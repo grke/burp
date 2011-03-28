@@ -383,7 +383,7 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 	FILE *logfp=NULL;
 	char *logpath=NULL;
 	char *logpathz=NULL;
-	int status; // For sending status information up to the server.
+	int status=0; // For sending status information up to the server.
 
 	if(act==ACTION_RESTORE) status=11;
 	else if(act==ACTION_VERIFY) status=12;

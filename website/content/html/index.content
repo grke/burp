@@ -1,0 +1,166 @@
+<TABLE>
+<TR><TD WIDTH="10%"></TD>
+<TD WIDTH="60%">
+</TD><TD WIDTH="10%"></TD></TR>
+
+<TR>
+<TD></TD>
+<TD ALIGN="CENTER">
+<P>
+<FONT COLOR="#99CCFF">
+Burp is a backup and restore program. It uses librsync in order to save on
+the amount of space that is used by each backup. It also uses VSS (Volume
+Shadow Copy Service) to make snapshots when backing up Windows computers.
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">
+It is open source free software (where 'free' means both that you do not have
+to pay for it, and that you have freedom to do what you want with it) released
+under the AGPLv3 licence. See the FAQ for more information.
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">
+Finally, as with the vast majority of open software, Burp comes with
+absolutely no warranty. You are responsible for testing it and ensuring that
+it works for you.
+Please see the FAQ page for more information on this.
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">
+The main author of Burp is Graham Keeling.
+</FONT>
+</P>
+
+<BR><BR>
+
+<h3><font color="#99CCFF">NEWS</font></h3>
+
+</TD></TR>
+
+<TR>
+<TD></TD>
+<TD ALIGN="LEFT">
+
+<P>
+<FONT COLOR="#99CCFF">2011-03-27: burp-1.1.30 is released. See the DOWNLOADS
+page.
+<pre>
+2011-03-27 Changes in burp-1.1.30:
+  * First pass at having a live status monitor.
+  * Fixed a bug that meant you couldn't restore links.
+  * Fixed a bug when freeing structs at the end of a restore.
+</pre>
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">2011-03-18: burp-1.1.22 is released. See the DOWNLOADS
+page.
+<pre>
+Changes in burp-1.1.22:
+  * Added scheduling.
+  * Added email notifications.
+  * Fixed autoconf. Programs like ccache should now work.
+  * Strip whitespace from end of conf lines, ignore quotes around conf lines.
+  * Updated the Windows build tools.
+</pre>
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">2011-03-10: burp-1.1.14 is released. See the DOWNLOADS
+page.
+<pre>
+Changes in burp-1.1.14:
+  * Added client-side blowfish file encryption. See the man page for details.
+  * Byte counters also give counts in KB/MB/GB/etc as appropriate.
+  * Restore directories after their contents so that the access times are
+    correct.
+  * Updated the win32 build tools.
+</pre>
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">2011-03-02: burp-1.1.5 is released. See the DOWNLOADS
+page.
+<pre>
+Changes in burp-1.1.5:
+  * Added a 'verify' command. See the man page for details.
+  * Improved the include/exclude path functionality.
+  * Added the ability to define mount points to cross.
+  * Fixed a crash on 64bit Windows when exiting.
+</pre>
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">2011-02-27: burp-1.1.0 is released. See the DOWNLOADS
+page.
+<pre>
+Changes in burp-1.1.0:
+  * Added openssl.
+  * Added byte counters and checksums to the backup manifest files, in
+    anticipation of a 'verify' command.
+
+    IMPORTANT IF YOU ARE UPGRADING FROM AN OLDER VERSION OF BURP:
+    a) Your previous backups will no longer work, due to changes in the
+    manifest files. You will also need to move old backups aside in order to
+    continue to make new backups.
+    b) Your old config files will need some fields to do with SSL added to them.
+    See the man page and the examples in the 'configs' directory for help.
+
+    IMPORTANT FOR MY ENCOURAGEMENT AND THE FUTURE OF BURP:
+    If you have tried burp, I really want to hear from you to find out what 
+    you like about it, what you don't like, what new features you would like,
+    how you have been using it, whether it has helped you, or anything that
+    you would like to tell me. I am currently working in the dark!
+</pre>
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">2011-02-16: burp-1.0.31 is released.</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">2011-02-02: burp-1.0.11 is released.</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">2011-02-02: burp-1.0.10 is released.</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">2011-01-30: burp-1.0.9 is released.</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">2011-01-25: burp-1.0.5 is released.</FONT>
+</P>
+<P>
+<FONT COLOR="#99CCFF">2011-01-25: mailling list created. See the CONTACT page.
+</FONT>
+</P>
+<P>
+<FONT COLOR="#99CCFF">2011-01-23: burp-1.0.3 is released.</FONT>
+</P>
+<P>
+<FONT COLOR="#99CCFF">2011-01-22: burp-1.0.0 is released.</FONT>
+</P>
+<P>
+<FONT COLOR="#99CCFF">2011-01-22: Web site created.
+</FONT>
+</P>
+
+</TD>
+</TR>
+
+</TR>
+</TABLE>

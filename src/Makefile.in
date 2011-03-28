@@ -1,0 +1,185 @@
+@MCOMMON@
+
+srcdir =	.
+VPATH = 	.
+.PATH:		.
+
+# one up
+basedir = ..
+# top dir
+topdir = ..
+# this dir relative to top dir
+thisdir = src/burp
+
+DEBUG=@DEBUG@
+
+GETTEXT_LIBS = @LIBINTL@
+
+first_rule: all
+dummy:
+
+#
+SVRSRCS =	asyncio.c \
+		attribs.c \
+		auth_server.c \
+		auth_client.c \
+		backup_phase1_client.c \
+		backup_phase2_client.c \
+		backup_phase1_server.c \
+		backup_phase2_server.c \
+		backup_phase3_server.c \
+		backup_phase4_server.c \
+		base64.c \
+		berrno.c \
+		bfile.c \
+		client.c \
+		client_vss.c \
+		conf.c \
+		counter.c \
+		current_backups_server.c \
+		dpth.c \
+		find.c \
+		find_one.c \
+		handy.c \
+		list_client.c \
+		list_server.c \
+		lock.c \
+		log.c \
+		msg.c \
+		prog.c \
+		restore_client.c \
+		restore_server.c \
+		rs_buf.c \
+		sbuf.c \
+		server.c \
+		ssl.c \
+		status_client.c \
+		status_server.c \
+		zlibio.c \
+
+SVROBJS = $(SVRSRCS:.c=.o)
+
+# these are the objects that are changed by the .configure process
+EXTRAOBJS = @OBJLIST@
+
+FDLIBS = @FDLIBS@		  # extra libs for File daemon
+
+# extra items for linking on Win32
+WIN32OBJS = win32/winmain.o win32/winlib.a win32/winres.res
+win32 = $(WIN32OBJS) -luser32 -lgdi32
+
+WIN32LIBS = $(@WIN32@)
+
+.SUFFIXES:	.c .o
+.PHONY:
+.DONTCARE:
+
+# inference rules
+.c.o:
+#	@echo "Compiling $<"
+	$(ECHO_CMD)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+#-------------------------------------------------------------------------
+all: Makefile @WIN32@ burp @STATIC@
+	@echo "==== Make of burp is good ===="
+	@echo " "
+
+win32/winlib.a:
+	@if test -f win32/Makefile -a "${GMAKE}" != "none"; then \
+	   (cd win32; $(GMAKE) DESTDIR=$(DESTDIR)); \
+	fi
+	@rm -f burp.exe
+
+win32/winmain.o:
+	@if test -f win32/Makefile -a "${GMAKE}" != "none"; then \
+	   (cd win32; $(GMAKE) DESTDIR=$(DESTDIR)); \
+	fi
+	@rm -f burp.exe
+
+win32/winres.res:
+	@if test -f win32/Makefile -a "${GMAKE}" != "none"; then \
+	   (cd win32; $(GMAKE) DESTDIR=$(DESTDIR)); \
+	fi
+	@rm -f burp.exe
+
+# win32 libraries if needed
+win32:	$(WIN32OBJS)
+	@if test -f win32/Makefile -a "${GMAKE}" != "none"; then \
+	   (cd win32; $(GMAKE) DESTDIR=$(DESTDIR)); \
+	fi
+	@rm -f burp.exe
+
+burp:  Makefile $(SVROBJS) @WIN32@
+	@echo "Linking $@ ..."
+	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -o $@ $(SVROBJS) \
+	  $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
+	  $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(RSYNC_LIBS) $(ZLIBS) -ldl
+
+static-burp: Makefile $(SVROBJS) @WIN32@
+	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -o $@ $(SVROBJS) \
+	   $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
+	   $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(RSYNC_LIBS) $(ZLIBS) -ldl
+#	strip $@
+
+Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
+	cd $(topdir) \
+	  && CONFIG_FILES=$(thisdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
+
+libtool-clean:
+	@$(RMF) -r .libs _libs
+
+clean:	libtool-clean
+	@$(RMF) burp burp core core.* a.out *.o *.bak *~ *.intpro *.extpro 1 2 3
+	@$(RMF) static-burp
+#	@if test -f win32/Makefile -a "${GMAKE}" != "none"; then \
+#	   (cd win32; $(GMAKE) clean); \
+#	fi
+
+realclean: clean
+	@$(RMF) x
+
+distclean: realclean
+	if test $(srcdir) = .; then $(MAKE) realclean; fi
+	(cd $(srcdir); $(RMF) Makefile)
+	@if test -f win32/Makefile -a "${GMAKE}" != "none"; then \
+	   (cd win32; $(GMAKE) distclean); \
+	fi
+
+devclean: realclean
+	if test $(srcdir) = .; then $(MAKE) realclean; fi
+	(cd $(srcdir); $(RMF) Makefile)
+	@if test -f win32/Makefile -a "${GMAKE}" != "none"; then \
+	   (cd win32; $(GMAKE) devclean); \
+	fi
+
+install: all
+	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) burp $(DESTDIR)$(sbindir)/burp 
+	@if test -f static-burp; then \
+	   $(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) static-burp $(DESTDIR)$(sbindir)/static-burp; \
+	fi
+
+
+
+uninstall:
+	(cd $(DESTDIR)$(sbindir); $(RMF) burp)
+
+
+
+# Semi-automatic generation of dependencies:
+# Use gcc -MM because X11 `makedepend' doesn't work on all systems
+# and it also includes system headers.
+# `semi'-automatic since dependencies are generated at distribution time.
+
+depend:
+	@$(MV) Makefile Makefile.bak
+	@$(SED) "/^# DO NOT DELETE:/,$$ d" Makefile.bak > Makefile
+	@$(ECHO) "# DO NOT DELETE: nice dependency list follows" >> Makefile
+	@$(CXX) -S -M $(CPPFLAGS) $(XINC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
+	@if test -f Makefile ; then \
+	    $(RMF) Makefile.bak; \
+	else \
+	   $(MV) Makefile.bak Makefile; \
+	   echo " ===== Something went wrong in make depend ====="; \
+	fi
+
+# -----------------------------------------------------------------------
+# DO NOT DELETE: nice dependency list follows

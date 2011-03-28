@@ -1,0 +1,73 @@
+2011-03-27 Changes in burp-1.1.30:
+  * First pass at having a live status monitor.
+  * Fixed a bug that meant you couldn't restore links.
+  * Fixed a bug when freeing structs at the end of a restore.
+
+2011-03-18 Changes in burp-1.1.22:
+  * Added scheduling.
+  * Added email notifications.
+  * Fixed autoconf. Programs like ccache should now work. 
+  * Strip whitespace from end of conf lines, ignore quotes around conf lines.
+  * Updated the Windows build tools.
+
+2011-03-10 Changes in burp-1.1.14:
+  * Added client-side blowfish file encryption. See the man page for details.
+  * Byte counters also give counts in KB/MB/GB/etc as appropriate.
+  * Restore directories after their contents so that the access times are
+    correct.
+  * Updated the win32 build tools.
+
+2011-03-02 Changes in burp-1.1.5:
+  * Added a 'verify' command. See the man page for details.
+  * Improved the include/exclude path functionality.
+  * Added the ability to define mount points to cross.
+  * Fixed a crash on 64bit Windows when exiting.
+
+Changes in burp-1.1.0:
+  * Added openssl.
+  * Added byte counters and checksums to the backup manifest files, in
+    anticipation of a 'verify' command.
+
+    IMPORTANT IF YOU ARE UPGRADING FROM AN OLDER VERSION OF BURP:
+    a) Your previous backups will no longer work, due to changes in the
+    manifest files. You will also need to move old backups aside in order to
+    continue to make new backups.
+    b) Your old config files will need some fields to do with SSL added to them.
+    See the man page and the examples in the 'configs' directory for help.
+
+    IMPORTANT FOR MY ENCOURAGEMENT AND THE FUTURE OF BURP:
+    If you have tried burp, I really want to hear from you to find out what
+    you like about it, what you don't like, what new features you would like,
+    how you have been using it, whether it has helped you, or anything that
+    you would like to tell me. I am currently working in the dark!
+
+Changes in burp-1.0.31:
+  * Large scale rewrites to the main backup process to make it more efficient
+    and easier to understand.
+  * Much tidying up of code and splitting into smaller files.
+  * Removed complicated/flaky compression code from the network stuff. Network
+    compression will come free with SSL anyway (when it is implemented).
+    Currently, whole new files are transmitted compressed, file information
+    and deltas are not.
+
+Changes in burp-1.0.11:
+  * Fixed Windows restore crash. Windows restores should now work better.
+
+Changes in burp-1.0.10:
+  * Fixed three major bugs introduced in burp-1.0.9 to do with client/server
+    communication when doing deltas.
+  * Make "make install" and the Windows installers not overwrite an existing
+    config file.
+  * Support for backup and restore of fifos and nodes.
+  * KNOWN ISSUE: There seems to be a problem with restoring multiple files
+    at once to Windows. I am working on this.
+
+Changes in burp-1.0.9:
+  * Added counters to summarise the files that were backed up or restored.
+  * Added the ability to have warnings instead of errors always being fatal.
+  * Prevent restores overwriting existing files, unless the new '-f' option is
+    given.
+  * Notice invalid characters in paths on Windows and replace them with
+    '_'. This also means that you can now restore to alternative directories
+    (the colon in the drive name no longer gets in the way).
+  * Added instructions for building the Windows installer.

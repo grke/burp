@@ -1,0 +1,39 @@
+#!/bin/bash
+
+echo "Running notify script: $@"
+
+client="$1" ; shift
+current="$1" ; shift
+working="$1" ; shift
+finishing="$1" ; shift
+reserved3="$1" ; shift
+sendmail="$1" ; shift
+
+while [ "$#" -gt 0 ] ; do
+	case "$1" in
+		Subject:*) h="$1 $client" ;;
+		*) h="$1" ;;
+	esac
+	if [ -z "$headers" ] ; then
+		headers="$h"
+	else
+		headers=$(printf "%s\n%s\n" "$headers" "$h")
+	fi
+	shift
+done
+
+# Look for a log to attach
+[ -z "$log" -a -f "$working/log" ] && log="$working/log" && id=$(readlink "$working")
+[ -z "$log" -a -f "$working/log.gz" ] && log="$working/log.gz" && id=$(readlink "$working")
+[ -z "$log" -a -f "$finishing/log" ] && log="$finishing/log" && id=$(readlink "$finishing")
+[ -z "$log" -a -f "$finishing/log.gz" ] && log="$finishing/log.gz" && id=$(readlink "$finishing")
+[ -z "$log" -a -f "$current/log" ] && log="$current/log" && id=$(readlink "$current")
+[ -z "$log" -a -f "$current/log.gz" ] && log="$current/log.gz" && id=$(readlink "$current")
+
+if [ -z "$log" ] ; then
+  echo "$headers" && echo && echo "No log found to send in email" | $sendmail
+else
+  (echo "$headers" && echo && echo "$id" && echo && echo "$log:" && echo && zcat -f "$log") | $sendmail
+fi
+
+exit 0

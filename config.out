@@ -1,0 +1,22 @@
+
+Configuration on Sat Mar 26 22:55:24 GMT 2011:
+
+   Host:		    i686-pc-linux-gnu -- debian 
+   Burp version:	    Burp 1.1.22
+   Source code location:    .
+   Install binaries:	    /usr/sbin
+   Install config files:    /etc/burp
+   Man directory:	    ${datarootdir}/man
+   C Compiler:		    gcc
+   C++ Compiler:	    g++
+   Compiler flags:	     -g -O2 -Wall -fno-strict-aliasing -fno-exceptions -fno-rtti
+   Linker flags:	     
+   Libraries:		    -ldl 
+   Static:                  
+
+   large file support:	    yes
+   openssl:	 	    yes
+   zlib:		    yes
+   librsync:		    yes
+
+  

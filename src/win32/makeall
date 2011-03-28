@@ -1,0 +1,6 @@
+#!/bin/sh
+# Build win32 Burp
+make
+#
+# Build win64 Burp
+make WIN64=yes

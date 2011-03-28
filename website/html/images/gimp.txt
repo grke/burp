@@ -1,0 +1,6 @@
+Alien Neon
+Font size 25
+Font: Nimbus Mono L Bold
+2 bands
+colour 99ccff
+colour selected b33a3a

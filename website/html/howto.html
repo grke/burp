@@ -1,0 +1,537 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+<STYLE type="text/css">
+<!--
+A { text-decoration:none;
+color:#AA99BB;
+background-color:black;}
+P { text-align:justify;}
+-->
+</STYLE>
+<TITLE>
+BURP - BackUp and Restore Program
+</TITLE>
+</HEAD>
+<BODY BACKGROUND="/images/background.jpg" BGCOLOR="black">
+<!-- BODY BGCOLOR="black" -->
+
+<TABLE WIDTH="100%" BORDER=0>
+<TR>
+<TD WIDTH="10%"></TD>
+<TD ALIGN="CENTER" WIDTH="80%">
+<TABLE BORDER=0 BGCOLOR="black">
+<TR><TD ALIGN="CENTER" WIDTH="100%"><BR>
+<A HREF="/">
+<IMG BORDER=0 SRC="/images/logo.jpg" ALT="BURP - BackUp and Restore Program">
+</A>
+
+<HR>
+<TABLE BORDER=0 WIDTH="100%" CELLSPACING=0 CELLPADDING=0>
+<TR>
+<TD ALIGN=CENTER><A HREF="/index.html"><IMG BORDER=0 SRC="/images/index.jpg" ALT="index"></A></TD>
+<TD ALIGN=CENTER><A HREF="/why.html"><IMG BORDER=0 SRC="/images/why.jpg" ALT="why"></A></TD>
+<TD ALIGN=CENTER><A HREF="/faq.html"><IMG BORDER=0 SRC="/images/faq.jpg" ALT="faq"></A></TD>
+<TD ALIGN=CENTER><IMG BORDER=0 SRC="/images/howtosel.jpg" ALT="howto"></TD>
+<TD ALIGN=CENTER><A HREF="/download.html"><IMG BORDER=0 SRC="/images/download.jpg" ALT="download"></A></TD>
+<TD ALIGN=CENTER><A HREF="/contact.html"><IMG BORDER=0 SRC="/images/contact.jpg" ALT="contact"></A></TD>
+</TR>
+</TABLE>
+<HR>
+
+<BR><BR>
+<!-- @header -->
+<!-- FONT COLOR="#FF9999" -->
+
+<TABLE>
+<TR><TD WIDTH=10%></TD>
+<TD WIDTH=60%>
+</TD><TD WIDTH=10%></TD></TR>
+
+<TR>
+<TD></TD>
+<TD ALIGN=LEFT>
+<P>
+<FONT COLOR=#99CCFF>
+<pre>
+QUICK START
+
+You need to compile burp on a unix-based operating system first.
+Make sure that you have openssl, zlib and librsync libraries and development
+libraries installed. With debian or ubuntu, this command should install them
+for you:
+apt-get install librsync-dev libz-dev libssl-dev
+Change to the burp source directory and run "./configure --prefix=/usr",
+then "make".
+All being well, burp will compile successfully.
+Then run "make install" as root to install.
+
+Start the burp server with this command:
+burp -c /etc/burp/burp-server.conf
+
+UNIX CLIENT
+
+The example client configuration file is /etc/burp/burp.conf.
+It will backup /home by default.
+
+A cron job for the client is installed to /etc/cron.d/burp and will run every
+20 minutes. Whether or not this results in an actual backup depends upon the
+timer settings in the server config files.
+
+You can either force a backup by hand:
+burp -a b
+ 
+Or add a regular cron job like the following to /etc/cron.d/burp (or
+equivalent). This makes the client ask the server every twenty minutes whether
+it is yet time for a new backup. It is probably a good idea to change the
+numbers for each client, in order to spread the load a bit:
+MAILTO=
+7,27,47 * * * * root    /usr/sbin/burp -a t
+
+WINDOWS CLIENT
+
+Pick the 32-bit or 64-bit Burp installer as appropriate - visit
+http://burp.grke.net/ to find one of them.
+Compilation instructions will be included in a separate guide.
+The Windows installer will ask you for the address of your server, the client
+name, and the client password. Burp will then installed its files to:
+C:/Program Files/Burp
+If you need to change client configuration settings, the file can be found at:
+C:/Program Files/Burp/burp.conf
+It will be configured to backup "C:/Documents and Settings".
+
+A Windows Scheduler task will have been installed and will be configured to
+run every 20 minutes from the time of the installation. Whether or not this
+results in an actual backup depends upon the timer settings in the server
+config files.
+
+To force a backup by hand, start the burp client from within its directory:
+cd "C:\Program Files\Burp\bin"
+burp.exe -a b
+If you are running Windows 7, you might need to start the command prompt with
+"Run as Administrator".
+
+
+
+For more help, see the man page - type 'man burp'.
+
+
+For the benefit of the website, the man page now follows.
+
+
+Burp(8) 							       Burp(8)
+
+
+
+NAME
+       Burp - BackUp and Restore Program
+
+SYNOPSIS
+       burp [OPTIONS]
+
+DESCRIPTION
+       BackUp and Restore Program.
+
+
+SERVER OPTIONS
+       -c path
+	      Short  for  'config  file'. The argument is a path to the config
+	      file. The default is /etc/burp/burp.conf.
+
+       -n     No daemon mode. The program will accept  a  single  query,  deal
+	      with it, and then exit. This is useful for debugging.
+
+       -a s   Run  this to connect to a running server and see a live snapshot
+	      of the status of all your backup clients. You  can  additionally
+	      specify  '-s [client]' to get more verbose details of a particu-
+	      lar client. If your server config file is  not  in  the  default
+	      location,  you  will also need to specify the path with the '-c'
+	      option. Use the external program 'watch' to  have  a  continuous
+	      update.  A  future  burp release will use ncurses for a smoother
+	      experience. A 'watch' example: "watch burp -a s -s testclient'
+
+
+CLIENT OPTIONS
+       -a [b|t|r|l|L|v|]
+	      Short for 'action'. The arguments  mean  backup,	timed  backup,
+	      restore, list, long list or verify, respectively.
+
+       -b [number|a]
+	      Short  for  'backup number'. The argument is a number, or 'a' to
+	      select all backups.
+
+       -c [path]
+	      Short for 'config file'. The argument is a path  to  the	config
+	      file.   The   default   is  /etc/burp/burp.conf,	or  C:\Program
+	      Files\Burp\burp.conf on Windows.
+
+       -d [path]
+	      Short for 'directory'. The argument is a path to an  alternative
+	      directory to restore to.
+
+       -f [path]
+	      Short  for 'force overwrite'. Without this option set, a restore
+	      will not overwrite existing files.
+
+       -r [regex]
+	      Short for  'regular  expression'.  The  argument	is  a  regular
+	      expression  with	which  to match backup files. Use it for lists
+	      and restores.
+
+
+EXAMPLES
+       burp -a l
+	      Lists the available backups and dates
+
+       burp -a l -b 1
+	      Lists all the files in backup number 1.
+
+       burp -a l -b a
+	      Lists all the files in all the backups.
+
+       burp -a l -b 1 -r myregex
+	      Lists all the files in backup number 1 that  match  the  regular
+	      expression 'myregex'.
+
+       burp -a L -b 1 -r myregex
+	      Long lists all the files in backup number 1 that match the regu-
+	      lar expression 'myregex'. This is like doing an 'ls -l'.
+
+       burp -a r -b 1 -r myregex
+	      Restores all the files in backup number 1 that match the regular
+	      expression  'myregex' back to their original location. You won't
+	      be given a warning if the files already exist there, so use with
+	      caution.
+
+       burp -a r -b 1 -r myregex -d /tmp/restoredir
+	      Restores all the files in backup number 1 that match the regular
+	      expression 'myregex' into the directory /tmp/restoredir.
+
+       burp -a r
+	      Restores all the files in the most recent backup to their origi-
+	      nal  location. You won't be given a warning if the files already
+	      exist there, so use with caution.
+
+       burp -a v
+	      Verifies the most recent backup.
+
+       burp -a v -b 1 -r myregex
+	      Verifies everything in backup number 1 that matches the  regular
+	      expression 'myregex'.
+
+       burp -a t
+	      Timed  backup.  The same as 'burp -a b', except that a script is
+	      run on the server before deciding to go ahead. The intention  is
+	      that  this  command  will  be run on a repeating cron job with a
+	      short interval, and that the server will decide when it is  time
+	      for a new backup.
+
+
+SERVER CONFIGURATION FILE OPTIONS
+       mode=server
+	      Required to run in server mode.
+
+       port=[port number]
+	      Defines the main TCP port that the server listens on.
+
+       status_port=[port number]
+	      Defines  the  TCP  port  that  the  server listens on for status
+	      requests.
+
+       directory=[path]
+	      Path to the directory in which to store backups.
+
+       clientconfdir=[path]
+	      Path to the directory that contains client configuration files.
+
+       lockfile=[path]
+	      Path to the lockfile that ensures that two server processes can-
+	      not run simultaneously.
+
+       keep=[number]
+	      Number of backups to keep. This can be overriddden by the client
+	      configuration files in clientconfdir on the server.
+
+       hardlinked_archive=[0|1]
+	      On the server, defines whether to keep hardlinked files  in  the
+	      backups,	or  whether  to generate reverse deltas and delete the
+	      original files. Can be set to either 0 (off) or 1 (on).	Disad-
+	      vantage:	More  disk space will be used Advantage: Restores will
+	      be faster, and since no reverse deltas need to be generated, the
+	      time  and  effort  the  server  needs  at the end of a backup is
+	      reduced.
+
+       working_dir_recovery_method=[merge|use|delete]
+	      This option tells the server what to do when it finds the  work-
+	      ing  directory of an interrupted backup (perhaps somebody pulled
+	      the plug on the server, or something). This can be overridden by
+	      the  client configurations files in clientconfdir on the server.
+	      Options are...
+
+       delete: Just delete the old working directory.
+
+       use: Convert the working directory into a complete backup.
+
+       merge: Merge the working directory with the previous  complete  backup.
+       The  resulting  backup  will  contain  the newest files from them both.
+       This option takes effect when you try to do a new backup on the	client
+       that  was interrupted. Once the old working directory is dealt with, an
+       entirely new backup will be made.
+
+       ssl_cert_ca=[path]
+	      The path to the SSL CA certificate. This file will  probably  be
+	      the same on both the server and the client. The file should con-
+	      tain just the certificate in PEM format
+
+       ssl_cert=[path]
+	      The path to the server SSL certificate. It works for me when the
+	      file  contains  the concatenation of the certificate and private
+	      key in PEM format.
+
+       ssl_cert_password=[password]
+	      The SSL certificate password.
+
+       ssl_dhfile=[path]
+	      Path to Diffie-Hellman parameter	file.  To  generate  one  with
+	      openssl,	 use   a  command  like  this:	openssl  dhparam  -out
+	      dhfile.pem -5 1024
+
+       max_children=[number]
+	      Defines the number of child processes to	fork  (the  number  of
+	      clients that can simultaneously connect. The default is 5.
+
+       timer_script=[path]
+	      Path  to the script to run when a client connects with the timed
+	      backup option. If the script exits with code 0,  a  backup  will
+	      run. The first two arguments are the client name and the path to
+	      the 'current' storage directory. The next  three	arguments  are
+	      reserved, and user arguments are appended after that. An example
+	      timer script is provided. The timer_script option can  be  over-
+	      riddden  by  the	client configuration files in clientconfdir on
+	      the server.
+
+       timer_arg=[string]
+	      A user-definable argument to the timer script. You can have many
+	      of these. The timer_arg options can be overriddden by the client
+	      configuration files in clientconfdir on the server.
+
+       notify_success_script=[path]
+	      Path to the script to run when a backup succeeds. User arguments
+	      are appended after the first five reserved arguments. An example
+	      notify script is provided. The notify_success_script option  can
+	      be  overriddden  by  the	client	configuration files in client-
+	      confdir on the server.
+
+       notify_success_arg=[string]
+	      A user-definable argument to the notify success script. You  can
+	      have  many of these. The notify_success_arg options can be over-
+	      riddden by the client configuration files  in  clientconfdir  on
+	      the server.
+
+       notify_failure_script=[path]
+	      The same as notify_success_script, but for backups that failed.
+
+       notify_failure_arg=[string]
+	      The same as notify_failure_arg, but for backups that failed.
+
+
+CLIENT CONFIGURATION FILE OPTIONS
+       mode=client
+	      Required to run in client mode.
+
+       server=[IP address or hostname]
+	      Defines the server to connect to.
+
+       port=[port number]
+	      Defines the TCP port that the server is listening on.
+
+       cname=[password]
+	      Defines the client name to identify as to the server.
+
+       password=[password]
+	      Defines the password to send to the server.
+
+       lockfile=[path]
+	      Path to the lockfile that ensures that two client processes can-
+	      not run simultaneously (this currently doesn't work on Windows).
+
+       include=[path]
+	      Path to include in the backup. You  can  have  multiple  include
+	      lines.  Use  forward  slashes  '/',  not backslashes '\' as path
+	      delimiters.
+
+       exclude=[path]
+	      Path to exclude from the backup. You can have  multiple  exclude
+	      lines.  Use  forward  slashes  '/',  not backslashes '\' as path
+	      delimiters.
+
+       cross_filesystem=[path]
+	      Allow backups to cross a particular filesystem mountpoint.
+
+       cross_all_filesystems=[0|1]
+	      Allow backups to cross all filesystem mountpoints.
+
+       ssl_cert_ca=[path]
+	      The path to the SSL CA certificate. This file will  probably  be
+	      the same on both the server and the client. The file should con-
+	      tain just the certificate in PEM format
+
+       ssl_cert=[path]
+	      The path to the server SSL certificate. It works for me when the
+	      file  contains  the concatenation of the certificate and private
+	      key in PEM format.
+
+       ssl_cert_password=[password]
+	      The SSL certificate password.
+
+       encryption_password=[password]
+	      Set this to enable client side file Blowfish encryption. If  you
+	      do  not  want  encypryption, leave this field out of your config
+	      file. IMPORTANT: Configuring  this  renders  delta  differencing
+	      pointless,  since  the  smallest real change to a file will make
+	      the whole file look different. Therefore, activating this option
+	      turns  off  delta  differencing  so  that whenever a client file
+	      changes, the whole new file will be uploaded on the next backup.
+	      ALSO  IMPORTANT: If you manage to lose your encryption password,
+	      you will not be able to unencrypt your files. You should	there-
+	      fore  think about having a copy of the encryption password some-
+	      where off-box,  in  case	of  your  client  hard	disk  failing.
+	      FINALLY: If you change your encryption password, you will end up
+	      with a mixture of files on the server with different  encryption
+	      and  it  may  become  tricky  to restore more than one file at a
+	      time. For this reason, if you change your  encryption  password,
+	      you  may	want  to start a fresh chain of backups (by moving the
+	      original set aside, for example). Burp will cope fine with turn-
+	      ing the same encryption password on and off between backups, and
+	      will restore a backup of mixed encrypted and  unencrypted  files
+	      without a problem.
+
+
+
+       SERVER CLIENTCONFDIR FILE
+
+       For  the  server to know about clients that can contact it, you need to
+       place a file named after the client in  clientconfdir.  The  file  name
+       must   match   the   name   in	the   'cname'  field  on  the  client.
+       ssl_peer_cn=[string] must also be set and match the common name in  the
+       SSL certificate that the client gives when it connects.	The file needs
+       to contain a line like password=[password] that matches the same  field
+       on  the	client.  Additionally, the following options can be overridden
+       here for each client:
+	      directory    keep    working_dir_recovery_method	  timer_script
+	      timer_arg  notify_success_script notify_success_arg notify_fail-
+	      ure_script notify_failure_arg
+
+
+Some notes on SSL certificates
+       The burp example configs come with example SSL certificates  and  keys.
+       You can use these and burp will work. But if you are worried about net-
+       work security, you should generate your own certificates and  keys  and
+       point  your config files to them. To create the example files, I used a
+       handy  interface  to  openssl,	called	 'tinyca'   (http://tinyca.sm-
+       zone.net/).  If	you  are  using  Debian,  you can run 'apt-get install
+       tinyca' to get it.
+
+
+Examining backups
+       As well as using the client list options described above,  you  can  go
+       directly  to  the  storage  directory  on the server. The backups for a
+       client are in the directory named after the client. Inside each	backup
+       directory is a file called manifest.gz.
+
+       This  contains  a  list	of all the files in the backup, and where they
+       originally came from on the client.
+
+       There is also a 'log.gz' file in the backup directory,  which  contains
+       the output generated by the server during the backup.
+
+       The 'data' directory contains complete backup files.
+
+       The  'deltas.reverse'  directory  contains  reverse  deltas that can be
+       applied to the data from the next backup in the sequence (indicated  by
+       the contents of the 'forward' file).
+
+       Anything  with  a .gz suffix is compressed in gzip format.  You can use
+       standard tools, such as zcat, zless or cp, to view them	or  copy  them
+       elsewhere.
+
+
+
+BUGS
+       If you find bugs, please report them to the email list. See the website
+       <http://burp.grke.net/> for details.
+
+
+AUTHOR
+       The main author of Burp is Graham Keeling.
+
+
+COPYRIGHT
+       See the LICENCE file included with the source distribution.
+
+
+
+				     Burp			       Burp(8)
+
+</pre>
+</FONT>
+</P>
+
+</TD>
+</TR>
+
+</TR>
+</TABLE>
+<!-- /FONT -->
+
+<table width="100%">
+<tr>
+<td width="10%"></td>
+<td align="left" width="30%">
+<form action="https://www.paypal.com/cgi-bin/webscr" method="post">
+<input type="hidden" name="cmd" value="_s-xclick">
+<input type="hidden" name="hosted_button_id" value="XC8N3XB7T6UFQ">
+<input type="image" src="http://burp.grke.net/images/paypal.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online.">
+<img alt="" border="0" src="https://www.paypal.com/en_GB/i/scr/pixel.gif" width="1" height="1">
+</form>
+</td>
+<td align="centre" width="50%">
+<p>
+<font color="#99ccff">
+Burp is open and free software. I work on it in my spare time.
+If you would like this work to continue, please consider making a small
+donation.
+</font>
+</p>
+</td>
+<td width="10%">
+</td>
+</tr>
+</table>
+
+<BR>
+</TD>
+</TR>
+
+</TABLE>
+<TD WIDTH="10%"></TD>
+</TR>
+
+<table width="100%"><tr>
+<td align="left">
+<font color="#99ccff">
+Burp, don't suck.
+</font>
+</td>
+<td align="right">
+<font color="#99ccff">
+Last updated: March 2011
+</font>
+</td></tr></table>
+
+</TABLE>
+
+</BODY>
+</HTML>

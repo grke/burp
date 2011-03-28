@@ -1,0 +1,60 @@
+QUICK START
+
+You need to compile burp on a unix-based operating system first.
+Make sure that you have openssl, zlib and librsync libraries and development
+libraries installed. With debian or ubuntu, this command should install them
+for you:
+apt-get install librsync-dev libz-dev libssl-dev
+Change to the burp source directory and run "./configure --prefix=/usr",
+then "make".
+All being well, burp will compile successfully.
+Then run "make install" as root to install.
+
+Start the burp server with this command:
+burp -c /etc/burp/burp-server.conf
+
+UNIX CLIENT
+
+The example client configuration file is /etc/burp/burp.conf.
+It will backup /home by default.
+
+A cron job for the client is installed to /etc/cron.d/burp and will run every
+20 minutes. Whether or not this results in an actual backup depends upon the
+timer settings in the server config files.
+
+You can either force a backup by hand:
+burp -a b
+ 
+Or add a regular cron job like the following to /etc/cron.d/burp (or
+equivalent). This makes the client ask the server every twenty minutes whether
+it is yet time for a new backup. It is probably a good idea to change the
+numbers for each client, in order to spread the load a bit:
+MAILTO=
+7,27,47 * * * * root    /usr/sbin/burp -a t
+
+WINDOWS CLIENT
+
+Pick the 32-bit or 64-bit Burp installer as appropriate - visit
+http://burp.grke.net/ to find one of them.
+Compilation instructions will be included in a separate guide.
+The Windows installer will ask you for the address of your server, the client
+name, and the client password. Burp will then installed its files to:
+C:/Program Files/Burp
+If you need to change client configuration settings, the file can be found at:
+C:/Program Files/Burp/burp.conf
+It will be configured to backup "C:/Documents and Settings".
+
+A Windows Scheduler task will have been installed and will be configured to
+run every 20 minutes from the time of the installation. Whether or not this
+results in an actual backup depends upon the timer settings in the server
+config files.
+
+To force a backup by hand, start the burp client from within its directory:
+cd "C:\Program Files\Burp\bin"
+burp.exe -a b
+If you are running Windows 7, you might need to start the command prompt with
+"Run as Administrator".
+
+
+
+For more help, see the man page - type 'man burp'.

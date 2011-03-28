@@ -12,6 +12,14 @@ For downloads, please visit the
 <a href="http://sourceforge.net/projects/burp">burp sourceforge page</a>.
 </FONT>
 </P>
+<P>
+<FONT COLOR="#99CCFF">
+Or, if you are very keen there is now a git repository:
+<pre>
+git clone git://github.com/grke/burp.git (read-only)
+</pre>
+</FONT>
+</P>
 
 </TD>
 </TR>

@@ -21,7 +21,12 @@ static time_t get_last_backup_time(const char *timestamp)
 		struct tm tm;
 		memset(&tm, 0, sizeof(struct tm));
 		if(strptime(b, " %Y-%m-%d %H:%M:%S", &tm))
+		{
+			// Tell mktime to use the daylight savings time setting
+			// from the time zone of the system.
+			tm.tm_isdst=-1;
 			t=mktime(&tm);
+		}
 	}
 	return t;
 }

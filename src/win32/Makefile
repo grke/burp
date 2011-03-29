@@ -21,7 +21,7 @@ endif
 all: Makefile.inc $(DIRS) $(SPECIAL) $(INSTALLER)
 
 clean: $(DIRS) installer32 installer64
-	$(ECHO_CMD)-rm -rf release32 release64
+	$(ECHO_CMD)-rm -rf release32 release64 Makefile.inc
 
 installer32:
 	@if test -f Makefile.inc; then \

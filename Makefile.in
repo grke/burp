@@ -18,9 +18,9 @@ dummy:
 fd_subdirs = src
 
 # Non-client-only directores
-subdirs =    src/cats @DIRD_DIR@ @STORED_DIR@ src/tools
+subdirs =    src/cats src/tools
 
-all_subdirs = ${fd_subdirs} ${@ALL_DIRS@} manpages
+all_subdirs = ${fd_subdirs} manpages
 
 DIST =	INSTALL README.configure configure Makefile Makefile.in ChangeLog
 
@@ -120,9 +120,10 @@ Makefiles:
 	$(SHELL) config.status
 
 clean:
-	@for I in ${all_subdirs} ; \
+	@for I in ${all_subdirs} src/win32 ; \
 	  do (cd $$I; echo "==>Entering directory `pwd`"; ${MAKE} $@ || exit 1); done
 	@$(RMF) *~ 1 2 3 core core.* config.guess console.log console.sum
+	@$(RMF) config.log config.out
 	@$(RMF) examples/1 examples/2 examples/devices/1 examples/devices/2
 	@$(RMF) -r autom4te.cache
 	@$(RMF) cross-tools-mingw32

@@ -45,6 +45,12 @@ struct config
 	int fscount;
 	int cross_all_filesystems;
 	char *encryption_password;
+	char *backup_script_pre;
+	char *backup_script_post;
+	int   backup_script_post_run_on_fail;
+	char *restore_script_pre;
+	char *restore_script_post;
+	int   restore_script_post_run_on_fail;
 
 // Client options on the server.
 // They can be set globally in the server config, or for each client.

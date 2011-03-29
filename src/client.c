@@ -14,6 +14,7 @@
 #include "list_client.h"
 #include "ssl.h"
 #include "berrno.h"
+#include "forkchild.h"
 
 // Return 0 for OK, -1 for error, 1 for timer conditions not met.
 static int maybe_check_timer(const char *phase1str)
@@ -41,13 +42,85 @@ static int maybe_check_timer(const char *phase1str)
 	return 0;
 }
 
+static void log_script_output(const char *str, FILE **fp, struct cntr *cntr)
+{
+	char buf[256]="";
+	if(fp && *fp)
+	{
+		while(fgets(buf, sizeof(buf), *fp))
+		logp("%s%s", str, buf);
+		//logw(cntr, "%s%s", str, buf);
+		if(feof(*fp))
+		{
+			fclose(*fp);
+			*fp=NULL;
+		}
+	}
+}
+
+static int run_script(const char *script, struct cntr *cntr)
+{
+	int a=0;
+	int l=0;
+	pid_t p;
+	int pid_status=0;
+	FILE *serr=NULL;
+	FILE *sout=NULL;
+	char *cmd[2]={ NULL };
+
+	logp("run script: %s\n", script);
+
+	if(!script) return 0;
+
+	cmd[l++]=(char *)script;
+	cmd[l++]=NULL;
+
+	fflush(stdout); fflush(stderr);
+	if((p=forkchild(NULL, &sout, &serr, cmd[0], cmd))==-1) return -1;
+
+	do {
+		log_script_output("", &sout, cntr);
+		log_script_output("", &serr, cntr);
+	} while(!(a=waitpid(p, &pid_status, WNOHANG)));
+	log_script_output("", &sout, cntr);
+	log_script_output("", &serr, cntr);
+
+	if(a<0)
+	{
+		logp("%s: waitpid error: %s\n", cmd[0], strerror(errno));
+		logw(cntr, "%s: waitpid error: %s\n", cmd[0], strerror(errno));
+		return -1;
+	}
+
+	if(WIFEXITED(pid_status))
+	{
+		int ret=WEXITSTATUS(pid_status);
+		logp("Script '%s' returned: %d\n", cmd[0], ret);
+		if(ret) logw(cntr, "Script '%s' returned: %d\n", cmd[0], ret);
+		return ret;
+	}
+	else if(WIFSIGNALED(pid_status))
+	{
+		logp("%s terminated on signal %s\n",
+			cmd[0], WTERMSIG(pid_status));
+		logw(cntr, "%s terminated on signal %s\n",
+			cmd[0], WTERMSIG(pid_status));
+	}
+	else
+	{
+		logp("%s: strange return\n", cmd[0]);
+		logw(cntr, "%s: strange return\n", cmd[0]);
+	}
+
+	return -1;
+}
+
 // Return 0 for OK, -1 for error, 1 for timer conditions not met.
 static int do_backup_client(struct config *conf, const char *phase1str, struct cntr *cntr)
 {
 	int ret=0;
 
 logp("do backup client\n");
-	if((ret=maybe_check_timer(phase1str))) return ret;
 
 #if defined(HAVE_WIN32)
 	win32_enable_backup_privileges(1 /* ignore_errors */);
@@ -65,9 +138,6 @@ logp("do backup client\n");
 #if defined(WIN32_VSS)
 	win32_stop_vss();
 #endif
-
-	if(ret) logp("error in backup\n");
-	else logp("backup finished ok\n");
 
 	return ret;
 }
@@ -151,27 +221,58 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 	 && !(ret=authorise_client(conf)))
 	{
 		rfd=-1;
+		const char *phase1str="backupphase1";
 		switch(act)
 		{
-			case ACTION_BACKUP:
-				ret=do_backup_client(conf, "backupphase1", &cntr);
-				break;
 			case ACTION_BACKUP_TIMED:
+				phase1str="backupphase1timed";
+			case ACTION_BACKUP:
 			{
-				// Returns 1 if server timer not OK, -1 for
-				// error.
-				// Do not give an error if the timer is not
-				// OK.
-				if(do_backup_client(conf,
-					"backupphase1timed", &cntr)<0) ret=-1;
+				if(!(ret=maybe_check_timer(phase1str)))
+				{
+					if(conf->backup_script_pre
+					 && run_script(conf->backup_script_pre,
+						 &cntr)) ret=-1;
+
+					if(!ret && do_backup_client(conf,
+						"backupphase1", &cntr))
+							ret=-1;
+	
+					if((conf->backup_script_post_run_on_fail
+					  || !ret) && conf->backup_script_post)
+					{
+						if(run_script(
+						  conf->backup_script_post,
+						  &cntr)) ret=-1;
+					}
+
+				}
+
+				if(ret<0) logp("error in backup\n");
+				else logp("backup finished ok\n");
+				
 				break;
 			}
 			case ACTION_RESTORE:
 			case ACTION_VERIFY:
-				ret=do_restore_client(conf, act, backup,
+			{
+				if(conf->restore_script_pre
+				   && run_script(conf->restore_script_pre,
+					&cntr)) ret=-1;
+				if(!ret && do_restore_client(conf,
+					act, backup,
 					restoreprefix, regex, forceoverwrite,
-					&cntr);
+					&cntr)) ret=-1;
+				if((conf->restore_script_post_run_on_fail
+				  || !ret) && conf->restore_script_post)
+				{
+					if(run_script(
+					  conf->restore_script_post, &cntr))
+						ret=-1;
+				}
+
 				break;
+			}
 			case ACTION_LIST:
 			case ACTION_LONG_LIST:
 			default:

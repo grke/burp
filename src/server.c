@@ -20,6 +20,7 @@
 #include "ssl.h"
 #include "berrno.h"
 #include "status_server.h"
+#include "forkchild.h"
 
 #include <netdb.h>
 #include <librsync.h>

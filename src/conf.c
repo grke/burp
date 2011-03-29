@@ -50,6 +50,14 @@ void init_config(struct config *conf)
 	conf->notify_failure_script=NULL;
 	conf->notify_failure_arg=NULL;
 	conf->nfcount=0;
+
+	conf->backup_script_pre=NULL;
+	conf->backup_script_post=NULL;
+	conf->backup_script_post_run_on_fail=0;
+
+	conf->restore_script_pre=NULL;
+	conf->restore_script_post=NULL;
+	conf->restore_script_post_run_on_fail=0;
 }
 
 static void free_backupdirs(struct backupdir **bd, int count)
@@ -98,6 +106,11 @@ void free_config(struct config *conf)
 
 	if(conf->notify_failure_script) free(conf->notify_failure_script);
 	free_backupdirs(conf->notify_failure_arg, conf->nfcount);
+
+	if(conf->backup_script_pre) free(conf->backup_script_pre);
+	if(conf->backup_script_post) free(conf->backup_script_post);
+	if(conf->restore_script_pre) free(conf->restore_script_pre);
+	if(conf->restore_script_post) free(conf->restore_script_post);
 
 	init_config(conf);
 }
@@ -278,6 +291,14 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 			if((conf->max_children=atoi(value))<=0)
 				return conf_error(config_path, line);
 		}
+		else if(!strcmp(field, "backup_script_post_run_on_fail"))
+		{
+			conf->backup_script_post_run_on_fail=atoi(value);
+		}
+		else if(!strcmp(field, "restore_script_post_run_on_fail"))
+		{
+			conf->restore_script_post_run_on_fail=atoi(value);
+		}
 		else
 		{
 			char *tmp=NULL;
@@ -390,6 +411,19 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 					tmp, 0)) return -1;
 				free(tmp); tmp=NULL;
 			}
+
+			if(get_conf_val(field, value,
+			  "backup_script_pre", &(conf->backup_script_pre)))
+				return -1;
+			if(get_conf_val(field, value,
+			  "backup_script_post", &(conf->backup_script_post)))
+				return -1;
+			if(get_conf_val(field, value,
+			  "restore_script_pre", &(conf->restore_script_pre)))
+				return -1;
+			if(get_conf_val(field, value,
+			  "restore_script_post", &(conf->restore_script_post)))
+				return -1;
 		}
 	}
 	fclose(fp);

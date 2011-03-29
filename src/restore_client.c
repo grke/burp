@@ -9,6 +9,7 @@
 #include "berrno.h"
 #include "client_vss.h"
 #include "restore_client.h"
+#include "forkchild.h"
 
 static int restore_interrupt(char fcmd, const char *dpth, const char *msg, struct cntr *cntr)
 {

@@ -1267,8 +1267,14 @@ int server(struct config *conf, const char *configfile, int forking)
 		{
 			if(process_status_client(sfd, conf))
 			{
-				ret=1;
-				break;
+				//logp("process_status_client returned error\n");
+				// Just carry on, it should be OK.
+				// Do not want something dodgy happening with
+				// the status process to make the server
+				// exit. Like EPIPEs on writes.
+			//	ret=1;
+			//	break;
+				continue;
 			}
 		}
 

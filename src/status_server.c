@@ -92,7 +92,14 @@ static int examine_spool_dir(int cfd, struct config *cconf, const char *client)
 	while(*w)
 	{
 		size_t wl=0;
-		if((wl=write(cfd, w, strlen(w)))<0) return -1;
+		if((wl=write(cfd, w, strlen(w)))<0)
+		{
+			if(errno!=EINTR)
+			{
+				//logp("error writing in examine_spool_dir(): %s\n", strerror(errno));
+				return -1;
+			}
+		}
 		w+=wl;
 	}
 	return 0;
@@ -142,7 +149,11 @@ static int send_status_info(int cfd, struct config *conf, const char *request)
 			l=strlen(chlds[q].data);
 			if(write(cfd, chlds[q].data, l)<0)
 			{
-				ret=-1;
+				if(errno!=EINTR)
+				{
+					//logp("send_status_info write error: %s\n", strerror(errno));
+					ret=-1;
+				}
 				break;
 			}
 			found=1;
@@ -173,6 +184,7 @@ static int send_status_info(int cfd, struct config *conf, const char *request)
 			if(cpath) { free(cpath); cpath=NULL; }
 			if(examine_spool_dir(cfd, &cconf, dir[m]->d_name))
 			{
+				//logp("examine_spool_dir returned error\n");
 				ret=-1;
 				break;
 			}
@@ -224,6 +236,7 @@ int process_status_client(int fd, struct config *conf)
 
 			if(send_status_info(cfd, conf, buf))
 			{
+				//logp("send_status_info returned error\n");
 				ret=-1;
 				break;
 			}

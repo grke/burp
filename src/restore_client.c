@@ -111,8 +111,8 @@ static int make_link(const char *fname, const char *lnk, char cmd, const char *r
 	}
 #endif
 
-	if(ret) logp("could not %slink %s -> %s\n", cmd=='L'?"hard":"sym",
-		fname, cmd=='L'?lnk:fname);
+	if(ret) logp("could not %slink %s -> %s: %s\n", cmd=='L'?"hard":"sym",
+		fname, lnk, strerror(errno));
 
 	return ret;
 }
@@ -258,7 +258,7 @@ static int restore_special(char cmd, const char *fname, struct stat *statp, enum
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
 			"Skipping restore of event port file: %s\n", fname);
-		logw(msg);
+		logw(cntr, "%s", msg);
 #endif
 	} else {
             if(mknod(fname, statp->st_mode, statp->st_rdev) && errno!=EEXIST)
@@ -275,16 +275,16 @@ static int restore_special(char cmd, const char *fname, struct stat *statp, enum
 	    }
          }
 #endif
+	if(rpath) free(rpath);
 	return ret;
 }
 
 static int restore_dir(char cmd, const char *dname, struct stat *statp, enum action act, struct cntr *cntr)
 {
 	int ret=0;
+	char *rpath=NULL;
 	if(act==ACTION_RESTORE)
 	{
-		char *rpath=NULL;
-
 		if(build_path(dname, "", 0, &rpath))
 		{
 			char msg[256]="";
@@ -310,6 +310,7 @@ static int restore_dir(char cmd, const char *dname, struct stat *statp, enum act
 		if(!ret) do_filecounter(cntr, cmd, 1);
 	}
 	else do_filecounter(cntr, cmd, 1);
+	if(rpath) free(rpath);
 	return ret;
 }
 
@@ -332,17 +333,27 @@ static int restore_link(char fcmd, const char *fname, size_t flen, struct stat *
 	}
 	else if(act==ACTION_RESTORE)
 	{
-		if(make_link(fname, lname, lcmd, restoreprefix, cntr))
+		char *rpath=NULL;
+		if(build_path(fname, "", flen, &rpath))
+		{
+			char msg[256]="";
+			// failed - do a warning
+			snprintf(msg, sizeof(msg), "build path failed: %s", rpath);
+			if(restore_interrupt(fcmd, NULL, msg, cntr))
+				ret=-1;
+		}
+		else if(make_link(fname, lname, lcmd, restoreprefix, cntr))
 		{
 			// failed - do a warning
 			if(restore_interrupt(fcmd, NULL, "could not create link", cntr))
 				ret=-1;
 		}
-		else
+		else if(!ret)
 		{
 			set_attributes(fname, fcmd, statp);
+			do_filecounter(cntr, fcmd, 1);
 		}
-		if(!ret) do_filecounter(cntr, fcmd, 1);
+		if(rpath) free(rpath);
 	}
 	else do_filecounter(cntr, fcmd, 1);
 	if(lname) free(lname);

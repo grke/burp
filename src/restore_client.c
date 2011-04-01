@@ -467,7 +467,11 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 				  strip_invalid_characters(&fullpath);
 				  if(!forceoverwrite
 				   && !S_ISDIR(statp.st_mode)
-				   && !lstat(fullpath, &checkstat))
+				   && !lstat(fullpath, &checkstat)
+				// If we have file data and the destination is
+				// a fifo, it is OK to write to the fifo.
+				   && !((cmd=='f' || cmd=='y')
+					&& S_ISFIFO(checkstat.st_mode)))
 				  {
 					char msg[512]="";
 printf("got lstat on restore\n");

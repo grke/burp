@@ -960,12 +960,12 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 		// Hmm. inefficient.
 	  	if(!strncmp(buf, "restore ", strlen("restore ")))
 		{
-			backupnostr=buf+=strlen("restore ");
+			backupnostr=buf+strlen("restore ");
 			act=ACTION_RESTORE;
 		}
 		else
 		{
-			backupnostr=buf+=strlen("verify ");
+			backupnostr=buf+strlen("verify ");
 			act=ACTION_VERIFY;
 		}
 

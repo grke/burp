@@ -956,11 +956,18 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 		|| !strncmp(buf, "verify ", strlen("verify "))))
 	{
 		enum action act;
+		char *backupnostr=NULL;
 		// Hmm. inefficient.
 	  	if(!strncmp(buf, "restore ", strlen("restore ")))
+		{
+			backupnostr=buf+=strlen("restore ");
 			act=ACTION_RESTORE;
+		}
 		else
+		{
+			backupnostr=buf+=strlen("verify ");
 			act=ACTION_VERIFY;
+		}
 
 		if(get_lock_and_clean(basedir, lockfile, current, working,
 			currentdata, finishing, TRUE, &gotlock, cconf,
@@ -976,7 +983,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 				*restoreregex++;
 			}
 			async_write_str('c', "ok");
-			ret=do_restore_server(basedir, buf+strlen("restore "),
+			ret=do_restore_server(basedir, backupnostr,
 				restoreregex, act, client, &cntr);
 		}
 	}

@@ -662,7 +662,14 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 				}
 
 				logp("sbuf to manifest\n");
-				sbuf_to_manifest(&cb, mp, NULL);
+				if(sbuf_to_manifest(&cb, mp, NULL))
+				{
+					close_fp(&mp);
+					gzclose_fp(&czp);
+					free(cmanifest);
+					set_logfp(NULL); // fclose the logfp
+					return -1;
+				}
 
 				free_sbuf(&cb);
 			}

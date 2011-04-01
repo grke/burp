@@ -8,18 +8,26 @@
 int send_msg_fp(FILE *fp, char cmd, const char *buf, size_t s)
 {
 	//fprintf(fp, "%c%04X%s\n", cmd, (unsigned int)s, buf);
-	fprintf(fp, "%c%04X", cmd, (unsigned int)s);
-	fwrite(buf, 1, s, fp);
-	fprintf(fp, "\n");
+	if(fprintf(fp, "%c%04X", cmd, (unsigned int)s)!=9
+	  || fwrite(buf, 1, s, fp)!=s
+	  || fprintf(fp, "\n")!=1)
+	{
+		logp("Unable to write message to file: %s\n", strerror(errno));
+		return -1;
+	}
 	return 0;
 }
 
 int send_msg_zp(gzFile zp, char cmd, const char *buf, size_t s)
 {
 	//gzprintf(zp, "%c%04X%s\n", cmd, s, buf);
-	gzprintf(zp, "%c%04X", cmd, s);
-	gzwrite(zp, buf, s);
-	gzprintf(zp, "\n");
+	if(gzprintf(zp, "%c%04X", cmd, s)!=9
+	  || gzwrite(zp, buf, s)!=(int)s
+	  || gzprintf(zp, "\n")!=1)
+	{
+		logp("Unable to write message to compressed file: %s\n",
+			strerror(errno));
+	}
 	return 0;
 }
 

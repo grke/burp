@@ -44,6 +44,9 @@ struct config
 	int iecount;
 	int fscount;
 	int cross_all_filesystems;
+	int read_all_fifos;
+	struct backupdir **fifos;
+	int ffcount;
 	char *encryption_password;
 	char *backup_script_pre;
 	char *backup_script_post;

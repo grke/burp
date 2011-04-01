@@ -43,7 +43,7 @@ int readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result);
 #define FO_SPARSE       (1<<5)        /* do sparse file checking */
 #define FO_IF_NEWER     (1<<6)        /* replace if newer */
 #define FO_NOREPLACE    (1<<7)        /* never replace */
-#define FO_READFIFO     (1<<8)        /* read data from fifo */
+//#define FO_READFIFO     (1<<8)        /* read data from fifo */
 //#define FO_SHA1         (1<<9)        /* Do SHA1 checksum */
 #define FO_PORTABLE     (1<<10)       /* Use portable data format -- no BackupWrite */
 #define FO_MTIMEONLY    (1<<11)       /* Use mtime rather than mtime & ctime */
@@ -54,9 +54,9 @@ int readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result);
 #define FO_IGNORECASE   (1<<16)       /* Ignore file name case */
 #define FO_HFSPLUS      (1<<17)       /* Resource forks and Finder Info */
 #define FO_WIN32DECOMP  (1<<18)       /* Use BackupRead decomposition */
-#define FO_SHA256       (1<<19)       /* Do SHA256 checksum */
-#define FO_SHA512       (1<<20)       /* Do SHA512 checksum */
-#define FO_ENCRYPT      (1<<21)       /* Encrypt data stream */
+//#define FO_SHA256       (1<<19)       /* Do SHA256 checksum */
+//#define FO_SHA512       (1<<20)       /* Do SHA512 checksum */
+//#define FO_ENCRYPT      (1<<21)       /* Encrypt data stream */
 #define FO_NOATIME      (1<<22)       /* Use O_NOATIME to prevent atime change */
 #define FO_ENHANCEDWILD (1<<23)       /* Enhanced wild card processing */
 #define FO_CHKCHANGES   (1<<24)       /* Check if file have been modified during backup */

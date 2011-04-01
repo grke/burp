@@ -59,6 +59,7 @@ _ZN6winverC2Ev
 syslog
 umask
 utime
+_Z9forkchildPP6_iobufS1_S1_PKcPKPc
  
 ; print.o
 _Z10__snprintfPcjPKcz

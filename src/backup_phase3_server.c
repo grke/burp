@@ -67,13 +67,13 @@ int backup_phase3_server(const char *phase2data, const char *unchangeddata, cons
 		if(ucb.path && !p2b.path)
 		{
 			write_status(client, 3, ucb.path, cntr);
-			sbuf_to_manifest(&ucb, mp, mzp);
+			if(sbuf_to_manifest(&ucb, mp, mzp)) { ret=-1; break; }
 			free_sbuf(&ucb);
 		}
 		else if(!ucb.path && p2b.path)
 		{
 			write_status(client, 3, p2b.path, cntr);
-			sbuf_to_manifest(&p2b, mp, mzp);
+			if(sbuf_to_manifest(&p2b, mp, mzp)) { ret=-1; break; }
 			free_sbuf(&p2b);
 		}
 		else if(!ucb.path && !p2b.path) 
@@ -84,20 +84,20 @@ int backup_phase3_server(const char *phase2data, const char *unchangeddata, cons
 		{
 			// They were the same - write one and free both.
 			write_status(client, 3, p2b.path, cntr);
-			sbuf_to_manifest(&p2b, mp, mzp);
+			if(sbuf_to_manifest(&p2b, mp, mzp)) { ret=-1; break; }
 			free_sbuf(&p2b);
 			free_sbuf(&ucb);
 		}
 		else if(pcmp<0)
 		{
 			write_status(client, 3, ucb.path, cntr);
-			sbuf_to_manifest(&ucb, mp, mzp);
+			if(sbuf_to_manifest(&ucb, mp, mzp)) { ret=-1; break; }
 			free_sbuf(&ucb);
 		}
 		else
 		{
 			write_status(client, 3, p2b.path, cntr);
-			sbuf_to_manifest(&p2b, mp, mzp);
+			if(sbuf_to_manifest(&p2b, mp, mzp)) { ret=-1; break; }
 			free_sbuf(&p2b);
 		}
 	}

@@ -4,85 +4,9 @@
 #include "log.h"
 
 #ifdef HAVE_WIN32
-pid_t forkchild(FILE **sin, FILE **sout, FILE **serr, const char *path, char * const argv[])
-{
-/*
-	pid_t pid=-1;
-	HANDLE hChildStdinRd, hChildStdinWr, hChildStdinWrDup,
-		hChildStdoutRd, hChildStdoutWr, hChildStdoutRdDup,
-		hInputFile;
-
-	SECURITY_ATTRIBUTES saAttr;
-
-	BOOL fSuccess;
-
-	hChildStdinRd = hChildStdinWr = hChildStdinWrDup =
-		hChildStdoutRd = hChildStdoutWr = hChildStdoutRdDup =
-		hInputFile = INVALID_HANDLE_VALUE;
-
-	// Set the bInheritHandle flag so pipe handles are inherited.
-
-	saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
-	saAttr.bInheritHandle = TRUE;
-	saAttr.lpSecurityDescriptor = NULL;
-
-	if (mode_read) {
-		// Create a pipe for the child process's STDOUT.
-		if (! CreatePipe(&hChildStdoutRd, &hChildStdoutWr, &saAttr, 0))
-		{
-			ErrorExit("Stdout pipe creation failed\n");
-			goto cleanup;
-		}
-		// Create noninheritable read handle and close the inheritable read
-		// handle.
-
-		fSuccess = DuplicateHandle(GetCurrentProcess(), hChildStdoutRd,
-			GetCurrentProcess(), &hChildStdoutRdDup , 0,
-			FALSE,
-			DUPLICATE_SAME_ACCESS);
-		if ( !fSuccess ) {
-			ErrorExit("DuplicateHandle failed");
-			goto cleanup;
-		}
-		CloseHandle(hChildStdoutRd);
-		hChildStdoutRd = INVALID_HANDLE_VALUE;
-	}
-
-	// spawn program with redirected handles as appropriate
-	pid = (pid_t) CreateChildProcess(prog,             // commandline
-			hChildStdinRd,    // stdin HANDLE
-			hChildStdoutWr,   // stdout HANDLE
-			hChildStdoutWr);  // stderr HANDLE
-
-	if ((HANDLE) pid == INVALID_HANDLE_VALUE)
-		goto cleanup;
-
-	if (mode_read) {
-		CloseHandle(hChildStdoutWr); // close our write side so when
-		// process terminates we can
-		// detect eof.
-		// ugly but convert WIN32 HANDLE to FILE*
-		int rfd = _open_osfhandle((intptr_t)hChildStdoutRdDup, O_RDONLY | O_BINARY);
-		if (rfd >= 0) {
-			if(sin) *sin = _fdopen(rfd, "rb");
-		}
-	}
-
-	return pid;
-
-cleanup:
-
-	CloseIfValid(hChildStdoutRd);
-	CloseIfValid(hChildStdoutRdDup);
-	CloseIfValid(hChildStdinWr);
-	CloseIfValid(hChildStdinWrDup);
-
-	errno = b_errno_win32;            // do GetLastError() for error code
-*/
-	return -1;
-}
-
+	// Windows version of forkchild is in src/win32/compat/compat.cpp
 #else
+
 static pid_t forkchild_fd(int sin, int sout, int serr, const char *path, char * const argv[])
 {
 	pid_t pid;
@@ -137,4 +61,4 @@ pid_t forkchild(FILE **sin, FILE **sout, FILE **serr, const char *path, char * c
 	return pid;
 }
 
-#endif // HAVE_WIN32
+#endif

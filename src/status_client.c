@@ -255,13 +255,9 @@ int status_client(struct config *conf, const char *cstatus)
 					rbuf=(char *)realloc(rbuf, r+l+1);
 					if(!r) *rbuf='\0';
 					strcat(rbuf+r, buf);
+					continue;
 				}
-				if(l<0)
-				{
-					ret=-1;
-					break;
-				}
-				continue;
+				if(l<0) ret=-1;
 			}
 
 			break;
@@ -269,7 +265,7 @@ int status_client(struct config *conf, const char *cstatus)
 
 		if(!ret && rbuf) ret=parse_rbuf(rbuf, cstatus, conf);
 
-		if(rbuf)free(rbuf);
+		if(rbuf) free(rbuf);
 	}
 	close_fd(&fd);
 	return ret;

@@ -30,7 +30,10 @@ void init_config(struct config *conf)
 	conf->sdcount=0;
 	conf->iecount=0;
 	conf->fscount=0;
+	conf->ffcount=0;
+	conf->fifos=NULL;
 	conf->cross_all_filesystems=0;
+	conf->read_all_fifos=0;
 	conf->ssl_cert_ca=NULL;
         conf->ssl_cert=NULL;
         conf->ssl_cert_password=NULL;
@@ -97,6 +100,7 @@ void free_config(struct config *conf)
 	free_backupdirs(conf->startdir, conf->sdcount);
 	free_backupdirs(conf->incexcdir, conf->iecount);
 	free_backupdirs(conf->fschgdir, conf->fscount);
+	free_backupdirs(conf->fifos, conf->ffcount);
 
 	if(conf->timer_script) free(conf->timer_script);
 	free_backupdirs(conf->timer_arg, conf->tacount);
@@ -213,6 +217,7 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 	struct backupdir **sdlist=NULL;
 	struct backupdir **ielist=NULL;
 	struct backupdir **fslist=NULL;
+	struct backupdir **fflist=NULL;
 	struct backupdir **talist=NULL;
 	struct backupdir **nslist=NULL;
 	struct backupdir **nflist=NULL;
@@ -286,6 +291,10 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 		{
 			conf->cross_all_filesystems=atoi(value);
 		}
+		else if(!strcmp(field, "read_all_fifos"))
+		{
+			conf->read_all_fifos=atoi(value);
+		}
 		else if(!strcmp(field, "max_children"))
 		{
 			if((conf->max_children=atoi(value))<=0)
@@ -354,6 +363,14 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 			if(tmp)
 			{
 				if(add_backup_dir(&fslist, &(conf->fscount),
+					tmp, 0)) return -1;
+				free(tmp); tmp=NULL;
+			}
+			if(get_conf_val(field, value,
+			  "read_fifo", &tmp)) return -1;
+			if(tmp)
+			{
+				if(add_backup_dir(&fflist, &(conf->ffcount),
 					tmp, 0)) return -1;
 				free(tmp); tmp=NULL;
 			}
@@ -427,6 +444,11 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 		}
 	}
 	fclose(fp);
+
+	if(conf->ffcount) qsort(fflist, conf->ffcount,
+		sizeof(*fflist),
+		(int (*)(const void *, const void *))myalphasort);
+	conf->fifos=fflist;
 
 	if(conf->fscount) qsort(fslist, conf->fscount,
 		sizeof(*fslist),

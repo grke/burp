@@ -154,14 +154,20 @@ static int sbuf_to_fp(struct sbuf *sb, FILE *mp)
 {
 	if(sb->path)
 	{
-		if(sb->datapth)
-			send_msg_fp(mp, 't', sb->datapth, strlen(sb->datapth));
-		send_msg_fp(mp, 'r', sb->statbuf, sb->slen);
-		send_msg_fp(mp, sb->cmd, sb->path, sb->plen);
-		if(sb->linkto)
-			send_msg_fp(mp, sb->cmd, sb->linkto, sb->llen);
+		if(sb->datapth
+		  && send_msg_fp(mp, 't', sb->datapth, strlen(sb->datapth)))
+			return -1;
+		if(send_msg_fp(mp, 'r', sb->statbuf, sb->slen)
+		  || send_msg_fp(mp, sb->cmd, sb->path, sb->plen))
+			return -1;
+		if(sb->linkto
+		  && send_msg_fp(mp, sb->cmd, sb->linkto, sb->llen))
+			return -1;
 		if(sbuf_is_file(sb) || sbuf_is_encrypted_file(sb))
-			send_msg_fp(mp, 'x', sb->endfile, sb->elen);
+		{
+			if(send_msg_fp(mp, 'x', sb->endfile, sb->elen))
+				return -1;
+		}
 	}
 	return 0;
 }
@@ -170,14 +176,20 @@ static int sbuf_to_zp(struct sbuf *sb, gzFile zp)
 {
 	if(sb->path)
 	{
-		if(sb->datapth)
-			send_msg_zp(zp, 't', sb->datapth, strlen(sb->datapth));
-		send_msg_zp(zp, 'r', sb->statbuf, sb->slen);
-		send_msg_zp(zp, sb->cmd, sb->path, sb->plen);
-		if(sb->linkto)
-			send_msg_zp(zp, sb->cmd, sb->linkto, sb->llen);
+		if(sb->datapth
+		  && send_msg_zp(zp, 't', sb->datapth, strlen(sb->datapth)))
+			return -1;
+		if(send_msg_zp(zp, 'r', sb->statbuf, sb->slen)
+		  || send_msg_zp(zp, sb->cmd, sb->path, sb->plen))
+			return -1;
+		if(sb->linkto
+		  && send_msg_zp(zp, sb->cmd, sb->linkto, sb->llen))
+			return -1;
 		if(sbuf_is_file(sb) || sbuf_is_encrypted_file(sb))
-			send_msg_zp(zp, 'x', sb->endfile, sb->elen);
+		{
+			if(send_msg_zp(zp, 'x', sb->endfile, sb->elen))
+				return -1;
+		}
 	}
 	return 0;
 }

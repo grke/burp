@@ -176,6 +176,15 @@ static int fs_change_is_allowed(struct config *conf, const char *fname)
 	return 0;
 }
 
+static int need_to_read_fifo(struct config *conf, const char *fname)
+{
+	int i=0;
+	if(conf->read_all_fifos) return 1;
+	for(i=0; i<conf->ffcount; i++)
+		if(!strcmp(conf->fifos[i]->path, fname)) return 1;
+	return 0;
+}
+
 /*
  * Find a single file.
  * handle_file is the callback for handling the file.
@@ -635,13 +644,13 @@ find_one_file(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
     * crw-r----- 1 root  operator - 116, 0x00040002 Jun 9 19:32 /dev/ad0s3
     * crw-r----- 1 root  operator - 116, 0x00040002 Jun 9 19:32 /dev/rad0s3
     */
-   if (top_level && (S_ISBLK(ff_pkt->statp.st_mode) || S_ISCHR(ff_pkt->statp.st_mode))) {
+   if ((S_ISBLK(ff_pkt->statp.st_mode) || S_ISCHR(ff_pkt->statp.st_mode))) {
 #else
-   if (top_level && S_ISBLK(ff_pkt->statp.st_mode)) {
+   if (S_ISBLK(ff_pkt->statp.st_mode)) {
 #endif
       ff_pkt->type = FT_RAW;          /* raw partition */
-   } else if (top_level && S_ISFIFO(ff_pkt->statp.st_mode) &&
-              ff_pkt->flags & FO_READFIFO) {
+   } else if (S_ISFIFO(ff_pkt->statp.st_mode) &&
+		need_to_read_fifo(conf, ff_pkt->fname)) {
       ff_pkt->type = FT_FIFO;
    } else {
       /* The only remaining types are special (character, ...) files */

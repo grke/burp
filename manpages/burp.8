@@ -192,6 +192,12 @@ Allow backups to cross a particular filesystem mountpoint.
 \fBcross_all_filesystems=[0|1]\fR
 Allow backups to cross all filesystem mountpoints.
 .TP
+\fBread_fifo=[path]\fR
+Do not back up the given fifo itself, but open it for reading and back up the contents as if it were a regular file.
+.TP
+\fBread_all_fifos=[0|1]\fR
+Open all fifos for reading and back up the contents as if they were regular files.
+.TP
 \fBssl_cert_ca=[path]\fR
 The path to the SSL CA certificate. This file will probably be the same on both the server and the client. The file should contain just the certificate in PEM format
 .TP
@@ -204,6 +210,23 @@ The SSL certificate password.
 \fBencryption_password=[password]\fR
 Set this to enable client side file Blowfish encryption. If you do not want encypryption, leave this field out of your config file. \fBIMPORTANT:\fR Configuring this renders delta differencing pointless, since the smallest real change to a file will make the whole file look different. Therefore, activating this option turns off delta differencing so that whenever a client file changes, the whole new file will be uploaded on the next backup. \fBALSO IMPORTANT:\fR If you manage to lose your encryption password, you will not be able to unencrypt your files. You should therefore think about having a copy of the encryption password somewhere off-box, in case of your client hard disk failing. \fBFINALLY:\fR If you change your encryption password, you will end up with a mixture of files on the server with different encryption and it may become tricky to restore more than one file at a time. For this reason, if you change your encryption password, you may want to start a fresh chain of backups (by moving the original set aside, for example). Burp will cope fine with turning the same encryption password on and off between backups, and will restore a backup of mixed encrypted and unencrypted files without a problem.
 .TP
+\fBbackup_script_pre=[path]\fR
+Path to a script to run before a backup.
+.TP
+\fBbackup_script_post=[path]\fR
+Path to a script to run after a backup.
+.TP
+\fBbackup_script_post_run_on_fail=[0|1]\fR
+If this is set to 1, backup_script_post will be run whether the backup succeeds or not. The default is 0, which means that backup_script_post will only be run if the backup succeeds.
+.TP
+\fBrestore_script_pre=[path]\fR
+Path to a script to run before a restore.
+.TP
+\fBrestore_script_post=[path]\fR
+Path to a script to run after a restore.
+.TP
+\fBrestore_script_post_run_on_fail=[0|1]\fR
+If this is set to 1, restore_script_post will be run whether the restore succeeds or not. The default is 0, which means that restore_script_post will only be run if the restore succeeds.
 
 .SH SERVER CLIENTCONFDIR FILE
 .TP

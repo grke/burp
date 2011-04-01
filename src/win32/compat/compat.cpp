@@ -2087,3 +2087,237 @@ file_dup2(int, int)
 /* syslog function, added by Nicolas Boichat */
 void openlog(const char *ident, int option, int facility) {}  
 #endif //HAVE_MINGW
+
+
+/**
+ * Create the process with WCHAR API
+ */
+static BOOL
+CreateChildProcessW(const char *comspec, const char *cmdLine,
+                    PROCESS_INFORMATION *hProcInfo,
+                    HANDLE in, HANDLE out, HANDLE err)
+{
+   STARTUPINFOW siStartInfo;
+   BOOL bFuncRetn = FALSE;
+
+   // Set up members of the STARTUPINFO structure.
+   ZeroMemory( &siStartInfo, sizeof(siStartInfo) );
+   siStartInfo.cb = sizeof(siStartInfo);
+   // setup new process to use supplied handles for stdin,stdout,stderr
+
+   siStartInfo.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
+   siStartInfo.wShowWindow = SW_SHOWMINNOACTIVE;
+
+   siStartInfo.hStdInput = in;
+   siStartInfo.hStdOutput = out;
+   siStartInfo.hStdError = err;
+
+   // Convert argument to WCHAR
+   char *cmdLine_wchar = (char *)malloc(PM_FNAME);
+   char *comspec_wchar = (char *)malloc(PM_FNAME);
+
+   UTF8_2_wchar(&cmdLine_wchar, cmdLine);
+   UTF8_2_wchar(&comspec_wchar, comspec);
+
+   // try to execute program
+   bFuncRetn = p_CreateProcessW((WCHAR*)comspec_wchar,
+                                (WCHAR*)cmdLine_wchar,// command line
+                                NULL,      // process security attributes
+                                NULL,      // primary thread security attributes
+                                TRUE,      // handles are inherited
+                                0,         // creation flags
+                                NULL,      // use parent's environment
+                                NULL,      // use parent's current directory
+                                &siStartInfo,  // STARTUPINFO pointer
+                                hProcInfo);   // receives PROCESS_INFORMATION
+   if(cmdLine_wchar) free(cmdLine_wchar);
+   if(comspec_wchar) free(comspec_wchar);
+
+   return bFuncRetn;
+}
+
+/**
+ * Create the process with ANSI API
+ */
+static BOOL
+CreateChildProcessA(const char *comspec, char *cmdLine,
+                    PROCESS_INFORMATION *hProcInfo,
+                    HANDLE in, HANDLE out, HANDLE err)
+{
+   STARTUPINFOA siStartInfo;
+   BOOL bFuncRetn = FALSE;
+
+   // Set up members of the STARTUPINFO structure.
+   ZeroMemory( &siStartInfo, sizeof(siStartInfo) );
+   siStartInfo.cb = sizeof(siStartInfo);
+   // setup new process to use supplied handles for stdin,stdout,stderr
+   siStartInfo.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
+   siStartInfo.wShowWindow = SW_SHOWMINNOACTIVE;
+
+   siStartInfo.hStdInput = in;
+   siStartInfo.hStdOutput = out;
+   siStartInfo.hStdError = err;
+
+   // try to execute program
+   bFuncRetn = p_CreateProcessA(comspec,
+                                cmdLine,  // command line
+                                NULL,     // process security attributes
+                                NULL,     // primary thread security attributes
+                                TRUE,     // handles are inherited
+                                0,        // creation flags
+                                NULL,     // use parent's environment
+                                NULL,     // use parent's current directory
+                                &siStartInfo,// STARTUPINFO pointer
+                                hProcInfo);// receives PROCESS_INFORMATION
+   return bFuncRetn;
+}
+
+/**
+ * OK, so it would seem CreateProcess only handles true executables:
+ * .com or .exe files.  So grab $COMSPEC value and pass command line to it.
+ */
+HANDLE
+CreateChildProcess(const char *cmdline, HANDLE in, HANDLE out, HANDLE err)
+{
+   static const char *comspec = NULL;
+   PROCESS_INFORMATION piProcInfo;
+   BOOL bFuncRetn = FALSE;
+
+   if (!p_CreateProcessA || !p_CreateProcessW)
+      return INVALID_HANDLE_VALUE;
+
+   if (comspec == NULL)
+      comspec = getenv("COMSPEC");
+   if (comspec == NULL) // should never happen
+      return INVALID_HANDLE_VALUE;
+
+   // Set up members of the PROCESS_INFORMATION structure.
+   ZeroMemory( &piProcInfo, sizeof(PROCESS_INFORMATION) );
+
+   // if supplied handles are not used the send a copy of our STD_HANDLE
+   // as appropriate
+   if (in == INVALID_HANDLE_VALUE)
+      in = GetStdHandle(STD_INPUT_HANDLE);
+
+   if (out == INVALID_HANDLE_VALUE)
+      out = GetStdHandle(STD_OUTPUT_HANDLE);
+
+   if (err == INVALID_HANDLE_VALUE)
+      err = GetStdHandle(STD_ERROR_HANDLE);
+
+   char *exeFile;
+   const char *argStart;
+
+   if (!GetApplicationName(cmdline, &exeFile, &argStart)) {
+      return INVALID_HANDLE_VALUE;
+   }
+
+   char cmdLine[PM_FNAME];
+   snprintf(cmdLine, sizeof(cmdLine), "%s /c %s%s", comspec, exeFile, argStart);
+
+   free(exeFile);
+
+   // New function disabled
+   if (p_CreateProcessW && p_MultiByteToWideChar) {
+      bFuncRetn = CreateChildProcessW(comspec, cmdLine, &piProcInfo,
+                                      in, out, err);
+   } else {
+      bFuncRetn = CreateChildProcessA(comspec, cmdLine, &piProcInfo,
+                                      in, out, err);
+   }
+
+   if (bFuncRetn == 0) {
+      ErrorExit("CreateProcess failed\n");
+      const char *err = errorString();
+      LocalFree((void *)err);
+      return INVALID_HANDLE_VALUE;
+   }
+   // we don't need a handle on the process primary thread so we close
+   // this now.
+   CloseHandle(piProcInfo.hThread);
+   return piProcInfo.hProcess;
+}
+
+static void
+CloseIfValid(HANDLE handle)
+{
+    if (handle != INVALID_HANDLE_VALUE)
+        CloseHandle(handle);
+}
+
+pid_t forkchild(FILE **sin, FILE **sout, FILE **serr, const char *path, char * const argv[])
+{
+	pid_t pid=-1;
+	int mode_read=1;
+	HANDLE hChildStdinRd, hChildStdinWr, hChildStdinWrDup,
+		hChildStdoutRd, hChildStdoutWr, hChildStdoutRdDup,
+		hInputFile;
+
+	SECURITY_ATTRIBUTES saAttr;
+
+	BOOL fSuccess;
+
+	hChildStdinRd = hChildStdinWr = hChildStdinWrDup =
+		hChildStdoutRd = hChildStdoutWr = hChildStdoutRdDup =
+		hInputFile = INVALID_HANDLE_VALUE;
+
+	// Set the bInheritHandle flag so pipe handles are inherited.
+
+	saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
+	saAttr.bInheritHandle = TRUE;
+	saAttr.lpSecurityDescriptor = NULL;
+
+	if (mode_read) {
+		// Create a pipe for the child process's STDOUT.
+		if (! CreatePipe(&hChildStdoutRd, &hChildStdoutWr, &saAttr, 0))
+		{
+			ErrorExit("Stdout pipe creation failed\n");
+			goto cleanup;
+		}
+		// Create noninheritable read handle and close the inheritable read
+		// handle.
+
+		fSuccess = DuplicateHandle(GetCurrentProcess(), hChildStdoutRd,
+			GetCurrentProcess(), &hChildStdoutRdDup , 0,
+			FALSE,
+			DUPLICATE_SAME_ACCESS);
+		if ( !fSuccess ) {
+			ErrorExit("DuplicateHandle failed");
+			goto cleanup;
+		}
+		CloseHandle(hChildStdoutRd);
+		hChildStdoutRd = INVALID_HANDLE_VALUE;
+	}
+
+	// spawn program with redirected handles as appropriate
+	pid = (pid_t) CreateChildProcess(path,             // commandline
+			hChildStdinRd,    // stdin HANDLE
+			hChildStdoutWr,   // stdout HANDLE
+			hChildStdoutWr);  // stderr HANDLE
+
+	if ((HANDLE) pid == INVALID_HANDLE_VALUE)
+		goto cleanup;
+
+	if (mode_read) {
+		CloseHandle(hChildStdoutWr); // close our write side so when
+		// process terminates we can
+		// detect eof.
+		// ugly but convert WIN32 HANDLE to FILE*
+		int rfd = _open_osfhandle((intptr_t)hChildStdoutRdDup, O_RDONLY | O_BINARY);
+		if (rfd >= 0) {
+			if(sin) *sin = _fdopen(rfd, "rb");
+		}
+	}
+
+	return pid;
+
+cleanup:
+
+	CloseIfValid(hChildStdoutRd);
+	CloseIfValid(hChildStdoutRdDup);
+	CloseIfValid(hChildStdinWr);
+	CloseIfValid(hChildStdinWrDup);
+
+	errno = b_errno_win32;            // do GetLastError() for error code
+	return -1;
+}

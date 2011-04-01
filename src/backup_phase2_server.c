@@ -108,7 +108,11 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, gzFile uczp, co
 		{
 			// got an unchanged file
 			//logp("got unchanged file: %s\n", cb->path);
-			sbuf_to_manifest(cb, NULL, uczp);
+			if(sbuf_to_manifest(cb, NULL, uczp))
+			{
+				free_sbuf(cb);
+				return -1;
+			}
 			do_filecounter_bytes(cntr,
 				 strtoull(cb->endfile, NULL, 10));
 			free_sbuf(cb);
@@ -293,13 +297,17 @@ static int do_stuff_to_receive(struct sbuf *rb, FILE *p2fp, const char *datadirt
 					ret=-1;
 				else
 				{
-					sbuf_to_manifest(rb, p2fp, NULL);
-					do_filecounter(cntr, rb->receivedelta?'x':'F', 0);
-					if(*last_requested
-					  && !strcmp(rb->path, *last_requested))
+					if(sbuf_to_manifest(rb, p2fp, NULL))
+						ret=-1;
+					else
 					{
+					  do_filecounter(cntr, rb->receivedelta?'x':'F', 0);
+					  if(*last_requested
+					  && !strcmp(rb->path, *last_requested))
+					  {
 						free(*last_requested);
 						*last_requested=NULL;
+					  }
 					}
 				}
 
@@ -449,7 +457,10 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzF
 
 			// If it is not file data, we are not currently
 			// interested. Write it to the unchanged file.
-			sbuf_to_manifest(&p1b, NULL, uczp);
+			if(sbuf_to_manifest(&p1b, NULL, uczp))
+			{
+				ret=-1; quit++;
+			}
 		   }
 		   if(ret || !p1zp) continue;
 

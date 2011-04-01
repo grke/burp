@@ -29,6 +29,7 @@ static int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cnt
 		return -1;
 	do_filecounter(cntr, 'L', 1);
       break;
+   case FT_FIFO:
    case FT_REGE:
    case FT_REG:
       encode_stat(attribs, &ff->statp);
@@ -110,9 +111,6 @@ static int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cnt
       break;
    case FT_RAW:
       logw(cntr, _("Err: Raw partition: %s"), ff->fname);
-      break;
-   case FT_FIFO:
-      logw(cntr, _("Err: Fifo: %s"), ff->fname);
       break;
    default:
       logw(cntr, _("Err: Unknown file ff->type %d: %s"), ff->type, ff->fname);

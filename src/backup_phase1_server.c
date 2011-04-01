@@ -46,9 +46,10 @@ int backup_phase1_server(const char *phase1data, const char *client, struct cntr
 		{
 			if(!strcmp(buf, "backupphase2"))
 			{
-				if(async_write_str('c', "ok")) ret=-1;
-				send_msg_zp(p1zp, 'c',
-					"phase1end", strlen("phase1end"));
+				if(async_write_str('c', "ok")
+				  || send_msg_zp(p1zp, 'c',
+					"phase1end", strlen("phase1end")))
+						ret=-1;
 				break;
 			}
 			else
@@ -65,7 +66,11 @@ int backup_phase1_server(const char *phase1data, const char *client, struct cntr
 		}
 		else
 		{
-			send_msg_zp(p1zp, cmd, buf, len);
+			if(send_msg_zp(p1zp, cmd, buf, len))
+			{
+				ret=-1;
+				break;
+			}
 			// TODO - Flaky, do this better
 			if(cmd=='r') expect_file_type++;
 			else if(expect_file_type)

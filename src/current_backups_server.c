@@ -411,7 +411,7 @@ int compress_file(const char *src, const char *dst)
 	char *dsttmp=NULL;
 	pid_t pid=getpid();
 	char p[12]="";
-	snprintf(p, sizeof(p), "%d", pid);
+	snprintf(p, sizeof(p), "%d", (int)pid);
 
 	if(!(dsttmp=prepend(dst, p, strlen(p), 0 /* no slash */)))
 		return -1;

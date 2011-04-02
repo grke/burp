@@ -77,7 +77,10 @@ static int run_script(const char *script, struct cntr *cntr)
 
 	fflush(stdout); fflush(stderr);
 	if((p=forkchild(NULL, &sout, &serr, cmd[0], cmd))==-1) return -1;
-
+#ifdef HAVE_WIN32
+	// My windows forkchild currently just executes, then returns.
+	return 0;
+#endif
 	do {
 		log_script_output("", &sout, cntr);
 		log_script_output("", &serr, cntr);

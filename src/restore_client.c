@@ -207,10 +207,10 @@ static int restore_file(char cmd, const char *fname, struct stat *statp, enum ac
 static int restore_special(char cmd, const char *fname, struct stat *statp, enum action act, struct cntr *cntr)
 {
 	int ret=0;
+	char *rpath=NULL;
 #ifdef HAVE_WIN32
 	logw(cntr, "Cannot restore special files to Windows: %s\n", fname);
 #else
-	char *rpath=NULL;
 
 	if(act==ACTION_VERIFY)
 	{

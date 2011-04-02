@@ -56,12 +56,12 @@ nodes.
 <li>Storage and network compression using zlib.
 <li>Ability to continue interrupted backups. 
 <li>SSL.
-<li>Client side encryption - using this feature means that delta differencing
-is pointless. If a file changes at all, the whole file will be transferred in
-the next backup.
+<li>Client side encryption - (note: this turns off delta differencing).
 <li>Scheduling.
 <li>Email backup success/failure notifications.
 <li>A live monitor on the server.
+<li>Fifo read/write support.
+<li>Pre/post backup/restore client scripts.
 </ul>
 </FONT>
 </P>
@@ -76,12 +76,11 @@ Q. What is on the roadmap? What doesn't work?
 <FONT COLOR="#99CCFF">
 A. The following items are on my TODO list:
 <ul>
-<li>Add ability to have pre/post client scripts.
 <li>Investigate HFS / resource forks and Mac support.
-<li>Add fifo read support.
 <li>Add include/exclude wildcards.
 <li>Add xattr/acl support.
 <li>Add an ncurses wrapper to the monitor commands.
+<li>Add an option to turn off storage compression.
 </ul>
 </FONT>
 </P>

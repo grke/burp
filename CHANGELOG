@@ -1,3 +1,9 @@
+2011-04-02 Changes in burp-1.1.40:
+  * Ability to run client pre/post backup/restore scripts.
+  * Ability to read data from fifos (and restore to them).
+  * Fixed a bug when restoring the first link in a directory.
+  * Fixed a bug that prevented giving a backup number when using the verify option.
+
 2011-03-27 Changes in burp-1.1.30:
   * First pass at having a live status monitor.
   * Fixed a bug that meant you couldn't restore links.

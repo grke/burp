@@ -7,16 +7,7 @@
 
 * Investigate HFS / resource forks and make support.
 
-* Add ability to have pre/post client scripts.
-
-* Add fifo read support.
-
 * Add include/exclude wildcards.
-
-* Think about having an ncurses style monitor for the server.
-  Probably best make some sort of generic interface that can have different
-  front-ends.
-  Think about a way of doing something similar on the client.
 
 * Think about adding a utility to create certs, like easy-rsa from OpenVPN.
 
@@ -28,3 +19,5 @@
 * Add xattr/acl support.
 
 * Add an ncurses wrapper to the monitor commands.
+
+* Add an option to turn of storage compression.

@@ -48,14 +48,24 @@ The main author of Burp is Graham Keeling.
 <TD ALIGN="LEFT">
 
 <P>
-<FONT COLOR="#99CCFF">2011-03-28: git repository added. See the DOWNLOADS
-page.
+<FONT COLOR="#99CCFF">2011-04-02: burp-1.1.40 is released.
+<pre>
+Changes in burp-1.1.40:
+  * Ability to run client pre/post backup/restore scripts.
+  * Ability to read data from fifos (and restore to them).
+  * Fixed a bug when restoring the first link in a directory.
+  * Fixed a bug that prevented giving a backup number when using the verify option.
+</pre>
 </FONT>
 </P>
 
 <P>
-<FONT COLOR="#99CCFF">2011-03-27: burp-1.1.30 is released. See the DOWNLOADS
-page.
+<FONT COLOR="#99CCFF">2011-03-28: git repository added.
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">2011-03-27: burp-1.1.30 is released.
 <pre>
 Changes in burp-1.1.30:
   * First pass at having a live status monitor.
@@ -66,8 +76,7 @@ Changes in burp-1.1.30:
 </P>
 
 <P>
-<FONT COLOR="#99CCFF">2011-03-18: burp-1.1.22 is released. See the DOWNLOADS
-page.
+<FONT COLOR="#99CCFF">2011-03-18: burp-1.1.22 is released.
 <pre>
 Changes in burp-1.1.22:
   * Added scheduling.
@@ -80,8 +89,7 @@ Changes in burp-1.1.22:
 </P>
 
 <P>
-<FONT COLOR="#99CCFF">2011-03-10: burp-1.1.14 is released. See the DOWNLOADS
-page.
+<FONT COLOR="#99CCFF">2011-03-10: burp-1.1.14 is released.
 <pre>
 Changes in burp-1.1.14:
   * Added client-side blowfish file encryption. See the man page for details.
@@ -94,8 +102,7 @@ Changes in burp-1.1.14:
 </P>
 
 <P>
-<FONT COLOR="#99CCFF">2011-03-02: burp-1.1.5 is released. See the DOWNLOADS
-page.
+<FONT COLOR="#99CCFF">2011-03-02: burp-1.1.5 is released.
 <pre>
 Changes in burp-1.1.5:
   * Added a 'verify' command. See the man page for details.
@@ -107,8 +114,7 @@ Changes in burp-1.1.5:
 </P>
 
 <P>
-<FONT COLOR="#99CCFF">2011-02-27: burp-1.1.0 is released. See the DOWNLOADS
-page.
+<FONT COLOR="#99CCFF">2011-02-27: burp-1.1.0 is released.
 <pre>
 Changes in burp-1.1.0:
   * Added openssl.
@@ -151,8 +157,7 @@ Changes in burp-1.1.0:
 <FONT COLOR="#99CCFF">2011-01-25: burp-1.0.5 is released.</FONT>
 </P>
 <P>
-<FONT COLOR="#99CCFF">2011-01-25: mailling list created. See the CONTACT page.
-</FONT>
+<FONT COLOR="#99CCFF">2011-01-25: mailling list created.</FONT>
 </P>
 <P>
 <FONT COLOR="#99CCFF">2011-01-23: burp-1.0.3 is released.</FONT>

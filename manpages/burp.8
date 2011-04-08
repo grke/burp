@@ -213,8 +213,14 @@ Set this to enable client side file Blowfish encryption. If you do not want ency
 \fBbackup_script_pre=[path]\fR
 Path to a script to run before a backup.
 .TP
+\fBbackup_script_pre_arg=[string]\fR
+A user-definable argument to the backup pre script. You can have many of these.
+.TP
 \fBbackup_script_post=[path]\fR
 Path to a script to run after a backup.
+.TP
+\fBbackup_script_post_arg=[string]\fR
+A user-definable argument to the backup post script. You can have many of these.
 .TP
 \fBbackup_script_post_run_on_fail=[0|1]\fR
 If this is set to 1, backup_script_post will be run whether the backup succeeds or not. The default is 0, which means that backup_script_post will only be run if the backup succeeds.
@@ -222,8 +228,14 @@ If this is set to 1, backup_script_post will be run whether the backup succeeds 
 \fBrestore_script_pre=[path]\fR
 Path to a script to run before a restore.
 .TP
+\fBrestore_script_pre_arg=[string]\fR
+A user-definable argument to the restore pre script. You can have many of these.
+.TP
 \fBrestore_script_post=[path]\fR
 Path to a script to run after a restore.
+.TP
+\fBrestore_script_post_arg=[string]\fR
+A user-definable argument to the restore post script. You can have many of these.
 .TP
 \fBrestore_script_post_run_on_fail=[0|1]\fR
 If this is set to 1, restore_script_post will be run whether the restore succeeds or not. The default is 0, which means that restore_script_post will only be run if the restore succeeds.

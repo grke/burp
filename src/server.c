@@ -751,78 +751,10 @@ static int get_lock_and_clean(const char *basedir, const char *lockfile, const c
 	return ret;
 }
 
-static void log_script_output(const char *str, FILE **fp)
-{
-	char buf[256]="";
-	if(fp && *fp)
-	{
-		while(fgets(buf, sizeof(buf), *fp))
-			logp("%s%s", str, buf);
-		if(feof(*fp))
-		{
-			fclose(*fp);
-			*fp=NULL;
-		}
-	}
-}
-
-static int run_script(const char *script, struct backupdir **userargs, int userargc, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5)
-{
-	int a=0;
-	int l=0;
-	pid_t p;
-	int pid_status=0;
-	FILE *serr=NULL;
-	FILE *sout=NULL;
-	char *cmd[64]={ NULL };
-
-	if(!script) return 0;
-
-	cmd[l++]=(char *)script;
-	if(arg1) cmd[l++]=(char *)arg1;
-	if(arg2) cmd[l++]=(char *)arg2;
-	if(arg3) cmd[l++]=(char *)arg3;
-	if(arg4) cmd[l++]=(char *)arg4;
-	if(arg5) cmd[l++]=(char *)arg5;
-	for(a=0; a<userargc && l<64-1; a++)
-		cmd[l++]=userargs[a]->path;
-	cmd[l++]=NULL;
-
-	fflush(stdout); fflush(stderr);
-	if((p=forkchild(NULL, &sout, &serr, cmd[0], cmd))==-1) return -1;
-
-	do {
-		log_script_output("", &sout);
-		log_script_output("", &serr);
-	} while(!(a=waitpid(p, &pid_status, WNOHANG)));
-	log_script_output("", &sout);
-	log_script_output("", &serr);
-
-	if(a<0)
-	{
-		logp("waitpid error: %s\n", strerror(errno));
-		return -1;
-	}
-
-	if(WIFEXITED(pid_status))
-	{
-		int ret=WEXITSTATUS(pid_status);
-		logp("Script returned: %d\n", ret);
-		return ret;
-	}
-	else if(WIFSIGNALED(pid_status))
-		logp("%s terminated on signal %s\n",
-			cmd[0], WTERMSIG(pid_status));
-	else
-		logp("Strange return when trying to run script\n");
-	
-	return -1;
-}
-
-static int run_script_w(const char *script, struct backupdir **userargs, int userargc, const char *client, const char *current)
+static int run_script_w(const char *script, struct backupdir **userargs, int userargc, const char *client, const char *current, struct cntr *cntr)
 {
 	return run_script(script, userargs, userargc, client, current,
-		"reserved1", "reserved2", "reserved3");
+		"reserved1", "reserved2", "reserved3", cntr);
 }
 
 static int child(struct config *conf, struct config *cconf, const char *client)
@@ -903,7 +835,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 					cconf->timer_script,
 					cconf->timer_arg,
 					cconf->tacount,
-					client, current))<0)
+					client, current, &cntr))<0)
 				{
 					ret=tret;
 					logp("Error running timer script for %s\n", client);
@@ -939,7 +871,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 						cconf->nfcount,
 						client, current,
 						working, finishing,
-						"reserved");
+						"reserved", &cntr);
 				else
 					run_script(
 						cconf->notify_success_script,
@@ -947,7 +879,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 						cconf->nscount,
 						client, current,
 						working, finishing,
-						"reserved");
+						"reserved", &cntr);
 			}
 		}
 	}

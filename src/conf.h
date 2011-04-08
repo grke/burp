@@ -49,10 +49,18 @@ struct config
 	int ffcount;
 	char *encryption_password;
 	char *backup_script_pre;
+	struct backupdir **backup_script_pre_arg;
+	int bprecount;
 	char *backup_script_post;
+	struct backupdir **backup_script_post_arg;
+	int bpostcount;
 	int   backup_script_post_run_on_fail;
 	char *restore_script_pre;
+	struct backupdir **restore_script_pre_arg;
+	int rprecount;
 	char *restore_script_post;
+	struct backupdir **restore_script_post_arg;
+	int rpostcount;
 	int   restore_script_post_run_on_fail;
 
 // Client options on the server.

@@ -2092,7 +2092,8 @@ void openlog(const char *ident, int option, int facility) {}
 
 pid_t forkchild(FILE **sin, FILE **sout, FILE **serr, const char *path, char * const argv[])
 {
-    char cmd[512]="";
+    int a=0;
+    char cmd[1024]="";
     STARTUPINFO si;
     PROCESS_INFORMATION pi;
 
@@ -2100,7 +2101,13 @@ pid_t forkchild(FILE **sin, FILE **sout, FILE **serr, const char *path, char * c
     si.cb = sizeof(si);
     ZeroMemory( &pi, sizeof(pi) );
 
-    snprintf(cmd, sizeof(cmd), "\"%s\"", path);
+    while(argv[a] && strlen(cmd)+strlen(argv[a])+10<sizeof(cmd))
+    {
+	if(a>0) strcat(cmd, " ");
+	strcat(cmd, "\"");
+	strcat(cmd, argv[a++]);
+	strcat(cmd, "\"");
+    }
     if( !CreateProcess( NULL,   
         cmd,        
         NULL,         

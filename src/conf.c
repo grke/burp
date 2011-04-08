@@ -55,11 +55,21 @@ void init_config(struct config *conf)
 	conf->nfcount=0;
 
 	conf->backup_script_pre=NULL;
+	conf->backup_script_pre_arg=NULL;
+	conf->bprecount=0;
+
 	conf->backup_script_post=NULL;
+	conf->backup_script_post_arg=NULL;
+	conf->bpostcount=0;
 	conf->backup_script_post_run_on_fail=0;
 
 	conf->restore_script_pre=NULL;
+	conf->restore_script_pre_arg=NULL;
+	conf->rprecount=0;
+
 	conf->restore_script_post=NULL;
+	conf->restore_script_post_arg=NULL;
+	conf->rpostcount=0;
 	conf->restore_script_post_run_on_fail=0;
 }
 
@@ -112,9 +122,13 @@ void free_config(struct config *conf)
 	free_backupdirs(conf->notify_failure_arg, conf->nfcount);
 
 	if(conf->backup_script_pre) free(conf->backup_script_pre);
+	free_backupdirs(conf->backup_script_pre_arg, conf->bprecount);
 	if(conf->backup_script_post) free(conf->backup_script_post);
+	free_backupdirs(conf->backup_script_post_arg, conf->bpostcount);
 	if(conf->restore_script_pre) free(conf->restore_script_pre);
+	free_backupdirs(conf->restore_script_pre_arg, conf->rprecount);
 	if(conf->restore_script_post) free(conf->restore_script_post);
+	free_backupdirs(conf->restore_script_post_arg, conf->rpostcount);
 
 	init_config(conf);
 }
@@ -207,6 +221,25 @@ static int myalphasort(struct backupdir **a, struct backupdir **b)
 	return pathcmp((*a)->path, (*b)->path);
 }
 
+static int get_conf_val_args(const char *field, const char *value, const char *opt, struct backupdir ***args, int *got_args, int *count, struct backupdir ***list, int include)
+{
+	char *tmp=NULL;
+	if(get_conf_val(field, value, opt, &tmp)) return -1;
+	if(tmp)
+	{
+		if(got_args && *got_args && args)
+		{
+			free_backupdirs(*args, *count);
+			*got_args=0;
+			*args=NULL;
+			*count=0;
+		}
+		if(add_backup_dir(list, count, tmp, include)) return -1;
+		free(tmp); tmp=NULL;
+	}
+	return 0;
+}
+
 int load_config(const char *config_path, struct config *conf, bool loadall)
 {
 	int i=0;
@@ -221,6 +254,10 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 	struct backupdir **talist=NULL;
 	struct backupdir **nslist=NULL;
 	struct backupdir **nflist=NULL;
+	struct backupdir **bprelist=NULL;
+	struct backupdir **bpostlist=NULL;
+	struct backupdir **rprelist=NULL;
+	struct backupdir **rpostlist=NULL;
 	int have_include=0;
 	int got_timer_args=conf->tacount;
 	int got_ns_args=conf->nscount;
@@ -310,7 +347,6 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 		}
 		else
 		{
-			char *tmp=NULL;
 			if(get_conf_val(field, value,
 			  "ssl_cert_ca", &(conf->ssl_cert_ca))) return -1;
 			if(get_conf_val(field, value,
@@ -337,110 +373,77 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 			if(get_conf_val(field, value,
 			  "encryption_password", &(conf->encryption_password)))
 				return -1;
-			if(get_conf_val(field, value,
-			  "include", &tmp)) return -1;
-			if(tmp)
-			{
-				if(strchr(tmp, '\\'))
-					logp("WARNING: Please use forward slashes '/' instead of backslashes '\\' in your include paths.\n");
-				if(add_backup_dir(&ielist, &(conf->iecount),
-					tmp, 1)) return -1;
-				have_include++;
-				free(tmp); tmp=NULL;
-			}
-			if(get_conf_val(field, value,
-			  "exclude", &tmp)) return -1;
-			if(tmp)
-			{
-				if(strchr(tmp, '\\'))
-					logp("WARNING: Please use forward slashes '/' instead of backslashes '\\' in your exclude paths.\n");
-				if(add_backup_dir(&ielist, &(conf->iecount),
-					tmp, 0)) return -1;
-				free(tmp); tmp=NULL;
-			}
-			if(get_conf_val(field, value,
-			  "cross_filesystem", &tmp)) return -1;
-			if(tmp)
-			{
-				if(add_backup_dir(&fslist, &(conf->fscount),
-					tmp, 0)) return -1;
-				free(tmp); tmp=NULL;
-			}
-			if(get_conf_val(field, value,
-			  "read_fifo", &tmp)) return -1;
-			if(tmp)
-			{
-				if(add_backup_dir(&fflist, &(conf->ffcount),
-					tmp, 0)) return -1;
-				free(tmp); tmp=NULL;
-			}
+			if(get_conf_val_args(field, value,
+				"include",
+				NULL, NULL, &(conf->iecount),
+				&ielist, 1)) return -1;
+			if(get_conf_val_args(field, value,
+				"exclude",
+				NULL, NULL, &(conf->iecount),
+				&ielist, 0)) return -1;
+			if(get_conf_val_args(field, value,
+				"cross_filesystem",
+				NULL, NULL, &(conf->fscount),
+				&fslist, 0)) return -1;
+			if(get_conf_val_args(field, value,
+				"read_fifo",
+				NULL, NULL, &(conf->ffcount),
+				&fflist, 0)) return -1;
 			if(get_conf_val(field, value,
 			  "timer_script", &(conf->timer_script))) return -1;
+			if(get_conf_val_args(field, value,
+				"timer_arg",
+				&(conf->timer_arg),
+				&got_timer_args, &(conf->tacount),
+				&talist, 0)) return -1;
 			if(get_conf_val(field, value,
-			  "timer_arg", &tmp)) return -1;
-			if(tmp)
-			{
-				if(got_timer_args)
-				{
-					free_backupdirs(conf->timer_arg,
-						conf->tacount);
-					got_timer_args=0;
-					conf->timer_arg=NULL;
-					conf->tacount=0;
-				}
-				if(add_backup_dir(&talist, &(conf->tacount),
-					tmp, 0)) return -1;
-				free(tmp); tmp=NULL;
-			}
+			  "notify_success_script",
+			  &(conf->notify_success_script))) return -1;
+			if(get_conf_val_args(field, value,
+				"notify_success_arg",
+				&(conf->notify_success_arg),
+				&got_ns_args, &(conf->nscount),
+				&nslist, 0)) return -1;
 			if(get_conf_val(field, value,
-			  "notify_success_script", &(conf->notify_success_script))) return -1;
+			  "notify_failure_script",
+			  &(conf->notify_failure_script))) return -1;
+			if(get_conf_val_args(field, value,
+				"notify_failure_arg",
+				&(conf->notify_failure_arg),
+				&got_nf_args, &(conf->nfcount),
+				&nflist, 0)) return -1;
 			if(get_conf_val(field, value,
-			  "notify_success_arg", &tmp)) return -1;
-			if(tmp)
-			{
-				if(got_ns_args)
-				{
-					free_backupdirs(conf->notify_success_arg,
-						conf->nscount);
-					got_ns_args=0;
-					conf->notify_success_arg=NULL;
-					conf->nscount=0;
-				}
-				if(add_backup_dir(&nslist, &(conf->nscount),
-					tmp, 0)) return -1;
-				free(tmp); tmp=NULL;
-			}
+			  "backup_script_pre",
+			  &(conf->backup_script_pre))) return -1;
+			if(get_conf_val_args(field, value,
+				"backup_script_pre",
+				&(conf->backup_script_pre_arg),
+				NULL, &(conf->bprecount),
+				&bprelist, 0)) return -1;
 			if(get_conf_val(field, value,
-			  "notify_failure_script", &(conf->notify_failure_script))) return -1;
+			  "backup_script_post",
+			  &(conf->backup_script_post))) return -1;
+			if(get_conf_val_args(field, value,
+				"backup_script_post",
+				&(conf->backup_script_post_arg),
+				NULL, &(conf->bpostcount),
+				&bpostlist, 0)) return -1;
 			if(get_conf_val(field, value,
-			  "notify_failure_arg", &tmp)) return -1;
-			if(tmp)
-			{
-				if(got_nf_args)
-				{
-					free_backupdirs(conf->notify_failure_arg,
-						conf->nfcount);
-					got_nf_args=0;
-					conf->notify_failure_arg=NULL;
-					conf->nfcount=0;
-				}
-				if(add_backup_dir(&nflist, &(conf->nfcount),
-					tmp, 0)) return -1;
-				free(tmp); tmp=NULL;
-			}
-
+			  "restore_script_pre",
+			  &(conf->restore_script_pre))) return -1;
+			if(get_conf_val_args(field, value,
+				"restore_script_pre",
+				&(conf->restore_script_pre_arg),
+				NULL, &(conf->rprecount),
+				&rprelist, 0)) return -1;
 			if(get_conf_val(field, value,
-			  "backup_script_pre", &(conf->backup_script_pre)))
-				return -1;
-			if(get_conf_val(field, value,
-			  "backup_script_post", &(conf->backup_script_post)))
-				return -1;
-			if(get_conf_val(field, value,
-			  "restore_script_pre", &(conf->restore_script_pre)))
-				return -1;
-			if(get_conf_val(field, value,
-			  "restore_script_post", &(conf->restore_script_post)))
-				return -1;
+			  "restore_script_post",
+			  &(conf->restore_script_post))) return -1;
+			if(get_conf_val_args(field, value,
+				"restore_script_post",
+				&(conf->restore_script_post_arg),
+				NULL, &(conf->rpostcount),
+				&rpostlist, 0)) return -1;
 		}
 	}
 	fclose(fp);
@@ -464,6 +467,9 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 	// are subdirectories which don't need to be started separately.
 	for(i=0; i<conf->iecount; i++)
 	{
+		if(strchr(ielist[i]->path, '\\'))
+			logp("WARNING: Please use forward slashes '/' instead of backslashes '\\' in your include/exclude paths.\n");
+		if(ielist[i]->include) have_include++;
 		if(!i)
 		{
 			// ielist is sorted - the first entry is one that
@@ -498,6 +504,11 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 	if(!got_timer_args) conf->timer_arg=talist;
 	if(!got_ns_args) conf->notify_success_arg=nslist;
 	if(!got_nf_args) conf->notify_failure_arg=nflist;
+
+	conf->backup_script_pre_arg=bprelist;
+	conf->backup_script_post_arg=bpostlist;
+	conf->restore_script_pre_arg=rprelist;
+	conf->restore_script_post_arg=rpostlist;
 
 	if(!loadall) return 0;
 

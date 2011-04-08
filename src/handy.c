@@ -6,6 +6,7 @@
 #include "counter.h"
 #include "find.h"
 #include "berrno.h"
+#include "forkchild.h"
 
 void close_fd(int *fd)
 {
@@ -710,4 +711,82 @@ void write_status(const char *client, int phase, const char *path, struct cntr *
 			w+=wl;
 		}
 	}
+}
+
+static void log_script_output(const char *str, FILE **fp)
+{
+	char buf[256]="";
+	if(fp && *fp)
+	{
+		while(fgets(buf, sizeof(buf), *fp))
+			logp("%s%s", str, buf);
+		if(feof(*fp))
+		{
+			fclose(*fp);
+			*fp=NULL;
+		}
+	}
+}
+
+int run_script(const char *script, struct backupdir **userargs, int userargc, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, struct cntr *cntr)
+{
+	int a=0;
+	int l=0;
+	pid_t p;
+	int pid_status=0;
+	FILE *serr=NULL;
+	FILE *sout=NULL;
+	char *cmd[64]={ NULL };
+
+	if(!script) return 0;
+
+	cmd[l++]=(char *)script;
+	if(arg1) cmd[l++]=(char *)arg1;
+	if(arg2) cmd[l++]=(char *)arg2;
+	if(arg3) cmd[l++]=(char *)arg3;
+	if(arg4) cmd[l++]=(char *)arg4;
+	if(arg5) cmd[l++]=(char *)arg5;
+	for(a=0; a<userargc && l<64-1; a++)
+	cmd[l++]=userargs[a]->path;
+	cmd[l++]=NULL;
+
+	fflush(stdout); fflush(stderr);
+	if((p=forkchild(NULL, &sout, &serr, cmd[0], cmd))==-1) return -1;
+#ifdef HAVE_WIN32
+	// My windows forkchild currently just executes, then returns.
+	return 0;
+#endif
+
+	do {
+		log_script_output("", &sout);
+		log_script_output("", &serr);
+	} while(!(a=waitpid(p, &pid_status, WNOHANG)));
+	log_script_output("", &sout);
+	log_script_output("", &serr);
+
+	if(a<0)
+	{
+		logp("waitpid error: %s\n", strerror(errno));
+		return -1;
+	}
+
+	if(WIFEXITED(pid_status))
+	{
+		int ret=WEXITSTATUS(pid_status);
+		logp("Script returned: %d\n", ret);
+		if(cntr) logw(cntr, "Script returned: %d\n", ret);
+		return ret;
+	}
+	else if(WIFSIGNALED(pid_status))
+		logp("%s terminated on signal %s\n",
+			cmd[0], WTERMSIG(pid_status));
+		if(cntr) logw(cntr, "%s terminated on signal %s\n",
+			cmd[0], WTERMSIG(pid_status));
+	else
+	{
+		logp("Strange return when trying to run script\n");
+		if(cntr) logw(cntr, "Strange return when trying to run script\n");
+	}
+
+	return -1;
 }

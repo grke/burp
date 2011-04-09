@@ -56,11 +56,9 @@ rs_result rs_async(rs_job_t *job,
 
 
 
-rs_result rs_patch_gzfile(FILE *basis_file, gzFile delta_file, FILE *new_file, gzFile new_zfile, rs_stats_t *stats, struct cntr *cntr);
-rs_result rs_sig_gzfile(gzFile old_file, FILE *sig_file, size_t new_block_len, size_t strong_len, rs_stats_t *stats, struct cntr *cntr);
-rs_result rs_loadsig_gzfile(gzFile sig_file, rs_signature_t **sumset, rs_stats_t *stats, struct cntr *cntr);
-rs_result rs_delta_gzfile(rs_signature_t *sig, gzFile new_file, gzFile delta_file, rs_stats_t *stats, struct cntr *cntr);
-
+rs_result rs_patch_gzfile(FILE *basis_file, FILE *delta_file, gzFile delta_zfile, FILE *new_file, gzFile new_zfile, rs_stats_t *stats, struct cntr *cntr);
+rs_result rs_sig_gzfile(FILE *old_file, gzFile old_zfile, FILE *sig_file, size_t new_block_len, size_t strong_len, rs_stats_t *stats, struct cntr *cntr);
+rs_result rs_delta_gzfile(rs_signature_t *sig, FILE *new_file, gzFile new_zfile, FILE *delta_file, gzFile delta_zfile, rs_stats_t *stats, struct cntr *cntr);
 
 
 #endif

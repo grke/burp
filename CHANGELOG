@@ -1,3 +1,4 @@
+  * Added the ability to define the level of compression (including turning it off).
   * Added an option to define the poll interval in the Windows installer.
   * Added the ability to turn off delta differencing.
   * Added the ability to give arguments to backup/restore/pre/post scripts.

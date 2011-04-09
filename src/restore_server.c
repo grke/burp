@@ -15,10 +15,11 @@
 #include <librsync.h>
 
 // Also used by backup_phase4_server.c
-int do_patch(const char *dst, const char *del, const char *upd, bool gzupd, struct cntr *cntr)
+int do_patch(const char *dst, const char *del, const char *upd, bool gzupd, struct cntr *cntr, struct config *cconf)
 {
 	FILE *dstp=NULL;
-	gzFile delp=NULL;
+	FILE *delfp=NULL;
+	gzFile delzp=NULL;
 	gzFile updp=NULL;
 	FILE *updfp=NULL;
 	rs_result result;
@@ -30,14 +31,21 @@ int do_patch(const char *dst, const char *del, const char *upd, bool gzupd, stru
 		logp("could not open %s for reading\n", dst);
 		return -1;
 	}
-	else if(!(delp=gzopen(del, "rb9")))
+
+	if(dpth_is_compressed(del))
+		delzp=gzopen(del, "rb");
+	else
+		delfp=fopen(del, "rb");
+
+	if(!delzp && !delfp)
 	{
 		logp("could not open %s for reading\n", del);
 		close_fp(&dstp);
 		return -1;
 	}
-	else if(gzupd)
-		updp=gzopen(upd, "wb9");
+
+	if(gzupd)
+		updp=gzopen(upd, comp_level(cconf));
 	else
 		updfp=fopen(upd, "wb");
 
@@ -45,28 +53,26 @@ int do_patch(const char *dst, const char *del, const char *upd, bool gzupd, stru
 	{
 		logp("could not open %s for writing\n", upd);
 		close_fp(&dstp);
-		gzclose_fp(&delp);
+		gzclose_fp(&delzp);
+		close_fp(&delfp);
 		return -1;
 	}
 	
+	result=rs_patch_gzfile(dstp, delfp, delzp, updfp, updp, NULL, cntr);
 
-	result=rs_patch_gzfile(dstp, delp, updfp, updp, NULL, cntr);
 	fclose(dstp);
-	gzclose_fp(&delp);
+	gzclose_fp(&delzp);
+	close_fp(&delfp);
 	if(updp) gzclose_fp(&updp);
 	if(updfp) fclose(updfp);
 
 	return result;
 }
 
-static int inflate_oldfile(const char *oldpath, const char *infpath)
+static int inflate_or_link_oldfile(const char *oldpath, const char *infpath)
 {
 	int ret=0;
 	struct stat statp;
-	FILE *source=NULL;
-	FILE *dest=NULL;
-
-	logp("inflating...\n");
 
 	if(lstat(oldpath, &statp))
 	{
@@ -74,37 +80,55 @@ static int inflate_oldfile(const char *oldpath, const char *infpath)
 		return -1;
 	}
 
-	if(!(dest=open_file(infpath, "wb")))
+	if(dpth_is_compressed(oldpath))
 	{
-		close_fp(&dest);
-		return -1;
-	}
+		FILE *source=NULL;
+		FILE *dest=NULL;
 
-	if(!statp.st_size)
+		logp("inflating...\n");
+
+		if(!(dest=open_file(infpath, "wb")))
+		{
+			close_fp(&dest);
+			return -1;
+		}
+
+		if(!statp.st_size)
+		{
+			// Empty file - cannot inflate.
+			// just close the destination and we have duplicated a
+			// zero length file.
+			logp("asked to inflate zero length file: %s\n", oldpath);
+			close_fp(&dest);
+			return 0;
+		}
+
+		if(!(source=open_file(oldpath, "rb")))
+		{
+			close_fp(&dest);
+			return -1;
+		}
+
+		if((ret=zlib_inflate(source, dest))!=Z_OK)
+			logp("zlib_inflate returned: %d\n", ret);
+
+		close_fp(&source);
+		close_fp(&dest);
+	}
+	else
 	{
-		// Empty file - cannot inflate.
-		// just close the destination and we have duplicated a zero
-		// length file.
-		logp("asked to inflate zero length file: %s\n", oldpath);
-		close_fp(&dest);
-		return 0;
+		// Not compressed - just hard link it.
+		if(link(oldpath, infpath))
+		{
+			logp("hardlink %s to %s failed: %s\n",
+				infpath, oldpath, strerror(errno));
+			ret=-1;
+		}
 	}
-
-	if(!(source=open_file(oldpath, "rb")))
-	{
-		close_fp(&dest);
-		return -1;
-	}
-
-	if((ret=zlib_inflate(source, dest))!=Z_OK)
-		logp("zlib_inflate returned: %d\n", ret);
-
-	close_fp(&source);
-	close_fp(&dest);
 	return ret;
 }
 
-static int send_file(const char *fname, int patches, const char *best, const char *datapth, unsigned long long *bytes, char cmd, struct cntr *cntr)
+static int send_file(const char *fname, int patches, const char *best, const char *datapth, unsigned long long *bytes, char cmd, struct cntr *cntr, struct config *cconf)
 {
 	//logp("sending: %s\n", best);
 	if(async_write(cmd, fname, strlen(fname)))
@@ -113,13 +137,21 @@ static int send_file(const char *fname, int patches, const char *best, const cha
 	{
 		// If we did some patches, the resulting file
 		// is not gzipped. Gzip it during the send. 
-		return send_whole_file_gz(best, datapth, 1, bytes, NULL, cntr);
+		return send_whole_file_gz(best, datapth, 1, bytes, NULL, cntr,
+			9);
 	}
 	else
 	{
-		// If we did not do some patches, the resulting
-		// file is already gzipped. Send it as it is.
-		return send_whole_file(best, datapth, 1, bytes, cntr);
+		// It might have been stored uncompressed. Gzip it during
+		// the send. If the client new what kind of file it would be
+		// receiving, this step could disappear.
+		if(!dpth_is_compressed(datapth))
+			return send_whole_file_gz(best, datapth, 1, bytes,
+				NULL, cntr, 9);
+		else
+			// If we did not do some patches, the resulting
+			// file might already be gzipped. Send it as it is.
+			return send_whole_file(best, datapth, 1, bytes, cntr);
 	}
 }
 
@@ -145,10 +177,11 @@ static int verify_file(const char *fname, int patches, const char *best, const c
 		logp("MD5_Init() failed\n");
 		return -1;
 	}
-	if(patches || cmd_is_encrypted_file(cmd))
+	if(patches || cmd_is_encrypted_file(cmd)
+	  || (!patches && !dpth_is_compressed(best)))
 	{
-		// If we did some patches or encryption, the resulting file
-		// is not gzipped.
+		// If we did some patches or encryption, or the compression
+		// was turned off, the resulting file is not gzipped.
 		FILE *fp=NULL;
 		if(!(fp=open_file(best, "rb")))
 		{
@@ -175,10 +208,8 @@ static int verify_file(const char *fname, int patches, const char *best, const c
 	}
 	else
 	{
-		// If we did not do some patches, the resulting
-		// file is gzipped.
 		gzFile zp=NULL;
-		if(!(zp=gzopen_file(best, "rb9")))
+		if(!(zp=gzopen_file(best, "rb")))
 		{
 			logw(cntr, "could not gzopen %s\n", best);
 			return 0;
@@ -224,7 +255,7 @@ static int verify_file(const char *fname, int patches, const char *best, const c
 
 // a = length of struct bu array
 // i = position to restore from
-static int restore_file(struct bu *arr, int a, int i, const char *datapth, const char *fname, const char *tmppath1, const char *tmppath2, int act, const char *endfile, char cmd, struct cntr *cntr)
+static int restore_file(struct bu *arr, int a, int i, const char *datapth, const char *fname, const char *tmppath1, const char *tmppath2, int act, const char *endfile, char cmd, struct cntr *cntr, struct config *cconf)
 {
 	int x=0;
 	char msg[256]="";
@@ -279,7 +310,7 @@ static int restore_file(struct bu *arr, int a, int i, const char *datapth, const
 				if(!patches)
 				{
 					// Need to gunzip the first one.
-					if(inflate_oldfile(best, tmp))
+					if(inflate_or_link_oldfile(best, tmp))
 					{
 						logp("error when inflating %s\n", best);
 						free(path);
@@ -292,7 +323,8 @@ static int restore_file(struct bu *arr, int a, int i, const char *datapth, const
 				}
 
 				if(do_patch(best, dpath, tmp,
-				  FALSE /* do not gzip the result */, cntr ))
+				  FALSE /* do not gzip the result */, cntr,
+				  cconf))
 				{
 					char msg[256]="";
 					snprintf(msg, sizeof(msg),
@@ -315,7 +347,7 @@ static int restore_file(struct bu *arr, int a, int i, const char *datapth, const
 			if(act==ACTION_RESTORE)
 			{
 				if(send_file(fname, patches, best, datapth,
-					&bytes, cmd, cntr))
+					&bytes, cmd, cntr, cconf))
 				{
 					free(path);
 					return -1;
@@ -342,7 +374,7 @@ static int restore_file(struct bu *arr, int a, int i, const char *datapth, const
 	return -1;
 }
 
-static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, enum action act, const char *client, int status, struct cntr *cntr)
+static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, enum action act, const char *client, int status, struct cntr *cntr, struct config *cconf)
 {
 	logp("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path);
 	write_status(client, status, sb->path, cntr);
@@ -354,7 +386,7 @@ static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, const cha
 	{
 		return restore_file(arr, a, i, sb->datapth,
 		  sb->path, tmppath1, tmppath2, act,
-		  sb->endfile, sb->cmd, cntr);
+		  sb->endfile, sb->cmd, cntr, cconf);
 	}
 	else
 	{
@@ -374,7 +406,7 @@ static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, const cha
 
 // a = length of struct bu array
 // i = position to restore from
-static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, regex_t *regex, enum action act, const char *client, struct cntr *cntr)
+static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, regex_t *regex, enum action act, const char *client, struct cntr *cntr, struct config *cconf)
 {
 	int ret=0;
 	gzFile zp=NULL;
@@ -406,7 +438,7 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 		log_and_send(msg);
 		ret=-1;
 	}
-	else if(!(zp=gzopen_file(manifest, "rb9")))
+	else if(!(zp=gzopen_file(manifest, "rb")))
 	{
 		log_and_send("could not open manifest");
 		ret=-1;
@@ -490,7 +522,7 @@ printf("read quick error\n");
 						// fiddling in a subdirectory.
 				  		if(restore_sbuf(sblist[s], arr,
 						 a, i, tmppath1, tmppath2, act,
-						 client, status, cntr))
+						 client, status, cntr, cconf))
 						{
 							ret=-1; quit++;
 							break;
@@ -520,7 +552,8 @@ printf("read quick error\n");
 					init_sbuf(&sb);
 				  }
 				  else if(!ret && restore_sbuf(&sb, arr, a, i,
-				    tmppath1, tmppath2, act, client, status, cntr))
+				    tmppath1, tmppath2, act, client, status,
+				    cntr, cconf))
 				  {
 					ret=-1; quit++;
 				  }
@@ -533,7 +566,8 @@ printf("read quick error\n");
 		if(!ret) for(s=scount-1; s>=0; s--)
 		{
 			if(restore_sbuf(sblist[s], arr, a, i,
-				tmppath1, tmppath2, act, client, status, cntr))
+				tmppath1, tmppath2, act, client, status, cntr,
+				cconf))
 			{
 				ret=-1;
 				break;
@@ -581,7 +615,7 @@ printf("read quick error\n");
 		end_filecounter(cntr, 1, act);
 	}
 	set_logfp(NULL);
-	compress_file(logpath, logpathz);
+	compress_file(logpath, logpathz, cconf);
 	if(manifest) free(manifest);
 	if(datadir) free(datadir);
 	if(logpath) free(logpath);
@@ -589,7 +623,7 @@ printf("read quick error\n");
 	return ret;
 }
 
-int do_restore_server(const char *basedir, const char *backup, const char *restoreregex, enum action act, const char *client, struct cntr *cntr)
+int do_restore_server(const char *basedir, const char *backup, const char *restoreregex, enum action act, const char *client, struct cntr *cntr, struct config *cconf)
 {
 	int a=0;
 	int i=0;
@@ -625,7 +659,7 @@ int do_restore_server(const char *basedir, const char *backup, const char *resto
 	{
 		// No backup specified, do the most recent.
 		ret=restore_manifest(arr, a, a-1,
-			tmppath1, tmppath2, regex, act, client, cntr);
+			tmppath1, tmppath2, regex, act, client, cntr, cconf);
 		found=TRUE;
 	}
 	else for(i=0; i<a; i++)
@@ -636,7 +670,8 @@ int do_restore_server(const char *basedir, const char *backup, const char *resto
 			found=TRUE;
 			logp("got: %s\n", arr[i].path);
 			ret=restore_manifest(arr, a, i,
-				tmppath1, tmppath2, regex, act, client, cntr);
+				tmppath1, tmppath2, regex, act, client, cntr,
+				cconf);
 			break;
 		}
 	}

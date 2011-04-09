@@ -152,6 +152,16 @@ static int load_signature_and_send_delta(const char *rpath, unsigned long long *
 	return r;
 }
 
+static int send_whole_file_w(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression)
+{
+	if(compression || encpassword)
+		return send_whole_file_gz(fname, datapth, quick_read, bytes, 
+			encpassword, cntr, compression);
+	else
+		return send_whole_file(fname, datapth, quick_read, bytes, 
+			cntr);
+}
+
 static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
 {
 	int ret=0;
@@ -240,9 +250,10 @@ static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
 					// send the whole file.
 					if(async_write_str('r', attribs)
 					  || async_write_str(cmd, sb.path)
-					  || send_whole_file_gz(sb.path,
+					  || send_whole_file_w(sb.path,
 						NULL, 0, &bytes,
-						conf->encryption_password, cntr))
+						conf->encryption_password,
+						cntr, conf->compression))
 					{
 						ret=-1;
 						quit++;

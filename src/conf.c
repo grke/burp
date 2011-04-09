@@ -42,6 +42,7 @@ void init_config(struct config *conf)
 	conf->encryption_password=NULL;
 	conf->max_children=0;
 	conf->librsync=1;
+	conf->compression=9;
 
 	conf->timer_script=NULL;
 	conf->timer_arg=NULL;
@@ -315,6 +316,20 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 		else if(!strcmp(field, "librsync"))
 		{
 			conf->librsync=atoi(value);
+		}
+		else if(!strcmp(field, "compression"))
+		{
+			char *cp=NULL;
+			cp=value;
+			if(!strncmp(value, "gzip", strlen("gzip")))
+			{
+				char *cp=NULL;
+				cp=value+strlen("gzip")+1;
+			}
+			if(strlen(cp)!=1 || !isdigit(*cp))
+				return conf_error(config_path, line);
+
+			conf->compression=atoi(value);
 		}
 		else if(!strcmp(field, "working_dir_recovery_method"))
 		{
@@ -635,6 +650,7 @@ int set_client_global_config(struct config *conf, struct config *cconf)
 	cconf->keep=conf->keep;
 	cconf->hardlinked_archive=conf->hardlinked_archive;
 	cconf->librsync=conf->librsync;
+	cconf->compression=conf->compression;
 	if(set_global_str(&(cconf->directory), conf->directory))
 		return -1;
 	if(set_global_str(&(cconf->working_dir_recovery_method),

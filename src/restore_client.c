@@ -474,7 +474,6 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 					&& S_ISFIFO(checkstat.st_mode)))
 				  {
 					char msg[512]="";
-printf("got lstat on restore\n");
 					// Something exists at that path.
 					snprintf(msg, sizeof(msg),
 						"Path exists: %s (%s)",

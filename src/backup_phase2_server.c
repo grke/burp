@@ -11,7 +11,7 @@
 #include "sbuf.h"
 #include "backup_phase2_server.h"
 
-static int start_to_receive_new_file(struct sbuf *sb, const char *datadirtmp, struct dpth *dpth, struct cntr *cntr)
+static int start_to_receive_new_file(struct sbuf *sb, const char *datadirtmp, struct dpth *dpth, struct cntr *cntr, struct config *cconf)
 {
 	int ret=0;
 	char *rpath=NULL;
@@ -28,13 +28,13 @@ static int start_to_receive_new_file(struct sbuf *sb, const char *datadirtmp, st
 		log_and_send("build path failed");
 		ret=-1;
 	}
-	else if(!(sb->fp=open_file(rpath, "wb9")))
+	else if(!(sb->fp=open_file(rpath, comp_level(cconf))))
 	{
 		log_and_send("make file failed");
 		ret=-1;
 	}
 	if(rpath) free(rpath);
-	incr_dpth(dpth);
+	incr_dpth(dpth, cconf);
 	return ret;
 }
 
@@ -52,7 +52,11 @@ static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *c
 		logp("out of memory\n");
 		return -1;
 	}
-	if(!(p1b->sigfp=gzopen_file(curpath, "rb9")))
+	if(dpth_is_compressed(curpath))
+		p1b->sigzp=gzopen_file(curpath, "rb");
+	else
+		p1b->sigfp=open_file(curpath, "rb");
+	if(!p1b->sigzp && !p1b->sigfp)
 	{
 		logp("could not open %s: %s\n", curpath, strerror(errno));
 		free(curpath);
@@ -66,7 +70,7 @@ static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *c
 		return -1;
 	}
 //logp("sig begin: %s\n", p1b->datapth);
-	if(!(p1b->infb=rs_filebuf_new(NULL, NULL, p1b->sigfp, -1, rs_inbuflen, cntr)))
+	if(!(p1b->infb=rs_filebuf_new(NULL, p1b->sigfp, p1b->sigzp, -1, rs_inbuflen, cntr)))
 	{
 		logp("could not rs_filebuf_new for infb.\n");
 		return -1;
@@ -103,6 +107,7 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, gzFile uczp, co
 	int pcmp;
 	if(!(pcmp=pathcmp(cb->path, p1b->path)))
 	{
+		int oldcompressed=0;
 		if(cb->statp.st_mtime==p1b->statp.st_mtime
 		  && cb->statp.st_ctime==p1b->statp.st_ctime)
 		{
@@ -126,6 +131,18 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, gzFile uczp, co
 		if(!cconf->librsync
 		  || sbuf_is_encrypted_file(cb)
 		  || sbuf_is_encrypted_file(p1b))
+		{
+			if(process_new_file(p1b)) return -1;
+			free_sbuf(cb);
+			return 1;
+		}
+
+		// Get new files if they have switched between compression on
+		// or off.
+		if(dpth_is_compressed(cb->datapth))
+			oldcompressed=1;
+		if( ( oldcompressed && !cconf->compression)
+		 || (!oldcompressed &&  cconf->compression))
 		{
 			if(process_new_file(p1b)) return -1;
 			free_sbuf(cb);
@@ -219,9 +236,18 @@ static int do_stuff_to_send(struct sbuf *p1b, char **last_requested)
 	return 0;
 }
 
-static int start_to_receive_delta(struct sbuf *rb, const char *working, const char *deltmppath)
+static int start_to_receive_delta(struct sbuf *rb, const char *working, const char *deltmppath, struct config *cconf)
 {
-	if(!(rb->zp=gzopen_file(deltmppath, "wb9"))) return -1;
+	if(cconf->compression)
+	{
+		if(!(rb->zp=gzopen_file(deltmppath, comp_level(cconf))))
+			return -1;
+	}
+	else
+	{
+		if(!(rb->fp=open_file(deltmppath, "wb")))
+			return -1;
+	}
 	rb->receivedelta++;
 
 	return 0;
@@ -242,7 +268,7 @@ static int finish_delta(struct sbuf *rb, const char *working, const char *deltmp
 }
 
 // returns 1 for finished ok.
-static int do_stuff_to_receive(struct sbuf *rb, FILE *p2fp, const char *datadirtmp, struct dpth *dpth, const char *working, char **last_requested, const char *deltmppath, struct cntr *cntr)
+static int do_stuff_to_receive(struct sbuf *rb, FILE *p2fp, const char *datadirtmp, struct dpth *dpth, const char *working, char **last_requested, const char *deltmppath, struct cntr *cntr, struct config *cconf)
 {
 	int ret=0;
 	char rcmd;
@@ -355,7 +381,7 @@ static int do_stuff_to_receive(struct sbuf *rb, FILE *p2fp, const char *datadirt
 			{
 				// Receiving a delta.
 				if(start_to_receive_delta(rb,
-				  working, deltmppath))
+				  working, deltmppath, cconf))
 				{
 					logp("error in start_to_receive_delta\n");
 					ret=-1;
@@ -365,7 +391,7 @@ static int do_stuff_to_receive(struct sbuf *rb, FILE *p2fp, const char *datadirt
 			{
 				// Receiving a whole new file.
 				if(start_to_receive_new_file(rb,
-					datadirtmp, dpth, cntr))
+					datadirtmp, dpth, cntr, cconf))
 				{
 					logp("error in start_to_receive_new_file\n");
 					ret=-1;
@@ -410,7 +436,7 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzF
 	init_sbuf(&p1b);
 	init_sbuf(&rb);
 
-	if(!(p1zp=gzopen_file(phase1data, "rb9")))
+	if(!(p1zp=gzopen_file(phase1data, "rb")))
 		return -1;
 
 	if(!(deltmppath=prepend_s(working, "delta.tmp", strlen("delta.tmp"))))
@@ -424,7 +450,7 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzF
 		else write_status(client, 2, p1b.path, cntr);
 		if((last_requested || !p1zp)
 		  && (ars=do_stuff_to_receive(&rb, p2fp, datadirtmp, dpth,
-			working, &last_requested, deltmppath, cntr)))
+			working, &last_requested, deltmppath, cntr, cconf)))
 		{
 			if(ars<0) ret=-1;
 			// 1 means ok.

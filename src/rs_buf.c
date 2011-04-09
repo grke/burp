@@ -430,14 +430,14 @@ rs_result rs_async(rs_job_t *job, rs_buffers_t *rsbuf, rs_filebuf_t *infb, rs_fi
 
 
 static rs_result
-rs_whole_gzrun(rs_job_t *job, gzFile in_zfile, FILE *out_file, gzFile out_zfile, struct cntr *cntr)
+rs_whole_gzrun(rs_job_t *job, FILE *in_file, gzFile in_zfile, FILE *out_file, gzFile out_zfile, struct cntr *cntr)
 {
     rs_buffers_t    buf;
     rs_result       result;
     rs_filebuf_t    *in_fb = NULL, *out_fb = NULL;
 
-    if (in_zfile)
-        in_fb = rs_filebuf_new(NULL, NULL, in_zfile, -1, rs_inbuflen, cntr);
+    if (in_file || in_zfile)
+        in_fb = rs_filebuf_new(NULL, in_file, in_zfile, -1, rs_inbuflen, cntr);
 
     if (out_file || out_zfile)
         out_fb = rs_filebuf_new(NULL, out_file, out_zfile, -1, rs_outbuflen, cntr);
@@ -456,14 +456,14 @@ rs_whole_gzrun(rs_job_t *job, gzFile in_zfile, FILE *out_file, gzFile out_zfile,
     return result;
 }
 
-rs_result rs_patch_gzfile(FILE *basis_zfile, gzFile delta_zfile, FILE *new_file, gzFile new_zfile, rs_stats_t *stats, struct cntr *cntr)
+rs_result rs_patch_gzfile(FILE *basis_file, FILE *delta_file, gzFile delta_zfile, FILE *new_file, gzFile new_zfile, rs_stats_t *stats, struct cntr *cntr)
 {
 	rs_job_t            *job;
 	rs_result           r;
 
-	job = rs_patch_begin(rs_file_copy_cb, basis_zfile);
+	job = rs_patch_begin(rs_file_copy_cb, basis_file);
 
-	r = rs_whole_gzrun(job, delta_zfile, new_file, new_zfile, cntr);
+	r = rs_whole_gzrun(job, delta_file, delta_zfile, new_file, new_zfile, cntr);
 /*
 	if (stats)
 		memcpy(stats, &job->stats, sizeof *stats);
@@ -474,14 +474,13 @@ rs_result rs_patch_gzfile(FILE *basis_zfile, gzFile delta_zfile, FILE *new_file,
 	return r;
 }
 
-
-rs_result rs_sig_gzfile(gzFile old_file, FILE *sig_file, size_t new_block_len, size_t strong_len, rs_stats_t *stats, struct cntr *cntr)
+rs_result rs_sig_gzfile(FILE *old_file, gzFile old_zfile, FILE *sig_file, size_t new_block_len, size_t strong_len, rs_stats_t *stats, struct cntr *cntr)
 {
     rs_job_t        *job;
     rs_result       r;
 
     job = rs_sig_begin(new_block_len, strong_len);
-    r = rs_whole_gzrun(job, old_file, sig_file, NULL, cntr);
+    r = rs_whole_gzrun(job, old_file, old_zfile, sig_file, NULL, cntr);
 /*
     if (stats)
         memcpy(stats, &job->stats, sizeof *stats);
@@ -491,30 +490,14 @@ rs_result rs_sig_gzfile(gzFile old_file, FILE *sig_file, size_t new_block_len, s
     return r;
 }
 
-rs_result rs_loadsig_gzfile(gzFile sig_file, rs_signature_t **sumset, rs_stats_t *stats, struct cntr *cntr)
-{
-    rs_job_t            *job;
-    rs_result           r;
-
-    job = rs_loadsig_begin(sumset);
-    r = rs_whole_gzrun(job, sig_file, NULL, NULL, cntr);
-/*
-    if (stats)
-        memcpy(stats, &job->stats, sizeof *stats);
-*/
-    rs_job_free(job);
-
-    return r;
-}
-
-rs_result rs_delta_gzfile(rs_signature_t *sig, gzFile new_file, gzFile delta_file, rs_stats_t *stats, struct cntr *cntr)
+rs_result rs_delta_gzfile(rs_signature_t *sig, FILE *new_file, gzFile new_zfile, FILE *delta_file, gzFile delta_zfile, rs_stats_t *stats, struct cntr *cntr)
 {
     rs_job_t            *job;
     rs_result           r;
 
     job = rs_delta_begin(sig);
 
-    r = rs_whole_gzrun(job, new_file, NULL, delta_file, cntr);
+    r = rs_whole_gzrun(job, new_file, new_zfile, delta_file, delta_zfile, cntr);
 /*
     if (stats)
         memcpy(stats, &job->stats, sizeof *stats);

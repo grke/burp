@@ -260,7 +260,7 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password)
 	return ctx;
 }
 
-int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr)
+int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression)
 {
 	int ret=0;
 	int zret=0;
@@ -314,7 +314,7 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 	strm.zalloc = Z_NULL;
 	strm.zfree = Z_NULL;
 	strm.opaque = Z_NULL;
-	if((zret=deflateInit2(&strm, Z_BEST_COMPRESSION, Z_DEFLATED, (15+16),
+	if((zret=deflateInit2(&strm, compression, Z_DEFLATED, (15+16),
 		8, Z_DEFAULT_STRATEGY))!=Z_OK)
 
 	{
@@ -789,4 +789,11 @@ int run_script(const char *script, struct backupdir **userargs, int userargc, co
 	}
 
 	return -1;
+}
+
+char *comp_level(struct config *conf)
+{
+	static char comp[8]="";
+	snprintf(comp, sizeof(comp), "wb%d", conf->compression);
+	return comp;
 }

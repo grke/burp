@@ -7,10 +7,10 @@
 #include "dpth.h"
 #include "find.h"
 
-static void mk_dpth(struct dpth *dpth)
+static void mk_dpth(struct dpth *dpth, struct config *cconf)
 {
-	snprintf(dpth->path, sizeof(dpth->path), "%04X/%04X/%04X.gz",
-	dpth->prim, dpth->seco, dpth->tert);
+	snprintf(dpth->path, sizeof(dpth->path), "%04X/%04X/%04X%s",
+	  dpth->prim, dpth->seco, dpth->tert, cconf->compression?".gz":"");
 }
 
 static void mk_dpth_prim(struct dpth *dpth)
@@ -45,7 +45,7 @@ static int get_highest_entry(const char *path)
 	return max;
 }
 
-int init_dpth(struct dpth *dpth, const char *currentdata)
+int init_dpth(struct dpth *dpth, const char *currentdata, struct config *cconf)
 {
 	char *tmp=NULL;
 	//logp("in init_dpth\n");
@@ -58,7 +58,7 @@ int init_dpth(struct dpth *dpth, const char *currentdata)
 	{
 		// Could not open directory. Set all zeros.
 		dpth->prim=0;
-		mk_dpth(dpth);
+		mk_dpth(dpth, cconf);
 		return 0;
 	}
 	mk_dpth_prim(dpth);
@@ -71,7 +71,7 @@ int init_dpth(struct dpth *dpth, const char *currentdata)
 	{
 		// Could not open directory. Set zero.
 		dpth->seco=0;
-		mk_dpth(dpth);
+		mk_dpth(dpth, cconf);
 		free(tmp);
 		return 0;
 	}
@@ -86,13 +86,13 @@ int init_dpth(struct dpth *dpth, const char *currentdata)
 	{
 		// Could not open directory. Set zero.
 		dpth->tert=0;
-		mk_dpth(dpth);
+		mk_dpth(dpth, cconf);
 		free(tmp);
 		return 0;
 	}
 	// At this point, we have the latest data file. Increment to get the
 	// next free one.
-	incr_dpth(dpth);
+	incr_dpth(dpth, cconf);
 
 	//logp("init_dpth: %d/%d/%d\n", dpth->prim, dpth->seco, dpth->tert);
 	//logp("init_dpth: %s\n", dpth->path);
@@ -102,7 +102,7 @@ int init_dpth(struct dpth *dpth, const char *currentdata)
 // Three levels with 65535 entries each gives
 // 65535^3 = 281,462,092,005,375 data entries
 // recommend a filesystem with lots of inodes?
-int incr_dpth(struct dpth *dpth)
+int incr_dpth(struct dpth *dpth, struct config *cconf)
 {
 	if(dpth->tert++>=0xFFFF)
 	{
@@ -125,7 +125,14 @@ int incr_dpth(struct dpth *dpth)
 		}
 	}
 	//printf("before incr_dpth: %s %04X/%04X/%04X\n", dpth->path, dpth->prim, dpth->seco, dpth->tert);
-	mk_dpth(dpth);
+	mk_dpth(dpth, cconf);
 	//printf("after incr_dpth: %s\n", dpth->path);
+	return 0;
+}
+
+int dpth_is_compressed(const char *datapath)
+{
+	const char *dp=NULL;
+	if((dp=strrchr(datapath, '.')) && !strcmp(dp, ".gz")) return 1;
 	return 0;
 }

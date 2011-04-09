@@ -133,6 +133,9 @@ int backup_phase1_client(struct config *conf, struct cntr *cntr)
 	int sd=0;
 	int ret=0;
 	FF_PKT *ff=NULL;
+	char rcmd;
+	char *rdst=NULL;
+	size_t rlen=0;
 
 	// First, tell the server about everything that needs to be backed up.
 
@@ -143,9 +146,21 @@ int backup_phase1_client(struct config *conf, struct cntr *cntr)
 
 	// Send our starting point, so the server can forward through the
 	// manifest.
-	if(async_write_str('c', conf->startdir[sd]->path)
-	  || async_read_expect('c', "ok"))
+	if(async_write_str('c', conf->startdir[sd]->path)) return -1;
+	// The server now tells us the compression level in the OK response.
+	if(async_read(&rcmd, &rdst, &rlen)) return -1;
+	if(rcmd!='c'
+	  || strncmp(rdst, "ok", 2))
+	{
+		logp("unexpected response from server: %c:%s\n", rcmd, rdst);
+		if(rdst) free(rdst);
 		return -1;
+	}
+	printf("here: %s\n", rdst);
+	if(strlen(rdst)>3) conf->compression=atoi(rdst+3);
+	free(rdst); rdst=NULL;
+	logp("Compression level: %d\n", conf->compression);
+
 logp("before init find files\n");
 	ff=init_find_files();
 logp("after init find files\n");

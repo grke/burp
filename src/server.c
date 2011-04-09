@@ -257,13 +257,13 @@ static int do_backup_server(const char *basedir, const char *current, const char
 		log_and_send(msg);
 		ret=-1;
 	}
-	if(!ret && init_dpth(&dpth, currentdata))
+	if(!ret && init_dpth(&dpth, currentdata, cconf))
 	{
 		log_and_send("could not init_dpth\n");
 		ret=-1;
 	}
 
-	if(!ret && backup_phase1_server(phase1data, client, cntr))
+	if(!ret && backup_phase1_server(phase1data, client, cntr, cconf))
 	{
 		logp("error in backup phase 1\n");
 		ret=-1;
@@ -271,7 +271,7 @@ static int do_backup_server(const char *basedir, const char *current, const char
 
 	// Open the previous (current) manifest.
 	if(!ret && !lstat(cmanifest, &statp)
-		&& !(cmanfp=gzopen_file(cmanifest, "rb9")))
+		&& !(cmanfp=gzopen_file(cmanifest, "rb")))
 	{
 		if(!lstat(cmanifest, &statp))
 		{
@@ -284,7 +284,7 @@ static int do_backup_server(const char *basedir, const char *current, const char
 
 	if(!ret && !(p2fp=open_file(phase2data, "wb")))
 		ret=-1;
-	if(!ret && !(uczp=gzopen_file(unchangeddata, "wb9")))
+	if(!ret && !(uczp=gzopen_file(unchangeddata, comp_level(cconf))))
 		ret=-1;
 	if(!ret && backup_phase2_server(&cmanfp, phase1data, p2fp, uczp,
 		datadirtmp, &dpth, currentdata, working, client, cntr, cconf))
@@ -300,7 +300,8 @@ static int do_backup_server(const char *basedir, const char *current, const char
 	gzclose_fp(&uczp);
 
 	if(!ret && backup_phase3_server(phase2data, unchangeddata, manifest,
-		0 /* not recovery mode */, 1 /* compress */, client, cntr))
+		0 /* not recovery mode */, 1 /* compress */, client, cntr,
+		cconf))
 	{
 		logp("error in backup phase 3\n");
 		ret=-1;
@@ -349,7 +350,7 @@ static int do_backup_server(const char *basedir, const char *current, const char
 	return ret;
 }
 
-static int maybe_rebuild_manifest(const char *phase2data, const char *unchangeddata, const char *manifest, int compress, const char *client, struct cntr *cntr)
+static int maybe_rebuild_manifest(const char *phase2data, const char *unchangeddata, const char *manifest, int compress, const char *client, struct cntr *cntr, struct config *cconf)
 {
 	struct stat statp;
 	if(!lstat(manifest, &statp))
@@ -359,7 +360,7 @@ static int maybe_rebuild_manifest(const char *phase2data, const char *unchangedd
 		return 0;
 	}
 	return backup_phase3_server(phase2data, unchangeddata, manifest,
-		1 /* recovery mode */, compress, client, cntr);
+		1 /* recovery mode */, compress, client, cntr, cconf);
 }
 
 static int check_for_rubble(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *manifest, const char *client, struct cntr *cntr)
@@ -476,7 +477,7 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 
 		// Get us a partial manifest from the files lying around.
 		if(maybe_rebuild_manifest(phase2data, unchangeddata, manifest,
-			1 /* compress */, client, cntr))
+			1 /* compress */, client, cntr, cconf))
 		{
 			set_logfp(NULL); // fclose the logfp
 			return -1;
@@ -512,7 +513,8 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 		logp("rebuild\n");
 		// Get us a partial manifest from the files lying around.
 		if(maybe_rebuild_manifest(phase2data, unchangeddata,
-			manifesttmp, 0 /* do not compress */, client, cntr))
+			manifesttmp, 0 /* do not compress */, client, cntr,
+			cconf))
 		{
 			set_logfp(NULL); // fclose the logfp
 			free(manifesttmp);
@@ -537,7 +539,7 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 			return -1;
 		}
 
-		if((czp=gzopen_file(cmanifest, "rb9")))
+		if((czp=gzopen_file(cmanifest, "rb")))
 		{
 			int ars=0;
 			char *lastpbuf=NULL;
@@ -675,7 +677,7 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 			}
 			close_fp(&mp);
 			gzclose_fp(&czp);
-			if(compress_file(manifesttmp, manifest))
+			if(compress_file(manifesttmp, manifest, cconf))
 			{
 				logp("manifest compress failed\n");
 				free(manifesttmp);
@@ -852,6 +854,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 				logp("Running backup of %s\n", client);
 			}
 			free(buf); buf=NULL;
+
 			async_write_str('c', "ok");
 			if(async_read(&cmd, &buf, &len))
 			{
@@ -859,7 +862,13 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 			}
 			else
 			{
-				async_write_str('c', "ok");
+				char okstr[32]="ok";
+				// Do not upset old clients by writing an ok
+				// string that they do not expect.
+				if(cconf->compression!=9)
+					snprintf(okstr, sizeof(okstr), "ok:%d",
+						conf->compression);
+				async_write_str('c', okstr);
 				ret=do_backup_server(basedir, current, working,
 				  currentdata, finishing, buf, cconf,
 				  manifest, forward, phase1data, phase2data,
@@ -916,7 +925,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 			}
 			async_write_str('c', "ok");
 			ret=do_restore_server(basedir, backupnostr,
-				restoreregex, act, client, &cntr);
+				restoreregex, act, client, &cntr, cconf);
 		}
 	}
 	else if(cmd=='c' && !strncmp(buf, "list ", strlen("list ")))

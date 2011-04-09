@@ -12,7 +12,7 @@
 #include "backup_phase3_server.h"
 
 // Combine the phase1 and phase2 files into a new manifest.
-int backup_phase3_server(const char *phase2data, const char *unchangeddata, const char *manifest, int recovery, int compress, const char *client, struct cntr *cntr)
+int backup_phase3_server(const char *phase2data, const char *unchangeddata, const char *manifest, int recovery, int compress, const char *client, struct cntr *cntr, struct config *cconf)
 {
 	int ars=0;
 	int ret=0;
@@ -31,7 +31,7 @@ int backup_phase3_server(const char *phase2data, const char *unchangeddata, cons
 
         if(!(uczp=gzopen_file(unchangeddata, "rb"))
 	  || !(p2fp=open_file(phase2data, "rb"))
-	  || (compress && !(mzp=gzopen_file(manifesttmp, "wb9")))
+	  || (compress && !(mzp=gzopen_file(manifesttmp, comp_level(cconf))))
           || (!compress && !(mp=open_file(manifesttmp, "wb"))))
 	{
 		gzclose_fp(&uczp);

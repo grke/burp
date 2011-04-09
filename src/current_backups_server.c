@@ -374,7 +374,7 @@ int write_timestamp(const char *timestamp, const char *tstmp)
 	return 0;
 }
 
-static int compress(const char *src, const char *dst)
+static int compress(const char *src, const char *dst, struct config *cconf)
 {
 	int res;
 	int got;
@@ -383,7 +383,7 @@ static int compress(const char *src, const char *dst)
 	char buf[16000];
 
 	if(!(mp=open_file(src, "rb"))
-	  || !(zp=gzopen_file(dst, "wb9")))
+	  || !(zp=gzopen_file(dst, comp_level(cconf))))
 	{
 		close_fp(&mp);
 		gzclose_fp(&zp);
@@ -406,7 +406,7 @@ static int compress(const char *src, const char *dst)
 	return 0;
 }
 
-int compress_file(const char *src, const char *dst)
+int compress_file(const char *src, const char *dst, struct config *cconf)
 {
 	char *dsttmp=NULL;
 	pid_t pid=getpid();
@@ -418,7 +418,7 @@ int compress_file(const char *src, const char *dst)
 	
 	// Need to compress the log.
 	logp("Compressing %s to %s...\n", src, dst);
-	if(compress(src, dsttmp)
+	if(compress(src, dsttmp, cconf)
 	  || do_rename(dsttmp, dst))
 	{
 		unlink(dsttmp);
@@ -431,13 +431,13 @@ int compress_file(const char *src, const char *dst)
 	return 0;
 }
 
-int compress_filename(const char *d, const char *file, const char *zfile)
+int compress_filename(const char *d, const char *file, const char *zfile, struct config *cconf)
 {
 	char *fullfile=NULL;
 	char *fullzfile=NULL;
 	if(!(fullfile=prepend_s(d, file, strlen(file)))
 	  || !(fullzfile=prepend_s(d, zfile, strlen(zfile)))
-	  || compress_file(fullfile, fullzfile))
+	  || compress_file(fullfile, fullzfile, cconf))
 	{
 		if(fullfile) free(fullfile);
 		if(fullzfile) free(fullzfile);

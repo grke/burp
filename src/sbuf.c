@@ -29,6 +29,7 @@ void init_sbuf(struct sbuf *sb)
 	sb->infb=NULL;
 	sb->outfb=NULL;
 	sb->sigfp=NULL;
+	sb->sigzp=NULL;
 	sb->sendendofsig=0;
 
 	sb->receivedelta=0;
@@ -49,7 +50,8 @@ void free_sbuf(struct sbuf *sb)
 	if(sb->sigjob) rs_job_free(sb->sigjob);
 	if(sb->infb) rs_filebuf_free(sb->infb);
 	if(sb->outfb) rs_filebuf_free(sb->outfb);
-	gzclose_fp(&sb->sigfp);
+	close_fp(&sb->sigfp);
+	gzclose_fp(&sb->sigzp);
 	close_fp(&sb->fp);
 	gzclose_fp(&sb->zp);
 	init_sbuf(sb);

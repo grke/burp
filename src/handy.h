@@ -12,7 +12,7 @@ extern char *prepend(const char *prep, const char *fname, size_t len, bool slash
 extern char *prepend_s(const char *prep, const char *fname, size_t len);
 extern int mkpath(char **rpath);
 extern int build_path(const char *datadir, const char *fname, size_t flen, char **rpath);
-extern int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr);
+extern int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression);
 extern int send_whole_file(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, struct cntr *cntr);
 extern int set_non_blocking(int fd);
 extern int set_blocking(int fd);
@@ -26,5 +26,6 @@ extern int init_client_socket(const char *host, int port);
 extern void reuseaddr(int fd);
 extern void write_status(const char *client, int phase, const char *path, struct cntr *cntr);
 extern int run_script(const char *script, struct backupdir **userargs, int userargc, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, struct cntr *cntr);
+extern char *comp_level(struct config *conf);
 
 #endif

@@ -18,29 +18,37 @@
 
 static int make_rev_sig(const char *dst, const char *sig, struct cntr *cntr)
 {
-	gzFile dstp=NULL;
+	FILE *dstfp=NULL;
+	gzFile dstzp=NULL;
 	FILE *sigp=NULL;
 	rs_result result;
 //logp("make rev sig: %s %s\n", dst, sig);
 
-	if(!(dstp=gzopen_file(dst, "rb9"))
+	if(dpth_is_compressed(dst))
+		dstzp=gzopen_file(dst, "rb");
+	else
+		dstfp=open_file(dst, "rb");
+
+	if((!dstzp && !dstfp)
 	  || !(sigp=open_file(sig, "wb")))
 	{
-		if(dstp) gzclose_fp(&dstp);
+		gzclose_fp(&dstzp);
+		close_fp(&dstfp);
 		return -1;
 	}
-	result=rs_sig_gzfile(dstp, sigp, block_len, strong_len, NULL, cntr);
-	gzclose_fp(&dstp);
-	fclose(sigp);
+	result=rs_sig_gzfile(dstfp, dstzp, sigp, block_len, strong_len, NULL, cntr);
+	gzclose_fp(&dstzp);
+	close_fp(&dstfp);
+	close_fp(&sigp);
 //logp("end of make rev sig\n");
 	return result;
 }
 
-static int make_rev_delta(const char *src, const char *sig, const char *del, struct cntr *cntr)
+static int make_rev_delta(const char *src, const char *sig, const char *del, struct cntr *cntr, struct config *cconf)
 {
-	gzFile srcp=NULL;
+	gzFile srczp=NULL;
+	FILE *srcfp=NULL;
 	FILE *sigp=NULL;
-	gzFile delp=NULL;
 	rs_result result;
 	rs_signature_t *sumset=NULL;
 
@@ -57,24 +65,53 @@ static int make_rev_delta(const char *src, const char *sig, const char *del, str
 
 //logp("make rev deltb: %s %s %s\n", src, sig, del);
 
-	if(!(srcp=gzopen_file(src, "rb9"))
-	  || !(delp=gzopen_file(del, "wb9")))
+	if(dpth_is_compressed(src))
+		srczp=gzopen_file(src, "rb");
+	else
+		srcfp=open_file(src, "rb");
+
+	if(!srczp && !srcfp)
 	{
-		if(srcp) gzclose_fp(&srcp);
 		rs_free_sumset(sumset);
 		return -1;
 	}
 
-	result=rs_delta_gzfile(sumset, srcp, delp, NULL, cntr);
+	if(cconf->compression)
+	{
+		gzFile delzp=NULL;
+		if(!(delzp=gzopen_file(del, comp_level(cconf))))
+		{
+			gzclose_fp(&srczp);
+			close_fp(&srcfp);
+			rs_free_sumset(sumset);
+			return -1;
+		}
+		result=rs_delta_gzfile(sumset, srcfp, srczp, NULL, delzp, NULL, cntr);
+		gzclose_fp(&delzp);
+	}
+	else
+	{
+		FILE *delfp=NULL;
+		if(!(delfp=open_file(del, "wb")))
+		{
+			gzclose_fp(&srczp);
+			close_fp(&srcfp);
+			rs_free_sumset(sumset);
+			return -1;
+		}
+		result=rs_delta_gzfile(sumset, srcfp, srczp, delfp, NULL, NULL, cntr);
+		close_fp(&delfp);
+	}
+
 	rs_free_sumset(sumset);
-	gzclose_fp(&srcp);
-	gzclose_fp(&delp);
+	gzclose_fp(&srczp);
+	close_fp(&srcfp);
 
 	return result;
 }
 
 
-static int gen_rev_delta(const char *sigpath, const char *deltadir, const char *oldpath, const char *finpath, const char *path, struct cntr *cntr)
+static int gen_rev_delta(const char *sigpath, const char *deltadir, const char *oldpath, const char *finpath, const char *path, struct cntr *cntr, struct config *cconf)
 {
 	int ret=0;
 	char *delpath=NULL;
@@ -100,7 +137,7 @@ static int gen_rev_delta(const char *sigpath, const char *deltadir, const char *
 		logp("could not make signature from: %s\n", finpath);
 		ret=-1;
 	}
-	else if(make_rev_delta(oldpath, sigpath, delpath, cntr))
+	else if(make_rev_delta(oldpath, sigpath, delpath, cntr, cconf))
 	{
 		logp("could not make delta from: %s\n", oldpath);
 		ret=-1;
@@ -110,14 +147,10 @@ static int gen_rev_delta(const char *sigpath, const char *deltadir, const char *
 	return ret;
 }
 
-static int inflate_oldfile(const char *oldpath, const char *infpath)
+static int inflate_or_link_oldfile(const char *oldpath, const char *infpath)
 {
 	int ret=0;
 	struct stat statp;
-	FILE *source=NULL;
-	FILE *dest=NULL;
-
-	//logp("inflating...\n");
 
 	if(lstat(oldpath, &statp))
 	{
@@ -125,33 +158,48 @@ static int inflate_oldfile(const char *oldpath, const char *infpath)
 		return -1;
 	}
 
-	if(!(dest=open_file(infpath, "wb")))
+	if(dpth_is_compressed(oldpath))
 	{
-		close_fp(&dest);
-		return -1;
-	}
+		FILE *source=NULL;
+		FILE *dest=NULL;
 
-	if(!statp.st_size)
-	{
-		// Empty file - cannot inflate.
-		// just close the destination and we have duplicated a zero
-		// length file.
-		logp("asked to inflate zero length file: %s\n", oldpath);
-		close_fp(&dest);
-		return 0;
-	}
+		//logp("inflating...\n");
 
-	if(!(source=open_file(oldpath, "rb")))
-	{
-		close_fp(&dest);
-		return -1;
-	}
+		if(!(dest=open_file(infpath, "wb")))
+		{
+			close_fp(&dest);
+			return -1;
+		}
 
-	if((ret=zlib_inflate(source, dest))!=Z_OK)
+		if(!statp.st_size)
+		{
+			// Empty file - cannot inflate.
+			// just close the destination and we have duplicated a
+			// zero length file.
+			logp("asked to inflate zero length file: %s\n", oldpath);
+			close_fp(&dest);
+			return 0;
+		}
+		if(!(source=open_file(oldpath, "rb")))
+		{
+			close_fp(&dest);
+			return -1;
+		}
+		if((ret=zlib_inflate(source, dest))!=Z_OK)
 		logp("zlib_inflate returned: %d\n", ret);
-
-	close_fp(&source);
-	close_fp(&dest);
+		close_fp(&source);
+		close_fp(&dest);
+	}
+	else
+	{
+		// If it was not a compressed file, just hard link it.
+		if(link(oldpath, infpath))
+		{
+			logp("could not hard link '%s' to '%s': %s\n", infpath, oldpath, strerror(errno));
+			ret=-1;
+		}
+	
+	}
 	return ret;
 }
 
@@ -186,7 +234,7 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 	  logp(" will generate reverse deltas\n");
 	}
 
-	if(!(mp=gzopen_file(manifest, "rb9"))) return -1;
+	if(!(mp=gzopen_file(manifest, "rb"))) return -1;
 
 	if(!(deltabdir=prepend_s(current,
 		"deltas.reverse", strlen("deltas.reverse")))
@@ -280,15 +328,15 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 				*cp='\0';
 
 				//logp("Fixing up: %s\n", buf);
-				if(!ret && inflate_oldfile(oldpath, infpath))
+				if(!ret && inflate_or_link_oldfile(oldpath, infpath))
 				{
 					logp("error when inflating old file: %s\n", oldpath);
 					ret=-1;
 				}
 
-				// Gzip the result with TRUE;
 				if(!ret && do_patch(infpath, deltafpath,
-					newpath, TRUE, cntr))
+				  newpath, cconf->compression,
+				  cntr, cconf))
 				{
 					logp("error when patching\n");
 					ret=-1;
@@ -310,7 +358,7 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 					if(!cconf->hardlinked_archive)
 					{
 					  if(gen_rev_delta(sigpath, deltabdir,
-					    oldpath, newpath, buf, cntr))
+					    oldpath, newpath, buf, cntr, cconf))
 						ret=-1;
 					}
 
@@ -566,7 +614,7 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 	logp("End phase4 (shuffle files)\n");
 	set_logfp(NULL); // will close logfp.
 
-	compress_filename(current, "log", "log.gz");
+	compress_filename(current, "log", "log.gz", cconf);
 
 endfunc:
 	if(datadir) free(datadir);

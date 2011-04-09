@@ -25,7 +25,8 @@ struct sbuf
 	rs_job_t *sigjob;
 	rs_filebuf_t *infb;
 	rs_filebuf_t *outfb;
-	gzFile sigfp;
+	FILE *sigfp;
+	gzFile sigzp;
 	int sendendofsig;
 
 	int receivedelta;

@@ -28,7 +28,7 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *clien
 		log_and_send("out of memory");
 		return -1;
 	}
-	if(!(fp=gzopen_file(manifest, "rb9")))
+	if(!(fp=gzopen_file(manifest, "rb")))
 	{
 		log_and_send("could not open manifest");
 		free(manifest);

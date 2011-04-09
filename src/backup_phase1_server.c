@@ -11,7 +11,7 @@
 #include "sbuf.h"
 #include "backup_phase1_server.h"
 
-int backup_phase1_server(const char *phase1data, const char *client, struct cntr *cntr)
+int backup_phase1_server(const char *phase1data, const char *client, struct cntr *cntr, struct config *conf)
 {
 	char cmd;
 	int ret=0;
@@ -28,7 +28,7 @@ int backup_phase1_server(const char *phase1data, const char *client, struct cntr
 	if(!(phase1tmp=get_tmp_filename(phase1data)))
 		return -1;
 
-	if(!(p1zp=gzopen_file(phase1tmp, "wb9")))
+	if(!(p1zp=gzopen_file(phase1tmp, comp_level(conf))))
 	{
 		free(phase1tmp);
 		return -1;

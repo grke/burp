@@ -10,7 +10,8 @@ struct dpth
 	int looped;
 };
 
-extern int init_dpth(struct dpth *dpth, const char *currentdata);
-extern int incr_dpth(struct dpth *dpth);
+extern int init_dpth(struct dpth *dpth, const char *currentdata, struct config *cconf);
+extern int incr_dpth(struct dpth *dpth, struct config *cconf);
+extern int dpth_is_compressed(const char *datapath);
 
 #endif

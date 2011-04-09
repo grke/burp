@@ -287,7 +287,7 @@ static int do_backup_server(const char *basedir, const char *current, const char
 	if(!ret && !(uczp=gzopen_file(unchangeddata, "wb9")))
 		ret=-1;
 	if(!ret && backup_phase2_server(&cmanfp, phase1data, p2fp, uczp,
-		datadirtmp, &dpth, currentdata, working, client, cntr))
+		datadirtmp, &dpth, currentdata, working, client, cntr, cconf))
 	{
 		logp("error in backup phase 2\n");
 		ret=-1;

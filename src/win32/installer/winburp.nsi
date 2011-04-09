@@ -84,6 +84,7 @@ Var HostName
 Var DNSDomain
 
 Var ConfigClientPassword
+Var ConfigClientPoll
 Var ConfigClientInstallService
 Var ConfigClientStartService
 
@@ -91,6 +92,7 @@ Var ConfigServerAddress
 Var ConfigServerPort
 Var ConfigClientName
 Var ConfigPassword
+Var ConfigPoll
 
 Var ConfigMonitorPassword
 
@@ -180,6 +182,7 @@ Function .onInit
   StrCpy $ConfigServerPort              "4971"
   StrCpy $ConfigClientName              "clientname"
   StrCpy $ConfigPassword                "password"
+  StrCpy $ConfigPoll                    "20"
 
   InitPluginsDir
 ;  File "/oname=$PLUGINSDIR\openssl.exe"  "${SRC_DIR}\openssl.exe"
@@ -342,7 +345,9 @@ Section "-Finish"
     nsExec::ExecToLog 'cmd.exe /C echo Y|cacls "$APPDATA\Burp" /T /G SYSTEM:F Administrators:F'
   ${EndIf}
 
-  nsExec::ExecToLog 'schtasks /CREATE /RU SYSTEM /TN "burp cron" /TR "\"C:\Program Files\Burp\bin\burp.exe\" -a t" /SC MINUTE /MO 20'
+  ${If} $ConfigPoll != 0
+    nsExec::ExecToLog 'schtasks /CREATE /RU SYSTEM /TN "burp cron" /TR "\"C:\Program Files\Burp\bin\burp.exe\" -a t" /SC MINUTE /MO $ConfigPoll'
+  ${EndIf}
 
   ; Write the uninstall keys for Windows & create Start Menu entry
   WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Burp" "DisplayName" "Burp"
@@ -593,11 +598,13 @@ Function EnterConfigPageBP
 ;  !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPageBP.ini" "Field 5" "State" "$ConfigServerPort"
   !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPageBP.ini" "Field 5" "State" "$ConfigClientName"
   !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPageBP.ini" "Field 8" "State" "$ConfigPassword"
+  !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPageBP.ini" "Field 11" "State" "$ConfigPoll"
   !insertmacro MUI_INSTALLOPTIONS_DISPLAY "ConfigPageBP.ini"
   !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigServerAddress "ConfigPageBP.ini" "Field 2" State
 ;  !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigServerPort "ConfigPageBP.ini" "Field 5" State
   !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigClientName "ConfigPageBP.ini" "Field 5" State
   !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigPassword "ConfigPageBP.ini" "Field 8" State
+  !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigPoll "ConfigPageBP.ini" "Field 11" State
 
 end:
   DetailPrint "$INSTDIR\burp.conf already exists. Not overwriting."

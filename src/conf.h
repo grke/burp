@@ -68,6 +68,7 @@ struct config
 	int keep;
 	int hardlinked_archive;
 	char *working_dir_recovery_method;
+	int librsync;
 
 	char *timer_script;
 	struct backupdir **timer_arg;

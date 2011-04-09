@@ -1,6 +1,10 @@
+  * Added an option to define the poll interval in the Windows installer.
+  * Added the ability to turn off delta differencing.
+  * Added the ability to give arguments to backup/restore/pre/post scripts.
+
 2011-04-02 Changes in burp-1.1.40:
-  * Ability to run client pre/post backup/restore scripts.
-  * Ability to read data from fifos (and restore to them).
+  * Added the ability to run client pre/post backup/restore scripts.
+  * Added the ability to read data from fifos (and restore to them).
   * Fixed a bug when restoring the first link in a directory.
   * Fixed a bug that prevented giving a backup number when using the verify option.
 

@@ -98,7 +98,7 @@ static int process_new_file(struct sbuf *p1b)
 }
 
 // return 1 to say that a file was processed
-static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, gzFile uczp, const char *currentdata, struct cntr *cntr)
+static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, gzFile uczp, const char *currentdata, struct cntr *cntr, struct config *cconf)
 {
 	int pcmp;
 	if(!(pcmp=pathcmp(cb->path, p1b->path)))
@@ -121,9 +121,10 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, gzFile uczp, co
 
 		// Got a changed file.
 
-		// If either old or new is encrypted, we need to get a new
-		// file.
-		if(sbuf_is_encrypted_file(cb)
+		// If either old or new is encrypted, or librsync is off,
+		// we need to get a new file.
+		if(!cconf->librsync
+		  || sbuf_is_encrypted_file(cb)
 		  || sbuf_is_encrypted_file(p1b))
 		{
 			if(process_new_file(p1b)) return -1;
@@ -389,7 +390,7 @@ static int do_stuff_to_receive(struct sbuf *rb, FILE *p2fp, const char *datadirt
 	return ret;
 }
 
-int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzFile uczp, const char *datadirtmp, struct dpth *dpth, const char *currentdata, const char *working, const char *client, struct cntr *cntr)
+int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzFile uczp, const char *datadirtmp, struct dpth *dpth, const char *currentdata, const char *working, const char *client, struct cntr *cntr, struct config *cconf)
 {
 	int ars=0;
 	int ret=0;
@@ -482,7 +483,7 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzF
 			if(cb.path)
 			{
 				if((ars=maybe_process_file(&cb, &p1b, uczp,
-					currentdata, cntr)))
+					currentdata, cntr, cconf)))
 				{
 					if(ars<0)
 					{
@@ -522,7 +523,7 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzF
 					continue;
 				}
 				if((ars=maybe_process_file(&cb, &p1b, uczp,
-					currentdata, cntr)))
+					currentdata, cntr, cconf)))
 				{
 					if(ars<0)
 					{

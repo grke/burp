@@ -41,6 +41,7 @@ void init_config(struct config *conf)
 	conf->ssl_peer_cn=NULL;
 	conf->encryption_password=NULL;
 	conf->max_children=0;
+	conf->librsync=1;
 
 	conf->timer_script=NULL;
 	conf->timer_arg=NULL;
@@ -310,6 +311,10 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 		else if(!strcmp(field, "hardlinked_archive"))
 		{
 			conf->hardlinked_archive=atoi(value);
+		}
+		else if(!strcmp(field, "librsync"))
+		{
+			conf->librsync=atoi(value);
 		}
 		else if(!strcmp(field, "working_dir_recovery_method"))
 		{
@@ -629,6 +634,7 @@ int set_client_global_config(struct config *conf, struct config *cconf)
 {
 	cconf->keep=conf->keep;
 	cconf->hardlinked_archive=conf->hardlinked_archive;
+	cconf->librsync=conf->librsync;
 	if(set_global_str(&(cconf->directory), conf->directory))
 		return -1;
 	if(set_global_str(&(cconf->working_dir_recovery_method),

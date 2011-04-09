@@ -21,12 +21,6 @@ install:
 	     $(INSTALL_DATA) $$I.gz $(DESTDIR)$(mandir)/man8/$$I.gz; \
 	     rm -f $$I.gz); \
 	done
-	$(MKDIR) $(DESTDIR)/$(mandir)/man1
-	for I in ${MAN1}; \
-	  do ($(RMF) $$I.gz; gzip -c $$I >$$I.gz; \
-	     $(INSTALL_DATA) $$I.gz $(DESTDIR)$(mandir)/man1/$$I.gz; \
-	     rm -f $$I.gz); \
-	done
 
 uninstall:
 	for I in ${MAN8}; \

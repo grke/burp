@@ -120,7 +120,7 @@ Makefiles:
 	$(SHELL) config.status
 
 clean:
-	@for I in ${all_subdirs} src/win32 ; \
+	@for I in ${all_subdirs} ; \
 	  do (cd $$I; echo "==>Entering directory `pwd`"; ${MAKE} $@ || exit 1); done
 	@$(RMF) *~ 1 2 3 core core.* config.guess console.log console.sum
 	@$(RMF) config.log config.out

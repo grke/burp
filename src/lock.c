@@ -15,7 +15,7 @@ int get_lock(const char *path)
 		return -1;
 	if(lockf(fdlock, F_TLOCK, 0))
 		return -1;
-	snprintf(pid, sizeof(pid), "%d\n", getpid());
+	snprintf(pid, sizeof(pid), "%d\n", (int)getpid());
 	if(write(fdlock, pid, strlen(pid))!=(ssize_t)strlen(pid))
 	{
 		logp("Could not write pid to %s\n", path);

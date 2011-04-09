@@ -20,9 +20,6 @@
 
 * Add an ncurses wrapper to the monitor commands.
 
-* Add an option to turn of storage compression.
-
 * Do not compress manifests and logs when compression is turned off.
 
-* A restore warning when a file exists now seems to cause "ret OK, but zstream not finished: 0" on the server.
-
+* A restore warning when a file exists now seems to cause "ret OK, but zstream not finished: 0" on the server. Or does it?

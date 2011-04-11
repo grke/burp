@@ -176,7 +176,7 @@ static int setup_signals(int max_children)
 	return 0;
 }
 
-static int do_backup_server(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, const char *startdir, struct config *cconf, const char *manifest, const char *forward, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *client, struct cntr *cntr)
+static int do_backup_server(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *manifest, const char *forward, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *client, struct cntr *cntr)
 {
 	int ret=0;
 	char msg[256]="";
@@ -831,6 +831,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 		else
 		{
 			int tret=0;
+			char okstr[32]="ok";
 			if(!strcmp(buf, "backupphase1timed"))
 			{
 				if((tret=run_script_w(
@@ -855,41 +856,29 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 			}
 			free(buf); buf=NULL;
 
-			async_write_str('c', "ok");
-			if(async_read(&cmd, &buf, &len))
-			{
-				ret=-1;
-			}
+			snprintf(okstr, sizeof(okstr), "ok:%d",
+				conf->compression);
+			async_write_str('c', okstr);
+			ret=do_backup_server(basedir, current, working,
+			  currentdata, finishing, cconf,
+			  manifest, forward, phase1data, phase2data,
+			  unchangeddata, client, &cntr);
+			if(ret)
+				run_script(
+					cconf->notify_failure_script,
+					cconf->notify_failure_arg,
+					cconf->nfcount,
+					client, current,
+					working, finishing,
+					"reserved", &cntr);
 			else
-			{
-				char okstr[32]="ok";
-				// Do not upset old clients by writing an ok
-				// string that they do not expect.
-				if(cconf->compression!=9)
-					snprintf(okstr, sizeof(okstr), "ok:%d",
-						conf->compression);
-				async_write_str('c', okstr);
-				ret=do_backup_server(basedir, current, working,
-				  currentdata, finishing, buf, cconf,
-				  manifest, forward, phase1data, phase2data,
-				  unchangeddata, client, &cntr);
-				if(ret)
-					run_script(
-						cconf->notify_failure_script,
-						cconf->notify_failure_arg,
-						cconf->nfcount,
-						client, current,
-						working, finishing,
-						"reserved", &cntr);
-				else
-					run_script(
-						cconf->notify_success_script,
-						cconf->notify_success_arg,
-						cconf->nscount,
-						client, current,
-						working, finishing,
-						"reserved", &cntr);
-			}
+				run_script(
+					cconf->notify_success_script,
+					cconf->notify_success_arg,
+					cconf->nscount,
+					client, current,
+					working, finishing,
+					"reserved", &cntr);
 		}
 	}
 	else if(cmd=='c'
@@ -1199,6 +1188,7 @@ int server(struct config *conf, const char *configfile, int forking)
 		{
 			// Happens when a client exits.
 			//logp("error on listening socket.\n");
+			if(!forking) break;
 			continue;
 		}
 
@@ -1206,6 +1196,7 @@ int server(struct config *conf, const char *configfile, int forking)
 		{
 			// Happens when a client exits.
 			//logp("error on status socket.\n");
+			if(!forking) break;
 			continue;
 		}
 

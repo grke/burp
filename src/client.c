@@ -17,7 +17,7 @@
 #include "forkchild.h"
 
 // Return 0 for OK, -1 for error, 1 for timer conditions not met.
-static int maybe_check_timer(const char *phase1str)
+static int maybe_check_timer(const char *phase1str, struct config *conf)
 {
 	char rcmd;
 	char *rdst=NULL;
@@ -33,12 +33,17 @@ static int maybe_check_timer(const char *phase1str)
                 logp("Timer conditions not met.\n");
                 return 1;
         }
-        else if(rcmd!='c' || strcmp(rdst, "ok"))
+        else if(rcmd!='c' || strncmp(rdst, "ok", 2))
         {
                 logp("unexpected command from server: %c:%s\n", rcmd ,rdst);
                 free(rdst);
                 return -1;
         }
+
+        // The server now tells us the compression level in the OK response.
+        if(strlen(rdst)>3) conf->compression=atoi(rdst+3);
+        logp("Compression level: %d\n", conf->compression);
+
 	return 0;
 }
 
@@ -155,7 +160,7 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 				phase1str="backupphase1timed";
 			case ACTION_BACKUP:
 			{
-				if(!(ret=maybe_check_timer(phase1str)))
+				if(!(ret=maybe_check_timer(phase1str, conf)))
 				{
 					if(conf->backup_script_pre
 					 && run_script(
@@ -172,7 +177,7 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 					if(!ret && do_backup_client(conf,
 						"backupphase1", &cntr))
 							ret=-1;
-	
+
 					if((conf->backup_script_post_run_on_fail
 					  || !ret) && conf->backup_script_post)
 					{
@@ -189,7 +194,6 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 						"reserved5",
 						&cntr)) ret=-1;
 					}
-
 				}
 
 				if(ret<0) logp("error in backup\n");

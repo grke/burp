@@ -436,7 +436,7 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 			  "backup_script_pre",
 			  &(conf->backup_script_pre))) return -1;
 			if(get_conf_val_args(field, value,
-				"backup_script_pre",
+				"backup_script_pre_arg",
 				&(conf->backup_script_pre_arg),
 				NULL, &(conf->bprecount),
 				&bprelist, 0)) return -1;
@@ -444,7 +444,7 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 			  "backup_script_post",
 			  &(conf->backup_script_post))) return -1;
 			if(get_conf_val_args(field, value,
-				"backup_script_post",
+				"backup_script_post_arg",
 				&(conf->backup_script_post_arg),
 				NULL, &(conf->bpostcount),
 				&bpostlist, 0)) return -1;
@@ -452,7 +452,7 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 			  "restore_script_pre",
 			  &(conf->restore_script_pre))) return -1;
 			if(get_conf_val_args(field, value,
-				"restore_script_pre",
+				"restore_script_pre_arg",
 				&(conf->restore_script_pre_arg),
 				NULL, &(conf->rprecount),
 				&rprelist, 0)) return -1;
@@ -460,7 +460,7 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 			  "restore_script_post",
 			  &(conf->restore_script_post))) return -1;
 			if(get_conf_val_args(field, value,
-				"restore_script_post",
+				"restore_script_post_arg",
 				&(conf->restore_script_post_arg),
 				NULL, &(conf->rpostcount),
 				&rpostlist, 0)) return -1;

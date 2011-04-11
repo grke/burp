@@ -177,7 +177,7 @@ int async_init(int afd, SSL *assl)
 
 void async_free(void)
 {
-	//printf("in async_free\n");
+//	printf("in async_free\n");
 	if(ssl && fd>=0)
 	{
 		int r;
@@ -185,6 +185,7 @@ void async_free(void)
 		set_blocking(fd);
 /* I do not think this SSL_shutdown stuff works right. Ignore it for now. */
 //printf("calling SSL_shutdown...\n");
+signal(SIGPIPE, SIG_IGN);
 		if(!(r=SSL_shutdown(ssl)))
 		{
 //printf("calling SSL_shutdown again...\n");

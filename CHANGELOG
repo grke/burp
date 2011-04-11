@@ -2,6 +2,7 @@
   * Added an option to define the poll interval in the Windows installer.
   * Added the ability to turn off delta differencing.
   * Added the ability to give arguments to backup/restore/pre/post scripts.
+  * Added a script for backing up zfs full and incremental snapshots with 'zfs send'.
 
 2011-04-02 Changes in burp-1.1.40:
   * Added the ability to run client pre/post backup/restore scripts.

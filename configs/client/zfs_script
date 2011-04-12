@@ -13,14 +13,11 @@
 # the arguments for pre and post are both the same. You can add multiple
 # pools to backup.
 #
-# backup_script_pre=/etc/burp/zfs_script
-# backup_script_pre_arg=7
-# backup_script_pre_arg=rpool/export/home@abc
-# backup_script_pre_arg=rpool/ROOT/s10x_u9wos_14a/var@xyz
-# backup_script_post=/etc/burp/zfs_script
-# backup_script_post_arg=7
-# backup_script_post_arg=rpool/export/home@burp
-# backup_script_post_arg=rpool/ROOT/s10x_u9wos_14a/var@xyz
+# backup_script=/etc/burp/zfs_script
+# backup_script_arg=7
+# backup_script_arg=rpool/export/home@abc
+# backup_script_arg=rpool/ROOT/s10x_u9wos_14a/var@xyz
+# backup_script_post_run_on_fail=1
 #
 # A snapshot numbered between 1 to $MAX_SNAPS is created on a backup. The
 # number is incremented for each backup. Number 1 is always a full ZFS snapshot.

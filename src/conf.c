@@ -73,6 +73,13 @@ void init_config(struct config *conf)
 	conf->restore_script_post_arg=NULL;
 	conf->rpostcount=0;
 	conf->restore_script_post_run_on_fail=0;
+
+	conf->backup_script=NULL;
+	conf->backup_script_arg=NULL;
+	conf->bscount=0;
+	conf->restore_script=NULL;
+	conf->restore_script_arg=NULL;
+	conf->rscount=0;
 }
 
 static void free_backupdirs(struct backupdir **bd, int count)
@@ -131,6 +138,11 @@ void free_config(struct config *conf)
 	free_backupdirs(conf->restore_script_pre_arg, conf->rprecount);
 	if(conf->restore_script_post) free(conf->restore_script_post);
 	free_backupdirs(conf->restore_script_post_arg, conf->rpostcount);
+
+	if(conf->backup_script) free(conf->backup_script);
+	if(conf->restore_script) free(conf->restore_script);
+	free_backupdirs(conf->backup_script_arg, conf->bscount);
+	free_backupdirs(conf->restore_script_arg, conf->rscount);
 
 	init_config(conf);
 }
@@ -260,6 +272,8 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 	struct backupdir **bpostlist=NULL;
 	struct backupdir **rprelist=NULL;
 	struct backupdir **rpostlist=NULL;
+	struct backupdir **bslist=NULL;
+	struct backupdir **rslist=NULL;
 	int have_include=0;
 	int got_timer_args=conf->tacount;
 	int got_ns_args=conf->nscount;
@@ -464,6 +478,23 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 				&(conf->restore_script_post_arg),
 				NULL, &(conf->rpostcount),
 				&rpostlist, 0)) return -1;
+
+			if(get_conf_val(field, value,
+			  "backup_script",
+			  &(conf->backup_script))) return -1;
+			if(get_conf_val_args(field, value,
+				"backup_script_arg",
+				&(conf->backup_script_arg),
+				NULL, &(conf->bscount),
+				&bslist, 0)) return -1;
+			if(get_conf_val(field, value,
+			  "restore_script",
+			  &(conf->restore_script))) return -1;
+			if(get_conf_val_args(field, value,
+				"restore_script_arg",
+				&(conf->restore_script_arg),
+				NULL, &(conf->rscount),
+				&rslist, 0)) return -1;
 		}
 	}
 	fclose(fp);
@@ -524,6 +555,73 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 	if(!got_timer_args) conf->timer_arg=talist;
 	if(!got_ns_args) conf->notify_success_arg=nslist;
 	if(!got_nf_args) conf->notify_failure_arg=nflist;
+
+	// If backup_script is set, override both post and pre settings.
+	// TODO: make a function to avoid repeating this stuff.
+	if(conf->backup_script)
+	{
+		if(conf->backup_script_pre)
+			free(conf->backup_script_pre);
+		if(conf->backup_script_post)
+			free(conf->backup_script_post);
+		if(!(conf->backup_script_pre=strdup(conf->backup_script))
+		  || !(conf->backup_script_post=strdup(conf->backup_script)))
+		{
+			logp("out of memory\n");
+			return -1;
+		}
+		free(conf->backup_script);
+		conf->backup_script=NULL;
+	}
+	if(bslist)
+	{
+		free_backupdirs(bprelist, conf->bprecount);
+		free_backupdirs(bpostlist, conf->bpostcount);
+		conf->bprecount=0;
+		conf->bpostcount=0;
+		for(i=0; i<conf->bscount; i++)
+		{
+			if(add_backup_dir(&bprelist,
+				&(conf->bprecount),
+				bslist[i]->path, 0)) return -1;
+			if(add_backup_dir(&bpostlist,
+				&(conf->bpostcount),
+				bslist[i]->path, 0)) return -1;
+		}
+	}
+	// If restore_script is set, override both post and pre settings.
+	// TODO: make a function to avoid repeating this stuff.
+	if(conf->restore_script)
+	{
+		if(conf->restore_script_pre)
+			free(conf->restore_script_pre);
+		if(conf->restore_script_post)
+			free(conf->restore_script_post);
+		if(!(conf->restore_script_pre=strdup(conf->restore_script))
+		  || !(conf->restore_script_post=strdup(conf->restore_script)))
+		{
+			logp("out of memory\n");
+			return -1;
+		}
+		free(conf->restore_script);
+		conf->restore_script=NULL;
+	}
+	if(rslist)
+	{
+		free_backupdirs(rprelist, conf->rprecount);
+		free_backupdirs(rpostlist, conf->rpostcount);
+		conf->rprecount=0;
+		conf->rpostcount=0;
+		for(i=0; i<conf->rscount; i++)
+		{
+			if(add_backup_dir(&rprelist,
+				&(conf->rprecount),
+				rslist[i]->path, 0)) return -1;
+			if(add_backup_dir(&rpostlist,
+				&(conf->rpostcount),
+				rslist[i]->path, 0)) return -1;
+		}
+	}
 
 	conf->backup_script_pre_arg=bprelist;
 	conf->backup_script_post_arg=bpostlist;

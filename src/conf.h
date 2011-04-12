@@ -48,6 +48,7 @@ struct config
 	struct backupdir **fifos;
 	int ffcount;
 	char *encryption_password;
+
 	char *backup_script_pre;
 	struct backupdir **backup_script_pre_arg;
 	int bprecount;
@@ -62,6 +63,15 @@ struct config
 	struct backupdir **restore_script_post_arg;
 	int rpostcount;
 	int   restore_script_post_run_on_fail;
+
+	// Use these when you want to give the same args to both post and pre
+	// scripts.
+	char *backup_script;
+	struct backupdir **backup_script_arg;
+	int bscount;
+	char *restore_script;
+	struct backupdir **restore_script_arg;
+	int rscount;
 
 // Client options on the server.
 // They can be set globally in the server config, or for each client.

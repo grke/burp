@@ -857,7 +857,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 			free(buf); buf=NULL;
 
 			snprintf(okstr, sizeof(okstr), "ok:%d",
-				conf->compression);
+				cconf->compression);
 			async_write_str('c', okstr);
 			ret=do_backup_server(basedir, current, working,
 			  currentdata, finishing, cconf,

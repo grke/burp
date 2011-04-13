@@ -23,17 +23,17 @@ while [ "$#" -gt 0 ] ; do
 done
 
 # Look for a log to attach
-[ -z "$log" -a -f "$working/log" ] && log="$working/log" && id=$(readlink "$working")
-[ -z "$log" -a -f "$working/log.gz" ] && log="$working/log.gz" && id=$(readlink "$working")
-[ -z "$log" -a -f "$finishing/log" ] && log="$finishing/log" && id=$(readlink "$finishing")
-[ -z "$log" -a -f "$finishing/log.gz" ] && log="$finishing/log.gz" && id=$(readlink "$finishing")
-[ -z "$log" -a -f "$current/log" ] && log="$current/log" && id=$(readlink "$current")
-[ -z "$log" -a -f "$current/log.gz" ] && log="$current/log.gz" && id=$(readlink "$current")
+[ -z "$log" -a -f "$working/log" ] && log="$working/log" && id=$(cat "$working"/timestamp)
+[ -z "$log" -a -f "$working/log.gz" ] && log="$working/log.gz" && id=$(cat "$working"/timestamp)
+[ -z "$log" -a -f "$finishing/log" ] && log="$finishing/log" && id=$(cat "$finishing"/timestamp)
+[ -z "$log" -a -f "$finishing/log.gz" ] && log="$finishing/log.gz" && id=$(cat "$finishing"/timestamp)
+[ -z "$log" -a -f "$current/log" ] && log="$current/log" && id=$(cat "$current"/timestamp)
+[ -z "$log" -a -f "$current/log.gz" ] && log="$current/log.gz" && id=$(cat "$current"/timestamp)
 
 if [ -z "$log" ] ; then
   echo "$headers" && echo && echo "No log found to send in email" | $sendmail
 else
-  (echo "$headers" && echo && echo "$id" && echo && echo "$log:" && echo && zcat -f "$log") | $sendmail
+  (echo "$headers" && echo && echo "$id" && echo && echo "$log:" && echo && gunzip -c "$log") | $sendmail
 fi
 
 exit 0

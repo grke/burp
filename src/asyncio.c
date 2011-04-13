@@ -185,7 +185,9 @@ void async_free(void)
 		set_blocking(fd);
 /* I do not think this SSL_shutdown stuff works right. Ignore it for now. */
 //printf("calling SSL_shutdown...\n");
+#ifndef HAVE_WIN32
 signal(SIGPIPE, SIG_IGN);
+#endif
 		if(!(r=SSL_shutdown(ssl)))
 		{
 //printf("calling SSL_shutdown again...\n");

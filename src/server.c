@@ -910,7 +910,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 			if((restoreregex=strrchr(buf, ':')))
 			{
 				*restoreregex='\0';
-				*restoreregex++;
+				restoreregex++;
 			}
 			async_write_str('c', "ok");
 			ret=do_restore_server(basedir, backupnostr,
@@ -930,7 +930,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 			if((listregex=strrchr(buf, ':')))
 			{
 				*listregex='\0';
-				*listregex++;
+				listregex++;
 			}
 			async_write_str('c', "ok");
 			ret=do_list_server(basedir, buf+strlen("list "),

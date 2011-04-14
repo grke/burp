@@ -766,28 +766,28 @@ int run_script(const char *script, struct backupdir **userargs, int userargc, co
 
 	if(a<0)
 	{
-		logp("waitpid error: %s\n", strerror(errno));
+		logp("%s waitpid error: %s\n", script, strerror(errno));
 		return -1;
 	}
 
 	if(WIFEXITED(pid_status))
 	{
 		int ret=WEXITSTATUS(pid_status);
-		logp("Script returned: %d\n", ret);
-		if(cntr && ret) logw(cntr, "Script returned: %d\n", ret);
+		logp("%s returned: %d\n", script, ret);
+		if(cntr && ret) logw(cntr, "%s returned: %d\n", script, ret);
 		return ret;
 	}
 	else if(WIFSIGNALED(pid_status))
 	{
 		logp("%s terminated on signal %s\n",
-			cmd[0], WTERMSIG(pid_status));
+			script, WTERMSIG(pid_status));
 		if(cntr) logw(cntr, "%s terminated on signal %s\n",
-			cmd[0], WTERMSIG(pid_status));
+			script, WTERMSIG(pid_status));
 	}
 	else
 	{
-		logp("Strange return when trying to run script\n");
-		if(cntr) logw(cntr, "Strange return when trying to run script\n");
+		logp("Strange return when trying to run %s\n", script);
+		if(cntr) logw(cntr, "Strange return when trying to run %s\n", script);
 	}
 
 	return -1;

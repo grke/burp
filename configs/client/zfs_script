@@ -9,14 +9,13 @@
 # On success, the ZFS script renames the temporary snapshot
 # to a more permanent name so that the snapshots can be tracked consistently.
 #
-# To use, put something like this in your burp.conf. It is important that
-# the arguments for pre and post are both the same. You can add multiple
-# pools to backup.
+# To use, put something like this in your burp.conf.
+# You can add multiple pools.
 #
 # backup_script=/etc/burp/zfs_script
 # backup_script_arg=7
-# backup_script_arg=rpool/export/home@abc
-# backup_script_arg=rpool/ROOT/s10x_u9wos_14a/var@xyz
+# backup_script_arg=rpool/export/home@burp
+# backup_script_arg=rpool/ROOT/s10x_u9wos_14a/var@burp
 # backup_script_post_run_on_fail=1
 #
 # A snapshot numbered between 1 to $MAX_SNAPS is created on a backup. The
@@ -29,9 +28,10 @@
 # to 7, you will want to keep at least 14 backups on the server to guarantee
 # that you can always restore at least 7 backups into the past.
 #
-# To do a restore, you will need to do this, starting from number 1:
-# mkfifo /etc/burp/fifos/<number>
-# cat /etc/burp/fifos/<number> | zfs recv <zfs recv args>
+# To do a restore, you will need to do this (for example), starting from number
+# 1:
+# mkfifo /etc/burp/fifos/rpool/export/home@burp<number>
+# cat /etc/burp/fifos/rpool/export/home@burp<number> | zfs recv <zfs recv args>
 #
 # Then repeat, each time incrementing the number until you reach the backup
 # that you want to end up on.

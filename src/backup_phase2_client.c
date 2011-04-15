@@ -217,6 +217,14 @@ static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
 				if(lstat(sb.path, &statbuf))
 				{
 					logw(cntr, "File has vanished: %s", sb.path);
+					// Tell the server to forget about this
+					// file, otherwise it might get stuck
+					// on a select waiting for it to arrive.
+					if(async_write_str('i', sb.path))
+					{
+						ret=-1;
+						quit++;
+					}
 					free_sbuf(&sb);
 					continue;
 				}

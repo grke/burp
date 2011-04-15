@@ -403,6 +403,18 @@ static int do_stuff_to_receive(struct sbuf *rb, FILE *p2fp, const char *datadirt
 			ret=1;
 			logp("got okbackupphase2end\n");
 		}
+		else if(rcmd=='i')
+		{
+			// Interrupt - forget about the last requested file
+			// if it matches. Otherwise, we can get stuck on the
+			// select in the async stuff, waiting for something
+			// that will never arrive.
+			if(*last_requested && !strcmp(rbuf, *last_requested))
+			{
+				free(*last_requested);
+				*last_requested=NULL;
+			}
+		}
 		else
 		{
 			logp("unexpected cmd from client while expecting a file: %c %s\n", rcmd, rbuf);

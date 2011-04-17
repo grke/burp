@@ -11,6 +11,29 @@
 #include "sbuf.h"
 #include "berrno.h"
 
+static int load_signature(rs_signature_t **sumset, struct cntr *cntr)
+{
+	rs_result r;
+	rs_job_t *job;
+//logp("loadsig %s\n", rpath);
+
+	job = rs_loadsig_begin(sumset);
+	if((r=do_rs_run(job,
+		NULL, NULL, NULL, NULL, NULL, async_get_fd(), -1, cntr)))
+	{
+		rs_free_sumset(*sumset);
+		return r;
+	}
+	if((r=rs_build_hash_table(*sumset)))
+	{
+		return r;
+	}
+	rs_job_free(job);
+//logp("end loadsig\n");
+//logp("\n");
+	return r;
+}
+
 static int load_signature_and_send_delta(const char *rpath, unsigned long long *bytes, unsigned long long *sentbytes, struct cntr *cntr)
 {
 	rs_job_t *job;
@@ -27,23 +50,7 @@ static int load_signature_and_send_delta(const char *rpath, unsigned long long *
 	rs_buffers_t rsbuf;
 	memset(&rsbuf, 0, sizeof(rsbuf));
 
-//logp("loadsig %s\n", rpath);
-
-	job = rs_loadsig_begin(&sumset);
-	if((r=do_rs_run(job, NULL, NULL, NULL, NULL, NULL, async_get_fd(), -1, cntr)))
-	{
-		rs_free_sumset(sumset);
-		return r;
-	}
-	if((r=rs_build_hash_table(sumset)))
-	{
-		rs_free_sumset(sumset);
-		return r;
-	}
-	rs_job_free(job);
-	job=NULL;
-//logp("end loadsig\n");
-//logp("\n");
+	if(load_signature(&sumset, cntr)) return -1;
 
 #ifdef HAVE_WIN32
         binit(&bfd);
@@ -224,6 +231,19 @@ static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
 					{
 						ret=-1;
 						quit++;
+					}
+					if(cmd=='f' && sb.datapth)
+					{
+						rs_signature_t *sumset=NULL;
+						// The server will be sending
+						// us a signature. Munch it up
+						// then carry on.
+						if(load_signature(&sumset, cntr))
+						{
+							ret=-1;
+							quit++;
+						}
+						else rs_free_sumset(sumset);
 					}
 					free_sbuf(&sb);
 					continue;

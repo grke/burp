@@ -143,10 +143,11 @@ static int send_status_info(int cfd, struct config *conf, const char *request)
 		for(q=0; chlds && chlds[q].pid!=-2; q++)
 		{
 			if(!chlds[q].name
-			  || strcmp(dir[m]->d_name, chlds[q].name))
+			  || !chlds[q].data
+			  || strcmp(dir[m]->d_name, chlds[q].name)
+			  || !(l=strlen(chlds[q].data)))
 				continue;
 
-			l=strlen(chlds[q].data);
 			if(write(cfd, chlds[q].data, l)<0)
 			{
 				if(errno!=EINTR)

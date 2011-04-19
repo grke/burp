@@ -121,6 +121,9 @@ When set to 0, delta differencing will not take place. That is, when a file chan
 \fBcompression=[gzip0-9]\fR
 Choose the level of gzip compression. Setting 0 or gzip0 turns compression off. The default is gzip9. This option can be overridden by the client configuration files in clientconfdif on the server.
 .TP
+\fBclient_lockdir=[path]\fR
+Path to the directory in which to keep per-client lock files. By default, this is set to the path given by the 'directory' option.
+.TP
 \fBworking_dir_recovery_method=[merge|use|delete]\fR
 This option tells the server what to do when it finds the working directory of an interrupted backup (perhaps somebody pulled the plug on the server, or something). This can be overridden by the client configurations files in clientconfdir
 on the server. Options are...

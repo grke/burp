@@ -1,6 +1,7 @@
 #include "burp.h"
 #include "lock.h"
 #include "log.h"
+#include "handy.h"
 
 int get_lock(const char *path)
 {
@@ -10,6 +11,16 @@ int get_lock(const char *path)
 #else
 	int fdlock;
 	char pid[16]="";
+
+	char *copy=NULL;
+	// Make sure the lock directory exists.
+	if(!(copy=strdup(path))
+	  || mkpath(&copy))
+	{
+		if(copy) free(copy);
+		return -1;
+	}
+	free(copy);
 
 	if((fdlock=open(path, O_WRONLY|O_CREAT, 0666))==-1)
 		return -1;

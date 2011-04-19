@@ -32,6 +32,7 @@ struct config
 	char *clientconfdir;
 	char *ssl_dhfile;
 	int max_children;
+	char *client_lockdir;
 
 // client options
 	char *cname;

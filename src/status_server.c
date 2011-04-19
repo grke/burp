@@ -31,13 +31,14 @@ static time_t get_last_backup_time(const char *timestamp)
 	return t;
 }
 
-static int examine_spool_dir(int cfd, struct config *cconf, const char *client)
+static int examine_spool_dir(int cfd, struct config *conf, struct config *cconf, const char *client)
 {
 	char *w=NULL;
 	char wbuf[256]="";
 	char *basedir=NULL;
 	char *working=NULL;
 	char *current=NULL;
+	char *lockbasedir=NULL;
 	char *lockfile=NULL;
 	char *timestamp=NULL;
 	struct stat statp;
@@ -46,7 +47,8 @@ static int examine_spool_dir(int cfd, struct config *cconf, const char *client)
 	  || !(working=prepend_s(basedir, "working", strlen("working")))
 	  || !(current=prepend_s(basedir, "current", strlen("current")))
 	  || !(timestamp=prepend_s(current, "timestamp", strlen("timestamp")))
-	  || !(lockfile=prepend_s(basedir, "lockfile", strlen("lockfile"))))
+	  || !(lockbasedir=prepend_s(conf->client_lockdir, client, strlen(client)))
+	  || !(lockfile=prepend_s(lockbasedir, "lockfile", strlen("lockfile"))))
 	{
 		logp("out of memory\n");
 		return -1;
@@ -85,6 +87,7 @@ static int examine_spool_dir(int cfd, struct config *cconf, const char *client)
 	if(basedir) free(basedir);
 	if(working) free(working);
 	if(current) free(current);
+	if(lockbasedir) free(lockbasedir);
 	if(lockfile) free(lockfile);
 	if(timestamp) free(timestamp);
 
@@ -183,7 +186,7 @@ static int send_status_info(int cfd, struct config *conf, const char *request)
 				continue;
 			}
 			if(cpath) { free(cpath); cpath=NULL; }
-			if(examine_spool_dir(cfd, &cconf, dir[m]->d_name))
+			if(examine_spool_dir(cfd, conf, &cconf, dir[m]->d_name))
 			{
 				//logp("examine_spool_dir returned error\n");
 				ret=-1;

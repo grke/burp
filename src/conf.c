@@ -43,6 +43,7 @@ void init_config(struct config *conf)
 	conf->max_children=0;
 	conf->librsync=1;
 	conf->compression=9;
+	conf->client_lockdir=NULL;
 
 	conf->timer_script=NULL;
 	conf->timer_arg=NULL;
@@ -116,6 +117,7 @@ void free_config(struct config *conf)
         if(conf->ssl_dhfile) free(conf->ssl_dhfile);
         if(conf->ssl_peer_cn) free(conf->ssl_peer_cn);
         if(conf->encryption_password) free(conf->encryption_password);
+	if(conf->client_lockdir) free(conf->client_lockdir);
 	free_backupdirs(conf->startdir, conf->sdcount);
 	free_backupdirs(conf->incexcdir, conf->iecount);
 	free_backupdirs(conf->fschgdir, conf->fscount);
@@ -398,6 +400,8 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 			  "cname", &(conf->cname))) return -1;
 			if(get_conf_val(field, value,
 			  "directory", &(conf->directory))) return -1;
+			if(get_conf_val(field, value,
+			  "client_lockdir", &(conf->client_lockdir))) return -1;
 			if(get_conf_val(field, value,
 			  "lockfile", &(conf->lockfile))) return -1;
 			if(get_conf_val(field, value,
@@ -712,6 +716,14 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 		  break;
 	}
 	//if(!r) logp("ok\n");
+
+	// If client_lockdir not set, use conf->directory.
+	if(!conf->client_lockdir && conf->directory
+	  && !(conf->client_lockdir=strdup(conf->directory)))
+	{
+		logp("out of memory\n");
+		return -1;
+	}
 
 	return r;
 }

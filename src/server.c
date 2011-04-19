@@ -768,6 +768,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 	size_t len=0;
 	char *basedir=NULL;
 	// Do not allow a single client to connect more than once
+	char *lockbasedir=NULL;
 	char *lockfile=NULL;
 	bool gotlock=FALSE;
 	// The previous backup
@@ -805,7 +806,8 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 	  || !(phase2data=prepend_s(working, "phase2", strlen("phase2")))
 	  || !(unchangeddata=prepend_s(working, "unchanged", strlen("unchanged")))
 	  || !(forward=prepend_s(current, "forward", strlen("forward")))
-	  || !(lockfile=prepend_s(basedir, "lockfile", strlen("lockfile"))))
+	  || !(lockbasedir=prepend_s(conf->client_lockdir, client, strlen(client)))
+	  || !(lockfile=prepend_s(lockbasedir, "lockfile", strlen("lockfile"))))
 	{
 		log_and_send("out of memory");
 		ret=-1;
@@ -958,6 +960,7 @@ end:
 	if(phase1data) free(phase1data);
 	if(phase2data) free(phase2data);
 	if(unchangeddata) free(unchangeddata);
+	if(lockbasedir) free(lockbasedir);
 	if(lockfile)
 	{
 		if(gotlock) unlink(lockfile);

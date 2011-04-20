@@ -13,8 +13,8 @@ static int conf_error(const char *config_path, int line)
 void init_config(struct config *conf)
 {
 	conf->mode=MODE_UNSET;
-	conf->port=0;
-	conf->status_port=0;
+	conf->port=NULL;
+	conf->status_port=NULL;
 	conf->keep=0;
 	conf->hardlinked_archive=0;
 	conf->working_dir_recovery_method=NULL;
@@ -307,18 +307,6 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 			else
 				return conf_error(config_path, line);
 		}
-		else if(!strcmp(field, "port"))
-		{
-			conf->port=atoi(value);
-			if(conf->port<=0)
-				return conf_error(config_path, line);
-		}
-		else if(!strcmp(field, "status_port"))
-		{
-			conf->status_port=atoi(value);
-			if(conf->status_port<=0)
-				return conf_error(config_path, line);
-		}
 		else if(!strcmp(field, "keep"))
 		{
 			conf->keep=atoi(value);
@@ -383,6 +371,10 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 		}
 		else
 		{
+			if(get_conf_val(field, value,
+			  "port", &(conf->port))) return -1;
+			if(get_conf_val(field, value,
+			  "status_port", &(conf->status_port))) return -1;
 			if(get_conf_val(field, value,
 			  "ssl_cert_ca", &(conf->ssl_cert_ca))) return -1;
 			if(get_conf_val(field, value,
@@ -634,7 +626,7 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 
 	if(!loadall) return 0;
 
-	if(conf->port<=0)
+	if(!conf->port)
 	{
 		logp("%s: port unset\n", config_path);
 		r--;
@@ -660,7 +652,7 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 			  { logp("%s: ssl_dhfile unset\n", config_path); r--; }
 			if(conf->encryption_password)
 			  { logp("%s: encryption_password should not be set on the server!\n", config_path); r--; }
-			if(conf->status_port<=0) // carry on if not set.
+			if(!conf->status_port) // carry on if not set.
 			  { logp("%s: status_port unset\n", config_path); }
 			if(!conf->max_children)
 			{

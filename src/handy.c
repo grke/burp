@@ -8,6 +8,10 @@
 #include "berrno.h"
 #include "forkchild.h"
 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+
 void close_fd(int *fd)
 {
 	if(*fd<0) return;
@@ -607,42 +611,44 @@ void add_fd_to_sets(int fd, fd_set *read_set, fd_set *write_set, fd_set *err_set
 	if(fd > *max_fd) *max_fd = fd;
 }
 
-int init_client_socket(const char *host, int port)
+int init_client_socket(const char *host, const char *port)
 {
 	int rfd=-1;
-	struct sockaddr_in sin;
-	struct hostent *hp=NULL;
+	int gai_ret;
+	struct addrinfo hints;
+	struct addrinfo *result;
+	struct addrinfo *rp;
 
-	if(!(hp=gethostbyname(host)))
+	memset(&hints, 0, sizeof(struct addrinfo));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = 0;
+	hints.ai_protocol = 0;
+
+	if((gai_ret=getaddrinfo(host, port, &hints, &result)))
 	{
-		logp("unknown host: %s\n", host);
+		logp("getaddrinfo: %s\n", gai_strerror(rfd));
 		return -1;
 	}
 
-	memset(&sin, 0, sizeof(sin));
-	sin.sin_family=AF_INET;
-	memcpy((char *)&sin.sin_addr, hp->h_addr, hp->h_length);
-	sin.sin_port=htons(port);
-
-	if((rfd=socket(PF_INET, SOCK_STREAM, 0))<0)
+	for(rp=result; rp; rp=rp->ai_next)
 	{
-		berrno be;
-		logp("socket error: %s\n", be.bstrerror());
-		return -1;
+		rfd=socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+		if(rfd<0) continue;
+		if(connect(rfd, rp->ai_addr, rp->ai_addrlen) != -1) break;
+		close(rfd);
 	}
-	//setsockopt(rfd, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
-	if(connect(rfd, (struct sockaddr *)&sin, sizeof(sin))<0)
+	freeaddrinfo(result);
+	if(!rp)
 	{
-		//berrno be;
-		logp("connect error, %s: %s\n", host, strerror(errno));
-		//be.bstrerror(b_errno_win32));
+		logp("could not connect to %s:%s\n", host, port);
 		close_fd(&rfd);
 		return -1;
 	}
 
-	#ifdef HAVE_WIN32
+#ifdef HAVE_WIN32
 	setmode(rfd, O_BINARY);
-	#endif
+#endif
 	return rfd;
 }
 

@@ -18,8 +18,8 @@ struct backupdir
 
 struct config
 {
-	int port;
-	int status_port;
+	char *port;
+	char *status_port;
 	enum burp_mode mode;
 	char *lockfile;
 	char *ssl_cert_ca;

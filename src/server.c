@@ -40,36 +40,45 @@ static void sighandler(int sig)
 	exit(1);
 }
 
-static int init_listen_socket(int port, int alladdr)
+static int init_listen_socket(const char *port, int alladdr)
 {
 	int rfd;
-	struct sockaddr_in laddr;
-	socklen_t laddrlen;
+	int gai_ret;
+	struct addrinfo hints;
+	struct addrinfo *result=NULL;
+	struct addrinfo *rp=NULL;
 
-	memset(&laddr, 0, sizeof(laddr));
+	memset(&hints, 0, sizeof(struct addrinfo));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = alladdr ? AI_PASSIVE : 0;
+	hints.ai_protocol = IPPROTO_TCP;
+	hints.ai_canonname = NULL;
+	hints.ai_addr = NULL;
+	hints.ai_next = NULL;
 
-	if((rfd=socket(AF_INET, SOCK_STREAM, IPPROTO_TCP))<0)
+	if((gai_ret=getaddrinfo(NULL, port, &hints, &result)))
 	{
-		logp("unable to create listening socket on port %d\n", port);
+		logp("unable to create listening socket on port %s: %s\n",
+			port, gai_strerror(gai_ret));
 		return -1;
 	}
 
-	laddr.sin_family=AF_INET;
-	laddr.sin_port=htons(port);
-	laddr.sin_addr.s_addr=htonl(alladdr?INADDR_ANY:INADDR_LOOPBACK);
-
-	// Bind listening address.
-	laddrlen=sizeof(laddr);
-
-	if(bind(rfd, (struct sockaddr *)&laddr, laddrlen)<0)
+	for(rp=result; rp; rp=rp->ai_next)
 	{
-		logp("unable to bind listening socket on port %d\n", port);
+		rfd=socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+		if(rfd<0) continue;
+		if(!bind(rfd, rp->ai_addr, rp->ai_addrlen)) break;
+		close(rfd);
+	}
+	freeaddrinfo(result);
+	if(!rp)
+	{
+		logp("unable to bind listening socket on port %s\n", port);
 		return -1;
 	}
 
 	reuseaddr(rfd);
-
-	getsockname(rfd, (struct sockaddr *)&laddr, &laddrlen);
 
 	// Say that we are happy to accept connections.
 	if(listen(rfd, 5)<0)
@@ -1154,7 +1163,7 @@ int server(struct config *conf, const char *configfile, int forking)
 		SSL_VERIFY_FAIL_IF_NO_PEER_CERT,0);
 
 	if((rfd=init_listen_socket(conf->port, 1))<0) return 1;
-	if(conf->status_port>=0
+	if(conf->status_port
 		&& (sfd=init_listen_socket(conf->status_port, 0))<0) return 1;
 
 	while(1)

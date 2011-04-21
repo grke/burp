@@ -56,6 +56,7 @@ FILED_OBJS = \
 	$(OBJDIR)/rs_buf.o \
 	$(OBJDIR)/sbuf.o \
 	$(OBJDIR)/ssl.o \
+	$(OBJDIR)/strlist.o \
 	$(OBJDIR)/vss.o \
 	$(OBJDIR)/vss_XP.o \
 	$(OBJDIR)/vss_W2K3.o \

@@ -56,6 +56,7 @@ SVRSRCS =	asyncio.c \
 		ssl.c \
 		status_client.c \
 		status_server.c \
+		strlist.c \
 		zlibio.c \
 
 SVROBJS = $(SVRSRCS:.c=.o)

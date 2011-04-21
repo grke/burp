@@ -1,5 +1,3 @@
-* Add more file types.
-
 * Improve the byte counter:
 	do something about working dir recovery
 
@@ -16,10 +14,14 @@
 * Make the restore stuff use sbuf so that I can remove the kludge from
   asyncio.c for links.
 
-* Add xattr/acl support.
+* Add xattr support.
+
+* Add acl support.
 
 * Add an ncurses wrapper to the monitor commands.
 
 * Do not compress manifests and logs when compression is turned off.
 
 * A restore warning when a file exists now seems to cause "ret OK, but zstream not finished: 0" on the server. Or does it?
+
+* Allow random backups to be deleted safely when hardlinked_archive is on.

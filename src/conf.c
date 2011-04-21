@@ -3,6 +3,7 @@
 #include "prog.h"
 #include "find.h"
 #include "log.h"
+#include "strlist.h"
 
 static int conf_error(const char *config_path, int line)
 {
@@ -83,23 +84,6 @@ void init_config(struct config *conf)
 	conf->rscount=0;
 }
 
-static void free_backupdirs(struct backupdir **bd, int count)
-{
-	int b=0;
-	if(bd)
-	{
-		for(b=0; b<count; b++)
-		{
-			if(bd[b])
-			{
-				if(bd[b]->path) free(bd[b]->path);
-				free(bd[b]);
-			}
-		}
-		free(bd);
-	}
-}
-
 void free_config(struct config *conf)
 {
 	if(!conf) return;
@@ -118,33 +102,33 @@ void free_config(struct config *conf)
         if(conf->ssl_peer_cn) free(conf->ssl_peer_cn);
         if(conf->encryption_password) free(conf->encryption_password);
 	if(conf->client_lockdir) free(conf->client_lockdir);
-	free_backupdirs(conf->startdir, conf->sdcount);
-	free_backupdirs(conf->incexcdir, conf->iecount);
-	free_backupdirs(conf->fschgdir, conf->fscount);
-	free_backupdirs(conf->fifos, conf->ffcount);
+	strlists_free(conf->startdir, conf->sdcount);
+	strlists_free(conf->incexcdir, conf->iecount);
+	strlists_free(conf->fschgdir, conf->fscount);
+	strlists_free(conf->fifos, conf->ffcount);
 
 	if(conf->timer_script) free(conf->timer_script);
-	free_backupdirs(conf->timer_arg, conf->tacount);
+	strlists_free(conf->timer_arg, conf->tacount);
 
 	if(conf->notify_success_script) free(conf->notify_success_script);
-	free_backupdirs(conf->notify_success_arg, conf->nscount);
+	strlists_free(conf->notify_success_arg, conf->nscount);
 
 	if(conf->notify_failure_script) free(conf->notify_failure_script);
-	free_backupdirs(conf->notify_failure_arg, conf->nfcount);
+	strlists_free(conf->notify_failure_arg, conf->nfcount);
 
 	if(conf->backup_script_pre) free(conf->backup_script_pre);
-	free_backupdirs(conf->backup_script_pre_arg, conf->bprecount);
+	strlists_free(conf->backup_script_pre_arg, conf->bprecount);
 	if(conf->backup_script_post) free(conf->backup_script_post);
-	free_backupdirs(conf->backup_script_post_arg, conf->bpostcount);
+	strlists_free(conf->backup_script_post_arg, conf->bpostcount);
 	if(conf->restore_script_pre) free(conf->restore_script_pre);
-	free_backupdirs(conf->restore_script_pre_arg, conf->rprecount);
+	strlists_free(conf->restore_script_pre_arg, conf->rprecount);
 	if(conf->restore_script_post) free(conf->restore_script_post);
-	free_backupdirs(conf->restore_script_post_arg, conf->rpostcount);
+	strlists_free(conf->restore_script_post_arg, conf->rpostcount);
 
 	if(conf->backup_script) free(conf->backup_script);
 	if(conf->restore_script) free(conf->restore_script);
-	free_backupdirs(conf->backup_script_arg, conf->bscount);
-	free_backupdirs(conf->restore_script_arg, conf->rscount);
+	strlists_free(conf->backup_script_arg, conf->bscount);
+	strlists_free(conf->restore_script_arg, conf->rscount);
 
 	init_config(conf);
 }
@@ -201,43 +185,7 @@ static int get_pair(char *buf, char **field, char **value)
 	return 0;
 }
 
-static int add_backup_dir(struct backupdir ***bdlist, int *count, char *path, int include)
-{
-	//int b=0;
-	struct backupdir *bdnew=NULL;
-	struct backupdir **bdtmp=NULL;
-	if(!path)
-	{
-		logp("add_backup_dir called with NULL path!\n");
-		return -1;
-	}
-	if(!(bdtmp=(struct backupdir **)realloc(*bdlist,
-		((*count)+1)*sizeof(struct backupdir *))))
-	{
-		logp("out of memory in add_backup_dir()\n");
-		return -1;
-	}
-	*bdlist=bdtmp;
-	if(!(bdnew=(struct backupdir *)malloc(sizeof(struct backupdir))))
-	{
-		logp("out of memory in add_backup_dir()\n");
-		return -1;
-	}
-	bdnew->include=include;
-	bdnew->path=strdup(path);
-	(*bdlist)[(*count)++]=bdnew;
-
-	//for(b=0; b<*count; b++)
-	//	printf("now: %d %s\n", b, (*bdlist)[b]->path);
-	return 0;
-}
-
-static int myalphasort(struct backupdir **a, struct backupdir **b)
-{
-	return pathcmp((*a)->path, (*b)->path);
-}
-
-static int get_conf_val_args(const char *field, const char *value, const char *opt, struct backupdir ***args, int *got_args, int *count, struct backupdir ***list, int include)
+static int get_conf_val_args(const char *field, const char *value, const char *opt, struct strlist ***args, int *got_args, int *count, struct strlist ***list, int include)
 {
 	char *tmp=NULL;
 	if(get_conf_val(field, value, opt, &tmp)) return -1;
@@ -245,12 +193,12 @@ static int get_conf_val_args(const char *field, const char *value, const char *o
 	{
 		if(got_args && *got_args && args)
 		{
-			free_backupdirs(*args, *count);
+			strlists_free(*args, *count);
 			*got_args=0;
 			*args=NULL;
 			*count=0;
 		}
-		if(add_backup_dir(list, count, tmp, include)) return -1;
+		if(strlist_add(list, count, tmp, include)) return -1;
 		free(tmp); tmp=NULL;
 	}
 	return 0;
@@ -263,19 +211,19 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 	int line=0;
 	FILE *fp=NULL;
 	char buf[256]="";
-	struct backupdir **sdlist=NULL;
-	struct backupdir **ielist=NULL;
-	struct backupdir **fslist=NULL;
-	struct backupdir **fflist=NULL;
-	struct backupdir **talist=NULL;
-	struct backupdir **nslist=NULL;
-	struct backupdir **nflist=NULL;
-	struct backupdir **bprelist=NULL;
-	struct backupdir **bpostlist=NULL;
-	struct backupdir **rprelist=NULL;
-	struct backupdir **rpostlist=NULL;
-	struct backupdir **bslist=NULL;
-	struct backupdir **rslist=NULL;
+	struct strlist **sdlist=NULL;
+	struct strlist **ielist=NULL;
+	struct strlist **fslist=NULL;
+	struct strlist **fflist=NULL;
+	struct strlist **talist=NULL;
+	struct strlist **nslist=NULL;
+	struct strlist **nflist=NULL;
+	struct strlist **bprelist=NULL;
+	struct strlist **bpostlist=NULL;
+	struct strlist **rprelist=NULL;
+	struct strlist **rpostlist=NULL;
+	struct strlist **bslist=NULL;
+	struct strlist **rslist=NULL;
 	int have_include=0;
 	int got_timer_args=conf->tacount;
 	int got_ns_args=conf->nscount;
@@ -497,17 +445,17 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 
 	if(conf->ffcount) qsort(fflist, conf->ffcount,
 		sizeof(*fflist),
-		(int (*)(const void *, const void *))myalphasort);
+		(int (*)(const void *, const void *))strlist_sort);
 	conf->fifos=fflist;
 
 	if(conf->fscount) qsort(fslist, conf->fscount,
 		sizeof(*fslist),
-		(int (*)(const void *, const void *))myalphasort);
+		(int (*)(const void *, const void *))strlist_sort);
 	conf->fschgdir=fslist;
 
 	if(conf->iecount) qsort(ielist, conf->iecount,
 		sizeof(*ielist),
-		(int (*)(const void *, const void *))myalphasort);
+		(int (*)(const void *, const void *))strlist_sort);
 	conf->incexcdir=ielist;
 
 	// This decides which directories to start backing up, and which
@@ -516,18 +464,18 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 	{
 		if(strchr(ielist[i]->path, '\\'))
 			logp("WARNING: Please use forward slashes '/' instead of backslashes '\\' in your include/exclude paths.\n");
-		if(ielist[i]->include) have_include++;
+		if(ielist[i]->flag) have_include++;
 		if(!i)
 		{
 			// ielist is sorted - the first entry is one that
 			// can be backed up
-			if(!ielist[i]->include)
+			if(!ielist[i]->flag)
 			{
 				logp("Top level should not be an exclude: %s\n",
 					ielist[i]->path);
 				return -1;
 			}
-			if(add_backup_dir(&sdlist, &(conf->sdcount),
+			if(strlist_add(&sdlist, &(conf->sdcount),
 				ielist[i]->path, 1)) return -1;
 			continue;
 		}
@@ -542,7 +490,7 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 		// we have found another start point.
 		if(!is_subdir(sdlist[(conf->sdcount)-1]->path, ielist[i]->path))
 		{
-			if(add_backup_dir(&sdlist, &(conf->sdcount),
+			if(strlist_add(&sdlist, &(conf->sdcount),
 				ielist[i]->path, 1)) return -1;
 		}
 	}
@@ -571,16 +519,16 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 	}
 	if(bslist)
 	{
-		free_backupdirs(bprelist, conf->bprecount);
-		free_backupdirs(bpostlist, conf->bpostcount);
+		strlists_free(bprelist, conf->bprecount);
+		strlists_free(bpostlist, conf->bpostcount);
 		conf->bprecount=0;
 		conf->bpostcount=0;
 		for(i=0; i<conf->bscount; i++)
 		{
-			if(add_backup_dir(&bprelist,
+			if(strlist_add(&bprelist,
 				&(conf->bprecount),
 				bslist[i]->path, 0)) return -1;
-			if(add_backup_dir(&bpostlist,
+			if(strlist_add(&bpostlist,
 				&(conf->bpostcount),
 				bslist[i]->path, 0)) return -1;
 		}
@@ -604,16 +552,16 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 	}
 	if(rslist)
 	{
-		free_backupdirs(rprelist, conf->rprecount);
-		free_backupdirs(rpostlist, conf->rpostcount);
+		strlists_free(rprelist, conf->rprecount);
+		strlists_free(rpostlist, conf->rpostcount);
 		conf->rprecount=0;
 		conf->rpostcount=0;
 		for(i=0; i<conf->rscount; i++)
 		{
-			if(add_backup_dir(&rprelist,
+			if(strlist_add(&rprelist,
 				&(conf->rprecount),
 				rslist[i]->path, 0)) return -1;
-			if(add_backup_dir(&rpostlist,
+			if(strlist_add(&rpostlist,
 				&(conf->rpostcount),
 				rslist[i]->path, 0)) return -1;
 		}
@@ -687,7 +635,7 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 				logp("Listing configured paths:\n");
 				for(int b=0; b<conf->iecount; b++)
 					logp("%s: %s\n",
-						conf->incexcdir[b]->include?
+						conf->incexcdir[b]->flag?
 							"include":"exclude",
 						conf->incexcdir[b]->path);
 				logp("Listing starting paths:\n");
@@ -730,15 +678,15 @@ static int set_global_str(char **dst, const char *src)
 	return 0;
 }
 
-static int set_global_arglist(struct backupdir ***dst, struct backupdir **src, int *dstcount, int srccount)
+static int set_global_arglist(struct strlist ***dst, struct strlist **src, int *dstcount, int srccount)
 {
 	if(!*dst && src)
 	{
 		int i=0;
-		struct backupdir **list=NULL;
+		struct strlist **list=NULL;
 		for(i=0; i<srccount; i++)
 		{
-			if(add_backup_dir(&list, dstcount,
+			if(strlist_add(&list, dstcount,
 				src[i]->path, 0)) return -1;
 		}
 		*dst=list;

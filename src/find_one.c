@@ -141,7 +141,7 @@ int is_subdir(const char *dir, const char *sub)
 	return 0;
 }
 
-int file_is_included(struct backupdir **ielist, int iecount, const char *fname)
+int file_is_included(struct strlist **ielist, int iecount, const char *fname)
 {
 	int i=0;
 	int ret=0;
@@ -161,7 +161,7 @@ int file_is_included(struct backupdir **ielist, int iecount, const char *fname)
 	}
 	//logp("best: %d\n", best);
 	if(best<0) ret=0;
-	else ret=ielist[best]->include;
+	else ret=ielist[best]->flag;
 
 	//logp("return: %d\n", ret);
 	return ret;
@@ -590,7 +590,7 @@ find_one_file(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
 		// included.
 		int ex=0;
 		for(ex=0; ex<conf->iecount; ex++) {
-		  if(conf->incexcdir[ex]->include
+		  if(conf->incexcdir[ex]->flag
 		    && is_subdir(link, conf->incexcdir[ex]->path)) {
 			int ey;
 			if((rtn_stat=find_one_file(ff_pkt, conf, cntr, handle_file,

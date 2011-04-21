@@ -25,7 +25,7 @@ extern void add_fd_to_sets(int fd, fd_set *read_set, fd_set *write_set, fd_set *
 extern int init_client_socket(const char *host, const char *port);
 extern void reuseaddr(int fd);
 extern void write_status(const char *client, int phase, const char *path, struct cntr *cntr);
-extern int run_script(const char *script, struct backupdir **userargs, int userargc, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, struct cntr *cntr);
+extern int run_script(const char *script, struct strlist **userargs, int userargc, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, struct cntr *cntr);
 extern char *comp_level(struct config *conf);
 
 #endif

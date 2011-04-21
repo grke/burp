@@ -146,7 +146,7 @@ logp("before init find files\n");
 logp("after init find files\n");
 	for(; sd < conf->sdcount; sd++)
 	{
-		if(conf->startdir[sd]->include)
+		if(conf->startdir[sd]->flag)
 		{
 			if((ret=find_files(ff, conf,
 				conf->startdir[sd]->path, cntr, send_file)))

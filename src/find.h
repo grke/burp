@@ -125,7 +125,7 @@ int   find_one_file(FF_PKT *ff, struct config *conf, struct cntr *cntr,
 int   term_find_one(FF_PKT *ff);
 int pathcmp(const char *a, const char *b);
 int is_subdir(const char *dir, const char *sub);
-int file_is_included(struct backupdir **ielist, int iecount, const char *fname);
+int file_is_included(struct strlist **ielist, int iecount, const char *fname);
 
 /* from attribs.c */
 void encode_stat(char *buf, struct stat *statp);

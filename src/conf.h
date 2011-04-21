@@ -1,19 +1,13 @@
 #ifndef _CONF_FILE_H
 #define _CONF_FILE_H
 
+#include "strlist.h"
+
 enum burp_mode
 {
 	MODE_UNSET=0,
 	MODE_SERVER,
 	MODE_CLIENT
-};
-
-typedef struct backupdir backupdir_t;
-
-struct backupdir
-{
-	int include;
-	char *path;
 };
 
 struct config
@@ -38,40 +32,40 @@ struct config
 	char *cname;
 	char *password;
 	char *server;
-	struct backupdir **startdir;
-	struct backupdir **incexcdir;
-	struct backupdir **fschgdir;
+	struct strlist **startdir;
+	struct strlist **incexcdir;
+	struct strlist **fschgdir;
 	int sdcount;
 	int iecount;
 	int fscount;
 	int cross_all_filesystems;
 	int read_all_fifos;
-	struct backupdir **fifos;
+	struct strlist **fifos;
 	int ffcount;
 	char *encryption_password;
 
 	char *backup_script_pre;
-	struct backupdir **backup_script_pre_arg;
+	struct strlist **backup_script_pre_arg;
 	int bprecount;
 	char *backup_script_post;
-	struct backupdir **backup_script_post_arg;
+	struct strlist **backup_script_post_arg;
 	int bpostcount;
 	int   backup_script_post_run_on_fail;
 	char *restore_script_pre;
-	struct backupdir **restore_script_pre_arg;
+	struct strlist **restore_script_pre_arg;
 	int rprecount;
 	char *restore_script_post;
-	struct backupdir **restore_script_post_arg;
+	struct strlist **restore_script_post_arg;
 	int rpostcount;
 	int   restore_script_post_run_on_fail;
 
 	// Use these when you want to give the same args to both post and pre
 	// scripts.
 	char *backup_script;
-	struct backupdir **backup_script_arg;
+	struct strlist **backup_script_arg;
 	int bscount;
 	char *restore_script;
-	struct backupdir **restore_script_arg;
+	struct strlist **restore_script_arg;
 	int rscount;
 
 // Client options on the server.
@@ -83,15 +77,15 @@ struct config
 	int compression;
 
 	char *timer_script;
-	struct backupdir **timer_arg;
+	struct strlist **timer_arg;
 	int tacount;
 
 	char *notify_success_script;
-	struct backupdir **notify_success_arg;
+	struct strlist **notify_success_arg;
 	int nscount;
 
 	char *notify_failure_script;
-	struct backupdir **notify_failure_arg;
+	struct strlist **notify_failure_arg;
 	int nfcount;
 };
 

@@ -762,7 +762,7 @@ static int get_lock_and_clean(const char *basedir, const char *lockfile, const c
 	return ret;
 }
 
-static int run_script_w(const char *script, struct backupdir **userargs, int userargc, const char *client, const char *current, struct cntr *cntr)
+static int run_script_w(const char *script, struct strlist **userargs, int userargc, const char *client, const char *current, struct cntr *cntr)
 {
 	return run_script(script, userargs, userargc, client, current,
 		"reserved1", "reserved2", "reserved3", cntr);

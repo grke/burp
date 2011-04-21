@@ -734,7 +734,7 @@ static void log_script_output(const char *str, FILE **fp)
 	}
 }
 
-int run_script(const char *script, struct backupdir **userargs, int userargc, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, struct cntr *cntr)
+int run_script(const char *script, struct strlist **userargs, int userargc, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, struct cntr *cntr)
 {
 	int a=0;
 	int l=0;

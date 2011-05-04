@@ -125,7 +125,7 @@ int do_list_client(const char *backup, const char *listregex, enum action act)
 		if(scmd=='b')
 		{
 			// A backup timestamp, just print it.
-			logp("Backup: %s\n", statbuf);
+			printf("Backup: %s\n", statbuf);
 			if(listregex) printf("With regex: %s\n", listregex);
 			if(statbuf) { free(statbuf); statbuf=NULL; }
 			continue;

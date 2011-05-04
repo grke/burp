@@ -25,6 +25,14 @@ exit. This is useful for debugging.
 .TP
 \fB\-a s\fR \fB\fR
 Run this to connect to a running server and see a live snapshot of the status of all your backup clients. You can additionally specify '-s [client]' to get more verbose details of a particular client. If your server config file is not in the default location, you will also need to specify the path with the '-c' option. Use the external program 'watch' to have a continuous update. A future burp release will use ncurses for a smoother experience. A 'watch' example: "watch burp -a s -s testclient' 
+.TP
+\fB\-l\fR \fBlogfile\fR
+Short for 'log file'. The argument is a path to the log file. The default
+is stdout. This option overrides the
+.IR logfile
+option in the config file. Use 
+.I /dev/null
+to deactivate or '' to reactivate output.
 
 .SH CLIENT OPTIONS
 .TP
@@ -50,6 +58,14 @@ overwrite existing files.
 \fB\-r\fR \fB[regex]\fR
 Short for 'regular expression'. The argument is a regular expression with
 which to match backup files. Use it for lists and restores.
+.TP
+\fB\-l\fR \fBlogfile\fR
+Short for 'log file'. The argument is a path to the log file. The default
+is stdout. This option overrides the
+.IR logfile
+option in the config file. Use 
+.I /dev/null
+to deactivate or '' to reactivate output.
 
 .SH EXAMPLES
 .TP
@@ -58,6 +74,9 @@ Lists the available backups and dates
 .TP
 \fBburp -a l -b 1\fR
 Lists all the files in backup number 1.
+.TP
+\fBburp -a l -b 1 -l /dev/null\fR
+Lists all the files in backup number 1 without extra debug info.
 .TP
 \fBburp -a l -b a\fR
 Lists all the files in all the backups.
@@ -107,6 +126,12 @@ Path to the directory that contains client configuration files.
 \fBlockfile=[path]\fR
 Path to the lockfile that ensures that two server processes cannot run
 simultaneously.
+.TP
+\fBpidfile=[path]\fR
+Synonym for lockfile.
+.TP
+\fBlogfile=[path]\fR
+Path to the logfile.
 .TP
 \fBkeep=[number]\fR
 Number of backups to keep. This can be overriddden by the client configuration
@@ -188,6 +213,12 @@ Defines the password to send to the server.
 \fBlockfile=[path]\fR
 Path to the lockfile that ensures that two client processes cannot run
 simultaneously (this currently doesn't work on Windows).
+.TP
+\fBpidfile=[path]\fR
+Synonym for lockfile.
+.TP
+\fBlogfile=[path]\fR
+Path to the logfile.
 .TP
 \fBinclude=[path]\fR
 Path to include in the backup. You can have multiple include lines. Use forward slashes '/', not backslashes '\\' as path delimiters.

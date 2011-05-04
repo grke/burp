@@ -658,7 +658,7 @@ int init_client_socket(const char *host, const char *port)
 }
 #else
 // This second version is supposed to do IPv6 properly and does not work
-// for 32 bit Windows.
+// for 32 bit Windows (but does for 64 bit Windows and unix-style machines)
 int init_client_socket(const char *host, const char *port)
 {
 	int rfd=-1;
@@ -689,7 +689,8 @@ int init_client_socket(const char *host, const char *port)
 	freeaddrinfo(result);
 	if(!rp)
 	{
-		logp("could not connect to %s:%s\n", host, port);
+		/* host==NULL and AI_PASSIVE not set -> LOOPBACK */
+		logp("could not connect to %s:%s\n", host?host:"LOOPBACK", port);
 		close_fd(&rfd);
 		return -1;
 	}

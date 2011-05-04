@@ -199,7 +199,8 @@ int status_client(struct config *conf, const char *cstatus)
 		logp("server running\n\n");
 */
 
-	if((fd=init_client_socket("127.0.0.1", conf->status_port))<0)
+	/* NULL == ::1 or 127.0.0.1 */
+	if((fd=init_client_socket(NULL, conf->status_port))<0)
 		return -1;
 	set_blocking(fd);
 	if(request_status(fd, cstatus))

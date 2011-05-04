@@ -34,6 +34,7 @@ void logp(const char *fmt, ...)
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	pid=(int)getpid();
 	fprintf(logfp?logfp:stdout, "%s: %s[%d] %s", gettm(), prog, pid, buf);
+	syslog(LOG_INFO, "%s: %s[%d] %s", gettm(), prog, pid, buf);
 	va_end(ap);
 }
 
@@ -46,6 +47,7 @@ int set_logfp(FILE *fp)
 {
 	if(logfp) fclose(logfp);
 	logfp=fp;
+	if(logfp) setlinebuf(logfp);
 	return 0;
 }
 

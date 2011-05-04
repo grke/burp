@@ -23,6 +23,7 @@ void init_config(struct config *conf)
 	conf->cname=NULL;
 	conf->directory=NULL;
 	conf->lockfile=NULL;
+	conf->logfile=NULL;
 	conf->password=NULL;
 	conf->server=NULL;
 	conf->startdir=NULL;
@@ -91,6 +92,7 @@ void free_config(struct config *conf)
 	if(conf->cname) free(conf->cname);
 	if(conf->directory) free(conf->directory);
 	if(conf->lockfile) free(conf->lockfile);
+	if(conf->logfile) free(conf->logfile);
 	if(conf->password) free(conf->password);
 	if(conf->server) free(conf->server);
 	if(conf->working_dir_recovery_method)
@@ -344,6 +346,11 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 			  "client_lockdir", &(conf->client_lockdir))) return -1;
 			if(get_conf_val(field, value,
 			  "lockfile", &(conf->lockfile))) return -1;
+			// "pidfile" is a synonym for "lockfile".
+			if(get_conf_val(field, value,
+			  "pidfile", &(conf->lockfile))) return -1;
+			if(get_conf_val(field, value,
+			  "logfile", &(conf->logfile))) return -1;
 			if(get_conf_val(field, value,
 			  "password", &(conf->password))) return -1;
 			if(get_conf_val(field, value,

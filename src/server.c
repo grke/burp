@@ -1133,10 +1133,72 @@ static int process_incoming_client(int rfd, int forking, struct config *conf, SS
 	}
 	else
 	{
-		free_config(conf);
+		//free_config(conf);
 		return run_child(&rfd, &cfd, ctx, configfile);
 	}
 	return 0;
+}
+
+static int daemonise(void)
+{
+	/* process ID */
+	pid_t pid;
+
+	/* session ID */
+	pid_t sid;
+
+	/* fork new child and end parent */
+	pid=fork();
+
+	/* did we fork? */
+	if(pid<0)
+	{
+		logp("error forking\n");
+		return -1;
+	}
+
+	/* parent? */
+	if(pid>0)
+		exit(EXIT_SUCCESS);
+
+	/* now we are in the child process */
+
+	/* change umask (FIXME: is this correct?) */
+	umask(0);
+
+	/* create a session and set the process group ID */
+	sid=setsid();
+	if(sid<0)
+	{
+		logp("error setting sid\n");
+		return -1;
+	}
+
+	/* leave and unblock current working dir */
+	if(chdir("/")<0)
+	{
+		logp("error changing working dir\n");
+		return -1;
+	}
+
+	/* close std* */
+	close(STDIN_FILENO);
+	close(STDOUT_FILENO);
+	close(STDERR_FILENO);
+
+	return 0;
+}
+
+static int relock(const char *lockfile)
+{
+	int tries=5;
+	for(; tries>0; tries--)
+	{
+		if(!get_lock(lockfile)) return 0;
+		sleep(2);
+	}
+	logp("Unable to re-get lockfile after forking.\n");
+	return -1;
 }
 
 int server(struct config *conf, const char *configfile, int forking)
@@ -1144,6 +1206,11 @@ int server(struct config *conf, const char *configfile, int forking)
 	int ret=0;
 	int rfd=-1; // normal client port
 	SSL_CTX *ctx=NULL;
+
+	if(forking)
+	{
+		if(daemonise() || relock(conf->lockfile)) return 1;
+	}
 
 	setup_signals(conf->max_children);
 

@@ -25,6 +25,8 @@ int main (int argc, char *argv[])
 	const char *restoreprefix=NULL;
 	const char *regex=NULL;
 	const char *cstatus=NULL;
+	const char *logfile=NULL;
+	FILE *fp=NULL;
 #ifdef HAVE_WIN32
 	const char *configfile="C:/Program Files/Burp/burp.conf";
 #else
@@ -33,7 +35,7 @@ int main (int argc, char *argv[])
 
 	init_log(argv[0]);
 
-	while((option=getopt(argc, argv, "a:b:c:d:hfnr:s:v?"))!=-1)
+	while((option=getopt(argc, argv, "a:b:c:d:hfnr:s:l:v?"))!=-1)
 	{
 		switch(option)
 		{
@@ -82,6 +84,9 @@ int main (int argc, char *argv[])
 				// for all clients).
 				cstatus=optarg;
 				break;
+			case 'l':
+				logfile=optarg;
+				break;
 			case 'v':
 				printf("%s-%s\n", progname(), VERSION);
 				return 0;
@@ -99,14 +104,34 @@ int main (int argc, char *argv[])
 		return 1;
 	}
 
+	/* if logfile is defined, we use it */
+	/* we have to do this twice, becouse init_config uses logp() */
+	if(logfile && strlen(logfile)) {
+		if(!(fp=fopen(logfile,"ab"))) {
+			logp("error opening logfile %s.\n",logfile);
+			return 1;
+		}
+		set_logfp(fp);
+	}
+
+	init_config(&conf);
+	if(load_config(configfile, &conf, 1)) return 1;
+
+	/* if logfile is defined in config and logfile is not defined... */
+	if(conf.logfile && !logfile) {
+		logfile=conf.logfile;
+		if(!(fp=fopen(logfile,"ab"))) {
+			logp("error opening logfile %s.\n",logfile);
+			return 1;
+		}
+		set_logfp(fp);
+	}
+
 	if((act==ACTION_RESTORE || act==ACTION_VERIFY) && !backup)
 	{
 		logp("No backup specified. Using the most recent.\n");
 		backup="0";
 	}
-
-	init_config(&conf);
-	if(load_config(configfile, &conf, 1)) return 1;
 
 	if(conf.mode==MODE_SERVER && act==ACTION_STATUS)
 	{
@@ -150,5 +175,6 @@ int main (int argc, char *argv[])
 
 	if(gotlock) unlink(conf.lockfile);
 	free_config(&conf);
+	if(fp) fclose(fp);
 	return ret;
 }

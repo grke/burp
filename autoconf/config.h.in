@@ -312,8 +312,8 @@
 /* Define if encryption support should be enabled */
 #undef HAVE_CRYPTO
 
-/* Define to 1 if you have the <curses.h> header file. */
-#undef HAVE_CURSES_H
+/* Define to 1 if you have the <ncurses.h> header file. */
+#undef HAVE_NCURSES_H
 
 /* Set if you have the DBI driver */
 #undef HAVE_DBI

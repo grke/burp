@@ -1155,6 +1155,15 @@ if test $have_librsync = no  ; then
 	exit 1
 fi
 
+AC_CHECK_HEADERS(ncurses.h)
+AC_CHECK_LIB(ncurses, curs_set, [NCURSES_LIBS="-lncurses"])
+have_ncurses=no
+if test x$NCURSES_LIBS = x-lncurses; then
+   AC_DEFINE(HAVE_NCURSES)
+   have_ncurses=yes
+fi
+AC_SUBST(NCURSES_LIBS)
+
 dnl
 dnl Check if we have AFS on this system
 dnl
@@ -1578,6 +1587,7 @@ Configuration on `date`:
    Static:                  ${support_static}
  
    large file support:	    $largefile_support
+   ncurses:		    ${have_ncurses}
    openssl:	 	    ${support_tls}
    zlib:		    ${have_zlib}
    librsync:		    ${have_librsync}

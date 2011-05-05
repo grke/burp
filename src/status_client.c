@@ -71,7 +71,8 @@ static void summary(char **toks)
 		if(toks[3] && *(toks[3]))
 			printf(" %s files", toks[3]);
 		if(toks[14] && *(toks[14]) && strcmp(toks[14], "0"))
-			printf(" %s bytes", toks[14]);
+			printf(" %s bytes%s", toks[14],
+				bytes_to_human_str(toks[14]));
 	}
 }
 
@@ -140,9 +141,12 @@ static void detail(char **toks, struct config *conf)
 	if(toks[3])  printf("Total:           %s\n", toks[3]);
 	printf("\n");
 	if(toks[12]) printf("Warnings:        %s\n", toks[12]);
-	if(toks[13]) printf("Bytes in backup: %s\n", toks[13]);
-	if(toks[14]) printf("Bytes received:  %s\n", toks[14]);
-	if(toks[15]) printf("Bytes sent:      %s\n", toks[15]);
+	if(toks[13]) printf("Bytes in backup: %s%s\n",
+		toks[13], bytes_to_human_str(toks[13]));
+	if(toks[14]) printf("Bytes received:  %s%s\n",
+		toks[14], bytes_to_human_str(toks[14]));
+	if(toks[15]) printf("Bytes sent:      %s%s\n",
+		toks[15], bytes_to_human_str(toks[15]));
 	if(toks[17]) printf("\n%s\n", toks[17]);
 }
 

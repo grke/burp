@@ -48,6 +48,11 @@ static const char *bytes_to_human(unsigned long long counter)
 	return ret;
 }
 
+const char *bytes_to_human_str(const char *str)
+{
+	return bytes_to_human(strtoull(str, NULL, 10));
+}
+
 static void pcounter(const char *str, unsigned long long counter)
 {
 	if(counter) logp(str, counter);

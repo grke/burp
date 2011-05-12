@@ -18,7 +18,8 @@ static char *writebuf=NULL;
 static size_t writebuflen=0;
 static size_t writebufmaxsize=(rs_outbuflen*2)+32;
 
-int status_wfd=-1; // for the client to send information to the server.
+int status_wfd=-1; // for the child to send information to the parent.
+int status_rfd=-1; // for the child to read information from the parent.
 
 static void truncate_buf(char **buf, size_t *buflen)
 {

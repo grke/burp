@@ -100,6 +100,8 @@ gnomedirs:
 	$(MKDIR) $(DESTDIR)/etc/security/console.apps
 	$(MKDIR) $(DESTDIR)/etc/pam.d
 
+installation: install
+
 install: installdirs
 	@for I in $(all_subdirs); do (cd $$I && $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1); done
 	@if [ ! -f $(DESTDIR)$(sysconfdir)/burp-server.conf ] ; then cp configs/server/burp.conf $(DESTDIR)$(sysconfdir)/burp-server.conf ; fi

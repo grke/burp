@@ -24,7 +24,6 @@ int main (int argc, char *argv[])
 	const char *backup=NULL;
 	const char *restoreprefix=NULL;
 	const char *regex=NULL;
-	const char *cstatus=NULL;
 	const char *logfile=NULL;
 	FILE *fp=NULL;
 #ifdef HAVE_WIN32
@@ -35,7 +34,7 @@ int main (int argc, char *argv[])
 
 	init_log(argv[0]);
 
-	while((option=getopt(argc, argv, "a:b:c:d:hfnr:s:l:v?"))!=-1)
+	while((option=getopt(argc, argv, "a:b:c:d:hfnr:l:v?"))!=-1)
 	{
 		switch(option)
 		{
@@ -77,12 +76,6 @@ int main (int argc, char *argv[])
 				break;
 			case 'r':
 				regex=optarg;
-				break;
-			case 's':
-				// For status mode, specify a particular
-				// client (without this, you get status
-				// for all clients).
-				cstatus=optarg;
 				break;
 			case 'l':
 				logfile=optarg;
@@ -159,7 +152,7 @@ int main (int argc, char *argv[])
 		{
 			// We are running on the server machine, being a client
 			// of the burp server, getting status information.
-			ret=status_client(&conf, cstatus);
+			ret=status_client(&conf);
 		}
 		else
 			ret=server(&conf, configfile, forking);
@@ -175,6 +168,9 @@ int main (int argc, char *argv[])
 
 	if(gotlock) unlink(conf.lockfile);
 	free_config(&conf);
-	if(fp) fclose(fp);
+
+	// If there was no forking, logfp ends up getting closed before this
+	// and will segfault if we try to do it again.
+	if(fp && forking) fclose(fp);
 	return ret;
 }

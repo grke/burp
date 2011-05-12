@@ -81,7 +81,7 @@ static void sighandler(int sig)
 	// Close the sockets properly so as to avoid annoying waits during
 	// testing when I kill the server with a Ctrl-C and then get
 	// 'unable to bind listening socket'.
-	async_free();
+//	async_free();
 	logp("exiting\n");
 	exit(1);
 }
@@ -89,7 +89,6 @@ static void sighandler(int sig)
 
 static void setup_signals(void)
 {
-	// Ignore SIGPIPE - we are careful with read and write return values.
 #ifndef HAVE_WIN32
 	//signal(SIGABRT, &sighandler);
 	//signal(SIGTERM, &sighandler);

@@ -38,13 +38,13 @@ int strlist_add(struct strlist ***bdlist, int *count, char *path, int flag)
 		return -1;
 	}
 	*bdlist=bdtmp;
-	if(!(bdnew=(struct strlist *)malloc(sizeof(struct strlist))))
+	if(!(bdnew=(struct strlist *)malloc(sizeof(struct strlist)))
+	  || !(bdnew->path=strdup(path)))
 	{
 		logp("out of memory in add_strlist()\n");
 		return -1;
 	}
 	bdnew->flag=flag;
-	bdnew->path=strdup(path);
 	(*bdlist)[(*count)++]=bdnew;
 
 	//for(b=0; b<*count; b++)

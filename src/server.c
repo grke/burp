@@ -36,6 +36,7 @@ static void sighandler(int sig)
 	async_free();
 	close_fd(&sfd);
 	close_fd(&status_wfd);
+	close_fd(&status_rfd);
 	logp("exiting\n");
 	exit(1);
 }
@@ -98,7 +99,27 @@ static int init_listen_socket(const char *port, int alladdr)
 	return rfd;
 }
 
-static void free_chld(struct chldstat *chld)
+// Structure that gives us data from forked children, in order to be able to
+// give a 'live' status update.
+// And can now also send data to forked status server children, to be able to
+// write the 'live' status update to a status client.
+// This also enables us to count the children in order to stay under the
+// configured max_children limit.
+struct chldstat
+{
+	pid_t pid;  // child pid
+	int rfd;    // read end of the pipe from the child
+	int wfd;    // write end of a different pipe to the child
+	char *data; // last message sent from the child
+	char *name; // client name
+	int status_server; // set to 1 if this is a status server child.
+};
+
+// Want sigchld_handler to be able to access this, but you cannot pass any
+// data into sigchld_handler, so it has to be a global.
+static struct chldstat *chlds;
+
+static void chldstat_free(struct chldstat *chld)
 {
 	chld->pid=-1;
 	if(chld->data)
@@ -112,6 +133,7 @@ static void free_chld(struct chldstat *chld)
 		chld->name=NULL;
 	}
 	close_fd(&(chld->rfd));
+	close_fd(&(chld->wfd));
 }
 
 // Remove any exiting child pids from our list.
@@ -128,7 +150,7 @@ static void check_for_exiting_children(void)
 			if(p==chlds[q].pid)
 			{
 				//logp("removed %d from list\n", p);
-				free_chld(&(chlds[q]));
+				chldstat_free(&(chlds[q]));
 				break;
 			}
 		}
@@ -137,6 +159,7 @@ static void check_for_exiting_children(void)
 
 static void sigchld_handler(int sig)
 {
+	//printf("in sigchld_handler\n");
 	check_for_exiting_children();
 }
 
@@ -166,8 +189,10 @@ static int setup_signals(int max_children)
 	{
 		chlds[p].pid=-1;
 		chlds[p].rfd=-1;
+		chlds[p].wfd=-1;
 		chlds[p].data=NULL;
 		chlds[p].name=NULL;
+		chlds[p].status_server=0;
 	}
 	// There is one extra entry in the list, as an 
 	// end marker so that sigchld_handler does not fall
@@ -1043,6 +1068,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile)
 	set_non_blocking(*cfd);
 
 	ret=child(&conf, &cconf, client);
+
 	*cfd=-1;
 	async_free(); // this closes cfd for us.
 	logp("exit child\n");
@@ -1051,7 +1077,30 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile)
 	return ret;
 }
 
-static int process_incoming_client(int rfd, int forking, struct config *conf, SSL_CTX *ctx, const char *configfile)
+static int run_status_server(int *rfd, int *cfd, const char *configfile)
+{
+	int ret=0;
+	struct config conf;
+
+	close_fd(rfd);
+
+	// Reload global config, in case things have changed. This means that
+	// the server does not need to be restarted for most config changes.
+	init_config(&conf);
+	if(load_config(configfile, &conf, 1)) return -1;
+
+	ret=status_server(cfd, &conf);
+
+	close_fd(cfd);
+
+	logp("exit status server\n");
+
+	free_config(&conf);
+
+	return ret;
+}
+
+static int process_incoming_client(int rfd, int forking, struct config *conf, SSL_CTX *ctx, const char *configfile, int is_status_server)
 {
 	int cfd=-1;
 	socklen_t client_length=0;
@@ -1073,7 +1122,8 @@ static int process_incoming_client(int rfd, int forking, struct config *conf, SS
 	if(forking)
 	{
 	  int p=0;
-	  int pipe_fd[2];
+	  int pipe_rfd[2];
+	  int pipe_wfd[2];
 	  pid_t childpid;
 
 	  // Find a spare slot in our pid list for the child.
@@ -1084,7 +1134,8 @@ static int process_incoming_client(int rfd, int forking, struct config *conf, SS
 		close_fd(&cfd);
 		return 0;
 	  }
-	  if(pipe(pipe_fd)<0)
+	  if(pipe(pipe_rfd)<0
+	    || pipe(pipe_wfd)<0)
 	  {
 		logp("pipe failed: %s", strerror(errno));
 		close_fd(&cfd);
@@ -1108,24 +1159,37 @@ static int process_incoming_client(int rfd, int forking, struct config *conf, SS
 			sa.sa_handler=SIG_DFL;
 			sigaction(SIGCHLD, &sa, NULL);
 
-			close(pipe_fd[0]); // close read end
+			close(pipe_rfd[0]); // close read end
+			close(pipe_wfd[1]); // close write end
 
 			free_config(conf);
 
-			set_blocking(pipe_fd[1]);
-			status_wfd=pipe_fd[1];
-			ret=run_child(&rfd, &cfd, ctx, configfile);
+			set_blocking(pipe_rfd[1]);
+			status_wfd=pipe_rfd[1];
+			status_rfd=pipe_wfd[0];
+
+			if(is_status_server)
+			  ret=run_status_server(&rfd, &cfd, configfile);
+			else
+			  ret=run_child(&rfd, &cfd, ctx, configfile);
 			close_fd(&status_wfd);
+			close_fd(&status_rfd);
 			exit(ret);
 		}
 		default:
 			// parent
-			close(pipe_fd[1]); // close write end
+			close(pipe_rfd[1]); // close write end
+			close(pipe_wfd[0]); // close read end
 
 			// keep a note of the child pid.
-			logp("forked child pid %d\n", childpid);
+			if(is_status_server)
+				logp("forked status server child pid %d\n", childpid);
+			else
+				logp("forked child pid %d\n", childpid);
 			chlds[p].pid=childpid;
-			chlds[p].rfd=pipe_fd[0];
+			chlds[p].rfd=pipe_rfd[0];
+			chlds[p].wfd=pipe_wfd[1];
+			chlds[p].status_server=is_status_server;
 			set_blocking(chlds[p].rfd);
 			close_fd(&cfd);
 			break;
@@ -1134,7 +1198,10 @@ static int process_incoming_client(int rfd, int forking, struct config *conf, SS
 	else
 	{
 		//free_config(conf);
-		return run_child(&rfd, &cfd, ctx, configfile);
+		if(is_status_server)
+			return run_status_server(&rfd, &cfd, configfile);
+		else
+			return run_child(&rfd, &cfd, ctx, configfile);
 	}
 	return 0;
 }
@@ -1209,7 +1276,7 @@ int server(struct config *conf, const char *configfile, int forking)
 
 	if(forking)
 	{
-		if(daemonise() || relock(conf->lockfile)) return 1;
+		//if(daemonise() || relock(conf->lockfile)) return 1;
 	}
 
 	setup_signals(conf->max_children);
@@ -1239,6 +1306,7 @@ int server(struct config *conf, const char *configfile, int forking)
 		int mfd=-1;
 		berrno be;
 		fd_set fsr;
+		fd_set fsw;
 		fd_set fse;
 		struct timeval tval;
 
@@ -1250,7 +1318,10 @@ int server(struct config *conf, const char *configfile, int forking)
 
 		add_fd_to_sets(rfd, &fsr, NULL, &fse, &mfd);
 		if(sfd>=0) add_fd_to_sets(sfd, &fsr, NULL, &fse, &mfd);
-		for(c=0; c<conf->max_children; c++) if(chlds[c].rfd>=0)
+
+		// Add read fds of normal children.
+		for(c=0; c<conf->max_children; c++)
+		  if(!chlds[c].status_server && chlds[c].rfd>=0)
 			add_fd_to_sets(chlds[c].rfd, &fsr, NULL, &fse, &mfd);
 
 		if(select(mfd+1, &fsr, NULL, &fse, &tval)<0)
@@ -1281,8 +1352,9 @@ int server(struct config *conf, const char *configfile, int forking)
 
 		if(FD_ISSET(rfd, &fsr))
 		{
+			// A normal client is incoming.
 			if(process_incoming_client(rfd, forking, conf, ctx,
-				configfile))
+				configfile, 0 /* not a status client */))
 			{
 				ret=1;
 				break;
@@ -1291,21 +1363,20 @@ int server(struct config *conf, const char *configfile, int forking)
 
 		if(sfd>=0 && FD_ISSET(sfd, &fsr))
 		{
-			if(process_status_client(sfd, conf))
+			// A status client is incoming.
+			//printf("status client?\n");
+			if(process_incoming_client(sfd, forking, conf, ctx,
+				configfile, 1 /* a status client */))
 			{
-				//logp("process_status_client returned error\n");
-				// Just carry on, it should be OK.
-				// Do not want something dodgy happening with
-				// the status process to make the server
-				// exit. Like EPIPEs on writes.
-			//	ret=1;
-			//	break;
-				continue;
+				ret=1;
+				break;
 			}
 		}
 
-		for(c=0; c<conf->max_children; c++) if(chlds[c].rfd>=0)
+		for(c=0; c<conf->max_children; c++)
 		{
+		  if(!chlds[c].status_server && chlds[c].rfd>=0)
+		  {
 			if(FD_ISSET(chlds[c].rfd, &fse))
 				continue;
 			if(FD_ISSET(chlds[c].rfd, &fsr))
@@ -1344,6 +1415,68 @@ int server(struct config *conf, const char *configfile, int forking)
 				}
 				if(l<=0) close_fd(&(chlds[c].rfd));
 			}
+		  }
+		}
+
+
+		// Have a separate select for writing to status server children
+
+		mfd=-1;
+		FD_ZERO(&fsw);
+		FD_ZERO(&fse);
+		for(c=0; c<conf->max_children; c++)
+		  if(chlds[c].status_server && chlds[c].wfd>=0)
+			add_fd_to_sets(chlds[c].wfd, NULL, &fsw, &fse, &mfd);
+		if(mfd==-1)
+		{
+			// Did not find any status server children.
+			// No need to do the select.
+			continue;
+		}
+
+		// Do not hang around - doing the status stuff is a lower
+		// priority thing than dealing with normal clients.
+		tval.tv_sec=0;
+		tval.tv_usec=500;
+
+		//printf("try status server\n");
+
+		if(select(mfd+1, NULL, &fsw, &fse, &tval)<0)
+		{
+			if(errno!=EAGAIN && errno!=EINTR)
+			{
+				logp("select error: %s\n", strerror(errno));
+				ret=1;
+				break;
+			}
+		}
+
+		for(c=0; c<conf->max_children; c++)
+		{
+		  if(chlds[c].status_server && chlds[c].wfd>=0)
+		  {
+			if(FD_ISSET(chlds[c].wfd, &fse))
+			{
+				logp("exception on status server write pipe\n");
+				continue;
+			}
+			if(FD_ISSET(chlds[c].wfd, &fsw))
+			{
+				int d=0;
+				//printf("ready for write\n");
+				// Go through all the normal children and
+				// write their statuses to the status child.
+				for(d=0; d<conf->max_children; d++)
+				{
+				  if(!chlds[d].status_server && chlds[d].data)
+				  {
+				//	printf("try write\n");
+					write(chlds[c].wfd, chlds[d].data,
+						strlen(chlds[d].data));
+				  }
+				}
+			}
+		  }
 		}
 	}
 
@@ -1355,7 +1488,7 @@ int server(struct config *conf, const char *configfile, int forking)
 	{
 		int q=0;
 		for(q=0; chlds && chlds[q].pid!=-2; q++)
-			free_chld(&(chlds[q]));
+			chldstat_free(&(chlds[q]));
 		free(chlds);
 	}
 

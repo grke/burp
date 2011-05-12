@@ -1276,7 +1276,7 @@ int server(struct config *conf, const char *configfile, int forking)
 
 	if(forking)
 	{
-		//if(daemonise() || relock(conf->lockfile)) return 1;
+		if(daemonise() || relock(conf->lockfile)) return 1;
 	}
 
 	setup_signals(conf->max_children);

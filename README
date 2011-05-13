@@ -13,6 +13,9 @@ Then run "make install" as root to install.
 Start the burp server with this command:
 burp -c /etc/burp/burp-server.conf
 
+By default, the server will fork into the background and run as a daemon. To
+stay in the foreground, add the '-F' option.
+
 UNIX CLIENT
 
 The example client configuration file is /etc/burp/burp.conf.

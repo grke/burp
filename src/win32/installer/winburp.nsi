@@ -312,7 +312,15 @@ endssl_cert_ca:
   FileWrite $R1 "port = $ConfigServerPort$\r$\n"
   FileWrite $R1 "cname = $ConfigClientName$\r$\n"
   FileWrite $R1 "password = $ConfigPassword$\r$\n"
-  FileWrite $R1 "include = C:/Documents and Settings$\r$\n"
+  ${If} ${FileExists} "C:/Users"
+    FileWrite $R1 "include = C:/Users$\r$\n"
+  ${Else}
+    ${If} ${FileExists} "C:/Documents and Settings"
+      FileWrite $R1 "include = C:/Documents and Settings$\r$\n"
+    ${Else}
+      FileWrite $R1 "include = C:/$\r$\n"
+    ${EndIf}
+  ${EndIf}
   FileWrite $R1 "lockfile = C:/Program Files/Burp/lockfile$\r$\n"
   FileWrite $R1 "ssl_cert = C:/Program Files/Burp/ssl_cert-client.pem$\r$\n"
   FileWrite $R1 "ssl_cert_ca = C:/Program Files/Burp/ssl_cert_ca.pem$\r$\n"

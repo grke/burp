@@ -206,6 +206,40 @@ static int get_conf_val_args(const char *field, const char *value, const char *o
 	return 0;
 }
 
+#define ABSOLUTE_ERROR	"ERROR: Please use absolute include/exclude paths.\n"
+static int path_checks(const char *path)
+{
+	const char *p=NULL;
+	if(strchr(path, '\\'))
+	{
+		logp("ERROR: Please use forward slashes '/' instead of backslashes '\\' in your include/exclude paths.\n");
+		return -1;
+	}
+	for(p=path; *p; p++)
+	{
+		if(*p!='.' || *(p+1)!='.') continue;
+		if((p==path || *(p-1)=='/') && (*(p+2)=='/' || !*(p+2)))
+		{
+			logp(ABSOLUTE_ERROR);
+			return -1;
+		}
+	}
+#ifdef HAVE_WIN32
+	if(!isalpha(*path) || *(path+1)!=':')
+	{
+		logp(ABSOLUTE_ERROR);
+		return -1;
+	}
+#else
+	if(*path!='/')
+	{
+		logp(ABSOLUTE_ERROR);
+		return -1;
+	}
+#endif
+	return 0;
+}
+
 int load_config(const char *config_path, struct config *conf, bool loadall)
 {
 	int i=0;
@@ -469,8 +503,7 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 	// are subdirectories which don't need to be started separately.
 	for(i=0; i<conf->iecount; i++)
 	{
-		if(strchr(ielist[i]->path, '\\'))
-			logp("WARNING: Please use forward slashes '/' instead of backslashes '\\' in your include/exclude paths.\n");
+		if(path_checks(ielist[i]->path)) r--;
 		if(ielist[i]->flag) have_include++;
 		if(!i)
 		{

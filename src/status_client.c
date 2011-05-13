@@ -369,6 +369,22 @@ static int show_rbuf(const char *rbuf, struct config *conf, int sel, int *count,
 	return 0;
 }
 
+static void sighandler(int sig)
+{
+	endwin();
+        logp("got signal: %d\n", sig);
+        logp("exiting\n");
+        exit(1);
+}
+
+static void setup_signals(void)
+{
+	signal(SIGABRT, &sighandler);
+	signal(SIGTERM, &sighandler);
+	signal(SIGINT, &sighandler);
+	signal(SIGPIPE, &sighandler);
+}
+
 int status_client(struct config *conf)
 {
 	int fd=0;
@@ -381,6 +397,8 @@ int status_client(struct config *conf)
 	int details=0;
 	char *last_rbuf=NULL;
 	int srbr=0;
+
+	setup_signals();
 
 	/* NULL == ::1 or 127.0.0.1 */
 	if((fd=init_client_socket(NULL, conf->status_port))<0)

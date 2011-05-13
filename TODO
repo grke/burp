@@ -18,10 +18,16 @@
 
 * Add acl support.
 
-* Add an ncurses wrapper to the monitor commands.
+* Improve the status monitor.
 
 * Do not compress manifests and logs when compression is turned off.
 
 * A restore warning when a file exists now seems to cause "ret OK, but zstream not finished: 0" on the server. Or does it?
 
 * Allow random backups to be deleted safely when hardlinked_archive is on.
+
+* Add extra ways of deciding when to delete old backups - e.g, by time, or
+  by space.
+
+* Add an option to set hardlinked_archive on a cycle, instead of just being
+  either on or off.

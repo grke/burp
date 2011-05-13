@@ -1,3 +1,14 @@
+2011-05-13 Changes in burp-1.1.55:
+  * Make the status monitor use ncurses.
+  * Fixed two bugs that could drastically slow down the server if a file
+    disappeared on a client after the initial scan (to get these two bug fixes,
+    you need to upgrade your clients).
+  * IPv6 patches.
+  * Ability to specify the location of the client lockfiles on the server.
+  * Make the server go fork into the background by default. Use '-F' to stay in
+    the foreground.
+  * Add option to specify a log file.
+
 2011-04-14 Changes in burp-1.1.51:
   * Added a script for backing up zfs snapshots with 'zfs send'.
   * Added the ability to set the level of compression.

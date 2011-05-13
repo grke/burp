@@ -5,7 +5,7 @@
     you need to upgrade your clients).
   * IPv6 patches.
   * Ability to specify the location of the client lockfiles on the server.
-  * Make the server go fork into the background by default. Use '-F' to stay in
+  * Make the server fork into the background by default. Use '-F' to stay in
     the foreground.
   * Add option to specify a log file.
 

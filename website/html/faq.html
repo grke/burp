@@ -105,9 +105,10 @@ nodes.
 <li>Client side encryption - (note: this turns off delta differencing).
 <li>Scheduling.
 <li>Email backup success/failure notifications.
-<li>A live monitor on the server.
+<li>A live ncurses monitor on the server.
 <li>Fifo read/write support.
 <li>Pre/post backup/restore client scripts.
+<li>Backups of Solaris ZFS snapshot send/receives.
 </ul>
 </FONT>
 </P>
@@ -124,9 +125,13 @@ A. The following items are on my TODO list:
 <ul>
 <li>Investigate HFS / resource forks and Mac support.
 <li>Add include/exclude wildcards.
-<li>Add xattr/acl support.
-<li>Add an ncurses wrapper to the monitor commands.
-<li>Add an option to turn off storage compression.
+<li>Add xattr support
+<li>Add acl support.
+<li>Improve the status monitor.
+<li>Add extra ways of deciding when to delete old backups - e.g, by time, or
+by space.
+<li>Add an option to set hardlinked_archive on a cycle, instead of just
+being either on or off.
 </ul>
 </FONT>
 </P>
@@ -284,6 +289,29 @@ Try this: LDFLAGS="-L /opt/somepath -R /opt/somepath"
 
 <HR>
 
+<P>
+<FONT COLOR="#99CCFF">
+Q. On Windows, the client exits with a message like:
+"Could not open 'C:/Documents and Settings/Administrator/NTUSER.DAT': The file is in use by another process."
+Why?
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">
+On newer versions of Windows, things called 'junction points' have been added.
+In the example given, 'include = C:/Documents and Settings' was set in the
+client burp.conf, but 'C:/Documents and Settings' is a junction point and the
+real path is 'C:/Users'.
+<BR>
+Pointing burp at the junction point means that it goes outside of the VSS
+snapshot, and hence cannot open files that other processes have open.
+Use the real path instead.
+</FONT>
+</P>
+
+<HR>
+
 
 </TD>
 </TR>
@@ -333,7 +361,7 @@ Burp, don't suck.
 </td>
 <td align="right">
 <font color="#99ccff">
-Last updated: March 2011
+Last updated: May 2011
 </font>
 </td></tr></table>
 

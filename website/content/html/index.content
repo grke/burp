@@ -48,6 +48,23 @@ The main author of Burp is Graham Keeling.
 <TD ALIGN="LEFT">
 
 <P>
+<FONT COLOR="#99CCFF">2011-05-13: burp-1.1.55 is released.
+<pre>
+Changes in burp-1.1.55:
+  * Make the status monitor use ncurses.
+  * Fixed two bugs that could drastically slow down the server if a file
+    disappeared on a client after the initial scan (to get these two bug fixes,
+    you need to upgrade your clients).
+  * IPv6 patches.
+  * Ability to specify the location of the client lockfiles on the server.
+  * Make the server fork into the background by default. Use '-F' to stay in
+    the foreground.
+  * Add option to specify a log file.
+</pre>
+</FONT>
+</P>
+
+<P>
 <FONT COLOR="#99CCFF">2011-04-14: burp-1.1.51 is released.
 <pre>
 Changes in burp-1.1.51:

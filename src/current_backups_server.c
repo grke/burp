@@ -230,18 +230,41 @@ void free_current_backups(struct bu **arr, int a)
 	free(*arr);
 }
 
-int get_current_backups(const char *basedir, struct bu **arr, int *a)
+static int get_link(const char *basedir, const char *lnk, char real[], size_t r)
+{
+	int len=0;
+	char *tmp=NULL;
+	if(!(tmp=prepend_s(basedir, lnk, strlen(lnk))))
+	{
+		logp("out of memory");
+		return -1;
+	}
+	if((len=readlink(tmp, real, r-1))<0) len=0;
+	real[len]='\0';
+	free(tmp);
+	return 0;
+}
+
+int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 {
 	int i=0;
 	int j=0;
 	int ret=0;
 	DIR *d=NULL;
 	char buf[32]="";
+	char realwork[32]="";
+	char realfinishing[32]="";
 	struct dirent *dp=NULL;
+
+	// Find out what certain directories really are, if they exist,
+	// so they can be excluded.
+	if(get_link(basedir, "working", realwork, sizeof(realwork))
+	  || get_link(basedir, "finishing", realfinishing, sizeof(realfinishing)))
+			return -1;
 
 	if(!(d=opendir(basedir)))
 	{
-		log_and_send("could not open backup directory");
+		if(log) log_and_send("could not open backup directory");
 		return -1;
 	}
 	while((dp=readdir(d)))
@@ -255,7 +278,9 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a)
 
 		if(dp->d_ino==0
 		  || !strcmp(dp->d_name, ".")
-		  || !strcmp(dp->d_name, ".."))
+		  || !strcmp(dp->d_name, "..")
+		  || !strcmp(dp->d_name, realwork)
+		  || !strcmp(dp->d_name, realfinishing))
 			continue;
 		if(!(fullpath=prepend_s(basedir,
 			dp->d_name, strlen(dp->d_name)))
@@ -289,7 +314,7 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a)
 		  || !((*arr)[i].data=prepend_s(fullpath, "data", strlen("data")))
 		  || !((*arr)[i].delta=prepend_s(fullpath, "deltas.reverse", strlen("deltas.reverse"))))
 		{
-			log_and_send("out of memory");
+			if(log) log_and_send("out of memory");
 			free(timestampstr);
 			free(fullpath);
 			break;
@@ -322,7 +347,7 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a)
 		{
 			char msg[256]="";
 			snprintf(msg, sizeof(msg), "%s does not match forward path from %s\n", (*arr)[j+1].path, (*arr)[j].path);
-			log_and_send(msg);
+			if(log) log_and_send(msg);
 			free_current_backups(arr, i);
 			ret=-1;
 			break;
@@ -350,7 +375,7 @@ int get_new_timestamp(const char *basedir, char *buf, size_t s)
 
 	// get_current_backups orders the array with the highest index number 
 	// last
-	if(get_current_backups(basedir, &arr, &a)) return -1;
+	if(get_current_backups(basedir, &arr, &a, 1)) return -1;
 	if(a) index=arr[a-1].index;
 
 	free_current_backups(&arr, a);
@@ -456,7 +481,7 @@ int remove_old_backups(const char *basedir, int keep)
 
 	logp("in remove_old_backups\n");
 
-	if(get_current_backups(basedir, &arr, &a)) return -1;
+	if(get_current_backups(basedir, &arr, &a, 1)) return -1;
 
 	// Find the cut-off point.
 	del=a-keep;

@@ -1268,13 +1268,13 @@ static int relock(const char *lockfile)
 	return -1;
 }
 
-int server(struct config *conf, const char *configfile, int forking)
+int server(struct config *conf, const char *configfile, int forking, int daemon)
 {
 	int ret=0;
 	int rfd=-1; // normal client port
 	SSL_CTX *ctx=NULL;
 
-	if(forking)
+	if(forking && daemon)
 	{
 		if(daemonise() || relock(conf->lockfile)) return 1;
 	}

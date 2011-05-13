@@ -8,7 +8,7 @@ extern void close_fd(int *fd);
 extern void close_fp(FILE **fp);
 extern void gzclose_fp(gzFile *fp);
 extern int is_dir(const char *path);
-extern char *prepend(const char *prep, const char *fname, size_t len, bool slash);
+extern char *prepend(const char *prep, const char *fname, size_t len, const char *sep);
 extern char *prepend_s(const char *prep, const char *fname, size_t len);
 extern int mkpath(char **rpath);
 extern int build_path(const char *datadir, const char *fname, size_t flen, char **rpath);

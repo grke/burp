@@ -81,7 +81,7 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 
 	if(compile_regex(&regex, listregex)) return -1;
 
-	if(get_current_backups(basedir, &arr, &a))
+	if(get_current_backups(basedir, &arr, &a, 1))
 	{
 		if(regex) { regfree(regex); free(regex); }
 		return -1;

@@ -49,12 +49,12 @@ int is_dir(const char *path)
         return S_ISDIR(buf.st_mode);
 }
 
-char *prepend(const char *prep, const char *fname, size_t len, bool slash)
+char *prepend(const char *prep, const char *fname, size_t len, const char *sep)
 {
 	char *rpath=NULL;
 
 	if(prep) len+=strlen(prep)+1;
-	if(slash) len++;
+	if(sep) len++;
 	len++;
 
 	if(!(rpath=(char *)malloc(len)))
@@ -63,7 +63,7 @@ char *prepend(const char *prep, const char *fname, size_t len, bool slash)
 		return NULL;
 	}
 	snprintf(rpath, len, "%s%s%s",
-		prep?prep:"", (slash && *fname)?"/":"", fname);
+		prep?prep:"", (sep && *fname)?sep:"", fname);
 	return rpath;
 }
 
@@ -82,7 +82,7 @@ char *prepend_s(const char *prep, const char *fname, size_t len)
 		fname++;
 		len--;
 	}
-	return prepend(prep, fname, len, TRUE);
+	return prepend(prep, fname, len, "/");
 }
 
 int mkpath(char **rpath)

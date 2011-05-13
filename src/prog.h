@@ -19,7 +19,8 @@ enum action
 #include "find.h"
 #include "log.h"
 
-extern int server(struct config *conf, const char *configfile, int forking);
+extern int server(struct config *conf, const char *configfile, int forking,
+	int daemon);
 extern int client(struct config *conf, enum action act, const char *backup,
 	const char *restoreprefix, const char *regex, int forceoverwrite);
 

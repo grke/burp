@@ -647,7 +647,7 @@ int do_restore_server(const char *basedir, const char *backup, const char *resto
 		return -1;
 	}
 
-	if(get_current_backups(basedir, &arr, &a))
+	if(get_current_backups(basedir, &arr, &a, 1))
 	{
 		if(tmppath1) free(tmppath1);
 		if(tmppath2) free(tmppath2);

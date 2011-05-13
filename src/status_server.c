@@ -15,6 +15,7 @@ struct cstat
 	time_t conf_mtime;
 	char *summary;
 	char *running_detail; // set from the parent process
+	char status;
 
 	// When the mtime of conffile changes, the following get reloaded
 	int valid_conf;
@@ -147,25 +148,25 @@ static int set_cstat_from_conf(struct cstat *c, struct config *conf, struct conf
 	return 0;
 }
 
+static time_t timestamp_to_long(const char *buf)
+{
+	struct tm tm;
+	const char *b=NULL;
+	if(!(b=strchr(buf, ' '))) return 0;
+	memset(&tm, 0, sizeof(struct tm));
+	if(!strptime(b, " %Y-%m-%d %H:%M:%S", &tm)) return 0;
+	// Tell mktime to use the daylight savings time setting
+	// from the time zone of the system.
+	tm.tm_isdst=-1;
+	return mktime(&tm);
+}
+
 static time_t get_last_backup_time(const char *timestamp)
 {
-	time_t t=0;
-	char *b=NULL;
 	char wbuf[64]="";
-	if(!read_timestamp(timestamp, wbuf, sizeof(wbuf))
-	  && (b=strchr(wbuf, ' ')))
-	{
-		struct tm tm;
-		memset(&tm, 0, sizeof(struct tm));
-		if(strptime(b, " %Y-%m-%d %H:%M:%S", &tm))
-		{
-			// Tell mktime to use the daylight savings time setting
-			// from the time zone of the system.
-			tm.tm_isdst=-1;
-			t=mktime(&tm);
-		}
-	}
-	return t;
+	if(read_timestamp(timestamp, wbuf, sizeof(wbuf))) return 0;
+	  
+	return timestamp_to_long(wbuf);;
 }
 
 static int set_summary(struct cstat *c)
@@ -178,16 +179,19 @@ static int set_summary(struct cstat *c)
 	{
 		if(lstat(c->working, &statp))
 		{
-			snprintf(wbuf, sizeof(wbuf), "%s\ti\t%li\n", c->name,
+			c->status='i';
+			snprintf(wbuf, sizeof(wbuf), "%s\t%c\t%li\n", c->name,
+				c->status,
 				get_last_backup_time(c->timestamp));
 		}
 		else
 		{
 			// client process crashed
-			snprintf(wbuf, sizeof(wbuf), "%s\tc\t%li\t%li\n",
-				c->name,
-				get_last_backup_time(c->timestamp),
-				statp.st_ctime);
+			c->status='c';
+			snprintf(wbuf, sizeof(wbuf), "%s\t%c\t%li\n",
+				c->name, c->status,
+				get_last_backup_time(c->timestamp));
+			//	statp.st_ctime);
 		}
 		// It is not running, so free the running_detail.
 		if(c->running_detail)
@@ -200,11 +204,13 @@ static int set_summary(struct cstat *c)
 	{
 		if(!test_lock(c->lockfile))
 		{
-			time_t t=0;
-			if(!lstat(c->working, &statp)) t=statp.st_ctime;
+			//time_t t=0;
+			//if(!lstat(c->working, &statp)) t=statp.st_ctime;
 			// server process crashed
-			snprintf(wbuf, sizeof(wbuf), "%s\tC\t%li\t%li\n",
-			  c->name, get_last_backup_time(c->timestamp), t);
+			c->status='C';
+			snprintf(wbuf, sizeof(wbuf), "%s\t%c\t%li\n",
+				c->name, c->status,
+				get_last_backup_time(c->timestamp));
 			// It is not running, so free the running_detail.
 			if(c->running_detail)
 			{
@@ -215,6 +221,7 @@ static int set_summary(struct cstat *c)
 		else
 		{
 			// it is running
+			c->status='r';
 			*wbuf='\0';
 		}
 	}
@@ -374,13 +381,61 @@ static int send_data_to_client(int cfd, const char *data)
 	return 0;
 }
 
-static int send_summaries_to_client(int cfd, struct cstat **clist, int clen)
+static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, int sel_client)
 {
 	int q=0;
 	for(q=0; q<clen; q++)
 	{
 		char *tosend=NULL;
+		char *curback=NULL;
 		if(clist[q]->running_detail) tosend=clist[q]->running_detail;
+		else if(sel_client==q
+		  && (clist[q]->status=='i' // idle
+			|| clist[q]->status=='c' // client crashed 
+			|| clist[q]->status=='C')) // server crashed
+		{
+			// Client not running, but asked for detail.
+			// Gather a list of successful backups to talk about.
+        		int a=0;
+        		struct bu *arr=NULL;
+			if(get_current_backups(clist[q]->basedir, &arr, &a, 0))
+			{
+				logp("error when looking up current backups\n");
+				tosend=clist[q]->summary;
+			}
+			else
+			{
+				int i=0;
+				int len=0;
+				time_t t=0;
+				// make more than enough room for the message
+				len+=strlen(clist[q]->name)+1;
+				len+=(a*2)+1;
+				len+=(a*16)+1;
+				if(!(curback=(char *)malloc(len)))
+				{
+					logp("out of memory");
+					return -1;
+				}
+				snprintf(curback, len, "%s\t%c",
+					clist[q]->name, clist[q]->status);
+				for(i=a-1; i>=0; i--)
+				{
+					char tmp[16]="";
+					t=timestamp_to_long(arr[i].timestamp);
+					snprintf(tmp, sizeof(tmp), "\t%li", t);
+					strcat(curback, tmp);
+				}
+				strcat(curback, "\n");
+        			free_current_backups(&arr, a);
+
+				// Overwrite the summary with it.
+				// It will get updated again
+				if(clist[q]->summary) free(clist[q]->summary);
+				clist[q]->summary=curback;
+				tosend=clist[q]->summary;
+			}
+		}
 		else tosend=clist[q]->summary;
 		//printf("send summary: %s (%s)\n", clist[q]->name, tosend);
 		if(send_data_to_client(cfd, tosend)) return -1;
@@ -388,7 +443,7 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen)
 
 	return 0;
 }
-
+/*
 static int send_detail_to_client(int cfd, struct cstat **clist, int clen, const char *name)
 {
 	int q=0;
@@ -407,6 +462,7 @@ static int send_detail_to_client(int cfd, struct cstat **clist, int clen, const 
 	}
 	return 0;
 }
+*/
 
 /* Incoming status request */
 int status_server(int *cfd, struct config *conf)
@@ -544,7 +600,7 @@ int status_server(int *cfd, struct config *conf)
 				{
 					//printf("summaries request\n");
 					if(send_summaries_to_client(*cfd,
-						clist, clen))
+						clist, clen, -1))
 					{
 						ret=-1;
 						break;
@@ -553,8 +609,8 @@ int status_server(int *cfd, struct config *conf)
 				else
 				{
 					//printf("detail request: %s\n", buf);
-					if(send_detail_to_client(*cfd,
-						clist, clen, buf))
+					if(send_summaries_to_client(*cfd,
+						clist, clen, atoi(buf)))
 					{
 						ret=-1;
 						break;

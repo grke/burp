@@ -47,7 +47,9 @@ int set_logfp(FILE *fp)
 {
 	if(logfp) fclose(logfp);
 	logfp=fp;
+#ifndef HAVE_WIN32
 	if(logfp) setlinebuf(logfp);
+#endif
 	return 0;
 }
 

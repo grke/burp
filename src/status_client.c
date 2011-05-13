@@ -9,29 +9,30 @@
 
 #ifdef HAVE_NCURSES_H
 #include "ncurses.h"
-static int request_status(int fd, const char *client)
+static int request_status(int fd, int sel)
 {
 	int l;
 	char buf[256]="";
-	snprintf(buf, sizeof(buf), "%s\n", client?client:"");
+	if(sel>=0) snprintf(buf, sizeof(buf), "%d\n", sel);
+	else snprintf(buf, sizeof(buf), "\n");
 	l=strlen(buf);
 	if(write(fd, buf, l)<0) return -1;
 	return 0;
 }
 
 #define LEFT_SPACE	3
+#define TOP_SPACE	2
 
 static void print_line(const char *string, int row, int col)
 {
 	int k=0;
 	const char *cp=NULL;
 
-	while(k<LEFT_SPACE) mvprintw(row+1, k++, " ");
-	for(cp=string; (*cp && k<col); cp++) mvprintw(row+1, k++, "%c", *cp);
-	while(k<col) mvprintw(row+1, k++, " ");
+	while(k<LEFT_SPACE) mvprintw(row+TOP_SPACE, k++, " ");
+	for(cp=string; (*cp && k<col); cp++)
+		mvprintw(row+TOP_SPACE, k++, "%c", *cp);
+	while(k<col) mvprintw(row+TOP_SPACE, k++, " ");
 }
-
-#define TOK_LEN	32
 
 static const char *getdate(time_t t)
 {
@@ -47,64 +48,64 @@ static const char *getdate(time_t t)
 }
 
 // Returns 1 if it printed a line, 0 otherwise.
-static int summary(char **toks, int count, int row, int col)
+static int summary(char **toks, int t, int count, int row, int col)
 {
 	char msg[1024]="";
 
 	if(!strcmp(toks[1], "i"))
 	{
-		if(toks[2])
+		if(t>2)
 		  snprintf(msg, sizeof(msg),
-			"%-14.14s %-15s last backup: %s",
+			"%-14.14s %-14s last backup: %s",
 			toks[0], "idle", getdate(atol(toks[2])));
 		else
-		  snprintf(msg, sizeof(msg), "%-14.14s %-15s",
+		  snprintf(msg, sizeof(msg), "%-14.14s %-14s",
 			toks[0], "idle");
 	}
 	else if(!strcmp(toks[1], "C"))
 	{
-		if(toks[2])
+		if(t>2)
 		  snprintf(msg, sizeof(msg),
-			"%-14.14s %-15s last backup: %s",
+			"%-14.14s %-14s last backup: %s",
 			toks[0], "server crashed", getdate(atol(toks[2])));
 		else
-		  snprintf(msg, sizeof(msg), "%-14.14s %-15s",
+		  snprintf(msg, sizeof(msg), "%-14.14s %-14s",
 			toks[0], "server crashed");
 	}
 	else if(!strcmp(toks[1], "c"))
 	{
-		if(toks[2])
+		if(t>2)
 		  snprintf(msg, sizeof(msg),
-			"%-14.14s %-15s last backup: %s",
+			"%-14.14s %-14s last backup: %s",
 			toks[0], "client crashed", getdate(atol(toks[2])));
 		else
-		  snprintf(msg, sizeof(msg), "%-14.14s %-15s",
+		  snprintf(msg, sizeof(msg), "%-14.14s %-14s",
 			toks[0], "client crashed");
 	}
 	else if(!strcmp(toks[1], "r"))
 	{
 		char f[64]="";
 		char b[64]="";
-		const char *t="";
-		if(!toks[2]) return 0;
-		if(!strcmp(toks[2], "1")) t="scanning";
-		if(!strcmp(toks[2], "2")) t="backup";
-		if(!strcmp(toks[2], "3")) t="merging";
-		if(!strcmp(toks[2], "4")) t="shuffling";
-		if(!strcmp(toks[2], "10")) t="listing";
-		if(!strcmp(toks[2], "11")) t="restoring";
-		if(!strcmp(toks[2], "12")) t="verifying";
-		if(toks[3] && *(toks[3]))
+		const char *s="";
+		if(t<3) return 0;
+		if(!strcmp(toks[2], "1")) s="scanning";
+		if(!strcmp(toks[2], "2")) s="backup";
+		if(!strcmp(toks[2], "3")) s="merging";
+		if(!strcmp(toks[2], "4")) s="shuffling";
+		if(!strcmp(toks[2], "10")) s="listing";
+		if(!strcmp(toks[2], "11")) s="restoring";
+		if(!strcmp(toks[2], "12")) s="verifying";
+		if(t>3 && *(toks[3]))
 		{
 			snprintf(f, sizeof(f), "%s files", toks[3]);
 		}
-		if(toks[14] && *(toks[14]) && strcmp(toks[14], "0"))
+		if(t>14 && *(toks[14]) && strcmp(toks[14], "0"))
 		{
 			snprintf(b, sizeof(b), "%s bytes%s", toks[14],
 				bytes_to_human_str(toks[14]));
 		}
-		snprintf(msg, sizeof(msg), "%-14.14s %-15s %s %s",
-			toks[0], t, f, b);
+		snprintf(msg, sizeof(msg), "%-14.14s %-14s %s %s",
+			toks[0], s, f, b);
 	}
 	if(*msg)
 	{
@@ -114,17 +115,25 @@ static int summary(char **toks, int count, int row, int col)
 	return 0;
 }
 
-static void show_all_backups(const char *client, struct config *conf)
+static void show_all_backups(char *toks[], int t, int *x, int col)
 {
-	// TODO: Figure out a way to do this.
-}
-
-static void print_last_backup(const char *str, int *x, int col)
-{
+	int i=2;
 	char msg[256]="";
-	if(!str) return;
-	snprintf(msg, sizeof(msg), "Last backup: %s\n", getdate(atol(str)));
-	print_line(msg, (*x)++, col);
+	for(; i<t; i++)
+	{
+		if(i==2)
+		{
+		  snprintf(msg, sizeof(msg), "Backup list: %s",
+			getdate(atol(toks[i])));
+		  print_line(msg, (*x)++, col);
+		}
+		else
+		{
+		  snprintf(msg, sizeof(msg), "             %s",
+			getdate(atol(toks[i])));
+		  print_line(msg, (*x)++, col);
+		}
+	}
 }
 
 static void print_detail(const char *field, const char *value, int *x, int col)
@@ -135,7 +144,7 @@ static void print_detail(const char *field, const char *value, int *x, int col)
 	print_line(msg, (*x)++, col);
 }
 
-static void detail(char **toks, struct config *conf, int row, int col)
+static void detail(char *toks[], int t, struct config *conf, int row, int col)
 {
 	int x=0;
 	char msg[1024]="";
@@ -150,26 +159,24 @@ static void detail(char **toks, struct config *conf, int row, int col)
 		if(!strcmp(toks[1], "i"))
 		{
 			print_line("Status: idle", x++, col);
-			print_last_backup(toks[2], &x, col);
-			show_all_backups(toks[0], conf);
+			show_all_backups(toks, t, &x, col);
 			return;
 		}
 		else if(!strcmp(toks[1], "C"))
 		{
 			print_line("Status: server crashed", x++, col);
-			print_last_backup(toks[2], &x, col);
-			show_all_backups(toks[0], conf);
+			show_all_backups(toks, t, &x, col);
 			return;
 		}
 		else if(!strcmp(toks[1], "c"))
 		{
 			print_line("Status: client crashed", x++, col);
-			print_last_backup(toks[2], &x, col);
-			show_all_backups(toks[0], conf);
+			show_all_backups(toks, t, &x, col);
 			return;
 		}
 		else if(!strcmp(toks[1], "r") && toks[2])
 		{
+			if(t<3) return;
 			if(!strcmp(toks[2], "1"))
 			  print_line("Status: running (scanning)", x++, col);
 			if(!strcmp(toks[2], "2"))
@@ -187,30 +194,53 @@ static void detail(char **toks, struct config *conf, int row, int col)
 		}
 	}
 	print_line("", x++, col);
-	print_detail("Files", toks[4], &x, col);
-	print_detail("Encrypted files", toks[16], &x, col);
-	print_detail("Changed files", toks[5], &x, col);
-	print_detail("Unchanged files", toks[6], &x, col);
-	print_detail("New files", toks[7], &x, col);
-	print_detail("Directories", toks[8], &x, col);
-	print_detail("Special files", toks[9], &x, col);
-	print_detail("Soft links", toks[11], &x, col);
-	print_detail("Hard links", toks[10], &x, col);
-	print_detail("Total", toks[3], &x, col);
+	if(t>4) print_detail("Files", toks[4], &x, col);
+	if(t>16) print_detail("Encrypted files", toks[16], &x, col);
+	if(t>5) print_detail("Changed files", toks[5], &x, col);
+	if(t>6) print_detail("Unchanged files", toks[6], &x, col);
+	if(t>7) print_detail("New files", toks[7], &x, col);
+	if(t>8) print_detail("Directories", toks[8], &x, col);
+	if(t>9) print_detail("Special files", toks[9], &x, col);
+	if(t>11) print_detail("Soft links", toks[11], &x, col);
+	if(t>10) print_detail("Hard links", toks[10], &x, col);
+	if(t>3) print_detail("Total", toks[3], &x, col);
 	print_line("", x++, col);
-	print_detail("Warnings", toks[12], &x, col);
-	tmp=bytes_to_human_str(toks[13]);
-	print_detail("Bytes in backup", tmp, &x, col);
-	tmp=bytes_to_human_str(toks[14]);
-	print_detail("Bytes received", tmp, &x, col);
-	tmp=bytes_to_human_str(toks[15]);
-	print_detail("Bytes sent", tmp, &x, col);
-	if(toks[17]) printw("\n%s\n", toks[17]);
+	if(t>12) print_detail("Warnings", toks[12], &x, col);
+
+	if(t>13)
+	{	
+		tmp=bytes_to_human_str(toks[13]);
+		print_detail("Bytes in backup", tmp, &x, col);
+	}
+	if(t>14)
+	{
+		tmp=bytes_to_human_str(toks[14]);
+		print_detail("Bytes received", tmp, &x, col);
+	}
+	if(t>15)
+	{
+		tmp=bytes_to_human_str(toks[15]);
+		print_detail("Bytes sent", tmp, &x, col);
+	}
+	if(t>17 && toks[17]) printw("\n%s\n", toks[17]);
+}
+
+static void blank_screen(int row, int col)
+{
+	int c=0;
+	int l=0;
+	const char *date=NULL;
+	time_t t=time(NULL);
+	for(c=0; c<row; c++) print_line("", c, col);
+	mvprintw(0, 0, " burp monitor");
+	date=getdate(t);
+	l=strlen(date);
+	mvprintw(0, col-l-1, date);
 }
 
 static int parse_rbuf(const char *rbuf, struct config *conf, int row, int col, int sel, int *count, int details)
 {
-	int c=0;
+	//int c=0;
 	char *cp=NULL;
 	char *dp=NULL;
 	char *copyall=NULL;
@@ -221,59 +251,73 @@ static int parse_rbuf(const char *rbuf, struct config *conf, int row, int col, i
 		return -1;
 	}
 
-	cp=copyall;
 	dp=copyall;
 	*count=0;
 
 	// First, blank the whole screen.
-	for(c=0; c<row; c++) print_line("", c, col);
+	blank_screen(row, col);
 	while((cp=strchr(dp, '\n')))
 	{
-		int t=0;
+		int t=1;
 		char *copy=NULL;
-		char *toks[TOK_LEN];
+		char **toks=NULL;
 		*cp='\0';
 
-		for(t=0; t<TOK_LEN; t++) toks[t]=NULL;
-		t=0;
+		if(!(toks=(char **)realloc(toks, t*sizeof(char *))))
+		{
+			logp("out of memory");
+			return -1;
+		}
 
 		if(!(copy=strdup(dp)))
 		{
 			logp("out of memory\n");
 			free(copyall);
+			free(toks);
 			return -1;
 		}
 
-		if((toks[t++]=strtok(copy, "\t\n")))
+		if((toks[0]=strtok(copy, "\t\n")))
 		{
-			while(t<TOK_LEN)
+			char *tmp=NULL;
+			while(1)
 			{
-				if(!(toks[t++]=strtok(NULL, "\t\n")))
+				if(!(tmp=strtok(NULL, "\t\n")))
 					break;
+				if(!(toks=(char **)realloc(toks,
+					(t+1)*sizeof(char *))))
+				{
+					logp("out of memory");
+					free(copyall);
+					free(copy);
+					return -1;
+				}
+				toks[t++]=tmp;
 			}
 		}
 
-		if(!toks[0]
-		  || !toks[1])
+		if(t<2)
 		{
+			free(toks);
 			free(copy);
 			continue;
 		}
 
 		if(details)
 		{
-			if(*count==sel) detail(toks, conf, 0, col);
+			if(*count==sel) detail(toks, t, conf, 0, col);
 		}
 		else
 		{
-			summary(toks, *count, row, col);
+			summary(toks, t, *count, row, col);
 		}
 		(*count)++;
 
 		dp=cp+1;
 		free(copy);
+		free(toks);
 	}
-	free(copyall);
+	if(copyall) free(copyall);
 	return 0;
 }
 
@@ -298,14 +342,7 @@ static int need_status(void)
 
 static void print_star(int sel)
 {
-	int c=0;
-	int row=0;
-	int col=0;
-
-	getmaxyx(stdscr, row, col);
-
-	for(c=0; c<row; c++) mvprintw(c+1, 1, " ");
-	mvprintw(sel+1, 1, "*");
+	mvprintw(sel+TOP_SPACE, 1, "*");
 }
 
 // Return 1 if it was shown, -1 on error, 0 otherwise.
@@ -369,10 +406,15 @@ int status_client(struct config *conf)
 		fd_set fse;
 		struct timeval tval;
 
-		if(need_status() && request_status(fd, NULL))
+		if(need_status())
 		{
-			ret=-1;
-			break;
+			int req=-1;
+			if(details) req=sel;
+			if(request_status(fd, req))
+			{
+				ret=-1;
+				break;
+			}
 		}
 
 		FD_ZERO(&fsr);
@@ -415,7 +457,7 @@ int status_client(struct config *conf)
 				case 'k':
 				case 'K':
 					if(details) break;
-					if(sel>0) sel--;
+					sel--;
 					break;
 				case KEY_DOWN:
 				case 'j':
@@ -423,37 +465,58 @@ int status_client(struct config *conf)
 					if(details) break;
 					sel++;
 					break;
-				case KEY_BACKSPACE:
 				case KEY_ENTER:
-				case KEY_RIGHT:
-				case KEY_LEFT:
 				case '\n':
 				case ' ':
-				case 'r':
-				case 'R':
-				case 'l':
-				case 'L':
 					if(details) details=0;
 					else details++;
 					break;
+				case KEY_LEFT:
+				case 'h':
+				case 'H':
+					details=0;
+					break;
+				case KEY_RIGHT:
+				case 'l':
+				case 'L':
+					details++;
+					break;
+				case KEY_NPAGE:
+				{
+					int row=0, col=0;
+					getmaxyx(stdscr, row, col);
+					sel+=row-TOP_SPACE;
+					break;
+				}
+				case KEY_PPAGE:
+				{
+					int row=0, col=0;
+					getmaxyx(stdscr, row, col);
+					sel-=row-TOP_SPACE;
+					break;
+				}
 			}
 			if(quit) break;
 
+			if(sel<0) sel=0;
 			if(sel>=count) sel=count-1;
 
 			// Attempt to print stuff to the screen right now,
 			// to give the impression of key strokes being
 			// responsive.
-			if((srbr=show_rbuf(last_rbuf,
-				conf, sel, &count, details))<0)
+			if(!details)
 			{
+			  if((srbr=show_rbuf(last_rbuf,
+				conf, sel, &count, details))<0)
+			  {
 				ret=-1;
 				break;
-			}
-			if(!details) print_star(sel);
+			  }
+			  if(!details) print_star(sel);
 			
-			//mvprintw(0, 0, "%c", x);
-			refresh();
+			  //mvprintw(0, 0, "%c", x);
+			  refresh();
+			}
 		}
 
 		if(FD_ISSET(fd, &fsr))
@@ -494,6 +557,8 @@ int status_client(struct config *conf)
 	}
 	endwin();
 	close_fd(&fd);
+	if(last_rbuf) free(last_rbuf);
+	if(rbuf) free(rbuf);
 	return ret;
 }
 

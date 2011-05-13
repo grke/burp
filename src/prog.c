@@ -16,6 +16,7 @@ int main (int argc, char *argv[])
 {
 	int ret=0;
 	int option=0;
+	int daemon=1;
 	int forking=1;
 	int gotlock=0;
 	struct config conf;
@@ -34,7 +35,7 @@ int main (int argc, char *argv[])
 
 	init_log(argv[0]);
 
-	while((option=getopt(argc, argv, "a:b:c:d:hfnr:l:v?"))!=-1)
+	while((option=getopt(argc, argv, "a:b:c:d:hfFnr:l:v?"))!=-1)
 	{
 		switch(option)
 		{
@@ -70,6 +71,9 @@ int main (int argc, char *argv[])
 				break;
 			case 'f':
 				forceoverwrite=1;
+				break;
+			case 'F':
+				daemon=0;
 				break;
 			case 'n':
 				forking=0;
@@ -155,7 +159,7 @@ int main (int argc, char *argv[])
 			ret=status_client(&conf);
 		}
 		else
-			ret=server(&conf, configfile, forking);
+			ret=server(&conf, configfile, forking, daemon);
 #endif
 	}
 	else

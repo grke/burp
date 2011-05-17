@@ -1,0 +1,25 @@
+This work was packaged for Debian by:
+
+    Patrick Koppen <software@koppen.de> on Mon, 09 May 2011 20:48:57 +0200
+
+It was downloaded from:
+
+    <http://burp.grke.net/>
+
+Upstream Author(s):
+
+
+Copyright:
+
+License:
+
+ AGPLv3
+
+The Debian packaging is:
+
+    Copyright (C) 2011 Patrick Koppen <software@koppen.de>
+
+and is licensed under the GPL version 3.
+
+On Debian systems, the complete text of the GNU General
+Public License version 3 can be found in "/usr/share/common-licenses/GPL-3".

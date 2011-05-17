@@ -1,0 +1,4 @@
+* cron output (normal = none, error= output)
+* postinst, preinst, postrm: useradd, del...
+* ssl cert generation (make-ssl-cert)
+* debian policy

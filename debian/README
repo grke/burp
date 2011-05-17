@@ -1,0 +1,24 @@
+The Debian Package burp
+----------------------------
+
+BUILD:
+
+ apt-get install debhelper autotools-dev libncurses5-dev libssl-dev \
+         zlib1g-dev librsync-dev
+
+ debuild -us -uc
+
+ #check contents
+
+ dpkg-deb -c burp_<version>_<arch>.deb
+
+INSTALL:
+
+ dpkg -i burp_<version>_<arch>.deb
+
+CLEAN (clean git directory):
+
+ ./debian/rules clean
+ git clean -n
+ # CHECK OUTPUT!!!!
+ git clean -f

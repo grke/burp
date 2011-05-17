@@ -1,0 +1,12 @@
+# Defaults for burp initscript
+# sourced by /etc/init.d/burp
+# installed at /etc/default/burp by the maintainer scripts
+
+#
+# This is a POSIX shell fragment
+#
+
+RUN=no
+
+# Additional options that are passed to the Daemon.
+DAEMON_ARGS="-c /etc/burp/burp-server.conf"

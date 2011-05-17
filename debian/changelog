@@ -1,0 +1,17 @@
+burp (1.1.55) unstable; urgency=low
+
+  * update to 1.1.55
+
+ -- Patrick Koppen <software@koppen.de>  Sat, 14 May 2011 21:48:17 +0200
+
+burp (1.1.51+git0) unstable; urgency=low
+
+  * debian package
+
+ -- Patrick Koppen <software@koppen.de>  Mon, 09 May 2011 21:24:24 +0200
+
+burp (1.1.51) unstable; urgency=low
+
+  * Initial Release.
+
+ -- Patrick Koppen <software@koppen.de>  Mon, 09 May 2011 20:48:57 +0200

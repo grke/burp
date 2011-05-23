@@ -464,6 +464,78 @@ static int send_detail_to_client(int cfd, struct cstat **clist, int clen, const 
 }
 */
 
+
+static int parse_parent_data_entry(char *tok, struct cstat **clist, int clen)
+{
+	int q=0;
+	char *tp=NULL;
+	//logp("status server got: %s", tok);
+
+	// Find the array entry for this client,
+	// and add the detail from the parent to it.
+	// The name of the client is at the start, and
+	// the fields are tab separated.
+	if(!(tp=strchr(tok, '\t'))) return 0;
+	*tp='\0';
+	for(q=0; q<clen; q++)
+	{
+		if(clist[q]->name
+		  && !strcmp(clist[q]->name, tok))
+		{
+			int x=0;
+			*tp='\t'; // put the tab back.
+			x=strlen(tok);
+			if(clist[q]->running_detail)
+			free(clist[q]->running_detail);
+			clist[q]->running_detail=NULL;
+			//clist[q]->running_detail=strdup(tok);
+
+			// Need to add the newline back on the end.
+			if(!(clist[q]->running_detail=(char *)malloc(x+2)))
+			{
+				logp("out of memory\n");
+				return -1;
+			}
+			snprintf(clist[q]->running_detail, x+2, "%s\n",
+				tok);
+			
+		}
+	}
+	return 0;
+}
+
+static int parse_parent_data(const char *data, struct cstat **clist, int clen)
+{
+	char *tok=NULL;
+	char *copyall=NULL;
+
+	if(!(copyall=strdup(data)))
+	{
+		logp("out of memory\n");
+		return -1;
+	}
+
+	if((tok=strtok(copyall, "\n")))
+	{
+		if(parse_parent_data_entry(tok, clist, clen))
+		{
+			free(copyall);
+			return -1;
+		}
+		while((tok=strtok(NULL, "\n")))
+		{
+			if(parse_parent_data_entry(tok, clist, clen))
+			{
+				free(copyall);
+				return -1;
+			}
+		}
+	}
+
+	free(copyall);
+	return 0;
+}
+
 /* Incoming status request */
 int status_server(int *cfd, struct config *conf)
 {
@@ -547,32 +619,10 @@ int status_server(int *cfd, struct config *conf)
 			}
 			buf[l]='\0';
 
-			// If we did not get a full read, do
-			// not worry, just throw it away.
-			if(buf[l-1]=='\n')
+			if(parse_parent_data(buf, clist, clen))
 			{
-				int q=0;
-				char *tp=NULL;
-				//buf[l-1]='\0';
-				//logp("status server got: %s", buf);
-
-				// Find the array entry for this client,
-				// and add the detail from the parent to it.
-				// The name of the client is at the start, and
-				// the fields are tab separated.
-				if(!(tp=strchr(buf, '\t'))) continue;
-				*tp='\0';
-				for(q=0; q<clen; q++)
-				{
-				  if(clist[q]->name
-					&& !strcmp(clist[q]->name, buf))
-				  {
-					*tp='\t'; // put the tab back.
-					if(clist[q]->running_detail)
-						free(clist[q]->running_detail);
-					clist[q]->running_detail=strdup(buf);
-				  }
-				}
+				ret=-1;
+				break;
 			}
 	//		continue;
 		}

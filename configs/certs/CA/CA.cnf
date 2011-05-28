@@ -1,0 +1,32 @@
+# simple config for burp_ca
+
+RANDFILE                = /dev/urandom
+CA_DIR                  = /etc/burp/CA
+
+
+[ ca ]
+dir                     = $ENV::CA_DIR
+database                = $dir/index.txt
+serial                  = $dir/serial.txt
+certs                   = $dir/certs
+new_certs_dir           = $dir/newcerts
+crlnumber               = $dir/crlnumber.txt
+
+unique_subject          = no
+
+default_md              = sha1
+default_days            = 730
+default_crl_days        = 30
+
+#????
+name_opt                = ca_default
+cert_opt                = ca_default
+
+x509_extensions         = usr_cert
+policy                  = policy_anything
+
+[ usr_cert ]
+basicConstraints        = CA:FALSE
+
+[ policy_anything ]
+commonName              = supplied

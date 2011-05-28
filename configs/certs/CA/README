@@ -1,0 +1,60 @@
+Graham Keeling says:
+> Below are Patrick Koppen's notes on his burp_ca script.
+> I haven't had time yet to integrate it into burp properly, but I think it
+> is probably nearly there as it stands. It just needs a little bit more time
+> and effort to finish it off.
+> We need to bear in mind that this kind of thing also needs to be easily done
+> for operating systems that don't have bash - like Windows.
+> How would you imagine that would work - generate the things on a Debian
+> machine and just copy them over?
+
+
+I wrote a 'burp_ca' for testing. It should be installed to /usr/sbin.
+CA.cnf goes to /etc/burp/.
+
+I think it would be better not to install any certificates. Maybe
+you can add a 'make install; make demo_certs'.
+
+The debian package could something similar during postinstall.
+
+ burp_ca --init --key --request --sign --batch
+
+ (add --config CA.cnf --dir CA if you don't use the defaults)
+
+This initializes a CA with `hostname -f` as the CN, generates the
+server key, requests the certificate and signs it.
+
+On a client you do something like:
+
+ # generate key and csr
+ burp_ca --key --request --dir . --name `hostname -f`
+ # copy *.csr to the server to /etc/burp/CA (or whatever --dir ...)
+ # on the server:
+ burp_ca --ca `hostname -f` --sign --name <clienthostname>
+ # copy CA/<clienthostname>.crt back to the client
+
+
+Problems:
+ * I cannot add burp_ca and CA.cnf to your Makefile, because I don't
+   understand your autoconf...
+
+> Graham Keeling says:
+> I have been adding scripts and conf files to the top level Makefile.in.
+> What I'm doing may not be quite right, but it has been working so far and
+> nobody has complained yet!
+> So these two new ones can probably just be added around line 113.
+	
+ * Default certs needs to be removed and replaced by symlinks to generated
+   certificates (so you don't have to change the configs).
+
+Graham Keeling says:
+> If we switch to this new mechanism, we can just leave the old default bits
+> in their old places, which will keep working, and explain in the release notes
+> what you have to do to start using the new way. People starting fresh should
+> just start using the new way automatically without knowing any different.
+
+
+ * add ssl_key option, so key and cert can be in different files
+
+Graham Keeling says:
+> This should be easy for me to do.

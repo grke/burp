@@ -151,6 +151,12 @@ Choose the level of gzip compression. Setting 0 or gzip0 turns compression off. 
 \fBclient_lockdir=[path]\fR
 Path to the directory in which to keep per-client lock files. By default, this is set to the path given by the 'directory' option.
 .TP
+\fBuser=[username]\fR
+Run as a particular user.
+.TP
+\fBgroup=[groupname]\fR
+Run as a particular group.
+.TP
 \fBworking_dir_recovery_method=[merge|use|delete]\fR
 This option tells the server what to do when it finds the working directory of an interrupted backup (perhaps somebody pulled the plug on the server, or something). This can be overridden by the client configurations files in clientconfdir
 on the server. Options are...
@@ -221,6 +227,12 @@ Synonym for lockfile.
 .TP
 \fBlogfile=[path]\fR
 Path to the logfile.
+.TP
+\fBuser=[username]\fR
+Run as a particular user (not supported on Windows).
+.TP
+\fBgroup=[groupname]\fR
+Run as a particular group (not supported on Windows).
 .TP
 \fBinclude=[path]\fR
 Path to include in the backup. You can have multiple include lines. Use forward slashes '/', not backslashes '\\' as path delimiters.

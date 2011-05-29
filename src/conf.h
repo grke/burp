@@ -21,6 +21,8 @@ struct config
 	char *ssl_cert;
 	char *ssl_cert_password;
 	char *ssl_peer_cn;
+	char *user;
+	char *group;
 
 // server options
 	char *directory;

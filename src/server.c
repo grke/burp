@@ -1300,6 +1300,9 @@ int server(struct config *conf, const char *configfile, int forking, int daemon)
 	if(conf->status_port
 		&& (sfd=init_listen_socket(conf->status_port, 0))<0) return 1;
 
+	//if(chuser_and_or_chgrp(conf->user, conf->group))
+	//	return 1;
+
 	while(1)
 	{
 		int c=0;

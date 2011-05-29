@@ -27,5 +27,6 @@ extern void reuseaddr(int fd);
 extern void write_status(const char *client, int phase, const char *path, struct cntr *cntr);
 extern int run_script(const char *script, struct strlist **userargs, int userargc, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, struct cntr *cntr);
 extern char *comp_level(struct config *conf);
+extern int chuser_and_or_chgrp(const char *user, const char *group);
 
 #endif

@@ -857,3 +857,82 @@ char *comp_level(struct config *conf)
 	snprintf(comp, sizeof(comp), "wb%d", conf->compression);
 	return comp;
 }
+
+/* Function based on src/lib/priv.c from bacula. */
+int chuser_and_or_chgrp(const char *user, const char *group)
+{
+#if defined(HAVE_PWD_H) && defined(HAVE_GRP_H)
+	struct passwd *passw = NULL;
+	struct group *grp = NULL;
+	gid_t gid;
+	uid_t uid;
+	char *username=NULL;
+
+	if(!user && !group) return 0;
+
+	if(user)
+	{
+		if(!(passw=getpwnam(user)))
+		{
+			logp("could not find user '%s': %s\n",
+				user, strerror(errno));
+			return -1;
+		}
+	}
+	else
+	{
+		if(!(passw=getpwuid(getuid())))
+		{
+			logp("could not find password entry: %s\n",
+				strerror(errno));
+			return -1;
+		}
+		user=passw->pw_name;
+	}
+	// Any OS uname pointer may get overwritten, so save name, uid, and gid
+	if(!(username=strdup(user)))
+	{
+		logp("out of memory\n");
+		return -1;
+	}
+	uid=passw->pw_uid;
+	gid=passw->pw_gid;
+	if(group)
+	{
+		if(!(grp=getgrnam(group)))
+		{
+			logp("could not find group '%s': %s\n", group,
+				strerror(errno));
+			free(username);
+			return -1;
+		}
+		gid=grp->gr_gid;
+	}
+	if(initgroups(username, gid))
+	{
+		if(grp)
+			logp("could not initgroups for group '%s', user '%s': %s\n", group, user, strerror(errno));
+		else
+			logp("could not initgroups for user '%s': %s\n", user, strerror(errno));
+		free(username);
+		return -1;
+	}
+	free(username);
+	if(grp)
+	{
+		if(setgid(gid))
+		{
+			logp("could not set group '%s': %s\n", group,
+				strerror(errno));
+			return -1;
+		}
+	}
+	if(setuid(uid))
+	{
+		logp("could not set specified user '%s': %s\n", username,
+			strerror(errno));
+		return -1;
+	}
+#endif
+	return 0;
+}

@@ -2,6 +2,7 @@
 #include "prog.h"
 #include "msg.h"
 #include "lock.h"
+#include "handy.h"
 #include "status_client.h"
 
 static void usage(void)
@@ -113,6 +114,9 @@ int main (int argc, char *argv[])
 
 	init_config(&conf);
 	if(load_config(configfile, &conf, 1)) return 1;
+        if(chuser_and_or_chgrp(conf.user, conf.group))
+              return 1;
+
 
 	/* if logfile is defined in config and logfile is not defined... */
 	if(conf.logfile && !logfile) {

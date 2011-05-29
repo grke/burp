@@ -46,6 +46,8 @@ void init_config(struct config *conf)
 	conf->librsync=1;
 	conf->compression=9;
 	conf->client_lockdir=NULL;
+	conf->user=NULL;
+	conf->group=NULL;
 
 	conf->timer_script=NULL;
 	conf->timer_arg=NULL;
@@ -102,6 +104,8 @@ void free_config(struct config *conf)
         if(conf->ssl_cert_password) free(conf->ssl_cert_password);
         if(conf->ssl_dhfile) free(conf->ssl_dhfile);
         if(conf->ssl_peer_cn) free(conf->ssl_peer_cn);
+        if(conf->user) free(conf->user);
+        if(conf->group) free(conf->group);
         if(conf->encryption_password) free(conf->encryption_password);
 	if(conf->client_lockdir) free(conf->client_lockdir);
 	strlists_free(conf->startdir, conf->sdcount);
@@ -389,6 +393,10 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 			  "password", &(conf->password))) return -1;
 			if(get_conf_val(field, value,
 			  "server", &(conf->server))) return -1;
+			if(get_conf_val(field, value,
+			  "user", &(conf->user))) return -1;
+			if(get_conf_val(field, value,
+			  "group", &(conf->group))) return -1;
 			if(get_conf_val(field, value,
 			  "encryption_password", &(conf->encryption_password)))
 				return -1;

@@ -9,9 +9,6 @@
 
 * Think about adding a utility to create certs, like easy-rsa from OpenVPN.
 
-* Make the restore stuff use sbuf so that I can remove the kludge from
-  asyncio.c for links.
-
 * Add xattr support.
 
 * Add acl support.
@@ -19,8 +16,6 @@
 * Improve the status monitor.
 
 * Do not compress manifests and logs when compression is turned off.
-
-* A restore warning when a file exists now seems to cause "ret OK, but zstream not finished: 0" on the server. Or does it?
 
 * Allow random backups to be deleted safely when hardlinked_archive is on.
 

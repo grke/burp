@@ -846,12 +846,6 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 		log_and_send("out of memory");
 		ret=-1;
 	}
-	else if(mkpath(&current)) // creates basedir, without the /current part
-	{
-		snprintf(msg, sizeof(msg), "could not mkpath %s", working);
-		log_and_send(msg);
-		ret=-1;
-	}
 	else if(async_read(&cmd, &buf, &len))
 	{
 		ret=-1;
@@ -868,6 +862,13 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 		{
 			int tret=0;
 			char okstr[32]="ok";
+			if(mkpath(&current)) // creates basedir, without the /current part
+			{
+				snprintf(msg, sizeof(msg), "could not mkpath %s", working);
+				log_and_send(msg);
+				ret=-1;
+				goto end;
+			}
 			if(!strcmp(buf, "backupphase1timed"))
 			{
 				if((tret=run_script_w(

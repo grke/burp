@@ -376,7 +376,7 @@ static int restore_file(struct bu *arr, int a, int i, const char *datapth, const
 
 static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, enum action act, const char *client, int status, struct cntr *cntr, struct config *cconf)
 {
-	logp("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path);
+	//logp("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path);
 	write_status(client, status, sb->path, cntr);
 
 	if((sb->datapth && async_write('t', sb->datapth, strlen(sb->datapth)))
@@ -465,12 +465,12 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 			char *buf=NULL;
 			if(async_read_quick(&cmd, &buf, &len))
 			{
-printf("read quick error\n");
+				logp("read quick error\n");
 				ret=-1; quit++; break;
 			}
 			if(buf)
 			{
-				logp("got read quick\n");
+				//logp("got read quick\n");
 				if(cmd=='w')
 				{
 					logp("WARNING: %s\n", buf);

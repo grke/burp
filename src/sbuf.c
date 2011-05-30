@@ -102,7 +102,30 @@ int sbuf_is_endfile(struct sbuf *sb)
 	return cmd_is_endfile(sb->cmd);
 }
 
-static int do_sbuf_fill(FILE *fp, gzFile zp, struct sbuf *sb, int phase1, struct cntr *cntr)
+static int do_sbuf_fill_from_net(struct sbuf *sb, struct cntr *cntr)
+{
+	int ars;
+	if((ars=async_read_stat(NULL, NULL, &(sb->statbuf), &(sb->slen),
+		&(sb->statp), &(sb->datapth), cntr)))
+			return ars;
+	if((ars=async_read(&(sb->cmd), &(sb->path), &(sb->plen))))
+		return ars;
+	if(sbuf_is_link(sb))
+	{
+		char cmd;
+		if((ars=async_read(&cmd, &(sb->linkto), &(sb->llen))))
+				return ars;
+		if(!cmd_is_link(cmd))
+		{
+			logp("got non-link cmd after link cmd: %c %s\n",
+				cmd, sb->linkto);
+			return -1;
+		}
+	}
+	return 0;
+}
+
+static int do_sbuf_fill_from_file(FILE *fp, gzFile zp, struct sbuf *sb, int phase1, struct cntr *cntr)
 {
 	int ars;
 	//free_sbuf(sb);
@@ -144,12 +167,13 @@ static int do_sbuf_fill(FILE *fp, gzFile zp, struct sbuf *sb, int phase1, struct
 
 int sbuf_fill(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
 {
-	return do_sbuf_fill(fp, zp, sb, 0, cntr);
+	if(fp || zp) return do_sbuf_fill_from_file(fp, zp, sb, 0, cntr);
+	return do_sbuf_fill_from_net(sb, cntr);
 }
 
 int sbuf_fill_phase1(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
 {
-	return do_sbuf_fill(fp, zp, sb, 1, cntr);
+	return do_sbuf_fill_from_file(fp, zp, sb, 1, cntr);
 }
 
 static int sbuf_to_fp(struct sbuf *sb, FILE *mp)

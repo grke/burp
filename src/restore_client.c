@@ -83,10 +83,15 @@ static int make_link(const char *fname, const char *lnk, char cmd, const char *r
 		ret=link(flnk, fname);
 		free(flnk);
 	}
-	else
+	else if(cmd=='l')
 	{
 		//printf("%s -> %s\n", fname, lnk);
 		ret=symlink(lnk, fname);
+	}
+	else
+	{
+		logp("unexpected link command: %c\n", cmd);
+		ret=-1;
 	}
 #endif
 
@@ -313,7 +318,7 @@ static int restore_link(struct sbuf *sb, const char *fname, const char *restorep
 			if(restore_interrupt(sb, msg, cntr))
 				ret=-1;
 		}
-		else if(make_link(fname, sb->linkto, sb->llen,
+		else if(make_link(fname, sb->linkto, sb->cmd,
 			restoreprefix, cntr))
 		{
 			// failed - do a warning

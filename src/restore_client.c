@@ -122,7 +122,7 @@ static int restore_file(struct sbuf *sb, const char *fname, enum action act, con
 	{
 		char msg[256]="";
 		// failed - do a warning
-		snprintf(msg, sizeof(msg), "build path failed: %s", rpath);
+		snprintf(msg, sizeof(msg), "build path failed: %s", fname);
 		if(restore_interrupt(sb, msg, cntr))
 			ret=-1;
 	}
@@ -207,7 +207,7 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
 	{
 		char msg[256]="";
 		// failed - do a warning
-		snprintf(msg, sizeof(msg), "build path failed: %s", rpath);
+		snprintf(msg, sizeof(msg), "build path failed: %s", fname);
 		if(restore_interrupt(sb, msg, cntr))
 			ret=-1;
 	}
@@ -275,7 +275,7 @@ static int restore_dir(struct sbuf *sb, const char *dname, enum action act, stru
 			char msg[256]="";
 			// failed - do a warning
 			snprintf(msg, sizeof(msg),
-				"build path failed: %s", rpath);
+				"build path failed: %s", dname);
 			if(restore_interrupt(sb, msg, cntr))
 				ret=-1;
 		}
@@ -314,7 +314,7 @@ static int restore_link(struct sbuf *sb, const char *fname, const char *restorep
 			char msg[256]="";
 			// failed - do a warning
 			snprintf(msg, sizeof(msg), "build path failed: %s",
-				rpath);
+				fname);
 			if(restore_interrupt(sb, msg, cntr))
 				ret=-1;
 		}
@@ -443,8 +443,7 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 					char msg[512]="";
 					// Something exists at that path.
 					snprintf(msg, sizeof(msg),
-						"Path exists: %s (%s)",
-							fullpath, sb.datapth);
+						"Path exists: %s", fullpath);
 					if(restore_interrupt(&sb, msg, cntr))
 					{
 						ret=-1;

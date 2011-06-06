@@ -125,6 +125,7 @@ static int restore_file(struct sbuf *sb, const char *fname, enum action act, con
 		snprintf(msg, sizeof(msg), "build path failed: %s", rpath);
 		if(restore_interrupt(sb, msg, cntr))
 			ret=-1;
+		goto end;
 	}
 
 #ifdef HAVE_WIN32
@@ -147,6 +148,7 @@ static int restore_file(struct sbuf *sb, const char *fname, enum action act, con
 				rpath, be.bstrerror(errno));
 		if(restore_interrupt(sb, msg, cntr))
 			ret=-1;
+		goto end;
 	}
 #else
 	if(!(fp=open_file(rpath, "wb")))
@@ -157,6 +159,7 @@ static int restore_file(struct sbuf *sb, const char *fname, enum action act, con
 				rpath, strerror(errno));
 		if(restore_interrupt(sb, msg, cntr))
 			ret=-1;
+		goto end;
 	}
 #endif
 
@@ -180,10 +183,12 @@ static int restore_file(struct sbuf *sb, const char *fname, enum action act, con
 					rpath);
 			if(restore_interrupt(sb, msg, cntr))
 				ret=-1;
+			goto end;
 		}
 	}
 	if(!ret) do_filecounter(cntr, sb->cmd, 1);
 
+end:
 	if(rpath) free(rpath);
 	return ret;
 }
@@ -210,6 +215,7 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
 		snprintf(msg, sizeof(msg), "build path failed: %s", rpath);
 		if(restore_interrupt(sb, msg, cntr))
 			ret=-1;
+		goto end;
 	}
 	if(S_ISFIFO(statp.st_mode))
 	{
@@ -260,6 +266,7 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
 	    }
          }
 #endif
+end:
 	if(rpath) free(rpath);
 	return ret;
 }
@@ -278,6 +285,7 @@ static int restore_dir(struct sbuf *sb, const char *dname, enum action act, stru
 				"build path failed: %s", rpath);
 			if(restore_interrupt(sb, msg, cntr))
 				ret=-1;
+			goto end;
 		}
 		else if(!is_dir(rpath))
 		{
@@ -289,6 +297,7 @@ static int restore_dir(struct sbuf *sb, const char *dname, enum action act, stru
 				// failed - do a warning
 				if(restore_interrupt(sb, msg, cntr))
 					ret=-1;
+				goto end;
 			}
 		}
 		else
@@ -298,6 +307,7 @@ static int restore_dir(struct sbuf *sb, const char *dname, enum action act, stru
 		if(!ret) do_filecounter(cntr, sb->cmd, 1);
 	}
 	else do_filecounter(cntr, sb->cmd, 1);
+end:
 	if(rpath) free(rpath);
 	return ret;
 }
@@ -317,6 +327,7 @@ static int restore_link(struct sbuf *sb, const char *fname, const char *restorep
 				rpath);
 			if(restore_interrupt(sb, msg, cntr))
 				ret=-1;
+			goto end;
 		}
 		else if(make_link(fname, sb->linkto, sb->cmd,
 			restoreprefix, cntr))
@@ -324,6 +335,7 @@ static int restore_link(struct sbuf *sb, const char *fname, const char *restorep
 			// failed - do a warning
 			if(restore_interrupt(sb, "could not create link", cntr))
 				ret=-1;
+			goto end;
 		}
 		else if(!ret)
 		{
@@ -333,6 +345,7 @@ static int restore_link(struct sbuf *sb, const char *fname, const char *restorep
 		if(rpath) free(rpath);
 	}
 	else do_filecounter(cntr, sb->cmd, 1);
+end:
 	return ret;
 }
 

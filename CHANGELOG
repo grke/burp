@@ -1,6 +1,8 @@
   * Add options to run as a different user and group.
   * Add Patrick Koppen's burp_ca script.
   * Get the client restore to use the sbuf functions, remove related kludges.
+  * Make a failure to restore over a busy file not cause the whole restore to
+    fail.
 
 2011-05-13 Changes in burp-1.1.55:
   * Make the status monitor use ncurses.

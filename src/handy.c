@@ -93,7 +93,11 @@ int mkpath(char **rpath)
 	if((cp=strrchr(*rpath, '/')))
 	{
 		*cp='\0';
-		if(lstat(*rpath, &buf))
+		if(!**rpath)
+		{
+			// We are down to the root, which is OK.
+		}
+		else if(lstat(*rpath, &buf))
 		{
 			// does not exist - recurse further down, then come
 			// back and try to mkdir it.
@@ -126,6 +130,7 @@ int mkpath(char **rpath)
 
 int build_path(const char *datadir, const char *fname, size_t flen, char **rpath)
 {
+	//logp("build path: '%s/%s'\n", datadir, fname);
 	if(!(*rpath=prepend_s(datadir, fname, flen))) return -1;
 	if(mkpath(rpath))
 	{

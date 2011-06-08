@@ -434,6 +434,7 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, int
 						arr[i].index, t);
 					strcat(curback, tmp);
 				}
+				if(!a) strcat(curback, "\t0");
 				strcat(curback, "\n");
         			free_current_backups(&arr, a);
 

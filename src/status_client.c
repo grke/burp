@@ -47,6 +47,27 @@ static const char *getdate(time_t t)
 	return buf;
 }
 
+static char *get_backup_str(const char *s, bool dateonly)
+{
+	static char str[32]="";
+	const char *cp=NULL;
+	if(!(cp=strchr(s, ' ')))
+		snprintf(str, sizeof(str), "never");
+	else if(dateonly)
+	{
+		snprintf(str, sizeof(str),
+			"%s", getdate(atol(cp+1)));
+	}
+	else
+	{
+		unsigned long backupnum=0;
+		backupnum=strtoul(s, NULL, 10);
+		snprintf(str, sizeof(str),
+			"%07lu %s", backupnum, getdate(atol(cp+1)));
+	}
+	return str;
+}
+
 // Returns 1 if it printed a line, 0 otherwise.
 static int summary(char **toks, int t, int count, int row, int col)
 {
@@ -57,7 +78,8 @@ static int summary(char **toks, int t, int count, int row, int col)
 		if(t>2)
 		  snprintf(msg, sizeof(msg),
 			"%-14.14s %-14s last backup: %s",
-			toks[0], "idle", getdate(atol(toks[2])));
+			toks[0], "idle",
+			get_backup_str(toks[2], TRUE));
 		else
 		  snprintf(msg, sizeof(msg), "%-14.14s %-14s",
 			toks[0], "idle");
@@ -67,7 +89,8 @@ static int summary(char **toks, int t, int count, int row, int col)
 		if(t>2)
 		  snprintf(msg, sizeof(msg),
 			"%-14.14s %-14s last backup: %s",
-			toks[0], "server crashed", getdate(atol(toks[2])));
+			toks[0], "server crashed",
+				get_backup_str(toks[2], TRUE));
 		else
 		  snprintf(msg, sizeof(msg), "%-14.14s %-14s",
 			toks[0], "server crashed");
@@ -77,7 +100,8 @@ static int summary(char **toks, int t, int count, int row, int col)
 		if(t>2)
 		  snprintf(msg, sizeof(msg),
 			"%-14.14s %-14s last backup: %s",
-			toks[0], "client crashed", getdate(atol(toks[2])));
+			toks[0], "client crashed",
+				get_backup_str(toks[2], TRUE));
 		else
 		  snprintf(msg, sizeof(msg), "%-14.14s %-14s",
 			toks[0], "client crashed");
@@ -121,16 +145,17 @@ static void show_all_backups(char *toks[], int t, int *x, int col)
 	char msg[256]="";
 	for(; i<t; i++)
 	{
+		char *str=NULL;
+		str=get_backup_str(toks[i], FALSE);
+
 		if(i==2)
 		{
-		  snprintf(msg, sizeof(msg), "Backup list: %s",
-			getdate(atol(toks[i])));
+		  snprintf(msg, sizeof(msg), "Backup list: %s", str);
 		  print_line(msg, (*x)++, col);
 		}
 		else
 		{
-		  snprintf(msg, sizeof(msg), "             %s",
-			getdate(atol(toks[i])));
+		  snprintf(msg, sizeof(msg), "             %s", str);
 		  print_line(msg, (*x)++, col);
 		}
 	}

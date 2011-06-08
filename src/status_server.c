@@ -161,12 +161,18 @@ static time_t timestamp_to_long(const char *buf)
 	return mktime(&tm);
 }
 
-static time_t get_last_backup_time(const char *timestamp)
+static char *get_last_backup_time(const char *timestamp)
 {
+	static char ret[64]="";
 	char wbuf[64]="";
-	if(read_timestamp(timestamp, wbuf, sizeof(wbuf))) return 0;
+	snprintf(ret, sizeof(ret), "0");
+	if(read_timestamp(timestamp, wbuf, sizeof(wbuf))) return ret;
+
+	snprintf(ret, sizeof(ret), "%lu %li",
+		strtoul(wbuf, NULL, 0),
+		timestamp_to_long(wbuf));
 	  
-	return timestamp_to_long(wbuf);;
+	return ret;
 }
 
 static int set_summary(struct cstat *c)
@@ -180,7 +186,8 @@ static int set_summary(struct cstat *c)
 		if(lstat(c->working, &statp))
 		{
 			c->status='i';
-			snprintf(wbuf, sizeof(wbuf), "%s\t%c\t%li\n", c->name,
+			snprintf(wbuf, sizeof(wbuf), "%s\t%c\t%s\n",
+				c->name,
 				c->status,
 				get_last_backup_time(c->timestamp));
 		}
@@ -188,7 +195,7 @@ static int set_summary(struct cstat *c)
 		{
 			// client process crashed
 			c->status='c';
-			snprintf(wbuf, sizeof(wbuf), "%s\t%c\t%li\n",
+			snprintf(wbuf, sizeof(wbuf), "%s\t%c\t%s\n",
 				c->name, c->status,
 				get_last_backup_time(c->timestamp));
 			//	statp.st_ctime);
@@ -208,7 +215,7 @@ static int set_summary(struct cstat *c)
 			//if(!lstat(c->working, &statp)) t=statp.st_ctime;
 			// server process crashed
 			c->status='C';
-			snprintf(wbuf, sizeof(wbuf), "%s\t%c\t%li\n",
+			snprintf(wbuf, sizeof(wbuf), "%s\t%c\t%s\n",
 				c->name, c->status,
 				get_last_backup_time(c->timestamp));
 			// It is not running, so free the running_detail.
@@ -423,7 +430,8 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, int
 				{
 					char tmp[16]="";
 					t=timestamp_to_long(arr[i].timestamp);
-					snprintf(tmp, sizeof(tmp), "\t%li", t);
+					snprintf(tmp, sizeof(tmp), "\t%lu %li",
+						arr[i].index, t);
 					strcat(curback, tmp);
 				}
 				strcat(curback, "\n");

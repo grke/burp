@@ -6,6 +6,7 @@
     fail.
   * Print byte count as well as human readable byte count in the status summary
     screen.
+  * Include backup numbers with the backup list in the status summary.
 
 2011-05-13 Changes in burp-1.1.55:
   * Make the status monitor use ncurses.

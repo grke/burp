@@ -4,6 +4,8 @@
   * Fix possible client segfault when refusing to restore over existing files.
   * Make a failure to restore over a busy file not cause the whole restore to
     fail.
+  * Print byte count as well as human readable byte count in the status summary
+    screen.
 
 2011-05-13 Changes in burp-1.1.55:
   * Make the status monitor use ncurses.

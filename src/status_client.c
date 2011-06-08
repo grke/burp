@@ -144,6 +144,16 @@ static void print_detail(const char *field, const char *value, int *x, int col)
 	print_line(msg, (*x)++, col);
 }
 
+static void print_detail2(const char *field, const char *value1, const char *value2, int *x, int col)
+{
+	char msg[256]="";
+	if(!field
+		|| !value1 || !*value1 || !strcmp(value1, "0")
+		|| !value2 || !*value2) return;
+	snprintf(msg, sizeof(msg), "%s: %s%s\n", field, value1, value2);
+	print_line(msg, (*x)++, col);
+}
+
 static void detail(char *toks[], int t, struct config *conf, int row, int col)
 {
 	int x=0;
@@ -210,17 +220,17 @@ static void detail(char *toks[], int t, struct config *conf, int row, int col)
 	if(t>13)
 	{	
 		tmp=bytes_to_human_str(toks[13]);
-		print_detail("Bytes in backup", tmp, &x, col);
+		print_detail2("Bytes in backup", toks[13], tmp, &x, col);
 	}
 	if(t>14)
 	{
 		tmp=bytes_to_human_str(toks[14]);
-		print_detail("Bytes received", tmp, &x, col);
+		print_detail2("Bytes received", toks[14], tmp, &x, col);
 	}
 	if(t>15)
 	{
 		tmp=bytes_to_human_str(toks[15]);
-		print_detail("Bytes sent", tmp, &x, col);
+		print_detail2("Bytes sent", toks[15], tmp, &x, col);
 	}
 	if(t>17 && toks[17]) printw("\n%s\n", toks[17]);
 }

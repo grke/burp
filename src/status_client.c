@@ -53,11 +53,11 @@ static char *get_backup_str(const char *s, bool dateonly)
 	const char *cp=NULL;
 	if(!(cp=strchr(s, ' ')))
 		snprintf(str, sizeof(str), "never");
-	else if(dateonly)
+	/*else if(dateonly)
 	{
 		snprintf(str, sizeof(str),
 			"%s", getdate(atol(cp+1)));
-	}
+	}*/
 	else
 	{
 		unsigned long backupnum=0;

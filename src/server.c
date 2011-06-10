@@ -1008,7 +1008,7 @@ end:
 #define PASSWORD "password"
 #define DHFILE "dh1024.pem"
 
-static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile)
+static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, int forking)
 {
 	int ret=0;
 	SSL *ssl=NULL;
@@ -1017,7 +1017,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile)
 	struct config conf;
 	struct config cconf;
 
-	close_fd(rfd);
+	if(forking) close_fd(rfd);
 
 	// Reload global config, in case things have changed. This means that
 	// the server does not need to be restarted for most config changes.
@@ -1172,7 +1172,7 @@ static int process_incoming_client(int rfd, int forking, struct config *conf, SS
 			if(is_status_server)
 			  ret=run_status_server(&rfd, &cfd, configfile);
 			else
-			  ret=run_child(&rfd, &cfd, ctx, configfile);
+			  ret=run_child(&rfd, &cfd, ctx, configfile, forking);
 			close_fd(&status_wfd);
 			close_fd(&status_rfd);
 			exit(ret);
@@ -1202,7 +1202,7 @@ static int process_incoming_client(int rfd, int forking, struct config *conf, SS
 		if(is_status_server)
 			return run_status_server(&rfd, &cfd, configfile);
 		else
-			return run_child(&rfd, &cfd, ctx, configfile);
+			return run_child(&rfd, &cfd, ctx, configfile, forking);
 	}
 	return 0;
 }

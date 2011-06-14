@@ -1232,7 +1232,7 @@ static int daemonise(void)
 	/* now we are in the child process */
 
 	/* change umask (FIXME: is this correct?) */
-	umask(0);
+	/* umask(0); */
 
 	/* create a session and set the process group ID */
 	sid=setsid();

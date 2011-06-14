@@ -40,7 +40,7 @@ EOF
 }
 
 if ! options=$(getopt -o hid:c:n:krsa:D:S: \
-    -l help,init,dir:,config:,name:,key:,request:,sign:,ca:,ca_days,revoke:,crl,batch,days:,size: -- "$@")
+    -l help,init,dir:,config:,name:,key:,request:,sign,ca:,ca_days,revoke:,crl,batch,days:,size: -- "$@")
 then
     exit 1
 fi

@@ -58,6 +58,7 @@ SSL_CTX *ssl_initialise_ctx(struct config *conf)
 {
 	SSL_CTX *ctx=NULL;
 	SSL_METHOD *meth=NULL;
+	char *ssl_key=NULL;
 
 	/* Create our context*/
 	meth=(SSL_METHOD *)SSLv23_method();
@@ -67,10 +68,15 @@ SSL_CTX *ssl_initialise_ctx(struct config *conf)
 	if(!(SSL_CTX_use_certificate_chain_file(ctx, conf->ssl_cert)))
 		return berr_exit("Can't read certificate file");
 
-	pass=conf->ssl_cert_password;
+	pass=conf->ssl_key_password;
 	SSL_CTX_set_default_passwd_cb(ctx, password_cb);
 
-	if(!(SSL_CTX_use_PrivateKey_file(ctx,conf->ssl_cert,SSL_FILETYPE_PEM)))
+	if(conf->ssl_key)
+		ssl_key=conf->ssl_key;
+	else
+		ssl_key=conf->ssl_cert;
+
+	if(!(SSL_CTX_use_PrivateKey_file(ctx,ssl_key,SSL_FILETYPE_PEM)))
 		return berr_exit("Can't read key file");
 
 	/* Load the CAs we trust*/

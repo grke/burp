@@ -38,7 +38,8 @@ void init_config(struct config *conf)
 	conf->read_all_fifos=0;
 	conf->ssl_cert_ca=NULL;
         conf->ssl_cert=NULL;
-        conf->ssl_cert_password=NULL;
+        conf->ssl_key=NULL;
+        conf->ssl_key_password=NULL;
 	conf->ssl_dhfile=NULL;
 	conf->ssl_peer_cn=NULL;
 	conf->encryption_password=NULL;
@@ -101,7 +102,8 @@ void free_config(struct config *conf)
 		free(conf->working_dir_recovery_method);
  	if(conf->ssl_cert_ca) free(conf->ssl_cert_ca);
         if(conf->ssl_cert) free(conf->ssl_cert);
-        if(conf->ssl_cert_password) free(conf->ssl_cert_password);
+        if(conf->ssl_key) free(conf->ssl_key);
+        if(conf->ssl_key_password) free(conf->ssl_key_password);
         if(conf->ssl_dhfile) free(conf->ssl_dhfile);
         if(conf->ssl_peer_cn) free(conf->ssl_peer_cn);
         if(conf->user) free(conf->user);
@@ -141,10 +143,14 @@ void free_config(struct config *conf)
 
 static int get_conf_val(const char *field, const char *value, const char *want, char **dest)
 {
-	if(!strcmp(field, want) && !(*dest=strdup(value)))
+	if(!strcmp(field, want))
 	{
-		logp("could not strdup %s value: %s\n", field, value);
-		return -1;
+		if(*dest) free(*dest);
+		if(!(*dest=strdup(value)))
+		{
+			logp("could not strdup %s value: %s\n", field, value);
+			return -1;
+		}
 	}
 	return 0;
 }
@@ -368,7 +374,13 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 			if(get_conf_val(field, value,
 			  "ssl_cert", &(conf->ssl_cert))) return -1;
 			if(get_conf_val(field, value,
-			  "ssl_cert_password", &(conf->ssl_cert_password)))
+			  "ssl_key", &(conf->ssl_key))) return -1;
+			// ssl_cert_password is a synonym for ssl_key_password
+			if(get_conf_val(field, value,
+			  "ssl_cert_password", &(conf->ssl_key_password)))
+				return -1;
+			if(get_conf_val(field, value,
+			  "ssl_key_password", &(conf->ssl_key_password)))
 				return -1;
 			if(get_conf_val(field, value,
 			  "ssl_dhfile", &(conf->ssl_dhfile))) return -1;
@@ -629,7 +641,7 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 	}
 	// Let the caller check the 'keep' value.
 
-	if(!conf->ssl_cert_password) conf->ssl_cert_password=strdup("");
+	if(!conf->ssl_key_password) conf->ssl_key_password=strdup("");
 
 	switch(conf->mode)
 	{

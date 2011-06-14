@@ -48,6 +48,26 @@ The main author of Burp is Graham Keeling.
 <TD ALIGN="LEFT">
 
 <P>
+<FONT COLOR="#99CCFF">2011-06-14: burp-1.1.57 is released.
+<pre>
+Changes in burp-1.1.57:
+  * Add options to run as a different user and group.
+  * Add Patrick Koppen's burp_ca script.
+  * Get the client restore to use the sbuf functions, remove related kludges.
+  * Fix possible client segfault when refusing to restore over existing files.
+  * Make a failure to restore over a busy file not cause the whole restore to
+    fail.
+  * Print byte count as well as human readable byte count in the status summary
+    screen.
+  * Include backup numbers with the backup list in the status summary.
+  * Don't close the server read fd when running in non-forking mode.
+  * Add ssl_key options so that the cert and key can be in separate files.
+  * Add ssl_key_password, a synonym for ssl_cert_password.
+</pre>
+</FONT>
+</P>
+
+<P>
 <FONT COLOR="#99CCFF">2011-05-13: burp-1.1.55 is released.
 <pre>
 Changes in burp-1.1.55:

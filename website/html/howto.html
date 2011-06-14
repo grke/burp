@@ -304,6 +304,12 @@ SERVER CONFIGURATION FILE OPTIONS
 	      default,	this  is  set  to  the	path  given by the 'directory'
 	      option.
 
+       user=[username]
+	      Run as a particular user.
+
+       group=[groupname]
+	      Run as a particular group.
+
        working_dir_recovery_method=[merge|use|delete]
 	      This option tells the server what to do when it finds the  work-
 	      ing  directory of an interrupted backup (perhaps somebody pulled
@@ -331,8 +337,14 @@ SERVER CONFIGURATION FILE OPTIONS
 	      file  contains  the concatenation of the certificate and private
 	      key in PEM format.
 
+       ssl_key=[path]
+	      The path to the server SSL private key in PEM format.
+
+       ssl_key_password=[password]
+	      The SSL key password.
+
        ssl_cert_password=[password]
-	      The SSL certificate password.
+	      Synonym for ssl_key_password.
 
        ssl_dhfile=[path]
 	      Path to Diffie-Hellman parameter	file.  To  generate  one  with
@@ -404,6 +416,12 @@ CLIENT CONFIGURATION FILE OPTIONS
        logfile=[path]
 	      Path to the logfile.
 
+       user=[username]
+	      Run as a particular user (not supported on Windows).
+
+       group=[groupname]
+	      Run as a particular group (not supported on Windows).
+
        include=[path]
 	      Path to include in the backup. You  can  have  multiple  include
 	      lines.  Use  forward  slashes  '/',  not backslashes '\' as path
@@ -434,12 +452,18 @@ CLIENT CONFIGURATION FILE OPTIONS
 	      tain just the certificate in PEM format
 
        ssl_cert=[path]
-	      The path to the server SSL certificate. It works for me when the
+	      The path to the client SSL certificate. It works for me when the
 	      file  contains  the concatenation of the certificate and private
 	      key in PEM format.
 
+       ssl_key=[path]
+	      The path to the client SSL private key in PEM format.
+
+       ssl_key_password=[password]
+	      The SSL key password.
+
        ssl_cert_password=[password]
-	      The SSL certificate password.
+	      Synonym for ssl_key_password.
 
        encryption_password=[password]
 	      Set this to enable client side file Blowfish encryption. If  you
@@ -646,7 +670,7 @@ Burp, don't suck.
 </td>
 <td align="right">
 <font color="#99ccff">
-Last updated: May 2011
+Last updated: June 2011
 </font>
 </td></tr></table>
 

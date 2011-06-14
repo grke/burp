@@ -1,3 +1,4 @@
+2011-06-14 Changes in burp-1.1.57:
   * Add options to run as a different user and group.
   * Add Patrick Koppen's burp_ca script.
   * Get the client restore to use the sbuf functions, remove related kludges.
@@ -8,6 +9,8 @@
     screen.
   * Include backup numbers with the backup list in the status summary.
   * Don't close the server read fd when running in non-forking mode.
+  * Add ssl_key options so that the cert and key can be in separate files.
+  * Add ssl_key_password, a synonym for ssl_cert_password.
 
 2011-05-13 Changes in burp-1.1.55:
   * Make the status monitor use ncurses.

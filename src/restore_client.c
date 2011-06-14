@@ -131,7 +131,7 @@ static int restore_file(struct sbuf *sb, const char *fname, enum action act, con
 #ifdef HAVE_WIN32
 	binit(&bfd);
 	set_win32_backup(&bfd);
-	if(S_ISDIR(statp->st_mode))
+	if(S_ISDIR(sb->statp.st_mode))
 	{
 		mkdir(rpath, 0777);
 		bopenret=bopen(&bfd, rpath, O_WRONLY | O_BINARY, 0);
@@ -200,6 +200,7 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
 	struct stat statp=sb->statp;
 #ifdef HAVE_WIN32
 	logw(cntr, "Cannot restore special files to Windows: %s\n", fname);
+	goto end;
 #else
 
 	if(act==ACTION_VERIFY)

@@ -78,7 +78,7 @@ fi
 
 # init CA
 if [ "$init" = "yes" ]; then
-  echo "Init... ${name}"
+  echo "Init... ${ca}"
   if [ ! -f ${conf} ]; then
      echo "$0: error - config ${conf} missing" 1>&2; exit 1
   fi
@@ -91,7 +91,7 @@ if [ "$init" = "yes" ]; then
   mkdir ${dir}/newcerts
 
   umask ${sec_umask}
-  openssl genrsa -out ${dir}/CA_${name}.key ${size}
+  openssl genrsa -out ${dir}/CA_${ca}.key ${size}
   umask ${def_umask}
   TEMP=$(mktemp || /tmp/temp.$$)
   cat <<-EOF > ${TEMP}
@@ -107,10 +107,10 @@ if [ "$init" = "yes" ]; then
 	authorityKeyIdentifier=keyid,issuer:always
 
 	[ req_distinguished_name ]
-	commonName                      = ${name}
+	commonName                      = ${ca}
 EOF
   CA_DIR=${dir} openssl req -config ${TEMP} -new -x509 -days $ca_days \
-    -key ${dir}/CA_${name}.key -out ${dir}/CA_${name}.crt -extensions v3_ca
+    -key ${dir}/CA_${ca}.key -out ${dir}/CA_${ca}.crt -extensions v3_ca
   rm -f $TEMP
 
   : > ${dir}/index.txt

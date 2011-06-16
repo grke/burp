@@ -7,7 +7,21 @@
 # This special exception was added by Craig Small in version 0.37 of dh-make.
 
 # Uncomment this to turn on verbose mode.
-#export DH_VERBOSE=1
+export DH_VERBOSE=1
 
 %:
 	dh $@ 
+
+override_dh_install:
+	dh_install
+	install -m 0644 configs/certs/CA/CA.cnf debian/burp/etc/burp/
+	install -m 0755 configs/certs/CA/burp_ca debian/burp/usr/sbin/
+
+override_dh_fixperms:
+	dh_fixperms
+	chmod 0600 debian/burp/etc/burp/burp.conf
+	chmod 0600 debian/burp/etc/burp/burp-server.conf
+	chmod 0600 debian/burp/etc/burp/ssl_cert-client.pem
+	chmod 0600 debian/burp/etc/burp/ssl_cert-server.pem
+	chmod 0700 debian/burp/etc/burp/clientconfdir
+	chmod 0700 debian/burp/var/spool/burp

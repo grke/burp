@@ -1231,9 +1231,6 @@ static int daemonise(void)
 
 	/* now we are in the child process */
 
-	/* change umask (FIXME: is this correct?) */
-	/* umask(0); */
-
 	/* create a session and set the process group ID */
 	sid=setsid();
 	if(sid<0)
@@ -1279,6 +1276,9 @@ int server(struct config *conf, const char *configfile, int forking, int daemon)
 	{
 		if(daemonise() || relock(conf->lockfile)) return 1;
 	}
+
+	/* change umask */
+	umask(conf->umask);
 
 	setup_signals(conf->max_children);
 

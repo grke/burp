@@ -1,3 +1,6 @@
+  * Add option to set the umask on the server.
+  * Add Patrick's burp_ca patches and README.CA.
+
 2011-06-14 Changes in burp-1.1.57:
   * Add options to run as a different user and group.
   * Add Patrick Koppen's burp_ca script.

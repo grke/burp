@@ -47,6 +47,7 @@ void init_config(struct config *conf)
 	conf->librsync=1;
 	conf->compression=9;
 	conf->client_lockdir=NULL;
+	conf->umask=0022;
 	conf->user=NULL;
 	conf->group=NULL;
 
@@ -329,6 +330,10 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 
 			conf->compression=atoi(value);
 		}
+		else if(!strcmp(field, "umask"))
+		{
+			conf->umask=strtol(value, NULL, 8);
+		}
 		else if(!strcmp(field, "working_dir_recovery_method"))
 		{
 			if(get_conf_val(field, value,
@@ -392,8 +397,6 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 			  "cname", &(conf->cname))) return -1;
 			if(get_conf_val(field, value,
 			  "directory", &(conf->directory))) return -1;
-			if(get_conf_val(field, value,
-			  "client_lockdir", &(conf->client_lockdir))) return -1;
 			if(get_conf_val(field, value,
 			  "lockfile", &(conf->lockfile))) return -1;
 			// "pidfile" is a synonym for "lockfile".

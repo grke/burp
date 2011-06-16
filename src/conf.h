@@ -31,6 +31,7 @@ struct config
 	char *ssl_dhfile;
 	int max_children;
 	char *client_lockdir;
+	mode_t umask;
 
 // client options
 	char *cname;

@@ -157,6 +157,9 @@ Run as a particular user.
 \fBgroup=[groupname]\fR
 Run as a particular group.
 .TP
+\fBumask=[umask]\fR
+Set the file creation umask. Default is 0022.
+.TP
 \fBworking_dir_recovery_method=[merge|use|delete]\fR
 This option tells the server what to do when it finds the working directory of an interrupted backup (perhaps somebody pulled the plug on the server, or something). This can be overridden by the client configurations files in clientconfdir
 on the server. Options are...

@@ -545,15 +545,6 @@ int async_read_stat(FILE *fp, gzFile zp, char **buf, size_t *len, struct stat *s
 			if(d) free(d);
 			return 1;
 		}
-		else if(cmd=='L' || cmd=='l')
-		{
-			// LOOK OUT! This is a kludge to make the restore
-			// interrupt work when a link already exists.
-			// TODO: The restore stuff should use the sbuf stuff
-			// instead  of trying to parse the manifest stream
-			// itself.
-			if(*buf) { free(*buf); *buf=NULL; }
-		}
 		else
 		{
 			logp("expected cmd 't' or 'r', got '%c:%s'\n", cmd, *buf?*buf:"");

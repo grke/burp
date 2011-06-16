@@ -1,3 +1,4 @@
+  * Remove link kludge in async_read_stat().
   * Add option to set the umask on the server.
   * Add Patrick's burp_ca patches and README.CA.
 

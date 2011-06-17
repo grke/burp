@@ -28121,7 +28121,6 @@ Configuration on `date`:
    Libraries:		    ${LIBS}
    Static:                  ${support_static}
 
-   large file support:	    $largefile_support
    ncurses:		    ${have_ncurses}
    openssl:	 	    ${support_tls}
    zlib:		    ${have_zlib}

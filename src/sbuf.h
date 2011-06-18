@@ -43,12 +43,10 @@ struct sbuf
 
 extern void init_sbuf(struct sbuf *sb);
 extern void free_sbuf(struct sbuf *sb);
-extern int cmd_is_file(char cmd);
-extern int sbuf_is_file(struct sbuf *sb);
-extern int cmd_is_encrypted_file(char cmd);
-extern int sbuf_is_encrypted_file(struct sbuf *sb);
 extern int cmd_is_link(char cmd);
 extern int sbuf_is_link(struct sbuf *sb);
+extern int cmd_is_not_file(char cmd);
+extern int sbuf_is_not_file(struct sbuf *sb);
 extern int sbuf_fill(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr);
 extern int sbuf_fill_phase1(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr);
 extern int sbuf_to_manifest(struct sbuf *sb, FILE *mp, gzFile zp);

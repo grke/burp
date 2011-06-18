@@ -6,8 +6,11 @@
 #include "handy.h"
 #include "asyncio.h"
 #include "counter.h"
+#include "sbuf.h"
 #include "list_client.h"
 
+/* Note: The chars in this function are not the same as in the CMD_ set.
+   These are for printing to the screen only. */
 static char *encode_mode(mode_t mode, char *buf)
 {
   char *cp = buf;
@@ -109,10 +112,11 @@ int do_list_client(const char *backup, const char *listregex, enum action act)
 
 	snprintf(msg, sizeof(msg), "list %s:%s",
 		backup?backup:"", listregex?listregex:"");
-	if(async_write_str('c', msg)
-	  || async_read_expect('c', "ok"))
+	if(async_write_str(CMD_GEN, msg)
+	  || async_read_expect(CMD_GEN, "ok"))
 		return -1;
 
+	// This should probably should use the sbuf stuff.
 	while(1)
 	{
 		char fcmd;
@@ -123,7 +127,7 @@ int do_list_client(const char *backup, const char *listregex, enum action act)
 			//ret=-1; break;
 			break;
 		}
-		if(scmd=='b')
+		if(scmd==CMD_TIMESTAMP)
 		{
 			// A backup timestamp, just print it.
 			printf("Backup: %s\n", statbuf);
@@ -131,14 +135,15 @@ int do_list_client(const char *backup, const char *listregex, enum action act)
 			if(statbuf) { free(statbuf); statbuf=NULL; }
 			continue;
 		}
-		else if(scmd=='t')
+		else if(scmd==CMD_DATAPTH)
 		{
 			if(statbuf) { free(statbuf); statbuf=NULL; }
 			continue;
 		}
-		else if(scmd!='r')
+		else if(scmd!=CMD_STAT)
 		{
-			logp("expected 'r' cmd - got %c:%s\n", scmd, statbuf);
+			logp("expected %c cmd - got %c:%s\n",
+				CMD_STAT, scmd, statbuf);
 			ret=-1; break;
 		}
 
@@ -150,7 +155,10 @@ int do_list_client(const char *backup, const char *listregex, enum action act)
 			logp("got stat without an object\n");
 			ret=-1; break;
 		}
-		else if(fcmd=='d' || fcmd=='f' || fcmd=='y' || fcmd=='s')
+		else if(fcmd==CMD_DIRECTORY
+			|| fcmd==CMD_FILE
+			|| fcmd==CMD_ENC_FILE
+			|| fcmd==CMD_SPECIAL)
 		{
 			*ls='\0';
 			if(act==ACTION_LONG_LIST)
@@ -163,7 +171,7 @@ int do_list_client(const char *backup, const char *listregex, enum action act)
 				printf("%s\n", fname);
 			}
 		}
-		else if(fcmd=='l' || fcmd=='L') // symlink or hardlink
+		else if(cmd_is_link(fcmd)) // symlink or hardlink
 		{
 			char lcmd;
 			size_t llen=0;

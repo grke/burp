@@ -50,14 +50,14 @@ int authorise_server(struct config *conf, char **client, struct config *cconf)
 		logp("unable to read initial message\n");
 		return -1;
 	}
-	if(cmd!='c' || strcmp(buf, "hello"))
+	if(cmd!=CMD_GEN || strcmp(buf, "hello"))
 	{
 		logp("unexpected command given: %c %s\n", cmd, buf);
 		free(buf);
 		return -1;
 	}
 	free(buf); buf=NULL;
-	async_write_str('c', "whoareyou");
+	async_write_str(CMD_GEN, "whoareyou");
 	if(async_read(&cmd, &buf, &len) || !len)
 	{
 		logp("unable to get client name\n");
@@ -65,7 +65,7 @@ int authorise_server(struct config *conf, char **client, struct config *cconf)
 	}
 	*client=buf;
 	buf=NULL;
-	async_write_str('c', "okpassword");
+	async_write_str(CMD_GEN, "okpassword");
 	if(async_read(&cmd, &buf, &len) || !len)
 	{
 		logp("unable to get password for client %s\n", *client);
@@ -83,7 +83,7 @@ int authorise_server(struct config *conf, char **client, struct config *cconf)
 		return -1;
 	}
 
-	async_write_str('c', "ok");
+	async_write_str(CMD_GEN, "ok");
 	logp("auth ok for client: %s\n", *client);
 	if(password) free(password);
 	return 0;

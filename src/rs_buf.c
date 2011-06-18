@@ -175,21 +175,21 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 	char *rbuf=NULL;
 
 	if(async_read(&rcmd, &rbuf, &rlen)) return RS_IO_ERROR;
-	if(rcmd=='a')
+	if(rcmd==CMD_APPEND)
 	{
-		//logp("got 'a' in fd infilebuf: %d\n", rlen);
+		//logp("got '%c' in fd infilebuf: %d\n", CMD_APPEND, rlen);
 		memcpy(fb->buf, rbuf, rlen);
 		len=rlen;
 		free(rbuf);
 	}
-	else if(rcmd=='x')
+	else if(rcmd==CMD_END_FILE)
 	{
 		free(rbuf);
-		//logp("got 'x' in fd infilebuf\n");
+		//logp("got %c in fd infilebuf\n", CMD_END_FILE);
 		buf->eof_in=1;
 		return RS_DONE;
 	}
-	else if(rcmd=='w')
+	else if(rcmd==CMD_WARNING)
 	{
 		logp("WARNING: %s\n", rbuf);
 		do_filecounter(cntr, rcmd, 0);
@@ -317,7 +317,7 @@ rs_result rs_outfilebuf_drain(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 	if(fd>0)
 	{
 		size_t w=wlen;
-		if(async_append_all_to_write_buffer('a', fb->buf, &wlen))
+		if(async_append_all_to_write_buffer(CMD_APPEND, fb->buf, &wlen))
 		{
 			// stop the rsync stuff from reading more.
 	//		buf->next_out = fb->buf;

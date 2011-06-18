@@ -177,7 +177,7 @@ static int verify_file(const char *fname, int patches, const char *best, const c
 		logp("MD5_Init() failed\n");
 		return -1;
 	}
-	if(patches || cmd_is_encrypted_file(cmd)
+	if(patches || cmd==CMD_ENC_FILE
 	  || (!patches && !dpth_is_compressed(best)))
 	{
 		// If we did some patches or encryption, or the compression
@@ -374,15 +374,16 @@ static int restore_file(struct bu *arr, int a, int i, const char *datapth, const
 	return -1;
 }
 
-static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, enum action act, const char *client, int status, struct cntr *cntr, struct config *cconf)
+static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, enum action act, const char *client, char status, struct cntr *cntr, struct config *cconf)
 {
 	//logp("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path);
 	write_status(client, status, sb->path, cntr);
 
-	if((sb->datapth && async_write('t', sb->datapth, strlen(sb->datapth)))
-	  || async_write('r', sb->statbuf, sb->slen))
+	if((sb->datapth && async_write(CMD_DATAPTH,
+		sb->datapth, strlen(sb->datapth)))
+	  || async_write(CMD_STAT, sb->statbuf, sb->slen))
 		return -1;
-	else if(sbuf_is_file(sb) || sbuf_is_encrypted_file(sb))
+	else if(sb->cmd==CMD_FILE || sb->cmd==CMD_ENC_FILE)
 	{
 		return restore_file(arr, a, i, sb->datapth,
 		  sb->path, tmppath1, tmppath2, act,
@@ -415,10 +416,11 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 	FILE *logfp=NULL;
 	char *logpath=NULL;
 	char *logpathz=NULL;
-	int status=0; // For sending status information up to the server.
+	// For sending status information up to the server.
+	char status=STATUS_RESTORING;
 
-	if(act==ACTION_RESTORE) status=11;
-	else if(act==ACTION_VERIFY) status=12;
+	if(act==ACTION_RESTORE) status=STATUS_RESTORING;
+	else if(act==ACTION_VERIFY) status=STATUS_VERIFYING;
 
 	if(
 	    (act==ACTION_RESTORE && !(logpath=prepend_s(arr[i].path, "restorelog", strlen("restorelog"))))
@@ -471,14 +473,14 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 			if(buf)
 			{
 				//logp("got read quick\n");
-				if(cmd=='w')
+				if(cmd==CMD_WARNING)
 				{
 					logp("WARNING: %s\n", buf);
 					do_filecounter(cntr, cmd, 0);
 					free(buf); buf=NULL;
 					continue;
 				}
-				else if(cmd=='i')
+				else if(cmd==CMD_INTERRUPT)
 				{
 					// Client wanted to interrupt the
 					// sending of a file. But if we are
@@ -575,7 +577,7 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 		}
 		free_sbufs(sblist, scount);
 
-		if(!ret && async_write_str('c', "restoreend"))
+		if(!ret && async_write_str(CMD_GEN, "restoreend"))
 		{
 			ret=-1; quit++;
 		}
@@ -590,17 +592,17 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 			{
 				ret=-1; quit++;
 			}
-			else if(cmd=='c' && !strcmp(buf, "restoreend ok"))
+			else if(cmd==CMD_GEN && !strcmp(buf, "restoreend ok"))
 			{
 				logp("got restoreend ok\n");
 				quit++;
 			}
-			else if(cmd=='w')
+			else if(cmd==CMD_WARNING)
 			{
 				logp("WARNING: %s\n", buf);
 				do_filecounter(cntr, cmd, 0);
 			}
-			else if(cmd=='i')
+			else if(cmd==CMD_INTERRUPT)
 			{
 				// ignore - client wanted to interrupt a file
 			}
@@ -668,7 +670,7 @@ int do_restore_server(const char *basedir, const char *backup, const char *resto
 			|| arr[i].index==index)
 		{
 			found=TRUE;
-			logp("got: %s\n", arr[i].path);
+			//logp("got: %s\n", arr[i].path);
 			ret=restore_manifest(arr, a, i,
 				tmppath1, tmppath2, regex, act, client, cntr,
 				cconf);
@@ -680,7 +682,7 @@ int do_restore_server(const char *basedir, const char *backup, const char *resto
 
 	if(!found)
 	{
-		async_write_str('e', "backup not found");
+		async_write_str(CMD_ERROR, "backup not found");
 		ret=-1;
 	}
 	if(tmppath1)

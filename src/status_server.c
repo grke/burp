@@ -184,7 +184,7 @@ static int set_summary(struct cstat *c)
 	{
 		if(lstat(c->working, &statp))
 		{
-			c->status='i';
+			c->status=STATUS_IDLE;
 			snprintf(wbuf, sizeof(wbuf), "%s\t%c\t%s\n",
 				c->name,
 				c->status,
@@ -193,7 +193,7 @@ static int set_summary(struct cstat *c)
 		else
 		{
 			// client process crashed
-			c->status='c';
+			c->status=STATUS_CLIENT_CRASHED;
 			snprintf(wbuf, sizeof(wbuf), "%s\t%c\t%s\n",
 				c->name, c->status,
 				get_last_backup_time(c->timestamp));
@@ -213,7 +213,7 @@ static int set_summary(struct cstat *c)
 			//time_t t=0;
 			//if(!lstat(c->working, &statp)) t=statp.st_ctime;
 			// server process crashed
-			c->status='C';
+			c->status=STATUS_SERVER_CRASHED;
 			snprintf(wbuf, sizeof(wbuf), "%s\t%c\t%s\n",
 				c->name, c->status,
 				get_last_backup_time(c->timestamp));
@@ -227,7 +227,7 @@ static int set_summary(struct cstat *c)
 		else
 		{
 			// it is running
-			c->status='r';
+			c->status=STATUS_RUNNING;
 			*wbuf='\0';
 		}
 	}
@@ -394,11 +394,20 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, int
 	{
 		char *tosend=NULL;
 		char *curback=NULL;
-		if(clist[q]->running_detail) tosend=clist[q]->running_detail;
+
+                if(!clist[q]->summary || !*(clist[q]->summary))
+		{
+			if(set_summary(clist[q]))
+				return -1;
+		}
+                if(clist[q]->running_detail && *(clist[q]->running_detail))
+		{
+			tosend=clist[q]->running_detail;
+		}
 		else if(sel_client==q
-		  && (clist[q]->status=='i' // idle
-			|| clist[q]->status=='c' // client crashed 
-			|| clist[q]->status=='C')) // server crashed
+		  && (clist[q]->status==STATUS_IDLE
+			|| clist[q]->status==STATUS_CLIENT_CRASHED
+			|| clist[q]->status==STATUS_SERVER_CRASHED))
 		{
 			// Client not running, but asked for detail.
 			// Gather a list of successful backups to talk about.

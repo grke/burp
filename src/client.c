@@ -23,17 +23,17 @@ static int maybe_check_timer(const char *phase1str, struct config *conf)
 	char *rdst=NULL;
 	size_t rlen=0;
 
-        if(async_write_str('c', phase1str)) return -1;
+        if(async_write_str(CMD_GEN, phase1str)) return -1;
 
         if(async_read(&rcmd, &rdst, &rlen)) return -1;
 
-        if(rcmd=='c' && !strcmp(rdst, "timer conditions not met"))
+        if(rcmd==CMD_GEN && !strcmp(rdst, "timer conditions not met"))
         {
                 free(rdst);
                 logp("Timer conditions not met.\n");
                 return 1;
         }
-        else if(rcmd!='c' || strncmp(rdst, "ok", 2))
+        else if(rcmd!=CMD_GEN || strncmp(rdst, "ok", 2))
         {
                 logp("unexpected command from server: %c:%s\n", rcmd ,rdst);
                 free(rdst);

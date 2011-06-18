@@ -152,12 +152,12 @@ int do_quick_read(const char *datapth, struct cntr *cntr)
 
 	if(buf)
 	{
-		if(cmd=='w')
+		if(cmd==CMD_WARNING)
 		{
 			logp("WARNING: %s\n", buf);
 			do_filecounter(cntr, cmd, 0);
 		}
-		else if(cmd=='i')
+		else if(cmd==CMD_INTERRUPT)
 		{
 			// Client wants to interrupt - double check that
 			// it is still talking about the file that we are
@@ -211,7 +211,7 @@ int write_endfile(unsigned long long bytes, unsigned char *checksum)
 	snprintf(endmsg, sizeof(endmsg), "%llu:%s",
 		bytes, get_checksum_str(checksum));
 
-	ret=async_write_str('x', endmsg);
+	ret=async_write_str(CMD_END_FILE, endmsg);
 	return ret;
 }
 
@@ -228,7 +228,7 @@ static int do_encryption(EVP_CIPHER_CTX *ctx, unsigned char *inbuf, size_t inlen
 	if(*outlen>0)
 	{
 		int ret;
-		if(!(ret=async_write('a', (const char *)outbuf, *outlen)))
+		if(!(ret=async_write(CMD_APPEND, (const char *)outbuf, *outlen)))
 		{
 			if(!MD5_Update(md5, outbuf, *outlen))
 			{
@@ -306,7 +306,7 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 	}
 
 
-//logp("send_whole_file_gz: %s\n", fname);
+//logp("send_whole_file_gz: %s\n", datapth);
 
 #ifdef HAVE_WIN32
 	binit(&bfd);
@@ -394,7 +394,7 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 					break;
 				}
 			}
-			else if(async_write('a', (const char *)out, have))
+			else if(async_write(CMD_APPEND, (const char *)out, have))
 			{
 				ret=-1;
 				break;
@@ -409,8 +409,7 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 				}
 				if(qr) // client wants to interrupt
 				{
-					flush=Z_FINISH;
-					break;
+					goto cleanup;
 				}
 			}
 		} while (!strm.avail_out);
@@ -442,7 +441,7 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 			}
 			else if(eoutlen>0)
 			{
-			  if(async_write('a', (const char *)eoutbuf, eoutlen))
+			  if(async_write(CMD_APPEND, (const char *)eoutbuf, eoutlen))
 				ret=-1;
 			  else if(!MD5_Update(&md5, eoutbuf, eoutlen))
 			  {
@@ -452,6 +451,8 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 			}
 		}
 	}
+
+cleanup:
 	deflateEnd(&strm);
 
 #ifdef HAVE_WIN32
@@ -509,7 +510,7 @@ int send_whole_file(const char *fname, const char *datapth, int quick_read, unsi
 			ret=-1;
 			break;
 		}
-		if(async_write('a', buf, s))
+		if(async_write(CMD_APPEND, buf, s))
 		{
 			ret=-1;
 			break;
@@ -547,7 +548,7 @@ int send_whole_file(const char *fname, const char *datapth, int quick_read, unsi
 			ret=-1;
 			break;
 		}
-		if(async_write('a', buf, s))
+		if(async_write(CMD_APPEND, buf, s))
 		{
 			ret=-1;
 			break;
@@ -716,7 +717,7 @@ void reuseaddr(int fd)
 		(sockopt_val_t)&tmpfd, sizeof(tmpfd));
 }
 
-void write_status(const char *client, int phase, const char *path, struct cntr *cntr)
+void write_status(const char *client, char phase, const char *path, struct cntr *cntr)
 {
 	static time_t lasttime=0;
 	if(status_wfd>=0 && client)
@@ -740,8 +741,8 @@ void write_status(const char *client, int phase, const char *path, struct cntr *
 		lasttime=now;
 
 		snprintf(wbuf, sizeof(wbuf),
-			"%s\tr\t%d\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%s\n",
-			client, phase,
+			"%s\t%c\t%c\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%s\n",
+			client, STATUS_RUNNING, phase,
 			cntr->totalcounter,
 			cntr->filecounter,
 			cntr->changedcounter,

@@ -1,7 +1,8 @@
-#ifndef _ASYNCIO_ROUTINES
-#define _ASYNCIO_ROUTINES
+#ifndef _ASYNCIO_ROUTINES_H
+#define _ASYNCIO_ROUTINES_H
 
 #include <zlib.h>
+#include "cmd.h"
 
 extern int status_wfd; // for the child to send information to the parent.
 extern int status_rfd; // for the child to read information from the parent.
@@ -51,4 +52,4 @@ extern void settimers(int sec, int usec);
 // should be in src/lib/log.c
 int logw(struct cntr *cntr, const char *fmt, ...);
 
-#endif
+#endif // _ASYNC_ROUTINES_H

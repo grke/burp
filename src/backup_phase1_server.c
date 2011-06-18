@@ -36,18 +36,18 @@ int backup_phase1_server(const char *phase1data, const char *client, struct cntr
 
 	while(!quit)
 	{
-		write_status(client, 1, lastfile, cntr);
+		write_status(client, STATUS_SCANNING, lastfile, cntr);
 		if(async_read(&cmd, &buf, &len))
 		{
 			quit++; ret=-1;
 			break;
 		}
-		if(cmd=='c')
+		if(cmd==CMD_GEN)
 		{
 			if(!strcmp(buf, "backupphase2"))
 			{
-				if(async_write_str('c', "ok")
-				  || send_msg_zp(p1zp, 'c',
+				if(async_write_str(CMD_GEN, "ok")
+				  || send_msg_zp(p1zp, CMD_GEN,
 					"phase1end", strlen("phase1end")))
 						ret=-1;
 				break;
@@ -59,7 +59,7 @@ int backup_phase1_server(const char *phase1data, const char *client, struct cntr
 					cmd, buf);
 			}
 		}
-		else if(cmd=='w')
+		else if(cmd==CMD_WARNING)
 		{
 			logp("WARNING: %s\n", buf);
 			do_filecounter(cntr, cmd, 0);
@@ -72,7 +72,7 @@ int backup_phase1_server(const char *phase1data, const char *client, struct cntr
 				break;
 			}
 			// TODO - Flaky, do this better
-			if(cmd=='r') expect_file_type++;
+			if(cmd==CMD_STAT) expect_file_type++;
 			else if(expect_file_type)
 			{
 				expect_file_type=0;

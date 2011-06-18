@@ -51,10 +51,10 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *clien
 		}
 
 		if(mb.path[mb.plen]=='\n') mb.path[mb.plen]='\0';
-		write_status(client, 10, mb.path, cntr);
+		write_status(client, STATUS_LISTING, mb.path, cntr);
 		if(check_regex(regex, mb.path))
 		{
-			if(async_write('r', mb.statbuf, mb.slen)
+			if(async_write(CMD_STAT, mb.statbuf, mb.slen)
 			  || async_write(mb.cmd, mb.path, mb.plen))
 			{ quit++; ret=-1; }
 			else if(sbuf_is_link(&mb)
@@ -87,7 +87,7 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 		return -1;
 	}
 
-	write_status(client, 10, NULL, cntr);
+	write_status(client, STATUS_LISTING, NULL, cntr);
 
 	if(backup && *backup) index=strtoul(backup, NULL, 10);
 
@@ -97,7 +97,7 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 		if(listregex && backup && *backup=='a')
 		{
 			found=TRUE;
-			async_write('b',
+			async_write(CMD_TIMESTAMP,
 				arr[i].timestamp, strlen(arr[i].timestamp));
 			ret+=list_manifest(arr[i].path, regex, client, cntr);
 		}
@@ -109,7 +109,7 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 				|| arr[i].index==index))
 			{
 				found=TRUE;
-				async_write('b',
+				async_write(CMD_TIMESTAMP,
 				  arr[i].timestamp, strlen(arr[i].timestamp));
 				ret=list_manifest(arr[i].path, regex, client, cntr);
 			}
@@ -118,7 +118,7 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 		else
 		{
 			found=TRUE;
-			async_write('b',
+			async_write(CMD_TIMESTAMP,
 				arr[i].timestamp, strlen(arr[i].timestamp));
 		}
 	}
@@ -126,7 +126,7 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 
 	if(backup && *backup && !found)
 	{
-		async_write_str('e', "backup not found");
+		async_write_str(CMD_ERROR, "backup not found");
 		ret=-1;
 	}
 	if(regex) { regfree(regex); free(regex); }

@@ -9,7 +9,7 @@
 #include "extrameta.h"
 #include "backup_phase1_client.h"
 
-static char filesymbol='f';
+static char filesymbol=CMD_FILE;
 
 static int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *cntr)
 {
@@ -24,17 +24,17 @@ static int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cnt
    case FT_LNKSAVED:
         //printf("Lnka: %s -> %s\n", ff->fname, ff->link);
    	encode_stat(attribs, &ff->statp, has_extrameta(ff->fname));
-	if(async_write_str('r', attribs)
-	  || async_write_str('L', ff->fname)
-	  || async_write_str('L', ff->link))
+	if(async_write_str(CMD_STAT, attribs)
+	  || async_write_str(CMD_HARD_LINK, ff->fname)
+	  || async_write_str(CMD_HARD_LINK, ff->link))
 		return -1;
-	do_filecounter(cntr, 'L', 1);
+	do_filecounter(cntr, CMD_HARD_LINK, 1);
       break;
    case FT_FIFO:
    case FT_REGE:
    case FT_REG:
       encode_stat(attribs, &ff->statp, has_extrameta(ff->fname));
-      if(async_write_str('r', attribs)
+      if(async_write_str(CMD_STAT, attribs)
 	|| async_write_str(filesymbol, ff->fname))
 		return -1;
 	do_filecounter(cntr, filesymbol, 1);
@@ -42,11 +42,11 @@ static int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cnt
    case FT_LNK:
 	//printf("link: %s -> %s\n", ff->fname, ff->link);
    	encode_stat(attribs, &ff->statp, has_extrameta(ff->fname));
-	if(async_write_str('r', attribs)
-	  || async_write_str('l', ff->fname)
-	  || async_write_str('l', ff->link))
+	if(async_write_str(CMD_STAT, attribs)
+	  || async_write_str(CMD_SOFT_LINK, ff->fname)
+	  || async_write_str(CMD_SOFT_LINK, ff->link))
 		return -1;
-	do_filecounter(cntr, 'l', 1);
+	do_filecounter(cntr, CMD_SOFT_LINK, 1);
       break;
    case FT_DIREND:
       return 0;
@@ -71,23 +71,23 @@ static int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cnt
 	 else
 	 {
 		encode_stat(attribs, &ff->statp, has_extrameta(ff->fname));
-	      	if(async_write_str('r', attribs)) return -1;
+	      	if(async_write_str(CMD_STAT, attribs)) return -1;
 #if defined(WIN32_VSS)
 		if(async_write_str(filesymbol, ff->fname)) return -1;
 		do_filecounter(cntr, filesymbol, 1);
 #else
-		if(async_write_str('d', ff->fname)) return -1;
-		do_filecounter(cntr, 'd', 1);
+		if(async_write_str(CMD_DIRECTORY, ff->fname)) return -1;
+		do_filecounter(cntr, CMD_DIRECTORY, 1);
 #endif
 	 }
 	}
       break;
    case FT_SPEC: // special file - fifo, socket, device node...
       encode_stat(attribs, &ff->statp, has_extrameta(ff->fname));
-      if(async_write_str('r', attribs)
-	  || async_write_str('s', ff->fname))
+      if(async_write_str(CMD_STAT, attribs)
+	  || async_write_str(CMD_SPECIAL, ff->fname))
 		return -1;
-      do_filecounter(cntr, 's', 1);
+      do_filecounter(cntr, CMD_SPECIAL, 1);
       break;
    case FT_NOACCESS:
       logw(cntr, _("Err: Could not access %s: %s"), ff->fname, strerror(errno));

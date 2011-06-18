@@ -8,6 +8,7 @@
 #include "base64.h"
 #include "prog.h"
 #include "find.h"
+#include "cmd.h"
 #include "berrno.h"
 
 /*
@@ -163,7 +164,7 @@ static uid_t my_uid=1;
 static gid_t my_gid=1;
 static bool uid_set=false;
 
-bool set_attributes(const char *path, char type, struct stat *statp)
+bool set_attributes(const char *path, char cmd, struct stat *statp)
 {
    struct utimbuf ut;
    mode_t old_mask;
@@ -185,7 +186,7 @@ bool set_attributes(const char *path, char type, struct stat *statp)
     * For link, change owner of link using lchown, but don't
     *   try to do a chmod as that will update the file behind it.
     */
-   if (type == 'l') {
+   if (cmd==CMD_SOFT_LINK) {
       /* Change owner of link, not of real file */
       if (lchown(path, statp->st_uid, statp->st_gid) < 0 && my_uid == 0) {
          berrno be;

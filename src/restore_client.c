@@ -18,16 +18,16 @@ static int restore_interrupt(struct sbuf *sb, const char *msg, struct cntr *cntr
 	int quit=0;
 	char *buf=NULL;
 
-	do_filecounter(cntr, 'w', 1);
+	do_filecounter(cntr, CMD_WARNING, 1);
 	logp("WARNING: %s\n", msg);
-	if(async_write_str('w', msg)) return -1;
+	if(async_write_str(CMD_WARNING, msg)) return -1;
 
 	// If it is file data, get the server
 	// to interrupt the flow and move on.
-	if((!sbuf_is_file(sb) && !sbuf_is_encrypted_file(sb)) || !(sb->datapth))
+	if((sb->cmd!=CMD_FILE && sb->cmd!=CMD_ENC_FILE) || !(sb->datapth))
 		return 0;
 
-	if(async_write_str('i', sb->datapth))
+	if(async_write_str(CMD_INTERRUPT, sb->datapth))
 	{
 		ret=-1;
 		quit++;
@@ -43,11 +43,11 @@ static int restore_interrupt(struct sbuf *sb, const char *msg, struct cntr *cntr
 		}
 		if(!ret && len)
 		{
-		  if(cmd=='a')
+		  if(cmd==CMD_APPEND)
 		  {
 			continue;
 		  }
-		  else if(cmd=='x')
+		  else if(cmd==CMD_END_FILE)
 		  {
 			break;
 		  }
@@ -71,7 +71,7 @@ static int make_link(const char *fname, const char *lnk, char cmd, const char *r
 	logw(cntr, "windows seems not to support hardlinks or symlinks\n");
 #else
 	unlink(fname);
-	if(cmd=='L')
+	if(cmd==CMD_HARD_LINK)
 	{
 		char *flnk=NULL;
 		if(!(flnk=prepend_s(restoreprefix, lnk, strlen(lnk))))
@@ -83,7 +83,7 @@ static int make_link(const char *fname, const char *lnk, char cmd, const char *r
 		ret=link(flnk, fname);
 		free(flnk);
 	}
-	else if(cmd=='l')
+	else if(cmd==CMD_SOFT_LINK)
 	{
 		//printf("%s -> %s\n", fname, lnk);
 		ret=symlink(lnk, fname);
@@ -95,7 +95,8 @@ static int make_link(const char *fname, const char *lnk, char cmd, const char *r
 	}
 #endif
 
-	if(ret) logp("could not %slink %s -> %s: %s\n", cmd=='L'?"hard":"sym",
+	if(ret) logp("could not %slink %s -> %s: %s\n",
+		cmd==CMD_HARD_LINK?"hard":"sym",
 		fname, lnk, strerror(errno));
 
 	return ret;
@@ -205,7 +206,7 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
 
 	if(act==ACTION_VERIFY)
 	{
-		do_filecounter(cntr, 's', 1);
+		do_filecounter(cntr, CMD_SPECIAL, 1);
 		return 0;
 	}
 
@@ -229,8 +230,8 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
 		}
 		else
 		{
-			set_attributes(rpath, 's', &statp);
-			do_filecounter(cntr, 's', 1);
+			set_attributes(rpath, CMD_SPECIAL, &statp);
+			do_filecounter(cntr, CMD_SPECIAL, 1);
 		}
 	}
 	else if(S_ISSOCK(statp.st_mode)) {
@@ -262,8 +263,8 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
             }
 	    else
 	    {
-		set_attributes(rpath, 's', &statp);
-		do_filecounter(cntr, 's', 1);
+		set_attributes(rpath, CMD_SPECIAL, &statp);
+		do_filecounter(cntr, CMD_SPECIAL, 1);
 	    }
          }
 #endif
@@ -396,8 +397,8 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 
 	snprintf(msg, sizeof(msg), "%s %s:%s", act_str(act),
 		backup?backup:"", restoreregex?restoreregex:"");
-	if(async_write_str('c', msg)
-	  || async_read_expect('c', "ok"))
+	if(async_write_str(CMD_GEN, msg)
+	  || async_read_expect(CMD_GEN, "ok"))
 		return -1;
 	logp("doing %s confirmed\n", act_str(act));
 
@@ -421,7 +422,7 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 				end_filecounter(cntr, 1, act);
 				wroteendcounter++;
 				logp("got %s end\n", act_str(act));
-				if(async_write_str('c', "restoreend ok"))
+				if(async_write_str(CMD_GEN, "restoreend ok"))
 					ret=-1;
 			}
 			break;
@@ -429,12 +430,12 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 
 		switch(sb.cmd)
 		{
-			case 'd':
-			case 'f':
-			case 'y':
-			case 'l':
-			case 'L':
-			case 's':
+			case CMD_DIRECTORY:
+			case CMD_FILE:
+			case CMD_ENC_FILE:
+			case CMD_SOFT_LINK:
+			case CMD_HARD_LINK:
+			case CMD_SPECIAL:
 				if(!(fullpath=prepend_s(restoreprefix,
 					sb.path, strlen(sb.path))))
 				{
@@ -450,8 +451,8 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 				   && !lstat(fullpath, &checkstat)
 				// If we have file data and the destination is
 				// a fifo, it is OK to write to the fifo.
-				   && !((sbuf_is_file(&sb)
-					  || sbuf_is_encrypted_file(&sb))
+				   && !((sb.cmd==CMD_FILE
+					  || sb.cmd==CMD_ENC_FILE)
 					&& S_ISFIFO(checkstat.st_mode)))
 				  {
 					char msg[512]="";
@@ -477,19 +478,19 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 
 		if(!quit && !ret) switch(sb.cmd)
 		{
-			case 'w': // warning
+			case CMD_WARNING:
 				do_filecounter(cntr, sb.cmd, 1);
 				printf("\n");
 				logp("%s", sb.path);
 				break;
-			case 'd': // directory data
+			case CMD_DIRECTORY:
                                 if(restore_dir(&sb, fullpath, act, cntr))
 				{
 					ret=-1;
 					quit++;
 				}
 				break;
-			case 'f': // file data
+			case CMD_FILE:
 				// Have it a separate statement to the
 				// encrypted version so that encrypted and not
 				// encrypted files can be restored at the
@@ -502,7 +503,7 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 					quit++;
 				}
 				break;
-			case 'y': // file data (encrypted)
+			case CMD_ENC_FILE:
 				if(restore_file(&sb, fullpath, act,
 					conf->encryption_password, cntr))
 				{
@@ -511,8 +512,8 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 					quit++;
 				}
 				break;
-			case 'l': // symlink
-			case 'L': // hardlink
+			case CMD_SOFT_LINK:
+			case CMD_HARD_LINK:
 				if(restore_link(&sb, fullpath,
 					restoreprefix, act, cntr))
 				{
@@ -520,7 +521,7 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 					quit++;
 				}
 				break;
-			case 's': // special file
+			case CMD_SPECIAL:
 				if(restore_special(&sb, fullpath, act, cntr))
 				{
 					ret=-1;

@@ -183,8 +183,8 @@ static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
 
 	init_sbuf(&sb);
 
-	if(async_write_str('c', "backupphase2")
-	  || async_read_expect('c', "ok"))
+	if(async_write_str(CMD_GEN, "backupphase2")
+	  || async_read_expect(CMD_GEN, "ok"))
 		return -1;
 
 	while(!quit)
@@ -197,13 +197,13 @@ static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
 		else if(buf)
 		{
 			//logp("got: %c:%s\n", cmd, buf);
-			if(cmd=='t')
+			if(cmd==CMD_DATAPTH)
 			{
 				sb.datapth=buf;
 				buf=NULL;
 				continue;
 			}
-			else if(cmd=='r')
+			else if(cmd==CMD_STAT)
 			{
 				// Ignore the stat data - we will fill it
 				// in again. Some time may have passed by now,
@@ -213,8 +213,7 @@ static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
 				buf=NULL;
 				continue;
 			}
-			else if(cmd=='f' || cmd=='y')
-					// normal file || encrypted file
+			else if(cmd==CMD_FILE || cmd==CMD_ENC_FILE)
 			{
 				struct stat statbuf;
 				unsigned long long bytes=0;
@@ -224,16 +223,16 @@ static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
 
 				if(lstat(sb.path, &statbuf))
 				{
-					logw(cntr, "File has vanished: %s", sb.path);
+					logw(cntr, "Path has vanished: %s", sb.path);
 					// Tell the server to forget about this
 					// file, otherwise it might get stuck
 					// on a select waiting for it to arrive.
-					if(async_write_str('i', sb.path))
+					if(async_write_str(CMD_INTERRUPT, sb.path))
 					{
 						ret=-1;
 						quit++;
 					}
-					if(cmd=='f' && sb.datapth)
+					if(cmd==CMD_FILE && sb.datapth)
 					{
 						rs_signature_t *sumset=NULL;
 						// The server will be sending
@@ -251,13 +250,13 @@ static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
 				}
 				encode_stat(attribs, &statbuf, has_extrameta(sb.path));
 
-				if(cmd=='f' && sb.datapth)
+				if(cmd==CMD_FILE && sb.datapth)
 				{
 					unsigned long long sentbytes=0;
 					// Need to do sig/delta stuff.
-					if(async_write_str('t', sb.datapth)
-					  || async_write_str('r', attribs)
-					  || async_write_str('f', sb.path)
+					if(async_write_str(CMD_DATAPTH, sb.datapth)
+					  || async_write_str(CMD_STAT, attribs)
+					  || async_write_str(CMD_FILE, sb.path)
 					  || load_signature_and_send_delta(
 						sb.path, &bytes, &sentbytes, cntr))
 					{
@@ -267,7 +266,7 @@ static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
 					}
 					else
 					{
-						do_filecounter(cntr, 'x', 1);
+						do_filecounter(cntr, CMD_END_FILE, 1);
 						do_filecounter_bytes(cntr, bytes);
 						do_filecounter_sentbytes(cntr, sentbytes);
 					}
@@ -277,7 +276,7 @@ static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
 					//logp("need to send whole file: %s\n",
 					//	sb.path);
 					// send the whole file.
-					if(async_write_str('r', attribs)
+					if(async_write_str(CMD_STAT, attribs)
 					  || async_write_str(cmd, sb.path)
 					  || send_whole_file_w(sb.path,
 						NULL, 0, &bytes,
@@ -289,22 +288,26 @@ static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
 					}
 					else
 					{
-						do_filecounter(cntr, 'F', 1);
+						do_filecounter(cntr, CMD_NEW_FILE, 1);
 						do_filecounter_bytes(cntr, bytes);
 						do_filecounter_sentbytes(cntr, bytes);
 					}
 				}
 				free_sbuf(&sb);
 			}
-			else if(cmd=='w')
+			else if(cmd_is_not_file(cmd))
+			{
+				// There is only extra meta data to send.
+			}
+			else if(cmd==CMD_WARNING)
 			{
 				do_filecounter(cntr, cmd, 0);
 				free(buf);
 				buf=NULL;
 			}
-			else if(cmd=='c' && !strcmp(buf, "backupphase2end"))
+			else if(cmd==CMD_GEN && !strcmp(buf, "backupphase2end"))
 			{
-				if(async_write_str('c', "okbackupphase2end"))
+				if(async_write_str(CMD_GEN, "okbackupphase2end"))
 					ret=-1;
 				quit++;
 			}

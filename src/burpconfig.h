@@ -2,6 +2,8 @@
 #define _BURPCONFIG_H 1
 
 /* Burp common configuration defines */
+/* Graham says: probably most of this stuff can be deleted - it is debris
+   left from Bacula */
 
 #undef  TRUE
 #undef  FALSE
@@ -382,15 +384,6 @@ typedef off_t     boffset_t;
 #undef bindtextdomain
 #endif  
 #endif
-
-/*
- * Replace codes needed in both file routines and non-file routines
- * Job replace codes -- in "replace"
- */
-#define REPLACE_ALWAYS   'a'
-#define REPLACE_IFNEWER  'w'
-#define REPLACE_NEVER    'n'
-#define REPLACE_IFOLDER  'o'
 
 /* This probably should be done on a machine by machine basis, but it works */
 /* This is critical for the smartalloc routines to properly align memory */

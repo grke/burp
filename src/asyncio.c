@@ -483,7 +483,7 @@ int async_read_fp(FILE *fp, gzFile zp, char *cmd, char **rdst, size_t *rlen)
 void log_and_send(const char *msg)
 {
 	logp("%s\n", msg);
-	if(fd>0) async_write_str('e', msg);
+	if(fd>0) async_write_str(CMD_ERROR, msg);
 }
 
 int async_get_fd(void)
@@ -517,7 +517,7 @@ int async_read_stat(FILE *fp, gzFile zp, char **buf, size_t *len, struct stat *s
 			{
 				break;
 			}
-			if(cmd=='w')
+			if(cmd==CMD_WARNING)
 			{
 				logp("WARNING: %s\n", buf);
 				do_filecounter(cntr, cmd, 0);
@@ -525,29 +525,31 @@ int async_read_stat(FILE *fp, gzFile zp, char **buf, size_t *len, struct stat *s
 				continue;
 			}
 		}
-		if(cmd=='t')
+		if(cmd==CMD_DATAPTH)
 		{
 			if(d) free(d);
 			d=*buf;
 			*buf=NULL;
 		}
-		else if(cmd=='r')
+		else if(cmd==CMD_STAT)
 		{
 			if(statp) decode_stat(*buf, statp, extrameta);
 			if(*dpth) free(*dpth);
 			*dpth=d;
 			return 0;
 		}
-		else if((cmd=='c' && !strcmp(*buf, "backupend"))
-		  || (cmd=='c' && !strcmp(*buf, "restoreend"))
-		  || (cmd=='c' && !strcmp(*buf, "phase1end")))
+		else if((cmd==CMD_GEN && !strcmp(*buf, "backupend"))
+		  || (cmd==CMD_GEN && !strcmp(*buf, "restoreend"))
+		  || (cmd==CMD_GEN && !strcmp(*buf, "phase1end")))
 		{
 			if(d) free(d);
 			return 1;
 		}
 		else
 		{
-			logp("expected cmd 't' or 'r', got '%c:%s'\n", cmd, *buf?*buf:"");
+			logp("expected cmd %c or %c, got '%c:%s'\n",
+				CMD_DATAPTH, CMD_STAT,
+				cmd, *buf?*buf:"");
 			if(*buf) { free(*buf); *buf=NULL; }
 			break;
 		}
@@ -564,8 +566,8 @@ int logw(struct cntr *cntr, const char *fmt, ...)
 	va_list ap;
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
-	r=async_write_str('w', buf);
+	r=async_write_str(CMD_WARNING, buf);
 	va_end(ap);
-	do_filecounter(cntr, 'w', 1);
+	do_filecounter(cntr, CMD_WARNING, 1);
 	return r;
 }

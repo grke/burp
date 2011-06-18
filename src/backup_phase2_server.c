@@ -92,7 +92,7 @@ static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *c
 	return 0;
 }
 
-static int process_new_file(struct sbuf *p1b)
+static int process_new(struct sbuf *p1b)
 {
 	//logp("need to process new file: %s\n", p1b->path);
 	// Flag the things that need to be sent.
@@ -129,10 +129,10 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, gzFile uczp, co
 		// If either old or new is encrypted, or librsync is off,
 		// we need to get a new file.
 		if(!cconf->librsync
-		  || sbuf_is_encrypted_file(cb)
-		  || sbuf_is_encrypted_file(p1b))
+		  || cb->cmd==CMD_ENC_FILE
+		  || p1b->cmd==CMD_ENC_FILE)
 		{
-			if(process_new_file(p1b)) return -1;
+			if(process_new(p1b)) return -1;
 			free_sbuf(cb);
 			return 1;
 		}
@@ -144,7 +144,7 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, gzFile uczp, co
 		if( ( oldcompressed && !cconf->compression)
 		 || (!oldcompressed &&  cconf->compression))
 		{
-			if(process_new_file(p1b)) return -1;
+			if(process_new(p1b)) return -1;
 			free_sbuf(cb);
 			return 1;
 		}
@@ -157,7 +157,7 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, gzFile uczp, co
 	else if(pcmp>0)
 	{
 		// ahead - need to get the whole file
-		if(process_new_file(p1b)) return -1;
+		if(process_new(p1b)) return -1;
 		// do not free
 		return 1;
 	}
@@ -173,7 +173,7 @@ static int do_stuff_to_send(struct sbuf *p1b, char **last_requested)
 	if(p1b->senddatapth)
 	{
 		size_t l=strlen(p1b->datapth);
-		if(async_append_all_to_write_buffer('t', p1b->datapth, &l))
+		if(async_append_all_to_write_buffer(CMD_DATAPTH, p1b->datapth, &l))
 			return 1;
 		p1b->senddatapth=0;
 		//if(async_rw(NULL, NULL, NULL, NULL, NULL, &junk)) return -1;
@@ -181,7 +181,7 @@ static int do_stuff_to_send(struct sbuf *p1b, char **last_requested)
 	if(p1b->sendstat)
 	{
 		size_t l=p1b->slen;
-		if(async_append_all_to_write_buffer('r', p1b->statbuf, &l))
+		if(async_append_all_to_write_buffer(CMD_STAT, p1b->statbuf, &l))
 			return 1;
 		p1b->sendstat=0;
 		//if(async_rw(NULL, NULL, NULL, NULL, NULL, &junk)) return -1;
@@ -228,7 +228,7 @@ static int do_stuff_to_send(struct sbuf *p1b, char **last_requested)
 		size_t l;
 		const char *endfile="endfile";
 		l=strlen(endfile);
-		if(async_append_all_to_write_buffer('x', endfile, &l))
+		if(async_append_all_to_write_buffer(CMD_END_FILE, endfile, &l))
 			return 1;
 		//if(async_rw(NULL, NULL, NULL, NULL, NULL, &junk)) return -1;
 		p1b->sendendofsig=0;
@@ -285,7 +285,7 @@ static int do_stuff_to_receive(struct sbuf *rb, FILE *p2fp, const char *datadirt
 
 	if(rbuf)
 	{
-		if(rcmd=='w')
+		if(rcmd==CMD_WARNING)
 		{
 			logp("WARNING: %s\n", rbuf);
 			do_filecounter(cntr, rcmd, 0);
@@ -293,7 +293,7 @@ static int do_stuff_to_receive(struct sbuf *rb, FILE *p2fp, const char *datadirt
 		else if(rb->fp || rb->zp)
 		{
 			// Currently writing a file.
-			if(rcmd=='a')
+			if(rcmd==CMD_APPEND)
 			{
 				int app;
 				//logp("rlen: %d\n", rlen);
@@ -303,12 +303,12 @@ static int do_stuff_to_receive(struct sbuf *rb, FILE *p2fp, const char *datadirt
 				  && (app=fwrite(rbuf, 1, rlen, rb->fp))<=0))
 				{
 					logp("error when appending: %d\n", app);
-					async_write_str('e', "write failed");
+					async_write_str(CMD_ERROR, "write failed");
 					ret=-1;
 				}
 				do_filecounter_recvbytes(cntr, rlen);
 			}
-			else if(rcmd=='x')
+			else if(rcmd==CMD_END_FILE)
 			{
 				// Finished the file.
 				// Write it to the phase2 file, and free the
@@ -328,7 +328,7 @@ static int do_stuff_to_receive(struct sbuf *rb, FILE *p2fp, const char *datadirt
 						ret=-1;
 					else
 					{
-					  do_filecounter(cntr, rb->receivedelta?'x':'F', 0);
+					  do_filecounter(cntr, rb->receivedelta?CMD_END_FILE:CMD_NEW_FILE, 0);
 					  if(*last_requested
 					  && !strcmp(rb->path, *last_requested))
 					  {
@@ -359,18 +359,18 @@ static int do_stuff_to_receive(struct sbuf *rb, FILE *p2fp, const char *datadirt
 			}
 		}
 		// Otherwise, expecting to be told of a file to save.
-		else if(rcmd=='t')
+		else if(rcmd==CMD_DATAPTH)
 		{
 			rb->datapth=rbuf;
 			rbuf=NULL;
 		}
-		else if(rcmd=='r')
+		else if(rcmd==CMD_STAT)
 		{
 			rb->statbuf=rbuf;
 			rb->slen=rlen;
 			rbuf=NULL;
 		}
-		else if(rcmd=='f' || rcmd=='y')
+		else if(rcmd==CMD_FILE || rcmd==CMD_ENC_FILE)
 		{
 			rb->cmd=rcmd;
 			rb->plen=rlen;
@@ -398,12 +398,12 @@ static int do_stuff_to_receive(struct sbuf *rb, FILE *p2fp, const char *datadirt
 				}
 			}
 		}
-		else if(rcmd=='c' && !strcmp(rbuf, "okbackupphase2end"))
+		else if(rcmd==CMD_GEN && !strcmp(rbuf, "okbackupphase2end"))
 		{
 			ret=1;
 			logp("got okbackupphase2end\n");
 		}
-		else if(rcmd=='i')
+		else if(rcmd==CMD_INTERRUPT)
 		{
 			// Interrupt - forget about the last requested file
 			// if it matches. Otherwise, we can get stuck on the
@@ -458,8 +458,8 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzF
 	{
 		int sts=0;
 		//logp("in loop\n");
-		if(rb.path) write_status(client, 2, rb.path, cntr);
-		else write_status(client, 2, p1b.path, cntr);
+		if(rb.path) write_status(client, STATUS_BACKUP, rb.path, cntr);
+		else write_status(client, STATUS_BACKUP, p1b.path, cntr);
 		if((last_requested || !p1zp)
 		  && (ars=do_stuff_to_receive(&rb, p2fp, datadirtmp, dpth,
 			working, &last_requested, deltmppath, cntr, cconf)))
@@ -487,15 +487,16 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzF
 				// ars==1 means it ended ok.
 				gzclose_fp(&p1zp);
 				//free_sbuf(&p1b);
-				if(async_write_str('c', "backupphase2end"))
+				if(async_write_str(CMD_GEN, "backupphase2end"))
 				break;
 			}
 
-			if(sbuf_is_file(&p1b)
-			  || sbuf_is_encrypted_file(&p1b))
+			if(p1b.cmd==CMD_FILE
+			  || p1b.cmd==CMD_ENC_FILE)
 				break;
 
-			// If it is not file data, we are not currently
+			// If it is not file data or it is something else that
+			// has no extra meta data, we are not currently
 			// interested. Write it to the unchanged file.
 			if(sbuf_to_manifest(&p1b, NULL, uczp))
 			{
@@ -506,12 +507,12 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzF
 
 		   //logp("check: %s\n", p1b.path);
 
-		   // If it is file data...
+		   // If it is file data (or something with extra meta data)
 		   if(!*cmanfp)
 		   {
 			// No old manifest, need to ask for a new file.
 			//logp("no cmanfp\n");
-			if(process_new_file(&p1b)) return -1;
+			if(process_new(&p1b)) return -1;
 		   }
 		   else
 		   {
@@ -538,7 +539,6 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzF
 
 			while(*cmanfp)
 			{
-		//logp("in loop x\n");
 				free_sbuf(&cb);
 				if((ars=sbuf_fill(NULL, *cmanfp, &cb, cntr)))
 				{
@@ -551,12 +551,12 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzF
 					// ars==1 means it ended ok.
 					gzclose_fp(cmanfp);
 		//logp("ran out of current manifest\n");
-					if(process_new_file(&p1b)) return -1;
+					if(process_new(&p1b)) return -1;
 					break;
 				}
 		//logp("against: %s\n", cb.path);
-				if(!sbuf_is_file(&cb)
-				  && !sbuf_is_encrypted_file(&cb))
+				if(cb.cmd!=CMD_FILE
+				  && cb.cmd!=CMD_ENC_FILE)
 				{
 					free_sbuf(&cb);
 					continue;

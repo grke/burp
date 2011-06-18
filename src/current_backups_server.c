@@ -68,7 +68,7 @@ int recursive_hardlink(const char *src, const char *dst, const char *client, str
 		else
 		{
 			//logp("hardlinking %s to %s\n", fullpathb, fullpatha);
-			write_status(client, 4, fullpathb, cntr);
+			write_status(client, STATUS_SHUFFLING, fullpathb, cntr);
 			if(link(fullpatha, fullpathb))
 			{
 				logp("hardlink %s to %s failed: %s\n",

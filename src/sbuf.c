@@ -12,7 +12,7 @@
 
 void init_sbuf(struct sbuf *sb)
 {
-	sb->cmd='e';
+	sb->cmd=CMD_ERROR;
 	sb->path=NULL;
 	sb->plen=0;
 	sb->linkto=NULL;
@@ -59,32 +59,10 @@ void free_sbuf(struct sbuf *sb)
 	if(sb->endfile) free(sb->endfile);
 }
 
-int cmd_is_file(char cmd)
-{
-	if(cmd=='f') return 1;
-	return 0;
-}
-
-int sbuf_is_file(struct sbuf *sb)
-{
-	return cmd_is_file(sb->cmd);
-}
-
-int cmd_is_encrypted_file(char cmd)
-{
-	if(cmd=='y') return 1;
-	return 0;
-}
-
-int sbuf_is_encrypted_file(struct sbuf *sb)
-{
-	return cmd_is_encrypted_file(sb->cmd);
-}
-
 int cmd_is_link(char cmd)
 {
-	if(cmd=='l' || cmd=='L') return 1;
-	return 0;
+	return (cmd==CMD_SOFT_LINK
+		|| cmd==CMD_HARD_LINK);
 }
 
 int sbuf_is_link(struct sbuf *sb)
@@ -92,15 +70,22 @@ int sbuf_is_link(struct sbuf *sb)
 	return cmd_is_link(sb->cmd);
 }
 
-int cmd_is_endfile(char cmd)
+int cmd_is_not_file(char cmd)
 {
-	if(cmd=='x') return 1;
-	return 0;
+	return (cmd==CMD_DIRECTORY
+		|| cmd==CMD_SOFT_LINK
+		|| cmd==CMD_HARD_LINK
+		|| cmd==CMD_SPECIAL);
+}
+
+int sbuf_is_not_file(struct sbuf *sb)
+{
+	return cmd_is_not_file(sb->cmd);
 }
 
 int sbuf_is_endfile(struct sbuf *sb)
 {
-	return cmd_is_endfile(sb->cmd);
+	return sb->cmd==CMD_END_FILE;
 }
 
 static int do_sbuf_fill_from_net(struct sbuf *sb, struct cntr *cntr)
@@ -150,13 +135,13 @@ static int do_sbuf_fill_from_file(FILE *fp, gzFile zp, struct sbuf *sb, int phas
 			return -1;
 		}
 	}
-	else if(!phase1 && (sbuf_is_file(sb) || sbuf_is_encrypted_file(sb)))
+	else if(!phase1 && (sb->cmd==CMD_FILE || sb->cmd==CMD_ENC_FILE))
 	{
 		char cmd;
 		if((ars=async_read_fp(fp, zp, &cmd,
 			&(sb->endfile), &(sb->elen))))
 				return ars;
-		if(!cmd_is_endfile(cmd))
+		if(cmd!=CMD_END_FILE)
 		{
 			logp("got non-endfile cmd after file: %c %s\n",
 				cmd, sb->endfile);
@@ -182,18 +167,18 @@ static int sbuf_to_fp(struct sbuf *sb, FILE *mp)
 	if(sb->path)
 	{
 		if(sb->datapth
-		  && send_msg_fp(mp, 't', sb->datapth, strlen(sb->datapth)))
-			return -1;
-		if(send_msg_fp(mp, 'r', sb->statbuf, sb->slen)
+		  && send_msg_fp(mp, CMD_DATAPTH,
+			sb->datapth, strlen(sb->datapth))) return -1;
+		if(send_msg_fp(mp, CMD_STAT, sb->statbuf, sb->slen)
 		  || send_msg_fp(mp, sb->cmd, sb->path, sb->plen))
 			return -1;
 		if(sb->linkto
 		  && send_msg_fp(mp, sb->cmd, sb->linkto, sb->llen))
 			return -1;
-		if(sbuf_is_file(sb) || sbuf_is_encrypted_file(sb))
+		if(sb->cmd==CMD_FILE || sb->cmd==CMD_ENC_FILE)
 		{
-			if(send_msg_fp(mp, 'x', sb->endfile, sb->elen))
-				return -1;
+			if(send_msg_fp(mp, CMD_END_FILE,
+				sb->endfile, sb->elen)) return -1;
 		}
 	}
 	return 0;
@@ -204,18 +189,18 @@ static int sbuf_to_zp(struct sbuf *sb, gzFile zp)
 	if(sb->path)
 	{
 		if(sb->datapth
-		  && send_msg_zp(zp, 't', sb->datapth, strlen(sb->datapth)))
-			return -1;
-		if(send_msg_zp(zp, 'r', sb->statbuf, sb->slen)
+		  && send_msg_zp(zp, CMD_DATAPTH,
+			sb->datapth, strlen(sb->datapth))) return -1;
+		if(send_msg_zp(zp, CMD_STAT, sb->statbuf, sb->slen)
 		  || send_msg_zp(zp, sb->cmd, sb->path, sb->plen))
 			return -1;
 		if(sb->linkto
 		  && send_msg_zp(zp, sb->cmd, sb->linkto, sb->llen))
 			return -1;
-		if(sbuf_is_file(sb) || sbuf_is_encrypted_file(sb))
+		if(sb->cmd==CMD_FILE || sb->cmd==CMD_ENC_FILE)
 		{
-			if(send_msg_zp(zp, 'x', sb->endfile, sb->elen))
-				return -1;
+			if(send_msg_zp(zp, CMD_END_FILE,
+				sb->endfile, sb->elen)) return -1;
 		}
 	}
 	return 0;

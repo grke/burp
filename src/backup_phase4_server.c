@@ -257,14 +257,14 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 		}
 		else
 		{
-			if(cmd!='t')
+			if(cmd!=CMD_DATAPTH)
 			{
 				// ignore
 				if(buf) { free(buf); buf=NULL; }
 				continue;
 			}
 			if(buf[len]=='\n') buf[len]='\0';
-			write_status(client, 4, buf, cntr);
+			write_status(client, STATUS_SHUFFLING, buf, cntr);
 			if(!(oldpath=prepend_s(currentdata,
 				buf, strlen(buf)))
 			  || !(newpath=prepend_s(datadirtmp,
@@ -504,7 +504,7 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 
 	logp("Begin phase4 (shuffle files)\n");
 
-	write_status(client, 4, NULL, cntr);
+	write_status(client, STATUS_SHUFFLING, NULL, cntr);
 
 	if(!lstat(current, &statp)) // Had a previous backup
 	{
@@ -564,7 +564,7 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 			goto endfunc;
 		}
 
-		write_status(client, 4, "deleting temporary files", cntr);
+		write_status(client, STATUS_SHUFFLING, "deleting temporary files", cntr);
 
 		// Remove the temporary data directory, we have now removed
 		// everything useful from it.

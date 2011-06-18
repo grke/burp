@@ -349,7 +349,7 @@ static int do_backup_server(const char *basedir, const char *current, const char
 		// for reading
 		gzclose_fp(&mzp);
 
-		async_write_str('c', "okbackupend");
+		async_write_str(CMD_GEN, "okbackupend");
 		logp("Backup ending - disconnect from client.\n");
 
 		// Close the connection with the client, the rest of the job
@@ -766,13 +766,13 @@ static int get_lock_and_clean(const char *basedir, const char *lockfile, const c
 				char msg[256]="";
 				logp("finalising previous backup\n");
 				snprintf(msg, sizeof(msg), "Finalising previous backup of client. Please try again later.");
-				async_write_str('e', msg);
+				async_write_str(CMD_ERROR, msg);
 			}
 			else
 			{
 				logp("another instance of client is already running,\n");
 				logp("or %s is not writable.\n", lockfile);
-				async_write_str('e', "another instance is already running");
+				async_write_str(CMD_ERROR, "another instance is already running");
 			}
 		}
 		ret=-1;
@@ -850,7 +850,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 	{
 		ret=-1;
 	}
-	else if(cmd=='c' && !strncmp(buf, "backupphase1", strlen("backupphase1")))
+	else if(cmd==CMD_GEN && !strncmp(buf, "backupphase1", strlen("backupphase1")))
 	{
 		if(get_lock_and_clean(basedir, lockfile, current,
 			working, currentdata,
@@ -885,7 +885,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 				{
 					logp("Not running backup of %s\n",
 						client);
-					async_write_str('c',
+					async_write_str(CMD_GEN,
 						"timer conditions not met");
 					goto end;
 				}
@@ -895,7 +895,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 
 			snprintf(okstr, sizeof(okstr), "ok:%d",
 				cconf->compression);
-			async_write_str('c', okstr);
+			async_write_str(CMD_GEN, okstr);
 			ret=do_backup_server(basedir, current, working,
 			  currentdata, finishing, cconf,
 			  manifest, forward, phase1data, phase2data,
@@ -918,7 +918,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 					"reserved", &cntr);
 		}
 	}
-	else if(cmd=='c'
+	else if(cmd==CMD_GEN
 	  && (!strncmp(buf, "restore ", strlen("restore "))
 		|| !strncmp(buf, "verify ", strlen("verify "))))
 	{
@@ -949,12 +949,12 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 				*restoreregex='\0';
 				restoreregex++;
 			}
-			async_write_str('c', "ok");
+			async_write_str(CMD_GEN, "ok");
 			ret=do_restore_server(basedir, backupnostr,
 				restoreregex, act, client, &cntr, cconf);
 		}
 	}
-	else if(cmd=='c' && !strncmp(buf, "list ", strlen("list ")))
+	else if(cmd==CMD_GEN && !strncmp(buf, "list ", strlen("list ")))
 	{
 		if(get_lock_and_clean(basedir, lockfile, current, working,
 			currentdata, finishing, FALSE, &gotlock, cconf,
@@ -969,7 +969,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 				*listregex='\0';
 				listregex++;
 			}
-			async_write_str('c', "ok");
+			async_write_str(CMD_GEN, "ok");
 			ret=do_list_server(basedir, buf+strlen("list "),
 				listregex, client, &cntr);
 		}
@@ -977,7 +977,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 	else
 	{
 		logp("unknown command: %c:%s\n", cmd, buf);
-		async_write_str('e', "unknown command");
+		async_write_str(CMD_ERROR, "unknown command");
 		ret=-1;
 	}
 

@@ -13,12 +13,12 @@
 
 int authorise_client(struct config *conf)
 {
-	if(async_write_str('c', "hello")
-	  || async_read_expect('c', "whoareyou")
-	  || async_write_str('c', conf->cname)
-	  || async_read_expect('c', "okpassword")
-	  || async_write_str('c', conf->password)
-	  || async_read_expect('c', "ok"))
+	if(async_write_str(CMD_GEN, "hello")
+	  || async_read_expect(CMD_GEN, "whoareyou")
+	  || async_write_str(CMD_GEN, conf->cname)
+	  || async_read_expect(CMD_GEN, "okpassword")
+	  || async_write_str(CMD_GEN, conf->password)
+	  || async_read_expect(CMD_GEN, "ok"))
 	{
 		logp("problem with auth\n");
 		return -1;

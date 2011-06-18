@@ -37,14 +37,14 @@ static int do_write(BFILE *bfd, FILE *fp, unsigned char *out, size_t outlen)
 	if((ret=bwrite(bfd, out, outlen))<=0)
 	{
 		logp("error when appending: %d\n", ret);
-		async_write_str('e', "write failed");
+		async_write_str(CMD_ERROR, "write failed");
 		return -1;
 	}
 #else
 	if((fp && (ret=fwrite(out, 1, outlen, fp))<=0))
 	{
 		logp("error when appending: %d\n", ret);
-		async_write_str('e', "write failed");
+		async_write_str(CMD_ERROR, "write failed");
 		return -1;
 	}
 #endif
@@ -140,11 +140,11 @@ int transfer_gzfile_in(BFILE *bfd, FILE *fp, char **bytes, const char *encpasswo
 		//logp("transfer in: %c:%s\n", cmd, buf);
 		switch(cmd)
 		{
-			case 'a': // append
+			case CMD_APPEND: // append
 				if(!fp && !bfd)
 				{
 					logp("given append, but no file to write to\n");
-					async_write_str('e', "append with no file");
+					async_write_str(CMD_ERROR, "append with no file");
 					quit++; ret=-1;
 				}
 				else
@@ -183,7 +183,7 @@ int transfer_gzfile_in(BFILE *bfd, FILE *fp, char **bytes, const char *encpasswo
 					}
 				}
 				break;
-			case 'x': // finish up
+			case CMD_END_FILE: // finish up
 				if(enc_ctx)
 				{
 					if(!EVP_CipherFinal_ex(enc_ctx,
@@ -205,7 +205,7 @@ int transfer_gzfile_in(BFILE *bfd, FILE *fp, char **bytes, const char *encpasswo
 				quit++;
 				ret=0;
 				break;
-			case 'w':
+			case CMD_WARNING:
 				logp("WARNING: %s\n", buf);
 				do_filecounter(cntr, cmd, 0);
 				break;

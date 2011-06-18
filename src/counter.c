@@ -1,5 +1,6 @@
 #include "burp.h"
 #include "prog.h"
+#include "cmd.h"
 
 void reset_filecounter(struct cntr *c)
 {
@@ -115,15 +116,24 @@ void do_filecounter(struct cntr *c, char ch, int print)
 	}
 	switch(ch)
 	{
-		case 'f': ++(c->filecounter); break;
-		case 'x': ++(c->changedcounter); break;
-		case 'F': ++(c->newcounter); break;
-		case 'd': ++(c->directorycounter); break;
-		case 's': ++(c->specialcounter); break;
-		case 'l': ++(c->softlinkcounter); break;
-		case 'L': ++(c->hardlinkcounter); break;
-		case 'w': ++(c->warningcounter); return; // do not add to total
-		case 'y': ++(c->encryptedcounter); break;
+		case CMD_FILE:
+			++(c->filecounter); break;
+		case CMD_END_FILE:
+			++(c->changedcounter); break;
+		case CMD_NEW_FILE:
+			++(c->newcounter); break;
+		case CMD_DIRECTORY:
+			++(c->directorycounter); break;
+		case CMD_SPECIAL:
+			++(c->specialcounter); break;
+		case CMD_SOFT_LINK:
+			++(c->softlinkcounter); break;
+		case CMD_HARD_LINK:
+			++(c->hardlinkcounter); break;
+		case CMD_WARNING:
+			++(c->warningcounter); return; // do not add to total
+		case CMD_ENC_FILE:
+			++(c->encryptedcounter); break;
 	}
 	if(!((++(c->totalcounter))%64) && print)
 		printf(" %llu\n", c->totalcounter);

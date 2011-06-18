@@ -5,6 +5,7 @@
 #include "prog.h"
 #include "handy.h"
 #include "lock.h"
+#include "cmd.h"
 #include "current_backups_server.h"
 
 #ifdef HAVE_NCURSES_H
@@ -68,12 +69,38 @@ static char *get_backup_str(const char *s, bool dateonly)
 	return str;
 }
 
+static char *running_status_to_text(char s)
+{
+	static char ret[16]="";
+	switch(s)
+	{
+		case STATUS_SCANNING:
+			snprintf(ret, sizeof(ret), "scanning"); break;
+		case STATUS_BACKUP:
+			snprintf(ret, sizeof(ret), "backup"); break;
+		case STATUS_MERGING:
+			snprintf(ret, sizeof(ret), "merging"); break;
+		case STATUS_SHUFFLING:
+			snprintf(ret, sizeof(ret), "shuffling"); break;
+		case STATUS_LISTING:
+			snprintf(ret, sizeof(ret), "listing"); break;
+		case STATUS_RESTORING:
+			snprintf(ret, sizeof(ret), "restoring"); break;
+		case STATUS_VERIFYING:
+			snprintf(ret, sizeof(ret), "verifying"); break;
+		default:
+			*ret='\0';
+			break;
+	}
+	return ret;
+}
+
 // Returns 1 if it printed a line, 0 otherwise.
 static int summary(char **toks, int t, int count, int row, int col)
 {
 	char msg[1024]="";
 
-	if(!strcmp(toks[1], "i"))
+	if(*(toks[1])==STATUS_IDLE)
 	{
 		if(t>2)
 		  snprintf(msg, sizeof(msg),
@@ -84,7 +111,7 @@ static int summary(char **toks, int t, int count, int row, int col)
 		  snprintf(msg, sizeof(msg), "%-14.14s %-14s",
 			toks[0], "idle");
 	}
-	else if(!strcmp(toks[1], "C"))
+	if(*(toks[1])==STATUS_SERVER_CRASHED)
 	{
 		if(t>2)
 		  snprintf(msg, sizeof(msg),
@@ -95,7 +122,7 @@ static int summary(char **toks, int t, int count, int row, int col)
 		  snprintf(msg, sizeof(msg), "%-14.14s %-14s",
 			toks[0], "server crashed");
 	}
-	else if(!strcmp(toks[1], "c"))
+	if(*(toks[1])==STATUS_CLIENT_CRASHED)
 	{
 		if(t>2)
 		  snprintf(msg, sizeof(msg),
@@ -106,19 +133,13 @@ static int summary(char **toks, int t, int count, int row, int col)
 		  snprintf(msg, sizeof(msg), "%-14.14s %-14s",
 			toks[0], "client crashed");
 	}
-	else if(!strcmp(toks[1], "r"))
+	if(*(toks[1])==STATUS_RUNNING)
 	{
 		char f[64]="";
 		char b[64]="";
 		const char *s="";
 		if(t<3) return 0;
-		if(!strcmp(toks[2], "1")) s="scanning";
-		if(!strcmp(toks[2], "2")) s="backup";
-		if(!strcmp(toks[2], "3")) s="merging";
-		if(!strcmp(toks[2], "4")) s="shuffling";
-		if(!strcmp(toks[2], "10")) s="listing";
-		if(!strcmp(toks[2], "11")) s="restoring";
-		if(!strcmp(toks[2], "12")) s="verifying";
+		s=running_status_to_text(*(toks[2]));
 		if(t>3 && *(toks[3]))
 		{
 			snprintf(f, sizeof(f), "%s files", toks[3]);
@@ -191,41 +212,39 @@ static void detail(char *toks[], int t, struct config *conf, int row, int col)
 	}
 	if(toks[1])
 	{
-		if(!strcmp(toks[1], "i"))
+		switch(*(toks[1]))
 		{
-			print_line("Status: idle", x++, col);
-			show_all_backups(toks, t, &x, col);
-			return;
-		}
-		else if(!strcmp(toks[1], "C"))
-		{
-			print_line("Status: server crashed", x++, col);
-			show_all_backups(toks, t, &x, col);
-			return;
-		}
-		else if(!strcmp(toks[1], "c"))
-		{
-			print_line("Status: client crashed", x++, col);
-			show_all_backups(toks, t, &x, col);
-			return;
-		}
-		else if(!strcmp(toks[1], "r") && toks[2])
-		{
-			if(t<3) return;
-			if(!strcmp(toks[2], "1"))
-			  print_line("Status: running (scanning)", x++, col);
-			if(!strcmp(toks[2], "2"))
-			  print_line("Status: running (backing up)", x++, col);
-			if(!strcmp(toks[2], "3"))
-			  print_line("Status: running (merging)", x++, col);
-			if(!strcmp(toks[2], "4"))
-			  print_line("Status: running (shuffling)", x++, col);
-			if(!strcmp(toks[2], "10"))
-			  print_line("Status: running (listing)", x++, col);
-			if(!strcmp(toks[2], "11"))
-			  print_line("Status: running (restoring)", x++, col);
-			if(!strcmp(toks[2], "12"))
-			  print_line("Status: running (verifying)", x++, col);
+			case STATUS_IDLE:
+			{
+				print_line("Status: idle", x++, col);
+				show_all_backups(toks, t, &x, col);
+				return;
+			}
+			case STATUS_SERVER_CRASHED:
+			{
+				print_line("Status: server crashed", x++, col);
+				show_all_backups(toks, t, &x, col);
+				return;
+			}
+			case STATUS_CLIENT_CRASHED:
+			{
+				print_line("Status: client crashed", x++, col);
+				show_all_backups(toks, t, &x, col);
+				return;
+			}
+			case STATUS_RUNNING:
+			{
+				if(toks[2])
+				{
+					char msg[64]="";
+					if(t<3) return;
+					snprintf(msg, sizeof(msg),
+						"Status: running (%s)",
+						running_status_to_text(
+							*(toks[2])));
+					print_line(msg, x++, col);
+				}
+			}
 		}
 	}
 	print_line("", x++, col);

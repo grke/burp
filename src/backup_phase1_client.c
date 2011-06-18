@@ -6,6 +6,7 @@
 #include "handy.h"
 #include "asyncio.h"
 #include "counter.h"
+#include "extrameta.h"
 #include "backup_phase1_client.h"
 
 static char filesymbol='f';
@@ -22,7 +23,7 @@ static int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cnt
    switch (ff->type) {
    case FT_LNKSAVED:
         //printf("Lnka: %s -> %s\n", ff->fname, ff->link);
-   	encode_stat(attribs, &ff->statp);
+   	encode_stat(attribs, &ff->statp, has_extrameta(ff->fname));
 	if(async_write_str('r', attribs)
 	  || async_write_str('L', ff->fname)
 	  || async_write_str('L', ff->link))
@@ -32,7 +33,7 @@ static int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cnt
    case FT_FIFO:
    case FT_REGE:
    case FT_REG:
-      encode_stat(attribs, &ff->statp);
+      encode_stat(attribs, &ff->statp, has_extrameta(ff->fname));
       if(async_write_str('r', attribs)
 	|| async_write_str(filesymbol, ff->fname))
 		return -1;
@@ -40,7 +41,7 @@ static int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cnt
       break;
    case FT_LNK:
 	//printf("link: %s -> %s\n", ff->fname, ff->link);
-   	encode_stat(attribs, &ff->statp);
+   	encode_stat(attribs, &ff->statp, has_extrameta(ff->fname));
 	if(async_write_str('r', attribs)
 	  || async_write_str('l', ff->fname)
 	  || async_write_str('l', ff->link))
@@ -69,7 +70,7 @@ static int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cnt
 	 }
 	 else
 	 {
-		encode_stat(attribs, &ff->statp);
+		encode_stat(attribs, &ff->statp, has_extrameta(ff->fname));
 	      	if(async_write_str('r', attribs)) return -1;
 #if defined(WIN32_VSS)
 		if(async_write_str(filesymbol, ff->fname)) return -1;
@@ -82,7 +83,7 @@ static int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cnt
 	}
       break;
    case FT_SPEC: // special file - fifo, socket, device node...
-      encode_stat(attribs, &ff->statp);
+      encode_stat(attribs, &ff->statp, has_extrameta(ff->fname));
       if(async_write_str('r', attribs)
 	  || async_write_str('s', ff->fname))
 		return -1;
@@ -116,15 +117,6 @@ static int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cnt
       logw(cntr, _("Err: Unknown file ff->type %d: %s"), ff->type, ff->fname);
       break;
    }
-/*
-   if (attrs) {
-      char attr[200];
-      encode_attribsEx(NULL, attr, ff);
-      if (*attr != 0) {
-         printf("AttrEx=%s\n", attr);
-      }
-   }
-*/
    return 0;
 }
 

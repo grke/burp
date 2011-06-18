@@ -40,7 +40,7 @@ extern void log_and_send(const char *msg);
 // Read from fp if given, is read from our fd.
 extern int async_read_stat(FILE *fp, gzFile zp,
 	char **buf, size_t *len, struct stat *statp, char **dpth,
-	struct cntr *cntr);
+	int *extrameta, struct cntr *cntr);
 
 // not really async
 extern int async_read_fp(FILE *fp, gzFile zp, char *cmd, char **rdst, size_t *rlen);

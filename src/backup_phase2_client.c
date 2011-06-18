@@ -10,6 +10,7 @@
 #include "dpth.h"
 #include "sbuf.h"
 #include "berrno.h"
+#include "extrameta.h"
 
 static int load_signature(rs_signature_t **sumset, struct cntr *cntr)
 {
@@ -248,7 +249,7 @@ static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
 					free_sbuf(&sb);
 					continue;
 				}
-				encode_stat(attribs, &statbuf);
+				encode_stat(attribs, &statbuf, has_extrameta(sb.path));
 
 				if(cmd=='f' && sb.datapth)
 				{

@@ -491,7 +491,8 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzF
 				break;
 			}
 
-			if(sbuf_is_file(&p1b) || sbuf_is_encrypted_file(&p1b))
+			if(sbuf_is_file(&p1b)
+			  || sbuf_is_encrypted_file(&p1b))
 				break;
 
 			// If it is not file data, we are not currently

@@ -104,6 +104,7 @@ int do_list_client(const char *backup, const char *listregex, enum action act)
 	char *statbuf=NULL;
 	char ls[256]="";
 	char *dpth=NULL;
+	int extrameta=0;
 //logp("in do_list\n");
 
 	snprintf(msg, sizeof(msg), "list %s:%s",
@@ -141,7 +142,8 @@ int do_list_client(const char *backup, const char *listregex, enum action act)
 			ret=-1; break;
 		}
 
-		decode_stat(statbuf, &statp);
+		// extrameta is currently unused in list mode.
+		decode_stat(statbuf, &statp, &extrameta);
 
 		if(async_read(&fcmd, &fname, &flen))
 		{

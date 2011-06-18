@@ -36,6 +36,7 @@ int readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result);
  * Options saved int "options" of the include/exclude lists.
  * They are directly jammed ito  "flag" of ff packet
  */
+/* Graham says: most of these can be deleted, being bacula debris. */
 //#define FO_MD5          (1<<1)        /* Do MD5 checksum */
 #define FO_GZIP         (1<<2)        /* Do Zlib compression */
 #define FO_NO_RECURSION (1<<3)        /* no recursion in directories */
@@ -128,8 +129,8 @@ int is_subdir(const char *dir, const char *sub);
 int file_is_included(struct strlist **ielist, int iecount, const char *fname);
 
 /* from attribs.c */
-void encode_stat(char *buf, struct stat *statp);
-void decode_stat(const char *buf, struct stat *statp);
+void encode_stat(char *buf, struct stat *statp, int extrameta);
+void decode_stat(const char *buf, struct stat *statp, int *extrameta);
 bool set_attributes(const char *path, char type, struct stat *statp);
 
 #endif /* __FILES_H */

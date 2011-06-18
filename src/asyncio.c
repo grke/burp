@@ -494,7 +494,7 @@ int async_get_fd(void)
 
 
 /* Read from fp if given - else read from our fd */
-int async_read_stat(FILE *fp, gzFile zp, char **buf, size_t *len, struct stat *statp, char **dpth, struct cntr *cntr)
+int async_read_stat(FILE *fp, gzFile zp, char **buf, size_t *len, struct stat *statp, char **dpth, int *extrameta, struct cntr *cntr)
 {
 	char cmd;
 	char *d=NULL;
@@ -533,7 +533,7 @@ int async_read_stat(FILE *fp, gzFile zp, char **buf, size_t *len, struct stat *s
 		}
 		else if(cmd=='r')
 		{
-			if(statp) decode_stat(*buf, statp);
+			if(statp) decode_stat(*buf, statp, extrameta);
 			if(*dpth) free(*dpth);
 			*dpth=d;
 			return 0;

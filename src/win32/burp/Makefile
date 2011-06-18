@@ -42,6 +42,7 @@ FILED_OBJS = \
 	$(OBJDIR)/client_vss.o \
 	$(OBJDIR)/conf.o \
 	$(OBJDIR)/counter.o \
+	$(OBJDIR)/extrameta.o \
 	$(OBJDIR)/find.o \
 	$(OBJDIR)/find_one.o \
 	$(OBJDIR)/forkchild.o \

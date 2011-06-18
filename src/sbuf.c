@@ -23,6 +23,7 @@ void init_sbuf(struct sbuf *sb)
 	sb->statbuf=NULL;
 	sb->slen=0;
 	sb->sendstat=0;
+	sb->extrameta=0;
 
 	memset(&(sb->rsbuf), 0, sizeof(sb->rsbuf));
 	sb->sigjob=NULL;
@@ -106,7 +107,7 @@ static int do_sbuf_fill_from_net(struct sbuf *sb, struct cntr *cntr)
 {
 	int ars;
 	if((ars=async_read_stat(NULL, NULL, &(sb->statbuf), &(sb->slen),
-		&(sb->statp), &(sb->datapth), cntr)))
+		&(sb->statp), &(sb->datapth), &(sb->extrameta), cntr)))
 			return ars;
 	if((ars=async_read(&(sb->cmd), &(sb->path), &(sb->plen))))
 		return ars;
@@ -130,7 +131,7 @@ static int do_sbuf_fill_from_file(FILE *fp, gzFile zp, struct sbuf *sb, int phas
 	int ars;
 	//free_sbuf(sb);
 	if((ars=async_read_stat(fp, zp, &(sb->statbuf), &(sb->slen),
-		&(sb->statp), &(sb->datapth), cntr)))
+		&(sb->statp), &(sb->datapth), &(sb->extrameta), cntr)))
 			return ars;
 	if((ars=async_read_fp(fp, zp, &(sb->cmd), &(sb->path), &(sb->plen))))
 		return ars;

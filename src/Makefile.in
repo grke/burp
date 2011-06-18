@@ -38,6 +38,7 @@ SVRSRCS =	asyncio.c \
 		counter.c \
 		current_backups_server.c \
 		dpth.c \
+		extrameta.c \
 		find.c \
 		find_one.c \
 		forkchild.c \

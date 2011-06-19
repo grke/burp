@@ -3,5 +3,5 @@
 
 int has_extrameta(const char *path)
 {
-        return 1;
+        return 0;
 }

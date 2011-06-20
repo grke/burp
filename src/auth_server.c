@@ -9,9 +9,23 @@
 #include "counter.h"
 #include "dpth.h"
 #include "sbuf.h"
+#include "crypt.h"
 #include "auth_server.h"
 
 #include <netdb.h>
+
+static int check_passwd(const char *passwd, const char *plain_text)
+{
+	char salt[3];
+
+	if(!plain_text || !passwd || strlen(passwd)!=13)
+		return 0;
+
+	salt[0]=passwd[0];
+	salt[1]=passwd[1];
+	salt[2]=0;
+	return !strcmp(crypt(plain_text, salt), passwd);
+}
 
 static int check_client_and_password(struct config *conf, const char *client, const char *password, struct config *cconf)
 {
@@ -25,11 +39,24 @@ static int check_client_and_password(struct config *conf, const char *client, co
 	  || load_config(cpath, cconf, 0))
 		return -1;
 
-	if(!cconf->password || strcmp(cconf->password, password))
+	if(!cconf->password && !cconf->passwd)
 	{
 		logp("password rejected for client %s\n", client);
 		return -1;
 	}
+	// check against plain text
+	if(cconf->password && strcmp(cconf->password, password))
+	{
+		logp("password rejected for client %s\n", client);
+		return -1;
+	}
+	// check against encypted passwd
+	if(cconf->passwd && !check_passwd(cconf->passwd, password))
+	{
+		logp("password rejected for client %s\n", client);
+		return -1;
+	}
+
 	if(!cconf->keep)
 	{
 		logp("%s: you cannot set the keep value for a client to 0!\n",

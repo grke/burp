@@ -323,7 +323,15 @@ Goes with restore_script and overrides restore_script_pre_arg and restore_script
 
 .SH SERVER CLIENTCONFDIR FILE
 .TP
-For the server to know about clients that can contact it, you need to place a file named after the client in clientconfdir. The file name must match the name in the 'cname' field on the client. \fBssl_peer_cn=[string]\fR must also be set and match the common name in the SSL certificate that the client gives when it connects.  The file needs to contain a line like \fBpassword=[password]\fR that matches the same field on the client. Additionally, the following options can be overridden here for each client:
+For the server to know about clients that can contact it, you need to place a file named after the client in clientconfdir.
+.TP
+The file name must match the name in the 'cname' field on the client.
+.TP
+\fBssl_peer_cn=[string]\fR must also be set and match the common name in the SSL certificate that the client gives when it connects.
+.TP
+The file needs to contain a line like \fBpassword=[password]\fR that matches the same field on the client, or \fBpasswd=[encrypted password]\fR - where the plain text password on the client will be tested against an encrypted password of the kind you might find in /etc/passwd.
+.TP
+Additionally, the following options can be overridden here for each client:
 \fBdirectory\fR
 \fBkeep\fR
 \fBworking_dir_recovery_method\fR

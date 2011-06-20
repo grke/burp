@@ -1141,6 +1141,15 @@ if test $have_zlib = no  ; then
 	exit 1
 fi
 
+AC_CHECK_HEADERS(crypt.h)
+AC_CHECK_LIB(crypt, crypt, [CRYPT_LIBS="-lcrypt"])
+have_crypt=no
+if test x$CRYPT_LIBS = x-lcrypt; then
+   AC_DEFINE(HAVE_CRYPT)
+   have_crypt=yes
+fi
+AC_SUBST(CRYPT_LIBS)
+
 AC_CHECK_HEADERS(librsync.h)
 AC_CHECK_LIB(rsync, rs_delta_begin, [RSYNC_LIBS="-lrsync"])
 have_librsync=no

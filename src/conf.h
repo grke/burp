@@ -35,7 +35,8 @@ struct config
 
 // client options
 	char *cname;
-	char *password;
+	char *password; // also a clientconfdir option
+	char *passwd; // also a clientconfdir option
 	char *server;
 	struct strlist **startdir;
 	struct strlist **incexcdir;

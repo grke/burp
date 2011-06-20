@@ -25,6 +25,7 @@ void init_config(struct config *conf)
 	conf->lockfile=NULL;
 	conf->logfile=NULL;
 	conf->password=NULL;
+	conf->passwd=NULL;
 	conf->server=NULL;
 	conf->startdir=NULL;
 	conf->incexcdir=NULL;
@@ -98,6 +99,7 @@ void free_config(struct config *conf)
 	if(conf->lockfile) free(conf->lockfile);
 	if(conf->logfile) free(conf->logfile);
 	if(conf->password) free(conf->password);
+	if(conf->passwd) free(conf->passwd);
 	if(conf->server) free(conf->server);
 	if(conf->working_dir_recovery_method)
 		free(conf->working_dir_recovery_method);
@@ -406,6 +408,8 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 			  "logfile", &(conf->logfile))) return -1;
 			if(get_conf_val(field, value,
 			  "password", &(conf->password))) return -1;
+			if(get_conf_val(field, value,
+			  "passwd", &(conf->passwd))) return -1;
 			if(get_conf_val(field, value,
 			  "server", &(conf->server))) return -1;
 			if(get_conf_val(field, value,

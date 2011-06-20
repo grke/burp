@@ -233,6 +233,9 @@
 /* Define if data encryption should be enabled */
 #undef HAVE_CRYPTO
 
+/* Define if crypt support should be enabled */
+#undef HAVE_CRYPT
+
 /* Define the LOCALEDIR if a translation */
 #undef LOCALEDIR
 
@@ -308,9 +311,6 @@
 
 /* Set if Burp conio support enabled */
 #undef HAVE_CONIO
-
-/* Define if encryption support should be enabled */
-#undef HAVE_CRYPTO
 
 /* Define to 1 if you have the <ncurses.h> header file. */
 #undef HAVE_NCURSES_H

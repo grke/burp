@@ -756,6 +756,17 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 static int get_lock_and_clean(const char *basedir, const char *lockfile, const char *current, const char *working, const char *currentdata, const char *finishing, bool cancel, bool *gotlock, struct config *cconf, const char *forward, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *manifest, const char *client, struct cntr *cntr)
 {
 	int ret=0;
+	char *copy=NULL;
+	// Make sure the lock directory exists.
+	if(!(copy=strdup(lockfile))
+	  || mkpath(&copy))
+	{
+		async_write_str(CMD_ERROR, "problem with lock directory");
+		if(copy) free(copy);
+		return -1;
+	}
+	free(copy);
+
 	if(get_lock(lockfile))
 	{
 		if(cancel)
@@ -1058,12 +1069,24 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 		free_config(&conf);
 		return -1;
 	}
+	// Now that the client conf is loaded, we might want to chuser or
+	// chgrp.
+	if(chuser_and_or_chgrp(cconf.user, cconf.group))
+	{
+		logp("chuser_and_or_chgrp failed\n");
+		close_fd(cfd);
+		if(client) free(client);
+		free_config(&conf);
+		free_config(&cconf);
+		return -1;
+	}
 	if(ssl_check_cert(ssl, &cconf))
 	{
 		logp("check cert failed\n");
 		close_fd(cfd);
 		if(client) free(client);
 		free_config(&conf);
+		free_config(&cconf);
 		return -1;
 	}
 	set_non_blocking(*cfd);
@@ -1075,6 +1098,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	logp("exit child\n");
 	if(client) free(client);
 	free_config(&conf);
+	free_config(&cconf);
 	return ret;
 }
 

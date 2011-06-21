@@ -12,16 +12,6 @@ int get_lock(const char *path)
 	int fdlock;
 	char pid[16]="";
 
-	char *copy=NULL;
-	// Make sure the lock directory exists.
-	if(!(copy=strdup(path))
-	  || mkpath(&copy))
-	{
-		if(copy) free(copy);
-		return -1;
-	}
-	free(copy);
-
 	if((fdlock=open(path, O_WRONLY|O_CREAT, 0666))==-1)
 		return -1;
 	if(lockf(fdlock, F_TLOCK, 0))

@@ -30,11 +30,13 @@ static int check_passwd(const char *passwd, const char *plain_text)
 static int check_client_and_password(struct config *conf, const char *client, const char *password, struct config *cconf)
 {
 	char cpath[256]="";
-	snprintf(cpath, sizeof(cpath), "%s/%s", conf->clientconfdir, client);
 
 	// Some client settings can be globally set in the server config and
 	// overridden in the client specific config.
+	// Cannot load it until here, because we need to have the name of the
+	// client.
 	init_config(cconf);
+	snprintf(cpath, sizeof(cpath), "%s/%s", conf->clientconfdir, client);
 	if(set_client_global_config(conf, cconf)
 	  || load_config(cpath, cconf, 0))
 		return -1;

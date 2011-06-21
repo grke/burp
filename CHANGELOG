@@ -6,6 +6,9 @@
     existing files.
   * Fixed bug that made clients disappear from the status monitor.
   * Added option to specify the clientconfdir password in passwd format.
+  * Allow user and group options to be placed in the server clientconfdir files,
+    so that different client backups can be owned by different users.
+  * Bug fix the client_lockdir option.
 
 2011-06-14 Changes in burp-1.1.57:
   * Add options to run as a different user and group.

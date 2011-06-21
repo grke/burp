@@ -417,6 +417,8 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 			if(get_conf_val(field, value,
 			  "group", &(conf->group))) return -1;
 			if(get_conf_val(field, value,
+			  "client_lockdir", &(conf->client_lockdir))) return -1;
+			if(get_conf_val(field, value,
 			  "encryption_password", &(conf->encryption_password)))
 				return -1;
 			if(get_conf_val_args(field, value,
@@ -773,6 +775,10 @@ int set_client_global_config(struct config *conf, struct config *cconf)
 	if(set_global_str(&(cconf->working_dir_recovery_method),
 		conf->working_dir_recovery_method)) return -1;
 	if(set_global_str(&(cconf->timer_script), conf->timer_script))
+		return -1;
+	if(set_global_str(&(cconf->user), conf->user))
+		return -1;
+	if(set_global_str(&(cconf->group), conf->group))
 		return -1;
 	if(set_global_str(&(cconf->notify_success_script),
 		conf->notify_success_script)) return -1;

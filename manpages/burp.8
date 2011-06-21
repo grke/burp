@@ -152,10 +152,10 @@ Choose the level of gzip compression. Setting 0 or gzip0 turns compression off. 
 Path to the directory in which to keep per-client lock files. By default, this is set to the path given by the 'directory' option.
 .TP
 \fBuser=[username]\fR
-Run as a particular user.
+Run as a particular user. This can be overridden by the client configuration files in clientconfdir on the server.
 .TP
 \fBgroup=[groupname]\fR
-Run as a particular group.
+Run as a particular group. This can be overridden by the client configuration files in clientconfdir on the server.
 .TP
 \fBumask=[umask]\fR
 Set the file creation umask. Default is 0022.

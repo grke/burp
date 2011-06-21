@@ -117,7 +117,6 @@ int main (int argc, char *argv[])
         if(chuser_and_or_chgrp(conf.user, conf.group))
               return 1;
 
-
 	/* if logfile is defined in config and logfile is not defined... */
 	if(conf.logfile && !logfile) {
 		logfile=conf.logfile;

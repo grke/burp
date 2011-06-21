@@ -51,12 +51,12 @@ void free_sbuf(struct sbuf *sb)
 	if(sb->sigjob) rs_job_free(sb->sigjob);
 	if(sb->infb) rs_filebuf_free(sb->infb);
 	if(sb->outfb) rs_filebuf_free(sb->outfb);
+	if(sb->endfile) free(sb->endfile);
 	close_fp(&sb->sigfp);
 	gzclose_fp(&sb->sigzp);
 	close_fp(&sb->fp);
 	gzclose_fp(&sb->zp);
 	init_sbuf(sb);
-	if(sb->endfile) free(sb->endfile);
 }
 
 int cmd_is_link(char cmd)

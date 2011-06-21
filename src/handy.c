@@ -134,7 +134,7 @@ int build_path(const char *datadir, const char *fname, size_t flen, char **rpath
 	if(!(*rpath=prepend_s(datadir, fname, flen))) return -1;
 	if(mkpath(rpath))
 	{
-		if(*rpath) free(*rpath);
+		if(*rpath) { free(*rpath); *rpath=NULL; }
 		return -1;
 	}
 	return 0;

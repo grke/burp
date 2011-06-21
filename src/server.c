@@ -697,7 +697,6 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 					break; // finished
 				}
 
-				logp("sbuf to manifest\n");
 				if(sbuf_to_manifest(&cb, mp, NULL))
 				{
 					close_fp(&mp);

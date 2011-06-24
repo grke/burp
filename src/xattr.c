@@ -4,7 +4,6 @@
 #include "cmd.h"
 
 #ifdef HAVE_XATTR
-#include "attr/xattr.h"
 
 int has_xattr(const char *path, char cmd)
 {

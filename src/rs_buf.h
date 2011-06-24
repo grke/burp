@@ -19,6 +19,7 @@
  * License along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+/* Modified by Graham Keeling, from 2011 */
 
 #ifndef RS_BUF_H
 #define RS_BUF_H

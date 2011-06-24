@@ -203,38 +203,227 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath)
 	return ret;
 }
 
+static int jiggle(const char *datapth, const char *currentdata, const char *datadirtmp, const char *datadir, const char *deltabdir, const char *deltafdir, const char *sigpath, struct cntr *cntr, struct config *cconf)
+{
+	int ret=0;
+	struct stat statp;
+	char *oldpath=NULL;
+	char *newpath=NULL;
+	char *finpath=NULL;
+	char *deltafpath=NULL;
+
+	if(!(oldpath=prepend_s(currentdata, datapth, strlen(datapth)))
+	  || !(newpath=prepend_s(datadirtmp, datapth, strlen(datapth)))
+	  || !(finpath=prepend_s(datadir, datapth, strlen(datapth)))
+	  || !(deltafpath=prepend_s(deltafdir, datapth, strlen(datapth))))
+	{
+		logp("out of memory\n");
+		ret=-1;	
+		goto cleanup;
+	}
+	else if(!lstat(finpath, &statp) && S_ISREG(statp.st_mode))
+	{
+		// Looks like an interrupted jiggle
+		// did this file already.
+		if(!lstat(deltafpath, &statp) && S_ISREG(statp.st_mode))
+		{
+			logp("deleting unneeded forward delta: %s\n",
+				deltafpath);
+			unlink(deltafpath);
+		}
+		logp("skipping already present file: %s\n", finpath);
+	}
+	else if(mkpath(&finpath))
+	{
+		logp("could not create path for: %s\n", finpath);
+		ret=-1;
+		goto cleanup;
+	}
+	else if(mkpath(&newpath))
+	{
+		logp("could not create path for: %s\n", newpath);
+		ret=-1;
+		goto cleanup;
+	}
+	else if(!lstat(deltafpath, &statp) && S_ISREG(statp.st_mode))
+	{
+		char *cp=NULL;
+		char *infpath=NULL;
+
+		// Got a forward patch to do.
+		// First, need to gunzip the old file,
+		// otherwise the librsync patch will take
+		// forever, because it will be doing seeks
+		// all over the place, and gzseeks are slow.
+
+		if(!(infpath=strdup(deltafpath)))
+		{
+			logp("out of memory\n");
+			ret=-1;
+			goto cleanup;
+		}
+		else if(!(cp=strrchr(infpath, '.')))
+		{
+			logp("could not strip the suffix from '%s'\n", infpath);
+			ret=-1;
+			goto cleanup;
+		}
+		*cp='\0';
+
+		//logp("Fixing up: %s\n", datapth);
+		if(inflate_or_link_oldfile(oldpath, infpath))
+		{
+			logp("error when inflating old file: %s\n", oldpath);
+			ret=-1;
+			goto cleanup;
+		}
+
+		if(do_patch(infpath, deltafpath, newpath, cconf->compression,
+			cntr, cconf))
+		{
+			logp("error when patching\n");
+			ret=-1;
+			// Remove anything that got written.
+			unlink(newpath);
+			goto cleanup;
+		}
+
+		// Get rid of the inflated old file.
+		// This will also remove it if there was an
+		// error.
+		unlink(infpath);
+		free(infpath);
+
+		// Need to generate a reverse diff,
+		// unless we are keeping a hardlinked
+		// archive.
+		if(!cconf->hardlinked_archive)
+		{
+			if(gen_rev_delta(sigpath, deltabdir,
+				oldpath, newpath, datapth, cntr, cconf))
+			{
+				ret=-1;
+				goto cleanup;
+			}
+		}
+
+		// Power interruptions should be
+		// recoverable. If it happens before
+		// this point, the data jiggle for
+		// this file has to be done again.
+		// Once finpath is in place, no more
+		// jiggle is required.
+
+		// Use the fresh new file.
+		if(do_rename(newpath, finpath))
+		{
+			ret=-1;
+			goto cleanup;
+		}
+		else
+		{
+			// Remove the forward delta, as it is
+			// no longer needed. There is a
+			// reverse diff and the finished
+			// finished file is in place.
+			//logp("Deleting delta.forward...\n");
+			unlink(deltafpath);
+
+			// Remove the old file. If a power
+			// cut happens just before this,
+			// the old file will hang around
+			// forever.
+			// TODO: Put in something to
+			// detect this.
+			// ie, both a reverse delta and the
+			// old file exist.
+			if(!cconf->hardlinked_archive)
+			{
+				//logp("Deleting oldpath...\n");
+				unlink(oldpath);
+			}
+		}
+	}
+	else if(!lstat(newpath, &statp) && S_ISREG(statp.st_mode))
+	{
+		// Use the fresh new file.
+		// This needs to happen after checking
+		// for the forward delta, because the
+		// patching stuff writes to newpath.
+		//logp("Using newly received file\n");
+		if(do_rename(newpath, finpath))
+		{
+			ret=-1;
+			goto cleanup;
+		}
+	}
+	else if(!lstat(oldpath, &statp) && S_ISREG(statp.st_mode))
+	{
+		// Use the old unchanged file.
+		// Hard link it first.
+		//logp("Hard linking to old file: %s\n", datapth);
+		if(link(oldpath, finpath))
+		{
+			logp("could not hard link '%s' to '%s': %s\n",
+				finpath, oldpath, strerror(errno));
+			ret=-1;
+			goto cleanup;
+		}
+		else
+		{
+			// If we are not keeping a hardlinked
+			// archive, delete the old link.
+			if(!cconf->hardlinked_archive)
+			{
+				//logp("Unlinking old file: %s\n", oldpath);
+				unlink(oldpath);
+			}
+		}
+	}
+	else
+	{
+		logp("could not find: %s\n", oldpath);
+		ret=-1;
+		goto cleanup;
+	}
+
+cleanup:
+	if(oldpath) { free(oldpath); oldpath=NULL; }
+	if(newpath) { free(newpath); newpath=NULL; }
+	if(finpath) { free(finpath); finpath=NULL; }
+	if(deltafpath) { free(deltafpath); deltafpath=NULL; }
+
+	return ret;
+}
+
 /* Need to make all the stuff that this does atomic so that existing backups
    never get broken, even if somebody turns the power off on the server. */ 
 static int atomic_data_jiggle(const char *finishing, const char *working, const char *manifest, const char *current, const char *currentdata, const char *datadir, const char *datadirtmp, struct config *cconf, const char *client, struct cntr *cntr)
 {
-	char cmd;
 	int ret=0;
-	size_t len=0;
-	char *buf=NULL;
-	char *newpath=NULL;
-	char *oldpath=NULL;
-	char *finpath=NULL;
+	int ars=0;
+	char *datapth=NULL;
+
 	char *deltabdir=NULL;
 	char *deltafdir=NULL;
-	char *deltafpath=NULL;
 	char *sigpath=NULL;
-	struct stat statp;
-	gzFile mp=NULL;
+	gzFile zp=NULL;
+	struct sbuf sb;
 
 	logp("Doing the atomic data jiggle...\n");
 
 	if(cconf->hardlinked_archive)
 	{
-	  logp("Hardlinked archive is on -\n");
-	  logp(" will not generate reverse deltas\n");
+		logp("Hardlinked archive is on -\n");
+		logp(" will not generate reverse deltas\n");
 	}
 	else
 	{
-	  logp("Hardlinked archive is off -\n");
-	  logp(" will generate reverse deltas\n");
+		logp("Hardlinked archive is off -\n");
+		logp(" will generate reverse deltas\n");
 	}
 
-	if(!(mp=gzopen_file(manifest, "rb"))) return -1;
+	if(!(zp=gzopen_file(manifest, "rb"))) return -1;
 
 	if(!(deltabdir=prepend_s(current,
 		"deltas.reverse", strlen("deltas.reverse")))
@@ -244,207 +433,34 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 		"sig.tmp", strlen("sig.tmp"))))
 	{
 		logp("out of memory\n");
-		gzclose_fp(&mp);
+		gzclose_fp(&zp);
 		return -1;
 	}
 
 	mkdir(datadir, 0777);
-	while(!ret)
+	init_sbuf(&sb);
+	while(!(ars=sbuf_fill(NULL, zp, &sb, cntr)))
 	{
-		if(async_read_fp(NULL, mp, &cmd, &buf, &len))
+		if(sb.datapth)
 		{
-			break;
+			write_status(client, STATUS_SHUFFLING,
+				sb.datapth, cntr);
+
+			if((ret=jiggle(sb.datapth, currentdata, datadirtmp,
+				datadir, deltabdir, deltafdir,
+				sigpath,
+				cntr, cconf))) break;
 		}
-		else
-		{
-			if(cmd!=CMD_DATAPTH)
-			{
-				// ignore
-				if(buf) { free(buf); buf=NULL; }
-				continue;
-			}
-			if(buf[len]=='\n') buf[len]='\0';
-			write_status(client, STATUS_SHUFFLING, buf, cntr);
-			if(!(oldpath=prepend_s(currentdata,
-				buf, strlen(buf)))
-			  || !(newpath=prepend_s(datadirtmp,
-				buf, strlen(buf)))
-			  || !(finpath=prepend_s(datadir,
-				buf, strlen(buf)))
-			  || !(deltafpath=prepend_s(deltafdir,
-				buf, strlen(buf))))
-			{
-				logp("out of memory\n");
-				ret=-1;	
-			}
-			else if(!lstat(finpath, &statp)
-			  && S_ISREG(statp.st_mode))
-			{
-				// Looks like an interrupted jiggle
-				// did this file already.
-				if(!lstat(deltafpath, &statp)
-				  && S_ISREG(statp.st_mode))
-				{
-					logp("deleting unneeded forward delta: %s\n", deltafpath);
-					unlink(deltafpath);
-				}
-				logp("skipping already present file: %s\n",
-					finpath);
-			}
-			else if(mkpath(&finpath))
-			{
-				logp("could not create path for: %s\n",
-					finpath);
-				ret=-1;
-			}
-			else if(mkpath(&newpath))
-			{
-				logp("could not create path for: %s\n",
-					newpath);
-				ret=-1;
-			}
-			else if(!lstat(deltafpath, &statp)
-			  && S_ISREG(statp.st_mode))
-			{
-				char *cp=NULL;
-				char *infpath=NULL;
-
-				// Got a forward patch to do.
-				// First, need to gunzip the old file,
-				// otherwise the librsync patch will take
-				// forever, because it will be doing seeks
-				// all over the place, and gzseeks are slow.
-
-				if(!(infpath=strdup(deltafpath)))
-				{
-					logp("out of memory\n");
-					ret=-1;
-				}
-				else if(!(cp=strrchr(infpath, '.')))
-				{
-					logp("could not strip the suffix from '%s'\n", infpath);
-					ret=-1;
-				}
-				*cp='\0';
-
-				//logp("Fixing up: %s\n", buf);
-				if(!ret && inflate_or_link_oldfile(oldpath, infpath))
-				{
-					logp("error when inflating old file: %s\n", oldpath);
-					ret=-1;
-				}
-
-				if(!ret && do_patch(infpath, deltafpath,
-				  newpath, cconf->compression,
-				  cntr, cconf))
-				{
-					logp("error when patching\n");
-					ret=-1;
-					// Remove anything that got written.
-					unlink(newpath);
-				}
-
-				// Get rid of the inflated old file.
-				// This will also remove it if there was an
-				// error.
-				unlink(infpath);
-				free(infpath);
-
-				if(!ret)
-				{
-					// Need to generate a reverse diff,
-					// unless we are keeping a hardlinked
-					// archive.
-					if(!cconf->hardlinked_archive)
-					{
-					  if(gen_rev_delta(sigpath, deltabdir,
-					    oldpath, newpath, buf, cntr, cconf))
-						ret=-1;
-					}
-
-					// Power interruptions should be
-					// recoverable. If it happens before
-					// this point, the data jiggle for
-					// this file has to be done again.
-					// Once finpath is in place, no more
-					// jiggle is required.
-
-					// Use the fresh new file.
-					if(!ret && do_rename(newpath, finpath))
-						ret=-1;
-					else if(!ret)
-					{
-					  // Remove the forward delta, as it is
-					  // no longer needed. There is a
-					  // reverse diff and the finished
-					  // finished file is in place.
-					  //logp("Deleting delta.forward...\n");
-					  unlink(deltafpath);
-
-					  // Remove the old file. If a power
-					  // cut happens just before this,
-					  // the old file will hang around
-					  // forever.
-					  // TODO: Put in something to
-					  // detect this.
-					  // ie, both a reverse delta and the
-					  // old file exist.
-					  if(!cconf->hardlinked_archive)
-					  {
-					    //logp("Deleting oldpath...\n");
-					    unlink(oldpath);
-					  }
-					}
-				}
-			}
-			else if(!lstat(newpath, &statp)
-			     && S_ISREG(statp.st_mode))
-			{
-				// Use the fresh new file.
-				// This needs to happen after checking
-				// for the forward delta, because the
-				// patching stuff writes to newpath.
-				//logp("Using newly received file\n");
-				if(do_rename(newpath, finpath)) ret=-1;
-			}
-			else if(!lstat(oldpath, &statp)
-			  && S_ISREG(statp.st_mode))
-			{
-				// Use the old unchanged file.
-				// Hard link it first.
-				//logp("Hard linking to old file: %s\n", buf);
-				if(link(oldpath, finpath))
-				{
-					logp("could not hard link '%s' to '%s': %s\n", finpath, oldpath, strerror(errno));
-					ret=-1;
-				}
-				else
-				{
-					// If we are not keeping a hardlinked
-					// archive, delete the old link.
-					if(!cconf->hardlinked_archive)
-					{
-						//logp("Unlinking old file: %s\n", oldpath);
-						unlink(oldpath);
-					}
-				}
-			}
-			else
-			{
-				logp("could not find: %s\n", oldpath);
-				ret=-1;
-			}
-
-			if(oldpath) { free(oldpath); oldpath=NULL; }
-			if(newpath) { free(newpath); newpath=NULL; }
-			if(finpath) { free(finpath); finpath=NULL; }
-			if(deltafpath) { free(deltafpath); deltafpath=NULL; }
-		}
-		if(buf) { free(buf); buf=NULL; }
+		free_sbuf(&sb);
 	}
-	gzclose_fp(&mp);
-
 	if(!ret)
+	{
+		if(ars>0) ret=0;
+		else ret=-1;
+	}
+	gzclose_fp(&zp);
+
+	if(ret)
 	{
 		// Remove the temporary data directory, we have now removed
 		// everything useful from it.
@@ -453,7 +469,7 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 	if(deltabdir) free(deltabdir);
 	if(deltafdir) free(deltafdir);
 	if(sigpath) free(sigpath);
-	if(buf) { free(buf); buf=NULL; }
+	if(datapth) free(datapth);
 	return ret;
 }
 

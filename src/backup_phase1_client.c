@@ -23,7 +23,7 @@ static int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cnt
    switch (ff->type) {
    case FT_LNKSAVED:
         //printf("Lnka: %s -> %s\n", ff->fname, ff->link);
-   	encode_stat(attribs, &ff->statp, has_extrameta(ff->fname));
+   	encode_stat(attribs, &ff->statp);
 	if(async_write_str(CMD_STAT, attribs)
 	  || async_write_str(CMD_HARD_LINK, ff->fname)
 	  || async_write_str(CMD_HARD_LINK, ff->link))
@@ -33,7 +33,7 @@ static int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cnt
    case FT_FIFO:
    case FT_REGE:
    case FT_REG:
-      encode_stat(attribs, &ff->statp, has_extrameta(ff->fname));
+      encode_stat(attribs, &ff->statp);
       if(async_write_str(CMD_STAT, attribs)
 	|| async_write_str(filesymbol, ff->fname))
 		return -1;
@@ -41,7 +41,7 @@ static int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cnt
       break;
    case FT_LNK:
 	//printf("link: %s -> %s\n", ff->fname, ff->link);
-   	encode_stat(attribs, &ff->statp, has_extrameta(ff->fname));
+   	encode_stat(attribs, &ff->statp);
 	if(async_write_str(CMD_STAT, attribs)
 	  || async_write_str(CMD_SOFT_LINK, ff->fname)
 	  || async_write_str(CMD_SOFT_LINK, ff->link))
@@ -70,7 +70,7 @@ static int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cnt
 	 }
 	 else
 	 {
-		encode_stat(attribs, &ff->statp, has_extrameta(ff->fname));
+		encode_stat(attribs, &ff->statp);
 	      	if(async_write_str(CMD_STAT, attribs)) return -1;
 #if defined(WIN32_VSS)
 		if(async_write_str(filesymbol, ff->fname)) return -1;
@@ -83,7 +83,7 @@ static int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cnt
 	}
       break;
    case FT_SPEC: // special file - fifo, socket, device node...
-      encode_stat(attribs, &ff->statp, has_extrameta(ff->fname));
+      encode_stat(attribs, &ff->statp);
       if(async_write_str(CMD_STAT, attribs)
 	  || async_write_str(CMD_SPECIAL, ff->fname))
 		return -1;

@@ -1,6 +1,8 @@
 #ifndef SBUF_H
 #define SBUF_H
 
+#include "rs_buf.h"
+
 struct sbuf
 {
 	// file data
@@ -20,8 +22,6 @@ struct sbuf
 	struct stat statp;
 	size_t slen;
 	int sendstat; // flag indicating it needs to be sent
-
-	int extrameta; // flag indicating that there is extra meta data
 
 	rs_buffers_t rsbuf;
 	rs_job_t *sigjob;

@@ -19,7 +19,8 @@ first_rule: all
 dummy:
 
 #
-SVRSRCS =	asyncio.c \
+SVRSRCS =	acl.c \
+		asyncio.c \
 		attribs.c \
 		auth_server.c \
 		auth_client.c \
@@ -58,6 +59,7 @@ SVRSRCS =	asyncio.c \
 		status_client.c \
 		status_server.c \
 		strlist.c \
+		xattr.c \
 		zlibio.c \
 
 SVROBJS = $(SVRSRCS:.c=.o)

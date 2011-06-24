@@ -15,6 +15,7 @@
 #define CMD_SOFT_LINK	'l'	/* Soft link */
 #define CMD_HARD_LINK	'L'	/* Hard link */
 #define CMD_SPECIAL	's'	/* Fifo, socket, device node... */
+#define CMD_METADATA	'm'	/* Extra meta data */
 
 // Commands
 #define CMD_GEN		'c'	/* Generic command */

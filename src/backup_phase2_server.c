@@ -18,7 +18,7 @@ static int start_to_receive_new_file(struct sbuf *sb, const char *datadirtmp, st
 
 //logp("start to receive: %s\n", sb->path);
 
-	if(!(sb->datapth=strdup(dpth->path)))
+	if(!(sb->datapth=strdup(dpth->path))) // file data path
 	{
 		log_and_send("out of memory");
 		ret=-1;
@@ -28,7 +28,7 @@ static int start_to_receive_new_file(struct sbuf *sb, const char *datadirtmp, st
 		log_and_send("build path failed");
 		ret=-1;
 	}
-	else if(!(sb->fp=open_file(rpath, comp_level(cconf))))
+	else if(!(sb->fp=open_file(rpath, "wb")))
 	{
 		log_and_send("make file failed");
 		ret=-1;
@@ -44,6 +44,7 @@ static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *c
 	//logp("need to process changed file: %s (%s)\n", cb->path, cb->datapth);
 
 	// Move datapth onto p1b.
+	if(p1b->datapth) free(p1b->datapth);
 	p1b->datapth=cb->datapth;
 	cb->datapth=NULL;
 
@@ -81,7 +82,7 @@ static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *c
 		return -1;
 	}
 
-	// Flag the things that need to be sent.
+	// Flag the things that need to be sent (to the client)
 	p1b->senddatapth++;
 	p1b->sendstat++;
 	p1b->sendpath++;
@@ -95,7 +96,7 @@ static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *c
 static int process_new(struct sbuf *p1b)
 {
 	//logp("need to process new file: %s\n", p1b->path);
-	// Flag the things that need to be sent.
+	// Flag the things that need to be sent (to the client)
 	p1b->sendstat++;
 	p1b->sendpath++;
 	return 0;
@@ -292,7 +293,7 @@ static int do_stuff_to_receive(struct sbuf *rb, FILE *p2fp, const char *datadirt
 		}
 		else if(rb->fp || rb->zp)
 		{
-			// Currently writing a file.
+			// Currently writing a file (or meta data)
 			if(rcmd==CMD_APPEND)
 			{
 				int app;
@@ -583,7 +584,6 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzF
 	free_sbuf(&p1b);
 	free_sbuf(&rb);
 	gzclose_fp(&p1zp);
-
 	if(!ret) unlink(phase1data);
 
 	logp("End phase2 (receive file data)\n");

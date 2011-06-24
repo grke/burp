@@ -248,7 +248,8 @@ static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
 					free_sbuf(&sb);
 					continue;
 				}
-				encode_stat(attribs, &statbuf, has_extrameta(sb.path));
+
+				encode_stat(attribs, &statbuf);
 
 				if(cmd==CMD_FILE && sb.datapth)
 				{
@@ -294,10 +295,6 @@ static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
 					}
 				}
 				free_sbuf(&sb);
-			}
-			else if(cmd_is_not_file(cmd))
-			{
-				// There is only extra meta data to send.
 			}
 			else if(cmd==CMD_WARNING)
 			{

@@ -15,7 +15,7 @@
  * Encode a stat structure into a base64 character string
  *   All systems must create such a structure.
  */
-void encode_stat(char *buf, struct stat *statp, int extrameta)
+void encode_stat(char *buf, struct stat *statp)
 {
    char *p = buf;
 
@@ -63,11 +63,7 @@ void encode_stat(char *buf, struct stat *statp, int extrameta)
 #else
    p += to_base64((int64_t)0, p);     /* output place holder */
 #endif
-   *p++ = ' ';
 
-   /* Set to indicate that there is more meta data stored in a separate file
-      to the main file data. */
-   p += to_base64((int64_t)extrameta, p);
    *p = 0;
    return;
 }
@@ -91,7 +87,7 @@ void encode_stat(char *buf, struct stat *statp, int extrameta)
 
 
 /* Decode a stat packet from base64 characters */
-void decode_stat(const char *buf, struct stat *statp, int *extrameta)
+void decode_stat(const char *buf, struct stat *statp)
 {
    const char *p = buf;
    int64_t val;
@@ -154,10 +150,6 @@ void decode_stat(const char *buf, struct stat *statp, int *extrameta)
       statp->st_flags  = 0;
 #endif
    }
-
-   p++;
-   p += from_base64(&val, p);
-   plug(*extrameta, val);
 }
 
 static uid_t my_uid=1;

@@ -9,13 +9,13 @@
 #include "counter.h"
 #include "dpth.h"
 #include "sbuf.h"
-#include "crypt.h"
 #include "auth_server.h"
 
 #include <netdb.h>
 
 static int check_passwd(const char *passwd, const char *plain_text)
 {
+#ifdef HAVE_CRYPT
 	char salt[3];
 
 	if(!plain_text || !passwd || strlen(passwd)!=13)
@@ -25,6 +25,9 @@ static int check_passwd(const char *passwd, const char *plain_text)
 	salt[1]=passwd[1];
 	salt[2]=0;
 	return !strcmp(crypt(plain_text, salt), passwd);
+#endif // HAVE_CRYPT
+	logp("Server compiled without crypt support - cannot use passwd option\n");
+	return -1;
 }
 
 static int check_client_and_password(struct config *conf, const char *client, const char *password, struct config *cconf)

@@ -129,8 +129,8 @@ int is_subdir(const char *dir, const char *sub);
 int file_is_included(struct strlist **ielist, int iecount, const char *fname);
 
 /* from attribs.c */
-void encode_stat(char *buf, struct stat *statp, int extrameta);
-void decode_stat(const char *buf, struct stat *statp, int *extrameta);
+void encode_stat(char *buf, struct stat *statp);
+void decode_stat(const char *buf, struct stat *statp);
 bool set_attributes(const char *path, char cmd, struct stat *statp);
 
 #endif /* __FILES_H */

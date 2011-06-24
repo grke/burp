@@ -6,6 +6,7 @@
 #include "handy.h"
 #include "find.h"
 #include "ssl.h"
+#include "sbuf.h"
 
 static int fd=-1;
 static SSL *ssl=NULL;
@@ -494,26 +495,31 @@ int async_get_fd(void)
 
 
 /* Read from fp if given - else read from our fd */
-int async_read_stat(FILE *fp, gzFile zp, char **buf, size_t *len, struct stat *statp, char **dpth, int *extrameta, struct cntr *cntr)
+int async_read_stat(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
 {
 	char cmd;
+	char *buf;
+	size_t len=0;
+
 	char *d=NULL;
+	size_t dlen=0;
+
 	while(1)
 	{
 		if(fp || zp)
 		{
 			int asr;
-			if((asr=async_read_fp(fp, zp, &cmd, buf, len)))
+			if((asr=async_read_fp(fp, zp, &cmd, &buf, &len)))
 			{
 				//logp("async_read_fp returned: %d\n", asr);
 				if(d) free(d);
 				return asr;
 			}
-			if((*buf)[*len]=='\n') (*buf)[*len]='\0';
+			if(buf[len]=='\n') buf[len]='\0';
 		}
 		else
 		{
-			if(async_read(&cmd, buf, len))
+			if(async_read(&cmd, &buf, &len))
 			{
 				break;
 			}
@@ -521,26 +527,29 @@ int async_read_stat(FILE *fp, gzFile zp, char **buf, size_t *len, struct stat *s
 			{
 				logp("WARNING: %s\n", buf);
 				do_filecounter(cntr, cmd, 0);
-				if(*buf) { free(*buf); *buf=NULL; }
+				if(buf) { free(buf); buf=NULL; }
 				continue;
 			}
 		}
 		if(cmd==CMD_DATAPTH)
 		{
 			if(d) free(d);
-			d=*buf;
-			*buf=NULL;
+			d=buf;
+			dlen=len;
+			buf=NULL;
 		}
 		else if(cmd==CMD_STAT)
 		{
-			if(statp) decode_stat(*buf, statp, extrameta);
-			if(*dpth) free(*dpth);
-			*dpth=d;
+			decode_stat(buf, &(sb->statp));
+			sb->statbuf=buf;
+			sb->slen=len;
+			sb->datapth=d;
+
 			return 0;
 		}
-		else if((cmd==CMD_GEN && !strcmp(*buf, "backupend"))
-		  || (cmd==CMD_GEN && !strcmp(*buf, "restoreend"))
-		  || (cmd==CMD_GEN && !strcmp(*buf, "phase1end")))
+		else if((cmd==CMD_GEN && !strcmp(buf, "backupend"))
+		  || (cmd==CMD_GEN && !strcmp(buf, "restoreend"))
+		  || (cmd==CMD_GEN && !strcmp(buf, "phase1end")))
 		{
 			if(d) free(d);
 			return 1;
@@ -549,8 +558,8 @@ int async_read_stat(FILE *fp, gzFile zp, char **buf, size_t *len, struct stat *s
 		{
 			logp("expected cmd %c or %c, got '%c:%s'\n",
 				CMD_DATAPTH, CMD_STAT,
-				cmd, *buf?*buf:"");
-			if(*buf) { free(*buf); *buf=NULL; }
+				cmd, buf?buf:"");
+			if(buf) { free(buf); buf=NULL; }
 			break;
 		}
 	}

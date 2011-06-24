@@ -9,6 +9,7 @@
 
 static void mk_dpth(struct dpth *dpth, struct config *cconf)
 {
+	// file data
 	snprintf(dpth->path, sizeof(dpth->path), "%04X/%04X/%04X%s",
 	  dpth->prim, dpth->seco, dpth->tert, cconf->compression?".gz":"");
 }

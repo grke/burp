@@ -752,13 +752,13 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 	return 0;
 }
 
-static int get_lock_and_clean(const char *basedir, const char *lockfile, const char *current, const char *working, const char *currentdata, const char *finishing, bool cancel, bool *gotlock, struct config *cconf, const char *forward, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *manifest, const char *client, struct cntr *cntr)
+static int get_lock_and_clean(const char *basedir, const char *lockbasedir, const char *lockfile, const char *current, const char *working, const char *currentdata, const char *finishing, bool cancel, bool *gotlock, struct config *cconf, const char *forward, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *manifest, const char *client, struct cntr *cntr)
 {
 	int ret=0;
 	char *copy=NULL;
 	// Make sure the lock directory exists.
 	if(!(copy=strdup(lockfile))
-	  || mkpath(&copy))
+	  || mkpath(&copy, lockbasedir))
 	{
 		async_write_str(CMD_ERROR, "problem with lock directory");
 		if(copy) free(copy);
@@ -862,7 +862,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 	}
 	else if(cmd==CMD_GEN && !strncmp(buf, "backupphase1", strlen("backupphase1")))
 	{
-		if(get_lock_and_clean(basedir, lockfile, current,
+		if(get_lock_and_clean(basedir, lockbasedir, lockfile, current,
 			working, currentdata,
 			finishing, TRUE, &gotlock, cconf,
 			forward, phase1data, phase2data, unchangeddata,
@@ -872,9 +872,9 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 		{
 			int tret=0;
 			char okstr[32]="ok";
-			if(mkpath(&current)) // creates basedir, without the /current part
+			if(mkpath(&current, cconf->directory)) // creates basedir, without the /current part
 			{
-				snprintf(msg, sizeof(msg), "could not mkpath %s", working);
+				snprintf(msg, sizeof(msg), "could not mkpath %s", current);
 				log_and_send(msg);
 				ret=-1;
 				goto end;
@@ -946,7 +946,8 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 			act=ACTION_VERIFY;
 		}
 
-		if(get_lock_and_clean(basedir, lockfile, current, working,
+		if(get_lock_and_clean(basedir, lockbasedir, lockfile,
+			current, working,
 			currentdata, finishing, TRUE, &gotlock, cconf,
 			forward, phase1data, phase2data, unchangeddata,
 			manifest, client, &cntr))
@@ -966,7 +967,8 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 	}
 	else if(cmd==CMD_GEN && !strncmp(buf, "list ", strlen("list ")))
 	{
-		if(get_lock_and_clean(basedir, lockfile, current, working,
+		if(get_lock_and_clean(basedir, lockbasedir, lockfile,
+			current, working,
 			currentdata, finishing, FALSE, &gotlock, cconf,
 			forward, phase1data, phase2data, unchangeddata,
 			manifest, client, &cntr))

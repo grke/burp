@@ -9,6 +9,7 @@
   * Allow user and group options to be placed in the server clientconfdir files,
     so that different client backups can be owned by different users.
   * Bug fix the client_lockdir option.
+  * On the server, be more cautious about creating directories that don't exist.
 
 2011-06-14 Changes in burp-1.1.57:
   * Add options to run as a different user and group.

@@ -127,7 +127,7 @@ static int gen_rev_delta(const char *sigpath, const char *deltadir, const char *
 	logp("sigpath: %s\n", sigpath);
 	logp("oldpath: %s\n", oldpath);
 */
-	if(mkpath(&delpath))
+	if(mkpath(&delpath, deltadir))
 	{
 		logp("could not mkpaths for: %s\n", delpath);
 		ret=-1;
@@ -233,13 +233,13 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 		}
 		logp("skipping already present file: %s\n", finpath);
 	}
-	else if(mkpath(&finpath))
+	else if(mkpath(&finpath, datadir))
 	{
 		logp("could not create path for: %s\n", finpath);
 		ret=-1;
 		goto cleanup;
 	}
-	else if(mkpath(&newpath))
+	else if(mkpath(&newpath, datadirtmp))
 	{
 		logp("could not create path for: %s\n", newpath);
 		ret=-1;

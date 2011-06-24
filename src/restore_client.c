@@ -119,7 +119,7 @@ static int restore_file(struct sbuf *sb, const char *fname, enum action act, con
 		return 0;
 	}
 
-	if(build_path(fname, "", len, &rpath))
+	if(build_path(fname, "", len, &rpath, NULL))
 	{
 		char msg[256]="";
 		// failed - do a warning
@@ -210,7 +210,7 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
 		return 0;
 	}
 
-	if(build_path(fname, "", 0, &rpath))
+	if(build_path(fname, "", 0, &rpath, NULL))
 	{
 		char msg[256]="";
 		// failed - do a warning
@@ -279,7 +279,7 @@ static int restore_dir(struct sbuf *sb, const char *dname, enum action act, stru
 	char *rpath=NULL;
 	if(act==ACTION_RESTORE)
 	{
-		if(build_path(dname, "", 0, &rpath))
+		if(build_path(dname, "", 0, &rpath, NULL))
 		{
 			char msg[256]="";
 			// failed - do a warning
@@ -321,7 +321,7 @@ static int restore_link(struct sbuf *sb, const char *fname, const char *restorep
 	if(act==ACTION_RESTORE)
 	{
 		char *rpath=NULL;
-		if(build_path(fname, "", strlen(fname), &rpath))
+		if(build_path(fname, "", strlen(fname), &rpath, NULL))
 		{
 			char msg[256]="";
 			// failed - do a warning

@@ -24,7 +24,7 @@ int recursive_hardlink(const char *src, const char *dst, const char *client, str
 	//logp("in rec hl: %s %s\n", src, dst);
 	if(!(tmp=prepend_s(dst, "dummy", strlen("dummy"))))
 		return -1;
-	if(mkpath(&tmp))
+	if(mkpath(&tmp, dst))
 	{
 		logp("could not mkpath for %s\n", tmp);
 		free(tmp);

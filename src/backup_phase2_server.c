@@ -23,7 +23,8 @@ static int start_to_receive_new_file(struct sbuf *sb, const char *datadirtmp, st
 		log_and_send("out of memory");
 		ret=-1;
 	}
-	else if(build_path(datadirtmp, sb->datapth, strlen(sb->datapth),&rpath))
+	else if(build_path(datadirtmp, sb->datapth, strlen(sb->datapth),
+		&rpath, datadirtmp))
 	{
 		log_and_send("build path failed");
 		ret=-1;
@@ -261,7 +262,7 @@ static int finish_delta(struct sbuf *rb, const char *working, const char *deltmp
 	char *delpath=NULL;
 	snprintf(deltmp, sizeof(deltmp), "deltas.forward/%s", rb->datapth);
 	if(!(delpath=prepend_s(working, deltmp, strlen(deltmp)))
-	  || mkpath(&delpath)
+	  || mkpath(&delpath, working)
 	  || do_rename(deltmppath, delpath))
 		ret=-1;
 	if(delpath) free(delpath);

@@ -85,7 +85,7 @@ char *prepend_s(const char *prep, const char *fname, size_t len)
 	return prepend(prep, fname, len, "/");
 }
 
-int mkpath(char **rpath)
+int mkpath(char **rpath, const char *limit)
 {
 	char *cp=NULL;
 	struct stat buf;
@@ -101,7 +101,30 @@ int mkpath(char **rpath)
 		{
 			// does not exist - recurse further down, then come
 			// back and try to mkdir it.
-			if(mkpath(rpath)) return -1;
+			if(mkpath(rpath, limit)) return -1;
+
+			// Require that the user has set up the required paths
+			// on the server correctly. I have seen problems with
+			// part of the path being a temporary symlink that
+			// gets replaced by burp with a proper directory.
+			// Allow it to create the actual directory specified,
+			// though.
+
+			// That is, if limit is:
+			// /var/spool/burp
+			// and /var/spool exists, the directory will be
+			// created.
+			// If only /var exists, the directory will not be
+			// created.
+
+			// Caller can give limit=NULL to create the whole
+			// path with no limit, as in a restore.
+			if(limit && pathcmp(*rpath, limit)<0)
+			{
+				logp("will not mkdir %s\n", *rpath);
+				*cp='/';
+				return -1;
+			}
 			if(mkdir(*rpath, 0777))
 			{
 				logp("could not mkdir %s: %s\n", *rpath, strerror(errno));
@@ -121,18 +144,18 @@ int mkpath(char **rpath)
 		{
 			// something funny going on
 			logp("warning: wanted '%s' to be a directory\n",
-			*rpath);
+				*rpath);
 		}
 		*cp='/';
 	}
 	return 0;
 }
 
-int build_path(const char *datadir, const char *fname, size_t flen, char **rpath)
+int build_path(const char *datadir, const char *fname, size_t flen, char **rpath, const char *limit)
 {
 	//logp("build path: '%s/%s'\n", datadir, fname);
 	if(!(*rpath=prepend_s(datadir, fname, flen))) return -1;
-	if(mkpath(rpath))
+	if(mkpath(rpath, limit))
 	{
 		if(*rpath) { free(*rpath); *rpath=NULL; }
 		return -1;

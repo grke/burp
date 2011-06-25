@@ -497,9 +497,9 @@ int async_get_fd(void)
 /* Read from fp if given - else read from our fd */
 int async_read_stat(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
 {
-	char cmd;
-	char *buf;
 	size_t len=0;
+	char *buf=NULL;
+	char cmd=CMD_ERROR;
 
 	char *d=NULL;
 	size_t dlen=0;

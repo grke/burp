@@ -99,6 +99,8 @@ void end_filecounter(struct cntr *c, int print, enum action act)
 		pcounter("New files:                 %llu\n", c->newcounter);
 		pcounter("Changed files:             %llu\n", c->changedcounter);
 		pcounter("Unchanged files:           %llu\n", c->unchangedcounter);
+		pcounter("Meta data:                 %llu\n", c->metadatacounter);
+		pcounter("Encrypted meta data:       %llu\n", c->encmetadatacounter);
 	}
 	pcounter("Directories:               %llu\n", c->directorycounter);
 	pcounter("Soft links:                %llu\n", c->softlinkcounter);

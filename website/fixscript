@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 howto=content/html/howto.content
 

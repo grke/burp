@@ -1,17 +1,19 @@
-  * Sanitised magic characters by defining them in a new cmd.h file.
-  * Remove link kludge in async_read_stat().
+2011-06-27 Changes in burp-1.1.65:
+  * Add mechanism for backing up and restoring extra meta data.
+  * Linux acl support.
+  * Linux xattr support.
   * Add option to set the umask on the server.
-  * Add Patrick's burp_ca patches and README.CA.
-  * Fixed 'ret OK, but zstream not finished: 0' when refusing to restore over
-    existing files.
-  * Fixed bug that made clients disappear from the status monitor.
   * Added option to specify the clientconfdir password in passwd format.
   * Allow user and group options to be placed in the server clientconfdir files,
     so that different client backups can be owned by different users.
+  * Add Patrick's burp_ca patches and README.CA.
+  * Sanitised magic characters by defining them in a new cmd.h file.
+  * Fixed 'ret OK, but zstream not finished: 0' when refusing to restore over
+    existing files.
+  * Fixed bug that made clients disappear from the status monitor.
   * Bug fix the client_lockdir option.
   * On the server, be more cautious about creating directories that don't exist.
-  * Add mechanism for backing up and restoring extra meta data.
-  * Linux ACL support.
+  * Remove link kludge in async_read_stat().
 
 2011-06-14 Changes in burp-1.1.57:
   * Add options to run as a different user and group.

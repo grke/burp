@@ -12,13 +12,14 @@
 static char filesymbol=CMD_FILE;
 static char metasymbol=CMD_METADATA;
 
-static int maybe_send_extrameta(const char *path, char cmd, const char *attribs)
+static int maybe_send_extrameta(const char *path, char cmd, const char *attribs, struct cntr *cntr)
 {
 	if(has_extrameta(path, cmd))
 	{
 		if(async_write_str(CMD_STAT, attribs)
 		  || async_write_str(metasymbol, path))
 			return -1;
+		do_filecounter(cntr, metasymbol, 1);
 	}
 	return 0;
 }
@@ -41,7 +42,7 @@ static int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cnt
 	  || async_write_str(CMD_HARD_LINK, ff->link))
 		return -1;
 	do_filecounter(cntr, CMD_HARD_LINK, 1);
-	if(maybe_send_extrameta(ff->fname, CMD_HARD_LINK, attribs))
+	if(maybe_send_extrameta(ff->fname, CMD_HARD_LINK, attribs, cntr))
 		return -1;
       break;
    case FT_FIFO:
@@ -52,7 +53,7 @@ static int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cnt
 	|| async_write_str(filesymbol, ff->fname))
 		return -1;
       do_filecounter(cntr, filesymbol, 1);
-      if(maybe_send_extrameta(ff->fname, filesymbol, attribs))
+      if(maybe_send_extrameta(ff->fname, filesymbol, attribs, cntr))
 		return -1;
       break;
    case FT_LNK:
@@ -63,7 +64,7 @@ static int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cnt
 	  || async_write_str(CMD_SOFT_LINK, ff->link))
 		return -1;
 	do_filecounter(cntr, CMD_SOFT_LINK, 1);
-        if(maybe_send_extrameta(ff->fname, CMD_SOFT_LINK, attribs))
+        if(maybe_send_extrameta(ff->fname, CMD_SOFT_LINK, attribs, cntr))
 		return -1;
       break;
    case FT_DIREND:
@@ -96,7 +97,7 @@ static int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cnt
 #else
 		if(async_write_str(CMD_DIRECTORY, ff->fname)) return -1;
 		do_filecounter(cntr, CMD_DIRECTORY, 1);
-        	if(maybe_send_extrameta(ff->fname, CMD_DIRECTORY, attribs))
+        	if(maybe_send_extrameta(ff->fname, CMD_DIRECTORY, attribs, cntr))
 			return -1;
 #endif
 	 }
@@ -108,7 +109,7 @@ static int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cnt
 	  || async_write_str(CMD_SPECIAL, ff->fname))
 		return -1;
       do_filecounter(cntr, CMD_SPECIAL, 1);
-      if(maybe_send_extrameta(ff->fname, CMD_SPECIAL, attribs))
+      if(maybe_send_extrameta(ff->fname, CMD_SPECIAL, attribs, cntr))
 		return -1;
       break;
    case FT_NOACCESS:

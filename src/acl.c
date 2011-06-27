@@ -88,33 +88,34 @@ int has_acl(const char *path, char cmd)
 static int get_acl_string(acl_t acl, char **acltext, const char *path, char type, struct cntr *cntr)
 {
 	ssize_t s=0;
-	char pre[8]="";
+	char pre[10]="";
 	char *tmp=NULL;
 	char *ourtext=NULL;
+	ssize_t maxlen=0xFFFFFFFF/2;
 
 	if(!(tmp=acl_to_any_text(acl, NULL, ',',
 		TEXT_NUMERIC_IDS|TEXT_ABBREVIATE)))
 	{
-		logp("could not get ACL text of '%s'\n", path);
-		return -1;
+		logw(cntr, "could not get ACL text of '%s'\n", path);
+		return 0; // carry on
 	}
 /*
 	if(!(tmp=acl_to_text(acl, NULL)))
 	{
-		logp("could not get ACL text of '%s'\n", path);
-		return -1;
+		logw(cntr, "could not get ACL text of '%s'\n", path);
+		return 0; // carry on
 	}
 */
 	s=strlen(tmp);
 
-	if(s>0xFFFF)
+	if(s>maxlen)
 	{
 		logw(cntr, "ACL of '%s' too long: %d\n", path, s);
 		if(tmp) acl_free(tmp);
-		return 0;
+		return 0; // carry on
 	}
 
-	snprintf(pre, sizeof(pre), "%c%04X", type, (unsigned int)s);
+	snprintf(pre, sizeof(pre), "%c%08X", type, (unsigned int)s);
 	if(!(ourtext=prepend(pre, tmp, s, "")))
 	{
 		if(tmp) acl_free(tmp);
@@ -124,9 +125,9 @@ static int get_acl_string(acl_t acl, char **acltext, const char *path, char type
 	if(!*acltext)
 	{
 		*acltext=ourtext;
-		return  0;
+		return 0;
 	}
-	if(!(*acltext=prepend(*acltext, ourtext, s+5, "")))
+	if(!(*acltext=prepend(*acltext, ourtext, s+9, "")))
 	{
 		if(ourtext) free(ourtext);
 		return -1;

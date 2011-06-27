@@ -28187,6 +28187,7 @@ Configuration on `date`:
    zlib:			${have_zlib}
    librsync:			${have_librsync}
    acl:				${have_acl}
+   xattr:			${have_xattr}
 
   " > config.out
 

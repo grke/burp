@@ -3,6 +3,7 @@
 
 #define META_ACCESS_ACL		'A'
 #define META_DEFAULT_ACL	'D'
+#define META_XATTR		'X'
 
 extern int has_extrameta(const char *path, char cmd);
 extern int get_extrameta(const char *path, struct stat *statp, char **extrameta, struct cntr *cntr);

@@ -48,6 +48,29 @@ The main author of Burp is Graham Keeling.
 <TD ALIGN="LEFT">
 
 <P>
+<FONT COLOR="#99CCFF">2011-06-27: burp-1.1.65 is released.
+<pre>
+Changes in burp-1.1.65:
+  * Add mechanism for backing up and restoring extra meta data.
+  * Linux acl support.
+  * Linux xattr support.
+  * Add option to set the umask on the server.
+  * Added option to specify the clientconfdir password in passwd format.
+  * Allow user and group options to be placed in the server clientconfdir files,
+    so that different client backups can be owned by different users.
+  * Add Patrick's burp_ca patches and README.CA.
+  * Sanitised magic characters by defining them in a new cmd.h file.
+  * Fixed 'ret OK, but zstream not finished: 0' when refusing to restore over
+    existing files.
+  * Fixed bug that made clients disappear from the status monitor.
+  * Bug fix the client_lockdir option.
+  * On the server, be more cautious about creating directories that don't exist.
+  * Remove link kludge in async_read_stat().
+</pre>
+</FONT>
+</P>
+
+<P>
 <FONT COLOR="#99CCFF">2011-06-14: burp-1.1.57 is released.
 <pre>
 Changes in burp-1.1.57:

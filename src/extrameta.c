@@ -5,17 +5,19 @@
 #include "sbuf.h"
 #include "asyncio.h"
 #include "extrameta.h"
+#include "xattr.h"
 
 int has_extrameta(const char *path, char cmd)
 {
 	// Assume that links do not have their own metadata.
 	if(cmd_is_link(cmd)) return 0;
+
 #if defined(HAVE_LINUX_OS)
 #ifdef HAVE_ACL
 	if(has_acl(path, cmd)) return 1;
 #endif
 #ifdef HAVE_XATTR
-	//if(has_xattr(path, cmd)) return 1;
+	if(has_xattr(path, cmd)) return 1;
 #endif
 #endif
         return 0;
@@ -23,12 +25,14 @@ int has_extrameta(const char *path, char cmd)
 
 int get_extrameta(const char *path, struct stat *statp, char **extrameta, struct cntr *cntr)
 {
+	// Important to do xattr directly after acl, because xattr is excluding
+	// some entries if acls were set.
 #if defined(HAVE_LINUX_OS)
 #ifdef HAVE_ACL
 	if(get_acl(path, statp, extrameta, cntr)) return -1;
 #endif
 #ifdef HAVE_XATTR
-	//if(get_xattr(path, statp, extrameta, cntr)) return -1;
+	if(get_xattr(path, statp, extrameta, cntr)) return -1;
 #endif
 #endif
         return 0;
@@ -36,7 +40,7 @@ int get_extrameta(const char *path, struct stat *statp, char **extrameta, struct
 
 int set_extrameta(const char *path, char cmd, struct stat *statp, const char *extrameta, struct cntr *cntr)
 {
-	size_t l=NULL;
+	ssize_t l=NULL;
 	char cmdtmp='\0';
 	unsigned int s=0;
 	const char *metadata=NULL;
@@ -47,14 +51,14 @@ int set_extrameta(const char *path, char cmd, struct stat *statp, const char *ex
 	while(l>0)
 	{
 		char *m=NULL;
-		if((sscanf(metadata, "%c%04X", &cmdtmp, &s))!=2)
+		if((sscanf(metadata, "%c%08X", &cmdtmp, &s))!=2)
 		{
-			logp("sscanf of metadata failed: %s\n", metadata);
+			logp("sscanf of metadata failed\n");
 			logw(cntr, "sscanf of metadata failed\n");
 			return -1;
 		}
-		metadata+=5;
-		l-=5;
+		metadata+=9;
+		l-=9;
 		if(!(m=(char *)malloc(s+1)))
 		{
 			logp("out of memory\n");
@@ -76,6 +80,12 @@ int set_extrameta(const char *path, char cmd, struct stat *statp, const char *ex
 				break;
 			case META_DEFAULT_ACL:
 				if(set_acl(path, statp, m, cmdtmp, cntr))
+					errors++;
+				break;
+#endif
+#ifdef HAVE_XATTR
+			case META_XATTR:
+				if(set_xattr(path, statp, m, cmdtmp, cntr))
 					errors++;
 				break;
 #endif

@@ -1,3 +1,5 @@
+(in no particular order)
+
 * Improve the byte counter:
 	do something about working dir recovery
 
@@ -8,10 +10,13 @@
 * Add include/exclude wildcards.
 
 * Think about adding a utility to create certs, like easy-rsa from OpenVPN.
+	(burp_ca has been added - does more need to be done?)
 
 * Add xattr support.
+	(generic linux support is done - do freebsd and solaris next)
 
-* Add acl support.
+* Add acl support
+	(generic linux support is done - do freebsd and solaris next)
 
 * Improve the status monitor.
 
@@ -19,8 +24,15 @@
 
 * Allow random backups to be deleted safely when hardlinked_archive is on.
 
-* Add extra ways of deciding when to delete old backups - e.g, by time, or
-  by space.
+* Delete old backups by time.
+
+* Delete old backups by space.
 
 * Add an option to set hardlinked_archive on a cycle, instead of just being
   either on or off.
+
+* Get metadata transfers to use librsync.
+
+* Have an option to let the client give the server the encryption password
+  and hence do server-side encryption. This would mean that network deltas
+  with encryption can be done.

@@ -63,6 +63,7 @@ nodes.
 <li>Fifo read/write support.
 <li>Pre/post backup/restore client scripts.
 <li>Backups of Solaris ZFS snapshot send/receives.
+<li>Linux acl/xattr support.
 </ul>
 </FONT>
 </P>
@@ -77,15 +78,15 @@ Q. What is on the roadmap? What doesn't work?
 <FONT COLOR="#99CCFF">
 A. The following items are on my TODO list:
 <ul>
-<li>Investigate HFS / resource forks and Mac support.
-<li>Add include/exclude wildcards.
-<li>Add xattr support
-<li>Add acl support.
-<li>Improve the status monitor.
 <li>Add extra ways of deciding when to delete old backups - e.g, by time, or
 by space.
+<li>Add acl/xattr support for FreeBSD and Solaris.
+<li>Server-side encryption option, so that network deltas can be done.
+<li>Improve the status monitor.
 <li>Add an option to set hardlinked_archive on a cycle, instead of just
 being either on or off.
+<li>Investigate HFS / resource forks and Mac support.
+<li>Add include/exclude wildcards.
 </ul>
 </FONT>
 </P>

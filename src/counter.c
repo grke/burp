@@ -80,13 +80,17 @@ void end_filecounter(struct cntr *c, int print, enum action act)
 
 	if(act==ACTION_RESTORE)
 	{
-		logp("Restored files:            %llu\n", c->filecounter);
-		pcounter("Restored encrypted files:  %llu\n", c->encryptedcounter);
+		logp("Files:                     %llu\n", c->filecounter);
+		pcounter("Encrypted files:           %llu\n", c->encryptedcounter);
+		logp("Meta data:                 %llu\n", c->metadatacounter);
+		pcounter("Encrypted meta data:       %llu\n", c->encmetadatacounter);
 	}
 	else if(act==ACTION_VERIFY)
 	{
 		logp("Verified files:            %llu\n", c->filecounter);
 		pcounter("Verified encrypted files:  %llu\n", c->encryptedcounter);
+		logp("Verified meta data:        %llu\n", c->metadatacounter);
+		pcounter("Verified encrypted meta:   %llu\n", c->encmetadatacounter);
 	}
 	else
 	{
@@ -100,8 +104,6 @@ void end_filecounter(struct cntr *c, int print, enum action act)
 	pcounter("Soft links:                %llu\n", c->softlinkcounter);
 	pcounter("Hard links:                %llu\n", c->hardlinkcounter);
 	pcounter("Special files:             %llu\n", c->specialcounter);
-	pcounter("Meta data:                 %llu\n", c->metadatacounter);
-	pcounter("Encrypted meta data:       %llu\n", c->encmetadatacounter);
 	//logp("\n");
 	pcounter("Total:                     %llu\n", c->totalcounter);
 	//logp("\n");

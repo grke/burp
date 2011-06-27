@@ -82,14 +82,14 @@ void end_filecounter(struct cntr *c, int print, enum action act)
 	{
 		logp("Files:                     %llu\n", c->filecounter);
 		pcounter("Encrypted files:           %llu\n", c->encryptedcounter);
-		logp("Meta data:                 %llu\n", c->metadatacounter);
+		pcounter("Meta data:                 %llu\n", c->metadatacounter);
 		pcounter("Encrypted meta data:       %llu\n", c->encmetadatacounter);
 	}
 	else if(act==ACTION_VERIFY)
 	{
 		logp("Verified files:            %llu\n", c->filecounter);
 		pcounter("Verified encrypted files:  %llu\n", c->encryptedcounter);
-		logp("Verified meta data:        %llu\n", c->metadatacounter);
+		pcounter("Verified meta data:        %llu\n", c->metadatacounter);
 		pcounter("Verified encrypted meta:   %llu\n", c->encmetadatacounter);
 	}
 	else

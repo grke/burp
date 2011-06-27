@@ -2,7 +2,7 @@ Source: burp
 Section: utils
 Priority: extra
 Maintainer: Patrick Koppen <software@koppen.de>
-Build-Depends: debhelper (>= 7.0.50~), autotools-dev, libncurses5-dev, libssl-dev, zlib1g-dev, librsync-dev
+Build-Depends: debhelper (>= 7.0.50~), autotools-dev, libncurses5-dev, libssl-dev, zlib1g-dev, librsync-dev, libacl1-dev, libattr1-dev
 Standards-Version: 3.8.4
 Homepage: <http://burp.grke.net/>
 Vcs-Git: git://github.com/grke/burp.git

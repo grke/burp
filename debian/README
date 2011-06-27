@@ -4,7 +4,7 @@ The Debian Package burp
 BUILD:
 
  apt-get install debhelper autotools-dev libncurses5-dev libssl-dev \
-         zlib1g-dev librsync-dev
+         zlib1g-dev librsync-dev libacl1-dev libattr1-dev
 
  debuild -us -uc
 

@@ -464,6 +464,7 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 	{
 		// Remove the temporary data directory, we have now removed
 		// everything useful from it.
+		sync(); // try to help CIFS
 		recursive_delete(deltafdir, NULL, FALSE /* do not del files */);
 	}
 	if(deltabdir) free(deltabdir);
@@ -592,6 +593,7 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 		// with the option that makes it not delete files.
 		// This will have the effect of getting rid of unnecessary
 		// directories.
+		sync(); // try to help CIFS
 		recursive_delete(currentdupdata, NULL, FALSE /* do not del files */);
 
 		// Rename the old current to something that we know to

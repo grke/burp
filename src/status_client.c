@@ -257,6 +257,8 @@ static void detail(char *toks[], int t, struct config *conf, int row, int col)
 	if(t>9) print_detail("Special files", toks[9], &x, col);
 	if(t>11) print_detail("Soft links", toks[11], &x, col);
 	if(t>10) print_detail("Hard links", toks[10], &x, col);
+	if(t>17) print_detail("Meta data", toks[17], &x, col);
+	if(t>18) print_detail("Encrypted meta data", toks[18], &x, col);
 	if(t>3) print_detail("Total", toks[3], &x, col);
 	print_line("", x++, col);
 	if(t>12) print_detail("Warnings", toks[12], &x, col);

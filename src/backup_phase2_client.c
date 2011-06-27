@@ -160,14 +160,14 @@ static int load_signature_and_send_delta(const char *rpath, unsigned long long *
 	return r;
 }
 
-static int send_whole_file_w(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression)
+static int send_whole_file_w(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, const char *extrameta)
 {
 	if(compression || encpassword)
 		return send_whole_file_gz(fname, datapth, quick_read, bytes, 
-			encpassword, cntr, compression);
+			encpassword, cntr, compression, extrameta);
 	else
 		return send_whole_file(fname, datapth, quick_read, bytes, 
-			cntr);
+			cntr, extrameta);
 }
 
 static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
@@ -213,9 +213,13 @@ static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
 				buf=NULL;
 				continue;
 			}
-			else if(cmd==CMD_FILE || cmd==CMD_ENC_FILE)
+			else if(cmd==CMD_FILE
+			  || cmd==CMD_ENC_FILE
+			  || cmd==CMD_METADATA
+			  || cmd==CMD_ENC_METADATA)
 			{
 				struct stat statbuf;
+				char *extrameta=NULL;
 				unsigned long long bytes=0;
 
 				sb.path=buf;
@@ -251,6 +255,24 @@ static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
 
 				encode_stat(attribs, &statbuf);
 
+				if(cmd==CMD_METADATA
+				  || cmd==CMD_ENC_METADATA)
+				{
+					if(get_extrameta(sb.path,
+						&statbuf, &extrameta, cntr))
+					{
+						logw(cntr, "Meta data error for %s", sb.path);
+						free_sbuf(&sb);
+						continue;
+					}
+					if(!extrameta)
+					{
+						logw(cntr, "No meta data after all: %s", sb.path);
+						free_sbuf(&sb);
+						continue;
+					}
+				}
+
 				if(cmd==CMD_FILE && sb.datapth)
 				{
 					unsigned long long sentbytes=0;
@@ -282,19 +304,25 @@ static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
 					  || send_whole_file_w(sb.path,
 						NULL, 0, &bytes,
 						conf->encryption_password,
-						cntr, conf->compression))
+						cntr, conf->compression,
+						extrameta))
 					{
 						ret=-1;
 						quit++;
 					}
 					else
 					{
-						do_filecounter(cntr, CMD_NEW_FILE, 1);
+						if(cmd==CMD_METADATA
+						  || cmd==CMD_ENC_METADATA)
+						  do_filecounter(cntr, cmd, 1);
+						else
+						  do_filecounter(cntr, CMD_NEW_FILE, 1);
 						do_filecounter_bytes(cntr, bytes);
 						do_filecounter_sentbytes(cntr, bytes);
 					}
 				}
 				free_sbuf(&sb);
+				if(extrameta) free(extrameta);
 			}
 			else if(cmd==CMD_WARNING)
 			{

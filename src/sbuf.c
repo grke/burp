@@ -69,19 +69,6 @@ int sbuf_is_link(struct sbuf *sb)
 	return cmd_is_link(sb->cmd);
 }
 
-int cmd_is_not_file(char cmd)
-{
-	return (cmd==CMD_DIRECTORY
-		|| cmd==CMD_SOFT_LINK
-		|| cmd==CMD_HARD_LINK
-		|| cmd==CMD_SPECIAL);
-}
-
-int sbuf_is_not_file(struct sbuf *sb)
-{
-	return cmd_is_not_file(sb->cmd);
-}
-
 int sbuf_is_endfile(struct sbuf *sb)
 {
 	return sb->cmd==CMD_END_FILE;
@@ -129,7 +116,10 @@ static int do_sbuf_fill_from_file(FILE *fp, gzFile zp, struct sbuf *sb, int phas
 			return -1;
 		}
 	}
-	else if(!phase1 && (sb->cmd==CMD_FILE || sb->cmd==CMD_ENC_FILE))
+	else if(!phase1 && (sb->cmd==CMD_FILE
+			|| sb->cmd==CMD_ENC_FILE
+			|| sb->cmd==CMD_METADATA
+			|| sb->cmd==CMD_ENC_METADATA))
 	{
 		char cmd;
 		if((ars=async_read_fp(fp, zp, &cmd,
@@ -169,7 +159,10 @@ static int sbuf_to_fp(struct sbuf *sb, FILE *mp)
 		if(sb->linkto
 		  && send_msg_fp(mp, sb->cmd, sb->linkto, sb->llen))
 			return -1;
-		if(sb->cmd==CMD_FILE || sb->cmd==CMD_ENC_FILE)
+		if(sb->cmd==CMD_FILE
+		  || sb->cmd==CMD_ENC_FILE
+		  || sb->cmd==CMD_METADATA
+		  || sb->cmd==CMD_ENC_METADATA)
 		{
 			if(send_msg_fp(mp, CMD_END_FILE,
 				sb->endfile, sb->elen)) return -1;
@@ -191,7 +184,10 @@ static int sbuf_to_zp(struct sbuf *sb, gzFile zp)
 		if(sb->linkto
 		  && send_msg_zp(zp, sb->cmd, sb->linkto, sb->llen))
 			return -1;
-		if(sb->cmd==CMD_FILE || sb->cmd==CMD_ENC_FILE)
+		if(sb->cmd==CMD_FILE
+		  || sb->cmd==CMD_ENC_FILE
+		  || sb->cmd==CMD_METADATA
+		  || sb->cmd==CMD_ENC_METADATA)
 		{
 			if(send_msg_zp(zp, CMD_END_FILE,
 				sb->endfile, sb->elen)) return -1;
@@ -271,4 +267,22 @@ int del_from_sbuf_arr(struct sbuf ***sblist, int *count)
         //      printf("now: %d %s\n", b, (*sblist)[b]->path); }
 
 	return 0;
+}
+
+// Like pathcmp, but sort entries that have the same paths so that metadata
+// comes later.
+int sbuf_pathcmp(struct sbuf *a, struct sbuf *b)
+{
+	int r;
+	if((r=pathcmp(a->path, b->path))) return r;
+	if(a->cmd==CMD_METADATA || a->cmd==CMD_ENC_METADATA)
+	{
+		if(b->cmd==CMD_METADATA || b->cmd==CMD_ENC_METADATA) return 0;
+		else return 1;
+	}
+	else
+	{
+		if(b->cmd==CMD_METADATA || b->cmd==CMD_ENC_METADATA) return -1;
+		else return 0;
+	}
 }

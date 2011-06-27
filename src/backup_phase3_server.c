@@ -80,7 +80,7 @@ int backup_phase3_server(const char *phase2data, const char *unchangeddata, cons
 		{
 			continue;
 		}
-		else if(!(pcmp=pathcmp(ucb.path, p2b.path)))
+		else if(!(pcmp=sbuf_pathcmp(&ucb, &p2b)))
 		{
 			// They were the same - write one and free both.
 			write_status(client, STATUS_MERGING, p2b.path, cntr);

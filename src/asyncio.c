@@ -556,9 +556,9 @@ int async_read_stat(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
 		}
 		else
 		{
-			logp("expected cmd %c or %c, got '%c:%s'\n",
-				CMD_DATAPTH, CMD_STAT,
-				cmd, buf?buf:"");
+			logp("%c\n", cmd);
+			logp("expected cmd %c or %c, got '%c'\n",
+				CMD_DATAPTH, CMD_STAT, cmd);
 			if(buf) { free(buf); buf=NULL; }
 			break;
 		}

@@ -11,12 +11,15 @@
 #include "restore_client.h"
 #include "forkchild.h"
 #include "sbuf.h"
+#include "extrameta.h"
 
 static int restore_interrupt(struct sbuf *sb, const char *msg, struct cntr *cntr)
 {
 	int ret=0;
 	int quit=0;
 	char *buf=NULL;
+
+	if(!cntr) return 0;
 
 	do_filecounter(cntr, CMD_WARNING, 1);
 	logp("WARNING: %s\n", msg);
@@ -102,7 +105,7 @@ static int make_link(const char *fname, const char *lnk, char cmd, const char *r
 	return ret;
 }
 
-static int restore_file(struct sbuf *sb, const char *fname, enum action act, const char *encpassword, struct cntr *cntr)
+static int restore_file_or_get_meta(struct sbuf *sb, const char *fname, enum action act, const char *encpassword, struct cntr *cntr, char **metadata)
 {
 	size_t len=0;
 	int ret=0;
@@ -129,52 +132,70 @@ static int restore_file(struct sbuf *sb, const char *fname, enum action act, con
 		goto end;
 	}
 
+	if(!metadata)
+	{
 #ifdef HAVE_WIN32
-	binit(&bfd);
-	set_win32_backup(&bfd);
-	if(S_ISDIR(sb->statp.st_mode))
-	{
-		mkdir(rpath, 0777);
-		bopenret=bopen(&bfd, rpath, O_WRONLY | O_BINARY, 0);
-	}
-	else
-		bopenret=bopen(&bfd, rpath,
-		  O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, S_IRUSR | S_IWUSR);
-	if(bopenret<0)
-	{
-		berrno be;
-		char msg[256]="";
-		snprintf(msg, sizeof(msg),
-			"Could not open for writing %s: %s",
-				rpath, be.bstrerror(errno));
-		if(restore_interrupt(sb, msg, cntr))
-			ret=-1;
-		goto end;
-	}
+		binit(&bfd);
+		set_win32_backup(&bfd);
+		if(S_ISDIR(sb->statp.st_mode))
+		{
+			mkdir(rpath, 0777);
+			bopenret=bopen(&bfd, rpath, O_WRONLY | O_BINARY, 0);
+		}
+		else
+			bopenret=bopen(&bfd, rpath,
+			  O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,
+			  S_IRUSR | S_IWUSR);
+		if(bopenret<0)
+		{
+			berrno be;
+			char msg[256]="";
+			snprintf(msg, sizeof(msg),
+				"Could not open for writing %s: %s",
+					rpath, be.bstrerror(errno));
+			if(restore_interrupt(sb, msg, cntr))
+				ret=-1;
+			goto end;
+		}
 #else
-	if(!(fp=open_file(rpath, "wb")))
-	{
-		char msg[256]="";
-		snprintf(msg, sizeof(msg),
-			"Could not open for writing %s: %s",
-				rpath, strerror(errno));
-		if(restore_interrupt(sb, msg, cntr))
-			ret=-1;
-		goto end;
-	}
+		if(!(fp=open_file(rpath, "wb")))
+		{
+			char msg[256]="";
+			snprintf(msg, sizeof(msg),
+				"Could not open for writing %s: %s",
+					rpath, strerror(errno));
+			if(restore_interrupt(sb, msg, cntr))
+				ret=-1;
+			goto end;
+		}
 #endif
+	}
 
 	if(!ret)
 	{
 		char *bytes=NULL;
+
+		if(metadata)
+		{
+			ret=transfer_gzfile_in(NULL, NULL, &bytes,
+				encpassword, cntr, metadata);
+			// skip setting the file counter, as we do not actually
+			// restore until a bit later
+			goto end;
+		}
+		else
+		{
 #ifdef HAVE_WIN32
-		ret=transfer_gzfile_in(&bfd, NULL, &bytes, encpassword, cntr);
-		bclose(&bfd);
+			ret=transfer_gzfile_in(&bfd, NULL, &bytes,
+				encpassword, cntr, NULL);
+			bclose(&bfd);
 #else
-		ret=transfer_gzfile_in(NULL, fp, &bytes, encpassword, cntr);
-		close_fp(&fp);
-		if(!ret) set_attributes(rpath, sb->cmd, &(sb->statp));
+			ret=transfer_gzfile_in(NULL, fp, &bytes,
+				encpassword, cntr, NULL);
+			close_fp(&fp);
+			if(!ret) set_attributes(rpath, sb->cmd, &(sb->statp));
 #endif
+		}
 		if(bytes) free(bytes);
 		if(ret)
 		{
@@ -351,6 +372,46 @@ end:
 	return ret;
 }
 
+static int restore_metadata(struct sbuf *sb, const char *fname, enum action act, const char *encpassword, struct cntr *cntr)
+{
+	// If it is directory metadata, try to make sure the directory
+	// exists. Pass in NULL as the cntr, so no counting is done.
+	// The actual directory entry will be coming after the metadata,
+	// annoyingly. This is because of the way that the server is queuing
+	// up directories to send after file data, so that the stat info on
+	// them gets set correctly.
+	if(act==ACTION_RESTORE)
+	{
+		char *metadata=NULL;
+		if(S_ISDIR(sb->statp.st_mode)
+		  && restore_dir(sb, fname, act, NULL))
+			return -1;
+
+		// Read in the metadata...
+		if(restore_file_or_get_meta(sb, fname, act, encpassword,
+			cntr, &metadata)) return -1;
+		if(metadata)
+		{
+			if(set_extrameta(fname, sb->cmd,
+				&(sb->statp), metadata, cntr))
+			{
+				free(metadata);
+				// carry on if we could not do it
+				return 0;
+			}
+			free(metadata);
+
+			// set attributes again, since we just diddled with
+			// the file
+			set_attributes(fname, sb->cmd, &(sb->statp));
+
+			do_filecounter(cntr, sb->cmd, 1);
+		}
+	}
+	else do_filecounter(cntr, sb->cmd, 1);
+	return 0;
+}
+
 static void strip_invalid_characters(char **path)
 {
 #ifdef HAVE_WIN32
@@ -436,6 +497,8 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 			case CMD_SOFT_LINK:
 			case CMD_HARD_LINK:
 			case CMD_SPECIAL:
+			case CMD_METADATA:
+			case CMD_ENC_METADATA:
 				if(!(fullpath=prepend_s(restoreprefix,
 					sb.path, strlen(sb.path))))
 				{
@@ -448,6 +511,8 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 				  strip_invalid_characters(&fullpath);
 				  if(!forceoverwrite
 				   && !S_ISDIR(sb.statp.st_mode)
+				   && sb.cmd!=CMD_METADATA
+				   && sb.cmd!=CMD_ENC_METADATA
 				   && !lstat(fullpath, &checkstat)
 				// If we have file data and the destination is
 				// a fifo, it is OK to write to the fifo.
@@ -495,8 +560,8 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 				// encrypted version so that encrypted and not
 				// encrypted files can be restored at the
 				// same time.
-				if(restore_file(&sb, fullpath, act,
-					NULL, cntr))
+				if(restore_file_or_get_meta(&sb, fullpath, act,
+					NULL, cntr, NULL))
 				{
 					logp("restore_file error\n");
 					ret=-1;
@@ -504,8 +569,8 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 				}
 				break;
 			case CMD_ENC_FILE:
-				if(restore_file(&sb, fullpath, act,
-					conf->encryption_password, cntr))
+				if(restore_file_or_get_meta(&sb, fullpath, act,
+					conf->encryption_password, cntr, NULL))
 				{
 					logp("restore_file error\n");
 					ret=-1;
@@ -523,6 +588,22 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 				break;
 			case CMD_SPECIAL:
 				if(restore_special(&sb, fullpath, act, cntr))
+				{
+					ret=-1;
+					quit++;
+				}
+				break;
+			case CMD_METADATA:
+				if(restore_metadata(&sb, fullpath, act,
+					NULL, cntr))
+				{
+					ret=-1;
+					quit++;
+				}
+				break;
+			case CMD_ENC_METADATA:
+				if(restore_metadata(&sb, fullpath, act,
+					conf->encryption_password, cntr))
 				{
 					ret=-1;
 					quit++;

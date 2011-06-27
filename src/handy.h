@@ -12,8 +12,8 @@ extern char *prepend(const char *prep, const char *fname, size_t len, const char
 extern char *prepend_s(const char *prep, const char *fname, size_t len);
 extern int mkpath(char **rpath, const char *limit);
 extern int build_path(const char *datadir, const char *fname, size_t flen, char **rpath, const char *limit);
-extern int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression);
-extern int send_whole_file(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, struct cntr *cntr);
+extern int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, const char *extrameta);
+extern int send_whole_file(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, struct cntr *cntr, const char *extrameta);
 extern int set_non_blocking(int fd);
 extern int set_blocking(int fd);
 extern int do_rename(const char *oldpath, const char *newpath);

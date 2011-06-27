@@ -28169,23 +28169,24 @@ ${MAKE:-make} clean
 echo "
 Configuration on `date`:
 
-   Host:		    ${host}${post_host} -- ${DISTNAME} ${DISTVER}
-   Burp version:	    ${BURP} ${VERSION}
-   Source code location:    ${srcdir}
-   Install binaries:	    ${sbindir}
-   Install config files:    ${sysconfdir}
-   Man directory:	    ${mandir}
-   C Compiler:		    ${CC}
-   C++ Compiler:	    ${CXX}
-   Compiler flags:	    ${WCFLAGS} ${CFLAGS}
-   Linker flags:	    ${WLDFLAGS} ${LDFLAGS}
-   Libraries:		    ${LIBS}
-   Static:                  ${support_static}
+   Host:			${host}${post_host} -- ${DISTNAME} ${DISTVER}
+   Burp version:		${BURP} ${VERSION}
+   Source code location:	${srcdir}
+   Install binaries:		${sbindir}
+   Install config files:	${sysconfdir}
+   Man directory:		${mandir}
+   C Compiler:			${CC}
+   C++ Compiler:		${CXX}
+   Compiler flags:		${WCFLAGS} ${CFLAGS}
+   Linker flags:		${WLDFLAGS} ${LDFLAGS}
+   Libraries:			${LIBS}
+   Static:			${support_static}
 
-   ncurses:		    ${have_ncurses}
-   openssl:	 	    ${support_tls}
-   zlib:		    ${have_zlib}
-   librsync:		    ${have_librsync}
+   ncurses:			${have_ncurses}
+   openssl:			${support_tls}
+   zlib:			${have_zlib}
+   librsync:			${have_librsync}
+   acl:				${have_acl}
 
   " > config.out
 

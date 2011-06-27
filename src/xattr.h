@@ -3,7 +3,7 @@
 
 #ifdef HAVE_XATTR
 extern int has_xattr(const char *path, char cmd);
-extern int get_xattr(const char *path, char cmd, char **xattrtext);
+extern int get_xattr(const char *path, struct stat *statp, char **xattrtext);
 #endif
 
 #endif // _BURP_XATTR_H

@@ -138,7 +138,7 @@ static int send_file(const char *fname, int patches, const char *best, const cha
 		// If we did some patches, the resulting file
 		// is not gzipped. Gzip it during the send. 
 		return send_whole_file_gz(best, datapth, 1, bytes, NULL, cntr,
-			9);
+			9, NULL);
 	}
 	else
 	{
@@ -147,11 +147,12 @@ static int send_file(const char *fname, int patches, const char *best, const cha
 		// receiving, this step could disappear.
 		if(!dpth_is_compressed(datapth))
 			return send_whole_file_gz(best, datapth, 1, bytes,
-				NULL, cntr, 9);
+				NULL, cntr, 9, NULL);
 		else
 			// If we did not do some patches, the resulting
 			// file might already be gzipped. Send it as it is.
-			return send_whole_file(best, datapth, 1, bytes, cntr);
+			return send_whole_file(best,
+				datapth, 1, bytes, cntr, NULL);
 	}
 }
 
@@ -177,7 +178,7 @@ static int verify_file(const char *fname, int patches, const char *best, const c
 		logp("MD5_Init() failed\n");
 		return -1;
 	}
-	if(patches || cmd==CMD_ENC_FILE
+	if(patches || cmd==CMD_ENC_FILE || cmd==CMD_ENC_METADATA
 	  || (!patches && !dpth_is_compressed(best)))
 	{
 		// If we did some patches or encryption, or the compression
@@ -383,7 +384,10 @@ static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, const cha
 		sb->datapth, strlen(sb->datapth)))
 	  || async_write(CMD_STAT, sb->statbuf, sb->slen))
 		return -1;
-	else if(sb->cmd==CMD_FILE || sb->cmd==CMD_ENC_FILE)
+	else if(sb->cmd==CMD_FILE
+	  || sb->cmd==CMD_ENC_FILE
+	  || sb->cmd==CMD_METADATA
+	  || sb->cmd==CMD_ENC_METADATA)
 	{
 		return restore_file(arr, a, i, sb->datapth,
 		  sb->path, tmppath1, tmppath2, act,
@@ -541,6 +545,9 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 				  /* If it is a directory, need to remember it
 				     and restore it later, so that the
 				     permissions come out right. */
+				  /* Meta data of directories will also have
+				     the stat stuff set to be a directory,
+				     so will also come out at the end. */
 				  if(!ret && S_ISDIR(sb.statp.st_mode))
 				  {
 					if(add_to_sbuf_arr(&sblist, &sb, &scount))
@@ -682,6 +689,7 @@ int do_restore_server(const char *basedir, const char *backup, const char *resto
 
 	if(!found)
 	{
+		logp("backup not found\n");
 		async_write_str(CMD_ERROR, "backup not found");
 		ret=-1;
 	}

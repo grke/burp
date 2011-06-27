@@ -4,6 +4,7 @@
 
 void reset_filecounter(struct cntr *c)
 {
+	if(!c) return;
 	c->totalcounter=0;
 	c->filecounter=0;
 	c->changedcounter=0;
@@ -18,6 +19,8 @@ void reset_filecounter(struct cntr *c)
 	c->recvbytecounter=0;
 	c->sentbytecounter=0;
 	c->encryptedcounter=0;
+	c->metadatacounter=0;
+	c->encmetadatacounter=0;
 }
 
 static const char *bytes_to_human(unsigned long long counter)
@@ -72,6 +75,7 @@ static void bcounter(const char *str, unsigned long long counter)
 
 void end_filecounter(struct cntr *c, int print, enum action act)
 {
+	if(!c) return;
 	if(print) printf(" %llu\n\n", c->totalcounter);
 
 	if(act==ACTION_RESTORE)
@@ -96,6 +100,8 @@ void end_filecounter(struct cntr *c, int print, enum action act)
 	pcounter("Soft links:                %llu\n", c->softlinkcounter);
 	pcounter("Hard links:                %llu\n", c->hardlinkcounter);
 	pcounter("Special files:             %llu\n", c->specialcounter);
+	pcounter("Meta data:                 %llu\n", c->metadatacounter);
+	pcounter("Encrypted meta data:       %llu\n", c->encmetadatacounter);
 	//logp("\n");
 	pcounter("Total:                     %llu\n", c->totalcounter);
 	//logp("\n");
@@ -109,6 +115,7 @@ void end_filecounter(struct cntr *c, int print, enum action act)
 
 void do_filecounter(struct cntr *c, char ch, int print)
 {
+	if(!c) return;
 	if(print)
 	{
 		if(!c->totalcounter && !c->warningcounter) printf("\n");
@@ -134,6 +141,10 @@ void do_filecounter(struct cntr *c, char ch, int print)
 			++(c->warningcounter); return; // do not add to total
 		case CMD_ENC_FILE:
 			++(c->encryptedcounter); break;
+		case CMD_METADATA:
+			++(c->metadatacounter); break;
+		case CMD_ENC_METADATA:
+			++(c->encmetadatacounter); break;
 	}
 	if(!((++(c->totalcounter))%64) && print)
 		printf(" %llu\n", c->totalcounter);
@@ -142,15 +153,18 @@ void do_filecounter(struct cntr *c, char ch, int print)
 
 void do_filecounter_bytes(struct cntr *c, unsigned long long bytes)
 {
+	if(!c) return;
 	c->bytecounter+=bytes;
 }
 
 void do_filecounter_sentbytes(struct cntr *c, unsigned long long bytes)
 {
+	if(!c) return;
 	c->sentbytecounter+=bytes;
 }
 
 void do_filecounter_recvbytes(struct cntr *c, unsigned long long bytes)
 {
+	if(!c) return;
 	c->recvbytecounter+=bytes;
 }

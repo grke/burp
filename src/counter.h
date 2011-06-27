@@ -17,6 +17,8 @@ struct cntr
 	unsigned long long recvbytecounter;
 	unsigned long long sentbytecounter;
 	unsigned long long encryptedcounter;
+	unsigned long long metadatacounter;
+	unsigned long long encmetadatacounter;
 };
 
 extern void end_filecounter(struct cntr *c, int print, enum action act);

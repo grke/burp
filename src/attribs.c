@@ -178,6 +178,10 @@ bool set_attributes(const char *path, char cmd, struct stat *statp)
     * For link, change owner of link using lchown, but don't
     *   try to do a chmod as that will update the file behind it.
     */
+
+   /* watch out, a metadata restore will have cmd set to CMD_METADATA or
+      CMD_ENC_META, but that is OK at the moment because we are not doing
+      meta stuff on links. */
    if (cmd==CMD_SOFT_LINK) {
       /* Change owner of link, not of real file */
       if (lchown(path, statp->st_uid, statp->st_gid) < 0 && my_uid == 0) {

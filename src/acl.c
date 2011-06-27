@@ -5,12 +5,14 @@
 #include "log.h"
 #include "asyncio.h"
 #include "handy.h"
+#include "extrameta.h"
 
 #ifdef HAVE_ACL
+#if defined(HAVE_LINUX_OS)
 #include "sys/acl.h"
 #include "acl/libacl.h"
 
-// acl_is_trivial copied from bacula 
+// section of acl_is_trivial copied from bacula 
 static int acl_is_trivial(acl_t acl)
 {
   /*
@@ -89,12 +91,20 @@ static int get_acl_string(acl_t acl, char **acltext, const char *path, char type
 	char pre[8]="";
 	char *tmp=NULL;
 	char *ourtext=NULL;
-	if(!(tmp=acl_to_any_text(acl, NULL, ':',
+
+	if(!(tmp=acl_to_any_text(acl, NULL, ',',
 		TEXT_NUMERIC_IDS|TEXT_ABBREVIATE)))
 	{
 		logp("could not get ACL text of '%s'\n", path);
 		return -1;
 	}
+/*
+	if(!(tmp=acl_to_text(acl, NULL)))
+	{
+		logp("could not get ACL text of '%s'\n", path);
+		return -1;
+	}
+*/
 	s=strlen(tmp);
 
 	if(s>0xFFFF)
@@ -125,12 +135,14 @@ static int get_acl_string(acl_t acl, char **acltext, const char *path, char type
 	return 0;
 }
 
-int get_acl(const char *path, char cmd, char **acltext, struct cntr *cntr)
+int get_acl(const char *path, struct stat *statp, char **acltext, struct cntr *cntr)
 {
 	acl_t acl=NULL;
+
 	if((acl=acl_contains_something(path, ACL_TYPE_ACCESS)))
 	{
-		if(get_acl_string(acl, acltext, path, 'A', cntr))
+		if(get_acl_string(acl,
+			acltext, path, META_ACCESS_ACL, cntr))
 		{
 			acl_free(acl);
 			return -1;
@@ -138,11 +150,12 @@ int get_acl(const char *path, char cmd, char **acltext, struct cntr *cntr)
 		acl_free(acl);
 	}
 
-	if(cmd==CMD_DIRECTORY)
+	if(S_ISDIR(statp->st_mode))
 	{
 		if((acl=acl_contains_something(path, ACL_TYPE_DEFAULT)))
 		{
-			if(get_acl_string(acl, acltext, path, 'D', cntr))
+			if(get_acl_string(acl,
+				acltext, path, META_DEFAULT_ACL, cntr))
 			{
 				acl_free(acl);
 				return -1;
@@ -153,4 +166,52 @@ int get_acl(const char *path, char cmd, char **acltext, struct cntr *cntr)
 	return 0;
 }
 
+static int do_set_acl(const char *path, struct stat *statp, const char *acltext, int acltype, struct cntr *cntr)
+{
+	acl_t acl;
+	if(!(acl=acl_from_text(acltext)))
+	{
+		logp("acl_from_text error on %s (%s): %s\n",
+			path, acltext, strerror(errno));
+		logw(cntr, "acl_from_text error on %s (%s): %s\n",
+			path, acltext, strerror(errno));
+		return -1;
+	}
+	if(acl_valid(acl))
+	{
+		logp("acl_valid error on %s: %s", path, strerror(errno));
+		logw(cntr, "acl_valid error on %s: %s", path, strerror(errno));
+		acl_free(acl);
+		return -1;
+	}
+	if(acl_set_file(path, acltype, acl))
+	{
+		logp("acl set error on %s: %s", path, strerror(errno));
+		logw(cntr, "acl set error on %s: %s", path, strerror(errno));
+		acl_free(acl);
+		return -1;
+	}
+	acl_free(acl);
+	return 0; 
+}
+
+int set_acl(const char *path, struct stat *statp, const char *acltext, char cmd, struct cntr *cntr)
+{
+	switch(cmd)
+	{
+		case META_ACCESS_ACL:
+			return do_set_acl(path,
+				statp, acltext, ACL_TYPE_ACCESS, cntr);
+		case META_DEFAULT_ACL:
+			return do_set_acl(path,
+				statp, acltext, ACL_TYPE_DEFAULT, cntr);
+		default:
+			logp("unknown acl type: %c\n", cmd);
+			logw(cntr, "unknown acl type: %c\n", cmd);
+			break;
+	}
+	return -1;
+}
+
+#endif // HAVE_LINUX_OS
 #endif // HAVE_ACL

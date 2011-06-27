@@ -45,8 +45,6 @@ extern void init_sbuf(struct sbuf *sb);
 extern void free_sbuf(struct sbuf *sb);
 extern int cmd_is_link(char cmd);
 extern int sbuf_is_link(struct sbuf *sb);
-extern int cmd_is_not_file(char cmd);
-extern int sbuf_is_not_file(struct sbuf *sb);
 extern int sbuf_fill(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr);
 extern int sbuf_fill_phase1(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr);
 extern int sbuf_to_manifest(struct sbuf *sb, FILE *mp, gzFile zp);
@@ -55,5 +53,6 @@ extern int add_to_sbuf_arr(struct sbuf ***sblist, struct sbuf *sb, int *count);
 extern void free_sbufs(struct sbuf **sb, int count);
 extern int del_from_sbuf_arr(struct sbuf ***sblist, int *count);
 extern void print_sbuf_arr(struct sbuf **list, int count, const char *str);
+extern int sbuf_pathcmp(struct sbuf *a, struct sbuf *b);
 
 #endif

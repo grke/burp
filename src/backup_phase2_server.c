@@ -107,7 +107,7 @@ static int process_new(struct sbuf *p1b)
 static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, gzFile uczp, const char *currentdata, struct cntr *cntr, struct config *cconf)
 {
 	int pcmp;
-	if(!(pcmp=pathcmp(cb->path, p1b->path)))
+	if(!(pcmp=sbuf_pathcmp(cb, p1b)))
 	{
 		int oldcompressed=0;
 		if(cb->statp.st_mtime==p1b->statp.st_mtime
@@ -132,7 +132,11 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, gzFile uczp, co
 		// we need to get a new file.
 		if(!cconf->librsync
 		  || cb->cmd==CMD_ENC_FILE
-		  || p1b->cmd==CMD_ENC_FILE)
+		  || p1b->cmd==CMD_ENC_FILE
+		  || cb->cmd==CMD_ENC_METADATA
+		  || p1b->cmd==CMD_ENC_METADATA
+		  || cb->cmd==CMD_METADATA
+		  || p1b->cmd==CMD_METADATA)
 		{
 			if(process_new(p1b)) return -1;
 			free_sbuf(cb);
@@ -372,7 +376,10 @@ static int do_stuff_to_receive(struct sbuf *rb, FILE *p2fp, const char *datadirt
 			rb->slen=rlen;
 			rbuf=NULL;
 		}
-		else if(rcmd==CMD_FILE || rcmd==CMD_ENC_FILE)
+		else if(rcmd==CMD_FILE
+		  || rcmd==CMD_ENC_FILE
+		  || rcmd==CMD_METADATA
+		  || rcmd==CMD_ENC_METADATA)
 		{
 			rb->cmd=rcmd;
 			rb->plen=rlen;
@@ -494,7 +501,9 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzF
 			}
 
 			if(p1b.cmd==CMD_FILE
-			  || p1b.cmd==CMD_ENC_FILE)
+			  || p1b.cmd==CMD_ENC_FILE
+			  || p1b.cmd==CMD_METADATA
+			  || p1b.cmd==CMD_ENC_METADATA)
 				break;
 
 			// If it is not file data or it is something else that
@@ -558,7 +567,9 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzF
 				}
 		//logp("against: %s\n", cb.path);
 				if(cb.cmd!=CMD_FILE
-				  && cb.cmd!=CMD_ENC_FILE)
+				  && cb.cmd!=CMD_ENC_FILE
+				  && cb.cmd!=CMD_METADATA
+				  && cb.cmd!=CMD_ENC_METADATA)
 				{
 					free_sbuf(&cb);
 					continue;

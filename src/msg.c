@@ -30,30 +30,45 @@ int send_msg_zp(gzFile zp, char cmd, const char *buf, size_t s)
 	return 0;
 }
 
-static int do_write(BFILE *bfd, FILE *fp, unsigned char *out, size_t outlen)
+static int do_write(BFILE *bfd, FILE *fp, unsigned char *out, size_t outlen, char **metadata)
 {
 	int ret=0;
+	if(metadata)
+	{
+		// Append it to our metadata.
+		out[outlen]='\0';
+		if(!(*metadata=prepend(*metadata,
+				(const char *)out, outlen, "")))
+		{
+			logp("error when appending metadata\n");
+			async_write_str(CMD_ERROR, "error when appending metadata");
+			return -1;
+		}
+	}
+	else
+	{
 #ifdef HAVE_WIN32
-	if((ret=bwrite(bfd, out, outlen))<=0)
-	{
-		logp("error when appending: %d\n", ret);
-		async_write_str(CMD_ERROR, "write failed");
-		return -1;
-	}
+		if((ret=bwrite(bfd, out, outlen))<=0)
+		{
+			logp("error when appending: %d\n", ret);
+			async_write_str(CMD_ERROR, "write failed");
+			return -1;
+		}
 #else
-	if((fp && (ret=fwrite(out, 1, outlen, fp))<=0))
-	{
-		logp("error when appending: %d\n", ret);
-		async_write_str(CMD_ERROR, "write failed");
-		return -1;
-	}
+		if((fp && (ret=fwrite(out, 1, outlen, fp))<=0))
+		{
+			logp("error when appending: %d\n", ret);
+			async_write_str(CMD_ERROR, "write failed");
+			return -1;
+		}
 #endif
+	}
 	return 0;
 }
 
 #define ZCHUNK 16000
 
-static int do_inflate(z_stream *zstrm, BFILE *bfd, FILE *fp, unsigned char *out, unsigned char *buftouse, size_t lentouse)
+static int do_inflate(z_stream *zstrm, BFILE *bfd, FILE *fp, unsigned char *out, unsigned char *buftouse, size_t lentouse, char **metadata)
 {
 	int zret=Z_OK;
 	unsigned have=0;
@@ -79,7 +94,7 @@ static int do_inflate(z_stream *zstrm, BFILE *bfd, FILE *fp, unsigned char *out,
 		have=ZCHUNK-zstrm->avail_out;
 		if(!have) continue;
 
-		if(do_write(bfd, fp, out, have))
+		if(do_write(bfd, fp, out, have, metadata))
 		{
 			return -1;
 			break;
@@ -88,7 +103,7 @@ static int do_inflate(z_stream *zstrm, BFILE *bfd, FILE *fp, unsigned char *out,
 	return 0;
 }
 
-int transfer_gzfile_in(BFILE *bfd, FILE *fp, char **bytes, const char *encpassword, struct cntr *cntr)
+int transfer_gzfile_in(BFILE *bfd, FILE *fp, char **bytes, const char *encpassword, struct cntr *cntr, char **metadata)
 {
 	char cmd;
 	char *buf=NULL;
@@ -141,10 +156,10 @@ int transfer_gzfile_in(BFILE *bfd, FILE *fp, char **bytes, const char *encpasswo
 		switch(cmd)
 		{
 			case CMD_APPEND: // append
-				if(!fp && !bfd)
+				if(!fp && !bfd && !metadata)
 				{
-					logp("given append, but no file to write to\n");
-					async_write_str(CMD_ERROR, "append with no file");
+					logp("given append, but no file or metadata to write to\n");
+					async_write_str(CMD_ERROR, "append with no file or metadata");
 					quit++; ret=-1;
 				}
 				else
@@ -176,7 +191,7 @@ int transfer_gzfile_in(BFILE *bfd, FILE *fp, char **bytes, const char *encpasswo
 					//logp("want to write: %d\n", zstrm.avail_in);
 
 					if(do_inflate(&zstrm, bfd, fp, out,
-						buftouse, lentouse))
+						buftouse, lentouse, metadata))
 					{
 						ret=-1; quit++;
 						break;
@@ -194,7 +209,7 @@ int transfer_gzfile_in(BFILE *bfd, FILE *fp, char **bytes, const char *encpasswo
 						break;
 					}
 					if(doutlen && do_inflate(&zstrm, bfd,
-					  fp, out, doutbuf, doutlen))
+					  fp, out, doutbuf, doutlen, metadata))
 					{
 						ret=-1; quit++;
 						break;

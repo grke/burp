@@ -297,7 +297,7 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password)
 	return ctx;
 }
 
-int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression)
+int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, const char *extrameta)
 {
 	int ret=0;
 	int zret=0;
@@ -307,6 +307,8 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 #else
 	FILE *fp=NULL;
 #endif
+	size_t metalen=0;
+	const char *metadata=NULL;
 
 	unsigned have;
 	z_stream strm;
@@ -329,23 +331,32 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 	}
 
 
-//logp("send_whole_file_gz: %s\n", datapth);
+//logp("send_whole_file_gz: %s%s\n", fname, extrameta?" (meta)":"");
 
+	if((metadata=extrameta))
+	{
+		metalen=strlen(metadata);
+	}
+	else
+	{
 #ifdef HAVE_WIN32
-	binit(&bfd);
-	if(bopen(&bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0)<0)
-	{
-		berrno be;
-		logp("Could not open %s: %s\n", fname, be.bstrerror(errno));
-		return -1;
-	}
+		binit(&bfd);
+		if(bopen(&bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0)<0)
+		{
+			berrno be;
+			logp("Could not open %s: %s\n",
+				fname, be.bstrerror(errno));
+			return -1;
+		}
 #else
-	if(!(fp=fopen(fname, "rb")))
-	{
-		logp("Could not open %s: %s\n", fname, strerror(errno));
-		return -1;
-	}
+		if(!(fp=fopen(fname, "rb")))
+		{
+			logp("Could not open %s: %s\n",
+				fname, strerror(errno));
+			return -1;
+		}
 #endif
+	}
 
 	/* allocate deflate state */
 	strm.zalloc = Z_NULL;
@@ -355,21 +366,37 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 		8, Z_DEFAULT_STRATEGY))!=Z_OK)
 
 	{
+		if(!metadata)
+		{
 #ifdef HAVE_WIN32
-		bclose(&bfd);
+			bclose(&bfd);
 #else
-		fclose(fp);
+			fclose(fp);
 #endif
+		}
 		return -1;
 	}
 
 	do
 	{
+		if(metadata)
+		{
+			if(metalen>ZCHUNK)
+				strm.avail_in=ZCHUNK;
+			else
+				strm.avail_in=metalen;
+			memcpy(in, metadata, strm.avail_in);
+			metadata+=strm.avail_in;
+			metalen-=strm.avail_in;
+		}
+		else
+		{
 #ifdef HAVE_WIN32
-		strm.avail_in=(uint32_t)bread(&bfd, in, ZCHUNK);
+			strm.avail_in=(uint32_t)bread(&bfd, in, ZCHUNK);
 #else
-		strm.avail_in=fread(in, 1, ZCHUNK, fp);
+			strm.avail_in=fread(in, 1, ZCHUNK, fp);
 #endif
+		}
 		if(strm.avail_in<0)
 		{
 			logp("Error in read: %d\n", strm.avail_in);
@@ -478,11 +505,14 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 cleanup:
 	deflateEnd(&strm);
 
+	if(!metadata)
+	{
 #ifdef HAVE_WIN32
-	bclose(&bfd);
+		bclose(&bfd);
 #else
-	fclose(fp);
+		fclose(fp);
 #endif
+	}
 
 	if(enc_ctx)
 	{
@@ -501,98 +531,134 @@ cleanup:
 
 		return write_endfile(*bytes, checksum);
 	}
+//logp("end of send\n");
 	return ret;
 }
 
-int send_whole_file(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, struct cntr *cntr)
+int send_whole_file(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, struct cntr *cntr, const char *extrameta)
 {
 	int ret=0;
 	ssize_t s=0;
-	char buf[4096]="";
 	MD5_CTX md5;
+	char buf[4096]="";
+
 	if(!MD5_Init(&md5))
 	{
 		logp("MD5_Init() failed\n");
 		return -1;
 	}
+
+	if(extrameta)
+	{
+		size_t metalen=0;
+		const char *metadata=NULL;
+
+		metadata=extrameta;
+		metalen=strlen(metadata);
+
+		// Send metadata in chunks, rather than all at once.
+		while(metalen>0)
+		{
+			if(metalen>ZCHUNK) s=ZCHUNK;
+			else s=metalen;
+
+			if(!MD5_Update(&md5, metadata, s))
+			{
+				logp("MD5_Update() failed\n");
+				ret=-1;
+			}
+			if(async_write(CMD_APPEND, metadata, s))
+			{
+				ret=-1;
+			}
+
+			metadata+=s;
+			metalen-=s;
+
+			*bytes+=s;
+		}
+	}
+	else
+	{
 #ifdef HAVE_WIN32
-	BFILE bfd;
-	binit(&bfd);
-	if(bopen(&bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0)<0)
-	{
-		berrno be;
-		logp("Could not open %s: %s\n", fname, be.bstrerror(errno));
-		return -1;
-	}
-	while((s=(uint32_t)bread(&bfd, buf, 4096))>0)
-	{
-		*bytes+=s;
-		if(!MD5_Update(&md5, buf, s))
+		BFILE bfd;
+		binit(&bfd);
+		if(bopen(&bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0)<0)
 		{
-			logp("MD5_Update() failed\n");
-			ret=-1;
-			break;
+			berrno be;
+			logp("Could not open %s: %s\n", fname, be.bstrerror(errno));
+			return -1;
 		}
-		if(async_write(CMD_APPEND, buf, s))
+		while((s=(uint32_t)bread(&bfd, buf, 4096))>0)
 		{
-			ret=-1;
-			break;
-		}
-		if(quick_read)
-		{
-			int qr;
-			if((qr=do_quick_read(datapth, cntr))<0)
+			*bytes+=s;
+			if(!MD5_Update(&md5, buf, s))
+			{
+				logp("MD5_Update() failed\n");
+				ret=-1;
+				break;
+			}
+			if(async_write(CMD_APPEND, buf, s))
 			{
 				ret=-1;
 				break;
 			}
-			if(qr)
+			if(quick_read)
 			{
-				// client wants to interrupt
-				break;
+				int qr;
+				if((qr=do_quick_read(datapth, cntr))<0)
+				{
+					ret=-1;
+					break;
+				}
+				if(qr)
+				{
+					// client wants to interrupt
+					break;
+				}
 			}
 		}
-	}
-	bclose(&bfd);
+		bclose(&bfd);
 #else
-	FILE *fp=NULL;
-//printf("send_whole_file: %s\n", fname);
-	if(!(fp=fopen(fname, "rb")))
-	{
-		logp("Could not open %s: %s\n", fname, strerror(errno));
-		return -1;
-	}
-	while((s=fread(buf, 1, 4096, fp))>0)
-	{
-		*bytes+=s;
-		if(!MD5_Update(&md5, buf, s))
+		FILE *fp=NULL;
+	//printf("send_whole_file: %s\n", fname);
+		if(!(fp=fopen(fname, "rb")))
 		{
-			logp("MD5_Update() failed\n");
-			ret=-1;
-			break;
+			logp("Could not open %s: %s\n", fname, strerror(errno));
+			return -1;
 		}
-		if(async_write(CMD_APPEND, buf, s))
+		while((s=fread(buf, 1, 4096, fp))>0)
 		{
-			ret=-1;
-			break;
-		}
-		if(quick_read)
-		{
-			int qr;
-			if((qr=do_quick_read(datapth, cntr))<0)
+			*bytes+=s;
+			if(!MD5_Update(&md5, buf, s))
+			{
+				logp("MD5_Update() failed\n");
+				ret=-1;
+				break;
+			}
+			if(async_write(CMD_APPEND, buf, s))
 			{
 				ret=-1;
 				break;
 			}
-			if(qr)
+			if(quick_read)
 			{
-				// client wants to interrupt
-				break;
+				int qr;
+				if((qr=do_quick_read(datapth, cntr))<0)
+				{
+					ret=-1;
+					break;
+				}
+				if(qr)
+				{
+					// client wants to interrupt
+					break;
+				}
 			}
 		}
-	}
-	fclose(fp);
+		fclose(fp);
 #endif
+	}
 	if(!ret)
 	{
 		unsigned char checksum[MD5_DIGEST_LENGTH+1];
@@ -764,7 +830,7 @@ void write_status(const char *client, char phase, const char *path, struct cntr 
 		lasttime=now;
 
 		snprintf(wbuf, sizeof(wbuf),
-			"%s\t%c\t%c\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%s\n",
+			"%s\t%c\t%c\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%s\n",
 			client, STATUS_RUNNING, phase,
 			cntr->totalcounter,
 			cntr->filecounter,
@@ -780,6 +846,8 @@ void write_status(const char *client, char phase, const char *path, struct cntr 
 			cntr->recvbytecounter,
 			cntr->sentbytecounter,
 			cntr->encryptedcounter,
+			cntr->metadatacounter,
+			cntr->encmetadatacounter,
 			path?path:"");
 
 		// Make sure there is a new line at the end.

@@ -2,6 +2,7 @@
 #include "prog.h"
 #include "acl.h"
 #include "cmd.h"
+#include "extrameta.h"
 
 #ifdef HAVE_XATTR
 
@@ -11,7 +12,7 @@ int has_xattr(const char *path, char cmd)
 	return 0;
 }
 
-int get_xattr(const char *path, char cmd, char **xattrtext)
+int get_xattr(const char *path, struct stat *statp, char **xattrtext)
 {
 	return 0;
 }

@@ -7,9 +7,9 @@
 #include "handy.h"
 #include "extrameta.h"
 
-#ifdef HAVE_ACL
+#ifdef HAVE_XATTR
 #if defined(HAVE_LINUX_OS)
-#include <attr/xattr.h>
+#include <sys/xattr.h>
 
 static const char *xattr_acl_skiplist[3] = { "system.posix_acl_access", "system.posix_acl_default", NULL };
 //static const char *xattr_skiplist[1] = { NULL };

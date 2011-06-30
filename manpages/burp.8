@@ -255,6 +255,9 @@ Allow backups to cross a particular filesystem mountpoint.
 \fBcross_all_filesystems=[0|1]\fR
 Allow backups to cross all filesystem mountpoints.
 .TP
+\fBnobackup=[file name]\fR
+If this file system entry exists, the directory containing it will not be backed up.
+.TP
 \fBread_fifo=[path]\fR
 Do not back up the given fifo itself, but open it for reading and back up the contents as if it were a regular file.
 .TP

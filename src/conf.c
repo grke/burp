@@ -30,9 +30,11 @@ void init_config(struct config *conf)
 	conf->startdir=NULL;
 	conf->incexcdir=NULL;
 	conf->fschgdir=NULL;
+	conf->nobackup=NULL;
 	conf->sdcount=0;
 	conf->iecount=0;
 	conf->fscount=0;
+	conf->nbcount=0;
 	conf->ffcount=0;
 	conf->fifos=NULL;
 	conf->cross_all_filesystems=0;
@@ -116,6 +118,7 @@ void free_config(struct config *conf)
 	strlists_free(conf->startdir, conf->sdcount);
 	strlists_free(conf->incexcdir, conf->iecount);
 	strlists_free(conf->fschgdir, conf->fscount);
+	strlists_free(conf->nobackup, conf->nbcount);
 	strlists_free(conf->fifos, conf->ffcount);
 
 	if(conf->timer_script) free(conf->timer_script);
@@ -263,6 +266,7 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 	struct strlist **sdlist=NULL;
 	struct strlist **ielist=NULL;
 	struct strlist **fslist=NULL;
+	struct strlist **nblist=NULL;
 	struct strlist **fflist=NULL;
 	struct strlist **talist=NULL;
 	struct strlist **nslist=NULL;
@@ -434,6 +438,10 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 				NULL, NULL, &(conf->fscount),
 				&fslist, 0)) return -1;
 			if(get_conf_val_args(field, value,
+				"nobackup",
+				NULL, NULL, &(conf->nbcount),
+				&nblist, 0)) return -1;
+			if(get_conf_val_args(field, value,
 				"read_fifo",
 				NULL, NULL, &(conf->ffcount),
 				&fflist, 0)) return -1;
@@ -527,6 +535,11 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 		sizeof(*ielist),
 		(int (*)(const void *, const void *))strlist_sort);
 	conf->incexcdir=ielist;
+
+	if(conf->nobackup) qsort(nblist, conf->nbcount,
+		sizeof(*nblist),
+		(int (*)(const void *, const void *))strlist_sort);
+	conf->nobackup=nblist;
 
 	// This decides which directories to start backing up, and which
 	// are subdirectories which don't need to be started separately.

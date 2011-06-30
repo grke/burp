@@ -2,6 +2,7 @@
 #include "prog.h"
 #include "find.h"
 #include "log.h"
+#include "handy.h"
 #ifdef HAVE_DARWIN_OS
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -185,6 +186,26 @@ static int need_to_read_fifo(struct config *conf, const char *fname)
 	return 0;
 }
 
+static int nobackup_directory(struct config *conf, const char *path)
+{
+	int i=0;
+	struct stat statp;
+	for(i=0; i<conf->nbcount; i++)
+	{
+		char *fullpath=NULL;
+		if(!(fullpath=prepend_s(path,
+		  conf->nobackup[i]->path, strlen(conf->nobackup[i]->path))))
+				return -1;
+		if(!lstat(fullpath, &statp))
+		{
+			free(fullpath);
+			return 1;
+		}
+		free(fullpath);
+	}
+	return 0;
+}
+
 /*
  * Find a single file.
  * handle_file is the callback for handling the file.
@@ -364,6 +385,7 @@ find_one_file(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
       size_t link_len;
       size_t len;
       int status;
+      int nbret=0;
       dev_t our_device = ff_pkt->statp.st_dev;
       bool recurse = true;
       bool volhas_attrlist = ff_pkt->volhas_attrlist;    /* Remember this if we recurse */
@@ -382,23 +404,13 @@ find_one_file(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
       }
 
       /*
-       * Ignore this directory and everything below if the file .nobackup
-       * (or what is defined for IgnoreDir in this fileset) exists
+       * Ignore this directory and everything below if one of the files defined
+       * by the 'nobackup' option exists.
        */
-      if (ff_pkt->ignoredir != NULL) {
-         struct stat sb;
-         char fname[MAXPATHLEN];
-
-         if (strlen(ff_pkt->fname) + strlen("/") +
-            strlen(ff_pkt->ignoredir) + 1 > MAXPATHLEN)
-            return 1;   /* Is this wisdom? */
-
-         strcpy(fname, ff_pkt->fname);
-         strcat(fname, "/");
-         strcat(fname, ff_pkt->ignoredir);
-         if (stat(fname, &sb) == 0) {
-            return 1;      /* Just ignore this directory */
-         }
+      if((nbret=nobackup_directory(conf, ff_pkt->fname)))
+      {
+		if(nbret<0) return -1; // error
+		return 0; // do not back it up.
       }
 
       /* Build a canonical directory name with a trailing slash in link var */

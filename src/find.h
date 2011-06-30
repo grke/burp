@@ -101,7 +101,6 @@ struct FF_PKT {
    /* Values set by accept_file while processing Options */
    uint32_t flags;                    /* backup options */
    int strip_path;                    /* strip path count */
-   char *ignoredir;                   /* ignore directories with this file */
 
    /* List of all hard linked files found */
    struct f_link **linkhash;          /* hard linked files */

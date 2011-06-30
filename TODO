@@ -53,8 +53,8 @@
 * Think about having a 'friendly' way of doing restores, as I have known some
   people to complain about having to type things on the command lne.
 
-* Add 'nobackup =' option, of which you could have many. If a file system entry
-  named thus exists, then the directory is not backed up.
-
 * Add 'working_dir_recovery_method = resume' option, which would continue a
   backup from the point it was interrupted.
+
+* Get rid of the stupidly complicated 'find_files' callback mechanism
+  inherited from bacula. Just call the functions directly.

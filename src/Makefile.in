@@ -9,7 +9,7 @@ basedir = ..
 # top dir
 topdir = ..
 # this dir relative to top dir
-thisdir = src/burp
+thisdir = src
 
 DEBUG=@DEBUG@
 
@@ -117,12 +117,12 @@ burp:  Makefile $(SVROBJS) @WIN32@
 	@echo "Linking $@ ..."
 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -o $@ $(SVROBJS) \
 	  $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
-	  $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(RSYNC_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS) -ldl
+	  $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(RSYNC_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS)
 
 static-burp: Makefile $(SVROBJS) @WIN32@
 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -o $@ $(SVROBJS) \
 	   $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
-	   $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(RSYNC_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS) -ldl
+	   $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(RSYNC_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS) -ldl -lgpm
 #	strip $@
 
 Makefile: $(srcdir)/Makefile.in $(topdir)/config.status

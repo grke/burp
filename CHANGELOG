@@ -1,3 +1,4 @@
+  * Fix compiler warnings and '-ldl' linker error on FreeBSD 8.2.
   * Add 'nobackup = [file name]' option. If this file system entry exists, the
     directory containing it will not be backed up.
 

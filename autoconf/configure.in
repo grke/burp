@@ -534,10 +534,10 @@ fi
 AC_SUBST(OPENSSL_LIBS)
 AC_SUBST(OPENSSL_INC)
 
-dnl -----------------------------------------------------------
-dnl dlopen is needed for plugins
-dnl -----------------------------------------------------------
-AC_SEARCH_LIBS(dlopen, [dl])
+#dnl -----------------------------------------------------------
+#dnl dlopen is needed for plugins
+#dnl -----------------------------------------------------------
+#AC_SEARCH_LIBS(dlopen, [dl])
 
 AC_DEFINE(PROTOTYPES)
 

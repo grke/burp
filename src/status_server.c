@@ -169,7 +169,7 @@ static char *get_last_backup_time(const char *timestamp)
 	if(read_timestamp(timestamp, wbuf, sizeof(wbuf))) return ret;
 
 	snprintf(ret, sizeof(ret), "%lu %li", atol(wbuf),
-		timestamp_to_long(wbuf));
+		(long)timestamp_to_long(wbuf));
 	  
 	return ret;
 }
@@ -439,7 +439,7 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, int
 					char tmp[16]="";
 					t=timestamp_to_long(arr[i].timestamp);
 					snprintf(tmp, sizeof(tmp), "\t%lu %li",
-						arr[i].index, t);
+						arr[i].index, (long)t);
 					strcat(curback, tmp);
 				}
 				if(!a) strcat(curback, "\t0");

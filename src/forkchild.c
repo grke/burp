@@ -30,7 +30,7 @@ static pid_t forkchild_fd(int sin, int sout, int serr, const char *path, char * 
 		 * the true number, and FD_SETSIZE is a close approximation.
 		 * It would be a bit lame if you could open a file whose
 		 * descriptor could not be included in an fd_set. */
-		for(fd=3; fd<FD_SETSIZE; ++fd) close(fd);
+		for(fd=3; fd<(int)FD_SETSIZE; ++fd) close(fd);
 		if(execv(path, argv)==-1)
 		{
 			logp("execv %s: %s\n", path, strerror(errno));

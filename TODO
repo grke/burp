@@ -1,8 +1,5 @@
 (in no particular order)
 
-* Improve the byte counter:
-	do something about working dir recovery
-
 * Make SSL_shutdown() work properly.
 
 * Investigate HFS / resource forks and make support.
@@ -12,13 +9,19 @@
 * Think about adding a utility to create certs, like easy-rsa from OpenVPN.
 	(burp_ca has been added - does more need to be done?)
 
-* Add xattr support.
+* Add acl/xattr support
 	(generic linux support is done - do freebsd and solaris next)
 
-* Add acl support
-	(generic linux support is done - do freebsd and solaris next)
-
-* Improve the status monitor.
+* Improve the status monitor / counters.
+	- It is no longer showing file paths in the detail view.
+	- Sometimes crashes when you edit a clientconfdir file with vi.
+	- Doesn't delete clients properly from its list when they are removed
+	  from clientconfdir.
+	- Remember the phase1 scan counters so that later phases can have
+	  things like estimated times.
+	- Counters are missing from the logs when a backup is completed via
+	  working dir recovery.
+	- Can something be done to make key presses more responsive?
 
 * Do not compress manifests and logs when compression is turned off.
 
@@ -31,6 +34,10 @@
 * Add an option to set hardlinked_archive on a cycle, instead of just being
   either on or off.
 
+* Add the option to turn an existing hardlinked_archive (not 'current') into
+  a non-hardlinked_archive, and vice versa. This could be useful for deleting
+  backups out of the middle of a chain instead of just the oldest.
+
 * Get metadata transfers to use librsync.
 
 * Have an option to let the client give the server the encryption password
@@ -42,3 +49,12 @@
   containing 1,500,000 small files with very few changes.
 
 * Investigate Windows 'bare metal restore'.
+
+* Think about having a 'friendly' way of doing restores, as I have known some
+  people to complain about having to type things on the command lne.
+
+* Add 'nobackup =' option, of which you could have many. If a file system entry
+  named thus exists, then the directory is not backed up.
+
+* Add 'working_dir_recovery_method = resume' option, which would continue a
+  backup from the point it was interrupted.

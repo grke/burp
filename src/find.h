@@ -96,7 +96,6 @@ struct FF_PKT {
    int type;                          /* FT_ type from above */
    int ff_errno;                      /* errno */
    time_t save_time;                  /* start of incremental time */
-   int (*file_save)(FF_PKT *, bool, struct config *, struct cntr *cntr); /* User's callback */
 
    /* Values set by accept_file while processing Options */
    uint32_t flags;                    /* backup options */
@@ -113,16 +112,9 @@ struct FF_PKT {
 #endif
 };
 
-/* protos from find.c */
 FF_PKT *init_find_files();
-int   find_files(FF_PKT *ff, struct config *conf, char *path, struct cntr *cntr, int file_sub(FF_PKT *ff_pkt, bool, struct config *conf, struct cntr *cntr));
-int   term_find_files(FF_PKT *ff);
-
-/* From find_one.c */
-int   find_one_file(FF_PKT *ff, struct config *conf, struct cntr *cntr,
-  int handle_file(FF_PKT *ff_pkt, bool top_level, struct config *conf, struct cntr *cntr),
-  char *p, dev_t parent_device, bool top_level);
-int   term_find_one(FF_PKT *ff);
+int term_find_files(FF_PKT *ff);
+int find_files_begin(FF_PKT *ff_pkt, struct config *conf, char *fname, struct cntr *cntr);
 int pathcmp(const char *a, const char *b);
 int is_subdir(const char *dir, const char *sub);
 int file_is_included(struct strlist **ielist, int iecount, const char *fname);

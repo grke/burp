@@ -41,7 +41,6 @@ SVRSRCS =	acl.c \
 		dpth.c \
 		extrameta.c \
 		find.c \
-		find_one.c \
 		forkchild.c \
 		handy.c \
 		list_client.c \

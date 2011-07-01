@@ -1,3 +1,5 @@
+  * Get rid of the stupidly complicated 'find_files' callback mechanism
+    inherited from bacula. Just call all the functions directly.
   * Fix compiler warnings and '-ldl' linker error on FreeBSD 8.2.
   * Add 'nobackup = [file name]' option. If this file system entry exists, the
     directory containing it will not be backed up.

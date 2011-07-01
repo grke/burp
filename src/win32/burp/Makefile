@@ -44,7 +44,6 @@ FILED_OBJS = \
 	$(OBJDIR)/counter.o \
 	$(OBJDIR)/extrameta.o \
 	$(OBJDIR)/find.o \
-	$(OBJDIR)/find_one.o \
 	$(OBJDIR)/forkchild.o \
 	$(OBJDIR)/list_client.o \
 	$(OBJDIR)/handy.o \

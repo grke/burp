@@ -24,7 +24,7 @@ static int maybe_send_extrameta(const char *path, char cmd, const char *attribs,
 	return 0;
 }
 
-static int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *cntr)
+int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *cntr)
 {
    char msg[128]="";
    char attribs[MAXSTRING];
@@ -165,8 +165,8 @@ int backup_phase1_client(struct config *conf, struct cntr *cntr)
 	{
 		if(conf->startdir[sd]->flag)
 		{
-			if((ret=find_files(ff, conf,
-				conf->startdir[sd]->path, cntr, send_file)))
+			if((ret=find_files_begin(ff, conf,
+				conf->startdir[sd]->path, cntr)))
 					break;
 		}
 	}

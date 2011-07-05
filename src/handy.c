@@ -92,7 +92,17 @@ int mkpath(char **rpath, const char *limit)
 	//printf("mkpath: %s\n", *rpath);
 	if((cp=strrchr(*rpath, '/')))
 	{
+#ifdef HAVE_WIN32
+		int windows_stupidity=0;
 		*cp='\0';
+		if(strlen(*rpath)==2 && (*rpath)[1]==':')
+		{
+			(*rpath)[1]='\0';
+			windows_stupidity++;
+		}
+#else
+		*cp='\0';
+#endif
 		if(!**rpath)
 		{
 			// We are down to the root, which is OK.
@@ -122,12 +132,18 @@ int mkpath(char **rpath, const char *limit)
 			if(limit && pathcmp(*rpath, limit)<0)
 			{
 				logp("will not mkdir %s\n", *rpath);
+#ifdef HAVE_WIN32
+				if(windows_stupidity) (*rpath)[1]=':';
+#endif
 				*cp='/';
 				return -1;
 			}
 			if(mkdir(*rpath, 0777))
 			{
 				logp("could not mkdir %s: %s\n", *rpath, strerror(errno));
+#ifdef HAVE_WIN32
+				if(windows_stupidity) (*rpath)[1]=':';
+#endif
 				*cp='/';
 				return -1;
 			}
@@ -146,6 +162,9 @@ int mkpath(char **rpath, const char *limit)
 			logp("warning: wanted '%s' to be a directory\n",
 				*rpath);
 		}
+#ifdef HAVE_WIN32
+		if(windows_stupidity) (*rpath)[1]=':';
+#endif
 		*cp='/';
 	}
 	return 0;

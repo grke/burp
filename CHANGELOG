@@ -3,6 +3,7 @@
   * Fix compiler warnings and '-ldl' linker error on FreeBSD 8.2.
   * Add 'nobackup = [file name]' option. If this file system entry exists, the
     directory containing it will not be backed up.
+  * When down to 'C:' in mkpath() on Windows restore, strip the ':'.
 
 2011-06-27 Changes in burp-1.1.65:
   * Add mechanism for backing up and restoring extra meta data.

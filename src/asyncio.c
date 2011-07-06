@@ -89,6 +89,7 @@ static int do_read(int *read_blocked_on_write)
 {
 	ssize_t r;
 
+	ERR_clear_error();
 	r=SSL_read(ssl, readbuf+readbuflen, readbufmaxsize-readbuflen);
 
 	switch(SSL_get_error(ssl, r))
@@ -108,6 +109,12 @@ static int do_read(int *read_blocked_on_write)
 	  case SSL_ERROR_WANT_WRITE:
 		*read_blocked_on_write=1;
 		break;
+	  case SSL_ERROR_SYSCALL:
+		if(errno == EAGAIN || errno == EINTR)
+			break;
+		logp("Got SSL_ERROR_SYSCALL in read, errno=%d (%s)\n",
+			errno, strerror(errno));
+		// Fall through to read problem
 	  default:
 		logp("SSL read problem\n");
 		truncate_buf(&readbuf, &readbuflen);
@@ -120,6 +127,7 @@ static int do_write(int *write_blocked_on_read)
 {
 	ssize_t w;
 
+	ERR_clear_error();
 	w=SSL_write(ssl, writebuf, writebuflen);
 
 	switch(SSL_get_error(ssl, w))
@@ -134,6 +142,12 @@ static int do_write(int *write_blocked_on_read)
 	  case SSL_ERROR_WANT_READ:
 		*write_blocked_on_read=1;
 		break;
+	  case SSL_ERROR_SYSCALL:
+		if(errno == EAGAIN || errno == EINTR)
+			break;
+		logp("Got SSL_ERROR_SYSCALL in write, errno=%d (%s)\n",
+			errno, strerror(errno));
+		// Fall through to write problem
 	  default:
 		berr_exit("SSL write problem");
 		logp("write returned: %d\n", w);

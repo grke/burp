@@ -12,10 +12,13 @@ int has_extrameta(const char *path, char cmd)
 	// Assume that links do not have their own metadata.
 	if(cmd_is_link(cmd)) return 0;
 
-#if defined(HAVE_LINUX_OS)
+#if defined(HAVE_LINUX_OS) || \
+    defined(HAVE_FREEBSD_OS)
 #ifdef HAVE_ACL
 	if(has_acl(path, cmd)) return 1;
 #endif
+#endif
+#if defined(HAVE_LINUX_OS)
 #ifdef HAVE_XATTR
 	if(has_xattr(path, cmd)) return 1;
 #endif
@@ -27,10 +30,13 @@ int get_extrameta(const char *path, struct stat *statp, char **extrameta, struct
 {
 	// Important to do xattr directly after acl, because xattr is excluding
 	// some entries if acls were set.
-#if defined(HAVE_LINUX_OS)
+#if defined(HAVE_LINUX_OS) || \
+    defined(HAVE_FREEBSD_OS)
 #ifdef HAVE_ACL
 	if(get_acl(path, statp, extrameta, cntr)) return -1;
 #endif
+#endif
+#if defined(HAVE_LINUX_OS)
 #ifdef HAVE_XATTR
 	if(get_xattr(path, statp, extrameta, cntr)) return -1;
 #endif
@@ -72,7 +78,8 @@ int set_extrameta(const char *path, char cmd, struct stat *statp, const char *ex
 
 		switch(cmdtmp)
 		{
-#if defined(HAVE_LINUX_OS)
+#if defined(HAVE_LINUX_OS) || \
+    defined(HAVE_FREEBSD_OS)
 #ifdef HAVE_ACL
 			case META_ACCESS_ACL:
 				if(set_acl(path, statp, m, cmdtmp, cntr))
@@ -83,6 +90,8 @@ int set_extrameta(const char *path, char cmd, struct stat *statp, const char *ex
 					errors++;
 				break;
 #endif
+#endif
+#if defined(HAVE_LINUX_OS)
 #ifdef HAVE_XATTR
 			case META_XATTR:
 				if(set_xattr(path, statp, m, cmdtmp, cntr))

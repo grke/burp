@@ -5,6 +5,7 @@
     directory containing it will not be backed up.
   * When down to 'C:' in mkpath() on Windows restore, strip the ':'.
   * Run ERR_clear_error() before SSL_read/write.
+  * FreeBSD ACL support.
 
 2011-06-27 Changes in burp-1.1.65:
   * Add mechanism for backing up and restoring extra meta data.

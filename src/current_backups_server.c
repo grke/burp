@@ -505,7 +505,7 @@ int remove_old_backups(const char *basedir, int keep)
 
 int compile_regex(regex_t **regex, const char *str)
 {
-	if(str)
+	if(str && *str)
 	{
 		if(!(*regex=(regex_t *)malloc(sizeof(regex_t)))
 		  || regcomp(*regex, str, REG_EXTENDED))

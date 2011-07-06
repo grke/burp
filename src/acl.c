@@ -8,9 +8,15 @@
 #include "extrameta.h"
 
 #ifdef HAVE_ACL
-#if defined(HAVE_LINUX_OS)
+#if defined(HAVE_LINUX_OS) || \
+    defined(HAVE_FREEBSD_OS)
 #include "sys/acl.h"
-#include "acl/libacl.h"
+
+/* Linux can do shorter ACLs */
+#if defined(HAVE_LINUX_OS)
+#include <acl/libacl.h>
+#define acl_to_text(acl,len)	    (acl_to_any_text((acl), NULL, ',', TEXT_ABBREVIATE|TEXT_NUMERIC_IDS))
+#endif
 
 // section of acl_is_trivial copied from bacula 
 static int acl_is_trivial(acl_t acl)
@@ -93,19 +99,12 @@ static int get_acl_string(acl_t acl, char **acltext, const char *path, char type
 	char *ourtext=NULL;
 	ssize_t maxlen=0xFFFFFFFF/2;
 
-	if(!(tmp=acl_to_any_text(acl, NULL, ',',
-		TEXT_NUMERIC_IDS|TEXT_ABBREVIATE)))
-	{
-		logw(cntr, "could not get ACL text of '%s'\n", path);
-		return 0; // carry on
-	}
-/*
 	if(!(tmp=acl_to_text(acl, NULL)))
 	{
 		logw(cntr, "could not get ACL text of '%s'\n", path);
 		return 0; // carry on
 	}
-*/
+
 	s=strlen(tmp);
 
 	if(s>maxlen)
@@ -178,6 +177,8 @@ static int do_set_acl(const char *path, struct stat *statp, const char *acltext,
 			path, acltext, strerror(errno));
 		return -1;
 	}
+//#ifndef HAVE_FREEBSD_OS // Bacula says that acl_valid fails on valid input
+			// on freebsd. It works OK for me on FreeBSD 8.2.
 	if(acl_valid(acl))
 	{
 		logp("acl_valid error on %s: %s", path, strerror(errno));
@@ -185,6 +186,7 @@ static int do_set_acl(const char *path, struct stat *statp, const char *acltext,
 		acl_free(acl);
 		return -1;
 	}
+//#endif
 	if(acl_set_file(path, acltype, acl))
 	{
 		logp("acl set error on %s: %s", path, strerror(errno));

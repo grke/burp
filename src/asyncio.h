@@ -1,6 +1,9 @@
 #ifndef _ASYNCIO_ROUTINES_H
 #define _ASYNCIO_ROUTINES_H
 
+#define ASYNC_BUF_LEN	16000
+#define ZCHUNK		ASYNC_BUF_LEN
+
 #include <zlib.h>
 #include "cmd.h"
 

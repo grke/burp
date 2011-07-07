@@ -156,15 +156,13 @@ static int send_file(const char *fname, int patches, const char *best, const cha
 	}
 }
 
-#define VCHUNK	16000
-
 static int verify_file(const char *fname, int patches, const char *best, const char *datapth, unsigned long long *bytes, const char *endfile, char cmd, struct cntr *cntr)
 {
 	MD5_CTX md5;
 	size_t b=0;
 	const char *cp=NULL;
 	const char *newsum=NULL;
-	unsigned char in[VCHUNK];
+	unsigned char in[ZCHUNK];
 	unsigned char checksum[MD5_DIGEST_LENGTH+1];
 	unsigned long long cbytes=0;
 	if(!(cp=strrchr(endfile, ':')))
@@ -189,7 +187,7 @@ static int verify_file(const char *fname, int patches, const char *best, const c
 			logw(cntr, "could not open %s\n", best);
 			return 0;
 		}
-		while((b=fread(in, 1, VCHUNK, fp))>0)
+		while((b=fread(in, 1, ZCHUNK, fp))>0)
 		{
 			cbytes+=b;
 			if(!MD5_Update(&md5, in, b))
@@ -215,7 +213,7 @@ static int verify_file(const char *fname, int patches, const char *best, const c
 			logw(cntr, "could not gzopen %s\n", best);
 			return 0;
 		}
-		while((b=gzread(zp, in, VCHUNK))>0)
+		while((b=gzread(zp, in, ZCHUNK))>0)
 		{
 			cbytes+=b;
 			if(!MD5_Update(&md5, in, b))

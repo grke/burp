@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <zlib.h>
 
+#include "burp.h"
+#include "asyncio.h"
 #include "zlibio.h"
 
 /*
@@ -11,15 +13,13 @@
    Not copyrighted -- provided to the public domain
    Version 1.4  11 December 2005  Mark Adler */
 
-#define CHUNK 16000
-
 int zlib_inflate(FILE *source, FILE *dest)
 {
     int ret;
     unsigned have;
     z_stream strm;
-    unsigned char in[CHUNK];
-    unsigned char out[CHUNK];
+    unsigned char in[ZCHUNK];
+    unsigned char out[ZCHUNK];
 
     /* allocate inflate state */
     strm.zalloc = Z_NULL;
@@ -33,7 +33,7 @@ int zlib_inflate(FILE *source, FILE *dest)
 
     /* decompress until deflate stream ends or end of file */
     do {
-        strm.avail_in = fread(in, 1, CHUNK, source);
+        strm.avail_in = fread(in, 1, ZCHUNK, source);
         if (ferror(source)) {
             (void)inflateEnd(&strm);
             return Z_ERRNO;
@@ -44,7 +44,7 @@ int zlib_inflate(FILE *source, FILE *dest)
 
         /* run inflate() on input until output buffer not full */
         do {
-            strm.avail_out = CHUNK;
+            strm.avail_out = ZCHUNK;
             strm.next_out = out;
             ret = inflate(&strm, Z_NO_FLUSH);
             assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
@@ -56,7 +56,7 @@ int zlib_inflate(FILE *source, FILE *dest)
                 (void)inflateEnd(&strm);
                 return ret;
             }
-            have = CHUNK - strm.avail_out;
+            have = ZCHUNK - strm.avail_out;
             if (fwrite(out, 1, have, dest) != have || ferror(dest)) {
                 (void)inflateEnd(&strm);
                 return Z_ERRNO;

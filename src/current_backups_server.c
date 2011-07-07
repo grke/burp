@@ -14,6 +14,7 @@
 #include <netdb.h>
 #include <librsync.h>
 #include <regex.h>
+#include <math.h>
 
 int recursive_hardlink(const char *src, const char *dst, const char *client, struct cntr *cntr)
 {
@@ -405,7 +406,7 @@ static int compress(const char *src, const char *dst, struct config *cconf)
 	int got;
 	FILE *mp=NULL;
 	gzFile zp=NULL;
-	char buf[16000];
+	char buf[ZCHUNK];
 
 	if(!(mp=open_file(src, "rb"))
 	  || !(zp=gzopen_file(dst, comp_level(cconf))))
@@ -526,4 +527,17 @@ int check_regex(regex_t *regex, const char *buf)
 		case REG_NOMATCH: return 0;
 		default: return 0;
 	}
+}
+
+/* Need to base librsync block length on the size of the old file, otherwise
+   the risk of librsync collisions and silent corruption increases as the
+   size of the new file gets bigger. */
+size_t get_librsync_block_len(const char *endfile)
+{
+	size_t ret=0;
+	unsigned long long oldlen=0;
+	oldlen=strtoull(endfile, NULL, 10);
+	ret=(size_t)(ceil(sqrt(oldlen)/16)*16); // round to a multiple of 16.
+	if(ret<64) return 64; // minimum of 64 bytes.
+	return ret;
 }

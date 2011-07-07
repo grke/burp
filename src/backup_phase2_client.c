@@ -81,16 +81,16 @@ static int load_signature_and_send_delta(const char *rpath, unsigned long long *
 	}
 
 #ifdef HAVE_WIN32
-	if(!(infb=rs_filebuf_new(&bfd, NULL, NULL, -1, rs_inbuflen, cntr))
-	  || !(outfb=rs_filebuf_new(NULL, NULL, NULL, async_get_fd(), rs_outbuflen, cntr)))
+	if(!(infb=rs_filebuf_new(&bfd, NULL, NULL, -1, ASYNC_BUF_LEN, cntr))
+	  || !(outfb=rs_filebuf_new(NULL, NULL, NULL, async_get_fd(), ASYNC_BUF_LEN, cntr)))
 	{
 		logp("could not rs_filebuf_new for delta\n");
 		if(infb) rs_filebuf_free(infb);
 		return -1;
 	}
 #else
-	if(!(infb=rs_filebuf_new(NULL, in, NULL, -1, rs_inbuflen, cntr))
-	  || !(outfb=rs_filebuf_new(NULL, NULL, NULL, async_get_fd(), rs_outbuflen, cntr)))
+	if(!(infb=rs_filebuf_new(NULL, in, NULL, -1, ASYNC_BUF_LEN, cntr))
+	  || !(outfb=rs_filebuf_new(NULL, NULL, NULL, async_get_fd(), ASYNC_BUF_LEN, cntr)))
 	{
 		logp("could not rs_filebuf_new for delta\n");
 		if(infb) rs_filebuf_free(infb);

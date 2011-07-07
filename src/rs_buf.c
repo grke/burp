@@ -48,19 +48,10 @@
 #include "zlibio.h"
 #include <assert.h>
 
-size_t block_len=RS_DEFAULT_BLOCK_LEN;
-size_t strong_len=RS_DEFAULT_STRONG_LEN;
-
 /* use fseeko instead of fseek for long file support if we have it */
 #ifdef HAVE_FSEEKO
 #define fseek fseeko
 #endif
-
-/**
- * File IO buffer sizes.
- */
-//int rs_inbuflen = 16000, rs_outbuflen = 16000;
-
 
 /*
  * Allocate and zero-fill an instance of TYPE.
@@ -91,8 +82,6 @@ rs_alloc(size_t size, char const *name)
 
     return p;
 }
-
-#define ZCHUNK	16000
 
 rs_filebuf_t *rs_filebuf_new(BFILE *bfd, FILE *fp, gzFile zp, int fd,
 	size_t buf_len, struct cntr *cntr)
@@ -368,10 +357,10 @@ rs_result do_rs_run(rs_job_t *job, BFILE *bfd,
 	}
 
 	if((bfd || in_file || in_zfile || infd>=0)
-	 && !(in_fb=rs_filebuf_new(bfd, in_file, in_zfile, infd, rs_inbuflen, cntr)))
+	 && !(in_fb=rs_filebuf_new(bfd, in_file, in_zfile, infd, ASYNC_BUF_LEN, cntr)))
 		return RS_MEM_ERROR;
 	if((out_file || out_zfile || outfd>=0)
-	 && !(out_fb=rs_filebuf_new(NULL, out_file, out_zfile, outfd, rs_outbuflen, cntr)))
+	 && !(out_fb=rs_filebuf_new(NULL, out_file, out_zfile, outfd, ASYNC_BUF_LEN, cntr)))
 	{
 		if(in_fb) rs_filebuf_free(in_fb);
 		return RS_MEM_ERROR;
@@ -437,10 +426,10 @@ rs_whole_gzrun(rs_job_t *job, FILE *in_file, gzFile in_zfile, FILE *out_file, gz
     rs_filebuf_t    *in_fb = NULL, *out_fb = NULL;
 
     if (in_file || in_zfile)
-        in_fb = rs_filebuf_new(NULL, in_file, in_zfile, -1, rs_inbuflen, cntr);
+        in_fb = rs_filebuf_new(NULL, in_file, in_zfile, -1, ASYNC_BUF_LEN, cntr);
 
     if (out_file || out_zfile)
-        out_fb = rs_filebuf_new(NULL, out_file, out_zfile, -1, rs_outbuflen, cntr);
+        out_fb = rs_filebuf_new(NULL, out_file, out_zfile, -1, ASYNC_BUF_LEN, cntr);
 //logp("before drive\n");
     result = rs_job_drive(job, &buf,
                           in_fb ? rs_infilebuf_fill : NULL, in_fb,

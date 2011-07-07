@@ -24,5 +24,7 @@ extern int compress_filename(const char *d, const char *file, const char *zfile,
 extern int remove_old_backups(const char *basedir, int keep);
 extern int compile_regex(regex_t **regex, const char *str);
 extern int check_regex(regex_t *regex, const char *buf);
+extern size_t get_librsync_block_len(const char *endfile);
+
 
 #endif // _CURRENT_BACKUPS_H

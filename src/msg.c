@@ -66,8 +66,6 @@ static int do_write(BFILE *bfd, FILE *fp, unsigned char *out, size_t outlen, cha
 	return 0;
 }
 
-#define ZCHUNK 16000
-
 static int do_inflate(z_stream *zstrm, BFILE *bfd, FILE *fp, unsigned char *out, unsigned char *buftouse, size_t lentouse, char **metadata)
 {
 	int zret=Z_OK;

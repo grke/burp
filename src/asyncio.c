@@ -13,11 +13,11 @@ static SSL *ssl=NULL;
 
 static char *readbuf=NULL;
 static size_t readbuflen=0;
-static size_t readbufmaxsize=(rs_inbuflen*2)+32;
+static size_t readbufmaxsize=(ASYNC_BUF_LEN*2)+32;
 
 static char *writebuf=NULL;
 static size_t writebuflen=0;
-static size_t writebufmaxsize=(rs_outbuflen*2)+32;
+static size_t writebufmaxsize=(ASYNC_BUF_LEN*2)+32;
 
 int status_wfd=-1; // for the child to send information to the parent.
 int status_rfd=-1; // for the child to read information from the parent.

@@ -257,8 +257,6 @@ int write_endfile(unsigned long long bytes, unsigned char *checksum)
 	return ret;
 }
 
-#define ZCHUNK 16000
-
 static int do_encryption(EVP_CIPHER_CTX *ctx, unsigned char *inbuf, size_t inlen, unsigned char *outbuf, size_t *outlen, MD5_CTX *md5)
 {
 	if(!inlen) return 0;

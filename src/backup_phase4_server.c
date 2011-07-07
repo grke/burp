@@ -16,7 +16,7 @@
 #include <netdb.h>
 #include <librsync.h>
 
-static int make_rev_sig(const char *dst, const char *sig, struct cntr *cntr)
+static int make_rev_sig(const char *dst, const char *sig, const char *endfile, struct cntr *cntr)
 {
 	FILE *dstfp=NULL;
 	gzFile dstzp=NULL;
@@ -36,7 +36,9 @@ static int make_rev_sig(const char *dst, const char *sig, struct cntr *cntr)
 		close_fp(&dstfp);
 		return -1;
 	}
-	result=rs_sig_gzfile(dstfp, dstzp, sigp, block_len, strong_len, NULL, cntr);
+	result=rs_sig_gzfile(dstfp, dstzp, sigp,
+		get_librsync_block_len(endfile),
+		RS_DEFAULT_STRONG_LEN, NULL, cntr);
 	gzclose_fp(&dstzp);
 	close_fp(&dstfp);
 	close_fp(&sigp);
@@ -111,7 +113,7 @@ static int make_rev_delta(const char *src, const char *sig, const char *del, str
 }
 
 
-static int gen_rev_delta(const char *sigpath, const char *deltadir, const char *oldpath, const char *finpath, const char *path, struct cntr *cntr, struct config *cconf)
+static int gen_rev_delta(const char *sigpath, const char *deltadir, const char *oldpath, const char *finpath, const char *path, const char *endfile, struct cntr *cntr, struct config *cconf)
 {
 	int ret=0;
 	char *delpath=NULL;
@@ -132,7 +134,7 @@ static int gen_rev_delta(const char *sigpath, const char *deltadir, const char *
 		logp("could not mkpaths for: %s\n", delpath);
 		ret=-1;
 	}
-	else if(make_rev_sig(finpath, sigpath, cntr))
+	else if(make_rev_sig(finpath, sigpath, endfile, cntr))
 	{
 		logp("could not make signature from: %s\n", finpath);
 		ret=-1;
@@ -203,7 +205,7 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath)
 	return ret;
 }
 
-static int jiggle(const char *datapth, const char *currentdata, const char *datadirtmp, const char *datadir, const char *deltabdir, const char *deltafdir, const char *sigpath, struct cntr *cntr, struct config *cconf)
+static int jiggle(const char *datapth, const char *currentdata, const char *datadirtmp, const char *datadir, const char *deltabdir, const char *deltafdir, const char *sigpath, const char *endfile, struct cntr *cntr, struct config *cconf)
 {
 	int ret=0;
 	struct stat statp;
@@ -300,7 +302,8 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 		if(!cconf->hardlinked_archive)
 		{
 			if(gen_rev_delta(sigpath, deltabdir,
-				oldpath, newpath, datapth, cntr, cconf))
+				oldpath, newpath, datapth, endfile,
+				cntr, cconf))
 			{
 				ret=-1;
 				goto cleanup;
@@ -448,7 +451,7 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 
 			if((ret=jiggle(sb.datapth, currentdata, datadirtmp,
 				datadir, deltabdir, deltafdir,
-				sigpath,
+				sigpath, sb.endfile,
 				cntr, cconf))) break;
 		}
 		free_sbuf(&sb);

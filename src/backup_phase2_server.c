@@ -10,6 +10,7 @@
 #include "dpth.h"
 #include "sbuf.h"
 #include "backup_phase2_server.h"
+#include "current_backups_server.h"
 
 static int start_to_receive_new_file(struct sbuf *sb, const char *datadirtmp, struct dpth *dpth, struct cntr *cntr, struct config *cconf)
 {
@@ -41,6 +42,7 @@ static int start_to_receive_new_file(struct sbuf *sb, const char *datadirtmp, st
 
 static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *currentdata, struct cntr *cntr)
 {
+	size_t blocklen=0;
 	char *curpath=NULL;
 	//logp("need to process changed file: %s (%s)\n", cb->path, cb->datapth);
 
@@ -66,18 +68,19 @@ static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *c
 	}
 	free(curpath);
 
-	if(!(p1b->sigjob=rs_sig_begin(block_len, strong_len)))
+	blocklen=get_librsync_block_len(cb->endfile);
+	if(!(p1b->sigjob=rs_sig_begin(blocklen, RS_DEFAULT_STRONG_LEN)))
 	{
 		logp("could not start signature job.\n");
 		return -1;
 	}
 //logp("sig begin: %s\n", p1b->datapth);
-	if(!(p1b->infb=rs_filebuf_new(NULL, p1b->sigfp, p1b->sigzp, -1, rs_inbuflen, cntr)))
+	if(!(p1b->infb=rs_filebuf_new(NULL, p1b->sigfp, p1b->sigzp, -1, blocklen, cntr)))
 	{
 		logp("could not rs_filebuf_new for infb.\n");
 		return -1;
 	}
-	if(!(p1b->outfb=rs_filebuf_new(NULL, NULL, NULL, async_get_fd(), rs_outbuflen, cntr)))
+	if(!(p1b->outfb=rs_filebuf_new(NULL, NULL, NULL, async_get_fd(), ASYNC_BUF_LEN, cntr)))
 	{
 		logp("could not rs_filebuf_new for in_outfb.\n");
 		return -1;

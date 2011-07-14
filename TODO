@@ -68,3 +68,6 @@
 * When a client is waiting a very long time on working directory recovery, it
   can get stuck in its select loop. Have some kind of a timeout. Or, go into
   a different kind of loop where it keeps trying to make a fresh connection.
+
+* burp -a e: 'estimate' option - just run backup phase1 to find out roughly how 
+  much space a client will use.

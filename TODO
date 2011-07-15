@@ -71,3 +71,5 @@
 
 * burp -a e: 'estimate' option - just run backup phase1 to find out roughly how 
   much space a client will use.
+
+* Option to send a regular snapshot of the status summary screen in an email.

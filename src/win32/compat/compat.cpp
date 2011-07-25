@@ -705,12 +705,63 @@ statDir(const char *file, struct stat *sb)
     *  filesystem).
     */
    if (*pdwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
-      if (*pdwReserved0 & IO_REPARSE_TAG_MOUNT_POINT) {
-         sb->st_rdev = WIN32_MOUNT_POINT;           /* mount point */
-      } else {
-         sb->st_rdev = WIN32_REPARSE_POINT;         /* reparse point */
+      sb->st_rdev = WIN32_MOUNT_POINT;           /* mount point */
+   } else {
+      sb->st_rdev = 0;
+   }
+   if ((*pdwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) &&
+        (*pdwReserved0 & IO_REPARSE_TAG_MOUNT_POINT)) {
+      sb->st_rdev = WIN32_MOUNT_POINT;           /* mount point */
+      /*
+       * Now to find out if the directory is a mount point or
+       * a reparse point, we must do a song and a dance.
+       * Explicitly open the file to read the reparse point, then
+       * call DeviceIoControl to find out if it points to a Volume
+       * or to a directory.
+       */
+      h = INVALID_HANDLE_VALUE;
+      if (p_GetFileAttributesW) {
+         char* pwszBuf = sm_get_pool_memory(PM_FNAME);
+         make_win32_path_UTF8_2_wchar(&pwszBuf, file);
+         if (p_CreateFileW) {
+            h = CreateFileW((LPCWSTR)pwszBuf, GENERIC_READ,
+                   FILE_SHARE_READ, NULL, OPEN_EXISTING,
+                   FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
+                   NULL);
+         }
+         sm_free_pool_memory(pwszBuf);
+      } else if (p_GetFileAttributesA) {
+         h = CreateFileA(file, GENERIC_READ,
+                FILE_SHARE_READ, NULL, OPEN_EXISTING,
+                FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
+                NULL);
       }
-   }  
+      if (h != INVALID_HANDLE_VALUE) {
+         char dummy[1000];
+         REPARSE_DATA_BUFFER *rdb = (REPARSE_DATA_BUFFER *)dummy;
+         rdb->ReparseTag = IO_REPARSE_TAG_MOUNT_POINT;
+         DWORD bytes;
+         bool ok;
+         ok = DeviceIoControl(h, FSCTL_GET_REPARSE_POINT,
+                 NULL, 0,                           /* in buffer, bytes */
+                 (LPVOID)rdb, (DWORD)sizeof(dummy), /* out buffer, btyes */
+                 (LPDWORD)&bytes, (LPOVERLAPPED)0);
+         if (ok) {
+            char *utf8 = sm_get_pool_memory(PM_NAME);
+            wchar_2_UTF8(utf8, (wchar_t *)rdb->SymbolicLinkReparseBuffer.PathBuffer);
+            if (strncasecmp(utf8, "\\??\\volume{", 11) == 0) {
+               sb->st_rdev = WIN32_MOUNT_POINT;
+            } else {
+               /* It points to a directory so we ignore it. */
+               sb->st_rdev = WIN32_JUNCTION_POINT;
+            }
+            sm_free_pool_memory(utf8);
+         }
+         CloseHandle(h);
+      } else {
+         //Dmsg1(dbglvl, "Invalid handle from CreateFile(%s)\n", file);
+      }
+   }
    sb->st_size = *pnFileSizeHigh;
    sb->st_size <<= 32;
    sb->st_size |= *pnFileSizeLow;

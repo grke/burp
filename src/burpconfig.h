@@ -36,8 +36,9 @@
 
 #if defined(HAVE_WIN32)
 
-#define WIN32_REPARSE_POINT 1
-#define WIN32_MOUNT_POINT   2
+#define WIN32_REPARSE_POINT  1   /* Can be any number of "funny" directories except the next two */
+#define WIN32_MOUNT_POINT    2   /* Directory link to Volume */
+#define WIN32_JUNCTION_POINT 3   /* Directory link to a directory */
 
 void InitWinAPIWrapper();
 
@@ -289,6 +290,7 @@ void InitWinAPIWrapper();
 #define FT_REPARSE   21               /* Win NTFS reparse point */
 #define FT_PLUGIN    22               /* Plugin generated filename */
 #define FT_DELETED   23               /* Deleted file entry */
+#define FT_JUNCTION  26               /* Win32 Junction point */
 
 /* Definitions for upper part of type word (see above). */
 #define AR_DATA_STREAM (1<<16)        /* Data stream id present */

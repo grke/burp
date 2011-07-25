@@ -17,7 +17,36 @@
 #ifdef MINGW64
 #include <direct.h>
 #define _declspec __declspec
+
+/* Missing in 64 bit mingw */
+typedef struct _REPARSE_DATA_BUFFER {
+        DWORD  ReparseTag;
+        WORD   ReparseDataLength;
+        WORD   Reserved;
+        union {
+                struct {
+                        WORD   SubstituteNameOffset;
+                        WORD   SubstituteNameLength;
+                        WORD   PrintNameOffset;
+                        WORD   PrintNameLength;
+                        WCHAR PathBuffer[1];
+                } SymbolicLinkReparseBuffer;
+                struct {
+                        WORD   SubstituteNameOffset;
+                        WORD   SubstituteNameLength;
+                        WORD   PrintNameOffset;
+                        WORD   PrintNameLength;
+                        WCHAR PathBuffer[1];
+                } MountPointReparseBuffer;
+                struct {
+                        BYTE   DataBuffer[1];
+                } GenericReparseBuffer;
+        } DUMMYUNIONNAME;
+} REPARSE_DATA_BUFFER, *PREPARSE_DATA_BUFFER;
+
 #endif
+
+#include <winioctl.h>
 
 #ifdef _WIN64
 # define GWL_USERDATA  GWLP_USERDATA

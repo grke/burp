@@ -74,6 +74,8 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *cntr
    case FT_INVALIDFS:
    case FT_INVALIDDT:
    case FT_DIRBEGIN:
+   case FT_REPARSE:
+   case FT_JUNCTION:
 	{
          char errmsg[100] = "";
          if (ff->type == FT_NOFSCHG)
@@ -130,9 +132,6 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *cntr
       break;
    case FT_NOOPEN:
       logw(cntr, _("Err: Could not open directory %s: %s"), ff->fname, strerror(errno));
-      break;
-   case FT_REPARSE:
-      logw(cntr, _("Err: Windows reparse point: %s"), ff->fname);
       break;
    case FT_RAW:
       logw(cntr, _("Err: Raw partition: %s"), ff->fname);

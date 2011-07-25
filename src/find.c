@@ -404,10 +404,32 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 	*  if st_rdev is 2, it is a mount point 
 	*/
 #if defined(HAVE_WIN32)
-	if(ff_pkt->statp.st_rdev==WIN32_REPARSE_POINT) ff_pkt->type=FT_REPARSE;
-#endif 
+	/*
+	 * A reparse point (WIN32_REPARSE_POINT)
+	 *  is something special like one of the following:
+	 *  IO_REPARSE_TAG_DFS              0x8000000A
+	 *  IO_REPARSE_TAG_DFSR             0x80000012
+	 *  IO_REPARSE_TAG_HSM              0xC0000004
+	 *  IO_REPARSE_TAG_HSM2             0x80000006
+	 *  IO_REPARSE_TAG_SIS              0x80000007
+	 *  IO_REPARSE_TAG_SYMLINK          0xA000000C
+	 *
+	 * A junction point is a:
+	 *  IO_REPARSE_TAG_MOUNT_POINT      0xA0000003
+	 * which can be either a link to a Volume (WIN32_MOUNT_POINT)
+	 * or a link to a directory (WIN32_JUNCTION_POINT)
+	 *
+	 * Ignore WIN32_REPARSE_POINT and WIN32_JUNCTION_POINT
+	 */
+	if (ff_pkt->statp.st_rdev == WIN32_REPARSE_POINT) {
+		ff_pkt->type = FT_REPARSE;
+	} else if (ff_pkt->statp.st_rdev == WIN32_JUNCTION_POINT) {
+		ff_pkt->type = FT_JUNCTION;
+	}
+#endif
+
 	rtn_stat=send_file(ff_pkt, top_level, conf, cntr);
-	if(rtn_stat || ff_pkt->type==FT_REPARSE)
+	if(rtn_stat || ff_pkt->type==FT_REPARSE || ff_pkt->type==FT_JUNCTION)
 	{
 		 /* ignore or error status */
 		free(link);

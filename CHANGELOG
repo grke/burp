@@ -6,6 +6,7 @@
   * When down to 'C:' in mkpath() on Windows restore, strip the ':'.
   * Run ERR_clear_error() before SSL_read/write.
   * FreeBSD ACL support.
+  * FreeBSD xattr support.
   * Set librsync signature block size based on the old file size.
 
 2011-06-27 Changes in burp-1.1.65:

@@ -9,7 +9,9 @@
 
 #ifdef HAVE_ACL
 #if defined(HAVE_LINUX_OS) || \
-    defined(HAVE_FREEBSD_OS)
+    defined(HAVE_FREEBSD_OS) || \
+    defined(HAVE_OPENBSD_OS) || \
+    defined(HAVE_NETBSD_OS)
 #include "sys/acl.h"
 
 /* Linux can do shorter ACLs */
@@ -29,8 +31,10 @@ static int acl_is_trivial(acl_t acl)
    */
    acl_entry_t ace;
    acl_tag_t tag;
-#if defined(HAVE_FREEBSD_OS) || \
-    defined(HAVE_LINUX_OS)
+#if defined(HAVE_LINUX_OS) || \
+    defined(HAVE_FREEBSD_OS) || \
+    defined(HAVE_OPENBSD_OS) || \
+    defined(HAVE_NETBSD_OS)
    int entry_available;
 
    entry_available = acl_get_entry(acl, ACL_FIRST_ENTRY, &ace);
@@ -91,11 +95,11 @@ int has_acl(const char *path, char cmd)
 	return 0;
 }
 
-static int get_acl_string(acl_t acl, char **acltext, const char *path, char type, struct cntr *cntr)
+static int get_acl_string(acl_t acl, char **acltext, size_t *alen, const char *path, char type, struct cntr *cntr)
 {
-	ssize_t s=0;
 	char pre[10]="";
 	char *tmp=NULL;
+	ssize_t tlen=0;
 	char *ourtext=NULL;
 	ssize_t maxlen=0xFFFFFFFF/2;
 
@@ -105,28 +109,24 @@ static int get_acl_string(acl_t acl, char **acltext, const char *path, char type
 		return 0; // carry on
 	}
 
-	s=strlen(tmp);
+	tlen=strlen(tmp);
 
-	if(s>maxlen)
+	if(tlen>maxlen)
 	{
-		logw(cntr, "ACL of '%s' too long: %d\n", path, s);
+		logw(cntr, "ACL of '%s' too long: %d\n", path, tlen);
 		if(tmp) acl_free(tmp);
 		return 0; // carry on
 	}
 
-	snprintf(pre, sizeof(pre), "%c%08X", type, (unsigned int)s);
-	if(!(ourtext=prepend(pre, tmp, s, "")))
+	snprintf(pre, sizeof(pre), "%c%08X", type, (unsigned int)tlen);
+	if(!(ourtext=prepend(pre, tmp, tlen, "")))
 	{
 		if(tmp) acl_free(tmp);
 		return -1;
 	}
 	if(tmp) acl_free(tmp);
-	if(!*acltext)
-	{
-		*acltext=ourtext;
-		return 0;
-	}
-	if(!(*acltext=prepend(*acltext, ourtext, s+9, "")))
+	if(!(*acltext=prepend_len(*acltext,
+		*alen, ourtext, tlen+9, "", 0, alen)))
 	{
 		if(ourtext) free(ourtext);
 		return -1;
@@ -135,14 +135,14 @@ static int get_acl_string(acl_t acl, char **acltext, const char *path, char type
 	return 0;
 }
 
-int get_acl(const char *path, struct stat *statp, char **acltext, struct cntr *cntr)
+int get_acl(const char *path, struct stat *statp, char **acltext, size_t *alen, struct cntr *cntr)
 {
 	acl_t acl=NULL;
 
 	if((acl=acl_contains_something(path, ACL_TYPE_ACCESS)))
 	{
 		if(get_acl_string(acl,
-			acltext, path, META_ACCESS_ACL, cntr))
+			acltext, alen, path, META_ACCESS_ACL, cntr))
 		{
 			acl_free(acl);
 			return -1;
@@ -155,7 +155,7 @@ int get_acl(const char *path, struct stat *statp, char **acltext, struct cntr *c
 		if((acl=acl_contains_something(path, ACL_TYPE_DEFAULT)))
 		{
 			if(get_acl_string(acl,
-				acltext, path, META_DEFAULT_ACL, cntr))
+				acltext, alen, path, META_DEFAULT_ACL, cntr))
 			{
 				acl_free(acl);
 				return -1;
@@ -166,7 +166,7 @@ int get_acl(const char *path, struct stat *statp, char **acltext, struct cntr *c
 	return 0;
 }
 
-static int do_set_acl(const char *path, struct stat *statp, const char *acltext, int acltype, struct cntr *cntr)
+static int do_set_acl(const char *path, struct stat *statp, const char *acltext, size_t alen, int acltype, struct cntr *cntr)
 {
 	acl_t acl;
 	if(!(acl=acl_from_text(acltext)))
@@ -198,16 +198,16 @@ static int do_set_acl(const char *path, struct stat *statp, const char *acltext,
 	return 0; 
 }
 
-int set_acl(const char *path, struct stat *statp, const char *acltext, char cmd, struct cntr *cntr)
+int set_acl(const char *path, struct stat *statp, const char *acltext, size_t alen, char cmd, struct cntr *cntr)
 {
 	switch(cmd)
 	{
 		case META_ACCESS_ACL:
 			return do_set_acl(path,
-				statp, acltext, ACL_TYPE_ACCESS, cntr);
+				statp, acltext, alen, ACL_TYPE_ACCESS, cntr);
 		case META_DEFAULT_ACL:
 			return do_set_acl(path,
-				statp, acltext, ACL_TYPE_DEFAULT, cntr);
+				statp, acltext, alen, ACL_TYPE_DEFAULT, cntr);
 		default:
 			logp("unknown acl type: %c\n", cmd);
 			logw(cntr, "unknown acl type: %c\n", cmd);
@@ -216,5 +216,5 @@ int set_acl(const char *path, struct stat *statp, const char *acltext, char cmd,
 	return -1;
 }
 
-#endif // HAVE_LINUX_OS
+#endif // LINUX | BSD
 #endif // HAVE_ACL

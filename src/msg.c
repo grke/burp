@@ -30,15 +30,17 @@ int send_msg_zp(gzFile zp, char cmd, const char *buf, size_t s)
 	return 0;
 }
 
-static int do_write(BFILE *bfd, FILE *fp, unsigned char *out, size_t outlen, char **metadata)
+static int do_write(BFILE *bfd, FILE *fp, unsigned char *out, size_t outlen, char **metadata, unsigned long long *sent)
 {
 	int ret=0;
 	if(metadata)
 	{
 		// Append it to our metadata.
 		out[outlen]='\0';
-		if(!(*metadata=prepend(*metadata,
-				(const char *)out, outlen, "")))
+		//printf("\nadd outlen: %lu\n", outlen);
+		if(!(*metadata=prepend_len(*metadata, *sent,
+				(const char *)out, outlen,
+				"", 0, (size_t *)sent)))
 		{
 			logp("error when appending metadata\n");
 			async_write_str(CMD_ERROR, "error when appending metadata");
@@ -62,11 +64,12 @@ static int do_write(BFILE *bfd, FILE *fp, unsigned char *out, size_t outlen, cha
 			return -1;
 		}
 #endif
+		*sent+=outlen;
 	}
 	return 0;
 }
 
-static int do_inflate(z_stream *zstrm, BFILE *bfd, FILE *fp, unsigned char *out, unsigned char *buftouse, size_t lentouse, char **metadata)
+static int do_inflate(z_stream *zstrm, BFILE *bfd, FILE *fp, unsigned char *out, unsigned char *buftouse, size_t lentouse, char **metadata, MD5_CTX *md5, unsigned long long *sent)
 {
 	int zret=Z_OK;
 	unsigned have=0;
@@ -92,16 +95,23 @@ static int do_inflate(z_stream *zstrm, BFILE *bfd, FILE *fp, unsigned char *out,
 		have=ZCHUNK-zstrm->avail_out;
 		if(!have) continue;
 
-		if(do_write(bfd, fp, out, have, metadata))
-		{
+		if(do_write(bfd, fp, out, have, metadata, sent))
 			return -1;
-			break;
+/*
+		if(md5)
+		{
+			if(!MD5_Update(md5, out, have))
+			{
+				logp("MD5 update error\n");
+				return -1;
+			}
 		}
+*/
 	} while(!zstrm->avail_out);
 	return 0;
 }
 
-int transfer_gzfile_in(BFILE *bfd, FILE *fp, char **bytes, const char *encpassword, struct cntr *cntr, char **metadata)
+int transfer_gzfile_in(const char *path, BFILE *bfd, FILE *fp, unsigned long long *rcvd, unsigned long long *sent, const char *encpassword, struct cntr *cntr, char **metadata)
 {
 	char cmd;
 	char *buf=NULL;
@@ -117,7 +127,16 @@ int transfer_gzfile_in(BFILE *bfd, FILE *fp, char **bytes, const char *encpasswo
 
 	EVP_CIPHER_CTX *enc_ctx=NULL;
 
+	// Checksum stuff
+	MD5_CTX md5;
+	//unsigned char checksum[MD5_DIGEST_LENGTH+1];
+
 //logp("in transfer_gzfile_in\n");
+	//if(!MD5_Init(&md5))
+	//{
+	//	logp("MD5_Init() failed");
+	//	return -1;
+	//}
 
 	zstrm.zalloc=Z_NULL;
 	zstrm.zfree=Z_NULL;
@@ -149,6 +168,7 @@ int transfer_gzfile_in(BFILE *bfd, FILE *fp, char **bytes, const char *encpasswo
 			inflateEnd(&zstrm);
 			return -1;
 		}
+		rcvd+=len;
 
 		//logp("transfer in: %c:%s\n", cmd, buf);
 		switch(cmd)
@@ -164,10 +184,29 @@ int transfer_gzfile_in(BFILE *bfd, FILE *fp, char **bytes, const char *encpasswo
 				{
 					size_t lentouse;
 					unsigned char *buftouse=NULL;
+/*
+					if(!MD5_Update(&md5, buf, len))
+					{
+						logp("MD5 update enc error\n");
+						quit++; ret=-1;
+						break;
+					}
+*/
 					// If doing decryption, it needs
 					// to be done before uncompressing.
 					if(enc_ctx)
 					{
+					  // updating our checksum needs to
+					  // be done first
+/*
+					  if(!MD5_Update(&md5, buf, len))
+					  {
+						logp("MD5 update enc error\n");
+						quit++; ret=-1;
+						break;
+					  }
+					  else 
+*/
 					  if(!EVP_CipherUpdate(enc_ctx,
 						doutbuf, (int *)&doutlen,
 						(unsigned char *)buf,
@@ -189,7 +228,9 @@ int transfer_gzfile_in(BFILE *bfd, FILE *fp, char **bytes, const char *encpasswo
 					//logp("want to write: %d\n", zstrm.avail_in);
 
 					if(do_inflate(&zstrm, bfd, fp, out,
-						buftouse, lentouse, metadata))
+						buftouse, lentouse, metadata,
+						enc_ctx?NULL:&md5,
+						sent))
 					{
 						ret=-1; quit++;
 						break;
@@ -207,14 +248,33 @@ int transfer_gzfile_in(BFILE *bfd, FILE *fp, char **bytes, const char *encpasswo
 						break;
 					}
 					if(doutlen && do_inflate(&zstrm, bfd,
-					  fp, out, doutbuf, doutlen, metadata))
+					  fp, out, doutbuf, doutlen, metadata,
+					  enc_ctx?NULL:&md5, sent))
 					{
 						ret=-1; quit++;
 						break;
 					}
 				}
-				*bytes=buf;
-				buf=NULL;
+/*
+				if(MD5_Final(checksum, &md5))
+				{
+					char *oldsum=NULL;
+					const char *newsum=NULL;
+
+					if((oldsum=strchr(buf, ':')))
+					{
+						oldsum++;
+						newsum=get_checksum_str(checksum);
+						// log if the checksum differed
+						if(strcmp(newsum, oldsum))
+							logw(cntr, "md5sum for '%s' did not match! (%s!=%s)\n", path, newsum, oldsum);
+					}
+				}
+				else
+				{
+					logp("MD5_Final() failed\n");
+				}
+*/
 				quit++;
 				ret=0;
 				break;
@@ -237,6 +297,7 @@ int transfer_gzfile_in(BFILE *bfd, FILE *fp, char **bytes, const char *encpasswo
 		EVP_CIPHER_CTX_cleanup(enc_ctx);
 		free(enc_ctx);
 	}
+
 	if(ret) logp("transfer file returning: %d\n", ret);
 	return ret;
 }

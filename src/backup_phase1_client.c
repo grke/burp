@@ -42,6 +42,7 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *cntr
 	  || async_write_str(CMD_HARD_LINK, ff->link))
 		return -1;
 	do_filecounter(cntr, CMD_HARD_LINK, 1);
+	// At least FreeBSD 8.2 can have different xattrs on hard links.
 	if(maybe_send_extrameta(ff->fname, CMD_HARD_LINK, attribs, cntr))
 		return -1;
       break;

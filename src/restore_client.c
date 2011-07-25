@@ -105,7 +105,7 @@ static int make_link(const char *fname, const char *lnk, char cmd, const char *r
 	return ret;
 }
 
-static int restore_file_or_get_meta(struct sbuf *sb, const char *fname, enum action act, const char *encpassword, struct cntr *cntr, char **metadata)
+static int restore_file_or_get_meta(struct sbuf *sb, const char *fname, enum action act, const char *encpassword, struct cntr *cntr, char **metadata, size_t *metalen)
 {
 	size_t len=0;
 	int ret=0;
@@ -173,12 +173,15 @@ static int restore_file_or_get_meta(struct sbuf *sb, const char *fname, enum act
 
 	if(!ret)
 	{
-		char *bytes=NULL;
+		unsigned long long rcvdbytes=NULL;
+		unsigned long long sentbytes=NULL;
 
 		if(metadata)
 		{
-			ret=transfer_gzfile_in(NULL, NULL, &bytes,
+			ret=transfer_gzfile_in(fname, NULL, NULL,
+				&rcvdbytes, &sentbytes,
 				encpassword, cntr, metadata);
+			*metalen=sentbytes;
 			// skip setting the file counter, as we do not actually
 			// restore until a bit later
 			goto end;
@@ -186,17 +189,18 @@ static int restore_file_or_get_meta(struct sbuf *sb, const char *fname, enum act
 		else
 		{
 #ifdef HAVE_WIN32
-			ret=transfer_gzfile_in(&bfd, NULL, &bytes,
+			ret=transfer_gzfile_in(fname, &bfd, NULL,
+				&rcvdbytes, &sentbytes,
 				encpassword, cntr, NULL);
 			bclose(&bfd);
 #else
-			ret=transfer_gzfile_in(NULL, fp, &bytes,
+			ret=transfer_gzfile_in(fname, NULL, fp,
+				&rcvdbytes, &sentbytes,
 				encpassword, cntr, NULL);
 			close_fp(&fp);
 			if(!ret) set_attributes(rpath, sb->cmd, &(sb->statp));
 #endif
 		}
-		if(bytes) free(bytes);
 		if(ret)
 		{
 			char msg[256]="";
@@ -382,6 +386,7 @@ static int restore_metadata(struct sbuf *sb, const char *fname, enum action act,
 	// them gets set correctly.
 	if(act==ACTION_RESTORE)
 	{
+		size_t metalen=0;
 		char *metadata=NULL;
 		if(S_ISDIR(sb->statp.st_mode)
 		  && restore_dir(sb, fname, act, NULL))
@@ -389,11 +394,11 @@ static int restore_metadata(struct sbuf *sb, const char *fname, enum action act,
 
 		// Read in the metadata...
 		if(restore_file_or_get_meta(sb, fname, act, encpassword,
-			cntr, &metadata)) return -1;
+			cntr, &metadata, &metalen)) return -1;
 		if(metadata)
 		{
 			if(set_extrameta(fname, sb->cmd,
-				&(sb->statp), metadata, cntr))
+				&(sb->statp), metadata, metalen, cntr))
 			{
 				free(metadata);
 				// carry on if we could not do it
@@ -561,7 +566,7 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 				// encrypted files can be restored at the
 				// same time.
 				if(restore_file_or_get_meta(&sb, fullpath, act,
-					NULL, cntr, NULL))
+					NULL, cntr, NULL, NULL))
 				{
 					logp("restore_file error\n");
 					ret=-1;
@@ -570,7 +575,8 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 				break;
 			case CMD_ENC_FILE:
 				if(restore_file_or_get_meta(&sb, fullpath, act,
-					conf->encryption_password, cntr, NULL))
+					conf->encryption_password, cntr,
+					NULL, NULL))
 				{
 					logp("restore_file error\n");
 					ret=-1;

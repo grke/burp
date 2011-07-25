@@ -138,21 +138,21 @@ static int send_file(const char *fname, int patches, const char *best, const cha
 		// If we did some patches, the resulting file
 		// is not gzipped. Gzip it during the send. 
 		return send_whole_file_gz(best, datapth, 1, bytes, NULL, cntr,
-			9, NULL);
+			9, NULL, 0);
 	}
 	else
 	{
 		// It might have been stored uncompressed. Gzip it during
-		// the send. If the client new what kind of file it would be
+		// the send. If the client knew what kind of file it would be
 		// receiving, this step could disappear.
 		if(!dpth_is_compressed(datapth))
 			return send_whole_file_gz(best, datapth, 1, bytes,
-				NULL, cntr, 9, NULL);
+				NULL, cntr, 9, NULL, 0);
 		else
 			// If we did not do some patches, the resulting
 			// file might already be gzipped. Send it as it is.
 			return send_whole_file(best,
-				datapth, 1, bytes, cntr, NULL);
+				datapth, 1, bytes, cntr, NULL, 0);
 	}
 }
 

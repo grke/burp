@@ -73,3 +73,14 @@
   much space a client will use.
 
 * Option to send a regular snapshot of the status summary screen in an email.
+
+* Maybe look at the timer script regularly. If the time is now out of the
+  defined range, interrupt the backup in such a way that it will pick up from
+  where it left off the next time round.
+
+* Make transfer_gzfile_in() and send_whole_file[_gz]() check checksums.
+
+* If you kill the client (or is it the server?) in a particular way, the
+  working dir recovery stuff doesn't work, because it is looking for
+  manifest.gz and the file actually ends up being called manifest.gz.tmp.
+  Fix this.

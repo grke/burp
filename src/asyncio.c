@@ -95,6 +95,7 @@ static int do_read(int *read_blocked_on_write)
 	switch(SSL_get_error(ssl, r))
 	{
 	  case SSL_ERROR_NONE:
+		//logp("read: %d\n", r);
 		readbuflen+=r;
 		readbuf[readbuflen]='\0';
 		break;

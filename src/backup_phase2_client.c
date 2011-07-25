@@ -160,14 +160,14 @@ static int load_signature_and_send_delta(const char *rpath, unsigned long long *
 	return r;
 }
 
-static int send_whole_file_w(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, const char *extrameta)
+static int send_whole_file_w(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, const char *extrameta, size_t elen)
 {
 	if(compression || encpassword)
 		return send_whole_file_gz(fname, datapth, quick_read, bytes, 
-			encpassword, cntr, compression, extrameta);
+			encpassword, cntr, compression, extrameta, elen);
 	else
 		return send_whole_file(fname, datapth, quick_read, bytes, 
-			cntr, extrameta);
+			cntr, extrameta, elen);
 }
 
 static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
@@ -220,6 +220,7 @@ static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
 			{
 				struct stat statbuf;
 				char *extrameta=NULL;
+				size_t elen=0;
 				unsigned long long bytes=0;
 
 				sb.path=buf;
@@ -259,7 +260,8 @@ static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
 				  || cmd==CMD_ENC_METADATA)
 				{
 					if(get_extrameta(sb.path,
-						&statbuf, &extrameta, cntr))
+						&statbuf, &extrameta, &elen,
+						cntr))
 					{
 						logw(cntr, "Meta data error for %s", sb.path);
 						free_sbuf(&sb);
@@ -305,7 +307,7 @@ static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
 						NULL, 0, &bytes,
 						conf->encryption_password,
 						cntr, conf->compression,
-						extrameta))
+						extrameta, elen))
 					{
 						ret=-1;
 						quit++;

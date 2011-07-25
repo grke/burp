@@ -49,22 +49,36 @@ int is_dir(const char *path)
         return S_ISDIR(buf.st_mode);
 }
 
-char *prepend(const char *prep, const char *fname, size_t len, const char *sep)
+/* This may be given binary data, of which we need to already know the length */
+char *prepend_len(const char *prep, size_t plen, const char *fname, size_t flen, const char *sep, size_t slen, size_t *newlen)
 {
+	size_t l=0;
 	char *rpath=NULL;
 
-	if(prep) len+=strlen(prep)+1;
-	if(sep) len++;
-	len++;
+	l+=plen;
+	l+=flen;
+	l+=slen;
+	l+=1;
 
-	if(!(rpath=(char *)malloc(len)))
+	if(!(rpath=(char *)malloc(l)))
 	{
-		logp("could not malloc for relative path of %s\n", rpath);
+		logp("could not malloc for prepend to %s\n", fname);
 		return NULL;
 	}
-	snprintf(rpath, len, "%s%s%s",
-		prep?prep:"", (sep && *fname)?sep:"", fname);
+	if(plen) memcpy(rpath,           prep,  plen);
+	if(slen) memcpy(rpath+plen,      sep,   slen);
+	if(flen) memcpy(rpath+plen+slen, fname, flen);
+	rpath[plen+slen+flen]='\0';
+
+	if(newlen) (*newlen)+=slen+flen;
 	return rpath;
+}
+
+char *prepend(const char *prep, const char *fname, size_t len, const char *sep)
+{
+	return prepend_len(prep, prep?strlen(prep):0,
+		fname, len,
+		sep, (sep && *fname)?strlen(sep):0, NULL);
 }
 
 char *prepend_s(const char *prep, const char *fname, size_t len)
@@ -314,7 +328,7 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password)
 	return ctx;
 }
 
-int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, const char *extrameta)
+int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, const char *extrameta, size_t elen)
 {
 	int ret=0;
 	int zret=0;
@@ -347,12 +361,11 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 		return -1;
 	}
 
-
 //logp("send_whole_file_gz: %s%s\n", fname, extrameta?" (meta)":"");
 
 	if((metadata=extrameta))
 	{
-		metalen=strlen(metadata);
+		metalen=elen;
 	}
 	else
 	{
@@ -552,10 +565,10 @@ cleanup:
 	return ret;
 }
 
-int send_whole_file(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, struct cntr *cntr, const char *extrameta)
+int send_whole_file(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, struct cntr *cntr, const char *extrameta, size_t elen)
 {
 	int ret=0;
-	ssize_t s=0;
+	size_t s=0;
 	MD5_CTX md5;
 	char buf[4096]="";
 
@@ -571,7 +584,7 @@ int send_whole_file(const char *fname, const char *datapth, int quick_read, unsi
 		const char *metadata=NULL;
 
 		metadata=extrameta;
-		metalen=strlen(metadata);
+		metalen=elen;
 
 		// Send metadata in chunks, rather than all at once.
 		while(metalen>0)

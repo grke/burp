@@ -109,7 +109,7 @@ nodes.
 <li>Fifo read/write support.
 <li>Pre/post backup/restore client scripts.
 <li>Backups of Solaris ZFS snapshot send/receives.
-<li>Linux acl/xattr support.
+<li>Linux and FreeBSD acl/xattr support.
 </ul>
 </FONT>
 </P>
@@ -126,8 +126,9 @@ A. The following items are on my TODO list:
 <ul>
 <li>Add extra ways of deciding when to delete old backups - e.g, by time, or
 by space.
-<li>Add acl/xattr support for FreeBSD and Solaris.
-<li>Server-side encryption option, so that network deltas can be done.
+<li>Add acl/xattr support for Solaris.
+<li>Server-side encryption option, so that network deltas can be done with
+    encryption.
 <li>Improve the status monitor.
 <li>Add an option to set hardlinked_archive on a cycle, instead of just
 being either on or off.

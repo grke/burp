@@ -48,6 +48,29 @@ The main author of Burp is Graham Keeling.
 <TD ALIGN="LEFT">
 
 <P>
+<FONT COLOR="#99CCFF">2011-07-26: burp-1.1.70 is released.
+<pre>
+Changes in burp-1.1.70:
+  * FreeBSD xattr support.
+  * FreeBSD ACL support.
+  * Handle Windows junction points.
+  * Add 'nobackup = [file name]' option. If this file system entry exists, the
+    directory containing it will not be backed up.
+  * Set librsync signature block size based on the old file size.
+  * Small bug fixes to the status monitor.
+  * Fixed working directory recovery bug where it couldn't find the manifest.gz
+    file due to it being called manifest.gz.tmp.
+  * Get rid of the stupidly complicated 'find_files' callback mechanism
+    inherited from bacula. Just call all the functions directly.
+  * Fix compiler warnings and '-ldl' linker error on FreeBSD 8.2.
+  * When down to 'C:' in mkpath() on Windows restore, strip the ':'.
+  * Run ERR_clear_error() before SSL_read/write.
+</pre>
+</FONT>
+</P>
+
+
+<P>
 <FONT COLOR="#99CCFF">2011-06-27: burp-1.1.65 is released.
 <pre>
 Changes in burp-1.1.65:

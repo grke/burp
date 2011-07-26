@@ -9,6 +9,10 @@
   * FreeBSD xattr support.
   * Set librsync signature block size based on the old file size.
   * Handle Windows junction points.
+  * Status monitor - ignore vim tmp files in clientconfdir.
+  * Status monitor - fix a crash when a clientconfdir file can't be parsed.
+  * Status monitor - don't show deleted clients.
+
 
 2011-06-27 Changes in burp-1.1.65:
   * Add mechanism for backing up and restoring extra meta data.

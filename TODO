@@ -14,9 +14,6 @@
 
 * Improve the status monitor / counters.
 	- It is no longer showing file paths in the detail view.
-	- Sometimes crashes when you edit a clientconfdir file with vi.
-	- Doesn't delete clients properly from its list when they are removed
-	  from clientconfdir.
 	- Remember the phase1 scan counters so that later phases can have
 	  things like estimated times.
 	- Counters are missing from the logs when a backup is completed via

@@ -18,7 +18,6 @@ struct cstat
 	char status;
 
 	// When the mtime of conffile changes, the following get reloaded
-	int valid_conf;
 	char *basedir;
 	time_t basedir_mtime;
 	char *working;
@@ -55,7 +54,6 @@ static int cstat_add_initial_details(struct cstat *c, const char *name, const ch
 	c->current=NULL;
 	c->timestamp=NULL;
 	c->lockfile=NULL;
-	c->valid_conf=0;
 	return 0;
 }
 
@@ -118,7 +116,6 @@ static void cstat_blank(struct cstat *c)
 	if(c->timestamp) { free(c->timestamp); c->timestamp=NULL; }
 	if(c->lockfile) { free(c->lockfile); c->lockfile=NULL; }
 	c->conf_mtime=0;
-	c->valid_conf=0;
 	c->basedir_mtime=0;
 }
 
@@ -142,7 +139,6 @@ static int set_cstat_from_conf(struct cstat *c, struct config *conf, struct conf
 		logp("out of memory\n");
 		return -1;
 	}
-	c->valid_conf=1;
 	c->basedir_mtime=0;
 	if(lockbasedir) free(lockbasedir);
 	return 0;
@@ -238,6 +234,17 @@ static int set_summary(struct cstat *c)
 	return 0;
 }
 
+static int looks_like_vim_tmpfile(const char *filename)
+{
+	const char *cp=NULL;
+	// vim tmpfiles look like ".filename.swp".
+	if(filename[0]=='.'
+	  && (cp=strrchr(filename, '.'))
+	  && !strcmp(cp, ".swp"))
+		return 1;
+	return 0;
+}
+
 static int load_data_from_disk(struct config *conf, struct cstat ***clist, int *clen)
 {
 	int q=0;
@@ -259,7 +266,8 @@ static int load_data_from_disk(struct config *conf, struct cstat ***clist, int *
 	{
 		if(dir[m]->d_ino==0
 		  || !strcmp(dir[m]->d_name, ".")
-		  || !strcmp(dir[m]->d_name, ".."))
+		  || !strcmp(dir[m]->d_name, "..")
+		  || looks_like_vim_tmpfile(dir[m]->d_name))
 			continue;
 		for(q=0; q<*clen; q++)
 		{
@@ -319,7 +327,7 @@ static int load_data_from_disk(struct config *conf, struct cstat ***clist, int *
 		  || load_config((*clist)[q]->conffile, &cconf, 0))
 		{
 			free_config(&cconf);
-			(*clist)[q]->valid_conf=0;
+			cstat_blank((*clist)[q]);
 			continue;
 		}
 
@@ -394,6 +402,10 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, int
 	{
 		char *tosend=NULL;
 		char *curback=NULL;
+
+		// Currently, if you delete a conf file, the entry does not
+		// get removed from our list - they get blanked out instead.
+		if(!clist[q]->name) continue;
 
                 if(!clist[q]->summary || !*(clist[q]->summary))
 		{

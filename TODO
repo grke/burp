@@ -10,7 +10,7 @@
 	(burp_ca has been added - does more need to be done?)
 
 * Add acl/xattr support
-	(generic linux support is done - do freebsd and solaris next)
+	(generic linux and freebsd support is done - do solaris next)
 
 * Improve the status monitor / counters.
 	- It is no longer showing file paths in the detail view.
@@ -84,3 +84,5 @@
   working dir recovery stuff doesn't work, because it is looking for
   manifest.gz and the file actually ends up being called manifest.gz.tmp.
   Fix this.
+
+* Put the number of warnings in the subject of the notification emails.

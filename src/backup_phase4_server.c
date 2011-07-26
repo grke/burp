@@ -406,6 +406,8 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 	int ret=0;
 	int ars=0;
 	char *datapth=NULL;
+	char *tmpman=NULL;
+	struct stat statp;
 
 	char *deltabdir=NULL;
 	char *deltafdir=NULL;
@@ -426,6 +428,15 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 		logp(" will generate reverse deltas\n");
 	}
 
+	if(!(tmpman=get_tmp_filename(manifest))) return -1;
+	if(lstat(manifest, &statp))
+	{
+		// Manifest does not exist - maybe the server was killed before
+		// it could be renamed.
+		logp("%s did not exist - trying %s\n", manifest, tmpman);
+		do_rename(tmpman, manifest);
+	}
+	free(tmpman);
 	if(!(zp=gzopen_file(manifest, "rb"))) return -1;
 
 	if(!(deltabdir=prepend_s(current,

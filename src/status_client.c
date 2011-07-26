@@ -278,7 +278,7 @@ static void detail(char *toks[], int t, struct config *conf, int row, int col)
 		tmp=bytes_to_human_str(toks[15]);
 		print_detail2("Bytes sent", toks[15], tmp, &x, col);
 	}
-	if(t>17 && toks[17]) printw("\n%s\n", toks[17]);
+	if(t>19 && toks[19]) printw("\n%s\n", toks[19]);
 }
 
 static void blank_screen(int row, int col)

@@ -151,8 +151,11 @@ CLIENT OPTIONS
 
 
 EXAMPLES
+       burp -a b
+	      Runs a backup.
+
        burp -a l
-	      Lists the available backups and dates
+	      Lists the available backups and dates.
 
        burp -a l -b 1
 	      Lists all the files in backup number 1.

@@ -13,7 +13,6 @@
 	(generic linux and freebsd support is done - do solaris next)
 
 * Improve the status monitor / counters.
-	- It is no longer showing file paths in the detail view.
 	- Remember the phase1 scan counters so that later phases can have
 	  things like estimated times.
 	- Counters are missing from the logs when a backup is completed via
@@ -83,3 +82,5 @@
   Fix this.
 
 * Put the number of warnings in the subject of the notification emails.
+
+* Add a useful message about options when run with '-h' or '--help'.

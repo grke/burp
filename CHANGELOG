@@ -12,6 +12,7 @@
   * Status monitor - ignore vim tmp files in clientconfdir.
   * Status monitor - fix a crash when a clientconfdir file can't be parsed.
   * Status monitor - don't show deleted clients.
+  * Status monitor - make the file paths work again.
 
 
 2011-06-27 Changes in burp-1.1.65:

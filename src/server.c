@@ -917,15 +917,20 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 					cconf->nfcount,
 					client, current,
 					working, finishing,
-					"reserved", &cntr);
+					"0", &cntr);
 			else
+			{
+				char warnings[32]="";
+				snprintf(warnings, sizeof(warnings),
+					"%llu", cntr.warningcounter);
 				run_script(
 					cconf->notify_success_script,
 					cconf->notify_success_arg,
 					cconf->nscount,
 					client, current,
 					working, finishing,
-					"reserved", &cntr);
+					warnings, &cntr);
+			}
 		}
 	}
 	else if(cmd==CMD_GEN

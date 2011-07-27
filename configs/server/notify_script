@@ -6,13 +6,18 @@ client="$1" ; shift
 current="$1" ; shift
 working="$1" ; shift
 finishing="$1" ; shift
-reserved3="$1" ; shift
+warnings="$1" ; shift
 sendmail="$1" ; shift
 
 while [ "$#" -gt 0 ] ; do
 	case "$1" in
-		Subject:*) h="$1 $client" ;;
-		*) h="$1" ;;
+		Subject:*)
+			w=""
+			[ "$warnings" != "0" ] && w="($warnings warnings)"
+			h="$1 $client $w"
+			;;
+		*) h="$1"
+			;;
 	esac
 	if [ -z "$headers" ] ; then
 		headers="$h"

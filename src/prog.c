@@ -5,9 +5,51 @@
 #include "handy.h"
 #include "status_client.h"
 
+static void usage_server(void)
+{
+#ifndef HAVE_WIN32
+	printf("\nThe configuration file specifies whether burp runs in server or client mode.\n");
+	printf("\nServer usage: %s [options]\n", progname());
+	printf("\n");
+	printf(" Options:\n");
+	printf("  -c <path>     Path to config file (default: /etc/burp/burp.conf).\n");
+	printf("  -F            Stay in the foreground.\n");
+	printf("  -h|-?         Print this text and exit.\n");
+	printf("  -l <path>     Path to log file.\n");
+	printf("  -n            Do not fork any children (implies '-F').\n");
+	printf("  -v            Print version and exit.\n");
+	printf("\n");
+#endif
+}
+
+static void usage_client(void)
+{
+	printf("\nClient usage: %s [options]\n", progname());
+	printf("\n");
+	printf(" Options:\n");
+	printf("  -a <action>    The action can be one of the following.\n");
+	printf("                  b: backup\n");
+	printf("                  l: list (this is the default when an action is not given)\n");
+	printf("                  L: long list\n");
+	printf("                  r: restore\n");
+	printf("                  t: timed backup\n");
+	printf("                  v: verify\n");
+	printf("  -b <number>    Backup number (default: the most recent backup)\n");
+	printf("  -c <path>      Path to config file (default: /etc/burp/burp.conf).\n");
+	printf("  -d <directory> Directory to restore to.\n");
+	printf("  -f             Allow overwrite during restore.\n");
+	printf("  -h|-?          Print this text and exit.\n");
+	printf("  -l <path>      Path to log file.\n");
+	printf("  -r <regex>     Specify a regular expression.\n");
+	printf("  -v             Print version and exit.\n");
+	printf("\n");
+}
+
 static void usage(void)
 {
-	logp("usage: %s <options>\n", progname());
+	usage_server();
+	usage_client();
+	printf(" Please see the man page (man burp) for usage examples.\n");
 }
 
 #if defined(HAVE_WIN32)

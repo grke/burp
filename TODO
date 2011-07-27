@@ -77,5 +77,3 @@
 * Make transfer_gzfile_in() and send_whole_file[_gz]() check checksums.
 
 * Put the number of warnings in the subject of the notification emails.
-
-* Add a useful message about options when run with '-h' or '--help'.

@@ -43,13 +43,19 @@ static void usage_client(void)
 	printf("  -r <regex>     Specify a regular expression.\n");
 	printf("  -v             Print version and exit.\n");
 	printf("\n");
+#ifndef HAVE_WIN32
+	printf(" See http://burp.grke.net/ or the man page ('man burp') for usage examples\n");
+	printf(" and additional configuration options.\n\n");
+#else
+	printf(" See http://burp.grke.net/ for usage examples and additional configuration\n");
+	printf(" options.\n\n");
+#endif
 }
 
 static void usage(void)
 {
 	usage_server();
 	usage_client();
-	printf(" Please see the man page (man burp) for usage examples.\n");
 }
 
 #if defined(HAVE_WIN32)

@@ -77,3 +77,8 @@
 * Make transfer_gzfile_in() and send_whole_file[_gz]() check checksums.
 
 * Put the number of warnings in the subject of the notification emails.
+
+* Get logrotate to work:
+   - Reload conf and close and reopen the main logfile on SIGHUP.
+   - Uncomment the reload lines in the init script.
+   - Add a logrotate conf file.

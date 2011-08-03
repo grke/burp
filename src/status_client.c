@@ -95,6 +95,40 @@ static char *running_status_to_text(char s)
 	return ret;
 }
 
+static int extract_ul(const char *value, unsigned long long *a, unsigned long long *b, unsigned long long *c, unsigned long long *d, unsigned long long *t)
+{
+	char *as=NULL;
+	char *bs=NULL;
+	char *cs=NULL;
+	char *ds=NULL;
+	char *copy=NULL;
+	if(!value || !(copy=strdup(value))) return -1;
+
+	// Do not want to use strtok, just in case I end up running more
+	// than one at a time.
+	as=copy;
+	if((bs=strchr(as, '/')))
+	{
+		*bs='\0';
+		*a=strtoull(as, NULL, 10);
+		if((cs=strchr(++bs, '/')))
+		{
+			*cs='\0';
+			*b=strtoull(bs, NULL, 10);
+			if((ds=strchr(++cs, '/')))
+			{
+				*c=strtoull(cs, NULL, 10);
+				*ds='\0';
+				ds++;
+				*d=strtoull(ds, NULL, 10);
+			}
+		}
+	}
+	free(copy);
+	*t=(*a)+(*b)+(*c);
+	return 0;
+}
+
 // Returns 1 if it printed a line, 0 otherwise.
 static int summary(char **toks, int t, int count, int row, int col)
 {
@@ -142,14 +176,25 @@ static int summary(char **toks, int t, int count, int row, int col)
 		s=running_status_to_text(*(toks[2]));
 		if(t>3 && *(toks[3]))
 		{
-			snprintf(f, sizeof(f), "%s files", toks[3]);
+			unsigned long long a=0;
+			unsigned long long b=0;
+			unsigned long long c=0;
+			unsigned long long d=0;
+			unsigned long long t=0;
+	  		unsigned long long p=0;
+			if(!extract_ul(toks[3], &a, &b, &c, &d, &t))
+			{
+				if(d) p=(t*100)/d;
+				snprintf(f, sizeof(f), "%llu/%llu %llu%%",
+					t, d, p);
+			}
 		}
 		if(t>15 && *(toks[15]) && strcmp(toks[15], "0"))
 		{
 			//snprintf(b, sizeof(b), "%s bytes%s", toks[14],
 			//	bytes_to_human_str(toks[14]));
 			snprintf(b, sizeof(b), "%s",
-				bytes_to_human_str(toks[14]));
+				bytes_to_human_str(toks[15]));
 		}
 		snprintf(msg, sizeof(msg), "%-14.14s %-14s %s%s",
 			toks[0], s, f, b);
@@ -196,8 +241,6 @@ void to_msg(char msg[], size_t s, const char *fmt, ...)
 static void print_detail(const char *field, const char *value, int *x, int col, int percent)
 {
 	char msg[256]="";
-	char *tok=NULL;
-	char *copy=NULL;
 	unsigned long long a=0;
 	unsigned long long b=0;
 	unsigned long long c=0;
@@ -206,23 +249,8 @@ static void print_detail(const char *field, const char *value, int *x, int col, 
 	if(!field || !value || !*value
 	  || !strcmp(value, "0")
 	  || !strcmp(value, "0/0/0/0")) return;
-	if(!(copy=strdup(value))) return;
 
-	if((tok=strtok(copy, "/\n")))
-	{
-		a=strtoull(tok, NULL, 10);
-		if((tok=strtok(NULL, "/\n")))
-		{
-			b=strtoull(tok, NULL, 10);
-			if((tok=strtok(NULL, "/\n")))
-			{
-				c=strtoull(tok, NULL, 10);
-				if((tok=strtok(NULL, "/\n")))
-					d=strtoull(tok, NULL, 10);
-			}
-		}
-	}
-	t=a+b+c;
+	if(extract_ul(value, &a, &b, &c, &d, &t)) return;
 	to_msg(msg, sizeof(msg), "% 22s % 9llu % 9llu % 9llu % 9llu % 9llu\n",
 			field, a, b, c, t, d);
 	print_line(msg, (*x)++, col);
@@ -234,7 +262,6 @@ static void print_detail(const char *field, const char *value, int *x, int col, 
 		"", "", "", "", p, "");
 	  print_line(msg, (*x)++, col);
 	}
-	free(copy);
 }
 
 static void table_header(int *x, int col)

@@ -184,11 +184,64 @@ static void show_all_backups(char *toks[], int t, int *x, int col)
 	}
 }
 
-static void print_detail(const char *field, const char *value, int *x, int col)
+/* for the counters */
+void to_msg(char msg[], size_t s, const char *fmt, ...)
+{
+	va_list ap;
+	va_start(ap, fmt);
+	vsnprintf(msg, s, fmt, ap);
+	va_end(ap);
+}
+
+static void print_detail(const char *field, const char *value, int *x, int col, int percent)
 {
 	char msg[256]="";
-	if(!field || !value || !*value || !strcmp(value, "0")) return;
-	snprintf(msg, sizeof(msg), "%s: %s\n", field, value);
+	char *tok=NULL;
+	char *copy=NULL;
+	unsigned long long a=0;
+	unsigned long long b=0;
+	unsigned long long c=0;
+	unsigned long long d=0;
+	unsigned long long t=0;
+	if(!field || !value || !*value
+	  || !strcmp(value, "0")
+	  || !strcmp(value, "0/0/0/0")) return;
+	if(!(copy=strdup(value))) return;
+
+	if((tok=strtok(copy, "/\n")))
+	{
+		a=strtoull(tok, NULL, 10);
+		if((tok=strtok(NULL, "/\n")))
+		{
+			b=strtoull(tok, NULL, 10);
+			if((tok=strtok(NULL, "/\n")))
+			{
+				c=strtoull(tok, NULL, 10);
+				if((tok=strtok(NULL, "/\n")))
+					d=strtoull(tok, NULL, 10);
+			}
+		}
+	}
+	t=a+b+c;
+	to_msg(msg, sizeof(msg), "% 22s % 9llu % 9llu % 9llu % 9llu % 9llu\n",
+			field, a, b, c, t, d);
+	print_line(msg, (*x)++, col);
+	if(percent && d)
+	{
+	  unsigned long long p;
+	  p=(t*100)/d;
+	  to_msg(msg, sizeof(msg), "% 22s % 9s % 9s % 9s % 9llu%% % 9s\n",
+		"", "", "", "", p, "");
+	  print_line(msg, (*x)++, col);
+	}
+	free(copy);
+}
+
+static void table_header(int *x, int col)
+{
+	char msg[256]="";
+	to_msg(msg, sizeof(msg), "% 22s % 9s % 9s % 9s % 9s % 9s\n",
+		"", "New", "Changed", "Unchanged", "Total", "Scanned");
 	print_line(msg, (*x)++, col);
 }
 
@@ -250,17 +303,21 @@ static void detail(char *toks[], int t, struct config *conf, int row, int col)
 		}
 	}
 	print_line("", x++, col);
-	if(t>4) print_detail("Files", toks[4], &x, col);
-	if(t>5) print_detail("Encrypted files", toks[5], &x, col);
-	if(t>6) print_detail("Meta data", toks[6], &x, col);
-	if(t>7) print_detail("Encrypted meta data", toks[7], &x, col);
-	if(t>8) print_detail("Directories", toks[8], &x, col);
-	if(t>9) print_detail("Soft links", toks[9], &x, col);
-	if(t>10) print_detail("Hard links", toks[10], &x, col);
-	if(t>11) print_detail("Special files", toks[11], &x, col);
-	if(t>12) print_detail("Total", toks[12], &x, col);
+	table_header(&x, col);
+	if(t>4) print_detail("Files", toks[4], &x, col, 0);
+	if(t>5) print_detail("Encrypted files", toks[5], &x, col, 0);
+	if(t>6) print_detail("Meta data", toks[6], &x, col, 0);
+	if(t>7) print_detail("Encrypted meta data", toks[7], &x, col, 0);
+	if(t>8) print_detail("Directories", toks[8], &x, col, 0);
+	if(t>9) print_detail("Soft links", toks[9], &x, col, 0);
+	if(t>10) print_detail("Hard links", toks[10], &x, col, 0);
+	if(t>11) print_detail("Special files", toks[11], &x, col, 0);
+	if(t>12)
+	{
+		print_detail("Total", toks[12], &x, col, 1);
+	}
 	print_line("", x++, col);
-	if(t>14) print_detail("Warnings", toks[14], &x, col);
+	if(t>14) print_detail("Warnings", toks[14], &x, col, 0);
 
 	if(t>15)
 	{	

@@ -3,6 +3,7 @@
 
 extern void init_log(char *progname);
 extern void logp(const char *fmt, ...);
+extern void logc(const char *fmt, ...);
 extern const char *progname(void);
 extern int set_logfp(FILE *fp);
 extern FILE *get_logfp(void);

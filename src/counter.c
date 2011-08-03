@@ -5,22 +5,80 @@
 void reset_filecounter(struct cntr *c)
 {
 	if(!c) return;
-	c->totalcounter=0;
-	c->filecounter=0;
-	c->changedcounter=0;
-	c->unchangedcounter=0;
-	c->newcounter=0;
-	c->directorycounter=0;
-	c->specialcounter=0;
-	c->hardlinkcounter=0;
-	c->softlinkcounter=0;
-	c->warningcounter=0;
-	c->bytecounter=0;
-	c->recvbytecounter=0;
-	c->sentbytecounter=0;
-	c->encryptedcounter=0;
-	c->metadatacounter=0;
-	c->encmetadatacounter=0;
+	c->gtotal=0;
+
+	c->total=0;
+	c->total_same=0;
+	c->total_changed=0;
+
+	c->file=0;
+	c->file_same=0;
+	c->file_changed=0;
+
+	c->enc=0;
+	c->enc_same=0;
+	c->enc_changed=0;
+
+	c->meta=0;
+	c->meta_same=0;
+	c->meta_changed=0;
+
+	c->encmeta=0;
+	c->encmeta_same=0;
+	c->encmeta_changed=0;
+
+	c->dir=0;
+	c->dir_same=0;
+	c->dir_changed=0;
+
+	c->slink=0;
+	c->slink_same=0;
+	c->slink_changed=0;
+
+	c->hlink=0;
+	c->hlink_same=0;
+	c->hlink_changed=0;
+
+	c->special=0;
+	c->special_same=0;
+	c->special_changed=0;
+
+	c->warning=0;
+	c->byte=0;
+	c->recvbyte=0;
+	c->sentbyte=0;
+}
+
+char cmd_to_same(char cmd)
+{
+	switch(cmd)
+	{
+		case CMD_FILE: return CMD_FILE_SAME;
+		case CMD_ENC_FILE: return CMD_ENC_FILE_SAME;
+		case CMD_METADATA: return CMD_METADATA_SAME;
+		case CMD_ENC_METADATA: return CMD_ENC_METADATA_SAME;
+		case CMD_DIRECTORY: return CMD_DIRECTORY_SAME;
+		case CMD_SOFT_LINK: return CMD_SOFT_LINK_SAME;
+		case CMD_HARD_LINK: return CMD_HARD_LINK_SAME;
+		case CMD_SPECIAL: return CMD_SPECIAL_SAME;
+	}
+	return CMD_ERROR;
+}
+
+char cmd_to_changed(char cmd)
+{
+	switch(cmd)
+	{
+		case CMD_FILE: return CMD_FILE_CHANGED;
+		case CMD_ENC_FILE: return CMD_ENC_FILE_CHANGED;
+		case CMD_METADATA: return CMD_METADATA_CHANGED;
+		case CMD_ENC_METADATA: return CMD_ENC_METADATA_CHANGED;
+		case CMD_DIRECTORY: return CMD_DIRECTORY_CHANGED;
+		case CMD_SOFT_LINK: return CMD_SOFT_LINK_CHANGED;
+		case CMD_HARD_LINK: return CMD_HARD_LINK_CHANGED;
+		case CMD_SPECIAL: return CMD_SPECIAL_CHANGED;
+	}
+	return CMD_ERROR;
 }
 
 static const char *bytes_to_human(unsigned long long counter)
@@ -57,64 +115,14 @@ const char *bytes_to_human_str(const char *str)
 	return bytes_to_human(strtoull(str, NULL, 10));
 }
 
-static void pcounter(const char *str, unsigned long long counter)
+static void border(void)
 {
-	if(counter) logp(str, counter);
+	logc("--------------------------------------------------------------------------------\n");
 }
 
-static void bcounter(const char *str, unsigned long long counter)
+static void table_border(void)
 {
-	if(counter)
-	{
-		char msg[128]="";
-		snprintf(msg, sizeof(msg),
-			str, counter, bytes_to_human(counter));
-		logp("%s", msg);
-	}
-}
-
-void end_filecounter(struct cntr *c, int print, enum action act)
-{
-	if(!c) return;
-	if(print) printf(" %llu\n\n", c->totalcounter);
-
-	if(act==ACTION_RESTORE)
-	{
-		logp("Files:                     %llu\n", c->filecounter);
-		pcounter("Encrypted files:           %llu\n", c->encryptedcounter);
-		pcounter("Meta data:                 %llu\n", c->metadatacounter);
-		pcounter("Encrypted meta data:       %llu\n", c->encmetadatacounter);
-	}
-	else if(act==ACTION_VERIFY)
-	{
-		logp("Verified files:            %llu\n", c->filecounter);
-		pcounter("Verified encrypted files:  %llu\n", c->encryptedcounter);
-		pcounter("Verified meta data:        %llu\n", c->metadatacounter);
-		pcounter("Verified encrypted meta:   %llu\n", c->encmetadatacounter);
-	}
-	else
-	{
-		pcounter("Files:                     %llu\n", c->filecounter);
-		pcounter("Encrypted files:           %llu\n", c->encryptedcounter);
-		pcounter("New files:                 %llu\n", c->newcounter);
-		pcounter("Changed files:             %llu\n", c->changedcounter);
-		pcounter("Unchanged files:           %llu\n", c->unchangedcounter);
-		pcounter("Meta data:                 %llu\n", c->metadatacounter);
-		pcounter("Encrypted meta data:       %llu\n", c->encmetadatacounter);
-	}
-	pcounter("Directories:               %llu\n", c->directorycounter);
-	pcounter("Soft links:                %llu\n", c->softlinkcounter);
-	pcounter("Hard links:                %llu\n", c->hardlinkcounter);
-	pcounter("Special files:             %llu\n", c->specialcounter);
-	//logp("\n");
-	pcounter("Total:                     %llu\n", c->totalcounter);
-	//logp("\n");
-	pcounter("Warnings:                  %llu\n", c->warningcounter);
-	bcounter("Bytes received:  %llu%s\n", c->recvbytecounter);
-	bcounter("Bytes sent:      %llu%s\n", c->sentbytecounter);
-	bcounter("Bytes in backup: %llu%s\n", c->bytecounter);
-	//logp("\n");
-	reset_filecounter(c);
+	logc("% 22s --------------------------------------------------\n", "");
 }
 
 void do_filecounter(struct cntr *c, char ch, int print)
@@ -122,53 +130,255 @@ void do_filecounter(struct cntr *c, char ch, int print)
 	if(!c) return;
 	if(print)
 	{
-		if(!c->totalcounter && !c->warningcounter) printf("\n");
+		if(!c->gtotal && !c->warning) printf("\n");
 		printf("%c", ch);
 	}
 	switch(ch)
 	{
 		case CMD_FILE:
-			++(c->filecounter); break;
-		case CMD_END_FILE:
-			++(c->changedcounter); break;
-		case CMD_NEW_FILE:
-			++(c->newcounter); break;
-		case CMD_DIRECTORY:
-			++(c->directorycounter); break;
-		case CMD_SPECIAL:
-			++(c->specialcounter); break;
-		case CMD_SOFT_LINK:
-			++(c->softlinkcounter); break;
-		case CMD_HARD_LINK:
-			++(c->hardlinkcounter); break;
-		case CMD_WARNING:
-			++(c->warningcounter); return; // do not add to total
+			++(c->file); ++(c->total); break;
+		case CMD_FILE_SAME:
+			++(c->file_same); ++(c->total_same); break;
+		case CMD_FILE_CHANGED:
+			++(c->file_changed); ++(c->total_changed); break;
+
 		case CMD_ENC_FILE:
-			++(c->encryptedcounter); break;
+			++(c->enc); ++(c->total); break;
+		case CMD_ENC_FILE_SAME:
+			++(c->enc_same); ++(c->total_same); break;
+		case CMD_ENC_FILE_CHANGED:
+			++(c->enc_changed); ++(c->total_changed); break;
+
 		case CMD_METADATA:
-			++(c->metadatacounter); break;
+			++(c->meta); ++(c->total); break;
+		case CMD_METADATA_SAME:
+			++(c->meta_same); ++(c->total_same); break;
+		case CMD_METADATA_CHANGED:
+			++(c->meta_changed); ++(c->total_changed); break;
+
 		case CMD_ENC_METADATA:
-			++(c->encmetadatacounter); break;
+			++(c->encmeta); ++(c->total); break;
+		case CMD_ENC_METADATA_SAME:
+			++(c->encmeta_same); ++(c->total_same); break;
+		case CMD_ENC_METADATA_CHANGED:
+			++(c->encmeta_changed); ++(c->total_changed); break;
+
+		case CMD_DIRECTORY:
+			++(c->dir); ++(c->total); break;
+		case CMD_DIRECTORY_SAME:
+			++(c->dir_same); ++(c->total_same); break;
+		case CMD_DIRECTORY_CHANGED:
+			++(c->dir_changed); ++(c->total_changed); break;
+
+		case CMD_HARD_LINK:
+			++(c->hlink); ++(c->total); break;
+		case CMD_HARD_LINK_SAME:
+			++(c->hlink_same); ++(c->total_same); break;
+		case CMD_HARD_LINK_CHANGED:
+			++(c->hlink_changed); ++(c->total_changed); break;
+
+		case CMD_SOFT_LINK:
+			++(c->slink); ++(c->total); break;
+		case CMD_SOFT_LINK_SAME:
+			++(c->slink_same); ++(c->total_same); break;
+		case CMD_SOFT_LINK_CHANGED:
+			++(c->slink_changed); ++(c->total_changed); break;
+
+		case CMD_SPECIAL:
+			++(c->special); ++(c->total); break;
+		case CMD_SPECIAL_SAME:
+			++(c->special_same); ++(c->total_same); break;
+		case CMD_SPECIAL_CHANGED:
+			++(c->special_changed); ++(c->total_changed); break;
+
+		case CMD_WARNING:
+			++(c->warning); return; // do not add to total
+		case CMD_ERROR:
+			return; // errors should be fatal - ignore
 	}
-	if(!((++(c->totalcounter))%64) && print)
-		printf(" %llu\n", c->totalcounter);
+	if(!((++(c->gtotal))%64) && print)
+		printf(" %llu\n", c->gtotal);
 	fflush(stdout);
 }
 
 void do_filecounter_bytes(struct cntr *c, unsigned long long bytes)
 {
 	if(!c) return;
-	c->bytecounter+=bytes;
+	c->byte+=bytes;
 }
 
 void do_filecounter_sentbytes(struct cntr *c, unsigned long long bytes)
 {
 	if(!c) return;
-	c->sentbytecounter+=bytes;
+	c->sentbyte+=bytes;
 }
 
 void do_filecounter_recvbytes(struct cntr *c, unsigned long long bytes)
 {
 	if(!c) return;
-	c->recvbytecounter+=bytes;
+	c->recvbyte+=bytes;
+}
+
+enum lform
+{
+	FORMAT_SERVER=0,
+	FORMAT_CLIENT_DATA,
+	FORMAT_CLIENT_NODE,
+	FORMAT_CLIENT_RESTORE
+};
+
+static void quint_print(const char *msg, unsigned long long a, unsigned long long b, unsigned long long c, unsigned long long d, enum lform form)
+{
+	switch(form)
+	{
+		case FORMAT_SERVER:
+			if(!d) return;
+			logc("% 22s % 9llu % 9llu % 9llu % 9llu |% 9llu\n",
+				msg, a, b, c, a+b+c, d);
+			break;
+		case FORMAT_CLIENT_DATA:
+			if(!d) return;
+			logc("% 22s % 9llu % 9llu % 9s % 9llu |% 9llu\n",
+				msg, a, b, "-", a+b+c, d);
+			break;
+		case FORMAT_CLIENT_NODE:
+			if(!d) return;
+			logc("% 22s % 9s % 9s % 9s % 9s |% 9llu\n",
+				msg, "-", "-", "-", "-", d);
+			break;
+		case FORMAT_CLIENT_RESTORE:
+			if(!c) return;
+			logc("% 22s % 9s % 9s % 9s % 9llu |% 9s\n",
+				msg, "-", "-", "-", c, "-");
+			break;
+	}
+}
+
+static void restore_print(const char *msg, unsigned long long count)
+{
+	quint_print(msg, 0, 0, count, 0, FORMAT_CLIENT_RESTORE);
+}
+
+static void bottom_part(struct cntr *a, struct cntr *b)
+{
+	logc("\n");
+	logc("             Warnings:   % 11llu\n",
+		b->warning + a->warning);
+	logc("\n");
+	logc("       Bytes received:   % 11llu%s\n",
+		b->recvbyte, bytes_to_human(b->recvbyte));
+	logc("           Bytes sent:   % 11llu%s\n",
+		b->sentbyte, bytes_to_human(b->sentbyte));
+	logc("      Bytes in backup:   % 11llu%s\n",
+		b->byte, bytes_to_human(b->byte));
+}
+
+void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act, int client)
+{
+	if(!p1c || !c) return;
+
+	border();
+	logc("% 22s % 9s % 9s % 9s % 9s |% 9s\n",
+	  " ", "New", "Changed", "Unchanged", "Total", "Scanned");
+	table_border();
+
+	if(act==ACTION_RESTORE)
+	{
+		restore_print("Files:", c->file);
+		restore_print("Files (encrypted):", c->enc);
+		restore_print("Meta data:", c->meta);
+		restore_print("Meta (encrypted):", c->encmeta);
+		restore_print("Directories:", c->dir);
+		restore_print("Soft links:", c->slink);
+		restore_print("Hard links:", c->hlink);
+		restore_print("Special files:", c->special);
+		restore_print("Grand total:", c->total);
+	}
+	else if(act==ACTION_VERIFY)
+	{
+		restore_print("Verified files:", c->file);
+		restore_print("Verified files (enc):", c->enc);
+		restore_print("Verified meta data:", c->meta);
+		restore_print("Verified meta (enc):", c->encmeta);
+		restore_print("Verified directories:", c->dir);
+		restore_print("Verified soft links:", c->slink);
+		restore_print("Verified hard links:", c->hlink);
+		restore_print("Verified special:", c->special);
+		restore_print("Grand total:", c->total);
+	}
+	else
+	{
+		quint_print("Files:",
+			c->file,
+			c->file_changed,
+			c->file_same,
+			p1c->file,
+			client?FORMAT_CLIENT_DATA:FORMAT_SERVER);
+
+		quint_print("Files (encrypted):",
+			c->enc,
+			c->enc_changed,
+			c->enc_same,
+			p1c->enc,
+			client?FORMAT_CLIENT_DATA:FORMAT_SERVER);
+
+		quint_print("Meta data:",
+			c->meta,
+			c->meta_changed,
+			c->meta_same,
+			p1c->meta,
+			client?FORMAT_CLIENT_DATA:FORMAT_SERVER);
+
+		quint_print("Meta data (encrypted):",
+			c->encmeta,
+			c->meta_changed,
+			c->meta_same,
+			p1c->encmeta,
+			client?FORMAT_CLIENT_DATA:FORMAT_SERVER);
+
+		quint_print("Directories:",
+			c->dir,
+			c->dir_changed,
+			c->dir_same,
+			p1c->dir,
+			client?FORMAT_CLIENT_NODE:FORMAT_SERVER);
+
+		quint_print("Soft links:",
+			c->slink,
+			c->slink_changed,
+			c->slink_same,
+			p1c->slink,
+			client?FORMAT_CLIENT_NODE:FORMAT_SERVER);
+
+		quint_print("Hard links:",
+			c->hlink,
+			c->hlink_changed,
+			c->hlink_same,
+			p1c->hlink,
+			client?FORMAT_CLIENT_NODE:FORMAT_SERVER);
+
+		quint_print("Special files:",
+			c->special,
+			c->special_changed,
+			c->special_same,
+			p1c->special,
+			client?FORMAT_CLIENT_NODE:FORMAT_SERVER);
+
+		quint_print("Grand total:",
+			c->total,
+			c->total_changed,
+			c->total_same,
+			p1c->total,
+			client?FORMAT_CLIENT_DATA:FORMAT_SERVER);
+	}
+
+	table_border();
+	bottom_part(p1c, c);
+
+	border();
+}
+
+void print_endcounter(struct cntr *cntr)
+{
+	if(cntr->gtotal) printf(" %llu\n\n", cntr->gtotal);
 }

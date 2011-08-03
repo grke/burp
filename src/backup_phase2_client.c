@@ -291,7 +291,7 @@ static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
 					}
 					else
 					{
-						do_filecounter(cntr, CMD_END_FILE, 1);
+						do_filecounter(cntr, CMD_FILE_CHANGED, 1);
 						do_filecounter_bytes(cntr, bytes);
 						do_filecounter_sentbytes(cntr, sentbytes);
 					}
@@ -314,11 +314,11 @@ static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
 					}
 					else
 					{
-						if(cmd==CMD_METADATA
-						  || cmd==CMD_ENC_METADATA)
+						//if(cmd==CMD_METADATA
+						//  || cmd==CMD_ENC_METADATA)
 						  do_filecounter(cntr, cmd, 1);
-						else
-						  do_filecounter(cntr, CMD_NEW_FILE, 1);
+						//else
+						//  do_filecounter(cntr, CMD_NEW_FILE, 1);
 						do_filecounter_bytes(cntr, bytes);
 						do_filecounter_sentbytes(cntr, bytes);
 					}
@@ -352,16 +352,16 @@ static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
 	return ret;
 }
 
-int backup_phase2_client(struct config *conf, struct cntr *cntr)
+int backup_phase2_client(struct config *conf, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ret=0;
 
 	logp("Phase 2 begin (send file data)\n");
-        reset_filecounter(cntr);
 
 	ret=do_backup_phase2_client(conf, cntr);
 
-        end_filecounter(cntr, 1, ACTION_BACKUP);
+	print_endcounter(cntr);
+	print_filecounters(p1cntr, cntr, ACTION_BACKUP, 1);
 
 	if(ret) logp("Error in phase 2\n");
 	logp("Phase 2 end (send file data)\n");

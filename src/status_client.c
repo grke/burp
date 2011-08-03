@@ -144,12 +144,14 @@ static int summary(char **toks, int t, int count, int row, int col)
 		{
 			snprintf(f, sizeof(f), "%s files", toks[3]);
 		}
-		if(t>14 && *(toks[14]) && strcmp(toks[14], "0"))
+		if(t>15 && *(toks[15]) && strcmp(toks[15], "0"))
 		{
-			snprintf(b, sizeof(b), "%s bytes%s", toks[14],
+			//snprintf(b, sizeof(b), "%s bytes%s", toks[14],
+			//	bytes_to_human_str(toks[14]));
+			snprintf(b, sizeof(b), "%s",
 				bytes_to_human_str(toks[14]));
 		}
-		snprintf(msg, sizeof(msg), "%-14.14s %-14s %s %s",
+		snprintf(msg, sizeof(msg), "%-14.14s %-14s %s%s",
 			toks[0], s, f, b);
 	}
 	if(*msg)
@@ -249,36 +251,33 @@ static void detail(char *toks[], int t, struct config *conf, int row, int col)
 	}
 	print_line("", x++, col);
 	if(t>4) print_detail("Files", toks[4], &x, col);
-	if(t>16) print_detail("Encrypted files", toks[16], &x, col);
-	if(t>5) print_detail("Changed files", toks[5], &x, col);
-	if(t>6) print_detail("Unchanged files", toks[6], &x, col);
-	if(t>7) print_detail("New files", toks[7], &x, col);
+	if(t>5) print_detail("Encrypted files", toks[5], &x, col);
+	if(t>6) print_detail("Meta data", toks[6], &x, col);
+	if(t>7) print_detail("Encrypted meta data", toks[7], &x, col);
 	if(t>8) print_detail("Directories", toks[8], &x, col);
-	if(t>9) print_detail("Special files", toks[9], &x, col);
-	if(t>11) print_detail("Soft links", toks[11], &x, col);
+	if(t>9) print_detail("Soft links", toks[9], &x, col);
 	if(t>10) print_detail("Hard links", toks[10], &x, col);
-	if(t>17) print_detail("Meta data", toks[17], &x, col);
-	if(t>18) print_detail("Encrypted meta data", toks[18], &x, col);
-	if(t>3) print_detail("Total", toks[3], &x, col);
+	if(t>11) print_detail("Special files", toks[11], &x, col);
+	if(t>12) print_detail("Total", toks[12], &x, col);
 	print_line("", x++, col);
-	if(t>12) print_detail("Warnings", toks[12], &x, col);
+	if(t>14) print_detail("Warnings", toks[14], &x, col);
 
-	if(t>13)
-	{	
-		tmp=bytes_to_human_str(toks[13]);
-		print_detail2("Bytes in backup", toks[13], tmp, &x, col);
-	}
-	if(t>14)
-	{
-		tmp=bytes_to_human_str(toks[14]);
-		print_detail2("Bytes received", toks[14], tmp, &x, col);
-	}
 	if(t>15)
-	{
+	{	
 		tmp=bytes_to_human_str(toks[15]);
-		print_detail2("Bytes sent", toks[15], tmp, &x, col);
+		print_detail2("Bytes in backup", toks[15], tmp, &x, col);
 	}
-	if(t>19 && toks[19]) printw("\n%s\n", toks[19]);
+	if(t>16)
+	{
+		tmp=bytes_to_human_str(toks[16]);
+		print_detail2("Bytes received", toks[16], tmp, &x, col);
+	}
+	if(t>17)
+	{
+		tmp=bytes_to_human_str(toks[17]);
+		print_detail2("Bytes sent", toks[17], tmp, &x, col);
+	}
+	if(t>18 && toks[18]) printw("\n%s\n", toks[18]);
 }
 
 static void blank_screen(int row, int col)

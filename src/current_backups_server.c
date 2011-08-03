@@ -16,7 +16,7 @@
 #include <regex.h>
 #include <math.h>
 
-int recursive_hardlink(const char *src, const char *dst, const char *client, struct cntr *cntr)
+int recursive_hardlink(const char *src, const char *dst, const char *client, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int n=-1;
 	int ret=0;
@@ -59,7 +59,8 @@ int recursive_hardlink(const char *src, const char *dst, const char *client, str
 
 		if(is_dir(fullpatha))
 		{
-			if(recursive_hardlink(fullpatha, fullpathb, client, cntr))
+			if(recursive_hardlink(fullpatha, fullpathb, client,
+				p1cntr, cntr))
 			{
 				free(fullpatha);
 				free(fullpathb);
@@ -69,7 +70,8 @@ int recursive_hardlink(const char *src, const char *dst, const char *client, str
 		else
 		{
 			//logp("hardlinking %s to %s\n", fullpathb, fullpatha);
-			write_status(client, STATUS_SHUFFLING, fullpathb, cntr);
+			write_status(client, STATUS_SHUFFLING, fullpathb,
+				p1cntr, cntr);
 			if(link(fullpatha, fullpathb))
 			{
 				logp("hardlink %s to %s failed: %s\n",

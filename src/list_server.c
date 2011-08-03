@@ -12,7 +12,7 @@
 #include "list_server.h"
 #include "current_backups_server.h"
 
-static int list_manifest(const char *fullpath, regex_t *regex, const char *client, struct cntr *cntr)
+static int list_manifest(const char *fullpath, regex_t *regex, const char *client, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ars=0;
 	int ret=0;
@@ -51,7 +51,7 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *clien
 		}
 
 		if(mb.path[mb.plen]=='\n') mb.path[mb.plen]='\0';
-		write_status(client, STATUS_LISTING, mb.path, cntr);
+		write_status(client, STATUS_LISTING, mb.path, p1cntr, cntr);
 		if(check_regex(regex, mb.path))
 		{
 			if(async_write(CMD_STAT, mb.statbuf, mb.slen)
@@ -67,7 +67,7 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *clien
 	return ret;
 }
 
-int do_list_server(const char *basedir, const char *backup, const char *listregex, const char *client, struct cntr *cntr)
+int do_list_server(const char *basedir, const char *backup, const char *listregex, const char *client, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int a=0;
 	int i=0;
@@ -87,7 +87,7 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 		return -1;
 	}
 
-	write_status(client, STATUS_LISTING, NULL, cntr);
+	write_status(client, STATUS_LISTING, NULL, p1cntr, cntr);
 
 	if(backup && *backup) index=strtoul(backup, NULL, 10);
 
@@ -99,7 +99,8 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 			found=TRUE;
 			async_write(CMD_TIMESTAMP,
 				arr[i].timestamp, strlen(arr[i].timestamp));
-			ret+=list_manifest(arr[i].path, regex, client, cntr);
+			ret+=list_manifest(arr[i].path, regex, client,
+				p1cntr, cntr);
 		}
 		// Search or list a particular backup.
 		else if(backup && *backup)
@@ -111,7 +112,8 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 				found=TRUE;
 				async_write(CMD_TIMESTAMP,
 				  arr[i].timestamp, strlen(arr[i].timestamp));
-				ret=list_manifest(arr[i].path, regex, client, cntr);
+				ret=list_manifest(arr[i].path, regex, client,
+					p1cntr, cntr);
 			}
 		}
 		// List the backups.

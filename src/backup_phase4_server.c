@@ -401,7 +401,7 @@ cleanup:
 
 /* Need to make all the stuff that this does atomic so that existing backups
    never get broken, even if somebody turns the power off on the server. */ 
-static int atomic_data_jiggle(const char *finishing, const char *working, const char *manifest, const char *current, const char *currentdata, const char *datadir, const char *datadirtmp, struct config *cconf, const char *client, struct cntr *cntr)
+static int atomic_data_jiggle(const char *finishing, const char *working, const char *manifest, const char *current, const char *currentdata, const char *datadir, const char *datadirtmp, struct config *cconf, const char *client, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ret=0;
 	int ars=0;
@@ -458,7 +458,7 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 		if(sb.datapth)
 		{
 			write_status(client, STATUS_SHUFFLING,
-				sb.datapth, cntr);
+				sb.datapth, p1cntr, cntr);
 
 			if((ret=jiggle(sb.datapth, currentdata, datadirtmp,
 				datadir, deltabdir, deltafdir,
@@ -488,7 +488,7 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 	return ret;
 }
 
-int backup_phase4_server(const char *basedir, const char *working, const char *current, const char *currentdata, const char *finishing, struct config *cconf, const char *client, struct cntr *cntr)
+int backup_phase4_server(const char *basedir, const char *working, const char *current, const char *currentdata, const char *finishing, struct config *cconf, const char *client, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ret=0;
 	struct stat statp;
@@ -535,7 +535,7 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 
 	logp("Begin phase4 (shuffle files)\n");
 
-	write_status(client, STATUS_SHUFFLING, NULL, cntr);
+	write_status(client, STATUS_SHUFFLING, NULL, p1cntr, cntr);
 
 	if(!lstat(current, &statp)) // Had a previous backup
 	{
@@ -558,7 +558,8 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 				}
 			}
 			logp("Duplicating current backup.\n");
-			if(recursive_hardlink(current, currentduptmp, client, cntr)
+			if(recursive_hardlink(current, currentduptmp, client,
+				p1cntr, cntr)
 			  || do_rename(currentduptmp, currentdup))
 			{
 				ret=-1;
@@ -588,14 +589,15 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 		if(atomic_data_jiggle(finishing,
 			working, manifest, currentdup,
 			currentdupdata,
-			datadir, datadirtmp, cconf, client, cntr))
+			datadir, datadirtmp, cconf, client, p1cntr, cntr))
 		{
 			logp("could not finish up backup.\n");
 			ret=-1;
 			goto endfunc;
 		}
 
-		write_status(client, STATUS_SHUFFLING, "deleting temporary files", cntr);
+		write_status(client, STATUS_SHUFFLING,
+			"deleting temporary files", p1cntr, cntr);
 
 		// Remove the temporary data directory, we have now removed
 		// everything useful from it.
@@ -641,7 +643,7 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 	// Rename the finishing symlink so that it becomes the current symlink
 	do_rename(finishing, current);
 
-	end_filecounter(cntr, 0, ACTION_BACKUP);
+	print_filecounters(p1cntr, cntr, ACTION_BACKUP, 0);
 	logp("Backup completed.\n");
 	logp("End phase4 (shuffle files)\n");
 	set_logfp(NULL); // will close logfp.

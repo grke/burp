@@ -12,7 +12,7 @@
 #include "backup_phase3_server.h"
 
 // Combine the phase1 and phase2 files into a new manifest.
-int backup_phase3_server(const char *phase2data, const char *unchangeddata, const char *manifest, int recovery, int compress, const char *client, struct cntr *cntr, struct config *cconf)
+int backup_phase3_server(const char *phase2data, const char *unchangeddata, const char *manifest, int recovery, int compress, const char *client, struct cntr *p1cntr, struct cntr *cntr, struct config *cconf)
 {
 	int ars=0;
 	int ret=0;
@@ -66,13 +66,15 @@ int backup_phase3_server(const char *phase2data, const char *unchangeddata, cons
 
 		if(ucb.path && !p2b.path)
 		{
-			write_status(client, STATUS_MERGING, ucb.path, cntr);
+			write_status(client, STATUS_MERGING, ucb.path,
+				p1cntr, cntr);
 			if(sbuf_to_manifest(&ucb, mp, mzp)) { ret=-1; break; }
 			free_sbuf(&ucb);
 		}
 		else if(!ucb.path && p2b.path)
 		{
-			write_status(client, STATUS_MERGING, p2b.path, cntr);
+			write_status(client, STATUS_MERGING, p2b.path,
+				p1cntr, cntr);
 			if(sbuf_to_manifest(&p2b, mp, mzp)) { ret=-1; break; }
 			free_sbuf(&p2b);
 		}
@@ -83,20 +85,23 @@ int backup_phase3_server(const char *phase2data, const char *unchangeddata, cons
 		else if(!(pcmp=sbuf_pathcmp(&ucb, &p2b)))
 		{
 			// They were the same - write one and free both.
-			write_status(client, STATUS_MERGING, p2b.path, cntr);
+			write_status(client, STATUS_MERGING, p2b.path,
+				p1cntr, cntr);
 			if(sbuf_to_manifest(&p2b, mp, mzp)) { ret=-1; break; }
 			free_sbuf(&p2b);
 			free_sbuf(&ucb);
 		}
 		else if(pcmp<0)
 		{
-			write_status(client, STATUS_MERGING, ucb.path, cntr);
+			write_status(client, STATUS_MERGING, ucb.path,
+				p1cntr, cntr);
 			if(sbuf_to_manifest(&ucb, mp, mzp)) { ret=-1; break; }
 			free_sbuf(&ucb);
 		}
 		else
 		{
-			write_status(client, STATUS_MERGING, p2b.path, cntr);
+			write_status(client, STATUS_MERGING, p2b.path,
+				p1cntr, cntr);
 			if(sbuf_to_manifest(&p2b, mp, mzp)) { ret=-1; break; }
 			free_sbuf(&p2b);
 		}

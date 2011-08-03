@@ -373,10 +373,10 @@ static int restore_file(struct bu *arr, int a, int i, const char *datapth, const
 	return -1;
 }
 
-static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, enum action act, const char *client, char status, struct cntr *cntr, struct config *cconf)
+static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, enum action act, const char *client, char status, struct cntr *p1cntr, struct cntr *cntr, struct config *cconf)
 {
 	//logp("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path);
-	write_status(client, status, sb->path, cntr);
+	write_status(client, status, sb->path, p1cntr, cntr);
 
 	if((sb->datapth && async_write(CMD_DATAPTH,
 		sb->datapth, strlen(sb->datapth)))
@@ -409,7 +409,7 @@ static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, const cha
 
 // a = length of struct bu array
 // i = position to restore from
-static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, regex_t *regex, enum action act, const char *client, struct cntr *cntr, struct config *cconf)
+static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, regex_t *regex, enum action act, const char *client, struct cntr *p1cntr, struct cntr *cntr, struct config *cconf)
 {
 	int ret=0;
 	gzFile zp=NULL;
@@ -460,8 +460,6 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 		struct sbuf **sblist=NULL;
 
 		init_sbuf(&sb);
-
-		reset_filecounter(cntr);
 
 		while(!quit)
 		{
@@ -526,7 +524,8 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 						// fiddling in a subdirectory.
 				  		if(restore_sbuf(sblist[s], arr,
 						 a, i, tmppath1, tmppath2, act,
-						 client, status, cntr, cconf))
+						 client, status,
+						 p1cntr, cntr, cconf))
 						{
 							ret=-1; quit++;
 							break;
@@ -560,7 +559,7 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 				  }
 				  else if(!ret && restore_sbuf(&sb, arr, a, i,
 				    tmppath1, tmppath2, act, client, status,
-				    cntr, cconf))
+				    p1cntr, cntr, cconf))
 				  {
 					ret=-1; quit++;
 				  }
@@ -573,8 +572,8 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 		if(!ret) for(s=scount-1; s>=0; s--)
 		{
 			if(restore_sbuf(sblist[s], arr, a, i,
-				tmppath1, tmppath2, act, client, status, cntr,
-				cconf))
+				tmppath1, tmppath2, act, client, status,
+				p1cntr, cntr, cconf))
 			{
 				ret=-1;
 				break;
@@ -619,7 +618,8 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 			if(buf) { free(buf); buf=NULL; }
 		}
 
-		end_filecounter(cntr, 1, act);
+		print_endcounter(cntr);
+		print_filecounters(p1cntr, cntr, act, 0);
 	}
 	set_logfp(NULL);
 	compress_file(logpath, logpathz, cconf);
@@ -630,7 +630,7 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 	return ret;
 }
 
-int do_restore_server(const char *basedir, const char *backup, const char *restoreregex, enum action act, const char *client, struct cntr *cntr, struct config *cconf)
+int do_restore_server(const char *basedir, const char *backup, const char *restoreregex, enum action act, const char *client, struct cntr *p1cntr, struct cntr *cntr, struct config *cconf)
 {
 	int a=0;
 	int i=0;
@@ -666,7 +666,8 @@ int do_restore_server(const char *basedir, const char *backup, const char *resto
 	{
 		// No backup specified, do the most recent.
 		ret=restore_manifest(arr, a, a-1,
-			tmppath1, tmppath2, regex, act, client, cntr, cconf);
+			tmppath1, tmppath2, regex, act, client,
+			p1cntr, cntr, cconf);
 		found=TRUE;
 	}
 	else for(i=0; i<a; i++)
@@ -677,8 +678,8 @@ int do_restore_server(const char *basedir, const char *backup, const char *resto
 			found=TRUE;
 			//logp("got: %s\n", arr[i].path);
 			ret=restore_manifest(arr, a, i,
-				tmppath1, tmppath2, regex, act, client, cntr,
-				cconf);
+				tmppath1, tmppath2, regex, act, client,
+				p1cntr, cntr, cconf);
 			break;
 		}
 	}

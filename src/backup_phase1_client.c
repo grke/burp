@@ -12,26 +12,26 @@
 static char filesymbol=CMD_FILE;
 static char metasymbol=CMD_METADATA;
 
-static int maybe_send_extrameta(const char *path, char cmd, const char *attribs, struct cntr *cntr)
+static int maybe_send_extrameta(const char *path, char cmd, const char *attribs, struct cntr *p1cntr)
 {
 	if(has_extrameta(path, cmd))
 	{
 		if(async_write_str(CMD_STAT, attribs)
 		  || async_write_str(metasymbol, path))
 			return -1;
-		do_filecounter(cntr, metasymbol, 1);
+		do_filecounter(p1cntr, metasymbol, 1);
 	}
 	return 0;
 }
 
-int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *cntr)
+int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *p1cntr)
 {
    char msg[128]="";
    char attribs[MAXSTRING];
 
    if(!file_is_included(conf->incexcdir, conf->iecount, ff->fname)) return 0;
 
- //  logp("%d: %s\n", ff->type, ff->fname);
+   //logp("%d: %s\n", ff->type, ff->fname);
 
    switch (ff->type) {
    case FT_LNKSAVED:
@@ -41,9 +41,9 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *cntr
 	  || async_write_str(CMD_HARD_LINK, ff->fname)
 	  || async_write_str(CMD_HARD_LINK, ff->link))
 		return -1;
-	do_filecounter(cntr, CMD_HARD_LINK, 1);
+	do_filecounter(p1cntr, CMD_HARD_LINK, 1);
 	// At least FreeBSD 8.2 can have different xattrs on hard links.
-	if(maybe_send_extrameta(ff->fname, CMD_HARD_LINK, attribs, cntr))
+	if(maybe_send_extrameta(ff->fname, CMD_HARD_LINK, attribs, p1cntr))
 		return -1;
       break;
    case FT_FIFO:
@@ -53,8 +53,8 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *cntr
       if(async_write_str(CMD_STAT, attribs)
 	|| async_write_str(filesymbol, ff->fname))
 		return -1;
-      do_filecounter(cntr, filesymbol, 1);
-      if(maybe_send_extrameta(ff->fname, filesymbol, attribs, cntr))
+      do_filecounter(p1cntr, filesymbol, 1);
+      if(maybe_send_extrameta(ff->fname, filesymbol, attribs, p1cntr))
 		return -1;
       break;
    case FT_LNK:
@@ -64,8 +64,8 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *cntr
 	  || async_write_str(CMD_SOFT_LINK, ff->fname)
 	  || async_write_str(CMD_SOFT_LINK, ff->link))
 		return -1;
-	do_filecounter(cntr, CMD_SOFT_LINK, 1);
-        if(maybe_send_extrameta(ff->fname, CMD_SOFT_LINK, attribs, cntr))
+	do_filecounter(p1cntr, CMD_SOFT_LINK, 1);
+        if(maybe_send_extrameta(ff->fname, CMD_SOFT_LINK, attribs, p1cntr))
 		return -1;
       break;
    case FT_DIREND:
@@ -88,7 +88,7 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *cntr
 	 {
 		snprintf(msg, sizeof(msg),
 			"%s%s%s\n", "Dir: ", ff->fname, errmsg);
-		logw(cntr, "%s", msg);
+		logw(p1cntr, "%s", msg);
 	 }
 	 else
 	 {
@@ -96,12 +96,12 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *cntr
 	      	if(async_write_str(CMD_STAT, attribs)) return -1;
 #if defined(WIN32_VSS)
 		if(async_write_str(filesymbol, ff->fname)) return -1;
-		do_filecounter(cntr, filesymbol, 1);
+		do_filecounter(p1cntr, filesymbol, 1);
 #else
 		if(async_write_str(CMD_DIRECTORY, ff->fname)) return -1;
-		do_filecounter(cntr, CMD_DIRECTORY, 1);
-        	if(maybe_send_extrameta(ff->fname, CMD_DIRECTORY, attribs, cntr))
-			return -1;
+		do_filecounter(p1cntr, CMD_DIRECTORY, 1);
+        	if(maybe_send_extrameta(ff->fname, CMD_DIRECTORY,
+			attribs, p1cntr)) return -1;
 #endif
 	 }
 	}
@@ -111,39 +111,39 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *cntr
       if(async_write_str(CMD_STAT, attribs)
 	  || async_write_str(CMD_SPECIAL, ff->fname))
 		return -1;
-      do_filecounter(cntr, CMD_SPECIAL, 1);
-      if(maybe_send_extrameta(ff->fname, CMD_SPECIAL, attribs, cntr))
+      do_filecounter(p1cntr, CMD_SPECIAL, 1);
+      if(maybe_send_extrameta(ff->fname, CMD_SPECIAL, attribs, p1cntr))
 		return -1;
       break;
    case FT_NOACCESS:
-      logw(cntr, _("Err: Could not access %s: %s"), ff->fname, strerror(errno));
+      logw(p1cntr, _("Err: Could not access %s: %s"), ff->fname, strerror(errno));
       break;
    case FT_NOFOLLOW:
-      logw(cntr, _("Err: Could not follow ff->link %s: %s"), ff->fname, strerror(errno));
+      logw(p1cntr, _("Err: Could not follow ff->link %s: %s"), ff->fname, strerror(errno));
       break;
    case FT_NOSTAT:
-      logw(cntr, _("Err: Could not stat %s: %s"), ff->fname, strerror(errno));
+      logw(p1cntr, _("Err: Could not stat %s: %s"), ff->fname, strerror(errno));
       break;
    case FT_NOCHG:
-      logw(cntr, _("Skip: File not saved. No change. %s"), ff->fname);
+      logw(p1cntr, _("Skip: File not saved. No change. %s"), ff->fname);
       break;
    case FT_ISARCH:
-      logw(cntr, _("Err: Attempt to backup archive. Not saved. %s"), ff->fname);
+      logw(p1cntr, _("Err: Attempt to backup archive. Not saved. %s"), ff->fname);
       break;
    case FT_NOOPEN:
-      logw(cntr, _("Err: Could not open directory %s: %s"), ff->fname, strerror(errno));
+      logw(p1cntr, _("Err: Could not open directory %s: %s"), ff->fname, strerror(errno));
       break;
    case FT_RAW:
-      logw(cntr, _("Err: Raw partition: %s"), ff->fname);
+      logw(p1cntr, _("Err: Raw partition: %s"), ff->fname);
       break;
    default:
-      logw(cntr, _("Err: Unknown file ff->type %d: %s"), ff->type, ff->fname);
+      logw(p1cntr, _("Err: Unknown file ff->type %d: %s"), ff->type, ff->fname);
       break;
    }
    return 0;
 }
 
-int backup_phase1_client(struct config *conf, struct cntr *cntr)
+int backup_phase1_client(struct config *conf, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int sd=0;
 	int ret=0;
@@ -152,7 +152,6 @@ int backup_phase1_client(struct config *conf, struct cntr *cntr)
 	// First, tell the server about everything that needs to be backed up.
 
 	logp("Phase 1 begin (file system scan)\n");
-        reset_filecounter(cntr);
 
 	if(conf->encryption_password)
 	{
@@ -166,13 +165,14 @@ int backup_phase1_client(struct config *conf, struct cntr *cntr)
 		if(conf->startdir[sd]->flag)
 		{
 			if((ret=find_files_begin(ff, conf,
-				conf->startdir[sd]->path, cntr)))
+				conf->startdir[sd]->path, p1cntr)))
 					break;
 		}
 	}
 	term_find_files(ff);
 
-	end_filecounter(cntr, 1, ACTION_BACKUP);
+	print_endcounter(p1cntr);
+	//print_filecounters(p1cntr, cntr, ACTION_BACKUP);
 	if(ret) logp("Error in phase 1\n");
 	logp("Phase 1 end (file system scan)\n");
 

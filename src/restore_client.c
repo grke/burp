@@ -448,7 +448,7 @@ static const char *act_str(enum action act)
 	return ret;
 }
 
-int do_restore_client(struct config *conf, enum action act, const char *backup, const char *restoreprefix, const char *restoreregex, int forceoverwrite, struct cntr *cntr)
+int do_restore_client(struct config *conf, enum action act, const char *backup, const char *restoreprefix, const char *restoreregex, int forceoverwrite, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ars=0;
 	int ret=0;
@@ -459,7 +459,6 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 	int wroteendcounter=0;
 
 	logp("doing %s\n", act_str(act));
-	reset_filecounter(cntr);
 
 	snprintf(msg, sizeof(msg), "%s %s:%s", act_str(act),
 		backup?backup:"", restoreregex?restoreregex:"");
@@ -485,7 +484,8 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 			else
 			{
 				// ars==1 means it ended ok.
-				end_filecounter(cntr, 1, act);
+				print_endcounter(cntr);
+				print_filecounters(p1cntr, cntr, act, 1);
 				wroteendcounter++;
 				logp("got %s end\n", act_str(act));
 				if(async_write_str(CMD_GEN, "restoreend ok"))
@@ -625,7 +625,11 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 	}
 	free_sbuf(&sb);
 
-	if(!wroteendcounter) end_filecounter(cntr, 1, act);
+	if(!wroteendcounter)
+	{
+		print_endcounter(cntr);
+		print_filecounters(p1cntr, cntr, act, 1);
+	}
 
 	if(!ret) logp("%s finished\n", act_str(act));
 	else logp("ret: %d\n", ret);

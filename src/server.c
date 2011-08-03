@@ -210,7 +210,7 @@ static int setup_signals(int max_children)
 	return 0;
 }
 
-static int do_backup_server(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *manifest, const char *forward, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *client, struct cntr *cntr)
+static int do_backup_server(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *manifest, const char *forward, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *client, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ret=0;
 	char msg[256]="";
@@ -229,7 +229,7 @@ static int do_backup_server(const char *basedir, const char *current, const char
 	char *logpath=NULL;
 	FILE *logfp=NULL;
 	// Where to write backupphase2 data.
-	// Phase 2 data is not get written to a compressed file.
+	// Phase 2 data is not getting written to a compressed file.
 	// This is important for recovery if the power goes.
 	FILE *p2fp=NULL;
 	gzFile uczp=NULL;
@@ -297,7 +297,8 @@ static int do_backup_server(const char *basedir, const char *current, const char
 		ret=-1;
 	}
 
-	if(!ret && backup_phase1_server(phase1data, client, cntr, cconf))
+	if(!ret && backup_phase1_server(phase1data,
+		client, p1cntr, cntr, cconf))
 	{
 		logp("error in backup phase 1\n");
 		ret=-1;
@@ -321,7 +322,8 @@ static int do_backup_server(const char *basedir, const char *current, const char
 	if(!ret && !(uczp=gzopen_file(unchangeddata, comp_level(cconf))))
 		ret=-1;
 	if(!ret && backup_phase2_server(&cmanfp, phase1data, p2fp, uczp,
-		datadirtmp, &dpth, currentdata, working, client, cntr, cconf))
+		datadirtmp, &dpth, currentdata, working, client,
+		p1cntr, cntr, cconf))
 	{
 		logp("error in backup phase 2\n");
 		ret=-1;
@@ -334,8 +336,8 @@ static int do_backup_server(const char *basedir, const char *current, const char
 	gzclose_fp(&uczp);
 
 	if(!ret && backup_phase3_server(phase2data, unchangeddata, manifest,
-		0 /* not recovery mode */, 1 /* compress */, client, cntr,
-		cconf))
+		0 /* not recovery mode */, 1 /* compress */, client,
+		p1cntr, cntr, cconf))
 	{
 		logp("error in backup phase 3\n");
 		ret=-1;
@@ -366,7 +368,8 @@ static int do_backup_server(const char *basedir, const char *current, const char
 			// finish_backup will open logfp again
 			ret=backup_phase4_server(basedir,
 				working, current, currentdata,
-				finishing, cconf, client, cntr);
+				finishing, cconf, client,
+				p1cntr, cntr);
 			if(!ret && cconf->keep>0)
 				ret=remove_old_backups(basedir, cconf->keep);
 		}
@@ -384,7 +387,7 @@ static int do_backup_server(const char *basedir, const char *current, const char
 	return ret;
 }
 
-static int maybe_rebuild_manifest(const char *phase2data, const char *unchangeddata, const char *manifest, int compress, const char *client, struct cntr *cntr, struct config *cconf)
+static int maybe_rebuild_manifest(const char *phase2data, const char *unchangeddata, const char *manifest, int compress, const char *client, struct cntr *p1cntr, struct cntr *cntr, struct config *cconf)
 {
 	struct stat statp;
 	if(!lstat(manifest, &statp))
@@ -394,10 +397,10 @@ static int maybe_rebuild_manifest(const char *phase2data, const char *unchangedd
 		return 0;
 	}
 	return backup_phase3_server(phase2data, unchangeddata, manifest,
-		1 /* recovery mode */, compress, client, cntr, cconf);
+		1 /* recovery mode */, compress, client, p1cntr, cntr, cconf);
 }
 
-static int check_for_rubble(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *manifest, const char *client, struct cntr *cntr)
+static int check_for_rubble(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *manifest, const char *client, struct cntr *p1cntr, struct cntr *cntr)
 {
 	size_t len=0;
 	char realwork[256]="";
@@ -421,6 +424,7 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 			finishing,
 			cconf,
 			client,
+			p1cntr,
 			cntr);
 		if(!r) logp("Prior backup completed OK.\n");
 		return r;
@@ -511,7 +515,7 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 
 		// Get us a partial manifest from the files lying around.
 		if(maybe_rebuild_manifest(phase2data, unchangeddata, manifest,
-			1 /* compress */, client, cntr, cconf))
+			1 /* compress */, client, p1cntr, cntr, cconf))
 		{
 			set_logfp(NULL); // fclose the logfp
 			return -1;
@@ -528,7 +532,7 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 
 		return check_for_rubble(basedir, current, working,
 			currentdata, finishing, cconf, phase1data, phase2data,
-			unchangeddata, manifest, client, cntr);
+			unchangeddata, manifest, client, p1cntr, cntr);
 	}
 	else if(!strcmp(wdrm, "merge"))
 	{
@@ -547,8 +551,8 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 		logp("rebuild\n");
 		// Get us a partial manifest from the files lying around.
 		if(maybe_rebuild_manifest(phase2data, unchangeddata,
-			manifesttmp, 0 /* do not compress */, client, cntr,
-			cconf))
+			manifesttmp, 0 /* do not compress */, client,
+			p1cntr, cntr, cconf))
 		{
 			set_logfp(NULL); // fclose the logfp
 			free(manifesttmp);
@@ -737,7 +741,7 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 
 		return check_for_rubble(basedir, current, working,
 			currentdata, finishing, cconf, phase1data, phase2data,
-			unchangeddata, manifest, client, cntr);
+			unchangeddata, manifest, client, p1cntr, cntr);
 	}
 	else
 	{
@@ -752,7 +756,7 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 	return 0;
 }
 
-static int get_lock_and_clean(const char *basedir, const char *lockbasedir, const char *lockfile, const char *current, const char *working, const char *currentdata, const char *finishing, bool cancel, bool *gotlock, struct config *cconf, const char *forward, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *manifest, const char *client, struct cntr *cntr)
+static int get_lock_and_clean(const char *basedir, const char *lockbasedir, const char *lockfile, const char *current, const char *working, const char *currentdata, const char *finishing, bool cancel, bool *gotlock, struct config *cconf, const char *forward, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *manifest, const char *client, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ret=0;
 	char *copy=NULL;
@@ -791,7 +795,7 @@ static int get_lock_and_clean(const char *basedir, const char *lockbasedir, cons
 
 	if(!ret && check_for_rubble(basedir, current, working, currentdata,
 		finishing, cconf, phase1data, phase2data, unchangeddata,
-		manifest, client, cntr))
+		manifest, client, p1cntr, cntr))
 			ret=-1;
 
 	return ret;
@@ -835,8 +839,10 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 	char *phase1data=NULL;
 	char *phase2data=NULL;
 	char *unchangeddata=NULL;
-	struct cntr cntr;
+	struct cntr p1cntr; // cntr for phase1 (scan)
+	struct cntr cntr; // cntr for the rest
 
+	reset_filecounter(&p1cntr);
 	reset_filecounter(&cntr);
 
 	if(!(basedir=prepend_s(cconf->directory, client, strlen(client)))
@@ -866,7 +872,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 			working, currentdata,
 			finishing, TRUE, &gotlock, cconf,
 			forward, phase1data, phase2data, unchangeddata,
-			manifest, client, &cntr))
+			manifest, client, &p1cntr, &cntr))
 				ret=-1;
 		else
 		{
@@ -909,7 +915,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 			ret=do_backup_server(basedir, current, working,
 			  currentdata, finishing, cconf,
 			  manifest, forward, phase1data, phase2data,
-			  unchangeddata, client, &cntr);
+			  unchangeddata, client, &p1cntr, &cntr);
 			if(ret)
 				run_script(
 					cconf->notify_failure_script,
@@ -922,7 +928,8 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 			{
 				char warnings[32]="";
 				snprintf(warnings, sizeof(warnings),
-					"%llu", cntr.warningcounter);
+				  "%llu",
+				  p1cntr.warning+cntr.warning);
 				run_script(
 					cconf->notify_success_script,
 					cconf->notify_success_arg,
@@ -955,7 +962,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 			current, working,
 			currentdata, finishing, TRUE, &gotlock, cconf,
 			forward, phase1data, phase2data, unchangeddata,
-			manifest, client, &cntr))
+			manifest, client, &p1cntr, &cntr))
 				ret=-1;
 		else
 		{
@@ -967,7 +974,8 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 			}
 			async_write_str(CMD_GEN, "ok");
 			ret=do_restore_server(basedir, backupnostr,
-				restoreregex, act, client, &cntr, cconf);
+				restoreregex, act, client,
+				&p1cntr, &cntr, cconf);
 		}
 	}
 	else if(cmd==CMD_GEN && !strncmp(buf, "list ", strlen("list ")))
@@ -976,7 +984,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 			current, working,
 			currentdata, finishing, FALSE, &gotlock, cconf,
 			forward, phase1data, phase2data, unchangeddata,
-			manifest, client, &cntr))
+			manifest, client, &p1cntr, &cntr))
 				ret=-1;
 		else
 		{
@@ -988,7 +996,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 			}
 			async_write_str(CMD_GEN, "ok");
 			ret=do_list_server(basedir, buf+strlen("list "),
-				listregex, client, &cntr);
+				listregex, client, &p1cntr, &cntr);
 		}
 	}
 	else

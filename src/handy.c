@@ -836,7 +836,7 @@ void reuseaddr(int fd)
 		(sockopt_val_t)&tmpfd, sizeof(tmpfd));
 }
 
-void write_status(const char *client, char phase, const char *path, struct cntr *cntr)
+void write_status(const char *client, char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr)
 {
 	static time_t lasttime=0;
 	if(status_wfd>=0 && client)
@@ -860,25 +860,76 @@ void write_status(const char *client, char phase, const char *path, struct cntr 
 		lasttime=now;
 
 		snprintf(wbuf, sizeof(wbuf),
-			"%s\t%c\t%c\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%s\n",
-			client, STATUS_RUNNING, phase,
-			cntr->totalcounter,
-			cntr->filecounter,
-			cntr->changedcounter,
-			cntr->unchangedcounter,
-			cntr->newcounter,
-			cntr->directorycounter,
-			cntr->specialcounter,
-			cntr->hardlinkcounter,
-			cntr->softlinkcounter,
-			cntr->warningcounter,
-			cntr->bytecounter,
-			cntr->recvbytecounter,
-			cntr->sentbytecounter,
-			cntr->encryptedcounter,
-			cntr->metadatacounter,
-			cntr->encmetadatacounter,
-			path?path:"");
+			"%s\t%c\t%c\t"
+			"%llu/%llu/%llu/%llu\t"
+			"%llu/%llu/%llu/%llu\t"
+			"%llu/%llu/%llu/%llu\t"
+			"%llu/%llu/%llu/%llu\t"
+			"%llu/%llu/%llu/%llu\t"
+			"%llu/%llu/%llu/%llu\t"
+			"%llu/%llu/%llu/%llu\t"
+			"%llu/%llu/%llu/%llu\t"
+			"%llu/%llu/%llu/%llu\t"
+			"%llu/%llu/%llu/%llu\t"
+			"%llu\t%llu\t%llu\t%llu\t%llu\t%s\n",
+				client, STATUS_RUNNING, phase,
+
+				cntr->total,
+				cntr->total_same,
+				cntr->total_changed,
+				p1cntr->total,
+
+				cntr->file,
+				cntr->file_same,
+				cntr->file_changed,
+				p1cntr->file,
+
+				cntr->enc,
+				cntr->enc_same,
+				cntr->enc_changed,
+				p1cntr->enc,
+
+				cntr->meta,
+				cntr->meta_same,
+				cntr->meta_changed,
+				p1cntr->meta,
+
+				cntr->encmeta,
+				cntr->encmeta_same,
+				cntr->encmeta_changed,
+				p1cntr->encmeta,
+
+				cntr->dir,
+				cntr->dir_same,
+				cntr->dir_changed,
+				p1cntr->dir,
+
+				cntr->slink,
+				cntr->slink_same,
+				cntr->slink_changed,
+				p1cntr->slink,
+
+				cntr->hlink,
+				cntr->hlink_same,
+				cntr->hlink_changed,
+				p1cntr->hlink,
+
+				cntr->special,
+				cntr->special_same,
+				cntr->special_changed,
+				p1cntr->special,
+
+				cntr->total,
+				cntr->total_same,
+				cntr->total_changed,
+				p1cntr->total,
+
+				cntr->gtotal,
+				cntr->warning,
+				cntr->byte,
+				cntr->recvbyte,
+				cntr->sentbyte,
+				path?path:"");
 
 		// Make sure there is a new line at the end.
 		l=strlen(wbuf);

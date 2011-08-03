@@ -12,7 +12,7 @@ struct bu
 	unsigned long forward_index;
 };
 
-extern int recursive_hardlink(const char *src, const char *dst, const char *client, struct cntr *cntr);
+extern int recursive_hardlink(const char *src, const char *dst, const char *client, struct cntr *p1cntr, struct cntr *cntr);
 extern int recursive_delete(const char *d, const char *file, bool delfiles);
 extern void free_current_backups(struct bu **arr, int a);
 extern int get_current_backups(const char *basedir, struct bu **arr, int *a, int log);

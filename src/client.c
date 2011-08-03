@@ -48,7 +48,7 @@ static int maybe_check_timer(const char *phase1str, struct config *conf)
 }
 
 // Return 0 for OK, -1 for error, 1 for timer conditions not met.
-static int do_backup_client(struct config *conf, const char *phase1str, struct cntr *cntr)
+static int do_backup_client(struct config *conf, const char *phase1str, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ret=0;
 
@@ -62,10 +62,10 @@ logp("do backup client\n");
 #endif
 
 	// Scan the file system and send the results to the server.
-	if(!ret) ret=backup_phase1_client(conf, cntr);
+	if(!ret) ret=backup_phase1_client(conf, p1cntr, cntr);
 
 	// Now, the server will be telling us what data we need to send.
-	if(!ret) ret=backup_phase2_client(conf, cntr);
+	if(!ret) ret=backup_phase2_client(conf, p1cntr, cntr);
 
 #if defined(WIN32_VSS)
 	win32_stop_vss();
@@ -106,7 +106,9 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 	BIO *sbio=NULL;
 	SSL_CTX *ctx=NULL;
 	struct cntr cntr;
+	struct cntr p1cntr;
 
+	reset_filecounter(&p1cntr);
 	reset_filecounter(&cntr);
 
 	setup_signals();
@@ -171,10 +173,10 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 					  "reserved3",
 					  "reserved4",
 					  "reserved5",
-					  &cntr)) ret=-1;
+					  &p1cntr)) ret=-1;
 
 					if(!ret && do_backup_client(conf,
-						"backupphase1", &cntr))
+						"backupphase1", &p1cntr, &cntr))
 							ret=-1;
 
 					if((conf->backup_script_post_run_on_fail
@@ -217,7 +219,7 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 				if(!ret && do_restore_client(conf,
 					act, backup,
 					restoreprefix, regex, forceoverwrite,
-					&cntr)) ret=-1;
+					&p1cntr, &cntr)) ret=-1;
 				if((conf->restore_script_post_run_on_fail
 				  || !ret) && conf->restore_script_post)
 				{

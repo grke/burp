@@ -25,7 +25,7 @@ extern EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password);
 extern void add_fd_to_sets(int fd, fd_set *read_set, fd_set *write_set, fd_set *err_set, int *max_fd);
 extern int init_client_socket(const char *host, const char *port);
 extern void reuseaddr(int fd);
-extern void write_status(const char *client, char phase, const char *path, struct cntr *cntr);
+extern void write_status(const char *client, char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr);
 extern int run_script(const char *script, struct strlist **userargs, int userargc, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, struct cntr *cntr);
 extern char *comp_level(struct config *conf);
 extern int chuser_and_or_chgrp(const char *user, const char *group);

@@ -11,7 +11,7 @@
 #include "sbuf.h"
 #include "backup_phase1_server.h"
 
-int backup_phase1_server(const char *phase1data, const char *client, struct cntr *cntr, struct config *conf)
+int backup_phase1_server(const char *phase1data, const char *client, struct cntr *p1cntr, struct cntr *cntr, struct config *conf)
 {
 	char cmd;
 	int ret=0;
@@ -36,7 +36,7 @@ int backup_phase1_server(const char *phase1data, const char *client, struct cntr
 
 	while(!quit)
 	{
-		write_status(client, STATUS_SCANNING, lastfile, cntr);
+		write_status(client, STATUS_SCANNING, lastfile, p1cntr, cntr);
 		if(async_read(&cmd, &buf, &len))
 		{
 			quit++; ret=-1;
@@ -62,7 +62,7 @@ int backup_phase1_server(const char *phase1data, const char *client, struct cntr
 		else if(cmd==CMD_WARNING)
 		{
 			logp("WARNING: %s\n", buf);
-			do_filecounter(cntr, cmd, 0);
+			do_filecounter(p1cntr, cmd, 0);
 		}
 		else
 		{
@@ -76,7 +76,7 @@ int backup_phase1_server(const char *phase1data, const char *client, struct cntr
 			else if(expect_file_type)
 			{
 				expect_file_type=0;
-				do_filecounter(cntr, cmd, 0);
+				do_filecounter(p1cntr, cmd, 0);
 				if(lastfile) free(lastfile);
 				lastfile=buf; buf=NULL;
 				continue;
@@ -84,6 +84,7 @@ int backup_phase1_server(const char *phase1data, const char *client, struct cntr
 		}
 		if(buf) { free(buf); buf=NULL; }
 	}
+
 	if(buf) { free(buf); buf=NULL; }
 	if(lastfile) { free(lastfile); lastfile=NULL; }
 
@@ -92,7 +93,7 @@ int backup_phase1_server(const char *phase1data, const char *client, struct cntr
 		ret=-1;
 	free(phase1tmp);
 
-	end_filecounter(cntr, 0, ACTION_BACKUP);
+	//print_filecounters(p1cntr, cntr, ACTION_BACKUP);
 
 	logp("End phase1 (file system scan)\n");
 

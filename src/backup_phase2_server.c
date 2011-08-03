@@ -40,6 +40,14 @@ static int start_to_receive_new_file(struct sbuf *sb, const char *datadirtmp, st
 	return ret;
 }
 
+static int filedata(char cmd)
+{
+	return (cmd==CMD_FILE
+	  || cmd==CMD_ENC_FILE
+	  || cmd==CMD_METADATA
+	  || cmd==CMD_ENC_METADATA);
+}
+
 static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *currentdata, struct cntr *cntr)
 {
 	size_t blocklen=0;
@@ -47,11 +55,13 @@ static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *c
 	//logp("need to process changed file: %s (%s)\n", cb->path, cb->datapth);
 
 	// Move datapth onto p1b.
+
 	if(p1b->datapth) free(p1b->datapth);
 	p1b->datapth=cb->datapth;
 	cb->datapth=NULL;
 
-	if(!(curpath=prepend_s(currentdata, p1b->datapth, strlen(p1b->datapth))))
+	if(!(curpath=prepend_s(currentdata,
+		p1b->datapth, strlen(p1b->datapth))))
 	{
 		logp("out of memory\n");
 		return -1;
@@ -62,7 +72,8 @@ static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *c
 		p1b->sigfp=open_file(curpath, "rb");
 	if(!p1b->sigzp && !p1b->sigfp)
 	{
-		logp("could not open %s: %s\n", curpath, strerror(errno));
+		logp("could not open %s: %s\n",
+			curpath, strerror(errno));
 		free(curpath);
 		return -1;
 	}
@@ -74,13 +85,15 @@ static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *c
 		logp("could not start signature job.\n");
 		return -1;
 	}
-//logp("sig begin: %s\n", p1b->datapth);
-	if(!(p1b->infb=rs_filebuf_new(NULL, p1b->sigfp, p1b->sigzp, -1, blocklen, cntr)))
+	//logp("sig begin: %s\n", p1b->datapth);
+	if(!(p1b->infb=rs_filebuf_new(NULL,
+		p1b->sigfp, p1b->sigzp, -1, blocklen, cntr)))
 	{
 		logp("could not rs_filebuf_new for infb.\n");
 		return -1;
 	}
-	if(!(p1b->outfb=rs_filebuf_new(NULL, NULL, NULL, async_get_fd(), ASYNC_BUF_LEN, cntr)))
+	if(!(p1b->outfb=rs_filebuf_new(NULL, NULL, NULL,
+		async_get_fd(), ASYNC_BUF_LEN, cntr)))
 	{
 		logp("could not rs_filebuf_new for in_outfb.\n");
 		return -1;
@@ -97,17 +110,43 @@ static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *c
 	return 0;
 }
 
-static int process_new(struct sbuf *p1b)
+static int new_non_file(struct sbuf *p1b, gzFile uzcp, char cmd, struct cntr *cntr)
 {
-	//logp("need to process new file: %s\n", p1b->path);
-	// Flag the things that need to be sent (to the client)
-	p1b->sendstat++;
-	p1b->sendpath++;
+	// Is something that does not need more data backed up.
+	// Like a directory or a link or something like that.
+	// Goes into the unchanged file, so that it does not end up out of
+	// order with normal files, which has to wait around for their data
+	// to turn up.
+	if(sbuf_to_manifest(p1b, NULL, uzcp))
+	{
+		return -1;
+	}
+	else
+	{
+		do_filecounter(cntr, cmd, 0);
+	}
+	free_sbuf(p1b);
+	return 0;
+}
+
+static int process_new(struct sbuf *p1b, FILE *p2fp, gzFile uczp, struct cntr *cntr)
+{
+	if(filedata(p1b->cmd))
+	{
+		//logp("need to process new file: %s\n", p1b->path);
+		// Flag the things that need to be sent (to the client)
+		p1b->sendstat++;
+		p1b->sendpath++;
+	}
+	else
+	{
+		new_non_file(p1b, uczp, p1b->cmd, cntr);
+	}
 	return 0;
 }
 
 // return 1 to say that a file was processed
-static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, gzFile uczp, const char *currentdata, struct cntr *cntr, struct config *cconf)
+static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, gzFile uczp, const char *currentdata, struct cntr *cntr, struct config *cconf)
 {
 	int pcmp;
 	if(!(pcmp=sbuf_pathcmp(cb, p1b)))
@@ -123,13 +162,18 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, gzFile uczp, co
 				free_sbuf(cb);
 				return -1;
 			}
-			do_filecounter_bytes(cntr,
+			else
+			{
+				do_filecounter(cntr, cmd_to_same(cb->cmd), 0);
+			}
+			if(cb->endfile) do_filecounter_bytes(cntr,
 				 strtoull(cb->endfile, NULL, 10));
 			free_sbuf(cb);
 			return 1;
 		}
 
 		// Got a changed file.
+		//logp("got changed file: %s\n", p1b->path);
 
 		// If either old or new is encrypted, or librsync is off,
 		// we need to get a new file.
@@ -138,38 +182,51 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, gzFile uczp, co
 		  || p1b->cmd==CMD_ENC_FILE
 		  || cb->cmd==CMD_ENC_METADATA
 		  || p1b->cmd==CMD_ENC_METADATA
+		// TODO: make unencrypted metadata use the librsync
 		  || cb->cmd==CMD_METADATA
 		  || p1b->cmd==CMD_METADATA)
 		{
-			if(process_new(p1b)) return -1;
+			if(process_new(p1b, p2fp, uczp, cntr)) return -1;
 			free_sbuf(cb);
 			return 1;
 		}
 
 		// Get new files if they have switched between compression on
 		// or off.
-		if(dpth_is_compressed(cb->datapth))
+		if(cb->datapth && dpth_is_compressed(cb->datapth))
 			oldcompressed=1;
 		if( ( oldcompressed && !cconf->compression)
 		 || (!oldcompressed &&  cconf->compression))
 		{
-			if(process_new(p1b)) return -1;
+			if(process_new(p1b, p2fp, uczp, cntr)) return -1;
 			free_sbuf(cb);
 			return 1;
 		}
 
-		// Otherwise, do the delta stuff.
-		if(process_changed_file(cb, p1b, currentdata, cntr)) return -1;
+		// Otherwise, do the delta stuff (if possible).
+		if(filedata(p1b->cmd))
+		{
+			if(process_changed_file(cb, p1b, currentdata, cntr))
+				return -1;
+		}
+		else
+		{
+			if(new_non_file(p1b, uczp,
+				cmd_to_changed(p1b->cmd), cntr))
+					return -1;
+		}
 		free_sbuf(cb);
 		return 1;
 	}
 	else if(pcmp>0)
 	{
+		//logp("ahead: %s\n", p1b->path);
 		// ahead - need to get the whole file
-		if(process_new(p1b)) return -1;
+		if(process_new(p1b, p2fp, uczp, cntr)) return -1;
 		// do not free
 		return 1;
 	}
+	//logp("behind: %s\n", p1b->path);
 	// behind - need to read more from the old
 	// manifest
 	return 0;
@@ -337,7 +394,10 @@ static int do_stuff_to_receive(struct sbuf *rb, FILE *p2fp, const char *datadirt
 						ret=-1;
 					else
 					{
-					  do_filecounter(cntr, rb->receivedelta?CMD_END_FILE:CMD_NEW_FILE, 0);
+					  char cmd=rb->cmd;
+					  if(rb->receivedelta)
+						cmd=cmd_to_changed(cmd);
+					  do_filecounter(cntr, cmd, 0);
 					  if(*last_requested
 					  && !strcmp(rb->path, *last_requested))
 					  {
@@ -351,8 +411,9 @@ static int do_stuff_to_receive(struct sbuf *rb, FILE *p2fp, const char *datadirt
 				{
 					char *cp=NULL;
 					cp=strchr(rb->endfile, ':');
-					do_filecounter_bytes(cntr,
-					 strtoull(rb->endfile, NULL, 10));
+					if(rb->endfile)
+					 do_filecounter_bytes(cntr,
+					  strtoull(rb->endfile, NULL, 10));
 					if(cp)
 					{
 						// checksum stuff goes here
@@ -440,7 +501,7 @@ static int do_stuff_to_receive(struct sbuf *rb, FILE *p2fp, const char *datadirt
 	return ret;
 }
 
-int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzFile uczp, const char *datadirtmp, struct dpth *dpth, const char *currentdata, const char *working, const char *client, struct cntr *cntr, struct config *cconf)
+int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzFile uczp, const char *datadirtmp, struct dpth *dpth, const char *currentdata, const char *working, const char *client, struct cntr *p1cntr, struct cntr *cntr, struct config *cconf)
 {
 	int ars=0;
 	int ret=0;
@@ -469,9 +530,11 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzF
 	while(!quit)
 	{
 		int sts=0;
-		//logp("in loop\n");
-		if(rb.path) write_status(client, STATUS_BACKUP, rb.path, cntr);
-		else write_status(client, STATUS_BACKUP, p1b.path, cntr);
+		//logp("in loop, %s\n", *cmanfp?"got cmanfp":"no cmanfp");
+		if(rb.path) write_status(client, STATUS_BACKUP,
+			rb.path, p1cntr, cntr);
+		else write_status(client, STATUS_BACKUP,
+			p1b.path, p1cntr, cntr);
 		if((last_requested || !p1zp)
 		  && (ars=do_stuff_to_receive(&rb, p2fp, datadirtmp, dpth,
 			working, &last_requested, deltmppath, cntr, cconf)))
@@ -489,44 +552,26 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzF
 
 		if(!sts && p1zp)
 		{
-		   while(p1zp)
+		   free_sbuf(&p1b);
+
+		   if((ars=sbuf_fill_phase1(NULL, p1zp, &p1b, cntr)))
 		   {
-			free_sbuf(&p1b);
-
-			if((ars=sbuf_fill_phase1(NULL, p1zp, &p1b, cntr)))
-			{
-				if(ars<0) { ret=-1; quit++; } // error
-				// ars==1 means it ended ok.
-				gzclose_fp(&p1zp);
-				//free_sbuf(&p1b);
-				if(async_write_str(CMD_GEN, "backupphase2end"))
+			if(ars<0) { ret=-1; quit++; } // error
+			// ars==1 means it ended ok.
+			gzclose_fp(&p1zp);
+			//free_sbuf(&p1b);
+			if(async_write_str(CMD_GEN, "backupphase2end"))
 				break;
-			}
-
-			if(p1b.cmd==CMD_FILE
-			  || p1b.cmd==CMD_ENC_FILE
-			  || p1b.cmd==CMD_METADATA
-			  || p1b.cmd==CMD_ENC_METADATA)
-				break;
-
-			// If it is not file data or it is something else that
-			// has no extra meta data, we are not currently
-			// interested. Write it to the unchanged file.
-			if(sbuf_to_manifest(&p1b, NULL, uczp))
-			{
-				ret=-1; quit++;
-			}
 		   }
-		   if(ret || !p1zp) continue;
+		   if(ret) continue;
 
 		   //logp("check: %s\n", p1b.path);
 
-		   // If it is file data (or something with extra meta data)
 		   if(!*cmanfp)
 		   {
 			// No old manifest, need to ask for a new file.
 			//logp("no cmanfp\n");
-			if(process_new(&p1b)) return -1;
+			if(process_new(&p1b, p2fp, uczp, cntr)) return -1;
 		   }
 		   else
 		   {
@@ -536,7 +581,8 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzF
 			// manifest.
 			if(cb.path)
 			{
-				if((ars=maybe_process_file(&cb, &p1b, uczp,
+				if((ars=maybe_process_file(&cb, &p1b,
+					p2fp, uczp,
 					currentdata, cntr, cconf)))
 				{
 					if(ars<0)
@@ -565,20 +611,13 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzF
 					// ars==1 means it ended ok.
 					gzclose_fp(cmanfp);
 		//logp("ran out of current manifest\n");
-					if(process_new(&p1b)) return -1;
+					if(process_new(&p1b, p2fp, uczp, cntr))
+						return -1;
 					break;
 				}
 		//logp("against: %s\n", cb.path);
-				if(cb.cmd!=CMD_FILE
-				  && cb.cmd!=CMD_ENC_FILE
-				  && cb.cmd!=CMD_METADATA
-				  && cb.cmd!=CMD_ENC_METADATA)
-				{
-					free_sbuf(&cb);
-					continue;
-				}
-				if((ars=maybe_process_file(&cb, &p1b, uczp,
-					currentdata, cntr, cconf)))
+				if((ars=maybe_process_file(&cb, &p1b,
+					p2fp, uczp, currentdata, cntr, cconf)))
 				{
 					if(ars<0)
 					{

@@ -38,6 +38,17 @@ void logp(const char *fmt, ...)
 	va_end(ap);
 }
 
+/* for the counters */
+void logc(const char *fmt, ...)
+{
+	char buf[512]="";
+	va_list ap;
+	va_start(ap, fmt);
+	vsnprintf(buf, sizeof(buf), fmt, ap);
+	fprintf(logfp?logfp:stdout, "%s", buf);
+	va_end(ap);
+}
+
 const char *progname(void)
 {
 	return prog;

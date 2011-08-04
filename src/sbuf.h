@@ -48,6 +48,7 @@ extern int sbuf_is_link(struct sbuf *sb);
 extern int sbuf_fill(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr);
 extern int sbuf_fill_phase1(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr);
 extern int sbuf_to_manifest(struct sbuf *sb, FILE *mp, gzFile zp);
+extern int sbuf_to_manifest_phase1(struct sbuf *sb, FILE *mp, gzFile zp);
 
 extern int add_to_sbuf_arr(struct sbuf ***sblist, struct sbuf *sb, int *count);
 extern void free_sbufs(struct sbuf **sb, int count);

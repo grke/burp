@@ -13,15 +13,12 @@
 
 int backup_phase1_server(const char *phase1data, const char *client, struct cntr *p1cntr, struct cntr *cntr, struct config *conf)
 {
-	char cmd;
+	int ars=0;
 	int ret=0;
 	int quit=0;
-	size_t len=0;
-	char *buf=NULL;
+	struct sbuf sb;
 	gzFile p1zp=NULL;
 	char *phase1tmp=NULL;
-	int expect_file_type=0;
-	char *lastfile=NULL;
 
 	logp("Begin phase1 (file system scan)\n");
 
@@ -34,59 +31,30 @@ int backup_phase1_server(const char *phase1data, const char *client, struct cntr
 		return -1;
 	}
 
+	init_sbuf(&sb);
 	while(!quit)
 	{
-		write_status(client, STATUS_SCANNING, lastfile, p1cntr, cntr);
-		if(async_read(&cmd, &buf, &len))
+		free_sbuf(&sb);
+		if((ars=sbuf_fill(NULL, NULL, &sb, p1cntr)))
 		{
-			quit++; ret=-1;
+			if(ars<0) ret=-1;
+			//ars==1 means it ended ok.
+			// Last thing the client sends is 'backupphase2', and
+			// it wants an 'ok' reply.
+			if(async_write_str(CMD_GEN, "ok")
+			  || send_msg_zp(p1zp, CMD_GEN,
+				"phase1end", strlen("phase1end")))
+					ret=-1;
 			break;
 		}
-		if(cmd==CMD_GEN)
+		write_status(client, STATUS_SCANNING, sb.path, p1cntr, cntr);
+		if(sbuf_to_manifest_phase1(&sb, NULL, p1zp))
 		{
-			if(!strcmp(buf, "backupphase2"))
-			{
-				if(async_write_str(CMD_GEN, "ok")
-				  || send_msg_zp(p1zp, CMD_GEN,
-					"phase1end", strlen("phase1end")))
-						ret=-1;
-				break;
-			}
-			else
-			{
-				quit++; ret=-1;
-				logp("unexpected cmd in backupphase1: %c %s\n",
-					cmd, buf);
-			}
+			ret=-1;
+			break;
 		}
-		else if(cmd==CMD_WARNING)
-		{
-			logp("WARNING: %s\n", buf);
-			do_filecounter(p1cntr, cmd, 0);
-		}
-		else
-		{
-			if(send_msg_zp(p1zp, cmd, buf, len))
-			{
-				ret=-1;
-				break;
-			}
-			// TODO - Flaky, do this better
-			if(cmd==CMD_STAT) expect_file_type++;
-			else if(expect_file_type)
-			{
-				expect_file_type=0;
-				do_filecounter(p1cntr, cmd, 0);
-				if(lastfile) free(lastfile);
-				lastfile=buf; buf=NULL;
-				continue;
-			}
-		}
-		if(buf) { free(buf); buf=NULL; }
+		do_filecounter(p1cntr, sb.cmd, 0);
 	}
-
-	if(buf) { free(buf); buf=NULL; }
-	if(lastfile) { free(lastfile); lastfile=NULL; }
 
         if(p1zp) gzclose(p1zp);
 	if(!ret && do_rename(phase1tmp, phase1data))

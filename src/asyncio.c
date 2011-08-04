@@ -564,7 +564,8 @@ int async_read_stat(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
 		}
 		else if((cmd==CMD_GEN && !strcmp(buf, "backupend"))
 		  || (cmd==CMD_GEN && !strcmp(buf, "restoreend"))
-		  || (cmd==CMD_GEN && !strcmp(buf, "phase1end")))
+		  || (cmd==CMD_GEN && !strcmp(buf, "phase1end"))
+		  || (cmd==CMD_GEN && !strcmp(buf, "backupphase2")))
 		{
 			if(d) free(d);
 			return 1;

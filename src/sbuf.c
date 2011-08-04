@@ -146,7 +146,7 @@ int sbuf_fill_phase1(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
 	return do_sbuf_fill_from_file(fp, zp, sb, 1, cntr);
 }
 
-static int sbuf_to_fp(struct sbuf *sb, FILE *mp)
+static int sbuf_to_fp(struct sbuf *sb, FILE *mp, int write_endfile)
 {
 	if(sb->path)
 	{
@@ -159,10 +159,10 @@ static int sbuf_to_fp(struct sbuf *sb, FILE *mp)
 		if(sb->linkto
 		  && send_msg_fp(mp, sb->cmd, sb->linkto, sb->llen))
 			return -1;
-		if(sb->cmd==CMD_FILE
+		if(write_endfile && (sb->cmd==CMD_FILE
 		  || sb->cmd==CMD_ENC_FILE
 		  || sb->cmd==CMD_METADATA
-		  || sb->cmd==CMD_ENC_METADATA)
+		  || sb->cmd==CMD_ENC_METADATA))
 		{
 			if(send_msg_fp(mp, CMD_END_FILE,
 				sb->endfile, sb->elen)) return -1;
@@ -171,7 +171,7 @@ static int sbuf_to_fp(struct sbuf *sb, FILE *mp)
 	return 0;
 }
 
-static int sbuf_to_zp(struct sbuf *sb, gzFile zp)
+static int sbuf_to_zp(struct sbuf *sb, gzFile zp, int write_endfile)
 {
 	if(sb->path)
 	{
@@ -184,10 +184,10 @@ static int sbuf_to_zp(struct sbuf *sb, gzFile zp)
 		if(sb->linkto
 		  && send_msg_zp(zp, sb->cmd, sb->linkto, sb->llen))
 			return -1;
-		if(sb->cmd==CMD_FILE
+		if(write_endfile && (sb->cmd==CMD_FILE
 		  || sb->cmd==CMD_ENC_FILE
 		  || sb->cmd==CMD_METADATA
-		  || sb->cmd==CMD_ENC_METADATA)
+		  || sb->cmd==CMD_ENC_METADATA))
 		{
 			if(send_msg_zp(zp, CMD_END_FILE,
 				sb->endfile, sb->elen)) return -1;
@@ -198,9 +198,17 @@ static int sbuf_to_zp(struct sbuf *sb, gzFile zp)
 
 int sbuf_to_manifest(struct sbuf *sb, FILE *mp, gzFile zp)
 {
-	if(mp) return sbuf_to_fp(sb, mp);
-	if(zp) return sbuf_to_zp(sb, zp);
+	if(mp) return sbuf_to_fp(sb, mp, 1);
+	if(zp) return sbuf_to_zp(sb, zp, 1);
 	logp("No valid file pointer given to sbuf_to_manifest()\n");
+	return -1;
+}
+
+int sbuf_to_manifest_phase1(struct sbuf *sb, FILE *mp, gzFile zp)
+{
+	if(mp) return sbuf_to_fp(sb, mp, 0);
+	if(zp) return sbuf_to_zp(sb, zp, 0);
+	logp("No valid file pointer given to sbuf_to_manifest_phase1()\n");
 	return -1;
 }
 

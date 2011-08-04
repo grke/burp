@@ -265,6 +265,8 @@ static void bottom_part(struct cntr *a, struct cntr *b)
 	logc("             Warnings:   % 11llu\n",
 		b->warning + a->warning);
 	logc("\n");
+	logc("      Bytes estimated:   % 11llu%s\n",
+		a->byte, bytes_to_human(a->byte));
 	logc("       Bytes received:   % 11llu%s\n",
 		b->recvbyte, bytes_to_human(b->recvbyte));
 	logc("           Bytes sent:   % 11llu%s\n",

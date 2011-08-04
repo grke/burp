@@ -54,8 +54,16 @@ int backup_phase1_server(const char *phase1data, const char *client, struct cntr
 			break;
 		}
 		do_filecounter(p1cntr, sb.cmd, 0);
+
+		if(sb.cmd==CMD_FILE
+		  || sb.cmd==CMD_ENC_FILE
+		  || sb.cmd==CMD_METADATA
+		  || sb.cmd==CMD_ENC_METADATA)
+			do_filecounter_bytes(p1cntr,
+				(unsigned long long)sb.statp.st_size);
 	}
 
+	free_sbuf(&sb);
         if(p1zp) gzclose(p1zp);
 	if(!ret && do_rename(phase1tmp, phase1data))
 		ret=-1;

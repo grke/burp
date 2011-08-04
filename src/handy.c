@@ -871,7 +871,7 @@ void write_status(const char *client, char phase, const char *path, struct cntr 
 			"%llu/%llu/%llu/%llu\t"
 			"%llu/%llu/%llu/%llu\t"
 			"%llu/%llu/%llu/%llu\t"
-			"%llu\t%llu\t%llu\t%llu\t%llu\t%s\n",
+			"%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%s\n",
 				client, STATUS_RUNNING, phase,
 
 				cntr->total,
@@ -926,6 +926,7 @@ void write_status(const char *client, char phase, const char *path, struct cntr 
 
 				cntr->gtotal,
 				cntr->warning,
+				p1cntr->byte,
 				cntr->byte,
 				cntr->recvbyte,
 				cntr->sentbyte,

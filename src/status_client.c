@@ -189,12 +189,12 @@ static int summary(char **toks, int t, int count, int row, int col)
 					t, d, p);
 			}
 		}
-		if(t>15 && *(toks[15]) && strcmp(toks[15], "0"))
+		if(t>16 && *(toks[16]) && strcmp(toks[16], "0"))
 		{
 			//snprintf(b, sizeof(b), "%s bytes%s", toks[14],
 			//	bytes_to_human_str(toks[14]));
 			snprintf(b, sizeof(b), "%s",
-				bytes_to_human_str(toks[15]));
+				bytes_to_human_str(toks[16]));
 		}
 		snprintf(msg, sizeof(msg), "%-14.14s %-14s %s%s",
 			toks[0], s, f, b);
@@ -347,21 +347,26 @@ static void detail(char *toks[], int t, struct config *conf, int row, int col)
 	if(t>14) print_detail("Warnings", toks[14], &x, col, 0);
 
 	if(t>15)
-	{	
+	{
 		tmp=bytes_to_human_str(toks[15]);
-		print_detail2("Bytes in backup", toks[15], tmp, &x, col);
+		print_detail2("Bytes expected", toks[15], tmp, &x, col);
 	}
 	if(t>16)
-	{
+	{	
 		tmp=bytes_to_human_str(toks[16]);
-		print_detail2("Bytes received", toks[16], tmp, &x, col);
+		print_detail2("Bytes in backup", toks[16], tmp, &x, col);
 	}
 	if(t>17)
 	{
 		tmp=bytes_to_human_str(toks[17]);
-		print_detail2("Bytes sent", toks[17], tmp, &x, col);
+		print_detail2("Bytes received", toks[17], tmp, &x, col);
 	}
-	if(t>18 && toks[18]) printw("\n%s\n", toks[18]);
+	if(t>18)
+	{
+		tmp=bytes_to_human_str(toks[18]);
+		print_detail2("Bytes sent", toks[18], tmp, &x, col);
+	}
+	if(t>19 && toks[19]) printw("\n%s\n", toks[19]);
 }
 
 static void blank_screen(int row, int col)

@@ -15,6 +15,8 @@
 * Improve the status monitor / counters.
 	- Remember the phase1 scan counters so that later phases can have
 	  things like estimated times.
+	- Option to send a regular snapshot of the status summary screen in an
+	  email.
 	- Counters are missing from the logs when a backup is completed via
 	  working dir recovery.
 	- Can something be done to make key presses more responsive?
@@ -54,6 +56,7 @@
 
 * Add some kind of generic method for passing new fields from the client to
   the server, so that clients are less likely to have to upgrade.
+  (can be added to the 'hello' line)
 
 * Break the stupidly long find_files() function down into smaller pieces.
   (partly done)
@@ -65,15 +68,11 @@
 * burp -a e: 'estimate' option - just run backup phase1 to find out roughly how 
   much space a client will use.
 
-* Option to send a regular snapshot of the status summary screen in an email.
-
 * Maybe look at the timer script regularly. If the time is now out of the
   defined range, interrupt the backup in such a way that it will pick up from
   where it left off the next time round.
 
 * Make transfer_gzfile_in() and send_whole_file[_gz]() check checksums.
-
-* Put the number of warnings in the subject of the notification emails.
 
 * Get logrotate to work:
    - Reload conf and close and reopen the main logfile on SIGHUP.

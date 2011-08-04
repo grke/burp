@@ -12,6 +12,7 @@ static void usage_server(void)
 	printf("\nServer usage: %s [options]\n", progname());
 	printf("\n");
 	printf(" Options:\n");
+	printf("  -a s          Run the status monitor.\n");
 	printf("  -c <path>     Path to config file (default: /etc/burp/burp.conf).\n");
 	printf("  -F            Stay in the foreground.\n");
 	printf("  -h|-?         Print this text and exit.\n");

@@ -1,4 +1,7 @@
   * Add a useful message about options when run with '-h' or '-?'.
+  * Get the client to pass its version to the server. The minimum version the
+    client needs to be is now this release.
+  * Get the server to warn when the client is on a different version.
 
 2011-07-26 Changes in burp-1.1.70:
   * FreeBSD ACL support.

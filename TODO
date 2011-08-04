@@ -52,9 +52,6 @@
 * Add 'working_dir_recovery_method = resume' option, which would continue a
   backup from the point it was interrupted.
 
-* Get the client to pass its version to the server, so that the server can then
-  give a warning when the client is on an older version.
-
 * Add some kind of generic method for passing new fields from the client to
   the server, so that clients are less likely to have to upgrade.
 

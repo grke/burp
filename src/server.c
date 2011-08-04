@@ -807,7 +807,7 @@ static int run_script_w(const char *script, struct strlist **userargs, int usera
 		"reserved1", "reserved2", "reserved3", cntr);
 }
 
-static int child(struct config *conf, struct config *cconf, const char *client)
+static int child(struct config *conf, struct config *cconf, const char *client, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ret=0;
 	char cmd;
@@ -839,11 +839,6 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 	char *phase1data=NULL;
 	char *phase2data=NULL;
 	char *unchangeddata=NULL;
-	struct cntr p1cntr; // cntr for phase1 (scan)
-	struct cntr cntr; // cntr for the rest
-
-	reset_filecounter(&p1cntr);
-	reset_filecounter(&cntr);
 
 	if(!(basedir=prepend_s(cconf->directory, client, strlen(client)))
 	  || !(working=prepend_s(basedir, "working", strlen("working")))
@@ -872,7 +867,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 			working, currentdata,
 			finishing, TRUE, &gotlock, cconf,
 			forward, phase1data, phase2data, unchangeddata,
-			manifest, client, &p1cntr, &cntr))
+			manifest, client, p1cntr, cntr))
 				ret=-1;
 		else
 		{
@@ -891,7 +886,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 					cconf->timer_script,
 					cconf->timer_arg,
 					cconf->tacount,
-					client, current, &cntr))<0)
+					client, current, cntr))<0)
 				{
 					ret=tret;
 					logp("Error running timer script for %s\n", client);
@@ -915,7 +910,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 			ret=do_backup_server(basedir, current, working,
 			  currentdata, finishing, cconf,
 			  manifest, forward, phase1data, phase2data,
-			  unchangeddata, client, &p1cntr, &cntr);
+			  unchangeddata, client, p1cntr, cntr);
 			if(ret)
 				run_script(
 					cconf->notify_failure_script,
@@ -923,20 +918,20 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 					cconf->nfcount,
 					client, current,
 					working, finishing,
-					"0", &cntr);
+					"0", cntr);
 			else
 			{
 				char warnings[32]="";
 				snprintf(warnings, sizeof(warnings),
 				  "%llu",
-				  p1cntr.warning+cntr.warning);
+				  p1cntr->warning+cntr->warning);
 				run_script(
 					cconf->notify_success_script,
 					cconf->notify_success_arg,
 					cconf->nscount,
 					client, current,
 					working, finishing,
-					warnings, &cntr);
+					warnings, cntr);
 			}
 		}
 	}
@@ -962,7 +957,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 			current, working,
 			currentdata, finishing, TRUE, &gotlock, cconf,
 			forward, phase1data, phase2data, unchangeddata,
-			manifest, client, &p1cntr, &cntr))
+			manifest, client, p1cntr, cntr))
 				ret=-1;
 		else
 		{
@@ -975,7 +970,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 			async_write_str(CMD_GEN, "ok");
 			ret=do_restore_server(basedir, backupnostr,
 				restoreregex, act, client,
-				&p1cntr, &cntr, cconf);
+				p1cntr, cntr, cconf);
 		}
 	}
 	else if(cmd==CMD_GEN && !strncmp(buf, "list ", strlen("list ")))
@@ -984,7 +979,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 			current, working,
 			currentdata, finishing, FALSE, &gotlock, cconf,
 			forward, phase1data, phase2data, unchangeddata,
-			manifest, client, &p1cntr, &cntr))
+			manifest, client, p1cntr, cntr))
 				ret=-1;
 		else
 		{
@@ -996,7 +991,7 @@ static int child(struct config *conf, struct config *cconf, const char *client)
 			}
 			async_write_str(CMD_GEN, "ok");
 			ret=do_list_server(basedir, buf+strlen("list "),
-				listregex, client, &p1cntr, &cntr);
+				listregex, client, p1cntr, cntr);
 		}
 	}
 	else
@@ -1042,6 +1037,12 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	struct config conf;
 	struct config cconf;
 
+	struct cntr p1cntr; // cntr for phase1 (scan)
+	struct cntr cntr; // cntr for the rest
+
+	reset_filecounter(&p1cntr);
+	reset_filecounter(&cntr);
+
 	if(forking) close_fd(rfd);
 
 	// Reload global config, in case things have changed. This means that
@@ -1073,7 +1074,8 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 		free_config(&conf);
 		return -1;
 	}
-	if(authorise_server(&conf, &client, &cconf) || !client || !*client)
+	if(authorise_server(&conf, &client, &cconf, &p1cntr)
+		|| !client || !*client)
 	{
 		// add an annoying delay in case they are tempted to
 		// try repeatedly
@@ -1105,7 +1107,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	}
 	set_non_blocking(*cfd);
 
-	ret=child(&conf, &cconf, client);
+	ret=child(&conf, &cconf, client, &p1cntr, &cntr);
 
 	*cfd=-1;
 	async_free(); // this closes cfd for us.

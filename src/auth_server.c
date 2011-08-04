@@ -71,28 +71,51 @@ static int check_client_and_password(struct config *conf, const char *client, co
 	return 0;
 }
 
-int authorise_server(struct config *conf, char **client, struct config *cconf)
+static void version_warn(struct cntr *cntr, const char *client, const char *cversion)
+{
+	if(!cversion || strcmp(cversion, VERSION))
+	{
+		char msg[256]="";
+
+		if(!cversion || !*cversion)
+			snprintf(msg, sizeof(msg), "Client '%s' has an unknown version. Please upgrade.", client?client:"unknown");
+		else
+			snprintf(msg, sizeof(msg), "Client '%s' version '%s' does not match server version '%s'. An upgrade is recommended.", client?client:"unknown", cversion, VERSION);
+		logw(cntr, "%s", msg);
+		logp("WARNING: %s\n", msg);
+	}
+}
+
+int authorise_server(struct config *conf, char **client, struct config *cconf, struct cntr *p1cntr)
 {
 	char cmd;
+	char *cp=NULL;
 	size_t len=0;
 	char *buf=NULL;
 	char *password=NULL;
+	char *cversion=NULL;
 	if(async_read(&cmd, &buf, &len))
 	{
 		logp("unable to read initial message\n");
 		return -1;
 	}
-	if(cmd!=CMD_GEN || strcmp(buf, "hello"))
+	if(cmd!=CMD_GEN || strncmp(buf, "hello", strlen("hello")))
 	{
 		logp("unexpected command given: %c %s\n", cmd, buf);
 		free(buf);
 		return -1;
+	}
+	if((cp=strchr(buf, ':')))
+	{
+		cp++;
+		if(cp) cversion=strdup(cp);
 	}
 	free(buf); buf=NULL;
 	async_write_str(CMD_GEN, "whoareyou");
 	if(async_read(&cmd, &buf, &len) || !len)
 	{
 		logp("unable to get client name\n");
+		if(cversion) free(cversion);
 		return -1;
 	}
 	*client=buf;
@@ -102,6 +125,7 @@ int authorise_server(struct config *conf, char **client, struct config *cconf)
 	{
 		logp("unable to get password for client %s\n", *client);
 		if(*client) free(*client); *client=NULL;
+		if(cversion) free(cversion);
 		free(buf); buf=NULL;
 		return -1;
 	}
@@ -111,9 +135,13 @@ int authorise_server(struct config *conf, char **client, struct config *cconf)
 	if(check_client_and_password(conf, *client, password, cconf))
 	{
 		if(*client) free(*client); *client=NULL;
+		if(cversion) free(cversion);
 		free(password); password=NULL;
 		return -1;
 	}
+
+	version_warn(p1cntr, *client, cversion);
+	if(cversion) free(cversion);
 
 	async_write_str(CMD_GEN, "ok");
 	logp("auth ok for client: %s\n", *client);

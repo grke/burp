@@ -151,7 +151,7 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 	set_non_blocking(rfd);
 
 	if(!(ret=async_init(rfd, ssl))
-	 && !(ret=authorise_client(conf)))
+	 && !(ret=authorise_client(conf, &p1cntr)))
 	{
 		rfd=-1;
 		const char *phase1str="backupphase1";

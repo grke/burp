@@ -254,7 +254,7 @@ static int load_data_from_disk(struct config *conf, struct cstat ***clist, int *
 	//size_t l=0;
 	int newclient=0;
 
-	struct dirent **dir;
+	struct dirent **dir=NULL;
 
 	if((n=scandir(conf->clientconfdir, &dir, 0, 0))<0)
 	{
@@ -288,7 +288,7 @@ static int load_data_from_disk(struct config *conf, struct cstat ***clist, int *
 		}
 	}
 	for(m=0; m<n; m++) if(dir[m]) free(dir[m]);
-	free(dir);
+	if(dir) free(dir);
 	if(ret) return ret;
 
 	if(newclient)
@@ -430,7 +430,7 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, int
 				logp("error when looking up current backups\n");
 				tosend=clist[q]->summary;
 			}
-			else
+			else if(a>0)
 			{
 				int i=0;
 				int len=0;

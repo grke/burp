@@ -1,6 +1,7 @@
 #include "burp.h"
 #include "prog.h"
 #include "cmd.h"
+#include "handy.h"
 
 void reset_filecounter(struct cntr *c)
 {
@@ -47,6 +48,8 @@ void reset_filecounter(struct cntr *c)
 	c->byte=0;
 	c->recvbyte=0;
 	c->sentbyte=0;
+
+	c->start=time(NULL);
 }
 
 char cmd_to_same(char cmd)
@@ -267,19 +270,23 @@ static void bottom_part(struct cntr *a, struct cntr *b)
 	logc("\n");
 	logc("      Bytes estimated:   % 11llu%s\n",
 		a->byte, bytes_to_human(a->byte));
+	logc("      Bytes in backup:   % 11llu%s\n",
+		b->byte, bytes_to_human(b->byte));
 	logc("       Bytes received:   % 11llu%s\n",
 		b->recvbyte, bytes_to_human(b->recvbyte));
 	logc("           Bytes sent:   % 11llu%s\n",
 		b->sentbyte, bytes_to_human(b->sentbyte));
-	logc("      Bytes in backup:   % 11llu%s\n",
-		b->byte, bytes_to_human(b->byte));
 }
 
 void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act, int client)
 {
+	time_t now=time(NULL);
 	if(!p1c || !c) return;
 
 	border();
+	logc("Start time: %s\n", getdatestr(p1c->start));
+	logc("  End time: %s\n", getdatestr(now));
+	logc("Time taken: %s\n", time_taken(now-p1c->start));
 	logc("% 22s % 9s % 9s % 9s % 9s |% 9s\n",
 	  " ", "New", "Changed", "Unchanged", "Total", "Scanned");
 	table_border();

@@ -35,19 +35,6 @@ static void print_line(const char *string, int row, int col)
 	while(k<col) mvprintw(row+TOP_SPACE, k++, " ");
 }
 
-static const char *getdate(time_t t)
-{
-        static char buf[32]="";
-        const struct tm *ctm=NULL;
-
-	if(!t) return "never"; 
-
-        ctm=localtime(&t);
-
-        strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", ctm);
-	return buf;
-}
-
 static char *get_backup_str(const char *s, bool dateonly)
 {
 	static char str[32]="";
@@ -57,14 +44,14 @@ static char *get_backup_str(const char *s, bool dateonly)
 	/*else if(dateonly)
 	{
 		snprintf(str, sizeof(str),
-			"%s", getdate(atol(cp+1)));
+			"%s", getdatestr(atol(cp+1)));
 	}*/
 	else
 	{
 		unsigned long backupnum=0;
 		backupnum=strtoul(s, NULL, 10);
 		snprintf(str, sizeof(str),
-			"%07lu %s", backupnum, getdate(atol(cp+1)));
+			"%07lu %s", backupnum, getdatestr(atol(cp+1)));
 	}
 	return str;
 }
@@ -366,7 +353,39 @@ static void detail(char *toks[], int t, struct config *conf, int row, int col)
 		tmp=bytes_to_human_str(toks[18]);
 		print_detail2("Bytes sent", toks[18], tmp, &x, col);
 	}
-	if(t>19 && toks[19]) printw("\n%s\n", toks[19]);
+	if(t>19)
+	{
+		long start=0;
+		time_t now=0;
+		time_t diff=0;
+		now=time(NULL);
+		start=atol(toks[19]);
+		diff=now-start;
+
+		print_detail2("Start time", getdatestr(start), " ", &x, col);
+		print_detail2("Time taken", time_taken(diff), " ", &x, col);
+
+		if(diff>0)
+		{
+			char msg[256]="";
+			unsigned long long bytesleft=0;
+			unsigned long long byteswant=0;
+			unsigned long long bytesrcvd=0;
+			unsigned long long bytespersec=0;
+			byteswant=strtoull(toks[15], NULL, 0);
+			bytesrcvd=strtoull(toks[17], NULL, 0);
+			bytespersec=bytesrcvd/diff;
+			bytesleft=byteswant-bytesrcvd;
+			if(bytespersec>0)
+			{
+				time_t timeleft=0;
+				timeleft=bytesleft/bytespersec;
+				print_detail2("Time left",
+					time_taken(timeleft), " ", &x, col);
+			}
+		}
+	}
+	if(t>20 && toks[20]) printw("\n%s\n", toks[20]);
 }
 
 static void blank_screen(int row, int col)
@@ -377,7 +396,7 @@ static void blank_screen(int row, int col)
 	time_t t=time(NULL);
 	for(c=0; c<row; c++) print_line("", c, col);
 	mvprintw(0, 0, " burp monitor");
-	date=getdate(t);
+	date=getdatestr(t);
 	l=strlen(date);
 	mvprintw(0, col-l-1, date);
 }

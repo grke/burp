@@ -871,7 +871,7 @@ void write_status(const char *client, char phase, const char *path, struct cntr 
 			"%llu/%llu/%llu/%llu\t"
 			"%llu/%llu/%llu/%llu\t"
 			"%llu/%llu/%llu/%llu\t"
-			"%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%s\n",
+			"%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%li\t%s\n",
 				client, STATUS_RUNNING, phase,
 
 				cntr->total,
@@ -930,6 +930,7 @@ void write_status(const char *client, char phase, const char *path, struct cntr 
 				cntr->byte,
 				cntr->recvbyte,
 				cntr->sentbyte,
+				p1cntr->start,
 				path?path:"");
 
 		// Make sure there is a new line at the end.
@@ -1114,4 +1115,47 @@ int chuser_and_or_chgrp(const char *user, const char *group)
 	}
 #endif
 	return 0;
+}
+
+const char *getdatestr(time_t t)
+{
+	static char buf[32]="";
+	const struct tm *ctm=NULL;
+
+	if(!t) return "never";
+
+	ctm=localtime(&t);
+
+	strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", ctm);
+	return buf;
+}
+
+const char *time_taken(time_t d)
+{
+	static char str[32]="";
+	int seconds=0;
+	int minutes=0;
+	int hours=0;
+	int days=0;
+	char ss[4]="";
+	char ms[4]="";
+	char hs[4]="";
+	char ds[4]="";
+	seconds=d % 60;
+	minutes=(d/60) % 60;
+	hours=(d/60/60) % 24;
+	days=(d/60/60/24);
+	if(days)
+	{
+		snprintf(ds, sizeof(ds), "%02d:", days);
+		snprintf(hs, sizeof(hs), "%02d:", hours);
+	}
+	else if(hours)
+	{
+		snprintf(hs, sizeof(hs), "%02d:", hours);
+	}
+	snprintf(ms, sizeof(ms), "%02d:", minutes);
+	snprintf(ss, sizeof(ss), "%02d", seconds);
+	snprintf(str, sizeof(str), "%s%s%s%s", ds, hs, ms, ss);
+	return str;
 }

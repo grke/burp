@@ -45,6 +45,8 @@ struct cntr
 	unsigned long long byte;
 	unsigned long long recvbyte;
 	unsigned long long sentbyte;
+
+	time_t start;
 };
 
 extern void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act, int client);

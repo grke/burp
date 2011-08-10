@@ -5,6 +5,9 @@
   * Put the number of warnings in the subject of the notification emails.
   * Allow config file location to be changed via configure (Michael Roland's
     suggestions).
+  * Implement main server process config reload functionality on SIGHUP.
+  * Uncomment the reload lines in the Debian init script.
+  * Add logrotate file for Debian.
 
 2011-07-26 Changes in burp-1.1.70:
   * FreeBSD ACL support.

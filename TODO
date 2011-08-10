@@ -74,9 +74,4 @@
 
 * Make transfer_gzfile_in() and send_whole_file[_gz]() check checksums.
 
-* Get logrotate to work:
-   - Reload conf and close and reopen the main logfile on SIGHUP.
-   - Uncomment the reload lines in the init script.
-   - Add a logrotate conf file.
-
 * Looks like the manifest.gz.tmp.tmp problem is back in working dir recovery.

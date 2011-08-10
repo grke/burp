@@ -27,6 +27,8 @@
 
 static int sfd=-1; // status fd for the main server
 
+static int hupreload=0;
+
 static void sighandler(int sig)
 {
 	logp("got signal: %d\n", sig);
@@ -39,6 +41,12 @@ static void sighandler(int sig)
 	close_fd(&status_rfd);
 	logp("exiting\n");
 	exit(1);
+}
+
+static void huphandler(int sig)
+{
+	logp("got signal: %d\n", sig);
+	hupreload=1;
 }
 
 static int init_listen_socket(const char *port, int alladdr)
@@ -171,7 +179,7 @@ static void setup_signal(int sig, void handler(int sig))
 	sigaction(sig, &sa, NULL);
 }
 
-static int setup_signals(int max_children)
+static int setup_signals(int oldmax_children, int max_children)
 {
 	// Ignore SIGPIPE - we are careful with read and write return values.
 #ifndef HAVE_WIN32
@@ -180,12 +188,13 @@ static int setup_signals(int max_children)
 	signal(SIGPIPE, SIG_IGN);
 	// Get rid of defunct children.
 	if(!(chlds=(struct chldstat *)
-		malloc(sizeof(struct chldstat)*(max_children+1))))
+		realloc(chlds, sizeof(struct chldstat)*(max_children+1))))
 	{
 		logp("out of memory");
 		return -1;
 	}
-	for(p=0; p<max_children+1; p++)
+	if((p=oldmax_children-1)<0) p=0;
+	for(; p<max_children+1; p++)
 	{
 		chlds[p].pid=-1;
 		chlds[p].rfd=-1;
@@ -206,6 +215,7 @@ static int setup_signals(int max_children)
 	setup_signal(SIGABRT, sighandler);
 	setup_signal(SIGTERM, sighandler);
 	setup_signal(SIGINT, sighandler);
+	setup_signal(SIGHUP, huphandler);
 #endif
 	return 0;
 }
@@ -1306,23 +1316,52 @@ static int relock(const char *lockfile)
 	return -1;
 }
 
-int server(struct config *conf, const char *configfile, int forking, int daemon)
+static int open_logfile(const char *logfile)
 {
-	int ret=0;
-	int rfd=-1; // normal client port
-	SSL_CTX *ctx=NULL;
-
-	if(forking && daemon)
+	FILE *fp=NULL;
+	set_logfp(NULL); // Close the old log, if it is open.
+	if(!(fp=fopen(logfile, "ab")))
 	{
-		if(daemonise() || relock(conf->lockfile)) return 1;
+		logp("error opening logfile %s.\n", logfile);
+		return 1;
 	}
+	set_logfp(fp);
+	return 0;
+}
+
+int server_reload(struct config *conf, const char *configfile, char **logfile, bool firsttime, int oldmax_children)
+{
+	logp("Reloading server config\n");
+	// If logfile is defined, use it 
+	// Have to do this twice, because init_config uses logp(). 
+	if(*logfile && strlen(*logfile) && open_logfile(*logfile))
+		return 1;
+
+	init_config(conf);
+	if(load_config(configfile, conf, 1)) return 1;
 
 	/* change umask */
 	umask(conf->umask);
 
-	setup_signals(conf->max_children);
+	setup_signals(oldmax_children, conf->max_children);
 
-	ssl_load_globals();
+	// Do not try to change user or group after the first time.
+	if(firsttime && chuser_and_or_chgrp(conf->user, conf->group))
+		return 1;
+
+	// If logfile is defined in config...
+	if(conf->logfile)
+	{
+		*logfile=conf->logfile;
+		if(open_logfile(*logfile)) return 1;
+	}
+	return 0;
+}
+
+static int run_server(struct config *conf, const char *configfile, int forking, int *rfd, const char *oldport, const char *oldstatusport)
+{
+	int ret=0;
+	SSL_CTX *ctx=NULL;
 
 	if(!(ctx=ssl_initialise_ctx(conf)))
 	{
@@ -1337,14 +1376,23 @@ int server(struct config *conf, const char *configfile, int forking, int daemon)
 	SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER |
 		SSL_VERIFY_FAIL_IF_NO_PEER_CERT,0);
 
-	if((rfd=init_listen_socket(conf->port, 1))<0) return 1;
+	if(!oldport
+	  || strcmp(oldport, conf->port))
+	{
+		close_fd(rfd);
+		if((*rfd=init_listen_socket(conf->port, 1))<0)
+			return 1;
+	}
 	if(conf->status_port
-		&& (sfd=init_listen_socket(conf->status_port, 0))<0) return 1;
+	  && (!oldstatusport
+		|| strcmp(oldstatusport, conf->status_port)))
+	{
+		close_fd(&sfd);
+		if((sfd=init_listen_socket(conf->status_port, 0))<0)
+			return 1;
+	}
 
-	//if(chuser_and_or_chgrp(conf->user, conf->group))
-	//	return 1;
-
-	while(1)
+	while(!hupreload)
 	{
 		int c=0;
 		int mfd=-1;
@@ -1360,7 +1408,7 @@ int server(struct config *conf, const char *configfile, int forking, int daemon)
 		tval.tv_sec=1;
 		tval.tv_usec=0;
 
-		add_fd_to_sets(rfd, &fsr, NULL, &fse, &mfd);
+		add_fd_to_sets(*rfd, &fsr, NULL, &fse, &mfd);
 		if(sfd>=0) add_fd_to_sets(sfd, &fsr, NULL, &fse, &mfd);
 
 		// Add read fds of normal children.
@@ -1378,7 +1426,7 @@ int server(struct config *conf, const char *configfile, int forking, int daemon)
 			}
 		}
 
-		if(FD_ISSET(rfd, &fse))
+		if(FD_ISSET(*rfd, &fse))
 		{
 			// Happens when a client exits.
 			//logp("error on listening socket.\n");
@@ -1394,10 +1442,10 @@ int server(struct config *conf, const char *configfile, int forking, int daemon)
 			continue;
 		}
 
-		if(FD_ISSET(rfd, &fsr))
+		if(FD_ISSET(*rfd, &fsr))
 		{
 			// A normal client is incoming.
-			if(process_incoming_client(rfd, forking, conf, ctx,
+			if(process_incoming_client(*rfd, forking, conf, ctx,
 				configfile, 0 /* not a status client */))
 			{
 				ret=1;
@@ -1526,8 +1574,49 @@ int server(struct config *conf, const char *configfile, int forking, int daemon)
 
 	ssl_destroy_ctx(ctx);
 
+	return ret;
+}
+
+int server(struct config *conf, const char *configfile, int forking, int daemon, char **logfile)
+{
+	int ret=0;
+	int rfd=-1; // normal client port
+	// Only close and reopen listening sockets if the ports changed.
+	// Otherwise you get an "unable to bind listening socket on port X"
+	// error, and the server stops.
+	char *oldport=NULL;
+	char *oldstatusport=NULL;
+
+	if(forking && daemon)
+	{
+		if(daemonise() || relock(conf->lockfile)) return 1;
+	}
+
+	ssl_load_globals();
+
+	while(!ret)
+	{
+		ret=run_server(conf, configfile, forking,
+			&rfd, oldport, oldstatusport);
+		if(ret) break;
+		if(hupreload)
+		{
+			if(oldport) free(oldport);
+			if(oldstatusport) free(oldstatusport);
+			oldport=strdup(conf->port);
+			oldstatusport=conf->status_port?
+				strdup(conf->status_port):NULL;
+			if(server_reload(conf, configfile, logfile,
+				0 /* not first time */, conf->max_children))
+					ret=1;
+		}
+		hupreload=0;
+	}
 	close_fd(&rfd);
 	close_fd(&sfd);
+	if(oldport) free(oldport);
+	if(oldstatusport) free(oldstatusport);
+	
 	if(chlds)
 	{
 		int q=0;

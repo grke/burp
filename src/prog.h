@@ -19,8 +19,10 @@ enum action
 #include "find.h"
 #include "log.h"
 
+extern int server_reload(struct config *conf, const char *configfile, char **logfile, bool firsttime, int oldmax_children);
+
 extern int server(struct config *conf, const char *configfile, int forking,
-	int daemon);
+	int daemon, char **logfile);
 extern int client(struct config *conf, enum action act, const char *backup,
 	const char *restoreprefix, const char *regex, int forceoverwrite);
 

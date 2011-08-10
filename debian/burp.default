@@ -9,4 +9,4 @@
 RUN=no
 
 # Additional options that are passed to the Daemon.
-DAEMON_ARGS="-c /etc/burp/burp-server.conf"
+DAEMON_ARGS="-c /etc/burp/burp-server.conf -l /var/log/burp"

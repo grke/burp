@@ -69,13 +69,13 @@ int main (int argc, char *argv[])
 	int daemon=1;
 	int forking=1;
 	int gotlock=0;
+	char *logfile=NULL;
 	struct config conf;
 	int forceoverwrite=0;
 	enum action act=ACTION_LIST;
 	const char *backup=NULL;
 	const char *restoreprefix=NULL;
 	const char *regex=NULL;
-	const char *logfile=NULL;
 	FILE *fp=NULL;
 #ifdef HAVE_WIN32
 	const char *configfile="C:/Program Files/Burp/burp.conf";
@@ -151,30 +151,8 @@ int main (int argc, char *argv[])
 		return 1;
 	}
 
-	/* if logfile is defined, we use it */
-	/* we have to do this twice, becouse init_config uses logp() */
-	if(logfile && strlen(logfile)) {
-		if(!(fp=fopen(logfile,"ab"))) {
-			logp("error opening logfile %s.\n",logfile);
-			return 1;
-		}
-		set_logfp(fp);
-	}
-
-	init_config(&conf);
-	if(load_config(configfile, &conf, 1)) return 1;
-        if(chuser_and_or_chgrp(conf.user, conf.group))
-              return 1;
-
-	/* if logfile is defined in config and logfile is not defined... */
-	if(conf.logfile && !logfile) {
-		logfile=conf.logfile;
-		if(!(fp=fopen(logfile,"ab"))) {
-			logp("error opening logfile %s.\n",logfile);
-			return 1;
-		}
-		set_logfp(fp);
-	}
+	if(server_reload(&conf, configfile, &logfile,
+	  1 /* first time */, 0 /* no old maxchildren setting */)) return 1;
 
 	if((act==ACTION_RESTORE || act==ACTION_VERIFY) && !backup)
 	{
@@ -211,7 +189,8 @@ int main (int argc, char *argv[])
 			ret=status_client(&conf);
 		}
 		else
-			ret=server(&conf, configfile, forking, daemon);
+			ret=server(&conf, configfile,
+				forking, daemon, &logfile);
 #endif
 	}
 	else

@@ -367,7 +367,6 @@ static void detail(char *toks[], int t, struct config *conf, int row, int col)
 
 		if(diff>0)
 		{
-			char msg[256]="";
 			unsigned long long bytesleft=0;
 			unsigned long long byteswant=0;
 			unsigned long long bytesrcvd=0;

@@ -13,7 +13,7 @@ static void usage_server(void)
 	printf("\n");
 	printf(" Options:\n");
 	printf("  -a s          Run the status monitor.\n");
-	printf("  -c <path>     Path to config file (default: /etc/burp/burp.conf).\n");
+	printf("  -c <path>     Path to config file (default: %s/burp.conf).\n", SYSCONFDIR);
 	printf("  -F            Stay in the foreground.\n");
 	printf("  -h|-?         Print this text and exit.\n");
 	printf("  -l <path>     Path to log file.\n");
@@ -36,7 +36,7 @@ static void usage_client(void)
 	printf("                  t: timed backup\n");
 	printf("                  v: verify\n");
 	printf("  -b <number>    Backup number (default: the most recent backup)\n");
-	printf("  -c <path>      Path to config file (default: /etc/burp/burp.conf).\n");
+	printf("  -c <path>      Path to config file (default: %s/burp.conf).\n", SYSCONFDIR);
 	printf("  -d <directory> Directory to restore to.\n");
 	printf("  -f             Allow overwrite during restore.\n");
 	printf("  -h|-?          Print this text and exit.\n");
@@ -80,7 +80,7 @@ int main (int argc, char *argv[])
 #ifdef HAVE_WIN32
 	const char *configfile="C:/Program Files/Burp/burp.conf";
 #else
-	const char *configfile="/etc/burp/burp.conf";
+	const char *configfile=SYSCONFDIR "/burp.conf";
 #endif
 
 	init_log(argv[0]);

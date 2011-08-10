@@ -88,8 +88,8 @@ libtool: Makefile $(LIBTOOL_DEPS)
 
 installdirs:
 	$(MKDIR) $(DESTDIR)$(sbindir)
-	$(MKDIR) $(DESTDIR)$(sysconfdir)
-	$(MKDIR) $(DESTDIR)$(sysconfdir)/clientconfdir
+	$(MKDIR) $(DESTDIR)$(sysconfdir)/burp
+	$(MKDIR) $(DESTDIR)$(sysconfdir)/burp/clientconfdir
 	$(MKDIR) $(DESTDIR)/var/lock/burp
 	$(MKDIR) $(DESTDIR)/var/spool/burp
 
@@ -104,15 +104,15 @@ installation: install
 
 install: installdirs
 	@for I in $(all_subdirs); do (cd $$I && $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1); done
-	@if [ ! -f $(DESTDIR)$(sysconfdir)/burp-server.conf ] ; then cp configs/server/burp.conf $(DESTDIR)$(sysconfdir)/burp-server.conf ; fi
-	@if [ ! -f $(DESTDIR)$(sysconfdir)/clientconfdir/testclient ] ; then cp configs/server/clientconfdir/testclient $(DESTDIR)$(sysconfdir)/clientconfdir/testclient ; fi
-	@if [ ! -f $(DESTDIR)$(sysconfdir)/burp.conf ] ; then cp configs/client/burp.conf $(DESTDIR)$(sysconfdir)/burp.conf ; fi
-	@if [ ! -f $(DESTDIR)$(sysconfdir)/ssl_cert-server.pem ] ; then cp configs/certs/ssl_cert-server.pem $(DESTDIR)$(sysconfdir)/ssl_cert-server.pem ; fi
-	@if [ ! -f $(DESTDIR)$(sysconfdir)/ssl_cert-client.pem ] ; then cp configs/certs/ssl_cert-client.pem $(DESTDIR)$(sysconfdir)/ssl_cert-client.pem ; fi
-	@if [ ! -f $(DESTDIR)$(sysconfdir)/ssl_cert_ca.pem ] ; then cp configs/certs/ssl_cert_ca.pem $(DESTDIR)$(sysconfdir)/ssl_cert_ca.pem ; fi
-	@if [ ! -f $(DESTDIR)$(sysconfdir)/dhfile.pem ] ; then cp configs/certs/dhfile.pem $(DESTDIR)$(sysconfdir)/dhfile.pem ; fi
-	@if [ ! -f $(DESTDIR)$(sysconfdir)/timer_script ] ; then cp configs/server/timer_script $(DESTDIR)$(sysconfdir)/timer_script && chmod 755 $(DESTDIR)$(sysconfdir)/timer_script ; fi
-	@if [ ! -f $(DESTDIR)$(sysconfdir)/notify_script ] ; then cp configs/server/notify_script $(DESTDIR)$(sysconfdir)/notify_script && chmod 755 $(DESTDIR)$(sysconfdir)/notify_script ; fi
+	@if [ ! -f $(DESTDIR)$(sysconfdir)/burp/burp-server.conf ] ; then cp configs/server/burp.conf $(DESTDIR)$(sysconfdir)/burp/burp-server.conf ; fi
+	@if [ ! -f $(DESTDIR)$(sysconfdir)/burp/clientconfdir/testclient ] ; then cp configs/server/clientconfdir/testclient $(DESTDIR)$(sysconfdir)/burp/clientconfdir/testclient ; fi
+	@if [ ! -f $(DESTDIR)$(sysconfdir)/burp/burp.conf ] ; then cp configs/client/burp.conf $(DESTDIR)$(sysconfdir)/burp/burp.conf ; fi
+	@if [ ! -f $(DESTDIR)$(sysconfdir)/ssl_cert-server.pem ] ; then cp configs/certs/ssl_cert-server.pem $(DESTDIR)$(sysconfdir)/burp/ssl_cert-server.pem ; fi
+	@if [ ! -f $(DESTDIR)$(sysconfdir)/burp/ssl_cert-client.pem ] ; then cp configs/certs/ssl_cert-client.pem $(DESTDIR)$(sysconfdir)/burp/ssl_cert-client.pem ; fi
+	@if [ ! -f $(DESTDIR)$(sysconfdir)/burp/ssl_cert_ca.pem ] ; then cp configs/certs/ssl_cert_ca.pem $(DESTDIR)$(sysconfdir)/burp/ssl_cert_ca.pem ; fi
+	@if [ ! -f $(DESTDIR)$(sysconfdir)/burp/dhfile.pem ] ; then cp configs/certs/dhfile.pem $(DESTDIR)$(sysconfdir)/burp/dhfile.pem ; fi
+	@if [ ! -f $(DESTDIR)$(sysconfdir)/burp/timer_script ] ; then cp configs/server/timer_script $(DESTDIR)$(sysconfdir)/burp/timer_script && chmod 755 $(DESTDIR)$(sysconfdir)/burp/timer_script ; fi
+	@if [ ! -f $(DESTDIR)$(sysconfdir)/burp/notify_script ] ; then cp configs/server/notify_script $(DESTDIR)$(sysconfdir)/burp/notify_script && chmod 755 $(DESTDIR)$(sysconfdir)/burp/notify_script ; fi
 
 Makefile: Makefile.in
 	cd $(topdir) \

@@ -17,7 +17,7 @@ Make sure that you have openssl, zlib and librsync libraries and development
 libraries installed. With debian or ubuntu, this command should install them
 for you:
 apt-get install librsync-dev libz-dev libssl-dev
-Change to the burp source directory and run "./configure --prefix=/usr",
+Change to the burp source directory and run "./configure",
 then "make".
 All being well, burp will compile successfully.
 Then run "make install" as root to install.
@@ -45,7 +45,7 @@ equivalent). This makes the client ask the server every twenty minutes whether
 it is yet time for a new backup. It is probably a good idea to change the
 numbers for each client, in order to spread the load a bit:
 MAILTO=
-7,27,47 * * * * root    /usr/sbin/burp -a t
+7,27,47 * * * * root    /sbin/burp -a t
 
 WINDOWS CLIENT
 

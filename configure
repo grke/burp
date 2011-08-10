@@ -16961,7 +16961,6 @@ $as_echo "#define HAVE_DCGETTEXT 1" >>confdefs.h
 
 
 os_name=`uname -s 2>/dev/null`
-sysconfdir=/etc/burp
 if test x${prefix} = xNONE ; then
    if test `eval echo ${sysconfdir}` = NONE/etc ; then
       sysconfdir=/etc/burp

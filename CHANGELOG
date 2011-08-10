@@ -3,6 +3,8 @@
     client needs to be is now this release.
   * Get the server to warn when the client is on a different version.
   * Put the number of warnings in the subject of the notification emails.
+  * Allow config file location to be changed via configure (Michael Roland's
+    suggestions).
 
 2011-07-26 Changes in burp-1.1.70:
   * FreeBSD ACL support.

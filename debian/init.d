@@ -17,7 +17,7 @@
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC=burp             # Introduce a short description here
 NAME=burp             # Introduce the short server's name here
-DAEMON=/usr/sbin/burp # Introduce the server's location here
+DAEMON=/sbin/burp # Introduce the server's location here
 DAEMON_ARGS=""             # Arguments to run the daemon with
 #PIDFILE=/var/run/$NAME.pid
 PIDFILE=/var/lock/burp/server.lockfile

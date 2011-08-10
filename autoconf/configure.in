@@ -232,7 +232,6 @@ dnl If either --prefix or --includedir is set, we leave includedir
 dnl alone except to eval it
 dnl ------------------------------------------------------------------
 os_name=`uname -s 2>/dev/null`
-sysconfdir=/etc/burp
 if test x${prefix} = xNONE ; then
    if test `eval echo ${sysconfdir}` = NONE/etc ; then
       sysconfdir=/etc/burp

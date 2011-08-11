@@ -157,10 +157,10 @@ devclean: realclean
 
 install: all
 	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) burp $(DESTDIR)$(sbindir)/burp 
-	@if [ $(DESTDIR)$(sbindir) != $(DESTDIR)/usr/sbin/burp ] ; then \
+	@if [ $(sbindir) != /usr/sbin ] ; then \
 		rm -f $(DESTDIR)/usr/sbin/burp ; \
 		mkdir -p $(DESTDIR)/usr/sbin ; \
-		ln -s $(sbindir)/burp $(DESTDIR)/usr/sbin/burp ; \
+		ln -sfT $(sbindir)/burp $(DESTDIR)/usr/sbin/burp ; \
 	fi
 	@if test -f static-burp; then \
 	   $(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) static-burp $(DESTDIR)$(sbindir)/static-burp; \

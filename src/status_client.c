@@ -10,16 +10,9 @@
 
 #ifdef HAVE_NCURSES_H
 #include "ncurses.h"
-static int request_status(int fd, int sel)
-{
-	int l;
-	char buf[256]="";
-	if(sel>=0) snprintf(buf, sizeof(buf), "%d\n", sel);
-	else snprintf(buf, sizeof(buf), "\n");
-	l=strlen(buf);
-	if(write(fd, buf, l)<0) return -1;
-	return 0;
-}
+// So that the sighandler can call endwin():
+static enum action actg=ACTION_STATUS;
+#endif
 
 #define LEFT_SPACE	3
 #define TOP_SPACE	2
@@ -28,11 +21,20 @@ static void print_line(const char *string, int row, int col)
 {
 	int k=0;
 	const char *cp=NULL;
-
-	while(k<LEFT_SPACE) mvprintw(row+TOP_SPACE, k++, " ");
+#ifdef HAVE_NCURSES_H
+	if(actg==ACTION_STATUS)
+	{
+		while(k<LEFT_SPACE) mvprintw(row+TOP_SPACE, k++, " ");
+		for(cp=string; (*cp && k<col); cp++)
+			mvprintw(row+TOP_SPACE, k++, "%c", *cp);
+		while(k<col) mvprintw(row+TOP_SPACE, k++, " ");
+		return;
+	}
+#endif
+	while(k<LEFT_SPACE) { printf(" "); k++; }
 	for(cp=string; (*cp && k<col); cp++)
-		mvprintw(row+TOP_SPACE, k++, "%c", *cp);
-	while(k<col) mvprintw(row+TOP_SPACE, k++, " ");
+		{ printf("%c", *cp); k++; }
+	printf("\n");
 }
 
 static char *get_backup_str(const char *s, bool dateonly)
@@ -41,11 +43,6 @@ static char *get_backup_str(const char *s, bool dateonly)
 	const char *cp=NULL;
 	if(!(cp=strchr(s, ' ')))
 		snprintf(str, sizeof(str), "never");
-	/*else if(dateonly)
-	{
-		snprintf(str, sizeof(str),
-			"%s", getdatestr(atol(cp+1)));
-	}*/
 	else
 	{
 		unsigned long backupnum=0;
@@ -384,7 +381,18 @@ static void detail(char *toks[], int t, struct config *conf, int row, int col)
 			}
 		}
 	}
-	if(t>20 && toks[20]) printw("\n%s\n", toks[20]);
+	if(t>20 && toks[20])
+	{
+#ifdef HAVE_NCURSES_H
+		if(actg==ACTION_STATUS)
+		{
+			printw("\n%s\n", toks[20]);
+			return;
+		}
+#else
+		printf("\n%s\n", toks[20]);
+#endif
+	}
 }
 
 static void blank_screen(int row, int col)
@@ -393,11 +401,21 @@ static void blank_screen(int row, int col)
 	int l=0;
 	const char *date=NULL;
 	time_t t=time(NULL);
-	for(c=0; c<row; c++) print_line("", c, col);
-	mvprintw(0, 0, " burp monitor");
 	date=getdatestr(t);
 	l=strlen(date);
-	mvprintw(0, col-l-1, date);
+#ifdef HAVE_NCURSES_H
+	if(actg==ACTION_STATUS)
+	{
+		for(c=0; c<row; c++) print_line("", c, col);
+		mvprintw(0, 0, " burp monitor");
+		mvprintw(0, col-l-1, date);
+		return;
+	}
+#endif
+
+	printf("\n burp status");
+	for(c=0; c<(int)(col-strlen(" burp status")-l-1); c++) printf(" ");
+	printf("%s\n\n", date);
 }
 
 static int parse_rbuf(const char *rbuf, struct config *conf, int row, int col, int sel, int *count, int details)
@@ -504,7 +522,13 @@ static int need_status(void)
 
 static void print_star(int sel)
 {
-	mvprintw(sel+TOP_SPACE, 1, "*");
+#ifdef HAVE_NCURSES_H
+	if(actg==ACTION_STATUS)
+	{
+		mvprintw(sel+TOP_SPACE, 1, "*");
+		return;
+	}
+#endif
 }
 
 // Return 1 if it was shown, -1 on error, 0 otherwise.
@@ -518,22 +542,39 @@ static int show_rbuf(const char *rbuf, struct config *conf, int sel, int *count,
 		&& rbuf[rbuflen-1]=='\n'
 		&& rbuf[rbuflen-2]=='\n')
 	{
-		int row=0;
-		int col=0;
-		getmaxyx(stdscr, row, col);
+		int row=24;
+		int col=80;
+#ifdef HAVE_NCURSES_H
+		if(actg==ACTION_STATUS) getmaxyx(stdscr, row, col);
+#endif
 		if(parse_rbuf(rbuf, conf, row, col, sel, count, details))
 			return -1;
 		if(sel>=*count) sel=(*count)-1;
 		if(!details) print_star(sel);
-		refresh();
+#ifdef HAVE_NCURSES_H
+		if(actg==ACTION_STATUS) refresh();
+#endif
 		return 1;
 	}
 	return 0;
 }
 
+static int request_status(int fd, int sel)
+{
+	int l;
+	char buf[256]="";
+	if(sel>=0) snprintf(buf, sizeof(buf), "%d\n", sel);
+	else snprintf(buf, sizeof(buf), "\n");
+	l=strlen(buf);
+	if(write(fd, buf, l)<0) return -1;
+	return 0;
+}
+
 static void sighandler(int sig)
 {
-	endwin();
+#ifdef HAVE_NCURSES_H
+	if(actg==ACTION_STATUS) endwin();
+#endif
         logp("got signal: %d\n", sig);
         logp("exiting\n");
         exit(1);
@@ -547,18 +588,28 @@ static void setup_signals(void)
 	signal(SIGPIPE, &sighandler);
 }
 
-int status_client(struct config *conf)
+int status_client(struct config *conf, enum action act)
 {
 	int fd=0;
         int ret=0;
 	int sel=0;
-	int stdinfd=fileno(stdin);
 	char *rbuf=NULL;
 	char buf[512]="";
 	int count=0;
 	int details=0;
 	char *last_rbuf=NULL;
 	int srbr=0;
+
+#ifdef HAVE_NCURSES_H
+	int stdinfd=fileno(stdin);
+#else
+	if(act==ACTION_STATUS)
+	{
+		printf("To use the live status monitor, you need to recompile with ncurses support.\n");
+		return -1;
+	}
+#endif
+	actg=act; // So that the sighandler can call endwin().
 
 	setup_signals();
 
@@ -567,16 +618,21 @@ int status_client(struct config *conf)
 		return -1;
 	set_non_blocking(fd);
 
-	initscr();
-	start_color();
-	init_pair(1, COLOR_WHITE, COLOR_BLACK);
-	init_pair(2, COLOR_WHITE, COLOR_BLACK);
-	init_pair(3, COLOR_WHITE, COLOR_BLACK);
-	raw();
-	keypad(stdscr, TRUE);
-	noecho();
-	curs_set(0);
-	halfdelay(3);
+#ifdef HAVE_NCURSES_H
+	if(actg==ACTION_STATUS)
+	{
+		initscr();
+		start_color();
+		init_pair(1, COLOR_WHITE, COLOR_BLACK);
+		init_pair(2, COLOR_WHITE, COLOR_BLACK);
+		init_pair(3, COLOR_WHITE, COLOR_BLACK);
+		raw();
+		keypad(stdscr, TRUE);
+		noecho();
+		curs_set(0);
+		halfdelay(3);
+	}
+#endif
 
 	while(!ret)
 	{
@@ -604,7 +660,10 @@ int status_client(struct config *conf)
 		tval.tv_usec=0;
 
 		add_fd_to_sets(fd, &fsr, NULL, &fse, &mfd);
-		add_fd_to_sets(stdinfd, &fsr, NULL, &fse, &mfd);
+#ifdef HAVE_NCURSES_H
+		if(actg==ACTION_STATUS)
+			add_fd_to_sets(stdinfd, &fsr, NULL, &fse, &mfd);
+#endif
 
 		if(select(mfd+1, &fsr, NULL, &fse, &tval)<0)
 		{
@@ -617,87 +676,96 @@ int status_client(struct config *conf)
 			}
 		}
 
-		if(FD_ISSET(fd, &fse) || FD_ISSET(stdinfd, &fse))
+		if(FD_ISSET(fd, &fse))
 		{
 			ret=-1;
 			break;
 		}
 
-		if(FD_ISSET(stdinfd, &fsr))
+#ifdef HAVE_NCURSES_H
+		if(actg==ACTION_STATUS)
 		{
-			int x;
-			int quit=0;
-			switch((x=getch()))
+			if(FD_ISSET(stdinfd, &fse))
 			{
-				case 'q':
-				case 'Q':
-					quit++;
-					break;
-				case KEY_UP:
-				case 'k':
-				case 'K':
-					if(details) break;
-					sel--;
-					break;
-				case KEY_DOWN:
-				case 'j':
-				case 'J':
-					if(details) break;
-					sel++;
-					break;
-				case KEY_ENTER:
-				case '\n':
-				case ' ':
-					if(details) details=0;
-					else details++;
-					break;
-				case KEY_LEFT:
-				case 'h':
-				case 'H':
-					details=0;
-					break;
-				case KEY_RIGHT:
-				case 'l':
-				case 'L':
-					details++;
-					break;
-				case KEY_NPAGE:
-				{
-					int row=0, col=0;
-					getmaxyx(stdscr, row, col);
-					sel+=row-TOP_SPACE;
-					break;
-				}
-				case KEY_PPAGE:
-				{
-					int row=0, col=0;
-					getmaxyx(stdscr, row, col);
-					sel-=row-TOP_SPACE;
-					break;
-				}
-			}
-			if(quit) break;
-
-			if(sel<0) sel=0;
-			if(sel>=count) sel=count-1;
-
-			// Attempt to print stuff to the screen right now,
-			// to give the impression of key strokes being
-			// responsive.
-			if(!details)
-			{
-			  if((srbr=show_rbuf(last_rbuf,
-				conf, sel, &count, details))<0)
-			  {
 				ret=-1;
 				break;
-			  }
-			  if(!details) print_star(sel);
-			
-			  //mvprintw(0, 0, "%c", x);
-			  refresh();
+			}
+			if(FD_ISSET(stdinfd, &fsr))
+			{
+				int x;
+				int quit=0;
+				switch((x=getch()))
+				{
+					case 'q':
+					case 'Q':
+						quit++;
+						break;
+					case KEY_UP:
+					case 'k':
+					case 'K':
+						if(details) break;
+						sel--;
+						break;
+					case KEY_DOWN:
+					case 'j':
+					case 'J':
+						if(details) break;
+						sel++;
+						break;
+					case KEY_ENTER:
+					case '\n':
+					case ' ':
+						if(details) details=0;
+						else details++;
+						break;
+					case KEY_LEFT:
+					case 'h':
+					case 'H':
+						details=0;
+						break;
+					case KEY_RIGHT:
+					case 'l':
+					case 'L':
+						details++;
+						break;
+					case KEY_NPAGE:
+					{
+						int row=0, col=0;
+						getmaxyx(stdscr, row, col);
+						sel+=row-TOP_SPACE;
+						break;
+					}
+					case KEY_PPAGE:
+					{
+						int row=0, col=0;
+						getmaxyx(stdscr, row, col);
+						sel-=row-TOP_SPACE;
+						break;
+					}
+				}
+				if(quit) break;
+
+				if(sel<0) sel=0;
+				if(sel>=count) sel=count-1;
+
+				// Attempt to print stuff to the screen right
+				// now, to give the impression of key strokes
+				// being responsive.
+				if(!details)
+				{
+				  if((srbr=show_rbuf(last_rbuf,
+					conf, sel, &count, details))<0)
+				  {
+					ret=-1;
+					break;
+				  }
+				  if(!details) print_star(sel);
+				
+				  refresh();
+				}
 			}
 		}
+#endif
 
 		if(FD_ISSET(fd, &fsr))
 		{
@@ -733,19 +801,24 @@ int status_client(struct config *conf)
 		}
 
 		usleep(20000);
-		flushinp();
+#ifdef HAVE_NCURSES_H
+		if(actg==ACTION_STATUS)
+		{
+			flushinp();
+			continue;
+		}
+#endif
+		if(count)
+		{
+			printf("\n");
+			break;
+		}
 	}
-	endwin();
+#ifdef HAVE_NCURSES_H
+	if(actg==ACTION_STATUS) endwin();
+#endif
 	close_fd(&fd);
 	if(last_rbuf) free(last_rbuf);
 	if(rbuf) free(rbuf);
 	return ret;
 }
-
-#else
-int status_client(struct config *conf)
-{
-	printf("To use the status monitor, you need to recompile with ncurses support.\n");
-	return -1;
-}
-#endif

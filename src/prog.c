@@ -104,6 +104,8 @@ int main (int argc, char *argv[])
 					act=ACTION_LONG_LIST;
 				else if(!strncmp(optarg, "status", 1))
 					act=ACTION_STATUS;
+				else if(!strncmp(optarg, "Status", 1))
+					act=ACTION_STATUS_SNAPSHOT;
 				else
 				{
 					usage();
@@ -160,7 +162,8 @@ int main (int argc, char *argv[])
 		backup="0";
 	}
 
-	if(conf.mode==MODE_SERVER && act==ACTION_STATUS)
+	if(conf.mode==MODE_SERVER
+	  && (act==ACTION_STATUS || act==ACTION_STATUS_SNAPSHOT))
 	{
 		// Server status mode needs to run without getting the lock.
 	}
@@ -182,11 +185,11 @@ int main (int argc, char *argv[])
 #ifdef HAVE_WIN32
 		logp("Sorry, server mode is not implemented for Windows.\n");
 #else
-		if(act==ACTION_STATUS)
+		if(act==ACTION_STATUS || act==ACTION_STATUS_SNAPSHOT)
 		{
 			// We are running on the server machine, being a client
 			// of the burp server, getting status information.
-			ret=status_client(&conf);
+			ret=status_client(&conf, act);
 		}
 		else
 			ret=server(&conf, configfile,

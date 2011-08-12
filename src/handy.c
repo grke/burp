@@ -729,7 +729,10 @@ int do_rename(const char *oldpath, const char *newpath)
 
 char *get_tmp_filename(const char *basis)
 {
-	return prepend(basis, ".tmp", strlen(".tmp"), 0 /* no slash */);
+	char *ret=NULL;
+	ret=prepend(basis, ".tmp", strlen(".tmp"), 0 /* no slash */);
+	if(ret) printf("get_tmp_filename: %s\n", ret);
+	return ret;
 }
 
 void add_fd_to_sets(int fd, fd_set *read_set, fd_set *write_set, fd_set *err_set, int *max_fd)

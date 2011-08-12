@@ -29,6 +29,9 @@ Foreground mode. The server will fork into the background and run as a daemon if
 \fB\-a s\fR \fB\fR
 Run this to connect to a running server to get a live monitor of the status of all your backup clients. If your server config file is not in the default location, you will also need to specify the path with the '-c' option. The live monitor requires ncurses support at compile time.
 .TP
+\fB\-a S\fR \fB\fR
+Similar to '-a s', but it prints the main status monitor summary screen to stdout. The intention is that a script can run this and email an administrator the output on a cron job. This doesn't require ncurses support.
+.TP
 \fB\-l\fR \fB[path]\fR
 Path to log file. The default is stdout. This option overrides the
 .IR logfile
@@ -61,7 +64,7 @@ overwrite existing files.
 Short for 'regular expression'. The argument is a regular expression with
 which to match backup files. Use it for lists and restores.
 .TP
-\fB\-l\fR \fBlogfile\fR
+\fB\-l\fR \fB[path]\fR
 Short for 'log file'. The argument is a path to the log file. The default
 is stdout. This option overrides the
 .IR logfile

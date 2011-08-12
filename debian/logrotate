@@ -1,0 +1,10 @@
+/var/log/burp {
+        daily
+        missingok
+        rotate 7
+        postrotate
+		invoke-rd.d burp reload >/dev/null
+        endscript
+        compress
+        notifempty
+}

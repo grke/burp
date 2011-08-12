@@ -27,6 +27,7 @@ int backup_phase3_server(const char *phase2data, const char *unchangeddata, cons
 
 	logp("Begin phase3 (merge manifests)\n");
 
+	printf("before get_tmp_filename d: %s\n", manifest);
 	if(!(manifesttmp=get_tmp_filename(manifest))) return -1;
 
         if(!(uczp=gzopen_file(unchangeddata, "rb"))

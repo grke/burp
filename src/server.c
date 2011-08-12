@@ -470,6 +470,7 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 		return -1;
 	}
 
+printf("before get_tmp_filename a: %s\n", phase1data);
 	if(!(phase1datatmp=get_tmp_filename(phase1data)))
 	{
 		free(fullrealwork);
@@ -556,6 +557,7 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 
 		logp("merging old working directory with the most recent backup\n");
 
+printf("before get_tmp_filename b: %s\n", manifest);
 		if(!(manifesttmp=get_tmp_filename(manifest))) return -1;
 
 		logp("rebuild\n");
@@ -1331,7 +1333,7 @@ static int open_logfile(const char *logfile)
 
 int server_reload(struct config *conf, const char *configfile, char **logfile, bool firsttime, int oldmax_children)
 {
-	logp("Reloading server config\n");
+	if(!firsttime) logp("Reloading server config\n");
 	// If logfile is defined, use it 
 	// Have to do this twice, because init_config uses logp(). 
 	if(*logfile && strlen(*logfile) && open_logfile(*logfile))

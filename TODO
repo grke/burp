@@ -15,8 +15,6 @@
 * Improve the status monitor / counters.
 	- Remember the phase1 scan counters so that later phases can have
 	  things like estimated times.
-	- Option to send a regular snapshot of the status summary screen in an
-	  email.
 	- Counters are missing from the logs when a backup is completed via
 	  working dir recovery.
 	- Can something be done to make key presses more responsive?

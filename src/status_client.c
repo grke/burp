@@ -602,6 +602,7 @@ int status_client(struct config *conf, enum action act)
 
 #ifdef HAVE_NCURSES_H
 	int stdinfd=fileno(stdin);
+	actg=act; // So that the sighandler can call endwin().
 #else
 	if(act==ACTION_STATUS)
 	{
@@ -609,7 +610,6 @@ int status_client(struct config *conf, enum action act)
 		return -1;
 	}
 #endif
-	actg=act; // So that the sighandler can call endwin().
 
 	setup_signals();
 

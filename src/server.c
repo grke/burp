@@ -220,7 +220,7 @@ static int setup_signals(int oldmax_children, int max_children)
 	return 0;
 }
 
-static int do_backup_server(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *manifest, const char *forward, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *client, struct cntr *p1cntr, struct cntr *cntr)
+static int do_backup_server(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *manifest, const char *forward, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *client, struct cntr *p1cntr, struct cntr *cntr, int resume)
 {
 	int ret=0;
 	char msg[256]="";
@@ -238,11 +238,6 @@ static int do_backup_server(const char *basedir, const char *current, const char
 	// Where to write messages
 	char *logpath=NULL;
 	FILE *logfp=NULL;
-	// Where to write backupphase2 data.
-	// Phase 2 data is not getting written to a compressed file.
-	// This is important for recovery if the power goes.
-	FILE *p2fp=NULL;
-	gzFile uczp=NULL;
 
 	struct dpth dpth;
 
@@ -257,137 +252,147 @@ static int do_backup_server(const char *basedir, const char *current, const char
 	  || !(datadirtmp=prepend_s(working, "data.tmp", strlen("data.tmp"))))
 	{
 		log_and_send("out of memory");
-		ret=-1;
-	}
-	else if(get_new_timestamp(basedir, tstmp, sizeof(tstmp)))
-		ret=-1;
-	else if(!(realworking=prepend_s(basedir, tstmp, strlen(tstmp)))
-	  || !(logpath=prepend_s(realworking, "log", strlen("log"))))
-	{
-		log_and_send("out of memory");
-		ret=-1;
-	}
-	else if(mkdir(realworking, 0777))
-	{
-		snprintf(msg, sizeof(msg),
-		  "could not mkdir for increment: %s", working);
-		log_and_send(msg);
-		ret=-1;
-	}
-	else if(!(logfp=open_file(logpath, "ab")) || set_logfp(logfp))
-	{
-		snprintf(msg, sizeof(msg),
-		  "could not open log file: %s", logpath);
-		log_and_send(msg);
-		ret=-1;
-	}
-	else if(symlink(tstmp, working)) // relative link to the real work dir
-	{
-		snprintf(msg, sizeof(msg),
-		  "could not point working symlink to: %s", realworking);
-		ret=-1;
-	}
-	else if(mkdir(datadirtmp, 0777))
-	{
-		snprintf(msg, sizeof(msg),
-		  "could not mkdir for datadir: %s", datadirtmp);
-		log_and_send(msg);
-		ret=-1;
-	}
-	else if(write_timestamp(timestamp, tstmp))
-	{
-		snprintf(msg, sizeof(msg),
-		  "unable to write timestamp %s", timestamp);
-		log_and_send(msg);
-		ret=-1;
-	}
-	if(!ret && init_dpth(&dpth, currentdata, cconf))
-	{
-		log_and_send("could not init_dpth\n");
-		ret=-1;
+		goto error;
 	}
 
-	if(!ret && backup_phase1_server(phase1data,
-		client, p1cntr, cntr, cconf))
+	if(init_dpth(&dpth, currentdata, cconf))
 	{
-		logp("error in backup phase 1\n");
-		ret=-1;
+		log_and_send("could not init_dpth\n");
+		goto error;
+	}
+
+	if(resume)
+	{
+		size_t len=0;
+		char real[256]="";
+		if((len=readlink(working, real, sizeof(real)-1))<0)
+			len=0;
+		real[len]='\0';
+		if(!(realworking=prepend_s(basedir, real, strlen(real))))
+		{
+			log_and_send("out of memory");
+			goto error;
+		}
+	}
+	else
+	{
+		// Not resuming - need to set everything up fresh.
+
+		if(get_new_timestamp(basedir, tstmp, sizeof(tstmp)))
+			goto error;
+		if(!(realworking=prepend_s(basedir, tstmp, strlen(tstmp)))
+		  || !(logpath=prepend_s(realworking, "log", strlen("log"))))
+		{
+			log_and_send("out of memory");
+			goto error;
+		}
+		if(mkdir(realworking, 0777))
+		{
+			snprintf(msg, sizeof(msg),
+			  "could not mkdir for increment: %s", working);
+			log_and_send(msg);
+			goto error;
+		}
+		if(!(logfp=open_file(logpath, "ab")) || set_logfp(logfp))
+		{
+			snprintf(msg, sizeof(msg),
+			  "could not open log file: %s", logpath);
+			log_and_send(msg);
+			goto error;
+		}
+		else if(symlink(tstmp, working)) // relative link to the real work dir
+		{
+			snprintf(msg, sizeof(msg),
+			  "could not point working symlink to: %s",
+			  realworking);
+			goto error;
+		}
+		else if(mkdir(datadirtmp, 0777))
+		{
+			snprintf(msg, sizeof(msg),
+			  "could not mkdir for datadir: %s", datadirtmp);
+			log_and_send(msg);
+			goto error;
+		}
+		else if(write_timestamp(timestamp, tstmp))
+		{
+			snprintf(msg, sizeof(msg),
+			  "unable to write timestamp %s", timestamp);
+			log_and_send(msg);
+			goto error;
+		}
+
+		if(backup_phase1_server(phase1data,
+			client, p1cntr, cntr, cconf))
+		{
+			logp("error in backup phase 1\n");
+			goto error;
+		}
 	}
 
 	// Open the previous (current) manifest.
-	if(!ret && !lstat(cmanifest, &statp)
-		&& !(cmanfp=gzopen_file(cmanifest, "rb")))
+	if(!lstat(cmanifest, &statp) && !(cmanfp=gzopen_file(cmanifest, "rb")))
 	{
 		if(!lstat(cmanifest, &statp))
 		{
 			logp("could not open old manifest %s\n", cmanifest);
-			ret=-1;
+			goto error;
 		}
 	}
 
 	//if(cmanfp) logp("Current manifest: %s\n", cmanifest);
 
-	if(!ret && !(p2fp=open_file(phase2data, "wb")))
-		ret=-1;
-	if(!ret && !(uczp=gzopen_file(unchangeddata, comp_level(cconf))))
-		ret=-1;
-	if(!ret && backup_phase2_server(&cmanfp, phase1data, p2fp, uczp,
+	if(backup_phase2_server(&cmanfp, phase1data, phase2data, unchangeddata,
 		datadirtmp, &dpth, currentdata, working, client,
-		p1cntr, cntr, cconf))
+		p1cntr, resume, cntr, cconf))
 	{
 		logp("error in backup phase 2\n");
-		ret=-1;
+		goto error;
 	}
 
-	// Close the phase2, and unchanged files.
-	// Phase3 will open phase2 and unchanged again, and combine them
-	// into a new manifest.
-	close_fp(&p2fp);
-	gzclose_fp(&uczp);
-
-	if(!ret && backup_phase3_server(phase2data, unchangeddata, manifest,
+	if(backup_phase3_server(phase2data, unchangeddata, manifest,
 		0 /* not recovery mode */, 1 /* compress */, client,
 		p1cntr, cntr, cconf))
 	{
 		logp("error in backup phase 3\n");
-		ret=-1;
+		goto error;
 	}
 
-	if(!ret)
+	// will not write anything more to
+	// the new manifest
+	// finish_backup will open it again
+	// for reading
+	gzclose_fp(&mzp);
+
+	async_write_str(CMD_GEN, "okbackupend");
+	logp("Backup ending - disconnect from client.\n");
+
+	// Close the connection with the client, the rest of the job
+	// we can do by ourselves.
+	async_free();
+
+	// Move the symlink to indicate that we are now in the end
+	// phase. 
+	if(do_rename(working, finishing))
+		goto error;
+	else
 	{
-		// will not write anything more to
-		// the new manifest
-		// finish_backup will open it again
-		// for reading
-		gzclose_fp(&mzp);
-
-		async_write_str(CMD_GEN, "okbackupend");
-		logp("Backup ending - disconnect from client.\n");
-
-		// Close the connection with the client, the rest of the job
-		// we can do by ourselves.
-		async_free();
-
-		// Move the symlink to indicate that we are now in the end
-		// phase. 
-		if(do_rename(working, finishing))
-			ret=-1;
-		else
-		{
-			set_logfp(NULL); // does an fclose on logfp.
-			// finish_backup will open logfp again
-			ret=backup_phase4_server(basedir,
-				working, current, currentdata,
-				finishing, cconf, client,
-				p1cntr, cntr);
-			if(!ret && cconf->keep>0)
-				ret=remove_old_backups(basedir, cconf->keep);
-		}
+		set_logfp(NULL); // does an fclose on logfp.
+		// finish_backup will open logfp again
+		ret=backup_phase4_server(basedir,
+			working, current, currentdata,
+			finishing, cconf, client,
+			p1cntr, cntr);
+		if(!ret && cconf->keep>0)
+			ret=remove_old_backups(basedir, cconf->keep);
 	}
+
+	goto end;
+error:
+	ret=-1;
+end:
 	gzclose_fp(&cmanfp);
 	gzclose_fp(&mzp);
-	close_fp(&p2fp);
-	gzclose_fp(&uczp);
 	if(timestamp) free(timestamp);
 	if(newpath) free(newpath);
 	if(cmanifest) free(cmanifest);
@@ -410,7 +415,7 @@ static int maybe_rebuild_manifest(const char *phase2data, const char *unchangedd
 		1 /* recovery mode */, compress, client, p1cntr, cntr, cconf);
 }
 
-static int check_for_rubble(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *manifest, const char *client, struct cntr *p1cntr, struct cntr *cntr)
+static int check_for_rubble(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *manifest, const char *client, struct cntr *p1cntr, struct cntr *cntr, int *resume)
 {
 	size_t len=0;
 	char realwork[256]="";
@@ -470,7 +475,6 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 		return -1;
 	}
 
-printf("before get_tmp_filename a: %s\n", phase1data);
 	if(!(phase1datatmp=get_tmp_filename(phase1data)))
 	{
 		free(fullrealwork);
@@ -543,22 +547,40 @@ printf("before get_tmp_filename a: %s\n", phase1data);
 
 		return check_for_rubble(basedir, current, working,
 			currentdata, finishing, cconf, phase1data, phase2data,
-			unchangeddata, manifest, client, p1cntr, cntr);
+			unchangeddata, manifest, client, p1cntr, cntr, resume);
+	}
+	else if(!strcmp(wdrm, "resume"))
+	{
+		// Attempt to resume the next backup
+		logp("Found interrupted backup - will resume on the next backup request.\n");
+		*resume=1;
 	}
 	else if(!strcmp(wdrm, "merge"))
 	{
 		// Forward merge with the 'current' backup.
 		// I had trouble re-opening a gz file for appending, so
 		// the new manifest now starts out as a normal file.
+		int ret=0;
+		int ars=0;
 		FILE *mp=NULL;
 		gzFile czp=NULL;
 		char *cmanifest=NULL;
 		char *manifesttmp=NULL;
+		struct sbuf pb;
+		struct sbuf cb;
+		z_off_t offz=0;
+		char *lastpbuf=NULL;
+
+		init_sbuf(&pb);
+		init_sbuf(&cb);
 
 		logp("merging old working directory with the most recent backup\n");
 
-printf("before get_tmp_filename b: %s\n", manifest);
-		if(!(manifesttmp=get_tmp_filename(manifest))) return -1;
+		if(!(manifesttmp=get_tmp_filename(manifest)))
+		{
+			ret=-1;
+			goto merge_error;
+		}
 
 		logp("rebuild\n");
 		// Get us a partial manifest from the files lying around.
@@ -566,9 +588,8 @@ printf("before get_tmp_filename b: %s\n", manifest);
 			manifesttmp, 0 /* do not compress */, client,
 			p1cntr, cntr, cconf))
 		{
-			set_logfp(NULL); // fclose the logfp
-			free(manifesttmp);
-			return -1;
+			ret=-1;
+			goto merge_error;
 		}
 		logp("after rebuild\n");
 
@@ -578,120 +599,81 @@ printf("before get_tmp_filename b: %s\n", manifest);
 		// place where the partial one ended, then copy the rest of
 		// the old one into the new one.
 
-		free(fullrealwork);
+		free(fullrealwork); fullrealwork=NULL;
 
 		if(!(mp=open_file(manifesttmp, "r+b"))
 		  || !(cmanifest=prepend_s(current,
 			"manifest.gz", strlen("manifest.gz"))))
 		{
-			set_logfp(NULL); // fclose the logfp
-			free(manifesttmp);
-			return -1;
+			ret=-1;
+			goto merge_error;
 		}
 
 		if((czp=gzopen_file(cmanifest, "rb")))
 		{
-			int ars=0;
-			char *lastpbuf=NULL;
-			z_off_t offz=0;
-			struct sbuf pb;
-			struct sbuf cb;
-
-			init_sbuf(&pb);
-			init_sbuf(&cb);
-
 			// Forwarding through working manifest...
 			while(1)
 			{
-			  int ars;
-			  free_sbuf(&pb);
-			  if((ars=sbuf_fill(mp, NULL, &pb, cntr))<0)
-			  {
 				free_sbuf(&pb);
-				close_fp(&mp);
-				gzclose_fp(&czp);
-				free(cmanifest);
-				free(manifesttmp);
-				set_logfp(NULL); // fclose the logfp
-				return -1;
-			  }
-			  if(ars==1) break; // got to the end
+				if((ars=sbuf_fill(mp, NULL, &pb, cntr))<0)
+				{
+					ret=-1;
+					goto merge_error;
+				}
+				if(ars==1) break; // got to the end
 
-			  if(lastpbuf) free(lastpbuf);
-			  lastpbuf=strdup(pb.path);
-			  free_sbuf(&pb);
+				if(lastpbuf) free(lastpbuf);
+				lastpbuf=strdup(pb.path);
+				free_sbuf(&pb);
 			}
 			free_sbuf(&pb);
 
 			// Now we should have the latest file entry.
 			// Forward through the current manifest.
-
 			if(lastpbuf)
 			{
-			 logp("Last path in working manifest: '%s'\n",
-				lastpbuf);
-			 while(1)
-			 {
-			  if((offz=gztell(czp))<0)
-			  {
-				logp("gztell returned error\n");
-				free_sbuf(&pb);
-				free_sbuf(&cb);
-				close_fp(&mp);
-				gzclose_fp(&czp);
-				free(cmanifest);
-				free(manifesttmp);
-				free(lastpbuf);
-				set_logfp(NULL); // fclose the logfp
-				return -1;
-			  }
-			  free_sbuf(&cb);
-			  if((ars=sbuf_fill(NULL, czp, &cb, cntr))<0)
-			  {
-				free_sbuf(&pb);
-				free_sbuf(&cb);
-				close_fp(&mp);
-				gzclose_fp(&czp);
-				free(cmanifest);
-				free(manifesttmp);
-				free(lastpbuf);
-				set_logfp(NULL); // fclose the logfp
-				return -1;
-			  }
-			  if(cb.path && pathcmp(lastpbuf, cb.path)<0)
-			  {
-				// Ahead in the current manifest.
-				// Get back to the start of this entry.
-
-				logp("Ahead in the current manifest\n");
-				logp("working: %s\n", lastpbuf);
-				logp("current: %s\n", cb.path);
-				if(gzseek(czp, offz, SEEK_SET)!=offz)
+				logp("Last path in working manifest: '%s'\n",
+					lastpbuf);
+				while(1)
 				{
-					logp("error in gzseek\n");
-					free_sbuf(&pb);
-					free_sbuf(&cb);
-					close_fp(&mp);
-					gzclose_fp(&czp);
-					free(cmanifest);
-					free(manifesttmp);
-					free(lastpbuf);
-					set_logfp(NULL); // fclose the logfp
-					return -1;
+				  if((offz=gztell(czp))<0)
+				  {
+					logp("gztell returned error\n");
+					ret=-1;
+					goto merge_error;
+				  }
+				  free_sbuf(&cb);
+				  if((ars=sbuf_fill(NULL, czp, &cb, cntr))<0)
+				  {
+					ret=-1;
+					goto merge_error;
+				  }
+				  if(cb.path && pathcmp(lastpbuf, cb.path)<0)
+				  {
+					// Ahead in the current manifest.
+					// Get back to the start of this entry.
+
+					logp("Ahead in the current manifest\n");
+					logp("working: %s\n", lastpbuf);
+					logp("current: %s\n", cb.path);
+					if(gzseek(czp, offz, SEEK_SET)!=offz)
+					{
+						logp("error in gzseek\n");
+						ret=-1;
+						goto merge_error;
+					}
+					break;
+				  }
+				  if(ars==1) break; // got to the end
+				  free_sbuf(&pb);
+				  free_sbuf(&cb);
 				}
-				break;
-			  }
-			  if(ars==1) break; // got to the end
-			  free_sbuf(&pb);
-			  free_sbuf(&cb);
-			 }
-			 free(lastpbuf);
+				free(lastpbuf); lastpbuf=NULL;
 			}
 			else
 			{
 				logp("Did not find last path in working manifest.\n");
 			}
-			free_sbuf(&pb);
 			free_sbuf(&cb);
 
 			// Write the rest of the current manifest into
@@ -702,11 +684,8 @@ printf("before get_tmp_filename b: %s\n", manifest);
 				free_sbuf(&cb);
 				if((ars=sbuf_fill(NULL, czp, &cb, cntr))<0)
 				{
-					close_fp(&mp);
-					gzclose_fp(&czp);
-					free(cmanifest);
-					set_logfp(NULL); // fclose the logfp
-					return -1;
+					ret=-1;
+					goto merge_error;
 				}
 				else if(ars==1)
 				{
@@ -715,32 +694,42 @@ printf("before get_tmp_filename b: %s\n", manifest);
 
 				if(sbuf_to_manifest(&cb, mp, NULL))
 				{
-					close_fp(&mp);
-					gzclose_fp(&czp);
-					free(cmanifest);
-					set_logfp(NULL); // fclose the logfp
-					return -1;
+					ret=-1;
+					goto merge_error;
 				}
-
-				free_sbuf(&cb);
 			}
-			close_fp(&mp);
-			gzclose_fp(&czp);
 			if(compress_file(manifesttmp, manifest, cconf))
 			{
 				logp("manifest compress failed\n");
-				free(manifesttmp);
-				return -1;
+				ret=-1;
+				goto merge_error;
 			}
-			free(manifesttmp);
+
 			logp("Merge OK\n");
+			goto merge_end;
+
+merge_error:
+			ret=-1;
+merge_end:
+			free_sbuf(&pb);
+			free_sbuf(&cb);
+			close_fp(&mp);
+			gzclose_fp(&czp);
+			if(cmanifest) { free(cmanifest); cmanifest=NULL; }
+			if(manifesttmp) { free(manifesttmp); manifesttmp=NULL; }
+			if(lastpbuf) { free(lastpbuf); lastpbuf=NULL; }
+			if(ret)
+			{
+				set_logfp(NULL); // fclose the logfp
+				return ret;
+			}
 		}
 		else
 		{
 			logp("No current backup found.\n");
 			logp("Will use old working directory as the current backup.\n");
 		}
-		free(cmanifest);
+		if(cmanifest) { free(cmanifest); cmanifest=NULL; }
 
 		// Then rename the working link to be a finishing link,
 		// then run this function again.
@@ -753,7 +742,7 @@ printf("before get_tmp_filename b: %s\n", manifest);
 
 		return check_for_rubble(basedir, current, working,
 			currentdata, finishing, cconf, phase1data, phase2data,
-			unchangeddata, manifest, client, p1cntr, cntr);
+			unchangeddata, manifest, client, p1cntr, cntr, resume);
 	}
 	else
 	{
@@ -768,7 +757,7 @@ printf("before get_tmp_filename b: %s\n", manifest);
 	return 0;
 }
 
-static int get_lock_and_clean(const char *basedir, const char *lockbasedir, const char *lockfile, const char *current, const char *working, const char *currentdata, const char *finishing, bool cancel, bool *gotlock, struct config *cconf, const char *forward, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *manifest, const char *client, struct cntr *p1cntr, struct cntr *cntr)
+static int get_lock_and_clean(const char *basedir, const char *lockbasedir, const char *lockfile, const char *current, const char *working, const char *currentdata, const char *finishing, bool cancel, bool *gotlock, struct config *cconf, const char *forward, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *manifest, const char *client, struct cntr *p1cntr, struct cntr *cntr, int *resume)
 {
 	int ret=0;
 	char *copy=NULL;
@@ -807,7 +796,7 @@ static int get_lock_and_clean(const char *basedir, const char *lockbasedir, cons
 
 	if(!ret && check_for_rubble(basedir, current, working, currentdata,
 		finishing, cconf, phase1data, phase2data, unchangeddata,
-		manifest, client, p1cntr, cntr))
+		manifest, client, p1cntr, cntr, resume))
 			ret=-1;
 
 	return ret;
@@ -875,16 +864,17 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 	}
 	else if(cmd==CMD_GEN && !strncmp(buf, "backupphase1", strlen("backupphase1")))
 	{
+		int resume=0;
 		if(get_lock_and_clean(basedir, lockbasedir, lockfile, current,
 			working, currentdata,
 			finishing, TRUE, &gotlock, cconf,
 			forward, phase1data, phase2data, unchangeddata,
-			manifest, client, p1cntr, cntr))
+			manifest, client, p1cntr, cntr, &resume))
 				ret=-1;
 		else
 		{
 			int tret=0;
-			char okstr[32]="ok";
+			char okstr[32]="";
 			if(mkpath(&current, cconf->directory)) // creates basedir, without the /current part
 			{
 				snprintf(msg, sizeof(msg), "could not mkpath %s", current);
@@ -916,13 +906,13 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			}
 			free(buf); buf=NULL;
 
-			snprintf(okstr, sizeof(okstr), "ok:%d",
-				cconf->compression);
+			snprintf(okstr, sizeof(okstr), "%s:%d",
+				resume?"resume":"ok", cconf->compression);
 			async_write_str(CMD_GEN, okstr);
 			ret=do_backup_server(basedir, current, working,
 			  currentdata, finishing, cconf,
 			  manifest, forward, phase1data, phase2data,
-			  unchangeddata, client, p1cntr, cntr);
+			  unchangeddata, client, p1cntr, cntr, resume);
 			if(ret)
 				run_script(
 					cconf->notify_failure_script,
@@ -951,6 +941,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 	  && (!strncmp(buf, "restore ", strlen("restore "))
 		|| !strncmp(buf, "verify ", strlen("verify "))))
 	{
+		int resume=0; // ignored
 		enum action act;
 		char *backupnostr=NULL;
 		// Hmm. inefficient.
@@ -969,7 +960,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			current, working,
 			currentdata, finishing, TRUE, &gotlock, cconf,
 			forward, phase1data, phase2data, unchangeddata,
-			manifest, client, p1cntr, cntr))
+			manifest, client, p1cntr, cntr, &resume))
 				ret=-1;
 		else
 		{
@@ -987,11 +978,12 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 	}
 	else if(cmd==CMD_GEN && !strncmp(buf, "list ", strlen("list ")))
 	{
+		int resume=0; // ignored
 		if(get_lock_and_clean(basedir, lockbasedir, lockfile,
 			current, working,
 			currentdata, finishing, FALSE, &gotlock, cconf,
 			forward, phase1data, phase2data, unchangeddata,
-			manifest, client, p1cntr, cntr))
+			manifest, client, p1cntr, cntr, &resume))
 				ret=-1;
 		else
 		{

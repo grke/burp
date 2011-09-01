@@ -170,7 +170,7 @@ static int send_whole_file_w(const char *fname, const char *datapth, int quick_r
 			cntr, extrameta, elen);
 }
 
-static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
+static int do_backup_phase2_client(struct config *conf, int resume, struct cntr *cntr)
 {
 	int ret=0;
 	int quit=0;
@@ -183,9 +183,13 @@ static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
 
 	init_sbuf(&sb);
 
-	if(async_write_str(CMD_GEN, "backupphase2")
-	  || async_read_expect(CMD_GEN, "ok"))
-		return -1;
+	if(!resume)
+	{
+		// Only do this bit if the server did not tell us to resume.
+		if(async_write_str(CMD_GEN, "backupphase2")
+		  || async_read_expect(CMD_GEN, "ok"))
+			return -1;
+	}
 
 	while(!quit)
 	{
@@ -352,13 +356,13 @@ static int do_backup_phase2_client(struct config *conf, struct cntr *cntr)
 	return ret;
 }
 
-int backup_phase2_client(struct config *conf, struct cntr *p1cntr, struct cntr *cntr)
+int backup_phase2_client(struct config *conf, struct cntr *p1cntr, int resume, struct cntr *cntr)
 {
 	int ret=0;
 
 	logp("Phase 2 begin (send file data)\n");
 
-	ret=do_backup_phase2_client(conf, cntr);
+	ret=do_backup_phase2_client(conf, resume, cntr);
 
 	print_endcounter(cntr);
 	print_filecounters(p1cntr, cntr, ACTION_BACKUP, 1);

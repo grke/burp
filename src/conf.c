@@ -346,11 +346,13 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 			  "working_dir_recovery_method",
 			  &(conf->working_dir_recovery_method))) return -1;
 			if(strcmp(conf->working_dir_recovery_method, "delete")
+			  && strcmp(conf->working_dir_recovery_method, "resume")
 			  && strcmp(conf->working_dir_recovery_method, "use")
 			  && strcmp(conf->working_dir_recovery_method, "merge"))
 			{
 			  logp("unknown working_dir_recovery_method: %s\n",
 				conf->working_dir_recovery_method);
+			  return conf_error(config_path, line);
 			}
 		}
 		else if(!strcmp(field, "cross_all_filesystems"))

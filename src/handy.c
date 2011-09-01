@@ -731,7 +731,6 @@ char *get_tmp_filename(const char *basis)
 {
 	char *ret=NULL;
 	ret=prepend(basis, ".tmp", strlen(".tmp"), 0 /* no slash */);
-	if(ret) printf("get_tmp_filename: %s\n", ret);
 	return ret;
 }
 

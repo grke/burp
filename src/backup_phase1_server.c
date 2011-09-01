@@ -22,7 +22,6 @@ int backup_phase1_server(const char *phase1data, const char *client, struct cntr
 
 	logp("Begin phase1 (file system scan)\n");
 
-printf("before get_tmp_filename e: %s\n", phase1data);
 	if(!(phase1tmp=get_tmp_filename(phase1data)))
 		return -1;
 

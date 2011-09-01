@@ -110,14 +110,14 @@ static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *c
 	return 0;
 }
 
-static int new_non_file(struct sbuf *p1b, gzFile uzcp, char cmd, struct cntr *cntr)
+static int new_non_file(struct sbuf *p1b, FILE *ucfp, char cmd, struct cntr *cntr)
 {
 	// Is something that does not need more data backed up.
 	// Like a directory or a link or something like that.
 	// Goes into the unchanged file, so that it does not end up out of
 	// order with normal files, which has to wait around for their data
 	// to turn up.
-	if(sbuf_to_manifest(p1b, NULL, uzcp))
+	if(sbuf_to_manifest(p1b, ucfp, NULL))
 	{
 		return -1;
 	}
@@ -129,7 +129,7 @@ static int new_non_file(struct sbuf *p1b, gzFile uzcp, char cmd, struct cntr *cn
 	return 0;
 }
 
-static int process_new(struct sbuf *p1b, FILE *p2fp, gzFile uczp, struct cntr *cntr)
+static int process_new(struct sbuf *p1b, FILE *p2fp, FILE *ucfp, struct cntr *cntr)
 {
 	if(filedata(p1b->cmd))
 	{
@@ -140,13 +140,13 @@ static int process_new(struct sbuf *p1b, FILE *p2fp, gzFile uczp, struct cntr *c
 	}
 	else
 	{
-		new_non_file(p1b, uczp, p1b->cmd, cntr);
+		new_non_file(p1b, ucfp, p1b->cmd, cntr);
 	}
 	return 0;
 }
 
 // return 1 to say that a file was processed
-static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, gzFile uczp, const char *currentdata, struct cntr *cntr, struct config *cconf)
+static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FILE *ucfp, const char *currentdata, struct cntr *cntr, struct config *cconf)
 {
 	int pcmp;
 	if(!(pcmp=sbuf_pathcmp(cb, p1b)))
@@ -157,7 +157,7 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, gzF
 		{
 			// got an unchanged file
 			//logp("got unchanged file: %s\n", cb->path);
-			if(sbuf_to_manifest(cb, NULL, uczp))
+			if(sbuf_to_manifest(cb, ucfp, NULL))
 			{
 				free_sbuf(cb);
 				return -1;
@@ -186,7 +186,7 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, gzF
 		  || cb->cmd==CMD_METADATA
 		  || p1b->cmd==CMD_METADATA)
 		{
-			if(process_new(p1b, p2fp, uczp, cntr)) return -1;
+			if(process_new(p1b, p2fp, ucfp, cntr)) return -1;
 			free_sbuf(cb);
 			return 1;
 		}
@@ -198,7 +198,7 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, gzF
 		if( ( oldcompressed && !cconf->compression)
 		 || (!oldcompressed &&  cconf->compression))
 		{
-			if(process_new(p1b, p2fp, uczp, cntr)) return -1;
+			if(process_new(p1b, p2fp, ucfp, cntr)) return -1;
 			free_sbuf(cb);
 			return 1;
 		}
@@ -211,7 +211,7 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, gzF
 		}
 		else
 		{
-			if(new_non_file(p1b, uczp,
+			if(new_non_file(p1b, ucfp,
 				cmd_to_changed(p1b->cmd), cntr))
 					return -1;
 		}
@@ -222,7 +222,7 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, gzF
 	{
 		//logp("ahead: %s\n", p1b->path);
 		// ahead - need to get the whole file
-		if(process_new(p1b, p2fp, uczp, cntr)) return -1;
+		if(process_new(p1b, p2fp, ucfp, cntr)) return -1;
 		// do not free
 		return 1;
 	}
@@ -474,7 +474,7 @@ static int do_stuff_to_receive(struct sbuf *rb, FILE *p2fp, const char *datadirt
 		else if(rcmd==CMD_GEN && !strcmp(rbuf, "okbackupphase2end"))
 		{
 			ret=1;
-			logp("got okbackupphase2end\n");
+			//logp("got okbackupphase2end\n");
 		}
 		else if(rcmd==CMD_INTERRUPT)
 		{
@@ -501,14 +501,128 @@ static int do_stuff_to_receive(struct sbuf *rb, FILE *p2fp, const char *datadirt
 	return ret;
 }
 
-int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzFile uczp, const char *datadirtmp, struct dpth *dpth, const char *currentdata, const char *working, const char *client, struct cntr *p1cntr, struct cntr *cntr, struct config *cconf)
+static int forward_sbuf(FILE *fp, gzFile zp, struct sbuf *b, struct sbuf *target, int seekback, struct cntr *cntr)
+{
+	int ars=0;
+	struct sbuf latest;
+	init_sbuf(b);
+	init_sbuf(&latest);
+	off_t pos=0;
+	while(1)
+	{
+		if(target)
+		{
+			// If told to 'seekback' to the immediately previous
+			// entry, we need to remember the position of it.
+			if(fp && seekback && (pos=ftello(fp))<0)
+			{
+				free_sbuf(&latest);
+				logp("Could not ftello in forward_sbuf(): %s\n",
+					strerror(errno));
+				return -1;
+			}
+			ars=sbuf_fill_phase1(fp, zp, b, cntr);
+		}
+		else
+		{
+			ars=sbuf_fill(fp, zp, b, cntr);
+		}
+
+		//printf("got: %s\n", b->path);
+
+		if(ars)
+		{
+			// ars==1 means it ended ok.
+			if(ars<0)
+			{
+				free_sbuf(b);
+				free_sbuf(&latest);
+				return -1;
+			}
+			memcpy(b, &latest, sizeof(struct sbuf));
+			return 0;
+		}
+//printf("got: %s\n", b->path);
+		free_sbuf(&latest);
+
+		// If seeking to a particular point...
+		if(target && sbuf_pathcmp(target, b)<=0)
+		{
+			// If told to 'seekback' to the immediately previous
+			// entry, do it here.
+			if(fp && seekback && fseeko(fp, pos, SEEK_SET))
+			{
+				logp("Could not fseeko in forward_sbuf(): %s\n",
+					strerror(errno));
+				free_sbuf(b);
+				free_sbuf(&latest);
+				return -1;
+			}
+			//memcpy(b, &latest, sizeof(struct sbuf));
+			return 0;
+		}
+
+		memcpy(&latest, b, sizeof(struct sbuf));
+		init_sbuf(b);
+	}
+	// Not reached.
+	free_sbuf(b);
+	free_sbuf(&latest);
+	return 0;
+}
+
+static int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, gzFile cmanfp, struct dpth *dpth, struct config *cconf, struct cntr *cntr)
+{
+	int ret=0;
+	struct sbuf p1b;
+	struct sbuf p2b;
+	struct sbuf ucb;
+
+	// Go to the end of p2fp.
+	if(forward_sbuf(p2fp, NULL, &p2b, NULL, 0 /* no seekback */, cntr))
+		goto error;
+	logp("last entry in phase2: %s (%s)\n", p2b.path, p2b.datapth);
+
+	// Now need to go to the appropriate places in p1zp and unchanged.
+	// The unchanged file needs to be positioned just before the found
+	// entry, otherwise it ends up having a duplicated entry.
+	if(forward_sbuf(NULL, p1zp, &p1b, &p2b, 0 /* no seekback */, cntr)
+	  || forward_sbuf(ucfp, NULL, &ucb, &p2b, 1 /* seekback */, cntr))
+		goto error;
+	logp("equivalent entry in phase1: %s\n", p1b.path);
+	logp("equivalent entry in unchanged: %s\n", ucb.path);
+
+	// Now should have all file pointers in the right places to resume.
+	if(set_dpth_from_string(dpth, p2b.datapth, cconf))
+	{
+		logp("unable to set dpth from p2 datapth: %s\n", p2b.datapth);
+		goto error;
+	}
+	incr_dpth(dpth, cconf);
+
+	goto end;
+error:
+	ret=-1;
+end:
+	free_sbuf(&p1b);
+	free_sbuf(&p2b);
+	free_sbuf(&ucb);
+	return ret;
+}
+
+int backup_phase2_server(gzFile *cmanfp, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *datadirtmp, struct dpth *dpth, const char *currentdata, const char *working, const char *client, struct cntr *p1cntr, int resume, struct cntr *cntr, struct config *cconf)
 {
 	int ars=0;
 	int ret=0;
-	int quit=0;
 	gzFile p1zp=NULL;
 	char *deltmppath=NULL;
 	char *last_requested=NULL;
+	// Where to write phase2data.
+	// Data is not getting written to a compressed file.
+	// This is important for recovery if the power goes.
+	FILE *p2fp=NULL;
+	// unchanged data
+	FILE *ucfp=NULL;
 
 	struct sbuf cb;		// file list in current manifest
 	struct sbuf p1b;	// file list from client
@@ -521,13 +635,32 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzF
 	init_sbuf(&p1b);
 	init_sbuf(&rb);
 
-	if(!(p1zp=gzopen_file(phase1data, "rb")))
-		return -1;
-
 	if(!(deltmppath=prepend_s(working, "delta.tmp", strlen("delta.tmp"))))
-		return -1;
+		goto error;
 
-	while(!quit)
+	if(!(p1zp=gzopen_file(phase1data, "rb")))
+		goto error;
+
+	// Open in read+write mode, so that they can be read through if
+	// we need to resume.
+	// First, open them in a+ mode, so that they will be created if they
+	// do not exist.
+	if(!(ucfp=open_file(unchangeddata, "a+b")))
+		goto error;
+	if(!(p2fp=open_file(phase2data, "a+b")))
+		goto error;
+	close_fp(&ucfp);
+	close_fp(&p2fp);
+
+	if(!(ucfp=open_file(unchangeddata, "r+b")))
+		goto error;
+	if(!(p2fp=open_file(phase2data, "r+b")))
+		goto error;
+
+	if(resume && do_resume(p1zp, p2fp, ucfp, cmanfp, dpth, cconf, cntr))
+		goto error;
+
+	while(1)
 	{
 		int sts=0;
 		//logp("in loop, %s\n", *cmanfp?"got cmanfp":"no cmanfp");
@@ -539,16 +672,13 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzF
 		  && (ars=do_stuff_to_receive(&rb, p2fp, datadirtmp, dpth,
 			working, &last_requested, deltmppath, cntr, cconf)))
 		{
-			if(ars<0) ret=-1;
+			if(ars<0) goto error;
 			// 1 means ok.
 			break;
 		}
 
 		if((sts=do_stuff_to_send(&p1b, &last_requested))<0)
-		{
-			ret=-1;
-			break;
-		}
+			goto error;
 
 		if(!sts && p1zp)
 		{
@@ -556,14 +686,13 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzF
 
 		   if((ars=sbuf_fill_phase1(NULL, p1zp, &p1b, cntr)))
 		   {
-			if(ars<0) { ret=-1; quit++; } // error
+			if(ars<0) goto error;
 			// ars==1 means it ended ok.
 			gzclose_fp(&p1zp);
-			//free_sbuf(&p1b);
+			//logp("ended OK - write phase2end");
 			if(async_write_str(CMD_GEN, "backupphase2end"))
-				break;
+				goto error;
 		   }
-		   if(ret) continue;
 
 		   //logp("check: %s\n", p1b.path);
 
@@ -571,7 +700,7 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzF
 		   {
 			// No old manifest, need to ask for a new file.
 			//logp("no cmanfp\n");
-			if(process_new(&p1b, p2fp, uczp, cntr)) return -1;
+			if(process_new(&p1b, p2fp, ucfp, cntr)) goto error;
 		   }
 		   else
 		   {
@@ -582,15 +711,10 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzF
 			if(cb.path)
 			{
 				if((ars=maybe_process_file(&cb, &p1b,
-					p2fp, uczp,
+					p2fp, ucfp,
 					currentdata, cntr, cconf)))
 				{
-					if(ars<0)
-					{
-						ret=-1;
-						quit++;
-						break;
-					}
+					if(ars<0) goto error;
 					// Do not free it - need to send stuff.
 					continue;
 				}
@@ -602,29 +726,19 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzF
 				free_sbuf(&cb);
 				if((ars=sbuf_fill(NULL, *cmanfp, &cb, cntr)))
 				{
-					if(ars<0) // error
-					{
-						ret=-1;
-						quit++;
-						break;
-					}
 					// ars==1 means it ended ok.
+					if(ars<0) goto error;
 					gzclose_fp(cmanfp);
 		//logp("ran out of current manifest\n");
-					if(process_new(&p1b, p2fp, uczp, cntr))
-						return -1;
+					if(process_new(&p1b, p2fp, ucfp, cntr))
+						goto error;
 					break;
 				}
 		//logp("against: %s\n", cb.path);
 				if((ars=maybe_process_file(&cb, &p1b,
-					p2fp, uczp, currentdata, cntr, cconf)))
+					p2fp, ucfp, currentdata, cntr, cconf)))
 				{
-					if(ars<0)
-					{
-						ret=-1;
-						quit++;
-						break;
-					}
+					if(ars<0) goto error;
 					// Do not free it - need to send stuff.
 					break;
 				}
@@ -633,11 +747,18 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, FILE *p2fp, gzF
 		}
 	}
 
+	goto end;
+
+error:
+	ret=-1;
+end:
 	free(deltmppath);
 	free_sbuf(&cb);
 	free_sbuf(&p1b);
 	free_sbuf(&rb);
 	gzclose_fp(&p1zp);
+	close_fp(&p2fp);
+	close_fp(&ucfp);
 	if(!ret) unlink(phase1data);
 
 	logp("End phase2 (receive file data)\n");

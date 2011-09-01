@@ -1,3 +1,7 @@
+  * Improvements to the counters and status monitor - remember the phase1
+    scan counters for later phases to use for things like estimated times. 
+  * Add 'working_dir_recovery_method = resume' option, which continues a
+    backup from the point it was interrupted.
   * Add a useful message about options when run with '-h' or '-?'.
   * Get the client to pass its version to the server. The minimum version the
     client needs to be is now this release.

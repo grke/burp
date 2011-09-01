@@ -166,7 +166,7 @@ Run as a particular group. This can be overridden by the client configuration fi
 \fBumask=[umask]\fR
 Set the file creation umask. Default is 0022.
 .TP
-\fBworking_dir_recovery_method=[merge|use|delete]\fR
+\fBworking_dir_recovery_method=[resume|merge|use|delete]\fR
 This option tells the server what to do when it finds the working directory of an interrupted backup (perhaps somebody pulled the plug on the server, or something). This can be overridden by the client configurations files in clientconfdir
 on the server. Options are...
 .TP
@@ -175,6 +175,8 @@ on the server. Options are...
 \fBuse:\fR Convert the working directory into a complete backup.
 .TP
 \fBmerge:\fR Merge the working directory with the previous complete backup.  The resulting backup will contain the newest files from them both.  This option takes effect when you try to do a new backup on the client that was interrupted. Once the old working directory is dealt with, an entirely new backup will be made.
+.TP
+\fBresume:\fR Simply continue the previous backup from the point at which it left off.
 .TP
 \fBssl_cert_ca=[path]\fR
 The path to the SSL CA certificate. This file will probably be the same on both the server and the client. The file should contain just the certificate in PEM format

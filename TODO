@@ -13,10 +13,11 @@
 	(generic linux and freebsd support is done - do solaris next)
 
 * Improve the status monitor / counters.
-	- Remember the phase1 scan counters so that later phases can have
-	  things like estimated times.
+	- Include the final jiggling around time in estimates.
 	- Counters are missing from the logs when a backup is completed via
 	  working dir recovery.
+	- Client knows no counters when resuming, because it didn't do the
+	  phase1 scan. Have the server send it the counters.
 	- Can something be done to make key presses more responsive?
 
 * Do not compress manifests and logs when compression is turned off.
@@ -43,14 +44,13 @@
 * Try to make backup_phase4_server more efficient. For example, a storage
   server using a CIFS mounted disk appears very slow when I have a backup
   containing 1,500,000 small files with very few changes.
+  (This may have been exacerbated by working dir recovery 'merge'. With
+   'resume', it may be fairly improved).
 
 * Investigate Windows 'bare metal restore'.
 
 * Think about having a 'friendly' way of doing restores, as I have known some
   people to complain about having to type things on the command lne.
-
-* Add 'working_dir_recovery_method = resume' option, which would continue a
-  backup from the point it was interrupted.
 
 * Add some kind of generic method for passing new fields from the client to
   the server, so that clients are less likely to have to upgrade.
@@ -58,10 +58,6 @@
 
 * Break the stupidly long find_files() function down into smaller pieces.
   (partly done)
-
-* When a client is waiting a very long time on working directory recovery, it
-  can get stuck in its select loop. Have some kind of a timeout. Or, go into
-  a different kind of loop where it keeps trying to make a fresh connection.
 
 * burp -a e: 'estimate' option - just run backup phase1 to find out roughly how 
   much space a client will use.
@@ -72,4 +68,11 @@
 
 * Make transfer_gzfile_in() and send_whole_file[_gz]() check checksums.
 
-* Looks like the manifest.gz.tmp.tmp problem is back in working dir recovery.
+* Stuff that will likely go away when working dir recovery 'merge' is
+  deprecated, which should be quite soon since 'resume' is now working:
+	* Looks like the manifest.gz.tmp.tmp problem is back in working dir
+	  recovery, when using 'merge'.
+	* When a client is waiting a very long time on working directory
+	  recovery, it can get stuck in its select loop. Have some kind of a
+	  timeout. Or, go into a different kind of loop where it keeps trying
+	  to make a fresh connection.

@@ -428,7 +428,6 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 		logp(" will generate reverse deltas\n");
 	}
 
-	printf("before get_tmp_filename c: %s\n", manifest);
 	if(!(tmpman=get_tmp_filename(manifest))) return -1;
 	if(lstat(manifest, &statp))
 	{

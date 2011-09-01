@@ -20,11 +20,12 @@
 #include <regex.h>
 
 // Return 0 for OK, -1 for error, 1 for timer conditions not met.
-static int maybe_check_timer(const char *phase1str, struct config *conf)
+static int maybe_check_timer(const char *phase1str, struct config *conf, int *resume)
 {
 	char rcmd;
 	char *rdst=NULL;
 	size_t rlen=0;
+	int complen=0;
 
         if(async_write_str(CMD_GEN, phase1str)) return -1;
 
@@ -36,22 +37,36 @@ static int maybe_check_timer(const char *phase1str, struct config *conf)
                 logp("Timer conditions not met.\n");
                 return 1;
         }
-        else if(rcmd!=CMD_GEN || strncmp(rdst, "ok", 2))
+        else if(rcmd!=CMD_GEN)
         {
                 logp("unexpected command from server: %c:%s\n", rcmd ,rdst);
                 free(rdst);
                 return -1;
         }
 
+	if(!strncmp(rdst, "ok", 2))
+		complen=3;
+	else if(!strncmp(rdst, "resume", 6))
+	{
+		complen=7;
+		*resume=1;
+		logp("server wants to resume previous backup.\n");
+	}
+	else
+	{
+                logp("unexpected command from server: %c:%s\n", rcmd ,rdst);
+                free(rdst);
+                return -1;
+	}
         // The server now tells us the compression level in the OK response.
-        if(strlen(rdst)>3) conf->compression=atoi(rdst+3);
+        if(strlen(rdst)>3) conf->compression=atoi(rdst+complen);
         logp("Compression level: %d\n", conf->compression);
 
 	return 0;
 }
 
 // Return 0 for OK, -1 for error, 1 for timer conditions not met.
-static int do_backup_client(struct config *conf, const char *phase1str, struct cntr *p1cntr, struct cntr *cntr)
+static int do_backup_client(struct config *conf, const char *phase1str, int resume, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ret=0;
 
@@ -65,10 +80,11 @@ logp("do backup client\n");
 #endif
 
 	// Scan the file system and send the results to the server.
-	if(!ret) ret=backup_phase1_client(conf, p1cntr, cntr);
+	// Skip phase1 if the server wanted to resume.
+	if(!ret && !resume) ret=backup_phase1_client(conf, p1cntr, cntr);
 
 	// Now, the server will be telling us what data we need to send.
-	if(!ret) ret=backup_phase2_client(conf, p1cntr, cntr);
+	if(!ret) ret=backup_phase2_client(conf, p1cntr, resume, cntr);
 
 #if defined(WIN32_VSS)
 	win32_stop_vss();
@@ -164,7 +180,9 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 				phase1str="backupphase1timed";
 			case ACTION_BACKUP:
 			{
-				if(!(ret=maybe_check_timer(phase1str, conf)))
+				int resume=0;
+				if(!(ret=maybe_check_timer(phase1str,
+					conf, &resume)))
 				{
 					if(conf->backup_script_pre
 					 && run_script(
@@ -179,8 +197,9 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 					  &p1cntr)) ret=-1;
 
 					if(!ret && do_backup_client(conf,
-						"backupphase1", &p1cntr, &cntr))
-							ret=-1;
+						"backupphase1", resume,
+							&p1cntr, &cntr))
+								ret=-1;
 
 					if((conf->backup_script_post_run_on_fail
 					  || !ret) && conf->backup_script_post)

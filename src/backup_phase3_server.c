@@ -17,7 +17,7 @@ int backup_phase3_server(const char *phase2data, const char *unchangeddata, cons
 	int ars=0;
 	int ret=0;
 	int pcmp=0;
-	gzFile uczp=NULL;
+	FILE *ucfp=NULL;
 	FILE *p2fp=NULL;
 	FILE *mp=NULL;
 	gzFile mzp=NULL;
@@ -27,15 +27,14 @@ int backup_phase3_server(const char *phase2data, const char *unchangeddata, cons
 
 	logp("Begin phase3 (merge manifests)\n");
 
-	printf("before get_tmp_filename d: %s\n", manifest);
 	if(!(manifesttmp=get_tmp_filename(manifest))) return -1;
 
-        if(!(uczp=gzopen_file(unchangeddata, "rb"))
+        if(!(ucfp=open_file(unchangeddata, "rb"))
 	  || !(p2fp=open_file(phase2data, "rb"))
 	  || (compress && !(mzp=gzopen_file(manifesttmp, comp_level(cconf))))
           || (!compress && !(mp=open_file(manifesttmp, "wb"))))
 	{
-		gzclose_fp(&uczp);
+		close_fp(&ucfp);
 		gzclose_fp(&mzp);
 		close_fp(&p2fp);
 		close_fp(&mp);
@@ -46,13 +45,13 @@ int backup_phase3_server(const char *phase2data, const char *unchangeddata, cons
 	init_sbuf(&ucb);
 	init_sbuf(&p2b);
 
-	while(uczp || p2fp)
+	while(ucfp || p2fp)
 	{
-		if(uczp && !ucb.path && (ars=sbuf_fill(NULL, uczp, &ucb, cntr)))
+		if(ucfp && !ucb.path && (ars=sbuf_fill(ucfp, NULL, &ucb, cntr)))
 		{
 			if(ars<0) { ret=-1; break; }
 			// ars==1 means it ended ok.
-			gzclose_fp(&uczp);
+			close_fp(&ucfp);
 		}
 		if(p2fp && !p2b.path && (ars=sbuf_fill(p2fp, NULL, &p2b, cntr)))
 		{
@@ -113,7 +112,7 @@ int backup_phase3_server(const char *phase2data, const char *unchangeddata, cons
 
 	close_fp(&p2fp);
 	close_fp(&mp);
-	gzclose_fp(&uczp);
+	close_fp(&ucfp);
 	gzclose_fp(&mzp);
 
 	if(!ret)

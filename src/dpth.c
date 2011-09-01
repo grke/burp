@@ -137,3 +137,17 @@ int dpth_is_compressed(const char *datapath)
 	if((dp=strrchr(datapath, '.')) && !strcmp(dp, ".gz")) return 1;
 	return 0;
 }
+
+int set_dpth_from_string(struct dpth *dpth, const char *datapath, struct config *cconf)
+{
+	unsigned int a=0;
+	unsigned int b=0;
+	unsigned int c=0;
+	if((sscanf(datapath, "%04X/%04X/%04X", &a, &b, &c))!=3)
+		return -1;
+	dpth->prim=a;
+	dpth->seco=b;
+	dpth->tert=c;
+	mk_dpth(dpth, cconf);
+	return 0;
+}

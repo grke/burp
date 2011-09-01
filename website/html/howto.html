@@ -91,7 +91,7 @@ equivalent). This makes the client ask the server every twenty minutes whether
 it is yet time for a new backup. It is probably a good idea to change the
 numbers for each client, in order to spread the load a bit:
 MAILTO=
-7,27,47 * * * * root    /usr/sbin/burp -a t
+7,27,47 * * * * root    /sbin/burp -a t
 
 WINDOWS CLIENT
 
@@ -152,47 +152,52 @@ SERVER OPTIONS
 
        -a s   Run this to connect to a running server to get a live monitor of
 	      the status of all your backup clients.  If  your	server	config
-	      file is not in the default location, you will also need to spec-
+	      file is not in the default location, you will also need to spec‐
 	      ify the path with the '-c' option.  The  live  monitor  requires
 	      ncurses support at compile time.
 
+       -a S   Similar to '-a s', but it prints the main status monitor summary
+	      screen to stdout. The intention is that a script	can  run  this
+	      and  email  an  administrator  the  output  on  a cron job. This
+	      doesn't require ncurses support.
+
        -l [path]
-	      Path  to	log file. The default is stdout. This option overrides
-	      the logfile option in the config file. Use /dev/null to  deacti-
+	      Path to log file. The default is stdout. This  option  overrides
+	      the  logfile option in the config file. Use /dev/null to deacti‐
 	      vate or '' to reactivate output.
 
 
 CLIENT OPTIONS
        -a [b|t|r|l|L|v|]
-	      Short  for  'action'.  The  arguments mean backup, timed backup,
+	      Short for 'action'. The arguments  mean  backup,	timed  backup,
 	      restore, list, long list or verify, respectively.
 
        -b [number|a]
-	      Short for 'backup number'. The argument is a number, or  'a'  to
+	      Short  for  'backup number'. The argument is a number, or 'a' to
 	      select all backups.
 
        -c [path]
-	      Short  for  'config  file'. The argument is a path to the config
-	      file.  The  default  is	/etc/burp/burp.conf,   or   C:\Program
+	      Short for 'config file'. The argument is a path  to  the	config
+	      file.   The   default   is  /etc/burp/burp.conf,	or  C:\Program
 	      Files\Burp\burp.conf on Windows.
 
        -d [path]
-	      Short  for 'directory'. The argument is a path to an alternative
+	      Short for 'directory'. The argument is a path to an  alternative
 	      directory to restore to.
 
        -f [path]
-	      Short for 'force overwrite'. Without this option set, a  restore
+	      Short  for 'force overwrite'. Without this option set, a restore
 	      will not overwrite existing files.
 
        -r [regex]
-	      Short  for  'regular  expression'.  The  argument  is  a regular
-	      expression with which to match backup files. Use	it  for  lists
+	      Short for  'regular  expression'.  The  argument	is  a  regular
+	      expression  with	which  to match backup files. Use it for lists
 	      and restores.
 
-       -l logfile
-	      Short  for  'log	file'. The argument is a path to the log file.
-	      The default is stdout. This option overrides the logfile	option
-	      in the config file. Use /dev/null to deactivate or '' to reacti-
+       -l [path]
+	      Short for 'log file'. The argument is a path to  the  log  file.
+	      The  default is stdout. This option overrides the logfile option
+	      in the config file. Use /dev/null to deactivate or '' to reacti‐
 	      vate output.
 
 
@@ -213,16 +218,16 @@ EXAMPLES
 	      Lists all the files in all the backups.
 
        burp -a l -b 1 -r myregex
-	      Lists all the files in backup number 1 that  match  the  regular
+	      Lists  all  the  files in backup number 1 that match the regular
 	      expression 'myregex'.
 
        burp -a L -b 1 -r myregex
-	      Long lists all the files in backup number 1 that match the regu-
+	      Long lists all the files in backup number 1 that match the regu‐
 	      lar expression 'myregex'. This is like doing an 'ls -l'.
 
        burp -a r -b 1 -r myregex
 	      Restores all the files in backup number 1 that match the regular
-	      expression  'myregex' back to their original location. You won't
+	      expression 'myregex' back to their original location. You  won't
 	      be given a warning if the files already exist there, so use with
 	      caution.
 
@@ -231,22 +236,22 @@ EXAMPLES
 	      expression 'myregex' into the directory /tmp/restoredir.
 
        burp -a r
-	      Restores all the files in the most recent backup to their origi-
-	      nal  location. You won't be given a warning if the files already
+	      Restores all the files in the most recent backup to their origi‐
+	      nal location. You won't be given a warning if the files  already
 	      exist there, so use with caution.
 
        burp -a v
 	      Verifies the most recent backup.
 
        burp -a v -b 1 -r myregex
-	      Verifies everything in backup number 1 that matches the  regular
+	      Verifies	everything in backup number 1 that matches the regular
 	      expression 'myregex'.
 
        burp -a t
-	      Timed  backup.  The same as 'burp -a b', except that a script is
-	      run on the server before deciding to go ahead. The intention  is
-	      that  this  command  will  be run on a repeating cron job with a
-	      short interval, and that the server will decide when it is  time
+	      Timed backup. The same as 'burp -a b', except that a  script  is
+	      run  on the server before deciding to go ahead. The intention is
+	      that this command will be run on a repeating  cron  job  with  a
+	      short  interval, and that the server will decide when it is time
 	      for a new backup.
 
 
@@ -258,7 +263,7 @@ SERVER CONFIGURATION FILE OPTIONS
 	      Defines the main TCP port that the server listens on.
 
        status_port=[port number]
-	      Defines  the  TCP  port  that  the  server listens on for status
+	      Defines the TCP port that  the  server  listens  on  for	status
 	      requests.
 
        directory=[path]
@@ -268,7 +273,7 @@ SERVER CONFIGURATION FILE OPTIONS
 	      Path to the directory that contains client configuration files.
 
        lockfile=[path]
-	      Path to the lockfile that ensures that two server processes can-
+	      Path to the lockfile that ensures that two server processes can‐
 	      not run simultaneously.
 
        pidfile=[path]
@@ -282,62 +287,65 @@ SERVER CONFIGURATION FILE OPTIONS
 	      configuration files in clientconfdir on the server.
 
        hardlinked_archive=[0|1]
-	      On the server, defines whether to keep hardlinked files  in  the
-	      backups,	or  whether  to generate reverse deltas and delete the
-	      original files. Can be set to either 0 (off) or 1 (on).	Disad-
-	      vantage:	More  disk space will be used Advantage: Restores will
+	      On  the  server, defines whether to keep hardlinked files in the
+	      backups, or whether to generate reverse deltas  and  delete  the
+	      original	files. Can be set to either 0 (off) or 1 (on).	Disad‐
+	      vantage: More disk space will be used Advantage:	Restores  will
 	      be faster, and since no reverse deltas need to be generated, the
-	      time  and  effort  the  server  needs  at the end of a backup is
+	      time and effort the server needs at  the	end  of  a  backup  is
 	      reduced.
 
        librsync=[0|1]
-	      When set to 0, delta differencing will not take place. That  is,
+	      When  set to 0, delta differencing will not take place. That is,
 	      when a file changes, the server will request the whole new file.
-	      The default is 1. This option can be overridden  by  the	client
+	      The  default  is	1. This option can be overridden by the client
 	      configuration files in clientconfdif on the server.
 
        compression=[gzip0-9]
-	      Choose  the  level of gzip compression. Setting 0 or gzip0 turns
-	      compression off. The default is gzip9. This option can be  over-
+	      Choose the level of gzip compression. Setting 0 or  gzip0  turns
+	      compression  off. The default is gzip9. This option can be over‐
 	      ridden by the client configuration files in clientconfdif on the
 	      server.
 
        client_lockdir=[path]
 	      Path to the directory in which to keep per-client lock files. By
-	      default,	this  is  set  to  the	path  given by the 'directory'
+	      default, this is set  to	the  path  given  by  the  'directory'
 	      option.
 
        user=[username]
-	      Run as a particular user. This can be overridden by  the	client
+	      Run  as  a particular user. This can be overridden by the client
 	      configuration files in clientconfdir on the server.
 
        group=[groupname]
-	      Run  as a particular group. This can be overridden by the client
+	      Run as a particular group. This can be overridden by the	client
 	      configuration files in clientconfdir on the server.
 
        umask=[umask]
 	      Set the file creation umask. Default is 0022.
 
-       working_dir_recovery_method=[merge|use|delete]
-	      This option tells the server what to do when it finds the  work-
-	      ing  directory of an interrupted backup (perhaps somebody pulled
+       working_dir_recovery_method=[resume|merge|use|delete]
+	      This  option tells the server what to do when it finds the work‐
+	      ing directory of an interrupted backup (perhaps somebody	pulled
 	      the plug on the server, or something). This can be overridden by
-	      the  client configurations files in clientconfdir on the server.
+	      the client configurations files in clientconfdir on the  server.
 	      Options are...
 
        delete: Just delete the old working directory.
 
        use: Convert the working directory into a complete backup.
 
-       merge: Merge the working directory with the previous  complete  backup.
-       The  resulting  backup  will  contain  the newest files from them both.
-       This option takes effect when you try to do a new backup on the	client
-       that  was interrupted. Once the old working directory is dealt with, an
+       merge:  Merge  the working directory with the previous complete backup.
+       The resulting backup will contain the  newest  files  from  them  both.
+       This  option takes effect when you try to do a new backup on the client
+       that was interrupted. Once the old working directory is dealt with,  an
        entirely new backup will be made.
+
+       resume:	Simply continue the previous backup from the point at which it
+       left off.
 
        ssl_cert_ca=[path]
 	      The path to the SSL CA certificate. This file will  probably  be
-	      the same on both the server and the client. The file should con-
+	      the same on both the server and the client. The file should con‐
 	      tain just the certificate in PEM format
 
        ssl_cert=[path]
@@ -369,7 +377,7 @@ SERVER CONFIGURATION FILE OPTIONS
 	      run. The first two arguments are the client name and the path to
 	      the 'current' storage directory. The next  three	arguments  are
 	      reserved, and user arguments are appended after that. An example
-	      timer script is provided. The timer_script option can  be  over-
+	      timer script is provided. The timer_script option can  be  over‐
 	      riddden  by  the	client configuration files in clientconfdir on
 	      the server.
 
@@ -382,12 +390,12 @@ SERVER CONFIGURATION FILE OPTIONS
 	      Path to the script to run when a backup succeeds. User arguments
 	      are appended after the first five reserved arguments. An example
 	      notify script is provided. The notify_success_script option  can
-	      be  overriddden  by  the	client	configuration files in client-
+	      be  overriddden  by  the	client	configuration files in client‐
 	      confdir on the server.
 
        notify_success_arg=[string]
 	      A user-definable argument to the notify success script. You  can
-	      have  many of these. The notify_success_arg options can be over-
+	      have  many of these. The notify_success_arg options can be over‐
 	      riddden by the client configuration files  in  clientconfdir  on
 	      the server.
 
@@ -415,7 +423,7 @@ CLIENT CONFIGURATION FILE OPTIONS
 	      Defines the password to send to the server.
 
        lockfile=[path]
-	      Path to the lockfile that ensures that two client processes can-
+	      Path to the lockfile that ensures that two client processes can‐
 	      not run simultaneously (this currently doesn't work on Windows).
 
        pidfile=[path]
@@ -460,7 +468,7 @@ CLIENT CONFIGURATION FILE OPTIONS
 
        ssl_cert_ca=[path]
 	      The  path  to the SSL CA certificate. This file will probably be
-	      the same on both the server and the client. The file should con-
+	      the same on both the server and the client. The file should con‐
 	      tain just the certificate in PEM format
 
        ssl_cert=[path]
@@ -486,15 +494,15 @@ CLIENT CONFIGURATION FILE OPTIONS
 	      turns off delta differencing so  that  whenever  a  client  file
 	      changes, the whole new file will be uploaded on the next backup.
 	      ALSO IMPORTANT: If you manage to lose your encryption  password,
-	      you  will not be able to unencrypt your files. You should there-
-	      fore think about having a copy of the encryption password  some-
+	      you  will not be able to unencrypt your files. You should there‐
+	      fore think about having a copy of the encryption password  some‐
 	      where  off-box,  in  case  of  your  client  hard  disk failing.
 	      FINALLY: If you change your encryption password, you will end up
 	      with  a mixture of files on the server with different encryption
 	      and it may become tricky to restore more	than  one  file  at  a
 	      time.  For  this reason, if you change your encryption password,
 	      you may want to start a fresh chain of backups  (by  moving  the
-	      original set aside, for example). Burp will cope fine with turn-
+	      original set aside, for example). Burp will cope fine with turn‐
 	      ing the same encryption password on and off between backups, and
 	      will  restore  a backup of mixed encrypted and unencrypted files
 	      without a problem.
@@ -589,34 +597,35 @@ SERVER CLIENTCONFDIR FILE
 
 Some notes on SSL certificates
        The burp example configs come with example SSL certificates  and  keys.
-       You can use these and burp will work. But if you are worried about net-
+       You can use these and burp will work. But if you are worried about net‐
        work security, you should generate your own certificates and  keys  and
        point  your config files to them. To create the example files, I used a
        handy  interface  to  openssl,	called	 'tinyca'   (http://tinyca.sm-
        zone.net/).  If	you  are  using  Debian,  you can run 'apt-get install
-       tinyca' to get it.
+       tinyca' to get it. There is also the option of using burp_ca, which you
+       can find in the source distribution, courtesy of Patrick Koppen.
 
 
 Examining backups
-       As well as using the client list options described above,  you  can  go
-       directly  to  the  storage  directory  on the server. The backups for a
-       client are in the directory named after the client. Inside each	backup
+       As  well  as  using the client list options described above, you can go
+       directly to the storage directory on the  server.  The  backups	for  a
+       client  are in the directory named after the client. Inside each backup
        directory is a file called manifest.gz.
 
-       This  contains  a  list	of all the files in the backup, and where they
+       This contains a list of all the files in the  backup,  and  where  they
        originally came from on the client.
 
-       There is also a 'log.gz' file in the backup directory,  which  contains
+       There  is  also a 'log.gz' file in the backup directory, which contains
        the output generated by the server during the backup.
 
        The 'data' directory contains complete backup files.
 
-       The  'deltas.reverse'  directory  contains  reverse  deltas that can be
-       applied to the data from the next backup in the sequence (indicated  by
+       The 'deltas.reverse' directory contains	reverse  deltas  that  can  be
+       applied	to the data from the next backup in the sequence (indicated by
        the contents of the 'forward' file).
 
-       Anything  with  a .gz suffix is compressed in gzip format.  You can use
-       standard tools, such as zcat, zless or cp, to view them	or  copy  them
+       Anything with a .gz suffix is compressed in gzip format.  You  can  use
+       standard  tools,  such  as zcat, zless or cp, to view them or copy them
        elsewhere.
 
 
@@ -689,7 +698,7 @@ Burp, don't suck.
 </td>
 <td align="right">
 <font color="#99ccff">
-Last updated: July 2011
+Last updated: September 2011
 </font>
 </td></tr></table>
 

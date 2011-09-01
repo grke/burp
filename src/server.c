@@ -220,6 +220,30 @@ static int setup_signals(int oldmax_children, int max_children)
 	return 0;
 }
 
+static int open_log(const char *realworking)
+{
+	FILE *logfp=NULL;
+	char *logpath=NULL;
+
+	if(!(logpath=prepend_s(realworking, "log", strlen("log"))))
+	{
+		log_and_send("out of memory");
+		return -1;
+	}
+	if(!(logfp=open_file(logpath, "ab")) || set_logfp(logfp))
+	{
+		char msg[256]="";
+		snprintf(msg, sizeof(msg),
+			"could not open log file: %s", logpath);
+		log_and_send(msg);
+		free(logpath);
+		return -1;
+	}
+	free(logpath);
+
+	return 0;
+}
+
 static int do_backup_server(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *manifest, const char *forward, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *client, struct cntr *p1cntr, struct cntr *cntr, int resume)
 {
 	int ret=0;
@@ -235,9 +259,6 @@ static int do_backup_server(const char *basedir, const char *current, const char
 	char *realworking=NULL;
 	char tstmp[64]="";
 	char *datadirtmp=NULL;
-	// Where to write messages
-	char *logpath=NULL;
-	FILE *logfp=NULL;
 
 	struct dpth dpth;
 
@@ -273,6 +294,9 @@ static int do_backup_server(const char *basedir, const char *current, const char
 			log_and_send("out of memory");
 			goto error;
 		}
+		if(open_log(realworking))
+			goto error;
+		logp("Skip phase1 (file system scan)\n");
 	}
 	else
 	{
@@ -280,8 +304,7 @@ static int do_backup_server(const char *basedir, const char *current, const char
 
 		if(get_new_timestamp(basedir, tstmp, sizeof(tstmp)))
 			goto error;
-		if(!(realworking=prepend_s(basedir, tstmp, strlen(tstmp)))
-		  || !(logpath=prepend_s(realworking, "log", strlen("log"))))
+		if(!(realworking=prepend_s(basedir, tstmp, strlen(tstmp))))
 		{
 			log_and_send("out of memory");
 			goto error;
@@ -293,11 +316,8 @@ static int do_backup_server(const char *basedir, const char *current, const char
 			log_and_send(msg);
 			goto error;
 		}
-		if(!(logfp=open_file(logpath, "ab")) || set_logfp(logfp))
+		else if(open_log(realworking))
 		{
-			snprintf(msg, sizeof(msg),
-			  "could not open log file: %s", logpath);
-			log_and_send(msg);
 			goto error;
 		}
 		else if(symlink(tstmp, working)) // relative link to the real work dir
@@ -397,7 +417,6 @@ end:
 	if(newpath) free(newpath);
 	if(cmanifest) free(cmanifest);
 	if(datadirtmp) free(datadirtmp);
-	if(logpath) free(logpath);
 	set_logfp(NULL); // does an fclose on logfp.
 	return ret;
 }

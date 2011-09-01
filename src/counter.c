@@ -235,22 +235,22 @@ static void quint_print(const char *msg, unsigned long long a, unsigned long lon
 	switch(form)
 	{
 		case FORMAT_SERVER:
-			if(!d) return;
+			if(!d && !a && !b && !c) return;
 			logc("% 22s % 9llu % 9llu % 9llu % 9llu |% 9llu\n",
 				msg, a, b, c, a+b+c, d);
 			break;
 		case FORMAT_CLIENT_DATA:
-			if(!d) return;
+			if(!d && !a && !b && !c) return;
 			logc("% 22s % 9llu % 9llu % 9s % 9llu |% 9llu\n",
 				msg, a, b, "-", a+b+c, d);
 			break;
 		case FORMAT_CLIENT_NODE:
-			if(!d) return;
+			if(!d && !a && !b && !c) return;
 			logc("% 22s % 9s % 9s % 9s % 9s |% 9llu\n",
 				msg, "-", "-", "-", "-", d);
 			break;
 		case FORMAT_CLIENT_RESTORE:
-			if(!c) return;
+			if(!d && !a && !b && !c) return;
 			logc("% 22s % 9s % 9s % 9s % 9llu |% 9s\n",
 				msg, "-", "-", "-", c, "-");
 			break;

@@ -578,10 +578,11 @@ static int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, gzFile cmanfp, struct 
 	struct sbuf p2b;
 	struct sbuf ucb;
 
+	logp("Setting up resume positions...\n");
 	// Go to the end of p2fp.
 	if(forward_sbuf(p2fp, NULL, &p2b, NULL, 0 /* no seekback */, cntr))
 		goto error;
-	logp("last entry in phase2: %s (%s)\n", p2b.path, p2b.datapth);
+	logp("  phase2:    %s (%s)\n", p2b.path, p2b.datapth);
 
 	// Now need to go to the appropriate places in p1zp and unchanged.
 	// The unchanged file needs to be positioned just before the found
@@ -589,8 +590,8 @@ static int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, gzFile cmanfp, struct 
 	if(forward_sbuf(NULL, p1zp, &p1b, &p2b, 0 /* no seekback */, cntr)
 	  || forward_sbuf(ucfp, NULL, &ucb, &p2b, 1 /* seekback */, cntr))
 		goto error;
-	logp("equivalent entry in phase1: %s\n", p1b.path);
-	logp("equivalent entry in unchanged: %s\n", ucb.path);
+	logp("  phase1:    %s\n", p1b.path);
+	logp("  unchanged: %s\n", ucb.path);
 
 	// Now should have all file pointers in the right places to resume.
 	if(set_dpth_from_string(dpth, p2b.datapth, cconf))

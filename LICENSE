@@ -1,17 +1,6 @@
-Burp started life as an extremely cut down and tweaked version of the Bacula
-code.
-The intention was to cut out everything except for the Windows VSS API parts
-and to combine that with librsync to make a new backup program.
-As well as the Windows VSS API parts these things remain:
-Some of src/findlib remain.
-A fragment of src/lib/berrno.c.
-Some Makefiles and configure scripts.
-
-The new Burp code is Copyright Graham Keeling.
-The license for the new Burp code continues to be AGPLv3.
-
-What follows are the original Bacula LICENSE declarations (stripped of
-references to deleted files), from bacula-5.0.3.
+What follows is a slightly modified version of the original Bacula LICENSE
+declarations (stripped of references to deleted files and 'Burp' replacing
+'Bacula' as appropriate, and some extra History), from bacula-5.0.3.
 They continue to be applicable.
 
 
@@ -20,42 +9,52 @@ The original Bacula code was Copyright Kern Sibbald and John Walker.
 After November 2004, it became Copyright Kern Sibbald, and finally,
 the copyright was transferred to the Free Software Foundation Europe
 on 15 November 2006. The license was changed from GPLv2 to AGPLv3
-on 24 July 2010.
+on 24 July 2010. The first version of Burp was released on 22 January
+2011, which was an extremely cut down and tweaked version of the Bacula code.
+The intention was to cut out everything except for the Windows VSS API parts
+and to combine that with librsync to make a new backup program.
+As well as the Windows VSS API parts these things remain:
+Some of src/findlib remain.
+A fragment of src/lib/berrno.c.
+Some Makefiles and configure scripts.
+The new Burp code is Copyright Graham Keeling.
+The license for the new Burp code continues to be AGPLv3.
 
 Trademark:
 The name Bacula is a registered trademark of Kern Sibbald.
+The name Burp is not a registered trademark of anybody.
 
 ===================================
 
 License:
-For the most part, Bacula is licensed under the AGPL version 3. This
+For the most part, Burp is licensed under the AGPL version 3. This
 code is listed under Copyright Free Software Foundation Europe e.V.
 What follows is the addition(s) to the AGPL version 3 license, that
 applies to code that is copyrighted by the Free Software Foundation
 Europe e.V.
 
 Linking: 
-As a special exception to the AGPLv3, the Bacula Project gives
-permission to link the code of its release of Bacula with the OpenSSL
+As a special exception to the AGPLv3, the Burp Project gives
+permission to link the code of its release of Burp with the OpenSSL
 project's "OpenSSL" library (or with modified versions of it that use
 the same license as the "OpenSSL" library), and distribute the linked
 executables.  You must obey the GNU Affero General Public License in all
 respects for all of the code used other than "OpenSSL".
 
-As a special exception to the AGPLv3, the Bacula Project gives
-permission to link the code of its release of the Bacula Win32 File
-daemon with the Microsoft supplied Volume Shadow Copy (VSS) libraries
+As a special exception to the AGPLv3, the Burp Project gives
+permission to link the code of its release of the Burp Windows client
+with the Microsoft supplied Volume Shadow Copy (VSS) libraries
 and distribute the linked executables.  You must obey the GNU General
 Public License in all respects for all of the code used other than for
 the Microsoft VSS code, where you must obey their license terms.
 
-The Bacula Project gives permission for plugins with AGPLv3 compatible
-licenses to be loaded and distributed with the Bacula executables as
+The Burp Project gives permission for plugins with AGPLv3 compatible
+licenses to be loaded and distributed with the Burp executables as
 long as the combined work is distributed under the terms listed in the 
-Bacula LICENSE file.  A full list of AGPLv3 compatible licenses can be
+Burp LICENSE file.  A full list of AGPLv3 compatible licenses can be
 found at: http://www.fsf.org/licensing/licenses/.  If you wish to load
 or distribute plugins with different licensing terms please contact
-the Bacula Project at: license@bacula.org
+the Burp Project via http://burp.grke.net/
              
 ===================================
 
@@ -63,14 +62,14 @@ the Bacula Project at: license@bacula.org
 What follows is information from the authors of the code:
 
 License:
-To the best of our knowledge, all code used in Bacula, which is 
+To the best of our knowledge, all code used in Burp, which is 
 copyrighted by a third party, has licenses that are compatible
 with the OpenSSL license, and so given the exception that we have 
-made to the AGPLv3 above, Bacula can be freely linked and distributed
+made to the AGPLv3 above, Burp can be freely linked and distributed
 with the OpenSSL libraries.
 
 Intellectual Property rights:
-Recipient understands that although each Contributor to Bacula grants
+Recipient understands that although each Contributor to Burp grants
 the licenses to its Contributions set forth herein, no assurances are
 provided by any Contributor that the Program does not infringe the
 patent or other intellectual property rights of any other entity.
@@ -85,47 +84,17 @@ Recipient's responsibility to acquire that license before distributing
 the Program.
 
 Copyrights:
-Each Contributor to Bacula represents that to its knowledge it has
+Each Contributor to Burp represents that to its knowledge it has
 sufficient copyright rights in its Contribution, if any, to grant
 the copyright license set forth in this Agreement.
 
-Code falling under the above conditions will be marked as follows:
-
-   Bacula® - The Network Backup Solution
-
-   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
-
-   The main author of Bacula is Kern Sibbald, with contributions from
-   many others, a complete list can be found in the file AUTHORS.
-   This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version three of the GNU Affero General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
-
-   This program is distributed in the hope that it will be useful, but
-   WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU Affero General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
-   02110-1301, USA.
-
-   Bacula® is a registered trademark of Kern Sibbald.
-
-   The licensor of Bacula is the Free Software Foundation Europe
-   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
-   Switzerland, email:ftf@fsfeurope.org.
-
-
 Windows:
-Certain source code used to build the Windows version of the
-Bacula File daemon is copyrighted and or trademarked by Microsoft
+Certain source code used to build the Windows version of
+Burp is copyrighted and or trademarked by Microsoft
 and may contain Microsoft intellectual property (examples:
 Microsoft VC++, the source to the VSS libraries, the Microsoft C
 runtime libraries).  As such we cannot and do not distribute that
-software.  We are permitted however to distribute Bacula with the
+software.  We are permitted however to distribute Burp with the
 necessary Microsoft libraries in binary form.
 
 You may obtain the parts that we cannot distribute as follows.  The
@@ -147,17 +116,17 @@ copyrighted code.
  src/win32/compat/sys/mtio.h (LGPL)
    Copyright (C) 1996, 1997 Free Software Foundation, Inc.
 
-Bacula can be enabled with data encryption and/or communications
+Burp can be enabled with data encryption and/or communications
 encryption. If this is the case, you will be including OpenSSL code that
 that contains cryptographic software written by Eric Young
 (eay@cryptsoft.com) and also software written by Tim Hudson
 (tjh@cryptsoft.com).
 
-There are parts of Bacula that are licensed under the LGPL so
+There are parts of Burp that are licensed under the LGPL so
 that those files may be used in proprietary code to interface with
-Bacula.
+Burp.
 
-Finally there are parts of Bacula that are in the public domain.
+Finally there are parts of Burp that are in the public domain.
              
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
 IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -175,7 +144,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 The entire AGPL is reproduced below, in the manuals distributed with the
-Bacula documentation and can also be found online on the GNU web site
+Burp documentation and can also be found online on the GNU web site
 as well as at www.bacula.org. You may also obtain a copy of the
 AGPL (or LGPL) by writing to: Free Software Foundation, Inc.,
 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA

@@ -174,7 +174,7 @@ on the server. Options are...
 .TP
 \fBuse:\fR Convert the working directory into a complete backup.
 .TP
-\fBmerge:\fR Merge the working directory with the previous complete backup.  The resulting backup will contain the newest files from them both.  This option takes effect when you try to do a new backup on the client that was interrupted. Once the old working directory is dealt with, an entirely new backup will be made.
+\fBmerge:\fR This option is deprecated - please use 'resume' instead. Merge the working directory with the previous complete backup.  The resulting backup will contain the newest files from them both.  This option takes effect when you try to do a new backup on the client that was interrupted. Once the old working directory is dealt with, an entirely new backup will be made.
 .TP
 \fBresume:\fR Simply continue the previous backup from the point at which it left off.
 .TP
@@ -357,7 +357,7 @@ Additionally, the following options can be overridden here for each client:
 
 .SH Some notes on SSL certificates
 .TP
-The burp example configs come with example SSL certificates and keys. You can use these and burp will work. But if you are worried about network security, you should generate your own certificates and keys and point your config files to them. To create the example files, I used a handy interface to openssl, called 'tinyca' (http://tinyca.sm-zone.net/). If you are using Debian, you can run 'apt-get install tinyca' to get it.
+The burp example configs come with example SSL certificates and keys. You can use these and burp will work. But if you are worried about network security, you should generate your own certificates and keys and point your config files to them. To create the example files, I used a handy interface to openssl, called 'tinyca' (http://tinyca.sm-zone.net/). If you are using Debian, you can run 'apt-get install tinyca' to get it. There is also the option of using burp_ca, which you can find in the source distribution, courtesy of Patrick Koppen.
 
 .SH Examining backups
 .TP

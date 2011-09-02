@@ -368,8 +368,8 @@ static void detail(char *toks[], int t, struct config *conf, int row, int col)
 			unsigned long long byteswant=0;
 			unsigned long long bytesrcvd=0;
 			unsigned long long bytespersec=0;
-			byteswant=strtoull(toks[15], NULL, 0);
-			bytesrcvd=strtoull(toks[17], NULL, 0);
+			byteswant=strtoull(toks[15], NULL, 10);
+			bytesrcvd=strtoull(toks[17], NULL, 10);
 			bytespersec=bytesrcvd/diff;
 			bytesleft=byteswant-bytesrcvd;
 			if(bytespersec>0)

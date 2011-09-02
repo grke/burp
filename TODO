@@ -13,9 +13,9 @@
 	(generic linux and freebsd support is done - do solaris next)
 
 * Improve the status monitor / counters.
-	- Include the final jiggling around time in estimates.
-	- Counters are missing from the logs when a backup is completed via
-	  working dir recovery.
+	- Estimates:
+		+ Should include the final jiggling around time.
+		+ Currently go a bit wonky during resume.
 	- Client knows no counters when resuming, because it didn't do the
 	  phase1 scan. Have the server send it the counters.
 	- Can something be done to make key presses more responsive?

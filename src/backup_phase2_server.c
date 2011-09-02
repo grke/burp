@@ -9,6 +9,7 @@
 #include "counter.h"
 #include "dpth.h"
 #include "sbuf.h"
+#include "backup_phase1_server.h" // for the resume stuff
 #include "backup_phase2_server.h"
 #include "current_backups_server.h"
 
@@ -501,116 +502,6 @@ static int do_stuff_to_receive(struct sbuf *rb, FILE *p2fp, const char *datadirt
 	return ret;
 }
 
-static int forward_sbuf(FILE *fp, gzFile zp, struct sbuf *b, struct sbuf *target, int seekback, struct cntr *cntr)
-{
-	int ars=0;
-	struct sbuf latest;
-	init_sbuf(b);
-	init_sbuf(&latest);
-	off_t pos=0;
-	while(1)
-	{
-		if(target)
-		{
-			// If told to 'seekback' to the immediately previous
-			// entry, we need to remember the position of it.
-			if(fp && seekback && (pos=ftello(fp))<0)
-			{
-				free_sbuf(&latest);
-				logp("Could not ftello in forward_sbuf(): %s\n",
-					strerror(errno));
-				return -1;
-			}
-			ars=sbuf_fill_phase1(fp, zp, b, cntr);
-		}
-		else
-		{
-			ars=sbuf_fill(fp, zp, b, cntr);
-		}
-
-		//printf("got: %s\n", b->path);
-
-		if(ars)
-		{
-			// ars==1 means it ended ok.
-			if(ars<0)
-			{
-				free_sbuf(b);
-				free_sbuf(&latest);
-				return -1;
-			}
-			memcpy(b, &latest, sizeof(struct sbuf));
-			return 0;
-		}
-//printf("got: %s\n", b->path);
-		free_sbuf(&latest);
-
-		// If seeking to a particular point...
-		if(target && sbuf_pathcmp(target, b)<=0)
-		{
-			// If told to 'seekback' to the immediately previous
-			// entry, do it here.
-			if(fp && seekback && fseeko(fp, pos, SEEK_SET))
-			{
-				logp("Could not fseeko in forward_sbuf(): %s\n",
-					strerror(errno));
-				free_sbuf(b);
-				free_sbuf(&latest);
-				return -1;
-			}
-			//memcpy(b, &latest, sizeof(struct sbuf));
-			return 0;
-		}
-
-		memcpy(&latest, b, sizeof(struct sbuf));
-		init_sbuf(b);
-	}
-	// Not reached.
-	free_sbuf(b);
-	free_sbuf(&latest);
-	return 0;
-}
-
-static int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, gzFile cmanfp, struct dpth *dpth, struct config *cconf, struct cntr *cntr)
-{
-	int ret=0;
-	struct sbuf p1b;
-	struct sbuf p2b;
-	struct sbuf ucb;
-
-	logp("Setting up resume positions...\n");
-	// Go to the end of p2fp.
-	if(forward_sbuf(p2fp, NULL, &p2b, NULL, 0 /* no seekback */, cntr))
-		goto error;
-	logp("  phase2:    %s (%s)\n", p2b.path, p2b.datapth);
-
-	// Now need to go to the appropriate places in p1zp and unchanged.
-	// The unchanged file needs to be positioned just before the found
-	// entry, otherwise it ends up having a duplicated entry.
-	if(forward_sbuf(NULL, p1zp, &p1b, &p2b, 0 /* no seekback */, cntr)
-	  || forward_sbuf(ucfp, NULL, &ucb, &p2b, 1 /* seekback */, cntr))
-		goto error;
-	logp("  phase1:    %s\n", p1b.path);
-	logp("  unchanged: %s\n", ucb.path);
-
-	// Now should have all file pointers in the right places to resume.
-	if(set_dpth_from_string(dpth, p2b.datapth, cconf))
-	{
-		logp("unable to set dpth from p2 datapth: %s\n", p2b.datapth);
-		goto error;
-	}
-	incr_dpth(dpth, cconf);
-
-	goto end;
-error:
-	ret=-1;
-end:
-	free_sbuf(&p1b);
-	free_sbuf(&p2b);
-	free_sbuf(&ucb);
-	return ret;
-}
-
 int backup_phase2_server(gzFile *cmanfp, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *datadirtmp, struct dpth *dpth, const char *currentdata, const char *working, const char *client, struct cntr *p1cntr, int resume, struct cntr *cntr, struct config *cconf)
 {
 	int ars=0;
@@ -630,14 +521,9 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, const char *pha
 
 	struct sbuf rb;		// receiving file from client
 
-	logp("Begin phase2 (receive file data)\n");
-
 	init_sbuf(&cb);
 	init_sbuf(&p1b);
 	init_sbuf(&rb);
-
-	if(!(deltmppath=prepend_s(working, "delta.tmp", strlen("delta.tmp"))))
-		goto error;
 
 	if(!(p1zp=gzopen_file(phase1data, "rb")))
 		goto error;
@@ -658,7 +544,13 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, const char *pha
 	if(!(p2fp=open_file(phase2data, "r+b")))
 		goto error;
 
-	if(resume && do_resume(p1zp, p2fp, ucfp, cmanfp, dpth, cconf, cntr))
+	if(resume && do_resume(p1zp, p2fp, ucfp, cmanfp, dpth, cconf,
+		p1cntr, cntr))
+			goto error;
+
+	logp("Begin phase2 (receive file data)\n");
+
+	if(!(deltmppath=prepend_s(working, "delta.tmp", strlen("delta.tmp"))))
 		goto error;
 
 	while(1)

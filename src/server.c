@@ -296,7 +296,6 @@ static int do_backup_server(const char *basedir, const char *current, const char
 		}
 		if(open_log(realworking))
 			goto error;
-		logp("Skip phase1 (file system scan)\n");
 	}
 	else
 	{

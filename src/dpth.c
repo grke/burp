@@ -143,8 +143,16 @@ int set_dpth_from_string(struct dpth *dpth, const char *datapath, struct config 
 	unsigned int a=0;
 	unsigned int b=0;
 	unsigned int c=0;
+	if(!datapath) return 0;
+
 	if((sscanf(datapath, "%04X/%04X/%04X", &a, &b, &c))!=3)
 		return -1;
+
+	/* only set it if it is a higher one */
+	if(dpth->prim > (int)a
+	  || dpth->seco > (int)b
+	  || dpth->tert > (int)c) return 0;
+
 	dpth->prim=a;
 	dpth->seco=b;
 	dpth->tert=c;

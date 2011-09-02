@@ -76,3 +76,5 @@
 	  recovery, it can get stuck in its select loop. Have some kind of a
 	  timeout. Or, go into a different kind of loop where it keeps trying
 	  to make a fresh connection.
+
+* Network rate-limiting feature (both client and server).

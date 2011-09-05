@@ -17,7 +17,6 @@
 #include "forkchild.h"
 
 #include <sys/types.h>
-#include <regex.h>
 
 // Return 0 for OK, -1 for error, 1 for timer conditions not met.
 static int maybe_check_timer(const char *phase1str, struct config *conf, int *resume)

@@ -5,6 +5,17 @@
 #include "handy.h"
 #include "status_client.h"
 
+static char *get_config_path(void)
+{
+	static char path[256]="";
+#ifdef HAVE_WIN32
+	snprintf(path, sizeof(path), "%s", "C:/Program Files/Burp/burp.conf");
+#else
+	snprintf(path, sizeof(path), "%s", SYSCONFDIR "/burp.conf");
+#endif
+	return path;
+}
+
 static void usage_server(void)
 {
 #ifndef HAVE_WIN32
@@ -13,7 +24,7 @@ static void usage_server(void)
 	printf("\n");
 	printf(" Options:\n");
 	printf("  -a s          Run the status monitor.\n");
-	printf("  -c <path>     Path to config file (default: %s/burp.conf).\n", SYSCONFDIR);
+	printf("  -c <path>     Path to config file (default: %s).\n", get_config_path());
 	printf("  -F            Stay in the foreground.\n");
 	printf("  -h|-?         Print this text and exit.\n");
 	printf("  -l <path>     Path to log file.\n");
@@ -36,7 +47,7 @@ static void usage_client(void)
 	printf("                  t: timed backup\n");
 	printf("                  v: verify\n");
 	printf("  -b <number>    Backup number (default: the most recent backup)\n");
-	printf("  -c <path>      Path to config file (default: %s/burp.conf).\n", SYSCONFDIR);
+	printf("  -c <path>      Path to config file (default: %s).\n", get_config_path());
 	printf("  -d <directory> Directory to restore to.\n");
 	printf("  -f             Allow overwrite during restore.\n");
 	printf("  -h|-?          Print this text and exit.\n");
@@ -77,11 +88,7 @@ int main (int argc, char *argv[])
 	const char *restoreprefix=NULL;
 	const char *regex=NULL;
 	FILE *fp=NULL;
-#ifdef HAVE_WIN32
-	const char *configfile="C:/Program Files/Burp/burp.conf";
-#else
-	const char *configfile=SYSCONFDIR "/burp.conf";
-#endif
+	const char *configfile=get_config_path();
 
 	init_log(argv[0]);
 
@@ -153,8 +160,10 @@ int main (int argc, char *argv[])
 		return 1;
 	}
 
+#ifndef HAVE_WIN32
 	if(server_reload(&conf, configfile, &logfile,
 	  1 /* first time */, 0 /* no old maxchildren setting */)) return 1;
+#endif
 
 	if((act==ACTION_RESTORE || act==ACTION_VERIFY) && !backup)
 	{

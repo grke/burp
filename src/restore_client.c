@@ -173,8 +173,8 @@ static int restore_file_or_get_meta(struct sbuf *sb, const char *fname, enum act
 
 	if(!ret)
 	{
-		unsigned long long rcvdbytes=NULL;
-		unsigned long long sentbytes=NULL;
+		unsigned long long rcvdbytes=0;
+		unsigned long long sentbytes=0;
 
 		if(metadata)
 		{

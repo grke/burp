@@ -24,6 +24,7 @@ static void usage_server(void)
 	printf("\n");
 	printf(" Options:\n");
 	printf("  -a s          Run the status monitor.\n");
+	printf("  -a S          Print the front screen of the status monitor (for reporting).\n");
 	printf("  -c <path>     Path to config file (default: %s).\n", get_config_path());
 	printf("  -F            Stay in the foreground.\n");
 	printf("  -h|-?         Print this text and exit.\n");

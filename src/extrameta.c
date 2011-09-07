@@ -53,7 +53,7 @@ int get_extrameta(const char *path, struct stat *statp, char **extrameta, size_t
 
 int set_extrameta(const char *path, char cmd, struct stat *statp, const char *extrameta, size_t metalen, struct cntr *cntr)
 {
-	size_t l=NULL;
+	size_t l=0;
 	char cmdtmp='\0';
 	unsigned int s=0;
 	const char *metadata=NULL;

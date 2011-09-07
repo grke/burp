@@ -84,7 +84,6 @@ Var HostName
 Var DNSDomain
 
 Var ConfigClientPassword
-Var ConfigClientPoll
 Var ConfigClientInstallService
 Var ConfigClientStartService
 

@@ -179,10 +179,9 @@ static void setup_signal(int sig, void handler(int sig))
 	sigaction(sig, &sa, NULL);
 }
 
-static int setup_signals(int oldmax_children, int max_children)
+extern int setup_signals(int oldmax_children, int max_children)
 {
 	// Ignore SIGPIPE - we are careful with read and write return values.
-#ifndef HAVE_WIN32
 	int p=0;
 	struct sigaction sa;
 	signal(SIGPIPE, SIG_IGN);
@@ -216,7 +215,7 @@ static int setup_signals(int oldmax_children, int max_children)
 	setup_signal(SIGTERM, sighandler);
 	setup_signal(SIGINT, sighandler);
 	setup_signal(SIGHUP, huphandler);
-#endif
+
 	return 0;
 }
 
@@ -1332,48 +1331,6 @@ static int relock(const char *lockfile)
 	return -1;
 }
 
-static int open_logfile(const char *logfile)
-{
-	FILE *fp=NULL;
-	set_logfp(NULL); // Close the old log, if it is open.
-	if(!(fp=fopen(logfile, "ab")))
-	{
-		logp("error opening logfile %s.\n", logfile);
-		return 1;
-	}
-	set_logfp(fp);
-	return 0;
-}
-
-int server_reload(struct config *conf, const char *configfile, char **logfile, bool firsttime, int oldmax_children)
-{
-	if(!firsttime) logp("Reloading server config\n");
-	// If logfile is defined, use it 
-	// Have to do this twice, because init_config uses logp(). 
-	if(*logfile && strlen(*logfile) && open_logfile(*logfile))
-		return 1;
-
-	init_config(conf);
-	if(load_config(configfile, conf, 1)) return 1;
-
-	/* change umask */
-	umask(conf->umask);
-
-	setup_signals(oldmax_children, conf->max_children);
-
-	// Do not try to change user or group after the first time.
-	if(firsttime && chuser_and_or_chgrp(conf->user, conf->group))
-		return 1;
-
-	// If logfile is defined in config...
-	if(conf->logfile)
-	{
-		*logfile=conf->logfile;
-		if(open_logfile(*logfile)) return 1;
-	}
-	return 0;
-}
-
 static int run_server(struct config *conf, const char *configfile, int forking, int *rfd, const char *oldport, const char *oldstatusport)
 {
 	int ret=0;
@@ -1622,7 +1579,7 @@ int server(struct config *conf, const char *configfile, int forking, int daemon,
 			oldport=strdup(conf->port);
 			oldstatusport=conf->status_port?
 				strdup(conf->status_port):NULL;
-			if(server_reload(conf, configfile, logfile,
+			if(reload(conf, configfile, logfile,
 				0 /* not first time */, conf->max_children))
 					ret=1;
 		}

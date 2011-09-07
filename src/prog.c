@@ -65,6 +65,38 @@ static void usage_client(void)
 #endif
 }
 
+int reload(struct config *conf, const char *configfile, char **logfile, bool firsttime, int oldmax_children)
+{
+	if(!firsttime) logp("Reloading config\n");
+	// If logfile is defined, use it
+	// Have to do this twice, because init_config uses logp().
+	if(*logfile && strlen(*logfile) && open_logfile(*logfile))
+		return 1;
+
+	init_config(conf);
+	if(load_config(configfile, conf, 1)) return 1;
+
+	/* change umask */
+	umask(conf->umask);
+
+#ifndef HAVE_WIN32
+	setup_signals(oldmax_children, conf->max_children);
+#endif
+
+	// Do not try to change user or group after the first time.
+	if(firsttime && chuser_and_or_chgrp(conf->user, conf->group))
+		return 1;
+
+	// If logfile is defined in config...
+	if(conf->logfile)
+	{
+		*logfile=conf->logfile;
+		if(open_logfile(*logfile)) return 1;
+	}
+
+	return 0;
+}
+
 static void usage(void)
 {
 	usage_server();
@@ -161,10 +193,8 @@ int main (int argc, char *argv[])
 		return 1;
 	}
 
-#ifndef HAVE_WIN32
-	if(server_reload(&conf, configfile, &logfile,
+	if(reload(&conf, configfile, &logfile,
 	  1 /* first time */, 0 /* no old maxchildren setting */)) return 1;
-#endif
 
 	if((act==ACTION_RESTORE || act==ACTION_VERIFY) && !backup)
 	{

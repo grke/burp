@@ -68,3 +68,16 @@ FILE *get_logfp(void)
 {
 	return logfp;
 }
+
+int open_logfile(const char *logfile)
+{
+	FILE *fp=NULL;
+	set_logfp(NULL); // Close the old log, if it is open.
+	if(!(fp=fopen(logfile, "ab")))
+	{
+		logp("error opening logfile %s.\n", logfile);
+		return 1;
+	}
+	set_logfp(fp);
+	return 0;
+}

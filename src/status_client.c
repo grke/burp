@@ -406,8 +406,10 @@ static void blank_screen(int row, int col)
 #ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS)
 	{
+		char v[32]="";
 		for(c=0; c<row; c++) print_line("", c, col);
-		mvprintw(0, 0, " burp monitor");
+		snprintf(v, sizeof(v), " burp monitor %s", VERSION);
+		mvprintw(0, 0, v);
 		mvprintw(0, col-l-1, date);
 		return;
 	}

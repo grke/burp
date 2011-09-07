@@ -153,8 +153,8 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 			break;
 		}
 
-		snprintf(tmp1, sizeof(tmp1), "%08X", zlen);
-		snprintf(tmp2, sizeof(tmp2), "%08X", vlen);
+		snprintf(tmp1, sizeof(tmp1), "%08X", (unsigned int)zlen);
+		snprintf(tmp2, sizeof(tmp2), "%08X", (unsigned int)vlen);
 		if(!(toappend=prepend_len(toappend, totallen,
 			tmp1, 8, "", 0, &totallen))
 		  || !(toappend=prepend_len(toappend, totallen,
@@ -185,7 +185,8 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 	if(toappend)
 	{
 		char tmp3[10];
-		snprintf(tmp3, sizeof(tmp3), "%c%08X", META_XATTR, totallen);
+		snprintf(tmp3, sizeof(tmp3), "%c%08X",
+			META_XATTR, (unsigned int)totallen);
 		if(!(*xattrtext=prepend_len(*xattrtext, *xlen,
 			tmp3, 9, "", 0, xlen))
 		  || !(*xattrtext=prepend_len(*xattrtext, *xlen,

@@ -220,7 +220,7 @@ static int setup_signals(int oldmax_children, int max_children)
 	return 0;
 }
 
-static int open_log(const char *realworking)
+static int open_log(const char *realworking, const char *cversion)
 {
 	FILE *logfp=NULL;
 	char *logpath=NULL;
@@ -241,10 +241,12 @@ static int open_log(const char *realworking)
 	}
 	free(logpath);
 
+	logp("Client version: %s\n", cversion?:"");
+
 	return 0;
 }
 
-static int do_backup_server(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *manifest, const char *forward, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *client, struct cntr *p1cntr, struct cntr *cntr, int resume)
+static int do_backup_server(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *manifest, const char *forward, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *client, const char *cversion, struct cntr *p1cntr, struct cntr *cntr, int resume)
 {
 	int ret=0;
 	char msg[256]="";
@@ -294,7 +296,7 @@ static int do_backup_server(const char *basedir, const char *current, const char
 			log_and_send("out of memory");
 			goto error;
 		}
-		if(open_log(realworking))
+		if(open_log(realworking, cversion))
 			goto error;
 	}
 	else
@@ -315,7 +317,7 @@ static int do_backup_server(const char *basedir, const char *current, const char
 			log_and_send(msg);
 			goto error;
 		}
-		else if(open_log(realworking))
+		else if(open_log(realworking, cversion))
 		{
 			goto error;
 		}
@@ -826,7 +828,7 @@ static int run_script_w(const char *script, struct strlist **userargs, int usera
 		"reserved1", "reserved2", "reserved3", cntr);
 }
 
-static int child(struct config *conf, struct config *cconf, const char *client, struct cntr *p1cntr, struct cntr *cntr)
+static int child(struct config *conf, struct config *cconf, const char *client, const char *cversion, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ret=0;
 	char cmd;
@@ -930,7 +932,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			ret=do_backup_server(basedir, current, working,
 			  currentdata, finishing, cconf,
 			  manifest, forward, phase1data, phase2data,
-			  unchangeddata, client, p1cntr, cntr, resume);
+			  unchangeddata, client, cversion, p1cntr, cntr, resume);
 			if(ret)
 				run_script(
 					cconf->notify_failure_script,
@@ -1056,6 +1058,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	SSL *ssl=NULL;
 	BIO *sbio=NULL;
 	char *client=NULL;
+	char *cversion=NULL;
 	struct config conf;
 	struct config cconf;
 
@@ -1096,7 +1099,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 		free_config(&conf);
 		return -1;
 	}
-	if(authorise_server(&conf, &client, &cconf, &p1cntr)
+	if(authorise_server(&conf, &client, &cversion, &cconf, &p1cntr)
 		|| !client || !*client)
 	{
 		// add an annoying delay in case they are tempted to
@@ -1129,12 +1132,13 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	}
 	set_non_blocking(*cfd);
 
-	ret=child(&conf, &cconf, client, &p1cntr, &cntr);
+	ret=child(&conf, &cconf, client, cversion, &p1cntr, &cntr);
 
 	*cfd=-1;
 	async_free(); // this closes cfd for us.
 	logp("exit child\n");
 	if(client) free(client);
+	if(cversion) free(cversion);
 	free_config(&conf);
 	free_config(&cconf);
 	return ret;

@@ -86,14 +86,13 @@ static void version_warn(struct cntr *cntr, const char *client, const char *cver
 	}
 }
 
-int authorise_server(struct config *conf, char **client, struct config *cconf, struct cntr *p1cntr)
+int authorise_server(struct config *conf, char **client, char **cversion, struct config *cconf, struct cntr *p1cntr)
 {
 	char cmd;
 	char *cp=NULL;
 	size_t len=0;
 	char *buf=NULL;
 	char *password=NULL;
-	char *cversion=NULL;
 	if(async_read(&cmd, &buf, &len))
 	{
 		logp("unable to read initial message\n");
@@ -108,14 +107,14 @@ int authorise_server(struct config *conf, char **client, struct config *cconf, s
 	if((cp=strchr(buf, ':')))
 	{
 		cp++;
-		if(cp) cversion=strdup(cp);
+		if(cp) *cversion=strdup(cp);
 	}
 	free(buf); buf=NULL;
 	async_write_str(CMD_GEN, "whoareyou");
 	if(async_read(&cmd, &buf, &len) || !len)
 	{
 		logp("unable to get client name\n");
-		if(cversion) free(cversion);
+		if(*cversion) free(*cversion); *cversion=NULL;
 		return -1;
 	}
 	*client=buf;
@@ -125,7 +124,7 @@ int authorise_server(struct config *conf, char **client, struct config *cconf, s
 	{
 		logp("unable to get password for client %s\n", *client);
 		if(*client) free(*client); *client=NULL;
-		if(cversion) free(cversion);
+		if(*cversion) free(*cversion); *cversion=NULL;
 		free(buf); buf=NULL;
 		return -1;
 	}
@@ -135,13 +134,12 @@ int authorise_server(struct config *conf, char **client, struct config *cconf, s
 	if(check_client_and_password(conf, *client, password, cconf))
 	{
 		if(*client) free(*client); *client=NULL;
-		if(cversion) free(cversion);
+		if(*cversion) free(*cversion); *cversion=NULL;
 		free(password); password=NULL;
 		return -1;
 	}
 
-	version_warn(p1cntr, *client, cversion);
-	if(cversion) free(cversion);
+	version_warn(p1cntr, *client, *cversion);
 
 	async_write_str(CMD_GEN, "ok");
 	logp("auth ok for client: %s\n", *client);

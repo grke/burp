@@ -29,7 +29,8 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *p1cn
    char msg[128]="";
    char attribs[MAXSTRING];
 
-   if(!file_is_included(conf->incexcdir, conf->iecount, ff->fname)) return 0;
+   if(!file_is_included(conf->incexcdir, conf->iecount,
+	conf->excext, conf->excount, ff->fname)) return 0;
 
    //logp("%d: %s\n", ff->type, ff->fname);
 

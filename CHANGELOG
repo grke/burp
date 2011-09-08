@@ -14,6 +14,7 @@
   * Add logrotate file for Debian.
   * Add ability to send a regular snapshot of the status summary screen in an
 	email ("daily backup summary" feature).
+  * Add simple 'exclude_ext =' feature.
 
 2011-07-26 Changes in burp-1.1.70:
   * FreeBSD ACL support.

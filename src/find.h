@@ -117,7 +117,8 @@ int term_find_files(FF_PKT *ff);
 int find_files_begin(FF_PKT *ff_pkt, struct config *conf, char *fname, struct cntr *cntr);
 int pathcmp(const char *a, const char *b);
 int is_subdir(const char *dir, const char *sub);
-int file_is_included(struct strlist **ielist, int iecount, const char *fname);
+int file_is_included(struct strlist **ielist, int iecount,
+	struct strlist **excext, int excount, const char *fname);
 
 /* from attribs.c */
 void encode_stat(char *buf, struct stat *statp);

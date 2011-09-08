@@ -31,11 +31,13 @@ void init_config(struct config *conf)
 	conf->incexcdir=NULL;
 	conf->fschgdir=NULL;
 	conf->nobackup=NULL;
+	conf->excext=NULL;
 	conf->sdcount=0;
 	conf->iecount=0;
 	conf->fscount=0;
 	conf->nbcount=0;
 	conf->ffcount=0;
+	conf->excount=0;
 	conf->fifos=NULL;
 	conf->cross_all_filesystems=0;
 	conf->read_all_fifos=0;
@@ -120,6 +122,7 @@ void free_config(struct config *conf)
 	strlists_free(conf->fschgdir, conf->fscount);
 	strlists_free(conf->nobackup, conf->nbcount);
 	strlists_free(conf->fifos, conf->ffcount);
+	strlists_free(conf->excext, conf->excount);
 
 	if(conf->timer_script) free(conf->timer_script);
 	strlists_free(conf->timer_arg, conf->tacount);
@@ -277,6 +280,7 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 	struct strlist **rpostlist=NULL;
 	struct strlist **bslist=NULL;
 	struct strlist **rslist=NULL;
+	struct strlist **exlist=NULL;
 	int have_include=0;
 	int got_timer_args=conf->tacount;
 	int got_ns_args=conf->nscount;
@@ -447,6 +451,10 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 				"read_fifo",
 				NULL, NULL, &(conf->ffcount),
 				&fflist, 0)) return -1;
+			if(get_conf_val_args(field, value,
+				"exclude_ext",
+				NULL, NULL, &(conf->excount),
+				&exlist, 0)) return -1;
 			if(get_conf_val(field, value,
 			  "timer_script", &(conf->timer_script))) return -1;
 			if(get_conf_val_args(field, value,
@@ -522,6 +530,11 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 		}
 	}
 	fclose(fp);
+
+	if(conf->excount) qsort(exlist, conf->excount,
+		sizeof(*exlist),
+		(int (*)(const void *, const void *))strlist_sort);
+	conf->excext=exlist;
 
 	if(conf->ffcount) qsort(fflist, conf->ffcount,
 		sizeof(*fflist),

@@ -257,6 +257,9 @@ Path to include in the backup. You can have multiple include lines. Use forward 
 \fBexclude=[path]\fR
 Path to exclude from the backup. You can have multiple exclude lines. Use forward slashes '/', not backslashes '\\' as path delimiters.
 .TP
+\fBexclude_ext=[extension]\fR
+Extensions to exclude from the backup. Case insensitive. You can have multiple exclude extension lines. For example, set 'vdi' to exclude VirtualBox disk images.
+.TP
 \fBcross_filesystem=[path]\fR
 Allow backups to cross a particular filesystem mountpoint.
 .TP

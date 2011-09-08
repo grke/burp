@@ -215,14 +215,25 @@ int is_subdir(const char *dir, const char *sub)
 	return 0;
 }
 
-int file_is_included(struct strlist **ielist, int iecount, const char *fname)
+int file_is_included(struct strlist **ielist, int iecount, struct strlist **excext, int excount, const char *fname)
 {
 	int i=0;
 	int ret=0;
 	int longest=0;
 	int matching=0;
 	int best=-1;
+	const char *cp=NULL;
 	//logp("in is_inc: %s\n", fname);
+
+	// Check excluded extension list.
+	if(excount && (cp=strrchr(fname, '.')))
+	{
+		cp++;
+		for(i=0; i<excount; i++)
+			if(!strcasecmp(excext[i]->path, cp)) return 0;
+	}
+
+	// Check include/exclude directories.
 	for(i=0; i<iecount; i++)
 	{
 		//logp("try: %d %s\n", i, ielist[i]->path);
@@ -585,7 +596,8 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 		for(i=0; i<strlen(nl[m]->d_name); i++) *q++=*p++;
 		*q=0;
 
-		if(file_is_included(conf->incexcdir, conf->iecount, link))
+		if(file_is_included(conf->incexcdir, conf->iecount,
+			conf->excext, conf->excount, link))
 		{
 			rtn_stat=find_files(ff_pkt,
 				conf, cntr, link, our_device, false);

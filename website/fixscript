@@ -2,9 +2,9 @@
 
 howto=content/html/howto.content
 
-rm "$howto"
-echo "
-<TABLE>
+print_top()
+{
+	echo "<TABLE>
 <TR><TD WIDTH="10%"></TD>
 <TD WIDTH="60%">
 </TD><TD WIDTH="10%"></TD></TR>
@@ -14,18 +14,12 @@ echo "
 <TD ALIGN="LEFT">
 <P>
 <FONT COLOR="#99CCFF">
-<pre>" >> "$howto" 
+<pre>" >> "$1" 
+}
 
-cat ../README >> "$howto"
-echo >> "$howto" 
-echo >> "$howto" 
-echo "For the benefit of the website, the man page now follows." >> "$howto"
-echo >> "$howto" 
-echo >> "$howto" 
-man ../manpages/burp.8 | col -b >> $howto
-
-echo "
-</pre>
+print_bottom()
+{
+	echo "</pre>
 </FONT>
 </P>
 
@@ -33,7 +27,21 @@ echo "
 </TR>
 
 </TR>
-</TABLE>" >> "$howto" 
+</TABLE>" >> "$1" 
+}
+
+rm "$howto"
+print_top "$howto"
+cat ../README >> "$howto"
+echo >> "$howto" 
+echo >> "$howto" 
+echo "For the benefit of the website, the man page now follows." >> "$howto"
+echo >> "$howto" 
+echo >> "$howto" 
+man ../manpages/burp.8 | col -b >> $howto
+print_bottom "$howto"
+
+cp -v ../docs/*.txt html/txt
 
 go_for_it()
 {

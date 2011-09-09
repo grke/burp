@@ -1,0 +1,13 @@
+Things to watch out for when upgrading.
+
+1.1.x to 1.2.0
+---------------
+* Clients older than 1.1.70 will not work with a 1.2.0 server. You will need
+to upgrade the clients at the same time. Your old backups will continue to
+work.
+* If you previously compiled with './configure --prefix=/usr', you will probably
+now want to compile with just './configure'. The binary will now go to
+/sbin/burp, with a symlink from /usr/sbin/burp.
+* If you are installing from source onto the server, you may want to
+'rm /etc/burp/notify_script' before 'make installation', otherwise you won't
+get the updated version.

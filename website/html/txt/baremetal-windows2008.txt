@@ -1,0 +1,9 @@
+Windows 2008 bare metal restore steps
+-------------------------------------
+
+Unfortunately, I have not yet completed a Windows 2008 bare metal restore.
+The process should be nearly identical to the Windows 7 steps, but I get stuck
+at the point of making the new disk bootable.
+
+TODO: Have another go at this. Perhaps I need to create a different version
+of the WinPE disk.

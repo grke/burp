@@ -166,6 +166,23 @@ under the AGPLv3 licence. Refer to the Burp
 </FONT>
 </P>
 
+<P>
+<FONT COLOR="#99CCFF">
+Q. How can I do a "bare metal" restore?
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">
+A. There are instructions for <A HREF="/txt/baremetal-windows7.txt">Windows 7</A>.
+<BR>
+If anybody wants to contribute instructions for any other operating system,
+please feel free.
+</FONT>
+</P>
+
+<HR>
+
 <HR>
 <P>
 <FONT COLOR="#99CCFF">

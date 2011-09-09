@@ -25,3 +25,6 @@ override_dh_fixperms:
 	chmod 0600 debian/burp/etc/burp/ssl_cert-server.pem
 	chmod 0700 debian/burp/etc/burp/clientconfdir
 	chmod 0700 debian/burp/var/spool/burp
+
+override_dh_auto_configure:
+	./configure

@@ -838,6 +838,7 @@ void reuseaddr(int fd)
 		(sockopt_val_t)&tmpfd, sizeof(tmpfd));
 }
 
+#ifndef HAVE_WIN32
 void write_status(const char *client, char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr)
 {
 	static time_t lasttime=0;
@@ -952,6 +953,7 @@ void write_status(const char *client, char phase, const char *path, struct cntr 
 		}
 	}
 }
+#endif
 
 static void log_script_output(const char *str, FILE **fp)
 {

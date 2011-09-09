@@ -1,0 +1,103 @@
+Windows 7 bare metal restore steps
+----------------------------------
+
+Thanks to:
+Wai Keong Phan, who first completed a bare metal restore, wrote up the
+	first draft and provided help when I was stuck.
+Michael Da Cova, who also provided help when I was stuck.
+
+
+a) Install the burp client on Windows 7.
+
+b) Make a burp backup of your C: drive (plus any others you want to keep).
+That means that 'include = C:' should be in the client burp.conf.
+You may also 'exclude = C:/pagefile.sys', because it is known to be pointless
+to backup that file.
+
+c) Download MS Win AIK via this link (at the time of writing):
+	http://www.microsoft.com/download/en/details.aspx?displaylang=en&id=5753
+
+d) Install MS Win AIK
+
+e) Run a command prompt with administrator privileges, and execute these
+	commands:
+   > copype.cmd amd64 c:\winpe_amd64
+   > cd c:\winpe_amd64
+   > copy winpe.wim iso\sources\boot.wim
+   > dism /mount-wim /wimfile:iso\sources\boot.wim /index:1 /mountdir:mount
+
+   (at this point, I found it easiest to copy the whole 'C:\Program Files\Burp'
+    directory to mount\windows, although you may just install it on the target
+    machine via a file server later)
+
+   > dism /unmount-wim /mountdir:mount /commit
+   > oscdimg -n -betfsboot.com iso winpe_amd64.iso
+
+f) Make a bootable CD with the iso image.
+
+g) With a new or reprovisioned machine, boot the machine up with WinPE. It
+   will go to a command prompt that looks like 'X:\windows\system32>'
+
+h) Create a new 'C:' partition by executing these commands:
+   > select disk 0
+   > create partition primary
+   > active
+   > assign letter=C
+
+   You can change 'ntfs' to something else in the following command:
+
+   > format fs=ntfs quick
+
+   To verify disk status:
+
+   > detail disk
+
+i) At this point, you can grab the burp client installer from your file server,
+   if you did not but it on the WinPE disk in step (e). Make sure the
+   appropriate burp server name, burp client name and password are entered
+   during the installer.
+
+j) Start the restore by executing the following command:
+
+   > "cd C:\Program Files\Burp\bin"
+   > burp.exe -a r -f
+
+k) Shutdown the machine.
+
+l) Reboot from a Windows 7 installation disk.
+
+m) Select a language, a time and currency, and a keyboard or input method, and
+   click next. It doesn't matter what you choose here, as long as you can
+   continue to provide input.
+
+n) Select 'Repair your computer'.
+
+o) Follow the menus to a command prompt. You need to run diskpart again to
+   make the 'C:' partition active, and then rebuild the boot sector.
+
+   > select disk 0
+   > select partition primary
+   > active
+   > bootrec /rebuildbcd
+
+p) Reboot into the Windows 7 installation disk twice more, selecting 'Repair
+   your computer' both times.
+
+q) Windows 7 should now boot from the disk by itself.
+
+Unresolved issues:
+
+There is something a bit weird about the entries in the top level of the
+file system, though. I have these odd directories:
+
+C:\$Recycle.Bin
+C:\Documents and Settings
+C:\System Volume Information
+C:\Temp
+C:\C:   <- Very odd because ':' is not a valid character in Windows names.
+
+I think most of these exist on the original system, but are somehow hidden.
+
+
+It has also given me a new small E:\ partition. Perhaps that was something
+to do with the recovery via the installation disk.

@@ -28,9 +28,6 @@
 
 * Delete old backups by space.
 
-* Add an option to set hardlinked_archive on a cycle, instead of just being
-  either on or off.
-
 * Add the option to turn an existing hardlinked_archive (not 'current') into
   a non-hardlinked_archive, and vice versa. This could be useful for deleting
   backups out of the middle of a chain instead of just the oldest.
@@ -78,3 +75,5 @@
 	  to make a fresh connection.
 
 * Network rate-limiting feature (both client and server).
+
+* Windows non-VSS backups.

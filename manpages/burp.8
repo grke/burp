@@ -146,7 +146,7 @@ Number of backups to keep. This can be overriddden by the client configuration
 files in clientconfdir on the server.
 .TP
 \fBhardlinked_archive=[0|1]\fR
-On the server, defines whether to keep hardlinked files in the backups, or whether to generate reverse deltas and delete the original files. Can be set to either 0 (off) or 1 (on).  Disadvantage: More disk space will be used Advantage: Restores will be faster, and since no reverse deltas need to be generated, the time and effort the server needs at the end of a backup is reduced.
+On the server, defines whether to keep hardlinked files in the backups, or whether to generate reverse deltas and delete the original files. Can be set to either 0 (off) or a positive number (on). When set to a positive number 'x', every 'x'th backup will be hardlinked - for example, '1' will do it for every backup, '7' will do it for every seventh backup. Disadvantage: More disk space will be used Advantage: Restores will be faster, and since no reverse deltas need to be generated, the time and effort the server needs at the end of a backup is reduced.
 .TP
 \fBlibrsync=[0|1]\fR
 When set to 0, delta differencing will not take place. That is, when a file changes, the server will request the whole new file. The default is 1. This option can be overridden by the client configuration files in clientconfdif on the server.

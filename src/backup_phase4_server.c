@@ -205,7 +205,7 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath)
 	return ret;
 }
 
-static int jiggle(const char *datapth, const char *currentdata, const char *datadirtmp, const char *datadir, const char *deltabdir, const char *deltafdir, const char *sigpath, const char *endfile, struct cntr *cntr, struct config *cconf)
+static int jiggle(const char *datapth, const char *currentdata, const char *datadirtmp, const char *datadir, const char *deltabdir, const char *deltafdir, const char *sigpath, const char *endfile, int hardlinked, struct cntr *cntr, struct config *cconf)
 {
 	int ret=0;
 	struct stat statp;
@@ -299,7 +299,7 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 		// Need to generate a reverse diff,
 		// unless we are keeping a hardlinked
 		// archive.
-		if(!cconf->hardlinked_archive)
+		if(!hardlinked)
 		{
 			if(gen_rev_delta(sigpath, deltabdir,
 				oldpath, newpath, datapth, endfile,
@@ -340,7 +340,7 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 			// detect this.
 			// ie, both a reverse delta and the
 			// old file exist.
-			if(!cconf->hardlinked_archive)
+			if(!hardlinked)
 			{
 				//logp("Deleting oldpath...\n");
 				unlink(oldpath);
@@ -376,7 +376,7 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 		{
 			// If we are not keeping a hardlinked
 			// archive, delete the old link.
-			if(!cconf->hardlinked_archive)
+			if(!hardlinked)
 			{
 				//logp("Unlinking old file: %s\n", oldpath);
 				unlink(oldpath);
@@ -399,9 +399,17 @@ cleanup:
 	return ret;
 }
 
+static int do_hardlinked_archive(struct config *cconf, int bno)
+{
+	if(!cconf->hardlinked_archive) return 0;
+	//if(bno==2) return 1; // Make the very first one hardlink.
+
+	return !((bno-2)%cconf->hardlinked_archive);
+}
+
 /* Need to make all the stuff that this does atomic so that existing backups
    never get broken, even if somebody turns the power off on the server. */ 
-static int atomic_data_jiggle(const char *finishing, const char *working, const char *manifest, const char *current, const char *currentdata, const char *datadir, const char *datadirtmp, struct config *cconf, const char *client, struct cntr *p1cntr, struct cntr *cntr)
+static int atomic_data_jiggle(const char *finishing, const char *working, const char *manifest, const char *current, const char *currentdata, const char *datadir, const char *datadirtmp, struct config *cconf, const char *client, int hardlinked, long bno, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ret=0;
 	int ars=0;
@@ -417,16 +425,8 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 
 	logp("Doing the atomic data jiggle...\n");
 
-	if(cconf->hardlinked_archive)
-	{
-		logp("Hardlinked archive is on -\n");
-		logp(" will not generate reverse deltas\n");
-	}
-	else
-	{
-		logp("Hardlinked archive is off -\n");
-		logp(" will generate reverse deltas\n");
-	}
+	logp("hardlinked_archive: %d, backup: %li\n",
+		cconf->hardlinked_archive, bno);
 
 	if(!(tmpman=get_tmp_filename(manifest))) return -1;
 	if(lstat(manifest, &statp))
@@ -463,7 +463,7 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 			if((ret=jiggle(sb.datapth, currentdata, datadirtmp,
 				datadir, deltabdir, deltafdir,
 				sigpath, sb.endfile,
-				cntr, cconf))) break;
+				hardlinked, cntr, cconf))) break;
 		}
 		free_sbuf(&sb);
 	}
@@ -503,6 +503,7 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 	char *fullrealcurrent=NULL;
 	char *deleteme=NULL;
 	char *logpath=NULL;
+	char *hlinkedpath=NULL;
 	int len=0;
 	char realcurrent[256]="";
 	FILE *logfp=NULL;
@@ -521,7 +522,8 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 	  || !(timestamp=prepend_s(finishing, "timestamp", strlen("timestamp")))
 	  || !(fullrealcurrent=prepend_s(basedir, realcurrent, strlen(realcurrent)))
 	  || !(deleteme=prepend_s(basedir, "deleteme", strlen("deleteme")))
-	  || !(logpath=prepend_s(finishing, "log", strlen("log"))))
+	  || !(logpath=prepend_s(finishing, "log", strlen("log")))
+	  || !(hlinkedpath=prepend_s(currentdup, "hardlinked", strlen("hardlinked"))))
 	{
 		ret=-1;
 		goto endfunc;
@@ -539,7 +541,9 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 
 	if(!lstat(current, &statp)) // Had a previous backup
 	{
+		long bno=0;
 		FILE *fwd=NULL;
+		int hardlinked=0;
 		char tstmp[64]="";
 
 		if(lstat(currentdup, &statp))
@@ -573,6 +577,8 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 			ret=-1;
 			goto endfunc;
 		}
+		// Get the backup number.
+		bno=atol(tstmp);
 
 		// Put forward reference in, indicating the timestamp of
 		// the working directory (which will soon become the current
@@ -586,10 +592,38 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 		fprintf(fwd, "%s\n", tstmp);
 		close_fp(&fwd);
 
+		hardlinked=do_hardlinked_archive(cconf, bno);
+
+		if(hardlinked)
+		{
+			// Create a file to indicate that the previous backup
+			// does not have others depending on it.
+			FILE *hfp=NULL;
+			if(!(hfp=open_file(hlinkedpath, "wb")))
+			{
+				ret=-1;
+				goto endfunc;
+			}
+			// Stick the next backup timestamp in it. It might
+			// be useful one day when wondering when the next
+			// backup, now deleted, was made.
+			fprintf(hfp, "%s\n", tstmp);
+			close_fp(&hfp);
+			logp(" doing hardlinked archive\n");
+			logp(" will not generate reverse deltas\n");
+		}
+		else
+		{
+			logp(" not doing hardlinked archive\n");
+			logp(" will generate reverse deltas\n");
+			unlink(hlinkedpath);
+		}
+
 		if(atomic_data_jiggle(finishing,
 			working, manifest, currentdup,
 			currentdupdata,
-			datadir, datadirtmp, cconf, client, p1cntr, cntr))
+			datadir, datadirtmp, cconf, client,
+			hardlinked, bno, p1cntr, cntr))
 		{
 			logp("could not finish up backup.\n");
 			ret=-1;
@@ -662,6 +696,7 @@ endfunc:
 	if(fullrealcurrent) free(fullrealcurrent);
 	if(deleteme) free(deleteme);
 	if(logpath) free(logpath);
+	if(hlinkedpath) free(hlinkedpath);
 
 	return ret;
 }

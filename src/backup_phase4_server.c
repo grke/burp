@@ -399,12 +399,18 @@ cleanup:
 	return ret;
 }
 
-static int do_hardlinked_archive(struct config *cconf, int bno)
+static int do_hardlinked_archive(struct config *cconf, long bno)
 {
+	int ret=0;
+	logp("hardlinked_archive: %d, backup: %li (%li-2=%li)\n",
+			cconf->hardlinked_archive, bno, bno, bno-2);
 	if(!cconf->hardlinked_archive) return 0;
-	//if(bno==2) return 1; // Make the very first one hardlink.
 
-	return !((bno-2)%cconf->hardlinked_archive);
+	ret=(bno-2)%cconf->hardlinked_archive;
+	logp("%sneed to hardlink archive (%li%%%d=%d)\n",
+		ret?"do not ":"", bno-2, cconf->hardlinked_archive, ret);
+
+	return !ret;
 }
 
 /* Need to make all the stuff that this does atomic so that existing backups
@@ -424,9 +430,6 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 	struct sbuf sb;
 
 	logp("Doing the atomic data jiggle...\n");
-
-	logp("hardlinked_archive: %d, backup: %li\n",
-		cconf->hardlinked_archive, bno);
 
 	if(!(tmpman=get_tmp_filename(manifest))) return -1;
 	if(lstat(manifest, &statp))
@@ -545,6 +548,7 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 		FILE *fwd=NULL;
 		int hardlinked=0;
 		char tstmp[64]="";
+		int newdup=0;
 
 		if(lstat(currentdup, &statp))
 		{
@@ -569,6 +573,7 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 				ret=-1;
 				goto endfunc;
 			}
+			newdup++;
 		}
 
 		if(read_timestamp(timestamp, tstmp, sizeof(tstmp)))
@@ -592,7 +597,31 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 		fprintf(fwd, "%s\n", tstmp);
 		close_fp(&fwd);
 
-		hardlinked=do_hardlinked_archive(cconf, bno);
+		if(newdup)
+		{
+			// When we have just created currentdup, determine
+			// hardlinked archive from the conf and the backup
+			// number...
+			hardlinked=do_hardlinked_archive(cconf, bno);
+		}
+		else
+		{
+			// ...if recovering, find out what currentdup started
+			// out as.
+			// Otherwise it is possible that things can be messed
+			// up by somebody swapping between hardlinked and
+			// not hardlinked at the same time as a resume happens.
+			if(lstat(hlinkedpath, &statp))
+			{
+				logp("previous attempt started not hardlinked\n");
+				hardlinked=0;
+			}
+			else
+			{
+				logp("previous attempt started hardlinked\n");
+				hardlinked=1;
+			}
+		}
 
 		if(hardlinked)
 		{

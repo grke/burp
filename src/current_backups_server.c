@@ -384,7 +384,7 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 	{
 		// Transpose indexes so that the oldest index is set to 1.
 		(*arr)[j].trindex=tr-(*arr)[j].index+1;
-		printf("%lu: %lu\n", (*arr)[j].index, (*arr)[j].trindex);
+		//printf("%lu: %lu\n", (*arr)[j].index, (*arr)[j].trindex);
 	}
 
 	*a=i;
@@ -625,10 +625,10 @@ int do_remove_old_backups(const char *basedir, struct config *cconf, const char 
 	if(!ret)
 	{
 		// Remove the very oldest backups.
-		printf("back from: %lu\n", m);
+		//printf("back from: %lu\n", m);
 		for(b=0; b<a; b++)
 		{
-			printf(" %d: %lu (%lu)\n", b, arr[b].index, arr[b].trindex);
+			//printf(" %d: %lu (%lu)\n", b, arr[b].index, arr[b].trindex);
 			if(arr[b].trindex>m-1) break;
 		}
 		for(; b>=0 && b<a; b--)

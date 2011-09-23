@@ -220,17 +220,19 @@ void free_current_backups(struct bu **arr, int a)
 	for(b=0; b<a; b++)
 	{
 		if((*arr)[b].path)
-			free((*arr)[b].path);
+			{ free((*arr)[b].path); (*arr)[b].path=NULL; }
 		if((*arr)[b].data)
-			free((*arr)[b].data);
+			{ free((*arr)[b].data); (*arr)[b].data=NULL; }
 		if((*arr)[b].delta)
-			free((*arr)[b].delta);
+			{ free((*arr)[b].delta); (*arr)[b].delta=NULL; }
 		if((*arr)[b].timestamp)
-			free((*arr)[b].timestamp);
+			{ free((*arr)[b].timestamp); (*arr)[b].timestamp=NULL; }
 		if((*arr)[b].forward_timestamp)
-			free((*arr)[b].forward_timestamp);
+			{ free((*arr)[b].forward_timestamp);
+				(*arr)[b].forward_timestamp=NULL; }
 	}
 	free(*arr);
+	*arr=NULL;
 }
 
 static int get_link(const char *basedir, const char *lnk, char real[], size_t r)
@@ -252,6 +254,7 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 {
 	int i=0;
 	int j=0;
+	int tr=0;
 	int ret=0;
 	DIR *d=NULL;
 	char buf[32]="";
@@ -272,12 +275,14 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 	}
 	while((dp=readdir(d)))
 	{
+		int hardlinked=0;
 		struct stat statp;
 		char *fullpath=NULL;
 		char *timestamp=NULL;
 		char *forward=NULL;
 		char *timestampstr=NULL;
 		char *forward_timestampstr=NULL;
+		char *hlinkedpath=NULL;
 
 		if(dp->d_ino==0
 		  || !strcmp(dp->d_name, ".")
@@ -290,7 +295,9 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 		 || !(timestamp=prepend_s(fullpath,
 			"timestamp", strlen("timestamp")))
 		 || !(forward=prepend_s(fullpath,
-			"forward", strlen("forward"))))
+			"forward", strlen("forward")))
+		 || !(hlinkedpath=prepend_s(fullpath,
+			"hardlinked", strlen("hardlinked"))))
 		{
 			ret=-1;
 			if(timestamp) free(timestamp);
@@ -305,9 +312,12 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 			free(fullpath);
 			free(forward);
 			free(timestamp);
+			free(hlinkedpath);
 			continue;
 		}
 		free(timestamp);
+
+		if(!lstat(hlinkedpath, &statp)) hardlinked++;
 
 		if(!read_timestamp(forward, buf, sizeof(buf)))
 			forward_timestampstr=strdup(buf);
@@ -320,10 +330,13 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 			if(log) log_and_send("out of memory");
 			free(timestampstr);
 			free(fullpath);
+			free(hlinkedpath);
 			break;
 		}
 		(*arr)[i].path=fullpath;
 		(*arr)[i].timestamp=timestampstr;
+		(*arr)[i].hardlinked=hardlinked;
+		(*arr)[i].deletable=0;
 		(*arr)[i].index=strtoul(timestampstr, NULL, 10);
 		if(forward_timestampstr)
 		{
@@ -336,11 +349,19 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 			(*arr)[i].forward_timestamp=NULL;
 			(*arr)[i].forward_index=0;
 		}
+		(*arr)[i].trindex=0;
 		i++;
 	}
 	closedir(d);
 
 	if(*arr) qsort(*arr, i, sizeof(struct bu), bu_cmp);
+
+	if(i>1)
+	{
+		tr=(*arr)[i-1].index;
+		// The oldest backup is deletable.
+		(*arr)[0].deletable=1;
+	}
 
 	for(j=0; j<i-1; j++)
 	{
@@ -355,6 +376,15 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 			ret=-1;
 			break;
 		}
+
+		// Backups that come after hardlinked backups are deletable.
+		if((*arr)[j].hardlinked) (*arr)[j+1].deletable=1;
+	}
+	for(j=0; j<i; j++)
+	{
+		// Transpose indexes so that the oldest index is set to 1.
+		(*arr)[j].trindex=tr-(*arr)[j].index+1;
+		printf("%lu: %lu\n", (*arr)[j].index, (*arr)[j].trindex);
 	}
 
 	*a=i;
@@ -474,36 +504,165 @@ int compress_filename(const char *d, const char *file, const char *zfile, struct
 	return 0;
 }
 
-int remove_old_backups(const char *basedir, int keep)
+static int delete_backup(const char *basedir, struct bu *arr, int a, int b, const char *client)
+{
+	char *deleteme=NULL;
+
+	logp("deleting %s backup %lu\n", client, arr[b].index);
+
+	// First, point the preceeding backup to the following backup.
+	if(b>0 && b+1<a)
+	{
+		char *forward=NULL;
+		if(!(forward=prepend_s(arr[b-1].path,
+			"forward", strlen("forward")))) return -1;
+
+		if(write_timestamp(forward, arr[b+1].timestamp))
+		{
+			free(forward);
+			return -1;
+		}
+
+		free(forward);
+	}
+
+	if(!(deleteme=prepend_s(basedir, "deleteme", strlen("deleteme")))
+	  || do_rename(arr[b].path, deleteme)
+	  || recursive_delete(deleteme, NULL, TRUE))
+	{
+		logp("Error when trying to delete %s\n", arr[b].path);
+		free(deleteme);
+		return -1;
+	}
+	free(deleteme);
+
+	return 0;
+}
+
+int do_remove_old_backups(const char *basedir, struct config *cconf, const char *client)
 {
 	int a=0;
 	int b=0;
+        int x=0;
 	int ret=0;
-	int del=0;
+	int deleted=0;
+	unsigned long m=1;
 	struct bu *arr=NULL;
+	struct strlist **kplist=NULL;
 
-	logp("in remove_old_backups\n");
+	kplist=cconf->keep;
 
 	if(get_current_backups(basedir, &arr, &a, 1)) return -1;
 
-	// Find the cut-off point.
-	del=a-keep;
+	// For each of the 'keep' values, generate ranges in which to keep
+	// one backup.
+        for(x=0; x<cconf->kpcount; x++)
+        {
+		unsigned long n=0;
+		n=m * kplist[x]->flag;
 
-	// Trim from the back so that we do not end up with any
-	// directories with broken dependencies.
-	for(b=0; b<a; b++)
-	{
-		if(!ret && b<del)
+                //printf("keep[%d]: %d - m:%lu n:%lu\n",
+		//	x, cconf->keep[x]->flag, m, n);
+		if(x+1 < cconf->kpcount)
 		{
-			logp("keeping %d backups\n", keep);
-			logp("deleting %s\n", arr[b].timestamp);
-			ret=recursive_delete(arr[b].path, NULL, TRUE);
+			unsigned long r=0;
+			unsigned long s=0;
+			unsigned long upto=0;
+			upto=n*cconf->keep[x+1]->flag;
+			//printf("upto: %lu\n", upto);
+			// This is going over each range.
+			for(r=upto; r>n; r-=n)
+			{
+				int count=0;
+				s=r-n;
+				//printf("   try: %lu - %lu\n", s, r);
+
+				// Count the backups in the range.
+				for(b=0; b<a; b++)
+				{
+					if(s<arr[b].trindex
+					   && arr[b].trindex<=r)
+					{
+						//printf("     check backup %lu (%lu) %d\n", arr[b].index, arr[b].trindex, arr[b].deletable);
+						count++;
+					}
+				}
+
+				// Want to leave one entry in each range.
+				if(count>1)
+				{
+				  // Try to delete from the most recent in each
+				  // so that hardlinked backups get taken out
+				  // last.
+				  
+				  for(b=a-1; b>=0; b--)
+				  {
+				    if(s<arr[b].trindex
+				       && arr[b].trindex<=r
+				       && arr[b].deletable)
+				    {
+					//printf("deleting backup %lu (%lu)\n", arr[b].index, arr[b].trindex);
+					if(delete_backup(basedir, arr,
+						a, b, client))
+					{
+						ret=-1;
+						break;
+					}
+					deleted++;
+				  	if(--count<=1) break;
+				    }
+				  }
+				}
+
+				if(ret) break;
+			}
+		}
+		m=n;
+
+		if(ret) break;
+        }
+
+	if(!ret)
+	{
+		// Remove the very oldest backups.
+		printf("back from: %lu\n", m);
+		for(b=0; b<a; b++)
+		{
+			printf(" %d: %lu (%lu)\n", b, arr[b].index, arr[b].trindex);
+			if(arr[b].trindex>m-1) break;
+		}
+		for(; b>=0 && b<a; b--)
+		{
+			if(delete_backup(basedir, arr, a, b, client))
+			{
+				ret=-1;
+				break;
+			}
+			deleted++;
 		}
 	}
 
 	free_current_backups(&arr, a);
 
-	return ret;
+	if(ret) return ret;
+
+	return deleted;
+}
+
+int remove_old_backups(const char *basedir, struct config *cconf, const char *client)
+{
+	int deleted=0;
+	// Deleting a backup might mean that more become available to get rid
+	// of.
+	// Keep trying to delete until we cannot delete any more.
+	while(1)
+	{
+		if((deleted=do_remove_old_backups(basedir, cconf, client))<0)
+			return -1;
+		else if(!deleted)
+			break;
+	}
+	return 0;
 }
 
 int compile_regex(regex_t **regex, const char *str)

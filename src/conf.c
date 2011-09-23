@@ -16,7 +16,6 @@ void init_config(struct config *conf)
 	conf->mode=MODE_UNSET;
 	conf->port=NULL;
 	conf->status_port=NULL;
-	conf->keep=0;
 	conf->hardlinked_archive=0;
 	conf->working_dir_recovery_method=NULL;
 	conf->clientconfdir=NULL;
@@ -55,6 +54,8 @@ void init_config(struct config *conf)
 	conf->umask=0022;
 	conf->user=NULL;
 	conf->group=NULL;
+	conf->keep=NULL;
+	conf->kpcount=0;
 
 	conf->timer_script=NULL;
 	conf->timer_arg=NULL;
@@ -146,6 +147,8 @@ void free_config(struct config *conf)
 	if(conf->restore_script) free(conf->restore_script);
 	strlists_free(conf->backup_script_arg, conf->bscount);
 	strlists_free(conf->restore_script_arg, conf->rscount);
+
+	strlists_free(conf->keep, conf->kpcount);
 
 	init_config(conf);
 }
@@ -281,10 +284,12 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 	struct strlist **bslist=NULL;
 	struct strlist **rslist=NULL;
 	struct strlist **exlist=NULL;
+	struct strlist **kplist=NULL;
 	int have_include=0;
 	int got_timer_args=conf->tacount;
 	int got_ns_args=conf->nscount;
 	int got_nf_args=conf->nfcount;
+	int got_kp_args=conf->kpcount;
 
 	//logp("in load_config\n");
 
@@ -312,15 +317,9 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 			else
 				return conf_error(config_path, line);
 		}
-		else if(!strcmp(field, "keep"))
-		{
-			conf->keep=atoi(value);
-			if(!conf->keep)
-				return conf_error(config_path, line);
-		}
 		else if(!strcmp(field, "hardlinked_archive"))
 		{
-			conf->hardlinked_archive=atoi(value);
+			if(atoi(value)) conf->hardlinked_archive=1;
 		}
 		else if(!strcmp(field, "librsync"))
 		{
@@ -431,6 +430,11 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 			if(get_conf_val(field, value,
 			  "encryption_password", &(conf->encryption_password)))
 				return -1;
+			if(get_conf_val_args(field, value,
+				"keep",
+				&(conf->keep),
+				&got_kp_args, &(conf->kpcount),
+				&kplist, 1)) return -1;
 			if(get_conf_val_args(field, value,
 				"include",
 				NULL, NULL, &(conf->iecount),
@@ -597,6 +601,35 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 	if(!got_ns_args) conf->notify_success_arg=nslist;
 	if(!got_nf_args) conf->notify_failure_arg=nflist;
 
+	if(!got_kp_args)
+	{
+		unsigned long long mult=1;
+		for(i=0; i<conf->kpcount; i++)
+		{
+			if(!(kplist[i]->flag=atoi(kplist[i]->path)))
+			{
+				logp("'keep' value cannot be set to '%s'\n",
+					kplist[i]->path);
+				return -1;
+			}
+			mult*=kplist[i]->flag;
+
+			// An error if you try to keep backups every second
+			// for 100 years.
+			if(mult>52560000)
+			{
+				logp("Your 'keep' values are far too high. High enough to keep a backup every second for 10 years. Please lower them to something sensible.\n");
+				return -1;
+			}
+		}
+		// If more than one keep value is set, add one to the last one.
+		// This is so that, for example, having set 7, 4, 6, then
+		// a backup of age 7*4*6=168 or more is guaranteed to be kept.
+		// Otherwise, only 7*4*5=140 would be guaranteed to be kept.
+		if(conf->kpcount>1) kplist[i-1]->flag++;
+		conf->keep=kplist;
+	}
+
 	// If backup_script is set, override both post and pre settings.
 	// TODO: make a function to avoid repeating this stuff.
 	if(conf->backup_script)
@@ -705,6 +738,8 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 					config_path);
 				conf->max_children=5;
 			}
+			if(!conf->kpcount)
+			  { logp("%s: keep unset\n", config_path); r--; }
 			break;
 		case MODE_CLIENT:
 			if(!conf->cname)
@@ -784,7 +819,7 @@ static int set_global_arglist(struct strlist ***dst, struct strlist **src, int *
 		for(i=0; i<srccount; i++)
 		{
 			if(strlist_add(&list, dstcount,
-				src[i]->path, 0)) return -1;
+				src[i]->path, src[i]->flag)) return -1;
 		}
 		*dst=list;
 	}
@@ -794,7 +829,6 @@ static int set_global_arglist(struct strlist ***dst, struct strlist **src, int *
 /* Remember to update the list in the man page when you change these.*/
 int set_client_global_config(struct config *conf, struct config *cconf)
 {
-	cconf->keep=conf->keep;
 	cconf->hardlinked_archive=conf->hardlinked_archive;
 	cconf->librsync=conf->librsync;
 	cconf->compression=conf->compression;
@@ -820,6 +854,9 @@ int set_client_global_config(struct config *conf, struct config *cconf)
 	if(set_global_arglist(&(cconf->notify_failure_arg),
 		conf->notify_failure_arg,
 		&(cconf->nfcount), conf->nfcount)) return -1;
+	if(set_global_arglist(&(cconf->keep),
+		conf->keep,
+		&(cconf->kpcount), conf->kpcount)) return -1;
 
 	return 0;
 }

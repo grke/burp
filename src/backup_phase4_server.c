@@ -399,23 +399,43 @@ cleanup:
 	return ret;
 }
 
-static int do_hardlinked_archive(struct config *cconf, long bno)
+/* If cconf->hardlinked_archive set, hardlink everything.
+   If unset and there is more than one 'keep' value, periodically hardlink,
+   based on the first 'keep' value. This is so that we have more choice
+   of backups to delete than just the oldest.
+*/
+static int do_hardlinked_archive(struct config *cconf, unsigned long bno)
 {
+	int kp=0;
 	int ret=0;
-	logp("hardlinked_archive: %d, backup: %li (%li-2=%li)\n",
-			cconf->hardlinked_archive, bno, bno, bno-2);
-	if(!cconf->hardlinked_archive) return 0;
+	if(cconf->hardlinked_archive)
+	{
+		logp("need to hardlink archive\n");
+		return 1;
+	}
+	if(cconf->kpcount<=1)
+	{
+		logp("do not need to hardlink archive\n");
+		return 0;
+	}
 
-	ret=(bno-2)%cconf->hardlinked_archive;
-	logp("%sneed to hardlink archive (%li%%%d=%d)\n",
-		ret?"do not ":"", bno-2, cconf->hardlinked_archive, ret);
+	// If they have specified more than one 'keep' value, need to
+	// periodically hardlink, based on the first 'keep' value.
+	kp=cconf->keep[0]->flag;
+
+	logp("first keep value: %d, backup: %lu (%lu-2=%lu)\n",
+			kp, bno, bno, bno-2);
+
+	ret=(bno-2)%kp;
+	logp("%sneed to hardlink archive (%lu%%%d=%d)\n",
+		ret?"do not ":"", bno-2, kp, ret);
 
 	return !ret;
 }
 
 /* Need to make all the stuff that this does atomic so that existing backups
    never get broken, even if somebody turns the power off on the server. */ 
-static int atomic_data_jiggle(const char *finishing, const char *working, const char *manifest, const char *current, const char *currentdata, const char *datadir, const char *datadirtmp, struct config *cconf, const char *client, int hardlinked, long bno, struct cntr *p1cntr, struct cntr *cntr)
+static int atomic_data_jiggle(const char *finishing, const char *working, const char *manifest, const char *current, const char *currentdata, const char *datadir, const char *datadirtmp, struct config *cconf, const char *client, int hardlinked, unsigned long bno, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ret=0;
 	int ars=0;
@@ -544,7 +564,7 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 
 	if(!lstat(current, &statp)) // Had a previous backup
 	{
-		long bno=0;
+		unsigned long bno=0;
 		FILE *fwd=NULL;
 		int hardlinked=0;
 		char tstmp[64]="";
@@ -583,7 +603,7 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 			goto endfunc;
 		}
 		// Get the backup number.
-		bno=atol(tstmp);
+		bno=strtoul(tstmp, NULL, 10);
 
 		// Put forward reference in, indicating the timestamp of
 		// the working directory (which will soon become the current

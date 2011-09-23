@@ -80,8 +80,11 @@ struct config
 
 // Client options on the server.
 // They can be set globally in the server config, or for each client.
-	int keep;
 	int hardlinked_archive;
+
+	int kpcount;
+	struct strlist **keep;
+
 	char *working_dir_recovery_method;
 	int librsync;
 	int compression;

@@ -10,6 +10,10 @@ struct bu
 	char *forward_timestamp;
 	unsigned long index;
 	unsigned long forward_index;
+	int hardlinked;
+	int deletable;
+	// transposed index - will set the oldest backup to 1.
+	unsigned long trindex;
 };
 
 extern int recursive_hardlink(const char *src, const char *dst, const char *client, struct cntr *p1cntr, struct cntr *cntr);
@@ -21,7 +25,7 @@ extern int read_timestamp(const char *path, char buf[], size_t len);
 extern int write_timestamp(const char *timestamp, const char *tstmp);
 extern int compress_file(const char *current, const char *file, struct config *cconf);
 extern int compress_filename(const char *d, const char *file, const char *zfile, struct config *cconf);
-extern int remove_old_backups(const char *basedir, int keep);
+extern int remove_old_backups(const char *basedir, struct config *cconf, const char *client);
 extern int compile_regex(regex_t **regex, const char *str);
 extern int check_regex(regex_t *regex, const char *buf);
 extern size_t get_librsync_block_len(const char *endfile);

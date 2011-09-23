@@ -404,7 +404,7 @@ static int do_backup_server(const char *basedir, const char *current, const char
 			finishing, cconf, client,
 			p1cntr, cntr);
 		if(!ret && cconf->keep>0)
-			ret=remove_old_backups(basedir, cconf->keep);
+			ret=remove_old_backups(basedir, cconf, client);
 	}
 
 	goto end;

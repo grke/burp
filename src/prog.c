@@ -80,7 +80,8 @@ int reload(struct config *conf, const char *configfile, char **logfile, bool fir
 	umask(conf->umask);
 
 #ifndef HAVE_WIN32
-	setup_signals(oldmax_children, conf->max_children);
+	if(conf->mode==MODE_SERVER)
+		setup_signals(oldmax_children, conf->max_children);
 #endif
 
 	// Do not try to change user or group after the first time.

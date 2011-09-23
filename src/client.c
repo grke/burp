@@ -105,7 +105,7 @@ static void sighandler(int sig)
 }
 */
 
-static void setup_signals(void)
+static void setup_signals_client(void)
 {
 #ifndef HAVE_WIN32
 	//signal(SIGABRT, &sighandler);
@@ -129,7 +129,7 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 	reset_filecounter(&p1cntr);
 	reset_filecounter(&cntr);
 
-	setup_signals();
+	setup_signals_client();
 //	settimers(0, 100);
 	logp("begin client\n");
 

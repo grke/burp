@@ -3,6 +3,8 @@
     backups, 4 weekly backups (7x4=28), and 6 multiples of 4 weeks (7x4x6=168).
     You can have as many 'keep' lines as you like.
   * Make sure the client version warning message appears in the backup log.
+  * Get pre backup scripts running reliably again. Also, send script messages
+    on stderr to the server backup log.
 
 2011-09-09 Changes in burp-1.2.0:
   * Improvements to the counters and status monitor - remember the phase1

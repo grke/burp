@@ -2,6 +2,7 @@
     example, keep=7 keep=4 keep=6 (on separate lines) will keep 7 daily
     backups, 4 weekly backups (7x4=28), and 6 multiples of 4 weeks (7x4x6=168).
     You can have as many 'keep' lines as you like.
+  * Make sure the client version warning message appears in the backup log.
 
 2011-09-09 Changes in burp-1.2.0:
   * Improvements to the counters and status monitor - remember the phase1

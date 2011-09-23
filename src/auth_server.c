@@ -71,7 +71,7 @@ static int check_client_and_password(struct config *conf, const char *client, co
 	return 0;
 }
 
-static void version_warn(struct cntr *cntr, const char *client, const char *cversion)
+void version_warn(struct cntr *cntr, const char *client, const char *cversion)
 {
 	if(!cversion || strcmp(cversion, VERSION))
 	{
@@ -81,7 +81,7 @@ static void version_warn(struct cntr *cntr, const char *client, const char *cver
 			snprintf(msg, sizeof(msg), "Client '%s' has an unknown version. Please upgrade.", client?client:"unknown");
 		else
 			snprintf(msg, sizeof(msg), "Client '%s' version '%s' does not match server version '%s'. An upgrade is recommended.", client?client:"unknown", cversion, VERSION);
-		logw(cntr, "%s", msg);
+		if(cntr) logw(cntr, "%s", msg);
 		logp("WARNING: %s\n", msg);
 	}
 }

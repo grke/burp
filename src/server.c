@@ -219,7 +219,7 @@ extern int setup_signals(int oldmax_children, int max_children)
 	return 0;
 }
 
-static int open_log(const char *realworking, const char *cversion)
+static int open_log(const char *realworking, const char *client, const char *cversion)
 {
 	FILE *logfp=NULL;
 	char *logpath=NULL;
@@ -241,6 +241,11 @@ static int open_log(const char *realworking, const char *cversion)
 	free(logpath);
 
 	logp("Client version: %s\n", cversion?:"");
+	// Make sure a warning appears in the backup log.
+	// The client will already have been sent a message with logw.
+	// This time, prevent it sending a logw to the client by specifying
+	// NULL for cntr.
+	version_warn(NULL, client, cversion);
 
 	return 0;
 }
@@ -295,7 +300,7 @@ static int do_backup_server(const char *basedir, const char *current, const char
 			log_and_send("out of memory");
 			goto error;
 		}
-		if(open_log(realworking, cversion))
+		if(open_log(realworking, client, cversion))
 			goto error;
 	}
 	else
@@ -316,7 +321,7 @@ static int do_backup_server(const char *basedir, const char *current, const char
 			log_and_send(msg);
 			goto error;
 		}
-		else if(open_log(realworking, cversion))
+		else if(open_log(realworking, client, cversion))
 		{
 			goto error;
 		}

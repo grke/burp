@@ -150,6 +150,10 @@ static int forward_sbuf(FILE *fp, gzFile zp, struct sbuf *b, struct sbuf *target
 			if(ars<0)
 			{
 				free_sbuf(b);
+				if(latest.path)
+				{
+					logp("Error after %s in forward_sbuf()\n", latest.path?latest.path:"");
+				}
 				free_sbuf(&latest);
 				return -1;
 			}

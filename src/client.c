@@ -168,7 +168,7 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 	}
 	set_non_blocking(rfd);
 
-	if(!(ret=async_init(rfd, ssl))
+	if(!(ret=async_init(rfd, ssl, conf))
 	 && !(ret=authorise_client(conf, &p1cntr)))
 	{
 		rfd=-1;

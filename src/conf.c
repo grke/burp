@@ -26,6 +26,7 @@ void init_config(struct config *conf)
 	conf->password=NULL;
 	conf->passwd=NULL;
 	conf->server=NULL;
+	conf->ratelimit=0;
 	conf->startdir=NULL;
 	conf->incexcdir=NULL;
 	conf->fschgdir=NULL;
@@ -378,6 +379,20 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 		else if(!strcmp(field, "restore_script_post_run_on_fail"))
 		{
 			conf->restore_script_post_run_on_fail=atoi(value);
+		}
+		else if(!strcmp(field, "ratelimit"))
+		{
+			float f=0;
+			f=atof(value);
+			// User is specifying Mega bits per second.
+			// Need to convert to bytes per second.
+			f=(f*1024*1024)/8;
+			if(!f)
+			{
+				logp("ratelimit should be greater than zero\n");
+				return conf_error(config_path, line);
+			}
+			conf->ratelimit=f;
 		}
 		else
 		{

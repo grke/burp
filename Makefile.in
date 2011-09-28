@@ -90,7 +90,7 @@ installdirs:
 	$(MKDIR) $(DESTDIR)$(sbindir)
 	$(MKDIR) $(DESTDIR)$(sysconfdir)
 	$(MKDIR) $(DESTDIR)$(sysconfdir)/clientconfdir
-	$(MKDIR) $(DESTDIR)/var/lock/burp
+	$(MKDIR) $(DESTDIR)/var/run/burp
 	$(MKDIR) $(DESTDIR)/var/spool/burp
 
 gnomedirs:

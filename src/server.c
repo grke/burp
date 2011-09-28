@@ -1097,7 +1097,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 		free_config(&conf);
 		return -1;
 	}
-	if(async_init(*cfd, ssl))
+	if(async_init(*cfd, ssl, &conf))
 	{
 		close_fd(cfd);
 		free_config(&conf);

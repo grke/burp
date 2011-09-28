@@ -24,6 +24,7 @@ struct config
 	char *ssl_peer_cn;
 	char *user;
 	char *group;
+	float ratelimit;
 
 // server options
 	char *directory;

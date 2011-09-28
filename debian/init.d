@@ -19,8 +19,7 @@ DESC=burp             # Introduce a short description here
 NAME=burp             # Introduce the short server's name here
 DAEMON=/sbin/burp # Introduce the server's location here
 DAEMON_ARGS=""             # Arguments to run the daemon with
-#PIDFILE=/var/run/$NAME.pid
-PIDFILE=/var/lock/burp/server.lockfile
+PIDFILE=/var/run/$NAME/server.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
 # Exit if the package is not installed

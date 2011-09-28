@@ -10,6 +10,7 @@
 
 static int fd=-1;
 static SSL *ssl=NULL;
+static float ratelimit=0;
 
 static char *readbuf=NULL;
 static size_t readbuflen=0;
@@ -124,10 +125,45 @@ static int do_read(int *read_blocked_on_write)
 	return 0;
 }
 
+// Return 0 for OK to write, non-zero for not OK to write.
+static int check_ratelimit(unsigned long long *bytes)
+{
+	float f;
+	time_t now;
+	time_t diff;
+	static time_t start=time(NULL);
+	static int sleeptime=10000;
+	now=time(NULL);
+	if((diff=now-start)<0)
+	{
+		// It is possible that the clock changed. Reset ourselves.
+		now=start;
+		*bytes=0;
+		logp("Looks like the clock went back in time since starting. Resetting ratelimit\n");
+		return 0;
+	}
+	if(!diff) return 0; // Need to get started somehow.
+	f=(*bytes)/diff; // Bytes per second.
+
+	if(f>=ratelimit)
+	{
+	//	printf("ratelimit: %f %f\n", f, ratelimit);
+		usleep(sleeptime);
+		// If sleeping, increase the sleep time.
+		if((sleeptime*=2)>=500000) sleeptime=500000;
+		return 1;
+	}
+	// If not sleeping, decrease the sleep time.
+	if((sleeptime/=2)<=9999) sleeptime=10000;
+	return 0;
+}
+
 static int do_write(int *write_blocked_on_read)
 {
 	ssize_t w;
+	static unsigned long long bytes=0;
 
+	if(ratelimit && check_ratelimit(&bytes)) return 0;
 	ERR_clear_error();
 	w=SSL_write(ssl, writebuf, writebuflen);
 
@@ -135,6 +171,7 @@ static int do_write(int *write_blocked_on_read)
 	{
 	  case SSL_ERROR_NONE:
 		//logp("wrote: %d\n", w);
+		if(ratelimit) bytes+=w;
 		memmove(writebuf, writebuf+w, writebuflen-w);
 		writebuflen-=w;
 		break;
@@ -181,10 +218,11 @@ int async_append_all_to_write_buffer(char wcmd, const char *wsrc, size_t *wlen)
 	return 0;
 }
 
-int async_init(int afd, SSL *assl)
+int async_init(int afd, SSL *assl, struct config *conf)
 {
 	fd=afd;
 	ssl=assl;
+	ratelimit=conf->ratelimit;
 	if(async_alloc_buf(&readbuf, &readbuflen, readbufmaxsize)
 	  || async_alloc_buf(&writebuf, &writebuflen, writebufmaxsize))
 		return -1;
@@ -356,8 +394,9 @@ int async_rw(char *rcmd, char **rdst, size_t *rlen, char wcmd, const char *wsrc,
 
                 if(dowrite && FD_ISSET(fd, &fsw)) // able to write
 		{
-			int r;
+			int r=0;
 			write_blocked_on_read=0;
+
 			if((r=do_write(&write_blocked_on_read)))
 				logp("error in do_write\n");
 			return r;

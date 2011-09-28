@@ -74,8 +74,6 @@
 	  timeout. Or, go into a different kind of loop where it keeps trying
 	  to make a fresh connection.
 
-* Network rate-limiting feature (both client and server).
-
 * Windows non-VSS backups.
 
 * Investigate how to make massive files work better with librsync.

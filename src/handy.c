@@ -955,13 +955,16 @@ void write_status(const char *client, char phase, const char *path, struct cntr 
 }
 #endif
 
-static void log_script_output(const char *str, FILE **fp)
+static void log_script_output(FILE **fp, struct cntr *cntr)
 {
 	char buf[256]="";
 	if(fp && *fp)
 	{
-		while(fgets(buf, sizeof(buf), *fp))
-			logp("%s%s", str, buf);
+		if(fgets(buf, sizeof(buf), *fp))
+		{
+			logp("%s", buf);
+			if(cntr) logw(cntr, "%s", buf);
+		}
 		if(feof(*fp))
 		{
 			fclose(*fp);
@@ -970,10 +973,87 @@ static void log_script_output(const char *str, FILE **fp)
 	}
 }
 
+#ifndef HAVE_WIN32
+static int got_sigchld=0;
+static int run_script_status=-1;
+
+static void run_script_sigchld_handler(int sig)
+{
+	//printf("in run_script_sigchld_handler\n");
+	got_sigchld=1;
+	run_script_status=-1;
+	waitpid(-1, &run_script_status, 0);
+}
+
+void setup_signal(int sig, void handler(int sig))
+{
+	struct sigaction sa;
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler=handler;
+	sigaction(sig, &sa, NULL);
+}
+
+static int run_script_select(FILE **sout, FILE **serr, struct cntr *cntr)
+{
+	int mfd=-1;
+	fd_set fsr;
+	fd_set fse;
+	struct timeval tval;
+	int soutfd=fileno(*sout);
+	int serrfd=fileno(*serr);
+	setlinebuf(*sout);
+	setlinebuf(*serr);
+	set_non_blocking(soutfd);
+	set_non_blocking(serrfd);
+
+	while(1)
+	{
+		mfd=-1;
+		FD_ZERO(&fsr);
+		FD_ZERO(&fse);
+		if(*sout) add_fd_to_sets(soutfd, &fsr, NULL, &fse, &mfd);
+		if(*serr) add_fd_to_sets(serrfd, &fsr, NULL, &fse, &mfd);
+		tval.tv_sec=1;
+		tval.tv_usec=0;
+		if(select(mfd+1, &fsr, NULL, &fse, &tval)<0)
+		{
+			if(errno!=EAGAIN && errno!=EINTR)
+			{
+				logp("run_script_select error: %s\n",
+					strerror(errno));
+				return -1;
+			}
+		}
+		if(FD_ISSET(soutfd, &fse)
+		  || FD_ISSET(serrfd, &fse))
+		{
+			logp("error on run_script child fd\n");
+			return -1;
+		}
+		if(FD_ISSET(soutfd, &fsr)) log_script_output(sout, NULL);
+		if(FD_ISSET(serrfd, &fsr)) log_script_output(serr, cntr);
+
+		if(!*sout && !*serr && got_sigchld)
+		{
+			//fclose(*sout); *sout=NULL;
+			//fclose(*serr); *serr=NULL;
+			got_sigchld=0;
+			return 0;
+		}
+	}
+
+	// Never get here.
+	return -1;
+}
+
+#endif
+
+
 int run_script(const char *script, struct strlist **userargs, int userargc, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, struct cntr *cntr)
 {
 	int a=0;
 	int l=0;
+	int s=0;
 	pid_t p;
 	int pid_status=0;
 	FILE *serr=NULL;
@@ -992,47 +1072,46 @@ int run_script(const char *script, struct strlist **userargs, int userargc, cons
 	cmd[l++]=userargs[a]->path;
 	cmd[l++]=NULL;
 
+#ifndef HAVE_WIN32
+	setup_signal(SIGCHLD, run_script_sigchld_handler);
+#endif
+
 	fflush(stdout); fflush(stderr);
 	if((p=forkchild(NULL, &sout, &serr, cmd[0], cmd))==-1) return -1;
 #ifdef HAVE_WIN32
 	// My windows forkchild currently just executes, then returns.
 	return 0;
-#endif
+#else
+	s=run_script_select(&sout, &serr, cntr);
 
-	do {
-		log_script_output("", &sout);
-		log_script_output("", &serr);
-	} while(!(a=waitpid(p, &pid_status, WNOHANG)));
-	log_script_output("", &sout);
-	log_script_output("", &serr);
+	// Set SIGCHLD back to default.
+	setup_signal(SIGCHLD, SIG_DFL);
 
-	if(a<0)
+	if(s) return -1;
+
+	if(WIFEXITED(run_script_status))
 	{
-		logp("%s waitpid error: %s\n", script, strerror(errno));
-		return -1;
-	}
-
-	if(WIFEXITED(pid_status))
-	{
-		int ret=WEXITSTATUS(pid_status);
+		int ret=WEXITSTATUS(run_script_status);
 		logp("%s returned: %d\n", script, ret);
-		if(cntr && ret) logw(cntr, "%s returned: %d\n", script, ret);
+		if(cntr && ret) logw(cntr, "%s returned: %d\n",
+			script, ret);
 		return ret;
 	}
-	else if(WIFSIGNALED(pid_status))
+	else if(WIFSIGNALED(run_script_status))
 	{
 		logp("%s terminated on signal %s\n",
 			script, WTERMSIG(pid_status));
 		if(cntr) logw(cntr, "%s terminated on signal %s\n",
-			script, WTERMSIG(pid_status));
+			script, WTERMSIG(run_script_status));
 	}
 	else
 	{
 		logp("Strange return when trying to run %s\n", script);
-		if(cntr) logw(cntr, "Strange return when trying to run %s\n", script);
+		if(cntr) logw(cntr, "Strange return when trying to run %s\n",
+			script);
 	}
-
 	return -1;
+#endif
 }
 
 char *comp_level(struct config *conf)

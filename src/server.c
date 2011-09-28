@@ -31,7 +31,7 @@ static int hupreload=0;
 
 static void sighandler(int sig)
 {
-	logp("got signal: %d\n", sig);
+	logp("got signal in sighandler: %d\n", sig);
 	// Close the sockets properly so as to attempt to avoid annoying waits
 	// during testing when I kill the server with a Ctrl-C and then get
 	// 'unable to bind listening socket'.
@@ -45,7 +45,7 @@ static void sighandler(int sig)
 
 static void huphandler(int sig)
 {
-	logp("got signal: %d\n", sig);
+	logp("got signal in huphandler: %d\n", sig);
 	hupreload=1;
 }
 
@@ -171,19 +171,10 @@ static void sigchld_handler(int sig)
 	check_for_exiting_children();
 }
 
-static void setup_signal(int sig, void handler(int sig))
-{
-	struct sigaction sa;
-	memset(&sa, 0, sizeof(sa));
-	sa.sa_handler=handler;
-	sigaction(sig, &sa, NULL);
-}
-
 extern int setup_signals(int oldmax_children, int max_children)
 {
 	// Ignore SIGPIPE - we are careful with read and write return values.
 	int p=0;
-	struct sigaction sa;
 	signal(SIGPIPE, SIG_IGN);
 	// Get rid of defunct children.
 	if(!(chlds=(struct chldstat *)
@@ -207,10 +198,7 @@ extern int setup_signals(int oldmax_children, int max_children)
 	// off the end of the array. Mark this one with pid=-2.
 	chlds[max_children].pid=-2;
 
-	memset(&sa, 0, sizeof(sa));
-	sa.sa_handler=sigchld_handler;
-	sigaction(SIGCHLD, &sa, NULL);
-
+	setup_signal(SIGCHLD, sigchld_handler);
 	setup_signal(SIGABRT, sighandler);
 	setup_signal(SIGTERM, sighandler);
 	setup_signal(SIGINT, sighandler);

@@ -59,6 +59,7 @@ nodes.
 <li>Client side encryption - (note: this turns off delta differencing).
 <li>Scheduling.
 <li>Email backup success/failure notifications.
+<li>A single daily backup summary email.
 <li>A live ncurses monitor on the server.
 <li>Fifo read/write support.
 <li>Pre/post backup/restore client scripts.

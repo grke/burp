@@ -328,7 +328,7 @@ static void detail(char *toks[], int t, struct config *conf, int row, int col)
 		print_detail("Total", toks[12], &x, col, 1);
 	}
 	print_line("", x++, col);
-	if(t>14) print_detail("Warnings", toks[14], &x, col, 0);
+	if(t>14) print_detail2("Warnings", toks[14], "", &x, col);
 
 	if(t>15)
 	{

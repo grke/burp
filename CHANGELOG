@@ -6,6 +6,7 @@
   * Change pidfile paths to /var/run/burp instead of /var/lock/burp.
   * Get pre backup scripts running reliably again. Also, send script messages
     on stderr to the server backup log.
+  * Fix 'Warnings' line on the status monitor.
 
 2011-09-09 Changes in burp-1.2.0:
   * Improvements to the counters and status monitor - remember the phase1

@@ -114,7 +114,6 @@ static int forward_sbuf(FILE *fp, gzFile zp, struct sbuf *b, struct sbuf *target
 {
 	int ars=0;
 	struct sbuf latest;
-	init_sbuf(b);
 	init_sbuf(&latest);
 	off_t pos=0;
 	while(1)
@@ -151,6 +150,10 @@ static int forward_sbuf(FILE *fp, gzFile zp, struct sbuf *b, struct sbuf *target
 			if(ars<0)
 			{
 				free_sbuf(b);
+				if(latest.path)
+				{
+					logp("Error after %s in forward_sbuf()\n", latest.path?latest.path:"");
+				}
 				free_sbuf(&latest);
 				return -1;
 			}
@@ -205,6 +208,9 @@ int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, gzFile cmanfp, struct dpth *d
 	struct sbuf p1b;
 	struct sbuf p2b;
 	struct sbuf ucb;
+	init_sbuf(&p1b);
+	init_sbuf(&p2b);
+	init_sbuf(&ucb);
 
 	logp("Begin phase1 (read previous file system scan)\n");
 	if(read_phase1(p1zp, p1cntr)) goto error;

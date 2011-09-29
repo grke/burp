@@ -148,7 +148,13 @@ static int check_ratelimit(unsigned long long *bytes)
 	if(f>=ratelimit)
 	{
 	//	printf("ratelimit: %f %f\n", f, ratelimit);
+#ifdef HAVE_WIN32
+		// Windows Sleep is milliseconds, usleep is microseconds.
+		// Do some conversion.
+		Sleep(sleeptime/1000);
+#else
 		usleep(sleeptime);
+#endif
 		// If sleeping, increase the sleep time.
 		if((sleeptime*=2)>=500000) sleeptime=500000;
 		return 1;

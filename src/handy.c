@@ -953,7 +953,6 @@ void write_status(const char *client, char phase, const char *path, struct cntr 
 		}
 	}
 }
-#endif
 
 static void log_script_output(FILE **fp, struct cntr *cntr)
 {
@@ -973,7 +972,6 @@ static void log_script_output(FILE **fp, struct cntr *cntr)
 	}
 }
 
-#ifndef HAVE_WIN32
 static int got_sigchld=0;
 static int run_script_status=-1;
 
@@ -1053,13 +1051,14 @@ int run_script(const char *script, struct strlist **userargs, int userargc, cons
 {
 	int a=0;
 	int l=0;
-	int s=0;
 	pid_t p;
-	int pid_status=0;
 	FILE *serr=NULL;
 	FILE *sout=NULL;
 	char *cmd[64]={ NULL };
-
+#ifndef HAVE_WIN32
+	int s=0;
+	int pid_status=0;
+#endif
 	if(!script) return 0;
 
 	cmd[l++]=(char *)script;

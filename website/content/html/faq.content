@@ -65,6 +65,8 @@ nodes.
 <li>Pre/post backup/restore client scripts.
 <li>Backups of Solaris ZFS snapshot send/receives.
 <li>Linux and FreeBSD acl/xattr support.
+<li>Multiple retention periods (e.g, keep 1 backup per day for 7 days, 1 backup per week for 4 weeks, 1 backup per 4 weeks for a year).
+<li>Network rate limiting.
 </ul>
 </FONT>
 </P>
@@ -85,8 +87,6 @@ by space.
 <li>Server-side encryption option, so that network deltas can be done with
     encryption.
 <li>Improve the status monitor.
-<li>Add an option to set hardlinked_archive on a cycle, instead of just
-being either on or off.
 <li>Investigate HFS / resource forks and Mac support.
 <li>Add include/exclude wildcards.
 </ul>

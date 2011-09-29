@@ -7,6 +7,8 @@
   * Get pre backup scripts running reliably again. Also, send script messages
     on stderr to the server backup log.
   * Fix 'Warnings' line on the status monitor.
+  * Fix resume mode bug to do with potentially partially written entries at
+    the end of the phase2 file.
 
 2011-09-09 Changes in burp-1.2.0:
   * Improvements to the counters and status monitor - remember the phase1

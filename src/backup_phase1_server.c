@@ -207,9 +207,11 @@ int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, gzFile cmanfp, struct dpth *d
 	int ret=0;
 	struct sbuf p1b;
 	struct sbuf p2b;
+	struct sbuf p2btmp;
 	struct sbuf ucb;
 	init_sbuf(&p1b);
 	init_sbuf(&p2b);
+	init_sbuf(&p2btmp);
 	init_sbuf(&ucb);
 
 	logp("Begin phase1 (read previous file system scan)\n");
@@ -219,7 +221,17 @@ int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, gzFile cmanfp, struct dpth *d
 
 	logp("Setting up resume positions...\n");
 	// Go to the end of p2fp.
-	if(forward_sbuf(p2fp, NULL, &p2b, NULL,
+	if(forward_sbuf(p2fp, NULL, &p2btmp, NULL,
+		0, /* not phase1 */
+		0, /* no seekback */
+		1, /* do_counters */
+		0, /* changed */
+		dpth, cconf, cntr)) goto error;
+	rewind(p2fp);
+	// Go to the beginning of p2fp and seek forward to the p2btmp entry.
+	// This is to guard against a partially written entry at the end of
+	// p2fp, which will get overwritten.
+	if(forward_sbuf(p2fp, NULL, &p2b, &p2btmp,
 		0, /* not phase1 */
 		0, /* no seekback */
 		1, /* do_counters */
@@ -255,6 +267,7 @@ error:
 end:
 	free_sbuf(&p1b);
 	free_sbuf(&p2b);
+	free_sbuf(&p2btmp);
 	free_sbuf(&ucb);
 	logp("End phase1 (read previous file system scan)\n");
 	return ret;

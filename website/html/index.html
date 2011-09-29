@@ -93,6 +93,25 @@ The main author of Burp is Graham Keeling.
 <TD></TD>
 <TD ALIGN="LEFT">
 <P>
+<FONT COLOR="#99CCFF">2011-09-29: burp-1.2.2 is released.
+<pre>
+Changes in burp-1.2.2:
+  * Multiple retention periods (e.g, keep 1 backup per day for 7 days, 1
+    backup per week for 4 weeks, 1 backup per 4 weeks for a year). See the
+    'keep' option in the man page.
+  * Make sure the client version warning message appears in the backup log.
+  * Network send rate-limiting feature (both client and server).
+  * Change pidfile paths to /var/run/burp instead of /var/lock/burp.
+  * Get pre backup scripts running reliably again. Also, send script messages
+    on stderr to the server backup log.
+  * Fix 'Warnings' line on the status monitor.
+  * Fix resume mode bug to do with potentially partially written entries at
+    the end of the phase2 file.
+</pre>
+</FONT>
+</P>
+
+<P>
 <FONT COLOR="#99CCFF">2011-09-09: burp-1.2.0 is released.
 <pre>
 Changes in burp-1.2.0:
@@ -392,7 +411,7 @@ Burp, don't suck.
 </td>
 <td align="right">
 <font color="#99ccff">
-Last updated: September 2011
+Last updated: October 2011
 </font>
 </td></tr></table>
 

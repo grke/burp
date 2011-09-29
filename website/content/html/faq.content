@@ -79,7 +79,8 @@ Q. What is on the roadmap? What doesn't work?
 </P>
 <P>
 <FONT COLOR="#99CCFF">
-A. The following items are on my TODO list:
+A. The following items are on my TODO list (for the full list so the TODO file
+in the top level directory of the source):
 <ul>
 <li>Add extra ways of deciding when to delete old backups - e.g, by time, or
 by space.

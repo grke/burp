@@ -199,9 +199,9 @@ extern int setup_signals(int oldmax_children, int max_children)
 	chlds[max_children].pid=-2;
 
 	setup_signal(SIGCHLD, sigchld_handler);
-	setup_signal(SIGABRT, sighandler);
-	setup_signal(SIGTERM, sighandler);
-	setup_signal(SIGINT, sighandler);
+	//setup_signal(SIGABRT, sighandler);
+	//setup_signal(SIGTERM, sighandler);
+	//setup_signal(SIGINT, sighandler);
 	setup_signal(SIGHUP, huphandler);
 
 	return 0;

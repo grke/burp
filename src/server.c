@@ -29,6 +29,7 @@ static int sfd=-1; // status fd for the main server
 
 static int hupreload=0;
 
+/*
 static void sighandler(int sig)
 {
 	logp("got signal in sighandler: %d\n", sig);
@@ -42,6 +43,7 @@ static void sighandler(int sig)
 	logp("exiting\n");
 	exit(1);
 }
+*/
 
 static void huphandler(int sig)
 {

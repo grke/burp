@@ -1,3 +1,5 @@
+  * Add option to send success notifications only if there were warnings.
+
 2011-09-29 Changes in burp-1.2.2:
   * Multiple retention periods (e.g, keep 1 backup per day for 7 days, 1
     backup per week for 4 weeks, 1 backup per 4 weeks for a year). See the

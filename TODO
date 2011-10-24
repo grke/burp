@@ -78,6 +78,4 @@
 
 * Investigate how to make massive files work better with librsync.
 
-* Send notification email only on error or warnings.
-
 * Client version warning on the server does not end up in a backup log.

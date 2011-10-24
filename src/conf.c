@@ -65,6 +65,7 @@ void init_config(struct config *conf)
 	conf->notify_success_script=NULL;
 	conf->notify_success_arg=NULL;
 	conf->nscount=0;
+	conf->notify_success_warnings_only=0;
 
 	conf->notify_failure_script=NULL;
 	conf->notify_failure_arg=NULL;
@@ -379,6 +380,10 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 		else if(!strcmp(field, "restore_script_post_run_on_fail"))
 		{
 			conf->restore_script_post_run_on_fail=atoi(value);
+		}
+		else if(!strcmp(field, "notify_success_warnings_only"))
+		{
+			conf->notify_success_warnings_only=atoi(value);
 		}
 		else if(!strcmp(field, "ratelimit"))
 		{
@@ -847,6 +852,7 @@ int set_client_global_config(struct config *conf, struct config *cconf)
 	cconf->hardlinked_archive=conf->hardlinked_archive;
 	cconf->librsync=conf->librsync;
 	cconf->compression=conf->compression;
+	cconf->notify_success_warnings_only=conf->notify_success_warnings_only;
 	if(set_global_str(&(cconf->directory), conf->directory))
 		return -1;
 	if(set_global_str(&(cconf->working_dir_recovery_method),

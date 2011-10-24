@@ -97,6 +97,7 @@ struct config
 	char *notify_success_script;
 	struct strlist **notify_success_arg;
 	int nscount;
+	int notify_success_warnings_only;
 
 	char *notify_failure_script;
 	struct strlist **notify_failure_arg;

@@ -55,8 +55,8 @@ A. At the time of writing, the following features work:
 nodes.
 <li>Storage and network compression using zlib.
 <li>Ability to continue interrupted backups. 
-<li>SSL.
-<li>Client side encryption - (note: this turns off delta differencing).
+<li>Client/server communications encryption with SSL.
+<li>Client side file encryption - (note: this turns off delta differencing).
 <li>Scheduling.
 <li>Email backup success/failure notifications.
 <li>A single daily backup summary email.
@@ -85,11 +85,13 @@ in the top level directory of the source):
 <li>Add extra ways of deciding when to delete old backups - e.g, by time, or
 by space.
 <li>Add acl/xattr support for Solaris.
-<li>Server-side encryption option, so that network deltas can be done with
-    encryption.
+<li>Server-side file encryption option, so that network deltas can still be
+    done if you have file encryption turned on.
 <li>Improve the status monitor.
 <li>Investigate HFS / resource forks and Mac support.
 <li>Add include/exclude wildcards.
+<li>Start thinking about how to make a client-side gui for doing things like
+restores.
 </ul>
 </FONT>
 </P>

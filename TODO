@@ -47,7 +47,7 @@
 * Investigate Windows 'bare metal restore'.
 
 * Think about having a 'friendly' way of doing restores, as I have known some
-  people to complain about having to type things on the command lne.
+  people to complain about having to type things on the command line.
 
 * Add some kind of generic method for passing new fields from the client to
   the server, so that clients are less likely to have to upgrade.
@@ -77,5 +77,3 @@
 * Windows non-VSS backups.
 
 * Investigate how to make massive files work better with librsync.
-
-* Client version warning on the server does not end up in a backup log.

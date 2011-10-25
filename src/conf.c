@@ -27,6 +27,7 @@ void init_config(struct config *conf)
 	conf->passwd=NULL;
 	conf->server=NULL;
 	conf->ratelimit=0;
+	conf->network_timeout=60*60*2; // two hours
 	conf->startdir=NULL;
 	conf->incexcdir=NULL;
 	conf->fschgdir=NULL;
@@ -384,6 +385,10 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 		else if(!strcmp(field, "notify_success_warnings_only"))
 		{
 			conf->notify_success_warnings_only=atoi(value);
+		}
+		else if(!strcmp(field, "network_timeout"))
+		{
+			conf->network_timeout=atoi(value);
 		}
 		else if(!strcmp(field, "ratelimit"))
 		{

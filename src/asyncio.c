@@ -11,6 +11,8 @@
 static int fd=-1;
 static SSL *ssl=NULL;
 static float ratelimit=0;
+static int network_timeout=0;
+static int max_network_timeout=0;
 
 static char *readbuf=NULL;
 static size_t readbuflen=0;
@@ -229,6 +231,7 @@ int async_init(int afd, SSL *assl, struct config *conf)
 	fd=afd;
 	ssl=assl;
 	ratelimit=conf->ratelimit;
+	max_network_timeout=conf->network_timeout;
 	if(async_alloc_buf(&readbuf, &readbuflen, readbufmaxsize)
 	  || async_alloc_buf(&writebuf, &writebuflen, writebufmaxsize))
 		return -1;
@@ -379,8 +382,15 @@ int async_rw(char *rcmd, char **rdst, size_t *rlen, char wcmd, const char *wsrc,
 		{
 	//		logp("SELECT HIT TIMEOUT - doread: %d, dowrite: %d\n",
 	//			doread, dowrite);
+			if(max_network_timeout>0 && network_timeout--<=0)
+			{
+				logp("No activity on network for %d seconds.\n",
+					max_network_timeout);
+				return -1;
+			}
 			return 0;
 		}
+		network_timeout=max_network_timeout;
 
                 if(FD_ISSET(fd, &fse))
                 {

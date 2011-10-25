@@ -25,6 +25,7 @@ struct config
 	char *user;
 	char *group;
 	float ratelimit;
+	int network_timeout;
 
 // server options
 	char *directory;

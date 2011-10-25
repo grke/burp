@@ -10,7 +10,22 @@ int get_lock(const char *path)
 	return 0;
 #else
 	int fdlock;
+	char *cp=NULL;
 	char pid[16]="";
+        char *copy=NULL;
+
+        // Try to make sure the lock directory exists.
+        if(!(copy=strdup(path)))
+	{
+                logp("Out of memory\n");
+		return -1;
+	}
+	if((cp=strrchr(copy, '/')))
+	{
+		*cp='\0';
+		if(*copy) mkdir(copy, 0777);
+	}
+	free(copy);
 
 	if((fdlock=open(path, O_WRONLY|O_CREAT, 0666))==-1)
 		return -1;

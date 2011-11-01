@@ -83,7 +83,7 @@ WIN32LIBS = $(@WIN32@)
 #	@echo "Compiling $<"
 	$(ECHO_CMD)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 #-------------------------------------------------------------------------
-all: Makefile @WIN32@ burp @STATIC@
+all: Makefile @WIN32@ burp @STATIC@ bedup @STATIC_DEDUP@
 	@echo "==== Make of burp is good ===="
 	@echo " "
 
@@ -122,7 +122,17 @@ static-burp: Makefile $(SVROBJS) @WIN32@
 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -o $@ $(SVROBJS) \
 	   $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
 	   $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(RSYNC_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS) -ldl -lgpm
-#	strip $@
+
+bedup:  Makefile bedup.o @WIN32@
+	@echo "Linking $@ ..."
+	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -o $@ bedup.o log.o \
+	  $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
+	  $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(RSYNC_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS)
+
+static-bedup: Makefile bedup.o @WIN32@
+	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -o $@ bedup.o log.o \
+	   $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
+	   $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(RSYNC_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS) -ldl -lgpm
 
 Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
 	cd $(topdir) \
@@ -132,8 +142,8 @@ libtool-clean:
 	@$(RMF) -r .libs _libs
 
 clean:	libtool-clean
-	@$(RMF) burp burp core core.* a.out *.o *.bak *~ *.intpro *.extpro 1 2 3
-	@$(RMF) static-burp
+	@$(RMF) burp core core.* a.out *.o *.bak *~ *.intpro *.extpro 1 2 3
+	@$(RMF) bedup static-burp static-bedup
 #	@if test -f win32/Makefile -a "${GMAKE}" != "none"; then \
 #	   (cd win32; $(GMAKE) clean); \
 #	fi
@@ -157,6 +167,7 @@ devclean: realclean
 
 install: all
 	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) burp $(DESTDIR)$(sbindir)/burp 
+	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) bedup $(DESTDIR)$(sbindir)/bedup
 	@if [ $(sbindir) != /usr/sbin ] ; then \
 		rm -f $(DESTDIR)/usr/sbin/burp ; \
 		mkdir -p $(DESTDIR)/usr/sbin ; \
@@ -165,11 +176,14 @@ install: all
 	@if test -f static-burp; then \
 	   $(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) static-burp $(DESTDIR)$(sbindir)/static-burp; \
 	fi
+	@if test -f static-bedup ; then \
+	   $(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) static-bedup  $(DESTDIR)$(sbindir)/static-bedup ; \
+	fi
 
 
 
 uninstall:
-	(cd $(DESTDIR)$(sbindir); $(RMF) burp)
+	(cd $(DESTDIR)$(sbindir); $(RMF) burp bedup static-burp static-bedup)
 
 
 

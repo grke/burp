@@ -67,6 +67,7 @@ nodes.
 <li>Linux and FreeBSD acl/xattr support.
 <li>Multiple retention periods (e.g, keep 1 backup per day for 7 days, 1 backup per week for 4 weeks, 1 backup per 4 weeks for a year).
 <li>Network rate limiting.
+<li>Storage data deduplication.
 </ul>
 </FONT>
 </P>
@@ -211,10 +212,9 @@ Q. Are you going to do data deduplication on the server side?
 
 <P>
 <FONT COLOR="#99CCFF">
-No. There are file systems (like btrfs, zfs and btrfs) coming along that will
-do data deduplication automatically. So applications won't need to do anything
-particularly special just to get that feature, and anything similar that I
-might implement now would probably be wasted effort.
+Yes, new in version 1.2.4.
+Note, that there are file systems (like btrfs, zfs and btrfs) coming along that
+will do data deduplication automatically, and probably better than burp.
 </FONT>
 </P>
 

@@ -1,3 +1,4 @@
+  * Add a file deduplication program, "bedup".
   * Add a network_timeout parameter. Default is 7200 seconds (2 hours).
   * Add option to send success notifications only if there were warnings.
   * Try to create the pidfile directory if it doesn't exist.

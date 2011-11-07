@@ -77,5 +77,3 @@
 * Windows non-VSS backups.
 
 * Investigate how to make massive files work better with librsync.
-
-* FIgure out a way to sensibly run bedup.

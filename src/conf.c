@@ -96,6 +96,8 @@ void init_config(struct config *conf)
 	conf->restore_script=NULL;
 	conf->restore_script_arg=NULL;
 	conf->rscount=0;
+
+	conf->dedup_group=NULL;
 }
 
 void free_config(struct config *conf)
@@ -152,6 +154,8 @@ void free_config(struct config *conf)
 	strlists_free(conf->restore_script_arg, conf->rscount);
 
 	strlists_free(conf->keep, conf->kpcount);
+
+	if(conf->dedup_group) free(conf->dedup_group);
 
 	init_config(conf);
 }
@@ -263,6 +267,52 @@ static int path_checks(const char *path)
 	}
 #endif
 	return 0;
+}
+
+/* is_subdir() and pathcmp() included in conf.c so that bedup can include
+   conf.c and not much more else. */
+
+// Return a number indicating the number of directories matched (plus one).
+// 0 if it is not a sub-directory.
+// Two paths the same counts as a subdirectory.
+int is_subdir(const char *dir, const char *sub)
+{
+	int count=1;
+	const char *d=NULL;
+	const char *s=NULL;
+	const char *dl=NULL;
+	const char *sl=NULL;
+	if(!sub || !dir) return 0;
+	for(s=sl=sub, dl=d=dir; *s && *d; s++, d++)
+	{
+		if(*s!=*d) break;
+		sl=s;
+		dl=d;
+		if(*s=='/') count++;
+	}
+	if(!*d && !*s) return ++count; // Paths were exactly the same.
+	if(!*d && *s=='/')
+		return ++count; // 'dir' ended without a slash, for example:
+	// dir=/bin sub=/bin/bash
+	if(*dl=='/' && *sl=='/' && *(sl+1) && !*(dl+1)) return count;
+	return 0;
+}
+
+int pathcmp(const char *a, const char *b)
+{
+	const char *x=NULL;
+	const char *y=NULL;
+	for(x=a, y=b; *x && *y ; x++, y++)
+	{
+		if(*x==*y) continue;
+		if(*x=='/' && *y!='/') return -1;
+		if(*x!='/' && *y=='/') return 1;
+		if(*x<*y) return -1;
+		if(*x>*y) return 1;
+	}
+	if(!*x && !*y) return 0; // equal
+	if( *x && !*y) return 1; // x is longer
+	return -1; // y is longer
 }
 
 int load_config(const char *config_path, struct config *conf, bool loadall)
@@ -556,6 +606,9 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 				&(conf->restore_script_arg),
 				NULL, &(conf->rscount),
 				&rslist, 0)) return -1;
+			if(get_conf_val(field, value,
+			  "dedup_group",
+			  &(conf->dedup_group))) return -1;
 		}
 	}
 	fclose(fp);
@@ -883,6 +936,8 @@ int set_client_global_config(struct config *conf, struct config *cconf)
 	if(set_global_arglist(&(cconf->keep),
 		conf->keep,
 		&(cconf->kpcount), conf->kpcount)) return -1;
+	if(set_global_str(&(cconf->dedup_group), conf->dedup_group))
+		return -1;
 
 	return 0;
 }

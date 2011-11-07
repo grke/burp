@@ -5,10 +5,16 @@
 #include <errno.h>
 #include <libgen.h>
 #include <unistd.h>
+#include <stdarg.h>
 
 #include <openssl/md5.h>
 
+#include "config.h"
+#include "version.h"
 #include "log.h"
+#include "conf.h"
+#include "lock.h"
+#include "strlist.h"
 #include "uthash/uthash.h"
 
 static int makelinks=0;
@@ -16,6 +22,7 @@ static char *prog=NULL;
 
 static unsigned long long savedbytes=0;
 static unsigned long long count=0;
+static int ccount=0;
 
 typedef struct file file_t;
 
@@ -118,8 +125,7 @@ static int full_match(struct file *o, struct file *n, FILE **ofp, FILE **nfp)
 	size_t ngot;
 	char obuf[4096];
 	char nbuf[4096];
-	char *op=NULL;
-	char *np=NULL;
+	unsigned int i=0;
 
 	if(!*ofp && !(*ofp=open_file(o))) return 0;
 	if(!*nfp && !(*nfp=open_file(n))) return 0;
@@ -133,8 +139,8 @@ static int full_match(struct file *o, struct file *n, FILE **ofp, FILE **nfp)
 		ngot=read_chunk(*nfp, nbuf, sizeof(nbuf));
 		if(ogot<0 || ogot!=ngot) return 0;
 		if(!ogot) break;
-		for(op=obuf, np=nbuf; *op; op++, np++)
-			if(*op!=*np) return 0;
+		for(i=0; i<ogot; i++)
+			if(obuf[i]!=nbuf[i]) return 0;
 	}
 
 	return 1;
@@ -215,7 +221,7 @@ static int do_rename(const char *oldpath, const char *newpath)
 {
 	if(rename(oldpath, newpath))
 	{
-		logp("could not rename '%s' to '%s': %s\n",
+		logp("Could not rename '%s' to '%s': %s\n",
 			oldpath, newpath, strerror(errno));
 		return -1;
 	}
@@ -369,7 +375,7 @@ static int process_dir(const char *oldpath, const char *newpath, const char *ext
 
 	if(!(dirp=opendir(path)))
 	{
-		logp("could not opendir '%s': %s\n", path, strerror(errno));
+		logp("Could not opendir '%s': %s\n", path, strerror(errno));
 		return 0;
 	}
 	while((dirinfo=readdir(dirp)))
@@ -443,10 +449,162 @@ static int process_dir(const char *oldpath, const char *newpath, const char *ext
 	return 0;
 }
 
+static int looks_like_vim_tmpfile(const char *filename)
+{
+	const char *cp=NULL;
+	// vim tmpfiles look like ".filename.swp".
+	if(filename[0]=='.'
+	  && (cp=strrchr(filename, '.'))
+	  && !strcmp(cp, ".swp"))
+		return 1;
+	return 0;
+}
+
+static int in_group(const char *clientconfdir, const char *client, strlist_t **grouplist, int gcount, struct config *conf)
+{
+	int i=0;
+	char *ccfile=NULL;
+	struct config cconf;
+
+	if(!(ccfile=prepend(clientconfdir, client, "/"))) return -1;
+	init_config(&cconf);
+	if(set_client_global_config(conf, &cconf)
+	  || load_config(ccfile, &cconf, 0))
+	{
+		logp("could not load config for client %s\n", client);
+		free(ccfile);
+		return 0;
+	}
+	free(ccfile);
+
+	if(!cconf.dedup_group) return 0;
+
+	for(i=0; i<gcount; i++)
+		if(!strcmp(grouplist[i]->path, cconf.dedup_group))
+			return 1;
+	return 0;
+}
+
+static int iterate_over_clients(struct config *conf, strlist_t **grouplist, int gcount, const char *ext)
+{
+	int i=0;
+	int ret=0;
+	DIR *dirp=NULL;
+	int lockcount=0;
+	struct dirent *dirinfo=NULL;
+	struct strlist **locklist=NULL;
+
+	if(!(dirp=opendir(conf->clientconfdir)))
+	{
+		logp("Could not opendir '%s': %s\n",
+			conf->clientconfdir, strerror(errno));
+		return 0;
+	}
+	while((dirinfo=readdir(dirp)))
+	{
+		char *lockfile=NULL;
+		char *lockfilebase=NULL;
+		char *lockfilededup=NULL;
+		if(!strcmp(dirinfo->d_name, ".")
+		  || !strcmp(dirinfo->d_name, "..")
+		  || looks_like_vim_tmpfile(dirinfo->d_name))
+			continue;
+
+		if(gcount)
+		{
+			int ig=0;
+			if((ig=in_group(conf->clientconfdir,
+				dirinfo->d_name, grouplist, gcount, conf))<0)
+			{
+				ret=-1;
+				break;
+			}
+			if(!ig) continue;
+		}
+
+		if(!(lockfilebase=prepend(conf->client_lockdir,
+			dirinfo->d_name, "/"))
+		 || !(lockfile=prepend(lockfilebase, "lockfile", "/"))
+		 || !(lockfilededup=prepend(lockfile, ".dedup", "")))
+		{
+			if(lockfilebase) free(lockfilebase);
+			if(lockfile) free(lockfile);
+			if(lockfilededup) free(lockfilededup);
+			ret=-1;
+			break;
+		}
+		free(lockfilebase);
+
+		// Get a second lock to indicate to the status server that
+		// a dedup is in progress.
+		if(get_lock(lockfile) || get_lock(lockfilededup))
+		{
+			logp("Could not get %s\n", lockfile);
+			free(lockfile);
+			free(lockfilededup);
+			continue;
+		}
+
+		// Remember that we got that lock.
+		if(strlist_add(&locklist, &lockcount, lockfile, 1))
+		{
+			free(lockfile);
+			free(lockfilededup);
+			lockcount=0;
+			break;
+		}
+
+		logp("Got %s\n", lockfile);
+		free(lockfilededup);
+
+		if(process_dir(conf->directory, dirinfo->d_name, ext))
+		{
+			ret=-1;
+			break;
+		}
+
+		ccount++;
+	}
+	closedir(dirp);
+
+	// Remove locks.
+	for(i=0; i<lockcount; i++)
+	{
+		char path[512]="";
+		snprintf(path, sizeof(path), "%s.dedup", locklist[i]->path);
+		unlink(path);
+		unlink(locklist[i]->path);
+	}
+
+	strlists_free(locklist, lockcount);
+	return ret;
+}
+
+static char *get_config_path(void)
+{
+        static char path[256]="";
+        snprintf(path, sizeof(path), "%s", SYSCONFDIR "/burp.conf");
+        return path;
+}
+
 static int usage(void)
 {
-	fprintf(stderr, "%s: [-l] <list of directories>\n\n", prog);
-	fprintf(stderr, "If you give '-l', duplicate files will be replaced with hard links.\n");
+	printf("\n%s: [options]\n", prog);
+	printf("\n");
+	printf(" Options:\n");
+	printf("  -c <path>                Path to config file (default: %s).\n", get_config_path());
+	printf("  -h|-?                    Print this text and exit.\n");
+	printf("  -l                       Hard link any duplicate files found.\n");
+	printf("  -n <list of directories> Non-burp mode. Deduplicate any (set of) directories.\n");
+	printf("  -v                       Print version and exit.\n");
+	printf("\n");
+	printf("Be default, %s will read %s and gain locks on client storage\n", prog, get_config_path());
+	printf("directories before attempting to deduplicate files within them.\n");
+	printf("\n");
+	printf("With '-n', this locking is turned off and you have to specify the directories\n");
+	printf("to deduplicate on the command line. Running with '-n' is therefore dangerous\n");
+	printf("if you are deduplicating burp storage directories without first turning off\n");
+	printf("the burp server\n\n");
 	return 1;
 }
 
@@ -483,32 +641,137 @@ int main(int argc, char *argv[])
 {
 	int i=1;
 	int ret=0;
+	int option=0;
+	int nonburp=0;
+	char *groups=NULL;
 	char ext[16]="";
+	int givenconfigfile=0;
 	prog=basename(argv[0]);
 	init_log(prog);
+	const char *configfile=NULL;
 
-	if(argc<2
-	  || !strcmp(argv[1], "-h")
-	  || !strcmp(argv[1], "-?"))
-		return usage();
+	configfile=get_config_path();
+	snprintf(ext, sizeof(ext), ".bedup.%d", getpid());
 
-	if(!strcmp(argv[1], "-l"))
+	while((option=getopt(argc, argv, "c:g:hlnv?"))!=-1)
 	{
-		i++;
-		makelinks=1;
+		switch(option)
+		{
+			case 'c':
+				configfile=optarg;
+				givenconfigfile=1;
+				break;
+			case 'g':
+				groups=optarg;
+				break;
+			case 'l':
+				makelinks=1;
+				break;
+			case 'n':
+				nonburp=1;
+				break;
+			case 'v':
+				printf("%s-%s\n", prog, VERSION);
+				return 0;
+			case 'h':
+			case '?':
+				return usage();
+		}
 	}
 
-	snprintf(ext, sizeof(ext), ".bedup.%d", getpid());
-	for(; i<argc; i++)
+	if(nonburp && givenconfigfile)
 	{
-		// Strip trailing slashes, for tidiness.
-		if(argv[i][strlen(argv[i])-1]=='/')
-			argv[i][strlen(argv[i])-1]='\0';
-		if(process_dir("", argv[i], ext))
+		logp("-n and -c options are mutually exclusive\n");
+		return 1;
+	}
+	if(nonburp && groups)
+	{
+		logp("-n and -g options are mutually exclusive\n");
+	}
+
+	if(optind>=argc)
+	{
+		if(nonburp)
 		{
-			ret=1;
-			break;
+			logp("No directories found after options\n");
+			return 1;
 		}
+	}
+	else
+	{
+		if(!nonburp)
+		{
+			logp("Do not specify extra arguments.\n");
+			return 1;
+		}
+	}
+
+	if(nonburp)
+	{
+		// Read directories from command line.
+		for(i=optind; i<argc; i++)
+		{
+			// Strip trailing slashes, for tidiness.
+			if(argv[i][strlen(argv[i])-1]=='/')
+				argv[i][strlen(argv[i])-1]='\0';
+			if(process_dir("", argv[i], ext))
+			{
+				ret=1;
+				break;
+			}
+		}
+	}
+	else
+	{
+		int gcount=0;
+		struct config conf;
+		struct strlist **grouplist=NULL;
+
+		if(groups)
+		{
+			char *tok=NULL;
+			if((tok=strtok(groups, ",\n")))
+			{
+				do
+				{
+					if(strlist_add(&grouplist, &gcount,
+						tok, 1))
+					{
+						logp("out of memory\n");
+						return -1;
+					}
+				} while((tok=strtok(NULL, ",\n")));
+			}
+			if(!gcount)
+			{
+				logp("unable to read list of groups\n");
+				return -1;
+			}
+		}
+
+		// Read directories from config files, and get locks.
+		init_config(&conf);
+		if(load_config(configfile, &conf, 1)) return 1;
+		if(conf.mode!=MODE_SERVER)
+		{
+			logp("%s is not a server config file\n", configfile);
+			free_config(&conf);
+			return 1;
+		}
+		logp("Dedup clients from %s\n", conf.clientconfdir);
+		if(gcount)
+		{
+			logp("in dedup groups:\n");
+			for(i=0; i<gcount; i++)
+				logp("%s\n", grouplist[i]->path);
+		}
+		ret=iterate_over_clients(&conf, grouplist, gcount, ext);
+		free_config(&conf);
+	}
+
+	if(!nonburp)
+	{
+		logp("%d client storages scanned\n", ccount);
 	}
 	logp("%llu duplicate %s found\n",
 		count, count==1?"file":"files");

@@ -105,5 +105,6 @@
 #define	STATUS_LISTING		'7'
 #define	STATUS_RESTORING	'8'
 #define	STATUS_VERIFYING	'9'
+#define	STATUS_DEDUP		'd'
 
 #endif // _CMD_H

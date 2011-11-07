@@ -103,11 +103,15 @@ struct config
 	char *notify_failure_script;
 	struct strlist **notify_failure_arg;
 	int nfcount;
+
+	char *dedup_group;
 };
 
 extern void init_config(struct config *conf);
 extern int load_config(const char *config_path, struct config *conf, bool loadall);
 extern void free_config(struct config *conf);
 extern int set_client_global_config(struct config *conf, struct config *cconf);
+extern int is_subdir(const char *dir, const char *sub);
+extern int pathcmp(const char *a, const char *b);
 
 #endif

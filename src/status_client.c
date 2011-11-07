@@ -183,6 +183,11 @@ static int summary(char **toks, int t, int count, int row, int col)
 		snprintf(msg, sizeof(msg), "%-14.14s %-14s %s%s",
 			toks[0], s, f, b);
 	}
+	if(*(toks[1])==STATUS_DEDUP)
+	{
+		snprintf(msg, sizeof(msg), "%-14.14s %-14s",
+			toks[0], "deduplicating");
+	}
 	if(*msg)
 	{
 		print_line(msg, count, col);
@@ -310,6 +315,13 @@ static void detail(char *toks[], int t, struct config *conf, int row, int col)
 							*(toks[2])));
 					print_line(msg, x++, col);
 				}
+				break;
+			}
+			case STATUS_DEDUP:
+			{
+				print_line("Status: deduplicating", x++, col);
+				show_all_backups(toks, t, &x, col);
+				return;
 			}
 		}
 	}

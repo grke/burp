@@ -593,6 +593,11 @@ static int usage(void)
 	printf("\n");
 	printf(" Options:\n");
 	printf("  -c <path>                Path to config file (default: %s).\n", get_config_path());
+	printf("  -g <list of group names> Only run on the directories of clients that\n");
+	printf("                           are in one of the groups specified.\n");
+	printf("                           The list is comma-separated. To put a client in a\n");
+	printf("                           group, use the 'dedup_group' option in the client\n");
+	printf("                           configuration file on the server.\n");
 	printf("  -h|-?                    Print this text and exit.\n");
 	printf("  -l                       Hard link any duplicate files found.\n");
 	printf("  -n <list of directories> Non-burp mode. Deduplicate any (set of) directories.\n");

@@ -225,6 +225,9 @@ The same as notify_success_script, but for backups that failed.
 .TP
 \fBnotify_failure_arg=[string]\fR
 The same as notify_failure_arg, but for backups that failed.
+.TP
+\fBdedup_group=[string]\fR
+Enables you to group clients together for file deduplication purposes. For example, you might want to set 'dedup_group=xp' for each Windows XP client, and then run the bedup program on a cron job every other day with the option '-g xp'.
 
 .SH CLIENT CONFIGURATION FILE OPTIONS
 
@@ -373,6 +376,7 @@ Additionally, the following options can be overridden here for each client:
 \fBnotify_success_warnings_only\fR
 \fBnotify_failure_script\fR
 \fBnotify_failure_arg\fR
+\fBdedup_group\fR
 
 .SH Some notes on SSL certificates
 .TP

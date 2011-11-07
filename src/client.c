@@ -33,7 +33,7 @@ static int maybe_check_timer(const char *phase1str, struct config *conf, int *re
         if(rcmd==CMD_GEN && !strcmp(rdst, "timer conditions not met"))
         {
                 free(rdst);
-                logp("Timer conditions not met.\n");
+                logp("Timer conditions on the server were not met\n");
                 return 1;
         }
         else if(rcmd!=CMD_GEN)
@@ -218,8 +218,12 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 					}
 				}
 
-				if(ret<0) logp("error in backup\n");
-				else logp("backup finished ok\n");
+				if(ret<0)
+					logp("error in backup\n");
+				else if(ret>0)
+				{ } // timer script said no.
+				else
+					logp("backup finished ok\n");
 				
 				break;
 			}

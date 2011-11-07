@@ -902,7 +902,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 					cconf->timer_script,
 					cconf->timer_arg,
 					cconf->tacount,
-					client, current, cntr))<0)
+					client, current, NULL))<0)
 				{
 					ret=tret;
 					logp("Error running timer script for %s\n", client);

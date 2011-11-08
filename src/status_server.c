@@ -24,7 +24,6 @@ struct cstat
 	char *current;
 	char *timestamp;
 	char *lockfile;
-	char *lockfilededup;
 	time_t lockfile_mtime;
 };
 
@@ -56,7 +55,6 @@ static int cstat_add_initial_details(struct cstat *c, const char *name, const ch
 	c->current=NULL;
 	c->timestamp=NULL;
 	c->lockfile=NULL;
-	c->lockfilededup=NULL;
 	c->lockfile_mtime=0;
 	return 0;
 }
@@ -119,7 +117,6 @@ static void cstat_blank(struct cstat *c)
 	if(c->current) { free(c->current); c->current=NULL; }
 	if(c->timestamp) { free(c->timestamp); c->timestamp=NULL; }
 	if(c->lockfile) { free(c->lockfile); c->lockfile=NULL; }
-	if(c->lockfilededup) { free(c->lockfilededup); c->lockfilededup=NULL; }
 	c->conf_mtime=0;
 	c->basedir_mtime=0;
 	c->lockfile_mtime=0;
@@ -132,15 +129,13 @@ static int set_cstat_from_conf(struct cstat *c, struct config *conf, struct conf
 	if(c->working) { free(c->working); c->working=NULL; }
 	if(c->current) { free(c->current); c->current=NULL; }
 	if(c->timestamp) { free(c->timestamp); c->timestamp=NULL; }
-	if(c->lockfilededup) { free(c->lockfilededup); c->lockfilededup=NULL; }
 
 	if(!(c->basedir=prepend_s(cconf->directory, c->name, strlen(c->name)))
 	  || !(c->working=prepend_s(c->basedir, "working", strlen("working")))
 	  || !(c->current=prepend_s(c->basedir, "current", strlen("current")))
 	  || !(c->timestamp=prepend_s(c->current, "timestamp", strlen("timestamp")))
 	  || !(lockbasedir=prepend_s(conf->client_lockdir, c->name, strlen(c->name)))
-	  || !(c->lockfile=prepend_s(lockbasedir, "lockfile", strlen("lockfile")))
-	  || !(c->lockfilededup=prepend(c->lockfile, ".dedup", strlen(".dedup"), "")))
+	  || !(c->lockfile=prepend_s(lockbasedir, "lockfile", strlen("lockfile"))))
 	{
 		if(lockbasedir) free(lockbasedir);
 		logp("out of memory\n");
@@ -212,7 +207,9 @@ static int set_summary(struct cstat *c)
 	}
 	else
 	{
-		if(!test_lock(c->lockfile))
+		char *prog=NULL;
+		if(!test_lock(c->lockfile) // could have got lock
+		  || get_lock_prog_and_pid(c->lockfile, &prog)<=0)
 		{
 			//time_t t=0;
 			//if(!lstat(c->working, &statp)) t=statp.st_ctime;
@@ -230,14 +227,13 @@ static int set_summary(struct cstat *c)
 		}
 		else
 		{
-			if(!lstat(c->lockfilededup, &statp)
-			  && test_lock(c->lockfilededup))
+			if(prog && !strcmp(prog, "bedup"))
 			{
 				c->status=STATUS_DEDUP;
 				snprintf(wbuf, sizeof(wbuf), "%s\t%c\t%s\n",
 					c->name,
 					c->status,
-					get_last_backup_time(0));
+					get_last_backup_time(c->timestamp));
 			}
 			else
 			{
@@ -246,9 +242,10 @@ static int set_summary(struct cstat *c)
 				snprintf(wbuf, sizeof(wbuf), "%s\t%c\t%s\n",
 					c->name,
 					c->status,
-					get_last_backup_time(0));
+					get_last_backup_time(c->timestamp));
 			}
 		}
+		if(prog) free(prog);
 	}
 
 	if(c->summary) free(c->summary);
@@ -387,6 +384,7 @@ static int load_data_from_disk(struct config *conf, struct cstat ***clist, int *
 		//logp("pre set summary for %s\n", (*clist)[q]->name);
 		if(statp.st_mtime==(*clist)[q]->basedir_mtime
 		  && ltime==(*clist)[q]->lockfile_mtime
+		  && (*clist)[q]->status!=STATUS_SERVER_CRASHED
 		  && !((*clist)[q]->running_detail))
 		{
 			// basedir has not changed - no need to do anything.

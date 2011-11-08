@@ -151,6 +151,17 @@ static int summary(char **toks, int t, int count, int row, int col)
 		  snprintf(msg, sizeof(msg), "%-14.14s %-14s",
 			toks[0], "client crashed");
 	}
+	if(*(toks[1])==STATUS_DEDUP)
+	{
+		if(t>2)
+		  snprintf(msg, sizeof(msg),
+			"%-14.14s %-14s last backup: %s",
+			toks[0], "deduplicating",
+				get_backup_str(toks[2], TRUE));
+		else
+		  snprintf(msg, sizeof(msg), "%-14.14s %-14s",
+			toks[0], "deduplicating");
+	}
 	if(*(toks[1])==STATUS_RUNNING)
 	{
 		char f[64]="";
@@ -182,11 +193,6 @@ static int summary(char **toks, int t, int count, int row, int col)
 		}
 		snprintf(msg, sizeof(msg), "%-14.14s %-14s %s%s",
 			toks[0], s, f, b);
-	}
-	if(*(toks[1])==STATUS_DEDUP)
-	{
-		snprintf(msg, sizeof(msg), "%-14.14s %-14s",
-			toks[0], "deduplicating");
 	}
 	if(*msg)
 	{

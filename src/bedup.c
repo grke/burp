@@ -6,6 +6,7 @@
 #include <libgen.h>
 #include <unistd.h>
 #include <stdarg.h>
+#include <signal.h>
 
 #include <openssl/md5.h>
 
@@ -17,12 +18,17 @@
 #include "strlist.h"
 #include "uthash/uthash.h"
 
+#define LOCKFILE_NAME	"lockfile"
+
 static int makelinks=0;
 static char *prog=NULL;
 
 static unsigned long long savedbytes=0;
 static unsigned long long count=0;
 static int ccount=0;
+
+static struct strlist **locklist=NULL;
+static int lockcount=0;
 
 typedef struct file file_t;
 
@@ -127,11 +133,11 @@ static int full_match(struct file *o, struct file *n, FILE **ofp, FILE **nfp)
 	char nbuf[4096];
 	unsigned int i=0;
 
-	if(!*ofp && !(*ofp=open_file(o))) return 0;
-	if(!*nfp && !(*nfp=open_file(n))) return 0;
+	if(*ofp) fseek(*ofp, 0, SEEK_SET);
+	else if(!(*ofp=open_file(o))) return 0;
 
-	fseek(*ofp, 0, SEEK_SET);
-	fseek(*nfp, 0, SEEK_SET);
+	if(*nfp) fseek(*nfp, 0, SEEK_SET);
+	else if(!(*nfp=open_file(n))) return 0;
 
 	while(1)
 	{
@@ -146,15 +152,17 @@ static int full_match(struct file *o, struct file *n, FILE **ofp, FILE **nfp)
 	return 1;
 }
 
+#define PART_CHUNK	1024
+
 static int get_part_cksum(struct file *f, FILE **fp)
 {
 	MD5_CTX md5;
 	int got=0;
-	char buf[4096]="";
+	char buf[PART_CHUNK]="";
 	unsigned char checksum[MD5_DIGEST_LENGTH+1];
 
-	if(!*fp && !(*fp=open_file(f))) return 1;
-	fseek(*fp, 0, SEEK_SET);
+	if(*fp) fseek(*fp, 0, SEEK_SET);
+	else if(!(*fp=open_file(f))) return 0;
 
 	if(!MD5_Init(&md5))
 	{
@@ -178,6 +186,10 @@ static int get_part_cksum(struct file *f, FILE **fp)
 
 	memcpy(&(f->part_cksum), checksum, sizeof(unsigned));
 
+	// Try for a bit of efficiency - no need to calculate the full checksum
+	// again if we already read the whole file.
+	if(got<PART_CHUNK) f->full_cksum=f->part_cksum;
+
 	return 0;
 }
 
@@ -188,8 +200,8 @@ static int get_full_cksum(struct file *f, FILE **fp)
 	char buf[4096]="";
 	unsigned char checksum[MD5_DIGEST_LENGTH+1];
 
-	if(!*fp && !(*fp=open_file(f))) return -1;
-	fseek(*fp, 0, SEEK_SET);
+	if(*fp) fseek(*fp, 0, SEEK_SET);
+	else if(!(*fp=open_file(f))) return 0;
 
 	if(!MD5_Init(&md5))
 	{
@@ -357,7 +369,7 @@ static int check_files(struct mystruct *find, struct file *newfile, struct stat 
 		return 0;
 	}
 
-	if((add_file(find, newfile))) return -1;
+	if(add_file(find, newfile)) return -1;
 
 	return 0;
 }
@@ -380,8 +392,13 @@ static int process_dir(const char *oldpath, const char *newpath, const char *ext
 	}
 	while((dirinfo=readdir(dirp)))
 	{
+		/* Be careful not to try to dedup the lockfiles.
+		   The lock actually gets lost if you open one to do a checksum
+		   and then close it. This caused me major headaches to figure
+		   out. */
 		if(!strcmp(dirinfo->d_name, ".")
-		  || !strcmp(dirinfo->d_name, ".."))
+		  || !strcmp(dirinfo->d_name, "..")
+		  || !strcmp(dirinfo->d_name, LOCKFILE_NAME))
 			continue;
 
 		if(!(newfile.path=prepend(path, dirinfo->d_name, "/")))
@@ -435,7 +452,7 @@ static int process_dir(const char *oldpath, const char *newpath, const char *ext
 		else
 		{
 			//printf("add: %s\n", newfile.path);
-			if((add_key(info.st_size, &newfile)))
+			if(add_key(info.st_size, &newfile))
 			{
 				closedir(dirp);
 				free(path);
@@ -485,14 +502,32 @@ static int in_group(const char *clientconfdir, const char *client, strlist_t **g
 	return 0;
 }
 
-static int iterate_over_clients(struct config *conf, strlist_t **grouplist, int gcount, const char *ext)
+static void remove_locks(void)
 {
 	int i=0;
+	// Remove locks.
+	for(i=0; i<lockcount; i++)
+		unlink(locklist[i]->path);
+
+	strlists_free(locklist, lockcount);
+	lockcount=0;
+}
+
+static void sighandler(int signum)
+{
+	remove_locks();
+	exit(1);
+}
+
+static int iterate_over_clients(struct config *conf, strlist_t **grouplist, int gcount, const char *ext)
+{
 	int ret=0;
 	DIR *dirp=NULL;
-	int lockcount=0;
 	struct dirent *dirinfo=NULL;
-	struct strlist **locklist=NULL;
+
+	signal(SIGABRT, &sighandler);
+	signal(SIGTERM, &sighandler);
+	signal(SIGINT, &sighandler);
 
 	if(!(dirp=opendir(conf->clientconfdir)))
 	{
@@ -504,7 +539,6 @@ static int iterate_over_clients(struct config *conf, strlist_t **grouplist, int 
 	{
 		char *lockfile=NULL;
 		char *lockfilebase=NULL;
-		char *lockfilededup=NULL;
 		if(!strcmp(dirinfo->d_name, ".")
 		  || !strcmp(dirinfo->d_name, "..")
 		  || looks_like_vim_tmpfile(dirinfo->d_name))
@@ -524,24 +558,19 @@ static int iterate_over_clients(struct config *conf, strlist_t **grouplist, int 
 
 		if(!(lockfilebase=prepend(conf->client_lockdir,
 			dirinfo->d_name, "/"))
-		 || !(lockfile=prepend(lockfilebase, "lockfile", "/"))
-		 || !(lockfilededup=prepend(lockfile, ".dedup", "")))
+		 || !(lockfile=prepend(lockfilebase, LOCKFILE_NAME, "/")))
 		{
 			if(lockfilebase) free(lockfilebase);
 			if(lockfile) free(lockfile);
-			if(lockfilededup) free(lockfilededup);
 			ret=-1;
 			break;
 		}
 		free(lockfilebase);
 
-		// Get a second lock to indicate to the status server that
-		// a dedup is in progress.
-		if(get_lock(lockfile) || get_lock(lockfilededup))
+		if(get_lock(lockfile))
 		{
 			logp("Could not get %s\n", lockfile);
 			free(lockfile);
-			free(lockfilededup);
 			continue;
 		}
 
@@ -549,13 +578,11 @@ static int iterate_over_clients(struct config *conf, strlist_t **grouplist, int 
 		if(strlist_add(&locklist, &lockcount, lockfile, 1))
 		{
 			free(lockfile);
-			free(lockfilededup);
 			lockcount=0;
 			break;
 		}
 
 		logp("Got %s\n", lockfile);
-		free(lockfilededup);
 
 		if(process_dir(conf->directory, dirinfo->d_name, ext))
 		{
@@ -567,16 +594,8 @@ static int iterate_over_clients(struct config *conf, strlist_t **grouplist, int 
 	}
 	closedir(dirp);
 
-	// Remove locks.
-	for(i=0; i<lockcount; i++)
-	{
-		char path[512]="";
-		snprintf(path, sizeof(path), "%s.dedup", locklist[i]->path);
-		unlink(path);
-		unlink(locklist[i]->path);
-	}
+	remove_locks();
 
-	strlists_free(locklist, lockcount);
 	return ret;
 }
 

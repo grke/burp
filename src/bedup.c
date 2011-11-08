@@ -113,25 +113,15 @@ static FILE *open_file(struct file *f)
 	return fp;
 }
 
-static size_t read_chunk(FILE *fp, char *buf, size_t need)
-{
-	size_t s=0;
-	size_t got=0;
-	while((s=fread(buf+got, 1, need, fp))>0)
-	{
-		need-=s;
-		got+=s;
-	}
-	return got;
-}
+#define FULL_CHUNK	4096
 
 static int full_match(struct file *o, struct file *n, FILE **ofp, FILE **nfp)
 {
 	size_t ogot;
 	size_t ngot;
-	char obuf[4096];
-	char nbuf[4096];
 	unsigned int i=0;
+	static char obuf[FULL_CHUNK];
+	static char nbuf[FULL_CHUNK];
 
 	if(*ofp) fseek(*ofp, 0, SEEK_SET);
 	else if(!(*ofp=open_file(o))) return 0;
@@ -141,12 +131,12 @@ static int full_match(struct file *o, struct file *n, FILE **ofp, FILE **nfp)
 
 	while(1)
 	{
-		ogot=read_chunk(*ofp, obuf, sizeof(obuf));
-		ngot=read_chunk(*nfp, nbuf, sizeof(nbuf));
-		if(ogot<0 || ogot!=ngot) return 0;
-		if(!ogot) break;
+		if((ogot=fread(obuf, 1, FULL_CHUNK, *ofp))<0) return 0;
+		ngot=fread(nbuf, 1, FULL_CHUNK, *nfp);
+		if(ogot!=ngot) return 0;
 		for(i=0; i<ogot; i++)
 			if(obuf[i]!=nbuf[i]) return 0;
+		if(ogot<FULL_CHUNK) break;
 	}
 
 	return 1;
@@ -158,7 +148,7 @@ static int get_part_cksum(struct file *f, FILE **fp)
 {
 	MD5_CTX md5;
 	int got=0;
-	char buf[PART_CHUNK]="";
+	static char buf[PART_CHUNK];
 	unsigned char checksum[MD5_DIGEST_LENGTH+1];
 
 	if(*fp) fseek(*fp, 0, SEEK_SET);
@@ -170,7 +160,7 @@ static int get_part_cksum(struct file *f, FILE **fp)
 		return -1;
 	}
 
-	got=read_chunk(*fp, buf, sizeof(buf));
+	got=fread(buf, 1, PART_CHUNK, *fp);
 
 	if(!MD5_Update(&md5, buf, got))
 	{
@@ -197,7 +187,7 @@ static int get_full_cksum(struct file *f, FILE **fp)
 {
 	size_t s=0;
 	MD5_CTX md5;
-	char buf[4096]="";
+	static char buf[FULL_CHUNK];
 	unsigned char checksum[MD5_DIGEST_LENGTH+1];
 
 	if(*fp) fseek(*fp, 0, SEEK_SET);
@@ -209,13 +199,14 @@ static int get_full_cksum(struct file *f, FILE **fp)
 		return -1;
 	}
 
-	while((s=fread(buf, 1, 4096, *fp))>0)
+	while((s=fread(buf, 1, FULL_CHUNK, *fp))>0)
 	{
 		if(!MD5_Update(&md5, buf, s))
 		{
 			logp("MD5_Update() failed\n");
 			return -1;
 		}
+		if(s<FULL_CHUNK) break;
 	}
 
 	if(!MD5_Final(checksum, &md5))

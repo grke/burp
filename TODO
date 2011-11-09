@@ -77,3 +77,9 @@
 * Windows non-VSS backups.
 
 * Investigate how to make massive files work better with librsync.
+
+* Add localisation/gettext.
+
+* Add localisation/gettext specifically to work around the Polish Windows XP
+  "schtasks.exe Co_minutę" problem.
+

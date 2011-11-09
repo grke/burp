@@ -233,9 +233,7 @@ static int do_rename(const char *oldpath, const char *newpath)
 
 static int do_hardlink(struct file *o, struct file *n, const char *ext)
 {
-	char pid[16]="";
 	char *tmppath=NULL;
-	snprintf(pid, sizeof(pid), ".bedup.%d", getpid());
 	if(!(tmppath=prepend(o->path, ext, "")))
 	{
 		logp("out of memory\n");
@@ -417,7 +415,8 @@ static int process_dir(const char *oldpath, const char *newpath, const char *ext
 			free(newfile.path);
 			continue;
 		}
-		else if(!S_ISREG(info.st_mode))
+		else if(!S_ISREG(info.st_mode)
+		  || !info.st_size) // ignore zero-length files
 		{
 			free(newfile.path);
 			continue;

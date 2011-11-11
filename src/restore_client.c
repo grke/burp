@@ -198,8 +198,8 @@ static int restore_file_or_get_meta(struct sbuf *sb, const char *fname, enum act
 				&rcvdbytes, &sentbytes,
 				encpassword, cntr, NULL);
 			close_fp(&fp);
-			if(!ret) set_attributes(rpath, sb->cmd, &(sb->statp));
 #endif
+			if(!ret) set_attributes(rpath, sb->cmd, &(sb->statp));
 		}
 		if(ret)
 		{

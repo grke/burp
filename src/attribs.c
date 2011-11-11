@@ -156,6 +156,18 @@ static uid_t my_uid=1;
 static gid_t my_gid=1;
 static bool uid_set=false;
 
+static int set_file_times(const char *path, struct utimbuf *ut)
+{
+	if(utime(path, ut)<0 && !my_uid)
+	{
+		berrno be;
+		fprintf(stderr, _("Unable to set file times %s: ERR=%s\n"),
+			path, be.bstrerror());
+		return -1;
+	}
+	return 0;
+}
+
 bool set_attributes(const char *path, char cmd, struct stat *statp)
 {
    struct utimbuf ut;
@@ -172,6 +184,11 @@ bool set_attributes(const char *path, char cmd, struct stat *statp)
 
    ut.actime = statp->st_atime;
    ut.modtime = statp->st_mtime;
+
+#ifdef HAVE_WIN32
+   if(set_file_times(path, &ut)) ok=false;
+   return ok;
+#endif
 
    /* ***FIXME**** optimize -- don't do if already correct */
    /*
@@ -204,15 +221,7 @@ bool set_attributes(const char *path, char cmd, struct stat *statp)
          ok = false;
       }
 
-      /*
-       * Reset file times.
-       */
-      if (utime(path, &ut) < 0 && my_uid == 0) {
-         berrno be;
-         fprintf(stderr, _("Unable to set file times %s: ERR=%s\n"),
-            path, be.bstrerror());
-         ok = false;
-      }
+      if(set_file_times(path, &ut)) ok=false;
 #ifdef HAVE_CHFLAGS
       /*
        * FreeBSD user flags

@@ -83,3 +83,4 @@
 * Add localisation/gettext specifically to work around the Polish Windows XP
   "schtasks.exe Co_minutę" problem.
 
+* Windows XP restore appears to end up with the wrong dates on files.

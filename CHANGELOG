@@ -2,6 +2,7 @@
   * Add a network_timeout parameter. Default is 7200 seconds (2 hours).
   * Add option to send success notifications only if there were warnings.
   * Try to create the pidfile directory if it doesn't exist.
+  * Restore times on Windows files.
 
 2011-09-29 Changes in burp-1.2.2:
   * Multiple retention periods (e.g, keep 1 backup per day for 7 days, 1

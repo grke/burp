@@ -37,6 +37,7 @@ struct file
 	char *path;
 	dev_t dev;
 	ino_t ino;
+	nlink_t nlink;
 	unsigned long full_cksum;
 	unsigned long part_cksum;
 	file_t *next;
@@ -255,7 +256,7 @@ static int do_hardlink(struct file *o, struct file *n, const char *ext)
 	return 0;
 }
 
-static int check_files(struct mystruct *find, struct file *newfile, struct stat *info, const char *ext)
+static int check_files(struct mystruct *find, struct file *newfile, struct stat *info, const char *ext, unsigned int maxlinks)
 {
 	int found=0;
 	FILE *nfp=NULL;
@@ -331,6 +332,20 @@ static int check_files(struct mystruct *find, struct file *newfile, struct stat 
 		//printf("full match\n");
 		//printf("%s, %s\n", find->files->path, newfile->path);
 
+		// If there are already enough links to this file, replace
+		// our memory of it with the new file so that files later on
+		// can link to the new one. 
+		if(f->nlink>=maxlinks)
+		{
+			// Just need to reset the path name and the number
+			// of links.
+			f->nlink=info->st_nlink;
+			if(f->path) free(f->path);
+			f->path=newfile->path;
+			newfile->path=NULL;
+			break;
+		}
+
 		found++;
 		count++;
 
@@ -338,7 +353,13 @@ static int check_files(struct mystruct *find, struct file *newfile, struct stat 
 		if(makelinks)
 		{
 			if(!do_hardlink(newfile, f, ext))
-				savedbytes+=info->st_size;
+			{
+				f->nlink++;
+				// Only count bytes as saved if we removed the
+				// last link.
+				if(newfile->nlink==1)
+					savedbytes+=info->st_size;
+			}
 		}
 		else
 		{
@@ -354,7 +375,7 @@ static int check_files(struct mystruct *find, struct file *newfile, struct stat 
 
 	if(found)
 	{
-		free(newfile->path);
+		if(newfile->path) free(newfile->path);
 		return 0;
 	}
 
@@ -363,7 +384,7 @@ static int check_files(struct mystruct *find, struct file *newfile, struct stat 
 	return 0;
 }
 
-static int process_dir(const char *oldpath, const char *newpath, const char *ext)
+static int process_dir(const char *oldpath, const char *newpath, const char *ext, unsigned int maxlinks)
 {
 	DIR *dirp=NULL;
 	char *path=NULL;
@@ -405,7 +426,7 @@ static int process_dir(const char *oldpath, const char *newpath, const char *ext
 
 		if(S_ISDIR(info.st_mode))
 		{
-			if(process_dir(path, dirinfo->d_name, ext))
+			if(process_dir(path, dirinfo->d_name, ext, maxlinks))
 			{
 				closedir(dirp);
 				free(path);
@@ -424,6 +445,7 @@ static int process_dir(const char *oldpath, const char *newpath, const char *ext
 
 		newfile.dev=info.st_dev;
 		newfile.ino=info.st_ino;
+		newfile.nlink=info.st_nlink;
 		newfile.full_cksum=0;
 		newfile.part_cksum=0;
 		newfile.next=NULL;
@@ -432,7 +454,7 @@ static int process_dir(const char *oldpath, const char *newpath, const char *ext
 
 		if((find=find_key(info.st_size)))
 		{
-			if(check_files(find, &newfile, &info, ext))
+			if(check_files(find, &newfile, &info, ext, maxlinks))
 			{
 				closedir(dirp);
 				free(path);
@@ -509,7 +531,7 @@ static void sighandler(int signum)
 	exit(1);
 }
 
-static int iterate_over_clients(struct config *conf, strlist_t **grouplist, int gcount, const char *ext)
+static int iterate_over_clients(struct config *conf, strlist_t **grouplist, int gcount, const char *ext, unsigned int maxlinks)
 {
 	int ret=0;
 	DIR *dirp=NULL;
@@ -574,7 +596,8 @@ static int iterate_over_clients(struct config *conf, strlist_t **grouplist, int 
 
 		logp("Got %s\n", lockfile);
 
-		if(process_dir(conf->directory, dirinfo->d_name, ext))
+		if(process_dir(conf->directory, dirinfo->d_name,
+			ext, maxlinks))
 		{
 			ret=-1;
 			break;
@@ -609,6 +632,10 @@ static int usage(void)
 	printf("                           configuration file on the server.\n");
 	printf("  -h|-?                    Print this text and exit.\n");
 	printf("  -l                       Hard link any duplicate files found.\n");
+	printf("  -m <number>              Maximum number of hard links to a single file.\n");
+	printf("                           The default is 10000. On ext3, the maximum number\n");
+	printf("                           of links possible is 32000, but space is needed\n");
+	printf("                           for the normal operation of burp.\n");
 	printf("  -n <list of directories> Non-burp mode. Deduplicate any (set of) directories.\n");
 	printf("  -v                       Print version and exit.\n");
 	printf("\n");
@@ -657,6 +684,7 @@ int main(int argc, char *argv[])
 	int ret=0;
 	int option=0;
 	int nonburp=0;
+	unsigned int maxlinks=10000;
 	char *groups=NULL;
 	char ext[16]="";
 	int givenconfigfile=0;
@@ -667,7 +695,7 @@ int main(int argc, char *argv[])
 	configfile=get_config_path();
 	snprintf(ext, sizeof(ext), ".bedup.%d", getpid());
 
-	while((option=getopt(argc, argv, "c:g:hlnv?"))!=-1)
+	while((option=getopt(argc, argv, "c:g:hlmnv?"))!=-1)
 	{
 		switch(option)
 		{
@@ -680,6 +708,9 @@ int main(int argc, char *argv[])
 				break;
 			case 'l':
 				makelinks=1;
+				break;
+			case 'm':
+				maxlinks=atoi(optarg);
 				break;
 			case 'n':
 				nonburp=1;
@@ -720,6 +751,12 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	if(maxlinks<2)
+	{
+		logp("The argument to -m needs to be greater than 1.\n");
+		return 1;
+	}
+
 	if(nonburp)
 	{
 		// Read directories from command line.
@@ -728,7 +765,7 @@ int main(int argc, char *argv[])
 			// Strip trailing slashes, for tidiness.
 			if(argv[i][strlen(argv[i])-1]=='/')
 				argv[i][strlen(argv[i])-1]='\0';
-			if(process_dir("", argv[i], ext))
+			if(process_dir("", argv[i], ext, maxlinks))
 			{
 				ret=1;
 				break;
@@ -779,7 +816,8 @@ int main(int argc, char *argv[])
 			for(i=0; i<gcount; i++)
 				logp("%s\n", grouplist[i]->path);
 		}
-		ret=iterate_over_clients(&conf, grouplist, gcount, ext);
+		ret=iterate_over_clients(&conf, grouplist, gcount,
+			ext, maxlinks);
 		free_config(&conf);
 	}
 

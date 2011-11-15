@@ -208,8 +208,7 @@ static int set_summary(struct cstat *c)
 	else
 	{
 		char *prog=NULL;
-		if(!test_lock(c->lockfile) // could have got lock
-		  || get_lock_prog_and_pid(c->lockfile, &prog)<=0)
+		if(!test_lock(c->lockfile)) // could have got lock
 		{
 			//time_t t=0;
 			//if(!lstat(c->working, &statp)) t=statp.st_ctime;
@@ -227,23 +226,12 @@ static int set_summary(struct cstat *c)
 		}
 		else
 		{
-			if(prog && !strcmp(prog, "bedup"))
-			{
-				c->status=STATUS_DEDUP;
-				snprintf(wbuf, sizeof(wbuf), "%s\t%c\t%s\n",
-					c->name,
-					c->status,
-					get_last_backup_time(c->timestamp));
-			}
-			else
-			{
-				// running normally
-				c->status=STATUS_RUNNING;
-				snprintf(wbuf, sizeof(wbuf), "%s\t%c\t%s\n",
-					c->name,
-					c->status,
-					get_last_backup_time(c->timestamp));
-			}
+			// running normally
+			c->status=STATUS_RUNNING;
+			snprintf(wbuf, sizeof(wbuf), "%s\t%c\t%s\n",
+				c->name,
+				c->status,
+				get_last_backup_time(c->timestamp));
 		}
 		if(prog) free(prog);
 	}

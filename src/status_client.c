@@ -151,17 +151,6 @@ static int summary(char **toks, int t, int count, int row, int col)
 		  snprintf(msg, sizeof(msg), "%-14.14s %-14s",
 			toks[0], "client crashed");
 	}
-	if(*(toks[1])==STATUS_DEDUP)
-	{
-		if(t>2)
-		  snprintf(msg, sizeof(msg),
-			"%-14.14s %-14s last backup: %s",
-			toks[0], "deduplicating",
-				get_backup_str(toks[2], TRUE));
-		else
-		  snprintf(msg, sizeof(msg), "%-14.14s %-14s",
-			toks[0], "deduplicating");
-	}
 	if(*(toks[1])==STATUS_RUNNING)
 	{
 		char f[64]="";
@@ -322,12 +311,6 @@ static void detail(char *toks[], int t, struct config *conf, int row, int col)
 					print_line(msg, x++, col);
 				}
 				break;
-			}
-			case STATUS_DEDUP:
-			{
-				print_line("Status: deduplicating", x++, col);
-				show_all_backups(toks, t, &x, col);
-				return;
 			}
 		}
 	}

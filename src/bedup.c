@@ -18,7 +18,8 @@
 #include "strlist.h"
 #include "uthash/uthash.h"
 
-#define LOCKFILE_NAME	"lockfile"
+#define LOCKFILE_NAME		"lockfile"
+#define BEDUP_LOCKFILE_NAME	"lockfile.bedup"
 
 static int makelinks=0;
 static char *prog=NULL;
@@ -232,6 +233,7 @@ static int do_rename(const char *oldpath, const char *newpath)
 	return 0;
 }
 
+/* Make it atomic by linking to a temporary file, then moving it into place. */
 static int do_hardlink(struct file *o, struct file *n, const char *ext)
 {
 	char *tmppath=NULL;
@@ -254,6 +256,14 @@ static int do_hardlink(struct file *o, struct file *n, const char *ext)
 	}
 	free(tmppath);
 	return 0;
+}
+
+static void reset_old_file(struct file *oldfile, struct file *newfile, struct stat *info)
+{
+	oldfile->nlink=info->st_nlink;
+	if(oldfile->path) free(oldfile->path);
+	oldfile->path=newfile->path;
+	newfile->path=NULL;
 }
 
 static int check_files(struct mystruct *find, struct file *newfile, struct stat *info, const char *ext, unsigned int maxlinks)
@@ -339,10 +349,7 @@ static int check_files(struct mystruct *find, struct file *newfile, struct stat 
 		{
 			// Just need to reset the path name and the number
 			// of links.
-			f->nlink=info->st_nlink;
-			if(f->path) free(f->path);
-			f->path=newfile->path;
-			newfile->path=NULL;
+			reset_old_file(f, newfile, info);
 			break;
 		}
 
@@ -359,6 +366,14 @@ static int check_files(struct mystruct *find, struct file *newfile, struct stat 
 				// last link.
 				if(newfile->nlink==1)
 					savedbytes+=info->st_size;
+			}
+			else
+			{
+				// On error, replace the memory of the old file
+				// with the one that we just find. It might
+				// work better when someone later tries to
+				// link to the new one instead of the old one.
+				reset_old_file(f, newfile, info);
 			}
 		}
 		else
@@ -384,7 +399,25 @@ static int check_files(struct mystruct *find, struct file *newfile, struct stat 
 	return 0;
 }
 
-static int process_dir(const char *oldpath, const char *newpath, const char *ext, unsigned int maxlinks)
+static int get_link(const char *basedir, const char *lnk, char real[], size_t r)
+{
+	int len=0;
+	char *tmp=NULL;
+	if(!(tmp=prepend(basedir, lnk, "/")))
+	{
+		logp("out of memory");
+		return -1;
+	}
+	if((len=readlink(tmp, real, r-1))<0) len=0;
+	real[len]='\0';
+	free(tmp);
+	// Strip any trailing slash.
+	if(real[strlen(real)-1]=='/') real[strlen(real)-1]='\0';
+	return 0;
+}
+
+
+static int process_dir(const char *oldpath, const char *newpath, const char *ext, unsigned int maxlinks, int burp_mode, int level)
 {
 	DIR *dirp=NULL;
 	char *path=NULL;
@@ -392,8 +425,20 @@ static int process_dir(const char *oldpath, const char *newpath, const char *ext
 	struct dirent *dirinfo=NULL;
 	struct file newfile;
 	struct mystruct *find=NULL;
+	static char working[256]="";
+	static char finishing[256]="";
 
 	if(!(path=prepend(oldpath, newpath, "/"))) return -1;
+
+	if(burp_mode && level==0)
+	{
+		if(get_link(path, "working", working, sizeof(working))
+		  || get_link(path, "finishing", finishing, sizeof(finishing)))
+		{
+			free(path);
+			return -1;
+		}
+	}
 
 	if(!(dirp=opendir(path)))
 	{
@@ -402,14 +447,44 @@ static int process_dir(const char *oldpath, const char *newpath, const char *ext
 	}
 	while((dirinfo=readdir(dirp)))
 	{
-		/* Be careful not to try to dedup the lockfiles.
-		   The lock actually gets lost if you open one to do a checksum
-		   and then close it. This caused me major headaches to figure
-		   out. */
 		if(!strcmp(dirinfo->d_name, ".")
-		  || !strcmp(dirinfo->d_name, "..")
-		  || !strcmp(dirinfo->d_name, LOCKFILE_NAME))
+		  || !strcmp(dirinfo->d_name, ".."))
 			continue;
+
+		if(burp_mode)
+		{
+		  if(level==0)
+		  {
+			/* Be careful not to try to dedup the lockfiles.
+			   The lock actually gets lost if you open one to do a
+			   checksum
+			   and then close it. This caused me major headaches to
+			   figure out. */
+			if(!strcmp(dirinfo->d_name, LOCKFILE_NAME)
+			  || !strcmp(dirinfo->d_name, BEDUP_LOCKFILE_NAME))
+				continue;
+
+			/* Skip places where backups are going on. */
+			if(!strcmp(dirinfo->d_name, working)
+			  || !strcmp(dirinfo->d_name, finishing))
+				continue;
+
+			if(!strcmp(dirinfo->d_name, "deleteme"))
+				continue;
+		  }
+		  else if(level==1)
+		  {
+			/* Do not dedup stuff that might be appended to later.
+			*/
+			if(!strncmp(dirinfo->d_name, "log",
+				strlen("log"))
+			  || !strncmp(dirinfo->d_name, "verifylog",
+				strlen("verifylog"))
+			  || !strncmp(dirinfo->d_name, "restorelog",
+				strlen("restorelog")))
+					continue;
+		  }
+		}
 
 		if(!(newfile.path=prepend(path, dirinfo->d_name, "/")))
 		{
@@ -426,7 +501,7 @@ static int process_dir(const char *oldpath, const char *newpath, const char *ext
 
 		if(S_ISDIR(info.st_mode))
 		{
-			if(process_dir(path, dirinfo->d_name, ext, maxlinks))
+			if(process_dir(path, dirinfo->d_name, ext, maxlinks,					burp_mode, level+1))
 			{
 				closedir(dirp);
 				free(path);
@@ -570,7 +645,8 @@ static int iterate_over_clients(struct config *conf, strlist_t **grouplist, int 
 
 		if(!(lockfilebase=prepend(conf->client_lockdir,
 			dirinfo->d_name, "/"))
-		 || !(lockfile=prepend(lockfilebase, LOCKFILE_NAME, "/")))
+		 || !(lockfile=prepend(lockfilebase,
+			BEDUP_LOCKFILE_NAME, "/")))
 		{
 			if(lockfilebase) free(lockfilebase);
 			if(lockfile) free(lockfile);
@@ -597,7 +673,7 @@ static int iterate_over_clients(struct config *conf, strlist_t **grouplist, int 
 		logp("Got %s\n", lockfile);
 
 		if(process_dir(conf->directory, dirinfo->d_name,
-			ext, maxlinks))
+			ext, maxlinks, 1 /* burp mode */, 0 /* level */))
 		{
 			ret=-1;
 			break;
@@ -639,13 +715,12 @@ static int usage(void)
 	printf("  -n <list of directories> Non-burp mode. Deduplicate any (set of) directories.\n");
 	printf("  -v                       Print version and exit.\n");
 	printf("\n");
-	printf("Be default, %s will read %s and gain locks on client storage\n", prog, get_config_path());
-	printf("directories before attempting to deduplicate files within them.\n");
+	printf("By default, %s will read %s and deduplicate client storage\n", prog, get_config_path());
+	printf("directories using special knowledge of the structure.\n");
 	printf("\n");
-	printf("With '-n', this locking is turned off and you have to specify the directories\n");
+	printf("With '-n', this knowledge is turned off and you have to specify the directories\n");
 	printf("to deduplicate on the command line. Running with '-n' is therefore dangerous\n");
-	printf("if you are deduplicating burp storage directories without first turning off\n");
-	printf("the burp server\n\n");
+	printf("if you are deduplicating burp storage directories.\n\n");
 	return 1;
 }
 
@@ -765,7 +840,8 @@ int main(int argc, char *argv[])
 			// Strip trailing slashes, for tidiness.
 			if(argv[i][strlen(argv[i])-1]=='/')
 				argv[i][strlen(argv[i])-1]='\0';
-			if(process_dir("", argv[i], ext, maxlinks))
+			if(process_dir("", argv[i], ext, maxlinks,
+				0 /* not burp mode */, 0 /* level */))
 			{
 				ret=1;
 				break;

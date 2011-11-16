@@ -304,22 +304,28 @@ static int do_backup_server(const char *basedir, const char *current, const char
 			log_and_send("out of memory");
 			goto error;
 		}
-		if(mkdir(realworking, 0777))
-		{
-			snprintf(msg, sizeof(msg),
-			  "could not mkdir for increment: %s", working);
-			log_and_send(msg);
-			goto error;
-		}
-		else if(open_log(realworking, client, cversion))
-		{
-			goto error;
-		}
-		else if(symlink(tstmp, working)) // relative link to the real work dir
+		// Add the working symlink before creating the directory.
+		// This is because bedup checks the working symlink before
+		// going into a directory. If the directory got created first,
+		// bedup might go into it in the moment before the symlink
+		// gets added.
+		if(symlink(tstmp, working)) // relative link to the real work dir
 		{
 			snprintf(msg, sizeof(msg),
 			  "could not point working symlink to: %s",
 			  realworking);
+			goto error;
+		}
+		else if(mkdir(realworking, 0777))
+		{
+			snprintf(msg, sizeof(msg),
+			  "could not mkdir for increment: %s", working);
+			log_and_send(msg);
+			unlink(working);
+			goto error;
+		}
+		else if(open_log(realworking, client, cversion))
+		{
 			goto error;
 		}
 		else if(mkdir(datadirtmp, 0777))
@@ -483,10 +489,10 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 
 	if(lstat(fullrealwork, &statp))
 	{
-		logp("could not lstat '%s' - something odd is going on\n",
-			fullrealwork);
+		logp("removing dangling working symlink -> %s\n", realwork);
+		unlink(working);
 		free(fullrealwork);
-		return -1;
+		return 0;
 	}
 
 	if(!(phase1datatmp=get_tmp_filename(phase1data)))

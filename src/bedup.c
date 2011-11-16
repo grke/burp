@@ -260,6 +260,8 @@ static int do_hardlink(struct file *o, struct file *n, const char *ext)
 
 static void reset_old_file(struct file *oldfile, struct file *newfile, struct stat *info)
 {
+	//printf("reset %s with %s %d\n", oldfile->path, newfile->path,
+	//	info->st_nlink);
 	oldfile->nlink=info->st_nlink;
 	if(oldfile->path) free(oldfile->path);
 	oldfile->path=newfile->path;
@@ -309,8 +311,8 @@ static int check_files(struct mystruct *find, struct file *newfile, struct stat 
 			if(ofp) { fclose(ofp); ofp=NULL; }
 			continue;
 		}
-		//printf("%s, %s\n", find->files->path, newfile->path);
-		//printf("part cksum matched\n");
+		//printf("  %s, %s\n", find->files->path, newfile->path);
+		//printf("  part cksum matched\n");
 
 		if(!newfile->full_cksum && get_full_cksum(newfile, &nfp))
 		{
@@ -333,13 +335,13 @@ static int check_files(struct mystruct *find, struct file *newfile, struct stat 
 			continue;
 		}
 
-		//printf("full cksum matched\n");
+		//printf("  full cksum matched\n");
 		if(!full_match(newfile, f, &nfp, &ofp))
 		{
 			if(ofp) { fclose(ofp); ofp=NULL; }
 			continue;
 		}
-		//printf("full match\n");
+		//printf("  full match\n");
 		//printf("%s, %s\n", find->files->path, newfile->path);
 
 		// If there are already enough links to this file, replace
@@ -348,8 +350,10 @@ static int check_files(struct mystruct *find, struct file *newfile, struct stat 
 		if(f->nlink>=maxlinks)
 		{
 			// Just need to reset the path name and the number
-			// of links.
+			// of links, and pretend that it was found otherwise
+			// NULL newfile will get added to the memory.
 			reset_old_file(f, newfile, info);
+			found++;
 			break;
 		}
 
@@ -370,10 +374,11 @@ static int check_files(struct mystruct *find, struct file *newfile, struct stat 
 			else
 			{
 				// On error, replace the memory of the old file
-				// with the one that we just find. It might
+				// with the one that we just found. It might
 				// work better when someone later tries to
 				// link to the new one instead of the old one.
 				reset_old_file(f, newfile, info);
+				count--;
 			}
 		}
 		else
@@ -450,6 +455,8 @@ static int process_dir(const char *oldpath, const char *newpath, const char *ext
 		if(!strcmp(dirinfo->d_name, ".")
 		  || !strcmp(dirinfo->d_name, ".."))
 			continue;
+
+		//printf("try %s\n", dirinfo->d_name);
 
 		if(burp_mode)
 		{
@@ -852,6 +859,7 @@ int main(int argc, char *argv[])
 	{
 		int gcount=0;
 		struct config conf;
+		char *globallock=NULL;
 		struct strlist **grouplist=NULL;
 
 		if(groups)
@@ -892,9 +900,30 @@ int main(int argc, char *argv[])
 			for(i=0; i<gcount; i++)
 				logp("%s\n", grouplist[i]->path);
 		}
+		else
+		{
+			// Only get the global lock when doing a global run.
+			// If you are doing individual groups, you are likely
+			// to want to do many different dedup jobs and a
+			// global lock would get in the way.
+			if(!(globallock=prepend(conf.lockfile, ".bedup", "")))
+				return 1;
+			if(get_lock(globallock))
+			{
+				logp("Could not get %s\n", globallock);
+				return 1;
+			}
+			logp("Got %s\n", globallock);
+		}
 		ret=iterate_over_clients(&conf, grouplist, gcount,
 			ext, maxlinks);
 		free_config(&conf);
+
+		if(globallock)
+		{
+			unlink(globallock);
+			free(globallock);
+		}
 	}
 
 	if(!nonburp)

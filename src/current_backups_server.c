@@ -380,7 +380,7 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 		// Backups that come after hardlinked backups are deletable.
 		if((*arr)[j].hardlinked) (*arr)[j+1].deletable=1;
 	}
-	for(j=0; j<i; j++)
+	if(tr) for(j=0; j<i; j++)
 	{
 		// Transpose indexes so that the oldest index is set to 1.
 		(*arr)[j].trindex=tr-(*arr)[j].index+1;
@@ -629,7 +629,7 @@ int do_remove_old_backups(const char *basedir, struct config *cconf, const char 
 		for(b=0; b<a; b++)
 		{
 			//printf(" %d: %lu (%lu)\n", b, arr[b].index, arr[b].trindex);
-			if(arr[b].trindex>m-1) break;
+			if(arr[b].trindex>m) break;
 		}
 		for(; b>=0 && b<a; b--)
 		{

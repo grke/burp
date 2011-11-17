@@ -126,7 +126,17 @@ static int full_match(struct file *o, struct file *n, FILE **ofp, FILE **nfp)
 	static char nbuf[FULL_CHUNK];
 
 	if(*ofp) fseek(*ofp, 0, SEEK_SET);
-	else if(!(*ofp=open_file(o))) return 0;
+	else if(!(*ofp=open_file(o)))
+	{
+		if(o->path)
+		{
+			// Blank this entry so that it can be ignored from
+			// now on.
+			free(o->path);
+			o->path=NULL;
+		}
+		return 0;
+	}
 
 	if(*nfp) fseek(*nfp, 0, SEEK_SET);
 	else if(!(*nfp=open_file(n))) return 0;
@@ -154,7 +164,11 @@ static int get_part_cksum(struct file *f, FILE **fp)
 	unsigned char checksum[MD5_DIGEST_LENGTH+1];
 
 	if(*fp) fseek(*fp, 0, SEEK_SET);
-	else if(!(*fp=open_file(f))) return 0;
+	else if(!(*fp=open_file(f)))
+	{
+		f->part_cksum=0;
+		return 0;
+	}
 
 	if(!MD5_Init(&md5))
 	{
@@ -193,7 +207,11 @@ static int get_full_cksum(struct file *f, FILE **fp)
 	unsigned char checksum[MD5_DIGEST_LENGTH+1];
 
 	if(*fp) fseek(*fp, 0, SEEK_SET);
-	else if(!(*fp=open_file(f))) return 0;
+	else if(!(*fp=open_file(f)))
+	{
+		f->full_cksum=0;
+		return 0;
+	}
 
 	if(!MD5_Init(&md5))
 	{
@@ -279,6 +297,14 @@ static int check_files(struct mystruct *find, struct file *newfile, struct stat 
 
 	for(f=find->files; f; f=f->next)
 	{
+		if(!newfile->path)
+		{
+			// If the full_match() function fails to open oldfile
+			// (which could happen if burp deleted some old
+			// directories), it will free path and set it to NULL.
+			// Skip entries like this.
+			continue;
+		}
 		if(newfile->dev!=f->dev)
 		{
 			// Different device.
@@ -291,20 +317,11 @@ static int check_files(struct mystruct *find, struct file *newfile, struct stat 
 			found++;
 			break;
 		}
-		if(!newfile->part_cksum && get_part_cksum(newfile, &nfp))
+		if((!newfile->part_cksum && get_part_cksum(newfile, &nfp))
+		  || (!f->part_cksum && get_part_cksum(f, &ofp)))
 		{
-			// Error, pretend that it was found, so
-			// that it will be ignored from now
-			// onwards.
-			found++;
-			break;
-		}
-		if(!f->part_cksum && get_part_cksum(f, &ofp))
-		{
-			// Error, continue trying to
-			// find matches elsewhere.
-			if(ofp) { fclose(ofp); ofp=NULL; }
-			continue;
+			// Some error with md5sums Give up.
+			return -1;
 		}
 		if(newfile->part_cksum!=f->part_cksum)
 		{
@@ -314,20 +331,11 @@ static int check_files(struct mystruct *find, struct file *newfile, struct stat 
 		//printf("  %s, %s\n", find->files->path, newfile->path);
 		//printf("  part cksum matched\n");
 
-		if(!newfile->full_cksum && get_full_cksum(newfile, &nfp))
+		if((!newfile->full_cksum && get_full_cksum(newfile, &nfp))
+		  || (!f->full_cksum && get_full_cksum(f, &ofp)))
 		{
-			// Error, pretend that it was found,
-			// so that it will be ignored from
-			// now onwards.
-			found++;
-			break;
-		}
-		if(!f->full_cksum && get_full_cksum(f, &ofp))
-		{
-			// Error, continue trying to
-			// find matches elsewhere.
-			if(ofp) { fclose(ofp); ofp=NULL; }
-			continue;
+			// Some error with md5sums Give up.
+			return -1;
 		}
 		if(newfile->full_cksum!=f->full_cksum)
 		{

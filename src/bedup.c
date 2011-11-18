@@ -297,7 +297,7 @@ static int check_files(struct mystruct *find, struct file *newfile, struct stat 
 
 	for(f=find->files; f; f=f->next)
 	{
-		if(!newfile->path)
+		if(!f->path)
 		{
 			// If the full_match() function fails to open oldfile
 			// (which could happen if burp deleted some old

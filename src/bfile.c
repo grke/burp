@@ -315,7 +315,6 @@ bool processWin32BackupAPIBlock (BFILE *bfd, void *pBuffer, ssize_t dwSize)
 char *unix_name_to_win32(char *name);
 extern "C" HANDLE get_osfhandle(int fd);
 
-
 void binit(BFILE *bfd)
 {
    memset(bfd, 0, sizeof(BFILE));

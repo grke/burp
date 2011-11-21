@@ -1403,39 +1403,39 @@ int win32_chmod(const char *path, mode_t mode)
       attr = p_GetFileAttributesW((LPCWSTR) pwszBuf);
       if (attr != INVALID_FILE_ATTRIBUTES) {
          /* Use Burp mappings define in stat() above */
-         if (mode & (S_IRUSR|S_IRGRP|S_IROTH)) {
+         if (!(mode & (S_IRUSR|S_IRGRP|S_IROTH))) {
             attr |= FILE_ATTRIBUTE_READONLY;
          } else {
             attr &= ~FILE_ATTRIBUTE_READONLY;
+         }
+         if (!(mode & S_IRWXO)) { 
+            attr |= FILE_ATTRIBUTE_SYSTEM;
+         } else {
+            attr &= ~FILE_ATTRIBUTE_SYSTEM;
          }
          if (mode & S_ISVTX) {
             attr |= FILE_ATTRIBUTE_HIDDEN;
          } else {
             attr &= ~FILE_ATTRIBUTE_HIDDEN;
-         }
-         if (mode & S_IRWXO) { 
-            attr |= FILE_ATTRIBUTE_SYSTEM;
-         } else {
-            attr &= ~FILE_ATTRIBUTE_SYSTEM;
          }
          attr = p_SetFileAttributesW((LPCWSTR)pwszBuf, attr);
       }
       sm_free_pool_memory(pwszBuf);
    } else if (p_GetFileAttributesA) {
-         if (mode & (S_IRUSR|S_IRGRP|S_IROTH)) {
+         if (!(mode & (S_IRUSR|S_IRGRP|S_IROTH))) {
             attr |= FILE_ATTRIBUTE_READONLY;
          } else {
             attr &= ~FILE_ATTRIBUTE_READONLY;
+         }
+         if (!(mode & S_IRWXO)) { 
+            attr |= FILE_ATTRIBUTE_SYSTEM;
+         } else {
+            attr &= ~FILE_ATTRIBUTE_SYSTEM;
          }
          if (mode & S_ISVTX) {
             attr |= FILE_ATTRIBUTE_HIDDEN;
          } else {
             attr &= ~FILE_ATTRIBUTE_HIDDEN;
-         }
-         if (mode & S_IRWXO) { 
-            attr |= FILE_ATTRIBUTE_SYSTEM;
-         } else {
-            attr &= ~FILE_ATTRIBUTE_SYSTEM;
          }
       attr = p_GetFileAttributesA(path);
       if (attr != INVALID_FILE_ATTRIBUTES) {

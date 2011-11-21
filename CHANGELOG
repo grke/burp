@@ -5,6 +5,7 @@
   * Restore times on Windows files.
   * Fix bug in 'keep' mechanism where setting it to 2 would delete both
     backups.
+  * Set readonly/hidden attributes on Windows restore.
 
 2011-09-29 Changes in burp-1.2.2:
   * Multiple retention periods (e.g, keep 1 backup per day for 7 days, 1

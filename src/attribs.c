@@ -171,7 +171,6 @@ static int set_file_times(const char *path, struct utimbuf *ut)
 bool set_attributes(const char *path, char cmd, struct stat *statp)
 {
    struct utimbuf ut;
-   mode_t old_mask;
    bool ok = true;
  
    if (uid_set) {
@@ -180,14 +179,13 @@ bool set_attributes(const char *path, char cmd, struct stat *statp)
       uid_set = true;
    }
 
-   old_mask = umask(0);
-
    ut.actime = statp->st_atime;
    ut.modtime = statp->st_mtime;
 
 #ifdef HAVE_WIN32
-   if(set_file_times(path, &ut)) ok=false;
-   return ok;
+	win32_chmod(path, statp->st_mode);
+	set_file_times(path, ut);
+	return true;
 #endif
 
    /* ***FIXME**** optimize -- don't do if already correct */

@@ -3,9 +3,9 @@
   * Add option to send success notifications only if there were warnings.
   * Try to create the pidfile directory if it doesn't exist.
   * Restore times on Windows files.
-  * Fix bug in 'keep' mechanism where setting it to 2 would delete both
-    backups.
-  * Set readonly/hidden attributes on Windows restore.
+  * Restore readonly/hidden attributes on Windows.
+  * Fix bug in 'keep' mechanism where setting 'keep=2' would delete both
+	backups.
 
 2011-09-29 Changes in burp-1.2.2:
   * Multiple retention periods (e.g, keep 1 backup per day for 7 days, 1

@@ -302,6 +302,9 @@ int pathcmp(const char *a, const char *b)
 {
 	const char *x=NULL;
 	const char *y=NULL;
+	if(!x && !y) return 0;
+	if( x && !y) return 1;
+	if(!x &&  y) return -1;
 	for(x=a, y=b; *x && *y ; x++, y++)
 	{
 		if(*x==*y) continue;

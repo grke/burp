@@ -572,7 +572,6 @@ int async_read_stat(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
 	char cmd=CMD_ERROR;
 
 	char *d=NULL;
-	size_t dlen=0;
 
 	while(1)
 	{
@@ -605,7 +604,6 @@ int async_read_stat(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
 		{
 			if(d) free(d);
 			d=buf;
-			dlen=len;
 			buf=NULL;
 		}
 		else if(cmd==CMD_STAT)

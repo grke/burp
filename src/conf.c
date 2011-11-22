@@ -383,10 +383,7 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 			char *cp=NULL;
 			cp=value;
 			if(!strncmp(value, "gzip", strlen("gzip")))
-			{
-				char *cp=NULL;
 				cp=value+strlen("gzip")+1;
-			}
 			if(strlen(cp)!=1 || !isdigit(*cp))
 				return conf_error(config_path, line);
 

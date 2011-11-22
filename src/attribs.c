@@ -184,7 +184,7 @@ bool set_attributes(const char *path, char cmd, struct stat *statp)
 
 #ifdef HAVE_WIN32
 	win32_chmod(path, statp->st_mode);
-	set_file_times(path, ut);
+	set_file_times(path, &ut);
 	return true;
 #endif
 

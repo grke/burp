@@ -60,6 +60,7 @@ The main author of Burp is Graham Keeling.
         backups.
   * Only install clientconfdir/testclient with 'make install' if clientconfdir
     didn't previously exist.
+  * Fix possible segfault when resume mode triggers with nothing to resume.
 </pre>
 </FONT>
 </P>

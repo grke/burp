@@ -6,6 +6,8 @@
   * Restore readonly/hidden attributes on Windows.
   * Fix bug in 'keep' mechanism where setting 'keep=2' would delete both
 	backups.
+  * Only install clientconfdir/testclient with 'make install' if clientconfdir
+    didn't previously exist.
 
 2011-09-29 Changes in burp-1.2.2:
   * Multiple retention periods (e.g, keep 1 backup per day for 7 days, 1

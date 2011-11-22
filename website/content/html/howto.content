@@ -105,7 +105,7 @@ SERVER OPTIONS
 
        -a s   Run this to connect to a running server to get a live monitor of
 	      the status of all your backup clients.  If  your	server	config
-	      file is not in the default location, you will also need to spec‐
+	      file is not in the default location, you will also need to spec-
 	      ify the path with the '-c' option.  The  live  monitor  requires
 	      ncurses support at compile time.
 
@@ -116,7 +116,7 @@ SERVER OPTIONS
 
        -l [path]
 	      Path to log file. The default is stdout. This  option  overrides
-	      the  logfile option in the config file. Use /dev/null to deacti‐
+	      the  logfile option in the config file. Use /dev/null to deacti-
 	      vate or '' to reactivate output.
 
 
@@ -150,7 +150,7 @@ CLIENT OPTIONS
        -l [path]
 	      Short for 'log file'. The argument is a path to  the  log  file.
 	      The  default is stdout. This option overrides the logfile option
-	      in the config file. Use /dev/null to deactivate or '' to reacti‐
+	      in the config file. Use /dev/null to deactivate or '' to reacti-
 	      vate output.
 
 
@@ -175,7 +175,7 @@ EXAMPLES
 	      expression 'myregex'.
 
        burp -a L -b 1 -r myregex
-	      Long lists all the files in backup number 1 that match the regu‐
+	      Long lists all the files in backup number 1 that match the regu-
 	      lar expression 'myregex'. This is like doing an 'ls -l'.
 
        burp -a r -b 1 -r myregex
@@ -189,7 +189,7 @@ EXAMPLES
 	      expression 'myregex' into the directory /tmp/restoredir.
 
        burp -a r
-	      Restores all the files in the most recent backup to their origi‐
+	      Restores all the files in the most recent backup to their origi-
 	      nal location. You won't be given a warning if the files  already
 	      exist there, so use with caution.
 
@@ -226,7 +226,7 @@ SERVER CONFIGURATION FILE OPTIONS
 	      Path to the directory that contains client configuration files.
 
        lockfile=[path]
-	      Path to the lockfile that ensures that two server processes can‐
+	      Path to the lockfile that ensures that two server processes can-
 	      not run simultaneously.
 
        pidfile=[path]
@@ -237,7 +237,7 @@ SERVER CONFIGURATION FILE OPTIONS
 
        keep=[number]
 	      Number of backups to keep. This can be overriddden by the client
-	      configuration files in clientconfdir on the server. Specify mul‐
+	      configuration files in clientconfdir on the server. Specify mul-
 	      tiple 'keep' entries on separate lines in order to keep multiple
 	      periods  of  backups. For example, assuming that you are doing a
 	      backup a day, keep=7 keep=4 keep=6 (on separate lines) will keep
@@ -246,7 +246,7 @@ SERVER CONFIGURATION FILE OPTIONS
 	      will  be	guaranteed  to	be able to restore up to 168 days ago,
 	      with the number of available backups exponentially decreasing as
 	      you  go  back  in time to that point. In this example, every 7th
-	      backup will be hardlinked to allow burp to safely delete	inter‐
+	      backup will be hardlinked to allow burp to safely delete	inter-
 	      mediate  backups	when  necessary.  You  can have as many 'keep'
 	      lines as you like, as long as they don't	exceed	52560000  when
 	      multiplied  together.  That  is,	a  backup every minute for 100
@@ -255,7 +255,7 @@ SERVER CONFIGURATION FILE OPTIONS
        hardlinked_archive=[0|1]
 	      On the server, defines whether to keep hardlinked files  in  the
 	      backups,	or  whether  to generate reverse deltas and delete the
-	      original files. Can be set to either 0 (off) or 1  (on).	Disad‐
+	      original files. Can be set to either 0 (off) or 1  (on).	Disad-
 	      vantage:	More  disk space will be used Advantage: Restores will
 	      be faster, and since no reverse deltas need to be generated, the
 	      time  and  effort  the  server  needs  at the end of a backup is
@@ -269,7 +269,7 @@ SERVER CONFIGURATION FILE OPTIONS
 
        compression=[gzip0-9]
 	      Choose  the  level of gzip compression. Setting 0 or gzip0 turns
-	      compression off. The default is gzip9. This option can be  over‐
+	      compression off. The default is gzip9. This option can be  over-
 	      ridden by the client configuration files in clientconfdif on the
 	      server.
 
@@ -293,8 +293,13 @@ SERVER CONFIGURATION FILE OPTIONS
 	      Set the network send rate limit, in Mb/s. If this option is  not
 	      given, burp will send data as fast as it can.
 
+       network_timeout=[s]
+	      Set  the	network  timeout  in  seconds.	If  no data is sent or
+	      received over a period of this length, burp will	give  up.  The
+	      default is 7200 seconds (2 hours).
+
        working_dir_recovery_method=[resume|merge|use|delete]
-	      This  option tells the server what to do when it finds the work‐
+	      This  option tells the server what to do when it finds the work-
 	      ing directory of an interrupted backup (perhaps somebody	pulled
 	      the plug on the server, or something). This can be overridden by
 	      the client configurations files in clientconfdir on the  server.
@@ -307,7 +312,7 @@ SERVER CONFIGURATION FILE OPTIONS
        merge:  This  option is deprecated - please use 'resume' instead. Merge
        the working directory with the previous complete backup.  The resulting
        backup will contain the newest files from them both.  This option takes
-       effect when you try to do a new backup on the client  that  was	inter‐
+       effect when you try to do a new backup on the client  that  was	inter-
        rupted.	Once  the old working directory is dealt with, an entirely new
        backup will be made.
 
@@ -316,7 +321,7 @@ SERVER CONFIGURATION FILE OPTIONS
 
        ssl_cert_ca=[path]
 	      The  path  to the SSL CA certificate. This file will probably be
-	      the same on both the server and the client. The file should con‐
+	      the same on both the server and the client. The file should con-
 	      tain just the certificate in PEM format
 
        ssl_cert=[path]
@@ -348,7 +353,7 @@ SERVER CONFIGURATION FILE OPTIONS
 	      run. The first two arguments are the client name and the path to
 	      the  'current'  storage  directory. The next three arguments are
 	      reserved, and user arguments are appended after that. An example
-	      timer  script  is provided. The timer_script option can be over‐
+	      timer  script  is provided. The timer_script option can be over-
 	      riddden by the client configuration files  in  clientconfdir  on
 	      the server.
 
@@ -361,12 +366,12 @@ SERVER CONFIGURATION FILE OPTIONS
 	      Path to the script to run when a backup succeeds. User arguments
 	      are appended after the first five reserved arguments. An example
 	      notify  script is provided. The notify_success_script option can
-	      be overriddden by the  client  configuration  files  in  client‐
+	      be overriddden by the  client  configuration  files  in  client-
 	      confdir on the server.
 
        notify_success_arg=[string]
 	      A  user-definable argument to the notify success script. You can
-	      have many of these. The notify_success_arg options can be  over‐
+	      have many of these. The notify_success_arg options can be  over-
 	      riddden  by  the	client configuration files in clientconfdir on
 	      the server.
 
@@ -380,6 +385,12 @@ SERVER CONFIGURATION FILE OPTIONS
 
        notify_failure_arg=[string]
 	      The same as notify_failure_arg, but for backups that failed.
+
+       dedup_group=[string]
+	      Enables you to group clients  together  for  file  deduplication
+	      purposes.  For  example,	you might want to set 'dedup_group=xp'
+	      for each Windows XP client, and then run the bedup program on  a
+	      cron job every other day with the option '-g xp'.
 
 
 CLIENT CONFIGURATION FILE OPTIONS
@@ -399,7 +410,7 @@ CLIENT CONFIGURATION FILE OPTIONS
 	      Defines the password to send to the server.
 
        lockfile=[path]
-	      Path to the lockfile that ensures that two client processes can‐
+	      Path to the lockfile that ensures that two client processes can-
 	      not run simultaneously (this currently doesn't work on Windows).
 
        pidfile=[path]
@@ -415,17 +426,22 @@ CLIENT CONFIGURATION FILE OPTIONS
 	      Run as a particular group (not supported on Windows).
 
        ratelimit=[Mb/s]
-	      Set  the network send rate limit, in Mb/s. If this option is not
+	      Set the network send rate limit, in Mb/s. If this option is  not
 	      given, burp will send data as fast as it can.
 
+       network_timeout=[s]
+	      Set  the	network  timeout  in  seconds.	If  no data is sent or
+	      received over a period of this length, burp will	give  up.  The
+	      default is 7200 seconds (2 hours).
+
        include=[path]
-	      Path to include in the backup. You  can  have  multiple  include
-	      lines.  Use  forward  slashes  '/',  not backslashes '\' as path
+	      Path  to	include  in  the backup. You can have multiple include
+	      lines. Use forward slashes '/',  not  backslashes  '\'  as  path
 	      delimiters.
 
        exclude=[path]
-	      Path to exclude from the backup. You can have  multiple  exclude
-	      lines.  Use  forward  slashes  '/',  not backslashes '\' as path
+	      Path  to	exclude from the backup. You can have multiple exclude
+	      lines. Use forward slashes '/',  not  backslashes  '\'  as  path
 	      delimiters.
 
        exclude_ext=[extension]
@@ -440,25 +456,25 @@ CLIENT CONFIGURATION FILE OPTIONS
 	      Allow backups to cross all filesystem mountpoints.
 
        nobackup=[file name]
-	      If this file system entry exists, the  directory	containing  it
+	      If  this	file  system entry exists, the directory containing it
 	      will not be backed up.
 
        read_fifo=[path]
-	      Do  not  back  up the given fifo itself, but open it for reading
+	      Do not back up the given fifo itself, but open  it  for  reading
 	      and back up the contents as if it were a regular file.
 
        read_all_fifos=[0|1]
-	      Open all fifos for reading and back up the contents as  if  they
+	      Open  all  fifos for reading and back up the contents as if they
 	      were regular files.
 
        ssl_cert_ca=[path]
-	      The  path  to the SSL CA certificate. This file will probably be
-	      the same on both the server and the client. The file should con‐
+	      The path to the SSL CA certificate. This file will  probably  be
+	      the same on both the server and the client. The file should con-
 	      tain just the certificate in PEM format
 
        ssl_cert=[path]
 	      The path to the client SSL certificate. It works for me when the
-	      file contains the concatenation of the certificate  and  private
+	      file  contains  the concatenation of the certificate and private
 	      key in PEM format.
 
        ssl_key=[path]
@@ -471,25 +487,25 @@ CLIENT CONFIGURATION FILE OPTIONS
 	      Synonym for ssl_key_password.
 
        encryption_password=[password]
-	      Set  this to enable client side file Blowfish encryption. If you
-	      do not want encryption, leave this  field  out  of  your	config
-	      file.  IMPORTANT:  Configuring  this  renders delta differencing
-	      pointless, since the smallest real change to a  file  will  make
+	      Set this to enable client side file Blowfish encryption. If  you
+	      do  not  want  encryption,  leave  this field out of your config
+	      file. IMPORTANT: Configuring  this  renders  delta  differencing
+	      pointless,  since  the  smallest real change to a file will make
 	      the whole file look different. Therefore, activating this option
-	      turns off delta differencing so  that  whenever  a  client  file
+	      turns  off  delta  differencing  so  that whenever a client file
 	      changes, the whole new file will be uploaded on the next backup.
-	      ALSO IMPORTANT: If you manage to lose your encryption  password,
-	      you  will not be able to unencrypt your files. You should there‐
-	      fore think about having a copy of the encryption password  some‐
-	      where  off-box,  in  case  of  your  client  hard  disk failing.
+	      ALSO  IMPORTANT: If you manage to lose your encryption password,
+	      you will not be able to unencrypt your files. You should	there-
+	      fore  think about having a copy of the encryption password some-
+	      where off-box,  in  case	of  your  client  hard	disk  failing.
 	      FINALLY: If you change your encryption password, you will end up
-	      with  a mixture of files on the server with different encryption
-	      and it may become tricky to restore more	than  one  file  at  a
-	      time.  For  this reason, if you change your encryption password,
-	      you may want to start a fresh chain of backups  (by  moving  the
-	      original set aside, for example). Burp will cope fine with turn‐
+	      with a mixture of files on the server with different  encryption
+	      and  it  may  become  tricky  to restore more than one file at a
+	      time. For this reason, if you change your  encryption  password,
+	      you  may	want  to start a fresh chain of backups (by moving the
+	      original set aside, for example). Burp will cope fine with turn-
 	      ing the same encryption password on and off between backups, and
-	      will  restore  a backup of mixed encrypted and unencrypted files
+	      will restore a backup of mixed encrypted and  unencrypted  files
 	      without a problem.
 
        backup_script_pre=[path]
@@ -502,116 +518,116 @@ CLIENT CONFIGURATION FILE OPTIONS
 	      many of these.
 
        backup_script_post=[path]
-	      Path  to a script to run after a backup. The arguments to it are
-	      'post', [0|1] if the backup failed or succeeded, 'reserved3'  to
-	      'reserved5',	and	 then	  arguments	defined     by
+	      Path to a script to run after a backup. The arguments to it  are
+	      'post',  [0|1] if the backup failed or succeeded, 'reserved3' to
+	      'reserved5',     and     then	arguments      defined	    by
 	      backup_script_post_arg.
 
        backup_script_post_arg=[string]
-	      A user-definable argument to the backup  post  script.  You  can
+	      A  user-definable  argument  to  the backup post script. You can
 	      have many of these.
 
        backup_script_post_run_on_fail=[0|1]
-	      If  this is set to 1, backup_script_post will be run whether the
-	      backup succeeds or not. The  default  is	0,  which  means  that
+	      If this is set to 1, backup_script_post will be run whether  the
+	      backup  succeeds	or  not.  The  default	is 0, which means that
 	      backup_script_post will only be run if the backup succeeds.
 
        restore_script_pre=[path]
-	      Path  to	a  script to run before a restore. The arguments to it
+	      Path to a script to run before a restore. The  arguments	to  it
 	      are  'pre',  'reserved2'	to  'reserved5',  and  then  arguments
 	      defined by restore_script_pre_arg.
 
        restore_script_pre_arg=[string]
-	      A  user-definable  argument  to  the restore pre script. You can
+	      A user-definable argument to the restore	pre  script.  You  can
 	      have many of these.
 
        restore_script_post=[path]
 	      Path to a script to run after a restore. The arguments to it are
 	      'post', [0|1] if the restore failed or succeeded, 'reserved3' to
-	      'reserved5',     and     then	arguments      defined	    by
+	      'reserved5',	and	 then	  arguments	defined     by
 	      restore_script_post_arg.
 
        restore_script_post_arg=[string]
-	      A  user-definable  argument  to the restore post script. You can
+	      A user-definable argument to the restore post  script.  You  can
 	      have many of these.
 
        restore_script_post_run_on_fail=[0|1]
 	      If this is set to 1, restore_script_post will be run whether the
-	      restore  succeeds  or  not.  The	default is 0, which means that
+	      restore succeeds or not. The default  is	0,  which  means  that
 	      restore_script_post will only be run if the restore succeeds.
 
        backup_script=[path]
 	      You can use this to save space in your config file when you want
-	      to  run  the same script before and after a backup. It overrides
+	      to run the same script before and after a backup.  It  overrides
 	      backup_script_pre and backup_script_post.
 
        backup_script_arg=[path]
-	      Goes with backup_script and overrides backup_script_pre_arg  and
+	      Goes  with backup_script and overrides backup_script_pre_arg and
 	      backup_script_post_arg.
 
        restore_script=[path]
 	      You can use this to save space in your config file when you want
-	      to run the same script before and after a restore. It  overrides
+	      to  run the same script before and after a restore. It overrides
 	      restore_script_pre and restore_script_post.
 
        restore_script_arg=[path]
-	      Goes  with  restore_script  and overrides restore_script_pre_arg
+	      Goes with restore_script	and  overrides	restore_script_pre_arg
 	      and restore_script_post_arg.
 
 
 SERVER CLIENTCONFDIR FILE
-       For the server to know about clients that can contact it, you  need  to
+       For  the  server to know about clients that can contact it, you need to
        place a file named after the client in clientconfdir.
 
        The file name must match the name in the 'cname' field on the client.
 
-       ssl_peer_cn=[string]  must also be set and match the common name in the
+       ssl_peer_cn=[string] must also be set and match the common name in  the
        SSL certificate that the client gives when it connects.
 
-       The file needs to contain a line like password=[password] that  matches
-       the  same  field  on the client, or passwd=[encrypted password] - where
-       the plain text password	on  the  client  will  be  tested  against  an
+       The  file needs to contain a line like password=[password] that matches
+       the same field on the client, or passwd=[encrypted  password]  -  where
+       the  plain  text  password  on  the  client  will  be tested against an
        encrypted password of the kind you might find in /etc/passwd.
 
-       Additionally,  the  following  options  can be overridden here for each
+       Additionally, the following options can be  overridden  here  for  each
        client:
-	      directory keep working_dir_recovery_method librsync  compression
-	      timer_script  timer_arg notify_success_script notify_success_arg
-	      notify_success_warnings_only notify_failure_script  notify_fail‐
-	      ure_arg
+	      directory  keep working_dir_recovery_method librsync compression
+	      timer_script timer_arg notify_success_script  notify_success_arg
+	      notify_success_warnings_only  notify_failure_script notify_fail-
+	      ure_arg dedup_group
 
 
 Some notes on SSL certificates
-       The  burp  example configs come with example SSL certificates and keys.
-       You can use these and burp will work. But if you are worried about net‐
-       work  security,	you should generate your own certificates and keys and
-       point your config files to them. To create the example files, I used  a
-       handy   interface   to	openssl,  called  'tinyca'  (http://tinyca.sm-
-       zone.net/). If you are using  Debian,  you  can	run  'apt-get  install
+       The burp example configs come with example SSL certificates  and  keys.
+       You can use these and burp will work. But if you are worried about net-
+       work security, you should generate your own certificates and  keys  and
+       point  your config files to them. To create the example files, I used a
+       handy  interface  to  openssl,	called	 'tinyca'   (http://tinyca.sm-
+       zone.net/).  If	you  are  using  Debian,  you can run 'apt-get install
        tinyca' to get it. There is also the option of using burp_ca, which you
        can find in the source distribution, courtesy of Patrick Koppen.
 
 
 Examining backups
-       As well as using the client list options described above,  you  can  go
-       directly  to  the  storage  directory  on the server. The backups for a
-       client are in the directory named after the client. Inside each	backup
+       As  well  as  using the client list options described above, you can go
+       directly to the storage directory on the  server.  The  backups	for  a
+       client  are in the directory named after the client. Inside each backup
        directory is a file called manifest.gz.
 
-       This  contains  a  list	of all the files in the backup, and where they
+       This contains a list of all the files in the  backup,  and  where  they
        originally came from on the client.
 
-       There is also a 'log.gz' file in the backup directory,  which  contains
+       There  is  also a 'log.gz' file in the backup directory, which contains
        the output generated by the server during the backup.
 
        The 'data' directory contains complete backup files.
 
-       The  'deltas.reverse'  directory  contains  reverse  deltas that can be
-       applied to the data from the next backup in the sequence (indicated  by
+       The 'deltas.reverse' directory contains	reverse  deltas  that  can  be
+       applied	to the data from the next backup in the sequence (indicated by
        the contents of the 'forward' file).
 
-       Anything  with  a .gz suffix is compressed in gzip format.  You can use
-       standard tools, such as zcat, zless or cp, to view them	or  copy  them
+       Anything with a .gz suffix is compressed in gzip format.  You  can  use
+       standard  tools,  such  as zcat, zless or cp, to view them or copy them
        elsewhere.
 
 

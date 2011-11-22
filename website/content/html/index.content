@@ -47,6 +47,24 @@ The main author of Burp is Graham Keeling.
 <TD></TD>
 <TD ALIGN="LEFT">
 <P>
+<FONT COLOR="#99CCFF">2011-11-22: burp-1.2.4 is released.
+<pre>
+2011-11-22 Changes in burp-1.2.4:
+  * Add a file deduplication program, "bedup".
+  * Add a network_timeout parameter. Default is 7200 seconds (2 hours).
+  * Add option to send success notifications only if there were warnings.
+  * Try to create the pidfile directory if it doesn't exist.
+  * Restore times on Windows files.
+  * Restore readonly/hidden attributes on Windows.
+  * Fix bug in 'keep' mechanism where setting 'keep=2' would delete both
+        backups.
+  * Only install clientconfdir/testclient with 'make install' if clientconfdir
+    didn't previously exist.
+</pre>
+</FONT>
+</P>
+
+<P>
 <FONT COLOR="#99CCFF">2011-09-29: burp-1.2.2 is released.
 <pre>
 Changes in burp-1.2.2:

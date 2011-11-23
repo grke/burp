@@ -608,7 +608,7 @@ int async_read_stat(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
 		}
 		else if(cmd==CMD_STAT)
 		{
-			decode_stat(buf, &(sb->statp));
+			decode_stat(buf, &(sb->statp), &(sb->winattr));
 			sb->statbuf=buf;
 			sb->slen=len;
 			sb->datapth=d;

@@ -90,6 +90,7 @@ struct FF_PKT {
    char *fname;                       /* full filename */
    char *link;                        /* link if file linked */
    struct stat statp;                 /* stat packet */
+   int64_t winattr;                   /* windows attributes */
    int32_t FileIndex;                 /* FileIndex of this file */
    int32_t LinkFI;                    /* FileIndex of main hard linked file */
    struct f_link *linked;             /* Set if this file is hard linked */
@@ -120,8 +121,8 @@ int file_is_included(struct strlist **ielist, int iecount,
 	struct strlist **excext, int excount, const char *fname);
 
 /* from attribs.c */
-void encode_stat(char *buf, struct stat *statp);
-void decode_stat(const char *buf, struct stat *statp);
-bool set_attributes(const char *path, char cmd, struct stat *statp);
+void encode_stat(char *buf, struct stat *statp, int64_t winattr);
+void decode_stat(const char *buf, struct stat *statp, int64_t *winattr);
+bool set_attributes(const char *path, char cmd, struct stat *statp, int64_t winattr);
 
 #endif /* __FILES_H */

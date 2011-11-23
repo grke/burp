@@ -673,7 +673,11 @@ find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
 
 	ff_pkt->fname=ff_pkt->link=fname;
 
+#ifdef HAVE_WIN32
+	if(win32_lstat(fname, &ff_pkt->statp, &ff_pkt->winattr))
+#else
 	if(lstat(fname, &ff_pkt->statp))
+#endif
 	{
 		ff_pkt->type=FT_NOSTAT;
 		ff_pkt->ff_errno=errno;

@@ -15,7 +15,7 @@
  * Encode a stat structure into a base64 character string
  *   All systems must create such a structure.
  */
-void encode_stat(char *buf, struct stat *statp)
+void encode_stat(char *buf, struct stat *statp, int64_t winattr)
 {
    char *p = buf;
 
@@ -64,6 +64,12 @@ void encode_stat(char *buf, struct stat *statp)
    p += to_base64((int64_t)0, p);     /* output place holder */
 #endif
 
+#ifdef HAVE_WIN32
+   p += to_base64((int64_t)winattr, p);
+#else
+   p += to_base64((int64_t)0, p);     /* output place holder */
+#endif
+
    *p = 0;
    return;
 }
@@ -87,7 +93,7 @@ void encode_stat(char *buf, struct stat *statp)
 
 
 /* Decode a stat packet from base64 characters */
-void decode_stat(const char *buf, struct stat *statp)
+void decode_stat(const char *buf, struct stat *statp, int64_t *winattr)
 {
    const char *p = buf;
    int64_t val;
@@ -150,6 +156,16 @@ void decode_stat(const char *buf, struct stat *statp)
       statp->st_flags  = 0;
 #endif
    }
+
+   if (*p == ' ' || (*p != 0 && *(p+1) == ' ')) {
+      p++;
+      p += from_base64(&val, p);
+#ifdef HAVE_WIN32
+      *winattr=val;
+   } else {
+      *winattr=0;
+#endif
+   }
 }
 
 static uid_t my_uid=1;
@@ -168,7 +184,7 @@ static int set_file_times(const char *path, struct utimbuf *ut)
 	return 0;
 }
 
-bool set_attributes(const char *path, char cmd, struct stat *statp)
+bool set_attributes(const char *path, char cmd, struct stat *statp, int64_t winattr)
 {
    struct utimbuf ut;
    bool ok = true;
@@ -183,7 +199,7 @@ bool set_attributes(const char *path, char cmd, struct stat *statp)
    ut.modtime = statp->st_mtime;
 
 #ifdef HAVE_WIN32
-	win32_chmod(path, statp->st_mode);
+	win32_chmod(path, statp->st_mode, winattr);
 	set_file_times(path, &ut);
 	return true;
 #endif

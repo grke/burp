@@ -120,6 +120,7 @@ int do_list_client(const char *backup, const char *listregex, enum action act)
 	{
 		char fcmd;
 		size_t flen=0;
+		int64_t winattr=0;
 		char *fname=NULL;
 		if(async_read(&scmd, &statbuf, &slen))
 		{
@@ -146,7 +147,7 @@ int do_list_client(const char *backup, const char *listregex, enum action act)
 			ret=-1; break;
 		}
 
-		decode_stat(statbuf, &statp);
+		decode_stat(statbuf, &statp, &winattr);
 
 		if(async_read(&fcmd, &fname, &flen))
 		{

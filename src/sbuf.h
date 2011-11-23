@@ -20,6 +20,7 @@ struct sbuf
 	// stat data
 	char *statbuf;
 	struct stat statp;
+	int64_t winattr;
 	size_t slen;
 	int sendstat; // flag indicating it needs to be sent
 

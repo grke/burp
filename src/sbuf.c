@@ -26,6 +26,7 @@ void init_sbuf(struct sbuf *sb)
 
 	memset(&(sb->rsbuf), 0, sizeof(sb->rsbuf));
 	memset(&(sb->statp), 0, sizeof(sb->statp));
+	sb->winattr=0;
 	sb->sigjob=NULL;
 	sb->infb=NULL;
 	sb->outfb=NULL;

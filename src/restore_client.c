@@ -199,7 +199,8 @@ static int restore_file_or_get_meta(struct sbuf *sb, const char *fname, enum act
 				encpassword, cntr, NULL);
 			close_fp(&fp);
 #endif
-			if(!ret) set_attributes(rpath, sb->cmd, &(sb->statp));
+			if(!ret) set_attributes(rpath, sb->cmd,
+				&(sb->statp), sb->winattr);
 		}
 		if(ret)
 		{
@@ -255,7 +256,7 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
 		}
 		else
 		{
-			set_attributes(rpath, CMD_SPECIAL, &statp);
+			set_attributes(rpath, CMD_SPECIAL, &statp, sb->winattr);
 			do_filecounter(cntr, CMD_SPECIAL, 1);
 		}
 	}
@@ -288,7 +289,7 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
             }
 	    else
 	    {
-		set_attributes(rpath, CMD_SPECIAL, &statp);
+		set_attributes(rpath, CMD_SPECIAL, &statp, sb->winattr);
 		do_filecounter(cntr, CMD_SPECIAL, 1);
 	    }
          }
@@ -329,7 +330,8 @@ static int restore_dir(struct sbuf *sb, const char *dname, enum action act, stru
 		}
 		else
 		{
-			set_attributes(rpath, sb->cmd, &(sb->statp));
+			set_attributes(rpath,
+				sb->cmd, &(sb->statp), sb->winattr);
 		}
 		if(!ret) do_filecounter(cntr, sb->cmd, 1);
 	}
@@ -366,7 +368,8 @@ static int restore_link(struct sbuf *sb, const char *fname, const char *restorep
 		}
 		else if(!ret)
 		{
-			set_attributes(fname, sb->cmd, &(sb->statp));
+			set_attributes(fname,
+				sb->cmd, &(sb->statp), sb->winattr);
 			do_filecounter(cntr, sb->cmd, 1);
 		}
 		if(rpath) free(rpath);
@@ -408,7 +411,8 @@ static int restore_metadata(struct sbuf *sb, const char *fname, enum action act,
 
 			// set attributes again, since we just diddled with
 			// the file
-			set_attributes(fname, sb->cmd, &(sb->statp));
+			set_attributes(fname, sb->cmd,
+				&(sb->statp), sb->winattr);
 
 			do_filecounter(cntr, sb->cmd, 1);
 		}

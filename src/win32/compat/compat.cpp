@@ -612,7 +612,7 @@ static const char *errorString(void)
 
 
 static int
-statDir(const char *file, struct stat *sb)
+statDir(const char *file, struct stat *sb, int64_t *winattr)
 {
    WIN32_FIND_DATAW info_w;       // window's file info
    WIN32_FIND_DATAA info_a;       // window's file info
@@ -658,7 +658,6 @@ statDir(const char *file, struct stat *sb)
       pftLastAccessTime = &info_w.ftLastAccessTime;
       pftLastWriteTime  = &info_w.ftLastWriteTime;
       pftCreationTime   = &info_w.ftCreationTime;
-
    // use ASCII
    } else if (p_FindFirstFileA) {
       h = p_FindFirstFileA(file, &info_a);
@@ -686,6 +685,15 @@ statDir(const char *file, struct stat *sb)
       FindClose(h);
    }
 
+   *winattr = (int64_t)pdwFileAttributes;
+
+   /* Graham says: all the following stuff seems rather complicated.
+      It is probably not all needed anymore, since I have added *winattr
+      above, which bacula did not do.
+      One reason for keeping it is that some of the values get converted to
+      unix-style permissions that show up in the long list functionality.
+      I think I would prefer to remove it all at some point.
+   */
    sb->st_mode = 0777;               /* start with everything */
    if (*pdwFileAttributes & FILE_ATTRIBUTE_READONLY)
        sb->st_mode &= ~(S_IRUSR|S_IRGRP|S_IROTH);
@@ -775,8 +783,8 @@ statDir(const char *file, struct stat *sb)
    return 0;
 }
 
-int
-fstat(intptr_t fd, struct stat *sb)
+static int
+do_fstat(intptr_t fd, struct stat *sb, int64_t *winattr)
 {
    BY_HANDLE_FILE_INFORMATION info;
 
@@ -794,7 +802,15 @@ fstat(intptr_t fd, struct stat *sb)
    sb->st_nlink = (short)info.nNumberOfLinks;
    if (sb->st_nlink > 1) {
    }
+   *winattr = (int64_t)info.dwFileAttributes;
 
+   /* Graham says: all the following stuff seems rather complicated.
+      It is probably not all needed anymore, since I have added *winattr
+      above, which bacula did not do.
+      One reason for keeping it is that some of the values get converted to
+      unix-style permissions that show up in the long list functionality.
+      I think I would prefer to remove it all though.
+   */
    sb->st_mode = 0777;               /* start with everything */
    if (info.dwFileAttributes & FILE_ATTRIBUTE_READONLY)
        sb->st_mode &= ~(S_IRUSR|S_IRGRP|S_IROTH);
@@ -821,8 +837,15 @@ fstat(intptr_t fd, struct stat *sb)
    return 0;
 }
 
+int
+fstat(intptr_t fd, struct stat *sb)
+{
+	int64_t winattr=0;
+	return do_fstat(fd, sb, &winattr);
+}
+
 static int
-stat2(const char *file, struct stat *sb)
+stat2(const char *file, struct stat *sb, int64_t *winattr)
 {
    HANDLE h = INVALID_HANDLE_VALUE;
    int rval = 0;
@@ -864,23 +887,24 @@ stat2(const char *file, struct stat *sb)
       return -1;
    }
 
-   rval = fstat((intptr_t)h, sb);
+   rval = do_fstat((intptr_t)h, sb, winattr);
    CloseHandle(h);
 
    if (attr & FILE_ATTRIBUTE_DIRECTORY &&
         file[1] == ':' && file[2] != 0) {
-      rval = statDir(file, sb);
+      rval = statDir(file, sb, winattr);
    }
    return rval;
 }
 
-int
-stat(const char *file, struct stat *sb)
+static int
+do_stat(const char *file, struct stat *sb, int64_t *winattr)
 {
    WIN32_FILE_ATTRIBUTE_DATA data;
    errno = 0;
 
    memset(sb, 0, sizeof(*sb));
+   memset(winattr, 0, sizeof(*winattr));
 
    if (p_GetFileAttributesExW) {
       /* dynamically allocate enough space for UCS2 filename */
@@ -891,17 +915,26 @@ stat(const char *file, struct stat *sb)
       sm_free_pool_memory(pwszBuf);
 
       if (!b) {
-         return stat2(file, sb);
+         return stat2(file, sb, winattr);
       }
 
    } else if (p_GetFileAttributesExA) {
       if (!p_GetFileAttributesExA(file, GetFileExInfoStandard, &data)) {
-         return stat2(file, sb);
+         return stat2(file, sb, winattr);
        }
    } else {
-      return stat2(file, sb);
+      return stat2(file, sb, winattr);
    }
 
+   *winattr = (int64_t)data.dwFileAttributes;
+
+   /* Graham says: all the following stuff seems rather complicated.
+      It is probably not all needed anymore, since I have added *winattr
+      above, which bacula did not do.
+      One reason for keeping it is that some of the values get converted to
+      unix-style permissions that show up in the long list functionality.
+      I think I would prefer to remove it all though.
+   */
    sb->st_mode = 0777;               /* start with everything */
    if (data.dwFileAttributes & FILE_ATTRIBUTE_READONLY) {
       sb->st_mode &= ~(S_IRUSR|S_IRGRP|S_IROTH);
@@ -941,7 +974,7 @@ stat(const char *file, struct stat *sb)
     */
    if (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY && 
         file[1] == ':' && file[2] != 0) {
-      statDir(file, sb);
+      statDir(file, sb, winattr);
    }
    return 0;
 }
@@ -996,7 +1029,14 @@ int fcntl(int fd, int cmd, long arg)
 int
 lstat(const char *file, struct stat *sb)
 {
-   return stat(file, sb);
+   int64_t winattr=0;
+   return do_stat(file, sb, &winattr);
+}
+
+int
+win32_lstat(const char *file, struct stat *sb, int64_t *winattr)
+{
+   return do_stat(file, sb, winattr);
 }
 
 void
@@ -1392,7 +1432,8 @@ WSA_Init(void)
     return 0;
 }
 
-int win32_chmod(const char *path, mode_t mode)
+static
+int win32_chmod_old(const char *path, mode_t mode)
 {
    DWORD attr = (DWORD)-1;
 
@@ -1443,7 +1484,6 @@ int win32_chmod(const char *path, mode_t mode)
       }
    } else {
    }
-    
 
    if (attr == (DWORD)-1) {
       const char *err = errorString();
@@ -1454,6 +1494,57 @@ int win32_chmod(const char *path, mode_t mode)
    return 0;
 }
 
+/** Define attributes that are legal to set with SetFileAttributes() */
+#define SET_ATTRS ( \
+	FILE_ATTRIBUTE_ARCHIVE| \
+	FILE_ATTRIBUTE_HIDDEN| \
+	FILE_ATTRIBUTE_NORMAL| \
+	FILE_ATTRIBUTE_NOT_CONTENT_INDEXED| \
+	FILE_ATTRIBUTE_OFFLINE| \
+	FILE_ATTRIBUTE_READONLY| \
+	FILE_ATTRIBUTE_SYSTEM| \
+	FILE_ATTRIBUTE_TEMPORARY)
+
+static
+int win32_chmod_new(const char *path, int64_t winattr)
+{
+   DWORD attr = (DWORD)-1;
+
+   if (p_GetFileAttributesW) {
+      char* pwszBuf = sm_get_pool_memory(PM_FNAME);
+      make_win32_path_UTF8_2_wchar(&pwszBuf, path);
+
+      attr = p_GetFileAttributesW((LPCWSTR) pwszBuf);
+      if (attr != INVALID_FILE_ATTRIBUTES) {
+         attr = p_SetFileAttributesW((LPCWSTR)pwszBuf, winattr & SET_ATTRS);
+      }
+      sm_free_pool_memory(pwszBuf);
+   } else if (p_GetFileAttributesA) {
+      attr = p_GetFileAttributesA(path);
+      if (attr != INVALID_FILE_ATTRIBUTES) {
+         winattr = p_SetFileAttributesA(path, attr & SET_ATTRS);
+      }
+   } else {
+   }
+
+   if (attr == (DWORD)-1) {
+      const char *err = errorString();
+      LocalFree((void *)err);
+      errno = b_errno_win32;
+      return -1;
+   }
+   return 0;
+}
+
+int win32_chmod(const char *path, mode_t mode, int64_t winattr)
+{
+	/* Graham says: used to try to encode attributes in a mode_t.
+	   The new way is to just have an int64_t with them set properly.
+	   Old backups will not have winattr set, so if we have winattr,
+	   use it, other try to use the mode_t. */
+	if(winattr) win32_chmod_new(path, winattr);
+	else if(mode) win32_chmod_old(path, mode);
+}
 
 int
 win32_chdir(const char *dir)

@@ -222,6 +222,7 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 			  || cmd==CMD_METADATA
 			  || cmd==CMD_ENC_METADATA)
 			{
+				int64_t winattr=0;
 				struct stat statbuf;
 				char *extrameta=NULL;
 				size_t elen=0;
@@ -230,7 +231,11 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 				sb.path=buf;
 				buf=NULL;
 
+#ifdef HAVE_WIN32
+				if(win32_lstat(sb.path, &statbuf, &winattr))
+#else
 				if(lstat(sb.path, &statbuf))
+#endif
 				{
 					logw(cntr, "Path has vanished: %s", sb.path);
 					// Tell the server to forget about this
@@ -258,7 +263,7 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 					continue;
 				}
 
-				encode_stat(attribs, &statbuf);
+				encode_stat(attribs, &statbuf, winattr);
 
 				if(cmd==CMD_METADATA
 				  || cmd==CMD_ENC_METADATA)

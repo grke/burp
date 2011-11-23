@@ -288,6 +288,7 @@ int readdir(unsigned int fd, struct dirent *dirp, unsigned int count);
 long int random(void);
 void srandom(unsigned int seed);
 int lstat(const char *, struct stat *);
+int win32_lstat(const char *, struct stat *, int64_t *);
 int stat(const char *file, struct stat *sb);
 long pathconf(const char *, int);
 int readlink(const char *, char *, int);
@@ -320,7 +321,7 @@ struct sigaction {
 #define mkdir(p, m) win32_mkdir(p)
 #define unlink win32_unlink
 #define chdir win32_chdir
-#define chmod win32_chmod
+//#define chmod win32_chmod
 extern "C" void syslog(int type, const char *fmt, ...);
 #if !defined(LOG_DAEMON)
 #define LOG_DAEMON 0
@@ -347,14 +348,14 @@ extern "C" void *  __cdecl _alloca(size_t);
 
 #define getcwd win32_getcwd
 #define chdir win32_chdir
-#define chmod win32_chmod
+//#define chmod win32_chmod
 #define fputs win32_fputs
 char *win32_getcwd(char *buf, int maxlen);
 int win32_chdir(const char *buf);
 int win32_mkdir(const char *buf);
 int win32_fputs(const char *string, FILE *stream);
 int win32_unlink(const char *filename);
-int win32_chmod(const char *, mode_t);
+int win32_chmod(const char *, mode_t, int64_t);
 
 
 char* win32_cgets (char* buffer, int len);

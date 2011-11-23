@@ -63,6 +63,7 @@ void encode_stat(char *buf, struct stat *statp, int64_t winattr)
 #else
    p += to_base64((int64_t)0, p);     /* output place holder */
 #endif
+   *p++ = ' ';
 
 #ifdef HAVE_WIN32
    p += to_base64((int64_t)winattr, p);
@@ -149,6 +150,7 @@ void decode_stat(const char *buf, struct stat *statp, int64_t *winattr)
    /* FreeBSD user flags */
    if (*p == ' ' || (*p != 0 && *(p+1) == ' ')) {
       p++;
+      if(!*p) return;
       p += from_base64(&val, p);
 #ifdef HAVE_CHFLAGS
       plug(statp->st_flags, val);
@@ -157,15 +159,18 @@ void decode_stat(const char *buf, struct stat *statp, int64_t *winattr)
 #endif
    }
 
+   /* Look for winattr */
+#ifdef HAVE_WIN32
    if (*p == ' ' || (*p != 0 && *(p+1) == ' ')) {
       p++;
       p += from_base64(&val, p);
-#ifdef HAVE_WIN32
-      *winattr=val;
    } else {
-      *winattr=0;
-#endif
+      val = 0;
    }
+#else
+   val=0;
+#endif
+   *winattr=val;
 }
 
 static uid_t my_uid=1;

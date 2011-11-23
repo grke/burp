@@ -1508,6 +1508,7 @@ int win32_chmod_old(const char *path, mode_t mode)
 static
 int win32_chmod_new(const char *path, int64_t winattr)
 {
+	if(winattr & FILE_ATTRIBUTE_ENCRYPTED) printf("\n   %s was encrypted!\n", path);
    DWORD attr = (DWORD)-1;
 
    if (p_GetFileAttributesW) {
@@ -1542,8 +1543,10 @@ int win32_chmod(const char *path, mode_t mode, int64_t winattr)
 	   The new way is to just have an int64_t with them set properly.
 	   Old backups will not have winattr set, so if we have winattr,
 	   use it, other try to use the mode_t. */
-	if(winattr) win32_chmod_new(path, winattr);
-	else if(mode) win32_chmod_old(path, mode);
+	/* After a few releases, get rid of the old stuff. */
+	if(winattr) return win32_chmod_new(path, winattr);
+	else if(mode) return win32_chmod_old(path, mode);
+	return 0;
 }
 
 int

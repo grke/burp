@@ -170,6 +170,27 @@ static int send_whole_file_w(const char *fname, const char *datapth, int quick_r
 			cntr, extrameta, elen);
 }
 
+static int forget_file(struct sbuf *sb, char cmd, struct cntr *cntr)
+{
+	// Tell the server to forget about this
+	// file, otherwise it might get stuck
+	// on a select waiting for it to arrive.
+	if(async_write_str(CMD_INTERRUPT, sb->path))
+		return 0;
+
+	if(cmd==CMD_FILE && sb->datapth)
+	{
+		rs_signature_t *sumset=NULL;
+		// The server will be sending
+		// us a signature. Munch it up
+		// then carry on.
+		if(load_signature(&sumset, cntr))
+			return -1;
+		else rs_free_sumset(sumset);
+	}
+	return 0;
+}
+
 static int do_backup_phase2_client(struct config *conf, int resume, struct cntr *cntr)
 {
 	int ret=0;
@@ -238,26 +259,23 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 #endif
 				{
 					logw(cntr, "Path has vanished: %s", sb.path);
-					// Tell the server to forget about this
-					// file, otherwise it might get stuck
-					// on a select waiting for it to arrive.
-					if(async_write_str(CMD_INTERRUPT, sb.path))
+					if(forget_file(&sb, cmd, cntr))
 					{
 						ret=-1;
 						quit++;
 					}
-					if(cmd==CMD_FILE && sb.datapth)
+					free_sbuf(&sb);
+					continue;
+				}
+
+				if(conf->max_file_size
+				  && statbuf.st_size>conf->max_file_size)
+				{
+					logw(cntr, "File size increased above max_file_size after initial scan: %s", sb.path);
+					if(forget_file(&sb, cmd, cntr))
 					{
-						rs_signature_t *sumset=NULL;
-						// The server will be sending
-						// us a signature. Munch it up
-						// then carry on.
-						if(load_signature(&sumset, cntr))
-						{
-							ret=-1;
-							quit++;
-						}
-						else rs_free_sumset(sumset);
+						ret=-1;
+						quit++;
 					}
 					free_sbuf(&sb);
 					continue;

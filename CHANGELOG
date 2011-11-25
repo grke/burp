@@ -1,3 +1,5 @@
+  * Add a 'max_file_size' option.
+
 2011-11-22 Changes in burp-1.2.4:
   * Add a file deduplication program, "bedup".
   * Add a network_timeout parameter. Default is 7200 seconds (2 hours).

@@ -95,3 +95,9 @@
   Have a directory on the server to contain the software, and a config
   option that can go in clientconfdir that says which software each client
   gets.
+
+* Add generic server-side pre/post scripts.
+
+* Pass client cert details to server-side pre/post scripts in environment
+  variables so that Jason Haar can do cunning things with them (see his mailing
+  list email of 2011/11/25.

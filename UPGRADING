@@ -1,5 +1,10 @@
 Things to watch out for when upgrading.
 
+1.2.4
+-----
+There was a critical bug in 1.2.4.
+Please upgrade clients and servers to 1.2.5 as soon as you can.
+
 1.1.x to 1.2.0
 ---------------
 * Clients on 1.1.70 or older will not work with a 1.2.0 server. You will need

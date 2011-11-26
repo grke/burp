@@ -42,7 +42,6 @@ void init_config(struct config *conf)
 	conf->fifos=NULL;
 	conf->cross_all_filesystems=0;
 	conf->read_all_fifos=0;
-	conf->max_file_size=0;
 	conf->ssl_cert_ca=NULL;
         conf->ssl_cert=NULL;
         conf->ssl_key=NULL;
@@ -303,9 +302,9 @@ int pathcmp(const char *a, const char *b)
 {
 	const char *x=NULL;
 	const char *y=NULL;
-	if(!x && !y) return 0;
-	if( x && !y) return 1;
-	if(!x &&  y) return -1;
+	if(!a && !b) return 0; // equal
+	if( a && !b) return 1; // a is longer
+	if(!a &&  b) return -1; // b is longer
 	for(x=a, y=b; *x && *y ; x++, y++)
 	{
 		if(*x==*y) continue;
@@ -440,27 +439,6 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 		else if(!strcmp(field, "network_timeout"))
 		{
 			conf->network_timeout=atoi(value);
-		}
-		else if(!strcmp(field, "max_file_size"))
-		{
-			// Store in bytes, allow k/m/g.
-			char *cp=NULL;
-			conf->max_file_size=strtoul(value, NULL, 10);
-			for(cp=value;
-			  *cp && (isspace(*cp) || isdigit(*cp)); cp++) { }
-			if(tolower(*cp)=='k')
-				conf->max_file_size*=1024;
-			else if(tolower(*cp)=='m')
-				conf->max_file_size*=1024*1024;
-			else if(tolower(*cp)=='g')
-				conf->max_file_size*=1024*1024*1024;
-			else if(!*cp || *cp=='b')
-			{ }
-			else
-			{
-				logp("Unknown file size type '%s' - please use b/kb/mb/gb\n", cp);
-				return conf_error(config_path, line);
-			}
 		}
 		else if(!strcmp(field, "ratelimit"))
 		{

@@ -47,6 +47,18 @@ The main author of Burp is Graham Keeling.
 <TD></TD>
 <TD ALIGN="LEFT">
 <P>
+<FONT COLOR="#99CCFF">2011-11-26: burp-1.2.5 is released.
+<pre>
+2011-11-26 Changes in burp-1.2.5:
+  * Fix critical server path comparison typo bug. If you have been using a
+        1.2.4 server, you need to upgrade immediately!
+  * Add a 'max_file_size' option.
+  * Store windows file attributes in a separate field to the standard unix ones.
+</pre>
+</FONT>
+</P>
+
+<P>
 <FONT COLOR="#99CCFF">2011-11-22: burp-1.2.4 is released.
 <pre>
 2011-11-22 Changes in burp-1.2.4:

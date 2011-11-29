@@ -48,6 +48,18 @@ The main author of Burp is Graham Keeling.
 <TR>
 <TD></TD>
 <TD ALIGN="LEFT">
+
+<P>
+<FONT COLOR="#99CCFF">2011-11-29: burp-1.2.5
+<pre>
+IMPORTANT: burp-1.2.5 has a bug related to 'max_file_size'. If you do not set
+it explicitly, the value could be set to any random number and consequently
+prevent some files getting backed up. If you are using 1.2.5 clients, please
+set 'max_file_size = 0' in the client config, or downgrade to burp 1.2.2.
+</pre>
+</FONT>
+</P>
+
 <P>
 <FONT COLOR="#99CCFF">2011-11-26: burp-1.2.5 is released.
 <pre>

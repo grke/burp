@@ -58,6 +58,7 @@ void init_config(struct config *conf)
 	conf->group=NULL;
 	conf->keep=NULL;
 	conf->kpcount=0;
+	conf->max_file_size=0;
 
 	conf->timer_script=NULL;
 	conf->timer_arg=NULL;

@@ -1,0 +1,121 @@
+#!/bin/bash
+#
+#
+
+path="$PWD"
+logs="$path/logs"
+serverlog="$logs/server.log"
+clientlog="$logs/client.log"
+difflog="$logs/diff.log"
+restoredir="$path/restore"
+serverpid=
+
+kill_server()
+{
+	if [ -n "$serverpid" ] ; then
+		echo "Killing test server"
+		kill -9 $serverpid
+	fi
+}
+
+fail()
+{
+	echo
+	echo "Test failed: $@"
+	echo
+	kill_server
+	exit 1
+}
+
+makedir()
+{
+	rm -rf "$1"
+	mkdir -p "$1" || fail "could not mkdir $1"
+}
+
+cdir()
+{
+	cd "$1" || fail "could not cd to $1"
+}
+
+build_and_install()
+{
+	# Create a build directory, and fill it with the source.
+	build="$path/build"
+	makedir "$build"
+	ls ../ | while read f ; do
+		[ "$f" = "test" ] && continue
+		cp -ar ../"$f" "$build"
+	done
+
+	# Create a target directory, compile burp and install it into the
+	# target.
+	makedir "$path/target"
+	cdir "$build"
+	#./configure --prefix="$path"/target --datarootdir="$path"/target/usr/share --sysconfdir="$path"/target/etc/burp || fail "configure failed"
+	./configure || fail "configure failed"
+	make || fail "make failed"
+	make install DESTDIR="$path/target" || fail "make install failed"
+}
+
+sed_rep()
+{
+	sed -i -e "$1" "$2" || fail "sed $1 failed $2f"
+}
+
+sed_rep_both()
+{
+	sed_rep "$1" etc/burp/burp.conf
+	sed_rep "$1" etc/burp/burp-server.conf
+}
+
+build_and_install
+
+makedir "$logs"
+makedir "$restoredir"
+
+cdir "$path/target"
+
+# Tweak the example configuration files by removing the leading '/' from all
+# the paths, and changing the port numbers.
+sed_rep_both 's/= \//= /g'
+sed_rep_both 's/port = 4971/port = 4998/g'
+sed_rep_both 's/port = 4972/port = 4999/g'
+
+# Remove all includes and excludes, then add the build directory.
+sed_rep 's/^include = .*//g' etc/burp/burp.conf
+sed_rep 's/^exclude = .*//g' etc/burp/burp.conf
+echo "include = $build" >> etc/burp/burp.conf
+
+# Start up the server
+echo "Starting server, logging to $serverlog"
+./sbin/burp -c ./etc/burp/burp-server.conf -F >> "$serverlog" 2>&1 &
+serverpid=$!
+
+# Be kind, and wait a little for it to start.
+echo "Waiting for five seconds"
+sleep 5
+
+# Make a backup with the client.
+echo "Starting client backup, logging to $clientlog"
+./sbin/burp -c ./etc/burp/burp.conf -a b >> "$clientlog" 2>&1 \
+	|| fail "client backup returned $?"
+
+# Restore it.
+echo "Starting client restore, logging to $clientlog"
+./sbin/burp -c ./etc/burp/burp.conf -a r -d "$restoredir" >>"$clientlog" 2>&1 \
+	|| fail "client restore returned $?"
+sleep 20
+
+# Compare them
+echo "Comparing original and restore"
+diff -ur "$build" "$restoredir/$build" >"$difflog" 2>&1 \
+	|| fail "client restore differed from the original!"
+
+echo
+echo "Test succeeded"
+echo
+
+kill_server
+
+exit 0

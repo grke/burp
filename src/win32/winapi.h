@@ -67,6 +67,16 @@ typedef DWORD (WINAPI * t_GetFileAttributesW)(LPCWSTR);
 typedef BOOL (WINAPI * t_SetFileAttributesA)(LPCSTR, DWORD);
 typedef BOOL (WINAPI * t_SetFileAttributesW)(LPCWSTR, DWORD);
 
+/* Graham says: PFE_EXPORT_FUNC/PFE_IMPORT_FUNC are defined in mingw64 but no
+   mingw32. Put them here and see if it works. */
+typedef DWORD (WINAPI *PFE_EXPORT_FUNC)(PBYTE pbData,PVOID pvCallbackContext,ULONG ulLength);
+typedef DWORD (WINAPI *PFE_IMPORT_FUNC)(PBYTE pbData,PVOID pvCallbackContext,PULONG ulLength);
+
+typedef DWORD (WINAPI * t_OpenEncryptedFileRaw)(LPCSTR, ULONG, PVOID);
+typedef void  (WINAPI * t_CloseEncryptedFileRaw)(PVOID);
+typedef DWORD (WINAPI * t_ReadEncryptedFileRaw)(PFE_EXPORT_FUNC, PVOID, PVOID);
+typedef DWORD (WINAPI * t_WriteEncryptedFileRaw)(PFE_IMPORT_FUNC, PVOID, PVOID);
+
 typedef HANDLE (WINAPI * t_CreateFileA) (LPCSTR, DWORD ,DWORD, LPSECURITY_ATTRIBUTES,
         DWORD , DWORD, HANDLE);
 typedef HANDLE (WINAPI * t_CreateFileW) (LPCWSTR, DWORD ,DWORD, LPSECURITY_ATTRIBUTES,
@@ -125,6 +135,11 @@ typedef BOOL (WINAPI *t_CreateProcessW) (
 
 extern t_CreateProcessA DLL_IMP_EXP p_CreateProcessA;
 extern t_CreateProcessW DLL_IMP_EXP p_CreateProcessW;
+
+extern t_OpenEncryptedFileRaw DLL_IMP_EXP p_OpenEncryptedFileRaw;
+extern t_CloseEncryptedFileRaw DLL_IMP_EXP p_CloseEncryptedFileRaw;
+extern t_ReadEncryptedFileRaw DLL_IMP_EXP p_ReadEncryptedFileRaw;
+extern t_WriteEncryptedFileRaw DLL_IMP_EXP p_WriteEncryptedFileRaw;
 
 extern t_GetFileAttributesA   DLL_IMP_EXP p_GetFileAttributesA;
 extern t_GetFileAttributesW   DLL_IMP_EXP p_GetFileAttributesW;

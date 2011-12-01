@@ -1,4 +1,5 @@
   * Add an automated test script.
+  * Return non-zero if there were warnings on verify or restore.
   * Make sure to initialise max_file_size, or it gets set to some random
     number, meaning lots of files might not get backed up.
 

@@ -262,6 +262,11 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 					&cntr)) ret=-1;
 				}
 
+				// Return non-zero if there were warnings,
+				// so that the test script can easily check.
+				if(p1cntr.warning+cntr.warning)
+					ret=1;
+
 				break;
 			}
 			case ACTION_LIST:

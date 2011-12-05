@@ -55,6 +55,7 @@ struct config
 	struct strlist **fifos;
 	int ffcount;
 	char *encryption_password;
+	unsigned long min_file_size;
 	unsigned long max_file_size;
 
 	char *backup_script_pre;

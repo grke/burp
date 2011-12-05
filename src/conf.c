@@ -42,6 +42,8 @@ void init_config(struct config *conf)
 	conf->fifos=NULL;
 	conf->cross_all_filesystems=0;
 	conf->read_all_fifos=0;
+	conf->min_file_size=0;
+	conf->max_file_size=0;
 	conf->ssl_cert_ca=NULL;
         conf->ssl_cert=NULL;
         conf->ssl_key=NULL;
@@ -58,7 +60,6 @@ void init_config(struct config *conf)
 	conf->group=NULL;
 	conf->keep=NULL;
 	conf->kpcount=0;
-	conf->max_file_size=0;
 
 	conf->timer_script=NULL;
 	conf->timer_arg=NULL;
@@ -319,6 +320,26 @@ int pathcmp(const char *a, const char *b)
 	return -1; // y is longer
 }
 
+static int get_file_size(const char *value, unsigned long *dest, const char *config_path, int line)
+{
+	// Store in bytes, allow k/m/g.
+	const char *cp=NULL;
+	*dest=strtoul(value, NULL, 10);
+	for(cp=value; *cp && (isspace(*cp) || isdigit(*cp)); cp++) { }
+	if(tolower(*cp)=='k') *dest*=1024;
+	else if(tolower(*cp)=='m') *dest*=1024*1024;
+	else if(tolower(*cp)=='g') *dest*=1024*1024*1024;
+	else if(!*cp || *cp=='b')
+	{ }
+	else
+	{
+		logp("Unknown file size type '%s' - please use b/kb/mb/gb\n",
+			cp);
+		return conf_error(config_path, line);
+	}
+	return 0;
+}
+
 int load_config(const char *config_path, struct config *conf, bool loadall)
 {
 	int i=0;
@@ -440,6 +461,16 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 		else if(!strcmp(field, "network_timeout"))
 		{
 			conf->network_timeout=atoi(value);
+		}
+		else if(!strcmp(field, "min_file_size"))
+		{
+			if(get_file_size(value, &(conf->min_file_size),
+				config_path, line)) return -1;
+		}
+		else if(!strcmp(field, "max_file_size"))
+		{
+			if(get_file_size(value, &(conf->max_file_size),
+				config_path, line)) return -1;
 		}
 		else if(!strcmp(field, "ratelimit"))
 		{

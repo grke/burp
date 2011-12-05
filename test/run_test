@@ -18,6 +18,7 @@ restoredir="$path/restore"
 serverpid=
 clientconf=etc/burp/burp.conf
 serverconf=etc/burp/burp-server.conf
+fsize=1024
 
 kill_server()
 {
@@ -58,6 +59,7 @@ build_and_install()
 	makedir "$build/test"
 	ls ../ | while read f ; do
 		[ "$f" = "test" ] && continue
+		[ "$f" = ".git" ] && continue
 		cp -ar ../"$f" "$build" || fail "could not copy ../$f to $build"
 	done || exit 1
 
@@ -130,7 +132,8 @@ write_message()
 start_test()
 {
 	write_message "
-Start test $1, $2"
+Test $1
+$2"
 }
 
 end_test()
@@ -185,6 +188,36 @@ encryption_on()
 	echo "encryption_password = 7djh34nmm$sd" >> $clientconf
 }
 
+min_file_size_off()
+{
+	sed_rep 's/^min_file_size = .*//g' $clientconf
+}
+
+min_file_size_on()
+{
+	min_file_size_off
+	echo "min_file_size = $fsize" >> $clientconf
+}
+
+max_file_size_off()
+{
+	sed_rep 's/^max_file_size = .*//g' $clientconf
+}
+
+max_file_size_on()
+{
+	max_file_size_off
+	echo "max_file_size = $fsize" >> $clientconf
+}
+
+normal_settings()
+{
+	compression_on
+	encryption_off
+	max_file_size_off
+	min_file_size_off
+}
+
 build_and_install
 
 makedir "$logs"
@@ -223,7 +256,8 @@ sleep 5
 
 
 # ----- Test 1 -----
-start_test 1 "first backup/restore comparison"
+start_test 1 "First backup/restore comparison"
+normal_settings
 run_backup
 # Verify the specific backup number 1. Later tests will use 'all', which will
 # verify all available backups. Might as well test both methods.
@@ -234,7 +268,8 @@ diff -ur "$build" "$restoredir"1/"$build" >>"$difflog" 2>&1 \
 end_test 1
 
 # ----- Test 2 -----
-start_test 2 "second backup/restore comparison"
+start_test 2 "Second backup/restore comparison"
+normal_settings
 run_backup
 run_verify all
 # There should be no 'data' directory left in the first backup directory,
@@ -257,7 +292,8 @@ diff -ur "$restoredir"1/"$build" "$restoredir"2/"$build" >>"$difflog" 2>&1 \
 end_test 2
 
 # ----- Test 3 -----
-start_test 3 "third backup/restore comparison, with changes"
+start_test 3 "Third backup/restore comparison, with changes"
+normal_settings
 change_source_files
 run_backup
 run_verify all
@@ -272,12 +308,13 @@ diff -ur "$restoredir"2/"$build" "$restoredir"4/"$build" >>"$difflog" 2>&1 \
 end_test 3
 
 # ----- Test 4 -----
-start_test 4 "deduplication, backup/restore comparison"
+start_test 4 "Deduplication, backup/restore comparison"
+normal_settings
 run_bedup
 run_verify all
-run_restore 3 "$restoredir"3
-diff -ur "$build" "$restoredir"3/"$build" >>"$difflog" 2>&1 \
-	|| fail "client restore 3 differed from the original!"
+run_restore 3 "$restoredir"4
+diff -ur "$build" "$restoredir"4/"$build" >>"$difflog" 2>&1 \
+	|| fail "client restore 4 differed from the original!"
 # Make sure that restoring backup number 2 gives the same as restoring backup
 # number 2 gave in test 2.
 run_restore 2 "$restoredir"4
@@ -289,8 +326,11 @@ run_backup
 end_test 4
 
 # ----- Test 5 -----
-start_test 5 "turn compression off, change files, backup/restore comparison"
+start_test 5 "Turn compression off, change files, backup/restore comparison"
 compression_off
+encryption_off
+max_file_size_off
+min_file_size_off
 change_source_files
 run_backup
 run_verify all
@@ -300,7 +340,8 @@ diff -ur "$build" "$restoredir"5/"$build" >>"$difflog" 2>&1 \
 end_test 5
 
 # ----- Test 6 -----
-start_test 6 "turn compression off, encryption on, change files, backup/restore comparison"
+start_test 6 "Turn compression off, encryption on, change files, backup/restore comparison"
+normal_settings
 compression_off
 encryption_on
 change_source_files
@@ -312,7 +353,8 @@ diff -ur "$build" "$restoredir"6/"$build" >>"$difflog" 2>&1 \
 end_test 6
 
 # ----- Test 7 -----
-start_test 7 "turn compression on, encryption on, change files, backup/restore comparison"
+start_test 7 "Turn compression on, encryption on, change files, backup/restore comparison"
+normal_settings
 compression_on
 encryption_on
 change_source_files
@@ -322,6 +364,30 @@ run_restore 7 "$restoredir"7
 diff -ur "$build" "$restoredir"7/"$build" >>"$difflog" 2>&1 \
 	|| fail "client restore 7 differed from the original!"
 end_test 7
+
+# ----- Test 8 -----
+start_test 8 "Min file size, backup/restore comparison"
+normal_settings
+min_file_size_on
+change_source_files
+run_backup
+run_verify all
+run_restore 8 "$restoredir"8
+f=$(find "$restoredir"8 -size -${fsize}c -type f)
+[ -n "$f" ] && fail "found file sizes greater than $fsize: $f"
+end_test 8
+
+# ----- Test 9 -----
+start_test 9 "Max file size, backup/restore comparison"
+normal_settings
+max_file_size_on
+change_source_files
+run_backup
+run_verify all
+run_restore 9 "$restoredir"9
+f=$(find "$restoredir"9 -size +${fsize}c -type f)
+[ -n "$f" ] && fail "found file sizes less than $fsize: $f"
+end_test 9
 
 echo
 echo "All tests succeeded"

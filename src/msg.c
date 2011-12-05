@@ -133,7 +133,7 @@ int transfer_gzfile_in(const char *path, BFILE *bfd, FILE *fp, unsigned long lon
 	EVP_CIPHER_CTX *enc_ctx=NULL;
 
 	// Checksum stuff
-	MD5_CTX md5;
+	//MD5_CTX md5;
 	//unsigned char checksum[MD5_DIGEST_LENGTH+1];
 
 //logp("in transfer_gzfile_in\n");

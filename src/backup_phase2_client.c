@@ -243,6 +243,7 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 			  || cmd==CMD_METADATA
 			  || cmd==CMD_ENC_METADATA)
 			{
+				int forget=0;
 				int64_t winattr=0;
 				struct stat statbuf;
 				char *extrameta=NULL;
@@ -268,10 +269,20 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 					continue;
 				}
 
-				if(conf->max_file_size
+				if(conf->min_file_size
+				  && statbuf.st_size<conf->min_file_size)
+				{
+					logw(cntr, "File size decreased below min_file_size after initial scan: %s", sb.path);
+					forget++;
+				}
+				else if(conf->max_file_size
 				  && statbuf.st_size>conf->max_file_size)
 				{
 					logw(cntr, "File size increased above max_file_size after initial scan: %s", sb.path);
+					forget++;
+				}
+				if(forget)
+				{
 					if(forget_file(&sb, cmd, cntr))
 					{
 						ret=-1;

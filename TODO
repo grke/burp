@@ -83,11 +83,6 @@
 * Add localisation/gettext specifically to work around the Polish Windows XP
   "schtasks.exe Co_minutę" problem.
 
-* Windows XP restore appears to end up with the wrong dates on files.
-
-* Get extra Windows file attributes working (SYSTEM doesn't seem to work, for
-  example - HIDDEN/READONLY do now).
-
 * Get EFS backup/restore working on Windows (FILE_ATTRIBUTE_ENCRYPTED, and
   special open/read/close functions).
 
@@ -101,6 +96,3 @@
 * Pass client cert details to server-side pre/post scripts in environment
   variables so that Jason Haar can do cunning things with them (see his mailing
   list email of 2011/11/25.
-
-* Write some automatic test scripts that need to be run before doing a release,
-  which test some basic things.

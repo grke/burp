@@ -69,10 +69,15 @@ static int do_write(BFILE *bfd, FILE *fp, unsigned char *out, size_t outlen, cha
 	return 0;
 }
 
-static int do_inflate(z_stream *zstrm, BFILE *bfd, FILE *fp, unsigned char *out, unsigned char *buftouse, size_t lentouse, char **metadata, MD5_CTX *md5, unsigned long long *sent)
+static int do_inflate(z_stream *zstrm, BFILE *bfd, FILE *fp, unsigned char *out, unsigned char *buftouse, size_t lentouse, char **metadata, const char *encpassword, int enccompressed, unsigned long long *sent)
 {
 	int zret=Z_OK;
 	unsigned have=0;
+
+	// Do not want to inflate encrypted data that was not compressed.
+	// Just write it straight out.
+	if(encpassword && !enccompressed)
+		return do_write(bfd, fp, buftouse, lentouse, metadata, sent);
 
 	zstrm->avail_in=lentouse;
 	zstrm->next_in=buftouse;
@@ -111,7 +116,7 @@ static int do_inflate(z_stream *zstrm, BFILE *bfd, FILE *fp, unsigned char *out,
 	return 0;
 }
 
-int transfer_gzfile_in(const char *path, BFILE *bfd, FILE *fp, unsigned long long *rcvd, unsigned long long *sent, const char *encpassword, struct cntr *cntr, char **metadata)
+int transfer_gzfile_in(const char *path, BFILE *bfd, FILE *fp, unsigned long long *rcvd, unsigned long long *sent, const char *encpassword, int enccompressed, struct cntr *cntr, char **metadata)
 {
 	char cmd;
 	char *buf=NULL;
@@ -229,7 +234,8 @@ int transfer_gzfile_in(const char *path, BFILE *bfd, FILE *fp, unsigned long lon
 
 					if(do_inflate(&zstrm, bfd, fp, out,
 						buftouse, lentouse, metadata,
-						enc_ctx?NULL:&md5,
+						encpassword,
+						enccompressed,
 						sent))
 					{
 						ret=-1; quit++;
@@ -249,7 +255,8 @@ int transfer_gzfile_in(const char *path, BFILE *bfd, FILE *fp, unsigned long lon
 					}
 					if(doutlen && do_inflate(&zstrm, bfd,
 					  fp, out, doutbuf, doutlen, metadata,
-					  enc_ctx?NULL:&md5, sent))
+					  encpassword,
+					  enccompressed, sent))
 					{
 						ret=-1; quit++;
 						break;

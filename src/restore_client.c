@@ -11,6 +11,7 @@
 #include "restore_client.h"
 #include "forkchild.h"
 #include "sbuf.h"
+#include "dpth.h"
 #include "extrameta.h"
 
 static int restore_interrupt(struct sbuf *sb, const char *msg, struct cntr *cntr)
@@ -173,14 +174,28 @@ static int restore_file_or_get_meta(struct sbuf *sb, const char *fname, enum act
 
 	if(!ret)
 	{
+		int enccompressed=0;
 		unsigned long long rcvdbytes=0;
 		unsigned long long sentbytes=0;
+
+		enccompressed=dpth_is_compressed(sb->datapth);
+/*
+		printf("%s \n", fname);
+		if(encpassword && !enccompressed)
+			printf("encrypted and not compressed\n");
+		else if(!encpassword && enccompressed)
+			printf("not encrypted and compressed\n");
+		else if(!encpassword && !enccompressed)
+			printf("not encrypted and not compressed\n");
+		else if(encpassword && enccompressed)
+			printf("encrypted and compressed\n");
+*/
 
 		if(metadata)
 		{
 			ret=transfer_gzfile_in(fname, NULL, NULL,
 				&rcvdbytes, &sentbytes,
-				encpassword, cntr, metadata);
+				encpassword, enccompressed, cntr, metadata);
 			*metalen=sentbytes;
 			// skip setting the file counter, as we do not actually
 			// restore until a bit later
@@ -191,12 +206,12 @@ static int restore_file_or_get_meta(struct sbuf *sb, const char *fname, enum act
 #ifdef HAVE_WIN32
 			ret=transfer_gzfile_in(fname, &bfd, NULL,
 				&rcvdbytes, &sentbytes,
-				encpassword, cntr, NULL);
+				encpassword, enccompressed, cntr, NULL);
 			bclose(&bfd);
 #else
 			ret=transfer_gzfile_in(fname, NULL, fp,
 				&rcvdbytes, &sentbytes,
-				encpassword, cntr, NULL);
+				encpassword, enccompressed, cntr, NULL);
 			close_fp(&fp);
 #endif
 			if(!ret) set_attributes(rpath, sb->cmd,

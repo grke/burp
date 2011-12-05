@@ -85,7 +85,7 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath)
 		FILE *source=NULL;
 		FILE *dest=NULL;
 
-		logp("inflating...\n");
+		//logp("inflating...\n");
 
 		if(!(dest=open_file(infpath, "wb")))
 		{
@@ -142,17 +142,29 @@ static int send_file(const char *fname, int patches, const char *best, const cha
 	}
 	else
 	{
+		// If it was encrypted, it may or may not have been compressed
+		// before encryption. Send it as it as, and let the client
+		// sort it out.
+		if(cmd==CMD_ENC_FILE || cmd==CMD_ENC_METADATA)
+		{
+			return send_whole_file(best,
+				datapth, 1, bytes, cntr, NULL, 0);
+		}
 		// It might have been stored uncompressed. Gzip it during
 		// the send. If the client knew what kind of file it would be
 		// receiving, this step could disappear.
-		if(!dpth_is_compressed(datapth))
+		else if(!dpth_is_compressed(datapth))
+		{
 			return send_whole_file_gz(best, datapth, 1, bytes,
 				NULL, cntr, 9, NULL, 0);
+		}
 		else
+		{
 			// If we did not do some patches, the resulting
 			// file might already be gzipped. Send it as it is.
 			return send_whole_file(best,
 				datapth, 1, bytes, cntr, NULL, 0);
+		}
 	}
 }
 
@@ -406,10 +418,54 @@ static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, const cha
 	}
 	return 0;
 }
+//	logp("wrote restoreend\n");
+//	if(ret) logp("did not write restoreend (%d)\n", ret);
+
+static int do_restore_end(enum action act, struct cntr *cntr)
+{
+	char cmd;
+	int ret=0;
+	int quit=0;
+	size_t len=0;
+
+	if(async_write_str(CMD_GEN, "restoreend"))
+		ret=-1;
+
+	while(!ret && !quit)
+	{
+		char *buf=NULL;
+		if(async_read(&cmd, &buf, &len))
+		{
+			ret=-1; quit++;
+		}
+		else if(cmd==CMD_GEN && !strcmp(buf, "restoreend ok"))
+		{
+			logp("got restoreend ok\n");
+			quit++;
+		}
+		else if(cmd==CMD_WARNING)
+		{
+			logp("WARNING: %s\n", buf);
+			do_filecounter(cntr, cmd, 0);
+		}
+		else if(cmd==CMD_INTERRUPT)
+		{
+			// ignore - client wanted to interrupt a file
+		}
+		else
+		{
+			logp("unexpected cmd from client at end of restore: %c:%s\n", cmd, buf);
+			ret=-1; quit++;
+		}
+		if(buf) { free(buf); buf=NULL; }
+	}
+
+	return ret;
+}
 
 // a = length of struct bu array
 // i = position to restore from
-static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, regex_t *regex, enum action act, const char *client, struct cntr *p1cntr, struct cntr *cntr, struct config *cconf)
+static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, regex_t *regex, enum action act, const char *client, struct cntr *p1cntr, struct cntr *cntr, struct config *cconf, bool all)
 {
 	int ret=0;
 	gzFile zp=NULL;
@@ -581,45 +637,13 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 		}
 		free_sbufs(sblist, scount);
 
-		if(!ret && async_write_str(CMD_GEN, "restoreend"))
-		{
-			ret=-1; quit++;
-		}
-		if(!ret) logp("wrote restoreend\n");
-		if(!ret) quit=0;
-		if(ret) logp("did not write restoreend (%d)\n", ret);
-
-		while(!ret && !quit)
-		{
-			char *buf=NULL;
-			if(async_read(&cmd, &buf, &len))
-			{
-				ret=-1; quit++;
-			}
-			else if(cmd==CMD_GEN && !strcmp(buf, "restoreend ok"))
-			{
-				logp("got restoreend ok\n");
-				quit++;
-			}
-			else if(cmd==CMD_WARNING)
-			{
-				logp("WARNING: %s\n", buf);
-				do_filecounter(cntr, cmd, 0);
-			}
-			else if(cmd==CMD_INTERRUPT)
-			{
-				// ignore - client wanted to interrupt a file
-			}
-			else
-			{
-				logp("unexpected cmd from client at end of restore: %c:%s\n", cmd, buf);
-				ret=-1; quit++;
-			}
-			if(buf) { free(buf); buf=NULL; }
-		}
+		if(!ret && !all) ret=do_restore_end(act, cntr);
 
 		print_endcounter(cntr);
 		print_filecounters(p1cntr, cntr, act, 0);
+
+		reset_filecounter(p1cntr);
+		reset_filecounter(cntr);
 	}
 	set_logfp(NULL);
 	compress_file(logpath, logpathz, cconf);
@@ -641,6 +665,7 @@ int do_restore_server(const char *basedir, const char *backup, const char *resto
 	char *tmppath1=NULL;
 	char *tmppath2=NULL;
 	regex_t *regex=NULL;
+	bool all=FALSE;
 
 	logp("in do_restore\n");
 
@@ -662,27 +687,36 @@ int do_restore_server(const char *basedir, const char *backup, const char *resto
 		return -1;
 	}
 
-	if(!(index=strtoul(backup, NULL, 10)) && a>0)
+	if(backup && *backup=='a')
+	{
+		all=TRUE;
+	}
+	else if(!(index=strtoul(backup, NULL, 10)) && a>0)
 	{
 		// No backup specified, do the most recent.
 		ret=restore_manifest(arr, a, a-1,
 			tmppath1, tmppath2, regex, act, client,
-			p1cntr, cntr, cconf);
+			p1cntr, cntr, cconf, all);
 		found=TRUE;
 	}
-	else for(i=0; i<a; i++)
+
+	if(!found) for(i=0; i<a; i++)
 	{
-		if(!strcmp(arr[i].timestamp, backup)
+		if(all || !strcmp(arr[i].timestamp, backup)
 			|| arr[i].index==index)
 		{
 			found=TRUE;
 			//logp("got: %s\n", arr[i].path);
-			ret=restore_manifest(arr, a, i,
+			ret|=restore_manifest(arr, a, i,
 				tmppath1, tmppath2, regex, act, client,
-				p1cntr, cntr, cconf);
-			break;
+				p1cntr, cntr, cconf, all);
+			if(!all) break;
 		}
 	}
+
+	// If doing all backups, send restore end.
+	if(!ret && all && found)
+		ret=do_restore_end(act, cntr);
 
 	free_current_backups(&arr, a);
 

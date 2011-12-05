@@ -1,4 +1,6 @@
   * Add an automated test script.
+  * Fix bugs with uncompressed encrypted backup/restore.
+  * Get verify all backups for a client (-a v -b a) to work.
   * Return non-zero if there were warnings on verify or restore.
   * Make sure to initialise max_file_size, or it gets set to some random
     number, meaning lots of files might not get backed up.

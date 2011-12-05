@@ -9,23 +9,26 @@ fi
 path="$PWD"
 logs="$path/logs"
 target="$path/target"
-serverlog="$logs/server.log"
+serveroutputlog="$logs/server-output.log"
+serversystemlog="$logs/server-system.log"
 clientlog="$logs/client.log"
 beduplog="$logs/bedup.log"
 difflog="$logs/diff.log"
-restoredir1="$path/restore1"
-restoredir2="$path/restore2"
-restoredir3="$path/restore3"
-restoredir4="$path/restore4"
+restoredir="$path/restore"
 serverpid=
+clientconf=etc/burp/burp.conf
+serverconf=etc/burp/burp-server.conf
 
 kill_server()
 {
 	if [ -n "$serverpid" ] ; then
 		echo "Killing test server"
 		kill -9 $serverpid
+		serverpid=
 	fi
 }
+
+trap "kill_server" 0 1 2 3 15
 
 fail()
 {
@@ -52,10 +55,11 @@ build_and_install()
 	# Create a build directory, and fill it with the source.
 	build="$path/build"
 	makedir "$build"
+	makedir "$build/test"
 	ls ../ | while read f ; do
 		[ "$f" = "test" ] && continue
 		cp -ar ../"$f" "$build" || fail "could not copy ../$f to $build"
-	done
+	done || exit 1
 
 	# Create a target directory, compile burp and install it into the
 	# target.
@@ -74,22 +78,22 @@ sed_rep()
 
 sed_rep_both()
 {
-	sed_rep "$1" etc/burp/burp.conf
-	sed_rep "$1" etc/burp/burp-server.conf
+	sed_rep "$1" $clientconf
+	sed_rep "$1" $serverconf
 }
 
 run_bedup()
 {
-	echo "Starting test bedup, logging to $beduplog"
-	./sbin/bedup -c ./etc/burp/burp-server.conf -l >> "$beduplog" 2>&1 \
+	echo "Starting test bedup"
+	./sbin/bedup -c $serverconf -l >> "$beduplog" 2>&1 \
 		|| fail "bedup returned $?"
 	sleep 5
 }
 
 run_backup()
 {
-	echo "Starting test client backup, logging to $clientlog"
-	./sbin/burp -c ./etc/burp/burp.conf -a b >> "$clientlog" 2>&1 \
+	echo "Starting test client backup"
+	./sbin/burp -c $clientconf -a b >> "$clientlog" 2>&1 \
 		|| fail "client backup returned $?"
 	sleep 5
 }
@@ -97,8 +101,8 @@ run_backup()
 run_verify()
 {
 	local num="$1"
-	echo "Starting test client verify of backup $num, logging to $clientlog"
-	./sbin/burp -c ./etc/burp/burp.conf -a v -b "$num" \
+	echo "Starting test client verify of backup $num"
+	./sbin/burp -c $clientconf -a v -b "$num" \
 		>> "$clientlog" 2>&1 || fail "client backup returned $?"
 }
 
@@ -106,9 +110,9 @@ run_restore()
 {
 	local num="$1"
 	local dir="$2"
-	echo "Starting test client restore of backup $num, logging to $clientlog"
+	echo "Starting test client restore of backup $num"
 	makedir "$dir"
-	./sbin/burp -c ./etc/burp/burp.conf -a r -b "$num" -d "$dir" \
+	./sbin/burp -c $clientconf -a r -b "$num" -d "$dir" \
 		>>"$clientlog" 2>&1 || fail "client restore returned $?"
 }
 
@@ -116,7 +120,8 @@ write_message()
 {
 	message="$1"
 	echo "$message"
-	echo "$message" >> $serverlog
+	echo "$message" >> $serveroutputlog
+	echo "$message" >> $serversystemlog
 	echo "$message" >> $clientlog
 	echo "$message" >> $difflog
 	echo "$message" >> $beduplog
@@ -133,6 +138,53 @@ end_test()
 	write_message "Test $1 OK"
 }
 
+change_source_files()
+{
+	cp -r "$build/src" "$build/src-new" \
+		|| fail "could not cp $build/src to $build/src-new"
+
+	# Move a directory, which simulates deleting and adding new files.
+	if [ -d "$build/debian" ] && [ ! -e "$build/debian-new" ] ; then
+		mv "$build/debian" "$build/debian-new" \
+		  || fail "could not move $build/debian to $build/debian-new"
+	elif [ ! -e "$build/debian" ] && [ -d "$build/debian-new" ] ; then
+		mv "$build/debian-new" "$build/debian" \
+		  || fail "could not move $build/debian-new to $build/debian"
+	else
+		fail "could not move debian directories" 
+	fi
+
+	# Scramble a whole bunch of files
+	find "$build/autoconf" -type f | while read f ; do
+		sort --random-sort "$f" > tmpfile \
+			|| fail "could not randomise $f"
+		mv tmpfile "$f" || fail "could not move tmpfile to $f"
+	done
+}
+
+compression_off()
+{
+	sed_rep 's/^compression = .*//g' $serverconf
+	echo "compression = 0" >> $serverconf
+}
+
+compression_on()
+{
+	sed_rep 's/^compression = .*//g' $serverconf
+	echo "compression = 9" >> $serverconf
+}
+
+encryption_off()
+{
+	sed_rep 's/^encryption_password = .*//g' $clientconf
+}
+
+encryption_on()
+{
+	encryption_off
+	echo "encryption_password = 7djh34nmm$sd" >> $clientconf
+}
+
 build_and_install
 
 makedir "$logs"
@@ -146,13 +198,24 @@ sed_rep_both 's/port = 4971/port = 4998/g'
 sed_rep_both 's/port = 4972/port = 4999/g'
 
 # Remove all includes and excludes, then add the build directory.
-sed_rep 's/^include = .*//g' etc/burp/burp.conf
-sed_rep 's/^exclude = .*//g' etc/burp/burp.conf
-echo "include = $build" >> etc/burp/burp.conf
+sed_rep 's/^include = .*//g' $clientconf
+sed_rep 's/^exclude = .*//g' $clientconf
+echo "include = $build" >> $clientconf
+
+echo
+echo "Starting tests"
+echo "Server output log: $serversystemlog"
+echo "Server system log: $serveroutputlog"
+echo "       Client log: $clientlog"
+echo "        Bedup log: $beduplog"
+echo "         Diff log: $difflog"
+echo "More logs can be found in:"
+echo "$target/var/spool/burp/testclient/<backup number>"
+echo
 
 # Start up the server
-echo "Starting test server, logging to $serverlog"
-./sbin/burp -c ./etc/burp/burp-server.conf -F >> "$serverlog" 2>&1 &
+echo "Starting test server"
+./sbin/burp -c $serverconf -l "$serversystemlog" -F >> "$serveroutputlog" 2>&1 &
 serverpid=$!
 
 # Be kind, and wait a little for it to start.
@@ -162,17 +225,18 @@ sleep 5
 # ----- Test 1 -----
 start_test 1 "first backup/restore comparison"
 run_backup
+# Verify the specific backup number 1. Later tests will use 'all', which will
+# verify all available backups. Might as well test both methods.
 run_verify 1
-run_restore 1 "$restoredir1"
-diff -ur "$build" "$restoredir1/$build" >>"$difflog" 2>&1 \
+run_restore 1 "$restoredir"1
+diff -ur "$build" "$restoredir"1/"$build" >>"$difflog" 2>&1 \
 	|| fail "client restore differed from the original!"
 end_test 1
 
 # ----- Test 2 -----
 start_test 2 "second backup/restore comparison"
 run_backup
-run_verify 1
-run_verify 2
+run_verify all
 # There should be no 'data' directory left in the first backup directory,
 # because all the files should have moved over into the second backup
 # directory.
@@ -184,52 +248,83 @@ diff -ur "$backuppath1"/manifest.gz "$backuppath2/manifest.gz" \
 	>>"$difflog" 2>&1 \
 		|| fail "manifests changed between backup 1 and backup 2!"
 # Make sure that restoring from either backup gives the same result.
-run_restore 1 "$restoredir1"
-run_restore 2 "$restoredir2"
-diff -ur "$build" "$restoredir1/$build" >>"$difflog" 2>&1 \
+run_restore 1 "$restoredir"1
+run_restore 2 "$restoredir"2
+diff -ur "$build" "$restoredir"1/"$build" >>"$difflog" 2>&1 \
 	|| fail "client restore 1 differed from the original!"
-diff -ur "$restoredir1/$build" "$restoredir2/$build" >>"$difflog" 2>&1 \
+diff -ur "$restoredir"1/"$build" "$restoredir"2/"$build" >>"$difflog" 2>&1 \
 	|| fail "client restore 1 and 2 differ!"
 end_test 2
 
 # ----- Test 3 -----
 start_test 3 "third backup/restore comparison, with changes"
-cp -r "$build/src" "$build/src-new" || fail "could not cp $build/src to $build/src-new"
-rm -r "$build/debian" || fail "could not delete $build/debian"
+change_source_files
 run_backup
-run_verify 1
-run_verify 2
-run_verify 3
-run_restore 3 "$restoredir3"
-diff -ur "$build" "$restoredir3/$build" >>"$difflog" 2>&1 \
+run_verify all
+run_restore 3 "$restoredir"3
+diff -ur "$build" "$restoredir"3/"$build" >>"$difflog" 2>&1 \
 	|| fail "client restore 3 differed from the original!"
 # Make sure that restoring backup number 2 gives the same as restoring backup
 # number 2 gave in test 2.
-run_restore 2 "$restoredir4"
-diff -ur "$restoredir2/$build" "$restoredir4/$build" >>"$difflog" 2>&1 \
+run_restore 2 "$restoredir"4
+diff -ur "$restoredir"2/"$build" "$restoredir"4/"$build" >>"$difflog" 2>&1 \
 	|| fail "client restore 2 and 4 differ!"
 end_test 3
 
 # ----- Test 4 -----
 start_test 4 "deduplication, backup/restore comparison"
 run_bedup
-run_verify 1
-run_verify 2
-run_verify 3
-run_restore 3 "$restoredir3"
-diff -ur "$build" "$restoredir3/$build" >>"$difflog" 2>&1 \
+run_verify all
+run_restore 3 "$restoredir"3
+diff -ur "$build" "$restoredir"3/"$build" >>"$difflog" 2>&1 \
 	|| fail "client restore 3 differed from the original!"
 # Make sure that restoring backup number 2 gives the same as restoring backup
 # number 2 gave in test 2.
-run_restore 2 "$restoredir4"
-diff -ur "$restoredir2/$build" "$restoredir4/$build" >>"$difflog" 2>&1 \
+run_restore 2 "$restoredir"4
+diff -ur "$restoredir"2/"$build" "$restoredir"4/"$build" >>"$difflog" 2>&1 \
 	|| fail "client restore 2 and 4 differ!"
+# Run another backup, so we can continue to refer to them by the same number
+# as the test number (easier on the brain).
+run_backup
 end_test 4
+
+# ----- Test 5 -----
+start_test 5 "turn compression off, change files, backup/restore comparison"
+compression_off
+change_source_files
+run_backup
+run_verify all
+run_restore 5 "$restoredir"5
+diff -ur "$build" "$restoredir"5/"$build" >>"$difflog" 2>&1 \
+	|| fail "client restore 5 differed from the original!"
+end_test 5
+
+# ----- Test 6 -----
+start_test 6 "turn compression off, encryption on, change files, backup/restore comparison"
+compression_off
+encryption_on
+change_source_files
+run_backup
+run_verify all
+run_restore 6 "$restoredir"6
+diff -ur "$build" "$restoredir"6/"$build" >>"$difflog" 2>&1 \
+	|| fail "client restore 6 differed from the original!"
+end_test 6
+
+# ----- Test 7 -----
+start_test 7 "turn compression on, encryption on, change files, backup/restore comparison"
+compression_on
+encryption_on
+change_source_files
+run_backup
+run_verify all
+run_restore 7 "$restoredir"7
+diff -ur "$build" "$restoredir"7/"$build" >>"$difflog" 2>&1 \
+	|| fail "client restore 7 differed from the original!"
+end_test 7
 
 echo
 echo "All tests succeeded"
 echo
-
-kill_server
 
 exit 0

@@ -328,6 +328,15 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password)
 	return ctx;
 }
 
+/* OK, this function is getting a bit out of control.
+   One problem is that, if you give deflateInit2 compression=0, it still
+   writes gzip headers and footers, so I had to add extra
+   if(compression) and if(!compression) bits all over the place that would
+   skip the actual compression.
+   This is needed for the case where encryption is on and compression if off.
+   Encryption off and compression off uses send_whole_file().
+   Perhaps a separate function is needed for encryption on compression off.
+*/
 int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, const char *extrameta, size_t elen)
 {
 	int ret=0;
@@ -427,6 +436,7 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 			strm.avail_in=fread(in, 1, ZCHUNK, fp);
 #endif
 		}
+		if(!compression && !strm.avail_in) break;
 		if(strm.avail_in<0)
 		{
 			logp("Error in read: %d\n", strm.avail_in);
@@ -455,16 +465,24 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 			compression if all of source has been read in */
 		do
 		{
-			strm.avail_out = ZCHUNK;
-			strm.next_out = out;
-			zret = deflate(&strm, flush); /* no bad return value */
-			if(zret==Z_STREAM_ERROR) /* state not clobbered */
+			if(compression)
 			{
-				logp("z_stream_error\n");
-				ret=-1;
-				break;
+				strm.avail_out = ZCHUNK;
+				strm.next_out = out;
+				zret = deflate(&strm, flush); /* no bad return value */
+				if(zret==Z_STREAM_ERROR) /* state not clobbered */
+				{
+					logp("z_stream_error\n");
+					ret=-1;
+					break;
+				}
+				have = ZCHUNK-strm.avail_out;
 			}
-			have = ZCHUNK-strm.avail_out;
+			else
+			{
+				have=strm.avail_in;
+				memcpy(out, in, have);
+			}
 
 			if(enc_ctx)
 			{
@@ -492,9 +510,12 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 					goto cleanup;
 				}
 			}
+			if(!compression) break;
 		} while (!strm.avail_out);
 
 		if(ret) break;
+
+		if(!compression) continue;
 
 		if(strm.avail_in) /* all input will be used */
 		{
@@ -506,7 +527,7 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 
 	if(!ret)
 	{
-		if(zret!=Z_STREAM_END)
+		if(compression && zret!=Z_STREAM_END)
 		{
 			logp("ret OK, but zstream not finished: %d\n", zret);
 			ret=-1;

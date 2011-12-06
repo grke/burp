@@ -57,6 +57,7 @@ struct config
 	char *encryption_password;
 	unsigned long min_file_size;
 	unsigned long max_file_size;
+	int autoupgrade;
 
 	char *backup_script_pre;
 	struct strlist **backup_script_pre_arg;
@@ -73,6 +74,14 @@ struct config
 	int rpostcount;
 	int   restore_script_post_run_on_fail;
 
+	char *server_script_pre;
+	struct strlist **server_script_pre_arg;
+	int sprecount;
+	char *server_script_post;
+	struct strlist **server_script_post_arg;
+	int spostcount;
+	int   server_script_post_run_on_fail;
+
 	// Use these when you want to give the same args to both post and pre
 	// scripts.
 	char *backup_script;
@@ -81,6 +90,10 @@ struct config
 	char *restore_script;
 	struct strlist **restore_script_arg;
 	int rscount;
+
+	char *server_script;
+	struct strlist **server_script_arg;
+	int sscount;
 
 // Client options on the server.
 // They can be set globally in the server config, or for each client.

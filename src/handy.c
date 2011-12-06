@@ -1262,3 +1262,11 @@ const char *time_taken(time_t d)
 	snprintf(str, sizeof(str), "%s%s%s%s", ds, hs, ms, ss);
 	return str;
 }
+
+// Not in dpth.c so that Windows client can see it.
+int dpth_is_compressed(const char *datapath)
+{
+	const char *dp=NULL;
+	if((dp=strrchr(datapath, '.')) && !strcmp(dp, ".gz")) return 1;
+	return 0;
+}

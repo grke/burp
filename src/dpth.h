@@ -12,7 +12,6 @@ struct dpth
 
 extern int init_dpth(struct dpth *dpth, const char *currentdata, struct config *cconf);
 extern int incr_dpth(struct dpth *dpth, struct config *cconf);
-extern int dpth_is_compressed(const char *datapath);
 extern int set_dpth_from_string(struct dpth *dpth, const char *datapath, struct config *conf);
 
 #endif

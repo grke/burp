@@ -7,6 +7,9 @@ if [ ! -f "$myscript" ] ; then
 fi
 
 path="$PWD"
+build="$path/build"
+includedir="$path/build"
+excludedir="$includedir/src"
 logs="$path/logs"
 target="$path/target"
 serveroutputlog="$logs/server-output.log"
@@ -54,7 +57,6 @@ cdir()
 build_and_install()
 {
 	# Create a build directory, and fill it with the source.
-	build="$path/build"
 	makedir "$build"
 	makedir "$build/test"
 	ls ../ | while read f ; do
@@ -210,12 +212,36 @@ max_file_size_on()
 	echo "max_file_size = $fsize" >> $clientconf
 }
 
+exclude_off()
+{
+	sed_rep 's/^exclude = .*//g' $clientconf
+}
+
+exclude_on()
+{
+	exclude_off
+	echo "exclude = $excludedir" >> $clientconf
+}
+
+include_off()
+{
+	sed_rep 's/^include = .*//g' $clientconf
+}
+
+include_on()
+{
+	include_off
+	echo "include = $includedir" >> $clientconf
+}
+
 normal_settings()
 {
 	compression_on
 	encryption_off
 	max_file_size_off
 	min_file_size_off
+	exclude_off
+	include_on
 }
 
 build_and_install
@@ -229,11 +255,6 @@ cdir "$target"
 sed_rep_both 's/= \//= /g'
 sed_rep_both 's/port = 4971/port = 4998/g'
 sed_rep_both 's/port = 4972/port = 4999/g'
-
-# Remove all includes and excludes, then add the build directory.
-sed_rep 's/^include = .*//g' $clientconf
-sed_rep 's/^exclude = .*//g' $clientconf
-echo "include = $build" >> $clientconf
 
 echo
 echo "Starting tests"
@@ -388,6 +409,17 @@ run_restore 9 "$restoredir"9
 f=$(find "$restoredir"9 -size +${fsize}c -type f)
 [ -n "$f" ] && fail "found file sizes less than $fsize: $f"
 end_test 9
+
+# ----- Test 10 -----
+start_test 10 "Exclude directory, backup/restore comparison"
+normal_settings
+exclude_on
+run_backup
+run_verify all
+run_restore 10 "$restoredir"10
+[ -d "$restoredir"10/$excludedir ] && fail "$excludedir should not have been restored!
+[ ! -d "$restoredir"10/$includedir ] && fail "$includedir should have been restored!
+end_test 10
 
 echo
 echo "All tests succeeded"

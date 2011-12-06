@@ -31,6 +31,7 @@ extern char *comp_level(struct config *conf);
 extern int chuser_and_or_chgrp(const char *user, const char *group);
 extern const char *getdatestr(time_t t);
 extern const char *time_taken(time_t d);
+extern int dpth_is_compressed(const char *datapath);
 #ifndef HAVE_WIN32
 extern void setup_signal(int sig, void handler(int sig));
 #endif

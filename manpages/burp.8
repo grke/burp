@@ -228,6 +228,27 @@ The same as notify_failure_arg, but for backups that failed.
 .TP
 \fBdedup_group=[string]\fR
 Enables you to group clients together for file deduplication purposes. For example, you might want to set 'dedup_group=xp' for each Windows XP client, and then run the bedup program on a cron job every other day with the option '-g xp'.
+.TP
+\fBserver_script_pre=[path]\fR
+Path to a script to run on the server after each successfully authenticated connection but before any work is carried out. The arguments to it are 'pre', '(client command)', 'reserved3' to 'reserved5', and then arguments defined by server_script_pre_arg. If the script returns non-zero, the task asked for by the client will not be run. This command and related options can be overriddden by the client configuration files in clientconfdir on the server.
+.TP
+\fBserver_script_pre_arg=[string]\fR
+A user-definable argument to the server pre script. You can have many of these.
+.TP
+\fBserver_script_post=[path]\fR
+Path to a script to run on the server before the client disconnects. The arguments to it are 'post', '(client command)', 'reserved3' to 'reserved5', and then arguments defined by server_script_post_arg. This command and related options can be overriddden by the client configuration files in clientconfdir on the server.
+.TP
+\fBserver_script_post_arg=[string]\fR
+A user-definable argument to the server post script. You can have many of these.
+.TP
+\fBserver_script=[path]\fR
+You can use this to save space in your config file when you want to run the same server script twice. It overrides server_script_pre and server_script_post. This command and related options can be overriddden by the client configuration files in clientconfdir on the server.
+.TP
+\fBserver_script_arg=[path]\fR
+Goes with server_script and overrides server_script_pre_arg and server_script_post_arg.
+.TP
+\fBserver_script_post_run_on_fail=[0|1]\fR
+If this is set to 1, server_script_post will always be run. The default is 0, which means that if the task asked for by the client fails, server_script_post will not be run.
 
 .SH CLIENT CONFIGURATION FILE OPTIONS
 
@@ -383,6 +404,13 @@ Additionally, the following options can be overridden here for each client:
 \fBnotify_failure_script\fR
 \fBnotify_failure_arg\fR
 \fBdedup_group\fR
+\fBserver_script_pre\fR
+\fBserver_script_pre_arg\fR
+\fBserver_script_post\fR
+\fBserver_script_post_arg\fR
+\fBserver_script\fR
+\fBserver_script_arg\fR
+\fBserver_script_post_run_on_fail\fR
 
 .SH Some notes on SSL certificates
 .TP

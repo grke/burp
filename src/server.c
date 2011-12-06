@@ -828,13 +828,10 @@ static int run_script_w(const char *script, struct strlist **userargs, int usera
 		"reserved1", "reserved2", "reserved3", cntr);
 }
 
-static int child(struct config *conf, struct config *cconf, const char *client, const char *cversion, struct cntr *p1cntr, struct cntr *cntr)
+static int child(struct config *conf, struct config *cconf, const char *client, const char *cversion, char cmd, char *buf, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ret=0;
-	char cmd;
 	char msg[256]="";
-	char *buf=NULL;
-	size_t len=0;
 	char *basedir=NULL;
 	// Do not allow a single client to connect more than once
 	char *lockbasedir=NULL;
@@ -876,10 +873,6 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 	  || !(lockfile=prepend_s(lockbasedir, "lockfile", strlen("lockfile"))))
 	{
 		log_and_send("out of memory");
-		ret=-1;
-	}
-	else if(async_read(&cmd, &buf, &len))
-	{
 		ret=-1;
 	}
 	else if(cmd==CMD_GEN && !strncmp(buf, "backupphase1", strlen("backupphase1")))
@@ -924,7 +917,8 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 				}
 				logp("Running backup of %s\n", client);
 			}
-			free(buf); buf=NULL;
+
+			buf=NULL;
 
 			snprintf(okstr, sizeof(okstr), "%s:%d",
 				resume?"resume":"ok", cconf->compression);
@@ -1027,8 +1021,6 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 	}
 
 end:
-	if(buf) free(buf);
-
 	if(basedir) free(basedir);
 	if(current) free(current);
 	if(finishing) free(finishing);
@@ -1056,6 +1048,9 @@ end:
 static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, int forking)
 {
 	int ret=0;
+	char cmd;
+	size_t len=0;
+	char *buf=NULL;
 	SSL *ssl=NULL;
 	BIO *sbio=NULL;
 	char *client=NULL;
@@ -1080,9 +1075,8 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	  || !(ssl=SSL_new(ctx)))
 	{
 		logp("There was a problem joining ssl to the socket\n");
-		close_fd(cfd);
-		free_config(&conf);
-		return -1;
+		ret=-1;
+		goto finish;
 	}
 	SSL_set_bio(ssl, sbio, sbio);
 
@@ -1090,56 +1084,91 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	{
 		logp("SSL_accept: %d\n", ret);
 		berr_exit("SSL accept error");
-		close_fd(cfd);
-		free_config(&conf);
-		return -1;
+		ret=-1;
+		goto finish;
 	}
+	ret=0;
 	if(async_init(*cfd, ssl, &conf))
 	{
-		close_fd(cfd);
-		free_config(&conf);
-		return -1;
+		ret=-1;
+		goto finish;
 	}
 	if(authorise_server(&conf, &client, &cversion, &cconf, &p1cntr)
 		|| !client || !*client)
 	{
 		// add an annoying delay in case they are tempted to
 		// try repeatedly
-		log_and_send("unable to authorise");
+		log_and_send("unable to authorise on server");
 		sleep(1);
-		close_fd(cfd);
-		free_config(&conf);
-		return -1;
+		ret=-1;
+		goto finish;
 	}
 	// Now that the client conf is loaded, we might want to chuser or
 	// chgrp.
 	if(chuser_and_or_chgrp(cconf.user, cconf.group))
 	{
-		logp("chuser_and_or_chgrp failed\n");
-		close_fd(cfd);
-		if(client) free(client);
-		free_config(&conf);
-		free_config(&cconf);
-		return -1;
+		log_and_send("chuser_and_or_chgrp failed on server");
+		ret=-1;
+		goto finish;
 	}
 	if(ssl_check_cert(ssl, &cconf))
 	{
-		logp("check cert failed\n");
-		close_fd(cfd);
-		if(client) free(client);
-		free_config(&conf);
-		free_config(&cconf);
-		return -1;
+		log_and_send("check cert failed on server");
+		ret=-1;
+		goto finish;
 	}
+
 	set_non_blocking(*cfd);
 
-	ret=child(&conf, &cconf, client, cversion, &p1cntr, &cntr);
+	if(async_read(&cmd, &buf, &len))
+	{
+		ret=-1;
+	}
 
+	if(cconf.server_script_pre
+	  && run_script(cconf.server_script_pre,
+			cconf.server_script_pre_arg,
+			cconf.sprecount,
+			"pre",
+			buf?buf:"",
+			"reserved3",
+			"reserved4",
+			"reserved5",
+			&p1cntr))
+	{
+		log_and_send("server pre script returned an error\n");
+		ret=-1;
+		// Do not finish here, because the server post script might
+		// want to run.
+	}
+
+	if(!ret) ret=child(&conf, &cconf, client, cversion,
+		cmd, buf, &p1cntr, &cntr);
+
+	if((!ret || cconf.server_script_post_run_on_fail)
+	  && cconf.server_script_post
+	  && run_script(cconf.server_script_post,
+			cconf.server_script_post_arg,
+			cconf.sprecount,
+			"post",
+			buf?buf:"",
+			"reserved3",
+			"reserved4",
+			"reserved5",
+			&p1cntr))
+	{
+		log_and_send("server post script returned an error\n");
+		ret=-1;
+		goto finish;
+	}
+
+finish:
 	*cfd=-1;
 	async_free(); // this closes cfd for us.
 	logp("exit child\n");
 	if(client) free(client);
 	if(cversion) free(cversion);
+	if(buf) free(buf);
 	free_config(&conf);
 	free_config(&cconf);
 	return ret;

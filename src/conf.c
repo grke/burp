@@ -44,6 +44,7 @@ void init_config(struct config *conf)
 	conf->read_all_fifos=0;
 	conf->min_file_size=0;
 	conf->max_file_size=0;
+	conf->autoupgrade=0;
 	conf->ssl_cert_ca=NULL;
         conf->ssl_cert=NULL;
         conf->ssl_key=NULL;
@@ -92,12 +93,25 @@ void init_config(struct config *conf)
 	conf->rpostcount=0;
 	conf->restore_script_post_run_on_fail=0;
 
+	conf->server_script_pre=NULL;
+	conf->server_script_pre_arg=NULL;
+	conf->sprecount=0;
+
+	conf->server_script_post=NULL;
+	conf->server_script_post_arg=NULL;
+	conf->spostcount=0;
+	conf->server_script_post_run_on_fail=0;
+
 	conf->backup_script=NULL;
 	conf->backup_script_arg=NULL;
 	conf->bscount=0;
 	conf->restore_script=NULL;
 	conf->restore_script_arg=NULL;
 	conf->rscount=0;
+
+	conf->server_script=NULL;
+	conf->server_script_arg=NULL;
+	conf->sscount=0;
 
 	conf->dedup_group=NULL;
 }
@@ -150,10 +164,18 @@ void free_config(struct config *conf)
 	if(conf->restore_script_post) free(conf->restore_script_post);
 	strlists_free(conf->restore_script_post_arg, conf->rpostcount);
 
+	if(conf->server_script_pre) free(conf->server_script_pre);
+	strlists_free(conf->server_script_pre_arg, conf->sprecount);
+	if(conf->server_script_post) free(conf->server_script_post);
+	strlists_free(conf->server_script_post_arg, conf->spostcount);
+
 	if(conf->backup_script) free(conf->backup_script);
 	if(conf->restore_script) free(conf->restore_script);
 	strlists_free(conf->backup_script_arg, conf->bscount);
 	strlists_free(conf->restore_script_arg, conf->rscount);
+
+	if(conf->server_script) free(conf->server_script);
+	strlists_free(conf->server_script_arg, conf->sscount);
 
 	strlists_free(conf->keep, conf->kpcount);
 
@@ -340,6 +362,47 @@ static int get_file_size(const char *value, unsigned long *dest, const char *con
 	return 0;
 }
 
+static int pre_post_override(char **override, char **pre, char **post)
+{
+	if(!override || !*override) return 0;
+	if(*pre) free(*pre);
+	if(*post) free(*post);
+	if(!(*pre=strdup(*override))
+	  || !(*post=strdup(*override)))
+	{
+		logp("out of memory\n");
+		return -1;
+	}
+	free(*override);
+	*override=NULL;
+	return 0;
+}
+
+static int setup_script_args(struct strlist **list, int count, struct strlist ***prelist, struct strlist ***postlist, int *precount, int *postcount)
+{
+	int i=0;
+	if(!list) return 0;
+	strlists_free(*prelist, *precount);
+	strlists_free(*postlist, *postcount);
+	*precount=0;
+	*postcount=0;
+	for(i=0; i<count; i++)
+	{
+		if(strlist_add(prelist, precount,
+			list[i]->path, 0)) return -1;
+		if(strlist_add(postlist, postcount,
+			list[i]->path, 0)) return -1;
+	}
+	return 0;
+}
+
+static void do_strlist_sort(struct strlist **list, int count, struct strlist ***dest)
+{
+	if(count) qsort(list, count, sizeof(*list),
+		(int (*)(const void *, const void *))strlist_sort);
+	*dest=list;
+}
+
 int load_config(const char *config_path, struct config *conf, bool loadall)
 {
 	int i=0;
@@ -359,8 +422,15 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 	struct strlist **bpostlist=NULL;
 	struct strlist **rprelist=NULL;
 	struct strlist **rpostlist=NULL;
+
+	struct strlist **sprelist=NULL;
+	struct strlist **spostlist=NULL;
+
 	struct strlist **bslist=NULL;
 	struct strlist **rslist=NULL;
+
+	struct strlist **sslist=NULL;
+
 	struct strlist **exlist=NULL;
 	struct strlist **kplist=NULL;
 	int have_include=0;
@@ -368,6 +438,9 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 	int got_ns_args=conf->nscount;
 	int got_nf_args=conf->nfcount;
 	int got_kp_args=conf->kpcount;
+	int got_spre_args=conf->sprecount;
+	int got_spost_args=conf->spostcount;
+	int got_ss_args=conf->sscount;
 
 	//logp("in load_config\n");
 
@@ -454,6 +527,10 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 		{
 			conf->restore_script_post_run_on_fail=atoi(value);
 		}
+		else if(!strcmp(field, "server_script_post_run_on_fail"))
+		{
+			conf->server_script_post_run_on_fail=atoi(value);
+		}
 		else if(!strcmp(field, "notify_success_warnings_only"))
 		{
 			conf->notify_success_warnings_only=atoi(value);
@@ -471,6 +548,10 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 		{
 			if(get_file_size(value, &(conf->max_file_size),
 				config_path, line)) return -1;
+		}
+		else if(!strcmp(field, "autoupgrade"))
+		{
+			conf->autoupgrade=atoi(value);
 		}
 		else if(!strcmp(field, "ratelimit"))
 		{
@@ -623,6 +704,23 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 				&rpostlist, 0)) return -1;
 
 			if(get_conf_val(field, value,
+			  "server_script_pre",
+			  &(conf->server_script_pre))) return -1;
+			if(get_conf_val_args(field, value,
+				"server_script_pre_arg",
+				&(conf->server_script_pre_arg),
+				NULL, &(conf->sprecount),
+				&sprelist, 0)) return -1;
+			if(get_conf_val(field, value,
+			  "server_script_post",
+			  &(conf->server_script_post))) return -1;
+			if(get_conf_val_args(field, value,
+				"server_script_post_arg",
+				&(conf->server_script_post_arg),
+				NULL, &(conf->spostcount),
+				&spostlist, 0)) return -1;
+
+			if(get_conf_val(field, value,
 			  "backup_script",
 			  &(conf->backup_script))) return -1;
 			if(get_conf_val_args(field, value,
@@ -639,36 +737,27 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 				NULL, &(conf->rscount),
 				&rslist, 0)) return -1;
 			if(get_conf_val(field, value,
+			  "server_script",
+			  &(conf->server_script))) return -1;
+			if(get_conf_val_args(field, value,
+				"server_script_arg",
+				&(conf->server_script_arg),
+				NULL, &(conf->sscount),
+				&sslist, 0)) return -1;
+
+
+			if(get_conf_val(field, value,
 			  "dedup_group",
 			  &(conf->dedup_group))) return -1;
 		}
 	}
 	fclose(fp);
 
-	if(conf->excount) qsort(exlist, conf->excount,
-		sizeof(*exlist),
-		(int (*)(const void *, const void *))strlist_sort);
-	conf->excext=exlist;
-
-	if(conf->ffcount) qsort(fflist, conf->ffcount,
-		sizeof(*fflist),
-		(int (*)(const void *, const void *))strlist_sort);
-	conf->fifos=fflist;
-
-	if(conf->fscount) qsort(fslist, conf->fscount,
-		sizeof(*fslist),
-		(int (*)(const void *, const void *))strlist_sort);
-	conf->fschgdir=fslist;
-
-	if(conf->iecount) qsort(ielist, conf->iecount,
-		sizeof(*ielist),
-		(int (*)(const void *, const void *))strlist_sort);
-	conf->incexcdir=ielist;
-
-	if(conf->nobackup) qsort(nblist, conf->nbcount,
-		sizeof(*nblist),
-		(int (*)(const void *, const void *))strlist_sort);
-	conf->nobackup=nblist;
+	do_strlist_sort(exlist, conf->excount, &(conf->excext));
+	do_strlist_sort(fflist, conf->ffcount, &(conf->fifos));
+	do_strlist_sort(fslist, conf->fscount, &(conf->fschgdir));
+	do_strlist_sort(ielist, conf->iecount, &(conf->incexcdir));
+	do_strlist_sort(nblist, conf->nbcount, &(conf->nobackup));
 
 	// This decides which directories to start backing up, and which
 	// are subdirectories which don't need to be started separately.
@@ -710,6 +799,9 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 	if(!got_timer_args) conf->timer_arg=talist;
 	if(!got_ns_args) conf->notify_success_arg=nslist;
 	if(!got_nf_args) conf->notify_failure_arg=nflist;
+	if(!got_spre_args) conf->server_script_pre_arg=sprelist;
+	if(!got_spost_args) conf->server_script_post_arg=spostlist;
+	if(!got_ss_args) conf->server_script_arg=sslist;
 
 	if(!got_kp_args)
 	{
@@ -740,77 +832,26 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 		conf->keep=kplist;
 	}
 
-	// If backup_script is set, override both post and pre settings.
-	// TODO: make a function to avoid repeating this stuff.
-	if(conf->backup_script)
-	{
-		if(conf->backup_script_pre)
-			free(conf->backup_script_pre);
-		if(conf->backup_script_post)
-			free(conf->backup_script_post);
-		if(!(conf->backup_script_pre=strdup(conf->backup_script))
-		  || !(conf->backup_script_post=strdup(conf->backup_script)))
-		{
-			logp("out of memory\n");
-			return -1;
-		}
-		free(conf->backup_script);
-		conf->backup_script=NULL;
-	}
-	if(bslist)
-	{
-		strlists_free(bprelist, conf->bprecount);
-		strlists_free(bpostlist, conf->bpostcount);
-		conf->bprecount=0;
-		conf->bpostcount=0;
-		for(i=0; i<conf->bscount; i++)
-		{
-			if(strlist_add(&bprelist,
-				&(conf->bprecount),
-				bslist[i]->path, 0)) return -1;
-			if(strlist_add(&bpostlist,
-				&(conf->bpostcount),
-				bslist[i]->path, 0)) return -1;
-		}
-	}
-	// If restore_script is set, override both post and pre settings.
-	// TODO: make a function to avoid repeating this stuff.
-	if(conf->restore_script)
-	{
-		if(conf->restore_script_pre)
-			free(conf->restore_script_pre);
-		if(conf->restore_script_post)
-			free(conf->restore_script_post);
-		if(!(conf->restore_script_pre=strdup(conf->restore_script))
-		  || !(conf->restore_script_post=strdup(conf->restore_script)))
-		{
-			logp("out of memory\n");
-			return -1;
-		}
-		free(conf->restore_script);
-		conf->restore_script=NULL;
-	}
-	if(rslist)
-	{
-		strlists_free(rprelist, conf->rprecount);
-		strlists_free(rpostlist, conf->rpostcount);
-		conf->rprecount=0;
-		conf->rpostcount=0;
-		for(i=0; i<conf->rscount; i++)
-		{
-			if(strlist_add(&rprelist,
-				&(conf->rprecount),
-				rslist[i]->path, 0)) return -1;
-			if(strlist_add(&rpostlist,
-				&(conf->rpostcount),
-				rslist[i]->path, 0)) return -1;
-		}
-	}
+	pre_post_override(&(conf->backup_script),
+		&(conf->backup_script_pre), &(conf->backup_script_post));
+	pre_post_override(&(conf->restore_script),
+		&(conf->restore_script_pre), &(conf->restore_script_post));
+	pre_post_override(&(conf->server_script),
+		&(conf->server_script_pre), &(conf->server_script_post));
+
+	setup_script_args(bslist, conf->bscount, &bprelist, &bpostlist,
+		&(conf->bprecount), &(conf->bpostcount));
+	setup_script_args(rslist, conf->rscount, &rprelist, &rpostlist,
+		&(conf->rprecount), &(conf->rpostcount));
+	setup_script_args(sslist, conf->sscount, &sprelist, &spostlist,
+		&(conf->sprecount), &(conf->spostcount));
 
 	conf->backup_script_pre_arg=bprelist;
 	conf->backup_script_post_arg=bpostlist;
 	conf->restore_script_pre_arg=rprelist;
 	conf->restore_script_post_arg=rpostlist;
+	conf->server_script_pre_arg=sprelist;
+	conf->server_script_post_arg=spostlist;
 
 	if(!loadall) return 0;
 
@@ -943,6 +984,7 @@ int set_client_global_config(struct config *conf, struct config *cconf)
 	cconf->librsync=conf->librsync;
 	cconf->compression=conf->compression;
 	cconf->notify_success_warnings_only=conf->notify_success_warnings_only;
+	cconf->server_script_post_run_on_fail=conf->server_script_post_run_on_fail;
 	if(set_global_str(&(cconf->directory), conf->directory))
 		return -1;
 	if(set_global_str(&(cconf->working_dir_recovery_method),
@@ -970,6 +1012,21 @@ int set_client_global_config(struct config *conf, struct config *cconf)
 		&(cconf->kpcount), conf->kpcount)) return -1;
 	if(set_global_str(&(cconf->dedup_group), conf->dedup_group))
 		return -1;
+	if(set_global_str(&(cconf->server_script_pre),
+		conf->server_script_pre)) return -1;
+	if(set_global_arglist(&(cconf->server_script_pre_arg),
+		conf->server_script_pre_arg,
+		&(cconf->sprecount), conf->sprecount)) return -1;
+	if(set_global_str(&(cconf->server_script_post),
+		conf->server_script_post)) return -1;
+	if(set_global_arglist(&(cconf->server_script_post_arg),
+		conf->server_script_post_arg,
+		&(cconf->spostcount), conf->spostcount)) return -1;
+	if(set_global_str(&(cconf->server_script),
+		conf->server_script)) return -1;
+	if(set_global_arglist(&(cconf->server_script_arg),
+		conf->server_script_arg,
+		&(cconf->sscount), conf->sscount)) return -1;
 
 	return 0;
 }

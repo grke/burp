@@ -131,13 +131,6 @@ int incr_dpth(struct dpth *dpth, struct config *cconf)
 	return 0;
 }
 
-int dpth_is_compressed(const char *datapath)
-{
-	const char *dp=NULL;
-	if((dp=strrchr(datapath, '.')) && !strcmp(dp, ".gz")) return 1;
-	return 0;
-}
-
 int set_dpth_from_string(struct dpth *dpth, const char *datapath, struct config *cconf)
 {
 	unsigned int a=0;

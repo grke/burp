@@ -3,6 +3,8 @@
   * Get verify all backups for a client (-a v -b a) to work.
   * Return non-zero if there were warnings on verify or restore.
   * Fix 'max_file_size' option, add 'min_file_size' option.
+  * Add generic server-side pre/post scripts that can run on every connection
+    after authentication and before disconnecting.
 
 2011-11-26 Changes in burp-1.2.5:
   * IMPORTANT: Fixed critical path comparison typo bug. If you have been using

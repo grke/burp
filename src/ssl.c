@@ -91,10 +91,27 @@ void ssl_destroy_ctx(SSL_CTX *ctx)
 	SSL_CTX_free(ctx);
 }
 
+#ifndef HAVE_WIN32
+static void sanitise(char *buf)
+{
+	char *cp=NULL;
+	for(cp=buf; *cp; cp++)
+	{
+		if(!isalnum(*cp)
+		  && !isblank(*cp)
+		  && *cp!='_'
+		  && *cp!='-'
+		  && *cp!='.'
+		  && *cp!='@')
+			*cp='_';
+	}
+}
+#endif
+
 int ssl_check_cert(SSL *ssl, struct config *conf)
 {
 	X509 *peer;
-	char peer_CN[256];
+	char tmpbuf[256];
 
 	if(!conf->ssl_peer_cn)
 	{
@@ -114,13 +131,22 @@ int ssl_check_cert(SSL *ssl, struct config *conf)
 	}
 
 	X509_NAME_get_text_by_NID(X509_get_subject_name(peer),
-		NID_commonName, peer_CN, 256);
-	if(strcasecmp(peer_CN, conf->ssl_peer_cn))
+		NID_commonName, tmpbuf, sizeof(tmpbuf));
+	if(strcasecmp(tmpbuf, conf->ssl_peer_cn))
 	{
 		logp("cert common name doesn't match configured ssl_peer_cn\n");
-		logp("'%s'!='%s'\n", peer_CN, conf->ssl_peer_cn);
+		logp("'%s'!='%s'\n", tmpbuf, conf->ssl_peer_cn);
 		return -1;
 	}
+
+#ifndef HAVE_WIN32
+	sanitise(tmpbuf);
+	setenv("X509_PEER_CN", tmpbuf, 1);
+	X509_NAME_get_text_by_NID(X509_get_issuer_name(peer),
+		NID_commonName, tmpbuf, sizeof(tmpbuf));
+	sanitise(tmpbuf);
+	setenv("X509_PEER_IN", tmpbuf, 1);
+#endif
 
 	return 0;
 }

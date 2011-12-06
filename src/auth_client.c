@@ -41,10 +41,14 @@ int authorise_client(struct config *conf, struct cntr *p1cntr)
 			return -1;
 		}
 	}
-	else if(cmd==CMD_GEN && strcmp(buf, "ok"))
+	else if(cmd==CMD_GEN && !strcmp(buf, "ok"))
 	{
+		// It is OK.
+	}
+	else
+	{
+		logp("problem with auth: got %c %s\n", cmd, buf);
 		free(buf);
-		logp("problem with auth\n");
 		return -1;
 	}
 	free(buf);

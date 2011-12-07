@@ -98,7 +98,6 @@ run_bedup()
 	echo "Starting test bedup"
 	./sbin/bedup -c $serverconf -l >> "$beduplog" 2>&1 \
 		|| fail "bedup returned $?"
-	sleep 5
 }
 
 run_backup()
@@ -106,7 +105,7 @@ run_backup()
 	echo "Starting test client backup"
 	./sbin/burp -c $clientconf -a b >> "$clientlog" 2>&1 \
 		|| fail "client backup returned $?"
-	sleep 5
+	sleep 10
 }
 
 run_verify()

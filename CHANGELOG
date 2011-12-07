@@ -10,6 +10,7 @@
   * Add '-i' option: print an index table of symbols that humans may see burp
     produce, and exit.
   * Let backups carry on when files cannot be opened.
+  * Spot Windows EFS directories and files and warn about them.
 
 2011-11-26 Changes in burp-1.2.5:
   * IMPORTANT: Fixed critical path comparison typo bug. If you have been using

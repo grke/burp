@@ -31,6 +31,14 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *p1cn
 
    if(!file_is_included(conf->incexcdir, conf->iecount,
 	conf->excext, conf->excount, ff->fname)) return 0;
+#ifdef HAVE_WIN32
+	if(ff->winattr & FILE_ATTRIBUTE_ENCRYPTED)
+	{
+		if(ff->type!=FT_DIREND)
+			logw(p1cntr, "EFS not yet supported: %s", ff->fname);
+		return 0;
+	}
+#endif
 
    //logp("%d: %s\n", ff->type, ff->fname);
 

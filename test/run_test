@@ -6,6 +6,13 @@ if [ ! -f "$myscript" ] ; then
 	exit 1
 fi
 
+# The Windows build symlinks cock things for 'diff -ur' on the restore later,
+# so delete them first.
+rm -f ../depkgs-mingw32
+rm -f ../cross-tools-mingw32
+rm -f ../depkgs-mingw64
+rm -f ../cross-tools-mingw64
+
 path="$PWD"
 build="$path/build"
 includedir="$path/build"
@@ -161,7 +168,7 @@ change_source_files()
 
 	# Scramble a whole bunch of files
 	find "$build/autoconf" -type f | while read f ; do
-		sort --random-sort "$f" > tmpfile \
+		LC_ALL='C' sort --random-sort "$f" > tmpfile \
 			|| fail "could not randomise $f"
 		mv tmpfile "$f" || fail "could not move tmpfile to $f"
 	done

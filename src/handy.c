@@ -328,25 +328,51 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password)
 	return ctx;
 }
 
+int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, struct cntr *cntr)
+{
+#ifdef HAVE_WIN32
+	binit(bfd);
+	if(bopen(bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0)<0)
+	{
+		berrno be;
+		logw(cntr,
+			"Could not open %s: %s\n", fname, be.bstrerror(errno));
+		return -1;
+	}
+#else
+	if(!(*fp=fopen(fname, "rb")))
+	{
+		logw(cntr,
+			"Could not open %s: %s\n", fname, strerror(errno));
+		return -1;
+	}
+#endif
+	return 0;
+}
+
+void close_file_for_send(BFILE *bfd, FILE **fp)
+{
+#ifdef HAVE_WIN32
+	bclose(bfd);
+#else
+	fclose(*fp);
+#endif
+}
+
 /* OK, this function is getting a bit out of control.
    One problem is that, if you give deflateInit2 compression=0, it still
    writes gzip headers and footers, so I had to add extra
    if(compression) and if(!compression) bits all over the place that would
    skip the actual compression.
-   This is needed for the case where encryption is on and compression if off.
+   This is needed for the case where encryption is on and compression is off.
    Encryption off and compression off uses send_whole_file().
    Perhaps a separate function is needed for encryption on compression off.
 */
-int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, const char *extrameta, size_t elen)
+int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen)
 {
 	int ret=0;
 	int zret=0;
 	MD5_CTX md5;
-#ifdef HAVE_WIN32
-	BFILE bfd;
-#else
-	FILE *fp=NULL;
-#endif
 	size_t metalen=0;
 	const char *metadata=NULL;
 
@@ -376,26 +402,6 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 	{
 		metalen=elen;
 	}
-	else
-	{
-#ifdef HAVE_WIN32
-		binit(&bfd);
-		if(bopen(&bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0)<0)
-		{
-			berrno be;
-			logp("Could not open %s: %s\n",
-				fname, be.bstrerror(errno));
-			return -1;
-		}
-#else
-		if(!(fp=fopen(fname, "rb")))
-		{
-			logp("Could not open %s: %s\n",
-				fname, strerror(errno));
-			return -1;
-		}
-#endif
-	}
 
 	/* allocate deflate state */
 	strm.zalloc = Z_NULL;
@@ -405,14 +411,6 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 		8, Z_DEFAULT_STRATEGY))!=Z_OK)
 
 	{
-		if(!metadata)
-		{
-#ifdef HAVE_WIN32
-			bclose(&bfd);
-#else
-			fclose(fp);
-#endif
-		}
 		return -1;
 	}
 
@@ -431,7 +429,7 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 		else
 		{
 #ifdef HAVE_WIN32
-			strm.avail_in=(uint32_t)bread(&bfd, in, ZCHUNK);
+			strm.avail_in=(uint32_t)bread(bfd, in, ZCHUNK);
 #else
 			strm.avail_in=fread(in, 1, ZCHUNK, fp);
 #endif
@@ -556,15 +554,6 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 cleanup:
 	deflateEnd(&strm);
 
-	if(!metadata)
-	{
-#ifdef HAVE_WIN32
-		bclose(&bfd);
-#else
-		fclose(fp);
-#endif
-	}
-
 	if(enc_ctx)
 	{
 		EVP_CIPHER_CTX_cleanup(enc_ctx);
@@ -586,7 +575,7 @@ cleanup:
 	return ret;
 }
 
-int send_whole_file(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, struct cntr *cntr, const char *extrameta, size_t elen)
+int send_whole_file(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, struct cntr *cntr, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen)
 {
 	int ret=0;
 	size_t s=0;
@@ -632,15 +621,7 @@ int send_whole_file(const char *fname, const char *datapth, int quick_read, unsi
 	else
 	{
 #ifdef HAVE_WIN32
-		BFILE bfd;
-		binit(&bfd);
-		if(bopen(&bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0)<0)
-		{
-			berrno be;
-			logp("Could not open %s: %s\n", fname, be.bstrerror(errno));
-			return -1;
-		}
-		while((s=(uint32_t)bread(&bfd, buf, 4096))>0)
+		if(!ret) while((s=(uint32_t)bread(bfd, buf, 4096))>0)
 		{
 			*bytes+=s;
 			if(!MD5_Update(&md5, buf, s))
@@ -669,16 +650,9 @@ int send_whole_file(const char *fname, const char *datapth, int quick_read, unsi
 				}
 			}
 		}
-		bclose(&bfd);
 #else
-		FILE *fp=NULL;
 	//printf("send_whole_file: %s\n", fname);
-		if(!(fp=fopen(fname, "rb")))
-		{
-			logp("Could not open %s: %s\n", fname, strerror(errno));
-			return -1;
-		}
-		while((s=fread(buf, 1, 4096, fp))>0)
+		if(!ret) while((s=fread(buf, 1, 4096, fp))>0)
 		{
 			*bytes+=s;
 			if(!MD5_Update(&md5, buf, s))
@@ -707,7 +681,6 @@ int send_whole_file(const char *fname, const char *datapth, int quick_read, unsi
 				}
 			}
 		}
-		fclose(fp);
 #endif
 	}
 	if(!ret)
@@ -1269,4 +1242,92 @@ int dpth_is_compressed(const char *datapath)
 	const char *dp=NULL;
 	if((dp=strrchr(datapath, '.')) && !strcmp(dp, ".gz")) return 1;
 	return 0;
+}
+
+void cmd_to_text(char cmd, char *buf, size_t len)
+{
+	switch(cmd)
+	{
+		case CMD_DATAPTH:
+			snprintf(buf, len, "Path to data on the server"); break;
+		case CMD_STAT:
+			snprintf(buf, len, "File stat information"); break;
+		case CMD_FILE:
+			snprintf(buf, len, "Plain file"); break;
+		case CMD_ENC_FILE:
+			snprintf(buf, len, "Encrypted file"); break;
+		case CMD_DIRECTORY:
+			snprintf(buf, len, "Directory"); break;
+		case CMD_SOFT_LINK:
+			snprintf(buf, len, "Soft link"); break;
+		case CMD_HARD_LINK:
+			snprintf(buf, len, "Hard link"); break;
+		case CMD_SPECIAL:
+			snprintf(buf, len, "Special file - fifo, socket, device node"); break;
+		case CMD_METADATA:
+			snprintf(buf, len, "Extra meta data"); break;
+		case CMD_GEN:
+			snprintf(buf, len, "Generic command"); break;
+		case CMD_ERROR:
+			snprintf(buf, len, "Error message"); break;
+		case CMD_APPEND:
+			snprintf(buf, len, "Append to a file"); break;
+		case CMD_INTERRUPT:
+			snprintf(buf, len, "Interrupt"); break;
+		case CMD_WARNING:
+			snprintf(buf, len, "Warning"); break;
+		case CMD_END_FILE:
+			snprintf(buf, len, "End of file transmission"); break;
+		case CMD_FILE_CHANGED:
+			snprintf(buf, len, "Plain file changed"); break;
+		case CMD_FILE_SAME:
+			snprintf(buf, len, "Plain file unchanged"); break;
+		case CMD_METADATA_CHANGED:
+			snprintf(buf, len, "Meta data changed"); break;
+		case CMD_METADATA_SAME:
+			snprintf(buf, len, "Meta data unchanged"); break;
+		case CMD_ENC_METADATA_CHANGED:
+			snprintf(buf, len, "Encrypted meta data changed"); break;
+		case CMD_ENC_METADATA_SAME:
+			snprintf(buf, len, "Encrypted meta data unchanged"); break;
+		case CMD_ENC_FILE_CHANGED:
+			snprintf(buf, len, "Encrypted file changed"); break;
+		case CMD_ENC_FILE_SAME:
+			snprintf(buf, len, "Encrypted file unchanged"); break;
+		case CMD_DIRECTORY_CHANGED:
+			snprintf(buf, len, "Directory changed"); break;
+		case CMD_DIRECTORY_SAME:
+			snprintf(buf, len, "Directory unchanged"); break;
+		case CMD_HARD_LINK_CHANGED:
+			snprintf(buf, len, "Hard link changed"); break;
+		case CMD_HARD_LINK_SAME:
+			snprintf(buf, len, "Hard link unchanged"); break;
+		case CMD_SOFT_LINK_CHANGED:
+			snprintf(buf, len, "Soft link changed"); break;
+		case CMD_SOFT_LINK_SAME:
+			snprintf(buf, len, "Soft link unchanged"); break;
+		case CMD_SPECIAL_CHANGED:
+			snprintf(buf, len, "Special file changed"); break;
+		case CMD_SPECIAL_SAME:
+			snprintf(buf, len, "Special file unchanged"); break;
+		case CMD_TIMESTAMP:
+			snprintf(buf, len, "Backup timestamp"); break;
+		default:
+			snprintf(buf, len, "----------------"); break;
+	}
+}
+
+void print_all_cmds(void)
+{
+	int i=0;
+	char buf[256]="";
+	char cmds[256]="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+	size_t len=sizeof(buf);
+	printf("\nIndex of symbols\n\n");
+	for(i=0; cmds[i]; i++)
+	{
+		cmd_to_text(cmds[i], buf, len);
+		printf("  %c: %s\n", cmds[i], buf);
+	}
+	printf("\n");
 }

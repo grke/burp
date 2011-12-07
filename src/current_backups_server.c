@@ -16,7 +16,7 @@
 #include <regex.h>
 #include <math.h>
 
-int recursive_hardlink(const char *src, const char *dst, const char *client, struct cntr *p1cntr, struct cntr *cntr)
+int recursive_hardlink(const char *src, const char *dst, const char *client, struct cntr *p1cntr, struct cntr *cntr, struct config *conf)
 {
 	int n=-1;
 	int ret=0;
@@ -41,6 +41,7 @@ int recursive_hardlink(const char *src, const char *dst, const char *client, str
 	}
 	while(n--)
 	{
+		struct stat statp;
 		char *fullpatha=NULL;
 		char *fullpathb=NULL;
 		if(dir[n]->d_ino==0
@@ -57,10 +58,14 @@ int recursive_hardlink(const char *src, const char *dst, const char *client, str
 			break;
 		}
 
-		if(is_dir(fullpatha))
+		if(lstat(fullpatha, &statp))
+		{
+			logp("could not lstat %s\n", fullpatha);
+		}
+		else if(S_ISDIR(statp.st_mode))
 		{
 			if(recursive_hardlink(fullpatha, fullpathb, client,
-				p1cntr, cntr))
+				p1cntr, cntr, conf))
 			{
 				free(fullpatha);
 				free(fullpathb);
@@ -72,10 +77,8 @@ int recursive_hardlink(const char *src, const char *dst, const char *client, str
 			//logp("hardlinking %s to %s\n", fullpathb, fullpatha);
 			write_status(client, STATUS_SHUFFLING, fullpathb,
 				p1cntr, cntr);
-			if(link(fullpatha, fullpathb))
+			if(do_link(fullpatha, fullpathb, &statp, conf))
 			{
-				logp("hardlink %s to %s failed: %s\n",
-					fullpathb, fullpatha, strerror(errno));
 				free(fullpatha);
 				free(fullpathb);
 				break;
@@ -701,4 +704,54 @@ size_t get_librsync_block_len(const char *endfile)
 	ret=(size_t)(ceil(sqrt(oldlen)/16)*16); // round to a multiple of 16.
 	if(ret<64) return 64; // minimum of 64 bytes.
 	return ret;
+}
+
+#define DUP_CHUNK	4096
+static int duplicate_file(const char *oldpath, const char *newpath)
+{
+	int ret=0;
+	size_t s=0;
+	size_t t=0;
+	FILE *op=NULL;
+	FILE *np=NULL;
+	char buf[DUP_CHUNK]="";
+	if(!(op=open_file(oldpath, "rb"))
+	  || !(np=open_file(newpath, "wb")))
+	{
+		ret=-1;
+		goto finish;
+	}
+
+	while((s=fread(buf, 1, DUP_CHUNK, op))>0)
+	{
+		t=fwrite(buf, 1, s, np);
+		if(t!=s)
+		{
+			logp("could not write all bytes: %d!=%d\n", s, t);
+			ret=-1;
+			goto finish;
+		}
+	}
+
+finish:
+	if(np) fclose(np);
+	if(op) fclose(op);
+	if(ret) logp("could not duplicate %s to %s\n", oldpath, newpath);
+	return ret;
+}
+
+int do_link(const char *oldpath, const char *newpath, struct stat *statp, struct config *conf)
+{
+	/* Avoid creating too many hardlinks */
+	if(statp->st_nlink >= conf->max_hardlinks)
+	{
+		return duplicate_file(oldpath, newpath);
+	}
+	else if(link(oldpath, newpath))
+	{
+		logp("could not hard link '%s' to '%s': %s\n",
+			newpath, oldpath, strerror(errno));
+		return -1;
+	}
+	return 0;
 }

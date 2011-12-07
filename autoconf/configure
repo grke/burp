@@ -1632,7 +1632,7 @@ Optional Packages:
   --with-libintl-prefix[=DIR]  search for libintl in DIR/include and DIR/lib
   --without-libintl-prefix     don't search for libintl in includedir and libdir
   --with-included-gettext use the GNU gettext library included here
-  --with-sbin-perm=MODE   specify permissions for sbin binaries [default=0750]
+  --with-sbin-perm=MODE   specify permissions for sbin binaries [default=0755]
   --with-tcp-wrappers[=DIR]
                           enable tcpwrappers support
   --with-openssl[=DIR]    Include OpenSSL support. DIR is the OpenSSL base
@@ -19852,7 +19852,7 @@ support_conio=yes
 support_tls=no
 support_crypto=no
 
-SBINPERM=0750
+SBINPERM=0755
 
 # Check whether --with-sbin-perm was given.
 if test "${with_sbin_perm+set}" = set; then :

@@ -35,17 +35,12 @@ static int load_signature(rs_signature_t **sumset, struct cntr *cntr)
 	return r;
 }
 
-static int load_signature_and_send_delta(const char *rpath, unsigned long long *bytes, unsigned long long *sentbytes, struct cntr *cntr)
+static int load_signature_and_send_delta(BFILE *bfd, FILE *in, unsigned long long *bytes, unsigned long long *sentbytes, struct cntr *cntr)
 {
 	rs_job_t *job;
 	rs_result r;
 	rs_signature_t *sumset=NULL;
 	unsigned char checksum[MD5_DIGEST_LENGTH+1];
-#ifdef HAVE_WIN32
-        BFILE bfd;
-#else
-	FILE *in=NULL;
-#endif
 	rs_filebuf_t *infb=NULL;
 	rs_filebuf_t *outfb=NULL;
 	rs_buffers_t rsbuf;
@@ -53,24 +48,6 @@ static int load_signature_and_send_delta(const char *rpath, unsigned long long *
 
 	if(load_signature(&sumset, cntr)) return -1;
 
-#ifdef HAVE_WIN32
-        binit(&bfd);
-        if(bopen(&bfd, rpath, O_RDONLY | O_BINARY | O_NOATIME, S_IRUSR | S_IWUSR)<0)
-        {
-                berrno be;
-                logp("Could not open %s: %s\n", rpath, be.bstrerror(errno));
-                return -1;
-        }
-#else
-	//logp("opening: %s\n", rpath);
-	if(!(in=fopen(rpath, "rb")))
-	{
-		logp("could not open '%s' in order to generate delta.\n",
-			rpath);
-		rs_free_sumset(sumset);
-		return RS_IO_ERROR;
-	}
-#endif
 //logp("start delta\n");
 
 	if(!(job=rs_delta_begin(sumset)))
@@ -80,23 +57,13 @@ static int load_signature_and_send_delta(const char *rpath, unsigned long long *
 		return RS_IO_ERROR;
 	}
 
-#ifdef HAVE_WIN32
-	if(!(infb=rs_filebuf_new(&bfd, NULL, NULL, -1, ASYNC_BUF_LEN, cntr))
+	if(!(infb=rs_filebuf_new(bfd, in, NULL, -1, ASYNC_BUF_LEN, cntr))
 	  || !(outfb=rs_filebuf_new(NULL, NULL, NULL, async_get_fd(), ASYNC_BUF_LEN, cntr)))
 	{
 		logp("could not rs_filebuf_new for delta\n");
 		if(infb) rs_filebuf_free(infb);
 		return -1;
 	}
-#else
-	if(!(infb=rs_filebuf_new(NULL, in, NULL, -1, ASYNC_BUF_LEN, cntr))
-	  || !(outfb=rs_filebuf_new(NULL, NULL, NULL, async_get_fd(), ASYNC_BUF_LEN, cntr)))
-	{
-		logp("could not rs_filebuf_new for delta\n");
-		if(infb) rs_filebuf_free(infb);
-		return -1;
-	}
-#endif
 //logp("start delta loop\n");
 
 	while(1)
@@ -146,28 +113,23 @@ static int load_signature_and_send_delta(const char *rpath, unsigned long long *
 	rs_filebuf_free(outfb);
 	rs_job_free(job);
 	rs_free_sumset(sumset);
-#ifdef HAVE_WIN32
-        bclose(&bfd);
-#else
-	if(in) fclose(in);
-#endif
 
 	if(r==RS_DONE && write_endfile(*bytes, checksum)) // finish delta file
 			return -1;
 
-	//logp("end of load_sig_send_delta for: %s\n", rpath);
+	//logp("end of load_sig_send_delta\n");
 
 	return r;
 }
 
-static int send_whole_file_w(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, const char *extrameta, size_t elen)
+static int send_whole_file_w(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen)
 {
 	if(compression || encpassword)
 		return send_whole_file_gz(fname, datapth, quick_read, bytes, 
-			encpassword, cntr, compression, extrameta, elen);
+		  encpassword, cntr, compression, bfd, fp, extrameta, elen);
 	else
 		return send_whole_file(fname, datapth, quick_read, bytes, 
-			cntr, extrameta, elen);
+		  cntr, bfd, fp, extrameta, elen);
 }
 
 static int forget_file(struct sbuf *sb, char cmd, struct cntr *cntr)
@@ -249,6 +211,8 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 				char *extrameta=NULL;
 				size_t elen=0;
 				unsigned long long bytes=0;
+				BFILE bfd;
+				FILE *fp=NULL;
 
 				sb.path=buf;
 				buf=NULL;
@@ -281,6 +245,15 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 					logw(cntr, "File size increased above max_file_size after initial scan: %s", sb.path);
 					forget++;
 				}
+
+				if(!forget)
+				{
+					encode_stat(attribs, &statbuf, winattr);
+					if(open_file_for_send(&bfd, &fp,
+						sb.path, cntr))
+							forget++;
+				}
+
 				if(forget)
 				{
 					if(forget_file(&sb, cmd, cntr))
@@ -292,8 +265,6 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 					continue;
 				}
 
-				encode_stat(attribs, &statbuf, winattr);
-
 				if(cmd==CMD_METADATA
 				  || cmd==CMD_ENC_METADATA)
 				{
@@ -303,12 +274,14 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 					{
 						logw(cntr, "Meta data error for %s", sb.path);
 						free_sbuf(&sb);
+						close_file_for_send(&bfd, &fp);
 						continue;
 					}
 					if(!extrameta)
 					{
 						logw(cntr, "No meta data after all: %s", sb.path);
 						free_sbuf(&sb);
+						close_file_for_send(&bfd, &fp);
 						continue;
 					}
 				}
@@ -321,7 +294,8 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 					  || async_write_str(CMD_STAT, attribs)
 					  || async_write_str(CMD_FILE, sb.path)
 					  || load_signature_and_send_delta(
-						sb.path, &bytes, &sentbytes, cntr))
+						&bfd, fp,
+						&bytes, &sentbytes, cntr))
 					{
 						logp("error in sig/delta for %s (%s)\n", sb.path, sb.datapth);
 						ret=-1;
@@ -345,6 +319,7 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 						NULL, 0, &bytes,
 						conf->encryption_password,
 						cntr, conf->compression,
+						&bfd, fp,
 						extrameta, elen))
 					{
 						ret=-1;
@@ -361,6 +336,7 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 						do_filecounter_sentbytes(cntr, bytes);
 					}
 				}
+				close_file_for_send(&bfd, &fp);
 				free_sbuf(&sb);
 				if(extrameta) free(extrameta);
 			}

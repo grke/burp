@@ -130,15 +130,19 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath)
 
 static int send_file(const char *fname, int patches, const char *best, const char *datapth, unsigned long long *bytes, char cmd, struct cntr *cntr, struct config *cconf)
 {
+	int ret=0;
+	FILE *fp=NULL;
+	if(open_file_for_send(NULL, &fp, best, cntr))
+		return -1;
 	//logp("sending: %s\n", best);
 	if(async_write(cmd, fname, strlen(fname)))
-		return -1;
-	if(patches)
+		ret=-1;
+	else if(patches)
 	{
 		// If we did some patches, the resulting file
 		// is not gzipped. Gzip it during the send. 
-		return send_whole_file_gz(best, datapth, 1, bytes, NULL, cntr,
-			9, NULL, 0);
+		ret=send_whole_file_gz(best, datapth, 1, bytes, NULL, cntr,
+			9, NULL, fp, NULL, 0);
 	}
 	else
 	{
@@ -147,25 +151,27 @@ static int send_file(const char *fname, int patches, const char *best, const cha
 		// sort it out.
 		if(cmd==CMD_ENC_FILE || cmd==CMD_ENC_METADATA)
 		{
-			return send_whole_file(best,
-				datapth, 1, bytes, cntr, NULL, 0);
+			ret=send_whole_file(best,
+				datapth, 1, bytes, cntr, NULL, fp, NULL, 0);
 		}
 		// It might have been stored uncompressed. Gzip it during
 		// the send. If the client knew what kind of file it would be
 		// receiving, this step could disappear.
 		else if(!dpth_is_compressed(datapth))
 		{
-			return send_whole_file_gz(best, datapth, 1, bytes,
-				NULL, cntr, 9, NULL, 0);
+			ret=send_whole_file_gz(best, datapth, 1, bytes,
+				NULL, cntr, 9, NULL, fp, NULL, 0);
 		}
 		else
 		{
 			// If we did not do some patches, the resulting
 			// file might already be gzipped. Send it as it is.
-			return send_whole_file(best,
-				datapth, 1, bytes, cntr, NULL, 0);
+			ret=send_whole_file(best,
+				datapth, 1, bytes, cntr, NULL, fp, NULL, 0);
 		}
 	}
+	close_file_for_send(NULL, &fp);
+	return ret;
 }
 
 static int verify_file(const char *fname, int patches, const char *best, const char *datapth, unsigned long long *bytes, const char *endfile, char cmd, struct cntr *cntr)

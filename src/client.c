@@ -66,11 +66,14 @@ static int maybe_check_timer(const char *phase1str, struct config *conf, int *re
 }
 
 // Return 0 for OK, -1 for error, 1 for timer conditions not met.
-static int do_backup_client(struct config *conf, const char *phase1str, int resume, struct cntr *p1cntr, struct cntr *cntr)
+static int do_backup_client(struct config *conf, int resume, int estimate, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ret=0;
 
-logp("do backup client\n");
+	if(estimate)
+		logp("do estimate client\n");
+	else
+		logp("do backup client\n");
 
 #if defined(HAVE_WIN32)
 	win32_enable_backup_privileges(1 /* ignore_errors */);
@@ -81,10 +84,21 @@ logp("do backup client\n");
 
 	// Scan the file system and send the results to the server.
 	// Skip phase1 if the server wanted to resume.
-	if(!ret && !resume) ret=backup_phase1_client(conf, p1cntr, cntr);
+	if(!ret && !resume) ret=backup_phase1_client(conf,
+		estimate, p1cntr, cntr);
 
 	// Now, the server will be telling us what data we need to send.
-	if(!ret) ret=backup_phase2_client(conf, p1cntr, resume, cntr);
+	if(!estimate && !ret)
+		ret=backup_phase2_client(conf, p1cntr, resume, cntr);
+
+	if(estimate)
+	{
+		if(async_write_str(CMD_GEN, "estimateend")
+		  || async_read_expect(CMD_GEN, "ok"))
+			ret=-1;
+
+		print_filecounters(p1cntr, cntr, ACTION_ESTIMATE, 1);
+	}
 
 #if defined(WIN32_VSS)
 	win32_stop_vss();
@@ -173,6 +187,7 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 	 && !(ret=authorise_client(conf, &p1cntr)))
 	{
 		rfd=-1;
+		int resume=0;
 		const char *phase1str="backupphase1";
 		switch(act)
 		{
@@ -180,7 +195,6 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 				phase1str="backupphase1timed";
 			case ACTION_BACKUP:
 			{
-				int resume=0;
 				if(!(ret=maybe_check_timer(phase1str,
 					conf, &resume)))
 				{
@@ -197,9 +211,8 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 					  &p1cntr)) ret=-1;
 
 					if(!ret && do_backup_client(conf,
-						"backupphase1", resume,
-							&p1cntr, &cntr))
-								ret=-1;
+						resume, 0, &p1cntr, &cntr))
+							ret=-1;
 
 					if((conf->backup_script_post_run_on_fail
 					  || !ret) && conf->backup_script_post)
@@ -270,6 +283,12 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 
 				break;
 			}
+			case ACTION_ESTIMATE:
+				ret=maybe_check_timer("estimate",
+					conf, &resume);
+				if(!ret) ret=do_backup_client(conf, 0, 1,
+						&p1cntr, &cntr);
+				break;
 			case ACTION_LIST:
 			case ACTION_LONG_LIST:
 			default:

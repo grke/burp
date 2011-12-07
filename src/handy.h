@@ -4,6 +4,8 @@
 #include <openssl/md5.h>
 #include <zlib.h>
 
+#include "bfile.h"
+
 extern void close_fd(int *fd);
 extern void close_fp(FILE **fp);
 extern void gzclose_fp(gzFile *fp);
@@ -13,8 +15,11 @@ extern char *prepend(const char *prep, const char *fname, size_t len, const char
 extern char *prepend_s(const char *prep, const char *fname, size_t len);
 extern int mkpath(char **rpath, const char *limit);
 extern int build_path(const char *datadir, const char *fname, size_t flen, char **rpath, const char *limit);
-extern int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, const char *extrameta, size_t elen);
-extern int send_whole_file(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, struct cntr *cntr, const char *extrameta, size_t elen);
+
+extern int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, struct cntr *cntr);
+extern void close_file_for_send(BFILE *bfd, FILE **fp);
+extern int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen);
+extern int send_whole_file(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, struct cntr *cntr, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen);
 extern int set_non_blocking(int fd);
 extern int set_blocking(int fd);
 extern int do_rename(const char *oldpath, const char *newpath);
@@ -35,5 +40,7 @@ extern int dpth_is_compressed(const char *datapath);
 #ifndef HAVE_WIN32
 extern void setup_signal(int sig, void handler(int sig));
 #endif
+extern void cmd_to_text(char cmd, char *buf, size_t len);
+extern void print_all_cmds(void);
 
 #endif

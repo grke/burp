@@ -1508,7 +1508,7 @@ int win32_chmod_old(const char *path, mode_t mode)
 static
 int win32_chmod_new(const char *path, int64_t winattr)
 {
-	if(winattr & FILE_ATTRIBUTE_ENCRYPTED) printf("\n   %s was encrypted!\n", path);
+	//if(winattr & FILE_ATTRIBUTE_ENCRYPTED) printf("\n   %s was encrypted!\n", path);
    DWORD attr = (DWORD)-1;
 
    if (p_GetFileAttributesW) {

@@ -334,9 +334,9 @@ support_crypto=no
 dnl
 dnl allow setting default executable permissions
 dnl
-SBINPERM=0750
+SBINPERM=0755
 AC_ARG_WITH(sbin-perm,
-   AC_HELP_STRING([--with-sbin-perm=MODE], [specify permissions for sbin binaries @<:@default=0750@:>@]),
+   AC_HELP_STRING([--with-sbin-perm=MODE], [specify permissions for sbin binaries @<:@default=0755@:>@]),
    [
        if test "x$withval" != "x" ; then
           SBINPERM=$withval

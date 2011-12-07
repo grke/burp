@@ -28,6 +28,7 @@ static void usage_server(void)
 	printf("  -c <path>     Path to config file (default: %s).\n", get_config_path());
 	printf("  -F            Stay in the foreground.\n");
 	printf("  -h|-?         Print this text and exit.\n");
+	printf("  -i            Print index of symbols and exit\n");
 	printf("  -l <path>     Path to log file.\n");
 	printf("  -n            Do not fork any children (implies '-F').\n");
 	printf("  -v            Print version and exit.\n");
@@ -52,6 +53,7 @@ static void usage_client(void)
 	printf("  -d <directory> Directory to restore to.\n");
 	printf("  -f             Allow overwrite during restore.\n");
 	printf("  -h|-?          Print this text and exit.\n");
+	printf("  -i             Print index of symbols and exit\n");
 	printf("  -l <path>      Path to log file.\n");
 	printf("  -r <regex>     Specify a regular expression.\n");
 	printf("  -v             Print version and exit.\n");
@@ -126,7 +128,7 @@ int main (int argc, char *argv[])
 
 	init_log(argv[0]);
 
-	while((option=getopt(argc, argv, "a:b:c:d:hfFnr:l:v?"))!=-1)
+	while((option=getopt(argc, argv, "a:b:c:d:hfFinr:l:v?"))!=-1)
 	{
 		switch(option)
 		{
@@ -147,6 +149,8 @@ int main (int argc, char *argv[])
 					act=ACTION_STATUS;
 				else if(!strncmp(optarg, "Status", 1))
 					act=ACTION_STATUS_SNAPSHOT;
+				else if(!strncmp(optarg, "estimate", 1))
+					act=ACTION_ESTIMATE;
 				else
 				{
 					usage();
@@ -168,6 +172,9 @@ int main (int argc, char *argv[])
 			case 'F':
 				daemon=0;
 				break;
+			case 'i':
+				print_all_cmds();
+				return 0;
 			case 'n':
 				forking=0;
 				break;

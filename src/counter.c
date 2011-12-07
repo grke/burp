@@ -84,7 +84,7 @@ char cmd_to_changed(char cmd)
 	return CMD_ERROR;
 }
 
-static const char *bytes_to_human(unsigned long long counter)
+const char *bytes_to_human(unsigned long long counter)
 {
 	static char ret[32]="";
 	float div=(float)counter;
@@ -262,7 +262,7 @@ static void restore_print(const char *msg, unsigned long long count)
 	quint_print(msg, 0, 0, count, 0, FORMAT_CLIENT_RESTORE);
 }
 
-static void bottom_part(struct cntr *a, struct cntr *b)
+static void bottom_part(struct cntr *a, struct cntr *b, enum action act)
 {
 	logc("\n");
 	logc("             Warnings:   % 11llu\n",
@@ -270,6 +270,9 @@ static void bottom_part(struct cntr *a, struct cntr *b)
 	logc("\n");
 	logc("      Bytes estimated:   % 11llu%s\n",
 		a->byte, bytes_to_human(a->byte));
+
+	if(act==ACTION_ESTIMATE) return;
+
 	logc("      Bytes in backup:   % 11llu%s\n",
 		b->byte, bytes_to_human(b->byte));
 	logc("       Bytes received:   % 11llu%s\n",
@@ -382,7 +385,7 @@ void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act, int c
 	}
 
 	table_border();
-	bottom_part(p1c, c);
+	bottom_part(p1c, c, act);
 
 	border();
 }

@@ -61,6 +61,7 @@ void init_config(struct config *conf)
 	conf->group=NULL;
 	conf->keep=NULL;
 	conf->kpcount=0;
+	conf->max_hardlinks=10000;
 
 	conf->timer_script=NULL;
 	conf->timer_arg=NULL;
@@ -471,6 +472,10 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 		else if(!strcmp(field, "hardlinked_archive"))
 		{
 			if(atoi(value)) conf->hardlinked_archive=1;
+		}
+		else if(!strcmp(field, "max_hardlinks"))
+		{
+			conf->max_hardlinks=atoi(value);
 		}
 		else if(!strcmp(field, "librsync"))
 		{
@@ -891,6 +896,9 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 			}
 			if(!conf->kpcount)
 			  { logp("%s: keep unset\n", config_path); r--; }
+			if(conf->max_hardlinks<2)
+			  { logp("%s: max_hardlinks too low\n",
+			    	config_path); r--; }
 			break;
 		case MODE_CLIENT:
 			if(!conf->cname)

@@ -16,7 +16,7 @@ struct bu
 	unsigned long trindex;
 };
 
-extern int recursive_hardlink(const char *src, const char *dst, const char *client, struct cntr *p1cntr, struct cntr *cntr);
+extern int recursive_hardlink(const char *src, const char *dst, const char *client, struct cntr *p1cntr, struct cntr *cntr, struct config *conf);
 extern int recursive_delete(const char *d, const char *file, bool delfiles);
 extern void free_current_backups(struct bu **arr, int a);
 extern int get_current_backups(const char *basedir, struct bu **arr, int *a, int log);
@@ -29,6 +29,6 @@ extern int remove_old_backups(const char *basedir, struct config *cconf, const c
 extern int compile_regex(regex_t **regex, const char *str);
 extern int check_regex(regex_t *regex, const char *buf);
 extern size_t get_librsync_block_len(const char *endfile);
-
+extern int do_link(const char *oldpath, const char *newpath, struct stat *statp, struct config *conf);
 
 #endif // _CURRENT_BACKUPS_H

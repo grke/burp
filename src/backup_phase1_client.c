@@ -55,6 +55,8 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *p1cn
 	|| async_write_str(filesymbol, ff->fname))
 		return -1;
       do_filecounter(p1cntr, filesymbol, 1);
+      if(ff->type==FT_REG)
+	do_filecounter_bytes(p1cntr, (unsigned long long)ff->statp.st_size);
       if(maybe_send_extrameta(ff->fname, filesymbol, attribs, p1cntr))
 		return -1;
       break;
@@ -144,7 +146,7 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *p1cn
    return 0;
 }
 
-int backup_phase1_client(struct config *conf, struct cntr *p1cntr, struct cntr *cntr)
+int backup_phase1_client(struct config *conf, int estimate, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int sd=0;
 	int ret=0;

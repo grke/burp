@@ -2,9 +2,14 @@
   * Fix bugs with uncompressed encrypted backup/restore.
   * Get verify all backups for a client (-a v -b a) to work.
   * Return non-zero if there were warnings on verify or restore.
-  * Fix 'max_file_size' option, add 'min_file_size' option.
+  * Add 'min_file_size' option, fix 'max_file_size' option.
   * Add generic server-side pre/post scripts that can run on every connection
     after authentication and before disconnecting.
+  * Add 'max_hardlinks' option, which limits the number of times a single file
+    is hardlinked in storage. Default is 10000.
+  * Add '-i' option: print an index table of symbols that humans may see burp
+    produce, and exit.
+  * Let backups carry on when files cannot be opened.
 
 2011-11-26 Changes in burp-1.2.5:
   * IMPORTANT: Fixed critical path comparison typo bug. If you have been using

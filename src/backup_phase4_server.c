@@ -149,7 +149,7 @@ static int gen_rev_delta(const char *sigpath, const char *deltadir, const char *
 	return ret;
 }
 
-static int inflate_or_link_oldfile(const char *oldpath, const char *infpath)
+static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, struct config *cconf)
 {
 	int ret=0;
 	struct stat statp;
@@ -195,11 +195,8 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath)
 	else
 	{
 		// If it was not a compressed file, just hard link it.
-		if(link(oldpath, infpath))
-		{
-			logp("could not hard link '%s' to '%s': %s\n", infpath, oldpath, strerror(errno));
+		if(do_link(oldpath, infpath, &statp, cconf))
 			ret=-1;
-		}
 	
 	}
 	return ret;
@@ -227,13 +224,19 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 	{
 		// Looks like an interrupted jiggle
 		// did this file already.
+		static int donemsg=0;
 		if(!lstat(deltafpath, &statp) && S_ISREG(statp.st_mode))
 		{
 			logp("deleting unneeded forward delta: %s\n",
 				deltafpath);
 			unlink(deltafpath);
 		}
-		logp("skipping already present file: %s\n", finpath);
+		if(!donemsg)
+		{
+			logp("skipping already present file: %s\n", finpath);
+			logp("to save log space, skips of other already present files will not be logged\n");
+			donemsg++;
+		}
 	}
 	else if(mkpath(&finpath, datadir))
 	{
@@ -273,7 +276,7 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 		*cp='\0';
 
 		//logp("Fixing up: %s\n", datapth);
-		if(inflate_or_link_oldfile(oldpath, infpath))
+		if(inflate_or_link_oldfile(oldpath, infpath, cconf))
 		{
 			logp("error when inflating old file: %s\n", oldpath);
 			ret=-1;
@@ -365,10 +368,8 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 		// Use the old unchanged file.
 		// Hard link it first.
 		//logp("Hard linking to old file: %s\n", datapth);
-		if(link(oldpath, finpath))
+		if(do_link(oldpath, finpath, &statp, cconf))
 		{
-			logp("could not hard link '%s' to '%s': %s\n",
-				finpath, oldpath, strerror(errno));
 			ret=-1;
 			goto cleanup;
 		}
@@ -587,7 +588,7 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 			}
 			logp("Duplicating current backup.\n");
 			if(recursive_hardlink(current, currentduptmp, client,
-				p1cntr, cntr)
+				p1cntr, cntr, cconf)
 			  || do_rename(currentduptmp, currentdup))
 			{
 				ret=-1;

@@ -21,6 +21,8 @@
 #define LOCKFILE_NAME		"lockfile"
 #define BEDUP_LOCKFILE_NAME	"lockfile.bedup"
 
+#define DEF_MAX_LINKS		10000
+
 static int makelinks=0;
 static char *prog=NULL;
 
@@ -724,7 +726,9 @@ static int usage(void)
 	printf("  -h|-?                    Print this text and exit.\n");
 	printf("  -l                       Hard link any duplicate files found.\n");
 	printf("  -m <number>              Maximum number of hard links to a single file.\n");
-	printf("                           The default is 10000. On ext3, the maximum number\n");
+	printf("                           (non-burp mode only - in burp mode, use the\n");
+	printf("                           max_hardlinks option in the configuration file)\n");
+	printf("                           The default is %d. On ext3, the maximum number\n", DEF_MAX_LINKS);
 	printf("                           of links possible is 32000, but space is needed\n");
 	printf("                           for the normal operation of burp.\n");
 	printf("  -n <list of directories> Non-burp mode. Deduplicate any (set of) directories.\n");
@@ -774,7 +778,7 @@ int main(int argc, char *argv[])
 	int ret=0;
 	int option=0;
 	int nonburp=0;
-	unsigned int maxlinks=10000;
+	unsigned int maxlinks=DEF_MAX_LINKS;
 	char *groups=NULL;
 	char ext[16]="";
 	int givenconfigfile=0;
@@ -822,6 +826,12 @@ int main(int argc, char *argv[])
 	if(nonburp && groups)
 	{
 		logp("-n and -g options are mutually exclusive\n");
+		return 1;
+	}
+	if(!nonburp && maxlinks!=DEF_MAX_LINKS)
+	{
+		logp("-m option is specified via the configuration file in burp mode (max_hardlinks=)\n");
+		return 1;
 	}
 
 	if(optind>=argc)
@@ -902,6 +912,7 @@ int main(int argc, char *argv[])
 			return 1;
 		}
 		logp("Dedup clients from %s\n", conf.clientconfdir);
+		maxlinks=conf.max_hardlinks;
 		if(gcount)
 		{
 			logp("in dedup groups:\n");

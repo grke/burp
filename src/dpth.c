@@ -1,4 +1,5 @@
 #include "burp.h"
+#include "bfile.h"
 #include "handy.h"
 #include "prog.h"
 #include "msg.h"

@@ -56,6 +56,7 @@ extern void do_filecounter_bytes(struct cntr *c, unsigned long long bytes);
 extern void do_filecounter_sentbytes(struct cntr *c, unsigned long long bytes);
 extern void do_filecounter_recvbytes(struct cntr *c, unsigned long long bytes);
 extern void reset_filecounter(struct cntr *c);
+extern const char *bytes_to_human(unsigned long long counter);
 extern const char *bytes_to_human_str(const char *str);
 extern char cmd_to_same(char cmd);
 extern char cmd_to_changed(char cmd);

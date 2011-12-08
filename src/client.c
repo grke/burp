@@ -92,13 +92,7 @@ static int do_backup_client(struct config *conf, int resume, int estimate, struc
 		ret=backup_phase2_client(conf, p1cntr, resume, cntr);
 
 	if(estimate)
-	{
-		if(async_write_str(CMD_GEN, "estimateend")
-		  || async_read_expect(CMD_GEN, "ok"))
-			ret=-1;
-
 		print_filecounters(p1cntr, cntr, ACTION_ESTIMATE, 1);
-	}
 
 #if defined(WIN32_VSS)
 	win32_stop_vss();
@@ -148,43 +142,50 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 //	settimers(0, 100);
 	logp("begin client\n");
 
-	ssl_load_globals();
-	if(!(ctx=ssl_initialise_ctx(conf)))
+	if(act!=ACTION_ESTIMATE)
 	{
-		logp("error initialising ssl ctx\n");
-		return -1;
+		ssl_load_globals();
+		if(!(ctx=ssl_initialise_ctx(conf)))
+		{
+			logp("error initialising ssl ctx\n");
+			return -1;
+		}
+
+		SSL_CTX_set_session_id_context(ctx,
+			(const unsigned char *)&s_server_session_id_context,
+			sizeof(s_server_session_id_context));
+
+		if((rfd=init_client_socket(conf->server, conf->port))<0) return 1;
+
+		if(!(ssl=SSL_new(ctx))
+		  || !(sbio=BIO_new_socket(rfd, BIO_NOCLOSE)))
+		{
+			logp("There was a problem joining ssl to the socket.\n");
+			close_fd(&rfd);
+			return 1;
+		}
+		SSL_set_bio(ssl, sbio, sbio);
+		if(SSL_connect(ssl)<=0)
+		{
+			berr_exit("SSL connect error\n");
+			close_fd(&rfd);
+			return 1;
+		}
+		if(ssl_check_cert(ssl, conf))
+		{
+			logp("check cert failed\n");
+			close_fd(&rfd);
+			return 1;
+		}
+		set_non_blocking(rfd);
 	}
 
-	SSL_CTX_set_session_id_context(ctx,
-		(const unsigned char *)&s_server_session_id_context,
-		sizeof(s_server_session_id_context));
+	ret=async_init(rfd, ssl, conf, act==ACTION_ESTIMATE);
 
-	if((rfd=init_client_socket(conf->server, conf->port))<0) return 1;
+	if(!ret && act!=ACTION_ESTIMATE)
+		ret=authorise_client(conf, &p1cntr);
 
-	if(!(ssl=SSL_new(ctx))
-	  || !(sbio=BIO_new_socket(rfd, BIO_NOCLOSE)))
-	{
-		logp("There was a problem joining ssl to the socket.\n");
-		close_fd(&rfd);
-		return 1;
-	}
-	SSL_set_bio(ssl, sbio, sbio);
-	if(SSL_connect(ssl)<=0)
-	{
-		berr_exit("SSL connect error\n");
-		close_fd(&rfd);
-		return 1;
-	}
-	if(ssl_check_cert(ssl, conf))
-	{
-		logp("check cert failed\n");
-		close_fd(&rfd);
-		return 1;
-	}
-	set_non_blocking(rfd);
-
-	if(!(ret=async_init(rfd, ssl, conf))
-	 && !(ret=authorise_client(conf, &p1cntr)))
+	if(!ret)
 	{
 		rfd=-1;
 		int resume=0;
@@ -284,8 +285,6 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 				break;
 			}
 			case ACTION_ESTIMATE:
-				ret=maybe_check_timer("estimate",
-					conf, &resume);
 				if(!ret) ret=do_backup_client(conf, 0, 1,
 						&p1cntr, &cntr);
 				break;
@@ -299,7 +298,8 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 
 	rfd=-1;
 	async_free();
-	ssl_destroy_ctx(ctx);
+	if(act!=ACTION_ESTIMATE)
+		ssl_destroy_ctx(ctx);
 
         //logp("end client\n");
 	return ret;

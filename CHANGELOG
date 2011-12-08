@@ -11,6 +11,8 @@
     produce, and exit.
   * Let backups carry on when files cannot be opened.
   * Spot Windows EFS directories and files and warn about them.
+  * Add an 'estimate' option (-a e), which does a scan of the file system to
+    be backed up, and prints counters, without contacting the server.
 
 2011-11-26 Changes in burp-1.2.5:
   * IMPORTANT: Fixed critical path comparison typo bug. If you have been using

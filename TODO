@@ -56,9 +56,6 @@
 * Break the stupidly long find_files() function down into smaller pieces.
   (partly done)
 
-* burp -a e: 'estimate' option - just run backup phase1 to find out roughly how 
-  much space a client will use.
-
 * Maybe look at the timer script regularly. If the time is now out of the
   defined range, interrupt the backup in such a way that it will pick up from
   where it left off the next time round.

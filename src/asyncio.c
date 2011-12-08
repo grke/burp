@@ -13,6 +13,7 @@ static SSL *ssl=NULL;
 static float ratelimit=0;
 static int network_timeout=0;
 static int max_network_timeout=0;
+static int doing_estimate=0;
 
 static char *readbuf=NULL;
 static size_t readbuflen=0;
@@ -226,12 +227,15 @@ int async_append_all_to_write_buffer(char wcmd, const char *wsrc, size_t *wlen)
 	return 0;
 }
 
-int async_init(int afd, SSL *assl, struct config *conf)
+int async_init(int afd, SSL *assl, struct config *conf, int estimate)
 {
 	fd=afd;
 	ssl=assl;
 	ratelimit=conf->ratelimit;
 	max_network_timeout=conf->network_timeout;
+	doing_estimate=estimate;
+	if(doing_estimate) return 0;
+
 	if(async_alloc_buf(&readbuf, &readbuflen, readbufmaxsize)
 	  || async_alloc_buf(&writebuf, &writebuflen, writebufmaxsize))
 		return -1;
@@ -321,6 +325,7 @@ int async_rw(char *rcmd, char **rdst, size_t *rlen, char wcmd, const char *wsrc,
 	static int write_blocked_on_read=0;
 
 //printf("in async_rw\n");
+	if(doing_estimate) return 0;
 
 	if(fd<0)
 	{
@@ -425,6 +430,7 @@ int async_rw(char *rcmd, char **rdst, size_t *rlen, char wcmd, const char *wsrc,
 int async_rw_ensure_read(char *rcmd, char **rdst, size_t *rlen, char wcmd, const char *wsrc, size_t wlen)
 {
 	size_t w=wlen;
+	if(doing_estimate) return 0;
 	while(!*rdst) if(async_rw(rcmd, rdst, rlen, wcmd, wsrc, &w))
 		return -1;
 	return 0;
@@ -433,6 +439,7 @@ int async_rw_ensure_read(char *rcmd, char **rdst, size_t *rlen, char wcmd, const
 int async_rw_ensure_write(char *rcmd, char **rdst, size_t *rlen, char wcmd, const char *wsrc, size_t wlen)
 {
 	size_t w=wlen;
+	if(doing_estimate) return 0;
 	while(w) if(async_rw(rcmd, rdst, rlen, wcmd, wsrc, &w))
 		return -1;
 	return 0;
@@ -644,7 +651,8 @@ int logw(struct cntr *cntr, const char *fmt, ...)
 	va_list ap;
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
-	r=async_write_str(CMD_WARNING, buf);
+	if(doing_estimate) printf("\nWARNING: %s\n", buf);
+	else r=async_write_str(CMD_WARNING, buf);
 	va_end(ap);
 	do_filecounter(cntr, CMD_WARNING, 1);
 	return r;

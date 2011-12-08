@@ -240,7 +240,7 @@ static int open_log(const char *realworking, const char *client, const char *cve
 	return 0;
 }
 
-static int do_backup_server(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *manifest, const char *forward, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *client, const char *cversion, struct cntr *p1cntr, struct cntr *cntr, int resume, int estimate)
+static int do_backup_server(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *manifest, const char *forward, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *client, const char *cversion, struct cntr *p1cntr, struct cntr *cntr, int resume)
 {
 	int ret=0;
 	char msg[256]="";
@@ -348,12 +348,6 @@ static int do_backup_server(const char *basedir, const char *current, const char
 		{
 			logp("error in phase 1\n");
 			goto error;
-		}
-
-		if(estimate)
-		{
-			print_filecounters(p1cntr, cntr, ACTION_ESTIMATE, 0);
-			goto end;
 		}
 	}
 
@@ -863,28 +857,10 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 	char *phase1data=NULL;
 	char *phase2data=NULL;
 	char *unchangeddata=NULL;
-	int estimate=0;
 
-	if(!(basedir=prepend_s(cconf->directory, client, strlen(client))))
-	{
-		log_and_send("out of memory");
-		ret=-1;
-		goto end;
-	}
-	if(cmd==CMD_GEN && !strncmp(buf, "estimate", strlen("estimate")))
-	{
-		//working=prepend_s(basedir, "estimate", strlen("estimate"));
-		estimate++;
-	}
-	working=prepend_s(basedir, "working", strlen("working"));
-	if(!working)
-	{
-		log_and_send("out of memory");
-		ret=-1;
-		goto end;
-	}
-
-	if(!(finishing=prepend_s(basedir, "finishing", strlen("finishing")))
+	if(!(basedir=prepend_s(cconf->directory, client, strlen(client)))
+	  || !(working=prepend_s(basedir, "working", strlen("working")))
+	  || !(finishing=prepend_s(basedir, "finishing", strlen("finishing")))
 	  || !(current=prepend_s(basedir, "current", strlen("current")))
 	  || !(currentdata=prepend_s(current, "data", strlen("data")))
 	  || !(manifest=prepend_s(working, "manifest.gz", strlen("manifest.gz")))
@@ -899,8 +875,8 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 		log_and_send("out of memory");
 		ret=-1;
 	}
-	else if(estimate || (cmd==CMD_GEN && !strncmp(buf,
-			"backupphase1", strlen("backupphase1"))))
+	else if(cmd==CMD_GEN
+	  && !strncmp(buf, "backupphase1", strlen("backupphase1")))
 	{
 		int resume=0;
 		if(get_lock_and_clean(basedir, lockbasedir, lockfile, current,
@@ -944,15 +920,6 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 				}
 				logp("Running backup of %s\n", client);
 			}
-			if(!strcmp(buf, "estimate"))
-			{
-				estimate++;
-				if(resume)
-				{
-					logw(cntr, "Not running estimate of %s because server wants to resume previous backup\n", client);
-					goto end;
-				}
-			}
 
 			buf=NULL;
 
@@ -963,7 +930,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			  currentdata, finishing, cconf,
 			  manifest, forward, phase1data, phase2data,
 			  unchangeddata, client, cversion, p1cntr, cntr,
-			  resume, estimate);
+			  resume);
 			if(ret)
 				run_script(
 					cconf->notify_failure_script,
@@ -1125,7 +1092,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 		goto finish;
 	}
 	ret=0;
-	if(async_init(*cfd, ssl, &conf))
+	if(async_init(*cfd, ssl, &conf, 0))
 	{
 		ret=-1;
 		goto finish;

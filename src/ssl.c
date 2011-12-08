@@ -106,6 +106,47 @@ static void sanitise(char *buf)
 			*cp='_';
 	}
 }
+
+/* This function taken from openvpn-2.2.1 and tidied up a bit. */
+static int setenv_x509(X509_NAME *x509, const char *type)
+{
+	int i, n;
+	int fn_nid;
+	ASN1_OBJECT *fn;
+	ASN1_STRING *val;
+	X509_NAME_ENTRY *ent;
+	const char *objbuf;
+	unsigned char *buf;
+	char *name_expand;
+	size_t name_expand_size;
+
+	n = X509_NAME_entry_count (x509);
+	for (i = 0; i < n; ++i)
+	{
+		if(!(ent=X509_NAME_get_entry (x509, i))
+		  || !(fn=X509_NAME_ENTRY_get_object(ent))
+		  || !(val=X509_NAME_ENTRY_get_data(ent))
+		  || (fn_nid=OBJ_obj2nid(fn))==NID_undef
+		  || !(objbuf=OBJ_nid2sn(fn_nid)))
+			continue;
+		buf=(unsigned char *)1; /* bug in OpenSSL 0.9.6b ASN1_STRING_to_UTF8 requires this workaround */
+		if(ASN1_STRING_to_UTF8(&buf, val)<=0) continue;
+		name_expand_size = 64 + strlen (objbuf);
+		if(!(name_expand=(char *)malloc(name_expand_size)))
+		{
+			logp("out of memory\n");
+			return -1;
+		}
+		snprintf(name_expand, name_expand_size,
+			"X509_%s_%s", type, objbuf);
+		sanitise(name_expand);
+		sanitise((char*)buf);
+		setenv(name_expand, (char*)buf, 1);
+		free (name_expand);
+		OPENSSL_free (buf);
+	}
+	return 0;
+}
 #endif
 
 int ssl_check_cert(SSL *ssl, struct config *conf)
@@ -138,14 +179,10 @@ int ssl_check_cert(SSL *ssl, struct config *conf)
 		logp("'%s'!='%s'\n", tmpbuf, conf->ssl_peer_cn);
 		return -1;
 	}
-
 #ifndef HAVE_WIN32
-	sanitise(tmpbuf);
-	setenv("X509_PEER_CN", tmpbuf, 1);
-	X509_NAME_get_text_by_NID(X509_get_issuer_name(peer),
-		NID_commonName, tmpbuf, sizeof(tmpbuf));
-	sanitise(tmpbuf);
-	setenv("X509_PEER_IN", tmpbuf, 1);
+	if(setenv_x509(X509_get_subject_name(peer), "PEER")
+	  || setenv_x509(X509_get_issuer_name(peer), "ISSUER"))
+		return -1;
 #endif
 
 	return 0;

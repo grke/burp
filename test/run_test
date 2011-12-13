@@ -285,6 +285,7 @@ sleep 5
 # ----- Test 1 -----
 start_test 1 "First backup/restore comparison"
 normal_settings
+#echo "server_script_pre = /tmp/server.sh" >>"$serverconf"
 run_backup
 # Verify the specific backup number 1. Later tests will use 'all', which will
 # verify all available backups. Might as well test both methods.

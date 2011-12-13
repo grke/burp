@@ -5,6 +5,8 @@
   * Add 'min_file_size' option, fix 'max_file_size' option.
   * Add generic server-side pre/post scripts that can run on every connection
     after authentication and before disconnecting.
+  * Set environment variables from SSL cert details so that the server-side
+    scripts can see them.
   * Add 'max_hardlinks' option, which limits the number of times a single file
     is hardlinked in storage. Default is 10000.
   * Add '-i' option: print an index table of symbols that humans may see burp
@@ -14,6 +16,7 @@
   * Add an 'estimate' option (-a e), which does a scan of the file system to
     be backed up, and prints counters, without contacting the server.
   * Strip out 744 lines of unused Windows code.
+  * Fix possible segfault when backup directory forward paths don't match.
 
 2011-11-26 Changes in burp-1.2.5:
   * IMPORTANT: Fixed critical path comparison typo bug. If you have been using

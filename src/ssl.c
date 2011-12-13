@@ -102,6 +102,7 @@ static void sanitise(char *buf)
 		  && *cp!='_'
 		  && *cp!='-'
 		  && *cp!='.'
+		  && *cp!=':'
 		  && *cp!='@')
 			*cp='_';
 	}
@@ -147,6 +148,44 @@ static int setenv_x509(X509_NAME *x509, const char *type)
 	}
 	return 0;
 }
+
+static int setenv_x509_date(ASN1_TIME *tm, const char *env)
+{
+	BIO *bio_out=NULL;
+	BUF_MEM *bptr=NULL;
+	char tmpbuf[256]="";
+	if(!(bio_out=BIO_new(BIO_s_mem())))
+	{
+		logp("out of memory\n");
+		return -1;
+	}
+	ASN1_TIME_print(bio_out, tm);
+	BIO_get_mem_ptr(bio_out, &bptr);
+	BIO_gets(bio_out, tmpbuf, sizeof(tmpbuf)-1);
+	BIO_free_all(bio_out);
+	sanitise(tmpbuf);
+	setenv(env, (char*)tmpbuf, 1);
+	return 0;
+}
+
+static int setenv_x509_serialnumber(ASN1_INTEGER *i, const char *env)
+{
+	BIO *bio_out=NULL;
+	BUF_MEM *bptr=NULL;
+	char tmpbuf[256]="";
+	if(!(bio_out=BIO_new(BIO_s_mem())))
+	{
+		logp("out of memory\n");
+		return -1;
+	}
+	i2a_ASN1_INTEGER(bio_out, i);
+	BIO_get_mem_ptr(bio_out, &bptr);
+	BIO_gets(bio_out, tmpbuf, sizeof(tmpbuf)-1);
+	BIO_free_all(bio_out);
+	sanitise(tmpbuf);
+	setenv(env, (char*)tmpbuf, 1);
+	return 0;
+}
 #endif
 
 int ssl_check_cert(SSL *ssl, struct config *conf)
@@ -183,6 +222,14 @@ int ssl_check_cert(SSL *ssl, struct config *conf)
 	if(setenv_x509(X509_get_subject_name(peer), "PEER")
 	  || setenv_x509(X509_get_issuer_name(peer), "ISSUER"))
 		return -1;
+
+	if(setenv_x509_date(X509_get_notBefore(peer), "X509_PEER_NOT_BEFORE")
+	  || setenv_x509_date(X509_get_notAfter(peer), "X509_PEER_NOT_AFTER"))
+		return -1;
+
+	if(setenv_x509_serialnumber(X509_get_serialNumber(peer),
+		"X509_PEER_SERIALNUMBER"))
+			return -1;
 #endif
 
 	return 0;

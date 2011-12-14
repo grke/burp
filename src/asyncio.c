@@ -385,9 +385,11 @@ int async_rw(char *rcmd, char **rdst, size_t *rlen, char wcmd, const char *wsrc,
 		  && (!doread || !FD_ISSET(fd, &fsr))
 		  && (!dowrite || !FD_ISSET(fd, &fsw)))
 		{
-	//		logp("SELECT HIT TIMEOUT - doread: %d, dowrite: %d\n",
-	//			doread, dowrite);
-			if(max_network_timeout>0 && network_timeout--<=0)
+			//logp("SELECT HIT TIMEOUT - doread: %d, dowrite: %d\n",
+			//	doread, dowrite);
+			// Be careful to avoid 'read quick' mode.
+			if((setsec || setusec)
+			  && max_network_timeout>0 && network_timeout--<=0)
 			{
 				logp("No activity on network for %d seconds.\n",
 					max_network_timeout);

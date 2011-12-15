@@ -33,6 +33,7 @@ FILED_OBJS = \
 	$(OBJDIR)/asyncio.o \
 	$(OBJDIR)/attribs.o \
 	$(OBJDIR)/auth_client.o \
+	$(OBJDIR)/autoupgrade_client.o \
 	$(OBJDIR)/backup_phase1_client.o \
 	$(OBJDIR)/backup_phase2_client.o \
 	$(OBJDIR)/base64.o \

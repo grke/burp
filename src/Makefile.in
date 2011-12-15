@@ -25,6 +25,7 @@ SVRSRCS =	acl.c \
 		auth_server.c \
 		auth_client.c \
 		autoupgrade_client.c \
+		autoupgrade_server.c \
 		backup_phase1_client.c \
 		backup_phase2_client.c \
 		backup_phase1_server.c \

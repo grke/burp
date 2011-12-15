@@ -11,7 +11,6 @@
 #include "backup_phase1_client.h"
 #include "backup_phase2_client.h"
 #include "restore_client.h"
-#include "autoupgrade_client.h"
 #include "list_client.h"
 #include "ssl.h"
 #include "berrno.h"

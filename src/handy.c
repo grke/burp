@@ -1062,7 +1062,7 @@ int run_script(const char *script, struct strlist **userargs, int userargc, cons
 	if(arg4) cmd[l++]=(char *)arg4;
 	if(arg5) cmd[l++]=(char *)arg5;
 	for(a=0; a<userargc && l<64-1; a++)
-	cmd[l++]=userargs[a]->path;
+		cmd[l++]=userargs[a]->path;
 	cmd[l++]=NULL;
 
 #ifndef HAVE_WIN32

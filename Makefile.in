@@ -110,9 +110,10 @@ install: installdirs
 	@if [ ! -f $(DESTDIR)$(sysconfdir)/ssl_cert-client.pem ] ; then cp configs/certs/ssl_cert-client.pem $(DESTDIR)$(sysconfdir)/ssl_cert-client.pem ; fi
 	@if [ ! -f $(DESTDIR)$(sysconfdir)/ssl_cert_ca.pem ] ; then cp configs/certs/ssl_cert_ca.pem $(DESTDIR)$(sysconfdir)/ssl_cert_ca.pem ; fi
 	@if [ ! -f $(DESTDIR)$(sysconfdir)/dhfile.pem ] ; then cp configs/certs/dhfile.pem $(DESTDIR)$(sysconfdir)/dhfile.pem ; fi
-	@if [ ! -f $(DESTDIR)$(sysconfdir)/timer_script ] ; then cp configs/server/timer_script $(DESTDIR)$(sysconfdir)/timer_script && chmod 755 $(DESTDIR)$(sysconfdir)/timer_script ; fi
 	@if [ ! -f $(DESTDIR)$(sysconfdir)/notify_script ] ; then cp configs/server/notify_script $(DESTDIR)$(sysconfdir)/notify_script && chmod 755 $(DESTDIR)$(sysconfdir)/notify_script ; fi
+	@if [ ! -f $(DESTDIR)$(sysconfdir)/ssl_extra_checks_script ] ; then cp configs/server/ssl_extra_checks_script $(DESTDIR)$(sysconfdir)/ssl_extra_checks_script && chmod 755 $(DESTDIR)$(sysconfdir)/ssl_extra_checks_script ; fi
 	@if [ ! -f $(DESTDIR)$(sysconfdir)/summary_script ] ; then cp configs/server/summary_script $(DESTDIR)$(sysconfdir)/summary_script && chmod 755 $(DESTDIR)$(sysconfdir)/summary_script ; fi
+	@if [ ! -f $(DESTDIR)$(sysconfdir)/timer_script ] ; then cp configs/server/timer_script $(DESTDIR)$(sysconfdir)/timer_script && chmod 755 $(DESTDIR)$(sysconfdir)/timer_script ; fi
 
 Makefile: Makefile.in
 	cd $(topdir) \

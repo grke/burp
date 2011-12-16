@@ -379,7 +379,7 @@ static int pre_post_override(char **override, char **pre, char **post)
 	return 0;
 }
 
-static int setup_script_args(struct strlist **list, int count, struct strlist ***prelist, struct strlist ***postlist, int *precount, int *postcount)
+static int setup_script_arg_override(struct strlist **list, int count, struct strlist ***prelist, struct strlist ***postlist, int *precount, int *postcount)
 {
 	int i=0;
 	if(!list) return 0;
@@ -714,7 +714,7 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 			if(get_conf_val_args(field, value,
 				"server_script_pre_arg",
 				&(conf->server_script_pre_arg),
-				NULL, &(conf->sprecount),
+				&got_spre_args, &(conf->sprecount),
 				&sprelist, 0)) return -1;
 			if(get_conf_val(field, value,
 			  "server_script_post",
@@ -722,7 +722,7 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 			if(get_conf_val_args(field, value,
 				"server_script_post_arg",
 				&(conf->server_script_post_arg),
-				NULL, &(conf->spostcount),
+				&got_spost_args, &(conf->spostcount),
 				&spostlist, 0)) return -1;
 
 			if(get_conf_val(field, value,
@@ -747,7 +747,7 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 			if(get_conf_val_args(field, value,
 				"server_script_arg",
 				&(conf->server_script_arg),
-				NULL, &(conf->sscount),
+				&got_ss_args, &(conf->sscount),
 				&sslist, 0)) return -1;
 
 
@@ -801,13 +801,6 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 	}
 	conf->startdir=sdlist;
 
-	if(!got_timer_args) conf->timer_arg=talist;
-	if(!got_ns_args) conf->notify_success_arg=nslist;
-	if(!got_nf_args) conf->notify_failure_arg=nflist;
-	if(!got_spre_args) conf->server_script_pre_arg=sprelist;
-	if(!got_spost_args) conf->server_script_post_arg=spostlist;
-	if(!got_ss_args) conf->server_script_arg=sslist;
-
 	if(!got_kp_args)
 	{
 		unsigned long long mult=1;
@@ -844,19 +837,28 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 	pre_post_override(&(conf->server_script),
 		&(conf->server_script_pre), &(conf->server_script_post));
 
-	setup_script_args(bslist, conf->bscount, &bprelist, &bpostlist,
+	if(!got_timer_args) conf->timer_arg=talist;
+	if(!got_ns_args) conf->notify_success_arg=nslist;
+	if(!got_nf_args) conf->notify_failure_arg=nflist;
+	if(!got_ss_args) conf->server_script_arg=sslist;
+
+	setup_script_arg_override(bslist, conf->bscount,
+		&bprelist, &bpostlist,
 		&(conf->bprecount), &(conf->bpostcount));
-	setup_script_args(rslist, conf->rscount, &rprelist, &rpostlist,
+	setup_script_arg_override(rslist, conf->rscount,
+		&rprelist, &rpostlist,
 		&(conf->rprecount), &(conf->rpostcount));
-	setup_script_args(sslist, conf->sscount, &sprelist, &spostlist,
+	setup_script_arg_override(conf->server_script_arg, conf->sscount,
+		&sprelist, &spostlist,
 		&(conf->sprecount), &(conf->spostcount));
 
 	conf->backup_script_pre_arg=bprelist;
 	conf->backup_script_post_arg=bpostlist;
 	conf->restore_script_pre_arg=rprelist;
 	conf->restore_script_post_arg=rpostlist;
-	conf->server_script_pre_arg=sprelist;
-	conf->server_script_post_arg=spostlist;
+
+	if(!got_spre_args) conf->server_script_pre_arg=sprelist;
+	if(!got_spost_args) conf->server_script_post_arg=spostlist;
 
 	if(!loadall) return 0;
 

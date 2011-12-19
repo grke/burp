@@ -62,15 +62,6 @@
 
 * Make transfer_gzfile_in() and send_whole_file[_gz]() check checksums.
 
-* Stuff that will likely go away when working dir recovery 'merge' is
-  deprecated, which should be quite soon since 'resume' is now working:
-	* Looks like the manifest.gz.tmp.tmp problem is back in working dir
-	  recovery, when using 'merge'.
-	* When a client is waiting a very long time on working directory
-	  recovery, it can get stuck in its select loop. Have some kind of a
-	  timeout. Or, go into a different kind of loop where it keeps trying
-	  to make a fresh connection.
-
 * Windows non-VSS backups.
 
 * Investigate how to make massive files work better with librsync.

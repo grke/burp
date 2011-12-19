@@ -503,8 +503,7 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 			  &(conf->working_dir_recovery_method))) return -1;
 			if(strcmp(conf->working_dir_recovery_method, "delete")
 			  && strcmp(conf->working_dir_recovery_method, "resume")
-			  && strcmp(conf->working_dir_recovery_method, "use")
-			  && strcmp(conf->working_dir_recovery_method, "merge"))
+			  && strcmp(conf->working_dir_recovery_method, "use"))
 			{
 			  logp("unknown working_dir_recovery_method: %s\n",
 				conf->working_dir_recovery_method);

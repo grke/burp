@@ -18,6 +18,7 @@
     be backed up, and prints counters, without contacting the server.
   * Strip out 744 lines of unused Windows code.
   * Fix possible segfault when backup directory forward paths don't match.
+  * Removed working_dir_recovery_method=merge. Use 'resume' instead.
 
 2011-11-26 Changes in burp-1.2.5:
   * IMPORTANT: Fixed critical path comparison typo bug. If you have been using

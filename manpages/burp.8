@@ -181,15 +181,13 @@ Set the network send rate limit, in Mb/s. If this option is not given, burp will
 \fBnetwork_timeout=[s]\fR
 Set the network timeout in seconds. If no data is sent or received over a period of this length, burp will give up. The default is 7200 seconds (2 hours).
 .TP
-\fBworking_dir_recovery_method=[resume|merge|use|delete]\fR
+\fBworking_dir_recovery_method=[resume|use|delete]\fR
 This option tells the server what to do when it finds the working directory of an interrupted backup (perhaps somebody pulled the plug on the server, or something). This can be overridden by the client configurations files in clientconfdir
 on the server. Options are...
 .TP
 \fBdelete:\fR Just delete the old working directory.
 .TP
 \fBuse:\fR Convert the working directory into a complete backup.
-.TP
-\fBmerge:\fR This option is deprecated - please use 'resume' instead. Merge the working directory with the previous complete backup.  The resulting backup will contain the newest files from them both.  This option takes effect when you try to do a new backup on the client that was interrupted. Once the old working directory is dealt with, an entirely new backup will be made.
 .TP
 \fBresume:\fR Simply continue the previous backup from the point at which it left off.
 .TP

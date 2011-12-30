@@ -96,12 +96,32 @@ The main author of Burp is Graham Keeling.
 <TD ALIGN="LEFT">
 
 <P>
-<FONT COLOR="#99CCFF">2011-11-29: burp-1.2.5
+<FONT COLOR="#99CCFF">2011-12-30: burp-1.2.7 is released.
 <pre>
-IMPORTANT: burp-1.2.5 has a bug related to 'max_file_size'. If you do not set
-it explicitly, the value could be set to any random number and consequently
-prevent some files getting backed up. If you are using 1.2.5 clients, please
-set 'max_file_size = 0' in the client config, or downgrade to burp 1.2.2.
+2011-12-30 Changes in burp-1.2.7:
+  * Add an automated test script.
+  * Fix bugs with uncompressed encrypted backup/restore.
+  * Get verify all backups for a client (-a v -b a) to work.
+  * Return non-zero if there were warnings on verify or restore.
+  * Add 'min_file_size' option, fix 'max_file_size' option.
+  * Add generic server-side pre/post scripts that can run on every connection
+    after authentication and before disconnecting.
+  * Set environment variables from SSL cert details so that the server-side
+    scripts can see them.
+  * Add Jason Haar's server script for doing extra SSL certificate checks.
+  * Add 'max_hardlinks' option, which limits the number of times a single file
+    is hardlinked in storage. Default is 10000.
+  * Add '-i' option: print an index table of symbols that humans may see burp
+    produce, and exit.
+  * Let backups carry on when files cannot be opened.
+  * Spot Windows EFS directories and files and warn about them.
+  * Add an 'estimate' option (-a e), which does a scan of the file system to
+    be backed up, and prints counters, without contacting the server.
+  * Strip out 744 lines of unused Windows code.
+  * Fix possible segfault when backup directory forward paths don't match.
+  * Removed working_dir_recovery_method=merge. Use 'resume' instead.
+  * Add a flexible way of passing new fields from the client to the server so
+    that clients are less likely to have to upgrade.
 </pre>
 </FONT>
 </P>

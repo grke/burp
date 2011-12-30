@@ -8,4 +8,5 @@ ssl_peer_cn = grkeclient
 # The upgrade files need to be called 'script' and 'package'.
 # 'script' will be run on the client, with 'package' given as its argument.
 # Leave it commented out if you do not want to autoupgrade the client.
+# WARNING: this feature is only partially complete in 1.2.7, do not use it yet.
 # autoupgrade_dir = /etc/burp/autoupgrade/server/test_os

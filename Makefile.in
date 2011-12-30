@@ -92,6 +92,8 @@ installdirs:
 	$(MKDIR) $(DESTDIR)/var/run/burp
 	$(MKDIR) $(DESTDIR)/var/spool/burp
 	@if [ ! -d $(DESTDIR)$(sysconfdir)/clientconfdir ] ; then $(MKDIR) $(DESTDIR)$(sysconfdir)/clientconfdir ; cp configs/server/clientconfdir/testclient $(DESTDIR)$(sysconfdir)/clientconfdir/testclient ; fi
+	@if [ ! -d $(DESTDIR)$(sysconfdir)/autoupgrade/client ] ; then $(MKDIR) $(DESTDIR)$(sysconfdir)/autoupgrade/client ; fi
+	@if [ ! -d $(DESTDIR)$(sysconfdir)/autoupgrade/server ] ; then $(MKDIR) $(DESTDIR)$(sysconfdir)/autoupgrade/server ; fi
 
 gnomedirs:
 	$(MKDIR) $(DESTDIR)/usr/share/pixmaps

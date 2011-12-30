@@ -44,7 +44,7 @@ void init_config(struct config *conf)
 	conf->read_all_fifos=0;
 	conf->min_file_size=0;
 	conf->max_file_size=0;
-	conf->autoupgrade=0;
+	conf->autoupgrade_dir=NULL;
 	conf->ssl_cert_ca=NULL;
         conf->ssl_cert=NULL;
         conf->ssl_key=NULL;
@@ -140,6 +140,7 @@ void free_config(struct config *conf)
         if(conf->group) free(conf->group);
         if(conf->encryption_password) free(conf->encryption_password);
 	if(conf->client_lockdir) free(conf->client_lockdir);
+	if(conf->autoupgrade_dir) free(conf->autoupgrade_dir);
 	strlists_free(conf->startdir, conf->sdcount);
 	strlists_free(conf->incexcdir, conf->iecount);
 	strlists_free(conf->fschgdir, conf->fscount);
@@ -553,10 +554,6 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 			if(get_file_size(value, &(conf->max_file_size),
 				config_path, line)) return -1;
 		}
-		else if(!strcmp(field, "autoupgrade"))
-		{
-			conf->autoupgrade=atoi(value);
-		}
 		else if(!strcmp(field, "ratelimit"))
 		{
 			float f=0;
@@ -600,6 +597,8 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 			  "cname", &(conf->cname))) return -1;
 			if(get_conf_val(field, value,
 			  "directory", &(conf->directory))) return -1;
+			if(get_conf_val(field, value,
+			  "autoupgrade_dir", &(conf->autoupgrade_dir))) return -1;
 			if(get_conf_val(field, value,
 			  "lockfile", &(conf->lockfile))) return -1;
 			// "pidfile" is a synonym for "lockfile".
@@ -1036,6 +1035,8 @@ int set_client_global_config(struct config *conf, struct config *cconf)
 	if(set_global_arglist(&(cconf->server_script_arg),
 		conf->server_script_arg,
 		&(cconf->sscount), conf->sscount)) return -1;
+	if(set_global_str(&(cconf->autoupgrade_dir),
+		conf->autoupgrade_dir)) return -1;
 
 	return 0;
 }

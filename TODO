@@ -49,10 +49,6 @@
 * Think about having a 'friendly' way of doing restores, as I have known some
   people to complain about having to type things on the command line.
 
-* Add some kind of generic method for passing new fields from the client to
-  the server, so that clients are less likely to have to upgrade.
-  (can be added to the 'hello' line)
-
 * Break the stupidly long find_files() function down into smaller pieces.
   (partly done)
 

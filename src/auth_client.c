@@ -10,7 +10,6 @@
 #include "dpth.h"
 #include "sbuf.h"
 #include "auth_client.h"
-#include "autoupgrade_client.h"
 
 int authorise_client(struct config *conf, struct cntr *p1cntr)
 {
@@ -19,9 +18,8 @@ int authorise_client(struct config *conf, struct cntr *p1cntr)
 	size_t l=0;
 	char hello[256]="";
 	snprintf(hello, sizeof(hello),
-		"hello:%s:%d",
-		VERSION,
-		conf->autoupgrade);
+		"hello:%s",
+		VERSION);
 	if(async_write_str(CMD_GEN, hello)
 	  || async_read_expect(CMD_GEN, "whoareyou")
 	  || async_write_str(CMD_GEN, conf->cname)
@@ -38,16 +36,15 @@ int authorise_client(struct config *conf, struct cntr *p1cntr)
 		//logw(p1cntr, buf);
 		logp("WARNING: %s\n", buf);
 		p1cntr->warning++;
-		if(async_read_expect(CMD_GEN, "ok"))
+		free(buf); buf=NULL;
+		if(async_read(&cmd, &buf, &l))
 		{
 			logp("problem with auth\n");
 			free(buf);
 			return -1;
 		}
 	}
-	else if(cmd==CMD_GEN
-		&& (!strcmp(buf, "ok")
-		 || !strcmp(buf, "autoupgrade")))
+	if(cmd==CMD_GEN && !strcmp(buf, "ok"))
 	{
 		// It is OK.
 		logp("auth ok\n");
@@ -58,19 +55,6 @@ int authorise_client(struct config *conf, struct cntr *p1cntr)
 		free(buf);
 		return -1;
 	}
-
-	if(cmd==CMD_GEN && !strcmp(buf, "autoupgrade"))
-	{
-		if(!conf->autoupgrade)
-		{
-			logp("server wants to autoupgrade us, but we told it no!\n");
-			free(buf);
-			return -1;
-		}
-		free(buf);
-		return autoupgrade_client(conf, p1cntr);
-	}
-	free(buf);
 
 	return 0;
 }

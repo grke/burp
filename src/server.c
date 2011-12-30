@@ -21,6 +21,7 @@
 #include "berrno.h"
 #include "status_server.h"
 #include "forkchild.h"
+#include "autoupgrade_server.h"
 
 #include <netdb.h>
 #include <librsync.h>
@@ -856,6 +857,99 @@ end:
 	return ret;
 }
 
+static long version_to_long(const char *version)
+{
+	long ret=0;
+	char *copy=NULL;
+	char *tok1=NULL;
+	char *tok2=NULL;
+	char *tok3=NULL;
+	if(!version || !*version) return 0;
+	if(!(copy=strdup(version)))
+	{
+		logp("out of memory\n");
+		return -1;
+	}
+	if(!(tok1=strtok(copy, "."))
+	  || !(tok2=strtok(NULL, "."))
+	  || !(tok3=strtok(NULL, ".")))
+	{
+		free(copy);
+		return -1;
+	}
+	ret+=atol(tok3);
+	ret+=atol(tok2)*100;
+	ret+=atol(tok1)*100*100;
+	free(copy);
+	return ret;
+}
+
+static int extra_comms(const char *cversion)
+{
+	int ret=0;
+	char *buf=NULL;
+	long min_ver=0;
+	long cli_ver=0;
+	if((min_ver=version_to_long("1.2.7"))<0
+	 || (cli_ver=version_to_long(cversion))<0)
+		return -1;
+	// Clients before 1.2.7 did not know how to do extra comms, so skip
+	// this section for them.
+	if(cli_ver < min_ver) return 0;
+
+	if(async_read_expect(CMD_GEN, "extra_comms_begin")
+	  || async_write_str(CMD_GEN, "extra_comms_begin ok"))
+	{
+		logp("problem in extra_comms\n");
+		return -1;
+	}
+
+	while(1)
+	{
+		char cmd;
+		size_t len=0;
+		if(async_read(&cmd, &buf, &len))
+		{
+			ret=-1;
+			break;
+		}
+
+		if(cmd==CMD_GEN)
+		{
+			if(!strcmp(buf, "extra_comms_end"))
+			{
+				if(async_write_str(CMD_GEN,
+					"extra_comms_end ok"))
+						ret=-1;
+				break;
+			}
+			else if(!strcmp(buf, "autoupgrade"))
+			{
+				logp("autoupgrade goes here!");
+			}
+			else
+			{
+				logp("unexpected command from client: %c:%s\n",
+					cmd, buf);
+				ret=-1;
+				break;
+			}
+		}
+		else
+		{
+			logp("unexpected command from client: %c:%s\n",
+				cmd, buf);
+			ret=-1;
+			break;
+		}
+
+		if(buf); free(buf); buf=NULL;
+	}
+
+	if(buf) free(buf);
+	return ret;
+}
+
 #define KEYFILE "server.pem"
 #define PASSWORD "password"
 #define DHFILE "dh1024.pem"
@@ -929,6 +1023,13 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	if(ssl_check_cert(ssl, &cconf))
 	{
 		log_and_send("check cert failed on server");
+		ret=-1;
+		goto finish;
+	}
+
+	if(extra_comms(cversion))
+	{
+		log_and_send("running extra comms failed on server");
 		ret=-1;
 		goto finish;
 	}

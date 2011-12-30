@@ -58,7 +58,7 @@ struct config
 	char *encryption_password;
 	unsigned long min_file_size;
 	unsigned long max_file_size;
-	int autoupgrade;
+	char *autoupgrade_dir; // also a server option
 
 	char *backup_script_pre;
 	struct strlist **backup_script_pre_arg;

@@ -10,7 +10,6 @@
 #include "dpth.h"
 #include "sbuf.h"
 #include "auth_server.h"
-#include "autoupgrade_server.h"
 
 #include <netdb.h>
 
@@ -94,7 +93,6 @@ int authorise_server(struct config *conf, char **client, char **cversion, struct
 	size_t len=0;
 	char *buf=NULL;
 	char *password=NULL;
-	int autoupgrade=0;
 	if(async_read(&cmd, &buf, &len))
 	{
 		logp("unable to read initial message\n");
@@ -109,23 +107,11 @@ int authorise_server(struct config *conf, char **client, char **cversion, struct
 	// String may look like...
 	// "hello"
 	// "hello:(version)"
-	// "hello:(version):(autoupgrade)"
 	// (version) is a version number
-	// (autoupgrade) is 0 or 1
 	if((cp=strchr(buf, ':')))
 	{
 		cp++;
-		if(cp)
-		{
-			char *dp=NULL;
-			if((dp=strchr(cp, ':')))
-			{
-				*dp='\0';
-				dp++;
-				if(dp) autoupgrade=atoi(dp);
-			}
-			*cversion=strdup(cp);
-		}
+		if(cp) *cversion=strdup(cp);
 	}
 	free(buf); buf=NULL;
 	async_write_str(CMD_GEN, "whoareyou");
@@ -162,14 +148,6 @@ int authorise_server(struct config *conf, char **client, char **cversion, struct
 	logp("auth ok for client: %s\n", *client);
 	if(password) free(password);
 
-	if(autoupgrade)
-	{
-		async_write_str(CMD_GEN, "autoupgrade");
-		return autoupgrade_server(conf, p1cntr);
-	}
-	else
-	{
-		async_write_str(CMD_GEN, "ok");
-	}
+	async_write_str(CMD_GEN, "ok");
 	return 0;
 }

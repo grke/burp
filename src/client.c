@@ -15,6 +15,7 @@
 #include "ssl.h"
 #include "berrno.h"
 #include "forkchild.h"
+#include "autoupgrade_client.h"
 
 #include <sys/types.h>
 
@@ -183,6 +184,26 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 
 	if(!ret && act!=ACTION_ESTIMATE)
 		ret=authorise_client(conf, &p1cntr);
+
+        if(async_write_str(CMD_GEN, "extra_comms_begin")
+	  || async_read_expect(CMD_GEN, "extra_comms_begin ok"))
+	{
+		logp("Problem requesting extra_comms_begin\n");
+		ret=-1;
+	}
+
+	// Can add extra bits here. The first extra bit is the autoupgrade
+	// stuff.
+
+	if(!ret && conf->autoupgrade_dir)
+		ret=autoupgrade_client(conf, &p1cntr);
+
+        if(async_write_str(CMD_GEN, "extra_comms_end")
+	  || async_read_expect(CMD_GEN, "extra_comms_end ok"))
+	{
+		logp("Problem requesting extra_comms_end\n");
+		ret=-1;
+	}
 
 	if(!ret)
 	{

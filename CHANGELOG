@@ -1,3 +1,5 @@
+  * Don't backup the whole file if only ctime changed.
+
 2011-12-30 Changes in burp-1.2.7:
   * Add an automated test script.
   * Fix bugs with uncompressed encrypted backup/restore.

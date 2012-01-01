@@ -75,10 +75,6 @@
   option that can go in clientconfdir that says which software each client
   gets.
 
-* Set environment variables with client cert details in so that Jason Haar can
-  do cunning things with the server-side scripts (see his mailing list email
-  of 2011/11/25).
-
 * Add automatic tests to verify that acl/xattr backup/restore works properly.
   Is probably a bit trickier than other tests, because it has to be different
   on different systems.

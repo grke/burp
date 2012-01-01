@@ -146,6 +146,31 @@ static int process_new(struct sbuf *p1b, FILE *p2fp, FILE *ucfp, struct cntr *cn
 	return 0;
 }
 
+static int process_unchanged_file(struct sbuf *cb, FILE *ucfp, struct cntr *cntr)
+{
+	if(sbuf_to_manifest(cb, ucfp, NULL))
+	{
+		free_sbuf(cb);
+		return -1;
+	}
+	else
+	{
+		do_filecounter(cntr, cmd_to_same(cb->cmd), 0);
+	}
+	if(cb->endfile) do_filecounter_bytes(cntr,
+		 strtoull(cb->endfile, NULL, 10));
+	free_sbuf(cb);
+	return 1;
+}
+
+static int process_new_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FILE *ucfp, struct cntr *cntr)
+{
+	if(process_new(p1b, p2fp, ucfp, cntr))
+		return -1;
+	free_sbuf(cb);
+	return 1;
+}
+
 // return 1 to say that a file was processed
 static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FILE *ucfp, const char *currentdata, struct cntr *cntr, struct config *cconf)
 {
@@ -153,24 +178,32 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FIL
 	if(!(pcmp=sbuf_pathcmp(cb, p1b)))
 	{
 		int oldcompressed=0;
+
+		// mtime is the actual file data.
+		// ctime is the attributes or meta data.
 		if(cb->statp.st_mtime==p1b->statp.st_mtime
 		  && cb->statp.st_ctime==p1b->statp.st_ctime)
 		{
 			// got an unchanged file
 			//logp("got unchanged file: %s\n", cb->path);
-			if(sbuf_to_manifest(cb, ucfp, NULL))
-			{
-				free_sbuf(cb);
-				return -1;
-			}
+			return process_unchanged_file(cb, ucfp, cntr);
+		}
+
+		if(cb->statp.st_mtime==p1b->statp.st_mtime
+		  && cb->statp.st_ctime!=p1b->statp.st_ctime)
+		{
+			// File data stayed the same, but attributes or meta
+			// data changed. We already have the attributes, but
+			// may need to get extra meta data.
+			if(cb->cmd==CMD_ENC_METADATA
+			  || p1b->cmd==CMD_ENC_METADATA
+			// TODO: make unencrypted metadata use the librsync
+			  || cb->cmd==CMD_METADATA
+			  || p1b->cmd==CMD_METADATA)
+				return process_new_file(cb,
+					p1b, p2fp, ucfp, cntr);
 			else
-			{
-				do_filecounter(cntr, cmd_to_same(cb->cmd), 0);
-			}
-			if(cb->endfile) do_filecounter_bytes(cntr,
-				 strtoull(cb->endfile, NULL, 10));
-			free_sbuf(cb);
-			return 1;
+				return process_unchanged_file(cb, ucfp, cntr);
 		}
 
 		// Got a changed file.
@@ -186,11 +219,7 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FIL
 		// TODO: make unencrypted metadata use the librsync
 		  || cb->cmd==CMD_METADATA
 		  || p1b->cmd==CMD_METADATA)
-		{
-			if(process_new(p1b, p2fp, ucfp, cntr)) return -1;
-			free_sbuf(cb);
-			return 1;
-		}
+			return process_new_file(cb, p1b, p2fp, ucfp, cntr);
 
 		// Get new files if they have switched between compression on
 		// or off.
@@ -198,11 +227,7 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FIL
 			oldcompressed=1;
 		if( ( oldcompressed && !cconf->compression)
 		 || (!oldcompressed &&  cconf->compression))
-		{
-			if(process_new(p1b, p2fp, ucfp, cntr)) return -1;
-			free_sbuf(cb);
-			return 1;
-		}
+			return process_new_file(cb, p1b, p2fp, ucfp, cntr);
 
 		// Otherwise, do the delta stuff (if possible).
 		if(filedata(p1b->cmd))

@@ -78,3 +78,12 @@
 * Add automatic tests to verify that acl/xattr backup/restore works properly.
   Is probably a bit trickier than other tests, because it has to be different
   on different systems.
+
+* Storage directories are going from 0000 to FFFF, but ext3 only lets you have
+  32000 directories in a directory. Maybe make it automatically increment the
+  parent directory when it ends up with errno==EMLINK.
+
+* Make sure behaviour is sensible when a client runs out of storage
+  directories. It is programmed to loop to the start, but it will currently
+  overwrite existing files (see section that calls incr_dpth() in
+  backup_phase2_server().

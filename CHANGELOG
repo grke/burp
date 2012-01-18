@@ -1,6 +1,8 @@
   * Fix rounding problem in remaining time estimation in the status monitor.
   * Don't backup the whole file if only ctime changed.
   * Include the client name in arguments to server scripts.
+  * Do not log a message in the server SIGCHLD handler, as this appeared to
+    be causing an occasional lock up on a Ubuntu server.
 
 2011-12-30 Changes in burp-1.2.7:
   * Add an automated test script.

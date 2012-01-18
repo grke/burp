@@ -155,7 +155,9 @@ static void check_for_exiting_children(void)
 	if((p=waitpid(-1, &status, WNOHANG))>0)
 	{
 		int q;
-		logp("child pid %d exited\n", p);
+		// Logging a message here appeared to occasionally lock burp
+		// up on a Ubuntu server that I use.
+		//logp("child pid %d exited\n", p);
 		if(chlds) for(q=0; chlds[q].pid!=-2; q++)
 		{
 			if(p==chlds[q].pid)

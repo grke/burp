@@ -54,9 +54,11 @@ BURP - BackUp and Restore Program
 <TD ALIGN="CENTER">
 <P>
 <FONT COLOR="#99CCFF">
-Burp is a backup and restore program. It uses librsync in order to save on
-the amount of space that is used by each backup. It also uses VSS (Volume
-Shadow Copy Service) to make snapshots when backing up Windows computers.
+Burp is a network backup and restore program. It uses librsync in order to
+save network traffic and to save on the amount of space that is used by each
+backup.
+It also uses VSS (Volume Shadow Copy Service) to make snapshots when backing
+up Windows computers.
 </FONT>
 </P>
 
@@ -98,7 +100,7 @@ The main author of Burp is Graham Keeling.
 <P>
 <FONT COLOR="#99CCFF">2011-12-30: burp-1.2.7 is released.
 <pre>
-2011-12-30 Changes in burp-1.2.7:
+Changes in burp-1.2.7:
   * Add an automated test script.
   * Fix bugs with uncompressed encrypted backup/restore.
   * Get verify all backups for a client (-a v -b a) to work.
@@ -129,7 +131,7 @@ The main author of Burp is Graham Keeling.
 <P>
 <FONT COLOR="#99CCFF">2011-11-26: burp-1.2.5 is released.
 <pre>
-2011-11-26 Changes in burp-1.2.5:
+Changes in burp-1.2.5:
   * IMPORTANT: Fixed critical path comparison typo bug. If you have been using
 	1.2.4 either as a server or as a client, you need to upgrade
 	immediately! Backups made with 1.2.4 should be treated as suspicious.
@@ -142,7 +144,7 @@ The main author of Burp is Graham Keeling.
 <P>
 <FONT COLOR="#99CCFF">2011-11-22: burp-1.2.4 is released.
 <pre>
-2011-11-22 Changes in burp-1.2.4:
+Changes in burp-1.2.4:
   * Add a file deduplication program, "bedup".
   * Add a network_timeout parameter. Default is 7200 seconds (2 hours).
   * Add option to send success notifications only if there were warnings.
@@ -477,7 +479,7 @@ Burp, don't suck.
 </td>
 <td align="right">
 <font color="#99ccff">
-Last updated: November 2011
+Last updated: January 2012
 </font>
 </td></tr></table>
 

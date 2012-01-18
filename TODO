@@ -19,6 +19,8 @@
 	- Client knows no counters when resuming, because it didn't do the
 	  phase1 scan. Have the server send it the counters.
 	- Can something be done to make key presses more responsive?
+	- When lots of clients are backing up, the live status monitor
+	  truncates information.
 
 * Do not compress manifests and logs when compression is turned off.
 
@@ -86,4 +88,4 @@
 * Make sure behaviour is sensible when a client runs out of storage
   directories. It is programmed to loop to the start, but it will currently
   overwrite existing files (see section that calls incr_dpth() in
-  backup_phase2_server().
+  backup_phase2_server()).

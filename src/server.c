@@ -1047,7 +1047,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 			cconf.sprecount,
 			"pre",
 			buf?buf:"",
-			"reserved3",
+			client,
 			"reserved4",
 			"reserved5",
 			&p1cntr))
@@ -1068,7 +1068,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 			cconf.sprecount,
 			"post",
 			buf?buf:"",
-			"reserved3",
+			client,
 			"reserved4",
 			"reserved5",
 			&p1cntr))

@@ -135,10 +135,11 @@ by space.
 <li>Server-side file encryption option, so that network deltas can still be
     done if you have file encryption turned on.
 <li>Improve the status monitor.
-<li>Investigate HFS / resource forks and Mac support.
 <li>Add include/exclude wildcards.
 <li>Start thinking about how to make a client-side gui for doing things like
-restores.
+    restores.
+<li>Get EFS backup/restore working on Windows.
+<li>Add a mechanism that can make clients upgrade automatically.
 </ul>
 </FONT>
 </P>
@@ -335,6 +336,26 @@ Use the real path instead.
 
 <HR>
 
+<P>
+<FONT COLOR="#99CCFF">
+Q. My backup fails with the message 'error in async_rw'. Why?
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">
+This normally means that the other side of the connection went away.
+For example, it happens to me when I close my laptop lid, or when my laptop
+goes into hibernate mode, or when I pull the network cable out.
+<BR>
+Otherwise, if you are seeing this message on the server, it is worth running
+the backup by hand from a console on the client (if you are not already doing
+so), as it may give you more information to work with.
+</FONT>
+</P>
+
+<HR>
+
 
 </TD>
 </TR>
@@ -384,7 +405,7 @@ Burp, don't suck.
 </td>
 <td align="right">
 <font color="#99ccff">
-Last updated: November 2011
+Last updated: January 2012
 </font>
 </td></tr></table>
 

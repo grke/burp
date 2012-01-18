@@ -1,5 +1,6 @@
   * Fix rounding problem in remaining time estimation in the status monitor.
   * Don't backup the whole file if only ctime changed.
+  * Include the client name in arguments to server scripts.
 
 2011-12-30 Changes in burp-1.2.7:
   * Add an automated test script.

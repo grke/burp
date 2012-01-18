@@ -35,7 +35,7 @@ export error_crlNoDir=107
 
 usage()
 {
-	logEvent "usage: $prog <preorpost> <action> <reserved3> <reserved4> <reserved5> <reserved6> <crl dir> <server config file> <optional extra script>"
+	logEvent "usage: $prog <preorpost> <action> <client> <reserved4> <reserved5> <reserved6> <crl dir> <server config file> <optional extra script>"
 	exit $error_crlNoArgs
 }
 
@@ -43,7 +43,8 @@ usage()
 export preorpost="$1" ; shift
 # What the client requested. Ignored.
 export action="$1" ; shift
-export reserved3="$1" ; shift
+# The burp client name. Ignored.
+export client="$1" ; shift
 export reserved4="$1" ; shift
 export reserved5="$1" ; shift
 export reserved6="$1" ; shift

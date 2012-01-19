@@ -89,3 +89,5 @@
   directories. It is programmed to loop to the start, but it will currently
   overwrite existing files (see section that calls incr_dpth() in
   backup_phase2_server()).
+
+* Restore / verify email notifications.

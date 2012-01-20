@@ -886,14 +886,16 @@ static long version_to_long(const char *version)
 	return ret;
 }
 
-static int extra_comms(const char *cversion)
+static int extra_comms(const char *cversion, struct config *cconf, struct cntr *p1cntr)
 {
 	int ret=0;
 	char *buf=NULL;
 	long min_ver=0;
 	long cli_ver=0;
+	long ser_ver=0;
 	if((min_ver=version_to_long("1.2.7"))<0
-	 || (cli_ver=version_to_long(cversion))<0)
+	 || (cli_ver=version_to_long(cversion))<0
+	 || (ser_ver=version_to_long(VERSION))<0)
 		return -1;
 	// Clients before 1.2.7 did not know how to do extra comms, so skip
 	// this section for them.
@@ -910,6 +912,7 @@ static int extra_comms(const char *cversion)
 	{
 		char cmd;
 		size_t len=0;
+
 		if(async_read(&cmd, &buf, &len))
 		{
 			ret=-1;
@@ -927,7 +930,12 @@ static int extra_comms(const char *cversion)
 			}
 			else if(!strcmp(buf, "autoupgrade"))
 			{
-				logp("autoupgrade goes here!");
+				if(autoupgrade_server(ser_ver, cli_ver,
+					cconf, p1cntr))
+				{
+					ret=-1;
+					break;
+				}
 			}
 			else
 			{
@@ -1029,7 +1037,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 		goto finish;
 	}
 
-	if(extra_comms(cversion))
+	if(extra_comms(cversion, &cconf, &p1cntr))
 	{
 		log_and_send("running extra comms failed on server");
 		ret=-1;

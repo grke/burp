@@ -3,6 +3,8 @@
 #include "counter.h"
 #include "msg.h"
 #include "handy.h"
+#include "cmd.h"
+#include "asyncio.h"
 #include "autoupgrade_client.h"
 
 static int receive_file(const char *autoupgrade_dir, const char *file, struct cntr *p1cntr)
@@ -38,10 +40,13 @@ end:
 
 int autoupgrade_client(struct config *conf, struct cntr *p1cntr)
 {
-	int ret=-1; // always return failure, so as to exit
+	int ret=-1;
 	char *cp=NULL;
 	char *copy=NULL;
-	logp("server wants to autoupgrade us\n");
+	char *buf=NULL;
+	size_t len=0;
+	char cmd='\0';
+	char *script_path=NULL;
 
 	if(!conf->autoupgrade_dir)
 	{
@@ -59,10 +64,57 @@ int autoupgrade_client(struct config *conf, struct cntr *p1cntr)
 	if(mkpath(&(conf->autoupgrade_dir), copy))
 		goto end;
 
-	if(receive_file(conf->autoupgrade_dir, "script", p1cntr)
-	  || receive_file(conf->autoupgrade_dir, "package", p1cntr))
+	// Let the server know we are ready.
+	if(async_write_str(CMD_GEN, "autoupgrade"))
 		goto end;
+
+	if(async_read(&cmd, &buf, &len))
+		goto end;
+
+	if(cmd==CMD_GEN)
+	{
+		if(!strcmp(buf, "do not autoupgrade"))
+		{
+			ret=0;
+			goto end;
+		}
+		else if(strcmp(buf, "autoupgrade ok"))
+		{
+			logp("unexpected response to autoupgrade from server: %s\n", buf);
+			goto end;
+		}
+	}
+	else
+	{
+		logp("unexpected response to autoupgrade from server: %c:%s\n", cmd, buf);
+		goto end;
+	}
+
+	if(receive_file(conf->autoupgrade_dir, "script", p1cntr))
+	{
+		logp("Problem receiving %s/%s\n",
+			conf->autoupgrade_dir, "script");
+		goto end;
+	}
+	if(receive_file(conf->autoupgrade_dir, "package", p1cntr))
+	{
+		logp("Problem receiving %s/%s\n",
+			conf->autoupgrade_dir, "package");
+		goto end;
+	}
+
+	if(!(script_path=prepend_s(conf->autoupgrade_dir,
+		"script", strlen("script")))) goto end;
+
+	chmod(script_path, 0755);
+
+	/* Run the script here */
+	ret=run_script(script_path,
+		NULL, 0, NULL, NULL, NULL, NULL, NULL, p1cntr);
+
 end:
 	if(copy) free(copy);
+	if(buf) free(buf);
+	if(script_path) free(script_path);
 	return ret;
 }

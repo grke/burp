@@ -275,6 +275,7 @@ Section "-Initialize"
   RMDir "$SMPROGRAMS\Burp\Documentation"
   RMDir "$SMPROGRAMS\Burp"
   CreateDirectory "$SMPROGRAMS\Burp"
+  CreateDirectory "$SMPROGRAMS\Burp\autoupgrade"
   ; CreateDirectory "$SMPROGRAMS\Burp\Configuration"
   ; CreateDirectory "$SMPROGRAMS\Burp\Documentation"
 
@@ -326,6 +327,7 @@ endssl_cert_ca:
   FileWrite $R1 "ssl_cert_ca = C:/Program Files/Burp/ssl_cert_ca.pem$\r$\n"
   FileWrite $R1 "ssl_key_password = password$\r$\n"
   FileWrite $R1 "ssl_peer_cn = grkeserver$\r$\n"
+  FileWrite $R1 "autoupgrade_dir = C:/Program Files/Burp/autoupgrade$\r$\n"
 
   FileClose $R1
 
@@ -599,6 +601,7 @@ Function EnterConfigPageBP
 ;    Abort
 ;  ${EndIf}
 
+  CreateDirectory "$INSTDIR\autoupgrade"
   IfFileExists $INSTDIR\Burp.conf end
 
   !insertmacro MUI_HEADER_TEXT "Install Burp" ""

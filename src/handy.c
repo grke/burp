@@ -1019,7 +1019,7 @@ static int run_script_select(FILE **sout, FILE **serr, struct cntr *cntr)
 		if(FD_ISSET(soutfd, &fse)
 		  || FD_ISSET(serrfd, &fse))
 		{
-			logp("error on run_script child fd\n");
+			//logp("error on run_script child fd\n");
 			return -1;
 		}
 		if(FD_ISSET(soutfd, &fsr)) log_script_output(sout, NULL);

@@ -32,6 +32,26 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *p1cn
    if(!file_is_included(conf->incexcdir, conf->iecount,
 	conf->excext, conf->excount, ff->fname)) return 0;
 #ifdef HAVE_WIN32
+// Useful Windows attributes debug
+/*
+	printf("\n%llu", ff->winattr);
+	printf("\n%s\n", ff->fname);
+if(ff->winattr & FILE_ATTRIBUTE_READONLY) printf("readonly\n");
+if(ff->winattr & FILE_ATTRIBUTE_HIDDEN) printf("hidden\n");
+if(ff->winattr & FILE_ATTRIBUTE_SYSTEM) printf("system\n");
+if(ff->winattr & FILE_ATTRIBUTE_DIRECTORY) printf("directory\n");
+if(ff->winattr & FILE_ATTRIBUTE_ARCHIVE) printf("archive\n");
+if(ff->winattr & FILE_ATTRIBUTE_DEVICE) printf("device\n");
+if(ff->winattr & FILE_ATTRIBUTE_NORMAL) printf("normal\n");
+if(ff->winattr & FILE_ATTRIBUTE_TEMPORARY) printf("temporary\n");
+if(ff->winattr & FILE_ATTRIBUTE_SPARSE_FILE) printf("sparse\n");
+if(ff->winattr & FILE_ATTRIBUTE_REPARSE_POINT) printf("reparse\n");
+if(ff->winattr & FILE_ATTRIBUTE_COMPRESSED) printf("compressed\n");
+if(ff->winattr & FILE_ATTRIBUTE_OFFLINE) printf("offline\n");
+if(ff->winattr & FILE_ATTRIBUTE_NOT_CONTENT_INDEXED) printf("notcont\n");
+if(ff->winattr & FILE_ATTRIBUTE_ENCRYPTED) printf("encrypted\n");
+if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
+*/
 	if(ff->winattr & FILE_ATTRIBUTE_ENCRYPTED)
 	{
 		if(ff->type!=FT_DIREND)

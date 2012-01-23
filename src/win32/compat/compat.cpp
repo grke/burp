@@ -685,7 +685,7 @@ statDir(const char *file, struct stat *sb, int64_t *winattr)
       FindClose(h);
    }
 
-   *winattr = (int64_t)pdwFileAttributes;
+   *winattr = (int64_t)*pdwFileAttributes;
 
    /* Graham says: all the following stuff seems rather complicated.
       It is probably not all needed anymore, since I have added *winattr

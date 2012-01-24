@@ -327,7 +327,7 @@ endssl_cert_ca:
   FileWrite $R1 "ssl_cert_ca = C:/Program Files/Burp/ssl_cert_ca.pem$\r$\n"
   FileWrite $R1 "ssl_key_password = password$\r$\n"
   FileWrite $R1 "ssl_peer_cn = grkeserver$\r$\n"
-  FileWrite $R1 "autoupgrade_dir = C:/Program Files/Burp/autoupgrade$\r$\n"
+  FileWrite $R1 "# autoupgrade_dir = C:/Program Files/Burp/autoupgrade$\r$\n"
 
   FileClose $R1
 

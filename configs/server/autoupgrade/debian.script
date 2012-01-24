@@ -1,0 +1,5 @@
+#!/bin/bash
+
+dpkg -i /etc/burp/autoupgrade/client/package
+
+exit 0

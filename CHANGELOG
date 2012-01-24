@@ -1,3 +1,4 @@
+  * Add a mechanism for automatically upgrading clients.
   * Fix bug where attributes on Windows directories were not getting read
     properly.
   * Fix rounding problem in remaining time estimation in the status monitor.

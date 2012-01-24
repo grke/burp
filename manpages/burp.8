@@ -256,6 +256,9 @@ Goes with server_script and overrides server_script_pre_arg and server_script_po
 .TP
 \fBserver_script_post_run_on_fail=[0|1]\fR
 If this is set to 1, server_script_post will always be run. The default is 0, which means that if the task asked for by the client fails, server_script_post will not be run.
+.TP
+\fBautoupgrade_dir=[path]\fR
+Path to autoupgrade directory from which upgrades are downloaded. It is intended that each client will individually set this in their respective clientconfdir files. The option can be left unset in order not to autoupgrade. Please see docs/autoupgrade.txt in the source package for more help with this option.
 
 .SH CLIENT CONFIGURATION FILE OPTIONS
 
@@ -386,6 +389,8 @@ You can use this to save space in your config file when you want to run the same
 .TP
 \fBrestore_script_arg=[path]\fR
 Goes with restore_script and overrides restore_script_pre_arg and restore_script_post_arg.
+\fBautoupgrade_dir=[path]\fR
+Path to autoupgrade directory into which upgrades are downloaded. Please see docs/autoupgrade.txt in the source package for more help with this option. If you do not want your client to autoupgrade, do not set this option.
 
 .SH SERVER CLIENTCONFDIR FILE
 .TP
@@ -418,6 +423,7 @@ Additionally, the following options can be overridden here for each client:
 \fBserver_script\fR
 \fBserver_script_arg\fR
 \fBserver_script_post_run_on_fail\fR
+\fBautoupgrade_dir\fR
 
 .SH Some notes on SSL certificates
 .TP

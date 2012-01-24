@@ -72,11 +72,6 @@
 * Get EFS backup/restore working on Windows (FILE_ATTRIBUTE_ENCRYPTED, and
   special open/read/close functions).
 
-* Add a mechanism that can make clients upgrade automatically.
-  Have a directory on the server to contain the software, and a config
-  option that can go in clientconfdir that says which software each client
-  gets.
-
 * Add automatic tests to verify that acl/xattr backup/restore works properly.
   Is probably a bit trickier than other tests, because it has to be different
   on different systems.

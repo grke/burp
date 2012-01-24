@@ -2234,8 +2234,7 @@ file_dup2(int, int)
 void openlog(const char *ident, int option, int facility) {}  
 #endif //HAVE_MINGW
 
-
-pid_t forkchild(FILE **sin, FILE **sout, FILE **serr, const char *path, char * const argv[])
+static pid_t do_forkchild(FILE **sin, FILE **sout, FILE **serr, const char *path, char * const argv[], int quit)
 {
     int a=0;
     char cmd[1024]="";
@@ -2268,8 +2267,19 @@ pid_t forkchild(FILE **sin, FILE **sout, FILE **serr, const char *path, char * c
         printf( "CreateProcess %s failed\n", path);
         return -1;
     }
-    WaitForSingleObject( pi.hProcess, INFINITE );
+    if(!quit) WaitForSingleObject( pi.hProcess, INFINITE );
     CloseHandle( pi.hProcess );
     CloseHandle( pi.hThread );
+    if(quit) exit(0);
     return 0;
+}
+
+pid_t forkchild(FILE **sin, FILE **sout, FILE **serr, const char *path, char * const argv[])
+{
+	return do_forkchild(sin, sout, serr, path, argv, 0 /* do not exit */);
+}
+
+pid_t forkchild_and_exit(FILE **sin, FILE **sout, FILE **serr, const char *path, char * const argv[])
+{
+	return do_forkchild(sin, sout, serr, path, argv, 1 /* exit */);
 }

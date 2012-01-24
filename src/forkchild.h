@@ -3,5 +3,7 @@
 
 extern pid_t forkchild(FILE **sin, FILE **sout, FILE **serr,
 	const char *path, char * const argv[]);
+extern pid_t forkchild_and_exit(FILE **sin, FILE **sout, FILE **serr,
+	const char *path, char * const argv[]);
 
-#endif // _CURRENT_BACKUPS_H
+#endif // _FORKCHILD_H

@@ -231,7 +231,7 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 					  "reserved3",
 					  "reserved4",
 					  "reserved5",
-					  &p1cntr)) ret=-1;
+					  &p1cntr, 0)) ret=-1;
 
 					if(!ret && do_backup_client(conf,
 						resume, 0, &p1cntr, &cntr))
@@ -251,7 +251,7 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 						"reserved3",
 						"reserved4",
 						"reserved5",
-						&cntr)) ret=-1;
+						&cntr, 0)) ret=-1;
 					}
 				}
 
@@ -277,7 +277,7 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 					"reserved3",
 					"reserved4",
 					"reserved5",
-					&cntr)) ret=-1;
+					&cntr, 0)) ret=-1;
 				if(!ret && do_restore_client(conf,
 					act, backup,
 					restoreprefix, regex, forceoverwrite,
@@ -296,7 +296,7 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 					"reserved3",
 					"reserved4",
 					"reserved5",
-					&cntr)) ret=-1;
+					&cntr, 0)) ret=-1;
 				}
 
 				// Return non-zero if there were warnings,

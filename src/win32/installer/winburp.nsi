@@ -551,6 +551,7 @@ Function GetSelectedComponents
   StrCpy $R0 0
   ${If} ${SectionIsSelected} ${SecFileDaemon}
     IntOp $R0 $R0 | ${ComponentFile}
+    IntOp $R0 $R0 | ${SF_SELECTED}
   ${EndIf}
   Exch $R0
 FunctionEnd

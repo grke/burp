@@ -1041,7 +1041,7 @@ static int run_script_select(FILE **sout, FILE **serr, struct cntr *cntr)
 #endif
 
 
-int run_script(const char *script, struct strlist **userargs, int userargc, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, struct cntr *cntr)
+int run_script(const char *script, struct strlist **userargs, int userargc, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, struct cntr *cntr, int quit)
 {
 	int a=0;
 	int l=0;
@@ -1070,7 +1070,16 @@ int run_script(const char *script, struct strlist **userargs, int userargc, cons
 #endif
 
 	fflush(stdout); fflush(stderr);
-	if((p=forkchild(NULL, &sout, &serr, cmd[0], cmd))==-1) return -1;
+	if(quit)
+	{
+		if((p=forkchild_and_exit(NULL,
+			&sout, &serr, cmd[0], cmd))==-1) return -1;
+	}
+	else
+	{
+		if((p=forkchild(NULL,
+			&sout, &serr, cmd[0], cmd))==-1) return -1;
+	}
 #ifdef HAVE_WIN32
 	// My windows forkchild currently just executes, then returns.
 	return 0;

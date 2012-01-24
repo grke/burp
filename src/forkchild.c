@@ -61,4 +61,10 @@ pid_t forkchild(FILE **sin, FILE **sout, FILE **serr, const char *path, char * c
 	return pid;
 }
 
+pid_t forkchild_and_exit(FILE **sin, FILE **sout, FILE **serr, const char *path, char * const argv[])
+{
+	forkchild(sin, sout, serr, path, argv);
+	exit(0);
+}
+
 #endif

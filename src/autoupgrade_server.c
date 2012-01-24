@@ -96,6 +96,10 @@ int autoupgrade_server(long ser_ver, long cli_ver, struct config *cconf, struct 
 		goto end;
 	}
 	ret=0;
+	/* Clients currently exit after forking, so exit ourselves. */
+	logp("Expecting client to upgrade - now exiting\n");
+	async_free();
+	exit(0);
 end:
 	if(path) free(path);
 	if(script_path) free(script_path);

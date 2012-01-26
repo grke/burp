@@ -54,6 +54,8 @@ void init_config(struct config *conf)
 	conf->ssl_peer_cn=NULL;
 	conf->encryption_password=NULL;
 	conf->max_children=0;
+	// ext3 maximum number of subdirs is 32000, so leave a little room.
+	conf->max_storage_subdirs=30000;
 	conf->librsync=1;
 	conf->compression=9;
 	conf->client_lockdir=NULL;
@@ -524,6 +526,11 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 		else if(!strcmp(field, "max_children"))
 		{
 			if((conf->max_children=atoi(value))<=0)
+				return conf_error(config_path, line);
+		}
+		else if(!strcmp(field, "max_storage_subdirs"))
+		{
+			if((conf->max_storage_subdirs=atoi(value))<=1000)
 				return conf_error(config_path, line);
 		}
 		else if(!strcmp(field, "backup_script_post_run_on_fail"))

@@ -35,6 +35,7 @@ struct config
 	char *client_lockdir;
 	mode_t umask;
 	unsigned int max_hardlinks;
+	int max_storage_subdirs;
 
 // client options
 	char *cname;

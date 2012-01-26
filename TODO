@@ -79,10 +79,6 @@
   Is probably a bit trickier than other tests, because it has to be different
   on different systems.
 
-* Storage directories are going from 0000 to FFFF, but ext3 only lets you have
-  32000 directories in a directory. Maybe make it automatically increment the
-  parent directory when it ends up with errno==EMLINK.
-
 * Make sure behaviour is sensible when a client runs out of storage
   directories. It is programmed to loop to the start, but it will currently
   overwrite existing files (see section that calls incr_dpth() in
@@ -92,8 +88,6 @@
 
 * If 'resume' is set, but the includes/excludes changes, switch to 'use',
   then start a new backup.
-
-* Add autoupgrade option to windows installer. Need extra screen, probably.
 
 * Add the ability to specify things like includes/excludes on the server side.
   Will probably work by downloading chunks of config to the client.

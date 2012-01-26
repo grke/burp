@@ -9,6 +9,7 @@
   * Upgrade Windows depkgs to latest versions of openssl.
   * Make Windows uninstall work.
   * Add 'allow autoupgrade' option to a second screen on the Windows installer.
+  * Add 'max_storage_subdirs' option, and default it to 30000.
 
 2011-12-30 Changes in burp-1.2.7:
   * Add an automated test script.

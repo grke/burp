@@ -104,15 +104,16 @@ int init_dpth(struct dpth *dpth, const char *currentdata, struct config *cconf)
 // Three levels with 65535 entries each gives
 // 65535^3 = 281,462,092,005,375 data entries
 // recommend a filesystem with lots of inodes?
+// Hmm, but ext3 only allows 32000 subdirs, although that many files are OK.
 int incr_dpth(struct dpth *dpth, struct config *cconf)
 {
 	if(dpth->tert++>=0xFFFF)
 	{
 		dpth->tert=0;
-		if(dpth->seco++>=0xFFFF)
+		if(dpth->seco++>=conf->max_storage_subdirs)
 		{
 			dpth->seco=0;
-			if(dpth->prim++>=0xFFFF)
+			if(dpth->prim++>=max_storage_subdirs)
 			{
 				dpth->prim=0;
 				// Start again from zero, so make sure that

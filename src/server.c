@@ -639,7 +639,7 @@ static int get_lock_and_clean(const char *basedir, const char *lockbasedir, cons
 static int run_script_w(const char *script, struct strlist **userargs, int userargc, const char *client, const char *current, struct cntr *cntr)
 {
 	return run_script(script, userargs, userargc, client, current,
-		"reserved1", "reserved2", "reserved3", cntr, 0);
+		"reserved1", "reserved2", "reserved3", cntr, 1);
 }
 
 static int child(struct config *conf, struct config *cconf, const char *client, const char *cversion, char cmd, char *buf, struct cntr *p1cntr, struct cntr *cntr)
@@ -752,7 +752,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 					cconf->nfcount,
 					client, current,
 					working, finishing,
-					"0", cntr, 0);
+					"0", cntr, 1);
 			else if(!cconf->notify_success_warnings_only
 			  || (p1cntr->warning+cntr->warning)>0)
 			{
@@ -766,7 +766,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 					cconf->nscount,
 					client, current,
 					working, finishing,
-					warnings, cntr, 0);
+					warnings, cntr, 1);
 			}
 		}
 	}
@@ -886,7 +886,7 @@ static long version_to_long(const char *version)
 	return ret;
 }
 
-static int extra_comms(const char *cversion, struct config *cconf, struct cntr *p1cntr)
+static int extra_comms(const char *cversion, struct config *conf, struct config *cconf, struct cntr *p1cntr)
 {
 	int ret=0;
 	char *buf=NULL;
@@ -928,10 +928,14 @@ static int extra_comms(const char *cversion, struct config *cconf, struct cntr *
 						ret=-1;
 				break;
 			}
-			else if(!strcmp(buf, "autoupgrade"))
+			else if(!strncmp(buf,
+				"autoupgrade:", strlen("autoupgrade:")))
 			{
-				if(autoupgrade_server(ser_ver, cli_ver,
-					cconf, p1cntr))
+				char *os=NULL;
+				os=buf+strlen("autoupgrade:");
+				if(os && *os
+				  && autoupgrade_server(ser_ver, cli_ver, os,
+					conf, p1cntr))
 				{
 					ret=-1;
 					break;
@@ -1037,7 +1041,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 		goto finish;
 	}
 
-	if(extra_comms(cversion, &cconf, &p1cntr))
+	if(extra_comms(cversion, &conf, &cconf, &p1cntr))
 	{
 		log_and_send("running extra comms failed on server");
 		ret=-1;
@@ -1060,7 +1064,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 			client,
 			"reserved4",
 			"reserved5",
-			&p1cntr, 0))
+			&p1cntr, 1))
 	{
 		log_and_send("server pre script returned an error\n");
 		ret=-1;
@@ -1081,7 +1085,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 			client,
 			"reserved4",
 			"reserved5",
-			&p1cntr, 0))
+			&p1cntr, 1))
 	{
 		log_and_send("server post script returned an error\n");
 		ret=-1;

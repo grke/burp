@@ -74,10 +74,16 @@ int autoupgrade_client(struct config *conf, struct cntr *p1cntr)
 	char *script_path=NULL;
 	char script_name[32]="";
 	char package_name[32]="";
+	char write_str[256]="";
 
 	if(!conf->autoupgrade_dir)
 	{
 		logp("autoupgrade_dir not set!\n");
+		goto end;
+	}
+	if(!conf->autoupgrade_os)
+	{
+		logp("autoupgrade_os not set!\n");
 		goto end;
 	}
 	if(!(copy=strdup(conf->autoupgrade_dir)))
@@ -92,7 +98,9 @@ int autoupgrade_client(struct config *conf, struct cntr *p1cntr)
 		goto end;
 
 	// Let the server know we are ready.
-	if(async_write_str(CMD_GEN, "autoupgrade"))
+	snprintf(write_str, sizeof(write_str),
+		"autoupgrade:%s", conf->autoupgrade_os);
+	if(async_write_str(CMD_GEN, write_str))
 		goto end;
 
 	if(async_read(&cmd, &buf, &len))
@@ -144,14 +152,20 @@ int autoupgrade_client(struct config *conf, struct cntr *p1cntr)
 
 	chmod(script_path, 0755);
 
-	/* Run the script here.
-	   To get round Windows problems to do with installing over files
-	   that the current process is running from, I am forking the child,
-	   then immediately exiting the parent process, so for now, control
-	   never comes back from this run_script. */
+	/* Run the script here. */
 	ret=run_script(script_path,
-		NULL, 0, NULL, NULL, NULL, NULL, NULL, p1cntr, 1 /* exit */);
+		NULL, 0, NULL, NULL, NULL, NULL, NULL, p1cntr,
+		0 /* do not wait */);
+	/* To get round Windows problems to do with installing over files
+	   that the current process is running from, I am forking the child,
+	   then immediately exiting the parent process. */
 
+	printf("\n");
+	logp("The server tried to upgrade your client.\n");
+	logp("You will need to try your command again.\n");
+	async_free();
+
+	exit(0);
 end:
 	if(copy) free(copy);
 	if(buf) free(buf);

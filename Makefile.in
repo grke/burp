@@ -94,6 +94,10 @@ installdirs:
 	@if [ ! -d $(DESTDIR)$(sysconfdir)/clientconfdir ] ; then $(MKDIR) $(DESTDIR)$(sysconfdir)/clientconfdir ; cp configs/server/clientconfdir/testclient $(DESTDIR)$(sysconfdir)/clientconfdir/testclient ; fi
 	@if [ ! -d $(DESTDIR)$(sysconfdir)/autoupgrade/client ] ; then $(MKDIR) $(DESTDIR)$(sysconfdir)/autoupgrade/client ; fi
 	@if [ ! -d $(DESTDIR)$(sysconfdir)/autoupgrade/server ] ; then $(MKDIR) $(DESTDIR)$(sysconfdir)/autoupgrade/server ; fi
+	@if [ ! -d $(DESTDIR)$(sysconfdir)/autoupgrade/server/win32 ] ; then $(MKDIR) $(DESTDIR)$(sysconfdir)/autoupgrade/server/win32 ; fi
+	@if [ ! -d $(DESTDIR)$(sysconfdir)/autoupgrade/server/win32/$(VERSION) ] ; then $(MKDIR) $(DESTDIR)$(sysconfdir)/autoupgrade/server/win32/$(VERSION) ; fi
+	@if [ ! -d $(DESTDIR)$(sysconfdir)/autoupgrade/server/win64 ] ; then $(MKDIR) $(DESTDIR)$(sysconfdir)/autoupgrade/server/win64 ; fi
+	@if [ ! -d $(DESTDIR)$(sysconfdir)/autoupgrade/server/win64/$(VERSION) ] ; then $(MKDIR) $(DESTDIR)$(sysconfdir)/autoupgrade/server/win64/$(VERSION) ; fi
 
 gnomedirs:
 	$(MKDIR) $(DESTDIR)/usr/share/pixmaps
@@ -116,6 +120,8 @@ install: installdirs
 	@if [ ! -f $(DESTDIR)$(sysconfdir)/ssl_extra_checks_script ] ; then cp configs/server/ssl_extra_checks_script $(DESTDIR)$(sysconfdir)/ssl_extra_checks_script && chmod 755 $(DESTDIR)$(sysconfdir)/ssl_extra_checks_script ; fi
 	@if [ ! -f $(DESTDIR)$(sysconfdir)/summary_script ] ; then cp configs/server/summary_script $(DESTDIR)$(sysconfdir)/summary_script && chmod 755 $(DESTDIR)$(sysconfdir)/summary_script ; fi
 	@if [ ! -f $(DESTDIR)$(sysconfdir)/timer_script ] ; then cp configs/server/timer_script $(DESTDIR)$(sysconfdir)/timer_script && chmod 755 $(DESTDIR)$(sysconfdir)/timer_script ; fi
+	@if [ ! -f $(DESTDIR)$(sysconfdir)/autoupgrade/server/win32/script ] ; then cp configs/server/autoupgrade/windows.script $(DESTDIR)$(sysconfdir)/autoupgrade/server/win32/script ; fi
+	@if [ ! -f $(DESTDIR)$(sysconfdir)/autoupgrade/server/win64/script ] ; then cp configs/server/autoupgrade/windows.script $(DESTDIR)$(sysconfdir)/autoupgrade/server/win64/script ; fi
 
 Makefile: Makefile.in
 	cd $(topdir) \

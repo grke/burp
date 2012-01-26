@@ -31,7 +31,7 @@ extern void add_fd_to_sets(int fd, fd_set *read_set, fd_set *write_set, fd_set *
 extern int init_client_socket(const char *host, const char *port);
 extern void reuseaddr(int fd);
 extern void write_status(const char *client, char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr);
-extern int run_script(const char *script, struct strlist **userargs, int userargc, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, struct cntr *cntr, int quit);
+extern int run_script(const char *script, struct strlist **userargs, int userargc, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, struct cntr *cntr, int do_wait);
 extern char *comp_level(struct config *conf);
 extern int chuser_and_or_chgrp(const char *user, const char *group);
 extern const char *getdatestr(time_t t);

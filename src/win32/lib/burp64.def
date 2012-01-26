@@ -60,7 +60,7 @@ syslog
 umask
 utime
 _Z9forkchildPP6_iobufS1_S1_PKcPKPc
-_Z18forkchild_and_exitPP6_iobufS1_S1_PKcPKPc
+_Z17forkchild_no_waitPP6_iobufS1_S1_PKcPKPc
  
 ; print.o
 _Z10__vsprintfPcPKcS_

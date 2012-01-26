@@ -1,27 +1,30 @@
 How to set up autoupgrades
 --------------------------
 
-On the client machines, you need to have a field in burp.conf that looks like
+On the client machines, you need to have fields in burp.conf that look like
 this:
 
+autoupgrade_os = win32
 autoupgrade_dir = C:/Program Files/Burp/autoupgrade
 or
+autoupgrade_os = some_os
 autoupgrade_dir = /etc/burp/autoupgrade/client
 
+The 'os' values match a directory component on the server.
 The directories given need to exist.
 
 
-On the server, you need to have a suitable field in clientconfdir/<clientname>
-that looks like this:
-autoupgrade_dir = /etc/burp/autoupgrade/server/windows-32bit
-or
-autoupgrade_dir = /etc/burp/autoupgrade/server/debian-32bit
+On the server, you need to have a field in the burp.conf that looks like this:
+autoupgrade_dir = /etc/burp/autoupgrade/server
 
-The directories given need to exist on the server, and need to have a
-subdirectory named after the current server version number. For example:
-/etc/burp/autoupgrade/server/windows32bit/1.3.1
+The directory needs to exist on the server.
+Subdirectories need to exist for the 'autoupgrade_os' values on the client,
+with further subdirectories named after the current server version.
+For example:
+/etc/burp/autoupgrade/server/win32/1.3.1
+/etc/burp/autoupgrade/server/some_os/1.3.1
 
-The subdirectory needs to contain two files called "script" and "package".
+The version directory needs to contain two files called "script" and "package".
 
 
 Given all the above, then when the client version is 1.2.8 or newer, and the
@@ -32,7 +35,7 @@ exit.
 Examples of "script" files are given in the source package, in
 configs/server/autoupgrade.
 
-The "package" file is the new file to be installed.
+The "package" file is the new package to be installed.
 
 
 
@@ -45,16 +48,20 @@ You want to automatically upgrade the Windows client to 1.3.1.
 You have a Windows burp installer called burp-win32-installer-1.3.1.exe.
 
 Make sure this is in the client burp.conf file:
+autoupgrade_os = win32
 autoupgrade_dir = C:/Program Files/Burp/autoupgrade
-Make sure this is in the server clientconfdir/win2k8 file:
-autoupgrade_dir = /etc/burp/autoupgrade/server/windows-32bit
+
+Make sure this is in the server burp.conf file:
+autoupgrade_dir = /etc/burp/autoupgrade/server
+
 Make sure this directory exists on the server:
-/etc/burp/autoupgrade/server/windows-32bit/1.3.1
+/etc/burp/autoupgrade/server/win32/1.3.1
+
 Copy an appropriate script file to that directory (and rename it "script"):
 cp burp/configs/autoupgrade/windows.script \
-	/etc/burp/autoupgrade/server/windows-32bit/1.3.1/script
+	/etc/burp/autoupgrade/server/win32/1.3.1/script
 Copy the installer to that directory (and rename it "package"):
 cp burp-win32-installer-1.3.1.exe \
-	/etc/burp/autoupgrade/server/windows-32bit/1.3.1/package
+	/etc/burp/autoupgrade/server/win32/1.3.1/package
 
 The client should now automatically upgrade to 1.3.1 when it next connects.

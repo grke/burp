@@ -16,11 +16,14 @@
 	- Estimates:
 		+ Should include the final jiggling around time.
 		+ Currently go a bit wonky during resume.
+		+ Don't show up on restore/verify.
 	- Client knows no counters when resuming, because it didn't do the
 	  phase1 scan. Have the server send it the counters.
 	- Can something be done to make key presses more responsive?
 	- When lots of clients are backing up, the live status monitor
 	  truncates information.
+	- Have a way of browsing backup contents.
+	- Have a way of viewing logs.
 
 * Do not compress manifests and logs when compression is turned off.
 
@@ -86,3 +89,13 @@
   backup_phase2_server()).
 
 * Restore / verify email notifications.
+
+* If 'resume' is set, but the includes/excludes changes, switch to 'use',
+  then start a new backup.
+
+* Add autoupgrade option to windows installer. Need extra screen, probably.
+
+* Add the ability to specify things like includes/excludes on the server side.
+  Will probably work by downloading chunks of config to the client.
+
+* Add option to strip off leading path components on restore.

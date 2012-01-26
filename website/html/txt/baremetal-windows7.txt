@@ -10,7 +10,7 @@ Michael Da Cova, who also provided help when I was stuck.
 a) Install the burp client on Windows 7.
 
 b) Make a burp backup of your C: drive (plus any others you want to keep).
-That means that 'include = C:' should be in the client burp.conf.
+That means that 'include = C:/' should be in the client burp.conf.
 You may also 'exclude = C:/pagefile.sys', because it is known to be pointless
 to backup that file.
 

@@ -2,10 +2,3 @@ password = abcdefgh
 
 # The common name in the certificate that the client gives us.
 ssl_peer_cn = grkeclient
-
-# Place the two upgrade files to be transerred to the client in a subdirectory
-# of autoupgrade_dir named after the version.
-# The upgrade files need to be called 'script' and 'package'.
-# Both will be downloaded to the client, and 'script' will be executed.
-# Leave it commented out if you do not want to autoupgrade the client.
-# autoupgrade_dir = /etc/burp/autoupgrade/server/test_os

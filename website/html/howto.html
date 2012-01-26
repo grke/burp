@@ -484,6 +484,12 @@ SERVER CONFIGURATION FILE OPTIONS
 	      default is 0, which means that if the  task  asked  for  by  the
 	      client fails, server_script_post will not be run.
 
+       autoupgrade_dir=[path]
+	      Path  to	autoupgrade  directory	from  which upgrades are down‐
+	      loaded. The option can be left unset in order not to autoupgrade
+	      clients.	Please	see docs/autoupgrade.txt in the source package
+	      for more help with this option.
+
 
 CLIENT CONFIGURATION FILE OPTIONS
        mode=client
@@ -518,22 +524,22 @@ CLIENT CONFIGURATION FILE OPTIONS
 	      Run as a particular group (not supported on Windows).
 
        ratelimit=[Mb/s]
-	      Set the network send rate limit, in Mb/s. If this option is  not
+	      Set  the network send rate limit, in Mb/s. If this option is not
 	      given, burp will send data as fast as it can.
 
        network_timeout=[s]
-	      Set  the	network  timeout  in  seconds.	If  no data is sent or
-	      received over a period of this length, burp will	give  up.  The
+	      Set the network timeout in  seconds.  If	no  data  is  sent  or
+	      received	over  a  period of this length, burp will give up. The
 	      default is 7200 seconds (2 hours).
 
        include=[path]
-	      Path  to	include  in  the backup. You can have multiple include
-	      lines. Use forward slashes '/',  not  backslashes  '\'  as  path
+	      Path to include in the backup. You  can  have  multiple  include
+	      lines.  Use  forward  slashes  '/',  not backslashes '\' as path
 	      delimiters.
 
        exclude=[path]
-	      Path  to	exclude from the backup. You can have multiple exclude
-	      lines. Use forward slashes '/',  not  backslashes  '\'  as  path
+	      Path to exclude from the backup. You can have  multiple  exclude
+	      lines.  Use  forward  slashes  '/',  not backslashes '\' as path
 	      delimiters.
 
        exclude_ext=[extension]
@@ -542,13 +548,13 @@ CLIENT CONFIGURATION FILE OPTIONS
 	      exclude VirtualBox disk images.
 
        min_file_size=[b/Kb/Mb/Gb]
-	      Do  not  back  up  files	that are less than the specified size.
-	      Example: 'min_file_size = 10Mb'. Set to 0 (the default) to  have
+	      Do not back up files that are  less  than  the  specified  size.
+	      Example:	'min_file_size = 10Mb'. Set to 0 (the default) to have
 	      no limit.
 
        max_file_size=[b/Kb/Mb/Gb]
-	      Do  not  back up files that are greater than the specified size.
-	      Example: 'max_file_size = 10Mb'. Set to 0 (the default) to  have
+	      Do not back up files that are greater than the  specified  size.
+	      Example:	'max_file_size = 10Mb'. Set to 0 (the default) to have
 	      no limit.
 
        cross_filesystem=[path]
@@ -558,25 +564,25 @@ CLIENT CONFIGURATION FILE OPTIONS
 	      Allow backups to cross all filesystem mountpoints.
 
        nobackup=[file name]
-	      If  this	file  system entry exists, the directory containing it
+	      If this file system entry exists, the  directory	containing  it
 	      will not be backed up.
 
        read_fifo=[path]
-	      Do not back up the given fifo itself, but open  it  for  reading
+	      Do  not  back  up the given fifo itself, but open it for reading
 	      and back up the contents as if it were a regular file.
 
        read_all_fifos=[0|1]
-	      Open  all  fifos for reading and back up the contents as if they
+	      Open all fifos for reading and back up the contents as  if  they
 	      were regular files.
 
        ssl_cert_ca=[path]
-	      The path to the SSL CA certificate. This file will  probably  be
+	      The  path  to the SSL CA certificate. This file will probably be
 	      the same on both the server and the client. The file should con‐
 	      tain just the certificate in PEM format
 
        ssl_cert=[path]
 	      The path to the client SSL certificate. It works for me when the
-	      file  contains  the concatenation of the certificate and private
+	      file contains the concatenation of the certificate  and  private
 	      key in PEM format.
 
        ssl_key=[path]
@@ -589,25 +595,25 @@ CLIENT CONFIGURATION FILE OPTIONS
 	      Synonym for ssl_key_password.
 
        encryption_password=[password]
-	      Set this to enable client side file Blowfish encryption. If  you
-	      do  not  want  encryption,  leave  this field out of your config
-	      file. IMPORTANT: Configuring  this  renders  delta  differencing
-	      pointless,  since  the  smallest real change to a file will make
+	      Set  this to enable client side file Blowfish encryption. If you
+	      do not want encryption, leave this  field  out  of  your	config
+	      file.  IMPORTANT:  Configuring  this  renders delta differencing
+	      pointless, since the smallest real change to a  file  will  make
 	      the whole file look different. Therefore, activating this option
-	      turns  off  delta  differencing  so  that whenever a client file
+	      turns off delta differencing so  that  whenever  a  client  file
 	      changes, the whole new file will be uploaded on the next backup.
-	      ALSO  IMPORTANT: If you manage to lose your encryption password,
-	      you will not be able to unencrypt your files. You should	there‐
-	      fore  think about having a copy of the encryption password some‐
-	      where off-box,  in  case	of  your  client  hard	disk  failing.
+	      ALSO IMPORTANT: If you manage to lose your encryption  password,
+	      you  will not be able to unencrypt your files. You should there‐
+	      fore think about having a copy of the encryption password  some‐
+	      where  off-box,  in  case  of  your  client  hard  disk failing.
 	      FINALLY: If you change your encryption password, you will end up
-	      with a mixture of files on the server with different  encryption
-	      and  it  may  become  tricky  to restore more than one file at a
-	      time. For this reason, if you change your  encryption  password,
-	      you  may	want  to start a fresh chain of backups (by moving the
+	      with  a mixture of files on the server with different encryption
+	      and it may become tricky to restore more	than  one  file  at  a
+	      time.  For  this reason, if you change your encryption password,
+	      you may want to start a fresh chain of backups  (by  moving  the
 	      original set aside, for example). Burp will cope fine with turn‐
 	      ing the same encryption password on and off between backups, and
-	      will restore a backup of mixed encrypted and  unencrypted  files
+	      will  restore  a backup of mixed encrypted and unencrypted files
 	      without a problem.
 
        backup_script_pre=[path]
@@ -620,61 +626,73 @@ CLIENT CONFIGURATION FILE OPTIONS
 	      many of these.
 
        backup_script_post=[path]
-	      Path to a script to run after a backup. The arguments to it  are
-	      'post',  [0|1] if the backup failed or succeeded, 'reserved3' to
-	      'reserved5',     and     then	arguments      defined	    by
+	      Path  to a script to run after a backup. The arguments to it are
+	      'post', [0|1] if the backup failed or succeeded, 'reserved3'  to
+	      'reserved5',	and	 then	  arguments	defined     by
 	      backup_script_post_arg.
 
        backup_script_post_arg=[string]
-	      A  user-definable  argument  to  the backup post script. You can
+	      A user-definable argument to the backup  post  script.  You  can
 	      have many of these.
 
        backup_script_post_run_on_fail=[0|1]
-	      If this is set to 1, backup_script_post will be run whether  the
-	      backup  succeeds	or  not.  The  default	is 0, which means that
+	      If  this is set to 1, backup_script_post will be run whether the
+	      backup succeeds or not. The  default  is	0,  which  means  that
 	      backup_script_post will only be run if the backup succeeds.
 
        restore_script_pre=[path]
-	      Path to a script to run before a restore. The  arguments	to  it
+	      Path  to	a  script to run before a restore. The arguments to it
 	      are  'pre',  'reserved2'	to  'reserved5',  and  then  arguments
 	      defined by restore_script_pre_arg.
 
        restore_script_pre_arg=[string]
-	      A user-definable argument to the restore	pre  script.  You  can
+	      A  user-definable  argument  to  the restore pre script. You can
 	      have many of these.
 
        restore_script_post=[path]
 	      Path to a script to run after a restore. The arguments to it are
 	      'post', [0|1] if the restore failed or succeeded, 'reserved3' to
-	      'reserved5',	and	 then	  arguments	defined     by
+	      'reserved5',     and     then	arguments      defined	    by
 	      restore_script_post_arg.
 
        restore_script_post_arg=[string]
-	      A user-definable argument to the restore post  script.  You  can
+	      A  user-definable  argument  to the restore post script. You can
 	      have many of these.
 
        restore_script_post_run_on_fail=[0|1]
 	      If this is set to 1, restore_script_post will be run whether the
-	      restore succeeds or not. The default  is	0,  which  means  that
+	      restore  succeeds  or  not.  The	default is 0, which means that
 	      restore_script_post will only be run if the restore succeeds.
 
        backup_script=[path]
 	      You can use this to save space in your config file when you want
-	      to run the same script before and after a backup.  It  overrides
+	      to  run  the same script before and after a backup. It overrides
 	      backup_script_pre and backup_script_post.
 
        backup_script_arg=[path]
-	      Goes  with backup_script and overrides backup_script_pre_arg and
+	      Goes with backup_script and overrides backup_script_pre_arg  and
 	      backup_script_post_arg.
 
        restore_script=[path]
 	      You can use this to save space in your config file when you want
-	      to  run the same script before and after a restore. It overrides
+	      to run the same script before and after a restore. It  overrides
 	      restore_script_pre and restore_script_post.
 
        restore_script_arg=[path]
-	      Goes with restore_script	and  overrides	restore_script_pre_arg
+	      Goes  with  restore_script  and overrides restore_script_pre_arg
 	      and restore_script_post_arg.
+
+       autoupgrade_dir=[path]
+	      Path to autoupgrade directory  into  which  upgrades  are  down‐
+	      loaded.  Please  see  docs/autoupgrade.txt in the source package
+	      for more help with this option. If you do not want  your	client
+	      to autoupgrade, do not set this option.
+
+       autoupgrade_os=[string]
+	      Name  of	the  client operating system. Should match a directory
+	      name in the server's autoupgrade_dir. If you do  not  want  your
+	      client to autoupgrade, do not set this option.
+
 
 
 SERVER CLIENTCONFDIR FILE

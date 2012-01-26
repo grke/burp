@@ -42,13 +42,14 @@ ${StrTrimNewLines}
 !define      MUI_BGCOLOR                FFFFFF
 ;!define      MUI_HEADERIMAGE_BITMAP     "burp-logo.bmp"
 
-!define      MUI_WELCOMEPAGE_TITLE      "Welcome to the Burp Setup Wizard, version ${RPMVERSION}."
+!define      MUI_WELCOMEPAGE_TITLE      "Welcome to the Burp setup wizard, version ${VERSION}."
 !InsertMacro MUI_PAGE_WELCOME
 !define      MUI_PAGE_CUSTOMFUNCTION_SHOW PageComponentsShow
 ; !InsertMacro MUI_PAGE_COMPONENTS
 !define      MUI_PAGE_CUSTOMFUNCTION_PRE PageDirectoryPre
 !InsertMacro MUI_PAGE_DIRECTORY
-Page custom EnterConfigPageBP
+Page custom EnterConfigPage1
+Page custom EnterConfigPage2
 ; Page custom EnterConfigPage2 LeaveConfigPage2
 !Define      MUI_PAGE_CUSTOMFUNCTION_LEAVE LeaveInstallPage
 !InsertMacro MUI_PAGE_INSTFILES
@@ -92,6 +93,7 @@ Var ConfigServerPort
 Var ConfigClientName
 Var ConfigPassword
 Var ConfigPoll
+Var ConfigAutoupgrade
 
 Var ConfigMonitorPassword
 
@@ -182,6 +184,7 @@ Function .onInit
   StrCpy $ConfigClientName              "clientname"
   StrCpy $ConfigPassword                "password"
   StrCpy $ConfigPoll                    "20"
+  StrCpy $ConfigAutoupgrade		"1"
 
   InitPluginsDir
 ;  File "/oname=$PLUGINSDIR\openssl.exe"  "${SRC_DIR}\openssl.exe"
@@ -195,7 +198,8 @@ Function .onInit
   File "/oname=$PLUGINSDIR\cryptoeay32-0.9.8.dll" "${SRC_DIR}\cryptoeay32-0.9.8.dll"
 !endif
 
-  !InsertMacro MUI_INSTALLOPTIONS_EXTRACT "ConfigPageBP.ini"
+  !InsertMacro MUI_INSTALLOPTIONS_EXTRACT "ConfigPage1.ini"
+  !InsertMacro MUI_INSTALLOPTIONS_EXTRACT "ConfigPage2.ini"
 
   SetPluginUnload alwaysoff
 
@@ -275,7 +279,6 @@ Section "-Initialize"
   RMDir "$SMPROGRAMS\Burp\Documentation"
   RMDir "$SMPROGRAMS\Burp"
   CreateDirectory "$SMPROGRAMS\Burp"
-  CreateDirectory "$SMPROGRAMS\Burp\autoupgrade"
   ; CreateDirectory "$SMPROGRAMS\Burp\Configuration"
   ; CreateDirectory "$SMPROGRAMS\Burp\Documentation"
 
@@ -327,7 +330,18 @@ endssl_cert_ca:
   FileWrite $R1 "ssl_cert_ca = C:/Program Files/Burp/ssl_cert_ca.pem$\r$\n"
   FileWrite $R1 "ssl_key_password = password$\r$\n"
   FileWrite $R1 "ssl_peer_cn = grkeserver$\r$\n"
-  FileWrite $R1 "# autoupgrade_dir = C:/Program Files/Burp/autoupgrade$\r$\n"
+!if "${BUILD_TOOLS}" == "mingw32"
+  FileWrite $R1 "autoupgrade_os = win32$\r$\n"
+!endif
+!if "${BUILD_TOOLS}" == "mingw64"
+  FileWrite $R1 "autoupgrade_os = win64$\r$\n"
+!endif
+  ${If} $ConfigAutoupgrade == "0"
+    FileWrite $R1 "# autoupgrade_dir = C:/Program Files/Burp/autoupgrade$\r$\n"
+  ${EndIf}
+  ${If} $ConfigAutoupgrade != "0"
+    FileWrite $R1 "autoupgrade_dir = C:/Program Files/Burp/autoupgrade$\r$\n"
+  ${EndIf}
 
   FileClose $R1
 
@@ -418,39 +432,24 @@ Section "Uninstall"
   Delete /REBOOTOK "$SMPROGRAMS\Startup\Burp Update.lnk"
 
   ; remove files and uninstaller (preserving config for now)
+  Delete /REBOOTOK "$INSTDIR\autoupgrade\*"
   Delete /REBOOTOK "$INSTDIR\bin\*"
-  Delete /REBOOTOK "$INSTDIR\doc\*"
   Delete /REBOOTOK "$INSTDIR\*"
 
   ; stop and delete the burp service
-  nsExec::Exec "sc stop burp"
-  nsExec::Exec "sc delete burp"
+  ;nsExec::Exec "sc stop burp"
+  ;nsExec::Exec "sc delete burp"
 
-  nsExec::Exec 'schtasks /DELETE "burp cron" /F'
+  nsExec::Exec 'schtasks /DELETE /TN "burp cron" /F'
 
-  ; Check for existing installation
-  MessageBox MB_YESNO|MB_ICONQUESTION \
-  "Would you like to delete the current configuration files and the working state file?" IDNO NoDel
-    Delete /REBOOTOK "$APPDATA\Burp\*"
-    Delete /REBOOTOK "$APPDATA\Burp\Work\*"
-    Delete /REBOOTOK "$APPDATA\Burp\Spool\*"
-    Delete /REBOOTOK "$PLUGINSDIR\burp*.conf"
-    Delete /REBOOTOK "$PLUGINSDIR\*console.conf"
-    Delete /REBOOTOK "$PLUGINSDIR\*conf.in"
-    Delete /REBOOTOK "$PLUGINSDIR\openssl.exe"
-    Delete /REBOOTOK "$PLUGINSDIR\libeay32.dll"
-    Delete /REBOOTOK "$PLUGINSDIR\ssleay32.dll"
-    Delete /REBOOTOK "$PLUGINSDIR\pw.txt"     
-    Delete /REBOOTOK "$PLUGINSDIR\*.cmd"    
-    Delete /REBOOTOK "$PLUGINSDIR\*.sql"    
-    RMDir "$APPDATA\Burp\Work"
-    RMDir "$APPDATA\Burp\Spool"
-    RMDir "$APPDATA\Burp"
-NoDel:
+  Delete /REBOOTOK "$PLUGINSDIR\burp*.conf"
+  Delete /REBOOTOK "$PLUGINSDIR\openssl.exe"
+  Delete /REBOOTOK "$PLUGINSDIR\libeay32.dll"
+  Delete /REBOOTOK "$PLUGINSDIR\ssleay32.dll"
 
   ; remove directories used
+  RMDir "$INSTDIR\autoupgrade"
   RMDir "$INSTDIR\bin"
-  RMDir "$INSTDIR\doc"
   RMDir "$INSTDIR"
 SectionEnd
 
@@ -595,7 +594,7 @@ Function UpdateComponentUI
   Pop $R0
 FunctionEnd
 
-Function EnterConfigPageBP
+Function EnterConfigPage1
 ;  IntOp $R0 $NewComponents & ${ComponentsRequiringUserConfig}
 
 ;  ${If} $R0 = 0
@@ -605,18 +604,37 @@ Function EnterConfigPageBP
   CreateDirectory "$INSTDIR\autoupgrade"
   IfFileExists $INSTDIR\Burp.conf end
 
-  !insertmacro MUI_HEADER_TEXT "Install Burp" ""
-  !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPageBP.ini" "Field 2" "State" "$ConfigServerAddress"
-;  !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPageBP.ini" "Field 5" "State" "$ConfigServerPort"
-  !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPageBP.ini" "Field 5" "State" "$ConfigClientName"
-  !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPageBP.ini" "Field 8" "State" "$ConfigPassword"
-  !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPageBP.ini" "Field 11" "State" "$ConfigPoll"
-  !insertmacro MUI_INSTALLOPTIONS_DISPLAY "ConfigPageBP.ini"
-  !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigServerAddress "ConfigPageBP.ini" "Field 2" State
-;  !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigServerPort "ConfigPageBP.ini" "Field 5" State
-  !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigClientName "ConfigPageBP.ini" "Field 5" State
-  !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigPassword "ConfigPageBP.ini" "Field 8" State
-  !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigPoll "ConfigPageBP.ini" "Field 11" State
+  !insertmacro MUI_HEADER_TEXT "Install burp (page 1 of 2)" ""
+  !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage1.ini" "Field 2" "State" "$ConfigServerAddress"
+;  !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage1.ini" "Field 5" "State" "$ConfigServerPort"
+  !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage1.ini" "Field 5" "State" "$ConfigClientName"
+  !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage1.ini" "Field 8" "State" "$ConfigPassword"
+  !insertmacro MUI_INSTALLOPTIONS_DISPLAY "ConfigPage1.ini"
+  !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigServerAddress "ConfigPage1.ini" "Field 2" State
+;  !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigServerPort "ConfigPage1.ini" "Field 5" State
+  !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigClientName "ConfigPage1.ini" "Field 5" State
+  !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigPassword "ConfigPage1.ini" "Field 8" State
+
+end:
+  DetailPrint "$INSTDIR\burp.conf already exists. Not overwriting."
+
+FunctionEnd
+
+Function EnterConfigPage2
+;  IntOp $R0 $NewComponents & ${ComponentsRequiringUserConfig}
+
+;  ${If} $R0 = 0
+;    Abort
+;  ${EndIf}
+
+  IfFileExists $INSTDIR\Burp.conf end
+
+  !insertmacro MUI_HEADER_TEXT "Install burp (page 2 of 2)" ""
+  !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage2.ini" "Field 2" "State" "$ConfigPoll"
+  !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage2.ini" "Field 5" "State" "$ConfigAutoupgrade"
+  !insertmacro MUI_INSTALLOPTIONS_DISPLAY "ConfigPage2.ini"
+  !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigPoll "ConfigPage2.ini" "Field 2" State
+  !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigAutoupgrade "ConfigPage2.ini" "Field 5" State
 
 end:
   DetailPrint "$INSTDIR\burp.conf already exists. Not overwriting."

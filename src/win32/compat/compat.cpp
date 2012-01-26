@@ -2234,7 +2234,7 @@ file_dup2(int, int)
 void openlog(const char *ident, int option, int facility) {}  
 #endif //HAVE_MINGW
 
-static pid_t do_forkchild(FILE **sin, FILE **sout, FILE **serr, const char *path, char * const argv[], int quit)
+static pid_t do_forkchild(FILE **sin, FILE **sout, FILE **serr, const char *path, char * const argv[], int do_wait)
 {
     int a=0;
     char cmd[1024]="";
@@ -2267,19 +2267,18 @@ static pid_t do_forkchild(FILE **sin, FILE **sout, FILE **serr, const char *path
         printf( "CreateProcess %s failed\n", path);
         return -1;
     }
-    if(!quit) WaitForSingleObject( pi.hProcess, INFINITE );
+    if(do_wait) WaitForSingleObject( pi.hProcess, INFINITE );
     CloseHandle( pi.hProcess );
     CloseHandle( pi.hThread );
-    if(quit) exit(0);
     return 0;
 }
 
 pid_t forkchild(FILE **sin, FILE **sout, FILE **serr, const char *path, char * const argv[])
 {
-	return do_forkchild(sin, sout, serr, path, argv, 0 /* do not exit */);
+	return do_forkchild(sin, sout, serr, path, argv, 1 /* wait */);
 }
 
-pid_t forkchild_and_exit(FILE **sin, FILE **sout, FILE **serr, const char *path, char * const argv[])
+pid_t forkchild_no_wait(FILE **sin, FILE **sout, FILE **serr, const char *path, char * const argv[])
 {
-	return do_forkchild(sin, sout, serr, path, argv, 1 /* exit */);
+	return do_forkchild(sin, sout, serr, path, argv, 0 /* do not wait */);
 }

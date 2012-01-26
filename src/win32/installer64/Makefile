@@ -56,7 +56,8 @@ clean:
 	$(CMD_ECHO)-rm -f $(INSTALL_EXE)
 	$(CMD_ECHO)-rm -rf release64
 	$(CMD_ECHO)-rm -rf winburp.nsi
-	$(CMD_ECHO)-rm -rf ConfigPageBP.ini
+	$(CMD_ECHO)-rm -rf ConfigPage1.ini
+	$(CMD_ECHO)-rm -rf ConfigPage2.ini
 	$(CMD_ECHO)-rm -rf DumpLog.nsh
 
 #
@@ -92,7 +93,8 @@ $(foreach file,$(addprefix $(DEPKGS32)/ssl/, $(SSL_FILES)),$(eval $(call Copy_Bi
 
 winburp.nsi:
 	cp ../installer/winburp.nsi .
-	cp ../installer/ConfigPageBP.ini .
+	cp ../installer/ConfigPage1.ini .
+	cp ../installer/ConfigPage2.ini .
 	cp ../installer/DumpLog.nsh .
 
 $(INSTALL_EXE): winburp.nsi $(addprefix release64/,$(BURP_BINARIES) $(DEPKGS_BINARIES) $(DEPKGS32_BINARIES) $(SSL_FILES) )

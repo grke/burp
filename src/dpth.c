@@ -110,10 +110,10 @@ int incr_dpth(struct dpth *dpth, struct config *cconf)
 	if(dpth->tert++>=0xFFFF)
 	{
 		dpth->tert=0;
-		if(dpth->seco++>=conf->max_storage_subdirs)
+		if(dpth->seco++>=cconf->max_storage_subdirs)
 		{
 			dpth->seco=0;
-			if(dpth->prim++>=max_storage_subdirs)
+			if(dpth->prim++>=cconf->max_storage_subdirs)
 			{
 				dpth->prim=0;
 				// Start again from zero, so make sure that

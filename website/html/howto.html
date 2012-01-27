@@ -397,6 +397,11 @@ SERVER CONFIGURATION FILE OPTIONS
 	      Defines the number of child processes to	fork  (the  number  of
 	      clients that can simultaneously connect. The default is 5.
 
+       max_storage_subdirs=[number]
+	      Defines  the number of subdirectories in the data storage areas.
+	      The maximum number of subdirectories that ext3 allows is	32000.
+	      If you do not set this option, it defaults to 30000.
+
        timer_script=[path]
 	      Path  to the script to run when a client connects with the timed
 	      backup option. If the script exits with code 0,  a  backup  will
@@ -821,7 +826,7 @@ Burp, don't suck.
 </td>
 <td align="right">
 <font color="#99ccff">
-Last updated: January 2012
+Last updated: February 2012
 </font>
 </td></tr></table>
 

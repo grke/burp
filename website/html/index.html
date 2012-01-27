@@ -98,6 +98,26 @@ The main author of Burp is Graham Keeling.
 <TD ALIGN="LEFT">
 
 <P>
+<FONT COLOR="#99CCFF">2012-01-27: burp-1.30 is released.
+<pre>
+Changes in burp-1.3.0:
+  * Add a mechanism for automatically upgrading clients.
+  * Fix bug where attributes on Windows directories were not getting read
+    properly.
+  * Fix rounding problem in remaining time estimation in the status monitor.
+  * Don't backup the whole file if only ctime changed.
+  * Include the client name in arguments to server scripts.
+  * Do not log a message in the server SIGCHLD handler, as this appeared to
+    be causing an occasional lock up on a Ubuntu server.
+  * Upgrade Windows depkgs to latest versions of openssl.
+  * Make Windows uninstall work.
+  * Add 'allow autoupgrade' option to a second screen on the Windows installer.
+  * Add 'max_storage_subdirs' option, and default it to 30000.
+</pre>
+</FONT>
+</P>
+
+<P>
 <FONT COLOR="#99CCFF">2011-12-30: burp-1.2.7 is released.
 <pre>
 Changes in burp-1.2.7:
@@ -479,7 +499,7 @@ Burp, don't suck.
 </td>
 <td align="right">
 <font color="#99ccff">
-Last updated: January 2012
+Last updated: February 2012
 </font>
 </td></tr></table>
 

@@ -2,12 +2,16 @@
 #include "prog.h"
 #include "find.h"
 #include "log.h"
+#include "asyncio.h"
 #include "handy.h"
 #include "backup_phase1_client.h"
 #ifdef HAVE_DARWIN_OS
 #include <sys/param.h>
 #include <sys/mount.h>
 #include <sys/attr.h>
+#endif
+#ifdef HAVE_LINUX_OS
+#include <sys/statfs.h>
 #endif
 
 extern int32_t name_max;              /* filename max length */
@@ -297,6 +301,41 @@ static int found_soft_link(FF_PKT *ff_pkt, struct config *conf,
 	return rtn_stat;
 }
 
+static int backup_dir_and_return(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr, const char *fname, bool top_level, FF_PKT *dir_ff_pkt, struct utimbuf *restore_times)
+{
+	int rtn_stat=send_file(ff_pkt, top_level, conf, cntr);
+	if(ff_pkt->linked)
+		ff_pkt->linked->FileIndex=ff_pkt->FileIndex;
+	free_dir_ff_pkt(dir_ff_pkt);
+	/* reset "link" */
+	ff_pkt->link=ff_pkt->fname;
+	if(ff_pkt->flags & FO_KEEPATIME) utime(fname, restore_times);
+	return rtn_stat;
+}
+
+int fstype_excluded(struct config *conf, const char *fname, struct cntr *cntr)
+{
+#if defined(HAVE_LINUX_OS)
+	int i=0;
+	struct statfs buf;
+	if(statfs(fname, &buf))
+	{
+		logw(cntr, "Could not statfs %s: %s\n", fname, strerror(errno));
+		return -1;
+	}
+	for(i=0; i<conf->exfscount; i++)
+	{
+		if(conf->excfs[i]->flag==buf.f_type)
+		{
+			//printf("excluding: %s (%s)\n",
+			//	fname, conf->excfs[i]->path);
+			return -1;
+		}
+	}
+#endif
+	return 0;
+}
+
 /* prototype, because found_directory() recurses using find_files() */
 static int
 find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
@@ -440,6 +479,12 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 #endif
 		))
 	{
+		if(fstype_excluded(conf, ff_pkt->fname, cntr))
+		{
+			free(link);
+			return backup_dir_and_return(ff_pkt, conf, cntr,
+				fname, top_level, dir_ff_pkt, restore_times);
+		}
 		if(!fs_change_is_allowed(conf, ff_pkt->fname))
 		{
 			ff_pkt->type=FT_NOFSCHG;
@@ -449,15 +494,9 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 	/* If not recursing, just backup dir and return */
 	if(!recurse)
 	{
-		rtn_stat=send_file(ff_pkt, top_level, conf, cntr);
-		if(ff_pkt->linked)
-			ff_pkt->linked->FileIndex=ff_pkt->FileIndex;
 		free(link);
-		free_dir_ff_pkt(dir_ff_pkt);
-		/* reset "link" */
-		ff_pkt->link=ff_pkt->fname;
-		if(ff_pkt->flags & FO_KEEPATIME) utime(fname, restore_times);
-		return rtn_stat;
+		return backup_dir_and_return(ff_pkt, conf, cntr,
+			fname, top_level, dir_ff_pkt, restore_times);
 	}
 
 	/* reset "link" */

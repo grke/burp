@@ -93,6 +93,3 @@
   Will probably work by downloading chunks of config to the client.
 
 * Add option to strip off leading path components on restore.
-
-* Have a way to skip over particular partitions (like tmpfs) without generating
-  warnings.

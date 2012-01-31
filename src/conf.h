@@ -47,11 +47,13 @@ struct config
 	struct strlist **fschgdir;
 	struct strlist **nobackup;
 	struct strlist **excext;
+	struct strlist **excfs;
 	int sdcount;
 	int iecount;
 	int fscount;
 	int nbcount;
 	int excount;
+	int exfscount;
 	int cross_all_filesystems;
 	int read_all_fifos;
 	struct strlist **fifos;

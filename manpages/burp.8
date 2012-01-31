@@ -312,6 +312,9 @@ Path to exclude from the backup. You can have multiple exclude lines. Use forwar
 \fBexclude_ext=[extension]\fR
 Extensions to exclude from the backup. Case insensitive. You can have multiple exclude extension lines. For example, set 'vdi' to exclude VirtualBox disk images.
 .TP
+\fBexclude_fs=[fstype]\fR
+File systems to exclude from the backup. Case insensitive. You can have multiple exclude file system lines. For example, set 'tmpfs' to exclude tmpfs. Burp has an internal mapping of file system names to file system IDs. If you know the file system ID, you can use that instead. For example, 'exclude_fs = 0x01021994' will also exclude tmpfs.
+.TP
 \fBmin_file_size=[b/Kb/Mb/Gb]\fR
 Do not back up files that are less than the specified size. Example: 'min_file_size = 10Mb'. Set to 0 (the default) to have no limit.
 .TP

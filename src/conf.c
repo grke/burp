@@ -33,12 +33,14 @@ void init_config(struct config *conf)
 	conf->fschgdir=NULL;
 	conf->nobackup=NULL;
 	conf->excext=NULL;
+	conf->excfs=NULL;
 	conf->sdcount=0;
 	conf->iecount=0;
 	conf->fscount=0;
 	conf->nbcount=0;
 	conf->ffcount=0;
 	conf->excount=0;
+	conf->exfscount=0;
 	conf->fifos=NULL;
 	conf->cross_all_filesystems=0;
 	conf->read_all_fifos=0;
@@ -151,6 +153,7 @@ void free_config(struct config *conf)
 	strlists_free(conf->nobackup, conf->nbcount);
 	strlists_free(conf->fifos, conf->ffcount);
 	strlists_free(conf->excext, conf->excount);
+	strlists_free(conf->excfs, conf->exfscount);
 
 	if(conf->timer_script) free(conf->timer_script);
 	strlists_free(conf->timer_arg, conf->tacount);
@@ -409,6 +412,56 @@ static void do_strlist_sort(struct strlist **list, int count, struct strlist ***
 	*dest=list;
 }
 
+#ifdef HAVE_LINUX_OS
+struct fstype
+{
+	const char *str;
+	long flag;
+};
+
+static struct fstype fstypes[]={
+	{ "debugfs",		0x64626720 },
+	{ "devfs",		0x00001373 },
+	{ "devpts",		0x00001CD1 },
+	{ "ext2",		0x0000EF53 },
+	{ "ext3",		0x0000EF53 },
+	{ "ext4",		0x0000EF53 },
+	{ "iso9660",		0x00009660 },
+	{ "jfs",		0x3153464A },
+	{ "nfs",		0x00006969 },
+	{ "ntfs",		0x5346544E },
+	{ "proc",		0x00009fa0 },
+	{ "reiserfs",		0x52654973 },
+	{ "securityfs",		0x73636673 },
+	{ "sysfs",		0x62656572 },
+	{ "smbfs",		0x0000517B },
+	{ "usbdevfs",		0x00009fa2 },
+	{ "xfs",		0x58465342 },
+	{ "ramfs",		0x858458f6 },
+	{ "romfs",		0x00007275 },
+	{ "tmpfs",		0x01021994 },
+	{ NULL,			0 },
+};
+#endif
+
+static int fstype_to_flag(const char *fstype, long *flag)
+{
+#ifdef HAVE_LINUX_OS
+	int i=0;
+	for(i=0; fstypes[i].str; i++)
+	{
+		if(!strcmp(fstypes[i].str, fstype))
+		{
+			*flag=fstypes[i].flag;
+			return 0;
+		}
+	}
+#else
+	return 0;
+#endif
+	return -1;
+}
+
 int load_config(const char *config_path, struct config *conf, bool loadall)
 {
 	int i=0;
@@ -438,6 +491,7 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 	struct strlist **sslist=NULL;
 
 	struct strlist **exlist=NULL;
+	struct strlist **exfslist=NULL;
 	struct strlist **kplist=NULL;
 	int have_include=0;
 	int got_timer_args=conf->tacount;
@@ -661,6 +715,10 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 				"exclude_ext",
 				NULL, NULL, &(conf->excount),
 				&exlist, 0)) return -1;
+			if(get_conf_val_args(field, value,
+				"exclude_fs",
+				NULL, NULL, &(conf->exfscount),
+				&exfslist, 0)) return -1;
 			if(get_conf_val(field, value,
 			  "timer_script", &(conf->timer_script))) return -1;
 			if(get_conf_val_args(field, value,
@@ -767,7 +825,31 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 	}
 	fclose(fp);
 
+	// Set the strlist flag for the excluded fstypes
+	for(i=0; i<conf->exfscount; i++)
+	{
+		exfslist[i]->flag=0;
+		if(!strncasecmp(exfslist[i]->path, "0x", 2))
+		{
+			exfslist[i]->flag=strtol((exfslist[i]->path)+2,
+				NULL, 16);
+			logp("Excluding file system type 0x%08X\n",
+				exfslist[i]->flag);
+		}
+		else
+		{
+			if(fstype_to_flag(exfslist[i]->path,
+				&(exfslist[i]->flag)))
+			{
+				logp("Unknown exclude fs type: %s\n",
+					exfslist[i]->path);
+				return -1;
+			}
+		}
+	}
+
 	do_strlist_sort(exlist, conf->excount, &(conf->excext));
+	do_strlist_sort(exfslist, conf->exfscount, &(conf->excfs));
 	do_strlist_sort(fflist, conf->ffcount, &(conf->fifos));
 	do_strlist_sort(fslist, conf->fscount, &(conf->fschgdir));
 	do_strlist_sort(ielist, conf->iecount, &(conf->incexcdir));

@@ -22,6 +22,7 @@
 #include "status_server.h"
 #include "forkchild.h"
 #include "autoupgrade_server.h"
+#include "incexc_recv_server.h"
 
 #include <netdb.h>
 #include <librsync.h>
@@ -243,7 +244,24 @@ static int open_log(const char *realworking, const char *client, const char *cve
 	return 0;
 }
 
-static int do_backup_server(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *manifest, const char *forward, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *client, const char *cversion, struct cntr *p1cntr, struct cntr *cntr, int resume)
+static int write_incexc(const char *realworking, const char *incexc)
+{
+	int ret=-1;
+	FILE *fp=NULL;
+	char *path=NULL;
+	if(!(path=prepend_s(realworking, "incexc", strlen("incexc"))))
+		goto end;
+	if(!(fp=open_file(path, "wb")))
+		goto end;
+	fprintf(fp, "%s", incexc);
+	ret=0;
+end:
+	if(path) free(path);
+	close_fp(&fp);
+	return ret;
+}
+
+static int do_backup_server(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *manifest, const char *forward, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *client, const char *cversion, struct cntr *p1cntr, struct cntr *cntr, int resume, const char *incexc)
 {
 	int ret=0;
 	char msg[256]="";
@@ -345,6 +363,12 @@ static int do_backup_server(const char *basedir, const char *current, const char
 			log_and_send(msg);
 			goto error;
 		}
+		else if(incexc && *incexc && write_incexc(realworking, incexc))
+		{
+			snprintf(msg, sizeof(msg), "unable to write incexc");
+			log_and_send(msg);
+			goto error;
+		}
 
 		if(backup_phase1_server(phase1data,
 			client, p1cntr, cntr, cconf))
@@ -438,8 +462,40 @@ static int maybe_rebuild_manifest(const char *phase2data, const char *unchangedd
 		1 /* recovery mode */, compress, client, p1cntr, cntr, cconf);
 }
 
-static int check_for_rubble(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *manifest, const char *client, struct cntr *p1cntr, struct cntr *cntr, int *resume)
+static int incexc_matches(const char *fullrealwork, const char *incexc)
 {
+	int ret=0;
+	int got=0;
+	FILE *fp=NULL;
+	char buf[4096]="";
+	const char *inc=NULL;
+	char *old_incexc_path=NULL;
+	if(!(old_incexc_path=prepend_s(fullrealwork,
+		"incexc", strlen("incexc"))))
+			return -1;
+	if(!(fp=open_file(old_incexc_path, "rb")))
+	{
+		ret=-1;
+		goto end;
+	}
+	inc=incexc;
+	while((got=fread(buf, 1, sizeof(buf), fp))>0)
+	{
+		if(strlen(inc)<(size_t)got) break;
+		if(strncmp(buf, inc, got)) break;
+		inc+=got;
+	}
+	if(inc && strlen(inc)) ret=0;
+	else ret=1;
+end:
+	close_fp(&fp);
+	free(old_incexc_path);
+	return ret;
+}
+
+static int check_for_rubble(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *manifest, const char *client, struct cntr *p1cntr, struct cntr *cntr, int *resume, const char *incexc)
+{
+	int ret=0;
 	size_t len=0;
 	char realwork[256]="";
 	struct stat statp;
@@ -453,9 +509,8 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 	// run the finish_backup stuff.
 	if(!lstat(finishing, &statp))
 	{
-		int r=0;
 		logp("Found finishing symlink - attempting to complete prior backup!\n");
-		r=backup_phase4_server(basedir,
+		ret=backup_phase4_server(basedir,
 			working,
 			current,
 			currentdata,
@@ -464,19 +519,20 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 			client,
 			p1cntr,
 			cntr);
-		if(!r) logp("Prior backup completed OK.\n");
-		return r;
+		if(!ret) logp("Prior backup completed OK.\n");
+		goto end;
 	}
 
 	if(lstat(working, &statp))
 	{
 		// No working directory - that is good.
-		return 0;
+		goto end;
 	}
 	if(!S_ISLNK(statp.st_mode))
 	{
 		logp("Working directory is not a symlink.\n");
-		return -1;
+		ret=-1;
+		goto end;
 	}
 
 	// The working directory has not finished being populated.
@@ -484,37 +540,34 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 	if((len=readlink(working, realwork, sizeof(realwork)-1))<0)
 	{
 		logp("Could not readlink on old working directory: %s\n", strerror(errno));
-		return -1;
+		ret=-1;
+		goto end;
 	}
 	realwork[len]='\0';
 	if(!(fullrealwork=prepend_s(basedir, realwork, strlen(realwork))))
-		return -1;
+	{
+		ret=-1;
+		goto end;
+	}
 
 	if(lstat(fullrealwork, &statp))
 	{
 		logp("removing dangling working symlink -> %s\n", realwork);
 		unlink(working);
-		free(fullrealwork);
-		return 0;
+		goto end;
 	}
 
 	if(!(phase1datatmp=get_tmp_filename(phase1data)))
-	{
-		free(fullrealwork);
-		return -1;
-	}
+		goto end;
 
 	// We have found an old working directory - open the log inside
 	// for appending.
 	if(!(logpath=prepend_s(fullrealwork, "log", strlen("log")))
 	  || !(logfp=open_file(logpath, "ab")) || set_logfp(logfp))
 	{
-		free(fullrealwork);
-		if(logpath) free(logpath);
-		if(phase1datatmp) free(phase1datatmp);
-		return -1;
+		ret=-1;
+		goto end;
 	}
-	free(logpath); logpath=NULL;
 
 	logp("found old working directory: %s\n", fullrealwork);
 	logp("working_dir_recovery_method: %s\n", wdrm);
@@ -525,7 +578,6 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 		logp("Phase 1 has not completed.\n");
 		wdrm="delete";
 	}
-	free(phase1datatmp); phase1datatmp=NULL;
 
 	if(!strcmp(wdrm, "delete"))
 	{
@@ -535,17 +587,37 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 			NULL, TRUE /* delete files */))
 		{
 			logp("Old working directory is in the way.\n");
-			free(fullrealwork);
-			set_logfp(NULL); // fclose the logfp
-			return -1;
+			ret=-1;
+			goto end;
 		}
 		unlink(working); // get rid of the symlink.
+		goto end;
 	}
-	else if(!strcmp(wdrm, "use"))
+	if(!strcmp(wdrm, "resume"))
+	{
+		logp("Found interrupted backup.\n");
+
+		// Check that the current incexc configuration is the same
+		// as before.
+		if((ret=incexc_matches(fullrealwork, incexc))<0)
+			goto end;
+		if(ret)
+		{
+			// Attempt to resume on the next backup.
+			logp("Will resume on the next backup request.\n");
+			*resume=1;
+			ret=0;
+			goto end;
+		}
+		logp("Includes/excludes have changed since the last backup.\n");
+		logp("Will treat last backup as finished.\n");
+		wdrm="use";
+	}
+	if(!strcmp(wdrm, "use"))
 	{
 		// Use it as it is.
 		logp("converting old working directory into the latest backup\n");
-		free(fullrealwork);
+		free(fullrealwork); fullrealwork=NULL;
 
 		// TODO: There might be a partial file written that is not
 		// yet logged to the manifest. It does no harm other than
@@ -555,43 +627,36 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 		if(maybe_rebuild_manifest(phase2data, unchangeddata, manifest,
 			1 /* compress */, client, p1cntr, cntr, cconf))
 		{
-			set_logfp(NULL); // fclose the logfp
-			return -1;
+			ret=-1;
+			goto end;
 		}
 
 		// Now just rename the working link to be a finishing link,
 		// then run this function again.
 		if(do_rename(working, finishing))
 		{
-			set_logfp(NULL); // fclose the logfp
-			return -1;
+			ret=-1;
+			goto end;
 		}
-		set_logfp(NULL); // fclose the logfp
-
-		return check_for_rubble(basedir, current, working,
+		ret=check_for_rubble(basedir, current, working,
 			currentdata, finishing, cconf, phase1data, phase2data,
-			unchangeddata, manifest, client, p1cntr, cntr, resume);
-	}
-	else if(!strcmp(wdrm, "resume"))
-	{
-		// Attempt to resume the next backup
-		logp("Found interrupted backup - will resume on the next backup request.\n");
-		*resume=1;
-	}
-	else
-	{
-		logp("Unknown working_dir_recovery_method: %s\n", wdrm);
-		free(fullrealwork);
-		set_logfp(NULL); // fclose the logfp
-		return -1;
+			unchangeddata, manifest, client, p1cntr, cntr,
+			resume, incexc);
+		goto end;
 	}
 
-	free(fullrealwork);
+	logp("Unknown working_dir_recovery_method: %s\n", wdrm);
+	ret=-1;
+
+end:
+	if(fullrealwork) free(fullrealwork);
+	if(logpath) free(logpath);
+	if(phase1datatmp) free(phase1datatmp);
 	set_logfp(NULL); // fclose the logfp
-	return 0;
+	return ret;
 }
 
-static int get_lock_and_clean(const char *basedir, const char *lockbasedir, const char *lockfile, const char *current, const char *working, const char *currentdata, const char *finishing, bool cancel, bool *gotlock, struct config *cconf, const char *forward, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *manifest, const char *client, struct cntr *p1cntr, struct cntr *cntr, int *resume)
+static int get_lock_and_clean(const char *basedir, const char *lockbasedir, const char *lockfile, const char *current, const char *working, const char *currentdata, const char *finishing, bool cancel, bool *gotlock, struct config *cconf, const char *forward, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *manifest, const char *client, struct cntr *p1cntr, struct cntr *cntr, int *resume, const char *incexc)
 {
 	int ret=0;
 	char *copy=NULL;
@@ -630,7 +695,7 @@ static int get_lock_and_clean(const char *basedir, const char *lockbasedir, cons
 
 	if(!ret && check_for_rubble(basedir, current, working, currentdata,
 		finishing, cconf, phase1data, phase2data, unchangeddata,
-		manifest, client, p1cntr, cntr, resume))
+		manifest, client, p1cntr, cntr, resume, incexc))
 			ret=-1;
 
 	return ret;
@@ -642,7 +707,7 @@ static int run_script_w(const char *script, struct strlist **userargs, int usera
 		"reserved1", "reserved2", "reserved3", cntr, 1);
 }
 
-static int child(struct config *conf, struct config *cconf, const char *client, const char *cversion, char cmd, char *buf, struct cntr *p1cntr, struct cntr *cntr)
+static int child(struct config *conf, struct config *cconf, const char *client, const char *cversion, const char *incexc, char cmd, char *buf, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ret=0;
 	char msg[256]="";
@@ -697,7 +762,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			working, currentdata,
 			finishing, TRUE, &gotlock, cconf,
 			forward, phase1data, phase2data, unchangeddata,
-			manifest, client, p1cntr, cntr, &resume))
+			manifest, client, p1cntr, cntr, &resume, incexc))
 				ret=-1;
 		else
 		{
@@ -744,7 +809,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			  currentdata, finishing, cconf,
 			  manifest, forward, phase1data, phase2data,
 			  unchangeddata, client, cversion, p1cntr, cntr,
-			  resume);
+			  resume, incexc);
 			if(ret)
 				run_script(
 					cconf->notify_failure_script,
@@ -793,7 +858,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			current, working,
 			currentdata, finishing, TRUE, &gotlock, cconf,
 			forward, phase1data, phase2data, unchangeddata,
-			manifest, client, p1cntr, cntr, &resume))
+			manifest, client, p1cntr, cntr, &resume, incexc))
 				ret=-1;
 		else
 		{
@@ -816,7 +881,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			current, working,
 			currentdata, finishing, FALSE, &gotlock, cconf,
 			forward, phase1data, phase2data, unchangeddata,
-			manifest, client, p1cntr, cntr, &resume))
+			manifest, client, p1cntr, cntr, &resume, incexc))
 				ret=-1;
 		else
 		{
@@ -886,7 +951,7 @@ static long version_to_long(const char *version)
 	return ret;
 }
 
-static int extra_comms(const char *cversion, struct config *conf, struct config *cconf, struct cntr *p1cntr)
+static int extra_comms(const char *cversion, char **incexc, struct config *conf, struct config *cconf, struct cntr *p1cntr)
 {
 	int ret=0;
 	char *buf=NULL;
@@ -941,6 +1006,14 @@ static int extra_comms(const char *cversion, struct config *conf, struct config 
 					break;
 				}
 			}
+			else if(!strcmp(buf, "incexc"))
+			{
+				if(incexc_recv_server(incexc, conf, p1cntr))
+				{
+					ret=-1;
+					break;
+				}
+			}
 			else
 			{
 				logp("unexpected command from client: %c:%s\n",
@@ -976,6 +1049,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	char *buf=NULL;
 	SSL *ssl=NULL;
 	BIO *sbio=NULL;
+	char *incexc=NULL;
 	char *client=NULL;
 	char *cversion=NULL;
 	struct config conf;
@@ -1041,7 +1115,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 		goto finish;
 	}
 
-	if(extra_comms(cversion, &conf, &cconf, &p1cntr))
+	if(extra_comms(cversion, &incexc, &conf, &cconf, &p1cntr))
 	{
 		log_and_send("running extra comms failed on server");
 		ret=-1;
@@ -1072,7 +1146,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 		// want to run.
 	}
 
-	if(!ret) ret=child(&conf, &cconf, client, cversion,
+	if(!ret) ret=child(&conf, &cconf, client, cversion, incexc,
 		cmd, buf, &p1cntr, &cntr);
 
 	if((!ret || cconf.server_script_post_run_on_fail)
@@ -1099,6 +1173,7 @@ finish:
 	if(client) free(client);
 	if(cversion) free(cversion);
 	if(buf) free(buf);
+	if(incexc) free(incexc);
 	free_config(&conf);
 	free_config(&cconf);
 	return ret;

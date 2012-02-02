@@ -2,7 +2,8 @@
 
 * Make SSL_shutdown() work properly.
 
-* Investigate HFS / resource forks and make support.
+* Investigate HFS / resource forks and make support. I think this might
+  need somebody to buy me a Mac.
 
 * Add include/exclude wildcards.
 
@@ -24,6 +25,7 @@
 	  truncates information.
 	- Have a way of browsing backup contents.
 	- Have a way of viewing logs.
+	- Make a web interface.
 
 * Do not compress manifests and logs when compression is turned off.
 
@@ -86,10 +88,11 @@
 
 * Restore / verify email notifications.
 
-* If 'resume' is set, but the includes/excludes changes, switch to 'use',
-  then start a new backup.
-
 * Add the ability to specify things like includes/excludes on the server side.
   Will probably work by downloading chunks of config to the client.
 
 * Add option to strip off leading path components on restore.
+
+* Add option to take a list of paths for restore.
+
+* Add option to set up a restore on the server side.

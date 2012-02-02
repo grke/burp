@@ -189,7 +189,7 @@ on the server. Options are...
 .TP
 \fBuse:\fR Convert the working directory into a complete backup.
 .TP
-\fBresume:\fR Simply continue the previous backup from the point at which it left off.
+\fBresume:\fR Simply continue the previous backup from the point at which it left off. NOTE: If the client has changed its include/exclude configuration since the backup was interrupted, the recovery method will automatically switch to 'use'.
 .TP
 \fBssl_cert_ca=[path]\fR
 The path to the SSL CA certificate. This file will probably be the same on both the server and the client. The file should contain just the certificate in PEM format

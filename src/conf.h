@@ -42,6 +42,11 @@ struct config
 	char *password; // also a clientconfdir option
 	char *passwd; // also a clientconfdir option
 	char *server;
+	char *encryption_password;
+	char *autoupgrade_os;
+	char *autoupgrade_dir; // also a server option
+
+  // This block of client stuff is all to do with what files to backup.
 	struct strlist **startdir;
 	struct strlist **incexcdir;
 	struct strlist **fschgdir;
@@ -58,11 +63,8 @@ struct config
 	int read_all_fifos;
 	struct strlist **fifos;
 	int ffcount;
-	char *encryption_password;
 	unsigned long min_file_size;
 	unsigned long max_file_size;
-	char *autoupgrade_os;
-	char *autoupgrade_dir; // also a server option
 
 	char *backup_script_pre;
 	struct strlist **backup_script_pre_arg;
@@ -133,5 +135,8 @@ extern void free_config(struct config *conf);
 extern int set_client_global_config(struct config *conf, struct config *cconf);
 extern int is_subdir(const char *dir, const char *sub);
 extern int pathcmp(const char *a, const char *b);
+
+extern int send_incexc_client(struct config *conf, struct cntr *p1cntr);
+extern int recv_incexc_server(struct config *conf, struct cntr *p1cntr);
 
 #endif

@@ -1,5 +1,7 @@
   * Add 'exclude_fs =' option for Linux so that you can skip partitions
     types (for example, tmpfs) without generating warnings.
+  * If recovery method 'resume' is set, but the includes/excludes change,
+    switch to 'use', then start a new backup.
 
 2012-01-27 Changes in burp-1.3.0:
   * Add a mechanism for automatically upgrading clients.

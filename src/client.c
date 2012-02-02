@@ -16,6 +16,7 @@
 #include "berrno.h"
 #include "forkchild.h"
 #include "autoupgrade_client.h"
+#include "incexc_send_client.h"
 
 #include <sys/types.h>
 
@@ -198,6 +199,8 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 
 		if(!ret && conf->autoupgrade_dir && conf->autoupgrade_os)
 			ret=autoupgrade_client(conf, &p1cntr);
+
+		if(!ret) ret=incexc_send_client(conf, &p1cntr);
 
 		if(async_write_str(CMD_GEN, "extra_comms_end")
 		  || async_read_expect(CMD_GEN, "extra_comms_end ok"))

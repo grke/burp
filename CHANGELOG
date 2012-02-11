@@ -6,6 +6,8 @@
   * In the tests, check to see whether it looks like the server has finished
     the backup before moving on, rather than just waiting a set amount of time.
   * Add man pages for bedup and burp_ca.
+  * Remove embedded uthash code. It will need to be installed as a dependency.
+    For example, in Debian, you might run 'apt-get install uthash-dev'.
 
 2012-01-27 Changes in burp-1.3.0:
   * Add a mechanism for automatically upgrading clients.

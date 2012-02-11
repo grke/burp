@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <dirent.h>
@@ -7,7 +8,9 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <signal.h>
+#include <malloc.h>
 
+#include <uthash.h>
 #include <openssl/md5.h>
 
 #include "config.h"
@@ -16,7 +19,6 @@
 #include "conf.h"
 #include "lock.h"
 #include "strlist.h"
-#include "uthash/uthash.h"
 
 #define LOCKFILE_NAME		"lockfile"
 #define BEDUP_LOCKFILE_NAME	"lockfile.bedup"

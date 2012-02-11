@@ -100,10 +100,24 @@ run_bedup()
 
 run_backup()
 {
+	local waited=0
+	local working="$target/var/spool/burp/testclient/working"
+	local finishing="$target/var/spool/burp/testclient/finishing"
+	SLEEPTIME=2
+
 	echo "Starting test client backup"
 	./sbin/burp -c $clientconf -a b >> "$clientlog" 2>&1 \
 		|| fail "client backup returned $?"
-	sleep 10
+
+	# Repeatedly check to see whether the server has finished, rather
+	# than just sleeping some length of time. 
+	while true ; do
+		sleep $SLEEPTIME
+		[ ! -e "$working" -a ! -e "$finishing" ] && break
+		waited=$((waited+$SLEEPTIME))
+		[ "$waited" -gt 120 ] && \
+		  fail "client backup seemed to be complete after 2 minutes"
+	done
 }
 
 run_verify()

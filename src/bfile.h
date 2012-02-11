@@ -40,11 +40,14 @@ struct BFILE {
    int mode;                          /* set if file is open */
    HANDLE fh;                         /* Win32 file handle */
    LPVOID lpContext;                  /* BackupRead/Write context */
-   char *errmsg;                   /* error message buffer */
+   char *errmsg;                      /* error message buffer */
    DWORD rw_bytes;                    /* Bytes read or written */
    DWORD lerror;                      /* Last error code */
    int berrno;                        /* errno */
    bool reparse_point;                /* set if reparse point */ 
+   int64_t winattr;                   /* needed for deciding to open with
+					 encrypted functions or not */
+   PVOID pvContext;                   /* also for the encrypted functions */
 };
 
 #else
@@ -55,7 +58,7 @@ struct BFILE {
 
 #endif
 
-void    binit(BFILE *bfd);
+void    binit(BFILE *bfd, int64_t winattr);
 bool    set_win32_backup(BFILE *bfd);
 bool    have_win32_api();
 int     bopen(BFILE *bfd, const char *fname, int flags, mode_t mode);

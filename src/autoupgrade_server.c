@@ -11,7 +11,7 @@ static int send_a_file(const char *path, struct cntr *p1cntr)
 	int ret=0;
 	FILE *fp=NULL;
 	unsigned long long bytes=0;
-	if(open_file_for_send(NULL, &fp, path, p1cntr)
+	if(open_file_for_send(NULL, &fp, path, 0, p1cntr)
 	  || send_whole_file_gz(path, "datapth", 0, &bytes, NULL,
 		p1cntr, 9, /* compression */
 		NULL, fp, NULL, 0))

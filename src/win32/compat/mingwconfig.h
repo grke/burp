@@ -67,9 +67,6 @@
 
 /* Define to 1 if you have `alloca', as a function or macro. */
 #define HAVE_ALLOCA 1
-#ifndef HAVE_MINGW
-#define alloca _alloca
-#endif
 
 /* Define to 1 if you have the <dirent.h> header file, and it defines `DIR'.
    */

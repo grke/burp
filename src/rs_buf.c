@@ -254,10 +254,13 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 		}
 	    }
 	    fb->bytes+=len;
+/* This bit cannot ever have been working right, because gzeof(fp) probably
+   always returns 0.
 	    if (len < (int)fb->buf_len && gzeof(fp)) {
 		buf->eof_in=1;
 		return RS_DONE;
 	    }
+*/
 	    if(!MD5_Update(&(fb->md5), fb->buf, len))
 	    {
 		logp("MD5_Update() failed\n");

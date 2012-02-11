@@ -128,11 +128,11 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath)
 	return ret;
 }
 
-static int send_file(const char *fname, int patches, const char *best, const char *datapth, unsigned long long *bytes, char cmd, struct cntr *cntr, struct config *cconf)
+static int send_file(const char *fname, int patches, const char *best, const char *datapth, unsigned long long *bytes, char cmd, int64_t winattr, struct cntr *cntr, struct config *cconf)
 {
 	int ret=0;
 	FILE *fp=NULL;
-	if(open_file_for_send(NULL, &fp, best, cntr))
+	if(open_file_for_send(NULL, &fp, best, winattr, cntr))
 		return -1;
 	//logp("sending: %s\n", best);
 	if(async_write(cmd, fname, strlen(fname)))
@@ -272,7 +272,7 @@ static int verify_file(const char *fname, int patches, const char *best, const c
 
 // a = length of struct bu array
 // i = position to restore from
-static int restore_file(struct bu *arr, int a, int i, const char *datapth, const char *fname, const char *tmppath1, const char *tmppath2, int act, const char *endfile, char cmd, struct cntr *cntr, struct config *cconf)
+static int restore_file(struct bu *arr, int a, int i, const char *datapth, const char *fname, const char *tmppath1, const char *tmppath2, int act, const char *endfile, char cmd, int64_t winattr, struct cntr *cntr, struct config *cconf)
 {
 	int x=0;
 	char msg[256]="";
@@ -364,7 +364,7 @@ static int restore_file(struct bu *arr, int a, int i, const char *datapth, const
 			if(act==ACTION_RESTORE)
 			{
 				if(send_file(fname, patches, best, datapth,
-					&bytes, cmd, cntr, cconf))
+					&bytes, cmd, winattr, cntr, cconf))
 				{
 					free(path);
 					return -1;
@@ -407,7 +407,7 @@ static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, const cha
 	{
 		return restore_file(arr, a, i, sb->datapth,
 		  sb->path, tmppath1, tmppath2, act,
-		  sb->endfile, sb->cmd, cntr, cconf);
+		  sb->endfile, sb->cmd, sb->winattr, cntr, cconf);
 	}
 	else
 	{

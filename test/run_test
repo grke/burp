@@ -8,10 +8,8 @@ fi
 
 # The Windows build symlinks cock things for 'diff -ur' on the restore later,
 # so delete them first.
-rm -f ../depkgs-mingw32
-rm -f ../cross-tools-mingw32
-rm -f ../depkgs-mingw64
-rm -f ../cross-tools-mingw64
+rm -f ../burp-depkgs
+rm -f ../burp-cross-tools
 
 path="$PWD"
 build="$path/build"

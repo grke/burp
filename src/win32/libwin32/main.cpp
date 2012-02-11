@@ -3,11 +3,7 @@
 #include <signal.h>
 
 #undef  _WIN32_IE
-#ifdef MINGW64
-# define _WIN32_IE 0x0501
-#else
-# define _WIN32_IE 0x0401
-#endif  // MINGW64
+#define _WIN32_IE 0x0501
 #undef  _WIN32_WINNT
 #define _WIN32_WINNT 0x0501
 #include <commctrl.h>

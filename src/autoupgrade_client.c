@@ -27,7 +27,7 @@ static int receive_file(const char *autoupgrade_dir, const char *file, struct cn
 		goto end;
 	}
 #ifdef HAVE_WIN32
-	binit(&bfd);
+	binit(&bfd, 0);
 	bfd.use_backup_api=0;
 	//set_win32_backup(&bfd);
 	if(bopen(&bfd, incoming,

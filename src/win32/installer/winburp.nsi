@@ -187,23 +187,16 @@ Function .onInit
   StrCpy $ConfigAutoupgrade		"1"
 
   InitPluginsDir
-;  File "/oname=$PLUGINSDIR\openssl.exe"  "${SRC_DIR}\openssl.exe"
 
-!if "${BUILD_TOOLS}" == "mingw32"
   File "/oname=$PLUGINSDIR\libeay32.dll" "${SRC_DIR}\libeay32.dll"
   File "/oname=$PLUGINSDIR\ssleay32.dll" "${SRC_DIR}\ssleay32.dll"
-!endif
-!if "${BUILD_TOOLS}" == "mingw64"
-  File "/oname=$PLUGINSDIR\ssleay32-0.9.8.dll" "${SRC_DIR}\ssleay32-0.9.8.dll"
-  File "/oname=$PLUGINSDIR\cryptoeay32-0.9.8.dll" "${SRC_DIR}\cryptoeay32-0.9.8.dll"
-!endif
 
   !InsertMacro MUI_INSTALLOPTIONS_EXTRACT "ConfigPage1.ini"
   !InsertMacro MUI_INSTALLOPTIONS_EXTRACT "ConfigPage2.ini"
 
   SetPluginUnload alwaysoff
 
-  nsExec::Exec '"$PLUGINSDIR\openssl.exe" rand -base64 -out $PLUGINSDIR\pw.txt 33'
+;  nsExec::Exec '"$PLUGINSDIR\openssl.exe" rand -base64 -out $PLUGINSDIR\pw.txt 33'
   pop $R0
   ${If} $R0 = 0
    FileOpen $R1 "$PLUGINSDIR\pw.txt" r
@@ -215,7 +208,7 @@ Function .onInit
 
   SetPluginUnload manual
 
-  nsExec::Exec '"$PLUGINSDIR\openssl.exe" rand -base64 -out $PLUGINSDIR\pw.txt 33'
+;  nsExec::Exec '"$PLUGINSDIR\openssl.exe" rand -base64 -out $PLUGINSDIR\pw.txt 33'
   pop $R0
   ${If} $R0 = 0
    FileOpen $R1 "$PLUGINSDIR\pw.txt" r
@@ -239,23 +232,13 @@ Function InstallCommonFiles
     ; File "Readme.txt"
 
     SetOutPath "$INSTDIR\bin"
-!if "${BUILD_TOOLS}" == "mingw32"
-    File "${SRC_DIR}\mingwm10.dll"
     File "${SRC_DIR}\libeay32.dll"
     File "${SRC_DIR}\ssleay32.dll"
-!endif
-!if "${BUILD_TOOLS}" == "mingw64"
-    File "${SRC_DIR}\cryptoeay32-0.9.8.dll"
-    File "${SRC_DIR}\ssleay32-0.9.8.dll"
-!endif
 
     File "${SRC_DIR}\zlib1.dll"
+    File "${SRC_DIR}\libgcc_s_sjlj-1.dll"
+
     File "${SRC_DIR}\burp.dll"
-
-    File "/oname=$INSTDIR\openssl.cnf" "${SRC_DIR}\openssl.cnf"
-    File "${SRC_DIR}\openssl.exe"
-
-    ; CreateShortCut "$SMPROGRAMS\Burp\Documentation\View Readme.lnk" "write.exe" '"$INSTDIR\Readme.txt"'
 
     StrCpy $CommonFilesDone 1
   ${EndIf}
@@ -300,10 +283,10 @@ endssl_cert_ca:
   IfFileExists $INSTDIR\burp.conf end
   FileOpen $R1 $INSTDIR\burp.conf w
 
-!If "$BUILD_TOOLS" == "mingw32"
-  StrCpy $R2 "mingw32"
+!If "$BITS" == "32"
+  StrCpy $R2 "32"
 !Else
-  StrCpy $R2 "mingw64"
+  StrCpy $R2 "64"
 !EndIf
 
   Call GetHostName
@@ -330,10 +313,10 @@ endssl_cert_ca:
   FileWrite $R1 "ssl_cert_ca = C:/Program Files/Burp/ssl_cert_ca.pem$\r$\n"
   FileWrite $R1 "ssl_key_password = password$\r$\n"
   FileWrite $R1 "ssl_peer_cn = grkeserver$\r$\n"
-!if "${BUILD_TOOLS}" == "mingw32"
+!if "${BITS}" == "32"
   FileWrite $R1 "autoupgrade_os = win32$\r$\n"
 !endif
-!if "${BUILD_TOOLS}" == "mingw64"
+!if "${BITS}" == "64"
   FileWrite $R1 "autoupgrade_os = win64$\r$\n"
 !endif
   ${If} $ConfigAutoupgrade == "0"
@@ -443,7 +426,7 @@ Section "Uninstall"
   nsExec::Exec 'schtasks /DELETE /TN "burp cron" /F'
 
   Delete /REBOOTOK "$PLUGINSDIR\burp*.conf"
-  Delete /REBOOTOK "$PLUGINSDIR\openssl.exe"
+;  Delete /REBOOTOK "$PLUGINSDIR\openssl.exe"
   Delete /REBOOTOK "$PLUGINSDIR\libeay32.dll"
   Delete /REBOOTOK "$PLUGINSDIR\ssleay32.dll"
 

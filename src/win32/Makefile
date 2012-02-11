@@ -1,27 +1,23 @@
 ECHO_CMD=@
 
+DIRS=	lib \
+	burp
+
 ifeq ($(WIN64),yes)
- DIRS=	lib \
-	burp
-
   INSTALLER=installer64
-
-  SPECIAL=
 else
- DIRS=	lib \
-	burp
-
   INSTALLER=installer32
-
-  SPECIAL=
 endif
 
-.PHONY: $(DIRS) clean all Makefile.inc installer32 installer64
+.PHONY: $(DIRS) $(INSTALLER) clean all Makefile.inc
 
-all: Makefile.inc $(DIRS) $(SPECIAL) $(INSTALLER)
+all: Makefile.inc $(DIRS) $(INSTALLER)
 
-clean: $(DIRS) installer32 installer64
-	$(ECHO_CMD)-rm -rf release32 release64 Makefile.inc
+
+clean: $(DIRS)
+	$(ECHO_CMD)-rm -f Makefile.inc
+	$(ECHO_CMD)-rm -rf release32 release64 
+	$(ECHO_CMD)-rm -rf installer32 installer64
 
 installer32:
 	@if test -f Makefile.inc; then \
@@ -55,24 +51,22 @@ Makefile.inc:
 	@echo Creating $@
 	$(ECHO_CMD)TOPDIR=`(cd ../..;pwd)`; \
 	TOPDIR=$${DEPKGS:-$${TOPDIR}}; \
-	ln -sf ../cross-tools-mingw32 ../../cross-tools-mingw32 ; \
-	ln -sf ../depkgs-mingw32 ../../depkgs-mingw32 ; \
-	ln -sf ../cross-tools-mingw64 ../../cross-tools-mingw64 ; \
-	ln -sf ../depkgs-mingw64 ../../depkgs-mingw64 ; \
-	if test "$(WIN64)" = yes -a -e $${TOPDIR}/cross-tools-mingw64/mingw-w64/bin/x86_64-pc-mingw32-gcc; then \
-		BINDIR=$${TOPDIR}/cross-tools-mingw64/mingw-w64/bin; \
-		INCDIR=$${TOPDIR}/cross-tools-mingw64/mingw-w64/x86_64-pc-mingw32/include; \
-		DLLDIR=$${TOPDIR}/cross-tools-mingw64/mingw-w64/x86_64-pc-mingw32/bin; \
-		DEPKGSDIR=depkgs-mingw64; \
-		DEPKGSDIR32=depkgs-mingw32; \
-		MINGW64PREFIX=x86_64-pc-; \
-	elif test -e $${TOPDIR}/cross-tools-mingw32/mingw32/bin/mingw32-gcc; then \
-		BINDIR=$${TOPDIR}/cross-tools-mingw32/mingw32/bin; \
-		INCDIR=$${TOPDIR}/cross-tools-mingw32/mingw32/mingw32/include; \
-		DLLDIR=$${TOPDIR}/cross-tools-mingw32/mingw32/mingw32/bin; \
-		DEPKGSDIR=depkgs-mingw32; \
-		DEPKGSDIR32=depkgs-mingw32; \
-		MINGW64PREFIX=; \
+	ln -sfT ../burp-cross-tools ../../burp-cross-tools ; \
+	ln -sfT ../burp-depkgs ../../burp-depkgs ; \
+	if test "$(WIN64)" = yes -a -e $${TOPDIR}/burp-cross-tools/mingw-w64-x86_64/bin/x86_64-w64-mingw32-gcc; then \
+		BINDIR=$${TOPDIR}/burp-cross-tools/mingw-w64-x86_64/bin; \
+		INCDIR=$${TOPDIR}/burp-cross-tools/mingw-w64-x86_64/x86_64-w64-mingw32/include; \
+		DLLDIR=$${TOPDIR}/burp-cross-tools/mingw-w64-x86_64/x86_64-w64-mingw32/lib; \
+		DEPKGSDIR=burp-depkgs/mingw-w64-x86_64; \
+		MINGW_PREFIX=x86_64-w64-mingw32-; \
+		BITS=64 ; \
+	elif test -e $${TOPDIR}/burp-cross-tools/mingw-w64-i686/bin/i686-w64-mingw32-gcc; then \
+		BINDIR=$${TOPDIR}/burp-cross-tools/mingw-w64-i686/bin; \
+		INCDIR=$${TOPDIR}/burp-cross-tools/mingw-w64-i686/i686-w64-mingw32/include; \
+		DLLDIR=$${TOPDIR}/burp-cross-tools/mingw-w64-i686/i686-w64-mingw32/lib; \
+		DEPKGSDIR=burp-depkgs/mingw-w64-i686; \
+		MINGW_PREFIX=i686-w64-mingw32-; \
+		BITS=32 ; \
 	else \
 		echo "\nThe GCC cross compiler isn't installed."; \
 		echo "You must run build-win32-cross-tools and build-dependencies first.\n"; \
@@ -81,13 +75,16 @@ Makefile.inc:
 	BUILDDIR=`(pwd)`; \
 	MAINDIR=`(cd ../..;pwd)`; \
 	sed \
-		-e "s^@WIN64@^$${WIN64}^" \
-		-e "s^@WIN32DEPKGS@^$${DEPKGSDIR}^" \
-		-e "s^@WIN32DEPKGS32@^$${DEPKGSDIR32}^" \
-		-e "s^@WIN32BUILDDIR@^$${BUILDDIR}^" \
-		-e "s^@WIN32MAINDIR@^$${MAINDIR}^" \
-		-e "s^@WIN32TOPDIR@^$${TOPDIR}^" \
-		-e "s^@WIN32BINDIR@^$${BINDIR}^" \
-		-e "s^@WIN32INCDIR@^$${INCDIR}^" \
-		-e "s^@WIN32MINGW64PREFIX@^$${MINGW64PREFIX}^" \
-		-e "s^@WIN32DLLDIR@^$${DLLDIR}^" < Makefile.inc.in > $@
+		-e "s^@WIN64@^$${WIN64}^g" \
+		-e "s^@DEPKGS@^$${DEPKGSDIR}^g" \
+		-e "s^@BUILDDIR@^$${BUILDDIR}^g" \
+		-e "s^@MAINDIR@^$${MAINDIR}^g" \
+		-e "s^@TOPDIR@^$${TOPDIR}^g" \
+		-e "s^@BINDIR@^$${BINDIR}^g" \
+		-e "s^@INCDIR@^$${INCDIR}^g" \
+		-e "s^@MINGW_PREFIX@^$${MINGW_PREFIX}^g" \
+		-e "s^@DLLDIR@^$${DLLDIR}^g" < Makefile.inc.in > $@ ; \
+	mkdir -vp installer$${BITS} ; \
+	sed \
+		-e "s^@BITS@^$${BITS}^g" \
+		< Makefile.installer.in > installer$${BITS}/Makefile

@@ -114,7 +114,9 @@ int main (int argc, char *argv[])
 {
 	int ret=0;
 	int option=0;
+#ifndef HAVE_WIN32
 	int daemon=1;
+#endif
 	int forking=1;
 	int gotlock=0;
 	char *logfile=NULL;
@@ -171,7 +173,9 @@ int main (int argc, char *argv[])
 				forceoverwrite=1;
 				break;
 			case 'F':
+#ifndef HAVE_WIN32 // keep MINGW64 quiet
 				daemon=0;
+#endif
 				break;
 			case 'i':
 				print_all_cmds();

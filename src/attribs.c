@@ -39,17 +39,16 @@ void encode_stat(char *buf, struct stat *statp, int64_t winattr)
    *p++ = ' ';
    p += to_base64((int64_t)statp->st_size, p);
    *p++ = ' ';
-#ifndef HAVE_MINGW
+#ifdef HAVE_WIN32
+   p += to_base64((int64_t)0, p); /* output place holder */
+   *p++ = ' ';
+   p += to_base64((int64_t)0, p); /* output place holder */
+#else
    p += to_base64((int64_t)statp->st_blksize, p);
    *p++ = ' ';
    p += to_base64((int64_t)statp->st_blocks, p);
-   *p++ = ' ';
-#else
-   p += to_base64((int64_t)0, p); /* output place holder */
-   *p++ = ' ';
-   p += to_base64((int64_t)0, p); /* output place holder */
-   *p++ = ' ';
 #endif
+   *p++ = ' ';
    p += to_base64((int64_t)statp->st_atime, p);
    *p++ = ' ';
    p += to_base64((int64_t)statp->st_mtime, p);
@@ -123,21 +122,19 @@ void decode_stat(const char *buf, struct stat *statp, int64_t *winattr)
    p += from_base64(&val, p);
    plug(statp->st_size, val);
    p++;
-#ifndef HAVE_MINGW
    p += from_base64(&val, p);
-   plug(statp->st_blksize, val);
-   p++;
-   p += from_base64(&val, p);
-   plug(statp->st_blocks, val);
-   p++;
-#else
-   p += from_base64(&val, p);
+#ifdef HAVE_WIN32
 //   plug(statp->st_blksize, val);
    p++;
    p += from_base64(&val, p);
 //   plug(statp->st_blocks, val);
+#else
+   plug(statp->st_blksize, val);
    p++;
+   p += from_base64(&val, p);
+   plug(statp->st_blocks, val);
 #endif
+   p++;
    p += from_base64(&val, p);
    plug(statp->st_atime, val);
    p++;

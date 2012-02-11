@@ -44,11 +44,13 @@
 char *unix_name_to_win32(char *name);
 extern "C" HANDLE get_osfhandle(int fd);
 
-void binit(BFILE *bfd)
+void binit(BFILE *bfd, int64_t winattr)
 {
    memset(bfd, 0, sizeof(BFILE));
    bfd->mode = BF_CLOSED;
    bfd->use_backup_api = have_win32_api();
+   bfd->winattr = winattr;
+   bfd->pvContext = NULL;
 }
 
 /*
@@ -68,12 +70,73 @@ bool have_win32_api()
    return p_BackupRead && p_BackupWrite;
 }
 
+// Windows flags for the OpenEncryptedFileRaw functions
+#define CREATE_FOR_EXPORT	0
+// These are already defined
+//#define CREATE_FOR_IMPORT	1
+//#define CREATE_FOR_DIR	2
+//#define OVERWRITE_HIDDEN	4
+
+static int bopen_encrypted(BFILE *bfd, const char *fname, int flags, mode_t mode)
+{
+	char *win32_fname=NULL;
+	char *win32_fname_wchar=NULL;
+
+	if(!(p_OpenEncryptedFileRawA || p_OpenEncryptedFileRawW)) {
+		return 0;
+	}
+	if (p_OpenEncryptedFileRawW && p_MultiByteToWideChar) {
+		if(!(win32_fname_wchar=make_win32_path_UTF8_2_wchar_w(fname)))
+		logp("could not get widename!");
+	}
+	if(!(win32_fname=unix_name_to_win32((char *)fname)))
+		return 0;
+
+	if(flags & O_CREAT) /* Create */
+	{
+	}
+	else if (flags & O_WRONLY) /* Open existing for write */
+	{
+	}
+	else /* Open existing for read */
+	{
+		int ret=0;
+		if(p_OpenEncryptedFileRawW && p_MultiByteToWideChar)
+		{
+         		// unicode open for open existing read
+			ret=OpenEncryptedFileRawW((LPCWSTR)win32_fname_wchar,
+				CREATE_FOR_EXPORT,
+				&(bfd->pvContext));
+			if(ret) bfd->mode=BF_CLOSED;
+			else bfd->mode=BF_READ;
+			goto end;
+		}
+		else
+		{
+			// ascii open
+			ret=OpenEncryptedFileRawA(win32_fname,
+				CREATE_FOR_EXPORT,
+				&(bfd->pvContext));
+			if(ret) bfd->mode=BF_CLOSED;
+			else bfd->mode=BF_READ;
+			goto end;
+		}
+	}
+end:
+   	if(win32_fname_wchar) free(win32_fname_wchar);
+   	if(win32_fname) free(win32_fname);
+	return bfd->mode == BF_CLOSED ? -1 : 1;
+}
+
 int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
 {
    char *win32_fname=NULL;
    char *win32_fname_wchar=NULL;
 
    DWORD dwaccess, dwflags, dwshare;
+
+   if(bfd->winattr & FILE_ATTRIBUTE_ENCRYPTED)
+	return bopen_encrypted(bfd, fname, flags, mode);
 
    if (!(p_CreateFileA || p_CreateFileW)) {
       return 0;

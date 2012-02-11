@@ -195,7 +195,9 @@ typedef float             float32_t;
 #define utime_t int64_t
 
 #ifndef HAVE_SOCKLEN_T
+#ifndef HAVE_WIN32
 #define socklen_t int
+#endif
 #endif
 
 #ifdef HAVE_OLD_SOCKOPT

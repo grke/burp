@@ -8,13 +8,10 @@
 #if defined(_MSC_VER) && (_MSC_VER >= 1400) // VC8+
 #pragma warning(disable : 4996) // Either disable all deprecation warnings,
 // #define _CRT_SECURE_NO_DEPRECATE // Or just turn off warnings about the newly deprecated CRT functions.
-#elif !defined(HAVE_MINGW) && !defined(HAVE_WXCONSOLE)
-#define __STDC__ 1
 #endif
 
 #include <malloc.h>
 
-#ifdef MINGW64
 #include <direct.h>
 #define _declspec __declspec
 
@@ -44,8 +41,6 @@ typedef struct _REPARSE_DATA_BUFFER {
         } DUMMYUNIONNAME;
 } REPARSE_DATA_BUFFER, *PREPARSE_DATA_BUFFER;
 
-#endif
-
 #include <winioctl.h>
 
 #ifdef _WIN64
@@ -67,12 +62,6 @@ typedef signed short int16_t;
 typedef signed char int8_t;
 typedef int __daddr_t;
 
-#if !defined(HAVE_MINGW)
-typedef long int32_t;
-typedef float float32_t;
-typedef double float64_t;
-#endif
-
 #if !defined(_MSC_VER) || (_MSC_VER < 1400) // VC8+
 #ifndef _TIME_T_DEFINED
 #define _TIME_T_DEFINED
@@ -80,39 +69,18 @@ typedef long time_t;
 #endif
 #endif
 
-#if __STDC__ && !defined(HAVE_MINGW)
-typedef _dev_t dev_t;
-#if !defined(HAVE_WXCONSOLE)
-typedef __int64 ino_t;
-#endif
-#endif
-
 typedef UINT32 u_int32_t;
 typedef unsigned char u_int8_t;
 typedef unsigned short u_int16_t;
-
-#if !defined(HAVE_MINGW)
-#undef uint32_t
-#endif
 
 void sleep(int);
 
 typedef UINT32 key_t;
 
-#if defined(HAVE_MINGW)
 #if !defined(uid_t)
 typedef UINT32 uid_t;
 typedef UINT32 gid_t;
 #endif
-#else
-typedef UINT32 uid_t;
-typedef UINT32 gid_t;
-typedef UINT32 mode_t;
-typedef INT32  ssize_t;
-typedef UINT32 size_t;
-#define HAVE_SSIZE_T 1
-
-#endif /* HAVE_MINGW */
 
 struct dirent {
     uint64_t    d_ino;
@@ -233,9 +201,6 @@ void SetVSSPathConvert(t_pVSSPathConvert pPathConvert, t_pVSSPathConvertW pPathC
 
 int lchown(const char *, uid_t uid, gid_t gid);
 int chown(const char *, uid_t uid, gid_t gid);
-#if !defined(HAVE_MINGW)
-int chmod(const char *, mode_t mode);
-#endif
 #define O_NONBLOCK   04000
 #define F_GETFL      3
 #define F_SETFL      4
@@ -250,10 +215,6 @@ ssize_t win32_read(int fd, void *buffer, size_t count);
 ssize_t win32_write(int fd, const void *buffer, size_t count);
 int win32_ioctl(int fd, unsigned long int req, ...);
 
-#ifndef MINGW64
-#define open   _open
-#endif
-
 int fcntl(int fd, int cmd, long arg);
 int fstat(intptr_t fd, struct stat *sb);
 
@@ -262,15 +223,6 @@ int kill(int pid, int signo);
 int pipe(int []);
 int fork();
 int waitpid(int, int *, int);
-
-#if !defined(HAVE_MINGW)
-#define strncasecmp strnicmp
-//int strncasecmp(const char*, const char *, int);
-int utime(const char *filename, struct utimbuf *buf);
-#define vsnprintf _vsnprintf
-#define snprintf _snprintf
-#endif //HAVE_MINGW
-
 
 #define WNOHANG 0
 #define WIFEXITED(x) 0
@@ -327,18 +279,6 @@ extern "C" void syslog(int type, const char *fmt, ...);
 #define LOG_DAEMON 0
 #endif
 
-#if !defined(HAVE_MINGW)
-#define R_OK 04
-#define W_OK 02
-int stat(const char *, struct stat *);
-#if defined(__cplusplus)
-#define access _access
-extern "C" _CRTIMP int __cdecl _access(const char *, int);
-int execvp(const char *, char *[]);
-extern "C" void *  __cdecl _alloca(size_t);
-#endif
-#endif //HAVE_MINGW
-
 #define getpid _getpid
 
 #define getppid() 0
@@ -363,10 +303,8 @@ char* win32_cgets (char* buffer, int len);
 int WSA_Init(void);
 void Win32ConvCleanupCache();
 
-#if defined(HAVE_MINGW)
 void closelog();
 void openlog(const char *ident, int option, int facility);
-#endif //HAVE_MINGW
 
 #if !defined(INVALID_FILE_ATTRIBUTES)
 #define INVALID_FILE_ATTRIBUTES ((DWORD)-1)

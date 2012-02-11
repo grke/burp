@@ -42,10 +42,14 @@ t_CreateFileW           p_CreateFileW = NULL;
 t_CreateDirectoryA      p_CreateDirectoryA;
 t_CreateDirectoryW      p_CreateDirectoryW;
 
-t_OpenEncryptedFileRaw  p_OpenEncryptedFileRaw = NULL;
-t_CloseEncryptedFileRaw p_CloseEncryptedFileRaw = NULL;
-t_ReadEncryptedFileRaw  p_ReadEncryptedFileRaw = NULL;
-t_WriteEncryptedFileRaw p_WriteEncryptedFileRaw = NULL;
+t_OpenEncryptedFileRawA  p_OpenEncryptedFileRawA = NULL;
+t_OpenEncryptedFileRawW  p_OpenEncryptedFileRawW = NULL;
+t_CloseEncryptedFileRawA p_CloseEncryptedFileRawA = NULL;
+t_CloseEncryptedFileRawW p_CloseEncryptedFileRawW = NULL;
+t_ReadEncryptedFileRawA  p_ReadEncryptedFileRawA = NULL;
+t_ReadEncryptedFileRawW  p_ReadEncryptedFileRawW = NULL;
+t_WriteEncryptedFileRawA p_WriteEncryptedFileRawA = NULL;
+t_WriteEncryptedFileRawW p_WriteEncryptedFileRawW = NULL;
 
 t_wunlink               p_wunlink = NULL;
 t_wmkdir                p_wmkdir = NULL;
@@ -111,10 +115,10 @@ InitWinAPIWrapper()
       p_CreateFileA = (t_CreateFileA)GetProcAddress(hLib, "CreateFileA");
       p_CreateDirectoryA = (t_CreateDirectoryA)GetProcAddress(hLib, "CreateDirectoryA");
 
-      p_OpenEncryptedFileRaw = (t_OpenEncryptedFileRaw)GetProcAddress(hLib, "OpenEncryptedFileRaw");
-      p_CloseEncryptedFileRaw = (t_CloseEncryptedFileRaw)GetProcAddress(hLib, "CloseEncryptedFileRaw");
-      p_ReadEncryptedFileRaw = (t_ReadEncryptedFileRaw)GetProcAddress(hLib, "ReadEncryptedFileRaw");
-      p_WriteEncryptedFileRaw = (t_WriteEncryptedFileRaw)GetProcAddress(hLib, "WriteEncryptedFileRaw");
+      p_OpenEncryptedFileRawA = (t_OpenEncryptedFileRawA)GetProcAddress(hLib, "OpenEncryptedFileRawA");
+      p_CloseEncryptedFileRawA = (t_CloseEncryptedFileRawA)GetProcAddress(hLib, "CloseEncryptedFileRawA");
+      p_ReadEncryptedFileRawA = (t_ReadEncryptedFileRawA)GetProcAddress(hLib, "ReadEncryptedFileRawA");
+      p_WriteEncryptedFileRawA = (t_WriteEncryptedFileRawA)GetProcAddress(hLib, "WriteEncryptedFileRawA");
 
       /* attribute calls */
       p_GetFileAttributesA = (t_GetFileAttributesA)GetProcAddress(hLib, "GetFileAttributesA");
@@ -146,6 +150,15 @@ InitWinAPIWrapper()
              GetProcAddress(hLib, "CreateFileW");
          p_CreateDirectoryW = (t_CreateDirectoryW)
              GetProcAddress(hLib, "CreateDirectoryW");
+
+         p_OpenEncryptedFileRawW = (t_OpenEncryptedFileRawW)
+		GetProcAddress(hLib, "OpenEncryptedFileRawW");
+         p_CloseEncryptedFileRawW = (t_CloseEncryptedFileRawW)
+		GetProcAddress(hLib, "CloseEncryptedFileRawW");
+         p_ReadEncryptedFileRawW = (t_ReadEncryptedFileRawW)
+		GetProcAddress(hLib, "ReadEncryptedFileRawW");
+         p_WriteEncryptedFileRawW = (t_WriteEncryptedFileRawW)
+		GetProcAddress(hLib, "WriteEncryptedFileRawW");
 
          /* backup calls */
          p_BackupRead = (t_BackupRead)GetProcAddress(hLib, "BackupRead");

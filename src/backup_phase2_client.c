@@ -250,7 +250,7 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 				{
 					encode_stat(attribs, &statbuf, winattr);
 					if(open_file_for_send(&bfd, &fp,
-						sb.path, cntr))
+						sb.path, winattr, cntr))
 							forget++;
 				}
 

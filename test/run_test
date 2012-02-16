@@ -77,6 +77,10 @@ build_and_install()
 	#./configure --prefix="$target" --datarootdir="$target"/usr/share --sysconfdir="$target"/etc/burp || fail "configure failed"
 	./configure || fail "configure failed"
 	make || fail "make failed"
+	# For some reason, make is not returning an error code.
+	# Look for important binaries before carrying on.
+	[ -f src/burp ] || fail "make failed"
+	[ -f src/bedup ] || fail "make failed"
 	make install DESTDIR="$target" || fail "make install failed"
 }
 

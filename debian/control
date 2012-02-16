@@ -11,7 +11,7 @@ Vcs-Git: git://github.com/grke/burp.git
 Package: burp
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description:  simple network BackUp and Restore Program
+Description: Simple cross-platform network BackUp and Restore Program
  Burp is a client/server backup system that saves space and network
  usage by using librsync, and uses the Volume Snapshot Service when
  backing up Windows clients.

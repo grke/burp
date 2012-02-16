@@ -1,17 +1,17 @@
 #!/bin/sh
 ### BEGIN INIT INFO
 # Provides:          burp
-# Required-Start:    $network $local_fs
-# Required-Stop:
+# Required-Start:    $network $local_fs $remote_fs
+# Required-Stop:     $network $local_fs $remote_fs
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
-# Short-Description: <Enter a short description of the sortware>
-# Description:       <Enter a long description of the software>
-#                    <...>
-#                    <...>
+# Short-Description: backup and restore program
+# Description:       Burp is a backup and restore program. It uses librsync in order to save onr
+#                    the amount of space that is used by each backup. It also uses VSS (Volumer
+#                    Shadow Copy Service) to make snapshots when backing up Windows computers.
+#                    Author Patrick Koppen <software@koppen.de>
 ### END INIT INFO
 
-# Author: Patrick Koppen <software@koppen.de>
 
 # PATH should only include /usr/* if it runs after the mountnfs.sh script
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
@@ -19,7 +19,7 @@ DESC=burp             # Introduce a short description here
 NAME=burp             # Introduce the short server's name here
 DAEMON=/sbin/burp # Introduce the server's location here
 DAEMON_ARGS=""             # Arguments to run the daemon with
-PIDFILE=/var/run/$NAME.server.pid
+PIDFILE=/var/run/burp.server.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
 # Exit if the package is not installed

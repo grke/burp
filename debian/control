@@ -1,17 +1,17 @@
 Source: burp
 Section: utils
 Priority: extra
-Maintainer: Patrick Koppen <software@koppen.de>
+Maintainer: Bastiaan Franciscus van den Dikkenberg <bas@dikkenberg.net>
 Build-Depends: debhelper (>= 7.0.50~), autotools-dev, libncurses5-dev, libssl-dev, zlib1g-dev, librsync-dev, libacl1-dev, libattr1-dev, uthash-dev
-Standards-Version: 3.8.4
-Homepage: <http://burp.grke.net/>
+Standards-Version: 3.9.2
+Homepage: http://burp.grke.net/
 Vcs-Git: git://github.com/grke/burp.git
 #Vcs-Browser: http://git.debian.org/?p=collab-maint/burp.git;a=summary
 
 Package: burp
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: backup and restore program
- Burp is a backup and restore program. It uses librsync in order to save onr
- the amount of space that is used by each backup. It also uses VSS (Volumer
- Shadow Copy Service) to make snapshots when backing up Windows computers.
+Description:  simple network BackUp and Restore Program
+ Burp is a client/server backup system that saves space and network
+ usage by using librsync, and uses the Volume Snapshot Service when
+ backing up Windows clients.

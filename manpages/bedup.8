@@ -1,15 +1,15 @@
-.\" manual page [] for bedup
-.\" SH section heading
-.\" SS subsection heading
-.\" LP paragraph
-.\" IP indented paragraph
-.\" TP hanging label
-.TH bedup 8 "bedup"
+.\"Created with GNOME Manpages Editor Wizard
+.\"http://sourceforge.net/projects/gmanedit2
+.TH bedup 8 "February 10, 2012" "" "bedup"
+
 .SH NAME
-bedup 
+bedup \- program for deduplication program with additional knowledge of burp
+
 .SH SYNOPSIS
-.B bedup: [options]
-.SH DESCRIPTION
+.B bedup
+.RI [ options ]
+.br
+
 .LP
 A file deduplication program with additional knowledge of burp storage directories. This program comes with the burp backup and restore package.
 
@@ -36,10 +36,8 @@ Non-burp mode. Deduplicate any (set of) directories.
 \fB\-v\fR \fB\fR
 Print version and exit.\fR
 .TP
-\fB\Defaults\fR \fB\fR
 By default, bedup will read /etc/burp/burp.conf and deduplicate client storage directories using special knowledge of the structure.\fR
 .TP
-\fB\Defaults\fR \fB\fR
 With '-n', this knowledge is turned off and you have to specify the directories to deduplicate on the command line. Running with '-n' is therefore dangerous if you are deduplicating burp storage directories.
 
 .SH BUGS

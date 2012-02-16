@@ -1,71 +1,58 @@
-burp (1.3.0) unstable; urgency=low
+burp (1.3.0+20120214git-1) unstable; urgency=low
 
-  * update to 1.3.0
+  * Compilation bug solved for in farm (Closes: #659692)
+  * New upstream release from GIT branch 1.3.1 on advise of author
+  * Add 'exclude_fs =' option for Linux so that you can skip partitions
+    types (for example, tmpfs) without generating warnings.
+  * If recovery method 'resume' is set, but the includes/excludes change,
+    switch to 'use', then start a new backup.
+  * In the tests, check to see whether it looks like the server has finished
+    the backup before moving on, rather than just waiting a set 
+    amount of time.(Closes: #659462)
+  * Add man pages for bedup and burp_ca.
+  * Remove embedded uthash code. It will need to be installed 
+    as a dependency. (Closes: #659454)
 
- -- Graham Keeling <burp-users@lists.sourceforge.net>  Fri, 27 January 2012 17:00:00 +0000
+ -- Bastiaan Franciscus van den Dikkenberg <bas@dikkenberg.net>  Tue, 14 Feb 2012 15:47:01 +0100
 
-burp (1.2.7) unstable; urgency=low
+burp (1.3.0-3) unstable; urgency=low
 
-  * update to 1.2.7
+  * Forgot to add 1 patch
 
- -- Graham Keeling <burp-users@lists.sourceforge.net>  Fri, 30 December 2011 22:00:00 +0000
+ -- Bastiaan Franciscus van den Dikkenberg <bas@dikkenberg.net>  Sun, 12 Feb 2012 14:50:29 +0100
 
-burp (1.2.5) unstable; urgency=low
+burp (1.3.0-2) unstable; urgency=low
 
-  * update to 1.2.5
+  * added forwarded header to patches
+  * removed changelog entries from patches
+  * removed debian/README (Closes: #659453)
+  * removed blank MAILTO header in cronjob and 
+    redirected output to /var/log/burp-client (Closes: #659452)
+  * added extra logrotate for /var/log/burp-client
+  * changed /var/run to /run (Closes: #659464)
+  * thanks to Justin B Rye from debian-l10n-english team for
+    helping with linguistic support
 
- -- Graham Keeling <burp-users@lists.sourceforge.net>  Sat, 26 November 2011 23:30:00 +0000
+ -- Bastiaan Franciscus van den Dikkenberg <bas@dikkenberg.net>  Sat, 11 Feb 2012 23:48:03 +0100
 
-burp (1.2.4) unstable; urgency=low
+burp (1.3.0-1) unstable; urgency=low
 
-  * update to 1.2.4
+  * changed file permissions in rules file
+  * removed empty todo and readme
+  * fixed a typo in the control file
+  * override_dh_auto_configure restore is necessary to run
+    ./configure without any options
+    the configure files places the files in the correct
+    directory for a Debian build
+  * added watch file
+  * made patch to move PID file
+  * fixed lintian errors
+  * corrected the Copyright file
+  * initial release (Closes: #658152)
+  * switched to 3.0 (quilt)
+  * made lintian override file for file permissions
+  * added man pages for bedup and burp_ca
 
- -- Graham Keeling <burp-users@lists.sourceforge.net>  Thu, 22 November 2011 20:00:00 +0000
 
-burp (1.2.2) unstable; urgency=low
+ -- Bastiaan Franciscus van den Dikkenberg <bas@dikkenberg.net>  Fri, 10 Feb 2012 17:14:13 +0100
 
-  * update to 1.2.2
-
- -- Graham Keeling <burp-users@lists.sourceforge.net>  Thu, 29 September 2011 21:00:00 +0000
-
-burp (1.2.0) unstable; urgency=low
-
-  * update to 1.2.0
-
- -- Graham Keeling <burp-users@lists.sourceforge.net>  Fri, 09 September 2011 20:20:00 +0000
-
-burp (1.1.70) unstable; urgency=low
-
-  * update to 1.1.70
-
- -- Graham Keeling <burp-users@lists.sourceforge.net>  Tue, 26 July 2011 22:00:00 +0000
-
-burp (1.1.65) unstable; urgency=low
-
-  * update to 1.1.65
-
- -- Graham Keeling <burp-users@lists.sourceforge.net>  Mon, 27 June 2011 21:40:00 +0000
-
-burp (1.1.57) unstable; urgency=low
-
-  * update to 1.1.57
-
- -- Graham Keeling <burp-users@lists.sourceforge.net>  Tue, 06 June 2011 23:00:00 +0000
-
-burp (1.1.55) unstable; urgency=low
-
-  * update to 1.1.55
-
- -- Patrick Koppen <software@koppen.de>  Sat, 14 May 2011 21:48:17 +0200
-
-burp (1.1.51+git0) unstable; urgency=low
-
-  * debian package
-
- -- Patrick Koppen <software@koppen.de>  Mon, 09 May 2011 21:24:24 +0200
-
-burp (1.1.51) unstable; urgency=low
-
-  * Initial Release.
-
- -- Patrick Koppen <software@koppen.de>  Mon, 09 May 2011 20:48:57 +0200

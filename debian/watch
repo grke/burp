@@ -1,0 +1,4 @@
+version=3
+http://sf.net/burp/burp-([0-9])\.([0-9])\.([0-9])\.(?:zip|tgz|tbz2|txz|tar\.gz|tar\.bz2|tar\.xz)
+
+

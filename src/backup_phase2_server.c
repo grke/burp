@@ -569,8 +569,7 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, const char *pha
 	if(!(p2fp=open_file(phase2data, "r+b")))
 		goto error;
 
-	if(resume && do_resume(p1zp, p2fp, ucfp, cmanfp, dpth, cconf,
-		p1cntr, cntr))
+	if(resume && do_resume(p1zp, p2fp, ucfp, dpth, cconf, p1cntr, cntr))
 			goto error;
 
 	logp("Begin phase2 (receive file data)\n");

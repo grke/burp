@@ -202,7 +202,7 @@ static int forward_sbuf(FILE *fp, gzFile zp, struct sbuf *b, struct sbuf *target
 	return 0;
 }
 
-int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, gzFile cmanfp, struct dpth *dpth, struct config *cconf, struct cntr *p1cntr, struct cntr *cntr)
+int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpth *dpth, struct config *cconf, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ret=0;
 	struct sbuf p1b;

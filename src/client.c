@@ -124,6 +124,20 @@ static void setup_signals_client(void)
 #endif
 }
 
+static int server_supports(const char *feat, const char *wanted)
+{
+	if(strstr(feat, wanted)) return 1;
+	return 0;
+}
+
+static int server_supports_autoupgrade(const char *feat)
+{
+	// 1.3.0 servers did not list the features, but the only feature
+	// that was supported was autoupgrade.
+	if(!strcmp(feat, "extra_comms_begin ok")) return 1;
+	return server_supports(feat, ":autoupgrade:");
+}
+
 static int s_server_session_id_context=1;
 
 int client(struct config *conf, enum action act, const char *backup, const char *restoreprefix, const char *regex, int forceoverwrite)
@@ -185,22 +199,46 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 
 	if(!ret && act!=ACTION_ESTIMATE)
 	{
+		char cmd;
+		size_t len=0;
+		char *feat=NULL;
 		ret=authorise_client(conf, &p1cntr);
 
-		if(async_write_str(CMD_GEN, "extra_comms_begin")
-		  || async_read_expect(CMD_GEN, "extra_comms_begin ok"))
+		if(async_write_str(CMD_GEN, "extra_comms_begin"))
 		{
 			logp("Problem requesting extra_comms_begin\n");
+			ret=-1;
+		}
+		// Servers greater than 1.3.0 will list the extra_comms
+		// features they support.
+		else if(async_read(&cmd, &feat, &len))
+		{
+			logp("Problem reading response to extra_comms_begin\n");
+			ret=-1;
+		}
+		else if(cmd!=CMD_GEN)
+		{
+			logp("Unexpected command from server when reading response to extra_comms_begin: %c:%s\n", cmd, feat);
+			ret=-1;
+		}
+		else if(strncmp(feat,
+		  "extra_comms_begin ok", strlen("extra_comms_begin ok")))
+		{
+			logp("Unexpected response from server when reading response to extra_comms_begin: %c:%s\n", cmd, feat);
 			ret=-1;
 		}
 
 		// Can add extra bits here. The first extra bit is the
 		// autoupgrade stuff.
 
-		if(!ret && conf->autoupgrade_dir && conf->autoupgrade_os)
-			ret=autoupgrade_client(conf, &p1cntr);
+		if(!ret && server_supports_autoupgrade(feat))
+		{
+			 if(conf->autoupgrade_dir && conf->autoupgrade_os)
+				ret=autoupgrade_client(conf, &p1cntr);
+		}
 
-		if(!ret) ret=incexc_send_client(conf, &p1cntr);
+		if(!ret && server_supports(feat, ":incexc:"))
+			ret=incexc_send_client(conf, &p1cntr);
 
 		if(async_write_str(CMD_GEN, "extra_comms_end")
 		  || async_read_expect(CMD_GEN, "extra_comms_end ok"))
@@ -208,6 +246,8 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 			logp("Problem requesting extra_comms_end\n");
 			ret=-1;
 		}
+
+		if(feat) free(feat);
 	}
 
 	if(!ret)

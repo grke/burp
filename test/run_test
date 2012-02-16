@@ -113,7 +113,8 @@ run_backup()
 	# than just sleeping some length of time. 
 	while true ; do
 		sleep $SLEEPTIME
-		[ ! -e "$working" -a ! -e "$finishing" ] && break
+		[ ! -e "$working" -a ! -e "$finishing" ] \
+			&& sleep $SLEEPTIME && break
 		waited=$((waited+$SLEEPTIME))
 		[ "$waited" -gt 120 ] && \
 		  fail "client backup seemed to be complete after 2 minutes"

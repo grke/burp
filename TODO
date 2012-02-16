@@ -96,8 +96,3 @@
 * Add option to take a list of paths for restore.
 
 * Add option to set up a restore on the server side.
-
-* Add Bas van den Dikkenberg's patches for Debian.
-
-* In the test script, check whether the backup has finished before going on
-  to the next step (rather than waiting 10 seconds and then possibly failing).

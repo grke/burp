@@ -958,19 +958,41 @@ static int extra_comms(const char *cversion, char **incexc, struct config *conf,
 	long min_ver=0;
 	long cli_ver=0;
 	long ser_ver=0;
+	long feat_list_ver=0;
 	if((min_ver=version_to_long("1.2.7"))<0
 	 || (cli_ver=version_to_long(cversion))<0
-	 || (ser_ver=version_to_long(VERSION))<0)
+	 || (ser_ver=version_to_long(VERSION))<0
+	 || (feat_list_ver=version_to_long("1.3.0"))<0)
 		return -1;
 	// Clients before 1.2.7 did not know how to do extra comms, so skip
 	// this section for them.
 	if(cli_ver < min_ver) return 0;
 
-	if(async_read_expect(CMD_GEN, "extra_comms_begin")
-	  || async_write_str(CMD_GEN, "extra_comms_begin ok"))
+	if(async_read_expect(CMD_GEN, "extra_comms_begin"))
 	{
-		logp("problem in extra_comms\n");
+		logp("problem reading in extra_comms\n");
 		return -1;
+	}
+	// Want to tell the clients the extra comms features that are
+	// supported, so that new clients are more likely to work with old
+	// servers.
+	if(cli_ver==feat_list_ver)
+	{
+		// 1.3.0 did not support the feature list.
+		if(async_write_str(CMD_GEN, "extra_comms_begin ok"))
+		{
+			logp("problem writing in extra_comms\n");
+			return -1;
+		}
+	}
+	else
+	{
+		if(async_write_str(CMD_GEN,
+			"extra_comms_begin ok:autoupgrade:incexc:"))
+		{
+			logp("problem in extra_comms\n");
+			return -1;
+		}
 	}
 
 	while(1)

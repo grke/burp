@@ -28112,10 +28112,10 @@ if test X"$GCC" = "Xyes" ; then
 fi
 
 # clean up any old junk
-echo " "
-echo "Cleaning up"
-echo " "
-${MAKE:-make} clean
+#echo " "
+#echo "Cleaning up"
+#echo " "
+#${MAKE:-make} clean
 
 echo "
 Configuration on `date`:

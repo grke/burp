@@ -134,11 +134,11 @@ clean:
 	@for I in ${all_subdirs} test ; \
 	  do (cd $$I; echo "==>Entering directory `pwd`"; ${MAKE} $@ || exit 1); done
 	@$(RMF) *~ 1 2 3 core core.* config.guess console.log console.sum
-	@$(RMF) config.log config.out
-	@$(RMF) examples/1 examples/2 examples/devices/1 examples/devices/2
-	@$(RMF) -r autom4te.cache
+	@$(RMF) config.log config.out config.status libtool
+	@$(RMF) -r autoconf/autom4te.cache autoconf/Make.common
 	@$(RMF) burp-cross-tools
 	@$(RMF) burp-depkgs
+	@$(RMF) Makefile
 	@find . -name ".#*" -exec $(RMF) {} \;
 
 

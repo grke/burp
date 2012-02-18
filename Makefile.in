@@ -133,6 +133,7 @@ Makefiles:
 clean:
 	@for I in ${all_subdirs} test ; \
 	  do (cd $$I; echo "==>Entering directory `pwd`"; ${MAKE} $@ || exit 1); done
+	@cd src/win32 && ${MAKE} $@
 	@$(RMF) *~ 1 2 3 core core.* config.guess console.log console.sum
 	@$(RMF) config.log config.out config.status libtool
 	@$(RMF) -r autoconf/autom4te.cache autoconf/Make.common

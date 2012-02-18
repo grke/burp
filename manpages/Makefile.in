@@ -32,6 +32,7 @@ uninstall:
 
 clean:
 	@$(RMF) *~ 1 2 3 *.bak
+	@$(RMF) Makefile
 	@find . -name .#* -exec $(RMF) {} \;
 
 depend:      

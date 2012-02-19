@@ -8,11 +8,13 @@
 #include "dpth.h"
 #include "find.h"
 
-static void mk_dpth(struct dpth *dpth, struct config *cconf)
+void mk_dpth(struct dpth *dpth, struct config *cconf, char cmd)
 {
 	// file data
 	snprintf(dpth->path, sizeof(dpth->path), "%04X/%04X/%04X%s",
-	  dpth->prim, dpth->seco, dpth->tert, cconf->compression?".gz":"");
+	  dpth->prim, dpth->seco, dpth->tert,
+	  /* Because of the way EFS works, it cannot be compressed. */
+	  (cconf->compression && cmd!=CMD_EFS_FILE)?".gz":"");
 }
 
 static void mk_dpth_prim(struct dpth *dpth)
@@ -60,7 +62,7 @@ int init_dpth(struct dpth *dpth, const char *currentdata, struct config *cconf)
 	{
 		// Could not open directory. Set all zeros.
 		dpth->prim=0;
-		mk_dpth(dpth, cconf);
+//		mk_dpth(dpth, cconf);
 		return 0;
 	}
 	mk_dpth_prim(dpth);
@@ -73,7 +75,7 @@ int init_dpth(struct dpth *dpth, const char *currentdata, struct config *cconf)
 	{
 		// Could not open directory. Set zero.
 		dpth->seco=0;
-		mk_dpth(dpth, cconf);
+//		mk_dpth(dpth, cconf);
 		free(tmp);
 		return 0;
 	}
@@ -88,7 +90,7 @@ int init_dpth(struct dpth *dpth, const char *currentdata, struct config *cconf)
 	{
 		// Could not open directory. Set zero.
 		dpth->tert=0;
-		mk_dpth(dpth, cconf);
+//		mk_dpth(dpth, cconf);
 		free(tmp);
 		return 0;
 	}
@@ -128,7 +130,7 @@ int incr_dpth(struct dpth *dpth, struct config *cconf)
 		}
 	}
 	//printf("before incr_dpth: %s %04X/%04X/%04X\n", dpth->path, dpth->prim, dpth->seco, dpth->tert);
-	mk_dpth(dpth, cconf);
+//	mk_dpth(dpth, cconf);
 	//printf("after incr_dpth: %s\n", dpth->path);
 	return 0;
 }
@@ -151,6 +153,6 @@ int set_dpth_from_string(struct dpth *dpth, const char *datapath, struct config 
 	dpth->prim=a;
 	dpth->seco=b;
 	dpth->tert=c;
-	mk_dpth(dpth, cconf);
+//	mk_dpth(dpth, cconf);
 	return 0;
 }

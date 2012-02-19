@@ -20,6 +20,7 @@ static int start_to_receive_new_file(struct sbuf *sb, const char *datadirtmp, st
 
 //logp("start to receive: %s\n", sb->path);
 
+	mk_dpth(dpth, cconf, sb->cmd);
 	if(!(sb->datapth=strdup(dpth->path))) // file data path
 	{
 		log_and_send("out of memory");
@@ -46,7 +47,8 @@ static int filedata(char cmd)
 	return (cmd==CMD_FILE
 	  || cmd==CMD_ENC_FILE
 	  || cmd==CMD_METADATA
-	  || cmd==CMD_ENC_METADATA);
+	  || cmd==CMD_ENC_METADATA
+	  || cmd==CMD_EFS_FILE);
 }
 
 static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *currentdata, struct cntr *cntr)
@@ -216,6 +218,8 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FIL
 		  || p1b->cmd==CMD_ENC_FILE
 		  || cb->cmd==CMD_ENC_METADATA
 		  || p1b->cmd==CMD_ENC_METADATA
+		  || cb->cmd==CMD_EFS_FILE
+		  || p1b->cmd==CMD_EFS_FILE
 		// TODO: make unencrypted metadata use the librsync
 		  || cb->cmd==CMD_METADATA
 		  || p1b->cmd==CMD_METADATA)
@@ -466,10 +470,7 @@ static int do_stuff_to_receive(struct sbuf *rb, FILE *p2fp, const char *datadirt
 			rb->slen=rlen;
 			rbuf=NULL;
 		}
-		else if(rcmd==CMD_FILE
-		  || rcmd==CMD_ENC_FILE
-		  || rcmd==CMD_METADATA
-		  || rcmd==CMD_ENC_METADATA)
+		else if(filedata(rcmd))
 		{
 			rb->cmd=rcmd;
 			rb->plen=rlen;

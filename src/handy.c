@@ -579,7 +579,7 @@ cleanup:
 	return ret;
 }
 
-int send_whole_file(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, struct cntr *cntr, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen)
+int send_whole_file(char cmd, const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, struct cntr *cntr, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen)
 {
 	int ret=0;
 	size_t s=0;
@@ -625,8 +625,21 @@ int send_whole_file(const char *fname, const char *datapth, int quick_read, unsi
 	else
 	{
 #ifdef HAVE_WIN32
-		if(!ret) while((s=(uint32_t)bread(bfd, buf, 4096))>0)
+		if(!ret && cmd==CMD_EFS_FILE)
 		{
+			// The EFS read function, ReadEncryptedFileRaw(),
+			// works in an annoying way. You have to give it a
+			// function that it calls repeatedly every time the
+			// read buffer is called.
+			// So ReadEncryptedFileRaw() will not return until
+			// it has read the whole file. I have no idea why
+			// they do not have a plain 'read()' function for it.
+		}
+
+		if(!ret && cmd!=CMD_EFS_FILE)
+		{
+		  while((s=(uint32_t)bread(bfd, buf, 4096))>0)
+		  {
 			*bytes+=s;
 			if(!MD5_Update(&md5, buf, s))
 			{
@@ -653,6 +666,7 @@ int send_whole_file(const char *fname, const char *datapth, int quick_read, unsi
 					break;
 				}
 			}
+		  }
 		}
 #else
 	//printf("send_whole_file: %s\n", fname);
@@ -1255,6 +1269,8 @@ void cmd_to_text(char cmd, char *buf, size_t len)
 			snprintf(buf, len, "Meta data changed"); break;
 		case CMD_METADATA_SAME:
 			snprintf(buf, len, "Meta data unchanged"); break;
+		case CMD_ENC_METADATA:
+			snprintf(buf, len, "Encrypted meta data"); break;
 		case CMD_ENC_METADATA_CHANGED:
 			snprintf(buf, len, "Encrypted meta data changed"); break;
 		case CMD_ENC_METADATA_SAME:
@@ -1263,6 +1279,12 @@ void cmd_to_text(char cmd, char *buf, size_t len)
 			snprintf(buf, len, "Encrypted file changed"); break;
 		case CMD_ENC_FILE_SAME:
 			snprintf(buf, len, "Encrypted file unchanged"); break;
+		case CMD_EFS_FILE:
+			snprintf(buf, len, "Windows EFS file"); break;
+		case CMD_EFS_FILE_SAME:
+			snprintf(buf, len, "Windows EFS file changed"); break;
+		case CMD_EFS_FILE_CHANGED:
+			snprintf(buf, len, "Windows EFS file unchanged"); break;
 		case CMD_DIRECTORY_CHANGED:
 			snprintf(buf, len, "Directory changed"); break;
 		case CMD_DIRECTORY_SAME:

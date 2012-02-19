@@ -157,6 +157,7 @@ int do_list_client(const char *backup, const char *listregex, enum action act)
 		else if(fcmd==CMD_DIRECTORY
 			|| fcmd==CMD_FILE
 			|| fcmd==CMD_ENC_FILE
+			|| fcmd==CMD_EFS_FILE
 			|| fcmd==CMD_SPECIAL)
 		{
 			*ls='\0';

@@ -41,6 +41,10 @@ struct cntr
 	unsigned long long special_same;
 	unsigned long long special_changed;
 
+	unsigned long long efs;
+	unsigned long long efs_same;
+	unsigned long long efs_changed;
+
 	unsigned long long warning;
 	unsigned long long byte;
 	unsigned long long recvbyte;

@@ -28,7 +28,10 @@ static int restore_interrupt(struct sbuf *sb, const char *msg, struct cntr *cntr
 
 	// If it is file data, get the server
 	// to interrupt the flow and move on.
-	if((sb->cmd!=CMD_FILE && sb->cmd!=CMD_ENC_FILE) || !(sb->datapth))
+	if((sb->cmd!=CMD_FILE
+	   && sb->cmd!=CMD_ENC_FILE
+	   && sb->cmd!=CMD_EFS_FILE)
+	 || !(sb->datapth))
 		return 0;
 
 	if(async_write_str(CMD_INTERRUPT, sb->datapth))
@@ -523,6 +526,7 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 			case CMD_SPECIAL:
 			case CMD_METADATA:
 			case CMD_ENC_METADATA:
+			case CMD_EFS_FILE:
 				if(!(fullpath=prepend_s(restoreprefix,
 					sb.path, strlen(sb.path))))
 				{
@@ -633,6 +637,9 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 					ret=-1;
 					quit++;
 				}
+				break;
+			case CMD_EFS_FILE:
+				logw(cntr, "EFS restore not yet implemented!\n");
 				break;
 			default:
 				logp("unknown cmd: %c\n", sb.cmd);

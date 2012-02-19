@@ -20,4 +20,4 @@ Server read rev delta   -> gzip file                    yes
 Server make new revfile -> gzip file, file              yes
 Server make new revfile -> file,      file              yes
 Server restore file     -> file,      gzip fd           yes
-Client restore file     -> gzip fd,   file              no
+Client restore file     -> gzip fd,   file              yes

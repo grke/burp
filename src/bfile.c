@@ -14,12 +14,6 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 */
-/*
- *  Bacula low level File I/O routines.  This routine simulates
- *    open(), read(), write(), and close(), but using native routines.
- *    I.e. on Windows, we use Windows APIs.
- *
- */
 
 #include "burp.h"
 #include "prog.h"
@@ -262,6 +256,14 @@ int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
    return bfd->mode == BF_CLOSED ? -1 : 1;
 }
 
+static int bclose_encrypted(BFILE *bfd)
+{
+	CloseEncryptedFileRaw(bfd->pvContext);
+	bfd->pvContext=NULL;
+	bfd->mode = BF_CLOSED;
+	return 0;
+}
+
 /*
  * Returns  0 on success
  *         -1 on error
@@ -277,6 +279,9 @@ int bclose(BFILE *bfd)
    if (bfd->mode == BF_CLOSED) {
       return 0;
    }
+
+   if(bfd->winattr & FILE_ATTRIBUTE_ENCRYPTED)
+	return bclose_encrypted(bfd);
 
    /*
     * We need to tell the API to release the buffer it

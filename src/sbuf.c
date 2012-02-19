@@ -121,7 +121,8 @@ static int do_sbuf_fill_from_file(FILE *fp, gzFile zp, struct sbuf *sb, int phas
 	else if(!phase1 && (sb->cmd==CMD_FILE
 			|| sb->cmd==CMD_ENC_FILE
 			|| sb->cmd==CMD_METADATA
-			|| sb->cmd==CMD_ENC_METADATA))
+			|| sb->cmd==CMD_ENC_METADATA
+			|| sb->cmd==CMD_EFS_FILE))
 	{
 		char cmd;
 		if((ars=async_read_fp(fp, zp, &cmd,
@@ -164,7 +165,8 @@ static int sbuf_to_fp(struct sbuf *sb, FILE *mp, int write_endfile)
 		if(write_endfile && (sb->cmd==CMD_FILE
 		  || sb->cmd==CMD_ENC_FILE
 		  || sb->cmd==CMD_METADATA
-		  || sb->cmd==CMD_ENC_METADATA))
+		  || sb->cmd==CMD_ENC_METADATA
+		  || sb->cmd==CMD_EFS_FILE))
 		{
 			if(send_msg_fp(mp, CMD_END_FILE,
 				sb->endfile, sb->elen)) return -1;
@@ -189,7 +191,8 @@ static int sbuf_to_zp(struct sbuf *sb, gzFile zp, int write_endfile)
 		if(write_endfile && (sb->cmd==CMD_FILE
 		  || sb->cmd==CMD_ENC_FILE
 		  || sb->cmd==CMD_METADATA
-		  || sb->cmd==CMD_ENC_METADATA))
+		  || sb->cmd==CMD_ENC_METADATA
+		  || sb->cmd==CMD_EFS_FILE))
 		{
 			if(send_msg_zp(zp, CMD_END_FILE,
 				sb->endfile, sb->elen)) return -1;

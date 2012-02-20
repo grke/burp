@@ -181,13 +181,19 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FIL
 	{
 		int oldcompressed=0;
 
+		// If the file type changed, I think it is time to back it
+		// up again (for example, EFS changing to normal file, or
+		// back again).
+		if(cb->cmd!=p1b->cmd)
+			return process_new_file(cb, p1b, p2fp, ucfp, cntr);
+
 		// mtime is the actual file data.
 		// ctime is the attributes or meta data.
 		if(cb->statp.st_mtime==p1b->statp.st_mtime
 		  && cb->statp.st_ctime==p1b->statp.st_ctime)
 		{
 			// got an unchanged file
-			//logp("got unchanged file: %s\n", cb->path);
+			logp("got unchanged file: %s %c %c\n", cb->path, cb->cmd, p1b->cmd);
 			return process_unchanged_file(cb, ucfp, cntr);
 		}
 
@@ -201,7 +207,9 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FIL
 			  || p1b->cmd==CMD_ENC_METADATA
 			// TODO: make unencrypted metadata use the librsync
 			  || cb->cmd==CMD_METADATA
-			  || p1b->cmd==CMD_METADATA)
+			  || p1b->cmd==CMD_METADATA
+			  || cb->cmd==CMD_EFS_FILE
+			  || p1b->cmd==CMD_EFS_FILE)
 				return process_new_file(cb,
 					p1b, p2fp, ucfp, cntr);
 			else

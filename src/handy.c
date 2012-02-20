@@ -336,7 +336,7 @@ int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, int64_t winattr
 {
 #ifdef HAVE_WIN32
 	binit(bfd, winattr);
-	if(bopen(bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0)<0)
+	if(bopen(bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0)<=0)
 	{
 		berrno be;
 		logw(cntr,
@@ -579,12 +579,47 @@ cleanup:
 	return ret;
 }
 
+#ifdef HAVE_WIN32
+struct winbuf
+{
+	MD5_CTX *md5;
+	int quick_read;
+	const char *datapth;
+	struct cntr *cntr;
+	unsigned long long *bytes;
+};
+
+static DWORD WINAPI write_efs(PBYTE pbData, PVOID pvCallbackContext, ULONG ulLength)
+{
+	struct winbuf *mybuf=(struct winbuf *)pvCallbackContext;
+	(*(mybuf->bytes))+=ulLength;
+	if(!MD5_Update(mybuf->md5, pbData, ulLength))
+	{
+		logp("MD5_Update() failed\n");
+		return ERROR_FUNCTION_FAILED;
+	}
+	if(async_write(CMD_APPEND, (const char *)pbData, ulLength))
+	{
+		return ERROR_FUNCTION_FAILED;
+	}
+	if(mybuf->quick_read)
+	{
+		int qr;
+		if((qr=do_quick_read(mybuf->datapth, mybuf->cntr))<0)
+			return ERROR_FUNCTION_FAILED;
+		if(qr) // client wants to interrupt
+			return ERROR_FUNCTION_FAILED;
+	}
+	return ERROR_SUCCESS;
+}
+#endif
+
 int send_whole_file(char cmd, const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, struct cntr *cntr, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen)
 {
 	int ret=0;
 	size_t s=0;
 	MD5_CTX md5;
-	char buf[4096]="";
+	char buf[8192]="";
 
 	if(!MD5_Init(&md5))
 	{
@@ -627,6 +662,12 @@ int send_whole_file(char cmd, const char *fname, const char *datapth, int quick_
 #ifdef HAVE_WIN32
 		if(!ret && cmd==CMD_EFS_FILE)
 		{
+			struct winbuf mybuf;
+			mybuf.md5=&md5;
+			mybuf.quick_read=quick_read;
+			mybuf.datapth=datapth;
+			mybuf.cntr=cntr;
+			mybuf.bytes=bytes;
 			// The EFS read function, ReadEncryptedFileRaw(),
 			// works in an annoying way. You have to give it a
 			// function that it calls repeatedly every time the
@@ -634,11 +675,17 @@ int send_whole_file(char cmd, const char *fname, const char *datapth, int quick_
 			// So ReadEncryptedFileRaw() will not return until
 			// it has read the whole file. I have no idea why
 			// they do not have a plain 'read()' function for it.
+/* md5, quick_read, datapth, cntr need to be passed in*/
+
+			printf("before read\n"); fflush(stdout);
+			ReadEncryptedFileRaw((PFE_EXPORT_FUNC)write_efs,
+				&mybuf, bfd->pvContext);
+			printf("after read\n"); fflush(stdout);
 		}
 
 		if(!ret && cmd!=CMD_EFS_FILE)
 		{
-		  while((s=(uint32_t)bread(bfd, buf, 4096))>0)
+		  while((s=(uint32_t)bread(bfd, buf, 8192))>0)
 		  {
 			*bytes+=s;
 			if(!MD5_Update(&md5, buf, s))
@@ -670,7 +717,7 @@ int send_whole_file(char cmd, const char *fname, const char *datapth, int quick_
 		}
 #else
 	//printf("send_whole_file: %s\n", fname);
-		if(!ret) while((s=fread(buf, 1, 4096, fp))>0)
+		if(!ret) while((s=fread(buf, 1, 8192, fp))>0)
 		{
 			*bytes+=s;
 			if(!MD5_Update(&md5, buf, s))
@@ -709,6 +756,7 @@ int send_whole_file(char cmd, const char *fname, const char *datapth, int quick_
 			logp("MD5_Final() failed\n");
 			return -1;
 		}
+printf("before write_endfile()\n"); fflush(stdout);
 		return write_endfile(*bytes, checksum);
 	}
 	return ret;

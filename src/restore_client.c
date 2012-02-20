@@ -150,7 +150,7 @@ static int restore_file_or_get_meta(struct sbuf *sb, const char *fname, enum act
 			bopenret=bopen(&bfd, rpath,
 			  O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,
 			  S_IRUSR | S_IWUSR);
-		if(bopenret<0)
+		if(bopenret<=0)
 		{
 			berrno be;
 			char msg[256]="";
@@ -639,7 +639,14 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 				}
 				break;
 			case CMD_EFS_FILE:
-				logw(cntr, "EFS restore not yet implemented!\n");
+				if(restore_file_or_get_meta(&sb, fullpath, act,
+					NULL, cntr, NULL, NULL))
+				{
+					logp("restore_file error\n");
+					ret=-1;
+					quit++;
+				}
+				break;
 				break;
 			default:
 				logp("unknown cmd: %c\n", sb.cmd);

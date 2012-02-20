@@ -73,49 +73,55 @@ bool have_win32_api()
 
 static int bopen_encrypted(BFILE *bfd, const char *fname, int flags, mode_t mode)
 {
+	int ret=0;
+	ULONG ulFlags=0;
 	char *win32_fname=NULL;
 	char *win32_fname_wchar=NULL;
 
 	if(!(p_OpenEncryptedFileRawA || p_OpenEncryptedFileRawW)) {
+		logp("no OpenEncryptedFileRaw pointers.\n");
 		return 0;
 	}
 	if (p_OpenEncryptedFileRawW && p_MultiByteToWideChar) {
 		if(!(win32_fname_wchar=make_win32_path_UTF8_2_wchar_w(fname)))
-		logp("could not get widename!");
+			logp("could not get widename!");
 	}
 	if(!(win32_fname=unix_name_to_win32((char *)fname)))
 		return 0;
 
-	if(flags & O_CREAT) /* Create */
+	if((flags & O_CREAT) /* Create */
+	  || (flags & O_WRONLY)) /* Open existing for write */
 	{
-	}
-	else if (flags & O_WRONLY) /* Open existing for write */
-	{
+		ulFlags |= CREATE_FOR_IMPORT;
+		ulFlags |= OVERWRITE_HIDDEN;
+		if(S_ISDIR(mode)) ulFlags |= CREATE_FOR_DIR;
 	}
 	else /* Open existing for read */
 	{
-		int ret=0;
-		if(p_OpenEncryptedFileRawW && p_MultiByteToWideChar)
-		{
-         		// unicode open for open existing read
-			ret=OpenEncryptedFileRawW((LPCWSTR)win32_fname_wchar,
-				CREATE_FOR_EXPORT,
-				&(bfd->pvContext));
-			if(ret) bfd->mode=BF_CLOSED;
-			else bfd->mode=BF_READ;
-			goto end;
-		}
-		else
-		{
-			// ascii open
-			ret=OpenEncryptedFileRawA(win32_fname,
-				CREATE_FOR_EXPORT,
-				&(bfd->pvContext));
-			if(ret) bfd->mode=BF_CLOSED;
-			else bfd->mode=BF_READ;
-			goto end;
-		}
+		ulFlags = CREATE_FOR_EXPORT;
 	}
+
+	if(p_OpenEncryptedFileRawW && p_MultiByteToWideChar)
+	{
+        	// unicode open
+		ret=OpenEncryptedFileRawW((LPCWSTR)win32_fname_wchar,
+			CREATE_FOR_EXPORT,
+			&(bfd->pvContext));
+		if(ret) bfd->mode=BF_CLOSED;
+		else bfd->mode=BF_READ;
+		goto end;
+	}
+	else
+	{
+		// ascii open
+		ret=OpenEncryptedFileRawA(win32_fname,
+			CREATE_FOR_EXPORT,
+			&(bfd->pvContext));
+		if(ret) bfd->mode=BF_CLOSED;
+		else bfd->mode=BF_READ;
+		goto end;
+	}
+
 end:
    	if(win32_fname_wchar) free(win32_fname_wchar);
    	if(win32_fname) free(win32_fname);

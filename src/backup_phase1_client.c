@@ -64,12 +64,13 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 		{
 			encode_stat(attribs, &ff->statp, ff->winattr);
 			if(async_write_str(CMD_STAT, attribs)
-			  || async_write_str(CMD_EFS, ff->fname))
+			  || async_write_str(CMD_EFS_FILE, ff->fname))
 				return -1;
-			do_filecounter(p1cntr, CMD_EFS, 1);
+			do_filecounter(p1cntr, CMD_EFS_FILE, 1);
 			if(ff->type==FT_REG)
 				do_filecounter_bytes(p1cntr,
 					(unsigned long long)ff->statp.st_size);
+			return 0;
 		}
 		else if(ff->type==FT_DIREND)
 			return 0;
@@ -79,6 +80,7 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 			logw(p1cntr, "EFS type %d not yet supported: %s",
 				ff->type,
 				ff->fname);
+			return 0;
 		}
 	}
 #endif

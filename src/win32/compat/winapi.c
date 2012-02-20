@@ -115,11 +115,6 @@ InitWinAPIWrapper()
       p_CreateFileA = (t_CreateFileA)GetProcAddress(hLib, "CreateFileA");
       p_CreateDirectoryA = (t_CreateDirectoryA)GetProcAddress(hLib, "CreateDirectoryA");
 
-      p_OpenEncryptedFileRawA = (t_OpenEncryptedFileRawA)GetProcAddress(hLib, "OpenEncryptedFileRawA");
-      p_CloseEncryptedFileRawA = (t_CloseEncryptedFileRawA)GetProcAddress(hLib, "CloseEncryptedFileRawA");
-      p_ReadEncryptedFileRawA = (t_ReadEncryptedFileRawA)GetProcAddress(hLib, "ReadEncryptedFileRawA");
-      p_WriteEncryptedFileRawA = (t_WriteEncryptedFileRawA)GetProcAddress(hLib, "WriteEncryptedFileRawA");
-
       /* attribute calls */
       p_GetFileAttributesA = (t_GetFileAttributesA)GetProcAddress(hLib, "GetFileAttributesA");
       p_GetFileAttributesExA = (t_GetFileAttributesExA)GetProcAddress(hLib, "GetFileAttributesExA");
@@ -150,15 +145,6 @@ InitWinAPIWrapper()
              GetProcAddress(hLib, "CreateFileW");
          p_CreateDirectoryW = (t_CreateDirectoryW)
              GetProcAddress(hLib, "CreateDirectoryW");
-
-         p_OpenEncryptedFileRawW = (t_OpenEncryptedFileRawW)
-		GetProcAddress(hLib, "OpenEncryptedFileRawW");
-         p_CloseEncryptedFileRawW = (t_CloseEncryptedFileRawW)
-		GetProcAddress(hLib, "CloseEncryptedFileRawW");
-         p_ReadEncryptedFileRawW = (t_ReadEncryptedFileRawW)
-		GetProcAddress(hLib, "ReadEncryptedFileRawW");
-         p_WriteEncryptedFileRawW = (t_WriteEncryptedFileRawW)
-		GetProcAddress(hLib, "WriteEncryptedFileRawW");
 
          /* backup calls */
          p_BackupRead = (t_BackupRead)GetProcAddress(hLib, "BackupRead");
@@ -210,6 +196,24 @@ InitWinAPIWrapper()
             GetProcAddress(hLib, "AdjustTokenPrivileges");
          p_LookupPrivilegeValue = (t_LookupPrivilegeValue)
             GetProcAddress(hLib, "LookupPrivilegeValueA");
+
+	 p_OpenEncryptedFileRawA = (t_OpenEncryptedFileRawA)
+		GetProcAddress(hLib, "OpenEncryptedFileRawA");
+	 p_CloseEncryptedFileRawA = (t_CloseEncryptedFileRawA)
+		GetProcAddress(hLib, "CloseEncryptedFileRawA");
+	 p_ReadEncryptedFileRawA = (t_ReadEncryptedFileRawA)
+		GetProcAddress(hLib, "ReadEncryptedFileRawA");
+	 p_WriteEncryptedFileRawA = (t_WriteEncryptedFileRawA)
+		GetProcAddress(hLib, "WriteEncryptedFileRawA");
+
+         p_OpenEncryptedFileRawW = (t_OpenEncryptedFileRawW)
+		GetProcAddress(hLib, "OpenEncryptedFileRawW");
+         p_CloseEncryptedFileRawW = (t_CloseEncryptedFileRawW)
+		GetProcAddress(hLib, "CloseEncryptedFileRawW");
+         p_ReadEncryptedFileRawW = (t_ReadEncryptedFileRawW)
+		GetProcAddress(hLib, "ReadEncryptedFileRawW");
+         p_WriteEncryptedFileRawW = (t_WriteEncryptedFileRawW)
+		GetProcAddress(hLib, "WriteEncryptedFileRawW");
       }
    }
 

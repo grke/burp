@@ -105,8 +105,7 @@ static int bopen_encrypted(BFILE *bfd, const char *fname, int flags, mode_t mode
 	{
         	// unicode open
 		ret=OpenEncryptedFileRawW((LPCWSTR)win32_fname_wchar,
-			CREATE_FOR_EXPORT,
-			&(bfd->pvContext));
+			ulFlags, &(bfd->pvContext));
 		if(ret) bfd->mode=BF_CLOSED;
 		else bfd->mode=BF_READ;
 		goto end;
@@ -115,8 +114,7 @@ static int bopen_encrypted(BFILE *bfd, const char *fname, int flags, mode_t mode
 	{
 		// ascii open
 		ret=OpenEncryptedFileRawA(win32_fname,
-			CREATE_FOR_EXPORT,
-			&(bfd->pvContext));
+			ulFlags, &(bfd->pvContext));
 		if(ret) bfd->mode=BF_CLOSED;
 		else bfd->mode=BF_READ;
 		goto end;

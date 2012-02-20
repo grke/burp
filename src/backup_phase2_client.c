@@ -183,7 +183,7 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 		}
 		else if(buf)
 		{
-			logp("now: %c:%s\n", cmd, buf);
+			//logp("now: %c:%s\n", cmd, buf);
 			if(cmd==CMD_DATAPTH)
 			{
 				sb.datapth=buf;
@@ -333,9 +333,7 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 						do_filecounter_sentbytes(cntr, bytes);
 					}
 				}
-printf("before close file for send\n"); fflush(stdout);
 				close_file_for_send(&bfd, &fp);
-printf("after close file for send\n"); fflush(stdout);
 				free_sbuf(&sb);
 				if(extrameta) free(extrameta);
 			}

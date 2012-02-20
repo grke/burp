@@ -54,9 +54,9 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 */
 	if(ff->winattr & FILE_ATTRIBUTE_ENCRYPTED)
 	{
-		if(ff->type!=FT_DIREND)
-			logw(p1cntr, "EFS not yet supported: %s", ff->fname);
-		return 0;
+//		if(ff->type!=FT_DIREND)
+//			logw(p1cntr, "EFS not yet supported: %s", ff->fname);
+//		return 0;
 
 		if(ff->type==FT_REGE
 		  || ff->type==FT_REG

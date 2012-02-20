@@ -49,12 +49,12 @@ static int receive_file(const char *autoupgrade_dir, const char *file, struct cn
 #endif
 
 #ifdef HAVE_WIN32
-	ret=transfer_gzfile_in(incoming, &bfd, NULL, &rcvdbytes, &sentbytes,
-		NULL, 0, p1cntr, NULL);
+	ret=transfer_gzfile_in(NULL, incoming, &bfd, NULL,
+		&rcvdbytes, &sentbytes, NULL, 0, p1cntr, NULL);
 	bclose(&bfd);
 #else
-	ret=transfer_gzfile_in(incoming, NULL, fp, &rcvdbytes, &sentbytes,
-		NULL, 0, p1cntr, NULL);
+	ret=transfer_gzfile_in(NULL, incoming, NULL, fp,
+		&rcvdbytes, &sentbytes, NULL, 0, p1cntr, NULL);
 	close_fp(&fp);
 #endif
 end:

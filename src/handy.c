@@ -675,12 +675,9 @@ int send_whole_file(char cmd, const char *fname, const char *datapth, int quick_
 			// So ReadEncryptedFileRaw() will not return until
 			// it has read the whole file. I have no idea why
 			// they do not have a plain 'read()' function for it.
-/* md5, quick_read, datapth, cntr need to be passed in*/
 
-			printf("before read\n"); fflush(stdout);
 			ReadEncryptedFileRaw((PFE_EXPORT_FUNC)write_efs,
 				&mybuf, bfd->pvContext);
-			printf("after read\n"); fflush(stdout);
 		}
 
 		if(!ret && cmd!=CMD_EFS_FILE)
@@ -756,7 +753,6 @@ int send_whole_file(char cmd, const char *fname, const char *datapth, int quick_
 			logp("MD5_Final() failed\n");
 			return -1;
 		}
-printf("before write_endfile()\n"); fflush(stdout);
 		return write_endfile(*bytes, checksum);
 	}
 	return ret;

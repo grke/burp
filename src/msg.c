@@ -4,6 +4,7 @@
 #include "counter.h"
 #include "asyncio.h"
 #include "handy.h"
+#include "sbuf.h"
 
 int send_msg_fp(FILE *fp, char cmd, const char *buf, size_t s)
 {
@@ -116,7 +117,67 @@ static int do_inflate(z_stream *zstrm, BFILE *bfd, FILE *fp, unsigned char *out,
 	return 0;
 }
 
-int transfer_gzfile_in(const char *path, BFILE *bfd, FILE *fp, unsigned long long *rcvd, unsigned long long *sent, const char *encpassword, int enccompressed, struct cntr *cntr, char **metadata)
+#ifdef HAVE_WIN32
+
+struct winbuf
+{
+	unsigned long long *rcvd;
+	unsigned long long *sent;
+	struct cntr *cntr;
+};
+
+static DWORD WINAPI read_efs(PBYTE pbData, PVOID pvCallbackContext, PULONG ulLength)
+{
+	char cmd='\0';
+	size_t len=0;
+	char *buf=NULL;
+	struct winbuf *mybuf=(struct winbuf *)pvCallbackContext;
+
+	while(1)
+	{
+		if(async_read(&cmd, &buf, &len))
+			return ERROR_FUNCTION_FAILED;
+		(*(mybuf->rcvd))+=len;
+
+		switch(cmd)
+		{
+			case CMD_APPEND:
+				memcpy(pbData, buf, len);
+				*ulLength=(ULONG)len;
+				(*(mybuf->sent))+=len;
+				free(buf);
+				return ERROR_SUCCESS;
+			case CMD_END_FILE:
+				*ulLength=0;
+				free(buf);
+				return ERROR_SUCCESS;
+			case CMD_WARNING:
+				logp("WARNING: %s\n", buf);
+				do_filecounter(mybuf->cntr, cmd, 0);
+				free(buf);
+				continue;
+			default:
+				logp("unknown append cmd: %c\n", cmd);
+				free(buf);
+				break;
+		}
+	}
+	return ERROR_FUNCTION_FAILED;
+}
+
+static int transfer_efs_in(BFILE *bfd, unsigned long long *rcvd, unsigned long long *sent, struct cntr *cntr)
+{
+	struct winbuf mybuf;
+	mybuf.rcvd=rcvd;
+	mybuf.sent=sent;
+	mybuf.cntr=cntr;
+	WriteEncryptedFileRaw((PFE_IMPORT_FUNC)read_efs, &mybuf, bfd->pvContext);
+	return 0;
+}
+
+#endif
+
+int transfer_gzfile_in(struct sbuf *sb, const char *path, BFILE *bfd, FILE *fp, unsigned long long *rcvd, unsigned long long *sent, const char *encpassword, int enccompressed, struct cntr *cntr, char **metadata)
 {
 	char cmd;
 	char *buf=NULL;
@@ -137,6 +198,12 @@ int transfer_gzfile_in(const char *path, BFILE *bfd, FILE *fp, unsigned long lon
 	//unsigned char checksum[MD5_DIGEST_LENGTH+1];
 
 //logp("in transfer_gzfile_in\n");
+
+#ifdef HAVE_WIN32
+	if(sb && sb->cmd==CMD_EFS_FILE)
+		return transfer_efs_in(bfd, rcvd, sent, cntr);
+#endif
+
 	//if(!MD5_Init(&md5))
 	//{
 	//	logp("MD5_Init() failed");
@@ -173,7 +240,7 @@ int transfer_gzfile_in(const char *path, BFILE *bfd, FILE *fp, unsigned long lon
 			inflateEnd(&zstrm);
 			return -1;
 		}
-		rcvd+=len;
+		(*rcvd)+=len;
 
 		//logp("transfer in: %c:%s\n", cmd, buf);
 		switch(cmd)

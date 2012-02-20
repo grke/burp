@@ -196,7 +196,7 @@ static int restore_file_or_get_meta(struct sbuf *sb, const char *fname, enum act
 
 		if(metadata)
 		{
-			ret=transfer_gzfile_in(fname, NULL, NULL,
+			ret=transfer_gzfile_in(sb, fname, NULL, NULL,
 				&rcvdbytes, &sentbytes,
 				encpassword, enccompressed, cntr, metadata);
 			*metalen=sentbytes;
@@ -207,12 +207,12 @@ static int restore_file_or_get_meta(struct sbuf *sb, const char *fname, enum act
 		else
 		{
 #ifdef HAVE_WIN32
-			ret=transfer_gzfile_in(fname, &bfd, NULL,
+			ret=transfer_gzfile_in(sb, fname, &bfd, NULL,
 				&rcvdbytes, &sentbytes,
 				encpassword, enccompressed, cntr, NULL);
 			bclose(&bfd);
 #else
-			ret=transfer_gzfile_in(fname, NULL, fp,
+			ret=transfer_gzfile_in(sb, fname, NULL, fp,
 				&rcvdbytes, &sentbytes,
 				encpassword, enccompressed, cntr, NULL);
 			close_fp(&fp);

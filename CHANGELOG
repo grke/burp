@@ -1,3 +1,4 @@
+  * EFS support on Windows.
   * Move to using mingw-w64 for both 32bit and 64bit Windows builds.
   * Add 'exclude_fs =' option for Linux so that you can skip partitions
     types (for example, tmpfs) without generating warnings.

@@ -65,13 +65,7 @@ typedef DWORD (WINAPI *PFE_EXPORT_FUNC)(PBYTE pbData,PVOID pvCallbackContext,ULO
 typedef DWORD (WINAPI *PFE_IMPORT_FUNC)(PBYTE pbData,PVOID pvCallbackContext,PULONG ulLength);
 
 typedef DWORD (WINAPI * t_OpenEncryptedFileRawA)(LPCSTR, ULONG, PVOID);
-typedef DWORD (WINAPI * t_OpenEncryptedFileRawW)(LPCSTR, ULONG, PVOID);
-typedef void  (WINAPI * t_CloseEncryptedFileRawA)(PVOID);
-typedef void  (WINAPI * t_CloseEncryptedFileRawW)(PVOID);
-typedef DWORD (WINAPI * t_ReadEncryptedFileRawA)(PFE_EXPORT_FUNC, PVOID, PVOID);
-typedef DWORD (WINAPI * t_ReadEncryptedFileRawW)(PFE_EXPORT_FUNC, PVOID, PVOID);
-typedef DWORD (WINAPI * t_WriteEncryptedFileRawA)(PFE_IMPORT_FUNC, PVOID, PVOID);
-typedef DWORD (WINAPI * t_WriteEncryptedFileRawW)(PFE_IMPORT_FUNC, PVOID, PVOID);
+typedef DWORD (WINAPI * t_OpenEncryptedFileRawW)(LPCWSTR, ULONG, PVOID);
 
 typedef HANDLE (WINAPI * t_CreateFileA) (LPCSTR, DWORD ,DWORD, LPSECURITY_ATTRIBUTES,
         DWORD , DWORD, HANDLE);
@@ -134,12 +128,6 @@ extern t_CreateProcessW DLL_IMP_EXP p_CreateProcessW;
 
 extern t_OpenEncryptedFileRawA  DLL_IMP_EXP p_OpenEncryptedFileRawA;
 extern t_OpenEncryptedFileRawW  DLL_IMP_EXP p_OpenEncryptedFileRawW;
-extern t_CloseEncryptedFileRawA DLL_IMP_EXP p_CloseEncryptedFileRawA;
-extern t_CloseEncryptedFileRawW DLL_IMP_EXP p_CloseEncryptedFileRawW;
-extern t_ReadEncryptedFileRawA  DLL_IMP_EXP p_ReadEncryptedFileRawA;
-extern t_ReadEncryptedFileRawW  DLL_IMP_EXP p_ReadEncryptedFileRawW;
-extern t_WriteEncryptedFileRawA DLL_IMP_EXP p_WriteEncryptedFileRawA;
-extern t_WriteEncryptedFileRawW DLL_IMP_EXP p_WriteEncryptedFileRawW;
 
 extern t_GetFileAttributesA   DLL_IMP_EXP p_GetFileAttributesA;
 extern t_GetFileAttributesW   DLL_IMP_EXP p_GetFileAttributesW;

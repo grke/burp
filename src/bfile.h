@@ -61,7 +61,7 @@ struct BFILE {
 void    binit(BFILE *bfd, int64_t winattr);
 bool    set_win32_backup(BFILE *bfd);
 bool    have_win32_api();
-int     bopen(BFILE *bfd, const char *fname, int flags, mode_t mode);
+int     bopen(BFILE *bfd, const char *fname, int flags, mode_t mode, int isdir);
 int     bclose(BFILE *bfd);
 ssize_t bread(BFILE *bfd, void *buf, size_t count);
 ssize_t bwrite(BFILE *bfd, void *buf, size_t count);

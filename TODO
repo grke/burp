@@ -74,9 +74,6 @@
 * Add localisation/gettext specifically to work around the Polish Windows XP
   "schtasks.exe Co_minutę" problem.
 
-* Get EFS backup/restore working on Windows (FILE_ATTRIBUTE_ENCRYPTED, and
-  special open/read/close functions).
-
 * Add automatic tests to verify that acl/xattr backup/restore works properly.
   Is probably a bit trickier than other tests, because it has to be different
   on different systems.

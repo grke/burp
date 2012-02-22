@@ -71,7 +71,7 @@ bool have_win32_api()
 //#define CREATE_FOR_DIR	2
 //#define OVERWRITE_HIDDEN	4
 
-static int bopen_encrypted(BFILE *bfd, const char *fname, int flags, mode_t mode)
+static int bopen_encrypted(BFILE *bfd, const char *fname, int flags, mode_t mode, int isdir)
 {
 	int ret=0;
 	ULONG ulFlags=0;
@@ -94,7 +94,7 @@ static int bopen_encrypted(BFILE *bfd, const char *fname, int flags, mode_t mode
 	{
 		ulFlags |= CREATE_FOR_IMPORT;
 		ulFlags |= OVERWRITE_HIDDEN;
-		if(S_ISDIR(mode)) ulFlags |= CREATE_FOR_DIR;
+		if(isdir) ulFlags |= CREATE_FOR_DIR;
 	}
 	else /* Open existing for read */
 	{
@@ -104,7 +104,7 @@ static int bopen_encrypted(BFILE *bfd, const char *fname, int flags, mode_t mode
 	if(p_OpenEncryptedFileRawW && p_MultiByteToWideChar)
 	{
         	// unicode open
-		ret=OpenEncryptedFileRawW((LPCWSTR)win32_fname_wchar,
+		ret=p_OpenEncryptedFileRawW((LPCWSTR)win32_fname_wchar,
 			ulFlags, &(bfd->pvContext));
 		if(ret) bfd->mode=BF_CLOSED;
 		else bfd->mode=BF_READ;
@@ -113,7 +113,7 @@ static int bopen_encrypted(BFILE *bfd, const char *fname, int flags, mode_t mode
 	else
 	{
 		// ascii open
-		ret=OpenEncryptedFileRawA(win32_fname,
+		ret=p_OpenEncryptedFileRawA(win32_fname,
 			ulFlags, &(bfd->pvContext));
 		if(ret) bfd->mode=BF_CLOSED;
 		else bfd->mode=BF_READ;
@@ -126,7 +126,7 @@ end:
 	return bfd->mode == BF_CLOSED ? -1 : 1;
 }
 
-int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
+int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode, int isdir)
 {
    char *win32_fname=NULL;
    char *win32_fname_wchar=NULL;
@@ -134,7 +134,7 @@ int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
    DWORD dwaccess, dwflags, dwshare;
 
    if(bfd->winattr & FILE_ATTRIBUTE_ENCRYPTED)
-	return bopen_encrypted(bfd, fname, flags, mode);
+	return bopen_encrypted(bfd, fname, flags, mode, isdir);
 
    if (!(p_CreateFileA || p_CreateFileW)) {
       return 0;

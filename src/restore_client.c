@@ -144,12 +144,12 @@ static int restore_file_or_get_meta(struct sbuf *sb, const char *fname, enum act
 		if(S_ISDIR(sb->statp.st_mode))
 		{
 			mkdir(rpath, 0777);
-			bopenret=bopen(&bfd, rpath, O_WRONLY | O_BINARY, 0);
+			bopenret=bopen(&bfd, rpath, O_WRONLY | O_BINARY, 0, 1);
 		}
 		else
 			bopenret=bopen(&bfd, rpath,
 			  O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,
-			  S_IRUSR | S_IWUSR);
+			  S_IRUSR | S_IWUSR, 0);
 		if(bopenret<=0)
 		{
 			berrno be;

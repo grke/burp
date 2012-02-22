@@ -336,7 +336,8 @@ int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, int64_t winattr
 {
 #ifdef HAVE_WIN32
 	binit(bfd, winattr);
-	if(bopen(bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0)<=0)
+	if(bopen(bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0,
+		(winattr & FILE_ATTRIBUTE_DIRECTORY))<=0)
 	{
 		berrno be;
 		logw(cntr,
@@ -619,7 +620,7 @@ int send_whole_file(char cmd, const char *fname, const char *datapth, int quick_
 	int ret=0;
 	size_t s=0;
 	MD5_CTX md5;
-	char buf[8192]="";
+	char buf[4096]="";
 
 	if(!MD5_Init(&md5))
 	{
@@ -682,7 +683,7 @@ int send_whole_file(char cmd, const char *fname, const char *datapth, int quick_
 
 		if(!ret && cmd!=CMD_EFS_FILE)
 		{
-		  while((s=(uint32_t)bread(bfd, buf, 8192))>0)
+		  while((s=(uint32_t)bread(bfd, buf, 4096))>0)
 		  {
 			*bytes+=s;
 			if(!MD5_Update(&md5, buf, s))
@@ -714,7 +715,7 @@ int send_whole_file(char cmd, const char *fname, const char *datapth, int quick_
 		}
 #else
 	//printf("send_whole_file: %s\n", fname);
-		if(!ret) while((s=fread(buf, 1, 8192, fp))>0)
+		if(!ret) while((s=fread(buf, 1, 4096, fp))>0)
 		{
 			*bytes+=s;
 			if(!MD5_Update(&md5, buf, s))

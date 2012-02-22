@@ -167,12 +167,15 @@ static DWORD WINAPI read_efs(PBYTE pbData, PVOID pvCallbackContext, PULONG ulLen
 
 static int transfer_efs_in(BFILE *bfd, unsigned long long *rcvd, unsigned long long *sent, struct cntr *cntr)
 {
+	int ret=0;
 	struct winbuf mybuf;
 	mybuf.rcvd=rcvd;
 	mybuf.sent=sent;
 	mybuf.cntr=cntr;
-	WriteEncryptedFileRaw((PFE_IMPORT_FUNC)read_efs, &mybuf, bfd->pvContext);
-	return 0;
+	if((ret=WriteEncryptedFileRaw((PFE_IMPORT_FUNC)read_efs,
+		&mybuf, bfd->pvContext)))
+			logp("WriteEncryptedFileRaw returned %d\n", ret);
+	return ret;
 }
 
 #endif

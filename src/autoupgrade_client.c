@@ -32,7 +32,7 @@ static int receive_file(const char *autoupgrade_dir, const char *file, struct cn
 	//set_win32_backup(&bfd);
 	if(bopen(&bfd, incoming,
 		O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,
-		S_IRUSR | S_IWUSR)<=0)
+		S_IRUSR | S_IWUSR, 0)<=0)
 	{
 		berrno be;
 		logp("Could not open for writing %s: %s\n",

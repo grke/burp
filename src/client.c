@@ -140,7 +140,7 @@ static int server_supports_autoupgrade(const char *feat)
 
 static int s_server_session_id_context=1;
 
-int client(struct config *conf, enum action act, const char *backup, const char *restoreprefix, const char *regex, int forceoverwrite)
+int client(struct config *conf, enum action act, const char *backup, const char *restoreprefix, const char *regex, int forceoverwrite, int strip)
 {
 	int ret=0;
 	int rfd=-1;
@@ -324,7 +324,7 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 				if(!ret && do_restore_client(conf,
 					act, backup,
 					restoreprefix, regex, forceoverwrite,
-					&p1cntr, &cntr)) ret=-1;
+					strip, &p1cntr, &cntr)) ret=-1;
 				if((conf->restore_script_post_run_on_fail
 				  || !ret) && conf->restore_script_post)
 				{

@@ -69,6 +69,7 @@ nodes.
 <li>Network rate limiting.
 <li>Storage data deduplication (in versions > 1.2.2)
 <li>Automatic client upgrade (for server and client >= 1.3.0)
+<li>EFS support on Windows.
 </ul>
 </FONT>
 </P>
@@ -93,8 +94,6 @@ by space.
 <li>Add include/exclude wildcards.
 <li>Start thinking about how to make a client-side gui for doing things like
     restores.
-<li>Get EFS backup/restore working on Windows.
-<li>Add a mechanism that can make clients upgrade automatically.
 </ul>
 </FONT>
 </P>

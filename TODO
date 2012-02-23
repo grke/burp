@@ -88,8 +88,6 @@
 * Add the ability to specify things like includes/excludes on the server side.
   Will probably work by downloading chunks of config to the client.
 
-* Add option to strip off leading path components on restore.
-
 * Add option to take a list of paths for restore.
 
 * Add option to set up a restore on the server side.

@@ -235,13 +235,13 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 				}
 
 				if(conf->min_file_size
-				  && statbuf.st_size<conf->min_file_size)
+				  && statbuf.st_size<(boffset_t)conf->min_file_size)
 				{
 					logw(cntr, "File size decreased below min_file_size after initial scan: %s", sb.path);
 					forget++;
 				}
 				else if(conf->max_file_size
-				  && statbuf.st_size>conf->max_file_size)
+				  && statbuf.st_size>(boffset_t)conf->max_file_size)
 				{
 					logw(cntr, "File size increased above max_file_size after initial scan: %s", sb.path);
 					forget++;

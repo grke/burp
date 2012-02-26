@@ -261,8 +261,10 @@ static int found_regular_file(FF_PKT *ff_pkt, struct config *conf,
 	sizeleft=ff_pkt->statp.st_size;
 
 	// If the user specified a minimum or maximum file size, obey it.
-	if(conf->min_file_size && sizeleft<conf->min_file_size) return 0;
-	if(conf->max_file_size && sizeleft>conf->max_file_size) return 0;
+	if(conf->min_file_size && sizeleft<(boffset_t)conf->min_file_size)
+		return 0;
+	if(conf->max_file_size && sizeleft>(boffset_t)conf->max_file_size)
+		return 0;
 
 	/* Don't bother opening empty, world readable files.  Also do not open
 	files when archive is meant for /dev/null.  */

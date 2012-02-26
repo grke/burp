@@ -1,3 +1,14 @@
+burp (1.3.1-1) unstable; urgency=low
+
+  * New upstream release version 1.3.1
+  * Switched to Standards-Version 3.9.3 Debian bug: (Closes: #661001)
+  * respect noopt in DEB_BUILD_OPTIONS. Debian bug: (Closes: #661281)
+  * Fixed typo in logrotate script Debian bug: (Closes: #660964)
+
+ -- Bastiaan Franciscus van den Dikkenberg <bas@dikkenberg.net> Tue, 26 Feb 2012 10:47:01 +0100
+
+
+
 burp (1.3.0+20120214git-1) unstable; urgency=low
 
   * Compilation bug solved for in farm (Closes: #659692)
@@ -7,33 +18,33 @@ burp (1.3.0+20120214git-1) unstable; urgency=low
   * If recovery method 'resume' is set, but the includes/excludes change,
     switch to 'use', then start a new backup.
   * In the tests, check to see whether it looks like the server has finished
-    the backup before moving on, rather than just waiting a set 
+    the backup before moving on, rather than just waiting a set
     amount of time.(Closes: #659462)
   * Add man pages for bedup and burp_ca.
-  * Remove embedded uthash code. It will need to be installed 
+  * Remove embedded uthash code. It will need to be installed
     as a dependency. (Closes: #659454)
 
- -- Bastiaan Franciscus van den Dikkenberg <bas@dikkenberg.net>  Tue, 14 Feb 2012 15:47:01 +0100
+ -- Bastiaan Franciscus van den Dikkenberg <bas@dikkenberg.net> Tue, 14 Feb 2012 15:47:01 +0100
 
 burp (1.3.0-3) unstable; urgency=low
 
   * Forgot to add 1 patch
 
- -- Bastiaan Franciscus van den Dikkenberg <bas@dikkenberg.net>  Sun, 12 Feb 2012 14:50:29 +0100
+ -- Bastiaan Franciscus van den Dikkenberg <bas@dikkenberg.net> Sun, 12 Feb 2012 14:50:29 +0100
 
 burp (1.3.0-2) unstable; urgency=low
 
   * added forwarded header to patches
   * removed changelog entries from patches
   * removed debian/README (Closes: #659453)
-  * removed blank MAILTO header in cronjob and 
+  * removed blank MAILTO header in cronjob and
     redirected output to /var/log/burp-client (Closes: #659452)
   * added extra logrotate for /var/log/burp-client
   * changed /var/run to /run (Closes: #659464)
   * thanks to Justin B Rye from debian-l10n-english team for
     helping with linguistic support
 
- -- Bastiaan Franciscus van den Dikkenberg <bas@dikkenberg.net>  Sat, 11 Feb 2012 23:48:03 +0100
+ -- Bastiaan Franciscus van den Dikkenberg <bas@dikkenberg.net> Sat, 11 Feb 2012 23:48:03 +0100
 
 burp (1.3.0-1) unstable; urgency=low
 
@@ -54,5 +65,78 @@ burp (1.3.0-1) unstable; urgency=low
   * added man pages for bedup and burp_ca
 
 
- -- Bastiaan Franciscus van den Dikkenberg <bas@dikkenberg.net>  Fri, 10 Feb 2012 17:14:13 +0100
+ -- Bastiaan Franciscus van den Dikkenberg <bas@dikkenberg.net> Fri, 10 Feb 2012 17:14:13 +0100
 
+
+
+burp (1.3.0) unstable; urgency=low
+
+  * update to 1.3.0
+
+ -- Graham Keeling <burp-users@lists.sourceforge.net> Fri, 27 January 2012 17:00:00 +0000
+
+burp (1.2.7) unstable; urgency=low
+
+  * update to 1.2.7
+
+ -- Graham Keeling <burp-users@lists.sourceforge.net> Fri, 30 December 2011 22:00:00 +0000
+
+burp (1.2.5) unstable; urgency=low
+
+  * update to 1.2.5
+
+ -- Graham Keeling <burp-users@lists.sourceforge.net> Sat, 26 November 2011 23:30:00 +0000
+
+burp (1.2.4) unstable; urgency=low
+
+  * update to 1.2.4
+
+ -- Graham Keeling <burp-users@lists.sourceforge.net> Thu, 22 November 2011 20:00:00 +0000
+
+burp (1.2.2) unstable; urgency=low
+
+  * update to 1.2.2
+
+ -- Graham Keeling <burp-users@lists.sourceforge.net> Thu, 29 September 2011 21:00:00 +0000
+
+burp (1.2.0) unstable; urgency=low
+
+  * update to 1.2.0
+
+ -- Graham Keeling <burp-users@lists.sourceforge.net> Fri, 09 September 2011 20:20:00 +0000
+
+burp (1.1.70) unstable; urgency=low
+
+  * update to 1.1.70
+
+ -- Graham Keeling <burp-users@lists.sourceforge.net> Tue, 26 July 2011 22:00:00 +0000
+
+burp (1.1.65) unstable; urgency=low
+
+  * update to 1.1.65
+
+ -- Graham Keeling <burp-users@lists.sourceforge.net> Mon, 27 June 2011 21:40:00 +0000
+
+burp (1.1.57) unstable; urgency=low
+
+  * update to 1.1.57
+
+ -- Graham Keeling <burp-users@lists.sourceforge.net> Tue, 06 June 2011 23:00:00 +0000
+
+burp (1.1.55) unstable; urgency=low
+
+  * update to 1.1.55
+
+ -- Patrick Koppen <software@koppen.de> Sat, 14 May 2011 21:48:17 +0200
+
+burp (1.1.51+git0) unstable; urgency=low
+
+  * debian package
+
+ -- Patrick Koppen <software@koppen.de> Mon, 09 May 2011 21:24:24 +0200
+
+burp (1.1.51) unstable; urgency=low
+
+  * Initial Release.
+
+ -- Patrick Koppen <software@koppen.de> Mon, 09 May 2011 20:48:57 +0200

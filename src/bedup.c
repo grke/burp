@@ -147,7 +147,7 @@ static int full_match(struct file *o, struct file *n, FILE **ofp, FILE **nfp)
 
 	while(1)
 	{
-		if((ogot=fread(obuf, 1, FULL_CHUNK, *ofp))<0) return 0;
+		ogot=fread(obuf, 1, FULL_CHUNK, *ofp);
 		ngot=fread(nbuf, 1, FULL_CHUNK, *nfp);
 		if(ogot!=ngot) return 0;
 		for(i=0; i<ogot; i++)

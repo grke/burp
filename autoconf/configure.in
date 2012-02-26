@@ -546,9 +546,9 @@ AC_DEFINE(PROTOTYPES)
 dnl --------------------------------------------------------------------------
 dnl Supply default CFLAGS, if not specified by `CFLAGS=flags ./configure'
 dnl
-if test -z "$CFLAGS" -o "$CFLAGS" = "-g -O2"; then
+if test -z "$CFLAGS" -o "$CFLAGS" = "-g -O0"; then
    if test -z "$CCOPTS"; then
-      CCOPTS='-g -O2 -Wall'
+      CCOPTS='-g -O0 -Wall'
    fi
    CFLAGS="$CCOPTS"
 fi

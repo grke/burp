@@ -3765,13 +3765,13 @@ if test "$ac_test_CFLAGS" = set; then
   CFLAGS=$ac_save_CFLAGS
 elif test $ac_cv_prog_cc_g = yes; then
   if test "$GCC" = yes; then
-    CFLAGS="-g -O2"
+    CFLAGS="-g -O0"
   else
     CFLAGS="-g"
   fi
 else
   if test "$GCC" = yes; then
-    CFLAGS="-O2"
+    CFLAGS="-O0"
   else
     CFLAGS=
   fi
@@ -4113,13 +4113,13 @@ if test "$ac_test_CXXFLAGS" = set; then
   CXXFLAGS=$ac_save_CXXFLAGS
 elif test $ac_cv_prog_cxx_g = yes; then
   if test "$GXX" = yes; then
-    CXXFLAGS="-g -O2"
+    CXXFLAGS="-g -O0"
   else
     CXXFLAGS="-g"
   fi
 else
   if test "$GXX" = yes; then
-    CXXFLAGS="-O2"
+    CXXFLAGS="-O0"
   else
     CXXFLAGS=
   fi
@@ -8144,13 +8144,13 @@ if test "$ac_test_CXXFLAGS" = set; then
   CXXFLAGS=$ac_save_CXXFLAGS
 elif test $ac_cv_prog_cxx_g = yes; then
   if test "$GXX" = yes; then
-    CXXFLAGS="-g -O2"
+    CXXFLAGS="-g -O0"
   else
     CXXFLAGS="-g"
   fi
 else
   if test "$GXX" = yes; then
-    CXXFLAGS="-O2"
+    CXXFLAGS="-O0"
   else
     CXXFLAGS=
   fi
@@ -20382,9 +20382,9 @@ fi
 $as_echo "#define PROTOTYPES 1" >>confdefs.h
 
 
-if test -z "$CFLAGS" -o "$CFLAGS" = "-g -O2"; then
+if test -z "$CFLAGS" -o "$CFLAGS" = "-g -O0"; then
    if test -z "$CCOPTS"; then
-      CCOPTS='-g -O2 -Wall'
+      CCOPTS='-g -O0 -Wall'
    fi
    CFLAGS="$CCOPTS"
 fi

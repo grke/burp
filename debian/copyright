@@ -325,7 +325,7 @@ License:  AGPLv3
                      END OF TERMS AND CONDITIONS
 
 Files: debian/*
-Copyright: 2012 Bas van den Dikkenberg <bas@dikkenberg.net>
+Copyright: 2012 Bastiaan Franciscus van den Dikkenberg <bas@dikkenberg.net>
 License: GPL-2+
    This package is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by

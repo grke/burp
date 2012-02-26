@@ -15,3 +15,14 @@ Description: Simple cross-platform network BackUp and Restore Program
  Burp is a client/server backup system that saves space and network
  usage by using librsync, and uses the Volume Snapshot Service when
  backing up Windows clients.
+
+Package: burp-dbg
+Architecture: any
+Section: debug
+Depends: burp (= ${binary:Version}), ${misc:Depends}
+Description: debugging symbols for Burp
+ Burp is a client/server backup system that saves space and network
+ usage by using librsync, and uses the Volume Snapshot Service when
+ backing up Windows clients.
+ .
+ This package contains debugging symbols for burp.

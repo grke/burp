@@ -24,3 +24,11 @@ override_dh_fixperms:
 override_dh_auto_configure:
 	./configure
 
+override_dh_strip:
+	dh_strip --dbg-package=burp-dbg
+
+override_dh_auto_install:
+	dh_auto_install --destdir=debian/burp
+
+override_dh_installdocs:
+	dh_installdocs --link-doc=burp

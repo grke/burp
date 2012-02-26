@@ -1088,6 +1088,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	// Reload global config, in case things have changed. This means that
 	// the server does not need to be restarted for most config changes.
 	init_config(&conf);
+	init_config(&cconf);
 	if(load_config(configfile, &conf, 1)) return -1;
 
 	if(!(sbio=BIO_new_socket(*cfd, BIO_NOCLOSE))

@@ -12,7 +12,6 @@ burp (1.3.0+20120214git-1) unstable; urgency=low
   * Add man pages for bedup and burp_ca.
   * Remove embedded uthash code. It will need to be installed 
     as a dependency. (Closes: #659454)
-  * Simple edit test
 
  -- Bastiaan Franciscus van den Dikkenberg <bas@dikkenberg.net>  Tue, 14 Feb 2012 15:47:01 +0100
 

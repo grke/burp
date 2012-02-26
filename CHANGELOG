@@ -16,6 +16,8 @@
   * Improve 'make clean'.
   * Add option to strip off leading path components on restore.
   * Fix segfault that was happening on the server when SSL_accept() failed.
+  * Move burp and bedup to /usr/sbin (you need to check that any cron jobs
+    are pointing there too).
 
 2012-01-27 Changes in burp-1.3.0:
   * Add a mechanism for automatically upgrading clients.

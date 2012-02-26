@@ -8,5 +8,5 @@ fi
 (echo "To: $2"
  echo "From: burp"
  echo "Subject: $3"
- /sbin/burp -c "$1" -a S
+ /usr/sbin/burp -c "$1" -a S
  echo) | /usr/sbin/sendmail -t

@@ -98,7 +98,7 @@ sed_rep_both()
 run_bedup()
 {
 	echo "Starting test bedup"
-	./sbin/bedup -c $serverconf -l >> "$beduplog" 2>&1 \
+	./usr/sbin/bedup -c $serverconf -l >> "$beduplog" 2>&1 \
 		|| fail "bedup returned $?"
 }
 
@@ -110,7 +110,7 @@ run_backup()
 	SLEEPTIME=2
 
 	echo "Starting test client backup"
-	./sbin/burp -c $clientconf -a b >> "$clientlog" 2>&1 \
+	./usr/sbin/burp -c $clientconf -a b >> "$clientlog" 2>&1 \
 		|| fail "client backup returned $?"
 
 	# Repeatedly check to see whether the server has finished, rather
@@ -129,7 +129,7 @@ run_verify()
 {
 	local num="$1"
 	echo "Starting test client verify of backup $num"
-	./sbin/burp -c $clientconf -a v -b "$num" \
+	./usr/sbin/burp -c $clientconf -a v -b "$num" \
 		>> "$clientlog" 2>&1 || fail "client backup returned $?"
 }
 
@@ -139,7 +139,7 @@ run_restore()
 	local dir="$2"
 	echo "Starting test client restore of backup $num"
 	makedir "$dir"
-	./sbin/burp -c $clientconf -a r -b "$num" -d "$dir" \
+	./usr/sbin/burp -c $clientconf -a r -b "$num" -d "$dir" \
 		>>"$clientlog" 2>&1 || fail "client restore returned $?"
 }
 
@@ -292,7 +292,7 @@ echo
 
 # Start up the server
 echo "Starting test server"
-./sbin/burp -c $serverconf -l "$serversystemlog" -F >> "$serveroutputlog" 2>&1 &
+./usr/sbin/burp -c $serverconf -l "$serversystemlog" -F >> "$serveroutputlog" 2>&1 &
 serverpid=$!
 
 # Be kind, and wait a little for it to start.

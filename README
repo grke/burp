@@ -33,7 +33,7 @@ equivalent). This makes the client ask the server every twenty minutes whether
 it is yet time for a new backup. It is probably a good idea to change the
 numbers for each client, in order to spread the load a bit:
 MAILTO=
-7,27,47 * * * * root    /sbin/burp -a t
+7,27,47 * * * * root    /usr/sbin/burp -a t
 
 WINDOWS CLIENT
 

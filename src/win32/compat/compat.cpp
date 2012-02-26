@@ -1187,7 +1187,11 @@ opendir(const char *path)
     memset (rval, 0, sizeof (_dir));
     if (rval == NULL) return NULL;
     char *tspec = (char *)malloc(max_len);
-    if (tspec == NULL) return NULL;
+    if (tspec == NULL)
+    {
+	free(rval);
+	return NULL;
+    }
 
     conv_unix_to_win32_path(path, tspec, max_len);
 

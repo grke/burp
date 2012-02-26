@@ -1,0 +1,88 @@
+Description: <short summary of the patch>
+
+Origin: <vendor|upstream|other>, <url of original patch>
+Bug: <url in upstream bugtracker>
+Bug-Debian: http://bugs.debian.org/<bugnumber>
+Bug-Ubuntu: https://launchpad.net/bugs/<bugnumber>
+Forwarded: <no|not-needed|url proving that it has been forwarded>
+Reviewed-By: <name and email of someone who approved the patch>
+Last-Update: <YYYY-MM-DD>
+
+--- burp-1.3.1.orig/README
++++ burp-1.3.1/README
+@@ -33,7 +33,7 @@ equivalent). This makes the client ask t
+ it is yet time for a new backup. It is probably a good idea to change the
+ numbers for each client, in order to spread the load a bit:
+ MAILTO=
+-7,27,47 * * * * root    /sbin/burp -a t
++7,27,47 * * * * root    /usr/sbin/burp -a t
+ 
+ WINDOWS CLIENT
+ 
+--- burp-1.3.1.orig/configure
++++ burp-1.3.1/configure
+@@ -1019,7 +1019,7 @@ x_libraries=NONE
+ # Use braces instead of parens because sh, perl, etc. also accept them.
+ # (The list follows the same order as the GNU Coding Standards.)
+ bindir='${exec_prefix}/bin'
+-sbindir='${exec_prefix}/sbin'
++sbindir='${exec_prefix}/usr/sbin'
+ libexecdir='${exec_prefix}/libexec'
+ datarootdir='${prefix}/share'
+ datadir='${datarootdir}'
+@@ -1565,7 +1565,7 @@ For better control, use the options belo
+ 
+ Fine tuning of the installation directories:
+   --bindir=DIR            user executables [EPREFIX/bin]
+-  --sbindir=DIR           system admin executables [EPREFIX/sbin]
++  --sbindir=DIR           system admin executables [EPREFIX/usr/sbin]
+   --libexecdir=DIR        program executables [EPREFIX/libexec]
+   --sysconfdir=DIR        read-only single-machine data [PREFIX/etc]
+   --sharedstatedir=DIR    modifiable architecture-independent data [PREFIX/com]
+--- burp-1.3.1.orig/test/run_test
++++ burp-1.3.1/test/run_test
+@@ -98,7 +98,7 @@ sed_rep_both()
+ run_bedup()
+ {
+ 	echo "Starting test bedup"
+-	./sbin/bedup -c $serverconf -l >> "$beduplog" 2>&1 \
++	./usr/sbin/bedup -c $serverconf -l >> "$beduplog" 2>&1 \
+ 		|| fail "bedup returned $?"
+ }
+ 
+@@ -110,7 +110,7 @@ run_backup()
+ 	SLEEPTIME=2
+ 
+ 	echo "Starting test client backup"
+-	./sbin/burp -c $clientconf -a b >> "$clientlog" 2>&1 \
++	./usr/sbin/burp -c $clientconf -a b >> "$clientlog" 2>&1 \
+ 		|| fail "client backup returned $?"
+ 
+ 	# Repeatedly check to see whether the server has finished, rather
+@@ -129,7 +129,7 @@ run_verify()
+ {
+ 	local num="$1"
+ 	echo "Starting test client verify of backup $num"
+-	./sbin/burp -c $clientconf -a v -b "$num" \
++	./usr/sbin/burp -c $clientconf -a v -b "$num" \
+ 		>> "$clientlog" 2>&1 || fail "client backup returned $?"
+ }
+ 
+@@ -139,7 +139,7 @@ run_restore()
+ 	local dir="$2"
+ 	echo "Starting test client restore of backup $num"
+ 	makedir "$dir"
+-	./sbin/burp -c $clientconf -a r -b "$num" -d "$dir" \
++	./usr/sbin/burp -c $clientconf -a r -b "$num" -d "$dir" \
+ 		>>"$clientlog" 2>&1 || fail "client restore returned $?"
+ }
+ 
+@@ -292,7 +292,7 @@ echo
+ 
+ # Start up the server
+ echo "Starting test server"
+-./sbin/burp -c $serverconf -l "$serversystemlog" -F >> "$serveroutputlog" 2>&1 &
++./usr/sbin/burp -c $serverconf -l "$serversystemlog" -F >> "$serveroutputlog" 2>&1 &
+ serverpid=$!
+ 
+ # Be kind, and wait a little for it to start.

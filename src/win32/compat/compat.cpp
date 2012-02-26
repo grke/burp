@@ -1175,6 +1175,8 @@ DIR *
 opendir(const char *path)
 {
     ssize_t len=0;
+    char *tspec=NULL;
+
     /* enough space for VSS !*/
     int max_len = strlen(path) + MAX_PATH;
     _dir *rval = NULL;
@@ -1183,11 +1185,10 @@ opendir(const char *path)
        return NULL;
     }
 
-    rval = (_dir *)malloc(sizeof(_dir));
+    if(!(rval = (_dir *)malloc(sizeof(_dir))))
+	return NULL;
     memset (rval, 0, sizeof (_dir));
-    if (rval == NULL) return NULL;
-    char *tspec = (char *)malloc(max_len);
-    if (tspec == NULL)
+    if(!(tspec = (char *)malloc(max_len)))
     {
 	free(rval);
 	return NULL;

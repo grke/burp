@@ -1,7 +1,7 @@
 burp (1.3.2-1) unstable; urgency=low
 
   * New upstream release version 1.3.2
-  * Fixed make error during build proces
+  * Fixed make error during build process
 
  -- Bastiaan Franciscus van den Dikkenberg <bas@dikkenberg.net>  Mon, 27 Feb 2012 16:03:20 +0100
 

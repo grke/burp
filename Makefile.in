@@ -142,6 +142,7 @@ clean:
 	@$(RMF) Makefile
 	@$(RMF) website/html/*.html
 	@$(RMF) website/html/*.html
+	@$(RMF) -r website/html/about
 	@$(RMF) -r website/html/faq
 	@$(RMF) -r website/html/txt
 	@find . -name ".#*" -exec $(RMF) {} \;

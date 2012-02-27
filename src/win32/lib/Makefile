@@ -5,7 +5,6 @@
 include ../Makefile.inc
 
 INCLUDES = \
-	$(INCLUDE_PTHREADS) \
 	$(INCLUDE_BURP) \
 	$(INCLUDE_ZLIB) \
 	$(INCLUDE_OPENSSL)
@@ -43,7 +42,6 @@ ALL_OBJS = \
 LIBS_DLL = \
 	$(LIBS_SSL) \
 	$(LIBS_CRYPTO) \
-	$(LIBS_PTHREADS) \
 	$(LIBS_ZLIB) \
 	$(LIBS_NETWORK) \
 	-lole32 \
@@ -80,7 +78,7 @@ $(LIBDIR)/libburp.a: $(BINDIR)/burp.dll $(STATIC_OBJS)
 $(BINDIR)/burp.dll: DLL_DEFINE=BUILDING_DLL
 
 $(BINDIR)/burp.dll: $(DLL_OBJS) burp$(WIN_VERSION).def
-	@echo "Linking $@"
+	@echo "Linkinga $@"
 	$(call checkdir,$@)
 	$(ECHO_CMD)$(CXX) $(LDFLAGS) -mdll -mwindows -Wl,--out-implib,$(OBJDIR)/burp.a $^ $(LIBS_DLL) -o $@
 

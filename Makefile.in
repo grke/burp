@@ -89,7 +89,7 @@ libtool: Makefile $(LIBTOOL_DEPS)
 installdirs:
 	$(MKDIR) $(DESTDIR)$(sbindir)
 	$(MKDIR) $(DESTDIR)$(sysconfdir)
-	$(MKDIR) $(DESTDIR)/var/run/burp
+	$(MKDIR) $(DESTDIR)/var/run
 	$(MKDIR) $(DESTDIR)/var/spool/burp
 	@if [ ! -d $(DESTDIR)$(sysconfdir)/clientconfdir ] ; then $(MKDIR) $(DESTDIR)$(sysconfdir)/clientconfdir ; cp configs/server/clientconfdir/testclient $(DESTDIR)$(sysconfdir)/clientconfdir/testclient ; fi
 	@if [ ! -d $(DESTDIR)$(sysconfdir)/autoupgrade/client ] ; then $(MKDIR) $(DESTDIR)$(sysconfdir)/autoupgrade/client ; fi
@@ -133,14 +133,18 @@ Makefiles:
 clean:
 	@for I in ${all_subdirs} test ; \
 	  do (cd $$I; echo "==>Entering directory `pwd`"; ${MAKE} $@ || exit 1); done
+	@cd src/win32 && ${MAKE} $@
 	@$(RMF) *~ 1 2 3 core core.* config.guess console.log console.sum
-	@$(RMF) config.log config.out
-	@$(RMF) examples/1 examples/2 examples/devices/1 examples/devices/2
-	@$(RMF) -r autom4te.cache
-	@$(RMF) cross-tools-mingw32
-	@$(RMF) cross-tools-mingw64
-	@$(RMF) depkgs-mingw32
-	@$(RMF) depkgs-mingw64
+	@$(RMF) config.log config.out config.status libtool
+	@$(RMF) -r autoconf/autom4te.cache autoconf/Make.common
+	@$(RMF) burp-cross-tools
+	@$(RMF) burp-depkgs
+	@$(RMF) Makefile
+	@$(RMF) website/html/*.html
+	@$(RMF) website/html/*.html
+	@$(RMF) -r website/html/about
+	@$(RMF) -r website/html/faq
+	@$(RMF) -r website/html/txt
 	@find . -name ".#*" -exec $(RMF) {} \;
 
 

@@ -14,11 +14,7 @@
 #endif
 
 #if defined(HAVE_WIN32)
-#if defined(HAVE_MINGW)
 #include "mingwconfig.h"
-#else
-#include "winconfig.h"
-#endif
 #else
 #include "config.h"
 #endif
@@ -93,10 +89,7 @@ extern "C" {
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
-#if defined(HAVE_WIN32) & !defined(HAVE_MINGW)
-#include <winsock2.h>
-#endif 
-#if !defined(HAVE_WIN32) & !defined(HAVE_MINGW)
+#if !defined(HAVE_WIN32)
 #include <sys/stat.h>
 #endif 
 #include <sys/time.h>

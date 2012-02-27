@@ -67,11 +67,7 @@ extern DWORD   g_platform_id;
 extern DWORD   g_MinorVersion;
 
 // from MicroSoft SDK (KES) is the diff between Jan 1 1601 and Jan 1 1970
-#ifdef HAVE_MINGW
 #define WIN32_FILETIME_ADJUST 0x19DB1DED53E8000ULL 
-#else
-#define WIN32_FILETIME_ADJUST 0x19DB1DED53E8000I64
-#endif
 
 #define WIN32_FILETIME_SCALE  10000000             // 100ns/second
 
@@ -1086,30 +1082,6 @@ readlink(const char *, char *, int)
    return -1;
 }
 
-
-#ifndef HAVE_MINGW
-int
-strcasecmp(const char *s1, const char *s2)
-{
-   register int ch1, ch2;
-
-   if (s1==s2)
-      return 0;       /* strings are equal if same object. */
-   else if (!s1)
-      return -1;
-   else if (!s2)
-      return 1;
-   do {
-      ch1 = *s1;
-      ch2 = *s2;
-      s1++;
-      s2++;
-   } while (ch1 != 0 && tolower(ch1) == tolower(ch2));
-
-   return(ch1 - ch2);
-}
-#endif //HAVE_MINGW
-
 int
 strncasecmp(const char *s1, const char *s2, int len)
 {
@@ -1203,6 +1175,8 @@ DIR *
 opendir(const char *path)
 {
     ssize_t len=0;
+    char *tspec=NULL;
+
     /* enough space for VSS !*/
     int max_len = strlen(path) + MAX_PATH;
     _dir *rval = NULL;
@@ -1211,11 +1185,14 @@ opendir(const char *path)
        return NULL;
     }
 
-    rval = (_dir *)malloc(sizeof(_dir));
+    if(!(rval = (_dir *)malloc(sizeof(_dir))))
+	return NULL;
     memset (rval, 0, sizeof (_dir));
-    if (rval == NULL) return NULL;
-    char *tspec = (char *)malloc(max_len);
-    if (tspec == NULL) return NULL;
+    if(!(tspec = (char *)malloc(max_len)))
+    {
+	free(rval);
+	return NULL;
+    }
 
     conv_unix_to_win32_path(path, tspec, max_len);
 
@@ -2049,190 +2026,8 @@ kill(int pid, int signal)
    return rval;
 }
 
-
-#ifndef MINGW64
-int
-utime(const char *fname, struct utimbuf *times)
-{
-    FILETIME acc, mod;
-    char tmpbuf[5000];
-
-    conv_unix_to_win32_path(fname, tmpbuf, 5000);
-
-    cvt_utime_to_ftime(times->actime, acc);
-    cvt_utime_to_ftime(times->modtime, mod);
-
-    HANDLE h = INVALID_HANDLE_VALUE;
-
-    if (p_CreateFileW) {
-       char* pwszBuf = sm_get_pool_memory(PM_FNAME);
-       make_win32_path_UTF8_2_wchar(&pwszBuf, tmpbuf);
-
-       h = p_CreateFileW((LPCWSTR)pwszBuf,
-                        FILE_WRITE_ATTRIBUTES,
-                        FILE_SHARE_WRITE|FILE_SHARE_READ|FILE_SHARE_DELETE,
-                        NULL,
-                        OPEN_EXISTING,
-                        FILE_FLAG_BACKUP_SEMANTICS, // required for directories
-                        NULL);
-
-       sm_free_pool_memory(pwszBuf);
-    } else if (p_CreateFileA) {
-       h = p_CreateFileA(tmpbuf,
-                        FILE_WRITE_ATTRIBUTES,
-                        FILE_SHARE_WRITE|FILE_SHARE_READ|FILE_SHARE_DELETE,
-                        NULL,
-                        OPEN_EXISTING,
-                        FILE_FLAG_BACKUP_SEMANTICS, // required for directories
-                        NULL);
-    }
-
-    if (h == INVALID_HANDLE_VALUE) {
-       const char *err = errorString();
-       LocalFree((void *)err);
-       errno = b_errno_win32;
-       return -1;
-    }
-
-    int rval = SetFileTime(h, NULL, &acc, &mod) ? 0 : -1;
-    CloseHandle(h);
-    if (rval == -1) {
-       errno = b_errno_win32;
-    }
-    return rval;
-}
-#endif
-
-#if 0
-int
-file_open(const char *file, int flags, int mode)
-{
-   DWORD access = 0;
-   DWORD shareMode = 0;
-   DWORD create = 0;
-   DWORD msflags = 0;
-   HANDLE foo = INVALID_HANDLE_VALUE;
-   const char *remap = file;
-
-   if (flags & O_WRONLY) access = GENERIC_WRITE;
-   else if (flags & O_RDWR) access = GENERIC_READ|GENERIC_WRITE;
-   else access = GENERIC_READ;
-
-   if ((flags & (O_CREAT | O_EXCL)) == (O_CREAT | O_EXCL))
-      create = CREATE_NEW;
-   else if ((flags & (O_CREAT | O_TRUNC)) == (O_CREAT | O_TRUNC))
-      create = CREATE_ALWAYS;
-   else if (flags & O_CREAT)
-      create = OPEN_ALWAYS;
-   else if (flags & O_TRUNC)
-      create = TRUNCATE_EXISTING;
-   else 
-      create = OPEN_EXISTING;
-
-   shareMode = 0;
-
-   if (flags & O_APPEND) {
-      printf("open...APPEND not implemented yet.");
-      exit(-1);
-   }
-
-   if (p_CreateFileW) {
-      char* pwszBuf = sm_get_pool_memory(PM_FNAME);
-      make_win32_path_UTF8_2_wchar(&pwszBuf, file);
-
-      foo = p_CreateFileW((LPCWSTR) pwszBuf, access, shareMode, NULL, create, msflags, NULL);
-      sm_free_pool_memory(pwszBuf);
-   } else if (p_CreateFileA)
-      foo = CreateFile(file, access, shareMode, NULL, create, msflags, NULL);
-
-   if (INVALID_HANDLE_VALUE == foo) {
-      errno = b_errno_win32;
-      return (int)-1;
-   }
-   return (int)foo;
-
-}
-
-
-int
-file_close(int fd)
-{
-    if (!CloseHandle((HANDLE)fd)) {
-        errno = b_errno_win32;
-        return -1;
-    }
-
-    return 0;
-}
-
-ssize_t
-file_write(int fd, const void *data, ssize_t len)
-{
-    BOOL status;
-    DWORD bwrite;
-    status = WriteFile((HANDLE)fd, data, len, &bwrite, NULL);
-    if (status) return bwrite;
-    errno = b_errno_win32;
-    return -1;
-}
-
-
-ssize_t
-file_read(int fd, void *data, ssize_t len)
-{
-    BOOL status;
-    DWORD bread;
-
-    status = ReadFile((HANDLE)fd, data, len, &bread, NULL);
-    if (status) return bread;
-    errno = b_errno_win32;
-    return -1;
-}
-
-boffset_t
-file_seek(int fd, boffset_t offset, int whence)
-{
-    DWORD method = 0;
-    DWORD val;
-    LONG  offset_low = (LONG)offset;
-    LONG  offset_high = (LONG)(offset >> 32);
-
-    switch (whence) {
-    case SEEK_SET :
-        method = FILE_BEGIN;
-        break;
-    case SEEK_CUR:
-        method = FILE_CURRENT;
-        break;
-    case SEEK_END:
-        method = FILE_END;
-        break;
-    default:
-        errno = EINVAL;
-        return -1;
-    }
-
-
-    if ((val=SetFilePointer((HANDLE)fd, offset_low, &offset_high, method)) == INVALID_SET_FILE_POINTER) {
-       errno = b_errno_win32;
-       return -1;
-    }
-    /* ***FIXME*** I doubt this works right */
-    return val;
-}
-
-int
-file_dup2(int, int)
-{
-    errno = ENOSYS;
-    return -1;
-}
-#endif
-
-#ifdef HAVE_MINGW
 /* syslog function, added by Nicolas Boichat */
 void openlog(const char *ident, int option, int facility) {}  
-#endif //HAVE_MINGW
 
 static pid_t do_forkchild(FILE **sin, FILE **sout, FILE **serr, const char *path, char * const argv[], int do_wait)
 {

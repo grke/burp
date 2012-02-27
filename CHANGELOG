@@ -1,7 +1,25 @@
+2012-02-27 Changes in burp-1.3.1:
+  * EFS support on Windows.
+  * Move to using mingw-w64 for both 32bit and 64bit Windows builds.
   * Add 'exclude_fs =' option for Linux so that you can skip partitions
     types (for example, tmpfs) without generating warnings.
   * If recovery method 'resume' is set, but the includes/excludes change,
     switch to 'use', then start a new backup.
+  * In the tests, check to see whether it looks like the server has finished
+    the backup before moving on, rather than just waiting a set amount of time.
+  * Add man pages for bedup and burp_ca.
+  * Remove embedded uthash code. It will need to be installed as a dependency.
+    For example, in Debian, you might run 'apt-get install uthash-dev'.
+  * Add Bas van den Dikkenberg's tweaks for getting burp into official Debian
+    and Ubuntu repositories. Burp is now in debian sid and ubuntu precise.
+  * Make the server tell the client what extra_comms features it supports, so
+    that, in future, old servers are more likely to work with new clients. 
+  * Improve 'make clean'.
+  * Add option to strip off leading path components on restore.
+  * Fix segfault that was happening on the server when SSL_accept() failed.
+  * Move burp and bedup to /usr/sbin (you need to check that any cron jobs
+    are pointing there too).
+  * Moved list of things to do to https://github.com/grke/burp/issues
 
 2012-01-27 Changes in burp-1.3.0:
   * Add a mechanism for automatically upgrading clients.

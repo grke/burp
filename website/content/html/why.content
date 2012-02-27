@@ -44,6 +44,7 @@ another was based on.
 <li>Retention configuration - it is just impossible to configure a sensible
 retention policy.
 <A href="http://www.adsm.org/lists/html/Bacula-users/2011-01/msg00308.html">Here is my explanation why</a>, sent to the bacula-users mailing list.
+<li>No Windows EFS support - EFS files are silently ignored.
 </ul>
 
 The main advantage that Bacula has over other open source offerings is that

@@ -18,7 +18,7 @@ _Z15win32_ftruncateix
 _Z16wchar_win32_pathPKcPw
 _Z17SetVSSPathConvertPFiPKcPciEPFiPKwPwiE
 _Z18GetApplicationNamePKcPPcPS0_
-_Z18cvt_utime_to_ftimeRKxR9_FILETIME
+; _Z18cvt_utime_to_ftimeRKxR9_FILETIME
 _Z18unix_name_to_win32Pc
 _Z21Win32ConvCleanupCachev
 _Z21make_wchar_win32_pathPcPi
@@ -32,7 +32,7 @@ _Z11win32_lstatPKcP4statPx
 _Z5chownPKcjj
 _Z5fcntlii
 _Z5fcntliil
-_Z5fstatxP4stat
+;_Z5fstatxP4stat
 _Z5lstatPKcP4stat
 _Z5sleepi
 _Z6execvpPKcPPc
@@ -64,10 +64,10 @@ _Z17forkchild_no_waitPP6_iobufS1_S1_PKcPKPc
  
 ; print.o
 _Z10__vsprintfPcPKcS_
-_Z11__vsnprintfPcyPKcS_
-_Z10__snprintfPcyPKcz
+; _Z11__vsnprintfPcyPKcS_
+; _Z10__snprintfPcyPKcz
 _Z9__sprintfPcPKcz
-_Z4doprPcyPKcS_PFvS_PyyiE
+; _Z4doprPcyPKcS_PFvS_PyyiE
  
 ; winapi.o
 _Z17InitWinAPIWrapperv

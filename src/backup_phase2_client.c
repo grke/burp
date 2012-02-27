@@ -122,13 +122,13 @@ static int load_signature_and_send_delta(BFILE *bfd, FILE *in, unsigned long lon
 	return r;
 }
 
-static int send_whole_file_w(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen)
+static int send_whole_file_w(char cmd, const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen)
 {
-	if(compression || encpassword)
+	if((compression || encpassword) && cmd!=CMD_EFS_FILE)
 		return send_whole_file_gz(fname, datapth, quick_read, bytes, 
 		  encpassword, cntr, compression, bfd, fp, extrameta, elen);
 	else
-		return send_whole_file(fname, datapth, quick_read, bytes, 
+		return send_whole_file(cmd, fname, datapth, quick_read, bytes, 
 		  cntr, bfd, fp, extrameta, elen);
 }
 
@@ -183,7 +183,7 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 		}
 		else if(buf)
 		{
-			//logp("got: %c:%s\n", cmd, buf);
+			//logp("now: %c:%s\n", cmd, buf);
 			if(cmd==CMD_DATAPTH)
 			{
 				sb.datapth=buf;
@@ -203,7 +203,8 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 			else if(cmd==CMD_FILE
 			  || cmd==CMD_ENC_FILE
 			  || cmd==CMD_METADATA
-			  || cmd==CMD_ENC_METADATA)
+			  || cmd==CMD_ENC_METADATA
+			  || cmd==CMD_EFS_FILE)
 			{
 				int forget=0;
 				int64_t winattr=0;
@@ -234,13 +235,13 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 				}
 
 				if(conf->min_file_size
-				  && statbuf.st_size<conf->min_file_size)
+				  && statbuf.st_size<(boffset_t)conf->min_file_size)
 				{
 					logw(cntr, "File size decreased below min_file_size after initial scan: %s", sb.path);
 					forget++;
 				}
 				else if(conf->max_file_size
-				  && statbuf.st_size>conf->max_file_size)
+				  && statbuf.st_size>(boffset_t)conf->max_file_size)
 				{
 					logw(cntr, "File size increased above max_file_size after initial scan: %s", sb.path);
 					forget++;
@@ -250,7 +251,7 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 				{
 					encode_stat(attribs, &statbuf, winattr);
 					if(open_file_for_send(&bfd, &fp,
-						sb.path, cntr))
+						sb.path, winattr, cntr))
 							forget++;
 				}
 
@@ -315,7 +316,7 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 					// send the whole file.
 					if(async_write_str(CMD_STAT, attribs)
 					  || async_write_str(cmd, sb.path)
-					  || send_whole_file_w(sb.path,
+					  || send_whole_file_w(cmd, sb.path,
 						NULL, 0, &bytes,
 						conf->encryption_password,
 						cntr, conf->compression,
@@ -327,11 +328,7 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 					}
 					else
 					{
-						//if(cmd==CMD_METADATA
-						//  || cmd==CMD_ENC_METADATA)
-						  do_filecounter(cntr, cmd, 1);
-						//else
-						//  do_filecounter(cntr, CMD_NEW_FILE, 1);
+						do_filecounter(cntr, cmd, 1);
 						do_filecounter_bytes(cntr, bytes);
 						do_filecounter_sentbytes(cntr, bytes);
 					}

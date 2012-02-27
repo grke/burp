@@ -41,6 +41,7 @@ echo >> "$howto"
 man ../manpages/burp.8 | col -b >> $howto
 print_bottom "$howto"
 
+mkdir -p html/txt
 cp -v ../docs/*.txt html/txt
 
 go_for_it()
@@ -109,7 +110,7 @@ recurse()
 			if ! [ $x = "html" ] ; then rmdir $root/$x ; fi
 		else
 			case "$i" in
-				*.content|*.howto|*.faq|*.html)
+				*.content|*.howto|*.faq|*.html|*.about)
 					go_for_it "$i" "$dir"
 					;;
 				*.template|*.jpg|*.rtf|*.png)

@@ -28,7 +28,10 @@ static int restore_interrupt(struct sbuf *sb, const char *msg, struct cntr *cntr
 
 	// If it is file data, get the server
 	// to interrupt the flow and move on.
-	if((sb->cmd!=CMD_FILE && sb->cmd!=CMD_ENC_FILE) || !(sb->datapth))
+	if((sb->cmd!=CMD_FILE
+	   && sb->cmd!=CMD_ENC_FILE
+	   && sb->cmd!=CMD_EFS_FILE)
+	 || !(sb->datapth))
 		return 0;
 
 	if(async_write_str(CMD_INTERRUPT, sb->datapth))
@@ -136,18 +139,18 @@ static int restore_file_or_get_meta(struct sbuf *sb, const char *fname, enum act
 	if(!metadata)
 	{
 #ifdef HAVE_WIN32
-		binit(&bfd);
+		binit(&bfd, sb->winattr);
 		set_win32_backup(&bfd);
 		if(S_ISDIR(sb->statp.st_mode))
 		{
 			mkdir(rpath, 0777);
-			bopenret=bopen(&bfd, rpath, O_WRONLY | O_BINARY, 0);
+			bopenret=bopen(&bfd, rpath, O_WRONLY | O_BINARY, 0, 1);
 		}
 		else
 			bopenret=bopen(&bfd, rpath,
 			  O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,
-			  S_IRUSR | S_IWUSR);
-		if(bopenret<0)
+			  S_IRUSR | S_IWUSR, 0);
+		if(bopenret<=0)
 		{
 			berrno be;
 			char msg[256]="";
@@ -193,7 +196,7 @@ static int restore_file_or_get_meta(struct sbuf *sb, const char *fname, enum act
 
 		if(metadata)
 		{
-			ret=transfer_gzfile_in(fname, NULL, NULL,
+			ret=transfer_gzfile_in(sb, fname, NULL, NULL,
 				&rcvdbytes, &sentbytes,
 				encpassword, enccompressed, cntr, metadata);
 			*metalen=sentbytes;
@@ -204,12 +207,12 @@ static int restore_file_or_get_meta(struct sbuf *sb, const char *fname, enum act
 		else
 		{
 #ifdef HAVE_WIN32
-			ret=transfer_gzfile_in(fname, &bfd, NULL,
+			ret=transfer_gzfile_in(sb, fname, &bfd, NULL,
 				&rcvdbytes, &sentbytes,
 				encpassword, enccompressed, cntr, NULL);
 			bclose(&bfd);
 #else
-			ret=transfer_gzfile_in(fname, NULL, fp,
+			ret=transfer_gzfile_in(sb, fname, NULL, fp,
 				&rcvdbytes, &sentbytes,
 				encpassword, enccompressed, cntr, NULL);
 			close_fp(&fp);
@@ -239,11 +242,11 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
 {
 	int ret=0;
 	char *rpath=NULL;
-	struct stat statp=sb->statp;
 #ifdef HAVE_WIN32
 	logw(cntr, "Cannot restore special files to Windows: %s\n", fname);
 	goto end;
 #else
+	struct stat statp=sb->statp;
 
 	if(act==ACTION_VERIFY)
 	{
@@ -467,7 +470,46 @@ static const char *act_str(enum action act)
 	return ret;
 }
 
-int do_restore_client(struct config *conf, enum action act, const char *backup, const char *restoreprefix, const char *restoreregex, int forceoverwrite, struct cntr *p1cntr, struct cntr *cntr)
+/* Return 1 for ok, -1 for error, 0 for too many components stripped. */
+static int strip_path_components(struct sbuf *sb, char **path, int strip, struct cntr *cntr)
+{
+	int s=0;
+	char *tmp=NULL;
+	char *cp=*path;
+	char *dp=NULL;
+	for(s=0; cp && *cp && s<strip; s++)
+	{
+		if(!(dp=strchr(cp, '/')))
+		{
+			char msg[256]="";
+			snprintf(msg, sizeof(msg),
+				"Stripped too many components: %s", *path);
+			if(restore_interrupt(sb, msg, cntr))
+				return -1;
+			return 0;
+		}
+		cp=dp+1;
+	}
+	if(!cp)
+	{
+		char msg[256]="";
+		snprintf(msg, sizeof(msg),
+			"Stripped too many components: %s", *path);
+		if(restore_interrupt(sb, msg, cntr))
+			return -1;
+		return 0;
+	}
+	if(!(tmp=strdup(cp)))
+	{
+		log_and_send("out of memory");
+		return -1;
+	}
+	free(*path);
+	*path=tmp;
+	return 1;
+}
+
+int do_restore_client(struct config *conf, enum action act, const char *backup, const char *restoreprefix, const char *restoreregex, int forceoverwrite, int strip, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ars=0;
 	int ret=0;
@@ -523,6 +565,25 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 			case CMD_SPECIAL:
 			case CMD_METADATA:
 			case CMD_ENC_METADATA:
+			case CMD_EFS_FILE:
+				if(strip)
+				{
+					int s;
+					s=strip_path_components(&sb, &(sb.path),
+						strip, cntr);
+					if(s<0) // error
+					{
+						ret=-1;
+						quit++;
+					}
+					else if(s==0)
+					{
+						// Too many components stripped
+						// - carry on.
+						continue;
+					}
+					// It is OK, sb.path is now stripped.
+				}
 				if(!(fullpath=prepend_s(restoreprefix,
 					sb.path, strlen(sb.path))))
 				{
@@ -633,6 +694,16 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 					ret=-1;
 					quit++;
 				}
+				break;
+			case CMD_EFS_FILE:
+				if(restore_file_or_get_meta(&sb, fullpath, act,
+					NULL, cntr, NULL, NULL))
+				{
+					logp("restore_file error\n");
+					ret=-1;
+					quit++;
+				}
+				break;
 				break;
 			default:
 				logp("unknown cmd: %c\n", sb.cmd);

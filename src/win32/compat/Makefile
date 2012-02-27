@@ -7,7 +7,6 @@ include ../Makefile.inc
 INCLUDES = \
 	$(INCLUDE_GCC) \
 	$(INCLUDE_MINGW) \
-	$(INCLUDE_PTHREADS) \
 	$(INCLUDE_BURP) \
 	$(INCLUDE_ZLIB) \
 	$(INCLUDE_VSS) \

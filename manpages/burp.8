@@ -77,6 +77,9 @@ is stdout. This option overrides the
 option in the config file. Use 
 .I /dev/null
 to deactivate or '' to reactivate output.
+.TP
+\fB\-s\fR \fB[number]\fR
+For use with restores - strip a number of leading path components.
 
 .SH EXAMPLES
 .TP
@@ -106,6 +109,9 @@ Restores all the files in backup number 1 that match the regular expression 'myr
 .TP
 \fBburp -a r -b 1 -r myregex -d /tmp/restoredir\fR
 Restores all the files in backup number 1 that match the regular expression 'myregex' into the directory /tmp/restoredir.
+.TP
+\fBburp -a r -b 1 -r myregex -d /tmp/restoredir -s 2\fR
+Restores all the files in backup number 1 that match the regular expression 'myregex' into the directory /tmp/restoredir and strip 2 leading path components.
 .TP
 \fBburp -a r\fR
 Restores all the files in the most recent backup to their original location. You won't be given a warning if the files already exist there, so use with caution.

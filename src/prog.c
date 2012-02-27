@@ -114,9 +114,12 @@ int main (int argc, char *argv[])
 {
 	int ret=0;
 	int option=0;
+#ifndef HAVE_WIN32
 	int daemon=1;
+#endif
 	int forking=1;
 	int gotlock=0;
+	int strip=0;
 	char *logfile=NULL;
 	struct config conf;
 	int forceoverwrite=0;
@@ -129,7 +132,7 @@ int main (int argc, char *argv[])
 
 	init_log(argv[0]);
 
-	while((option=getopt(argc, argv, "a:b:c:d:hfFinr:l:v?"))!=-1)
+	while((option=getopt(argc, argv, "a:b:c:d:hfFinr:s:l:v?"))!=-1)
 	{
 		switch(option)
 		{
@@ -171,7 +174,9 @@ int main (int argc, char *argv[])
 				forceoverwrite=1;
 				break;
 			case 'F':
+#ifndef HAVE_WIN32 // keep MINGW64 quiet
 				daemon=0;
+#endif
 				break;
 			case 'i':
 				print_all_cmds();
@@ -181,6 +186,9 @@ int main (int argc, char *argv[])
 				break;
 			case 'r':
 				regex=optarg;
+				break;
+			case 's':
+				strip=atoi(optarg);
 				break;
 			case 'l':
 				logfile=optarg;
@@ -249,7 +257,7 @@ int main (int argc, char *argv[])
 	{
 		logp("before client\n");
 		ret=client(&conf, act, backup,
-			restoreprefix, regex, forceoverwrite);
+			restoreprefix, regex, forceoverwrite, strip);
 		logp("after client\n");
 	}
 

@@ -2,14 +2,6 @@
 #define __WINAPI_H
 
 #if defined(HAVE_WIN32)
-/*
- * Commented out native.h include statement, which is not distributed with the
- * free version of VC++, and which is not used in burp.
- * 
- * #if !defined(HAVE_MINGW) // native.h not present on mingw
- * #include <native.h>
- * #endif
- */
 #include <windef.h>
 
 // unicode enabling of win 32 needs some defines and functions
@@ -72,10 +64,8 @@ typedef BOOL (WINAPI * t_SetFileAttributesW)(LPCWSTR, DWORD);
 typedef DWORD (WINAPI *PFE_EXPORT_FUNC)(PBYTE pbData,PVOID pvCallbackContext,ULONG ulLength);
 typedef DWORD (WINAPI *PFE_IMPORT_FUNC)(PBYTE pbData,PVOID pvCallbackContext,PULONG ulLength);
 
-typedef DWORD (WINAPI * t_OpenEncryptedFileRaw)(LPCSTR, ULONG, PVOID);
-typedef void  (WINAPI * t_CloseEncryptedFileRaw)(PVOID);
-typedef DWORD (WINAPI * t_ReadEncryptedFileRaw)(PFE_EXPORT_FUNC, PVOID, PVOID);
-typedef DWORD (WINAPI * t_WriteEncryptedFileRaw)(PFE_IMPORT_FUNC, PVOID, PVOID);
+typedef DWORD (WINAPI * t_OpenEncryptedFileRawA)(LPCSTR, ULONG, PVOID);
+typedef DWORD (WINAPI * t_OpenEncryptedFileRawW)(LPCWSTR, ULONG, PVOID);
 
 typedef HANDLE (WINAPI * t_CreateFileA) (LPCSTR, DWORD ,DWORD, LPSECURITY_ATTRIBUTES,
         DWORD , DWORD, HANDLE);
@@ -136,10 +126,8 @@ typedef BOOL (WINAPI *t_CreateProcessW) (
 extern t_CreateProcessA DLL_IMP_EXP p_CreateProcessA;
 extern t_CreateProcessW DLL_IMP_EXP p_CreateProcessW;
 
-extern t_OpenEncryptedFileRaw DLL_IMP_EXP p_OpenEncryptedFileRaw;
-extern t_CloseEncryptedFileRaw DLL_IMP_EXP p_CloseEncryptedFileRaw;
-extern t_ReadEncryptedFileRaw DLL_IMP_EXP p_ReadEncryptedFileRaw;
-extern t_WriteEncryptedFileRaw DLL_IMP_EXP p_WriteEncryptedFileRaw;
+extern t_OpenEncryptedFileRawA  DLL_IMP_EXP p_OpenEncryptedFileRawA;
+extern t_OpenEncryptedFileRawW  DLL_IMP_EXP p_OpenEncryptedFileRawW;
 
 extern t_GetFileAttributesA   DLL_IMP_EXP p_GetFileAttributesA;
 extern t_GetFileAttributesW   DLL_IMP_EXP p_GetFileAttributesW;

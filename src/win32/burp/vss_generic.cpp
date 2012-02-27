@@ -40,9 +40,7 @@ using namespace std;
 BOOL VSSPathConvert(const char *szFilePath, char *szShadowPath, int nBuflen);
 BOOL VSSPathConvertW(const wchar_t *szFilePath, wchar_t *szShadowPath, int nBuflen);
 
-#ifdef HAVE_MINGW
 class IXMLDOMDocument;
-#endif
 
 /* Reduce compiler warnings from Windows vss code */
 #define uuid(x)

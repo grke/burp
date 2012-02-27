@@ -12,7 +12,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
-#if defined(WIN64)
+#ifdef HAVE_WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #endif
@@ -264,9 +264,13 @@ int write_endfile(unsigned long long bytes, unsigned char *checksum)
 	int ret=0;
 	char endmsg[128]="";
 
-	snprintf(endmsg, sizeof(endmsg), "%llu:%s",
+	snprintf(endmsg, sizeof(endmsg),
+#ifdef HAVE_WIN32
+		"%I64u:%s",
+#else
+		"%llu:%s",
+#endif
 		bytes, get_checksum_str(checksum));
-
 	ret=async_write_str(CMD_END_FILE, endmsg);
 	return ret;
 }
@@ -328,11 +332,12 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password)
 	return ctx;
 }
 
-int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, struct cntr *cntr)
+int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, int64_t winattr, struct cntr *cntr)
 {
 #ifdef HAVE_WIN32
-	binit(bfd);
-	if(bopen(bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0)<0)
+	binit(bfd, winattr);
+	if(bopen(bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0,
+		(winattr & FILE_ATTRIBUTE_DIRECTORY))<=0)
 	{
 		berrno be;
 		logw(cntr,
@@ -575,7 +580,42 @@ cleanup:
 	return ret;
 }
 
-int send_whole_file(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, struct cntr *cntr, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen)
+#ifdef HAVE_WIN32
+struct winbuf
+{
+	MD5_CTX *md5;
+	int quick_read;
+	const char *datapth;
+	struct cntr *cntr;
+	unsigned long long *bytes;
+};
+
+static DWORD WINAPI write_efs(PBYTE pbData, PVOID pvCallbackContext, ULONG ulLength)
+{
+	struct winbuf *mybuf=(struct winbuf *)pvCallbackContext;
+	(*(mybuf->bytes))+=ulLength;
+	if(!MD5_Update(mybuf->md5, pbData, ulLength))
+	{
+		logp("MD5_Update() failed\n");
+		return ERROR_FUNCTION_FAILED;
+	}
+	if(async_write(CMD_APPEND, (const char *)pbData, ulLength))
+	{
+		return ERROR_FUNCTION_FAILED;
+	}
+	if(mybuf->quick_read)
+	{
+		int qr;
+		if((qr=do_quick_read(mybuf->datapth, mybuf->cntr))<0)
+			return ERROR_FUNCTION_FAILED;
+		if(qr) // client wants to interrupt
+			return ERROR_FUNCTION_FAILED;
+	}
+	return ERROR_SUCCESS;
+}
+#endif
+
+int send_whole_file(char cmd, const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, struct cntr *cntr, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen)
 {
 	int ret=0;
 	size_t s=0;
@@ -621,8 +661,30 @@ int send_whole_file(const char *fname, const char *datapth, int quick_read, unsi
 	else
 	{
 #ifdef HAVE_WIN32
-		if(!ret) while((s=(uint32_t)bread(bfd, buf, 4096))>0)
+		if(!ret && cmd==CMD_EFS_FILE)
 		{
+			struct winbuf mybuf;
+			mybuf.md5=&md5;
+			mybuf.quick_read=quick_read;
+			mybuf.datapth=datapth;
+			mybuf.cntr=cntr;
+			mybuf.bytes=bytes;
+			// The EFS read function, ReadEncryptedFileRaw(),
+			// works in an annoying way. You have to give it a
+			// function that it calls repeatedly every time the
+			// read buffer is called.
+			// So ReadEncryptedFileRaw() will not return until
+			// it has read the whole file. I have no idea why
+			// they do not have a plain 'read()' function for it.
+
+			ReadEncryptedFileRaw((PFE_EXPORT_FUNC)write_efs,
+				&mybuf, bfd->pvContext);
+		}
+
+		if(!ret && cmd!=CMD_EFS_FILE)
+		{
+		  while((s=(uint32_t)bread(bfd, buf, 4096))>0)
+		  {
 			*bytes+=s;
 			if(!MD5_Update(&md5, buf, s))
 			{
@@ -649,6 +711,7 @@ int send_whole_file(const char *fname, const char *datapth, int quick_read, unsi
 					break;
 				}
 			}
+		  }
 		}
 #else
 	//printf("send_whole_file: %s\n", fname);
@@ -737,49 +800,6 @@ void add_fd_to_sets(int fd, fd_set *read_set, fd_set *write_set, fd_set *err_set
 	if(fd > *max_fd) *max_fd = fd;
 }
 
-#if defined(HAVE_WIN32) && !defined(WIN64)
-// This first version is for Windows 32 bit, which does not let me use the
-// addrinfo stuff in the second version, and therefore does not support
-// IPv6 properly.
-int init_client_socket(const char *host, const char *port)
-{
-	int rfd=-1;
-	struct sockaddr_in sin;
-	struct hostent *hp=NULL;
-	int p=atoi(port);
-
-	if(!(hp=gethostbyname(host)))
-	{
-		logp("unknown host: %s\n", host);
-		return -1;
-	}
-
-	memset(&sin, 0, sizeof(sin));
-	sin.sin_family=AF_INET;
-	memcpy((char *)&sin.sin_addr, hp->h_addr, hp->h_length);
-	sin.sin_port=htons(p);
-
-	if((rfd=socket(PF_INET, SOCK_STREAM, 0))<0)
-	{
-		berrno be;
-		logp("socket error: %s\n", be.bstrerror());
-		return -1;
-	}
-	if(connect(rfd, (struct sockaddr *)&sin, sizeof(sin))<0)
-	{
-		logp("could not connect to %s:%s\n", host, port);
-		close_fd(&rfd);
-		return -1;
-	}
-
-#ifdef HAVE_WIN32
-	setmode(rfd, O_BINARY);
-#endif
-	return rfd;
-}
-#else
-// This second version is supposed to do IPv6 properly and does not work
-// for 32 bit Windows (but does for 64 bit Windows and unix-style machines)
 int init_client_socket(const char *host, const char *port)
 {
 	int rfd=-1;
@@ -822,8 +842,6 @@ int init_client_socket(const char *host, const char *port)
 #endif
 	return rfd;
 }
-
-#endif
 
 void reuseaddr(int fd)
 {
@@ -1296,6 +1314,8 @@ void cmd_to_text(char cmd, char *buf, size_t len)
 			snprintf(buf, len, "Meta data changed"); break;
 		case CMD_METADATA_SAME:
 			snprintf(buf, len, "Meta data unchanged"); break;
+		case CMD_ENC_METADATA:
+			snprintf(buf, len, "Encrypted meta data"); break;
 		case CMD_ENC_METADATA_CHANGED:
 			snprintf(buf, len, "Encrypted meta data changed"); break;
 		case CMD_ENC_METADATA_SAME:
@@ -1304,6 +1324,12 @@ void cmd_to_text(char cmd, char *buf, size_t len)
 			snprintf(buf, len, "Encrypted file changed"); break;
 		case CMD_ENC_FILE_SAME:
 			snprintf(buf, len, "Encrypted file unchanged"); break;
+		case CMD_EFS_FILE:
+			snprintf(buf, len, "Windows EFS file"); break;
+		case CMD_EFS_FILE_SAME:
+			snprintf(buf, len, "Windows EFS file changed"); break;
+		case CMD_EFS_FILE_CHANGED:
+			snprintf(buf, len, "Windows EFS file unchanged"); break;
 		case CMD_DIRECTORY_CHANGED:
 			snprintf(buf, len, "Directory changed"); break;
 		case CMD_DIRECTORY_SAME:

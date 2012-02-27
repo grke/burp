@@ -8,4 +8,4 @@ MAILTO=""
 # The following will run file deduplication over all client storages every
 # Saturday at 8 in the morning. Again, if your server is using a different
 # config file to /etc/burp/burp-server.conf, change that argument.
-0 8 * * 6	root    /sbin/bedup -l -c /etc/burp/burp-server.conf
+0 8 * * 6	root    /usr/sbin/bedup -l -c /etc/burp/burp-server.conf >>/var/log/burp-bedup 2>&1

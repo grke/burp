@@ -1,5 +1,11 @@
 Things to watch out for when upgrading.
 
+1.3.1
+-----
+Due to Debian policy, burp and bedup will now be installed in /usr/sbin.
+Therefore, you may need to update any cron jobs that were previously using
+/sbin.
+
 1.2.4
 -----
 There was a critical bug in 1.2.4.

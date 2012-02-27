@@ -1,0 +1,70 @@
+.TH burp_ca 8 "February 10, 2012" "" "burp_ca"
+
+.SH NAME
+burp_ca \- program for generating certificates for use with burp
+
+.SH SYNOPSIS
+.B burp_ca
+.RI [ options ]
+.br
+
+.LP
+A script for generating certificates for use with burp. This script comes with the burp backup and restore package, and was contributed by Patrick Koppen.
+
+.SH OPTIONS
+.TP
+\fB\-h|--help\fR \fB\fR
+show help
+.TP
+\fB\-i|--init\fR \fB\fR
+inititalize CA
+.TP
+\fB\-k|--key\fR \fB\fR
+generate new key
+.TP
+\fB\-r|--request \fR \fB\fR
+generate certificate sign request
+.TP
+\fB\-s|--sign\fR \fB\fR
+sign csr (use --ca <ca> and --name <name>)
+.IP
+\fB\--batch\fR \fB\fR
+do not prompt for anything
+.IP
+\fB\--revoke\fR \fB<number>\fR
+revoke certificate with serial number
+.IP
+\fB\--crl\fR \fB\fR
+generate certificate revoke list
+.TP
+\fB\-d|--dir\fR \fB<dir>\fR
+ca output dir (default: /etc/burp/CA)
+.TP
+\fB\-c|--config\fR \fB\fR
+config file (default: /etc/burp/CA.cnf)
+.TP
+\fB\-n|--name\fR \fB\fR
+name (default: builder)
+.TP
+\fB\-D|--days\fR \fB\fR
+valid days for certificate (default in config file)
+.IP
+\fB\--ca_days\fR \fB\fR
+valid days for CA certificate (default: 3650)
+.TP
+\fB\-S|--size\fR \fB\fR
+key size (default: 2048)
+.TP
+\fB\-a|--ca\fR \fB\fR
+ca name if different from name
+.SH
+
+.SH BUGS
+If you find bugs, please report them to the email list. See the website
+<http://burp.grke.net/> for details.
+
+.SH AUTHOR
+The main author of Burp is Graham Keeling.
+
+.SH COPYRIGHT
+See the LICENCE file included with the source distribution.

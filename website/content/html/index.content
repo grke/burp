@@ -40,7 +40,7 @@ The main author of Burp is Graham Keeling.
 </P>
 
 <BR>
-<h3><font color="#99CCFF">Current stable version: 1.2.2</font></h3>
+<h3><font color="#99CCFF">Current stable version: 1.3.0</font></h3>
 <BR>
 
 <h3><font color="#99CCFF">NEWS</font></h3>
@@ -52,7 +52,49 @@ The main author of Burp is Graham Keeling.
 <TD ALIGN="LEFT">
 
 <P>
-<FONT COLOR="#99CCFF">2012-01-27: burp-1.30 is released.
+<FONT COLOR="#99CCFF">2012-01-27: This month marks one year of burp!
+<BR>
+Many thanks to the following donors for financially supporting burp:
+<pre>
+  * &pound;250.00 Robert L.
+  *  &pound;50.00 Sebastiano P.
+  *  &pound;10.00 Tim R.
+  *  &pound;10.00 Patryk D.
+</pre>
+</FONT>
+</p>
+
+<P>
+<FONT COLOR="#99CCFF">2012-01-27: burp-1.3.1 is released.
+<pre>
+Changes in burp-1.3.1:
+  * EFS support on Windows.
+  * Move to using mingw-w64 for both 32bit and 64bit Windows builds.
+  * Add 'exclude_fs =' option for Linux so that you can skip partitions
+    types (for example, tmpfs) without generating warnings.
+  * If recovery method 'resume' is set, but the includes/excludes change,
+    switch to 'use', then start a new backup.
+  * In the tests, check to see whether it looks like the server has finished
+    the backup before moving on, rather than just waiting a set amount of time.
+  * Add man pages for bedup and burp_ca.
+  * Remove embedded uthash code. It will need to be installed as a dependency.
+    For example, in Debian, you might run 'apt-get install uthash-dev'.
+  * Add Bas van den Dikkenberg's tweaks for getting burp into official Debian
+    and Ubuntu repositories. Burp is now in debian sid and ubuntu precise.
+  * Make the server tell the client what extra_comms features it supports, so
+    that, in future, old servers are more likely to work with new clients.
+  * Improve 'make clean'.
+  * Add option to strip off leading path components on restore.
+  * Fix segfault that was happening on the server when SSL_accept() failed.
+  * Move burp and bedup to /usr/sbin (you need to check that any cron jobs
+    are pointing there too).
+  * Moved list of things to do to https://github.com/grke/burp/issues
+</pre>
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">2012-01-27: burp-1.3.0 is released.
 <pre>
 Changes in burp-1.3.0:
   * Add a mechanism for automatically upgrading clients.
@@ -154,255 +196,7 @@ Changes in burp-1.2.2:
 </P>
 
 <P>
-<FONT COLOR="#99CCFF">2011-09-09: burp-1.2.0 is released.
-<pre>
-Changes in burp-1.2.0:
-  * Improvements to the counters and status monitor - remember the phase1
-    scan counters for later phases to use for things like estimated times.
-  * Add 'working_dir_recovery_method = resume' option, which continues a
-    backup from the point it was interrupted.
-  * Add a useful message about options when run with '-h' or '-?'.
-  * Get the client to pass its version to the server. The minimum version the
-    client needs to be is now this release.
-  * Get the server to warn when the client is on a different version.
-  * Put the number of warnings in the subject of the notification emails.
-  * Allow config file location to be changed via configure (Michael Roland's
-    suggestions).
-  * Implement main server process config reload functionality on SIGHUP.
-  * Uncomment the reload lines in the Debian init script.
-  * Add logrotate file for Debian.
-  * Add ability to send a regular snapshot of the status summary screen in an
-        email ("daily backup summary" feature).
-  * Add simple 'exclude_ext =' feature.
-  * Add Windows 7 bare metal restore instructions.
-</pre>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2011-09-01: In the UK, a nice half-page review of burp has appeared in the October edition of 'Linux Format' magazine, in their 'Hot Picks' section.
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2011-07-26: burp-1.1.70 is released.
-<pre>
-Changes in burp-1.1.70:
-  * FreeBSD xattr support.
-  * FreeBSD ACL support.
-  * Handle Windows junction points.
-  * Add 'nobackup = [file name]' option. If this file system entry exists, the
-    directory containing it will not be backed up.
-  * Set librsync signature block size based on the old file size.
-  * Small bug fixes to the status monitor.
-  * Fixed working directory recovery bug where it couldn't find the manifest.gz
-    file due to it being called manifest.gz.tmp.
-  * Get rid of the stupidly complicated 'find_files' callback mechanism
-    inherited from bacula. Just call all the functions directly.
-  * Fix compiler warnings and '-ldl' linker error on FreeBSD 8.2.
-  * When down to 'C:' in mkpath() on Windows restore, strip the ':'.
-  * Run ERR_clear_error() before SSL_read/write.
-</pre>
-</FONT>
-</P>
-
-
-<P>
-<FONT COLOR="#99CCFF">2011-06-27: burp-1.1.65 is released.
-<pre>
-Changes in burp-1.1.65:
-  * Add mechanism for backing up and restoring extra meta data.
-  * Linux acl support.
-  * Linux xattr support.
-  * Add option to set the umask on the server.
-  * Added option to specify the clientconfdir password in passwd format.
-  * Allow user and group options to be placed in the server clientconfdir files,
-    so that different client backups can be owned by different users.
-  * Add Patrick's burp_ca patches and README.CA.
-  * Sanitised magic characters by defining them in a new cmd.h file.
-  * Fixed 'ret OK, but zstream not finished: 0' when refusing to restore over
-    existing files.
-  * Fixed bug that made clients disappear from the status monitor.
-  * Bug fix the client_lockdir option.
-  * On the server, be more cautious about creating directories that don't exist.
-  * Remove link kludge in async_read_stat().
-</pre>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2011-06-14: burp-1.1.57 is released.
-<pre>
-Changes in burp-1.1.57:
-  * Add options to run as a different user and group.
-  * Add Patrick Koppen's burp_ca script.
-  * Get the client restore to use the sbuf functions, remove related kludges.
-  * Fix possible client segfault when refusing to restore over existing files.
-  * Make a failure to restore over a busy file not cause the whole restore to
-    fail.
-  * Print byte count as well as human readable byte count in the status summary
-    screen.
-  * Include backup numbers with the backup list in the status summary.
-  * Don't close the server read fd when running in non-forking mode.
-  * Add ssl_key options so that the cert and key can be in separate files.
-  * Add ssl_key_password, a synonym for ssl_cert_password.
-</pre>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2011-05-13: burp-1.1.55 is released.
-<pre>
-Changes in burp-1.1.55:
-  * Make the status monitor use ncurses.
-  * Fixed two bugs that could drastically slow down the server if a file
-    disappeared on a client after the initial scan (to get these two bug fixes,
-    you need to upgrade your clients).
-  * IPv6 patches.
-  * Ability to specify the location of the client lockfiles on the server.
-  * Make the server fork into the background by default. Use '-F' to stay in
-    the foreground.
-  * Add option to specify a log file.
-</pre>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2011-04-14: burp-1.1.51 is released.
-<pre>
-Changes in burp-1.1.51:
-  * Added a script for backing up zfs snapshots with 'zfs send'.
-  * Added the ability to set the level of compression.
-  * Added the ability to turn off compression.
-  * Added an option to define the poll interval in the Windows installer.
-  * Added the ability to turn off librsync delta differencing.
-  * Added the ability to give arguments to backup/restore/pre/post scripts.
-  * Make configure/make work better on Solaris.
-</pre>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2011-04-02: burp-1.1.40 is released.
-<pre>
-Changes in burp-1.1.40:
-  * Ability to run client pre/post backup/restore scripts.
-  * Ability to read data from fifos (and restore to them).
-  * Fixed a bug when restoring the first link in a directory.
-  * Fixed a bug that prevented giving a backup number when using the verify option.
-</pre>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2011-03-28: git repository added.
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2011-03-27: burp-1.1.30 is released.
-<pre>
-Changes in burp-1.1.30:
-  * First pass at having a live status monitor.
-  * Fixed a bug that meant you couldn't restore links.
-  * Fixed a bug when freeing structs at the end of a restore.
-</pre>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2011-03-18: burp-1.1.22 is released.
-<pre>
-Changes in burp-1.1.22:
-  * Added scheduling.
-  * Added email notifications.
-  * Fixed autoconf. Programs like ccache should now work.
-  * Strip whitespace from end of conf lines, ignore quotes around conf lines.
-  * Updated the Windows build tools.
-</pre>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2011-03-10: burp-1.1.14 is released.
-<pre>
-Changes in burp-1.1.14:
-  * Added client-side blowfish file encryption. See the man page for details.
-  * Byte counters also give counts in KB/MB/GB/etc as appropriate.
-  * Restore directories after their contents so that the access times are
-    correct.
-  * Updated the win32 build tools.
-</pre>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2011-03-02: burp-1.1.5 is released.
-<pre>
-Changes in burp-1.1.5:
-  * Added a 'verify' command. See the man page for details.
-  * Improved the include/exclude path functionality.
-  * Added the ability to define mount points to cross.
-  * Fixed a crash on 64bit Windows when exiting.
-</pre>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2011-02-27: burp-1.1.0 is released.
-<pre>
-Changes in burp-1.1.0:
-  * Added openssl.
-  * Added byte counters and checksums to the backup manifest files, in
-    anticipation of a 'verify' command.
-
-    IMPORTANT IF YOU ARE UPGRADING FROM AN OLDER VERSION OF BURP:
-    a) Your previous backups will no longer work, due to changes in the
-    manifest files. You will also need to move old backups aside in order to
-    continue to make new backups.
-    b) Your old config files will need some fields to do with SSL added to them.
-    See the man page and the examples in the 'configs' directory for help.
-
-    IMPORTANT FOR MY ENCOURAGEMENT AND THE FUTURE OF BURP:
-    If you have tried burp, I really want to hear from you to find out what 
-    you like about it, what you don't like, what new features you would like,
-    how you have been using it, whether it has helped you, or anything that
-    you would like to tell me. I am currently working in the dark!
-</pre>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2011-02-16: burp-1.0.31 is released.</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2011-02-02: burp-1.0.11 is released.</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2011-02-02: burp-1.0.10 is released.</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2011-01-30: burp-1.0.9 is released.</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2011-01-25: burp-1.0.5 is released.</FONT>
-</P>
-<P>
-<FONT COLOR="#99CCFF">2011-01-25: mailling list created.</FONT>
-</P>
-<P>
-<FONT COLOR="#99CCFF">2011-01-23: burp-1.0.3 is released.</FONT>
-</P>
-<P>
-<FONT COLOR="#99CCFF">2011-01-22: burp-1.0.0 is released.</FONT>
-</P>
-<P>
-<FONT COLOR="#99CCFF">2011-01-22: Web site created.
-</FONT>
+<A HREF="about/oldnews.html">Older news</A>
 </P>
 
 </TD>

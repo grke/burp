@@ -9,7 +9,6 @@ include ../Makefile.inc
 
 INCLUDES = \
 	-I. \
-	$(INCLUDE_PTHREADS) \
 	$(INCLUDE_BURP) \
 	$(INCLUDE_ZLIB) \
 	$(INCLUDE_VSS) \
@@ -17,7 +16,6 @@ INCLUDES = \
 	$(INCLUDE_ICONS)
 
 DEFINES = \
-	-DHAVE_TRAY_MONITOR \
 	-DUSING_DLL \
 	-DWIN32_VSS \
 	-DWINVER=0x500 \
@@ -46,6 +44,8 @@ FILED_OBJS = \
 	$(OBJDIR)/extrameta.o \
 	$(OBJDIR)/find.o \
 	$(OBJDIR)/forkchild.o \
+	$(OBJDIR)/incexc_recv_server.o \
+	$(OBJDIR)/incexc_send_client.o \
 	$(OBJDIR)/list_client.o \
 	$(OBJDIR)/handy.o \
 	$(OBJDIR)/lock.o \

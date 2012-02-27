@@ -23,8 +23,6 @@
 #undef DISTNAME
 #undef DISTVER
 
-#ifdef HAVE_MINGW
-
 #define HOST_OS  "Linux"
 #define DISTNAME "Cross-compile"
 #define BURP "Burp"
@@ -32,15 +30,4 @@
 # define DISTVER "Win64"
 #else
 # define DISTVER "Win32"
-#endif
-
-#else
-
-extern DLL_IMP_EXP char WIN_VERSION_LONG[];
-extern DLL_IMP_EXP char WIN_VERSION[];
-
-#define HOST_OS  WIN_VERSION_LONG
-#define DISTNAME "MVS"
-#define DISTVER  WIN_VERSION
-
 #endif

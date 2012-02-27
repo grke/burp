@@ -8,10 +8,8 @@ fi
 
 # The Windows build symlinks cock things for 'diff -ur' on the restore later,
 # so delete them first.
-rm -f ../depkgs-mingw32
-rm -f ../cross-tools-mingw32
-rm -f ../depkgs-mingw64
-rm -f ../cross-tools-mingw64
+rm -f ../burp-depkgs
+rm -f ../burp-cross-tools
 
 path="$PWD"
 build="$path/build"
@@ -79,6 +77,10 @@ build_and_install()
 	#./configure --prefix="$target" --datarootdir="$target"/usr/share --sysconfdir="$target"/etc/burp || fail "configure failed"
 	./configure || fail "configure failed"
 	make || fail "make failed"
+	# For some reason, make is not returning an error code.
+	# Look for important binaries before carrying on.
+	[ -f src/burp ] || fail "make failed"
+	[ -f src/bedup ] || fail "make failed"
 	make install DESTDIR="$target" || fail "make install failed"
 }
 
@@ -96,23 +98,38 @@ sed_rep_both()
 run_bedup()
 {
 	echo "Starting test bedup"
-	./sbin/bedup -c $serverconf -l >> "$beduplog" 2>&1 \
+	./usr/sbin/bedup -c $serverconf -l >> "$beduplog" 2>&1 \
 		|| fail "bedup returned $?"
 }
 
 run_backup()
 {
+	local waited=0
+	local working="$target/var/spool/burp/testclient/working"
+	local finishing="$target/var/spool/burp/testclient/finishing"
+	SLEEPTIME=2
+
 	echo "Starting test client backup"
-	./sbin/burp -c $clientconf -a b >> "$clientlog" 2>&1 \
+	./usr/sbin/burp -c $clientconf -a b >> "$clientlog" 2>&1 \
 		|| fail "client backup returned $?"
-	sleep 10
+
+	# Repeatedly check to see whether the server has finished, rather
+	# than just sleeping some length of time. 
+	while true ; do
+		sleep $SLEEPTIME
+		[ ! -e "$working" -a ! -e "$finishing" ] \
+			&& sleep $SLEEPTIME && break
+		waited=$((waited+$SLEEPTIME))
+		[ "$waited" -gt 120 ] && \
+		  fail "client backup seemed to be complete after 2 minutes"
+	done
 }
 
 run_verify()
 {
 	local num="$1"
 	echo "Starting test client verify of backup $num"
-	./sbin/burp -c $clientconf -a v -b "$num" \
+	./usr/sbin/burp -c $clientconf -a v -b "$num" \
 		>> "$clientlog" 2>&1 || fail "client backup returned $?"
 }
 
@@ -122,7 +139,7 @@ run_restore()
 	local dir="$2"
 	echo "Starting test client restore of backup $num"
 	makedir "$dir"
-	./sbin/burp -c $clientconf -a r -b "$num" -d "$dir" \
+	./usr/sbin/burp -c $clientconf -a r -b "$num" -d "$dir" \
 		>>"$clientlog" 2>&1 || fail "client restore returned $?"
 }
 
@@ -275,7 +292,7 @@ echo
 
 # Start up the server
 echo "Starting test server"
-./sbin/burp -c $serverconf -l "$serversystemlog" -F >> "$serveroutputlog" 2>&1 &
+./usr/sbin/burp -c $serverconf -l "$serversystemlog" -F >> "$serveroutputlog" 2>&1 &
 serverpid=$!
 
 # Be kind, and wait a little for it to start.

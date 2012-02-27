@@ -1,39 +1,6 @@
 #ifndef _CMD_H
 #define _CMD_H
 
-// used in CMD_*:
-// a
-// c
-// d
-// e
-// E
-// f
-// g
-// G
-// h
-// H
-// i
-// j
-// J
-// l
-// L
-// m
-// M
-// n
-// p
-// P
-// r
-// s
-// t
-// u
-// w
-// x
-// X
-// y
-// Y
-// z
-// Z
-
 /* These things appear at the beginning of each line of communication on the
    network, and in the manifest. */
 
@@ -50,6 +17,7 @@
 #define CMD_SPECIAL	's'	/* Fifo, socket, device node... */
 #define CMD_METADATA	'm'	/* Extra meta data */
 #define CMD_ENC_METADATA 'n'	/* Encrypted extra meta data */
+#define CMD_EFS_FILE 	'k'	/* Windows EFS file */
 
 // Commands
 #define CMD_GEN		'c'	/* Generic command */
@@ -85,6 +53,9 @@
 
 #define CMD_SPECIAL_CHANGED		'h'
 #define CMD_SPECIAL_SAME		'H'
+
+#define CMD_EFS_FILE_CHANGED		'I'
+#define CMD_EFS_FILE_SAME		'K'
 
 #define CMD_TIMESTAMP	'b'	/* Backup timestamp (in response to list) */
 

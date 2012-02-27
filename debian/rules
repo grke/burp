@@ -1,10 +1,5 @@
 #!/usr/bin/make -f
 # -*- makefile -*-
-# Sample debian/rules that uses debhelper.
-# This file was originally written by Joey Hess and Craig Small.
-# As a special exception, when this file is copied by dh-make into a
-# dh-make output file, you may use that output file without restriction.
-# This special exception was added by Craig Small in version 0.37 of dh-make.
 
 # Uncomment this to turn on verbose mode.
 export DH_VERBOSE=1
@@ -28,3 +23,12 @@ override_dh_fixperms:
 
 override_dh_auto_configure:
 	./configure
+
+override_dh_strip:
+	dh_strip --dbg-package=burp-dbg
+
+override_dh_auto_install:
+	dh_auto_install --destdir=debian/burp
+
+override_dh_installdocs:
+	dh_installdocs --link-doc=burp

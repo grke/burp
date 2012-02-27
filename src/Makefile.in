@@ -147,7 +147,8 @@ libtool-clean:
 
 clean:	libtool-clean
 	@$(RMF) burp core core.* a.out *.o *.bak *~ *.intpro *.extpro 1 2 3
-	@$(RMF) bedup static-burp static-bedup
+	@$(RMF) bedup static-burp static-bedup config.h
+	@$(RMF) Makefile
 #	@if test -f win32/Makefile -a "${GMAKE}" != "none"; then \
 #	   (cd win32; $(GMAKE) clean); \
 #	fi
@@ -170,13 +171,12 @@ devclean: realclean
 	fi
 
 install: all
+	rm -f $(DESTDIR)/sbin/burp ; \
+	rm -f $(DESTDIR)/sbin/bedup ; \
+	rm -f $(DESTDIR)/usr/sbin/burp ; \
+	rm -f $(DESTDIR)/usr/sbin/bedup ; \
 	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) burp $(DESTDIR)$(sbindir)/burp 
 	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) bedup $(DESTDIR)$(sbindir)/bedup
-	@if [ $(sbindir) != /usr/sbin ] ; then \
-		rm -f $(DESTDIR)/usr/sbin/burp ; \
-		mkdir -p $(DESTDIR)/usr/sbin ; \
-		ln -sfT $(sbindir)/burp $(DESTDIR)/usr/sbin/burp ; \
-	fi
 	@if test -f static-burp; then \
 	   $(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) static-burp $(DESTDIR)$(sbindir)/static-burp; \
 	fi

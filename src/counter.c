@@ -44,6 +44,10 @@ void reset_filecounter(struct cntr *c)
 	c->special_same=0;
 	c->special_changed=0;
 
+	c->efs=0;
+	c->efs_same=0;
+	c->efs_changed=0;
+
 	c->warning=0;
 	c->byte=0;
 	c->recvbyte=0;
@@ -64,6 +68,7 @@ char cmd_to_same(char cmd)
 		case CMD_SOFT_LINK: return CMD_SOFT_LINK_SAME;
 		case CMD_HARD_LINK: return CMD_HARD_LINK_SAME;
 		case CMD_SPECIAL: return CMD_SPECIAL_SAME;
+		case CMD_EFS_FILE: return CMD_EFS_FILE_SAME;
 	}
 	return CMD_ERROR;
 }
@@ -80,6 +85,7 @@ char cmd_to_changed(char cmd)
 		case CMD_SOFT_LINK: return CMD_SOFT_LINK_CHANGED;
 		case CMD_HARD_LINK: return CMD_HARD_LINK_CHANGED;
 		case CMD_SPECIAL: return CMD_SPECIAL_CHANGED;
+		case CMD_EFS_FILE: return CMD_EFS_FILE_CHANGED;
 	}
 	return CMD_ERROR;
 }
@@ -194,13 +200,26 @@ void do_filecounter(struct cntr *c, char ch, int print)
 		case CMD_SPECIAL_CHANGED:
 			++(c->special_changed); ++(c->total_changed); break;
 
+		case CMD_EFS_FILE:
+			++(c->efs); ++(c->total); break;
+		case CMD_EFS_FILE_SAME:
+			++(c->efs_same); ++(c->total_same); break;
+		case CMD_EFS_FILE_CHANGED:
+			++(c->efs_changed); ++(c->total_changed); break;
+
 		case CMD_WARNING:
 			++(c->warning); return; // do not add to total
 		case CMD_ERROR:
 			return; // errors should be fatal - ignore
 	}
 	if(!((++(c->gtotal))%64) && print)
-		printf(" %llu\n", c->gtotal);
+		printf(
+#ifdef HAVE_WIN32
+			" %I64u\n",
+#else
+			" %llu\n",
+#endif
+			c->gtotal);
 	fflush(stdout);
 }
 
@@ -304,6 +323,7 @@ void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act, int c
 		restore_print("Soft links:", c->slink);
 		restore_print("Hard links:", c->hlink);
 		restore_print("Special files:", c->special);
+		restore_print("EFS files:", c->efs);
 		restore_print("Grand total:", c->total);
 	}
 	else if(act==ACTION_VERIFY)
@@ -316,6 +336,7 @@ void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act, int c
 		restore_print("Verified soft links:", c->slink);
 		restore_print("Verified hard links:", c->hlink);
 		restore_print("Verified special:", c->special);
+		restore_print("Verified EFS files:", c->efs);
 		restore_print("Grand total:", c->total);
 	}
 	else
@@ -376,6 +397,13 @@ void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act, int c
 			p1c->special,
 			client?FORMAT_CLIENT_NODE:FORMAT_SERVER);
 
+		quint_print("EFS files:",
+			c->efs,
+			c->efs_changed,
+			c->efs_same,
+			p1c->efs,
+			client?FORMAT_CLIENT_NODE:FORMAT_SERVER);
+
 		quint_print("Grand total:",
 			c->total,
 			c->total_changed,
@@ -392,5 +420,11 @@ void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act, int c
 
 void print_endcounter(struct cntr *cntr)
 {
-	if(cntr->gtotal) printf(" %llu\n\n", cntr->gtotal);
+	if(cntr->gtotal) printf(
+#ifdef HAVE_WIN32
+		" %I64u\n\n",
+#else
+		" %llu\n\n",
+#endif
+		cntr->gtotal);
 }

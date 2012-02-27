@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <dirent.h>
@@ -7,7 +8,9 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <signal.h>
+#include <malloc.h>
 
+#include <uthash.h>
 #include <openssl/md5.h>
 
 #include "config.h"
@@ -16,7 +19,6 @@
 #include "conf.h"
 #include "lock.h"
 #include "strlist.h"
-#include "uthash/uthash.h"
 
 #define LOCKFILE_NAME		"lockfile"
 #define BEDUP_LOCKFILE_NAME	"lockfile.bedup"
@@ -145,7 +147,7 @@ static int full_match(struct file *o, struct file *n, FILE **ofp, FILE **nfp)
 
 	while(1)
 	{
-		if((ogot=fread(obuf, 1, FULL_CHUNK, *ofp))<0) return 0;
+		ogot=fread(obuf, 1, FULL_CHUNK, *ofp);
 		ngot=fread(nbuf, 1, FULL_CHUNK, *nfp);
 		if(ogot!=ngot) return 0;
 		for(i=0; i<ogot; i++)

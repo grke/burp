@@ -14,12 +14,6 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 */
-/*
- *  Bacula low level File I/O routines.  This routine simulates
- *    open(), read(), write(), and close(), but using native routines.
- *    I.e. on Windows, we use Windows APIs.
- *
- */
 
 #include "burp.h"
 #include "prog.h"
@@ -44,11 +38,13 @@
 char *unix_name_to_win32(char *name);
 extern "C" HANDLE get_osfhandle(int fd);
 
-void binit(BFILE *bfd)
+void binit(BFILE *bfd, int64_t winattr)
 {
    memset(bfd, 0, sizeof(BFILE));
    bfd->mode = BF_CLOSED;
    bfd->use_backup_api = have_win32_api();
+   bfd->winattr = winattr;
+   bfd->pvContext = NULL;
 }
 
 /*
@@ -68,12 +64,77 @@ bool have_win32_api()
    return p_BackupRead && p_BackupWrite;
 }
 
-int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
+// Windows flags for the OpenEncryptedFileRaw functions
+#define CREATE_FOR_EXPORT	0
+// These are already defined
+//#define CREATE_FOR_IMPORT	1
+//#define CREATE_FOR_DIR	2
+//#define OVERWRITE_HIDDEN	4
+
+static int bopen_encrypted(BFILE *bfd, const char *fname, int flags, mode_t mode, int isdir)
+{
+	int ret=0;
+	ULONG ulFlags=0;
+	char *win32_fname=NULL;
+	char *win32_fname_wchar=NULL;
+
+	if(!(p_OpenEncryptedFileRawA || p_OpenEncryptedFileRawW)) {
+		logp("no OpenEncryptedFileRaw pointers.\n");
+		return 0;
+	}
+	if (p_OpenEncryptedFileRawW && p_MultiByteToWideChar) {
+		if(!(win32_fname_wchar=make_win32_path_UTF8_2_wchar_w(fname)))
+			logp("could not get widename!");
+	}
+	if(!(win32_fname=unix_name_to_win32((char *)fname)))
+		return 0;
+
+	if((flags & O_CREAT) /* Create */
+	  || (flags & O_WRONLY)) /* Open existing for write */
+	{
+		ulFlags |= CREATE_FOR_IMPORT;
+		ulFlags |= OVERWRITE_HIDDEN;
+		if(isdir) ulFlags |= CREATE_FOR_DIR;
+	}
+	else /* Open existing for read */
+	{
+		ulFlags = CREATE_FOR_EXPORT;
+	}
+
+	if(p_OpenEncryptedFileRawW && p_MultiByteToWideChar)
+	{
+        	// unicode open
+		ret=p_OpenEncryptedFileRawW((LPCWSTR)win32_fname_wchar,
+			ulFlags, &(bfd->pvContext));
+		if(ret) bfd->mode=BF_CLOSED;
+		else bfd->mode=BF_READ;
+		goto end;
+	}
+	else
+	{
+		// ascii open
+		ret=p_OpenEncryptedFileRawA(win32_fname,
+			ulFlags, &(bfd->pvContext));
+		if(ret) bfd->mode=BF_CLOSED;
+		else bfd->mode=BF_READ;
+		goto end;
+	}
+
+end:
+   	if(win32_fname_wchar) free(win32_fname_wchar);
+   	if(win32_fname) free(win32_fname);
+	return bfd->mode == BF_CLOSED ? -1 : 1;
+}
+
+int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode, int isdir)
 {
    char *win32_fname=NULL;
    char *win32_fname_wchar=NULL;
 
    DWORD dwaccess, dwflags, dwshare;
+
+   if(bfd->winattr & FILE_ATTRIBUTE_ENCRYPTED)
+	return bopen_encrypted(bfd, fname, flags, mode, isdir);
 
    if (!(p_CreateFileA || p_CreateFileW)) {
       return 0;
@@ -199,6 +260,14 @@ int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
    return bfd->mode == BF_CLOSED ? -1 : 1;
 }
 
+static int bclose_encrypted(BFILE *bfd)
+{
+	CloseEncryptedFileRaw(bfd->pvContext);
+	bfd->pvContext=NULL;
+	bfd->mode = BF_CLOSED;
+	return 0;
+}
+
 /*
  * Returns  0 on success
  *         -1 on error
@@ -214,6 +283,9 @@ int bclose(BFILE *bfd)
    if (bfd->mode == BF_CLOSED) {
       return 0;
    }
+
+   if(bfd->winattr & FILE_ATTRIBUTE_ENCRYPTED)
+	return bclose_encrypted(bfd);
 
    /*
     * We need to tell the API to release the buffer it

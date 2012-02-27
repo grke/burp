@@ -14,50 +14,50 @@
 
 # Global Configuration
 
-ECHO_CMD = @
+ECHO_CMD = 
 
 # Main Burp source dir
-MAINDIR := @WIN32MAINDIR@
+MAINDIR := @MAINDIR@
 #
 # Build dir -- i.e. normally  src/win32
-BUILDDIR := @WIN32BUILDDIR@
+BUILDDIR := @BUILDDIR@
 #
 # Dir above Burp where we find depkgs
-TOPDIR := @WIN32TOPDIR@
+TOPDIR := @TOPDIR@
 #
 # where we find depkgs
-DEPKGS := $(TOPDIR)/@WIN32DEPKGS@
-DEPKGS32 := $(TOPDIR)/@WIN32DEPKGS32@
+DEPKGS := $(TOPDIR)/@DEPKGS@
 
 DOCDIR := $(TOPDIR)/docs
 
-MINGW_BIN := @WIN32BINDIR@
-MINGW_INCLUDE := @WIN32INCDIR@
-MINGW_DLLDIR := @WIN32DLLDIR@
-MINGW64PREFIX := @WIN32MINGW64PREFIX@
+MINGW_BIN := @BINDIR@
+MINGW_INCLUDE := @INCDIR@
+MINGW_DLLDIR := @DLLDIR@
+MINGW_PREFIX := @MINGW_PREFIX@
 
-CC = $(MINGW_BIN)/$(MINGW64PREFIX)mingw32-g++ $(DEFINES) $(INCLUDES)
-CXX = $(MINGW_BIN)/$(MINGW64PREFIX)mingw32-g++ $(DEFINES) $(INCLUDES)
-AR := $(MINGW_BIN)/$(MINGW64PREFIX)mingw32-ar
-RANLIB := $(MINGW_BIN)/$(MINGW64PREFIX)mingw32-ranlib
-WINDRES := $(MINGW_BIN)/$(MINGW64PREFIX)mingw32-windres
-DLLTOOL := $(MINGW_BIN)/$(MINGW64PREFIX)mingw32-dlltool
-OBJCPY := $(MINGW_BIN)/$(MINGW64PREFIX)mingw32-objcopy
-NSIS_DIR := $(DEPKGS32)/nsis
-STAB2CV := $(DEPKGS32)/tools/bin/stab2cv
+CC = $(MINGW_BIN)/$(MINGW_PREFIX)g++ $(DEFINES) $(INCLUDES)
+CXX = $(MINGW_BIN)/$(MINGW_PREFIX)g++ $(DEFINES) $(INCLUDES)
+AR := $(MINGW_BIN)/$(MINGW_PREFIX)ar
+RANLIB := $(MINGW_BIN)/$(MINGW_PREFIX)ranlib
+WINDRES := $(MINGW_BIN)/$(MINGW_PREFIX)windres
+DLLTOOL := $(MINGW_BIN)/$(MINGW_PREFIX)dlltool
+OBJCPY := $(MINGW_BIN)/$(MINGW_PREFIX)objcopy
+NSIS_DIR := $(DEPKGS)/nsis
+STAB2CV := $(DEPKGS)/tools/bin/stab2cv
 
 WIN64=@WIN64@
 
 ifeq ($(WIN64),yes)
-   CFLAGS := -g -Wall -mno-cygwin -mthreads -O3 -fno-strict-aliasing -DHAVE_VSS64
+   CFLAGS := -g -Wall -mthreads -O3 -fno-strict-aliasing -DHAVE_VSS64
    LIBS_NETWORK := -lws2_32
    WIN_VERSION := 64
    BINDIR := $(BUILDDIR)/release64
    LIBDIR := $(BUILDDIR)/release64
    OBJDIR := obj64
 else
-   CFLAGS := -g -Wall -mno-cygwin -m32 -mwin32 -mthreads -O3 -fno-strict-aliasing
-   LIBS_NETWORK := -lwsock32
+   CFLAGS := -g -Wall -mthreads -O3 -fno-strict-aliasing -m32
+#   LIBS_NETWORK := -lwsock32
+   LIBS_NETWORK := -lws2_32
    WIN_VERSION := 32
    BINDIR := $(BUILDDIR)/release32
    LIBDIR := $(BUILDDIR)/release32
@@ -92,9 +92,6 @@ LIBS_BURP := \
 
 HAVES := \
 	-DHAVE_WIN32 \
-	-DHAVE_MINGW \
 	-DHAVE_ZLIB_H \
 	-DHAVE_LIBZ \
-	-DHAVE_CRYPTO \
 	-DHAVE_OPENSSL \
-	-DHAVE_TLS

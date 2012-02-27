@@ -35,6 +35,8 @@ int cstat_sort(const void *a, const void *b)
 	if(!*x && !*y) return 0;
 	if(!*x) return -1;
 	if(!*y) return 1;
+	if(!(*x)->name) return -1;
+	if(!(*y)->name) return 1;
 	return strcmp((*x)->name, (*y)->name);
 }
 
@@ -320,6 +322,12 @@ static int load_data_from_disk(struct config *conf, struct cstat ***clist, int *
 		if(stat((*clist)[q]->conffile, &statp))
 		{
 			// TODO: Need to remove the client from the list.
+			cstat_blank((*clist)[q]);
+			continue;
+		}
+		// Allow directories to exist in the conf dir.
+		if(!S_ISREG(statp.st_mode))
+		{
 			cstat_blank((*clist)[q]);
 			continue;
 		}

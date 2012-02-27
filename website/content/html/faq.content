@@ -82,19 +82,7 @@ Q. What is on the roadmap? What doesn't work?
 </P>
 <P>
 <FONT COLOR="#99CCFF">
-A. The following items are on my TODO list (for the full list so the TODO file
-in the top level directory of the source):
-<ul>
-<li>Add extra ways of deciding when to delete old backups - e.g, by time, or
-by space.
-<li>Add acl/xattr support for Solaris.
-<li>Server-side file encryption option, so that network deltas can still be
-    done if you have file encryption turned on.
-<li>Improve the status monitor.
-<li>Add include/exclude wildcards.
-<li>Start thinking about how to make a client-side gui for doing things like
-    restores.
-</ul>
+A. For the list of things to do, please see https://github.com/grke/burp/issues
 </FONT>
 </P>
 <HR>

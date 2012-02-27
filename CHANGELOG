@@ -1,3 +1,4 @@
+2012-02-27 Changes in burp-1.3.1:
   * EFS support on Windows.
   * Move to using mingw-w64 for both 32bit and 64bit Windows builds.
   * Add 'exclude_fs =' option for Linux so that you can skip partitions
@@ -18,6 +19,7 @@
   * Fix segfault that was happening on the server when SSL_accept() failed.
   * Move burp and bedup to /usr/sbin (you need to check that any cron jobs
     are pointing there too).
+  * Moved list of things to do to https://github.com/grke/burp/issues
 
 2012-01-27 Changes in burp-1.3.0:
   * Add a mechanism for automatically upgrading clients.

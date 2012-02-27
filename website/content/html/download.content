@@ -14,9 +14,18 @@ For downloads, please visit the
 </P>
 <P>
 <FONT COLOR="#99CCFF">
-Or, if you are very keen there is now a git repository:
+Or, if you are very keen, there is a git repository:
 <pre>
 git clone git://github.com/grke/burp.git (read-only)
+</pre>
+</FONT>
+</P>
+<P>
+<FONT COLOR="#99CCFF">
+Packages are also available in:
+<pre>
+Debian sid <a href="http://packages.debian.org/sid/burp">http://packages.debian.org/sid/burp</a>.
+Ubuntu precise <a href="http://packages.ubuntu.com/precise/burp">http://packages.ubuntu.com/precise/burp</a>.
 </pre>
 </FONT>
 </P>

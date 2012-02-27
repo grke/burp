@@ -52,6 +52,7 @@ SVRSRCS =	acl.c \
 		lock.c \
 		log.c \
 		msg.c \
+		prepend.c \
 		prog.c \
 		restore_client.c \
 		restore_server.c \
@@ -129,12 +130,12 @@ static-burp: Makefile $(SVROBJS) @WIN32@
 
 bedup:  Makefile bedup.o @WIN32@
 	@echo "Linking $@ ..."
-	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -o $@ bedup.o conf.o lock.o log.o strlist.o \
+	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -o $@ bedup.o conf.o lock.o log.o prepend.o strlist.o \
 	  $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
 	  $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(RSYNC_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS)
 
 static-bedup: Makefile bedup.o @WIN32@
-	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -o $@ bedup.o conf.o lock.o log.o strlist.o \
+	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -o $@ bedup.o conf.o lock.o log.o prepend.o strlist.o \
 	   $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
 	   $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(RSYNC_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS) -ldl -lgpm
 

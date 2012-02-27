@@ -52,6 +52,7 @@ FILED_OBJS = \
 	$(OBJDIR)/log.o \
 	$(OBJDIR)/main.o \
 	$(OBJDIR)/msg.o \
+	$(OBJDIR)/prepend.o \
 	$(OBJDIR)/prog.o \
 	$(OBJDIR)/restore_client.o \
 	$(OBJDIR)/rs_buf.o \

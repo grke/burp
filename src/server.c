@@ -988,7 +988,15 @@ static int extra_comms(const char *cversion, char **incexc, struct config *conf,
 	else
 	{
 		if(async_write_str(CMD_GEN,
-			"extra_comms_begin ok:autoupgrade:incexc:"))
+			"extra_comms_begin ok:"
+			/* clients can autoupgrade */
+			"autoupgrade:"
+			/* clients can give server incexc config so that the
+			   server knows better what to do on resume */
+			"incexc:"
+			/* server can tell the client what to backup */
+			"sincexc:"
+		))
 		{
 			logp("problem in extra_comms\n");
 			return -1;
@@ -1028,8 +1036,23 @@ static int extra_comms(const char *cversion, char **incexc, struct config *conf,
 					break;
 				}
 			}
+/*
+			else if(!strcmp(buf, "sincexc"))
+			{
+				// Client can accept incexc conf from the
+				// server.
+				if(incexc_send_server(cconf, p1cntr))
+				{
+					ret=-1;
+					break;
+				}
+			}
+*/
 			else if(!strcmp(buf, "incexc"))
 			{
+				// Client is telling server its incexc
+				// configuration so that it can better decide
+				// what to do on resume.
 				if(incexc_recv_server(incexc, conf, p1cntr))
 				{
 					ret=-1;

@@ -1,6 +1,8 @@
 #ifndef HANDY_H
 #define HANDY_H
 
+#include "prepend.h"
+
 #include <openssl/md5.h>
 #include <zlib.h>
 
@@ -10,9 +12,6 @@ extern void close_fd(int *fd);
 extern void close_fp(FILE **fp);
 extern void gzclose_fp(gzFile *fp);
 extern int is_dir(const char *path);
-extern char *prepend_len(const char *prep, size_t plen, const char *fname, size_t flen, const char *sep, size_t slen, size_t *newlen);
-extern char *prepend(const char *prep, const char *fname, size_t len, const char *sep);
-extern char *prepend_s(const char *prep, const char *fname, size_t len);
 extern int mkpath(char **rpath, const char *limit);
 extern int build_path(const char *datadir, const char *fname, size_t flen, char **rpath, const char *limit);
 

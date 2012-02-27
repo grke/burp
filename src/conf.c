@@ -3,8 +3,8 @@
 #include "counter.h"
 #include "conf.h"
 #include "msg.h"
-#include "handy.h"
 #include "strlist.h"
+#include "prepend.h"
 
 static int conf_error(const char *config_path, int line)
 {

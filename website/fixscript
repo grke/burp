@@ -41,6 +41,7 @@ echo >> "$howto"
 man ../manpages/burp.8 | col -b >> $howto
 print_bottom "$howto"
 
+mkdir -p html/txt
 cp -v ../docs/*.txt html/txt
 
 go_for_it()

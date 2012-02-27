@@ -747,7 +747,7 @@ finish:
 int do_link(const char *oldpath, const char *newpath, struct stat *statp, struct config *conf)
 {
 	/* Avoid creating too many hardlinks */
-	if(statp->st_nlink >= conf->max_hardlinks)
+	if(statp->st_nlink >= (unsigned int)conf->max_hardlinks)
 	{
 		return duplicate_file(oldpath, newpath);
 	}

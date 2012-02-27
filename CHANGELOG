@@ -11,7 +11,7 @@
   * Remove embedded uthash code. It will need to be installed as a dependency.
     For example, in Debian, you might run 'apt-get install uthash-dev'.
   * Add Bas van den Dikkenberg's tweaks for getting burp into official Debian
-    and Ubuntu repositories.
+    and Ubuntu repositories. Burp is now in debian sid and ubuntu precise.
   * Make the server tell the client what extra_comms features it supports, so
     that, in future, old servers are more likely to work with new clients. 
   * Improve 'make clean'.

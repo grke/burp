@@ -22,7 +22,8 @@
 #include "status_server.h"
 #include "forkchild.h"
 #include "autoupgrade_server.h"
-#include "incexc_recv_server.h"
+#include "incexc_recv.h"
+#include "incexc_send.h"
 
 #include <netdb.h>
 #include <librsync.h>
@@ -951,6 +952,25 @@ static long version_to_long(const char *version)
 	return ret;
 }
 
+static int append_to_feat(char **feat, const char *str)
+{
+	char *tmp=NULL;
+	if(!*feat)
+	{
+		if(!(*feat=strdup(str)))
+		{
+			logp("out of memory\n");
+			return -1;
+		}
+		return 0;
+	}
+	if(!(tmp=prepend(*feat, str, strlen(str), "")))
+		return -1;
+	free(*feat);
+	*feat=tmp;
+	return 0;
+}
+
 static int extra_comms(const char *cversion, char **incexc, struct config *conf, struct config *cconf, struct cntr *p1cntr)
 {
 	int ret=0;
@@ -987,20 +1007,30 @@ static int extra_comms(const char *cversion, char **incexc, struct config *conf,
 	}
 	else
 	{
-		if(async_write_str(CMD_GEN,
-			"extra_comms_begin ok:"
+		char *feat=NULL;
+		if(append_to_feat(&feat, "extra_comms_begin ok:")
 			/* clients can autoupgrade */
-			"autoupgrade:"
+		  || append_to_feat(&feat, "autoupgrade:")
 			/* clients can give server incexc config so that the
 			   server knows better what to do on resume */
-			"incexc:"
-			/* server can tell the client what to backup */
-			"sincexc:"
-		))
+		  || append_to_feat(&feat, "incexc:"))
 		{
-			logp("problem in extra_comms\n");
+			logp("out of memory\n");
 			return -1;
 		}
+		/* Clients can receive incexc config from the server.
+		   Only give it as an option if the server has some starting
+		   directory configured in the clientconfdir. */
+		if(cconf->sdcount && append_to_feat(&feat, "sincexc:"))
+			return -1;
+
+		if(async_write_str(CMD_GEN, feat))
+		{
+			logp("problem in extra_comms\n");
+			free(feat);
+			return -1;
+		}
+		free(feat);
 	}
 
 	while(1)
@@ -1036,8 +1066,7 @@ static int extra_comms(const char *cversion, char **incexc, struct config *conf,
 					break;
 				}
 			}
-/*
-			else if(!strcmp(buf, "sincexc"))
+			else if(!strcmp(buf, "sincexc ok"))
 			{
 				// Client can accept incexc conf from the
 				// server.
@@ -1047,7 +1076,6 @@ static int extra_comms(const char *cversion, char **incexc, struct config *conf,
 					break;
 				}
 			}
-*/
 			else if(!strcmp(buf, "incexc"))
 			{
 				// Client is telling server its incexc

@@ -16,7 +16,8 @@
 #include "berrno.h"
 #include "forkchild.h"
 #include "autoupgrade_client.h"
-#include "incexc_send_client.h"
+#include "incexc_recv.h"
+#include "incexc_send.h"
 
 #include <sys/types.h>
 
@@ -149,6 +150,7 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 	SSL_CTX *ctx=NULL;
 	struct cntr cntr;
 	struct cntr p1cntr;
+	char *incexc=NULL;
 
 	reset_filecounter(&p1cntr);
 	reset_filecounter(&cntr);
@@ -239,8 +241,16 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 
 		// :sincexc: is for the server giving the client the
 		// incexc config.
-//		if(!ret && server_supports(feat, ":sincexc:"))
-//			ret=incexc_recv_client(conf, &p1cntr);
+		if(!ret && server_supports(feat, ":sincexc:"))
+		{
+			if(!(ret=incexc_recv_client(&incexc, conf, &p1cntr)))
+			{
+				if(incexc)
+				{
+					ret=parse_incexcs(conf, incexc);
+				}
+			}
+		}
 
 		// :incexc: is for the client sending the server the
 		// incexc config so that it better knows what to do on
@@ -269,6 +279,12 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 				phase1str="backupphase1timed";
 			case ACTION_BACKUP:
 			{
+				if(incexc)
+				{
+					logp("Server is overriding the configuration\n");
+					logp("with the following settings:\n");
+					printf("%s\n", incexc);
+				}
 				if(!(ret=maybe_check_timer(phase1str,
 					conf, &resume)))
 				{
@@ -373,6 +389,8 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 	async_free();
 	if(act!=ACTION_ESTIMATE)
 		ssl_destroy_ctx(ctx);
+
+	if(incexc) free(incexc);
 
         //logp("end client\n");
 	return ret;

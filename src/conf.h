@@ -136,7 +136,7 @@ extern int set_client_global_config(struct config *conf, struct config *cconf);
 extern int is_subdir(const char *dir, const char *sub);
 extern int pathcmp(const char *a, const char *b);
 
-extern int send_incexc_client(struct config *conf, struct cntr *p1cntr);
-extern int recv_incexc_server(struct config *conf, struct cntr *p1cntr);
+extern int parse_incexcs(struct config *conf, const char *incexc);
+
 
 #endif

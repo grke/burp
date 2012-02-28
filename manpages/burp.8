@@ -315,39 +315,6 @@ Set the network send rate limit, in Mb/s. If this option is not given, burp will
 \fBnetwork_timeout=[s]\fR
 Set the network timeout in seconds. If no data is sent or received over a period of this length, burp will give up. The default is 7200 seconds (2 hours).
 .TP
-\fBinclude=[path]\fR
-Path to include in the backup. You can have multiple include lines. Use forward slashes '/', not backslashes '\\' as path delimiters.
-.TP
-\fBexclude=[path]\fR
-Path to exclude from the backup. You can have multiple exclude lines. Use forward slashes '/', not backslashes '\\' as path delimiters.
-.TP
-\fBexclude_ext=[extension]\fR
-Extensions to exclude from the backup. Case insensitive. You can have multiple exclude extension lines. For example, set 'vdi' to exclude VirtualBox disk images.
-.TP
-\fBexclude_fs=[fstype]\fR
-File systems to exclude from the backup. Case insensitive. You can have multiple exclude file system lines. For example, set 'tmpfs' to exclude tmpfs. Burp has an internal mapping of file system names to file system IDs. If you know the file system ID, you can use that instead. For example, 'exclude_fs = 0x01021994' will also exclude tmpfs.
-.TP
-\fBmin_file_size=[b/Kb/Mb/Gb]\fR
-Do not back up files that are less than the specified size. Example: 'min_file_size = 10Mb'. Set to 0 (the default) to have no limit.
-.TP
-\fBmax_file_size=[b/Kb/Mb/Gb]\fR
-Do not back up files that are greater than the specified size. Example: 'max_file_size = 10Mb'. Set to 0 (the default) to have no limit.
-.TP
-\fBcross_filesystem=[path]\fR
-Allow backups to cross a particular filesystem mountpoint.
-.TP
-\fBcross_all_filesystems=[0|1]\fR
-Allow backups to cross all filesystem mountpoints.
-.TP
-\fBnobackup=[file name]\fR
-If this file system entry exists, the directory containing it will not be backed up.
-.TP
-\fBread_fifo=[path]\fR
-Do not back up the given fifo itself, but open it for reading and back up the contents as if it were a regular file.
-.TP
-\fBread_all_fifos=[0|1]\fR
-Open all fifos for reading and back up the contents as if they were regular files.
-.TP
 \fBssl_cert_ca=[path]\fR
 The path to the SSL CA certificate. This file will probably be the same on both the server and the client. The file should contain just the certificate in PEM format
 .TP
@@ -413,6 +380,45 @@ Path to autoupgrade directory into which upgrades are downloaded. Please see doc
 .TP
 \fBautoupgrade_os=[string]\fR
 Name of the client operating system. Should match a directory name in the server's autoupgrade_dir. If you do not want your client to autoupgrade, do not set this option.
+
+.SH INCLUDES / EXCLUDES
+
+.TP
+The following options specify exactly what is backed up. The client can specify these options, or if you include at least one 'include=' in the server configuration files, the server will override them all.
+.TP
+\fBinclude=[path]\fR
+Path to include in the backup. You can have multiple include lines. Use forward slashes '/', not backslashes '\\' as path delimiters.
+.TP
+\fBexclude=[path]\fR
+Path to exclude from the backup. You can have multiple exclude lines. Use forward slashes '/', not backslashes '\\' as path delimiters.
+.TP
+\fBexclude_ext=[extension]\fR
+Extensions to exclude from the backup. Case insensitive. You can have multiple exclude extension lines. For example, set 'vdi' to exclude VirtualBox disk images.
+.TP
+\fBexclude_fs=[fstype]\fR
+File systems to exclude from the backup. Case insensitive. You can have multiple exclude file system lines. For example, set 'tmpfs' to exclude tmpfs. Burp has an internal mapping of file system names to file system IDs. If you know the file system ID, you can use that instead. For example, 'exclude_fs = 0x01021994' will also exclude tmpfs.
+.TP
+\fBmin_file_size=[b/Kb/Mb/Gb]\fR
+Do not back up files that are less than the specified size. Example: 'min_file_size = 10Mb'. Set to 0 (the default) to have no limit.
+.TP
+\fBmax_file_size=[b/Kb/Mb/Gb]\fR
+Do not back up files that are greater than the specified size. Example: 'max_file_size = 10Mb'. Set to 0 (the default) to have no limit.
+.TP
+\fBcross_filesystem=[path]\fR
+Allow backups to cross a particular filesystem mountpoint.
+.TP
+\fBcross_all_filesystems=[0|1]\fR
+Allow backups to cross all filesystem mountpoints.
+.TP
+\fBnobackup=[file name]\fR
+If this file system entry exists, the directory containing it will not be backed up.
+.TP
+\fBread_fifo=[path]\fR
+Do not back up the given fifo itself, but open it for reading and back up the contents as if it were a regular file.
+.TP
+\fBread_all_fifos=[0|1]\fR
+Open all fifos for reading and back up the contents as if they were regular files.
+
 
 
 .SH SERVER CLIENTCONFDIR FILE

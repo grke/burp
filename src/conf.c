@@ -6,10 +6,31 @@
 #include "strlist.h"
 #include "prepend.h"
 
-static int conf_error(const char *config_path, int line)
+/* Init only stuff related to includes/excludes.
+   This is so that the server can override them all on the client. */
+static void init_incexcs(struct config *conf)
 {
-	logp("%s: parse error on line %d\n", config_path, line);
-	return -1;
+	conf->startdir=NULL; conf->sdcount=0;
+	conf->incexcdir=NULL; conf->iecount=0;
+	conf->fschgdir=NULL; conf->fscount=0;
+	conf->nobackup=NULL; conf->nbcount=0;
+	conf->excext=NULL; conf->excount=0;
+	conf->excfs=NULL; conf->exfscount=0;
+	conf->fifos=NULL; conf->ffcount=0;
+}
+
+/* Free only stuff related to includes/excludes.
+   This is so that the server can override them all on the client. */
+static void free_incexcs(struct config *conf)
+{
+	strlists_free(conf->startdir, conf->sdcount);
+	strlists_free(conf->incexcdir, conf->iecount);
+	strlists_free(conf->fschgdir, conf->fscount);
+	strlists_free(conf->nobackup, conf->nbcount);
+	strlists_free(conf->excext, conf->excount);
+	strlists_free(conf->excfs, conf->exfscount);
+	strlists_free(conf->fifos, conf->ffcount);
+	init_incexcs(conf);
 }
 
 void init_config(struct config *conf)
@@ -29,20 +50,6 @@ void init_config(struct config *conf)
 	conf->server=NULL;
 	conf->ratelimit=0;
 	conf->network_timeout=60*60*2; // two hours
-	conf->startdir=NULL;
-	conf->incexcdir=NULL;
-	conf->fschgdir=NULL;
-	conf->nobackup=NULL;
-	conf->excext=NULL;
-	conf->excfs=NULL;
-	conf->sdcount=0;
-	conf->iecount=0;
-	conf->fscount=0;
-	conf->nbcount=0;
-	conf->ffcount=0;
-	conf->excount=0;
-	conf->exfscount=0;
-	conf->fifos=NULL;
 	conf->cross_all_filesystems=0;
 	conf->read_all_fifos=0;
 	conf->min_file_size=0;
@@ -121,6 +128,8 @@ void init_config(struct config *conf)
 	conf->sscount=0;
 
 	conf->dedup_group=NULL;
+
+	init_incexcs(conf);
 }
 
 void free_config(struct config *conf)
@@ -148,13 +157,6 @@ void free_config(struct config *conf)
 	if(conf->client_lockdir) free(conf->client_lockdir);
 	if(conf->autoupgrade_dir) free(conf->autoupgrade_dir);
 	if(conf->autoupgrade_os) free(conf->autoupgrade_os);
-	strlists_free(conf->startdir, conf->sdcount);
-	strlists_free(conf->incexcdir, conf->iecount);
-	strlists_free(conf->fschgdir, conf->fscount);
-	strlists_free(conf->nobackup, conf->nbcount);
-	strlists_free(conf->fifos, conf->ffcount);
-	strlists_free(conf->excext, conf->excount);
-	strlists_free(conf->excfs, conf->exfscount);
 
 	if(conf->timer_script) free(conf->timer_script);
 	strlists_free(conf->timer_arg, conf->tacount);
@@ -191,6 +193,8 @@ void free_config(struct config *conf)
 
 	if(conf->dedup_group) free(conf->dedup_group);
 
+	free_incexcs(conf);
+
 	init_config(conf);
 }
 
@@ -213,7 +217,7 @@ static void get_conf_val_int(const char *field, const char *value, const char *w
 	if(!strcmp(field, want)) *dest=atoi(value);
 }
 
-static int get_pair(char *buf, char **field, char **value)
+static int get_pair(char buf[], char **field, char **value)
 {
 	char *cp=NULL;
 	char *eq=NULL;
@@ -355,6 +359,12 @@ int pathcmp(const char *a, const char *b)
 	if(!*x && !*y) return 0; // equal
 	if( *x && !*y) return 1; // x is longer
 	return -1; // y is longer
+}
+
+static int conf_error(const char *config_path, int line)
+{
+	logp("%s: parse error on line %d\n", config_path, line);
+	return -1;
 }
 
 static int get_file_size(const char *value, unsigned long *dest, const char *config_path, int line)
@@ -718,95 +728,81 @@ static int load_config_field_and_value(struct config *conf, const char *field, c
 	return 0;
 }
 
-int load_config_lines(const char *config_path, struct config *conf, struct llists *l)
+/* Recursing, so need to define load_config_lines ahead of parse_config_line.
+*/
+int load_config_lines(const char *config_path, struct config *conf, struct llists *l);
+
+static int parse_config_line(struct config *conf, struct llists *l, const char *config_path, char buf[], int line)
 {
-	int line=0;
-	FILE *fp=NULL;
-	char buf[256]="";
+	char *field=NULL;
+	char *value=NULL;
 
-	if(!(fp=fopen(config_path, "r")))
+	if(!strncmp(buf, ". ", 2))
 	{
-		logp("could not open '%s' for reading.\n", config_path);
-		return -1;
-	}
-	while(fgets(buf, sizeof(buf), fp))
-	{
-		char *field=NULL;
-		char *value=NULL;
-		line++;
+		// The conf file specifies another file to include.
+		char *np=NULL;
+		char *extrafile=NULL;
 
-		if(!strncmp(buf, ". ", 2))
+		if(!(extrafile=strdup(buf+2)))
 		{
-			// The conf file specifies another file to include.
-			char *np=NULL;
-			char *extrafile=buf+2;
-
-			if(!(extrafile=strdup(buf+2)))
-			{
-				logp("out of memory\n");
-				goto err;
-			}
-
-			if((np=strrchr(extrafile, '\n'))) *np='\0';
-			if(!*extrafile)
-			{
-				free(extrafile);
-				goto err;
-			}
-
-#ifdef HAVE_WIN32
-			if(strlen(extrafile)>2
-			  && extrafile[1]!=':')
-#else
-			if(*extrafile!='/')
-#endif
-			{
-				// It is relative to the directory that the
-				// current config file is in.
-				char *cp=NULL;
-				char *copy=NULL;
-				char *tmp=NULL;
-				if(!(copy=strdup(config_path)))
-				{
-					logp("out of memory\n");
-					free(extrafile);
-					goto err;
-				}
-				if((cp=strrchr(copy, '/'))) *cp='\0';
-				if(!(tmp=prepend_s(copy,
-					extrafile, strlen(extrafile))))
-				{
-					logp("out of memory\n");
-					free(extrafile);
-					free(copy);
-				}
-				free(extrafile);
-				free(copy);
-				extrafile=tmp;
-			}
-
-			if(load_config_lines(extrafile, conf, l))
-			{
-				free(extrafile);
-				goto err;
-			}
-			free(extrafile);
-			continue;
+			logp("out of memory\n");
+			return -1;
 		}
 
-		if(get_pair(buf, &field, &value)) goto err;
-		if(!field || !value) continue;
+		if((np=strrchr(extrafile, '\n'))) *np='\0';
+		if(!*extrafile)
+		{
+			free(extrafile);
+			return -1;
+		}
 
-		if(load_config_field_and_value(conf, field, value, l,
-			config_path, line))
-				goto err;
+#ifdef HAVE_WIN32
+		if(strlen(extrafile)>2
+		  && extrafile[1]!=':')
+#else
+		if(*extrafile!='/')
+#endif
+		{
+			// It is relative to the directory that the
+			// current config file is in.
+			char *cp=NULL;
+			char *copy=NULL;
+			char *tmp=NULL;
+			if(!(copy=strdup(config_path)))
+			{
+				logp("out of memory\n");
+				free(extrafile);
+				return -1;
+			}
+			if((cp=strrchr(copy, '/'))) *cp='\0';
+			if(!(tmp=prepend_s(copy,
+				extrafile, strlen(extrafile))))
+			{
+				logp("out of memory\n");
+				free(extrafile);
+				free(copy);
+			}
+			free(extrafile);
+			free(copy);
+			extrafile=tmp;
+		}
+
+		if(load_config_lines(extrafile, conf, l))
+		{
+			free(extrafile);
+			return -1;
+		}
+		free(extrafile);
+		return 0;
 	}
-	if(fp) fclose(fp);
+
+	if(get_pair(buf, &field, &value)) return -1;
+	if(!field || !value) return 0;
+
+	if(load_config_field_and_value(conf,
+		field, value, l, config_path, line))
+			return -1;
 	return 0;
-err:
-	conf_error(config_path, line);
-	if(fp) fclose(fp);
-	return -1;
 }
 
 static void conf_problem(const char *config_path, const char *msg, int *r)
@@ -892,108 +888,93 @@ static int client_conf_checks(struct config *conf, const char *path, int *r, int
 	return 0;
 }
 
-int load_config(const char *config_path, struct config *conf, bool loadall)
+static int finalise_config(const char *config_path, struct config *conf, struct llists *l, bool loadall)
 {
 	int i=0;
 	int r=0;
-	struct llists l;
 	int have_include=0;
 	struct strlist **sdlist=NULL;
-
-	memset(&l, 0, sizeof(struct llists));
-	l.got_timer_args=conf->tacount;
-	l.got_ns_args=conf->nscount;
-	l.got_nf_args=conf->nfcount;
-	l.got_kp_args=conf->kpcount;
-	l.got_spre_args=conf->sprecount;
-	l.got_spost_args=conf->spostcount;
-	l.got_ss_args=conf->sscount;
-
-	//logp("in load_config\n");
-
-	if(load_config_lines(config_path, conf, &l))
-		return -1;
 
 	// Set the strlist flag for the excluded fstypes
 	for(i=0; i<conf->exfscount; i++)
 	{
-		l.exfslist[i]->flag=0;
-		if(!strncasecmp(l.exfslist[i]->path, "0x", 2))
+		l->exfslist[i]->flag=0;
+		if(!strncasecmp(l->exfslist[i]->path, "0x", 2))
 		{
-			l.exfslist[i]->flag=strtol((l.exfslist[i]->path)+2,
+			l->exfslist[i]->flag=strtol((l->exfslist[i]->path)+2,
 				NULL, 16);
 			logp("Excluding file system type 0x%08X\n",
-				l.exfslist[i]->flag);
+				l->exfslist[i]->flag);
 		}
 		else
 		{
-			if(fstype_to_flag(l.exfslist[i]->path,
-				&(l.exfslist[i]->flag)))
+			if(fstype_to_flag(l->exfslist[i]->path,
+				&(l->exfslist[i]->flag)))
 			{
 				logp("Unknown exclude fs type: %s\n",
-					l.exfslist[i]->path);
+					l->exfslist[i]->path);
 				return -1;
 			}
 		}
 	}
 
-	do_strlist_sort(l.exlist, conf->excount, &(conf->excext));
-	do_strlist_sort(l.exfslist, conf->exfscount, &(conf->excfs));
-	do_strlist_sort(l.fflist, conf->ffcount, &(conf->fifos));
-	do_strlist_sort(l.fslist, conf->fscount, &(conf->fschgdir));
-	do_strlist_sort(l.ielist, conf->iecount, &(conf->incexcdir));
-	do_strlist_sort(l.nblist, conf->nbcount, &(conf->nobackup));
+	do_strlist_sort(l->exlist, conf->excount, &(conf->excext));
+	do_strlist_sort(l->exfslist, conf->exfscount, &(conf->excfs));
+	do_strlist_sort(l->fflist, conf->ffcount, &(conf->fifos));
+	do_strlist_sort(l->fslist, conf->fscount, &(conf->fschgdir));
+	do_strlist_sort(l->ielist, conf->iecount, &(conf->incexcdir));
+	do_strlist_sort(l->nblist, conf->nbcount, &(conf->nobackup));
 
 	// This decides which directories to start backing up, and which
 	// are subdirectories which don't need to be started separately.
 	for(i=0; i<conf->iecount; i++)
 	{
-		if(path_checks(l.ielist[i]->path)) r--;
-		if(l.ielist[i]->flag) have_include++;
+		if(path_checks(l->ielist[i]->path)) r--;
+		if(l->ielist[i]->flag) have_include++;
 		if(!i)
 		{
 			// ielist is sorted - the first entry is one that
 			// can be backed up
-			if(!l.ielist[i]->flag)
+			if(!l->ielist[i]->flag)
 			{
 				logp("Top level should not be an exclude: %s\n",
-					l.ielist[i]->path);
+					l->ielist[i]->path);
 				return -1;
 			}
 			if(strlist_add(&sdlist, &(conf->sdcount),
-				l.ielist[i]->path, 1)) return -1;
+				l->ielist[i]->path, 1)) return -1;
 			continue;
 		}
 		// Ensure that we do not backup the same directory twice.
-		if(!strcmp(l.ielist[i]->path, l.ielist[i-1]->path))
+		if(!strcmp(l->ielist[i]->path, l->ielist[i-1]->path))
 		{
 			logp("Directory appears twice in config: %s\n",
-				l.ielist[i]->path);
+				l->ielist[i]->path);
 			return -1;
 		}
 		// If it is not a subdirectory of the most recent start point,
 		// we have found another start point.
 		if(!is_subdir(sdlist[(conf->sdcount)-1]->path,
-			l.ielist[i]->path))
+			l->ielist[i]->path))
 		{
 			if(strlist_add(&sdlist, &(conf->sdcount),
-				l.ielist[i]->path, 1)) return -1;
+				l->ielist[i]->path, 1)) return -1;
 		}
 	}
 	conf->startdir=sdlist;
 
-	if(!l.got_kp_args)
+	if(!l->got_kp_args)
 	{
 		unsigned long long mult=1;
 		for(i=0; i<conf->kpcount; i++)
 		{
-			if(!(l.kplist[i]->flag=atoi(l.kplist[i]->path)))
+			if(!(l->kplist[i]->flag=atoi(l->kplist[i]->path)))
 			{
 				logp("'keep' value cannot be set to '%s'\n",
-					l.kplist[i]->path);
+					l->kplist[i]->path);
 				return -1;
 			}
-			mult*=l.kplist[i]->flag;
+			mult*=l->kplist[i]->flag;
 
 			// An error if you try to keep backups every second
 			// for 100 years.
@@ -1007,8 +988,8 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 		// This is so that, for example, having set 7, 4, 6, then
 		// a backup of age 7*4*6=168 or more is guaranteed to be kept.
 		// Otherwise, only 7*4*5=140 would be guaranteed to be kept.
-		if(conf->kpcount>1) l.kplist[i-1]->flag++;
-		conf->keep=l.kplist;
+		if(conf->kpcount>1) l->kplist[i-1]->flag++;
+		conf->keep=l->kplist;
 	}
 
 	pre_post_override(&(conf->backup_script),
@@ -1018,28 +999,28 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 	pre_post_override(&(conf->server_script),
 		&(conf->server_script_pre), &(conf->server_script_post));
 
-	if(!l.got_timer_args) conf->timer_arg=l.talist;
-	if(!l.got_ns_args) conf->notify_success_arg=l.nslist;
-	if(!l.got_nf_args) conf->notify_failure_arg=l.nflist;
-	if(!l.got_ss_args) conf->server_script_arg=l.sslist;
+	if(!l->got_timer_args) conf->timer_arg=l->talist;
+	if(!l->got_ns_args) conf->notify_success_arg=l->nslist;
+	if(!l->got_nf_args) conf->notify_failure_arg=l->nflist;
+	if(!l->got_ss_args) conf->server_script_arg=l->sslist;
 
-	setup_script_arg_override(l.bslist, conf->bscount,
-		&(l.bprelist), &(l.bpostlist),
+	setup_script_arg_override(l->bslist, conf->bscount,
+		&(l->bprelist), &(l->bpostlist),
 		&(conf->bprecount), &(conf->bpostcount));
-	setup_script_arg_override(l.rslist, conf->rscount,
-		&(l.rprelist), &(l.rpostlist),
+	setup_script_arg_override(l->rslist, conf->rscount,
+		&(l->rprelist), &(l->rpostlist),
 		&(conf->rprecount), &(conf->rpostcount));
 	setup_script_arg_override(conf->server_script_arg, conf->sscount,
-		&(l.sprelist), &(l.spostlist),
+		&(l->sprelist), &(l->spostlist),
 		&(conf->sprecount), &(conf->spostcount));
 
-	conf->backup_script_pre_arg=l.bprelist;
-	conf->backup_script_post_arg=l.bpostlist;
-	conf->restore_script_pre_arg=l.rprelist;
-	conf->restore_script_post_arg=l.rpostlist;
+	conf->backup_script_pre_arg=l->bprelist;
+	conf->backup_script_post_arg=l->bpostlist;
+	conf->restore_script_pre_arg=l->rprelist;
+	conf->restore_script_post_arg=l->rpostlist;
 
-	if(!l.got_spre_args) conf->server_script_pre_arg=l.sprelist;
-	if(!l.got_spost_args) conf->server_script_post_arg=l.spostlist;
+	if(!l->got_spre_args) conf->server_script_pre_arg=l->sprelist;
+	if(!l->got_spost_args) conf->server_script_post_arg=l->spostlist;
 
 	if(!loadall) return 0;
 
@@ -1074,6 +1055,88 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 	}
 
 	return r;
+}
+
+/* The client runs this when the server overrides the incexcs. */
+int parse_incexcs(struct config *conf, const char *incexc)
+{
+	int ret=0;
+	int line=0;
+	char *tok=NULL;
+	char *copy=NULL;
+	struct llists l;
+	memset(&l, 0, sizeof(struct llists));
+	if(!(copy=strdup(incexc)))
+	{
+		logp("out of memory\n");
+		return -1;
+	}
+	free_incexcs(conf);
+	if(!(tok=strtok(copy, "\n")))
+	{
+		logp("unable to parse server incexc\n");
+		free(copy);
+		return -1;
+	}
+	do
+	{
+		line++;
+		if(parse_config_line(conf, &l, "", tok, line))
+		{
+			ret=-1;
+			break;
+		}
+	} while((tok=strtok(NULL, "\n")));
+	free(copy);
+
+	if(ret) return ret;
+	return finalise_config("server override", conf, &l, FALSE);
+}
+
+int load_config_lines(const char *config_path, struct config *conf, struct llists *l)
+{
+	int line=0;
+	FILE *fp=NULL;
+	char buf[256]="";
+
+	if(!(fp=fopen(config_path, "r")))
+	{
+		logp("could not open '%s' for reading.\n", config_path);
+		return -1;
+	}
+	while(fgets(buf, sizeof(buf), fp))
+	{
+		line++;
+		if(parse_config_line(conf, l, config_path, buf, line))
+			goto err;
+	}
+	if(fp) fclose(fp);
+	return 0;
+err:
+	conf_error(config_path, line);
+	if(fp) fclose(fp);
+	return -1;
+}
+
+int load_config(const char *config_path, struct config *conf, bool loadall)
+{
+	struct llists l;
+
+	memset(&l, 0, sizeof(struct llists));
+	l.got_timer_args=conf->tacount;
+	l.got_ns_args=conf->nscount;
+	l.got_nf_args=conf->nfcount;
+	l.got_kp_args=conf->kpcount;
+	l.got_spre_args=conf->sprecount;
+	l.got_spost_args=conf->spostcount;
+	l.got_ss_args=conf->sscount;
+
+	//logp("in load_config\n");
+
+	if(load_config_lines(config_path, conf, &l))
+		return -1;
+
+	return finalise_config(config_path, conf, &l, loadall);
 }
 
 static int set_global_str(char **dst, const char *src)

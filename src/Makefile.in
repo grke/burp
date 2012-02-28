@@ -45,8 +45,8 @@ SVRSRCS =	acl.c \
 		find.c \
 		forkchild.c \
 		handy.c \
-		incexc_recv_server.c \
-		incexc_send_client.c \
+		incexc_recv.c \
+		incexc_send.c \
 		list_client.c \
 		list_server.c \
 		lock.c \

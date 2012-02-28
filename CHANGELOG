@@ -1,6 +1,7 @@
   * Add ability for conf files to point to more conf files to read.
   * Fix status server segfault when deleting files from clientconfdir.
   * Allow directories in clientconfdir.
+  * Add the ability for the server to set the client include/excludes.
 
 2012-02-27 Changes in burp-1.3.1:
   * EFS support on Windows.

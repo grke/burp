@@ -193,7 +193,7 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FIL
 		  && cb->statp.st_ctime==p1b->statp.st_ctime)
 		{
 			// got an unchanged file
-			logp("got unchanged file: %s %c %c\n", cb->path, cb->cmd, p1b->cmd);
+			//logp("got unchanged file: %s %c %c\n", cb->path, cb->cmd, p1b->cmd);
 			return process_unchanged_file(cb, ucfp, cntr);
 		}
 

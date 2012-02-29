@@ -141,7 +141,7 @@ static int server_supports_autoupgrade(const char *feat)
 
 static int s_server_session_id_context=1;
 
-int client(struct config *conf, enum action act, const char *backup, const char *restoreprefix, const char *regex, int forceoverwrite, int strip)
+int client(struct config *conf, enum action act, const char *backup, const char *restoreprefix, const char *browsedir, const char *regex, int forceoverwrite, int strip)
 {
 	int ret=0;
 	int rfd=-1;
@@ -380,7 +380,8 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 			case ACTION_LIST:
 			case ACTION_LONG_LIST:
 			default:
-				ret=do_list_client(backup, regex, act);
+				ret=do_list_client(backup,
+					browsedir, regex, act);
 				break;
 		}
 	}

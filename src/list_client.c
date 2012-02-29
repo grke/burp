@@ -97,7 +97,7 @@ static void ls_output(char *buf, const char *fname, struct stat *statp)
 	*p = 0;
 }
 
-int do_list_client(const char *backup, const char *listregex, enum action act)
+int do_list_client(const char *backup, const char *browsedir, const char *listregex, enum action act)
 {
 	int ret=0;
 	size_t slen=0;
@@ -109,7 +109,11 @@ int do_list_client(const char *backup, const char *listregex, enum action act)
 	char *dpth=NULL;
 //logp("in do_list\n");
 
-	snprintf(msg, sizeof(msg), "list %s:%s",
+	if(browsedir)
+	  snprintf(msg, sizeof(msg), "listb %s:%s",
+		backup?backup:"", browsedir);
+	else
+	  snprintf(msg, sizeof(msg), "list %s:%s",
 		backup?backup:"", listregex?listregex:"");
 	if(async_write_str(CMD_GEN, msg)
 	  || async_read_expect(CMD_GEN, "ok"))
@@ -131,6 +135,8 @@ int do_list_client(const char *backup, const char *listregex, enum action act)
 		{
 			// A backup timestamp, just print it.
 			printf("Backup: %s\n", statbuf);
+			if(browsedir)
+				printf("Listing directory: %s\n", browsedir);
 			if(listregex) printf("With regex: %s\n", listregex);
 			if(statbuf) { free(statbuf); statbuf=NULL; }
 			continue;

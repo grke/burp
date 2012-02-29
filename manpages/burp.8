@@ -56,8 +56,7 @@ Short for 'config file'. The argument is a path to the config file. The default
 is /etc/burp/burp.conf, or C:\\Program Files\\Burp\\burp.conf on Windows.
 .TP
 \fB\-d\fR \fB[path]\fR
-Short for 'directory'. The argument is a path to an alternative directory
-to restore to.
+Short for 'directory'. When restoring, the argument is a path to an alternative directory to restore to. When listing, the argument is the directory to list.
 .TP
 \fB\-f\fR \fB[path]\fR
 Short for 'force overwrite'. Without this option set, a restore will not
@@ -124,6 +123,12 @@ Verifies everything in backup number 1 that matches the regular expression 'myre
 .TP
 \fBburp -a t\fR
 Timed backup. The same as 'burp -a b', except that a script is run on the server before deciding to go ahead. The intention is that this command will be run on a repeating cron job with a short interval, and that the server will decide when it is time for a new backup.
+.TP
+\fBburp -a L -b 1 -d ''\fR
+Long list the top level directory of backup 1.
+.TP
+\fBburp -a L -b 1 -d '/home/graham'\fR
+Long list the /home/graham directory of backup 1. These '-d' versions of the list function provide the ability to 'browse' backups.
 
 .SH SERVER CONFIGURATION FILE OPTIONS
 

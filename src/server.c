@@ -875,7 +875,9 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 				p1cntr, cntr, cconf);
 		}
 	}
-	else if(cmd==CMD_GEN && !strncmp(buf, "list ", strlen("list ")))
+	else if(cmd==CMD_GEN
+	  && (!strncmp(buf, "list ", strlen("list "))
+	      || !strncmp(buf, "listb ", strlen("listb "))))
 	{
 		int resume=0; // ignored
 		if(get_lock_and_clean(basedir, lockbasedir, lockfile,
@@ -886,15 +888,35 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 				ret=-1;
 		else
 		{
+			char *backupno=NULL;
+			char *browsedir=NULL;
 			char *listregex=NULL;
-			if((listregex=strrchr(buf, ':')))
+			if(!strncmp(buf, "list ", strlen("list ")))
 			{
-				*listregex='\0';
-				listregex++;
+				if((listregex=strrchr(buf, ':')))
+				{
+					*listregex='\0';
+					listregex++;
+				}
+				backupno=buf+strlen("list ");
+			}
+			else if(!strncmp(buf, "listb ", strlen("listb ")))
+			{
+				if((browsedir=strrchr(buf, ':')))
+				{
+					*browsedir='\0';
+					browsedir++;
+				}
+				// strip any trailing slashes
+				// (unless it is '/').
+				if(strcmp(browsedir, "/")
+				 && browsedir[strlen(browsedir)-1]=='/')
+				  browsedir[strlen(browsedir)-1]='\0';
+				backupno=buf+strlen("listb ");
 			}
 			async_write_str(CMD_GEN, "ok");
-			ret=do_list_server(basedir, buf+strlen("list "),
-				listregex, client, p1cntr, cntr);
+			ret=do_list_server(basedir, backupno,
+				listregex, browsedir, client, p1cntr, cntr);
 		}
 	}
 	else

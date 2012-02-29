@@ -51,12 +51,13 @@ static void usage_client(void)
 	printf("                  v: verify\n");
 	printf("  -b <number>    Backup number (default: the most recent backup)\n");
 	printf("  -c <path>      Path to config file (default: %s).\n", get_config_path());
-	printf("  -d <directory> Directory to restore to.\n");
+	printf("  -d <directory> Directory to restore to, or directory to list\n");
 	printf("  -f             Allow overwrite during restore.\n");
 	printf("  -h|-?          Print this text and exit.\n");
 	printf("  -i             Print index of symbols and exit\n");
 	printf("  -l <path>      Path to log file.\n");
 	printf("  -r <regex>     Specify a regular expression.\n");
+	printf("  -s <number>    Number of leading path components to strip during restore.\n");
 	printf("  -v             Print version and exit.\n");
 	printf("\n");
 #ifndef HAVE_WIN32
@@ -127,6 +128,7 @@ int main (int argc, char *argv[])
 	const char *backup=NULL;
 	const char *restoreprefix=NULL;
 	const char *regex=NULL;
+	const char *browsedir=NULL;
 	FILE *fp=NULL;
 	const char *configfile=get_config_path();
 
@@ -168,7 +170,8 @@ int main (int argc, char *argv[])
 				configfile=optarg;
 				break;
 			case 'd':
-				restoreprefix=optarg;
+				restoreprefix=optarg; // for restores
+				browsedir=optarg; // for lists
 				break;
 			case 'f':
 				forceoverwrite=1;
@@ -257,7 +260,8 @@ int main (int argc, char *argv[])
 	{
 		logp("before client\n");
 		ret=client(&conf, act, backup,
-			restoreprefix, regex, forceoverwrite, strip);
+			restoreprefix, browsedir,
+			regex, forceoverwrite, strip);
 		logp("after client\n");
 	}
 

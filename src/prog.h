@@ -27,7 +27,7 @@ extern int reload(struct config *conf, const char *configfile, char **logfile, b
 extern int server(struct config *conf, const char *configfile, int forking,
 	int daemon, char **logfile);
 extern int client(struct config *conf, enum action act, const char *backup,
-	const char *restoreprefix, const char *regex, int forceoverwrite,
-	int strip);
+	const char *restoreprefix, const char *browsedir,
+	const char *regex, int forceoverwrite, int strip);
 
 #endif // _PROG_H

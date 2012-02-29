@@ -473,9 +473,87 @@ static int do_restore_end(enum action act, struct cntr *cntr)
 	return ret;
 }
 
+static int restore_ent(const char *client, struct sbuf *sb, struct sbuf ***sblist, int *scount, struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, enum action act, char status, struct config *cconf, struct cntr *cntr, struct cntr *p1cntr)
+{
+	int s=0;
+	int ret=0;
+	// Check if we have any directories waiting to be restored.
+	for(s=(*scount)-1; s>=0; s--)
+	{
+		if(is_subdir((*sblist)[s]->path, sb->path))
+		{
+			// We are still in a subdir.
+			//printf(" subdir (%s %s)\n",
+			// (*sblist)[s]->path, sb->path);
+			break;
+		}
+		else
+		{
+			// Can now restore sblist[s] because nothing else is
+			// fiddling in a subdirectory.
+			if(restore_sbuf((*sblist)[s], arr, a, i, tmppath1,
+				tmppath2, act, client, status,
+				p1cntr, cntr, cconf))
+			{
+				ret=-1;
+				break;
+			}
+			else if(del_from_sbuf_arr(sblist, scount))
+			{
+				ret=-1;
+				break;
+			}
+		}
+	}
+
+	/* If it is a directory, need to remember it and restore it later, so
+	   that the permissions come out right. */
+	/* Meta data of directories will also have the stat stuff set to be a
+	   directory, so will also come out at the end. */
+	if(!ret && S_ISDIR(sb->statp.st_mode))
+	{
+		if(add_to_sbuf_arr(sblist, sb, scount))
+			ret=-1;
+
+		// Wipe out sb, without freeing up all the strings inside it,
+		// which have been added to sblist.
+		init_sbuf(sb);
+	}
+	else if(!ret && restore_sbuf(sb, arr, a, i, tmppath1, tmppath2, act,
+		client, status, p1cntr, cntr, cconf))
+			ret=-1;
+	return ret;
+}
+
+static int srestore_matches(struct strlist *s, const char *path)
+{
+	int r=0;
+	if(!s->flag) return 0; // Do not know how to do excludes yet.
+	if((r=strncmp(s->path, path, strlen(s->path)))) return 0; // no match
+	if(!r) return 1; // exact match
+	if(*(path+strlen(s->path)+1)=='/')
+		return 1; // matched directory contents
+	return 0; // no match
+}
+
+/* Used when restore is initiated from the server. */
+static int check_srestore(struct config *cconf, const char *path)
+{
+	int i=0;
+	for(i=0; i<cconf->iecount; i++)
+	{
+		//printf(" %d %s %s\n",
+		//	cconf->incexcdir[i]->flag, cconf->incexcdir[i]->path,
+		//	path);
+		if(srestore_matches(cconf->incexcdir[i], path))
+			return 1;
+	}
+	return 0;
+}
+
 // a = length of struct bu array
 // i = position to restore from
-static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, regex_t *regex, enum action act, const char *client, struct cntr *p1cntr, struct cntr *cntr, struct config *cconf, bool all)
+static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, regex_t *regex, int srestore, enum action act, const char *client, struct cntr *p1cntr, struct cntr *cntr, struct config *cconf, bool all)
 {
 	int ret=0;
 	gzFile zp=NULL;
@@ -508,7 +586,10 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 		log_and_send(msg);
 		ret=-1;
 	}
-	else if(!(zp=gzopen_file(manifest, "rb")))
+
+	log_restore_settings(cconf, srestore);
+
+	if(!ret && !(zp=gzopen_file(manifest, "rb")))
 	{
 		log_and_send("could not open manifest");
 		ret=-1;
@@ -516,12 +597,12 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 	else
 	{
 		char cmd;
+		int s=0;
 		int quit=0;
 		size_t len=0;
 		struct sbuf sb;
 		// For out-of-sequence directory restoring so that the
 		// timestamps come out right:
-		int s=0;
 		int scount=0;
 		struct sbuf **sblist=NULL;
 
@@ -571,64 +652,17 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 			}
 			else
 			{
-				if(check_regex(regex, sb.path))
+				if((!srestore
+				    || check_srestore(cconf, sb.path))
+				  && check_regex(regex, sb.path)
+				  && restore_ent(client,
+					&sb, &sblist, &scount,
+					arr, a, i, tmppath1, tmppath2,
+					act, status, cconf,
+					cntr, p1cntr))
 				{
-				  // Check if we have any directories waiting
-				  // to be restored.
-				  for(s=scount-1; s>=0; s--)
-				  {
-					if(is_subdir(sblist[s]->path, sb.path))
-					{
-						// We are still in a subdir.
-						//printf(" subdir (%s %s)\n", sblist[s]->path, sb.path);
-						break;
-					}
-					else
-					{
-						// Can now restore sblist[s]
-						// because nothing else is
-						// fiddling in a subdirectory.
-				  		if(restore_sbuf(sblist[s], arr,
-						 a, i, tmppath1, tmppath2, act,
-						 client, status,
-						 p1cntr, cntr, cconf))
-						{
-							ret=-1; quit++;
-							break;
-						}
-						else if(del_from_sbuf_arr(
-							&sblist, &scount))
-						{
-							ret=-1; quit++;
-							break;
-						}
-					}
-				  }
-
-				  /* If it is a directory, need to remember it
-				     and restore it later, so that the
-				     permissions come out right. */
-				  /* Meta data of directories will also have
-				     the stat stuff set to be a directory,
-				     so will also come out at the end. */
-				  if(!ret && S_ISDIR(sb.statp.st_mode))
-				  {
-					if(add_to_sbuf_arr(&sblist, &sb, &scount))
-					{
-						ret=-1; quit++;
-					}
-
-					// Wipe out sb, without freeing up
-					// all the strings inside it, which
-					// have been added to sblist.
-					init_sbuf(&sb);
-				  }
-				  else if(!ret && restore_sbuf(&sb, arr, a, i,
-				    tmppath1, tmppath2, act, client, status,
-				    p1cntr, cntr, cconf))
-				  {
-					ret=-1; quit++;
-				  }
+					ret=-1;
+					quit++;
 				}
 			}
 			free_sbuf(&sb);
@@ -664,7 +698,7 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 	return ret;
 }
 
-int do_restore_server(const char *basedir, const char *backup, const char *restoreregex, enum action act, const char *client, struct cntr *p1cntr, struct cntr *cntr, struct config *cconf)
+int do_restore_server(const char *basedir, enum action act, const char *client, int srestore, struct cntr *p1cntr, struct cntr *cntr, struct config *cconf)
 {
 	int a=0;
 	int i=0;
@@ -679,7 +713,7 @@ int do_restore_server(const char *basedir, const char *backup, const char *resto
 
 	logp("in do_restore\n");
 
-	if(compile_regex(&regex, restoreregex)) return -1;
+	if(compile_regex(&regex, cconf->regex)) return -1;
 
 	if(!(tmppath1=prepend_s(basedir, "tmp1", strlen("tmp1")))
 	  || !(tmppath2=prepend_s(basedir, "tmp2", strlen("tmp2"))))
@@ -697,28 +731,29 @@ int do_restore_server(const char *basedir, const char *backup, const char *resto
 		return -1;
 	}
 
-	if(backup && *backup=='a')
+	if(cconf->backup && *(cconf->backup)=='a')
 	{
 		all=TRUE;
 	}
-	else if(!(index=strtoul(backup, NULL, 10)) && a>0)
+	else if(!(index=strtoul(cconf->backup, NULL, 10)) && a>0)
 	{
 		// No backup specified, do the most recent.
 		ret=restore_manifest(arr, a, a-1,
-			tmppath1, tmppath2, regex, act, client,
+			tmppath1, tmppath2, regex, srestore, act, client,
 			p1cntr, cntr, cconf, all);
 		found=TRUE;
 	}
 
 	if(!found) for(i=0; i<a; i++)
 	{
-		if(all || !strcmp(arr[i].timestamp, backup)
+		if(all || !strcmp(arr[i].timestamp, cconf->backup)
 			|| arr[i].index==index)
 		{
 			found=TRUE;
 			//logp("got: %s\n", arr[i].path);
 			ret|=restore_manifest(arr, a, i,
-				tmppath1, tmppath2, regex, act, client,
+				tmppath1, tmppath2, regex,
+				srestore, act, client,
 				p1cntr, cntr, cconf, all);
 			if(!all) break;
 		}

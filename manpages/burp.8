@@ -145,6 +145,12 @@ Defines the main TCP port that the server listens on.
 \fBstatus_port=[port number]\fR
 Defines the TCP port that the server listens on for status requests.
 .TP
+\fBdaemon=[0|1]\fR
+Whether to daemonise. The default is 1.
+.TP
+\fBfork=[0|1]\fR
+Whether to fork children. The default is 1.
+.TP
 \fBdirectory=[path]\fR
 Path to the directory in which to store backups.
 .TP
@@ -478,6 +484,29 @@ The 'deltas.reverse' directory contains reverse deltas that can be applied to th
 .TP
 Anything with a .gz suffix is compressed in gzip format.  You can use standard tools, such as zcat, zless or cp, to view them or copy them elsewhere.
 
+.SH Server initiated restores
+.TP
+You can queue a restore on the server, to be performed when the client next makes contact. To do this, you put a file called 'restore' into the top level of the client storage directory. Valid fields to include in the restore file are:
+.TP
+\fBbackup=[number|a]\fR
+The number of the backup to restore from. Equivalent to '-b' when initiating a restore from the client.
+.TP
+\fBoverwrite=[0|1]\fR
+Whether to overwrite existing files. Equivalent to '-f' when initiating a restore from the client.
+.TP
+\fBstrip=[number]\fR
+Number of leading path components to strip. Equivalent to '-s' when initiating a restore from the client.
+.TP
+\fBrestoreprefix=[path]\fR
+Prefix to the restore path. Equivalent to '-d' when initiating a restore from the client.
+.TP
+\fBregex=[regular expression]\fR
+Only restore files matching the regular expression. Equivalent to '-r' when initiating a restore from the client.
+.TP
+\fBinclude=[path]\fR
+Restore directories and files that match the path. If it is a directory, the contents of the directory will be restored. You can have multiple 'include' lines. There is no equivalent when initiating a restore from the client.
+.TP
+As a minimum, the 'restore' file needs to contain a 'backup' option, and one 'regex' or 'include' line.
 
 .SH BUGS
 If you find bugs, please report them to the email list. See the website

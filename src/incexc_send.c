@@ -12,6 +12,7 @@
 static int send_incexc_str(const char *pre, const char *str)
 {
 	char *tosend=NULL;
+	if(!str) return 0;
 	if(!(tosend=prepend(pre, str, strlen(str), " = ")))
 		return -1;
 	if(async_write_str(CMD_GEN, tosend))
@@ -67,6 +68,19 @@ static int do_sends(struct config *conf)
 	  || send_incexc_int("read_all_fifos", conf->read_all_fifos)
 	  || send_incexc_long("min_file_size", conf->min_file_size)
 	  || send_incexc_long("max_file_size", conf->max_file_size))
+		return -1;
+	return 0;
+}
+
+static int do_sends_restore(struct config *conf)
+{
+	if(  send_incexc_from_strlist("include", "exclude",
+		conf->iecount, conf->incexcdir)
+	  || send_incexc_str("backup", conf->backup)
+	  || send_incexc_str("restoreprefix", conf->restoreprefix)
+	  || send_incexc_str("regex", conf->regex)
+	  || send_incexc_int("overwrite", conf->overwrite)
+	  || send_incexc_long("strip", conf->strip))
 		return -1;
 	return 0;
 }
@@ -147,6 +161,16 @@ int incexc_send_server(struct config *conf, struct cntr *p1cntr)
 	   so go straight into doing the sends. */
 	if(do_sends(conf)
 	  || do_finish("sincexc end", "sincexc end ok"))
+		return -1;
+	return 0;
+}
+
+int incexc_send_server_restore(struct config *conf, struct cntr *p1cntr)
+{
+	/* 'srestore' and 'srestore ok' have already been exchanged,
+	   so go straight into doing the sends. */
+	if(do_sends_restore(conf)
+	  || do_finish("srestore end", "srestore end ok"))
 		return -1;
 	return 0;
 }

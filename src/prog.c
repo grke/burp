@@ -78,7 +78,7 @@ int reload(struct config *conf, const char *configfile, char **logfile, bool fir
 		return 1;
 
 	init_config(conf);
-	if(load_config(configfile, conf, 1)) return 1;
+	if(load_config(configfile, conf, TRUE)) return 1;
 
 	/* change umask */
 	umask(conf->umask);
@@ -102,6 +102,20 @@ int reload(struct config *conf, const char *configfile, char **logfile, bool fir
 	return 0;
 }
 
+static int replace_conf_str(const char *newval, char **dest)
+{
+	if(newval)
+	{
+		if(*dest) free(*dest);
+		if(!(*dest=strdup(newval)))
+		{
+			logp("out of memory\n");
+			return -1;
+		}
+	}
+	return 0;
+}
+
 static void usage(void)
 {
 	usage_server();
@@ -115,9 +129,7 @@ int main (int argc, char *argv[])
 {
 	int ret=0;
 	int option=0;
-#ifndef HAVE_WIN32
 	int daemon=1;
-#endif
 	int forking=1;
 	int gotlock=0;
 	int strip=0;
@@ -177,9 +189,7 @@ int main (int argc, char *argv[])
 				forceoverwrite=1;
 				break;
 			case 'F':
-#ifndef HAVE_WIN32 // keep MINGW64 quiet
 				daemon=0;
-#endif
 				break;
 			case 'i':
 				print_all_cmds();
@@ -240,6 +250,15 @@ int main (int argc, char *argv[])
 		gotlock++;
 	}
 
+	conf.overwrite=forceoverwrite;
+	conf.strip=strip;
+	conf.forking=forking;
+	conf.daemon=daemon;
+	if(replace_conf_str(backup, &(conf.backup))
+	  || replace_conf_str(restoreprefix, &(conf.restoreprefix))
+	  || replace_conf_str(regex, &(conf.regex))
+	  || replace_conf_str(browsedir, &(conf.browsedir)))
+		return -1;
 	if(conf.mode==MODE_SERVER)
 	{
 #ifdef HAVE_WIN32
@@ -252,16 +271,13 @@ int main (int argc, char *argv[])
 			ret=status_client(&conf, act);
 		}
 		else
-			ret=server(&conf, configfile,
-				forking, daemon, &logfile);
+			ret=server(&conf, configfile, &logfile);
 #endif
 	}
 	else
 	{
 		logp("before client\n");
-		ret=client(&conf, act, backup,
-			restoreprefix, browsedir,
-			regex, forceoverwrite, strip);
+		ret=client(&conf, act);
 		logp("after client\n");
 	}
 
@@ -270,6 +286,6 @@ int main (int argc, char *argv[])
 
 	// If there was no forking, logfp ends up getting closed before this
 	// and will segfault if we try to do it again.
-	if(fp && forking) fclose(fp);
+	if(fp && conf.forking) fclose(fp);
 	return ret;
 }

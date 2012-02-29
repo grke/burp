@@ -1317,3 +1317,24 @@ void print_all_cmds(void)
 	}
 	printf("\n");
 }
+
+void log_restore_settings(struct config *cconf, int srestore)
+{
+	int i=0;
+	logp("Restore settings:\n");
+	logp("backup = %s\n", cconf->backup);
+	if(srestore)
+	{
+		// This are unknown unless doing a server initiated restore.
+		logp("overwrite = %d\n", cconf->overwrite);
+		logp("strip = %d\n", cconf->strip);
+	}
+	if(cconf->restoreprefix)
+		logp("restoreprefix = %s\n", cconf->restoreprefix);
+	if(cconf->regex) logp("regex = %s\n", cconf->regex);
+	for(i=0; i<cconf->iecount; i++)
+	{
+		if(cconf->incexcdir[i]->flag)
+			logp("include = %s\n", cconf->incexcdir[i]->path);
+	}
+}

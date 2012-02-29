@@ -66,6 +66,14 @@ int incexc_recv_client(char **incexc, struct config *conf, struct cntr *p1cntr)
 		conf, p1cntr);
 }
 
+int incexc_recv_client_restore(char **incexc, struct config *conf, struct cntr *p1cntr)
+{
+	return incexc_recv(incexc,
+		"srestore", "srestore ok",
+		"srestore end", "srestore end ok",
+		conf, p1cntr);
+}
+
 int incexc_recv_server(char **incexc, struct config *conf, struct cntr *p1cntr)
 {
 	return incexc_recv(incexc,

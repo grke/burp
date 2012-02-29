@@ -141,7 +141,7 @@ static int server_supports_autoupgrade(const char *feat)
 
 static int s_server_session_id_context=1;
 
-int client(struct config *conf, enum action act, const char *backup, const char *restoreprefix, const char *browsedir, const char *regex, int forceoverwrite, int strip)
+int client(struct config *conf, enum action act)
 {
 	int ret=0;
 	int rfd=-1;
@@ -239,15 +239,32 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 				ret=autoupgrade_client(conf, &p1cntr);
 		}
 
+		// :srestore: means that the server wants to do a restore.
+		if(!ret && server_supports(feat, ":srestore:"))
+		{
+			logp("Server is initiating a restore\n");
+			if(!(ret=incexc_recv_client_restore(&incexc, conf,
+			  &p1cntr)))
+			{
+				if(incexc)
+				{
+					ret=parse_incexcs_buf(conf, incexc);
+					if(!ret) act=ACTION_RESTORE;
+					log_restore_settings(conf, 1);
+				}
+			}
+		}
+
 		// :sincexc: is for the server giving the client the
 		// incexc config.
-		if(!ret && server_supports(feat, ":sincexc:"))
+		if(!ret && !incexc && server_supports(feat, ":sincexc:"))
 		{
+			logp("Server wants to do a restore.");
 			if(!(ret=incexc_recv_client(&incexc, conf, &p1cntr)))
 			{
 				if(incexc)
 				{
-					ret=parse_incexcs(conf, incexc);
+					ret=parse_incexcs_buf(conf, incexc);
 				}
 			}
 		}
@@ -255,7 +272,7 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 		// :incexc: is for the client sending the server the
 		// incexc config so that it better knows what to do on
 		// resume.
-		if(!ret && server_supports(feat, ":incexc:"))
+		if(!ret && !incexc && server_supports(feat, ":incexc:"))
 			ret=incexc_send_client(conf, &p1cntr);
 
 		if(async_write_str(CMD_GEN, "extra_comms_end")
@@ -346,9 +363,7 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 					"reserved5",
 					&cntr, 1)) ret=-1;
 				if(!ret && do_restore_client(conf,
-					act, backup,
-					restoreprefix, regex, forceoverwrite,
-					strip, &p1cntr, &cntr)) ret=-1;
+					act, &p1cntr, &cntr)) ret=-1;
 				if((conf->restore_script_post_run_on_fail
 				  || !ret) && conf->restore_script_post)
 				{
@@ -380,8 +395,7 @@ int client(struct config *conf, enum action act, const char *backup, const char 
 			case ACTION_LIST:
 			case ACTION_LONG_LIST:
 			default:
-				ret=do_list_client(backup,
-					browsedir, regex, act);
+				ret=do_list_client(conf, act);
 				break;
 		}
 	}

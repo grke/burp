@@ -708,7 +708,22 @@ static int run_script_w(const char *script, struct strlist **userargs, int usera
 		"reserved1", "reserved2", "reserved3", cntr, 1);
 }
 
-static int child(struct config *conf, struct config *cconf, const char *client, const char *cversion, const char *incexc, char cmd, char *buf, struct cntr *p1cntr, struct cntr *cntr)
+/* I am sure I wrote this function already, somewhere else. */
+static int reset_conf_val(const char *src, char **dest)
+{
+	if(src)
+	{
+		if(*dest) free(*dest);
+		if(!(*dest=strdup(src)))
+		{
+			logp("out of memory\n");
+			return -1;
+		}
+	}
+	return 0;
+}
+
+static int child(struct config *conf, struct config *cconf, const char *client, const char *cversion, const char *incexc, int srestore, char cmd, char *buf, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ret=0;
 	char msg[256]="";
@@ -840,6 +855,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 	  && (!strncmp(buf, "restore ", strlen("restore "))
 		|| !strncmp(buf, "verify ", strlen("verify "))))
 	{
+		char *cp=NULL;
 		int resume=0; // ignored
 		enum action act;
 		char *backupnostr=NULL;
@@ -854,6 +870,8 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			backupnostr=buf+strlen("verify ");
 			act=ACTION_VERIFY;
 		}
+		reset_conf_val(backupnostr, &(cconf->backup));
+		if((cp=strchr(cconf->backup, ':'))) *cp='\0';
 
 		if(get_lock_and_clean(basedir, lockbasedir, lockfile,
 			current, working,
@@ -869,9 +887,9 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 				*restoreregex='\0';
 				restoreregex++;
 			}
+			reset_conf_val(restoreregex, &(cconf->regex));
 			async_write_str(CMD_GEN, "ok");
-			ret=do_restore_server(basedir, backupnostr,
-				restoreregex, act, client,
+			ret=do_restore_server(basedir, act, client, srestore,
 				p1cntr, cntr, cconf);
 		}
 	}
@@ -993,7 +1011,7 @@ static int append_to_feat(char **feat, const char *str)
 	return 0;
 }
 
-static int extra_comms(const char *cversion, char **incexc, struct config *conf, struct config *cconf, struct cntr *p1cntr)
+static int extra_comms(const char *client, const char *cversion, char **incexc, int *srestore, struct config *conf, struct config *cconf, struct cntr *p1cntr)
 {
 	int ret=0;
 	char *buf=NULL;
@@ -1001,6 +1019,8 @@ static int extra_comms(const char *cversion, char **incexc, struct config *conf,
 	long cli_ver=0;
 	long ser_ver=0;
 	long feat_list_ver=0;
+	char *restorepath=NULL;
+
 	if((min_ver=version_to_long("1.2.7"))<0
 	 || (cli_ver=version_to_long(cversion))<0
 	 || (ser_ver=version_to_long(VERSION))<0
@@ -1029,27 +1049,47 @@ static int extra_comms(const char *cversion, char **incexc, struct config *conf,
 	}
 	else
 	{
+		char *tmp=NULL;
 		char *feat=NULL;
+		struct stat statp;
 		if(append_to_feat(&feat, "extra_comms_begin ok:")
 			/* clients can autoupgrade */
 		  || append_to_feat(&feat, "autoupgrade:")
 			/* clients can give server incexc config so that the
 			   server knows better what to do on resume */
 		  || append_to_feat(&feat, "incexc:"))
+			return -1;
+
+		/* Clients can receive restore initiated from the server. */
+		if(!(tmp=prepend_s(cconf->directory, client, strlen(client)))
+		 || !(restorepath=prepend_s(tmp, "restore", strlen("restore"))))
 		{
-			logp("out of memory\n");
+			if(tmp) free(tmp);
+			if(feat) free(feat);
 			return -1;
 		}
+		free(tmp);
+		if(!lstat(restorepath, &statp) && S_ISREG(statp.st_mode)
+		  && append_to_feat(&feat, "srestore:"))
+		{
+			if(restorepath) free(restorepath);
+			if(feat) free(feat);
+			return -1;
+		}
+
 		/* Clients can receive incexc config from the server.
 		   Only give it as an option if the server has some starting
 		   directory configured in the clientconfdir. */
 		if(cconf->sdcount && append_to_feat(&feat, "sincexc:"))
 			return -1;
 
+		//printf("feat: %s\n", feat);
+
 		if(async_write_str(CMD_GEN, feat))
 		{
 			logp("problem in extra_comms\n");
 			free(feat);
+			if(restorepath) free(restorepath);
 			return -1;
 		}
 		free(feat);
@@ -1087,6 +1127,19 @@ static int extra_comms(const char *cversion, char **incexc, struct config *conf,
 					ret=-1;
 					break;
 				}
+			}
+			else if(!strcmp(buf, "srestore ok"))
+			{
+				// Client can accept the restore.
+				// Load the restore config, then send it.
+				*srestore=1;
+				if(parse_incexcs_path(cconf, restorepath)
+				  || incexc_send_server_restore(cconf, p1cntr))
+				{
+					ret=-1;
+					break;
+				}
+				unlink(restorepath);
 			}
 			else if(!strcmp(buf, "sincexc ok"))
 			{
@@ -1128,6 +1181,7 @@ static int extra_comms(const char *cversion, char **incexc, struct config *conf,
 		if(buf); free(buf); buf=NULL;
 	}
 
+	if(restorepath) free(restorepath);
 	if(buf) free(buf);
 	return ret;
 }
@@ -1147,6 +1201,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	char *incexc=NULL;
 	char *client=NULL;
 	char *cversion=NULL;
+	int srestore=0;
 	struct config conf;
 	struct config cconf;
 
@@ -1211,7 +1266,8 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 		goto finish;
 	}
 
-	if(extra_comms(cversion, &incexc, &conf, &cconf, &p1cntr))
+	if(extra_comms(client, cversion, &incexc, &srestore,
+		&conf, &cconf, &p1cntr))
 	{
 		log_and_send("running extra comms failed on server");
 		ret=-1;
@@ -1242,7 +1298,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 		// want to run.
 	}
 
-	if(!ret) ret=child(&conf, &cconf, client, cversion, incexc,
+	if(!ret) ret=child(&conf, &cconf, client, cversion, incexc, srestore,
 		cmd, buf, &p1cntr, &cntr);
 
 	if((!ret || cconf.server_script_post_run_on_fail)
@@ -1285,7 +1341,7 @@ static int run_status_server(int *rfd, int *cfd, const char *configfile)
 	// Reload global config, in case things have changed. This means that
 	// the server does not need to be restarted for most config changes.
 	init_config(&conf);
-	if(load_config(configfile, &conf, 1)) return -1;
+	if(load_config(configfile, &conf, TRUE)) return -1;
 
 	ret=status_server(cfd, &conf);
 
@@ -1298,7 +1354,7 @@ static int run_status_server(int *rfd, int *cfd, const char *configfile)
 	return ret;
 }
 
-static int process_incoming_client(int rfd, int forking, struct config *conf, SSL_CTX *ctx, const char *configfile, int is_status_server)
+static int process_incoming_client(int rfd, struct config *conf, SSL_CTX *ctx, const char *configfile, int is_status_server)
 {
 	int cfd=-1;
 	socklen_t client_length=0;
@@ -1317,7 +1373,7 @@ static int process_incoming_client(int rfd, int forking, struct config *conf, SS
 	reuseaddr(cfd);
 	check_for_exiting_children();
 
-	if(forking)
+	if(conf->forking)
 	{
 	  int p=0;
 	  int pipe_rfd[2];
@@ -1369,7 +1425,8 @@ static int process_incoming_client(int rfd, int forking, struct config *conf, SS
 			if(is_status_server)
 			  ret=run_status_server(&rfd, &cfd, configfile);
 			else
-			  ret=run_child(&rfd, &cfd, ctx, configfile, forking);
+			  ret=run_child(&rfd, &cfd, ctx,
+				configfile, conf->forking);
 			close_fd(&status_wfd);
 			close_fd(&status_rfd);
 			exit(ret);
@@ -1399,7 +1456,8 @@ static int process_incoming_client(int rfd, int forking, struct config *conf, SS
 		if(is_status_server)
 			return run_status_server(&rfd, &cfd, configfile);
 		else
-			return run_child(&rfd, &cfd, ctx, configfile, forking);
+			return run_child(&rfd, &cfd, ctx, configfile,
+				conf->forking);
 	}
 	return 0;
 }
@@ -1463,7 +1521,7 @@ static int relock(const char *lockfile)
 	return -1;
 }
 
-static int run_server(struct config *conf, const char *configfile, int forking, int *rfd, const char *oldport, const char *oldstatusport)
+static int run_server(struct config *conf, const char *configfile, int *rfd, const char *oldport, const char *oldstatusport)
 {
 	int ret=0;
 	SSL_CTX *ctx=NULL;
@@ -1535,7 +1593,7 @@ static int run_server(struct config *conf, const char *configfile, int forking, 
 		{
 			// Happens when a client exits.
 			//logp("error on listening socket.\n");
-			if(!forking) break;
+			if(!conf->forking) break;
 			continue;
 		}
 
@@ -1543,14 +1601,14 @@ static int run_server(struct config *conf, const char *configfile, int forking, 
 		{
 			// Happens when a client exits.
 			//logp("error on status socket.\n");
-			if(!forking) break;
+			if(!conf->forking) break;
 			continue;
 		}
 
 		if(FD_ISSET(*rfd, &fsr))
 		{
 			// A normal client is incoming.
-			if(process_incoming_client(*rfd, forking, conf, ctx,
+			if(process_incoming_client(*rfd, conf, ctx,
 				configfile, 0 /* not a status client */))
 			{
 				ret=1;
@@ -1562,7 +1620,7 @@ static int run_server(struct config *conf, const char *configfile, int forking, 
 		{
 			// A status client is incoming.
 			//printf("status client?\n");
-			if(process_incoming_client(sfd, forking, conf, ctx,
+			if(process_incoming_client(sfd, conf, ctx,
 				configfile, 1 /* a status client */))
 			{
 				ret=1;
@@ -1682,7 +1740,7 @@ static int run_server(struct config *conf, const char *configfile, int forking, 
 	return ret;
 }
 
-int server(struct config *conf, const char *configfile, int forking, int daemon, char **logfile)
+int server(struct config *conf, const char *configfile, char **logfile)
 {
 	int ret=0;
 	int rfd=-1; // normal client port
@@ -1692,7 +1750,7 @@ int server(struct config *conf, const char *configfile, int forking, int daemon,
 	char *oldport=NULL;
 	char *oldstatusport=NULL;
 
-	if(forking && daemon)
+	if(conf->forking && conf->daemon)
 	{
 		if(daemonise() || relock(conf->lockfile)) return 1;
 	}
@@ -1701,7 +1759,7 @@ int server(struct config *conf, const char *configfile, int forking, int daemon,
 
 	while(!ret)
 	{
-		ret=run_server(conf, configfile, forking,
+		ret=run_server(conf, configfile,
 			&rfd, oldport, oldstatusport);
 		if(ret) break;
 		if(hupreload)

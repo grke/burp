@@ -24,10 +24,7 @@ enum action
 extern int setup_signals(int oldmax_children, int max_children);
 extern int reload(struct config *conf, const char *configfile, char **logfile, bool firsttime, int oldmax_children);
 
-extern int server(struct config *conf, const char *configfile, int forking,
-	int daemon, char **logfile);
-extern int client(struct config *conf, enum action act, const char *backup,
-	const char *restoreprefix, const char *browsedir,
-	const char *regex, int forceoverwrite, int strip);
+extern int server(struct config *conf, const char *configfile, char **logfile);
+extern int client(struct config *conf, enum action act);
 
 #endif // _PROG_H

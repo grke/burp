@@ -509,7 +509,7 @@ static int strip_path_components(struct sbuf *sb, char **path, int strip, struct
 	return 1;
 }
 
-int do_restore_client(struct config *conf, enum action act, const char *backup, const char *restoreprefix, const char *restoreregex, int forceoverwrite, int strip, struct cntr *p1cntr, struct cntr *cntr)
+int do_restore_client(struct config *conf, enum action act, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ars=0;
 	int ret=0;
@@ -522,7 +522,7 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 	logp("doing %s\n", act_str(act));
 
 	snprintf(msg, sizeof(msg), "%s %s:%s", act_str(act),
-		backup?backup:"", restoreregex?restoreregex:"");
+		conf->backup?conf->backup:"", conf->regex?conf->regex:"");
 	if(async_write_str(CMD_GEN, msg)
 	  || async_read_expect(CMD_GEN, "ok"))
 		return -1;
@@ -566,11 +566,11 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 			case CMD_METADATA:
 			case CMD_ENC_METADATA:
 			case CMD_EFS_FILE:
-				if(strip)
+				if(conf->strip)
 				{
 					int s;
 					s=strip_path_components(&sb, &(sb.path),
-						strip, cntr);
+						conf->strip, cntr);
 					if(s<0) // error
 					{
 						ret=-1;
@@ -584,7 +584,7 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 					}
 					// It is OK, sb.path is now stripped.
 				}
-				if(!(fullpath=prepend_s(restoreprefix,
+				if(!(fullpath=prepend_s(conf->restoreprefix,
 					sb.path, strlen(sb.path))))
 				{
 					log_and_send("out of memory");
@@ -594,7 +594,7 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 				if(act==ACTION_RESTORE)
 				{
 				  strip_invalid_characters(&fullpath);
-				  if(!forceoverwrite
+				  if(!conf->overwrite
 				   && !S_ISDIR(sb.statp.st_mode)
 				   && sb.cmd!=CMD_METADATA
 				   && sb.cmd!=CMD_ENC_METADATA
@@ -666,7 +666,7 @@ int do_restore_client(struct config *conf, enum action act, const char *backup, 
 			case CMD_SOFT_LINK:
 			case CMD_HARD_LINK:
 				if(restore_link(&sb, fullpath,
-					restoreprefix, act, cntr))
+					conf->restoreprefix, act, cntr))
 				{
 					ret=-1;
 					quit++;

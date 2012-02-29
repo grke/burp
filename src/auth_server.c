@@ -41,7 +41,7 @@ static int check_client_and_password(struct config *conf, const char *client, co
 	init_config(cconf);
 	snprintf(cpath, sizeof(cpath), "%s/%s", conf->clientconfdir, client);
 	if(set_client_global_config(conf, cconf)
-	  || load_config(cpath, cconf, 0))
+	  || load_config(cpath, cconf, FALSE))
 		return -1;
 
 	if(!cconf->password && !cconf->passwd)

@@ -17,6 +17,12 @@ static void init_incexcs(struct config *conf)
 	conf->excext=NULL; conf->excount=0;
 	conf->excfs=NULL; conf->exfscount=0;
 	conf->fifos=NULL; conf->ffcount=0;
+	/* stuff to do with restore */
+	conf->overwrite=0;
+	conf->strip=0;
+	conf->backup=NULL;
+	conf->restoreprefix=NULL;
+	conf->regex=NULL;
 }
 
 /* Free only stuff related to includes/excludes.
@@ -30,6 +36,9 @@ static void free_incexcs(struct config *conf)
 	strlists_free(conf->excext, conf->excount);
 	strlists_free(conf->excfs, conf->exfscount);
 	strlists_free(conf->fifos, conf->ffcount);
+	if(conf->backup) free(conf->backup);
+	if(conf->restoreprefix) free(conf->restoreprefix);
+	if(conf->regex) free(conf->regex);
 	init_incexcs(conf);
 }
 
@@ -40,6 +49,8 @@ void init_config(struct config *conf)
 	conf->status_port=NULL;
 	conf->hardlinked_archive=0;
 	conf->working_dir_recovery_method=NULL;
+	conf->forking=0;
+	conf->daemon=0;
 	conf->clientconfdir=NULL;
 	conf->cname=NULL;
 	conf->directory=NULL;
@@ -128,7 +139,7 @@ void init_config(struct config *conf)
 	conf->sscount=0;
 
 	conf->dedup_group=NULL;
-
+	conf->browsedir=NULL;
 	init_incexcs(conf);
 }
 
@@ -192,6 +203,7 @@ void free_config(struct config *conf)
 	strlists_free(conf->keep, conf->kpcount);
 
 	if(conf->dedup_group) free(conf->dedup_group);
+	if(conf->browsedir) free(conf->browsedir);
 
 	free_incexcs(conf);
 
@@ -532,6 +544,14 @@ static int load_config_ints(struct config *conf, const char *field, const char *
 		&(conf->max_children));
 	get_conf_val_int(field, value, "max_storage_subdirs",
 		&(conf->max_storage_subdirs));
+	get_conf_val_int(field, value, "overwrite",
+		&(conf->overwrite));
+	get_conf_val_int(field, value, "strip",
+		&(conf->strip));
+	get_conf_val_int(field, value, "fork",
+		&(conf->forking));
+	get_conf_val_int(field, value, "daemon",
+		&(conf->daemon));
 
 	return 0;
 }
@@ -562,6 +582,14 @@ static int load_config_strings(struct config *conf, const char *field, const cha
 	if(get_conf_val(field, value, "cname", &(conf->cname)))
 		return -1;
 	if(get_conf_val(field, value, "directory", &(conf->directory)))
+		return -1;
+	if(get_conf_val(field, value, "backup", &(conf->backup)))
+		return -1;
+	if(get_conf_val(field, value, "restoreprefix", &(conf->restoreprefix)))
+		return -1;
+	if(get_conf_val(field, value, "regex", &(conf->regex)))
+		return -1;
+	if(get_conf_val(field, value, "browsedir", &(conf->browsedir)))
 		return -1;
 	if(get_conf_val(field, value, "working_dir_recovery_method",
 		&(conf->working_dir_recovery_method))) return -1;
@@ -1057,8 +1085,60 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 	return r;
 }
 
+
+int load_config_lines(const char *config_path, struct config *conf, struct llists *l)
+{
+	int line=0;
+	FILE *fp=NULL;
+	char buf[4096]="";
+
+	if(!(fp=fopen(config_path, "r")))
+	{
+		logp("could not open '%s' for reading.\n", config_path);
+		return -1;
+	}
+	while(fgets(buf, sizeof(buf), fp))
+	{
+		line++;
+		if(parse_config_line(conf, l, config_path, buf, line))
+			goto err;
+	}
+	if(fp) fclose(fp);
+	return 0;
+err:
+	conf_error(config_path, line);
+	if(fp) fclose(fp);
+	return -1;
+}
+
+static void set_got_args(struct llists *l, struct config *conf)
+{
+	l->got_timer_args=conf->tacount;
+	l->got_ns_args=conf->nscount;
+	l->got_nf_args=conf->nfcount;
+	l->got_kp_args=conf->kpcount;
+	l->got_spre_args=conf->sprecount;
+	l->got_spost_args=conf->spostcount;
+	l->got_ss_args=conf->sscount;
+}
+
+int load_config(const char *config_path, struct config *conf, bool loadall)
+{
+	struct llists l;
+
+	memset(&l, 0, sizeof(struct llists));
+	set_got_args(&l, conf);
+
+	//logp("in load_config\n");
+
+	if(load_config_lines(config_path, conf, &l))
+		return -1;
+
+	return finalise_config(config_path, conf, &l, loadall);
+}
+
 /* The client runs this when the server overrides the incexcs. */
-int parse_incexcs(struct config *conf, const char *incexc)
+int parse_incexcs_buf(struct config *conf, const char *incexc)
 {
 	int ret=0;
 	int line=0;
@@ -1066,6 +1146,7 @@ int parse_incexcs(struct config *conf, const char *incexc)
 	char *copy=NULL;
 	struct llists l;
 	memset(&l, 0, sizeof(struct llists));
+	set_got_args(&l, conf);
 	if(!(copy=strdup(incexc)))
 	{
 		logp("out of memory\n");
@@ -1093,50 +1174,10 @@ int parse_incexcs(struct config *conf, const char *incexc)
 	return finalise_config("server override", conf, &l, FALSE);
 }
 
-int load_config_lines(const char *config_path, struct config *conf, struct llists *l)
+/* The server runs this when parsing a restore file on the server. */
+int parse_incexcs_path(struct config *conf, const char *path)
 {
-	int line=0;
-	FILE *fp=NULL;
-	char buf[256]="";
-
-	if(!(fp=fopen(config_path, "r")))
-	{
-		logp("could not open '%s' for reading.\n", config_path);
-		return -1;
-	}
-	while(fgets(buf, sizeof(buf), fp))
-	{
-		line++;
-		if(parse_config_line(conf, l, config_path, buf, line))
-			goto err;
-	}
-	if(fp) fclose(fp);
-	return 0;
-err:
-	conf_error(config_path, line);
-	if(fp) fclose(fp);
-	return -1;
-}
-
-int load_config(const char *config_path, struct config *conf, bool loadall)
-{
-	struct llists l;
-
-	memset(&l, 0, sizeof(struct llists));
-	l.got_timer_args=conf->tacount;
-	l.got_ns_args=conf->nscount;
-	l.got_nf_args=conf->nfcount;
-	l.got_kp_args=conf->kpcount;
-	l.got_spre_args=conf->sprecount;
-	l.got_spost_args=conf->spostcount;
-	l.got_ss_args=conf->sscount;
-
-	//logp("in load_config\n");
-
-	if(load_config_lines(config_path, conf, &l))
-		return -1;
-
-	return finalise_config(config_path, conf, &l, loadall);
+	return load_config(path, conf, FALSE);
 }
 
 static int set_global_str(char **dst, const char *src)

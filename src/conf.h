@@ -36,6 +36,8 @@ struct config
 	mode_t umask;
 	int max_hardlinks;
 	int max_storage_subdirs;
+	int forking;
+	int daemon;
 
 // client options
 	char *cname;
@@ -65,6 +67,14 @@ struct config
 	int ffcount;
 	unsigned long min_file_size;
 	unsigned long max_file_size;
+  // These are to do with restore.
+	int overwrite;
+	int strip;
+	char *backup;
+	char *restoreprefix;
+	char *regex;
+  // To do with listing.
+	char *browsedir;
 
 	char *backup_script_pre;
 	struct strlist **backup_script_pre_arg;
@@ -136,7 +146,8 @@ extern int set_client_global_config(struct config *conf, struct config *cconf);
 extern int is_subdir(const char *dir, const char *sub);
 extern int pathcmp(const char *a, const char *b);
 
-extern int parse_incexcs(struct config *conf, const char *incexc);
+extern int parse_incexcs_buf(struct config *conf, const char *incexc);
+extern int parse_incexcs_path(struct config *conf, const char *path);
 
 
 #endif

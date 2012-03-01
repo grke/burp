@@ -418,7 +418,7 @@ static int send_data_to_client(int cfd, const char *data)
 	return 0;
 }
 
-static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, int sel_client)
+static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, int sel_client, const char *sel_client_str)
 {
 	int q=0;
 	for(q=0; q<clen; q++)
@@ -439,7 +439,9 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, int
 		{
 			tosend=clist[q]->running_detail;
 		}
-		else if(sel_client==q
+		else if(((sel_client>=0 && sel_client==q)
+			|| (sel_client_str && !strcmp(sel_client_str,
+				clist[q]->name)))
 		  && (clist[q]->status==STATUS_IDLE
 			|| clist[q]->status==STATUS_CLIENT_CRASHED
 			|| clist[q]->status==STATUS_SERVER_CRASHED))
@@ -450,7 +452,7 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, int
         		struct bu *arr=NULL;
 			if(get_current_backups(clist[q]->basedir, &arr, &a, 0))
 			{
-				logp("error when looking up current backups\n");
+				//logp("error when looking up current backups\n");
 				tosend=clist[q]->summary;
 			}
 			else if(a>0)
@@ -681,6 +683,7 @@ int status_server(int *cfd, struct config *conf)
 
 		if(FD_ISSET(*cfd, &fsr))
 		{
+			char *cp=NULL;
 			//logp("status server stuff to read from client\n");
 			if((l=read(*cfd, buf, sizeof(buf)-2))<0)
 			{
@@ -695,14 +698,26 @@ int status_server(int *cfd, struct config *conf)
 			}
 			// If we did not get a full read, do
 			// not worry, just throw it away.
-			if(buf[l-1]=='\n')
+			if((cp=strrchr(buf, '\n')))
 			{
-				buf[l-1]='\0';
-				if(!*buf)
+				*cp=NULL;
+				// Also get rid of '\r'. I think telnet adds
+				// this.
+				if((cp=strrchr(buf, '\r'))) *cp=NULL;
+				if(!strncmp(buf, "s:", 2))
 				{
-					//printf("summaries request\n");
+					//printf("detail request: %s\n", buf);
 					if(send_summaries_to_client(*cfd,
-						clist, clen, -1))
+						clist, clen, atoi(buf+2), NULL))
+					{
+						ret=-1;
+						break;
+					}
+				}
+				else if(!strncmp(buf, "c:", 2))
+				{
+					if(send_summaries_to_client(*cfd,
+						clist, clen, -1, buf+2))
 					{
 						ret=-1;
 						break;
@@ -710,9 +725,9 @@ int status_server(int *cfd, struct config *conf)
 				}
 				else
 				{
-					//printf("detail request: %s\n", buf);
+					//printf("summaries request\n");
 					if(send_summaries_to_client(*cfd,
-						clist, clen, atoi(buf)))
+						clist, clen, -1, NULL))
 					{
 						ret=-1;
 						break;

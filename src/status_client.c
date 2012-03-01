@@ -17,6 +17,10 @@ static enum action actg=ACTION_STATUS;
 #define LEFT_SPACE	3
 #define TOP_SPACE	2
 
+#ifdef DBFP
+static FILE *dbfp=NULL;
+#endif
+
 static void print_line(const char *string, int row, int col)
 {
 	int k=0;
@@ -421,7 +425,7 @@ static void blank_screen(int row, int col)
 	printf("%s\n\n", date);
 }
 
-static int parse_rbuf(const char *rbuf, struct config *conf, int row, int col, int sel, int *count, int details)
+static int parse_rbuf(const char *rbuf, struct config *conf, int row, int col, int sel, char **client, int *count, int details)
 {
 	//int c=0;
 	char *cp=NULL;
@@ -488,7 +492,16 @@ static int parse_rbuf(const char *rbuf, struct config *conf, int row, int col, i
 
 		if(details)
 		{
-			if(*count==sel) detail(toks, t, conf, 0, col);
+			if(*count==sel)
+			{
+				if(toks[0]
+				  && (!*client || strcmp(toks[0], *client)))
+				{
+					if(*client) free(*client);
+					*client=strdup(toks[0]);
+				}
+				detail(toks, t, conf, 0, col);
+			}
 		}
 		else
 		{
@@ -535,11 +548,14 @@ static void print_star(int sel)
 }
 
 // Return 1 if it was shown, -1 on error, 0 otherwise.
-static int show_rbuf(const char *rbuf, struct config *conf, int sel, int *count, int details)
+static int show_rbuf(const char *rbuf, struct config *conf, int sel, char **client, int *count, int details)
 {
 	int rbuflen=0;
 	if(!rbuf) return 0;
 	rbuflen=strlen(rbuf);
+#ifdef DBFP
+	if(dbfp) { fprintf(dbfp, "%s\n", rbuf);  fflush(dbfp); }
+#endif
 
 	if(rbuflen>2
 		&& rbuf[rbuflen-1]=='\n'
@@ -550,8 +566,9 @@ static int show_rbuf(const char *rbuf, struct config *conf, int sel, int *count,
 #ifdef HAVE_NCURSES_H
 		if(actg==ACTION_STATUS) getmaxyx(stdscr, row, col);
 #endif
-		if(parse_rbuf(rbuf, conf, row, col, sel, count, details))
-			return -1;
+		if(parse_rbuf(rbuf, conf, row, col,
+			sel, client, count, details))
+				return -1;
 		if(sel>=*count) sel=(*count)-1;
 		if(!details) print_star(sel);
 #ifdef HAVE_NCURSES_H
@@ -562,12 +579,15 @@ static int show_rbuf(const char *rbuf, struct config *conf, int sel, int *count,
 	return 0;
 }
 
-static int request_status(int fd, int sel)
+static int request_status(int fd, const char *client)
 {
 	int l;
 	char buf[256]="";
-	if(sel>=0) snprintf(buf, sizeof(buf), "%d\n", sel);
+	if(client) snprintf(buf, sizeof(buf), "c:%s\n", client);
 	else snprintf(buf, sizeof(buf), "\n");
+#ifdef DBFP
+fprintf(dbfp, "request: %s\n", buf); fflush(dbfp);
+#endif
 	l=strlen(buf);
 	if(write(fd, buf, l)<0) return -1;
 	return 0;
@@ -603,6 +623,8 @@ int status_client(struct config *conf, enum action act)
 	int details=0;
 	char *last_rbuf=NULL;
 	int srbr=0;
+	char *client=NULL;
+	int enterpressed=0;
 
 #ifdef HAVE_NCURSES_H
 	int stdinfd=fileno(stdin);
@@ -635,7 +657,11 @@ int status_client(struct config *conf, enum action act)
 		noecho();
 		curs_set(0);
 		halfdelay(3);
+		//nodelay(stdscr, TRUE);
 	}
+#endif
+#ifdef DBFP
+	dbfp=fopen("/tmp/dbfp", "w");
 #endif
 
 	while(!ret)
@@ -646,10 +672,11 @@ int status_client(struct config *conf, enum action act)
 		fd_set fse;
 		struct timeval tval;
 
-		if(need_status())
+		if(enterpressed || need_status())
 		{
-			int req=-1;
-			if(details) req=sel;
+			char *req=NULL;
+			enterpressed=0;
+			if(details && client) req=client;
 			if(request_status(fd, req))
 			{
 				ret=-1;
@@ -696,9 +723,9 @@ int status_client(struct config *conf, enum action act)
 			}
 			if(FD_ISSET(stdinfd, &fsr))
 			{
-				int x;
 				int quit=0;
-				switch((x=getch()))
+				
+				switch(getch())
 				{
 					case 'q':
 					case 'Q':
@@ -721,6 +748,7 @@ int status_client(struct config *conf, enum action act)
 					case ' ':
 						if(details) details=0;
 						else details++;
+						enterpressed++;
 						break;
 					case KEY_LEFT:
 					case 'h':
@@ -758,7 +786,7 @@ int status_client(struct config *conf, enum action act)
 				if(!details)
 				{
 				  if((srbr=show_rbuf(last_rbuf,
-					conf, sel, &count, details))<0)
+					conf, sel, &client, &count, details))<0)
 				  {
 					ret=-1;
 					break;
@@ -774,7 +802,7 @@ int status_client(struct config *conf, enum action act)
 		if(FD_ISSET(fd, &fsr))
 		{
 			// ready to read.
-			if((l=read(fd, buf, sizeof(buf)-1))>0)
+			while((l=read(fd, buf, sizeof(buf)-1))>0)
 			{
 				size_t r=0;
 				buf[l]='\0';
@@ -783,14 +811,17 @@ int status_client(struct config *conf, enum action act)
 				if(!r) *rbuf='\0';
 				strcat(rbuf+r, buf);
 			}
+/*
 			if(l<0)
 			{
 				ret=-1;
 				break;
 			}
+*/
 		}
 
-		if((srbr=show_rbuf(rbuf, conf, sel, &count, details))<0)
+		if((srbr=show_rbuf(rbuf, conf,
+			sel, &client, &count, details))<0)
 		{
 			ret=-1;
 			break;
@@ -824,5 +855,8 @@ int status_client(struct config *conf, enum action act)
 	close_fd(&fd);
 	if(last_rbuf) free(last_rbuf);
 	if(rbuf) free(rbuf);
+#ifdef DBFP
+	if(dbfp) fclose(dbfp);
+#endif
 	return ret;
 }

@@ -772,6 +772,14 @@ static int parse_rbuf(const char *rbuf, int cfd, struct cstat **clist, int clen)
 		if(!(bno=strtoul(backup, NULL, 10)))
 			goto end;
 	}
+	if(file)
+	{
+		if(strchr(file, '/')) // Stop any funny business.
+		{
+			free(file);
+			file=NULL;
+		}
+	}
 /*
 	printf("client: %s\n", client?:"");
 	printf("backup: %s\n", backup?:"");

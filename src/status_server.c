@@ -403,7 +403,7 @@ static int send_data_to_client(int cfd, const char *data, size_t len)
 {
 	int ret=0;
 	const char *w=data;
-printf("need to write: %d\n", len);
+//printf("need to write: %d\n", len);
 	while(len>0)
 	{
 		ssize_t wl=0;
@@ -443,22 +443,20 @@ printf("need to write: %d\n", len);
 		{
 			if(errno!=EINTR)
 			{
-				//logp("error writing in send_data_to_client(): %s\n", strerror(errno));
-				printf("error writing in send_data_to_client(): %s\n", strerror(errno));
+				logp("error writing in send_data_to_client(): %s\n", strerror(errno));
 				ret=-1;
 				goto end;
 			}
-			printf("got EINTR\n");
+//			printf("got EINTR\n");
 		}
 		else if(wl>0)
 		{
 			w+=wl;
 			len-=wl;
 		}
-		printf("wrote: %d left: %d\n", wl, len);
+//		printf("wrote: %d left: %d\n", wl, len);
 	}
 end:
-printf("finished\n");
 	return ret;
 }
 
@@ -774,10 +772,11 @@ static int parse_rbuf(const char *rbuf, int cfd, struct cstat **clist, int clen)
 		if(!(bno=strtoul(backup, NULL, 10)))
 			goto end;
 	}
-
+/*
 	printf("client: %s\n", client?:"");
 	printf("backup: %s\n", backup?:"");
 	printf("file: %s\n", file?:"");
+*/
 	if(client)
 	{
 		if(bno)

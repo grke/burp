@@ -17,6 +17,7 @@ static enum action actg=ACTION_STATUS;
 #define LEFT_SPACE	3
 #define TOP_SPACE	2
 
+//#define DBFP	1
 #ifdef DBFP
 static FILE *dbfp=NULL;
 #endif
@@ -425,7 +426,7 @@ static void blank_screen(int row, int col)
 	printf("%s\n\n", date);
 }
 
-static int parse_rbuf(const char *rbuf, struct config *conf, int row, int col, int sel, char **client, int *count, int details)
+static int parse_rbuf(const char *rbuf, struct config *conf, int row, int col, int sel, char **client, int *count, int details, const char *sclient)
 {
 	//int c=0;
 	char *cp=NULL;
@@ -492,7 +493,7 @@ static int parse_rbuf(const char *rbuf, struct config *conf, int row, int col, i
 
 		if(details)
 		{
-			if(*count==sel)
+			if(*count==sel || sclient)
 			{
 				if(toks[0]
 				  && (!*client || strcmp(toks[0], *client)))
@@ -500,7 +501,8 @@ static int parse_rbuf(const char *rbuf, struct config *conf, int row, int col, i
 					if(*client) free(*client);
 					*client=strdup(toks[0]);
 				}
-				detail(toks, t, conf, 0, col);
+				if(!sclient || !strcmp(toks[0], sclient))
+					detail(toks, t, conf, 0, col);
 			}
 		}
 		else
@@ -548,7 +550,7 @@ static void print_star(int sel)
 }
 
 // Return 1 if it was shown, -1 on error, 0 otherwise.
-static int show_rbuf(const char *rbuf, struct config *conf, int sel, char **client, int *count, int details)
+static int show_rbuf(const char *rbuf, struct config *conf, int sel, char **client, int *count, int details, const char *sclient)
 {
 	int rbuflen=0;
 	if(!rbuf) return 0;
@@ -567,7 +569,7 @@ static int show_rbuf(const char *rbuf, struct config *conf, int sel, char **clie
 		if(actg==ACTION_STATUS) getmaxyx(stdscr, row, col);
 #endif
 		if(parse_rbuf(rbuf, conf, row, col,
-			sel, client, count, details))
+			sel, client, count, details, sclient))
 				return -1;
 		if(sel>=*count) sel=(*count)-1;
 		if(!details) print_star(sel);
@@ -612,7 +614,7 @@ static void setup_signals(void)
 	signal(SIGPIPE, &sighandler);
 }
 
-int status_client(struct config *conf, enum action act)
+int status_client(struct config *conf, enum action act, const char *sclient)
 {
 	int fd=0;
         int ret=0;
@@ -671,17 +673,22 @@ int status_client(struct config *conf, enum action act)
 		fd_set fsr;
 		fd_set fse;
 		struct timeval tval;
+		if(sclient && !client)
+		{
+			client=strdup(sclient);
+			details=1;
+		}
 
 		if(enterpressed || need_status())
 		{
 			char *req=NULL;
-			enterpressed=0;
 			if(details && client) req=client;
 			if(request_status(fd, req))
 			{
 				ret=-1;
 				break;
 			}
+			enterpressed=0;
 		}
 
 		FD_ZERO(&fsr);
@@ -783,10 +790,11 @@ int status_client(struct config *conf, enum action act)
 				// Attempt to print stuff to the screen right
 				// now, to give the impression of key strokes
 				// being responsive.
-				if(!details)
+				if(!details && !sclient)
 				{
 				  if((srbr=show_rbuf(last_rbuf,
-					conf, sel, &client, &count, details))<0)
+					conf, sel, &client,
+					&count, details, sclient))<0)
 				  {
 					ret=-1;
 					break;
@@ -821,7 +829,7 @@ int status_client(struct config *conf, enum action act)
 		}
 
 		if((srbr=show_rbuf(rbuf, conf,
-			sel, &client, &count, details))<0)
+			sel, &client, &count, details, sclient))<0)
 		{
 			ret=-1;
 			break;
@@ -834,6 +842,8 @@ int status_client(struct config *conf, enum action act)
 			last_rbuf=rbuf;
 			rbuf=NULL;
 		}
+
+		if(sclient) details++;
 
 		usleep(20000);
 #ifdef HAVE_NCURSES_H

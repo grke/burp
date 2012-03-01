@@ -15,7 +15,7 @@ BackUp and Restore Program.
 
 .SH SERVER OPTIONS
 .TP
-\fB\-c\fR \fBpath\fR
+\fB\-c\fR \fB[path]\fR
 Short for 'config file'. The argument is a path to the config file. The default
 is /etc/burp/burp.conf.
 .TP
@@ -31,6 +31,9 @@ Run this to connect to a running server to get a live monitor of the status of a
 .TP
 \fB\-a S\fR \fB\fR
 Similar to '-a s', but it prints the main status monitor summary screen to stdout. The intention is that a script can run this and email an administrator the output on a cron job. This doesn't require ncurses support.
+.TP
+\fB\-C\fR \fB[client]\fR
+For use with the status monitor. Limit the output to a single client.
 .TP
 \fB\-i\fR \fB\fR
 Print an index table of symbols that humans may see burp produce, and exit.

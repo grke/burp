@@ -24,8 +24,9 @@ static void usage_server(void)
 	printf("\n");
 	printf(" Options:\n");
 	printf("  -a s          Run the status monitor.\n");
-	printf("  -a S          Print the front screen of the status monitor (for reporting).\n");
+	printf("  -a S          Screen dump of the status monitor (for reporting).\n");
 	printf("  -c <path>     Path to config file (default: %s).\n", get_config_path());
+	printf("  -C <client>   Show a single client in the status monitor\n");
 	printf("  -F            Stay in the foreground.\n");
 	printf("  -h|-?         Print this text and exit.\n");
 	printf("  -i            Print index of symbols and exit\n");
@@ -144,10 +145,11 @@ int main (int argc, char *argv[])
 	const char *browsedir=NULL;
 	FILE *fp=NULL;
 	const char *configfile=get_config_path();
+	const char *sclient=NULL;
 
 	init_log(argv[0]);
 
-	while((option=getopt(argc, argv, "a:b:c:d:hfFinr:s:l:v?"))!=-1)
+	while((option=getopt(argc, argv, "a:b:c:C:d:hfFinr:s:l:v?"))!=-1)
 	{
 		switch(option)
 		{
@@ -181,6 +183,9 @@ int main (int argc, char *argv[])
 				break;
 			case 'c':
 				configfile=optarg;
+				break;
+			case 'C':
+				sclient=optarg;
 				break;
 			case 'd':
 				restoreprefix=optarg; // for restores
@@ -271,7 +276,7 @@ int main (int argc, char *argv[])
 		{
 			// We are running on the server machine, being a client
 			// of the burp server, getting status information.
-			ret=status_client(&conf, act);
+			ret=status_client(&conf, act, sclient);
 		}
 		else
 			ret=server(&conf, configfile, &logfile);

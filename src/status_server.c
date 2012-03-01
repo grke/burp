@@ -399,26 +399,70 @@ static int load_data_from_disk(struct config *conf, struct cstat ***clist, int *
 	return ret;
 }
 
-static int send_data_to_client(int cfd, const char *data)
+static int send_data_to_client(int cfd, const char *data, size_t len)
 {
+	int ret=0;
 	const char *w=data;
-	while(w && *w)
+printf("need to write: %d\n", len);
+	while(len>0)
 	{
-		size_t wl=0;
-		if((wl=write(cfd, w, strlen(w)))<0)
+		ssize_t wl=0;
+		int mfd=-1;
+		fd_set fsw;
+		fd_set fse;
+		struct timeval tval;
+
+		FD_ZERO(&fsw);
+		FD_ZERO(&fse);
+
+		tval.tv_sec=1;
+		tval.tv_usec=0;
+
+		add_fd_to_sets(cfd, NULL, &fsw, &fse, &mfd);
+
+		if(select(mfd+1, NULL, &fsw, &fse, &tval)<0)
+		{
+			if(errno!=EAGAIN && errno!=EINTR)
+			{
+				logp("select error: %s\n", strerror(errno));
+				ret=-1;
+				break;
+			}
+			continue;
+		}
+
+		if(FD_ISSET(cfd, &fse))
+		{
+			// Client exited?
+			logp("exception on client fd when writing\n");
+			break;
+		}
+		if(!FD_ISSET(cfd, &fsw)) continue;
+
+		if((wl=write(cfd, w, len))<=0)
 		{
 			if(errno!=EINTR)
 			{
 				//logp("error writing in send_data_to_client(): %s\n", strerror(errno));
-				return -1;
+				printf("error writing in send_data_to_client(): %s\n", strerror(errno));
+				ret=-1;
+				goto end;
 			}
+			printf("got EINTR\n");
 		}
-		w+=wl;
+		else if(wl>0)
+		{
+			w+=wl;
+			len-=wl;
+		}
+		printf("wrote: %d left: %d\n", wl, len);
 	}
-	return 0;
+end:
+printf("finished\n");
+	return ret;
 }
 
-static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, int sel_client, const char *sel_client_str)
+static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, const char *sel_client)
 {
 	int q=0;
 	for(q=0; q<clen; q++)
@@ -439,9 +483,7 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, int
 		{
 			tosend=clist[q]->running_detail;
 		}
-		else if(((sel_client>=0 && sel_client==q)
-			|| (sel_client_str && !strcmp(sel_client_str,
-				clist[q]->name)))
+		else if(sel_client && !strcmp(sel_client, clist[q]->name)
 		  && (clist[q]->status==STATUS_IDLE
 			|| clist[q]->status==STATUS_CLIENT_CRASHED
 			|| clist[q]->status==STATUS_SERVER_CRASHED))
@@ -492,7 +534,7 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, int
 		}
 		else tosend=clist[q]->summary;
 		//printf("send summary: %s (%s)\n", clist[q]->name, tosend);
-		if(send_data_to_client(cfd, tosend)) return -1;
+		if(send_data_to_client(cfd, tosend, strlen(tosend))) return -1;
 	}
 
 	return 0;
@@ -510,7 +552,8 @@ static int send_detail_to_client(int cfd, struct cstat **clist, int clen, const 
 				tosend=clist[q]->running_detail;
 			else
 				tosend=clist[q]->summary;
-			if(send_data_to_client(cfd, tosend)) return -1;
+			if(send_data_to_client(cfd, tosend, strlen(tosend)))
+				return -1;
 			break;
 		}
 	}
@@ -590,11 +633,198 @@ static int parse_parent_data(const char *data, struct cstat **clist, int clen)
 	return 0;
 }
 
+static cstat *get_cstat_by_client_name(struct cstat **clist, int clen, const char *client)
+{
+	int c=0;
+	for(c=0; c<clen; c++)
+	{
+		if(clist[c]->name && !strcmp(clist[c]->name, client))
+			return clist[c];
+	}
+	return NULL;
+}
+
+static int list_backup_file(const char *dir, const char *file)
+{
+	char *path=NULL;
+	struct stat statp;
+	if(!(path=prepend_s(dir, file, strlen(file))))
+		return -1;
+	if(lstat(path, &statp) || !S_ISREG(statp.st_mode))
+	{
+		free(path);
+		return 0;
+	}
+	printf("%s\n", file);
+	free(path);
+	return 0;
+}
+
+static int list_backup_file_contents(int cfd, const char *dir, const char *file)
+{
+	int ret=0;
+	size_t l=0;
+	gzFile zp=NULL;
+	char *path=NULL;
+	char buf[256]="";
+	if(!(path=prepend_s(dir, file, strlen(file))))
+		return -1;
+	if(!(zp=gzopen_file(path, "rb")))
+	{
+		free(path);
+		return -1;
+	}
+	while((l=gzread(zp, buf, sizeof(buf)))>0)
+	{
+		if(send_data_to_client(cfd, buf, l))
+		{
+			ret=-1;
+			break;
+		}
+	}
+	gzclose_fp(&zp);
+	return ret;
+}
+
+static int list_backup_dir(struct cstat *cli, unsigned long bno)
+{
+        int a=0;
+        struct bu *arr=NULL;
+	if(get_current_backups(cli->basedir, &arr, &a, 0))
+	{
+		//logp("error when looking up current backups\n");
+		return -1;
+	}
+	if(a>0)
+	{
+		int i=0;
+		for(i=0; i<a; i++) if(arr[i].index==bno) break;
+		if(i<a)
+		{
+			printf("found: %s\n", arr[i].path);
+			list_backup_file(arr[i].path, "manifest.gz");
+			list_backup_file(arr[i].path, "log.gz");
+			list_backup_file(arr[i].path, "restorelog.gz");
+			list_backup_file(arr[i].path, "verifylog.gz");
+		}
+		free_current_backups(&arr, a);
+	}
+	return 0;
+}
+
+static int list_backup_file(int cfd, struct cstat *cli, unsigned long bno, const char *file)
+{
+        int a=0;
+        struct bu *arr=NULL;
+	if(get_current_backups(cli->basedir, &arr, &a, 0))
+	{
+		//logp("error when looking up current backups\n");
+		return -1;
+	}
+	if(a>0)
+	{
+		int i=0;
+		for(i=0; i<a; i++) if(arr[i].index==bno) break;
+		if(i<a)
+		{
+			printf("found: %s\n", arr[i].path);
+			list_backup_file_contents(cfd, arr[i].path, file);
+		}
+		free_current_backups(&arr, a);
+	}
+	return 0;
+}
+
+static char *get_str(const char **buf, const char *pre)
+{
+	size_t len=0;
+	char *cp=NULL;
+	char *copy=NULL;
+	if(!buf || !*buf) return NULL;
+	len=strlen(pre);
+	if(strncmp(*buf, pre, len)) return NULL;
+	if(!(copy=strdup(*buf)+len)) return NULL;
+	if((cp=strchr(copy, ':'))) *cp='\0';
+	*buf+=len+strlen(copy)+1;
+	return copy;
+}
+
+static int parse_rbuf(const char *rbuf, int cfd, struct cstat **clist, int clen)
+{
+	int ret=0;
+	const char *cp=NULL;
+	char *backup=NULL;
+	char *file=NULL;
+	char *client=NULL;
+	unsigned long bno=0;
+	struct cstat *cli=NULL;
+
+	cp=rbuf;
+	file  =get_str(&cp, "f:");
+	backup=get_str(&cp, "b:");
+	client=get_str(&cp, "c:");
+
+	if(client)
+	{
+		if(!(cli=get_cstat_by_client_name(clist, clen, client)))
+			goto end;
+	}
+	if(backup)
+	{
+		if(!(bno=strtoul(backup, NULL, 10)))
+			goto end;
+	}
+
+	printf("client: %s\n", client?:"");
+	printf("backup: %s\n", backup?:"");
+	printf("file: %s\n", file?:"");
+	if(client)
+	{
+		if(bno)
+		{
+			if(file)
+			{
+			  printf("list file %s of backup %lu of client '%s'\n",
+				file, bno, client);
+				list_backup_file(cfd, cli, bno, file);
+			}
+			else
+			{
+				printf("list backup %lu of client '%s'\n",
+					bno, client);
+				printf("basedir: %s\n", cli->basedir);
+				list_backup_dir(cli, bno);
+			}
+		}
+		else
+		{
+			//printf("detail request: %s\n", rbuf);
+			if(send_summaries_to_client(cfd, clist, clen, client))
+			{
+				ret=-1;
+				goto end;
+			}
+		}
+	}
+	else
+	{
+		//printf("summaries request\n");
+		if(send_summaries_to_client(cfd, clist, clen, NULL))
+		{
+			ret=-1;
+			goto end;
+		}
+	}
+end:
+	return ret;
+}
+
 /* Incoming status request */
 int status_server(int *cfd, struct config *conf)
 {
 	int l;
 	int ret=0;
+	char *rbuf=NULL;
 	char buf[512]="";
 	int clen=0;
 	struct cstat **clist=NULL;
@@ -639,6 +869,7 @@ int status_server(int *cfd, struct config *conf)
 				ret=-1;
 				break;
 			}
+			continue;
 		}
 
 		if(status_rfd>=0 && FD_ISSET(status_rfd, &fse))
@@ -685,55 +916,34 @@ int status_server(int *cfd, struct config *conf)
 		{
 			char *cp=NULL;
 			//logp("status server stuff to read from client\n");
-			if((l=read(*cfd, buf, sizeof(buf)-2))<0)
+			while((l=read(*cfd, buf, sizeof(buf)))>0)
 			{
-				logp("read error\n");
-				ret=-1;
-				break;
-			}
-			else if(!l)
-			{
-				// client went away
-				break;
+				size_t r=0;
+				buf[l]='\0';
+				if(rbuf) r=strlen(buf);
+				rbuf=(char *)realloc(rbuf, r+l+1);
+				if(!r) *rbuf='\0';
+				strcat(rbuf+r, buf);
 			}
 			// If we did not get a full read, do
 			// not worry, just throw it away.
-			if((cp=strrchr(buf, '\n')))
+			if((cp=strrchr(rbuf, '\n')))
 			{
 				*cp=NULL;
 				// Also get rid of '\r'. I think telnet adds
 				// this.
-				if((cp=strrchr(buf, '\r'))) *cp=NULL;
-				if(!strncmp(buf, "s:", 2))
+				if((cp=strrchr(rbuf, '\r'))) *cp=NULL;
+
+				if(parse_rbuf(rbuf, *cfd, clist, clen))
 				{
-					//printf("detail request: %s\n", buf);
-					if(send_summaries_to_client(*cfd,
-						clist, clen, atoi(buf+2), NULL))
-					{
-						ret=-1;
-						break;
-					}
+					ret=-1;
+					free(rbuf);
+					rbuf=NULL;
+					break;
 				}
-				else if(!strncmp(buf, "c:", 2))
-				{
-					if(send_summaries_to_client(*cfd,
-						clist, clen, -1, buf+2))
-					{
-						ret=-1;
-						break;
-					}
-				}
-				else
-				{
-					//printf("summaries request\n");
-					if(send_summaries_to_client(*cfd,
-						clist, clen, -1, NULL))
-					{
-						ret=-1;
-						break;
-					}
-				}
-				if(send_data_to_client(*cfd, "\n"))
+				free(rbuf);
+				rbuf=NULL;
+				if(send_data_to_client(*cfd, "\n", 1))
 					return -1;
 			}
 	//		continue;

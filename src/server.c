@@ -178,20 +178,22 @@ static void sigchld_handler(int sig)
 	check_for_exiting_children();
 }
 
-extern int setup_signals(int oldmax_children, int max_children)
+int setup_signals(int oldmax_children, int max_children, int oldmax_status_children, int max_status_children)
 {
 	// Ignore SIGPIPE - we are careful with read and write return values.
 	int p=0;
+	int total_max_children=max_children+max_status_children;
+	int total_oldmax_children=oldmax_children+oldmax_status_children;
 	signal(SIGPIPE, SIG_IGN);
 	// Get rid of defunct children.
 	if(!(chlds=(struct chldstat *)
-		realloc(chlds, sizeof(struct chldstat)*(max_children+1))))
+		realloc(chlds, sizeof(struct chldstat)*(total_max_children+1))))
 	{
 		logp("out of memory");
 		return -1;
 	}
-	if((p=oldmax_children-1)<0) p=0;
-	for(; p<max_children+1; p++)
+	if((p=total_oldmax_children-1)<0) p=0;
+	for(; p<total_max_children+1; p++)
 	{
 		chlds[p].pid=-1;
 		chlds[p].rfd=-1;
@@ -203,7 +205,7 @@ extern int setup_signals(int oldmax_children, int max_children)
 	// There is one extra entry in the list, as an 
 	// end marker so that sigchld_handler does not fall
 	// off the end of the array. Mark this one with pid=-2.
-	chlds[max_children].pid=-2;
+	chlds[total_max_children].pid=-2;
 
 	setup_signal(SIGCHLD, sigchld_handler);
 	//setup_signal(SIGABRT, sighandler);
@@ -1379,12 +1381,41 @@ static int process_incoming_client(int rfd, struct config *conf, SSL_CTX *ctx, c
 	  int pipe_rfd[2];
 	  int pipe_wfd[2];
 	  pid_t childpid;
+	  int c_count=0;
+	  int sc_count=0;
+	  int total_max_children=conf->max_children+conf->max_status_children;
 
-	  // Find a spare slot in our pid list for the child.
-	  for(p=0; p<conf->max_children; p++) if(chlds[p].pid<0) break;
-	  if(p==conf->max_children)
+	  /* Need to count status children separately from normal children. */
+	  for(p=0; p<total_max_children; p++)
+	  {
+		if(chlds[p].pid>=0)
+		{
+			if(chlds[p].status_server) sc_count++;
+			else c_count++;
+		}
+	  }
+
+	  if(!is_status_server && c_count>=conf->max_children)
 	  {
 		logp("Too many child processes. Closing new connection.\n");
+		close_fd(&cfd);
+		return 0;
+	  }
+	  if(is_status_server && sc_count>=conf->max_status_children)
+	  {
+		logp("Too many status child processes. Closing new connection.\n");
+		close_fd(&cfd);
+		return 0;
+	  }
+
+	  // Find a spare slot in our pid list for the child.
+	  for(p=0; p<total_max_children; p++)
+	  {
+		if(chlds[p].pid<0) break;
+	  }
+	  if(p>=total_max_children)
+	  {
+		logp("Too many total child processes. Closing new connection.\n");
 		close_fd(&cfd);
 		return 0;
 	  }
@@ -1770,7 +1801,9 @@ int server(struct config *conf, const char *configfile, char **logfile)
 			oldstatusport=conf->status_port?
 				strdup(conf->status_port):NULL;
 			if(reload(conf, configfile, logfile,
-				0 /* not first time */, conf->max_children))
+				0 /* not first time */,
+				conf->max_children,
+				conf->max_status_children))
 					ret=1;
 		}
 		hupreload=0;

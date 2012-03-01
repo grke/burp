@@ -232,6 +232,9 @@ Path to Diffie-Hellman parameter file. To generate one with openssl, use a comma
 \fBmax_children=[number]\fR
 Defines the number of child processes to fork (the number of clients that can simultaneously connect. The default is 5.
 .TP
+\fBmax_status_children=[number]\fR
+Defines the number of status child processes to fork (the number of status clients that can simultaneously connect. The default is 5.
+.TP
 \fBmax_storage_subdirs=[number]\fR
 Defines the number of subdirectories in the data storage areas. The maximum number of subdirectories that ext3 allows is 32000. If you do not set this option, it defaults to 30000.
 .TP

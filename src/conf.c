@@ -75,6 +75,7 @@ void init_config(struct config *conf)
 	conf->ssl_peer_cn=NULL;
 	conf->encryption_password=NULL;
 	conf->max_children=0;
+	conf->max_status_children=0;
 	// ext3 maximum number of subdirs is 32000, so leave a little room.
 	conf->max_storage_subdirs=30000;
 	conf->librsync=1;
@@ -542,6 +543,8 @@ static int load_config_ints(struct config *conf, const char *field, const char *
 		&(conf->network_timeout));
 	get_conf_val_int(field, value, "max_children",
 		&(conf->max_children));
+	get_conf_val_int(field, value, "max_status_children",
+		&(conf->max_status_children));
 	get_conf_val_int(field, value, "max_storage_subdirs",
 		&(conf->max_storage_subdirs));
 	get_conf_val_int(field, value, "overwrite",
@@ -866,12 +869,19 @@ static int server_conf_checks(struct config *conf, const char *path, int *r)
 		logp("%s: max_children unset - using 5\n", path);
 		conf->max_children=5;
 	}
+	if(!conf->max_status_children)
+	{
+		logp("%s: max_status_children unset - using 5\n", path);
+		conf->max_status_children=5;
+	}
 	if(!conf->kpcount)
 		conf_problem(path, "keep unset", r);
 	if(conf->max_hardlinks<2)
 		conf_problem(path, "max_hardlinks too low", r);
 	if(conf->max_children<=0)
 		conf_problem(path, "max_children too low", r);
+	if(conf->max_status_children<=0)
+		conf_problem(path, "max_status_children too low", r);
 	if(conf->max_storage_subdirs<=1000)
 		conf_problem(path, "max_storage_subdirs too low", r);
 	return 0;

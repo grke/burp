@@ -69,7 +69,7 @@ static void usage_client(void)
 #endif
 }
 
-int reload(struct config *conf, const char *configfile, char **logfile, bool firsttime, int oldmax_children)
+int reload(struct config *conf, const char *configfile, char **logfile, bool firsttime, int oldmax_children, int oldmax_status_children)
 {
 	if(!firsttime) logp("Reloading config\n");
 	// If logfile is defined, use it
@@ -85,7 +85,8 @@ int reload(struct config *conf, const char *configfile, char **logfile, bool fir
 
 #ifndef HAVE_WIN32
 	if(conf->mode==MODE_SERVER)
-		setup_signals(oldmax_children, conf->max_children);
+		setup_signals(oldmax_children, conf->max_children,
+			oldmax_status_children, conf->max_status_children);
 #endif
 
 	// Do not try to change user or group after the first time.
@@ -224,7 +225,9 @@ int main (int argc, char *argv[])
 	}
 
 	if(reload(&conf, configfile, &logfile,
-	  1 /* first time */, 0 /* no old maxchildren setting */)) return 1;
+	  1 /* first time */,
+	  0 /* no oldmax_children setting */,
+	  0 /* no oldmax_status_children setting */)) return 1;
 
 	if((act==ACTION_RESTORE || act==ACTION_VERIFY) && !backup)
 	{

@@ -32,6 +32,7 @@ struct config
 	char *clientconfdir;
 	char *ssl_dhfile;
 	int max_children;
+	int max_status_children;
 	char *client_lockdir;
 	mode_t umask;
 	int max_hardlinks;

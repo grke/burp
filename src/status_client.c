@@ -579,6 +579,7 @@ static void sighandler(int sig)
 	if(actg==ACTION_STATUS) endwin();
 #endif
         logp("got signal: %d\n", sig);
+	if(sig==SIGPIPE) logp("Server may have too many active status clients.\n");
         logp("exiting\n");
         exit(1);
 }

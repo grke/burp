@@ -30,7 +30,8 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *p1cn
    char attribs[MAXSTRING];
 
    if(!file_is_included(conf->incexcdir, conf->iecount,
-	conf->excext, conf->excount, ff->fname)) return 0;
+	conf->incext, conf->incount,
+	conf->excext, conf->excount, ff->fname, top_level)) return 0;
 #ifdef HAVE_WIN32
 // Useful Windows attributes debug
 /*

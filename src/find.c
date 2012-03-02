@@ -170,29 +170,50 @@ static bool no_dump(FF_PKT *ff_pkt)
    return false;                      /* do backup */
 }
 
-static int
-myalphasort (const struct dirent **a, const struct dirent **b)
+static int myalphasort (const struct dirent **a, const struct dirent **b)
 {
-  return pathcmp ((*a)->d_name, (*b)->d_name);
+	return pathcmp ((*a)->d_name, (*b)->d_name);
 }
 
-int file_is_included(struct strlist **ielist, int iecount, struct strlist **excext, int excount, const char *fname)
+/* Return 1 to include the file, 0 to exclude it. */
+static int in_include_ext(struct strlist **incext, int incount, const char *fname)
+{
+	int i=0;
+	const char *cp=NULL;
+	// If not doing include_ext, let the file get backed up. 
+	if(!incount) return 1;
+	// If file has no extension, it cannot be included.
+	if(!(cp=strrchr(fname, '.'))) return 0;
+	for(i=0; i<incount; i++)
+		if(!strcasecmp(incext[i]->path, cp+1))
+			return 1;
+	return 0;
+}
+
+static int in_exclude_ext(struct strlist **excext, int excount, const char *fname)
+{
+	int i=0;
+	const char *cp=NULL;
+	// If not doing exclude_ext, let the file get backed up.
+	if(!excount) return 0;
+	// If file has no extension, it is included.
+	if(!(cp=strrchr(fname, '.'))) return 0;
+	for(i=0; i<excount; i++)
+		if(!strcasecmp(excext[i]->path, cp+1))
+			return 1;
+	return 0;
+}
+
+// When recursing into directories, do not want to check the include_ext list.
+static int file_is_included_no_incext(struct strlist **ielist, int iecount, struct strlist **excext, int excount, const char *fname)
 {
 	int i=0;
 	int ret=0;
 	int longest=0;
 	int matching=0;
 	int best=-1;
-	const char *cp=NULL;
-	//logp("in is_inc: %s\n", fname);
 
-	// Check excluded extension list.
-	if(excount && (cp=strrchr(fname, '.')))
-	{
-		cp++;
-		for(i=0; i<excount; i++)
-			if(!strcasecmp(excext[i]->path, cp)) return 0;
-	}
+	if(in_exclude_ext(excext, excount, fname)) return 0;
 
 	// Check include/exclude directories.
 	for(i=0; i<iecount; i++)
@@ -211,6 +232,23 @@ int file_is_included(struct strlist **ielist, int iecount, struct strlist **exce
 
 	//logp("return: %d\n", ret);
 	return ret;
+}
+
+int file_is_included(struct strlist **ielist, int iecount, struct strlist **incexc, int incount, struct strlist **excext, int excount, const char *fname, bool top_level)
+{
+	// Always save the top level directory.
+	// This will help in the simulation of browsing backups because it
+	// will mean that there is always a directory before any files:
+	// d /home/graham
+	// f /home/graham/somefile.txt
+	// This means that we can use the stats of the directory (/home/graham
+	// in this example) as the stats of the parent directories (/home,
+	// for example). Trust me on this.
+	if(!top_level
+	  && !in_include_ext(incexc, incount, fname)) return 0;
+
+	return file_is_included_no_incext(ielist, iecount,
+		excext, excount, fname);
 }
 
 static int fs_change_is_allowed(struct config *conf, const char *fname)
@@ -598,7 +636,7 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 		for(i=0; i<strlen(nl[m]->d_name); i++) *q++=*p++;
 		*q=0;
 
-		if(file_is_included(conf->incexcdir, conf->iecount,
+		if(file_is_included_no_incext(conf->incexcdir, conf->iecount,
 			conf->excext, conf->excount, link))
 		{
 			rtn_stat=find_files(ff_pkt,

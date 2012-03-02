@@ -14,8 +14,9 @@ static void init_incexcs(struct config *conf)
 	conf->incexcdir=NULL; conf->iecount=0;
 	conf->fschgdir=NULL; conf->fscount=0;
 	conf->nobackup=NULL; conf->nbcount=0;
-	conf->excext=NULL; conf->excount=0;
-	conf->excfs=NULL; conf->exfscount=0;
+	conf->incext=NULL; conf->incount=0; // include extensions
+	conf->excext=NULL; conf->excount=0; // exclude extensions
+	conf->excfs=NULL; conf->exfscount=0; // exclude filesystems
 	conf->fifos=NULL; conf->ffcount=0;
 	/* stuff to do with restore */
 	conf->overwrite=0;
@@ -33,8 +34,9 @@ static void free_incexcs(struct config *conf)
 	strlists_free(conf->incexcdir, conf->iecount);
 	strlists_free(conf->fschgdir, conf->fscount);
 	strlists_free(conf->nobackup, conf->nbcount);
-	strlists_free(conf->excext, conf->excount);
-	strlists_free(conf->excfs, conf->exfscount);
+	strlists_free(conf->incext, conf->incount); // include extensions
+	strlists_free(conf->excext, conf->excount); // exclude extensions
+	strlists_free(conf->excfs, conf->exfscount); // exclude filesystems
 	strlists_free(conf->fifos, conf->ffcount);
 	if(conf->backup) free(conf->backup);
 	if(conf->restoreprefix) free(conf->restoreprefix);
@@ -498,8 +500,9 @@ struct llists
 	struct strlist **fslist;
 	struct strlist **nblist;
 	struct strlist **fflist;
-	struct strlist **exlist;
-	struct strlist **exfslist;
+	struct strlist **inlist; // include extensions
+	struct strlist **exlist; // exclude extensions
+	struct strlist **exfslist; // exclude filesystems
 	struct strlist **talist;
 	struct strlist **nslist;
 	struct strlist **nflist;
@@ -628,6 +631,8 @@ static int load_config_strings(struct config *conf, const char *field, const cha
 		NULL, &(conf->nbcount), &(l->nblist), 0)) return -1;
 	if(get_conf_val_args(field, value, "read_fifo", NULL,
 		NULL, &(conf->ffcount), &(l->fflist), 0)) return -1;
+	if(get_conf_val_args(field, value, "include_ext", NULL,
+		NULL, &(conf->incount), &(l->inlist), 0)) return -1;
 	if(get_conf_val_args(field, value, "exclude_ext", NULL,
 		NULL, &(conf->excount), &(l->exlist), 0)) return -1;
 	if(get_conf_val_args(field, value, "exclude_fs", NULL,
@@ -956,7 +961,11 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 		}
 	}
 
+	// include extensions
+	do_strlist_sort(l->inlist, conf->incount, &(conf->incext));
+	// exclude extensions
 	do_strlist_sort(l->exlist, conf->excount, &(conf->excext));
+	// exclude filesystems
 	do_strlist_sort(l->exfslist, conf->exfscount, &(conf->excfs));
 	do_strlist_sort(l->fflist, conf->ffcount, &(conf->fifos));
 	do_strlist_sort(l->fslist, conf->fscount, &(conf->fschgdir));

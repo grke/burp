@@ -257,6 +257,28 @@ include_on()
 	echo "include = $includedir" >> $clientconf
 }
 
+include_ext_off()
+{
+	sed_rep 's/^include_ext = c//g' $clientconf
+}
+
+include_ext_on()
+{
+	include_ext_off
+	echo "include_ext = c" >> $clientconf
+}
+
+exclude_ext_off()
+{
+	sed_rep 's/^exclude_ext = c//g' $clientconf
+}
+
+exclude_ext_on()
+{
+	exclude_ext_off
+	echo "exclude_ext = c" >> $clientconf
+}
+
 normal_settings()
 {
 	compression_on
@@ -265,6 +287,8 @@ normal_settings()
 	min_file_size_off
 	exclude_off
 	include_on
+	include_ext_off
+	exclude_ext_off
 }
 
 build_and_install
@@ -441,9 +465,33 @@ exclude_on
 run_backup
 run_verify all
 run_restore 10 "$restoredir"10
-[ -d "$restoredir"10/$excludedir ] && fail "$excludedir should not have been restored!
-[ ! -d "$restoredir"10/$includedir ] && fail "$includedir should have been restored!
+[ -d "$restoredir"10/$excludedir ] && fail "$excludedir should not have been restored!"
+[ ! -d "$restoredir"10/$includedir ] && fail "$includedir should have been restored!"
 end_test 10
+
+# ----- Test 11 -----
+start_test 11 "Exclude extension, backup/restore comparison"
+normal_settings
+exclude_ext_on
+run_backup
+run_verify all
+run_restore 11 "$restoredir"11
+f=$(find "$restoredir"11 -type f -name '*.c')
+[ -n "$f" ] && fail "$restoredir11 should not contain any '.c' files"
+end_test 11
+
+# ----- Test 12 -----
+start_test 12 "Include extension, backup/restore comparison"
+normal_settings
+include_ext_on
+run_backup
+run_verify all
+run_restore 12 "$restoredir"12
+f=$(find "$restoredir"12 -type f -name '*.h')
+[ -n "$f" ] && fail "$restoredir12 should not contain any '.h' files"
+f=$(find "$restoredir"12 -type f -name '*.c')
+[ -z "$f" ] && fail "$restoredir12 should contain '.c' files"
+end_test 12
 
 echo
 echo "All tests succeeded"

@@ -57,6 +57,8 @@ static int do_sends(struct config *conf)
 		conf->fscount, conf->fschgdir)
 	  || send_incexc_from_strlist("nobackup", "nobackup",
 		conf->nbcount, conf->nobackup)
+	  || send_incexc_from_strlist("include_ext", "include_ext",
+		conf->incount, conf->incext)
 	  || send_incexc_from_strlist("exclude_ext", "exclude_ext",
 		conf->excount, conf->excext)
 	  || send_incexc_from_strlist("exclude_fs", "exclude_fs",

@@ -478,7 +478,9 @@ static int incexc_matches(const char *fullrealwork, const char *incexc)
 			return -1;
 	if(!(fp=open_file(old_incexc_path, "rb")))
 	{
-		ret=-1;
+		// Assume that no incexc file could be found because the client
+		// was on an old version. Assume resume is OK and return 1.
+		ret=1;
 		goto end;
 	}
 	inc=incexc;

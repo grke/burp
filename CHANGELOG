@@ -7,6 +7,8 @@
   * Add ability to specificy child processes separately to status child process
     with new max_status_children option.
   * Status monitor - make keypresses more responsive.
+  * Fix bug where old clients didn't leave an incexc file on the server meant
+    that resume would not start.
 
 2012-02-27 Changes in burp-1.3.1:
   * EFS support on Windows.

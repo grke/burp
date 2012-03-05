@@ -12,15 +12,18 @@
 #include "list_server.h"
 #include "current_backups_server.h"
 
-static int check_browsedir(const char *browsedir, char **path, size_t bdlen, char **lastpath)
+int check_browsedir(const char *browsedir, char **path, size_t bdlen, char **lastpath)
 {
 	char *cp=NULL;
 	char *copy=NULL;
-	if(strncmp(browsedir, *path, bdlen)) return 0;
+//	if(strncmp(browsedir, *path, bdlen)
+//	  || (bdlen && (*path)[bdlen]!='\0' && (*path)[bdlen]!='/'))
+	if(strncmp(browsedir, *path, bdlen))
+		return 0;
 	if((*path)[bdlen+1]=='\0') return 0;
 
-/* lots of messing around related to whether browsedir was '', '/', or something
-   else */
+	/* Lots of messing around related to whether browsedir was '', '/', or
+   	   something else. */
 	if(*browsedir)
 	{
 		if(!strcmp(browsedir, "/"))
@@ -44,6 +47,9 @@ static int check_browsedir(const char *browsedir, char **path, size_t bdlen, cha
 			return -1;
 		}
 		if(*copy=='/') *(copy+1)='\0';
+		// Messing around for Windows.
+		else if(strlen(copy)>2 && copy[1]==':' && copy[2]=='/')
+			copy[2]='\0';
 	}
 	if(*lastpath && !strcmp(*lastpath, copy))
 	{
@@ -68,7 +74,7 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 	int ars=0;
 	int ret=0;
 	int quit=0;
-	gzFile fp=NULL;
+	gzFile zp=NULL;
 	struct sbuf mb;
 	char *manifest=NULL;
 	size_t bdlen=0;
@@ -82,7 +88,7 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 		log_and_send("out of memory");
 		return -1;
 	}
-	if(!(fp=gzopen_file(manifest, "rb")))
+	if(!(zp=gzopen_file(manifest, "rb")))
 	{
 		log_and_send("could not open manifest");
 		free(manifest);
@@ -99,14 +105,14 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 		// Need to parse while sending, to take note of the regex.
 
 		free_sbuf(&mb);
-		if((ars=sbuf_fill(NULL, fp, &mb, cntr)))
+		if((ars=sbuf_fill(NULL, zp, &mb, cntr)))
 		{
 			if(ars<0) ret=-1;
 			// ars==1 means it ended ok.
 			break;
 		}
 
-		if(mb.path[mb.plen]=='\n') mb.path[mb.plen]='\0';
+		//if(mb.path[mb.plen]=='\n') mb.path[mb.plen]='\0';
 		write_status(client, STATUS_LISTING, mb.path, p1cntr, cntr);
 
 		if(browsedir)
@@ -136,7 +142,7 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 			{ quit++; ret=-1; }
 		}
 	}
-	gzclose_fp(&fp);
+	gzclose_fp(&zp);
 	free_sbuf(&mb);
 	if(lastpath) free(lastpath);
 	return ret;

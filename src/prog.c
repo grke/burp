@@ -276,7 +276,7 @@ int main (int argc, char *argv[])
 		{
 			// We are running on the server machine, being a client
 			// of the burp server, getting status information.
-			ret=status_client(&conf, act, sclient);
+			ret=status_client_ncurses(&conf, act, sclient);
 		}
 		else
 			ret=server(&conf, configfile, &logfile);

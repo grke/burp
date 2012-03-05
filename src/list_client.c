@@ -68,7 +68,7 @@ static char *encode_time(utime_t utime, char *buf)
    return buf+n;
 }
 
-static void ls_output(char *buf, const char *fname, struct stat *statp)
+void ls_output(char *buf, const char *fname, struct stat *statp)
 {
 	char *p;
 	const char *f;
@@ -78,7 +78,7 @@ static void ls_output(char *buf, const char *fname, struct stat *statp)
 	p = encode_mode(statp->st_mode, buf);
 	n = sprintf(p, " %2d ", (uint32_t)statp->st_nlink);
 	p += n;
-	n = sprintf(p, "%4d %4d",
+	n = sprintf(p, "%5d %5d",
 		(uint32_t)statp->st_uid,
 		(uint32_t)statp->st_gid);
 	p += n;

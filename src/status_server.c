@@ -5,8 +5,11 @@
 #include "handy.h"
 #include "asyncio.h"
 #include "counter.h"
+#include "sbuf.h"
 #include "current_backups_server.h"
 #include "status_server.h"
+#include "list_client.h"
+#include "list_server.h"
 
 struct cstat
 {
@@ -658,7 +661,51 @@ static int list_backup_file_name(const char *dir, const char *file)
 	return 0;
 }
 
-static int list_backup_file_contents(int cfd, const char *dir, const char *file)
+static int browse_manifest(int cfd, gzFile zp, const char *browse)
+{
+	int ars=0;
+	int ret=0;
+	char ls[1024]="";
+	struct sbuf sb;
+	struct cntr cntr;
+	size_t blen=0;
+	char *lastpath=NULL;
+	reset_filecounter(&cntr);
+	init_sbuf(&sb);
+	if(browse) blen=strlen(browse);
+	while(1)
+	{
+		int r;
+		free_sbuf(&sb);
+		if((ars=sbuf_fill(NULL, zp, &sb, &cntr)))
+		{
+			if(ars<0) ret=-1;
+			// ars==1 means it ended ok.
+			break;
+		}
+		if((r=check_browsedir(browse, &sb.path, blen, &lastpath))<0)
+		{
+			ret=-1;
+			break;
+		}
+		if(!r) continue;
+
+		ls_output(ls, sb.path, &(sb.statp));
+
+printf("%s\n", ls);
+		if(send_data_to_client(cfd, ls, strlen(ls))
+		  || send_data_to_client(cfd, "\n", 1))
+		{
+			ret=-1;
+			break;
+		}
+	}
+	free_sbuf(&sb);
+	if(lastpath) free(lastpath);
+	return ret;
+}
+
+static int list_backup_file_contents(int cfd, const char *dir, const char *file, const char *browse)
 {
 	int ret=0;
 	size_t l=0;
@@ -672,14 +719,34 @@ static int list_backup_file_contents(int cfd, const char *dir, const char *file)
 		free(path);
 		return -1;
 	}
-	while((l=gzread(zp, buf, sizeof(buf)))>0)
+
+	if(send_data_to_client(cfd, "-list begin-\n", strlen("-list begin-\n")))
 	{
-		if(send_data_to_client(cfd, buf, l))
+		ret=-1;
+		goto end;
+	}
+
+	if(!strcmp(file, "manifest.gz"))
+	{
+		ret=browse_manifest(cfd, zp, browse?:"");
+	}
+	else
+	{
+		while((l=gzread(zp, buf, sizeof(buf)))>0)
 		{
-			ret=-1;
-			break;
+			if(send_data_to_client(cfd, buf, l))
+			{
+				ret=-1;
+				break;
+			}
 		}
 	}
+	if(send_data_to_client(cfd, "-list end-\n", strlen("-list end-\n")))
+	{
+		ret=-1;
+		goto end;
+	}
+end:
 	gzclose_fp(&zp);
 	return ret;
 }
@@ -726,7 +793,8 @@ static int list_backup_file(int cfd, struct cstat *cli, unsigned long bno, const
 		if(i<a)
 		{
 			printf("found: %s\n", arr[i].path);
-			list_backup_file_contents(cfd, arr[i].path, file);
+			list_backup_file_contents(cfd, arr[i].path,
+				file, browse);
 		}
 		free_current_backups(&arr, a);
 	}
@@ -766,6 +834,19 @@ static int parse_rbuf(const char *rbuf, int cfd, struct cstat **clist, int clen)
 	backup=get_str(&cp, "b:", 0);
 	file  =get_str(&cp, "f:", 0);
 	browse=get_str(&cp, "p:", 1);
+	if(browse)
+	{
+		if(file) free(file);
+		if(!(file=strdup("manifest.gz")))
+		{
+			logp("out of memory\n");
+			ret=-1;
+			goto end;
+		}
+		// Strip trailing slashes.
+		if(strlen(browse)>1 && browse[strlen(browse)-1]=='/')
+			browse[strlen(browse)-1]='\0';
+	}
 
 	if(client)
 	{
@@ -794,7 +875,7 @@ static int parse_rbuf(const char *rbuf, int cfd, struct cstat **clist, int clen)
 	{
 		if(bno)
 		{
-			if(file)
+			if(file || browse)
 			{
 			  printf("list file %s of backup %lu of client '%s'\n",
 			    file, bno, client);
@@ -932,6 +1013,7 @@ int status_server(int *cfd, struct config *conf)
 		if(FD_ISSET(*cfd, &fsr))
 		{
 			char *cp=NULL;
+			ssize_t total=0;
 			//logp("status server stuff to read from client\n");
 			while((l=read(*cfd, buf, sizeof(buf)))>0)
 			{
@@ -941,6 +1023,17 @@ int status_server(int *cfd, struct config *conf)
 				rbuf=(char *)realloc(rbuf, r+l+1);
 				if(!r) *rbuf='\0';
 				strcat(rbuf+r, buf);
+				total+=l;
+			}
+			if(!total)
+			{
+				// client went away?
+				if(rbuf)
+				{
+					free(rbuf);
+					rbuf=NULL;
+				}
+				break;
 			}
 			// If we did not get a full read, do
 			// not worry, just throw it away.

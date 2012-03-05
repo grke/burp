@@ -60,7 +60,7 @@ SVRSRCS =	acl.c \
 		sbuf.c \
 		server.c \
 		ssl.c \
-		status_client.c \
+		status_client_ncurses.c \
 		status_server.c \
 		strlist.c \
 		xattr.c \

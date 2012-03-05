@@ -219,7 +219,7 @@ static void show_all_backups(char *toks[], int t, int *x, int col)
 }
 
 /* for the counters */
-void to_msg(char msg[], size_t s, const char *fmt, ...)
+static void to_msg(char msg[], size_t s, const char *fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
@@ -614,7 +614,7 @@ static void setup_signals(void)
 	signal(SIGPIPE, &sighandler);
 }
 
-int status_client(struct config *conf, enum action act, const char *sclient)
+int status_client_ncurses(struct config *conf, enum action act, const char *sclient)
 {
 	int fd=0;
         int ret=0;

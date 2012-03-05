@@ -1255,13 +1255,21 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 		ret=-1;
 		goto finish;
 	}
+
 	// Now that the client conf is loaded, we might want to chuser or
 	// chgrp.
-	if(chuser_and_or_chgrp(cconf.user, cconf.group))
+	// The main process could have already done this, so we don't want
+	// to try doing it again if cconf has the same values, because it
+	// will fail.
+	if(  (!conf.user  || (cconf.user && strcmp(conf.user, cconf.user)))
+	  || (!conf.group || (cconf.group && strcmp(conf.group, cconf.group))))
 	{
-		log_and_send("chuser_and_or_chgrp failed on server");
-		ret=-1;
-		goto finish;
+		if(chuser_and_or_chgrp(cconf.user, cconf.group))
+		{
+			log_and_send("chuser_and_or_chgrp failed on server");
+			ret=-1;
+			goto finish;
+		}
 	}
 	if(ssl_check_cert(ssl, &cconf))
 	{

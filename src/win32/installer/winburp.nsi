@@ -328,6 +328,10 @@ endssl_cert_ca:
 
   FileClose $R1
 
+  ${If} $ConfigPoll != 0
+    nsExec::ExecToLog 'schtasks /CREATE /RU SYSTEM /TN "burp cron" /TR "\"C:\Program Files\Burp\bin\burp.exe\" -a t" /SC MINUTE /MO $ConfigPoll'
+  ${EndIf}
+
 end:
   DetailPrint "$INSTDIR\burp.conf already exists. Not overwriting."
 
@@ -350,10 +354,6 @@ Section "-Finish"
   ${If} $OsIsNT = 1
     nsExec::ExecToLog 'cmd.exe /C echo Y|cacls "$INSTDIR" /T /G SYSTEM:F Administrators:F'
     nsExec::ExecToLog 'cmd.exe /C echo Y|cacls "$APPDATA\Burp" /T /G SYSTEM:F Administrators:F'
-  ${EndIf}
-
-  ${If} $ConfigPoll != 0
-    nsExec::ExecToLog 'schtasks /CREATE /RU SYSTEM /TN "burp cron" /TR "\"C:\Program Files\Burp\bin\burp.exe\" -a t" /SC MINUTE /MO $ConfigPoll'
   ${EndIf}
 
   ; Write the uninstall keys for Windows & create Start Menu entry

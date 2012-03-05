@@ -642,7 +642,7 @@ static cstat *get_cstat_by_client_name(struct cstat **clist, int clen, const cha
 	return NULL;
 }
 
-static int list_backup_file(const char *dir, const char *file)
+static int list_backup_file_name(const char *dir, const char *file)
 {
 	char *path=NULL;
 	struct stat statp;
@@ -700,17 +700,17 @@ static int list_backup_dir(struct cstat *cli, unsigned long bno)
 		if(i<a)
 		{
 			printf("found: %s\n", arr[i].path);
-			list_backup_file(arr[i].path, "manifest.gz");
-			list_backup_file(arr[i].path, "log.gz");
-			list_backup_file(arr[i].path, "restorelog.gz");
-			list_backup_file(arr[i].path, "verifylog.gz");
+			list_backup_file_name(arr[i].path, "manifest.gz");
+			list_backup_file_name(arr[i].path, "log.gz");
+			list_backup_file_name(arr[i].path, "restorelog.gz");
+			list_backup_file_name(arr[i].path, "verifylog.gz");
 		}
 		free_current_backups(&arr, a);
 	}
 	return 0;
 }
 
-static int list_backup_file(int cfd, struct cstat *cli, unsigned long bno, const char *file)
+static int list_backup_file(int cfd, struct cstat *cli, unsigned long bno, const char *file, const char *browse)
 {
         int a=0;
         struct bu *arr=NULL;
@@ -733,34 +733,39 @@ static int list_backup_file(int cfd, struct cstat *cli, unsigned long bno, const
 	return 0;
 }
 
-static char *get_str(const char **buf, const char *pre)
+static char *get_str(const char **buf, const char *pre, int last)
 {
 	size_t len=0;
 	char *cp=NULL;
 	char *copy=NULL;
+	char *ret=NULL;
 	if(!buf || !*buf) return NULL;
 	len=strlen(pre);
 	if(strncmp(*buf, pre, len)) return NULL;
-	if(!(copy=strdup(*buf)+len)) return NULL;
-	if((cp=strchr(copy, ':'))) *cp='\0';
+	if(!(copy=strdup((*buf)+len))) return NULL;
+	if(!last && (cp=strchr(copy, ':'))) *cp='\0';
 	*buf+=len+strlen(copy)+1;
-	return copy;
+	ret=strdup(copy);
+	free(copy);
+	return ret;
 }
 
 static int parse_rbuf(const char *rbuf, int cfd, struct cstat **clist, int clen)
 {
 	int ret=0;
 	const char *cp=NULL;
+	char *client=NULL;
 	char *backup=NULL;
 	char *file=NULL;
-	char *client=NULL;
+	char *browse=NULL;
 	unsigned long bno=0;
 	struct cstat *cli=NULL;
 
 	cp=rbuf;
-	file  =get_str(&cp, "f:");
-	backup=get_str(&cp, "b:");
-	client=get_str(&cp, "c:");
+	client=get_str(&cp, "c:", 0);
+	backup=get_str(&cp, "b:", 0);
+	file  =get_str(&cp, "f:", 0);
+	browse=get_str(&cp, "p:", 1);
 
 	if(client)
 	{
@@ -774,11 +779,11 @@ static int parse_rbuf(const char *rbuf, int cfd, struct cstat **clist, int clen)
 	}
 	if(file)
 	{
-		if(strchr(file, '/')) // Stop any funny business.
-		{
-			free(file);
-			file=NULL;
-		}
+		if(strcmp(file, "manifest.gz")
+		  && strcmp(file, "log.gz")
+		  && strcmp(file, "restorelog.gz")
+		  && strcmp(file, "verifylog.gz"))
+			goto end;
 	}
 /*
 	printf("client: %s\n", client?:"");
@@ -792,8 +797,9 @@ static int parse_rbuf(const char *rbuf, int cfd, struct cstat **clist, int clen)
 			if(file)
 			{
 			  printf("list file %s of backup %lu of client '%s'\n",
-				file, bno, client);
-				list_backup_file(cfd, cli, bno, file);
+			    file, bno, client);
+			  if(browse) printf("browse '%s'\n", browse);
+				list_backup_file(cfd, cli, bno, file, browse);
 			}
 			else
 			{
@@ -823,6 +829,10 @@ static int parse_rbuf(const char *rbuf, int cfd, struct cstat **clist, int clen)
 		}
 	}
 end:
+	if(client) free(client);
+	if(backup) free(backup);
+	if(file) free(file);
+	if(browse) free(browse);
 	return ret;
 }
 
@@ -934,7 +944,7 @@ int status_server(int *cfd, struct config *conf)
 			}
 			// If we did not get a full read, do
 			// not worry, just throw it away.
-			if((cp=strrchr(rbuf, '\n')))
+			if(rbuf && (cp=strrchr(rbuf, '\n')))
 			{
 				*cp=NULL;
 				// Also get rid of '\r'. I think telnet adds

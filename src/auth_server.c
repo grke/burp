@@ -43,6 +43,19 @@ static int check_client_and_password(struct config *conf, const char *client, co
 	if(set_client_global_config(conf, cconf)
 	  || load_config(cpath, cconf, FALSE))
 		return -1;
+	if(!cconf->ssl_peer_cn)
+	{
+		logp("ssl_peer_cn unset");
+		if(client)
+		{
+			logp("Falling back to using '%s'\n", client);
+			if(!(cconf->ssl_peer_cn=strdup(client)))
+			{
+				logp("out of memory\n");
+				return -1;
+			}
+		}
+	}
 
 	if(!cconf->password && !cconf->passwd)
 	{

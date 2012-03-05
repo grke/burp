@@ -11,6 +11,8 @@
     that resume would not start.
   * Add 'include_ext' option, which excludes all files unless their names end
     in the given extension.
+  * Fall back to using the client or server name if ssl_peer_cn is unset on the
+    server or client.
 
 2012-02-27 Changes in burp-1.3.1:
   * EFS support on Windows.

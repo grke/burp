@@ -905,7 +905,18 @@ static int client_conf_checks(struct config *conf, const char *path, int *r, int
 	if(!conf->ssl_cert_ca)
 		conf_problem(path, "ssl_cert_ca unset", r);
 	if(!conf->ssl_peer_cn)
-		conf_problem(path, "ssl_peer_cn unset", r);
+	{
+		logp("ssl_peer_cn unset\n");
+		if(conf->server)
+		{
+			logp("falling back to '%s'\n", conf->server);
+			if(!(conf->ssl_peer_cn=strdup(conf->server)))
+			{
+				logp("out of memory\n");
+				return -1;
+			}
+		}
+	}
 	if(!conf->lockfile)
 		conf_problem(path, "lockfile unset", r);
 	if(!have_include)
@@ -1080,10 +1091,11 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 	switch(conf->mode)
 	{
 		case MODE_SERVER:
-			server_conf_checks(conf, config_path, &r);
+			if(server_conf_checks(conf, config_path, &r)) r--;
 			break;
 		case MODE_CLIENT:
-			client_conf_checks(conf, config_path, &r, have_include);
+			if(client_conf_checks(conf,
+				config_path, &r, have_include)) r--;
 			break;
 		case MODE_UNSET:
 		default:

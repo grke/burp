@@ -661,7 +661,7 @@ end:
 	return ret;
 }
 
-static int get_lock_and_clean(const char *basedir, const char *lockbasedir, const char *lockfile, const char *current, const char *working, const char *currentdata, const char *finishing, bool cancel, bool *gotlock, struct config *cconf, const char *forward, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *manifest, const char *client, struct cntr *p1cntr, struct cntr *cntr, int *resume, const char *incexc)
+static int get_lock_and_clean(const char *basedir, const char *lockbasedir, const char *lockfile, const char *current, const char *working, const char *currentdata, const char *finishing, bool cancel, char **gotlock, struct config *cconf, const char *forward, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *manifest, const char *client, struct cntr *p1cntr, struct cntr *cntr, int *resume, const char *incexc)
 {
 	int ret=0;
 	char *copy=NULL;
@@ -696,7 +696,15 @@ static int get_lock_and_clean(const char *basedir, const char *lockbasedir, cons
 		}
 		ret=-1;
 	}
-	else *gotlock=TRUE;
+	else
+	{
+		if(*gotlock) free(*gotlock);
+		if(!(*gotlock=strdup(lockfile)))
+		{
+			logp("out of memory\n");
+			ret=-1;
+		}
+	}
 
 	if(!ret && check_for_rubble(basedir, current, working, currentdata,
 		finishing, cconf, phase1data, phase2data, unchangeddata,
@@ -727,7 +735,7 @@ static int reset_conf_val(const char *src, char **dest)
 	return 0;
 }
 
-static int child(struct config *conf, struct config *cconf, const char *client, const char *cversion, const char *incexc, int srestore, char cmd, char *buf, struct cntr *p1cntr, struct cntr *cntr)
+static int child(struct config *conf, struct config *cconf, const char *client, const char *cversion, const char *incexc, int srestore, char cmd, char *buf, char **gotlock, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ret=0;
 	char msg[256]="";
@@ -735,7 +743,6 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 	// Do not allow a single client to connect more than once
 	char *lockbasedir=NULL;
 	char *lockfile=NULL;
-	bool gotlock=FALSE;
 	// The previous backup
 	char *current=NULL;
 	// The one we are working on
@@ -780,7 +787,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 		int resume=0;
 		if(get_lock_and_clean(basedir, lockbasedir, lockfile, current,
 			working, currentdata,
-			finishing, TRUE, &gotlock, cconf,
+			finishing, TRUE, gotlock, cconf,
 			forward, phase1data, phase2data, unchangeddata,
 			manifest, client, p1cntr, cntr, &resume, incexc))
 				ret=-1;
@@ -879,7 +886,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 
 		if(get_lock_and_clean(basedir, lockbasedir, lockfile,
 			current, working,
-			currentdata, finishing, TRUE, &gotlock, cconf,
+			currentdata, finishing, TRUE, gotlock, cconf,
 			forward, phase1data, phase2data, unchangeddata,
 			manifest, client, p1cntr, cntr, &resume, incexc))
 				ret=-1;
@@ -904,7 +911,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 		int resume=0; // ignored
 		if(get_lock_and_clean(basedir, lockbasedir, lockfile,
 			current, working,
-			currentdata, finishing, FALSE, &gotlock, cconf,
+			currentdata, finishing, FALSE, gotlock, cconf,
 			forward, phase1data, phase2data, unchangeddata,
 			manifest, client, p1cntr, cntr, &resume, incexc))
 				ret=-1;
@@ -961,11 +968,7 @@ end:
 	if(phase2data) free(phase2data);
 	if(unchangeddata) free(unchangeddata);
 	if(lockbasedir) free(lockbasedir);
-	if(lockfile)
-	{
-		if(gotlock) unlink(lockfile);
-		free(lockfile);
-	}
+	if(lockfile) free(lockfile);
 	return ret;
 }
 
@@ -1206,6 +1209,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	char *client=NULL;
 	char *cversion=NULL;
 	int srestore=0;
+	char *gotlock=NULL;
 	struct config conf;
 	struct config cconf;
 
@@ -1311,7 +1315,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	}
 
 	if(!ret) ret=child(&conf, &cconf, client, cversion, incexc, srestore,
-		cmd, buf, &p1cntr, &cntr);
+		cmd, buf, &gotlock, &p1cntr, &cntr);
 
 	if((!ret || cconf.server_script_post_run_on_fail)
 	  && cconf.server_script_post
@@ -1332,6 +1336,11 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 
 finish:
 	*cfd=-1;
+	if(gotlock)
+	{
+		unlink(gotlock);
+		free(gotlock);
+	}
 	async_free(); // this closes cfd for us.
 	logp("exit child\n");
 	if(client) free(client);

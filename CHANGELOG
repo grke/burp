@@ -19,6 +19,7 @@
   * Windows installer: add comment about poll interval '0' means that the
     scheduled job isn't installed.
   * Windows installer: don't install the scheduled task when doing an upgrade.
+  * Unlock the client directory after server_script_post has run.
 
 2012-02-27 Changes in burp-1.3.1:
   * EFS support on Windows.

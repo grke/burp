@@ -775,7 +775,7 @@ int init_client_socket(const char *host, const char *port)
 		rfd=socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
 		if(rfd<0) continue;
 		if(connect(rfd, rp->ai_addr, rp->ai_addrlen) != -1) break;
-		close(rfd);
+		close_fd(&rfd);
 	}
 	freeaddrinfo(result);
 	if(!rp)

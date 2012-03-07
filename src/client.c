@@ -259,7 +259,7 @@ int client(struct config *conf, enum action act)
 		// incexc config.
 		if(!ret && !incexc && server_supports(feat, ":sincexc:"))
 		{
-			logp("Server wants to do a restore.");
+			logp("Server is setting includes/excludes.\n");
 			if(!(ret=incexc_recv_client(&incexc, conf, &p1cntr)))
 			{
 				if(incexc)

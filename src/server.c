@@ -1321,7 +1321,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	  && cconf.server_script_post
 	  && run_script(cconf.server_script_post,
 			cconf.server_script_post_arg,
-			cconf.sprecount,
+			cconf.spostcount,
 			"post",
 			buf?buf:"",
 			client,

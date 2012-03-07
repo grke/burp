@@ -444,6 +444,11 @@ static int send_data_to_client(int cfd, const char *data, size_t len)
 
 		if((wl=write(cfd, w, len))<=0)
 		{
+			if(errno==EPIPE)
+			{
+				ret=-1;
+				goto end;
+			}
 			if(errno!=EINTR)
 			{
 				logp("error writing in send_data_to_client(): %s\n", strerror(errno));
@@ -457,7 +462,7 @@ static int send_data_to_client(int cfd, const char *data, size_t len)
 			w+=wl;
 			len-=wl;
 		}
-//		printf("wrote: %d left: %d\n", wl, len);
+		//printf("wrote: %d left: %d\n", wl, len);
 	}
 end:
 	return ret;
@@ -651,9 +656,11 @@ static cstat *get_cstat_by_client_name(struct cstat **clist, int clen, const cha
 	return NULL;
 }
 
-static int list_backup_file_name(const char *dir, const char *file)
+static int list_backup_file_name(int cfd, const char *dir, const char *file)
 {
+	int ret=0;
 	char *path=NULL;
+	char msg[256]="";
 	struct stat statp;
 	if(!(path=prepend_s(dir, file, strlen(file))))
 		return -1;
@@ -662,9 +669,10 @@ static int list_backup_file_name(const char *dir, const char *file)
 		free(path);
 		return 0;
 	}
-	printf("%s\n", file);
+	snprintf(msg, sizeof(msg), "%s\n", file);
+	ret=send_data_to_client(cfd, msg, strlen(msg));
 	free(path);
-	return 0;
+	return ret;
 }
 
 static int browse_manifest(int cfd, gzFile zp, const char *browse)
@@ -698,7 +706,6 @@ static int browse_manifest(int cfd, gzFile zp, const char *browse)
 
 		ls_output(ls, sb.path, &(sb.statp));
 
-printf("%s\n", ls);
 		if(send_data_to_client(cfd, ls, strlen(ls))
 		  || send_data_to_client(cfd, "\n", 1))
 		{
@@ -757,9 +764,10 @@ end:
 	return ret;
 }
 
-static int list_backup_dir(struct cstat *cli, unsigned long bno)
+static int list_backup_dir(int cfd, struct cstat *cli, unsigned long bno)
 {
         int a=0;
+	int ret=0;
         struct bu *arr=NULL;
 	if(get_current_backups(cli->basedir, &arr, &a, 0))
 	{
@@ -772,15 +780,27 @@ static int list_backup_dir(struct cstat *cli, unsigned long bno)
 		for(i=0; i<a; i++) if(arr[i].index==bno) break;
 		if(i<a)
 		{
-			printf("found: %s\n", arr[i].path);
-			list_backup_file_name(arr[i].path, "manifest.gz");
-			list_backup_file_name(arr[i].path, "log.gz");
-			list_backup_file_name(arr[i].path, "restorelog.gz");
-			list_backup_file_name(arr[i].path, "verifylog.gz");
+			if(send_data_to_client(cfd, "-list begin-\n",
+				strlen("-list begin-\n")))
+			{
+				ret=-1;
+				goto end;
+			}
+			list_backup_file_name(cfd,arr[i].path, "manifest.gz");
+			list_backup_file_name(cfd,arr[i].path, "log.gz");
+			list_backup_file_name(cfd,arr[i].path, "restorelog.gz");
+			list_backup_file_name(cfd,arr[i].path, "verifylog.gz");
+			if(send_data_to_client(cfd, "-list end-\n",
+				strlen("-list end-\n")))
+			{
+				ret=-1;
+				goto end;
+			}
 		}
-		free_current_backups(&arr, a);
 	}
-	return 0;
+end:
+	if(a>0) free_current_backups(&arr, a);
+	return ret;
 }
 
 static int list_backup_file(int cfd, struct cstat *cli, unsigned long bno, const char *file, const char *browse)
@@ -893,7 +913,7 @@ static int parse_rbuf(const char *rbuf, int cfd, struct cstat **clist, int clen)
 				printf("list backup %lu of client '%s'\n",
 					bno, client);
 				printf("basedir: %s\n", cli->basedir);
-				list_backup_dir(cli, bno);
+				list_backup_dir(cfd, cli, bno);
 			}
 		}
 		else
@@ -914,6 +934,13 @@ static int parse_rbuf(const char *rbuf, int cfd, struct cstat **clist, int clen)
 			ret=-1;
 			goto end;
 		}
+	}
+
+	// Kludge - exit straight away if doing snapshot type stuff. 
+	if(backup || file || browse)
+	{
+		ret=-1;
+		goto end;
 	}
 end:
 	if(client) free(client);

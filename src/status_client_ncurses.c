@@ -581,11 +581,35 @@ static int show_rbuf(const char *rbuf, struct config *conf, int sel, char **clie
 	return 0;
 }
 
-static int request_status(int fd, const char *client)
+static int request_status(int fd, const char *client, struct config *conf)
 {
 	int l;
 	char buf[256]="";
-	if(client) snprintf(buf, sizeof(buf), "c:%s\n", client);
+	if(client)
+	{
+		if(conf->backup)
+		{
+			if(conf->browsedir)
+			{
+				snprintf(buf, sizeof(buf), "c:%s:b:%s:p:%s\n",
+					client, conf->backup, conf->browsedir);
+			}
+			else if(conf->browsefile)
+			{
+				snprintf(buf, sizeof(buf), "c:%s:b:%s:f:%s\n",
+					client, conf->backup, conf->browsefile);
+			}
+			else
+			{
+				snprintf(buf, sizeof(buf), "c:%s:b:%s\n",
+					client, conf->backup);
+			}
+		}
+		else
+		{
+			snprintf(buf, sizeof(buf), "c:%s\n", client);
+		}
+	}
 	else snprintf(buf, sizeof(buf), "\n");
 #ifdef DBFP
 fprintf(dbfp, "request: %s\n", buf); fflush(dbfp);
@@ -683,7 +707,7 @@ int status_client_ncurses(struct config *conf, enum action act, const char *scli
 		{
 			char *req=NULL;
 			if(details && client) req=client;
-			if(request_status(fd, req))
+			if(request_status(fd, req, conf))
 			{
 				ret=-1;
 				break;
@@ -820,13 +844,25 @@ int status_client_ncurses(struct config *conf, enum action act, const char *scli
 				strcat(rbuf+r, buf);
 			}
 
-			if(rbuf && !strcmp(rbuf, "\n")
-			  && actg==ACTION_STATUS_SNAPSHOT)
+			if(actg==ACTION_STATUS_SNAPSHOT)
 			{
-				// This happens when there are no backup
-				// clients.
-				break;
+				if(rbuf)
+				{
+					if(!strcmp(rbuf, "\n"))
+					{
+						// This happens when there are
+						// no backup clients.
+						break;
+					}
+					if(strstr(rbuf, "\n-list end-\n"))
+					{
+						printf("%s", rbuf);
+						break;
+					}
+				}
 			}
+
+			//if(rbuf) printf("rbuf: %s\n", rbuf);
 /*
 			if(l<0)
 			{

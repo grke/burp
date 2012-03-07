@@ -142,6 +142,7 @@ void init_config(struct config *conf)
 	conf->sscount=0;
 
 	conf->dedup_group=NULL;
+	conf->browsefile=NULL;
 	conf->browsedir=NULL;
 	init_incexcs(conf);
 }
@@ -206,6 +207,7 @@ void free_config(struct config *conf)
 	strlists_free(conf->keep, conf->kpcount);
 
 	if(conf->dedup_group) free(conf->dedup_group);
+	if(conf->browsefile) free(conf->browsefile);
 	if(conf->browsedir) free(conf->browsedir);
 
 	free_incexcs(conf);
@@ -596,6 +598,8 @@ static int load_config_strings(struct config *conf, const char *field, const cha
 	if(get_conf_val(field, value, "regex", &(conf->regex)))
 		return -1;
 	if(get_conf_val(field, value, "browsedir", &(conf->browsedir)))
+		return -1;
+	if(get_conf_val(field, value, "browsefile", &(conf->browsefile)))
 		return -1;
 	if(get_conf_val(field, value, "working_dir_recovery_method",
 		&(conf->working_dir_recovery_method))) return -1;

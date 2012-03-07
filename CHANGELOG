@@ -23,6 +23,7 @@
   * Fix bug where the wrong arg count was being given to the server post
     script.
   * Make sure status snapshot exits when there are no backup clients.
+  * Ability to dump logs and paths in backups using '-a S'.
 
 2012-02-27 Changes in burp-1.3.1:
   * EFS support on Windows.

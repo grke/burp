@@ -70,6 +70,7 @@ struct config
 	char *restoreprefix;
 	char *regex;
   // To do with listing.
+	char *browsefile;
 	char *browsedir;
 
 	char *backup_script_pre;

@@ -26,13 +26,18 @@ static void usage_server(void)
 	printf("  -a s          Run the status monitor.\n");
 	printf("  -a S          Screen dump of the status monitor (for reporting).\n");
 	printf("  -c <path>     Path to config file (default: %s).\n", get_config_path());
-	printf("  -C <client>   Show a single client in the status monitor\n");
+	printf("  -d <path>     a single client in the status monitor\n");
 	printf("  -F            Stay in the foreground.\n");
 	printf("  -h|-?         Print this text and exit.\n");
 	printf("  -i            Print index of symbols and exit\n");
 	printf("  -l <path>     Path to log file.\n");
 	printf("  -n            Do not fork any children (implies '-F').\n");
 	printf("  -v            Print version and exit.\n");
+	printf("Options to use with '-a S':\n");
+	printf("  -C <client>   Show a particular client\n");
+	printf("  -b <number>   Show listable files in a particular backup (requires -C)\n");
+	printf("  -z <file>     Dump a particular log file in a backup (requires -C and -b)\n");
+	printf("  -d <path>     Show a particular path in a backup (requires -C and -b)\n");
 	printf("\n");
 #endif
 }
@@ -142,6 +147,7 @@ int main (int argc, char *argv[])
 	const char *backup=NULL;
 	const char *restoreprefix=NULL;
 	const char *regex=NULL;
+	const char *browsefile=NULL;
 	const char *browsedir=NULL;
 	FILE *fp=NULL;
 	const char *configfile=get_config_path();
@@ -149,7 +155,7 @@ int main (int argc, char *argv[])
 
 	init_log(argv[0]);
 
-	while((option=getopt(argc, argv, "a:b:c:C:d:hfFinr:s:l:v?"))!=-1)
+	while((option=getopt(argc, argv, "a:b:c:C:d:hfFinr:s:l:vz:?"))!=-1)
 	{
 		switch(option)
 		{
@@ -215,6 +221,9 @@ int main (int argc, char *argv[])
 			case 'v':
 				printf("%s-%s\n", progname(), VERSION);
 				return 0;
+			case 'z':
+				browsefile=optarg;
+				break;
 			case 'h':
 			case '?':
 			default:
@@ -265,6 +274,7 @@ int main (int argc, char *argv[])
 	if(replace_conf_str(backup, &(conf.backup))
 	  || replace_conf_str(restoreprefix, &(conf.restoreprefix))
 	  || replace_conf_str(regex, &(conf.regex))
+	  || replace_conf_str(browsefile, &(conf.browsefile))
 	  || replace_conf_str(browsedir, &(conf.browsedir)))
 		return -1;
 	if(conf.mode==MODE_SERVER)

@@ -466,6 +466,12 @@ end:
 static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, const char *sel_client)
 {
 	int q=0;
+
+	// If there are no backup clients to list, just give a new line.
+	// Without this, the status client will stay in a loop trying to read
+	// data when in snapshot mode.
+	if(!clen) send_data_to_client(cfd, "\n", 1);
+
 	for(q=0; q<clen; q++)
 	{
 		char *tosend=NULL;

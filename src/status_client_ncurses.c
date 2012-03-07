@@ -819,6 +819,14 @@ int status_client_ncurses(struct config *conf, enum action act, const char *scli
 				if(!r) *rbuf='\0';
 				strcat(rbuf+r, buf);
 			}
+
+			if(rbuf && !strcmp(rbuf, "\n")
+			  && actg==ACTION_STATUS_SNAPSHOT)
+			{
+				// This happens when there are no backup
+				// clients.
+				break;
+			}
 /*
 			if(l<0)
 			{

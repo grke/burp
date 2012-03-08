@@ -272,7 +272,7 @@ int client(struct config *conf, enum action act)
 		// :incexc: is for the client sending the server the
 		// incexc config so that it better knows what to do on
 		// resume.
-		if(!ret && !incexc && server_supports(feat, ":incexc:"))
+		if(!ret && server_supports(feat, ":incexc:"))
 			ret=incexc_send_client(conf, &p1cntr);
 
 		if(async_write_str(CMD_GEN, "extra_comms_end")

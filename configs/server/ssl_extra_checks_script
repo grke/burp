@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# This server pre script was contributed by Jaon Haar.
+# This server pre script was contributed by Jason Haar.
 
 (
 cat<<EOF
@@ -35,7 +35,7 @@ export error_crlNoDir=107
 
 usage()
 {
-	logEvent "usage: $prog <preorpost> <action> <client> <reserved4> <reserved5> <reserved6> <crl dir> <server config file> <optional extra script>"
+	logEvent "usage: $prog <preorpost> <action> <client> <reserved4> <reserved5> <crl dir> <server config file> <optional extra script>"
 	exit $error_crlNoArgs
 }
 
@@ -47,11 +47,11 @@ export action="$1" ; shift
 export client="$1" ; shift
 export reserved4="$1" ; shift
 export reserved5="$1" ; shift
-export reserved6="$1" ; shift
 
 export BURP_CRLDIR="$1"
 export BURP_SERVER_CONFIG="$2"
 export BURP_EXTRA_SCRIPT="$3"
+
 [ -z "$BURP_CRLDIR" ] && usage
 [ -z "$BURP_SERVER_CONFIG" ] && usage
 
@@ -92,8 +92,8 @@ export CRL_POINTS=`(openssl  x509 -noout -inform PEM -text -in $SERVER_CERT 2>/d
 updateCRL()
 {
 	downloadedCRL=0
-        mkdir -p $BURP_CLRDIR
-	cd $BURP_CLRDIR
+        mkdir -p $BURP_CRLDIR
+	cd $BURP_CRLDIR
 	CRL_FILE="`echo $X509_ISSUER_CN|sed 's/[^0-9a-zA-Z]/_/g'`.crl"
 	CRL_AGE=`stat -c %Y "$CRL_FILE" 2>/dev/null`
 	CRL_AGE=${CRL_AGE:-0}
@@ -120,12 +120,16 @@ if [ "$CRL_POINTS" = "" ] ; then
 	logEvent "CRL: no http CRL points - skipping CRL checks"
 else
 	updateCRL > /dev/null 2>&1&
-	if [ "`/bin/ls $BURP_CLRDIR/*.crl 2>/dev/null`" = "" ] ; then
-		logEvent "CRL: failed crl checks - no CRL files in $BURP_CLRDIR"
-		exit $error_noCRLs
+	if [ "`/bin/ls $BURP_CRLDIR/*.crl 2>/dev/null`" = "" ] ; then
+		#wait 10sec in case this is the first time updateCRL has run
+		sleep 10
+		if [ "`/bin/ls $BURP_CRLDIR/*.crl 2>/dev/null`" = "" ] ; then
+			logEvent "CRL: failed crl checks - no CRL files in $BURP_CRLDIR"
+			exit $error_noCRLs
+		fi
 	fi
 	FOUND_CRL=0
-	for crl in $BURP_CLRDIR/*.crl 
+	for crl in $BURP_CRLDIR/*.crl 
 	do
 	 if [ "`(openssl crl -in $crl -inform DER -text -noout 2>/dev/null || openssl crl -in $crl -inform PEM -text -noout 2>/dev/null)|grep Issuer:|egrep \"$X509_ISSUER_CN\"|egrep \"$X509_ISSUER_emailAddress\"`" != "" ] ; then
 		FOUND_CRL=1
@@ -159,4 +163,3 @@ if [ -n "$BURP_EXTRA_SCRIPT" -a -x "$BURP_EXTRA_SCRIPT" ] ; then
 else
 	exit 0
 fi
-

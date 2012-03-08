@@ -462,7 +462,7 @@ static int send_data_to_client(int cfd, const char *data, size_t len)
 			w+=wl;
 			len-=wl;
 		}
-		//printf("wrote: %d left: %d\n", wl, len);
+//		printf("wrote: %d left: %d\n", wl, len);
 	}
 end:
 	return ret;
@@ -937,11 +937,13 @@ static int parse_rbuf(const char *rbuf, int cfd, struct cstat **clist, int clen)
 	}
 
 	// Kludge - exit straight away if doing snapshot type stuff. 
+/*
 	if(backup || file || browse)
 	{
 		ret=-1;
 		goto end;
 	}
+*/
 end:
 	if(client) free(client);
 	if(backup) free(backup);

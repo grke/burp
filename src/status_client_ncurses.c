@@ -651,7 +651,8 @@ int status_client_ncurses(struct config *conf, enum action act, const char *scli
 	int srbr=0;
 	char *client=NULL;
 	int enterpressed=0;
-	int loop=0;
+//	int loop=0;
+	int reqdone=0;
 
 #ifdef HAVE_NCURSES_H
 	int stdinfd=fileno(stdin);
@@ -698,10 +699,12 @@ int status_client_ncurses(struct config *conf, enum action act, const char *scli
 		fd_set fsr;
 		fd_set fse;
 		struct timeval tval;
+//		printf("loop: %d\n", loop);
 
 		// Failsafe to prevent the snapshot ever getting permanently
 		// stuck.
-		if(actg==ACTION_STATUS_SNAPSHOT && loop++>20) break;
+//		if(actg==ACTION_STATUS_SNAPSHOT && loop++>10000)
+//			break;
 
 		if(sclient && !client)
 		{
@@ -709,7 +712,7 @@ int status_client_ncurses(struct config *conf, enum action act, const char *scli
 			details=1;
 		}
 
-		if(enterpressed || need_status())
+		if((enterpressed || need_status()) && !reqdone)
 		{
 			char *req=NULL;
 			if(details && client) req=client;
@@ -719,6 +722,8 @@ int status_client_ncurses(struct config *conf, enum action act, const char *scli
 				break;
 			}
 			enterpressed=0;
+			if(actg==ACTION_STATUS_SNAPSHOT)
+				reqdone++;
 		}
 
 		FD_ZERO(&fsr);
@@ -849,6 +854,12 @@ int status_client_ncurses(struct config *conf, enum action act, const char *scli
 				if(!r) *rbuf='\0';
 				strcat(rbuf+r, buf);
 			}
+/*
+			if(l<=0)
+			{
+				break;
+			}
+*/
 
 			if(actg==ACTION_STATUS_SNAPSHOT)
 			{
@@ -866,6 +877,7 @@ int status_client_ncurses(struct config *conf, enum action act, const char *scli
 						break;
 					}
 				}
+				continue;
 			}
 
 			//if(rbuf) printf("rbuf: %s\n", rbuf);

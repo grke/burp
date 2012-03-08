@@ -479,7 +479,7 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, con
 
 	for(q=0; q<clen; q++)
 	{
-		char *tosend=NULL;
+		const char *tosend=NULL;
 		char *curback=NULL;
 
 		// Currently, if you delete a conf file, the entry does not
@@ -545,6 +545,8 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, con
 			}
 		}
 		else tosend=clist[q]->summary;
+
+		if(!tosend || !*tosend) tosend="\n";
 		//printf("send summary: %s (%s)\n", clist[q]->name, tosend);
 		if(send_data_to_client(cfd, tosend, strlen(tosend))) return -1;
 	}

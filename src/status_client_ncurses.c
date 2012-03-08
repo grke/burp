@@ -699,12 +699,11 @@ int status_client_ncurses(struct config *conf, enum action act, const char *scli
 		fd_set fsr;
 		fd_set fse;
 		struct timeval tval;
-//		printf("loop: %d\n", loop);
 
 		// Failsafe to prevent the snapshot ever getting permanently
 		// stuck.
-//		if(actg==ACTION_STATUS_SNAPSHOT && loop++>10000)
-//			break;
+		//if(actg==ACTION_STATUS_SNAPSHOT && loop++>10000)
+		//	break;
 
 		if(sclient && !client)
 		{
@@ -845,7 +844,7 @@ int status_client_ncurses(struct config *conf, enum action act, const char *scli
 		if(FD_ISSET(fd, &fsr))
 		{
 			// ready to read.
-			while((l=read(fd, buf, sizeof(buf)-1))>0)
+			if((l=read(fd, buf, sizeof(buf)-1))>0)
 			{
 				size_t r=0;
 				buf[l]='\0';
@@ -854,12 +853,8 @@ int status_client_ncurses(struct config *conf, enum action act, const char *scli
 				if(!r) *rbuf='\0';
 				strcat(rbuf+r, buf);
 			}
-/*
-			if(l<=0)
-			{
+			else
 				break;
-			}
-*/
 
 			if(actg==ACTION_STATUS_SNAPSHOT)
 			{

@@ -233,7 +233,9 @@ int async_init(int afd, SSL *assl, struct config *conf, int estimate)
 	ssl=assl;
 	ratelimit=conf->ratelimit;
 	max_network_timeout=conf->network_timeout;
+	network_timeout=max_network_timeout;
 	doing_estimate=estimate;
+printf("here: %d\n", conf->network_timeout);
 	if(doing_estimate) return 0;
 
 	if(async_alloc_buf(&readbuf, &readbuflen, readbufmaxsize)

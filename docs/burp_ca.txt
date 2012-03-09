@@ -69,7 +69,7 @@ Setup the client (the usual way)
 
 4) sign the request __on the server__
  
-  burp_ca --name myClient --ca myCA --key --request --sign --batch
+  burp_ca --name myClient --ca myCA --sign --batch
 
 5) copy the certs back to the client
 

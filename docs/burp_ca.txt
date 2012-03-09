@@ -26,7 +26,7 @@ Setup the server:
 
  ln -s CA/CA_myCA.crt /etc/burp/ssl_cert_ca.pem
  ln -s CA/myServer.crt /etc/burp/ssl_cert-server.pem
- ln -s CA/myServer,key /etc/burp/ssl_cert-server.key
+ ln -s CA/myServer.key /etc/burp/ssl_cert-server.key
 
  (use the ssl_cert and ssl_key options in burp-server.conf !)
 
@@ -45,7 +45,7 @@ Setup the client (the easy way - unsecure):
 3) copy key and certs from server to client
 
   server:/etc/burp/ssl_cert_ca.pem -> client:/etc/burp/ssl_cert_ca.pem
-  server:/etc/burp/CA/myClient.crt -> client:/etc/burp/ssl_cert-client.crt
+  server:/etc/burp/CA/myClient.crt -> client:/etc/burp/ssl_cert-client.pem
   server:/etc/burp/CA/myClient.key -> client:/etc/burp/ssl_cert-client.key
   chmod 600 /etc/burp/ssl_cert-client.key
 
@@ -65,7 +65,7 @@ Setup the client (the usual way)
 
 3) copy the request from client to the server
 
-  client:/etc/burp/CA/myClient.csr -> server:/etc/burp/ssl/myClient.csr
+  client:/etc/burp/CA/myClient.csr -> server:/etc/burp/CA/myClient.csr
 
 4) sign the request __on the server__
  
@@ -80,6 +80,6 @@ Setup the client (the usual way)
 
  ln -s CA/CA_myCA.crt /etc/burp/ssl_cert_ca.pem
  ln -s CA/myClient.crt /etc/burp/ssl_cert-client.pem
- ln -s CA/myClient,key /etc/burp/ssl_cert-client.key
+ ln -s CA/myClient.key /etc/burp/ssl_cert-client.key
   
  (use the ssl_cert and ssl_key options in burp.conf !)

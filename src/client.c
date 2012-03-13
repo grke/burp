@@ -243,6 +243,7 @@ int client(struct config *conf, enum action act)
 		if(!ret && server_supports(feat, ":srestore:"))
 		{
 			logp("Server is initiating a restore\n");
+			if(incexc) { free(incexc); incexc=NULL; }
 			if(!(ret=incexc_recv_client_restore(&incexc, conf,
 			  &p1cntr)))
 			{
@@ -260,6 +261,7 @@ int client(struct config *conf, enum action act)
 		if(!ret && !incexc && server_supports(feat, ":sincexc:"))
 		{
 			logp("Server is setting includes/excludes.\n");
+			if(incexc) { free(incexc); incexc=NULL; }
 			if(!(ret=incexc_recv_client(&incexc, conf, &p1cntr)))
 			{
 				if(incexc)

@@ -1163,6 +1163,7 @@ static int extra_comms(const char *client, const char *cversion, char **incexc, 
 				// Client is telling server its incexc
 				// configuration so that it can better decide
 				// what to do on resume.
+				if(*incexc) { free(*incexc); *incexc=NULL; }
 				if(incexc_recv_server(incexc, conf, p1cntr))
 				{
 					ret=-1;

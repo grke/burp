@@ -1212,6 +1212,7 @@ int parse_incexcs_buf(struct config *conf, const char *incexc)
 /* The server runs this when parsing a restore file on the server. */
 int parse_incexcs_path(struct config *conf, const char *path)
 {
+	free_incexcs(conf);
 	return load_config(path, conf, FALSE);
 }
 

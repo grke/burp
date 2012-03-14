@@ -1,11 +1,9 @@
 #!/bin/bash
 #
 # Script that determines whether it is time to run a backup.
-#
-# Note: This script uses the 'date' command with the %a format
-# argument to get the day of the week. The output of this changes depending on
-# the LANG environment variable, so if you are having trouble with the day
-# arguments here, check what the output of 'date +%a' gives you.
+
+# Set LANG=C so that 'date' returns English day names.
+export LANG=C
 
 echo "Running timer script: $@"
 

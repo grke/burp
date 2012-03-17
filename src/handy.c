@@ -801,12 +801,93 @@ void reuseaddr(int fd)
 }
 
 #ifndef HAVE_WIN32
+static void get_status_buf(char *buf, size_t len, const char *client, char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr)
+{
+	int l=0;
+	snprintf(buf, len,
+		"%s\t%c\t%c\t"
+		"%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu\t"
+		"%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%li\t%s\n",
+			client, STATUS_RUNNING, phase,
+
+			cntr->total,
+			cntr->total_changed,
+			cntr->total_same,
+			p1cntr->total,
+
+			cntr->file,
+			cntr->file_changed,
+			cntr->file_same,
+			p1cntr->file,
+
+			cntr->enc,
+			cntr->enc_changed,
+			cntr->enc_same,
+			p1cntr->enc,
+
+			cntr->meta,
+			cntr->meta_changed,
+			cntr->meta_same,
+			p1cntr->meta,
+
+			cntr->encmeta,
+			cntr->encmeta_changed,
+			cntr->encmeta_same,
+			p1cntr->encmeta,
+
+			cntr->dir,
+			cntr->dir_changed,
+			cntr->dir_same,
+			p1cntr->dir,
+
+			cntr->slink,
+			cntr->slink_changed,
+			cntr->slink_same,
+			p1cntr->slink,
+
+			cntr->hlink,
+			cntr->hlink_changed,
+			cntr->hlink_same,
+			p1cntr->hlink,
+
+			cntr->special,
+			cntr->special_changed,
+			cntr->special_same,
+			p1cntr->special,
+
+			cntr->total,
+			cntr->total_changed,
+			cntr->total_same,
+			p1cntr->total,
+
+			cntr->gtotal,
+			cntr->warning,
+			p1cntr->byte,
+			cntr->byte,
+			cntr->recvbyte,
+			cntr->sentbyte,
+			p1cntr->start,
+			path?path:"");
+
+	// Make sure there is a new line at the end.
+	l=strlen(buf);
+	if(buf[l-1]!='\n') buf[l-1]='\n';
+}
+
 void write_status(const char *client, char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr)
 {
 	static time_t lasttime=0;
 	if(status_wfd>=0 && client)
 	{
-		int l;
 		char *w=NULL;
 		time_t now=0;
 		time_t diff=0;
@@ -824,83 +905,9 @@ void write_status(const char *client, char phase, const char *path, struct cntr 
 		}
 		lasttime=now;
 
-		snprintf(wbuf, sizeof(wbuf),
-			"%s\t%c\t%c\t"
-			"%llu/%llu/%llu/%llu\t"
-			"%llu/%llu/%llu/%llu\t"
-			"%llu/%llu/%llu/%llu\t"
-			"%llu/%llu/%llu/%llu\t"
-			"%llu/%llu/%llu/%llu\t"
-			"%llu/%llu/%llu/%llu\t"
-			"%llu/%llu/%llu/%llu\t"
-			"%llu/%llu/%llu/%llu\t"
-			"%llu/%llu/%llu/%llu\t"
-			"%llu/%llu/%llu/%llu\t"
-			"%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%li\t%s\n",
-				client, STATUS_RUNNING, phase,
+		get_status_buf(wbuf, sizeof(wbuf),
+			client, phase, path, p1cntr, cntr);
 
-				cntr->total,
-				cntr->total_changed,
-				cntr->total_same,
-				p1cntr->total,
-
-				cntr->file,
-				cntr->file_changed,
-				cntr->file_same,
-				p1cntr->file,
-
-				cntr->enc,
-				cntr->enc_changed,
-				cntr->enc_same,
-				p1cntr->enc,
-
-				cntr->meta,
-				cntr->meta_changed,
-				cntr->meta_same,
-				p1cntr->meta,
-
-				cntr->encmeta,
-				cntr->encmeta_changed,
-				cntr->encmeta_same,
-				p1cntr->encmeta,
-
-				cntr->dir,
-				cntr->dir_changed,
-				cntr->dir_same,
-				p1cntr->dir,
-
-				cntr->slink,
-				cntr->slink_changed,
-				cntr->slink_same,
-				p1cntr->slink,
-
-				cntr->hlink,
-				cntr->hlink_changed,
-				cntr->hlink_same,
-				p1cntr->hlink,
-
-				cntr->special,
-				cntr->special_changed,
-				cntr->special_same,
-				p1cntr->special,
-
-				cntr->total,
-				cntr->total_changed,
-				cntr->total_same,
-				p1cntr->total,
-
-				cntr->gtotal,
-				cntr->warning,
-				p1cntr->byte,
-				cntr->byte,
-				cntr->recvbyte,
-				cntr->sentbyte,
-				p1cntr->start,
-				path?path:"");
-
-		// Make sure there is a new line at the end.
-		l=strlen(wbuf);
-		if(wbuf[l-1]!='\n') wbuf[l-1]='\n';
 		w=wbuf;
 		while(*w)
 		{

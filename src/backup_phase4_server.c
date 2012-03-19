@@ -553,7 +553,7 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 		goto endfunc;
 	}
 
-	if(!(logfp=open_file(logpath, "ab")) || set_logfp(logfp))
+	if(!(logfp=open_file(logpath, "ab")) || set_logfp(logfp, cconf))
 	{
 		ret=-1;
 		goto endfunc;
@@ -730,7 +730,7 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 	print_filecounters(p1cntr, cntr, ACTION_BACKUP, 0);
 	logp("Backup completed.\n");
 	logp("End phase4 (shuffle files)\n");
-	set_logfp(NULL); // will close logfp.
+	set_logfp(NULL, cconf); // will close logfp.
 
 	compress_filename(current, "log", "log.gz", cconf);
 

@@ -578,7 +578,7 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 		log_and_send("out of memory");
 		ret=-1;
 	}
-	else if(!(logfp=open_file(logpath, "ab")) || set_logfp(logfp))
+	else if(!(logfp=open_file(logpath, "ab")) || set_logfp(logfp, cconf))
 	{
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
@@ -689,7 +689,7 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 		reset_filecounter(p1cntr);
 		reset_filecounter(cntr);
 	}
-	set_logfp(NULL);
+	set_logfp(NULL, cconf);
 	compress_file(logpath, logpathz, cconf);
 	if(manifest) free(manifest);
 	if(datadir) free(datadir);

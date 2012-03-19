@@ -216,7 +216,7 @@ int setup_signals(int oldmax_children, int max_children, int oldmax_status_child
 	return 0;
 }
 
-static int open_log(const char *realworking, const char *client, const char *cversion)
+static int open_log(const char *realworking, const char *client, const char *cversion, struct config *conf)
 {
 	FILE *logfp=NULL;
 	char *logpath=NULL;
@@ -226,7 +226,7 @@ static int open_log(const char *realworking, const char *client, const char *cve
 		log_and_send("out of memory");
 		return -1;
 	}
-	if(!(logfp=open_file(logpath, "ab")) || set_logfp(logfp))
+	if(!(logfp=open_file(logpath, "ab")) || set_logfp(logfp, conf))
 	{
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
@@ -314,7 +314,7 @@ static int do_backup_server(const char *basedir, const char *current, const char
 			log_and_send("out of memory");
 			goto error;
 		}
-		if(open_log(realworking, client, cversion))
+		if(open_log(realworking, client, cversion, cconf))
 			goto error;
 	}
 	else
@@ -348,7 +348,7 @@ static int do_backup_server(const char *basedir, const char *current, const char
 			unlink(working);
 			goto error;
 		}
-		else if(open_log(realworking, client, cversion))
+		else if(open_log(realworking, client, cversion, cconf))
 		{
 			goto error;
 		}
@@ -428,7 +428,7 @@ static int do_backup_server(const char *basedir, const char *current, const char
 		goto error;
 	else
 	{
-		set_logfp(NULL); // does an fclose on logfp.
+		set_logfp(NULL, cconf); // does an fclose on logfp.
 		// finish_backup will open logfp again
 		ret=backup_phase4_server(basedir,
 			working, current, currentdata,
@@ -448,7 +448,7 @@ end:
 	if(newpath) free(newpath);
 	if(cmanifest) free(cmanifest);
 	if(datadirtmp) free(datadirtmp);
-	set_logfp(NULL); // does an fclose on logfp.
+	set_logfp(NULL, cconf); // does an fclose on logfp.
 	return ret;
 }
 
@@ -568,7 +568,7 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 	// We have found an old working directory - open the log inside
 	// for appending.
 	if(!(logpath=prepend_s(fullrealwork, "log", strlen("log")))
-	  || !(logfp=open_file(logpath, "ab")) || set_logfp(logfp))
+	  || !(logfp=open_file(logpath, "ab")) || set_logfp(logfp, cconf))
 	{
 		ret=-1;
 		goto end;
@@ -657,7 +657,7 @@ end:
 	if(fullrealwork) free(fullrealwork);
 	if(logpath) free(logpath);
 	if(phase1datatmp) free(phase1datatmp);
-	set_logfp(NULL); // fclose the logfp
+	set_logfp(NULL, cconf); // fclose the logfp
 	return ret;
 }
 

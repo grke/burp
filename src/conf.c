@@ -58,6 +58,7 @@ void init_config(struct config *conf)
 	conf->directory=NULL;
 	conf->lockfile=NULL;
 	conf->logfile=NULL;
+	conf->syslog=0;
 	conf->password=NULL;
 	conf->passwd=NULL;
 	conf->server=NULL;
@@ -528,6 +529,8 @@ struct llists
 
 static int load_config_ints(struct config *conf, const char *field, const char *value)
 {
+	get_conf_val_int(field, value, "syslog",
+		&(conf->syslog));
 	get_conf_val_int(field, value, "hardlinked_archive",
 		&(conf->hardlinked_archive));
 	get_conf_val_int(field, value, "max_hardlinks",
@@ -1245,6 +1248,7 @@ static int set_global_arglist(struct strlist ***dst, struct strlist **src, int *
 /* Remember to update the list in the man page when you change these.*/
 int set_client_global_config(struct config *conf, struct config *cconf)
 {
+	cconf->syslog=conf->syslog;
 	cconf->hardlinked_archive=conf->hardlinked_archive;
 	cconf->librsync=conf->librsync;
 	cconf->compression=conf->compression;

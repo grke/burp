@@ -17,6 +17,7 @@ struct config
 	enum burp_mode mode;
 	char *lockfile;
 	char *logfile;
+	int syslog;
 	char *ssl_cert_ca;
 	char *ssl_cert;
 	char *ssl_key;

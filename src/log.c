@@ -1,9 +1,11 @@
 #include "burp.h"
+#include "conf.h"
 #include "log.h"
 
 static const char *prog="unknown";
 
 static FILE *logfp=NULL;
+static int do_syslog=0;
 
 void init_log(char *progname)
 {
@@ -34,7 +36,8 @@ void logp(const char *fmt, ...)
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	pid=(int)getpid();
 	fprintf(logfp?logfp:stdout, "%s: %s[%d] %s", gettm(), prog, pid, buf);
-	syslog(LOG_INFO, "%s: %s[%d] %s", gettm(), prog, pid, buf);
+	if(do_syslog)
+		syslog(LOG_INFO, "%s: %s[%d] %s", gettm(), prog, pid, buf);
 	va_end(ap);
 }
 
@@ -54,13 +57,14 @@ const char *progname(void)
 	return prog;
 }
 
-int set_logfp(FILE *fp)
+int set_logfp(FILE *fp, struct config *conf)
 {
 	if(logfp) fclose(logfp);
 	logfp=fp;
 #ifndef HAVE_WIN32
 	if(logfp) setlinebuf(logfp);
 #endif
+	do_syslog=conf->syslog;
 	return 0;
 }
 
@@ -69,15 +73,15 @@ FILE *get_logfp(void)
 	return logfp;
 }
 
-int open_logfile(const char *logfile)
+int open_logfile(const char *logfile, struct config *conf)
 {
 	FILE *fp=NULL;
-	set_logfp(NULL); // Close the old log, if it is open.
+	set_logfp(NULL, conf); // Close the old log, if it is open.
 	if(!(fp=fopen(logfile, "ab")))
 	{
 		logp("error opening logfile %s.\n", logfile);
 		return 1;
 	}
-	set_logfp(fp);
+	set_logfp(fp, conf);
 	return 0;
 }

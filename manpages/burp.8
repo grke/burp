@@ -181,6 +181,9 @@ Synonym for lockfile.
 \fBlogfile=[path]\fR
 Path to the logfile.
 .TP
+\fBsyslog=[0|1]\fR
+Log to syslog.
+.TP
 \fBkeep=[number]\fR
 Number of backups to keep. This can be overriddden by the client configuration
 files in clientconfdir on the server. Specify multiple 'keep' entries on separate lines in order to keep multiple periods of backups. For example, assuming that you are doing a backup a day, keep=7 keep=4 keep=6 (on separate lines) will keep 7 daily backups, 4 weekly backups (7x4=28), and 6 multiples of 4 weeks (7x4x6=168) - roughly 6 monthly backups. Effectively, you will be guaranteed to be able to restore up to 168 days ago, with the number of available backups exponentially decreasing as you go back in time to that point. In this example, every 7th backup will be hardlinked to allow burp to safely delete intermediate backups when necessary. You can have as many 'keep' lines as you like, as long as they don't exceed 52560000 when multiplied together. That is, a backup every minute for 100 years.
@@ -331,6 +334,9 @@ Synonym for lockfile.
 \fBlogfile=[path]\fR
 Path to the logfile.
 .TP
+\fBsyslog=[0|1]\fR
+Log to syslog.
+.TP
 \fBuser=[username]\fR
 Run as a particular user (not supported on Windows).
 .TP
@@ -470,6 +476,7 @@ Additionally, the following options can be overridden here for each client:
 \fBkeep\fR
 \fBworking_dir_recovery_method\fR
 \fBlibrsync\fR
+\fBsyslog\fR
 \fBcompression\fR
 \fBtimer_script\fR
 \fBtimer_arg\fR

@@ -80,7 +80,7 @@ int reload(struct config *conf, const char *configfile, char **logfile, bool fir
 	if(!firsttime) logp("Reloading config\n");
 	// If logfile is defined, use it
 	// Have to do this twice, because init_config uses logp().
-	if(*logfile && strlen(*logfile) && open_logfile(*logfile))
+	if(*logfile && strlen(*logfile) && open_logfile(*logfile, conf))
 		return 1;
 
 	init_config(conf);
@@ -103,7 +103,7 @@ int reload(struct config *conf, const char *configfile, char **logfile, bool fir
 	if(conf->logfile)
 	{
 		*logfile=conf->logfile;
-		if(open_logfile(*logfile)) return 1;
+		if(open_logfile(*logfile, conf)) return 1;
 	}
 
 	return 0;

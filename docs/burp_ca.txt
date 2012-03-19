@@ -26,7 +26,7 @@ Setup the server:
 
  ln -s CA/CA_myCA.crt /etc/burp/ssl_cert_ca.pem
  ln -s CA/myServer.crt /etc/burp/ssl_cert-server.pem
- ln -s CA/myServer,key /etc/burp/ssl_cert-server.key
+ ln -s CA/myServer.key /etc/burp/ssl_cert-server.key
 
  (use the ssl_cert and ssl_key options in burp-server.conf !)
 

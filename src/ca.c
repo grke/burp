@@ -104,21 +104,29 @@ static int burp_ca_init(struct config *conf, const char *ca_dir)
 		return -1;
 	}
 
-	remove_file(conf->ssl_cert_ca);
-	remove_file(conf->ssl_cert);
-	remove_file(conf->ssl_key);
-
 	snprintf(linktarget, sizeof(linktarget), "%s/CA_%s.crt",
 		ca_dir, conf->ca_name);
-	if(symlink_file(linktarget, conf->ssl_cert_ca)) return -1;
+	if(strcmp(linktarget, conf->ssl_cert_ca))
+	{
+		remove_file(conf->ssl_cert_ca);
+		if(symlink_file(linktarget, conf->ssl_cert_ca)) return -1;
+	}
 
 	snprintf(linktarget, sizeof(linktarget), "%s/%s.crt",
 		ca_dir, conf->ca_server_name);
-	if(symlink_file(linktarget, conf->ssl_cert)) return -1;
+	if(strcmp(linktarget, conf->ssl_cert))
+	{
+		remove_file(conf->ssl_cert);
+		if(symlink_file(linktarget, conf->ssl_cert)) return -1;
+	}
 
 	snprintf(linktarget, sizeof(linktarget), "%s/%s.key",
 		ca_dir, conf->ca_server_name);
-	if(symlink_file(linktarget, conf->ssl_key)) return -1;
+	if(strcmp(linktarget, conf->ssl_key))
+	{
+		remove_file(conf->ssl_key);
+		if(symlink_file(linktarget, conf->ssl_key)) return -1;
+	}
 
 	return 0;
 }

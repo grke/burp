@@ -56,6 +56,10 @@ void init_config(struct config *conf)
 	conf->clientconfdir=NULL;
 	conf->cname=NULL;
 	conf->directory=NULL;
+	conf->ca_conf=NULL;
+	conf->ca_name=NULL;
+	conf->ca_server_name=NULL;
+	conf->ca_burp_ca=NULL;
 	conf->lockfile=NULL;
 	conf->logfile=NULL;
 	conf->syslog=0;
@@ -154,6 +158,10 @@ void free_config(struct config *conf)
 	if(conf->clientconfdir) free(conf->clientconfdir);
 	if(conf->cname) free(conf->cname);
 	if(conf->directory) free(conf->directory);
+	if(conf->ca_conf) free(conf->ca_conf);
+	if(conf->ca_name) free(conf->ca_name);
+	if(conf->ca_server_name) free(conf->ca_server_name);
+	if(conf->ca_burp_ca) free(conf->ca_burp_ca);
 	if(conf->lockfile) free(conf->lockfile);
 	if(conf->logfile) free(conf->logfile);
 	if(conf->password) free(conf->password);
@@ -235,7 +243,7 @@ static void get_conf_val_int(const char *field, const char *value, const char *w
 	if(!strcmp(field, want)) *dest=atoi(value);
 }
 
-static int get_pair(char buf[], char **field, char **value)
+int config_get_pair(char buf[], char **field, char **value)
 {
 	char *cp=NULL;
 	char *eq=NULL;
@@ -594,6 +602,14 @@ static int load_config_strings(struct config *conf, const char *field, const cha
 		return -1;
 	if(get_conf_val(field, value, "directory", &(conf->directory)))
 		return -1;
+	if(get_conf_val(field, value, "ca_conf", &(conf->ca_conf)))
+		return -1;
+	if(get_conf_val(field, value, "ca_name", &(conf->ca_name)))
+		return -1;
+	if(get_conf_val(field, value, "ca_server_name",
+		&(conf->ca_server_name))) return -1;
+	if(get_conf_val(field, value, "ca_burp_ca",
+		&(conf->ca_burp_ca))) return -1;
 	if(get_conf_val(field, value, "backup", &(conf->backup)))
 		return -1;
 	if(get_conf_val(field, value, "restoreprefix", &(conf->restoreprefix)))
@@ -839,7 +855,7 @@ static int parse_config_line(struct config *conf, struct llists *l, const char *
 		return 0;
 	}
 
-	if(get_pair(buf, &field, &value)) return -1;
+	if(config_get_pair(buf, &field, &value)) return -1;
 	if(!field || !value) return 0;
 
 	if(load_config_field_and_value(conf,
@@ -896,6 +912,47 @@ static int server_conf_checks(struct config *conf, const char *path, int *r)
 		conf_problem(path, "max_status_children too low", r);
 	if(conf->max_storage_subdirs<=1000)
 		conf_problem(path, "max_storage_subdirs too low", r);
+	if(conf->ca_conf)
+	{
+		int ca_err=0;
+		if(!conf->ca_name)
+		{
+			logp("ca_conf set, but ca_name not set\n");
+			ca_err++;
+		}
+		if(!conf->ca_server_name)
+		{
+			logp("ca_conf set, but ca_server_name not set\n");
+			ca_err++;
+		}
+		if(!conf->ca_burp_ca)
+		{
+			logp("ca_conf set, but ca_burp_ca not set\n");
+			ca_err++;
+		}
+		if(!conf->ssl_dhfile)
+		{
+			logp("ca_conf set, but ssl_dhfile not set\n");
+			ca_err++;
+		}
+		if(!conf->ssl_cert_ca)
+		{
+			logp("ca_conf set, but ssl_cert_ca not set\n");
+			ca_err++;
+		}
+		if(!conf->ssl_cert)
+		{
+			logp("ca_conf set, but ssl_cert not set\n");
+			ca_err++;
+		}
+		if(!conf->ssl_key)
+		{
+			logp("ca_conf set, but ssl_key not set\n");
+			ca_err++;
+		}
+		if(ca_err) return -1;
+	}
+
 	return 0;
 }
 

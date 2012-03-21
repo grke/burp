@@ -151,7 +151,9 @@ int main (int argc, char *argv[])
 	const char *browsedir=NULL;
 	FILE *fp=NULL;
 	const char *configfile=get_config_path();
+#ifndef HAVE_WIN32
 	const char *sclient=NULL;
+#endif
 
 	init_log(argv[0]);
 
@@ -191,7 +193,9 @@ int main (int argc, char *argv[])
 				configfile=optarg;
 				break;
 			case 'C':
+#ifndef HAVE_WIN32
 				sclient=optarg;
+#endif
 				break;
 			case 'd':
 				restoreprefix=optarg; // for restores

@@ -24,6 +24,7 @@
 #include "autoupgrade_server.h"
 #include "incexc_recv.h"
 #include "incexc_send.h"
+#include "ca.h"
 
 #include <netdb.h>
 #include <librsync.h>
@@ -717,7 +718,8 @@ static int get_lock_and_clean(const char *basedir, const char *lockbasedir, cons
 static int run_script_w(const char *script, struct strlist **userargs, int userargc, const char *client, const char *current, struct cntr *cntr)
 {
 	return run_script(script, userargs, userargc, client, current,
-		"reserved1", "reserved2", "reserved3", cntr, 1);
+		"reserved1", "reserved2", "reserved3", NULL, cntr,
+		1 /* wait */, 1 /* use logp */);
 }
 
 /* I am sure I wrote this function already, somewhere else. */
@@ -844,7 +846,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 					cconf->nfcount,
 					client, current,
 					working, finishing,
-					"0", cntr, 1);
+					"0", NULL, cntr, 1, 1);
 			else if(!cconf->notify_success_warnings_only
 			  || (p1cntr->warning+cntr->warning)>0)
 			{
@@ -858,7 +860,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 					cconf->nscount,
 					client, current,
 					working, finishing,
-					warnings, cntr, 1);
+					warnings, NULL, cntr, 1, 1);
 			}
 		}
 	}
@@ -1307,7 +1309,8 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 			client,
 			"reserved4",
 			"reserved5",
-			&p1cntr, 1))
+			NULL,
+			&p1cntr, 1, 1))
 	{
 		log_and_send("server pre script returned an error\n");
 		ret=-1;
@@ -1328,7 +1331,8 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 			client,
 			"reserved4",
 			"reserved5",
-			&p1cntr, 1))
+			NULL,
+			&p1cntr, 1, 1))
 	{
 		log_and_send("server post script returned an error\n");
 		ret=-1;
@@ -1805,6 +1809,8 @@ int server(struct config *conf, const char *configfile, char **logfile)
 	{
 		if(daemonise() || relock(conf->lockfile)) return 1;
 	}
+
+	if(setup_ca(conf)) return 1;
 
 	ssl_load_globals();
 

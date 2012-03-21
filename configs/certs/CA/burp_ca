@@ -36,11 +36,12 @@ $0: Help:
        --ca_days         valid days for CA certificate (default: $ca_days)
     -S|--size            key size (default: $size)
     -a|--ca              ca name if different from name
+    -f|--dhfile <path>   generate Diffie-Hellman file
 EOF
 }
 
-if ! options=$(getopt -o hid:c:n:krsa:D:S: \
-    -l help,init,dir:,config:,name:,key:,request:,sign,ca:,ca_days,revoke:,crl,batch,days:,size: -- "$@")
+if ! options=$(getopt -o hid:c:n:krsa:D:S:f: \
+    -l help,init,dir:,config:,name:,key:,request:,sign,ca:,ca_days,revoke:,crl,batch,days:,size:,dhfile: -- "$@")
 then
     exit 1
 fi
@@ -65,12 +66,20 @@ do
        --ca_days)  ca_days=$2; shift ;;
     -S|--size)  days=$2; shift ;;
     -a|--ca)  ca=$2; shift ;;
+    -f|--dhfile) dhfile=$2; shift ;;
     --) shift; break;;
     -*) echo "$0: error - unrecognized option $1" 1>&2; exit 1;;
     *) break;;
     esac
     shift
 done
+
+if [ -n "$dhfile" ] ; then
+	openssl dhparam -out "$dhfile" 1024
+	r=$?
+	chmod 600 "$dhfile"
+	exit $r
+fi
 
 if [ -z "$ca" ]; then
   ca=${name}
@@ -121,7 +130,7 @@ fi
 
 # generate key
 if [ "$key" = "yes" ]; then
-  echo "genrating key ${name}"
+  echo "generating key ${name}"
   umask ${sec_umask}
   openssl genrsa -out ${dir}/${name}.key ${size}
   umask ${def_umask}
@@ -129,7 +138,7 @@ fi
 
 # generate signing request 
 if [ "$request" = "yes" ]; then
-  echo "genrating request ${name}"
+  echo "generating request ${name}"
   TEMP=$(mktemp || /tmp/temp.$$)
   cat <<-EOF > ${TEMP}
 	RANDFILE                = /dev/urandom

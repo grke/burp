@@ -317,7 +317,8 @@ int client(struct config *conf, enum action act)
 					  "reserved3",
 					  "reserved4",
 					  "reserved5",
-					  &p1cntr, 1)) ret=-1;
+					  NULL,
+					  &p1cntr, 1, 1)) ret=-1;
 
 					if(!ret && do_backup_client(conf,
 						resume, 0, &p1cntr, &cntr))
@@ -337,7 +338,8 @@ int client(struct config *conf, enum action act)
 						"reserved3",
 						"reserved4",
 						"reserved5",
-						&cntr, 1)) ret=-1;
+					  	NULL,
+						&cntr, 1, 1)) ret=-1;
 					}
 				}
 
@@ -363,7 +365,8 @@ int client(struct config *conf, enum action act)
 					"reserved3",
 					"reserved4",
 					"reserved5",
-					&cntr, 1)) ret=-1;
+					NULL,
+					&cntr, 1, 1)) ret=-1;
 				if(!ret && do_restore_client(conf,
 					act, &p1cntr, &cntr)) ret=-1;
 				if((conf->restore_script_post_run_on_fail
@@ -380,7 +383,8 @@ int client(struct config *conf, enum action act)
 					"reserved3",
 					"reserved4",
 					"reserved5",
-					&cntr, 1)) ret=-1;
+					NULL,
+					&cntr, 1, 1)) ret=-1;
 				}
 
 				// Return non-zero if there were warnings,

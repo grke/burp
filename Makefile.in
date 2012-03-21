@@ -123,6 +123,8 @@ install: installdirs
 	@if [ ! -f $(DESTDIR)$(sysconfdir)/timer_script ] ; then cp configs/server/timer_script $(DESTDIR)$(sysconfdir)/timer_script && chmod 755 $(DESTDIR)$(sysconfdir)/timer_script ; fi
 	@if [ ! -f $(DESTDIR)$(sysconfdir)/autoupgrade/server/win32/script ] ; then cp configs/server/autoupgrade/windows.script $(DESTDIR)$(sysconfdir)/autoupgrade/server/win32/script ; fi
 	@if [ ! -f $(DESTDIR)$(sysconfdir)/autoupgrade/server/win64/script ] ; then cp configs/server/autoupgrade/windows.script $(DESTDIR)$(sysconfdir)/autoupgrade/server/win64/script ; fi
+	@if [ ! -f $(DESTDIR)$(sysconfdir)/CA.cnf ] ; then cp configs/certs/CA/CA.cnf $(DESTDIR)$(sysconfdir)/CA.cnf ; fi
+	cp configs/certs/CA/burp_ca $(DESTDIR)$(sbindir) && chmod 755 $(DESTDIR)$(sbindir)/burp_ca
 
 Makefile: Makefile.in
 	cd $(topdir) \

@@ -923,14 +923,16 @@ void write_status(const char *client, char phase, const char *path, struct cntr 
 	}
 }
 
-static void log_script_output(FILE **fp, struct cntr *cntr)
+static void log_script_output(FILE **fp, struct cntr *cntr, int logfunc)
 {
 	char buf[256]="";
 	if(fp && *fp)
 	{
 		if(fgets(buf, sizeof(buf), *fp))
 		{
-			logp("%s", buf);
+			// logc does not print a prefix
+			if(logfunc) logp("%s", buf);
+			else logc("%s", buf);
 			if(cntr) logw(cntr, "%s", buf);
 		}
 		if(feof(*fp))
@@ -960,7 +962,7 @@ void setup_signal(int sig, void handler(int sig))
 	sigaction(sig, &sa, NULL);
 }
 
-static int run_script_select(FILE **sout, FILE **serr, struct cntr *cntr)
+static int run_script_select(FILE **sout, FILE **serr, struct cntr *cntr, int logfunc)
 {
 	int mfd=-1;
 	fd_set fsr;
@@ -997,8 +999,10 @@ static int run_script_select(FILE **sout, FILE **serr, struct cntr *cntr)
 			//logp("error on run_script child fd\n");
 			return -1;
 		}
-		if(FD_ISSET(soutfd, &fsr)) log_script_output(sout, NULL);
-		if(FD_ISSET(serrfd, &fsr)) log_script_output(serr, cntr);
+		if(FD_ISSET(soutfd, &fsr))
+			log_script_output(sout, NULL, logfunc);
+		if(FD_ISSET(serrfd, &fsr))
+			log_script_output(serr, cntr, logfunc);
 
 		if(!*sout && !*serr && got_sigchld)
 		{
@@ -1016,7 +1020,7 @@ static int run_script_select(FILE **sout, FILE **serr, struct cntr *cntr)
 #endif
 
 
-int run_script(const char *script, struct strlist **userargs, int userargc, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, struct cntr *cntr, int do_wait)
+int run_script(const char *script, struct strlist **userargs, int userargc, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, const char *arg6, struct cntr *cntr, int do_wait, int logfunc)
 {
 	int a=0;
 	int l=0;
@@ -1036,6 +1040,7 @@ int run_script(const char *script, struct strlist **userargs, int userargc, cons
 	if(arg3) cmd[l++]=(char *)arg3;
 	if(arg4) cmd[l++]=(char *)arg4;
 	if(arg5) cmd[l++]=(char *)arg5;
+	if(arg6) cmd[l++]=(char *)arg6;
 	for(a=0; a<userargc && l<64-1; a++)
 		cmd[l++]=userargs[a]->path;
 	cmd[l++]=NULL;
@@ -1060,7 +1065,7 @@ int run_script(const char *script, struct strlist **userargs, int userargc, cons
 	// My windows forkchild currently just executes, then returns.
 	return 0;
 #else
-	s=run_script_select(&sout, &serr, cntr);
+	s=run_script_select(&sout, &serr, cntr, logfunc);
 
 	// Set SIGCHLD back to default.
 	setup_signal(SIGCHLD, SIG_DFL);

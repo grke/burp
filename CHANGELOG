@@ -30,6 +30,8 @@
   * Add 'export LANG=C' to the timer script, so that timer_arg days are always
     expected in English.
   * Add config file option to turn syslog logging on/off.
+  * Add options for the server to automatically run burp_ca and populate the
+    CA directory if the CA directory does not exist.
 
 2012-02-27 Changes in burp-1.3.1:
   * EFS support on Windows.

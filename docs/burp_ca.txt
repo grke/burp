@@ -4,8 +4,7 @@ Setup the server:
 
 1) generate Diffie-Hellman Parameters
 
- openssl dhparam -out /etc/burp/dhfile.pem 1024
- chmod 600 /etc/burp/dhfile.pem
+ burp_ca --dhfile /etc/burp/dhfile.pem
 
 2) Initialise CA
 

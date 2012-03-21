@@ -302,6 +302,18 @@ If this is set to 1, server_script_post will always be run. The default is 0, wh
 .TP
 \fBautoupgrade_dir=[path]\fR
 Path to autoupgrade directory from which upgrades are downloaded. The option can be left unset in order not to autoupgrade clients. Please see docs/autoupgrade.txt in the source package for more help with this option.
+.TP
+\fBca_conf=[path]\fR
+Path to CA configuration file. The CA configuration file will usually be /etc/burp/CA.cnf. The CA directory indicated by CA.cnf will usually be /etc/burp/CA. If ca_conf is set and the CA directory does not exist, the server will create and populate it. The paths indicated by ssl_cert_ca, ssl_cert and ssl_key will be overwritten symlinks to the generated files in /etc/burp/CA.
+.TP
+\fBca_name=[path]\fR
+Name of the CA that the server will generate when using the ca_conf option.
+.TP
+\fBca_server_name=[path]\fR
+The name that the server will put into its own SSL certficates when using the ca_conf option.
+.TP
+\fBca_burp_ca=[path]\fR
+Path to the burp_ca script when using the ca_conf option.
 
 .SH CLIENT CONFIGURATION FILE OPTIONS
 

@@ -31,7 +31,9 @@ Setup the server:
  (use the ssl_cert and ssl_key options in burp-server.conf !)
 
 
-Setup the client (the easy way - unsecure):
+Setup the client (the easy way - unsecure)
+If you are using Windows you have to do it this way, because burp_ca will not
+run on Windows.
 
 1) Generate client key and cert __on the server__
 

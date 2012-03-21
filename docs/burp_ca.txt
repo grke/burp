@@ -37,12 +37,7 @@ Setup the client (the easy way - unsecure):
 
   burp_ca --name myClient --ca myCA --key --request --sign --batch
 
-2) on the client you dont need a CA, so just
-
-  mkdir /etc/burp/CA
-  chmod 700 /etc/burp/CA
-
-3) copy key and certs from server to client
+2) copy key and certs from server to client
 
   server:/etc/burp/ssl_cert_ca.pem -> client:/etc/burp/ssl_cert_ca.pem
   server:/etc/burp/CA/myClient.crt -> client:/etc/burp/ssl_cert-client.pem
@@ -53,6 +48,7 @@ Setup the client (the easy way - unsecure):
 
 
 Setup the client (the usual way)
+Unfortunately, this cannot be done with Windows, because it cannot run burp_ca.
 
 1) on the client you dont need a CA, so just
 

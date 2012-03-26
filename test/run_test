@@ -74,6 +74,7 @@ build_and_install()
 	# target.
 	makedir "$target"
 	cdir "$build"
+	make clean
 	#./configure --prefix="$target" --datarootdir="$target"/usr/share --sysconfdir="$target"/etc/burp || fail "configure failed"
 	./configure || fail "configure failed"
 	make || fail "make failed"
@@ -299,9 +300,10 @@ cdir "$target"
 
 # Tweak the example configuration files by removing the leading '/' from all
 # the paths, and changing the port numbers.
-sed_rep_both 's/= \//= /g'
+sed_rep_both "s#= /#= $target/#g"
 sed_rep_both 's/port = 4971/port = 4998/g'
 sed_rep_both 's/port = 4972/port = 4999/g'
+sed_rep "s#^CA_DIR.*#CA_DIR = $target/etc/burp/CA#g" "$target/etc/burp/CA.cnf"
 
 echo
 echo "Starting tests"
@@ -313,6 +315,10 @@ echo "         Diff log: $difflog"
 echo "More logs can be found in:"
 echo "$target/var/spool/burp/testclient/<backup number>"
 echo
+
+echo "Creating dhfile.pem"
+# Need to do this outside of the server, because it might take a long time.
+./usr/sbin/burp_ca --dhfile etc/burp/dhfile.pem
 
 # Start up the server
 echo "Starting test server"

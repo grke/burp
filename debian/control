@@ -2,7 +2,7 @@ Source: burp
 Section: utils
 Priority: extra
 Maintainer: Bastiaan Franciscus van den Dikkenberg <bas@dikkenberg.net>
-Build-Depends: debhelper (>= 7.0.50~), autotools-dev, libncurses5-dev, libssl-dev, zlib1g-dev, librsync-dev, libacl1-dev, libattr1-dev, uthash-dev
+Build-Depends: debhelper (>= 7.0.50~), autotools-dev, libncurses5-dev, libssl-dev, zlib1g-dev, librsync-dev, libacl1-dev, libattr1-dev, uthash-dev, openssl
 Standards-Version: 3.9.3
 Homepage: http://burp.grke.net/
 Vcs-Git: git://github.com/grke/burp.git

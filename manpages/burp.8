@@ -197,7 +197,7 @@ On the server, the number of times that a single file can be hardlinked. The bed
 \fBlibrsync=[0|1]\fR
 When set to 0, delta differencing will not take place. That is, when a file changes, the server will request the whole new file. The default is 1. This option can be overridden by the client configuration files in clientconfdif on the server.
 .TP
-\fBcompression=[0-9]\fR
+\fBcompression=gzip[0-9]\fR
 Choose the level of gzip compression. Setting 0 turns compression off. The default is 9. This option can be overridden by the client configuration files in clientconfdif on the server.
 .TP
 \fBclient_lockdir=[path]\fR

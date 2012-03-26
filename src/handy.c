@@ -1019,8 +1019,8 @@ static int run_script_select(FILE **sout, FILE **serr, struct cntr *cntr, int lo
 
 #endif
 
-
-int run_script(const char *script, struct strlist **userargs, int userargc, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, const char *arg6, struct cntr *cntr, int do_wait, int logfunc)
+/* TODO: make arg1..n an array */
+int run_script(const char *script, struct strlist **userargs, int userargc, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, const char *arg6, const char *arg7, const char *arg8, struct cntr *cntr, int do_wait, int logfunc)
 {
 	int a=0;
 	int l=0;
@@ -1041,6 +1041,8 @@ int run_script(const char *script, struct strlist **userargs, int userargc, cons
 	if(arg4) cmd[l++]=(char *)arg4;
 	if(arg5) cmd[l++]=(char *)arg5;
 	if(arg6) cmd[l++]=(char *)arg6;
+	if(arg7) cmd[l++]=(char *)arg7;
+	if(arg8) cmd[l++]=(char *)arg8;
 	for(a=0; a<userargc && l<64-1; a++)
 		cmd[l++]=userargs[a]->path;
 	cmd[l++]=NULL;
@@ -1349,4 +1351,118 @@ void log_restore_settings(struct config *cconf, int srestore)
 		if(cconf->incexcdir[i]->flag)
 			logp("include = %s\n", cconf->incexcdir[i]->path);
 	}
+}
+
+long version_to_long(const char *version)
+{
+	long ret=0;
+	char *copy=NULL;
+	char *tok1=NULL;
+	char *tok2=NULL;
+	char *tok3=NULL;
+	if(!version || !*version) return 0;
+	if(!(copy=strdup(version)))
+	{
+		logp("out of memory\n");
+		return -1;
+	}
+	if(!(tok1=strtok(copy, "."))
+	  || !(tok2=strtok(NULL, "."))
+	  || !(tok3=strtok(NULL, ".")))
+	{
+		free(copy);
+		return -1;
+	}
+	ret+=atol(tok3);
+	ret+=atol(tok2)*100;
+	ret+=atol(tok1)*100*100;
+	free(copy);
+	return ret;
+}
+
+/* These receive_a_file() and send_file() functions are for use by extra_comms
+   and the CA stuff, rather than backups/restores. */
+int receive_a_file(const char *path, struct cntr *p1cntr)
+{
+	int ret=0;
+#ifdef HAVE_WIN32
+	BFILE bfd;
+#else
+	FILE *fp=NULL;
+#endif
+	unsigned long long rcvdbytes=0;
+	unsigned long long sentbytes=0;
+
+#ifdef HAVE_WIN32
+	binit(&bfd, 0);
+	bfd.use_backup_api=0;
+	//set_win32_backup(&bfd);
+	if(bopen(&bfd, path,
+		O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,
+		S_IRUSR | S_IWUSR, 0)<=0)
+	{
+		berrno be;
+		logp("Could not open for writing %s: %s\n",
+			path, be.bstrerror(errno));
+		ret=-1;
+		goto end;
+	}
+#else
+	if(!(fp=open_file(path, "wb")))
+	{
+		ret=-1;
+		goto end;
+	}
+#endif
+
+#ifdef HAVE_WIN32
+	ret=transfer_gzfile_in(NULL, path, &bfd, NULL,
+		&rcvdbytes, &sentbytes, NULL, 0, p1cntr, NULL);
+	bclose(&bfd);
+#else
+	ret=transfer_gzfile_in(NULL, path, NULL, fp,
+		&rcvdbytes, &sentbytes, NULL, 0, p1cntr, NULL);
+	close_fp(&fp);
+#endif
+end:
+	if(!ret) logp("Received: %s\n", path);
+	return ret;
+}
+
+int send_a_file(const char *path, struct cntr *p1cntr)
+{
+#ifdef HAVE_WIN32
+	int ret=0;
+	BFILE bfd;
+	unsigned long long bytes=0;
+	binit(&bfd, 0);
+	if(open_file_for_send(&bfd, NULL, path, 0, p1cntr)
+	  || send_whole_file_gz(path, "datapth", 0, &bytes, NULL,
+		p1cntr, 9, /* compression */
+		&bfd, NULL, NULL, 0))
+	{
+		ret=-1;
+		goto end;
+	}
+	logp("Sent %s\n", path);
+end:
+	close_file_for_send(&bfd, NULL);
+	return ret;
+#else
+	int ret=0;
+	FILE *fp=NULL;
+	unsigned long long bytes=0;
+	if(open_file_for_send(NULL, &fp, path, 0, p1cntr)
+	  || send_whole_file_gz(path, "datapth", 0, &bytes, NULL,
+		p1cntr, 9, /* compression */
+		NULL, fp, NULL, 0))
+	{
+		ret=-1;
+		goto end;
+	}
+	logp("Sent %s\n", path);
+end:
+	close_file_for_send(NULL, &fp);
+	return ret;
+#endif
 }

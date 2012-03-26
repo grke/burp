@@ -6,25 +6,6 @@
 #include "asyncio.h"
 #include "autoupgrade_server.h"
 
-static int send_a_file(const char *path, struct cntr *p1cntr)
-{
-	int ret=0;
-	FILE *fp=NULL;
-	unsigned long long bytes=0;
-	if(open_file_for_send(NULL, &fp, path, 0, p1cntr)
-	  || send_whole_file_gz(path, "datapth", 0, &bytes, NULL,
-		p1cntr, 9, /* compression */
-		NULL, fp, NULL, 0))
-	{
-		ret=-1;
-		goto end;
-	}
-	logp("Sent %s\n", path);
-end:
-	close_file_for_send(NULL, &fp);
-	return ret;
-}
-
 // Return -1 on error or success, 0 to continue normally.
 int autoupgrade_server(long ser_ver, long cli_ver, const char *os, struct config *conf, struct cntr *p1cntr)
 {

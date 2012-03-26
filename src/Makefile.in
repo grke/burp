@@ -35,7 +35,8 @@ SVRSRCS =	acl.c \
 		base64.c \
 		berrno.c \
 		bfile.c \
-		ca.c \
+		ca_client.c \
+		ca_server.c \
 		client.c \
 		client_vss.c \
 		conf.c \

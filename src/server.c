@@ -24,7 +24,7 @@
 #include "autoupgrade_server.h"
 #include "incexc_recv.h"
 #include "incexc_send.h"
-#include "ca.h"
+#include "ca_server.h"
 
 #include <netdb.h>
 #include <librsync.h>
@@ -718,7 +718,7 @@ static int get_lock_and_clean(const char *basedir, const char *lockbasedir, cons
 static int run_script_w(const char *script, struct strlist **userargs, int userargc, const char *client, const char *current, struct cntr *cntr)
 {
 	return run_script(script, userargs, userargc, client, current,
-		"reserved1", "reserved2", "reserved3", NULL, cntr,
+		"reserved1", "reserved2", "reserved3", NULL, NULL, NULL, cntr,
 		1 /* wait */, 1 /* use logp */);
 }
 
@@ -846,7 +846,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 					cconf->nfcount,
 					client, current,
 					working, finishing,
-					"0", NULL, cntr, 1, 1);
+					"0", NULL, NULL, NULL, cntr, 1, 1);
 			else if(!cconf->notify_success_warnings_only
 			  || (p1cntr->warning+cntr->warning)>0)
 			{
@@ -860,7 +860,8 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 					cconf->nscount,
 					client, current,
 					working, finishing,
-					warnings, NULL, cntr, 1, 1);
+					warnings, NULL, NULL, NULL,
+					cntr, 1, 1);
 			}
 		}
 	}
@@ -971,33 +972,6 @@ end:
 	if(unchangeddata) free(unchangeddata);
 	if(lockbasedir) free(lockbasedir);
 	if(lockfile) free(lockfile);
-	return ret;
-}
-
-static long version_to_long(const char *version)
-{
-	long ret=0;
-	char *copy=NULL;
-	char *tok1=NULL;
-	char *tok2=NULL;
-	char *tok3=NULL;
-	if(!version || !*version) return 0;
-	if(!(copy=strdup(version)))
-	{
-		logp("out of memory\n");
-		return -1;
-	}
-	if(!(tok1=strtok(copy, "."))
-	  || !(tok2=strtok(NULL, "."))
-	  || !(tok3=strtok(NULL, ".")))
-	{
-		free(copy);
-		return -1;
-	}
-	ret+=atol(tok3);
-	ret+=atol(tok2)*100;
-	ret+=atol(tok1)*100*100;
-	free(copy);
 	return ret;
 }
 
@@ -1196,14 +1170,11 @@ static int extra_comms(const char *client, const char *cversion, char **incexc, 
 	return ret;
 }
 
-#define KEYFILE "server.pem"
-#define PASSWORD "password"
-#define DHFILE "dh1024.pem"
-
 static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, int forking)
 {
 	int ret=0;
 	char cmd;
+	int ca_ret=0;
 	size_t len=0;
 	char *buf=NULL;
 	SSL *ssl=NULL;
@@ -1239,10 +1210,18 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	}
 	SSL_set_bio(ssl, sbio, sbio);
 
+	/* Do not try to check peer certificate straight away.
+	   Clients can send a certificate signing request when they have
+	   no certificate.
+	*/
+	SSL_set_verify(ssl, SSL_VERIFY_PEER
+		/* | SSL_VERIFY_FAIL_IF_NO_PEER_CERT */, 0);
+
 	if((ret=SSL_accept(ssl))<=0)
 	{
-		logp("SSL_accept: %d\n", ret);
-		berr_exit("SSL accept error");
+		char buf[256]="";
+		ERR_error_string_n(ERR_get_error(), buf, sizeof(buf));
+		logp("SSL_accept: %s\n", buf);
 		ret=-1;
 		goto finish;
 	}
@@ -1263,6 +1242,35 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 		goto finish;
 	}
 
+	/* At this point, the client might want to get a new certificate
+	   signed. Clients on 1.3.2 or newer can do this. */
+	if((ca_ret=ca_server_maybe_sign_client_cert(client, cversion,
+		&conf, &p1cntr))<0)
+	{
+		// Error.
+		logp("Error signing client certificate request for %s\n",
+			client);
+		ret=-1;
+		goto finish;
+	}
+	else if(ca_ret>0)
+	{
+		// Certificate signed and sent back.
+		// Everything is OK, but we will close this instance
+		// so that the client can start again with a new
+		// connection and its new certificates.
+		logp("Signed and returned client certificate request for %s\n",
+			client);
+		goto finish;
+	}
+
+	/* Now it is time to check the certificate. */ 
+	if(ssl_check_cert(ssl, &cconf))
+	{
+		log_and_send("check cert failed on server");
+		return -1;
+	}
+
 	// Now that the client conf is loaded, we might want to chuser or
 	// chgrp.
 	// The main process could have already done this, so we don't want
@@ -1277,12 +1285,6 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 			ret=-1;
 			goto finish;
 		}
-	}
-	if(ssl_check_cert(ssl, &cconf))
-	{
-		log_and_send("check cert failed on server");
-		ret=-1;
-		goto finish;
 	}
 
 	if(extra_comms(client, cversion, &incexc, &srestore,
@@ -1309,7 +1311,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 			client,
 			"reserved4",
 			"reserved5",
-			NULL,
+			NULL, NULL, NULL,
 			&p1cntr, 1, 1))
 	{
 		log_and_send("server pre script returned an error\n");
@@ -1331,7 +1333,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 			client,
 			"reserved4",
 			"reserved5",
-			NULL,
+			NULL, NULL, NULL,
 			&p1cntr, 1, 1))
 	{
 		log_and_send("server post script returned an error\n");
@@ -1591,8 +1593,6 @@ static int run_server(struct config *conf, const char *configfile, int *rfd, con
 		logp("error loading dh params\n");
 		return 1;
 	}
-	SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER |
-		SSL_VERIFY_FAIL_IF_NO_PEER_CERT,0);
 
 	if(!oldport
 	  || strcmp(oldport, conf->port))
@@ -1810,7 +1810,7 @@ int server(struct config *conf, const char *configfile, char **logfile)
 		if(daemonise() || relock(conf->lockfile)) return 1;
 	}
 
-	if(setup_ca(conf)) return 1;
+	if(ca_server_setup(conf)) return 1;
 
 	ssl_load_globals();
 

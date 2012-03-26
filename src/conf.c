@@ -46,6 +46,7 @@ static void free_incexcs(struct config *conf)
 
 void init_config(struct config *conf)
 {
+	conf->configfile=NULL;
 	conf->mode=MODE_UNSET;
 	conf->port=NULL;
 	conf->status_port=NULL;
@@ -60,6 +61,7 @@ void init_config(struct config *conf)
 	conf->ca_name=NULL;
 	conf->ca_server_name=NULL;
 	conf->ca_burp_ca=NULL;
+	conf->ca_csr_dir=NULL;
 	conf->lockfile=NULL;
 	conf->logfile=NULL;
 	conf->syslog=0;
@@ -155,6 +157,7 @@ void init_config(struct config *conf)
 void free_config(struct config *conf)
 {
 	if(!conf) return;
+	if(conf->configfile) free(conf->configfile);
 	if(conf->clientconfdir) free(conf->clientconfdir);
 	if(conf->cname) free(conf->cname);
 	if(conf->directory) free(conf->directory);
@@ -162,6 +165,7 @@ void free_config(struct config *conf)
 	if(conf->ca_name) free(conf->ca_name);
 	if(conf->ca_server_name) free(conf->ca_server_name);
 	if(conf->ca_burp_ca) free(conf->ca_burp_ca);
+	if(conf->ca_csr_dir) free(conf->ca_csr_dir);
 	if(conf->lockfile) free(conf->lockfile);
 	if(conf->logfile) free(conf->logfile);
 	if(conf->password) free(conf->password);
@@ -610,6 +614,8 @@ static int load_config_strings(struct config *conf, const char *field, const cha
 		&(conf->ca_server_name))) return -1;
 	if(get_conf_val(field, value, "ca_burp_ca",
 		&(conf->ca_burp_ca))) return -1;
+	if(get_conf_val(field, value, "ca_csr_dir",
+		&(conf->ca_csr_dir))) return -1;
 	if(get_conf_val(field, value, "backup", &(conf->backup)))
 		return -1;
 	if(get_conf_val(field, value, "restoreprefix", &(conf->restoreprefix)))
@@ -987,9 +993,21 @@ static int client_conf_checks(struct config *conf, const char *path, int *r, int
 		conf_problem(path, "no 'include' paths configured", r);
 	if(conf->autoupgrade_os
 	  && strstr(conf->autoupgrade_os, ".."))
-		conf_problem(path, "autoupgrade_os must not contain a '..' component", r);
+		conf_problem(path,
+			"autoupgrade_os must not contain a '..' component", r);
 	if(!conf->sdcount)
 		conf_problem(path, "Found no starting paths!", r);
+	if(conf->ca_burp_ca)
+	{
+	  if(!conf->ca_csr_dir)
+	   conf_problem(path, "ca_burp_ca set, but ca_csr_dir not set\n", r);
+	  if(!conf->ssl_cert_ca)
+	   conf_problem(path, "ca_burp_ca set, but ssl_cert_ca not set\n", r);
+	  if(!conf->ssl_cert)
+	   conf_problem(path, "ca_burp_ca set, but ssl_cert not set\n", r);
+	  if(!conf->ssl_key)
+	   conf_problem(path, "ca_burp_ca set, but ssl_key not set\n", r);
+	}
 
 	if(!r)
 	{
@@ -1225,6 +1243,15 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 	set_got_args(&l, conf);
 
 	//logp("in load_config\n");
+	if(loadall)
+	{
+		if(conf->configfile) free(conf->configfile);
+		if(!(conf->configfile=strdup(config_path)))
+		{
+			logp("out of memory\n");
+			return -1;
+		}
+	}
 
 	if(load_config_lines(config_path, conf, &l))
 		return -1;

@@ -30,7 +30,7 @@ extern void add_fd_to_sets(int fd, fd_set *read_set, fd_set *write_set, fd_set *
 extern int init_client_socket(const char *host, const char *port);
 extern void reuseaddr(int fd);
 extern void write_status(const char *client, char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr);
-extern int run_script(const char *script, struct strlist **userargs, int userargc, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, const char *arg6, struct cntr *cntr, int do_wait, int logfunc);
+extern int run_script(const char *script, struct strlist **userargs, int userargc, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, const char *arg6, const char *arg7, const char *arg8, struct cntr *cntr, int do_wait, int logfunc);
 extern char *comp_level(struct config *conf);
 extern int chuser_and_or_chgrp(const char *user, const char *group);
 extern const char *getdatestr(time_t t);
@@ -46,6 +46,11 @@ extern int fstype_excluded(struct config *conf, const char *fname, struct cntr *
 
 extern void log_restore_settings(struct config *cconf, int srestore);
 
+extern long version_to_long(const char *version);
 
+/* These receive_a_file() and send_file() functions are for use by extra_comms
+   and the CA stuff, rather than backups/restores. */
+extern int receive_a_file(const char *path, struct cntr *p1cntr);
+extern int send_a_file(const char *path, struct cntr *p1cntr);
 
 #endif

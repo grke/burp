@@ -12,6 +12,7 @@ enum burp_mode
 
 struct config
 {
+	char *configfile;
 	char *port;
 	char *status_port;
 	enum burp_mode mode;
@@ -53,6 +54,7 @@ struct config
 	char *encryption_password;
 	char *autoupgrade_os;
 	char *autoupgrade_dir; // also a server option
+	char *ca_csr_dir;
 
   // This block of client stuff is all to do with what files to backup.
 	int sdcount; struct strlist **startdir;

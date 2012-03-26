@@ -113,10 +113,6 @@ install: installdirs
 	@for I in $(all_subdirs); do (cd $$I && $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1); done
 	@if [ ! -f $(DESTDIR)$(sysconfdir)/burp-server.conf ] ; then cp configs/server/burp.conf $(DESTDIR)$(sysconfdir)/burp-server.conf ; fi
 	@if [ ! -f $(DESTDIR)$(sysconfdir)/burp.conf ] ; then cp configs/client/burp.conf $(DESTDIR)$(sysconfdir)/burp.conf ; fi
-	@if [ ! -f $(DESTDIR)$(sysconfdir)/ssl_cert-server.pem ] ; then cp configs/certs/ssl_cert-server.pem $(DESTDIR)$(sysconfdir)/ssl_cert-server.pem ; fi
-	@if [ ! -f $(DESTDIR)$(sysconfdir)/ssl_cert-client.pem ] ; then cp configs/certs/ssl_cert-client.pem $(DESTDIR)$(sysconfdir)/ssl_cert-client.pem ; fi
-	@if [ ! -f $(DESTDIR)$(sysconfdir)/ssl_cert_ca.pem ] ; then cp configs/certs/ssl_cert_ca.pem $(DESTDIR)$(sysconfdir)/ssl_cert_ca.pem ; fi
-	@if [ ! -f $(DESTDIR)$(sysconfdir)/dhfile.pem ] ; then cp configs/certs/dhfile.pem $(DESTDIR)$(sysconfdir)/dhfile.pem ; fi
 	@if [ ! -f $(DESTDIR)$(sysconfdir)/notify_script ] ; then cp configs/server/notify_script $(DESTDIR)$(sysconfdir)/notify_script && chmod 755 $(DESTDIR)$(sysconfdir)/notify_script ; fi
 	@if [ ! -f $(DESTDIR)$(sysconfdir)/ssl_extra_checks_script ] ; then cp configs/server/ssl_extra_checks_script $(DESTDIR)$(sysconfdir)/ssl_extra_checks_script && chmod 755 $(DESTDIR)$(sysconfdir)/ssl_extra_checks_script ; fi
 	@if [ ! -f $(DESTDIR)$(sysconfdir)/summary_script ] ; then cp configs/server/summary_script $(DESTDIR)$(sysconfdir)/summary_script && chmod 755 $(DESTDIR)$(sysconfdir)/summary_script ; fi

@@ -749,11 +749,11 @@ static int load_config_field_and_value(struct config *conf, const char *field, c
 		const char *cp=NULL;
 		cp=value;
 		if(!strncmp(value, "gzip", strlen("gzip")))
-			cp=value+strlen("gzip")+1;
+			cp=value+strlen("gzip");
 		if(strlen(cp)!=1 || !isdigit(*cp))
 			return -1;
 
-		conf->compression=atoi(value);
+		conf->compression=atoi(cp);
 	}
 	else if(!strcmp(field, "umask"))
 	{

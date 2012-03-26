@@ -229,7 +229,7 @@ on the server. Options are...
 \fBresume:\fR Simply continue the previous backup from the point at which it left off. NOTE: If the client has changed its include/exclude configuration since the backup was interrupted, the recovery method will automatically switch to 'use'.
 .TP
 \fBssl_cert_ca=[path]\fR
-The path to the SSL CA certificate. This file will probably be the same on both the server and the client. The file should contain just the certificate in PEM format
+The path to the SSL CA certificate. This file will probably be the same on both the server and the client. The file should contain just the certificate in PEM format. For more information on this, and the other ssl_* options, please see docs/burp_ca.txt.
 .TP
 \fBssl_cert=[path]\fR
 The path to the server SSL certificate. It works for me when the file contains the concatenation of the certificate and private key in PEM format.
@@ -304,12 +304,12 @@ If this is set to 1, server_script_post will always be run. The default is 0, wh
 Path to autoupgrade directory from which upgrades are downloaded. The option can be left unset in order not to autoupgrade clients. Please see docs/autoupgrade.txt in the source package for more help with this option.
 .TP
 \fBca_conf=[path]\fR
-Path to certificate authority configuration file. The CA configuration file will usually be /etc/burp/CA.cnf. The CA directory indicated by CA.cnf will usually be /etc/burp/CA. If ca_conf is set and the CA directory does not exist, the server will create, populate it, and the paths indicated by ssl_cert_ca, ssl_cert, ssl_key and ssl_dhfile will be overwritten.
+Path to certificate authority configuration file. The CA configuration file will usually be /etc/burp/CA.cnf. The CA directory indicated by CA.cnf will usually be /etc/burp/CA. If ca_conf is set and the CA directory does not exist, the server will create, populate it, and the paths indicated by ssl_cert_ca, ssl_cert, ssl_key and ssl_dhfile will be overwritten. For more detailed information on this and the other ca_* options, please see docs/burp_ca.txt.
 .TP
-\fBca_name=[path]\fR
+\fBca_name=[name]\fR
 Name of the CA that the server will generate when using the ca_conf option.
 .TP
-\fBca_server_name=[path]\fR
+\fBca_server_name=[name]\fR
 The name that the server will put into its own SSL certficates when using the ca_conf option.
 .TP
 \fBca_burp_ca=[path]\fR
@@ -361,8 +361,14 @@ Set the network send rate limit, in Mb/s. If this option is not given, burp will
 \fBnetwork_timeout=[s]\fR
 Set the network timeout in seconds. If no data is sent or received over a period of this length, burp will give up. The default is 7200 seconds (2 hours).
 .TP
+\fBca_burp_ca=[path]\fR
+Path to the burp_ca script (burp_ca.bat on Windows). For more information on this, please see docs/burp_ca.txt.
+.TP
+\fBca_csr_dir=[path]\fR
+Directory where certificate signing requests are generated. For more information on this, please see docs/burp_ca.txt.
+.TP
 \fBssl_cert_ca=[path]\fR
-The path to the SSL CA certificate. This file will probably be the same on both the server and the client. The file should contain just the certificate in PEM format
+The path to the SSL CA certificate. This file will probably be the same on both the server and the client. The file should contain just the certificate in PEM format. For more information on this and the other ssl_* options, please see docs/burp_ca.txt.
 .TP
 \fBssl_cert=[path]\fR
 The path to the client SSL certificate. It works for me when the file contains the concatenation of the certificate and private key in PEM format.

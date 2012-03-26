@@ -592,7 +592,7 @@ static int in_group(const char *clientconfdir, const char *client, strlist_t **g
 
 	if(!(ccfile=prepend(clientconfdir, client, "/"))) return -1;
 	init_config(&cconf);
-	if(set_client_global_config(conf, &cconf)
+	if(set_client_global_config(conf, &cconf, client)
 	  || load_config(ccfile, &cconf, 0))
 	{
 		logp("could not load config for client %s\n", client);

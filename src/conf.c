@@ -1330,7 +1330,7 @@ static int set_global_arglist(struct strlist ***dst, struct strlist **src, int *
 }
 
 /* Remember to update the list in the man page when you change these.*/
-int set_client_global_config(struct config *conf, struct config *cconf)
+int set_client_global_config(struct config *conf, struct config *cconf, const char *client)
 {
 	cconf->syslog=conf->syslog;
 	cconf->hardlinked_archive=conf->hardlinked_archive;
@@ -1380,6 +1380,11 @@ int set_client_global_config(struct config *conf, struct config *cconf)
 	if(set_global_arglist(&(cconf->server_script_arg),
 		conf->server_script_arg,
 		&(cconf->sscount), conf->sscount)) return -1;
+
+	// If ssl_peer_cn is not set, default it to the client name.
+	if(!conf->ssl_peer_cn
+	  && set_global_str(&(cconf->ssl_peer_cn), client))
+		return -1;
 
 	return 0;
 }

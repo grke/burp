@@ -233,7 +233,7 @@ int ssl_check_cert(SSL *ssl, struct config *conf)
 	}
 	if(SSL_get_verify_result(ssl)!=X509_V_OK)
 	{
-		berr_exit("Certificate doesn't verify");
+		berr_exit("Certificate doesn't verify.\n");
 		return -1;
 	}
 

@@ -8,11 +8,15 @@
 #include "cmd.h"
 #include "asyncio.h"
 #include "counter.h"
+#include "client_vss.h"
 
 static int generate_key_and_csr(struct config *conf, const char *csr_path)
 {
 	logp("Generating SSL key and certificate signing request\n");
 	logp("Running '%s --key --keypath %s --request --requestpath %s --name %s'\n", conf->ca_burp_ca, conf->ssl_key, csr_path, conf->cname);
+#ifdef HAVE_WIN32
+	win32_enable_backup_privileges(1 /* ignore_errors */);
+#endif
 	if(run_script(conf->ca_burp_ca, NULL, 0, "--key", "--keypath",
 		conf->ssl_key, "--request", "--requestpath", csr_path,
 		"--name", conf->cname,
@@ -71,6 +75,12 @@ static int rewrite_client_conf(struct config *conf)
 
 		fprintf(dp, "ssl_peer_cn = %s\n", conf->ssl_peer_cn);
 	}
+	close_fp(&sp);
+	close_fp(&dp);
+#ifdef HAVE_WIN32
+	// Need to delete the destination, or Windows gets upset.
+	unlink(conf->configfile);
+#endif
 	if(do_rename(tmp, conf->configfile)) goto end;
 
 	ret=0;

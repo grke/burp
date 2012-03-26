@@ -342,7 +342,7 @@ static int load_data_from_disk(struct config *conf, struct cstat ***clist, int *
 		(*clist)[q]->conf_mtime=statp.st_mtime;
 
 		init_config(&cconf);
-		if(set_client_global_config(conf, &cconf)
+		if(set_client_global_config(conf, &cconf, (*clist)[q]->name)
 		  || load_config((*clist)[q]->conffile, &cconf, FALSE))
 		{
 			free_config(&cconf);

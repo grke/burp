@@ -146,7 +146,7 @@ struct config
 extern void init_config(struct config *conf);
 extern int load_config(const char *config_path, struct config *conf, bool loadall);
 extern void free_config(struct config *conf);
-extern int set_client_global_config(struct config *conf, struct config *cconf);
+extern int set_client_global_config(struct config *conf, struct config *cconf, const char *client);
 extern int is_subdir(const char *dir, const char *sub);
 extern int pathcmp(const char *a, const char *b);
 extern int config_get_pair(char buf[], char **field, char **value);

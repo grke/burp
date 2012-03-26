@@ -40,7 +40,7 @@ static int check_client_and_password(struct config *conf, const char *client, co
 	// client.
 	init_config(cconf);
 	snprintf(cpath, sizeof(cpath), "%s/%s", conf->clientconfdir, client);
-	if(set_client_global_config(conf, cconf)
+	if(set_client_global_config(conf, cconf, client)
 	  || load_config(cpath, cconf, FALSE))
 		return -1;
 	if(!cconf->ssl_peer_cn)

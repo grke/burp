@@ -1,5 +1,11 @@
 Things to watch out for when upgrading.
 
+1.3.2
+-----
+The process of generating SSL certificates has been automated, so the old
+default keys and certificates have been removed from new installs.
+See docs/burp_ca.txt for more information.
+
 1.3.1
 -----
 Due to Debian policy, burp and bedup will now be installed in /usr/sbin.

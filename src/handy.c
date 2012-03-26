@@ -284,22 +284,27 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password)
 
 int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, int64_t winattr, struct cntr *cntr)
 {
-#ifdef HAVE_WIN32
-	binit(bfd, winattr);
-	if(bopen(bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0,
-		(winattr & FILE_ATTRIBUTE_DIRECTORY))<=0)
+	if(fp)
 	{
-		berrno be;
-		logw(cntr,
-			"Could not open %s: %s\n", fname, be.bstrerror(errno));
-		return -1;
+		if(!(*fp=fopen(fname, "rb")))
+		{
+			logw(cntr,
+				"Could not open %s: %s\n", fname, strerror(errno));
+			return -1;
+		}
 	}
-#else
-	if(!(*fp=fopen(fname, "rb")))
+#ifdef HAVE_WIN32
+	else
 	{
-		logw(cntr,
-			"Could not open %s: %s\n", fname, strerror(errno));
-		return -1;
+		binit(bfd, winattr);
+		if(bopen(bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0,
+			(winattr & FILE_ATTRIBUTE_DIRECTORY))<=0)
+		{
+			berrno be;
+			logw(cntr, "Could not open %s: %s\n",
+				fname, be.bstrerror(errno));
+			return -1;
+		}
 	}
 #endif
 	return 0;
@@ -307,10 +312,9 @@ int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, int64_t winattr
 
 void close_file_for_send(BFILE *bfd, FILE **fp)
 {
+	if(fp) fclose(*fp);
 #ifdef HAVE_WIN32
-	bclose(bfd);
-#else
-	fclose(*fp);
+	else bclose(bfd);
 #endif
 }
 
@@ -383,10 +387,9 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 		}
 		else
 		{
+			if(fp) strm.avail_in=fread(in, 1, ZCHUNK, fp);
 #ifdef HAVE_WIN32
-			strm.avail_in=(uint32_t)bread(bfd, in, ZCHUNK);
-#else
-			strm.avail_in=fread(in, 1, ZCHUNK, fp);
+			else strm.avail_in=(uint32_t)bread(bfd, in, ZCHUNK);
 #endif
 		}
 		if(!compression && !strm.avail_in) break;
@@ -1429,32 +1432,17 @@ end:
 	return ret;
 }
 
+/* Windows will use this function, when sending a certificate signing request.
+   It is not using the Windows API stuff because it needs to arrive on the
+   server side without any junk in it. */
 int send_a_file(const char *path, struct cntr *p1cntr)
 {
-#ifdef HAVE_WIN32
-	int ret=0;
-	BFILE bfd;
-	unsigned long long bytes=0;
-	binit(&bfd, 0);
-	if(open_file_for_send(&bfd, NULL, path, 0, p1cntr)
-	  || send_whole_file_gz(path, "datapth", 0, &bytes, NULL,
-		p1cntr, 9, /* compression */
-		&bfd, NULL, NULL, 0))
-	{
-		ret=-1;
-		goto end;
-	}
-	logp("Sent %s\n", path);
-end:
-	close_file_for_send(&bfd, NULL);
-	return ret;
-#else
 	int ret=0;
 	FILE *fp=NULL;
 	unsigned long long bytes=0;
 	if(open_file_for_send(NULL, &fp, path, 0, p1cntr)
 	  || send_whole_file_gz(path, "datapth", 0, &bytes, NULL,
-		p1cntr, 9, /* compression */
+		p1cntr, 9, // compression
 		NULL, fp, NULL, 0))
 	{
 		ret=-1;
@@ -1464,5 +1452,4 @@ end:
 end:
 	close_file_for_send(NULL, &fp);
 	return ret;
-#endif
 }

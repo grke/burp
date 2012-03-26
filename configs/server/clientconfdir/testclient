@@ -1,8 +1,5 @@
 password = abcdefgh
 
-# The common name in the certificate that the client gives us.
-ssl_peer_cn = grkeclient
-
 # More configuration files can be read, using syntax like the following
 # (without the leading '# ').
 . incexc/example

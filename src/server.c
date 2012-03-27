@@ -1795,7 +1795,7 @@ static int run_server(struct config *conf, const char *configfile, int *rfd, con
 	return ret;
 }
 
-int server(struct config *conf, const char *configfile, char **logfile)
+int server(struct config *conf, const char *configfile, char **logfile, int generate_ca_only)
 {
 	int ret=0;
 	int rfd=-1; // normal client port
@@ -1805,12 +1805,17 @@ int server(struct config *conf, const char *configfile, char **logfile)
 	char *oldport=NULL;
 	char *oldstatusport=NULL;
 
+	if(ca_server_setup(conf)) return 1;
+	if(generate_ca_only)
+	{
+		logp("The '-g' command line option was given. Exiting now.\n");
+		return 0;
+	}
+
 	if(conf->forking && conf->daemon)
 	{
 		if(daemonise() || relock(conf->lockfile)) return 1;
 	}
-
-	if(ca_server_setup(conf)) return 1;
 
 	ssl_load_globals();
 

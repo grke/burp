@@ -28,6 +28,7 @@ static void usage_server(void)
 	printf("  -c <path>     Path to config file (default: %s).\n", get_config_path());
 	printf("  -d <path>     a single client in the status monitor\n");
 	printf("  -F            Stay in the foreground.\n");
+	printf("  -g            Generate initial CA certificates and exit.\n");
 	printf("  -h|-?         Print this text and exit.\n");
 	printf("  -i            Print index of symbols and exit\n");
 	printf("  -l <path>     Path to log file.\n");
@@ -143,6 +144,7 @@ int main (int argc, char *argv[])
 	char *logfile=NULL;
 	struct config conf;
 	int forceoverwrite=0;
+	int generate_ca_only=0;
 	enum action act=ACTION_LIST;
 	const char *backup=NULL;
 	const char *restoreprefix=NULL;
@@ -157,7 +159,7 @@ int main (int argc, char *argv[])
 
 	init_log(argv[0]);
 
-	while((option=getopt(argc, argv, "a:b:c:C:d:hfFinr:s:l:vz:?"))!=-1)
+	while((option=getopt(argc, argv, "a:b:c:C:d:ghfFinr:s:l:vz:?"))!=-1)
 	{
 		switch(option)
 		{
@@ -206,6 +208,9 @@ int main (int argc, char *argv[])
 				break;
 			case 'F':
 				daemon=0;
+				break;
+			case 'g':
+				generate_ca_only=1;
 				break;
 			case 'i':
 				print_all_cmds();
@@ -293,7 +298,8 @@ int main (int argc, char *argv[])
 			ret=status_client_ncurses(&conf, act, sclient);
 		}
 		else
-			ret=server(&conf, configfile, &logfile);
+			ret=server(&conf, configfile,
+				&logfile, generate_ca_only);
 #endif
 	}
 	else

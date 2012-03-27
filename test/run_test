@@ -316,13 +316,14 @@ echo "More logs can be found in:"
 echo "$target/var/spool/burp/testclient/<backup number>"
 echo
 
-echo "Creating dhfile.pem"
+echo "Initialising server certificate authority"
 # Need to do this outside of the server, because it might take a long time.
-./usr/sbin/burp_ca --dhfile etc/burp/dhfile.pem
+./usr/sbin/burp -c "$serverconf" -g >> "$serveroutputlog" 2>&1 || fail "Initialising server certificate authority failed"
+echo
 
 # Start up the server
 echo "Starting test server"
-./usr/sbin/burp -c $serverconf -l "$serversystemlog" -F >> "$serveroutputlog" 2>&1 &
+./usr/sbin/burp -c "$serverconf" -l "$serversystemlog" -F >> "$serveroutputlog" 2>&1 &
 serverpid=$!
 
 # Be kind, and wait a little for it to start.

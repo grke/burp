@@ -146,7 +146,7 @@ fi
 [ -z "$requestpath" ] && requestpath=${dir}/${name}.csr
 if [ "$request" = "yes" ]; then
   echo "generating request ${name}"
-  TEMP=$(mktemp || /tmp/temp.$$)
+  TEMP=$(mktemp /tmp/burp_ca.tmp.XXXXXXXX || echo /tmp/burp_ca.tmp.$$)
   cat <<-EOF > ${TEMP}
 	RANDFILE                = /dev/urandom
 

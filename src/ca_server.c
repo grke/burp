@@ -7,6 +7,7 @@
 #include "handy.h"
 #include "cmd.h"
 #include "asyncio.h"
+#include "current_backups_server.h"
 
 static int setup_stuff_done=0;
 
@@ -191,6 +192,7 @@ int ca_server_setup(struct config *conf)
 
 	if(burp_ca_init(conf, ca_dir))
 	{
+		recursive_delete(ca_dir, "", TRUE);
 		ret=-1;
 		goto end;
 	}

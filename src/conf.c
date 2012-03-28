@@ -962,7 +962,7 @@ static int server_conf_checks(struct config *conf, const char *path, int *r)
 	return 0;
 }
 
-static int client_conf_checks(struct config *conf, const char *path, int *r, int have_include)
+static int client_conf_checks(struct config *conf, const char *path, int *r)
 {
 	if(!conf->cname)
 		conf_problem(path, "client name unset", r);
@@ -989,14 +989,10 @@ static int client_conf_checks(struct config *conf, const char *path, int *r, int
 	}
 	if(!conf->lockfile)
 		conf_problem(path, "lockfile unset", r);
-	if(!have_include)
-		conf_problem(path, "no 'include' paths configured", r);
 	if(conf->autoupgrade_os
 	  && strstr(conf->autoupgrade_os, ".."))
 		conf_problem(path,
 			"autoupgrade_os must not contain a '..' component", r);
-	if(!conf->sdcount)
-		conf_problem(path, "Found no starting paths!", r);
 	if(conf->ca_burp_ca)
 	{
 	  if(!conf->ca_csr_dir)
@@ -1028,7 +1024,6 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 {
 	int i=0;
 	int r=0;
-	int have_include=0;
 	struct strlist **sdlist=NULL;
 
 	// Set the strlist flag for the excluded fstypes
@@ -1070,7 +1065,6 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 	for(i=0; i<conf->iecount; i++)
 	{
 		if(path_checks(l->ielist[i]->path)) r--;
-		if(l->ielist[i]->flag) have_include++;
 		if(!i)
 		{
 			// ielist is sorted - the first entry is one that
@@ -1176,8 +1170,7 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 			if(server_conf_checks(conf, config_path, &r)) r--;
 			break;
 		case MODE_CLIENT:
-			if(client_conf_checks(conf,
-				config_path, &r, have_include)) r--;
+			if(client_conf_checks(conf, config_path, &r)) r--;
 			break;
 		case MODE_UNSET:
 		default:

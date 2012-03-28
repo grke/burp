@@ -346,6 +346,13 @@ static int do_client(struct config *conf, enum action act)
 				logp("with the following settings:\n");
 				printf("%s\n", incexc);
 			}
+			if(!conf->sdcount)
+			{
+				logp("Found no include paths!\n");
+				ret=-1;
+				goto end;
+			}
+
 			if(!(ret=maybe_check_timer(phase1str,
 				conf, &resume)))
 			{

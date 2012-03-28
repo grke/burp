@@ -381,7 +381,7 @@ static void detail(char *toks[], int t, struct config *conf, int row, int col)
 			if(bytespersec>0)
 			{
 				time_t timeleft=0;
-				timeleft=bytesleft/bytespersec;
+				timeleft=(time_t)(bytesleft/bytespersec);
 				print_detail2("Time left",
 					time_taken(timeleft), " ", &x, col);
 			}

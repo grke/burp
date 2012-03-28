@@ -1076,10 +1076,10 @@ int status_server(int *cfd, struct config *conf)
 			// not worry, just throw it away.
 			if(rbuf && (cp=strrchr(rbuf, '\n')))
 			{
-				*cp=NULL;
+				*cp='\0';
 				// Also get rid of '\r'. I think telnet adds
 				// this.
-				if((cp=strrchr(rbuf, '\r'))) *cp=NULL;
+				if((cp=strrchr(rbuf, '\r'))) *cp='\0';
 
 				if(parse_rbuf(rbuf, *cfd, clist, clen))
 				{

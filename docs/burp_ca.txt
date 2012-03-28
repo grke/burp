@@ -60,6 +60,9 @@ ssl_key_password = password
 ssl_peer_cn = burpserver
 
 If you do not want the client to automate the CA stuff, do not set ca_burp_ca.
+Clients as of 1.3.2 will not include the old default certificates, so if you
+want to install new clients connecting to a server that is using the old
+certificates, you will also have to copy the old certificates onto the client.
 
 When the client runs (for example, with 'burp -a b'), it will try to connect
 to the server using the burp client name (cname) and password. If you haven't

@@ -144,7 +144,7 @@ static int s_server_session_id_context=1;
 
 /* May return 1 to mean try again. This happens after a successful certificate
    signing request so that it connects again straight away with the new
-   key/certificate. */
+   key/certificate. Returns 2 if there were restore/verify warnings. */
 static int do_client(struct config *conf, enum action act)
 {
 	int ret=0;
@@ -432,7 +432,7 @@ static int do_client(struct config *conf, enum action act)
 			// Return non-zero if there were warnings,
 			// so that the test script can easily check.
 			if(p1cntr.warning+cntr.warning)
-				ret=1;
+				ret=2;
 
 			break;
 		}
@@ -462,7 +462,7 @@ end:
 int client(struct config *conf, enum action act)
 {
 	int ret=0;
-	if((ret=do_client(conf, act))>0)
+	if((ret=do_client(conf, act))==1)
 	{
 		logp("Re-opening connection to server\n");
 		ret=do_client(conf, act);

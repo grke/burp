@@ -303,14 +303,17 @@ static int do_client(struct config *conf, enum action act)
 
 		// :sincexc: is for the server giving the client the
 		// incexc config.
-		if(!incexc && server_supports(feat, ":sincexc:"))
+		if(act==ACTION_BACKUP || act==ACTION_BACKUP_TIMED)
 		{
-			logp("Server is setting includes/excludes.\n");
-			if(incexc) { free(incexc); incexc=NULL; }
-			if((ret=incexc_recv_client(&incexc, conf, &p1cntr)))
-				goto end;
-			if(incexc && (ret=parse_incexcs_buf(conf, incexc)))
-				goto end;
+			if(!incexc && server_supports(feat, ":sincexc:"))
+			{
+				logp("Server is setting includes/excludes.\n");
+				if(incexc) { free(incexc); incexc=NULL; }
+				if((ret=incexc_recv_client(&incexc,
+					conf, &p1cntr))) goto end;
+				if(incexc && (ret=parse_incexcs_buf(conf,
+					incexc))) goto end;
+			}
 		}
 
 		// :incexc: is for the client sending the server the

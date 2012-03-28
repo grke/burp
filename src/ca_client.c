@@ -107,8 +107,6 @@ int ca_client_setup(struct config *conf, struct cntr *p1cntr)
 	char csr_path[256]="";
 	struct stat statp;
 
-	printf("in setup_client_ca\n");
-
 	// Do not continue if we have none of the following things set.
 	if(  !conf->ca_burp_ca
 	  || !conf->ca_csr_dir

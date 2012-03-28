@@ -106,7 +106,7 @@ if [ "$init" = "yes" ]; then
   umask ${sec_umask}
   openssl genrsa -out ${dir}/CA_${ca}.key ${size}
   umask ${def_umask}
-  TEMP=$(mktemp || /tmp/temp.$$)
+  TEMP=$(mktemp /tmp/burp_ca.tmp.XXXXXXXX || echo /tmp/burp_ca.tmp.$$)
   cat <<-EOF > ${TEMP}
 	RANDFILE                = /dev/urandom
 

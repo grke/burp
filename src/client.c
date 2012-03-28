@@ -157,6 +157,7 @@ static int do_client(struct config *conf, enum action act)
 	struct cntr cntr;
 	struct cntr p1cntr;
 	char *incexc=NULL;
+	char *server_version=NULL;
 	const char *phase1str="backupphase1";
 
 	reset_filecounter(&p1cntr);
@@ -213,23 +214,30 @@ static int do_client(struct config *conf, enum action act)
 		size_t len=0;
 		char *feat=NULL;
 		int ca_ret=0;
-		if((ret=authorise_client(conf, &p1cntr)))
+		if((ret=authorise_client(conf, &server_version, &p1cntr)))
 			goto end;
 
-		if((ca_ret=ca_client_setup(conf, &p1cntr))<0)
+		if(server_version)
 		{
-			// Error
-			logp("Error with certificate signing request\n");
-			ret=-1;
-			goto end;
-		}
-		else if(ca_ret>0)
-		{
-			// Certificate signed successfully.
-			// Everything is OK, but we will reconnect now, in
-			// order to use the new keys/certificates.
-			ret=1;
-			goto end;
+			logp("Server version: %s\n", server_version);
+			// Servers before 1.3.2 did not tell us their versions.
+			// 1.3.2 and above can do the automatic CA stuff that
+			// follows.
+			if((ca_ret=ca_client_setup(conf, &p1cntr))<0)
+			{
+				// Error
+				logp("Error with certificate signing request\n");
+				ret=-1;
+				goto end;
+			}
+			else if(ca_ret>0)
+			{
+				// Certificate signed successfully.
+				// Everything is OK, but we will reconnect now, in
+				// order to use the new keys/certificates.
+				ret=1;
+				goto end;
+			}
 		}
 
 		set_non_blocking(rfd);
@@ -442,6 +450,7 @@ end:
 	if(act!=ACTION_ESTIMATE) ssl_destroy_ctx(ctx);
 
 	if(incexc) free(incexc);
+	if(server_version) free(server_version);
 
         //logp("end client\n");
 	return ret;

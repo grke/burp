@@ -11,7 +11,7 @@
 #include "sbuf.h"
 #include "auth_client.h"
 
-int authorise_client(struct config *conf, struct cntr *p1cntr)
+int authorise_client(struct config *conf, char **server_version, struct cntr *p1cntr)
 {
 	char cmd;
 	char *buf=NULL;
@@ -20,9 +20,32 @@ int authorise_client(struct config *conf, struct cntr *p1cntr)
 	snprintf(hello, sizeof(hello),
 		"hello:%s",
 		VERSION);
-	if(async_write_str(CMD_GEN, hello)
-	  || async_read_expect(CMD_GEN, "whoareyou")
-	  || async_write_str(CMD_GEN, conf->cname)
+	if(async_write_str(CMD_GEN, hello))
+	{
+		logp("problem with auth\n");
+		return -1;
+	}
+	if(async_rw_ensure_read(&cmd, &buf, &l, '\0', NULL, 0)
+	  || cmd!=CMD_GEN || strncmp(buf, "whoareyou", strlen("whoareyou")))
+	{
+		logp("problem with auth\n");
+		if(buf) free(buf);
+		return -1;
+	}
+	if(buf)
+	{
+		char *cp=NULL;
+		if((cp=strchr(buf, ':')))
+		{
+			cp++;
+			if(cp) *server_version=strdup(cp);
+		}
+		free(buf);
+		buf=NULL;
+	}
+
+
+	if(async_write_str(CMD_GEN, conf->cname)
 	  || async_read_expect(CMD_GEN, "okpassword")
 	  || async_write_str(CMD_GEN, conf->password)
 	  || async_read(&cmd, &buf, &l))

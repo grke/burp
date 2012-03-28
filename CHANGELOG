@@ -37,6 +37,7 @@
     new certificate. Remove old default SSL certificates because they should
     no longer be needed.
   * Bug fix for 'compression = gzip[0-9]'.
+  * Pass the server version to the client.
 
 2012-02-27 Changes in burp-1.3.1:
   * EFS support on Windows.

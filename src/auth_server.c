@@ -106,6 +106,7 @@ int authorise_server(struct config *conf, char **client, char **cversion, struct
 	size_t len=0;
 	char *buf=NULL;
 	char *password=NULL;
+	char whoareyou[256]="";
 	if(async_read(&cmd, &buf, &len))
 	{
 		logp("unable to read initial message\n");
@@ -127,7 +128,10 @@ int authorise_server(struct config *conf, char **client, char **cversion, struct
 		if(cp) *cversion=strdup(cp);
 	}
 	free(buf); buf=NULL;
-	async_write_str(CMD_GEN, "whoareyou");
+
+	// Stick the server version on the end of the whoareyou string.
+	snprintf(whoareyou, sizeof(whoareyou), "whoareyou:%s", VERSION);
+	async_write_str(CMD_GEN, whoareyou);
 	if(async_read(&cmd, &buf, &len) || !len)
 	{
 		logp("unable to get client name\n");

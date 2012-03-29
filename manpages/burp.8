@@ -442,7 +442,7 @@ Name of the client operating system. Should match a directory name in the server
 .SH INCLUDES / EXCLUDES
 
 .TP
-The following options specify exactly what is backed up. The client can specify these options, or if you include at least one 'include=' in the server configuration files, the server will override them all.
+The following options specify exactly what is backed up. The client can specify these options, or if you include at least one 'include=' in the client configuration files on the server, the server will override them all.
 .TP
 \fBinclude=[path]\fR
 Path to include in the backup. You can have multiple include lines. Use forward slashes '/', not backslashes '\\' as path delimiters.
@@ -479,8 +479,6 @@ Do not back up the given fifo itself, but open it for reading and back up the co
 .TP
 \fBread_all_fifos=[0|1]\fR
 Open all fifos for reading and back up the contents as if they were regular files.
-
-
 
 .SH SERVER CLIENTCONFDIR FILE
 .TP

@@ -4,11 +4,11 @@
   * Add the ability for the server to set the client include/excludes.
   * Simulate browsing backups with the use of "-a l/L -d path".
   * Add ability to set up a restore on the server side.
-  * Add ability to specificy child processes separately to status child process
+  * Add ability to specify child processes separately to status child process
     with new max_status_children option.
   * Status monitor - make keypresses more responsive.
-  * Fix bug where old clients didn't leave an incexc file on the server meant
-    that resume would not start.
+  * Fix bug where old clients that didn't leave an incexc file on the server
+    meant that resume would not start.
   * Add 'include_ext' option, which excludes all files unless their names end
     in the given extension.
   * Fall back to using the client or server name if ssl_peer_cn is unset on the
@@ -19,11 +19,13 @@
   * Windows installer: add comment about poll interval '0' means that the
     scheduled job isn't installed.
   * Windows installer: don't install the scheduled task when doing an upgrade.
-  * Unlock the client directory after server_script_post has run.
+  * Unlock the client directory after server_script_post has run instead of
+    before.
   * Fix bug where the wrong arg count was being given to the server post
     script.
   * Make sure status snapshot exits when there are no backup clients.
-  * Ability to dump logs and paths in backups using '-a S'.
+  * Ability to dump logs and paths in backups using '-a S' (useful for making
+    a gui that browses backup contents).
   * Bug fixes to ssl_extra_checks_script.
   * Bug fix: initialise network_timeout properly.
   * Fix typos in docs/burp_ca.txt.

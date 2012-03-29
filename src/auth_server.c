@@ -129,8 +129,21 @@ int authorise_server(struct config *conf, char **client, char **cversion, struct
 	}
 	free(buf); buf=NULL;
 
-	// Stick the server version on the end of the whoareyou string.
-	snprintf(whoareyou, sizeof(whoareyou), "whoareyou:%s", VERSION);
+	snprintf(whoareyou, sizeof(whoareyou), "whoareyou");
+	if(*cversion)
+	{
+		long min_ver=0;
+		long cli_ver=0;
+		if((min_ver=version_to_long("1.3.2"))<0
+		  || (cli_ver=version_to_long(*cversion))<0)
+			return -1;
+		// Stick the server version on the end of the whoareyou string.
+		// if the client version is recent enough.
+		if(min_ver<=cli_ver)
+		 snprintf(whoareyou, sizeof(whoareyou),
+			"whoareyou:%s", VERSION);
+	}
+
 	async_write_str(CMD_GEN, whoareyou);
 	if(async_read(&cmd, &buf, &len) || !len)
 	{

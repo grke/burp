@@ -339,6 +339,7 @@ static int do_backup_server(const char *basedir, const char *current, const char
 			snprintf(msg, sizeof(msg),
 			  "could not point working symlink to: %s",
 			  realworking);
+			log_and_send(msg);
 			goto error;
 		}
 		else if(mkdir(realworking, 0777))

@@ -1173,7 +1173,7 @@ int chuser_and_or_chgrp(const char *user, const char *group)
 	if(grp)
 	{
 		if(gid!=getgid() // do not do it if we already have the same gid
-		  setgid(gid))
+		 && setgid(gid))
 		{
 			logp("could not set group '%s': %s\n", group,
 				strerror(errno));

@@ -12,11 +12,13 @@ enum burp_mode
 
 struct config
 {
+	char *configfile;
 	char *port;
 	char *status_port;
 	enum burp_mode mode;
 	char *lockfile;
 	char *logfile;
+	int syslog;
 	char *ssl_cert_ca;
 	char *ssl_cert;
 	char *ssl_key;
@@ -32,10 +34,17 @@ struct config
 	char *clientconfdir;
 	char *ssl_dhfile;
 	int max_children;
+	int max_status_children;
 	char *client_lockdir;
 	mode_t umask;
-	unsigned int max_hardlinks;
+	int max_hardlinks;
 	int max_storage_subdirs;
+	int forking;
+	int daemon;
+	char *ca_conf;
+	char *ca_name;
+	char *ca_server_name;
+	char *ca_burp_ca;
 
 // client options
 	char *cname;
@@ -45,26 +54,31 @@ struct config
 	char *encryption_password;
 	char *autoupgrade_os;
 	char *autoupgrade_dir; // also a server option
+	char *ca_csr_dir;
 
   // This block of client stuff is all to do with what files to backup.
-	struct strlist **startdir;
-	struct strlist **incexcdir;
-	struct strlist **fschgdir;
-	struct strlist **nobackup;
-	struct strlist **excext;
-	struct strlist **excfs;
-	int sdcount;
-	int iecount;
-	int fscount;
-	int nbcount;
-	int excount;
-	int exfscount;
+	int sdcount; struct strlist **startdir;
+	int iecount; struct strlist **incexcdir;
+	int fscount; struct strlist **fschgdir;
+	int nbcount; struct strlist **nobackup;
+	int incount; struct strlist **incext; // include extensions
+	int excount; struct strlist **excext; // exclude extensions
+	int exfscount; struct strlist **excfs; // exclude filesystems
 	int cross_all_filesystems;
 	int read_all_fifos;
 	struct strlist **fifos;
 	int ffcount;
 	unsigned long min_file_size;
 	unsigned long max_file_size;
+  // These are to do with restore.
+	int overwrite;
+	int strip;
+	char *backup;
+	char *restoreprefix;
+	char *regex;
+  // To do with listing.
+	char *browsefile;
+	char *browsedir;
 
 	char *backup_script_pre;
 	struct strlist **backup_script_pre_arg;
@@ -132,11 +146,12 @@ struct config
 extern void init_config(struct config *conf);
 extern int load_config(const char *config_path, struct config *conf, bool loadall);
 extern void free_config(struct config *conf);
-extern int set_client_global_config(struct config *conf, struct config *cconf);
+extern int set_client_global_config(struct config *conf, struct config *cconf, const char *client);
 extern int is_subdir(const char *dir, const char *sub);
 extern int pathcmp(const char *a, const char *b);
+extern int config_get_pair(char buf[], char **field, char **value);
+extern int parse_incexcs_buf(struct config *conf, const char *incexc);
+extern int parse_incexcs_path(struct config *conf, const char *path);
 
-extern int send_incexc_client(struct config *conf, struct cntr *p1cntr);
-extern int recv_incexc_server(struct config *conf, struct cntr *p1cntr);
 
 #endif

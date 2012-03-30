@@ -9,8 +9,6 @@ export DH_VERBOSE=1
 
 override_dh_install:
 	dh_install
-	install -m 0644 configs/certs/CA/CA.cnf debian/burp/etc/burp/
-	install -m 0755 configs/certs/CA/burp_ca debian/burp/usr/sbin/
 
 override_dh_fixperms:
 	dh_fixperms

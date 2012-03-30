@@ -240,6 +240,10 @@ Function InstallCommonFiles
 
     File "${SRC_DIR}\burp.dll"
 
+    File "${SRC_DIR}\openssl.exe"
+
+    File "${SRC_DIR}\burp_ca.bat"
+
     StrCpy $CommonFilesDone 1
   ${EndIf}
 FunctionEnd
@@ -267,18 +271,9 @@ Section "-Initialize"
 
   CreateDirectory "$INSTDIR"
   CreateDirectory "$INSTDIR\bin"
-  CreateDirectory "$APPDATA\Burp"
-  CreateDirectory "$APPDATA\Burp\Work"
-  CreateDirectory "$APPDATA\Burp\Spool"
+  CreateDirectory "$INSTDIR\CA"
 
   SetOutPath "$INSTDIR"
-
-  IfFileExists $INSTDIR\ssl_cert-client.pem endssl_cert
-  File "..\..\..\configs\certs\ssl_cert-client.pem"
-endssl_cert:
-  IfFileExists $INSTDIR\ssl_cert_ca.pem endssl_cert_ca
-  File "..\..\..\configs\certs\ssl_cert_ca.pem"
-endssl_cert_ca:
 
   IfFileExists $INSTDIR\burp.conf end
   FileOpen $R1 $INSTDIR\burp.conf w
@@ -309,10 +304,13 @@ endssl_cert_ca:
   ${EndIf}
   FileWrite $R1 "nobackup = .nobackup$\r$\n"
   FileWrite $R1 "lockfile = C:/Program Files/Burp/lockfile$\r$\n"
-  FileWrite $R1 "ssl_cert = C:/Program Files/Burp/ssl_cert-client.pem$\r$\n"
+  FileWrite $R1 "ca_burp_ca = C:/Program Files/Burp/bin/burp_ca.bat$\r$\n"
+  FileWrite $R1 "ca_csr_dir = C:/Program Files/Burp/CA$\r$\n"
   FileWrite $R1 "ssl_cert_ca = C:/Program Files/Burp/ssl_cert_ca.pem$\r$\n"
+  FileWrite $R1 "ssl_cert = C:/Program Files/Burp/ssl_cert-client.pem$\r$\n"
+  FileWrite $R1 "ssl_key = C:/Program Files/Burp/ssl_cert-client.key$\r$\n"
   FileWrite $R1 "ssl_key_password = password$\r$\n"
-  FileWrite $R1 "ssl_peer_cn = grkeserver$\r$\n"
+  FileWrite $R1 "ssl_peer_cn = burpserver$\r$\n"
 !if "${BITS}" == "32"
   FileWrite $R1 "autoupgrade_os = win32$\r$\n"
 !endif
@@ -327,6 +325,10 @@ endssl_cert_ca:
   ${EndIf}
 
   FileClose $R1
+
+  ${If} $ConfigPoll != 0
+    nsExec::ExecToLog 'schtasks /CREATE /RU SYSTEM /TN "burp cron" /TR "\"C:\Program Files\Burp\bin\burp.exe\" -a t" /SC MINUTE /MO $ConfigPoll'
+  ${EndIf}
 
 end:
   DetailPrint "$INSTDIR\burp.conf already exists. Not overwriting."
@@ -346,15 +348,6 @@ SectionGroupEnd
 
 Section "-Finish"
   Push $R0
-
-  ${If} $OsIsNT = 1
-    nsExec::ExecToLog 'cmd.exe /C echo Y|cacls "$INSTDIR" /T /G SYSTEM:F Administrators:F'
-    nsExec::ExecToLog 'cmd.exe /C echo Y|cacls "$APPDATA\Burp" /T /G SYSTEM:F Administrators:F'
-  ${EndIf}
-
-  ${If} $ConfigPoll != 0
-    nsExec::ExecToLog 'schtasks /CREATE /RU SYSTEM /TN "burp cron" /TR "\"C:\Program Files\Burp\bin\burp.exe\" -a t" /SC MINUTE /MO $ConfigPoll'
-  ${EndIf}
 
   ; Write the uninstall keys for Windows & create Start Menu entry
   WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Burp" "DisplayName" "Burp"
@@ -426,7 +419,7 @@ Section "Uninstall"
   nsExec::Exec 'schtasks /DELETE /TN "burp cron" /F'
 
   Delete /REBOOTOK "$PLUGINSDIR\burp*.conf"
-;  Delete /REBOOTOK "$PLUGINSDIR\openssl.exe"
+  Delete /REBOOTOK "$PLUGINSDIR\openssl.exe"
   Delete /REBOOTOK "$PLUGINSDIR\libeay32.dll"
   Delete /REBOOTOK "$PLUGINSDIR\ssleay32.dll"
 

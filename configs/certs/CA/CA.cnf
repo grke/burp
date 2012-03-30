@@ -15,8 +15,8 @@ crlnumber               = $dir/crlnumber.txt
 unique_subject          = no
 
 default_md              = sha1
-default_days            = 730
-default_crl_days        = 30
+default_days            = 7300
+default_crl_days        = 7300
 
 #????
 name_opt                = ca_default

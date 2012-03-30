@@ -21,18 +21,17 @@ INSTALL_EXE := $(BUILDDIR)/release@BITS@/burp-win@BITS@-installer-$(VERSION).exe
 
 BURP_BINARIES := \
 	burp.dll \
-	burp.exe
+	burp.exe \
+	burp_ca.bat
 
 DEPKGS_BINARIES := \
 	zlib1.dll \
 	libeay32.dll \
 	ssleay32.dll \
+	openssl.exe
 
 MINGW_LIBS := \
 	libgcc_s_sjlj-1.dll
-
-SSL_FILES := \
-#	openssl.cnf
 
 DOC_FILES :=
 
@@ -84,7 +83,7 @@ winburp.nsi:
 	cp ../installer/ConfigPage2.ini .
 	cp ../installer/DumpLog.nsh .
 
-$(INSTALL_EXE): winburp.nsi $(addprefix release@BITS@/,$(BURP_BINARIES) $(DEPKGS_BINARIES) $(MINGW_LIBS) $(SSL_FILES))
+$(INSTALL_EXE): winburp.nsi $(addprefix release@BITS@/,$(BURP_BINARIES) $(DEPKGS_BINARIES) $(MINGW_LIBS))
 	NSISDIR=$(NSIS_DIR) \
 	$(NSIS_DIR)/makensis -V3 $(DEFINES) winburp.nsi
 

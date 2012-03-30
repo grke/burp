@@ -12,23 +12,83 @@
 #include "list_server.h"
 #include "current_backups_server.h"
 
-static int list_manifest(const char *fullpath, regex_t *regex, const char *client, struct cntr *p1cntr, struct cntr *cntr)
+int check_browsedir(const char *browsedir, char **path, size_t bdlen, char **lastpath)
+{
+	char *cp=NULL;
+	char *copy=NULL;
+//	if(strncmp(browsedir, *path, bdlen)
+//	  || (bdlen && (*path)[bdlen]!='\0' && (*path)[bdlen]!='/'))
+	if(strncmp(browsedir, *path, bdlen))
+		return 0;
+	if((*path)[bdlen+1]=='\0') return 0;
+
+	/* Lots of messing around related to whether browsedir was '', '/', or
+   	   something else. */
+	if(*browsedir)
+	{
+		if(!strcmp(browsedir, "/"))
+		{
+			if(!(copy=strdup((*path)+bdlen)))
+				goto err;
+			if((cp=strchr(copy+1, '/'))) *cp='\0';
+		}
+		else
+		{
+			if(!(copy=strdup((*path)+bdlen+1)))
+				goto err;
+			if((cp=strchr(copy, '/'))) *cp='\0';
+		}
+	}
+	else
+	{
+		if(!(copy=strdup((*path)+bdlen)))
+		{
+			logp("out of memory\n");
+			return -1;
+		}
+		if(*copy=='/') *(copy+1)='\0';
+		// Messing around for Windows.
+		else if(strlen(copy)>2 && copy[1]==':' && copy[2]=='/')
+			copy[2]='\0';
+	}
+	if(*lastpath && !strcmp(*lastpath, copy))
+	{
+		free(copy);
+		return 0;
+	}
+	free(*path);
+	*path=copy;
+	if(*lastpath) free(*lastpath);
+	if(!(*lastpath=strdup(copy)))
+		goto err;
+	return 1;
+err:
+	if(copy) free(copy);
+	if(*lastpath) free(*lastpath);
+	logp("out of memory\n");
+	return -1;
+}
+
+static int list_manifest(const char *fullpath, regex_t *regex, const char *browsedir, const char *client, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ars=0;
 	int ret=0;
 	int quit=0;
-	gzFile fp=NULL;
+	gzFile zp=NULL;
 	struct sbuf mb;
 	char *manifest=NULL;
+	size_t bdlen=0;
+	char *lastpath=NULL;
 
 	init_sbuf(&mb);
 
-	if(!(manifest=prepend_s(fullpath, "manifest.gz", strlen("manifest.gz"))))
+	if(!(manifest=prepend_s(fullpath,
+		"manifest.gz", strlen("manifest.gz"))))
 	{
 		log_and_send("out of memory");
 		return -1;
 	}
-	if(!(fp=gzopen_file(manifest, "rb")))
+	if(!(zp=gzopen_file(manifest, "rb")))
 	{
 		log_and_send("could not open manifest");
 		free(manifest);
@@ -36,23 +96,43 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *clien
 	}
 	free(manifest);
 
+	if(browsedir) bdlen=strlen(browsedir);
 
 	while(!quit)
 	{
+		int show=0;
 		//logp("list manifest loop\n");
 		// Need to parse while sending, to take note of the regex.
 
 		free_sbuf(&mb);
-		if((ars=sbuf_fill(NULL, fp, &mb, cntr)))
+		if((ars=sbuf_fill(NULL, zp, &mb, cntr)))
 		{
 			if(ars<0) ret=-1;
 			// ars==1 means it ended ok.
 			break;
 		}
 
-		if(mb.path[mb.plen]=='\n') mb.path[mb.plen]='\0';
+		//if(mb.path[mb.plen]=='\n') mb.path[mb.plen]='\0';
 		write_status(client, STATUS_LISTING, mb.path, p1cntr, cntr);
-		if(check_regex(regex, mb.path))
+
+		if(browsedir)
+		{
+			int r;
+			if((r=check_browsedir(browsedir,
+				&(mb.path), bdlen, &lastpath))<0)
+			{
+				quit++;
+				ret=-1;
+			}
+			if(!r) continue;
+			show++;
+		}
+		else
+		{
+			if(check_regex(regex, mb.path))
+				show++;
+		}
+		if(show)
 		{
 			if(async_write(CMD_STAT, mb.statbuf, mb.slen)
 			  || async_write(mb.cmd, mb.path, mb.plen))
@@ -62,12 +142,13 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *clien
 			{ quit++; ret=-1; }
 		}
 	}
-	gzclose_fp(&fp);
+	gzclose_fp(&zp);
 	free_sbuf(&mb);
+	if(lastpath) free(lastpath);
 	return ret;
 }
 
-int do_list_server(const char *basedir, const char *backup, const char *listregex, const char *client, struct cntr *p1cntr, struct cntr *cntr)
+int do_list_server(const char *basedir, const char *backup, const char *listregex, const char *browsedir, const char *client, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int a=0;
 	int i=0;
@@ -99,8 +180,8 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 			found=TRUE;
 			async_write(CMD_TIMESTAMP,
 				arr[i].timestamp, strlen(arr[i].timestamp));
-			ret+=list_manifest(arr[i].path, regex, client,
-				p1cntr, cntr);
+			ret+=list_manifest(arr[i].path, regex, browsedir,
+				client, p1cntr, cntr);
 		}
 		// Search or list a particular backup.
 		else if(backup && *backup)
@@ -112,8 +193,8 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 				found=TRUE;
 				async_write(CMD_TIMESTAMP,
 				  arr[i].timestamp, strlen(arr[i].timestamp));
-				ret=list_manifest(arr[i].path, regex, client,
-					p1cntr, cntr);
+				ret=list_manifest(arr[i].path, regex,
+					browsedir, client, p1cntr, cntr);
 			}
 		}
 		// List the backups.

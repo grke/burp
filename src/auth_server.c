@@ -40,9 +40,22 @@ static int check_client_and_password(struct config *conf, const char *client, co
 	// client.
 	init_config(cconf);
 	snprintf(cpath, sizeof(cpath), "%s/%s", conf->clientconfdir, client);
-	if(set_client_global_config(conf, cconf)
-	  || load_config(cpath, cconf, 0))
+	if(set_client_global_config(conf, cconf, client)
+	  || load_config(cpath, cconf, FALSE))
 		return -1;
+	if(!cconf->ssl_peer_cn)
+	{
+		logp("ssl_peer_cn unset");
+		if(client)
+		{
+			logp("Falling back to using '%s'\n", client);
+			if(!(cconf->ssl_peer_cn=strdup(client)))
+			{
+				logp("out of memory\n");
+				return -1;
+			}
+		}
+	}
 
 	if(!cconf->password && !cconf->passwd)
 	{
@@ -93,6 +106,7 @@ int authorise_server(struct config *conf, char **client, char **cversion, struct
 	size_t len=0;
 	char *buf=NULL;
 	char *password=NULL;
+	char whoareyou[256]="";
 	if(async_read(&cmd, &buf, &len))
 	{
 		logp("unable to read initial message\n");
@@ -114,7 +128,23 @@ int authorise_server(struct config *conf, char **client, char **cversion, struct
 		if(cp) *cversion=strdup(cp);
 	}
 	free(buf); buf=NULL;
-	async_write_str(CMD_GEN, "whoareyou");
+
+	snprintf(whoareyou, sizeof(whoareyou), "whoareyou");
+	if(*cversion)
+	{
+		long min_ver=0;
+		long cli_ver=0;
+		if((min_ver=version_to_long("1.3.2"))<0
+		  || (cli_ver=version_to_long(*cversion))<0)
+			return -1;
+		// Stick the server version on the end of the whoareyou string.
+		// if the client version is recent enough.
+		if(min_ver<=cli_ver)
+		 snprintf(whoareyou, sizeof(whoareyou),
+			"whoareyou:%s", VERSION);
+	}
+
+	async_write_str(CMD_GEN, whoareyou);
 	if(async_read(&cmd, &buf, &len) || !len)
 	{
 		logp("unable to get client name\n");

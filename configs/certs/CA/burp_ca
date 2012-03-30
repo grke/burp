@@ -12,7 +12,7 @@ dir=${etc}/CA
 conf=${etc}/CA.cnf
 
 name=$(hostname -f)
-ca_days=3650
+ca_days=7300
 size=2048
 
 def_umask=022
@@ -21,26 +21,29 @@ sec_umask=077
 function help() {
   cat <<EOF
 $0: Help:
-    -h|--help            show help
-    -i|--init            inititalize CA
-    -k|--key             generate new key
-    -r|--request         generate certificate sign request
-    -s|--sign            sign csr (use --ca <ca> and --name <name>)
-       --batch           do not prompt for anything
-       --revoke <number> revoke certificate with serial number
-       --crl             generate certificate revoke list
-    -d|--dir <dir>       ca output dir (default: $dir)
-    -c|--config          config file (default: $conf)
-    -n|--name            name (default: $name)
-    -D|--days            valid days for certificate (default in config file)
-       --ca_days         valid days for CA certificate (default: $ca_days)
-    -S|--size            key size (default: $size)
-    -a|--ca              ca name if different from name
+    -h|--help               show help
+    -i|--init               inititalize CA
+    -k|--key                generate new key
+    -K|--keypath <path>     path to new key
+    -r|--request            generate certificate sign request
+    -R|--requestpath <path> path to certificate sign request
+    -s|--sign               sign csr (use --ca <ca> and --name <name>)
+       --batch              do not prompt for anything
+       --revoke <number>    revoke certificate with serial number
+       --crl                generate certificate revoke list
+    -d|--dir <dir>          ca output dir (default: $dir)
+    -c|--config             config file (default: $conf)
+    -n|--name               name (default: $name)
+    -D|--days               valid days for certificate (default in config file)
+       --ca_days            valid days for CA certificate (default: $ca_days)
+    -S|--size               key size (default: $size)
+    -a|--ca                 ca name if different from name
+    -f|--dhfile <path>      generate Diffie-Hellman file
 EOF
 }
 
-if ! options=$(getopt -o hid:c:n:krsa:D:S: \
-    -l help,init,dir:,config:,name:,key:,request:,sign,ca:,ca_days,revoke:,crl,batch,days:,size: -- "$@")
+if ! options=$(getopt -o hid:c:n:kK:rR:sa:D:S:f: \
+    -l help,init,dir:,config:,name:,key,keypath:,request,requestpath:,sign,ca:,ca_days,revoke:,crl,batch,days:,size:,dhfile: -- "$@")
 then
     exit 1
 fi
@@ -53,7 +56,9 @@ do
     -h|--help) help; exit ;;
     -i|--init) init=yes ;;
     -k|--key) key=yes ;;
+    -K|--keypath) keypath=$2; shift ;;
     -r|--request) request=yes ;;
+    -R|--requestpath) requestpath=$2; shift ;;
     -s|--sign) sign=yes ;;
        --batch) batch="-batch" ;;
        --revoke) revoke=$2; shift ;;
@@ -65,12 +70,20 @@ do
        --ca_days)  ca_days=$2; shift ;;
     -S|--size)  days=$2; shift ;;
     -a|--ca)  ca=$2; shift ;;
+    -f|--dhfile) dhfile=$2; shift ;;
     --) shift; break;;
     -*) echo "$0: error - unrecognized option $1" 1>&2; exit 1;;
     *) break;;
     esac
     shift
 done
+
+if [ -n "$dhfile" ] ; then
+	openssl dhparam -out "$dhfile" 1024
+	r=$?
+	chmod 600 "$dhfile"
+	exit $r
+fi
 
 if [ -z "$ca" ]; then
   ca=${name}
@@ -93,7 +106,7 @@ if [ "$init" = "yes" ]; then
   umask ${sec_umask}
   openssl genrsa -out ${dir}/CA_${ca}.key ${size}
   umask ${def_umask}
-  TEMP=$(mktemp || /tmp/temp.$$)
+  TEMP=$(mktemp /tmp/burp_ca.tmp.XXXXXXXX || echo /tmp/burp_ca.tmp.$$)
   cat <<-EOF > ${TEMP}
 	RANDFILE                = /dev/urandom
 
@@ -119,18 +132,21 @@ EOF
 
 fi
 
+[ -z "$keypath" ] && keypath=${dir}/${name}.key
+
 # generate key
 if [ "$key" = "yes" ]; then
-  echo "genrating key ${name}"
+  echo "generating key ${name}: ${keypath}"
   umask ${sec_umask}
-  openssl genrsa -out ${dir}/${name}.key ${size}
+  openssl genrsa -out "${keypath}" ${size}
   umask ${def_umask}
 fi
 
 # generate signing request 
+[ -z "$requestpath" ] && requestpath=${dir}/${name}.csr
 if [ "$request" = "yes" ]; then
-  echo "genrating request ${name}"
-  TEMP=$(mktemp || /tmp/temp.$$)
+  echo "generating request ${name}"
+  TEMP=$(mktemp /tmp/burp_ca.tmp.XXXXXXXX || echo /tmp/burp_ca.tmp.$$)
   cat <<-EOF > ${TEMP}
 	RANDFILE                = /dev/urandom
 
@@ -145,8 +161,8 @@ if [ "$request" = "yes" ]; then
 	commonName                      = ${name}
 
 EOF
-  openssl req -config ${TEMP} -new -key ${dir}/${name}.key \
-    -out ${dir}/${name}.csr -extensions v3_req
+  openssl req -config ${TEMP} -new -key "${keypath}" \
+    -out "${requestpath}" -extensions v3_req
   rm -f $TEMP
 fi
 

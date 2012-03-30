@@ -1,11 +1,112 @@
-CA and cert HOWTO:
+Certificate Authority (CA) and certificate how-to
+-------------------------------------------------
+
+As of burp-1.3.2, the process of generating SSL certificates has been
+automated.
+
+Effectively, the automation means that you can set up a new client on the
+server (in /etc/burp/clientconfdir/<client>), and the first client to connect
+that matches that client name and password will get its certificate signed
+and given back. If a different, second client, happens to connect with the
+same client name and password, it will be rejected because it doesn't have
+a matching certificate.
+
+
+Server CA options:
+ca_conf = /etc/burp/CA.cnf
+ca_name = burpCA
+ca_server_name = burpserver
+ca_burp_ca = /usr/sbin/burp_ca
+
+Server SSL options:
+ssl_dhfile = /etc/burp/dhfile.pem
+ssl_cert_ca = /etc/burp/ssl_cert_ca.pem
+ssl_cert = /etc/burp/ssl_cert-server.pem
+ssl_key = /etc/burp/ssl_cert-server.key
+ssl_key_password = password
+
+If you do not want the server to automate the CA stuff, do not set ca_conf.
+
+When the server starts, the ca_conf file will be read, and the CA_DIR value
+from that file will be read.
+If the CA_DIR directory already exists, the automatic CA setup finishes here.
+
+Next, if ssl_dhfile does not exist, an appropriate dhfile will be generated.
+The dhfile is used in encypting the SSL connection with the Diffie-Hellman
+protocol.
+
+Next, the CA directory is initialised using ca_burp_ca, which should point to
+the burp_ca script.
+The name of the CA will be the value of ca_name. 
+
+A key for the burp server is then generated, along with a certificate signing
+request to give to the CA. The CA then signs the request. The ssl_cert_ca,
+ssl_cert and ssl_key paths are then overwritten with symlinks to the new keys
+and certificates.
+
+This concludes the CA setup on the server.
+
+-----
+
+Client CA options:
+ca_burp_ca=/usr/sbin/burp_ca
+ca_csr_dir=/etc/burp/CA
+
+Client SSL options:
+ssl_cert_ca = /etc/burp/ssl_cert_ca.pem
+ssl_cert = /etc/burp/ssl_cert-client.pem
+ssl_key = /etc/burp/ssl_cert-client.key
+ssl_key_password = password
+ssl_peer_cn = burpserver
+
+If you do not want the client to automate the CA stuff, do not set ca_burp_ca.
+Clients as of 1.3.2 will not include the old default certificates, so if you
+want to install new clients connecting to a server that is using the old
+certificates, you will also have to copy the old certificates onto the client.
+
+When the client runs (for example, with 'burp -a b'), it will try to connect
+to the server using the burp client name (cname) and password. If you haven't
+got the client name and password right, everything stops here. 
+
+If the path to ssl_key exists, the client will not try to generate a key and
+certificate signing request - it assumes that this has already been done.
+Otherwise, a client key is generated at the path of ssl_key, and a certificate
+request is generated in the ca_csr_dir directory, named after the client name.
+
+This is copied to CA_DIR on the server, unless the server already has a file
+named the same, or a signed certificate with the same name. If either already
+exists, the server will reject the request.
+
+If the server accepts the request, it will generate a signed certificate
+and send it back to the client, along with the CA certificate.
+The ssl_cert_ca and ssl_cert paths will be overwritten on the client, and
+burp.conf will be rewritten with ssl_peer_cn set correctly.
+
+The connection between server and client is dropped and the client will
+reconnect using the new certificates to start the real work (for example, a
+backup). In previous versions of burp, you needed to set ssl_peer_cn in the
+client's clientconfdir file on the server. You don't need to set this any
+more, because the server will default to using the client name instead.
+
+This concludes the certificate setup on the client.
+
+-----
+
+
+
+
+
+The following is the (slightly tweaked) original documentation for burp_ca. It
+might still be of use in order to help understand the process, or if it is
+necessary to do it by hand. Note that there is a burp_ca.bat script if you are
+generating certificate signing requests on Windows.
+
 
 Setup the server:
 
 1) generate Diffie-Hellman Parameters
 
- openssl dhparam -out /etc/burp/dhfile.pem 1024
- chmod 600 /etc/burp/dhfile.pem
+ burp_ca --dhfile /etc/burp/dhfile.pem
 
 2) Initialise CA
 
@@ -26,26 +127,22 @@ Setup the server:
 
  ln -s CA/CA_myCA.crt /etc/burp/ssl_cert_ca.pem
  ln -s CA/myServer.crt /etc/burp/ssl_cert-server.pem
- ln -s CA/myServer,key /etc/burp/ssl_cert-server.key
+ ln -s CA/myServer.key /etc/burp/ssl_cert-server.key
 
  (use the ssl_cert and ssl_key options in burp-server.conf !)
 
 
-Setup the client (the easy way - unsecure):
+
+Setup the client (the easy way - insecure)
 
 1) Generate client key and cert __on the server__
 
   burp_ca --name myClient --ca myCA --key --request --sign --batch
 
-2) on the client you dont need a CA, so just
-
-  mkdir /etc/burp/CA
-  chmod 700 /etc/burp/CA
-
-3) copy key and certs from server to client
+2) copy key and certs from server to client
 
   server:/etc/burp/ssl_cert_ca.pem -> client:/etc/burp/ssl_cert_ca.pem
-  server:/etc/burp/CA/myClient.crt -> client:/etc/burp/ssl_cert-client.crt
+  server:/etc/burp/CA/myClient.crt -> client:/etc/burp/ssl_cert-client.pem
   server:/etc/burp/CA/myClient.key -> client:/etc/burp/ssl_cert-client.key
   chmod 600 /etc/burp/ssl_cert-client.key
 
@@ -62,14 +159,16 @@ Setup the client (the usual way)
 2) Generate client key and cert signing request
 
   burp_ca --key --request --name myClient
+(on Windows: burp_ca.bat --key --keypath <path> \
+	--request --requestpath <path> --name myClient)
 
 3) copy the request from client to the server
 
-  client:/etc/burp/CA/myClient.csr -> server:/etc/burp/ssl/myClient.csr
+  client:/etc/burp/CA/myClient.csr -> server:/etc/burp/CA/myClient.csr
 
 4) sign the request __on the server__
  
-  burp_ca --name myClient --ca myCA --key --request --sign --batch
+  burp_ca --name myClient --ca myCA --sign --batch
 
 5) copy the certs back to the client
 
@@ -80,6 +179,6 @@ Setup the client (the usual way)
 
  ln -s CA/CA_myCA.crt /etc/burp/ssl_cert_ca.pem
  ln -s CA/myClient.crt /etc/burp/ssl_cert-client.pem
- ln -s CA/myClient,key /etc/burp/ssl_cert-client.key
+ ln -s CA/myClient.key /etc/burp/ssl_cert-client.key
   
  (use the ssl_cert and ssl_key options in burp.conf !)

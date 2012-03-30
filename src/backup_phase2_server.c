@@ -177,6 +177,7 @@ static int process_new_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FILE 
 static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FILE *ucfp, const char *currentdata, struct cntr *cntr, struct config *cconf)
 {
 	int pcmp;
+//	logp("in maybe_proc %s\n", p1b->path);
 	if(!(pcmp=sbuf_pathcmp(cb, p1b)))
 	{
 		int oldcompressed=0;
@@ -193,7 +194,7 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FIL
 		  && cb->statp.st_ctime==p1b->statp.st_ctime)
 		{
 			// got an unchanged file
-			logp("got unchanged file: %s %c %c\n", cb->path, cb->cmd, p1b->cmd);
+			//logp("got unchanged file: %s %c %c\n", cb->path, cb->cmd, p1b->cmd);
 			return process_unchanged_file(cb, ucfp, cntr);
 		}
 

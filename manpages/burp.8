@@ -15,7 +15,7 @@ BackUp and Restore Program.
 
 .SH SERVER OPTIONS
 .TP
-\fB\-c\fR \fBpath\fR
+\fB\-c\fR \fB[path]\fR
 Short for 'config file'. The argument is a path to the config file. The default
 is /etc/burp/burp.conf.
 .TP
@@ -26,11 +26,8 @@ exit. This is useful for debugging. Implies '-F'.
 \fB\-F\fR \fB\fR
 Foreground mode. The server will fork into the background and run as a daemon if you do not give this option.
 .TP
-\fB\-a s\fR \fB\fR
-Run this to connect to a running server to get a live monitor of the status of all your backup clients. If your server config file is not in the default location, you will also need to specify the path with the '-c' option. The live monitor requires ncurses support at compile time.
-.TP
-\fB\-a S\fR \fB\fR
-Similar to '-a s', but it prints the main status monitor summary screen to stdout. The intention is that a script can run this and email an administrator the output on a cron job. This doesn't require ncurses support.
+\fB\-g\fR \fB\fR
+Generate initial CA keys and certificates, and then exit.
 .TP
 \fB\-i\fR \fB\fR
 Print an index table of symbols that humans may see burp produce, and exit.
@@ -41,6 +38,26 @@ Path to log file. The default is stdout. This option overrides the
 option in the config file. Use 
 .I /dev/null
 to deactivate or '' to reactivate output.
+.TP
+\fB\-a s\fR \fB\fR
+Run this to connect to a running server to get a live monitor of the status of all your backup clients. If your server config file is not in the default location, you will also need to specify the path with the '-c' option. The live monitor requires ncurses support at compile time.
+.TP
+\fB\-a S\fR \fB\fR
+Similar to '-a s', but it prints the main status monitor summary screen to stdout. The intention is that a script can run this and email an administrator the output on a cron job. This doesn't require ncurses support. There are additional options that can be given with '-a S', listed below. These enable logs and contents of backups to be listed whilst logged in on the server machine.
+.TP
+ADDITIONAL SERVER OPTIONS TO USE WITH '-a S'
+.TP
+\fB\-C\fR \fB[client]\fR
+Limit the output to a single client.
+.TP
+\fB\-b\fR \fB[number]\fR
+Show listable files in a particular backup (requires -C).
+.TP
+\fB\-z\fR \fB[file]\fR
+Dump a particular log file in a backup (requires -C and -b).
+.TP
+\fB\-d\fR \fB[path]\fR
+Show a particular path in a backup (requires -C and -b).
 
 .SH CLIENT OPTIONS
 .TP
@@ -56,8 +73,7 @@ Short for 'config file'. The argument is a path to the config file. The default
 is /etc/burp/burp.conf, or C:\\Program Files\\Burp\\burp.conf on Windows.
 .TP
 \fB\-d\fR \fB[path]\fR
-Short for 'directory'. The argument is a path to an alternative directory
-to restore to.
+Short for 'directory'. When restoring, the argument is a path to an alternative directory to restore to. When listing, the argument is the directory to list.
 .TP
 \fB\-f\fR \fB[path]\fR
 Short for 'force overwrite'. Without this option set, a restore will not
@@ -124,9 +140,18 @@ Verifies everything in backup number 1 that matches the regular expression 'myre
 .TP
 \fBburp -a t\fR
 Timed backup. The same as 'burp -a b', except that a script is run on the server before deciding to go ahead. The intention is that this command will be run on a repeating cron job with a short interval, and that the server will decide when it is time for a new backup.
+.TP
+\fBburp -a L -b 1 -d ''\fR
+Long list the top level directory of backup 1.
+.TP
+\fBburp -a L -b 1 -d '/home/graham'\fR
+Long list the /home/graham directory of backup 1. These '-d' versions of the list function provide the ability to 'browse' backups.
 
 .SH SERVER CONFIGURATION FILE OPTIONS
 
+.TP
+\fB. [path]\fR
+Read an additional configuration file.
 .TP
 \fBmode=server\fR
 Required to run in server mode.
@@ -136,6 +161,12 @@ Defines the main TCP port that the server listens on.
 .TP
 \fBstatus_port=[port number]\fR
 Defines the TCP port that the server listens on for status requests.
+.TP
+\fBdaemon=[0|1]\fR
+Whether to daemonise. The default is 1.
+.TP
+\fBfork=[0|1]\fR
+Whether to fork children. The default is 1.
 .TP
 \fBdirectory=[path]\fR
 Path to the directory in which to store backups.
@@ -153,6 +184,9 @@ Synonym for lockfile.
 \fBlogfile=[path]\fR
 Path to the logfile.
 .TP
+\fBsyslog=[0|1]\fR
+Log to syslog.
+.TP
 \fBkeep=[number]\fR
 Number of backups to keep. This can be overriddden by the client configuration
 files in clientconfdir on the server. Specify multiple 'keep' entries on separate lines in order to keep multiple periods of backups. For example, assuming that you are doing a backup a day, keep=7 keep=4 keep=6 (on separate lines) will keep 7 daily backups, 4 weekly backups (7x4=28), and 6 multiples of 4 weeks (7x4x6=168) - roughly 6 monthly backups. Effectively, you will be guaranteed to be able to restore up to 168 days ago, with the number of available backups exponentially decreasing as you go back in time to that point. In this example, every 7th backup will be hardlinked to allow burp to safely delete intermediate backups when necessary. You can have as many 'keep' lines as you like, as long as they don't exceed 52560000 when multiplied together. That is, a backup every minute for 100 years.
@@ -166,7 +200,7 @@ On the server, the number of times that a single file can be hardlinked. The bed
 \fBlibrsync=[0|1]\fR
 When set to 0, delta differencing will not take place. That is, when a file changes, the server will request the whole new file. The default is 1. This option can be overridden by the client configuration files in clientconfdif on the server.
 .TP
-\fBcompression=[gzip0-9]\fR
+\fBcompression=gzip[0-9]\fR
 Choose the level of gzip compression. Setting 0 or gzip0 turns compression off. The default is gzip9. This option can be overridden by the client configuration files in clientconfdif on the server.
 .TP
 \fBclient_lockdir=[path]\fR
@@ -198,7 +232,7 @@ on the server. Options are...
 \fBresume:\fR Simply continue the previous backup from the point at which it left off. NOTE: If the client has changed its include/exclude configuration since the backup was interrupted, the recovery method will automatically switch to 'use'.
 .TP
 \fBssl_cert_ca=[path]\fR
-The path to the SSL CA certificate. This file will probably be the same on both the server and the client. The file should contain just the certificate in PEM format
+The path to the SSL CA certificate. This file will probably be the same on both the server and the client. The file should contain just the certificate in PEM format. For more information on this, and the other ssl_* options, please see docs/burp_ca.txt.
 .TP
 \fBssl_cert=[path]\fR
 The path to the server SSL certificate. It works for me when the file contains the concatenation of the certificate and private key in PEM format.
@@ -217,6 +251,9 @@ Path to Diffie-Hellman parameter file. To generate one with openssl, use a comma
 .TP
 \fBmax_children=[number]\fR
 Defines the number of child processes to fork (the number of clients that can simultaneously connect. The default is 5.
+.TP
+\fBmax_status_children=[number]\fR
+Defines the number of status child processes to fork (the number of status clients that can simultaneously connect. The default is 5.
 .TP
 \fBmax_storage_subdirs=[number]\fR
 Defines the number of subdirectories in the data storage areas. The maximum number of subdirectories that ext3 allows is 32000. If you do not set this option, it defaults to 30000.
@@ -268,9 +305,24 @@ If this is set to 1, server_script_post will always be run. The default is 0, wh
 .TP
 \fBautoupgrade_dir=[path]\fR
 Path to autoupgrade directory from which upgrades are downloaded. The option can be left unset in order not to autoupgrade clients. Please see docs/autoupgrade.txt in the source package for more help with this option.
+.TP
+\fBca_conf=[path]\fR
+Path to certificate authority configuration file. The CA configuration file will usually be /etc/burp/CA.cnf. The CA directory indicated by CA.cnf will usually be /etc/burp/CA. If ca_conf is set and the CA directory does not exist, the server will create, populate it, and the paths indicated by ssl_cert_ca, ssl_cert, ssl_key and ssl_dhfile will be overwritten. For more detailed information on this and the other ca_* options, please see docs/burp_ca.txt.
+.TP
+\fBca_name=[name]\fR
+Name of the CA that the server will generate when using the ca_conf option.
+.TP
+\fBca_server_name=[name]\fR
+The name that the server will put into its own SSL certficates when using the ca_conf option.
+.TP
+\fBca_burp_ca=[path]\fR
+Path to the burp_ca script when using the ca_conf option.
 
 .SH CLIENT CONFIGURATION FILE OPTIONS
 
+.TP
+\fB. [path]\fR
+Read an additional configuration file.
 .TP
 \fBmode=client\fR
 Required to run in client mode.
@@ -297,6 +349,9 @@ Synonym for lockfile.
 \fBlogfile=[path]\fR
 Path to the logfile.
 .TP
+\fBsyslog=[0|1]\fR
+Log to syslog.
+.TP
 \fBuser=[username]\fR
 Run as a particular user (not supported on Windows).
 .TP
@@ -309,41 +364,14 @@ Set the network send rate limit, in Mb/s. If this option is not given, burp will
 \fBnetwork_timeout=[s]\fR
 Set the network timeout in seconds. If no data is sent or received over a period of this length, burp will give up. The default is 7200 seconds (2 hours).
 .TP
-\fBinclude=[path]\fR
-Path to include in the backup. You can have multiple include lines. Use forward slashes '/', not backslashes '\\' as path delimiters.
+\fBca_burp_ca=[path]\fR
+Path to the burp_ca script (burp_ca.bat on Windows). For more information on this, please see docs/burp_ca.txt.
 .TP
-\fBexclude=[path]\fR
-Path to exclude from the backup. You can have multiple exclude lines. Use forward slashes '/', not backslashes '\\' as path delimiters.
-.TP
-\fBexclude_ext=[extension]\fR
-Extensions to exclude from the backup. Case insensitive. You can have multiple exclude extension lines. For example, set 'vdi' to exclude VirtualBox disk images.
-.TP
-\fBexclude_fs=[fstype]\fR
-File systems to exclude from the backup. Case insensitive. You can have multiple exclude file system lines. For example, set 'tmpfs' to exclude tmpfs. Burp has an internal mapping of file system names to file system IDs. If you know the file system ID, you can use that instead. For example, 'exclude_fs = 0x01021994' will also exclude tmpfs.
-.TP
-\fBmin_file_size=[b/Kb/Mb/Gb]\fR
-Do not back up files that are less than the specified size. Example: 'min_file_size = 10Mb'. Set to 0 (the default) to have no limit.
-.TP
-\fBmax_file_size=[b/Kb/Mb/Gb]\fR
-Do not back up files that are greater than the specified size. Example: 'max_file_size = 10Mb'. Set to 0 (the default) to have no limit.
-.TP
-\fBcross_filesystem=[path]\fR
-Allow backups to cross a particular filesystem mountpoint.
-.TP
-\fBcross_all_filesystems=[0|1]\fR
-Allow backups to cross all filesystem mountpoints.
-.TP
-\fBnobackup=[file name]\fR
-If this file system entry exists, the directory containing it will not be backed up.
-.TP
-\fBread_fifo=[path]\fR
-Do not back up the given fifo itself, but open it for reading and back up the contents as if it were a regular file.
-.TP
-\fBread_all_fifos=[0|1]\fR
-Open all fifos for reading and back up the contents as if they were regular files.
+\fBca_csr_dir=[path]\fR
+Directory where certificate signing requests are generated. For more information on this, please see docs/burp_ca.txt.
 .TP
 \fBssl_cert_ca=[path]\fR
-The path to the SSL CA certificate. This file will probably be the same on both the server and the client. The file should contain just the certificate in PEM format
+The path to the SSL CA certificate. This file will probably be the same on both the server and the client. The file should contain just the certificate in PEM format. For more information on this and the other ssl_* options, please see docs/burp_ca.txt.
 .TP
 \fBssl_cert=[path]\fR
 The path to the client SSL certificate. It works for me when the file contains the concatenation of the certificate and private key in PEM format.
@@ -356,6 +384,9 @@ The SSL key password.
 .TP
 \fBssl_cert_password=[password]\fR
 Synonym for ssl_key_password.
+.TP
+\fBssl_peer_cn=[string]\fR
+Must match the common name in the SSL certificate that the server gives when it connects. If ssl_peer_cn is not set, the server name will be used instead.
 .TP
 \fBencryption_password=[password]\fR
 Set this to enable client side file Blowfish encryption. If you do not want encryption, leave this field out of your config file. \fBIMPORTANT:\fR Configuring this renders delta differencing pointless, since the smallest real change to a file will make the whole file look different. Therefore, activating this option turns off delta differencing so that whenever a client file changes, the whole new file will be uploaded on the next backup. \fBALSO IMPORTANT:\fR If you manage to lose your encryption password, you will not be able to unencrypt your files. You should therefore think about having a copy of the encryption password somewhere off-box, in case of your client hard disk failing. \fBFINALLY:\fR If you change your encryption password, you will end up with a mixture of files on the server with different encryption and it may become tricky to restore more than one file at a time. For this reason, if you change your encryption password, you may want to start a fresh chain of backups (by moving the original set aside, for example). Burp will cope fine with turning the same encryption password on and off between backups, and will restore a backup of mixed encrypted and unencrypted files without a problem.
@@ -408,6 +439,46 @@ Path to autoupgrade directory into which upgrades are downloaded. Please see doc
 \fBautoupgrade_os=[string]\fR
 Name of the client operating system. Should match a directory name in the server's autoupgrade_dir. If you do not want your client to autoupgrade, do not set this option.
 
+.SH INCLUDES / EXCLUDES
+
+.TP
+The following options specify exactly what is backed up. The client can specify these options, or if you include at least one 'include=' in the client configuration files on the server, the server will override them all.
+.TP
+\fBinclude=[path]\fR
+Path to include in the backup. You can have multiple include lines. Use forward slashes '/', not backslashes '\\' as path delimiters.
+.TP
+\fBexclude=[path]\fR
+Path to exclude from the backup. You can have multiple exclude lines. Use forward slashes '/', not backslashes '\\' as path delimiters.
+.TP
+\fBinclude_ext=[extension]\fR
+Extensions to include in the backup. Case insensitive. Nothing else will be included in the backup. You can have multiple include extension lines. For example, set 'txt' to include files that end in '.txt'. You need to specify an 'include' line so that burp knows where to start looking.
+.TP
+\fBexclude_ext=[extension]\fR
+Extensions to exclude from the backup. Case insensitive. You can have multiple exclude extension lines. For example, set 'vdi' to exclude VirtualBox disk images.
+.TP
+\fBexclude_fs=[fstype]\fR
+File systems to exclude from the backup. Case insensitive. You can have multiple exclude file system lines. For example, set 'tmpfs' to exclude tmpfs. Burp has an internal mapping of file system names to file system IDs. If you know the file system ID, you can use that instead. For example, 'exclude_fs = 0x01021994' will also exclude tmpfs.
+.TP
+\fBmin_file_size=[b/Kb/Mb/Gb]\fR
+Do not back up files that are less than the specified size. Example: 'min_file_size = 10Mb'. Set to 0 (the default) to have no limit.
+.TP
+\fBmax_file_size=[b/Kb/Mb/Gb]\fR
+Do not back up files that are greater than the specified size. Example: 'max_file_size = 10Mb'. Set to 0 (the default) to have no limit.
+.TP
+\fBcross_filesystem=[path]\fR
+Allow backups to cross a particular filesystem mountpoint.
+.TP
+\fBcross_all_filesystems=[0|1]\fR
+Allow backups to cross all filesystem mountpoints.
+.TP
+\fBnobackup=[file name]\fR
+If this file system entry exists, the directory containing it will not be backed up.
+.TP
+\fBread_fifo=[path]\fR
+Do not back up the given fifo itself, but open it for reading and back up the contents as if it were a regular file.
+.TP
+\fBread_all_fifos=[0|1]\fR
+Open all fifos for reading and back up the contents as if they were regular files.
 
 .SH SERVER CLIENTCONFDIR FILE
 .TP
@@ -415,7 +486,7 @@ For the server to know about clients that can contact it, you need to place a fi
 .TP
 The file name must match the name in the 'cname' field on the client.
 .TP
-\fBssl_peer_cn=[string]\fR must also be set and match the common name in the SSL certificate that the client gives when it connects.
+\fBssl_peer_cn=[string]\fR must match the common name in the SSL certificate that the client gives when it connects. If ssl_peer_cn is not set, the client name will be used instead (the clientconfdir file name).
 .TP
 The file needs to contain a line like \fBpassword=[password]\fR that matches the same field on the client, or \fBpasswd=[encrypted password]\fR - where the plain text password on the client will be tested against an encrypted password of the kind you might find in /etc/passwd.
 .TP
@@ -424,6 +495,7 @@ Additionally, the following options can be overridden here for each client:
 \fBkeep\fR
 \fBworking_dir_recovery_method\fR
 \fBlibrsync\fR
+\fBsyslog\fR
 \fBcompression\fR
 \fBtimer_script\fR
 \fBtimer_arg\fR
@@ -440,6 +512,8 @@ Additionally, the following options can be overridden here for each client:
 \fBserver_script\fR
 \fBserver_script_arg\fR
 \fBserver_script_post_run_on_fail\fR
+.TP
+As with the other configuration files, extra configuration can be included with the '. path/to/config/file' syntax.
 
 .SH Some notes on SSL certificates
 .TP
@@ -459,6 +533,29 @@ The 'deltas.reverse' directory contains reverse deltas that can be applied to th
 .TP
 Anything with a .gz suffix is compressed in gzip format.  You can use standard tools, such as zcat, zless or cp, to view them or copy them elsewhere.
 
+.SH Server initiated restores
+.TP
+You can queue a restore on the server, to be performed when the client next makes contact. To do this, you put a file called 'restore' into the top level of the client storage directory. Valid fields to include in the restore file are:
+.TP
+\fBbackup=[number|a]\fR
+The number of the backup to restore from. Equivalent to '-b' when initiating a restore from the client.
+.TP
+\fBoverwrite=[0|1]\fR
+Whether to overwrite existing files. Equivalent to '-f' when initiating a restore from the client.
+.TP
+\fBstrip=[number]\fR
+Number of leading path components to strip. Equivalent to '-s' when initiating a restore from the client.
+.TP
+\fBrestoreprefix=[path]\fR
+Prefix to the restore path. Equivalent to '-d' when initiating a restore from the client.
+.TP
+\fBregex=[regular expression]\fR
+Only restore files matching the regular expression. Equivalent to '-r' when initiating a restore from the client.
+.TP
+\fBinclude=[path]\fR
+Restore directories and files that match the path. If it is a directory, the contents of the directory will be restored. You can have multiple 'include' lines. There is no equivalent when initiating a restore from the client.
+.TP
+As a minimum, the 'restore' file needs to contain a 'backup' option, and one 'regex' or 'include' line.
 
 .SH BUGS
 If you find bugs, please report them to the email list. See the website

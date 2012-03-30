@@ -5,9 +5,13 @@
 static BIO *bio_err=0;
 static const char *pass=NULL;
 
-SSL_CTX *berr_exit(const char *string)
+SSL_CTX *berr_exit(const char *fmt, ...)
 {
-	BIO_printf(bio_err, "%s\n", string);
+	char buf[512]="";
+	va_list ap;
+	va_start(ap, fmt);
+	vsnprintf(buf, sizeof(buf), fmt, ap);
+	BIO_printf(bio_err, "%s", buf);
 	ERR_print_errors(bio_err);
 	return NULL;
 }
@@ -19,7 +23,7 @@ int ssl_load_dh_params(SSL_CTX *ctx, struct config *conf)
 
 	if(!(bio=BIO_new_file(conf->ssl_dhfile, "r")))
 	{
-		berr_exit("Couldn't open DH file");
+		berr_exit("Couldn't open ssl_dhfile: %s\n", conf->ssl_dhfile);
 		return -1;
 	}
 
@@ -54,19 +58,18 @@ void ssl_load_globals(void)
 	}
 }
 
-SSL_CTX *ssl_initialise_ctx(struct config *conf)
+static int ssl_load_keys_and_certs(SSL_CTX *ctx, struct config *conf)
 {
-	SSL_CTX *ctx=NULL;
-	SSL_METHOD *meth=NULL;
 	char *ssl_key=NULL;
+	struct stat statp;
 
-	/* Create our context*/
-	meth=(SSL_METHOD *)SSLv23_method();
-	ctx=(SSL_CTX *)SSL_CTX_new(meth);
-
-	/* Load our keys and certificates*/
-	if(!(SSL_CTX_use_certificate_chain_file(ctx, conf->ssl_cert)))
-		return berr_exit("Can't read certificate file");
+	/* Load our keys and certificates if the path exists. */
+	if(conf->ssl_cert && !lstat(conf->ssl_cert, &statp)
+	  && !SSL_CTX_use_certificate_chain_file(ctx, conf->ssl_cert))
+	{
+		berr_exit("Can't read ssl_cert: %s\n", conf->ssl_cert);
+		return -1;
+	}
 
 	pass=conf->ssl_key_password;
 	SSL_CTX_set_default_passwd_cb(ctx, password_cb);
@@ -76,12 +79,36 @@ SSL_CTX *ssl_initialise_ctx(struct config *conf)
 	else
 		ssl_key=conf->ssl_cert;
 
-	if(!(SSL_CTX_use_PrivateKey_file(ctx,ssl_key,SSL_FILETYPE_PEM)))
-		return berr_exit("Can't read key file");
+	/* Load the key file, if the path exists */
+	if(ssl_key && !lstat(ssl_key, &statp)
+	  && !SSL_CTX_use_PrivateKey_file(ctx,ssl_key,SSL_FILETYPE_PEM))
+	{
+		berr_exit("Can't read ssl_key file: %s\n", ssl_key);
+		return -1;
+	}
 
-	/* Load the CAs we trust*/
-	if(!(SSL_CTX_load_verify_locations(ctx, conf->ssl_cert_ca, 0)))
-		return berr_exit("Can't read CA list");
+	/* Load the CAs we trust, if the path exists. */
+	if(conf->ssl_cert_ca && !lstat(conf->ssl_cert_ca, &statp)
+	  && !SSL_CTX_load_verify_locations(ctx, conf->ssl_cert_ca, 0))
+	{
+		berr_exit("Can't read ssl_cert_ca file: %s\n",
+			conf->ssl_cert_ca);
+		return -1;
+	}
+
+	return 0;
+}
+
+SSL_CTX *ssl_initialise_ctx(struct config *conf)
+{
+	SSL_CTX *ctx=NULL;
+	SSL_METHOD *meth=NULL;
+
+	/* Create our context*/
+	meth=(SSL_METHOD *)SSLv23_method();
+	ctx=(SSL_CTX *)SSL_CTX_new(meth);
+
+	if(ssl_load_keys_and_certs(ctx, conf)) return NULL;
 
 	return ctx;
 }
@@ -206,7 +233,7 @@ int ssl_check_cert(SSL *ssl, struct config *conf)
 	}
 	if(SSL_get_verify_result(ssl)!=X509_V_OK)
 	{
-		berr_exit("Certificate doesn't verify");
+		berr_exit("Certificate doesn't verify.\n");
 		return -1;
 	}
 

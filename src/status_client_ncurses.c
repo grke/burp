@@ -17,6 +17,11 @@ static enum action actg=ACTION_STATUS;
 #define LEFT_SPACE	3
 #define TOP_SPACE	2
 
+//#define DBFP	1
+#ifdef DBFP
+static FILE *dbfp=NULL;
+#endif
+
 static void print_line(const char *string, int row, int col)
 {
 	int k=0;
@@ -214,7 +219,7 @@ static void show_all_backups(char *toks[], int t, int *x, int col)
 }
 
 /* for the counters */
-void to_msg(char msg[], size_t s, const char *fmt, ...)
+static void to_msg(char msg[], size_t s, const char *fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
@@ -376,7 +381,7 @@ static void detail(char *toks[], int t, struct config *conf, int row, int col)
 			if(bytespersec>0)
 			{
 				time_t timeleft=0;
-				timeleft=bytesleft/bytespersec;
+				timeleft=(time_t)(bytesleft/bytespersec);
 				print_detail2("Time left",
 					time_taken(timeleft), " ", &x, col);
 			}
@@ -421,7 +426,7 @@ static void blank_screen(int row, int col)
 	printf("%s\n\n", date);
 }
 
-static int parse_rbuf(const char *rbuf, struct config *conf, int row, int col, int sel, int *count, int details)
+static int parse_rbuf(const char *rbuf, struct config *conf, int row, int col, int sel, char **client, int *count, int details, const char *sclient)
 {
 	//int c=0;
 	char *cp=NULL;
@@ -488,7 +493,17 @@ static int parse_rbuf(const char *rbuf, struct config *conf, int row, int col, i
 
 		if(details)
 		{
-			if(*count==sel) detail(toks, t, conf, 0, col);
+			if(*count==sel || sclient)
+			{
+				if(toks[0]
+				  && (!*client || strcmp(toks[0], *client)))
+				{
+					if(*client) free(*client);
+					*client=strdup(toks[0]);
+				}
+				if(!sclient || !strcmp(toks[0], sclient))
+					detail(toks, t, conf, 0, col);
+			}
 		}
 		else
 		{
@@ -535,11 +550,14 @@ static void print_star(int sel)
 }
 
 // Return 1 if it was shown, -1 on error, 0 otherwise.
-static int show_rbuf(const char *rbuf, struct config *conf, int sel, int *count, int details)
+static int show_rbuf(const char *rbuf, struct config *conf, int sel, char **client, int *count, int details, const char *sclient)
 {
 	int rbuflen=0;
 	if(!rbuf) return 0;
 	rbuflen=strlen(rbuf);
+#ifdef DBFP
+	if(dbfp) { fprintf(dbfp, "%s\n", rbuf);  fflush(dbfp); }
+#endif
 
 	if(rbuflen>2
 		&& rbuf[rbuflen-1]=='\n'
@@ -550,8 +568,9 @@ static int show_rbuf(const char *rbuf, struct config *conf, int sel, int *count,
 #ifdef HAVE_NCURSES_H
 		if(actg==ACTION_STATUS) getmaxyx(stdscr, row, col);
 #endif
-		if(parse_rbuf(rbuf, conf, row, col, sel, count, details))
-			return -1;
+		if(parse_rbuf(rbuf, conf, row, col,
+			sel, client, count, details, sclient))
+				return -1;
 		if(sel>=*count) sel=(*count)-1;
 		if(!details) print_star(sel);
 #ifdef HAVE_NCURSES_H
@@ -562,12 +581,39 @@ static int show_rbuf(const char *rbuf, struct config *conf, int sel, int *count,
 	return 0;
 }
 
-static int request_status(int fd, int sel)
+static int request_status(int fd, const char *client, struct config *conf)
 {
 	int l;
 	char buf[256]="";
-	if(sel>=0) snprintf(buf, sizeof(buf), "%d\n", sel);
+	if(client)
+	{
+		if(conf->backup)
+		{
+			if(conf->browsedir)
+			{
+				snprintf(buf, sizeof(buf), "c:%s:b:%s:p:%s\n",
+					client, conf->backup, conf->browsedir);
+			}
+			else if(conf->browsefile)
+			{
+				snprintf(buf, sizeof(buf), "c:%s:b:%s:f:%s\n",
+					client, conf->backup, conf->browsefile);
+			}
+			else
+			{
+				snprintf(buf, sizeof(buf), "c:%s:b:%s\n",
+					client, conf->backup);
+			}
+		}
+		else
+		{
+			snprintf(buf, sizeof(buf), "c:%s\n", client);
+		}
+	}
 	else snprintf(buf, sizeof(buf), "\n");
+#ifdef DBFP
+fprintf(dbfp, "request: %s\n", buf); fflush(dbfp);
+#endif
 	l=strlen(buf);
 	if(write(fd, buf, l)<0) return -1;
 	return 0;
@@ -579,6 +625,7 @@ static void sighandler(int sig)
 	if(actg==ACTION_STATUS) endwin();
 #endif
         logp("got signal: %d\n", sig);
+	if(sig==SIGPIPE) logp("Server may have too many active status clients.\n");
         logp("exiting\n");
         exit(1);
 }
@@ -591,7 +638,7 @@ static void setup_signals(void)
 	signal(SIGPIPE, &sighandler);
 }
 
-int status_client(struct config *conf, enum action act)
+int status_client_ncurses(struct config *conf, enum action act, const char *sclient)
 {
 	int fd=0;
         int ret=0;
@@ -602,6 +649,10 @@ int status_client(struct config *conf, enum action act)
 	int details=0;
 	char *last_rbuf=NULL;
 	int srbr=0;
+	char *client=NULL;
+	int enterpressed=0;
+//	int loop=0;
+	int reqdone=0;
 
 #ifdef HAVE_NCURSES_H
 	int stdinfd=fileno(stdin);
@@ -634,7 +685,11 @@ int status_client(struct config *conf, enum action act)
 		noecho();
 		curs_set(0);
 		halfdelay(3);
+		//nodelay(stdscr, TRUE);
 	}
+#endif
+#ifdef DBFP
+	dbfp=fopen("/tmp/dbfp", "w");
 #endif
 
 	while(!ret)
@@ -645,15 +700,29 @@ int status_client(struct config *conf, enum action act)
 		fd_set fse;
 		struct timeval tval;
 
-		if(need_status())
+		// Failsafe to prevent the snapshot ever getting permanently
+		// stuck.
+		//if(actg==ACTION_STATUS_SNAPSHOT && loop++>10000)
+		//	break;
+
+		if(sclient && !client)
 		{
-			int req=-1;
-			if(details) req=sel;
-			if(request_status(fd, req))
+			client=strdup(sclient);
+			details=1;
+		}
+
+		if((enterpressed || need_status()) && !reqdone)
+		{
+			char *req=NULL;
+			if(details && client) req=client;
+			if(request_status(fd, req, conf))
 			{
 				ret=-1;
 				break;
 			}
+			enterpressed=0;
+			if(actg==ACTION_STATUS_SNAPSHOT)
+				reqdone++;
 		}
 
 		FD_ZERO(&fsr);
@@ -695,9 +764,9 @@ int status_client(struct config *conf, enum action act)
 			}
 			if(FD_ISSET(stdinfd, &fsr))
 			{
-				int x;
 				int quit=0;
-				switch((x=getch()))
+				
+				switch(getch())
 				{
 					case 'q':
 					case 'Q':
@@ -720,6 +789,7 @@ int status_client(struct config *conf, enum action act)
 					case ' ':
 						if(details) details=0;
 						else details++;
+						enterpressed++;
 						break;
 					case KEY_LEFT:
 					case 'h':
@@ -754,10 +824,11 @@ int status_client(struct config *conf, enum action act)
 				// Attempt to print stuff to the screen right
 				// now, to give the impression of key strokes
 				// being responsive.
-				if(!details)
+				if(!details && !sclient)
 				{
 				  if((srbr=show_rbuf(last_rbuf,
-					conf, sel, &count, details))<0)
+					conf, sel, &client,
+					&count, details, sclient))<0)
 				  {
 					ret=-1;
 					break;
@@ -782,14 +853,40 @@ int status_client(struct config *conf, enum action act)
 				if(!r) *rbuf='\0';
 				strcat(rbuf+r, buf);
 			}
+			else
+				break;
+
+			if(actg==ACTION_STATUS_SNAPSHOT)
+			{
+				if(rbuf)
+				{
+					if(!strcmp(rbuf, "\n"))
+					{
+						// This happens when there are
+						// no backup clients.
+						break;
+					}
+					if(strstr(rbuf, "\n-list end-\n"))
+					{
+						printf("%s", rbuf);
+						break;
+					}
+				}
+				continue;
+			}
+
+			//if(rbuf) printf("rbuf: %s\n", rbuf);
+/*
 			if(l<0)
 			{
 				ret=-1;
 				break;
 			}
+*/
 		}
 
-		if((srbr=show_rbuf(rbuf, conf, sel, &count, details))<0)
+		if((srbr=show_rbuf(rbuf, conf,
+			sel, &client, &count, details, sclient))<0)
 		{
 			ret=-1;
 			break;
@@ -802,6 +899,8 @@ int status_client(struct config *conf, enum action act)
 			last_rbuf=rbuf;
 			rbuf=NULL;
 		}
+
+		if(sclient) details++;
 
 		usleep(20000);
 #ifdef HAVE_NCURSES_H
@@ -823,5 +922,8 @@ int status_client(struct config *conf, enum action act)
 	close_fd(&fd);
 	if(last_rbuf) free(last_rbuf);
 	if(rbuf) free(rbuf);
+#ifdef DBFP
+	if(dbfp) fclose(dbfp);
+#endif
 	return ret;
 }

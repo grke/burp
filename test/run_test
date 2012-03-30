@@ -74,6 +74,7 @@ build_and_install()
 	# target.
 	makedir "$target"
 	cdir "$build"
+	make clean
 	#./configure --prefix="$target" --datarootdir="$target"/usr/share --sysconfdir="$target"/etc/burp || fail "configure failed"
 	./configure || fail "configure failed"
 	make || fail "make failed"
@@ -257,6 +258,28 @@ include_on()
 	echo "include = $includedir" >> $clientconf
 }
 
+include_ext_off()
+{
+	sed_rep 's/^include_ext = c//g' $clientconf
+}
+
+include_ext_on()
+{
+	include_ext_off
+	echo "include_ext = c" >> $clientconf
+}
+
+exclude_ext_off()
+{
+	sed_rep 's/^exclude_ext = c//g' $clientconf
+}
+
+exclude_ext_on()
+{
+	exclude_ext_off
+	echo "exclude_ext = c" >> $clientconf
+}
+
 normal_settings()
 {
 	compression_on
@@ -265,6 +288,8 @@ normal_settings()
 	min_file_size_off
 	exclude_off
 	include_on
+	include_ext_off
+	exclude_ext_off
 }
 
 build_and_install
@@ -275,9 +300,10 @@ cdir "$target"
 
 # Tweak the example configuration files by removing the leading '/' from all
 # the paths, and changing the port numbers.
-sed_rep_both 's/= \//= /g'
+sed_rep_both "s#= /#= $target/#g"
 sed_rep_both 's/port = 4971/port = 4998/g'
 sed_rep_both 's/port = 4972/port = 4999/g'
+sed_rep "s#^CA_DIR.*#CA_DIR = $target/etc/burp/CA#g" "$target/etc/burp/CA.cnf"
 
 echo
 echo "Starting tests"
@@ -290,9 +316,14 @@ echo "More logs can be found in:"
 echo "$target/var/spool/burp/testclient/<backup number>"
 echo
 
+echo "Initialising server certificate authority"
+# Need to do this outside of the server, because it might take a long time.
+./usr/sbin/burp -c "$serverconf" -g >> "$serveroutputlog" 2>&1 || fail "Initialising server certificate authority failed"
+echo
+
 # Start up the server
 echo "Starting test server"
-./usr/sbin/burp -c $serverconf -l "$serversystemlog" -F >> "$serveroutputlog" 2>&1 &
+./usr/sbin/burp -c "$serverconf" -l "$serversystemlog" -F >> "$serveroutputlog" 2>&1 &
 serverpid=$!
 
 # Be kind, and wait a little for it to start.
@@ -441,9 +472,33 @@ exclude_on
 run_backup
 run_verify all
 run_restore 10 "$restoredir"10
-[ -d "$restoredir"10/$excludedir ] && fail "$excludedir should not have been restored!
-[ ! -d "$restoredir"10/$includedir ] && fail "$includedir should have been restored!
+[ -d "$restoredir"10/$excludedir ] && fail "$excludedir should not have been restored!"
+[ ! -d "$restoredir"10/$includedir ] && fail "$includedir should have been restored!"
 end_test 10
+
+# ----- Test 11 -----
+start_test 11 "Exclude extension, backup/restore comparison"
+normal_settings
+exclude_ext_on
+run_backup
+run_verify all
+run_restore 11 "$restoredir"11
+f=$(find "$restoredir"11 -type f -name '*.c')
+[ -n "$f" ] && fail "$restoredir11 should not contain any '.c' files"
+end_test 11
+
+# ----- Test 12 -----
+start_test 12 "Include extension, backup/restore comparison"
+normal_settings
+include_ext_on
+run_backup
+run_verify all
+run_restore 12 "$restoredir"12
+f=$(find "$restoredir"12 -type f -name '*.h')
+[ -n "$f" ] && fail "$restoredir12 should not contain any '.h' files"
+f=$(find "$restoredir"12 -type f -name '*.c')
+[ -z "$f" ] && fail "$restoredir12 should contain '.c' files"
+end_test 12
 
 echo
 echo "All tests succeeded"

@@ -2,6 +2,9 @@
 #
 # Script that determines whether it is time to run a backup.
 
+# Set LANG=C so that 'date' returns English day names.
+export LANG=C
+
 echo "Running timer script: $@"
 
 client="$1" ; shift

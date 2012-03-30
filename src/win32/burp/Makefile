@@ -37,6 +37,7 @@ FILED_OBJS = \
 	$(OBJDIR)/base64.o \
 	$(OBJDIR)/berrno.o \
 	$(OBJDIR)/bfile.o \
+	$(OBJDIR)/ca_client.o \
 	$(OBJDIR)/client.o \
 	$(OBJDIR)/client_vss.o \
 	$(OBJDIR)/conf.o \
@@ -44,14 +45,15 @@ FILED_OBJS = \
 	$(OBJDIR)/extrameta.o \
 	$(OBJDIR)/find.o \
 	$(OBJDIR)/forkchild.o \
-	$(OBJDIR)/incexc_recv_server.o \
-	$(OBJDIR)/incexc_send_client.o \
+	$(OBJDIR)/incexc_recv.o \
+	$(OBJDIR)/incexc_send.o \
 	$(OBJDIR)/list_client.o \
 	$(OBJDIR)/handy.o \
 	$(OBJDIR)/lock.o \
 	$(OBJDIR)/log.o \
 	$(OBJDIR)/main.o \
 	$(OBJDIR)/msg.o \
+	$(OBJDIR)/prepend.o \
 	$(OBJDIR)/prog.o \
 	$(OBJDIR)/restore_client.o \
 	$(OBJDIR)/rs_buf.o \
@@ -84,7 +86,7 @@ FILED_LIBS = \
 
 .PHONY: all clean
 
-all: $(BINDIR)/burp.exe
+all: $(BINDIR)/burp.exe $(BINDIR)/burp_ca.bat
 
 clean:
 	@echo "Cleaning `pwd`"
@@ -98,6 +100,9 @@ clean:
 
 $(BINDIR)/burp.exe: $(FILED_OBJS) $(LIBS_BURP)
 	$(call link_conapp,$(FILED_LIBS))
+
+$(BINDIR)/burp_ca.bat:
+	cp $(MAINDIR)/configs/certs/CA/burp_ca.bat $(BINDIR)
 
 $(OBJDIR)/winres.res: ../libwin32/winres.rc
 	@echo "Compiling $(WINDRES) $@"

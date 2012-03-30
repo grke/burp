@@ -12,53 +12,10 @@
 static int receive_file(const char *autoupgrade_dir, const char *file, struct cntr *p1cntr)
 {
 	int ret=0;
-#ifdef HAVE_WIN32
-	BFILE bfd;
-#else
-	FILE *fp=NULL;
-#endif
 	char *incoming=NULL;
-	unsigned long long rcvdbytes=0;
-	unsigned long long sentbytes=0;
-
 	if(!(incoming=prepend_s(autoupgrade_dir, file, strlen(file))))
-	{
-		ret=-1;
-		goto end;
-	}
-#ifdef HAVE_WIN32
-	binit(&bfd, 0);
-	bfd.use_backup_api=0;
-	//set_win32_backup(&bfd);
-	if(bopen(&bfd, incoming,
-		O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,
-		S_IRUSR | S_IWUSR, 0)<=0)
-	{
-		berrno be;
-		logp("Could not open for writing %s: %s\n",
-			incoming, be.bstrerror(errno));
-		ret=-1;
-		goto end;
-	}
-#else
-	if(!(fp=open_file(incoming, "wb")))
-	{
-		ret=-1;
-		goto end;
-	}
-#endif
-
-#ifdef HAVE_WIN32
-	ret=transfer_gzfile_in(NULL, incoming, &bfd, NULL,
-		&rcvdbytes, &sentbytes, NULL, 0, p1cntr, NULL);
-	bclose(&bfd);
-#else
-	ret=transfer_gzfile_in(NULL, incoming, NULL, fp,
-		&rcvdbytes, &sentbytes, NULL, 0, p1cntr, NULL);
-	close_fp(&fp);
-#endif
-end:
-	if(!ret) logp("received: %s\n", incoming);
+		return -1;
+	ret=receive_a_file(incoming, p1cntr);
 	if(incoming) free(incoming);
 	return ret;
 }
@@ -154,8 +111,9 @@ int autoupgrade_client(struct config *conf, struct cntr *p1cntr)
 
 	/* Run the script here. */
 	ret=run_script(script_path,
-		NULL, 0, NULL, NULL, NULL, NULL, NULL, p1cntr,
-		0 /* do not wait */);
+		NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+		p1cntr,
+		0 /* do not wait */, 1 /* use logp */);
 	/* To get round Windows problems to do with installing over files
 	   that the current process is running from, I am forking the child,
 	   then immediately exiting the parent process. */

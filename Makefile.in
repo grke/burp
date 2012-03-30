@@ -92,6 +92,7 @@ installdirs:
 	$(MKDIR) $(DESTDIR)/var/run
 	$(MKDIR) $(DESTDIR)/var/spool/burp
 	@if [ ! -d $(DESTDIR)$(sysconfdir)/clientconfdir ] ; then $(MKDIR) $(DESTDIR)$(sysconfdir)/clientconfdir ; cp configs/server/clientconfdir/testclient $(DESTDIR)$(sysconfdir)/clientconfdir/testclient ; fi
+	@if [ ! -d $(DESTDIR)$(sysconfdir)/clientconfdir/incexc ] ; then $(MKDIR) $(DESTDIR)$(sysconfdir)/clientconfdir/incexc ; cp configs/server/clientconfdir/incexc $(DESTDIR)$(sysconfdir)/clientconfdir/incexc/example ; fi
 	@if [ ! -d $(DESTDIR)$(sysconfdir)/autoupgrade/client ] ; then $(MKDIR) $(DESTDIR)$(sysconfdir)/autoupgrade/client ; fi
 	@if [ ! -d $(DESTDIR)$(sysconfdir)/autoupgrade/server ] ; then $(MKDIR) $(DESTDIR)$(sysconfdir)/autoupgrade/server ; fi
 	@if [ ! -d $(DESTDIR)$(sysconfdir)/autoupgrade/server/win32 ] ; then $(MKDIR) $(DESTDIR)$(sysconfdir)/autoupgrade/server/win32 ; fi
@@ -112,16 +113,14 @@ install: installdirs
 	@for I in $(all_subdirs); do (cd $$I && $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1); done
 	@if [ ! -f $(DESTDIR)$(sysconfdir)/burp-server.conf ] ; then cp configs/server/burp.conf $(DESTDIR)$(sysconfdir)/burp-server.conf ; fi
 	@if [ ! -f $(DESTDIR)$(sysconfdir)/burp.conf ] ; then cp configs/client/burp.conf $(DESTDIR)$(sysconfdir)/burp.conf ; fi
-	@if [ ! -f $(DESTDIR)$(sysconfdir)/ssl_cert-server.pem ] ; then cp configs/certs/ssl_cert-server.pem $(DESTDIR)$(sysconfdir)/ssl_cert-server.pem ; fi
-	@if [ ! -f $(DESTDIR)$(sysconfdir)/ssl_cert-client.pem ] ; then cp configs/certs/ssl_cert-client.pem $(DESTDIR)$(sysconfdir)/ssl_cert-client.pem ; fi
-	@if [ ! -f $(DESTDIR)$(sysconfdir)/ssl_cert_ca.pem ] ; then cp configs/certs/ssl_cert_ca.pem $(DESTDIR)$(sysconfdir)/ssl_cert_ca.pem ; fi
-	@if [ ! -f $(DESTDIR)$(sysconfdir)/dhfile.pem ] ; then cp configs/certs/dhfile.pem $(DESTDIR)$(sysconfdir)/dhfile.pem ; fi
 	@if [ ! -f $(DESTDIR)$(sysconfdir)/notify_script ] ; then cp configs/server/notify_script $(DESTDIR)$(sysconfdir)/notify_script && chmod 755 $(DESTDIR)$(sysconfdir)/notify_script ; fi
 	@if [ ! -f $(DESTDIR)$(sysconfdir)/ssl_extra_checks_script ] ; then cp configs/server/ssl_extra_checks_script $(DESTDIR)$(sysconfdir)/ssl_extra_checks_script && chmod 755 $(DESTDIR)$(sysconfdir)/ssl_extra_checks_script ; fi
 	@if [ ! -f $(DESTDIR)$(sysconfdir)/summary_script ] ; then cp configs/server/summary_script $(DESTDIR)$(sysconfdir)/summary_script && chmod 755 $(DESTDIR)$(sysconfdir)/summary_script ; fi
 	@if [ ! -f $(DESTDIR)$(sysconfdir)/timer_script ] ; then cp configs/server/timer_script $(DESTDIR)$(sysconfdir)/timer_script && chmod 755 $(DESTDIR)$(sysconfdir)/timer_script ; fi
 	@if [ ! -f $(DESTDIR)$(sysconfdir)/autoupgrade/server/win32/script ] ; then cp configs/server/autoupgrade/windows.script $(DESTDIR)$(sysconfdir)/autoupgrade/server/win32/script ; fi
 	@if [ ! -f $(DESTDIR)$(sysconfdir)/autoupgrade/server/win64/script ] ; then cp configs/server/autoupgrade/windows.script $(DESTDIR)$(sysconfdir)/autoupgrade/server/win64/script ; fi
+	@if [ ! -f $(DESTDIR)$(sysconfdir)/CA.cnf ] ; then cp configs/certs/CA/CA.cnf $(DESTDIR)$(sysconfdir)/CA.cnf ; fi
+	cp configs/certs/CA/burp_ca $(DESTDIR)$(sbindir) && chmod 755 $(DESTDIR)$(sbindir)/burp_ca
 
 Makefile: Makefile.in
 	cd $(topdir) \

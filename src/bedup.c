@@ -9,6 +9,7 @@
 #include <stdarg.h>
 #include <signal.h>
 #include <malloc.h>
+#include <prepend.h>
 
 #include <uthash.h>
 #include <openssl/md5.h>
@@ -591,7 +592,7 @@ static int in_group(const char *clientconfdir, const char *client, strlist_t **g
 
 	if(!(ccfile=prepend(clientconfdir, client, "/"))) return -1;
 	init_config(&cconf);
-	if(set_client_global_config(conf, &cconf)
+	if(set_client_global_config(conf, &cconf, client)
 	  || load_config(ccfile, &cconf, 0))
 	{
 		logp("could not load config for client %s\n", client);
@@ -625,6 +626,21 @@ static void sighandler(int signum)
 	exit(1);
 }
 
+static int is_regular_file(const char *clientconfdir, const char *file)
+{
+	struct stat statp;
+	char *fullpath=NULL;
+	if(!(fullpath=prepend_s(clientconfdir, file, strlen(file))))
+		return 0;
+	if(lstat(fullpath, &statp))
+	{
+		free(fullpath);
+		return 0;
+	}
+	free(fullpath);
+	return S_ISREG(statp.st_mode);
+}
+
 static int iterate_over_clients(struct config *conf, strlist_t **grouplist, int gcount, const char *ext, unsigned int maxlinks)
 {
 	int ret=0;
@@ -647,7 +663,8 @@ static int iterate_over_clients(struct config *conf, strlist_t **grouplist, int 
 		char *lockfilebase=NULL;
 		if(!strcmp(dirinfo->d_name, ".")
 		  || !strcmp(dirinfo->d_name, "..")
-		  || looks_like_vim_tmpfile(dirinfo->d_name))
+		  || looks_like_vim_tmpfile(dirinfo->d_name)
+		  || !is_regular_file(conf->clientconfdir, dirinfo->d_name))
 			continue;
 
 		if(gcount)

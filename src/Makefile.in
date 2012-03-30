@@ -35,6 +35,8 @@ SVRSRCS =	acl.c \
 		base64.c \
 		berrno.c \
 		bfile.c \
+		ca_client.c \
+		ca_server.c \
 		client.c \
 		client_vss.c \
 		conf.c \
@@ -45,13 +47,14 @@ SVRSRCS =	acl.c \
 		find.c \
 		forkchild.c \
 		handy.c \
-		incexc_recv_server.c \
-		incexc_send_client.c \
+		incexc_recv.c \
+		incexc_send.c \
 		list_client.c \
 		list_server.c \
 		lock.c \
 		log.c \
 		msg.c \
+		prepend.c \
 		prog.c \
 		restore_client.c \
 		restore_server.c \
@@ -59,7 +62,7 @@ SVRSRCS =	acl.c \
 		sbuf.c \
 		server.c \
 		ssl.c \
-		status_client.c \
+		status_client_ncurses.c \
 		status_server.c \
 		strlist.c \
 		xattr.c \
@@ -129,12 +132,12 @@ static-burp: Makefile $(SVROBJS) @WIN32@
 
 bedup:  Makefile bedup.o @WIN32@
 	@echo "Linking $@ ..."
-	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -o $@ bedup.o conf.o lock.o log.o strlist.o \
+	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -o $@ bedup.o conf.o lock.o log.o prepend.o strlist.o \
 	  $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
 	  $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(RSYNC_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS)
 
 static-bedup: Makefile bedup.o @WIN32@
-	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -o $@ bedup.o conf.o lock.o log.o strlist.o \
+	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -o $@ bedup.o conf.o lock.o log.o prepend.o strlist.o \
 	   $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
 	   $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(RSYNC_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS) -ldl -lgpm
 

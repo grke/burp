@@ -49,56 +49,6 @@ int is_dir(const char *path)
         return S_ISDIR(buf.st_mode);
 }
 
-/* This may be given binary data, of which we need to already know the length */
-char *prepend_len(const char *prep, size_t plen, const char *fname, size_t flen, const char *sep, size_t slen, size_t *newlen)
-{
-	size_t l=0;
-	char *rpath=NULL;
-
-	l+=plen;
-	l+=flen;
-	l+=slen;
-	l+=1;
-
-	if(!(rpath=(char *)malloc(l)))
-	{
-		logp("could not malloc for prepend to %s\n", fname);
-		return NULL;
-	}
-	if(plen) memcpy(rpath,           prep,  plen);
-	if(slen) memcpy(rpath+plen,      sep,   slen);
-	if(flen) memcpy(rpath+plen+slen, fname, flen);
-	rpath[plen+slen+flen]='\0';
-
-	if(newlen) (*newlen)+=slen+flen;
-	return rpath;
-}
-
-char *prepend(const char *prep, const char *fname, size_t len, const char *sep)
-{
-	return prepend_len(prep, prep?strlen(prep):0,
-		fname, len,
-		sep, (sep && *fname)?strlen(sep):0, NULL);
-}
-
-char *prepend_s(const char *prep, const char *fname, size_t len)
-{
-	if(!prep || !*prep)
-	{
-		char *ret=NULL;
-		if(!(ret=strdup(fname)))
-			logp("out of memory in prepend_s\n");
-		return ret;
-	}
-	// Try to avoid getting a double slash in the path.
-	if(fname && fname[0]=='/')
-	{
-		fname++;
-		len--;
-	}
-	return prepend(prep, fname, len, "/");
-}
-
 int mkpath(char **rpath, const char *limit)
 {
 	char *cp=NULL;
@@ -334,22 +284,27 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password)
 
 int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, int64_t winattr, struct cntr *cntr)
 {
-#ifdef HAVE_WIN32
-	binit(bfd, winattr);
-	if(bopen(bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0,
-		(winattr & FILE_ATTRIBUTE_DIRECTORY))<=0)
+	if(fp)
 	{
-		berrno be;
-		logw(cntr,
-			"Could not open %s: %s\n", fname, be.bstrerror(errno));
-		return -1;
+		if(!(*fp=fopen(fname, "rb")))
+		{
+			logw(cntr,
+				"Could not open %s: %s\n", fname, strerror(errno));
+			return -1;
+		}
 	}
-#else
-	if(!(*fp=fopen(fname, "rb")))
+#ifdef HAVE_WIN32
+	else
 	{
-		logw(cntr,
-			"Could not open %s: %s\n", fname, strerror(errno));
-		return -1;
+		binit(bfd, winattr);
+		if(bopen(bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0,
+			(winattr & FILE_ATTRIBUTE_DIRECTORY))<=0)
+		{
+			berrno be;
+			logw(cntr, "Could not open %s: %s\n",
+				fname, be.bstrerror(errno));
+			return -1;
+		}
 	}
 #endif
 	return 0;
@@ -357,10 +312,9 @@ int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, int64_t winattr
 
 void close_file_for_send(BFILE *bfd, FILE **fp)
 {
+	if(fp) fclose(*fp);
 #ifdef HAVE_WIN32
-	bclose(bfd);
-#else
-	fclose(*fp);
+	else bclose(bfd);
 #endif
 }
 
@@ -433,10 +387,9 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 		}
 		else
 		{
+			if(fp) strm.avail_in=fread(in, 1, ZCHUNK, fp);
 #ifdef HAVE_WIN32
-			strm.avail_in=(uint32_t)bread(bfd, in, ZCHUNK);
-#else
-			strm.avail_in=fread(in, 1, ZCHUNK, fp);
+			else strm.avail_in=(uint32_t)bread(bfd, in, ZCHUNK);
 #endif
 		}
 		if(!compression && !strm.avail_in) break;
@@ -825,7 +778,7 @@ int init_client_socket(const char *host, const char *port)
 		rfd=socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
 		if(rfd<0) continue;
 		if(connect(rfd, rp->ai_addr, rp->ai_addrlen) != -1) break;
-		close(rfd);
+		close_fd(&rfd);
 	}
 	freeaddrinfo(result);
 	if(!rp)
@@ -851,12 +804,93 @@ void reuseaddr(int fd)
 }
 
 #ifndef HAVE_WIN32
+static void get_status_buf(char *buf, size_t len, const char *client, char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr)
+{
+	int l=0;
+	snprintf(buf, len,
+		"%s\t%c\t%c\t"
+		"%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu\t"
+		"%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%li\t%s\n",
+			client, STATUS_RUNNING, phase,
+
+			cntr->total,
+			cntr->total_changed,
+			cntr->total_same,
+			p1cntr->total,
+
+			cntr->file,
+			cntr->file_changed,
+			cntr->file_same,
+			p1cntr->file,
+
+			cntr->enc,
+			cntr->enc_changed,
+			cntr->enc_same,
+			p1cntr->enc,
+
+			cntr->meta,
+			cntr->meta_changed,
+			cntr->meta_same,
+			p1cntr->meta,
+
+			cntr->encmeta,
+			cntr->encmeta_changed,
+			cntr->encmeta_same,
+			p1cntr->encmeta,
+
+			cntr->dir,
+			cntr->dir_changed,
+			cntr->dir_same,
+			p1cntr->dir,
+
+			cntr->slink,
+			cntr->slink_changed,
+			cntr->slink_same,
+			p1cntr->slink,
+
+			cntr->hlink,
+			cntr->hlink_changed,
+			cntr->hlink_same,
+			p1cntr->hlink,
+
+			cntr->special,
+			cntr->special_changed,
+			cntr->special_same,
+			p1cntr->special,
+
+			cntr->total,
+			cntr->total_changed,
+			cntr->total_same,
+			p1cntr->total,
+
+			cntr->gtotal,
+			cntr->warning,
+			p1cntr->byte,
+			cntr->byte,
+			cntr->recvbyte,
+			cntr->sentbyte,
+			p1cntr->start,
+			path?path:"");
+
+	// Make sure there is a new line at the end.
+	l=strlen(buf);
+	if(buf[l-1]!='\n') buf[l-1]='\n';
+}
+
 void write_status(const char *client, char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr)
 {
 	static time_t lasttime=0;
 	if(status_wfd>=0 && client)
 	{
-		int l;
 		char *w=NULL;
 		time_t now=0;
 		time_t diff=0;
@@ -874,83 +908,9 @@ void write_status(const char *client, char phase, const char *path, struct cntr 
 		}
 		lasttime=now;
 
-		snprintf(wbuf, sizeof(wbuf),
-			"%s\t%c\t%c\t"
-			"%llu/%llu/%llu/%llu\t"
-			"%llu/%llu/%llu/%llu\t"
-			"%llu/%llu/%llu/%llu\t"
-			"%llu/%llu/%llu/%llu\t"
-			"%llu/%llu/%llu/%llu\t"
-			"%llu/%llu/%llu/%llu\t"
-			"%llu/%llu/%llu/%llu\t"
-			"%llu/%llu/%llu/%llu\t"
-			"%llu/%llu/%llu/%llu\t"
-			"%llu/%llu/%llu/%llu\t"
-			"%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%li\t%s\n",
-				client, STATUS_RUNNING, phase,
+		get_status_buf(wbuf, sizeof(wbuf),
+			client, phase, path, p1cntr, cntr);
 
-				cntr->total,
-				cntr->total_changed,
-				cntr->total_same,
-				p1cntr->total,
-
-				cntr->file,
-				cntr->file_changed,
-				cntr->file_same,
-				p1cntr->file,
-
-				cntr->enc,
-				cntr->enc_changed,
-				cntr->enc_same,
-				p1cntr->enc,
-
-				cntr->meta,
-				cntr->meta_changed,
-				cntr->meta_same,
-				p1cntr->meta,
-
-				cntr->encmeta,
-				cntr->encmeta_changed,
-				cntr->encmeta_same,
-				p1cntr->encmeta,
-
-				cntr->dir,
-				cntr->dir_changed,
-				cntr->dir_same,
-				p1cntr->dir,
-
-				cntr->slink,
-				cntr->slink_changed,
-				cntr->slink_same,
-				p1cntr->slink,
-
-				cntr->hlink,
-				cntr->hlink_changed,
-				cntr->hlink_same,
-				p1cntr->hlink,
-
-				cntr->special,
-				cntr->special_changed,
-				cntr->special_same,
-				p1cntr->special,
-
-				cntr->total,
-				cntr->total_changed,
-				cntr->total_same,
-				p1cntr->total,
-
-				cntr->gtotal,
-				cntr->warning,
-				p1cntr->byte,
-				cntr->byte,
-				cntr->recvbyte,
-				cntr->sentbyte,
-				p1cntr->start,
-				path?path:"");
-
-		// Make sure there is a new line at the end.
-		l=strlen(wbuf);
-		if(wbuf[l-1]!='\n') wbuf[l-1]='\n';
 		w=wbuf;
 		while(*w)
 		{
@@ -966,14 +926,16 @@ void write_status(const char *client, char phase, const char *path, struct cntr 
 	}
 }
 
-static void log_script_output(FILE **fp, struct cntr *cntr)
+static void log_script_output(FILE **fp, struct cntr *cntr, int logfunc)
 {
 	char buf[256]="";
 	if(fp && *fp)
 	{
 		if(fgets(buf, sizeof(buf), *fp))
 		{
-			logp("%s", buf);
+			// logc does not print a prefix
+			if(logfunc) logp("%s", buf);
+			else logc("%s", buf);
 			if(cntr) logw(cntr, "%s", buf);
 		}
 		if(feof(*fp))
@@ -1003,7 +965,7 @@ void setup_signal(int sig, void handler(int sig))
 	sigaction(sig, &sa, NULL);
 }
 
-static int run_script_select(FILE **sout, FILE **serr, struct cntr *cntr)
+static int run_script_select(FILE **sout, FILE **serr, struct cntr *cntr, int logfunc)
 {
 	int mfd=-1;
 	fd_set fsr;
@@ -1040,8 +1002,10 @@ static int run_script_select(FILE **sout, FILE **serr, struct cntr *cntr)
 			//logp("error on run_script child fd\n");
 			return -1;
 		}
-		if(FD_ISSET(soutfd, &fsr)) log_script_output(sout, NULL);
-		if(FD_ISSET(serrfd, &fsr)) log_script_output(serr, cntr);
+		if(FD_ISSET(soutfd, &fsr))
+			log_script_output(sout, NULL, logfunc);
+		if(FD_ISSET(serrfd, &fsr))
+			log_script_output(serr, cntr, logfunc);
 
 		if(!*sout && !*serr && got_sigchld)
 		{
@@ -1058,8 +1022,8 @@ static int run_script_select(FILE **sout, FILE **serr, struct cntr *cntr)
 
 #endif
 
-
-int run_script(const char *script, struct strlist **userargs, int userargc, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, struct cntr *cntr, int do_wait)
+/* TODO: make arg1..n an array */
+int run_script(const char *script, struct strlist **userargs, int userargc, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, const char *arg6, const char *arg7, const char *arg8, struct cntr *cntr, int do_wait, int logfunc)
 {
 	int a=0;
 	int l=0;
@@ -1079,6 +1043,9 @@ int run_script(const char *script, struct strlist **userargs, int userargc, cons
 	if(arg3) cmd[l++]=(char *)arg3;
 	if(arg4) cmd[l++]=(char *)arg4;
 	if(arg5) cmd[l++]=(char *)arg5;
+	if(arg6) cmd[l++]=(char *)arg6;
+	if(arg7) cmd[l++]=(char *)arg7;
+	if(arg8) cmd[l++]=(char *)arg8;
 	for(a=0; a<userargc && l<64-1; a++)
 		cmd[l++]=userargs[a]->path;
 	cmd[l++]=NULL;
@@ -1103,7 +1070,7 @@ int run_script(const char *script, struct strlist **userargs, int userargc, cons
 	// My windows forkchild currently just executes, then returns.
 	return 0;
 #else
-	s=run_script_select(&sout, &serr, cntr);
+	s=run_script_select(&sout, &serr, cntr, logfunc);
 
 	// Set SIGCHLD back to default.
 	setup_signal(SIGCHLD, SIG_DFL);
@@ -1192,7 +1159,8 @@ int chuser_and_or_chgrp(const char *user, const char *group)
 		}
 		gid=grp->gr_gid;
 	}
-	if(initgroups(username, gid))
+	if(gid!=getgid() // do not do it if we already have the same gid.
+	  && initgroups(username, gid))
 	{
 		if(grp)
 			logp("could not initgroups for group '%s', user '%s': %s\n", group, user, strerror(errno));
@@ -1204,14 +1172,16 @@ int chuser_and_or_chgrp(const char *user, const char *group)
 	free(username);
 	if(grp)
 	{
-		if(setgid(gid))
+		if(gid!=getgid() // do not do it if we already have the same gid
+		 && setgid(gid))
 		{
 			logp("could not set group '%s': %s\n", group,
 				strerror(errno));
 			return -1;
 		}
 	}
-	if(setuid(uid))
+	if(uid!=getuid() // do not do it if we already have the same uid
+	  && setuid(uid))
 	{
 		logp("could not set specified user '%s': %s\n", username,
 			strerror(errno));
@@ -1366,4 +1336,123 @@ void print_all_cmds(void)
 		printf("  %c: %s\n", cmds[i], buf);
 	}
 	printf("\n");
+}
+
+void log_restore_settings(struct config *cconf, int srestore)
+{
+	int i=0;
+	logp("Restore settings:\n");
+	logp("backup = %s\n", cconf->backup);
+	if(srestore)
+	{
+		// This are unknown unless doing a server initiated restore.
+		logp("overwrite = %d\n", cconf->overwrite);
+		logp("strip = %d\n", cconf->strip);
+	}
+	if(cconf->restoreprefix)
+		logp("restoreprefix = %s\n", cconf->restoreprefix);
+	if(cconf->regex) logp("regex = %s\n", cconf->regex);
+	for(i=0; i<cconf->iecount; i++)
+	{
+		if(cconf->incexcdir[i]->flag)
+			logp("include = %s\n", cconf->incexcdir[i]->path);
+	}
+}
+
+long version_to_long(const char *version)
+{
+	long ret=0;
+	char *copy=NULL;
+	char *tok1=NULL;
+	char *tok2=NULL;
+	char *tok3=NULL;
+	if(!version || !*version) return 0;
+	if(!(copy=strdup(version)))
+	{
+		logp("out of memory\n");
+		return -1;
+	}
+	if(!(tok1=strtok(copy, "."))
+	  || !(tok2=strtok(NULL, "."))
+	  || !(tok3=strtok(NULL, ".")))
+	{
+		free(copy);
+		return -1;
+	}
+	ret+=atol(tok3);
+	ret+=atol(tok2)*100;
+	ret+=atol(tok1)*100*100;
+	free(copy);
+	return ret;
+}
+
+/* These receive_a_file() and send_file() functions are for use by extra_comms
+   and the CA stuff, rather than backups/restores. */
+int receive_a_file(const char *path, struct cntr *p1cntr)
+{
+	int ret=0;
+#ifdef HAVE_WIN32
+	BFILE bfd;
+#else
+	FILE *fp=NULL;
+#endif
+	unsigned long long rcvdbytes=0;
+	unsigned long long sentbytes=0;
+
+#ifdef HAVE_WIN32
+	binit(&bfd, 0);
+	bfd.use_backup_api=0;
+	//set_win32_backup(&bfd);
+	if(bopen(&bfd, path,
+		O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,
+		S_IRUSR | S_IWUSR, 0)<=0)
+	{
+		berrno be;
+		logp("Could not open for writing %s: %s\n",
+			path, be.bstrerror(errno));
+		ret=-1;
+		goto end;
+	}
+#else
+	if(!(fp=open_file(path, "wb")))
+	{
+		ret=-1;
+		goto end;
+	}
+#endif
+
+#ifdef HAVE_WIN32
+	ret=transfer_gzfile_in(NULL, path, &bfd, NULL,
+		&rcvdbytes, &sentbytes, NULL, 0, p1cntr, NULL);
+	bclose(&bfd);
+#else
+	ret=transfer_gzfile_in(NULL, path, NULL, fp,
+		&rcvdbytes, &sentbytes, NULL, 0, p1cntr, NULL);
+	close_fp(&fp);
+#endif
+end:
+	if(!ret) logp("Received: %s\n", path);
+	return ret;
+}
+
+/* Windows will use this function, when sending a certificate signing request.
+   It is not using the Windows API stuff because it needs to arrive on the
+   server side without any junk in it. */
+int send_a_file(const char *path, struct cntr *p1cntr)
+{
+	int ret=0;
+	FILE *fp=NULL;
+	unsigned long long bytes=0;
+	if(open_file_for_send(NULL, &fp, path, 0, p1cntr)
+	  || send_whole_file_gz(path, "datapth", 0, &bytes, NULL,
+		p1cntr, 9, // compression
+		NULL, fp, NULL, 0))
+	{
+		ret=-1;
+		goto end;
+	}
+	logp("Sent %s\n", path);
+end:
+	close_file_for_send(NULL, &fp);
+	return ret;
 }

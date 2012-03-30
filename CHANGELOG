@@ -1,3 +1,9 @@
+2012-03-31 Changes in burp-1.3.2:
+  * Add options for the client to automatically generate a certificate signing
+    request, have the server sign and return it, and have the client use the
+    new certificate. Remove old default SSL certificates because they should
+    no longer be needed.
+    See docs/burp_ca.txt for more information.
   * Add ability for conf files to point to more conf files to read.
   * Fix status server segfault when deleting files from clientconfdir.
   * Allow directories in clientconfdir.
@@ -32,12 +38,6 @@
   * Add 'export LANG=C' to the timer script, so that timer_arg days are always
     expected in English.
   * Add config file option to turn syslog logging on/off.
-  * Add options for the server to automatically run burp_ca and populate the
-    CA directory if the CA directory does not exist.
-  * Add options for the client to automatically generate a certificate signing
-    request, have the server sign and return it, and have the client use the
-    new certificate. Remove old default SSL certificates because they should
-    no longer be needed.
   * Bug fix for 'compression = gzip[0-9]'.
   * Pass the server version to the client.
 

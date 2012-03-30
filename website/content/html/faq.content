@@ -70,6 +70,7 @@ nodes.
 <li>Storage data deduplication (in versions > 1.2.2)
 <li>Automatic client upgrade (for server and client >= 1.3.0)
 <li>EFS support on Windows.
+<li>Automatic certificate authority and client certificate signing.
 </ul>
 </FONT>
 </P>
@@ -307,6 +308,21 @@ Q. How can I automatically upgrade burp clients?
 <P>
 <FONT COLOR="#99CCFF">
 A. There are instructions <A HREF="/txt/autoupgrade.txt">here</A>.
+</FONT>
+</P>
+
+<HR>
+
+<P>
+<FONT COLOR="#99CCFF">
+Q. How does the automatic certificate authority and client certificate signing
+work?
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">
+A. There is documentation <A HREF="/txt/burp_ca.txt">here</A>.
 </FONT>
 </P>
 

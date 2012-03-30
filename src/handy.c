@@ -1159,7 +1159,8 @@ int chuser_and_or_chgrp(const char *user, const char *group)
 		}
 		gid=grp->gr_gid;
 	}
-	if(initgroups(username, gid))
+	if(gid!=getgid() // do not do it if we already have the same gid.
+	  && initgroups(username, gid))
 	{
 		if(grp)
 			logp("could not initgroups for group '%s', user '%s': %s\n", group, user, strerror(errno));
@@ -1171,14 +1172,16 @@ int chuser_and_or_chgrp(const char *user, const char *group)
 	free(username);
 	if(grp)
 	{
-		if(setgid(gid))
+		if(gid!=getgid() // do not do it if we already have the same gid
+		  setgid(gid))
 		{
 			logp("could not set group '%s': %s\n", group,
 				strerror(errno));
 			return -1;
 		}
 	}
-	if(setuid(uid))
+	if(uid!=getuid() // do not do it if we already have the same uid
+	  && setuid(uid))
 	{
 		logp("could not set specified user '%s': %s\n", username,
 			strerror(errno));

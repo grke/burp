@@ -32,9 +32,9 @@ base64_init(void)
  * stored (not including the EOS).
  */
 int
-to_base64(intmax_t value, char *where)
+to_base64(int64_t value, char *where)
 {
-   uintmax_t val;
+   uint64_t val;
    int i = 0;
    int n;
 
@@ -56,7 +56,7 @@ to_base64(intmax_t value, char *where)
    val = value;
    where[i] = 0;
    do {
-      where[--i] = base64_digits[val & (uintmax_t)0x3F];
+      where[--i] = base64_digits[val & (uint64_t)0x3F];
       val >>= 6;
    } while (val);
    return n;
@@ -70,9 +70,9 @@ to_base64(intmax_t value, char *where)
  * Returns the value.
  */
 int
-from_base64(intmax_t *value, const char *where)
+from_base64(int64_t *value, const char *where)
 {
-   uintmax_t val = 0;
+   uint64_t val = 0;
    int i, neg;
 
    if (!base64_inited)
@@ -89,6 +89,6 @@ from_base64(intmax_t *value, const char *where)
       val += base64_map[(uint8_t)where[i++]];
    }
 
-   *value = neg ? -(intmax_t)val : (intmax_t)val;
+   *value = neg ? -(int64_t)val : (int64_t)val;
    return i;
 }

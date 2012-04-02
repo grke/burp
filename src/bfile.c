@@ -276,6 +276,8 @@ int bclose(BFILE *bfd)
 {
    int stat = 0;
 
+   if(!bfd) return 0;
+
    if (bfd->errmsg) {
       free(bfd->errmsg);
       bfd->errmsg = NULL;

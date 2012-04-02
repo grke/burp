@@ -312,9 +312,9 @@ int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, int64_t winattr
 
 void close_file_for_send(BFILE *bfd, FILE **fp)
 {
-	if(fp) fclose(*fp);
+	if(fp) close_fp(fp);
 #ifdef HAVE_WIN32
-	else bclose(bfd);
+	if(bfd) bclose(bfd);
 #endif
 }
 

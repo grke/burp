@@ -250,7 +250,12 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 				if(!forget)
 				{
 					encode_stat(attribs, &statbuf, winattr);
-					if(open_file_for_send(&bfd, &fp,
+					if(open_file_for_send(
+#ifdef HAVE_WIN32
+						&bfd, NULL,
+#else
+						NULL, &fp,
+#endif
 						sb.path, winattr, cntr))
 							forget++;
 				}

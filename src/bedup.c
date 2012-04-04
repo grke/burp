@@ -8,7 +8,6 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <signal.h>
-#include <malloc.h>
 #include <prepend.h>
 
 #include <uthash.h>

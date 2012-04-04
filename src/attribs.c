@@ -23,51 +23,51 @@ void encode_stat(char *buf, struct stat *statp, int64_t winattr)
     *  Encode a stat packet.  I should have done this more intelligently
     *   with a length so that it could be easily expanded.
     */
-   p += to_base64((int64_t)statp->st_dev, p);
+   p += to_base64(statp->st_dev, p);
    *p++ = ' ';                        /* separate fields with a space */
-   p += to_base64((int64_t)statp->st_ino, p);
+   p += to_base64(statp->st_ino, p);
    *p++ = ' ';
-   p += to_base64((int64_t)statp->st_mode, p);
+   p += to_base64(statp->st_mode, p);
    *p++ = ' ';
-   p += to_base64((int64_t)statp->st_nlink, p);
+   p += to_base64(statp->st_nlink, p);
    *p++ = ' ';
-   p += to_base64((int64_t)statp->st_uid, p);
+   p += to_base64(statp->st_uid, p);
    *p++ = ' ';
-   p += to_base64((int64_t)statp->st_gid, p);
+   p += to_base64(statp->st_gid, p);
    *p++ = ' ';
-   p += to_base64((int64_t)statp->st_rdev, p);
+   p += to_base64(statp->st_rdev, p);
    *p++ = ' ';
-   p += to_base64((int64_t)statp->st_size, p);
+   p += to_base64(statp->st_size, p);
    *p++ = ' ';
 #ifdef HAVE_WIN32
-   p += to_base64((int64_t)0, p); /* output place holder */
+   p += to_base64(0, p); /* output place holder */
    *p++ = ' ';
-   p += to_base64((int64_t)0, p); /* output place holder */
+   p += to_base64(0, p); /* output place holder */
 #else
-   p += to_base64((int64_t)statp->st_blksize, p);
+   p += to_base64(statp->st_blksize, p);
    *p++ = ' ';
-   p += to_base64((int64_t)statp->st_blocks, p);
+   p += to_base64(statp->st_blocks, p);
 #endif
    *p++ = ' ';
-   p += to_base64((int64_t)statp->st_atime, p);
+   p += to_base64(statp->st_atime, p);
    *p++ = ' ';
-   p += to_base64((int64_t)statp->st_mtime, p);
+   p += to_base64(statp->st_mtime, p);
    *p++ = ' ';
-   p += to_base64((int64_t)statp->st_ctime, p);
+   p += to_base64(statp->st_ctime, p);
    *p++ = ' ';
 
 #ifdef HAVE_CHFLAGS
    /* FreeBSD function */
-   p += to_base64((int64_t)statp->st_flags, p);  /* output st_flags */
+   p += to_base64(statp->st_flags, p);  /* output st_flags */
 #else
-   p += to_base64((int64_t)0, p);     /* output place holder */
+   p += to_base64(0, p);     /* output place holder */
 #endif
    *p++ = ' ';
 
 #ifdef HAVE_WIN32
-   p += to_base64((int64_t)winattr, p);
+   p += to_base64(winattr, p);
 #else
-   p += to_base64((int64_t)0, p);     /* output place holder */
+   p += to_base64(0, p);     /* output place holder */
 #endif
 
    *p = 0;

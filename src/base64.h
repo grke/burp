@@ -5,7 +5,7 @@
 #define BASE64_SIZE(len) ((4 * len + 2) / 3 + 1)
 
 void      base64_init            (void);
-int       to_base64              (intmax_t value, char *where);
-int       from_base64            (intmax_t *value, const char *where);
+int       to_base64              (int64_t value, char *where);
+int       from_base64            (int64_t *value, const char *where);
 
 #endif

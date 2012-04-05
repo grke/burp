@@ -308,15 +308,19 @@ static int get_conf_val_args(const char *field, const char *value, const char *o
 	return 0;
 }
 
+/* Windows users have a nasty habit of putting in backslashes. Convert them. */
+#ifdef HAVE_WIN32
+static void convert_backslashes(char **path)
+{
+	char *p=NULL;
+	for(p=*path; *p; p++) if(*p=='\\') *p='/';
+}
+#endif
+
 #define ABSOLUTE_ERROR	"ERROR: Please use absolute include/exclude paths.\n"
 static int path_checks(const char *path)
 {
 	const char *p=NULL;
-	if(strchr(path, '\\'))
-	{
-		logp("ERROR: Please use forward slashes '/' instead of backslashes '\\' in your include/exclude paths.\n");
-		return -1;
-	}
 	for(p=path; *p; p++)
 	{
 		if(*p!='.' || *(p+1)!='.') continue;
@@ -1064,6 +1068,9 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 	// are subdirectories which don't need to be started separately.
 	for(i=0; i<conf->iecount; i++)
 	{
+#ifdef HAVE_WIN32
+		convert_backslashes(&(l->ielist[i]->path));
+#endif
 		if(path_checks(l->ielist[i]->path)) r--;
 		if(!i)
 		{

@@ -366,7 +366,7 @@ static int do_client(struct config *conf, enum action act)
 				  "reserved3",
 				  "reserved4",
 				  "reserved5",
-				  NULL, NULL, NULL,
+				  NULL, NULL, NULL, NULL, NULL,
 				  &p1cntr, 1, 1)) ret=-1;
 
 				if(!ret && do_backup_client(conf,
@@ -387,7 +387,7 @@ static int do_client(struct config *conf, enum action act)
 					"reserved3",
 					"reserved4",
 					"reserved5",
-					NULL, NULL, NULL,
+					NULL, NULL, NULL, NULL, NULL,
 					&cntr, 1, 1)) ret=-1;
 				}
 			}
@@ -414,7 +414,7 @@ static int do_client(struct config *conf, enum action act)
 				"reserved3",
 				"reserved4",
 				"reserved5",
-				NULL, NULL, NULL,
+				NULL, NULL, NULL, NULL, NULL,
 				&cntr, 1, 1)) ret=-1;
 			if(!ret && do_restore_client(conf,
 				act, &p1cntr, &cntr)) ret=-1;
@@ -432,7 +432,7 @@ static int do_client(struct config *conf, enum action act)
 				"reserved3",
 				"reserved4",
 				"reserved5",
-				NULL, NULL, NULL,
+				NULL, NULL, NULL, NULL, NULL,
 				&cntr, 1, 1)) ret=-1;
 			}
 

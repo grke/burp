@@ -74,11 +74,11 @@ static int burp_ca_init(struct config *conf, const char *ca_dir)
 	setup_stuff_done++;
 
 	logp("Initialising %s\n", ca_dir);
-	logp("Running '%s --init --ca %s --dir %s'\n",
-		conf->ca_burp_ca, conf->ca_name, ca_dir);
+	logp("Running '%s --init --ca %s --dir %s --config %s'\n",
+		conf->ca_burp_ca, conf->ca_name, ca_dir, conf->ca_conf);
 	if(run_script(conf->ca_burp_ca, NULL, 0, "--init", "--ca",
-		conf->ca_name, "--dir", ca_dir, NULL, NULL, NULL,
-		NULL /* cntr */, 1 /* wait */,
+		conf->ca_name, "--dir", ca_dir, "--config", conf->ca_conf,
+		NULL, NULL, NULL, NULL /* cntr */, 1 /* wait */,
 		0 /* do not use logp - stupid openssl prints lots of dots
 		     one at a time with no way to turn it off */))
 	{
@@ -87,10 +87,11 @@ static int burp_ca_init(struct config *conf, const char *ca_dir)
 	}
 
 	logp("Generating server key and cert signing request\n");
-	logp("Running '%s --key --request --name %s --dir %s'\n",
-		conf->ca_burp_ca, conf->ca_server_name, ca_dir);
+	logp("Running '%s --key --request --name %s --dir %s --config %s'\n",
+		conf->ca_burp_ca, conf->ca_server_name, ca_dir, conf->ca_conf);
 	if(run_script(conf->ca_burp_ca, NULL, 0, "--key", "--request",
-		"--name", conf->ca_server_name, "--dir", ca_dir, NULL, NULL,
+		"--name", conf->ca_server_name, "--dir", ca_dir, "--config",
+		conf->ca_conf, NULL, NULL,
 		NULL /* cntr */, 1 /* wait */,
 		0 /* do not use logp - stupid openssl prints lots of dots
 		     one at a time with no way to turn it off */))
@@ -100,11 +101,11 @@ static int burp_ca_init(struct config *conf, const char *ca_dir)
 	}
 
 	logp("Signing request\n");
-	logp("Running '%s --key --request --name %s --dir %s'\n",
-		conf->ca_burp_ca, conf->ca_server_name, ca_dir);
+	logp("Running '%s --key --request --name %s --dir %s --config %s'\n",
+		conf->ca_burp_ca, conf->ca_server_name, ca_dir, conf->ca_conf);
 	if(run_script(conf->ca_burp_ca, NULL, 0, "--sign", "--ca",
 		conf->ca_name, "--name", conf->ca_server_name, "--batch",
-		"--dir", ca_dir,
+		"--dir", ca_dir, "--config", conf->ca_conf,
 		NULL /* cntr */, 1 /* wait */,
 		0 /* do not use logp - stupid openssl prints lots of dots
 		     one at a time with no way to turn it off */))
@@ -156,7 +157,7 @@ static int maybe_make_dhfile(struct config *conf, const char *ca_dir)
 	logp("Running '%s --dhfile %s --dir %s'\n",
 		conf->ca_burp_ca, conf->ssl_dhfile, ca_dir);
 	if(run_script(conf->ca_burp_ca, NULL, 0, "--dhfile", conf->ssl_dhfile,
-		"--dir", ca_dir, NULL, NULL, NULL, NULL,
+		"--dir", ca_dir, NULL, NULL, NULL, NULL, NULL, NULL,
 		NULL /* cntr */, 1 /* wait */,
 		0 /* do not use logp - stupid openssl prints lots of dots
 		     one at a time with no way to turn it off */))
@@ -263,10 +264,10 @@ static int sign_client_cert(const char *client, struct config *conf, struct cntr
 
 	// Now, sign it.
 	logp("Signing certificate signing request from %s\n", client);
-	logp("Running '%s --name %s --ca %s --sign --batch --dir %s'\n",
-		conf->ca_burp_ca, client, conf->ca_name, gca_dir);
+	logp("Running '%s --name %s --ca %s --sign --batch --dir %s' --conf '%s'\n", conf->ca_burp_ca, client, conf->ca_name, gca_dir, conf->ca_conf);
 	if(run_script(conf->ca_burp_ca, NULL, 0, "--name", client,
 		"--ca", conf->ca_name, "--sign", "--batch", "--dir", gca_dir,
+		"--config", conf->ca_conf,
 		NULL /* cntr */, 1 /* wait */,
 		0 /* do not use logp - stupid openssl prints lots of dots
 		     one at a time with no way to turn it off */))

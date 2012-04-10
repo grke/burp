@@ -719,7 +719,9 @@ static int get_lock_and_clean(const char *basedir, const char *lockbasedir, cons
 static int run_script_w(const char *script, struct strlist **userargs, int userargc, const char *client, const char *current, struct cntr *cntr)
 {
 	return run_script(script, userargs, userargc, client, current,
-		"reserved1", "reserved2", "reserved3", NULL, NULL, NULL, cntr,
+		"reserved1", "reserved2", "reserved3", NULL, NULL,
+		NULL, NULL,
+		NULL, cntr,
 		1 /* wait */, 1 /* use logp */);
 }
 
@@ -847,7 +849,8 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 					cconf->nfcount,
 					client, current,
 					working, finishing,
-					"0", NULL, NULL, NULL, cntr, 1, 1);
+					"0", NULL, NULL, NULL, NULL,
+					NULL, cntr, 1, 1);
 			else if(!cconf->notify_success_warnings_only
 			  || (p1cntr->warning+cntr->warning)>0)
 			{
@@ -861,8 +864,8 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 					cconf->nscount,
 					client, current,
 					working, finishing,
-					warnings, NULL, NULL, NULL,
-					cntr, 1, 1);
+					warnings, NULL, NULL, NULL, NULL,
+					NULL, cntr, 1, 1);
 			}
 		}
 	}
@@ -1312,7 +1315,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 			client,
 			"reserved4",
 			"reserved5",
-			NULL, NULL, NULL,
+			NULL, NULL, NULL, NULL, NULL,
 			&p1cntr, 1, 1))
 	{
 		log_and_send("server pre script returned an error\n");
@@ -1334,7 +1337,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 			client,
 			"reserved4",
 			"reserved5",
-			NULL, NULL, NULL,
+			NULL, NULL, NULL, NULL, NULL,
 			&p1cntr, 1, 1))
 	{
 		log_and_send("server post script returned an error\n");

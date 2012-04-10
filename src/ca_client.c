@@ -19,7 +19,7 @@ static int generate_key_and_csr(struct config *conf, const char *csr_path)
 #endif
 	if(run_script(conf->ca_burp_ca, NULL, 0, "--key", "--keypath",
 		conf->ssl_key, "--request", "--requestpath", csr_path,
-		"--name", conf->cname,
+		"--name", conf->cname, NULL, NULL,
 		NULL /* cntr */,
 		1 /* wait */,
 		0 /* do not use logp - stupid openssl prints lots of dots

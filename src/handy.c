@@ -1023,7 +1023,7 @@ static int run_script_select(FILE **sout, FILE **serr, struct cntr *cntr, int lo
 #endif
 
 /* TODO: make arg1..n an array */
-int run_script(const char *script, struct strlist **userargs, int userargc, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, const char *arg6, const char *arg7, const char *arg8, struct cntr *cntr, int do_wait, int logfunc)
+int run_script(const char *script, struct strlist **userargs, int userargc, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, const char *arg6, const char *arg7, const char *arg8, const char *arg9, const char *arg10, struct cntr *cntr, int do_wait, int logfunc)
 {
 	int a=0;
 	int l=0;
@@ -1046,6 +1046,8 @@ int run_script(const char *script, struct strlist **userargs, int userargc, cons
 	if(arg6) cmd[l++]=(char *)arg6;
 	if(arg7) cmd[l++]=(char *)arg7;
 	if(arg8) cmd[l++]=(char *)arg8;
+	if(arg9) cmd[l++]=(char *)arg9;
+	if(arg10) cmd[l++]=(char *)arg10;
 	for(a=0; a<userargc && l<64-1; a++)
 		cmd[l++]=userargs[a]->path;
 	cmd[l++]=NULL;

@@ -5,6 +5,7 @@
   * Bug fix: pass the path to the CA conf file whenever running burp_ca (fixes
     problems with the test scripts).
   * Remove whitespace that was causing the burp_ca '--crl' option not to work.
+  * Make 'make install' create the directory /etc/burp/CA.
 
 2012-03-31 Changes in burp-1.3.2:
   * Add options for the client to automatically generate a certificate signing

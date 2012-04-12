@@ -702,7 +702,7 @@ int status_client_ncurses(struct config *conf, enum action act, const char *scli
 
 		// Failsafe to prevent the snapshot ever getting permanently
 		// stuck.
-		//if(actg==ACTION_STATUS_SNAPSHOT && loop++>10000)
+		//if(act==ACTION_STATUS_SNAPSHOT && loop++>10000)
 		//	break;
 
 		if(sclient && !client)
@@ -721,7 +721,7 @@ int status_client_ncurses(struct config *conf, enum action act, const char *scli
 				break;
 			}
 			enterpressed=0;
-			if(actg==ACTION_STATUS_SNAPSHOT)
+			if(act==ACTION_STATUS_SNAPSHOT)
 				reqdone++;
 		}
 
@@ -856,7 +856,7 @@ int status_client_ncurses(struct config *conf, enum action act, const char *scli
 			else
 				break;
 
-			if(actg==ACTION_STATUS_SNAPSHOT)
+			if(act==ACTION_STATUS_SNAPSHOT)
 			{
 				if(rbuf)
 				{

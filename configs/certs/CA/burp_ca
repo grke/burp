@@ -171,7 +171,7 @@ fi
 if [ "$sign" = "yes" ]; then
   serial=$(cat ${dir}/serial.txt)
   CA_DIR=${dir} openssl ca -config ${conf} -name ca \
-    -in ${dir}/${name}.csr -out $dir/${name}.crt ${days}\
+    -in ${dir}/${name}.csr -out $dir/${name}.crt ${days} \
     -keyfile ${dir}/CA_${ca}.key -cert ${dir}/CA_${ca}.crt \
     ${batch}
   if [ ! -f ${dir}/newcerts/${serial}.pem ]; then
@@ -191,7 +191,7 @@ fi
 
 #crl
 if [ -n "$crl" ]; then
-  CA_DIR=${dir} openssl ca -config ${conf} -name ca \ 
+  CA_DIR=${dir} openssl ca -config ${conf} -name ca \
    -gencrl -out ${dir}/CA_${ca}.crl \
    -keyfile ${dir}/CA_${ca}.key -cert ${dir}/CA_${ca}.crt 
 fi

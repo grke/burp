@@ -716,10 +716,10 @@ static int get_lock_and_clean(const char *basedir, const char *lockbasedir, cons
 	return ret;
 }
 
-static int run_script_w(const char *script, struct strlist **userargs, int userargc, const char *client, const char *current, struct cntr *cntr)
+static int run_script_w(const char *script, struct strlist **userargs, int userargc, const char *client, const char *current, const char *directory, struct cntr *cntr)
 {
 	return run_script(script, userargs, userargc, client, current,
-		"reserved1", "reserved2", "reserved3", NULL, NULL,
+		directory, "reserved1", "reserved2", NULL, NULL,
 		NULL, NULL,
 		NULL, cntr,
 		1 /* wait */, 1 /* use logp */);
@@ -815,7 +815,8 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 					cconf->timer_script,
 					cconf->timer_arg,
 					cconf->tacount,
-					client, current, NULL))<0)
+					client, current, cconf->directory,
+					NULL))<0)
 				{
 					ret=tret;
 					logp("Error running timer script for %s\n", client);

@@ -551,6 +551,10 @@ The 'deltas.reverse' directory contains reverse deltas that can be applied to th
 .TP
 Anything with a .gz suffix is compressed in gzip format.  You can use standard tools, such as zcat, zless or cp, to view them or copy them elsewhere.
 
+.SH Server initiated backups
+.TP
+You can queue a backup on the server, to be performed when the client next makes contact. To do this, you put a file called 'backup' into the top level of the client storage directory. The contents of the file are ignored.
+
 .SH Server initiated restores
 .TP
 You can queue a restore on the server, to be performed when the client next makes contact. To do this, you put a file called 'restore' into the top level of the client storage directory. Valid fields to include in the restore file are:

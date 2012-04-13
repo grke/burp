@@ -475,6 +475,7 @@ static struct fstype fstypes[]={
 	{ "debugfs",		0x64626720 },
 	{ "devfs",		0x00001373 },
 	{ "devpts",		0x00001CD1 },
+	{ "devtmpfs",		0x00009FA0 },
 	{ "ext2",		0x0000EF53 },
 	{ "ext3",		0x0000EF53 },
 	{ "ext4",		0x0000EF53 },
@@ -494,6 +495,29 @@ static struct fstype fstypes[]={
 	{ "tmpfs",		0x01021994 },
 	{ NULL,			0 },
 };
+/* Use this C code to figure out what f_type gets set to.
+#include <stdio.h>
+#include <sys/vfs.h>
+
+int main(int argc, char *argv[])
+{
+        int i=0;
+        struct statfs buf;
+        if(argc<1)
+        {
+                printf("not enough args\n");
+                return -1;
+        }
+        if(statfs(argv[1], &buf))
+        {
+                printf("error\n");
+                return -1;
+        }
+        printf("0x%08X\n", buf.f_type);
+        return 0;
+}
+*/
+
 #endif
 
 static int fstype_to_flag(const char *fstype, long *flag)
@@ -1052,7 +1076,7 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 			{
 				logp("Unknown exclude fs type: %s\n",
 					l->exfslist[i]->path);
-				return -1;
+				l->exfslist[i]->flag=0;
 			}
 		}
 	}

@@ -9,7 +9,8 @@
     create the directory /etc/burp/CA-client.
   * Make compile succeed when there is no libncurses library.
   * Add 'client_can_force_backup' option, defaulted to on. Turning it off means
-    that only timed backups are allowed.
+    that only timed backups are allowed. Also add similar 'client_can_list',
+    'client_can_restore' and 'client_can_verify' options.
   * Remove getopt from burp_ca, hopefully allowing it to work on Macs.
   * Make an unknown exclude_fs a non-fatal error.
 

@@ -909,6 +909,22 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 		else
 		{
 			char *restoreregex=NULL;
+
+			if(act==ACTION_RESTORE && !conf->client_can_restore)
+			{
+				logp("Not allowing restore of %s\n", client);
+				async_write_str(CMD_GEN,
+					"Client restore is not allowed");
+				goto end;
+			}
+			if(act==ACTION_VERIFY && !conf->client_can_verify)
+			{
+				logp("Not allowing verify of %s\n", client);
+				async_write_str(CMD_GEN,
+					"Client verify is not allowed");
+				goto end;
+			}
+
 			if((restoreregex=strrchr(buf, ':')))
 			{
 				*restoreregex='\0';
@@ -936,6 +952,15 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			char *backupno=NULL;
 			char *browsedir=NULL;
 			char *listregex=NULL;
+
+			if(!conf->client_can_list)
+			{
+				logp("Not allowing list of %s\n", client);
+				async_write_str(CMD_GEN,
+					"Client list is not allowed");
+				goto end;
+			}
+
 			if(!strncmp(buf, "list ", strlen("list ")))
 			{
 				if((listregex=strrchr(buf, ':')))

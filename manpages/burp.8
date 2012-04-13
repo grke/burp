@@ -234,6 +234,15 @@ on the server. Options are...
 \fBclient_can_force_backup=[0|1]\fR
 Turn this off to prevent clients from forcing backups with the '-a b' option. Timed backups will still work. The default is that clients can force backups.
 .TP
+\fBclient_can_list=[0|1]\fR
+Turn this off to prevent clients from listing backups with the '-a l' option. The default is that clients can force backups.
+.TP
+\fBclient_can_restore=[0|1]\fR
+Turn this off to prevent clients from initiating restores with the '-a r' option. The default is that clients can initiate restores.
+.TP
+\fBclient_can_verify=[0|1]\fR
+Turn this off to prevent clients from initiating a verify job with the '-a v' option. The default is that clients can initiate a verify job.
+.TP
 \fBssl_cert_ca=[path]\fR
 The path to the SSL CA certificate. This file will probably be the same on both the server and the client. The file should contain just the certificate in PEM format. For more information on this, and the other ssl_* options, please see docs/burp_ca.txt.
 .TP
@@ -500,6 +509,9 @@ Additionally, the following options can be overridden here for each client:
 \fBlibrsync\fR
 \fBsyslog\fR
 \fBclient_can_force_backup\fR
+\fBclient_can_list\fR
+\fBclient_can_restore\fR
+\fBclient_can_verify\fR
 \fBcompression\fR
 \fBtimer_script\fR
 \fBtimer_arg\fR

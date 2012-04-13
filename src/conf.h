@@ -143,6 +143,9 @@ struct config
 	char *dedup_group;
 
 	int client_can_force_backup;
+	int client_can_list;
+	int client_can_restore;
+	int client_can_verify;
 };
 
 extern void init_config(struct config *conf);

@@ -153,6 +153,10 @@ void init_config(struct config *conf)
 	conf->browsedir=NULL;
 
 	conf->client_can_force_backup=1;
+	conf->client_can_list=1;
+	conf->client_can_restore=1;
+	conf->client_can_verify=1;
+
 	init_incexcs(conf);
 }
 
@@ -607,6 +611,12 @@ static int load_config_ints(struct config *conf, const char *field, const char *
 		&(conf->daemon));
 	get_conf_val_int(field, value, "client_can_force_backup",
 		&(conf->client_can_force_backup));
+	get_conf_val_int(field, value, "client_can_list",
+		&(conf->client_can_list));
+	get_conf_val_int(field, value, "client_can_restore",
+		&(conf->client_can_restore));
+	get_conf_val_int(field, value, "client_can_verify",
+		&(conf->client_can_verify));
 
 	return 0;
 }
@@ -1362,6 +1372,9 @@ int set_client_global_config(struct config *conf, struct config *cconf, const ch
 {
 	cconf->syslog=conf->syslog;
 	cconf->client_can_force_backup=conf->client_can_force_backup;
+	cconf->client_can_list=conf->client_can_list;
+	cconf->client_can_restore=conf->client_can_restore;
+	cconf->client_can_verify=conf->client_can_verify;
 	cconf->hardlinked_archive=conf->hardlinked_archive;
 	cconf->librsync=conf->librsync;
 	cconf->compression=conf->compression;

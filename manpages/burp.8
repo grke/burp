@@ -231,6 +231,9 @@ on the server. Options are...
 .TP
 \fBresume:\fR Simply continue the previous backup from the point at which it left off. NOTE: If the client has changed its include/exclude configuration since the backup was interrupted, the recovery method will automatically switch to 'use'.
 .TP
+\fBclient_can_force_backup=[0|1]\fR
+Turn this off to prevent clients from forcing backups with the '-a b' option. Timed backups will still work. The default is that clients can force backups.
+.TP
 \fBssl_cert_ca=[path]\fR
 The path to the SSL CA certificate. This file will probably be the same on both the server and the client. The file should contain just the certificate in PEM format. For more information on this, and the other ssl_* options, please see docs/burp_ca.txt.
 .TP
@@ -496,6 +499,7 @@ Additionally, the following options can be overridden here for each client:
 \fBworking_dir_recovery_method\fR
 \fBlibrsync\fR
 \fBsyslog\fR
+\fBclient_can_force_backup\fR
 \fBcompression\fR
 \fBtimer_script\fR
 \fBtimer_arg\fR
@@ -512,6 +516,8 @@ Additionally, the following options can be overridden here for each client:
 \fBserver_script\fR
 \fBserver_script_arg\fR
 \fBserver_script_post_run_on_fail\fR
+.TP
+Additionally, the includes and excludes can be overridden here, as described in the section above.
 .TP
 As with the other configuration files, extra configuration can be included with the '. path/to/config/file' syntax.
 

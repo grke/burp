@@ -831,6 +831,15 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 				}
 				logp("Running backup of %s\n", client);
 			}
+			else
+			{
+				if(!conf->client_can_force_backup)
+				{
+					logp("Not allowing forced backup of %s\n", client);
+					async_write_str(CMD_GEN, "Forced backup is not allowed");
+					goto end;
+				}
+			}
 
 			buf=NULL;
 

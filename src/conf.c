@@ -151,6 +151,8 @@ void init_config(struct config *conf)
 	conf->dedup_group=NULL;
 	conf->browsefile=NULL;
 	conf->browsedir=NULL;
+
+	conf->client_can_force_backup=1;
 	init_incexcs(conf);
 }
 
@@ -579,6 +581,8 @@ static int load_config_ints(struct config *conf, const char *field, const char *
 		&(conf->forking));
 	get_conf_val_int(field, value, "daemon",
 		&(conf->daemon));
+	get_conf_val_int(field, value, "client_can_force_backup",
+		&(conf->client_can_force_backup));
 
 	return 0;
 }
@@ -1333,6 +1337,7 @@ static int set_global_arglist(struct strlist ***dst, struct strlist **src, int *
 int set_client_global_config(struct config *conf, struct config *cconf, const char *client)
 {
 	cconf->syslog=conf->syslog;
+	cconf->client_can_force_backup=conf->client_can_force_backup;
 	cconf->hardlinked_archive=conf->hardlinked_archive;
 	cconf->librsync=conf->librsync;
 	cconf->compression=conf->compression;

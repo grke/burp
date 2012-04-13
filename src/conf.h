@@ -141,6 +141,8 @@ struct config
 	int nfcount;
 
 	char *dedup_group;
+
+	int client_can_force_backup;
 };
 
 extern void init_config(struct config *conf);

@@ -283,7 +283,10 @@ Path to the script to run when a backup succeeds. User arguments are appended af
 A user-definable argument to the notify success script. You can have many of these. The notify_success_arg options can be overriddden by the client configuration files in clientconfdir on the server.
 .TP
 \fBnotify_success_warnings_only=[0|1]\fR
-Set to 1 to send success notifications only when there were warnings. Leave unset or set to 0 to send success notifications for every backup.
+Set to 1 to send success notifications when there were warnings. If this and notify_success_changes_only are not turned on, success notifications are always sent.
+.TP
+\fBnotify_success_changes_only=[0|1]\fR
+Set to 1 to send success notifications when there were new or changed files. If this and notify_success_warnings_only are not turned on, success notifications are always sent.
 .TP
 \fBnotify_failure_script=[path]\fR
 The same as notify_success_script, but for backups that failed.

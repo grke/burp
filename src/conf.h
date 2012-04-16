@@ -138,6 +138,7 @@ struct config
 	struct strlist **notify_success_arg;
 	int nscount;
 	int notify_success_warnings_only;
+	int notify_success_changes_only;
 
 	char *notify_failure_script;
 	struct strlist **notify_failure_arg;

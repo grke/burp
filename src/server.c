@@ -861,8 +861,12 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 					working, finishing,
 					"0", NULL, NULL, NULL, NULL,
 					NULL, cntr, 1, 1);
-			else if(!cconf->notify_success_warnings_only
-			  || (p1cntr->warning+cntr->warning)>0)
+			else if((cconf->notify_success_warnings_only
+				&& (p1cntr->warning+cntr->warning)>0)
+			  || (cconf->notify_success_changes_only
+				&& (cntr->total_changes>0))
+			  || (!cconf->notify_success_warnings_only
+				&& !cconf->notify_success_changes_only))
 			{
 				char warnings[32]="";
 				snprintf(warnings, sizeof(warnings),

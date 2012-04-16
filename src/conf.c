@@ -108,6 +108,7 @@ void init_config(struct config *conf)
 	conf->notify_success_arg=NULL;
 	conf->nscount=0;
 	conf->notify_success_warnings_only=0;
+	conf->notify_success_changes_only=0;
 
 	conf->notify_failure_script=NULL;
 	conf->notify_failure_arg=NULL;
@@ -599,6 +600,8 @@ static int load_config_ints(struct config *conf, const char *field, const char *
 		&(conf->server_script_post_run_on_fail));
 	get_conf_val_int(field, value, "notify_success_warnings_only",
 		&(conf->notify_success_warnings_only));
+	get_conf_val_int(field, value, "notify_success_changes_only",
+		&(conf->notify_success_changes_only));
 	get_conf_val_int(field, value, "network_timeout",
 		&(conf->network_timeout));
 	get_conf_val_int(field, value, "max_children",
@@ -1388,6 +1391,7 @@ int set_client_global_config(struct config *conf, struct config *cconf, const ch
 	cconf->librsync=conf->librsync;
 	cconf->compression=conf->compression;
 	cconf->notify_success_warnings_only=conf->notify_success_warnings_only;
+	cconf->notify_success_changes_only=conf->notify_success_changes_only;
 	cconf->server_script_post_run_on_fail=conf->server_script_post_run_on_fail;
 	if(set_global_str(&(cconf->directory), conf->directory))
 		return -1;

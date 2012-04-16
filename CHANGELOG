@@ -18,6 +18,8 @@
   * Fix bug where block device nodes were not backed up. Add 'read_blockdev'
     and 'read_all_blockdevs' options that work the same as the equivalent
     fifo options.
+  * Add 'notify_success_changes_only' option, which means that success
+    notifications only get sent if there were new or changed files.
 
 2012-03-31 Changes in burp-1.3.2:
   * Add options for the client to automatically generate a certificate signing

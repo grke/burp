@@ -65,6 +65,8 @@ static int do_sends(struct config *conf)
 		conf->exfscount, conf->excfs)
 	  || send_incexc_from_strlist("read_fifo", "read_fifo",
 		conf->ffcount, conf->fifos)
+	  || send_incexc_from_strlist("read_blockdev", "read_blockdev",
+		conf->bdcount, conf->blockdevs)
 	  || send_incexc_int("cross_all_filesystems",
 		conf->cross_all_filesystems)
 	  || send_incexc_int("read_all_fifos", conf->read_all_fifos)

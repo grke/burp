@@ -68,6 +68,9 @@ struct config
 	int read_all_fifos;
 	struct strlist **fifos;
 	int ffcount;
+	int read_all_blockdevs;
+	struct strlist **blockdevs;
+	int bdcount;
 	unsigned long min_file_size;
 	unsigned long max_file_size;
   // These are to do with restore.

@@ -491,6 +491,12 @@ Do not back up the given fifo itself, but open it for reading and back up the co
 .TP
 \fBread_all_fifos=[0|1]\fR
 Open all fifos for reading and back up the contents as if they were regular files.
+.TP
+\fBread_blockdev=[path]\fR
+Do not back up the given block device itself, but open it for reading and back up the contents as if it were a regular file.
+.TP
+\fBread_all_blockdevs=[0|1]\fR
+Open all block devices for reading and back up the contents as if they were regular files.
 
 .SH SERVER CLIENTCONFDIR FILE
 .TP

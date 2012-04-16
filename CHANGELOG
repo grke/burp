@@ -15,6 +15,9 @@
   * Make an unknown exclude_fs a non-fatal error.
   * Add ability to trigger a backup on the server side by placing a file called
     'backup' in the client's storage directory.
+  * Fix bug where block device nodes were not backed up. Add 'read_blockdev'
+    and 'read_all_blockdevs' options that work the same as the equivalent
+    fifo options.
 
 2012-03-31 Changes in burp-1.3.2:
   * Add options for the client to automatically generate a certificate signing

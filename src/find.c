@@ -269,6 +269,15 @@ static int need_to_read_fifo(struct config *conf, const char *fname)
 	return 0;
 }
 
+static int need_to_read_blockdev(struct config *conf, const char *fname)
+{
+	int i=0;
+	if(conf->read_all_blockdevs) return 1;
+	for(i=0; i<conf->bdcount; i++)
+		if(!strcmp(conf->blockdevs[i]->path, fname)) return 1;
+	return 0;
+}
+
 static int nobackup_directory(struct config *conf, const char *path)
 {
 	int i=0;
@@ -703,11 +712,6 @@ static int found_other(FF_PKT *ff_pkt, struct config *conf,
 	struct cntr *cntr, char *fname, bool top_level)
 {
 	int rtn_stat;
-	/*
-	 * If it is explicitly mentioned (i.e. top_level) and is
-	 *  a block device, we do a raw backup of it or if it is
-	 *  a fifo, we simply read it.
-	 */
 #ifdef HAVE_FREEBSD_OS
 	/*
 	 * On FreeBSD, all block devices are character devices, so
@@ -716,16 +720,18 @@ static int found_other(FF_PKT *ff_pkt, struct config *conf,
 	 * crw-r----- 1 root  operator - 116, 0x00040002 Jun 9 19:32 /dev/ad0s3
 	 * crw-r----- 1 root  operator - 116, 0x00040002 Jun 9 19:32 /dev/rad0s3
 	 */
-	if((S_ISBLK(ff_pkt->statp.st_mode) || S_ISCHR(ff_pkt->statp.st_mode)))
+	if((S_ISBLK(ff_pkt->statp.st_mode) || S_ISCHR(ff_pkt->statp.st_mode))
+		&& need_to_read_blockdev(conf, ff_pkt->fname))
 	{
 #else
-	if(S_ISBLK(ff_pkt->statp.st_mode))
+	if(S_ISBLK(ff_pkt->statp.st_mode)
+		&& need_to_read_blockdev(conf, ff_pkt->fname))
 	{
 #endif
-	      ff_pkt->type = FT_RAW;          /* raw partition */
+		ff_pkt->type = FT_RAW;          /* raw partition */
 	}
-	else if(S_ISFIFO(ff_pkt->statp.st_mode) &&
-		need_to_read_fifo(conf, ff_pkt->fname))
+	else if(S_ISFIFO(ff_pkt->statp.st_mode)
+		&& need_to_read_fifo(conf, ff_pkt->fname))
 	{
 		ff_pkt->type=FT_FIFO;
 	}

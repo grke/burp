@@ -18,6 +18,7 @@ static void init_incexcs(struct config *conf)
 	conf->excext=NULL; conf->excount=0; // exclude extensions
 	conf->excfs=NULL; conf->exfscount=0; // exclude filesystems
 	conf->fifos=NULL; conf->ffcount=0;
+	conf->blockdevs=NULL; conf->bdcount=0;
 	/* stuff to do with restore */
 	conf->overwrite=0;
 	conf->strip=0;
@@ -38,6 +39,7 @@ static void free_incexcs(struct config *conf)
 	strlists_free(conf->excext, conf->excount); // exclude extensions
 	strlists_free(conf->excfs, conf->exfscount); // exclude filesystems
 	strlists_free(conf->fifos, conf->ffcount);
+	strlists_free(conf->blockdevs, conf->bdcount);
 	if(conf->backup) free(conf->backup);
 	if(conf->restoreprefix) free(conf->restoreprefix);
 	if(conf->regex) free(conf->regex);
@@ -72,6 +74,7 @@ void init_config(struct config *conf)
 	conf->network_timeout=60*60*2; // two hours
 	conf->cross_all_filesystems=0;
 	conf->read_all_fifos=0;
+	conf->read_all_blockdevs=0;
 	conf->min_file_size=0;
 	conf->max_file_size=0;
 	conf->autoupgrade_dir=NULL;
@@ -548,7 +551,8 @@ struct llists
 	struct strlist **ielist;
 	struct strlist **fslist;
 	struct strlist **nblist;
-	struct strlist **fflist;
+	struct strlist **fflist; // fifos to read
+	struct strlist **bdlist; // blockdevs to read
 	struct strlist **inlist; // include extensions
 	struct strlist **exlist; // exclude extensions
 	struct strlist **exfslist; // exclude filesystems
@@ -587,6 +591,8 @@ static int load_config_ints(struct config *conf, const char *field, const char *
 		&(conf->cross_all_filesystems));
 	get_conf_val_int(field, value, "read_all_fifos",
 		&(conf->read_all_fifos));
+	get_conf_val_int(field, value, "read_all_blockdevs",
+		&(conf->read_all_blockdevs));
 	get_conf_val_int(field, value, "backup_script_post_run_on_fail",
 		&(conf->backup_script_post_run_on_fail));
 	get_conf_val_int(field, value, "server_script_post_run_on_fail",
@@ -702,6 +708,8 @@ static int load_config_strings(struct config *conf, const char *field, const cha
 		NULL, &(conf->nbcount), &(l->nblist), 0)) return -1;
 	if(get_conf_val_args(field, value, "read_fifo", NULL,
 		NULL, &(conf->ffcount), &(l->fflist), 0)) return -1;
+	if(get_conf_val_args(field, value, "read_blockdev", NULL,
+		NULL, &(conf->bdcount), &(l->bdlist), 0)) return -1;
 	if(get_conf_val_args(field, value, "include_ext", NULL,
 		NULL, &(conf->incount), &(l->inlist), 0)) return -1;
 	if(get_conf_val_args(field, value, "exclude_ext", NULL,
@@ -1098,6 +1106,7 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 	// exclude filesystems
 	do_strlist_sort(l->exfslist, conf->exfscount, &(conf->excfs));
 	do_strlist_sort(l->fflist, conf->ffcount, &(conf->fifos));
+	do_strlist_sort(l->bdlist, conf->bdcount, &(conf->blockdevs));
 	do_strlist_sort(l->fslist, conf->fscount, &(conf->fschgdir));
 	do_strlist_sort(l->ielist, conf->iecount, &(conf->incexcdir));
 	do_strlist_sort(l->nblist, conf->nbcount, &(conf->nobackup));

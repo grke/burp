@@ -864,7 +864,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			else if((cconf->notify_success_warnings_only
 				&& (p1cntr->warning+cntr->warning)>0)
 			  || (cconf->notify_success_changes_only
-				&& (cntr->total_changes>0))
+				&& (cntr->total_changed>0))
 			  || (!cconf->notify_success_warnings_only
 				&& !cconf->notify_success_changes_only))
 			{

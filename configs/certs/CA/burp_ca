@@ -53,7 +53,7 @@ check_second_arg()
 while [ $# -gt 0 ]
 do
     case $1 in
-    -h|--help) help; exit ;;
+    -h|--help) help; exit 0 ;;
     -i|--init) init=yes ;;
     -k|--key) key=yes ;;
     -K|--keypath) check_second_arg $#; keypath=$2; shift ;;
@@ -175,7 +175,7 @@ if [ "$sign" = "yes" ]; then
     -keyfile ${dir}/CA_${ca}.key -cert ${dir}/CA_${ca}.crt \
     ${batch}
   if [ ! -f ${dir}/newcerts/${serial}.pem ]; then
-    exit
+    exit 0
   fi
   mv ${dir}/newcerts/${serial}.pem ${dir}/certs/${serial}.pem
   c_rehash ${dir}/certs
@@ -195,3 +195,5 @@ if [ -n "$crl" ]; then
    -gencrl -out ${dir}/CA_${ca}.crl \
    -keyfile ${dir}/CA_${ca}.key -cert ${dir}/CA_${ca}.crt 
 fi
+
+exit 0

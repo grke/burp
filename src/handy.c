@@ -1088,9 +1088,9 @@ int run_script(const char *script, struct strlist **userargs, int userargc, cons
 	}
 	else if(WIFSIGNALED(run_script_status))
 	{
-		logp("%s terminated on signal %s\n",
+		logp("%s terminated on signal %d\n",
 			script, WTERMSIG(run_script_status));
-		if(cntr) logw(cntr, "%s terminated on signal %s\n",
+		if(cntr) logw(cntr, "%s terminated on signal %d\n",
 			script, WTERMSIG(run_script_status));
 	}
 	else

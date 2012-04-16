@@ -1033,7 +1033,6 @@ int run_script(const char *script, struct strlist **userargs, int userargc, cons
 	char *cmd[64]={ NULL };
 #ifndef HAVE_WIN32
 	int s=0;
-	int pid_status=0;
 #endif
 	if(!script) return 0;
 
@@ -1090,7 +1089,7 @@ int run_script(const char *script, struct strlist **userargs, int userargc, cons
 	else if(WIFSIGNALED(run_script_status))
 	{
 		logp("%s terminated on signal %s\n",
-			script, WTERMSIG(pid_status));
+			script, WTERMSIG(run_script_status));
 		if(cntr) logw(cntr, "%s terminated on signal %s\n",
 			script, WTERMSIG(run_script_status));
 	}

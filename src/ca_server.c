@@ -264,7 +264,7 @@ static int sign_client_cert(const char *client, struct config *conf, struct cntr
 
 	// Now, sign it.
 	logp("Signing certificate signing request from %s\n", client);
-	logp("Running '%s --name %s --ca %s --sign --batch --dir %s' --conf '%s'\n", conf->ca_burp_ca, client, conf->ca_name, gca_dir, conf->ca_conf);
+	logp("Running '%s --name %s --ca %s --sign --batch --dir %s --config %s'\n", conf->ca_burp_ca, client, conf->ca_name, gca_dir, conf->ca_conf);
 	if(run_script(conf->ca_burp_ca, NULL, 0, "--name", client,
 		"--ca", conf->ca_name, "--sign", "--batch", "--dir", gca_dir,
 		"--config", conf->ca_conf,

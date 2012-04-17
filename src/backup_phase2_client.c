@@ -249,7 +249,8 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 
 				if(!forget)
 				{
-					encode_stat(attribs, &statbuf, winattr);
+					encode_stat(attribs,
+					  &statbuf, winattr, conf->compression);
 					if(open_file_for_send(
 #ifdef HAVE_WIN32
 						&bfd, NULL,

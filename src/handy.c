@@ -1236,9 +1236,15 @@ const char *time_taken(time_t d)
 }
 
 // Not in dpth.c so that Windows client can see it.
-int dpth_is_compressed(const char *datapath)
+int dpth_is_compressed(int compressed, const char *datapath)
 {
 	const char *dp=NULL;
+
+	if(compressed>0) return compressed;
+	if(compressed==0) return 0;
+
+	/* Legacy - if the compressed value is -1 - that is, it is not set in
+	   the manifest, deduce the value from the datapath. */
 	if((dp=strrchr(datapath, '.')) && !strcmp(dp, ".gz")) return 1;
 	return 0;
 }

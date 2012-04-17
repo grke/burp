@@ -69,7 +69,7 @@ static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *c
 		logp("out of memory\n");
 		return -1;
 	}
-	if(dpth_is_compressed(curpath))
+	if(dpth_is_compressed(cb->compression, curpath))
 		p1b->sigzp=gzopen_file(curpath, "rb");
 	else
 		p1b->sigfp=open_file(curpath, "rb");
@@ -236,7 +236,7 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FIL
 
 		// Get new files if they have switched between compression on
 		// or off.
-		if(cb->datapth && dpth_is_compressed(cb->datapth))
+		if(cb->datapth && dpth_is_compressed(cb->compression, cb->datapth))
 			oldcompressed=1;
 		if( ( oldcompressed && !cconf->compression)
 		 || (!oldcompressed &&  cconf->compression))

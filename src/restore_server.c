@@ -15,7 +15,7 @@
 #include <librsync.h>
 
 // Also used by backup_phase4_server.c
-int do_patch(const char *dst, const char *del, const char *upd, bool gzupd, struct cntr *cntr, struct config *cconf)
+int do_patch(const char *dst, const char *del, const char *upd, bool gzupd, int compression, struct cntr *cntr, struct config *cconf)
 {
 	FILE *dstp=NULL;
 	FILE *delfp=NULL;
@@ -32,7 +32,7 @@ int do_patch(const char *dst, const char *del, const char *upd, bool gzupd, stru
 		return -1;
 	}
 
-	if(dpth_is_compressed(del))
+	if(dpth_is_compressed(compression, del))
 		delzp=gzopen(del, "rb");
 	else
 		delfp=fopen(del, "rb");
@@ -69,7 +69,7 @@ int do_patch(const char *dst, const char *del, const char *upd, bool gzupd, stru
 	return result;
 }
 
-static int inflate_or_link_oldfile(const char *oldpath, const char *infpath)
+static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, int compression)
 {
 	int ret=0;
 	struct stat statp;
@@ -80,7 +80,7 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath)
 		return -1;
 	}
 
-	if(dpth_is_compressed(oldpath))
+	if(dpth_is_compressed(compression, oldpath))
 	{
 		FILE *source=NULL;
 		FILE *dest=NULL;
@@ -128,7 +128,7 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath)
 	return ret;
 }
 
-static int send_file(const char *fname, int patches, const char *best, const char *datapth, unsigned long long *bytes, char cmd, int64_t winattr, struct cntr *cntr, struct config *cconf)
+static int send_file(const char *fname, int patches, const char *best, const char *datapth, unsigned long long *bytes, char cmd, int64_t winattr, int compression, struct cntr *cntr, struct config *cconf)
 {
 	int ret=0;
 	FILE *fp=NULL;
@@ -159,7 +159,7 @@ static int send_file(const char *fname, int patches, const char *best, const cha
 		// It might have been stored uncompressed. Gzip it during
 		// the send. If the client knew what kind of file it would be
 		// receiving, this step could disappear.
-		else if(!dpth_is_compressed(datapth))
+		else if(!dpth_is_compressed(compression, datapth))
 		{
 			ret=send_whole_file_gz(best, datapth, 1, bytes,
 				NULL, cntr, 9, NULL, fp, NULL, 0);
@@ -176,7 +176,7 @@ static int send_file(const char *fname, int patches, const char *best, const cha
 	return ret;
 }
 
-static int verify_file(const char *fname, int patches, const char *best, const char *datapth, unsigned long long *bytes, const char *endfile, char cmd, struct cntr *cntr)
+static int verify_file(const char *fname, int patches, const char *best, const char *datapth, unsigned long long *bytes, const char *endfile, char cmd, int compression, struct cntr *cntr)
 {
 	MD5_CTX md5;
 	size_t b=0;
@@ -198,7 +198,7 @@ static int verify_file(const char *fname, int patches, const char *best, const c
 	}
 	if(patches
 	  || cmd==CMD_ENC_FILE || cmd==CMD_ENC_METADATA || cmd==CMD_EFS_FILE
-	  || (!patches && !dpth_is_compressed(best)))
+	  || (!patches && !dpth_is_compressed(compression, best)))
 	{
 		// If we did some patches or encryption, or the compression
 		// was turned off, the resulting file is not gzipped.
@@ -275,7 +275,7 @@ static int verify_file(const char *fname, int patches, const char *best, const c
 
 // a = length of struct bu array
 // i = position to restore from
-static int restore_file(struct bu *arr, int a, int i, const char *datapth, const char *fname, const char *tmppath1, const char *tmppath2, int act, const char *endfile, char cmd, int64_t winattr, struct cntr *cntr, struct config *cconf)
+static int restore_file(struct bu *arr, int a, int i, const char *datapth, const char *fname, const char *tmppath1, const char *tmppath2, int act, const char *endfile, char cmd, int64_t winattr, int compression, struct cntr *cntr, struct config *cconf)
 {
 	int x=0;
 	char msg[256]="";
@@ -330,7 +330,8 @@ static int restore_file(struct bu *arr, int a, int i, const char *datapth, const
 				if(!patches)
 				{
 					// Need to gunzip the first one.
-					if(inflate_or_link_oldfile(best, tmp))
+					if(inflate_or_link_oldfile(best, tmp,
+						compression))
 					{
 						logp("error when inflating %s\n", best);
 						free(path);
@@ -343,8 +344,9 @@ static int restore_file(struct bu *arr, int a, int i, const char *datapth, const
 				}
 
 				if(do_patch(best, dpath, tmp,
-				  FALSE /* do not gzip the result */, cntr,
-				  cconf))
+				  FALSE /* do not gzip the result */,
+				  compression /* from the manifest */,
+				  cntr, cconf))
 				{
 					char msg[256]="";
 					snprintf(msg, sizeof(msg),
@@ -367,7 +369,8 @@ static int restore_file(struct bu *arr, int a, int i, const char *datapth, const
 			if(act==ACTION_RESTORE)
 			{
 				if(send_file(fname, patches, best, datapth,
-					&bytes, cmd, winattr, cntr, cconf))
+					&bytes, cmd, winattr, compression,
+					cntr, cconf))
 				{
 					free(path);
 					return -1;
@@ -377,7 +380,8 @@ static int restore_file(struct bu *arr, int a, int i, const char *datapth, const
 			else if(act==ACTION_VERIFY)
 			{
 				if(verify_file(fname, patches, best, datapth,
-					&bytes, endfile, cmd, cntr))
+					&bytes, endfile, cmd, compression,
+					cntr))
 				{
 					free(path);
 					return -1;
@@ -411,7 +415,8 @@ static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, const cha
 	{
 		return restore_file(arr, a, i, sb->datapth,
 		  sb->path, tmppath1, tmppath2, act,
-		  sb->endfile, sb->cmd, sb->winattr, cntr, cconf);
+		  sb->endfile, sb->cmd, sb->winattr,
+		  sb->compression, cntr, cconf);
 	}
 	else
 	{

@@ -22,6 +22,7 @@ struct sbuf
 	struct stat statp;
 	int64_t winattr;
 	size_t slen;
+	int compression;
 	int sendstat; // flag indicating it needs to be sent
 
 	rs_buffers_t rsbuf;

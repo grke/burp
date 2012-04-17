@@ -181,7 +181,7 @@ static int restore_file_or_get_meta(struct sbuf *sb, const char *fname, enum act
 		unsigned long long rcvdbytes=0;
 		unsigned long long sentbytes=0;
 
-		enccompressed=dpth_is_compressed(sb->datapth);
+		enccompressed=dpth_is_compressed(sb->compression, sb->datapth);
 /*
 		printf("%s \n", fname);
 		if(encpassword && !enccompressed)

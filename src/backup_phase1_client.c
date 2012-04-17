@@ -91,7 +91,7 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
    switch (ff->type) {
    case FT_LNKSAVED:
         //printf("Lnka: %s -> %s\n", ff->fname, ff->link);
-   	encode_stat(attribs, &ff->statp, ff->winattr);
+   	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
 	if(async_write_str(CMD_STAT, attribs)
 	  || async_write_str(CMD_HARD_LINK, ff->fname)
 	  || async_write_str(CMD_HARD_LINK, ff->link))
@@ -104,7 +104,7 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
    case FT_FIFO:
    case FT_REGE:
    case FT_REG:
-      encode_stat(attribs, &ff->statp, ff->winattr);
+      encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
       if(async_write_str(CMD_STAT, attribs)
 	|| async_write_str(filesymbol, ff->fname))
 		return -1;
@@ -116,7 +116,7 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
       break;
    case FT_LNK:
 	//printf("link: %s -> %s\n", ff->fname, ff->link);
-   	encode_stat(attribs, &ff->statp, ff->winattr);
+   	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
 	if(async_write_str(CMD_STAT, attribs)
 	  || async_write_str(CMD_SOFT_LINK, ff->fname)
 	  || async_write_str(CMD_SOFT_LINK, ff->link))
@@ -149,7 +149,8 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 	 }
 	 else
 	 {
-		encode_stat(attribs, &ff->statp, ff->winattr);
+		encode_stat(attribs,
+			&ff->statp, ff->winattr, conf->compression);
 	      	if(async_write_str(CMD_STAT, attribs)) return -1;
 #if defined(WIN32_VSS)
 		if(async_write_str(filesymbol, ff->fname)) return -1;
@@ -164,7 +165,7 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 	}
       break;
    case FT_SPEC: // special file - fifo, socket, device node...
-      encode_stat(attribs, &ff->statp, ff->winattr);
+      encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
       if(async_write_str(CMD_STAT, attribs)
 	  || async_write_str(CMD_SPECIAL, ff->fname))
 		return -1;

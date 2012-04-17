@@ -121,8 +121,8 @@ int file_is_included(struct strlist **ielist, int iecount,
 	bool top_level);
 
 /* from attribs.c */
-void encode_stat(char *buf, struct stat *statp, int64_t winattr);
-void decode_stat(const char *buf, struct stat *statp, int64_t *winattr);
+void encode_stat(char *buf, struct stat *statp, int64_t winattr, int compression);
+void decode_stat(const char *buf, struct stat *statp, int64_t *winattr, int *compression);
 bool set_attributes(const char *path, char cmd, struct stat *statp, int64_t winattr);
 
 #endif /* __FILES_H */

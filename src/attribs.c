@@ -15,14 +15,10 @@
  * Encode a stat structure into a base64 character string
  *   All systems must create such a structure.
  */
-void encode_stat(char *buf, struct stat *statp, int64_t winattr)
+void encode_stat(char *buf, struct stat *statp, int64_t winattr, int compression)
 {
    char *p = buf;
 
-   /*
-    *  Encode a stat packet.  I should have done this more intelligently
-    *   with a length so that it could be easily expanded.
-    */
    p += to_base64(statp->st_dev, p);
    *p++ = ' ';                        /* separate fields with a space */
    p += to_base64(statp->st_ino, p);
@@ -69,6 +65,9 @@ void encode_stat(char *buf, struct stat *statp, int64_t winattr)
 #else
    p += to_base64(0, p);     /* output place holder */
 #endif
+   *p++ = ' ';
+
+   p += to_base64(compression, p);
 
    *p = 0;
    return;
@@ -93,7 +92,7 @@ void encode_stat(char *buf, struct stat *statp, int64_t winattr)
 
 
 /* Decode a stat packet from base64 characters */
-void decode_stat(const char *buf, struct stat *statp, int64_t *winattr)
+void decode_stat(const char *buf, struct stat *statp, int64_t *winattr, int *compression)
 {
    const char *p = buf;
    int64_t val;
@@ -157,17 +156,23 @@ void decode_stat(const char *buf, struct stat *statp, int64_t *winattr)
    }
 
    /* Look for winattr */
-#ifdef HAVE_WIN32
    if (*p == ' ' || (*p != 0 && *(p+1) == ' ')) {
       p++;
       p += from_base64(&val, p);
    } else {
       val = 0;
    }
-#else
-   val=0;
-#endif
    *winattr=val;
+
+   /* Compression */
+   if (*p == ' ' || (*p != 0 && *(p+1) == ' ')) {
+      p++;
+      if(!*p) return;
+      p += from_base64(&val, p);
+      *compression=val;
+   } else {
+      *compression=-1;
+   }
 }
 
 static uid_t my_uid=1;

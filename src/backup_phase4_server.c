@@ -16,7 +16,7 @@
 #include <netdb.h>
 #include <librsync.h>
 
-static int make_rev_sig(const char *dst, const char *sig, const char *endfile, struct cntr *cntr)
+static int make_rev_sig(const char *dst, const char *sig, const char *endfile, int compression, struct cntr *cntr)
 {
 	FILE *dstfp=NULL;
 	gzFile dstzp=NULL;
@@ -24,7 +24,7 @@ static int make_rev_sig(const char *dst, const char *sig, const char *endfile, s
 	rs_result result;
 //logp("make rev sig: %s %s\n", dst, sig);
 
-	if(dpth_is_compressed(dst))
+	if(dpth_is_compressed(compression, dst))
 		dstzp=gzopen_file(dst, "rb");
 	else
 		dstfp=open_file(dst, "rb");
@@ -46,7 +46,7 @@ static int make_rev_sig(const char *dst, const char *sig, const char *endfile, s
 	return result;
 }
 
-static int make_rev_delta(const char *src, const char *sig, const char *del, struct cntr *cntr, struct config *cconf)
+static int make_rev_delta(const char *src, const char *sig, const char *del, int compression, struct cntr *cntr, struct config *cconf)
 {
 	gzFile srczp=NULL;
 	FILE *srcfp=NULL;
@@ -67,7 +67,7 @@ static int make_rev_delta(const char *src, const char *sig, const char *del, str
 
 //logp("make rev deltb: %s %s %s\n", src, sig, del);
 
-	if(dpth_is_compressed(src))
+	if(dpth_is_compressed(compression, src))
 		srczp=gzopen_file(src, "rb");
 	else
 		srcfp=open_file(src, "rb");
@@ -113,7 +113,7 @@ static int make_rev_delta(const char *src, const char *sig, const char *del, str
 }
 
 
-static int gen_rev_delta(const char *sigpath, const char *deltadir, const char *oldpath, const char *finpath, const char *path, const char *endfile, struct cntr *cntr, struct config *cconf)
+static int gen_rev_delta(const char *sigpath, const char *deltadir, const char *oldpath, const char *finpath, const char *path, const char *endfile, int compression, struct cntr *cntr, struct config *cconf)
 {
 	int ret=0;
 	char *delpath=NULL;
@@ -134,12 +134,14 @@ static int gen_rev_delta(const char *sigpath, const char *deltadir, const char *
 		logp("could not mkpaths for: %s\n", delpath);
 		ret=-1;
 	}
-	else if(make_rev_sig(finpath, sigpath, endfile, cntr))
+	else if(make_rev_sig(finpath, sigpath,
+		endfile, compression, cntr))
 	{
 		logp("could not make signature from: %s\n", finpath);
 		ret=-1;
 	}
-	else if(make_rev_delta(oldpath, sigpath, delpath, cntr, cconf))
+	else if(make_rev_delta(oldpath, sigpath, delpath,
+		compression, cntr, cconf))
 	{
 		logp("could not make delta from: %s\n", oldpath);
 		ret=-1;
@@ -149,7 +151,7 @@ static int gen_rev_delta(const char *sigpath, const char *deltadir, const char *
 	return ret;
 }
 
-static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, struct config *cconf)
+static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, int compression, struct config *cconf)
 {
 	int ret=0;
 	struct stat statp;
@@ -160,7 +162,7 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, str
 		return -1;
 	}
 
-	if(dpth_is_compressed(oldpath))
+	if(dpth_is_compressed(compression, oldpath))
 	{
 		FILE *source=NULL;
 		FILE *dest=NULL;
@@ -202,7 +204,7 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, str
 	return ret;
 }
 
-static int jiggle(const char *datapth, const char *currentdata, const char *datadirtmp, const char *datadir, const char *deltabdir, const char *deltafdir, const char *sigpath, const char *endfile, int hardlinked, struct cntr *cntr, struct config *cconf)
+static int jiggle(const char *datapth, const char *currentdata, const char *datadirtmp, const char *datadir, const char *deltabdir, const char *deltafdir, const char *sigpath, const char *endfile, int hardlinked, int compression, struct cntr *cntr, struct config *cconf)
 {
 	int ret=0;
 	struct stat statp;
@@ -276,7 +278,7 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 		*cp='\0';
 
 		//logp("Fixing up: %s\n", datapth);
-		if(inflate_or_link_oldfile(oldpath, infpath, cconf))
+		if(inflate_or_link_oldfile(oldpath, infpath, compression, cconf))
 		{
 			logp("error when inflating old file: %s\n", oldpath);
 			ret=-1;
@@ -284,7 +286,7 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 		}
 
 		if(do_patch(infpath, deltafpath, newpath, cconf->compression,
-			cntr, cconf))
+			compression /* from the manifest */, cntr, cconf))
 		{
 			logp("error when patching\n");
 			ret=-1;
@@ -306,7 +308,7 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 		{
 			if(gen_rev_delta(sigpath, deltabdir,
 				oldpath, newpath, datapth, endfile,
-				cntr, cconf))
+				compression, cntr, cconf))
 			{
 				ret=-1;
 				goto cleanup;
@@ -487,7 +489,8 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 			if((ret=jiggle(sb.datapth, currentdata, datadirtmp,
 				datadir, deltabdir, deltafdir,
 				sigpath, sb.endfile,
-				hardlinked, cntr, cconf))) break;
+				hardlinked, sb.compression, cntr, cconf)))
+					break;
 		}
 		free_sbuf(&sb);
 	}

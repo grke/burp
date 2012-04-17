@@ -472,6 +472,7 @@ int client(struct config *conf, enum action act)
 	if((ret=do_client(conf, act))==1)
 	{
 		logp("Re-opening connection to server\n");
+		sleep(5);
 		ret=do_client(conf, act);
 	}
 	return ret;

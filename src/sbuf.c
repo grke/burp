@@ -22,6 +22,7 @@ void init_sbuf(struct sbuf *sb)
 	sb->senddatapth=0;
 	sb->statbuf=NULL;
 	sb->slen=0;
+	sb->compression=-1;
 	sb->sendstat=0;
 
 	memset(&(sb->rsbuf), 0, sizeof(sb->rsbuf));

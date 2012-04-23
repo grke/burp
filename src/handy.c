@@ -969,7 +969,6 @@ static int run_script_select(FILE **sout, FILE **serr, struct cntr *cntr, int lo
 {
 	int mfd=-1;
 	fd_set fsr;
-	fd_set fse;
 	struct timeval tval;
 	int soutfd=fileno(*sout);
 	int serrfd=fileno(*serr);
@@ -982,12 +981,11 @@ static int run_script_select(FILE **sout, FILE **serr, struct cntr *cntr, int lo
 	{
 		mfd=-1;
 		FD_ZERO(&fsr);
-		FD_ZERO(&fse);
-		if(*sout) add_fd_to_sets(soutfd, &fsr, NULL, &fse, &mfd);
-		if(*serr) add_fd_to_sets(serrfd, &fsr, NULL, &fse, &mfd);
+		if(*sout) add_fd_to_sets(soutfd, &fsr, NULL, NULL, &mfd);
+		if(*serr) add_fd_to_sets(serrfd, &fsr, NULL, NULL, &mfd);
 		tval.tv_sec=1;
 		tval.tv_usec=0;
-		if(select(mfd+1, &fsr, NULL, &fse, &tval)<0)
+		if(select(mfd+1, &fsr, NULL, NULL, &tval)<0)
 		{
 			if(errno!=EAGAIN && errno!=EINTR)
 			{
@@ -995,12 +993,6 @@ static int run_script_select(FILE **sout, FILE **serr, struct cntr *cntr, int lo
 					strerror(errno));
 				return -1;
 			}
-		}
-		if(FD_ISSET(soutfd, &fse)
-		  || FD_ISSET(serrfd, &fse))
-		{
-			//logp("error on run_script child fd\n");
-			return -1;
 		}
 		if(FD_ISSET(soutfd, &fsr))
 			log_script_output(sout, NULL, logfunc);

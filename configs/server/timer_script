@@ -2,9 +2,6 @@
 #
 # Script that determines whether it is time to run a backup.
 
-# Set LANG=C so that 'date' returns English day names.
-export LANG=C
-
 echo "Running timer script: $@"
 
 client="$1" ; shift
@@ -28,7 +25,8 @@ if [ -f "$manual_file" ] ; then
 fi
 
 # The rest of the arguments, if any, should be timebands.
-curdayhour=$(date +"*%a*%H*")
+# Set LANG=C so that 'date' returns English day names.
+curdayhour=$(LANG=C date +"*%a*%H*")
 intimeband=1 # If no timebands given, default to OK.
 while [ "$#" -gt 0 ] ; do
 	intimeband=0
@@ -79,16 +77,16 @@ get_intervals()
 
 	read junk ts < "$timestamp"
 
-	if   ! secs=$(date +%s -d "$ts") \
-	  || ! now=$(date +"%Y-%m-%d %H:%M:%S") \
-	  || ! nowsecs=$(date +%s -d "$now")
+	if   ! secs=$(LANG=C date +%s -d "$ts") \
+	  || ! now=$(LANG=C date +"%Y-%m-%d %H:%M:%S") \
+	  || ! nowsecs=$(LANG=C date +%s -d "$now")
 	then
 		echo "$0: Date command returned error for $client."
 		return 0
 	fi
 
 	min_timesecs=$((secs+intervalsecs))
-	if ! min_time=$(date -d @$min_timesecs +"%Y-%m-%d %H:%M:%S")
+	if ! min_time=$(LANG=C date -d @$min_timesecs +"%Y-%m-%d %H:%M:%S")
 	then
 		echo "$0: Date command returned error for $client."
 		return 0

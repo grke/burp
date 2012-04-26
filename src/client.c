@@ -144,7 +144,10 @@ static int s_server_session_id_context=1;
 
 /* May return 1 to mean try again. This happens after a successful certificate
    signing request so that it connects again straight away with the new
-   key/certificate. Returns 2 if there were restore/verify warnings. */
+   key/certificate.
+   Returns 2 if there were restore/verify warnings.
+   Returns 3 if timer conditions were not met.
+*/
 static int do_client(struct config *conf, enum action act)
 {
 	int ret=0;
@@ -395,7 +398,14 @@ static int do_client(struct config *conf, enum action act)
 			if(ret<0)
 				logp("error in backup\n");
 			else if(ret>0)
-			{ } // timer script said no.
+			{
+				// Timer script said no.
+				// Have a distinct return value to
+				// differentiate between other cases
+				// (ssl reconnection and restore/verify
+				// warnings).
+				ret=3;
+			}
 			else
 				logp("backup finished ok\n");
 			

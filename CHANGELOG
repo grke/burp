@@ -11,7 +11,7 @@
   * Add 'client_can_force_backup' option, defaulted to on. Turning it off means
     that only timed backups are allowed. Also add similar 'client_can_list',
     'client_can_restore' and 'client_can_verify' options.
-  * Remove getopt from burp_ca, hopefully allowing it to work on Macs.
+  * Remove getopt from burp_ca, allowing it to work on Macs.
   * Make an unknown exclude_fs a non-fatal error.
   * Add ability to trigger a backup on the server side by placing a file called
     'backup' in the client's storage directory.
@@ -22,6 +22,7 @@
     notifications only get sent if there were new or changed files.
   * Added Ruben Kerkhof's fixes to make run_script() work on OSX.
   * For each file, store the compression setting in the manifest.
+  * Stop clients connecting twice when a timed backup is rejected.
 
 2012-03-31 Changes in burp-1.3.2:
   * Add options for the client to automatically generate a certificate signing
@@ -60,7 +61,7 @@
   * Bug fixes to ssl_extra_checks_script.
   * Bug fix: initialise network_timeout properly.
   * Fix typos in docs/burp_ca.txt.
-  * Add 'export LANG=C' to the timer script, so that timer_arg days are always
+  * Add 'LANG=C' to the timer script, so that timer_arg days are always
     expected in English.
   * Add config file option to turn syslog logging on/off.
   * Bug fix for 'compression = gzip[0-9]'.

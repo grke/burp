@@ -1,12 +1,18 @@
-burp (1.3.2-1) unstable; urgency=low
+burp (1.3.3-1) unstable; urgency=low
 
   * New upstream release version 1.3.2
   * Fixed make error during build process
   * In progress version for Equiinet.
-  * Fixed compression directive not fully functional only numeric value allowed Debian bug: (Closes: #665843)
+  * Fixed compression directive not fully functional only numeric value allowed Debian bug: 
+    (Closes: #665843)
+  * Fix "Build of version 1.32 failing"  (Closes: #669107)
+  * Tidy up "Raw partition" (Closes: #670598)
+  * Prevent client from browsing backups (Closes: #670599)
+  * Prevent client from running a restore (Closes: #670600)
+  * Fix "Document or implement ability to prevent *client* from initiating manual backup  
+    (Closes: #670601)
 
-
- -- Bastiaan Franciscus van den Dikkenberg <bas@dikkenberg.net>  Wed, 28 Mar 2012 09:16:00 +0100
+ -- Bastiaan Franciscus van den Dikkenberg <bas@dikkenberg.net>  Fri, 27 Apr 2012 10:52:49 +0200
 
 burp (1.3.1-1) unstable; urgency=low
 

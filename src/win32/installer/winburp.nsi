@@ -179,7 +179,7 @@ Function .onInit
   StrCpy $ConfigClientInstallService     "$OptService"
   StrCpy $ConfigClientStartService       "$OptStart"
 
-  StrCpy $ConfigServerAddress		"10.253.0.100"
+  StrCpy $ConfigServerAddress		"10.0.0.1"
   StrCpy $ConfigServerPort              "4971"
   StrCpy $ConfigClientName              "clientname"
   StrCpy $ConfigPassword                "password"

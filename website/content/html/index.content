@@ -53,6 +53,52 @@ The main author of Burp is Graham Keeling.
 <TD ALIGN="LEFT">
 
 <P>
+<FONT COLOR="#99CCFF">2012-04-27:
+<BR>
+Many thanks to the following donors for financially supporting burp during
+April:
+<pre>
+  * &pound;10.00 Calogero L.
+  * Server hosting from 6sync.com
+</pre>
+</FONT>
+</p>
+
+<P>
+<FONT COLOR="#99CCFF">2012-04-27: burp-1.3.4 is released.
+<pre>
+Changes in burp-1.3.4:
+2012-04-27 Changes in burp-1.3.4:
+  * Bug fix for Windows backups where it had stopped using the Windows backup
+    API in 1.3.2.
+  * Automatically convert backslashes to forward slashes for includes/excludes
+    on Windows clients.
+  * Bug fix: pass the path to the CA conf file whenever running burp_ca (fixes
+    problems with the test scripts).
+  * Remove whitespace that was causing the burp_ca '--crl' option not to work.
+  * Have separate CA directories for the client and server. Make 'make install'
+    create the directory /etc/burp/CA-client.
+  * Make compile succeed when there is no libncurses library.
+  * Add 'client_can_force_backup' option, defaulted to on. Turning it off means
+    that only timed backups are allowed. Also add similar 'client_can_list',
+    'client_can_restore' and 'client_can_verify' options.
+  * Remove getopt from burp_ca, allowing it to work on Macs.
+  * Make an unknown exclude_fs a non-fatal error.
+  * Add ability to trigger a backup on the server side by placing a file called
+    'backup' in the client's storage directory.
+  * Fix bug where block device nodes were not backed up. Add 'read_blockdev'
+    and 'read_all_blockdevs' options that work the same as the equivalent
+    fifo options.
+  * Add 'notify_success_changes_only' option, which means that success
+    notifications only get sent if there were new or changed files.
+  * Added Ruben Kerkhof's fixes to make run_script() work on OSX.
+  * For each file, store the compression setting in the manifest.
+  * Stop clients connecting twice when a timed backup is rejected.
+</pre>
+</FONT>
+</P>
+
+<P>
 <FONT COLOR="#99CCFF">2012-03-31:
 <BR>
 Many thanks to the following donors for financially supporting burp during

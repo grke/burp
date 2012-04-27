@@ -63,7 +63,8 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 		  || ff->type==FT_REG
 		  || ff->type==FT_DIRBEGIN)
 		{
-			encode_stat(attribs, &ff->statp, ff->winattr);
+			encode_stat(attribs,
+				&ff->statp, ff->winattr, conf->compression);
 			if(async_write_str(CMD_STAT, attribs)
 			  || async_write_str(CMD_EFS_FILE, ff->fname))
 				return -1;

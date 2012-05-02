@@ -68,7 +68,6 @@ April:
 <FONT COLOR="#99CCFF">2012-04-27: burp-1.3.4 is released.
 <pre>
 Changes in burp-1.3.4:
-2012-04-27 Changes in burp-1.3.4:
   * Bug fix for Windows backups where it had stopped using the Windows backup
     API in 1.3.2.
   * Automatically convert backslashes to forward slashes for includes/excludes

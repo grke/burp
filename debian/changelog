@@ -1,17 +1,25 @@
-burp (1.3.3-1) unstable; urgency=low
+burp (1.3.4-2) unstable; urgency=low
 
-  * New upstream release version 1.3.2
+  * Fixes building isues with hppa and powerpcspe and sparc64
+    Changed debhelper version to (>= 8)
+
+ -- Bastiaan Franciscus van den Dikkenberg <bas@dikkenberg.net>  Fri, 04 May 2012 11:57:30 +0200
+
+burp (1.3.4-1) unstable; urgency=low
+
+  * New upstream release version 1.3.3
   * Fixed make error during build process
-  * Fixed compression directive not fully functional only numeric value allowed Debian bug: 
-    (Closes: #665843)
+  * Fixed compression directive not fully functional only numeric value
+    allowed Debian bug: (Closes: #665843)
   * Fix "Build of version 1.3.2 failing"  (Closes: #669107)
   * Tidy up "Raw partition" (Closes: #670598)
   * Prevent client from browsing backups (Closes: #670599)
   * Prevent client from running a restore (Closes: #670600)
-  * Fix "Document or implement ability to prevent *client* from initiating manual backup  
-    (Closes: #670601)
+  * Fix "Document or implement ability to prevent *client* from initiating
+     manual backup (Closes: #670601)
 
- -- Bastiaan Franciscus van den Dikkenberg <bas@dikkenberg.net>  Fri, 27 Apr 2012 10:52:49 +0200
+ -- Bastiaan Franciscus van den Dikkenberg <bas@dikkenberg.net>  Sat, 28 Apr 2012 09:22:05 +0200
+
 
 burp (1.3.1-1) unstable; urgency=low
 

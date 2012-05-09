@@ -1152,6 +1152,12 @@ if test x$CRYPT_LIBS = x-lcrypt; then
 fi
 AC_SUBST(CRYPT_LIBS)
 
+AC_CHECK_HEADERS(uthash.h, [have_uthash=yes], [have_uthash=no])
+if test $have_uthash = no  ; then
+	echo "No uthash library. Will use own uthash/uthash.h"
+	cp ${srcdir}/uthash/uthash.h ${srcdir}/src
+fi
+
 AC_CHECK_HEADERS(librsync.h)
 AC_CHECK_LIB(rsync, rs_delta_begin, [RSYNC_LIBS="-lrsync"])
 have_librsync=no

@@ -3765,13 +3765,13 @@ if test "$ac_test_CFLAGS" = set; then
   CFLAGS=$ac_save_CFLAGS
 elif test $ac_cv_prog_cc_g = yes; then
   if test "$GCC" = yes; then
-    CFLAGS="-g -O0"
+    CFLAGS="-g -O2"
   else
     CFLAGS="-g"
   fi
 else
   if test "$GCC" = yes; then
-    CFLAGS="-O0"
+    CFLAGS="-O2"
   else
     CFLAGS=
   fi
@@ -4113,13 +4113,13 @@ if test "$ac_test_CXXFLAGS" = set; then
   CXXFLAGS=$ac_save_CXXFLAGS
 elif test $ac_cv_prog_cxx_g = yes; then
   if test "$GXX" = yes; then
-    CXXFLAGS="-g -O0"
+    CXXFLAGS="-g -O2"
   else
     CXXFLAGS="-g"
   fi
 else
   if test "$GXX" = yes; then
-    CXXFLAGS="-O0"
+    CXXFLAGS="-O2"
   else
     CXXFLAGS=
   fi
@@ -8144,13 +8144,13 @@ if test "$ac_test_CXXFLAGS" = set; then
   CXXFLAGS=$ac_save_CXXFLAGS
 elif test $ac_cv_prog_cxx_g = yes; then
   if test "$GXX" = yes; then
-    CXXFLAGS="-g -O0"
+    CXXFLAGS="-g -O2"
   else
     CXXFLAGS="-g"
   fi
 else
   if test "$GXX" = yes; then
-    CXXFLAGS="-O0"
+    CXXFLAGS="-O2"
   else
     CXXFLAGS=
   fi
@@ -24530,6 +24530,25 @@ if test x$CRYPT_LIBS = x-lcrypt; then
    have_crypt=yes
 fi
 
+
+for ac_header in uthash.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "uthash.h" "ac_cv_header_uthash_h" "$ac_includes_default"
+if test "x$ac_cv_header_uthash_h" = x""yes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_UTHASH_H 1
+_ACEOF
+ have_uthash=yes
+else
+  have_uthash=no
+fi
+
+done
+
+if test $have_uthash = no  ; then
+	echo "No uthash library. Will use own uthash/uthash.h"
+	cp ${srcdir}/uthash/uthash.h ${srcdir}/src
+fi
 
 for ac_header in librsync.h
 do :

@@ -152,6 +152,7 @@ clean:	libtool-clean
 	@$(RMF) burp core core.* a.out *.o *.bak *~ *.intpro *.extpro 1 2 3
 	@$(RMF) bedup static-burp static-bedup config.h
 	@$(RMF) Makefile
+	@$(RMF) uthash.h
 #	@if test -f win32/Makefile -a "${GMAKE}" != "none"; then \
 #	   (cd win32; $(GMAKE) clean); \
 #	fi

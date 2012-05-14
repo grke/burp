@@ -20,7 +20,7 @@ extern int recursive_hardlink(const char *src, const char *dst, const char *clie
 extern int recursive_delete(const char *d, const char *file, bool delfiles);
 extern void free_current_backups(struct bu **arr, int a);
 extern int get_current_backups(const char *basedir, struct bu **arr, int *a, int log);
-extern int get_new_timestamp(const char *basedir, char *buf, size_t s);
+extern int get_new_timestamp(struct config *cconf, const char *basedir, char *buf, size_t s);
 extern int read_timestamp(const char *path, char buf[], size_t len);
 extern int write_timestamp(const char *timestamp, const char *tstmp);
 extern int compress_file(const char *current, const char *file, struct config *cconf);

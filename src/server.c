@@ -322,7 +322,7 @@ static int do_backup_server(const char *basedir, const char *current, const char
 	{
 		// Not resuming - need to set everything up fresh.
 
-		if(get_new_timestamp(basedir, tstmp, sizeof(tstmp)))
+		if(get_new_timestamp(cconf, basedir, tstmp, sizeof(tstmp)))
 			goto error;
 		if(!(realworking=prepend_s(basedir, tstmp, strlen(tstmp))))
 		{

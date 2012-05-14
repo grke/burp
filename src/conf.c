@@ -59,6 +59,7 @@ void init_config(struct config *conf)
 	conf->clientconfdir=NULL;
 	conf->cname=NULL;
 	conf->directory=NULL;
+	conf->timestamp_format=NULL;
 	conf->ca_conf=NULL;
 	conf->ca_name=NULL;
 	conf->ca_server_name=NULL;
@@ -171,6 +172,7 @@ void free_config(struct config *conf)
 	if(conf->clientconfdir) free(conf->clientconfdir);
 	if(conf->cname) free(conf->cname);
 	if(conf->directory) free(conf->directory);
+	if(conf->timestamp_format) free(conf->timestamp_format);
 	if(conf->ca_conf) free(conf->ca_conf);
 	if(conf->ca_name) free(conf->ca_name);
 	if(conf->ca_server_name) free(conf->ca_server_name);
@@ -657,6 +659,8 @@ static int load_config_strings(struct config *conf, const char *field, const cha
 		return -1;
 	if(get_conf_val(field, value, "directory", &(conf->directory)))
 		return -1;
+	if(get_conf_val(field, value, "timestamp_format",
+		&(conf->timestamp_format))) return -1;
 	if(get_conf_val(field, value, "ca_conf", &(conf->ca_conf)))
 		return -1;
 	if(get_conf_val(field, value, "ca_name", &(conf->ca_name)))
@@ -933,6 +937,9 @@ static int server_conf_checks(struct config *conf, const char *path, int *r)
 {
 	if(!conf->directory)
 		conf_problem(path, "directory unset", r);
+	if(!conf->timestamp_format
+	  && !(conf->timestamp_format=strdup("%Y-%m-%d %H:%M:%S")))
+		conf_problem(path, "timestamp_format unset", r);
 	if(!conf->clientconfdir)
 		conf_problem(path, "clientconfdir unset", r);
 	if(!conf->working_dir_recovery_method
@@ -1394,6 +1401,8 @@ int set_client_global_config(struct config *conf, struct config *cconf, const ch
 	cconf->notify_success_changes_only=conf->notify_success_changes_only;
 	cconf->server_script_post_run_on_fail=conf->server_script_post_run_on_fail;
 	if(set_global_str(&(cconf->directory), conf->directory))
+		return -1;
+	if(set_global_str(&(cconf->timestamp_format), conf->timestamp_format))
 		return -1;
 	if(set_global_str(&(cconf->working_dir_recovery_method),
 		conf->working_dir_recovery_method)) return -1;

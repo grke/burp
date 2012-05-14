@@ -399,7 +399,7 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 	return ret;
 }
 
-int get_new_timestamp(const char *basedir, char *buf, size_t s)
+int get_new_timestamp(struct config *cconf, const char *basedir, char *buf, size_t s)
 {
 	int a=0;
 	time_t t=0;
@@ -424,7 +424,7 @@ int get_new_timestamp(const char *basedir, char *buf, size_t s)
 	ctm=localtime(&t);
         // Windows does not like the %T strftime format option - you get
         // complaints under gdb.
-	strftime(tmpbuf, sizeof(tmpbuf), "%Y-%m-%d %H:%M:%S", ctm);
+	strftime(tmpbuf, sizeof(tmpbuf), cconf->timestamp_format, ctm);
 	snprintf(buf, s, "%07lu %s", ++index, tmpbuf);
 
 	return 0;

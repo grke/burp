@@ -31,6 +31,7 @@ struct config
 
 // server options
 	char *directory;
+	char *timestamp_format;
 	char *clientconfdir;
 	char *ssl_dhfile;
 	int max_children;

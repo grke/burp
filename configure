@@ -1019,7 +1019,7 @@ x_libraries=NONE
 # Use braces instead of parens because sh, perl, etc. also accept them.
 # (The list follows the same order as the GNU Coding Standards.)
 bindir='${exec_prefix}/bin'
-sbindir='${exec_prefix}/sbin'
+sbindir='${exec_prefix}/usr/sbin'
 libexecdir='${exec_prefix}/libexec'
 datarootdir='${prefix}/share'
 datadir='${datarootdir}'
@@ -17019,8 +17019,8 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
-if test x$sbindir = x'${exec_prefix}/sbin' ; then
-   sbindir=${exec_prefix}/sbin
+if test x$sbindir = x'${exec_prefix}/usr/sbin' ; then
+   sbindir=${exec_prefix}/usr/sbin
 fi
 sbindir=`eval echo ${sbindir}`
 

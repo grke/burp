@@ -1,7 +1,8 @@
 backup_phase1_client: Scan the client filesystem and send stats to the server.
 backup_phase1_server: Receive the stats from the client.
 
-backup_phase2_server: Request and receive changes from the client.
+backup_phase2_server: Request and receive changes from the client and create
+	an unchanged list and a changed list.
 backup_phase2_client: Send the changes that the server requests. The work of
 	the client is now finished.
 

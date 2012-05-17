@@ -131,7 +131,7 @@ run_verify()
 	local num="$1"
 	echo "Starting test client verify of backup $num"
 	./usr/sbin/burp -c $clientconf -a v -b "$num" \
-		>> "$clientlog" 2>&1 || fail "client backup returned $?"
+		>> "$clientlog" 2>&1 || fail "client verify returned $?"
 }
 
 run_restore()

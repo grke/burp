@@ -42,6 +42,7 @@ struct config
 	int max_storage_subdirs;
 	int forking;
 	int daemon;
+	int directory_tree;
 	char *ca_conf;
 	char *ca_name;
 	char *ca_server_name;

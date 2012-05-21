@@ -129,8 +129,6 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
    case FT_DIREND:
       return 0;
    case FT_NOFSCHG:
-   case FT_INVALIDFS:
-   case FT_INVALIDDT:
    case FT_DIRBEGIN:
    case FT_REPARSE:
    case FT_JUNCTION:
@@ -138,10 +136,6 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
          char errmsg[100] = "";
          if (ff->type == FT_NOFSCHG)
             snprintf(errmsg, sizeof(errmsg), _("\t[will not descend: file system change not allowed]"));
-         else if (ff->type == FT_INVALIDFS)
-            snprintf(errmsg, sizeof(errmsg), _("\t[will not descend: disallowed file system]"));
-         else if (ff->type == FT_INVALIDDT)
-            snprintf(errmsg, sizeof(errmsg), _("\t[will not descend: disallowed drive type]"));
 	 if(*errmsg)
 	 {
 		snprintf(msg, sizeof(msg),

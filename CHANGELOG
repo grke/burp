@@ -1,3 +1,6 @@
+  * Store files in a directory structure like that of the original client.
+  * Fix 'ERROR: Please use absolute include/exclude paths' when setting paths
+    on the server side.
   * Add configure test for uthash.h. If it doesn't exist, use the uthash.h
     included with the burp source.
 

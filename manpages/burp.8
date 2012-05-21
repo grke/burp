@@ -171,6 +171,9 @@ Whether to fork children. The default is 1.
 \fBdirectory=[path]\fR
 Path to the directory in which to store backups.
 .TP
+\fBdirectory_tree=[0|1]\fR
+When turned on (which is the default), the structure of the storage directory will mimic that of the original filesystem on the client.
+.TP
 \fBtimestamp_format=[strftime format]\fR
 This allows you to tweak the format of the timestamps of individual backups. See 'man strftime' to see available substitutions. If this option is unset, burp uses "%Y-%m-%d %H:%M:%S".
 .TP
@@ -516,6 +519,7 @@ The file needs to contain a line like \fBpassword=[password]\fR that matches the
 .TP
 Additionally, the following options can be overridden here for each client:
 \fBdirectory\fR
+\fBdirectory_tree\fR
 \fBtimestamp_format\fR
 \fBkeep\fR
 \fBworking_dir_recovery_method\fR

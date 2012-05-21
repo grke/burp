@@ -56,6 +56,7 @@ void init_config(struct config *conf)
 	conf->working_dir_recovery_method=NULL;
 	conf->forking=0;
 	conf->daemon=0;
+	conf->directory_tree=1;
 	conf->clientconfdir=NULL;
 	conf->cname=NULL;
 	conf->directory=NULL;
@@ -342,19 +343,18 @@ static int path_checks(const char *path)
 			return -1;
 		}
 	}
-#ifdef HAVE_WIN32
-	if(!isalpha(*path) || *(path+1)!=':')
-	{
-		logp(ABSOLUTE_ERROR);
-		return -1;
-	}
-#else
-	if(*path!='/')
-	{
-		logp(ABSOLUTE_ERROR);
-		return -1;
-	}
+// This is being run on the server too, where you can enter paths for the
+// clients, so need to allow windows style paths for windows and unix.
+	if((!isalpha(*path) || *(path+1)!=':')
+#ifndef HAVE_WIN32
+	  // Windows does not need to check for unix style paths.
+	  && *path!='/'
 #endif
+	)
+	{
+		logp(ABSOLUTE_ERROR);
+		return -1;
+	}
 	return 0;
 }
 
@@ -620,6 +620,8 @@ static int load_config_ints(struct config *conf, const char *field, const char *
 		&(conf->forking));
 	get_conf_val_int(field, value, "daemon",
 		&(conf->daemon));
+	get_conf_val_int(field, value, "directory_tree",
+		&(conf->directory_tree));
 	get_conf_val_int(field, value, "client_can_force_backup",
 		&(conf->client_can_force_backup));
 	get_conf_val_int(field, value, "client_can_list",
@@ -1128,7 +1130,8 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 #ifdef HAVE_WIN32
 		convert_backslashes(&(l->ielist[i]->path));
 #endif
-		if(path_checks(l->ielist[i]->path)) r--;
+		if(path_checks(l->ielist[i]->path))
+			return -1;
 		if(!i)
 		{
 			// ielist is sorted - the first entry is one that
@@ -1400,6 +1403,7 @@ int set_client_global_config(struct config *conf, struct config *cconf, const ch
 	cconf->notify_success_warnings_only=conf->notify_success_warnings_only;
 	cconf->notify_success_changes_only=conf->notify_success_changes_only;
 	cconf->server_script_post_run_on_fail=conf->server_script_post_run_on_fail;
+	cconf->directory_tree=conf->directory_tree;
 	if(set_global_str(&(cconf->directory), conf->directory))
 		return -1;
 	if(set_global_str(&(cconf->timestamp_format), conf->timestamp_format))

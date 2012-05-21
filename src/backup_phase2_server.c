@@ -13,32 +13,66 @@
 #include "backup_phase2_server.h"
 #include "current_backups_server.h"
 
+static int treedata(struct sbuf *sb)
+{
+	// Windows is sending directory data as if it is file data - this
+	// cannot be saved in a tree structure.
+	// So, need to decode the stat to test for whether it is a directory.
+	decode_stat(sb->statbuf, &(sb->statp),
+		&(sb->winattr), &(sb->compression));
+	if(S_ISDIR(sb->statp.st_mode)) return 0;
+
+	if(sb->cmd==CMD_FILE
+	  || sb->cmd==CMD_ENC_FILE
+	  || sb->cmd==CMD_EFS_FILE)
+		return 1;
+	return 0;
+}
+
 static int start_to_receive_new_file(struct sbuf *sb, const char *datadirtmp, struct dpth *dpth, struct cntr *cntr, struct config *cconf)
 {
-	int ret=0;
+	int ret=-1;
 	char *rpath=NULL;
+	int istreedata=0;
 
 //logp("start to receive: %s\n", sb->path);
 
-	mk_dpth(dpth, cconf, sb->cmd);
-	if(!(sb->datapth=strdup(dpth->path))) // file data path
+	if(cconf->directory_tree) istreedata=treedata(sb);
+
+	if(istreedata)
 	{
-		log_and_send("out of memory");
-		ret=-1;
+		// We want to place this file in a directory structure like
+		// the directory structure on the original client.
+		if(!(sb->datapth=prepend_s("t", sb->path, strlen(sb->path))))
+		{
+			log_and_send("out of memory");
+			goto end;
+		}
 	}
-	else if(build_path(datadirtmp, sb->datapth, strlen(sb->datapth),
+	else
+	{
+		mk_dpth(dpth, cconf, sb->cmd);
+		if(!(sb->datapth=strdup(dpth->path))) // file data path
+		{
+			log_and_send("out of memory");
+			goto end;
+		}
+	}
+	if(build_path(datadirtmp, sb->datapth, strlen(sb->datapth),
 		&rpath, datadirtmp))
 	{
 		log_and_send("build path failed");
-		ret=-1;
+		goto end;
 	}
-	else if(!(sb->fp=open_file(rpath, "wb")))
+	if(!(sb->fp=open_file(rpath, "wb")))
 	{
 		log_and_send("make file failed");
-		ret=-1;
+		goto end;
 	}
 	if(rpath) free(rpath);
-	incr_dpth(dpth, cconf);
+	if(!istreedata) incr_dpth(dpth, cconf);
+	ret=0;
+end:
 	return ret;
 }
 
@@ -361,14 +395,16 @@ static int start_to_receive_delta(struct sbuf *rb, const char *working, const ch
 static int finish_delta(struct sbuf *rb, const char *working, const char *deltmppath)
 {
 	int ret=0;
-	char deltmp[64]="";
+	char *deltmp=NULL;
 	char *delpath=NULL;
-	snprintf(deltmp, sizeof(deltmp), "deltas.forward/%s", rb->datapth);
-	if(!(delpath=prepend_s(working, deltmp, strlen(deltmp)))
+	if(!(deltmp=prepend_s("deltas.forward",
+		rb->datapth, strlen(rb->datapth)))
+	  || !(delpath=prepend_s(working, deltmp, strlen(deltmp)))
 	  || mkpath(&delpath, working)
 	  || do_rename(deltmppath, delpath))
 		ret=-1;
 	if(delpath) free(delpath);
+	if(deltmp) free(deltmp);
 	return ret;
 }
 

@@ -24,7 +24,9 @@ int win32_start_vss(struct config *conf)
 		char szWinDriveLetters[27];
 		for(i=0, j=0; i < conf->sdcount && j<26; i++)
 		{
-			const char *path=conf->startdir[i]->path;
+			const char *path=NULL;
+			if(!conf->startdir[i]->flag) continue;
+			path=conf->startdir[i]->path;
 			if(strlen(path)>2 && isalpha(path[0]) && path[1]==':')
 			{
 				int x=0;

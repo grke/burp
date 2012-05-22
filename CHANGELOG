@@ -3,6 +3,7 @@
     on the server side.
   * Add configure test for uthash.h. If it doesn't exist, use the uthash.h
     included with the burp source.
+  * Make top level excludes not be a fatal error.
 
 2012-04-27 Changes in burp-1.3.4:
   * Bug fix for Windows backups where it had stopped using the Windows backup

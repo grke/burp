@@ -1077,7 +1077,8 @@ static int client_conf_checks(struct config *conf, const char *path, int *r)
 				conf->incexcdir[b]->path);
 		logp("Listing starting paths:\n");
 		for(int b=0; b<conf->sdcount; b++)
-			logp("%s\n", conf->startdir[b]->path);
+			if(conf->startdir[b]->flag)
+				logp("%s\n", conf->startdir[b]->path);
 	}
 	return 0;
 }
@@ -1132,22 +1133,11 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 #endif
 		if(path_checks(l->ielist[i]->path))
 			return -1;
-		if(!i)
-		{
-			// ielist is sorted - the first entry is one that
-			// can be backed up
-			if(!l->ielist[i]->flag)
-			{
-				logp("Top level should not be an exclude: %s\n",
-					l->ielist[i]->path);
-				return -1;
-			}
-			if(strlist_add(&sdlist, &(conf->sdcount),
-				l->ielist[i]->path, 1)) return -1;
-			continue;
-		}
+		
+		if(!l->ielist[i]->flag) continue; // an exclude
+
 		// Ensure that we do not backup the same directory twice.
-		if(!strcmp(l->ielist[i]->path, l->ielist[i-1]->path))
+		if(i>0 && !strcmp(l->ielist[i]->path, l->ielist[i-1]->path))
 		{
 			logp("Directory appears twice in config: %s\n",
 				l->ielist[i]->path);
@@ -1155,11 +1145,12 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 		}
 		// If it is not a subdirectory of the most recent start point,
 		// we have found another start point.
-		if(!is_subdir(sdlist[(conf->sdcount)-1]->path,
+		if(!conf->sdcount || !is_subdir(sdlist[(conf->sdcount)-1]->path,
 			l->ielist[i]->path))
 		{
 			if(strlist_add(&sdlist, &(conf->sdcount),
-				l->ielist[i]->path, 1)) return -1;
+				l->ielist[i]->path, l->ielist[i]->flag))
+					return -1;
 		}
 	}
 	conf->startdir=sdlist;

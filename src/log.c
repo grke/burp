@@ -77,6 +77,7 @@ int open_logfile(const char *logfile, struct config *conf)
 {
 	FILE *fp=NULL;
 	set_logfp(NULL, conf); // Close the old log, if it is open.
+	if(!logfile || !*logfile) return 0;
 	if(!(fp=fopen(logfile, "ab")))
 	{
 		logp("error opening logfile %s.\n", logfile);

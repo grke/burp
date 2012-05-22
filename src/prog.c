@@ -79,16 +79,21 @@ static void usage_client(void)
 int reload(struct config *conf, const char *configfile, char **logfile, bool firsttime, int oldmax_children, int oldmax_status_children)
 {
 	if(!firsttime) logp("Reloading config\n");
-	// If logfile is defined, use it
-	// Have to do this twice, because init_config uses logp().
-	if(*logfile && strlen(*logfile) && open_logfile(*logfile, conf))
-		return 1;
 
 	init_config(conf);
+
+	// If logfile is defined, use it
+	// Have to do this twice, because init_config uses logp().
+	if(open_logfile(*logfile, conf)) return 1;
+
 	if(load_config(configfile, conf, TRUE)) return 1;
 
 	/* change umask */
 	umask(conf->umask);
+
+	// Open the second time. This will turn on syslogging which could not
+	// be turned on before load_config.
+	if(open_logfile(*logfile, conf)) return 1;
 
 #ifndef HAVE_WIN32
 	if(conf->mode==MODE_SERVER)

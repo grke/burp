@@ -149,7 +149,6 @@ int main (int argc, char *argv[])
 	char *logfile=NULL;
 	struct config conf;
 	int forceoverwrite=0;
-	int generate_ca_only=0;
 	enum action act=ACTION_LIST;
 	const char *backup=NULL;
 	const char *restoreprefix=NULL;
@@ -160,6 +159,7 @@ int main (int argc, char *argv[])
 	const char *configfile=get_config_path();
 #ifndef HAVE_WIN32
 	const char *sclient=NULL;
+	int generate_ca_only=0;
 #endif
 
 	init_log(argv[0]);
@@ -215,7 +215,9 @@ int main (int argc, char *argv[])
 				daemon=0;
 				break;
 			case 'g':
+#ifndef HAVE_WIN32
 				generate_ca_only=1;
+#endif
 				break;
 			case 'i':
 				print_all_cmds();

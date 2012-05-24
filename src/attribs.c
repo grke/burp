@@ -175,13 +175,9 @@ void decode_stat(const char *buf, struct stat *statp, int64_t *winattr, int *com
    }
 }
 
-static uid_t my_uid=1;
-static gid_t my_gid=1;
-static bool uid_set=false;
-
 static int set_file_times(const char *path, struct utimbuf *ut)
 {
-	if(utime(path, ut)<0 && !my_uid)
+	if(utime(path, ut)<0)
 	{
 		berrno be;
 		fprintf(stderr, _("Unable to set file times %s: ERR=%s\n"),
@@ -196,12 +192,6 @@ bool set_attributes(const char *path, char cmd, struct stat *statp, int64_t wina
    struct utimbuf ut;
    bool ok = true;
  
-   if (uid_set) {
-      my_uid = getuid();
-      my_gid = getgid();
-      uid_set = true;
-   }
-
    ut.actime = statp->st_atime;
    ut.modtime = statp->st_mtime;
 

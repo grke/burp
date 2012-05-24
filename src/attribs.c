@@ -212,20 +212,20 @@ bool set_attributes(const char *path, char cmd, struct stat *statp, int64_t wina
       meta stuff on links. */
    if (cmd==CMD_SOFT_LINK) {
       /* Change owner of link, not of real file */
-      if (lchown(path, statp->st_uid, statp->st_gid) < 0 && my_uid == 0) {
+      if (lchown(path, statp->st_uid, statp->st_gid) < 0) {
          berrno be;
          fprintf(stderr, _("Unable to set file owner %s: ERR=%s\n"),
             path, be.bstrerror());
          ok = false;
       }
    } else {
-      if (chown(path, statp->st_uid, statp->st_gid) < 0 && my_uid == 0) {
+      if (chown(path, statp->st_uid, statp->st_gid) < 0) {
          berrno be;
          fprintf(stderr, _("Unable to set file owner %s: ERR=%s\n"),
             path, be.bstrerror());
          ok = false;
       }
-      if (chmod(path, statp->st_mode) < 0 && my_uid == 0) {
+      if (chmod(path, statp->st_mode) < 0) {
          berrno be;
          fprintf(stderr, _("Unable to set file modes %s: ERR=%s\n"),
             path, be.bstrerror());
@@ -241,7 +241,7 @@ bool set_attributes(const char *path, char cmd, struct stat *statp, int64_t wina
        *  but if the immutable bit is set, it will make the utimes()
        *  fail.
        */
-      if (chflags(path, statp->st_flags) < 0 && my_uid == 0) {
+      if (chflags(path, statp->st_flags) < 0) {
          berrno be;
          fprintf(stderr, _("Unable to set file flags %s: ERR=%s\n"),
             path, be.bstrerror());

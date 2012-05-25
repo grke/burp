@@ -10,6 +10,11 @@ REM The tildas here stop Windows putting quotes around the variable.
 set "keypath=%~3"
 set "requestpath=%~6"
 set "name=%~8"
+REM Need to set OPENSSL_CONF otherwise openssl tries to find an conf file from
+REM within my mingw build environment and prints a nasty looking warning.
+REM Setting it to burp.conf seems to make the warning disappear with no ill
+REM consequences.
+set OPENSSL_CONF=C:\Program Files\Burp\burp.conf
 set "openssl=C:\Program Files\Burp\bin\openssl.exe"
 
 if %3.==. goto notenoughparams

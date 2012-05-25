@@ -8,6 +8,8 @@
   * Unhide warning messages originally hidden by bacula when having errors
     when setting things like file times.
   * Fix bug where file times were not getting set on Windows directories.
+  * Remove openssl "can't open config file" warning when generating
+    certificates on Windows.
 
 2012-04-27 Changes in burp-1.3.4:
   * Bug fix for Windows backups where it had stopped using the Windows backup

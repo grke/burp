@@ -2077,3 +2077,54 @@ pid_t forkchild_no_wait(FILE **sin, FILE **sout, FILE **serr, const char *path, 
 {
 	return do_forkchild(sin, sout, serr, path, argv, 0 /* do not wait */);
 }
+
+int win32_utime(const char *fname, struct utimbuf *times)
+{
+    FILETIME acc, mod;
+    char tmpbuf[5000];
+
+    conv_unix_to_win32_path(fname, tmpbuf, 5000);
+
+    cvt_utime_to_ftime(times->actime, acc);
+    cvt_utime_to_ftime(times->modtime, mod);
+
+    HANDLE h = INVALID_HANDLE_VALUE;
+
+    if (p_CreateFileW) {
+       char* pwszBuf = sm_get_pool_memory(PM_FNAME);
+       make_win32_path_UTF8_2_wchar(&pwszBuf, tmpbuf);
+
+       h = p_CreateFileW((LPCWSTR)pwszBuf,
+                        FILE_WRITE_ATTRIBUTES,
+                        FILE_SHARE_WRITE|FILE_SHARE_READ|FILE_SHARE_DELETE,
+                        NULL,
+                        OPEN_EXISTING,
+                        FILE_FLAG_BACKUP_SEMANTICS, // required for directories
+                        NULL);
+
+       sm_free_pool_memory(pwszBuf);
+    } else if (p_CreateFileA) {
+       h = p_CreateFileA(tmpbuf,
+                        FILE_WRITE_ATTRIBUTES,
+                        FILE_SHARE_WRITE|FILE_SHARE_READ|FILE_SHARE_DELETE,
+                        NULL,
+                        OPEN_EXISTING,
+                        FILE_FLAG_BACKUP_SEMANTICS, // required for directories
+                        NULL);
+    }
+
+    if (h == INVALID_HANDLE_VALUE) {
+       const char *err = errorString();
+       fprintf(stderr, "Cannot open %s for utime(): ERR=%s\n", tmpbuf, err);
+       LocalFree((void *)err);
+       errno = b_errno_win32;
+       return -1;
+    }
+
+    int rval = SetFileTime(h, NULL, &acc, &mod) ? 0 : -1;
+    CloseHandle(h);
+    if (rval == -1) {
+       errno = b_errno_win32;
+    }
+    return rval;
+}

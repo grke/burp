@@ -176,9 +176,18 @@ void decode_stat(const char *buf, struct stat *statp, int64_t *winattr, int *com
    }
 }
 
-static int set_file_times(const char *path, struct utimbuf *ut, struct cntr *cntr)
+static int set_file_times(const char *path, struct utimbuf *ut, struct stat *statp, struct cntr *cntr)
 {
-	if(utime(path, ut)<0)
+	int e;
+// The mingw64 utime() appears not to work on directories.
+// Use the utime() from bacula instead.
+#ifdef HAVE_WIN32
+	if(S_ISDIR(statp->st_mode)) e=win32_utime(path, ut);
+	else e=utime(path, ut);
+#else
+	e=utime(path, ut);
+#endif
+	if(e<0)
 	{
 		berrno be;
 		logw(cntr, "Unable to set file times %s: ERR=%s",
@@ -198,7 +207,7 @@ bool set_attributes(const char *path, char cmd, struct stat *statp, int64_t wina
 
 #ifdef HAVE_WIN32
 	win32_chmod(path, statp->st_mode, winattr);
-	set_file_times(path, &ut, cntr);
+	set_file_times(path, &ut, statp, cntr);
 	return true;
 #endif
 
@@ -233,7 +242,7 @@ bool set_attributes(const char *path, char cmd, struct stat *statp, int64_t wina
          ok = false;
       }
 
-      if(set_file_times(path, &ut, cntr)) ok=false;
+      if(set_file_times(path, &ut, statp, cntr)) ok=false;
 #ifdef HAVE_CHFLAGS
       /*
        * FreeBSD user flags

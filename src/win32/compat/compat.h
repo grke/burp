@@ -325,6 +325,7 @@ inline unsigned long ffs(unsigned long word)
 #define  ffs   __builtin_ffs
 #endif
 
+int win32_utime(const char *fname, struct utimbuf *times);
 
 int win32_ftruncate(int fd, int64_t length);
 

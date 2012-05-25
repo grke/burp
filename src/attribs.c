@@ -10,6 +10,7 @@
 #include "find.h"
 #include "cmd.h"
 #include "berrno.h"
+#include "asyncio.h"
 
 /*
  * Encode a stat structure into a base64 character string
@@ -175,19 +176,19 @@ void decode_stat(const char *buf, struct stat *statp, int64_t *winattr, int *com
    }
 }
 
-static int set_file_times(const char *path, struct utimbuf *ut)
+static int set_file_times(const char *path, struct utimbuf *ut, struct cntr *cntr)
 {
 	if(utime(path, ut)<0)
 	{
 		berrno be;
-		fprintf(stderr, _("Unable to set file times %s: ERR=%s\n"),
+		logw(cntr, "Unable to set file times %s: ERR=%s",
 			path, be.bstrerror());
 		return -1;
 	}
 	return 0;
 }
 
-bool set_attributes(const char *path, char cmd, struct stat *statp, int64_t winattr)
+bool set_attributes(const char *path, char cmd, struct stat *statp, int64_t winattr, struct cntr *cntr)
 {
    struct utimbuf ut;
    bool ok = true;
@@ -197,7 +198,7 @@ bool set_attributes(const char *path, char cmd, struct stat *statp, int64_t wina
 
 #ifdef HAVE_WIN32
 	win32_chmod(path, statp->st_mode, winattr);
-	set_file_times(path, &ut);
+	set_file_times(path, &ut, cntr);
 	return true;
 #endif
 
@@ -214,25 +215,25 @@ bool set_attributes(const char *path, char cmd, struct stat *statp, int64_t wina
       /* Change owner of link, not of real file */
       if (lchown(path, statp->st_uid, statp->st_gid) < 0) {
          berrno be;
-         fprintf(stderr, _("Unable to set file owner %s: ERR=%s\n"),
+         logw(cntr, "Unable to set file owner %s: ERR=%s",
             path, be.bstrerror());
          ok = false;
       }
    } else {
       if (chown(path, statp->st_uid, statp->st_gid) < 0) {
          berrno be;
-         fprintf(stderr, _("Unable to set file owner %s: ERR=%s\n"),
+         logw(cntr, "Unable to set file owner %s: ERR=%s",
             path, be.bstrerror());
          ok = false;
       }
       if (chmod(path, statp->st_mode) < 0) {
          berrno be;
-         fprintf(stderr, _("Unable to set file modes %s: ERR=%s\n"),
+         logw(cntr, "Unable to set file modes %s: ERR=%s",
             path, be.bstrerror());
          ok = false;
       }
 
-      if(set_file_times(path, &ut)) ok=false;
+      if(set_file_times(path, &ut, cntr)) ok=false;
 #ifdef HAVE_CHFLAGS
       /*
        * FreeBSD user flags
@@ -243,7 +244,7 @@ bool set_attributes(const char *path, char cmd, struct stat *statp, int64_t wina
        */
       if (chflags(path, statp->st_flags) < 0) {
          berrno be;
-         fprintf(stderr, _("Unable to set file flags %s: ERR=%s\n"),
+         logw(cntr, "Unable to set file flags %s: ERR=%s",
             path, be.bstrerror());
          ok = false;
       }

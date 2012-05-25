@@ -5,6 +5,8 @@
     included with the burp source.
   * Make top level excludes not be a fatal error.
   * Make syslogging begin sooner.
+  * Unhide warning messages hidden by bacula when setting things like file
+    times.
 
 2012-04-27 Changes in burp-1.3.4:
   * Bug fix for Windows backups where it had stopped using the Windows backup

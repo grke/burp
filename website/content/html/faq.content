@@ -326,6 +326,83 @@ A. There is documentation <A HREF="/txt/burp_ca.txt">here</A>.
 </FONT>
 </P>
 
+<HR>
+
+<P>
+<FONT COLOR="#99CCFF">
+Q. Can you use librsync to do rsync feature X?
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">
+A. No, rsync has nothing to do with librsync other than them both using the
+same algorithm. Put another way, rsync does not use librsync. 
+</FONT>
+</P>
+
+<HR>
+
+<P>
+<FONT COLOR="#99CCFF">
+Q. What is the purpose of the shuffle operation at the end of the backup?
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">
+A. Once all the files and bits of files have been transferred to the server,
+it needs to assemble them into the final backup.<BR>
+By default, this includes hardlinking files that haven't changed since the
+immediately previous backup into place, patching the ones that have changed
+with the new deltas, generating reverse deltas to be able to recreate the
+previous files that change, and deleting the files that changed from the
+previous backup.
+</FONT>
+</P>
+
+<HR>
+
+<P>
+<FONT COLOR="#99CCFF">
+Q. Is there a way to speed up this process?
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">
+A. Yes, you can stop it from generating the reverse deltas and deleting the
+original files by setting hardlinked_archive=1, which means that a complete
+copy of every version of each file will be kept. This also has the benefit of
+speeding up restores for older backups, because no reverse deltas need to be
+applied, but it has the disadvantage of taking up more disk space.
+<BR>
+You can also set librsync=0, which turns off librsync so that, if a file has
+changed, the whole file is transferred from the client. This means that
+deltas don't have to be applied to the previously backed up files. So, if the
+speed of your network beats the speed of being able to apply deltas, you might
+want to set librsync=0.
+<BR>
+You can set both those options globally in the server burp.conf, or for
+individual clients in the server clientconfdir files.
+</FONT>
+</P>
+
+<HR>
+
+<P>
+<FONT COLOR="#99CCFF">
+Q. I have more questions about shuffling, librsync=[0|1] and
+hardlinked_archive=[0|1].
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">
+A. Perhaps the man page, or <A HREF="/txt/shuffling.txt">this file</A> can help
+you.
+</FONT>
+</P>
 
 </TD>
 </TR>

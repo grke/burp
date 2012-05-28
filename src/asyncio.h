@@ -53,4 +53,6 @@ extern void settimers(int sec, int usec);
 // should be in src/lib/log.c
 int logw(struct cntr *cntr, const char *fmt, ...);
 
+extern int set_bulk_packets(void);
+
 #endif // _ASYNC_ROUTINES_H

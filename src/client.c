@@ -211,6 +211,10 @@ static int do_client(struct config *conf, enum action act)
 	if((ret=async_init(rfd, ssl, conf, act==ACTION_ESTIMATE)))
 		goto end;
 
+	// Set quality of service bits on backup packets.
+	if(act==ACTION_BACKUP || act==ACTION_BACKUP_TIMED)
+		set_bulk_packets();
+
 	if(act!=ACTION_ESTIMATE)
 	{
 		char cmd;
@@ -343,6 +347,7 @@ static int do_client(struct config *conf, enum action act)
 			phase1str="backupphase1timed";
 		case ACTION_BACKUP:
 		{
+			// Set bulk packets quality of service flags on backup.
 			if(incexc)
 			{
 				logp("Server is overriding the configuration\n");

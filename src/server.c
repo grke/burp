@@ -790,6 +790,8 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 	  && !strncmp(buf, "backupphase1", strlen("backupphase1")))
 	{
 		int resume=0;
+		// Set quality of service bits on backups.
+		set_bulk_packets();
 		if(get_lock_and_clean(basedir, lockbasedir, lockfile, current,
 			working, currentdata,
 			finishing, TRUE, gotlock, cconf,

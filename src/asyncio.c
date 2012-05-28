@@ -8,6 +8,13 @@
 #include "ssl.h"
 #include "sbuf.h"
 
+/* For IPTOS / IPTOS_THROUGHPUT */
+#ifdef HAVE_WIN32
+#include <ws2tcpip.h>
+#else
+#include <netinet/ip.h>
+#endif
+
 static int fd=-1;
 static SSL *ssl=NULL;
 static float ratelimit=0;
@@ -242,6 +249,22 @@ int async_init(int afd, SSL *assl, struct config *conf, int estimate)
 		return -1;
 	return 0;
 
+}
+
+int set_bulk_packets(void)
+{
+#if defined(IP_TOS) && defined(IPTOS_THROUGHPUT)
+	int opt=IPTOS_THROUGHPUT;
+	if(fd<0) return -1;
+logp("doing TOS\n");
+	if(setsockopt(fd, IPPROTO_IP, IP_TOS, (char *) &opt, sizeof(opt))<0)
+	{
+		logp("Error: setsockopt IPTOS_THROUGHPUT: %s\n",
+			strerror(errno));
+		return -1;
+	}
+#endif
+	return 0;
 }
 
 void async_free(void)

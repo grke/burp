@@ -256,7 +256,6 @@ int set_bulk_packets(void)
 #if defined(IP_TOS) && defined(IPTOS_THROUGHPUT)
 	int opt=IPTOS_THROUGHPUT;
 	if(fd<0) return -1;
-logp("doing TOS\n");
 	if(setsockopt(fd, IPPROTO_IP, IP_TOS, (char *) &opt, sizeof(opt))<0)
 	{
 		logp("Error: setsockopt IPTOS_THROUGHPUT: %s\n",

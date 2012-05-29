@@ -1,4 +1,4 @@
-Format: http://dep.debian.net/deps/dep5
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: burp
 Source: http://burp.grke.net/
 Upstream-Contact: Graham Keeling <keeling@spamcop.net>
@@ -340,5 +340,5 @@ License: GPL-2+
    along with this package; if not, write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston,MA 02110-1301, USA.
  .
  On Debian GNU/Linux systems, the complete text of the GNU General
- Public License can be found in `/usr/share/common-licenses/GPL'.
+ Public License can be found in `/usr/share/common-licenses/GPL-2'.
 

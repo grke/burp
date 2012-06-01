@@ -105,6 +105,8 @@ int ca_client_setup(struct config *conf, struct cntr *p1cntr)
 	size_t len=0;
 	char *buf=NULL;
 	char csr_path[256]="";
+	char ssl_cert_tmp[512]="";
+	char ssl_cert_ca_tmp[512]="";
 	struct stat statp;
 
 	// Do not continue if we have none of the following things set.
@@ -160,11 +162,20 @@ int ca_client_setup(struct config *conf, struct cntr *p1cntr)
 	// Then copy the csr to the server.
 	if(send_a_file(csr_path, p1cntr)) goto end;
 
+	snprintf(ssl_cert_tmp, sizeof(ssl_cert_tmp), "%s.%d",
+		conf->ssl_cert, getpid());
+	snprintf(ssl_cert_ca_tmp, sizeof(ssl_cert_ca_tmp), "%s.%d",
+		conf->ssl_cert_ca, getpid());
+
 	// The server will then sign it, and give it back.
-	if(receive_a_file(conf->ssl_cert, p1cntr)) goto end;
+	if(receive_a_file(ssl_cert_tmp, p1cntr)) goto end;
 
 	// The server will also send the CA certificate.
-	if(receive_a_file(conf->ssl_cert_ca, p1cntr)) goto end;
+	if(receive_a_file(ssl_cert_ca_tmp, p1cntr)) goto end;
+
+	if(do_rename(ssl_cert_tmp, conf->ssl_cert)
+	  || do_rename(ssl_cert_ca_tmp, conf->ssl_cert_ca))
+		goto end;
 
 	// Need to rewrite our configuration file to contain the server
 	// name (ssl_peer_cn)
@@ -182,6 +193,8 @@ end:
 		unlink(conf->ssl_key);
 		unlink(conf->ssl_cert);
 		unlink(conf->ssl_cert_ca);
+		unlink(ssl_cert_tmp);
+		unlink(ssl_cert_ca_tmp);
 	}
 	return ret;
 }

@@ -1,4 +1,6 @@
   * Escape '-' symbols in man pages.
+  * Save received certs as temporary files and then rename them, to avoid
+    accidently truncating the current ones.
 
 2012-05-28 Changes in burp-1.3.6:
   * Store files in a directory structure like that of the original client.

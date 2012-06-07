@@ -1,5 +1,6 @@
   * Fix bug introduced in the new storage directory structure stuff that had
     the potential to corrupt backups.
+  * Force directory_tree = 0 for clients on less than version 1.3.6.
   * Escape '-' symbols in man pages.
   * Save received certs as temporary files and then rename them, to avoid
     accidently truncating the current ones.

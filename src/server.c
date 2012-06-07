@@ -1047,13 +1047,22 @@ static int extra_comms(const char *client, const char *cversion, char **incexc, 
 	long cli_ver=0;
 	long ser_ver=0;
 	long feat_list_ver=0;
+	long directory_tree_ver=0;
 	char *restorepath=NULL;
 
 	if((min_ver=version_to_long("1.2.7"))<0
 	 || (cli_ver=version_to_long(cversion))<0
 	 || (ser_ver=version_to_long(VERSION))<0
-	 || (feat_list_ver=version_to_long("1.3.0"))<0)
+	 || (feat_list_ver=version_to_long("1.3.0"))<0
+	 || (directory_tree_ver=version_to_long("1.3.6"))<0)
 		return -1;
+
+	if(cli_ver < directory_tree_ver)
+	{
+		conf->directory_tree=0;
+		cconf->directory_tree=0;
+	}
+
 	// Clients before 1.2.7 did not know how to do extra comms, so skip
 	// this section for them.
 	if(cli_ver < min_ver) return 0;

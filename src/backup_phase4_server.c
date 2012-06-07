@@ -254,7 +254,6 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 	}
 	else if(!lstat(deltafpath, &statp) && S_ISREG(statp.st_mode))
 	{
-		char *cp=NULL;
 		char *infpath=NULL;
 
 		// Got a forward patch to do.
@@ -262,20 +261,13 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 		// otherwise the librsync patch will take
 		// forever, because it will be doing seeks
 		// all over the place, and gzseeks are slow.
-
-		if(!(infpath=strdup(deltafpath)))
+	  	if(!(infpath=prepend_s(deltafdir,
+			"inflate", strlen("inflate"))))
 		{
 			logp("out of memory\n");
 			ret=-1;
 			goto cleanup;
 		}
-		else if(!(cp=strrchr(infpath, '.')))
-		{
-			logp("could not strip the suffix from '%s'\n", infpath);
-			ret=-1;
-			goto cleanup;
-		}
-		*cp='\0';
 
 		//logp("Fixing up: %s\n", datapth);
 		if(inflate_or_link_oldfile(oldpath, infpath, compression, cconf))

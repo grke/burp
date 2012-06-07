@@ -1,3 +1,5 @@
+  * Fix bug introduced in the new storage directory structure stuff that had
+    the potential to corrupt backups.
   * Escape '-' symbols in man pages.
   * Save received certs as temporary files and then rename them, to avoid
     accidently truncating the current ones.

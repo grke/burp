@@ -253,25 +253,44 @@ static void quint_print(const char *msg, unsigned long long a, unsigned long lon
 {
 	switch(form)
 	{
+		/* Windows has awful difficultly printf-ing more than one
+		   '%llu' type thing at a time, sometimes segfaulting,
+		   so split them all up. */
 		case FORMAT_SERVER:
 			if(!d && !a && !b && !c) return;
-			logc("% 22s % 9llu % 9llu % 9llu % 9llu |% 9llu\n",
-				msg, a, b, c, a+b+c, d);
+			logc("% 22s ", msg);
+			logc("% 9llu ", a);
+			logc("% 9llu ", b);
+			logc("% 9llu ", c);
+			logc("% 9llu |", a+b+c);
+			logc("% 9llu\n", d);
 			break;
 		case FORMAT_CLIENT_DATA:
 			if(!d && !a && !b && !c) return;
-			logc("% 22s % 9llu % 9llu % 9s % 9llu |% 9llu\n",
-				msg, a, b, "-", a+b+c, d);
+			logc("% 22s ", msg);
+			logc("% 9llu ", a);
+			logc("% 9llu ", b);
+			logc("% 9s ", "-");
+			logc("% 9llu |", a+b+c);
+			logc("% 9llu\n", d);
 			break;
 		case FORMAT_CLIENT_NODE:
 			if(!d && !a && !b && !c) return;
-			logc("% 22s % 9s % 9s % 9s % 9s |% 9llu\n",
-				msg, "-", "-", "-", "-", d);
+			logc("% 22s ", msg);
+			logc("% 9s ", "-");
+			logc("% 9s ", "-");
+			logc("% 9s ", "-");
+			logc("% 9s |", "-");
+			logc("% 9llu\n", d);
 			break;
 		case FORMAT_CLIENT_RESTORE:
 			if(!d && !a && !b && !c) return;
-			logc("% 22s % 9s % 9s % 9s % 9llu |% 9s\n",
-				msg, "-", "-", "-", c, "-");
+			logc("% 22s ", msg);
+			logc("% 9s ", "-");
+			logc("% 9s ", "-");
+			logc("% 9s ", "-");
+			logc("% 9llu |", d);
+			logc("% 9s\n", "-");
 			break;
 	}
 }
@@ -287,17 +306,17 @@ static void bottom_part(struct cntr *a, struct cntr *b, enum action act)
 	logc("             Warnings:   % 11llu\n",
 		b->warning + a->warning);
 	logc("\n");
-	logc("      Bytes estimated:   % 11llu%s\n",
-		a->byte, bytes_to_human(a->byte));
+	logc("      Bytes estimated:   % 11llu", a->byte);
+	logc("%s\n", bytes_to_human(a->byte));
 
 	if(act==ACTION_ESTIMATE) return;
 
-	logc("      Bytes in backup:   % 11llu%s\n",
-		b->byte, bytes_to_human(b->byte));
-	logc("       Bytes received:   % 11llu%s\n",
-		b->recvbyte, bytes_to_human(b->recvbyte));
-	logc("           Bytes sent:   % 11llu%s\n",
-		b->sentbyte, bytes_to_human(b->sentbyte));
+	logc("      Bytes in backup:   % 11llu", b->byte);
+	logc("%s\n", bytes_to_human(b->byte));
+	logc("       Bytes received:   % 11llu", b->recvbyte);
+	logc("%s\n", bytes_to_human(b->recvbyte));
+	logc("           Bytes sent:   % 11llu", b->sentbyte);
+	logc("%s\n", bytes_to_human(b->sentbyte));
 }
 
 void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act, int client)

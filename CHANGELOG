@@ -4,6 +4,9 @@
   * Escape '-' symbols in man pages.
   * Save received certs as temporary files and then rename them, to avoid
     accidently truncating the current ones.
+  * If Windows VSS snapshot fails, do not continue.
+  * 32bit mingw64 has difficulty printf-ing multiple %llu items and sometimes
+    even segfaults, so split the counters into individual printfs.
 
 2012-05-28 Changes in burp-1.3.6:
   * Store files in a directory structure like that of the original client.

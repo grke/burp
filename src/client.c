@@ -82,7 +82,7 @@ static int do_backup_client(struct config *conf, int resume, int estimate, struc
 	win32_enable_backup_privileges(1 /* ignore_errors */);
 #endif
 #if defined(WIN32_VSS)
-	win32_start_vss(conf);
+	if((ret=win32_start_vss(conf))) return ret;
 #endif
 
 	// Scan the file system and send the results to the server.

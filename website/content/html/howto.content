@@ -275,9 +275,9 @@ SERVER CONFIGURATION FILE OPTIONS
 	      Path to the directory in which to store backups.
 
        directory_tree=[0|1]
-	      When turned on (which is the  default),  the  structure  of  the
-	      storage  directory will mimic that of the original filesystem on
-	      the client.
+	      When turned on (which is the default) and the client is on  ver‐
+	      sion  1.3.6  or  greater, the structure of the storage directory
+	      will mimic that of the original filesystem on the client.
 
        timestamp_format=[strftime format]
 	      This allows you to tweak the format of the timestamps  of  indi‐

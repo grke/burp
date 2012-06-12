@@ -413,7 +413,7 @@ static void blank_screen(int row, int col)
 	if(actg==ACTION_STATUS)
 	{
 		char v[32]="";
-		for(c=0; c<row; c++) print_line("", c, col);
+		clear();
 		snprintf(v, sizeof(v), " burp monitor %s", VERSION);
 		mvprintw(0, 0, v);
 		mvprintw(0, col-l-1, date);
@@ -746,6 +746,7 @@ int status_client_ncurses(struct config *conf, enum action act, const char *scli
 				ret=-1;
 				break;
 			}
+			continue;
 		}
 
 		if(FD_ISSET(fd, &fse))

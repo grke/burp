@@ -287,10 +287,10 @@ AC_DEFINE_UNQUOTED(SYSCONFDIR, "$sysconfdir")
 AC_DEFINE_UNQUOTED(LOCALEDIR, "$localedir") 
 
 dnl ------------------------------------------------------------------
-dnl If the user has not set --sbindir, we set our default as /sbin
+dnl If the user has not set --sbindir, we set our default as /usr/sbin
 dnl ------------------------------------------------------------------
 if test x$sbindir = x'${exec_prefix}/sbin' ; then
-   sbindir=${exec_prefix}/sbin
+   sbindir=${exec_prefix}/usr/sbin
 fi
 sbindir=`eval echo ${sbindir}`
 

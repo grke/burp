@@ -1,3 +1,4 @@
+  * Added tcheneau's IPv6 fixes.
   * Fixed bug to do with directory_tree=1 that would stop resume working.
   * Stop status monitor exiting on terminal resize.
 

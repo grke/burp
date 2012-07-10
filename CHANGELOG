@@ -1,6 +1,7 @@
   * Added tcheneau's IPv6 fixes.
   * Fixed bug to do with directory_tree=1 that would stop resume working.
   * Stop status monitor exiting on terminal resize.
+  * Small man page corrections about overwriting existing files.
 
 2012-06-08 Changes in burp-1.3.8:
   * Fix bug introduced in the new storage directory structure stuff that had

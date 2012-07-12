@@ -179,11 +179,11 @@ void decode_stat(const char *buf, struct stat *statp, int64_t *winattr, int *com
 static int set_file_times(const char *path, struct utimbuf *ut, struct stat *statp, struct cntr *cntr)
 {
 	int e;
-// The mingw64 utime() appears not to work on directories.
+// The mingw64 utime() appears not to work on read-only files.
 // Use the utime() from bacula instead.
 #ifdef HAVE_WIN32
-	if(S_ISDIR(statp->st_mode)) e=win32_utime(path, ut);
-	else e=utime(path, ut);
+	//e=utime(path, ut);
+	e=win32_utime(path, ut);
 #else
 	e=utime(path, ut);
 #endif

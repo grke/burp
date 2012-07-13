@@ -686,7 +686,7 @@ end:
 	return ret;
 }
 
-static int get_lock_and_clean(const char *basedir, const char *lockbasedir, const char *lockfile, const char *current, const char *working, const char *currentdata, const char *finishing, bool cancel, char **gotlock, struct config *cconf, const char *forward, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *manifest, const char *client, struct cntr *p1cntr, struct cntr *cntr, int *resume, const char *incexc)
+static int get_lock_and_clean(const char *basedir, const char *lockbasedir, const char *lockfile, const char *current, const char *working, const char *currentdata, const char *finishing, char **gotlock, struct config *cconf, const char *forward, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *manifest, const char *client, struct cntr *p1cntr, struct cntr *cntr, int *resume, const char *incexc)
 {
 	int ret=0;
 	char *copy=NULL;
@@ -702,22 +702,19 @@ static int get_lock_and_clean(const char *basedir, const char *lockbasedir, cons
 
 	if(get_lock(lockfile))
 	{
-		if(cancel)
+		struct stat statp;
+		if(!lstat(finishing, &statp))
 		{
-			struct stat statp;
-			if(!lstat(finishing, &statp))
-			{
-				char msg[256]="";
-				logp("finalising previous backup\n");
-				snprintf(msg, sizeof(msg), "Finalising previous backup of client. Please try again later.");
-				async_write_str(CMD_ERROR, msg);
-			}
-			else
-			{
-				logp("another instance of client is already running,\n");
-				logp("or %s is not writable.\n", lockfile);
-				async_write_str(CMD_ERROR, "another instance is already running");
-			}
+			char msg[256]="";
+			logp("finalising previous backup\n");
+			snprintf(msg, sizeof(msg), "Finalising previous backup of client. Please try again later.");
+			async_write_str(CMD_ERROR, msg);
+		}
+		else
+		{
+			logp("another instance of client is already running,\n");
+			logp("or %s is not writable.\n", lockfile);
+			async_write_str(CMD_ERROR, "another instance is already running");
 		}
 		ret=-1;
 	}
@@ -817,7 +814,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 		set_bulk_packets();
 		if(get_lock_and_clean(basedir, lockbasedir, lockfile, current,
 			working, currentdata,
-			finishing, TRUE, gotlock, cconf,
+			finishing, gotlock, cconf,
 			forward, phase1data, phase2data, unchangeddata,
 			manifest, client, p1cntr, cntr, &resume, incexc))
 				ret=-1;
@@ -932,7 +929,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 
 		if(get_lock_and_clean(basedir, lockbasedir, lockfile,
 			current, working,
-			currentdata, finishing, TRUE, gotlock, cconf,
+			currentdata, finishing, gotlock, cconf,
 			forward, phase1data, phase2data, unchangeddata,
 			manifest, client, p1cntr, cntr, &resume, incexc))
 				ret=-1;
@@ -973,7 +970,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 		int resume=0; // ignored
 		if(get_lock_and_clean(basedir, lockbasedir, lockfile,
 			current, working,
-			currentdata, finishing, FALSE, gotlock, cconf,
+			currentdata, finishing, gotlock, cconf,
 			forward, phase1data, phase2data, unchangeddata,
 			manifest, client, p1cntr, cntr, &resume, incexc))
 				ret=-1;

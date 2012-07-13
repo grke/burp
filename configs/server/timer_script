@@ -86,10 +86,18 @@ get_intervals()
 	fi
 
 	min_timesecs=$((secs+intervalsecs))
-	if ! min_time=$(LANG=C date -d @$min_timesecs +"%Y-%m-%d %H:%M:%S")
+
+	# GNU coreutils 'date' command should accept the following (even
+	# slightly old versions).
+	if ! min_time=$(LANG=C date -d "Jan 1, 1970 00:00:00 +0000 + $min_timesecs seconds" +"%Y-%m-%d %H:%M:%S")
 	then
-		echo "$0: Date command returned error for $client."
-		return 0
+		# FreeBSD 'date' will return an error with the above, so try
+		# a version that FreeBSD 'date' should be happy with.
+		if ! min_time=$(LANG=C date -r $min_timesecs +"%Y-%m-%d %H:%M:%S")
+		then
+			echo "$0: Date command returned error for $client."
+			return 0
+		fi
 	fi
 
 	echo "Last backup: $ts"

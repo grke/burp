@@ -391,7 +391,7 @@ SERVER CONFIGURATION FILE OPTIONS
 
        client_can_list=[0|1]
 	      Turn  this  off to prevent clients from listing backups with the
-	      '-a l' option. The default is that clients can force backups.
+	      '-a l' option. The default is that clients can list backups.
 
        client_can_restore=[0|1]
 	      Turn this off to prevent clients from initiating	restores  with

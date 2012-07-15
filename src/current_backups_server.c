@@ -13,7 +13,6 @@
 
 #include <netdb.h>
 #include <librsync.h>
-#include <regex.h>
 #include <math.h>
 
 int recursive_hardlink(const char *src, const char *dst, const char *client, struct cntr *p1cntr, struct cntr *cntr, struct config *conf)
@@ -670,31 +669,6 @@ int remove_old_backups(const char *basedir, struct config *cconf, const char *cl
 			break;
 	}
 	return 0;
-}
-
-int compile_regex(regex_t **regex, const char *str)
-{
-	if(str && *str)
-	{
-		if(!(*regex=(regex_t *)malloc(sizeof(regex_t)))
-		  || regcomp(*regex, str, REG_EXTENDED))
-		{
-			log_and_send("unable to compile regex\n");
-			return -1;
-		}
-	}
-	return 0;
-}
-
-int check_regex(regex_t *regex, const char *buf)
-{
-	if(!regex) return 1;
-	switch(regexec(regex, buf, 0, NULL, 0))
-	{
-		case 0: return 1;
-		case REG_NOMATCH: return 0;
-		default: return 0;
-	}
 }
 
 /* Need to base librsync block length on the size of the old file, otherwise

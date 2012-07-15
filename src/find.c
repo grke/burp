@@ -4,6 +4,7 @@
 #include "log.h"
 #include "asyncio.h"
 #include "handy.h"
+#include "regexp.h"
 #include "backup_phase1_client.h"
 #ifdef HAVE_DARWIN_OS
 #include <sys/param.h>
@@ -201,6 +202,30 @@ static int in_exclude_ext(struct strlist **excext, int excount, const char *fnam
 	for(i=0; i<excount; i++)
 		if(!strcasecmp(excext[i]->path, cp+1))
 			return 1;
+	return 0;
+}
+
+/* Return 1 to include the file, 0 to exclude it. */
+int in_include_re(struct strlist **incre, int ircount, const char *fname)
+{
+	int i;
+	for(i=0; i<ircount; i++)
+	{
+		if (check_regex(incre[i]->re, fname))
+		return 1;
+	}
+	return 0;
+}
+
+
+int in_exclude_re(struct strlist **excre, int ercount, const char *fname)
+{
+	int i;
+	for(i=0; i<ercount; i++)
+        {
+		if (check_regex(excre[i]->re, fname))
+		return 1;
+	}
 	return 0;
 }
 
@@ -874,16 +899,24 @@ find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
 		ff_pkt->linked=NULL;
 	}
 
+	if(S_ISDIR(ff_pkt->statp.st_mode))
+		return found_directory(ff_pkt,
+		conf, cntr, fname, parent_device, top_level, &restore_times);
+
+	if(!in_include_re(conf->incre, conf->ircount, fname))
+		return 0;
+
+
+	if(in_exclude_re(conf->excre, conf->ercount, fname))
+		return 0;
+
 	/* This is not a link to a previously dumped file, so dump it.  */
 	if(S_ISREG(ff_pkt->statp.st_mode))
 		return found_regular_file(ff_pkt,
 	conf, cntr, fname, top_level, &restore_times);
 		else if(S_ISLNK(ff_pkt->statp.st_mode))
 	return found_soft_link(ff_pkt, conf, cntr, fname, top_level);
-		else if(S_ISDIR(ff_pkt->statp.st_mode))
-	return found_directory(ff_pkt,
-		conf, cntr, fname, parent_device, top_level, &restore_times);
-
+		else
 	return found_other(ff_pkt, conf, cntr, fname, top_level);
 }
 

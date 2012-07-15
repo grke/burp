@@ -753,6 +753,10 @@ INCLUDES / EXCLUDES
 	      lines.  Use  forward  slashes  '/',  not backslashes '\' as path
 	      delimiters.
 
+       include_re=[string]
+	      Only include file match the regular expression and found in the
+	      paths found in the include keys.
+
        exclude=[path]
 	      Path to exclude from the backup. You can have  multiple  exclude
 	      lines.  Use  forward  slashes  '/',  not backslashes '\' as path
@@ -769,6 +773,12 @@ INCLUDES / EXCLUDES
 	      Extensions to exclude from the backup. Case insensitive. You can
 	      have multiple exclude extension lines. For example, set 'vdi' to
 	      exclude VirtualBox disk images.
+
+	exclude_re=[string]
+	      Exclude from the backup path that match the regular expression.
+	      For example, use /\.cache/ to exclude all the path with a .cache
+	      within.
+
 
        exclude_fs=[fstype]
 	      File systems to exclude from the backup. Case  insensitive.  You

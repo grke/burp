@@ -9,6 +9,7 @@
 #include "counter.h"
 #include "dpth.h"
 #include "sbuf.h"
+#include "regexp.h"
 #include "current_backups_server.h"
 #include "restore_server.h"
 

@@ -9,6 +9,7 @@
 # include=/home
 # exclude=/home/dontwant
 # exclude_ext=vdi
+# exclude_re=\.cache
 # exclude_fs=tmpfs
 # min_file_size=0
 # max_file_size=0

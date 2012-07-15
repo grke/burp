@@ -5,6 +5,7 @@
 #include "msg.h"
 #include "strlist.h"
 #include "prepend.h"
+#include "regexp.h"
 
 /* Init only stuff related to includes/excludes.
    This is so that the server can override them all on the client. */
@@ -16,6 +17,8 @@ static void init_incexcs(struct config *conf)
 	conf->nobackup=NULL; conf->nbcount=0;
 	conf->incext=NULL; conf->incount=0; // include extensions
 	conf->excext=NULL; conf->excount=0; // exclude extensions
+	conf->incre=NULL; conf->ircount=0; // include (regular expression)
+	conf->excre=NULL; conf->ercount=0; // include (regular expression)
 	conf->excfs=NULL; conf->exfscount=0; // exclude filesystems
 	conf->fifos=NULL; conf->ffcount=0;
 	conf->blockdevs=NULL; conf->bdcount=0;
@@ -37,6 +40,8 @@ static void free_incexcs(struct config *conf)
 	strlists_free(conf->nobackup, conf->nbcount);
 	strlists_free(conf->incext, conf->incount); // include extensions
 	strlists_free(conf->excext, conf->excount); // exclude extensions
+	strlists_free(conf->incre, conf->ircount); // include (regular expression)
+	strlists_free(conf->excre, conf->ercount); // exclude (regular expression)
 	strlists_free(conf->excfs, conf->exfscount); // exclude filesystems
 	strlists_free(conf->fifos, conf->ffcount);
 	strlists_free(conf->blockdevs, conf->bdcount);
@@ -474,6 +479,18 @@ static void do_strlist_sort(struct strlist **list, int count, struct strlist ***
 	*dest=list;
 }
 
+static void do_build_regex(struct strlist **list, int count, struct strlist ***dest)
+{
+	int i;
+	for(i=0; i<count; i++)
+	{
+		*dest=list;
+		compile_regex(&(list[i]->re), list[i]->path);
+        }
+
+}
+
+
 #ifdef HAVE_LINUX_OS
 struct fstype
 {
@@ -558,6 +575,8 @@ struct llists
 	struct strlist **bdlist; // blockdevs to read
 	struct strlist **inlist; // include extensions
 	struct strlist **exlist; // exclude extensions
+	struct strlist **irlist; // include (regular expression)
+	struct strlist **erlist; // exclude (regular expression)
 	struct strlist **exfslist; // exclude filesystems
 	struct strlist **talist;
 	struct strlist **nslist;
@@ -723,6 +742,10 @@ static int load_config_strings(struct config *conf, const char *field, const cha
 		NULL, &(conf->incount), &(l->inlist), 0)) return -1;
 	if(get_conf_val_args(field, value, "exclude_ext", NULL,
 		NULL, &(conf->excount), &(l->exlist), 0)) return -1;
+	if(get_conf_val_args(field, value, "include_re", NULL,
+		NULL, &(conf->ircount), &(l->irlist), 0)) return -1;
+	if(get_conf_val_args(field, value, "exclude_re", NULL,
+		NULL, &(conf->ercount), &(l->erlist), 0)) return -1;
 	if(get_conf_val_args(field, value, "exclude_fs", NULL,
 		NULL, &(conf->exfscount), &(l->exfslist), 0)) return -1;
 	if(get_conf_val(field, value, "timer_script", &(conf->timer_script)))
@@ -1116,6 +1139,10 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 	do_strlist_sort(l->inlist, conf->incount, &(conf->incext));
 	// exclude extensions
 	do_strlist_sort(l->exlist, conf->excount, &(conf->excext));
+	// include (regular expression)
+	do_build_regex(l->irlist, conf->ircount, &(conf->incre));
+	// exclude (regular expression)
+	do_build_regex(l->erlist, conf->ercount, &(conf->excre));
 	// exclude filesystems
 	do_strlist_sort(l->exfslist, conf->exfscount, &(conf->excfs));
 	do_strlist_sort(l->fflist, conf->ffcount, &(conf->fifos));

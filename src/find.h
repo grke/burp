@@ -119,6 +119,8 @@ int file_is_included(struct strlist **ielist, int iecount,
 	struct strlist **incext, int incount,
 	struct strlist **excext, int excount, const char *fname,
 	bool top_level);
+int in_include_re(struct strlist **incre, int incount, const char *fname);
+int in_exclude_re(struct strlist **excre, int excount, const char *fname);
 
 /* from attribs.c */
 void encode_stat(char *buf, struct stat *statp, int64_t winattr, int compression);

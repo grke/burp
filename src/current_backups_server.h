@@ -26,8 +26,6 @@ extern int write_timestamp(const char *timestamp, const char *tstmp);
 extern int compress_file(const char *current, const char *file, struct config *cconf);
 extern int compress_filename(const char *d, const char *file, const char *zfile, struct config *cconf);
 extern int remove_old_backups(const char *basedir, struct config *cconf, const char *client);
-extern int compile_regex(regex_t **regex, const char *str);
-extern int check_regex(regex_t *regex, const char *buf);
 extern size_t get_librsync_block_len(const char *endfile);
 extern int do_link(const char *oldpath, const char *newpath, struct stat *statp, struct config *conf);
 

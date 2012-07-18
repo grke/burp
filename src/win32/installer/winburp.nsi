@@ -190,6 +190,8 @@ Function .onInit
 
   File "/oname=$PLUGINSDIR\libeay32.dll" "${SRC_DIR}\libeay32.dll"
   File "/oname=$PLUGINSDIR\ssleay32.dll" "${SRC_DIR}\ssleay32.dll"
+  File "/oname=$PLUGINSDIR\libpcre-1.dll" "${SRC_DIR}\libpcre-1.dll"
+  File "/oname=$PLUGINSDIR\libpcreposix-0.dll" "${SRC_DIR}\libpcreposix-0.dll"
 
   !InsertMacro MUI_INSTALLOPTIONS_EXTRACT "ConfigPage1.ini"
   !InsertMacro MUI_INSTALLOPTIONS_EXTRACT "ConfigPage2.ini"
@@ -235,6 +237,8 @@ Function InstallCommonFiles
     File "${SRC_DIR}\libeay32.dll"
     File "${SRC_DIR}\ssleay32.dll"
 
+    File "${SRC_DIR}\libpcreposix-0.dll"
+    File "${SRC_DIR}\libpcre-1.dll"
     File "${SRC_DIR}\zlib1.dll"
     File "${SRC_DIR}\libgcc_s_sjlj-1.dll"
 

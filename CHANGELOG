@@ -1,4 +1,4 @@
-  * Added tcheneau's IPv6 fixes.
+  * Added Tony Cheneau's IPv6 fixes.
   * Fixed bug to do with directory_tree=1 that would stop resume working.
   * Stop status monitor exiting on terminal resize.
   * Small man page corrections about overwriting existing files.
@@ -7,6 +7,11 @@
   * Tweak to timer_script to let it run with slightly older versions of 'date',
     plus the FreeBSD version of 'date'.
   * "burp -a l" should say that a backup is finalising.
+  * Upgraded Windows to gcc-4.6.3.
+  * Upgraded Windows to zlib-1.2.7.
+  * Upgraded Windows to openssl-1.0.0j.
+  * Added pcre-8.31 to Windows.
+  * Added Gonéri Le Bouder's exclude_regex option.
 
 2012-06-08 Changes in burp-1.3.8:
   * Fix bug introduced in the new storage directory structure stuff that had

@@ -17,8 +17,8 @@ static void init_incexcs(struct config *conf)
 	conf->nobackup=NULL; conf->nbcount=0;
 	conf->incext=NULL; conf->incount=0; // include extensions
 	conf->excext=NULL; conf->excount=0; // exclude extensions
-	conf->incre=NULL; conf->ircount=0; // include (regular expression)
-	conf->excre=NULL; conf->ercount=0; // include (regular expression)
+	conf->increg=NULL; conf->ircount=0; // include (regular expression)
+	conf->excreg=NULL; conf->ercount=0; // include (regular expression)
 	conf->excfs=NULL; conf->exfscount=0; // exclude filesystems
 	conf->fifos=NULL; conf->ffcount=0;
 	conf->blockdevs=NULL; conf->bdcount=0;
@@ -40,8 +40,8 @@ static void free_incexcs(struct config *conf)
 	strlists_free(conf->nobackup, conf->nbcount);
 	strlists_free(conf->incext, conf->incount); // include extensions
 	strlists_free(conf->excext, conf->excount); // exclude extensions
-	strlists_free(conf->incre, conf->ircount); // include (regular expression)
-	strlists_free(conf->excre, conf->ercount); // exclude (regular expression)
+	strlists_free(conf->increg, conf->ircount); // include (regular expression)
+	strlists_free(conf->excreg, conf->ercount); // exclude (regular expression)
 	strlists_free(conf->excfs, conf->exfscount); // exclude filesystems
 	strlists_free(conf->fifos, conf->ffcount);
 	strlists_free(conf->blockdevs, conf->bdcount);
@@ -742,9 +742,9 @@ static int load_config_strings(struct config *conf, const char *field, const cha
 		NULL, &(conf->incount), &(l->inlist), 0)) return -1;
 	if(get_conf_val_args(field, value, "exclude_ext", NULL,
 		NULL, &(conf->excount), &(l->exlist), 0)) return -1;
-	if(get_conf_val_args(field, value, "include_re", NULL,
+	if(get_conf_val_args(field, value, "include_regex", NULL,
 		NULL, &(conf->ircount), &(l->irlist), 0)) return -1;
-	if(get_conf_val_args(field, value, "exclude_re", NULL,
+	if(get_conf_val_args(field, value, "exclude_regex", NULL,
 		NULL, &(conf->ercount), &(l->erlist), 0)) return -1;
 	if(get_conf_val_args(field, value, "exclude_fs", NULL,
 		NULL, &(conf->exfscount), &(l->exfslist), 0)) return -1;
@@ -1140,9 +1140,9 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 	// exclude extensions
 	do_strlist_sort(l->exlist, conf->excount, &(conf->excext));
 	// include (regular expression)
-	do_build_regex(l->irlist, conf->ircount, &(conf->incre));
+	do_build_regex(l->irlist, conf->ircount, &(conf->increg));
 	// exclude (regular expression)
-	do_build_regex(l->erlist, conf->ercount, &(conf->excre));
+	do_build_regex(l->erlist, conf->ercount, &(conf->excreg));
 	// exclude filesystems
 	do_strlist_sort(l->exfslist, conf->exfscount, &(conf->excfs));
 	do_strlist_sort(l->fflist, conf->ffcount, &(conf->fifos));

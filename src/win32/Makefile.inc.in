@@ -87,6 +87,9 @@ LIBS_CRYPTO := \
 LIBS_RSYNC := \
 	$(DEPKGS)/lib/librsync.a
 
+LIBS_PCRE := \
+	$(DEPKGS)/lib/libpcreposix.dll.a
+
 LIBS_BURP := \
 	$(LIBDIR)/libburp.a
 
@@ -95,3 +98,4 @@ HAVES := \
 	-DHAVE_ZLIB_H \
 	-DHAVE_LIBZ \
 	-DHAVE_OPENSSL \
+	-DHAVE_PCREPOSIX \

@@ -65,8 +65,8 @@ struct config
 	int nbcount; struct strlist **nobackup;
 	int incount; struct strlist **incext; // include extensions
 	int excount; struct strlist **excext; // exclude extensions
-	int ircount; struct strlist **incre; // include (regular expression)
-	int ercount; struct strlist **excre; // exclude (regular expression)
+	int ircount; struct strlist **increg; // include (regular expression)
+	int ercount; struct strlist **excreg; // exclude (regular expression)
 	int exfscount; struct strlist **excfs; // exclude filesystems
 	int cross_all_filesystems;
 	int read_all_fifos;

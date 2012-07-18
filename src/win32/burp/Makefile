@@ -55,6 +55,7 @@ FILED_OBJS = \
 	$(OBJDIR)/msg.o \
 	$(OBJDIR)/prepend.o \
 	$(OBJDIR)/prog.o \
+	$(OBJDIR)/regexp.o \
 	$(OBJDIR)/restore_client.o \
 	$(OBJDIR)/rs_buf.o \
 	$(OBJDIR)/sbuf.o \
@@ -75,6 +76,7 @@ FILED_LIBS = \
 	$(LIBS_ZLIB) \
 	$(LIBS_NETWORK) \
 	$(LIBS_RSYNC) \
+	$(LIBS_PCRE) \
 	-lole32 \
 	-loleaut32 \
 	-luuid \

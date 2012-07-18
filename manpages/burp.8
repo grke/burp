@@ -471,6 +471,12 @@ Path to include in the backup. You can have multiple include lines. Use forward 
 \fBexclude=[path]\fR
 Path to exclude from the backup. You can have multiple exclude lines. Use forward slashes '/', not backslashes '\\' as path delimiters.
 .TP
+\fBinclude_regex=[regular expression]\fR
+Not implemented.
+.TP
+\fBexclude_regex=[regular expression]\fR
+Exclude paths that match the regular expression.
+.TP
 \fBinclude_ext=[extension]\fR
 Extensions to include in the backup. Case insensitive. Nothing else will be included in the backup. You can have multiple include extension lines. For example, set 'txt' to include files that end in '.txt'. You need to specify an 'include' line so that burp knows where to start looking.
 .TP

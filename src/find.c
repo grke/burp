@@ -206,31 +206,35 @@ static int in_exclude_ext(struct strlist **excext, int excount, const char *fnam
 }
 
 /* Return 1 to include the file, 0 to exclude it. */
-int in_include_re(struct strlist **incre, int ircount, const char *fname)
+/* Currently not used - it needs more thinking about. */
+int in_include_regex(struct strlist **increg, int ircount, const char *fname)
 {
 	int i;
+	// If not doing include_regex, let the file get backed up.
+	if(!ircount) return 1;
 	for(i=0; i<ircount; i++)
 	{
-		if (check_regex(incre[i]->re, fname))
-		return 1;
+		if(check_regex(increg[i]->re, fname))
+			return 1;
 	}
 	return 0;
 }
 
-
-int in_exclude_re(struct strlist **excre, int ercount, const char *fname)
+int in_exclude_regex(struct strlist **excreg, int ercount, const char *fname)
 {
 	int i;
+	// If not doing exclude_regex, let the file get backed up.
+	//if(!ercount) return 0; (will return 0 anyway)
 	for(i=0; i<ercount; i++)
         {
-		if (check_regex(excre[i]->re, fname))
-		return 1;
+		if(check_regex(excreg[i]->re, fname))
+			return 1;
 	}
 	return 0;
 }
 
 // When recursing into directories, do not want to check the include_ext list.
-static int file_is_included_no_incext(struct strlist **ielist, int iecount, struct strlist **excext, int excount, const char *fname)
+static int file_is_included_no_incext(struct strlist **ielist, int iecount, struct strlist **excext, int excount, struct strlist **excreg, int ercount, const char *fname)
 {
 	int i=0;
 	int ret=0;
@@ -238,7 +242,9 @@ static int file_is_included_no_incext(struct strlist **ielist, int iecount, stru
 	int matching=0;
 	int best=-1;
 
-	if(in_exclude_ext(excext, excount, fname)) return 0;
+	if(in_exclude_ext(excext, excount, fname)
+	  || in_exclude_regex(excreg, ercount, fname))
+		return 0;
 
 	// Check include/exclude directories.
 	for(i=0; i<iecount; i++)
@@ -259,7 +265,12 @@ static int file_is_included_no_incext(struct strlist **ielist, int iecount, stru
 	return ret;
 }
 
-int file_is_included(struct strlist **ielist, int iecount, struct strlist **incexc, int incount, struct strlist **excext, int excount, const char *fname, bool top_level)
+int file_is_included(struct strlist **ielist, int iecount,
+	struct strlist **incexc, int incount,
+	struct strlist **excext, int excount,
+	struct strlist **increg, int ircount,
+	struct strlist **excreg, int ercount,
+	const char *fname, bool top_level)
 {
 	// Always save the top level directory.
 	// This will help in the simulation of browsing backups because it
@@ -273,7 +284,7 @@ int file_is_included(struct strlist **ielist, int iecount, struct strlist **ince
 	  && !in_include_ext(incexc, incount, fname)) return 0;
 
 	return file_is_included_no_incext(ielist, iecount,
-		excext, excount, fname);
+		excext, excount, excreg, ercount, fname);
 }
 
 static int fs_change_is_allowed(struct config *conf, const char *fname)
@@ -671,7 +682,9 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 		*q=0;
 
 		if(file_is_included_no_incext(conf->incexcdir, conf->iecount,
-			conf->excext, conf->excount, link))
+			conf->excext, conf->excount,
+			conf->excreg, conf->ercount,
+			link))
 		{
 			rtn_stat=find_files(ff_pkt,
 				conf, cntr, link, our_device, false);
@@ -899,25 +912,17 @@ find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
 		ff_pkt->linked=NULL;
 	}
 
-	if(S_ISDIR(ff_pkt->statp.st_mode))
-		return found_directory(ff_pkt,
-		conf, cntr, fname, parent_device, top_level, &restore_times);
-
-	if(!in_include_re(conf->incre, conf->ircount, fname))
-		return 0;
-
-
-	if(in_exclude_re(conf->excre, conf->ercount, fname))
-		return 0;
-
 	/* This is not a link to a previously dumped file, so dump it.  */
 	if(S_ISREG(ff_pkt->statp.st_mode))
-		return found_regular_file(ff_pkt,
-	conf, cntr, fname, top_level, &restore_times);
-		else if(S_ISLNK(ff_pkt->statp.st_mode))
-	return found_soft_link(ff_pkt, conf, cntr, fname, top_level);
-		else
-	return found_other(ff_pkt, conf, cntr, fname, top_level);
+		return found_regular_file(ff_pkt, conf, cntr, fname,
+			top_level, &restore_times);
+	else if(S_ISLNK(ff_pkt->statp.st_mode))
+		return found_soft_link(ff_pkt, conf, cntr, fname, top_level);
+	else if(S_ISDIR(ff_pkt->statp.st_mode))
+		return found_directory(ff_pkt, conf, cntr, fname,
+			parent_device, top_level, &restore_times);
+	else
+		return found_other(ff_pkt, conf, cntr, fname, top_level);
 }
 
 int find_files_begin(FF_PKT *ff_pkt, struct config *conf, char *fname, struct cntr *cntr)

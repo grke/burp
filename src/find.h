@@ -117,10 +117,12 @@ int find_files_begin(FF_PKT *ff_pkt, struct config *conf, char *fname, struct cn
 int pathcmp(const char *a, const char *b);
 int file_is_included(struct strlist **ielist, int iecount,
 	struct strlist **incext, int incount,
-	struct strlist **excext, int excount, const char *fname,
-	bool top_level);
-int in_include_re(struct strlist **incre, int incount, const char *fname);
-int in_exclude_re(struct strlist **excre, int excount, const char *fname);
+	struct strlist **excext, int excount,
+	struct strlist **increg, int ircount,
+	struct strlist **excreg, int ercount,
+	const char *fname, bool top_level);
+int in_include_regex(struct strlist **incre, int incount, const char *fname);
+int in_exclude_regex(struct strlist **excre, int excount, const char *fname);
 
 /* from attribs.c */
 void encode_stat(char *buf, struct stat *statp, int64_t winattr, int compression);

@@ -1,7 +1,11 @@
 #ifndef _STRLIST_H
 #define _STRLIST_H
 
+#if defined(HAVE_PCREPOSIX)
+#include <pcreposix.h>
+#else
 #include <regex.h>
+#endif
 
 typedef struct strlist strlist_t;
 

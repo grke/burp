@@ -12,6 +12,7 @@
   * Upgraded Windows to openssl-1.0.0j.
   * Added pcre-8.31 to Windows.
   * Added Gonéri Le Bouder's exclude_regex option.
+  * Add a gentle shutdown server option - send signal 12 to the main process.
 
 2012-06-08 Changes in burp-1.3.8:
   * Fix bug introduced in the new storage directory structure stuff that had

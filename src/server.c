@@ -32,6 +32,7 @@
 static int sfd=-1; // status fd for the main server
 
 static int hupreload=0;
+static int gentleshutdown=0;
 
 /*
 static void sighandler(int sig)
@@ -53,6 +54,12 @@ static void huphandler(int sig)
 {
 	logp("got signal in huphandler: %d\n", sig);
 	hupreload=1;
+}
+
+static void usr2handler(int sig)
+{
+	logp("will shut down once children have exited\n");
+	gentleshutdown=1;
 }
 
 static int init_listen_socket(const char *port, int alladdr)
@@ -236,6 +243,7 @@ int setup_signals(int oldmax_children, int max_children, int oldmax_status_child
 	//setup_signal(SIGTERM, sighandler);
 	//setup_signal(SIGINT, sighandler);
 	setup_signal(SIGHUP, huphandler);
+	setup_signal(SIGUSR2, usr2handler);
 
 	return 0;
 }
@@ -1656,6 +1664,7 @@ static int run_server(struct config *conf, const char *configfile, int *rfd, con
 {
 	int ret=0;
 	SSL_CTX *ctx=NULL;
+	int found_normal_child=0;
 
 	if(!(ctx=ssl_initialise_ctx(conf)))
 	{
@@ -1704,9 +1713,22 @@ static int run_server(struct config *conf, const char *configfile, int *rfd, con
 		if(sfd>=0) add_fd_to_sets(sfd, &fsr, NULL, &fse, &mfd);
 
 		// Add read fds of normal children.
+		if(gentleshutdown) found_normal_child=0;
 		for(c=0; c<conf->max_children; c++)
+		{
 		  if(!chlds[c].status_server && chlds[c].rfd>=0)
+		  {
 			add_fd_to_sets(chlds[c].rfd, &fsr, NULL, &fse, &mfd);
+			if(gentleshutdown) found_normal_child++;
+		  }
+		}
+		// Leave if we had a SIGUSR1 and there are no children
+		// running.
+		if(gentleshutdown && !found_normal_child)
+		{
+			logp("all children have exited - shutting down\n");
+			break;
+		}
 
 		if(select(mfd+1, &fsr, NULL, &fse, &tval)<0)
 		{
@@ -1893,12 +1915,12 @@ int server(struct config *conf, const char *configfile, char **logfile, int gene
 
 	ssl_load_globals();
 
-	while(!ret)
+	while(!ret && !gentleshutdown)
 	{
 		ret=run_server(conf, configfile,
 			&rfd, oldport, oldstatusport);
 		if(ret) break;
-		if(hupreload)
+		if(hupreload && !gentleshutdown)
 		{
 			if(oldport) free(oldport);
 			if(oldstatusport) free(oldstatusport);

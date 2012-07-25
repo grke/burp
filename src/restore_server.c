@@ -394,9 +394,9 @@ static int restore_file(struct bu *arr, int a, int i, const char *datapth, const
 		}
 	}
 
-	snprintf(msg, sizeof(msg), "restore could not find %s (%s)\n", fname, datapth);
-	log_and_send(msg);
-	return -1;
+	logw(cntr, "restore could not find %s (%s)\n", fname, datapth);
+	//return -1;
+	return 0;
 }
 
 static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, enum action act, const char *client, char status, struct cntr *p1cntr, struct cntr *cntr, struct config *cconf)

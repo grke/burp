@@ -204,7 +204,7 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, int
 	return ret;
 }
 
-static int jiggle(const char *datapth, const char *currentdata, const char *datadirtmp, const char *datadir, const char *deltabdir, const char *deltafdir, const char *sigpath, const char *endfile, int hardlinked, int compression, struct cntr *cntr, struct config *cconf)
+static int jiggle(const char *datapth, const char *currentdata, const char *datadirtmp, const char *datadir, const char *deltabdir, const char *deltafdir, const char *sigpath, const char *endfile, const char *deletionsfile, FILE **delfp, struct sbuf *sb, int hardlinked, int compression, struct cntr *cntr, struct config *cconf)
 {
 	int ret=0;
 	struct stat statp;
@@ -254,6 +254,7 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 	}
 	else if(!lstat(deltafpath, &statp) && S_ISREG(statp.st_mode))
 	{
+		int lrs;
 		char *infpath=NULL;
 
 		// Got a forward patch to do.
@@ -274,22 +275,40 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 		{
 			logp("error when inflating old file: %s\n", oldpath);
 			ret=-1;
+			free(infpath);
 			goto cleanup;
 		}
 
-		if(do_patch(infpath, deltafpath, newpath, cconf->compression,
-			compression /* from the manifest */, cntr, cconf))
+		if((lrs=do_patch(infpath, deltafpath, newpath,
+			cconf->compression,
+			compression /* from the manifest */, cntr, cconf)))
 		{
-			logp("error when patching\n");
-			ret=-1;
+			logp("WARNING: librsync error when patching %s: %d\n",
+				oldpath, lrs);
+			do_filecounter(cntr, CMD_WARNING, 1);
+			// Try to carry on with the rest of the backup
+			// regardless.
+			//ret=-1;
 			// Remove anything that got written.
 			unlink(newpath);
+			unlink(infpath);
+			free(infpath);
+
+			// First, note that we want to remove this entry from
+			// the manifest.
+			if(!*delfp && !(*delfp=open_file(deletionsfile, "ab")))
+			{
+				// Could not mark this file as deleted. Fatal.
+				ret=-1;
+				goto cleanup;
+			}
+			if(sbuf_to_manifest(sb, *delfp, NULL))
+				ret=-1;
+
 			goto cleanup;
 		}
 
 		// Get rid of the inflated old file.
-		// This will also remove it if there was an
-		// error.
 		unlink(infpath);
 		free(infpath);
 
@@ -428,9 +447,116 @@ static int do_hardlinked_archive(struct config *cconf, unsigned long bno)
 	return !ret;
 }
 
+static int maybe_delete_files_from_manifest(const char *manifest, const char *deletionsfile, struct config *cconf, struct cntr *cntr)
+{
+	int ars=0;
+	int ret=0;
+	int pcmp=0;
+	FILE *dfp=NULL;
+	struct sbuf db;
+	struct sbuf mb;
+	gzFile nmzp=NULL;
+	gzFile omzp=NULL;
+	char *manifesttmp=NULL;
+	struct stat statp;
+
+	if(lstat(deletionsfile, &statp))
+	{
+		// No deletions, no problem.
+		return 0;
+	}
+	logp("Performing deletions on manifest\n");
+
+	if(!(manifesttmp=get_tmp_filename(manifest)))
+	{
+		ret=-1;
+		goto end;
+	}
+
+        if(!(dfp=open_file(deletionsfile, "rb"))
+	  || !(omzp=gzopen_file(manifest, "rb"))
+	  || !(nmzp=gzopen_file(manifesttmp, comp_level(cconf))))
+	{
+		ret=-1;
+		goto end;
+	}
+
+	init_sbuf(&db);
+	init_sbuf(&mb);
+
+	while(omzp || dfp)
+	{
+		if(dfp && !db.path && (ars=sbuf_fill(dfp, NULL, &db, cntr)))
+		{
+			if(ars<0) { ret=-1; break; }
+			// ars==1 means it ended ok.
+			close_fp(&dfp);
+		}
+		if(omzp && !mb.path && (ars=sbuf_fill(NULL, omzp, &mb, cntr)))
+		{
+			if(ars<0) { ret=-1; break; }
+			// ars==1 means it ended ok.
+			gzclose_fp(&omzp);
+		}
+
+		if(mb.path && !db.path)
+		{
+			if(sbuf_to_manifest(&mb, NULL, nmzp)) { ret=-1; break; }
+			free_sbuf(&mb);
+		}
+		else if(!mb.path && db.path)
+		{
+			free_sbuf(&db);
+		}
+		else if(!mb.path && !db.path) 
+		{
+			continue;
+		}
+		else if(!(pcmp=sbuf_pathcmp(&mb, &db)))
+		{
+			// They were the same - do not write.
+			free_sbuf(&mb);
+			free_sbuf(&db);
+		}
+		else if(pcmp<0)
+		{
+			// Behind in manifest. Write.
+			if(sbuf_to_manifest(&mb, NULL, nmzp)) { ret=-1; break; }
+			free_sbuf(&mb);
+		}
+		else
+		{
+			// Behind in deletions file. Do not write.
+			free_sbuf(&db);
+		}
+	}
+
+end:
+	close_fp(&dfp);
+	gzclose_fp(&nmzp);
+	gzclose_fp(&omzp);
+	free_sbuf(&db);
+	free_sbuf(&mb);
+	if(!ret)
+	{
+		unlink(deletionsfile);
+		if(do_rename(manifesttmp, manifest))
+		{
+			free(manifesttmp);
+			return -1;
+		}
+	}
+	if(manifesttmp)
+	{
+		unlink(manifesttmp);
+		free(manifesttmp);
+	}
+	return ret;
+}
+
 /* Need to make all the stuff that this does atomic so that existing backups
    never get broken, even if somebody turns the power off on the server. */ 
-static int atomic_data_jiggle(const char *finishing, const char *working, const char *manifest, const char *current, const char *currentdata, const char *datadir, const char *datadirtmp, struct config *cconf, const char *client, int hardlinked, unsigned long bno, struct cntr *p1cntr, struct cntr *cntr)
+static int atomic_data_jiggle(const char *finishing, const char *working, const char *manifest, const char *current, const char *currentdata, const char *datadir, const char *datadirtmp, const char *deletionsfile, struct config *cconf, const char *client, int hardlinked, unsigned long bno, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ret=0;
 	int ars=0;
@@ -443,6 +569,8 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 	char *sigpath=NULL;
 	gzFile zp=NULL;
 	struct sbuf sb;
+
+	FILE *delfp=NULL;
 
 	logp("Doing the atomic data jiggle...\n");
 
@@ -480,7 +608,8 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 
 			if((ret=jiggle(sb.datapth, currentdata, datadirtmp,
 				datadir, deltabdir, deltafdir,
-				sigpath, sb.endfile,
+				sigpath, sb.endfile, deletionsfile, &delfp,
+				&sb,
 				hardlinked, sb.compression, cntr, cconf)))
 					break;
 		}
@@ -491,15 +620,18 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 		if(ars>0) ret=0;
 		else ret=-1;
 	}
+
+	close_fp(&delfp);
 	gzclose_fp(&zp);
 
-	if(ret)
-	{
-		// Remove the temporary data directory, we have now removed
-		// everything useful from it.
-		sync(); // try to help CIFS
-		recursive_delete(deltafdir, NULL, FALSE /* do not del files */);
-	}
+	if(maybe_delete_files_from_manifest(manifest, deletionsfile,
+		cconf, cntr)) ret=-1;
+
+	// Remove the temporary data directory, we have probably removed
+	// useful files from it.
+	sync(); // try to help CIFS
+	recursive_delete(deltafdir, NULL, FALSE /* do not del files */);
+
 	if(deltabdir) free(deltabdir);
 	if(deltafdir) free(deltafdir);
 	if(sigpath) free(sigpath);
@@ -512,6 +644,7 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 	int ret=0;
 	struct stat statp;
 	char *manifest=NULL;
+	char *deletionsfile=NULL;
 	char *datadir=NULL;
 	char *datadirtmp=NULL;
 	char *currentdup=NULL;
@@ -534,6 +667,7 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 	if(!(datadir=prepend_s(finishing, "data", strlen("data")))
 	  || !(datadirtmp=prepend_s(finishing, "data.tmp", strlen("data.tmp")))
 	  || !(manifest=prepend_s(finishing, "manifest.gz", strlen("manifest.gz")))
+	  || !(deletionsfile=prepend_s(finishing, "deletions", strlen("deletions")))
 	  || !(currentdup=prepend_s(finishing, "currentdup", strlen("currentdup")))
 	  || !(currentduptmp=prepend_s(finishing, "currentdup.tmp", strlen("currentdup.tmp")))
 	  || !(currentdupdata=prepend_s(currentdup, "data", strlen("data")))
@@ -667,7 +801,7 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 		if(atomic_data_jiggle(finishing,
 			working, manifest, currentdup,
 			currentdupdata,
-			datadir, datadirtmp, cconf, client,
+			datadir, datadirtmp, deletionsfile, cconf, client,
 			hardlinked, bno, p1cntr, cntr))
 		{
 			logp("could not finish up backup.\n");
@@ -733,6 +867,7 @@ endfunc:
 	if(datadir) free(datadir);
 	if(datadirtmp) free(datadirtmp);
 	if(manifest) free(manifest);
+	if(deletionsfile) free(deletionsfile);
 	if(currentdup) free(currentdup);
 	if(currentduptmp) free(currentduptmp);
 	if(currentdupdata) free(currentdupdata);

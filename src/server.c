@@ -89,7 +89,7 @@ static int init_listen_socket(const char *port, int alladdr)
 
 	if((gai_ret=getaddrinfo(NULL, port, &hints, &result)))
 	{
-		logp("unable to create listening socket on port %s: %s\n",
+		logp("unable to getaddrinfo on port %s: %s\n",
 			port, gai_strerror(gai_ret));
 		return -1;
 	}
@@ -97,9 +97,22 @@ static int init_listen_socket(const char *port, int alladdr)
 	for(rp=result; rp; rp=rp->ai_next)
 	{
 		rfd=socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-		if(rfd<0) continue;
+		if(rfd<0)
+		{
+			logp("unable to create socket on port %s: %s\n",
+				port, strerror(errno));
+			continue;
+		}
 		if(!bind(rfd, rp->ai_addr, rp->ai_addrlen)) break;
+		logp("unable to bind socket on port %s: %s\n",
+			port, strerror(errno));
 		close(rfd);
+		rfd=-1;
+	}
+	if(!rp || rfd<0)
+	{
+		logp("unable to bind listening socket on port %s\n", port);
+		return -1;
 	}
 
 #ifdef HAVE_IPV6
@@ -116,12 +129,6 @@ static int init_listen_socket(const char *port, int alladdr)
 #endif
 
 	freeaddrinfo(result);
-	if(!rp)
-	{
-		logp("unable to bind listening socket on port %s\n", port);
-		return -1;
-	}
-
 
 	reuseaddr(rfd);
 

@@ -211,7 +211,7 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 	fb->bytes+=len;
 	if(!MD5_Update(&(fb->md5), fb->buf, len))
 	{
-		logp("MD5_Update() failed\n");
+		logp("rs_infilebuf_fill: MD5_Update() failed\n");
 		return RS_IO_ERROR;
 	}
     }
@@ -227,14 +227,14 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 		    buf->eof_in=1;
 		    return RS_DONE;
 		} else {
-		    logp("got return %d when trying to read\n", len);
+		    logp("rs_infilebuf_fill: got return %d when trying to read\n", len);
 		    return RS_IO_ERROR;
 		}
 	    }
 	    fb->bytes+=len;
 	    if(!MD5_Update(&(fb->md5), fb->buf, len))
 	    {
-		logp("MD5_Update() failed\n");
+		logp("rs_infilebuf_fill: MD5_Update() failed\n");
 		return RS_IO_ERROR;
 	    }
     }
@@ -249,7 +249,7 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 		    buf->eof_in=1;
 		    return RS_DONE;
 		} else {
-		    logp("got return %d when trying to read\n", len);
+		    logp("rs_infilebuf_fill: got return %d when trying to read\n", len);
 		    return RS_IO_ERROR;
 		}
 	    }
@@ -263,7 +263,7 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 */
 	    if(!MD5_Update(&(fb->md5), fb->buf, len))
 	    {
-		logp("MD5_Update() failed\n");
+		logp("rs_infilebuf_fill: MD5_Update() failed\n");
 		return RS_IO_ERROR;
 	    }
     }

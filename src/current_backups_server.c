@@ -466,8 +466,7 @@ static int compress(const char *src, const char *dst, struct config *cconf)
 		}
 	}
 	close_fp(&mp);
-	gzclose_fp(&zp);
-	return 0;
+	return gzclose_fp(&zp); // this can give an error when out of space
 }
 
 int compress_file(const char *src, const char *dst, struct config *cconf)

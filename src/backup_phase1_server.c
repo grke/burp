@@ -65,7 +65,11 @@ int backup_phase1_server(const char *phase1data, const char *client, struct cntr
 	}
 
 	free_sbuf(&sb);
-        if(p1zp) gzclose(p1zp);
+        if(gzclose(p1zp))
+	{
+		logp("error closing %s in backup_phase1_server\n", phase1tmp);
+		ret=-1;
+	}
 	if(!ret && do_rename(phase1tmp, phase1data))
 		ret=-1;
 	free(phase1tmp);

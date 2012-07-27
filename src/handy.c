@@ -25,19 +25,35 @@ void close_fd(int *fd)
 	*fd=-1;
 }
 
-void close_fp(FILE **fp)
+int close_fp(FILE **fp)
 {
-	if(!*fp) return;
-	fclose(*fp);
+	if(!*fp) return 0;
+	if(fclose(*fp))
+	{
+		logp("fclose failed: %s\n", strerror(errno));
+		*fp=NULL;
+		return -1;
+	}
 	*fp=NULL;
+	return 0;
 }
 
-void gzclose_fp(gzFile *fp)
+int gzclose_fp(gzFile *fp)
 {
-	if(!*fp) return;
-	gzflush(*fp, Z_FINISH);
-	gzclose(*fp);
+	int e;
+	if(!*fp) return 0;
+	if((e=gzclose(*fp)))
+	{
+		char msg[256]="";
+		const char *str=NULL;
+		if(e==Z_ERRNO) str=strerror(errno);
+		else str=gzerror(*fp, &e);
+		logp("gzclose failed: %d (%s)\n", e, str?:"");
+		*fp=NULL;
+		return -1;
+	}
 	*fp=NULL;
+	return 0;
 }
 
 int is_dir(const char *path)
@@ -310,11 +326,11 @@ int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, int64_t winattr
 	return 0;
 }
 
-void close_file_for_send(BFILE *bfd, FILE **fp)
+int close_file_for_send(BFILE *bfd, FILE **fp)
 {
-	if(fp) close_fp(fp);
+	if(fp) return close_fp(fp);
 #ifdef HAVE_WIN32
-	if(bfd) bclose(bfd);
+	if(bfd) return bclose(bfd);
 #endif
 }
 
@@ -1391,6 +1407,7 @@ long version_to_long(const char *version)
    and the CA stuff, rather than backups/restores. */
 int receive_a_file(const char *path, struct cntr *p1cntr)
 {
+	int c=0;
 	int ret=0;
 #ifdef HAVE_WIN32
 	BFILE bfd;
@@ -1425,13 +1442,18 @@ int receive_a_file(const char *path, struct cntr *p1cntr)
 #ifdef HAVE_WIN32
 	ret=transfer_gzfile_in(NULL, path, &bfd, NULL,
 		&rcvdbytes, &sentbytes, NULL, 0, p1cntr, NULL);
-	bclose(&bfd);
+	c=bclose(&bfd);
 #else
 	ret=transfer_gzfile_in(NULL, path, NULL, fp,
 		&rcvdbytes, &sentbytes, NULL, 0, p1cntr, NULL);
-	close_fp(&fp);
+	c=close_fp(&fp);
 #endif
 end:
+	if(c)
+	{
+		logp("error closing %s in receive_a_file\n", path);
+		ret=-1;
+	}
 	if(!ret) logp("Received: %s\n", path);
 	return ret;
 }

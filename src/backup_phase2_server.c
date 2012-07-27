@@ -455,15 +455,23 @@ static int do_stuff_to_receive(struct sbuf *rb, FILE *p2fp, const char *datadirt
 				// Write it to the phase2 file, and free the
 				// buffers.
 
-				close_fp(&(rb->fp));
-				gzclose_fp(&(rb->zp));
+				if(close_fp(&(rb->fp)))
+				{
+					logp("error closing delta for %s in receive\n", rb->path);
+					ret=-1;
+				}
+				if(gzclose_fp(&(rb->zp)))
+				{
+					logp("error gzclosing delta for %s in receive\n", rb->path);
+					ret=-1;
+				}
 				rb->endfile=rbuf;
 				rb->elen=rlen;
 				rbuf=NULL;
-				if(rb->receivedelta
+				if(!ret && rb->receivedelta
 				  && finish_delta(rb, working, deltmppath))
 					ret=-1;
-				else
+				else if(!ret)
 				{
 					if(sbuf_to_manifest(rb, p2fp, NULL))
 						ret=-1;
@@ -715,13 +723,23 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, const char *pha
 error:
 	ret=-1;
 end:
+	if(close_fp(&p2fp))
+	{
+		logp("error closing %s in backup_phase2_server\n",
+			phase2data);
+		ret=-1;
+	}
+	if(close_fp(&ucfp))
+	{
+		logp("error closing %s in backup_phase2_server\n",
+			unchangeddata);
+		ret=-1;
+	}
 	free(deltmppath);
 	free_sbuf(&cb);
 	free_sbuf(&p1b);
 	free_sbuf(&rb);
 	gzclose_fp(&p1zp);
-	close_fp(&p2fp);
-	close_fp(&ucfp);
 	if(!ret) unlink(phase1data);
 
 	logp("End phase2 (receive file data)\n");

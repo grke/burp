@@ -41,7 +41,11 @@ static int make_rev_sig(const char *dst, const char *sig, const char *endfile, i
 		RS_DEFAULT_STRONG_LEN, NULL, cntr);
 	gzclose_fp(&dstzp);
 	close_fp(&dstfp);
-	close_fp(&sigp);
+	if(close_fp(&sigp))
+	{
+		logp("error closing %s in make_rev_sig\n", sig);
+		return -1;
+	}
 //logp("end of make rev sig\n");
 	return result;
 }
@@ -89,7 +93,11 @@ static int make_rev_delta(const char *src, const char *sig, const char *del, int
 			return -1;
 		}
 		result=rs_delta_gzfile(sumset, srcfp, srczp, NULL, delzp, NULL, cntr);
-		gzclose_fp(&delzp);
+		if(gzclose_fp(&delzp))
+		{
+			logp("error closing %s in make_rev_delta\n", del);
+			result=RS_IO_ERROR;
+		}
 	}
 	else
 	{
@@ -102,7 +110,14 @@ static int make_rev_delta(const char *src, const char *sig, const char *del, int
 			return -1;
 		}
 		result=rs_delta_gzfile(sumset, srcfp, srczp, delfp, NULL, NULL, cntr);
-		close_fp(&delfp);
+		if(close_fp(&delfp))
+		{
+			logp("error closing %s in make_rev_delta\n", del);
+			gzclose_fp(&srczp);
+			close_fp(&srcfp);
+			rs_free_sumset(sumset);
+			return -1;
+		}
 	}
 
 	rs_free_sumset(sumset);
@@ -181,7 +196,11 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, int
 			// just close the destination and we have duplicated a
 			// zero length file.
 			logp("asked to inflate zero length file: %s\n", oldpath);
-			close_fp(&dest);
+			if(close_fp(&dest))
+			{
+				logp("error closing %s in inflate_or_link_oldfile\n", infpath);
+				return -1;
+			}
 			return 0;
 		}
 		if(!(source=open_file(oldpath, "rb")))
@@ -192,7 +211,12 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, int
 		if((ret=zlib_inflate(source, dest))!=Z_OK)
 		logp("zlib_inflate returned: %d\n", ret);
 		close_fp(&source);
-		close_fp(&dest);
+		if(close_fp(&dest))
+		{
+			logp("error closing %s in inflate_or_link_oldfile\n",
+				infpath);
+			return -1;
+		}
 	}
 	else
 	{
@@ -304,6 +328,11 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 			}
 			if(sbuf_to_manifest(sb, *delfp, NULL))
 				ret=-1;
+			if(fflush(*delfp))
+			{
+				logp("error fflushing deletions file in jiggle: %s\n", strerror(errno));
+				ret=-1;
+			}
 
 			goto cleanup;
 		}
@@ -532,8 +561,14 @@ static int maybe_delete_files_from_manifest(const char *manifest, const char *de
 	}
 
 end:
+	if(gzclose_fp(&nmzp))
+	{
+		logp("error closing %s in maybe_delete_files_from_manifest\n",
+			manifesttmp);
+		ret=-1;
+	}
+	
 	close_fp(&dfp);
-	gzclose_fp(&nmzp);
 	gzclose_fp(&omzp);
 	free_sbuf(&db);
 	free_sbuf(&mb);
@@ -621,7 +656,11 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 		else ret=-1;
 	}
 
-	close_fp(&delfp);
+	if(close_fp(&delfp))
+	{
+		logp("error closing %s in atomic_data_jiggle\n", deletionsfile);
+		ret=-1;
+	}
 	gzclose_fp(&zp);
 
 	if(maybe_delete_files_from_manifest(manifest, deletionsfile,
@@ -745,7 +784,12 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 			goto endfunc;
 		}
 		fprintf(fwd, "%s\n", tstmp);
-		close_fp(&fwd);
+		if(close_fp(&fwd))
+		{
+			log_and_send("error closing forward file\n");
+			return -1;
+			goto endfunc;
+		}
 
 		if(newdup)
 		{
@@ -787,7 +831,12 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 			// be useful one day when wondering when the next
 			// backup, now deleted, was made.
 			fprintf(hfp, "%s\n", tstmp);
-			close_fp(&hfp);
+			if(close_fp(&hfp))
+			{
+				logp("error closing hardlinked indication\n");
+				ret=-1;
+				goto endfunc;
+			}
 			logp(" doing hardlinked archive\n");
 			logp(" will not generate reverse deltas\n");
 		}

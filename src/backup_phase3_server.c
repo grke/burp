@@ -111,9 +111,19 @@ int backup_phase3_server(const char *phase2data, const char *unchangeddata, cons
 	free_sbuf(&p2b);
 
 	close_fp(&p2fp);
-	close_fp(&mp);
 	close_fp(&ucfp);
-	gzclose_fp(&mzp);
+	if(close_fp(&mp))
+	{
+		logp("error closing %s in backup_phase3_server\n",
+			manifesttmp);
+		ret=-1;
+	}
+	if(gzclose_fp(&mzp))
+	{
+		logp("error gzclosing %s in backup_phase3_server\n",
+			manifesttmp);
+		ret=-1;
+	}
 
 	if(!ret)
 	{

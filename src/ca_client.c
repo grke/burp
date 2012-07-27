@@ -76,7 +76,12 @@ static int rewrite_client_conf(struct config *conf)
 		fprintf(dp, "ssl_peer_cn = %s\n", conf->ssl_peer_cn);
 	}
 	close_fp(&sp);
-	close_fp(&dp);
+	if(close_fp(&dp))
+	{
+		logp("error closing %s in rewrite_client_conf\n", tmp);
+		ret=-1;
+		goto end;
+	}
 #ifdef HAVE_WIN32
 	// Need to delete the destination, or Windows gets upset.
 	unlink(conf->configfile);

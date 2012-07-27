@@ -298,8 +298,12 @@ static int write_incexc(const char *realworking, const char *incexc)
 	fprintf(fp, "%s", incexc);
 	ret=0;
 end:
+	if(close_fp(&fp))
+	{
+		logp("error writing to %s in write_incexc\n", path);
+		ret=-1;
+	}
 	if(path) free(path);
-	close_fp(&fp);
 	return ret;
 }
 
@@ -383,7 +387,7 @@ static int do_backup_server(const char *basedir, const char *current, const char
 		else if(mkdir(realworking, 0777))
 		{
 			snprintf(msg, sizeof(msg),
-			  "could not mkdir for increment: %s", working);
+			  "could not mkdir for next backup: %s", working);
 			log_and_send(msg);
 			unlink(working);
 			goto error;
@@ -453,7 +457,11 @@ static int do_backup_server(const char *basedir, const char *current, const char
 	// the new manifest
 	// finish_backup will open it again
 	// for reading
-	gzclose_fp(&mzp);
+	if(gzclose_fp(&mzp))
+	{
+		logp("Error closing manifest after phase3\n");
+		goto error;
+	}
 
 	async_write_str(CMD_GEN, "okbackupend");
 	logp("Backup ending - disconnect from client.\n");

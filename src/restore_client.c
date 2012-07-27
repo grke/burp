@@ -206,17 +206,23 @@ static int restore_file_or_get_meta(struct sbuf *sb, const char *fname, enum act
 		}
 		else
 		{
+			int c=0;
 #ifdef HAVE_WIN32
 			ret=transfer_gzfile_in(sb, fname, &bfd, NULL,
 				&rcvdbytes, &sentbytes,
 				encpassword, enccompressed, cntr, NULL);
-			bclose(&bfd);
+			c=bclose(&bfd);
 #else
 			ret=transfer_gzfile_in(sb, fname, NULL, fp,
 				&rcvdbytes, &sentbytes,
 				encpassword, enccompressed, cntr, NULL);
-			close_fp(&fp);
+			c=close_fp(&fp);
 #endif
+			if(c)
+			{
+				logp("error closing %s in restore_file_or_get_meta\n", fname);
+				ret=-1;
+			}
 			if(!ret) set_attributes(rpath, sb->cmd,
 				&(sb->statp), sb->winattr, cntr);
 		}

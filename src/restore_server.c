@@ -64,8 +64,16 @@ int do_patch(const char *dst, const char *del, const char *upd, bool gzupd, int 
 	fclose(dstp);
 	gzclose_fp(&delzp);
 	close_fp(&delfp);
-	if(updp) gzclose_fp(&updp);
-	if(updfp) fclose(updfp);
+	if(close_fp(&updfp))
+	{
+		logp("error closing %s after rs_patch_gzfile\n", upd);
+		result=RS_IO_ERROR;
+	}
+	if(gzclose_fp(&updp))
+	{
+		logp("error gzclosing %s after rs_patch_gzfile\n", upd);
+		result=RS_IO_ERROR;
+	}
 
 	return result;
 }
@@ -114,7 +122,12 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, int
 			logp("zlib_inflate returned: %d\n", ret);
 
 		close_fp(&source);
-		close_fp(&dest);
+		if(close_fp(&dest))
+		{
+			logp("error closing %s in inflate_or_link_oldfile\n",
+				dest);
+			return -1;
+		}
 	}
 	else
 	{

@@ -1,3 +1,4 @@
+2012-07-28 Changes in burp-1.3.10:
   * Added Tony Cheneau's IPv6 fixes.
   * Fixed bug to do with directory_tree=1 that would stop resume working.
   * Stop status monitor exiting on terminal resize.

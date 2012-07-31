@@ -14,7 +14,7 @@ timestamp="$current/timestamp"
 
 # A 'backup' file placed in the storage directory tells this script that
 # a backup needs to be done right now.
-# This gives the 'server initiates a manual restore' feature.
+# This gives the 'server initiates a manual backup' feature.
 
 manual_file="$storage_dir/$client/backup"
 if [ -f "$manual_file" ] ; then

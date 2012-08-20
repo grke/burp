@@ -332,6 +332,7 @@ int close_file_for_send(BFILE *bfd, FILE **fp)
 #ifdef HAVE_WIN32
 	if(bfd) return bclose(bfd);
 #endif
+	return -1;
 }
 
 /* OK, this function is getting a bit out of control.

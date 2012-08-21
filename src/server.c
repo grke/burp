@@ -307,7 +307,7 @@ end:
 	return ret;
 }
 
-static int do_backup_server(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *manifest, const char *forward, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *client, const char *cversion, struct cntr *p1cntr, struct cntr *cntr, int resume, const char *incexc)
+static int do_backup_server(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *manifest, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *client, const char *cversion, struct cntr *p1cntr, struct cntr *cntr, int resume, const char *incexc)
 {
 	int ret=0;
 	char msg[256]="";
@@ -709,7 +709,7 @@ end:
 	return ret;
 }
 
-static int get_lock_and_clean(const char *basedir, const char *lockbasedir, const char *lockfile, const char *current, const char *working, const char *currentdata, const char *finishing, char **gotlock, struct config *cconf, const char *forward, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *manifest, const char *client, struct cntr *p1cntr, struct cntr *cntr, int *resume, const char *incexc)
+static int get_lock_and_clean(const char *basedir, const char *lockbasedir, const char *lockfile, const char *current, const char *working, const char *currentdata, const char *finishing, char **gotlock, struct config *cconf, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *manifest, const char *client, struct cntr *p1cntr, struct cntr *cntr, int *resume, const char *incexc)
 {
 	int ret=0;
 	char *copy=NULL;
@@ -799,8 +799,6 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 	char *currentdata=NULL;
 	// where the data goes initially
 	char *datadirtmp=NULL;
-	// File containing timestamp of the next backup in the sequence.
-	char *forward=NULL;
 	// The final compressed manifest 
 	char *manifest=NULL;
 	// A symlink that indicates that the
@@ -822,7 +820,6 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 	  || !(phase1data=prepend_s(working, "phase1.gz", strlen("phase1.gz")))
 	  || !(phase2data=prepend_s(working, "phase2", strlen("phase2")))
 	  || !(unchangeddata=prepend_s(working, "unchanged", strlen("unchanged")))
-	  || !(forward=prepend_s(current, "forward", strlen("forward")))
 	  || !(lockbasedir=prepend_s(conf->client_lockdir, client, strlen(client)))
 	  || !(lockfile=prepend_s(lockbasedir, "lockfile", strlen("lockfile"))))
 	{
@@ -838,7 +835,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 		if(get_lock_and_clean(basedir, lockbasedir, lockfile, current,
 			working, currentdata,
 			finishing, gotlock, cconf,
-			forward, phase1data, phase2data, unchangeddata,
+			phase1data, phase2data, unchangeddata,
 			manifest, client, p1cntr, cntr, &resume, incexc))
 				ret=-1;
 		else
@@ -894,7 +891,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			async_write_str(CMD_GEN, okstr);
 			ret=do_backup_server(basedir, current, working,
 			  currentdata, finishing, cconf,
-			  manifest, forward, phase1data, phase2data,
+			  manifest, phase1data, phase2data,
 			  unchangeddata, client, cversion, p1cntr, cntr,
 			  resume, incexc);
 			if(ret)
@@ -953,7 +950,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 		if(get_lock_and_clean(basedir, lockbasedir, lockfile,
 			current, working,
 			currentdata, finishing, gotlock, cconf,
-			forward, phase1data, phase2data, unchangeddata,
+			phase1data, phase2data, unchangeddata,
 			manifest, client, p1cntr, cntr, &resume, incexc))
 				ret=-1;
 		else
@@ -994,7 +991,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 		if(get_lock_and_clean(basedir, lockbasedir, lockfile,
 			current, working,
 			currentdata, finishing, gotlock, cconf,
-			forward, phase1data, phase2data, unchangeddata,
+			phase1data, phase2data, unchangeddata,
 			manifest, client, p1cntr, cntr, &resume, incexc))
 				ret=-1;
 		else
@@ -1054,7 +1051,6 @@ end:
 	if(currentdata) free(currentdata);
 	if(datadirtmp) free(datadirtmp);
 	if(manifest) free(manifest);
-	if(forward) free(forward);
 	if(phase1data) free(phase1data);
 	if(phase2data) free(phase2data);
 	if(unchangeddata) free(unchangeddata);

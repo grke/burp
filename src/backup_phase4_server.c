@@ -689,7 +689,6 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 	char *currentdup=NULL;
 	char *currentduptmp=NULL;
 	char *currentdupdata=NULL;
-	char *forward=NULL;
 	char *timestamp=NULL;
 	char *fullrealcurrent=NULL;
 	char *deleteme=NULL;
@@ -710,7 +709,6 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 	  || !(currentdup=prepend_s(finishing, "currentdup", strlen("currentdup")))
 	  || !(currentduptmp=prepend_s(finishing, "currentdup.tmp", strlen("currentdup.tmp")))
 	  || !(currentdupdata=prepend_s(currentdup, "data", strlen("data")))
-	  || !(forward=prepend_s(currentdup, "forward", strlen("forward")))
 	  || !(timestamp=prepend_s(finishing, "timestamp", strlen("timestamp")))
 	  || !(fullrealcurrent=prepend_s(basedir, realcurrent, strlen(realcurrent)))
 	  || !(deleteme=prepend_s(basedir, "deleteme", strlen("deleteme")))
@@ -773,23 +771,6 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 		}
 		// Get the backup number.
 		bno=strtoul(tstmp, NULL, 10);
-
-		// Put forward reference in, indicating the timestamp of
-		// the working directory (which will soon become the current
-		// directory).
-		if(!(fwd=open_file(forward, "wb")))
-		{
-			log_and_send("could not create forward file");
-			ret=-1;
-			goto endfunc;
-		}
-		fprintf(fwd, "%s\n", tstmp);
-		if(close_fp(&fwd))
-		{
-			log_and_send("error closing forward file\n");
-			return -1;
-			goto endfunc;
-		}
 
 		if(newdup)
 		{
@@ -920,7 +901,6 @@ endfunc:
 	if(currentdup) free(currentdup);
 	if(currentduptmp) free(currentduptmp);
 	if(currentdupdata) free(currentdupdata);
-	if(forward) free(forward);
 	if(timestamp) free(timestamp);
 	if(fullrealcurrent) free(fullrealcurrent);
 	if(deleteme) free(deleteme);

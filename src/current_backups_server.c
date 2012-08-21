@@ -229,9 +229,6 @@ void free_current_backups(struct bu **arr, int a)
 			{ free((*arr)[b].delta); (*arr)[b].delta=NULL; }
 		if((*arr)[b].timestamp)
 			{ free((*arr)[b].timestamp); (*arr)[b].timestamp=NULL; }
-		if((*arr)[b].forward_timestamp)
-			{ free((*arr)[b].forward_timestamp);
-				(*arr)[b].forward_timestamp=NULL; }
 	}
 	free(*arr);
 	*arr=NULL;
@@ -281,9 +278,7 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 		struct stat statp;
 		char *fullpath=NULL;
 		char *timestamp=NULL;
-		char *forward=NULL;
 		char *timestampstr=NULL;
-		char *forward_timestampstr=NULL;
 		char *hlinkedpath=NULL;
 
 		if(dp->d_ino==0
@@ -296,8 +291,6 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 			dp->d_name, strlen(dp->d_name)))
 		 || !(timestamp=prepend_s(fullpath,
 			"timestamp", strlen("timestamp")))
-		 || !(forward=prepend_s(fullpath,
-			"forward", strlen("forward")))
 		 || !(hlinkedpath=prepend_s(fullpath,
 			"hardlinked", strlen("hardlinked"))))
 		{
@@ -312,7 +305,6 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 		  || !(timestampstr=strdup(buf)))
 		{
 			free(fullpath);
-			free(forward);
 			free(timestamp);
 			free(hlinkedpath);
 			continue;
@@ -320,10 +312,6 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 		free(timestamp);
 
 		if(!lstat(hlinkedpath, &statp)) hardlinked++;
-
-		if(!read_timestamp(forward, buf, sizeof(buf)))
-			forward_timestampstr=strdup(buf);
-		free(forward);
 
 		if(!(*arr=(struct bu *)realloc(*arr,(i+1)*sizeof(struct bu)))
 		  || !((*arr)[i].data=prepend_s(fullpath, "data", strlen("data")))
@@ -340,17 +328,6 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 		(*arr)[i].hardlinked=hardlinked;
 		(*arr)[i].deletable=0;
 		(*arr)[i].index=strtoul(timestampstr, NULL, 10);
-		if(forward_timestampstr)
-		{
-			(*arr)[i].forward_timestamp=forward_timestampstr;
-			(*arr)[i].forward_index=strtoul(forward_timestampstr,
-				NULL, 10);
-		}
-		else
-		{
-			(*arr)[i].forward_timestamp=NULL;
-			(*arr)[i].forward_index=0;
-		}
 		(*arr)[i].trindex=0;
 		i++;
 	}
@@ -367,18 +344,6 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 
 	for(j=0; j<i-1; j++)
 	{
-		if(!(*arr)[j].forward_timestamp
-		  || strcmp((*arr)[j].forward_timestamp, (*arr)[j+1].timestamp)
-		  || (*arr)[j].forward_index!=(*arr)[j+1].index)
-		{
-			char msg[256]="";
-			snprintf(msg, sizeof(msg), "%s does not match forward path from %s\n", (*arr)[j+1].path, (*arr)[j].path);
-			if(log) log_and_send(msg);
-			free_current_backups(arr, i);
-			ret=-1;
-			break;
-		}
-
 		// Backups that come after hardlinked backups are deletable.
 		if((*arr)[j].hardlinked) (*arr)[j+1].deletable=1;
 	}
@@ -514,22 +479,6 @@ static int delete_backup(const char *basedir, struct bu *arr, int a, int b, cons
 	char *deleteme=NULL;
 
 	logp("deleting %s backup %lu\n", client, arr[b].index);
-
-	// First, point the preceeding backup to the following backup.
-	if(b>0 && b+1<a)
-	{
-		char *forward=NULL;
-		if(!(forward=prepend_s(arr[b-1].path,
-			"forward", strlen("forward")))) return -1;
-
-		if(write_timestamp(forward, arr[b+1].timestamp))
-		{
-			free(forward);
-			return -1;
-		}
-
-		free(forward);
-	}
 
 	if(!(deleteme=prepend_s(basedir, "deleteme", strlen("deleteme")))
 	  || do_rename(arr[b].path, deleteme)

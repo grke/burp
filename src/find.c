@@ -357,7 +357,6 @@ static int found_regular_file(FF_PKT *ff_pkt, struct config *conf,
 		ff_pkt->type=FT_REG;
 	rtn_stat=send_file(ff_pkt, top_level, conf, cntr);
 	if(ff_pkt->linked) ff_pkt->linked->FileIndex=ff_pkt->FileIndex;
-	if(ff_pkt->flags & FO_KEEPATIME) utime(fname, restore_times);
 	return rtn_stat;
 }
 
@@ -394,7 +393,6 @@ static int backup_dir_and_return(FF_PKT *ff_pkt, struct config *conf, struct cnt
 	free_dir_ff_pkt(dir_ff_pkt);
 	/* reset "link" */
 	ff_pkt->link=ff_pkt->fname;
-	if(ff_pkt->flags & FO_KEEPATIME) utime(fname, restore_times);
 	return rtn_stat;
 }
 
@@ -421,10 +419,169 @@ int fstype_excluded(struct config *conf, const char *fname, struct cntr *cntr)
 	return 0;
 }
 
-/* prototype, because found_directory() recurses using find_files() */
+#if defined(HAVE_WIN32)
+static void windows_reparse_point_fiddling(FF_PKT *ff_pkt)
+{
+	/*
+	* We have set st_rdev to 1 if it is a reparse point, otherwise 0,
+	*  if st_rdev is 2, it is a mount point 
+	*/
+	/*
+	 * A reparse point (WIN32_REPARSE_POINT)
+	 *  is something special like one of the following:
+	 *  IO_REPARSE_TAG_DFS              0x8000000A
+	 *  IO_REPARSE_TAG_DFSR             0x80000012
+	 *  IO_REPARSE_TAG_HSM              0xC0000004
+	 *  IO_REPARSE_TAG_HSM2             0x80000006
+	 *  IO_REPARSE_TAG_SIS              0x80000007
+	 *  IO_REPARSE_TAG_SYMLINK          0xA000000C
+	 *
+	 * A junction point is a:
+	 *  IO_REPARSE_TAG_MOUNT_POINT      0xA0000003
+	 * which can be either a link to a Volume (WIN32_MOUNT_POINT)
+	 * or a link to a directory (WIN32_JUNCTION_POINT)
+	 *
+	 * Ignore WIN32_REPARSE_POINT and WIN32_JUNCTION_POINT
+	 */
+	if (ff_pkt->statp.st_rdev == WIN32_REPARSE_POINT) {
+		ff_pkt->type = FT_REPARSE;
+	} else if (ff_pkt->statp.st_rdev == WIN32_JUNCTION_POINT) {
+		ff_pkt->type = FT_JUNCTION;
+	}
+}
+#endif
+
+static int get_files_in_directory(DIR *directory, struct dirent ***nl, int *count)
+{
+	int status;
+	int allocated=0;
+	struct dirent **ntmp=NULL;
+	struct dirent *entry=NULL;
+	struct dirent *result=NULL;
+
+	/* Graham says: this here is doing a funky kind of scandir/alphasort
+	   that can also run on Windows.
+	   TODO: split into a scandir function
+	*/
+	while(1)
+	{
+		char *p;
+		if(!(entry=(struct dirent *)malloc(
+			sizeof(struct dirent)+name_max+100)))
+		{
+			logp("out of memory\n");
+			return -1;
+		}
+		status=readdir_r(directory, entry, &result);
+		if(status || !result)
+		{
+			free(entry);
+			break;
+		}
+
+		p=entry->d_name;
+		ASSERT(name_max+1 > (int)sizeof(struct dirent)+strlen(p));
+
+		/* Skip `.', `..', and excluded file names.  */
+		if(!p || !strcmp(p, ".") || !strcmp(p, ".."))
+		{
+			free(entry);
+			continue;
+		}
+
+		if(*count==allocated)
+		{
+			if(!allocated) allocated=10;
+			else allocated*=2;
+
+			if(!(ntmp=(struct dirent **)
+				realloc (*nl, allocated*sizeof(**nl))))
+			{
+				free(entry);
+				logp("out of memory\n");
+				return -1;
+			}
+			*nl=ntmp;
+		}
+		(*nl)[(*count)++]=entry;
+	}
+	if(*nl) qsort(*nl, *count, sizeof(**nl),
+		(int (*)(const void *, const void *))myalphasort);
+	return 0;
+}
+
+/* prototype, because process_files_in_directory() recurses using find_files()
+ */
 static int
 find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
   char *fname, dev_t parent_device, bool top_level);
+
+static int process_files_in_directory(struct dirent **nl, int count, int *rtn_stat, char *link, size_t len, size_t link_len, struct config *conf, struct cntr *cntr, FF_PKT *ff_pkt, dev_t our_device)
+{
+	int m=0;
+	for(m=0; m<count; m++)
+	{
+		size_t i;
+		char *p=NULL;
+		char *q=NULL;
+
+		p=nl[m]->d_name;
+
+		if(strlen(p)+len>=link_len)
+		{
+			link_len=len+strlen(p)+1;
+			if(!(link=(char *)realloc(link, link_len+1)))
+			{
+				logp("out of memory\n");
+				return -1;
+			}
+		}
+		q=link+len;
+		for(i=0; i<strlen(nl[m]->d_name); i++) *q++=*p++;
+		*q=0;
+
+		if(file_is_included_no_incext(conf->incexcdir, conf->iecount,
+			conf->excext, conf->excount,
+			conf->excreg, conf->ercount,
+			link))
+		{
+			*rtn_stat=find_files(ff_pkt,
+				conf, cntr, link, our_device, false);
+			if(ff_pkt->linked)
+				ff_pkt->linked->FileIndex = ff_pkt->FileIndex;
+		}
+		else
+		{ 
+			// Excluded, but there might be a subdirectory that is
+			// included.
+			int ex=0;
+			for(ex=0; ex<conf->iecount; ex++)
+			{
+				if(conf->incexcdir[ex]->flag
+				  && is_subdir(link, conf->incexcdir[ex]->path))
+				{
+					int ey;
+					if((*rtn_stat=find_files(ff_pkt, conf,
+						cntr, conf->incexcdir[ex]->path,
+						 our_device, false)))
+							break;
+					// Now need to skip subdirectories of
+					// the thing that we just stuck in
+					// find_one_file(), or we might get
+					// some things backed up twice.
+					for(ey=ex+1; ey<conf->iecount; ey++)
+					  if(is_subdir(
+						conf->incexcdir[ex]->path,
+						conf->incexcdir[ey]->path))
+							ex++;
+				}
+			}
+		}
+		free(nl[m]);
+		if(*rtn_stat) break;
+	}
+	return 0;
+}
 
 static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 	struct cntr *cntr, char *fname, dev_t parent_device, bool top_level,
@@ -432,40 +589,21 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 {
 	int m;
 	int rtn_stat;
-	int count=0;
-	int allocated=0;
 	DIR *directory;
 	char *link=NULL;
 	size_t link_len;
 	size_t len;
-	int status;
 	int nbret=0;
+	int count=0;
 	bool recurse;
 	dev_t our_device;
 	bool volhas_attrlist;
 	struct dirent **nl=NULL;
-	struct dirent **ntmp=NULL;
-	struct dirent *entry=NULL;
-	struct dirent *result=NULL;
 
 	recurse=true;
 	our_device=ff_pkt->statp.st_dev;
 	/* Remember volhas_attrlist if we recurse */
 	volhas_attrlist=ff_pkt->volhas_attrlist;
-
-	if((ff_pkt->flags & FO_PORTABLE))
-	{
-		if(access(fname, R_OK)==-1 && geteuid())
-		{
-			/* Could not access() directory */
-			ff_pkt->type=FT_NOACCESS;
-			ff_pkt->ff_errno=errno;
-			rtn_stat=send_file(ff_pkt, top_level, conf, cntr);
-			if(ff_pkt->linked)
-				ff_pkt->linked->FileIndex=ff_pkt->FileIndex;
-			return rtn_stat;
-		}
-	}
 
 	/*
 	* Ignore this directory and everything below if one of the files defined
@@ -495,33 +633,9 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 
 	ff_pkt->link=link;
 	ff_pkt->type=FT_DIRBEGIN;
-	/*
-	* We have set st_rdev to 1 if it is a reparse point, otherwise 0,
-	*  if st_rdev is 2, it is a mount point 
-	*/
+
 #if defined(HAVE_WIN32)
-	/*
-	 * A reparse point (WIN32_REPARSE_POINT)
-	 *  is something special like one of the following:
-	 *  IO_REPARSE_TAG_DFS              0x8000000A
-	 *  IO_REPARSE_TAG_DFSR             0x80000012
-	 *  IO_REPARSE_TAG_HSM              0xC0000004
-	 *  IO_REPARSE_TAG_HSM2             0x80000006
-	 *  IO_REPARSE_TAG_SIS              0x80000007
-	 *  IO_REPARSE_TAG_SYMLINK          0xA000000C
-	 *
-	 * A junction point is a:
-	 *  IO_REPARSE_TAG_MOUNT_POINT      0xA0000003
-	 * which can be either a link to a Volume (WIN32_MOUNT_POINT)
-	 * or a link to a directory (WIN32_JUNCTION_POINT)
-	 *
-	 * Ignore WIN32_REPARSE_POINT and WIN32_JUNCTION_POINT
-	 */
-	if (ff_pkt->statp.st_rdev == WIN32_REPARSE_POINT) {
-		ff_pkt->type = FT_REPARSE;
-	} else if (ff_pkt->statp.st_rdev == WIN32_JUNCTION_POINT) {
-		ff_pkt->type = FT_JUNCTION;
-	}
+	windows_reparse_point_fiddling(ff_pkt);
 #endif
 
 	rtn_stat=send_file(ff_pkt, top_level, conf, cntr);
@@ -609,117 +723,25 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 	*    This would possibly run faster if we chdir to the directory
 	*    before traversing it.
 	*/
-	/* Graham says: this here is doing a funky kind of scandir/alphasort
-	   that can also run on Windows.
-	   TODO: split into a scandir function
-	*/
-	while(1)
+	if(get_files_in_directory(directory, &nl, &count))
 	{
-		char *p;
-		if(!(entry=(struct dirent *)malloc(
-			sizeof(struct dirent)+name_max+100)))
-		{
-			logp("out of memory\n");
-			return -1;
-		}
-		status=readdir_r(directory, entry, &result);
-		if(status || !result)
-		{
-			free(entry);
-			break;
-		}
-
-		p=entry->d_name;
-		ASSERT(name_max+1 > (int)sizeof(struct dirent)+strlen(p));
-
-		/* Skip `.', `..', and excluded file names.  */
-		if(!p || !strcmp(p, ".") || !strcmp(p, ".."))
-		{
-			free(entry);
-			continue;
-		}
-
-		if(count==allocated)
-		{
-			if(!allocated) allocated=10;
-			else allocated*=2;
-
-			if(!(ntmp=(struct dirent **)
-				realloc (nl, allocated*sizeof(*nl))))
-			{
-				free(entry);
-				logp("out of memory\n");
-				return -1;
-			}
-			nl=ntmp;
-		}
-		nl[count++]=entry;
+		closedir(directory);
+		free(link);
+		return -1;
 	}
-	if(nl) qsort(nl, count, sizeof(*nl),
-		(int (*)(const void *, const void *))myalphasort);
 	closedir(directory);
 
 	rtn_stat=0;
-	if(nl) for(m=0; m<count; m++)
+	if(nl)
 	{
-		size_t i;
-		char *p=NULL;
-		char *q=NULL;
-
-		p=nl[m]->d_name;
-
-		if(strlen(p)+len>=link_len)
+		if(process_files_in_directory(nl, count,
+			&rtn_stat, link, len, link_len, conf, cntr,
+			ff_pkt, our_device))
 		{
-			link_len=len+strlen(p)+1;
-			if(!(link=(char *)realloc(link, link_len+1)))
-			{
-				logp("out of memory\n");
-				return -1;
-			}
+			free(link);
+			if(nl) free(nl);
+			return -1;
 		}
-		q=link+len;
-		for(i=0; i<strlen(nl[m]->d_name); i++) *q++=*p++;
-		*q=0;
-
-		if(file_is_included_no_incext(conf->incexcdir, conf->iecount,
-			conf->excext, conf->excount,
-			conf->excreg, conf->ercount,
-			link))
-		{
-			rtn_stat=find_files(ff_pkt,
-				conf, cntr, link, our_device, false);
-			if(ff_pkt->linked)
-				ff_pkt->linked->FileIndex = ff_pkt->FileIndex;
-		}
-		else
-		{ 
-			// Excluded, but there might be a subdirectory that is
-			// included.
-			int ex=0;
-			for(ex=0; ex<conf->iecount; ex++)
-			{
-				if(conf->incexcdir[ex]->flag
-				  && is_subdir(link, conf->incexcdir[ex]->path))
-				{
-					int ey;
-					if((rtn_stat=find_files(ff_pkt, conf,
-						cntr, conf->incexcdir[ex]->path,
-						 our_device, false)))
-							break;
-					// Now need to skip subdirectories of
-					// the thing that we just stuck in
-					// find_one_file(), or we might get
-					// some things backed up twice.
-					for(ey=ex+1; ey<conf->iecount; ey++)
-					  if(is_subdir(
-						conf->incexcdir[ex]->path,
-						conf->incexcdir[ey]->path))
-							ex++;
-				}
-			}
-		}
-		free(nl[m]);
-		if(rtn_stat) break;
 	}
 	free(link);
 	if(nl) free(nl);
@@ -731,16 +753,13 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 	*  the directory modes and dates.  Temp directory values
 	*  were used without this record.
 	*/
-	if(!rtn_stat)
-	{
 		/* handle directory entry */
+	if(!rtn_stat)
 		send_file(dir_ff_pkt, top_level, conf, cntr);
-	}
 	if(ff_pkt->linked)
 		ff_pkt->linked->FileIndex = dir_ff_pkt->FileIndex;
 	free_dir_ff_pkt(dir_ff_pkt);
 
-	if(ff_pkt->flags & FO_KEEPATIME) utime(fname, restore_times);
 	/* Restore value in case it changed. */
 	ff_pkt->volhas_attrlist=volhas_attrlist;
 	return rtn_stat;

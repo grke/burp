@@ -44,9 +44,9 @@ int readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result);
 #define FO_NOREPLACE    (1<<7)        /* never replace */
 //#define FO_READFIFO     (1<<8)        /* read data from fifo */
 //#define FO_SHA1         (1<<9)        /* Do SHA1 checksum */
-#define FO_PORTABLE     (1<<10)       /* Use portable data format -- no BackupWrite */
+//#define FO_PORTABLE     (1<<10)       /* Use portable data format -- no BackupWrite */
 #define FO_MTIMEONLY    (1<<11)       /* Use mtime rather than mtime & ctime */
-#define FO_KEEPATIME    (1<<12)       /* Reset access time */
+//#define FO_KEEPATIME    (1<<12)       /* Reset access time */
 #define FO_EXCLUDE      (1<<13)       /* Exclude file */
 #define FO_ACL          (1<<14)       /* Backup ACLs */
 #define FO_NO_HARDLINK  (1<<15)       /* don't handle hard links */

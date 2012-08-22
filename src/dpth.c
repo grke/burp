@@ -96,7 +96,7 @@ int init_dpth(struct dpth *dpth, const char *currentdata, struct config *cconf)
 	}
 	// At this point, we have the latest data file. Increment to get the
 	// next free one.
-	incr_dpth(dpth, cconf);
+	if(incr_dpth(dpth, cconf)) return -1;
 
 	//logp("init_dpth: %d/%d/%d\n", dpth->prim, dpth->seco, dpth->tert);
 	//logp("init_dpth: %s\n", dpth->path);
@@ -123,7 +123,8 @@ int incr_dpth(struct dpth *dpth, struct config *cconf)
 				// incrementing loop with O_CREAT|O_EXCL.
 				if(++(dpth->looped)>1)
 				{
-					logp("could not find any free data file entries out of the 15000^3 available!\n");
+					logp("Could not find any free data file entries out of the 15000*%d*%d available!\n", cconf->max_storage_subdirs, cconf->max_storage_subdirs);
+					logp("Recommend moving the client storage directory aside and starting again.\n");
 					return -1;
 				}
 			}

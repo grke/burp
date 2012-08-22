@@ -265,7 +265,7 @@ int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpth *dpth, struct con
 	logp("  unchanged: %s\n", ucb.path);
 
 	// Now should have all file pointers in the right places to resume.
-	incr_dpth(dpth, cconf);
+	if(incr_dpth(dpth, cconf)) goto error;
 
 	goto end;
 error:

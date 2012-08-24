@@ -14,8 +14,18 @@ REM Need to set OPENSSL_CONF otherwise openssl tries to find an conf file from
 REM within my mingw build environment and prints a nasty looking warning.
 REM Setting it to burp.conf seems to make the warning disappear with no ill
 REM consequences.
-set OPENSSL_CONF=C:\Program Files\Burp\burp.conf
-set "openssl=C:\Program Files\Burp\bin\openssl.exe"
+REM Burp used to always put things in C:\Program Files\Burp\, but as of
+REM 1.3.11, it changed to putting them in %PROGRAMFILES%, but still want to
+REM let the old way work.
+IF EXIST "C:\Program Files\Burp" (
+	set OPENSSL_CONF=C:\Program Files\Burp\burp.conf
+	set "openssl=C:\Program Files\Burp\bin\openssl.exe"
+	set "tmpconf=C:\Program Files\Burp\CA\tmp.conf"
+) ELSE (
+	set OPENSSL_CONF=%PROGRAMFILES%\Burp\burp.conf
+	set "openssl=%PROGRAMFILES%\Burp\bin\openssl.exe"
+	set "tmpconf=%PROGRAMFILES%\Burp\CA\tmp.conf"
+)
 
 if %3.==. goto notenoughparams
 if %6.==. goto notenoughparams
@@ -31,7 +41,6 @@ echo "generating key %name%: %keypath%"
 REM Need to create a config file for openssl in order to make a certicate
 REM signing request. There must be a neater way to do it than one line at a time
 REM and %tmpconf% at the end each time.
-set "tmpconf=C:\Program Files\Burp\CA\tmp.conf"
 echo RANDFILE = /dev/urandom > "%tmpconf%"
 echo [ req ] >> "%tmpconf%"
 echo distinguished_name = req_distinguished_name >> "%tmpconf%"

@@ -43,6 +43,8 @@ Compilation instructions can be found at src/win32/README in the source package.
 The Windows installer will ask you for the address of your server, the client
 name, and the client password. Burp will then install its files to:
 C:/Program Files/Burp
+(Note that the "C:/Program Files/" part may differ, depending on Windows'
+language settings).
 If you need to change client configuration settings, the file can be found at:
 C:/Program Files/Burp/burp.conf
 It will be configured to backup "C:/Documents and Settings".

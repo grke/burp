@@ -587,7 +587,6 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 	struct cntr *cntr, char *fname, dev_t parent_device, bool top_level,
 	struct utimbuf *restore_times)
 {
-	int m;
 	int rtn_stat;
 	DIR *directory;
 	char *link=NULL;

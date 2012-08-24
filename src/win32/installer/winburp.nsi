@@ -70,14 +70,10 @@ DirText "Setup will install Burp ${VERSION} to the directory specified below. To
 ;
 Var ConfDir
 
-Var OptService
-Var OptStart
 Var OptSilent
+Var Overwrite
 
 Var CommonFilesDone
-
-Var ConfigClientInstallService
-Var ConfigClientStartService
 
 Var ConfigServerAddress
 Var ConfigServerPort
@@ -85,6 +81,7 @@ Var ConfigClientName
 Var ConfigPassword
 Var ConfigPoll
 Var ConfigAutoupgrade
+Var ConfigMinuteText
 
 Var AutomaticInstall
 
@@ -163,9 +160,8 @@ Function .onInit
   StrCpy $ConfDir "$R0"
 
   ; Process Command Line Options
-  StrCpy $OptService 1
-  StrCpy $OptStart 1
   StrCpy $OptSilent 0
+  StrCpy $Overwrite 0
   StrCpy $CommonFilesDone 0
   StrCpy $AutomaticInstall 1
   StrCpy $PreviousComponents 0
@@ -173,23 +169,10 @@ Function .onInit
 
   ${GetParameters} $R0
 
-  ClearErrors
-  ${GetOptions} $R0 "/noservice" $R1
-  IfErrors +2
-    StrCpy $OptService 0
-
-  ClearErrors
-  ${GetOptions} $R0 "/nostart" $R1
-  IfErrors +2
-    StrCpy $OptStart 0
-
   IfSilent 0 +2
     StrCpy $OptSilent 1
 
   ; Configuration Defaults
-
-  StrCpy $ConfigClientInstallService     "$OptService"
-  StrCpy $ConfigClientStartService       "$OptStart"
 
   StrCpy $ConfigServerAddress		"10.0.0.1"
   StrCpy $ConfigServerPort              "4971"
@@ -197,6 +180,45 @@ Function .onInit
   StrCpy $ConfigPassword                "password"
   StrCpy $ConfigPoll                    "20"
   StrCpy $ConfigAutoupgrade		"1"
+  ; The commands that you have to give the Windows scheduler change depending
+  ; upon your language. 'MINUTE' works for English.
+  ; Allow it to be overridden on the command line. Maybe one day, there will
+  ; be an advanced option to choose from the screens.
+  StrCpy $ConfigMinuteText		"MINUTE"
+
+  ; Allow things to be set on the command line.
+  ClearErrors
+  ${GetOptions} $R0 "/server=" $R1
+  IfErrors +2
+    StrCpy $ConfigServerAddress $R1
+  ClearErrors
+  ${GetOptions} $R0 "/port=" $R1
+  IfErrors +2
+    StrCpy $ConfigServerPort $R1
+  ClearErrors
+  ${GetOptions} $R0 "/cname=" $R1
+  IfErrors +2
+    StrCpy $ConfigClientName $R1
+  ClearErrors
+  ${GetOptions} $R0 "/password=" $R1
+  IfErrors +2
+    StrCpy $ConfigPassword $R1
+  ClearErrors
+  ${GetOptions} $R0 "/poll=" $R1
+  IfErrors +2
+    StrCpy $ConfigPoll $R1
+  ClearErrors
+  ${GetOptions} $R0 "/autoupgrade=" $R1
+  IfErrors +2
+    StrCpy $ConfigAutoupgrade $R1
+  ClearErrors
+  ${GetOptions} $R0 "/minutetext=" $R1
+  IfErrors +2
+    StrCpy $ConfigMinuteText $R1
+  ClearErrors
+  ${GetOptions} $R0 "/overwrite" $R1
+  IfErrors +2
+    StrCpy $Overwrite 1
 
   !InsertMacro MUI_INSTALLOPTIONS_EXTRACT "ConfigPage1.ini"
   !InsertMacro MUI_INSTALLOPTIONS_EXTRACT "ConfigPage2.ini"
@@ -246,7 +268,12 @@ donotresetinstdir:
 
   SetOutPath "$INSTDIR"
 
-  IfFileExists $INSTDIR\burp.conf end
+; If /overwrite was given on the command line, allow overwrite of
+; old configuration.
+  StrCmp $Overwrite 1 overwrite
+  IfFileExists $INSTDIR\Burp.conf end
+overwrite:
+
   FileOpen $R1 $INSTDIR\burp.conf w
 
 !If "$BITS" == "32"
@@ -294,7 +321,9 @@ donotresetinstdir:
   FileClose $R1
 
   ${If} $ConfigPoll != 0
-    nsExec::ExecToLog 'schtasks /CREATE /RU SYSTEM /TN "burp cron" /TR "\"$INSTDIR\bin\burp.exe\" -a t" /SC MINUTE /MO $ConfigPoll'
+    ; Delete the cron if it already exists.
+    nsExec::Exec 'schtasks /DELETE /TN "burp cron" /F'
+    nsExec::ExecToLog 'schtasks /CREATE /RU SYSTEM /TN "burp cron" /TR "\"$INSTDIR\bin\burp.exe\" -a t" /SC $ConfigMinuteText /MO $ConfigPoll'
   ${EndIf}
 
 end:
@@ -416,7 +445,10 @@ Function EnterConfigPage1
 ;  ${EndIf}
 
   CreateDirectory "$INSTDIR\autoupgrade"
+
+  StrCmp $Overwrite 1 overwrite
   IfFileExists $INSTDIR\Burp.conf end
+overwrite:
 
   !insertmacro MUI_HEADER_TEXT "Install burp (page 1 of 2)" ""
   !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage1.ini" "Field 2" "State" "$ConfigServerAddress"
@@ -441,7 +473,9 @@ Function EnterConfigPage2
 ;    Abort
 ;  ${EndIf}
 
+  StrCmp $Overwrite 1 overwrite
   IfFileExists $INSTDIR\Burp.conf end
+overwrite:
 
   !insertmacro MUI_HEADER_TEXT "Install burp (page 2 of 2)" ""
   !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage2.ini" "Field 2" "State" "$ConfigPoll"

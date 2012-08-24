@@ -47,6 +47,7 @@ struct config
 	char *ca_name;
 	char *ca_server_name;
 	char *ca_burp_ca;
+	int password_check;
 
 // client options
 	char *cname;

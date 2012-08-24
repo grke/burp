@@ -177,6 +177,9 @@ When turned on (which is the default) and the client is on version 1.3.6 or grea
 \fBtimestamp_format=[strftime format]\fR
 This allows you to tweak the format of the timestamps of individual backups. See 'man strftime' to see available substitutions. If this option is unset, burp uses "%Y-%m-%d %H:%M:%S".
 .TP
+\fBpassword_check=[0|1]\fR
+Allows you to turn client password checking on or off. The default is on. SSL certificates will still be checked if you turn passwords off. This option can be overridden by the client configuration files in clientconfdir on the server.
+.TP
 \fBclientconfdir=[path]\fR
 Path to the directory that contains client configuration files.
 .TP
@@ -527,6 +530,7 @@ Additionally, the following options can be overridden here for each client:
 \fBdirectory\fR
 \fBdirectory_tree\fR
 \fBtimestamp_format\fR
+\fBpassword_check\fR
 \fBkeep\fR
 \fBworking_dir_recovery_method\fR
 \fBlibrsync\fR

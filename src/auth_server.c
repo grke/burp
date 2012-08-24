@@ -57,22 +57,25 @@ static int check_client_and_password(struct config *conf, const char *client, co
 		}
 	}
 
-	if(!cconf->password && !cconf->passwd)
+	if(cconf->password_check)
 	{
-		logp("password rejected for client %s\n", client);
-		return -1;
-	}
-	// check against plain text
-	if(cconf->password && strcmp(cconf->password, password))
-	{
-		logp("password rejected for client %s\n", client);
-		return -1;
-	}
-	// check against encypted passwd
-	if(cconf->passwd && !check_passwd(cconf->passwd, password))
-	{
-		logp("password rejected for client %s\n", client);
-		return -1;
+		if(!cconf->password && !cconf->passwd)
+		{
+			logp("password rejected for client %s\n", client);
+			return -1;
+		}
+		// check against plain text
+		if(cconf->password && strcmp(cconf->password, password))
+		{
+			logp("password rejected for client %s\n", client);
+			return -1;
+		}
+		// check against encypted passwd
+		if(cconf->passwd && !check_passwd(cconf->passwd, password))
+		{
+			logp("password rejected for client %s\n", client);
+			return -1;
+		}
 	}
 
 	if(!cconf->keep)
@@ -175,7 +178,8 @@ int authorise_server(struct config *conf, char **client, char **cversion, struct
 
 	version_warn(p1cntr, *client, *cversion);
 
-	logp("auth ok for client: %s\n", *client);
+	logp("auth ok for: %s%s\n", *client,
+		cconf->password_check?"":" (no password needed)");
 	if(password) free(password);
 
 	async_write_str(CMD_GEN, "ok");

@@ -66,6 +66,7 @@ void init_config(struct config *conf)
 	conf->cname=NULL;
 	conf->directory=NULL;
 	conf->timestamp_format=NULL;
+	conf->password_check=1;
 	conf->ca_conf=NULL;
 	conf->ca_name=NULL;
 	conf->ca_server_name=NULL;
@@ -649,6 +650,8 @@ static int load_config_ints(struct config *conf, const char *field, const char *
 		&(conf->client_can_restore));
 	get_conf_val_int(field, value, "client_can_verify",
 		&(conf->client_can_verify));
+	get_conf_val_int(field, value, "password_check",
+		&(conf->password_check));
 
 	return 0;
 }
@@ -1411,6 +1414,7 @@ static int set_global_arglist(struct strlist ***dst, struct strlist **src, int *
 int set_client_global_config(struct config *conf, struct config *cconf, const char *client)
 {
 	cconf->syslog=conf->syslog;
+	cconf->password_check=conf->password_check;
 	cconf->client_can_force_backup=conf->client_can_force_backup;
 	cconf->client_can_list=conf->client_can_list;
 	cconf->client_can_restore=conf->client_can_restore;

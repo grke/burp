@@ -11,42 +11,52 @@ void reset_filecounter(struct cntr *c)
 	c->total=0;
 	c->total_same=0;
 	c->total_changed=0;
+	c->total_deleted=0;
 
 	c->file=0;
 	c->file_same=0;
 	c->file_changed=0;
+	c->file_deleted=0;
 
 	c->enc=0;
 	c->enc_same=0;
 	c->enc_changed=0;
+	c->enc_deleted=0;
 
 	c->meta=0;
 	c->meta_same=0;
 	c->meta_changed=0;
+	c->meta_deleted=0;
 
 	c->encmeta=0;
 	c->encmeta_same=0;
 	c->encmeta_changed=0;
+	c->encmeta_deleted=0;
 
 	c->dir=0;
 	c->dir_same=0;
 	c->dir_changed=0;
+	c->dir_deleted=0;
 
 	c->slink=0;
 	c->slink_same=0;
 	c->slink_changed=0;
+	c->slink_deleted=0;
 
 	c->hlink=0;
 	c->hlink_same=0;
 	c->hlink_changed=0;
+	c->hlink_deleted=0;
 
 	c->special=0;
 	c->special_same=0;
 	c->special_changed=0;
+	c->special_deleted=0;
 
 	c->efs=0;
 	c->efs_same=0;
 	c->efs_changed=0;
+	c->efs_deleted=0;
 
 	c->warning=0;
 	c->byte=0;
@@ -131,7 +141,7 @@ static void border(void)
 
 static void table_border(void)
 {
-	logc("% 22s --------------------------------------------------\n", "");
+	logc("% 18s ------------------------------------------------------------\n", "");
 }
 
 void do_filecounter(struct cntr *c, char ch, int print)
@@ -241,6 +251,32 @@ void do_filecounter_recvbytes(struct cntr *c, unsigned long long bytes)
 	c->recvbyte+=bytes;
 }
 
+void do_filecounter_deleted(struct cntr *c, char ch)
+{
+	if(!c) return;
+	switch(ch)
+	{
+		case CMD_FILE:
+			++(c->file_deleted); ++(c->total_deleted); break;
+		case CMD_ENC_FILE:
+			++(c->enc_deleted); ++(c->total_deleted); break;
+		case CMD_METADATA:
+			++(c->meta_deleted); ++(c->total_deleted); break;
+		case CMD_ENC_METADATA:
+			++(c->encmeta_deleted); ++(c->total_deleted); break;
+		case CMD_DIRECTORY:
+			++(c->dir_deleted); ++(c->total_deleted); break;
+		case CMD_HARD_LINK:
+			++(c->hlink_deleted); ++(c->total_deleted); break;
+		case CMD_SOFT_LINK:
+			++(c->slink_deleted); ++(c->total_deleted); break;
+		case CMD_SPECIAL:
+			++(c->special_deleted); ++(c->total_deleted); break;
+		case CMD_EFS_FILE:
+			++(c->efs_deleted); ++(c->total_deleted); break;
+	}
+}
+
 enum lform
 {
 	FORMAT_SERVER=0,
@@ -249,7 +285,7 @@ enum lform
 	FORMAT_CLIENT_RESTORE
 };
 
-static void quint_print(const char *msg, unsigned long long a, unsigned long long b, unsigned long long c, unsigned long long d, enum lform form)
+static void quint_print(const char *msg, unsigned long long a, unsigned long long b, unsigned long long c, unsigned long long d, unsigned long long e, enum lform form)
 {
 	switch(form)
 	{
@@ -258,38 +294,42 @@ static void quint_print(const char *msg, unsigned long long a, unsigned long lon
 		   so split them all up. */
 		case FORMAT_SERVER:
 			if(!d && !a && !b && !c) return;
-			logc("% 22s ", msg);
+			logc("% 18s ", msg);
 			logc("% 9llu ", a);
 			logc("% 9llu ", b);
 			logc("% 9llu ", c);
+			logc("% 9llu ", d);
 			logc("% 9llu |", a+b+c);
-			logc("% 9llu\n", d);
+			logc("% 9llu\n", e);
 			break;
 		case FORMAT_CLIENT_DATA:
 			if(!d && !a && !b && !c) return;
-			logc("% 22s ", msg);
+			logc("% 18s ", msg);
 			logc("% 9llu ", a);
 			logc("% 9llu ", b);
 			logc("% 9s ", "-");
+			logc("% 9s ", "-");
 			logc("% 9llu |", a+b+c);
-			logc("% 9llu\n", d);
+			logc("% 9llu\n", e);
 			break;
 		case FORMAT_CLIENT_NODE:
 			if(!d && !a && !b && !c) return;
-			logc("% 22s ", msg);
+			logc("% 18s ", msg);
+			logc("% 9s ", "-");
 			logc("% 9s ", "-");
 			logc("% 9s ", "-");
 			logc("% 9s ", "-");
 			logc("% 9s |", "-");
-			logc("% 9llu\n", d);
+			logc("% 9llu\n", e);
 			break;
 		case FORMAT_CLIENT_RESTORE:
 			if(!d && !a && !b && !c) return;
-			logc("% 22s ", msg);
+			logc("% 18s ", msg);
 			logc("% 9s ", "-");
 			logc("% 9s ", "-");
 			logc("% 9s ", "-");
-			logc("% 9llu |", d);
+			logc("% 9s ", "-");
+			logc("% 9llu |", e);
 			logc("% 9s\n", "-");
 			break;
 	}
@@ -297,7 +337,7 @@ static void quint_print(const char *msg, unsigned long long a, unsigned long lon
 
 static void restore_print(const char *msg, unsigned long long count)
 {
-	quint_print(msg, 0, 0, count, 0, FORMAT_CLIENT_RESTORE);
+	quint_print(msg, 0, 0, count, 0, 0, FORMAT_CLIENT_RESTORE);
 }
 
 static void bottom_part(struct cntr *a, struct cntr *b, enum action act)
@@ -328,8 +368,8 @@ void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act, int c
 	logc("Start time: %s\n", getdatestr(p1c->start));
 	logc("  End time: %s\n", getdatestr(now));
 	logc("Time taken: %s\n", time_taken(now-p1c->start));
-	logc("% 22s % 9s % 9s % 9s % 9s |% 9s\n",
-	  " ", "New", "Changed", "Unchanged", "Total", "Scanned");
+	logc("% 18s % 9s % 9s % 9s % 9s % 9s |% 9s\n",
+	  " ", "New", "Changed", "Unchanged", "Deleted", "Total", "Scanned");
 	table_border();
 
 	if(act==ACTION_RESTORE)
@@ -347,15 +387,15 @@ void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act, int c
 	}
 	else if(act==ACTION_VERIFY)
 	{
-		restore_print("Verified files:", c->file);
-		restore_print("Verified files (enc):", c->enc);
-		restore_print("Verified meta data:", c->meta);
-		restore_print("Verified meta (enc):", c->encmeta);
-		restore_print("Verified directories:", c->dir);
-		restore_print("Verified soft links:", c->slink);
-		restore_print("Verified hard links:", c->hlink);
-		restore_print("Verified special:", c->special);
-		restore_print("Verified EFS files:", c->efs);
+		restore_print("Vrfd files:", c->file);
+		restore_print("Vrfd files (enc):", c->enc);
+		restore_print("Vrfd meta data:", c->meta);
+		restore_print("Vrfd meta (enc):", c->encmeta);
+		restore_print("Vrfd directories:", c->dir);
+		restore_print("Vrfd soft links:", c->slink);
+		restore_print("Vrfd hard links:", c->hlink);
+		restore_print("Vrfd special:", c->special);
+		restore_print("Vrfd EFS files:", c->efs);
 		restore_print("Grand total:", c->total);
 	}
 	else
@@ -364,6 +404,7 @@ void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act, int c
 			c->file,
 			c->file_changed,
 			c->file_same,
+			c->file_deleted,
 			p1c->file,
 			client?FORMAT_CLIENT_DATA:FORMAT_SERVER);
 
@@ -371,6 +412,7 @@ void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act, int c
 			c->enc,
 			c->enc_changed,
 			c->enc_same,
+			c->enc_deleted,
 			p1c->enc,
 			client?FORMAT_CLIENT_DATA:FORMAT_SERVER);
 
@@ -378,6 +420,7 @@ void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act, int c
 			c->meta,
 			c->meta_changed,
 			c->meta_same,
+			c->meta_deleted,
 			p1c->meta,
 			client?FORMAT_CLIENT_DATA:FORMAT_SERVER);
 
@@ -385,6 +428,7 @@ void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act, int c
 			c->encmeta,
 			c->meta_changed,
 			c->meta_same,
+			c->meta_deleted,
 			p1c->encmeta,
 			client?FORMAT_CLIENT_DATA:FORMAT_SERVER);
 
@@ -392,6 +436,7 @@ void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act, int c
 			c->dir,
 			c->dir_changed,
 			c->dir_same,
+			c->dir_deleted,
 			p1c->dir,
 			client?FORMAT_CLIENT_NODE:FORMAT_SERVER);
 
@@ -399,6 +444,7 @@ void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act, int c
 			c->slink,
 			c->slink_changed,
 			c->slink_same,
+			c->slink_deleted,
 			p1c->slink,
 			client?FORMAT_CLIENT_NODE:FORMAT_SERVER);
 
@@ -406,6 +452,7 @@ void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act, int c
 			c->hlink,
 			c->hlink_changed,
 			c->hlink_same,
+			c->hlink_deleted,
 			p1c->hlink,
 			client?FORMAT_CLIENT_NODE:FORMAT_SERVER);
 
@@ -413,6 +460,7 @@ void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act, int c
 			c->special,
 			c->special_changed,
 			c->special_same,
+			c->special_deleted,
 			p1c->special,
 			client?FORMAT_CLIENT_NODE:FORMAT_SERVER);
 
@@ -420,6 +468,7 @@ void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act, int c
 			c->efs,
 			c->efs_changed,
 			c->efs_same,
+			c->efs_deleted,
 			p1c->efs,
 			client?FORMAT_CLIENT_NODE:FORMAT_SERVER);
 
@@ -427,6 +476,7 @@ void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act, int c
 			c->total,
 			c->total_changed,
 			c->total_same,
+			c->total_deleted,
 			p1c->total,
 			client?FORMAT_CLIENT_DATA:FORMAT_SERVER);
 	}

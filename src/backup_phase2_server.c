@@ -299,9 +299,15 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FIL
 		// do not free
 		return 1;
 	}
-	//logp("behind: %s\n", p1b->path);
-	// behind - need to read more from the old
-	// manifest
+	else
+	{
+		//logp("behind: %s\n", p1b->path);
+		// behind - need to read more from the old
+		// manifest
+		// Count a deleted file - it was in the old manifest but not
+		// the new.
+		do_filecounter_deleted(cntr, cb->cmd);
+	}
 	return 0;
 }
 

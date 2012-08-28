@@ -543,6 +543,7 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, con
 				clist[q]->summary=curback;
 				tosend=clist[q]->summary;
 			}
+			else tosend=clist[q]->summary;
 		}
 		else tosend=clist[q]->summary;
 

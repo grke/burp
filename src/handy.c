@@ -44,7 +44,6 @@ int gzclose_fp(gzFile *fp)
 	if(!*fp) return 0;
 	if((e=gzclose(*fp)))
 	{
-		char msg[256]="";
 		const char *str=NULL;
 		if(e==Z_ERRNO) str=strerror(errno);
 		else str=gzerror(*fp, &e);
@@ -806,6 +805,7 @@ int init_client_socket(const char *host, const char *port)
 		close_fd(&rfd);
 		return -1;
 	}
+	reuseaddr(rfd);
 
 #ifdef HAVE_WIN32
 	setmode(rfd, O_BINARY);
@@ -828,67 +828,77 @@ static void get_status_buf(char *buf, size_t len, const char *client, char phase
 	int l=0;
 	snprintf(buf, len,
 		"%s\t%c\t%c\t"
-		"%llu/%llu/%llu/%llu\t"
-		"%llu/%llu/%llu/%llu\t"
-		"%llu/%llu/%llu/%llu\t"
-		"%llu/%llu/%llu/%llu\t"
-		"%llu/%llu/%llu/%llu\t"
-		"%llu/%llu/%llu/%llu\t"
-		"%llu/%llu/%llu/%llu\t"
-		"%llu/%llu/%llu/%llu\t"
-		"%llu/%llu/%llu/%llu\t"
-		"%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu/%llu\t"
 		"%llu\t%llu\t%llu\t%llu\t%llu\t%llu\t%li\t%s\n",
 			client, STATUS_RUNNING, phase,
 
 			cntr->total,
 			cntr->total_changed,
 			cntr->total_same,
+			cntr->total_deleted,
 			p1cntr->total,
 
 			cntr->file,
 			cntr->file_changed,
 			cntr->file_same,
+			cntr->file_deleted,
 			p1cntr->file,
 
 			cntr->enc,
 			cntr->enc_changed,
 			cntr->enc_same,
+			cntr->enc_deleted,
 			p1cntr->enc,
 
 			cntr->meta,
 			cntr->meta_changed,
 			cntr->meta_same,
+			cntr->meta_deleted,
 			p1cntr->meta,
 
 			cntr->encmeta,
 			cntr->encmeta_changed,
 			cntr->encmeta_same,
+			cntr->encmeta_deleted,
 			p1cntr->encmeta,
 
 			cntr->dir,
 			cntr->dir_changed,
 			cntr->dir_same,
+			cntr->dir_deleted,
 			p1cntr->dir,
 
 			cntr->slink,
 			cntr->slink_changed,
 			cntr->slink_same,
+			cntr->slink_deleted,
 			p1cntr->slink,
 
 			cntr->hlink,
 			cntr->hlink_changed,
 			cntr->hlink_same,
+			cntr->hlink_deleted,
 			p1cntr->hlink,
 
 			cntr->special,
 			cntr->special_changed,
 			cntr->special_same,
+			cntr->special_deleted,
 			p1cntr->special,
 
 			cntr->total,
 			cntr->total_changed,
 			cntr->total_same,
+			cntr->total_deleted,
 			p1cntr->total,
 
 			cntr->gtotal,

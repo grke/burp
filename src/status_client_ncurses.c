@@ -84,12 +84,13 @@ static char *running_status_to_text(char s)
 	return ret;
 }
 
-static int extract_ul(const char *value, unsigned long long *a, unsigned long long *b, unsigned long long *c, unsigned long long *d, unsigned long long *t)
+static int extract_ul(const char *value, unsigned long long *a, unsigned long long *b, unsigned long long *c, unsigned long long *d, unsigned long long *e, unsigned long long *t)
 {
 	char *as=NULL;
 	char *bs=NULL;
 	char *cs=NULL;
 	char *ds=NULL;
+	char *es=NULL;
 	char *copy=NULL;
 	if(!value || !(copy=strdup(value))) return -1;
 
@@ -106,10 +107,15 @@ static int extract_ul(const char *value, unsigned long long *a, unsigned long lo
 			*b=strtoull(bs, NULL, 10);
 			if((ds=strchr(++cs, '/')))
 			{
-				*c=strtoull(cs, NULL, 10);
 				*ds='\0';
-				ds++;
-				*d=strtoull(ds, NULL, 10);
+				*c=strtoull(cs, NULL, 10);
+				if((es=strchr(++ds, '/')))
+				{
+					*d=strtoull(ds, NULL, 10);
+					*es='\0';
+					es++;
+					*e=strtoull(es, NULL, 10);
+				}
 			}
 		}
 	}
@@ -169,19 +175,18 @@ static int summary(char **toks, int t, int count, int row, int col)
 			unsigned long long b=0;
 			unsigned long long c=0;
 			unsigned long long d=0;
+			unsigned long long e=0;
 			unsigned long long t=0;
 	  		unsigned long long p=0;
-			if(!extract_ul(toks[3], &a, &b, &c, &d, &t))
+			if(!extract_ul(toks[3], &a, &b, &c, &d, &e, &t))
 			{
-				if(d) p=(t*100)/d;
+				if(e) p=(t*100)/e;
 				snprintf(f, sizeof(f), "%llu/%llu %llu%%",
-					t, d, p);
+					t, e, p);
 			}
 		}
 		if(t>16 && *(toks[16]) && strcmp(toks[16], "0"))
 		{
-			//snprintf(b, sizeof(b), "%s bytes%s", toks[14],
-			//	bytes_to_human_str(toks[14]));
 			snprintf(b, sizeof(b), "%s",
 				bytes_to_human_str(toks[16]));
 		}
@@ -234,21 +239,23 @@ static void print_detail(const char *field, const char *value, int *x, int col, 
 	unsigned long long b=0;
 	unsigned long long c=0;
 	unsigned long long d=0;
+	unsigned long long e=0;
 	unsigned long long t=0;
 	if(!field || !value || !*value
 	  || !strcmp(value, "0")
-	  || !strcmp(value, "0/0/0/0")) return;
+	  || !strcmp(value, "0/0/0/0/0")) return;
 
-	if(extract_ul(value, &a, &b, &c, &d, &t)) return;
-	to_msg(msg, sizeof(msg), "% 22s % 9llu % 9llu % 9llu % 9llu % 9llu\n",
-			field, a, b, c, t, d);
+	if(extract_ul(value, &a, &b, &c, &d, &e, &t)) return;
+	to_msg(msg, sizeof(msg),
+			"% 15s % 9llu % 9llu % 9llu % 9llu % 9llu % 9llu",
+			field, a, b, c, d, t, e);
 	print_line(msg, (*x)++, col);
-	if(percent && d)
+	if(percent && e)
 	{
 	  unsigned long long p;
-	  p=(t*100)/d;
-	  to_msg(msg, sizeof(msg), "% 22s % 9s % 9s % 9s % 9llu%% % 9s\n",
-		"", "", "", "", p, "");
+	  p=(t*100)/e;
+	  to_msg(msg, sizeof(msg), "% 15s % 9s % 9s % 9s % 9s % 9llu%% % 9s",
+		"", "", "", "", "", p, "");
 	  print_line(msg, (*x)++, col);
 	}
 }
@@ -256,8 +263,8 @@ static void print_detail(const char *field, const char *value, int *x, int col, 
 static void table_header(int *x, int col)
 {
 	char msg[256]="";
-	to_msg(msg, sizeof(msg), "% 22s % 9s % 9s % 9s % 9s % 9s\n",
-		"", "New", "Changed", "Unchanged", "Total", "Scanned");
+	to_msg(msg, sizeof(msg), "% 15s % 9s % 9s % 9s % 9s % 9s % 9s",
+	  "", "New", "Changed", "Unchanged", "Deleted", "Total", "Scanned");
 	print_line(msg, (*x)++, col);
 }
 
@@ -267,7 +274,7 @@ static void print_detail2(const char *field, const char *value1, const char *val
 	if(!field
 		|| !value1 || !*value1 || !strcmp(value1, "0")
 		|| !value2 || !*value2) return;
-	snprintf(msg, sizeof(msg), "%s: %s%s\n", field, value1, value2);
+	snprintf(msg, sizeof(msg), "%s: %s%s", field, value1, value2);
 	print_line(msg, (*x)++, col);
 }
 

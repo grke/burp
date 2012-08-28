@@ -40,8 +40,8 @@ The main author of Burp is Graham Keeling.
 </P>
 
 <BR>
-<h3><font color="#99CCFF">Current stable version: 1.3.0</font></h3>
-<h4><font color="#99CCFF">Old stable version: 1.2.2</font></h4>
+<h3><font color="#99CCFF">Current stable version: 1.3.10</font></h3>
+<h4><font color="#99CCFF">Old stable version: 1.3.0</font></h4>
 <BR>
 
 <h3><font color="#99CCFF">NEWS</font></h3>
@@ -51,6 +51,38 @@ The main author of Burp is Graham Keeling.
 <TR>
 <TD></TD>
 <TD ALIGN="LEFT">
+
+<P>
+<FONT COLOR="#99CCFF">2012-08-28:
+<BR>
+Nobody financially supported burp during August, but thank you to 6sync for
+continuing to provide web hosting.
+</FONT>
+</p>
+
+<P>
+<FONT COLOR="#99CCFF">2012-08-28: burp-1.3.12 is released.
+<pre>
+Changes in burp-1.3.12:
+  * Remove 'forward' timestamp references in backup directories, to allow the
+    easier deletion of backup directories.
+  * Add missing_return_in_non_void_function.patch from Suse.
+  * Further break down find_files() into smaller functions.
+  * Make sure behaviour is sensible when a client runs out of storage
+    directories.
+  * On Windows, use PROGRAMFILES environment variable(s) instead of
+    C:/Program Files/Burp/.
+  * Stop the Windows installer writing/reading stuff to/from the registry and
+    the start menu.
+  * Allow the Windows installer options to be set on the Windows command line.
+  * Add password_check=[0|1] to options on the server. Defaults to on. Turning
+    it off disables client password checks (although SSL certificates are still
+    checked).
+  * Count deleted files.
+  * Remove unnecessary counter code.
+</pre>
+</FONT>
+</P>
 
 <P>
 <FONT COLOR="#99CCFF">2012-07-28:

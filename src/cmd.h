@@ -29,37 +29,10 @@
 				   the end of the manifest and contains
 				   size/checksum info. */
 
-/* Stuff only used in counting stats, for humans */
-#define CMD_FILE_CHANGED		'z'
-#define CMD_FILE_SAME			'u'
-
-#define CMD_METADATA_CHANGED		'p'
-#define CMD_METADATA_SAME		'M'
-
-#define CMD_ENC_METADATA_CHANGED	'P'
-#define CMD_ENC_METADATA_SAME		'E'
-
-#define CMD_ENC_FILE_CHANGED		'Z'
-#define CMD_ENC_FILE_SAME		'Y'
-
-#define CMD_DIRECTORY_CHANGED		'D'
-#define CMD_DIRECTORY_SAME		'X'
-
-#define CMD_HARD_LINK_CHANGED		'j'
-#define CMD_HARD_LINK_SAME		'J'
-
-#define CMD_SOFT_LINK_CHANGED		'g'
-#define CMD_SOFT_LINK_SAME		'G'
-
-#define CMD_SPECIAL_CHANGED		'h'
-#define CMD_SPECIAL_SAME		'H'
-
-#define CMD_EFS_FILE_CHANGED		'I'
-#define CMD_EFS_FILE_SAME		'K'
+/* CMD_FILE_UNCHANGED only used in counting stats on the client, for humans */
+#define CMD_FILE_CHANGED 'z'
 
 #define CMD_TIMESTAMP	'b'	/* Backup timestamp (in response to list) */
-
-
 
 
 /* These things are for the status server/client */

@@ -1304,46 +1304,12 @@ void cmd_to_text(char cmd, char *buf, size_t len)
 			snprintf(buf, len, "Warning"); break;
 		case CMD_END_FILE:
 			snprintf(buf, len, "End of file transmission"); break;
-		case CMD_FILE_CHANGED:
-			snprintf(buf, len, "Plain file changed"); break;
-		case CMD_FILE_SAME:
-			snprintf(buf, len, "Plain file unchanged"); break;
-		case CMD_METADATA_CHANGED:
-			snprintf(buf, len, "Meta data changed"); break;
-		case CMD_METADATA_SAME:
-			snprintf(buf, len, "Meta data unchanged"); break;
 		case CMD_ENC_METADATA:
 			snprintf(buf, len, "Encrypted meta data"); break;
-		case CMD_ENC_METADATA_CHANGED:
-			snprintf(buf, len, "Encrypted meta data changed"); break;
-		case CMD_ENC_METADATA_SAME:
-			snprintf(buf, len, "Encrypted meta data unchanged"); break;
-		case CMD_ENC_FILE_CHANGED:
-			snprintf(buf, len, "Encrypted file changed"); break;
-		case CMD_ENC_FILE_SAME:
-			snprintf(buf, len, "Encrypted file unchanged"); break;
 		case CMD_EFS_FILE:
 			snprintf(buf, len, "Windows EFS file"); break;
-		case CMD_EFS_FILE_SAME:
-			snprintf(buf, len, "Windows EFS file changed"); break;
-		case CMD_EFS_FILE_CHANGED:
-			snprintf(buf, len, "Windows EFS file unchanged"); break;
-		case CMD_DIRECTORY_CHANGED:
-			snprintf(buf, len, "Directory changed"); break;
-		case CMD_DIRECTORY_SAME:
-			snprintf(buf, len, "Directory unchanged"); break;
-		case CMD_HARD_LINK_CHANGED:
-			snprintf(buf, len, "Hard link changed"); break;
-		case CMD_HARD_LINK_SAME:
-			snprintf(buf, len, "Hard link unchanged"); break;
-		case CMD_SOFT_LINK_CHANGED:
-			snprintf(buf, len, "Soft link changed"); break;
-		case CMD_SOFT_LINK_SAME:
-			snprintf(buf, len, "Soft link unchanged"); break;
-		case CMD_SPECIAL_CHANGED:
-			snprintf(buf, len, "Special file changed"); break;
-		case CMD_SPECIAL_SAME:
-			snprintf(buf, len, "Special file unchanged"); break;
+		case CMD_FILE_CHANGED:
+			snprintf(buf, len, "Plain file changed"); break;
 		case CMD_TIMESTAMP:
 			snprintf(buf, len, "Backup timestamp"); break;
 		default:

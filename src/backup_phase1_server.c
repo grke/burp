@@ -188,8 +188,8 @@ static int forward_sbuf(FILE *fp, gzFile zp, struct sbuf *b, struct sbuf *target
 
 		if(do_counters)
 		{
-			do_filecounter(cntr,
-			  same?cmd_to_same(b->cmd):cmd_to_changed(b->cmd), 0);
+			if(same) do_filecounter_same(cntr, b->cmd);
+			else do_filecounter_changed(cntr, b->cmd);
 			if(b->endfile)
 			{
 				unsigned long long e=0;

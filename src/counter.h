@@ -66,14 +66,14 @@ struct cntr
 extern void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act, int client);
 extern void print_endcounter(struct cntr *c);
 extern void do_filecounter(struct cntr *c, char ch, int print);
+extern void do_filecounter_same(struct cntr *c, char ch);
+extern void do_filecounter_changed(struct cntr *c, char ch);
+extern void do_filecounter_deleted(struct cntr *c, char ch);
 extern void do_filecounter_bytes(struct cntr *c, unsigned long long bytes);
 extern void do_filecounter_sentbytes(struct cntr *c, unsigned long long bytes);
 extern void do_filecounter_recvbytes(struct cntr *c, unsigned long long bytes);
-extern void do_filecounter_deleted(struct cntr *c, char ch);
 extern void reset_filecounter(struct cntr *c);
 extern const char *bytes_to_human(unsigned long long counter);
 extern const char *bytes_to_human_str(const char *str);
-extern char cmd_to_same(char cmd);
-extern char cmd_to_changed(char cmd);
 
 #endif

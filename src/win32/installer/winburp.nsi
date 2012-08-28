@@ -72,6 +72,7 @@ Var ConfDir
 
 Var OptSilent
 Var Overwrite
+Var SkipPages
 
 Var CommonFilesDone
 
@@ -162,6 +163,7 @@ Function .onInit
   ; Process Command Line Options
   StrCpy $OptSilent 0
   StrCpy $Overwrite 0
+  StrCpy $SkipPages 0
   StrCpy $CommonFilesDone 0
   StrCpy $AutomaticInstall 1
   StrCpy $PreviousComponents 0
@@ -219,6 +221,10 @@ Function .onInit
   ${GetOptions} $R0 "/overwrite" $R1
   IfErrors +2
     StrCpy $Overwrite 1
+  ClearErrors
+  ${GetOptions} $R0 "/skippages" $R1
+  IfErrors +2
+    StrCpy $SkipPages 1
 
   !InsertMacro MUI_INSTALLOPTIONS_EXTRACT "ConfigPage1.ini"
   !InsertMacro MUI_INSTALLOPTIONS_EXTRACT "ConfigPage2.ini"
@@ -446,6 +452,8 @@ Function EnterConfigPage1
 
   CreateDirectory "$INSTDIR\autoupgrade"
 
+  StrCmp $SkipPages 1 end
+
   StrCmp $Overwrite 1 overwrite
   IfFileExists $INSTDIR\Burp.conf end
 overwrite:
@@ -462,7 +470,6 @@ overwrite:
   !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigPassword "ConfigPage1.ini" "Field 8" State
 
 end:
-  DetailPrint "$INSTDIR\burp.conf already exists. Not overwriting."
 
 FunctionEnd
 
@@ -472,6 +479,8 @@ Function EnterConfigPage2
 ;  ${If} $R0 = 0
 ;    Abort
 ;  ${EndIf}
+
+  StrCmp $SkipPages 1 end
 
   StrCmp $Overwrite 1 overwrite
   IfFileExists $INSTDIR\Burp.conf end
@@ -485,7 +494,6 @@ overwrite:
   !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigAutoupgrade "ConfigPage2.ini" "Field 5" State
 
 end:
-  DetailPrint "$INSTDIR\burp.conf already exists. Not overwriting."
 
 FunctionEnd
 

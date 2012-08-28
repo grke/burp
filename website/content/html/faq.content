@@ -443,6 +443,8 @@ Q. What command line options are available to the Windows installer?
 	<td>Set the poll interval</td></tr>
 <tr><td>/overwrite</td>
 	<td>Allow existing client configuration to be overwritten</td></tr>
+<tr><td>/skippages</td>
+	<td>Skip installer configuration pages but keep the initial splash screen and final confirmation</td></tr>
 <tr><td>/minutetext=&lt;text&gt;</td>
 	<td>When setting up the Windows scheduler, the Windows 'schtasks' command stupidly needs different text given to it depending on the language of the system. The default is 'MINUTE'. If your Windows is for example, Polish, this option lets you set it to the Polish version of 'MINUTE'.</td></tr>
 </table>

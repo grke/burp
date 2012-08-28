@@ -66,40 +66,6 @@ void reset_filecounter(struct cntr *c)
 	c->start=time(NULL);
 }
 
-char cmd_to_same(char cmd)
-{
-	switch(cmd)
-	{
-		case CMD_FILE: return CMD_FILE_SAME;
-		case CMD_ENC_FILE: return CMD_ENC_FILE_SAME;
-		case CMD_METADATA: return CMD_METADATA_SAME;
-		case CMD_ENC_METADATA: return CMD_ENC_METADATA_SAME;
-		case CMD_DIRECTORY: return CMD_DIRECTORY_SAME;
-		case CMD_SOFT_LINK: return CMD_SOFT_LINK_SAME;
-		case CMD_HARD_LINK: return CMD_HARD_LINK_SAME;
-		case CMD_SPECIAL: return CMD_SPECIAL_SAME;
-		case CMD_EFS_FILE: return CMD_EFS_FILE_SAME;
-	}
-	return CMD_ERROR;
-}
-
-char cmd_to_changed(char cmd)
-{
-	switch(cmd)
-	{
-		case CMD_FILE: return CMD_FILE_CHANGED;
-		case CMD_ENC_FILE: return CMD_ENC_FILE_CHANGED;
-		case CMD_METADATA: return CMD_METADATA_CHANGED;
-		case CMD_ENC_METADATA: return CMD_ENC_METADATA_CHANGED;
-		case CMD_DIRECTORY: return CMD_DIRECTORY_CHANGED;
-		case CMD_SOFT_LINK: return CMD_SOFT_LINK_CHANGED;
-		case CMD_HARD_LINK: return CMD_HARD_LINK_CHANGED;
-		case CMD_SPECIAL: return CMD_SPECIAL_CHANGED;
-		case CMD_EFS_FILE: return CMD_EFS_FILE_CHANGED;
-	}
-	return CMD_ERROR;
-}
-
 const char *bytes_to_human(unsigned long long counter)
 {
 	static char ret[32]="";
@@ -156,71 +122,32 @@ void do_filecounter(struct cntr *c, char ch, int print)
 	{
 		case CMD_FILE:
 			++(c->file); ++(c->total); break;
-		case CMD_FILE_SAME:
-			++(c->file_same); ++(c->total_same); break;
-		case CMD_FILE_CHANGED:
-			++(c->file_changed); ++(c->total_changed); break;
-
 		case CMD_ENC_FILE:
 			++(c->enc); ++(c->total); break;
-		case CMD_ENC_FILE_SAME:
-			++(c->enc_same); ++(c->total_same); break;
-		case CMD_ENC_FILE_CHANGED:
-			++(c->enc_changed); ++(c->total_changed); break;
-
 		case CMD_METADATA:
 			++(c->meta); ++(c->total); break;
-		case CMD_METADATA_SAME:
-			++(c->meta_same); ++(c->total_same); break;
-		case CMD_METADATA_CHANGED:
-			++(c->meta_changed); ++(c->total_changed); break;
-
 		case CMD_ENC_METADATA:
 			++(c->encmeta); ++(c->total); break;
-		case CMD_ENC_METADATA_SAME:
-			++(c->encmeta_same); ++(c->total_same); break;
-		case CMD_ENC_METADATA_CHANGED:
-			++(c->encmeta_changed); ++(c->total_changed); break;
-
 		case CMD_DIRECTORY:
 			++(c->dir); ++(c->total); break;
-		case CMD_DIRECTORY_SAME:
-			++(c->dir_same); ++(c->total_same); break;
-		case CMD_DIRECTORY_CHANGED:
-			++(c->dir_changed); ++(c->total_changed); break;
-
 		case CMD_HARD_LINK:
 			++(c->hlink); ++(c->total); break;
-		case CMD_HARD_LINK_SAME:
-			++(c->hlink_same); ++(c->total_same); break;
-		case CMD_HARD_LINK_CHANGED:
-			++(c->hlink_changed); ++(c->total_changed); break;
-
 		case CMD_SOFT_LINK:
 			++(c->slink); ++(c->total); break;
-		case CMD_SOFT_LINK_SAME:
-			++(c->slink_same); ++(c->total_same); break;
-		case CMD_SOFT_LINK_CHANGED:
-			++(c->slink_changed); ++(c->total_changed); break;
-
 		case CMD_SPECIAL:
 			++(c->special); ++(c->total); break;
-		case CMD_SPECIAL_SAME:
-			++(c->special_same); ++(c->total_same); break;
-		case CMD_SPECIAL_CHANGED:
-			++(c->special_changed); ++(c->total_changed); break;
-
 		case CMD_EFS_FILE:
 			++(c->efs); ++(c->total); break;
-		case CMD_EFS_FILE_SAME:
-			++(c->efs_same); ++(c->total_same); break;
-		case CMD_EFS_FILE_CHANGED:
-			++(c->efs_changed); ++(c->total_changed); break;
 
 		case CMD_WARNING:
 			++(c->warning); return; // do not add to total
 		case CMD_ERROR:
 			return; // errors should be fatal - ignore
+
+		// Include CMD_FILE_CHANGED so that the client can show changed
+		// file symbols.
+		case CMD_FILE_CHANGED:
+			++(c->file_changed); ++(c->total_changed); break;
 	}
 	if(!((++(c->gtotal))%64) && print)
 		printf(
@@ -233,22 +160,57 @@ void do_filecounter(struct cntr *c, char ch, int print)
 	fflush(stdout);
 }
 
-void do_filecounter_bytes(struct cntr *c, unsigned long long bytes)
+void do_filecounter_same(struct cntr *c, char ch)
 {
 	if(!c) return;
-	c->byte+=bytes;
+	switch(ch)
+	{
+		case CMD_FILE:
+			++(c->file_same); ++(c->total_same); break;
+		case CMD_ENC_FILE:
+			++(c->enc_same); ++(c->total_same); break;
+		case CMD_METADATA:
+			++(c->meta_same); ++(c->total_same); break;
+		case CMD_ENC_METADATA:
+			++(c->encmeta_same); ++(c->total_same); break;
+		case CMD_DIRECTORY:
+			++(c->dir_same); ++(c->total_same); break;
+		case CMD_HARD_LINK:
+			++(c->hlink_same); ++(c->total_same); break;
+		case CMD_SOFT_LINK:
+			++(c->slink_same); ++(c->total_same); break;
+		case CMD_SPECIAL:
+			++(c->special_same); ++(c->total_same); break;
+		case CMD_EFS_FILE:
+			++(c->efs_same); ++(c->total_same); break;
+	}
 }
 
-void do_filecounter_sentbytes(struct cntr *c, unsigned long long bytes)
+void do_filecounter_changed(struct cntr *c, char ch)
 {
 	if(!c) return;
-	c->sentbyte+=bytes;
-}
-
-void do_filecounter_recvbytes(struct cntr *c, unsigned long long bytes)
-{
-	if(!c) return;
-	c->recvbyte+=bytes;
+	switch(ch)
+	{
+		case CMD_FILE:
+		case CMD_FILE_CHANGED:
+			++(c->file_changed); ++(c->total_changed); break;
+		case CMD_ENC_FILE:
+			++(c->enc_changed); ++(c->total_changed); break;
+		case CMD_METADATA:
+			++(c->meta_changed); ++(c->total_changed); break;
+		case CMD_ENC_METADATA:
+			++(c->encmeta_changed); ++(c->total_changed); break;
+		case CMD_DIRECTORY:
+			++(c->dir_changed); ++(c->total_changed); break;
+		case CMD_HARD_LINK:
+			++(c->hlink_changed); ++(c->total_changed); break;
+		case CMD_SOFT_LINK:
+			++(c->slink_changed); ++(c->total_changed); break;
+		case CMD_SPECIAL:
+			++(c->special_changed); ++(c->total_changed); break;
+		case CMD_EFS_FILE:
+			++(c->efs_changed); ++(c->total_changed); break;
+	}
 }
 
 void do_filecounter_deleted(struct cntr *c, char ch)
@@ -277,6 +239,24 @@ void do_filecounter_deleted(struct cntr *c, char ch)
 	}
 }
 
+void do_filecounter_bytes(struct cntr *c, unsigned long long bytes)
+{
+	if(!c) return;
+	c->byte+=bytes;
+}
+
+void do_filecounter_sentbytes(struct cntr *c, unsigned long long bytes)
+{
+	if(!c) return;
+	c->sentbyte+=bytes;
+}
+
+void do_filecounter_recvbytes(struct cntr *c, unsigned long long bytes)
+{
+	if(!c) return;
+	c->recvbyte+=bytes;
+}
+
 enum lform
 {
 	FORMAT_SERVER=0,
@@ -293,7 +273,7 @@ static void quint_print(const char *msg, unsigned long long a, unsigned long lon
 		   '%llu' type thing at a time, sometimes segfaulting,
 		   so split them all up. */
 		case FORMAT_SERVER:
-			if(!d && !a && !b && !c) return;
+			if(!e && !a && !b && !c) return;
 			logc("% 18s ", msg);
 			logc("% 9llu ", a);
 			logc("% 9llu ", b);
@@ -303,7 +283,7 @@ static void quint_print(const char *msg, unsigned long long a, unsigned long lon
 			logc("% 9llu\n", e);
 			break;
 		case FORMAT_CLIENT_DATA:
-			if(!d && !a && !b && !c) return;
+			if(!e && !a && !b && !c) return;
 			logc("% 18s ", msg);
 			logc("% 9llu ", a);
 			logc("% 9llu ", b);
@@ -313,7 +293,7 @@ static void quint_print(const char *msg, unsigned long long a, unsigned long lon
 			logc("% 9llu\n", e);
 			break;
 		case FORMAT_CLIENT_NODE:
-			if(!d && !a && !b && !c) return;
+			if(!e && !a && !b && !c) return;
 			logc("% 18s ", msg);
 			logc("% 9s ", "-");
 			logc("% 9s ", "-");
@@ -323,7 +303,7 @@ static void quint_print(const char *msg, unsigned long long a, unsigned long lon
 			logc("% 9llu\n", e);
 			break;
 		case FORMAT_CLIENT_RESTORE:
-			if(!d && !a && !b && !c) return;
+			if(!e && !a && !b && !c) return;
 			logc("% 18s ", msg);
 			logc("% 9s ", "-");
 			logc("% 9s ", "-");
@@ -337,7 +317,7 @@ static void quint_print(const char *msg, unsigned long long a, unsigned long lon
 
 static void restore_print(const char *msg, unsigned long long count)
 {
-	quint_print(msg, 0, 0, count, 0, 0, FORMAT_CLIENT_RESTORE);
+	quint_print(msg, 0, 0, 0, 0, count, FORMAT_CLIENT_RESTORE);
 }
 
 static void bottom_part(struct cntr *a, struct cntr *b, enum action act)

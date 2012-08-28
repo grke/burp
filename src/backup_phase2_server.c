@@ -155,13 +155,20 @@ static int new_non_file(struct sbuf *p1b, FILE *ucfp, char cmd, struct cntr *cnt
 	// order with normal files, which has to wait around for their data
 	// to turn up.
 	if(sbuf_to_manifest(p1b, ucfp, NULL))
-	{
 		return -1;
-	}
 	else
-	{
 		do_filecounter(cntr, cmd, 0);
-	}
+	free_sbuf(p1b);
+	return 0;
+}
+
+static int changed_non_file(struct sbuf *p1b, FILE *ucfp, char cmd, struct cntr *cntr)
+{
+	// As new_non_file.
+	if(sbuf_to_manifest(p1b, ucfp, NULL))
+		return -1;
+	else
+		do_filecounter_changed(cntr, cmd);
 	free_sbuf(p1b);
 	return 0;
 }
@@ -191,7 +198,7 @@ static int process_unchanged_file(struct sbuf *cb, FILE *ucfp, struct cntr *cntr
 	}
 	else
 	{
-		do_filecounter(cntr, cmd_to_same(cb->cmd), 0);
+		do_filecounter_same(cntr, cb->cmd);
 	}
 	if(cb->endfile) do_filecounter_bytes(cntr,
 		 strtoull(cb->endfile, NULL, 10));
@@ -284,9 +291,8 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FIL
 		}
 		else
 		{
-			if(new_non_file(p1b, ucfp,
-				cmd_to_changed(p1b->cmd), cntr))
-					return -1;
+			if(changed_non_file(p1b, ucfp, p1b->cmd, cntr))
+				return -1;
 		}
 		free_sbuf(cb);
 		return 1;
@@ -485,8 +491,10 @@ static int do_stuff_to_receive(struct sbuf *rb, FILE *p2fp, const char *datadirt
 					{
 					  char cmd=rb->cmd;
 					  if(rb->receivedelta)
-						cmd=cmd_to_changed(cmd);
-					  do_filecounter(cntr, cmd, 0);
+						do_filecounter_changed(cntr,
+							cmd);
+					  else
+						do_filecounter(cntr, cmd, 0);
 					  if(*last_requested
 					  && !strcmp(rb->path, *last_requested))
 					  {

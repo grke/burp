@@ -1,5 +1,5 @@
   * Remove '-l <logfile> / logfile=' options because they didn't work properly
-    were adding to much complexity to the code.
+    and were adding too much complexity to the code.
   * Add 'stdout=[0|1]' option, which defines whether to log messages to stdout.
   * Add 'progress_counter=[0|1]' option for the client, which defines whether
     to print counters to stdout.

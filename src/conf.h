@@ -17,8 +17,9 @@ struct config
 	char *status_port;
 	enum burp_mode mode;
 	char *lockfile;
-	char *logfile;
 	int syslog;
+	int stdout;
+	int progress_counter;
 	char *ssl_cert_ca;
 	char *ssl_cert;
 	char *ssl_key;

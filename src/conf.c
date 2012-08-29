@@ -73,8 +73,9 @@ void init_config(struct config *conf)
 	conf->ca_burp_ca=NULL;
 	conf->ca_csr_dir=NULL;
 	conf->lockfile=NULL;
-	conf->logfile=NULL;
 	conf->syslog=0;
+	conf->stdout=1;
+	conf->progress_counter=1;
 	conf->password=NULL;
 	conf->passwd=NULL;
 	conf->server=NULL;
@@ -186,7 +187,6 @@ void free_config(struct config *conf)
 	if(conf->ca_burp_ca) free(conf->ca_burp_ca);
 	if(conf->ca_csr_dir) free(conf->ca_csr_dir);
 	if(conf->lockfile) free(conf->lockfile);
-	if(conf->logfile) free(conf->logfile);
 	if(conf->password) free(conf->password);
 	if(conf->passwd) free(conf->passwd);
 	if(conf->server) free(conf->server);
@@ -604,6 +604,10 @@ static int load_config_ints(struct config *conf, const char *field, const char *
 {
 	get_conf_val_int(field, value, "syslog",
 		&(conf->syslog));
+	get_conf_val_int(field, value, "stdout",
+		&(conf->stdout));
+	get_conf_val_int(field, value, "progress_counter",
+		&(conf->progress_counter));
 	get_conf_val_int(field, value, "hardlinked_archive",
 		&(conf->hardlinked_archive));
 	get_conf_val_int(field, value, "max_hardlinks",
@@ -716,7 +720,6 @@ static int load_config_strings(struct config *conf, const char *field, const cha
 	// "pidfile" is a synonym for "lockfile".
 	if(get_conf_val(field, value, "pidfile", &(conf->lockfile)))
 		return -1;
-	if(get_conf_val(field, value, "logfile", &(conf->logfile))) return -1;
 	if(get_conf_val(field, value, "password", &(conf->password))) return -1;
 	if(get_conf_val(field, value, "passwd", &(conf->passwd))) return -1;
 	if(get_conf_val(field, value, "server", &(conf->server))) return -1;
@@ -1414,6 +1417,8 @@ static int set_global_arglist(struct strlist ***dst, struct strlist **src, int *
 int set_client_global_config(struct config *conf, struct config *cconf, const char *client)
 {
 	cconf->syslog=conf->syslog;
+	cconf->stdout=conf->stdout;
+	cconf->progress_counter=conf->progress_counter;
 	cconf->password_check=conf->password_check;
 	cconf->client_can_force_backup=conf->client_can_force_backup;
 	cconf->client_can_list=conf->client_can_list;

@@ -89,24 +89,20 @@ static void usage_client(void)
 #endif
 }
 
-int reload(struct config *conf, const char *configfile, char **logfile, bool firsttime, int oldmax_children, int oldmax_status_children)
+int reload(struct config *conf, const char *configfile, bool firsttime, int oldmax_children, int oldmax_status_children)
 {
 	if(!firsttime) logp("Reloading config\n");
 
 	init_config(conf);
-
-	// If logfile is defined, use it
-	// Have to do this twice, because init_config uses logp().
-	if(open_logfile(*logfile, conf)) return 1;
 
 	if(load_config(configfile, conf, TRUE)) return 1;
 
 	/* change umask */
 	umask(conf->umask);
 
-	// Open the second time. This will turn on syslogging which could not
-	// be turned on before load_config.
-	if(open_logfile(*logfile, conf)) return 1;
+	// This will turn on syslogging which could not be turned on before
+	// load_config.
+	set_logfp(NULL, conf);
 
 #ifndef HAVE_WIN32
 	if(conf->mode==MODE_SERVER)
@@ -117,13 +113,6 @@ int reload(struct config *conf, const char *configfile, char **logfile, bool fir
 	// Do not try to change user or group after the first time.
 	if(firsttime && chuser_and_or_chgrp(conf->user, conf->group))
 		return 1;
-
-	// If logfile is defined in config...
-	if(conf->logfile)
-	{
-		*logfile=conf->logfile;
-		if(open_logfile(*logfile, conf)) return 1;
-	}
 
 	return 0;
 }
@@ -159,7 +148,6 @@ int main (int argc, char *argv[])
 	int forking=1;
 	int gotlock=0;
 	int strip=0;
-	char *logfile=NULL;
 	struct config conf;
 	int forceoverwrite=0;
 	enum action act=ACTION_LIST;
@@ -177,7 +165,7 @@ int main (int argc, char *argv[])
 
 	init_log(argv[0]);
 
-	while((option=getopt(argc, argv, "a:b:c:C:d:ghfFinr:s:l:vz:?"))!=-1)
+	while((option=getopt(argc, argv, "a:b:c:C:d:ghfFil:nr:s:vz:?"))!=-1)
 	{
 		switch(option)
 		{
@@ -235,6 +223,9 @@ int main (int argc, char *argv[])
 			case 'i':
 				print_all_cmds();
 				return 0;
+			case 'l':
+				logp("-l <logfile> option obsoleted\n");
+				break;
 			case 'n':
 				forking=0;
 				break;
@@ -243,9 +234,6 @@ int main (int argc, char *argv[])
 				break;
 			case 's':
 				strip=atoi(optarg);
-				break;
-			case 'l':
-				logfile=optarg;
 				break;
 			case 'v':
 				printf("%s-%s\n", progname(), VERSION);
@@ -267,7 +255,7 @@ int main (int argc, char *argv[])
 		return 1;
 	}
 
-	if(reload(&conf, configfile, &logfile,
+	if(reload(&conf, configfile,
 	  1 /* first time */,
 	  0 /* no oldmax_children setting */,
 	  0 /* no oldmax_status_children setting */)) return 1;
@@ -319,7 +307,7 @@ int main (int argc, char *argv[])
 		}
 		else
 			ret=server(&conf, configfile,
-				&logfile, generate_ca_only);
+				generate_ca_only);
 #endif
 	}
 	else

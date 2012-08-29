@@ -1902,7 +1902,7 @@ static int run_server(struct config *conf, const char *configfile, int *rfd, con
 	return ret;
 }
 
-int server(struct config *conf, const char *configfile, char **logfile, int generate_ca_only)
+int server(struct config *conf, const char *configfile, int generate_ca_only)
 {
 	int ret=0;
 	int rfd=-1; // normal client port
@@ -1938,7 +1938,7 @@ int server(struct config *conf, const char *configfile, char **logfile, int gene
 			oldport=strdup(conf->port);
 			oldstatusport=conf->status_port?
 				strdup(conf->status_port):NULL;
-			if(reload(conf, configfile, logfile,
+			if(reload(conf, configfile,
 				0 /* not first time */,
 				conf->max_children,
 				conf->max_status_children))

@@ -22,9 +22,9 @@ enum action
 #include "log.h"
 
 extern int setup_signals(int oldmax_children, int max_children, int oldmax_status_children, int max_status_children);
-extern int reload(struct config *conf, const char *configfile, char **logfile, bool firsttime, int oldmax_children, int oldmax_status_children);
+extern int reload(struct config *conf, const char *configfile, bool firsttime, int oldmax_children, int oldmax_status_children);
 
-extern int server(struct config *conf, const char *configfile, char **logfile,
+extern int server(struct config *conf, const char *configfile,
 	int generate_ca_only);
 extern int client(struct config *conf, enum action act);
 

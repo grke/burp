@@ -7,6 +7,5 @@ extern void logc(const char *fmt, ...);
 extern const char *progname(void);
 extern int set_logfp(FILE *fp, struct config *conf);
 extern FILE *get_logfp(void);
-extern int open_logfile(const char *logfile, struct config *conf);
 
 #endif

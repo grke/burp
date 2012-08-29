@@ -5,7 +5,11 @@
 static const char *prog="unknown";
 
 static FILE *logfp=NULL;
-static int do_syslog=0;
+// Start with all logging on, so that something is said when initial startup
+// goes wrong - for example, reading the conf file.
+static int do_syslog=1;
+static int do_stdout=1;
+static int do_progress_counter=1;
 
 void init_log(char *progname)
 {
@@ -35,9 +39,16 @@ void logp(const char *fmt, ...)
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	pid=(int)getpid();
-	fprintf(logfp?logfp:stdout, "%s: %s[%d] %s", gettm(), prog, pid, buf);
-	if(do_syslog)
-		syslog(LOG_INFO, "%s: %s[%d] %s", gettm(), prog, pid, buf);
+	if(logfp) fprintf(logfp, "%s: %s[%d] %s", gettm(), prog, pid, buf);
+	else
+	{
+		if(do_syslog)
+			syslog(LOG_INFO, "%s: %s[%d] %s",
+				gettm(), prog, pid, buf);
+		if(do_stdout)
+			fprintf(stdout, "%s: %s[%d] %s",
+				gettm(), prog, pid, buf);
+	}
 	va_end(ap);
 }
 
@@ -48,7 +59,11 @@ void logc(const char *fmt, ...)
 	va_list ap;
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
-	fprintf(logfp?logfp:stdout, "%s", buf);
+	if(logfp) fprintf(logfp, "%s", buf); // for the server side
+	else
+	{
+		if(do_progress_counter) fprintf(stdout, "%s", buf);
+	}
 	va_end(ap);
 }
 
@@ -65,24 +80,12 @@ int set_logfp(FILE *fp, struct config *conf)
 	if(logfp) setlinebuf(logfp);
 #endif
 	do_syslog=conf->syslog;
+	do_stdout=conf->stdout;
+	do_progress_counter=conf->progress_counter;
 	return 0;
 }
 
 FILE *get_logfp(void)
 {
 	return logfp;
-}
-
-int open_logfile(const char *logfile, struct config *conf)
-{
-	FILE *fp=NULL;
-	set_logfp(NULL, conf); // Close the old log, if it is open.
-	if(!logfile || !*logfile) return 0;
-	if(!(fp=fopen(logfile, "ab")))
-	{
-		logp("error opening logfile %s.\n", logfile);
-		return 1;
-	}
-	set_logfp(fp, conf);
-	return 0;
 }

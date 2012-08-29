@@ -115,8 +115,8 @@ void do_filecounter(struct cntr *c, char ch, int print)
 	if(!c) return;
 	if(print)
 	{
-		if(!c->gtotal && !c->warning) printf("\n");
-		printf("%c", ch);
+		if(!c->gtotal && !c->warning) logc("\n");
+		logc("%c", ch);
 	}
 	switch(ch)
 	{
@@ -150,7 +150,7 @@ void do_filecounter(struct cntr *c, char ch, int print)
 			++(c->file_changed); ++(c->total_changed); break;
 	}
 	if(!((++(c->gtotal))%64) && print)
-		printf(
+		logc(
 #ifdef HAVE_WIN32
 			" %I64u\n",
 #else
@@ -469,7 +469,7 @@ void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act, int c
 
 void print_endcounter(struct cntr *cntr)
 {
-	if(cntr->gtotal) printf(
+	if(cntr->gtotal) logc(
 #ifdef HAVE_WIN32
 		" %I64u\n\n",
 #else

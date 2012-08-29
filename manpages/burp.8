@@ -32,13 +32,6 @@ Generate initial CA keys and certificates, and then exit.
 \fB\-i\fR \fB\fR
 Print an index table of symbols that humans may see burp produce, and exit.
 .TP
-\fB\-l\fR \fB[path]\fR
-Path to log file. The default is stdout. This option overrides the
-.IR logfile
-option in the config file. Use 
-.I /dev/null
-to deactivate or '' to reactivate output.
-.TP
 \fB\-a s\fR \fB\fR
 Run this to connect to a running server to get a live monitor of the status of all your backup clients. If your server config file is not in the default location, you will also need to specify the path with the '\-c' option. The live monitor requires ncurses support at compile time.
 .TP
@@ -85,14 +78,6 @@ Print an index table of symbols that humans may see burp produce, and exit.
 \fB\-r\fR \fB[regex]\fR
 Short for 'regular expression'. The argument is a regular expression with
 which to match backup files. Use it for lists and restores.
-.TP
-\fB\-l\fR \fB[path]\fR
-Short for 'log file'. The argument is a path to the log file. The default
-is stdout. This option overrides the
-.IR logfile
-option in the config file. Use 
-.I /dev/null
-to deactivate or '' to reactivate output.
 .TP
 \fB\-s\fR \fB[number]\fR
 For use with restores \- strip a number of leading path components.
@@ -190,11 +175,11 @@ simultaneously.
 \fBpidfile=[path]\fR
 Synonym for lockfile.
 .TP
-\fBlogfile=[path]\fR
-Path to the logfile.
-.TP
 \fBsyslog=[0|1]\fR
-Log to syslog.
+Log to syslog. Defaults to off.
+.TP
+\fBstdout=[0|1]\fR
+Log to stdout. Defaults to on.
 .TP
 \fBkeep=[number]\fR
 Number of backups to keep. This can be overriddden by the client configuration
@@ -370,11 +355,14 @@ simultaneously (this currently doesn't work on Windows).
 \fBpidfile=[path]\fR
 Synonym for lockfile.
 .TP
-\fBlogfile=[path]\fR
-Path to the logfile.
-.TP
 \fBsyslog=[0|1]\fR
-Log to syslog.
+Log to syslog. Defaults to off.
+.TP
+\fBstdout=[0|1]\fR
+Log to syslog. Defaults to on.
+.TP
+\fBprogress_counter=[0|1]\fR
+Print progress counters on stdout. Defaults to on.
 .TP
 \fBuser=[username]\fR
 Run as a particular user (not supported on Windows).

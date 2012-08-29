@@ -302,6 +302,8 @@ overwrite:
       FileWrite $R1 "include = C:/$\r$\n"
     ${EndIf}
   ${EndIf}
+  FileWrite $R1 "stdout = 1$\r$\n"
+  FileWrite $R1 "progress_counter = 1$\r$\n"
   FileWrite $R1 "nobackup = .nobackup$\r$\n"
   FileWrite $R1 "lockfile = $ConfDir/lockfile$\r$\n"
   FileWrite $R1 "ca_burp_ca = $ConfDir/bin/burp_ca.bat$\r$\n"

@@ -10,6 +10,7 @@ static FILE *logfp=NULL;
 static int do_syslog=1;
 static int do_stdout=1;
 static int do_progress_counter=1;
+static int syslog_opened=0;
 
 void init_log(char *progname)
 {
@@ -43,8 +44,7 @@ void logp(const char *fmt, ...)
 	else
 	{
 		if(do_syslog)
-			syslog(LOG_INFO, "%s: %s[%d] %s",
-				gettm(), prog, pid, buf);
+			syslog(LOG_INFO, "%s", buf);
 		if(do_stdout)
 			fprintf(stdout, "%s: %s[%d] %s",
 				gettm(), prog, pid, buf);
@@ -82,6 +82,17 @@ int set_logfp(FILE *fp, struct config *conf)
 	do_syslog=conf->syslog;
 	do_stdout=conf->stdout;
 	do_progress_counter=conf->progress_counter;
+
+	if(syslog_opened)
+	{
+		closelog();
+		syslog_opened=0;
+	}
+	if(do_syslog)
+	{
+		openlog(prog, LOG_PID, LOG_USER);
+		syslog_opened++;
+	}
 	return 0;
 }
 

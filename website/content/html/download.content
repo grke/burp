@@ -24,8 +24,9 @@ git clone git://github.com/grke/burp.git (read-only)
 <FONT COLOR="#99CCFF">
 Packages are also available in:
 <pre>
-Debian sid <a href="http://packages.debian.org/sid/burp">http://packages.debian.org/sid/burp</a>.
-Ubuntu precise <a href="http://packages.ubuntu.com/precise/burp">http://packages.ubuntu.com/precise/burp</a>.
+Debian
+Ubuntu
+OpenSUSE
 </pre>
 </FONT>
 </P>

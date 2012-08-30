@@ -247,17 +247,6 @@ static int set_summary(struct cstat *c)
 	return 0;
 }
 
-static int looks_like_vim_tmpfile(const char *filename)
-{
-	const char *cp=NULL;
-	// vim tmpfiles look like ".filename.swp".
-	if(filename[0]=='.'
-	  && (cp=strrchr(filename, '.'))
-	  && !strcmp(cp, ".swp"))
-		return 1;
-	return 0;
-}
-
 static int load_data_from_disk(struct config *conf, struct cstat ***clist, int *clen)
 {
 	int q=0;
@@ -278,9 +267,8 @@ static int load_data_from_disk(struct config *conf, struct cstat ***clist, int *
         for(m=0; m<n; m++)
 	{
 		if(dir[m]->d_ino==0
-		  || !strcmp(dir[m]->d_name, ".")
-		  || !strcmp(dir[m]->d_name, "..")
-		  || looks_like_vim_tmpfile(dir[m]->d_name))
+		// looks_like...() also avoids '.' and '..'.
+		  || looks_like_tmp_or_hidden_file(dir[m]->d_name))
 			continue;
 		for(q=0; q<*clen; q++)
 		{

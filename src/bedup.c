@@ -572,17 +572,6 @@ static int process_dir(const char *oldpath, const char *newpath, const char *ext
 	return 0;
 }
 
-static int looks_like_vim_tmpfile(const char *filename)
-{
-	const char *cp=NULL;
-	// vim tmpfiles look like ".filename.swp".
-	if(filename[0]=='.'
-	  && (cp=strrchr(filename, '.'))
-	  && !strcmp(cp, ".swp"))
-		return 1;
-	return 0;
-}
-
 static int in_group(const char *clientconfdir, const char *client, strlist_t **grouplist, int gcount, struct config *conf)
 {
 	int i=0;
@@ -660,9 +649,9 @@ static int iterate_over_clients(struct config *conf, strlist_t **grouplist, int 
 	{
 		char *lockfile=NULL;
 		char *lockfilebase=NULL;
-		if(!strcmp(dirinfo->d_name, ".")
-		  || !strcmp(dirinfo->d_name, "..")
-		  || looks_like_vim_tmpfile(dirinfo->d_name)
+		if(dirinfo->d_ino==0
+		// looks_like...() also avoids '.' and '..'.
+		  || looks_like_tmp_or_hidden_file(dirinfo->d_name)
 		  || !is_regular_file(conf->clientconfdir, dirinfo->d_name))
 			continue;
 

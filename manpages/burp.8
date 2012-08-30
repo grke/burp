@@ -506,7 +506,7 @@ Open all block devices for reading and back up the contents as if they were regu
 
 .SH SERVER CLIENTCONFDIR FILE
 .TP
-For the server to know about clients that can contact it, you need to place a file named after the client in clientconfdir.
+For the server to know about clients that can contact it, you need to place a file named after the client in clientconfdir. Files beginning with '.' or ending with '~' are ignored. Directories are also ignored.
 .TP
 The file name must match the name in the 'cname' field on the client.
 .TP

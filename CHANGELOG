@@ -9,6 +9,7 @@
     these are hidden or temporary files.
   * Fix bug where the client_can_* options were not being overridden in the
     client specific conf files.
+  * Fix bug that stopped client_can_restore=0 working.
 
 2012-08-28 Changes in burp-1.3.12:
   * Remove 'forward' timestamp references in backup directories, to allow the

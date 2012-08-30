@@ -783,6 +783,39 @@ static int reset_conf_val(const char *src, char **dest)
 	return 0;
 }
 
+static char *get_restorepath(struct config *cconf, const char *client)
+{
+	char *tmp=NULL;
+	char *restorepath=NULL;
+	if(!(tmp=prepend_s(cconf->directory, client, strlen(client)))
+	 || !(restorepath=prepend_s(tmp, "restore", strlen("restore"))))
+	{
+		if(tmp) free(tmp);
+		return NULL;
+	}
+	free(tmp);
+	return restorepath;
+}
+
+static int client_can_restore(struct config *cconf, const char *client)
+{
+	struct stat statp;
+	char *restorepath=NULL;
+printf("HERE: %d\n", cconf->client_can_restore);
+	// If there is a restore file on the server, it is always OK.
+	if(!(restorepath=get_restorepath(cconf, client)))
+		return -1;
+	if(!lstat(restorepath, &statp))
+	{
+		// Remove the file.
+		unlink(restorepath);
+		free(restorepath);
+		return 1;
+	}
+	free(restorepath);
+	return cconf->client_can_restore;
+}
+
 static int child(struct config *conf, struct config *cconf, const char *client, const char *cversion, const char *incexc, int srestore, char cmd, char *buf, char **gotlock, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ret=0;
@@ -957,12 +990,22 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 		{
 			char *restoreregex=NULL;
 
-			if(act==ACTION_RESTORE && !cconf->client_can_restore)
+			if(act==ACTION_RESTORE)
 			{
-				logp("Not allowing restore of %s\n", client);
-				async_write_str(CMD_GEN,
-					"Client restore is not allowed");
-				goto end;
+				int r;
+				if((r=client_can_restore(cconf, client))<0)
+				{
+					ret=-1;
+					goto end;
+				}
+				else if(!r)
+				{
+					logp("Not allowing restore of %s\n",
+						client);
+					async_write_str(CMD_GEN,
+					  "Client restore is not allowed");
+					goto end;
+				}
 			}
 			if(act==ACTION_VERIFY && !cconf->client_can_verify)
 			{
@@ -1137,14 +1180,11 @@ static int extra_comms(const char *client, const char *cversion, char **incexc, 
 			return -1;
 
 		/* Clients can receive restore initiated from the server. */
-		if(!(tmp=prepend_s(cconf->directory, client, strlen(client)))
-		 || !(restorepath=prepend_s(tmp, "restore", strlen("restore"))))
+		if(!(restorepath=get_restorepath(cconf, client)))
 		{
-			if(tmp) free(tmp);
 			if(feat) free(feat);
 			return -1;
 		}
-		free(tmp);
 		if(!lstat(restorepath, &statp) && S_ISREG(statp.st_mode)
 		  && append_to_feat(&feat, "srestore:"))
 		{
@@ -1215,7 +1255,10 @@ static int extra_comms(const char *client, const char *cversion, char **incexc, 
 					ret=-1;
 					break;
 				}
-				unlink(restorepath);
+				// Do not unlink it here - wait until
+				// the client says that it wants to do the
+				// restore.
+				//unlink(restorepath);
 			}
 			else if(!strcmp(buf, "sincexc ok"))
 			{

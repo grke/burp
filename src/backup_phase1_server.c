@@ -230,7 +230,7 @@ int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpth *dpth, struct con
 	if(forward_sbuf(p2fp, NULL, &p2btmp, NULL,
 		0, /* not phase1 */
 		0, /* no seekback */
-		1, /* do_counters */
+		0, /* no counters */
 		0, /* changed */
 		dpth, cconf, cntr)) goto error;
 	rewind(p2fp);

@@ -62,7 +62,9 @@ void logc(const char *fmt, ...)
 	if(logfp) fprintf(logfp, "%s", buf); // for the server side
 	else
 	{
-		if(do_progress_counter) fprintf(stdout, "%s", buf);
+		if(do_progress_counter
+		  && do_stdout)
+			fprintf(stdout, "%s", buf);
 	}
 	va_end(ap);
 }

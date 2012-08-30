@@ -75,7 +75,7 @@ void init_config(struct config *conf)
 	conf->lockfile=NULL;
 	conf->syslog=0;
 	conf->stdout=1;
-	conf->progress_counter=1;
+	conf->progress_counter=0;
 	conf->password=NULL;
 	conf->passwd=NULL;
 	conf->server=NULL;
@@ -828,8 +828,16 @@ static int load_config_field_and_value(struct config *conf, const char *field, c
 {
 	if(!strcmp(field, "mode"))
 	{
-		if(!strcmp(value, "server")) conf->mode=MODE_SERVER;
-		else if(!strcmp(value, "client")) conf->mode=MODE_CLIENT;
+		if(!strcmp(value, "server"))
+		{
+			conf->mode=MODE_SERVER;
+			conf->progress_counter=0; // default to off for server
+		}
+		else if(!strcmp(value, "client"))
+		{
+			conf->mode=MODE_CLIENT;
+			conf->progress_counter=1; // default to on for client
+		}
 		else return -1;
 	}
 	else if(!strcmp(field, "compression"))

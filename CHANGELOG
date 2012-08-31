@@ -12,6 +12,7 @@
   * Fix bug that stopped client_can_restore=0 working.
   * Scan the manifest before restore/verify so that counters and status
     monitor can show estimates.
+  * Add verify/restore notifications.
 
 2012-08-28 Changes in burp-1.3.12:
   * Remove 'forward' timestamp references in backup directories, to allow the

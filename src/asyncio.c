@@ -678,7 +678,11 @@ int logw(struct cntr *cntr, const char *fmt, ...)
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	if(doing_estimate) printf("\nWARNING: %s\n", buf);
-	else r=async_write_str(CMD_WARNING, buf);
+	else
+	{
+		r=async_write_str(CMD_WARNING, buf);
+		logp("WARNING: %s\n", buf);
+	}
 	va_end(ap);
 	do_filecounter(cntr, CMD_WARNING, 1);
 	return r;

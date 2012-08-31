@@ -3,18 +3,25 @@
 echo "Running notify script: $@"
 
 client="$1" ; shift
-current="$1" ; shift
-working="$1" ; shift
-finishing="$1" ; shift
+basedir="$1" ; shift
+storagedir="$1" ; shift
+file="$1" ; shift
+brv="$1" ; shift # one of backup/restore/verify
 warnings="$1" ; shift
 sendmail="$1" ; shift
+
+working="$basedir/working"
+finishing="$basedir/finishing"
 
 while [ "$#" -gt 0 ] ; do
 	case "$1" in
 		Subject:*)
 			w=""
 			[ "$warnings" != "0" ] && w="($warnings warnings)"
-			h="$1 $client $w"
+			h="$1"
+			h="${h//%c/$client}"
+			h="${h//%w/$w}"
+			h="${h//%b/$brv}"
 			;;
 		*) h="$1"
 			;;
@@ -30,12 +37,21 @@ done
 catcmd="gunzip -c"
 
 # Look for a log to attach
-[ -z "$log" -a -f "$working/log" ] && log="$working/log" && id=$(cat "$working"/timestamp) && catcmd="cat"
-[ -z "$log" -a -f "$working/log.gz" ] && log="$working/log.gz" && id=$(cat "$working"/timestamp)
-[ -z "$log" -a -f "$finishing/log" ] && log="$finishing/log" && id=$(cat "$finishing"/timestamp) && catcmd="cat"
-[ -z "$log" -a -f "$finishing/log.gz" ] && log="$finishing/log.gz" && id=$(cat "$finishing"/timestamp)
-[ -z "$log" -a -f "$current/log" ] && log="$current/log" && id=$(cat "$current"/timestamp) && catcmd="cat"
-[ -z "$log" -a -f "$current/log.gz" ] && log="$current/log.gz" && id=$(cat "$current"/timestamp)
+if [ "$brv" = "backup" ] ; then
+  [ -z "$log" -a -f "$working/$file" ] && \
+    log="$working/$file" && id=$(cat "$working"/timestamp) && catcmd="cat"
+  [ -z "$log" -a -f "$working/$file.gz" ] && \
+    log="$working/$file.gz" && id=$(cat "$working"/timestamp)
+  [ -z "$log" -a -f "$finishing/$file" ] && \
+    log="$finishing/$file" && id=$(cat "$finishing"/timestamp) && catcmd="cat"
+  [ -z "$log" -a -f "$finishing/$file.gz" ] && \
+    log="$finishing/$file.gz" && id=$(cat "$finishing"/timestamp)
+fi
+
+[ -z "$log" -a -f "$storagedir/$file" ] && \
+  log="$storagedir/$file" && id=$(cat "$storagedir"/timestamp) && catcmd="cat"
+[ -z "$log" -a -f "$storagedir/$file.gz" ] && \
+  log="$storagedir/$file.gz" && id=$(cat "$storagedir"/timestamp)
 
 if [ -z "$log" ] ; then
   echo "$headers" && echo && echo "No log found to send in email" | $sendmail

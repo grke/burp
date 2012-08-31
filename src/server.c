@@ -815,6 +815,36 @@ static int client_can_restore(struct config *cconf, const char *client)
 	return cconf->client_can_restore;
 }
 
+static void maybe_do_notification(int status, const char *client, const char *basedir, const char *storagedir, const char *filename, const char *brv, struct config *cconf, struct cntr *p1cntr, struct cntr *cntr)
+{
+	if(status)
+		run_script(cconf->notify_failure_script,
+			cconf->notify_failure_arg,
+			cconf->nfcount,
+			client, basedir,
+			storagedir, filename,
+			brv, "0", NULL, NULL, NULL,
+			NULL, cntr, 1, 1);
+	else if((cconf->notify_success_warnings_only
+		&& (p1cntr->warning+cntr->warning)>0)
+	  || (cconf->notify_success_changes_only
+		&& (cntr->total_changed>0))
+	  || (!cconf->notify_success_warnings_only
+		&& !cconf->notify_success_changes_only))
+	{
+		char warnings[32]="";
+		snprintf(warnings, sizeof(warnings), "%llu",
+			p1cntr->warning+cntr->warning);
+		run_script(cconf->notify_success_script,
+			cconf->notify_success_arg,
+			cconf->nscount,
+			client, basedir,
+			storagedir, filename,
+			brv, warnings, NULL, NULL, NULL,
+			NULL, cntr, 1, 1);
+	}
+}
+
 static int child(struct config *conf, struct config *cconf, const char *client, const char *cversion, const char *incexc, int srestore, char cmd, char *buf, char **gotlock, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ret=0;
@@ -926,35 +956,9 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			  manifest, phase1data, phase2data,
 			  unchangeddata, client, cversion, p1cntr, cntr,
 			  resume, incexc);
-			if(ret)
-				run_script(
-					cconf->notify_failure_script,
-					cconf->notify_failure_arg,
-					cconf->nfcount,
-					client, current,
-					working, finishing,
-					"0", NULL, NULL, NULL, NULL,
-					NULL, cntr, 1, 1);
-			else if((cconf->notify_success_warnings_only
-				&& (p1cntr->warning+cntr->warning)>0)
-			  || (cconf->notify_success_changes_only
-				&& (cntr->total_changed>0))
-			  || (!cconf->notify_success_warnings_only
-				&& !cconf->notify_success_changes_only))
-			{
-				char warnings[32]="";
-				snprintf(warnings, sizeof(warnings),
-				  "%llu",
-				  p1cntr->warning+cntr->warning);
-				run_script(
-					cconf->notify_success_script,
-					cconf->notify_success_arg,
-					cconf->nscount,
-					client, current,
-					working, finishing,
-					warnings, NULL, NULL, NULL, NULL,
-					NULL, cntr, 1, 1);
-			}
+			maybe_do_notification(ret, client,
+				basedir, current, "log", "backup",
+				cconf, p1cntr, cntr);
 		}
 	}
 	else if(cmd==CMD_GEN
@@ -988,6 +992,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 		else
 		{
 			char *restoreregex=NULL;
+			char *dir_for_notify=NULL;
 
 			if(act==ACTION_RESTORE)
 			{
@@ -1022,7 +1027,18 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			reset_conf_val(restoreregex, &(cconf->regex));
 			async_write_str(CMD_GEN, "ok");
 			ret=do_restore_server(basedir, act, client, srestore,
-				p1cntr, cntr, cconf);
+				&dir_for_notify, p1cntr, cntr, cconf);
+			if(dir_for_notify)
+			{
+				maybe_do_notification(ret, client,
+					basedir, dir_for_notify,
+					act==ACTION_RESTORE?
+						"restorelog":"verifylog",
+					act==ACTION_RESTORE?
+						"restore":"verify",
+					cconf, p1cntr, cntr);
+				free(dir_for_notify);
+			}
 		}
 	}
 	else if(cmd==CMD_GEN

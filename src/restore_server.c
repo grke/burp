@@ -581,7 +581,7 @@ static int check_srestore(struct config *cconf, const char *path)
 
 // a = length of struct bu array
 // i = position to restore from
-static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, regex_t *regex, int srestore, enum action act, const char *client, struct cntr *p1cntr, struct cntr *cntr, struct config *cconf, bool all)
+static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, regex_t *regex, int srestore, enum action act, const char *client, char **dir_for_notify, struct cntr *p1cntr, struct cntr *cntr, struct config *cconf)
 {
 	int ret=0;
 	gzFile zp=NULL;
@@ -614,6 +614,8 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 		log_and_send(msg);
 		ret=-1;
 	}
+
+	*dir_for_notify=strdup(arr[i].path);
 
 	log_restore_settings(cconf, srestore);
 
@@ -759,7 +761,7 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 		}
 		free_sbufs(sblist, scount);
 
-		if(!ret && !all) ret=do_restore_end(act, cntr);
+		if(!ret) ret=do_restore_end(act, cntr);
 
 		//print_endcounter(cntr);
 		print_filecounters(p1cntr, cntr, act);
@@ -776,7 +778,7 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 	return ret;
 }
 
-int do_restore_server(const char *basedir, enum action act, const char *client, int srestore, struct cntr *p1cntr, struct cntr *cntr, struct config *cconf)
+int do_restore_server(const char *basedir, enum action act, const char *client, int srestore, char **dir_for_notify, struct cntr *p1cntr, struct cntr *cntr, struct config *cconf)
 {
 	int a=0;
 	int i=0;
@@ -787,7 +789,6 @@ int do_restore_server(const char *basedir, enum action act, const char *client, 
 	char *tmppath1=NULL;
 	char *tmppath2=NULL;
 	regex_t *regex=NULL;
-	bool all=FALSE;
 
 	logp("in do_restore\n");
 
@@ -809,37 +810,30 @@ int do_restore_server(const char *basedir, enum action act, const char *client, 
 		return -1;
 	}
 
-	if(cconf->backup && *(cconf->backup)=='a')
-	{
-		all=TRUE;
-	}
-	else if(!(index=strtoul(cconf->backup, NULL, 10)) && a>0)
+	if(!(index=strtoul(cconf->backup, NULL, 10)) && a>0)
 	{
 		// No backup specified, do the most recent.
 		ret=restore_manifest(arr, a, a-1,
 			tmppath1, tmppath2, regex, srestore, act, client,
-			p1cntr, cntr, cconf, all);
+			dir_for_notify,
+			p1cntr, cntr, cconf);
 		found=TRUE;
 	}
 
 	if(!found) for(i=0; i<a; i++)
 	{
-		if(all || !strcmp(arr[i].timestamp, cconf->backup)
+		if(!strcmp(arr[i].timestamp, cconf->backup)
 			|| arr[i].index==index)
 		{
 			found=TRUE;
 			//logp("got: %s\n", arr[i].path);
 			ret|=restore_manifest(arr, a, i,
 				tmppath1, tmppath2, regex,
-				srestore, act, client,
-				p1cntr, cntr, cconf, all);
-			if(!all) break;
+				srestore, act, client, dir_for_notify,
+				p1cntr, cntr, cconf);
+			break;
 		}
 	}
-
-	// If doing all backups, send restore end.
-	if(!ret && all && found)
-		ret=do_restore_end(act, cntr);
 
 	free_current_backups(&arr, a);
 

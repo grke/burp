@@ -167,8 +167,8 @@ static int send_file(const char *fname, int patches, const char *best, const cha
 		  || cmd==CMD_ENC_METADATA
 		  || cmd==CMD_EFS_FILE)
 		{
-			ret=send_whole_file(cmd, best,
-				datapth, 1, bytes, cntr, NULL, fp, NULL, 0);
+			ret=send_whole_file(cmd, best, datapth, 1, bytes,
+				cntr, NULL, fp, NULL, 0);
 		}
 		// It might have been stored uncompressed. Gzip it during
 		// the send. If the client knew what kind of file it would be
@@ -182,8 +182,8 @@ static int send_file(const char *fname, int patches, const char *best, const cha
 		{
 			// If we did not do some patches, the resulting
 			// file might already be gzipped. Send it as it is.
-			ret=send_whole_file(cmd, best,
-				datapth, 1, bytes, cntr, NULL, fp, NULL, 0);
+			ret=send_whole_file(cmd, best, datapth, 1, bytes,
+				cntr, NULL, fp, NULL, 0);
 		}
 	}
 	close_file_for_send(NULL, &fp);
@@ -389,7 +389,12 @@ static int restore_file(struct bu *arr, int a, int i, const char *datapth, const
 					free(path);
 					return -1;
 				}
-				else do_filecounter(cntr, cmd, 0);
+				else
+				{
+					do_filecounter(cntr, cmd, 0);
+					do_filecounter_bytes(cntr,
+                 			    strtoull(endfile, NULL, 10));
+				}
 			}
 			else if(act==ACTION_VERIFY)
 			{
@@ -400,8 +405,14 @@ static int restore_file(struct bu *arr, int a, int i, const char *datapth, const
 					free(path);
 					return -1;
 				}
-				else do_filecounter(cntr, cmd, 0);
+				else
+				{
+					do_filecounter(cntr, cmd, 0);
+					do_filecounter_bytes(cntr,
+                 			    strtoull(endfile, NULL, 10));
+				}
 			}
+			do_filecounter_sentbytes(cntr, bytes);
 			free(path);
 			return 0;
 		}
@@ -447,8 +458,6 @@ static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, const cha
 	}
 	return 0;
 }
-//	logp("wrote restoreend\n");
-//	if(ret) logp("did not write restoreend (%d)\n", ret);
 
 static int do_restore_end(enum action act, struct cntr *cntr)
 {
@@ -608,6 +617,56 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 
 	log_restore_settings(cconf, srestore);
 
+	// First, do a pass through the manifest to set up the counters.
+	// This is the equivalent of a phase1 scan during backup.
+	if(!ret && !(zp=gzopen_file(manifest, "rb")))
+	{
+		log_and_send("could not open manifest");
+		ret=-1;
+	}
+	else
+	{
+		int ars=0;
+		int quit=0;
+		struct sbuf sb;
+		init_sbuf(&sb);
+		while(!quit)
+		{
+			if((ars=sbuf_fill(NULL, zp, &sb, cntr)))
+			{
+				if(ars<0) ret=-1;
+				// ars==1 means end ok
+				quit++;
+			}
+			else
+			{
+				if((!srestore
+				    || check_srestore(cconf, sb.path))
+				  && check_regex(regex, sb.path))
+				{
+					do_filecounter(p1cntr, sb.cmd, 0);
+					if(sb.endfile)
+					  do_filecounter_bytes(p1cntr,
+                 			    strtoull(sb.endfile, NULL, 10));
+/*
+					if(sb.cmd==CMD_FILE
+					  || sb.cmd==CMD_ENC_FILE
+					  || sb.cmd==CMD_METADATA
+					  || sb.cmd==CMD_ENC_METADATA
+					  || sb.cmd==CMD_EFS_FILE)
+						do_filecounter_bytes(p1cntr,
+							(unsigned long long)
+							sb.statp.st_size);
+*/
+				}
+			}
+			free_sbuf(&sb);
+		}
+		free_sbuf(&sb);
+		gzclose_fp(&zp);
+	}
+
+	// Now, do the actual restore.
 	if(!ret && !(zp=gzopen_file(manifest, "rb")))
 	{
 		log_and_send("could not open manifest");
@@ -702,8 +761,8 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 
 		if(!ret && !all) ret=do_restore_end(act, cntr);
 
-		print_endcounter(cntr);
-		print_filecounters(p1cntr, cntr, act, 0);
+		//print_endcounter(cntr);
+		print_filecounters(p1cntr, cntr, act);
 
 		reset_filecounter(p1cntr);
 		reset_filecounter(cntr);

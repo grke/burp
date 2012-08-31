@@ -886,7 +886,7 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 	// Rename the finishing symlink so that it becomes the current symlink
 	do_rename(finishing, current);
 
-	print_filecounters(p1cntr, cntr, ACTION_BACKUP, 0);
+	print_filecounters(p1cntr, cntr, ACTION_BACKUP);
 	logp("Backup completed.\n");
 	logp("End phase4 (shuffle files)\n");
 	set_logfp(NULL, cconf); // will close logfp.

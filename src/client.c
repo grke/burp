@@ -95,7 +95,7 @@ static int do_backup_client(struct config *conf, int resume, int estimate, struc
 		ret=backup_phase2_client(conf, p1cntr, resume, cntr);
 
 	if(estimate)
-		print_filecounters(p1cntr, cntr, ACTION_ESTIMATE, 1);
+		print_filecounters(p1cntr, cntr, ACTION_ESTIMATE);
 
 #if defined(WIN32_VSS)
 	win32_stop_vss();

@@ -801,7 +801,6 @@ static int client_can_restore(struct config *cconf, const char *client)
 {
 	struct stat statp;
 	char *restorepath=NULL;
-printf("HERE: %d\n", cconf->client_can_restore);
 	// If there is a restore file on the server, it is always OK.
 	if(!(restorepath=get_restorepath(cconf, client)))
 		return -1;

@@ -105,9 +105,18 @@ static void border(void)
 	logc("--------------------------------------------------------------------------------\n");
 }
 
-static void table_border(void)
+static void table_border(enum action act)
 {
-	logc("% 18s ------------------------------------------------------------\n", "");
+	if(act==ACTION_BACKUP
+	  || act==ACTION_BACKUP_TIMED)
+	{
+	  logc("% 18s ------------------------------------------------------------\n", "");
+	}
+	if(act==ACTION_RESTORE
+	  || act==ACTION_VERIFY)
+	{
+	  logc("% 18s ------------------------------\n", "");
+	}
 }
 
 void do_filecounter(struct cntr *c, char ch, int print)
@@ -257,67 +266,28 @@ void do_filecounter_recvbytes(struct cntr *c, unsigned long long bytes)
 	c->recvbyte+=bytes;
 }
 
-enum lform
+static void quint_print(const char *msg, unsigned long long a, unsigned long long b, unsigned long long c, unsigned long long d, unsigned long long e, enum action act)
 {
-	FORMAT_SERVER=0,
-	FORMAT_CLIENT_DATA,
-	FORMAT_CLIENT_NODE,
-	FORMAT_CLIENT_RESTORE
-};
-
-static void quint_print(const char *msg, unsigned long long a, unsigned long long b, unsigned long long c, unsigned long long d, unsigned long long e, enum lform form)
-{
-	switch(form)
+	if(!e && !a && !b && !c) return;
+	logc("% 18s ", msg);
+	if(act==ACTION_BACKUP
+	  || act==ACTION_BACKUP_TIMED)
 	{
-		/* Windows has awful difficultly printf-ing more than one
-		   '%llu' type thing at a time, sometimes segfaulting,
-		   so split them all up. */
-		case FORMAT_SERVER:
-			if(!e && !a && !b && !c) return;
-			logc("% 18s ", msg);
-			logc("% 9llu ", a);
-			logc("% 9llu ", b);
-			logc("% 9llu ", c);
-			logc("% 9llu ", d);
-			logc("% 9llu |", a+b+c);
-			logc("% 9llu\n", e);
-			break;
-		case FORMAT_CLIENT_DATA:
-			if(!e && !a && !b && !c) return;
-			logc("% 18s ", msg);
-			logc("% 9llu ", a);
-			logc("% 9llu ", b);
-			logc("% 9s ", "-");
-			logc("% 9s ", "-");
-			logc("% 9llu |", a+b+c);
-			logc("% 9llu\n", e);
-			break;
-		case FORMAT_CLIENT_NODE:
-			if(!e && !a && !b && !c) return;
-			logc("% 18s ", msg);
-			logc("% 9s ", "-");
-			logc("% 9s ", "-");
-			logc("% 9s ", "-");
-			logc("% 9s ", "-");
-			logc("% 9s |", "-");
-			logc("% 9llu\n", e);
-			break;
-		case FORMAT_CLIENT_RESTORE:
-			if(!e && !a && !b && !c) return;
-			logc("% 18s ", msg);
-			logc("% 9s ", "-");
-			logc("% 9s ", "-");
-			logc("% 9s ", "-");
-			logc("% 9s ", "-");
-			logc("% 9llu |", e);
-			logc("% 9s\n", "-");
-			break;
+		logc("% 9llu ", a);
+		logc("% 9llu ", b);
+		logc("% 9llu ", c);
+		logc("% 9llu ", d);
 	}
-}
-
-static void restore_print(const char *msg, unsigned long long count)
-{
-	quint_print(msg, 0, 0, 0, 0, count, FORMAT_CLIENT_RESTORE);
+	if(act==ACTION_RESTORE
+	  || act==ACTION_VERIFY)
+	{
+		logc("% 9s ", "");
+		//logc("% 9s ", "");
+		//logc("% 9s ", "");
+		//logc("% 9s ", "");
+	}
+	logc("% 9llu |", a+b+c);
+	logc("% 9llu\n", e);
 }
 
 static void bottom_part(struct cntr *a, struct cntr *b, enum action act)
@@ -331,15 +301,39 @@ static void bottom_part(struct cntr *a, struct cntr *b, enum action act)
 
 	if(act==ACTION_ESTIMATE) return;
 
-	logc("      Bytes in backup:   % 11llu", b->byte);
-	logc("%s\n", bytes_to_human(b->byte));
-	logc("       Bytes received:   % 11llu", b->recvbyte);
-	logc("%s\n", bytes_to_human(b->recvbyte));
-	logc("           Bytes sent:   % 11llu", b->sentbyte);
-	logc("%s\n", bytes_to_human(b->sentbyte));
+	if(act==ACTION_BACKUP
+	  || act==ACTION_BACKUP_TIMED)
+	{
+		logc("      Bytes in backup:   % 11llu", b->byte);
+		logc("%s\n", bytes_to_human(b->byte));
+	}
+	if(act==ACTION_RESTORE)
+	{
+		logc("      Bytes attempted:   % 11llu", b->byte);
+		logc("%s\n", bytes_to_human(b->byte));
+	}
+	if(act==ACTION_VERIFY)
+	{
+		logc("        Bytes checked:   % 11llu", b->byte);
+		logc("%s\n", bytes_to_human(b->byte));
+	}
+
+	if(act==ACTION_BACKUP
+	  || act==ACTION_BACKUP_TIMED)
+	{
+		logc("       Bytes received:   % 11llu", b->recvbyte);
+		logc("%s\n", bytes_to_human(b->recvbyte));
+	}
+	if(act==ACTION_BACKUP 
+	  || act==ACTION_BACKUP_TIMED
+	  || act==ACTION_RESTORE)
+	{
+		logc("           Bytes sent:   % 11llu", b->sentbyte);
+		logc("%s\n", bytes_to_human(b->sentbyte));
+	}
 }
 
-void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act, int client)
+void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act)
 {
 	time_t now=time(NULL);
 	if(!p1c || !c) return;
@@ -348,120 +342,101 @@ void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act, int c
 	logc("Start time: %s\n", getdatestr(p1c->start));
 	logc("  End time: %s\n", getdatestr(now));
 	logc("Time taken: %s\n", time_taken(now-p1c->start));
-	logc("% 18s % 9s % 9s % 9s % 9s % 9s |% 9s\n",
-	  " ", "New", "Changed", "Unchanged", "Deleted", "Total", "Scanned");
-	table_border();
-
-	if(act==ACTION_RESTORE)
+	if(act==ACTION_BACKUP
+	  || act==ACTION_BACKUP_TIMED)
 	{
-		restore_print("Files:", c->file);
-		restore_print("Files (encrypted):", c->enc);
-		restore_print("Meta data:", c->meta);
-		restore_print("Meta (encrypted):", c->encmeta);
-		restore_print("Directories:", c->dir);
-		restore_print("Soft links:", c->slink);
-		restore_print("Hard links:", c->hlink);
-		restore_print("Special files:", c->special);
-		restore_print("EFS files:", c->efs);
-		restore_print("Grand total:", c->total);
+	  logc("% 18s % 9s % 9s % 9s % 9s % 9s |% 9s\n",
+	    " ", "New", "Changed", "Unchanged", "Deleted", "Total", "Scanned");
 	}
-	else if(act==ACTION_VERIFY)
+	if(act==ACTION_RESTORE
+	  || act==ACTION_VERIFY)
 	{
-		restore_print("Vrfd files:", c->file);
-		restore_print("Vrfd files (enc):", c->enc);
-		restore_print("Vrfd meta data:", c->meta);
-		restore_print("Vrfd meta (enc):", c->encmeta);
-		restore_print("Vrfd directories:", c->dir);
-		restore_print("Vrfd soft links:", c->slink);
-		restore_print("Vrfd hard links:", c->hlink);
-		restore_print("Vrfd special:", c->special);
-		restore_print("Vrfd EFS files:", c->efs);
-		restore_print("Grand total:", c->total);
+	  logc("% 18s % 9s % 9s |% 9s\n",
+	    " ", "", "Attempted", "Expected");
 	}
-	else
-	{
-		quint_print("Files:",
-			c->file,
-			c->file_changed,
-			c->file_same,
-			c->file_deleted,
-			p1c->file,
-			client?FORMAT_CLIENT_DATA:FORMAT_SERVER);
+	table_border(act);
 
-		quint_print("Files (encrypted):",
-			c->enc,
-			c->enc_changed,
-			c->enc_same,
-			c->enc_deleted,
-			p1c->enc,
-			client?FORMAT_CLIENT_DATA:FORMAT_SERVER);
+	quint_print("Files:",
+		c->file,
+		c->file_changed,
+		c->file_same,
+		c->file_deleted,
+		p1c->file,
+		act);
 
-		quint_print("Meta data:",
-			c->meta,
-			c->meta_changed,
-			c->meta_same,
-			c->meta_deleted,
-			p1c->meta,
-			client?FORMAT_CLIENT_DATA:FORMAT_SERVER);
+	quint_print("Files (encrypted):",
+		c->enc,
+		c->enc_changed,
+		c->enc_same,
+		c->enc_deleted,
+		p1c->enc,
+		act);
 
-		quint_print("Meta data (encrypted):",
-			c->encmeta,
-			c->meta_changed,
-			c->meta_same,
-			c->meta_deleted,
-			p1c->encmeta,
-			client?FORMAT_CLIENT_DATA:FORMAT_SERVER);
+	quint_print("Meta data:",
+		c->meta,
+		c->meta_changed,
+		c->meta_same,
+		c->meta_deleted,
+		p1c->meta,
+		act);
 
-		quint_print("Directories:",
-			c->dir,
-			c->dir_changed,
-			c->dir_same,
-			c->dir_deleted,
-			p1c->dir,
-			client?FORMAT_CLIENT_NODE:FORMAT_SERVER);
+	quint_print("Meta data (encrypted):",
+		c->encmeta,
+		c->meta_changed,
+		c->meta_same,
+		c->meta_deleted,
+		p1c->encmeta,
+		act);
 
-		quint_print("Soft links:",
-			c->slink,
-			c->slink_changed,
-			c->slink_same,
-			c->slink_deleted,
-			p1c->slink,
-			client?FORMAT_CLIENT_NODE:FORMAT_SERVER);
+	quint_print("Directories:",
+		c->dir,
+		c->dir_changed,
+		c->dir_same,
+		c->dir_deleted,
+		p1c->dir,
+		act);
 
-		quint_print("Hard links:",
-			c->hlink,
-			c->hlink_changed,
-			c->hlink_same,
-			c->hlink_deleted,
-			p1c->hlink,
-			client?FORMAT_CLIENT_NODE:FORMAT_SERVER);
+	quint_print("Soft links:",
+		c->slink,
+		c->slink_changed,
+		c->slink_same,
+		c->slink_deleted,
+		p1c->slink,
+		act);
 
-		quint_print("Special files:",
-			c->special,
-			c->special_changed,
-			c->special_same,
-			c->special_deleted,
-			p1c->special,
-			client?FORMAT_CLIENT_NODE:FORMAT_SERVER);
+	quint_print("Hard links:",
+		c->hlink,
+		c->hlink_changed,
+		c->hlink_same,
+		c->hlink_deleted,
+		p1c->hlink,
+		act);
 
-		quint_print("EFS files:",
-			c->efs,
-			c->efs_changed,
-			c->efs_same,
-			c->efs_deleted,
-			p1c->efs,
-			client?FORMAT_CLIENT_NODE:FORMAT_SERVER);
+	quint_print("Special files:",
+		c->special,
+		c->special_changed,
+		c->special_same,
+		c->special_deleted,
+		p1c->special,
+		act);
 
-		quint_print("Grand total:",
-			c->total,
-			c->total_changed,
-			c->total_same,
-			c->total_deleted,
-			p1c->total,
-			client?FORMAT_CLIENT_DATA:FORMAT_SERVER);
-	}
+	quint_print("EFS files:",
+		c->efs,
+		c->efs_changed,
+		c->efs_same,
+		c->efs_deleted,
+		p1c->efs,
+		act);
 
-	table_border();
+	quint_print("Grand total:",
+		c->total,
+		c->total_changed,
+		c->total_same,
+		c->total_deleted,
+		p1c->total,
+		act);
+
+	table_border(act);
 	bottom_part(p1c, c, act);
 
 	border();

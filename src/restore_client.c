@@ -552,7 +552,7 @@ int do_restore_client(struct config *conf, enum action act, struct cntr *p1cntr,
 			{
 				// ars==1 means it ended ok.
 				print_endcounter(cntr);
-				print_filecounters(p1cntr, cntr, act, 1);
+				print_filecounters(p1cntr, cntr, act);
 				wroteendcounter++;
 				logp("got %s end\n", act_str(act));
 				if(async_write_str(CMD_GEN, "restoreend ok"))
@@ -724,7 +724,7 @@ int do_restore_client(struct config *conf, enum action act, struct cntr *p1cntr,
 	if(!wroteendcounter)
 	{
 		print_endcounter(cntr);
-		print_filecounters(p1cntr, cntr, act, 1);
+		print_filecounters(p1cntr, cntr, act);
 	}
 
 	if(!ret) logp("%s finished\n", act_str(act));

@@ -63,7 +63,7 @@ struct cntr
 	time_t start;
 };
 
-extern void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act, int client);
+extern void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act);
 extern void print_endcounter(struct cntr *c);
 extern void do_filecounter(struct cntr *c, char ch, int print);
 extern void do_filecounter_same(struct cntr *c, char ch);

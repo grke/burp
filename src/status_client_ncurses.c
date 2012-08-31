@@ -232,7 +232,7 @@ static void to_msg(char msg[], size_t s, const char *fmt, ...)
 	va_end(ap);
 }
 
-static void print_detail(const char *field, const char *value, int *x, int col, int percent)
+static void print_detail(char *status, const char *field, const char *value, int *x, int col, int percent)
 {
 	char msg[256]="";
 	unsigned long long a=0;
@@ -246,25 +246,53 @@ static void print_detail(const char *field, const char *value, int *x, int col, 
 	  || !strcmp(value, "0/0/0/0/0")) return;
 
 	if(extract_ul(value, &a, &b, &c, &d, &e, &t)) return;
-	to_msg(msg, sizeof(msg),
+	if(status && (*status==STATUS_RESTORING
+	  || *status==STATUS_VERIFYING))
+	{
+		to_msg(msg, sizeof(msg),
+			"% 15s % 9s % 9llu % 9llu",
+			field, "", t, e);
+	}
+	else
+	{
+		to_msg(msg, sizeof(msg),
 			"% 15s % 9llu % 9llu % 9llu % 9llu % 9llu % 9llu",
 			field, a, b, c, d, t, e);
+	}
 	print_line(msg, (*x)++, col);
 	if(percent && e)
 	{
 	  unsigned long long p;
 	  p=(t*100)/e;
-	  to_msg(msg, sizeof(msg), "% 15s % 9s % 9s % 9s % 9s % 9llu%% % 9s",
+	  if(status && (*status==STATUS_RESTORING
+	    || *status==STATUS_VERIFYING))
+	  {
+	    to_msg(msg, sizeof(msg), "% 15s % 9s % 9llu%% % 9s",
+		"", "", p, "");
+	  }
+	  else
+	  {
+	    to_msg(msg, sizeof(msg), "% 15s % 9s % 9s % 9s % 9s % 9llu%% % 9s",
 		"", "", "", "", "", p, "");
+	  }
 	  print_line(msg, (*x)++, col);
 	}
 }
 
-static void table_header(int *x, int col)
+static void table_header(char *status, int *x, int col)
 {
 	char msg[256]="";
-	to_msg(msg, sizeof(msg), "% 15s % 9s % 9s % 9s % 9s % 9s % 9s",
-	  "", "New", "Changed", "Unchanged", "Deleted", "Total", "Scanned");
+	if(status && (*status==STATUS_RESTORING
+	  || *status==STATUS_VERIFYING))
+	{
+	  to_msg(msg, sizeof(msg), "% 15s % 9s % 9s % 9s",
+	    "", "", "Attempted", "Expected");
+	}
+	else
+	{
+	  to_msg(msg, sizeof(msg), "% 15s % 9s % 9s % 9s % 9s % 9s % 9s",
+	    "", "New", "Changed", "Unchanged", "Deleted", "Total", "Scanned");
+	}
 	print_line(msg, (*x)++, col);
 }
 
@@ -327,18 +355,18 @@ static void detail(char *toks[], int t, struct config *conf, int row, int col)
 		}
 	}
 	print_line("", x++, col);
-	table_header(&x, col);
-	if(t>4) print_detail("Files", toks[4], &x, col, 0);
-	if(t>5) print_detail("Encrypted files", toks[5], &x, col, 0);
-	if(t>6) print_detail("Meta data", toks[6], &x, col, 0);
-	if(t>7) print_detail("Encrypted meta data", toks[7], &x, col, 0);
-	if(t>8) print_detail("Directories", toks[8], &x, col, 0);
-	if(t>9) print_detail("Soft links", toks[9], &x, col, 0);
-	if(t>10) print_detail("Hard links", toks[10], &x, col, 0);
-	if(t>11) print_detail("Special files", toks[11], &x, col, 0);
+	table_header(toks[2], &x, col);
+	if(t>4) print_detail(toks[2], "Files", toks[4], &x, col, 0);
+	if(t>5) print_detail(toks[2], "Encrypted files", toks[5], &x, col, 0);
+	if(t>6) print_detail(toks[2], "Meta data", toks[6], &x, col, 0);
+	if(t>7) print_detail(toks[2], "Encrypted meta data", toks[7], &x, col, 0);
+	if(t>8) print_detail(toks[2], "Directories", toks[8], &x, col, 0);
+	if(t>9) print_detail(toks[2], "Soft links", toks[9], &x, col, 0);
+	if(t>10) print_detail(toks[2], "Hard links", toks[10], &x, col, 0);
+	if(t>11) print_detail(toks[2], "Special files", toks[11], &x, col, 0);
 	if(t>12)
 	{
-		print_detail("Total", toks[12], &x, col, 1);
+		print_detail(toks[2], "Total", toks[12], &x, col, 1);
 	}
 	print_line("", x++, col);
 	if(t>14) print_detail2("Warnings", toks[14], "", &x, col);
@@ -346,22 +374,32 @@ static void detail(char *toks[], int t, struct config *conf, int row, int col)
 	if(t>15)
 	{
 		tmp=bytes_to_human_str(toks[15]);
-		print_detail2("Bytes expected", toks[15], tmp, &x, col);
+		print_detail2("Bytes estimated", toks[15], tmp, &x, col);
 	}
 	if(t>16)
-	{	
+	{
+		const char *text=NULL;
+		if(*(toks[2])==STATUS_BACKUP) text="Bytes in backup";
+		else if(*(toks[2])==STATUS_RESTORING) text="Bytes attempted";
+		else if(*(toks[2])==STATUS_VERIFYING) text="Bytes checked";
 		tmp=bytes_to_human_str(toks[16]);
-		print_detail2("Bytes in backup", toks[16], tmp, &x, col);
+		if(text) print_detail2(text, toks[16], tmp, &x, col);
 	}
 	if(t>17)
 	{
+		const char *text=NULL;
 		tmp=bytes_to_human_str(toks[17]);
-		print_detail2("Bytes received", toks[17], tmp, &x, col);
+		if(*(toks[2])==STATUS_BACKUP)
+			text="Bytes received";
+		if(text) print_detail2(text, toks[17], tmp, &x, col);
 	}
 	if(t>18)
 	{
+		const char *text=NULL;
+		if(*(toks[2])==STATUS_BACKUP) text="Bytes sent";
+		else if(*(toks[2])==STATUS_RESTORING) text="Bytes sent";
 		tmp=bytes_to_human_str(toks[18]);
-		print_detail2("Bytes sent", toks[18], tmp, &x, col);
+		print_detail2(text, toks[18], tmp, &x, col);
 	}
 	if(t>19)
 	{

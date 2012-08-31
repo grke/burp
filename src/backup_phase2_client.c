@@ -378,7 +378,7 @@ int backup_phase2_client(struct config *conf, struct cntr *p1cntr, int resume, s
 	ret=do_backup_phase2_client(conf, resume, cntr);
 
 	print_endcounter(cntr);
-	print_filecounters(p1cntr, cntr, ACTION_BACKUP, 1);
+	print_filecounters(p1cntr, cntr, ACTION_BACKUP);
 
 	if(ret) logp("Error in phase 2\n");
 	logp("Phase 2 end (send file data)\n");

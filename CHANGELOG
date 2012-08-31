@@ -10,6 +10,8 @@
   * Fix bug where the client_can_* options were not being overridden in the
     client specific conf files.
   * Fix bug that stopped client_can_restore=0 working.
+  * Scan the manifest before restore/verify so that counters and status
+    monitor can show estimates.
 
 2012-08-28 Changes in burp-1.3.12:
   * Remove 'forward' timestamp references in backup directories, to allow the

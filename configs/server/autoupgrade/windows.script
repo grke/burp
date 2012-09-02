@@ -3,7 +3,6 @@ REM But still want old installations to work.
 
 IF EXIST "C:\Program Files\Burp\autoupgrade\package.exe" (
 	"C:\Program Files\Burp\autoupgrade\package.exe" /S
-)
-ELSE (
+) ELSE (
 	"%PROGRAMFILES%\Burp\autoupgrade\package.exe" /S
 )

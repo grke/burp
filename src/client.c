@@ -294,17 +294,30 @@ static int do_client(struct config *conf, enum action act)
 		// :srestore: means that the server wants to do a restore.
 		if(server_supports(feat, ":srestore:"))
 		{
-			logp("Server is initiating a restore\n");
-			if(incexc) { free(incexc); incexc=NULL; }
-			if((ret=incexc_recv_client_restore(&incexc,
-				conf, &p1cntr)))
-					goto end;
-			if(incexc)
+			if(conf->server_can_restore)
 			{
-				if((ret=parse_incexcs_buf(conf, incexc)))
+				logp("Server is initiating a restore\n");
+				if(incexc) { free(incexc); incexc=NULL; }
+				if((ret=incexc_recv_client_restore(&incexc,
+					conf, &p1cntr)))
+						goto end;
+				if(incexc)
+				{
+					if((ret=parse_incexcs_buf(conf,
+						incexc))) goto end;
+					act=ACTION_RESTORE;
+					log_restore_settings(conf, 1);
+				}
+			}
+			else
+			{
+				logp("Server wants to initiate a restore\n");
+				logp("Client configuration says no\n");
+				if(async_write_str(CMD_GEN, "srestore not ok"))
+				{
+					ret=-1;
 					goto end;
-				act=ACTION_RESTORE;
-				log_restore_settings(conf, 1);
+				}
 			}
 		}
 

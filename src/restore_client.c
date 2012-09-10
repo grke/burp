@@ -283,12 +283,14 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
 			set_attributes(rpath, CMD_SPECIAL, &statp, sb->winattr, cntr);
 			do_filecounter(cntr, CMD_SPECIAL, 1);
 		}
+/*
 	}
 	else if(S_ISSOCK(statp.st_mode)) {
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
 			"Skipping restore of socket: %s\n", fname);
 		logw(cntr, "%s", msg);
+*/
 #ifdef S_IFDOOR     // Solaris high speed RPC mechanism
 	} else if (S_ISDOOR(statp.st_mode)) {
 		char msg[256]="";

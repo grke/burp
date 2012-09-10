@@ -170,6 +170,8 @@ void init_config(struct config *conf)
 	conf->client_can_restore=1;
 	conf->client_can_verify=1;
 
+	conf->server_can_restore=1;
+
 	conf->send_client_counters=0;
 
 	init_incexcs(conf);
@@ -656,6 +658,8 @@ static int load_config_ints(struct config *conf, const char *field, const char *
 		&(conf->client_can_restore));
 	get_conf_val_int(field, value, "client_can_verify",
 		&(conf->client_can_verify));
+	get_conf_val_int(field, value, "server_can_restore",
+		&(conf->server_can_restore));
 	get_conf_val_int(field, value, "password_check",
 		&(conf->password_check));
 

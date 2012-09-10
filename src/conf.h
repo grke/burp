@@ -157,6 +157,8 @@ struct config
 	int client_can_restore;
 	int client_can_verify;
 
+	int server_can_restore;
+
 // Set to 1 on both client and server when the server is able to send counters
 // on resume/verify/restore.
 	int send_client_counters;

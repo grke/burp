@@ -1279,6 +1279,12 @@ static int extra_comms(const char *client, const char *cversion, char **incexc, 
 				// restore.
 				//unlink(restorepath);
 			}
+			else if(!strcmp(buf, "srestore not ok"))
+			{
+				// Client will not accept the restore.
+				unlink(restorepath);
+				logp("Client not accepting server initiated restore.\n");
+			}
 			else if(!strcmp(buf, "sincexc ok"))
 			{
 				// Client can accept incexc conf from the

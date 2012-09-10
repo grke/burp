@@ -42,7 +42,7 @@ static void print_line(const char *string, int row, int col)
 	printf("\n");
 }
 
-static char *get_backup_str(const char *s, bool dateonly)
+static char *get_backup_str(const char *s)
 {
 	static char str[32]="";
 	const char *cp=NULL;
@@ -84,114 +84,50 @@ static char *running_status_to_text(char s)
 	return ret;
 }
 
-static int extract_ul(const char *value, unsigned long long *a, unsigned long long *b, unsigned long long *c, unsigned long long *d, unsigned long long *e, unsigned long long *t)
-{
-	char *as=NULL;
-	char *bs=NULL;
-	char *cs=NULL;
-	char *ds=NULL;
-	char *es=NULL;
-	char *copy=NULL;
-	if(!value || !(copy=strdup(value))) return -1;
-
-	// Do not want to use strtok, just in case I end up running more
-	// than one at a time.
-	as=copy;
-	if((bs=strchr(as, '/')))
-	{
-		*bs='\0';
-		*a=strtoull(as, NULL, 10);
-		if((cs=strchr(++bs, '/')))
-		{
-			*cs='\0';
-			*b=strtoull(bs, NULL, 10);
-			if((ds=strchr(++cs, '/')))
-			{
-				*ds='\0';
-				*c=strtoull(cs, NULL, 10);
-				if((es=strchr(++ds, '/')))
-				{
-					*d=strtoull(ds, NULL, 10);
-					*es='\0';
-					es++;
-					*e=strtoull(es, NULL, 10);
-				}
-			}
-		}
-	}
-	free(copy);
-	*t=(*a)+(*b)+(*c);
-	return 0;
-}
-
 // Returns 1 if it printed a line, 0 otherwise.
-static int summary(char **toks, int t, int count, int row, int col)
+static int summary(const char *cntrclient, char status, char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr, char **backups, int count, int row, int col)
 {
 	char msg[1024]="";
 
-	if(*(toks[1])==STATUS_IDLE)
+	if(status==STATUS_IDLE)
 	{
-		if(t>2)
-		  snprintf(msg, sizeof(msg),
-			"%-14.14s %-14s last backup: %s",
-			toks[0], "idle",
-			get_backup_str(toks[2], TRUE));
-		else
-		  snprintf(msg, sizeof(msg), "%-14.14s %-14s",
-			toks[0], "idle");
+		snprintf(msg, sizeof(msg),
+			"%-14.14s %-14s%s%s", cntrclient, "idle",
+			backups && backups[0]?" last backup: ":"",
+			backups && backups[0]?backups[0]:"");
 	}
-	if(*(toks[1])==STATUS_SERVER_CRASHED)
+	if(status==STATUS_SERVER_CRASHED)
 	{
-		if(t>2)
-		  snprintf(msg, sizeof(msg),
-			"%-14.14s %-14s last backup: %s",
-			toks[0], "server crashed",
-				get_backup_str(toks[2], TRUE));
-		else
-		  snprintf(msg, sizeof(msg), "%-14.14s %-14s",
-			toks[0], "server crashed");
+		snprintf(msg, sizeof(msg),
+			"%-14.14s %-14s%s%s", cntrclient, "server crashed",
+			backups && backups[0]?" last backup: ":"",
+			backups && backups[0]?backups[0]:"");
 	}
-	if(*(toks[1])==STATUS_CLIENT_CRASHED)
+	if(status==STATUS_CLIENT_CRASHED)
 	{
-		if(t>2)
-		  snprintf(msg, sizeof(msg),
-			"%-14.14s %-14s last backup: %s",
-			toks[0], "client crashed",
-				get_backup_str(toks[2], TRUE));
-		else
-		  snprintf(msg, sizeof(msg), "%-14.14s %-14s",
-			toks[0], "client crashed");
+		snprintf(msg, sizeof(msg),
+			"%-14.14s %-14s%s%s", cntrclient, "client crashed",
+			backups && backups[0]?" last backup: ":"",
+			backups && backups[0]?backups[0]:"");
 	}
-	if(*(toks[1])==STATUS_RUNNING)
+	if(status==STATUS_RUNNING)
 	{
 		char f[64]="";
 		char b[64]="";
 		const char *s="";
-		if(t<3) return 0;
-		s=running_status_to_text(*(toks[2]));
-		if(t>3 && *(toks[3]))
-		{
-			unsigned long long a=0;
-			unsigned long long b=0;
-			unsigned long long c=0;
-			unsigned long long d=0;
-			unsigned long long e=0;
-			unsigned long long t=0;
-	  		unsigned long long p=0;
-			if(!extract_ul(toks[3], &a, &b, &c, &d, &e, &t))
-			{
-				if(e) p=(t*100)/e;
-				snprintf(f, sizeof(f), "%llu/%llu %llu%%",
-					t, e, p);
-			}
-		}
-		if(t>16 && *(toks[16]) && strcmp(toks[16], "0"))
-		{
+	  	unsigned long long p=0;
+		unsigned long long t=0;
+
+		s=running_status_to_text(phase);
+		t=cntr->total+cntr->total_same+cntr->total_changed;
+		if(p1cntr->total) p=(t*100)/p1cntr->total;
+		snprintf(f, sizeof(f), "%llu/%llu %llu%%",
+			t, p1cntr->total, p);
+		if(cntr->byte)
 			snprintf(b, sizeof(b), "%s",
-				bytes_to_human_str(toks[16]));
-		}
+				bytes_to_human(cntr->byte));
 		snprintf(msg, sizeof(msg), "%-14.14s %-14s %s%s",
-			toks[0], s, f, b);
+			cntrclient, s, f, b);
 	}
 	if(*msg)
 	{
@@ -201,23 +137,20 @@ static int summary(char **toks, int t, int count, int row, int col)
 	return 0;
 }
 
-static void show_all_backups(char *toks[], int t, int *x, int col)
+static void show_all_backups(char **backups, int *x, int col)
 {
-	int i=2;
+	int b=0;
 	char msg[256]="";
-	for(; i<t; i++)
+	for(b=0; backups && backups[b]; b++)
 	{
-		char *str=NULL;
-		str=get_backup_str(toks[i], FALSE);
-
-		if(i==2)
+		if(!b)
 		{
-		  snprintf(msg, sizeof(msg), "Backup list: %s", str);
+		  snprintf(msg, sizeof(msg), "Backup list: %s", backups[b]);
 		  print_line(msg, (*x)++, col);
 		}
 		else
 		{
-		  snprintf(msg, sizeof(msg), "             %s", str);
+		  snprintf(msg, sizeof(msg), "             %s", backups[b]);
 		  print_line(msg, (*x)++, col);
 		}
 	}
@@ -232,22 +165,21 @@ static void to_msg(char msg[], size_t s, const char *fmt, ...)
 	va_end(ap);
 }
 
-static void print_detail(char *status, const char *field, const char *value, int *x, int col, int percent)
+static void print_detail(char phase,
+	const char *field,
+	unsigned long long a,
+	unsigned long long b,
+	unsigned long long c,
+	unsigned long long d,
+	unsigned long long e,
+	int *x, int col, int percent)
 {
 	char msg[256]="";
-	unsigned long long a=0;
-	unsigned long long b=0;
-	unsigned long long c=0;
-	unsigned long long d=0;
-	unsigned long long e=0;
-	unsigned long long t=0;
-	if(!field || !value || !*value
-	  || !strcmp(value, "0")
-	  || !strcmp(value, "0/0/0/0/0")) return;
+	unsigned long long t=a+b+c;
+	if(!field || (!t && !d && !e)) return;
 
-	if(extract_ul(value, &a, &b, &c, &d, &e, &t)) return;
-	if(status && (*status==STATUS_RESTORING
-	  || *status==STATUS_VERIFYING))
+	if(phase==STATUS_RESTORING
+	  || phase==STATUS_VERIFYING)
 	{
 		to_msg(msg, sizeof(msg),
 			"% 15s % 9s % 9llu % 9llu",
@@ -264,8 +196,8 @@ static void print_detail(char *status, const char *field, const char *value, int
 	{
 	  unsigned long long p;
 	  p=(t*100)/e;
-	  if(status && (*status==STATUS_RESTORING
-	    || *status==STATUS_VERIFYING))
+	  if(phase==STATUS_RESTORING
+	    || phase==STATUS_VERIFYING)
 	  {
 	    to_msg(msg, sizeof(msg), "% 15s % 9s % 9llu%% % 9s",
 		"", "", p, "");
@@ -279,11 +211,11 @@ static void print_detail(char *status, const char *field, const char *value, int
 	}
 }
 
-static void table_header(char *status, int *x, int col)
+static void table_header(char phase, int *x, int col)
 {
 	char msg[256]="";
-	if(status && (*status==STATUS_RESTORING
-	  || *status==STATUS_VERIFYING))
+	if(phase==STATUS_RESTORING
+	  || phase==STATUS_VERIFYING)
 	{
 	  to_msg(msg, sizeof(msg), "% 15s % 9s % 9s % 9s",
 	    "", "", "Attempted", "Expected");
@@ -296,122 +228,173 @@ static void table_header(char *status, int *x, int col)
 	print_line(msg, (*x)++, col);
 }
 
-static void print_detail2(const char *field, const char *value1, const char *value2, int *x, int col)
+static void print_detail2(const char *field, unsigned long long value1, const char *value2, int *x, int col)
 {
 	char msg[256]="";
-	if(!field
-		|| !value1 || !*value1 || !strcmp(value1, "0")
-		|| !value2 || !*value2) return;
-	snprintf(msg, sizeof(msg), "%s: %s%s", field, value1, value2);
+	if(!field || !value1 || !value2 || !*value2) return;
+	snprintf(msg, sizeof(msg), "%s: %llu%s", field, value1, value2);
 	print_line(msg, (*x)++, col);
 }
 
-static void detail(char *toks[], int t, struct config *conf, int row, int col)
+static void print_detail3(const char *field, const char *value, int *x, int col)
+{
+	char msg[256]="";
+	if(!field || !value || !*value) return;
+	snprintf(msg, sizeof(msg), "%s: %s", field, value);
+	print_line(msg, (*x)++, col);
+}
+
+static void detail(const char *cntrclient, char status, char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr, char **backups, int row, int col)
 {
 	int x=0;
 	char msg[1024]="";
 	const char *tmp=NULL;
-	if(toks[0])
+	if(cntrclient)
 	{
-		snprintf(msg, sizeof(msg), "Client: %s", toks[0]);
+		snprintf(msg, sizeof(msg), "Client: %s", cntrclient);
 		print_line(msg, x++, col);
 	}
-	if(toks[1])
+	switch(status)
 	{
-		switch(*(toks[1]))
+		case STATUS_IDLE:
 		{
-			case STATUS_IDLE:
+			print_line("Status: idle", x++, col);
+			show_all_backups(backups, &x, col);
+			return;
+		}
+		case STATUS_SERVER_CRASHED:
+		{
+			print_line("Status: server crashed", x++, col);
+			show_all_backups(backups, &x, col);
+			return;
+		}
+		case STATUS_CLIENT_CRASHED:
+		{
+			print_line("Status: client crashed", x++, col);
+			show_all_backups(backups, &x, col);
+			return;
+		}
+		case STATUS_RUNNING:
+		{
+			if(phase)
 			{
-				print_line("Status: idle", x++, col);
-				show_all_backups(toks, t, &x, col);
-				return;
+				char msg[64]="";
+				snprintf(msg, sizeof(msg),
+					"Status: running (%s)",
+					running_status_to_text(phase));
+				print_line(msg, x++, col);
 			}
-			case STATUS_SERVER_CRASHED:
-			{
-				print_line("Status: server crashed", x++, col);
-				show_all_backups(toks, t, &x, col);
-				return;
-			}
-			case STATUS_CLIENT_CRASHED:
-			{
-				print_line("Status: client crashed", x++, col);
-				show_all_backups(toks, t, &x, col);
-				return;
-			}
-			case STATUS_RUNNING:
-			{
-				if(toks[2])
-				{
-					char msg[64]="";
-					if(t<3) return;
-					snprintf(msg, sizeof(msg),
-						"Status: running (%s)",
-						running_status_to_text(
-							*(toks[2])));
-					print_line(msg, x++, col);
-				}
-				break;
-			}
+			break;
 		}
 	}
 	print_line("", x++, col);
-	table_header(toks[2], &x, col);
-	if(t>4) print_detail(toks[2], "Files", toks[4], &x, col, 0);
-	if(t>5) print_detail(toks[2], "Encrypted files", toks[5], &x, col, 0);
-	if(t>6) print_detail(toks[2], "Meta data", toks[6], &x, col, 0);
-	if(t>7) print_detail(toks[2], "Encrypted meta data", toks[7], &x, col, 0);
-	if(t>8) print_detail(toks[2], "Directories", toks[8], &x, col, 0);
-	if(t>9) print_detail(toks[2], "Soft links", toks[9], &x, col, 0);
-	if(t>10) print_detail(toks[2], "Hard links", toks[10], &x, col, 0);
-	if(t>11) print_detail(toks[2], "Special files", toks[11], &x, col, 0);
-	if(t>12)
-	{
-		print_detail(toks[2], "Total", toks[12], &x, col, 1);
-	}
+	table_header(phase, &x, col);
+	print_detail(phase, "Files",
+				cntr->file,
+				cntr->file_changed,
+				cntr->file_same,
+				cntr->file_deleted,
+				p1cntr->file,
+				&x, col, 0);
+	print_detail(phase, "Encrypted files",
+				cntr->enc,
+				cntr->enc_changed,
+				cntr->enc_same,
+				cntr->enc_deleted,
+				p1cntr->enc,
+				&x, col, 0);
+	print_detail(phase, "Meta data",
+				cntr->meta,
+				cntr->meta_changed,
+				cntr->meta_same,
+				cntr->meta_deleted,
+				p1cntr->meta,
+				&x, col, 0);
+	print_detail(phase, "Encrypted meta data",
+				cntr->encmeta,
+				cntr->encmeta_changed,
+				cntr->encmeta_same,
+				cntr->encmeta_deleted,
+				p1cntr->encmeta,
+				&x, col, 0);
+	print_detail(phase, "Directories",
+				cntr->dir,
+				cntr->dir_changed,
+				cntr->dir_same,
+				cntr->dir_deleted,
+				p1cntr->dir,
+				&x, col, 0);
+	print_detail(phase, "Soft links",
+				cntr->slink,
+				cntr->slink_changed,
+				cntr->slink_same,
+				cntr->slink_deleted,
+				p1cntr->slink,
+				&x, col, 0);
+	print_detail(phase, "Hard links",
+				cntr->hlink,
+				cntr->hlink_changed,
+				cntr->hlink_same,
+				cntr->hlink_deleted,
+				p1cntr->hlink,
+				&x, col, 0);
+	print_detail(phase, "Special files",
+				cntr->special,
+				cntr->special_changed,
+				cntr->special_same,
+				cntr->special_deleted,
+				p1cntr->special,
+				&x, col, 0);
+	print_detail(phase, "Total",
+				cntr->gtotal,
+				cntr->gtotal_changed,
+				cntr->gtotal_same,
+				cntr->gtotal_deleted,
+				p1cntr->gtotal,
+				&x, col, 1);
 	print_line("", x++, col);
-	if(t>14) print_detail2("Warnings", toks[14], "", &x, col);
+	print_detail(phase, "Warnings",
+				cntr->warning, 0, 0, 0, 0,
+				&x, col, 1);
 
-	if(t>15)
+	if(p1cntr->byte)
 	{
-		tmp=bytes_to_human_str(toks[15]);
-		print_detail2("Bytes estimated", toks[15], tmp, &x, col);
+		tmp=bytes_to_human(p1cntr->byte);
+		print_detail2("Bytes estimated", p1cntr->byte, tmp, &x, col);
 	}
-	if(t>16)
+	if(cntr->byte)
 	{
 		const char *text=NULL;
-		if(*(toks[2])==STATUS_BACKUP) text="Bytes in backup";
-		else if(*(toks[2])==STATUS_RESTORING) text="Bytes attempted";
-		else if(*(toks[2])==STATUS_VERIFYING) text="Bytes checked";
-		tmp=bytes_to_human_str(toks[16]);
-		if(text) print_detail2(text, toks[16], tmp, &x, col);
+		if(phase==STATUS_BACKUP) text="Bytes in backup";
+		else if(phase==STATUS_RESTORING) text="Bytes attempted";
+		else if(phase==STATUS_VERIFYING) text="Bytes checked";
+		tmp=bytes_to_human(cntr->byte);
+		if(text) print_detail2(text, cntr->byte, tmp, &x, col);
 	}
-	if(t>17)
+	if(cntr->recvbyte)
 	{
 		const char *text=NULL;
-		tmp=bytes_to_human_str(toks[17]);
-		if(*(toks[2])==STATUS_BACKUP)
-			text="Bytes received";
-		if(text) print_detail2(text, toks[17], tmp, &x, col);
+		tmp=bytes_to_human(cntr->recvbyte);
+		if(phase==STATUS_BACKUP) text="Bytes received";
+		if(text) print_detail2(text, cntr->recvbyte, tmp, &x, col);
 	}
-	if(t>18)
+	if(cntr->sentbyte)
 	{
 		const char *text=NULL;
-		if(*(toks[2])==STATUS_BACKUP) text="Bytes sent";
-		else if(*(toks[2])==STATUS_RESTORING) text="Bytes sent";
-		tmp=bytes_to_human_str(toks[18]);
-		print_detail2(text, toks[18], tmp, &x, col);
+		if(phase==STATUS_BACKUP) text="Bytes sent";
+		else if(phase==STATUS_RESTORING) text="Bytes sent";
+		tmp=bytes_to_human(cntr->sentbyte);
+		print_detail2(text, cntr->sentbyte, tmp, &x, col);
 	}
-	if(t>19)
+	if(p1cntr->start)
 	{
-		long start=0;
 		time_t now=0;
 		time_t diff=0;
 		now=time(NULL);
-		start=atol(toks[19]);
-		diff=now-start;
+		diff=now-p1cntr->start;
 
-		print_detail2("Start time", getdatestr(start), " ", &x, col);
-		print_detail2("Time taken", time_taken(diff), " ", &x, col);
+		print_detail3("Start time", getdatestr(p1cntr->start), &x,col);
+		print_detail3("Time taken", time_taken(diff), &x, col);
 
 		if(diff>0)
 		{
@@ -419,29 +402,29 @@ static void detail(char *toks[], int t, struct config *conf, int row, int col)
 			unsigned long long byteswant=0;
 			unsigned long long bytesgot=0;
 			float bytespersec=0;
-			byteswant=strtoull(toks[15], NULL, 10);
-			bytesgot=strtoull(toks[16], NULL, 10);
+			byteswant=p1cntr->byte;
+			bytesgot=cntr->byte;
 			bytespersec=(float)(bytesgot/diff);
 			bytesleft=byteswant-bytesgot;
 			if(bytespersec>0)
 			{
 				time_t timeleft=0;
 				timeleft=(time_t)(bytesleft/bytespersec);
-				print_detail2("Time left",
-					time_taken(timeleft), " ", &x, col);
+				print_detail3("Time left",
+					time_taken(timeleft), &x, col);
 			}
 		}
 	}
-	if(t>20 && toks[20])
+	if(path && *path)
 	{
 #ifdef HAVE_NCURSES_H
 		if(actg==ACTION_STATUS)
 		{
-			printw("\n%s\n", toks[20]);
+			printw("\n%s\n", path);
 			return;
 		}
 #else
-		printf("\n%s\n", toks[20]);
+		printf("\n%s\n", path);
 #endif
 	}
 }
@@ -471,96 +454,81 @@ static void blank_screen(int row, int col)
 	printf("%s\n\n", date);
 }
 
-static int parse_rbuf(const char *rbuf, struct config *conf, int row, int col, int sel, char **client, int *count, int details, const char *sclient)
+static int parse_rbuf(const char *rbuf, struct config *conf, int row, int col, int sel, char **client, int *count, int details, const char *sclient, struct cntr *p1cntr, struct cntr *cntr)
 {
-	//int c=0;
 	char *cp=NULL;
 	char *dp=NULL;
-	char *copyall=NULL;
+	char *copy=NULL;
 
-	if(!(copyall=strdup(rbuf)))
+	if(!(copy=strdup(rbuf)))
 	{
 		logp("out of memory\n");
 		return -1;
 	}
 
-	dp=copyall;
+	dp=copy;
 	*count=0;
 
 	// First, blank the whole screen.
 	blank_screen(row, col);
 	while((cp=strchr(dp, '\n')))
 	{
-		int t=1;
-		char *copy=NULL;
-		char **toks=NULL;
+		char status='\0';
+		char phase='\0';
+		char *path=NULL;
+		char **backups=NULL;
+		char *cntrclient=NULL;
 		*cp='\0';
 
-		if(!(toks=(char **)realloc(toks, t*sizeof(char *))))
+		if(str_to_counters(dp, &cntrclient, &status, &phase, &path,
+			p1cntr, cntr, &backups))
 		{
-			logp("out of memory");
-			return -1;
-		}
-
-		if(!(copy=strdup(dp)))
-		{
-			logp("out of memory\n");
-			free(copyall);
-			free(toks);
-			return -1;
-		}
-
-		if((toks[0]=strtok(copy, "\t\n")))
-		{
-			char *tmp=NULL;
-			while(1)
-			{
-				if(!(tmp=strtok(NULL, "\t\n")))
-					break;
-				if(!(toks=(char **)realloc(toks,
-					(t+1)*sizeof(char *))))
-				{
-					logp("out of memory");
-					free(copyall);
-					free(copy);
-					return -1;
-				}
-				toks[t++]=tmp;
-			}
-		}
-
-		if(t<2)
-		{
-			free(toks);
 			free(copy);
-			continue;
+			if(path) free(path);
+			if(cntrclient) free(cntrclient);
+			return -1;
 		}
+
+		if(!cntrclient) continue;
 
 		if(details)
 		{
 			if(*count==sel || sclient)
 			{
-				if(toks[0]
-				  && (!*client || strcmp(toks[0], *client)))
+				if(cntrclient
+				  && (!*client
+				    || strcmp(cntrclient, *client)))
 				{
 					if(*client) free(*client);
-					*client=strdup(toks[0]);
+					*client=strdup(cntrclient);
 				}
-				if(!sclient || !strcmp(toks[0], sclient))
-					detail(toks, t, conf, 0, col);
+				if(!sclient
+				  || (cntrclient
+				    && !strcmp(cntrclient, sclient)))
+					detail(cntrclient, status, phase,
+						path, p1cntr, cntr,
+						backups, 0, col);
 			}
 		}
 		else
 		{
-			summary(toks, t, *count, row, col);
+			summary(cntrclient, status, phase,
+				path, p1cntr, cntr, backups,
+				*count, row, col);
 		}
 		(*count)++;
 
 		dp=cp+1;
-		free(copy);
-		free(toks);
+		if(path) free(path);
+		if(cntrclient) free(cntrclient);
+		if(backups)
+		{
+			int b=0;
+			for(b=0; backups && backups[b]; b++) free(backups[b]);
+			free(backups);
+		}
 	}
-	if(copyall) free(copyall);
+	if(copy) free(copy);
 	return 0;
 }
 
@@ -595,7 +563,7 @@ static void print_star(int sel)
 }
 
 // Return 1 if it was shown, -1 on error, 0 otherwise.
-static int show_rbuf(const char *rbuf, struct config *conf, int sel, char **client, int *count, int details, const char *sclient)
+static int show_rbuf(const char *rbuf, struct config *conf, int sel, char **client, int *count, int details, const char *sclient, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int rbuflen=0;
 	if(!rbuf) return 0;
@@ -614,7 +582,7 @@ static int show_rbuf(const char *rbuf, struct config *conf, int sel, char **clie
 		if(actg==ACTION_STATUS) getmaxyx(stdscr, row, col);
 #endif
 		if(parse_rbuf(rbuf, conf, row, col,
-			sel, client, count, details, sclient))
+			sel, client, count, details, sclient, p1cntr, cntr))
 				return -1;
 		if(sel>=*count) sel=(*count)-1;
 		if(!details) print_star(sel);
@@ -698,6 +666,8 @@ int status_client_ncurses(struct config *conf, enum action act, const char *scli
 	int enterpressed=0;
 //	int loop=0;
 	int reqdone=0;
+	struct cntr p1cntr;
+	struct cntr cntr;
 
 #ifdef HAVE_NCURSES_H
 	int stdinfd=fileno(stdin);
@@ -864,8 +834,8 @@ int status_client_ncurses(struct config *conf, enum action act, const char *scli
 				}
 				if(quit) break;
 
-				if(sel<0) sel=0;
 				if(sel>=count) sel=count-1;
+				if(sel<0) sel=0;
 
 				// Attempt to print stuff to the screen right
 				// now, to give the impression of key strokes
@@ -874,7 +844,8 @@ int status_client_ncurses(struct config *conf, enum action act, const char *scli
 				{
 				  if((srbr=show_rbuf(last_rbuf,
 					conf, sel, &client,
-					&count, details, sclient))<0)
+					&count, details, sclient,
+					&p1cntr, &cntr))<0)
 				  {
 					ret=-1;
 					break;
@@ -932,7 +903,8 @@ int status_client_ncurses(struct config *conf, enum action act, const char *scli
 		}
 
 		if((srbr=show_rbuf(rbuf, conf,
-			sel, &client, &count, details, sclient))<0)
+			sel, &client, &count, details, sclient,
+			&p1cntr, &cntr))<0)
 		{
 			ret=-1;
 			break;

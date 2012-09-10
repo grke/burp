@@ -81,8 +81,8 @@ int set_logfp(FILE *fp, struct config *conf)
 #ifndef HAVE_WIN32
 	if(logfp) setlinebuf(logfp);
 #endif
-	do_syslog=conf->syslog;
-	do_stdout=conf->stdout;
+	do_syslog=conf->log_to_syslog;
+	do_stdout=conf->log_to_stdout;
 	do_progress_counter=conf->progress_counter;
 
 	if(syslog_opened)

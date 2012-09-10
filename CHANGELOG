@@ -14,6 +14,9 @@
     monitor can show estimates.
   * Add verify/restore notifications.
   * Fix Windows batch file IF/ELSE syntax in Windows autoupgrade script.
+  * Have the server send the client the counters when resuming.
+  * Have the server send the client the counters when verifying/restoring, so
+    that it knows what to expect.
 
 2012-08-28 Changes in burp-1.3.12:
   * Remove 'forward' timestamp references in backup directories, to allow the

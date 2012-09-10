@@ -1,9 +1,14 @@
 #ifndef _COUNTER_ROUTINES
 #define _COUNTER_ROUTINES
 
+#define COUNTER_VERSION		'1'
+
 struct cntr
 {
 	unsigned long long gtotal;
+	unsigned long long gtotal_same;
+	unsigned long long gtotal_changed;
+	unsigned long long gtotal_deleted;
 
 	unsigned long long total;
 	unsigned long long total_same;
@@ -72,8 +77,16 @@ extern void do_filecounter_deleted(struct cntr *c, char ch);
 extern void do_filecounter_bytes(struct cntr *c, unsigned long long bytes);
 extern void do_filecounter_sentbytes(struct cntr *c, unsigned long long bytes);
 extern void do_filecounter_recvbytes(struct cntr *c, unsigned long long bytes);
-extern void reset_filecounter(struct cntr *c);
+extern void reset_filecounter(struct cntr *c, time_t t);
 extern const char *bytes_to_human(unsigned long long counter);
-extern const char *bytes_to_human_str(const char *str);
+
+extern void counters_to_str(char *str, size_t len, const char *client,
+	char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr);
+extern int str_to_counters(const char *str, char **client, char *status,
+	char *phase, char **path, struct cntr *p1cntr, struct cntr *cntr,
+	char ***backups);
+extern int send_counters(const char *client, struct cntr *p1cntr, struct cntr *cntr);
+extern int recv_counters(struct cntr *p1cntr, struct cntr *cntr);
+
 
 #endif

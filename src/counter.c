@@ -2,11 +2,15 @@
 #include "prog.h"
 #include "cmd.h"
 #include "handy.h"
+#include "asyncio.h"
 
-void reset_filecounter(struct cntr *c)
+void reset_filecounter(struct cntr *c, time_t t)
 {
 	if(!c) return;
 	c->gtotal=0;
+	c->gtotal_same=0;
+	c->gtotal_changed=0;
+	c->gtotal_deleted=0;
 
 	c->total=0;
 	c->total_same=0;
@@ -63,7 +67,7 @@ void reset_filecounter(struct cntr *c)
 	c->recvbyte=0;
 	c->sentbyte=0;
 
-	c->start=time(NULL);
+	c->start=t;
 }
 
 const char *bytes_to_human(unsigned long long counter)
@@ -93,11 +97,6 @@ const char *bytes_to_human(unsigned long long counter)
 	//strcat(ret, units);
 	//strcat(ret, ")");
 	return ret;
-}
-
-const char *bytes_to_human_str(const char *str)
-{
-	return bytes_to_human(strtoull(str, NULL, 10));
 }
 
 static void border(void)
@@ -156,7 +155,10 @@ void do_filecounter(struct cntr *c, char ch, int print)
 		// Include CMD_FILE_CHANGED so that the client can show changed
 		// file symbols.
 		case CMD_FILE_CHANGED:
-			++(c->file_changed); ++(c->total_changed); break;
+			++(c->file_changed);
+			++(c->total_changed);
+			++(c->gtotal_changed);
+			break;
 	}
 	if(!((++(c->gtotal))%64) && print)
 		logc(
@@ -193,6 +195,7 @@ void do_filecounter_same(struct cntr *c, char ch)
 		case CMD_EFS_FILE:
 			++(c->efs_same); ++(c->total_same); break;
 	}
+	++(c->gtotal_same);
 }
 
 void do_filecounter_changed(struct cntr *c, char ch)
@@ -220,6 +223,7 @@ void do_filecounter_changed(struct cntr *c, char ch)
 		case CMD_EFS_FILE:
 			++(c->efs_changed); ++(c->total_changed); break;
 	}
+	++(c->gtotal_changed);
 }
 
 void do_filecounter_deleted(struct cntr *c, char ch)
@@ -246,6 +250,7 @@ void do_filecounter_deleted(struct cntr *c, char ch)
 		case CMD_EFS_FILE:
 			++(c->efs_deleted); ++(c->total_deleted); break;
 	}
+	++(c->gtotal_deleted);
 }
 
 void do_filecounter_bytes(struct cntr *c, unsigned long long bytes)
@@ -380,7 +385,7 @@ void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act)
 		p1c->meta,
 		act);
 
-	quint_print("Meta data (encrypted):",
+	quint_print("Meta data (enc):",
 		c->encmeta,
 		c->meta_changed,
 		c->meta_same,
@@ -451,4 +456,357 @@ void print_endcounter(struct cntr *cntr)
 		" %llu\n\n",
 #endif
 		cntr->gtotal);
+}
+
+void counters_to_str(char *str, size_t len, const char *client, char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr)
+{
+	int l=0;
+	snprintf(str, len,
+		"%s\t%c\t%c\t%c\t"
+		"%llu/%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu/%llu\t"
+		"%llu\t%llu\t%llu\t%llu\t%llu\t%li\t%s\n",
+			client,
+			COUNTER_VERSION,
+			STATUS_RUNNING, phase,
+
+			cntr->total,
+			cntr->total_changed,
+			cntr->total_same,
+			cntr->total_deleted,
+			p1cntr->total,
+
+			cntr->file,
+			cntr->file_changed,
+			cntr->file_same,
+			cntr->file_deleted,
+			p1cntr->file,
+
+			cntr->enc,
+			cntr->enc_changed,
+			cntr->enc_same,
+			cntr->enc_deleted,
+			p1cntr->enc,
+
+			cntr->meta,
+			cntr->meta_changed,
+			cntr->meta_same,
+			cntr->meta_deleted,
+			p1cntr->meta,
+
+			cntr->encmeta,
+			cntr->encmeta_changed,
+			cntr->encmeta_same,
+			cntr->encmeta_deleted,
+			p1cntr->encmeta,
+
+			cntr->dir,
+			cntr->dir_changed,
+			cntr->dir_same,
+			cntr->dir_deleted,
+			p1cntr->dir,
+
+			cntr->slink,
+			cntr->slink_changed,
+			cntr->slink_same,
+			cntr->slink_deleted,
+			p1cntr->slink,
+
+			cntr->hlink,
+			cntr->hlink_changed,
+			cntr->hlink_same,
+			cntr->hlink_deleted,
+			p1cntr->hlink,
+
+			cntr->special,
+			cntr->special_changed,
+			cntr->special_same,
+			cntr->special_deleted,
+			p1cntr->special,
+
+			cntr->gtotal,
+			cntr->gtotal_changed,
+			cntr->gtotal_same,
+			cntr->gtotal_deleted,
+			p1cntr->gtotal,
+
+			cntr->warning,
+			p1cntr->byte,
+			cntr->byte,
+			cntr->recvbyte,
+			cntr->sentbyte,
+			p1cntr->start,
+			path?path:"");
+
+	// Make sure there is a new line at the end.
+	l=strlen(str);
+	if(str[l-1]!='\n') str[l-1]='\n';
+}
+
+static int extract_ul(const char *value, unsigned long long *a, unsigned long long *b, unsigned long long *c, unsigned long long *d, unsigned long long *e)
+{
+	char *as=NULL;
+	char *bs=NULL;
+	char *cs=NULL;
+	char *ds=NULL;
+	char *es=NULL;
+	char *copy=NULL;
+	if(!value || !(copy=strdup(value))) return -1;
+
+	// Do not want to use strtok, just in case I end up running more
+	// than one at a time.
+	as=copy;
+	if((bs=strchr(as, '/')))
+	{
+		*bs='\0';
+		*a=strtoull(as, NULL, 10);
+		if((cs=strchr(++bs, '/')))
+		{
+			*cs='\0';
+			*b=strtoull(bs, NULL, 10);
+			if((ds=strchr(++cs, '/')))
+			{
+				*ds='\0';
+				*c=strtoull(cs, NULL, 10);
+				if((es=strchr(++ds, '/')))
+				{
+					*d=strtoull(ds, NULL, 10);
+					*es='\0';
+					es++;
+					*e=strtoull(es, NULL, 10);
+				}
+			}
+		}
+	}
+	free(copy);
+	return 0;
+}
+
+static char *get_backup_str(const char *s)
+{
+	static char str[32]="";
+	const char *cp=NULL;
+	if(!s || !*s) return NULL;
+	if(!(cp=strchr(s, ' ')))
+		snprintf(str, sizeof(str), "never");
+	else
+	{
+		unsigned long backupnum=0;
+		backupnum=strtoul(s, NULL, 10);
+		snprintf(str, sizeof(str),
+			"%07lu %s", backupnum, getdatestr(atol(cp+1)));
+	}
+	return str;
+}
+
+static int add_to_backup_list(char ***backups, int *b, const char *tok)
+{
+	const char *str=NULL;
+	if(!(str=get_backup_str(tok))) return 0;
+	if(!(*backups=(char **)realloc(*backups, ((*b)+2)*sizeof(char *)))
+	  || !((*backups)[*b]=strdup(str)))
+	{
+		logp("out of memory\n");
+		return -1;
+	}
+	(*backups)[(*b)+1]=NULL;
+	(*b)++;
+	return 0;
+}
+
+int str_to_counters(const char *str, char **client, char *status, char *phase, char **path, struct cntr *p1cntr, struct cntr *cntr, char ***backups)
+{
+	int t=0;
+	char *tok=NULL;
+	char *copy=NULL;
+
+	reset_filecounter(p1cntr, 0);
+	reset_filecounter(cntr, 0);
+
+	if(!(copy=strdup(str)))
+	{
+		logp("out of memory\n");
+		return -1;
+	}
+
+	if((tok=strtok(copy, "\t\n")))
+	{
+		if(client && !(*client=strdup(tok)))
+		{
+			logp("out of memory\n");
+			return -1;
+		}
+		if(!(tok=strtok(NULL, "\t\n")))
+		{
+			free(copy);
+			return 0;
+		}
+		// First token after the client name is the version of
+		// the counter parser thing, which now has to be noted
+		// because counters might be passed to the client instead
+		// of just the server status monitor.
+		if(*tok=='1') // counter version 1.
+		{
+		  while(1)
+		  {
+			t++;
+			if(!(tok=strtok(NULL, "\t\n")))
+				break;
+			if     (t==1) { if(status) *status=*tok; }
+			else if(t==2)
+			{
+				if(status && (*status==STATUS_IDLE
+				  || *status==STATUS_SERVER_CRASHED
+				  || *status==STATUS_CLIENT_CRASHED))
+				{
+					int b=0;
+					if(backups)
+					{
+						// Build a list of backups.
+					  do
+					  {
+						if(add_to_backup_list(backups,
+								&b, tok))
+						{
+							free(copy);
+							return -1;
+						}
+					  } while((tok=strtok(NULL, "\t\n")));
+					}
+				}
+				else
+				{
+					if(phase) *phase=*tok;
+				}
+			}
+			else if(t==3) { extract_ul(tok,
+						&(cntr->total),
+						&(cntr->total_changed),
+						&(cntr->total_same),
+						&(cntr->total_deleted),
+						&(p1cntr->total)); }
+			else if(t==4) { extract_ul(tok,
+						&(cntr->file),
+						&(cntr->file_changed),
+						&(cntr->file_same),
+						&(cntr->file_deleted),
+						&(p1cntr->file)); }
+			else if(t==5) { extract_ul(tok,
+						&(cntr->enc),
+						&(cntr->enc_changed),
+						&(cntr->enc_same),
+						&(cntr->enc_deleted),
+						&(p1cntr->enc)); }
+			else if(t==6) { extract_ul(tok,
+						&(cntr->meta),
+						&(cntr->meta_changed),
+						&(cntr->meta_same),
+						&(cntr->meta_deleted),
+						&(p1cntr->meta)); }
+			else if(t==7) { extract_ul(tok,
+						&(cntr->encmeta),
+						&(cntr->encmeta_changed),
+						&(cntr->encmeta_same),
+						&(cntr->encmeta_deleted),
+						&(p1cntr->encmeta)); }
+			else if(t==8) { extract_ul(tok,
+						&(cntr->dir),
+						&(cntr->dir_changed),
+						&(cntr->dir_same),
+						&(cntr->dir_deleted),
+						&(p1cntr->dir)); }
+			else if(t==9) { extract_ul(tok,
+						&(cntr->slink),
+						&(cntr->slink_changed),
+						&(cntr->slink_same),
+						&(cntr->slink_deleted),
+						&(p1cntr->slink)); }
+			else if(t==10) { extract_ul(tok,
+						&(cntr->hlink),
+						&(cntr->hlink_changed),
+						&(cntr->hlink_same),
+						&(cntr->hlink_deleted),
+						&(p1cntr->hlink)); }
+			else if(t==11) { extract_ul(tok,
+						&(cntr->special),
+						&(cntr->special_changed),
+						&(cntr->special_same),
+						&(cntr->special_deleted),
+						&(p1cntr->special)); }
+			else if(t==12) { extract_ul(tok,
+						&(cntr->gtotal),
+						&(cntr->gtotal_changed),
+						&(cntr->gtotal_same),
+						&(cntr->gtotal_deleted),
+						&(p1cntr->gtotal)); }
+			else if(t==13) { cntr->warning=
+						strtoull(tok, NULL, 10); }
+			else if(t==14) { p1cntr->byte=
+						strtoull(tok, NULL, 10); }
+			else if(t==15) { cntr->byte=
+						strtoull(tok, NULL, 10); }
+			else if(t==16) { cntr->recvbyte=
+						strtoull(tok, NULL, 10); }
+			else if(t==17) { cntr->sentbyte=
+						strtoull(tok, NULL, 10); }
+			else if(t==18) { p1cntr->start=atol(tok); }
+			else if(t==19) { if(path && !(*path=strdup(tok)))
+				{ logp("out of memory\n"); return -1; } }
+		  }
+		}
+	}
+
+	free(copy);
+        return 0;
+}
+
+int send_counters(const char *client, struct cntr *p1cntr, struct cntr *cntr)
+{
+	char buf[4096]="";
+	counters_to_str(buf, sizeof(buf),
+		client,
+		STATUS_RUNNING,
+		" " /* normally the path for status server */,
+		p1cntr, cntr);
+	if(async_write_str(CMD_GEN, buf))
+	{
+		logp("Error when sending counters to client.\n");
+		return -1;
+	}
+	return 0;
+}
+
+int recv_counters(struct cntr *p1cntr, struct cntr *cntr)
+{
+	size_t l=0;
+	char cmd='\0';
+	char *buf=NULL;
+
+	if(async_read(&cmd, &buf, &l))
+	{
+		logp("Error when reading counters from server.\n");
+		return -1;
+	}
+	if(cmd!=CMD_GEN)
+	{
+		logp("Unexpected command when reading counters from server: %c:%s", cmd, buf);
+		if(buf) free(buf);
+		return -1;
+	}
+	if(str_to_counters(buf, NULL, NULL, NULL, NULL, p1cntr, cntr, NULL))
+	{
+		logp("Error when parsing counters from server.\n");
+		if(buf) free(buf);
+		return -1;
+	}
+	if(buf) free(buf);
+	return 0;
 }

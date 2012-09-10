@@ -534,6 +534,12 @@ int do_restore_client(struct config *conf, enum action act, struct cntr *p1cntr,
 		return -1;
 	logp("doing %s confirmed\n", act_str(act));
 
+	if(conf->send_client_counters)
+	{
+		if(recv_counters(p1cntr, cntr))
+			return -1;
+	}
+
 #if defined(HAVE_WIN32)
 	if(act==ACTION_RESTORE)
 		win32_enable_backup_privileges(1 /* ignore_errors */);

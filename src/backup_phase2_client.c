@@ -153,7 +153,7 @@ static int forget_file(struct sbuf *sb, char cmd, struct cntr *cntr)
 	return 0;
 }
 
-static int do_backup_phase2_client(struct config *conf, int resume, struct cntr *cntr)
+static int do_backup_phase2_client(struct config *conf, int resume, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ret=0;
 	int quit=0;
@@ -172,6 +172,13 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 		if(async_write_str(CMD_GEN, "backupphase2")
 		  || async_read_expect(CMD_GEN, "ok"))
 			return -1;
+	}
+	else if(conf->send_client_counters)
+	{
+		// On resume, the server might update the client with the
+ 		// counters.
+		if(recv_counters(p1cntr, cntr))
+			return -1;	
 	}
 
 	while(!quit)
@@ -375,7 +382,7 @@ int backup_phase2_client(struct config *conf, struct cntr *p1cntr, int resume, s
 
 	logp("Phase 2 begin (send file data)\n");
 
-	ret=do_backup_phase2_client(conf, resume, cntr);
+	ret=do_backup_phase2_client(conf, resume, p1cntr, cntr);
 
 	print_endcounter(cntr);
 	print_filecounters(p1cntr, cntr, ACTION_BACKUP);

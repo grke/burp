@@ -208,7 +208,7 @@ static int forward_sbuf(FILE *fp, gzFile zp, struct sbuf *b, struct sbuf *target
 	return 0;
 }
 
-int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpth *dpth, struct config *cconf, struct cntr *p1cntr, struct cntr *cntr)
+int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpth *dpth, struct config *cconf, const char *client, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ret=0;
 	struct sbuf p1b;
@@ -266,6 +266,12 @@ int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpth *dpth, struct con
 
 	// Now should have all file pointers in the right places to resume.
 	if(incr_dpth(dpth, cconf)) goto error;
+
+	if(cconf->send_client_counters)
+	{
+		if(send_counters(client, p1cntr, cntr))
+			goto error;
+	}
 
 	goto end;
 error:

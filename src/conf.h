@@ -17,8 +17,8 @@ struct config
 	char *status_port;
 	enum burp_mode mode;
 	char *lockfile;
-	int syslog;
-	int stdout;
+	int log_to_syslog;
+	int log_to_stdout;
 	int progress_counter;
 	char *ssl_cert_ca;
 	char *ssl_cert;
@@ -156,6 +156,10 @@ struct config
 	int client_can_list;
 	int client_can_restore;
 	int client_can_verify;
+
+// Set to 1 on both client and server when the server is able to send counters
+// on resume/verify/restore.
+	int send_client_counters;
 };
 
 extern void init_config(struct config *conf);

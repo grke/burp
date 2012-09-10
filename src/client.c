@@ -163,8 +163,8 @@ static int do_client(struct config *conf, enum action act)
 	char *server_version=NULL;
 	const char *phase1str="backupphase1";
 
-	reset_filecounter(&p1cntr);
-	reset_filecounter(&cntr);
+	reset_filecounter(&p1cntr, time(NULL));
+	reset_filecounter(&cntr, time(NULL));
 
 	setup_signals_client();
 //	settimers(0, 100);
@@ -321,6 +321,13 @@ static int do_client(struct config *conf, enum action act)
 				if(incexc && (ret=parse_incexcs_buf(conf,
 					incexc))) goto end;
 			}
+		}
+
+		if(server_supports(feat, ":counters:"))
+		{
+			if(async_write_str(CMD_GEN, "countersok"))
+				goto end;
+			conf->send_client_counters=1;
 		}
 
 		// :incexc: is for the client sending the server the

@@ -668,6 +668,14 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 		gzclose_fp(&zp);
 	}
 
+	if(cconf->send_client_counters)
+	{
+		if(send_counters(client, p1cntr, cntr))
+		{
+			ret=-1;
+		}
+	}
+
 	// Now, do the actual restore.
 	if(!ret && !(zp=gzopen_file(manifest, "rb")))
 	{
@@ -766,8 +774,8 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 		//print_endcounter(cntr);
 		print_filecounters(p1cntr, cntr, act);
 
-		reset_filecounter(p1cntr);
-		reset_filecounter(cntr);
+		reset_filecounter(p1cntr, time(NULL));
+		reset_filecounter(cntr, time(NULL));
 	}
 	set_logfp(NULL, cconf);
 	compress_file(logpath, logpathz, cconf);

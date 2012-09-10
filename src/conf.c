@@ -73,8 +73,8 @@ void init_config(struct config *conf)
 	conf->ca_burp_ca=NULL;
 	conf->ca_csr_dir=NULL;
 	conf->lockfile=NULL;
-	conf->syslog=0;
-	conf->stdout=1;
+	conf->log_to_syslog=0;
+	conf->log_to_stdout=1;
 	conf->progress_counter=0;
 	conf->password=NULL;
 	conf->passwd=NULL;
@@ -169,6 +169,8 @@ void init_config(struct config *conf)
 	conf->client_can_list=1;
 	conf->client_can_restore=1;
 	conf->client_can_verify=1;
+
+	conf->send_client_counters=0;
 
 	init_incexcs(conf);
 }
@@ -603,9 +605,9 @@ struct llists
 static int load_config_ints(struct config *conf, const char *field, const char *value)
 {
 	get_conf_val_int(field, value, "syslog",
-		&(conf->syslog));
+		&(conf->log_to_syslog));
 	get_conf_val_int(field, value, "stdout",
-		&(conf->stdout));
+		&(conf->log_to_stdout));
 	get_conf_val_int(field, value, "progress_counter",
 		&(conf->progress_counter));
 	get_conf_val_int(field, value, "hardlinked_archive",
@@ -1424,8 +1426,8 @@ static int set_global_arglist(struct strlist ***dst, struct strlist **src, int *
 /* Remember to update the list in the man page when you change these.*/
 int set_client_global_config(struct config *conf, struct config *cconf, const char *client)
 {
-	cconf->syslog=conf->syslog;
-	cconf->stdout=conf->stdout;
+	cconf->log_to_syslog=conf->log_to_syslog;
+	cconf->log_to_stdout=conf->log_to_stdout;
 	cconf->progress_counter=conf->progress_counter;
 	cconf->password_check=conf->password_check;
 	cconf->client_can_force_backup=conf->client_can_force_backup;

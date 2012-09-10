@@ -1214,6 +1214,10 @@ static int extra_comms(const char *client, const char *cversion, char **incexc, 
 		if(cconf->sdcount && append_to_feat(&feat, "sincexc:"))
 			return -1;
 
+		/* Clients can be sent counters on resume/verify/restore. */
+		if(append_to_feat(&feat, "counters:"))
+			return -1;
+
 		//printf("feat: %s\n", feat);
 
 		if(async_write_str(CMD_GEN, feat))
@@ -1297,6 +1301,13 @@ static int extra_comms(const char *client, const char *cversion, char **incexc, 
 					break;
 				}
 			}
+			else if(!strcmp(buf, "countersok"))
+			{
+				// Client can accept counters on
+				// resume/verify/restore.
+				logp("Client supports being sent counters.\n");
+				cconf->send_client_counters=1;
+			}
 			else
 			{
 				logp("unexpected command from client: %c:%s\n",
@@ -1341,8 +1352,8 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	struct cntr p1cntr; // cntr for phase1 (scan)
 	struct cntr cntr; // cntr for the rest
 
-	reset_filecounter(&p1cntr);
-	reset_filecounter(&cntr);
+	reset_filecounter(&p1cntr, time(NULL));
+	reset_filecounter(&cntr, time(NULL));
 
 	if(forking) close_fd(rfd);
 

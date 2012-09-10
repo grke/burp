@@ -1077,7 +1077,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			}
 			else if(!strncmp(buf, "listb ", strlen("listb ")))
 			{
-				if((browsedir=strrchr(buf, ':')))
+				if((browsedir=strchr(buf, ':')))
 				{
 					*browsedir='\0';
 					browsedir++;

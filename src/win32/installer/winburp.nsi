@@ -183,13 +183,13 @@ Function .onInit
   StrCpy $ConfigClientName              "clientname"
   StrCpy $ConfigPassword                "password"
   StrCpy $ConfigPoll                    "20"
-  StrCpy $ConfigAutoupgrade		"1"
+  StrCpy $ConfigAutoupgrade		"0"
   ; The commands that you have to give the Windows scheduler change depending
   ; upon your language. 'MINUTE' works for English.
   ; Allow it to be overridden on the command line. Maybe one day, there will
   ; be an advanced option to choose from the screens.
   StrCpy $ConfigMinuteText		"MINUTE"
-  StrCpy $ConfigServerRestore		"1"
+  StrCpy $ConfigServerRestore		"0"
   StrCpy $ConfigEncPass			""
 
   ; Allow things to be set on the command line.
@@ -467,12 +467,6 @@ Function UpdateComponentUI
 FunctionEnd
 
 Function EnterConfigPage1
-;  IntOp $R0 $NewComponents & ${ComponentsRequiringUserConfig}
-
-;  ${If} $R0 = 0
-;    Abort
-;  ${EndIf}
-
   StrCmp $SkipPages 1 end
 
   StrCmp $Overwrite 1 overwrite
@@ -481,12 +475,10 @@ overwrite:
 
   !insertmacro MUI_HEADER_TEXT "Install burp (page 1 of 3)" ""
   !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage1.ini" "Field 2" "State" "$ConfigServerAddress"
-;  !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage1.ini" "Field 5" "State" "$ConfigServerPort"
   !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage1.ini" "Field 5" "State" "$ConfigClientName"
   !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage1.ini" "Field 8" "State" "$ConfigPassword"
   !insertmacro MUI_INSTALLOPTIONS_DISPLAY "ConfigPage1.ini"
   !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigServerAddress "ConfigPage1.ini" "Field 2" State
-;  !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigServerPort "ConfigPage1.ini" "Field 5" State
   !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigClientName "ConfigPage1.ini" "Field 5" State
   !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigPassword "ConfigPage1.ini" "Field 8" State
 
@@ -495,12 +487,6 @@ end:
 FunctionEnd
 
 Function EnterConfigPage2
-;  IntOp $R0 $NewComponents & ${ComponentsRequiringUserConfig}
-
-;  ${If} $R0 = 0
-;    Abort
-;  ${EndIf}
-
   StrCmp $SkipPages 1 end
 
   StrCmp $Overwrite 1 overwrite
@@ -509,12 +495,8 @@ overwrite:
 
   !insertmacro MUI_HEADER_TEXT "Install burp (page 2 of 3)" ""
   !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage2.ini" "Field 2" "State" "$ConfigPoll"
-  !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage2.ini" "Field 5" "State" "$ConfigAutoupgrade"
-  !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage2.ini" "Field 8" "State" "$ConfigServerRestore"
   !insertmacro MUI_INSTALLOPTIONS_DISPLAY "ConfigPage2.ini"
   !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigPoll "ConfigPage2.ini" "Field 2" State
-  !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigAutoupgrade "ConfigPage2.ini" "Field 5" State
-  !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigServerRestore "ConfigPage2.ini" "Field 8" State
 
 end:
 
@@ -529,8 +511,12 @@ overwrite:
 
   !insertmacro MUI_HEADER_TEXT "Install burp (page 3 of 3)" ""
   !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage3.ini" "Field 2" "State" "$ConfigEncPass"
+  !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage3.ini" "Field 5" "State" "$ConfigAutoupgrade"
+  !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage3.ini" "Field 8" "State" "$ConfigServerRestore"
   !insertmacro MUI_INSTALLOPTIONS_DISPLAY "ConfigPage3.ini"
   !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigEncPass "ConfigPage3.ini" "Field 2" State
+  !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigAutoupgrade "ConfigPage3.ini" "Field 5" State
+  !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigServerRestore "ConfigPage3.ini" "Field 8" State
 
 end:
 

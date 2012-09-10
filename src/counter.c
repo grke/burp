@@ -458,6 +458,7 @@ void print_endcounter(struct cntr *cntr)
 		cntr->gtotal);
 }
 
+#ifndef HAVE_WIN32
 void counters_to_str(char *str, size_t len, const char *client, char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int l=0;
@@ -550,6 +551,7 @@ void counters_to_str(char *str, size_t len, const char *client, char phase, cons
 	l=strlen(str);
 	if(str[l-1]!='\n') str[l-1]='\n';
 }
+#endif
 
 static int extract_ul(const char *value, unsigned long long *a, unsigned long long *b, unsigned long long *c, unsigned long long *d, unsigned long long *e)
 {
@@ -768,6 +770,7 @@ int str_to_counters(const char *str, char **client, char *status, char *phase, c
         return 0;
 }
 
+#ifndef HAVE_WIN32
 int send_counters(const char *client, struct cntr *p1cntr, struct cntr *cntr)
 {
 	char buf[4096]="";
@@ -783,6 +786,7 @@ int send_counters(const char *client, struct cntr *p1cntr, struct cntr *cntr)
 	}
 	return 0;
 }
+#endif
 
 int recv_counters(struct cntr *p1cntr, struct cntr *cntr)
 {

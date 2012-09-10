@@ -431,23 +431,27 @@ Q. What command line options are available to the Windows installer?
 <table>
 <tr><td VALIGN="top" WIDTH="50%"><FONT COLOR="#99CCFF">/S</td>
 	<td VALIGN="top"><FONT COLOR="#99CCFF">Silent install</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#99CCFF">/server=&lt;address&gt;</FONT></td>
+<tr><td VALIGN="top"><FONT COLOR="#99CCFF">/server=[address]</FONT></td>
 	<td VALIGN="top"><FONT COLOR="#99CCFF">Set the address of the burp server</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#99CCFF">/port=&lt;port&gt;</FONT></td>
+<tr><td VALIGN="top"><FONT COLOR="#99CCFF">/port=[port]</FONT></td>
 	<td VALIGN="top"><FONT COLOR="#99CCFF">Set the port of the burp server</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#99CCFF">/cname=&lt;name&gt;</FONT></td>
+<tr><td VALIGN="top"><FONT COLOR="#99CCFF">/cname=[name]</FONT></td>
 	<td VALIGN="top"><FONT COLOR="#99CCFF">Set the client name</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#99CCFF">/password=&lt;password&gt;</FONT></td>
+<tr><td VALIGN="top"><FONT COLOR="#99CCFF">/password=[password]</FONT></td>
 	<td VALIGN="top"><FONT COLOR="#99CCFF">Set the client password</FONT></td></tr>
 <tr><td VALIGN="top"><FONT COLOR="#99CCFF">/autoupgrade=[0|1]</FONT></td>
 	<td VALIGN="top"><FONT COLOR="#99CCFF">Set whether autoupgrades are allowed</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#99CCFF">/poll=&lt;minutes&gt;</FONT></td>
+<tr><td VALIGN="top"><FONT COLOR="#99CCFF">/server_can_restore=[0|1]</FONT></td>
+	<td VALIGN="top"><FONT COLOR="#99CCFF">Set whether the server can initiate restores or not.</FONT></td></tr>
+<tr><td VALIGN="top"><FONT COLOR="#99CCFF">/encryption_password=[password]</FONT></td>
+	<td VALIGN="top"><FONT COLOR="#99CCFF">Set an encryption password.</FONT></td></tr>
+<tr><td VALIGN="top"><FONT COLOR="#99CCFF">/poll=[minutes]</FONT></td>
 	<td VALIGN="top"><FONT COLOR="#99CCFF">Set the poll interval</FONT></td></tr>
 <tr><td VALIGN="top"><FONT COLOR="#99CCFF">/overwrite</FONT></td>
 	<td VALIGN="top"><FONT COLOR="#99CCFF">Allow existing client configuration to be overwritten</FONT></td></tr>
 <tr><td VALIGN="top"><FONT COLOR="#99CCFF">/skippages</FONT></td>
 	<td VALIGN="top"><FONT COLOR="#99CCFF">Skip installer configuration pages but keep the initial splash screen and final confirmation</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#99CCFF">/minutetext=&lt;text&gt;</FONT></td>
+<tr><td VALIGN="top"><FONT COLOR="#99CCFF">/minutetext=[text]</FONT></td>
 	<td VALIGN="top"><FONT COLOR="#99CCFF">When setting up the Windows scheduler, the Windows 'schtasks' command stupidly needs different text given to it depending on the language of the system. The default is 'MINUTE'. If your Windows is for example, Polish, this option lets you set it to the Polish version of 'MINUTE'.</FONT></td></tr>
 </table>
 </FONT>

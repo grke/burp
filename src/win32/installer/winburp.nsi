@@ -45,7 +45,7 @@ InstType "Client"
 !InsertMacro MUI_PAGE_DIRECTORY
 Page custom EnterConfigPage1
 Page custom EnterConfigPage2
-; Page custom EnterConfigPage2 LeaveConfigPage2
+Page custom EnterConfigPage3
 !Define      MUI_PAGE_CUSTOMFUNCTION_LEAVE LeaveInstallPage
 !InsertMacro MUI_PAGE_INSTFILES
 !InsertMacro MUI_PAGE_FINISH
@@ -83,6 +83,8 @@ Var ConfigPassword
 Var ConfigPoll
 Var ConfigAutoupgrade
 Var ConfigMinuteText
+Var ConfigServerRestore
+Var ConfigEncPass
 
 Var AutomaticInstall
 
@@ -187,6 +189,8 @@ Function .onInit
   ; Allow it to be overridden on the command line. Maybe one day, there will
   ; be an advanced option to choose from the screens.
   StrCpy $ConfigMinuteText		"MINUTE"
+  StrCpy $ConfigServerRestore		"1"
+  StrCpy $ConfigEncPass			""
 
   ; Allow things to be set on the command line.
   ClearErrors
@@ -214,6 +218,14 @@ Function .onInit
   IfErrors +2
     StrCpy $ConfigAutoupgrade $R1
   ClearErrors
+  ${GetOptions} $R0 "/server_can_restore=" $R1
+  IfErrors +2
+    StrCpy $ConfigServerRestore $R1
+  ClearErrors
+  ${GetOptions} $R0 "/encryption_password=" $R1
+  IfErrors +2
+    StrCpy $ConfigEncPass $R1
+  ClearErrors
   ${GetOptions} $R0 "/minutetext=" $R1
   IfErrors +2
     StrCpy $ConfigMinuteText $R1
@@ -228,6 +240,7 @@ Function .onInit
 
   !InsertMacro MUI_INSTALLOPTIONS_EXTRACT "ConfigPage1.ini"
   !InsertMacro MUI_INSTALLOPTIONS_EXTRACT "ConfigPage2.ini"
+  !InsertMacro MUI_INSTALLOPTIONS_EXTRACT "ConfigPage3.ini"
 
   Pop $R1
   Pop $R0
@@ -269,6 +282,7 @@ resetinstdir:
 donotresetinstdir:
 
   CreateDirectory "$INSTDIR"
+  CreateDirectory "$INSTDIR\autoupgrade"
   CreateDirectory "$INSTDIR\bin"
   CreateDirectory "$INSTDIR\CA"
 
@@ -313,6 +327,10 @@ overwrite:
   FileWrite $R1 "ssl_key = $ConfDir/ssl_cert-client.key$\r$\n"
   FileWrite $R1 "ssl_key_password = password$\r$\n"
   FileWrite $R1 "ssl_peer_cn = burpserver$\r$\n"
+  FileWrite $R1 "server_can_restore = $ConfigServerRestore$\r$\n"
+  ${If} $ConfigEncPass != ""
+    FileWrite $R1 "encryption_password = $ConfigEncPass$\r$\n"
+  ${EndIf}
 !if "${BITS}" == "32"
   FileWrite $R1 "autoupgrade_os = win32$\r$\n"
 !endif
@@ -367,6 +385,9 @@ LangString SUBTITLE_ConfigPage1 ${LANG_ENGLISH} "Set installation configuration.
 
 LangString TITLE_ConfigPage2 ${LANG_ENGLISH} "Configuration (continued)"
 LangString SUBTITLE_ConfigPage2 ${LANG_ENGLISH} "Set installation configuration."
+
+LangString TITLE_ConfigPage3 ${LANG_ENGLISH} "Configuration (continued)"
+LangString SUBTITLE_ConfigPage3 ${LANG_ENGLISH} "Set installation configuration."
 
 !InsertMacro MUI_FUNCTION_DESCRIPTION_BEGIN
   !InsertMacro MUI_DESCRIPTION_TEXT ${SecFileDaemon} $(DESC_SecFileDaemon)
@@ -452,15 +473,13 @@ Function EnterConfigPage1
 ;    Abort
 ;  ${EndIf}
 
-  CreateDirectory "$INSTDIR\autoupgrade"
-
   StrCmp $SkipPages 1 end
 
   StrCmp $Overwrite 1 overwrite
   IfFileExists $INSTDIR\Burp.conf end
 overwrite:
 
-  !insertmacro MUI_HEADER_TEXT "Install burp (page 1 of 2)" ""
+  !insertmacro MUI_HEADER_TEXT "Install burp (page 1 of 3)" ""
   !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage1.ini" "Field 2" "State" "$ConfigServerAddress"
 ;  !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage1.ini" "Field 5" "State" "$ConfigServerPort"
   !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage1.ini" "Field 5" "State" "$ConfigClientName"
@@ -488,12 +507,30 @@ Function EnterConfigPage2
   IfFileExists $INSTDIR\Burp.conf end
 overwrite:
 
-  !insertmacro MUI_HEADER_TEXT "Install burp (page 2 of 2)" ""
+  !insertmacro MUI_HEADER_TEXT "Install burp (page 2 of 3)" ""
   !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage2.ini" "Field 2" "State" "$ConfigPoll"
   !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage2.ini" "Field 5" "State" "$ConfigAutoupgrade"
+  !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage2.ini" "Field 8" "State" "$ConfigServerRestore"
   !insertmacro MUI_INSTALLOPTIONS_DISPLAY "ConfigPage2.ini"
   !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigPoll "ConfigPage2.ini" "Field 2" State
   !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigAutoupgrade "ConfigPage2.ini" "Field 5" State
+  !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigServerRestore "ConfigPage2.ini" "Field 8" State
+
+end:
+
+FunctionEnd
+
+Function EnterConfigPage3
+  StrCmp $SkipPages 1 end
+
+  StrCmp $Overwrite 1 overwrite
+  IfFileExists $INSTDIR\Burp.conf end
+overwrite:
+
+  !insertmacro MUI_HEADER_TEXT "Install burp (page 3 of 3)" ""
+  !insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage3.ini" "Field 2" "State" "$ConfigEncPass"
+  !insertmacro MUI_INSTALLOPTIONS_DISPLAY "ConfigPage3.ini"
+  !InsertMacro MUI_INSTALLOPTIONS_READ $ConfigEncPass "ConfigPage3.ini" "Field 2" State
 
 end:
 

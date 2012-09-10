@@ -80,12 +80,15 @@ extern void do_filecounter_recvbytes(struct cntr *c, unsigned long long bytes);
 extern void reset_filecounter(struct cntr *c, time_t t);
 extern const char *bytes_to_human(unsigned long long counter);
 
+#ifndef HAVE_WIN32
 extern void counters_to_str(char *str, size_t len, const char *client,
 	char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr);
+extern int send_counters(const char *client, struct cntr *p1cntr, struct cntr *cntr);
+#endif
+
 extern int str_to_counters(const char *str, char **client, char *status,
 	char *phase, char **path, struct cntr *p1cntr, struct cntr *cntr,
 	char ***backups);
-extern int send_counters(const char *client, struct cntr *p1cntr, struct cntr *cntr);
 extern int recv_counters(struct cntr *p1cntr, struct cntr *cntr);
 
 

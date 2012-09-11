@@ -23,6 +23,8 @@
     server initiated restores.
   * Allow server_can_restore and encryption_password to be set with the Windows
     installer.
+  * Indicate to the server post script whether there was an error.
+  * Indicate to the server post script whether a timed backup was attempted.
 
 2012-08-28 Changes in burp-1.3.12:
   * Remove 'forward' timestamp references in backup directories, to allow the

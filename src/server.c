@@ -845,7 +845,7 @@ static void maybe_do_notification(int status, const char *client, const char *ba
 	}
 }
 
-static int child(struct config *conf, struct config *cconf, const char *client, const char *cversion, const char *incexc, int srestore, char cmd, char *buf, char **gotlock, struct cntr *p1cntr, struct cntr *cntr)
+static int child(struct config *conf, struct config *cconf, const char *client, const char *cversion, const char *incexc, int srestore, char cmd, char *buf, char **gotlock, int *timer_ret, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ret=0;
 	char msg[256]="";
@@ -902,7 +902,6 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 				ret=-1;
 		else
 		{
-			int tret=0;
 			char okstr[32]="";
 			// create basedir, without the /current part
 			if(mkpath(&current, cconf->directory))
@@ -915,18 +914,18 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			}
 			if(!strcmp(buf, "backupphase1timed"))
 			{
-				if((tret=run_script_w(
+				if((*timer_ret=run_script_w(
 					cconf->timer_script,
 					cconf->timer_arg,
 					cconf->tacount,
 					client, current, cconf->directory,
 					NULL))<0)
 				{
-					ret=tret;
+					ret=*timer_ret;
 					logp("Error running timer script for %s\n", client);
 					goto end;
 				}
-				if(tret)
+				if(*timer_ret)
 				{
 					logp("Not running backup of %s\n",
 						client);
@@ -1352,6 +1351,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	char *cversion=NULL;
 	int srestore=0;
 	char *gotlock=NULL;
+	int timer_ret=0;
 	struct config conf;
 	struct config cconf;
 
@@ -1489,7 +1489,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	}
 
 	if(!ret) ret=child(&conf, &cconf, client, cversion, incexc, srestore,
-		cmd, buf, &gotlock, &p1cntr, &cntr);
+		cmd, buf, &gotlock, &timer_ret, &p1cntr, &cntr);
 
 	if((!ret || cconf.server_script_post_run_on_fail)
 	  && cconf.server_script_post
@@ -1497,10 +1497,12 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 			cconf.server_script_post_arg,
 			cconf.spostcount,
 			"post",
-			buf?buf:"",
+			buf?buf:"", // the action requested by the client
 			client,
-			"reserved4",
-			"reserved5",
+			// indicate success or failure
+			ret?"1":"0",
+			// indicate whether the timer script said OK or not
+			timer_ret?"1":"0",
 			NULL, NULL, NULL, NULL, NULL,
 			&p1cntr, 1, 1))
 	{

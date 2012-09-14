@@ -70,6 +70,7 @@ struct config
 	int ircount; struct strlist **increg; // include (regular expression)
 	int ercount; struct strlist **excreg; // exclude (regular expression)
 	int exfscount; struct strlist **excfs; // exclude filesystems
+	int excmcount; struct strlist **excom; // exclude from compression
 	int cross_all_filesystems;
 	int read_all_fifos;
 	struct strlist **fifos;

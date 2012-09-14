@@ -67,6 +67,8 @@ static int do_sends(struct config *conf)
 		conf->ercount, conf->excreg)
 	  || send_incexc_from_strlist("exclude_fs", "exclude_fs",
 		conf->exfscount, conf->excfs)
+	  || send_incexc_from_strlist("exclude_comp", "exclude_comp",
+		conf->excmcount, conf->excom)
 	  || send_incexc_from_strlist("read_fifo", "read_fifo",
 		conf->ffcount, conf->fifos)
 	  || send_incexc_from_strlist("read_blockdev", "read_blockdev",

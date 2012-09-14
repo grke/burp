@@ -21,6 +21,7 @@ static void init_incexcs(struct config *conf)
 	conf->increg=NULL; conf->ircount=0; // include (regular expression)
 	conf->excreg=NULL; conf->ercount=0; // include (regular expression)
 	conf->excfs=NULL; conf->exfscount=0; // exclude filesystems
+	conf->excom=NULL; conf->excmcount=0; // exclude from compression
 	conf->fifos=NULL; conf->ffcount=0;
 	conf->blockdevs=NULL; conf->bdcount=0;
 	/* stuff to do with restore */
@@ -44,6 +45,7 @@ static void free_incexcs(struct config *conf)
 	strlists_free(conf->increg, conf->ircount); // include (regular expression)
 	strlists_free(conf->excreg, conf->ercount); // exclude (regular expression)
 	strlists_free(conf->excfs, conf->exfscount); // exclude filesystems
+	strlists_free(conf->excom, conf->excmcount); // exclude from compression
 	strlists_free(conf->fifos, conf->ffcount);
 	strlists_free(conf->blockdevs, conf->bdcount);
 	if(conf->backup) free(conf->backup);
@@ -595,6 +597,7 @@ struct llists
 	struct strlist **irlist; // include (regular expression)
 	struct strlist **erlist; // exclude (regular expression)
 	struct strlist **exfslist; // exclude filesystems
+	struct strlist **excomlist; // exclude from compression
 	struct strlist **talist;
 	struct strlist **nslist;
 	struct strlist **nflist;
@@ -774,6 +777,8 @@ static int load_config_strings(struct config *conf, const char *field, const cha
 		NULL, &(conf->ercount), &(l->erlist), 0)) return -1;
 	if(get_conf_val_args(field, value, "exclude_fs", NULL,
 		NULL, &(conf->exfscount), &(l->exfslist), 0)) return -1;
+	if(get_conf_val_args(field, value, "exclude_comp", NULL,
+		NULL, &(conf->excmcount), &(l->excomlist), 0)) return -1;
 	if(get_conf_val(field, value, "timer_script", &(conf->timer_script)))
 		return -1;
 	if(get_conf_val_args(field, value, "timer_arg", &(conf->timer_arg),
@@ -1147,6 +1152,21 @@ static int client_conf_checks(struct config *conf, const char *path, int *r)
 	return 0;
 }
 
+// Set the flag of the first item in a list that looks at extensions to the
+// maximum number of characters that need to be checked, plus one. This is for
+// a bit of added efficiency.
+static void set_max_ext(struct strlist **list, int count)
+{
+	int i=0;
+	int max=0;
+	for(i=0; i<count; i++)
+	{
+		int s=strlen(list[i]->path);
+		if(s>max) max=s;
+	}
+	if(count) list[0]->flag=max+1;
+}
+
 static int finalise_config(const char *config_path, struct config *conf, struct llists *l, bool loadall)
 {
 	int i=0;
@@ -1186,6 +1206,13 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 	do_build_regex(l->erlist, conf->ercount, &(conf->excreg));
 	// exclude filesystems
 	do_strlist_sort(l->exfslist, conf->exfscount, &(conf->excfs));
+	// exclude from compression
+	do_strlist_sort(l->excomlist, conf->excmcount, &(conf->excom));
+
+	set_max_ext(conf->incext, conf->incount);
+	set_max_ext(conf->excext, conf->excount);
+	set_max_ext(conf->excom, conf->excmcount);
+
 	do_strlist_sort(l->fflist, conf->ffcount, &(conf->fifos));
 	do_strlist_sort(l->bdlist, conf->bdcount, &(conf->blockdevs));
 	do_strlist_sort(l->fslist, conf->fscount, &(conf->fschgdir));

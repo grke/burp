@@ -221,6 +221,7 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 				unsigned long long bytes=0;
 				BFILE bfd;
 				FILE *fp=NULL;
+				int compression=conf->compression;
 
 				sb.path=buf;
 				buf=NULL;
@@ -256,8 +257,11 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 
 				if(!forget)
 				{
+					compression=in_exclude_comp(conf->excom,
+					  conf->excmcount, sb.path,
+					  conf->compression);
 					encode_stat(attribs,
-					  &statbuf, winattr, conf->compression);
+					  &statbuf, winattr, compression);
 					if(open_file_for_send(
 #ifdef HAVE_WIN32
 						&bfd, NULL,
@@ -332,7 +336,7 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 					  || send_whole_file_w(cmd, sb.path,
 						NULL, 0, &bytes,
 						conf->encryption_password,
-						cntr, conf->compression,
+						cntr, compression,
 						&bfd, fp,
 						extrameta, elen))
 					{

@@ -11,6 +11,7 @@
 # exclude_ext=vdi
 # exclude_regex=/\.cache/
 # exclude_fs=tmpfs
+# exclude_comp=gz
 # min_file_size=0
 # max_file_size=0
 # cross_filesystem=/some/path

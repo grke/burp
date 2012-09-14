@@ -123,6 +123,8 @@ int file_is_included(struct strlist **ielist, int iecount,
 	const char *fname, bool top_level);
 int in_include_regex(struct strlist **incre, int incount, const char *fname);
 int in_exclude_regex(struct strlist **excre, int excount, const char *fname);
+// Returns the level of compression.
+int in_exclude_comp(struct strlist **excom, int excmcount, const char *fname, int compression);
 
 /* from attribs.c */
 void encode_stat(char *buf, struct stat *statp, int64_t winattr, int compression);

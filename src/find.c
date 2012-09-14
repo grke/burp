@@ -183,11 +183,20 @@ static int in_include_ext(struct strlist **incext, int incount, const char *fnam
 	const char *cp=NULL;
 	// If not doing include_ext, let the file get backed up. 
 	if(!incount) return 1;
-	// If file has no extension, it cannot be included.
-	if(!(cp=strrchr(fname, '.'))) return 0;
-	for(i=0; i<incount; i++)
-		if(!strcasecmp(incext[i]->path, cp+1))
-			return 1;
+
+	// The flag of the first item contains the maximum number of characters
+	// that need to be checked.
+	for(cp=fname+strlen(fname)-1; i<incext[0]->flag && cp>=fname; cp--, i++)
+	{
+		if(*cp=='.')
+		{
+			for(i=0; i<incount; i++)
+				if(!strcasecmp(incext[i]->path, cp+1))
+					return 1;
+			// If file has no extension, it cannot be included.
+			return 0;
+		}
+	}
 	return 0;
 }
 
@@ -197,12 +206,46 @@ static int in_exclude_ext(struct strlist **excext, int excount, const char *fnam
 	const char *cp=NULL;
 	// If not doing exclude_ext, let the file get backed up.
 	if(!excount) return 0;
-	// If file has no extension, it is included.
-	if(!(cp=strrchr(fname, '.'))) return 0;
-	for(i=0; i<excount; i++)
-		if(!strcasecmp(excext[i]->path, cp+1))
-			return 1;
+
+	// The flag of the first item contains the maximum number of characters
+	// that need to be checked.
+	for(cp=fname+strlen(fname)-1; i<excext[0]->flag && cp>=fname; cp--, i++)
+	{
+		if(*cp=='.')
+		{
+			for(i=0; i<excount; i++)
+				if(!strcasecmp(excext[i]->path, cp+1))
+					return 1;
+			// If file has no extension, it is included.
+			return 0;
+		}
+	}
+
 	return 0;
+}
+
+// Returns the level of compression.
+int in_exclude_comp(struct strlist **excom, int excmcount, const char *fname, int compression)
+{
+	int i=0;
+	const char *cp=NULL;
+	// If not doing compression, or there are no excludes, return 0
+	// straight away.
+	if(!compression || !excmcount) return 0;
+
+	// The flag of the first item contains the maximum number of characters
+	// that need to be checked.
+	for(cp=fname+strlen(fname)-1; i<excom[0]->flag && cp>=fname; cp--, i++)
+	{
+		if(*cp=='.')
+		{
+			for(i=0; i<excmcount; i++)
+				if(!strcasecmp(excom[i]->path, cp+1))
+					return 0;
+			return compression;
+		}
+	}
+	return compression;
 }
 
 /* Return 1 to include the file, 0 to exclude it. */

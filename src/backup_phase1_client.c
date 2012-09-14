@@ -108,7 +108,9 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
    case FT_FIFO:
    case FT_REGE:
    case FT_REG:
-      encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
+      encode_stat(attribs, &ff->statp, ff->winattr,
+		in_exclude_comp(conf->excom, conf->excmcount,
+			ff->fname, conf->compression));
       if(async_write_str(CMD_STAT, attribs)
 	|| async_write_str(filesymbol, ff->fname))
 		return -1;

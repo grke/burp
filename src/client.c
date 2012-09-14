@@ -148,7 +148,7 @@ static int s_server_session_id_context=1;
    Returns 2 if there were restore/verify warnings.
    Returns 3 if timer conditions were not met.
 */
-static int do_client(struct config *conf, enum action act)
+static int do_client(struct config *conf, enum action act, const char *restore_client)
 {
 	int ret=0;
 	int rfd=-1;
@@ -350,6 +350,27 @@ static int do_client(struct config *conf, enum action act)
 		  && (ret=incexc_send_client(conf, &p1cntr)))
 			goto end;
 
+		if(restore_client && *restore_client)
+		{
+			char str[512]="";
+			snprintf(str, sizeof(str),
+				"restore_client=%s", restore_client);
+			if(!server_supports(feat, ":restore_client:"))
+			{
+				logp("Server does not support switching client.\n");
+				ret=-1;
+				goto end;
+			}
+			if((ret=async_write_str(CMD_GEN, str))
+			  || (ret=async_read_expect(CMD_GEN, "restore_client ok")))
+			{
+				logp("Problem requesting %s\n", str);
+				ret=-1;
+				goto end;
+			}
+			logp("Switched to client %s\n", restore_client);
+		}
+
 		if((ret=async_write_str(CMD_GEN, "extra_comms_end"))
 		  || (ret=async_read_expect(CMD_GEN, "extra_comms_end ok")))
 		{
@@ -501,14 +522,14 @@ end:
 	return ret;
 }
 
-int client(struct config *conf, enum action act)
+int client(struct config *conf, enum action act, const char *restore_client)
 {
 	int ret=0;
-	if((ret=do_client(conf, act))==1)
+	if((ret=do_client(conf, act, restore_client))==1)
 	{
 		logp("Re-opening connection to server\n");
 		sleep(5);
-		ret=do_client(conf, act);
+		ret=do_client(conf, act, restore_client);
 	}
 	return ret;
 }

@@ -150,6 +150,10 @@ struct config
 	struct strlist **notify_failure_arg;
 	int nfcount;
 
+// List of clients that are permitted to restore the files from our client.
+	struct strlist **rclients;
+	int rccount;
+
 	char *dedup_group;
 
 	int client_can_force_backup;
@@ -162,6 +166,10 @@ struct config
 // Set to 1 on both client and server when the server is able to send counters
 // on resume/verify/restore.
 	int send_client_counters;
+
+// Set on the server to the original client name when the client has switched
+// to a different set of client backups.
+	char *restore_client;
 };
 
 extern void init_config(struct config *conf);
@@ -173,6 +181,6 @@ extern int pathcmp(const char *a, const char *b);
 extern int config_get_pair(char buf[], char **field, char **value);
 extern int parse_incexcs_buf(struct config *conf, const char *incexc);
 extern int parse_incexcs_path(struct config *conf, const char *path);
-
+extern int load_client_config(struct config *conf, struct config *cconf, const char *client);
 
 #endif

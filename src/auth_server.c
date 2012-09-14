@@ -32,22 +32,10 @@ static int check_passwd(const char *passwd, const char *plain_text)
 
 static int check_client_and_password(struct config *conf, const char *client, const char *password, struct config *cconf)
 {
-	char cpath[256]="";
-
-	// Some client settings can be globally set in the server config and
-	// overridden in the client specific config.
 	// Cannot load it until here, because we need to have the name of the
 	// client.
-	init_config(cconf);
-	snprintf(cpath, sizeof(cpath), "%s/%s", conf->clientconfdir, client);
-	if(looks_like_tmp_or_hidden_file(client))
-	{
-		logp("client name '%s' is invalid\n", client);
-		return -1;
-	}
-	if(set_client_global_config(conf, cconf, client)
-	  || load_config(cpath, cconf, FALSE))
-		return -1;
+	if(load_client_config(conf, cconf, client)) return -1;
+
 	if(!cconf->ssl_peer_cn)
 	{
 		logp("ssl_peer_cn unset");

@@ -65,6 +65,9 @@ backups.
 Short for 'config file'. The argument is a path to the config file. The default
 is /etc/burp/burp.conf, or %PROGRAMFILES%\\Burp\\burp.conf on Windows.
 .TP
+\fB\-C\fR \fB[client]\fR
+Allows you to specify an alternative client to list or restore from. Requires that the server configuration of the alternative client permits your client to do this. See the 'restore_client' option.
+.TP
 \fB\-d\fR \fB[path]\fR
 Short for 'directory'. When restoring, the argument is a path to an alternative directory to restore to. When listing, the argument is the directory to list.
 .TP
@@ -131,6 +134,12 @@ Long list the top level directory of backup 1.
 .TP
 \fBburp \-a L \-b 1 \-d '/home/graham'\fR
 Long list the /home/graham directory of backup 1. These '\-d' versions of the list function provide the ability to 'browse' backups.
+.TP
+\fBburp \-C altclient \-a L\fR
+Long list the top level directory of backup 1 on client 'altclient'.
+.TP
+\fBburp \-C altclient \-a r \-b 1 \-r myregex \-d /tmp/restoredir\fR
+Restores all the files in backup number 1 from client 'altclient' that match the regular expression 'myregex' into the directory /tmp/restoredir.
 
 .SH SERVER CONFIGURATION FILE OPTIONS
 
@@ -236,6 +245,9 @@ Turn this off to prevent clients from initiating restores with the '\-a r' optio
 .TP
 \fBclient_can_verify=[0|1]\fR
 Turn this off to prevent clients from initiating a verify job with the '\-a v' option. The default is that clients can initiate a verify job.
+.TP
+\fBrestore_client=[client]\fR
+A client that is permitted to list and restore files belonging to any other client. You may specify multiple restore_clients. If this is too permissive, you may set a restore_client for individual original clients in the individual clientconfdir files. Note that restoring a backup from a Windows computer onto a Linux computer will currently leave the VSS headers in place at the beginning of each file. This will be addressed in a future version of burp.
 .TP
 \fBssl_cert_ca=[path]\fR
 The path to the SSL CA certificate. This file will probably be the same on both the server and the client. The file should contain just the certificate in PEM format. For more information on this, and the other ssl_* options, please see docs/burp_ca.txt.
@@ -530,6 +542,7 @@ Additionally, the following options can be overridden here for each client:
 \fBclient_can_list\fR
 \fBclient_can_restore\fR
 \fBclient_can_verify\fR
+\fBrestore_client\fR
 \fBcompression\fR
 \fBtimer_script\fR
 \fBtimer_arg\fR

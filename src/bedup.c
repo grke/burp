@@ -572,22 +572,16 @@ static int process_dir(const char *oldpath, const char *newpath, const char *ext
 	return 0;
 }
 
-static int in_group(const char *clientconfdir, const char *client, strlist_t **grouplist, int gcount, struct config *conf)
+static int in_group(const char *client, strlist_t **grouplist, int gcount, struct config *conf)
 {
 	int i=0;
-	char *ccfile=NULL;
 	struct config cconf;
 
-	if(!(ccfile=prepend(clientconfdir, client, "/"))) return -1;
-	init_config(&cconf);
-	if(set_client_global_config(conf, &cconf, client)
-	  || load_config(ccfile, &cconf, 0))
+	if(load_client_config(conf, &cconf, client))
 	{
 		logp("could not load config for client %s\n", client);
-		free(ccfile);
 		return 0;
 	}
-	free(ccfile);
 
 	if(!cconf.dedup_group) return 0;
 
@@ -658,7 +652,7 @@ static int iterate_over_clients(struct config *conf, strlist_t **grouplist, int 
 		if(gcount)
 		{
 			int ig=0;
-			if((ig=in_group(conf->clientconfdir,
+			if((ig=in_group(
 				dirinfo->d_name, grouplist, gcount, conf))<0)
 			{
 				ret=-1;

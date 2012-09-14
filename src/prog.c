@@ -158,8 +158,11 @@ int main (int argc, char *argv[])
 	const char *browsedir=NULL;
 	FILE *fp=NULL;
 	const char *configfile=get_config_path();
+	const char *restore_client=NULL;
+	// The restore_client is the alternative client that the normal client
+	// would like to restore from.
 #ifndef HAVE_WIN32
-	const char *sclient=NULL;
+	const char *sclient=NULL; // Status monitor client to view.
 	int generate_ca_only=0;
 #endif
 
@@ -201,6 +204,7 @@ int main (int argc, char *argv[])
 				configfile=optarg;
 				break;
 			case 'C':
+				restore_client=optarg;
 #ifndef HAVE_WIN32
 				sclient=optarg;
 #endif
@@ -313,7 +317,7 @@ int main (int argc, char *argv[])
 	else
 	{
 		logp("before client\n");
-		ret=client(&conf, act);
+		ret=client(&conf, act, restore_client);
 		logp("after client\n");
 	}
 

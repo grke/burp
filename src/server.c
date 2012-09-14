@@ -892,6 +892,16 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 	  && !strncmp(buf, "backupphase1", strlen("backupphase1")))
 	{
 		int resume=0;
+
+		if(cconf->restore_client)
+		{
+			// This client is not the original client, so a
+			// backup might cause all sorts of trouble.
+			logp("Not allowing backup of %s\n", client);
+			async_write_str(CMD_GEN, "Backup is not allowed");
+			goto end;
+		}
+
 		// Set quality of service bits on backups.
 		set_bulk_packets();
 		if(get_lock_and_clean(basedir, lockbasedir, lockfile, current,
@@ -1135,7 +1145,7 @@ static int append_to_feat(char **feat, const char *str)
 	return 0;
 }
 
-static int extra_comms(const char *client, const char *cversion, char **incexc, int *srestore, struct config *conf, struct config *cconf, struct cntr *p1cntr)
+static int extra_comms(char **client, const char *cversion, char **incexc, int *srestore, struct config *conf, struct config *cconf, struct cntr *p1cntr)
 {
 	int ret=0;
 	char *buf=NULL;
@@ -1190,11 +1200,14 @@ static int extra_comms(const char *client, const char *cversion, char **incexc, 
 		  || append_to_feat(&feat, "autoupgrade:")
 			/* clients can give server incexc config so that the
 			   server knows better what to do on resume */
-		  || append_to_feat(&feat, "incexc:"))
+		  || append_to_feat(&feat, "incexc:")
+			/* clients can give the server an alternative client
+			   to restore from */
+		  || append_to_feat(&feat, "restore_client:"))
 			return -1;
 
 		/* Clients can receive restore initiated from the server. */
-		if(!(restorepath=get_restorepath(cconf, client)))
+		if(!(restorepath=get_restorepath(cconf, *client)))
 		{
 			if(feat) free(feat);
 			return -1;
@@ -1312,6 +1325,78 @@ static int extra_comms(const char *client, const char *cversion, char **incexc, 
 				// resume/verify/restore.
 				logp("Client supports being sent counters.\n");
 				cconf->send_client_counters=1;
+			}
+			else if(!strncmp(buf,
+				"restore_client=", strlen("restore_client="))
+			  && strlen(buf)>strlen("restore_client="))
+			{
+				int r=0;
+				int rcok=0;
+				struct config *sconf=NULL;
+				const char *restore_client=NULL;
+				restore_client=buf+strlen("restore_client=");
+
+				if(!(sconf=(struct config *)
+					malloc(sizeof(struct config))))
+				{
+					logp("out of memory\n");
+					ret=-1;
+					break;
+				}
+				logp("Client wants to switch to client: %s\n",
+					restore_client);
+				if(load_client_config(conf, sconf,
+					restore_client))
+				{
+					char msg[256]="";
+					snprintf(msg, sizeof(msg), "Could not load alternate config: %s", restore_client);
+					log_and_send(msg);
+					ret=-1;
+					break;
+				}
+				sconf->send_client_counters=
+					cconf->send_client_counters;
+				for(r=0; r<sconf->rccount; r++)
+				{
+					if(sconf->rclients[r])
+					{
+					  if(!strcmp(sconf->rclients[r]->path,
+						*client))
+					  {
+						rcok++;
+						break;
+					  }
+					}
+				}
+				if(!rcok)
+				{
+					char msg[256]="";
+					snprintf(msg, sizeof(msg),
+					  "Access to client is not allowed: %s",
+						restore_client);
+					log_and_send(msg);
+					ret=-1;
+					break;
+				}
+				free_config(cconf);
+				memcpy(cconf, sconf, sizeof(struct config));
+				sconf=NULL;
+				free(*client);
+				if(!(*client=strdup(restore_client))
+				  || !(cconf->restore_client
+					=strdup(restore_client)))
+				{
+					log_and_send("out of memory");
+					ret=-1;
+					break;
+				}
+				restore_client=NULL;
+				logp("Switched to client %s\n", *client);
+				if(async_write_str(CMD_GEN, "restore_client ok"))
+				{
+					ret=-1;
+					break;
+				}
 			}
 			else
 			{
@@ -1439,6 +1524,17 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 		return -1;
 	}
 
+	/* Has to be before the chuser/chgrp stuff to allow clients to switch
+	   to different clients when both clients have different user/group
+	   settings. */
+	if(extra_comms(&client, cversion, &incexc, &srestore,
+		&conf, &cconf, &p1cntr))
+	{
+		log_and_send("running extra comms failed on server");
+		ret=-1;
+		goto finish;
+	}
+
 	// Now that the client conf is loaded, we might want to chuser or
 	// chgrp.
 	// The main process could have already done this, so we don't want
@@ -1453,14 +1549,6 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 			ret=-1;
 			goto finish;
 		}
-	}
-
-	if(extra_comms(client, cversion, &incexc, &srestore,
-		&conf, &cconf, &p1cntr))
-	{
-		log_and_send("running extra comms failed on server");
-		ret=-1;
-		goto finish;
 	}
 
 	set_non_blocking(*cfd);

@@ -266,7 +266,6 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 	if(get_link(basedir, "working", realwork, sizeof(realwork))
 	  || get_link(basedir, "finishing", realfinishing, sizeof(realfinishing)))
 			return -1;
-
 	if(!(d=opendir(basedir)))
 	{
 		if(log) log_and_send("could not open backup directory");

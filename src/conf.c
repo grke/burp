@@ -3,6 +3,7 @@
 #include "counter.h"
 #include "conf.h"
 #include "msg.h"
+#include "lock.h"
 #include "strlist.h"
 #include "prepend.h"
 #include "regexp.h"
@@ -170,9 +171,13 @@ void init_config(struct config *conf)
 	conf->client_can_restore=1;
 	conf->client_can_verify=1;
 
+	conf->rclients=NULL;
+	conf->rccount=0;
+
 	conf->server_can_restore=1;
 
 	conf->send_client_counters=0;
+	conf->restore_client=NULL;
 
 	init_incexcs(conf);
 }
@@ -218,6 +223,8 @@ void free_config(struct config *conf)
 	if(conf->notify_failure_script) free(conf->notify_failure_script);
 	strlists_free(conf->notify_failure_arg, conf->nfcount);
 
+	strlists_free(conf->rclients, conf->rccount);
+
 	if(conf->backup_script_pre) free(conf->backup_script_pre);
 	strlists_free(conf->backup_script_pre_arg, conf->bprecount);
 	if(conf->backup_script_post) free(conf->backup_script_post);
@@ -245,6 +252,7 @@ void free_config(struct config *conf)
 	if(conf->dedup_group) free(conf->dedup_group);
 	if(conf->browsefile) free(conf->browsefile);
 	if(conf->browsedir) free(conf->browsedir);
+	if(conf->restore_client) free(conf->restore_client);
 
 	free_incexcs(conf);
 
@@ -595,6 +603,7 @@ struct llists
 	struct strlist **bslist;
 	struct strlist **rslist;
 	struct strlist **sslist;
+	struct strlist **rclist;
 	int got_kp_args;
 	int got_timer_args;
 	int got_ns_args;
@@ -602,6 +611,7 @@ struct llists
 	int got_spre_args;
 	int got_spost_args;
 	int got_ss_args;
+	int got_rc_args;
 };
 
 static int load_config_ints(struct config *conf, const char *field, const char *value)
@@ -823,6 +833,10 @@ static int load_config_strings(struct config *conf, const char *field, const cha
 	if(get_conf_val_args(field, value, "server_script_arg",
 		&(conf->server_script_arg), &(l->got_ss_args),
 		&(conf->sscount), &(l->sslist), 0)) return -1;
+
+	if(get_conf_val_args(field, value, "restore_client",
+		&(conf->rclients), &(l->got_rc_args),
+		&(conf->rccount), &(l->rclist), 0)) return -1;
 
 	if(get_conf_val(field, value, "dedup_group", &(conf->dedup_group)))
 		return -1;
@@ -1242,6 +1256,7 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 	if(!l->got_ns_args) conf->notify_success_arg=l->nslist;
 	if(!l->got_nf_args) conf->notify_failure_arg=l->nflist;
 	if(!l->got_ss_args) conf->server_script_arg=l->sslist;
+	if(!l->got_rc_args) conf->rclients=l->rclist;
 
 	setup_script_arg_override(l->bslist, conf->bscount,
 		&(l->bprelist), &(l->bpostlist),
@@ -1331,6 +1346,7 @@ static void set_got_args(struct llists *l, struct config *conf)
 	l->got_spre_args=conf->sprecount;
 	l->got_spost_args=conf->spostcount;
 	l->got_ss_args=conf->sscount;
+	l->got_rc_args=conf->rccount;
 }
 
 int load_config(const char *config_path, struct config *conf, bool loadall)
@@ -1489,11 +1505,38 @@ int set_client_global_config(struct config *conf, struct config *cconf, const ch
 	if(set_global_arglist(&(cconf->server_script_arg),
 		conf->server_script_arg,
 		&(cconf->sscount), conf->sscount)) return -1;
+	if(set_global_arglist(&(cconf->rclients),
+		conf->rclients,
+		&(cconf->rccount), conf->rccount)) return -1;
 
 	// If ssl_peer_cn is not set, default it to the client name.
 	if(!conf->ssl_peer_cn
 	  && set_global_str(&(cconf->ssl_peer_cn), client))
 		return -1;
 
+	return 0;
+}
+
+int load_client_config(struct config *conf, struct config *cconf, const char *client)
+{
+	char *cpath=NULL;
+	init_config(cconf);
+	if(!(cpath=prepend_s(conf->clientconfdir, client, strlen(client))))
+		return -1;
+	if(looks_like_tmp_or_hidden_file(client))
+	{
+		logp("client name '%s' is invalid\n", client);
+		free(cpath);
+		return -1;
+	}
+	// Some client settings can be globally set in the server config and
+	// overridden in the client specific config.
+	if(set_client_global_config(conf, cconf, client)
+	  || load_config(cpath, cconf, FALSE))
+	{
+		free(cpath);
+		return -1;
+	}
+	free(cpath);
 	return 0;
 }

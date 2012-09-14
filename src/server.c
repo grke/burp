@@ -800,18 +800,14 @@ static char *get_restorepath(struct config *cconf, const char *client)
 static int client_can_restore(struct config *cconf, const char *client)
 {
 	struct stat statp;
-	char *restorepath=NULL;
 	// If there is a restore file on the server, it is always OK.
-	if(!(restorepath=get_restorepath(cconf, client)))
-		return -1;
-	if(!lstat(restorepath, &statp))
+	if(cconf->restore_path
+	  && !lstat(cconf->restore_path, &statp))
 	{
 		// Remove the file.
-		unlink(restorepath);
-		free(restorepath);
+		unlink(cconf->restore_path);
 		return 1;
 	}
-	free(restorepath);
 	return cconf->client_can_restore;
 }
 
@@ -1203,19 +1199,19 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 		  || append_to_feat(&feat, "incexc:")
 			/* clients can give the server an alternative client
 			   to restore from */
-		  || append_to_feat(&feat, "restore_client:"))
+		  || append_to_feat(&feat, "orig_client:"))
 			return -1;
 
 		/* Clients can receive restore initiated from the server. */
-		if(!(restorepath=get_restorepath(cconf, *client)))
+		if(cconf->restore_path) free(cconf->restore_path);
+		if(!(cconf->restore_path=get_restorepath(cconf, *client)))
 		{
 			if(feat) free(feat);
 			return -1;
 		}
-		if(!lstat(restorepath, &statp) && S_ISREG(statp.st_mode)
+		if(!lstat(cconf->restore_path, &statp) && S_ISREG(statp.st_mode)
 		  && append_to_feat(&feat, "srestore:"))
 		{
-			if(restorepath) free(restorepath);
 			if(feat) free(feat);
 			return -1;
 		}
@@ -1236,7 +1232,6 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 		{
 			logp("problem in extra_comms\n");
 			free(feat);
-			if(restorepath) free(restorepath);
 			return -1;
 		}
 		free(feat);
@@ -1280,7 +1275,7 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 				// Client can accept the restore.
 				// Load the restore config, then send it.
 				*srestore=1;
-				if(parse_incexcs_path(cconf, restorepath)
+				if(parse_incexcs_path(cconf,cconf->restore_path)
 				  || incexc_send_server_restore(cconf, p1cntr))
 				{
 					ret=-1;
@@ -1289,12 +1284,18 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 				// Do not unlink it here - wait until
 				// the client says that it wants to do the
 				// restore.
-				//unlink(restorepath);
+				// Also need to leave it around if the
+				// restore is to an alternative client, so
+				// that the code below that reloads the config
+				// can read it again.
+				//unlink(cconf->restore_path);
 			}
 			else if(!strcmp(buf, "srestore not ok"))
 			{
 				// Client will not accept the restore.
-				unlink(restorepath);
+				unlink(cconf->restore_path);
+				free(cconf->restore_path);
+				cconf->restore_path=NULL;
 				logp("Client not accepting server initiated restore.\n");
 			}
 			else if(!strcmp(buf, "sincexc ok"))
@@ -1327,14 +1328,14 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 				cconf->send_client_counters=1;
 			}
 			else if(!strncmp(buf,
-				"restore_client=", strlen("restore_client="))
-			  && strlen(buf)>strlen("restore_client="))
+				"orig_client=", strlen("orig_client="))
+			  && strlen(buf)>strlen("orig_client="))
 			{
 				int r=0;
 				int rcok=0;
 				struct config *sconf=NULL;
-				const char *restore_client=NULL;
-				restore_client=buf+strlen("restore_client=");
+				const char *orig_client=NULL;
+				orig_client=buf+strlen("orig_client=");
 
 				if(!(sconf=(struct config *)
 					malloc(sizeof(struct config))))
@@ -1344,12 +1345,12 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 					break;
 				}
 				logp("Client wants to switch to client: %s\n",
-					restore_client);
+					orig_client);
 				if(load_client_config(conf, sconf,
-					restore_client))
+					orig_client))
 				{
 					char msg[256]="";
-					snprintf(msg, sizeof(msg), "Could not load alternate config: %s", restore_client);
+					snprintf(msg, sizeof(msg), "Could not load alternate config: %s", orig_client);
 					log_and_send(msg);
 					ret=-1;
 					break;
@@ -1368,31 +1369,46 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 					  }
 					}
 				}
+
 				if(!rcok)
 				{
 					char msg[256]="";
 					snprintf(msg, sizeof(msg),
 					  "Access to client is not allowed: %s",
-						restore_client);
+						orig_client);
 					log_and_send(msg);
 					ret=-1;
 					break;
 				}
+				sconf->restore_path=cconf->restore_path;
+				cconf->restore_path=NULL;
 				free_config(cconf);
 				memcpy(cconf, sconf, sizeof(struct config));
 				sconf=NULL;
-				free(*client);
-				if(!(*client=strdup(restore_client))
-				  || !(cconf->restore_client
-					=strdup(restore_client)))
+				cconf->restore_client=*client;
+				if(!(*client=strdup(orig_client))
+				  || !(cconf->orig_client=strdup(orig_client)))
 				{
 					log_and_send("out of memory");
 					ret=-1;
 					break;
 				}
-				restore_client=NULL;
+				orig_client=NULL;
+
+				// If this started out as a server-initiated
+				// restore, need to load the restore file
+				// again.
+				if(*srestore)
+				{
+					if(parse_incexcs_path(cconf,
+						cconf->restore_path))
+					{
+						ret=-1;
+						break;
+					}
+				}
 				logp("Switched to client %s\n", *client);
-				if(async_write_str(CMD_GEN, "restore_client ok"))
+				if(async_write_str(CMD_GEN, "orig_client ok"))
 				{
 					ret=-1;
 					break;
@@ -1417,7 +1433,6 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 		if(buf); free(buf); buf=NULL;
 	}
 
-	if(restorepath) free(restorepath);
 	if(buf) free(buf);
 	return ret;
 }

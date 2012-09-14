@@ -1245,6 +1245,8 @@ void log_restore_settings(struct config *cconf, int srestore)
 {
 	int i=0;
 	logp("Restore settings:\n");
+	if(cconf->orig_client)
+		logp("orig_client = %s\n", cconf->orig_client);
 	logp("backup = %s\n", cconf->backup);
 	if(srestore)
 	{

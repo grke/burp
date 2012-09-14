@@ -84,6 +84,7 @@ static int do_sends_restore(struct config *conf)
 {
 	if(  send_incexc_from_strlist("include", "exclude",
 		conf->iecount, conf->incexcdir)
+	  || send_incexc_str("orig_client", conf->orig_client)
 	  || send_incexc_str("backup", conf->backup)
 	  || send_incexc_str("restoreprefix", conf->restoreprefix)
 	  || send_incexc_str("regex", conf->regex)

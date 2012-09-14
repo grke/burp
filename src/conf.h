@@ -167,9 +167,15 @@ struct config
 // on resume/verify/restore.
 	int send_client_counters;
 
-// Set on the server to the original client name when the client has switched
-// to a different set of client backups.
+// Set on the server to the restore client name (the one that you connected
+// with) when the client has switched to a different set of client backups.
 	char *restore_client;
+// Path to the server initiated restore file.
+	char *restore_path;
+
+// Original client that backed up. Used when doing a server initiated restore
+// to an alternative client;
+	char *orig_client;
 };
 
 extern void init_config(struct config *conf);

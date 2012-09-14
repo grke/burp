@@ -158,8 +158,8 @@ int main (int argc, char *argv[])
 	const char *browsedir=NULL;
 	FILE *fp=NULL;
 	const char *configfile=get_config_path();
-	const char *restore_client=NULL;
-	// The restore_client is the alternative client that the normal client
+	const char *orig_client=NULL;
+	// The orig_client is the original client that the normal client
 	// would like to restore from.
 #ifndef HAVE_WIN32
 	const char *sclient=NULL; // Status monitor client to view.
@@ -204,7 +204,7 @@ int main (int argc, char *argv[])
 				configfile=optarg;
 				break;
 			case 'C':
-				restore_client=optarg;
+				orig_client=optarg;
 #ifndef HAVE_WIN32
 				sclient=optarg;
 #endif
@@ -270,6 +270,18 @@ int main (int argc, char *argv[])
 		backup="0";
 	}
 
+	if(conf.mode==MODE_CLIENT)
+	{
+		if(orig_client && *orig_client)
+		{
+			if(!(conf.orig_client=strdup(orig_client)))
+			{
+				logp("out of memory\n");
+				return 1;
+			}
+		}
+	}
+
 	if(conf.mode==MODE_SERVER
 	  && (act==ACTION_STATUS || act==ACTION_STATUS_SNAPSHOT))
 	{
@@ -317,7 +329,7 @@ int main (int argc, char *argv[])
 	else
 	{
 		logp("before client\n");
-		ret=client(&conf, act, restore_client);
+		ret=client(&conf, act);
 		logp("after client\n");
 	}
 

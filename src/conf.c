@@ -178,6 +178,8 @@ void init_config(struct config *conf)
 
 	conf->send_client_counters=0;
 	conf->restore_client=NULL;
+	conf->restore_path=NULL;
+	conf->orig_client=NULL;
 
 	init_incexcs(conf);
 }
@@ -253,6 +255,8 @@ void free_config(struct config *conf)
 	if(conf->browsefile) free(conf->browsefile);
 	if(conf->browsedir) free(conf->browsedir);
 	if(conf->restore_client) free(conf->restore_client);
+	if(conf->restore_path) free(conf->restore_path);
+	if(conf->orig_client) free(conf->orig_client);
 
 	free_incexcs(conf);
 
@@ -839,6 +843,9 @@ static int load_config_strings(struct config *conf, const char *field, const cha
 		&(conf->rccount), &(l->rclist), 0)) return -1;
 
 	if(get_conf_val(field, value, "dedup_group", &(conf->dedup_group)))
+		return -1;
+
+	if(get_conf_val(field, value, "orig_client", &(conf->orig_client)))
 		return -1;
 
 	return 0;

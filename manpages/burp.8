@@ -590,6 +590,9 @@ You can queue a backup on the server, to be performed when the client next makes
 .TP
 You can queue a restore on the server, to be performed when the client next makes contact. To do this, you put a file called 'restore' into the top level of the client storage directory. The client can deny server initiated restores by setting "server_can_restore=0" in its burp.conf. Valid fields to include in the restore file are:
 .TP
+\fBorig_client=[client]\fR
+The original client to restore from. Equivalent to '\-C' when initiating a restore from a client. Do not include this line when restoring to the original client. See also the 'restore_client' server option.
+.TP
 \fBbackup=[number|a]\fR
 The number of the backup to restore from. Equivalent to '\-b' when initiating a restore from the client.
 .TP

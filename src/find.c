@@ -559,7 +559,7 @@ static int
 find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
   char *fname, dev_t parent_device, bool top_level);
 
-static int process_files_in_directory(struct dirent **nl, int count, int *rtn_stat, char *link, size_t len, size_t link_len, struct config *conf, struct cntr *cntr, FF_PKT *ff_pkt, dev_t our_device)
+static int process_files_in_directory(struct dirent **nl, int count, int *rtn_stat, char **link, size_t len, size_t *link_len, struct config *conf, struct cntr *cntr, FF_PKT *ff_pkt, dev_t our_device)
 {
 	int m=0;
 	for(m=0; m<count; m++)
@@ -570,26 +570,26 @@ static int process_files_in_directory(struct dirent **nl, int count, int *rtn_st
 
 		p=nl[m]->d_name;
 
-		if(strlen(p)+len>=link_len)
+		if(strlen(p)+len>=*link_len)
 		{
-			link_len=len+strlen(p)+1;
-			if(!(link=(char *)realloc(link, link_len+1)))
+			*link_len=len+strlen(p)+1;
+			if(!(*link=(char *)realloc(*link, (*link_len)+1)))
 			{
 				logp("out of memory\n");
 				return -1;
 			}
 		}
-		q=link+len;
+		q=(*link)+len;
 		for(i=0; i<strlen(nl[m]->d_name); i++) *q++=*p++;
 		*q=0;
 
 		if(file_is_included_no_incext(conf->incexcdir, conf->iecount,
 			conf->excext, conf->excount,
 			conf->excreg, conf->ercount,
-			link))
+			*link))
 		{
 			*rtn_stat=find_files(ff_pkt,
-				conf, cntr, link, our_device, false);
+				conf, cntr, *link, our_device, false);
 			if(ff_pkt->linked)
 				ff_pkt->linked->FileIndex = ff_pkt->FileIndex;
 		}
@@ -601,7 +601,7 @@ static int process_files_in_directory(struct dirent **nl, int count, int *rtn_st
 			for(ex=0; ex<conf->iecount; ex++)
 			{
 				if(conf->incexcdir[ex]->flag
-				  && is_subdir(link, conf->incexcdir[ex]->path))
+				  && is_subdir(*link, conf->incexcdir[ex]->path))
 				{
 					int ey;
 					if((*rtn_stat=find_files(ff_pkt, conf,
@@ -777,7 +777,7 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 	if(nl)
 	{
 		if(process_files_in_directory(nl, count,
-			&rtn_stat, link, len, link_len, conf, cntr,
+			&rtn_stat, &link, len, &link_len, conf, cntr,
 			ff_pkt, our_device))
 		{
 			free(link);

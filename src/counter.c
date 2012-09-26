@@ -291,8 +291,17 @@ static void quint_print(const char *msg, unsigned long long a, unsigned long lon
 		//logc("% 9s ", "");
 		//logc("% 9s ", "");
 	}
-	logc("% 9llu |", a+b+c);
-	logc("% 9llu\n", e);
+	if(act==ACTION_ESTIMATE)
+	{
+		logc("% 9s ", "");
+		logc("% 9s ", "");
+		logc("% 9llu\n", e);
+	}
+	else
+	{
+		logc("% 9llu |", a+b+c);
+		logc("% 9llu\n", e);
+	}
 }
 
 static void bottom_part(struct cntr *a, struct cntr *b, enum action act)
@@ -358,6 +367,11 @@ void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act)
 	{
 	  logc("% 18s % 9s % 9s |% 9s\n",
 	    " ", "", "Attempted", "Expected");
+	}
+	if(act==ACTION_ESTIMATE)
+	{
+	  logc("% 18s % 9s % 9s %9s\n",
+	    " ", "", "", "Scanned");
 	}
 	table_border(act);
 

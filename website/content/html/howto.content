@@ -153,25 +153,31 @@ CLIENT OPTIONS
 	      file.   The   default   is   /etc/burp/burp.conf,  or  %PROGRAM‐
 	      FILES%\Burp\burp.conf on Windows.
 
+       -C [client]
+	      Allows you to specify an alternative client to list  or  restore
+	      from.  Requires that the server configuration of the alternative
+	      client permits your client to do this. See the  'restore_client'
+	      option.
+
        -d [path]
 	      Short for 'directory'. When restoring, the argument is a path to
-	      an  alternative directory to restore to. When listing, the argu‐
+	      an alternative directory to restore to. When listing, the  argu‐
 	      ment is the directory to list.
 
        -f [path]
-	      Short for 'force overwrite'. Without this option set, a  restore
+	      Short  for 'force overwrite'. Without this option set, a restore
 	      will not overwrite existing files.
 
-       -i     Print  an  index	table of symbols that humans may see burp pro‐
+       -i     Print an index table of symbols that humans may  see  burp  pro‐
 	      duce, and exit.
 
        -r [regex]
-	      Short for  'regular  expression'.  The  argument	is  a  regular
-	      expression  with	which  to match backup files. Use it for lists
+	      Short  for  'regular  expression'.  The  argument  is  a regular
+	      expression with which to match backup files. Use	it  for  lists
 	      and restores.
 
        -s [number]
-	      For use with restores - strip a number of  leading  path	compo‐
+	      For  use	with  restores - strip a number of leading path compo‐
 	      nents.
 
 
@@ -192,7 +198,7 @@ EXAMPLES
 	      Lists all the files in all the backups.
 
        burp -a l -b 1 -r myregex
-	      Lists  all  the  files in backup number 1 that match the regular
+	      Lists all the files in backup number 1 that  match  the  regular
 	      expression 'myregex'.
 
        burp -a L -b 1 -r myregex
@@ -209,7 +215,7 @@ EXAMPLES
 
        burp -a r -b 1 -r myregex -d /tmp/restoredir -s 2
 	      Restores all the files in backup number 1 that match the regular
-	      expression 'myregex'  into  the  directory  /tmp/restoredir  and
+	      expression  'myregex'  into  the	directory  /tmp/restoredir and
 	      strip 2 leading path components.
 
        burp -a r
@@ -220,23 +226,32 @@ EXAMPLES
 	      Verifies the most recent backup.
 
        burp -a v -b 1 -r myregex
-	      Verifies everything in backup number 1 that matches the  regular
+	      Verifies	everything in backup number 1 that matches the regular
 	      expression 'myregex'.
 
        burp -a t
-	      Timed  backup.  The same as 'burp -a b', except that a script is
-	      run on the server before deciding to go ahead. The intention  is
-	      that  this  command  will  be run on a repeating cron job with a
-	      short interval, and that the server will decide when it is  time
+	      Timed backup. The same as 'burp -a b', except that a  script  is
+	      run  on the server before deciding to go ahead. The intention is
+	      that this command will be run on a repeating  cron  job  with  a
+	      short  interval, and that the server will decide when it is time
 	      for a new backup.
 
        burp -a L -b 1 -d ''
 	      Long list the top level directory of backup 1.
 
        burp -a L -b 1 -d '/home/graham'
-	      Long  list  the  /home/graham  directory of backup 1. These '-d'
-	      versions of the list function provide the  ability  to  'browse'
+	      Long list the /home/graham directory of  backup  1.  These  '-d'
+	      versions	of  the  list function provide the ability to 'browse'
 	      backups.
+
+       burp -C altclient -a L
+	      Long list the top level directory of backup 1  on  client  'alt‐
+	      client'.
+
+       burp -C altclient -a r -b 1 -r myregex -d /tmp/restoredir
+	      Restores	all  the  files  in  backup number 1 from client 'alt‐
+	      client' that match the regular  expression  'myregex'  into  the
+	      directory /tmp/restoredir.
 
 
 SERVER CONFIGURATION FILE OPTIONS
@@ -397,15 +412,25 @@ SERVER CONFIGURATION FILE OPTIONS
 	      with the '-a v' option. The default is that clients can initiate
 	      a verify job.
 
+       restore_client=[client]
+	      A  client  that is permitted to list and restore files belonging
+	      to any other client. You may specify  multiple  restore_clients.
+	      If  this	is  too  permissive,  you may set a restore_client for
+	      individual original  clients  in	the  individual  clientconfdir
+	      files. Note that restoring a backup from a Windows computer onto
+	      a Linux computer will currently leave the VSS headers  in  place
+	      at  the  beginning  of  each  file.  This will be addressed in a
+	      future version of burp.
+
        ssl_cert_ca=[path]
-	      The  path  to the SSL CA certificate. This file will probably be
+	      The path to the SSL CA certificate. This file will  probably  be
 	      the same on both the server and the client. The file should con‐
 	      tain just the certificate in PEM format. For more information on
 	      this, and the other ssl_* options, please see docs/burp_ca.txt.
 
        ssl_cert=[path]
 	      The path to the server SSL certificate. It works for me when the
-	      file  contains  the concatenation of the certificate and private
+	      file contains the concatenation of the certificate  and  private
 	      key in PEM format.
 
        ssl_key=[path]
@@ -418,32 +443,32 @@ SERVER CONFIGURATION FILE OPTIONS
 	      Synonym for ssl_key_password.
 
        ssl_dhfile=[path]
-	      Path to Diffie-Hellman parameter	file.  To  generate  one  with
-	      openssl,	 use   a  command  like  this:	openssl  dhparam  -out
+	      Path  to	Diffie-Hellman	parameter  file.  To generate one with
+	      openssl,	use  a	command  like  this:  openssl	dhparam   -out
 	      dhfile.pem -5 1024
 
        max_children=[number]
-	      Defines the number of child processes to	fork  (the  number  of
+	      Defines  the  number  of	child processes to fork (the number of
 	      clients that can simultaneously connect. The default is 5.
 
        max_status_children=[number]
 	      Defines the number of status child processes to fork (the number
-	      of status clients that can simultaneously connect.  The  default
+	      of  status  clients that can simultaneously connect. The default
 	      is 5.
 
        max_storage_subdirs=[number]
-	      Defines  the number of subdirectories in the data storage areas.
-	      The maximum number of subdirectories that ext3 allows is	32000.
+	      Defines the number of subdirectories in the data storage	areas.
+	      The  maximum number of subdirectories that ext3 allows is 32000.
 	      If you do not set this option, it defaults to 30000.
 
        timer_script=[path]
-	      Path  to the script to run when a client connects with the timed
-	      backup option. If the script exits with code 0,  a  backup  will
+	      Path to the script to run when a client connects with the  timed
+	      backup  option.  If  the script exits with code 0, a backup will
 	      run. The first two arguments are the client name and the path to
-	      the 'current' storage directory. The next  three	arguments  are
+	      the  'current'  storage  directory. The next three arguments are
 	      reserved, and user arguments are appended after that. An example
-	      timer script is provided. The timer_script option can  be  over‐
-	      riddden  by  the	client configuration files in clientconfdir on
+	      timer  script  is provided. The timer_script option can be over‐
+	      riddden by the client configuration files  in  clientconfdir  on
 	      the server.
 
        timer_arg=[string]
@@ -454,24 +479,24 @@ SERVER CONFIGURATION FILE OPTIONS
        notify_success_script=[path]
 	      Path to the script to run when a backup succeeds. User arguments
 	      are appended after the first five reserved arguments. An example
-	      notify script is provided. The notify_success_script option  can
-	      be  overriddden  by  the	client	configuration files in client‐
+	      notify  script is provided. The notify_success_script option can
+	      be overriddden by the  client  configuration  files  in  client‐
 	      confdir on the server.
 
        notify_success_arg=[string]
-	      A user-definable argument to the notify success script. You  can
-	      have  many of these. The notify_success_arg options can be over‐
-	      riddden by the client configuration files  in  clientconfdir  on
+	      A  user-definable argument to the notify success script. You can
+	      have many of these. The notify_success_arg options can be  over‐
+	      riddden  by  the	client configuration files in clientconfdir on
 	      the server.
 
        notify_success_warnings_only=[0|1]
 	      Set to 1 to send success notifications when there were warnings.
-	      If this and notify_success_changes_only are not turned on,  suc‐
+	      If  this and notify_success_changes_only are not turned on, suc‐
 	      cess notifications are always sent.
 
        notify_success_changes_only=[0|1]
-	      Set  to  1  to send success notifications when there were new or
-	      changed files. If this and notify_success_warnings_only are  not
+	      Set to 1 to send success notifications when there  were  new  or
+	      changed  files. If this and notify_success_warnings_only are not
 	      turned on, success notifications are always sent.
 
        notify_failure_script=[path]
@@ -481,19 +506,19 @@ SERVER CONFIGURATION FILE OPTIONS
 	      The same as notify_failure_arg, but for backups that failed.
 
        dedup_group=[string]
-	      Enables  you  to	group  clients together for file deduplication
-	      purposes. For example, you might want  to  set  'dedup_group=xp'
-	      for  each Windows XP client, and then run the bedup program on a
+	      Enables you to group clients  together  for  file  deduplication
+	      purposes.  For  example,	you might want to set 'dedup_group=xp'
+	      for each Windows XP client, and then run the bedup program on  a
 	      cron job every other day with the option '-g xp'.
 
        server_script_pre=[path]
-	      Path to a script to run on the server  after  each  successfully
+	      Path  to	a  script to run on the server after each successfully
 	      authenticated connection but before any work is carried out. The
-	      arguments to it are 'pre', '(client  command)',  'reserved3'  to
-	      'reserved5',	and	 then	  arguments	defined     by
-	      server_script_pre_arg. If the script returns non-zero, the  task
-	      asked  for  by  the  client  will  not  be run. This command and
-	      related options can be overriddden by the  client  configuration
+	      arguments  to  it  are 'pre', '(client command)', 'reserved3' to
+	      'reserved5',     and     then	arguments      defined	    by
+	      server_script_pre_arg.  If the script returns non-zero, the task
+	      asked for by the client  will  not  be  run.  This  command  and
+	      related  options	can be overriddden by the client configuration
 	      files in clientconfdir on the server.
 
        server_script_pre_arg=[string]
@@ -501,55 +526,55 @@ SERVER CONFIGURATION FILE OPTIONS
 	      many of these.
 
        server_script_post=[path]
-	      Path to a script to run on the server before the client  discon‐
-	      nects.  The  arguments  to  it  are  'post', '(client command)',
+	      Path  to a script to run on the server before the client discon‐
+	      nects. The arguments  to	it  are  'post',  '(client  command)',
 	      'reserved3'  to  'reserved5',  and  then	arguments  defined  by
-	      server_script_post_arg.  This command and related options can be
-	      overriddden by the client configuration files  in  clientconfdir
+	      server_script_post_arg. This command and related options can  be
+	      overriddden  by  the client configuration files in clientconfdir
 	      on the server.
 
        server_script_post_arg=[string]
-	      A  user-definable  argument  to  the server post script. You can
+	      A user-definable argument to the server  post  script.  You  can
 	      have many of these.
 
        server_script=[path]
 	      You can use this to save space in your config file when you want
-	      to   run	 the   same   server   script	twice.	 It  overrides
-	      server_script_pre  and  server_script_post.  This  command   and
-	      related  options	can be overriddden by the client configuration
+	      to  run	the   same   server   script   twice.	It   overrides
+	      server_script_pre   and  server_script_post.  This  command  and
+	      related options can be overriddden by the  client  configuration
 	      files in clientconfdir on the server.
 
        server_script_arg=[path]
-	      Goes with server_script and overrides server_script_pre_arg  and
+	      Goes  with server_script and overrides server_script_pre_arg and
 	      server_script_post_arg.
 
        server_script_post_run_on_fail=[0|1]
-	      If  this is set to 1, server_script_post will always be run. The
-	      default is 0, which means that if the  task  asked  for  by  the
+	      If this is set to 1, server_script_post will always be run.  The
+	      default  is  0,  which  means  that if the task asked for by the
 	      client fails, server_script_post will not be run.
 
        autoupgrade_dir=[path]
-	      Path  to	autoupgrade  directory	from  which upgrades are down‐
+	      Path to autoupgrade directory  from  which  upgrades  are  down‐
 	      loaded. The option can be left unset in order not to autoupgrade
-	      clients.	Please	see docs/autoupgrade.txt in the source package
+	      clients. Please see docs/autoupgrade.txt in the  source  package
 	      for more help with this option.
 
        ca_conf=[path]
 	      Path to certificate authority configuration file. The CA config‐
-	      uration  file will usually be /etc/burp/CA.cnf. The CA directory
-	      indicated by CA.cnf will usually be /etc/burp/CA. If ca_conf  is
+	      uration file will usually be /etc/burp/CA.cnf. The CA  directory
+	      indicated  by CA.cnf will usually be /etc/burp/CA. If ca_conf is
 	      set and the CA directory does not exist, the server will create,
-	      populate it, and the paths indicated by  ssl_cert_ca,  ssl_cert,
-	      ssl_key  and  ssl_dhfile	will be overwritten. For more detailed
-	      information on this and  the  other  ca_*  options,  please  see
+	      populate	it,  and the paths indicated by ssl_cert_ca, ssl_cert,
+	      ssl_key and ssl_dhfile will be overwritten.  For	more  detailed
+	      information  on  this  and  the  other  ca_* options, please see
 	      docs/burp_ca.txt.
 
        ca_name=[name]
-	      Name  of	the  CA  that  the server will generate when using the
+	      Name of the CA that the server  will  generate  when  using  the
 	      ca_conf option.
 
        ca_server_name=[name]
-	      The name that the server will put into its own  SSL  certficates
+	      The  name  that the server will put into its own SSL certficates
 	      when using the ca_conf option.
 
        ca_burp_ca=[path]
@@ -598,31 +623,31 @@ CLIENT CONFIGURATION FILE OPTIONS
 	      Run as a particular group (not supported on Windows).
 
        ratelimit=[Mb/s]
-	      Set the network send rate limit, in Mb/s. If this option is  not
+	      Set  the network send rate limit, in Mb/s. If this option is not
 	      given, burp will send data as fast as it can.
 
        network_timeout=[s]
-	      Set  the	network  timeout  in  seconds.	If  no data is sent or
-	      received over a period of this length, burp will	give  up.  The
+	      Set the network timeout in  seconds.  If	no  data  is  sent  or
+	      received	over  a  period of this length, burp will give up. The
 	      default is 7200 seconds (2 hours).
 
        ca_burp_ca=[path]
-	      Path  to	the  burp_ca script (burp_ca.bat on Windows). For more
+	      Path to the burp_ca script (burp_ca.bat on  Windows).  For  more
 	      information on this, please see docs/burp_ca.txt.
 
        ca_csr_dir=[path]
-	      Directory where certificate signing requests are generated.  For
+	      Directory  where certificate signing requests are generated. For
 	      more information on this, please see docs/burp_ca.txt.
 
        ssl_cert_ca=[path]
-	      The  path  to the SSL CA certificate. This file will probably be
+	      The path to the SSL CA certificate. This file will  probably  be
 	      the same on both the server and the client. The file should con‐
 	      tain just the certificate in PEM format. For more information on
 	      this and the other ssl_* options, please see docs/burp_ca.txt.
 
        ssl_cert=[path]
 	      The path to the client SSL certificate. It works for me when the
-	      file  contains  the concatenation of the certificate and private
+	      file contains the concatenation of the certificate  and  private
 	      key in PEM format.
 
        ssl_key=[path]
@@ -635,9 +660,13 @@ CLIENT CONFIGURATION FILE OPTIONS
 	      Synonym for ssl_key_password.
 
        ssl_peer_cn=[string]
-	      Must match the common name  in  the  SSL	certificate  that  the
-	      server  gives  when  it connects. If ssl_peer_cn is not set, the
+	      Must  match  the	common	name  in  the SSL certificate that the
+	      server gives when it connects. If ssl_peer_cn is	not  set,  the
 	      server name will be used instead.
+
+       server_can_restore=[0|1]
+	      To  prevent  the server from initiating restores, set this to 0.
+	      The default is 1.
 
        encryption_password=[password]
 	      Set this to enable client side file Blowfish encryption. If  you
@@ -773,6 +802,11 @@ INCLUDES / EXCLUDES
 	      have multiple exclude extension lines. For example, set 'vdi' to
 	      exclude VirtualBox disk images.
 
+       exclude_comp=[extension]
+	      Extensions  to  exclude  from compression. Case insensitive. You
+	      can have multiple exclude compression lines.  For  example,  set
+	      'gz' to exclude gzipped files from compression.
+
        exclude_fs=[fstype]
 	      File  systems  to exclude from the backup. Case insensitive. You
 	      can have multiple exclude file system lines.  For  example,  set
@@ -839,12 +873,12 @@ SERVER CLIENTCONFDIR FILE
 	      directory  directory_tree  timestamp_format  password_check keep
 	      working_dir_recovery_method	    librsync		syslog
 	      client_can_force_backup	 client_can_list    client_can_restore
-	      client_can_verify compression timer_script timer_arg notify_suc‐
-	      cess_script    notify_success_arg   notify_success_warnings_only
-	      notify_failure_script	  notify_failure_arg	   dedup_group
-	      server_script_pre    server_script_pre_arg    server_script_post
-	      server_script_post_arg	  server_script      server_script_arg
-	      server_script_post_run_on_fail
+	      client_can_verify   restore_client   compression	  timer_script
+	      timer_arg  notify_success_script	notify_success_arg notify_suc‐
+	      cess_warnings_only   notify_failure_script    notify_failure_arg
+	      dedup_group	 server_script_pre	 server_script_pre_arg
+	      server_script_post     server_script_post_arg	 server_script
+	      server_script_arg server_script_post_run_on_fail
 
        Additionally,  the  includes  and  excludes  can be overridden here, as
        described in the section above.
@@ -897,8 +931,15 @@ Server initiated backups
 Server initiated restores
        You can queue a restore on the server, to be performed when the	client
        next  makes  contact.  To do this, you put a file called 'restore' into
-       the top level of the client storage directory. Valid fields to  include
-       in the restore file are:
+       the top level of the client storage  directory.	The  client  can  deny
+       server  initiated  restores  by	setting  "server_can_restore=0" in its
+       burp.conf. Valid fields to include in the restore file are:
+
+       orig_client=[client]
+	      The original client to restore from.  Equivalent	to  '-C'  when
+	      initiating  a  restore  from  a client. Do not include this line
+	      when  restoring  to  the	 original   client.   See   also   the
+	      'restore_client' server option.
 
        backup=[number|a]
 	      The  number  of  the  backup to restore from. Equivalent to '-b'

@@ -393,7 +393,11 @@ static int do_client(struct config *conf, enum action act)
 			{
 				logp("Server is overriding the configuration\n");
 				logp("with the following settings:\n");
-				printf("%s\n", incexc);
+				if(log_incexcs_buf(incexc))
+				{
+					ret=-1;
+					goto end;
+				}
 			}
 			if(!conf->sdcount)
 			{

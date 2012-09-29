@@ -1444,6 +1444,30 @@ int parse_incexcs_buf(struct config *conf, const char *incexc)
 	return finalise_config("server override", conf, &l, FALSE);
 }
 
+int log_incexcs_buf(const char *incexc)
+{
+	char *tok=NULL;
+	char *copy=NULL;
+	if(!incexc || !*incexc) return 0;
+	if(!(copy=strdup(incexc)))
+	{
+		logp("out of memory\n");
+		return -1;
+	}
+	if(!(tok=strtok(copy, "\n")))
+	{
+		logp("unable to parse server incexc\n");
+		free(copy);
+		return -1;
+	}
+	do
+	{
+		logp("%s\n", tok);
+	} while((tok=strtok(NULL, "\n")));
+	free(copy);
+	return 0;
+}
+
 /* The server runs this when parsing a restore file on the server. */
 int parse_incexcs_path(struct config *conf, const char *path)
 {

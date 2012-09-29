@@ -72,7 +72,6 @@ int test_lock(const char *path)
 // In this source file so that both bedup and status_server can see it.
 int looks_like_tmp_or_hidden_file(const char *filename)
 {
-	const char *cp=NULL;
 	if(!filename) return 0;
 	if(filename[0]=='.' // Also avoids '.' and '..'.
 	// I am told that emacs tmp files end with '~'.

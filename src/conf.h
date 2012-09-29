@@ -187,6 +187,7 @@ extern int is_subdir(const char *dir, const char *sub);
 extern int pathcmp(const char *a, const char *b);
 extern int config_get_pair(char buf[], char **field, char **value);
 extern int parse_incexcs_buf(struct config *conf, const char *incexc);
+extern int log_incexcs_buf(const char *incexc);
 extern int parse_incexcs_path(struct config *conf, const char *path);
 extern int load_client_config(struct config *conf, struct config *cconf, const char *client);
 

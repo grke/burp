@@ -453,7 +453,26 @@ Q. What command line options are available to the Windows installer?
 	<td VALIGN="top"><FONT COLOR="#99CCFF">Skip installer configuration pages but keep the initial splash screen and final confirmation</FONT></td></tr>
 <tr><td VALIGN="top"><FONT COLOR="#99CCFF">/minutetext=[text]</FONT></td>
 	<td VALIGN="top"><FONT COLOR="#99CCFF">When setting up the Windows scheduler, the Windows 'schtasks' command stupidly needs different text given to it depending on the language of the system. The default is 'MINUTE'. If your Windows is for example, Polish, this option lets you set it to the Polish version of 'MINUTE'.</FONT></td></tr>
+<tr><td VALIGN="top"><FONT COLOR="#99CCFF">/server_can_restore=[0|1]</FONT></td>
+	<td VALIGN="top"><FONT COLOR="#99CCFF">Whether or not the server can initiate a restore.</FONT></td></tr>
+<tr><td VALIGN="top"><FONT COLOR="#99CCFF">/encryption_password=[password]</FONT></td>
+	<td VALIGN="top"><FONT COLOR="#99CCFF">Set the encryption password.</FONT></td></tr>
 </table>
+</FONT>
+</P>
+
+<HR>
+
+<P>
+<FONT COLOR="#99CCFF">
+Q. What should I do if I don't trust my burp server administrator?<BR>
+Q. What should I do if I don't trust my burp users?<BR>
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">
+A. There are some notes on security models <A HREF="/txt/security-models.txt">here</A>.
 </FONT>
 </P>
 

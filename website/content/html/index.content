@@ -53,6 +53,59 @@ The main author of Burp is Graham Keeling.
 <TD ALIGN="LEFT">
 
 <P>
+<FONT COLOR="#99CCFF">2012-09-27:
+<BR>
+Many thanks to the following donors for financially supporting burp during
+June and July:
+<pre>
+  *  &pound400.00 Robert L.
+</pre>
+</FONT>
+</p>
+
+<P>
+<FONT COLOR="#99CCFF">2012-09-27: burp-1.3.14 is released.
+<pre>
+Changes in burp-1.3.14:
+  * Remove '-l <logfile> / logfile=' options because they didn't work properly
+    and were adding too much complexity to the code.
+  * Add 'stdout=[0|1]' option, which defines whether to log messages to stdout.
+  * Add 'progress_counter=[0|1]' option for the client, which defines whether
+    to print counters to stdout.
+  * When syslogging, do not prepend a date to the log message.
+  * Don't count phase 2 counters twice when resuming.
+  * Ignore files in clientconfdir starting with '.' or ending with '~', as
+    these are hidden or temporary files.
+  * Fix bug where the client_can_* options were not being overridden in the
+    client specific conf files.
+  * Fix bug that stopped client_can_restore=0 working.
+  * Scan the manifest before restore/verify so that counters and status
+    monitor can show estimates.
+  * Add verify/restore notifications.
+  * Fix Windows batch file IF/ELSE syntax in Windows autoupgrade script.
+  * Have the server send the client the counters when resuming.
+  * Have the server send the client the counters when verifying/restoring, so
+    that it knows what to expect.
+  * Avi Rozen's bug fix for directory browsing on windows
+  * Do not skip restores of sockets.
+  * Add server_can_restore=[0|1] client side option, so that clients can refuse
+    server initiated restores.
+  * Allow server_can_restore and encryption_password to be set with the Windows
+    installer.
+  * Indicate to the server post script whether there was an error.
+  * Indicate to the server post script whether a timed backup was attempted.
+  * Add the ability to restore using a different client. See the
+    'restore_client' option in the man page.
+  * Add the ability to exclude compression on files by extension. See the
+    'exclude_comp' option in the man page.
+  * Make the functions that strcmp file extensions more efficient.
+  * Fixed bug introduced in 1.3.12 that made the client crash when scanning
+    files with very long names.
+</pre>
+</FONT>
+</P>
+
+<P>
 <FONT COLOR="#99CCFF">2012-08-28:
 <BR>
 Nobody financially supported burp during August, but thank you to 6sync for
@@ -338,88 +391,6 @@ Changes in burp-1.3.0:
   * Make Windows uninstall work.
   * Add 'allow autoupgrade' option to a second screen on the Windows installer.
   * Add 'max_storage_subdirs' option, and default it to 30000.
-</pre>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2011-12-30: burp-1.2.7 is released.
-<pre>
-Changes in burp-1.2.7:
-  * Add an automated test script.
-  * Fix bugs with uncompressed encrypted backup/restore.
-  * Get verify all backups for a client (-a v -b a) to work.
-  * Return non-zero if there were warnings on verify or restore.
-  * Add 'min_file_size' option, fix 'max_file_size' option.
-  * Add generic server-side pre/post scripts that can run on every connection
-    after authentication and before disconnecting.
-  * Set environment variables from SSL cert details so that the server-side
-    scripts can see them.
-  * Add Jason Haar's server script for doing extra SSL certificate checks.
-  * Add 'max_hardlinks' option, which limits the number of times a single file
-    is hardlinked in storage. Default is 10000.
-  * Add '-i' option: print an index table of symbols that humans may see burp
-    produce, and exit.
-  * Let backups carry on when files cannot be opened.
-  * Spot Windows EFS directories and files and warn about them.
-  * Add an 'estimate' option (-a e), which does a scan of the file system to
-    be backed up, and prints counters, without contacting the server.
-  * Strip out 744 lines of unused Windows code.
-  * Fix possible segfault when backup directory forward paths don't match.
-  * Removed working_dir_recovery_method=merge. Use 'resume' instead.
-  * Add a flexible way of passing new fields from the client to the server so
-    that clients are less likely to have to upgrade.
-</pre>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2011-11-26: burp-1.2.5 is released.
-<pre>
-Changes in burp-1.2.5:
-  * IMPORTANT: Fixed critical path comparison typo bug. If you have been using
-	1.2.4 either as a server or as a client, you need to upgrade
-	immediately! Backups made with 1.2.4 should be treated as suspicious.
-  * Add a 'max_file_size' option.
-  * Store windows file attributes in a separate field to the standard unix ones.
-</pre>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2011-11-22: burp-1.2.4 is released.
-<pre>
-Changes in burp-1.2.4:
-  * Add a file deduplication program, "bedup".
-  * Add a network_timeout parameter. Default is 7200 seconds (2 hours).
-  * Add option to send success notifications only if there were warnings.
-  * Try to create the pidfile directory if it doesn't exist.
-  * Restore times on Windows files.
-  * Restore readonly/hidden attributes on Windows.
-  * Fix bug in 'keep' mechanism where setting 'keep=2' would delete both
-        backups.
-  * Only install clientconfdir/testclient with 'make install' if clientconfdir
-    didn't previously exist.
-  * Fix possible segfault when resume mode triggers with nothing to resume.
-</pre>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2011-09-29: burp-1.2.2 is released.
-<pre>
-Changes in burp-1.2.2:
-  * Multiple retention periods (e.g, keep 1 backup per day for 7 days, 1
-    backup per week for 4 weeks, 1 backup per 4 weeks for a year). See the
-    'keep' option in the man page.
-  * Make sure the client version warning message appears in the backup log.
-  * Network send rate-limiting feature (both client and server).
-  * Change pidfile paths to /var/run/burp instead of /var/lock/burp.
-  * Get pre backup scripts running reliably again. Also, send script messages
-    on stderr to the server backup log.
-  * Fix 'Warnings' line on the status monitor.
-  * Fix resume mode bug to do with potentially partially written entries at
-    the end of the phase2 file.
 </pre>
 </FONT>
 </P>

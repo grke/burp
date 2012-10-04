@@ -191,7 +191,7 @@ Log to syslog. Defaults to off.
 Log to stdout. Defaults to on.
 .TP
 \fBkeep=[number]\fR
-Number of backups to keep. This can be overriddden by the client configuration
+Number of backups to keep. This can be overridden by the client configuration
 files in clientconfdir on the server. Specify multiple 'keep' entries on separate lines in order to keep multiple periods of backups. For example, assuming that you are doing a backup a day, keep=7 keep=4 keep=6 (on separate lines) will keep 7 daily backups, 4 weekly backups (7x4=28), and 6 multiples of 4 weeks (7x4x6=168) \- roughly 6 monthly backups. Effectively, you will be guaranteed to be able to restore up to 168 days ago, with the number of available backups exponentially decreasing as you go back in time to that point. In this example, every 7th backup will be hardlinked to allow burp to safely delete intermediate backups when necessary. You can have as many 'keep' lines as you like, as long as they don't exceed 52560000 when multiplied together. That is, a backup every minute for 100 years.
 .TP
 \fBhardlinked_archive=[0|1]\fR
@@ -277,10 +277,10 @@ Defines the number of status child processes to fork (the number of status clien
 Defines the number of subdirectories in the data storage areas. The maximum number of subdirectories that ext3 allows is 32000. If you do not set this option, it defaults to 30000.
 .TP
 \fBtimer_script=[path]\fR
-Path to the script to run when a client connects with the timed backup option. If the script exits with code 0, a backup will run. The first two arguments are the client name and the path to the 'current' storage directory. The next three arguments are reserved, and user arguments are appended after that. An example timer script is provided. The timer_script option can be overriddden by the client configuration files in clientconfdir on the server.
+Path to the script to run when a client connects with the timed backup option. If the script exits with code 0, a backup will run. The first two arguments are the client name and the path to the 'current' storage directory. The next three arguments are reserved, and user arguments are appended after that. An example timer script is provided. The timer_script option can be overridden by the client configuration files in clientconfdir on the server.
 .TP
 \fBtimer_arg=[string]\fR
-A user-definable argument to the timer script. You can have many of these. The timer_arg options can be overriddden by the client configuration files in clientconfdir on the server.
+A user-definable argument to the timer script. You can have many of these. The timer_arg options can be overridden by the client configuration files in clientconfdir on the server.
 .TP
 \fBnotify_success_script=[path]\fR
 Path to the script to run when a backup succeeds. User arguments are appended after the first five reserved arguments. An example notify script is provided. The notify_success_script option can be overriddden by the client configuration files in clientconfdir on the server.

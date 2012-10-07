@@ -229,9 +229,9 @@ int in_exclude_comp(struct strlist **excom, int excmcount, const char *fname, in
 {
 	int i=0;
 	const char *cp=NULL;
-	// If not doing compression, or there are no excludes, return 0
+	// If not doing compression, or there are no excludes, return
 	// straight away.
-	if(!compression || !excmcount) return 0;
+	if(!compression || !excmcount) return compression;
 
 	// The flag of the first item contains the maximum number of characters
 	// that need to be checked.

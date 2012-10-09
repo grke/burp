@@ -169,7 +169,8 @@ int authorise_server(struct config *conf, char **client, char **cversion, struct
 		return -1;
 	}
 
-	version_warn(p1cntr, *client, *cversion);
+	if(cconf->version_warn)
+		version_warn(p1cntr, *client, *cversion);
 
 	logp("auth ok for: %s%s\n", *client,
 		cconf->password_check?"":" (no password needed)");

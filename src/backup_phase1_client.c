@@ -105,6 +105,7 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 	if(maybe_send_extrameta(ff->fname, CMD_HARD_LINK, attribs, p1cntr))
 		return -1;
       break;
+   case FT_RAW:
    case FT_FIFO:
    case FT_REGE:
    case FT_REG:
@@ -190,9 +191,6 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
       break;
    case FT_NOOPEN:
       logw(p1cntr, _("Err: Could not open directory %s: %s"), ff->fname, strerror(errno));
-      break;
-   case FT_RAW:
-      logw(p1cntr, _("Err: Raw partition: %s"), ff->fname);
       break;
    default:
       logw(p1cntr, _("Err: Unknown file ff->type %d: %s"), ff->type, ff->fname);

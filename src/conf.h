@@ -136,6 +136,7 @@ struct config
 	char *working_dir_recovery_method;
 	int librsync;
 	int compression;
+	int version_warn;
 
 	char *timer_script;
 	struct strlist **timer_arg;

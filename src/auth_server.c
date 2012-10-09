@@ -169,6 +169,7 @@ int authorise_server(struct config *conf, char **client, char **cversion, struct
 		return -1;
 	}
 
+	printf("here: version_warn: %d\n", cconf->version_warn);
 	if(cconf->version_warn)
 		version_warn(p1cntr, *client, *cversion);
 

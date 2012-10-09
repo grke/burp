@@ -281,7 +281,8 @@ static int open_log(const char *realworking, const char *client, const char *cve
 	// The client will already have been sent a message with logw.
 	// This time, prevent it sending a logw to the client by specifying
 	// NULL for cntr.
-	version_warn(NULL, client, cversion);
+	if(conf->version_warn)
+		version_warn(NULL, client, cversion);
 
 	return 0;
 }

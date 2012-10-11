@@ -1642,7 +1642,7 @@ Optional Features:
   --enable-includes       enable installing of include files [default=no]
   --disable-nls           do not use Native Language Support
   --disable-rpath         do not hardcode runtime library paths
-  --enable-ipv6           Enable IPv6 support
+  --disable-ipv6          disable IPv6 support
   --disable-largefile     omit support for large files
   --disable-afs           disable afs support [default=auto]
   --disable-acl           disable acl support [default=auto]

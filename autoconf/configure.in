@@ -417,7 +417,7 @@ AC_ARG_WITH(tcp-wrappers,
    ]
 )
 
-AC_ARG_ENABLE(ipv6, AC_HELP_STRING([--enable-ipv6],[Enable IPv6 support]),[want_v6=$enableval],[want_v6=yes])
+AC_ARG_ENABLE(ipv6, AC_HELP_STRING([--disable-ipv6],[disable IPv6 support]),[want_v6=$enableval],[want_v6=yes])
 
 if test "x$want_v6" = "xno"; then
         have_ipv6="no"

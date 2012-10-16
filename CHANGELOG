@@ -1,4 +1,5 @@
   * Turn --enable-ipv6 configure option into --disable-ipv6.
+  * Print a carriage return when rewriting ssl_peer_cn on Windows.
 
 2012-10-09 Changes in burp-1.3.16:
   * Important bug fix for exclude_comp.

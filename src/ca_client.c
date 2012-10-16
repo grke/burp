@@ -72,8 +72,11 @@ static int rewrite_client_conf(struct config *conf)
 			continue;
 		}
 		free(copy);
-
+#ifdef HAVE_WIN32
+		fprintf(dp, "ssl_peer_cn = %s\r\n", conf->ssl_peer_cn);
+#else
 		fprintf(dp, "ssl_peer_cn = %s\n", conf->ssl_peer_cn);
+#endif
 	}
 	close_fp(&sp);
 	if(close_fp(&dp))

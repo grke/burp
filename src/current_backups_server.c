@@ -115,7 +115,7 @@ int recursive_delete(const char *d, const char *file, bool delfiles)
 	}
 	else if(!(directory=prepend_s(d, file, strlen(file))))
 	{
-		logp("out of memory\n");
+		log_out_of_memory(__FUNCTION__);
 		return RECDEL_ERROR;
 	}
 
@@ -240,7 +240,7 @@ static int get_link(const char *basedir, const char *lnk, char real[], size_t r)
 	char *tmp=NULL;
 	if(!(tmp=prepend_s(basedir, lnk, strlen(lnk))))
 	{
-		logp("out of memory");
+		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 	if((len=readlink(tmp, real, r-1))<0) len=0;
@@ -316,7 +316,7 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 		  || !((*arr)[i].data=prepend_s(fullpath, "data", strlen("data")))
 		  || !((*arr)[i].delta=prepend_s(fullpath, "deltas.reverse", strlen("deltas.reverse"))))
 		{
-			if(log) log_and_send("out of memory");
+			if(log) log_and_send_oom(__FUNCTION__);
 			free(timestampstr);
 			free(fullpath);
 			free(hlinkedpath);

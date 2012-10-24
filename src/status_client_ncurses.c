@@ -462,7 +462,7 @@ static int parse_rbuf(const char *rbuf, struct config *conf, int row, int col, i
 
 	if(!(copy=strdup(rbuf)))
 	{
-		logp("out of memory\n");
+		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 

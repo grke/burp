@@ -233,13 +233,13 @@ int add_to_sbuf_arr(struct sbuf ***sblist, struct sbuf *sb, int *count)
         if(!(sbtmp=(struct sbuf **)realloc(*sblist,
                 ((*count)+1)*sizeof(struct sbuf *))))
         {
-                logp("out of memory in add_to_sbuf_arr()\n");
+                log_out_of_memory(__FUNCTION__);
                 return -1;
         }
         *sblist=sbtmp;
 	if(!(sbnew=(struct sbuf *)malloc(sizeof(struct sbuf))))
 	{
-		logp("out of memory in add_to_sbuf_arr()\n");
+                log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 	memcpy(sbnew, sb, sizeof(struct sbuf));
@@ -272,7 +272,7 @@ int del_from_sbuf_arr(struct sbuf ***sblist, int *count)
         if(*count && !(sbtmp=(struct sbuf **)realloc(*sblist,
                 (*count)*sizeof(struct sbuf *))))
         {
-                logp("out of memory in del_from_sbuf_arr()\n");
+                log_out_of_memory(__FUNCTION__);
                 return -1;
         }
         *sblist=sbtmp;

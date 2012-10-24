@@ -466,7 +466,7 @@ static int pre_post_override(char **override, char **pre, char **post)
 	if(!(*pre=strdup(*override))
 	  || !(*post=strdup(*override)))
 	{
-		logp("out of memory\n");
+		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 	free(*override);
@@ -941,7 +941,7 @@ static int parse_config_line(struct config *conf, struct llists *l, const char *
 
 		if(!(extrafile=strdup(buf+2)))
 		{
-			logp("out of memory\n");
+			log_out_of_memory(__FUNCTION__);
 			return -1;
 		}
 
@@ -966,7 +966,7 @@ static int parse_config_line(struct config *conf, struct llists *l, const char *
 			char *tmp=NULL;
 			if(!(copy=strdup(config_path)))
 			{
-				logp("out of memory\n");
+				log_out_of_memory(__FUNCTION__);
 				free(extrafile);
 				return -1;
 			}
@@ -974,7 +974,7 @@ static int parse_config_line(struct config *conf, struct llists *l, const char *
 			if(!(tmp=prepend_s(copy,
 				extrafile, strlen(extrafile))))
 			{
-				logp("out of memory\n");
+				log_out_of_memory(__FUNCTION__);
 				free(extrafile);
 				free(copy);
 			}
@@ -1116,7 +1116,7 @@ static int client_conf_checks(struct config *conf, const char *path, int *r)
 			logp("falling back to '%s'\n", conf->server);
 			if(!(conf->ssl_peer_cn=strdup(conf->server)))
 			{
-				logp("out of memory\n");
+				log_out_of_memory(__FUNCTION__);
 				return -1;
 			}
 		}
@@ -1341,7 +1341,7 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 	if(!conf->client_lockdir && conf->directory
 	  && !(conf->client_lockdir=strdup(conf->directory)))
 	{
-		logp("out of memory\n");
+		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 
@@ -1399,7 +1399,7 @@ int load_config(const char *config_path, struct config *conf, bool loadall)
 		if(conf->configfile) free(conf->configfile);
 		if(!(conf->configfile=strdup(config_path)))
 		{
-			logp("out of memory\n");
+			log_out_of_memory(__FUNCTION__);
 			return -1;
 		}
 	}
@@ -1422,7 +1422,7 @@ int parse_incexcs_buf(struct config *conf, const char *incexc)
 	set_got_args(&l, conf);
 	if(!(copy=strdup(incexc)))
 	{
-		logp("out of memory\n");
+		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 	free_incexcs(conf);
@@ -1454,7 +1454,7 @@ int log_incexcs_buf(const char *incexc)
 	if(!incexc || !*incexc) return 0;
 	if(!(copy=strdup(incexc)))
 	{
-		logp("out of memory\n");
+		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 	if(!(tok=strtok(copy, "\n")))
@@ -1482,7 +1482,7 @@ static int set_global_str(char **dst, const char *src)
 {
 	if(src && !(*dst=strdup(src)))
 	{
-		logp("out of memory when setting global string\n");
+		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 	return 0;

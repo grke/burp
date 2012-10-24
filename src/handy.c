@@ -271,7 +271,7 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password)
 
 	if(!(ctx=(EVP_CIPHER_CTX *)malloc(sizeof(EVP_CIPHER_CTX))))
 	{
-		logp("out of memory\n");
+		log_out_of_memory(__FUNCTION__);
 		return NULL;
 	}
         memset(ctx, 0, sizeof(EVP_CIPHER_CTX));
@@ -1074,7 +1074,7 @@ int chuser_and_or_chgrp(const char *user, const char *group)
 	// Any OS uname pointer may get overwritten, so save name, uid, and gid
 	if(!(username=strdup(user)))
 	{
-		logp("out of memory\n");
+		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 	uid=passw->pw_uid;
@@ -1274,7 +1274,7 @@ long version_to_long(const char *version)
 	if(!version || !*version) return 0;
 	if(!(copy=strdup(version)))
 	{
-		logp("out of memory\n");
+		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 	if(!(tok1=strtok(copy, "."))

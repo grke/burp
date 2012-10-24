@@ -41,7 +41,7 @@ char *prepend_s(const char *prep, const char *fname, size_t len)
 	{
 		char *ret=NULL;
 		if(!(ret=strdup(fname)))
-			logp("out of memory in prepend_s\n");
+			log_out_of_memory(__FUNCTION__);
 		return ret;
 	}
 	// Try to avoid getting a double slash in the path.

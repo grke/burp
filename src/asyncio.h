@@ -40,6 +40,7 @@ extern int async_write_str(char wcmd, const char *wsrc);
 extern int async_read_expect(char cmd, const char *expect);
 
 extern void log_and_send(const char *msg);
+extern void log_and_send_oom(const char *function);
 
 // Read from fp if given, is read from our fd.
 extern int async_read_stat(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr);

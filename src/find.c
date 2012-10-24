@@ -135,7 +135,7 @@ static FF_PKT *new_dir_ff_pkt(FF_PKT *ff_pkt)
    FF_PKT *dir_ff_pkt = NULL;
    if(!(dir_ff_pkt=(FF_PKT *)malloc(sizeof(FF_PKT))))
    {
-	logp("out of memory\n");
+	log_out_of_memory(__FUNCTION__);
 	return NULL;
    }
    memcpy(dir_ff_pkt, ff_pkt, sizeof(FF_PKT));
@@ -512,7 +512,7 @@ static int get_files_in_directory(DIR *directory, struct dirent ***nl, int *coun
 		if(!(entry=(struct dirent *)malloc(
 			sizeof(struct dirent)+name_max+100)))
 		{
-			logp("out of memory\n");
+			log_out_of_memory(__FUNCTION__);
 			return -1;
 		}
 		status=readdir_r(directory, entry, &result);
@@ -541,7 +541,7 @@ static int get_files_in_directory(DIR *directory, struct dirent ***nl, int *coun
 				realloc (*nl, allocated*sizeof(**nl))))
 			{
 				free(entry);
-				logp("out of memory\n");
+				log_out_of_memory(__FUNCTION__);
 				return -1;
 			}
 			*nl=ntmp;
@@ -575,7 +575,7 @@ static int process_files_in_directory(struct dirent **nl, int count, int *rtn_st
 			*link_len=len+strlen(p)+1;
 			if(!(*link=(char *)realloc(*link, (*link_len)+1)))
 			{
-				logp("out of memory\n");
+				log_out_of_memory(__FUNCTION__);
 				return -1;
 			}
 		}
@@ -662,7 +662,7 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 	link_len=len+200;
 	if(!(link=(char *)malloc(link_len+2)))
 	{
-		logp("out of memory\n");
+		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 	snprintf(link, link_len, "%s", fname);
@@ -924,7 +924,7 @@ find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
 			if(!(ff_pkt->linkhash=(link_t **)malloc(
 				LINK_HASHTABLE_SIZE*sizeof(link_t *))))
 			{
-				logp("out of memory doing link hash\n");
+				log_out_of_memory(__FUNCTION__);
 				return -1;
 			}
 			memset(ff_pkt->linkhash, 0,
@@ -955,7 +955,7 @@ find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
 		len=strlen(fname)+1;
 		if(!(lp=(struct f_link *)malloc(sizeof(struct f_link)+len)))
 		{
-			logp("out of memory\n");
+			log_out_of_memory(__FUNCTION__);
 			return -1;
 		}
 		lp->ino=ff_pkt->statp.st_ino;

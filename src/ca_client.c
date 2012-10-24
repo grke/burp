@@ -60,7 +60,7 @@ static int rewrite_client_conf(struct config *conf)
 
 		if(!(copy=strdup(buf)))
 		{
-			logp("out of memory\n");
+			log_out_of_memory(__FUNCTION__);
 			goto end;
 		}
 		if(config_get_pair(buf, &field, &value)
@@ -155,7 +155,7 @@ int ca_client_setup(struct config *conf, struct cntr *p1cntr)
 	if(conf->ssl_peer_cn) free(conf->ssl_peer_cn);
 	if(!(conf->ssl_peer_cn=strdup(buf+strlen("csr ok:"))))
 	{
-		logp("out of memory\n");
+		log_out_of_memory(__FUNCTION__);
 		goto end;
 	}
 

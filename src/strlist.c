@@ -34,14 +34,14 @@ int strlist_add(struct strlist ***bdlist, int *count, char *path, long flag)
 	if(!(bdtmp=(struct strlist **)realloc(*bdlist,
 		((*count)+1)*sizeof(struct strlist *))))
 	{
-		logp("out of memory in add_strlist()\n");
+		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 	*bdlist=bdtmp;
 	if(!(bdnew=(struct strlist *)malloc(sizeof(struct strlist)))
 	  || !(bdnew->path=strdup(path)))
 	{
-		logp("out of memory in add_strlist()\n");
+		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 	bdnew->flag=flag;

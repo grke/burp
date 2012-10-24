@@ -83,7 +83,7 @@ static int make_link(const char *fname, const char *lnk, char cmd, const char *r
 		char *flnk=NULL;
 		if(!(flnk=prepend_s(restoreprefix, lnk, strlen(lnk))))
 		{
-			logp("out of memory\n");
+			log_out_of_memory(__FUNCTION__);
 			return -1;
 		}
 		//printf("%s -> %s\n", fname, flnk);
@@ -509,7 +509,7 @@ static int strip_path_components(struct sbuf *sb, char **path, int strip, struct
 	}
 	if(!(tmp=strdup(cp)))
 	{
-		log_and_send("out of memory");
+		log_and_send_oom(__FUNCTION__);
 		return -1;
 	}
 	free(*path);
@@ -601,7 +601,7 @@ int do_restore_client(struct config *conf, enum action act, struct cntr *p1cntr,
 				if(!(fullpath=prepend_s(conf->restoreprefix,
 					sb.path, strlen(sb.path))))
 				{
-					log_and_send("out of memory");
+					log_and_send_oom(__FUNCTION__);
 					ret=-1;
 					quit++;
 				}

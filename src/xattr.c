@@ -26,7 +26,7 @@ static char *get_next_str(char **data, size_t *l, struct cntr *cntr, ssize_t *s,
 	*l-=8;
 	if(!(ret=(char *)malloc((*s)+1)))
 	{
-		logp("out of memory\n");
+		log_out_of_memory(__FUNCTION__);
 		return NULL;
 	}
 	memcpy(ret, *data, *s);
@@ -70,7 +70,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 	}
 	if(!(xattrlist=(char *)malloc(len+1)))
 	{
-		logp("out of memory\n");
+		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 	memset(xattrlist, 0, len+1);
@@ -130,7 +130,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 		}
 		if(!(val=(char *)malloc(vlen+1)))
 		{
-			logp("out of memory\n");
+			log_out_of_memory(__FUNCTION__);
 			free(xattrlist);
 			if(toappend) free(toappend);
 			return -1;
@@ -164,7 +164,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 		  || !(toappend=prepend_len(toappend, totallen,
 			val, vlen, "", 0, &totallen)))
 		{
-			logp("out of memory\n");
+			log_out_of_memory(__FUNCTION__);
 			free(val);
 			free(xattrlist);
 			return -1;
@@ -192,7 +192,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 		  || !(*xattrtext=prepend_len(*xattrtext, *xlen,
 			toappend, totallen, "", 0, xlen)))
 		{
-			logp("out of memory\n");
+			log_out_of_memory(__FUNCTION__);
 			free(toappend);
 			free(xattrlist);
 			return -1;
@@ -312,7 +312,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 		}
 		if(!(xattrlist=(char *)malloc(len+1)))
 		{
-			logp("out of memory\n");
+			log_out_of_memory(__FUNCTION__);
 			return -1;
 		}
 		memset(xattrlist, 0, len+1);
@@ -379,7 +379,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 			}
 			if(!(val=(char *)malloc(vlen+1)))
 			{
-				logp("out of memory\n");
+				log_out_of_memory(__FUNCTION__);
 				free(xattrlist);
 				if(toappend) free(toappend);
 				return -1;
@@ -413,7 +413,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 			  || !(toappend=prepend_len(toappend, totallen,
 				val, vlen, "", 0, &totallen)))
 			{
-				logp("out of memory\n");
+				log_out_of_memory(__FUNCTION__);
 				free(val);
 				free(xattrlist);
 				return -1;
@@ -445,7 +445,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 			  || !(*xattrtext=prepend_len(*xattrtext, *xlen,
 				toappend, totallen, "", 0, xlen)))
 			{
-				logp("out of memory\n");
+				log_out_of_memory(__FUNCTION__);
 				free(toappend);
 				free(xattrlist);
 				return -1;

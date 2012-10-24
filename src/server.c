@@ -227,7 +227,7 @@ int setup_signals(int oldmax_children, int max_children, int oldmax_status_child
 	if(!(chlds=(struct chldstat *)
 		realloc(chlds, sizeof(struct chldstat)*(total_max_children+1))))
 	{
-		logp("out of memory");
+		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 	if((p=total_oldmax_children-1)<0) p=0;
@@ -262,7 +262,7 @@ static int open_log(const char *realworking, const char *client, const char *cve
 
 	if(!(logpath=prepend_s(realworking, "log", strlen("log"))))
 	{
-		log_and_send("out of memory");
+		log_and_send_oom(__FUNCTION__);
 		return -1;
 	}
 	if(!(logfp=open_file(logpath, "ab")) || set_logfp(logfp, conf))
@@ -336,7 +336,7 @@ static int do_backup_server(const char *basedir, const char *current, const char
 	  || !(cmanifest=prepend_s(current, "manifest.gz", strlen("manifest.gz")))
 	  || !(datadirtmp=prepend_s(working, "data.tmp", strlen("data.tmp"))))
 	{
-		log_and_send("out of memory");
+		log_and_send_oom(__FUNCTION__);
 		goto error;
 	}
 
@@ -355,7 +355,7 @@ static int do_backup_server(const char *basedir, const char *current, const char
 		real[len]='\0';
 		if(!(realworking=prepend_s(basedir, real, strlen(real))))
 		{
-			log_and_send("out of memory");
+			log_and_send_oom(__FUNCTION__);
 			goto error;
 		}
 		if(open_log(realworking, client, cversion, cconf))
@@ -369,7 +369,7 @@ static int do_backup_server(const char *basedir, const char *current, const char
 			goto error;
 		if(!(realworking=prepend_s(basedir, tstmp, strlen(tstmp))))
 		{
-			log_and_send("out of memory");
+			log_and_send_oom(__FUNCTION__);
 			goto error;
 		}
 		// Add the working symlink before creating the directory.
@@ -747,7 +747,7 @@ static int get_lock_and_clean(const char *basedir, const char *lockbasedir, cons
 		if(*gotlock) free(*gotlock);
 		if(!(*gotlock=strdup(lockfile)))
 		{
-			logp("out of memory\n");
+			log_out_of_memory(__FUNCTION__);
 			ret=-1;
 		}
 	}
@@ -777,7 +777,7 @@ static int reset_conf_val(const char *src, char **dest)
 		if(*dest) free(*dest);
 		if(!(*dest=strdup(src)))
 		{
-			logp("out of memory\n");
+			log_out_of_memory(__FUNCTION__);
 			return -1;
 		}
 	}
@@ -882,7 +882,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 	  || !(lockbasedir=prepend_s(conf->client_lockdir, client, strlen(client)))
 	  || !(lockfile=prepend_s(lockbasedir, "lockfile", strlen("lockfile"))))
 	{
-		log_and_send("out of memory");
+		log_and_send_oom(__FUNCTION__);
 		ret=-1;
 	}
 	else if(cmd==CMD_GEN
@@ -1130,7 +1130,7 @@ static int append_to_feat(char **feat, const char *str)
 	{
 		if(!(*feat=strdup(str)))
 		{
-			logp("out of memory\n");
+			log_out_of_memory(__FUNCTION__);
 			return -1;
 		}
 		return 0;
@@ -1341,7 +1341,7 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 				if(!(sconf=(struct config *)
 					malloc(sizeof(struct config))))
 				{
-					logp("out of memory\n");
+					log_out_of_memory(__FUNCTION__);
 					ret=-1;
 					break;
 				}
@@ -1390,7 +1390,7 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 				if(!(*client=strdup(orig_client))
 				  || !(cconf->orig_client=strdup(orig_client)))
 				{
-					log_and_send("out of memory");
+					log_and_send_oom(__FUNCTION__);
 					ret=-1;
 					break;
 				}

@@ -68,7 +68,7 @@ int init_dpth(struct dpth *dpth, const char *currentdata, struct config *cconf)
 	mk_dpth_prim(dpth);
 	if(!(tmp=prepend_s(currentdata, dpth->path, strlen(dpth->path))))
 	{
-		log_and_send("out of memory");
+		log_and_send_oom(__FUNCTION__);
 		return -1;
 	}
 	if((dpth->seco=get_highest_entry(tmp))<0)
@@ -83,7 +83,7 @@ int init_dpth(struct dpth *dpth, const char *currentdata, struct config *cconf)
 	mk_dpth_seco(dpth);
 	if(!(tmp=prepend_s(currentdata, dpth->path, strlen(dpth->path))))
 	{
-		log_and_send("out of memory");
+		log_and_send_oom(__FUNCTION__);
 		return -1;
 	}
 	if((dpth->tert=get_highest_entry(tmp))<0)

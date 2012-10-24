@@ -44,7 +44,7 @@ static int check_client_and_password(struct config *conf, const char *client, co
 			logp("Falling back to using '%s'\n", client);
 			if(!(cconf->ssl_peer_cn=strdup(client)))
 			{
-				logp("out of memory\n");
+				log_out_of_memory(__FUNCTION__);
 				return -1;
 			}
 		}

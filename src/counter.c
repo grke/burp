@@ -630,7 +630,7 @@ static int add_to_backup_list(char ***backups, int *b, const char *tok)
 	if(!(*backups=(char **)realloc(*backups, ((*b)+2)*sizeof(char *)))
 	  || !((*backups)[*b]=strdup(str)))
 	{
-		logp("out of memory\n");
+		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 	(*backups)[(*b)+1]=NULL;
@@ -649,7 +649,7 @@ int str_to_counters(const char *str, char **client, char *status, char *phase, c
 
 	if(!(copy=strdup(str)))
 	{
-		logp("out of memory\n");
+		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 
@@ -657,7 +657,7 @@ int str_to_counters(const char *str, char **client, char *status, char *phase, c
 	{
 		if(client && !(*client=strdup(tok)))
 		{
-			logp("out of memory\n");
+			log_out_of_memory(__FUNCTION__);
 			return -1;
 		}
 		if(!(tok=strtok(NULL, "\t\n")))
@@ -775,7 +775,7 @@ int str_to_counters(const char *str, char **client, char *status, char *phase, c
 						strtoull(tok, NULL, 10); }
 			else if(t==18) { p1cntr->start=atol(tok); }
 			else if(t==19) { if(path && !(*path=strdup(tok)))
-				{ logp("out of memory\n"); return -1; } }
+			  { log_out_of_memory(__FUNCTION__); return -1; } }
 		  }
 		}
 	}

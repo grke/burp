@@ -162,7 +162,7 @@ static int setenv_x509(X509_NAME *x509, const char *type)
 		name_expand_size = 64 + strlen (objbuf);
 		if(!(name_expand=(char *)malloc(name_expand_size)))
 		{
-			logp("out of memory\n");
+			log_out_of_memory(__FUNCTION__);
 			return -1;
 		}
 		snprintf(name_expand, name_expand_size,
@@ -183,7 +183,7 @@ static int setenv_x509_date(ASN1_TIME *tm, const char *env)
 	char tmpbuf[256]="";
 	if(!(bio_out=BIO_new(BIO_s_mem())))
 	{
-		logp("out of memory\n");
+		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 	ASN1_TIME_print(bio_out, tm);
@@ -202,7 +202,7 @@ static int setenv_x509_serialnumber(ASN1_INTEGER *i, const char *env)
 	char tmpbuf[256]="";
 	if(!(bio_out=BIO_new(BIO_s_mem())))
 	{
-		logp("out of memory\n");
+		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 	i2a_ASN1_INTEGER(bio_out, i);

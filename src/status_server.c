@@ -48,7 +48,7 @@ static int cstat_add_initial_details(struct cstat *c, const char *name, const ch
 	if(!(c->conffile=prepend_s(clientconfdir, name, strlen(name)))
 	  || !(c->name=strdup(name)))
 	{
-		logp("out of memory in cstat_add_initial_details()\n");
+		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 	c->conf_mtime=0;
@@ -93,13 +93,13 @@ static int cstat_add(struct cstat ***clist, int *clen,
 	if(!(ctmp=(struct cstat **)realloc(*clist,
 		((*clen)+1)*sizeof(struct cstat *))))
 	{
-		logp("out of memory in cstat_add()\n");
+		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 	*clist=ctmp;
 	if(!(cnew=(struct cstat *)malloc(sizeof(struct cstat))))
 	{
-		logp("out of memory in cstat_add()\n");
+		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 	if(cstat_add_initial_details(cnew, name, clientconfdir))
@@ -143,7 +143,7 @@ static int set_cstat_from_conf(struct cstat *c, struct config *conf, struct conf
 	  || !(c->lockfile=prepend_s(lockbasedir, "lockfile", strlen("lockfile"))))
 	{
 		if(lockbasedir) free(lockbasedir);
-		logp("out of memory\n");
+		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 	c->basedir_mtime=0;
@@ -506,7 +506,7 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, con
 				len+=(a*16)+1;
 				if(!(curback=(char *)malloc(len)))
 				{
-					logp("out of memory");
+					log_out_of_memory(__FUNCTION__);
 					return -1;
 				}
 				snprintf(curback, len, "%s\t%c\t%c",
@@ -592,7 +592,7 @@ static int parse_parent_data_entry(char *tok, struct cstat **clist, int clen)
 			// Need to add the newline back on the end.
 			if(!(clist[q]->running_detail=(char *)malloc(x+2)))
 			{
-				logp("out of memory\n");
+				log_out_of_memory(__FUNCTION__);
 				return -1;
 			}
 			snprintf(clist[q]->running_detail, x+2, "%s\n",
@@ -610,7 +610,7 @@ static int parse_parent_data(const char *data, struct cstat **clist, int clen)
 
 	if(!(copyall=strdup(data)))
 	{
-		logp("out of memory\n");
+		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 
@@ -855,7 +855,7 @@ static int parse_rbuf(const char *rbuf, int cfd, struct cstat **clist, int clen)
 		if(file) free(file);
 		if(!(file=strdup("manifest.gz")))
 		{
-			logp("out of memory\n");
+			log_out_of_memory(__FUNCTION__);
 			ret=-1;
 			goto end;
 		}

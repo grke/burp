@@ -45,7 +45,7 @@ static int start_to_receive_new_file(struct sbuf *sb, const char *datadirtmp, st
 		// the directory structure on the original client.
 		if(!(sb->datapth=prepend_s("t", sb->path, strlen(sb->path))))
 		{
-			log_and_send("out of memory");
+			log_and_send_oom(__FUNCTION__);
 			goto end;
 		}
 	}
@@ -54,7 +54,7 @@ static int start_to_receive_new_file(struct sbuf *sb, const char *datadirtmp, st
 		mk_dpth(dpth, cconf, sb->cmd);
 		if(!(sb->datapth=strdup(dpth->path))) // file data path
 		{
-			log_and_send("out of memory");
+			log_and_send_oom(__FUNCTION__);
 			goto end;
 		}
 	}
@@ -100,7 +100,7 @@ static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *c
 	if(!(curpath=prepend_s(currentdata,
 		p1b->datapth, strlen(p1b->datapth))))
 	{
-		logp("out of memory\n");
+		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 	if(dpth_is_compressed(cb->compression, curpath))

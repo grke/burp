@@ -31,7 +31,7 @@ static char *get_ca_dir(struct config *conf)
 		{
 			if(!(gca_dir=strdup(value)))
 			{
-				logp("out of memory");
+				log_out_of_memory(__FUNCTION__);
 				fclose(fp);
 				return NULL;
 			}

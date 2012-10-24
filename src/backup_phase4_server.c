@@ -134,7 +134,7 @@ static int gen_rev_delta(const char *sigpath, const char *deltadir, const char *
 	char *delpath=NULL;
 	if(!(delpath=prepend_s(deltadir, path, strlen(path))))
 	{
-		logp("out of memory\n");
+		log_out_of_memory(__FUNCTION__);
 		ret=-1;
 	}
 	//logp("Generating reverse delta...\n");
@@ -242,7 +242,7 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 	  || !(finpath=prepend_s(datadir, datapth, strlen(datapth)))
 	  || !(deltafpath=prepend_s(deltafdir, datapth, strlen(datapth))))
 	{
-		logp("out of memory\n");
+		log_out_of_memory(__FUNCTION__);
 		ret=-1;	
 		goto cleanup;
 	}
@@ -289,7 +289,7 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 	  	if(!(infpath=prepend_s(deltafdir,
 			"inflate", strlen("inflate"))))
 		{
-			logp("out of memory\n");
+			log_out_of_memory(__FUNCTION__);
 			ret=-1;
 			goto cleanup;
 		}
@@ -627,7 +627,7 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 	  || !(sigpath=prepend_s(current,
 		"sig.tmp", strlen("sig.tmp"))))
 	{
-		logp("out of memory\n");
+		log_out_of_memory(__FUNCTION__);
 		gzclose_fp(&zp);
 		return -1;
 	}

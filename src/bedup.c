@@ -70,7 +70,7 @@ static int add_file(struct mystruct *s, struct file *f)
 	struct file *newfile;
 	if(!(newfile=(struct file *)malloc(sizeof(struct file))))
 	{
-		logp("out of memory\n");
+		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 	memcpy(newfile, f, sizeof(struct file));
@@ -85,7 +85,7 @@ static int add_key(off_t st_size, struct file *f)
 
 	if(!(s=(struct mystruct *)malloc(sizeof(struct mystruct))))
 	{
-		logp("out of memory\n");
+		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 	s->st_size = st_size;
@@ -104,7 +104,7 @@ static char *prepend(const char *oldpath, const char *newpath, const char *sep)
 	len+=2;
 	if(!(path=(char *)malloc(len)))
 	{
-		logp("out of memory\n");
+		log_out_of_memory(__FUNCTION__);
 		return NULL;
 	}
 	snprintf(path, len, "%s%s%s", oldpath, *oldpath?sep:"", newpath);
@@ -261,7 +261,7 @@ static int do_hardlink(struct file *o, struct file *n, const char *ext)
 	char *tmppath=NULL;
 	if(!(tmppath=prepend(o->path, ext, "")))
 	{
-		logp("out of memory\n");
+		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 	if(link(n->path, tmppath))
@@ -422,7 +422,7 @@ static int get_link(const char *basedir, const char *lnk, char real[], size_t r)
 	char *tmp=NULL;
 	if(!(tmp=prepend(basedir, lnk, "/")))
 	{
-		logp("out of memory");
+		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 	if((len=readlink(tmp, real, r-1))<0) len=0;
@@ -891,7 +891,7 @@ int main(int argc, char *argv[])
 					if(strlist_add(&grouplist, &gcount,
 						tok, 1))
 					{
-						logp("out of memory\n");
+						log_out_of_memory(__FUNCTION__);
 						return -1;
 					}
 				} while((tok=strtok(NULL, ",\n")));

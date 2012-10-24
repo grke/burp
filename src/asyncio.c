@@ -59,7 +59,7 @@ static int parse_readbuf(char *cmd, char **dest, size_t *rlen)
 		*cmd=cmdtmp;
 		if(!(*dest=(char *)malloc(s+1)))
 		{
-			logp("out of memory in parse_readbuf\n");
+			log_out_of_memory(__FUNCTION__);
 			truncate_buf(&readbuf, &readbuflen);
 			return -1;
 		}
@@ -88,7 +88,7 @@ static int async_alloc_buf(char **buf, size_t *buflen, size_t bufmaxsize)
 	{
 		if(!(*buf=(char *)malloc(bufmaxsize)))
 		{
-			logp("out of memory in async_alloc_buf\n");
+			log_out_of_memory(__FUNCTION__);
 			return -1;
 		}
 		truncate_buf(buf, buflen);
@@ -587,6 +587,14 @@ void log_and_send(const char *msg)
 {
 	logp("%s\n", msg);
 	if(fd>0) async_write_str(CMD_ERROR, msg);
+}
+
+void log_and_send_oom(const char *function)
+{
+	char m[256]="";
+	snprintf(m, sizeof(m), "out of memory in %s()\n", __FUNCTION__);
+	logp("%s", m);
+	if(fd>0) async_write_str(CMD_ERROR, m);
 }
 
 int async_get_fd(void)

@@ -102,3 +102,9 @@ FILE *get_logfp(void)
 {
 	return logfp;
 }
+
+void log_out_of_memory(const char *function)
+{
+	if(function) logp("out of memory in %s()\n", function);
+	else logp("out of memory in unknown function\n");
+}

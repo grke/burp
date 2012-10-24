@@ -300,7 +300,7 @@ static int restore_file(struct bu *arr, int a, int i, const char *datapth, const
 		struct stat statp;
 		if(!(path=prepend_s(arr[x].data, datapth, strlen(datapth))))
 		{
-			log_and_send("out of memory");
+			log_and_send_oom(__FUNCTION__);
 			return -1;
 		}
 
@@ -329,7 +329,7 @@ static int restore_file(struct bu *arr, int a, int i, const char *datapth, const
 				if(!(dpath=prepend_s(arr[x].delta,
 						datapth, strlen(datapth))))
 				{
-					log_and_send("out of memory");
+					log_and_send_oom(__FUNCTION__);
 					free(path);
 					return -1;
 				}
@@ -603,7 +603,7 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 	 || (act==ACTION_VERIFY && !(logpathz=prepend_s(arr[i].path, "verifylog.gz", strlen("verifylog.gz"))))
 	 || !(manifest=prepend_s(arr[i].path, "manifest.gz", strlen("manifest.gz"))))
 	{
-		log_and_send("out of memory");
+		log_and_send_oom(__FUNCTION__);
 		ret=-1;
 	}
 	else if(!(logfp=open_file(logpath, "ab")) || set_logfp(logfp, cconf))

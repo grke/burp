@@ -44,7 +44,7 @@ int check_browsedir(const char *browsedir, char **path, size_t bdlen, char **las
 	{
 		if(!(copy=strdup((*path)+bdlen)))
 		{
-			logp("out of memory\n");
+			log_out_of_memory(__FUNCTION__);
 			return -1;
 		}
 		if(*copy=='/') *(copy+1)='\0';
@@ -66,7 +66,7 @@ int check_browsedir(const char *browsedir, char **path, size_t bdlen, char **las
 err:
 	if(copy) free(copy);
 	if(*lastpath) free(*lastpath);
-	logp("out of memory\n");
+	log_out_of_memory(__FUNCTION__);
 	return -1;
 }
 
@@ -86,7 +86,7 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 	if(!(manifest=prepend_s(fullpath,
 		"manifest.gz", strlen("manifest.gz"))))
 	{
-		log_and_send("out of memory");
+		log_and_send_oom(__FUNCTION__);
 		return -1;
 	}
 	if(!(zp=gzopen_file(manifest, "rb")))

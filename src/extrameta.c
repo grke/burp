@@ -74,7 +74,7 @@ int set_extrameta(const char *path, char cmd, struct stat *statp, const char *ex
 		l-=9;
 		if(!(m=(char *)malloc(s+1)))
 		{
-			logp("out of memory\n");
+			log_out_of_memory(__FUNCTION__);
 			return -1;
 		}
 		memcpy(m, metadata, s);

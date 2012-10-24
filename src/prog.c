@@ -124,7 +124,7 @@ static int replace_conf_str(const char *newval, char **dest)
 		if(*dest) free(*dest);
 		if(!(*dest=strdup(newval)))
 		{
-			logp("out of memory\n");
+			log_out_of_memory(__FUNCTION__);
 			return -1;
 		}
 	}
@@ -276,7 +276,7 @@ int main (int argc, char *argv[])
 		{
 			if(!(conf.orig_client=strdup(orig_client)))
 			{
-				logp("out of memory\n");
+				log_out_of_memory(__FUNCTION__);
 				return 1;
 			}
 		}

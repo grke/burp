@@ -45,7 +45,7 @@ int autoupgrade_client(struct config *conf, struct cntr *p1cntr)
 	}
 	if(!(copy=strdup(conf->autoupgrade_dir)))
 	{
-		logp("out of memory\n");
+		log_out_of_memory(__FUNCTION__);
 		goto end;
 	}
 	// strip trailing slash

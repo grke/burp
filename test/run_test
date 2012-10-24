@@ -17,8 +17,7 @@ includedir="$path/build"
 excludedir="$includedir/src"
 logs="$path/logs"
 target="$path/target"
-serveroutputlog="$logs/server-output.log"
-serversystemlog="$logs/server-system.log"
+serverlog="$logs/server.log"
 clientlog="$logs/client.log"
 beduplog="$logs/bedup.log"
 difflog="$logs/diff.log"
@@ -148,8 +147,7 @@ write_message()
 {
 	message="$1"
 	echo "$message"
-	echo "$message" >> $serveroutputlog
-	echo "$message" >> $serversystemlog
+	echo "$message" >> $serverlog
 	echo "$message" >> $clientlog
 	echo "$message" >> $difflog
 	echo "$message" >> $beduplog
@@ -304,11 +302,12 @@ sed_rep_both "s#= /#= $target/#g"
 sed_rep_both 's/port = 4971/port = 4998/g'
 sed_rep_both 's/port = 4972/port = 4999/g'
 sed_rep "s#^CA_DIR.*#CA_DIR = $target/etc/burp/CA#g" "$target/etc/burp/CA.cnf"
+sed_rep_both 's/^stdout = .*/stdout = 1/g'
+sed_rep_both 's/^syslog = .*/syslog = 0/g'
 
 echo
 echo "Starting tests"
-echo "Server output log: $serversystemlog"
-echo "Server system log: $serveroutputlog"
+echo "       Server log: $serverlog"
 echo "       Client log: $clientlog"
 echo "        Bedup log: $beduplog"
 echo "         Diff log: $difflog"
@@ -318,12 +317,12 @@ echo
 
 echo "Initialising server certificate authority"
 # Need to do this outside of the server, because it might take a long time.
-./usr/sbin/burp -c "$serverconf" -g >> "$serveroutputlog" 2>&1 || fail "Initialising server certificate authority failed"
+./usr/sbin/burp -c "$serverconf" -g >> "$serverlog" 2>&1 || fail "Initialising server certificate authority failed"
 echo
 
 # Start up the server
 echo "Starting test server"
-./usr/sbin/burp -c "$serverconf" -l "$serversystemlog" -F >> "$serveroutputlog" 2>&1 &
+./usr/sbin/burp -c "$serverconf" -F >> "$serverlog" 2>&1 &
 serverpid=$!
 
 # Be kind, and wait a little for it to start.

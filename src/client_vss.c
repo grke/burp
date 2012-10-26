@@ -223,8 +223,6 @@ int get_vss(BFILE *bfd, const char *path, struct stat *statp, char **vssdata, si
 		int64_t s=0;
 		int64_t g=0;
 
-		printf("sid.Size: %d\n", (int)sid.Size);
-
 		if(!(*vssdata=(char *)realloc(*vssdata, (*vlen)+bsidsize)))
 		{
 			log_out_of_memory(__FUNCTION__);

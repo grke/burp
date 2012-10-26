@@ -45,6 +45,7 @@ void binit(BFILE *bfd, int64_t winattr)
    bfd->use_backup_api = have_win32_api();
    bfd->winattr = winattr;
    bfd->pvContext = NULL;
+   bfd->path = NULL;
 }
 
 /*
@@ -252,6 +253,11 @@ int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode, int isdir)
       bfd->berrno = b_errno_win32;
       errno = b_errno_win32;
       bfd->mode = BF_CLOSED;
+   } else {
+      if(!(bfd->path = strdup(fname))) {
+		log_out_of_memory(__FUNCTION__);
+		return -1;
+      }
    }
    bfd->errmsg = NULL;
    bfd->lpContext = NULL;
@@ -281,6 +287,10 @@ int bclose(BFILE *bfd)
    if (bfd->errmsg) {
       free(bfd->errmsg);
       bfd->errmsg = NULL;
+   }
+   if (bfd->path) {
+      free(bfd->path);
+      bfd->path=NULL;
    }
    if (bfd->mode == BF_CLOSED) {
       return 0;

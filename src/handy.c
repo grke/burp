@@ -297,6 +297,15 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password)
 	return ctx;
 }
 
+#ifdef HAVE_WIN32
+struct bsid {
+	int32_t dwStreamId;
+	int32_t dwStreamAttributes;
+	int64_t Size;
+	int32_t dwStreamNameSize;
+};
+#endif
+
 int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, int64_t winattr, struct cntr *cntr)
 {
 	if(fp)
@@ -311,6 +320,21 @@ int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, int64_t winattr
 #ifdef HAVE_WIN32
 	else
 	{
+		if(bfd->mode!=BF_CLOSED)
+		{
+			if(bfd->path && !strcmp(bfd->path, fname))
+			{
+				// Already open after reading the VSS data.
+				// Time now for the actual file data.
+				return 0;
+			}
+			else
+			{
+				// Close the open bfd so that it can be
+				// used again
+				close_file_for_send(bfd, NULL);
+			}
+		}
 		binit(bfd, winattr);
 		if(bopen(bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0,
 			(winattr & FILE_ATTRIBUTE_DIRECTORY))<=0)

@@ -202,4 +202,78 @@ int win32_enable_backup_privileges(int ignore_errors)
     CloseHandle(hProcess);
     return stat;
 }
+
+// This is the shape of the Windows VSS header structure.
+// It is size 20. Using sizeof(struct bsid) seems to give 24, I guess due to
+// some alignment issue.
+struct bsid {
+	int32_t dwStreamId;
+	int32_t dwStreamAttributes;
+	int64_t Size;
+	int32_t dwStreamNameSize;
+};
+#define bsidsize	20
+
+int get_vss(BFILE *bfd, const char *path, struct stat *statp, char **vssdata, size_t *vlen, int64_t winattr, struct cntr *cntr)
+{
+	bsid sid;
+	*vlen=0;
+	while(bread(bfd, &sid, bsidsize)>0)
+	{
+		int64_t s=0;
+		int64_t g=0;
+
+		printf("sid.Size: %d\n", (int)sid.Size);
+
+		if(!(*vssdata=(char *)realloc(*vssdata, (*vlen)+bsidsize)))
+		{
+			log_out_of_memory(__FUNCTION__);
+			goto error;
+		}
+		memcpy((*vssdata)+(*vlen), &sid, bsidsize);
+		(*vlen)+=bsidsize;
+
+		// dwStreamId==1 means start of backup data, so finish.
+		if(sid.dwStreamId==1) break;
+
+		// Otherwise, need to read in the rest of the VSS header.
+		s=(sid.Size)+(sid.dwStreamNameSize);
+		if(!(*vssdata=(char *)realloc(*vssdata, (*vlen)+s)))
+		{
+			goto error;
+			log_out_of_memory(__FUNCTION__);
+			return -1;
+		}
+		if((g=bread(bfd, (*vssdata)+(*vlen), s))!=s)
+		{
+			logp("Short bread: %d!=%d\n", g, s);
+			goto error;
+			return -1;
+		}
+		(*vlen)+=s;
+	}
+	return 0;
+error:
+	if(*vssdata)
+	{
+		free(*vssdata);
+		*vssdata=NULL;
+	}
+	*vlen=0;
+	return -1;
+}
+
+int set_vss(BFILE *bfd, const char *vssdata, size_t vlen, struct cntr *cntr)
+{
+	int ret=0;
+	// Just need to write the VSS stuff to the file.
+	if(!vlen || !vssdata) return 0;
+	if((ret=bwrite(bfd, (void *)vssdata, vlen))<=0)
+	{
+		logp("error when writing %d VSS data: %d\n", vlen, ret);
+		return -1;
+	}
+	return 0;
+}
+
 #endif  /* HAVE_WIN32 */

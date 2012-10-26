@@ -27,7 +27,7 @@
 #ifdef HAVE_WIN32
 
 enum {
-   BF_CLOSED,
+   BF_CLOSED=0,
    BF_READ,                           /* BackupRead */
    BF_WRITE                           /* BackupWrite */
 };
@@ -48,6 +48,7 @@ struct BFILE {
    int64_t winattr;                   /* needed for deciding to open with
 					 encrypted functions or not */
    PVOID pvContext;                   /* also for the encrypted functions */
+   char *path;
 };
 
 #else

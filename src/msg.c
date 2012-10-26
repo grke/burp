@@ -53,14 +53,14 @@ static int do_write(BFILE *bfd, FILE *fp, unsigned char *out, size_t outlen, cha
 #ifdef HAVE_WIN32
 		if((ret=bwrite(bfd, out, outlen))<=0)
 		{
-			logp("error when appending: %d\n", ret);
+			logp("error when appending %d: %d\n", outlen, ret);
 			async_write_str(CMD_ERROR, "write failed");
 			return -1;
 		}
 #else
 		if((fp && (ret=fwrite(out, 1, outlen, fp))<=0))
 		{
-			logp("error when appending: %d\n", ret);
+			logp("error when appending %d: %d\n", outlen, ret);
 			async_write_str(CMD_ERROR, "write failed");
 			return -1;
 		}
@@ -199,8 +199,6 @@ int transfer_gzfile_in(struct sbuf *sb, const char *path, BFILE *bfd, FILE *fp, 
 	// Checksum stuff
 	//MD5_CTX md5;
 	//unsigned char checksum[MD5_DIGEST_LENGTH+1];
-
-//logp("in transfer_gzfile_in\n");
 
 #ifdef HAVE_WIN32
 	if(sb && sb->cmd==CMD_EFS_FILE)

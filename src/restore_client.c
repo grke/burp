@@ -109,17 +109,70 @@ static int make_link(const char *fname, const char *lnk, char cmd, const char *r
 	return ret;
 }
 
-static int restore_file_or_get_meta(struct sbuf *sb, const char *fname, enum action act, const char *encpassword, struct cntr *cntr, char **metadata, size_t *metalen)
+static int open_for_restore(BFILE *bfd, FILE **fp, const char *path, struct sbuf *sb, struct cntr *cntr)
+{
+#ifdef HAVE_WIN32
+	int bopenret;
+	if(bfd->mode!=BF_CLOSED)
+	{
+		if(bfd->path && !strcmp(bfd->path, path))
+		{
+			// Already open after restoring the VSS data.
+			// Time now for the actual file data.
+			return 0;
+		}
+		else
+		{
+			if(bclose(bfd))
+			{
+				logp("error closing %s in %s()\n",
+					path, __FUNCTION__);
+				return -1;
+			}
+		}
+	}
+	binit(bfd, sb->winattr);
+	set_win32_backup(bfd);
+	if(S_ISDIR(sb->statp.st_mode))
+	{
+		mkdir(path, 0777);
+		bopenret=bopen(bfd, path, O_WRONLY | O_BINARY, 0, 1);
+	}
+	else
+		bopenret=bopen(bfd, path,
+		  O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,
+		  S_IRUSR | S_IWUSR, 0);
+	if(bopenret<=0)
+	{
+		berrno be;
+		char msg[256]="";
+		snprintf(msg, sizeof(msg),
+			"Could not open for writing %s: %s",
+				path, be.bstrerror(errno));
+		if(restore_interrupt(sb, msg, cntr))
+			return -1;
+	}
+#else
+	if(!(*fp=open_file(path, "wb")))
+	{
+		char msg[256]="";
+		snprintf(msg, sizeof(msg),
+			"Could not open for writing %s: %s",
+				path, strerror(errno));
+		if(restore_interrupt(sb, msg, cntr))
+			return -1;
+	}
+#endif
+	return 0;
+}
+
+static int restore_file_or_get_meta(BFILE *bfd, struct sbuf *sb, const char *fname, enum action act, const char *encpassword, struct cntr *cntr, char **metadata, size_t *metalen)
 {
 	size_t len=0;
 	int ret=0;
 	char *rpath=NULL;
-#ifdef HAVE_WIN32
-	int bopenret;
-	BFILE bfd;
-#else
 	FILE *fp=NULL;
-#endif
+
 	if(act==ACTION_VERIFY)
 	{
 		do_filecounter(cntr, sb->cmd, 1);
@@ -136,44 +189,20 @@ static int restore_file_or_get_meta(struct sbuf *sb, const char *fname, enum act
 		goto end;
 	}
 
+#ifndef HAVE_WIN32
+	// We always want to open the file if it is on Windows. Otherwise,
+	// only open it if we are not doing metadata.
 	if(!metadata)
 	{
-#ifdef HAVE_WIN32
-		binit(&bfd, sb->winattr);
-		set_win32_backup(&bfd);
-		if(S_ISDIR(sb->statp.st_mode))
-		{
-			mkdir(rpath, 0777);
-			bopenret=bopen(&bfd, rpath, O_WRONLY | O_BINARY, 0, 1);
-		}
-		else
-			bopenret=bopen(&bfd, rpath,
-			  O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,
-			  S_IRUSR | S_IWUSR, 0);
-		if(bopenret<=0)
-		{
-			berrno be;
-			char msg[256]="";
-			snprintf(msg, sizeof(msg),
-				"Could not open for writing %s: %s",
-					rpath, be.bstrerror(errno));
-			if(restore_interrupt(sb, msg, cntr))
-				ret=-1;
-			goto end;
-		}
-#else
-		if(!(fp=open_file(rpath, "wb")))
-		{
-			char msg[256]="";
-			snprintf(msg, sizeof(msg),
-				"Could not open for writing %s: %s",
-					rpath, strerror(errno));
-			if(restore_interrupt(sb, msg, cntr))
-				ret=-1;
-			goto end;
-		}
 #endif
+		if(open_for_restore(bfd, &fp, rpath, sb, cntr))
+		{
+			ret=-1;
+			goto end;
+		}
+#ifndef HAVE_WIN32
 	}
+#endif
 
 	if(!ret)
 	{
@@ -208,10 +237,10 @@ static int restore_file_or_get_meta(struct sbuf *sb, const char *fname, enum act
 		{
 			int c=0;
 #ifdef HAVE_WIN32
-			ret=transfer_gzfile_in(sb, fname, &bfd, NULL,
+			ret=transfer_gzfile_in(sb, fname, bfd, NULL,
 				&rcvdbytes, &sentbytes,
 				encpassword, enccompressed, cntr, NULL);
-			c=bclose(&bfd);
+			//c=bclose(bfd);
 #else
 			ret=transfer_gzfile_in(sb, fname, NULL, fp,
 				&rcvdbytes, &sentbytes,
@@ -238,7 +267,6 @@ static int restore_file_or_get_meta(struct sbuf *sb, const char *fname, enum act
 		}
 	}
 	if(!ret) do_filecounter(cntr, sb->cmd, 1);
-
 end:
 	if(rpath) free(rpath);
 	return ret;
@@ -405,7 +433,7 @@ end:
 	return ret;
 }
 
-static int restore_metadata(struct sbuf *sb, const char *fname, enum action act, const char *encpassword, struct cntr *cntr)
+static int restore_metadata(BFILE *bfd, struct sbuf *sb, const char *fname, enum action act, const char *encpassword, struct cntr *cntr)
 {
 	// If it is directory metadata, try to make sure the directory
 	// exists. Pass in NULL as the cntr, so no counting is done.
@@ -422,11 +450,12 @@ static int restore_metadata(struct sbuf *sb, const char *fname, enum action act,
 			return -1;
 
 		// Read in the metadata...
-		if(restore_file_or_get_meta(sb, fname, act, encpassword,
+		if(restore_file_or_get_meta(bfd, sb, fname, act, encpassword,
 			cntr, &metadata, &metalen)) return -1;
 		if(metadata)
 		{
-			if(set_extrameta(fname, sb->cmd,
+			
+			if(set_extrameta(bfd, fname, sb->cmd,
 				&(sb->statp), metadata, metalen, cntr))
 			{
 				free(metadata);
@@ -434,12 +463,12 @@ static int restore_metadata(struct sbuf *sb, const char *fname, enum action act,
 				return 0;
 			}
 			free(metadata);
-
+#ifndef HAVE_WIN32
 			// set attributes again, since we just diddled with
 			// the file
 			set_attributes(fname, sb->cmd,
 				&(sb->statp), sb->winattr, cntr);
-
+#endif
 			do_filecounter(cntr, sb->cmd, 1);
 		}
 	}
@@ -526,6 +555,13 @@ int do_restore_client(struct config *conf, enum action act, struct cntr *p1cntr,
 	struct stat checkstat;
 	struct sbuf sb;
 	int wroteendcounter=0;
+// Windows needs to have the VSS data written first, and the actual data
+// written immediately afterwards. The server is transferring them in two
+// chunks. So, leave bfd open after a Windows metadata transfer.
+	BFILE bfd;
+#ifdef HAVE_WIN32
+	binit(&bfd, 0);
+#endif
 
 	logp("doing %s\n", act_str(act));
 
@@ -659,7 +695,8 @@ int do_restore_client(struct config *conf, enum action act, struct cntr *p1cntr,
 				// encrypted version so that encrypted and not
 				// encrypted files can be restored at the
 				// same time.
-				if(restore_file_or_get_meta(&sb, fullpath, act,
+				if(restore_file_or_get_meta(&bfd, &sb,
+					fullpath, act,
 					NULL, cntr, NULL, NULL))
 				{
 					logp("restore_file error\n");
@@ -668,7 +705,8 @@ int do_restore_client(struct config *conf, enum action act, struct cntr *p1cntr,
 				}
 				break;
 			case CMD_ENC_FILE:
-				if(restore_file_or_get_meta(&sb, fullpath, act,
+				if(restore_file_or_get_meta(&bfd, &sb,
+					fullpath, act,
 					conf->encryption_password, cntr,
 					NULL, NULL))
 				{
@@ -694,7 +732,7 @@ int do_restore_client(struct config *conf, enum action act, struct cntr *p1cntr,
 				}
 				break;
 			case CMD_METADATA:
-				if(restore_metadata(&sb, fullpath, act,
+				if(restore_metadata(&bfd, &sb, fullpath, act,
 					NULL, cntr))
 				{
 					ret=-1;
@@ -702,7 +740,7 @@ int do_restore_client(struct config *conf, enum action act, struct cntr *p1cntr,
 				}
 				break;
 			case CMD_ENC_METADATA:
-				if(restore_metadata(&sb, fullpath, act,
+				if(restore_metadata(&bfd, &sb, fullpath, act,
 					conf->encryption_password, cntr))
 				{
 					ret=-1;
@@ -710,7 +748,8 @@ int do_restore_client(struct config *conf, enum action act, struct cntr *p1cntr,
 				}
 				break;
 			case CMD_EFS_FILE:
-				if(restore_file_or_get_meta(&sb, fullpath, act,
+				if(restore_file_or_get_meta(&bfd, &sb,
+					fullpath, act,
 					NULL, cntr, NULL, NULL))
 				{
 					logp("restore_file error\n");
@@ -728,6 +767,11 @@ int do_restore_client(struct config *conf, enum action act, struct cntr *p1cntr,
 		if(fullpath) free(fullpath);
 	}
 	free_sbuf(&sb);
+
+#ifdef HAVE_WIN32
+	// It is possible for a bfd to still be open.
+	bclose(&bfd);
+#endif
 
 	if(!wroteendcounter)
 	{

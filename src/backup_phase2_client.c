@@ -161,6 +161,13 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 	char *buf=NULL;
 	size_t len=0;
 	char attribs[MAXSTRING];
+	// For efficiency, open Windows files for the VSS data, and do not
+	// close them until another time around the loop, when the actual
+	// data is read.
+	BFILE bfd;
+#ifdef HAVE_WIN32
+	binit(&bfd, 0);
+#endif
 
 	struct sbuf sb;
 
@@ -219,7 +226,6 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 				char *extrameta=NULL;
 				size_t elen=0;
 				unsigned long long bytes=0;
-				BFILE bfd;
 				FILE *fp=NULL;
 				int compression=conf->compression;
 
@@ -286,9 +292,15 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 				if(cmd==CMD_METADATA
 				  || cmd==CMD_ENC_METADATA)
 				{
-					if(get_extrameta(sb.path,
+					if(get_extrameta(
+#ifdef HAVE_WIN32
+						&bfd,
+#else
+						NULL,
+#endif
+						sb.path,
 						&statbuf, &extrameta, &elen,
-						cntr))
+						winattr, cntr))
 					{
 						logw(cntr, "Meta data error for %s", sb.path);
 						free_sbuf(&sb);
@@ -350,7 +362,16 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 						do_filecounter_sentbytes(cntr, bytes);
 					}
 				}
-				close_file_for_send(&bfd, &fp);
+#ifdef HAVE_WIN32
+				// If using Windows and it was metadata, do not
+				// close bfd until the next time around the
+				// loop.
+				if(cmd!=CMD_METADATA
+				  && cmd!=CMD_ENC_METADATA)
+					close_file_for_send(&bfd, NULL);
+#else
+				close_file_for_send(NULL, &fp);
+#endif
 				free_sbuf(&sb);
 				if(extrameta) free(extrameta);
 			}
@@ -377,6 +398,10 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 			}
 		}
 	}
+#ifdef HAVE_WIN32
+	// It is possible for a bfd to still be open.
+	close_file_for_send(&bfd, NULL);
+#endif
 	return ret;
 }
 

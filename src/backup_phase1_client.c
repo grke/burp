@@ -96,14 +96,20 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
    case FT_LNKSAVED:
         //printf("Lnka: %s -> %s\n", ff->fname, ff->link);
    	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
+#ifdef HAVE_WIN32
+	if(maybe_send_extrameta(ff->fname, CMD_HARD_LINK, attribs, p1cntr))
+		return -1;
+#endif
 	if(async_write_str(CMD_STAT, attribs)
 	  || async_write_str(CMD_HARD_LINK, ff->fname)
 	  || async_write_str(CMD_HARD_LINK, ff->link))
 		return -1;
 	do_filecounter(p1cntr, CMD_HARD_LINK, 1);
 	// At least FreeBSD 8.2 can have different xattrs on hard links.
+#ifndef HAVE_WIN32
 	if(maybe_send_extrameta(ff->fname, CMD_HARD_LINK, attribs, p1cntr))
 		return -1;
+#endif
       break;
    case FT_RAW:
    case FT_FIFO:
@@ -112,25 +118,37 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
       encode_stat(attribs, &ff->statp, ff->winattr,
 		in_exclude_comp(conf->excom, conf->excmcount,
 			ff->fname, conf->compression));
+#ifdef HAVE_WIN32
+      if(maybe_send_extrameta(ff->fname, filesymbol, attribs, p1cntr))
+		return -1;
+#endif
       if(async_write_str(CMD_STAT, attribs)
 	|| async_write_str(filesymbol, ff->fname))
 		return -1;
       do_filecounter(p1cntr, filesymbol, 1);
       if(ff->type==FT_REG)
 	do_filecounter_bytes(p1cntr, (unsigned long long)ff->statp.st_size);
+#ifndef HAVE_WIN32
       if(maybe_send_extrameta(ff->fname, filesymbol, attribs, p1cntr))
 		return -1;
+#endif
       break;
    case FT_LNK:
 	//printf("link: %s -> %s\n", ff->fname, ff->link);
    	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
+#ifdef HAVE_WIN32
+        if(maybe_send_extrameta(ff->fname, CMD_SOFT_LINK, attribs, p1cntr))
+		return -1;
+#endif
 	if(async_write_str(CMD_STAT, attribs)
 	  || async_write_str(CMD_SOFT_LINK, ff->fname)
 	  || async_write_str(CMD_SOFT_LINK, ff->link))
 		return -1;
 	do_filecounter(p1cntr, CMD_SOFT_LINK, 1);
+#ifndef HAVE_WIN32
         if(maybe_send_extrameta(ff->fname, CMD_SOFT_LINK, attribs, p1cntr))
 		return -1;
+#endif
       break;
    case FT_DIREND:
       return 0;
@@ -152,13 +170,14 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 	 {
 		encode_stat(attribs,
 			&ff->statp, ff->winattr, conf->compression);
-	      	if(async_write_str(CMD_STAT, attribs)) return -1;
-#if defined(WIN32_VSS)
-		if(async_write_str(filesymbol, ff->fname)) return -1;
-		do_filecounter(p1cntr, filesymbol, 1);
-#else
-		if(async_write_str(CMD_DIRECTORY, ff->fname)) return -1;
+#ifdef HAVE_WIN32
+        	if(maybe_send_extrameta(ff->fname, CMD_DIRECTORY,
+			attribs, p1cntr)) return -1;
+#endif
+	      	if(async_write_str(CMD_STAT, attribs)
+		  || async_write_str(CMD_DIRECTORY, ff->fname)) return -1;
 		do_filecounter(p1cntr, CMD_DIRECTORY, 1);
+#ifndef HAVE_WIN32
         	if(maybe_send_extrameta(ff->fname, CMD_DIRECTORY,
 			attribs, p1cntr)) return -1;
 #endif
@@ -167,12 +186,18 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
       break;
    case FT_SPEC: // special file - fifo, socket, device node...
       encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
+#ifdef HAVE_WIN32
+      if(maybe_send_extrameta(ff->fname, CMD_SPECIAL, attribs, p1cntr))
+		return -1;
+#endif
       if(async_write_str(CMD_STAT, attribs)
 	  || async_write_str(CMD_SPECIAL, ff->fname))
 		return -1;
       do_filecounter(p1cntr, CMD_SPECIAL, 1);
+#ifndef HAVE_WIN32
       if(maybe_send_extrameta(ff->fname, CMD_SPECIAL, attribs, p1cntr))
 		return -1;
+#endif
       break;
    case FT_NOACCESS:
       logw(p1cntr, _("Err: Could not access %s: %s"), ff->fname, strerror(errno));

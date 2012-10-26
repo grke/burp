@@ -3,6 +3,7 @@
   * Make all places that log 'out of memory' also log the function name.
   * Remove version_warn debug.
   * Tweaks to the test script.
+  * Store Windows VSS data separately to the actual file data.
 
 2012-10-09 Changes in burp-1.3.16:
   * Important bug fix for exclude_comp.

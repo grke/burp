@@ -6,9 +6,13 @@
 #include "asyncio.h"
 #include "extrameta.h"
 #include "xattr.h"
+#include "client_vss.h"
 
 int has_extrameta(const char *path, char cmd)
 {
+#if defined(WIN32_VSS)
+	return 1;
+#endif
 #if defined(HAVE_LINUX_OS) || \
     defined(HAVE_FREEBSD_OS) || \
     defined(HAVE_OPENBSD_OS) || \
@@ -28,8 +32,11 @@ int has_extrameta(const char *path, char cmd)
         return 0;
 }
 
-int get_extrameta(const char *path, struct stat *statp, char **extrameta, size_t *elen, struct cntr *cntr)
+int get_extrameta(BFILE *bfd, const char *path, struct stat *statp, char **extrameta, size_t *elen, int64_t winattr, struct cntr *cntr)
 {
+#if defined (WIN32_VSS)
+	if(get_vss(bfd, path, statp, extrameta, elen, winattr, cntr)) return -1;
+#endif
 	// Important to do xattr directly after acl, because xattr is excluding
 	// some entries if acls were set.
 #if defined(HAVE_LINUX_OS) || \
@@ -51,8 +58,11 @@ int get_extrameta(const char *path, struct stat *statp, char **extrameta, size_t
         return 0;
 }
 
-int set_extrameta(const char *path, char cmd, struct stat *statp, const char *extrameta, size_t metalen, struct cntr *cntr)
+int set_extrameta(BFILE *bfd, const char *path, char cmd, struct stat *statp, const char *extrameta, size_t metalen, struct cntr *cntr)
 {
+#ifdef HAVE_WIN32
+	return set_vss(bfd, extrameta, metalen, cntr);
+#else
 	size_t l=0;
 	char cmdtmp='\0';
 	unsigned int s=0;
@@ -129,4 +139,5 @@ int set_extrameta(const char *path, char cmd, struct stat *statp, const char *ex
 	}
 
 	return errors;
+#endif // ifndef HAVE_WIN32
 }

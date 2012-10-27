@@ -218,6 +218,8 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 			  || cmd==CMD_ENC_FILE
 			  || cmd==CMD_METADATA
 			  || cmd==CMD_ENC_METADATA
+			  || cmd==CMD_VSS
+			  || cmd==CMD_ENC_VSS
 			  || cmd==CMD_EFS_FILE)
 			{
 				int forget=0;
@@ -290,7 +292,9 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 				}
 
 				if(cmd==CMD_METADATA
-				  || cmd==CMD_ENC_METADATA)
+				  || cmd==CMD_ENC_METADATA
+				  || cmd==CMD_VSS
+				  || cmd==CMD_ENC_VSS)
 				{
 					if(get_extrameta(
 #ifdef HAVE_WIN32
@@ -367,7 +371,9 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 				// close bfd until the next time around the
 				// loop.
 				if(cmd!=CMD_METADATA
-				  && cmd!=CMD_ENC_METADATA)
+				  && cmd!=CMD_ENC_METADATA
+				  && cmd!=CMD_VSS
+				  && cmd!=CMD_ENC_VSS)
 					close_file_for_send(&bfd, NULL);
 #else
 				close_file_for_send(NULL, &fp);

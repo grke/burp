@@ -1245,6 +1245,10 @@ void cmd_to_text(char cmd, char *buf, size_t len)
 			snprintf(buf, len, "Plain file changed"); break;
 		case CMD_TIMESTAMP:
 			snprintf(buf, len, "Backup timestamp"); break;
+		case CMD_VSS:
+			snprintf(buf, len, "Windows meta data"); break;
+		case CMD_ENC_VSS:
+			snprintf(buf, len, "Encrypted windows meta data"); break;
 		default:
 			snprintf(buf, len, "----------------"); break;
 	}

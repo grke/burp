@@ -82,6 +82,8 @@ static int filedata(char cmd)
 	  || cmd==CMD_ENC_FILE
 	  || cmd==CMD_METADATA
 	  || cmd==CMD_ENC_METADATA
+	  || cmd==CMD_VSS
+	  || cmd==CMD_ENC_VSS
 	  || cmd==CMD_EFS_FILE);
 }
 
@@ -250,6 +252,10 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FIL
 			// TODO: make unencrypted metadata use the librsync
 			  || cb->cmd==CMD_METADATA
 			  || p1b->cmd==CMD_METADATA
+			  || cb->cmd==CMD_VSS
+			  || p1b->cmd==CMD_VSS
+			  || cb->cmd==CMD_ENC_VSS
+			  || p1b->cmd==CMD_ENC_VSS
 			  || cb->cmd==CMD_EFS_FILE
 			  || p1b->cmd==CMD_EFS_FILE)
 				return process_new_file(cb,
@@ -272,7 +278,11 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FIL
 		  || p1b->cmd==CMD_EFS_FILE
 		// TODO: make unencrypted metadata use the librsync
 		  || cb->cmd==CMD_METADATA
-		  || p1b->cmd==CMD_METADATA)
+		  || p1b->cmd==CMD_METADATA
+		  || cb->cmd==CMD_VSS
+		  || p1b->cmd==CMD_VSS
+		  || cb->cmd==CMD_ENC_VSS
+		  || p1b->cmd==CMD_ENC_VSS)
 			return process_new_file(cb, p1b, p2fp, ucfp, cntr);
 
 		// Get new files if they have switched between compression on
@@ -648,7 +658,9 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, const char *pha
 	while(1)
 	{
 		int sts=0;
-		//logp("in loop, %s\n", *cmanfp?"got cmanfp":"no cmanfp");
+	//	logp("in loop, %s %s %c\n",
+	//		*cmanfp?"got cmanfp":"no cmanfp",
+	//		rb.path?:"no rb.path", rb.path?'X':rb.cmd);
 		if(rb.path) write_status(client, STATUS_BACKUP,
 			rb.path, p1cntr, cntr);
 		else write_status(client, STATUS_BACKUP,

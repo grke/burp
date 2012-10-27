@@ -615,6 +615,8 @@ int do_restore_client(struct config *conf, enum action act, struct cntr *p1cntr,
 			case CMD_SPECIAL:
 			case CMD_METADATA:
 			case CMD_ENC_METADATA:
+			case CMD_VSS:
+			case CMD_ENC_VSS:
 			case CMD_EFS_FILE:
 				if(conf->strip)
 				{
@@ -648,6 +650,8 @@ int do_restore_client(struct config *conf, enum action act, struct cntr *p1cntr,
 				   && !S_ISDIR(sb.statp.st_mode)
 				   && sb.cmd!=CMD_METADATA
 				   && sb.cmd!=CMD_ENC_METADATA
+				   && sb.cmd!=CMD_VSS
+				   && sb.cmd!=CMD_ENC_VSS
 				   && !lstat(fullpath, &checkstat)
 				// If we have file data and the destination is
 				// a fifo, it is OK to write to the fifo.
@@ -732,6 +736,7 @@ int do_restore_client(struct config *conf, enum action act, struct cntr *p1cntr,
 				}
 				break;
 			case CMD_METADATA:
+			case CMD_VSS:
 				if(restore_metadata(&bfd, &sb, fullpath, act,
 					NULL, cntr))
 				{
@@ -740,6 +745,7 @@ int do_restore_client(struct config *conf, enum action act, struct cntr *p1cntr,
 				}
 				break;
 			case CMD_ENC_METADATA:
+			case CMD_ENC_VSS:
 				if(restore_metadata(&bfd, &sb, fullpath, act,
 					conf->encryption_password, cntr))
 				{

@@ -10,7 +10,11 @@
 #include "backup_phase1_client.h"
 
 static char filesymbol=CMD_FILE;
+#ifdef HAVE_WIN32
+static char metasymbol=CMD_VSS;
+#else
 static char metasymbol=CMD_METADATA;
+#endif
 
 static int maybe_send_extrameta(const char *path, char cmd, const char *attribs, struct cntr *p1cntr)
 {
@@ -237,7 +241,11 @@ int backup_phase1_client(struct config *conf, int estimate, struct cntr *p1cntr,
 	if(conf->encryption_password)
 	{
 		filesymbol=CMD_ENC_FILE;
+#ifdef HAVE_WIN32
+		metasymbol=CMD_ENC_VSS;
+#else
 		metasymbol=CMD_ENC_METADATA;
+#endif
 	}
 
 	ff=init_find_files();

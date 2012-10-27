@@ -62,6 +62,16 @@ void reset_filecounter(struct cntr *c, time_t t)
 	c->efs_changed=0;
 	c->efs_deleted=0;
 
+	c->vss=0;
+	c->vss_same=0;
+	c->vss_changed=0;
+	c->vss_deleted=0;
+
+	c->encvss=0;
+	c->encvss_same=0;
+	c->encvss_changed=0;
+	c->encvss_deleted=0;
+
 	c->warning=0;
 	c->byte=0;
 	c->recvbyte=0;
@@ -146,6 +156,10 @@ void do_filecounter(struct cntr *c, char ch, int print)
 			++(c->special); ++(c->total); break;
 		case CMD_EFS_FILE:
 			++(c->efs); ++(c->total); break;
+		case CMD_VSS:
+			++(c->vss); ++(c->total); break;
+		case CMD_ENC_VSS:
+			++(c->encvss); ++(c->total); break;
 
 		case CMD_WARNING:
 			++(c->warning); return; // do not add to total
@@ -194,6 +208,10 @@ void do_filecounter_same(struct cntr *c, char ch)
 			++(c->special_same); ++(c->total_same); break;
 		case CMD_EFS_FILE:
 			++(c->efs_same); ++(c->total_same); break;
+		case CMD_VSS:
+			++(c->vss_same); ++(c->total_same); break;
+		case CMD_ENC_VSS:
+			++(c->encvss_same); ++(c->total_same); break;
 	}
 	++(c->gtotal_same);
 }
@@ -222,6 +240,10 @@ void do_filecounter_changed(struct cntr *c, char ch)
 			++(c->special_changed); ++(c->total_changed); break;
 		case CMD_EFS_FILE:
 			++(c->efs_changed); ++(c->total_changed); break;
+		case CMD_VSS:
+			++(c->vss_changed); ++(c->total_changed); break;
+		case CMD_ENC_VSS:
+			++(c->encvss_changed); ++(c->total_changed); break;
 	}
 	++(c->gtotal_changed);
 }
@@ -249,6 +271,10 @@ void do_filecounter_deleted(struct cntr *c, char ch)
 			++(c->special_deleted); ++(c->total_deleted); break;
 		case CMD_EFS_FILE:
 			++(c->efs_deleted); ++(c->total_deleted); break;
+		case CMD_VSS:
+			++(c->vss_deleted); ++(c->total_deleted); break;
+		case CMD_ENC_VSS:
+			++(c->encvss_deleted); ++(c->total_deleted); break;
 	}
 	++(c->gtotal_deleted);
 }
@@ -401,9 +427,9 @@ void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act)
 
 	quint_print("Meta data (enc):",
 		c->encmeta,
-		c->meta_changed,
-		c->meta_same,
-		c->meta_deleted,
+		c->encmeta_changed,
+		c->encmeta_same,
+		c->encmeta_deleted,
 		p1c->encmeta,
 		act);
 
@@ -447,6 +473,22 @@ void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act)
 		p1c->efs,
 		act);
 
+	quint_print("VSS data:",
+		c->vss,
+		c->vss_changed,
+		c->vss_same,
+		c->vss_deleted,
+		p1c->vss,
+		act);
+
+	quint_print("VSS data (enc):",
+		c->encvss,
+		c->encvss_changed,
+		c->encvss_same,
+		c->encvss_deleted,
+		p1c->encvss,
+		act);
+
 	quint_print("Grand total:",
 		c->total,
 		c->total_changed,
@@ -488,9 +530,11 @@ void counters_to_str(char *str, size_t len, const char *client, char phase, cons
 		"%llu/%llu/%llu/%llu/%llu\t"
 		"%llu/%llu/%llu/%llu/%llu\t"
 		"%llu/%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu/%llu\t"
 		"%llu\t%llu\t%llu\t%llu\t%llu\t%li\t%s\n",
 			client,
-			COUNTER_VERSION,
+			COUNTER_VERSION_2,
 			STATUS_RUNNING, phase,
 
 			cntr->total,
@@ -546,6 +590,18 @@ void counters_to_str(char *str, size_t len, const char *client, char phase, cons
 			cntr->special_same,
 			cntr->special_deleted,
 			p1cntr->special,
+
+			cntr->vss,
+			cntr->vss_changed,
+			cntr->vss_same,
+			cntr->vss_deleted,
+			p1cntr->vss,
+
+			cntr->encvss,
+			cntr->encvss_changed,
+			cntr->encvss_same,
+			cntr->encvss_deleted,
+			p1cntr->encvss,
 
 			cntr->gtotal,
 			cntr->gtotal_changed,
@@ -655,12 +711,13 @@ int str_to_counters(const char *str, char **client, char *status, char *phase, c
 
 	if((tok=strtok(copy, "\t\n")))
 	{
+		char *counter_version=NULL;
 		if(client && !(*client=strdup(tok)))
 		{
 			log_out_of_memory(__FUNCTION__);
 			return -1;
 		}
-		if(!(tok=strtok(NULL, "\t\n")))
+		if(!(counter_version=strtok(NULL, "\t\n")))
 		{
 			free(copy);
 			return 0;
@@ -669,15 +726,17 @@ int str_to_counters(const char *str, char **client, char *status, char *phase, c
 		// the counter parser thing, which now has to be noted
 		// because counters might be passed to the client instead
 		// of just the server status monitor.
-		if(*tok=='1') // counter version 1.
+		if(*counter_version==COUNTER_VERSION_2
+		  || *counter_version==COUNTER_VERSION_1) // old version
 		{
 		  while(1)
 		  {
+			int x=1;
 			t++;
 			if(!(tok=strtok(NULL, "\t\n")))
 				break;
-			if     (t==1) { if(status) *status=*tok; }
-			else if(t==2)
+			if     (t==x++) { if(status) *status=*tok; }
+			else if(t==x++)
 			{
 				if(status && (*status==STATUS_IDLE
 				  || *status==STATUS_SERVER_CRASHED
@@ -703,78 +762,92 @@ int str_to_counters(const char *str, char **client, char *status, char *phase, c
 					if(phase) *phase=*tok;
 				}
 			}
-			else if(t==3) { extract_ul(tok,
+			else if(t==x++) { extract_ul(tok,
 						&(cntr->total),
 						&(cntr->total_changed),
 						&(cntr->total_same),
 						&(cntr->total_deleted),
 						&(p1cntr->total)); }
-			else if(t==4) { extract_ul(tok,
+			else if(t==x++) { extract_ul(tok,
 						&(cntr->file),
 						&(cntr->file_changed),
 						&(cntr->file_same),
 						&(cntr->file_deleted),
 						&(p1cntr->file)); }
-			else if(t==5) { extract_ul(tok,
+			else if(t==x++) { extract_ul(tok,
 						&(cntr->enc),
 						&(cntr->enc_changed),
 						&(cntr->enc_same),
 						&(cntr->enc_deleted),
 						&(p1cntr->enc)); }
-			else if(t==6) { extract_ul(tok,
+			else if(t==x++) { extract_ul(tok,
 						&(cntr->meta),
 						&(cntr->meta_changed),
 						&(cntr->meta_same),
 						&(cntr->meta_deleted),
 						&(p1cntr->meta)); }
-			else if(t==7) { extract_ul(tok,
+			else if(t==x++) { extract_ul(tok,
 						&(cntr->encmeta),
 						&(cntr->encmeta_changed),
 						&(cntr->encmeta_same),
 						&(cntr->encmeta_deleted),
 						&(p1cntr->encmeta)); }
-			else if(t==8) { extract_ul(tok,
+			else if(t==x++) { extract_ul(tok,
 						&(cntr->dir),
 						&(cntr->dir_changed),
 						&(cntr->dir_same),
 						&(cntr->dir_deleted),
 						&(p1cntr->dir)); }
-			else if(t==9) { extract_ul(tok,
+			else if(t==x++) { extract_ul(tok,
 						&(cntr->slink),
 						&(cntr->slink_changed),
 						&(cntr->slink_same),
 						&(cntr->slink_deleted),
 						&(p1cntr->slink)); }
-			else if(t==10) { extract_ul(tok,
+			else if(t==x++) { extract_ul(tok,
 						&(cntr->hlink),
 						&(cntr->hlink_changed),
 						&(cntr->hlink_same),
 						&(cntr->hlink_deleted),
 						&(p1cntr->hlink)); }
-			else if(t==11) { extract_ul(tok,
+			else if(t==x++) { extract_ul(tok,
 						&(cntr->special),
 						&(cntr->special_changed),
 						&(cntr->special_same),
 						&(cntr->special_deleted),
 						&(p1cntr->special)); }
-			else if(t==12) { extract_ul(tok,
+			else if(*counter_version==COUNTER_VERSION_2
+			  && t==x++) { extract_ul(tok,
+						&(cntr->vss),
+						&(cntr->vss_changed),
+						&(cntr->vss_same),
+						&(cntr->vss_deleted),
+						&(p1cntr->vss)); }
+			else if(*counter_version==COUNTER_VERSION_2
+			  && t==x++) { extract_ul(tok,
+						&(cntr->encvss),
+						&(cntr->encvss_changed),
+						&(cntr->encvss_same),
+						&(cntr->encvss_deleted),
+						&(p1cntr->encvss)); }
+			else if(t==x++) { extract_ul(tok,
 						&(cntr->gtotal),
 						&(cntr->gtotal_changed),
 						&(cntr->gtotal_same),
 						&(cntr->gtotal_deleted),
 						&(p1cntr->gtotal)); }
-			else if(t==13) { cntr->warning=
+			else if(t==x++) { cntr->warning=
 						strtoull(tok, NULL, 10); }
-			else if(t==14) { p1cntr->byte=
+			else if(t==x++) { p1cntr->byte=
 						strtoull(tok, NULL, 10); }
-			else if(t==15) { cntr->byte=
+			else if(t==x++) { cntr->byte=
 						strtoull(tok, NULL, 10); }
-			else if(t==16) { cntr->recvbyte=
+			else if(t==x++) { cntr->recvbyte=
 						strtoull(tok, NULL, 10); }
-			else if(t==17) { cntr->sentbyte=
+			else if(t==x++) { cntr->sentbyte=
 						strtoull(tok, NULL, 10); }
-			else if(t==18) { p1cntr->start=atol(tok); }
-			else if(t==19) { if(path && !(*path=strdup(tok)))
+			else if(t==x++) { p1cntr->start=atol(tok); }
+			else if(t==x++) { if(path && !(*path=strdup(tok)))
 			  { log_out_of_memory(__FUNCTION__); return -1; } }
 		  }
 		}

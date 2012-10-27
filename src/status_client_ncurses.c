@@ -345,6 +345,20 @@ static void detail(const char *cntrclient, char status, char phase, const char *
 				cntr->special_deleted,
 				p1cntr->special,
 				&x, col, 0);
+	print_detail(phase, "VSS data",
+				cntr->vss,
+				cntr->vss_changed,
+				cntr->vss_same,
+				cntr->vss_deleted,
+				p1cntr->vss,
+				&x, col, 0);
+	print_detail(phase, "Encrypted VSS data",
+				cntr->encvss,
+				cntr->encvss_changed,
+				cntr->encvss_same,
+				cntr->encvss_deleted,
+				p1cntr->encvss,
+				&x, col, 0);
 	print_detail(phase, "Total",
 				cntr->gtotal,
 				cntr->gtotal_changed,

@@ -1,7 +1,8 @@
 #ifndef _COUNTER_ROUTINES
 #define _COUNTER_ROUTINES
 
-#define COUNTER_VERSION		'1'
+#define COUNTER_VERSION_1	'1'
+#define COUNTER_VERSION_2	'2'
 
 struct cntr
 {
@@ -59,6 +60,16 @@ struct cntr
 	unsigned long long efs_same;
 	unsigned long long efs_changed;
 	unsigned long long efs_deleted;
+
+	unsigned long long vss;
+	unsigned long long vss_same;
+	unsigned long long vss_changed;
+	unsigned long long vss_deleted;
+
+	unsigned long long encvss;
+	unsigned long long encvss_same;
+	unsigned long long encvss_changed;
+	unsigned long long encvss_deleted;
 
 	unsigned long long warning;
 	unsigned long long byte;

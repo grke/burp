@@ -27,7 +27,7 @@ fi
 # The rest of the arguments, if any, should be timebands.
 # Set LANG=C so that 'date' returns English day names.
 curdayhour=$(LANG=C date +"*%a*%H*")
-intimeband=1 # If no timebands given, default to OK.
+intimeband=0 # If no timebands given, default to not OK.
 while [ "$#" -gt 0 ] ; do
 	intimeband=0
 	timeband="$1"

@@ -7,6 +7,7 @@
 #include "counter.h"
 #include "berrno.h"
 #include "client_vss.h"
+#include "extrameta.h"
 
 #if defined(WIN32_VSS)
 #include "vss.h"
@@ -217,18 +218,19 @@ struct bsid {
 int get_vss(BFILE *bfd, const char *path, struct stat *statp, char **vssdata, size_t *vlen, int64_t winattr, struct cntr *cntr)
 {
 	bsid sid;
+	char *tmp=NULL;
 	*vlen=0;
 	while(bread(bfd, &sid, bsidsize)>0)
 	{
 		int64_t s=0;
 		int64_t g=0;
 
-		if(!(*vssdata=(char *)realloc(*vssdata, (*vlen)+bsidsize)))
+		if(!(tmp=(char *)realloc(tmp, (*vlen)+bsidsize)))
 		{
 			log_out_of_memory(__FUNCTION__);
 			goto error;
 		}
-		memcpy((*vssdata)+(*vlen), &sid, bsidsize);
+		memcpy(tmp+(*vlen), &sid, bsidsize);
 		(*vlen)+=bsidsize;
 
 		// dwStreamId==1 means start of backup data, so finish.
@@ -236,13 +238,13 @@ int get_vss(BFILE *bfd, const char *path, struct stat *statp, char **vssdata, si
 
 		// Otherwise, need to read in the rest of the VSS header.
 		s=(sid.Size)+(sid.dwStreamNameSize);
-		if(!(*vssdata=(char *)realloc(*vssdata, (*vlen)+s)))
+		if(!(tmp=(char *)realloc(tmp, (*vlen)+s)))
 		{
 			goto error;
 			log_out_of_memory(__FUNCTION__);
 			return -1;
 		}
-		if((g=bread(bfd, (*vssdata)+(*vlen), s))!=s)
+		if((g=bread(bfd, tmp+(*vlen), s))!=s)
 		{
 			logp("Short bread: %d!=%d\n", g, s);
 			goto error;
@@ -250,8 +252,17 @@ int get_vss(BFILE *bfd, const char *path, struct stat *statp, char **vssdata, si
 		}
 		(*vlen)+=s;
 	}
+	if(!(*vssdata=(char *)realloc(*vssdata, (*vlen)+9)))
+	{
+		log_out_of_memory(__FUNCTION__);
+		goto error;
+	}
+	snprintf(*vssdata, 9, "%c%08X", META_VSS, *vlen);
+	memcpy((*vssdata)+9, tmp, *vlen);
+	(*vlen)+=9;
 	return 0;
 error:
+	if(tmp) free(tmp);
 	if(*vssdata)
 	{
 		free(*vssdata);

@@ -10,6 +10,8 @@
 extern int status_wfd; // for the child to send information to the parent.
 extern int status_rfd; // for the child to read information from the parent.
 
+extern size_t writebuflen;
+
 extern int async_init(int afd, SSL *assl, struct config *conf, int estimate);
 
 extern void async_free(void);

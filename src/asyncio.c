@@ -27,7 +27,7 @@ static size_t readbuflen=0;
 static size_t readbufmaxsize=(ASYNC_BUF_LEN*2)+32;
 
 static char *writebuf=NULL;
-static size_t writebuflen=0;
+size_t writebuflen=0;
 static size_t writebufmaxsize=(ASYNC_BUF_LEN*2)+32;
 
 int status_wfd=-1; // for the child to send information to the parent.
@@ -381,7 +381,7 @@ int async_rw(char *rcmd, char **rdst, size_t *rlen, char wcmd, const char *wsrc,
 
         if(doread || dowrite)
         {
-//printf("async_rw loop read %d write %d wbuflen: %d\n", doread, dowrite, writebuflen);
+//logp("async_rw loop read %d write %d wbuflen: %d\n", doread, dowrite, writebuflen);
                 mfd=-1;
 
                 if(doread) FD_ZERO(&fsr);

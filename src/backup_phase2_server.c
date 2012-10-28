@@ -363,7 +363,7 @@ static int do_stuff_to_send(struct sbuf *p1b, char **last_requested)
 
 		sigresult=rs_async(p1b->sigjob,
 			&(p1b->rsbuf), p1b->infb, p1b->outfb);
-//logp("after rs_async: %d\n", sigresult);
+//logp("after rs_async: %d %c %s\n", sigresult, p1b->cmd, p1b->path);
 
 		if(sigresult==RS_DONE)
 		{
@@ -665,7 +665,7 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, const char *pha
 			rb.path, p1cntr, cntr);
 		else write_status(client, STATUS_BACKUP,
 			p1b.path, p1cntr, cntr);
-		if((last_requested || !p1zp)
+		if((last_requested || !p1zp || writebuflen)
 		  && (ars=do_stuff_to_receive(&rb, p2fp, datadirtmp, dpth,
 			working, &last_requested, deltmppath, cntr, cconf)))
 		{

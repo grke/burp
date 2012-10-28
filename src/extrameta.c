@@ -60,9 +60,6 @@ int get_extrameta(BFILE *bfd, const char *path, struct stat *statp, char **extra
 
 int set_extrameta(BFILE *bfd, const char *path, char cmd, struct stat *statp, const char *extrameta, size_t metalen, struct cntr *cntr)
 {
-#ifdef HAVE_WIN32
-	return set_vss(bfd, extrameta, metalen, cntr);
-#else
 	size_t l=0;
 	char cmdtmp='\0';
 	unsigned int s=0;
@@ -95,6 +92,12 @@ int set_extrameta(BFILE *bfd, const char *path, char cmd, struct stat *statp, co
 
 		switch(cmdtmp)
 		{
+#if defined(HAVE_WIN32)
+			case META_VSS:
+				if(set_vss(bfd, m, s, cntr))
+					errors++;
+				break;
+#endif
 #if defined(HAVE_LINUX_OS) || \
     defined(HAVE_FREEBSD_OS) || \
     defined(HAVE_OPENBSD_OS) || \
@@ -139,5 +142,4 @@ int set_extrameta(BFILE *bfd, const char *path, char cmd, struct stat *statp, co
 	}
 
 	return errors;
-#endif // ifndef HAVE_WIN32
 }

@@ -367,12 +367,10 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 					}
 				}
 #ifdef HAVE_WIN32
-				// If using Windows and it was metadata, do not
-				// close bfd until the next time around the
+				// If using Windows and it was vss metadata, do
+				// not close bfd until the next time around the
 				// loop.
-				if(cmd!=CMD_METADATA
-				  && cmd!=CMD_ENC_METADATA
-				  && cmd!=CMD_VSS
+				if(cmd!=CMD_VSS
 				  && cmd!=CMD_ENC_VSS)
 					close_file_for_send(&bfd, NULL);
 #else

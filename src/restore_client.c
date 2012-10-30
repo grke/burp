@@ -546,13 +546,48 @@ static int strip_path_components(struct sbuf *sb, char **path, int strip, struct
 	return 1;
 }
 
+static int overwrite_ok(struct sbuf *sb, struct config *conf, BFILE *bfd, const char *fullpath)
+{
+	struct stat checkstat;
+
+	// User specified overwrite is OK.
+	if(conf->overwrite) return 1;
+
+	if(!S_ISDIR(sb->statp.st_mode)
+	  && sb->cmd!=CMD_METADATA
+	  && sb->cmd!=CMD_ENC_METADATA
+	  && sb->cmd!=CMD_VSS
+	  && sb->cmd!=CMD_ENC_VSS)
+	{
+#ifdef HAVE_WIN32
+		// If Windows previously got some VSS data, it needs to append
+		// the file data to the already open bfd.
+		if(bfd->mode!=BF_CLOSED
+		  && (sb->cmd==CMD_FILE || sb->cmd==CMD_ENC_FILE)
+		  && bfd->path && !strcmp(bfd->path, fullpath))
+		{
+			return 1;
+		}
+#endif
+		// If we have file data and the destination is
+		// a fifo, it is OK to write to the fifo.
+		if((sb->cmd==CMD_FILE || sb->cmd==CMD_ENC_FILE)
+	  	  && S_ISFIFO(checkstat.st_mode))
+			return 1;
+
+		// File path exists. Do not overwrite.
+		if(!lstat(fullpath, &checkstat)) return 0;
+	}
+
+	return 1;
+}
+
 int do_restore_client(struct config *conf, enum action act, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ars=0;
 	int ret=0;
 	int quit=0;
 	char msg[64]="";
-	struct stat checkstat;
 	struct sbuf sb;
 	int wroteendcounter=0;
 // Windows needs to have the VSS data written first, and the actual data
@@ -646,18 +681,7 @@ int do_restore_client(struct config *conf, enum action act, struct cntr *p1cntr,
 				if(act==ACTION_RESTORE)
 				{
 				  strip_invalid_characters(&fullpath);
-				  if(!conf->overwrite
-				   && !S_ISDIR(sb.statp.st_mode)
-				   && sb.cmd!=CMD_METADATA
-				   && sb.cmd!=CMD_ENC_METADATA
-				   && sb.cmd!=CMD_VSS
-				   && sb.cmd!=CMD_ENC_VSS
-				   && !lstat(fullpath, &checkstat)
-				// If we have file data and the destination is
-				// a fifo, it is OK to write to the fifo.
-				   && !((sb.cmd==CMD_FILE
-					  || sb.cmd==CMD_ENC_FILE)
-					&& S_ISFIFO(checkstat.st_mode)))
+				  if(!overwrite_ok(&sb, conf, &bfd, fullpath))
 				  {
 					char msg[512]="";
 					// Something exists at that path.

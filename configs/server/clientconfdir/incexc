@@ -19,3 +19,5 @@
 # nobackup=.nobackup
 # read_fifo=/some/path/to/a/fifo
 # read_all_fifos=0
+# split_vss=1
+# strip_vss=0

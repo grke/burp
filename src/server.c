@@ -308,6 +308,34 @@ end:
 	return ret;
 }
 
+static int vss_opts_changed(struct config *cconf, const char *cincexc)
+{
+	int ret=0;
+	struct config oldconf;
+	init_config(&oldconf);
+	if(parse_incexcs_path(&oldconf, cincexc))
+	{
+		// Assume that the file did not exist, and therefore
+		// the old split_vss setting is 0.
+		oldconf.split_vss=0;
+		oldconf.strip_vss=0;
+	}
+	if(cconf->split_vss!=oldconf.split_vss)
+	{
+		logp("split_vss=%d (changed since last backup)\n",
+			cconf->split_vss);
+		ret=1;
+	}
+	if(cconf->strip_vss!=oldconf.strip_vss)
+	{
+		logp("strip_vss=%d (changed since last backup)\n",
+			cconf->strip_vss);
+		ret=1;
+	}
+	if(ret) logp("All files will be treated as new\n");
+	return ret;
+}
+
 static int do_backup_server(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *manifest, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *client, const char *cversion, struct cntr *p1cntr, struct cntr *cntr, int resume, const char *incexc)
 {
 	int ret=0;
@@ -323,6 +351,8 @@ static int do_backup_server(const char *basedir, const char *current, const char
 	char *realworking=NULL;
 	char tstmp[64]="";
 	char *datadirtmp=NULL;
+	// Path to the old incexc file.
+	char *cincexc=NULL;
 
 	struct dpth dpth;
 
@@ -334,6 +364,7 @@ static int do_backup_server(const char *basedir, const char *current, const char
 	if(!(timestamp=prepend_s(working, "timestamp", strlen("timestamp")))
 	  || !(newpath=prepend_s(working, "patched.tmp", strlen("patched.tmp")))
 	  || !(cmanifest=prepend_s(current, "manifest.gz", strlen("manifest.gz")))
+	  || !(cincexc=prepend_s(current, "incexc", strlen("incexc")))
 	  || !(datadirtmp=prepend_s(working, "data.tmp", strlen("data.tmp"))))
 	{
 		log_and_send_oom(__FUNCTION__);
@@ -427,12 +458,22 @@ static int do_backup_server(const char *basedir, const char *current, const char
 	}
 
 	// Open the previous (current) manifest.
-	if(!lstat(cmanifest, &statp) && !(cmanfp=gzopen_file(cmanifest, "rb")))
+	// If the split_vss setting changed between the previous backup
+	// and the new backup, do not open the previous manifest.
+	// This will have the effect of making the client back up everything
+	// fresh. Need to do this, otherwise toggling split_vss on and off
+	// will result in backups that do not work.
+	if(!lstat(cmanifest, &statp)
+	  && !vss_opts_changed(cconf, cincexc))
 	{
-		if(!lstat(cmanifest, &statp))
+		if(!(cmanfp=gzopen_file(cmanifest, "rb")))
 		{
-			logp("could not open old manifest %s\n", cmanifest);
-			goto error;
+			if(!lstat(cmanifest, &statp))
+			{
+				logp("could not open old manifest %s\n",
+					cmanifest);
+				goto error;
+			}
 		}
 	}
 
@@ -497,6 +538,7 @@ end:
 	if(newpath) free(newpath);
 	if(cmanifest) free(cmanifest);
 	if(datadirtmp) free(datadirtmp);
+	if(cincexc) free(cincexc);
 	set_logfp(NULL, cconf); // does an fclose on logfp.
 	return ret;
 }

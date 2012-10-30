@@ -80,6 +80,8 @@ struct config
 	int bdcount;
 	unsigned long min_file_size;
 	unsigned long max_file_size;
+	int split_vss;
+	int strip_vss;
   // These are to do with restore.
 	int overwrite;
 	int strip;

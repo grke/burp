@@ -234,7 +234,12 @@ int get_vss(BFILE *bfd, const char *path, struct stat *statp, char **vssdata, si
 		(*vlen)+=bsidsize;
 
 		// dwStreamId==1 means start of backup data, so finish.
-		if(sid.dwStreamId==1) break;
+		if(sid.dwStreamId==1)
+		{
+		//	logp("\n%s: %d + %d\n",
+		//		path, (int)sid.Size, (int)sid.dwStreamNameSize);
+			break;
+		}
 
 		// Otherwise, need to read in the rest of the VSS header.
 		s=(sid.Size)+(sid.dwStreamNameSize);

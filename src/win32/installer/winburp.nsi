@@ -328,6 +328,8 @@ overwrite:
   FileWrite $R1 "ssl_key_password = password$\r$\n"
   FileWrite $R1 "ssl_peer_cn = burpserver$\r$\n"
   FileWrite $R1 "server_can_restore = $ConfigServerRestore$\r$\n"
+  FileWrite $R1 "split_vss = 1$\r$\n"
+  FileWrite $R1 "strip_vss = 0$\r$\n"
   ${If} $ConfigEncPass != ""
     FileWrite $R1 "encryption_password = $ConfigEncPass$\r$\n"
   ${EndIf}

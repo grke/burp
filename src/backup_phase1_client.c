@@ -101,7 +101,8 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
         //printf("Lnka: %s -> %s\n", ff->fname, ff->link);
    	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
 #ifdef HAVE_WIN32
-	if(maybe_send_extrameta(ff->fname, CMD_HARD_LINK, attribs, p1cntr))
+	if(conf->split_vss && !conf->strip_vss
+	  && maybe_send_extrameta(ff->fname, CMD_HARD_LINK, attribs, p1cntr))
 		return -1;
 #endif
 	if(async_write_str(CMD_STAT, attribs)
@@ -123,7 +124,8 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 		in_exclude_comp(conf->excom, conf->excmcount,
 			ff->fname, conf->compression));
 #ifdef HAVE_WIN32
-      if(maybe_send_extrameta(ff->fname, filesymbol, attribs, p1cntr))
+      if(conf->split_vss && !conf->strip_vss
+	&& maybe_send_extrameta(ff->fname, filesymbol, attribs, p1cntr))
 		return -1;
 #endif
       if(async_write_str(CMD_STAT, attribs)
@@ -141,7 +143,8 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 	//printf("link: %s -> %s\n", ff->fname, ff->link);
    	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
 #ifdef HAVE_WIN32
-        if(maybe_send_extrameta(ff->fname, CMD_SOFT_LINK, attribs, p1cntr))
+        if(conf->split_vss && !conf->strip_vss
+	  && maybe_send_extrameta(ff->fname, CMD_SOFT_LINK, attribs, p1cntr))
 		return -1;
 #endif
 	if(async_write_str(CMD_STAT, attribs)
@@ -175,13 +178,25 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 		encode_stat(attribs,
 			&ff->statp, ff->winattr, conf->compression);
 #ifdef HAVE_WIN32
-        	if(maybe_send_extrameta(ff->fname, CMD_DIRECTORY,
-			attribs, p1cntr)) return -1;
-#endif
+		if(conf->split_vss || conf->strip_vss)
+		{
+			if(!conf->strip_vss
+			  && maybe_send_extrameta(ff->fname,
+				CMD_DIRECTORY, attribs, p1cntr)) return -1;
+	      		if(async_write_str(CMD_STAT, attribs)) return -1;
+			if(async_write_str(CMD_DIRECTORY, ff->fname)) return -1;
+			do_filecounter(p1cntr, CMD_DIRECTORY, 1);
+		}
+		else
+		{
+	      		if(async_write_str(CMD_STAT, attribs)) return -1;
+			if(async_write_str(filesymbol, ff->fname)) return -1;
+			do_filecounter(p1cntr, filesymbol, 1);
+		}
+#else
 	      	if(async_write_str(CMD_STAT, attribs)
 		  || async_write_str(CMD_DIRECTORY, ff->fname)) return -1;
 		do_filecounter(p1cntr, CMD_DIRECTORY, 1);
-#ifndef HAVE_WIN32
         	if(maybe_send_extrameta(ff->fname, CMD_DIRECTORY,
 			attribs, p1cntr)) return -1;
 #endif
@@ -191,7 +206,8 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
    case FT_SPEC: // special file - fifo, socket, device node...
       encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
 #ifdef HAVE_WIN32
-      if(maybe_send_extrameta(ff->fname, CMD_SPECIAL, attribs, p1cntr))
+      if(conf->split_vss && !conf->strip_vss
+	&& maybe_send_extrameta(ff->fname, CMD_SPECIAL, attribs, p1cntr))
 		return -1;
 #endif
       if(async_write_str(CMD_STAT, attribs)

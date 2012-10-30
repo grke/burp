@@ -294,7 +294,11 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 				if(cmd==CMD_METADATA
 				  || cmd==CMD_ENC_METADATA
 				  || cmd==CMD_VSS
-				  || cmd==CMD_ENC_VSS)
+				  || cmd==CMD_ENC_VSS
+#ifdef HAVE_WIN32
+				  || conf->strip_vss
+#endif
+				  )
 				{
 					if(get_extrameta(
 #ifdef HAVE_WIN32
@@ -311,7 +315,18 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 						close_file_for_send(&bfd, &fp);
 						continue;
 					}
-					if(!extrameta)
+					if(extrameta)
+					{
+#ifdef HAVE_WIN32
+						if(conf->strip_vss)
+						{
+							free(extrameta);
+							extrameta=NULL;
+							elen=0;
+						}
+#endif
+					}
+					else
 					{
 						logw(cntr, "No meta data after all: %s", sb.path);
 						free_sbuf(&sb);

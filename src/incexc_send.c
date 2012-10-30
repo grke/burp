@@ -75,6 +75,8 @@ static int do_sends(struct config *conf)
 		conf->bdcount, conf->blockdevs)
 	  || send_incexc_int("cross_all_filesystems",
 		conf->cross_all_filesystems)
+	  || send_incexc_int("split_vss", conf->split_vss)
+	  || send_incexc_int("strip_vss", conf->strip_vss)
 	  || send_incexc_int("read_all_fifos", conf->read_all_fifos)
 	  || send_incexc_long("min_file_size", conf->min_file_size)
 	  || send_incexc_long("max_file_size", conf->max_file_size))

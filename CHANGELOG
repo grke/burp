@@ -3,7 +3,8 @@
   * Make all places that log 'out of memory' also log the function name.
   * Remove version_warn debug.
   * Tweaks to the test script.
-  * Store Windows VSS data separately to the actual file data.
+  * Option to store Windows VSS headers separately to the actual file data.
+  * Option to strip Windows VSS headers from the actual file data.
   * If no timebands are given to timer_script, default to not allowing a
     backup.
 

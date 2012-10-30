@@ -524,6 +524,12 @@ Do not back up the given block device itself, but open it for reading and back u
 .TP
 \fBread_all_blockdevs=[0|1]\fR
 Open all block devices for reading and back up the contents as if they were regular files.
+.TP
+\fBsplit_vss=[0|1]\fR
+When backing up Windows computers, this option allows you to save the VSS header data separate from the file data. The default is off, which means that the VSS header data is saved prepended to the file data.
+.TP
+\fBstrip_vss=[0|1]\fR
+When backing up Windows computers, this option allows you to prevent the VSS header data being backed up. The default is off. WARNING: If you turn this on, you cannot currently restore the backed up files to Windows via the burp client, because the burp client tries to use the VSS interface.
 
 .SH SERVER CLIENTCONFDIR FILE
 .TP

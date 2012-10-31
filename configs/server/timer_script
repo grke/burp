@@ -25,8 +25,8 @@ if [ -f "$manual_file" ] ; then
 fi
 
 # The rest of the arguments, if any, should be timebands.
-# Set LANG=C so that 'date' returns English day names.
-curdayhour=$(LANG=C date +"*%a*%H*")
+# Set LANG=C and LC_TIME=C so that 'date' returns English day names.
+curdayhour=$(LANG=C LC_TIME=C date +"*%a*%H*")
 intimeband=0 # If no timebands given, default to not OK.
 while [ "$#" -gt 0 ] ; do
 	intimeband=0
@@ -77,9 +77,9 @@ get_intervals()
 
 	read junk ts < "$timestamp"
 
-	if   ! secs=$(LANG=C date +%s -d "$ts") \
-	  || ! now=$(LANG=C date +"%Y-%m-%d %H:%M:%S") \
-	  || ! nowsecs=$(LANG=C date +%s -d "$now")
+	if   ! secs=$(LANG=C LC_TIME=C date +%s -d "$ts") \
+	  || ! now=$(LANG=C LC_TIME=C date +"%Y-%m-%d %H:%M:%S") \
+	  || ! nowsecs=$(LANG=C LC_TIME=C date +%s -d "$now")
 	then
 		echo "$0: Date command returned error for $client."
 		return 0
@@ -89,11 +89,11 @@ get_intervals()
 
 	# GNU coreutils 'date' command should accept the following (even
 	# slightly old versions).
-	if ! min_time=$(LANG=C date -d "Jan 1, 1970 00:00:00 +0000 + $min_timesecs seconds" +"%Y-%m-%d %H:%M:%S")
+	if ! min_time=$(LANG=C LC_TIME=C date -d "Jan 1, 1970 00:00:00 +0000 + $min_timesecs seconds" +"%Y-%m-%d %H:%M:%S")
 	then
 		# FreeBSD 'date' will return an error with the above, so try
 		# a version that FreeBSD 'date' should be happy with.
-		if ! min_time=$(LANG=C date -r $min_timesecs +"%Y-%m-%d %H:%M:%S")
+		if ! min_time=$(LANG=C LC_TIME=C date -r $min_timesecs +"%Y-%m-%d %H:%M:%S")
 		then
 			echo "$0: Date command returned error for $client."
 			return 0

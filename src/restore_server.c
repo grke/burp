@@ -145,8 +145,9 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, int
 static int send_file(const char *fname, int patches, const char *best, const char *datapth, unsigned long long *bytes, char cmd, int64_t winattr, int compression, struct cntr *cntr, struct config *cconf)
 {
 	int ret=0;
+	size_t datalen=0;
 	FILE *fp=NULL;
-	if(open_file_for_send(NULL, &fp, best, winattr, cntr))
+	if(open_file_for_send(NULL, &fp, best, winattr, &datalen, cntr))
 		return -1;
 	//logp("sending: %s\n", best);
 	if(async_write(cmd, fname, strlen(fname)))
@@ -156,7 +157,7 @@ static int send_file(const char *fname, int patches, const char *best, const cha
 		// If we did some patches, the resulting file
 		// is not gzipped. Gzip it during the send. 
 		ret=send_whole_file_gz(best, datapth, 1, bytes, NULL, cntr,
-			9, NULL, fp, NULL, 0);
+			9, NULL, fp, NULL, 0, -1);
 	}
 	else
 	{
@@ -169,7 +170,7 @@ static int send_file(const char *fname, int patches, const char *best, const cha
 		  || cmd==CMD_EFS_FILE)
 		{
 			ret=send_whole_file(cmd, best, datapth, 1, bytes,
-				cntr, NULL, fp, NULL, 0);
+				cntr, NULL, fp, NULL, 0, -1);
 		}
 		// It might have been stored uncompressed. Gzip it during
 		// the send. If the client knew what kind of file it would be
@@ -177,14 +178,14 @@ static int send_file(const char *fname, int patches, const char *best, const cha
 		else if(!dpth_is_compressed(compression, datapth))
 		{
 			ret=send_whole_file_gz(best, datapth, 1, bytes,
-				NULL, cntr, 9, NULL, fp, NULL, 0);
+				NULL, cntr, 9, NULL, fp, NULL, 0, -1);
 		}
 		else
 		{
 			// If we did not do some patches, the resulting
 			// file might already be gzipped. Send it as it is.
 			ret=send_whole_file(cmd, best, datapth, 1, bytes,
-				cntr, NULL, fp, NULL, 0);
+				cntr, NULL, fp, NULL, 0, -1);
 		}
 	}
 	close_file_for_send(NULL, &fp);
@@ -440,6 +441,8 @@ static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, const cha
 	  || sb->cmd==CMD_ENC_METADATA
 	  || sb->cmd==CMD_VSS
 	  || sb->cmd==CMD_ENC_VSS
+	  || sb->cmd==CMD_VSS_T
+	  || sb->cmd==CMD_ENC_VSS_T
 	  || sb->cmd==CMD_EFS_FILE)
 	{
 		return restore_file(arr, a, i, sb->datapth,
@@ -661,6 +664,8 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 					  || sb.cmd==CMD_ENC_METADATA
 					  || sb.cmd==CMD_VSS
 					  || sb.cmd==CMD_ENC_VSS
+					  || sb.cmd==CMD_VSS_T
+					  || sb.cmd==CMD_ENC_VSS_T
 					  || sb.cmd==CMD_EFS_FILE)
 						do_filecounter_bytes(p1cntr,
 							(unsigned long long)

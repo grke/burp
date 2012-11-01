@@ -72,6 +72,16 @@ void reset_filecounter(struct cntr *c, time_t t)
 	c->encvss_changed=0;
 	c->encvss_deleted=0;
 
+	c->vss_t=0;
+	c->vss_t_same=0;
+	c->vss_t_changed=0;
+	c->vss_t_deleted=0;
+
+	c->encvss_t=0;
+	c->encvss_t_same=0;
+	c->encvss_t_changed=0;
+	c->encvss_t_deleted=0;
+
 	c->warning=0;
 	c->byte=0;
 	c->recvbyte=0;
@@ -160,6 +170,10 @@ void do_filecounter(struct cntr *c, char ch, int print)
 			++(c->vss); ++(c->total); break;
 		case CMD_ENC_VSS:
 			++(c->encvss); ++(c->total); break;
+		case CMD_VSS_T:
+			++(c->vss_t); ++(c->total); break;
+		case CMD_ENC_VSS_T:
+			++(c->encvss_t); ++(c->total); break;
 
 		case CMD_WARNING:
 			++(c->warning); return; // do not add to total
@@ -212,6 +226,10 @@ void do_filecounter_same(struct cntr *c, char ch)
 			++(c->vss_same); ++(c->total_same); break;
 		case CMD_ENC_VSS:
 			++(c->encvss_same); ++(c->total_same); break;
+		case CMD_VSS_T:
+			++(c->vss_t_same); ++(c->total_same); break;
+		case CMD_ENC_VSS_T:
+			++(c->encvss_t_same); ++(c->total_same); break;
 	}
 	++(c->gtotal_same);
 }
@@ -244,6 +262,10 @@ void do_filecounter_changed(struct cntr *c, char ch)
 			++(c->vss_changed); ++(c->total_changed); break;
 		case CMD_ENC_VSS:
 			++(c->encvss_changed); ++(c->total_changed); break;
+		case CMD_VSS_T:
+			++(c->vss_t_changed); ++(c->total_changed); break;
+		case CMD_ENC_VSS_T:
+			++(c->encvss_t_changed); ++(c->total_changed); break;
 	}
 	++(c->gtotal_changed);
 }
@@ -275,6 +297,10 @@ void do_filecounter_deleted(struct cntr *c, char ch)
 			++(c->vss_deleted); ++(c->total_deleted); break;
 		case CMD_ENC_VSS:
 			++(c->encvss_deleted); ++(c->total_deleted); break;
+		case CMD_VSS_T:
+			++(c->vss_t_deleted); ++(c->total_deleted); break;
+		case CMD_ENC_VSS_T:
+			++(c->encvss_t_deleted); ++(c->total_deleted); break;
 	}
 	++(c->gtotal_deleted);
 }
@@ -473,7 +499,7 @@ void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act)
 		p1c->efs,
 		act);
 
-	quint_print("VSS data:",
+	quint_print("VSS headers:",
 		c->vss,
 		c->vss_changed,
 		c->vss_same,
@@ -481,12 +507,28 @@ void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act)
 		p1c->vss,
 		act);
 
-	quint_print("VSS data (enc):",
+	quint_print("VSS headers (enc):",
 		c->encvss,
 		c->encvss_changed,
 		c->encvss_same,
 		c->encvss_deleted,
 		p1c->encvss,
+		act);
+
+	quint_print("VSS footers:",
+		c->vss_t,
+		c->vss_t_changed,
+		c->vss_t_same,
+		c->vss_t_deleted,
+		p1c->vss_t,
+		act);
+
+	quint_print("VSS footers (enc):",
+		c->encvss_t,
+		c->encvss_t_changed,
+		c->encvss_t_same,
+		c->encvss_t_deleted,
+		p1c->encvss_t,
 		act);
 
 	quint_print("Grand total:",
@@ -520,6 +562,8 @@ void counters_to_str(char *str, size_t len, const char *client, char phase, cons
 	int l=0;
 	snprintf(str, len,
 		"%s\t%c\t%c\t%c\t"
+		"%llu/%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu/%llu\t"
 		"%llu/%llu/%llu/%llu/%llu\t"
 		"%llu/%llu/%llu/%llu/%llu\t"
 		"%llu/%llu/%llu/%llu/%llu\t"
@@ -602,6 +646,18 @@ void counters_to_str(char *str, size_t len, const char *client, char phase, cons
 			cntr->encvss_same,
 			cntr->encvss_deleted,
 			p1cntr->encvss,
+
+			cntr->vss_t,
+			cntr->vss_t_changed,
+			cntr->vss_t_same,
+			cntr->vss_t_deleted,
+			p1cntr->vss_t,
+
+			cntr->encvss_t,
+			cntr->encvss_t_changed,
+			cntr->encvss_t_same,
+			cntr->encvss_t_deleted,
+			p1cntr->encvss_t,
 
 			cntr->gtotal,
 			cntr->gtotal_changed,
@@ -830,6 +886,20 @@ int str_to_counters(const char *str, char **client, char *status, char *phase, c
 						&(cntr->encvss_same),
 						&(cntr->encvss_deleted),
 						&(p1cntr->encvss)); }
+			else if(*counter_version==COUNTER_VERSION_2
+			  && t==x++) { extract_ul(tok,
+						&(cntr->vss_t),
+						&(cntr->vss_t_changed),
+						&(cntr->vss_t_same),
+						&(cntr->vss_t_deleted),
+						&(p1cntr->vss_t)); }
+			else if(*counter_version==COUNTER_VERSION_2
+			  && t==x++) { extract_ul(tok,
+						&(cntr->encvss_t),
+						&(cntr->encvss_t_changed),
+						&(cntr->encvss_t_same),
+						&(cntr->encvss_t_deleted),
+						&(p1cntr->encvss_t)); }
 			else if(t==x++) { extract_ul(tok,
 						&(cntr->gtotal),
 						&(cntr->gtotal_changed),

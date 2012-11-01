@@ -8,6 +8,11 @@
 
 #include "bfile.h"
 
+#define min(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a < _b ? _a : _b; })
+
 extern void close_fd(int *fd);
 extern int close_fp(FILE **fp);
 extern int gzclose_fp(gzFile *fp);
@@ -15,10 +20,10 @@ extern int is_dir(const char *path);
 extern int mkpath(char **rpath, const char *limit);
 extern int build_path(const char *datadir, const char *fname, size_t flen, char **rpath, const char *limit);
 
-extern int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, int64_t winattr, struct cntr *cntr);
+extern int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, int64_t winattr, size_t *datalen, struct cntr *cntr);
 extern int close_file_for_send(BFILE *bfd, FILE **fp);
-extern int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen);
-extern int send_whole_file(char cmd, const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, struct cntr *cntr, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen);
+extern int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen, size_t datalen);
+extern int send_whole_file(char cmd, const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, struct cntr *cntr, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen, size_t datalen);
 extern int set_non_blocking(int fd);
 extern int set_blocking(int fd);
 extern int do_rename(const char *oldpath, const char *newpath);

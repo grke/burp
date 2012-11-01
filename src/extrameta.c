@@ -32,10 +32,11 @@ int has_extrameta(const char *path, char cmd)
         return 0;
 }
 
-int get_extrameta(BFILE *bfd, const char *path, struct stat *statp, char **extrameta, size_t *elen, int64_t winattr, struct cntr *cntr)
+int get_extrameta(BFILE *bfd, const char *path, struct stat *statp, char **extrameta, size_t *elen, int64_t winattr, struct cntr *cntr, size_t *datalen)
 {
 #if defined (WIN32_VSS)
-	if(get_vss(bfd, path, statp, extrameta, elen, winattr, cntr)) return -1;
+	if(get_vss(bfd, path, statp, extrameta, elen, winattr, cntr,
+		datalen)) return -1;
 #endif
 	// Important to do xattr directly after acl, because xattr is excluding
 	// some entries if acls were set.

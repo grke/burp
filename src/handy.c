@@ -306,7 +306,7 @@ struct bsid {
 };
 #endif
 
-int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, int64_t winattr, struct cntr *cntr)
+int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, int64_t winattr, size_t *datalen, struct cntr *cntr)
 {
 	if(fp)
 	{
@@ -336,6 +336,7 @@ int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, int64_t winattr
 			}
 		}
 		binit(bfd, winattr);
+		*datalen=0;
 		if(bopen(bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0,
 			(winattr & FILE_ATTRIBUTE_DIRECTORY))<=0)
 		{
@@ -367,7 +368,7 @@ int close_file_for_send(BFILE *bfd, FILE **fp)
    Encryption off and compression off uses send_whole_file().
    Perhaps a separate function is needed for encryption on compression off.
 */
-int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen)
+int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen, size_t datalen)
 {
 	int ret=0;
 	int zret=0;
@@ -385,6 +386,10 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 	unsigned char eoutbuf[ZCHUNK+EVP_MAX_BLOCK_LENGTH];
 
 	EVP_CIPHER_CTX *enc_ctx=NULL;
+#ifdef HAVE_WIN32
+	int do_known_byte_count=0;
+	if(datalen>0) do_known_byte_count=1;
+#endif
 
 	if(encpassword && !(enc_ctx=enc_setup(1, encpassword)))
 		return -1;
@@ -429,10 +434,28 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 		{
 			if(fp) strm.avail_in=fread(in, 1, ZCHUNK, fp);
 #ifdef HAVE_WIN32
-			else strm.avail_in=(uint32_t)bread(bfd, in, ZCHUNK);
+			else
+			{
+			  // Windows VSS headers give us how much data to
+			  // expect to read.
+			  if(do_known_byte_count)
+			  {
+				  if(datalen<=0) strm.avail_in=0;
+				  else strm.avail_in=
+					 (uint32_t)bread(bfd, in,
+						min((size_t)ZCHUNK, datalen));
+				  datalen-=strm.avail_in;
+			  }
+			  else
+			  {
+				  strm.avail_in=
+					 (uint32_t)bread(bfd, in, ZCHUNK);
+			  }
+			}
 #endif
 		}
 		if(!compression && !strm.avail_in) break;
+
 		if(strm.avail_in<0)
 		{
 			logp("Error in read: %d\n", strm.avail_in);
@@ -452,6 +475,10 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 			}
 		}
 
+#ifdef HAVE_WIN32
+		if(do_known_byte_count && datalen<=0) flush=Z_FINISH;
+		else
+#endif
 		if(strm.avail_in) flush=Z_NO_FLUSH;
 		else flush=Z_FINISH;
 
@@ -608,7 +635,7 @@ static DWORD WINAPI write_efs(PBYTE pbData, PVOID pvCallbackContext, ULONG ulLen
 }
 #endif
 
-int send_whole_file(char cmd, const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, struct cntr *cntr, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen)
+int send_whole_file(char cmd, const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, struct cntr *cntr, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen, size_t datalen)
 {
 	int ret=0;
 	size_t s=0;
@@ -676,8 +703,22 @@ int send_whole_file(char cmd, const char *fname, const char *datapth, int quick_
 
 		if(!ret && cmd!=CMD_EFS_FILE)
 		{
-		  while((s=(uint32_t)bread(bfd, buf, 4096))>0)
+		  int do_known_byte_count=0;
+		  if(datalen>0) do_known_byte_count=1;
+		  while(1)
 		  {
+			if(do_known_byte_count)
+			{
+				s=(uint32_t)bread(bfd,
+					buf, min((size_t)4096, datalen));
+				datalen-=s;
+			}
+			else
+			{
+				s=(uint32_t)bread(bfd, buf, 4096);
+			}
+			if(s<=0) break;
+
 			*bytes+=s;
 			if(!MD5_Update(&md5, buf, s))
 			{
@@ -704,6 +745,9 @@ int send_whole_file(char cmd, const char *fname, const char *datapth, int quick_
 					break;
 				}
 			}
+			// Windows VSS headers tell us how many bytes to
+			// expect.
+			if(do_known_byte_count && datalen<=0) break;
 		  }
 		}
 #else
@@ -1246,9 +1290,13 @@ void cmd_to_text(char cmd, char *buf, size_t len)
 		case CMD_TIMESTAMP:
 			snprintf(buf, len, "Backup timestamp"); break;
 		case CMD_VSS:
-			snprintf(buf, len, "Windows meta data"); break;
+			snprintf(buf, len, "Windows VSS header"); break;
 		case CMD_ENC_VSS:
-			snprintf(buf, len, "Encrypted windows meta data"); break;
+			snprintf(buf, len, "Encrypted windows VSS header"); break;
+		case CMD_VSS_T:
+			snprintf(buf, len, "Windows VSS footer"); break;
+		case CMD_ENC_VSS_T:
+			snprintf(buf, len, "Encrypted windows VSS footer"); break;
 		default:
 			snprintf(buf, len, "----------------"); break;
 	}
@@ -1381,11 +1429,12 @@ int send_a_file(const char *path, struct cntr *p1cntr)
 {
 	int ret=0;
 	FILE *fp=NULL;
+	size_t datalen=0;
 	unsigned long long bytes=0;
-	if(open_file_for_send(NULL, &fp, path, 0, p1cntr)
+	if(open_file_for_send(NULL, &fp, path, 0, &datalen, p1cntr)
 	  || send_whole_file_gz(path, "datapth", 0, &bytes, NULL,
 		p1cntr, 9, // compression
-		NULL, fp, NULL, 0))
+		NULL, fp, NULL, 0, -1))
 	{
 		ret=-1;
 		goto end;

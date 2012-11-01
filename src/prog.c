@@ -79,6 +79,9 @@ static void usage_client(void)
 	printf("  -r <regex>     Specify a regular expression.\n");
 	printf("  -s <number>    Number of leading path components to strip during restore.\n");
 	printf("  -v             Print version and exit.\n");
+#ifndef HAVE_WIN32
+	printf("  -x             Do not use the Windows VSS API when restoring.\n");
+#endif
 	printf("\n");
 #ifndef HAVE_WIN32
 	printf(" See http://burp.grke.net/ or the man page ('man burp') for usage examples\n");
@@ -165,10 +168,11 @@ int main (int argc, char *argv[])
 	const char *sclient=NULL; // Status monitor client to view.
 	int generate_ca_only=0;
 #endif
+	int vss_restore=1;
 
 	init_log(argv[0]);
 
-	while((option=getopt(argc, argv, "a:b:c:C:d:ghfFil:nr:s:vz:?"))!=-1)
+	while((option=getopt(argc, argv, "a:b:c:C:d:ghfFil:nr:s:vxz:?"))!=-1)
 	{
 		switch(option)
 		{
@@ -242,6 +246,9 @@ int main (int argc, char *argv[])
 			case 'v':
 				printf("%s-%s\n", progname(), VERSION);
 				return 0;
+			case 'x':
+				vss_restore=0;
+				break;
 			case 'z':
 				browsefile=optarg;
 				break;
@@ -329,7 +336,7 @@ int main (int argc, char *argv[])
 	else
 	{
 		logp("before client\n");
-		ret=client(&conf, act);
+		ret=client(&conf, act, vss_restore);
 		logp("after client\n");
 	}
 

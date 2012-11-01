@@ -42,11 +42,13 @@ struct rs_filebuf
 	char *buf;
         size_t buf_len;
 	unsigned long long bytes;
+	size_t data_len;
+	int do_known_byte_count;
 	struct cntr *cntr;
 	MD5_CTX md5;
 };
 
-rs_filebuf_t *rs_filebuf_new(BFILE *bfd, FILE *fp, gzFile zp, int fd, size_t buf_len, struct cntr *cntr);
+rs_filebuf_t *rs_filebuf_new(BFILE *bfd, FILE *fp, gzFile zp, int fd, size_t buf_len, size_t data_len, struct cntr *cntr);
 void rs_filebuf_free(rs_filebuf_t *fb);
 rs_result rs_infilebuf_fill(rs_job_t *, rs_buffers_t *buf, void *fb);
 rs_result rs_outfilebuf_drain(rs_job_t *, rs_buffers_t *, void *fb);

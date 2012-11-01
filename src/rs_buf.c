@@ -46,6 +46,7 @@
 #include "asyncio.h"
 #include "rs_buf.h"
 #include "zlibio.h"
+#include "handy.h"
 #include <assert.h>
 
 /* use fseeko instead of fseek for long file support if we have it */
@@ -84,7 +85,7 @@ rs_alloc(size_t size, char const *name)
 }
 
 rs_filebuf_t *rs_filebuf_new(BFILE *bfd, FILE *fp, gzFile zp, int fd,
-	size_t buf_len, struct cntr *cntr)
+	size_t buf_len, size_t data_len, struct cntr *cntr)
 {
     rs_filebuf_t *pf=NULL;
     if(!(pf=rs_alloc_struct(rs_filebuf_t))) return NULL;
@@ -100,6 +101,11 @@ rs_filebuf_t *rs_filebuf_new(BFILE *bfd, FILE *fp, gzFile zp, int fd,
     pf->fd=fd;
     pf->bfd=bfd;
     pf->bytes=0;
+    pf->data_len=data_len;
+    if(data_len>0)
+    	pf->do_known_byte_count=1;
+    else
+    	pf->do_known_byte_count=0;
     pf->cntr=cntr;
     if(!MD5_Init(&(pf->md5)))
     {
@@ -195,7 +201,13 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 #ifdef HAVE_WIN32
     else if(fb->bfd)
     {
-	len=bread(fb->bfd, fb->buf, fb->buf_len);
+	if(fb->do_known_byte_count)
+	{
+		len=bread(fb->bfd, fb->buf, min(fb->buf_len, fb->data_len));
+		fb->data_len-=len;
+	}
+	else
+		len=bread(fb->bfd, fb->buf, fb->buf_len);
 	if(len==0)
 	{
 		//logp("bread: eof\n");
@@ -213,6 +225,12 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 	{
 		logp("rs_infilebuf_fill: MD5_Update() failed\n");
 		return RS_IO_ERROR;
+	}
+	// Windows VSS headers have given us the data length to expect.
+	if(fb->do_known_byte_count && fb->data_len<=0)
+	{
+		buf->eof_in=1;
+		return RS_DONE;
 	}
     }
 #endif
@@ -360,10 +378,12 @@ rs_result do_rs_run(rs_job_t *job, BFILE *bfd,
 	}
 
 	if((bfd || in_file || in_zfile || infd>=0)
-	 && !(in_fb=rs_filebuf_new(bfd, in_file, in_zfile, infd, ASYNC_BUF_LEN, cntr)))
-		return RS_MEM_ERROR;
+	 && !(in_fb=rs_filebuf_new(bfd,
+		in_file, in_zfile, infd, ASYNC_BUF_LEN, -1, cntr)))
+			return RS_MEM_ERROR;
 	if((out_file || out_zfile || outfd>=0)
-	 && !(out_fb=rs_filebuf_new(NULL, out_file, out_zfile, outfd, ASYNC_BUF_LEN, cntr)))
+	 && !(out_fb=rs_filebuf_new(NULL,
+		out_file, out_zfile, outfd, ASYNC_BUF_LEN, -1, cntr)))
 	{
 		if(in_fb) rs_filebuf_free(in_fb);
 		return RS_MEM_ERROR;
@@ -429,10 +449,12 @@ rs_whole_gzrun(rs_job_t *job, FILE *in_file, gzFile in_zfile, FILE *out_file, gz
     rs_filebuf_t    *in_fb = NULL, *out_fb = NULL;
 
     if (in_file || in_zfile)
-        in_fb = rs_filebuf_new(NULL, in_file, in_zfile, -1, ASYNC_BUF_LEN, cntr);
+        in_fb = rs_filebuf_new(NULL,
+		in_file, in_zfile, -1, ASYNC_BUF_LEN, -1, cntr);
 
     if (out_file || out_zfile)
-        out_fb = rs_filebuf_new(NULL, out_file, out_zfile, -1, ASYNC_BUF_LEN, cntr);
+        out_fb = rs_filebuf_new(NULL,
+		out_file, out_zfile, -1, ASYNC_BUF_LEN, -1, cntr);
 //logp("before drive\n");
     result = rs_job_drive(job, &buf,
                           in_fb ? rs_infilebuf_fill : NULL, in_fb,

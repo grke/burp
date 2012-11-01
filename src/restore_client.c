@@ -30,7 +30,11 @@ static int restore_interrupt(struct sbuf *sb, const char *msg, struct cntr *cntr
 	// to interrupt the flow and move on.
 	if((sb->cmd!=CMD_FILE
 	   && sb->cmd!=CMD_ENC_FILE
-	   && sb->cmd!=CMD_EFS_FILE)
+	   && sb->cmd!=CMD_EFS_FILE
+	   && sb->cmd!=CMD_VSS
+	   && sb->cmd!=CMD_ENC_VSS
+	   && sb->cmd!=CMD_VSS_T
+	   && sb->cmd!=CMD_ENC_VSS_T)
 	 || !(sb->datapth))
 		return 0;
 
@@ -109,7 +113,7 @@ static int make_link(const char *fname, const char *lnk, char cmd, const char *r
 	return ret;
 }
 
-static int open_for_restore(BFILE *bfd, FILE **fp, const char *path, struct sbuf *sb, struct cntr *cntr)
+static int open_for_restore(BFILE *bfd, FILE **fp, const char *path, struct sbuf *sb, int vss_restore, struct config *conf, struct cntr *cntr)
 {
 #ifdef HAVE_WIN32
 	int bopenret;
@@ -132,7 +136,10 @@ static int open_for_restore(BFILE *bfd, FILE **fp, const char *path, struct sbuf
 		}
 	}
 	binit(bfd, sb->winattr);
-	set_win32_backup(bfd);
+	if(vss_restore)
+		set_win32_backup(bfd);
+	else
+		bfd->use_backup_api=0;
 	if(S_ISDIR(sb->statp.st_mode))
 	{
 		mkdir(path, 0777);
@@ -166,7 +173,7 @@ static int open_for_restore(BFILE *bfd, FILE **fp, const char *path, struct sbuf
 	return 0;
 }
 
-static int restore_file_or_get_meta(BFILE *bfd, struct sbuf *sb, const char *fname, enum action act, const char *encpassword, struct cntr *cntr, char **metadata, size_t *metalen)
+static int restore_file_or_get_meta(BFILE *bfd, struct sbuf *sb, const char *fname, enum action act, const char *encpassword, struct cntr *cntr, char **metadata, size_t *metalen, int vss_restore, struct config *conf)
 {
 	size_t len=0;
 	int ret=0;
@@ -195,7 +202,8 @@ static int restore_file_or_get_meta(BFILE *bfd, struct sbuf *sb, const char *fna
 	if(!metadata)
 	{
 #endif
-		if(open_for_restore(bfd, &fp, rpath, sb, cntr))
+		if(open_for_restore(bfd, &fp,
+			rpath, sb, vss_restore, conf, cntr))
 		{
 			ret=-1;
 			goto end;
@@ -433,7 +441,7 @@ end:
 	return ret;
 }
 
-static int restore_metadata(BFILE *bfd, struct sbuf *sb, const char *fname, enum action act, const char *encpassword, struct cntr *cntr)
+static int restore_metadata(BFILE *bfd, struct sbuf *sb, const char *fname, enum action act, const char *encpassword, int vss_restore, struct config *conf, struct cntr *cntr)
 {
 	// If it is directory metadata, try to make sure the directory
 	// exists. Pass in NULL as the cntr, so no counting is done.
@@ -451,7 +459,8 @@ static int restore_metadata(BFILE *bfd, struct sbuf *sb, const char *fname, enum
 
 		// Read in the metadata...
 		if(restore_file_or_get_meta(bfd, sb, fname, act, encpassword,
-			cntr, &metadata, &metalen)) return -1;
+			cntr, &metadata, &metalen, vss_restore, conf))
+				return -1;
 		if(metadata)
 		{
 			
@@ -562,8 +571,10 @@ static int overwrite_ok(struct sbuf *sb, struct config *conf, BFILE *bfd, const 
 #ifdef HAVE_WIN32
 		// If Windows previously got some VSS data, it needs to append
 		// the file data to the already open bfd.
+		// And trailing VSS data.
 		if(bfd->mode!=BF_CLOSED
-		  && (sb->cmd==CMD_FILE || sb->cmd==CMD_ENC_FILE)
+		  && (sb->cmd==CMD_FILE || sb->cmd==CMD_ENC_FILE
+		      || sb->cmd==CMD_VSS_T || sb->cmd==CMD_ENC_VSS_T)
 		  && bfd->path && !strcmp(bfd->path, fullpath))
 		{
 			return 1;
@@ -582,7 +593,7 @@ static int overwrite_ok(struct sbuf *sb, struct config *conf, BFILE *bfd, const 
 	return 1;
 }
 
-int do_restore_client(struct config *conf, enum action act, struct cntr *p1cntr, struct cntr *cntr)
+int do_restore_client(struct config *conf, enum action act, int vss_restore, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ars=0;
 	int ret=0;
@@ -652,6 +663,8 @@ int do_restore_client(struct config *conf, enum action act, struct cntr *p1cntr,
 			case CMD_ENC_METADATA:
 			case CMD_VSS:
 			case CMD_ENC_VSS:
+			case CMD_VSS_T:
+			case CMD_ENC_VSS_T:
 			case CMD_EFS_FILE:
 				if(conf->strip)
 				{
@@ -719,13 +732,15 @@ int do_restore_client(struct config *conf, enum action act, struct cntr *p1cntr,
 				}
 				break;
 			case CMD_FILE:
+			case CMD_VSS_T:
 				// Have it a separate statement to the
 				// encrypted version so that encrypted and not
 				// encrypted files can be restored at the
 				// same time.
 				if(restore_file_or_get_meta(&bfd, &sb,
 					fullpath, act,
-					NULL, cntr, NULL, NULL))
+					NULL, cntr, NULL, NULL,
+					vss_restore, conf))
 				{
 					logp("restore_file error\n");
 					ret=-1;
@@ -733,10 +748,11 @@ int do_restore_client(struct config *conf, enum action act, struct cntr *p1cntr,
 				}
 				break;
 			case CMD_ENC_FILE:
+			case CMD_ENC_VSS_T:
 				if(restore_file_or_get_meta(&bfd, &sb,
 					fullpath, act,
 					conf->encryption_password, cntr,
-					NULL, NULL))
+					NULL, NULL, vss_restore, conf))
 				{
 					logp("restore_file error\n");
 					ret=-1;
@@ -762,7 +778,7 @@ int do_restore_client(struct config *conf, enum action act, struct cntr *p1cntr,
 			case CMD_METADATA:
 			case CMD_VSS:
 				if(restore_metadata(&bfd, &sb, fullpath, act,
-					NULL, cntr))
+					NULL, vss_restore, conf, cntr))
 				{
 					ret=-1;
 					quit++;
@@ -771,7 +787,8 @@ int do_restore_client(struct config *conf, enum action act, struct cntr *p1cntr,
 			case CMD_ENC_METADATA:
 			case CMD_ENC_VSS:
 				if(restore_metadata(&bfd, &sb, fullpath, act,
-					conf->encryption_password, cntr))
+					conf->encryption_password,
+					vss_restore, conf, cntr))
 				{
 					ret=-1;
 					quit++;
@@ -780,13 +797,13 @@ int do_restore_client(struct config *conf, enum action act, struct cntr *p1cntr,
 			case CMD_EFS_FILE:
 				if(restore_file_or_get_meta(&bfd, &sb,
 					fullpath, act,
-					NULL, cntr, NULL, NULL))
+					NULL, cntr,
+					NULL, NULL, vss_restore, conf))
 				{
 					logp("restore_file error\n");
 					ret=-1;
 					quit++;
 				}
-				break;
 				break;
 			default:
 				logp("unknown cmd: %c\n", sb.cmd);

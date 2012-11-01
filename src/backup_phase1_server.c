@@ -59,8 +59,6 @@ int backup_phase1_server(const char *phase1data, const char *client, struct cntr
 		  || sb.cmd==CMD_ENC_FILE
 		  || sb.cmd==CMD_METADATA
 		  || sb.cmd==CMD_ENC_METADATA
-		  || sb.cmd==CMD_VSS
-		  || sb.cmd==CMD_ENC_VSS
 		  || sb.cmd==CMD_EFS_FILE)
 			do_filecounter_bytes(p1cntr,
 				(unsigned long long)sb.statp.st_size);
@@ -109,8 +107,6 @@ static int read_phase1(gzFile zp, struct cntr *p1cntr)
 		  || p1b.cmd==CMD_ENC_FILE
 		  || p1b.cmd==CMD_METADATA
 		  || p1b.cmd==CMD_ENC_METADATA
-		  || p1b.cmd==CMD_VSS
-		  || p1b.cmd==CMD_ENC_VSS
 		  || p1b.cmd==CMD_EFS_FILE)
 			do_filecounter_bytes(p1cntr,
 				(unsigned long long)p1b.statp.st_size);

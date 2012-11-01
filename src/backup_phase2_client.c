@@ -35,7 +35,7 @@ static int load_signature(rs_signature_t **sumset, struct cntr *cntr)
 	return r;
 }
 
-static int load_signature_and_send_delta(BFILE *bfd, FILE *in, unsigned long long *bytes, unsigned long long *sentbytes, struct cntr *cntr)
+static int load_signature_and_send_delta(BFILE *bfd, FILE *in, unsigned long long *bytes, unsigned long long *sentbytes, struct cntr *cntr, size_t datalen)
 {
 	rs_job_t *job;
 	rs_result r;
@@ -57,8 +57,10 @@ static int load_signature_and_send_delta(BFILE *bfd, FILE *in, unsigned long lon
 		return RS_IO_ERROR;
 	}
 
-	if(!(infb=rs_filebuf_new(bfd, in, NULL, -1, ASYNC_BUF_LEN, cntr))
-	  || !(outfb=rs_filebuf_new(NULL, NULL, NULL, async_get_fd(), ASYNC_BUF_LEN, cntr)))
+	if(!(infb=rs_filebuf_new(bfd,
+		in, NULL, -1, ASYNC_BUF_LEN, datalen, cntr))
+	  || !(outfb=rs_filebuf_new(NULL, NULL,
+		NULL, async_get_fd(), ASYNC_BUF_LEN, -1, cntr)))
 	{
 		logp("could not rs_filebuf_new for delta\n");
 		if(infb) rs_filebuf_free(infb);
@@ -122,14 +124,17 @@ static int load_signature_and_send_delta(BFILE *bfd, FILE *in, unsigned long lon
 	return r;
 }
 
-static int send_whole_file_w(char cmd, const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen)
+static int send_whole_file_w(char cmd, const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen, size_t datalen)
 {
 	if((compression || encpassword) && cmd!=CMD_EFS_FILE)
-		return send_whole_file_gz(fname, datapth, quick_read, bytes, 
-		  encpassword, cntr, compression, bfd, fp, extrameta, elen);
+		return send_whole_file_gz(fname, datapth, quick_read,
+		  bytes, 
+		  encpassword, cntr, compression, bfd, fp, extrameta, elen,
+		  datalen);
 	else
 		return send_whole_file(cmd, fname, datapth, quick_read, bytes, 
-		  cntr, bfd, fp, extrameta, elen);
+		  cntr, bfd, fp, extrameta, elen,
+		  datalen);
 }
 
 static int forget_file(struct sbuf *sb, char cmd, struct cntr *cntr)
@@ -165,6 +170,9 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 	// close them until another time around the loop, when the actual
 	// data is read.
 	BFILE bfd;
+	// Windows VSS headers tell us how much file
+	// data to expect.
+	size_t datalen=0;
 #ifdef HAVE_WIN32
 	binit(&bfd, 0);
 #endif
@@ -220,6 +228,8 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 			  || cmd==CMD_ENC_METADATA
 			  || cmd==CMD_VSS
 			  || cmd==CMD_ENC_VSS
+			  || cmd==CMD_VSS_T
+			  || cmd==CMD_ENC_VSS_T
 			  || cmd==CMD_EFS_FILE)
 			{
 				int forget=0;
@@ -276,7 +286,8 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 #else
 						NULL, &fp,
 #endif
-						sb.path, winattr, cntr))
+						sb.path, winattr,
+						&datalen, cntr))
 							forget++;
 				}
 
@@ -308,7 +319,8 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 #endif
 						sb.path,
 						&statbuf, &extrameta, &elen,
-						winattr, cntr))
+						winattr, cntr,
+						&datalen))
 					{
 						logw(cntr, "Meta data error for %s", sb.path);
 						free_sbuf(&sb);
@@ -344,7 +356,8 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 					  || async_write_str(CMD_FILE, sb.path)
 					  || load_signature_and_send_delta(
 						&bfd, fp,
-						&bytes, &sentbytes, cntr))
+						&bytes, &sentbytes, cntr,
+						datalen))
 					{
 						logp("error in sig/delta for %s (%s)\n", sb.path, sb.datapth);
 						ret=-1;
@@ -362,14 +375,16 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 					//logp("need to send whole file: %s\n",
 					//	sb.path);
 					// send the whole file.
-					if(async_write_str(CMD_STAT, attribs)
-					  || async_write_str(cmd, sb.path)
+
+					if((async_write_str(CMD_STAT, attribs)
+					  || async_write_str(cmd, sb.path))
 					  || send_whole_file_w(cmd, sb.path,
 						NULL, 0, &bytes,
 						conf->encryption_password,
 						cntr, compression,
 						&bfd, fp,
-						extrameta, elen))
+						extrameta, elen,
+						datalen))
 					{
 						ret=-1;
 						quit++;
@@ -382,12 +397,15 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 					}
 				}
 #ifdef HAVE_WIN32
-				// If using Windows and it was vss metadata, do
-				// not close bfd until the next time around the
-				// loop.
-				if(cmd!=CMD_VSS
-				  && cmd!=CMD_ENC_VSS)
-					close_file_for_send(&bfd, NULL);
+				// If using Windows do not close bfd - it needs
+				// to stay open to read VSS/file data/VSS.
+				// It will get closed either when given a
+				// different file path, or when this function
+				// exits.
+				
+				//if(cmd!=CMD_VSS
+				// && cmd!=CMD_ENC_VSS)
+				//	close_file_for_send(&bfd, NULL);
 #else
 				close_file_for_send(NULL, &fp);
 #endif

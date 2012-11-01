@@ -1,4 +1,4 @@
-#include "burp.h"
+ #include "burp.h"
 #include "prog.h"
 #include "msg.h"
 #include "rs_buf.h"
@@ -148,7 +148,7 @@ static int s_server_session_id_context=1;
    Returns 2 if there were restore/verify warnings.
    Returns 3 if timer conditions were not met.
 */
-static int do_client(struct config *conf, enum action act)
+static int do_client(struct config *conf, enum action act, int vss_restore)
 {
 	int ret=0;
 	int rfd=-1;
@@ -344,7 +344,8 @@ static int do_client(struct config *conf, enum action act)
 
 		// :sincexc: is for the server giving the client the
 		// incexc config.
-		if(act==ACTION_BACKUP || act==ACTION_BACKUP_TIMED)
+		if(act==ACTION_BACKUP
+		  || act==ACTION_BACKUP_TIMED)
 		{
 			if(!incexc && server_supports(feat, ":sincexc:"))
 			{
@@ -477,7 +478,7 @@ static int do_client(struct config *conf, enum action act)
 				NULL, NULL, NULL, NULL, NULL,
 				&cntr, 1, 1)) ret=-1;
 			if(!ret && do_restore_client(conf,
-				act, &p1cntr, &cntr)) ret=-1;
+				act, vss_restore, &p1cntr, &cntr)) ret=-1;
 			if((conf->restore_script_post_run_on_fail
 			  || !ret) && conf->restore_script_post)
 			{
@@ -526,14 +527,14 @@ end:
 	return ret;
 }
 
-int client(struct config *conf, enum action act)
+int client(struct config *conf, enum action act, int vss_restore)
 {
 	int ret=0;
-	if((ret=do_client(conf, act))==1)
+	if((ret=do_client(conf, act, vss_restore))==1)
 	{
 		logp("Re-opening connection to server\n");
 		sleep(5);
-		ret=do_client(conf, act);
+		ret=do_client(conf, act, vss_restore);
 	}
 	return ret;
 }

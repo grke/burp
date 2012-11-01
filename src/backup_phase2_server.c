@@ -84,6 +84,8 @@ static int filedata(char cmd)
 	  || cmd==CMD_ENC_METADATA
 	  || cmd==CMD_VSS
 	  || cmd==CMD_ENC_VSS
+	  || cmd==CMD_VSS_T
+	  || cmd==CMD_ENC_VSS_T
 	  || cmd==CMD_EFS_FILE);
 }
 
@@ -126,13 +128,13 @@ static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *c
 	}
 	//logp("sig begin: %s\n", p1b->datapth);
 	if(!(p1b->infb=rs_filebuf_new(NULL,
-		p1b->sigfp, p1b->sigzp, -1, blocklen, cntr)))
+		p1b->sigfp, p1b->sigzp, -1, blocklen, -1, cntr)))
 	{
 		logp("could not rs_filebuf_new for infb.\n");
 		return -1;
 	}
 	if(!(p1b->outfb=rs_filebuf_new(NULL, NULL, NULL,
-		async_get_fd(), ASYNC_BUF_LEN, cntr)))
+		async_get_fd(), ASYNC_BUF_LEN, -1, cntr)))
 	{
 		logp("could not rs_filebuf_new for in_outfb.\n");
 		return -1;
@@ -256,6 +258,10 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FIL
 			  || p1b->cmd==CMD_VSS
 			  || cb->cmd==CMD_ENC_VSS
 			  || p1b->cmd==CMD_ENC_VSS
+			  || cb->cmd==CMD_VSS_T
+			  || p1b->cmd==CMD_VSS_T
+			  || cb->cmd==CMD_ENC_VSS_T
+			  || p1b->cmd==CMD_ENC_VSS_T
 			  || cb->cmd==CMD_EFS_FILE
 			  || p1b->cmd==CMD_EFS_FILE)
 				return process_new_file(cb,
@@ -282,7 +288,11 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FIL
 		  || cb->cmd==CMD_VSS
 		  || p1b->cmd==CMD_VSS
 		  || cb->cmd==CMD_ENC_VSS
-		  || p1b->cmd==CMD_ENC_VSS)
+		  || p1b->cmd==CMD_ENC_VSS
+		  || cb->cmd==CMD_VSS_T
+		  || p1b->cmd==CMD_VSS_T
+		  || cb->cmd==CMD_ENC_VSS_T
+		  || p1b->cmd==CMD_ENC_VSS_T)
 			return process_new_file(cb, p1b, p2fp, ucfp, cntr);
 
 		// Get new files if they have switched between compression on

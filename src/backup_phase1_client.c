@@ -12,6 +12,7 @@
 static char filesymbol=CMD_FILE;
 #ifdef HAVE_WIN32
 static char metasymbol=CMD_VSS;
+static char vss_trail_symbol=CMD_VSS_T;
 #else
 static char metasymbol=CMD_METADATA;
 #endif
@@ -97,21 +98,16 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
    //logp("%d: %s\n", ff->type, ff->fname);
 
    switch (ff->type) {
+#ifndef HAVE_WIN32
    case FT_LNKSAVED:
         //printf("Lnka: %s -> %s\n", ff->fname, ff->link);
    	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
-#ifdef HAVE_WIN32
-	if(conf->split_vss && !conf->strip_vss
-	  && maybe_send_extrameta(ff->fname, CMD_HARD_LINK, attribs, p1cntr))
-		return -1;
-#endif
 	if(async_write_str(CMD_STAT, attribs)
 	  || async_write_str(CMD_HARD_LINK, ff->fname)
 	  || async_write_str(CMD_HARD_LINK, ff->link))
 		return -1;
 	do_filecounter(p1cntr, CMD_HARD_LINK, 1);
 	// At least FreeBSD 8.2 can have different xattrs on hard links.
-#ifndef HAVE_WIN32
 	if(maybe_send_extrameta(ff->fname, CMD_HARD_LINK, attribs, p1cntr))
 		return -1;
 #endif
@@ -134,25 +130,32 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
       do_filecounter(p1cntr, filesymbol, 1);
       if(ff->type==FT_REG)
 	do_filecounter_bytes(p1cntr, (unsigned long long)ff->statp.st_size);
-#ifndef HAVE_WIN32
+#ifdef HAVE_WIN32
+      // Possible trailing VSS meta data
+      if(conf->split_vss && !conf->strip_vss)
+      {
+	if(async_write_str(CMD_STAT, attribs)
+	 || async_write_str(vss_trail_symbol, ff->fname))
+		return -1;
+        do_filecounter(p1cntr, vss_trail_symbol, 1);
+      }
+#else
       if(maybe_send_extrameta(ff->fname, filesymbol, attribs, p1cntr))
 		return -1;
 #endif
       break;
+#ifndef HAVE_WIN32
    case FT_LNK:
 	//printf("link: %s -> %s\n", ff->fname, ff->link);
    	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
-#ifdef HAVE_WIN32
         if(conf->split_vss && !conf->strip_vss
 	  && maybe_send_extrameta(ff->fname, CMD_SOFT_LINK, attribs, p1cntr))
 		return -1;
-#endif
 	if(async_write_str(CMD_STAT, attribs)
 	  || async_write_str(CMD_SOFT_LINK, ff->fname)
 	  || async_write_str(CMD_SOFT_LINK, ff->link))
 		return -1;
 	do_filecounter(p1cntr, CMD_SOFT_LINK, 1);
-#ifndef HAVE_WIN32
         if(maybe_send_extrameta(ff->fname, CMD_SOFT_LINK, attribs, p1cntr))
 		return -1;
 #endif
@@ -203,18 +206,13 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 	 }
 	}
       break;
+#ifndef HAVE_WIN32
    case FT_SPEC: // special file - fifo, socket, device node...
       encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
-#ifdef HAVE_WIN32
-      if(conf->split_vss && !conf->strip_vss
-	&& maybe_send_extrameta(ff->fname, CMD_SPECIAL, attribs, p1cntr))
-		return -1;
-#endif
       if(async_write_str(CMD_STAT, attribs)
 	  || async_write_str(CMD_SPECIAL, ff->fname))
 		return -1;
       do_filecounter(p1cntr, CMD_SPECIAL, 1);
-#ifndef HAVE_WIN32
       if(maybe_send_extrameta(ff->fname, CMD_SPECIAL, attribs, p1cntr))
 		return -1;
 #endif
@@ -259,6 +257,7 @@ int backup_phase1_client(struct config *conf, int estimate, struct cntr *p1cntr,
 		filesymbol=CMD_ENC_FILE;
 #ifdef HAVE_WIN32
 		metasymbol=CMD_ENC_VSS;
+		vss_trail_symbol=CMD_ENC_VSS_T;
 #else
 		metasymbol=CMD_ENC_METADATA;
 #endif

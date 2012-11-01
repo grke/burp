@@ -215,7 +215,7 @@ struct bsid {
 };
 #define bsidsize	20
 
-int get_vss(BFILE *bfd, const char *path, struct stat *statp, char **vssdata, size_t *vlen, int64_t winattr, struct cntr *cntr)
+int get_vss(BFILE *bfd, const char *path, struct stat *statp, char **vssdata, size_t *vlen, int64_t winattr, struct cntr *cntr, size_t *datalen)
 {
 	bsid sid;
 	char *tmp=NULL;
@@ -238,6 +238,7 @@ int get_vss(BFILE *bfd, const char *path, struct stat *statp, char **vssdata, si
 		{
 		//	logp("\n%s: %d + %d\n",
 		//		path, (int)sid.Size, (int)sid.dwStreamNameSize);
+			*datalen=sid.Size;
 			break;
 		}
 

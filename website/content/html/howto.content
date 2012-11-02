@@ -180,6 +180,10 @@ CLIENT OPTIONS
 	      For  use	with  restores - strip a number of leading path compo‐
 	      nents.
 
+       -x     For Windows clients only - do not use the  Windows  VSS  API  on
+	      restore.	Give  this option when you are restoring a backup that
+	      contains no VSS information.
+
 
 EXAMPLES
        burp -a b
@@ -448,6 +452,9 @@ SERVER CONFIGURATION FILE OPTIONS
        ssl_cert_password=[password]
 	      Synonym for ssl_key_password.
 
+       ssl_ciphers=[cipher list]
+	      Allowed SSL ciphers. See openssl ciphers for details.
+
        ssl_dhfile=[path]
 	      Path to Diffie-Hellman parameter	file.  To  generate  one  with
 	      openssl,	 use   a  command  like  this:	openssl  dhparam  -out
@@ -670,6 +677,9 @@ CLIENT CONFIGURATION FILE OPTIONS
 	      server  gives  when  it connects. If ssl_peer_cn is not set, the
 	      server name will be used instead.
 
+       ssl_ciphers=[cipher list]
+	      Allowed SSL ciphers. See openssl ciphers for details.
+
        server_can_restore=[0|1]
 	      To prevent the server from initiating restores, set this	to  0.
 	      The default is 1.
@@ -856,6 +866,18 @@ INCLUDES / EXCLUDES
        read_all_blockdevs=[0|1]
 	      Open  all  block devices for reading and back up the contents as
 	      if they were regular files.
+
+       split_vss=[0|1]
+	      When backing up Windows computers, this  option  allows  you  to
+	      save  the  VSS  header  data  separate  from  the file data. The
+	      default is off, which means that the VSS header  data  is  saved
+	      prepended to the file data.
+
+       strip_vss=[0|1]
+	      When  backing  up  Windows  computers, this option allows you to
+	      prevent the VSS header data being backed up. The default is off.
+	      To  restore a backup that has no VSS information on Windows, you
+	      need to give the client the '-x' command line option.
 
 
 SERVER CLIENTCONFDIR FILE

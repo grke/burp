@@ -53,6 +53,46 @@ The main author of Burp is Graham Keeling.
 <TD ALIGN="LEFT">
 
 <P>
+<FONT COLOR="#99CCFF">2012-11-02: burp-1.3.18 is released.
+<pre>
+Changes in burp-1.3.18:
+  * Turn --enable-ipv6 configure option into --disable-ipv6.
+  * Print a carriage return when rewriting ssl_peer_cn on Windows.
+  * Make all places that log 'out of memory' also log the function name.
+  * Remove version_warn debug.
+  * Tweaks to the test script.
+  * Option to store Windows VSS headers separately to the actual file data.
+  * Option to strip Windows VSS headers from the actual file data.
+  * If no timebands are given to timer_script, default to not allowing a
+    backup.
+  * Add LC_TIME=C to LANG=C in the timer script.
+  * Add 'vss_strip' program, which is a tool for extracting the file data from
+    a file containing both VSS data and the file data.
+  * Add Patrick Koppen's patches:
+        - Add 'ssl_cipher' option.
+        - Add support for signal USR2 to Debian init script.
+        - Write pid first in pidfile.
+</pre>
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">2011-11-01: My attention has been brought to issue 10 of
+'Admin Magazine', which has just arrived in Australia. Burp is mentioned on the
+cover, and there is a 5 page article featuring it inside. "Burp coughs up the
+goods".
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">2012-10-31:
+<BR>
+Nobody financially supported burp during October, but thank you to 6sync for
+continuing to provide web hosting.
+</FONT>
+</p>
+
+<P>
 <FONT COLOR="#99CCFF">2012-10-09: burp-1.3.16 is released. If you have any
 clients on 1.3.14, you should upgrade them to 1.3.16 as soon as possible.
 <pre>

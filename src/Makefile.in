@@ -91,7 +91,7 @@ WIN32LIBS = $(@WIN32@)
 #	@echo "Compiling $<"
 	$(ECHO_CMD)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 #-------------------------------------------------------------------------
-all: Makefile @WIN32@ burp @STATIC@ bedup @STATIC_DEDUP@
+all: Makefile @WIN32@ burp @STATIC@ bedup @STATIC_DEDUP@ vss_strip @STATIC_STRIP_VSS@
 	@echo "==== Make of burp is good ===="
 	@echo " "
 
@@ -142,6 +142,13 @@ static-bedup: Makefile bedup.o @WIN32@
 	   $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
 	   $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(RSYNC_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS) -ldl -lgpm
 
+vss_strip:  Makefile vss_strip.o
+	@echo "Linking $@ ..."
+	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -o $@ vss_strip.o
+
+static-vss_strip: Makefile vss_strip.o
+	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -o $@ vss_strip.o
+
 Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
 	cd $(topdir) \
 	  && CONFIG_FILES=$(thisdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
@@ -152,6 +159,7 @@ libtool-clean:
 clean:	libtool-clean
 	@$(RMF) burp core core.* a.out *.o *.bak *~ *.intpro *.extpro 1 2 3
 	@$(RMF) bedup static-burp static-bedup config.h
+	@$(RMF) vss_strip static-vss_strip
 	@$(RMF) Makefile
 	@$(RMF) uthash.h
 #	@if test -f win32/Makefile -a "${GMAKE}" != "none"; then \
@@ -182,17 +190,21 @@ install: all
 	rm -f $(DESTDIR)/usr/sbin/bedup ; \
 	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) burp $(DESTDIR)$(sbindir)/burp 
 	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) bedup $(DESTDIR)$(sbindir)/bedup
+	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) vss_strip $(DESTDIR)$(sbindir)/vss_strip
 	@if test -f static-burp; then \
 	   $(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) static-burp $(DESTDIR)$(sbindir)/static-burp; \
 	fi
 	@if test -f static-bedup ; then \
 	   $(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) static-bedup  $(DESTDIR)$(sbindir)/static-bedup ; \
 	fi
+	@if test -f static-vss_strip ; then \
+	   $(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) static-vss_strip  $(DESTDIR)$(sbindir)/static-vss_strip ; \
+	fi
 
 
 
 uninstall:
-	(cd $(DESTDIR)$(sbindir); $(RMF) burp bedup static-burp static-bedup)
+	(cd $(DESTDIR)$(sbindir); $(RMF) burp bedup vss_strip static-burp static-bedup static-vss_strip)
 
 
 

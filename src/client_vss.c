@@ -215,15 +215,27 @@ struct bsid {
 };
 #define bsidsize	20
 
+static int ensure_read(BFILE *bfd, char *buf, size_t s)
+{
+	size_t got=0;
+	size_t offset=0;
+	while((got=bread(bfd, buf+offset, s-offset))>0)
+	{
+		offset+=got;
+		if(offset>=s) return 0;
+	}
+	fprintf(stderr, "Error in read: %s\n", strerror(errno));
+	return -1;
+}
+
 int get_vss(BFILE *bfd, const char *path, struct stat *statp, char **vssdata, size_t *vlen, int64_t winattr, struct cntr *cntr, size_t *datalen)
 {
 	bsid sid;
 	char *tmp=NULL;
 	*vlen=0;
-	while(bread(bfd, &sid, bsidsize)>0)
+	while(!ensure_read(bfd, (char *)&sid, bsidsize))
 	{
 		int64_t s=0;
-		int64_t g=0;
 
 		if(!(tmp=(char *)realloc(tmp, (*vlen)+bsidsize)))
 		{
@@ -250,9 +262,8 @@ int get_vss(BFILE *bfd, const char *path, struct stat *statp, char **vssdata, si
 			log_out_of_memory(__FUNCTION__);
 			return -1;
 		}
-		if((g=bread(bfd, tmp+(*vlen), s))!=s)
+		if(ensure_read(bfd, tmp+(*vlen), s))
 		{
-			logp("Short bread: %d!=%d\n", g, s);
 			goto error;
 			return -1;
 		}
@@ -278,17 +289,23 @@ error:
 	return -1;
 }
 
+static int ensure_write(BFILE *bfd, const char *buf, size_t got)
+{
+	size_t wrote=0;
+	while((wrote=bwrite(bfd, (void *)buf, got))>0)
+	{
+		got-=wrote;
+		if(got<=0) return 0;
+	}
+	logp("error when writing VSS data\n");
+	return -1;
+}
+
 int set_vss(BFILE *bfd, const char *vssdata, size_t vlen, struct cntr *cntr)
 {
-	int ret=0;
 	// Just need to write the VSS stuff to the file.
 	if(!vlen || !vssdata) return 0;
-	if((ret=bwrite(bfd, (void *)vssdata, vlen))<=0)
-	{
-		logp("error when writing %d VSS data: %d\n", vlen, ret);
-		return -1;
-	}
-	return 0;
+	return ensure_write(bfd, vssdata, vlen);
 }
 
 #endif  /* HAVE_WIN32 */

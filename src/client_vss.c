@@ -215,17 +215,23 @@ struct bsid {
 };
 #define bsidsize	20
 
-static int ensure_read(BFILE *bfd, char *buf, size_t s)
+static int ensure_read(BFILE *bfd, char *buf, size_t s, int print_err)
 {
 	size_t got=0;
 	size_t offset=0;
 	while((got=bread(bfd, buf+offset, s-offset))>0)
 	{
 		offset+=got;
-		if(offset>=s) return 0;
+		if(offset>=s) break;
 	}
-	fprintf(stderr, "Error in read: %s\n", strerror(errno));
-	return -1;
+	if(offset!=s)
+	{
+		if(print_err)
+			logp("Error in read - got %d, wanted %d\n",
+				offset, s);
+		return -1;
+	}
+	return 0;
 }
 
 int get_vss(BFILE *bfd, const char *path, struct stat *statp, char **vssdata, size_t *vlen, int64_t winattr, struct cntr *cntr, size_t *datalen)
@@ -233,7 +239,7 @@ int get_vss(BFILE *bfd, const char *path, struct stat *statp, char **vssdata, si
 	bsid sid;
 	char *tmp=NULL;
 	*vlen=0;
-	while(!ensure_read(bfd, (char *)&sid, bsidsize))
+	while(!ensure_read(bfd, (char *)&sid, bsidsize, 0))
 	{
 		int64_t s=0;
 
@@ -262,7 +268,7 @@ int get_vss(BFILE *bfd, const char *path, struct stat *statp, char **vssdata, si
 			log_out_of_memory(__FUNCTION__);
 			return -1;
 		}
-		if(ensure_read(bfd, tmp+(*vlen), s))
+		if(ensure_read(bfd, tmp+(*vlen), s, 1))
 		{
 			goto error;
 			return -1;

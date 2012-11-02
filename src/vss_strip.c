@@ -72,8 +72,8 @@ static int ensure_read(struct bsid *sid, FILE *inp)
 		offset+=got;
 		if(offset>=bsidsize) return 0;
 	}
-	fprintf(stderr, "Error in read: %s\n", strerror(errno));
-	return -1;
+	if(offset!=bsidsize) return -1;
+	return 0;
 }
 
 static int dump_headers(FILE *inp)

@@ -270,6 +270,9 @@ The SSL key password.
 \fBssl_cert_password=[password]\fR
 Synonym for ssl_key_password.
 .TP
+\fBssl_ciphers=[cipher list]\fR
+Allowed SSL ciphers. See openssl ciphers for details.
+.TP
 \fBssl_dhfile=[path]\fR
 Path to Diffie-Hellman parameter file. To generate one with openssl, use a command like this: openssl dhparam \-out dhfile.pem \-5 1024
 .TP
@@ -417,6 +420,9 @@ Synonym for ssl_key_password.
 .TP
 \fBssl_peer_cn=[string]\fR
 Must match the common name in the SSL certificate that the server gives when it connects. If ssl_peer_cn is not set, the server name will be used instead.
+.TP
+\fBssl_ciphers=[cipher list]\fR
+Allowed SSL ciphers. See openssl ciphers for details.
 .TP
 \fBserver_can_restore=[0|1]\fR
 To prevent the server from initiating restores, set this to 0. The default is 1.

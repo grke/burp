@@ -27,6 +27,14 @@ Print VSS header info.
 \fB\-h|-?\fR \fB\fR
 Print help text and exit.
 
+.SH EXAMPLES
+.TP
+\fBvss_strip -i infile -o outfile\fR
+Takes uncompressed infile, and extracts the file data to outfile.
+.TP
+\fBzcat infile.gz | vss_strip\fR
+Takes the output of zcat as input, and outputs to stdout.
+
 .SH BUGS
 If you find bugs, please report them to the email list. See the website
 <http://burp.grke.net/> for details.

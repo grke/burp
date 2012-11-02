@@ -10,6 +10,10 @@
   * Add LC_TIME=C to LANG=C in the timer script.
   * Add 'vss_strip' program, which is a tool for extracting the file data from
     a file containing both VSS data and the file data.
+  * Add Patrick Koppen's patches:
+	- Add 'ssl_cipher' option.
+	- Add support for signal USR2 to Debian init script.
+	- Write pid first in pidfile.
 
 2012-10-09 Changes in burp-1.3.16:
   * Important bug fix for exclude_comp.

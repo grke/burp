@@ -97,6 +97,7 @@ void init_config(struct config *conf)
         conf->ssl_cert=NULL;
         conf->ssl_key=NULL;
         conf->ssl_key_password=NULL;
+        conf->ssl_ciphers=NULL;
 	conf->ssl_dhfile=NULL;
 	conf->ssl_peer_cn=NULL;
 	conf->encryption_password=NULL;
@@ -212,6 +213,7 @@ void free_config(struct config *conf)
         if(conf->ssl_cert) free(conf->ssl_cert);
         if(conf->ssl_key) free(conf->ssl_key);
         if(conf->ssl_key_password) free(conf->ssl_key_password);
+        if(conf->ssl_ciphers) free(conf->ssl_ciphers);
         if(conf->ssl_dhfile) free(conf->ssl_dhfile);
         if(conf->ssl_peer_cn) free(conf->ssl_peer_cn);
         if(conf->user) free(conf->user);
@@ -712,6 +714,8 @@ static int load_config_strings(struct config *conf, const char *field, const cha
 	if(get_conf_val(field, value, "ssl_dhfile", &(conf->ssl_dhfile)))
 		return -1;
 	if(get_conf_val(field, value, "ssl_peer_cn", &(conf->ssl_peer_cn)))
+		return -1;
+	if(get_conf_val(field, value, "ssl_ciphers", &(conf->ssl_ciphers)))
 		return -1;
 	if(get_conf_val(field, value, "clientconfdir", &(conf->clientconfdir)))
 		return -1;

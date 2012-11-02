@@ -25,6 +25,7 @@ struct config
 	char *ssl_key;
 	char *ssl_key_password;
 	char *ssl_peer_cn;
+	char *ssl_ciphers;
 	char *user;
 	char *group;
 	float ratelimit;

@@ -110,6 +110,10 @@ SSL_CTX *ssl_initialise_ctx(struct config *conf)
 
 	if(ssl_load_keys_and_certs(ctx, conf)) return NULL;
 
+	if(conf->ssl_ciphers) {
+		SSL_CTX_set_cipher_list(ctx, conf->ssl_ciphers);
+	}
+
 	return ctx;
 }
 
@@ -225,7 +229,9 @@ int ssl_check_cert(SSL *ssl, struct config *conf)
 		logp("ssl_peer_cn not set.\n");
 		return -1;
 	}
-
+	logp("Client uses %s %s\n",
+		SSL_CIPHER_get_version(SSL_get_current_cipher(ssl)),
+		SSL_get_cipher_name(ssl));
 	if(!(peer=SSL_get_peer_certificate(ssl)))
 	{
 		logp("Could not get peer certificate.\n");

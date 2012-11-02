@@ -31,10 +31,10 @@ int get_lock(const char *path)
 		return -1;
 	if(lockf(fdlock, F_TLOCK, 0))
 		return -1;
-	snprintf(text, sizeof(text), "%s\n%d\n", progname(), (int)getpid());
+	snprintf(text, sizeof(text), "%d\n%s\n", (int)getpid(), progname());
 	if(write(fdlock, text, strlen(text))!=(ssize_t)strlen(text))
 	{
-		logp("Could not write progname/pid to %s\n", path);
+		logp("Could not write pid/progname to %s\n", path);
 		return -1;
 	}
 	fsync(fdlock); // Make sure the pid gets onto the disk.

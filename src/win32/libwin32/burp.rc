@@ -110,7 +110,7 @@ BEGIN
 
     LTEXT           "      by Graham Keeling",-1,134,38,78,10
     LTEXT           "For more information, see:",-1,115,60,100,10
-    LTEXT           "         www.burp.org",-1,115,70,100,10
+    LTEXT           "         burp.grke.net",-1,115,70,100,10
     LTEXT           "Copyright (C) 1999-2009, Free Software Foundation Europe e.V.",-1,7,120,175,10
     LTEXT           "Licensed under GNU GPL 2.0.",-1,7,130,175,10
     RTEXT           "Build Date:",-1,108,24,42,8

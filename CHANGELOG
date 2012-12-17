@@ -1,3 +1,4 @@
+2012-12-18 Changes in burp-1.3.20:
   * Bug fix for split/strip_vss = 1 on the client side always causing all files
     to be backed up.
   * Make configure report /usr as the default prefix.

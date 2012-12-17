@@ -280,7 +280,7 @@ int get_vss(BFILE *bfd, const char *path, struct stat *statp, char **vssdata, si
 		log_out_of_memory(__FUNCTION__);
 		goto error;
 	}
-	snprintf(*vssdata, 9, "%c%08X", META_VSS, *vlen);
+	snprintf(*vssdata, 9, "%c%08X", META_VSS, (unsigned int)*vlen);
 	memcpy((*vssdata)+9, tmp, *vlen);
 	(*vlen)+=9;
 	return 0;

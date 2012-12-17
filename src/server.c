@@ -308,11 +308,16 @@ end:
 	return ret;
 }
 
-static int vss_opts_changed(struct config *cconf, const char *cincexc)
+static int vss_opts_changed(struct config *cconf, const char *cincexc, const char *incexc)
 {
 	int ret=0;
 	struct config oldconf;
+	struct config newconf;
 	init_config(&oldconf);
+	init_config(&newconf);
+
+	// Figure out the old config, which is in the incexc file left
+	// in the current backup directory on the server.
 	if(parse_incexcs_path(&oldconf, cincexc))
 	{
 		// Assume that the file did not exist, and therefore
@@ -320,16 +325,34 @@ static int vss_opts_changed(struct config *cconf, const char *cincexc)
 		oldconf.split_vss=0;
 		oldconf.strip_vss=0;
 	}
-	if(cconf->split_vss!=oldconf.split_vss)
+
+	// Figure out the new config, which is either in the incexc file from
+	// the client, or in the cconf on the server.
+	if(incexc)
+	{
+		if(parse_incexcs_buf(&newconf, incexc))
+		{
+			// Should probably not got here.
+			newconf.split_vss=0;
+			newconf.strip_vss=0;
+		}
+	}
+	else
+	{
+		newconf.split_vss=cconf->split_vss;
+		newconf.strip_vss=cconf->strip_vss;
+	}
+
+	if(newconf.split_vss!=oldconf.split_vss)
 	{
 		logp("split_vss=%d (changed since last backup)\n",
-			cconf->split_vss);
+			newconf.split_vss);
 		ret=1;
 	}
-	if(cconf->strip_vss!=oldconf.strip_vss)
+	if(newconf.strip_vss!=oldconf.strip_vss)
 	{
 		logp("strip_vss=%d (changed since last backup)\n",
-			cconf->strip_vss);
+			newconf.strip_vss);
 		ret=1;
 	}
 	if(ret) logp("All files will be treated as new\n");
@@ -464,7 +487,7 @@ static int do_backup_server(const char *basedir, const char *current, const char
 	// fresh. Need to do this, otherwise toggling split_vss on and off
 	// will result in backups that do not work.
 	if(!lstat(cmanifest, &statp)
-	  && !vss_opts_changed(cconf, cincexc))
+	  && !vss_opts_changed(cconf, cincexc, incexc))
 	{
 		if(!(cmanfp=gzopen_file(cmanifest, "rb")))
 		{

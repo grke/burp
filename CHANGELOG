@@ -1,3 +1,6 @@
+  * Bug fix for split/strip_vss = 1 on the client side always causing all files
+    to be backed up.
+
 2012-11-02 Changes in burp-1.3.18:
   * Turn --enable-ipv6 configure option into --disable-ipv6.
   * Print a carriage return when rewriting ssl_peer_cn on Windows.

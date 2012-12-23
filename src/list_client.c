@@ -97,7 +97,47 @@ void ls_output(char *buf, const char *fname, struct stat *statp)
 	*p = 0;
 }
 
-int do_list_client(struct config *conf, enum action act)
+void ls_output_json(char *buf, const int first_entry, const char fcmd, const char *fname, const char *lname, struct stat *statp)
+{
+	sprintf(buf,
+		"%s"
+		"%s"
+		"\t\t\t{\n"
+		"\t\t\t\t\"type\": \"%c\",\n"
+		"\t\t\t\t\"name\": \"%s\",\n"
+		"\t\t\t\t\"link\": \"%s\",\n"
+		"\t\t\t\t\"st_dev\": %lu,\n"
+		"\t\t\t\t\"st_ino\": %lu,\n"
+		"\t\t\t\t\"st_mode\": %lu,\n"
+		"\t\t\t\t\"st_nlink\": %lu,\n"
+		"\t\t\t\t\"st_uid\": %d,\n"
+		"\t\t\t\t\"st_gid\": %d,\n"
+		"\t\t\t\t\"st_rdev\": %lu,\n"
+		"\t\t\t\t\"st_size\": %lu,\n"
+		"\t\t\t\t\"st_atime\": %lu,\n"
+		"\t\t\t\t\"st_mtime\": %lu,\n"
+		"\t\t\t\t\"st_ctime\": %lu\n"
+		"\t\t\t}",
+		first_entry? ("\t\"items\":\n"
+			      "\t\t[\n"):"",
+		first_entry? "":"\t\t\t,\n",
+		fcmd,
+		fname,
+		lname? lname:"",
+		statp->st_dev,
+		statp->st_ino,
+		statp->st_mode,
+		statp->st_nlink,
+		(uint32_t)statp->st_uid,
+		(uint32_t)statp->st_gid,
+		statp->st_rdev,
+		statp->st_size,
+		statp->st_atime,
+		statp->st_mtime,
+		statp->st_ctime);
+}
+
+int do_list_client(struct config *conf, enum action act, int json)
 {
 	int ret=0;
 	size_t slen=0;
@@ -105,8 +145,11 @@ int do_list_client(struct config *conf, enum action act)
 	char scmd;
 	struct stat statp;
 	char *statbuf=NULL;
-	char ls[256]="";
+	char ls[2048]="";
 	char *dpth=NULL;
+	int first_entry=1;
+	// format long list as JSON
+	int emit_json = (act==ACTION_LONG_LIST && conf->backup && json);
 //logp("in do_list\n");
 
 	if(conf->browsedir)
@@ -119,6 +162,11 @@ int do_list_client(struct config *conf, enum action act)
 	  || async_read_expect(CMD_GEN, "ok"))
 		return -1;
 
+	if(emit_json)
+	{
+		printf("{\n");
+	}
+	
 	// This should probably should use the sbuf stuff.
 	while(1)
 	{
@@ -135,13 +183,28 @@ int do_list_client(struct config *conf, enum action act)
 		if(scmd==CMD_TIMESTAMP)
 		{
 			// A backup timestamp, just print it.
-			printf("Backup: %s\n", statbuf);
-			if(conf->browsedir)
-				printf("Listing directory: %s\n",
-					conf->browsedir);
-			if(conf->regex)
-				printf("With regex: %s\n",
-					conf->regex);
+			if(emit_json)
+			{
+				printf("\t\"backup\":\n"
+				       "\t\t{\n"
+				       "\t\t\t\"timestamp\": \"%s\",\n"
+				       "\t\t\t\"directory\": \"%s\",\n"
+				       "\t\t\t\"regex\": \"%s\"\n"
+				       "\t\t},\n",
+				       statbuf,
+				       conf->browsedir? conf->browsedir:"",
+				       conf->regex? conf->regex:"");
+			}
+			else
+			{
+				printf("Backup: %s\n", statbuf);
+				if(conf->browsedir)
+					printf("Listing directory: %s\n",
+					       conf->browsedir);
+				if(conf->regex)
+					printf("With regex: %s\n",
+					       conf->regex);
+			}
 			if(statbuf) { free(statbuf); statbuf=NULL; }
 			continue;
 		}
@@ -173,12 +236,23 @@ int do_list_client(struct config *conf, enum action act)
 			*ls='\0';
 			if(act==ACTION_LONG_LIST)
 			{
-				ls_output(ls, fname, &statp);
+				if(emit_json)
+				{
+					ls_output_json(ls, first_entry, fcmd, fname, NULL, &statp);
+				}
+				else
+				{
+					ls_output(ls, fname, &statp);
+				}
 				printf("%s\n", ls);
 			}
 			else
 			{
 				printf("%s\n", fname);
+			}
+			if (first_entry)
+			{
+				first_entry = 0;
 			}
 		}
 		else if(cmd_is_link(fcmd)) // symlink or hardlink
@@ -197,12 +271,22 @@ int do_list_client(struct config *conf, enum action act)
 				if(act==ACTION_LONG_LIST)
 				{
 					*ls='\0';
-					ls_output(ls, fname, &statp);
-					printf("%s -> %s\n", ls, lname);
+					if(emit_json) {
+						ls_output_json(ls, first_entry, fcmd, fname, lname, &statp);
+						printf("%s\n", ls);
+					}
+					else {
+						ls_output(ls, fname, &statp);
+						printf("%s -> %s\n", ls, lname);
+					}
 				}
 				else
 				{
 					printf("%s\n", fname);
+				}
+				if (first_entry)
+				{
+					first_entry = 0;
 				}
 			}
 			if(lname) free(lname);
@@ -212,6 +296,14 @@ int do_list_client(struct config *conf, enum action act)
 	}
 	if(statbuf) free(statbuf);
 	if(dpth) free(dpth);
+	if(emit_json)
+	{
+		if(!first_entry)
+		{
+			printf("\t\t]\n");
+		}
+		printf("}\n");
+	}
 	if(!ret) logp("List finished ok\n");
 	return ret;
 }

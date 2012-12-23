@@ -108,15 +108,15 @@ void ls_output_json(char *buf, const int first_entry, const char fcmd, const cha
 		"\t\t\t\t\"link\": \"%s\",\n"
 		"\t\t\t\t\"st_dev\": %lu,\n"
 		"\t\t\t\t\"st_ino\": %lu,\n"
-		"\t\t\t\t\"st_mode\": %lu,\n"
+		"\t\t\t\t\"st_mode\": %u,\n"
 		"\t\t\t\t\"st_nlink\": %lu,\n"
-		"\t\t\t\t\"st_uid\": %d,\n"
-		"\t\t\t\t\"st_gid\": %d,\n"
+		"\t\t\t\t\"st_uid\": %u,\n"
+		"\t\t\t\t\"st_gid\": %u,\n"
 		"\t\t\t\t\"st_rdev\": %lu,\n"
-		"\t\t\t\t\"st_size\": %lu,\n"
-		"\t\t\t\t\"st_atime\": %lu,\n"
-		"\t\t\t\t\"st_mtime\": %lu,\n"
-		"\t\t\t\t\"st_ctime\": %lu\n"
+		"\t\t\t\t\"st_size\": %ld,\n"
+		"\t\t\t\t\"st_atime\": %ld,\n"
+		"\t\t\t\t\"st_mtime\": %ld,\n"
+		"\t\t\t\t\"st_ctime\": %ld\n"
 		"\t\t\t}",
 		first_entry? ("\t\"items\":\n"
 			      "\t\t[\n"):"",
@@ -124,17 +124,17 @@ void ls_output_json(char *buf, const int first_entry, const char fcmd, const cha
 		fcmd,
 		fname,
 		lname? lname:"",
-		statp->st_dev,
-		statp->st_ino,
-		statp->st_mode,
-		statp->st_nlink,
-		(uint32_t)statp->st_uid,
-		(uint32_t)statp->st_gid,
-		statp->st_rdev,
-		statp->st_size,
-		statp->st_atime,
-		statp->st_mtime,
-		statp->st_ctime);
+		(long unsigned int)statp->st_dev,
+		(long unsigned int)statp->st_ino,
+		(unsigned int)statp->st_mode,
+		(long unsigned int)statp->st_nlink,
+		(unsigned int)statp->st_uid,
+		(unsigned int)statp->st_gid,
+		(long unsigned int)statp->st_rdev,
+		(long int)statp->st_size,
+		(long int)statp->st_atime,
+		(long int)statp->st_mtime,
+		(long int)statp->st_ctime);
 }
 
 int do_list_client(struct config *conf, enum action act, int json)

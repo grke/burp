@@ -1090,7 +1090,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 				goto end;
 			}
 
-			if((restoreregex=strrchr(buf, ':')))
+			if((restoreregex=strchr(buf, ':')))
 			{
 				*restoreregex='\0';
 				restoreregex++;

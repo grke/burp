@@ -141,7 +141,7 @@ int do_list_client(struct config *conf, enum action act, int json)
 {
 	int ret=0;
 	size_t slen=0;
-	char msg[64]="";
+	char msg[512]="";
 	char scmd;
 	struct stat statp;
 	char *statbuf=NULL;
@@ -151,7 +151,6 @@ int do_list_client(struct config *conf, enum action act, int json)
 	// format long list as JSON
 	int emit_json = (act==ACTION_LONG_LIST && conf->backup && json);
 //logp("in do_list\n");
-
 	if(conf->browsedir)
 	  snprintf(msg, sizeof(msg), "listb %s:%s",
 		conf->backup?conf->backup:"", conf->browsedir);

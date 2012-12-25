@@ -560,7 +560,15 @@ static int overwrite_ok(struct sbuf *sb, struct config *conf, BFILE *bfd, const 
 	struct stat checkstat;
 
 	// User specified overwrite is OK.
+#ifdef HAVE_WIN32
 	if(conf->overwrite) return 1;
+#else
+	// User specified overwrite is OK,
+	// UNLESS we're trying to overwrite the file with the trailing VSS data
+	if(conf->overwrite)
+		return (sb->cmd!=CMD_VSS_T
+			&& sb->cmd!=CMD_ENC_VSS_T);
+#endif
 
 	if(!S_ISDIR(sb->statp.st_mode)
 	  && sb->cmd!=CMD_METADATA

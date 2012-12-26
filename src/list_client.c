@@ -97,44 +97,76 @@ void ls_output(char *buf, const char *fname, struct stat *statp)
 	*p = 0;
 }
 
-void ls_output_json(char *buf, const int first_entry, const char fcmd, const char *fname, const char *lname, struct stat *statp)
+static char *escape(const char *str)
 {
-	sprintf(buf,
-		"%s"
-		"%s"
-		"\t\t\t{\n"
-		"\t\t\t\t\"type\": \"%c\",\n"
-		"\t\t\t\t\"name\": \"%s\",\n"
-		"\t\t\t\t\"link\": \"%s\",\n"
-		"\t\t\t\t\"st_dev\": %lu,\n"
-		"\t\t\t\t\"st_ino\": %lu,\n"
-		"\t\t\t\t\"st_mode\": %u,\n"
-		"\t\t\t\t\"st_nlink\": %lu,\n"
-		"\t\t\t\t\"st_uid\": %u,\n"
-		"\t\t\t\t\"st_gid\": %u,\n"
-		"\t\t\t\t\"st_rdev\": %lu,\n"
-		"\t\t\t\t\"st_size\": %ld,\n"
-		"\t\t\t\t\"st_atime\": %ld,\n"
-		"\t\t\t\t\"st_mtime\": %ld,\n"
-		"\t\t\t\t\"st_ctime\": %ld\n"
-		"\t\t\t}",
-		first_entry? ("\t\"items\":\n"
-			      "\t\t[\n"):"",
-		first_entry? "":"\t\t\t,\n",
-		fcmd,
-		fname,
-		lname? lname:"",
-		(long unsigned int)statp->st_dev,
-		(long unsigned int)statp->st_ino,
-		(unsigned int)statp->st_mode,
-		(long unsigned int)statp->st_nlink,
-		(unsigned int)statp->st_uid,
-		(unsigned int)statp->st_gid,
-		(long unsigned int)statp->st_rdev,
-		(long int)statp->st_size,
-		(long int)statp->st_atime,
-		(long int)statp->st_mtime,
-		(long int)statp->st_ctime);
+	int i, j;
+	const char echars[] = "\\\"";
+	int n = 0;
+	char *estr = NULL;
+
+	if(!str)
+		return NULL;
+
+	n = strlen(str);
+	estr = (char *) malloc(2 * n * sizeof(char));
+	if(!estr)
+	{
+		log_out_of_memory(__FUNCTION__);
+		return NULL;
+	}
+	for(i = 0, j = 0; i < n; i++, j++)
+	{
+		int k = sizeof(echars);
+		for(; k && str[i] != echars[k-1]; k--);
+		if(k)
+			estr[j++] = '\\';
+		estr[j] = str[i];
+	}
+	estr[j] = '\0';
+	return estr;
+}
+
+static void ls_output_json(char *buf, const int len, const int first_entry, const char fcmd, const char *fname, char **p_esc_fname, const char *lname, char **p_esc_lname, struct stat *statp)
+{
+	if (p_esc_fname)
+		*p_esc_fname = escape(fname);
+	if (p_esc_lname)
+		*p_esc_lname = escape(lname);
+	snprintf(buf,
+		 len,
+		 "%s"
+		 "%s"
+		 "\t\t\t{\n"
+		 "\t\t\t\t\"type\": \"%c\",\n"
+		 "\t\t\t\t\"name\": \"%%s\",\n"
+		 "\t\t\t\t\"link\": \"%%s\",\n"
+		 "\t\t\t\t\"st_dev\": %lu,\n"
+		 "\t\t\t\t\"st_ino\": %lu,\n"
+		 "\t\t\t\t\"st_mode\": %u,\n"
+		 "\t\t\t\t\"st_nlink\": %lu,\n"
+		 "\t\t\t\t\"st_uid\": %u,\n"
+		 "\t\t\t\t\"st_gid\": %u,\n"
+		 "\t\t\t\t\"st_rdev\": %lu,\n"
+		 "\t\t\t\t\"st_size\": %ld,\n"
+		 "\t\t\t\t\"st_atime\": %ld,\n"
+		 "\t\t\t\t\"st_mtime\": %ld,\n"
+		 "\t\t\t\t\"st_ctime\": %ld\n"
+		 "\t\t\t}\n",
+		 first_entry? ("\t\"items\":\n"
+			       "\t\t[\n"):"",
+		 first_entry? "":"\t\t\t,\n",
+		 fcmd,
+		 (long unsigned int)statp->st_dev,
+		 (long unsigned int)statp->st_ino,
+		 (unsigned int)statp->st_mode,
+		 (long unsigned int)statp->st_nlink,
+		 (unsigned int)statp->st_uid,
+		 (unsigned int)statp->st_gid,
+		 (long unsigned int)statp->st_rdev,
+		 (long int)statp->st_size,
+		 (long int)statp->st_atime,
+		 (long int)statp->st_mtime,
+		 (long int)statp->st_ctime);
 }
 
 int do_list_client(struct config *conf, enum action act, int json)
@@ -237,13 +269,17 @@ int do_list_client(struct config *conf, enum action act, int json)
 			{
 				if(emit_json)
 				{
-					ls_output_json(ls, first_entry, fcmd, fname, NULL, &statp);
+					char *esc_fname = NULL;
+					ls_output_json(ls, sizeof(ls), first_entry, fcmd, fname, &esc_fname, NULL, NULL, &statp);
+					printf(ls, esc_fname? esc_fname:"", "");
+					if(esc_fname)
+						free(esc_fname);
 				}
 				else
 				{
 					ls_output(ls, fname, &statp);
+					printf("%s\n", ls);
 				}
-				printf("%s\n", ls);
 			}
 			else
 			{
@@ -270,11 +306,19 @@ int do_list_client(struct config *conf, enum action act, int json)
 				if(act==ACTION_LONG_LIST)
 				{
 					*ls='\0';
-					if(emit_json) {
-						ls_output_json(ls, first_entry, fcmd, fname, lname, &statp);
-						printf("%s\n", ls);
+					if(emit_json)
+					{
+						char *esc_fname = NULL;
+						char *esc_lname = NULL;
+						ls_output_json(ls, sizeof(ls), first_entry, fcmd, fname, &esc_fname, lname, &esc_lname, &statp);
+						printf(ls, esc_fname? esc_fname:"", esc_lname? esc_lname:"");
+						if(esc_fname)
+							free(esc_fname);
+						if(esc_lname)
+							free(esc_lname);
 					}
-					else {
+					else
+					{
 						ls_output(ls, fname, &statp);
 						printf("%s -> %s\n", ls, lname);
 					}

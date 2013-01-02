@@ -16,7 +16,7 @@ static char *encode_mode(mode_t mode, char *buf)
   char *cp = buf;
 
   *cp++ = S_ISDIR(mode) ? 'd' : S_ISBLK(mode)  ? 'b' : S_ISCHR(mode)  ? 'c' :
-          S_ISLNK(mode) ? 'l' : S_ISFIFO(mode) ? 'f' : S_ISSOCK(mode) ? 's' : '-';
+          S_ISLNK(mode) ? 'l' : S_ISFIFO(mode) ? 'p' : S_ISSOCK(mode) ? 's' : '-';
   *cp++ = mode & S_IRUSR ? 'r' : '-';
   *cp++ = mode & S_IWUSR ? 'w' : '-';
   *cp++ = (mode & S_ISUID
@@ -97,18 +97,92 @@ void ls_output(char *buf, const char *fname, struct stat *statp)
 	*p = 0;
 }
 
-int do_list_client(struct config *conf, enum action act)
+static char *escape(const char *str)
+{
+	int i, j;
+	const char echars[] = "\\\"";
+	int n = 0;
+	char *estr = NULL;
+
+	if(!str)
+		return NULL;
+
+	n = strlen(str);
+	estr = (char *) malloc(2 * n * sizeof(char));
+	if(!estr)
+	{
+		log_out_of_memory(__FUNCTION__);
+		return NULL;
+	}
+	for(i = 0, j = 0; i < n; i++, j++)
+	{
+		int k = sizeof(echars);
+		for(; k && str[i] != echars[k-1]; k--);
+		if(k)
+			estr[j++] = '\\';
+		estr[j] = str[i];
+	}
+	estr[j] = '\0';
+	return estr;
+}
+
+static void ls_output_json(char *buf, const int len, const int first_entry, const char fcmd, const char *fname, char **p_esc_fname, const char *lname, char **p_esc_lname, struct stat *statp)
+{
+	if (p_esc_fname)
+		*p_esc_fname = escape(fname);
+	if (p_esc_lname)
+		*p_esc_lname = escape(lname);
+	snprintf(buf,
+		 len,
+		 "%s"
+		 "%s"
+		 "\t\t\t{\n"
+		 "\t\t\t\t\"type\": \"%c\",\n"
+		 "\t\t\t\t\"name\": \"%%s\",\n"
+		 "\t\t\t\t\"link\": \"%%s\",\n"
+		 "\t\t\t\t\"st_dev\": %lu,\n"
+		 "\t\t\t\t\"st_ino\": %lu,\n"
+		 "\t\t\t\t\"st_mode\": %u,\n"
+		 "\t\t\t\t\"st_nlink\": %lu,\n"
+		 "\t\t\t\t\"st_uid\": %u,\n"
+		 "\t\t\t\t\"st_gid\": %u,\n"
+		 "\t\t\t\t\"st_rdev\": %lu,\n"
+		 "\t\t\t\t\"st_size\": %ld,\n"
+		 "\t\t\t\t\"st_atime\": %ld,\n"
+		 "\t\t\t\t\"st_mtime\": %ld,\n"
+		 "\t\t\t\t\"st_ctime\": %ld\n"
+		 "\t\t\t}\n",
+		 first_entry? ("\t\"items\":\n"
+			       "\t\t[\n"):"",
+		 first_entry? "":"\t\t\t,\n",
+		 fcmd,
+		 (long unsigned int)statp->st_dev,
+		 (long unsigned int)statp->st_ino,
+		 (unsigned int)statp->st_mode,
+		 (long unsigned int)statp->st_nlink,
+		 (unsigned int)statp->st_uid,
+		 (unsigned int)statp->st_gid,
+		 (long unsigned int)statp->st_rdev,
+		 (long int)statp->st_size,
+		 (long int)statp->st_atime,
+		 (long int)statp->st_mtime,
+		 (long int)statp->st_ctime);
+}
+
+int do_list_client(struct config *conf, enum action act, int json)
 {
 	int ret=0;
 	size_t slen=0;
-	char msg[64]="";
+	char msg[512]="";
 	char scmd;
 	struct stat statp;
 	char *statbuf=NULL;
-	char ls[256]="";
+	char ls[2048]="";
 	char *dpth=NULL;
+	int first_entry=1;
+	// format long list as JSON
+	int emit_json = (act==ACTION_LONG_LIST && conf->backup && json);
 //logp("in do_list\n");
-
 	if(conf->browsedir)
 	  snprintf(msg, sizeof(msg), "listb %s:%s",
 		conf->backup?conf->backup:"", conf->browsedir);
@@ -119,6 +193,11 @@ int do_list_client(struct config *conf, enum action act)
 	  || async_read_expect(CMD_GEN, "ok"))
 		return -1;
 
+	if(emit_json)
+	{
+		printf("{\n");
+	}
+	
 	// This should probably should use the sbuf stuff.
 	while(1)
 	{
@@ -135,13 +214,28 @@ int do_list_client(struct config *conf, enum action act)
 		if(scmd==CMD_TIMESTAMP)
 		{
 			// A backup timestamp, just print it.
-			printf("Backup: %s\n", statbuf);
-			if(conf->browsedir)
-				printf("Listing directory: %s\n",
-					conf->browsedir);
-			if(conf->regex)
-				printf("With regex: %s\n",
-					conf->regex);
+			if(emit_json)
+			{
+				printf("\t\"backup\":\n"
+				       "\t\t{\n"
+				       "\t\t\t\"timestamp\": \"%s\",\n"
+				       "\t\t\t\"directory\": \"%s\",\n"
+				       "\t\t\t\"regex\": \"%s\"\n"
+				       "\t\t},\n",
+				       statbuf,
+				       conf->browsedir? conf->browsedir:"",
+				       conf->regex? conf->regex:"");
+			}
+			else
+			{
+				printf("Backup: %s\n", statbuf);
+				if(conf->browsedir)
+					printf("Listing directory: %s\n",
+					       conf->browsedir);
+				if(conf->regex)
+					printf("With regex: %s\n",
+					       conf->regex);
+			}
 			if(statbuf) { free(statbuf); statbuf=NULL; }
 			continue;
 		}
@@ -173,12 +267,27 @@ int do_list_client(struct config *conf, enum action act)
 			*ls='\0';
 			if(act==ACTION_LONG_LIST)
 			{
-				ls_output(ls, fname, &statp);
-				printf("%s\n", ls);
+				if(emit_json)
+				{
+					char *esc_fname = NULL;
+					ls_output_json(ls, sizeof(ls), first_entry, fcmd, fname, &esc_fname, NULL, NULL, &statp);
+					printf(ls, esc_fname? esc_fname:"", "");
+					if(esc_fname)
+						free(esc_fname);
+				}
+				else
+				{
+					ls_output(ls, fname, &statp);
+					printf("%s\n", ls);
+				}
 			}
 			else
 			{
 				printf("%s\n", fname);
+			}
+			if (first_entry)
+			{
+				first_entry = 0;
 			}
 		}
 		else if(cmd_is_link(fcmd)) // symlink or hardlink
@@ -197,12 +306,30 @@ int do_list_client(struct config *conf, enum action act)
 				if(act==ACTION_LONG_LIST)
 				{
 					*ls='\0';
-					ls_output(ls, fname, &statp);
-					printf("%s -> %s\n", ls, lname);
+					if(emit_json)
+					{
+						char *esc_fname = NULL;
+						char *esc_lname = NULL;
+						ls_output_json(ls, sizeof(ls), first_entry, fcmd, fname, &esc_fname, lname, &esc_lname, &statp);
+						printf(ls, esc_fname? esc_fname:"", esc_lname? esc_lname:"");
+						if(esc_fname)
+							free(esc_fname);
+						if(esc_lname)
+							free(esc_lname);
+					}
+					else
+					{
+						ls_output(ls, fname, &statp);
+						printf("%s -> %s\n", ls, lname);
+					}
 				}
 				else
 				{
 					printf("%s\n", fname);
+				}
+				if (first_entry)
+				{
+					first_entry = 0;
 				}
 			}
 			if(lname) free(lname);
@@ -212,6 +339,14 @@ int do_list_client(struct config *conf, enum action act)
 	}
 	if(statbuf) free(statbuf);
 	if(dpth) free(dpth);
+	if(emit_json)
+	{
+		if(!first_entry)
+		{
+			printf("\t\t]\n");
+		}
+		printf("}\n");
+	}
 	if(!ret) logp("List finished ok\n");
 	return ret;
 }

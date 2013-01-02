@@ -606,7 +606,7 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore, str
 	int ars=0;
 	int ret=0;
 	int quit=0;
-	char msg[64]="";
+	char msg[512]="";
 	struct sbuf sb;
 	int wroteendcounter=0;
 // Windows needs to have the VSS data written first, and the actual data

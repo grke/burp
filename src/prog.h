@@ -26,6 +26,6 @@ extern int reload(struct config *conf, const char *configfile, bool firsttime, i
 
 extern int server(struct config *conf, const char *configfile,
 	int generate_ca_only);
-extern int client(struct config *conf, enum action act, int vss_restore);
+extern int client(struct config *conf, enum action act, int vss_restore, int json);
 
 #endif // _PROG_H

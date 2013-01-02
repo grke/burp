@@ -23,6 +23,7 @@ name_opt                = ca_default
 cert_opt                = ca_default
 
 x509_extensions         = usr_cert
+copy_extensions         = copy
 policy                  = policy_anything
 
 [ usr_cert ]

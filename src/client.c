@@ -148,7 +148,7 @@ static int s_server_session_id_context=1;
    Returns 2 if there were restore/verify warnings.
    Returns 3 if timer conditions were not met.
 */
-static int do_client(struct config *conf, enum action act, int vss_restore)
+static int do_client(struct config *conf, enum action act, int vss_restore, int json)
 {
 	int ret=0;
 	int rfd=-1;
@@ -511,7 +511,7 @@ static int do_client(struct config *conf, enum action act, int vss_restore)
 		case ACTION_LIST:
 		case ACTION_LONG_LIST:
 		default:
-			ret=do_list_client(conf, act);
+			ret=do_list_client(conf, act, json);
 			break;
 	}
 
@@ -527,14 +527,14 @@ end:
 	return ret;
 }
 
-int client(struct config *conf, enum action act, int vss_restore)
+int client(struct config *conf, enum action act, int vss_restore, int json)
 {
 	int ret=0;
-	if((ret=do_client(conf, act, vss_restore))==1)
+	if((ret=do_client(conf, act, vss_restore, json))==1)
 	{
 		logp("Re-opening connection to server\n");
 		sleep(5);
-		ret=do_client(conf, act, vss_restore);
+		ret=do_client(conf, act, vss_restore, json);
 	}
 	return ret;
 }

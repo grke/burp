@@ -78,6 +78,7 @@ static void usage_client(void)
 	printf("  -l <path>      Path to log file.\n");
 	printf("  -r <regex>     Specify a regular expression.\n");
 	printf("  -s <number>    Number of leading path components to strip during restore.\n");
+	printf("  -j             Format long list as JSON.\n");
 	printf("  -v             Print version and exit.\n");
 #ifndef HAVE_WIN32
 	printf("  -x             Do not use the Windows VSS API when restoring.\n");
@@ -169,10 +170,11 @@ int main (int argc, char *argv[])
 	int generate_ca_only=0;
 #endif
 	int vss_restore=1;
+	int json=0;
 
 	init_log(argv[0]);
 
-	while((option=getopt(argc, argv, "a:b:c:C:d:ghfFil:nr:s:vxz:?"))!=-1)
+	while((option=getopt(argc, argv, "a:b:c:C:d:ghfFil:nr:s:vxjz:?"))!=-1)
 	{
 		switch(option)
 		{
@@ -248,6 +250,9 @@ int main (int argc, char *argv[])
 				return 0;
 			case 'x':
 				vss_restore=0;
+				break;
+			case 'j':
+				json=1;
 				break;
 			case 'z':
 				browsefile=optarg;
@@ -336,7 +341,7 @@ int main (int argc, char *argv[])
 	else
 	{
 		logp("before client\n");
-		ret=client(&conf, act, vss_restore);
+		ret=client(&conf, act, vss_restore, json);
 		logp("after client\n");
 	}
 

@@ -180,6 +180,8 @@ CLIENT OPTIONS
 	      For  use	with  restores - strip a number of leading path compo‐
 	      nents.
 
+       -j     Format long file listing as JSON.
+
        -x     For Windows clients only - do not use the  Windows  VSS  API  on
 	      restore.	Give  this option when you are restoring a backup that
 	      contains no VSS information.

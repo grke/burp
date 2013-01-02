@@ -1,4 +1,16 @@
-  * Added Patrick Koppen's burp_ca patches.
+2013-01-02 Changes in burp-1.3.22:
+  * Contributions from Avi Rozen:
+	+ Added a '-j' option to format the long file list as JSON. Intended
+	  for use with burpfs (https://github.com/ZungBang/burpfs).
+	+ Bug fix for list/verify/restore when regex is long and/or contains
+	  a colon.
+	+ Bug fix for split_vss backups being restored on a linux
+    	  restore_client with the -f (force) option. Prevents overwrite of the
+          destination file with the vss footer.
+  * Contributions for burp_ca from Patrick Koppen:
+	+ Bug fix for the size option.
+	+ Use shell numeric comparison instead of string comparison.
+	+ Added subjectAltName patch (in case it is needed outside of burp).
 
 2012-12-18 Changes in burp-1.3.20:
   * Bug fix for split/strip_vss = 1 on the client side always causing all files

@@ -51,6 +51,39 @@ The main author of Burp is Graham Keeling.
 <TR>
 <TD></TD>
 <TD ALIGN="LEFT">
+
+<P>
+<FONT COLOR="#99CCFF">2012-09-27:
+<BR>
+Many thanks to the following donors for financially supporting burp during
+December:
+<pre>
+  *  &pound;50.00 Bryan B.
+  *   &pound;1.01 Romain M.
+</pre>
+</FONT>
+</p>
+
+<P>
+<FONT COLOR="#99CCFF">2013-01-02: burp-1.3.22 is released.
+<pre>
+Changes in burp-1.3.22:
+  * Contributions from Avi Rozen:
+        + Added a '-j' option to format the long file list as JSON. Intended
+          for use with burpfs (https://github.com/ZungBang/burpfs).
+        + Bug fix for list/verify/restore when regex is long and/or contains
+          a colon.
+        + Bug fix for split_vss backups being restored on a linux
+          restore_client with the -f (force) option. Prevents overwrite of the
+          destination file with the vss footer.
+  * Contributions for burp_ca from Patrick Koppen:
+        + Bug fix for the size option.
+        + Use shell numeric comparison instead of string comparison.
+        + Added subjectAltName patch (in case it is needed outside of burp).
+</pre>
+</FONT>
+</P>
+
 <P>
 <FONT COLOR="#99CCFF">2012-12-18: burp-1.3.20 is released.
 <pre>
@@ -129,7 +162,7 @@ Changes in burp-1.3.16:
 <FONT COLOR="#99CCFF">2012-09-27:
 <BR>
 Many thanks to the following donors for financially supporting burp during
-June and July:
+September:
 <pre>
   *  &pound400.00 Robert L.
 </pre>

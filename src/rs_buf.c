@@ -203,8 +203,18 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
     {
 	if(fb->do_known_byte_count)
 	{
-		len=bread(fb->bfd, fb->buf, min(fb->buf_len, fb->data_len));
-		fb->data_len-=len;
+		if(fb->data_len>0)
+		{
+			len=bread(fb->bfd, fb->buf,
+				min(fb->buf_len, fb->data_len));
+			fb->data_len-=len;
+		}
+		else
+		{
+			// We have already read as much data as the VSS header
+			// told us to, so set len=0 in order to finish up.
+			len=0;
+		}
 	}
 	else
 		len=bread(fb->bfd, fb->buf, fb->buf_len);
@@ -225,12 +235,6 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 	{
 		logp("rs_infilebuf_fill: MD5_Update() failed\n");
 		return RS_IO_ERROR;
-	}
-	// Windows VSS headers have given us the data length to expect.
-	if(fb->do_known_byte_count && fb->data_len<=0)
-	{
-		buf->eof_in=1;
-		return RS_DONE;
 	}
     }
 #endif

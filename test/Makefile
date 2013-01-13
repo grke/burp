@@ -8,4 +8,4 @@ clean:
 	@$(RMF) target
 
 test:
-	./run_test
+	./test_self

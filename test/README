@@ -1,7 +1,21 @@
-IMPORTANT: Run the script 'run_test' whilst standing in the same directory as
+IMPORTANT: Run the script 'test_self' whilst standing in the same directory as
 the script.
 
 It will copy the source from the parent directory into 'build', and then
 install it into 'target'.
 
-It will then run through some basic tests.
+It will then run through some basic tests, running the server and client on
+the same machine.
+
+
+
+WINDOWS TEST NOT QUITE WORKING YET.
+
+To run an automatic test of Windows, you need to set up cygwin on your Windows
+machine, and it needs to be a recent update of cygwin. I got it working with
+the 2013-01-11 snapshot. You need to setup automatic log in via ssh to the
+Windows machine. If your cygwin isn't new enough, the automatic log in will
+not have all the privileges needed to install the Windows client.
+
+Be aware that the automatic Windows test will delete any existing burp
+installation.

@@ -103,7 +103,11 @@ sed_rep()
 
 sed_rep_client()
 {
-	$sshclient sed -i -e \'"$1"\' "$2" || fail "sed $1 failed $2f"
+	if [ -n "$sshclient" ] ; then 
+		$sshclient sed -i -e \'"$1"\' "$2" || fail "sed $1 failed $2f"
+	else
+		sed -i -e "$1" "$2" || fail "sed $1 failed $2f"
+	fi
 }
 
 sed_rep_both()
@@ -211,13 +215,13 @@ change_source_files()
 compression_off()
 {
 	sed_rep 's/^compression = .*//g' "$serverconf"
-	echo "compression = 0" >> "$serverconf"
+	sed_rep '$ acompression = 0' "$serverconf"
 }
 
 compression_on()
 {
 	sed_rep 's/^compression = .*//g' "$serverconf"
-	echo "compression = 9" >> "$serverconf"
+	sed_rep '$ acompression = 9' "$serverconf"
 }
 
 encryption_off()
@@ -228,7 +232,7 @@ encryption_off()
 encryption_on()
 {
 	encryption_off
-	$sshclient echo "encryption_password = 7djh34nmm$sd" >> "$clientconf"
+	sed_rep_client '$ aencryption_password = 7djh34nmmsd' "$clientconf"
 }
 
 min_file_size_off()
@@ -239,7 +243,7 @@ min_file_size_off()
 min_file_size_on()
 {
 	min_file_size_off
-	$sshclient echo "min_file_size = $fsize" >> "$clientconf"
+	sed_rep_client '$ amin_file_size = '"$fsize" "$clientconf"
 }
 
 max_file_size_off()
@@ -250,7 +254,7 @@ max_file_size_off()
 max_file_size_on()
 {
 	max_file_size_off
-	$sshclient echo "max_file_size = $fsize" >> "$clientconf"
+	sed_rep_client '$ amax_file_size = '"$fsize" "$clientconf"
 }
 
 exclude_off()
@@ -261,7 +265,7 @@ exclude_off()
 exclude_on()
 {
 	exclude_off
-	$sshclient echo "exclude = $excludedir" >> "$clientconf"
+	sed_rep_client '$ aexclude = '"$excludedir" "$clientconf"
 }
 
 include_off()
@@ -272,7 +276,7 @@ include_off()
 include_on()
 {
 	include_off
-	$sshclient sed -i '$ a'"include = $includedir" $clientconf
+	sed_rep_client '$ ainclude = '"$includedir" "$clientconf"
 }
 
 include_ext_off()
@@ -283,7 +287,7 @@ include_ext_off()
 include_ext_on()
 {
 	include_ext_off
-	$sshclient echo "include_ext = c" >> "$clientconf"
+	sed_rep_client '$ ainclude_ext = c' "$clientconf"
 }
 
 exclude_ext_off()
@@ -294,28 +298,19 @@ exclude_ext_off()
 exclude_ext_on()
 {
 	exclude_ext_off
-	$sshclient echo "exclude_ext = c" >> "$clientconf"
+	sed_rep_client '$ aexclude_ext = c' "$clientconf"
 }
 
 normal_settings()
 {
-echo a
 	compression_on
-echo b
 	encryption_off
-echo c
 	max_file_size_off
-echo d
 	min_file_size_off
-echo e
 	exclude_off
-echo f
 	include_on
-echo g
 	include_ext_off
-echo h
 	exclude_ext_off
-echo i
 }
 
 makedir "$logs"
@@ -324,15 +319,15 @@ cdir "$target"
 
 # Tweak the example configuration files by removing the leading '/' from all
 # the paths, and changing the port numbers.
-sed_rep_both "s#= /#= $target/#g"
+sed_rep_both 's#= /#= '"$target"'/#g'
 sed_rep_both 's/port = 4971/port = 4998/g'
 sed_rep_both 's/port = 4972/port = 4999/g'
-sed_rep "s#^CA_DIR.*#CA_DIR = $target/etc/burp/CA#g" "$target/etc/burp/CA.cnf"
+sed_rep 's#^CA_DIR.*#CA_DIR = '"$target"'/etc/burp/CA#g' "$target/etc/burp/CA.cnf"
 sed_rep_both 's/^stdout = .*/stdout = 1/g'
 sed_rep_both 's/^syslog = .*/syslog = 0/g'
-sed_rep_client "s/^server = .*/server = $serveraddress/g" "$clientconf"
-sed_rep_client "s/^cname = .*/cname = testclient/g" "$clientconf"
-sed_rep_client "s/^password = .*/password = abcdefgh/g" "$clientconf"
+sed_rep_client 's/^server = .*/server = '"$serveraddress"'/g' "$clientconf"
+sed_rep_client 's/^cname = .*/cname = testclient/g' "$clientconf"
+sed_rep_client 's/^password = .*/password = abcdefgh/g' "$clientconf"
 
 echo
 echo "Starting tests"

@@ -51,8 +51,18 @@ Makefile.inc:
 	@echo Creating $@
 	$(ECHO_CMD)TOPDIR=`(cd ../..;pwd)`; \
 	TOPDIR=$${DEPKGS:-$${TOPDIR}}; \
-	ln -sfT ../burp-cross-tools ../../burp-cross-tools ; \
-	ln -sfT ../burp-depkgs ../../burp-depkgs ; \
+	TOOLSDIR=$${TOPDIR} ; \
+	while ! test -d $${TOOLSDIR}/burp-cross-tools \
+	  || test -h $${TOOLSDIR}/burp-cross-tools ; do \
+		TOOLSDIR=`dirname $${TOOLSDIR}` ; \
+		echo $${TOOLSDIR} ; \
+		if test $${TOOLSDIR} = '/' -o $${TOOLSDIR} = '.' ; then \
+			echo "\nCould not find burp-cross-tools." ; \
+			exit 1 ; \
+		fi ; \
+	done ; \
+	ln -sfT $${TOOLSDIR}/burp-cross-tools ../../burp-cross-tools ; \
+	ln -sfT $${TOOLSDIR}/burp-depkgs ../../burp-depkgs ; \
 	if test "$(WIN64)" = yes -a -e $${TOPDIR}/burp-cross-tools/mingw-w64-x86_64/bin/x86_64-w64-mingw32-gcc; then \
 		BINDIR=$${TOPDIR}/burp-cross-tools/mingw-w64-x86_64/bin; \
 		INCDIR=$${TOPDIR}/burp-cross-tools/mingw-w64-x86_64/x86_64-w64-mingw32/include; \
@@ -68,6 +78,7 @@ Makefile.inc:
 		MINGW_PREFIX=i686-w64-mingw32-; \
 		BITS=32 ; \
 	else \
+		echo "$${TOPDIR}/burp-cross-tools" ; \
 		echo "\nThe GCC cross compiler isn't installed."; \
 		echo "You must run build-win32-cross-tools and build-dependencies first.\n"; \
 		exit 1; \

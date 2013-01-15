@@ -13,12 +13,10 @@
 #include "list_server.h"
 #include "current_backups_server.h"
 
-int check_browsedir(const char *browsedir, char **path, size_t bdlen, char **lastpath)
+int check_browsedir(const char *browsedir, char **path, size_t bdlen)
 {
 	char *cp=NULL;
 	char *copy=NULL;
-//	if(strncmp(browsedir, *path, bdlen)
-//	  || (bdlen && (*path)[bdlen]!='\0' && (*path)[bdlen]!='/'))
 	if(strncmp(browsedir, *path, bdlen))
 		return 0;
 	if((*path)[bdlen+1]=='\0') return 0;
@@ -43,29 +41,17 @@ int check_browsedir(const char *browsedir, char **path, size_t bdlen, char **las
 	else
 	{
 		if(!(copy=strdup((*path)+bdlen)))
-		{
-			log_out_of_memory(__FUNCTION__);
-			return -1;
-		}
+			goto err;
 		if(*copy=='/') *(copy+1)='\0';
 		// Messing around for Windows.
 		else if(strlen(copy)>2 && copy[1]==':' && copy[2]=='/')
 			copy[2]='\0';
 	}
-	if(*lastpath && !strcmp(*lastpath, copy))
-	{
-		free(copy);
-		return 0;
-	}
 	free(*path);
 	*path=copy;
-	if(*lastpath) free(*lastpath);
-	if(!(*lastpath=strdup(copy)))
-		goto err;
 	return 1;
 err:
 	if(copy) free(copy);
-	if(*lastpath) free(*lastpath);
 	log_out_of_memory(__FUNCTION__);
 	return -1;
 }
@@ -79,7 +65,6 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 	struct sbuf mb;
 	char *manifest=NULL;
 	size_t bdlen=0;
-	char *lastpath=NULL;
 
 	init_sbuf(&mb);
 
@@ -113,14 +98,21 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 			break;
 		}
 
+		if(mb.cmd!=CMD_DIRECTORY
+		 && mb.cmd!=CMD_FILE
+		 && mb.cmd!=CMD_ENC_FILE
+		 && mb.cmd!=CMD_EFS_FILE
+		 && mb.cmd!=CMD_SPECIAL
+		 && !cmd_is_link(mb.cmd))
+			continue;
+
 		//if(mb.path[mb.plen]=='\n') mb.path[mb.plen]='\0';
 		write_status(client, STATUS_LISTING, mb.path, p1cntr, cntr);
 
 		if(browsedir)
 		{
 			int r;
-			if((r=check_browsedir(browsedir,
-				&(mb.path), bdlen, &lastpath))<0)
+			if((r=check_browsedir(browsedir, &(mb.path), bdlen))<0)
 			{
 				quit++;
 				ret=-1;
@@ -145,7 +137,6 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 	}
 	gzclose_fp(&zp);
 	free_sbuf(&mb);
-	if(lastpath) free(lastpath);
 	return ret;
 }
 

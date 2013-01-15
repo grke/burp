@@ -6,24 +6,56 @@ if [ ! -f "$myscript" ] ; then
 	exit 1
 fi
 
+target="$1"
+burpbin="$2"
+clientconf="$3"
+clientconfarg="$4"
+includedir="$5"
+restoredir="$6"
+serveraddress="$7"
+sshclient="$8"
+
+if [ -z "$target" ] ; then
+	echo "target directory not given."
+	exit 1
+fi
+if [ -z "$burpbin" ] ; then
+	echo "location of burp binary not given."
+	exit 1
+fi
+if [ -z "$clientconf" ] ; then
+	echo "location of client config file not given."
+	exit 1
+fi
+if [ -z "$clientconfarg" ] ; then
+	echo "client config arg not given."
+	exit 1
+fi
+if [ -z "$includedir" ] ; then
+	echo "location of directory to backup not given ."
+	exit 1
+fi
+if [ -z "$restoredir" ] ; then
+	echo "location of directory to restore to not given ."
+	exit 1
+fi
+if [ -z "$serveraddress" ] ; then
+	echo "server address not given ."
+	exit 1
+fi
+
 # The Windows build symlinks cock things for 'diff -ur' on the restore later,
 # so delete them first.
 rm -f ../burp-depkgs
 rm -f ../burp-cross-tools
 
-path="$PWD"
-build="$path/build"
-includedir="$path/build"
 excludedir="$includedir/src"
-logs="$path/logs"
-target="$path/target"
+logs="$PWD/logs"
 serverlog="$logs/server.log"
 clientlog="$logs/client.log"
 beduplog="$logs/bedup.log"
 difflog="$logs/diff.log"
-restoredir="$path/restore"
 serverpid=
-clientconf=etc/burp/burp.conf
 serverconf=etc/burp/burp-server.conf
 fsize=1024
 
@@ -53,35 +85,15 @@ makedir()
 	mkdir -p "$1" || fail "could not mkdir $1"
 }
 
+makedir_client()
+{
+	$sshclient rm -rf "$1"
+	$sshclient mkdir -p "$1" || fail "could not mkdir $1"
+}
+
 cdir()
 {
 	cd "$1" || fail "could not cd to $1"
-}
-
-build_and_install()
-{
-	# Create a build directory, and fill it with the source.
-	makedir "$build"
-	makedir "$build/test"
-	ls ../ | while read f ; do
-		[ "$f" = "test" ] && continue
-		[ "$f" = ".git" ] && continue
-		cp -ar ../"$f" "$build" || fail "could not copy ../$f to $build"
-	done || exit 1
-
-	# Create a target directory, compile burp and install it into the
-	# target.
-	makedir "$target"
-	cdir "$build"
-	make clean
-	#./configure --prefix="$target" --datarootdir="$target"/usr/share --sysconfdir="$target"/etc/burp || fail "configure failed"
-	./configure || fail "configure failed"
-	make || fail "make failed"
-	# For some reason, make is not returning an error code.
-	# Look for important binaries before carrying on.
-	[ -f src/burp ] || fail "make failed"
-	[ -f src/bedup ] || fail "make failed"
-	make install DESTDIR="$target" || fail "make install failed"
 }
 
 sed_rep()
@@ -89,16 +101,25 @@ sed_rep()
 	sed -i -e "$1" "$2" || fail "sed $1 failed $2f"
 }
 
+sed_rep_client()
+{
+	if [ -n "$sshclient" ] ; then 
+		$sshclient sed -i -e \'"$1"\' "$2" || fail "sed $1 failed $2f"
+	else
+		sed -i -e "$1" "$2" || fail "sed $1 failed $2f"
+	fi
+}
+
 sed_rep_both()
 {
-	sed_rep "$1" $clientconf
-	sed_rep "$1" $serverconf
+	sed_rep_client "$1" "$clientconf"
+	sed_rep "$1" "$serverconf"
 }
 
 run_bedup()
 {
 	echo "Starting test bedup"
-	./usr/sbin/bedup -c $serverconf -l >> "$beduplog" 2>&1 \
+	./usr/sbin/bedup -c "$serverconf" -l >> "$beduplog" 2>&1 \
 		|| fail "bedup returned $?"
 }
 
@@ -110,7 +131,7 @@ run_backup()
 	SLEEPTIME=2
 
 	echo "Starting test client backup"
-	./usr/sbin/burp -c $clientconf -a b >> "$clientlog" 2>&1 \
+	$sshclient "$burpbin" -c "$clientconfarg" -a b >> "$clientlog" 2>&1 \
 		|| fail "client backup returned $?"
 
 	# Repeatedly check to see whether the server has finished, rather
@@ -129,7 +150,7 @@ run_verify()
 {
 	local num="$1"
 	echo "Starting test client verify of backup $num"
-	./usr/sbin/burp -c $clientconf -a v -b "$num" \
+	$sshclient "$burpbin" -c "$clientconfarg" -a v -b "$num" \
 		>> "$clientlog" 2>&1 || fail "client verify returned $?"
 }
 
@@ -138,8 +159,8 @@ run_restore()
 	local num="$1"
 	local dir="$2"
 	echo "Starting test client restore of backup $num"
-	makedir "$dir"
-	./usr/sbin/burp -c $clientconf -a r -b "$num" -d "$dir" \
+	makedir_client "$dir"
+	$sshclient "$burpbin" -c "$clientconfarg" -a r -b "$num" -d "$dir" \
 		>>"$clientlog" 2>&1 || fail "client restore returned $?"
 }
 
@@ -167,115 +188,117 @@ end_test()
 
 change_source_files()
 {
-	cp -r "$build/src" "$build/src-new" \
-		|| fail "could not cp $build/src to $build/src-new"
+	$sshclient cp -r "$includedir/src" "$includedir/src-new" \
+		|| fail "could not cp $includedir/src to $includedir/src-new"
 
 	# Move a directory, which simulates deleting and adding new files.
-	if [ -d "$build/debian" ] && [ ! -e "$build/debian-new" ] ; then
-		mv "$build/debian" "$build/debian-new" \
-		  || fail "could not move $build/debian to $build/debian-new"
-	elif [ ! -e "$build/debian" ] && [ -d "$build/debian-new" ] ; then
-		mv "$build/debian-new" "$build/debian" \
-		  || fail "could not move $build/debian-new to $build/debian"
+	if $sshclient [ -d "$includedir/debian" ] \
+	 && [ ! -e "$includedir/debian-new" ] ; then
+	   $sshclient mv "$includedir/debian" "$includedir/debian-new" \
+	    || fail "could not move $includedir/debian to $includedir/debian-new"
+	elif [ ! -e "$includedir/debian" ] \
+	 && [ -d "$includedir/debian-new" ] ; then
+	   $sshclient mv "$includedir/debian-new" "$includedir/debian" \
+	    || fail "could not move $includedir/debian-new to $includedir/debian"
 	else
 		fail "could not move debian directories" 
 	fi
 
 	# Scramble a whole bunch of files
-	find "$build/autoconf" -type f | while read f ; do
+	$sshclient find "$includedir/autoconf" -type f | while read f ; do \
 		LC_ALL='C' sort --random-sort "$f" > tmpfile \
-			|| fail "could not randomise $f"
-		mv tmpfile "$f" || fail "could not move tmpfile to $f"
+			|| fail "could not randomise $f" ; \
+		mv tmpfile "$f" || fail "could not move tmpfile to $f" ; \
 	done
 }
 
 compression_off()
 {
-	sed_rep 's/^compression = .*//g' $serverconf
-	echo "compression = 0" >> $serverconf
+	sed_rep 's/^compression = .*//g' "$serverconf"
+	sed_rep '$ acompression = 0' "$serverconf"
 }
 
 compression_on()
 {
-	sed_rep 's/^compression = .*//g' $serverconf
-	echo "compression = 9" >> $serverconf
+	sed_rep 's/^compression = .*//g' "$serverconf"
+	sed_rep '$ acompression = 9' "$serverconf"
 }
 
 encryption_off()
 {
-	sed_rep 's/^encryption_password = .*//g' $clientconf
+	sed_rep_client 's/^encryption_password = .*//g' "$clientconf"
 }
 
 encryption_on()
 {
 	encryption_off
-	echo "encryption_password = 7djh34nmm$sd" >> $clientconf
+	sed_rep_client '$ aencryption_password = 7djh34nmmsd' "$clientconf"
 }
 
 min_file_size_off()
 {
-	sed_rep 's/^min_file_size = .*//g' $clientconf
+	sed_rep_client 's/^min_file_size = .*//g' "$clientconf"
 }
 
 min_file_size_on()
 {
 	min_file_size_off
-	echo "min_file_size = $fsize" >> $clientconf
+	sed_rep_client '$ amin_file_size = '"$fsize" "$clientconf"
 }
 
 max_file_size_off()
 {
-	sed_rep 's/^max_file_size = .*//g' $clientconf
+	sed_rep_client 's/^max_file_size = .*//g' "$clientconf"
 }
 
 max_file_size_on()
 {
 	max_file_size_off
-	echo "max_file_size = $fsize" >> $clientconf
+	sed_rep_client '$ amax_file_size = '"$fsize" "$clientconf"
 }
 
 exclude_off()
 {
-	sed_rep 's/^exclude = .*//g' $clientconf
+	sed_rep_client 's/^exclude = .*//g' "$clientconf"
 }
 
 exclude_on()
 {
 	exclude_off
-	echo "exclude = $excludedir" >> $clientconf
+	sed_rep_client '$ aexclude = '"$excludedir" "$clientconf"
 }
 
 include_off()
 {
-	sed_rep 's/^include = .*//g' $clientconf
+	sed_rep_client 's/^include = .*//g' "$clientconf"
 }
 
 include_on()
 {
 	include_off
-	echo "include = $includedir" >> $clientconf
+	sed_rep_client '$ ainclude = '"$includedir" "$clientconf"
 }
 
 include_ext_off()
 {
-	sed_rep 's/^include_ext = c//g' $clientconf
+	sed_rep_client 's/^include_ext = c//g' "$clientconf"
 }
 
 include_ext_on()
 {
 	include_ext_off
-	echo "include_ext = c" >> $clientconf
+	sed_rep_client '$ ainclude_ext = c' "$clientconf"
 }
 
 exclude_ext_off()
 {
-	sed_rep 's/^exclude_ext = c//g' $clientconf
+	sed_rep_client 's/^exclude_ext = c//g' "$clientconf"
 }
 
 exclude_ext_on()
 {
 	exclude_ext_off
-	echo "exclude_ext = c" >> $clientconf
+	sed_rep_client '$ aexclude_ext = c' "$clientconf"
 }
 
 normal_settings()
@@ -290,20 +313,21 @@ normal_settings()
 	exclude_ext_off
 }
 
-build_and_install
-
 makedir "$logs"
 
 cdir "$target"
 
 # Tweak the example configuration files by removing the leading '/' from all
 # the paths, and changing the port numbers.
-sed_rep_both "s#= /#= $target/#g"
+sed_rep_both 's#= /#= '"$target"'/#g'
 sed_rep_both 's/port = 4971/port = 4998/g'
 sed_rep_both 's/port = 4972/port = 4999/g'
-sed_rep "s#^CA_DIR.*#CA_DIR = $target/etc/burp/CA#g" "$target/etc/burp/CA.cnf"
+sed_rep 's#^CA_DIR.*#CA_DIR = '"$target"'/etc/burp/CA#g' "$target/etc/burp/CA.cnf"
 sed_rep_both 's/^stdout = .*/stdout = 1/g'
 sed_rep_both 's/^syslog = .*/syslog = 0/g'
+sed_rep_client 's/^server = .*/server = '"$serveraddress"'/g' "$clientconf"
+sed_rep_client 's/^cname = .*/cname = testclient/g' "$clientconf"
+sed_rep_client 's/^password = .*/password = abcdefgh/g' "$clientconf"
 
 echo
 echo "Starting tests"
@@ -332,13 +356,12 @@ sleep 5
 # ----- Test 1 -----
 start_test 1 "First backup/restore comparison"
 normal_settings
-#echo "server_script_pre = /tmp/server.sh" >>"$serverconf"
 run_backup
 # Verify the specific backup number 1. Later tests will use 'all', which will
 # verify all available backups. Might as well test both methods.
 run_verify 1
 run_restore 1 "$restoredir"1
-diff -ur "$build" "$restoredir"1/"$build" >>"$difflog" 2>&1 \
+$sshclient diff -ur "$includedir" "$restoredir"1/"$includedir" >>"$difflog" 2>&1 \
 	|| fail "client restore differed from the original!"
 end_test 1
 
@@ -360,9 +383,9 @@ diff -ur "$backuppath1"/manifest.gz "$backuppath2/manifest.gz" \
 # Make sure that restoring from either backup gives the same result.
 run_restore 1 "$restoredir"1
 run_restore 2 "$restoredir"2
-diff -ur "$build" "$restoredir"1/"$build" >>"$difflog" 2>&1 \
+$sshclient diff -ur "$includedir" "$restoredir"1/"$includedir" >>"$difflog" 2>&1 \
 	|| fail "client restore 1 differed from the original!"
-diff -ur "$restoredir"1/"$build" "$restoredir"2/"$build" >>"$difflog" 2>&1 \
+$sshclient diff -ur "$restoredir"1/"$includedir" "$restoredir"2/"$includedir" >>"$difflog" 2>&1 \
 	|| fail "client restore 1 and 2 differ!"
 end_test 2
 
@@ -373,12 +396,12 @@ change_source_files
 run_backup
 run_verify all
 run_restore 3 "$restoredir"3
-diff -ur "$build" "$restoredir"3/"$build" >>"$difflog" 2>&1 \
+$sshclient diff -ur "$includedir" "$restoredir"3/"$includedir" >>"$difflog" 2>&1 \
 	|| fail "client restore 3 differed from the original!"
 # Make sure that restoring backup number 2 gives the same as restoring backup
 # number 2 gave in test 2.
 run_restore 2 "$restoredir"4
-diff -ur "$restoredir"2/"$build" "$restoredir"4/"$build" >>"$difflog" 2>&1 \
+$sshclient diff -ur "$restoredir"2/"$includedir" "$restoredir"4/"$includedir" >>"$difflog" 2>&1 \
 	|| fail "client restore 2 and 4 differ!"
 end_test 3
 
@@ -388,12 +411,12 @@ normal_settings
 run_bedup
 run_verify all
 run_restore 3 "$restoredir"4
-diff -ur "$build" "$restoredir"4/"$build" >>"$difflog" 2>&1 \
+$sshclient diff -ur "$includedir" "$restoredir"4/"$includedir" >>"$difflog" 2>&1 \
 	|| fail "client restore 4 differed from the original!"
 # Make sure that restoring backup number 2 gives the same as restoring backup
 # number 2 gave in test 2.
 run_restore 2 "$restoredir"4
-diff -ur "$restoredir"2/"$build" "$restoredir"4/"$build" >>"$difflog" 2>&1 \
+$sshclient diff -ur "$restoredir"2/"$includedir" "$restoredir"4/"$includedir" >>"$difflog" 2>&1 \
 	|| fail "client restore 2 and 4 differ!"
 # Run another backup, so we can continue to refer to them by the same number
 # as the test number (easier on the brain).
@@ -410,7 +433,7 @@ change_source_files
 run_backup
 run_verify all
 run_restore 5 "$restoredir"5
-diff -ur "$build" "$restoredir"5/"$build" >>"$difflog" 2>&1 \
+$sshclient diff -ur "$includedir" "$restoredir"5/"$includedir" >>"$difflog" 2>&1 \
 	|| fail "client restore 5 differed from the original!"
 end_test 5
 
@@ -423,7 +446,7 @@ change_source_files
 run_backup
 run_verify all
 run_restore 6 "$restoredir"6
-diff -ur "$build" "$restoredir"6/"$build" >>"$difflog" 2>&1 \
+$sshclient diff -ur "$includedir" "$restoredir"6/"$includedir" >>"$difflog" 2>&1 \
 	|| fail "client restore 6 differed from the original!"
 end_test 6
 
@@ -436,7 +459,7 @@ change_source_files
 run_backup
 run_verify all
 run_restore 7 "$restoredir"7
-diff -ur "$build" "$restoredir"7/"$build" >>"$difflog" 2>&1 \
+$sshclient diff -ur "$includedir" "$restoredir"7/"$includedir" >>"$difflog" 2>&1 \
 	|| fail "client restore 7 differed from the original!"
 end_test 7
 
@@ -448,7 +471,7 @@ change_source_files
 run_backup
 run_verify all
 run_restore 8 "$restoredir"8
-f=$(find "$restoredir"8 -size -${fsize}c -type f)
+f=$($sshclient find "$restoredir"8 -size -${fsize}c -type f)
 [ -n "$f" ] && fail "found file sizes greater than $fsize: $f"
 end_test 8
 
@@ -460,7 +483,7 @@ change_source_files
 run_backup
 run_verify all
 run_restore 9 "$restoredir"9
-f=$(find "$restoredir"9 -size +${fsize}c -type f)
+f=$($sshclient find "$restoredir"9 -size +${fsize}c -type f)
 [ -n "$f" ] && fail "found file sizes less than $fsize: $f"
 end_test 9
 
@@ -471,8 +494,8 @@ exclude_on
 run_backup
 run_verify all
 run_restore 10 "$restoredir"10
-[ -d "$restoredir"10/$excludedir ] && fail "$excludedir should not have been restored!"
-[ ! -d "$restoredir"10/$includedir ] && fail "$includedir should have been restored!"
+$sshclient [ -d "$restoredir"10/$excludedir ] && fail "$excludedir should not have been restored!"
+$sshclient [ ! -d "$restoredir"10/$includedir ] && fail "$includedir should have been restored!"
 end_test 10
 
 # ----- Test 11 -----
@@ -482,7 +505,7 @@ exclude_ext_on
 run_backup
 run_verify all
 run_restore 11 "$restoredir"11
-f=$(find "$restoredir"11 -type f -name '*.c')
+f=$($sshclient find "$restoredir"11 -type f -name '*.c')
 [ -n "$f" ] && fail "$restoredir11 should not contain any '.c' files"
 end_test 11
 
@@ -493,9 +516,9 @@ include_ext_on
 run_backup
 run_verify all
 run_restore 12 "$restoredir"12
-f=$(find "$restoredir"12 -type f -name '*.h')
+f=$($sshclient find "$restoredir"12 -type f -name '*.h')
 [ -n "$f" ] && fail "$restoredir12 should not contain any '.h' files"
-f=$(find "$restoredir"12 -type f -name '*.c')
+f=$($sshclient find "$restoredir"12 -type f -name '*.c')
 [ -z "$f" ] && fail "$restoredir12 should contain '.c' files"
 end_test 12
 

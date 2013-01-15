@@ -42,7 +42,7 @@ static int skip_data(FILE *inp, size_t s)
 	}
 	if(s!=0)
 	{
-		fprintf(stderr, "Error - expected %d more bytes\n", s);
+		fprintf(stderr, "Error - expected %lu more bytes\n", s);
 		return -1;
 	}
 	return 0;
@@ -115,7 +115,7 @@ static int extract_data(FILE *inp, FILE *outp, size_t s)
 	}
 	if(s!=0)
 	{
-		fprintf(stderr, "Error - expected %d more bytes\n", s);
+		fprintf(stderr, "Error - expected %lu more bytes\n", s);
 		return -1;
 	}
 	return 0;

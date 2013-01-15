@@ -673,7 +673,6 @@ static int browse_manifest(int cfd, gzFile zp, const char *browse)
 	struct sbuf sb;
 	struct cntr cntr;
 	size_t blen=0;
-	char *lastpath=NULL;
 	reset_filecounter(&cntr, time(NULL));
 	init_sbuf(&sb);
 	if(browse) blen=strlen(browse);
@@ -687,7 +686,16 @@ static int browse_manifest(int cfd, gzFile zp, const char *browse)
 			// ars==1 means it ended ok.
 			break;
 		}
-		if((r=check_browsedir(browse, &sb.path, blen, &lastpath))<0)
+
+		if(sb.cmd!=CMD_DIRECTORY
+		  && sb.cmd!=CMD_FILE
+		  && sb.cmd!=CMD_ENC_FILE
+		  && sb.cmd!=CMD_EFS_FILE
+		  && sb.cmd!=CMD_SPECIAL
+		  && !cmd_is_link(sb.cmd))
+			continue;
+
+		if((r=check_browsedir(browse, &sb.path, blen))<0)
 		{
 			ret=-1;
 			break;
@@ -704,7 +712,6 @@ static int browse_manifest(int cfd, gzFile zp, const char *browse)
 		}
 	}
 	free_sbuf(&sb);
-	if(lastpath) free(lastpath);
 	return ret;
 }
 

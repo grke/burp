@@ -334,6 +334,10 @@ int do_list_client(struct config *conf, enum action act, int json)
 			}
 			if(lname) free(lname);
 		}
+		else
+		{
+			fprintf(stderr, "unlistable %c:%s\n", fcmd, fname?:"");
+		}
 		if(fname) free(fname);
 		if(statbuf) { free(statbuf); statbuf=NULL; }
 	}

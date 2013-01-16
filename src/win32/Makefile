@@ -47,13 +47,12 @@ $(DIRS):
 	   fi ; \
 	fi
 
-Makefile.inc:
-	@echo Creating $@
+../../burp-cross-tools:
 	$(ECHO_CMD)TOPDIR=`(cd ../..;pwd)`; \
 	TOPDIR=$${DEPKGS:-$${TOPDIR}}; \
 	TOOLSDIR=$${TOPDIR} ; \
 	while ! test -d $${TOOLSDIR}/burp-cross-tools \
-	  || test -h $${TOOLSDIR}/burp-cross-tools ; do \
+	  || ! test -h $${TOOLSDIR}/burp-cross-tools ; do \
 		TOOLSDIR=`dirname $${TOOLSDIR}` ; \
 		echo $${TOOLSDIR} ; \
 		if test $${TOOLSDIR} = '/' -o $${TOOLSDIR} = '.' ; then \
@@ -61,8 +60,14 @@ Makefile.inc:
 			exit 1 ; \
 		fi ; \
 	done ; \
-	ln -sfT $${TOOLSDIR}/burp-cross-tools ../../burp-cross-tools ; \
-	ln -sfT $${TOOLSDIR}/burp-depkgs ../../burp-depkgs ; \
+	ln -vsfT $${TOOLSDIR}/burp-cross-tools ../../burp-cross-tools ; \
+	ln -vsfT $${TOOLSDIR}/burp-depkgs ../../burp-depkgs
+
+Makefile.inc: ../../burp-cross-tools
+	@echo Creating $@
+	$(ECHO_CMD)TOPDIR=`(cd ../..;pwd)`; \
+	TOPDIR=$${DEPKGS:-$${TOPDIR}}; \
+	TOOLSDIR=$${TOPDIR} ; \
 	if test "$(WIN64)" = yes -a -e $${TOPDIR}/burp-cross-tools/mingw-w64-x86_64/bin/x86_64-w64-mingw32-gcc; then \
 		BINDIR=$${TOPDIR}/burp-cross-tools/mingw-w64-x86_64/bin; \
 		INCDIR=$${TOPDIR}/burp-cross-tools/mingw-w64-x86_64/x86_64-w64-mingw32/include; \

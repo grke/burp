@@ -616,6 +616,7 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 {
 	int ret=0;
 	size_t len=0;
+	char msg[256]="";
 	char realwork[256]="";
 	struct stat statp;
 	char *logpath=NULL;
@@ -639,6 +640,7 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 			p1cntr,
 			cntr);
 		if(!ret) logp("Prior backup completed OK.\n");
+		else log_and_send("Problem with prior backup. Please check the client log on the server.");
 		goto end;
 	}
 
@@ -649,7 +651,7 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 	}
 	if(!S_ISLNK(statp.st_mode))
 	{
-		logp("Working directory is not a symlink.\n");
+		log_and_send("Working directory is not a symlink.\n");
 		ret=-1;
 		goto end;
 	}
@@ -658,7 +660,8 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 	// Check what to do.
 	if((len=readlink(working, realwork, sizeof(realwork)-1))<0)
 	{
-		logp("Could not readlink on old working directory: %s\n", strerror(errno));
+		snprintf(msg, sizeof(msg), "Could not readlink on old working directory: %s\n", strerror(errno));
+		log_and_send(msg);
 		ret=-1;
 		goto end;
 	}
@@ -705,7 +708,7 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 		if(recursive_delete(fullrealwork,
 			NULL, TRUE /* delete files */))
 		{
-			logp("Old working directory is in the way.\n");
+			log_and_send("Old working directory is in the way.\n");
 			ret=-1;
 			goto end;
 		}
@@ -764,7 +767,9 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 		goto end;
 	}
 
-	logp("Unknown working_dir_recovery_method: %s\n", wdrm);
+	snprintf(msg, sizeof(msg),
+		"Unknown working_dir_recovery_method: %s\n", wdrm);
+	log_and_send(msg);
 	ret=-1;
 
 end:

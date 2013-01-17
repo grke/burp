@@ -221,8 +221,11 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, int
 	else
 	{
 		// If it was not a compressed file, just hard link it.
-		if(do_link(oldpath, infpath, &statp, cconf))
-			ret=-1;
+		// It is possible that infpath already exists, if the server
+		// was interrupted on a previous run just after this point.
+		if(do_link(oldpath, infpath, &statp, cconf,
+			TRUE /* allow overwrite of infpath */))
+				ret=-1;
 	
 	}
 	return ret;
@@ -410,7 +413,8 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 		// Use the old unchanged file.
 		// Hard link it first.
 		//logp("Hard linking to old file: %s\n", datapth);
-		if(do_link(oldpath, finpath, &statp, cconf))
+		if(do_link(oldpath, finpath, &statp, cconf,
+		  FALSE /* do not overwrite finpath (should never need to) */))
 		{
 			ret=-1;
 			goto cleanup;

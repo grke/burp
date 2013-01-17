@@ -76,7 +76,8 @@ int recursive_hardlink(const char *src, const char *dst, const char *client, str
 			//logp("hardlinking %s to %s\n", fullpathb, fullpatha);
 			write_status(client, STATUS_SHUFFLING, fullpathb,
 				p1cntr, cntr);
-			if(do_link(fullpatha, fullpathb, &statp, conf))
+			if(do_link(fullpatha, fullpathb, &statp, conf,
+				FALSE /* do not overwrite target */))
 			{
 				free(fullpatha);
 				free(fullpathb);
@@ -665,7 +666,7 @@ finish:
 	return ret;
 }
 
-int do_link(const char *oldpath, const char *newpath, struct stat *statp, struct config *conf)
+int do_link(const char *oldpath, const char *newpath, struct stat *statp, struct config *conf, bool overwrite)
 {
 	/* Avoid creating too many hardlinks */
 	if(statp->st_nlink >= (unsigned int)conf->max_hardlinks)
@@ -674,8 +675,21 @@ int do_link(const char *oldpath, const char *newpath, struct stat *statp, struct
 	}
 	else if(link(oldpath, newpath))
 	{
-		logp("could not hard link '%s' to '%s': %s\n",
-			newpath, oldpath, strerror(errno));
+		if(overwrite && errno==EEXIST)
+		{
+			unlink(newpath);
+			if(link(oldpath, newpath))
+			{
+				logp("could not hard link '%s' to '%s': %s\n",
+					newpath, oldpath, strerror(errno));
+				return -1;
+			}
+			else
+			{
+				logp("Successful hard link of '%s' to '%s' after unlinking the former\n", newpath, oldpath);
+				return 0;
+			}
+		}
 		return -1;
 	}
 	return 0;

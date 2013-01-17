@@ -27,6 +27,6 @@ extern int compress_file(const char *current, const char *file, struct config *c
 extern int compress_filename(const char *d, const char *file, const char *zfile, struct config *cconf);
 extern int remove_old_backups(const char *basedir, struct config *cconf, const char *client);
 extern size_t get_librsync_block_len(const char *endfile);
-extern int do_link(const char *oldpath, const char *newpath, struct stat *statp, struct config *conf);
+extern int do_link(const char *oldpath, const char *newpath, struct stat *statp, struct config *conf, bool overwrite);
 
 #endif // _CURRENT_BACKUPS_H

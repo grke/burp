@@ -52,7 +52,7 @@ $(DIRS):
 	TOPDIR=$${DEPKGS:-$${TOPDIR}}; \
 	TOOLSDIR=$${TOPDIR} ; \
 	while ! test -d $${TOOLSDIR}/burp-cross-tools \
-	  || ! test -h $${TOOLSDIR}/burp-cross-tools ; do \
+	  && ! test -h $${TOOLSDIR}/burp-cross-tools ; do \
 		TOOLSDIR=`dirname $${TOOLSDIR}` ; \
 		echo $${TOOLSDIR} ; \
 		if test $${TOOLSDIR} = '/' -o $${TOOLSDIR} = '.' ; then \

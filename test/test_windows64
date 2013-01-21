@@ -1,11 +1,21 @@
 #!/bin/bash
 
-server=10.253.0.13
-windowsclient=10.253.0.14
-
 myscript=$(basename $0)
 if [ ! -f "$myscript" ] ; then
 	echo "Please run $myscript whilst standing in the same directory" 1>&2
+	exit 1
+fi
+
+server="$1"
+client="$2"
+user="$3"
+pass="$4"
+
+if [ -z "$server" ] \
+  || [ -z "$client" ] \
+  || [ -z "$user" ] \
+  || [ -z "$pass" ] ; then
+	echo "Usage: $myscript [server address] [client address] [client user] [client pass]"
 	exit 1
 fi
 
@@ -63,15 +73,8 @@ build_and_install()
 
 	# Now copy the Windows installer to the client
 	installer=$(find -name burp-win64-installer*.exe)
-	[ -z "$windowsclient" ] && fail
-	scp "$installer" "$windowsclient:" || fail
-
-	# Remove any previous installation.
-	ssh "$windowsclient" rm -rf \'/cygdrive/c/Program Files/Burp\' || fail
-
-	# Now run the Windows installer
-	installer=$(basename $installer)
-	ssh "$windowsclient" ./$installer /S || fail
+	[ -z "$client" ] && fail
+	"$path/scp_expect" "$pass" "$installer" "$user@$client:" || fail
 
 	cdir -
 }
@@ -80,10 +83,28 @@ build_and_install
 
 # Copy the build directory to the client, to give it something to backup.
 cdir "$path" || fail
+# The Windows build symlinks cock things for 'diff -ur' on the restore later,
+# so delete them first.
+rm -f build/burp-depkgs
+rm -f build/burp-cross-tools
 tar -cjf build.tar.bz2 build || fail
-scp build.tar.bz2 "$windowsclient:" || fail
+"$path/scp_expect" "$pass" build.tar.bz2 "$user@$client:" || fail
+
+
+installer=$(basename $installer)
 clientburpdir="/cygdrive/c/Program Files/Burp"
-ssh "$windowsclient" tar -xjf build.tar.bz2 -C \'$clientburpdir\' || fail
+
+rm -f windowsscript
+cat >> windowsscript << EOF
+#!/bin/bash
+rm -rf "/cygdrive/c/Program Files/Burp" || exit 1
+./$installer /S || exit 1
+tar -xjf build.tar.bz2 -C "$clientburpdir" || exit 1
+EOF
+
+"$path/scp_expect" "$pass" windowsscript "$user@$client:" || fail
+"$path/ssh_expect" "$pass" "$user@$client" chmod 755 windowsscript || fail
+"$path/ssh_expect" "$pass" "$user@$client" ./windowsscript || fail
 
 # args:
 # 1 - directory where build was installed
@@ -94,14 +115,51 @@ ssh "$windowsclient" tar -xjf build.tar.bz2 -C \'$clientburpdir\' || fail
 # 6 - directory to restore to
 # 7 - address of the server
 # 8 - ssh command (leave unset for self test)
+# 9 - scp command (leave unset for self test)
+# 10 - address of the client (leave unset for self test)
+echo "Running with split_vss=0 and strip_vss=0"
 ./test_main \
 	"$target" \
-	\'"$clientburpdir/bin/burp.exe"\' \
-	\'"$clientburpdir/burp.conf"\' \
-	\'"C:\Program Files\Burp\burp.conf"\' \
-	\'"$clientburpdir/build"\' \
-	\'"$clientburpdir/restore"\' \
+	"$clientburpdir/bin/burp.exe" \
+	"$clientburpdir/burp.conf" \
+	"C:\Program Files\Burp\burp.conf" \
+	"C:/Program Files/Burp/build" \
+	"C:/Program Files/Burp/restore" \
 	"$server" \
-	"ssh $windowsclient"
+	"$path/ssh_expect $pass" \
+	"$path/scp_expect $pass" \
+	"$user@$client"
+
+# The following is not currently working.
+#
+# Go again with SPLIT_VSS=1
+#echo "Running with split_vss=1 and strip_vss=0"
+#rm -rf "$target/var/spool/burp"
+#NO_CA_GEN=1 SPLIT_VSS=1 ./test_main \
+#	"$target" \
+#	"$clientburpdir/bin/burp.exe" \
+#	"$clientburpdir/burp.conf" \
+#	"C:\Program Files\Burp\burp.conf" \
+#	"C:/Program Files/Burp/build" \
+#	"C:/Program Files/Burp/restore" \
+#	"$server" \
+#	"$path/ssh_expect $pass" \
+#	"$path/scp_expect $pass" \
+#	"$user@$client"
+#
+# Go again with STRIP_VSS=1
+#echo "Running with split_vss=0 and strip_vss=1"
+#rm -rf "$target/var/spool/burp"
+#NO_CA_GEN=1 STRIP_VSS=1 ./test_main \
+#	"$target" \
+#	"$clientburpdir/bin/burp.exe" \
+#	"$clientburpdir/burp.conf" \
+#	"C:\Program Files\Burp\burp.conf" \
+#	"C:/Program Files/Burp/build" \
+#	"C:/Program Files/Burp/restore" \
+#	"$server" \
+#	"$path/ssh_expect $pass" \
+#	"$path/scp_expect $pass" \
+#	"$user@$client"
 
 exit 0

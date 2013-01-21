@@ -18,11 +18,11 @@ REM Burp used to always put things in C:\Program Files\Burp\, but as of
 REM 1.3.11, it changed to putting them in %PROGRAMFILES%, but still want to
 REM let the old way work.
 IF EXIST "C:\Program Files\Burp" (
-	set OPENSSL_CONF=C:\Program Files\Burp\burp.conf
+	set "OPENSSL_CONF=C:\Program Files\Burp\burp.conf"
 	set "openssl=C:\Program Files\Burp\bin\openssl.exe"
 	set "tmpconf=C:\Program Files\Burp\CA\tmp.conf"
 ) ELSE (
-	set OPENSSL_CONF=%PROGRAMFILES%\Burp\burp.conf
+	set "OPENSSL_CONF=%PROGRAMFILES%\Burp\burp.conf"
 	set "openssl=%PROGRAMFILES%\Burp\bin\openssl.exe"
 	set "tmpconf=%PROGRAMFILES%\Burp\CA\tmp.conf"
 )

@@ -69,6 +69,8 @@ build_and_install
 # 6 - directory to restore to
 # 7 - address of the server
 # 8 - ssh command (leave unset for self test)
+# 9 - scp command (leave unset for self test)
+# 10 - address of the client (leave unset for self test)
 ./test_main \
 	"$target" \
 	"$target/usr/sbin/burp" \
@@ -77,6 +79,8 @@ build_and_install
 	"$build" \
 	"/tmp/restore" \
 	127.0.0.1 \
-	"ssh localhost"
+	"ssh" \
+	"scp" \
+	"localhost"
 
 exit 0

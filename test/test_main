@@ -489,9 +489,11 @@ add_normal_settings()
 	fi
 }
 
-pre_tweaks_server
-pre_tweaks_client
-run_scripts
+if [ -z "$NO_CA_GEN" ] ; then
+	pre_tweaks_server
+	pre_tweaks_client
+	run_scripts
+fi
 
 echo
 echo "Starting tests"

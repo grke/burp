@@ -130,36 +130,34 @@ echo "Running with split_vss=0 and strip_vss=0"
 	"$path/scp_expect $pass" \
 	"$user@$client"
 
-# The following is not currently working.
-#
 # Go again with SPLIT_VSS=1
-#echo "Running with split_vss=1 and strip_vss=0"
-#rm -rf "$target/var/spool/burp"
-#NO_CA_GEN=1 SPLIT_VSS=1 ./test_main \
-#	"$target" \
-#	"$clientburpdir/bin/burp.exe" \
-#	"$clientburpdir/burp.conf" \
-#	"C:\Program Files\Burp\burp.conf" \
-#	"C:/Program Files/Burp/build" \
-#	"C:/Program Files/Burp/restore" \
-#	"$server" \
-#	"$path/ssh_expect $pass" \
-#	"$path/scp_expect $pass" \
-#	"$user@$client"
-#
+echo "Running with split_vss=1 and strip_vss=0"
+rm -rf "$target/var/spool/burp/testclient"
+NO_CA_GEN=1 SPLIT_VSS=1 ./test_main \
+	"$target" \
+	"$clientburpdir/bin/burp.exe" \
+	"$clientburpdir/burp.conf" \
+	"C:\Program Files\Burp\burp.conf" \
+	"C:/Program Files/Burp/build" \
+	"C:/Program Files/Burp/restore" \
+	"$server" \
+	"$path/ssh_expect $pass" \
+	"$path/scp_expect $pass" \
+	"$user@$client"
+
 # Go again with STRIP_VSS=1
-#echo "Running with split_vss=0 and strip_vss=1"
-#rm -rf "$target/var/spool/burp"
-#NO_CA_GEN=1 STRIP_VSS=1 ./test_main \
-#	"$target" \
-#	"$clientburpdir/bin/burp.exe" \
-#	"$clientburpdir/burp.conf" \
-#	"C:\Program Files\Burp\burp.conf" \
-#	"C:/Program Files/Burp/build" \
-#	"C:/Program Files/Burp/restore" \
-#	"$server" \
-#	"$path/ssh_expect $pass" \
-#	"$path/scp_expect $pass" \
-#	"$user@$client"
+echo "Running with split_vss=0 and strip_vss=1"
+rm -rf "$target/var/spool/burp"
+NO_CA_GEN=1 STRIP_VSS=1 ./test_main \
+	"$target" \
+	"$clientburpdir/bin/burp.exe" \
+	"$clientburpdir/burp.conf" \
+	"C:\Program Files\Burp\burp.conf" \
+	"C:/Program Files/Burp/build" \
+	"C:/Program Files/Burp/restore" \
+	"$server" \
+	"$path/ssh_expect $pass" \
+	"$path/scp_expect $pass" \
+	"$user@$client"
 
 exit 0

@@ -3,6 +3,8 @@
   * Bug fix for autoupgrade failing on Windows if autoupgrade_dir has been
     modified.
   * Bug fix for listing backups created with split_vss=1.
+  * Bug fix for restoring uncompressed encrypted backups created with
+    split_vss=1.
   * Bug fix for Debian init do_stop() function from Peter Maloney.
   * Bug fix for resuming backups where a file to patch has already been
     hard linked into place. Also get the client to report a more helpful

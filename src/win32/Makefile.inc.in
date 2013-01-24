@@ -26,7 +26,7 @@ BUILDDIR := @BUILDDIR@
 TOPDIR := @TOPDIR@
 #
 # where we find depkgs
-DEPKGS := $(TOPDIR)/@DEPKGS@
+DEPKGS := $(BUILDDIR)/../../@DEPKGS@
 
 DOCDIR := $(TOPDIR)/docs
 

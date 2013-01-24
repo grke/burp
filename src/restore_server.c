@@ -167,6 +167,7 @@ static int send_file(const char *fname, int patches, const char *best, const cha
 		if(cmd==CMD_ENC_FILE
 		  || cmd==CMD_ENC_METADATA
 		  || cmd==CMD_ENC_VSS
+		  || cmd==CMD_ENC_VSS_T
 		  || cmd==CMD_EFS_FILE)
 		{
 			ret=send_whole_file(cmd, best, datapth, 1, bytes,

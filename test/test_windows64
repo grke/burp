@@ -128,7 +128,7 @@ echo "Running with split_vss=0 and strip_vss=0"
 	"$server" \
 	"$path/ssh_expect $pass" \
 	"$path/scp_expect $pass" \
-	"$user@$client"
+	"$user@$client" || exit 1
 
 # Go again with SPLIT_VSS=1
 echo "Running with split_vss=1 and strip_vss=0"
@@ -143,11 +143,11 @@ NO_CA_GEN=1 SPLIT_VSS=1 ./test_main \
 	"$server" \
 	"$path/ssh_expect $pass" \
 	"$path/scp_expect $pass" \
-	"$user@$client"
+	"$user@$client" || exit 1
 
 # Go again with STRIP_VSS=1
 echo "Running with split_vss=0 and strip_vss=1"
-rm -rf "$target/var/spool/burp"
+rm -rf "$target/var/spool/burp/testclient"
 NO_CA_GEN=1 STRIP_VSS=1 ./test_main \
 	"$target" \
 	"$clientburpdir/bin/burp.exe" \
@@ -158,6 +158,6 @@ NO_CA_GEN=1 STRIP_VSS=1 ./test_main \
 	"$server" \
 	"$path/ssh_expect $pass" \
 	"$path/scp_expect $pass" \
-	"$user@$client"
+	"$user@$client" || exit 1
 
 exit 0

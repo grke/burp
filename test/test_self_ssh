@@ -81,6 +81,6 @@ build_and_install
 	127.0.0.1 \
 	"ssh" \
 	"scp" \
-	"localhost"
+	"localhost" || exit 1
 
 exit 0

@@ -191,8 +191,6 @@ add_do_diff_client()
 	rpath1=$(echo "$1" | sed -e 's/\/C:\//\/C_\//g')
 	rpath2=$(echo "$2" | sed -e 's/\/C:\//\/C_\//g')
 cat >> "$clientscript" << EOF
-echo "HERE:$rpath1"
-echo "AND:$rpath2"
 diff -ur "$rpath1" "$rpath2" || fail "$3"
 EOF
 }
@@ -255,8 +253,10 @@ else
 fi
 
 # Scramble a whole bunch of files
+# On Windows, need to specify the whole path to find and sort, or the Windows
+# versions are picked up instead.
 /usr/bin/find "$includedir/autoconf" -type f | while read f ; do
-	LC_ALL='C' sort --random-sort "\$f" > tmpfile
+	LC_ALL='C' /usr/bin/sort --random-sort "\$f" > tmpfile
 	[ "$?" != "0" ] && exit 1
 	mv tmpfile "\$f" || exit 1
 done || fail "randomise files failed"
@@ -354,7 +354,7 @@ add_exclude_ext_on()
 
 add_split_vss_off()
 {
-	sed_rep_client 's/^split_vss = c//g' "$clientconf"
+	sed_rep_client 's/^split_vss = 0//g' "$clientconf"
 }
 
 add_split_vss_on()
@@ -365,7 +365,7 @@ add_split_vss_on()
 
 add_strip_vss_off()
 {
-	sed_rep_client 's/^strip_vss = c//g' "$clientconf"
+	sed_rep_client 's/^strip_vss = 0//g' "$clientconf"
 }
 
 add_strip_vss_on()
@@ -386,7 +386,7 @@ start_script()
 fail()
 {
 	echo
-	echo "Test failed: $@"
+	echo "Test failed: \$@"
 	echo
 	exit 1
 }
@@ -702,8 +702,11 @@ all_tests()
 	start_script_client
 	add_run_verify all
 	add_run_restore 10 "$restoredir"10
-	echo "[ -d \"$restoredir\"10/$excludedir ] && fail \"$excludedir should not have been restored!\"" >> "$clientscript"
-	echo "[ ! -d \"$restoredir\"10/$includedir ] && fail \"$includedir should have been restored!\"" >> "$clientscript"
+	# On Windows, /C:/ gets converted to /C_/, so tweak the path.
+	exc=$(echo "${restoredir}10/$excludedir" | sed -e 's/\/C:\//\/C_\//g')
+	inc=$(echo "${restoredir}10/$includedir" | sed -e 's/\/C:\//\/C_\//g')
+	echo "[ -d \"$exc\" ] && fail \"$exc should not have been restored!\"" >> "$clientscript"
+	echo "[ ! -d \"$inc\" ] && fail \"$inc should have been restored!\"" >> "$clientscript"
 	run_script_client
 	end_test 10
 

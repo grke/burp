@@ -32,34 +32,23 @@
 static int sfd=-1; // status fd for the main server
 
 static int hupreload=0;
+static int hupreload_logged=0;
 static int gentleshutdown=0;
-
-/*
-static void sighandler(int sig)
-{
-	logp("got signal in sighandler: %d\n", sig);
-	// Close the sockets properly so as to attempt to avoid annoying waits
-	// during testing when I kill the server with a Ctrl-C and then get
-	// 'unable to bind listening socket'.
-	async_free();
-	close_fd(&sfd);
-	close_fd(&status_wfd);
-	close_fd(&status_rfd);
-	logp("exiting\n");
-	exit(1);
-}
-*/
+static int gentleshutdown_logged=0;
+static int sigchld=0;
 
 static void huphandler(int sig)
 {
-	logp("got signal in huphandler: %d\n", sig);
 	hupreload=1;
+	// Be careful about not logging inside a signal handler.
+	hupreload_logged=0;
 }
 
 static void usr2handler(int sig)
 {
-	logp("will shut down once children have exited\n");
 	gentleshutdown=1;
+	// Be careful about not logging inside a signal handler.
+	gentleshutdown_logged=0;
 }
 
 static int init_listen_socket(const char *port, int alladdr)
@@ -168,6 +157,9 @@ struct chldstat
 
 // Want sigchld_handler to be able to access this, but you cannot pass any
 // data into sigchld_handler, so it has to be a global.
+// Update: This is no longer true, because dealing with chlds is now done
+// outside of sigchld_handler.
+// TODO: Make chlds not be a global.
 static struct chldstat *chlds;
 
 static void chldstat_free(struct chldstat *chld)
@@ -212,8 +204,7 @@ static void check_for_exiting_children(void)
 
 static void sigchld_handler(int sig)
 {
-	//printf("in sigchld_handler\n");
-	check_for_exiting_children();
+	sigchld=1;
 }
 
 int setup_signals(int oldmax_children, int max_children, int oldmax_status_children, int max_status_children)
@@ -1965,6 +1956,12 @@ static int run_server(struct config *conf, const char *configfile, int *rfd, con
 		fd_set fse;
 		struct timeval tval;
 
+		if(sigchld)
+		{
+			check_for_exiting_children();
+			sigchld=0;
+		}
+
 		FD_ZERO(&fsr);
 		FD_ZERO(&fse);
 
@@ -1986,10 +1983,19 @@ static int run_server(struct config *conf, const char *configfile, int *rfd, con
 		}
 		// Leave if we had a SIGUSR1 and there are no children
 		// running.
-		if(gentleshutdown && !found_normal_child)
+		if(gentleshutdown)
 		{
-			logp("all children have exited - shutting down\n");
-			break;
+			if(!gentleshutdown_logged)
+			{
+				logp("got SIGUSR2 gentle reload signal\n");
+				logp("will shut down once children have exited\n");
+				gentleshutdown_logged++;
+			}
+			else if(!found_normal_child)
+			{
+				logp("all children have exited - shutting down\n");
+				break;
+			}
 		}
 
 		if(select(mfd+1, &fsr, NULL, &fse, &tval)<0)
@@ -2147,6 +2153,8 @@ static int run_server(struct config *conf, const char *configfile, int *rfd, con
 		  }
 		}
 	}
+
+	if(hupreload) logp("got SIGHUP reload signal\n");
 
 	ssl_destroy_ctx(ctx);
 

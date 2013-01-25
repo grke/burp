@@ -167,12 +167,12 @@ add_run_restore()
 {
 	local num="$1"
 	local dir="$2"
-	echo "Starting test client restore of backup $num"
 	makedir_client "$dir"
 # If vss has been stripped, need to add the '-x' option to the restore.
 	nowinapi=
 	[ -n "$STRIP_VSS" ] && nowinapi='-x'
 cat >> "$clientscript" << EOF
+echo "Starting test client restore of backup $num"
 rm -rf "$dir" || fail
 
 "$burpbin" -c "$clientconfarg" -a r -b "$num" -d "$dir" $nowinapi \
@@ -354,7 +354,7 @@ add_exclude_ext_on()
 
 add_split_vss_off()
 {
-	sed_rep_client 's/^split_vss = 0//g' "$clientconf"
+	sed_rep_client 's/^split_vss = .*//g' "$clientconf"
 }
 
 add_split_vss_on()
@@ -365,7 +365,7 @@ add_split_vss_on()
 
 add_strip_vss_off()
 {
-	sed_rep_client 's/^strip_vss = 0//g' "$clientconf"
+	sed_rep_client 's/^strip_vss = .*//g' "$clientconf"
 }
 
 add_strip_vss_on()

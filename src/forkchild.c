@@ -32,10 +32,8 @@ static pid_t forkchild_fd(int sin, int sout, int serr, const char *path, char * 
 		 * descriptor could not be included in an fd_set. */
 		for(fd=3; fd<(int)FD_SETSIZE; ++fd) close(fd);
 		if(execv(path, argv)==-1)
-		{
 			logp("execv %s: %s\n", path, strerror(errno));
-			return -1;
-		}
+		exit(1);
 	}
 	return pid;
 }

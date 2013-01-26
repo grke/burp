@@ -12,16 +12,24 @@
 
 static int generate_key_and_csr(struct config *conf, const char *csr_path)
 {
+	int a=0;
+	const char *args[12];
 	logp("Generating SSL key and certificate signing request\n");
 	logp("Running '%s --key --keypath %s --request --requestpath %s --name %s'\n", conf->ca_burp_ca, conf->ssl_key, csr_path, conf->cname);
 #ifdef HAVE_WIN32
 	win32_enable_backup_privileges(1 /* ignore_errors */);
 #endif
-	if(run_script(conf->ca_burp_ca, NULL, 0, "--key", "--keypath",
-		conf->ssl_key, "--request", "--requestpath", csr_path,
-		"--name", conf->cname, NULL, NULL,
-		NULL /* cntr */,
-		1 /* wait */,
+	args[a++]=conf->ca_burp_ca;
+	args[a++]="--key";
+	args[a++]="--keypath";
+	args[a++]=conf->ssl_key;
+	args[a++]="--request";
+	args[a++]="--requestpath";
+	args[a++]=csr_path;
+	args[a++]="--name";
+	args[a++]=conf->cname;
+	args[a++]=NULL;
+	if(run_script(args, NULL, 0, NULL /* cntr */, 1 /* wait */,
 		0 /* do not use logp - stupid openssl prints lots of dots
 		     one at a time with no way to turn it off */))
 	{

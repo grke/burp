@@ -22,6 +22,7 @@ static int receive_file(const char *autoupgrade_dir, const char *file, struct cn
 
 int autoupgrade_client(struct config *conf, struct cntr *p1cntr)
 {
+	int a=0;
 	int ret=-1;
 	char *cp=NULL;
 	char *copy=NULL;
@@ -32,6 +33,7 @@ int autoupgrade_client(struct config *conf, struct cntr *p1cntr)
 	char script_name[32]="";
 	char package_name[32]="";
 	char write_str[256]="";
+	const char *args[2];
 
 	if(!conf->autoupgrade_dir)
 	{
@@ -110,11 +112,11 @@ int autoupgrade_client(struct config *conf, struct cntr *p1cntr)
 	chmod(script_path, 0755);
 
 	/* Run the script here. */
-	ret=run_script(script_path,
-		NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-		NULL, NULL,
-		p1cntr,
-		0 /* do not wait */, 1 /* use logp */);
+	a=0;
+	args[a++]=script_path;
+	args[a++]=NULL;
+	ret=run_script(args, NULL, 0,
+		p1cntr, 0 /* do not wait */, 1 /* use logp */);
 	/* To get round Windows problems to do with installing over files
 	   that the current process is running from, I am forking the child,
 	   then immediately exiting the parent process. */

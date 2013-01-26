@@ -821,15 +821,6 @@ static int get_lock_and_clean(const char *basedir, const char *lockbasedir, cons
 	return ret;
 }
 
-static int run_script_w(const char *script, struct strlist **userargs, int userargc, const char *client, const char *current, const char *directory, struct cntr *cntr)
-{
-	return run_script(script, userargs, userargc, client, current,
-		directory, "reserved1", "reserved2", NULL, NULL,
-		NULL, NULL,
-		NULL, cntr,
-		1 /* wait */, 1 /* use logp */);
-}
-
 /* I am sure I wrote this function already, somewhere else. */
 static int reset_conf_val(const char *src, char **dest)
 {
@@ -875,14 +866,22 @@ static int client_can_restore(struct config *cconf, const char *client)
 
 static void maybe_do_notification(int status, const char *client, const char *basedir, const char *storagedir, const char *filename, const char *brv, struct config *cconf, struct cntr *p1cntr, struct cntr *cntr)
 {
+	int a=0;
+	const char *args[12];
+	args[a++]=NULL; // Fill in the script name later.
+	args[a++]=client;
+	args[a++]=basedir;
+	args[a++]=storagedir;
+	args[a++]=filename;
+	args[a++]=brv;
 	if(status)
-		run_script(cconf->notify_failure_script,
-			cconf->notify_failure_arg,
-			cconf->nfcount,
-			client, basedir,
-			storagedir, filename,
-			brv, "0", NULL, NULL, NULL,
-			NULL, cntr, 1, 1);
+	{
+		args[0]=cconf->notify_failure_script;
+		args[a++]="0";
+		args[a++]=NULL;
+		run_script(args, cconf->notify_failure_arg, cconf->nfcount,
+			cntr, 1, 1);
+	}
 	else if((cconf->notify_success_warnings_only
 		&& (p1cntr->warning+cntr->warning)>0)
 	  || (cconf->notify_success_changes_only
@@ -893,13 +892,11 @@ static void maybe_do_notification(int status, const char *client, const char *ba
 		char warnings[32]="";
 		snprintf(warnings, sizeof(warnings), "%llu",
 			p1cntr->warning+cntr->warning);
-		run_script(cconf->notify_success_script,
-			cconf->notify_success_arg,
-			cconf->nscount,
-			client, basedir,
-			storagedir, filename,
-			brv, warnings, NULL, NULL, NULL,
-			NULL, cntr, 1, 1);
+		args[0]=cconf->notify_success_script;
+		args[a++]=warnings;
+		args[a++]=NULL;
+		run_script(args, cconf->notify_success_arg, cconf->nscount,
+			cntr, 1, 1);
 	}
 }
 
@@ -982,12 +979,19 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			}
 			if(!strcmp(buf, "backupphase1timed"))
 			{
-				if((*timer_ret=run_script_w(
-					cconf->timer_script,
-					cconf->timer_arg,
-					cconf->tacount,
-					client, current, cconf->directory,
-					NULL))<0)
+				int a=0;
+				const char *args[12];
+				args[a++]=cconf->timer_script;
+				args[a++]=client;
+				args[a++]=current;
+				args[a++]=cconf->directory;
+				args[a++]="reserved1";
+				args[a++]="reserved2";
+				args[a++]=NULL;
+				if((*timer_ret=run_script(args,
+				  cconf->timer_arg,
+				  cconf->tacount,
+				  cntr, 1 /* wait */, 1 /* use logp */))<0)
 				{
 					ret=*timer_ret;
 					logp("Error running timer script for %s\n", client);
@@ -1635,45 +1639,100 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 		ret=-1;
 	}
 
-	if(cconf.server_script_pre
-	  && run_script(cconf.server_script_pre,
-			cconf.server_script_pre_arg,
-			cconf.sprecount,
-			"pre",
-			buf?buf:"",
-			client,
-			"reserved4",
-			"reserved5",
-			NULL, NULL, NULL, NULL, NULL,
-			&p1cntr, 1, 1))
+	if(cconf.server_script_pre)
 	{
-		log_and_send("server pre script returned an error\n");
-		ret=-1;
-		// Do not finish here, because the server post script might
-		// want to run.
+		int a=0;
+		char *logbuf=NULL;
+		const char *args[12];
+		args[a++]=cconf.server_script_pre;
+		args[a++]="pre";
+		args[a++]=buf?buf:"";
+		args[a++]=client;
+		args[a++]="reserved4";
+		args[a++]="reserved5";
+		args[a++]=NULL;
+		// At this point, there is no client directory and therefore
+		// log file on the server.
+		// So to log the output, we have to catch it in a buffer,
+		// then pass the buffer to the notification script.
+		if(run_script_to_buf(args, cconf.server_script_pre_arg,
+			cconf.sprecount, NULL, 1, 1, &logbuf))
+		{
+			log_and_send("server pre script returned an error");
+			ret=-1;
+			if(cconf.server_script_pre_notify)
+			{
+				a=0;
+				args[a++]=cconf.notify_failure_script;
+				args[a++]=client;
+				// magic - set basedir blank and the
+				// notify script will know to get the content
+				// from the next argument (usually storagedir)
+				args[a++]=""; // usually basedir
+				args[a++]=logbuf?logbuf:""; //usually storagedir
+				args[a++]=""; // usually file
+				args[a++]=""; // usually brv
+				args[a++]=""; // usually warnings
+				args[a++]=NULL;
+				run_script(args,
+					cconf.notify_failure_arg,
+					cconf.nfcount,
+					NULL, 1, 1);
+			}
+			// Do not finish here, because the server post script
+			// might want to run.
+		}
+		if(logbuf) free(logbuf);
 	}
 
 	if(!ret) ret=child(&conf, &cconf, client, cversion, incexc, srestore,
-		cmd, buf, &gotlock, &timer_ret, &p1cntr, &cntr);
+			cmd, buf, &gotlock, &timer_ret, &p1cntr, &cntr);
 
 	if((!ret || cconf.server_script_post_run_on_fail)
-	  && cconf.server_script_post
-	  && run_script(cconf.server_script_post,
-			cconf.server_script_post_arg,
-			cconf.spostcount,
-			"post",
-			buf?buf:"", // the action requested by the client
-			client,
-			// indicate success or failure
-			ret?"1":"0",
-			// indicate whether the timer script said OK or not
-			timer_ret?"1":"0",
-			NULL, NULL, NULL, NULL, NULL,
-			&p1cntr, 1, 1))
+	  && cconf.server_script_post)
 	{
-		log_and_send("server post script returned an error\n");
-		ret=-1;
-		goto finish;
+		int a=0;
+		char *logbuf=NULL;
+		const char *args[12];
+		args[a++]=cconf.server_script_post;
+		args[a++]="post";
+		args[a++]=buf?buf:"", // the action requested by the client
+		args[a++]=client;
+		args[a++]=ret?"1":"0", // indicate success or failure
+		// indicate whether the timer script said OK or not
+		args[a++]=timer_ret?"1":"0",
+		args[a++]=NULL;
+		// Do not have a client storage directory, so capture the
+		// output in a buffer to pass to the notification script.
+		if(run_script_to_buf(args,
+			cconf.server_script_post_arg, cconf.spostcount,
+			NULL, 1, 1, &logbuf))
+		{
+			log_and_send("server post script returned an error");
+			ret=-1;
+			if(cconf.server_script_post_notify)
+			{
+				a=0;
+				args[a++]=cconf.notify_failure_script;
+				args[a++]=client;
+				// magic - set basedir blank and the
+				// notify script will know to get the content
+				// from the next argument (usually storagedir)
+				args[a++]=""; // usually basedir
+				args[a++]=logbuf?logbuf:""; //usually storagedir
+				args[a++]=""; // usually file
+				args[a++]=""; // usually brv
+				args[a++]=""; // usually warnings
+				args[a++]=NULL;
+				run_script(args,
+					cconf.notify_failure_arg,
+					cconf.nfcount,
+					NULL, 1, 1);
+			}
+			if(logbuf) free(logbuf);
+			goto finish;
+		}
+		if(logbuf) free(logbuf);
 	}
 
 finish:
@@ -2002,7 +2061,8 @@ static int run_server(struct config *conf, const char *configfile, int *rfd, con
 		{
 			if(errno!=EAGAIN && errno!=EINTR)
 			{
-				logp("select error: %s\n", strerror(errno));
+				logp("select error in normal part of %s: %s\n",
+					__func__, strerror(errno));
 				ret=1;
 				break;
 			}
@@ -2119,7 +2179,8 @@ static int run_server(struct config *conf, const char *configfile, int *rfd, con
 		{
 			if(errno!=EAGAIN && errno!=EINTR)
 			{
-				logp("select error: %s\n", strerror(errno));
+				logp("select error in status part of %s: %s\n",
+					__func__, strerror(errno));
 				ret=1;
 				break;
 			}

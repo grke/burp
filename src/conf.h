@@ -106,15 +106,17 @@ struct config
 	char *restore_script_post;
 	struct strlist **restore_script_post_arg;
 	int rpostcount;
-	int   restore_script_post_run_on_fail;
+	int restore_script_post_run_on_fail;
 
 	char *server_script_pre;
 	struct strlist **server_script_pre_arg;
 	int sprecount;
+	int server_script_pre_notify;
 	char *server_script_post;
 	struct strlist **server_script_post_arg;
 	int spostcount;
-	int   server_script_post_run_on_fail;
+	int server_script_post_run_on_fail;
+	int server_script_post_notify;
 
 	// Use these when you want to give the same args to both post and pre
 	// scripts.
@@ -128,6 +130,7 @@ struct config
 	char *server_script;
 	struct strlist **server_script_arg;
 	int sscount;
+	int server_script_notify;
 
 // Client options on the server.
 // They can be set globally in the server config, or for each client.

@@ -413,7 +413,8 @@ static int send_data_to_client(int cfd, const char *data, size_t len)
 		{
 			if(errno!=EAGAIN && errno!=EINTR)
 			{
-				logp("select error: %s\n", strerror(errno));
+				logp("select error in %s: %s\n", __func__,
+					strerror(errno));
 				ret=-1;
 				break;
 			}
@@ -995,7 +996,8 @@ int status_server(int *cfd, struct config *conf)
 		{
 			if(errno!=EAGAIN && errno!=EINTR)
 			{
-				logp("select error: %s\n", strerror(errno));
+				logp("select error in %s: %s\n", __func__,
+					strerror(errno));
 				ret=-1;
 				break;
 			}

@@ -932,7 +932,25 @@ void write_status(const char *client, char phase, const char *path, struct cntr 
 	}
 }
 
-static void log_script_output(FILE **fp, struct cntr *cntr, int logfunc)
+static int astrcat(char **buf, const char *append)
+{
+	int l=0;
+	char *copy=NULL;
+	if(append) l+=strlen(append);
+	if(*buf) l+=strlen(*buf);
+	l++;
+	if((*buf && !(copy=strdup(*buf)))
+	  || !(*buf=(char *)realloc(*buf, l)))
+	{
+		logp("out of memory in %s.\n", __func__);
+		return -1;
+	}
+	snprintf(*buf, l, "%s%s", copy?copy:"", append?append:"");
+	if(copy) free(copy);
+	return 0;
+}
+
+static int log_script_output(FILE **fp, struct cntr *cntr, int logfunc, char **logbuf)
 {
 	char buf[256]="";
 	if(fp && *fp)
@@ -942,6 +960,7 @@ static void log_script_output(FILE **fp, struct cntr *cntr, int logfunc)
 			// logc does not print a prefix
 			if(logfunc) logp("%s", buf);
 			else logc("%s", buf);
+			if(logbuf && astrcat(logbuf, buf)) return -1;
 			if(cntr) logw(cntr, "%s", buf);
 		}
 		if(feof(*fp))
@@ -950,6 +969,7 @@ static void log_script_output(FILE **fp, struct cntr *cntr, int logfunc)
 			*fp=NULL;
 		}
 	}
+	return 0;
 }
 
 static int got_sigchld=0;
@@ -971,7 +991,7 @@ void setup_signal(int sig, void handler(int sig))
 	sigaction(sig, &sa, NULL);
 }
 
-static int run_script_select(FILE **sout, FILE **serr, struct cntr *cntr, int logfunc)
+static int run_script_select(FILE **sout, FILE **serr, struct cntr *cntr, int logfunc, char **logbuf)
 {
 	int mfd=-1;
 	fd_set fsr;
@@ -995,15 +1015,21 @@ static int run_script_select(FILE **sout, FILE **serr, struct cntr *cntr, int lo
 		{
 			if(errno!=EAGAIN && errno!=EINTR)
 			{
-				logp("run_script_select error: %s\n",
+				logp("%s error: %s\n", __func__,
 					strerror(errno));
 				return -1;
 			}
 		}
 		if(FD_ISSET(soutfd, &fsr))
-			log_script_output(sout, NULL, logfunc);
+		{
+			if(log_script_output(sout, NULL, logfunc, logbuf))
+				return -1;
+		}
 		if(FD_ISSET(serrfd, &fsr))
-			log_script_output(serr, cntr, logfunc);
+		{
+			if(log_script_output(serr, cntr, logfunc, logbuf))
+				return -1;
+		}
 
 		if(!*sout && !*serr && got_sigchld)
 		{
@@ -1020,8 +1046,7 @@ static int run_script_select(FILE **sout, FILE **serr, struct cntr *cntr, int lo
 
 #endif
 
-/* TODO: make arg1..n an array */
-int run_script(const char *script, struct strlist **userargs, int userargc, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, const char *arg6, const char *arg7, const char *arg8, const char *arg9, const char *arg10, struct cntr *cntr, int do_wait, int logfunc)
+int run_script_to_buf(const char **args, struct strlist **userargs, int userargc, struct cntr *cntr, int do_wait, int logfunc, char **logbuf)
 {
 	int a=0;
 	int l=0;
@@ -1032,19 +1057,9 @@ int run_script(const char *script, struct strlist **userargs, int userargc, cons
 #ifndef HAVE_WIN32
 	int s=0;
 #endif
-	if(!script) return 0;
+	if(!args || !args[0]) return 0;
 
-	cmd[l++]=(char *)script;
-	if(arg1) cmd[l++]=(char *)arg1;
-	if(arg2) cmd[l++]=(char *)arg2;
-	if(arg3) cmd[l++]=(char *)arg3;
-	if(arg4) cmd[l++]=(char *)arg4;
-	if(arg5) cmd[l++]=(char *)arg5;
-	if(arg6) cmd[l++]=(char *)arg6;
-	if(arg7) cmd[l++]=(char *)arg7;
-	if(arg8) cmd[l++]=(char *)arg8;
-	if(arg9) cmd[l++]=(char *)arg9;
-	if(arg10) cmd[l++]=(char *)arg10;
+	for(a=0; args[a]; a++) cmd[l++]=(char *)args[a];
 	for(a=0; a<userargc && l<64-1; a++)
 		cmd[l++]=userargs[a]->path;
 	cmd[l++]=NULL;
@@ -1069,7 +1084,7 @@ int run_script(const char *script, struct strlist **userargs, int userargc, cons
 	// My windows forkchild currently just executes, then returns.
 	return 0;
 #else
-	s=run_script_select(&sout, &serr, cntr, logfunc);
+	s=run_script_select(&sout, &serr, cntr, logfunc, logbuf);
 
 	// Set SIGCHLD back to default.
 	setup_signal(SIGCHLD, SIG_DFL);
@@ -1079,26 +1094,32 @@ int run_script(const char *script, struct strlist **userargs, int userargc, cons
 	if(WIFEXITED(run_script_status))
 	{
 		int ret=WEXITSTATUS(run_script_status);
-		logp("%s returned: %d\n", script, ret);
+		logp("%s returned: %d\n", cmd[0], ret);
 		if(cntr && ret) logw(cntr, "%s returned: %d\n",
-			script, ret);
+			cmd[0], ret);
 		return ret;
 	}
 	else if(WIFSIGNALED(run_script_status))
 	{
 		logp("%s terminated on signal %d\n",
-			script, WTERMSIG(run_script_status));
+			cmd[0], WTERMSIG(run_script_status));
 		if(cntr) logw(cntr, "%s terminated on signal %d\n",
-			script, WTERMSIG(run_script_status));
+			cmd[0], WTERMSIG(run_script_status));
 	}
 	else
 	{
-		logp("Strange return when trying to run %s\n", script);
+		logp("Strange return when trying to run %s\n", cmd[0]);
 		if(cntr) logw(cntr, "Strange return when trying to run %s\n",
-			script);
+			cmd[0]);
 	}
 	return -1;
 #endif
+}
+
+int run_script(const char **args, struct strlist **userargs, int userargc, struct cntr *cntr, int do_wait, int logfunc)
+{
+	return run_script_to_buf(args, userargs, userargc, cntr, do_wait,
+		logfunc, NULL /* do not save output to buffer */);
 }
 
 char *comp_level(struct config *conf)

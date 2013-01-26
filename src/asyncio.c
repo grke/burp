@@ -399,7 +399,8 @@ int async_rw(char *rcmd, char **rdst, size_t *rlen, char wcmd, const char *wsrc,
                 {
                         if(errno!=EAGAIN && errno!=EINTR)
                         {
-                                logp("select error: %s\n", strerror(errno));
+                                logp("select error in %s: %s\n", __func__,
+					strerror(errno));
                                 return -1;
                         }
                 }

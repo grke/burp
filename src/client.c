@@ -410,18 +410,22 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 			if(!(ret=maybe_check_timer(phase1str,
 				conf, &resume)))
 			{
-				if(conf->backup_script_pre
-				 && run_script(
-				  conf->backup_script_pre,
-				  conf->backup_script_pre_arg,
-				  conf->bprecount,
-				  "pre",
-				  "reserved2",
-				  "reserved3",
-				  "reserved4",
-				  "reserved5",
-				  NULL, NULL, NULL, NULL, NULL,
-				  &p1cntr, 1, 1)) ret=-1;
+				if(conf->backup_script_pre)
+				{
+					int a=0;
+					const char *args[12];
+					args[a++]=conf->backup_script_pre;
+					args[a++]="pre";
+					args[a++]="reserved2";
+					args[a++]="reserved3";
+					args[a++]="reserved4";
+					args[a++]="reserved5";
+					args[a++]=NULL;
+					if(run_script(args,
+						conf->backup_script_pre_arg,
+						conf->bprecount,
+						&p1cntr, 1, 1)) ret=-1;
+				}
 
 				if(!ret && do_backup_client(conf,
 					resume, 0, &p1cntr, &cntr))
@@ -430,19 +434,21 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 				if((conf->backup_script_post_run_on_fail
 				  || !ret) && conf->backup_script_post)
 				{
-				  if(run_script(
-					conf->backup_script_post,
-					conf->backup_script_post_arg,
-					conf->bpostcount,
-					"post",
-				// Tell post script whether the restore
-				// failed.
-					ret?"1":"0",
-					"reserved3",
-					"reserved4",
-					"reserved5",
-					NULL, NULL, NULL, NULL, NULL,
-					&cntr, 1, 1)) ret=-1;
+					int a=0;
+					const char *args[12];
+					args[a++]=conf->backup_script_post;
+					args[a++]="post";
+					// Tell post script whether the restore
+					// failed.
+					args[a++]=ret?"1":"0";
+					args[a++]="reserved3";
+					args[a++]="reserved4";
+					args[a++]="reserved5";
+					args[a++]=NULL;
+					if(run_script(args,
+						conf->backup_script_post_arg,
+						conf->bpostcount,
+						&cntr, 1, 1)) ret=-1;
 				}
 			}
 
@@ -465,36 +471,40 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 		case ACTION_RESTORE:
 		case ACTION_VERIFY:
 		{
-			if(conf->restore_script_pre
-			   && run_script(
-				conf->restore_script_pre,
-				conf->restore_script_pre_arg,
-				conf->rprecount,
-				"pre",
-				"reserved2",
-				"reserved3",
-				"reserved4",
-				"reserved5",
-				NULL, NULL, NULL, NULL, NULL,
-				&cntr, 1, 1)) ret=-1;
+			if(conf->restore_script_pre)
+			{
+				int a=0;
+				const char *args[12];
+				args[a++]=conf->restore_script_pre;
+				args[a++]="pre";
+				args[a++]="reserved2";
+				args[a++]="reserved3";
+				args[a++]="reserved4";
+				args[a++]="reserved5";
+				args[a++]=NULL;
+				if(run_script(args,
+					conf->restore_script_pre_arg,
+					conf->rprecount, &cntr, 1, 1)) ret=-1;
+			}
 			if(!ret && do_restore_client(conf,
 				act, vss_restore, &p1cntr, &cntr)) ret=-1;
 			if((conf->restore_script_post_run_on_fail
 			  || !ret) && conf->restore_script_post)
 			{
-			   if(run_script(
-				conf->restore_script_post,
-				conf->restore_script_post_arg,
-				conf->rpostcount,
-				"post",
+				int a=0;
+				const char *args[12];
+				args[a++]=conf->restore_script_pre;
+				args[a++]="post";
 				// Tell post script whether the restore
 				// failed.
-				ret?"1":"0",
-				"reserved3",
-				"reserved4",
-				"reserved5",
-				NULL, NULL, NULL, NULL, NULL,
-				&cntr, 1, 1)) ret=-1;
+				args[a++]=ret?"1":"0";
+				args[a++]="reserved3";
+				args[a++]="reserved4";
+				args[a++]="reserved5";
+				args[a++]=NULL;
+				if(run_script(args,
+					conf->restore_script_post_arg,
+					conf->rpostcount, &cntr, 1, 1)) ret=-1;
 			}
 
 			// Return non-zero if there were warnings,

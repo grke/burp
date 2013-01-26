@@ -151,11 +151,13 @@ void init_config(struct config *conf)
 	conf->server_script_pre=NULL;
 	conf->server_script_pre_arg=NULL;
 	conf->sprecount=0;
+	conf->server_script_pre_notify=0;
 
 	conf->server_script_post=NULL;
 	conf->server_script_post_arg=NULL;
 	conf->spostcount=0;
 	conf->server_script_post_run_on_fail=0;
+	conf->server_script_post_notify=0;
 
 	conf->backup_script=NULL;
 	conf->backup_script_arg=NULL;
@@ -167,6 +169,7 @@ void init_config(struct config *conf)
 	conf->server_script=NULL;
 	conf->server_script_arg=NULL;
 	conf->sscount=0;
+	conf->server_script_notify=0;
 
 	conf->dedup_group=NULL;
 	conf->browsefile=NULL;
@@ -652,6 +655,12 @@ static int load_config_ints(struct config *conf, const char *field, const char *
 		&(conf->backup_script_post_run_on_fail));
 	get_conf_val_int(field, value, "server_script_post_run_on_fail",
 		&(conf->server_script_post_run_on_fail));
+	get_conf_val_int(field, value, "server_script_pre_notify",
+		&(conf->server_script_pre_notify));
+	get_conf_val_int(field, value, "server_script_post_notify",
+		&(conf->server_script_post_notify));
+	get_conf_val_int(field, value, "server_script_notify",
+		&(conf->server_script_notify));
 	get_conf_val_int(field, value, "notify_success_warnings_only",
 		&(conf->notify_success_warnings_only));
 	get_conf_val_int(field, value, "notify_success_changes_only",
@@ -1298,6 +1307,11 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 		&(conf->restore_script_pre), &(conf->restore_script_post));
 	pre_post_override(&(conf->server_script),
 		&(conf->server_script_pre), &(conf->server_script_post));
+	if(conf->server_script_notify)
+	{
+		conf->server_script_pre_notify=conf->server_script_notify;
+		conf->server_script_post_notify=conf->server_script_notify;
+	}
 
 	if(!l->got_timer_args) conf->timer_arg=l->talist;
 	if(!l->got_ns_args) conf->notify_success_arg=l->nslist;
@@ -1533,6 +1547,9 @@ int set_client_global_config(struct config *conf, struct config *cconf, const ch
 	cconf->notify_success_warnings_only=conf->notify_success_warnings_only;
 	cconf->notify_success_changes_only=conf->notify_success_changes_only;
 	cconf->server_script_post_run_on_fail=conf->server_script_post_run_on_fail;
+	cconf->server_script_pre_notify=conf->server_script_pre_notify;
+	cconf->server_script_post_notify=conf->server_script_post_notify;
+	cconf->server_script_notify=conf->server_script_notify;
 	cconf->directory_tree=conf->directory_tree;
 	if(set_global_str(&(cconf->directory), conf->directory))
 		return -1;

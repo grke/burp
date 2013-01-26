@@ -2,12 +2,19 @@
 
 echo "Running notify script: $@"
 
+# Arguments specified by the burp binary come first.
+# Normally, most of the following get set as you would expect.
+# In the server_script_pre/post case, burp does not have a directory from
+# which to read a log. In that case, it will set 'client' to the clientname,
+# 'basedir' blank, and 'storagedir' to the log buffer.
 client="$1" ; shift
 basedir="$1" ; shift
 storagedir="$1" ; shift
 file="$1" ; shift
 brv="$1" ; shift # one of backup/restore/verify
 warnings="$1" ; shift
+
+# Arguments given by the user in the conf files come next.
 sendmail="$1" ; shift
 
 working="$basedir/working"
@@ -17,7 +24,8 @@ while [ "$#" -gt 0 ] ; do
 	case "$1" in
 		Subject:*)
 			w=""
-			[ "$warnings" != "0" ] && w="($warnings warnings)"
+			[ -n "$warnings" -a "$warnings" != "0" ] \
+				&& w="($warnings warnings)"
 			h="$1"
 			h="${h//%c/$client}"
 			h="${h//%w/$w}"
@@ -53,9 +61,14 @@ fi
 [ -z "$log" -a -f "$storagedir/$file.gz" ] && \
   log="$storagedir/$file.gz" && id=$(cat "$storagedir"/timestamp)
 
-if [ -z "$log" ] ; then
+if [ -z "$log" -a -z "$basedir" -a -n "$storagedir" ] ; then
+  # This is the case where burp has no log directory and has given a buffer to
+  # log via the storagedir argument.
+  (echo "$headers" && echo && echo "$storagedir") | $sendmail
+elif [ -z "$log" ] ; then
   echo "$headers" && echo && echo "No log found to send in email" | $sendmail
 else
+  # The normal case.
   (echo "$headers" && echo && echo "$id" && echo && echo "$log:" && echo && ($catcmd "$log" 2>/dev/null || cat "$log")) | $sendmail
 fi
 

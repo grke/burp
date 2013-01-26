@@ -12,10 +12,31 @@
 #if defined(WIN32_VSS)
 #include "vss.h"
 
+// Attempt to stop VSS nicely if the client is interrupted by the user.
+BOOL CtrlHandler(DWORD fdwCtrlType)
+{ 
+	switch(fdwCtrlType)
+	{ 
+		// Handle the CTRL-C signal. 
+		case CTRL_C_EVENT:
+		case CTRL_CLOSE_EVENT: 
+		case CTRL_BREAK_EVENT: 
+			win32_stop_vss();
+			return FALSE; 
+		default: 
+			return FALSE; 
+	} 
+}
+
 int win32_start_vss(struct config *conf)
 {
 	int errors=0;
 	//char buf[256]="";
+
+	if(SetConsoleCtrlHandler((PHANDLER_ROUTINE) CtrlHandler, TRUE))
+		logp("Control handler registered.\n");
+	else
+		logp("Could not register control handler.\n");
 
 	if(g_pVSSClient->InitializeForBackup())
 	{

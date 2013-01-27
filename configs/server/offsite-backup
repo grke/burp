@@ -10,7 +10,7 @@
 # This script is included so that it can be fixed at a later point.
 # On the positive side, if you use hardlinked_archive=1 in your
 # server config, the hardlinks are transferred efficiently, and
-# only new files are transferred whole.
+# only changed files are transferred whole.
 # --------------------------------------------------------------
 #
 #

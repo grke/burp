@@ -540,11 +540,23 @@ end:
 int client(struct config *conf, enum action act, int vss_restore, int json)
 {
 	int ret=0;
+	
+#if defined(HAVE_WIN32)
+	// prevent sleep when idle
+	SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED);
+#endif
+	
 	if((ret=do_client(conf, act, vss_restore, json))==1)
 	{
 		logp("Re-opening connection to server\n");
 		sleep(5);
 		ret=do_client(conf, act, vss_restore, json);
 	}
+	
+#if defined(HAVE_WIN32)
+	// allow sleep when idle
+	SetThreadExecutionState(ES_CONTINUOUS);
+#endif
+	
 	return ret;
 }

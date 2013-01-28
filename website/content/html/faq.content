@@ -171,7 +171,7 @@ Q. How can I do a "bare metal" restore?
 
 <P>
 <FONT COLOR="#99CCFF">
-A. There are instructions for <A HREF="/txt/baremetal-windows7.txt">Windows 7</A>.
+A. There are instructions for <A HREF="https://github.com/grke/burp/wiki/Bare-metal-restore-for-Windows">Windows 7 and 8</A>.
 <BR>
 If anybody wants to contribute instructions for any other operating system,
 please feel free.

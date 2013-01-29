@@ -53,6 +53,49 @@ The main author of Burp is Graham Keeling.
 <TD ALIGN="LEFT">
 
 <P>
+<FONT COLOR="#99CCFF">2013-01-29:
+<BR>
+Many thanks to the following donors for financially supporting burp during
+January:
+<pre>
+  *  &pound;30.00 Sebastian A.
+  *  &pound;20.00 Graham D.
+  *  &pound;20.00 Brian H.
+</pre>
+</FONT>
+</p>
+
+<P>
+<FONT COLOR="#99CCFF">2013-01-29: burp-1.3.24 is released.
+<pre>
+Changes in burp-1.3.24:
+  * Bug fix for strip_vss/split_vss truncating backups of changed files on
+    Windows.
+  * Bug fix for autoupgrade failing on Windows if autoupgrade_dir has been
+    modified.
+  * Bug fix for listing backups created with split_vss=1.
+  * Bug fix for restoring uncompressed encrypted backups created with
+    split_vss=1.
+  * Bug fix for making backups with min_file_size and split_vss=1.
+  * Bug fix for Debian init do_stop() function from Peter Maloney.
+  * Bug fix for resuming backups where a file to patch has already been
+    hard linked into place. Also get the client to report a more helpful
+    message if any similar problem happens.
+  * Bug fix for signal handler race conditions.
+  * Bug fix for the forkchild child not exiting when execv fails.
+  * Changed the run_script() code to take an array.
+  * Added server_script_pre_notify and server_script_post_notify options.
+  * Rework the test script so that it can test Windows clients.
+  * Attempt a Windows signal handler to try to shut VSS down nicely on certain
+    signals, such as Ctrl-C.
+  * Include an example server side offsite rsync backup script. This is not
+    quite working properly, but it may still be useful.
+  * Bug fix to stop Windows going to sleep during a backup, from Avi Rozen.
+</pre>
+</FONT>
+</P>
+
+<P>
 <FONT COLOR="#99CCFF">2013-01-08:
 <BR>
 There is still a bug in the Windows strip_vss/split_vss options in burp-1.3.22.

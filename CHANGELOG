@@ -1,3 +1,4 @@
+2013-01-29 Changes in burp-1.3.24:
   * Bug fix for strip_vss/split_vss truncating backups of changed files on
     Windows.
   * Bug fix for autoupgrade failing on Windows if autoupgrade_dir has been
@@ -19,7 +20,7 @@
     signals, such as Ctrl-C.
   * Include an example server side offsite rsync backup script. This is not
     quite working properly, but it may still be useful.
-  * Avi Rozen's fix to stop Windows from going to sleep during a backup.
+  * Big fix to stop Windows going to sleep during a backup, from Avi Rozen.
 
 2013-01-02 Changes in burp-1.3.22:
   * Contributions from Avi Rozen:

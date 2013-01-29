@@ -540,6 +540,13 @@ SERVER CONFIGURATION FILE OPTIONS
 	      A user-definable argument to the server pre script. You can have
 	      many of these.
 
+       server_script_pre_notify=[0|1]
+	      Turn on to send a notification email when the server pre	script
+	      returns  non-zero. The default is off. Most people will not want
+	      this turned on because clients usually contact the server at  20
+	      minute intervals and this could cause a lot of emails to be gen‐
+	      erated. Requires the notify_failure options to be set.
+
        server_script_post=[path]
 	      Path to a script to run on the server before the client  discon‐
 	      nects.  The  arguments  to  it  are  'post', '(client command)',
@@ -552,6 +559,11 @@ SERVER CONFIGURATION FILE OPTIONS
 	      A  user-definable  argument  to  the server post script. You can
 	      have many of these.
 
+       server_script_post_notify=[0|1]
+	      Turn on to send a notification email when the server post script
+	      returns  non-zero. The default is off. Requires the notify_fail‐
+	      ure options to be set.
+
        server_script=[path]
 	      You can use this to save space in your config file when you want
 	      to   run	 the   same   server   script	twice.	 It  overrides
@@ -562,6 +574,11 @@ SERVER CONFIGURATION FILE OPTIONS
        server_script_arg=[path]
 	      Goes with server_script and overrides server_script_pre_arg  and
 	      server_script_post_arg.
+
+       server_script_notify=[0|1]
+	      Turn  on	to  send a notification emails when the server pre and
+	      post scripts return non-zero. The default is off.  Requires  the
+	      notify_failure options to be set.
 
        server_script_post_run_on_fail=[0|1]
 	      If  this is set to 1, server_script_post will always be run. The
@@ -907,8 +924,10 @@ SERVER CLIENTCONFDIR FILE
 	      timer_arg notify_success_script  notify_success_arg  notify_suc‐
 	      cess_warnings_only    notify_failure_script   notify_failure_arg
 	      dedup_group	server_script_pre	 server_script_pre_arg
-	      server_script_post      server_script_post_arg	 server_script
-	      server_script_arg server_script_post_run_on_fail
+	      server_script_pre_notify			    server_script_post
+	      server_script_post_arg  server_script_post_notify  server_script
+	      server_script_arg 			  server_script_notify
+	      server_script_post_run_on_fail
 
        Additionally, the includes and excludes	can  be  overridden  here,  as
        described in the section above.

@@ -13,7 +13,7 @@
 
 int authorise_client(struct config *conf, char **server_version, struct cntr *p1cntr)
 {
-	char cmd;
+	char cmd=0;
 	char *buf=NULL;
 	size_t l=0;
 	char hello[256]="";
@@ -79,5 +79,8 @@ int authorise_client(struct config *conf, char **server_version, struct cntr *p1
 		return -1;
 	}
 
+	if (buf)
+		free(buf);
+	
 	return 0;
 }

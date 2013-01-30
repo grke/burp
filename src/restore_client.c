@@ -591,7 +591,7 @@ static int overwrite_ok(struct sbuf *sb, struct config *conf, BFILE *bfd, const 
 		// If we have file data and the destination is
 		// a fifo, it is OK to write to the fifo.
 		if((sb->cmd==CMD_FILE || sb->cmd==CMD_ENC_FILE)
-	  	  && S_ISFIFO(checkstat.st_mode))
+	  	  && S_ISFIFO(sb->statp.st_mode))
 			return 1;
 
 		// File path exists. Do not overwrite.

@@ -196,6 +196,7 @@ void init_config(struct config *conf)
 void free_config(struct config *conf)
 {
 	if(!conf) return;
+	if(conf->port) free(conf->port);
 	if(conf->configfile) free(conf->configfile);
 	if(conf->clientconfdir) free(conf->clientconfdir);
 	if(conf->cname) free(conf->cname);

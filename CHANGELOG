@@ -1,3 +1,6 @@
+  * Avi Rozen's valgrind cleanup. Includes a fix for a bug in restore_client.c
+    where overwrite_ok checked the wrong stat struct when considering a FIFO.
+
 2013-01-29 Changes in burp-1.3.24:
   * Bug fix for strip_vss/split_vss truncating backups of changed files on
     Windows.

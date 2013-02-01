@@ -84,7 +84,7 @@ static int do_sbuf_fill_from_net(struct sbuf *sb, struct cntr *cntr)
 	if((ars=async_read(&(sb->cmd), &(sb->path), &(sb->plen)))) return ars;
 	if(sbuf_is_link(sb))
 	{
-		char cmd;
+		char cmd=0;
 		if((ars=async_read(&cmd, &(sb->linkto), &(sb->llen))))
 				return ars;
 		if(!cmd_is_link(cmd))

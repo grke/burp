@@ -174,7 +174,7 @@ int do_list_client(struct config *conf, enum action act, int json)
 	int ret=0;
 	size_t slen=0;
 	char msg[512]="";
-	char scmd;
+	char scmd=0;
 	struct stat statp;
 	char *statbuf=NULL;
 	char ls[2048]="";
@@ -201,7 +201,7 @@ int do_list_client(struct config *conf, enum action act, int json)
 	// This should probably should use the sbuf stuff.
 	while(1)
 	{
-		char fcmd;
+		char fcmd=0;
 		size_t flen=0;
 		int64_t winattr=0;
 		int compression=-1;
@@ -292,7 +292,7 @@ int do_list_client(struct config *conf, enum action act, int json)
 		}
 		else if(cmd_is_link(fcmd)) // symlink or hardlink
 		{
-			char lcmd;
+			char lcmd=0;
 			size_t llen=0;
 			char *lname=NULL;
 			if(async_read(&lcmd, &lname, &llen)

@@ -25,7 +25,7 @@
 // Return 0 for OK, -1 for error, 1 for timer conditions not met.
 static int maybe_check_timer(const char *phase1str, struct config *conf, int *resume)
 {
-	char rcmd;
+	char rcmd=0;
 	char *rdst=NULL;
 	size_t rlen=0;
 	int complen=0;
@@ -217,7 +217,7 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 
 	if(act!=ACTION_ESTIMATE)
 	{
-		char cmd;
+		char cmd=0;
 		size_t len=0;
 		char *feat=NULL;
 		int ca_ret=0;

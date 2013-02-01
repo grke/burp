@@ -505,7 +505,7 @@ int async_write_str(char wcmd, const char *wsrc)
 int async_read_expect(char cmd, const char *expect)
 {
 	int ret=0;
-	char rcmd;
+	char rcmd=0;
 	char *rdst=NULL;
 	size_t rlen=0;
 	if(async_read(&rcmd, &rdst, &rlen)) return -1;
@@ -663,6 +663,7 @@ int async_read_stat(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
 		  || (cmd==CMD_GEN && !strcmp(buf, "backupphase2"))
 		  || (cmd==CMD_GEN && !strcmp(buf, "estimateend")))
 		{
+			if(buf) free(buf);
 			if(d) free(d);
 			return 1;
 		}

@@ -12,15 +12,18 @@
 static int send_incexc_str(const char *pre, const char *str)
 {
 	char *tosend=NULL;
+	int rc=0;
 	if(!str) return 0;
 	if(!(tosend=prepend(pre, str, strlen(str), " = ")))
-		return -1;
-	if(async_write_str(CMD_GEN, tosend))
+		rc=-1;
+	if(!rc && async_write_str(CMD_GEN, tosend))
 	{
 		logp("Error in async_write_str when sending incexc\n");
-		return -1;
+		rc=-1;
 	}
-	return 0;
+	if(tosend)
+		free(tosend);
+	return rc;
 }
 
 static int send_incexc_int(const char *pre, int myint)

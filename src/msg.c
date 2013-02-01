@@ -182,7 +182,7 @@ static int transfer_efs_in(BFILE *bfd, unsigned long long *rcvd, unsigned long l
 
 int transfer_gzfile_in(struct sbuf *sb, const char *path, BFILE *bfd, FILE *fp, unsigned long long *rcvd, unsigned long long *sent, const char *encpassword, int enccompressed, struct cntr *cntr, char **metadata)
 {
-	char cmd;
+	char cmd=0;
 	char *buf=NULL;
 	size_t len=0;
 	int quit=0;

@@ -110,7 +110,7 @@ recurse()
 			if ! [ $x = "html" ] ; then rmdir $root/$x ; fi
 		else
 			case "$i" in
-				*.content|*.howto|*.faq|*.html|*.about)
+				*.content|*.howto|*.faq|*.html|*.about|*.contact)
 					go_for_it "$i" "$dir"
 					;;
 				*.template|*.jpg|*.rtf|*.png)

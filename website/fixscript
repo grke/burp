@@ -84,6 +84,8 @@ go_for_it()
 					echo "<TD ALIGN=CENTER><IMG BORDER=0 SRC=\"/images/"$name"sel.jpg\" ALT=\"$human\"></TD>" >> $h
 				fi
 				globhuman=$header
+			elif [ "$name" = "wiki" ] ; then
+				echo "<TD ALIGN=CENTER><A HREF=\"/wiki/index.php\"><IMG BORDER=0 SRC=\"/images/$name.jpg\" ALT=\"$human\"></A></TD>" >> $h
 			else
 				echo "<TD ALIGN=CENTER><A HREF=\"/$name.html\"><IMG BORDER=0 SRC=\"/images/$name.jpg\" ALT=\"$human\"></A></TD>" >> $h
 			fi

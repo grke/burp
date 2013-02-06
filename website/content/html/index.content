@@ -42,9 +42,7 @@ The main author of Burp is Graham Keeling.
 <BR>
 <h3><font color="#99CCFF">Current stable version: 1.3.10</font></h3>
 <h4><font color="#99CCFF">Old stable version: 1.3.0</font></h4>
-<BR>
-
-<p>
+<table border="0"><tr><td align="center">
 <script type="text/javascript"><!--
 google_ad_client = "ca-pub-0612005306689013";
 /* Test ads */
@@ -56,7 +54,7 @@ google_ad_height = 60;
 <script type="text/javascript"
 src="http://pagead2.googlesyndication.com/pagead/show_ads.js">
 </script>
-</p>
+</td></tr></table>
 
 <h3><font color="#99CCFF">NEWS</font></h3>
 

@@ -24,6 +24,9 @@ Only run on the directories of clients that are in one of the groups specified. 
 \fB\-h|-?\fR \fB\fR
 Print help text and exit.
 .TP
+\fB\-d \fR \fB\fR
+Delete any duplicate files found. (non-burp mode only, use with caution!)
+.TP
 \fB\-l \fR \fB\fR
 Hard link any duplicate files found.
 .TP
@@ -34,6 +37,9 @@ Maximum number of hard links to a single file. (non-burp mode only - in burp mod
 Non-burp mode. Deduplicate any (set of) directories.
 .TP
 \fB\-v\fR \fB\fR
+Print duplicate paths. Useful if you want to double check the files that would be hard linked or deleted before running with one of those options turned on.\fR
+.TP
+\fB\-V\fR \fB\fR
 Print version and exit.\fR
 .TP
 By default, bedup will read /etc/burp/burp.conf and deduplicate client storage directories using special knowledge of the structure.\fR

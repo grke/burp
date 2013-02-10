@@ -26,6 +26,7 @@
 #define DEF_MAX_LINKS		10000
 
 static int makelinks=0;
+static int deletedups=0;
 static char *prog=NULL;
 
 static unsigned long long savedbytes=0;
@@ -34,6 +35,8 @@ static int ccount=0;
 
 static struct strlist **locklist=NULL;
 static int lockcount=0;
+
+static int verbose=0;
 
 typedef struct file file_t;
 
@@ -372,6 +375,8 @@ static int check_files(struct mystruct *find, struct file *newfile, struct stat 
 		found++;
 		count++;
 
+		if(verbose) printf("%s\n", newfile->path);
+
 		// Now hardlink it.
 		if(makelinks)
 		{
@@ -391,6 +396,21 @@ static int check_files(struct mystruct *find, struct file *newfile, struct stat 
 				// link to the new one instead of the old one.
 				reset_old_file(f, newfile, info);
 				count--;
+			}
+		}
+		else if(deletedups)
+		{
+			if(unlink(newfile->path))
+			{
+				logp("Could not delete %s: %s\n",
+					newfile->path, strerror(errno));
+			}
+			else
+			{
+				// Only count bytes as saved if we removed the
+				// last link.
+				if(newfile->nlink==1)
+					savedbytes+=info->st_size;
 			}
 		}
 		else
@@ -725,6 +745,8 @@ static int usage(void)
 	printf("                           group, use the 'dedup_group' option in the client\n");
 	printf("                           configuration file on the server.\n");
 	printf("  -h|-?                    Print this text and exit.\n");
+	printf("  -d                       Delete any duplicate files found.\n");
+	printf("                           (non-burp mode only)\n");
 	printf("  -l                       Hard link any duplicate files found.\n");
 	printf("  -m <number>              Maximum number of hard links to a single file.\n");
 	printf("                           (non-burp mode only - in burp mode, use the\n");
@@ -733,7 +755,8 @@ static int usage(void)
 	printf("                           of links possible is 32000, but space is needed\n");
 	printf("                           for the normal operation of burp.\n");
 	printf("  -n <list of directories> Non-burp mode. Deduplicate any (set of) directories.\n");
-	printf("  -v                       Print version and exit.\n");
+	printf("  -v                       Print duplicate paths.\n");
+	printf("  -V                       Print version and exit.\n");
 	printf("\n");
 	printf("By default, %s will read %s and deduplicate client storage\n", prog, get_config_path());
 	printf("directories using special knowledge of the structure.\n");
@@ -790,13 +813,16 @@ int main(int argc, char *argv[])
 	configfile=get_config_path();
 	snprintf(ext, sizeof(ext), ".bedup.%d", getpid());
 
-	while((option=getopt(argc, argv, "c:g:hlmnv?"))!=-1)
+	while((option=getopt(argc, argv, "c:dg:hlmnvV?"))!=-1)
 	{
 		switch(option)
 		{
 			case 'c':
 				configfile=optarg;
 				givenconfigfile=1;
+				break;
+			case 'd':
+				deletedups=1;
 				break;
 			case 'g':
 				groups=optarg;
@@ -810,9 +836,12 @@ int main(int argc, char *argv[])
 			case 'n':
 				nonburp=1;
 				break;
-			case 'v':
+			case 'V':
 				printf("%s-%s\n", prog, VERSION);
 				return 0;
+			case 'v':
+				verbose=1;
+				break;
 			case 'h':
 			case '?':
 				return usage();
@@ -832,6 +861,16 @@ int main(int argc, char *argv[])
 	if(!nonburp && maxlinks!=DEF_MAX_LINKS)
 	{
 		logp("-m option is specified via the configuration file in burp mode (max_hardlinks=)\n");
+		return 1;
+	}
+	if(deletedups && makelinks)
+	{
+		logp("-d and -l options are mutually exclusive\n");
+		return 1;
+	}
+	if(deletedups && !nonburp)
+	{
+		logp("-d option requires -n option\n");
 		return 1;
 	}
 
@@ -953,7 +992,7 @@ int main(int argc, char *argv[])
 	logp("%llu duplicate %s found\n",
 		count, count==1?"file":"files");
 	logp("%llu bytes %s%s\n",
-		savedbytes, makelinks?"saved":"saveable",
+		savedbytes, (makelinks || deletedups)?"saved":"saveable",
 			bytes_to_human(savedbytes));
 	return ret;
 }

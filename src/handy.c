@@ -198,19 +198,7 @@ int do_quick_read(const char *datapth, struct cntr *cntr)
 
 char *get_checksum_str(unsigned char *checksum)
 {
-	//int i=0;
-	//char tmp[3]="";
 	static char str[64]="";
-/*
-	str[0]='\0';
-	// Windows does not seem to like me writing it all at the same time.
-	// Fuck knows why.
-	for(i=0; i<MD5_DIGEST_LENGTH; i++)
-	{
-		snprintf(tmp, sizeof(tmp), "%02x", checksum[i]);
-		strcat(str, tmp);
-	}
-*/
 	snprintf(str, sizeof(str),
 	  "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
 		checksum[0], checksum[1],
@@ -224,11 +212,9 @@ char *get_checksum_str(unsigned char *checksum)
 	return str;
 }
 
-int write_endfile(unsigned long long bytes, unsigned char *checksum)
+char *get_endfile_str(unsigned long long bytes, unsigned char *checksum)
 {
-	int ret=0;
-	char endmsg[128]="";
-
+	static char endmsg[128]="";
 	snprintf(endmsg, sizeof(endmsg),
 #ifdef HAVE_WIN32
 		"%I64u:%s",
@@ -236,8 +222,12 @@ int write_endfile(unsigned long long bytes, unsigned char *checksum)
 		"%llu:%s",
 #endif
 		bytes, get_checksum_str(checksum));
-	ret=async_write_str(CMD_END_FILE, endmsg);
-	return ret;
+	return endmsg;
+}
+
+int write_endfile(unsigned long long bytes, unsigned char *checksum)
+{
+	return async_write_str(CMD_END_FILE, get_endfile_str(bytes, checksum));
 }
 
 static int do_encryption(EVP_CIPHER_CTX *ctx, unsigned char *inbuf, size_t inlen, unsigned char *outbuf, size_t *outlen, MD5_CTX *md5)

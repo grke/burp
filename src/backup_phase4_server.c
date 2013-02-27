@@ -166,18 +166,35 @@ static int gen_rev_delta(const char *sigpath, const char *deltadir, const char *
 	return ret;
 }
 
-static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, int compression, struct config *cconf)
+static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, const char *datadirtmp, const char *datapth, int compression, struct config *cconf)
 {
 	int ret=0;
+	char *partial=NULL;
 	struct stat statp;
+	const char *opath=oldpath;
 
-	if(lstat(oldpath, &statp))
+	if(lstat(opath, &statp))
 	{
-		logp("could not lstat %s\n", oldpath);
-		return -1;
+		char *tmp=NULL;
+
+		// Maybe it is a partial transfer, in which case it might be
+		// found in "data.tmp/p".
+		if(!(tmp=prepend_s(datadirtmp, "p", strlen("p"))))
+			return -1;
+		partial=prepend_s(tmp, datapth, strlen(datapth));
+		free(tmp);
+		if(!partial) return -1;
+		if(lstat(partial, &statp))
+		{
+			logp("could not lstat %s or %s\n", opath, partial);
+			free(partial);
+			return -1;
+		}
+		//logp("Found partial file: %s\n", partial);
+		opath=partial;
 	}
 
-	if(dpth_is_compressed(compression, oldpath))
+	if(dpth_is_compressed(compression, opath))
 	{
 		FILE *source=NULL;
 		FILE *dest=NULL;
@@ -187,6 +204,7 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, int
 		if(!(dest=open_file(infpath, "wb")))
 		{
 			close_fp(&dest);
+			if(partial) free(partial);
 			return -1;
 		}
 
@@ -195,16 +213,19 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, int
 			// Empty file - cannot inflate.
 			// just close the destination and we have duplicated a
 			// zero length file.
-			logp("asked to inflate zero length file: %s\n", oldpath);
+			logp("asked to inflate zero length file: %s\n", opath);
 			if(close_fp(&dest))
 			{
-				logp("error closing %s in inflate_or_link_oldfile\n", infpath);
+				if(partial) free(partial);
+				logp("error closing %s in %s\n",
+					infpath, __FUNCTION__);
 				return -1;
 			}
 			return 0;
 		}
-		if(!(source=open_file(oldpath, "rb")))
+		if(!(source=open_file(opath, "rb")))
 		{
+			if(partial) free(partial);
 			close_fp(&dest);
 			return -1;
 		}
@@ -213,8 +234,9 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, int
 		close_fp(&source);
 		if(close_fp(&dest))
 		{
-			logp("error closing %s in inflate_or_link_oldfile\n",
-				infpath);
+			if(partial) free(partial);
+			logp("error closing %s in %s\n",
+				infpath, __FUNCTION__);
 			return -1;
 		}
 	}
@@ -223,11 +245,12 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, int
 		// If it was not a compressed file, just hard link it.
 		// It is possible that infpath already exists, if the server
 		// was interrupted on a previous run just after this point.
-		if(do_link(oldpath, infpath, &statp, cconf,
+		if(do_link(opath, infpath, &statp, cconf,
 			TRUE /* allow overwrite of infpath */))
 				ret=-1;
 	
 	}
+	if(partial) free(partial);
 	return ret;
 }
 
@@ -298,7 +321,8 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 		}
 
 		//logp("Fixing up: %s\n", datapth);
-		if(inflate_or_link_oldfile(oldpath, infpath, compression, cconf))
+		if(inflate_or_link_oldfile(oldpath, infpath, datadirtmp,
+			datapth, compression, cconf))
 		{
 			logp("error when inflating old file: %s\n", oldpath);
 			ret=-1;
@@ -613,7 +637,11 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 
 	logp("Doing the atomic data jiggle...\n");
 
-	if(!(tmpman=get_tmp_filename(manifest))) return -1;
+	if(!(tmpman=get_tmp_filename(manifest)))
+	{
+		ret=-1;
+		goto end;
+	}
 	if(lstat(manifest, &statp))
 	{
 		// Manifest does not exist - maybe the server was killed before
@@ -622,7 +650,11 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 		do_rename(tmpman, manifest);
 	}
 	free(tmpman);
-	if(!(zp=gzopen_file(manifest, "rb"))) return -1;
+	if(!(zp=gzopen_file(manifest, "rb")))
+	{
+		ret=-1;
+		goto end;
+	}
 
 	if(!(deltabdir=prepend_s(current,
 		"deltas.reverse", strlen("deltas.reverse")))
@@ -632,11 +664,12 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 		"sig.tmp", strlen("sig.tmp"))))
 	{
 		log_out_of_memory(__FUNCTION__);
-		gzclose_fp(&zp);
-		return -1;
+		ret=-1;
+		goto end;
 	}
 
 	mkdir(datadir, 0777);
+
 	init_sbuf(&sb);
 	while(!(ars=sbuf_fill(NULL, zp, &sb, cntr)))
 	{
@@ -675,6 +708,9 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 	sync(); // try to help CIFS
 	recursive_delete(deltafdir, NULL, FALSE /* do not del files */);
 
+end:
+	if(zp) gzclose_fp(&zp);
+	if(delfp) close_fp(&delfp);
 	if(deltabdir) free(deltabdir);
 	if(deltafdir) free(deltafdir);
 	if(sigpath) free(sigpath);
@@ -701,6 +737,13 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 	int len=0;
 	char realcurrent[256]="";
 	FILE *logfp=NULL;
+
+	unsigned long bno=0;
+	FILE *fwd=NULL;
+	int hardlinked=0;
+	char tstmp[64]="";
+	int newdup=0;
+	int previous_backup=0;
 
 	if((len=readlink(current, realcurrent, sizeof(realcurrent)-1))<0)
 		len=0;
@@ -735,11 +778,7 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 
 	if(!lstat(current, &statp)) // Had a previous backup
 	{
-		unsigned long bno=0;
-		FILE *fwd=NULL;
-		int hardlinked=0;
-		char tstmp[64]="";
-		int newdup=0;
+		previous_backup++;
 
 		if(lstat(currentdup, &statp))
 		{
@@ -831,50 +870,48 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 			logp(" will generate reverse deltas\n");
 			unlink(hlinkedpath);
 		}
-
-		if(atomic_data_jiggle(finishing,
-			working, manifest, currentdup,
-			currentdupdata,
-			datadir, datadirtmp, deletionsfile, cconf, client,
-			hardlinked, bno, p1cntr, cntr))
-		{
-			logp("could not finish up backup.\n");
-			ret=-1;
-			goto endfunc;
-		}
-
-		write_status(client, STATUS_SHUFFLING,
-			"deleting temporary files", p1cntr, cntr);
-
-		// Remove the temporary data directory, we have now removed
-		// everything useful from it.
-		recursive_delete(datadirtmp, NULL, TRUE /* del files */);
-
-		// Clean up the currentdata directory - this is now the 'old'
-		// currentdata directory. Any files that were deleted from
-		// the client will be left in there, so call recursive_delete
-		// with the option that makes it not delete files.
-		// This will have the effect of getting rid of unnecessary
-		// directories.
-		sync(); // try to help CIFS
-		recursive_delete(currentdupdata, NULL, FALSE /* do not del files */);
-
-		// Rename the old current to something that we know to
-		// delete.
-		if(do_rename(fullrealcurrent, deleteme))
-		{
-			ret=-1;
-			goto endfunc;
-		}
 	}
 	else
 	{
-		// No previous backup, just put datadirtmp in the right place.
-		if(do_rename(datadirtmp, datadir))
-		{
-			ret=-1;
-			goto endfunc;
-		}
+		// No previous backup. Set hardlinked=1 so that the jiggle
+		// does not attempt to produce reverse deltas when it fixes
+		// up a partial file.
+		hardlinked=1;
+	}
+
+	if(atomic_data_jiggle(finishing,
+		working, manifest, currentdup,
+		currentdupdata,
+		datadir, datadirtmp, deletionsfile, cconf, client,
+		hardlinked, bno, p1cntr, cntr))
+	{
+		logp("could not finish up backup.\n");
+		ret=-1;
+		goto endfunc;
+	}
+
+	write_status(client, STATUS_SHUFFLING,
+		"deleting temporary files", p1cntr, cntr);
+
+	// Remove the temporary data directory, we have now removed
+	// everything useful from it.
+	recursive_delete(datadirtmp, NULL, TRUE /* del files */);
+
+	// Clean up the currentdata directory - this is now the 'old'
+	// currentdata directory. Any files that were deleted from
+	// the client will be left in there, so call recursive_delete
+	// with the option that makes it not delete files.
+	// This will have the effect of getting rid of unnecessary
+	// directories.
+	sync(); // try to help CIFS
+	recursive_delete(currentdupdata, NULL, FALSE /* do not del files */);
+
+	// Rename the old current to something that we know to
+	// delete.
+	if(previous_backup && do_rename(fullrealcurrent, deleteme))
+	{
+		ret=-1;
+		goto endfunc;
 	}
 
 	if(!lstat(deleteme, &statp))

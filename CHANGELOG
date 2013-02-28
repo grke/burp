@@ -1,3 +1,5 @@
+  * When a read_blockdev option matches a symlink, backup the destination as
+    a raw block device.
   * Avi Rozen's valgrind cleanup. Includes a fix for a bug in restore_client.c
     where overwrite_ok checked the wrong stat struct when considering a FIFO.
   * Add '-v' option to bedup (output the names of duplicate files).

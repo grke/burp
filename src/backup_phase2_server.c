@@ -97,7 +97,121 @@ static int filedata(char cmd)
 	  || cmd==CMD_EFS_FILE);
 }
 
-static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *currentdata, struct cntr *cntr)
+// Interrupted files can have a gzip 'unexpected end of file error', which
+// causes things to get messed up later. So, read it and truncate it at
+// the point where this happens (if it happens).
+static int ztruncate(const char *rpath, const char *partial)
+{
+	size_t b=0;
+	size_t w=0;
+	gzFile sp=NULL;
+	gzFile dp=NULL;
+	unsigned char in[ZCHUNK];
+
+	unlink(partial);
+	if(!(sp=gzopen_file(rpath, "rb"))) return -1;
+	if(!(dp=gzopen_file(partial, "wb")))
+	{
+		gzclose_fp(&sp);
+		return -1;
+	}
+	while((b=gzread(sp, in, ZCHUNK))>0)
+	{
+		w=gzwrite(dp, in, b);
+		if(w!=b)
+		{
+			logp("gzwrite failed: %d!=%d\n", w, b);
+			gzclose_fp(&sp);
+			gzclose_fp(&dp);
+			return -1;
+		}
+	}
+
+	gzclose(sp); // expected to often give an error.
+
+	if(gzclose_fp(&dp))
+	{
+		logp("failed gzclose when truncating partial file\n");
+		return -1;
+	}
+
+	// Finally, delete the original.
+	if(unlink(rpath))
+	{
+		logp("Failed to unlink %s: %s\n", rpath, strerror(errno));
+		return -1;
+	}
+
+	return 0;
+}
+
+static int resume_partial_changed_file(struct sbuf *cb, struct sbuf *p1b, struct cntr *cntr, const char *datadirtmp, const char *deltmppath, struct config *cconf)
+{
+	int ret=0;
+	char *rpath=NULL;
+	int istreedata=0;
+	struct stat statp;
+	char *partial=NULL;
+	char *partialdir=NULL;
+
+	logp("Resume partial changed file: %s %s\n", cb->path, rpath);
+	if(!lstat(deltmppath, &statp) && S_ISREG(statp.st_mode)
+	     && !lstat(rpath, &statp) && S_ISREG(statp.st_mode))
+	{
+/*
+		if(!(partialdir=prepend_s(datadirtmp, "p", strlen("p")))
+		  || !(partial=prepend_s(partialdir,
+			cb->datapth, strlen(cb->datapth)))
+		  || build_path(partialdir, cb->datapth, strlen(cb->datapth),
+			&partial, partialdir))
+		{
+			ret=-1;
+			goto end;
+		}
+
+		// Need to copy the whole of p1b->sigfp/sigzp onto partial.
+		// If compression is on, be careful with gzip unexpected
+		// end of file errors.
+		// Otherwise, just rename the whole file.
+		if(cb->compression)
+		{
+			if(ztruncate(rpath, partial))
+			{
+				logp("Error in ztruncate\n");
+				ret=-1;
+				goto end;
+			}
+		}
+		else
+		{
+			if(do_rename(rpath, partial))
+			{
+				ret=-1;
+				goto end;
+			}
+		}
+		// So, we have created a new directory beginning with 'p',
+		// and moved the partial download to it.
+		// We can now use the partial file as the basis of a librsync
+		// transfer. 
+		if(process_changed_file(&cb, p1b, partialdir, cntr))
+		{
+			ret=-1;
+			goto end;
+		}
+		goto end;
+*/
+	}
+
+	logp("Actually, no - just forget the previous delta\n");
+end:
+	if(rpath) free(rpath);
+	if(partialdir) free(partialdir);
+	if(partial) free(partial);
+	return ret;
+}
+
+static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *currentdata, const char *datadirtmp, const char *deltmppath, int *resume_partial, struct cntr *cntr, struct config *cconf)
 {
 	size_t blocklen=0;
 	char *curpath=NULL;
@@ -125,6 +239,19 @@ static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *c
 			curpath, strerror(errno));
 		free(curpath);
 		return -1;
+	}
+
+	if(*resume_partial
+	  && p1b->cmd==CMD_FILE
+	  && cconf->librsync)
+	// compression?
+	{
+		if(resume_partial_changed_file(cb, p1b,
+			cntr, datadirtmp, deltmppath, cconf)) return -1;
+		// Burp only transfers one file at a time, so
+		// if there was an interruption, there is only
+		// a possibility of one partial file to resume.
+		*resume_partial=0;
 	}
 	free(curpath);
 
@@ -185,8 +312,105 @@ static int changed_non_file(struct sbuf *p1b, FILE *ucfp, char cmd, struct cntr 
 	return 0;
 }
 
-static int process_new(struct sbuf *p1b, FILE *p2fp, FILE *ucfp, struct cntr *cntr)
+static int resume_partial_new_file(struct sbuf *p1b, struct cntr * cntr, const char *currentdata, const char *datadirtmp, struct dpth *dpth, struct config *cconf)
 {
+	int ret=0;
+	struct sbuf cb;
+	char *rpath=NULL;
+	int istreedata=0;
+	struct stat statp;
+	char *partial=NULL;
+	char *partialdir=NULL;
+
+	// Need to set up a fake current sbuf.
+	init_sbuf(&cb);
+	cb.cmd=p1b->cmd;
+	cb.compression=p1b->compression;
+	cb.path=strdup(p1b->path);
+	cb.statbuf=strdup(p1b->statbuf);
+	if(!(rpath=set_new_datapth(&cb, datadirtmp, dpth, &istreedata, cconf)))
+	{
+		ret=-1;
+		goto end;
+	}
+	logp("Resume partial new file: %s %s\n", cb.path, rpath);
+	if(!lstat(rpath, &statp) && S_ISREG(statp.st_mode))
+	{
+		int junk=0;
+		// It does not matter what this checksum is set to.
+		// This is just to get an endfile string in the format that
+		// process_changed_file expects.
+		unsigned char checksum[18]="0123456789ABCDEF";
+
+		if(!(partialdir=prepend_s(datadirtmp, "p", strlen("p")))
+		  || !(partial=prepend_s(partialdir,
+			cb.datapth, strlen(cb.datapth)))
+		  || build_path(partialdir, cb.datapth, strlen(cb.datapth),
+			&partial, partialdir)
+		  || !(cb.endfile=strdup(get_endfile_str(statp.st_size, checksum))))
+		{
+			ret=-1;
+			goto end;
+		}
+		// If compression is on, be careful with gzip unexpected
+		// end of file errors.
+		// Otherwise, just rename the whole file.
+		if(cb.compression)
+		{
+			if(ztruncate(rpath, partial))
+			{
+				logp("Error in ztruncate\n");
+				ret=-1;
+				goto end;
+			}
+		}
+		else
+		{
+			if(do_rename(rpath, partial))
+			{
+				ret=-1;
+				goto end;
+			}
+		}
+		// So, we have created a new directory beginning with 'p',
+		// and moved the partial download to it.
+		// We can now use the partial file as the basis of a librsync
+		// transfer. 
+		if(process_changed_file(&cb, p1b, currentdata, partialdir, NULL,
+			&junk /* resume_partial=0 */,
+			cntr, cconf))
+		{
+			ret=-1;
+			goto end;
+		}
+		if(!istreedata) incr_dpth(dpth, cconf);
+		goto end;
+	}
+
+	logp("Actually, no - just treat it as completely new\n");
+end:
+	if(rpath) free(rpath);
+	if(partialdir) free(partialdir);
+	if(partial) free(partial);
+	free_sbuf(&cb);
+	return ret;
+}
+
+static int process_new(struct sbuf *p1b, FILE *ucfp, const char *currentdata, const char *datadirtmp, struct dpth *dpth, int *resume_partial, struct cntr *cntr, struct config *cconf)
+{
+	if(*resume_partial
+	  && p1b->cmd==CMD_FILE
+	  && cconf->librsync
+	  && p1b->compression==cconf->compression)
+	{
+		if(resume_partial_new_file(p1b,
+			cntr, currentdata, datadirtmp,
+			dpth, cconf)) return -1;
+		// Burp only transfers one file at a time, so
+		// if there was an interruption, there is only
+		// a possibility of one partial file to resume.
+		*resume_partial=0;
+	}
 	if(filedata(p1b->cmd))
 	{
 		//logp("need to process new file: %s\n", p1b->path);
@@ -218,16 +442,16 @@ static int process_unchanged_file(struct sbuf *cb, FILE *ucfp, struct cntr *cntr
 	return 1;
 }
 
-static int process_new_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FILE *ucfp, struct cntr *cntr)
+static int process_new_file(struct sbuf *cb, struct sbuf *p1b, FILE *ucfp, const char *currentdata, const char *datadirtmp, struct dpth *dpth, int *resume_partial, struct cntr *cntr, struct config *cconf)
 {
-	if(process_new(p1b, p2fp, ucfp, cntr))
-		return -1;
+	if(process_new(p1b, ucfp, currentdata, datadirtmp, dpth,
+		resume_partial, cntr, cconf)) return -1;
 	free_sbuf(cb);
 	return 1;
 }
 
 // return 1 to say that a file was processed
-static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FILE *ucfp, const char *currentdata, struct cntr *cntr, struct config *cconf)
+static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *ucfp, const char *currentdata, const char *datadirtmp, const char *deltmppath, struct dpth *dpth, int *resume_partial, struct cntr *cntr, struct config *cconf)
 {
 	int pcmp;
 //	logp("in maybe_proc %s\n", p1b->path);
@@ -239,7 +463,9 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FIL
 		// up again (for example, EFS changing to normal file, or
 		// back again).
 		if(cb->cmd!=p1b->cmd)
-			return process_new_file(cb, p1b, p2fp, ucfp, cntr);
+			return process_new_file(cb, p1b, ucfp, currentdata,
+				datadirtmp, dpth, resume_partial,
+				cntr, cconf);
 
 		// mtime is the actual file data.
 		// ctime is the attributes or meta data.
@@ -273,7 +499,9 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FIL
 			  || cb->cmd==CMD_EFS_FILE
 			  || p1b->cmd==CMD_EFS_FILE)
 				return process_new_file(cb,
-					p1b, p2fp, ucfp, cntr);
+					p1b, ucfp, currentdata,
+					datadirtmp, dpth, resume_partial,
+					cntr, cconf);
 			else
 				return process_unchanged_file(cb, ucfp, cntr);
 		}
@@ -301,7 +529,9 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FIL
 		  || p1b->cmd==CMD_VSS_T
 		  || cb->cmd==CMD_ENC_VSS_T
 		  || p1b->cmd==CMD_ENC_VSS_T)
-			return process_new_file(cb, p1b, p2fp, ucfp, cntr);
+			return process_new_file(cb, p1b, ucfp, currentdata,
+				datadirtmp, dpth, resume_partial,
+				cntr, cconf);
 
 		// Get new files if they have switched between compression on
 		// or off.
@@ -309,13 +539,16 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FIL
 			oldcompressed=1;
 		if( ( oldcompressed && !cconf->compression)
 		 || (!oldcompressed &&  cconf->compression))
-			return process_new_file(cb, p1b, p2fp, ucfp, cntr);
+			return process_new_file(cb, p1b, ucfp, currentdata,
+				datadirtmp, dpth, resume_partial,
+				cntr, cconf);
 
 		// Otherwise, do the delta stuff (if possible).
 		if(filedata(p1b->cmd))
 		{
-			if(process_changed_file(cb, p1b, currentdata, cntr))
-				return -1;
+			if(process_changed_file(cb, p1b, currentdata,
+				datadirtmp, deltmppath, resume_partial,
+				cntr, cconf)) return -1;
 		}
 		else
 		{
@@ -329,7 +562,8 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FIL
 	{
 		//logp("ahead: %s\n", p1b->path);
 		// ahead - need to get the whole file
-		if(process_new(p1b, p2fp, ucfp, cntr)) return -1;
+		if(process_new(p1b, ucfp, currentdata, datadirtmp,
+			dpth, resume_partial, cntr, cconf)) return -1;
 		// do not free
 		return 1;
 	}
@@ -623,128 +857,6 @@ static int do_stuff_to_receive(struct sbuf *rb, FILE *p2fp, const char *datadirt
 	return ret;
 }
 
-// Interrupted files can have a gzip 'unexpected end of file error', which
-// causes things to get messed up later. So, read it and truncate it at
-// the point where this happens (if it happens).
-static int ztruncate(const char *rpath, const char *partial)
-{
-	size_t b=0;
-	size_t w=0;
-	gzFile sp=NULL;
-	gzFile dp=NULL;
-	unsigned char in[ZCHUNK];
-
-	unlink(partial);
-	if(!(sp=gzopen_file(rpath, "rb"))) return -1;
-	if(!(dp=gzopen_file(partial, "wb")))
-	{
-		gzclose_fp(&sp);
-		return -1;
-	}
-	while((b=gzread(sp, in, ZCHUNK))>0)
-	{
-		w=gzwrite(dp, in, b);
-		if(w!=b)
-		{
-			logp("gzwrite failed: %d!=%d\n", w, b);
-			gzclose_fp(&sp);
-			gzclose_fp(&dp);
-			return -1;
-		}
-	}
-
-	gzclose(sp); // expected to often give an error.
-
-	if(gzclose_fp(&dp))
-	{
-		logp("failed gzclose when truncating partial file\n");
-		return -1;
-	}
-
-	// Finally, delete the original.
-	if(unlink(rpath))
-	{
-		logp("Failed to unlink %s: %s\n", rpath, strerror(errno));
-		return -1;
-	}
-
-	return 0;
-}
-
-static int resume_partial_new_file(struct sbuf *p1b, FILE *p2fp, FILE *ucfp, struct cntr * cntr, const char *datadirtmp, struct dpth *dpth, struct config *cconf)
-{
-	struct sbuf cb;
-	char *rpath=NULL;
-	int istreedata=0;
-	struct stat statp;
-	char *partial=NULL;
-	char *partialdir=NULL;
-
-	// Need to set up a fake current sbuf.
-	init_sbuf(&cb);
-	cb.cmd=p1b->cmd;
-	cb.compression=p1b->compression;
-	cb.path=strdup(p1b->path);
-	cb.statbuf=strdup(p1b->statbuf);
-	if(!(rpath=set_new_datapth(&cb, datadirtmp, dpth, &istreedata, cconf)))
-		return -1;
-	logp("Resume partial new file: %s %s\n", cb.path, rpath);
-	if(!lstat(rpath, &statp) && S_ISREG(statp.st_mode))
-	{
-		// It does not matter what this checksum is set to.
-		// This is just to get an endfile string in the format that
-		// process_changed_file expects.
-		unsigned char checksum[18]="0123456789ABCDEF";
-
-		if(!(partialdir=prepend_s(datadirtmp, "p", strlen("p")))
-		  || !(partial=prepend_s(partialdir,
-			cb.datapth, strlen(cb.datapth)))
-		  || build_path(partialdir, cb.datapth, strlen(cb.datapth),
-			&partial, partialdir)
-		  || !(cb.endfile=strdup(get_endfile_str(statp.st_size, checksum))))
-		{
-			goto error;
-		}
-		// If compression is on, be careful with gzip unexpected
-		// end of file errors.
-		// Otherwise, just rename the whole file.
-		if(cb.compression)
-		{
-			if(ztruncate(rpath, partial))
-			{
-				logp("Error in ztruncate\n");
-				goto error;
-			}
-		}
-		else
-		{
-			if(do_rename(rpath, partial)) goto error;
-		}
-		// So, we have created a new directory beginning with 'p',
-		// and moved the partial download to it.
-		// We can now use the partial file as the basis of a librsync
-		// transfer. 
-		if(process_changed_file(&cb, p1b, partialdir, cntr))
-			goto error;
-		if(!istreedata) incr_dpth(dpth, cconf);
-		free_sbuf(&cb);
-		free(rpath);
-		free(partialdir);
-		return 0;
-	}
-
-	logp("Actually, no - just treat it as completely new\n");
-	free_sbuf(&cb);
-	free(rpath);
-	return process_new(p1b, p2fp, ucfp, cntr);
-error:
-	if(rpath) free(rpath);
-	if(partialdir) free(partialdir);
-	if(partial) free(partial);
-	free_sbuf(&cb);
-	return -1;
-}
-
 int backup_phase2_server(gzFile *cmanfp, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *datadirtmp, struct dpth *dpth, const char *currentdata, const char *working, const char *client, struct cntr *p1cntr, int resume, struct cntr *cntr, struct config *cconf)
 {
 	int ars=0;
@@ -838,24 +950,9 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, const char *pha
 		   {
 			// No old manifest, need to ask for a new file.
 			//logp("no cmanfp\n");
-			if(resume_partial
-			  && filedata(p1b.cmd)
-			  && cconf->librsync
-			  && p1b.compression==cconf->compression
-			  && p1b.cmd!=CMD_ENC_FILE
-			  && p1b.cmd!=CMD_ENC_METADATA
-			  && p1b.cmd!=CMD_ENC_VSS
-			  && p1b.cmd!=CMD_ENC_VSS_T)
-			{
-				if(resume_partial_new_file(&p1b, p2fp, ucfp,
-					cntr, datadirtmp,
-					dpth, cconf)) goto error; 
-				// Burp only transfers one file at a time, so
-				// if there was an interruption, there is only
-				// a possibility of one partial file to resume.
-				resume_partial=0;
-			}
-			if(process_new(&p1b, p2fp, ucfp, cntr)) goto error;
+			if(process_new(&p1b, ucfp, currentdata,
+				datadirtmp, dpth, &resume_partial,
+				cntr, cconf)) goto error;
 		   }
 		   else
 		   {
@@ -866,8 +963,9 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, const char *pha
 			if(cb.path)
 			{
 				if((ars=maybe_process_file(&cb, &p1b,
-					p2fp, ucfp,
-					currentdata, cntr, cconf)))
+					ucfp, currentdata, datadirtmp,
+					deltmppath, dpth, &resume_partial,
+					cntr, cconf)))
 				{
 					if(ars<0) goto error;
 					// Do not free it - need to send stuff.
@@ -885,13 +983,17 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, const char *pha
 					if(ars<0) goto error;
 					gzclose_fp(cmanfp);
 		//logp("ran out of current manifest\n");
-					if(process_new(&p1b, p2fp, ucfp, cntr))
-						goto error;
+					if(process_new(&p1b, ucfp,
+						currentdata, datadirtmp, dpth,
+						&resume_partial, cntr, cconf))
+							goto error;
 					break;
 				}
 		//logp("against: %s\n", cb.path);
 				if((ars=maybe_process_file(&cb, &p1b,
-					p2fp, ucfp, currentdata, cntr, cconf)))
+					ucfp, currentdata, datadirtmp,
+					deltmppath, dpth, &resume_partial,
+					cntr, cconf)))
 				{
 					if(ars<0) goto error;
 					// Do not free it - need to send stuff.

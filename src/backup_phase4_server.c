@@ -166,7 +166,7 @@ static int gen_rev_delta(const char *sigpath, const char *deltadir, const char *
 	return ret;
 }
 
-static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, const char *datadirtmp, const char *datapth, int compression, struct config *cconf)
+static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, const char *datadirtmp, const char *datapth, int compression, int *is_partial, struct config *cconf)
 {
 	int ret=0;
 	char *partial=NULL;
@@ -192,6 +192,7 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, con
 		}
 		//logp("Found partial file: %s\n", partial);
 		opath=partial;
+		*is_partial=1;
 	}
 
 	if(dpth_is_compressed(compression, opath))
@@ -305,6 +306,7 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 	else if(!lstat(deltafpath, &statp) && S_ISREG(statp.st_mode))
 	{
 		int lrs;
+		int is_partial=0;
 		char *infpath=NULL;
 
 		// Got a forward patch to do.
@@ -322,7 +324,7 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 
 		//logp("Fixing up: %s\n", datapth);
 		if(inflate_or_link_oldfile(oldpath, infpath, datadirtmp,
-			datapth, compression, cconf))
+			datapth, compression, &is_partial, cconf))
 		{
 			logp("error when inflating old file: %s\n", oldpath);
 			ret=-1;
@@ -371,7 +373,7 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 		// Need to generate a reverse diff,
 		// unless we are keeping a hardlinked
 		// archive.
-		if(!hardlinked)
+		if(!hardlinked && !is_partial)
 		{
 			if(gen_rev_delta(sigpath, deltabdir,
 				oldpath, newpath, datapth, endfile,
@@ -876,7 +878,7 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 		// No previous backup. Set hardlinked=1 so that the jiggle
 		// does not attempt to produce reverse deltas when it fixes
 		// up a partial file.
-		hardlinked=1;
+		//hardlinked=1;
 	}
 
 	if(atomic_data_jiggle(finishing,

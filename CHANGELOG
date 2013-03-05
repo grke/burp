@@ -1,3 +1,4 @@
+2013-03-05 Changes in burp-1.3.26:
   * When a read_blockdev option matches a symlink, backup the destination as
     a raw block device.
   * Avi Rozen's valgrind cleanup. Includes a fix for a bug in restore_client.c
@@ -28,7 +29,7 @@
     signals, such as Ctrl-C.
   * Include an example server side offsite rsync backup script. This is not
     quite working properly, but it may still be useful.
-  * Big fix to stop Windows going to sleep during a backup, from Avi Rozen.
+  * Bug fix to stop Windows going to sleep during a backup, from Avi Rozen.
 
 2013-01-02 Changes in burp-1.3.22:
   * Contributions from Avi Rozen:

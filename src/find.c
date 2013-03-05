@@ -979,9 +979,11 @@ find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
 			top_level, &restore_times);
 	else if(S_ISLNK(ff_pkt->statp.st_mode))
 	{
+#ifdef S_IFLNK
 		/* A symlink.
 		   If they have specified the symlink in a read_blockdev
-		   argument, treat it as a block device. */
+		   argument, treat it as a block device.
+		*/
 		int i=0;
 		for(i=0; i<conf->bdcount; i++)
 		{
@@ -993,6 +995,7 @@ find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
 					top_level);
 			}
 		}
+#endif
 		return found_soft_link(ff_pkt, conf, cntr, fname, top_level);
 	}
 	else if(S_ISDIR(ff_pkt->statp.st_mode))

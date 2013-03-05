@@ -104,6 +104,7 @@ EOF
 
 "$path/scp_expect" "$pass" windowsscript "$user@$client:" || fail
 "$path/ssh_expect" "$pass" "$user@$client" chmod 755 windowsscript || fail
+"$path/ssh_expect" "$pass" "$user@$client" chmod 755 "$installer" || fail
 "$path/ssh_expect" "$pass" "$user@$client" ./windowsscript || fail
 
 # args:

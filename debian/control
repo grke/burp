@@ -2,11 +2,11 @@ Source: burp
 Section: utils
 Priority: extra
 Maintainer: Bastiaan Franciscus van den Dikkenberg <bas@dikkenberg.net>
-Build-Depends: debhelper (>= 8), autotools-dev, libncurses5-dev, libssl-dev, zlib1g-dev, librsync-dev, libacl1-dev, libattr1-dev, uthash-dev, openssl
+Build-Depends: debhelper (>= 9), autotools-dev, libncurses5-dev, libssl-dev, zlib1g-dev, librsync-dev, libacl1-dev, libattr1-dev, uthash-dev, openssl
 Standards-Version: 3.9.3
 Homepage: http://burp.grke.net/
 Vcs-Git: git://github.com/grke/burp.git
-#Vcs-Browser: http://git.debian.org/?p=collab-maint/burp.git;a=summary
+Vcs-Browser: https://github.com/grke/burp
 
 Package: burp
 Architecture: any

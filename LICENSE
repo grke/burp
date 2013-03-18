@@ -1,9 +1,3 @@
-What follows is a slightly modified version of the original Bacula LICENSE
-declarations (stripped of references to deleted files and 'Burp' replacing
-'Bacula' as appropriate, and some extra History), from bacula-5.0.3.
-They continue to be applicable.
-
-
 History:
 The original Bacula code was Copyright Kern Sibbald and John Walker.
 After November 2004, it became Copyright Kern Sibbald, and finally,
@@ -14,11 +8,10 @@ on 24 July 2010. The first version of Burp was released on 22 January
 The intention was to cut out everything except for the Windows VSS API parts
 and to combine that with librsync to make a new backup program.
 As well as the Windows VSS API parts these things remain:
-Some of src/findlib remain.
-A fragment of src/lib/berrno.c.
+Some of src/find.c.
+A fragment of src/berrno.c.
 Some Makefiles and configure scripts.
 The uthash.h header file is copyright (c) 2005-2010, Troy D. Hanson,
-http://uthash.sourceforge.net - see src/uthash/LICENSE.
 The new Burp code is Copyright Graham Keeling.
 The license for the new Burp code continues to be AGPLv3.
 

@@ -100,7 +100,7 @@ static int filedata(char cmd)
 // Interrupted files can have a gzip 'unexpected end of file error', which
 // causes things to get messed up later. So, read it and truncate it at
 // the point where this happens (if it happens).
-static int ztruncate(const char *rpath, const char *partial)
+static int ztruncate(gzFile sp, const char *partial)
 {
 	size_t b=0;
 	size_t w=0;
@@ -108,8 +108,6 @@ static int ztruncate(const char *rpath, const char *partial)
 	gzFile dp=NULL;
 	unsigned char in[ZCHUNK];
 
-	unlink(partial);
-	if(!(sp=gzopen_file(rpath, "rb"))) return -1;
 	if(!(dp=gzopen_file(partial, "wb")))
 	{
 		gzclose_fp(&sp);
@@ -127,13 +125,29 @@ static int ztruncate(const char *rpath, const char *partial)
 		}
 	}
 
-	gzclose(sp); // expected to often give an error.
-
 	if(gzclose_fp(&dp))
 	{
 		logp("failed gzclose when truncating partial file\n");
 		return -1;
 	}
+
+	return 0;
+}
+
+// This one is for resuming a new file.
+static int ztruncate_w(const char *rpath, const char *partial)
+{
+	gzFile sp=NULL;
+
+	if(!(sp=gzopen_file(rpath, "rb"))) return -1;
+
+	if(ztruncate(sp, partial))
+	{
+		gzclose(sp);
+		return -1;
+	}
+
+	gzclose(sp); // expected to often give an error.
 
 	// Finally, delete the original.
 	if(unlink(rpath))
@@ -169,10 +183,32 @@ static int resume_partial_changed_file(struct sbuf *cb, struct sbuf *p1b, struct
 			goto end;
 		}
 
-		// Need to copy the whole of p1b->sigfp/sigzp onto partial.
+		// Need to:
+		// If (partial exists)
+		// {
+		//   if (partial bigger than p1b->sig)
+		//   {
+		//	Read and recreate (ztruncate) partial.
+		//	Copy the whole of deltmppath onto partial.
+		//   }
+		//   else
+		//   {
+		//	Delete partial.
+		//	Copy the whole of p1b->sigfp/sigzp onto partial.
+		//	Copy the whole of deltmppath onto partial.
+		//   }
+		// }
+		// else
+		// {
+		//	Copy the whole of p1b->sigfp/sigzp onto partial.
+		//	Copy the whole of deltmppath onto partial.
+		// }
+		//
+		// Use partial as the basis for a librsync transfer.
+		
+
 		// If compression is on, be careful with gzip unexpected
 		// end of file errors.
-		// Otherwise, just rename the whole file.
 		if(cb->compression)
 		{
 			if(ztruncate(rpath, partial))
@@ -355,9 +391,10 @@ static int resume_partial_new_file(struct sbuf *p1b, struct cntr * cntr, const c
 		// If compression is on, be careful with gzip unexpected
 		// end of file errors.
 		// Otherwise, just rename the whole file.
+		unlink(partial);
 		if(cb.compression)
 		{
-			if(ztruncate(rpath, partial))
+			if(ztruncate_w(rpath, partial))
 			{
 				logp("Error in ztruncate\n");
 				ret=-1;

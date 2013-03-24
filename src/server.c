@@ -991,7 +991,12 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 				if((*timer_ret=run_script(args,
 				  cconf->timer_arg,
 				  cconf->tacount,
-				  cntr, 1 /* wait */, 1 /* use logp */))<0)
+				  /* cntr is NULL so that run_script does not
+				     write warnings down the socket, otherwise
+				     the client will never print the 'timer
+				     conditions not met' message below. */
+				  NULL,
+				  1 /* wait */, 1 /* use logp */))<0)
 				{
 					ret=*timer_ret;
 					logp("Error running timer script for %s\n", client);

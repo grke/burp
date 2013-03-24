@@ -1,3 +1,5 @@
+  * Make sure 'timer conditions not met' message appears on the client.
+
 2013-03-05 Changes in burp-1.3.26:
   * When a read_blockdev option matches a symlink, backup the destination as
     a raw block device.

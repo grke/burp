@@ -97,6 +97,54 @@ static int filedata(char cmd)
 	  || cmd==CMD_EFS_FILE);
 }
 
+static int copy(FILE *fp, const char *partial)
+{
+	size_t b=0;
+	size_t w=0;
+	FILE *dp=NULL;
+	unsigned char in[ZCHUNK];
+
+	if(!(dp=open_file(partial, "wb")))
+		return -1;
+	while((b=fread(in, 1, ZCHUNK, sp))>0)
+	{
+		w=fwrite(in, 1, ZCHUNK, dp);
+		if(w!=b)
+		{
+			logp("fwrite failed: %d!=%d\n", w, b);
+			close_fp(&dp);
+			return -1;
+		}
+	}
+
+	if(close_fp(&dp))
+	{
+		logp("failed close_fp when copying partial file\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+static int copy_gzFile(gzFile sp, gzFile dp)
+{
+	size_t b=0;
+	size_t w=0;
+	unsigned char in[ZCHUNK];
+
+	while((b=gzread(sp, in, ZCHUNK))>0)
+	{
+		w=gzwrite(dp, in, b);
+		if(w!=b)
+		{
+			logp("gzwrite failed: %d!=%d\n", w, b);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
 // Interrupted files can have a gzip 'unexpected end of file error', which
 // causes things to get messed up later. So, read it and truncate it at
 // the point where this happens (if it happens).
@@ -104,25 +152,16 @@ static int ztruncate(gzFile sp, const char *partial)
 {
 	size_t b=0;
 	size_t w=0;
-	gzFile sp=NULL;
 	gzFile dp=NULL;
 	unsigned char in[ZCHUNK];
 
 	if(!(dp=gzopen_file(partial, "wb")))
-	{
-		gzclose_fp(&sp);
 		return -1;
-	}
-	while((b=gzread(sp, in, ZCHUNK))>0)
+	
+	if(copy_gzFile(sp, dp))
 	{
-		w=gzwrite(dp, in, b);
-		if(w!=b)
-		{
-			logp("gzwrite failed: %d!=%d\n", w, b);
-			gzclose_fp(&sp);
-			gzclose_fp(&dp);
-			return -1;
-		}
+		gzclose_fp(&dp);
+		return -1;
 	}
 
 	if(gzclose_fp(&dp))
@@ -148,13 +187,6 @@ static int ztruncate_w(const char *rpath, const char *partial)
 	}
 
 	gzclose(sp); // expected to often give an error.
-
-	// Finally, delete the original.
-	if(unlink(rpath))
-	{
-		logp("Failed to unlink %s: %s\n", rpath, strerror(errno));
-		return -1;
-	}
 
 	return 0;
 }
@@ -209,19 +241,24 @@ static int resume_partial_changed_file(struct sbuf *cb, struct sbuf *p1b, struct
 
 		// If compression is on, be careful with gzip unexpected
 		// end of file errors.
-		if(cb->compression)
+		if(p1b->sigzp)
 		{
-			if(ztruncate(rpath, partial))
+			if(!(dp=gzopen_file(partial, "wb")))
+				return -1;
+			if(ztruncate(p1b->sigzp, partial))
 			{
 				logp("Error in ztruncate\n");
 				ret=-1;
 				goto end;
 			}
+			// Need a single file with the same compression.
+			//
 		}
 		else
 		{
-			if(do_rename(rpath, partial))
+			if(copy(p1b->sigfp, partial))
 			{
+				logp("Error in copy\n");
 				ret=-1;
 				goto end;
 			}
@@ -396,9 +433,16 @@ static int resume_partial_new_file(struct sbuf *p1b, struct cntr * cntr, const c
 		{
 			if(ztruncate_w(rpath, partial))
 			{
-				logp("Error in ztruncate\n");
+				logp("Error in ztruncate_w\n");
 				ret=-1;
 				goto end;
+			}
+			// delete the original.
+			if(unlink(rpath))
+			{
+				logp("Failed to unlink %s: %s\n",
+					rpath, strerror(errno));
+				return -1;
 			}
 		}
 		else

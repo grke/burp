@@ -97,7 +97,7 @@ static int filedata(char cmd)
 	  || cmd==CMD_EFS_FILE);
 }
 
-static int copy(FILE *fp, const char *partial)
+static int copy(FILE *sp, const char *partial)
 {
 	size_t b=0;
 	size_t w=0;
@@ -191,20 +191,21 @@ static int ztruncate_w(const char *rpath, const char *partial)
 	return 0;
 }
 
-static int resume_partial_changed_file(struct sbuf *cb, struct sbuf *p1b, struct cntr *cntr, const char *datadirtmp, const char *deltmppath, struct config *cconf)
+static int resume_partial_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *curpath, struct cntr *cntr, const char *datadirtmp, const char *deltmppath, struct config *cconf)
 {
 	int ret=0;
-	char *rpath=NULL;
 	int istreedata=0;
 	struct stat statp;
+	struct stat cstatp;
 	char *partial=NULL;
 	char *partialdir=NULL;
 
-	logp("Resume partial changed file: %s %s\n", cb->path, rpath);
+	logp("Resume partial changed file: %s\n", cb->path);
 	if(!lstat(deltmppath, &statp) && S_ISREG(statp.st_mode)
-	     && !lstat(rpath, &statp) && S_ISREG(statp.st_mode))
+	     && !lstat(curpath, &cstatp) && S_ISREG(cstatp.st_mode))
 	{
 /*
+		struct stat pstatp;
 		if(!(partialdir=prepend_s(datadirtmp, "p", strlen("p")))
 		  || !(partial=prepend_s(partialdir,
 			cb->datapth, strlen(cb->datapth)))
@@ -215,27 +216,35 @@ static int resume_partial_changed_file(struct sbuf *cb, struct sbuf *p1b, struct
 			goto end;
 		}
 
-		// Need to:
 		// If (partial exists)
-		// {
-		//   if (partial bigger than p1b->sig)
-		//   {
-		//	Read and recreate (ztruncate) partial.
-		//	Copy the whole of deltmppath onto partial.
-		//   }
-		//   else
-		//   {
-		//	Delete partial.
+		if(!lstat(partial, &pstatp))
+		{
+			if(!S_ISREG(pstatp.st_mode))
+			{
+				logp("%s is not a regular file\n", partial)
+				goto actuallyno;
+			}
+			if(pstatp.st_size>cstatp.st_size)
+			{
+				// Looks like a previously resumed file.
+				if(cb->compression)
+				{
+					// Need to read and recreate (ztruncate) it, in case it
+					// was not fully created.
+				}
+			}
+			else
+			{
+				unlink(partial);
+				// Copy the whole of p1b->sigfp/sigzp to partial.
+			}
+			// Now, copy the whole of deltmppath onto partial.
+		}
+		else
+		{
 		//	Copy the whole of p1b->sigfp/sigzp onto partial.
 		//	Copy the whole of deltmppath onto partial.
-		//   }
-		// }
-		// else
-		// {
-		//	Copy the whole of p1b->sigfp/sigzp onto partial.
-		//	Copy the whole of deltmppath onto partial.
-		// }
-		//
+		}
 		// Use partial as the basis for a librsync transfer.
 		
 
@@ -276,9 +285,9 @@ static int resume_partial_changed_file(struct sbuf *cb, struct sbuf *p1b, struct
 */
 	}
 
+actuallyno:
 	logp("Actually, no - just forget the previous delta\n");
 end:
-	if(rpath) free(rpath);
 	if(partialdir) free(partialdir);
 	if(partial) free(partial);
 	return ret;
@@ -319,7 +328,7 @@ static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *c
 	  && cconf->librsync)
 	// compression?
 	{
-		if(resume_partial_changed_file(cb, p1b,
+		if(resume_partial_changed_file(cb, p1b, curpath,
 			cntr, datadirtmp, deltmppath, cconf)) return -1;
 		// Burp only transfers one file at a time, so
 		// if there was an interruption, there is only

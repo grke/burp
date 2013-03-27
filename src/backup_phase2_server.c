@@ -275,26 +275,20 @@ static int resume_partial_changed_file(struct sbuf *xb, struct sbuf *p1b, const 
 			goto end;
 		}
 
-logp("a\n");
-
 		if(!lstat(partial, &pstatp))
 		{
-logp("b\n");
 			if(!S_ISREG(pstatp.st_mode))
 			{
 				logp("%s is not a regular file\n", partial);
 				goto actuallyno;
 			}
-logp("c\n");
 			if(!dstatp.st_size)
 			{
 				logp("%s is a zero-length file\n", deltmppath);
 				goto actuallyno;
 			}
-logp("d\n");
 			if(pstatp.st_size>cstatp.st_size)
 			{
-logp("e\n");
 				// Looks like a previously resumed file.
 				if(cb.compression)
 				{
@@ -367,12 +361,10 @@ logp("e\n");
 		}
 		else
 		{
-logp("f\n");
 		//	Copy the whole of p1b->sigfp/sigzp onto partial.
 		//	Copy the whole of deltmppath onto partial.
 			if(cb.compression)
 			{
-logp("g\n");
 				if(!(dzp=gzopen_file(partial, "wb"))
 				  || copy_gzFile_to_gzFile(p1b->sigzp, dzp))
 				{
@@ -382,7 +374,6 @@ logp("g\n");
 			}
 			else
 			{
-logp("h\n");
 				if(!(dfp=open_file(partial, "wb"))
 				  || copy_File_to_File(p1b->sigfp, dfp))
 				{
@@ -392,7 +383,6 @@ logp("h\n");
 			}
 			if(cb.compression)
 			{
-logp("i\n");
 				if(copy_gzpath_to_gzFile(deltmppath, dzp))
 				{
 					ret=-1;
@@ -401,7 +391,6 @@ logp("i\n");
 			}
 			else
 			{
-logp("j\n");
 				if(copy_path_to_File(deltmppath, dfp))
 				{
 					ret=-1;
@@ -409,21 +398,29 @@ logp("j\n");
 				}
 			}
 		}
-logp("k\n");
+		if(dfp && close_fp(&dfp))
+		{
+			ret=-1;
+			goto end;
+		}
+		if(dzp && gzclose_fp(&dzp))
+		{
+			ret=-1;
+			goto end;
+		}
 		// Use partial as the basis for a librsync transfer.
 		
 		// So, we have created a new directory beginning with 'p',
 		// and moved the partial download to it.
 		// We can now use the partial file as the basis of a librsync
 		// transfer. 
-		if(process_changed_file(&cb, p1b, currentdata, partialdir, NULL,
+		if(process_changed_file(&cb, p1b, partialdir, NULL, NULL,
 			&junk /* resume_partial=0 */,
 			cntr, cconf))
 		{
 			ret=-1;
 			goto end;
 		}
-logp("l\n");
 
 		goto end;
 	}
@@ -610,8 +607,8 @@ static int resume_partial_new_file(struct sbuf *p1b, struct cntr *cntr, const ch
 		// So, we have created a new directory beginning with 'p',
 		// and moved the partial download to it.
 		// We can now use the partial file as the basis of a librsync
-		// transfer. 
-		if(process_changed_file(&cb, p1b, currentdata, partialdir, NULL,
+		// transfer.
+		if(process_changed_file(&cb, p1b, partialdir, NULL, NULL,
 			&junk /* resume_partial=0 */,
 			cntr, cconf))
 		{

@@ -190,7 +190,7 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, con
 			free(partial);
 			return -1;
 		}
-		//logp("Found partial file: %s\n", partial);
+		logp("Found partial file: %s\n", partial);
 		opath=partial;
 		*is_partial=1;
 	}

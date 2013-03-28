@@ -29,24 +29,19 @@ static int treedata(struct sbuf *sb)
 	return 0;
 }
 
-static int start_to_receive_new_file(struct sbuf *sb, const char *datadirtmp, struct dpth *dpth, struct cntr *cntr, struct config *cconf)
+static char *set_new_datapth(struct sbuf *sb, const char *datadirtmp, struct dpth *dpth, int *istreedata, struct config *cconf)
 {
-	int ret=-1;
 	char *rpath=NULL;
-	int istreedata=0;
+	if(cconf->directory_tree) *istreedata=treedata(sb);
 
-//logp("start to receive: %s\n", sb->path);
-
-	if(cconf->directory_tree) istreedata=treedata(sb);
-
-	if(istreedata)
+	if(*istreedata)
 	{
 		// We want to place this file in a directory structure like
 		// the directory structure on the original client.
 		if(!(sb->datapth=prepend_s("t", sb->path, strlen(sb->path))))
 		{
 			log_and_send_oom(__FUNCTION__);
-			goto end;
+			return NULL;
 		}
 	}
 	else
@@ -55,25 +50,38 @@ static int start_to_receive_new_file(struct sbuf *sb, const char *datadirtmp, st
 		if(!(sb->datapth=strdup(dpth->path))) // file data path
 		{
 			log_and_send_oom(__FUNCTION__);
-			goto end;
+			return NULL;
 		}
 	}
 	if(build_path(datadirtmp, sb->datapth, strlen(sb->datapth),
 		&rpath, datadirtmp))
 	{
 		log_and_send("build path failed");
-		goto end;
+		return NULL;
 	}
+	return rpath;
+}
+
+static int start_to_receive_new_file(struct sbuf *sb, const char *datadirtmp, struct dpth *dpth, struct cntr *cntr, struct config *cconf)
+{
+	int ret=-1;
+	char *rpath=NULL;
+	int istreedata=0;
+
+//logp("start to receive: %s\n", sb->path);
+
+	if(!(rpath=set_new_datapth(sb, datadirtmp, dpth, &istreedata, cconf)))
+		return -1;
+	
 	if(!(sb->fp=open_file(rpath, "wb")))
 	{
 		log_and_send("make file failed");
-		goto end;
+		if(rpath) free(rpath);
+		return -1;
 	}
-	if(rpath) free(rpath);
 	if(!istreedata) incr_dpth(dpth, cconf);
-	ret=0;
-end:
-	return ret;
+	if(rpath) free(rpath);
+	return 0; 
 }
 
 static int filedata(char cmd)
@@ -89,14 +97,350 @@ static int filedata(char cmd)
 	  || cmd==CMD_EFS_FILE);
 }
 
-static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *currentdata, struct cntr *cntr)
+static int copy_File_to_File(FILE *sp, FILE *dp)
+{
+	size_t b=0;
+	size_t w=0;
+	unsigned char in[ZCHUNK];
+	while((b=fread(in, 1, ZCHUNK, sp))>0)
+	{
+		w=fwrite(in, 1, b, dp);
+		if(w!=b)
+		{
+			logp("fwrite failed: %d!=%d\n", w, b);
+			return -1;
+		}
+	}
+	return 0;
+}
+
+static int copy_File_to_path(FILE *sp, const char *dst)
+{
+	FILE *dp=NULL;
+
+	if(!(dp=open_file(dst, "wb")))
+		return -1;
+
+	if(copy_File_to_File(sp, dp))
+	{
+		close_fp(&dp);
+		return -1;
+	}
+
+	if(close_fp(&dp))
+	{
+		logp("failed close_fp in %s\n", __FUNCTION__);
+		return -1;
+	}
+
+	return 0;
+}
+
+static int copy_path_to_File(const char *src, FILE *dp)
+{
+	size_t b=0;
+	size_t w=0;
+	unsigned char in[ZCHUNK];
+	FILE *sp=NULL;
+
+	if(!(sp=open_file(src, "rb")))
+		return -1;
+
+	if(copy_File_to_File(sp, dp))
+	{
+		close_fp(&sp);
+		return -1;
+	}
+
+	close_fp(&sp);
+	return 0;
+}
+
+static int copy_gzFile_to_gzFile(gzFile sp, gzFile dp)
+{
+	size_t b=0;
+	size_t w=0;
+	unsigned char in[ZCHUNK];
+
+	while((b=gzread(sp, in, ZCHUNK))>0)
+	{
+		w=gzwrite(dp, in, b);
+		if(w!=b)
+		{
+			logp("gzwrite failed: %d!=%d\n", w, b);
+			return -1;
+		}
+	}
+	return 0;
+}
+
+static int copy_gzpath_to_gzFile(const char *src, gzFile dp)
+{
+	size_t b=0;
+	size_t w=0;
+	unsigned char in[ZCHUNK];
+	gzFile sp=NULL;
+
+	if(!(sp=gzopen_file(src, "rb")))
+		return -1;
+
+	if(copy_gzFile_to_gzFile(sp, dp))
+	{
+		gzclose(sp);
+		return -1;
+	}
+
+	gzclose(sp); // expected to often give an error.
+	return 0;
+}
+
+static int copy_gzFile_to_gzpath(gzFile sp, const char *dst)
+{
+	size_t b=0;
+	size_t w=0;
+	gzFile dp=NULL;
+	unsigned char in[ZCHUNK];
+
+	if(!(dp=gzopen_file(dst, "wb")))
+		return -1;
+	
+	if(copy_gzFile_to_gzFile(sp, dp))
+	{
+		gzclose_fp(&dp);
+		return -1;
+	}
+
+	if(gzclose_fp(&dp))
+	{
+		logp("failed gzclose when copying to %s\n", dst);
+		return -1;
+	}
+
+	return 0;
+}
+
+static int copy_gzpath_to_gzpath(const char *src, const char *dst)
+{
+	gzFile sp=NULL;
+
+	if(!(sp=gzopen_file(src, "rb"))) return -1;
+
+	if(copy_gzFile_to_gzpath(sp, dst))
+	{
+		gzclose(sp);
+		return -1;
+	}
+
+	gzclose(sp); // expected to often give an error.
+
+	return 0;
+}
+
+static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *currentdata, const char *datadirtmp, const char *deltmppath, int *resume_partial, struct cntr *cntr, struct config *cconf);
+
+// TODO: Some of the repeated code in this can be factored out.
+static int resume_partial_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *currentdata, const char *curpath, const char *datadirtmp, const char *deltmppath, struct config *cconf, struct cntr *cntr)
+{
+	int ret=0;
+	int istreedata=0;
+	struct stat dstatp;
+	struct stat cstatp;
+	char *partial=NULL;
+	char *partialdir=NULL;
+	char *zdeltmp=NULL;
+	struct sbuf xb;
+
+	init_sbuf(&xb);
+	xb.cmd=cb->cmd;
+	xb.compression=cb->compression;
+	xb.path=strdup(cb->path);
+	xb.statbuf=strdup(cb->statbuf);
+	xb.datapth=strdup(p1b->datapth);
+	xb.endfile=strdup(cb->endfile);
+
+	logp("Resume partial changed file: %s\n", xb.path);
+	if(!lstat(deltmppath, &dstatp) && S_ISREG(dstatp.st_mode)
+	     && !lstat(curpath, &cstatp) && S_ISREG(cstatp.st_mode))
+	{
+		int junk=0;
+		gzFile dzp=NULL;
+		FILE *dfp=NULL;
+		struct stat pstatp;
+		if(!(partialdir=prepend_s(datadirtmp, "p", strlen("p")))
+		  || !(partial=prepend_s(partialdir,
+			xb.datapth, strlen(xb.datapth)))
+		  || build_path(partialdir, xb.datapth, strlen(xb.datapth),
+			&partial, partialdir))
+		{
+			ret=-1;
+			goto end;
+		}
+
+		if(!lstat(partial, &pstatp))
+		{
+			if(!S_ISREG(pstatp.st_mode))
+			{
+				logp("%s is not a regular file\n", partial);
+				goto actuallyno;
+			}
+			if(pstatp.st_size>cstatp.st_size)
+			{
+				// Looks like a previously resumed file.
+				if(xb.compression)
+				{
+					// Need to read and recreate it, in
+					// case it was not fully created.
+					if(!(zdeltmp=prepend(deltmppath,
+						".z", strlen(".z"),
+						0 /* no slash */))
+					  || !(dzp=gzopen_file(zdeltmp, "wb"))
+					  || copy_gzpath_to_gzFile(partial,
+						dzp)
+					  || do_rename(zdeltmp, partial))
+					{
+						ret=-1;
+						goto end;
+					}
+				}
+				else
+				{
+					// Append to the existing one.
+					if(!(dfp=open_file(partial, "ab")))
+					{
+						ret=-1;
+						goto end;
+					}
+				}
+			}
+			else
+			{
+				unlink(partial);
+				// Copy the whole of p1b->sigfp/sigzp to
+				// partial.
+				if(xb.compression)
+				{
+					if(!(dzp=gzopen_file(partial, "wb"))
+					  || copy_gzFile_to_gzFile(p1b->sigzp,
+						dzp))
+					{
+						ret=-1;
+						goto end;
+					}
+				}
+				else
+				{
+					if(!(dfp=open_file(partial, "wb"))
+					  || copy_File_to_File(p1b->sigfp, dfp))
+					{
+						ret=-1;
+						goto end;
+					}
+				}
+			}
+			// Now, copy the whole of deltmppath onto partial.
+			// dzp or dfp will be open by this point.
+			if(xb.compression)
+			{
+				if(copy_gzpath_to_gzFile(deltmppath, dzp))
+				{
+					ret=-1;
+					goto end;
+				}
+			}
+			else
+			{
+				if(copy_path_to_File(deltmppath, dfp))
+				{
+					ret=-1;
+					goto end;
+				}
+			}
+		}
+		else
+		{
+		//	Copy the whole of p1b->sigfp/sigzp onto partial.
+		//	Copy the whole of deltmppath onto partial.
+			if(xb.compression)
+			{
+				// There is no partial, this creates it.
+				if(!(dzp=gzopen_file(partial, "wb"))
+				  || copy_gzFile_to_gzFile(p1b->sigzp, dzp))
+				{
+					ret=-1;
+					goto end;
+				}
+			}
+			else
+			{
+				// There is no partial, this creates it.
+				if(!(dfp=open_file(partial, "wb"))
+				  || copy_File_to_File(p1b->sigfp, dfp))
+				{
+					ret=-1;
+					goto end;
+				}
+			}
+			if(xb.compression)
+			{
+				if(copy_gzpath_to_gzFile(deltmppath, dzp))
+				{
+					ret=-1;
+					goto end;
+				}
+			}
+			else
+			{
+				if(copy_path_to_File(deltmppath, dfp))
+				{
+					ret=-1;
+					goto end;
+				}
+			}
+		}
+		if(dfp && close_fp(&dfp))
+		{
+			ret=-1;
+			goto end;
+		}
+		if(dzp && gzclose_fp(&dzp))
+		{
+			ret=-1;
+			goto end;
+		}
+		// Use partial as the basis for a librsync transfer.
+		
+		// So, we have created a new directory beginning with 'p',
+		// and moved the partial download to it.
+		// We can now use the partial file as the basis of a librsync
+		// transfer. 
+		if(process_changed_file(&xb, p1b, partialdir, NULL, NULL,
+			&junk /* resume_partial=0 */,
+			cntr, cconf))
+		{
+			ret=-1;
+			goto end;
+		}
+
+		goto end;
+	}
+
+actuallyno:
+	logp("Actually, no - just forget the previous delta\n");
+end:
+	if(partialdir) free(partialdir);
+	if(partial) free(partial);
+	if(zdeltmp) free(zdeltmp);
+	free_sbuf(&xb);
+	return ret;
+}
+
+static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *currentdata, const char *datadirtmp, const char *deltmppath, int *resume_partial, struct cntr *cntr, struct config *cconf)
 {
 	size_t blocklen=0;
 	char *curpath=NULL;
 	//logp("need to process changed file: %s (%s)\n", cb->path, cb->datapth);
 
 	// Move datapth onto p1b.
-
 	if(p1b->datapth) free(p1b->datapth);
 	p1b->datapth=cb->datapth;
 	cb->datapth=NULL;
@@ -117,6 +461,20 @@ static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *c
 			curpath, strerror(errno));
 		free(curpath);
 		return -1;
+	}
+
+	if(*resume_partial
+	  && p1b->cmd==CMD_FILE
+	  && cconf->librsync)
+	// compression?
+	{
+		if(resume_partial_changed_file(cb, p1b, currentdata, curpath,
+			datadirtmp, deltmppath, cconf, cntr)) return -1;
+
+		// Burp only transfers one file at a time, so
+		// if there was an interruption, there is only
+		// a possibility of one partial file to resume.
+		*resume_partial=0;
 	}
 	free(curpath);
 
@@ -177,8 +535,202 @@ static int changed_non_file(struct sbuf *p1b, FILE *ucfp, char cmd, struct cntr 
 	return 0;
 }
 
-static int process_new(struct sbuf *p1b, FILE *p2fp, FILE *ucfp, struct cntr *cntr)
+static int resume_partial_new_file(struct sbuf *p1b, struct cntr *cntr, const char *currentdata, const char *datadirtmp, const char *deltmppath, struct dpth *dpth, struct config *cconf)
 {
+	int ret=0;
+	int junk=0;
+	struct sbuf cb;
+	char *rpath=NULL;
+	int istreedata=0;
+	struct stat statp;
+	char *partial=NULL;
+	char *partialdir=NULL;
+	char *zdeltmp=NULL;
+	// It does not matter what this checksum is set to.
+	// This is just to get an endfile string in the format that
+	// process_changed_file expects.
+	unsigned char checksum[18]="0123456789ABCDEF";
+
+	// Need to set up a fake current sbuf.
+	init_sbuf(&cb);
+	cb.cmd=p1b->cmd;
+	cb.compression=p1b->compression;
+	cb.path=strdup(p1b->path);
+	cb.statbuf=strdup(p1b->statbuf);
+	if(!(rpath=set_new_datapth(&cb, datadirtmp, dpth, &istreedata, cconf)))
+	{
+		ret=-1;
+		goto end;
+	}
+
+	if(!(partialdir=prepend_s(datadirtmp, "p", strlen("p")))
+	  || !(partial=prepend_s(partialdir,
+		cb.datapth, strlen(cb.datapth)))
+	  || build_path(partialdir, cb.datapth, strlen(cb.datapth),
+		&partial, partialdir))
+	{
+		ret=-1;
+		goto end;
+	}
+
+	if(!lstat(partial, &statp) && S_ISREG(statp.st_mode))
+	{
+		// A previous resume was going on.
+		// Need to concatenate the possible delta onto the partial
+		// file.
+		FILE *dfp=NULL;
+		gzFile dzp=NULL;
+		logp("Resume previously resumed partial new file: %s %s\n",
+			cb.path, rpath);
+
+		if(!(cb.endfile=strdup(
+			get_endfile_str(statp.st_size, checksum))))
+		{
+			ret=-1;
+			goto end;
+		}
+		if(cb.compression)
+		{
+			// Recreate partial, in case it was only partially
+			// written and consequently has gz errors.
+			if(!(zdeltmp=prepend(deltmppath, ".z", strlen(".z"),
+				0 /* no slash */))
+			  || !(dzp=gzopen_file(zdeltmp, "wb"))
+			  || copy_gzpath_to_gzFile(partial, dzp)
+			  || do_rename(zdeltmp, partial))
+			{
+				ret=-1;
+				goto end;
+			}
+		}
+		else
+		{
+			// Just append to the existing one.
+			if(!(dfp=open_file(partial, "ab")))
+			{
+				ret=-1;
+				goto end;
+			}
+		}
+		if(!lstat(deltmppath, &statp) && S_ISREG(statp.st_mode))
+		{
+			if(cb.compression)
+			{
+				if(copy_gzpath_to_gzFile(deltmppath, dzp))
+				{
+					ret=-1;
+					goto end;
+				}
+			}
+			else
+			{
+				if(copy_path_to_File(deltmppath, dfp))
+				{
+					ret=-1;
+					goto end;
+				}
+			}
+		}
+		if(dfp && close_fp(&dfp))
+		{
+			ret=-1;
+			goto end;
+		}
+		if(dzp && gzclose_fp(&dzp))
+		{
+			ret=-1;
+			goto end;
+		}
+		if(process_changed_file(&cb, p1b, partialdir, NULL, NULL,
+			&junk /* resume_partial=0 */,
+			cntr, cconf))
+		{
+			ret=-1;
+			goto end;
+		}
+		if(!istreedata) incr_dpth(dpth, cconf);
+
+		goto end;
+	}
+
+	logp("Resume partial new file: %s %s\n", cb.path, rpath);
+	if(!lstat(rpath, &statp) && S_ISREG(statp.st_mode))
+	{
+		if(!(cb.endfile=strdup(
+			get_endfile_str(statp.st_size, checksum))))
+		{
+			ret=-1;
+			goto end;
+		}
+		// If compression is on, be careful with gzip unexpected
+		// end of file errors.
+		// Otherwise, just rename the whole file.
+		unlink(partial);
+		if(cb.compression)
+		{
+			if(copy_gzpath_to_gzpath(rpath, partial))
+			{
+				logp("Error in copy_gzpath_to_gzpath\n");
+				ret=-1;
+				goto end;
+			}
+			// delete the original.
+			if(unlink(rpath))
+			{
+				logp("Failed to unlink %s: %s\n",
+					rpath, strerror(errno));
+				return -1;
+			}
+		}
+		else
+		{
+			if(do_rename(rpath, partial))
+			{
+				ret=-1;
+				goto end;
+			}
+		}
+		// So, we have created a new directory beginning with 'p',
+		// and moved the partial download to it.
+		// We can now use the partial file as the basis of a librsync
+		// transfer.
+		if(process_changed_file(&cb, p1b, partialdir, NULL, NULL,
+			&junk /* resume_partial=0 */,
+			cntr, cconf))
+		{
+			ret=-1;
+			goto end;
+		}
+		if(!istreedata) incr_dpth(dpth, cconf);
+		goto end;
+	}
+
+	logp("Actually, no - just treat it as completely new\n");
+end:
+	if(rpath) free(rpath);
+	if(partialdir) free(partialdir);
+	if(partial) free(partial);
+	if(zdeltmp) free(zdeltmp);
+	free_sbuf(&cb);
+	return ret;
+}
+
+static int process_new(struct sbuf *p1b, FILE *ucfp, const char *currentdata, const char *datadirtmp, const char *deltmppath, struct dpth *dpth, int *resume_partial, struct cntr *cntr, struct config *cconf)
+{
+	if(*resume_partial
+	  && p1b->cmd==CMD_FILE
+	  && cconf->librsync
+	  && p1b->compression==cconf->compression)
+	{
+		if(resume_partial_new_file(p1b,
+			cntr, currentdata, datadirtmp, deltmppath,
+			dpth, cconf)) return -1;
+
+		// Burp only transfers one file at a time, so
+		// if there was an interruption, there is only
+		// a possibility of one partial file to resume.
+		*resume_partial=0;
+	}
 	if(filedata(p1b->cmd))
 	{
 		//logp("need to process new file: %s\n", p1b->path);
@@ -210,16 +762,16 @@ static int process_unchanged_file(struct sbuf *cb, FILE *ucfp, struct cntr *cntr
 	return 1;
 }
 
-static int process_new_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FILE *ucfp, struct cntr *cntr)
+static int process_new_file(struct sbuf *cb, struct sbuf *p1b, FILE *ucfp, const char *currentdata, const char *datadirtmp, const char *deltmppath, struct dpth *dpth, int *resume_partial, struct cntr *cntr, struct config *cconf)
 {
-	if(process_new(p1b, p2fp, ucfp, cntr))
-		return -1;
+	if(process_new(p1b, ucfp, currentdata, datadirtmp, deltmppath,
+		dpth, resume_partial, cntr, cconf)) return -1;
 	free_sbuf(cb);
 	return 1;
 }
 
 // return 1 to say that a file was processed
-static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FILE *ucfp, const char *currentdata, struct cntr *cntr, struct config *cconf)
+static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *ucfp, const char *currentdata, const char *datadirtmp, const char *deltmppath, struct dpth *dpth, int *resume_partial, struct cntr *cntr, struct config *cconf)
 {
 	int pcmp;
 //	logp("in maybe_proc %s\n", p1b->path);
@@ -231,7 +783,10 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FIL
 		// up again (for example, EFS changing to normal file, or
 		// back again).
 		if(cb->cmd!=p1b->cmd)
-			return process_new_file(cb, p1b, p2fp, ucfp, cntr);
+			return process_new_file(cb, p1b, ucfp, currentdata,
+				datadirtmp, deltmppath,
+				dpth, resume_partial,
+				cntr, cconf);
 
 		// mtime is the actual file data.
 		// ctime is the attributes or meta data.
@@ -265,7 +820,10 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FIL
 			  || cb->cmd==CMD_EFS_FILE
 			  || p1b->cmd==CMD_EFS_FILE)
 				return process_new_file(cb,
-					p1b, p2fp, ucfp, cntr);
+					p1b, ucfp, currentdata,
+					datadirtmp, deltmppath,
+					dpth, resume_partial,
+					cntr, cconf);
 			else
 				return process_unchanged_file(cb, ucfp, cntr);
 		}
@@ -293,7 +851,10 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FIL
 		  || p1b->cmd==CMD_VSS_T
 		  || cb->cmd==CMD_ENC_VSS_T
 		  || p1b->cmd==CMD_ENC_VSS_T)
-			return process_new_file(cb, p1b, p2fp, ucfp, cntr);
+			return process_new_file(cb, p1b, ucfp, currentdata,
+				datadirtmp, deltmppath,
+				dpth, resume_partial,
+				cntr, cconf);
 
 		// Get new files if they have switched between compression on
 		// or off.
@@ -301,13 +862,17 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FIL
 			oldcompressed=1;
 		if( ( oldcompressed && !cconf->compression)
 		 || (!oldcompressed &&  cconf->compression))
-			return process_new_file(cb, p1b, p2fp, ucfp, cntr);
+			return process_new_file(cb, p1b, ucfp, currentdata,
+				datadirtmp, deltmppath,
+				dpth, resume_partial,
+				cntr, cconf);
 
 		// Otherwise, do the delta stuff (if possible).
 		if(filedata(p1b->cmd))
 		{
-			if(process_changed_file(cb, p1b, currentdata, cntr))
-				return -1;
+			if(process_changed_file(cb, p1b, currentdata,
+				datadirtmp, deltmppath, resume_partial,
+				cntr, cconf)) return -1;
 		}
 		else
 		{
@@ -321,7 +886,8 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *p2fp, FIL
 	{
 		//logp("ahead: %s\n", p1b->path);
 		// ahead - need to get the whole file
-		if(process_new(p1b, p2fp, ucfp, cntr)) return -1;
+		if(process_new(p1b, ucfp, currentdata, datadirtmp, deltmppath,
+			dpth, resume_partial, cntr, cconf)) return -1;
 		// do not free
 		return 1;
 	}
@@ -628,6 +1194,7 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, const char *pha
 	FILE *p2fp=NULL;
 	// unchanged data
 	FILE *ucfp=NULL;
+	int resume_partial=resume;
 
 	struct sbuf cb;		// file list in current manifest
 	struct sbuf p1b;	// file list from client
@@ -707,7 +1274,10 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, const char *pha
 		   {
 			// No old manifest, need to ask for a new file.
 			//logp("no cmanfp\n");
-			if(process_new(&p1b, p2fp, ucfp, cntr)) goto error;
+			if(process_new(&p1b, ucfp, currentdata,
+				datadirtmp, deltmppath,
+				dpth, &resume_partial,
+				cntr, cconf)) goto error;
 		   }
 		   else
 		   {
@@ -718,8 +1288,9 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, const char *pha
 			if(cb.path)
 			{
 				if((ars=maybe_process_file(&cb, &p1b,
-					p2fp, ucfp,
-					currentdata, cntr, cconf)))
+					ucfp, currentdata, datadirtmp,
+					deltmppath, dpth, &resume_partial,
+					cntr, cconf)))
 				{
 					if(ars<0) goto error;
 					// Do not free it - need to send stuff.
@@ -737,13 +1308,18 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, const char *pha
 					if(ars<0) goto error;
 					gzclose_fp(cmanfp);
 		//logp("ran out of current manifest\n");
-					if(process_new(&p1b, p2fp, ucfp, cntr))
-						goto error;
+					if(process_new(&p1b, ucfp,
+						currentdata, datadirtmp,
+						deltmppath, dpth,
+						&resume_partial, cntr, cconf))
+							goto error;
 					break;
 				}
 		//logp("against: %s\n", cb.path);
 				if((ars=maybe_process_file(&cb, &p1b,
-					p2fp, ucfp, currentdata, cntr, cconf)))
+					ucfp, currentdata, datadirtmp,
+					deltmppath, dpth, &resume_partial,
+					cntr, cconf)))
 				{
 					if(ars<0) goto error;
 					// Do not free it - need to send stuff.

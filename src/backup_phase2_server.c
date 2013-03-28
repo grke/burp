@@ -238,6 +238,7 @@ static int copy_gzpath_to_gzpath(const char *src, const char *dst)
 
 static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *currentdata, const char *datadirtmp, const char *deltmppath, int *resume_partial, struct cntr *cntr, struct config *cconf);
 
+// TODO: Some of the repeated code in this can be factored out.
 static int resume_partial_changed_file(struct sbuf *xb, struct sbuf *p1b, const char *currentdata, const char *curpath, struct cntr *cntr, const char *datadirtmp, const char *deltmppath, struct config *cconf)
 {
 	int ret=0;
@@ -439,7 +440,7 @@ static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *c
 {
 	size_t blocklen=0;
 	char *curpath=NULL;
-	logp("need to process changed file: %s (%s)\n", cb->path, cb->datapth);
+	//logp("need to process changed file: %s (%s)\n", cb->path, cb->datapth);
 
 	// Move datapth onto p1b.
 	if(p1b->datapth) free(p1b->datapth);
@@ -452,7 +453,6 @@ static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *c
 		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
-logp("now: %s %s\n", curpath, p1b->datapth);
 	if(dpth_is_compressed(cb->compression, curpath))
 		p1b->sigzp=gzopen_file(curpath, "rb");
 	else

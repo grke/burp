@@ -166,33 +166,42 @@ static int gen_rev_delta(const char *sigpath, const char *deltadir, const char *
 	return ret;
 }
 
-static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, const char *datadirtmp, const char *datapth, int compression, int *is_partial, struct config *cconf)
+static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, const char *datadirtmp, const char *datapth, int compression, struct strlist **partials, int pcount, int *is_partial, struct config *cconf)
 {
+	int p=0;
 	int ret=0;
 	char *partial=NULL;
 	struct stat statp;
 	const char *opath=oldpath;
 
+	// First, check whether this is in our list of partial files.
+	// If it is, use the path to the partial file. The delta will apply
+	// to it.
+	for(p=0; p<pcount; p++)
+	{
+		if(!strcmp(partials[p]->path, datapth))
+		{
+			char *tmp=NULL;
+			// It is a partial transfer, it is in "data.tmp/p".
+			// Build the full path to it.
+			if(!(tmp=prepend_s(datadirtmp, "p", strlen("p"))))
+				return -1;
+			partial=prepend_s(tmp, datapth, strlen(datapth));
+			free(tmp);
+			if(!partial) return -1;
+			logp("Dealing with partial resumed file: %s\n",
+				partial);
+			opath=partial;
+			*is_partial=1;
+			break;
+		}
+	}
+
 	if(lstat(opath, &statp))
 	{
-		char *tmp=NULL;
-
-		// Maybe it is a partial transfer, in which case it might be
-		// found in "data.tmp/p".
-		if(!(tmp=prepend_s(datadirtmp, "p", strlen("p"))))
-			return -1;
-		partial=prepend_s(tmp, datapth, strlen(datapth));
-		free(tmp);
-		if(!partial) return -1;
-		if(lstat(partial, &statp))
-		{
-			logp("could not lstat %s or %s\n", opath, partial);
-			free(partial);
-			return -1;
-		}
-		logp("Found partial file: %s\n", partial);
-		opath=partial;
-		*is_partial=1;
+		logp("could not lstat %s\n", opath);
+		if(partial) free(partial);
+		return -1;
 	}
 
 	if(dpth_is_compressed(compression, opath))
@@ -255,7 +264,7 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, con
 	return ret;
 }
 
-static int jiggle(const char *datapth, const char *currentdata, const char *datadirtmp, const char *datadir, const char *deltabdir, const char *deltafdir, const char *sigpath, const char *endfile, const char *deletionsfile, FILE **delfp, struct sbuf *sb, int hardlinked, int compression, struct cntr *cntr, struct config *cconf)
+static int jiggle(const char *datapth, const char *currentdata, const char *datadirtmp, const char *datadir, const char *deltabdir, const char *deltafdir, const char *sigpath, const char *endfile, const char *deletionsfile, FILE **delfp, struct sbuf *sb, int hardlinked, int compression, struct strlist **partials, int pcount, struct cntr *cntr, struct config *cconf)
 {
 	int ret=0;
 	struct stat statp;
@@ -324,7 +333,8 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 
 		//logp("Fixing up: %s\n", datapth);
 		if(inflate_or_link_oldfile(oldpath, infpath, datadirtmp,
-			datapth, compression, &is_partial, cconf))
+			datapth, compression, partials, pcount, &is_partial,
+			cconf))
 		{
 			logp("error when inflating old file: %s\n", oldpath);
 			ret=-1;
@@ -619,6 +629,87 @@ end:
 	return ret;
 }
 
+static int get_partials_list(const char *path, const char *datapth, struct strlist ***partials, int *pcount)
+{
+	int n=-1;
+	int ret=0;
+	struct dirent **dir;
+
+	if((n=scandir(path, &dir, 0, 0))<0)
+	{
+		logp("scandir %s: %s\n", path, strerror(errno));
+		return -1;
+	}
+	while(n--)
+	{
+		char *fullpath=NULL;
+
+		if(dir[n]->d_ino==0
+		  || !strcmp(dir[n]->d_name, ".")
+		  || !strcmp(dir[n]->d_name, ".."))
+		{ free(dir[n]); continue; }
+
+		if(!(fullpath=prepend_s(path,
+			dir[n]->d_name, strlen(dir[n]->d_name))))
+				break;
+
+		if(is_dir(fullpath))
+		{
+			char *newdatapth=NULL;
+			if(!(newdatapth=prepend_s(datapth,
+				dir[n]->d_name, strlen(dir[n]->d_name))))
+					break;
+			if(get_partials_list(fullpath, newdatapth,
+				partials, pcount))
+			{
+				free(fullpath);
+				free(newdatapth);
+				break;
+			}
+			free(newdatapth);
+		}
+		else
+		{
+			char *tmp=NULL;
+			// Add to list.
+			if(!(tmp=prepend_s(datapth,
+				dir[n]->d_name, strlen(dir[n]->d_name))))
+					break;
+			logp("Found partial resumed file: %s\n", tmp);
+			if(strlist_add(partials, pcount, tmp, 0))
+			{
+				free(tmp);
+				break;
+			}
+			free(tmp);
+		}
+		
+		free(fullpath);
+		free(dir[n]);
+	}
+        if(n>0)
+        {
+                ret=-1;
+                for(; n>0; n--) free(dir[n]);
+        }
+        free(dir);
+
+	return ret;
+}
+
+static int get_partials_list_w(const char *datadirtmp, struct strlist ***partials, int *pcount)
+{
+	int ret=0;
+	char *path=NULL;
+	char *datapth=NULL;
+	// Build the full path to it.
+	if(!(path=prepend_s(datadirtmp, "p", strlen("p")))) return -1;
+	ret=get_partials_list(path, datapth, partials, pcount);
+	free(path);
+
+	return ret;
+}
+
 /* Need to make all the stuff that this does atomic so that existing backups
    never get broken, even if somebody turns the power off on the server. */ 
 static int atomic_data_jiggle(const char *finishing, const char *working, const char *manifest, const char *current, const char *currentdata, const char *datadir, const char *datadirtmp, const char *deletionsfile, struct config *cconf, const char *client, int hardlinked, unsigned long bno, struct cntr *p1cntr, struct cntr *cntr)
@@ -636,6 +727,9 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 	struct sbuf sb;
 
 	FILE *delfp=NULL;
+
+	int pcount=0;
+	struct strlist **partials=NULL;
 
 	logp("Doing the atomic data jiggle...\n");
 
@@ -670,6 +764,13 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 		goto end;
 	}
 
+	if(get_partials_list_w(datadirtmp, &partials, &pcount))
+	{
+		log_out_of_memory(__FUNCTION__);
+		ret=-1;
+		goto end;
+	}
+
 	mkdir(datadir, 0777);
 
 	init_sbuf(&sb);
@@ -683,8 +784,8 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 			if((ret=jiggle(sb.datapth, currentdata, datadirtmp,
 				datadir, deltabdir, deltafdir,
 				sigpath, sb.endfile, deletionsfile, &delfp,
-				&sb,
-				hardlinked, sb.compression, cntr, cconf)))
+				&sb, hardlinked, sb.compression,
+				partials, pcount, cntr, cconf)))
 					break;
 		}
 		free_sbuf(&sb);
@@ -711,6 +812,7 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 	recursive_delete(deltafdir, NULL, FALSE /* do not del files */);
 
 end:
+	strlists_free(partials, pcount);
 	if(zp) gzclose_fp(&zp);
 	if(delfp) close_fp(&delfp);
 	if(deltabdir) free(deltabdir);

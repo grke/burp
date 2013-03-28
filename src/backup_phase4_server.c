@@ -704,7 +704,8 @@ static int get_partials_list_w(const char *datadirtmp, struct strlist ***partial
 	char *datapth=NULL;
 	// Build the full path to it.
 	if(!(path=prepend_s(datadirtmp, "p", strlen("p")))) return -1;
-	ret=get_partials_list(path, datapth, partials, pcount);
+	if(is_dir(path))
+		ret=get_partials_list(path, datapth, partials, pcount);
 	free(path);
 
 	return ret;
@@ -766,7 +767,6 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 
 	if(get_partials_list_w(datadirtmp, &partials, &pcount))
 	{
-		log_out_of_memory(__FUNCTION__);
 		ret=-1;
 		goto end;
 	}

@@ -65,6 +65,29 @@ src="http://pagead2.googlesyndication.com/pagead/show_ads.js">
 <TD ALIGN="LEFT">
 
 <P>
+<FONT COLOR="#99CCFF">2013-03-30
+<BR>
+Many thanks to the following donors for financially supporting burp during
+March:
+<pre>
+  *  &pound;30.00 Haim G.
+  *   &pound;0.01 Romain M.
+</pre>
+</FONT>
+</p>
+
+<P>
+<FONT COLOR="#99CCFF">2013-03-30: burp-1.3.28 is released.
+<pre>
+Changes in burp-1.3.28:
+  * Add the ability to resume partially transferred files.
+  * Make sure 'timer conditions not met' message appears on the client.
+  * Bug fix for turning off compression before resuming a backup.
+</pre>
+</FONT>
+</P>
+
+<P>
 <FONT COLOR="#99CCFF">2013-03-05
 <BR>
 Many thanks to the following donors for financially supporting burp during

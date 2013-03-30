@@ -1,5 +1,6 @@
   * Add the ability to resume partially transferred files.
   * Make sure 'timer conditions not met' message appears on the client.
+  * Bug fix for turning off compression before resuming a backup.
 
 2013-03-05 Changes in burp-1.3.26:
   * When a read_blockdev option matches a symlink, backup the destination as

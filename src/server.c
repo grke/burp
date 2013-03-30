@@ -1390,6 +1390,22 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 					ret=-1;
 					break;
 				}
+				if(*incexc)
+				{
+					char *tmp=NULL;
+					char comp[32]="";
+					snprintf(comp, sizeof(comp),
+						"compression = %d\n",
+						cconf->compression);
+					if(!(tmp=prepend(*incexc, comp,
+						strlen(comp), 0)))
+					{
+						ret=-1;
+						break;
+					}
+					free(*incexc);
+					*incexc=tmp;
+				}
 			}
 			else if(!strcmp(buf, "countersok"))
 			{

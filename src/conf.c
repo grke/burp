@@ -360,6 +360,9 @@ static int get_conf_val_args(const char *field, const char *value, const char *o
 #ifdef HAVE_WIN32
 #include <limits.h>
 #include <string.h>
+
+char *unix_name_to_win32(char *name);
+
 static void convert_backslashes(char **path)
 {
 	char *p=NULL;
@@ -577,7 +580,7 @@ static char *xstrsub(const char *src, int begin, int len)
 {
 	if (src == NULL)
 		return NULL;
-	
+
 	char *ret;
 	size_t s_full = xstrlen(src);
 	int l = len == -1 ? (int) s_full : len;
@@ -1486,16 +1489,18 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 
 #ifndef HAVE_WIN32
 	for(i=0; i<conf->igcount; i++)
-		glob (conf->incglob[i]->path, i>0 ? GLOB_APPEND : 0, NULL, &globbuf);
+		glob(conf->incglob[i]->path, i>0 ? GLOB_APPEND : 0, NULL, &globbuf);
 
 	for(i=0; i<globbuf.gl_pathc; i++)
 		strlist_add(&(l->ielist), &(conf->iecount), globbuf.gl_pathv[i], 1);
+
+	globfree(&globbuf);
 #else
 	for(i=0; i<conf->igcount; i++)
 	{
 		char **splitstr1 = NULL;
 		char *tmppath = NULL, *sav = NULL;
-		size_t len1;
+		size_t len1 = 0;
 		convert_backslashes(&(conf->incglob[i]->path));
 		//logp("glob: %s\n", conf->incglob[i]->path);
 		if (conf->incglob[i]->path[strlen(conf->incglob[i]->path)-1] != '*')
@@ -1507,7 +1512,7 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 			xfree_list(splitstr1, len1);
 			continue;
 		}
-		if(splitstr1 != NULL)
+		if(len1 > 1)
 		{
 			tmppath = xstrcat(tmppath, splitstr1[0]);
 			sav = xstrdup(tmppath);
@@ -1547,7 +1552,8 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 			   && strcmp(ffd.cFileName, ".") != 0
 			   && strcmp(ffd.cFileName, "..") != 0)
 			{
-				if(splitstr1 == NULL)
+				char *win32_fname = NULL;
+				if(len1 < 2)
 				{
 					if(conf->incglob[i]->path[xstrlen(conf->incglob[i]->path)-1] == '*')
 					{
@@ -1563,8 +1569,20 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 					tmppath = xstrcat(tmppath, ffd.cFileName);
 					tmppath = xstrcat(tmppath, splitstr1[1]);
 				}
-				strlist_add(&(l->ielist), &(conf->iecount), tmppath, 1);
-				//logp("-(d)> %s\n", tmppath);
+				/*
+				//win32_fname = unix_name_to_win32(tmppath);
+				if(!(win32_fname=make_win32_path_UTF8_2_wchar_w(tmppath)))
+					            logp("could not get widename!");
+				if(win32_fname != NULL)
+				{
+					strlist_add(&(l->ielist), &(conf->iecount), win32_fname, 1);
+					logp("add: %s\n", win32_fname);
+					xfree(win32_fname);
+				}
+				else
+				*/
+					strlist_add(&(l->ielist), &(conf->iecount), tmppath, 1);
+				//logp("add: %s\n", tmppath);
 				xfree(tmppath);
 				tmppath = NULL;
 			}

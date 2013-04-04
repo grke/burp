@@ -118,8 +118,8 @@ static int burp_ca_init(struct config *conf, const char *ca_dir)
 	}
 
 	logp("Signing request\n");
-	logp("Running '%s --key --request --name %s --dir %s --config %s'\n",
-		conf->ca_burp_ca, conf->ca_server_name, ca_dir, conf->ca_conf);
+	logp("Running '%s --sign --ca %s --name %s --batch --dir %s --config %s'\n",
+		conf->ca_burp_ca, conf->ca_name, conf->ca_server_name, ca_dir, conf->ca_conf);
 	a=0;
 	args[a++]=conf->ca_burp_ca;
 	args[a++]="--sign";

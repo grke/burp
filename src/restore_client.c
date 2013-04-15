@@ -633,8 +633,7 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore, str
 	}
 
 #if defined(HAVE_WIN32)
-	if(act==ACTION_RESTORE)
-		win32_enable_backup_privileges(1 /* ignore_errors */);
+	if(act==ACTION_RESTORE) win32_enable_backup_privileges();
 #endif
 
 	init_sbuf(&sb);

@@ -85,7 +85,7 @@ int autoupgrade_client(struct config *conf, struct cntr *p1cntr)
 	}
 
 #ifdef HAVE_WIN32
-	win32_enable_backup_privileges(1 /* ignore_errors */);
+	win32_enable_backup_privileges();
 	snprintf(script_name, sizeof(script_name), "script.bat");
 	snprintf(package_name, sizeof(package_name), "package.exe");
 #else

@@ -79,7 +79,7 @@ static int do_backup_client(struct config *conf, int resume, int estimate, struc
 		logp("do backup client\n");
 
 #if defined(HAVE_WIN32)
-	win32_enable_backup_privileges(1 /* ignore_errors */);
+	win32_enable_backup_privileges();
 #endif
 #if defined(WIN32_VSS)
 	if((ret=win32_start_vss(conf))) return ret;

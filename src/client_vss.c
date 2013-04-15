@@ -129,33 +129,29 @@ int win32_stop_vss(void)
 
 #if defined(HAVE_WIN32)
 
-static int enable_priv(HANDLE hToken, const char *name, int ignore_errors)
+static int enable_priv(HANDLE hToken, const char *name)
 {
-    TOKEN_PRIVILEGES tkp;
-    DWORD lerror;
+	TOKEN_PRIVILEGES tkp;
+	DWORD lerror;
 
-    if (!(p_LookupPrivilegeValue && p_AdjustTokenPrivileges)) {
-       return 0;                      /* not avail on this OS */
-    }
+	if(!(p_LookupPrivilegeValue && p_AdjustTokenPrivileges))
+		return 0; /* not avail on this OS */
 
-    // Get the LUID for the security privilege.
-    if (!p_LookupPrivilegeValue(NULL, name,  &tkp.Privileges[0].Luid)) {
-	logp("LookupPrivilegeValue: %s\n", GetLastError());
-       return 0;
-    }
+	// Get the LUID for the security privilege.
+	if(!p_LookupPrivilegeValue(NULL, name, &tkp.Privileges[0].Luid))
+	{
+		logp("LookupPrivilegeValue: %s\n", GetLastError());
+		return 0;
+	}
 
-    /* Set the security privilege for this process. */
-    tkp.PrivilegeCount = 1;
-    tkp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
-    p_AdjustTokenPrivileges(hToken, FALSE, &tkp, 0, NULL, NULL);
-    lerror = GetLastError();
-    if (lerror != ERROR_SUCCESS) {
-       if (!ignore_errors) {
-	  logp("AdjustTokenPrivileges set %s: %s\n", name, lerror);
-       }
-       return 0;
-    }
-    return 1;
+	/* Set the security privilege for this process. */
+	tkp.PrivilegeCount=1;
+	tkp.Privileges[0].Attributes=SE_PRIVILEGE_ENABLED;
+	p_AdjustTokenPrivileges(hToken, FALSE, &tkp, 0, NULL, NULL);
+	lerror=GetLastError();
+	if(lerror==ERROR_SUCCESS) return 0;
+	logp("Could not set privilege %s\n", name);
+	return 1;
 }
 
 /*
@@ -163,66 +159,46 @@ static int enable_priv(HANDLE hToken, const char *name, int ignore_errors)
  *  the SE_SECURITY_NAME, but since nothing seems to be working,
  *  we get it hoping to fix the problems.
  */
-int win32_enable_backup_privileges(int ignore_errors)
+int win32_enable_backup_privileges()
 {
-    HANDLE hToken, hProcess;
-    int stat = 0;
+	int ret=0;
+	HANDLE hToken;
+	HANDLE hProcess;
 
-    if (!p_OpenProcessToken) {
-       return 0;                      /* No avail on this OS */
-    }
+	if(!p_OpenProcessToken) return 0; /* No avail on this OS */
 
-    hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, GetCurrentProcessId());
+	hProcess=OpenProcess(PROCESS_ALL_ACCESS, FALSE, GetCurrentProcessId());
 
-    // Get a token for this process.
-    if (!p_OpenProcessToken(hProcess,
-            TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken)) {
-       if (!ignore_errors) {
-          logp("OpenProcessToken: %s\n", GetLastError());
-       }
-       /* Forge on anyway */
-    }
+	// Get a token for this process.
+	if(!p_OpenProcessToken(hProcess,
+		TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken))
+	{
+		logp("Could not OpenProcessToken\n");
+		/* Forge on anyway */
+	}
 
-    /* Return a bit map of permissions set. */
-    if (enable_priv(hToken, SE_BACKUP_NAME, ignore_errors)) {
-       stat |= 1<<1;
-    }
-    if (enable_priv(hToken, SE_RESTORE_NAME, ignore_errors)) {
-       stat |= 1<<2;
-    }
-#if 0
-    if (enable_priv(hToken, SE_SECURITY_NAME, ignore_errors)) {
-       stat |= 1<<0;
-    }
-    if (enable_priv(hToken, SE_TAKE_OWNERSHIP_NAME, ignore_errors)) {
-       stat |= 1<<3;
-    }
-    if (enable_priv(hToken, SE_ASSIGNPRIMARYTOKEN_NAME, ignore_errors)) {
-       stat |= 1<<4;
-    }
-    if (enable_priv(hToken, SE_SYSTEM_ENVIRONMENT_NAME, ignore_errors)) {
-       stat |= 1<<5;
-    }
-    if (enable_priv(hToken, SE_CREATE_TOKEN_NAME, ignore_errors)) {
-       stat |= 1<<6;
-    }
-    if (enable_priv(hToken, SE_MACHINE_ACCOUNT_NAME, ignore_errors)) {
-       stat |= 1<<7;
-    }
-    if (enable_priv(hToken, SE_TCB_NAME, ignore_errors)) {
-       stat |= 1<<8;
-    }
-    if (enable_priv(hToken, SE_CREATE_PERMANENT_NAME, ignore_errors)) {
-       stat |= 1<<10;
-    }
-#endif
-    if (stat) {
-       stat |= 1<<9;
-    }
+	if(enable_priv(hToken, SE_BACKUP_NAME)) ret=-1;
+	if(enable_priv(hToken, SE_RESTORE_NAME)) ret=-1;
+/*
+	enable_priv(hToken, SE_SECURITY_NAME);
+	enable_priv(hToken, SE_TAKE_OWNERSHIP_NAME);
+	enable_priv(hToken, SE_ASSIGNPRIMARYTOKEN_NAME);
+	enable_priv(hToken, SE_SYSTEM_ENVIRONMENT_NAME);
+	enable_priv(hToken, SE_CREATE_TOKEN_NAME);
+	enable_priv(hToken, SE_MACHINE_ACCOUNT_NAME);
+	enable_priv(hToken, SE_TCB_NAME);
+	enable_priv(hToken, SE_CREATE_PERMANENT_NAME);
+*/
 
-    CloseHandle(hToken);
-    CloseHandle(hProcess);
-    return stat;
+	CloseHandle(hToken);
+	CloseHandle(hProcess);
+
+	if(ret)
+	{
+		logp("Some privileges were not enabled.\n\n");
+		logp("Are you running as Administrator?\n\n");
+	}
+	return ret;
 }
 
 // This is the shape of the Windows VSS header structure.

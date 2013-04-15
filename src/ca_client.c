@@ -17,7 +17,7 @@ static int generate_key_and_csr(struct config *conf, const char *csr_path)
 	logp("Generating SSL key and certificate signing request\n");
 	logp("Running '%s --key --keypath %s --request --requestpath %s --name %s'\n", conf->ca_burp_ca, conf->ssl_key, csr_path, conf->cname);
 #ifdef HAVE_WIN32
-	win32_enable_backup_privileges(1 /* ignore_errors */);
+	win32_enable_backup_privileges();
 #endif
 	args[a++]=conf->ca_burp_ca;
 	args[a++]="--key";

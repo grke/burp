@@ -1,23 +1,37 @@
 QUICK START
 
-The following assumes that you are not installing the burp server via a distribution's package management system.
+The following assumes that you are not installing the burp server via a
+distribution's package management system.
 
-You need to compile burp on a unix-based operating system first. Make sure that you have openssl, zlib, librsync and uthash libraries and development libraries installed. With debian or ubuntu, this command should install them for you:
+You need to compile burp on a unix-based operating system first. Make sure that
+you have openssl, zlib, librsync and uthash libraries and development libraries
+installed. With debian or ubuntu, this command should install them for you:
 
 apt-get install librsync-dev libz-dev libssl-dev uthash-dev
 
-Change to the burp source directory and run "./configure", then "make". All being well, burp will compile successfully. Then run "make install" as root to install.
+Change to the burp source directory and run "./configure", then "make". All
+being well, burp will compile successfully. Then run "make install" as root to
+install.
 
 Start the burp server with this command: burp -c /etc/burp/burp-server.conf
 
-By default, the server will fork into the background and run as a daemon. To stay in the foreground, add the '-F' option. The first time that the server runs, its startup will be a slower than usual because it needs to generate its SSL certificates. However, this will probably only be noticeable on old machines.
+By default, the server will fork into the background and run as a daemon. To
+stay in the foreground, add the '-F' option. The first time that the server
+runs, its startup will be a slower than usual because it needs to generate its
+SSL certificates. However, this will probably only be noticeable on old
+machines.
 
 The server is now ready for clients to connect to it. 
 
 
 UNIX CLIENT
 
-If you are going to run the client on the same machine on which you installed the server, the client will already be installed because the client is built into the same binary (the behaviour of the binary depends upon the configuration file that is given to it). Otherwise, you can either go through the 'configure/make/make install' sequence on the client machine, or get burp via your distribution's package manager.
+If you are going to run the client on the same machine on which you installed
+the server, the client will already be installed because the client is built
+into the same binary (the behaviour of the binary depends upon the
+configuration file that is given to it). Otherwise, you can either go through
+the 'configure/make/make install' sequence on the client machine, or get burp
+via your distribution's package manager.
 
 The example client configuration file is /etc/burp/burp.conf.
 It will backup /home by default.

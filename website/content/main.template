@@ -58,6 +58,7 @@ BURP - BackUp and Restore Program
 <input type="image" src="http://burp.grke.org/images/paypal.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online.">
 <img alt="" border="0" src="https://www.paypal.com/en_GB/i/scr/pixel.gif" width="1" height="1">
 </form>
+
 </td>
 <td align="centre" width="50%">
 <p>
@@ -65,6 +66,11 @@ BURP - BackUp and Restore Program
 Burp is open and free software. I work on it in my spare time.
 If you would like this work to continue, please consider making a small
 donation.
+</font>
+<br>
+<br>
+<font color="#ffffff">
+bitcoin:1PFtePS2YE5i5dTX17ozJPHrjKu2UqBLmi
 </font>
 </p>
 </td>

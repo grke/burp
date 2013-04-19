@@ -294,6 +294,11 @@ donotresetinstdir:
   IfFileExists $INSTDIR\Burp.conf end
 overwrite:
 
+; Need to create an empty openssl.conf file in order to not have warnings from
+; the burp_ca.bat script.
+  FileOpen $R1 $INSTDIR\openssl.conf w
+  FileClose $R1
+
   FileOpen $R1 $INSTDIR\burp.conf w
 
 !If "$BITS" == "32"

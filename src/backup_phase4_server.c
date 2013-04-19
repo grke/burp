@@ -653,7 +653,7 @@ static int get_partials_list(const char *path, const char *datapth, struct strli
 			dir[n]->d_name, strlen(dir[n]->d_name))))
 				break;
 
-		if(is_dir(fullpath))
+		if(is_dir(fullpath, dir[n]))
 		{
 			char *newdatapth=NULL;
 			if(!(newdatapth=prepend_s(datapth,
@@ -704,7 +704,7 @@ static int get_partials_list_w(const char *datadirtmp, struct strlist ***partial
 	char *datapth=NULL;
 	// Build the full path to it.
 	if(!(path=prepend_s(datadirtmp, "p", strlen("p")))) return -1;
-	if(is_dir(path))
+	if(is_dir_lstat(path))
 		ret=get_partials_list(path, datapth, partials, pcount);
 	free(path);
 

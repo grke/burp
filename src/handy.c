@@ -55,13 +55,30 @@ int gzclose_fp(gzFile *fp)
 	return 0;
 }
 
-int is_dir(const char *path)
+int is_dir_lstat(const char *path)
 {
         struct stat buf;
 
         if(lstat(path, &buf)) return 0;
 
         return S_ISDIR(buf.st_mode);
+}
+
+int is_dir(const char *path, struct dirent *d)
+{
+#ifdef _DIRENT_HAVE_D_TYPE
+	// Faster evaluation on most systems.
+	switch(d->d_type)
+	{
+		case DT_DIR:
+			return 1;
+		case DT_UNKNOWN:
+			break;
+		default:
+			return 0;
+	}
+#endif
+	return is_dir_lstat(path);
 }
 
 int mkpath(char **rpath, const char *limit)

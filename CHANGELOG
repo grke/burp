@@ -1,4 +1,6 @@
   * Add a warning when run on Windows without admin privileges.
+  * Perform fewer lstat()s on systems that support d_type (ie most Linux
+    systems), in order to speed up certain operations.
 
 2013-03-30 Changes in burp-1.3.28:
   * Add the ability to resume partially transferred files.

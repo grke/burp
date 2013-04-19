@@ -377,7 +377,7 @@ static int restore_dir(struct sbuf *sb, const char *dname, enum action act, stru
 				ret=-1;
 			goto end;
 		}
-		else if(!is_dir(rpath))
+		else if(!is_dir_lstat(rpath))
 		{
 			if(mkdir(rpath, 0777))
 			{

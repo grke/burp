@@ -57,6 +57,22 @@ int recursive_hardlink(const char *src, const char *dst, const char *client, str
 			break;
 		}
 
+#ifdef _DIRENT_HAVE_D_TYPE
+// Faster evaluation on most systems.
+		if(dir[n]->d_type==DT_DIR)
+		{
+			if(recursive_hardlink(fullpatha, fullpathb, client,
+				p1cntr, cntr, conf))
+			{
+				free(fullpatha);
+				free(fullpathb);
+				break;
+			}
+		}
+		else
+#endif
+		// Otherwise, we have to do an lstat() anyway, because we
+		// will need to check the number of hardlinks in do_link().
 		if(lstat(fullpatha, &statp))
 		{
 			logp("could not lstat %s\n", fullpatha);
@@ -144,7 +160,7 @@ int recursive_delete(const char *d, const char *file, bool delfiles)
 			dir[n]->d_name, strlen(dir[n]->d_name))))
 				break;
 
-		if(is_dir(fullpath))
+		if(is_dir(fullpath, dir[n]))
 		{
 			int r;
 			if((r=recursive_delete(directory,

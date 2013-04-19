@@ -71,7 +71,7 @@ static int burp_ca_init(struct config *conf, const char *ca_dir)
 	const char *args[15];
 	char linktarget[1024]="";
 
-	if(is_dir(ca_dir)) return 0;
+	if(is_dir_lstat(ca_dir)) return 0;
 
 	setup_stuff_done++;
 

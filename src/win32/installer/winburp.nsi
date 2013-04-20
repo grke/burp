@@ -378,6 +378,21 @@ SectionGroupEnd
 Section "-Finish"
   Push $R0
 
+  ; Write the uninstall keys for Windows.
+  ; These are also needed to put burp in the 'Programs' section of the
+  ; Control Panel.
+  WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Burp" "DisplayName" "Burp"
+  WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Burp" "InstallLocation" "$INSTDIR"
+  WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Burp" "DisplayVersion" "${VERSION}"
+  WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Burp" "Publisher" "Graham Keeling"
+  DeleteRegKey  HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Burp\VersionMajor"
+  DeleteRegKey  HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Burp\VersionMinor"
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Burp" "NoModify" 1
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Burp" "NoRepair" 1
+  WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Burp" "URLUpdateInfo" "http://burp.grke.net"
+  WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Burp" "URLInfoAbout" "http://burp.grke.net"
+  WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Burp" "HelpLink" "http://burp.grke.net"
+  WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Burp" "UninstallString" '"$INSTDIR\uninstall.exe"'
   WriteUninstaller "$INSTDIR\Uninstall.exe"
 
   Pop $R0
@@ -422,6 +437,10 @@ Section "Uninstall"
   RMDir "$INSTDIR\bin"
   RMDir "$INSTDIR\CA"
   RMDir "$INSTDIR"
+
+  ; remove registry keys
+  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Burp"
+  DeleteRegKey HKLM "Software\Burp"
 SectionEnd
 
 Function GetSelectedComponents

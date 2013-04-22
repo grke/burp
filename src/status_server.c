@@ -517,8 +517,8 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, con
 				{
 					char tmp[16]="";
 					t=timestamp_to_long(arr[i].timestamp);
-					snprintf(tmp, sizeof(tmp), "\t%lu %li",
-						arr[i].index, (long)t);
+					snprintf(tmp, sizeof(tmp), "\t%lu %d %li",
+						arr[i].index, arr[i].deletable, (long)t);
 					strcat(curback, tmp);
 				}
 				if(!a) strcat(curback, "\t0");

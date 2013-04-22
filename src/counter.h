@@ -109,7 +109,7 @@ extern int send_counters(const char *client, struct cntr *p1cntr, struct cntr *c
 
 extern int str_to_counters(const char *str, char **client, char *status,
 	char *phase, char **path, struct cntr *p1cntr, struct cntr *cntr,
-	char ***backups);
+	struct strlist ***backups, int *bcount);
 extern int recv_counters(struct cntr *p1cntr, struct cntr *cntr);
 
 

@@ -42,22 +42,6 @@ static void print_line(const char *string, int row, int col)
 	printf("\n");
 }
 
-static char *get_backup_str(const char *s)
-{
-	static char str[32]="";
-	const char *cp=NULL;
-	if(!(cp=strchr(s, ' ')))
-		snprintf(str, sizeof(str), "never");
-	else
-	{
-		unsigned long backupnum=0;
-		backupnum=strtoul(s, NULL, 10);
-		snprintf(str, sizeof(str),
-			"%07lu %s", backupnum, getdatestr(atol(cp+1)));
-	}
-	return str;
-}
-
 static char *running_status_to_text(char s)
 {
 	static char ret[16]="";
@@ -85,7 +69,7 @@ static char *running_status_to_text(char s)
 }
 
 // Returns 1 if it printed a line, 0 otherwise.
-static int summary(const char *cntrclient, char status, char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr, char **backups, int count, int row, int col)
+static int summary(const char *cntrclient, char status, char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr, struct strlist **backups, int bcount, int count, int row, int col)
 {
 	char msg[1024]="";
 
@@ -93,22 +77,22 @@ static int summary(const char *cntrclient, char status, char phase, const char *
 	{
 		snprintf(msg, sizeof(msg),
 			"%-14.14s %-14s%s%s", cntrclient, "idle",
-			backups && backups[0]?" last backup: ":"",
-			backups && backups[0]?backups[0]:"");
+			bcount?" last backup: ":"",
+			bcount?backups[0]->path:"");
 	}
 	if(status==STATUS_SERVER_CRASHED)
 	{
 		snprintf(msg, sizeof(msg),
 			"%-14.14s %-14s%s%s", cntrclient, "server crashed",
-			backups && backups[0]?" last backup: ":"",
-			backups && backups[0]?backups[0]:"");
+			bcount?" last backup: ":"",
+			bcount?backups[0]->path:"");
 	}
 	if(status==STATUS_CLIENT_CRASHED)
 	{
 		snprintf(msg, sizeof(msg),
 			"%-14.14s %-14s%s%s", cntrclient, "client crashed",
-			backups && backups[0]?" last backup: ":"",
-			backups && backups[0]?backups[0]:"");
+			bcount?" last backup: ":"",
+			bcount?backups[0]->path:"");
 	}
 	if(status==STATUS_RUNNING)
 	{
@@ -137,20 +121,22 @@ static int summary(const char *cntrclient, char status, char phase, const char *
 	return 0;
 }
 
-static void show_all_backups(char **backups, int *x, int col)
+static void show_all_backups(struct strlist **backups, int bcount, int *x, int col)
 {
 	int b=0;
 	char msg[256]="";
-	for(b=0; backups && backups[b]; b++)
+	for(b=0; b<bcount; b++)
 	{
 		if(!b)
 		{
-		  snprintf(msg, sizeof(msg), "Backup list: %s", backups[b]);
+		  snprintf(msg, sizeof(msg), "Backup list: %s%s", backups[b]->path,
+			backups[b]->flag?" (deletable)":"");
 		  print_line(msg, (*x)++, col);
 		}
 		else
 		{
-		  snprintf(msg, sizeof(msg), "             %s", backups[b]);
+		  snprintf(msg, sizeof(msg), "             %s%s", backups[b]->path,
+			backups[b]->flag?" (deletable)":"");
 		  print_line(msg, (*x)++, col);
 		}
 	}
@@ -244,7 +230,7 @@ static void print_detail3(const char *field, const char *value, int *x, int col)
 	print_line(msg, (*x)++, col);
 }
 
-static void detail(const char *cntrclient, char status, char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr, char **backups, int row, int col)
+static void detail(const char *cntrclient, char status, char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr, struct strlist **backups, int bcount, int row, int col)
 {
 	int x=0;
 	char msg[1024]="";
@@ -259,19 +245,19 @@ static void detail(const char *cntrclient, char status, char phase, const char *
 		case STATUS_IDLE:
 		{
 			print_line("Status: idle", x++, col);
-			show_all_backups(backups, &x, col);
+			show_all_backups(backups, bcount, &x, col);
 			return;
 		}
 		case STATUS_SERVER_CRASHED:
 		{
 			print_line("Status: server crashed", x++, col);
-			show_all_backups(backups, &x, col);
+			show_all_backups(backups, bcount, &x, col);
 			return;
 		}
 		case STATUS_CLIENT_CRASHED:
 		{
 			print_line("Status: client crashed", x++, col);
-			show_all_backups(backups, &x, col);
+			show_all_backups(backups, bcount, &x, col);
 			return;
 		}
 		case STATUS_RUNNING:
@@ -484,6 +470,7 @@ static void blank_screen(int row, int col)
 
 static int parse_rbuf(const char *rbuf, struct config *conf, int row, int col, int sel, char **client, int *count, int details, const char *sclient, struct cntr *p1cntr, struct cntr *cntr)
 {
+	int bcount=0;
 	char *cp=NULL;
 	char *dp=NULL;
 	char *copy=NULL;
@@ -504,12 +491,12 @@ static int parse_rbuf(const char *rbuf, struct config *conf, int row, int col, i
 		char status='\0';
 		char phase='\0';
 		char *path=NULL;
-		char **backups=NULL;
+		struct strlist **backups=NULL;
 		char *cntrclient=NULL;
 		*cp='\0';
 
 		if(str_to_counters(dp, &cntrclient, &status, &phase, &path,
-			p1cntr, cntr, &backups))
+			p1cntr, cntr, &backups, &bcount))
 		{
 			free(copy);
 			if(path) free(path);
@@ -535,13 +522,13 @@ static int parse_rbuf(const char *rbuf, struct config *conf, int row, int col, i
 				    && !strcmp(cntrclient, sclient)))
 					detail(cntrclient, status, phase,
 						path, p1cntr, cntr,
-						backups, 0, col);
+						backups, bcount, 0, col);
 			}
 		}
 		else
 		{
 			summary(cntrclient, status, phase,
-				path, p1cntr, cntr, backups,
+				path, p1cntr, cntr, backups, bcount,
 				*count, row, col);
 		}
 		(*count)++;
@@ -549,12 +536,7 @@ static int parse_rbuf(const char *rbuf, struct config *conf, int row, int col, i
 		dp=cp+1;
 		if(path) free(path);
 		if(cntrclient) free(cntrclient);
-		if(backups)
-		{
-			int b=0;
-			for(b=0; backups && backups[b]; b++) free(backups[b]);
-			free(backups);
-		}
+		strlists_free(backups, bcount);
 	}
 	if(copy) free(copy);
 	return 0;

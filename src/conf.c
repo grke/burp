@@ -94,10 +94,10 @@ void init_config(struct config *conf)
 	conf->autoupgrade_dir=NULL;
 	conf->autoupgrade_os=NULL;
 	conf->ssl_cert_ca=NULL;
-        conf->ssl_cert=NULL;
-        conf->ssl_key=NULL;
-        conf->ssl_key_password=NULL;
-        conf->ssl_ciphers=NULL;
+	conf->ssl_cert=NULL;
+	conf->ssl_key=NULL;
+	conf->ssl_key_password=NULL;
+	conf->ssl_ciphers=NULL;
 	conf->ssl_dhfile=NULL;
 	conf->ssl_peer_cn=NULL;
 	conf->encryption_password=NULL;

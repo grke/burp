@@ -210,7 +210,7 @@ On the server, the number of times that a single file can be hardlinked. The bed
 When set to 0, delta differencing will not take place. That is, when a file changes, the server will request the whole new file. The default is 1. This option can be overridden by the client configuration files in clientconfdir on the server.
 .TP
 \fBcompression=gzip[0-9]\fR
-Choose the level of gzip compression. Setting 0 or gzip0 turns compression off. The default is gzip9. This option can be overridden by the client configuration files in clientconfdir on the server.
+Choose the level of gzip compression for files stored in backups. Setting 0 or gzip0 turns compression off. The default is gzip9. This option can be overridden by the client configuration files in clientconfdir on the server.
 .TP
 \fBversion_warn=[0|1]\fR
 When this is on, which is the default, a warning will be issued when the client version does not match the server version. This option can be overridden by the client configuration files in clientconfdir on the server.

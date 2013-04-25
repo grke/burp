@@ -4,6 +4,7 @@
   * Allow _FORTIFY_SOURCE to work.
   * Fix problem with burp_ca.bat and repeated field names in burp.conf.
   * Put registry keys back in the Windows installer.
+  * Fix for SIGHUP reload causing the server to go into non-forking mode.
 
 2013-03-30 Changes in burp-1.3.28:
   * Add the ability to resume partially transferred files.

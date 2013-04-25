@@ -64,8 +64,8 @@ void init_config(struct config *conf)
 	conf->status_port=NULL;
 	conf->hardlinked_archive=0;
 	conf->working_dir_recovery_method=NULL;
-	conf->forking=0;
-	conf->daemon=0;
+	conf->forking=1;
+	conf->daemon=1;
 	conf->directory_tree=1;
 	conf->clientconfdir=NULL;
 	conf->cname=NULL;

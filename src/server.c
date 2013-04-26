@@ -15,6 +15,7 @@
 #include "backup_phase3_server.h"
 #include "backup_phase4_server.h"
 #include "current_backups_server.h"
+#include "delete_server.h"
 #include "list_server.h"
 #include "restore_server.h"
 #include "ssl.h"
@@ -1115,6 +1116,32 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 					cconf, p1cntr, cntr);
 				free(dir_for_notify);
 			}
+		}
+	}
+	else if(cmd==CMD_GEN && !strncmp(buf, "delete ", strlen("delete ")))
+	{
+		int resume=0; // ignored
+		if(get_lock_and_clean(basedir, lockbasedir, lockfile,
+			current, working,
+			currentdata, finishing, gotlock, cconf,
+			phase1data, phase2data, unchangeddata,
+			manifest, client, p1cntr, cntr, &resume, incexc))
+				ret=-1;
+		else
+		{
+			char *backupno=NULL;
+/*
+			if(!cconf->client_can_list)
+			{
+				logp("Not allowing list of %s\n", client);
+				async_write_str(CMD_GEN,
+					"Client list is not allowed");
+				goto end;
+			}
+*/
+			backupno=buf+strlen("list ");
+
+			ret=do_delete_server(basedir, backupno, client, p1cntr, cntr);
 		}
 	}
 	else if(cmd==CMD_GEN

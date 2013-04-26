@@ -61,6 +61,8 @@ static char *running_status_to_text(char s)
 			snprintf(ret, sizeof(ret), "restoring"); break;
 		case STATUS_VERIFYING:
 			snprintf(ret, sizeof(ret), "verifying"); break;
+		case STATUS_DELETING:
+			snprintf(ret, sizeof(ret), "deleting"); break;
 		default:
 			*ret='\0';
 			break;

@@ -16,6 +16,7 @@ enum action
 	ACTION_STATUS,
 	ACTION_STATUS_SNAPSHOT,
 	ACTION_ESTIMATE,
+	ACTION_DELETE,
 };
 
 #include "find.h"

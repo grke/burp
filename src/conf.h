@@ -164,6 +164,7 @@ struct config
 
 	char *dedup_group;
 
+	int client_can_delete;
 	int client_can_force_backup;
 	int client_can_list;
 	int client_can_restore;

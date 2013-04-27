@@ -42,6 +42,8 @@ SVRSRCS =	acl.c \
 		conf.c \
 		counter.c \
 		current_backups_server.c \
+		delete_client.c \
+		delete_server.c \
 		dpth.c \
 		extrameta.c \
 		find.c \

@@ -13,7 +13,7 @@ struct strlist
 {
 	long flag;
 	char *path;
-        regex_t *re;
+	regex_t *re;
 };
 
 extern void strlists_free(struct strlist **bd, int count);

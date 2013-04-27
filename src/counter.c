@@ -718,39 +718,36 @@ static int extract_ul(const char *value, unsigned long long *a, unsigned long lo
 	return 0;
 }
 
-static char *get_backup_str(const char *s)
+static char *get_backup_str(const char *s, int *deletable)
 {
 	static char str[32]="";
 	const char *cp=NULL;
+	const char *dp=NULL;
 	if(!s || !*s) return NULL;
-	if(!(cp=strchr(s, ' ')))
+	if(!(cp=strchr(s, ' '))
+	  || !(dp=strchr(cp+1, ' ')))
 		snprintf(str, sizeof(str), "never");
 	else
 	{
 		unsigned long backupnum=0;
 		backupnum=strtoul(s, NULL, 10);
 		snprintf(str, sizeof(str),
-			"%07lu %s", backupnum, getdatestr(atol(cp+1)));
+			"%07lu %s", backupnum, getdatestr(atol(dp+1)));
+		if(*(cp+1)=='1') *deletable=1;
 	}
 	return str;
 }
 
-static int add_to_backup_list(char ***backups, int *b, const char *tok)
+static int add_to_backup_list(struct strlist ***backups, int *bcount, const char *tok)
 {
+	int deletable=0;
 	const char *str=NULL;
-	if(!(str=get_backup_str(tok))) return 0;
-	if(!(*backups=(char **)realloc(*backups, ((*b)+2)*sizeof(char *)))
-	  || !((*backups)[*b]=strdup(str)))
-	{
-		log_out_of_memory(__FUNCTION__);
-		return -1;
-	}
-	(*backups)[(*b)+1]=NULL;
-	(*b)++;
+	if(!(str=get_backup_str(tok, &deletable))) return 0;
+	if(strlist_add(backups, bcount, (char *)str, deletable)) return -1;
 	return 0;
 }
 
-int str_to_counters(const char *str, char **client, char *status, char *phase, char **path, struct cntr *p1cntr, struct cntr *cntr, char ***backups)
+int str_to_counters(const char *str, char **client, char *status, char *phase, char **path, struct cntr *p1cntr, struct cntr *cntr, struct strlist ***backups, int *bcount)
 {
 	int t=0;
 	char *tok=NULL;
@@ -798,14 +795,13 @@ int str_to_counters(const char *str, char **client, char *status, char *phase, c
 				  || *status==STATUS_SERVER_CRASHED
 				  || *status==STATUS_CLIENT_CRASHED))
 				{
-					int b=0;
 					if(backups)
 					{
 						// Build a list of backups.
 					  do
 					  {
 						if(add_to_backup_list(backups,
-								&b, tok))
+								bcount, tok))
 						{
 							free(copy);
 							return -1;
@@ -924,7 +920,7 @@ int str_to_counters(const char *str, char **client, char *status, char *phase, c
 	}
 
 	free(copy);
-        return 0;
+	return 0;
 }
 
 #ifndef HAVE_WIN32
@@ -962,7 +958,7 @@ int recv_counters(struct cntr *p1cntr, struct cntr *cntr)
 		if(buf) free(buf);
 		return -1;
 	}
-	if(str_to_counters(buf, NULL, NULL, NULL, NULL, p1cntr, cntr, NULL))
+	if(str_to_counters(buf, NULL, NULL, NULL, NULL, p1cntr, cntr, NULL, NULL))
 	{
 		logp("Error when parsing counters from server.\n");
 		if(buf) free(buf);

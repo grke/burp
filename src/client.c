@@ -11,6 +11,7 @@
 #include "backup_phase1_client.h"
 #include "backup_phase2_client.h"
 #include "restore_client.h"
+#include "delete_client.h"
 #include "list_client.h"
 #include "ssl.h"
 #include "berrno.h"
@@ -517,6 +518,9 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 		case ACTION_ESTIMATE:
 			if(!ret) ret=do_backup_client(conf, 0, 1,
 					&p1cntr, &cntr);
+			break;
+		case ACTION_DELETE:
+			if(!ret) ret=do_delete_client(conf);
 			break;
 		case ACTION_LIST:
 		case ACTION_LONG_LIST:

@@ -5,6 +5,9 @@
   * Fix problem with burp_ca.bat and repeated field names in burp.conf.
   * Put registry keys back in the Windows installer.
   * Fix for SIGHUP reload causing the server to go into non-forking mode.
+  * Indicate the backups that are deletable.
+  * Add a client option for deleting deletable backups.
+  * Add a 'client_can_delete' option on the server.
 
 2013-03-30 Changes in burp-1.3.28:
   * Add the ability to resume partially transferred files.

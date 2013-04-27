@@ -197,6 +197,10 @@ int main (int argc, char *argv[])
 					act=ACTION_STATUS_SNAPSHOT;
 				else if(!strncmp(optarg, "estimate", 1))
 					act=ACTION_ESTIMATE;
+				// Start 'Delete' with a capital letter so that it is less
+				// likely to be used accidently.
+				else if(!strncmp(optarg, "Delete", 1))
+					act=ACTION_DELETE;
 				else
 				{
 					usage();
@@ -280,6 +284,12 @@ int main (int argc, char *argv[])
 	{
 		logp("No backup specified. Using the most recent.\n");
 		backup="0";
+	}
+
+	if(act==ACTION_DELETE && !backup)
+	{
+		logp("No backup specified for deletion.\n");
+		return 1;
 	}
 
 	if(conf.mode==MODE_CLIENT)

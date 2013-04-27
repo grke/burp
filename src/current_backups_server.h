@@ -4,6 +4,7 @@
 struct bu
 {
 	char *path;
+	char *basename;
 	char *data;
 	char *delta;
 	char *timestamp;
@@ -28,5 +29,6 @@ extern int compress_filename(const char *d, const char *file, const char *zfile,
 extern int remove_old_backups(const char *basedir, struct config *cconf, const char *client);
 extern size_t get_librsync_block_len(const char *endfile);
 extern int do_link(const char *oldpath, const char *newpath, struct stat *statp, struct config *conf, bool overwrite);
+extern int delete_backup(const char *basedir, struct bu *arr, int a, int b, const char *client);
 
 #endif // _CURRENT_BACKUPS_H

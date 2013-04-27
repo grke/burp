@@ -1365,14 +1365,6 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 			break;
 	}
 
-	// If client_lockdir not set, use conf->directory.
-	if(!conf->client_lockdir && conf->directory
-	  && !(conf->client_lockdir=strdup(conf->directory)))
-	{
-		log_out_of_memory(__FUNCTION__);
-		return -1;
-	}
-
 	return r;
 }
 

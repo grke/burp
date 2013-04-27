@@ -927,6 +927,10 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 	char *phase1data=NULL;
 	char *phase2data=NULL;
 	char *unchangeddata=NULL;
+	char *client_lockdir=NULL;
+
+	if(!(client_lockdir=conf->client_lockdir))
+		client_lockdir=cconf->directory;
 
 	if(!(basedir=prepend_s(cconf->directory, client, strlen(client)))
 	  || !(working=prepend_s(basedir, "working", strlen("working")))
@@ -938,7 +942,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 	  || !(phase1data=prepend_s(working, "phase1.gz", strlen("phase1.gz")))
 	  || !(phase2data=prepend_s(working, "phase2", strlen("phase2")))
 	  || !(unchangeddata=prepend_s(working, "unchanged", strlen("unchanged")))
-	  || !(lockbasedir=prepend_s(conf->client_lockdir, client, strlen(client)))
+	  || !(lockbasedir=prepend_s(client_lockdir, client, strlen(client)))
 	  || !(lockfile=prepend_s(lockbasedir, "lockfile", strlen("lockfile"))))
 	{
 		log_and_send_oom(__FUNCTION__);

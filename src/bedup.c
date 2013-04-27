@@ -663,6 +663,8 @@ static int iterate_over_clients(struct config *conf, strlist_t **grouplist, int 
 	{
 		char *lockfile=NULL;
 		char *lockfilebase=NULL;
+		char *client_lockdir=NULL;
+
 		if(dirinfo->d_ino==0
 		// looks_like...() also avoids '.' and '..'.
 		  || looks_like_tmp_or_hidden_file(dirinfo->d_name)
@@ -681,7 +683,10 @@ static int iterate_over_clients(struct config *conf, strlist_t **grouplist, int 
 			if(!ig) continue;
 		}
 
-		if(!(lockfilebase=prepend(conf->client_lockdir,
+		if(!(client_lockdir=conf->client_lockdir))
+			client_lockdir=conf->directory;
+
+		if(!(lockfilebase=prepend(client_lockdir,
 			dirinfo->d_name, "/"))
 		 || !(lockfile=prepend(lockfilebase,
 			BEDUP_LOCKFILE_NAME, "/")))

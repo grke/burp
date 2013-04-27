@@ -130,6 +130,11 @@ static void cstat_blank(struct cstat *c)
 static int set_cstat_from_conf(struct cstat *c, struct config *conf, struct config *cconf)
 {
 	char *lockbasedir=NULL;
+	char *client_lockdir=NULL;
+
+	if(!(client_lockdir=conf->client_lockdir))
+		client_lockdir=cconf->directory;
+
 	if(c->basedir) { free(c->basedir); c->basedir=NULL; }
 	if(c->working) { free(c->working); c->working=NULL; }
 	if(c->current) { free(c->current); c->current=NULL; }
@@ -139,7 +144,7 @@ static int set_cstat_from_conf(struct cstat *c, struct config *conf, struct conf
 	  || !(c->working=prepend_s(c->basedir, "working", strlen("working")))
 	  || !(c->current=prepend_s(c->basedir, "current", strlen("current")))
 	  || !(c->timestamp=prepend_s(c->current, "timestamp", strlen("timestamp")))
-	  || !(lockbasedir=prepend_s(conf->client_lockdir, c->name, strlen(c->name)))
+	  || !(lockbasedir=prepend_s(client_lockdir, c->name, strlen(c->name)))
 	  || !(c->lockfile=prepend_s(lockbasedir, "lockfile", strlen("lockfile"))))
 	{
 		if(lockbasedir) free(lockbasedir);

@@ -175,6 +175,7 @@ void init_config(struct config *conf)
 	conf->browsefile=NULL;
 	conf->browsedir=NULL;
 
+	conf->client_can_delete=1;
 	conf->client_can_force_backup=1;
 	conf->client_can_list=1;
 	conf->client_can_restore=1;
@@ -688,6 +689,8 @@ static int load_config_ints(struct config *conf, const char *field, const char *
 		&(conf->daemon));
 	get_conf_val_int(field, value, "directory_tree",
 		&(conf->directory_tree));
+	get_conf_val_int(field, value, "client_can_delete",
+		&(conf->client_can_delete));
 	get_conf_val_int(field, value, "client_can_force_backup",
 		&(conf->client_can_force_backup));
 	get_conf_val_int(field, value, "client_can_list",
@@ -1537,6 +1540,7 @@ int set_client_global_config(struct config *conf, struct config *cconf, const ch
 	cconf->log_to_stdout=conf->log_to_stdout;
 	cconf->progress_counter=conf->progress_counter;
 	cconf->password_check=conf->password_check;
+	cconf->client_can_delete=conf->client_can_delete;
 	cconf->client_can_force_backup=conf->client_can_force_backup;
 	cconf->client_can_list=conf->client_can_list;
 	cconf->client_can_restore=conf->client_can_restore;

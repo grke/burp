@@ -240,6 +240,8 @@ void free_current_backups(struct bu **arr, int a)
 	{
 		if((*arr)[b].path)
 			{ free((*arr)[b].path); (*arr)[b].path=NULL; }
+		if((*arr)[b].basename)
+			{ free((*arr)[b].basename); (*arr)[b].basename=NULL; }
 		if((*arr)[b].data)
 			{ free((*arr)[b].data); (*arr)[b].data=NULL; }
 		if((*arr)[b].delta)
@@ -296,6 +298,7 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 		char *timestamp=NULL;
 		char *timestampstr=NULL;
 		char *hlinkedpath=NULL;
+		char *basename=NULL;
 
 		if(dp->d_ino==0
 		  || !strcmp(dp->d_name, ".")
@@ -303,16 +306,19 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 		  || !strcmp(dp->d_name, realwork)
 		  || !strcmp(dp->d_name, realfinishing))
 			continue;
-		if(!(fullpath=prepend_s(basedir,
-			dp->d_name, strlen(dp->d_name)))
+		if(!(basename=prepend("",
+			dp->d_name, strlen(dp->d_name), ""))
+		 || !(fullpath=prepend_s(basedir,
+			basename, strlen(basename)))
 		 || !(timestamp=prepend_s(fullpath,
 			"timestamp", strlen("timestamp")))
 		 || !(hlinkedpath=prepend_s(fullpath,
 			"hardlinked", strlen("hardlinked"))))
 		{
 			ret=-1;
-			if(timestamp) free(timestamp);
+			if(basename) free(basename);
 			if(fullpath) free(fullpath);
+			if(timestamp) free(timestamp);
 			break;
 		}
 		if((!lstat(fullpath, &statp) && !S_ISDIR(statp.st_mode))
@@ -320,6 +326,7 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 		  || read_timestamp(timestamp, buf, sizeof(buf))
 		  || !(timestampstr=strdup(buf)))
 		{
+			free(basename);
 			free(fullpath);
 			free(timestamp);
 			free(hlinkedpath);
@@ -334,12 +341,14 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 		  || !((*arr)[i].delta=prepend_s(fullpath, "deltas.reverse", strlen("deltas.reverse"))))
 		{
 			if(log) log_and_send_oom(__FUNCTION__);
+			free(basename);
 			free(timestampstr);
 			free(fullpath);
 			free(hlinkedpath);
 			break;
 		}
 		(*arr)[i].path=fullpath;
+		(*arr)[i].basename=basename;
 		(*arr)[i].timestamp=timestampstr;
 		(*arr)[i].hardlinked=hardlinked;
 		(*arr)[i].deletable=0;
@@ -351,7 +360,7 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 
 	if(*arr) qsort(*arr, i, sizeof(struct bu), bu_cmp);
 
-	if(i>1)
+	if(i>=1)
 	{
 		tr=(*arr)[i-1].index;
 		// The oldest backup is deletable.
@@ -490,11 +499,63 @@ int compress_filename(const char *d, const char *file, const char *zfile, struct
 	return 0;
 }
 
-static int delete_backup(const char *basedir, struct bu *arr, int a, int b, const char *client)
+int delete_backup(const char *basedir, struct bu *arr, int a, int b, const char *client)
 {
 	char *deleteme=NULL;
 
 	logp("deleting %s backup %lu\n", client, arr[b].index);
+
+	if(b==a-1)
+	{
+		char *current=NULL;
+		// This is the current backup. Special measures are needed.
+		if(!(current=prepend_s(basedir, "current", strlen("current"))))
+			return -1;
+		if(!b)
+		{
+			// After the deletion, there will be no backups left.
+			// Just remove the symlink.
+			if(unlink(current))
+			{
+				logp("unlink %s: %s\n",
+					current, strerror(errno));
+				free(current);
+				return -1;
+			}
+		}
+		else
+		{
+			// Need to point the symlink at the previous backup.
+			char *tmp=NULL;
+			const char *target=NULL;
+			
+			if(!(tmp=prepend(current, ".tmp", strlen(".tmp"), "")))
+			{
+				free(current);
+				return -1;
+			}
+			target=arr[b-1].basename;
+			unlink(tmp);
+			if(symlink(target, tmp))
+			{
+				logp("could not symlink '%s' to '%s': %s\n",
+					tmp, target, strerror(errno));
+				logp("delete failed\n");
+				free(tmp);
+				free(current);
+				return -1;
+			}
+			if(do_rename(tmp, current))
+			{
+				logp("delete failed\n");
+				free(tmp);
+				free(current);
+				return -1;
+			}
+			free(tmp);
+		}
+		free(current);
+	}
 
 	if(!(deleteme=prepend_s(basedir, "deleteme", strlen("deleteme")))
 	  || do_rename(arr[b].path, deleteme)

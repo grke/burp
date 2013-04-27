@@ -54,8 +54,8 @@ Show a particular path in a backup (requires \-C and \-b).
 
 .SH CLIENT OPTIONS
 .TP
-\fB\-a\fR \fB[b|t|r|l|L|v|e]\fR
-Short for 'action'. The arguments mean backup, timed backup, restore, list, long list, verify, or estimate, respectively.
+\fB\-a\fR \fB[b|t|r|l|L|v|D|e]\fR
+Short for 'action'. The arguments mean backup, timed backup, restore, list, long list, verify, delete, or estimate, respectively.
 .TP
 \fB\-b\fR \fB[number|a]\fR
 Short for 'backup number'. The argument is a number, or 'a' to select all
@@ -131,6 +131,9 @@ Verifies the most recent backup.
 .TP
 \fBburp \-a v \-b 1 \-r myregex\fR
 Verifies everything in backup number 1 that matches the regular expression 'myregex'.
+.TP
+\fBburp \-a D \-b 1\fR
+Deletes backup number 1. Note that burp will not delete backup directories that other backup directories depend upon.
 .TP
 \fBburp \-a t\fR
 Timed backup. The same as 'burp \-a b', except that a script is run on the server before deciding to go ahead. The intention is that this command will be run on a repeating cron job with a short interval, and that the server will decide when it is time for a new backup.
@@ -243,6 +246,9 @@ on the server. Options are...
 .TP
 \fBresume:\fR Simply continue the previous backup from the point at which it left off. NOTE: If the client has changed its include/exclude configuration since the backup was interrupted, the recovery method will automatically switch to 'use'.
 .TP
+\fBclient_can_delete=[0|1]\fR
+Turn this off to prevent clients from deleting backups with the '\-a D' option. The default is that clients can delete backups.
+.TP
 \fBclient_can_force_backup=[0|1]\fR
 Turn this off to prevent clients from forcing backups with the '\-a b' option. Timed backups will still work. The default is that clients can force backups.
 .TP
@@ -322,7 +328,7 @@ Path to a script to run on the server after each successfully authenticated conn
 A user-definable argument to the server pre script. You can have many of these.
 .TP
 \fBserver_script_pre_notify=[0|1]\fR
-Turn on to send a notification email when the server pre script returns non-zero. The default is off. Most people will not want this turned on because clients usually contact the server at 20 minute intervals and this could cause a lot of emails to be generated. Requires the notify_failure options to be set.
+Turn on to send a notification email when the server pre script returns non-zero. The output of the script will be included in the email. The default is off. Most people will not want this turned on because clients usually contact the server at 20 minute intervals and this could cause a lot of emails to be generated. Requires the notify_failure options to be set.
 .TP
 \fBserver_script_post=[path]\fR
 Path to a script to run on the server before the client disconnects. The arguments to it are 'post', '(client command)', 'reserved3' to 'reserved5', and then arguments defined by server_script_post_arg. This command and related options can be overriddden by the client configuration files in clientconfdir on the server.
@@ -331,7 +337,7 @@ Path to a script to run on the server before the client disconnects. The argumen
 A user-definable argument to the server post script. You can have many of these.
 .TP
 \fBserver_script_post_notify=[0|1]\fR
-Turn on to send a notification email when the server post script returns non-zero. The default is off. Requires the notify_failure options to be set.
+Turn on to send a notification email when the server post script returns non-zero. The output of the script will be included in the email. The default is off. Requires the notify_failure options to be set.
 .TP
 \fBserver_script=[path]\fR
 You can use this to save space in your config file when you want to run the same server script twice. It overrides server_script_pre and server_script_post. This command and related options can be overriddden by the client configuration files in clientconfdir on the server.
@@ -340,7 +346,7 @@ You can use this to save space in your config file when you want to run the same
 Goes with server_script and overrides server_script_pre_arg and server_script_post_arg.
 .TP
 \fBserver_script_notify=[0|1]\fR
-Turn on to send a notification emails when the server pre and post scripts return non-zero. The default is off. Requires the notify_failure options to be set.
+Turn on to send a notification emails when the server pre and post scripts return non-zero. The output of the script will be included it the email. The default is off. Requires the notify_failure options to be set.
 .TP
 \fBserver_script_post_run_on_fail=[0|1]\fR
 If this is set to 1, server_script_post will always be run. The default is 0, which means that if the task asked for by the client fails, server_script_post will not be run.
@@ -572,6 +578,7 @@ Additionally, the following options can be overridden here for each client:
 \fBlibrsync\fR
 \fBversion_warn\fR
 \fBsyslog\fR
+\fBclient_can_delete\fR
 \fBclient_can_force_backup\fR
 \fBclient_can_list\fR
 \fBclient_can_restore\fR

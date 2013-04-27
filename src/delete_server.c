@@ -43,9 +43,15 @@ int do_delete_server(const char *basedir, const char *backup, const char *client
 			{
 				if(arr[i].deletable)
 				{
-					found=TRUE;
+					found=1;
 					async_write_str(CMD_GEN, "ok");
-					logp("Deleting backup now");
+					if(delete_backup(basedir,
+						arr, a, i, client))
+					{
+						free_current_backups(&arr, a);
+						ret=-1;
+						goto end;
+					}
 					break;
 				}
 				else

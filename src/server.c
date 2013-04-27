@@ -1130,17 +1130,14 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 		else
 		{
 			char *backupno=NULL;
-/*
-			if(!cconf->client_can_list)
+			if(!cconf->client_can_delete)
 			{
-				logp("Not allowing list of %s\n", client);
+				logp("Not allowing delete of %s\n", client);
 				async_write_str(CMD_GEN,
-					"Client list is not allowed");
+					"Client delete is not allowed");
 				goto end;
 			}
-*/
-			backupno=buf+strlen("list ");
-
+			backupno=buf+strlen("delete ");
 			ret=do_delete_server(basedir, backupno, client, p1cntr, cntr);
 		}
 	}

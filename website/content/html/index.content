@@ -65,6 +65,38 @@ src="http://pagead2.googlesyndication.com/pagead/show_ads.js">
 <TD ALIGN="LEFT">
 
 <P>
+<FONT COLOR="#99CCFF">2013-05-02
+<BR>
+Many thanks to the following donors for financially supporting burp during
+April:
+<pre>
+  *  &pound;25.00 Eduardo R.
+</pre>
+Donations by bitcoin are now being accepted at: 1PFtePS2YE5i5dTX17ozJPHrjKu2UqBLmi
+</FONT>
+</p>
+
+<P>
+<FONT COLOR="#99CCFF">2013-03-30: burp-1.3.30 is released.
+<pre>
+Changes in burp-1.3.30:
+  * Add a warning when run on Windows without admin privileges.
+  * Perform fewer lstat()s on systems that support d_type (ie most Linux
+    systems), in order to speed up certain operations.
+  * Allow _FORTIFY_SOURCE to work.
+  * Fix problem with burp_ca.bat and repeated field names in burp.conf.
+  * Put registry keys back in the Windows installer.
+  * Fix for SIGHUP reload causing the server to go into non-forking mode.
+  * Indicate the backups that are deletable.
+  * Add a client option for deleting deletable backups.
+  * Add a 'client_can_delete' option on the server.
+  * Fix for using the wrong lock directory when 'directory' is overridden for
+    a client.
+</pre>
+</FONT>
+</P>
+
+<P>
 <FONT COLOR="#99CCFF">2013-03-30
 <BR>
 Many thanks to the following donors for financially supporting burp during
@@ -390,228 +422,6 @@ Changes in burp-1.3.10:
   * Add a gentle shutdown server option - send signal 12 to the main process.
   * Make librsync errors in phase4 non-fatal.
   * Check for errors on gzclose() and fclose().
-</pre>
-</FONT>
-</P>
-
-
-<P>
-<FONT COLOR="#99CCFF">2012-06-08: burp-1.3.8 is released. If you have been
-using 1.3.6 on the server side, it is advised that you upgrade the server side
-straight away.
-<pre>
-Changes in burp-1.3.8:
-  * Fix bug introduced in the new storage directory structure stuff that had
-    the potential to corrupt backups.
-  * Force directory_tree = 0 for clients on less than version 1.3.6.
-  * Escape '-' symbols in man pages.
-  * Save received certs as temporary files and then rename them, to avoid
-    accidently truncating the current ones.
-  * If Windows VSS snapshot fails, do not continue.
-  * 32bit mingw64 has difficulty printf-ing multiple %llu items and sometimes
-    even segfaults, so split the counters into individual printfs.
-</pre>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2012-05-28:
-<BR>
-Many thanks to the following donors for financially supporting burp during
-May:
-<pre>
-  * &pound;100.00 Tomppa
-  *  &pound;64.00 Baker J.
-</pre>
-</FONT>
-</p>
-
-<P>
-<FONT COLOR="#99CCFF">2012-05-28: burp-1.3.6 is released.
-<pre>
-Changes in burp-1.3.6:
-  * Store files in a directory structure like that of the original client.
-  * Fix 'ERROR: Please use absolute include/exclude paths' when setting paths
-    on the server side.
-  * Add configure test for uthash.h. If it doesn't exist, use the uthash.h
-    included with the burp source.
-  * Make top level excludes not be a fatal error.
-  * Make syslogging begin sooner.
-  * Unhide warning messages originally hidden by bacula when having errors
-    when setting things like file times.
-  * Fix bug where file times were not getting set on Windows directories.
-  * Remove openssl "can't open config file" warning when generating
-    certificates on Windows.
-  * Set IPTOS_THROUGHPUT bulk packet flag for linux backups. Windows/mingw64
-    appears not to be able to do this.
-</pre>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2012-04-27:
-<BR>
-Many thanks to the following donors for financially supporting burp during
-April:
-<pre>
-  * &pound;10.00 Calogero L.
-  * Server hosting from 6sync.com
-</pre>
-</FONT>
-</p>
-
-<P>
-<FONT COLOR="#99CCFF">2012-04-27: burp-1.3.4 is released.
-<pre>
-Changes in burp-1.3.4:
-  * Bug fix for Windows backups where it had stopped using the Windows backup
-    API in 1.3.2.
-  * Automatically convert backslashes to forward slashes for includes/excludes
-    on Windows clients.
-  * Bug fix: pass the path to the CA conf file whenever running burp_ca (fixes
-    problems with the test scripts).
-  * Remove whitespace that was causing the burp_ca '--crl' option not to work.
-  * Have separate CA directories for the client and server. Make 'make install'
-    create the directory /etc/burp/CA-client.
-  * Make compile succeed when there is no libncurses library.
-  * Add 'client_can_force_backup' option, defaulted to on. Turning it off means
-    that only timed backups are allowed. Also add similar 'client_can_list',
-    'client_can_restore' and 'client_can_verify' options.
-  * Remove getopt from burp_ca, allowing it to work on Macs.
-  * Make an unknown exclude_fs a non-fatal error.
-  * Add ability to trigger a backup on the server side by placing a file called
-    'backup' in the client's storage directory.
-  * Fix bug where block device nodes were not backed up. Add 'read_blockdev'
-    and 'read_all_blockdevs' options that work the same as the equivalent
-    fifo options.
-  * Add 'notify_success_changes_only' option, which means that success
-    notifications only get sent if there were new or changed files.
-  * Added Ruben Kerkhof's fixes to make run_script() work on OSX.
-  * For each file, store the compression setting in the manifest.
-  * Stop clients connecting twice when a timed backup is rejected.
-</pre>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2012-03-31:
-<BR>
-Many thanks to the following donors for financially supporting burp during
-March:
-<pre>
-  * &pound;5.00 Łukasz P.
-</pre>
-</FONT>
-</p>
-
-<P>
-<FONT COLOR="#99CCFF">2012-03-31: burp-1.3.2 is released.
-<pre>
-Changes in burp-1.3.2:
-  * Add options for the client to automatically generate a certificate signing
-    request, have the server sign and return it, and have the client use the
-    new certificate. Remove old default SSL certificates because they should
-    no longer be needed.
-    See docs/burp_ca.txt for more information.
-  * Add ability for conf files to point to more conf files to read.
-  * Fix status server segfault when deleting files from clientconfdir.
-  * Allow directories in clientconfdir.
-  * Add the ability for the server to set the client include/excludes.
-  * Simulate browsing backups with the use of "-a l/L -d path".
-  * Add ability to set up a restore on the server side.
-  * Add ability to specify child processes separately to status child process
-    with new max_status_children option.
-  * Status monitor - make keypresses more responsive.
-  * Fix bug where old clients that didn't leave an incexc file on the server
-    meant that resume would not start.
-  * Add 'include_ext' option, which excludes all files unless their names end
-    in the given extension.
-  * Fall back to using the client or server name if ssl_peer_cn is unset on the
-    server or client.
-  * Don't try to chuser/chgrp in the child if the user/group settings are the
-    same as the parent (fixes bug where setting user/group in the server
-    wouldn't work, because it would try to chuser/chgrp twice).
-  * Windows installer: add comment about poll interval '0' means that the
-    scheduled job isn't installed.
-  * Windows installer: don't install the scheduled task when doing an upgrade.
-  * Unlock the client directory after server_script_post has run instead of
-    before.
-  * Fix bug where the wrong arg count was being given to the server post
-    script.
-  * Make sure status snapshot exits when there are no backup clients.
-  * Ability to dump logs and paths in backups using '-a S' (useful for making
-    a gui that browses backup contents).
-  * Bug fixes to ssl_extra_checks_script.
-  * Bug fix: initialise network_timeout properly.
-  * Fix typos in docs/burp_ca.txt.
-  * Add 'export LANG=C' to the timer script, so that timer_arg days are always
-    expected in English.
-  * Add config file option to turn syslog logging on/off.
-  * Bug fix for 'compression = gzip[0-9]'.
-  * Pass the server version to the client.
-</pre>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2012-01-27: This month marks one year of burp!
-<BR>
-Many thanks to the following donors for financially supporting burp during
-the last year:
-<pre>
-  * &pound;250.00 Robert L.
-  *  &pound;50.00 Sebastiano P.
-  *  &pound;10.00 Tim R.
-  *  &pound;10.00 Patryk D.
-</pre>
-</FONT>
-</p>
-
-<P>
-<FONT COLOR="#99CCFF">2012-01-27: burp-1.3.1 is released.
-<pre>
-Changes in burp-1.3.1:
-  * EFS support on Windows.
-  * Move to using mingw-w64 for both 32bit and 64bit Windows builds.
-  * Add 'exclude_fs =' option for Linux so that you can skip partitions
-    types (for example, tmpfs) without generating warnings.
-  * If recovery method 'resume' is set, but the includes/excludes change,
-    switch to 'use', then start a new backup.
-  * In the tests, check to see whether it looks like the server has finished
-    the backup before moving on, rather than just waiting a set amount of time.
-  * Add man pages for bedup and burp_ca.
-  * Remove embedded uthash code. It will need to be installed as a dependency.
-    For example, in Debian, you might run 'apt-get install uthash-dev'.
-  * Add Bas van den Dikkenberg's tweaks for getting burp into official Debian
-    and Ubuntu repositories. Burp is now in debian sid and ubuntu precise.
-  * Make the server tell the client what extra_comms features it supports, so
-    that, in future, old servers are more likely to work with new clients.
-  * Improve 'make clean'.
-  * Add option to strip off leading path components on restore.
-  * Fix segfault that was happening on the server when SSL_accept() failed.
-  * Move burp and bedup to /usr/sbin (you need to check that any cron jobs
-    are pointing there too).
-  * Moved list of things to do to https://github.com/grke/burp/issues
-</pre>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2012-01-27: burp-1.3.0 is released.
-<pre>
-Changes in burp-1.3.0:
-  * Add a mechanism for automatically upgrading clients.
-  * Fix bug where attributes on Windows directories were not getting read
-    properly.
-  * Fix rounding problem in remaining time estimation in the status monitor.
-  * Don't backup the whole file if only ctime changed.
-  * Include the client name in arguments to server scripts.
-  * Do not log a message in the server SIGCHLD handler, as this appeared to
-    be causing an occasional lock up on a Ubuntu server.
-  * Upgrade Windows depkgs to latest versions of openssl.
-  * Make Windows uninstall work.
-  * Add 'allow autoupgrade' option to a second screen on the Windows installer.
-  * Add 'max_storage_subdirs' option, and default it to 30000.
 </pre>
 </FONT>
 </P>

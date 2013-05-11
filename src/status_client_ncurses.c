@@ -472,7 +472,6 @@ static void blank_screen(int row, int col)
 
 static int parse_rbuf(const char *rbuf, struct config *conf, int row, int col, int sel, char **client, int *count, int details, const char *sclient, struct cntr *p1cntr, struct cntr *cntr)
 {
-	int bcount=0;
 	char *cp=NULL;
 	char *dp=NULL;
 	char *copy=NULL;
@@ -490,6 +489,7 @@ static int parse_rbuf(const char *rbuf, struct config *conf, int row, int col, i
 	blank_screen(row, col);
 	while((cp=strchr(dp, '\n')))
 	{
+		int bcount=0;
 		char status='\0';
 		char phase='\0';
 		char *path=NULL;

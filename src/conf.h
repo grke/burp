@@ -83,6 +83,7 @@ struct config
 	unsigned long max_file_size;
 	int split_vss;
 	int strip_vss;
+	char *vss_drives;
   // These are to do with restore.
 	int overwrite;
 	int strip;

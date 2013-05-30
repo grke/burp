@@ -31,7 +31,6 @@ BOOL CtrlHandler(DWORD fdwCtrlType)
 int win32_start_vss(struct config *conf)
 {
 	int errors=0;
-	//char buf[256]="";
 
 	if(SetConsoleCtrlHandler((PHANDLER_ROUTINE) CtrlHandler, TRUE))
 		logp("Control handler registered.\n");
@@ -40,27 +39,39 @@ int win32_start_vss(struct config *conf)
 
 	if(g_pVSSClient->InitializeForBackup())
 	{
-		int i=0;
-		int j=0;
-		/* tell vss which drives to snapshot */
 		char szWinDriveLetters[27];
-		for(i=0, j=0; i < conf->sdcount && j<26; i++)
+		// Tell vss which drives to snapshot.
+		if(conf->vss_drives)
 		{
-			const char *path=NULL;
-			if(!conf->startdir[i]->flag) continue;
-			path=conf->startdir[i]->path;
-			if(strlen(path)>2 && isalpha(path[0]) && path[1]==':')
-			{
-				int x=0;
-				// Try not to add the same letter twice.
-				for(x=0; x<j; x++)
-				  if(toupper(path[0])==szWinDriveLetters[x])
-					break;
-				if(x<j) continue;
-				szWinDriveLetters[j++]=toupper(path[0]);
-			}
+			int i=0;
+			for(i=0; i<strlen(conf->vss_drives) && i<26; i++)
+			  szWinDriveLetters[i]=toupper(conf->vss_drives[i]);
+			szWinDriveLetters[i]='\0';
 		}
-		szWinDriveLetters[j]='\0';
+		else
+		{
+			// Not given anything specific. Figure out what to do
+			// from the given starting directories.
+			int i=0;
+			int j=0;
+			for(i=0, j=0; i<conf->sdcount && j<26; i++)
+			{
+				const char *path=NULL;
+				if(!conf->startdir[i]->flag) continue;
+				path=conf->startdir[i]->path;
+				if(strlen(path)>2 && isalpha(path[0]) && path[1]==':')
+				{
+					int x=0;
+					// Try not to add the same letter twice.
+					for(x=0; x<j; x++)
+					  if(toupper(path[0])==szWinDriveLetters[x])
+						break;
+					if(x<j) continue;
+					szWinDriveLetters[j++]=toupper(path[0]);
+				}
+			}
+			szWinDriveLetters[j]='\0';
+		}
 		printf("Generate VSS snapshots.\n");
 		printf("Driver=\"%s\", Drive(s)=\"%s\"\n",
 			g_pVSSClient->GetDriverName(),
@@ -78,7 +89,7 @@ int win32_start_vss(struct config *conf)
 			  logp("VSS drive letters: %d\n", i);
 			  if(islower(szWinDriveLetters[i]))
 			  {
-				logp(_("Generate VSS snapshot of drive \"%c:\\\" failed. VSS support is disabled on this drive.\n"), szWinDriveLetters[i]);
+				logp(_("Generate VSS snapshot of drive \"%c:\\\" failed.\n"), szWinDriveLetters[i]);
 				errors++;
 			  }
 			}

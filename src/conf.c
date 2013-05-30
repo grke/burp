@@ -26,6 +26,7 @@ static void init_incexcs(struct config *conf)
 	conf->blockdevs=NULL; conf->bdcount=0;
 	conf->split_vss=0;
 	conf->strip_vss=0;
+	conf->vss_drives=NULL;
 	/* stuff to do with restore */
 	conf->overwrite=0;
 	conf->strip=0;
@@ -53,6 +54,7 @@ static void free_incexcs(struct config *conf)
 	if(conf->backup) free(conf->backup);
 	if(conf->restoreprefix) free(conf->restoreprefix);
 	if(conf->regex) free(conf->regex);
+	if(conf->vss_drives) free(conf->vss_drives);
 	init_incexcs(conf);
 }
 
@@ -753,6 +755,8 @@ static int load_config_strings(struct config *conf, const char *field, const cha
 	if(get_conf_val(field, value, "restoreprefix", &(conf->restoreprefix)))
 		return -1;
 	if(get_conf_val(field, value, "regex", &(conf->regex)))
+		return -1;
+	if(get_conf_val(field, value, "vss_drives", &(conf->vss_drives)))
 		return -1;
 	if(get_conf_val(field, value, "browsedir", &(conf->browsedir)))
 		return -1;

@@ -928,6 +928,13 @@ INCLUDES / EXCLUDES
 	      To  restore a backup that has no VSS information on Windows, you
 	      need to give the client the '-x' command line option.
 
+       vss_drives=[list of drive letters]
+	      When backing up Windows computers, this  option  allows  you  to
+	      specify  which  drives  have VSS snapshots taken of them. If you
+	      omit this option, burp will automatically decide	based  on  the
+	      'include' options. If you want no drives to have snapshots taken
+	      of them, you can specify '0'.
+
 
 SERVER CLIENTCONFDIR FILE
        For the server to know about clients that can contact it, you  need  to

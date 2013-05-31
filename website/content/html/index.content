@@ -65,6 +65,29 @@ src="http://pagead2.googlesyndication.com/pagead/show_ads.js">
 <TD ALIGN="LEFT">
 
 <P>
+<FONT COLOR="#99CCFF">2013-05-31
+<BR>
+Many thanks to the following donors for financially supporting burp during
+April:
+<pre>
+  *  &pound;30.00 Sebastian A.
+</pre>
+</FONT>
+</p>
+
+<P>
+<FONT COLOR="#99CCFF">2013-05-31: burp-1.3.32 is released.
+<pre>
+Changes in burp-1.3.32:
+  * Fix status monitor segfault.
+  * Run timed backups with lower thread priority on Windows.
+  * Add 'vss_drives' option, which gives the ability to specify which Windows
+    drives get a VSS snapshot.
+</pre>
+</FONT>
+</P>
+
+<P>
 <FONT COLOR="#99CCFF">2013-05-02
 <BR>
 Many thanks to the following donors for financially supporting burp during

@@ -107,6 +107,23 @@ static char *bstrncat(char *dest, const char *src, int maxlen)
    return dest;
 }
 
+BOOL VSSClient::GetShadowBasePath(char drive, char *szShadowPath, int nBuflen)
+{
+	if(m_bBackupIsInitialized && isalpha(drive))
+	{
+		int nDriveIndex = toupper(drive)-'A';
+		if(m_szShadowCopyName[nDriveIndex][0]
+		  && WideCharToMultiByte(CP_UTF8, 0,
+			m_szShadowCopyName[nDriveIndex],
+			-1, szShadowPath, nBuflen-1, NULL, NULL))
+				return TRUE;
+	}
+
+	*szShadowPath=0;
+	errno = EINVAL;
+	return FALSE;   
+}
+
 BOOL VSSClient::GetShadowPath(const char *szFilePath, char *szShadowPath, int nBuflen)
 {
    if (!m_bBackupIsInitialized)

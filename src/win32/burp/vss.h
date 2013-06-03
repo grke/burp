@@ -23,6 +23,7 @@ public:
     virtual const char* GetDriverName() = 0;
     BOOL GetShadowPath  (const char* szFilePath, char* szShadowPath, int nBuflen);
     BOOL GetShadowPathW (const wchar_t* szFilePath, wchar_t* szShadowPath, int nBuflen); /* nBuflen in characters */
+    BOOL GetShadowBasePath(char drive, char *szShadowPath, int nBuflen);
 
     const size_t GetWriterCount();
     const char* GetWriterInfo(int nIndex);
@@ -37,24 +38,24 @@ private:
     virtual void QuerySnapshotSet(GUID snapshotSetID) = 0;
 
 protected:
-    HMODULE                         m_hLib;
+    HMODULE   m_hLib;
 
-    BOOL                            m_bCoInitializeCalled;
-    BOOL                            m_bCoInitializeSecurityCalled;
-    DWORD                           m_dwContext;
+    BOOL      m_bCoInitializeCalled;
+    BOOL      m_bCoInitializeSecurityCalled;
+    DWORD     m_dwContext;
 
-    IUnknown*                       m_pVssObject;
-    GUID                            m_uidCurrentSnapshotSet;
+    IUnknown* m_pVssObject;
+    GUID      m_uidCurrentSnapshotSet;
     // TRUE if we are during restore
-    BOOL                            m_bDuringRestore;
-    BOOL                            m_bBackupIsInitialized;
+    BOOL      m_bDuringRestore;
+    BOOL      m_bBackupIsInitialized;
 
     // drive A will be stored on position 0,Z on pos. 25
-    wchar_t                           m_wszUniqueVolumeName[26][MAX_PATH]; // approx. 7 KB
-    wchar_t                           m_szShadowCopyName[26][MAX_PATH]; // approx. 7 KB
+    wchar_t   m_wszUniqueVolumeName[26][MAX_PATH]; // approx. 7 KB
+    wchar_t   m_szShadowCopyName[26][MAX_PATH]; // approx. 7 KB
     
-    void*                           m_pAlistWriterState;
-    void*                           m_pAlistWriterInfoText;
+    void*     m_pAlistWriterState;
+    void*     m_pAlistWriterInfoText;
 };
 
 class VSSClientXP:public VSSClient

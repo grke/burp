@@ -381,7 +381,9 @@ static int path_checks(const char *path)
 	}
 // This is being run on the server too, where you can enter paths for the
 // clients, so need to allow windows style paths for windows and unix.
-	if((!isalpha(*path) || *(path+1)!=':')
+// Also allow just single letters, to indicate that it is to be a Windows
+// image backup.
+	if((!isalpha(*path) || (*(path+1)!=':' && *(path+1)))
 #ifndef HAVE_WIN32
 	  // Windows does not need to check for unix style paths.
 	  && *path!='/'

@@ -28,6 +28,38 @@ BOOL CtrlHandler(DWORD fdwCtrlType)
 	} 
 }
 
+// Substitute a starting directory that is something like 'C' for the
+// VSS volume path, which is something like
+// '\\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy16'
+static int subs_img_path(char letter, struct config *conf, const char *path)
+{
+	int i;
+	strlist_t *s=NULL;
+	for(i=0; i<conf->sdcount; i++)
+	{
+		s=conf->startdir[i];
+		if(!s->flag
+		  || strlen(s->path)!=1
+		  || toupper(s->path[0])!=toupper(letter))
+			continue;
+		free(s->path);
+		if(!(s->path=strdup(path)))
+		{
+			log_out_of_memory(__FUNCTION__);
+			return -1;
+		}
+		logp("subs: %s\n", s->path);
+		FILE *fp=NULL;
+		if((fp=fopen(s->path, "r")))
+		{
+			logp("Open of %s worked\n", s->path);
+			fclose(fp);
+		}
+		break;
+	}
+	return 0;
+}
+
 int win32_start_vss(struct config *conf)
 {
 	int errors=0;
@@ -59,7 +91,8 @@ int win32_start_vss(struct config *conf)
 				const char *path=NULL;
 				if(!conf->startdir[i]->flag) continue;
 				path=conf->startdir[i]->path;
-				if(strlen(path)>2 && isalpha(path[0]) && path[1]==':')
+				if(isalpha(path[0])
+				  && (path[1]==':' || !path[1]))
 				{
 					int x=0;
 					// Try not to add the same letter twice.
@@ -86,11 +119,18 @@ int win32_start_vss(struct config *conf)
 			int i;
 			for(i=0; i<(int)strlen(szWinDriveLetters); i++)
 			{
-			  logp("VSS drive letters: %d\n", i);
-			  if(islower(szWinDriveLetters[i]))
+			  char letter=szWinDriveLetters[i];
+			  if(islower(letter))
 			  {
-				logp(_("Generate VSS snapshot of drive \"%c:\\\" failed.\n"), szWinDriveLetters[i]);
+				logp(_("Generate VSS snapshot of drive \"%c:\\\" failed.\n"), letter);
 				errors++;
+			  }
+			  else
+			  {
+				char buf[256]="";
+			  	if(g_pVSSClient->GetShadowBasePath(
+				  letter, buf, 256))
+					subs_img_path(letter, conf, buf);
 			  }
 			}
 

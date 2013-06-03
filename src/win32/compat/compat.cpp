@@ -150,6 +150,7 @@ unix_name_to_win32(char *name)
    conv_unix_to_win32_path(name, tmp, dwSize);
    if(tmp) ret=strdup(tmp);
    sm_free_pool_memory(tmp);
+	if(ret) printf("%s\n", ret);
    return ret;
 }
 

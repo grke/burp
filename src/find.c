@@ -862,6 +862,12 @@ find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
 	ff_pkt->fname=ff_pkt->link=fname;
 
 #ifdef HAVE_WIN32
+	if(top_level && *fname=='\\')
+	{
+logp("HERE: %s\n", fname);
+		ff_pkt->type=FT_RAW;
+		return send_file(ff_pkt, top_level, conf, cntr);
+	}
 	if(win32_lstat(fname, &ff_pkt->statp, &ff_pkt->winattr))
 #else
 	if(lstat(fname, &ff_pkt->statp))

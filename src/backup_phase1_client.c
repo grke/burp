@@ -33,13 +33,14 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *p1cn
 {
    char msg[128]="";
    char attribs[MAXSTRING];
-
+/*
    if(!file_is_included(conf->incexcdir, conf->iecount,
 	conf->incext, conf->incount,
 	conf->excext, conf->excount,
 	conf->increg, conf->ircount,
 	conf->excreg, conf->ercount,
 	ff->fname, top_level)) return 0;
+*/
 #ifdef HAVE_WIN32
 // Useful Windows attributes debug
 /*
@@ -95,7 +96,7 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 	}
 #endif
 
-   //logp("%d: %s\n", ff->type, ff->fname);
+   logp("%d: %s\n", ff->type, ff->fname);
 
    switch (ff->type) {
 #ifndef HAVE_WIN32

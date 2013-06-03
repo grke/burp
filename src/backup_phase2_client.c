@@ -175,6 +175,7 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 	size_t datalen=0;
 #ifdef HAVE_WIN32
 	binit(&bfd, 0);
+	//bfd.use_backup_api=0;
 #endif
 
 	struct sbuf sb;
@@ -243,7 +244,7 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 
 				sb.path=buf;
 				buf=NULL;
-
+/*
 #ifdef HAVE_WIN32
 				if(win32_lstat(sb.path, &statbuf, &winattr))
 #else
@@ -259,6 +260,7 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 					free_sbuf(&sb);
 					continue;
 				}
+*/
 
 				if(conf->min_file_size
 				  && statbuf.st_size<
@@ -290,6 +292,9 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 					  &statbuf, winattr, compression);
 					if(open_file_for_send(
 #ifdef HAVE_WIN32
+						// uncomment this to see
+						// image backup work
+						//&bfd, &fp,
 						&bfd, NULL,
 #else
 						NULL, &fp,

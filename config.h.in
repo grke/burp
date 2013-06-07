@@ -549,6 +549,9 @@
 /* Define to 1 if you have the `localtime_r' function. */
 #undef HAVE_LOCALTIME_R
 
+/* Define to 1 if you have the `lockf' function. */
+#undef HAVE_LOCKF
+
 /* Define to 1 if the system has the type `long long int'. */
 #undef HAVE_LONG_LONG_INT
 

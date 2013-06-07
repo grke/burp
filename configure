@@ -26419,6 +26419,18 @@ fi
 done
 
 
+for ac_func in lockf
+do :
+  ac_fn_c_check_func "$LINENO" "lockf" "ac_cv_func_lockf"
+if test "x$ac_cv_func_lockf" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LOCKF 1
+_ACEOF
+ $as_echo "#define HAVE_LOCKF 1" >>confdefs.h
+
+fi
+done
+
 for ac_func in fchdir
 do :
   ac_fn_c_check_func "$LINENO" "fchdir" "ac_cv_func_fchdir"

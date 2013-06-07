@@ -654,9 +654,6 @@
 /* Define if the SHA-2 family of digest algorithms is available */
 #undef HAVE_SHA2
 
-/* Define to 1 if you have the `signal' function. */
-#undef HAVE_SIGNAL
-
 /* Define to 1 if you have the `snprintf' function. */
 #undef HAVE_SNPRINTF
 

@@ -1160,7 +1160,7 @@ AC_FUNC_ALLOCA
 AC_FUNC_GETMNTENT
 AC_CHECK_FUNCS(getmntinfo, [AC_DEFINE(HAVE_GETMNTINFO)])
 AC_FUNC_CLOSEDIR_VOID
-AC_FUNC_SETPGRP 	    dnl check for BSD setpgrp.
+# AC_FUNC_SETPGRP 	    dnl check for BSD setpgrp.
 # AC_FUNC_FNMATCH    dnl use local version
 
 AC_CHECK_LIB(intl, gettext, [LIBS="$LIBS -lintl"])

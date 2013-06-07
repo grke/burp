@@ -954,9 +954,6 @@
 /* Define as the return type of signal handlers (`int' or `void'). */
 #undef RETSIGTYPE
 
-/* Define to 1 if the `setpgrp' function takes no argument. */
-#undef SETPGRP_VOID
-
 /* The size of `char', as computed by sizeof. */
 #undef SIZEOF_CHAR
 

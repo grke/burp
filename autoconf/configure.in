@@ -11,7 +11,7 @@ TOP_DIR=`pwd`
 cd ${BUILD_DIR}
 AC_SUBST(BUILD_DIR)
 AC_SUBST(TOP_DIR)
-AC_CONFIG_AUX_DIR(${BUILD_DIR}/autoconf)
+AC_CONFIG_AUX_DIR(autoconf)
 AC_CONFIG_HEADERS(src/config.h:config.h.in)
 
 dnl minimal Win32 stuff for "make clean"

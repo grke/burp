@@ -12,7 +12,7 @@ cd ${BUILD_DIR}
 AC_SUBST(BUILD_DIR)
 AC_SUBST(TOP_DIR)
 AC_CONFIG_AUX_DIR(${BUILD_DIR}/autoconf)
-AC_CONFIG_HEADERS(src/config.h:autoconf/config.h.in)
+AC_CONFIG_HEADERS(src/config.h:config.h.in)
 
 dnl minimal Win32 stuff for "make clean"
 WIN32BUILDDIR=${BUILD_DIR}/src/win32
@@ -1186,7 +1186,7 @@ AC_CHECK_HEADERS(crypt.h)
 AC_CHECK_LIB(crypt, crypt, [CRYPT_LIBS="-lcrypt"])
 have_crypt=no
 if test x$CRYPT_LIBS = x-lcrypt; then
-   AC_DEFINE(HAVE_CRYPT)
+   AC_DEFINE(HAVE_CRYPT, 1, [Defined to 1 if libcrypt was found])
    have_crypt=yes
 fi
 AC_SUBST(CRYPT_LIBS)
@@ -1201,7 +1201,7 @@ AC_CHECK_HEADERS(librsync.h)
 AC_CHECK_LIB(rsync, rs_delta_begin, [RSYNC_LIBS="-lrsync"])
 have_librsync=no
 if test x$RSYNC_LIBS = x-lrsync; then
-   AC_DEFINE(HAVE_LIBRSYNC)
+   AC_DEFINE(HAVE_LIBRSYNC, 1, [Defined to 1 if librsync was found])
    have_librsync=yes
 fi
 AC_SUBST(RSYNC_LIBS)
@@ -1215,7 +1215,7 @@ AC_CHECK_HEADERS(ncurses.h)
 AC_CHECK_LIB(ncurses, curs_set, [NCURSES_LIBS="-lncurses"])
 have_ncurses=no
 if test x$NCURSES_LIBS = x-lncurses; then
-   AC_DEFINE(HAVE_NCURSES)
+   AC_DEFINE(HAVE_NCURSES, 1, [Defined to 1 if libncurses was found])
    have_ncurses=yes
 fi
 AC_SUBST(NCURSES_LIBS)

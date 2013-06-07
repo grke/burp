@@ -11,8 +11,10 @@ TOP_DIR=`pwd`
 cd ${BUILD_DIR}
 AC_SUBST(BUILD_DIR)
 AC_SUBST(TOP_DIR)
+AC_USE_SYSTEM_EXTENSIONS
 AC_CONFIG_AUX_DIR(autoconf)
 AC_CONFIG_HEADERS(src/config.h:config.h.in)
+AC_CONFIG_MACRO_DIR([autoconf/m4])
 
 dnl minimal Win32 stuff for "make clean"
 WIN32BUILDDIR=${BUILD_DIR}/src/win32
@@ -56,7 +58,7 @@ AC_PROG_GCC_TRADITIONAL    dnl Determine if ioctl() need -traditional.
 BASECC=`basename $CC`
 have_gcc=no
 if test "x$BASECC" = xgcc; then
-   AC_DEFINE(HAVE_GCC)
+   AC_DEFINE(HAVE_GCC, 1, [Define if you have GCC])
    have_gcc=yes
 fi
 # This stuff interferes with ccache, so do not do it.
@@ -286,8 +288,8 @@ htmldir=`eval echo ${htmldir}`
 libdir=`eval echo ${libdir}`
 includedir=`eval echo ${includedir}`
 localedir=`eval echo ${datarootdir}/locale`
-AC_DEFINE_UNQUOTED(SYSCONFDIR, "$sysconfdir")
-AC_DEFINE_UNQUOTED(LOCALEDIR, "$localedir") 
+AC_DEFINE_UNQUOTED(SYSCONFDIR, "$sysconfdir", [Define to system config directory])
+AC_DEFINE_UNQUOTED(LOCALEDIR, "$localedir", [LOCALEDIR]) 
 
 dnl ------------------------------------------------------------------
 dnl If the user has not set --sbindir, we set our default as /usr/sbin
@@ -319,16 +321,6 @@ if test x$docdir = x'/usr/share/doc/' ; then
 fi
 
 	    
-AC_PATH_PROGS(MSGFMT, msgfmt, no)
-if test "$MSGFMT" = "no"
-then
-   echo 'msgfmt program not found, disabling NLS !'
-   USE_NLS=no
-   USE_INCLUDED_LIBINTL=no
-#else
-   AM_GNU_GETTEXT
-fi
-
 support_readline=yes
 support_conio=yes
 support_tls=no
@@ -580,7 +572,7 @@ AC_SUBST(OPENSSL_INC)
 #dnl -----------------------------------------------------------
 #AC_SEARCH_LIBS(dlopen, [dl])
 
-AC_DEFINE(PROTOTYPES)
+AC_DEFINE(PROTOTYPES, 1, [Define if you need function prototypes])
 
 dnl --------------------------------------------------------------------------
 dnl Supply default CFLAGS, if not specified by `CFLAGS=flags ./configure'
@@ -596,8 +588,7 @@ dnl A few others
 AC_EXEEXT
 
 dnl See if we can use 64 bit file addresses
-largefile_support="no"
-AC_BAC_LARGEFILE
+AC_SYS_LARGEFILE
 
 AC_PATH_XTRA
 
@@ -751,7 +742,7 @@ AC_TRY_CPP(
        #include <sys/statvfs.h>
        #include <sys/fstyp.h>
    ],
-   AC_DEFINE(FSTYPE_STATVFS) fstype=SVR4
+   AC_DEFINE(FSTYPE_STATVFS, 1, [Define to use SVR4 statvfs to get filesystem type]) fstype=SVR4
 )
 if test $fstype = no; then
    AC_TRY_CPP(
@@ -759,7 +750,7 @@ if test $fstype = no; then
 	  #include <sys/statfs.h>
 	  #include <sys/fstyp.h>
       ],
-      AC_DEFINE(FSTYPE_USG_STATFS) fstype=SVR3
+      AC_DEFINE(FSTYPE_USG_STATFS, 1, [Define to use SVR3.2 statfs to get filesystem type]) fstype=SVR3
    )
 fi
 if test $fstype = no; then
@@ -768,7 +759,7 @@ if test $fstype = no; then
 	  #include <sys/statfs.h>
 	  #include <sys/vmount.h>
       ],
-      AC_DEFINE(FSTYPE_AIX_STATFS) fstype=AIX
+      AC_DEFINE(FSTYPE_AIX_STATFS, 1, [Define to use AIX3 statfs to get filesystem type]) fstype=AIX
    )
 fi
 if test $fstype = no; then  
@@ -776,11 +767,11 @@ if test $fstype = no; then
       [
 	  #include <mntent.h>
       ],
-      AC_DEFINE(FSTYPE_MNTENT) fstype=4.3BSD
+      AC_DEFINE(FSTYPE_MNTENT, 1, [Define to use 4.3BSD getmntent to get filesystem type]) fstype=4.3BSD
    )
 fi
 if test $fstype = no; then  
-   AC_EGREP_HEADER(f_type;, sys/mount.h, AC_DEFINE(FSTYPE_STATFS) fstype=4.4BSD/OSF1)
+   AC_EGREP_HEADER(f_type;, sys/mount.h, AC_DEFINE(FSTYPE_STATFS, 1, [Define to use 4.4BSD and OSF1 statfs to get filesystem type]) fstype=4.4BSD/OSF1)
 fi
 if test $fstype = no; then  
    AC_TRY_CPP(
@@ -788,7 +779,7 @@ if test $fstype = no; then
 	  #include <sys/mount.h>
 	  #include <sys/fs_types.h>
       ],
-      AC_DEFINE(FSTYPE_GETMNT) fstype=Ultrix
+      AC_DEFINE(FSTYPE_GETMNT, 1, [Define to use Ultrix getmnt to get filesystem type]) fstype=Ultrix
    )
 fi
 AC_MSG_RESULT($fstype)
@@ -842,7 +833,7 @@ AC_CACHE_CHECK([for u_int type], ac_cv_have_u_int,
    ]
 )
 if test "x$ac_cv_have_u_int" = "xyes" ; then
-   AC_DEFINE(HAVE_U_INT)
+   AC_DEFINE(HAVE_U_INT, 1, [type is defined: u_int])
    have_u_int=1
 fi
 
@@ -872,7 +863,7 @@ AC_CACHE_CHECK([for intmax_t type], ac_cv_have_intmax_t,
    ]
 )
 if test "x$ac_cv_have_intmax_t" = "xyes" ; then
-   AC_DEFINE(HAVE_INTMAX_T)
+   AC_DEFINE(HAVE_INTMAX_T, 1, [type is defined: intmax_t])
    have_intmax_t=1
 fi
 
@@ -902,7 +893,7 @@ AC_CACHE_CHECK([for u_intmax_t type], ac_cv_have_u_intmax_t,
    ]
 )
 if test "x$ac_cv_have_u_intmax_t" = "xyes" ; then
-   AC_DEFINE(HAVE_U_INTMAX_T)
+   AC_DEFINE(HAVE_U_INTMAX_T, 1, [type is defined: u_intmax_t])
    have_u_intmax_t=1
 fi
 
@@ -922,7 +913,7 @@ AC_CACHE_CHECK([for intXX_t types], ac_cv_have_intxx_t,
    ]
 )
 if test "x$ac_cv_have_intxx_t" = "xyes" ; then
-   AC_DEFINE(HAVE_INTXX_T)
+   AC_DEFINE(HAVE_INTXX_T, 1, [type is defined: intXX_t])
    have_intxx_t=1
 fi
    
@@ -942,7 +933,7 @@ AC_CACHE_CHECK([for int64_t type], ac_cv_have_int64_t,
    ]
 )
 if test "x$ac_cv_have_int64_t" = "xyes" ; then
-   AC_DEFINE(HAVE_INT64_T)
+   AC_DEFINE(HAVE_INT64_T, 1, [type is defined: int64_t])
    have_int64_t=1
 fi
    
@@ -962,7 +953,7 @@ AC_CACHE_CHECK([for u_intXX_t types], ac_cv_have_u_intxx_t,
    ]
 )
 if test "x$ac_cv_have_u_intxx_t" = "xyes" ; then
-   AC_DEFINE(HAVE_U_INTXX_T)
+   AC_DEFINE(HAVE_U_INTXX_T, 1, [types are defined: u_intXX_t])
    have_u_intxx_t=1
 fi
 
@@ -982,7 +973,7 @@ AC_CACHE_CHECK([for u_int64_t types], ac_cv_have_u_int64_t,
    ]
 )
 if test "x$ac_cv_have_u_int64_t" = "xyes" ; then
-   AC_DEFINE(HAVE_U_INT64_T)
+   AC_DEFINE(HAVE_U_INT64_T, 1, [type is defined: u_int64_t])
    have_u_int64_t=1
 fi
 
@@ -1026,7 +1017,7 @@ if test -z "$have_u_intxx_t" ; then
       ]
    )
    if test "x$ac_cv_have_uintxx_t" = "xyes" ; then
-      AC_DEFINE(HAVE_UINTXX_T)
+      AC_DEFINE(HAVE_UINTXX_T, 1, [types are defined: uintXX_t])
    fi
 fi
 
@@ -1172,7 +1163,7 @@ AC_CHECK_HEADERS(zlib.h)
 AC_CHECK_LIB(z, deflate, [ZLIBS="-lz"])
 have_zlib=no
 if test x$ZLIBS = x-lz; then
-   AC_DEFINE(HAVE_LIBZ)
+   AC_DEFINE(HAVE_LIBZ, 1, [Define if you have zlib])
    have_zlib=yes
 fi
 AC_SUBST(ZLIBS)
@@ -1517,7 +1508,6 @@ fi
 AC_SUBST(CAP_LIBS)
 
 AC_SUBST(FDLIBS)
-AC_DEFINE(FDLIBS)
 
 CFLAGS=${CFLAGS--O}
 
@@ -1557,8 +1547,8 @@ WLDFLAGS=
 
 AC_SUBST(hostname)
 
-AC_DEFINE_UNQUOTED(lld, "$lld")
-AC_DEFINE_UNQUOTED(llu, "$llu")
+AC_DEFINE_UNQUOTED(lld, "$lld", [Set to correct scanf format for long long int])
+AC_DEFINE_UNQUOTED(llu, "$llu", [Set to correct scanf format for unsigned long long int])
 AC_SUBST(PSCMD)
 AC_SUBST(WIN32)
 AC_SUBST(MACOSX)

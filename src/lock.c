@@ -5,7 +5,7 @@
 
 int get_lock(const char *path)
 {
-#ifdef HAVE_WIN32
+#if defined(HAVE_WIN32) || !defined(HAVE_LOCKF)
 	// Would somebody please tell me how to get a lock on Windows?!
 	return 0;
 #else
@@ -46,7 +46,7 @@ int get_lock(const char *path)
 
 int test_lock(const char *path)
 {
-#ifdef HAVE_WIN32
+#if defined(HAVE_WIN32) || !defined(HAVE_LOCKF)
 	// Would somebody please tell me how to test a lock on Windows?!
 	return 0;
 #else

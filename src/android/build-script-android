@@ -1,0 +1,105 @@
+#!/bin/sh
+#
+# Script by Graham Keeling.
+# Modified for android by Avi Rozen
+
+BASE="$PWD"/..
+CROSS="$BASE"/../burp-cross-tools
+SRCDIR="$BASE"/src
+ORIGPATH=$PATH
+
+fail()
+{
+	echo "Failed"
+	exit 1
+}
+
+rm_and_mkdir()
+{
+	rm -rf "$1"
+	mkdir -p "$1"
+}
+
+do_build()
+{
+	TGT="$1"
+	HOST="$2"
+	SSLSUFFIX="$3"
+	DEPKGS="$BASE/$TGT"
+	if [ -z "$TGT" -o -z "$HOST" ] ; then
+		echo "do_build called with not enough parameters"
+		fail
+	fi
+	COMPPREFIX="$CROSS/$TGT/bin/$HOST"-
+	BINARY_PATH="$DEPKGS/bin"
+	INCLUDE_PATH="$DEPKGS/include"
+	LIBRARY_PATH="$DEPKGS/lib"
+	MAN_PATH="$DEPKGS/man"
+	PATH="$CROSS/$TGT"/bin:$ORIGPATH
+
+	rm -rf "$DEPKGS"
+	mkdir -p "$BINARY_PATH"
+	mkdir -p "$LIBRARY_PATH"
+	mkdir -p "$INCLUDE_PATH"
+	mkdir -p "$MAN_PATH"
+
+	echo "build zlib"
+	cd $SRCDIR
+	rm -rf zlib-1.2.7
+	tar -zxvf zlib-1.2.7.tar.gz || fail
+	cd zlib-1.2.7 || fail
+	prefix=$DEPKGS CC="$COMPPREFIX"gcc ./configure
+	make all || fail
+	make install || fail
+	cd $SRCDIR
+	rm -rf zlib-1.2.7
+
+	echo "build pcre"
+	cd $SRCDIR
+	rm -rf pcre-8.31
+	tar -xjvf pcre-8.31.tar.bz2 || fail
+	cd pcre-8.31 || fail
+	./configure CC_FOR_BUILD=gcc \
+		CXX_FOR_BUILD=g++ \
+		--host=$HOST \
+		--prefix=$DEPKGS \
+		--enable-utf8 \
+		--enable-unicode-properties || fail
+	make PREFIX=$DEPKGS all || fail
+	make PREFIX=$DEPKGS install || fail
+	cd $SRCDIR
+	rm -rf pcre-8.31
+
+	echo "build openssl"
+	cd $SRCDIR
+	rm -rf openssl-1.0.0j
+	tar -zxvf openssl-1.0.0j.tar.gz || fail
+	cd openssl-1.0.0j || fail
+	./Configure no-shared zlib no-dso threads \
+	    --prefix=$DEPKGS \
+	    --with-zlib-include=$INCLUDE_PATH \
+	    --cross-compile-prefix=$COMPPREFIX linux-generic32|| fail
+	make all || fail
+	make install_sw || fail
+	cd $SRCDIR
+	rm -rf openssl-1.0.0j
+
+	echo "build librsync"
+	cd $SRCDIR
+	rm -rf librsync-0.9.7
+	tar -zxvf librsync-0.9.7.tar.gz || fail
+	cd librsync-0.9.7 || fail
+	patch -Np1 <$SRCDIR/librsync_0.9.7-5-debian.patch || fail
+	rm config.sub
+	./autogen.sh || fail
+	./configure --host=$HOST --prefix=$DEPKGS || fail
+	make || fail
+	make install || fail
+	cd $SRCDIR
+	rm -rf librsync-0.9.7
+
+	echo "Finished OK"
+
+}
+
+do_build android arm-linux-androideabi android

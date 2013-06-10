@@ -1,8 +1,6 @@
 #ifndef SBUF_H
 #define SBUF_H
 
-#include "rs_buf.h"
-
 struct sbuf
 {
 	// file data
@@ -25,10 +23,6 @@ struct sbuf
 	int compression;
 	int sendstat; // flag indicating it needs to be sent
 
-	rs_buffers_t rsbuf;
-	rs_job_t *sigjob;
-	rs_filebuf_t *infb;
-	rs_filebuf_t *outfb;
 	FILE *sigfp;
 	gzFile sigzp;
 	int sendendofsig;

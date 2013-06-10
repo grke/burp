@@ -76,7 +76,6 @@ FILED_LIBS = \
 	$(LIBS_CRYPTO) \
 	$(LIBS_ZLIB) \
 	$(LIBS_NETWORK) \
-	$(LIBS_RSYNC) \
 	$(LIBS_PCRE) \
 	-lole32 \
 	-loleaut32 \

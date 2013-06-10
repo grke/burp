@@ -1,5 +1,10 @@
 Things to watch out for when upgrading.
 
+2.0.0
+-----
+There has been a massive rewrite of the core of burp. Old backups will not be
+compatible.
+
 1.3.24
 ------
 If installing with 'make install' and you want to use the

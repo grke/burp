@@ -2,7 +2,6 @@
 #include "prog.h"
 #include "msg.h"
 #include "lock.h"
-#include "rs_buf.h"
 #include "handy.h"
 #include "asyncio.h"
 #include "zlibio.h"
@@ -25,12 +24,8 @@ void init_sbuf(struct sbuf *sb)
 	sb->compression=-1;
 	sb->sendstat=0;
 
-	memset(&(sb->rsbuf), 0, sizeof(sb->rsbuf));
 	memset(&(sb->statp), 0, sizeof(sb->statp));
 	sb->winattr=0;
-	sb->sigjob=NULL;
-	sb->infb=NULL;
-	sb->outfb=NULL;
 	sb->sigfp=NULL;
 	sb->sigzp=NULL;
 	sb->sendendofsig=0;
@@ -50,9 +45,6 @@ void free_sbuf(struct sbuf *sb)
 	if(sb->linkto) free(sb->linkto);
 	if(sb->datapth) free(sb->datapth);
 	if(sb->statbuf) free(sb->statbuf);
-	if(sb->sigjob) rs_job_free(sb->sigjob);
-	if(sb->infb) rs_filebuf_free(sb->infb);
-	if(sb->outfb) rs_filebuf_free(sb->outfb);
 	if(sb->endfile) free(sb->endfile);
 	close_fp(&sb->sigfp);
 	gzclose_fp(&sb->sigzp);

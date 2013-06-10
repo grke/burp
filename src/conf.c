@@ -65,7 +65,6 @@ void init_config(struct config *conf)
 	conf->port=NULL;
 	conf->status_port=NULL;
 	conf->hardlinked_archive=0;
-	conf->working_dir_recovery_method=NULL;
 	conf->forking=1;
 	conf->daemon=1;
 	conf->directory_tree=1;
@@ -107,7 +106,6 @@ void init_config(struct config *conf)
 	conf->max_status_children=0;
 	// ext3 maximum number of subdirs is 32000, so leave a little room.
 	conf->max_storage_subdirs=30000;
-	conf->librsync=1;
 	conf->compression=9;
 	conf->version_warn=1;
 	conf->client_lockdir=NULL;
@@ -214,8 +212,6 @@ void free_config(struct config *conf)
 	if(conf->password) free(conf->password);
 	if(conf->passwd) free(conf->passwd);
 	if(conf->server) free(conf->server);
-	if(conf->working_dir_recovery_method)
-		free(conf->working_dir_recovery_method);
  	if(conf->ssl_cert_ca) free(conf->ssl_cert_ca);
         if(conf->ssl_cert) free(conf->ssl_cert);
         if(conf->ssl_key) free(conf->ssl_key);
@@ -645,8 +641,6 @@ static int load_config_ints(struct config *conf, const char *field, const char *
 		&(conf->hardlinked_archive));
 	get_conf_val_int(field, value, "max_hardlinks",
 		&(conf->max_hardlinks));
-	get_conf_val_int(field, value, "librsync",
-		&(conf->librsync));
 	get_conf_val_int(field, value, "version_warn",
 		&(conf->version_warn));
 	get_conf_val_int(field, value, "cross_all_filesystems",
@@ -762,8 +756,6 @@ static int load_config_strings(struct config *conf, const char *field, const cha
 		return -1;
 	if(get_conf_val(field, value, "browsefile", &(conf->browsefile)))
 		return -1;
-	if(get_conf_val(field, value, "working_dir_recovery_method",
-		&(conf->working_dir_recovery_method))) return -1;
 	if(get_conf_val(field, value, "autoupgrade_dir",
 		&(conf->autoupgrade_dir))) return -1;
 	if(get_conf_val(field, value, "autoupgrade_os",
@@ -1043,11 +1035,6 @@ static int server_conf_checks(struct config *conf, const char *path, int *r)
 		conf_problem(path, "timestamp_format unset", r);
 	if(!conf->clientconfdir)
 		conf_problem(path, "clientconfdir unset", r);
-	if(!conf->working_dir_recovery_method
-	  || (strcmp(conf->working_dir_recovery_method, "delete")
-	   && strcmp(conf->working_dir_recovery_method, "resume")
-	   && strcmp(conf->working_dir_recovery_method, "use")))
-		conf_problem(path, "unknown working_dir_recovery_method", r);
 	if(!conf->ssl_cert)
 		conf_problem(path, "ssl_cert unset", r);
 	if(!conf->ssl_cert_ca)
@@ -1542,7 +1529,6 @@ int set_client_global_config(struct config *conf, struct config *cconf, const ch
 	cconf->client_can_restore=conf->client_can_restore;
 	cconf->client_can_verify=conf->client_can_verify;
 	cconf->hardlinked_archive=conf->hardlinked_archive;
-	cconf->librsync=conf->librsync;
 	cconf->compression=conf->compression;
 	cconf->version_warn=conf->version_warn;
 	cconf->notify_success_warnings_only=conf->notify_success_warnings_only;
@@ -1556,8 +1542,6 @@ int set_client_global_config(struct config *conf, struct config *cconf, const ch
 		return -1;
 	if(set_global_str(&(cconf->timestamp_format), conf->timestamp_format))
 		return -1;
-	if(set_global_str(&(cconf->working_dir_recovery_method),
-		conf->working_dir_recovery_method)) return -1;
 	if(set_global_str(&(cconf->timer_script), conf->timer_script))
 		return -1;
 	if(set_global_str(&(cconf->user), conf->user))

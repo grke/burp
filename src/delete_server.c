@@ -2,7 +2,6 @@
 #include "prog.h"
 #include "msg.h"
 #include "lock.h"
-#include "rs_buf.h"
 #include "handy.h"
 #include "asyncio.h"
 #include "zlibio.h"

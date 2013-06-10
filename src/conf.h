@@ -140,8 +140,6 @@ struct config
 	int kpcount;
 	struct strlist **keep;
 
-	char *working_dir_recovery_method;
-	int librsync;
 	int compression;
 	int version_warn;
 

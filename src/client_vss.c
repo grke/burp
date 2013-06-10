@@ -1,7 +1,6 @@
 #include "burp.h"
 #include "prog.h"
 #include "msg.h"
-#include "rs_buf.h"
 #include "handy.h"
 #include "asyncio.h"
 #include "counter.h"

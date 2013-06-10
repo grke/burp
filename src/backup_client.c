@@ -1,13 +1,12 @@
 #include "burp.h"
 #include "prog.h"
 #include "msg.h"
-#include "rs_buf.h"
 #include "lock.h"
 #include "handy.h"
 #include "asyncio.h"
 #include "counter.h"
 #include "extrameta.h"
-#include "backup_phase1_client.h"
+#include "backup_client.h"
 
 static char filesymbol=CMD_FILE;
 #ifdef HAVE_WIN32
@@ -242,7 +241,7 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
    return 0;
 }
 
-int backup_phase1_client(struct config *conf, int estimate, struct cntr *p1cntr, struct cntr *cntr)
+static int backup_client(struct config *conf, int estimate, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int sd=0;
 	int ret=0;
@@ -279,6 +278,66 @@ int backup_phase1_client(struct config *conf, int estimate, struct cntr *p1cntr,
 	//print_filecounters(p1cntr, cntr, ACTION_BACKUP);
 	if(ret) logp("Error in phase 1\n");
 	logp("Phase 1 end (file system scan)\n");
+
+	return ret;
+}
+
+// Return 0 for OK, -1 for error, 1 for timer conditions not met.
+int do_backup_client(struct config *conf, enum action act, struct cntr *p1cntr, struct cntr *cntr)
+{
+	int ret=0;
+
+	if(act==ACTION_ESTIMATE)
+		logp("do estimate client\n");
+	else
+		logp("do backup client\n");
+
+#if defined(HAVE_WIN32)
+	win32_enable_backup_privileges();
+#if defined(WIN32_VSS)
+	if((ret=win32_start_vss(conf))) return ret;
+#endif
+	if(act==ACTION_BACKUP_TIMED)
+	{
+		// Run timed backups with lower priority.
+		// I found that this has to be done after the snapshot, or the
+		// snapshot never finishes. At least, I waited 30 minutes with
+		// nothing happening.
+#if defined(B_VSS_XP) || defined(B_VSS_W2K3)
+		if(SetThreadPriority(GetCurrentThread(),
+					THREAD_PRIORITY_LOWEST))
+			logp("Set thread_priority_lowest\n");
+		else
+			logp("Failed to set thread_priority_lowest\n");
+#else
+		if(SetThreadPriority(GetCurrentThread(),
+					THREAD_MODE_BACKGROUND_BEGIN))
+			logp("Set thread_mode_background_begin\n");
+		else
+			logp("Failed to set thread_mode_background_begin\n");
+#endif
+	}
+#endif
+
+	// Scan the file system and send the results to the server.
+	if(!ret) ret=backup_client(conf, act==ACTION_ESTIMATE, p1cntr, cntr);
+
+	if(act==ACTION_ESTIMATE)
+		print_filecounters(p1cntr, cntr, ACTION_ESTIMATE);
+
+#if defined(HAVE_WIN32)
+	if(act==ACTION_BACKUP_TIMED)
+	{
+		if(SetThreadPriority(GetCurrentThread(),
+					THREAD_MODE_BACKGROUND_END))
+			logp("Set thread_mode_background_end\n");
+		else
+			logp("Failed to set thread_mode_background_end\n");
+	}
+#if defined(WIN32_VSS)
+	win32_stop_vss();
+#endif
+#endif
 
 	return ret;
 }

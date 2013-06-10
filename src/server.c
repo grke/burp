@@ -2,7 +2,6 @@
 #include "prog.h"
 #include "msg.h"
 #include "lock.h"
-#include "rs_buf.h"
 #include "handy.h"
 #include "asyncio.h"
 #include "zlibio.h"
@@ -10,10 +9,7 @@
 #include "dpth.h"
 #include "sbuf.h"
 #include "auth_server.h"
-#include "backup_phase1_server.h"
-#include "backup_phase2_server.h"
-#include "backup_phase3_server.h"
-#include "backup_phase4_server.h"
+#include "backup_server.h"
 #include "current_backups_server.h"
 #include "delete_server.h"
 #include "list_server.h"
@@ -247,59 +243,6 @@ int setup_signals(int oldmax_children, int max_children, int oldmax_status_child
 	return 0;
 }
 
-static int open_log(const char *realworking, const char *client, const char *cversion, struct config *conf)
-{
-	FILE *logfp=NULL;
-	char *logpath=NULL;
-
-	if(!(logpath=prepend_s(realworking, "log", strlen("log"))))
-	{
-		log_and_send_oom(__FUNCTION__);
-		return -1;
-	}
-	if(!(logfp=open_file(logpath, "ab")) || set_logfp(logfp, conf))
-	{
-		char msg[256]="";
-		snprintf(msg, sizeof(msg),
-			"could not open log file: %s", logpath);
-		log_and_send(msg);
-		free(logpath);
-		return -1;
-	}
-	free(logpath);
-
-	logp("Client version: %s\n", cversion?:"");
-	// Make sure a warning appears in the backup log.
-	// The client will already have been sent a message with logw.
-	// This time, prevent it sending a logw to the client by specifying
-	// NULL for cntr.
-	if(conf->version_warn)
-		version_warn(NULL, client, cversion);
-
-	return 0;
-}
-
-static int write_incexc(const char *realworking, const char *incexc)
-{
-	int ret=-1;
-	FILE *fp=NULL;
-	char *path=NULL;
-	if(!(path=prepend_s(realworking, "incexc", strlen("incexc"))))
-		goto end;
-	if(!(fp=open_file(path, "wb")))
-		goto end;
-	fprintf(fp, "%s", incexc);
-	ret=0;
-end:
-	if(close_fp(&fp))
-	{
-		logp("error writing to %s in write_incexc\n", path);
-		ret=-1;
-	}
-	if(path) free(path);
-	return ret;
-}
-
 static int vss_opts_changed(struct config *cconf, const char *cincexc, const char *incexc)
 {
 	int ret=0;
@@ -351,226 +294,6 @@ static int vss_opts_changed(struct config *cconf, const char *cincexc, const cha
 	return ret;
 }
 
-static int do_backup_server(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *manifest, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *client, const char *cversion, struct cntr *p1cntr, struct cntr *cntr, int resume, const char *incexc)
-{
-	int ret=0;
-	char msg[256]="";
-	gzFile mzp=NULL;
-	// The timestamp file of this backup
-	char *timestamp=NULL;
-	// Where the new file generated from the delta temporarily goes
-	char *newpath=NULL;
-	// path to the last manifest
-	char *cmanifest=NULL;
-	// Real path to the working directory
-	char *realworking=NULL;
-	char tstmp[64]="";
-	char *datadirtmp=NULL;
-	// Path to the old incexc file.
-	char *cincexc=NULL;
-
-	struct dpth dpth;
-
-	gzFile cmanfp=NULL;
-	struct stat statp;
-
-	logp("in do_backup_server\n");
-
-	if(!(timestamp=prepend_s(working, "timestamp", strlen("timestamp")))
-	  || !(newpath=prepend_s(working, "patched.tmp", strlen("patched.tmp")))
-	  || !(cmanifest=prepend_s(current, "manifest.gz", strlen("manifest.gz")))
-	  || !(cincexc=prepend_s(current, "incexc", strlen("incexc")))
-	  || !(datadirtmp=prepend_s(working, "data.tmp", strlen("data.tmp"))))
-	{
-		log_and_send_oom(__FUNCTION__);
-		goto error;
-	}
-
-	if(init_dpth(&dpth, currentdata, cconf))
-	{
-		log_and_send("could not init_dpth\n");
-		goto error;
-	}
-
-	if(resume)
-	{
-		size_t len=0;
-		char real[256]="";
-		if((len=readlink(working, real, sizeof(real)-1))<0)
-			len=0;
-		real[len]='\0';
-		if(!(realworking=prepend_s(basedir, real, strlen(real))))
-		{
-			log_and_send_oom(__FUNCTION__);
-			goto error;
-		}
-		if(open_log(realworking, client, cversion, cconf))
-			goto error;
-	}
-	else
-	{
-		// Not resuming - need to set everything up fresh.
-
-		if(get_new_timestamp(cconf, basedir, tstmp, sizeof(tstmp)))
-			goto error;
-		if(!(realworking=prepend_s(basedir, tstmp, strlen(tstmp))))
-		{
-			log_and_send_oom(__FUNCTION__);
-			goto error;
-		}
-		// Add the working symlink before creating the directory.
-		// This is because bedup checks the working symlink before
-		// going into a directory. If the directory got created first,
-		// bedup might go into it in the moment before the symlink
-		// gets added.
-		if(symlink(tstmp, working)) // relative link to the real work dir
-		{
-			snprintf(msg, sizeof(msg),
-			  "could not point working symlink to: %s",
-			  realworking);
-			log_and_send(msg);
-			goto error;
-		}
-		else if(mkdir(realworking, 0777))
-		{
-			snprintf(msg, sizeof(msg),
-			  "could not mkdir for next backup: %s", working);
-			log_and_send(msg);
-			unlink(working);
-			goto error;
-		}
-		else if(open_log(realworking, client, cversion, cconf))
-		{
-			goto error;
-		}
-		else if(mkdir(datadirtmp, 0777))
-		{
-			snprintf(msg, sizeof(msg),
-			  "could not mkdir for datadir: %s", datadirtmp);
-			log_and_send(msg);
-			goto error;
-		}
-		else if(write_timestamp(timestamp, tstmp))
-		{
-			snprintf(msg, sizeof(msg),
-			  "unable to write timestamp %s", timestamp);
-			log_and_send(msg);
-			goto error;
-		}
-		else if(incexc && *incexc && write_incexc(realworking, incexc))
-		{
-			snprintf(msg, sizeof(msg), "unable to write incexc");
-			log_and_send(msg);
-			goto error;
-		}
-
-		if(backup_phase1_server(phase1data,
-			client, p1cntr, cntr, cconf))
-		{
-			logp("error in phase 1\n");
-			goto error;
-		}
-	}
-
-	// Open the previous (current) manifest.
-	// If the split_vss setting changed between the previous backup
-	// and the new backup, do not open the previous manifest.
-	// This will have the effect of making the client back up everything
-	// fresh. Need to do this, otherwise toggling split_vss on and off
-	// will result in backups that do not work.
-	if(!lstat(cmanifest, &statp)
-	  && !vss_opts_changed(cconf, cincexc, incexc))
-	{
-		if(!(cmanfp=gzopen_file(cmanifest, "rb")))
-		{
-			if(!lstat(cmanifest, &statp))
-			{
-				logp("could not open old manifest %s\n",
-					cmanifest);
-				goto error;
-			}
-		}
-	}
-
-	//if(cmanfp) logp("Current manifest: %s\n", cmanifest);
-
-	if(backup_phase2_server(&cmanfp, phase1data, phase2data, unchangeddata,
-		datadirtmp, &dpth, currentdata, working, client,
-		p1cntr, resume, cntr, cconf))
-	{
-		logp("error in backup phase 2\n");
-		goto error;
-	}
-
-	if(backup_phase3_server(phase2data, unchangeddata, manifest,
-		0 /* not recovery mode */, 1 /* compress */, client,
-		p1cntr, cntr, cconf))
-	{
-		logp("error in backup phase 3\n");
-		goto error;
-	}
-
-	// will not write anything more to
-	// the new manifest
-	// finish_backup will open it again
-	// for reading
-	if(gzclose_fp(&mzp))
-	{
-		logp("Error closing manifest after phase3\n");
-		goto error;
-	}
-
-	async_write_str(CMD_GEN, "okbackupend");
-	logp("Backup ending - disconnect from client.\n");
-
-	// Close the connection with the client, the rest of the job
-	// we can do by ourselves.
-	async_free();
-
-	// Move the symlink to indicate that we are now in the end
-	// phase. 
-	if(do_rename(working, finishing))
-		goto error;
-	else
-	{
-		set_logfp(NULL, cconf); // does an fclose on logfp.
-		// finish_backup will open logfp again
-		ret=backup_phase4_server(basedir,
-			working, current, currentdata,
-			finishing, cconf, client,
-			p1cntr, cntr);
-		if(!ret && cconf->keep>0)
-			ret=remove_old_backups(basedir, cconf, client);
-	}
-
-	goto end;
-error:
-	ret=-1;
-end:
-	gzclose_fp(&cmanfp);
-	gzclose_fp(&mzp);
-	if(timestamp) free(timestamp);
-	if(newpath) free(newpath);
-	if(cmanifest) free(cmanifest);
-	if(datadirtmp) free(datadirtmp);
-	if(cincexc) free(cincexc);
-	set_logfp(NULL, cconf); // does an fclose on logfp.
-	return ret;
-}
-
-static int maybe_rebuild_manifest(const char *phase2data, const char *unchangeddata, const char *manifest, int compress, const char *client, struct cntr *p1cntr, struct cntr *cntr, struct config *cconf)
-{
-	struct stat statp;
-	if(!lstat(manifest, &statp))
-	{
-		unlink(phase2data);
-		unlink(unchangeddata);
-		return 0;
-	}
-	return backup_phase3_server(phase2data, unchangeddata, manifest,
-		1 /* recovery mode */, compress, client, p1cntr, cntr, cconf);
-}
-
 static int incexc_matches(const char *fullrealwork, const char *incexc)
 {
 	int ret=0;
@@ -604,175 +327,7 @@ end:
 	return ret;
 }
 
-static int check_for_rubble(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *manifest, const char *client, struct cntr *p1cntr, struct cntr *cntr, int *resume, const char *incexc)
-{
-	int ret=0;
-	size_t len=0;
-	char msg[256]="";
-	char realwork[256]="";
-	struct stat statp;
-	char *logpath=NULL;
-	char *fullrealwork=NULL;
-	FILE *logfp=NULL;
-	char *phase1datatmp=NULL;
-	const char *wdrm=cconf->working_dir_recovery_method;
-
-	// If there is a 'finishing' symlink, we need to
-	// run the finish_backup stuff.
-	if(!lstat(finishing, &statp))
-	{
-		logp("Found finishing symlink - attempting to complete prior backup!\n");
-		ret=backup_phase4_server(basedir,
-			working,
-			current,
-			currentdata,
-			finishing,
-			cconf,
-			client,
-			p1cntr,
-			cntr);
-		if(!ret) logp("Prior backup completed OK.\n");
-		else log_and_send("Problem with prior backup. Please check the client log on the server.");
-		goto end;
-	}
-
-	if(lstat(working, &statp))
-	{
-		// No working directory - that is good.
-		goto end;
-	}
-	if(!S_ISLNK(statp.st_mode))
-	{
-		log_and_send("Working directory is not a symlink.\n");
-		ret=-1;
-		goto end;
-	}
-
-	// The working directory has not finished being populated.
-	// Check what to do.
-	if((len=readlink(working, realwork, sizeof(realwork)-1))<0)
-	{
-		snprintf(msg, sizeof(msg), "Could not readlink on old working directory: %s\n", strerror(errno));
-		log_and_send(msg);
-		ret=-1;
-		goto end;
-	}
-	realwork[len]='\0';
-	if(!(fullrealwork=prepend_s(basedir, realwork, strlen(realwork))))
-	{
-		ret=-1;
-		goto end;
-	}
-
-	if(lstat(fullrealwork, &statp))
-	{
-		logp("removing dangling working symlink -> %s\n", realwork);
-		unlink(working);
-		goto end;
-	}
-
-	if(!(phase1datatmp=get_tmp_filename(phase1data)))
-		goto end;
-
-	// We have found an old working directory - open the log inside
-	// for appending.
-	if(!(logpath=prepend_s(fullrealwork, "log", strlen("log")))
-	  || !(logfp=open_file(logpath, "ab")) || set_logfp(logfp, cconf))
-	{
-		ret=-1;
-		goto end;
-	}
-
-	logp("found old working directory: %s\n", fullrealwork);
-	logp("working_dir_recovery_method: %s\n", wdrm);
-
-	if(!lstat(phase1datatmp, &statp))
-	{
-		// Phase 1 did not complete - delete everything.
-		logp("Phase 1 has not completed.\n");
-		wdrm="delete";
-	}
-
-	if(!strcmp(wdrm, "delete"))
-	{
-		// Try to remove it and start again.
-		logp("deleting old working directory\n");
-		if(recursive_delete(fullrealwork,
-			NULL, TRUE /* delete files */))
-		{
-			log_and_send("Old working directory is in the way.\n");
-			ret=-1;
-			goto end;
-		}
-		unlink(working); // get rid of the symlink.
-		goto end;
-	}
-	if(!strcmp(wdrm, "resume"))
-	{
-		logp("Found interrupted backup.\n");
-
-		// Check that the current incexc configuration is the same
-		// as before.
-		if((ret=incexc_matches(fullrealwork, incexc))<0)
-			goto end;
-		if(ret)
-		{
-			// Attempt to resume on the next backup.
-			logp("Will resume on the next backup request.\n");
-			*resume=1;
-			ret=0;
-			goto end;
-		}
-		logp("Includes/excludes have changed since the last backup.\n");
-		logp("Will treat last backup as finished.\n");
-		wdrm="use";
-	}
-	if(!strcmp(wdrm, "use"))
-	{
-		// Use it as it is.
-		logp("converting old working directory into the latest backup\n");
-		free(fullrealwork); fullrealwork=NULL;
-
-		// TODO: There might be a partial file written that is not
-		// yet logged to the manifest. It does no harm other than
-		// taking up some disk space. Detect this and remove it.
-
-		// Get us a partial manifest from the files lying around.
-		if(maybe_rebuild_manifest(phase2data, unchangeddata, manifest,
-			1 /* compress */, client, p1cntr, cntr, cconf))
-		{
-			ret=-1;
-			goto end;
-		}
-
-		// Now just rename the working link to be a finishing link,
-		// then run this function again.
-		if(do_rename(working, finishing))
-		{
-			ret=-1;
-			goto end;
-		}
-		ret=check_for_rubble(basedir, current, working,
-			currentdata, finishing, cconf, phase1data, phase2data,
-			unchangeddata, manifest, client, p1cntr, cntr,
-			resume, incexc);
-		goto end;
-	}
-
-	snprintf(msg, sizeof(msg),
-		"Unknown working_dir_recovery_method: %s\n", wdrm);
-	log_and_send(msg);
-	ret=-1;
-
-end:
-	if(fullrealwork) free(fullrealwork);
-	if(logpath) free(logpath);
-	if(phase1datatmp) free(phase1datatmp);
-	set_logfp(NULL, cconf); // fclose the logfp
-	return ret;
-}
-
-static int get_lock_and_clean(const char *basedir, const char *lockbasedir, const char *lockfile, const char *current, const char *working, const char *currentdata, const char *finishing, char **gotlock, struct config *cconf, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *manifest, const char *client, struct cntr *p1cntr, struct cntr *cntr, int *resume, const char *incexc)
+static int get_lock_w(const char *lockbasedir, const char *lockfile, char **gotlock)
 {
 	int ret=0;
 	char *copy=NULL;
@@ -789,19 +344,9 @@ static int get_lock_and_clean(const char *basedir, const char *lockbasedir, cons
 	if(get_lock(lockfile))
 	{
 		struct stat statp;
-		if(!lstat(finishing, &statp))
-		{
-			char msg[256]="";
-			logp("finalising previous backup\n");
-			snprintf(msg, sizeof(msg), "Finalising previous backup of client. Please try again later.");
-			async_write_str(CMD_ERROR, msg);
-		}
-		else
-		{
-			logp("another instance of client is already running,\n");
-			logp("or %s is not writable.\n", lockfile);
-			async_write_str(CMD_ERROR, "another instance is already running");
-		}
+		logp("another instance of client is already running,\n");
+		logp("or %s is not writable.\n", lockfile);
+		async_write_str(CMD_ERROR, "another instance is already running");
 		ret=-1;
 	}
 	else
@@ -813,11 +358,6 @@ static int get_lock_and_clean(const char *basedir, const char *lockbasedir, cons
 			ret=-1;
 		}
 	}
-
-	if(!ret && check_for_rubble(basedir, current, working, currentdata,
-		finishing, cconf, phase1data, phase2data, unchangeddata,
-		manifest, client, p1cntr, cntr, resume, incexc))
-			ret=-1;
 
 	return ret;
 }
@@ -951,8 +491,6 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 	else if(cmd==CMD_GEN
 	  && !strncmp(buf, "backupphase1", strlen("backupphase1")))
 	{
-		int resume=0;
-
 		if(cconf->restore_client)
 		{
 			// This client is not the original client, so a
@@ -964,12 +502,8 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 
 		// Set quality of service bits on backups.
 		set_bulk_packets();
-		if(get_lock_and_clean(basedir, lockbasedir, lockfile, current,
-			working, currentdata,
-			finishing, gotlock, cconf,
-			phase1data, phase2data, unchangeddata,
-			manifest, client, p1cntr, cntr, &resume, incexc))
-				ret=-1;
+		if(get_lock_w(lockbasedir, lockfile, gotlock))
+			ret=-1;
 		else
 		{
 			char okstr[32]="";
@@ -1029,14 +563,14 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 
 			buf=NULL;
 
-			snprintf(okstr, sizeof(okstr), "%s:%d",
-				resume?"resume":"ok", cconf->compression);
+			snprintf(okstr, sizeof(okstr), "ok:%d",
+				cconf->compression);
 			async_write_str(CMD_GEN, okstr);
 			ret=do_backup_server(basedir, current, working,
 			  currentdata, finishing, cconf,
 			  manifest, phase1data, phase2data,
 			  unchangeddata, client, cversion, p1cntr, cntr,
-			  resume, incexc);
+			  incexc);
 			maybe_do_notification(ret, client,
 				basedir, current, "log", "backup",
 				cconf, p1cntr, cntr);
@@ -1047,7 +581,6 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 		|| !strncmp(buf, "verify ", strlen("verify "))))
 	{
 		char *cp=NULL;
-		int resume=0; // ignored
 		enum action act;
 		char *backupnostr=NULL;
 		// Hmm. inefficient.
@@ -1064,12 +597,8 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 		reset_conf_val(backupnostr, &(cconf->backup));
 		if((cp=strchr(cconf->backup, ':'))) *cp='\0';
 
-		if(get_lock_and_clean(basedir, lockbasedir, lockfile,
-			current, working,
-			currentdata, finishing, gotlock, cconf,
-			phase1data, phase2data, unchangeddata,
-			manifest, client, p1cntr, cntr, &resume, incexc))
-				ret=-1;
+		if(get_lock_w(lockbasedir, lockfile, gotlock))
+			ret=-1;
 		else
 		{
 			char *restoreregex=NULL;
@@ -1124,13 +653,8 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 	}
 	else if(cmd==CMD_GEN && !strncmp(buf, "delete ", strlen("delete ")))
 	{
-		int resume=0; // ignored
-		if(get_lock_and_clean(basedir, lockbasedir, lockfile,
-			current, working,
-			currentdata, finishing, gotlock, cconf,
-			phase1data, phase2data, unchangeddata,
-			manifest, client, p1cntr, cntr, &resume, incexc))
-				ret=-1;
+		if(get_lock_w(lockbasedir, lockfile, gotlock))
+			ret=-1;
 		else
 		{
 			char *backupno=NULL;
@@ -1149,13 +673,8 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 	  && (!strncmp(buf, "list ", strlen("list "))
 	      || !strncmp(buf, "listb ", strlen("listb "))))
 	{
-		int resume=0; // ignored
-		if(get_lock_and_clean(basedir, lockbasedir, lockfile,
-			current, working,
-			currentdata, finishing, gotlock, cconf,
-			phase1data, phase2data, unchangeddata,
-			manifest, client, p1cntr, cntr, &resume, incexc))
-				ret=-1;
+		if(get_lock_w(lockbasedir, lockfile, gotlock))
+			ret=-1;
 		else
 		{
 			char *backupno=NULL;

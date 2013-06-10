@@ -132,15 +132,12 @@ AC_ARG_ENABLE(static,
 
 STATIC=
 STATIC_DEDUP=
-STATIC_STRIP_VSS=
 if test x$support_static = xyes; then
    STATIC="static-burp"
    STATIC_DEDUP="static-bedup"
-   STATIC_STRIP_VSS="static-vss_strip"
 fi
 AC_SUBST(STATIC)
 AC_SUBST(STATIC_DEDUP)
-AC_SUBST(STATIC_STRIP_VSS)
 
 
 dnl --------------------------------------------------
@@ -1188,20 +1185,6 @@ if test $have_uthash = no  ; then
 	cp ${srcdir}/uthash/uthash.h ${srcdir}/src
 fi
 
-AC_CHECK_HEADERS(librsync.h)
-AC_CHECK_LIB(rsync, rs_delta_begin, [RSYNC_LIBS="-lrsync"])
-have_librsync=no
-if test x$RSYNC_LIBS = x-lrsync; then
-   AC_DEFINE(HAVE_LIBRSYNC, 1, [Defined to 1 if librsync was found])
-   have_librsync=yes
-fi
-AC_SUBST(RSYNC_LIBS)
-
-if test $have_librsync = no  ; then
-	echo "Please install librsync"
-	exit 1
-fi
-
 AC_CHECK_HEADERS(ncurses.h)
 AC_CHECK_LIB(ncurses, curs_set, [NCURSES_LIBS="-lncurses"])
 have_ncurses=no
@@ -1635,7 +1618,6 @@ Configuration on `date`:
    ncurses:			${have_ncurses}
    openssl:			${support_tls}
    zlib:			${have_zlib}
-   librsync:			${have_librsync}
    acl:				${have_acl}
    xattr:			${have_xattr}
    ipv6:			${have_ipv6}

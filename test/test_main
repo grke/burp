@@ -55,7 +55,6 @@ excludedir="$includedir/src"
 logs="$PWD/logs"
 serverlog="$logs/server.log"
 clientlog="$logs/client.log"
-beduplog="$logs/bedup.log"
 difflog="$logs/diff.log"
 serverpid=
 serverconf=etc/burp/burp-server.conf
@@ -116,13 +115,6 @@ sed_rep_client()
 	cat >> "$clientscript" << EOF
 sed -i -e "$1" "$clientconf" || fail "sed $1 failed $2"
 EOF
-}
-
-run_bedup()
-{
-	echo "Starting test bedup"
-	./usr/sbin/bedup -c "$serverconf" -l >> "$beduplog" 2>&1 \
-		|| fail "bedup returned $?"
 }
 
 wait_for_backup_to_finish()
@@ -218,7 +210,6 @@ write_message()
 	echo "$message" >> $serverlog
 	echo "$message" >> $clientlog
 	echo "$message" >> $difflog
-	echo "$message" >> $beduplog
 }
 
 start_test()
@@ -503,7 +494,6 @@ echo
 echo "Starting tests"
 echo "       Server log: $serverlog"
 echo "       Client log: $clientlog"
-echo "        Bedup log: $beduplog"
 echo "         Diff log: $difflog"
 echo "More logs can be found in:"
 echo "$target/var/spool/burp/testclient/<backup number>"
@@ -591,9 +581,8 @@ all_tests()
 	end_test 3
 
 	# ----- Test 4 -----
-	start_test 4 "Deduplication, backup/restore comparison"
+	start_test 4 "Was deduplication, now just another backup/restore comparison"
 	add_normal_settings
-	run_bedup
 	add_run_verify all
 	add_run_restore 3 "$restoredir"4
 	add_do_diff_client "$includedir" "$restoredir"4/"$includedir" \

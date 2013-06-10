@@ -5,7 +5,7 @@
 #include "asyncio.h"
 #include "handy.h"
 #include "regexp.h"
-#include "backup_phase1_client.h"
+#include "backup_client.h"
 #ifdef HAVE_DARWIN_OS
 #include <sys/param.h>
 #include <sys/mount.h>

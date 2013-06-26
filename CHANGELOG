@@ -1,3 +1,4 @@
+  * On the server, indicate where logging is occurring.
   * Contributions from Avi Rozen:
 	+ Major autoconf cleanup.
 	+ Initial support for cross-building android targets.

@@ -249,7 +249,6 @@ int setup_signals(int oldmax_children, int max_children, int oldmax_status_child
 
 static int open_log(const char *realworking, const char *client, const char *cversion, struct config *conf)
 {
-	FILE *logfp=NULL;
 	char *logpath=NULL;
 
 	if(!(logpath=prepend_s(realworking, "log", strlen("log"))))
@@ -257,7 +256,7 @@ static int open_log(const char *realworking, const char *client, const char *cve
 		log_and_send_oom(__FUNCTION__);
 		return -1;
 	}
-	if(!(logfp=open_file(logpath, "ab")) || set_logfp(logfp, conf))
+	if(set_logfp(logpath, conf))
 	{
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
@@ -613,7 +612,6 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 	struct stat statp;
 	char *logpath=NULL;
 	char *fullrealwork=NULL;
-	FILE *logfp=NULL;
 	char *phase1datatmp=NULL;
 	const char *wdrm=cconf->working_dir_recovery_method;
 
@@ -676,8 +674,12 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 
 	// We have found an old working directory - open the log inside
 	// for appending.
-	if(!(logpath=prepend_s(fullrealwork, "log", strlen("log")))
-	  || !(logfp=open_file(logpath, "ab")) || set_logfp(logfp, cconf))
+	if(!(logpath=prepend_s(fullrealwork, "log", strlen("log"))))
+	{
+		ret=-1;
+		goto end;
+	}
+	if(set_logfp(logpath, cconf))
 	{
 		ret=-1;
 		goto end;

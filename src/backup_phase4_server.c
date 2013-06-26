@@ -870,7 +870,7 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 		goto endfunc;
 	}
 
-	if(!(logfp=open_file(logpath, "ab")) || set_logfp(logfp, cconf))
+	if(set_logfp(logpath, cconf))
 	{
 		ret=-1;
 		goto endfunc;

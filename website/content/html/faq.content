@@ -114,7 +114,7 @@ Q. Do I need to install cygwin on Windows?
 </P>
 <P>
 <FONT COLOR="#99CCFF">
-No.
+A. No.
 </FONT>
 </P>
 
@@ -127,7 +127,7 @@ Q. How do I build the Windows client?
 </P>
 <P>
 <FONT COLOR="#99CCFF">
-This is slightly complicated. You might want to go to the DOWNLOAD page and
+A. This is slightly complicated. You might want to go to the DOWNLOAD page and
 get a prebuilt binary. If you really want to build it yourself, follow the
 instructions in the README file in the src/win32 directory of the burp source.
 </FONT>
@@ -142,7 +142,7 @@ Q. How do I build a static Linux binary?
 </P>
 <P>
 <FONT COLOR="#99CCFF">
-Use the --enable-static and --disable-libtool configure script options.
+A. Use the --enable-static and --disable-libtool configure script options.
 </FONT>
 </P>
 
@@ -203,7 +203,7 @@ Q. Are you going to do data deduplication on the server side?
 
 <P>
 <FONT COLOR="#99CCFF">
-Yes, new in version 1.2.4.
+A. Yes, new in version 1.2.4.
 Note, that there are file systems (like btrfs, zfs and btrfs) coming along that
 will do data deduplication automatically, and probably better than burp.
 </FONT>
@@ -218,7 +218,7 @@ Q. What is the best file system to use on the server?
 
 <P>
 <FONT COLOR="#99CCFF">
-So far, I have done all my testing on ext3, and it works for me. The main
+A. So far, I have done all my testing on ext3, and it works for me. The main
 concern is not to run out of file system inodes. You can configure the number
 of inodes when you create the ext3 file system, but you cannot change the
 number later without reformatting.
@@ -251,7 +251,7 @@ Q. I specified LDFLAGS="-L /opt/somepath" to build burp, but when I run it, it u
 
 <P>
 <FONT COLOR="#99CCFF">
-Try this: LDFLAGS="-L /opt/somepath -R /opt/somepath"
+A. Try this: LDFLAGS="-L /opt/somepath -R /opt/somepath"
 </FONT>
 </P>
 
@@ -267,7 +267,7 @@ Why?
 
 <P>
 <FONT COLOR="#99CCFF">
-On newer versions of Windows, things called 'junction points' have been added.
+A. On newer versions of Windows, things called 'junction points' have been added.
 In the example given, 'include = C:/Documents and Settings' was set in the
 client burp.conf, but 'C:/Documents and Settings' is a junction point and the
 real path is 'C:/Users'.
@@ -288,7 +288,7 @@ Q. My backup fails with the message 'error in async_rw'. Why?
 
 <P>
 <FONT COLOR="#99CCFF">
-This normally means that the other side of the connection went away.
+A. This normally means that the other side of the connection went away.
 For example, it happens to me when I close my laptop lid, or when my laptop
 goes into hibernate mode, or when I pull the network cable out.
 <BR>
@@ -474,6 +474,7 @@ Q. What should I do if I don't trust my burp users?<BR>
 A. There are some notes on security models <A HREF="/txt/security-models.txt">here</A>.
 </FONT>
 </P>
+<HR>
 
 </TD>
 </TR>

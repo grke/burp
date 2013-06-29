@@ -43,7 +43,7 @@ static int open_log(const char *realworking, const char *client, const char *cve
 		log_and_send_oom(__FUNCTION__);
 		return -1;
 	}
-	if(!(logfp=open_file(logpath, "ab")) || set_logfp(logfp, conf))
+	if(set_logfp(logpath, conf))
 	{
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),

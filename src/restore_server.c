@@ -421,7 +421,7 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 		log_and_send_oom(__FUNCTION__);
 		ret=-1;
 	}
-	else if(!(logfp=open_file(logpath, "ab")) || set_logfp(logfp, cconf))
+	else if(set_logfp(logpath, cconf))
 	{
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),

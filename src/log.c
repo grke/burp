@@ -74,10 +74,30 @@ const char *progname(void)
 	return prog;
 }
 
-int set_logfp(FILE *fp, struct config *conf)
+/* Same as the function in msg.c, which should be in its own file.
+   Copying and pasting here because fixing it will cause annoying merge
+   problems with burp2. */
+static FILE *open_file(const char *fname, const char *mode)
+{
+	FILE *fp=NULL;
+
+	if(!(fp=fopen(fname, mode)))
+	{
+		logp("could not open %s: %s\n", fname, strerror(errno));
+		return NULL;
+	}
+	return fp;
+}
+
+int set_logfp(const char *path, struct config *conf)
 {
 	if(logfp) fclose(logfp);
-	logfp=fp;
+	logfp=NULL;
+	if(path)
+	{
+		logp("Logging to %s\n", path);
+		if(!(logfp=open_file(path, "ab"))) return -1;
+	}
 #ifndef HAVE_WIN32
 	if(logfp) setlinebuf(logfp);
 #endif

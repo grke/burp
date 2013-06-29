@@ -65,7 +65,32 @@ src="http://pagead2.googlesyndication.com/pagead/show_ads.js">
 <TD ALIGN="LEFT">
 
 <P>
-<FONT COLOR="#99CCFF">2013-05-31
+<FONT COLOR="#99CCFF">2013-06-29:
+<BR>
+Many thanks to the following donors for financially supporting burp during
+June:
+<pre>
+  *  &pound;25.00 Louwris W.
+  *  &pound;20.00 Morgan S.
+</pre>
+</FONT>
+</p>
+
+<P>
+<FONT COLOR="#99CCFF">2013-06-29: burp-1.3.34 is released.
+<pre>
+Changes in burp-1.3.34:
+  * Contributions from Avi Rozen:
+        + Major autoconf cleanup.
+        + Initial support for cross-building android targets.
+  * On the server, indicate where logging is occurring.
+  * Fix bedup segfault when using -m with no argument.
+</pre>
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">2013-05-31:
 <BR>
 Many thanks to the following donors for financially supporting burp during
 May:
@@ -88,7 +113,7 @@ Changes in burp-1.3.32:
 </P>
 
 <P>
-<FONT COLOR="#99CCFF">2013-05-02
+<FONT COLOR="#99CCFF">2013-05-02:
 <BR>
 Many thanks to the following donors for financially supporting burp during
 April:
@@ -120,7 +145,7 @@ Changes in burp-1.3.30:
 </P>
 
 <P>
-<FONT COLOR="#99CCFF">2013-03-30
+<FONT COLOR="#99CCFF">2013-03-30:
 <BR>
 Many thanks to the following donors for financially supporting burp during
 March:
@@ -143,7 +168,7 @@ Changes in burp-1.3.28:
 </P>
 
 <P>
-<FONT COLOR="#99CCFF">2013-03-05
+<FONT COLOR="#99CCFF">2013-03-05:
 <BR>
 Many thanks to the following donors for financially supporting burp during
 February:

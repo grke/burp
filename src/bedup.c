@@ -818,7 +818,7 @@ int main(int argc, char *argv[])
 	configfile=get_config_path();
 	snprintf(ext, sizeof(ext), ".bedup.%d", getpid());
 
-	while((option=getopt(argc, argv, "c:dg:hlmnvV?"))!=-1)
+	while((option=getopt(argc, argv, "c:dg:hlm:nvV?"))!=-1)
 	{
 		switch(option)
 		{

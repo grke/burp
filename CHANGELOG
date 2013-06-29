@@ -1,4 +1,5 @@
   * On the server, indicate where logging is occurring.
+  * Fix bedup segfault when using -m with no argument.
   * Contributions from Avi Rozen:
 	+ Major autoconf cleanup.
 	+ Initial support for cross-building android targets.

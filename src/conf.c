@@ -22,6 +22,7 @@ static void init_incexcs(struct config *conf)
 	conf->excreg=NULL; conf->ercount=0; // include (regular expression)
 	conf->excfs=NULL; conf->exfscount=0; // exclude filesystems
 	conf->excom=NULL; conf->excmcount=0; // exclude from compression
+	conf->incglob=NULL; conf->igcount=0; // include (glob expression)
 	conf->fifos=NULL; conf->ffcount=0;
 	conf->blockdevs=NULL; conf->bdcount=0;
 	conf->split_vss=0;
@@ -48,6 +49,7 @@ static void free_incexcs(struct config *conf)
 	strlists_free(conf->excreg, conf->ercount); // exclude (regular expression)
 	strlists_free(conf->excfs, conf->exfscount); // exclude filesystems
 	strlists_free(conf->excom, conf->excmcount); // exclude from compression
+	strlists_free(conf->incglob, conf->igcount); // include (glob expression)
 	strlists_free(conf->fifos, conf->ffcount);
 	strlists_free(conf->blockdevs, conf->bdcount);
 	if(conf->backup) free(conf->backup);
@@ -94,10 +96,10 @@ void init_config(struct config *conf)
 	conf->autoupgrade_dir=NULL;
 	conf->autoupgrade_os=NULL;
 	conf->ssl_cert_ca=NULL;
-        conf->ssl_cert=NULL;
-        conf->ssl_key=NULL;
-        conf->ssl_key_password=NULL;
-        conf->ssl_ciphers=NULL;
+		conf->ssl_cert=NULL;
+		conf->ssl_key=NULL;
+		conf->ssl_key_password=NULL;
+		conf->ssl_ciphers=NULL;
 	conf->ssl_dhfile=NULL;
 	conf->ssl_peer_cn=NULL;
 	conf->encryption_password=NULL;
@@ -214,15 +216,15 @@ void free_config(struct config *conf)
 	if(conf->working_dir_recovery_method)
 		free(conf->working_dir_recovery_method);
  	if(conf->ssl_cert_ca) free(conf->ssl_cert_ca);
-        if(conf->ssl_cert) free(conf->ssl_cert);
-        if(conf->ssl_key) free(conf->ssl_key);
-        if(conf->ssl_key_password) free(conf->ssl_key_password);
-        if(conf->ssl_ciphers) free(conf->ssl_ciphers);
-        if(conf->ssl_dhfile) free(conf->ssl_dhfile);
-        if(conf->ssl_peer_cn) free(conf->ssl_peer_cn);
-        if(conf->user) free(conf->user);
-        if(conf->group) free(conf->group);
-        if(conf->encryption_password) free(conf->encryption_password);
+		if(conf->ssl_cert) free(conf->ssl_cert);
+		if(conf->ssl_key) free(conf->ssl_key);
+		if(conf->ssl_key_password) free(conf->ssl_key_password);
+		if(conf->ssl_ciphers) free(conf->ssl_ciphers);
+		if(conf->ssl_dhfile) free(conf->ssl_dhfile);
+		if(conf->ssl_peer_cn) free(conf->ssl_peer_cn);
+		if(conf->user) free(conf->user);
+		if(conf->group) free(conf->group);
+		if(conf->encryption_password) free(conf->encryption_password);
 	if(conf->client_lockdir) free(conf->client_lockdir);
 	if(conf->autoupgrade_dir) free(conf->autoupgrade_dir);
 	if(conf->autoupgrade_os) free(conf->autoupgrade_os);
@@ -356,10 +358,241 @@ static int get_conf_val_args(const char *field, const char *value, const char *o
 
 /* Windows users have a nasty habit of putting in backslashes. Convert them. */
 #ifdef HAVE_WIN32
+#include <limits.h>
+#include <string.h>
+
 static void convert_backslashes(char **path)
 {
 	char *p=NULL;
 	for(p=*path; *p; p++) if(*p=='\\') *p='/';
+}
+static void xfree(void *ptr)
+{
+	if(ptr != NULL)
+	{
+		free(ptr);
+	}
+}
+
+static void xfree_list(char **list, int size)
+{
+	if(list != NULL)
+	{
+		if(size < 0)
+		{
+			for(; *list != NULL; list++)
+				xfree(*list);
+		}
+		else
+		{
+			int i;
+			for (i = 0; i < size; i++)
+				xfree(list[i]);
+		}
+		xfree(list);
+	}
+}
+
+static size_t xstrlen(const char *in)
+{
+	const char *s;
+	size_t cpt;
+	if(in == NULL)
+	{
+		return 0;
+	}
+	/* we want to avoid an overflow in case the input string isn't null
+	   terminated */
+	for(s = in, cpt = 0; *s && cpt < UINT_MAX; ++s, cpt++);
+	return (s - in);
+}
+
+static void *xmalloc(size_t size)
+{
+	void *ret = malloc(size);
+	if(ret == NULL)
+	{
+		logp("xmalloc can not allocate %lu bytes", (u_long) size);
+		exit(2);
+	}
+	return ret;
+}
+
+static void *xcalloc(size_t nmem, size_t size)
+{
+	void *ret = calloc(nmem, size);
+	if (ret == NULL)
+	{
+		logp("xcalloc can not allocate %lu bytes", (u_long) (size * nmem));
+		exit(2);
+	}
+	return ret;
+}
+
+static void *xrealloc(void *src, size_t new_size)
+{
+	void *ret;
+	if(src == NULL)
+	{
+		ret = xmalloc(new_size);
+	}
+	else
+	{
+		ret = realloc(src, new_size);
+	}
+	if (ret == NULL)
+	{
+		logp("xrealloc can not reallocate %lu bytes", (u_long) new_size);
+		exit(2);
+	}
+	return ret;
+}
+
+static char *xstrdup(const char *dup)
+{
+	size_t len;
+	char *copy;
+
+	len = xstrlen(dup);
+	if (len == 0)
+		return NULL;
+	copy = (char *)xmalloc(len + 1);
+	if(copy != NULL)
+		strncpy(copy, dup, len + 1);
+	return copy;
+}
+
+static char *xstrcat(char *dest, const char *src)
+{
+	char *save = xstrdup(dest);
+	size_t len = xstrlen(save) + xstrlen(src) + 1;
+	xfree(dest);
+	dest = (char *)xmalloc(len);
+	if (dest == NULL)
+	{
+		xfree(save);
+		return NULL;
+	}
+	snprintf(dest, len, "%s%s", save ? save : "", src);
+	xfree(save);
+	return dest;
+}
+
+static char **xstrsplit(const char *src, const char *token, size_t *size)
+{
+	char **ret;
+	int n = 1;
+	char *tmp, *init;
+	init = xstrdup(src);
+	tmp = strtok(init, token);
+	*size = 0;
+	if(tmp == NULL)
+	{
+		xfree(init);
+		return NULL;
+	}
+	ret = (char **)xcalloc(10, sizeof(char *));
+	while(tmp != NULL)
+	{
+		if((int) *size > n * 10)
+		{
+			char **newstr = (char **)xrealloc(ret, n++ * 10 * sizeof(char *));
+			if(newstr == NULL)
+			{
+				for(;*size > 0; (*size)--)
+					xfree(ret[*size-1]);
+				xfree(ret);
+				xfree(init);
+				return NULL;
+			}
+			ret = newstr;
+		}
+		ret[*size] = xstrdup(tmp);
+		tmp = strtok(NULL, token);
+		(*size)++;
+	}
+	if ((int) *size + 1 > n * 10)
+	{
+		ret = (char **)xrealloc(ret, (n * 10 + 1) * sizeof(char *));
+	}
+	ret[*size+1] = NULL;
+
+	xfree(init);
+	return ret;
+}
+
+static char *xstrjoin(char **tab, int size, const char *join)
+{
+	char *ret;
+	size_t len = 0;
+	int i, first = 1;
+	if(size > 0)
+	{
+		for(i = 0; i < size; i++)
+			len += xstrlen(tab[i]);
+	}
+	else
+	{
+		for(i = 0; tab[i] != NULL; i++)
+			len += xstrlen(tab[i]);
+	}
+	len += (size > 0 ? size : i) * xstrlen(join);
+	ret = (char *)xmalloc((len + 1) * sizeof(char));
+	--i;
+	for(; i >= 0; i--)
+	{
+		if(first)
+		{
+			snprintf(ret,
+					 xstrlen(tab[i]) + xstrlen(join) + 1,
+					 "%s%s",
+					 join,
+					 tab[i]);
+			first = 0;
+		}
+		else
+		{
+			size_t s = xstrlen(tab[i]) + xstrlen(join) + xstrlen(ret) + 1;
+			char *t = (char *)xmalloc(s * sizeof(char));
+			snprintf(t, s, "%s%s%s", join, tab[i], ret);
+			xfree(ret);
+			ret = xstrdup(t);
+			xfree (t);
+		}
+	}
+	ret[len] = '\0';
+	return ret;
+}
+
+static inline int xmin(int a, int b)
+{
+	return a < b ? a : b;
+}
+
+static inline int xmax(int a, int b)
+{
+	return a > b ? a : b;
+}
+
+static char *xstrsub(const char *src, int begin, int len)
+{
+	if (src == NULL)
+		return NULL;
+
+	char *ret;
+	size_t s_full = xstrlen(src);
+	int l = len == -1 ? (int) s_full : len;
+	int ind;
+
+	ret = (char *)xmalloc((xmin (s_full, l) + 1) * sizeof(char));
+	ind = begin < 0 ?
+				xmax((int) s_full + begin, 0) :
+				xmin(s_full, begin);
+
+	strncpy(ret, src+ind, xmin(s_full, l));
+	ret[xmin(s_full, l)] = '\0';
+
+	return ret;
 }
 #endif
 
@@ -514,7 +747,7 @@ static void do_build_regex(struct strlist **list, int count, struct strlist ***d
 	{
 		*dest=list;
 		compile_regex(&(list[i]->re), list[i]->path);
-        }
+		}
 
 }
 
@@ -556,20 +789,20 @@ static struct fstype fstypes[]={
 
 int main(int argc, char *argv[])
 {
-        int i=0;
-        struct statfs buf;
-        if(argc<1)
-        {
-                printf("not enough args\n");
-                return -1;
-        }
-        if(statfs(argv[1], &buf))
-        {
-                printf("error\n");
-                return -1;
-        }
-        printf("0x%08X\n", buf.f_type);
-        return 0;
+		int i=0;
+		struct statfs buf;
+		if(argc<1)
+		{
+				printf("not enough args\n");
+				return -1;
+		}
+		if(statfs(argv[1], &buf))
+		{
+				printf("error\n");
+				return -1;
+		}
+		printf("0x%08X\n", buf.f_type);
+		return 0;
 }
 */
 
@@ -607,6 +840,7 @@ struct llists
 	struct strlist **erlist; // exclude (regular expression)
 	struct strlist **exfslist; // exclude filesystems
 	struct strlist **excomlist; // exclude from compression
+	struct strlist **iglist; //include (glob expression)
 	struct strlist **talist;
 	struct strlist **nslist;
 	struct strlist **nflist;
@@ -798,6 +1032,8 @@ static int load_config_strings(struct config *conf, const char *field, const cha
 		NULL, &(conf->ircount), &(l->irlist), 0)) return -1;
 	if(get_conf_val_args(field, value, "exclude_regex", NULL,
 		NULL, &(conf->ercount), &(l->erlist), 0)) return -1;
+	if (get_conf_val_args(field, value, "include_glob", NULL,
+		NULL, &(conf->igcount), &(l->iglist), 0)) return -1;
 	if(get_conf_val_args(field, value, "exclude_fs", NULL,
 		NULL, &(conf->exfscount), &(l->exfslist), 0)) return -1;
 	if(get_conf_val_args(field, value, "exclude_comp", NULL,
@@ -1195,6 +1431,12 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 	int i=0;
 	int r=0;
 	struct strlist **sdlist=NULL;
+#ifndef HAVE_WIN32
+	glob_t globbuf;
+#else
+	WIN32_FIND_DATA ffd;
+	HANDLE hFind = INVALID_HANDLE_VALUE;
+#endif
 
 	// Set the strlist flag for the excluded fstypes
 	for(i=0; i<conf->exfscount; i++)
@@ -1231,6 +1473,8 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 	do_strlist_sort(l->exfslist, conf->exfscount, &(conf->excfs));
 	// exclude from compression
 	do_strlist_sort(l->excomlist, conf->excmcount, &(conf->excom));
+	// include (wildcard expression)
+	do_strlist_sort(l->iglist, conf->igcount, &(conf->incglob));
 
 	set_max_ext(conf->incext, conf->incount);
 	set_max_ext(conf->excext, conf->excount);
@@ -1239,8 +1483,109 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 	do_strlist_sort(l->fflist, conf->ffcount, &(conf->fifos));
 	do_strlist_sort(l->bdlist, conf->bdcount, &(conf->blockdevs));
 	do_strlist_sort(l->fslist, conf->fscount, &(conf->fschgdir));
-	do_strlist_sort(l->ielist, conf->iecount, &(conf->incexcdir));
 	do_strlist_sort(l->nblist, conf->nbcount, &(conf->nobackup));
+
+	if (conf->mode != MODE_SERVER) { /* Disable globing if we are the server */
+#ifndef HAVE_WIN32
+		for(i=0; i<conf->igcount; i++)
+			glob(conf->incglob[i]->path, i>0 ? GLOB_APPEND : 0, NULL, &globbuf);
+
+		for(i=0; i<globbuf.gl_pathc; i++)
+			strlist_add(&(l->ielist), &(conf->iecount), globbuf.gl_pathv[i], 1);
+
+		globfree(&globbuf);
+#else
+		for(i=0; i<conf->igcount; i++)
+		{
+			char **splitstr1 = NULL;
+			char *tmppath = NULL, *sav = NULL;
+			size_t len1 = 0;
+			convert_backslashes(&(conf->incglob[i]->path));
+			//logp("glob: %s\n", conf->incglob[i]->path);
+			if (conf->incglob[i]->path[strlen(conf->incglob[i]->path)-1] != '*')
+				splitstr1 = xstrsplit(conf->incglob[i]->path, "*", &len1);
+			if(len1 > 2)
+			{
+				logp("include_glob error: '%s' contains at list two '*' which is not currently supported\n",
+						conf->incglob[i]->path);
+				xfree_list(splitstr1, len1);
+				continue;
+			}
+			if(len1 > 1)
+			{
+				tmppath = xstrcat(tmppath, splitstr1[0]);
+				sav = xstrdup(tmppath);
+				tmppath = xstrcat(tmppath, "*");
+				hFind = FindFirstFileA(tmppath, &ffd);
+				//logp("probing: %s\n", tmppath);
+				xfree(tmppath);
+				tmppath = NULL;
+			}
+			else
+				hFind = FindFirstFileA(conf->incglob[i]->path, &ffd);
+			if(INVALID_HANDLE_VALUE == hFind)
+			{
+				LPVOID lpMsgBuf;
+				DWORD dw = GetLastError(); 
+				FormatMessage(
+					FORMAT_MESSAGE_ALLOCATE_BUFFER | 
+					FORMAT_MESSAGE_FROM_SYSTEM |
+					FORMAT_MESSAGE_IGNORE_INSERTS,
+					NULL,
+					dw,
+					MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+					(LPTSTR) &lpMsgBuf,
+					0, NULL );
+				logp("Error: %s\n", lpMsgBuf);
+				LocalFree(lpMsgBuf);
+				if(splitstr1 != NULL)
+				{
+					xfree(sav);
+					xfree_list(splitstr1, len1);
+				}
+				continue;
+			}
+			do
+			{
+				if(ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY
+				   && strcmp(ffd.cFileName, ".") != 0
+				   && strcmp(ffd.cFileName, "..") != 0)
+				{
+					char *win32_fname = NULL;
+					if(len1 < 2)
+					{
+						if(conf->incglob[i]->path[xstrlen(conf->incglob[i]->path)-1] == '*')
+						{
+							tmppath = xstrsub(conf->incglob[i]->path, 0, xstrlen(conf->incglob[i]->path)-1);
+							tmppath = xstrcat(tmppath, ffd.cFileName);
+						}
+						else
+							tmppath = xstrdup(conf->incglob[i]->path);
+					}
+					else
+					{
+						tmppath = xstrcat(tmppath, sav);
+						tmppath = xstrcat(tmppath, ffd.cFileName);
+						tmppath = xstrcat(tmppath, splitstr1[1]);
+					}
+					strlist_add(&(l->ielist), &(conf->iecount), tmppath, 1);
+					//logp("add: %s\n", tmppath);
+					xfree(tmppath);
+					tmppath = NULL;
+				}
+			}
+			while(FindNextFileA(hFind, &ffd) != 0);
+			FindClose(hFind);
+			if(splitstr1 != NULL)
+			{
+				xfree(sav);
+				xfree_list(splitstr1, len1);
+			}
+		}
+#endif
+	}
+
+	do_strlist_sort(l->ielist, conf->iecount, &(conf->incexcdir));
 
 	// This decides which directories to start backing up, and which
 	// are subdirectories which don't need to be started separately.

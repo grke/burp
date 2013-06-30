@@ -91,6 +91,7 @@ extern "C" {
 #endif
 #if !defined(HAVE_WIN32)
 #include <sys/stat.h>
+#include <glob.h>
 #endif 
 #include <sys/time.h>
 #if HAVE_SYS_WAIT_H

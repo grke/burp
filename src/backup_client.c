@@ -26,79 +26,105 @@ static int maybe_send_extrameta(const char *path, char cmd, const char *attribs,
 }
 #endif
 
-int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *p1cntr)
-{
-   char msg[128]="";
-   char attribs[MAXSTRING];
-
-   if(!file_is_included(conf->incexcdir, conf->iecount,
-	conf->incext, conf->incount,
-	conf->excext, conf->excount,
-	conf->increg, conf->ircount,
-	conf->excreg, conf->ercount,
-	ff->fname, top_level)) return 0;
 #ifdef HAVE_WIN32
-// Useful Windows attributes debug
-/*
-	printf("\n%llu", ff->winattr);
-	printf("\n%s\n", ff->fname);
-if(ff->winattr & FILE_ATTRIBUTE_READONLY) printf("readonly\n");
-if(ff->winattr & FILE_ATTRIBUTE_HIDDEN) printf("hidden\n");
-if(ff->winattr & FILE_ATTRIBUTE_SYSTEM) printf("system\n");
-if(ff->winattr & FILE_ATTRIBUTE_DIRECTORY) printf("directory\n");
-if(ff->winattr & FILE_ATTRIBUTE_ARCHIVE) printf("archive\n");
-if(ff->winattr & FILE_ATTRIBUTE_DEVICE) printf("device\n");
-if(ff->winattr & FILE_ATTRIBUTE_NORMAL) printf("normal\n");
-if(ff->winattr & FILE_ATTRIBUTE_TEMPORARY) printf("temporary\n");
-if(ff->winattr & FILE_ATTRIBUTE_SPARSE_FILE) printf("sparse\n");
-if(ff->winattr & FILE_ATTRIBUTE_REPARSE_POINT) printf("reparse\n");
-if(ff->winattr & FILE_ATTRIBUTE_COMPRESSED) printf("compressed\n");
-if(ff->winattr & FILE_ATTRIBUTE_OFFLINE) printf("offline\n");
-if(ff->winattr & FILE_ATTRIBUTE_NOT_CONTENT_INDEXED) printf("notcont\n");
-if(ff->winattr & FILE_ATTRIBUTE_ENCRYPTED) printf("encrypted\n");
-if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
-*/
-	if(ff->winattr & FILE_ATTRIBUTE_ENCRYPTED)
+static int ft_windows_attribute_encrypted(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
+{
+	if(ff->type==FT_REGE
+	  || ff->type==FT_REG
+	  || ff->type==FT_DIRBEGIN)
 	{
-//		if(ff->type!=FT_DIREND)
-//			logw(p1cntr, "EFS not yet supported: %s", ff->fname);
-//		return 0;
-
-		if(ff->type==FT_REGE
-		  || ff->type==FT_REG
-		  || ff->type==FT_DIRBEGIN)
-		{
-			encode_stat(attribs,
-				&ff->statp, ff->winattr, conf->compression);
-			if(async_write_str(CMD_STAT, attribs)
-			  || async_write_str(CMD_EFS_FILE, ff->fname))
-				return -1;
-			do_filecounter(p1cntr, CMD_EFS_FILE, 1);
-			if(ff->type==FT_REG)
-				do_filecounter_bytes(p1cntr,
-					(unsigned long long)ff->statp.st_size);
-			return 0;
-		}
-		else if(ff->type==FT_DIREND)
-			return 0;
-		else
-		{
-			// Hopefully, here is never reached.
-			logw(p1cntr, "EFS type %d not yet supported: %s",
-				ff->type,
-				ff->fname);
-			return 0;
-		}
+		encode_stat(attribs,
+			&ff->statp, ff->winattr, conf->compression);
+		if(async_write_str(CMD_STAT, attribs)
+		  || async_write_str(CMD_EFS_FILE, ff->fname))
+			return -1;
+		do_filecounter(p1cntr, CMD_EFS_FILE, 1);
+		if(ff->type==FT_REG)
+			do_filecounter_bytes(p1cntr,
+				(unsigned long long)ff->statp.st_size);
+		return 0;
 	}
+	else if(ff->type==FT_DIREND)
+		return 0;
+
+	// Hopefully, here is never reached.
+	logw(p1cntr, "EFS type %d not yet supported: %s", ff->type, ff->fname);
+	return 0;
+}
 #endif
 
-   //logp("%d: %s\n", ff->type, ff->fname);
-
-   switch (ff->type) {
+static int ft_reg(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
+{
+	encode_stat(attribs, &ff->statp, ff->winattr,
+		in_exclude_comp(conf->excom, conf->excmcount,
+		ff->fname, conf->compression));
+	if(async_write_str(CMD_STAT, attribs)
+	  || async_write_str(filesymbol, ff->fname)) return -1;
+	do_filecounter(p1cntr, filesymbol, 1);
+	if(ff->type==FT_REG)
+		do_filecounter_bytes(p1cntr,
+			(unsigned long long)ff->statp.st_size);
 #ifndef HAVE_WIN32
-   case FT_LNKSAVED:
-        //printf("Lnka: %s -> %s\n", ff->fname, ff->link);
-   	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
+	if(maybe_send_extrameta(ff->fname, filesymbol, attribs, p1cntr))
+		return -1;
+#endif
+	return 0;
+}
+
+static int ft_nofschg(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
+{
+	logw(p1cntr, "%s%s [will not descend: file system change not allowed]\n", "Dir: ", ff->fname);
+	return 0;
+}
+
+static int ft_junction(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
+{
+	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
+#ifdef HAVE_WIN32
+	if(async_write_str(CMD_STAT, attribs)) return -1;
+	if(async_write_str(filesymbol, ff->fname)) return -1;
+	do_filecounter(p1cntr, filesymbol, 1);
+#else
+	if(async_write_str(CMD_STAT, attribs)
+	  || async_write_str(CMD_DIRECTORY, ff->fname)) return -1;
+	do_filecounter(p1cntr, CMD_DIRECTORY, 1);
+	if(maybe_send_extrameta(ff->fname, CMD_DIRECTORY, attribs, p1cntr))
+		return -1;
+#endif
+	return 0;
+}
+
+#ifndef HAVE_WIN32
+static int ft_spec(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
+{
+	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
+	if(async_write_str(CMD_STAT, attribs)
+			|| async_write_str(CMD_SPECIAL, ff->fname))
+		return -1;
+	do_filecounter(p1cntr, CMD_SPECIAL, 1);
+	if(maybe_send_extrameta(ff->fname, CMD_SPECIAL, attribs, p1cntr))
+		return -1;
+	return 0;
+}
+
+static int ft_lnk(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
+{
+	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
+	if(maybe_send_extrameta(ff->fname, CMD_SOFT_LINK, attribs, p1cntr))
+		return -1;
+	if(async_write_str(CMD_STAT, attribs)
+	  || async_write_str(CMD_SOFT_LINK, ff->fname)
+	  || async_write_str(CMD_SOFT_LINK, ff->link))
+		return -1;
+	do_filecounter(p1cntr, CMD_SOFT_LINK, 1);
+	if(maybe_send_extrameta(ff->fname, CMD_SOFT_LINK, attribs, p1cntr))
+		return -1;
+	return 0;
+}
+
+static int ft_lnksaved(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
+{
+	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
 	if(async_write_str(CMD_STAT, attribs)
 	  || async_write_str(CMD_HARD_LINK, ff->fname)
 	  || async_write_str(CMD_HARD_LINK, ff->link))
@@ -107,109 +133,66 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 	// At least FreeBSD 8.2 can have different xattrs on hard links.
 	if(maybe_send_extrameta(ff->fname, CMD_HARD_LINK, attribs, p1cntr))
 		return -1;
+	return 0;
+}
 #endif
-      break;
-   case FT_RAW:
-   case FT_FIFO:
-   case FT_REGE:
-   case FT_REG:
-      encode_stat(attribs, &ff->statp, ff->winattr,
-		in_exclude_comp(conf->excom, conf->excmcount,
-			ff->fname, conf->compression));
-      if(async_write_str(CMD_STAT, attribs)
-	|| async_write_str(filesymbol, ff->fname))
-		return -1;
-      do_filecounter(p1cntr, filesymbol, 1);
-      if(ff->type==FT_REG)
-	do_filecounter_bytes(p1cntr, (unsigned long long)ff->statp.st_size);
-#ifndef HAVE_WIN32
-      if(maybe_send_extrameta(ff->fname, filesymbol, attribs, p1cntr))
-		return -1;
-#endif
-      break;
-#ifndef HAVE_WIN32
-   case FT_LNK:
-	//printf("link: %s -> %s\n", ff->fname, ff->link);
-   	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
-	if(maybe_send_extrameta(ff->fname, CMD_SOFT_LINK, attribs, p1cntr))
-		return -1;
-	if(async_write_str(CMD_STAT, attribs)
-	  || async_write_str(CMD_SOFT_LINK, ff->fname)
-	  || async_write_str(CMD_SOFT_LINK, ff->link))
-		return -1;
-	do_filecounter(p1cntr, CMD_SOFT_LINK, 1);
-        if(maybe_send_extrameta(ff->fname, CMD_SOFT_LINK, attribs, p1cntr))
-		return -1;
-#endif
-      break;
-   case FT_DIREND:
-      return 0;
-   case FT_NOFSCHG:
-   case FT_DIRBEGIN:
-   case FT_REPARSE:
-   case FT_JUNCTION:
-	{
-         char errmsg[100] = "";
-         if (ff->type == FT_NOFSCHG)
-            snprintf(errmsg, sizeof(errmsg), _("\t[will not descend: file system change not allowed]"));
-	 if(*errmsg)
-	 {
-		snprintf(msg, sizeof(msg),
-			"%s%s%s\n", "Dir: ", ff->fname, errmsg);
-		logw(p1cntr, "%s", msg);
-	 }
-	 else
-	 {
-		encode_stat(attribs,
-			&ff->statp, ff->winattr, conf->compression);
+
+static int ft_err(FF_PKT *ff, struct cntr *p1cntr, const char *msg)
+{
+	logw(p1cntr, _("Err: %s %s: %s"), msg, ff->fname, strerror(errno));
+	return 0;
+}
+
+int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *p1cntr)
+{
+	char attribs[256];
+
+	if(!file_is_included(conf->incexcdir, conf->iecount,
+		conf->incext, conf->incount,
+		conf->excext, conf->excount,
+		conf->increg, conf->ircount,
+		conf->excreg, conf->ercount,
+		ff->fname, top_level)) return 0;
 #ifdef HAVE_WIN32
-	     	if(async_write_str(CMD_STAT, attribs)) return -1;
-		if(async_write_str(filesymbol, ff->fname)) return -1;
-		do_filecounter(p1cntr, filesymbol, 1);
-#else
-	      	if(async_write_str(CMD_STAT, attribs)
-		  || async_write_str(CMD_DIRECTORY, ff->fname)) return -1;
-		do_filecounter(p1cntr, CMD_DIRECTORY, 1);
-        	if(maybe_send_extrameta(ff->fname, CMD_DIRECTORY,
-			attribs, p1cntr)) return -1;
+	if(ff->winattr & FILE_ATTRIBUTE_ENCRYPTED)
+		return ft_windows_attribute_encrypted(ff,
+			attribs, conf, p1cntr);
 #endif
-	 }
-	}
-      break;
+	//logp("%d: %s\n", ff->type, ff->fname);
+
+	switch (ff->type)
+	{
+		case FT_RAW:
+		case FT_FIFO:
+		case FT_REGE:
+		case FT_REG:
+			return ft_reg(ff, attribs, conf, p1cntr);
+		case FT_DIREND:
+			return 0;
+		case FT_NOFSCHG:
+			return ft_nofschg(ff, attribs, conf, p1cntr);
+		case FT_DIRBEGIN:
+		case FT_REPARSE:
+		case FT_JUNCTION:
+			return ft_junction(ff, attribs, conf, p1cntr);
 #ifndef HAVE_WIN32
-   case FT_SPEC: // special file - fifo, socket, device node...
-      encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
-      if(async_write_str(CMD_STAT, attribs)
-	  || async_write_str(CMD_SPECIAL, ff->fname))
-		return -1;
-      do_filecounter(p1cntr, CMD_SPECIAL, 1);
-      if(maybe_send_extrameta(ff->fname, CMD_SPECIAL, attribs, p1cntr))
-		return -1;
+		case FT_SPEC: // special file - fifo, socket, device node...
+			return ft_spec(ff, attribs, conf, p1cntr);
+		case FT_LNK:
+			return ft_lnk(ff, attribs, conf, p1cntr);
+		case FT_LNKSAVED:
+			return ft_lnksaved(ff, attribs, conf, p1cntr);
 #endif
-      break;
-   case FT_NOACCESS:
-      logw(p1cntr, _("Err: Could not access %s: %s"), ff->fname, strerror(errno));
-      break;
-   case FT_NOFOLLOW:
-      logw(p1cntr, _("Err: Could not follow ff->link %s: %s"), ff->fname, strerror(errno));
-      break;
-   case FT_NOSTAT:
-      logw(p1cntr, _("Err: Could not stat %s: %s"), ff->fname, strerror(errno));
-      break;
-   case FT_NOCHG:
-      logw(p1cntr, _("Skip: File not saved. No change. %s"), ff->fname);
-      break;
-   case FT_ISARCH:
-      logw(p1cntr, _("Err: Attempt to backup archive. Not saved. %s"), ff->fname);
-      break;
-   case FT_NOOPEN:
-      logw(p1cntr, _("Err: Could not open directory %s: %s"), ff->fname, strerror(errno));
-      break;
-   default:
-      logw(p1cntr, _("Err: Unknown file ff->type %d: %s"), ff->type, ff->fname);
-      break;
-   }
-   return 0;
+		case FT_NOFOLLOW:
+			return ft_err(ff, p1cntr, "Could not follow link");
+		case FT_NOSTAT:
+			return ft_err(ff, p1cntr, "Could not stat");
+		case FT_NOOPEN:
+			return ft_err(ff, p1cntr, "Could not open directory");
+	}
+	logw(p1cntr, _("Err: Unknown file ff->type %d: %s"),
+		ff->type, ff->fname);
+	return 0;
 }
 
 static int backup_client(struct config *conf, int estimate, struct cntr *p1cntr, struct cntr *cntr)

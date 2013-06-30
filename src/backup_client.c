@@ -48,7 +48,7 @@ static int ft_windows_attribute_encrypted(FF_PKT *ff, char *attribs, struct conf
 {
 	if(ff->type==FT_REGE
 	  || ff->type==FT_REG
-	  || ff->type==FT_DIRBEGIN)
+	  || ff->type==FT_DIR)
 	{
 		encode_stat(attribs,
 			&ff->statp, ff->winattr, conf->compression);
@@ -59,8 +59,6 @@ static int ft_windows_attribute_encrypted(FF_PKT *ff, char *attribs, struct conf
 				(unsigned long long)ff->statp.st_size);
 		return 0;
 	}
-	else if(ff->type==FT_DIREND)
-		return 0;
 
 	// Hopefully, here is never reached.
 	logw(p1cntr, "EFS type %d not yet supported: %s", ff->type, ff->fname);
@@ -167,16 +165,14 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *p1cn
 
 	switch (ff->type)
 	{
-		case FT_RAW:
-		case FT_FIFO:
-		case FT_REGE:
 		case FT_REG:
+		case FT_REGE:
+		case FT_FIFO:
+		case FT_RAW:
 			return ft_reg(ff, attribs, conf, p1cntr);
-		case FT_DIREND:
-			return 0;
 		case FT_NOFSCHG:
 			return ft_nofschg(ff, attribs, conf, p1cntr);
-		case FT_DIRBEGIN:
+		case FT_DIR:
 		case FT_REPARSE:
 		case FT_JUNCTION:
 			return ft_directory(ff, attribs, conf, p1cntr);

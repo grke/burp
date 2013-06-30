@@ -120,7 +120,7 @@ void InitWinAPIWrapper();
 #define FT_REGE       2               /* Regular file but empty */
 #define FT_REG        3               /* Regular file */
 #define FT_LNK        4               /* Soft Link */
-#define FT_DIREND     5               /* Directory at end (saved) */
+#define FT_DIR        5               /* Directory */
 #define FT_SPEC       6               /* Special file -- chr, blk, fifo, sock */
 #define FT_NOFOLLOW   8               /* Could not follow link */
 #define FT_NOSTAT     9               /* Could not stat file */
@@ -131,7 +131,6 @@ void InitWinAPIWrapper();
 /* The DIRBEGIN packet is sent to the FD file processing routine so
  * that it can filter packets, but otherwise, it is not used
  * or saved */
-#define FT_DIRBEGIN  18               /* Directory at beginning (not saved) */
 #define FT_REPARSE   21               /* Win NTFS reparse point */
 #define FT_JUNCTION  26               /* Win32 Junction point */
 

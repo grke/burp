@@ -674,7 +674,7 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 	link[len]=0;
 
 	ff_pkt->link=link;
-	ff_pkt->type=FT_DIRBEGIN;
+	ff_pkt->type=FT_DIR;
 
 #if defined(HAVE_WIN32)
 	windows_reparse_point_fiddling(ff_pkt);
@@ -688,20 +688,9 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 		return rtn_stat;
 	}
 
-	/* Done with DIRBEGIN, next call will be DIREND */
-	/* Graham says: burp does not use DIREND, so this can be simplified. */
-	if(ff_pkt->type==FT_DIRBEGIN) ff_pkt->type=FT_DIREND;
-
-	/*
-	* Create a temporary ff packet for this directory
-	*   entry, and defer handling the directory until
-	*   we have recursed into it.  This saves the
-	*   directory after all files have been processed, and
-	*   during the restore, the directory permissions will
-	*   be reset after all the files have been restored.
-	*/
 	/* Graham says: what the fuck? Variables declared in the middle of
-	   the function? */ 
+	   the function? This was something to do with FT_DIREND, which no
+	   longer exists. Perhaps dir_ff_pkt can get removed too now. */ 
 	FF_PKT *dir_ff_pkt;
 	if(!(dir_ff_pkt=new_dir_ff_pkt(ff_pkt))) return -1;
 
@@ -788,16 +777,6 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 	free(link);
 	if(nl) free(nl);
 
-	/*
-	* Now that we have recursed through all the files in the
-	*  directory, we "save" the directory so that after all
-	*  the files are restored, this entry will serve to reset
-	*  the directory modes and dates.  Temp directory values
-	*  were used without this record.
-	*/
-		/* handle directory entry */
-	if(!rtn_stat)
-		send_file(dir_ff_pkt, top_level, conf, cntr);
 	if(ff_pkt->linked)
 		ff_pkt->linked->FileIndex = dir_ff_pkt->FileIndex;
 	free_dir_ff_pkt(dir_ff_pkt);

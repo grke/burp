@@ -116,7 +116,7 @@ static int ft_spec(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *
 	return 0;
 }
 
-static int ft_lnk(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
+static int ft_lnk_s(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
 {
 	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
 	if(maybe_send_extrameta(ff->fname, CMD_SOFT_LINK, attribs, p1cntr))
@@ -128,7 +128,7 @@ static int ft_lnk(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *p
 	return 0;
 }
 
-static int ft_lnksaved(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
+static int ft_lnk_h(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
 {
 	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
 	if(send_attribs_and_symbol_lnk(attribs, CMD_HARD_LINK, ff, p1cntr))
@@ -170,19 +170,19 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *p1cn
 		case FT_FIFO:
 		case FT_RAW:
 			return ft_reg(ff, attribs, conf, p1cntr);
-		case FT_NOFSCHG:
-			return ft_nofschg(ff, attribs, conf, p1cntr);
 		case FT_DIR:
 		case FT_REPARSE:
 		case FT_JUNCTION:
 			return ft_directory(ff, attribs, conf, p1cntr);
+		case FT_NOFSCHG:
+			return ft_nofschg(ff, attribs, conf, p1cntr);
 #ifndef HAVE_WIN32
 		case FT_SPEC: // special file - fifo, socket, device node...
 			return ft_spec(ff, attribs, conf, p1cntr);
-		case FT_LNK:
-			return ft_lnk(ff, attribs, conf, p1cntr);
-		case FT_LNKSAVED:
-			return ft_lnksaved(ff, attribs, conf, p1cntr);
+		case FT_LNK_S:
+			return ft_lnk_s(ff, attribs, conf, p1cntr);
+		case FT_LNK_H:
+			return ft_lnk_h(ff, attribs, conf, p1cntr);
 #endif
 		case FT_NOFOLLOW:
 			return ft_err(ff, p1cntr, "Could not follow link");

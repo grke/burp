@@ -109,17 +109,12 @@ void InitWinAPIWrapper();
 #define MAX_NAME_LENGTH 128
 
 /*
- *  File type (Burp defined).
- *
- *  This is stored as 32 bits on the Volume, but only FT_MASK (16) bits are
- *    used for the file type. The upper bits are used to indicate
- *    additional optional fields in the attribute record.
+ *  File types.
  */
-#define FT_MASK       0xFFFF          /* Bits used by FT (type) */
-#define FT_LNKSAVED   1               /* hard link to file already saved */
+#define FT_LNK_H      1               /* hard link to file already saved */
 #define FT_REGE       2               /* Regular file but empty */
 #define FT_REG        3               /* Regular file */
-#define FT_LNK        4               /* Soft Link */
+#define FT_LNK_S      4               /* Soft Link */
 #define FT_DIR        5               /* Directory */
 #define FT_SPEC       6               /* Special file -- chr, blk, fifo, sock */
 #define FT_NOFOLLOW   8               /* Could not follow link */
@@ -128,9 +123,6 @@ void InitWinAPIWrapper();
 #define FT_NOOPEN    15               /* Could not open directory */
 #define FT_RAW       16               /* Raw block device */
 #define FT_FIFO      17               /* Raw fifo device */
-/* The DIRBEGIN packet is sent to the FD file processing routine so
- * that it can filter packets, but otherwise, it is not used
- * or saved */
 #define FT_REPARSE   21               /* Win NTFS reparse point */
 #define FT_JUNCTION  26               /* Win32 Junction point */
 

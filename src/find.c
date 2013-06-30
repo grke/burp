@@ -422,7 +422,7 @@ static int found_soft_link(FF_PKT *ff_pkt, struct config *conf,
 	}
 	buffer[size]=0;
 	ff_pkt->link=buffer;	/* point to link */
-	ff_pkt->type=FT_LNK;	/* got a real link */
+	ff_pkt->type=FT_LNK_S;	/* got a real link */
 	rtn_stat = send_file(ff_pkt, top_level, conf, cntr);
 	if(ff_pkt->linked) ff_pkt->linked->FileIndex=ff_pkt->FileIndex;
 	return rtn_stat;
@@ -922,7 +922,7 @@ find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
 			if(!strcmp(lp->name, fname)) return 0;
 			ff_pkt->link=lp->name;
 			/* Handle link, file already saved */
-			ff_pkt->type=FT_LNKSAVED;
+			ff_pkt->type=FT_LNK_H;
 			ff_pkt->LinkFI=lp->FileIndex;
 			ff_pkt->linked=0;
 			rtn_stat=send_file(ff_pkt, top_level, conf, cntr);

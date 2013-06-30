@@ -243,57 +243,6 @@ int setup_signals(int oldmax_children, int max_children, int oldmax_status_child
 	return 0;
 }
 
-static int vss_opts_changed(struct config *cconf, const char *cincexc, const char *incexc)
-{
-	int ret=0;
-	struct config oldconf;
-	struct config newconf;
-	init_config(&oldconf);
-	init_config(&newconf);
-
-	// Figure out the old config, which is in the incexc file left
-	// in the current backup directory on the server.
-	if(parse_incexcs_path(&oldconf, cincexc))
-	{
-		// Assume that the file did not exist, and therefore
-		// the old split_vss setting is 0.
-		oldconf.split_vss=0;
-		oldconf.strip_vss=0;
-	}
-
-	// Figure out the new config, which is either in the incexc file from
-	// the client, or in the cconf on the server.
-	if(incexc)
-	{
-		if(parse_incexcs_buf(&newconf, incexc))
-		{
-			// Should probably not got here.
-			newconf.split_vss=0;
-			newconf.strip_vss=0;
-		}
-	}
-	else
-	{
-		newconf.split_vss=cconf->split_vss;
-		newconf.strip_vss=cconf->strip_vss;
-	}
-
-	if(newconf.split_vss!=oldconf.split_vss)
-	{
-		logp("split_vss=%d (changed since last backup)\n",
-			newconf.split_vss);
-		ret=1;
-	}
-	if(newconf.strip_vss!=oldconf.strip_vss)
-	{
-		logp("strip_vss=%d (changed since last backup)\n",
-			newconf.strip_vss);
-		ret=1;
-	}
-	if(ret) logp("All files will be treated as new\n");
-	return ret;
-}
-
 static int incexc_matches(const char *fullrealwork, const char *incexc)
 {
 	int ret=0;

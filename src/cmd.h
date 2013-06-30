@@ -18,10 +18,6 @@
 #define CMD_METADATA	'm'	/* Extra meta data */
 #define CMD_ENC_METADATA 'n'	/* Encrypted extra meta data */
 #define CMD_EFS_FILE 	'k'	/* Windows EFS file */
-#define CMD_VSS		'v'	/* Windows VSS metadata */
-#define CMD_ENC_VSS	'V'	/* Encrypted Windows VSS metadata */
-#define CMD_VSS_T	'u'	/* Windows VSS footer */
-#define CMD_ENC_VSS_T	'U'	/* Encrypted Windows VSS footer */
 
 // Commands
 #define CMD_GEN		'c'	/* Generic command */

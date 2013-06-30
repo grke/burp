@@ -29,11 +29,7 @@ static int restore_interrupt(struct sbuf *sb, const char *msg, struct cntr *cntr
 	// to interrupt the flow and move on.
 	if((sb->cmd!=CMD_FILE
 	   && sb->cmd!=CMD_ENC_FILE
-	   && sb->cmd!=CMD_EFS_FILE
-	   && sb->cmd!=CMD_VSS
-	   && sb->cmd!=CMD_ENC_VSS
-	   && sb->cmd!=CMD_VSS_T
-	   && sb->cmd!=CMD_ENC_VSS_T)
+	   && sb->cmd!=CMD_EFS_FILE)
 	 || !(sb->datapth))
 		return 0;
 
@@ -563,25 +559,18 @@ static int overwrite_ok(struct sbuf *sb, struct config *conf, BFILE *bfd, const 
 	if(conf->overwrite) return 1;
 #else
 	// User specified overwrite is OK,
-	// UNLESS we're trying to overwrite the file with the trailing VSS data
-	if(conf->overwrite)
-		return (sb->cmd!=CMD_VSS_T
-			&& sb->cmd!=CMD_ENC_VSS_T);
+	if(conf->overwrite) return 1;
 #endif
 
 	if(!S_ISDIR(sb->statp.st_mode)
 	  && sb->cmd!=CMD_METADATA
-	  && sb->cmd!=CMD_ENC_METADATA
-	  && sb->cmd!=CMD_VSS
-	  && sb->cmd!=CMD_ENC_VSS)
+	  && sb->cmd!=CMD_ENC_METADATA)
 	{
 #ifdef HAVE_WIN32
 		// If Windows previously got some VSS data, it needs to append
 		// the file data to the already open bfd.
-		// And trailing VSS data.
 		if(bfd->mode!=BF_CLOSED
-		  && (sb->cmd==CMD_FILE || sb->cmd==CMD_ENC_FILE
-		      || sb->cmd==CMD_VSS_T || sb->cmd==CMD_ENC_VSS_T)
+		  && (sb->cmd==CMD_FILE || sb->cmd==CMD_ENC_FILE)
 		  && bfd->path && !strcmp(bfd->path, fullpath))
 		{
 			return 1;
@@ -667,10 +656,6 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore, str
 			case CMD_SPECIAL:
 			case CMD_METADATA:
 			case CMD_ENC_METADATA:
-			case CMD_VSS:
-			case CMD_ENC_VSS:
-			case CMD_VSS_T:
-			case CMD_ENC_VSS_T:
 			case CMD_EFS_FILE:
 				if(conf->strip)
 				{
@@ -738,7 +723,6 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore, str
 				}
 				break;
 			case CMD_FILE:
-			case CMD_VSS_T:
 				// Have it a separate statement to the
 				// encrypted version so that encrypted and not
 				// encrypted files can be restored at the
@@ -754,7 +738,6 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore, str
 				}
 				break;
 			case CMD_ENC_FILE:
-			case CMD_ENC_VSS_T:
 				if(restore_file_or_get_meta(&bfd, &sb,
 					fullpath, act,
 					conf->encryption_password, cntr,
@@ -782,7 +765,6 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore, str
 				}
 				break;
 			case CMD_METADATA:
-			case CMD_VSS:
 				if(restore_metadata(&bfd, &sb, fullpath, act,
 					NULL, vss_restore, conf, cntr))
 				{
@@ -791,7 +773,6 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore, str
 				}
 				break;
 			case CMD_ENC_METADATA:
-			case CMD_ENC_VSS:
 				if(restore_metadata(&bfd, &sb, fullpath, act,
 					conf->encryption_password,
 					vss_restore, conf, cntr))

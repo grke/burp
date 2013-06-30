@@ -115,10 +115,6 @@ static int do_sbuf_fill_from_file(FILE *fp, gzFile zp, struct sbuf *sb, int phas
 			|| sb->cmd==CMD_ENC_FILE
 			|| sb->cmd==CMD_METADATA
 			|| sb->cmd==CMD_ENC_METADATA
-			|| sb->cmd==CMD_VSS
-			|| sb->cmd==CMD_ENC_VSS
-			|| sb->cmd==CMD_VSS_T
-			|| sb->cmd==CMD_ENC_VSS_T
 			|| sb->cmd==CMD_EFS_FILE))
 	{
 		char cmd;
@@ -163,10 +159,6 @@ static int sbuf_to_fp(struct sbuf *sb, FILE *mp, int write_endfile)
 		  || sb->cmd==CMD_ENC_FILE
 		  || sb->cmd==CMD_METADATA
 		  || sb->cmd==CMD_ENC_METADATA
-		  || sb->cmd==CMD_VSS
-		  || sb->cmd==CMD_ENC_VSS
-		  || sb->cmd==CMD_VSS_T
-		  || sb->cmd==CMD_ENC_VSS_T
 		  || sb->cmd==CMD_EFS_FILE))
 		{
 			if(send_msg_fp(mp, CMD_END_FILE,
@@ -193,10 +185,6 @@ static int sbuf_to_zp(struct sbuf *sb, gzFile zp, int write_endfile)
 		  || sb->cmd==CMD_ENC_FILE
 		  || sb->cmd==CMD_METADATA
 		  || sb->cmd==CMD_ENC_METADATA
-		  || sb->cmd==CMD_VSS
-		  || sb->cmd==CMD_ENC_VSS
-		  || sb->cmd==CMD_VSS_T
-		  || sb->cmd==CMD_ENC_VSS_T
 		  || sb->cmd==CMD_EFS_FILE))
 		{
 			if(send_msg_zp(zp, CMD_END_FILE,
@@ -298,21 +286,9 @@ int sbuf_pathcmp(struct sbuf *a, struct sbuf *b)
 		if(b->cmd==CMD_METADATA || b->cmd==CMD_ENC_METADATA) return 0;
 		else return 1;
 	}
-	else if(a->cmd==CMD_VSS || a->cmd==CMD_ENC_VSS)
-	{
-		if(b->cmd==CMD_VSS || b->cmd==CMD_ENC_VSS) return 0;
-		else return -1;
-	}
-	else if(a->cmd==CMD_VSS_T || a->cmd==CMD_ENC_VSS_T)
-	{
-		if(b->cmd==CMD_VSS_T || b->cmd==CMD_ENC_VSS_T) return 0;
-		else return 1;
-	}
 	else
 	{
 		if(b->cmd==CMD_METADATA || b->cmd==CMD_ENC_METADATA) return -1;
-		else if(b->cmd==CMD_VSS || b->cmd==CMD_ENC_VSS) return 1;
-		else if(b->cmd==CMD_VSS_T || b->cmd==CMD_ENC_VSS_T) return -1;
 		else return 0;
 	}
 }

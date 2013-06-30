@@ -81,8 +81,6 @@ struct config
 	int bdcount;
 	unsigned long min_file_size;
 	unsigned long max_file_size;
-	int split_vss;
-	int strip_vss;
 	char *vss_drives;
   // These are to do with restore.
 	int overwrite;

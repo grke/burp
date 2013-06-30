@@ -24,8 +24,6 @@ static void init_incexcs(struct config *conf)
 	conf->excom=NULL; conf->excmcount=0; // exclude from compression
 	conf->fifos=NULL; conf->ffcount=0;
 	conf->blockdevs=NULL; conf->bdcount=0;
-	conf->split_vss=0;
-	conf->strip_vss=0;
 	conf->vss_drives=NULL;
 	/* stuff to do with restore */
 	conf->overwrite=0;
@@ -673,10 +671,6 @@ static int load_config_ints(struct config *conf, const char *field, const char *
 		&(conf->max_storage_subdirs));
 	get_conf_val_int(field, value, "overwrite",
 		&(conf->overwrite));
-	get_conf_val_int(field, value, "split_vss",
-		&(conf->split_vss));
-	get_conf_val_int(field, value, "strip_vss",
-		&(conf->strip_vss));
 	get_conf_val_int(field, value, "strip",
 		&(conf->strip));
 	get_conf_val_int(field, value, "fork",
@@ -1482,8 +1476,7 @@ int log_incexcs_buf(const char *incexc)
 	return 0;
 }
 
-/* The server runs this when parsing a restore file on the server, and when
-   checking whether split_vss changed since the last backup. */
+/* The server runs this when parsing a restore file on the server. */
 int parse_incexcs_path(struct config *conf, const char *path)
 {
 	free_incexcs(conf);

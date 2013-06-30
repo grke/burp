@@ -61,26 +61,6 @@ struct cntr
 	unsigned long long efs_changed;
 	unsigned long long efs_deleted;
 
-	unsigned long long vss;
-	unsigned long long vss_same;
-	unsigned long long vss_changed;
-	unsigned long long vss_deleted;
-
-	unsigned long long encvss;
-	unsigned long long encvss_same;
-	unsigned long long encvss_changed;
-	unsigned long long encvss_deleted;
-
-	unsigned long long vss_t;
-	unsigned long long vss_t_same;
-	unsigned long long vss_t_changed;
-	unsigned long long vss_t_deleted;
-
-	unsigned long long encvss_t;
-	unsigned long long encvss_t_same;
-	unsigned long long encvss_t_changed;
-	unsigned long long encvss_t_deleted;
-
 	unsigned long long warning;
 	unsigned long long byte;
 	unsigned long long recvbyte;

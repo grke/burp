@@ -102,8 +102,6 @@ static int send_file(const char *fname, int patches, const char *best, const cha
 		// sort it out.
 		if(cmd==CMD_ENC_FILE
 		  || cmd==CMD_ENC_METADATA
-		  || cmd==CMD_ENC_VSS
-		  || cmd==CMD_ENC_VSS_T
 		  || cmd==CMD_EFS_FILE)
 		{
 			ret=send_whole_file(cmd, best, datapth, 1, bytes,
@@ -151,7 +149,6 @@ static int verify_file(const char *fname, int patches, const char *best, const c
 	}
 	if(patches
 	  || cmd==CMD_ENC_FILE || cmd==CMD_ENC_METADATA || cmd==CMD_EFS_FILE
-	  || cmd==CMD_ENC_VSS
 	  || (!patches && !dpth_is_compressed(compression, best)))
 	{
 		// If we did some patches or encryption, or the compression
@@ -247,10 +244,6 @@ static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, const cha
 	  || sb->cmd==CMD_ENC_FILE
 	  || sb->cmd==CMD_METADATA
 	  || sb->cmd==CMD_ENC_METADATA
-	  || sb->cmd==CMD_VSS
-	  || sb->cmd==CMD_ENC_VSS
-	  || sb->cmd==CMD_VSS_T
-	  || sb->cmd==CMD_ENC_VSS_T
 	  || sb->cmd==CMD_EFS_FILE)
 	{
 		return restore_file(arr, a, i, sb->datapth,
@@ -470,10 +463,6 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 					  || sb.cmd==CMD_ENC_FILE
 					  || sb.cmd==CMD_METADATA
 					  || sb.cmd==CMD_ENC_METADATA
-					  || sb.cmd==CMD_VSS
-					  || sb.cmd==CMD_ENC_VSS
-					  || sb.cmd==CMD_VSS_T
-					  || sb.cmd==CMD_ENC_VSS_T
 					  || sb.cmd==CMD_EFS_FILE)
 						do_filecounter_bytes(p1cntr,
 							(unsigned long long)

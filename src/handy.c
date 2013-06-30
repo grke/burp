@@ -1317,14 +1317,6 @@ void cmd_to_text(char cmd, char *buf, size_t len)
 			snprintf(buf, len, "Plain file changed"); break;
 		case CMD_TIMESTAMP:
 			snprintf(buf, len, "Backup timestamp"); break;
-		case CMD_VSS:
-			snprintf(buf, len, "Windows VSS header"); break;
-		case CMD_ENC_VSS:
-			snprintf(buf, len, "Encrypted windows VSS header"); break;
-		case CMD_VSS_T:
-			snprintf(buf, len, "Windows VSS footer"); break;
-		case CMD_ENC_VSS_T:
-			snprintf(buf, len, "Encrypted windows VSS footer"); break;
 		default:
 			snprintf(buf, len, "----------------"); break;
 	}

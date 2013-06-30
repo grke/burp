@@ -32,8 +32,7 @@ FILED_OBJS = \
 	$(OBJDIR)/attribs.o \
 	$(OBJDIR)/auth_client.o \
 	$(OBJDIR)/autoupgrade_client.o \
-	$(OBJDIR)/backup_phase1_client.o \
-	$(OBJDIR)/backup_phase2_client.o \
+	$(OBJDIR)/backup_client.o \
 	$(OBJDIR)/base64.o \
 	$(OBJDIR)/berrno.o \
 	$(OBJDIR)/bfile.o \
@@ -58,7 +57,6 @@ FILED_OBJS = \
 	$(OBJDIR)/prog.o \
 	$(OBJDIR)/regexp.o \
 	$(OBJDIR)/restore_client.o \
-	$(OBJDIR)/rs_buf.o \
 	$(OBJDIR)/sbuf.o \
 	$(OBJDIR)/ssl.o \
 	$(OBJDIR)/strlist.o \

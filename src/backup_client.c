@@ -7,15 +7,12 @@
 #include "counter.h"
 #include "extrameta.h"
 #include "backup_client.h"
+#include "client_vss.h"
 
 static char filesymbol=CMD_FILE;
-#ifdef HAVE_WIN32
-static char metasymbol=CMD_VSS;
-static char vss_trail_symbol=CMD_VSS_T;
-#else
 static char metasymbol=CMD_METADATA;
-#endif
 
+#ifndef HAVE_WIN32
 static int maybe_send_extrameta(const char *path, char cmd, const char *attribs, struct cntr *p1cntr)
 {
 	if(has_extrameta(path, cmd))
@@ -27,6 +24,7 @@ static int maybe_send_extrameta(const char *path, char cmd, const char *attribs,
 	}
 	return 0;
 }
+#endif
 
 int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *p1cntr)
 {
@@ -118,27 +116,13 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
       encode_stat(attribs, &ff->statp, ff->winattr,
 		in_exclude_comp(conf->excom, conf->excmcount,
 			ff->fname, conf->compression));
-#ifdef HAVE_WIN32
-      if(conf->split_vss && !conf->strip_vss
-	&& maybe_send_extrameta(ff->fname, filesymbol, attribs, p1cntr))
-		return -1;
-#endif
       if(async_write_str(CMD_STAT, attribs)
 	|| async_write_str(filesymbol, ff->fname))
 		return -1;
       do_filecounter(p1cntr, filesymbol, 1);
       if(ff->type==FT_REG)
 	do_filecounter_bytes(p1cntr, (unsigned long long)ff->statp.st_size);
-#ifdef HAVE_WIN32
-      // Possible trailing VSS meta data
-      if(conf->split_vss && !conf->strip_vss)
-      {
-	if(async_write_str(CMD_STAT, attribs)
-	 || async_write_str(vss_trail_symbol, ff->fname))
-		return -1;
-        do_filecounter(p1cntr, vss_trail_symbol, 1);
-      }
-#else
+#ifndef HAVE_WIN32
       if(maybe_send_extrameta(ff->fname, filesymbol, attribs, p1cntr))
 		return -1;
 #endif
@@ -147,8 +131,7 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
    case FT_LNK:
 	//printf("link: %s -> %s\n", ff->fname, ff->link);
    	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
-        if(conf->split_vss && !conf->strip_vss
-	  && maybe_send_extrameta(ff->fname, CMD_SOFT_LINK, attribs, p1cntr))
+	if(maybe_send_extrameta(ff->fname, CMD_SOFT_LINK, attribs, p1cntr))
 		return -1;
 	if(async_write_str(CMD_STAT, attribs)
 	  || async_write_str(CMD_SOFT_LINK, ff->fname)
@@ -180,21 +163,9 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 		encode_stat(attribs,
 			&ff->statp, ff->winattr, conf->compression);
 #ifdef HAVE_WIN32
-		if(conf->split_vss || conf->strip_vss)
-		{
-			if(!conf->strip_vss
-			  && maybe_send_extrameta(ff->fname,
-				CMD_DIRECTORY, attribs, p1cntr)) return -1;
-	      		if(async_write_str(CMD_STAT, attribs)) return -1;
-			if(async_write_str(CMD_DIRECTORY, ff->fname)) return -1;
-			do_filecounter(p1cntr, CMD_DIRECTORY, 1);
-		}
-		else
-		{
-	      		if(async_write_str(CMD_STAT, attribs)) return -1;
-			if(async_write_str(filesymbol, ff->fname)) return -1;
-			do_filecounter(p1cntr, filesymbol, 1);
-		}
+	     	if(async_write_str(CMD_STAT, attribs)) return -1;
+		if(async_write_str(filesymbol, ff->fname)) return -1;
+		do_filecounter(p1cntr, filesymbol, 1);
 #else
 	      	if(async_write_str(CMD_STAT, attribs)
 		  || async_write_str(CMD_DIRECTORY, ff->fname)) return -1;
@@ -254,12 +225,7 @@ static int backup_client(struct config *conf, int estimate, struct cntr *p1cntr,
 	if(conf->encryption_password)
 	{
 		filesymbol=CMD_ENC_FILE;
-#ifdef HAVE_WIN32
-		metasymbol=CMD_ENC_VSS;
-		vss_trail_symbol=CMD_ENC_VSS_T;
-#else
 		metasymbol=CMD_ENC_METADATA;
-#endif
 	}
 
 	ff=init_find_files();

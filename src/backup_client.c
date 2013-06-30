@@ -26,6 +26,23 @@ static int maybe_send_extrameta(const char *path, char cmd, const char *attribs,
 }
 #endif
 
+static int send_attribs_and_symbol(const char *attribs, char symbol, FF_PKT *ff, struct cntr *p1cntr)
+{
+	if(async_write_str(CMD_STAT, attribs)
+	  || async_write_str(symbol, ff->fname)) return -1;
+	do_filecounter(p1cntr, symbol, 1);
+	return 0;
+}
+
+static int send_attribs_and_symbol_lnk(const char *attribs, char symbol, FF_PKT *ff, struct cntr *p1cntr)
+{
+	if(async_write_str(CMD_STAT, attribs)
+	  || async_write_str(symbol, ff->fname)
+	  || async_write_str(symbol, ff->link)) return -1;
+	do_filecounter(p1cntr, symbol, 1);
+	return 0;
+}
+
 #ifdef HAVE_WIN32
 static int ft_windows_attribute_encrypted(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
 {
@@ -35,10 +52,8 @@ static int ft_windows_attribute_encrypted(FF_PKT *ff, char *attribs, struct conf
 	{
 		encode_stat(attribs,
 			&ff->statp, ff->winattr, conf->compression);
-		if(async_write_str(CMD_STAT, attribs)
-		  || async_write_str(CMD_EFS_FILE, ff->fname))
+		if(send_attribs_and_symbol(attribs, CMD_EFS_FILE, ff, p1cntr))
 			return -1;
-		do_filecounter(p1cntr, CMD_EFS_FILE, 1);
 		if(ff->type==FT_REG)
 			do_filecounter_bytes(p1cntr,
 				(unsigned long long)ff->statp.st_size);
@@ -58,9 +73,7 @@ static int ft_reg(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *p
 	encode_stat(attribs, &ff->statp, ff->winattr,
 		in_exclude_comp(conf->excom, conf->excmcount,
 		ff->fname, conf->compression));
-	if(async_write_str(CMD_STAT, attribs)
-	  || async_write_str(filesymbol, ff->fname)) return -1;
-	do_filecounter(p1cntr, filesymbol, 1);
+	if(send_attribs_and_symbol(attribs, filesymbol, ff, p1cntr)) return -1;
 	if(ff->type==FT_REG)
 		do_filecounter_bytes(p1cntr,
 			(unsigned long long)ff->statp.st_size);
@@ -77,17 +90,17 @@ static int ft_nofschg(FF_PKT *ff, char *attribs, struct config *conf, struct cnt
 	return 0;
 }
 
-static int ft_junction(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
+static int ft_directory(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
 {
 	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
+	if(send_attribs_and_symbol(attribs,
 #ifdef HAVE_WIN32
-	if(async_write_str(CMD_STAT, attribs)) return -1;
-	if(async_write_str(filesymbol, ff->fname)) return -1;
-	do_filecounter(p1cntr, filesymbol, 1);
+		filesymbol,
 #else
-	if(async_write_str(CMD_STAT, attribs)
-	  || async_write_str(CMD_DIRECTORY, ff->fname)) return -1;
-	do_filecounter(p1cntr, CMD_DIRECTORY, 1);
+		CMD_DIRECTORY,
+#endif
+		ff, p1cntr)) return -1;
+#ifndef HAVE_WIN32
 	if(maybe_send_extrameta(ff->fname, CMD_DIRECTORY, attribs, p1cntr))
 		return -1;
 #endif
@@ -98,10 +111,8 @@ static int ft_junction(FF_PKT *ff, char *attribs, struct config *conf, struct cn
 static int ft_spec(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
 {
 	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
-	if(async_write_str(CMD_STAT, attribs)
-			|| async_write_str(CMD_SPECIAL, ff->fname))
+	if(send_attribs_and_symbol(attribs, CMD_SPECIAL, ff, p1cntr))
 		return -1;
-	do_filecounter(p1cntr, CMD_SPECIAL, 1);
 	if(maybe_send_extrameta(ff->fname, CMD_SPECIAL, attribs, p1cntr))
 		return -1;
 	return 0;
@@ -112,11 +123,8 @@ static int ft_lnk(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *p
 	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
 	if(maybe_send_extrameta(ff->fname, CMD_SOFT_LINK, attribs, p1cntr))
 		return -1;
-	if(async_write_str(CMD_STAT, attribs)
-	  || async_write_str(CMD_SOFT_LINK, ff->fname)
-	  || async_write_str(CMD_SOFT_LINK, ff->link))
+	if(send_attribs_and_symbol_lnk(attribs, CMD_SOFT_LINK, ff, p1cntr))
 		return -1;
-	do_filecounter(p1cntr, CMD_SOFT_LINK, 1);
 	if(maybe_send_extrameta(ff->fname, CMD_SOFT_LINK, attribs, p1cntr))
 		return -1;
 	return 0;
@@ -125,11 +133,8 @@ static int ft_lnk(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *p
 static int ft_lnksaved(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
 {
 	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
-	if(async_write_str(CMD_STAT, attribs)
-	  || async_write_str(CMD_HARD_LINK, ff->fname)
-	  || async_write_str(CMD_HARD_LINK, ff->link))
+	if(send_attribs_and_symbol_lnk(attribs, CMD_HARD_LINK, ff, p1cntr))
 		return -1;
-	do_filecounter(p1cntr, CMD_HARD_LINK, 1);
 	// At least FreeBSD 8.2 can have different xattrs on hard links.
 	if(maybe_send_extrameta(ff->fname, CMD_HARD_LINK, attribs, p1cntr))
 		return -1;
@@ -174,7 +179,7 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *p1cn
 		case FT_DIRBEGIN:
 		case FT_REPARSE:
 		case FT_JUNCTION:
-			return ft_junction(ff, attribs, conf, p1cntr);
+			return ft_directory(ff, attribs, conf, p1cntr);
 #ifndef HAVE_WIN32
 		case FT_SPEC: // special file - fifo, socket, device node...
 			return ft_spec(ff, attribs, conf, p1cntr);

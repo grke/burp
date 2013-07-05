@@ -509,7 +509,7 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, con
 				// make more than enough room for the message
 				len+=strlen(clist[q]->name)+1;
 				len+=(a*2)+1;
-				len+=(a*16)+1;
+				len+=(a*32)+1;
 				if(!(curback=(char *)malloc(len)))
 				{
 					log_out_of_memory(__FUNCTION__);
@@ -520,7 +520,7 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, con
 					clist[q]->status);
 				for(i=a-1; i>=0; i--)
 				{
-					char tmp[16]="";
+					char tmp[32]="";
 					t=timestamp_to_long(arr[i].timestamp);
 					snprintf(tmp, sizeof(tmp), "\t%lu %d %li",
 						arr[i].index, arr[i].deletable, (long)t);

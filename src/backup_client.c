@@ -147,7 +147,7 @@ static int ft_err(FF_PKT *ff, struct cntr *p1cntr, const char *msg)
 	return 0;
 }
 
-int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *p1cntr)
+static int send_file_info(FF_PKT *ff, struct config *conf, struct cntr *p1cntr, bool top_level)
 {
 	char attribs[256];
 
@@ -202,10 +202,10 @@ static int backup_client(struct config *conf, int estimate, struct cntr *p1cntr,
 	int sd=0;
 	int ret=0;
 	FF_PKT *ff=NULL;
+	int ff_ret=0;
+	bool top_level=true;
 
-	// First, tell the server about everything that needs to be backed up.
-
-	logp("Phase 1 begin (file system scan)\n");
+	logp("Backup begin\n");
 
 	if(conf->encryption_password)
 	{
@@ -213,22 +213,18 @@ static int backup_client(struct config *conf, int estimate, struct cntr *p1cntr,
 		metasymbol=CMD_ENC_METADATA;
 	}
 
-	ff=init_find_files();
-	for(; sd < conf->sdcount; sd++)
+	ff=find_files_init();
+	while(!(ff_ret=find_file_next(ff, conf, p1cntr, &top_level)))
 	{
-		if(conf->startdir[sd]->flag)
-		{
-			if((ret=find_files_begin(ff, conf,
-				conf->startdir[sd]->path, p1cntr)))
-					break;
-		}
+		if((ff_ret=send_file_info(ff, conf, p1cntr, top_level))) break;
 	}
-	term_find_files(ff);
+	if(ff_ret<0) ret=ff_ret;
+	find_files_free(ff);
 
 	print_endcounter(p1cntr);
 	//print_filecounters(p1cntr, cntr, ACTION_BACKUP);
-	if(ret) logp("Error in phase 1\n");
-	logp("Phase 1 end (file system scan)\n");
+	if(ret) logp("Error in backup\n");
+	logp("Backup end\n");
 
 	return ret;
 }

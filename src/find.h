@@ -20,8 +20,6 @@ struct utimbuf {
 };
 #endif
 
-#define MODE_RALL (S_IRUSR|S_IRGRP|S_IROTH)
-
 #ifdef HAVE_REGEX_H
 #include <regex.h>
 #endif
@@ -30,10 +28,18 @@ struct utimbuf {
 int readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result);
 #endif
 
-/*
- * Definition of the find_files packet passed as the
- * first argument to the find_files callback subroutine.
- */
+typedef struct ff_dir ff_dir_t;
+
+struct ff_dir
+{
+	struct dirent **nl;
+	int count;
+	int c;
+	char *dirname;
+	dev_t dev;
+	struct ff_dir *next;
+};
+
 struct FF_PKT
 {
 	char *fname;             /* full filename */
@@ -41,16 +47,18 @@ struct FF_PKT
 	struct stat statp;       /* stat packet */
 	int64_t winattr;         /* windows attributes */
 	struct f_link *linked;   /* Set if this file is hard linked */
-	int type;                /* FT_ type from above */
-	int ff_errno;            /* errno */
+	int type;                /* FT_ type from burpconfig.h */
 
 	/* List of all hard linked files found */
 	struct f_link **linkhash;
+
+	struct ff_dir *ff_dir;
 };
 
-FF_PKT *init_find_files();
-int term_find_files(FF_PKT *ff);
-int find_files_begin(FF_PKT *ff_pkt, struct config *conf, char *fname, struct cntr *cntr);
+FF_PKT *find_files_init(void);
+int find_files_free(FF_PKT *ff);
+int find_file_next(FF_PKT *ff, struct config *conf, struct cntr *p1cntr, bool *top_level);
+
 int pathcmp(const char *a, const char *b);
 int file_is_included(struct strlist **ielist, int iecount,
 	struct strlist **incext, int incount,

@@ -1,4 +1,4 @@
 New burp engine, using variable length chunking (rabin fingerprinting),
 inline deduplication and sparse indexing.
 
-Very early work in progress - do not use if you value your data.
+Very early work in progress - do not use if you value your data!

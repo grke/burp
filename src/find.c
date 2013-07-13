@@ -15,38 +15,30 @@
 #include <sys/statfs.h>
 #endif
 
-extern int32_t name_max;              /* filename max length */
-extern int32_t path_max;              /* path name max length */
+static int32_t name_max;              /* filename max length */
+static int32_t path_max;              /* path name max length */
 
-int32_t name_max;              /* filename max length */
-int32_t path_max;              /* path name max length */
-
-static const int fnmode = 0;
+static void init_max(int32_t *max, int32_t default_max)
+{
+	*max = pathconf(".", default_max);
+	if(*max < 1024) *max = 1024;
+	// Add for EOS.
+	(*max)++;
+}
 
 /*
  * Initialize the find files "global" variables
  */
 FF_PKT *init_find_files()
 {
-  FF_PKT *ff;
+	FF_PKT *ff;
+	ff = (FF_PKT *)calloc(1, sizeof(FF_PKT));
 
-  ff = (FF_PKT *)malloc(sizeof(FF_PKT));
-  memset(ff, 0, sizeof(FF_PKT));
+	// Get system path and filename maximum lengths.
+	init_max(&path_max, _PC_PATH_MAX);
+	init_max(&name_max, _PC_NAME_MAX);
 
-   /* Get system path and filename maximum lengths */
-   path_max = pathconf(".", _PC_PATH_MAX);
-   if (path_max < 1024) {
-      path_max = 1024;
-   }
-
-   name_max = pathconf(".", _PC_NAME_MAX);
-   if (name_max < 1024) {
-      name_max = 1024;
-   }
-   path_max++;                        /* add for EOS */
-   name_max++;                        /* add for EOS */
-
-  return ff;
+	return ff;
 }
 
 /*
@@ -56,12 +48,12 @@ FF_PKT *init_find_files()
  *   are linked to this one, we save only the directory
  *   entry so we can link it.
  */
-struct f_link {
-    struct f_link *next;
-    dev_t dev;                        /* device */
-    ino_t ino;                        /* inode with device is unique */
-    uint32_t FileIndex;               /* FileIndex of this file */
-    char name[1];                     /* The name */
+struct f_link
+{
+	struct f_link *next;
+	dev_t dev;                        /* device */
+	ino_t ino;                        /* inode with device is unique */
+	char name[1];                     /* The name */
 };
 
 typedef struct f_link link_t;
@@ -69,114 +61,65 @@ typedef struct f_link link_t;
 #define LINK_HASHTABLE_SIZE (1<<LINK_HASHTABLE_BITS)
 #define LINK_HASHTABLE_MASK (LINK_HASHTABLE_SIZE-1)
 
+// Maybe convert this stuff to uthash?
 static inline int LINKHASH(const struct stat &info)
 {
-    int hash = info.st_dev;
-    unsigned long long i = info.st_ino;
-    hash ^= i;
-    i >>= 16;
-    hash ^= i;
-    i >>= 16;
-    hash ^= i;
-    i >>= 16;
-    hash ^= i;
-    return hash & LINK_HASHTABLE_MASK;
+	int hash = info.st_dev;
+	unsigned long long i = info.st_ino;
+	hash ^= i;
+	i >>= 16;
+	hash ^= i;
+	i >>= 16;
+	hash ^= i;
+	i >>= 16;
+	hash ^= i;
+	return hash & LINK_HASHTABLE_MASK;
 }
 
 static int term_find_one(FF_PKT *ff)
 {
-   struct f_link *lp, *lc;
-   int count = 0;
-   int i;
+	int i;
+	int count=0;
+	struct f_link *lp;
+	struct f_link *lc;
 
-   
-   if (ff->linkhash == NULL) return 0;
+	if(!ff->linkhash) return 0;
 
-   for (i =0 ; i < LINK_HASHTABLE_SIZE; i ++) {
-   /* Free up list of hard linked files */
-       lp = ff->linkhash[i];
-       while (lp) {
-      lc = lp;
-      lp = lp->next;
-      if (lc) {
-         free(lc);
-         count++;
-      }
-   }
-       ff->linkhash[i] = NULL;
-   }
-   free(ff->linkhash);
-   ff->linkhash = NULL;
-   return count;
+	for(i=0; i<LINK_HASHTABLE_SIZE; i++)
+	{
+		// Free up list of hard linked files.
+		lp=ff->linkhash[i];
+		while(lp)
+		{
+			lc=lp;
+			lp=lp->next;
+			if(lc)
+			{
+				free(lc);
+				count++;
+			}
+		}
+		ff->linkhash[i]=NULL;
+	}
+	free(ff->linkhash);
+	ff->linkhash=NULL;
+	return count;
 }
 
-/*
- * Terminate find_files() and release
- * all allocated memory
- */
-int
-term_find_files(FF_PKT *ff)
+// Terminate find_files() and release all allocated memory.
+int term_find_files(FF_PKT *ff)
 {
-   int hard_links;
-
-   hard_links = term_find_one(ff);
-   free(ff);
-   return hard_links;
+	int hard_links=term_find_one(ff);
+	free(ff);
+	return hard_links;
 }
 
-/*
- * Create a new directory Find File packet, but copy
- *   some of the essential info from the current packet.
- *   However, be careful to zero out the rest of the 
- *   packet.
- */
-static FF_PKT *new_dir_ff_pkt(FF_PKT *ff_pkt)
+static int myalphasort(const struct dirent **a, const struct dirent **b)
 {
-   FF_PKT *dir_ff_pkt = NULL;
-   if(!(dir_ff_pkt=(FF_PKT *)malloc(sizeof(FF_PKT))))
-   {
-	log_out_of_memory(__FUNCTION__);
-	return NULL;
-   }
-   memcpy(dir_ff_pkt, ff_pkt, sizeof(FF_PKT));
-   dir_ff_pkt->fname = strdup(ff_pkt->fname);
-   dir_ff_pkt->link = strdup(ff_pkt->link);
-   dir_ff_pkt->linkhash = NULL;
-   return dir_ff_pkt;
+	return pathcmp((*a)->d_name, (*b)->d_name);
 }
 
-/*
- * Free the temp directory ff_pkt
- */
-static void free_dir_ff_pkt(FF_PKT *dir_ff_pkt)
-{
-   free(dir_ff_pkt->fname);
-   free(dir_ff_pkt->link);
-   free(dir_ff_pkt);
-}
-
-/*
- * check for BSD nodump flag
- */
-static bool no_dump(FF_PKT *ff_pkt)
-{
-#if defined(HAVE_CHFLAGS) && defined(UF_NODUMP)
-   if ( (ff_pkt->flags & FO_HONOR_NODUMP) &&
-        (ff_pkt->statp.st_flags & UF_NODUMP) ) {
-      fprintf(stderr, _("     NODUMP flag set - will not process %s\n"),
-           ff_pkt->fname);
-      return true;                    /* do not backup this file */
-   }
-#endif
-   return false;                      /* do backup */
-}
-
-static int myalphasort (const struct dirent **a, const struct dirent **b)
-{
-	return pathcmp ((*a)->d_name, (*b)->d_name);
-}
-
-/* Return 1 to include the file, 0 to exclude it. */
+// Return 1 to include the file, 0 to exclude it.
 static int in_include_ext(struct strlist **incext, int incount, const char *fname)
 {
 	int i=0;
@@ -248,8 +191,8 @@ int in_exclude_comp(struct strlist **excom, int excmcount, const char *fname, in
 	return compression;
 }
 
-/* Return 1 to include the file, 0 to exclude it. */
-/* Currently not used - it needs more thinking about. */
+// Return 1 to include the file, 0 to exclude it.
+/* Currently not used - it needs more thinking about.
 int in_include_regex(struct strlist **increg, int ircount, const char *fname)
 {
 	int i;
@@ -262,6 +205,7 @@ int in_include_regex(struct strlist **increg, int ircount, const char *fname)
 	}
 	return 0;
 }
+*/
 
 int in_exclude_regex(struct strlist **excreg, int ercount, const char *fname)
 {
@@ -399,7 +343,6 @@ static int found_regular_file(FF_PKT *ff_pkt, struct config *conf,
 	else
 		ff_pkt->type=FT_REG;
 	rtn_stat=send_file(ff_pkt, top_level, conf, cntr);
-	if(ff_pkt->linked) ff_pkt->linked->FileIndex=ff_pkt->FileIndex;
 	return rtn_stat;
 }
 
@@ -416,24 +359,18 @@ static int found_soft_link(FF_PKT *ff_pkt, struct config *conf,
 		ff_pkt->type=FT_NOFOLLOW;
 		ff_pkt->ff_errno=errno;
 		rtn_stat=send_file(ff_pkt, top_level, conf, cntr);
-		if(ff_pkt->linked)
-			ff_pkt->linked->FileIndex=ff_pkt->FileIndex;
 		return rtn_stat;
 	}
 	buffer[size]=0;
 	ff_pkt->link=buffer;	/* point to link */
 	ff_pkt->type=FT_LNK_S;	/* got a real link */
 	rtn_stat = send_file(ff_pkt, top_level, conf, cntr);
-	if(ff_pkt->linked) ff_pkt->linked->FileIndex=ff_pkt->FileIndex;
 	return rtn_stat;
 }
 
-static int backup_dir_and_return(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr, const char *fname, bool top_level, FF_PKT *dir_ff_pkt, struct utimbuf *restore_times)
+static int backup_dir_and_return(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr, const char *fname, bool top_level, struct utimbuf *restore_times)
 {
 	int rtn_stat=send_file(ff_pkt, top_level, conf, cntr);
-	if(ff_pkt->linked)
-		ff_pkt->linked->FileIndex=ff_pkt->FileIndex;
-	free_dir_ff_pkt(dir_ff_pkt);
 	/* reset "link" */
 	ff_pkt->link=ff_pkt->fname;
 	return rtn_stat;
@@ -466,9 +403,9 @@ int fstype_excluded(struct config *conf, const char *fname, struct cntr *cntr)
 static void windows_reparse_point_fiddling(FF_PKT *ff_pkt)
 {
 	/*
-	* We have set st_rdev to 1 if it is a reparse point, otherwise 0,
-	*  if st_rdev is 2, it is a mount point 
-	*/
+	 * We have set st_rdev to 1 if it is a reparse point, otherwise 0,
+	 *  if st_rdev is 2, it is a mount point 
+	 */
 	/*
 	 * A reparse point (WIN32_REPARSE_POINT)
 	 *  is something special like one of the following:
@@ -553,11 +490,10 @@ static int get_files_in_directory(DIR *directory, struct dirent ***nl, int *coun
 	return 0;
 }
 
-/* prototype, because process_files_in_directory() recurses using find_files()
- */
+// Prototype, because process_files_in_directory() recurses using find_files().
 static int
 find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
-  char *fname, dev_t parent_device, bool top_level);
+	char *fname, dev_t parent_device, bool top_level);
 
 static int process_files_in_directory(struct dirent **nl, int count, int *rtn_stat, char **link, size_t len, size_t *link_len, struct config *conf, struct cntr *cntr, FF_PKT *ff_pkt, dev_t our_device)
 {
@@ -590,8 +526,6 @@ static int process_files_in_directory(struct dirent **nl, int count, int *rtn_st
 		{
 			*rtn_stat=find_files(ff_pkt,
 				conf, cntr, *link, our_device, false);
-			if(ff_pkt->linked)
-				ff_pkt->linked->FileIndex = ff_pkt->FileIndex;
 		}
 		else
 		{ 
@@ -639,25 +573,22 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 	int count=0;
 	bool recurse;
 	dev_t our_device;
-	bool volhas_attrlist;
 	struct dirent **nl=NULL;
 
 	recurse=true;
 	our_device=ff_pkt->statp.st_dev;
-	/* Remember volhas_attrlist if we recurse */
-	volhas_attrlist=ff_pkt->volhas_attrlist;
 
 	/*
-	* Ignore this directory and everything below if one of the files defined
-	* by the 'nobackup' option exists.
-	*/
+	 * Ignore this directory and everything below if one of the files
+	 * defined by the 'nobackup' option exists.
+	 */
 	if((nbret=nobackup_directory(conf, ff_pkt->fname)))
 	{
 		if(nbret<0) return -1; // error
 		return 0; // do not back it up.
 	}
 
-	/* Build a canonical directory name with a trailing slash in link var */
+	// Build a canonical directory name with a trailing slash in link var.
 	len=strlen(fname);
 	link_len=len+200;
 	if(!(link=(char *)malloc(link_len+2)))
@@ -667,9 +598,9 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 	}
 	snprintf(link, link_len, "%s", fname);
 
-	/* Strip all trailing slashes */
+	// Strip all trailing slashes.
 	while(len >= 1 && IsPathSeparator(link[len - 1])) len--;
-	/* add back one */
+	// Add one back.
 	link[len++]='/';
 	link[len]=0;
 
@@ -688,20 +619,14 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 		return rtn_stat;
 	}
 
-	/* Graham says: what the fuck? Variables declared in the middle of
-	   the function? This was something to do with FT_DIREND, which no
-	   longer exists. Perhaps dir_ff_pkt can get removed too now. */ 
-	FF_PKT *dir_ff_pkt;
-	if(!(dir_ff_pkt=new_dir_ff_pkt(ff_pkt))) return -1;
-
 	/*
-	* Do not descend into subdirectories (recurse) if the
-	* user has turned it off for this directory.
-	*
-	* If we are crossing file systems, we are either not allowed
-	* to cross, or we may be restricted by a list of permitted
-	* file systems.
-	*/
+	 * Do not descend into subdirectories (recurse) if the
+	 * user has turned it off for this directory.
+	 *
+	 * If we are crossing file systems, we are either not allowed
+	 * to cross, or we may be restricted by a list of permitted
+	 * file systems.
+	 */
 	if(!top_level
 	  && (parent_device!=ff_pkt->statp.st_dev
 #if defined(HAVE_WIN32)
@@ -713,7 +638,7 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 		{
 			free(link);
 			return backup_dir_and_return(ff_pkt, conf, cntr,
-				fname, top_level, dir_ff_pkt, restore_times);
+				fname, top_level, restore_times);
 		}
 		if(!fs_change_is_allowed(conf, ff_pkt->fname))
 		{
@@ -721,39 +646,29 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 			recurse=false;
 		}
 	}
-	/* If not recursing, just backup dir and return */
+	// If not recursing, just backup dir and return.
 	if(!recurse)
 	{
 		free(link);
 		return backup_dir_and_return(ff_pkt, conf, cntr,
-			fname, top_level, dir_ff_pkt, restore_times);
+			fname, top_level, restore_times);
 	}
 
-	/* reset "link" */
+	// Reset "link".
 	ff_pkt->link=ff_pkt->fname;
 
-	/*
-	* Descend into or "recurse" into the directory to read
-	*   all the files in it.
-	*/
+	// Recurse into the directory.
 	errno = 0;
 	if(!(directory=opendir(fname)))
 	{
 		ff_pkt->type=FT_NOOPEN;
 		ff_pkt->ff_errno=errno;
 		rtn_stat=send_file(ff_pkt, top_level, conf, cntr);
-		if(ff_pkt->linked)
-			ff_pkt->linked->FileIndex=ff_pkt->FileIndex;
 		free(link);
-		free_dir_ff_pkt(dir_ff_pkt);
 		return rtn_stat;
 	}
 
-	/*
-	* Process all files in this directory entry (recursing).
-	*    This would possibly run faster if we chdir to the directory
-	*    before traversing it.
-	*/
+	// Process all files in this directory entry (recursing).
 	if(get_files_in_directory(directory, &nl, &count))
 	{
 		closedir(directory);
@@ -777,12 +692,6 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 	free(link);
 	if(nl) free(nl);
 
-	if(ff_pkt->linked)
-		ff_pkt->linked->FileIndex = dir_ff_pkt->FileIndex;
-	free_dir_ff_pkt(dir_ff_pkt);
-
-	/* Restore value in case it changed. */
-	ff_pkt->volhas_attrlist=volhas_attrlist;
 	return rtn_stat;
 }
 
@@ -819,7 +728,6 @@ static int found_other(FF_PKT *ff_pkt, struct config *conf,
 		ff_pkt->type=FT_SPEC;
 	}
 	rtn_stat=send_file(ff_pkt, top_level, conf, cntr);
-	if(ff_pkt->linked) ff_pkt->linked->FileIndex = ff_pkt->FileIndex;
 	return rtn_stat;
 }
 
@@ -830,9 +738,8 @@ static int found_other(FF_PKT *ff_pkt, struct config *conf,
  * top_level is 1 when not recursing or 0 when
  *  descending into a directory.
  */
-static int
-find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
-  char *fname, dev_t parent_device, bool top_level)
+static int find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
+	char *fname, dev_t parent_device, bool top_level)
 {
 	int len;
 	int rtn_stat;
@@ -857,39 +764,13 @@ find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
 	restore_times.actime=ff_pkt->statp.st_atime;
 	restore_times.modtime=ff_pkt->statp.st_mtime;
 
-	if(no_dump(ff_pkt)) return 0;
-
-#ifdef HAVE_DARWIN_OS
-	if(ff_pkt->flags & FO_HFSPLUS
-		&& ff_pkt->volhas_attrlist
-		&& S_ISREG(ff_pkt->statp.st_mode))
-	{
-		/* TODO: initialise attrList once elsewhere? */
-		struct attrlist attrList;
-		memset(&attrList, 0, sizeof(attrList));
-		attrList.bitmapcount = ATTR_BIT_MAP_COUNT;
-		attrList.commonattr = ATTR_CMN_FNDRINFO;
-		attrList.fileattr = ATTR_FILE_RSRCLENGTH;
-		if(getattrlist(fname, &attrList, &ff_pkt->hfsinfo,
-			sizeof(ff_pkt->hfsinfo), FSOPT_NOFOLLOW))
-		{
-			ff_pkt->type=FT_NOSTAT;
-			ff_pkt->ff_errno=errno;
-			return send_file(ff_pkt, top_level, conf, cntr);
-		}
-	}
-#endif
-
-	ff_pkt->LinkFI=0;
 	/*
-	* Handle hard linked files
-	*
-	* Maintain a list of hard linked files already backed up. This
-	*  allows us to ensure that the data of each file gets backed
-	*  up only once.
-	*/
-	if (!(ff_pkt->flags & FO_NO_HARDLINK)
-	  && ff_pkt->statp.st_nlink > 1
+	 * Handle hard linked files.
+	 * Maintain a list of hard linked files already backed up. This
+	 *  allows us to ensure that the data of each file gets backed
+	 *  up only once.
+	 */
+	if(ff_pkt->statp.st_nlink > 1
 	  && (S_ISREG(ff_pkt->statp.st_mode)
 		|| S_ISCHR(ff_pkt->statp.st_mode)
 		|| S_ISBLK(ff_pkt->statp.st_mode)
@@ -911,7 +792,7 @@ find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
 		}
 		const int linkhash=LINKHASH(ff_pkt->statp);
 
-		/* Search link list of hard linked files */
+		// Search link list of hard linked files
 		for(lp=ff_pkt->linkhash[linkhash]; lp; lp=lp->next)
 		{
 		  if(lp->ino==(ino_t)ff_pkt->statp.st_ino
@@ -923,14 +804,13 @@ find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
 			ff_pkt->link=lp->name;
 			/* Handle link, file already saved */
 			ff_pkt->type=FT_LNK_H;
-			ff_pkt->LinkFI=lp->FileIndex;
 			ff_pkt->linked=0;
 			rtn_stat=send_file(ff_pkt, top_level, conf, cntr);
 			return rtn_stat;
 		  }
 		}
 
-		/* File not previously dumped. Chain it into our list. */
+		// File not previously dumped. Chain it into our list.
 		len=strlen(fname)+1;
 		if(!(lp=(struct f_link *)malloc(sizeof(struct f_link)+len)))
 		{
@@ -939,12 +819,11 @@ find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
 		}
 		lp->ino=ff_pkt->statp.st_ino;
 		lp->dev=ff_pkt->statp.st_dev;
-		/* set later */
-		lp->FileIndex=0;
+
 		snprintf(lp->name, len, "%s", fname);
 		lp->next=ff_pkt->linkhash[linkhash];
 		ff_pkt->linkhash[linkhash]=lp;
-		/* mark saved link */
+		// mark saved link
 		ff_pkt->linked=lp;
 	}
 	else
@@ -952,7 +831,7 @@ find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
 		ff_pkt->linked=NULL;
 	}
 
-	/* This is not a link to a previously dumped file, so dump it.  */
+	// This is not a link to a previously dumped file, so dump it.
 	if(S_ISREG(ff_pkt->statp.st_mode))
 		return found_regular_file(ff_pkt, conf, cntr, fname,
 			top_level, &restore_times);

@@ -116,11 +116,27 @@ static int term_find_one(FF_PKT *ff)
 	return count;
 }
 
+static void free_ff_dir(ff_dir *ff_dir)
+{
+	if(ff_dir)
+	{
+		if(ff_dir->nl) free(ff_dir->nl);
+		if(ff_dir->dirname) free(ff_dir->dirname);
+		free(ff_dir);
+	}
+}
+
 // Terminate find_files() and release all allocated memory.
 int find_files_free(FF_PKT *ff)
 {
 	int hard_links=term_find_one(ff);
-	free(ff);
+	if(ff)
+	{
+		if(ff->fname) free(ff->fname);
+		// Should probably attempt to free the whole ff_dir list here.
+		free_ff_dir(ff->ff_dir);
+		free(ff);
+	}
 	return hard_links;
 }
 
@@ -428,7 +444,6 @@ static void windows_reparse_point_fiddling(FF_PKT *ff_pkt)
 
 static int get_files_in_directory(DIR *directory, struct dirent ***nl, int *count)
 {
-	int status;
 	int allocated=0;
 	struct dirent **ntmp=NULL;
 	struct dirent *entry=NULL;
@@ -436,7 +451,6 @@ static int get_files_in_directory(DIR *directory, struct dirent ***nl, int *coun
 
 	/* Graham says: this here is doing a funky kind of scandir/alphasort
 	   that can also run on Windows.
-	   TODO: split into a scandir function
 	*/
 	while(1)
 	{
@@ -447,9 +461,9 @@ static int get_files_in_directory(DIR *directory, struct dirent ***nl, int *coun
 			log_out_of_memory(__FUNCTION__);
 			return -1;
 		}
-		status=readdir_r(directory, entry, &result);
-		if(status || !result)
+		if(readdir_r(directory, entry, &result) || !result)
 		{
+			// Got to the end of the directory.
 			free(entry);
 			break;
 		}
@@ -469,7 +483,7 @@ static int get_files_in_directory(DIR *directory, struct dirent ***nl, int *coun
 			else allocated*=2;
 
 			if(!(ntmp=(struct dirent **)
-				realloc (*nl, allocated*sizeof(**nl))))
+				realloc(*nl, allocated*sizeof(**nl))))
 			{
 				free(entry);
 				log_out_of_memory(__FUNCTION__);
@@ -695,18 +709,17 @@ static int set_up_new_ff_dir(FF_PKT *ff)
 {
 	static DIR *directory;
 	static struct ff_dir *ff_dir;
+	static size_t len;
 
-	if(!(ff_dir=(struct ff_dir *)calloc(1, sizeof(struct ff_dir))))
-	{
-		log_out_of_memory(__FUNCTION__);
-		return -1;
-	}
-	if(!(ff_dir->dirname=strdup(ff->fname)))
+	len=strlen(ff->fname)+2;
+	if(!(ff_dir=(struct ff_dir *)calloc(1, sizeof(struct ff_dir)))
+	  || !(ff_dir->dirname=(char *)malloc(len)))
 	{
 		free(ff_dir);
 		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
+	snprintf(ff_dir->dirname, len, "%s", ff->fname);
 
 	errno = 0;
 	if(!(directory=opendir(ff->fname)))
@@ -719,13 +732,26 @@ static int set_up_new_ff_dir(FF_PKT *ff)
 	if(get_files_in_directory(directory, &(ff_dir->nl), &(ff_dir->count)))
 	{
 		closedir(directory);
-		free(ff_dir->dirname);
-		free(ff_dir);
+		free_ff_dir(ff_dir);
 		return -1;
 	}
 	closedir(directory);
 
+	if(!ff_dir->count)
+	{
+		// Nothing in the directory. Just back up the directory entry.
+		free_ff_dir(ff_dir);
+		return 0;
+	}
+
 	ff_dir->dev=ff->statp.st_dev;
+
+	// Strip all trailing slashes.
+	len=strlen(ff_dir->dirname);
+	while(len >= 1 && IsPathSeparator(ff_dir->dirname[len - 1])) len--;
+	// Add one back.
+	ff_dir->dirname[len++]='/';
+	ff_dir->dirname[len]=0;
 
 	// Add it to the beginning of our list.
 	ff_dir->next=ff->ff_dir;
@@ -769,8 +795,9 @@ int find_file_next(FF_PKT *ff, struct config *conf, struct cntr *p1cntr, bool *t
 		ff_dir=ff->ff_dir;
 		nl=ff_dir->nl[ff_dir->c++];
 
-		if(!(path=prepend_s(ff_dir->dirname,
-			nl->d_name, strlen(nl->d_name)))) goto error;
+		if(!(path=prepend(ff_dir->dirname,
+			nl->d_name, strlen(nl->d_name), NULL))) goto error;
+		free(nl);
 
 		if(file_is_included_no_incext(conf->incexcdir, conf->iecount,
 			conf->excext, conf->excount,
@@ -783,13 +810,33 @@ int find_file_next(FF_PKT *ff, struct config *conf, struct cntr *p1cntr, bool *t
 		else
 		{
 			ff_ret=FF_NOT_FOUND;
+/* BIG TODO: Make this bit work. Probably have to remember that we are inside
+   a directory that was excluded.
+			// Excluded, but there might be a subdirectory that is
+			// included.
+			int ex=0;
+			for(ex=0; ex<conf->iecount; ex++)
+			{
+				if(conf->incexcdir[ex]->flag
+				  && is_subdir(path, conf->incexcdir[ex]->path))
+				{
+					while((ff_ret=find_files(ff, conf,
+						p1cntr,
+						conf->incexcdir[ex]->path,
+						ff_dir->dev,
+						false))==FF_NOT_FOUND) { }
+				}
+				break;
+			}
+			if(ex==conf->iecount) ff_ret=FF_NOT_FOUND;
+*/
 		}
 		free(path);
 
 		if(ff_dir->c>=ff_dir->count)
 		{
+			free_ff_dir(ff->ff_dir);
 			ff->ff_dir=ff_dir->next;
-			// FIX THIS: Free old ff_dir here.
 		}
 
 		if(ff_ret!=FF_NOT_FOUND)
@@ -820,42 +867,3 @@ error:
 	// FIX THIS: Free stuff here.
 	return -1;
 }
-
-/* FIX THIS: Is the path separator stuff needed?
-	// Strip all trailing slashes.
-	while(len >= 1 && IsPathSeparator(link[len - 1])) len--;
-	// Add one back.
-	link[len++]='/';
-	link[len]=0;
-*/
-
-/* FIX THIS. process_file_in_directory().
-	else
-	{ 
-		// Excluded, but there might be a subdirectory that is
-		// included.
-		int ex=0;
-		for(ex=0; ex<conf->iecount; ex++)
-		{
-			if(conf->incexcdir[ex]->flag
-			  && is_subdir(link, conf->incexcdir[ex]->path))
-			{
-				int ey;
-				if((ret=find_files(ff_pkt, conf,
-					cntr, conf->incexcdir[ex]->path,
-					 our_device, false)))
-						return ret;
-				// Now need to skip subdirectories of
-				// the thing that we just stuck in
-				// find_files(), or we might get
-				// some things backed up twice.
-				for(ey=ex+1; ey<conf->iecount; ey++)
-				  if(is_subdir(
-					conf->incexcdir[ex]->path,
-					conf->incexcdir[ey]->path))
-						ex++;
-			}
-		}
-	}
-	return ret;
-*/

@@ -244,14 +244,10 @@ extern "C" int getdomainname(char *name, int len);
 #endif
 
 
-
 #if defined(HAVE_WIN32)
-#define DEFAULT_CONFIGDIR "C:\\Documents and Settings\\All Users\\Application Data\\Burp"
 #define PathSeparator '\\'
 
 inline bool IsPathSeparator(int ch) { return ch == '/' || ch == '\\'; }
-inline char *first_path_separator(char *path) { return strpbrk(path, "/\\"); }
-inline const char *first_path_separator(const char *path) { return strpbrk(path, "/\\"); }
 
 #else
 #define PathSeparator '/'
@@ -261,8 +257,6 @@ inline const char *first_path_separator(const char *path) { return strpbrk(path,
 #define WSACleanup() 0 /* 0 = success */
 
 inline bool IsPathSeparator(int ch) { return ch == '/'; }
-inline char *first_path_separator(char *path) { return strchr(path, '/'); }
-inline const char *first_path_separator(const char *path) { return strchr(path, '/'); }
 #endif
 
 

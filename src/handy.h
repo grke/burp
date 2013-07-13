@@ -50,8 +50,6 @@ extern void setup_signal(int sig, void handler(int sig));
 extern void cmd_to_text(char cmd, char *buf, size_t len);
 extern void print_all_cmds(void);
 
-extern int fstype_excluded(struct config *conf, const char *fname, struct cntr *cntr);
-
 extern void log_restore_settings(struct config *cconf, int srestore);
 
 extern long version_to_long(const char *version);

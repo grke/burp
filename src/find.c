@@ -15,8 +15,18 @@
 #include <sys/statfs.h>
 #endif
 
-static int32_t name_max;              /* filename max length */
-static int32_t path_max;              /* path name max length */
+static int32_t name_max; // Filename max length.
+static int32_t path_max; // path name max length.
+
+static int sd=0; // starting directory index.
+
+enum ff_e
+{
+	FF_NOT_FOUND=0,
+	FF_FOUND,
+	FF_DIRECTORY,
+	FF_ERROR,
+};
 
 static void init_max(int32_t *max, int32_t default_max)
 {
@@ -26,10 +36,8 @@ static void init_max(int32_t *max, int32_t default_max)
 	(*max)++;
 }
 
-/*
- * Initialize the find files "global" variables
- */
-FF_PKT *init_find_files()
+// Initialize the find files "global" variables.
+FF_PKT *find_files_init(void)
 {
 	FF_PKT *ff;
 	ff = (FF_PKT *)calloc(1, sizeof(FF_PKT));
@@ -37,6 +45,8 @@ FF_PKT *init_find_files()
 	// Get system path and filename maximum lengths.
 	init_max(&path_max, _PC_PATH_MAX);
 	init_max(&name_max, _PC_NAME_MAX);
+
+	sd=0;
 
 	return ff;
 }
@@ -107,7 +117,7 @@ static int term_find_one(FF_PKT *ff)
 }
 
 // Terminate find_files() and release all allocated memory.
-int term_find_files(FF_PKT *ff)
+int find_files_free(FF_PKT *ff)
 {
 	int hard_links=term_find_one(ff);
 	free(ff);
@@ -321,20 +331,19 @@ static int nobackup_directory(struct config *conf, const char *path)
 	return 0;
 }
 
-static int found_regular_file(FF_PKT *ff_pkt, struct config *conf,
-	struct cntr *cntr, char *fname, bool top_level,
-	struct utimbuf *restore_times)
+#define MODE_RALL (S_IRUSR|S_IRGRP|S_IROTH)
+static ff_e found_regular_file(FF_PKT *ff_pkt, struct config *conf,
+	struct cntr *cntr, char *fname, bool top_level)
 {
-	int rtn_stat;
 	boffset_t sizeleft;
 
 	sizeleft=ff_pkt->statp.st_size;
 
 	// If the user specified a minimum or maximum file size, obey it.
 	if(conf->min_file_size && sizeleft<(boffset_t)conf->min_file_size)
-		return 0;
+		return FF_NOT_FOUND;
 	if(conf->max_file_size && sizeleft>(boffset_t)conf->max_file_size)
-		return 0;
+		return FF_NOT_FOUND;
 
 	/* Don't bother opening empty, world readable files.  Also do not open
 	files when archive is meant for /dev/null.  */
@@ -342,41 +351,28 @@ static int found_regular_file(FF_PKT *ff_pkt, struct config *conf,
 		ff_pkt->type=FT_REGE;
 	else
 		ff_pkt->type=FT_REG;
-	rtn_stat=send_file(ff_pkt, top_level, conf, cntr);
-	return rtn_stat;
+	return FF_FOUND;
 }
 
-static int found_soft_link(FF_PKT *ff_pkt, struct config *conf,
+static ff_e found_soft_link(FF_PKT *ff_pkt, struct config *conf,
 	struct cntr *cntr, char *fname, bool top_level)
 {
 	int size;
-	int rtn_stat;
 	char *buffer=(char *)alloca(path_max+name_max+102);
 
 	if((size=readlink(fname, buffer, path_max+name_max+101))<0)
 	{
 		/* Could not follow link */
 		ff_pkt->type=FT_NOFOLLOW;
-		ff_pkt->ff_errno=errno;
-		rtn_stat=send_file(ff_pkt, top_level, conf, cntr);
-		return rtn_stat;
+		return FF_FOUND;
 	}
 	buffer[size]=0;
 	ff_pkt->link=buffer;	/* point to link */
 	ff_pkt->type=FT_LNK_S;	/* got a real link */
-	rtn_stat = send_file(ff_pkt, top_level, conf, cntr);
-	return rtn_stat;
+	return FF_FOUND;
 }
 
-static int backup_dir_and_return(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr, const char *fname, bool top_level, struct utimbuf *restore_times)
-{
-	int rtn_stat=send_file(ff_pkt, top_level, conf, cntr);
-	/* reset "link" */
-	ff_pkt->link=ff_pkt->fname;
-	return rtn_stat;
-}
-
-int fstype_excluded(struct config *conf, const char *fname, struct cntr *cntr)
+static int fstype_excluded(struct config *conf, const char *fname, struct cntr *cntr)
 {
 #if defined(HAVE_LINUX_OS)
 	int i=0;
@@ -423,11 +419,10 @@ static void windows_reparse_point_fiddling(FF_PKT *ff_pkt)
 	 *
 	 * Ignore WIN32_REPARSE_POINT and WIN32_JUNCTION_POINT
 	 */
-	if (ff_pkt->statp.st_rdev == WIN32_REPARSE_POINT) {
+	if(ff_pkt->statp.st_rdev==WIN32_REPARSE_POINT)
 		ff_pkt->type = FT_REPARSE;
-	} else if (ff_pkt->statp.st_rdev == WIN32_JUNCTION_POINT) {
+	else if(ff_pkt->statp.st_rdev==WIN32_JUNCTION_POINT)
 		ff_pkt->type = FT_JUNCTION;
-	}
 }
 #endif
 
@@ -462,7 +457,6 @@ static int get_files_in_directory(DIR *directory, struct dirent ***nl, int *coun
 		p=entry->d_name;
 		ASSERT(name_max+1 > (int)sizeof(struct dirent)+strlen(p));
 
-		/* Skip `.', `..', and excluded file names.  */
 		if(!p || !strcmp(p, ".") || !strcmp(p, ".."))
 		{
 			free(entry);
@@ -490,93 +484,12 @@ static int get_files_in_directory(DIR *directory, struct dirent ***nl, int *coun
 	return 0;
 }
 
-// Prototype, because process_files_in_directory() recurses using find_files().
-static int
-find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
-	char *fname, dev_t parent_device, bool top_level);
-
-static int process_files_in_directory(struct dirent **nl, int count, int *rtn_stat, char **link, size_t len, size_t *link_len, struct config *conf, struct cntr *cntr, FF_PKT *ff_pkt, dev_t our_device)
+static ff_e found_directory(FF_PKT *ff_pkt, struct config *conf,
+	struct cntr *cntr, char *fname, dev_t parent_device, bool top_level)
 {
-	int m=0;
-	for(m=0; m<count; m++)
-	{
-		size_t i;
-		char *p=NULL;
-		char *q=NULL;
-
-		p=nl[m]->d_name;
-
-		if(strlen(p)+len>=*link_len)
-		{
-			*link_len=len+strlen(p)+1;
-			if(!(*link=(char *)realloc(*link, (*link_len)+1)))
-			{
-				log_out_of_memory(__FUNCTION__);
-				return -1;
-			}
-		}
-		q=(*link)+len;
-		for(i=0; i<strlen(nl[m]->d_name); i++) *q++=*p++;
-		*q=0;
-
-		if(file_is_included_no_incext(conf->incexcdir, conf->iecount,
-			conf->excext, conf->excount,
-			conf->excreg, conf->ercount,
-			*link))
-		{
-			*rtn_stat=find_files(ff_pkt,
-				conf, cntr, *link, our_device, false);
-		}
-		else
-		{ 
-			// Excluded, but there might be a subdirectory that is
-			// included.
-			int ex=0;
-			for(ex=0; ex<conf->iecount; ex++)
-			{
-				if(conf->incexcdir[ex]->flag
-				  && is_subdir(*link, conf->incexcdir[ex]->path))
-				{
-					int ey;
-					if((*rtn_stat=find_files(ff_pkt, conf,
-						cntr, conf->incexcdir[ex]->path,
-						 our_device, false)))
-							break;
-					// Now need to skip subdirectories of
-					// the thing that we just stuck in
-					// find_one_file(), or we might get
-					// some things backed up twice.
-					for(ey=ex+1; ey<conf->iecount; ey++)
-					  if(is_subdir(
-						conf->incexcdir[ex]->path,
-						conf->incexcdir[ey]->path))
-							ex++;
-				}
-			}
-		}
-		free(nl[m]);
-		if(*rtn_stat) break;
-	}
-	return 0;
-}
-
-static int found_directory(FF_PKT *ff_pkt, struct config *conf,
-	struct cntr *cntr, char *fname, dev_t parent_device, bool top_level,
-	struct utimbuf *restore_times)
-{
-	int rtn_stat;
-	DIR *directory;
-	char *link=NULL;
-	size_t link_len;
-	size_t len;
 	int nbret=0;
 	int count=0;
-	bool recurse;
-	dev_t our_device;
 	struct dirent **nl=NULL;
-
-	recurse=true;
-	our_device=ff_pkt->statp.st_dev;
 
 	/*
 	 * Ignore this directory and everything below if one of the files
@@ -584,45 +497,18 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 	 */
 	if((nbret=nobackup_directory(conf, ff_pkt->fname)))
 	{
-		if(nbret<0) return -1; // error
-		return 0; // do not back it up.
+		if(nbret<0) return FF_ERROR;
+		return FF_NOT_FOUND;
 	}
-
-	// Build a canonical directory name with a trailing slash in link var.
-	len=strlen(fname);
-	link_len=len+200;
-	if(!(link=(char *)malloc(link_len+2)))
-	{
-		log_out_of_memory(__FUNCTION__);
-		return -1;
-	}
-	snprintf(link, link_len, "%s", fname);
-
-	// Strip all trailing slashes.
-	while(len >= 1 && IsPathSeparator(link[len - 1])) len--;
-	// Add one back.
-	link[len++]='/';
-	link[len]=0;
-
-	ff_pkt->link=link;
-	ff_pkt->type=FT_DIR;
 
 #if defined(HAVE_WIN32)
 	windows_reparse_point_fiddling(ff_pkt);
+	// Do not treat them like real directories that get descended into.
+	if(ff_pkt->type==FT_REPARSE || ff_pkt->type==FT_JUNCTION)
+		return FF_FOUND;
 #endif
 
-	rtn_stat=send_file(ff_pkt, top_level, conf, cntr);
-	if(rtn_stat || ff_pkt->type==FT_REPARSE || ff_pkt->type==FT_JUNCTION)
-	{
-		 /* ignore or error status */
-		free(link);
-		return rtn_stat;
-	}
-
 	/*
-	 * Do not descend into subdirectories (recurse) if the
-	 * user has turned it off for this directory.
-	 *
 	 * If we are crossing file systems, we are either not allowed
 	 * to cross, or we may be restricted by a list of permitted
 	 * file systems.
@@ -636,69 +522,24 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 	{
 		if(fstype_excluded(conf, ff_pkt->fname, cntr))
 		{
-			free(link);
-			return backup_dir_and_return(ff_pkt, conf, cntr,
-				fname, top_level, restore_times);
+			// Just back up the directory entry, not the contents.
+			ff_pkt->type=FT_DIR;
+			return FF_FOUND;
 		}
 		if(!fs_change_is_allowed(conf, ff_pkt->fname))
 		{
 			ff_pkt->type=FT_NOFSCHG;
-			recurse=false;
+			return FF_FOUND;
 		}
 	}
-	// If not recursing, just backup dir and return.
-	if(!recurse)
-	{
-		free(link);
-		return backup_dir_and_return(ff_pkt, conf, cntr,
-			fname, top_level, restore_times);
-	}
 
-	// Reset "link".
-	ff_pkt->link=ff_pkt->fname;
-
-	// Recurse into the directory.
-	errno = 0;
-	if(!(directory=opendir(fname)))
-	{
-		ff_pkt->type=FT_NOOPEN;
-		ff_pkt->ff_errno=errno;
-		rtn_stat=send_file(ff_pkt, top_level, conf, cntr);
-		free(link);
-		return rtn_stat;
-	}
-
-	// Process all files in this directory entry (recursing).
-	if(get_files_in_directory(directory, &nl, &count))
-	{
-		closedir(directory);
-		free(link);
-		return -1;
-	}
-	closedir(directory);
-
-	rtn_stat=0;
-	if(nl)
-	{
-		if(process_files_in_directory(nl, count,
-			&rtn_stat, &link, len, &link_len, conf, cntr,
-			ff_pkt, our_device))
-		{
-			free(link);
-			if(nl) free(nl);
-			return -1;
-		}
-	}
-	free(link);
-	if(nl) free(nl);
-
-	return rtn_stat;
+	ff_pkt->type=FT_DIR;
+	return FF_DIRECTORY;
 }
 
-static int found_other(FF_PKT *ff_pkt, struct config *conf,
+static ff_e found_other(FF_PKT *ff_pkt, struct config *conf,
 	struct cntr *cntr, char *fname, bool top_level)
 {
-	int rtn_stat;
 #ifdef HAVE_FREEBSD_OS
 	/*
 	 * On FreeBSD, all block devices are character devices, so
@@ -727,8 +568,7 @@ static int found_other(FF_PKT *ff_pkt, struct config *conf,
 		/* The only remaining are special (character, ...) files */
 		ff_pkt->type=FT_SPEC;
 	}
-	rtn_stat=send_file(ff_pkt, top_level, conf, cntr);
-	return rtn_stat;
+	return FF_FOUND;
 }
 
 /*
@@ -738,31 +578,24 @@ static int found_other(FF_PKT *ff_pkt, struct config *conf,
  * top_level is 1 when not recursing or 0 when
  *  descending into a directory.
  */
-static int find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
+static ff_e find_files(FF_PKT *ff, struct config *conf, struct cntr *cntr,
 	char *fname, dev_t parent_device, bool top_level)
 {
 	int len;
-	int rtn_stat;
-	struct utimbuf restore_times;
 
-	ff_pkt->fname=ff_pkt->link=fname;
+	if(ff->fname) free(ff->fname);
+	ff->fname=strdup(fname);
+	ff->link=ff->fname;
 
 #ifdef HAVE_WIN32
-	if(win32_lstat(fname, &ff_pkt->statp, &ff_pkt->winattr))
+	if(win32_lstat(fname, &ff->statp, &ff->winattr))
 #else
-	if(lstat(fname, &ff_pkt->statp))
+	if(lstat(fname, &ff->statp))
 #endif
 	{
-		ff_pkt->type=FT_NOSTAT;
-		ff_pkt->ff_errno=errno;
-		return send_file(ff_pkt, top_level, conf, cntr);
+		ff->type=FT_NOSTAT;
+		return FF_FOUND;
 	}
-
-	/* Save current times of this directory in case we need to
-	 * reset them because the user doesn't want them changed.
-	 */
-	restore_times.actime=ff_pkt->statp.st_atime;
-	restore_times.modtime=ff_pkt->statp.st_mtime;
 
 	/*
 	 * Handle hard linked files.
@@ -770,43 +603,39 @@ static int find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
 	 *  allows us to ensure that the data of each file gets backed
 	 *  up only once.
 	 */
-	if(ff_pkt->statp.st_nlink > 1
-	  && (S_ISREG(ff_pkt->statp.st_mode)
-		|| S_ISCHR(ff_pkt->statp.st_mode)
-		|| S_ISBLK(ff_pkt->statp.st_mode)
-		|| S_ISFIFO(ff_pkt->statp.st_mode)
-		|| S_ISSOCK(ff_pkt->statp.st_mode)))
+	if(ff->statp.st_nlink > 1
+	  && (S_ISREG(ff->statp.st_mode)
+		|| S_ISCHR(ff->statp.st_mode)
+		|| S_ISBLK(ff->statp.st_mode)
+		|| S_ISFIFO(ff->statp.st_mode)
+		|| S_ISSOCK(ff->statp.st_mode)))
 	{
 
 		struct f_link *lp;
-		if(!(ff_pkt->linkhash))
+		if(!(ff->linkhash))
 		{
-			if(!(ff_pkt->linkhash=(link_t **)malloc(
+			if(!(ff->linkhash=(link_t **)malloc(
 				LINK_HASHTABLE_SIZE*sizeof(link_t *))))
 			{
 				log_out_of_memory(__FUNCTION__);
-				return -1;
+				return FF_ERROR;
 			}
-			memset(ff_pkt->linkhash, 0,
+			memset(ff->linkhash, 0,
 				LINK_HASHTABLE_SIZE*sizeof(link_t *));
 		}
-		const int linkhash=LINKHASH(ff_pkt->statp);
+		const int linkhash=LINKHASH(ff->statp);
 
 		// Search link list of hard linked files
-		for(lp=ff_pkt->linkhash[linkhash]; lp; lp=lp->next)
+		for(lp=ff->linkhash[linkhash]; lp; lp=lp->next)
 		{
-		  if(lp->ino==(ino_t)ff_pkt->statp.st_ino
-			&& lp->dev==(dev_t)ff_pkt->statp.st_dev)
+		  if(lp->ino==(ino_t)ff->statp.st_ino
+			&& lp->dev==(dev_t)ff->statp.st_dev)
 		  {
-			/* If we have already backed up the hard linked file
-				don't do it again */
-			if(!strcmp(lp->name, fname)) return 0;
-			ff_pkt->link=lp->name;
-			/* Handle link, file already saved */
-			ff_pkt->type=FT_LNK_H;
-			ff_pkt->linked=0;
-			rtn_stat=send_file(ff_pkt, top_level, conf, cntr);
-			return rtn_stat;
+			ff->link=lp->name;
+			// Handle link, file already saved.
+			ff->type=FT_LNK_H;
+			ff->linked=0;
+			return FF_FOUND;
 		  }
 		}
 
@@ -815,27 +644,29 @@ static int find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
 		if(!(lp=(struct f_link *)malloc(sizeof(struct f_link)+len)))
 		{
 			log_out_of_memory(__FUNCTION__);
-			return -1;
+			return FF_ERROR;
 		}
-		lp->ino=ff_pkt->statp.st_ino;
-		lp->dev=ff_pkt->statp.st_dev;
+		lp->ino=ff->statp.st_ino;
+		lp->dev=ff->statp.st_dev;
 
 		snprintf(lp->name, len, "%s", fname);
-		lp->next=ff_pkt->linkhash[linkhash];
-		ff_pkt->linkhash[linkhash]=lp;
-		// mark saved link
-		ff_pkt->linked=lp;
+		lp->next=ff->linkhash[linkhash];
+		ff->linkhash[linkhash]=lp;
+		// Mark saved link.
+		ff->linked=lp;
 	}
 	else
 	{
-		ff_pkt->linked=NULL;
+		ff->linked=NULL;
 	}
 
 	// This is not a link to a previously dumped file, so dump it.
-	if(S_ISREG(ff_pkt->statp.st_mode))
-		return found_regular_file(ff_pkt, conf, cntr, fname,
-			top_level, &restore_times);
-	else if(S_ISLNK(ff_pkt->statp.st_mode))
+	if(S_ISREG(ff->statp.st_mode))
+		return found_regular_file(ff, conf, cntr, fname, top_level);
+	else if(S_ISDIR(ff->statp.st_mode))
+		return found_directory(ff, conf, cntr, fname,
+			parent_device, top_level);
+	else if(S_ISLNK(ff->statp.st_mode))
 	{
 #ifdef S_IFLNK
 		/* A symlink.
@@ -847,24 +678,184 @@ static int find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
 		{
 			if(!strcmp(conf->blockdevs[i]->path, fname))
 			{
-				ff_pkt->statp.st_mode ^= S_IFLNK;
-				ff_pkt->statp.st_mode |= S_IFBLK;
-				return found_other(ff_pkt, conf, cntr, fname,
+				ff->statp.st_mode ^= S_IFLNK;
+				ff->statp.st_mode |= S_IFBLK;
+				return found_other(ff, conf, cntr, fname,
 					top_level);
 			}
 		}
 #endif
-		return found_soft_link(ff_pkt, conf, cntr, fname, top_level);
+		return found_soft_link(ff, conf, cntr, fname, top_level);
 	}
-	else if(S_ISDIR(ff_pkt->statp.st_mode))
-		return found_directory(ff_pkt, conf, cntr, fname,
-			parent_device, top_level, &restore_times);
 	else
-		return found_other(ff_pkt, conf, cntr, fname, top_level);
+		return found_other(ff, conf, cntr, fname, top_level);
 }
 
-int find_files_begin(FF_PKT *ff_pkt, struct config *conf, char *fname, struct cntr *cntr)
+static int set_up_new_ff_dir(FF_PKT *ff)
 {
-	return find_files(ff_pkt, conf, cntr, fname, (dev_t)-1,
-		1 /* top_level */);
+	static DIR *directory;
+	static struct ff_dir *ff_dir;
+
+	if(!(ff_dir=(struct ff_dir *)calloc(1, sizeof(struct ff_dir))))
+	{
+		log_out_of_memory(__FUNCTION__);
+		return -1;
+	}
+	if(!(ff_dir->dirname=strdup(ff->fname)))
+	{
+		free(ff_dir);
+		log_out_of_memory(__FUNCTION__);
+		return -1;
+	}
+
+	errno = 0;
+	if(!(directory=opendir(ff->fname)))
+	{
+		ff->type=FT_NOOPEN;
+		free(ff_dir->dirname);
+		free(ff_dir);
+		return 0;
+	}
+	if(get_files_in_directory(directory, &(ff_dir->nl), &(ff_dir->count)))
+	{
+		closedir(directory);
+		free(ff_dir->dirname);
+		free(ff_dir);
+		return -1;
+	}
+	closedir(directory);
+
+	ff_dir->dev=ff->statp.st_dev;
+
+	// Add it to the beginning of our list.
+	ff_dir->next=ff->ff_dir;
+	ff->ff_dir=ff_dir;
+	return 0;
 }
+
+static int deal_with_ff_ret(FF_PKT *ff, ff_e ff_ret)
+{
+	switch(ff_ret)
+	{
+		case FF_DIRECTORY:
+			if(set_up_new_ff_dir(ff)) return -1;
+			// Fall through to record the directory itself.
+		case FF_FOUND:
+			// Now ff should be set up with the next entry.
+			return 0;
+		case FF_NOT_FOUND:
+			// Should never get here.
+		case FF_ERROR:
+		default:
+			break;
+	}
+	return -1;
+}
+
+// Returns -1 on error. 1 on finished, 0 on more stuff to do.
+// Fills ff with information about the next file to back up.
+int find_file_next(FF_PKT *ff, struct config *conf, struct cntr *p1cntr, bool *top_level)
+{
+	static ff_e ff_ret;
+
+	if(ff->ff_dir)
+	{
+		// Have already recursed into a directory.
+		// Get the next entry.
+		static struct dirent *nl;
+		static struct ff_dir *ff_dir;
+		char *path=NULL;
+
+		ff_dir=ff->ff_dir;
+		nl=ff_dir->nl[ff_dir->c++];
+
+		if(!(path=prepend_s(ff_dir->dirname,
+			nl->d_name, strlen(nl->d_name)))) goto error;
+
+		if(file_is_included_no_incext(conf->incexcdir, conf->iecount,
+			conf->excext, conf->excount,
+			conf->excreg, conf->ercount,
+			path))
+		{
+			while((ff_ret=find_files(ff, conf, p1cntr,
+				path, ff_dir->dev, false))==FF_NOT_FOUND) { }
+		}
+		else
+		{
+			ff_ret=FF_NOT_FOUND;
+		}
+		free(path);
+
+		if(ff_dir->c>=ff_dir->count)
+		{
+			ff->ff_dir=ff_dir->next;
+			// FIX THIS: Free old ff_dir here.
+		}
+
+		if(ff_ret!=FF_NOT_FOUND)
+		{
+			if(deal_with_ff_ret(ff, ff_ret)) goto error;
+			return 0;
+		}
+	}
+
+	if(sd>=conf->sdcount)
+	{
+		// No more to do.
+		return 1;
+	}
+	if(conf->startdir[sd]->flag)
+	{
+		// Keep going until it does not give 'not found'.
+		while((ff_ret=find_files(ff, conf, p1cntr,
+			conf->startdir[sd]->path,
+			(dev_t)-1, 1 /* top_level */))==FF_NOT_FOUND) { }
+		sd++;
+
+		if(deal_with_ff_ret(ff, ff_ret)) goto error;
+	}
+
+	return 0;
+error:
+	// FIX THIS: Free stuff here.
+	return -1;
+}
+
+/* FIX THIS: Is the path separator stuff needed?
+	// Strip all trailing slashes.
+	while(len >= 1 && IsPathSeparator(link[len - 1])) len--;
+	// Add one back.
+	link[len++]='/';
+	link[len]=0;
+*/
+
+/* FIX THIS. process_file_in_directory().
+	else
+	{ 
+		// Excluded, but there might be a subdirectory that is
+		// included.
+		int ex=0;
+		for(ex=0; ex<conf->iecount; ex++)
+		{
+			if(conf->incexcdir[ex]->flag
+			  && is_subdir(link, conf->incexcdir[ex]->path))
+			{
+				int ey;
+				if((ret=find_files(ff_pkt, conf,
+					cntr, conf->incexcdir[ex]->path,
+					 our_device, false)))
+						return ret;
+				// Now need to skip subdirectories of
+				// the thing that we just stuck in
+				// find_files(), or we might get
+				// some things backed up twice.
+				for(ey=ex+1; ey<conf->iecount; ey++)
+				  if(is_subdir(
+					conf->incexcdir[ex]->path,
+					conf->incexcdir[ey]->path))
+						ex++;
+			}
+		}
+	}
+	return ret;
+*/

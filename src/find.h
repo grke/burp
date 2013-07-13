@@ -63,9 +63,4 @@ int in_exclude_regex(struct strlist **excre, int excount, const char *fname);
 // Returns the level of compression.
 int in_exclude_comp(struct strlist **excom, int excmcount, const char *fname, int compression);
 
-/* from attribs.c */
-void encode_stat(char *buf, struct stat *statp, int64_t winattr, int compression);
-void decode_stat(const char *buf, struct stat *statp, int64_t *winattr, int *compression);
-bool set_attributes(const char *path, char cmd, struct stat *statp, int64_t winattr, struct cntr *cntr);
-
 #endif /* __FILES_H */

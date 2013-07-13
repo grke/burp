@@ -7,6 +7,7 @@
 #include "lock.h"
 #include "cmd.h"
 #include "current_backups_server.h"
+#include "counter.h"
 
 #ifdef HAVE_NCURSES_H
 #include "ncurses.h"

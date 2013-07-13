@@ -7,64 +7,63 @@
 #include "counter.h"
 #include "sbuf.h"
 #include "list_client.h"
+#include "attribs.h"
 
 /* Note: The chars in this function are not the same as in the CMD_ set.
    These are for printing to the screen only. */
 static char *encode_mode(mode_t mode, char *buf)
 {
-  char *cp = buf;
+	char *cp = buf;
 
-  *cp++ = S_ISDIR(mode) ? 'd' : S_ISBLK(mode)  ? 'b' : S_ISCHR(mode)  ? 'c' :
-          S_ISLNK(mode) ? 'l' : S_ISFIFO(mode) ? 'p' : S_ISSOCK(mode) ? 's' : '-';
-  *cp++ = mode & S_IRUSR ? 'r' : '-';
-  *cp++ = mode & S_IWUSR ? 'w' : '-';
-  *cp++ = (mode & S_ISUID
-               ? (mode & S_IXUSR ? 's' : 'S')
-               : (mode & S_IXUSR ? 'x' : '-'));
-  *cp++ = mode & S_IRGRP ? 'r' : '-';
-  *cp++ = mode & S_IWGRP ? 'w' : '-';
-  *cp++ = (mode & S_ISGID
-               ? (mode & S_IXGRP ? 's' : 'S')
-               : (mode & S_IXGRP ? 'x' : '-'));
-  *cp++ = mode & S_IROTH ? 'r' : '-';
-  *cp++ = mode & S_IWOTH ? 'w' : '-';
-  *cp++ = (mode & S_ISVTX
-               ? (mode & S_IXOTH ? 't' : 'T')
-               : (mode & S_IXOTH ? 'x' : '-'));
-  *cp = '\0';
-  return cp;
+	*cp++ = S_ISDIR(mode) ? 'd' :
+		S_ISBLK(mode) ? 'b' :
+		S_ISCHR(mode) ? 'c' :
+		S_ISLNK(mode) ? 'l' :
+		S_ISFIFO(mode) ? 'p' :
+		S_ISSOCK(mode) ? 's' : '-';
+	*cp++ = mode & S_IRUSR ? 'r' : '-';
+	*cp++ = mode & S_IWUSR ? 'w' : '-';
+	*cp++ = (mode & S_ISUID ?
+		(mode & S_IXUSR ? 's' : 'S') : (mode & S_IXUSR ? 'x' : '-'));
+	*cp++ = mode & S_IRGRP ? 'r' : '-';
+	*cp++ = mode & S_IWGRP ? 'w' : '-';
+	*cp++ = (mode & S_ISGID ?
+		(mode & S_IXGRP ? 's' : 'S') : (mode & S_IXGRP ? 'x' : '-'));
+	*cp++ = mode & S_IROTH ? 'r' : '-';
+	*cp++ = mode & S_IWOTH ? 'w' : '-';
+	*cp++ = (mode & S_ISVTX ?
+		(mode & S_IXOTH ? 't' : 'T') : (mode & S_IXOTH ? 'x' : '-'));
+	*cp = '\0';
+	return cp;
 }
 
 static char *encode_time(utime_t utime, char *buf)
 {
-   const struct tm *tm;
-   int n = 0;
-   time_t time = utime;
+	const struct tm *tm;
+	int n = 0;
+	time_t time = utime;
 
 #if defined(HAVE_WIN32)
-   /*
-    * Avoid a seg fault in Microsoft's CRT localtime_r(),
-    *  which incorrectly references a NULL returned from gmtime() if
-    *  time is negative before or after the timezone adjustment.
-    */
-   struct tm *gtm;
+	/*
+	 * Avoid a seg fault in Microsoft's CRT localtime_r(),
+	 *  which incorrectly references a NULL returned from gmtime() if
+	 *  time is negative before or after the timezone adjustment.
+	 */
+	struct tm *gtm;
 
-   if ((gtm = gmtime(&time)) == NULL) {
-      return buf;
-   }
+	if(!(gtm = gmtime(&time))) return buf;
 
-   if (gtm->tm_year == 1970 && gtm->tm_mon == 1 && gtm->tm_mday < 3) {
-      return buf;
-   }
+	if(gtm->tm_year == 1970 && gtm->tm_mon == 1 && gtm->tm_mday < 3)
+		return buf;
 #endif
 
-   if((tm=localtime(&time)))
-   {
-      n = sprintf(buf, "%04d-%02d-%02d %02d:%02d:%02d",
-                   tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
-                   tm->tm_hour, tm->tm_min, tm->tm_sec);
-   }
-   return buf+n;
+	if((tm=localtime(&time)))
+	{
+		n = sprintf(buf, "%04d-%02d-%02d %02d:%02d:%02d",
+			tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
+			tm->tm_hour, tm->tm_min, tm->tm_sec);
+	}
+	return buf+n;
 }
 
 void ls_output(char *buf, const char *fname, struct stat *statp)

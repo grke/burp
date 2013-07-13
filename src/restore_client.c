@@ -12,6 +12,7 @@
 #include "sbuf.h"
 #include "dpth.h"
 #include "extrameta.h"
+#include "attribs.h"
 
 static int restore_interrupt(struct sbuf *sb, const char *msg, struct cntr *cntr)
 {

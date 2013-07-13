@@ -1,6 +1,7 @@
 #include "burp.h"
 #include "prog.h"
 #include "cmd.h"
+#include "counter.h"
 #include "handy.h"
 #include "asyncio.h"
 

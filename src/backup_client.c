@@ -8,6 +8,7 @@
 #include "extrameta.h"
 #include "backup_client.h"
 #include "client_vss.h"
+#include "attribs.h"
 
 static char filesymbol=CMD_FILE;
 static char metasymbol=CMD_METADATA;

@@ -4,9 +4,10 @@
 #include "asyncio.h"
 #include "librsync.h"
 #include "handy.h"
-#include "find.h"
+#include "attribs.h"
 #include "ssl.h"
 #include "sbuf.h"
+#include "conf.h"
 
 /* For IPTOS / IPTOS_THROUGHPUT */
 #ifdef HAVE_WIN32

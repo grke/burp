@@ -5,6 +5,8 @@
 #include <zlib.h>                     /* compression headers */
 #endif
 
+#include "conf.h"
+
 enum action
 {
 	ACTION_BACKUP=0,
@@ -19,7 +21,6 @@ enum action
 	ACTION_DELETE,
 };
 
-#include "find.h"
 #include "log.h"
 
 extern int setup_signals(int oldmax_children, int max_children, int oldmax_status_children, int max_status_children);

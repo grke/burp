@@ -10,6 +10,9 @@
 #include "client_vss.h"
 #include "attribs.h"
 #include "find.h"
+#include "sbuf.h"
+#include "blk.h"
+#include "rabin.h"
 
 static char filesymbol=CMD_FILE;
 static char metasymbol=CMD_METADATA;
@@ -42,6 +45,7 @@ static int send_attribs_and_symbol(const char *attribs, char symbol, ff_pkt *ff,
 	if(async_write_str(CMD_STAT, attribs)
 	  || async_write_str(symbol, ff->fname)) return -1;
 	do_filecounter(p1cntr, symbol, 1);
+//printf("sent: %c:%s\n", symbol, ff->fname);
 	return 0;
 }
 
@@ -198,12 +202,109 @@ static int send_file_info(ff_pkt *ff, struct config *conf, struct cntr *p1cntr, 
 	return 0;
 }
 
+static int send_blocks(struct sbuf *sb, struct config *conf, struct cntr *cntr)
+{
+	int ret;
+	char attribs[256];
+	BFILE bfd;
+	FILE *fp=NULL;
+#ifdef HAVE_WIN32
+        if(win32_lstat(sb->path, &sb->statp, &sb->winattr))
+#else
+        if(lstat(sb->path, &sb->statp))
+#endif
+	{
+		// This file is no longer available.
+		logw(cntr, "%s has vanished\n", sb->path);
+		return 0;
+	}
+	encode_stat(attribs, &sb->statp, sb->winattr, conf->compression);
+
+	if(open_file_for_send(
+#ifdef HAVE_WIN32
+		&bfd, NULL,
+#else
+		NULL, &fp,
+#endif
+		sb->path, sb->winattr, cntr))
+	{
+		logw(cntr, "Could not open %s\n", sb->path);
+		return 0;
+	}
+
+	if(async_write_str(CMD_STAT_BLKS, attribs)
+	  || async_write_str(sb->cmd, sb->path))
+	{
+		close_file_for_send(&bfd, &fp);
+		return -1;
+	}
+
+	ret=blks_generate(&conf->rconf,
+#ifdef HAVE_WIN32
+		&bfd, NULL
+#else
+		NULL, fp
+#endif
+		);
+
+	close_file_for_send(&bfd, &fp);
+
+	return ret;
+}
+
+static int deal_with_buf(struct sbuf *sb, char cmd, char *buf, size_t len, int *backup_end, struct config *conf, struct cntr *cntr)
+{
+	if(cmd==CMD_STAT)
+	{
+		if(sbuf_fill_ng(sb, buf, len))
+			return -1;
+		if(send_blocks(sb, conf, cntr))
+		{
+			printf("send_blocks returned error\n");
+			return -1;
+		}
+		printf("\nserver wants: %s", sb->path);
+		free_sbuf(sb);
+		return 0;
+	}
+	else if(cmd==CMD_WARNING)
+	{
+		logp("WARNING: %s\n", buf);
+		do_filecounter(cntr, cmd, 0);
+		if(buf) { free(buf); buf=NULL; }
+		return 0;
+	}
+	else if(cmd==CMD_GEN)
+	{
+		if(backup_end && !strcmp(buf, "backup_end"))
+		{
+			*backup_end=1;
+			return 0;
+		}
+	}
+
+	logp("unexpected cmd in %s, got '%c:%s'\n", __FUNCTION__, cmd, buf);
+	if(buf) { free(buf); buf=NULL; }
+	return -1;
+}
+
 static int backup_client(struct config *conf, int estimate, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ret=0;
 	ff_pkt *ff=NULL;
 	int ff_ret=0;
 	bool top_level=true;
+	char cmd;
+	size_t len=0;
+	char *buf=NULL;
+	struct sbuf *sb=NULL;
+
+	if(!(sb=(struct sbuf *)malloc(sizeof(struct sbuf))))
+	{
+		log_out_of_memory(__FUNCTION__);
+		return -1;
+	}
+	init_sbuf(sb);
 
 	logp("Backup begin\n");
 
@@ -217,10 +318,57 @@ static int backup_client(struct config *conf, int estimate, struct cntr *p1cntr,
 	while(!(ff_ret=find_file_next(ff, conf, p1cntr, &top_level)))
 	{
 		if((ff_ret=send_file_info(ff, conf, p1cntr, top_level))) break;
+		if(async_read_quick(&cmd, &buf, &len))
+		{
+			ff_ret=-1;
+			break;
+		}
+		if(buf)
+		{
+			if(deal_with_buf(sb, cmd, buf, len, NULL, conf, cntr))
+			{
+				ret=-1;
+				break;
+			}
+			buf=NULL;
+		}
 	}
-	if(ff_ret<0) ret=ff_ret;
-	find_files_free(ff);
+	if(ff_ret<0)
+	{
+		ret=ff_ret;
+		goto end;
+	}
 
+	if(async_write_str(CMD_GEN, "scan_end"))
+	{
+		ret=-1;
+		goto end;
+	}
+
+	while(1)
+	{
+		if(async_read(&cmd, &buf, &len))
+		{
+			ret=-1;
+			goto end;
+		}
+		if(buf)
+		{
+			int backup_end=0;
+			if(deal_with_buf(sb, cmd, buf, len,
+				&backup_end, conf, cntr))
+			{
+				ret=-1;
+				break;
+			}
+			buf=NULL;
+			if(backup_end) break;
+		}
+	}
+
+end:
+	find_files_free(ff);
+	if(sb) free(sb);
 	print_endcounter(p1cntr);
 	//print_filecounters(p1cntr, cntr, ACTION_BACKUP);
 	if(ret) logp("Error in backup\n");

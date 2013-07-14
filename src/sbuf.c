@@ -8,48 +8,38 @@
 #include "counter.h"
 #include "dpth.h"
 #include "sbuf.h"
+#include "attribs.h"
 
 void init_sbuf(struct sbuf *sb)
 {
+	// file data
 	sb->cmd=CMD_ERROR;
 	sb->path=NULL;
 	sb->plen=0;
 	sb->linkto=NULL;
 	sb->llen=0;
-	sb->sendpath=0;
-	sb->datapth=NULL;
-	sb->senddatapth=0;
-	sb->statbuf=NULL;
-	sb->slen=0;
-	sb->compression=-1;
-	sb->sendstat=0;
 
+	// stat data
+	sb->statbuf=NULL;
 	memset(&(sb->statp), 0, sizeof(sb->statp));
 	sb->winattr=0;
-	sb->sigfp=NULL;
-	sb->sigzp=NULL;
+	sb->slen=0;
+	sb->compression=-1;
+
 	sb->sendendofsig=0;
-
-	sb->receivedelta=0;
-
-	sb->fp=NULL;
-	sb->zp=NULL;
 
 	sb->endfile=NULL;
 	sb->elen=0;
+
+	sb->next=NULL;
 }
 
 void free_sbuf(struct sbuf *sb)
 {
 	if(sb->path) free(sb->path);
 	if(sb->linkto) free(sb->linkto);
-	if(sb->datapth) free(sb->datapth);
 	if(sb->statbuf) free(sb->statbuf);
 	if(sb->endfile) free(sb->endfile);
-	close_fp(&sb->sigfp);
-	gzclose_fp(&sb->sigzp);
-	close_fp(&sb->fp);
-	gzclose_fp(&sb->zp);
 	init_sbuf(sb);
 }
 
@@ -69,16 +59,19 @@ int sbuf_is_endfile(struct sbuf *sb)
 	return sb->cmd==CMD_END_FILE;
 }
 
-static int do_sbuf_fill_from_net(struct sbuf *sb, struct cntr *cntr)
+int sbuf_fill_ng(struct sbuf *sb, char *statbuf, size_t slen)
 {
 	int ars;
-	if((ars=async_read_stat(NULL, NULL, sb, cntr))) return ars;
+	decode_stat(statbuf, &(sb->statp), &(sb->winattr), &(sb->compression));
+	sb->statbuf=statbuf;
+	sb->slen=slen;
+
 	if((ars=async_read(&(sb->cmd), &(sb->path), &(sb->plen)))) return ars;
 	if(sbuf_is_link(sb))
 	{
 		char cmd=0;
 		if((ars=async_read(&cmd, &(sb->linkto), &(sb->llen))))
-				return ars;
+			return ars;
 		if(!cmd_is_link(cmd))
 		{
 			logp("got non-link cmd after link cmd: %c %s\n",
@@ -89,7 +82,27 @@ static int do_sbuf_fill_from_net(struct sbuf *sb, struct cntr *cntr)
 	return 0;
 }
 
-static int do_sbuf_fill_from_file(FILE *fp, gzFile zp, struct sbuf *sb, int phase1, struct cntr *cntr)
+static int do_sbuf_fill_from_net(struct sbuf *sb, struct cntr *cntr)
+{
+	int ars;
+	if((ars=async_read_stat(NULL, NULL, sb, cntr))) return ars;
+	if((ars=async_read(&(sb->cmd), &(sb->path), &(sb->plen)))) return ars;
+	if(sbuf_is_link(sb))
+	{
+		char cmd=0;
+		if((ars=async_read(&cmd, &(sb->linkto), &(sb->llen))))
+			return ars;
+		if(!cmd_is_link(cmd))
+		{
+			logp("got non-link cmd after link cmd: %c %s\n",
+				cmd, sb->linkto);
+			return -1;
+		}
+	}
+	return 0;
+}
+
+static int do_sbuf_fill_from_file(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
 {
 	int ars;
 	//free_sbuf(sb);
@@ -111,44 +124,19 @@ static int do_sbuf_fill_from_file(FILE *fp, gzFile zp, struct sbuf *sb, int phas
 			return -1;
 		}
 	}
-	else if(!phase1 && (sb->cmd==CMD_FILE
-			|| sb->cmd==CMD_ENC_FILE
-			|| sb->cmd==CMD_METADATA
-			|| sb->cmd==CMD_ENC_METADATA
-			|| sb->cmd==CMD_EFS_FILE))
-	{
-		char cmd;
-		if((ars=async_read_fp(fp, zp, &cmd,
-			&(sb->endfile), &(sb->elen))))
-				return ars;
-		if(cmd!=CMD_END_FILE)
-		{
-			logp("got non-endfile cmd after file: %c %s\n",
-				cmd, sb->endfile);
-			return -1;
-		}
-	}
 	return 0;
 }
 
 int sbuf_fill(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
 {
-	if(fp || zp) return do_sbuf_fill_from_file(fp, zp, sb, 0, cntr);
+	if(fp || zp) return do_sbuf_fill_from_file(fp, zp, sb, cntr);
 	return do_sbuf_fill_from_net(sb, cntr);
-}
-
-int sbuf_fill_phase1(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
-{
-	return do_sbuf_fill_from_file(fp, zp, sb, 1, cntr);
 }
 
 static int sbuf_to_fp(struct sbuf *sb, FILE *mp, int write_endfile)
 {
 	if(sb->path)
 	{
-		if(sb->datapth
-		  && send_msg_fp(mp, CMD_DATAPTH,
-			sb->datapth, strlen(sb->datapth))) return -1;
 		if(send_msg_fp(mp, CMD_STAT, sb->statbuf, sb->slen)
 		  || send_msg_fp(mp, sb->cmd, sb->path, sb->plen))
 			return -1;
@@ -172,9 +160,6 @@ static int sbuf_to_zp(struct sbuf *sb, gzFile zp, int write_endfile)
 {
 	if(sb->path)
 	{
-		if(sb->datapth
-		  && send_msg_zp(zp, CMD_DATAPTH,
-			sb->datapth, strlen(sb->datapth))) return -1;
 		if(send_msg_zp(zp, CMD_STAT, sb->statbuf, sb->slen)
 		  || send_msg_zp(zp, sb->cmd, sb->path, sb->plen))
 			return -1;
@@ -199,14 +184,6 @@ int sbuf_to_manifest(struct sbuf *sb, FILE *mp, gzFile zp)
 	if(mp) return sbuf_to_fp(sb, mp, 1);
 	if(zp) return sbuf_to_zp(sb, zp, 1);
 	logp("No valid file pointer given to sbuf_to_manifest()\n");
-	return -1;
-}
-
-int sbuf_to_manifest_phase1(struct sbuf *sb, FILE *mp, gzFile zp)
-{
-	if(mp) return sbuf_to_fp(sb, mp, 0);
-	if(zp) return sbuf_to_zp(sb, zp, 0);
-	logp("No valid file pointer given to sbuf_to_manifest_phase1()\n");
 	return -1;
 }
 

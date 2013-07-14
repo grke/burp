@@ -24,7 +24,7 @@
 prog=$(basename $0)
 
 preorpost="$1" ; shift
-action="$1" ; shift	# either "backupphase1" or "backupphase1timed"
+action="$1" ; shift	# either "backup" or "backup_timed"
 client="$1" ; shift
 success="$1" ; shift
 timer="$1" ; shift
@@ -44,7 +44,7 @@ private_key="/home/graham/.ssh/id_rsa"
 
 usage()
 {
-	echo "usage: $prog post [backupphase1|backupphase1timed] <client> [0|1] [0|1]" 1>&2
+	echo "usage: $prog post [backup|backup_timed] <client> [0|1] [0|1]" 1>&2
 	echo "The third argument is whether the backup succeeded (0 for ok)" 1>&2
 	echo "The fourth argument is whether the timer script allowed a backup (0 for ok)" 1>&2
 	exit 1
@@ -55,12 +55,12 @@ then
 	usage
 fi
 
-if [ "$action" != "backupphase1" -a "$action" != "backupphase1timed" ] ; then
+if [ "$action" != "backup" -a "$action" != "backup_timed" ] ; then
 	# It was not a backup that ran.
 	exit 0
 fi
 
-if [ "$action" = "backupphase1timed" ] && [ "$timer" != "0" ] ; then
+if [ "$action" = "backup_timed" ] && [ "$timer" != "0" ] ; then
 	# Server did not allow timed backup to be attempted.
 	exit 0
 fi

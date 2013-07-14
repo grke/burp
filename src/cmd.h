@@ -4,9 +4,9 @@
 /* These things appear at the beginning of each line of communication on the
    network, and in the manifest. */
 
-// These two come before any file type entries
-#define CMD_DATAPTH	't'	/* Path to data on the server */
+// This comes before any file type entries.
 #define CMD_STAT	'r'	/* File stat information */
+#define CMD_STAT_BLKS	'R'	/* File stat information preceding blks */
 
 // File types
 #define CMD_FILE	'f'	/* Plain file */

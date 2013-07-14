@@ -78,192 +78,9 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, int
 	return ret;
 }
 
-static int send_file(const char *fname, int patches, const char *best, const char *datapth, unsigned long long *bytes, char cmd, int64_t winattr, int compression, struct cntr *cntr, struct config *cconf)
-{
-	int ret=0;
-	size_t datalen=0;
-	FILE *fp=NULL;
-	if(open_file_for_send(NULL, &fp, best, winattr, &datalen, cntr))
-		return -1;
-	//logp("sending: %s\n", best);
-	if(async_write(cmd, fname, strlen(fname)))
-		ret=-1;
-	else if(patches)
-	{
-		// If we did some patches, the resulting file
-		// is not gzipped. Gzip it during the send. 
-		ret=send_whole_file_gz(best, datapth, 1, bytes, NULL, cntr,
-			9, NULL, fp, NULL, 0, -1);
-	}
-	else
-	{
-		// If it was encrypted, it may or may not have been compressed
-		// before encryption. Send it as it as, and let the client
-		// sort it out.
-		if(cmd==CMD_ENC_FILE
-		  || cmd==CMD_ENC_METADATA
-		  || cmd==CMD_EFS_FILE)
-		{
-			ret=send_whole_file(cmd, best, datapth, 1, bytes,
-				cntr, NULL, fp, NULL, 0, -1);
-		}
-		// It might have been stored uncompressed. Gzip it during
-		// the send. If the client knew what kind of file it would be
-		// receiving, this step could disappear.
-		else if(!dpth_is_compressed(compression, datapth))
-		{
-			ret=send_whole_file_gz(best, datapth, 1, bytes,
-				NULL, cntr, 9, NULL, fp, NULL, 0, -1);
-		}
-		else
-		{
-			// If we did not do some patches, the resulting
-			// file might already be gzipped. Send it as it is.
-			ret=send_whole_file(cmd, best, datapth, 1, bytes,
-				cntr, NULL, fp, NULL, 0, -1);
-		}
-	}
-	close_file_for_send(NULL, &fp);
-	return ret;
-}
-
-static int verify_file(const char *fname, int patches, const char *best, const char *datapth, unsigned long long *bytes, const char *endfile, char cmd, int compression, struct cntr *cntr)
-{
-	MD5_CTX md5;
-	size_t b=0;
-	const char *cp=NULL;
-	const char *newsum=NULL;
-	unsigned char in[ZCHUNK];
-	unsigned char checksum[MD5_DIGEST_LENGTH+1];
-	unsigned long long cbytes=0;
-	if(!(cp=strrchr(endfile, ':')))
-	{
-		logw(cntr, "%s has no md5sum!\n", datapth);
-		return 0;
-	}
-	cp++;
-	if(!MD5_Init(&md5))
-	{
-		logp("MD5_Init() failed\n");
-		return -1;
-	}
-	if(patches
-	  || cmd==CMD_ENC_FILE || cmd==CMD_ENC_METADATA || cmd==CMD_EFS_FILE
-	  || (!patches && !dpth_is_compressed(compression, best)))
-	{
-		// If we did some patches or encryption, or the compression
-		// was turned off, the resulting file is not gzipped.
-		FILE *fp=NULL;
-		if(!(fp=open_file(best, "rb")))
-		{
-			logw(cntr, "could not open %s\n", best);
-			return 0;
-		}
-		while((b=fread(in, 1, ZCHUNK, fp))>0)
-		{
-			cbytes+=b;
-			if(!MD5_Update(&md5, in, b))
-			{
-				logp("MD5_Update() failed\n");
-				close_fp(&fp);
-				return -1;
-			}
-		}
-		if(!feof(fp))
-		{
-			logw(cntr, "error while reading %s\n", best);
-			close_fp(&fp);
-			return 0;
-		}
-		close_fp(&fp);
-	}
-	else
-	{
-		gzFile zp=NULL;
-		if(!(zp=gzopen_file(best, "rb")))
-		{
-			logw(cntr, "could not gzopen %s\n", best);
-			return 0;
-		}
-		while((b=gzread(zp, in, ZCHUNK))>0)
-		{
-			cbytes+=b;
-			if(!MD5_Update(&md5, in, b))
-			{
-				logp("MD5_Update() failed\n");
-				gzclose_fp(&zp);
-				return -1;
-			}
-		}
-		if(!gzeof(zp))
-		{
-			logw(cntr, "error while gzreading %s\n", best);
-			gzclose_fp(&zp);
-			return 0;
-		}
-		gzclose_fp(&zp);
-	}
-	if(!MD5_Final(checksum, &md5))
-	{
-		logp("MD5_Final() failed\n");
-		return -1;
-	}
-	newsum=get_checksum_str(checksum);
-
-	if(strcmp(newsum, cp))
-	{
-		logp("%s %s\n", newsum, cp);
-		logw(cntr, "md5sum for '%s (%s)' did not match!\n", fname, datapth);
-		logp("md5sum for '%s (%s)' did not match!\n", fname, datapth);
-		return 0;
-	}
-	*bytes+=cbytes;
-
-	// Just send the file name to the client, so that it can show counters.
-	if(async_write(cmd, fname, strlen(fname))) return -1;
-	return 0;
-}
-
-// a = length of struct bu array
-// i = position to restore from
-static int restore_file(struct bu *arr, int a, int i, const char *datapth, const char *fname, const char *tmppath1, const char *tmppath2, int act, const char *endfile, char cmd, int64_t winattr, int compression, struct cntr *cntr, struct config *cconf)
-{
-	return 0;
-}
-
 static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, enum action act, const char *client, char status, struct cntr *p1cntr, struct cntr *cntr, struct config *cconf)
 {
 	//logp("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path);
-	write_status(client, status, sb->path, p1cntr, cntr);
-
-	if((sb->datapth && async_write(CMD_DATAPTH,
-		sb->datapth, strlen(sb->datapth)))
-	  || async_write(CMD_STAT, sb->statbuf, sb->slen))
-		return -1;
-	else if(sb->cmd==CMD_FILE
-	  || sb->cmd==CMD_ENC_FILE
-	  || sb->cmd==CMD_METADATA
-	  || sb->cmd==CMD_ENC_METADATA
-	  || sb->cmd==CMD_EFS_FILE)
-	{
-		return restore_file(arr, a, i, sb->datapth,
-		  sb->path, tmppath1, tmppath2, act,
-		  sb->endfile, sb->cmd, sb->winattr,
-		  sb->compression, cntr, cconf);
-	}
-	else
-	{
-		if(async_write(sb->cmd, sb->path, sb->plen))
-			return -1;
-		// If it is a link, send what
-		// it points to.
-		else if(sbuf_is_link(sb))
-		{
-			if(async_write(sb->cmd, sb->linkto, sb->llen))
-				return -1;
-		}
-		do_filecounter(cntr, sb->cmd, 0);
-	}
 	return 0;
 }
 
@@ -274,7 +91,7 @@ static int do_restore_end(enum action act, struct cntr *cntr)
 	int quit=0;
 	size_t len=0;
 
-	if(async_write_str(CMD_GEN, "restoreend"))
+	if(async_write_str(CMD_GEN, "restore_end"))
 		ret=-1;
 
 	while(!ret && !quit)
@@ -284,9 +101,9 @@ static int do_restore_end(enum action act, struct cntr *cntr)
 		{
 			ret=-1; quit++;
 		}
-		else if(cmd==CMD_GEN && !strcmp(buf, "restoreend ok"))
+		else if(cmd==CMD_GEN && !strcmp(buf, "ok_restore_end"))
 		{
-			logp("got restoreend ok\n");
+			logp("got ok_restore_end\n");
 			quit++;
 		}
 		else if(cmd==CMD_WARNING)
@@ -428,7 +245,6 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 	log_restore_settings(cconf, srestore);
 
 	// First, do a pass through the manifest to set up the counters.
-	// This is the equivalent of a phase1 scan during backup.
 	if(!ret && !(zp=gzopen_file(manifest, "rb")))
 	{
 		log_and_send("could not open manifest");

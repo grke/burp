@@ -65,81 +65,191 @@ static int open_log(const char *realworking, const char *client, const char *cve
 	return 0;
 }
 
-static int backup_server(const char *phase1data, const char *client, struct cntr *p1cntr, struct cntr *cntr, struct config *conf)
+static int add_to_slist(struct sbuf **shead, struct sbuf **stail, char cmd, char *buf, size_t len, int *scan_end, struct cntr *cntr)
+{
+	if(cmd==CMD_STAT)
+	{
+		struct sbuf *sb=NULL;
+		if(!(sb=(struct sbuf *)malloc(sizeof(struct sbuf))))
+		{
+			log_out_of_memory(__FUNCTION__);
+			return -1;
+		}
+		init_sbuf(sb);
+		if(sbuf_fill_ng(sb, buf, len)) return -1;
+		if(*stail)
+		{
+			// Add to the end of the list.
+			(*stail)->next=sb;
+			(*stail)=sb;
+		}
+		else
+		{
+			// Start the list.
+			*shead=sb;
+			*stail=sb;
+		}
+		return 0;
+	}
+	else if(cmd==CMD_STAT_BLKS)
+	{
+		struct sbuf *sb=NULL;
+		if(!(sb=(struct sbuf *)malloc(sizeof(struct sbuf))))
+		{
+			log_out_of_memory(__FUNCTION__);
+			return -1;
+		}
+		init_sbuf(sb);
+		if(sbuf_fill_ng(sb, buf, len)) return -1;
+		printf("receiving blocks for %s\n", sb->path);
+		free_sbuf(sb);
+		free(sb);
+		return 0;
+	}
+	else if(cmd==CMD_WARNING)
+	{
+		logp("WARNING: %s\n", buf);
+		do_filecounter(cntr, cmd, 0);
+		if(buf) { free(buf); buf=NULL; }
+		return 0;
+	}
+	else if(cmd==CMD_GEN)
+	{
+		if(!strcmp(buf, "scan_end"))
+		{
+			*scan_end=1;
+			return 0;
+		}
+	}
+
+	logp("unexpected cmd in %s, got '%c'\n",
+		__FUNCTION__, cmd);
+	if(buf) { free(buf); buf=NULL; }
+	return -1;
+}
+
+static int backup_needed(struct sbuf *sb)
+{
+	if(sb->cmd==CMD_FILE) return 1;
+	// TODO: Check previous manifest and modification time.
+	return 0;
+}
+
+static int backup_server(const char *manifest, const char *client, struct cntr *p1cntr, struct cntr *cntr, struct config *conf)
 {
 	int ars=0;
 	int ret=0;
-	int quit=0;
-	struct sbuf sb;
-	gzFile p1zp=NULL;
-	char *phase1tmp=NULL;
+	int scan_end=0;
+	gzFile mzp=NULL;
+	struct sbuf *shead=NULL;
+	struct sbuf *stail=NULL;
 
-	logp("Begin phase1 (file system scan)\n");
+	logp("Begin backup\n");
 
-	if(!(phase1tmp=get_tmp_filename(phase1data)))
+	if(!(mzp=gzopen_file(manifest, comp_level(conf))))
 		return -1;
 
-	if(!(p1zp=gzopen_file(phase1tmp, comp_level(conf))))
+	while(1)
 	{
-		free(phase1tmp);
-		return -1;
-	}
-
-	init_sbuf(&sb);
-	while(!quit)
-	{
-		free_sbuf(&sb);
-		if((ars=sbuf_fill(NULL, NULL, &sb, p1cntr)))
+		struct sbuf *sb;
+		for(sb=shead; sb; sb=sb->next)
 		{
-			if(ars<0) ret=-1;
-			//ars==1 means it ended ok.
-			// Last thing the client sends is 'backupphase2', and
-			// it wants an 'ok' reply.
-			if(async_write_str(CMD_GEN, "ok")
-			  || send_msg_zp(p1zp, CMD_GEN,
-				"phase1end", strlen("phase1end")))
+			char rcmd;
+			char *rbuf=NULL;
+			size_t rlen=0;
+			size_t wlen=0;
+		//	printf("process: %s\n", sb->path);
+
+			if(!backup_needed(sb))
+			{
+				// Write to manifest here.
+
+				if(!(shead=sb->next)) stail=NULL;
+				// TODO: Make free_sbuf() free the pointer as
+				// well.
+				free_sbuf(sb);
+				free(sb);
+				continue;
+			}
+
+	//	printf("request: %s\n", sb->path);
+			if(async_write(CMD_STAT, sb->statbuf, sb->slen)
+			// May also read.
+			  || async_rw_ensure_write(&rcmd, &rbuf, &rlen,
+				sb->cmd, sb->path, sb->plen))
+			{
+				logp("error in async_rw\n");
+				return -1;
+			}
+
+			if(!scan_end)
+			{
+				if(rbuf)
+				{
+					if(add_to_slist(&shead, &stail,
+						rcmd, rbuf, rlen,
+						&scan_end, cntr))
+					{
+						ret=-1;
+						break;
+					}
+			//		printf("opportune: %s\n", stail->path);
+				}
+			}
+
+			if(!(shead=sb->next)) stail=NULL;
+			// TODO: Make free_sbuf() free the pointer as well.
+			free_sbuf(sb);
+			free(sb);
+			break;
+		}
+
+		if(!shead)
+		{
+			if(scan_end)
+			{
+				if(async_write_str(CMD_GEN, "backup_end"))
 					ret=-1;
-			break;
+				break;
+			}
+			else
+			{
+				// Nothing to do.
+				// Maybe the client is sending more file names.
+				char rcmd;
+				char *rbuf=NULL;
+				size_t rlen=0;
+				if(async_read(&rcmd, &rbuf, &rlen))
+				{
+					logp("error in async_read\n");
+					return -1;
+				}
+				if(add_to_slist(&shead, &stail,
+					rcmd, rbuf, rlen,
+					&scan_end, cntr))
+				{
+					ret=-1;
+					break;
+				}
+			}
 		}
-		write_status(client, STATUS_SCANNING, sb.path, p1cntr, cntr);
-		if(sbuf_to_manifest_phase1(&sb, NULL, p1zp))
-		{
-			ret=-1;
-			break;
-		}
-		do_filecounter(p1cntr, sb.cmd, 0);
-
-		if(sb.cmd==CMD_FILE
-		  || sb.cmd==CMD_ENC_FILE
-		  || sb.cmd==CMD_METADATA
-		  || sb.cmd==CMD_ENC_METADATA
-		  || sb.cmd==CMD_EFS_FILE)
-			do_filecounter_bytes(p1cntr,
-				(unsigned long long)sb.statp.st_size);
 	}
 
-	free_sbuf(&sb);
-        if(gzclose(p1zp))
+        if(gzclose(mzp))
 	{
-		logp("error closing %s in backup_phase1_server\n", phase1tmp);
+		logp("error closing %s in %s\n", manifest, __FUNCTION__);
 		ret=-1;
 	}
-	if(!ret && do_rename(phase1tmp, phase1data))
-		ret=-1;
-	free(phase1tmp);
 
-	//print_filecounters(p1cntr, cntr, ACTION_BACKUP);
-
-	logp("End phase1 (file system scan)\n");
+	logp("End backup\n");
 
 	return ret;
 }
 
-extern int do_backup_server(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *manifest, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *client, const char *cversion, struct cntr *p1cntr, struct cntr *cntr, const char *incexc)
+extern int do_backup_server(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *manifest, const char *client, const char *cversion, struct cntr *p1cntr, struct cntr *cntr, const char *incexc)
 {
 	int ret=0;
 	char msg[256]="";
-	gzFile mzp=NULL;
 	// The timestamp file of this backup
 	char *timestamp=NULL;
 	// Where the new file generated from the delta temporarily goes
@@ -229,25 +339,13 @@ extern int do_backup_server(const char *basedir, const char *current, const char
 		goto error;
 	}
 
-	if(backup_server(phase1data, client, p1cntr, cntr, cconf))
+	if(backup_server(manifest, client, p1cntr, cntr, cconf))
 	{
 		logp("error in backup\n");
 		goto error;
 	}
 
-	//if(cmanfp) logp("Current manifest: %s\n", cmanifest);
-
-	// will not write anything more to
-	// the new manifest
-	// finish_backup will open it again
-	// for reading
-	if(gzclose_fp(&mzp))
-	{
-		logp("Error closing manifest after phase3\n");
-		goto error;
-	}
-
-	async_write_str(CMD_GEN, "okbackupend");
+	async_write_str(CMD_GEN, "backup_end");
 	logp("Backup ending - disconnect from client.\n");
 
 	// Close the connection with the client, the rest of the job
@@ -262,7 +360,6 @@ error:
 	ret=-1;
 end:
 	gzclose_fp(&cmanfp);
-	gzclose_fp(&mzp);
 	if(timestamp) free(timestamp);
 	if(newpath) free(newpath);
 	if(cmanifest) free(cmanifest);

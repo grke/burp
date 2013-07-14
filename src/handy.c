@@ -313,7 +313,7 @@ struct bsid {
 };
 #endif
 
-int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, int64_t winattr, size_t *datalen, struct cntr *cntr)
+int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, int64_t winattr, struct cntr *cntr)
 {
 	if(fp)
 	{
@@ -343,7 +343,6 @@ int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, int64_t winattr
 			}
 		}
 		binit(bfd, winattr);
-		*datalen=0;
 		if(bopen(bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0,
 			(winattr & FILE_ATTRIBUTE_DIRECTORY))<=0)
 		{
@@ -1279,10 +1278,10 @@ void cmd_to_text(char cmd, char *buf, size_t len)
 {
 	switch(cmd)
 	{
-		case CMD_DATAPTH:
-			snprintf(buf, len, "Path to data on the server"); break;
 		case CMD_STAT:
 			snprintf(buf, len, "File stat information"); break;
+		case CMD_STAT_BLKS:
+			snprintf(buf, len, "File stat information preceding blks"); break;
 		case CMD_FILE:
 			snprintf(buf, len, "Plain file"); break;
 		case CMD_ENC_FILE:
@@ -1449,9 +1448,8 @@ int send_a_file(const char *path, struct cntr *p1cntr)
 {
 	int ret=0;
 	FILE *fp=NULL;
-	size_t datalen=0;
 	unsigned long long bytes=0;
-	if(open_file_for_send(NULL, &fp, path, 0, &datalen, p1cntr)
+	if(open_file_for_send(NULL, &fp, path, 0, p1cntr)
 	  || send_whole_file_gz(path, "datapth", 0, &bytes, NULL,
 		p1cntr, 9, // compression
 		NULL, fp, NULL, 0, -1))

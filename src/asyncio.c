@@ -642,27 +642,18 @@ int async_read_stat(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
 				continue;
 			}
 		}
-		if(cmd==CMD_DATAPTH)
-		{
-			if(d) free(d);
-			d=buf;
-			buf=NULL;
-		}
-		else if(cmd==CMD_STAT)
+		if(cmd==CMD_STAT)
 		{
 			decode_stat(buf, &(sb->statp),
 				&(sb->winattr), &(sb->compression));
 			sb->statbuf=buf;
 			sb->slen=len;
-			sb->datapth=d;
 
 			return 0;
 		}
-		else if((cmd==CMD_GEN && !strcmp(buf, "backupend"))
-		  || (cmd==CMD_GEN && !strcmp(buf, "restoreend"))
-		  || (cmd==CMD_GEN && !strcmp(buf, "phase1end"))
-		  || (cmd==CMD_GEN && !strcmp(buf, "backupphase2"))
-		  || (cmd==CMD_GEN && !strcmp(buf, "estimateend")))
+		else if((cmd==CMD_GEN && !strcmp(buf, "backup_end"))
+		  || (cmd==CMD_GEN && !strcmp(buf, "restore_end"))
+		  || (cmd==CMD_GEN && !strcmp(buf, "estimate_end")))
 		{
 			if(buf) free(buf);
 			if(d) free(d);
@@ -670,8 +661,7 @@ int async_read_stat(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
 		}
 		else
 		{
-			logp("expected cmd %c or %c, got '%c'\n",
-				CMD_DATAPTH, CMD_STAT, cmd);
+			logp("expected cmd %c, got '%c'\n", CMD_STAT, cmd);
 			if(buf) { free(buf); buf=NULL; }
 			break;
 		}

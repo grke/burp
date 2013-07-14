@@ -22,14 +22,14 @@
 #include <sys/types.h>
 
 // Return 0 for OK, -1 for error, 1 for timer conditions not met.
-static int maybe_check_timer(const char *phase1str, struct config *conf)
+static int maybe_check_timer(const char *backupstr, struct config *conf)
 {
 	char rcmd=0;
 	char *rdst=NULL;
 	size_t rlen=0;
 	int complen=0;
 
-        if(async_write_str(CMD_GEN, phase1str)) return -1;
+        if(async_write_str(CMD_GEN, backupstr)) return -1;
 
         if(async_read(&rcmd, &rdst, &rlen)) return -1;
 
@@ -117,7 +117,7 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 	struct cntr p1cntr;
 	char *incexc=NULL;
 	char *server_version=NULL;
-	const char *phase1str="backupphase1";
+	const char *backupstr="backup";
 
 	reset_filecounter(&p1cntr, time(NULL));
 	reset_filecounter(&cntr, time(NULL));
@@ -342,7 +342,7 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 	switch(act)
 	{
 		case ACTION_BACKUP_TIMED:
-			phase1str="backupphase1timed";
+			backupstr="backup_timed";
 		case ACTION_BACKUP:
 		{
 			// Set bulk packets quality of service flags on backup.
@@ -363,8 +363,7 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 				goto end;
 			}
 
-			if(!(ret=maybe_check_timer(phase1str,
-				conf)))
+			if(!(ret=maybe_check_timer(backupstr, conf)))
 			{
 				if(conf->backup_script_pre)
 				{

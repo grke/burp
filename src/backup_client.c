@@ -9,6 +9,7 @@
 #include "backup_client.h"
 #include "client_vss.h"
 #include "attribs.h"
+#include "find.h"
 
 static char filesymbol=CMD_FILE;
 static char metasymbol=CMD_METADATA;
@@ -25,17 +26,8 @@ static int maybe_send_extrameta(const char *path, char cmd, const char *attribs,
 	}
 	return 0;
 }
-#endif
 
-static int send_attribs_and_symbol(const char *attribs, char symbol, FF_PKT *ff, struct cntr *p1cntr)
-{
-	if(async_write_str(CMD_STAT, attribs)
-	  || async_write_str(symbol, ff->fname)) return -1;
-	do_filecounter(p1cntr, symbol, 1);
-	return 0;
-}
-
-static int send_attribs_and_symbol_lnk(const char *attribs, char symbol, FF_PKT *ff, struct cntr *p1cntr)
+static int send_attribs_and_symbol_lnk(const char *attribs, char symbol, ff_pkt *ff, struct cntr *p1cntr)
 {
 	if(async_write_str(CMD_STAT, attribs)
 	  || async_write_str(symbol, ff->fname)
@@ -43,9 +35,18 @@ static int send_attribs_and_symbol_lnk(const char *attribs, char symbol, FF_PKT 
 	do_filecounter(p1cntr, symbol, 1);
 	return 0;
 }
+#endif
+
+static int send_attribs_and_symbol(const char *attribs, char symbol, ff_pkt *ff, struct cntr *p1cntr)
+{
+	if(async_write_str(CMD_STAT, attribs)
+	  || async_write_str(symbol, ff->fname)) return -1;
+	do_filecounter(p1cntr, symbol, 1);
+	return 0;
+}
 
 #ifdef HAVE_WIN32
-static int ft_windows_attribute_encrypted(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
+static int ft_windows_attribute_encrypted(ff_pkt *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
 {
 	if(ff->type==FT_REGE
 	  || ff->type==FT_REG
@@ -67,13 +68,13 @@ static int ft_windows_attribute_encrypted(FF_PKT *ff, char *attribs, struct conf
 }
 #endif
 
-static int ft_reg(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
+static int ft_reg(ff_pkt *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
 {
 	encode_stat(attribs, &ff->statp, ff->winattr,
 		in_exclude_comp(conf->excom, conf->excmcount,
 		ff->fname, conf->compression));
 	if(send_attribs_and_symbol(attribs, filesymbol, ff, p1cntr)) return -1;
-	if(ff->type==FT_REG)
+	if(ff->ftype==FT_REG)
 		do_filecounter_bytes(p1cntr,
 			(unsigned long long)ff->statp.st_size);
 #ifndef HAVE_WIN32
@@ -83,13 +84,13 @@ static int ft_reg(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *p
 	return 0;
 }
 
-static int ft_nofschg(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
+static int ft_nofschg(ff_pkt *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
 {
 	logw(p1cntr, "%s%s [will not descend: file system change not allowed]\n", "Dir: ", ff->fname);
 	return 0;
 }
 
-static int ft_directory(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
+static int ft_directory(ff_pkt *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
 {
 	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
 	if(send_attribs_and_symbol(attribs,
@@ -107,7 +108,7 @@ static int ft_directory(FF_PKT *ff, char *attribs, struct config *conf, struct c
 }
 
 #ifndef HAVE_WIN32
-static int ft_spec(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
+static int ft_spec(ff_pkt *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
 {
 	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
 	if(send_attribs_and_symbol(attribs, CMD_SPECIAL, ff, p1cntr))
@@ -117,7 +118,7 @@ static int ft_spec(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *
 	return 0;
 }
 
-static int ft_lnk_s(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
+static int ft_lnk_s(ff_pkt *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
 {
 	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
 	if(maybe_send_extrameta(ff->fname, CMD_SOFT_LINK, attribs, p1cntr))
@@ -129,7 +130,7 @@ static int ft_lnk_s(FF_PKT *ff, char *attribs, struct config *conf, struct cntr 
 	return 0;
 }
 
-static int ft_lnk_h(FF_PKT *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
+static int ft_lnk_h(ff_pkt *ff, char *attribs, struct config *conf, struct cntr *p1cntr)
 {
 	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
 	if(send_attribs_and_symbol_lnk(attribs, CMD_HARD_LINK, ff, p1cntr))
@@ -141,13 +142,13 @@ static int ft_lnk_h(FF_PKT *ff, char *attribs, struct config *conf, struct cntr 
 }
 #endif
 
-static int ft_err(FF_PKT *ff, struct cntr *p1cntr, const char *msg)
+static int ft_err(ff_pkt *ff, struct cntr *p1cntr, const char *msg)
 {
 	logw(p1cntr, _("Err: %s %s: %s"), msg, ff->fname, strerror(errno));
 	return 0;
 }
 
-static int send_file_info(FF_PKT *ff, struct config *conf, struct cntr *p1cntr, bool top_level)
+static int send_file_info(ff_pkt *ff, struct config *conf, struct cntr *p1cntr, bool top_level)
 {
 	char attribs[256];
 
@@ -164,7 +165,7 @@ static int send_file_info(FF_PKT *ff, struct config *conf, struct cntr *p1cntr, 
 #endif
 	//logp("%d: %s\n", ff->type, ff->fname);
 
-	switch (ff->type)
+	switch(ff->ftype)
 	{
 		case FT_REG:
 		case FT_REGE:
@@ -193,15 +194,14 @@ static int send_file_info(FF_PKT *ff, struct config *conf, struct cntr *p1cntr, 
 			return ft_err(ff, p1cntr, "Could not open directory");
 	}
 	logw(p1cntr, _("Err: Unknown file ff->type %d: %s"),
-		ff->type, ff->fname);
+		ff->ftype, ff->fname);
 	return 0;
 }
 
 static int backup_client(struct config *conf, int estimate, struct cntr *p1cntr, struct cntr *cntr)
 {
-	int sd=0;
 	int ret=0;
-	FF_PKT *ff=NULL;
+	ff_pkt *ff=NULL;
 	int ff_ret=0;
 	bool top_level=true;
 

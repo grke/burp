@@ -8,6 +8,8 @@
 #include "dpth.h"
 #include "find.h"
 
+#include <dirent.h>
+
 void mk_dpth(struct dpth *dpth, struct config *cconf, char cmd)
 {
 	// file data

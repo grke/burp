@@ -11,6 +11,8 @@
 #include "list_client.h"
 #include "list_server.h"
 
+#include <dirent.h>
+
 struct cstat
 {
 	char *name;

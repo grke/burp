@@ -13,6 +13,7 @@
 #include <netdb.h>
 #include <librsync.h>
 #include <math.h>
+#include <dirent.h>
 
 int recursive_hardlink(const char *src, const char *dst, const char *client, struct cntr *p1cntr, struct cntr *cntr, struct config *conf)
 {

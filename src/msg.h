@@ -2,7 +2,7 @@
 #define _MSG_ROUTINES
 
 #include <zlib.h>
-#include "find.h"
+#include "bfile.h"
 
 extern int send_msg_fp(FILE *fp, char cmd, const char *buf, size_t s);
 extern int send_msg_zp(gzFile zp, char cmd, const char *buf, size_t s);

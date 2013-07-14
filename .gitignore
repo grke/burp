@@ -2,7 +2,6 @@
 *~
 *.swp
 *.swo
-Makefile
 autoconf/Make.common
 config.log
 config.out
@@ -10,3 +9,4 @@ config.status
 libtool
 src/bedup
 src/burp
+src/config.h

@@ -1,6 +1,7 @@
 #ifndef _CONF_FILE_H
 #define _CONF_FILE_H
 
+#include "rconf.h"
 #include "strlist.h"
 
 enum burp_mode
@@ -116,6 +117,9 @@ struct config
 	int spostcount;
 	int server_script_post_run_on_fail;
 	int server_script_post_notify;
+
+	// Rabin conf
+	struct rconf rconf;
 
 	// Use these when you want to give the same args to both post and pre
 	// scripts.

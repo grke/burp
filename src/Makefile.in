@@ -31,6 +31,7 @@ SVRSRCS =	acl.c \
 		base64.c \
 		berrno.c \
 		bfile.c \
+		blk.c \
 		ca_client.c \
 		ca_server.c \
 		client.c \
@@ -54,6 +55,9 @@ SVRSRCS =	acl.c \
 		msg.c \
 		prepend.c \
 		prog.c \
+		rabin.c \
+		rabin_win.c \
+		rconf.c \
 		regexp.c \
 		restore_client.c \
 		restore_server.c \

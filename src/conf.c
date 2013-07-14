@@ -190,6 +190,7 @@ void init_config(struct config *conf)
 	conf->orig_client=NULL;
 
 	init_incexcs(conf);
+	rconf_init(&conf->rconf);
 }
 
 void free_config(struct config *conf)
@@ -1329,6 +1330,8 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 	if(!loadall) return 0;
 
 	if(!conf->port) conf_problem(config_path, "port unset", &r);
+
+	if(rconf_check(&conf->rconf)) r--;
 
 	// Let the caller check the 'keep' value.
 

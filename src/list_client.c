@@ -237,11 +237,6 @@ int do_list_client(struct config *conf, enum action act, int json)
 			if(statbuf) { free(statbuf); statbuf=NULL; }
 			continue;
 		}
-		else if(scmd==CMD_DATAPTH)
-		{
-			if(statbuf) { free(statbuf); statbuf=NULL; }
-			continue;
-		}
 		else if(scmd!=CMD_STAT)
 		{
 			logp("expected %c cmd - got %c:%s\n",

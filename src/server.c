@@ -413,9 +413,6 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 	// is needed to finish. The 'working' symlink gets renamed to this
 	// at the appropriate moment.
 	char *finishing=NULL;
-	char *phase1data=NULL;
-	char *phase2data=NULL;
-	char *unchangeddata=NULL;
 	char *client_lockdir=NULL;
 
 	if(!(client_lockdir=conf->client_lockdir))
@@ -428,9 +425,6 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 	  || !(currentdata=prepend_s(current, "data", strlen("data")))
 	  || !(manifest=prepend_s(working, "manifest.gz", strlen("manifest.gz")))
 	  || !(datadirtmp=prepend_s(working, "data.tmp", strlen("data.tmp")))
-	  || !(phase1data=prepend_s(working, "phase1.gz", strlen("phase1.gz")))
-	  || !(phase2data=prepend_s(working, "phase2", strlen("phase2")))
-	  || !(unchangeddata=prepend_s(working, "unchanged", strlen("unchanged")))
 	  || !(lockbasedir=prepend_s(client_lockdir, client, strlen(client)))
 	  || !(lockfile=prepend_s(lockbasedir, "lockfile", strlen("lockfile"))))
 	{
@@ -438,7 +432,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 		ret=-1;
 	}
 	else if(cmd==CMD_GEN
-	  && !strncmp(buf, "backupphase1", strlen("backupphase1")))
+	  && !strncmp(buf, "backup", strlen("backup")))
 	{
 		if(cconf->restore_client)
 		{
@@ -465,7 +459,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 				ret=-1;
 				goto end;
 			}
-			if(!strcmp(buf, "backupphase1timed"))
+			if(!strcmp(buf, "backup_timed"))
 			{
 				int a=0;
 				const char *args[12];
@@ -517,9 +511,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			async_write_str(CMD_GEN, okstr);
 			ret=do_backup_server(basedir, current, working,
 			  currentdata, finishing, cconf,
-			  manifest, phase1data, phase2data,
-			  unchangeddata, client, cversion, p1cntr, cntr,
-			  incexc);
+			  manifest, client, cversion, p1cntr, cntr, incexc);
 			maybe_do_notification(ret, client,
 				basedir, current, "log", "backup",
 				cconf, p1cntr, cntr);
@@ -681,9 +673,6 @@ end:
 	if(currentdata) free(currentdata);
 	if(datadirtmp) free(datadirtmp);
 	if(manifest) free(manifest);
-	if(phase1data) free(phase1data);
-	if(phase2data) free(phase2data);
-	if(unchangeddata) free(unchangeddata);
 	if(lockbasedir) free(lockbasedir);
 	if(lockfile) free(lockfile);
 	return ret;
@@ -1038,7 +1027,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	struct config conf;
 	struct config cconf;
 
-	struct cntr p1cntr; // cntr for phase1 (scan)
+	struct cntr p1cntr; // cntr for scan
 	struct cntr cntr; // cntr for the rest
 
 	reset_filecounter(&p1cntr, time(NULL));

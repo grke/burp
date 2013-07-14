@@ -28,13 +28,12 @@ static int restore_interrupt(struct sbuf *sb, const char *msg, struct cntr *cntr
 
 	// If it is file data, get the server
 	// to interrupt the flow and move on.
-	if((sb->cmd!=CMD_FILE
+	if(sb->cmd!=CMD_FILE
 	   && sb->cmd!=CMD_ENC_FILE
 	   && sb->cmd!=CMD_EFS_FILE)
-	 || !(sb->datapth))
 		return 0;
 
-	if(async_write_str(CMD_INTERRUPT, sb->datapth))
+	if(async_write_str(CMD_INTERRUPT, sb->path))
 	{
 		ret=-1;
 		quit++;
@@ -214,7 +213,7 @@ static int restore_file_or_get_meta(BFILE *bfd, struct sbuf *sb, const char *fna
 		unsigned long long rcvdbytes=0;
 		unsigned long long sentbytes=0;
 
-		enccompressed=dpth_is_compressed(sb->compression, sb->datapth);
+//		enccompressed=dpth_is_compressed(sb->compression, sb->datapth);
 /*
 		printf("%s \n", fname);
 		if(encpassword && !enccompressed)
@@ -641,7 +640,7 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore, str
 				print_filecounters(p1cntr, cntr, act);
 				wroteendcounter++;
 				logp("got %s end\n", act_str(act));
-				if(async_write_str(CMD_GEN, "restoreend ok"))
+				if(async_write_str(CMD_GEN, "ok_restore_end"))
 					ret=-1;
 			}
 			break;

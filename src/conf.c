@@ -444,7 +444,7 @@ static int conf_error(const char *config_path, int line)
 	return -1;
 }
 
-static int get_file_size(const char *value, unsigned long *dest, const char *config_path, int line)
+static int get_file_size(const char *value, ssize_t *dest, const char *config_path, int line)
 {
 	// Store in bytes, allow k/m/g.
 	const char *cp=NULL;

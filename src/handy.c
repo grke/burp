@@ -1278,10 +1278,10 @@ void cmd_to_text(char cmd, char *buf, size_t len)
 {
 	switch(cmd)
 	{
-		case CMD_STAT:
-			snprintf(buf, len, "File stat information"); break;
-		case CMD_STAT_BLKS:
-			snprintf(buf, len, "File stat information preceding blks"); break;
+		case CMD_ATTRIBS:
+			snprintf(buf, len, "File attribute information"); break;
+		case CMD_ATTRIBS_BLKS:
+			snprintf(buf, len, "File attribute information preceding blks"); break;
 		case CMD_FILE:
 			snprintf(buf, len, "Plain file"); break;
 		case CMD_ENC_FILE:

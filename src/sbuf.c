@@ -10,37 +10,37 @@
 #include "sbuf.h"
 #include "attribs.h"
 
-void init_sbuf(struct sbuf *sb)
+struct sbuf *sbuf_init(void)
 {
-	// file data
+	struct sbuf *sb;
+	if(!(sb=(struct sbuf *)calloc(1, sizeof(struct sbuf))))
+	{
+		log_out_of_memory(__FUNCTION__);
+		return NULL;
+	}
 	sb->cmd=CMD_ERROR;
-	sb->path=NULL;
-	sb->plen=0;
-	sb->linkto=NULL;
-	sb->llen=0;
-
-	// stat data
-	sb->statbuf=NULL;
-	memset(&(sb->statp), 0, sizeof(sb->statp));
-	sb->winattr=0;
-	sb->slen=0;
 	sb->compression=-1;
-
-	sb->sendendofsig=0;
-
-	sb->endfile=NULL;
-	sb->elen=0;
-
-	sb->next=NULL;
+	return sb;
 }
 
-void free_sbuf(struct sbuf *sb)
+void sbuf_free(struct sbuf *sb)
 {
 	if(sb->path) free(sb->path);
 	if(sb->linkto) free(sb->linkto);
-	if(sb->statbuf) free(sb->statbuf);
 	if(sb->endfile) free(sb->endfile);
-	init_sbuf(sb);
+	free(sb);
+}
+
+void sbuf_free_list(struct sbuf *shead)
+{
+	struct sbuf *sb;
+	sb=shead;
+	while(shead)
+	{
+		sb=shead;
+		shead=shead->next;
+		sbuf_free(sb);
+	}
 }
 
 int cmd_is_link(char cmd)
@@ -58,7 +58,7 @@ int sbuf_is_endfile(struct sbuf *sb)
 {
 	return sb->cmd==CMD_END_FILE;
 }
-
+/*
 int sbuf_fill_ng(struct sbuf *sb, char *statbuf, size_t slen)
 {
 	int ars;
@@ -81,6 +81,7 @@ int sbuf_fill_ng(struct sbuf *sb, char *statbuf, size_t slen)
 	}
 	return 0;
 }
+*/
 
 static int do_sbuf_fill_from_net(struct sbuf *sb, struct cntr *cntr)
 {
@@ -137,7 +138,7 @@ static int sbuf_to_fp(struct sbuf *sb, FILE *mp, int write_endfile)
 {
 	if(sb->path)
 	{
-		if(send_msg_fp(mp, CMD_STAT, sb->statbuf, sb->slen)
+		if(send_msg_fp(mp, CMD_ATTRIBS, sb->attribs, sb->alen)
 		  || send_msg_fp(mp, sb->cmd, sb->path, sb->plen))
 			return -1;
 		if(sb->linkto
@@ -160,7 +161,7 @@ static int sbuf_to_zp(struct sbuf *sb, gzFile zp, int write_endfile)
 {
 	if(sb->path)
 	{
-		if(send_msg_zp(zp, CMD_STAT, sb->statbuf, sb->slen)
+		if(send_msg_zp(zp, CMD_ATTRIBS, sb->attribs, sb->alen)
 		  || send_msg_zp(zp, sb->cmd, sb->path, sb->plen))
 			return -1;
 		if(sb->linkto
@@ -185,71 +186,6 @@ int sbuf_to_manifest(struct sbuf *sb, FILE *mp, gzFile zp)
 	if(zp) return sbuf_to_zp(sb, zp, 1);
 	logp("No valid file pointer given to sbuf_to_manifest()\n");
 	return -1;
-}
-
-void print_sbuf_arr(struct sbuf **list, int count, const char *str)
-{
-	int b=0;
-	for(b=0; b<count; b++)
-		printf("%s%d: '%s'\n", str, b, list[b]->path);
-}
-
-int add_to_sbuf_arr(struct sbuf ***sblist, struct sbuf *sb, int *count)
-{
-	struct sbuf *sbnew=NULL;
-        struct sbuf **sbtmp=NULL;
-	//print_sbuf_arr(*sblist, *count, "BEFORE");
-        if(!(sbtmp=(struct sbuf **)realloc(*sblist,
-                ((*count)+1)*sizeof(struct sbuf *))))
-        {
-                log_out_of_memory(__FUNCTION__);
-                return -1;
-        }
-        *sblist=sbtmp;
-	if(!(sbnew=(struct sbuf *)malloc(sizeof(struct sbuf))))
-	{
-                log_out_of_memory(__FUNCTION__);
-		return -1;
-	}
-	memcpy(sbnew, sb, sizeof(struct sbuf));
-
-        (*sblist)[(*count)++]=sbnew;
-	//print_sbuf_arr(*sblist, *count, "AFTER");
-
-        return 0;
-}
-
-void free_sbufs(struct sbuf **sb, int count)
-{
-	int s=0;
-	if(sb)
-	{
-		for(s=0; s<count; s++)
-			if(sb[s]) { free_sbuf(sb[s]); sb[s]=NULL; }
-		free(sb);
-		sb=NULL;
-	}
-}
-
-int del_from_sbuf_arr(struct sbuf ***sblist, int *count)
-{
-        struct sbuf **sbtmp=NULL;
-
-	(*count)--;
-	if((*sblist)[*count])
-		{ free_sbuf((*sblist)[*count]); (*sblist)[*count]=NULL; }
-        if(*count && !(sbtmp=(struct sbuf **)realloc(*sblist,
-                (*count)*sizeof(struct sbuf *))))
-        {
-                log_out_of_memory(__FUNCTION__);
-                return -1;
-        }
-        *sblist=sbtmp;
-
-        //{int b=0; for(b=0; b<*count; b++)
-        //      printf("now: %d %s\n", b, (*sblist)[b]->path); }
-
-	return 0;
 }
 
 // Like pathcmp, but sort entries that have the same paths so that metadata

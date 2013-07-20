@@ -22,6 +22,7 @@ void blk_free(struct blk *blk)
 	free(blk);
 }
 
+/*
 static char *get_md5sum_str(unsigned char *checksum)
 {
 	static char str[33]="";
@@ -37,6 +38,7 @@ static char *get_md5sum_str(unsigned char *checksum)
 		checksum[14], checksum[15]);
 	return str;
 }
+*/
 
 static int md5_update(struct blk *blk)
 {

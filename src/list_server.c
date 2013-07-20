@@ -57,15 +57,16 @@ err:
 
 static int list_manifest(const char *fullpath, regex_t *regex, const char *browsedir, const char *client, struct cntr *p1cntr, struct cntr *cntr)
 {
+/*
 	int ars=0;
 	int ret=0;
 	int quit=0;
 	gzFile zp=NULL;
-	struct sbuf mb;
+	struct sbuf *mb;
 	char *manifest=NULL;
 	size_t bdlen=0;
 
-	init_sbuf(&mb);
+	if(!(mb=sbuf_init())) return -1;
 
 	if(!(manifest=prepend_s(fullpath,
 		"manifest.gz", strlen("manifest.gz"))))
@@ -89,7 +90,7 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 		//logp("list manifest loop\n");
 		// Need to parse while sending, to take note of the regex.
 
-		free_sbuf(&mb);
+		sbuf_free(mb);
 		if((ars=sbuf_fill(NULL, zp, &mb, cntr)))
 		{
 			if(ars<0) ret=-1;
@@ -137,9 +138,11 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 	gzclose_fp(&zp);
 	free_sbuf(&mb);
 	return ret;
+*/
+	return 0;
 }
 
-static int send_backup_name_to_client(struct bu *arr)
+static void send_backup_name_to_client(struct bu *arr)
 {
 	char msg[64]="";
 	snprintf(msg, sizeof(msg), "%s%s",

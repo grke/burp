@@ -196,13 +196,13 @@ int do_list_client(struct config *conf, enum action act, int json)
 		printf("{\n");
 	}
 	
-	// This should probably should use the sbuf stuff.
+	// This should use the sbuf stuff.
 	while(1)
 	{
 		char fcmd=0;
 		size_t flen=0;
-		int64_t winattr=0;
-		int compression=-1;
+		//int64_t winattr=0;
+		//int compression=-1;
 		char *fname=NULL;
 		if(async_read(&scmd, &statbuf, &slen))
 		{
@@ -237,14 +237,15 @@ int do_list_client(struct config *conf, enum action act, int json)
 			if(statbuf) { free(statbuf); statbuf=NULL; }
 			continue;
 		}
-		else if(scmd!=CMD_STAT)
+		else if(scmd!=CMD_ATTRIBS)
 		{
 			logp("expected %c cmd - got %c:%s\n",
-				CMD_STAT, scmd, statbuf);
+				CMD_ATTRIBS, scmd, statbuf);
 			ret=-1; break;
 		}
 
-		decode_stat(statbuf, &statp, &winattr, &compression);
+		// FIXME - with the sbuf stuff.
+		//decode_stat(statbuf, &statp, &winattr, &compression);
 
 		if(async_read(&fcmd, &fname, &flen))
 		{

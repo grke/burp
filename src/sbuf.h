@@ -13,32 +13,34 @@ struct sbuf
 	size_t llen;
 
 	// stat data
-	char *statbuf;
 	struct stat statp;
+	char attribs[128]; // base64 encoded statp
 	int64_t winattr;
-	size_t slen;
+	int ftype;	// FT_ type from burpconfig.h.
+	size_t alen;
 	int compression;
-
-	int sendendofsig;
 
 	char *endfile;
 	size_t elen;
 
+	// Keep track of what has been sent.
+	int sent_stat;
+	int sent_path;
+	int sent_link;
+
 	struct sbuf *next;
 };
 
-extern void init_sbuf(struct sbuf *sb);
-extern void free_sbuf(struct sbuf *sb);
+extern struct sbuf *sbuf_init(void);
+extern void sbuf_free(struct sbuf *sb);
+extern void sbuf_free_list(struct sbuf *shead);
+
 extern int cmd_is_link(char cmd);
 extern int sbuf_is_link(struct sbuf *sb);
 extern int sbuf_fill(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr);
 extern int sbuf_to_manifest(struct sbuf *sb, FILE *mp, gzFile zp);
-extern int sbuf_fill_ng(struct sbuf *sb, char *statbuf, size_t slen);
+//extern int sbuf_fill_ng(struct sbuf *sb, char *statbuf, size_t slen);
 
-extern int add_to_sbuf_arr(struct sbuf ***sblist, struct sbuf *sb, int *count);
-extern void free_sbufs(struct sbuf **sb, int count);
-extern int del_from_sbuf_arr(struct sbuf ***sblist, int *count);
-extern void print_sbuf_arr(struct sbuf **list, int count, const char *str);
 extern int sbuf_pathcmp(struct sbuf *a, struct sbuf *b);
 
 #endif

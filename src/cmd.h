@@ -5,8 +5,8 @@
    network, and in the manifest. */
 
 // This comes before any file type entries.
-#define CMD_STAT	'r'	/* File stat information */
-#define CMD_STAT_BLKS	'R'	/* File stat information preceding blks */
+#define CMD_ATTRIBS	'r'	/* File stat information */
+#define CMD_ATTRIBS_BLKS 'R'	/* File stat information preceding blks */
 
 // File types
 #define CMD_FILE	'f'	/* Plain file */

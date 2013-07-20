@@ -675,8 +675,9 @@ static int list_backup_file_name(int cfd, const char *dir, const char *file)
 
 static int browse_manifest(int cfd, gzFile zp, const char *browse)
 {
-	int ars=0;
 	int ret=0;
+/*
+	int ars=0;
 	char ls[1024]="";
 	struct sbuf sb;
 	struct cntr cntr;
@@ -720,6 +721,7 @@ static int browse_manifest(int cfd, gzFile zp, const char *browse)
 		}
 	}
 	free_sbuf(&sb);
+*/
 	return ret;
 }
 

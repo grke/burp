@@ -489,10 +489,6 @@ void counters_to_str(char *str, size_t len, const char *client, char phase, cons
 		"%llu/%llu/%llu/%llu/%llu\t"
 		"%llu/%llu/%llu/%llu/%llu\t"
 		"%llu/%llu/%llu/%llu/%llu\t"
-		"%llu/%llu/%llu/%llu/%llu\t"
-		"%llu/%llu/%llu/%llu/%llu\t"
-		"%llu/%llu/%llu/%llu/%llu\t"
-		"%llu/%llu/%llu/%llu/%llu\t"
 		"%llu\t%llu\t%llu\t%llu\t%llu\t%li\t%s\n",
 			client,
 			COUNTER_VERSION_2,

@@ -12,11 +12,13 @@
 #include "berrno.h"
 #include "asyncio.h"
 #include "find.h"
+#include "sbuf.h"
 
 // Encode a stat structure into a base64 character string.
-void encode_stat(char *buf, struct stat *statp, int64_t winattr, int compression)
+void encode_stat(struct sbuf *sb, int compression)
 {
-	char *p = buf;
+	char *p=sb->attribs;
+	struct stat *statp=&sb->statp;
 
 	p += to_base64(statp->st_dev, p);
 	*p++ = ' ';
@@ -69,6 +71,9 @@ void encode_stat(char *buf, struct stat *statp, int64_t winattr, int compression
 	p += to_base64(compression, p);
 
 	*p = 0;
+
+	sb->alen=p-sb->attribs;
+
 	return;
 }
 
@@ -89,9 +94,10 @@ void encode_stat(char *buf, struct stat *statp, int64_t winattr, int compression
 #endif
 
 // Decode a stat packet from base64 characters.
-void decode_stat(const char *buf, struct stat *statp, int64_t *winattr, int *compression)
+void decode_stat(struct sbuf *sb, int *compression)
 {
-	const char *p = buf;
+	const char *p=sb->attribs;
+	struct stat *statp=&sb->statp;
 	int64_t val;
 
 	p += from_base64(&val, p);
@@ -163,7 +169,7 @@ void decode_stat(const char *buf, struct stat *statp, int64_t *winattr, int *com
 	}
 	else
 		val = 0;
-	*winattr=val;
+	sb->winattr=val;
 
 	// Compression.
 	if(*p == ' ' || (*p != 0 && *(p+1) == ' '))

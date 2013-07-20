@@ -14,6 +14,7 @@
 #include "extrameta.h"
 #include "attribs.h"
 
+/*
 static int restore_interrupt(struct sbuf *sb, const char *msg, struct cntr *cntr)
 {
 	int ret=0;
@@ -68,7 +69,9 @@ static int restore_interrupt(struct sbuf *sb, const char *msg, struct cntr *cntr
 	if(buf) free(buf);
 	return ret;
 }
+*/
 
+/*
 static int make_link(const char *fname, const char *lnk, char cmd, const char *restoreprefix, struct cntr *cntr)
 {
 	int ret=-1;
@@ -107,7 +110,8 @@ static int make_link(const char *fname, const char *lnk, char cmd, const char *r
 
 	return ret;
 }
-
+*/
+/*
 static int open_for_restore(BFILE *bfd, FILE **fp, const char *path, struct sbuf *sb, int vss_restore, struct config *conf, struct cntr *cntr)
 {
 #ifdef HAVE_WIN32
@@ -167,7 +171,9 @@ static int open_for_restore(BFILE *bfd, FILE **fp, const char *path, struct sbuf
 #endif
 	return 0;
 }
+*/
 
+/*
 static int restore_file_or_get_meta(BFILE *bfd, struct sbuf *sb, const char *fname, enum action act, const char *encpassword, struct cntr *cntr, char **metadata, size_t *metalen, int vss_restore, struct config *conf)
 {
 	size_t len=0;
@@ -214,17 +220,16 @@ static int restore_file_or_get_meta(BFILE *bfd, struct sbuf *sb, const char *fna
 		unsigned long long sentbytes=0;
 
 //		enccompressed=dpth_is_compressed(sb->compression, sb->datapth);
-/*
-		printf("%s \n", fname);
-		if(encpassword && !enccompressed)
-			printf("encrypted and not compressed\n");
-		else if(!encpassword && enccompressed)
-			printf("not encrypted and compressed\n");
-		else if(!encpassword && !enccompressed)
-			printf("not encrypted and not compressed\n");
-		else if(encpassword && enccompressed)
-			printf("encrypted and compressed\n");
-*/
+//
+//		printf("%s \n", fname);
+//		if(encpassword && !enccompressed)
+//			printf("encrypted and not compressed\n");
+//		else if(!encpassword && enccompressed)
+//			printf("not encrypted and compressed\n");
+//		else if(!encpassword && !enccompressed)
+//			printf("not encrypted and not compressed\n");
+//		else if(encpassword && enccompressed)
+//			printf("encrypted and compressed\n");
 
 		if(metadata)
 		{
@@ -274,7 +279,9 @@ end:
 	if(rpath) free(rpath);
 	return ret;
 }
+*/
 
+/*
 static int restore_special(struct sbuf *sb, const char *fname, enum action act, struct cntr *cntr)
 {
 	int ret=0;
@@ -314,14 +321,14 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
 			set_attributes(rpath, CMD_SPECIAL, &statp, sb->winattr, cntr);
 			do_filecounter(cntr, CMD_SPECIAL, 1);
 		}
-/*
-	}
-	else if(S_ISSOCK(statp.st_mode)) {
-		char msg[256]="";
-		snprintf(msg, sizeof(msg),
-			"Skipping restore of socket: %s\n", fname);
-		logw(cntr, "%s", msg);
-*/
+//
+//	}
+//	else if(S_ISSOCK(statp.st_mode)) {
+//		char msg[256]="";
+//		snprintf(msg, sizeof(msg),
+//			"Skipping restore of socket: %s\n", fname);
+//		logw(cntr, "%s", msg);
+//
 #ifdef S_IFDOOR     // Solaris high speed RPC mechanism
 	} else if (S_ISDOOR(statp.st_mode)) {
 		char msg[256]="";
@@ -355,7 +362,8 @@ end:
 	if(rpath) free(rpath);
 	return ret;
 }
-
+*/
+/*
 static int restore_dir(struct sbuf *sb, const char *dname, enum action act, struct cntr *cntr)
 {
 	int ret=0;
@@ -397,7 +405,9 @@ end:
 	if(rpath) free(rpath);
 	return ret;
 }
+*/
 
+/*
 static int restore_link(struct sbuf *sb, const char *fname, const char *restoreprefix, enum action act, struct cntr *cntr)
 {
 	int ret=0;
@@ -435,7 +445,9 @@ static int restore_link(struct sbuf *sb, const char *fname, const char *restorep
 end:
 	return ret;
 }
+*/
 
+/*
 static int restore_metadata(BFILE *bfd, struct sbuf *sb, const char *fname, enum action act, const char *encpassword, int vss_restore, struct config *conf, struct cntr *cntr)
 {
 	// If it is directory metadata, try to make sure the directory
@@ -479,7 +491,8 @@ static int restore_metadata(BFILE *bfd, struct sbuf *sb, const char *fname, enum
 	else do_filecounter(cntr, sb->cmd, 1);
 	return 0;
 }
-
+*/
+/*
 static void strip_invalid_characters(char **path)
 {
 #ifdef HAVE_WIN32
@@ -502,6 +515,7 @@ static void strip_invalid_characters(char **path)
       }
 #endif
 }
+*/
 
 static const char *act_str(enum action act)
 {
@@ -511,7 +525,8 @@ static const char *act_str(enum action act)
 	return ret;
 }
 
-/* Return 1 for ok, -1 for error, 0 for too many components stripped. */
+/*
+// Return 1 for ok, -1 for error, 0 for too many components stripped.
 static int strip_path_components(struct sbuf *sb, char **path, int strip, struct cntr *cntr)
 {
 	int s=0;
@@ -549,7 +564,8 @@ static int strip_path_components(struct sbuf *sb, char **path, int strip, struct
 	*path=tmp;
 	return 1;
 }
-
+*/
+/*
 static int overwrite_ok(struct sbuf *sb, struct config *conf, BFILE *bfd, const char *fullpath)
 {
 	struct stat checkstat;
@@ -588,19 +604,20 @@ static int overwrite_ok(struct sbuf *sb, struct config *conf, BFILE *bfd, const 
 
 	return 1;
 }
+*/
 
 int do_restore_client(struct config *conf, enum action act, int vss_restore, struct cntr *p1cntr, struct cntr *cntr)
 {
-	int ars=0;
+	//int ars=0;
 	int ret=0;
-	int quit=0;
+	//int quit=0;
 	char msg[512]="";
-	struct sbuf sb;
+	//struct sbuf sb;
 	int wroteendcounter=0;
 // Windows needs to have the VSS data written first, and the actual data
 // written immediately afterwards. The server is transferring them in two
 // chunks. So, leave bfd open after a Windows metadata transfer.
-	BFILE bfd;
+//	BFILE bfd;
 #ifdef HAVE_WIN32
 	binit(&bfd, 0);
 #endif
@@ -624,6 +641,7 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore, str
 	if(act==ACTION_RESTORE) win32_enable_backup_privileges();
 #endif
 
+/*
 	init_sbuf(&sb);
 	while(!quit)
 	{
@@ -801,6 +819,7 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore, str
 		if(fullpath) free(fullpath);
 	}
 	free_sbuf(&sb);
+*/
 
 #ifdef HAVE_WIN32
 	// It is possible for a bfd to still be open.

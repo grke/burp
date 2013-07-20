@@ -35,7 +35,6 @@ end:
 
 static int open_log(const char *realworking, const char *client, const char *cversion, struct config *conf)
 {
-	FILE *logfp=NULL;
 	char *logpath=NULL;
 
 	if(!(logpath=prepend_s(realworking, "log", strlen("log"))))
@@ -67,16 +66,11 @@ static int open_log(const char *realworking, const char *client, const char *cve
 
 static int add_to_slist(struct sbuf **shead, struct sbuf **stail, char cmd, char *buf, size_t len, int *scan_end, struct cntr *cntr)
 {
-	if(cmd==CMD_STAT)
+	if(cmd==CMD_ATTRIBS)
 	{
-		struct sbuf *sb=NULL;
-		if(!(sb=(struct sbuf *)malloc(sizeof(struct sbuf))))
-		{
-			log_out_of_memory(__FUNCTION__);
-			return -1;
-		}
-		init_sbuf(sb);
-		if(sbuf_fill_ng(sb, buf, len)) return -1;
+		struct sbuf *sb;
+		if(!(sb=sbuf_init())) return -1;
+//		if(sbuf_fill_ng(sb, buf, len)) return -1;
 		if(*stail)
 		{
 			// Add to the end of the list.
@@ -91,19 +85,13 @@ static int add_to_slist(struct sbuf **shead, struct sbuf **stail, char cmd, char
 		}
 		return 0;
 	}
-	else if(cmd==CMD_STAT_BLKS)
+	else if(cmd==CMD_ATTRIBS_BLKS)
 	{
-		struct sbuf *sb=NULL;
-		if(!(sb=(struct sbuf *)malloc(sizeof(struct sbuf))))
-		{
-			log_out_of_memory(__FUNCTION__);
-			return -1;
-		}
-		init_sbuf(sb);
-		if(sbuf_fill_ng(sb, buf, len)) return -1;
+		struct sbuf *sb;
+		if(!(sb=sbuf_init())) return -1;
+//		if(sbuf_fill_ng(sb, buf, len)) return -1;
 		printf("receiving blocks for %s\n", sb->path);
-		free_sbuf(sb);
-		free(sb);
+		sbuf_free(sb);
 		return 0;
 	}
 	else if(cmd==CMD_WARNING)
@@ -137,7 +125,6 @@ static int backup_needed(struct sbuf *sb)
 
 static int backup_server(const char *manifest, const char *client, struct cntr *p1cntr, struct cntr *cntr, struct config *conf)
 {
-	int ars=0;
 	int ret=0;
 	int scan_end=0;
 	gzFile mzp=NULL;
@@ -157,7 +144,6 @@ static int backup_server(const char *manifest, const char *client, struct cntr *
 			char rcmd;
 			char *rbuf=NULL;
 			size_t rlen=0;
-			size_t wlen=0;
 		//	printf("process: %s\n", sb->path);
 
 			if(!backup_needed(sb))
@@ -167,13 +153,12 @@ static int backup_server(const char *manifest, const char *client, struct cntr *
 				if(!(shead=sb->next)) stail=NULL;
 				// TODO: Make free_sbuf() free the pointer as
 				// well.
-				free_sbuf(sb);
-				free(sb);
+				sbuf_free(sb);
 				continue;
 			}
 
 	//	printf("request: %s\n", sb->path);
-			if(async_write(CMD_STAT, sb->statbuf, sb->slen)
+			if(async_write(CMD_ATTRIBS, sb->attribs, sb->alen)
 			// May also read.
 			  || async_rw_ensure_write(&rcmd, &rbuf, &rlen,
 				sb->cmd, sb->path, sb->plen))
@@ -199,8 +184,7 @@ static int backup_server(const char *manifest, const char *client, struct cntr *
 
 			if(!(shead=sb->next)) stail=NULL;
 			// TODO: Make free_sbuf() free the pointer as well.
-			free_sbuf(sb);
-			free(sb);
+			sbuf_free(sb);
 			break;
 		}
 
@@ -266,7 +250,6 @@ extern int do_backup_server(const char *basedir, const char *current, const char
 	struct dpth dpth;
 
 	gzFile cmanfp=NULL;
-	struct stat statp;
 
 	logp("in do_backup_server\n");
 

@@ -80,8 +80,8 @@ struct config
 	int read_all_blockdevs;
 	struct strlist **blockdevs;
 	int bdcount;
-	unsigned long min_file_size;
-	unsigned long max_file_size;
+	ssize_t min_file_size;
+	ssize_t max_file_size;
 	char *vss_drives;
   // These are to do with restore.
 	int overwrite;

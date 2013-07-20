@@ -642,12 +642,10 @@ int async_read_stat(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
 				continue;
 			}
 		}
-		if(cmd==CMD_STAT)
+		if(cmd==CMD_ATTRIBS)
 		{
-			decode_stat(buf, &(sb->statp),
-				&(sb->winattr), &(sb->compression));
-			sb->statbuf=buf;
-			sb->slen=len;
+			decode_stat(sb, &(sb->compression));
+			sb->alen=len;
 
 			return 0;
 		}
@@ -661,7 +659,7 @@ int async_read_stat(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
 		}
 		else
 		{
-			logp("expected cmd %c, got '%c'\n", CMD_STAT, cmd);
+			logp("expected cmd %c, got '%c'\n", CMD_ATTRIBS, cmd);
 			if(buf) { free(buf); buf=NULL; }
 			break;
 		}

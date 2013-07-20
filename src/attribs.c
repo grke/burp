@@ -15,10 +15,17 @@
 #include "sbuf.h"
 
 // Encode a stat structure into a base64 character string.
-void encode_stat(struct sbuf *sb, int compression)
+int encode_stat(struct sbuf *sb, int compression)
 {
-	char *p=sb->attribs;
+	char *p;
 	struct stat *statp=&sb->statp;
+
+	if(!(sb->attribs=(char *)malloc(128)))
+	{
+		log_out_of_memory(__FUNCTION__);
+		return -1;
+	}
+	p=sb->attribs;
 
 	p += to_base64(statp->st_dev, p);
 	*p++ = ' ';
@@ -74,7 +81,7 @@ void encode_stat(struct sbuf *sb, int compression)
 
 	sb->alen=p-sb->attribs;
 
-	return;
+	return 0;
 }
 
 // Do casting according to unknown type to keep compiler happy.

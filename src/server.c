@@ -243,6 +243,7 @@ int setup_signals(int oldmax_children, int max_children, int oldmax_status_child
 	return 0;
 }
 
+/*
 static int incexc_matches(const char *fullrealwork, const char *incexc)
 {
 	int ret=0;
@@ -275,6 +276,7 @@ end:
 	free(old_incexc_path);
 	return ret;
 }
+*/
 
 static int get_lock_w(const char *lockbasedir, const char *lockfile, char **gotlock)
 {
@@ -292,7 +294,6 @@ static int get_lock_w(const char *lockbasedir, const char *lockfile, char **gotl
 
 	if(get_lock(lockfile))
 	{
-		struct stat statp;
 		logp("another instance of client is already running,\n");
 		logp("or %s is not writable.\n", lockfile);
 		async_write_str(CMD_ERROR, "another instance is already running");
@@ -706,7 +707,7 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 	long ser_ver=0;
 	long feat_list_ver=0;
 	long directory_tree_ver=0;
-	char *restorepath=NULL;
+	//char *restorepath=NULL;
 
 	if((min_ver=version_to_long("1.2.7"))<0
 	 || (cli_ver=version_to_long(cversion))<0
@@ -744,7 +745,7 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 	}
 	else
 	{
-		char *tmp=NULL;
+		//char *tmp=NULL;
 		char *feat=NULL;
 		struct stat statp;
 		if(append_to_feat(&feat, "extra_comms_begin ok:")

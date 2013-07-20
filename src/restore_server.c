@@ -14,6 +14,7 @@
 
 #include <librsync.h>
 
+/*
 static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, int compression)
 {
 	int ret=0;
@@ -77,13 +78,15 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, int
 	}
 	return ret;
 }
-
+*/
+/*
 static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, enum action act, const char *client, char status, struct cntr *p1cntr, struct cntr *cntr, struct config *cconf)
 {
 	//logp("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path);
 	return 0;
 }
-
+*/
+/*
 static int do_restore_end(enum action act, struct cntr *cntr)
 {
 	char cmd;
@@ -125,7 +128,8 @@ static int do_restore_end(enum action act, struct cntr *cntr)
 
 	return ret;
 }
-
+*/
+/*
 static int restore_ent(const char *client, struct sbuf *sb, struct sbuf ***sblist, int *scount, struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, enum action act, char status, struct config *cconf, struct cntr *cntr, struct cntr *p1cntr)
 {
 	int s=0;
@@ -159,10 +163,10 @@ static int restore_ent(const char *client, struct sbuf *sb, struct sbuf ***sblis
 		}
 	}
 
-	/* If it is a directory, need to remember it and restore it later, so
-	   that the permissions come out right. */
-	/* Meta data of directories will also have the stat stuff set to be a
-	   directory, so will also come out at the end. */
+	// If it is a directory, need to remember it and restore it later, so
+	//  that the permissions come out right.
+	// Meta data of directories will also have the stat stuff set to be a
+	/   directory, so will also come out at the end.
 	if(!ret && S_ISDIR(sb->statp.st_mode))
 	{
 		if(add_to_sbuf_arr(sblist, sb, scount))
@@ -177,7 +181,8 @@ static int restore_ent(const char *client, struct sbuf *sb, struct sbuf ***sblis
 			ret=-1;
 	return ret;
 }
-
+*/
+/*
 static int srestore_matches(struct strlist *s, const char *path)
 {
 	int r=0;
@@ -188,8 +193,10 @@ static int srestore_matches(struct strlist *s, const char *path)
 		return 1; // matched directory contents
 	return 0; // no match
 }
+*/
 
-/* Used when restore is initiated from the server. */
+/*
+// Used when restore is initiated from the server.
 static int check_srestore(struct config *cconf, const char *path)
 {
 	int i=0;
@@ -203,6 +210,7 @@ static int check_srestore(struct config *cconf, const char *path)
 	}
 	return 0;
 }
+*/
 
 // a = length of struct bu array
 // i = position to restore from
@@ -212,14 +220,14 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 	gzFile zp=NULL;
 	char *manifest=NULL;
 	char *datadir=NULL;
-	FILE *logfp=NULL;
+//	FILE *logfp=NULL;
 	char *logpath=NULL;
 	char *logpathz=NULL;
 	// For sending status information up to the server.
-	char status=STATUS_RESTORING;
+//	char status=STATUS_RESTORING;
 
-	if(act==ACTION_RESTORE) status=STATUS_RESTORING;
-	else if(act==ACTION_VERIFY) status=STATUS_VERIFYING;
+//	if(act==ACTION_RESTORE) status=STATUS_RESTORING;
+//	else if(act==ACTION_VERIFY) status=STATUS_VERIFYING;
 
 	if(
 	    (act==ACTION_RESTORE && !(logpath=prepend_s(arr[i].path, "restorelog", strlen("restorelog"))))
@@ -252,6 +260,7 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 	}
 	else
 	{
+/*
 		int ars=0;
 		int quit=0;
 		struct sbuf sb;
@@ -274,22 +283,13 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 					if(sb.endfile)
 					  do_filecounter_bytes(p1cntr,
                  			    strtoull(sb.endfile, NULL, 10));
-/*
-					if(sb.cmd==CMD_FILE
-					  || sb.cmd==CMD_ENC_FILE
-					  || sb.cmd==CMD_METADATA
-					  || sb.cmd==CMD_ENC_METADATA
-					  || sb.cmd==CMD_EFS_FILE)
-						do_filecounter_bytes(p1cntr,
-							(unsigned long long)
-							sb.statp.st_size);
-*/
 				}
 			}
 			free_sbuf(&sb);
 		}
 		free_sbuf(&sb);
 		gzclose_fp(&zp);
+*/
 	}
 
 	if(cconf->send_client_counters)
@@ -308,6 +308,7 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 	}
 	else
 	{
+/*
 		char cmd;
 		int s=0;
 		int quit=0;
@@ -400,6 +401,7 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 
 		reset_filecounter(p1cntr, time(NULL));
 		reset_filecounter(cntr, time(NULL));
+*/
 	}
 	set_logfp(NULL, cconf);
 	compress_file(logpath, logpathz, cconf);

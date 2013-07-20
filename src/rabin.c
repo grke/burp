@@ -9,7 +9,7 @@
 
 static uint64_t get_multiplier(struct rconf *rconf)
 {
-	int i;
+	unsigned int i;
 	uint64_t multiplier=1;
 
 	for(i=0; i < rconf->win; i++) multiplier *= rconf->prime;

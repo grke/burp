@@ -2,7 +2,7 @@
 #define __FIND_H
 
 #include "conf.h"
-#include "counter.h"
+#include "sbuf.h"
 
 #if HAVE_UTIME_H
 #include <utime.h>
@@ -13,35 +13,11 @@ struct utimbuf {
 };
 #endif
 
-typedef struct ff_dir ff_dir_t;
-
-struct ff_dir
-{
-	struct dirent **nl;
-	int count;
-	int c;
-	char *dirname;
-	dev_t dev;
-	struct ff_dir *next;
-};
-
-struct ff_pkt
-{
-	char *fname;             /* full filename */
-	char *link;              /* link if file linked */
-	struct stat statp;       /* stat packet */
-	int64_t winattr;         /* windows attributes */
-	int ftype;                /* FT_ type from burpconfig.h */
-
-	/* List of all hard linked files found */
-	struct f_link **linkhash;
-
-	struct ff_dir *ff_dir;
-};
-
-extern ff_pkt *find_files_init(void);
-extern int find_file_next(ff_pkt *ff, struct config *conf, struct cntr *p1cntr, bool *top_level);
-extern void find_files_free(ff_pkt *ff);
+extern int find_files_init(void);
+extern int find_file_next(struct sbuf *sb,
+	struct config *conf,
+	bool *top_level);
+extern void find_files_free(void);
 
 extern int pathcmp(const char *a, const char *b);
 extern int file_is_included(struct strlist **ielist, int iecount,
@@ -49,13 +25,12 @@ extern int file_is_included(struct strlist **ielist, int iecount,
 	struct strlist **excext, int excount,
 	struct strlist **increg, int ircount,
 	struct strlist **excreg, int ercount,
-	const char *fname, bool top_level);
-
-// Returns the level of compression.
-extern int in_exclude_comp(struct strlist **excom, int excmcount, const char *fname, int compression);
+	const char *path, bool top_level);
 
 #ifndef HAVE_READDIR_R
 int readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result);
 #endif
+
+extern int ftype_to_cmd(struct sbuf *sb, struct config *conf, struct cntr *p1cntr, bool top_level);
 
 #endif /* __FIND_H */

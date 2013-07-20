@@ -2,9 +2,9 @@
 #define __RABIN_H
 
 #include <stdio.h>
-#include "bfile.h"
 #include "rconf.h"
+#include "sbuf.h"
 
-extern int blks_generate(struct rconf *rconf, BFILE *bfd, FILE *fp);
+extern int blks_generate(struct rconf *rconf, struct sbuf *sb);
 
 #endif

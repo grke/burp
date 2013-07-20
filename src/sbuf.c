@@ -25,7 +25,9 @@ struct sbuf *sbuf_init(void)
 
 void sbuf_free(struct sbuf *sb)
 {
+	sbuf_close_file(sb);
 	if(sb->path) free(sb->path);
+	if(sb->attribs) free(sb->attribs);
 	if(sb->linkto) free(sb->linkto);
 	if(sb->endfile) free(sb->endfile);
 	free(sb);
@@ -43,10 +45,25 @@ void sbuf_free_list(struct sbuf *shead)
 	}
 }
 
+void sbuf_add_to_list(struct sbuf *sb, struct sbuf **head, struct sbuf **tail)
+{
+	if(*tail)
+	{
+		// Add to the end of the list.
+		(*tail)->next=sb;
+		*tail=sb;
+	}
+	else
+	{
+		// Start the list.
+		*head=sb;
+		*tail=sb;
+	}
+}
+
 int cmd_is_link(char cmd)
 {
-	return (cmd==CMD_SOFT_LINK
-		|| cmd==CMD_HARD_LINK);
+	return (cmd==CMD_SOFT_LINK || cmd==CMD_HARD_LINK);
 }
 
 int sbuf_is_link(struct sbuf *sb)
@@ -204,4 +221,37 @@ int sbuf_pathcmp(struct sbuf *a, struct sbuf *b)
 		if(b->cmd==CMD_METADATA || b->cmd==CMD_ENC_METADATA) return -1;
 		else return 0;
 	}
+}
+
+int sbuf_open_file(struct sbuf *sb, struct config *conf, struct cntr *cntr)
+{
+#ifdef HAVE_WIN32
+	if(win32_lstat(sb->path, &sb->statp, &sb->winattr))
+#else
+	if(lstat(sb->path, &sb->statp))
+#endif
+	{
+		// This file is no longer available.
+		logw(cntr, "%s has vanished\n", sb->path);
+		return -1;
+	}
+	if(encode_stat(sb, conf->compression)) return -1;
+
+	if(open_file_for_send(
+#ifdef HAVE_WIN32
+		&sb->bfd, NULL,
+#else
+		NULL, &sb->fp,
+#endif
+		sb->path, sb->winattr, cntr))
+	{
+		logw(cntr, "Could not open %s\n", sb->path);
+		return -1;
+	}
+	return 0;
+}
+
+void sbuf_close_file(struct sbuf *sb)
+{
+	close_file_for_send(&sb->bfd, &sb->fp);
 }

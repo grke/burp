@@ -29,94 +29,48 @@ static int maybe_send_extrameta(struct sbuf *sb, char cmd, struct cntr *p1cntr)
 }
 #endif
 */
-/*
+
 static int send_blocks(struct sbuf *sb, struct config *conf, struct cntr *cntr)
 {
-	int ret;
-	BFILE bfd;
-	FILE *fp=NULL;
-#ifdef HAVE_WIN32
-        if(win32_lstat(sb->path, &sb->statp, &sb->winattr))
-#else
-        if(lstat(sb->path, &sb->statp))
-#endif
-	{
-		// This file is no longer available.
-		logw(cntr, "%s has vanished\n", sb->path);
-		return 0;
-	}
-	encode_stat(sb, conf->compression);
-
-	if(open_file_for_send(
-#ifdef HAVE_WIN32
-		&bfd, NULL,
-#else
-		NULL, &fp,
-#endif
-		sb->path, sb->winattr, cntr))
-	{
-		logw(cntr, "Could not open %s\n", sb->path);
-		return 0;
-	}
-
-	if(async_write_str(CMD_ATTRIBS_BLKS, sb->attribs)
-	  || async_write_str(sb->cmd, sb->path))
-	{
-		close_file_for_send(&bfd, &fp);
-		return -1;
-	}
-
-	ret=blks_generate(&conf->rconf,
-#ifdef HAVE_WIN32
-		&bfd, NULL
-#else
-		NULL, fp
-#endif
-		);
-
-	close_file_for_send(&bfd, &fp);
-
-	return ret;
+	return blks_generate(&conf->rconf, sb);
 }
-*/
 
-/*
-static int deal_with_buf(struct sbuf *sb, char cmd, char *buf, size_t len, int *backup_end, struct config *conf, struct cntr *cntr)
+static int deal_with_read(char rcmd, char **rbuf, size_t rlen, struct sbuf **shead, struct sbuf **stail, struct cntr *cntr, int *backup_end)
 {
-	if(cmd==CMD_ATTRIBS)
+	int ret=0;
+	switch(rcmd)
 	{
-		//if(sbuf_fill_ng(sb, buf, len))
-		//	return -1;
-		if(send_blocks(sb, conf, cntr))
+		case CMD_FILE:
 		{
-			printf("send_blocks returned error\n");
-			return -1;
-		}
-		printf("\nserver wants: %s", sb->path);
-	//	free_sbuf(sb);
-		return 0;
-	}
-	else if(cmd==CMD_WARNING)
-	{
-		logp("WARNING: %s\n", buf);
-		do_filecounter(cntr, cmd, 0);
-		if(buf) { free(buf); buf=NULL; }
-		return 0;
-	}
-	else if(cmd==CMD_GEN)
-	{
-		if(backup_end && !strcmp(buf, "backup_end"))
-		{
-			*backup_end=1;
+			struct sbuf *sb;
+			if(!(sb=sbuf_init())) goto error;
+			sb->path=*rbuf;
+			sb->plen=rlen;
+			*rbuf=NULL;
+			sbuf_add_to_list(sb, shead, stail);
+printf("got request for: %s\n", sb->path);
 			return 0;
 		}
+		case CMD_WARNING:
+			logp("WARNING: %s\n", rbuf);
+			do_filecounter(cntr, rcmd, 0);
+			goto end;
+		case CMD_GEN:
+			if(!strcmp(*rbuf, "backup_end"))
+			{
+				*backup_end=1;
+				goto end;
+			}
+			break;
 	}
 
-	logp("unexpected cmd in %s, got '%c:%s'\n", __FUNCTION__, cmd, buf);
-	if(buf) { free(buf); buf=NULL; }
-	return -1;
+	logp("unexpected cmd in %s, got '%c:%s'\n", __FUNCTION__, rcmd, *rbuf);
+error:
+	ret=-1;
+end:
+	if(*rbuf) { free(*rbuf); *rbuf=NULL; }
+	return ret;
 }
-*/
 
 static int add_to_scan_list(struct sbuf **fhead, struct sbuf **ftail, int *scanning, struct config *conf, bool *top_level, struct cntr *p1cntr)
 {
@@ -132,19 +86,7 @@ static int add_to_scan_list(struct sbuf **fhead, struct sbuf **ftail, int *scann
 			sbuf_free(sb);
 			return 0;
 		}
-
-		if(*ftail)
-		{
-			// Add to the end of the list.
-			(*ftail)->next=sb;
-			*ftail=sb;
-		}
-		else
-		{
-			// Start the list.
-			*fhead=sb;
-			*ftail=sb;
-		}
+		sbuf_add_to_list(sb, fhead, ftail);
 	}
 	else if(ff_ret<0)
 	{
@@ -209,12 +151,16 @@ static int backup_client(struct config *conf, int estimate, struct cntr *p1cntr,
 	struct sbuf *stail=NULL;
 	struct sbuf *fhead=NULL;
 	struct sbuf *ftail=NULL;
+	char rcmd=CMD_ERROR;
+	char *rbuf=NULL;
+	size_t rlen=0;
+	int backup_end=0;
 
 	logp("Backup begin\n");
 
 	if(find_files_init()) goto end;
 
-	while(1)
+	while(!backup_end)
 	{
 		if(!wlen)
 		{
@@ -227,11 +173,15 @@ static int backup_client(struct config *conf, int estimate, struct cntr *p1cntr,
 			}
 		}
 
-		if(wlen)
+		if(async_rw(&rcmd, &rbuf, &rlen, wcmd, wbuf, &wlen))
 		{
-			printf("%d %c:%s\n", (int)wlen, wcmd, wbuf);
-			wlen=0;
+			logp("error in async_rw\n");
+			goto end;
 		}
+
+		if(rbuf && deal_with_read(rcmd, &rbuf, rlen,
+			&shead, &stail, cntr, &backup_end))
+				goto end;
 
 		if(scanning)
 		{

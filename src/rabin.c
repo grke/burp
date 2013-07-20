@@ -66,7 +66,7 @@ static int blk_read(struct rconf *rconf, uint64_t multiplier, char *buf, char *b
 	return 0;
 }
 
-int blks_generate(struct rconf *rconf, BFILE *bfd, FILE *fp)
+int blks_generate(struct rconf *rconf, struct sbuf *sb)
 {
 	int ret=0;
 	ssize_t bytes;
@@ -90,9 +90,9 @@ int blks_generate(struct rconf *rconf, BFILE *bfd, FILE *fp)
 
 	while((bytes=
 #ifdef HAVE_WIN32
-		(ssize_t)bread(bfd, buf, bufsize)
+		(ssize_t)bread(sb->bfd, buf, bufsize)
 #else
-		fread(buf, 1, bufsize, fp)
+		fread(buf, 1, bufsize, sb->fp)
 #endif
 	))
 		if(blk_read(rconf, multiplier, buf, buf+bytes, win,

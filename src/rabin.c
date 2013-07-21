@@ -4,19 +4,9 @@
 #include "blk.h"
 #include "rabin.h"
 #include "rabin_win.h"
+#include "log.h"
 
-#define SIG_MAX	0xFFF
-
-static uint64_t get_multiplier(struct rconf *rconf)
-{
-	unsigned int i;
-	uint64_t multiplier=1;
-
-	for(i=0; i < rconf->win; i++) multiplier *= rconf->prime;
-
-	return multiplier;
-}
-
+/*
 static int blks_output(struct rconf *rconf, struct blk **blkbuf, int *b)
 {
 	int d;
@@ -30,21 +20,23 @@ static int blks_output(struct rconf *rconf, struct blk **blkbuf, int *b)
 	*b=0;
 	return 0;
 }
+*/
 
-static int blk_read(struct rconf *rconf, uint64_t multiplier, char *buf, char *buf_end, struct win *win, struct blk **blkbuf, int *b)
+// This is where the magic happens.
+static int blk_read(struct rconf *rconf, char *buf, char *buf_end, struct win *win, struct blkgrp *blkgrp)
 {
 	char c;
 	char *cp;
 	struct blk *blk;
 
-	for(cp=buf; cp!=buf_end; cp++)
+	for(cp=blkgrp->cp; cp!=buf_end; cp++)
 	{
-		blk=blkbuf[*b];
+		blk=blkgrp->blks[blkgrp->b];
 		c=*cp;
 
 		blk->fingerprint = (blk->fingerprint * rconf->prime) + c;
 		win->checksum    = (win->checksum    * rconf->prime) + c
-				   - (win->data[win->pos] * multiplier);
+				   - (win->data[win->pos] * rconf->multiplier);
 		win->data[win->pos] = c;
 
 		win->pos++;
@@ -57,62 +49,46 @@ static int blk_read(struct rconf *rconf, uint64_t multiplier, char *buf, char *b
 		 && (blk->length == rconf->blk_max
 		  || (win->checksum % rconf->blk_avg) == rconf->prime))
 		{
-			(*b)++;
-			if(*b<SIG_MAX) continue;
-			if(blks_output(rconf, blkbuf, b))
-				return -1;
+			// Maybe we have enough blocks to return now.
+			if(++(blkgrp->b)==SIG_MAX) return 0;
 		}
 	}
+	blkgrp->cp=buf;
 	return 0;
 }
 
-int blks_generate(struct rconf *rconf, struct sbuf *sb)
+static int do_blks_generate(struct blkgrp *blkgrp, struct rconf *rconf, struct sbuf *sb, struct win *win)
 {
-	int ret=0;
 	ssize_t bytes;
-	char buf[1048576];
-	struct win *win;
-	uint64_t multiplier;
-	ssize_t bufsize;
-	struct blk *blkbuf[SIG_MAX];
-	int b=0;
-
-	bufsize=sizeof(buf);
-
-	if(!(multiplier=get_multiplier(rconf))
-	  || !(win=win_alloc(rconf)))
-		goto error;
-
-	for(b=0; b<SIG_MAX; b++)
-		if(!(blkbuf[b]=blk_alloc(rconf->blk_max)))
-			goto error;
-	b=0;
-
-	while((bytes=
-#ifdef HAVE_WIN32
-		(ssize_t)bread(sb->bfd, buf, bufsize)
-#else
-		fread(buf, 1, bufsize, sb->fp)
-#endif
-	))
-		if(blk_read(rconf, multiplier, buf, buf+bytes, win,
-			blkbuf, &b))
-				goto error;
-
-	if(blkbuf[b]->length) b++;
-
-	if(b)
+	if(blkgrp->cp!=blkgrp->buf)
 	{
-		if(blks_output(rconf, blkbuf, &b))
-			goto error;
+		// Could have got a fill of blkgrp before buf ran out -
+		// need to resume from the same place in that case.
+		if(blk_read(rconf, blkgrp->buf, blkgrp->buf_end, win, blkgrp))
+			return -1;
+	}
+	while((bytes=sbuf_read(sb, blkgrp->buf, rconf->blk_max)))
+	{
+		blkgrp->cp=blkgrp->buf;
+		blkgrp->buf_end=blkgrp->buf+bytes;
+		if(blk_read(rconf, blkgrp->buf, blkgrp->buf_end, win, blkgrp))
+			return -1;
+		// Maybe we have enough blocks to return now.
+		if(blkgrp->b==SIG_MAX) return 0;
 	}
 
-	goto end;
-error:
-	ret=-1;
-end:
-	win_free(win);
-	for(b=0; b<SIG_MAX; b++)
-		blk_free(blkbuf[b]);
-	return ret;
+	// Getting here means there is no more to read from the file.
+	// Make sure to deal with anything left over.
+	if(blkgrp->blks[blkgrp->b]->length) blkgrp->b++;
+	return 0;
+}
+
+int blks_generate(struct blkgrp **bnew, struct rconf *rconf, struct sbuf *sb, struct win *win)
+{
+	if(!(*bnew=blkgrp_alloc(rconf))) return -1;
+
+	if(!do_blks_generate(*bnew, rconf, sb, win)) return 0;
+
+	blkgrp_free(*bnew); *bnew=NULL;
+	return -1;
 }

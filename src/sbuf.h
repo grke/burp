@@ -4,6 +4,7 @@
 #include <sys/stat.h>
 #include <zlib.h>
 #include "bfile.h"
+#include "blk.h"
 
 typedef struct sbuf sbuf_t;
 
@@ -38,6 +39,11 @@ struct sbuf
 
 	FILE *fp;
 	BFILE bfd;
+	int opened; // Get rid of this.
+
+	struct blkgrp *bhead;
+	struct blkgrp *btail;
+	struct blkgrp *bsighead;
 
 	struct sbuf *next;
 };
@@ -48,13 +54,14 @@ extern void sbuf_free_list(struct sbuf *shead);
 
 extern int sbuf_open_file(struct sbuf *sb, struct config *conf, struct cntr *cntr);
 extern void sbuf_close_file(struct sbuf *sb);
+extern ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize);
 
 extern int cmd_is_link(char cmd);
 extern int sbuf_is_link(struct sbuf *sb);
 extern int sbuf_fill(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr);
 extern int sbuf_to_manifest(struct sbuf *sb, FILE *mp, gzFile zp);
 //extern int sbuf_fill_ng(struct sbuf *sb, char *statbuf, size_t slen);
-extern void sbuf_add_to_list(struct sbuf *sb, struct sbuf **head, struct sbuf **tail);
+extern void sbuf_add_to_list(struct sbuf *sb, struct sbuf **head, struct sbuf **tail, struct sbuf **genhead, struct sbuf **sighead);
 
 extern int sbuf_pathcmp(struct sbuf *a, struct sbuf *b);
 

@@ -11,19 +11,18 @@ struct blk *blk_alloc(uint32_t max_data_length)
 	  && (blk->data=(char *)calloc(1, sizeof(char)*max_data_length)))
 		return blk;
 	log_out_of_memory(__FUNCTION__);
-	if(blk) free(blk);
+	blk_free(blk);
 	return NULL;
 }
 
 void blk_free(struct blk *blk)
 {
 	if(!blk) return;
-	free(blk->data);
+	if(blk->data) free(blk->data);
 	free(blk);
 }
 
-/*
-static char *get_md5sum_str(unsigned char *checksum)
+char *blk_get_md5sum_str(unsigned char *checksum)
 {
 	static char str[33]="";
 	snprintf(str, sizeof(str),
@@ -38,9 +37,8 @@ static char *get_md5sum_str(unsigned char *checksum)
 		checksum[14], checksum[15]);
 	return str;
 }
-*/
 
-static int md5_update(struct blk *blk)
+int blk_md5_update(struct blk *blk)
 {
 	MD5_CTX md5;
 	if(!MD5_Init(&md5)
@@ -53,34 +51,32 @@ static int md5_update(struct blk *blk)
 	return 0;
 }
 
-int blk_output(struct rconf *rconf, struct blk *blk)
+struct blkgrp *blkgrp_alloc(struct rconf *rconf)
 {
-	if(md5_update(blk)) return -1;
-printf("send block here\n");
-/*
+	int b;
+	struct blkgrp *blkgrp=NULL;
+	if(!(blkgrp=(struct blkgrp *)calloc(1, sizeof(struct blkgrp)))
+	// I guess buf could be much bigger than this.
+	  || !(blkgrp->buf=(char *)malloc(rconf->blk_max)))
+	{
+		log_out_of_memory(__FUNCTION__);
+		return NULL;
+	}
+	blkgrp->buf_end=blkgrp->buf;
+	blkgrp->cp=blkgrp->buf;
 
-	fprintf(ofp,
-		// The length of this record.
-		"s0031"
-		// Fingerprint is 4 bytes.
-		"%016lX"
-		// MD5sum is 32 characters long.
-		"%s"
-		// Offset is 4 bytes, so means pack files can be up to
-		// 16EB
-	//	"%016lX"
-		"\n"
-		,
-		blk->fingerprint,
-		get_md5sum_str(blk->md5sum)
-	//	blk->offset
-		);
+	for(b=0; b<SIG_MAX; b++)
+		if(!(blkgrp->blks[b]=blk_alloc(rconf->blk_max)))
+			return NULL;
+	return blkgrp;
+}
 
-	// Block length can be 2 bytes, giving a max length of 64KB.
-	fprintf(ofp, "a%04X", blk->length);
-
-	fwrite(blk->data, blk->length, 1, ofp);
-*/
-
-	return 0;
+void blkgrp_free(struct blkgrp *blkgrp)
+{
+	int b;
+	if(!blkgrp) return;
+	for(b=0; b<SIG_MAX; b++)
+		if(blkgrp->blks[b]) blk_free(blkgrp->blks[b]);
+	if(blkgrp->buf) free(blkgrp->buf);
+	free(blkgrp);
 }

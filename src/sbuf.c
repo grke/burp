@@ -25,7 +25,7 @@ struct sbuf *sbuf_init(void)
 
 void sbuf_free(struct sbuf *sb)
 {
-	sbuf_close_file(sb);
+//	sbuf_close_file(sb);
 	if(sb->path) free(sb->path);
 	if(sb->attribs) free(sb->attribs);
 	if(sb->linkto) free(sb->linkto);
@@ -45,19 +45,25 @@ void sbuf_free_list(struct sbuf *shead)
 	}
 }
 
-void sbuf_add_to_list(struct sbuf *sb, struct sbuf **head, struct sbuf **tail)
+void sbuf_add_to_list(struct sbuf *sb, struct sbuf **head, struct sbuf **tail, struct sbuf **genhead, struct sbuf **sighead)
 {
 	if(*tail)
 	{
 		// Add to the end of the list.
 		(*tail)->next=sb;
 		*tail=sb;
+		if(genhead && !*genhead) *genhead=*tail;
+		if(sighead && !*sighead) *sighead=*tail;
 	}
 	else
 	{
 		// Start the list.
 		*head=sb;
 		*tail=sb;
+		// Another pointer to the head that can move along the list
+		// at a different rate.
+		if(genhead) *genhead=*head;
+		if(sighead) *sighead=*head;
 	}
 }
 
@@ -248,10 +254,23 @@ int sbuf_open_file(struct sbuf *sb, struct config *conf, struct cntr *cntr)
 		logw(cntr, "Could not open %s\n", sb->path);
 		return -1;
 	}
+printf("opened: %s\n", sb->path);
+	sb->opened=1;
 	return 0;
 }
 
 void sbuf_close_file(struct sbuf *sb)
 {
 	close_file_for_send(&sb->bfd, &sb->fp);
+	sb->opened=0;
+printf("closed: %s\n", sb->path);
+}
+
+ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize)
+{
+#ifdef HAVE_WIN32
+	return (ssize_t)bread(sb->bfd, buf, bufsize);
+#else
+	return fread(buf, 1, bufsize, sb->fp);
+#endif
 }

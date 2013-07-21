@@ -20,7 +20,7 @@ static int receive_file(const char *autoupgrade_dir, const char *file, struct cn
 	return ret;
 }
 
-int autoupgrade_client(struct config *conf, struct cntr *p1cntr)
+int autoupgrade_client(struct config *conf)
 {
 	int a=0;
 	int ret=-1;
@@ -93,13 +93,13 @@ int autoupgrade_client(struct config *conf, struct cntr *p1cntr)
 	snprintf(package_name, sizeof(package_name), "package");
 #endif
 
-	if(receive_file(conf->autoupgrade_dir, script_name, p1cntr))
+	if(receive_file(conf->autoupgrade_dir, script_name, conf->p1cntr))
 	{
 		logp("Problem receiving %s/%s\n",
 			conf->autoupgrade_dir, script_name);
 		goto end;
 	}
-	if(receive_file(conf->autoupgrade_dir, package_name, p1cntr))
+	if(receive_file(conf->autoupgrade_dir, package_name, conf->p1cntr))
 	{
 		logp("Problem receiving %s/%s\n",
 			conf->autoupgrade_dir, package_name);
@@ -116,7 +116,7 @@ int autoupgrade_client(struct config *conf, struct cntr *p1cntr)
 	args[a++]=script_path;
 	args[a++]=NULL;
 	ret=run_script(args, NULL, 0,
-		p1cntr, 0 /* do not wait */, 1 /* use logp */);
+		conf->p1cntr, 0 /* do not wait */, 1 /* use logp */);
 	/* To get round Windows problems to do with installing over files
 	   that the current process is running from, I am forking the child,
 	   then immediately exiting the parent process. */

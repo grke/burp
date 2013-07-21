@@ -161,7 +161,7 @@ end:
 	return ret;
 }
 
-int incexc_send_client(struct config *conf, struct cntr *p1cntr)
+int incexc_send_client(struct config *conf)
 {
 	if(do_start("incexc", "incexc ok")
 	  || do_sends(conf)
@@ -170,7 +170,7 @@ int incexc_send_client(struct config *conf, struct cntr *p1cntr)
 	return 0;
 }
 
-int incexc_send_server(struct config *conf, struct cntr *p1cntr)
+int incexc_send_server(struct config *conf)
 {
 	/* 'sincexc' and 'sincexc ok' have already been exchanged,
 	   so go straight into doing the sends. */
@@ -180,7 +180,7 @@ int incexc_send_server(struct config *conf, struct cntr *p1cntr)
 	return 0;
 }
 
-int incexc_send_server_restore(struct config *conf, struct cntr *p1cntr)
+int incexc_send_server_restore(struct config *conf)
 {
 	/* 'srestore' and 'srestore ok' have already been exchanged,
 	   so go straight into doing the sends. */

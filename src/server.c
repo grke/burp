@@ -698,7 +698,7 @@ static int append_to_feat(char **feat, const char *str)
 	return 0;
 }
 
-static int extra_comms(char **client, const char *cversion, char **incexc, int *srestore, struct config *conf, struct config *cconf, struct cntr *p1cntr)
+static int extra_comms(char **client, const char *cversion, char **incexc, int *srestore, struct config *conf, struct config *cconf)
 {
 	int ret=0;
 	char *buf=NULL;
@@ -821,7 +821,7 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 				os=buf+strlen("autoupgrade:");
 				if(os && *os
 				  && autoupgrade_server(ser_ver, cli_ver, os,
-					conf, p1cntr))
+					conf))
 				{
 					ret=-1;
 					break;
@@ -833,7 +833,7 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 				// Load the restore config, then send it.
 				*srestore=1;
 				if(parse_incexcs_path(cconf,cconf->restore_path)
-				  || incexc_send_server_restore(cconf, p1cntr))
+				  || incexc_send_server_restore(cconf))
 				{
 					ret=-1;
 					break;
@@ -859,7 +859,7 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 			{
 				// Client can accept incexc conf from the
 				// server.
-				if(incexc_send_server(cconf, p1cntr))
+				if(incexc_send_server(cconf))
 				{
 					ret=-1;
 					break;
@@ -871,7 +871,7 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 				// configuration so that it can better decide
 				// what to do on resume.
 				if(*incexc) { free(*incexc); *incexc=NULL; }
-				if(incexc_recv_server(incexc, conf, p1cntr))
+				if(incexc_recv_server(incexc, conf))
 				{
 					ret=-1;
 					break;
@@ -1027,10 +1027,13 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	int timer_ret=0;
 	struct config conf;
 	struct config cconf;
+	struct cntr p1cntr;
+	struct cntr cntr;
 
-	struct cntr p1cntr; // cntr for scan
-	struct cntr cntr; // cntr for the rest
-
+	conf.p1cntr=&p1cntr;
+	conf.cntr=&cntr;
+	cconf.p1cntr=&p1cntr;
+	cconf.cntr=&cntr;
 	reset_filecounter(&p1cntr, time(NULL));
 	reset_filecounter(&cntr, time(NULL));
 
@@ -1072,7 +1075,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 		ret=-1;
 		goto finish;
 	}
-	if(authorise_server(&conf, &client, &cversion, &cconf, &p1cntr)
+	if(authorise_server(&conf, &client, &cversion, &cconf)
 		|| !client || !*client)
 	{
 		// add an annoying delay in case they are tempted to
@@ -1085,8 +1088,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 
 	/* At this point, the client might want to get a new certificate
 	   signed. Clients on 1.3.2 or newer can do this. */
-	if((ca_ret=ca_server_maybe_sign_client_cert(client, cversion,
-		&conf, &p1cntr))<0)
+	if((ca_ret=ca_server_maybe_sign_client_cert(client, cversion, &conf))<0)
 	{
 		// Error.
 		logp("Error signing client certificate request for %s\n",
@@ -1115,8 +1117,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	/* Has to be before the chuser/chgrp stuff to allow clients to switch
 	   to different clients when both clients have different user/group
 	   settings. */
-	if(extra_comms(&client, cversion, &incexc, &srestore,
-		&conf, &cconf, &p1cntr))
+	if(extra_comms(&client, cversion, &incexc, &srestore, &conf, &cconf))
 	{
 		log_and_send("running extra comms failed on server");
 		ret=-1;

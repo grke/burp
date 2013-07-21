@@ -1,6 +1,7 @@
 #ifndef _CONF_FILE_H
 #define _CONF_FILE_H
 
+#include "counter.h"
 #include "rconf.h"
 #include "strlist.h"
 
@@ -186,6 +187,9 @@ struct config
 // Original client that backed up. Used when doing a server initiated restore
 // to an alternative client;
 	char *orig_client;
+
+	struct cntr *p1cntr;
+	struct cntr *cntr;
 };
 
 extern void init_config(struct config *conf);

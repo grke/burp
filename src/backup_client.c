@@ -31,7 +31,7 @@ static int maybe_send_extrameta(struct sbuf *sb, char cmd, struct cntr *p1cntr)
 #endif
 */
 
-static int deal_with_read(char rcmd, char **rbuf, size_t rlen, struct sbuf **shead, struct sbuf **stail, struct cntr *cntr, int *backup_end, struct sbuf **genhead, struct sbuf **sighead)
+static int deal_with_read(char rcmd, char **rbuf, size_t rlen, struct sbuf **shead, struct sbuf **stail, struct config *conf, int *backup_end, struct sbuf **genhead, struct sbuf **sighead)
 {
 	int ret=0;
 	switch(rcmd)
@@ -49,7 +49,7 @@ printf("got request for: %s\n", sb->path);
 		}
 		case CMD_WARNING:
 			logp("WARNING: %s\n", rbuf);
-			do_filecounter(cntr, rcmd, 0);
+			do_filecounter(conf->cntr, rcmd, 0);
 			goto end;
 		case CMD_GEN:
 			if(!strcmp(*rbuf, "backup_end"))
@@ -68,7 +68,7 @@ end:
 	return ret;
 }
 
-static int add_to_scan_list(struct sbuf **fhead, struct sbuf **ftail, int *scanning, struct config *conf, bool *top_level, struct cntr *p1cntr)
+static int add_to_scan_list(struct sbuf **fhead, struct sbuf **ftail, int *scanning, struct config *conf, bool *top_level)
 {
 	int ff_ret;
 	struct sbuf *sb;
@@ -76,7 +76,7 @@ static int add_to_scan_list(struct sbuf **fhead, struct sbuf **ftail, int *scann
 	if(!(ff_ret=find_file_next(sb, conf, top_level)))
 	{
 		// Got something.
-		if(ftype_to_cmd(sb, conf, p1cntr, *top_level))
+		if(ftype_to_cmd(sb, conf, *top_level))
 		{
 			// It is not something we really want to send.
 			sbuf_free(sb);
@@ -98,14 +98,14 @@ static int add_to_scan_list(struct sbuf **fhead, struct sbuf **ftail, int *scann
 	return 0;
 }
 
-static int add_to_blks_list(struct config *conf, struct sbuf *shead, struct sbuf *stail, struct win *win, struct sbuf **genhead, int *blkgrps_queue, struct cntr *cntr)
+static int add_to_blks_list(struct config *conf, struct sbuf *shead, struct sbuf *stail, struct win *win, struct sbuf **genhead, int *blkgrps_queue)
 {
 	struct blkgrp *bnew=NULL;
 	if(!*genhead) return 0;
 printf("get for: %s\n", (*genhead)->path);
 	if(!(*genhead)->opened)
 	{
-		if(sbuf_open_file(*genhead, conf, cntr)) return -1;
+		if(sbuf_open_file(*genhead, conf)) return -1;
 	}
 	if(blks_generate(&bnew, &conf->rconf, *genhead, win)) return -1;
 	if(!bnew || !bnew->b)
@@ -242,7 +242,7 @@ static void get_wbuf_from_scan(char *wcmd, char **wbuf, size_t *wlen, struct sbu
 	}
 }
 
-static int backup_client(struct config *conf, int estimate, struct cntr *p1cntr, struct cntr *cntr)
+static int backup_client(struct config *conf, int estimate)
 {
 	int ret=0;
 	bool top_level=true;
@@ -290,13 +290,13 @@ static int backup_client(struct config *conf, int estimate, struct cntr *p1cntr,
 		}
 
 		if(rbuf && deal_with_read(rcmd, &rbuf, rlen,
-			&shead, &stail, cntr, &backup_end, &genhead, &sighead))
+			&shead, &stail, conf, &backup_end, &genhead, &sighead))
 				goto end;
 
 		if(scanning)
 		{
 			if(add_to_scan_list(&fhead, &ftail,
-				&scanning, conf, &top_level, p1cntr))
+				&scanning, conf, &top_level))
 			{
 				ret=-1;
 				break;
@@ -308,7 +308,7 @@ static int backup_client(struct config *conf, int estimate, struct cntr *p1cntr,
 			printf("get more blocks: %d<%d\n",
 				blkgrps_queue, blkgrps_queue_max);
 			if(add_to_blks_list(conf, shead, stail,
-				win, &genhead, &blkgrps_queue, cntr))
+				win, &genhead, &blkgrps_queue))
 			{
 				ret=-1;
 				break;
@@ -318,7 +318,7 @@ static int backup_client(struct config *conf, int estimate, struct cntr *p1cntr,
 			// So have another go.
 			if(!blkgrps_queue && genhead
 			  && add_to_blks_list(conf, shead, stail,
-				win, &genhead, &blkgrps_queue, cntr))
+				win, &genhead, &blkgrps_queue))
 			{
 				ret=-1;
 				break;
@@ -343,18 +343,10 @@ static int backup_client(struct config *conf, int estimate, struct cntr *p1cntr,
 end:
 	find_files_free();
 	win_free(win);
-/*
-{
-	struct sbuf *xb;
-	for(xb=fhead; xb; xb=xb->next)
-		send_attribs_and_symbol(xb, p1cntr);
-	
-}
-*/
 	sbuf_free_list(fhead); fhead=NULL;
 
-	print_endcounter(p1cntr);
-	//print_filecounters(p1cntr, cntr, ACTION_BACKUP);
+	print_endcounter(conf->p1cntr);
+	//print_filecounters(conf->p1cntr, conf->cntr, ACTION_BACKUP);
 	if(ret) logp("Error in backup\n");
 	logp("Backup end\n");
 
@@ -362,7 +354,7 @@ end:
 }
 
 // Return 0 for OK, -1 for error, 1 for timer conditions not met.
-int do_backup_client(struct config *conf, enum action act, struct cntr *p1cntr, struct cntr *cntr)
+int do_backup_client(struct config *conf, enum action act)
 {
 	int ret=0;
 
@@ -399,10 +391,10 @@ int do_backup_client(struct config *conf, enum action act, struct cntr *p1cntr, 
 #endif
 
 	// Scan the file system and send the results to the server.
-	if(!ret) ret=backup_client(conf, act==ACTION_ESTIMATE, p1cntr, cntr);
+	if(!ret) ret=backup_client(conf, act==ACTION_ESTIMATE);
 
 	if(act==ACTION_ESTIMATE)
-		print_filecounters(p1cntr, cntr, ACTION_ESTIMATE);
+		print_filecounters(conf->p1cntr, conf->cntr, ACTION_ESTIMATE);
 
 #if defined(HAVE_WIN32)
 	if(act==ACTION_BACKUP_TIMED)

@@ -31,6 +31,6 @@ extern int file_is_included(struct strlist **ielist, int iecount,
 int readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result);
 #endif
 
-extern int ftype_to_cmd(struct sbuf *sb, struct config *conf, struct cntr *p1cntr, bool top_level);
+extern int ftype_to_cmd(struct sbuf *sb, struct config *conf, bool top_level);
 
 #endif /* __FIND_H */

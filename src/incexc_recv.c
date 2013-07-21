@@ -8,7 +8,7 @@
 #include "asyncio.h"
 #include "incexc_recv.h"
 
-static int incexc_recv(char **incexc, const char *reqstr, const char *repstr, const char *endreqstr, const char *endrepstr, struct config *conf, struct cntr *p1cntr)
+static int incexc_recv(char **incexc, const char *reqstr, const char *repstr, const char *endreqstr, const char *endrepstr, struct config *conf)
 {
 	int ret=-1;
 	char *tmp=NULL;
@@ -58,26 +58,26 @@ end:
 	return ret;
 }
 
-int incexc_recv_client(char **incexc, struct config *conf, struct cntr *p1cntr)
+int incexc_recv_client(char **incexc, struct config *conf)
 {
 	return incexc_recv(incexc,
 		"sincexc", "sincexc ok",
 		"sincexc end", "sincexc end ok",
-		conf, p1cntr);
+		conf);
 }
 
-int incexc_recv_client_restore(char **incexc, struct config *conf, struct cntr *p1cntr)
+int incexc_recv_client_restore(char **incexc, struct config *conf)
 {
 	return incexc_recv(incexc,
 		"srestore", "srestore ok",
 		"srestore end", "srestore end ok",
-		conf, p1cntr);
+		conf);
 }
 
-int incexc_recv_server(char **incexc, struct config *conf, struct cntr *p1cntr)
+int incexc_recv_server(char **incexc, struct config *conf)
 {
 	return incexc_recv(incexc,
 		"incexc", "incexc ok",
 		"incexc end", "incexc end ok",
-		conf, p1cntr);
+		conf);
 }

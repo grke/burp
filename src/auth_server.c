@@ -94,7 +94,7 @@ void version_warn(struct cntr *cntr, const char *client, const char *cversion)
 	}
 }
 
-int authorise_server(struct config *conf, char **client, char **cversion, struct config *cconf, struct cntr *p1cntr)
+int authorise_server(struct config *conf, char **client, char **cversion, struct config *cconf)
 {
 	char cmd;
 	char *cp=NULL;
@@ -169,7 +169,7 @@ int authorise_server(struct config *conf, char **client, char **cversion, struct
 	}
 
 	if(cconf->version_warn)
-		version_warn(p1cntr, *client, *cversion);
+		version_warn(conf->p1cntr, *client, *cversion);
 
 	logp("auth ok for: %s%s\n", *client,
 		cconf->password_check?"":" (no password needed)");

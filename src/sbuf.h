@@ -52,7 +52,7 @@ extern struct sbuf *sbuf_init(void);
 extern void sbuf_free(struct sbuf *sb);
 extern void sbuf_free_list(struct sbuf *shead);
 
-extern int sbuf_open_file(struct sbuf *sb, struct config *conf, struct cntr *cntr);
+extern int sbuf_open_file(struct sbuf *sb, struct config *conf);
 extern void sbuf_close_file(struct sbuf *sb);
 extern ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize);
 

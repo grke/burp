@@ -606,7 +606,7 @@ static int overwrite_ok(struct sbuf *sb, struct config *conf, BFILE *bfd, const 
 }
 */
 
-int do_restore_client(struct config *conf, enum action act, int vss_restore, struct cntr *p1cntr, struct cntr *cntr)
+int do_restore_client(struct config *conf, enum action act, int vss_restore)
 {
 	//int ars=0;
 	int ret=0;
@@ -633,7 +633,7 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore, str
 
 	if(conf->send_client_counters)
 	{
-		if(recv_counters(p1cntr, cntr))
+		if(recv_counters(conf->p1cntr, conf->cntr))
 			return -1;
 	}
 
@@ -828,8 +828,8 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore, str
 
 	if(!wroteendcounter)
 	{
-		print_endcounter(cntr);
-		print_filecounters(p1cntr, cntr, act);
+		print_endcounter(conf->cntr);
+		print_filecounters(conf->p1cntr, conf->cntr, act);
 	}
 
 	if(!ret) logp("%s finished\n", act_str(act));

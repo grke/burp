@@ -6,21 +6,6 @@
 #endif
 
 #include "conf.h"
-
-enum action
-{
-	ACTION_BACKUP=0,
-	ACTION_RESTORE,
-	ACTION_VERIFY,
-	ACTION_LIST,
-	ACTION_LONG_LIST,
-	ACTION_BACKUP_TIMED,
-	ACTION_STATUS,
-	ACTION_STATUS_SNAPSHOT,
-	ACTION_ESTIMATE,
-	ACTION_DELETE,
-};
-
 #include "log.h"
 
 extern int setup_signals(int oldmax_children, int max_children, int oldmax_status_children, int max_status_children);

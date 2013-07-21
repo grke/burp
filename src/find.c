@@ -875,14 +875,14 @@ error:
 
 // Should somehow merge the FT_ and the CMD_ stuff.
 
-static int ft_err(struct sbuf *sb, struct cntr *p1cntr, const char *msg)
+static int ft_err(struct sbuf *sb, struct config *conf, const char *msg)
 {
-	logw(p1cntr, _("Err: %s %s: %s"), msg, sb->path, strerror(errno));
+	logw(conf->p1cntr, _("Err: %s %s: %s"), msg, sb->path, strerror(errno));
 	return -1;
 }
 
 // Return -1 if the entry is not to be sent, 0 if it is.
-int ftype_to_cmd(struct sbuf *sb, struct config *conf, struct cntr *p1cntr, bool top_level)
+int ftype_to_cmd(struct sbuf *sb, struct config *conf, bool top_level)
 {
 	// Does file_is_included() need to be here. It would be better in
 	// find.c.
@@ -905,7 +905,7 @@ int ftype_to_cmd(struct sbuf *sb, struct config *conf, struct cntr *p1cntr, bool
 		}
 
 		// Hopefully, here is never reached.
-		logw(p1cntr, "EFS type %d not yet supported: %s",
+		logw(conf->p1cntr, "EFS type %d not yet supported: %s",
 			sb->type, sb->path);
 		return -1;
 	}
@@ -933,7 +933,7 @@ int ftype_to_cmd(struct sbuf *sb, struct config *conf, struct cntr *p1cntr, bool
 			sb->plen=strlen(sb->path);
 			return 0;
 		case FT_NOFSCHG:
-			logw(p1cntr, "%s%s [will not descend: file system change not allowed]\n", "Dir: ", sb->path);
+			logw(conf->p1cntr, "%s%s [will not descend: file system change not allowed]\n", "Dir: ", sb->path);
 			return -1;
 #ifndef HAVE_WIN32
 		case FT_SPEC: // special file - fifo, socket, device node...
@@ -950,13 +950,13 @@ int ftype_to_cmd(struct sbuf *sb, struct config *conf, struct cntr *p1cntr, bool
 			return 0;
 #endif
 		case FT_NOFOLLOW:
-			return ft_err(sb, p1cntr, "Could not follow link");
+			return ft_err(sb, conf, "Could not follow link");
 		case FT_NOSTAT:
-			return ft_err(sb, p1cntr, "Could not stat");
+			return ft_err(sb, conf, "Could not stat");
 		case FT_NOOPEN:
-			return ft_err(sb, p1cntr, "Could not open directory");
+			return ft_err(sb, conf, "Could not open directory");
 	}
-	logw(p1cntr, _("Err: Unknown file sb->type %d: %s"),
+	logw(conf->p1cntr, _("Err: Unknown file sb->type %d: %s"),
 		sb->ftype, sb->path);
 	return -1;
 }

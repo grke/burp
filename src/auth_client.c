@@ -10,7 +10,7 @@
 #include "sbuf.h"
 #include "auth_client.h"
 
-int authorise_client(struct config *conf, char **server_version, struct cntr *p1cntr)
+int authorise_client(struct config *conf, char **server_version)
 {
 	char cmd=0;
 	char *buf=NULL;
@@ -55,9 +55,9 @@ int authorise_client(struct config *conf, char **server_version, struct cntr *p1
 
 	if(cmd==CMD_WARNING) // special case for the version warning
 	{
-		//logw(p1cntr, buf);
+		//logw(conf->p1cntr, buf);
 		logp("WARNING: %s\n", buf);
-		p1cntr->warning++;
+		conf->p1cntr->warning++;
 		free(buf); buf=NULL;
 		if(async_read(&cmd, &buf, &l))
 		{

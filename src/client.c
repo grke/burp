@@ -119,6 +119,8 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 	char *server_version=NULL;
 	const char *backupstr="backup";
 
+	conf->p1cntr=&p1cntr;
+	conf->cntr=&cntr;
 	reset_filecounter(&p1cntr, time(NULL));
 	reset_filecounter(&cntr, time(NULL));
 
@@ -177,7 +179,7 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 		size_t len=0;
 		char *feat=NULL;
 		int ca_ret=0;
-		if((ret=authorise_client(conf, &server_version, &p1cntr)))
+		if((ret=authorise_client(conf, &server_version)))
 			goto end;
 
 		if(server_version)
@@ -186,7 +188,7 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 			// Servers before 1.3.2 did not tell us their versions.
 			// 1.3.2 and above can do the automatic CA stuff that
 			// follows.
-			if((ca_ret=ca_client_setup(conf, &p1cntr))<0)
+			if((ca_ret=ca_client_setup(conf))<0)
 			{
 				// Error
 				logp("Error with certificate signing request\n");
@@ -243,7 +245,7 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 		if(server_supports_autoupgrade(feat))
 		{
 			if(conf->autoupgrade_dir && conf->autoupgrade_os
-			  && (ret=autoupgrade_client(conf, &p1cntr)))
+			  && (ret=autoupgrade_client(conf)))
 				goto end;
 		}
 
@@ -255,7 +257,7 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 				logp("Server is initiating a restore\n");
 				if(incexc) { free(incexc); incexc=NULL; }
 				if((ret=incexc_recv_client_restore(&incexc,
-					conf, &p1cntr)))
+					conf)))
 						goto end;
 				if(incexc)
 				{
@@ -308,7 +310,7 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 				logp("Server is setting includes/excludes.\n");
 				if(incexc) { free(incexc); incexc=NULL; }
 				if((ret=incexc_recv_client(&incexc,
-					conf, &p1cntr))) goto end;
+					conf))) goto end;
 				if(incexc && (ret=parse_incexcs_buf(conf,
 					incexc))) goto end;
 			}
@@ -325,7 +327,7 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 		// incexc config so that it better knows what to do on
 		// resume.
 		if(server_supports(feat, ":incexc:")
-		  && (ret=incexc_send_client(conf, &p1cntr)))
+		  && (ret=incexc_send_client(conf)))
 			goto end;
 
 		if((ret=async_write_str(CMD_GEN, "extra_comms_end"))
@@ -379,12 +381,11 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 					if(run_script(args,
 						conf->backup_script_pre_arg,
 						conf->bprecount,
-						&p1cntr, 1, 1)) ret=-1;
+						conf->p1cntr, 1, 1)) ret=-1;
 				}
 
-				if(!ret && do_backup_client(conf,
-					act, &p1cntr, &cntr))
-						ret=-1;
+				if(!ret && do_backup_client(conf, act))
+					ret=-1;
 
 				if((conf->backup_script_post_run_on_fail
 				  || !ret) && conf->backup_script_post)
@@ -403,7 +404,7 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 					if(run_script(args,
 						conf->backup_script_post_arg,
 						conf->bpostcount,
-						&cntr, 1, 1)) ret=-1;
+						conf->cntr, 1, 1)) ret=-1;
 				}
 			}
 
@@ -439,10 +440,11 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 				args[a++]=NULL;
 				if(run_script(args,
 					conf->restore_script_pre_arg,
-					conf->rprecount, &cntr, 1, 1)) ret=-1;
+					conf->rprecount,
+					conf->cntr, 1, 1)) ret=-1;
 			}
 			if(!ret && do_restore_client(conf,
-				act, vss_restore, &p1cntr, &cntr)) ret=-1;
+				act, vss_restore)) ret=-1;
 			if((conf->restore_script_post_run_on_fail
 			  || !ret) && conf->restore_script_post)
 			{
@@ -459,19 +461,19 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 				args[a++]=NULL;
 				if(run_script(args,
 					conf->restore_script_post_arg,
-					conf->rpostcount, &cntr, 1, 1)) ret=-1;
+					conf->rpostcount,
+					conf->cntr, 1, 1)) ret=-1;
 			}
 
 			// Return non-zero if there were warnings,
 			// so that the test script can easily check.
-			if(p1cntr.warning+cntr.warning)
+			if(conf->p1cntr->warning+conf->cntr->warning)
 				ret=2;
 
 			break;
 		}
 		case ACTION_ESTIMATE:
-			if(!ret) ret=do_backup_client(conf, act,
-					&p1cntr, &cntr);
+			if(!ret) ret=do_backup_client(conf, act);
 			break;
 		case ACTION_DELETE:
 			if(!ret) ret=do_delete_client(conf);

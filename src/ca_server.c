@@ -244,7 +244,7 @@ end:
 }
 
 /* Return 1 for everything OK, signed and returned, -1 for error */
-static int sign_client_cert(const char *client, struct config *conf, struct cntr *p1cntr)
+static int sign_client_cert(const char *client, struct config *conf)
 {
 	int a=0;
 	int ret=-1;
@@ -296,7 +296,7 @@ static int sign_client_cert(const char *client, struct config *conf, struct cntr
 	   to end and delete any new files. */
 
 	// Get the CSR from the client.
-	if(receive_a_file(csrpath, p1cntr)) goto end;
+	if(receive_a_file(csrpath, conf->p1cntr)) goto end;
 
 	// Now, sign it.
 	logp("Signing certificate signing request from %s\n", client);
@@ -324,11 +324,11 @@ static int sign_client_cert(const char *client, struct config *conf, struct cntr
 
 	// Now, we should have a signed certificate.
 	// Need to send it back to the client.
-	if(send_a_file(crtpath, p1cntr))
+	if(send_a_file(crtpath, conf->p1cntr))
 		goto end;
 
 	// Also need to send the CA public certificate back to the client.
-	if(send_a_file(conf->ssl_cert_ca, p1cntr))
+	if(send_a_file(conf->ssl_cert_ca, conf->p1cntr))
 		goto end;
 
 	ret=1;
@@ -343,7 +343,7 @@ end:
 
 /* Return 1 for everything OK, signed and returned, -1 for error, 0 for
    nothing done. */
-int ca_server_maybe_sign_client_cert(const char *client, const char *cversion, struct config *conf, struct cntr *p1cntr)
+int ca_server_maybe_sign_client_cert(const char *client, const char *cversion, struct config *conf)
 {
 	int ret=0;
 	char *buf=NULL;
@@ -383,7 +383,7 @@ int ca_server_maybe_sign_client_cert(const char *client, const char *cversion, s
 				// sign_client_cert() will return 1 for
 				// everything signed and returned, or -1
 				// for error
-				ret=sign_client_cert(client, conf, p1cntr);
+				ret=sign_client_cert(client, conf);
 				break;
 
 			}

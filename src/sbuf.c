@@ -229,7 +229,7 @@ int sbuf_pathcmp(struct sbuf *a, struct sbuf *b)
 	}
 }
 
-int sbuf_open_file(struct sbuf *sb, struct config *conf, struct cntr *cntr)
+int sbuf_open_file(struct sbuf *sb, struct config *conf)
 {
 #ifdef HAVE_WIN32
 	if(win32_lstat(sb->path, &sb->statp, &sb->winattr))
@@ -238,7 +238,7 @@ int sbuf_open_file(struct sbuf *sb, struct config *conf, struct cntr *cntr)
 #endif
 	{
 		// This file is no longer available.
-		logw(cntr, "%s has vanished\n", sb->path);
+		logw(conf->cntr, "%s has vanished\n", sb->path);
 		return -1;
 	}
 	if(encode_stat(sb, conf->compression)) return -1;
@@ -249,9 +249,9 @@ int sbuf_open_file(struct sbuf *sb, struct config *conf, struct cntr *cntr)
 #else
 		NULL, &sb->fp,
 #endif
-		sb->path, sb->winattr, cntr))
+		sb->path, sb->winattr, conf->cntr))
 	{
-		logw(cntr, "Could not open %s\n", sb->path);
+		logw(conf->cntr, "Could not open %s\n", sb->path);
 		return -1;
 	}
 printf("opened: %s\n", sb->path);

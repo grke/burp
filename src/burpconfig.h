@@ -297,4 +297,18 @@ extern "C" int mknod ( const char *path, int mode, dev_t device );
 #endif
 */
 
+enum action
+{
+	ACTION_BACKUP=0,
+	ACTION_RESTORE,
+	ACTION_VERIFY,
+	ACTION_LIST,
+	ACTION_LONG_LIST,
+	ACTION_BACKUP_TIMED,
+	ACTION_STATUS,
+	ACTION_STATUS_SNAPSHOT,
+	ACTION_ESTIMATE,
+	ACTION_DELETE,
+};
+
 #endif /* _BURP_H */

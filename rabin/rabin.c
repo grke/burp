@@ -70,14 +70,13 @@ int blks_generate(struct rconf *rconf, FILE *ifp, FILE *ofp)
 {
 	int ret=0;
 	ssize_t bytes;
-	char buf[1048576];
+	char *buf=NULL;
 	struct win *win;
 	uint64_t multiplier;
-	ssize_t bufsize;
 	struct blk *blkbuf[SIG_MAX];
 	int b=0;
 
-	bufsize=sizeof(buf);
+	buf=malloc(rconf->blk_max);
 
 	if(!(multiplier=get_multiplier(rconf))
 	  || !(win=win_alloc(rconf)))
@@ -88,7 +87,7 @@ int blks_generate(struct rconf *rconf, FILE *ifp, FILE *ofp)
 			goto error;
 	b=0;
 
-	while((bytes=fread(buf, 1, bufsize, ifp)))
+	while((bytes=fread(buf, 1, rconf->blk_max, ifp)))
 		if(blk_read(rconf, ofp, multiplier, buf, buf+bytes, win,
 			blkbuf, &b))
 				goto error;

@@ -75,7 +75,7 @@ static void maybe_sbuf_add_to_list(struct sbuf *sb, struct sbuf **shead, struct 
 {
 	if(backup_needed(sb))
 	{
-		sbuf_add_to_list(sb, shead, stail);
+		sbuf_add_to_list(sb, shead, stail, NULL, NULL);
 		return;
 	}
 	// FIX THIS: now need to write the entry direct to the manifest.
@@ -87,6 +87,9 @@ static int deal_with_read(char rcmd, char **rbuf, size_t rlen, struct sbuf **she
 	static struct sbuf *snew=NULL;
 	switch(rcmd)
 	{
+		case 'S':
+			printf("%c:%s\n", rcmd, *rbuf);
+			goto end;
 		case CMD_ATTRIBS:
 		{
 			if(snew)

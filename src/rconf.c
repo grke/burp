@@ -4,7 +4,17 @@
 #include "log.h"
 #include "rconf.h"
 
-/* Hey you. Probably best not fuck with these. */
+static uint64_t get_multiplier(uint32_t win, uint64_t prime)
+{
+	unsigned int i;
+	uint64_t multiplier=1;
+
+	for(i=0; i < win; i++) multiplier*=prime;
+
+	return multiplier;
+}
+
+// Hey you. Probably best not fuck with these.
 void rconf_init(struct rconf *rconf)
 {
 	rconf->prime=3;		// Not configurable.
@@ -16,6 +26,8 @@ void rconf_init(struct rconf *rconf)
 	rconf->blk_min=4096;	// Minimum block size.
 	rconf->blk_avg=5000;	// Average block size.
 	rconf->blk_max=8192;	// Maximum block size.
+
+	rconf->multiplier=get_multiplier(rconf->win, rconf->prime);
 }
 
 int rconf_check(struct rconf *rconf)

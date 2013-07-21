@@ -216,7 +216,12 @@ static void get_wbuf_from_scan(char *wcmd, char **wbuf, size_t *wlen, struct sbu
 	{
 		*fhead=(*fhead)->next;
 		sbuf_free(sb);
-		if(!*fhead) *ftail=NULL;
+		if(*fhead)
+		{
+			// Go ahead and get the next one from the list.
+			get_wbuf_from_scan(wcmd, wbuf, wlen, fhead, ftail);
+		}
+		else *ftail=NULL;
 	}
 }
 
@@ -273,15 +278,20 @@ static int backup_client(struct config *conf, int estimate, struct cntr *p1cntr,
 
 		if(scanning)
 		{
-			if(add_to_scan_list(&fhead, &ftail,
-				 &scanning, conf, &top_level, p1cntr))
+			int i;
+			for(i=0; i<100; i++) // Get a load at once.
 			{
-				ret=-1;
-				break;
+				if(add_to_scan_list(&fhead, &ftail,
+					&scanning, conf, &top_level, p1cntr))
+				{
+					ret=-1;
+					break;
+				}
+				if(!scanning) break;
 			}
 		}
 
-		if(blkgrps_queue<blkgrps_queue_max)
+		if(blkgrps_queue<blkgrps_queue_max && shead)
 		{
 			printf("get more blocks: %d<%d\n",
 				blkgrps_queue, blkgrps_queue_max);

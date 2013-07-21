@@ -278,16 +278,11 @@ static int backup_client(struct config *conf, int estimate, struct cntr *p1cntr,
 
 		if(scanning)
 		{
-			int i;
-			for(i=0; i<100; i++) // Get a load at once.
+			if(add_to_scan_list(&fhead, &ftail,
+				&scanning, conf, &top_level, p1cntr))
 			{
-				if(add_to_scan_list(&fhead, &ftail,
-					&scanning, conf, &top_level, p1cntr))
-				{
-					ret=-1;
-					break;
-				}
-				if(!scanning) break;
+				ret=-1;
+				break;
 			}
 		}
 
@@ -296,6 +291,16 @@ static int backup_client(struct config *conf, int estimate, struct cntr *p1cntr,
 			printf("get more blocks: %d<%d\n",
 				blkgrps_queue, blkgrps_queue_max);
 			if(add_to_blks_list(conf, shead, stail,
+				win, &genhead, &blkgrps_queue, cntr))
+			{
+				ret=-1;
+				break;
+			}
+			// Hack - the above can return without having got
+			// anything when it runs out of file to read.
+			// So have another go.
+			if(!blkgrps_queue && genhead
+			  && add_to_blks_list(conf, shead, stail,
 				win, &genhead, &blkgrps_queue, cntr))
 			{
 				ret=-1;

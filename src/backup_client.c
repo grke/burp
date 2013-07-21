@@ -150,12 +150,29 @@ static void get_wbuf_from_blks(char *wcmd, char **wbuf, size_t *wlen, struct sbu
 	static char buf[48];
 	struct blk *blk;
 	struct blkgrp *blkgrp;
-	if(!*sighead) return;
-	if(!(blkgrp=(*sighead)->bsighead))
+	struct sbuf *sb=*sighead;
+
+	if(!sb
+	  || !(blkgrp=sb->bsighead))
+		return;
+
+	if(!sb->sent_stat)
 	{
-printf("no bsighead for %s\n", (*sighead)->path);
+		*wcmd=CMD_ATTRIBS_SIGS;
+		*wbuf=sb->attribs;
+		*wlen=sb->alen;
+		sb->sent_stat=1;
 		return;
 	}
+	else if(!sb->sent_path)
+	{
+		*wcmd=CMD_PATH_SIGS;
+		*wbuf=sb->path;
+		*wlen=sb->plen;
+		sb->sent_path=1;
+		return;
+	}
+
 	blk=blkgrp->blks[i];
 // Check return of this - maybe should be done elsewhere.
 	blk_md5_update(blk);
@@ -168,9 +185,9 @@ printf("no bsighead for %s\n", (*sighead)->path);
 		blk->fingerprint,
 		blk_get_md5sum_str(blk->md5sum)
 		);
-	printf("%s (%d)\n", (*sighead)->path, blkgrp->b);
+	printf("%s (%d)\n", sb->path, blkgrp->b);
 	printf("%s\n", buf);
-	*wcmd='S';
+	*wcmd=CMD_SIG;
 	*wlen=strlen(buf);
 	*wbuf=buf;
 
@@ -178,13 +195,13 @@ printf("no bsighead for %s\n", (*sighead)->path);
 	if(++i<blkgrp->b) return;
 	(*blkgrps_queue)--;
 	i=0;
-	(*sighead)->bsighead=blkgrp->next;
+	sb->bsighead=blkgrp->next;
 
 // Free stuff for now. FIX THIS: It should not actually be freed until the
 // actual data blocks have been dealt with.
 	blkgrp_free(blkgrp);
-	if((*sighead)->bsighead) return;
-	*sighead=(*sighead)->next;
+	if(sb->bsighead) return;
+	*sighead=sb->next;
 }
 
 static void get_wbuf_from_scan(char *wcmd, char **wbuf, size_t *wlen, struct sbuf **fhead, struct sbuf **ftail)

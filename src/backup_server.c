@@ -85,20 +85,48 @@ static int deal_with_read(char rcmd, char **rbuf, size_t rlen, struct sbuf **she
 {
 	int ret=0;
 	static struct sbuf *snew=NULL;
+	static struct sbuf *inew=NULL;
+
+	if(!inew && !(inew=sbuf_init())) goto error;
+
 	switch(rcmd)
 	{
-		case 'S':
+		case CMD_ATTRIBS_SIGS:
+/*
+			if(inew->path)
+			{
+				if(!inew->attribs) goto error;
+				// New set of stuff incoming. Clean up.
+				free(inew->attribs);
+				free(inew->path); inew->path=NULL;
+			}
+			inew->attribs=*rbuf;
+			inew->alen=rlen;
+			inew->need_path=1;
+			*rbuf=NULL;
+			return 0;
+*/
+		case CMD_PATH_SIGS:
+/*
+			// Attribs should come first, so if we have not
+			// already set up inew->attribs, it is an error.
+			if(!inew->attribs) goto error;
+			inew->path=*rbuf;
+			inew->plen=rlen;
+			inew->cmd=rcmd;
+			inew->need_path=0;
+
+			return 0;
+*/
+		case CMD_SIG:
 			printf("%c:%s\n", rcmd, *rbuf);
 			goto end;
+
 		case CMD_ATTRIBS:
 		{
-			if(snew)
-			{
-				// Attribs should come first, so if we already
-				// set up snew, it is an error.
-				sbuf_free(snew); snew=NULL;
-				break;
-			}
+			// Attribs should come first, so if we already
+			// set up snew, it is an error.
+			if(snew) break;
 			if(!(snew=sbuf_init())) goto error;
 			snew->attribs=*rbuf;
 			snew->alen=rlen;
@@ -111,12 +139,9 @@ static int deal_with_read(char rcmd, char **rbuf, size_t rlen, struct sbuf **she
 		case CMD_SOFT_LINK:
 		case CMD_HARD_LINK:
 		case CMD_SPECIAL:
-			if(!snew)
-			{
-				// Attribs should come first, so if we have not
-				// already set up snew, it is an error.
-				break;
-			}
+			// Attribs should come first, so if we have not
+			// already set up snew, it is an error.
+			if(!snew) goto error;
 			if(snew->need_path)
 			{
 				snew->path=*rbuf;
@@ -165,6 +190,8 @@ static int deal_with_read(char rcmd, char **rbuf, size_t rlen, struct sbuf **she
 	logp("unexpected cmd in %s, got '%c:%s'\n", __FUNCTION__, rcmd, *rbuf);
 error:
 	ret=-1;
+	sbuf_free(inew); inew=NULL;
+	sbuf_free(snew); snew=NULL;
 end:
 	if(*rbuf) { free(*rbuf); *rbuf=NULL; }
 	return ret;

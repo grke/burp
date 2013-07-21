@@ -6,7 +6,10 @@
 
 // This comes before any file type entries.
 #define CMD_ATTRIBS	'r'	/* File stat information */
-#define CMD_ATTRIBS_BLKS 'R'	/* File stat information preceding blks */
+
+#define CMD_ATTRIBS_SIGS 'R'	/* File stat information preceding sigs */
+#define CMD_PATH_SIGS	'P'	/* Path for a set of blocks */
+#define CMD_SIG		'S'	/* Signature of a block */
 
 // File types
 #define CMD_FILE	'f'	/* Plain file */

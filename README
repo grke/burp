@@ -1,17 +1,35 @@
 QUICK START
+===========
 
+HOW TO BUILD
+------------
 The following assumes that you are not installing the burp server via a
 distribution's package management system.
 
 You need to compile burp on a unix-based operating system first. Make sure that
 you have openssl, zlib, librsync and uthash libraries and development libraries
-installed. With debian or ubuntu, this command should install them for you:
+installed. 
 
-apt-get install librsync-dev libz-dev libssl-dev uthash-dev
+Debian/Ubuntu dependencies:
+   
+    With debian or ubuntu, this command should install them for you:
+    apt-get install librsync-dev libz-dev libssl-dev uthash-dev
 
-Change to the burp source directory and run "./configure", then "make". All
-being well, burp will compile successfully. Then run "make install" as root to
+RHEL/CentOS dependencies:
+	
+    On RHEL, you need to install below crucial packages:
+    yum install zlib-devel openssl-devel ncurses-devel libacl-devel openssl-perl
+
+    You also need non-default packages librsync-devel and uthash, both of which
+    can be custom built and installed. See rhel/ subdirectory for more details.
+
+Then change to the burp source directory and run "./configure", then "make". All
+being well, burp will compile successfully. Then finally, run "make install" as root to
 install.
+
+
+UNIX SERVER
+-----------
 
 Start the burp server with this command: burp -c /etc/burp/burp-server.conf
 
@@ -25,6 +43,7 @@ The server is now ready for clients to connect to it.
 
 
 UNIX CLIENT
+-----------
 
 If you are going to run the client on the same machine on which you installed
 the server, the client will already be installed because the client is built
@@ -49,7 +68,9 @@ MAILTO=
 Whether or not an instance of the client results in an actual backup depends
 upon the timer settings in the server config files.
 
+
 WINDOWS CLIENT
+--------------
 
 Pick the 32-bit or 64-bit Burp installer as appropriate - visit
 http://burp.grke.org/ to find one of them.

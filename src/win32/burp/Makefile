@@ -46,6 +46,7 @@ FILED_OBJS = \
 	$(OBJDIR)/extrameta.o \
 	$(OBJDIR)/find.o \
 	$(OBJDIR)/forkchild.o \
+	$(OBJDIR)/glob_windows.o \
 	$(OBJDIR)/incexc_recv.o \
 	$(OBJDIR)/incexc_send.o \
 	$(OBJDIR)/list_client.o \

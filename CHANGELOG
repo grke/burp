@@ -1,4 +1,5 @@
   * Add bassu's RHEL spec files and related things.
+  * Add ziirish's include_glob feature.
 
 2013-06-26 Changes in burp-1.3.36:
   * Fix truncation of timestamps in the live status monitor.

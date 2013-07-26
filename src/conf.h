@@ -202,4 +202,8 @@ extern int log_incexcs_buf(const char *incexc);
 extern int parse_incexcs_path(struct config *conf, const char *path);
 extern int load_client_config(struct config *conf, struct config *cconf, const char *client);
 
+#ifdef HAVE_WIN32
+extern void convert_backslashes(char **path);
+#endif
+
 #endif

@@ -110,6 +110,7 @@ void init_config(struct config *conf)
 	conf->librsync=1;
 	conf->compression=9;
 	conf->version_warn=1;
+	conf->resume_partial=0;
 	conf->client_lockdir=NULL;
 	conf->umask=0022;
 	conf->user=NULL;
@@ -649,6 +650,8 @@ static int load_config_ints(struct config *conf, const char *field, const char *
 		&(conf->librsync));
 	get_conf_val_int(field, value, "version_warn",
 		&(conf->version_warn));
+	get_conf_val_int(field, value, "resume_partial",
+		&(conf->resume_partial));
 	get_conf_val_int(field, value, "cross_all_filesystems",
 		&(conf->cross_all_filesystems));
 	get_conf_val_int(field, value, "read_all_fifos",
@@ -1545,6 +1548,7 @@ int set_client_global_config(struct config *conf, struct config *cconf, const ch
 	cconf->librsync=conf->librsync;
 	cconf->compression=conf->compression;
 	cconf->version_warn=conf->version_warn;
+	cconf->resume_partial=conf->resume_partial;
 	cconf->notify_success_warnings_only=conf->notify_success_warnings_only;
 	cconf->notify_success_changes_only=conf->notify_success_changes_only;
 	cconf->server_script_post_run_on_fail=conf->server_script_post_run_on_fail;

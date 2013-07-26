@@ -259,7 +259,8 @@ static int resume_partial_changed_file(struct sbuf *cb, struct sbuf *p1b, const 
 	xb.endfile=strdup(cb->endfile);
 
 	logp("Resume partial changed file: %s\n", xb.path);
-	if(!lstat(deltmppath, &dstatp) && S_ISREG(dstatp.st_mode)
+	if(cconf->resume_partial
+	     && !lstat(deltmppath, &dstatp) && S_ISREG(dstatp.st_mode)
 	     && !lstat(curpath, &cstatp) && S_ISREG(cstatp.st_mode))
 	{
 		int junk=0;

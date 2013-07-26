@@ -144,6 +144,7 @@ struct config
 	int librsync;
 	int compression;
 	int version_warn;
+	int resume_partial;
 
 	char *timer_script;
 	struct strlist **timer_arg;

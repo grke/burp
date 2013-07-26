@@ -244,7 +244,10 @@ on the server. Options are...
 .TP
 \fBuse:\fR Convert the working directory into a complete backup.
 .TP
-\fBresume:\fR Simply continue the previous backup from the point at which it left off. NOTE: If the client has changed its include/exclude configuration since the backup was interrupted, the recovery method will automatically switch to 'use'.
+\fBresume:\fR Simply continue the previous backup from the point at which it left off, at file granularity. NOTE: If the client has changed its include/exclude configuration since the backup was interrupted, the recovery method will automatically switch to 'use'.
+.TP
+\fBresume_partial=[0|1]\fR
+Turn this on to enable 'resume partial' code. Requires 'working_dir_recovery_method=resume'. When resuming an interrupted transfer of a single file, it attempts to use previously transferred blocks of that file in order to be more efficient. However, situations have been reported where the file on the server side just gets bigger forever, so this feature now defaults to being turned off.
 .TP
 \fBclient_can_delete=[0|1]\fR
 Turn this off to prevent clients from deleting backups with the '\-a D' option. The default is that clients can delete backups.
@@ -578,6 +581,7 @@ Additionally, the following options can be overridden here for each client:
 \fBpassword_check\fR
 \fBkeep\fR
 \fBworking_dir_recovery_method\fR
+\fBresume_partial\fR
 \fBlibrsync\fR
 \fBversion_warn\fR
 \fBsyslog\fR

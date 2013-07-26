@@ -1,4 +1,6 @@
   * Fix truncation of timestamps in the live status monitor.
+  * Default the 'resume partial' feature to being off, and add an option to
+    turn it on.
   * Upgraded Windows cross tools to:
 	+ binutils-2.23.1
 	+ gcc-4.7.3

@@ -51,6 +51,9 @@ static int blk_read(struct rconf *rconf, char *buf, char *buf_end, struct win *w
 		{
 			// Maybe we have enough blocks to return now.
 			if(++(blkgrp->b)==SIG_MAX) return 0;
+			// Make space for another.
+			if(!(blkgrp->blks[blkgrp->b]=blk_alloc(rconf->blk_max)))
+				return -1;
 		}
 	}
 	blkgrp->cp=buf;

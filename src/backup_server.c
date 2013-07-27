@@ -64,7 +64,7 @@ static int open_log(const char *realworking, const char *client, const char *cve
 	return 0;
 }
 
-static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct cntr *cntr, int *backup_end)
+static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config *conf, int *backup_end)
 {
 	int ret=0;
 	static struct sbuf *snew=NULL;
@@ -118,6 +118,34 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct cntr *
 			printf("sig for %c:%s\n",
 				slist->mark2->cmd, slist->mark2->path);
 			printf("%c:%s\n", rbuf->cmd, rbuf->buf);
+			{
+				// Goes on slist->mark2
+				struct sbuf *sb=slist->mark2;
+				if(!sb->btail)
+				{
+					// Need the first blkgrp.
+					struct blkgrp *bnew;
+					if(!(bnew=blkgrp_alloc(&conf->rconf)))
+						goto error;
+					sb->bhead=bnew;
+					sb->btail=bnew;
+					sb->bsighead=bnew;
+				}
+				else if(sb->btail->b==SIG_MAX)
+				{
+					// Need to add a new blkgrp.
+					struct blkgrp *bnew;
+					if(!(bnew=blkgrp_alloc(&conf->rconf)))
+						goto error;
+					bnew->path_index=sb->btail->path_index+1;
+					sb->btail->next=bnew;
+					sb->btail=bnew;
+				}
+				// Now, just add the new sig to the end.
+
+				// FIX THIS - Make server side blkgrp/blk
+				// allocation smaller than client side.
+			}
 			goto end;
 
 		case CMD_ATTRIBS:
@@ -166,7 +194,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct cntr *
 			break;
 		case CMD_WARNING:
 			logp("WARNING: %s\n", rbuf);
-			do_filecounter(cntr, rbuf->cmd, 0);
+			do_filecounter(conf->cntr, rbuf->cmd, 0);
 			goto end;
 		case CMD_GEN:
 			if(!strcmp(rbuf->buf, "backup_end"))
@@ -251,9 +279,8 @@ static int backup_server(gzFile cmanfp, const char *manifest, const char *client
 			goto end;
 		}
 
-		if(rbuf->buf && deal_with_read(rbuf, slist,
-			conf->cntr, &backup_end))
-				goto end;
+		if(rbuf->buf && deal_with_read(rbuf, slist, conf, &backup_end))
+			goto end;
 	}
 	ret=0;
 

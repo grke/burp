@@ -12,6 +12,16 @@ extern int status_rfd; // for the child to read information from the parent.
 
 extern size_t writebuflen;
 
+struct iobuf
+{
+	char cmd;
+	char *buf;
+	size_t len;
+};
+
+extern struct iobuf *iobuf_init(void);
+extern void iobuf_free(struct iobuf *iobuf);
+
 extern int async_init(int afd, SSL *assl, struct config *conf, int estimate);
 
 extern void async_free(void);
@@ -24,6 +34,7 @@ extern int async_append_all_to_write_buffer(char wcmd, const char *wsrc, size_t 
 // *rdst and/or wlen.
 extern int async_rw(char *rcmd, char **rdst, size_t *rlen,
         char wcmd, const char *wsrc, size_t *wlen);
+extern int async_rw_ng(struct iobuf *rbuf, struct iobuf *wbuf);
 
 extern int async_rw_ensure_read(char *rcmd, char **rdst, size_t *rlen,
 	char wcmd, const char *wsrc, size_t wlen);

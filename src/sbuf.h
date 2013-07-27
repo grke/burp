@@ -48,9 +48,19 @@ struct sbuf
 	struct sbuf *next;
 };
 
+struct slist
+{
+	struct sbuf *head;
+	struct sbuf *tail;
+	struct sbuf *mark1;
+	struct sbuf *mark2;
+};
+
 extern struct sbuf *sbuf_init(void);
 extern void sbuf_free(struct sbuf *sb);
-extern void sbuf_free_list(struct sbuf *shead);
+
+extern struct slist *slist_init(void);
+extern void slist_free(struct slist *slist);
 
 extern int sbuf_open_file(struct sbuf *sb, struct config *conf);
 extern void sbuf_close_file(struct sbuf *sb);
@@ -60,8 +70,7 @@ extern int cmd_is_link(char cmd);
 extern int sbuf_is_link(struct sbuf *sb);
 extern int sbuf_fill(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr);
 extern int sbuf_to_manifest(struct sbuf *sb, FILE *mp, gzFile zp);
-//extern int sbuf_fill_ng(struct sbuf *sb, char *statbuf, size_t slen);
-extern void sbuf_add_to_list(struct sbuf *sb, struct sbuf **head, struct sbuf **tail, struct sbuf **genhead, struct sbuf **sighead);
+extern void sbuf_add_to_list(struct sbuf *sb, struct slist *slist);
 
 extern int sbuf_pathcmp(struct sbuf *a, struct sbuf *b);
 

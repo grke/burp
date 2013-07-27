@@ -33,37 +33,49 @@ void sbuf_free(struct sbuf *sb)
 	free(sb);
 }
 
-void sbuf_free_list(struct sbuf *shead)
+struct slist *slist_init(void)
+{
+	struct slist *slist;
+	if(!(slist=(struct slist *)calloc(1, sizeof(struct slist))))
+		log_out_of_memory(__FUNCTION__);
+	return slist;
+}
+
+void slist_free(struct slist *slist)
 {
 	struct sbuf *sb;
-	sb=shead;
+	struct sbuf *shead;
+	if(!slist) return;
+	sb=slist->head;
+	shead=sb;
 	while(shead)
 	{
 		sb=shead;
 		shead=shead->next;
 		sbuf_free(sb);
 	}
+	free(slist);
 }
 
-void sbuf_add_to_list(struct sbuf *sb, struct sbuf **head, struct sbuf **tail, struct sbuf **genhead, struct sbuf **sighead)
+void sbuf_add_to_list(struct sbuf *sb, struct slist *slist)
 {
-	if(*tail)
+	if(slist->tail)
 	{
 		// Add to the end of the list.
-		(*tail)->next=sb;
-		*tail=sb;
-		if(genhead && !*genhead) *genhead=*tail;
-		if(sighead && !*sighead) *sighead=*tail;
+		slist->tail->next=sb;
+		slist->tail=sb;
+		if(!slist->mark1) slist->mark1=slist->tail;
+		if(!slist->mark2) slist->mark2=slist->tail;
 	}
 	else
 	{
 		// Start the list.
-		*head=sb;
-		*tail=sb;
-		// Another pointer to the head that can move along the list
+		slist->head=sb;
+		slist->tail=sb;
+		// Pointers to the head that can move along the list
 		// at a different rate.
-		if(genhead) *genhead=*head;
-		if(sighead) *sighead=*head;
+		slist->mark1=sb;
+		slist->mark2=sb;
 	}
 }
 
@@ -81,30 +93,6 @@ int sbuf_is_endfile(struct sbuf *sb)
 {
 	return sb->cmd==CMD_END_FILE;
 }
-/*
-int sbuf_fill_ng(struct sbuf *sb, char *statbuf, size_t slen)
-{
-	int ars;
-	decode_stat(statbuf, &(sb->statp), &(sb->winattr), &(sb->compression));
-	sb->statbuf=statbuf;
-	sb->slen=slen;
-
-	if((ars=async_read(&(sb->cmd), &(sb->path), &(sb->plen)))) return ars;
-	if(sbuf_is_link(sb))
-	{
-		char cmd=0;
-		if((ars=async_read(&cmd, &(sb->linkto), &(sb->llen))))
-			return ars;
-		if(!cmd_is_link(cmd))
-		{
-			logp("got non-link cmd after link cmd: %c %s\n",
-				cmd, sb->linkto);
-			return -1;
-		}
-	}
-	return 0;
-}
-*/
 
 static int do_sbuf_fill_from_net(struct sbuf *sb, struct cntr *cntr)
 {

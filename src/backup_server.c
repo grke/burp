@@ -71,17 +71,17 @@ static int backup_needed(struct sbuf *sb)
 	return 0;
 }
 
-static void maybe_sbuf_add_to_list(struct sbuf *sb, struct sbuf **shead, struct sbuf **stail)
+static void maybe_sbuf_add_to_list(struct sbuf *sb, struct slist *slist)
 {
 	if(backup_needed(sb))
 	{
-		sbuf_add_to_list(sb, shead, stail, NULL, NULL);
+		sbuf_add_to_list(sb, slist);
 		return;
 	}
 	// FIX THIS: now need to write the entry direct to the manifest.
 }
 
-static int deal_with_read(char rcmd, char **rbuf, size_t rlen, struct sbuf **shead, struct sbuf **stail, struct cntr *cntr, int *backup_end)
+static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct cntr *cntr, int *backup_end)
 {
 	int ret=0;
 	static struct sbuf *snew=NULL;
@@ -89,7 +89,7 @@ static int deal_with_read(char rcmd, char **rbuf, size_t rlen, struct sbuf **she
 
 	if(!inew && !(inew=sbuf_init())) goto error;
 
-	switch(rcmd)
+	switch(rbuf->cmd)
 	{
 		case CMD_ATTRIBS_SIGS:
 /*
@@ -119,7 +119,7 @@ static int deal_with_read(char rcmd, char **rbuf, size_t rlen, struct sbuf **she
 			return 0;
 */
 		case CMD_SIG:
-			printf("%c:%s\n", rcmd, *rbuf);
+			printf("%c:%s\n", rbuf->cmd, rbuf->buf);
 			goto end;
 
 		case CMD_ATTRIBS:
@@ -128,10 +128,10 @@ static int deal_with_read(char rcmd, char **rbuf, size_t rlen, struct sbuf **she
 			// set up snew, it is an error.
 			if(snew) break;
 			if(!(snew=sbuf_init())) goto error;
-			snew->attribs=*rbuf;
-			snew->alen=rlen;
+			snew->attribs=rbuf->buf;
+			snew->alen=rbuf->len;
 			snew->need_path=1;
-			*rbuf=NULL;
+			rbuf->buf=NULL;
 			return 0;
 		}
 		case CMD_FILE:
@@ -144,42 +144,41 @@ static int deal_with_read(char rcmd, char **rbuf, size_t rlen, struct sbuf **she
 			if(!snew) goto error;
 			if(snew->need_path)
 			{
-				snew->path=*rbuf;
-				snew->plen=rlen;
-				snew->cmd=rcmd;
+				snew->path=rbuf->buf;
+				snew->plen=rbuf->len;
+				snew->cmd=rbuf->cmd;
 				snew->need_path=0;
-				*rbuf=NULL;
+				rbuf->buf=NULL;
 			printf("got request for: %s\n", snew->path);
-				if(cmd_is_link(rcmd))
+				if(cmd_is_link(rbuf->cmd))
 				{
 					snew->need_link=1;
 					return 0;
 				}
 				else
 				{
-					maybe_sbuf_add_to_list(snew,
-						shead, stail);
+					maybe_sbuf_add_to_list(snew, slist);
 					snew=NULL;
 					return 0;
 				}
 			}
 			else if(snew->need_link)
 			{
-				snew->linkto=*rbuf;
-				snew->llen=rlen;
+				snew->linkto=rbuf->buf;
+				snew->llen=rbuf->len;
 				snew->need_link=0;
-				*rbuf=NULL;
-				maybe_sbuf_add_to_list(snew, shead, stail);
+				rbuf->buf=NULL;
+				maybe_sbuf_add_to_list(snew, slist);
 				snew=NULL;
 				return 0;
 			}
 			break;
 		case CMD_WARNING:
 			logp("WARNING: %s\n", rbuf);
-			do_filecounter(cntr, rcmd, 0);
+			do_filecounter(cntr, rbuf->cmd, 0);
 			goto end;
 		case CMD_GEN:
-			if(!strcmp(*rbuf, "backup_end"))
+			if(!strcmp(rbuf->buf, "backup_end"))
 			{
 				*backup_end=1;
 				goto end;
@@ -193,88 +192,87 @@ error:
 	sbuf_free(inew); inew=NULL;
 	sbuf_free(snew); snew=NULL;
 end:
-	if(*rbuf) { free(*rbuf); *rbuf=NULL; }
+	if(rbuf->buf) { free(rbuf->buf); rbuf->buf=NULL; }
 	return ret;
 }
 
-static void get_wbuf_from_sigs(char *wcmd, char **wbuf, size_t *wlen, struct sbuf **shead, struct sbuf **stail)
+static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist)
 {
 }
 
-static void get_wbuf_from_files(char *wcmd, char **wbuf, size_t *wlen, struct sbuf **shead, struct sbuf **stail)
+static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist)
 {
-	struct sbuf *sb=*shead;
+	struct sbuf *sb=slist->head;
 	if(!sb) return;
 
 	// Only need to request the path at this stage.
 	if(!sb->sent_path)
 	{
-		*wcmd=sb->cmd;
-		*wbuf=sb->path;
-		*wlen=sb->plen;
+		wbuf->cmd=sb->cmd;
+		wbuf->buf=sb->path;
+		wbuf->len=sb->plen;
 		sb->sent_path=1;
 	}
 	else
 	{
-		*shead=(*shead)->next;
+		slist->head=slist->head->next;
 		sbuf_free(sb);
-		if(!*shead) *stail=NULL;
+		if(!slist->head) slist->tail=NULL;
 	}
 }
 
 static int backup_server(const char *manifest, const char *client, struct cntr *p1cntr, struct cntr *cntr, struct config *conf)
 {
-	int ret=0;
+	int ret=-1;
 	gzFile mzp=NULL;
-	struct sbuf *shead=NULL;
-	struct sbuf *stail=NULL;
-	char rcmd=CMD_ERROR;
-	char *rbuf=NULL;
-	size_t rlen=0;
-	char wcmd=CMD_ERROR;
-	char *wbuf=NULL;
-	size_t wlen=0;
 	int backup_end=0;
+	struct slist *slist=NULL;
+	struct iobuf *rbuf=NULL;
+	struct iobuf *wbuf=NULL;
 
 	logp("Begin backup\n");
 
-	if(!(mzp=gzopen_file(manifest, comp_level(conf))))
-		return -1;
+	if(!(slist=slist_init())
+	  || !(wbuf=iobuf_init())
+	  || !(rbuf=iobuf_init())
+	  || !(mzp=gzopen_file(manifest, comp_level(conf))))
+		goto end;
 
 	while(!backup_end)
 	{
-		if(!wlen)
+		if(!wbuf->len)
 		{
-			get_wbuf_from_sigs(&wcmd, &wbuf, &wlen,
-				&shead, &stail);
-			if(!wlen)
+			get_wbuf_from_sigs(wbuf, slist);
+			if(!wbuf->len)
 			{
-				get_wbuf_from_files(&wcmd, &wbuf, &wlen,
-					&shead, &stail);
+				get_wbuf_from_files(wbuf, slist);
 			}
 		}
 
-		if(wlen) printf("send request: %s\n", wbuf);
-		if(async_rw(&rcmd, &rbuf, &rlen, wcmd, wbuf, &wlen))
+		if(wbuf->len) printf("send request: %s\n", wbuf->buf);
+		if(async_rw_ng(rbuf, wbuf))
 		{
 			logp("error in async_rw\n");
 			goto end;
 		}
 
-		if(rbuf && deal_with_read(rcmd, &rbuf, rlen,
-			&shead, &stail, cntr, &backup_end))
-				goto end;
+		if(rbuf->buf && deal_with_read(rbuf, slist, cntr, &backup_end))
+			goto end;
 	}
+	ret=0;
 
+end:
 	if(gzclose(mzp))
 	{
 		logp("error closing %s in %s\n", manifest, __FUNCTION__);
 		ret=-1;
 	}
-
-end:
 	logp("End backup\n");
-	sbuf_free_list(shead); shead=NULL;
+	slist_free(slist);
+	iobuf_free(rbuf);
+	// Write buffer did not allocate 'buf'. 
+	wbuf->buf=NULL;
+	iobuf_free(wbuf);
 	return ret;
 }
 

@@ -64,6 +64,8 @@ void sbuf_add_to_list(struct sbuf *sb, struct slist *slist)
 		// Add to the end of the list.
 		slist->tail->next=sb;
 		slist->tail=sb;
+		// Markers might have fallen off the end. Start them again
+		// on the tail.
 		if(!slist->mark1) slist->mark1=slist->tail;
 		if(!slist->mark2) slist->mark2=slist->tail;
 	}
@@ -261,4 +263,51 @@ ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize)
 #else
 	return fread(buf, 1, bufsize, sb->fp);
 #endif
+}
+
+void sbuf_from_iobuf_path(struct sbuf *sb, struct iobuf *iobuf)
+{
+	sb->cmd=iobuf->cmd;
+	sb->path=iobuf->buf;
+	sb->plen=iobuf->len;
+}
+
+void sbuf_from_iobuf_attr(struct sbuf *sb, struct iobuf *iobuf)
+{
+	sb->attribs=iobuf->buf;
+	sb->alen=iobuf->len;
+}
+
+void sbuf_from_iobuf_link(struct sbuf *sb, struct iobuf *iobuf)
+{
+	sb->linkto=iobuf->buf;
+	sb->llen=iobuf->len;
+}
+
+void iobuf_from_sbuf_path(struct iobuf *iobuf, struct sbuf *sb)
+{
+	iobuf->cmd=sb->cmd;
+	iobuf->buf=sb->path;
+	iobuf->len=sb->plen;
+}
+
+void iobuf_from_sbuf_attr(struct iobuf *iobuf, struct sbuf *sb)
+{
+	iobuf->cmd=CMD_ATTRIBS;
+	iobuf->buf=sb->attribs;
+	iobuf->len=sb->alen;
+}
+
+void iobuf_from_sbuf_link(struct iobuf *iobuf, struct sbuf *sb)
+{
+	iobuf->cmd=sb->cmd;
+	iobuf->buf=sb->linkto;
+	iobuf->len=sb->llen;
+}
+
+void iobuf_from_str(struct iobuf *iobuf, char cmd, char *str)
+{
+	iobuf->cmd=cmd;
+	iobuf->buf=str;
+	iobuf->len=strlen(str);
 }

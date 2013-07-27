@@ -40,8 +40,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config
 		{
 			struct sbuf *sb;
 			if(!(sb=sbuf_init())) goto error;
-			sb->path=rbuf->buf;
-			sb->plen=rbuf->len;
+			sbuf_from_iobuf_path(sb, rbuf);
 			rbuf->buf=NULL;
 			sbuf_add_to_list(sb, slist);
 printf("got request for: %s\n", sb->path);
@@ -160,17 +159,15 @@ static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int *blk
 
 	if(!sb->sent_stat)
 	{
-		wbuf->cmd=CMD_ATTRIBS_SIGS;
-		wbuf->buf=sb->attribs;
-		wbuf->len=sb->alen;
+		iobuf_from_sbuf_attr(wbuf, sb);
+		wbuf->cmd=CMD_ATTRIBS_SIGS; // hack
 		sb->sent_stat=1;
 		return;
 	}
 	else if(!sb->sent_path)
 	{
-		wbuf->cmd=CMD_PATH_SIGS;
-		wbuf->buf=sb->path;
-		wbuf->len=sb->plen;
+		iobuf_from_sbuf_path(wbuf, sb);
+		wbuf->cmd=CMD_PATH_SIGS;  // hack
 		sb->sent_path=1;
 		return;
 	}
@@ -189,9 +186,7 @@ static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int *blk
 		);
 	printf("%s (%d)\n", sb->path, blkgrp->b);
 	printf("%s\n", buf);
-	wbuf->cmd=CMD_SIG;
-	wbuf->len=strlen(buf);
-	wbuf->buf=buf;
+	iobuf_from_str(wbuf, CMD_SIG, buf);
 
 	// Move on.
 	if(++i<blkgrp->b) return;
@@ -212,23 +207,17 @@ static void get_wbuf_from_scan(struct iobuf *wbuf, struct slist *flist)
 	if(!sb) return;
 	if(!sb->sent_stat)
 	{
-		wbuf->cmd=CMD_ATTRIBS;
-		wbuf->buf=sb->attribs;
-		wbuf->len=sb->alen;
+		iobuf_from_sbuf_attr(wbuf, sb);
 		sb->sent_stat=1;
 	}
 	else if(!sb->sent_path)
 	{
-		wbuf->cmd=sb->cmd;
-		wbuf->buf=sb->path;
-		wbuf->len=sb->plen;
+		iobuf_from_sbuf_path(wbuf, sb);
 		sb->sent_path=1;
 	}
 	else if(sb->linkto && !sb->sent_link)
 	{
-		wbuf->cmd=sb->cmd;
-		wbuf->buf=sb->linkto;
-		wbuf->len=sb->alen;
+		iobuf_from_sbuf_link(wbuf, sb);
 		sb->sent_link=1;
 	}
 	else

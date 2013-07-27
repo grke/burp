@@ -631,11 +631,8 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore)
 		return -1;
 	logp("doing %s confirmed\n", act_str(act));
 
-	if(conf->send_client_counters)
-	{
-		if(recv_counters(conf->p1cntr, conf->cntr))
-			return -1;
-	}
+	if(conf->send_client_counters && recv_counters(conf))
+		return -1;
 
 #if defined(HAVE_WIN32)
 	if(act==ACTION_RESTORE) win32_enable_backup_privileges();

@@ -64,23 +64,6 @@ static int open_log(const char *realworking, const char *client, const char *cve
 	return 0;
 }
 
-static int backup_needed(struct sbuf *sb)
-{
-	if(sb->cmd==CMD_FILE) return 1;
-	// TODO: Check previous manifest and modification time.
-	return 0;
-}
-
-static void maybe_sbuf_add_to_list(struct sbuf *sb, struct slist *slist)
-{
-	if(backup_needed(sb))
-	{
-		sbuf_add_to_list(sb, slist);
-		return;
-	}
-	// FIX THIS: now need to write the entry direct to the manifest.
-}
-
 static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct cntr *cntr, int *backup_end)
 {
 	int ret=0;
@@ -92,33 +75,48 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct cntr *
 	switch(rbuf->cmd)
 	{
 		case CMD_ATTRIBS_SIGS:
-/*
 			if(inew->path)
 			{
-				if(!inew->attribs) goto error;
 				// New set of stuff incoming. Clean up.
-				free(inew->attribs);
+				if(inew->attribs) free(inew->attribs);
 				free(inew->path); inew->path=NULL;
 			}
-			inew->attribs=*rbuf;
-			inew->alen=rlen;
+			sbuf_from_iobuf_attr(inew, rbuf);
 			inew->need_path=1;
-			*rbuf=NULL;
+			rbuf->buf=NULL;
 			return 0;
-*/
 		case CMD_PATH_SIGS:
-/*
 			// Attribs should come first, so if we have not
 			// already set up inew->attribs, it is an error.
 			if(!inew->attribs) goto error;
-			inew->path=*rbuf;
-			inew->plen=rlen;
-			inew->cmd=rcmd;
+			sbuf_from_iobuf_path(inew, rbuf);
 			inew->need_path=0;
-
+			rbuf->buf=NULL;
+			// Need to go through slist to find the matching
+			// entry.
+			{
+				int p=-1;
+				struct sbuf *sb=slist->mark2;
+				while(sb && (p=sbuf_pathcmp(inew, sb))>0)
+					sb=sb->next;
+				if(p!=0)
+				{
+					logp("Could not find %s in request list\n", inew->path);
+					goto error;
+				}
+				// Replace the attribs with the more recent
+				// values.
+				free(sb->attribs);
+				sb->attribs=inew->attribs;
+				sb->alen=inew->alen;
+				inew->attribs=NULL;
+				slist->mark2=sb;
+				// Incoming sigs now need to get added to mark2
+			}
 			return 0;
-*/
 		case CMD_SIG:
+			printf("sig for %c:%s\n",
+				slist->mark2->cmd, slist->mark2->path);
 			printf("%c:%s\n", rbuf->cmd, rbuf->buf);
 			goto end;
 
@@ -128,8 +126,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct cntr *
 			// set up snew, it is an error.
 			if(snew) break;
 			if(!(snew=sbuf_init())) goto error;
-			snew->attribs=rbuf->buf;
-			snew->alen=rbuf->len;
+			sbuf_from_iobuf_attr(snew, rbuf);
 			snew->need_path=1;
 			rbuf->buf=NULL;
 			return 0;
@@ -144,31 +141,25 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct cntr *
 			if(!snew) goto error;
 			if(snew->need_path)
 			{
-				snew->path=rbuf->buf;
-				snew->plen=rbuf->len;
-				snew->cmd=rbuf->cmd;
+				sbuf_from_iobuf_path(snew, rbuf);
 				snew->need_path=0;
 				rbuf->buf=NULL;
 			printf("got request for: %s\n", snew->path);
 				if(cmd_is_link(rbuf->cmd))
-				{
 					snew->need_link=1;
-					return 0;
-				}
 				else
 				{
-					maybe_sbuf_add_to_list(snew, slist);
+					sbuf_add_to_list(snew, slist);
 					snew=NULL;
-					return 0;
 				}
+				return 0;
 			}
 			else if(snew->need_link)
 			{
-				snew->linkto=rbuf->buf;
-				snew->llen=rbuf->len;
+				sbuf_from_iobuf_link(snew, rbuf);
 				snew->need_link=0;
 				rbuf->buf=NULL;
-				maybe_sbuf_add_to_list(snew, slist);
+				sbuf_add_to_list(snew, slist);
 				snew=NULL;
 				return 0;
 			}
@@ -200,28 +191,32 @@ static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist)
 {
 }
 
-static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist)
+static int backup_needed(struct sbuf *sb, gzFile cmanfp)
 {
-	struct sbuf *sb=slist->head;
-	if(!sb) return;
-
-	// Only need to request the path at this stage.
-	if(!sb->sent_path)
-	{
-		wbuf->cmd=sb->cmd;
-		wbuf->buf=sb->path;
-		wbuf->len=sb->plen;
-		sb->sent_path=1;
-	}
-	else
-	{
-		slist->head=slist->head->next;
-		sbuf_free(sb);
-		if(!slist->head) slist->tail=NULL;
-	}
+	if(sb->cmd==CMD_FILE) return 1;
+	// TODO: Check previous manifest and modification time.
+	return 0;
 }
 
-static int backup_server(const char *manifest, const char *client, struct cntr *p1cntr, struct cntr *cntr, struct config *conf)
+static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist, gzFile cmanfp)
+{
+	struct sbuf *sb=slist->mark1;
+	if(!sb) return;
+
+	if(sb->sent_path || !backup_needed(sb, cmanfp))
+	{
+		slist->mark1=sb->next;
+		return;
+	}
+
+	// Only need to request the path at this stage.
+	wbuf->cmd=sb->cmd;
+	wbuf->buf=sb->path;
+	wbuf->len=sb->plen;
+	sb->sent_path=1;
+}
+
+static int backup_server(gzFile cmanfp, const char *manifest, const char *client, struct config *conf)
 {
 	int ret=-1;
 	gzFile mzp=NULL;
@@ -245,7 +240,7 @@ static int backup_server(const char *manifest, const char *client, struct cntr *
 			get_wbuf_from_sigs(wbuf, slist);
 			if(!wbuf->len)
 			{
-				get_wbuf_from_files(wbuf, slist);
+				get_wbuf_from_files(wbuf, slist, cmanfp);
 			}
 		}
 
@@ -256,8 +251,9 @@ static int backup_server(const char *manifest, const char *client, struct cntr *
 			goto end;
 		}
 
-		if(rbuf->buf && deal_with_read(rbuf, slist, cntr, &backup_end))
-			goto end;
+		if(rbuf->buf && deal_with_read(rbuf, slist,
+			conf->cntr, &backup_end))
+				goto end;
 	}
 	ret=0;
 
@@ -276,34 +272,25 @@ end:
 	return ret;
 }
 
-extern int do_backup_server(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *manifest, const char *client, const char *cversion, struct cntr *p1cntr, struct cntr *cntr, const char *incexc)
+int do_backup_server(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *manifest, const char *client, const char *cversion, const char *incexc)
 {
 	int ret=0;
 	char msg[256]="";
 	// The timestamp file of this backup
 	char *timestamp=NULL;
-	// Where the new file generated from the delta temporarily goes
-	char *newpath=NULL;
 	// path to the last manifest
 	char *cmanifest=NULL;
 	// Real path to the working directory
 	char *realworking=NULL;
 	char tstmp[64]="";
-	char *datadirtmp=NULL;
-	// Path to the old incexc file.
-	char *cincexc=NULL;
-
 	struct dpth dpth;
-
 	gzFile cmanfp=NULL;
+	struct stat statp;
 
 	logp("in do_backup_server\n");
 
 	if(!(timestamp=prepend_s(working, "timestamp", strlen("timestamp")))
-	  || !(newpath=prepend_s(working, "patched.tmp", strlen("patched.tmp")))
-	  || !(cmanifest=prepend_s(current, "manifest.gz", strlen("manifest.gz")))
-	  || !(cincexc=prepend_s(current, "incexc", strlen("incexc")))
-	  || !(datadirtmp=prepend_s(working, "data.tmp", strlen("data.tmp"))))
+	  || !(cmanifest=prepend_s(current, "manifest.gz", strlen("manifest.gz"))))
 	{
 		log_and_send_oom(__FUNCTION__);
 		goto error;
@@ -347,13 +334,6 @@ extern int do_backup_server(const char *basedir, const char *current, const char
 	{
 		goto error;
 	}
-	else if(mkdir(datadirtmp, 0777))
-	{
-		snprintf(msg, sizeof(msg),
-		  "could not mkdir for datadir: %s", datadirtmp);
-		log_and_send(msg);
-		goto error;
-	}
 	else if(write_timestamp(timestamp, tstmp))
 	{
 		snprintf(msg, sizeof(msg),
@@ -368,7 +348,17 @@ extern int do_backup_server(const char *basedir, const char *current, const char
 		goto error;
 	}
 
-	if(backup_server(manifest, client, p1cntr, cntr, cconf))
+	// Open the previous (current) manifest.
+	if(!lstat(cmanifest, &statp))
+	{
+		if(!(cmanfp=gzopen_file(cmanifest, "rb")))
+		{
+			logp("could not open old manifest %s\n", cmanifest);
+			goto error;
+		}
+	}
+
+	if(backup_server(cmanfp, manifest, client, cconf))
 	{
 		logp("error in backup\n");
 		goto error;
@@ -390,10 +380,7 @@ error:
 end:
 	gzclose_fp(&cmanfp);
 	if(timestamp) free(timestamp);
-	if(newpath) free(newpath);
 	if(cmanifest) free(cmanifest);
-	if(datadirtmp) free(datadirtmp);
-	if(cincexc) free(cincexc);
 	set_logfp(NULL, cconf); // does an fclose on logfp.
 	return ret;
 }

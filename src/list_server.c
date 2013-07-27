@@ -55,7 +55,7 @@ err:
 	return -1;
 }
 
-static int list_manifest(const char *fullpath, regex_t *regex, const char *browsedir, const char *client, struct cntr *p1cntr, struct cntr *cntr)
+static int list_manifest(const char *fullpath, regex_t *regex, const char *browsedir, const char *client, struct config *conf)
 {
 /*
 	int ars=0;
@@ -150,7 +150,7 @@ static void send_backup_name_to_client(struct bu *arr)
 	async_write(CMD_TIMESTAMP, msg, strlen(msg));
 }
 
-int do_list_server(const char *basedir, const char *backup, const char *listregex, const char *browsedir, const char *client, struct cntr *p1cntr, struct cntr *cntr)
+int do_list_server(const char *basedir, const char *backup, const char *listregex, const char *browsedir, const char *client, struct config *conf)
 {
 	int a=0;
 	int i=0;
@@ -170,7 +170,7 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 		return -1;
 	}
 
-	write_status(client, STATUS_LISTING, NULL, p1cntr, cntr);
+	write_status(client, STATUS_LISTING, NULL, conf);
 
 	if(backup && *backup) index=strtoul(backup, NULL, 10);
 
@@ -183,7 +183,7 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 			async_write(CMD_TIMESTAMP,
 				arr[i].timestamp, strlen(arr[i].timestamp));
 			ret+=list_manifest(arr[i].path, regex, browsedir,
-				client, p1cntr, cntr);
+				client, conf);
 		}
 		// Search or list a particular backup.
 		else if(backup && *backup)
@@ -195,7 +195,7 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 				found=TRUE;
 				send_backup_name_to_client(&(arr[i]));
 				ret=list_manifest(arr[i].path, regex,
-					browsedir, client, p1cntr, cntr);
+					browsedir, client, conf);
 			}
 		}
 		// List the backups.

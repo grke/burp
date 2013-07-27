@@ -83,14 +83,14 @@ extern const char *bytes_to_human(unsigned long long counter);
 
 #ifndef HAVE_WIN32
 extern void counters_to_str(char *str, size_t len, const char *client,
-	char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr);
-extern int send_counters(const char *client, struct cntr *p1cntr, struct cntr *cntr);
+	char phase, const char *path, struct config *conf);
+extern int send_counters(const char *client, struct config *conf);
 #endif
 
 extern int str_to_counters(const char *str, char **client, char *status,
 	char *phase, char **path, struct cntr *p1cntr, struct cntr *cntr,
 	struct strlist ***backups, int *bcount);
-extern int recv_counters(struct cntr *p1cntr, struct cntr *cntr);
+extern int recv_counters(struct config *conf);
 
 
 #endif

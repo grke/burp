@@ -12,7 +12,7 @@
 #include "list_server.h"
 #include "current_backups_server.h"
 
-int do_delete_server(const char *basedir, const char *backup, const char *client, struct cntr *p1cntr, struct cntr *cntr)
+int do_delete_server(const char *basedir, const char *backup, const char *client, struct config *conf)
 {
 	int a=0;
 	int i=0;
@@ -28,7 +28,7 @@ int do_delete_server(const char *basedir, const char *backup, const char *client
 		return -1;
 	}
 
-	write_status(client, STATUS_DELETING, NULL, p1cntr, cntr);
+	write_status(client, STATUS_DELETING, NULL, conf);
 
 	if(backup && *backup) index=strtoul(backup, NULL, 10);
 

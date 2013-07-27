@@ -454,6 +454,14 @@ int async_rw(char *rcmd, char **rdst, size_t *rlen, char wcmd, const char *wsrc,
         return 0;
 }
 
+int async_rw_ng(struct iobuf *rbuf, struct iobuf *wbuf)
+{
+	// TODO: make this whole file use iobuf directly instead of just being
+	// a wrapper around the old stuff.
+	return async_rw(&(rbuf->cmd), &(rbuf->buf), &(rbuf->len),
+		wbuf->cmd, wbuf->buf, &(wbuf->len));
+}
+
 int async_rw_ensure_read(char *rcmd, char **rdst, size_t *rlen, char wcmd, const char *wsrc, size_t wlen)
 {
 	size_t w=wlen;
@@ -685,4 +693,23 @@ int logw(struct cntr *cntr, const char *fmt, ...)
 	va_end(ap);
 	do_filecounter(cntr, CMD_WARNING, 1);
 	return r;
+}
+
+struct iobuf *iobuf_init(void)
+{
+	struct iobuf *iobuf;
+	if(!(iobuf=(struct iobuf *)calloc(1, sizeof(struct iobuf))))
+	{
+		log_out_of_memory(__FUNCTION__);
+		return NULL;
+	}
+	iobuf->cmd=CMD_ERROR;
+	return iobuf;
+}
+
+void iobuf_free(struct iobuf *iobuf)
+{
+	if(!iobuf) return;
+	if(iobuf->buf) free(iobuf->buf);
+	free(iobuf);
 }

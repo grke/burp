@@ -31,28 +31,28 @@ static int maybe_send_extrameta(struct sbuf *sb, char cmd, struct cntr *p1cntr)
 #endif
 */
 
-static int deal_with_read(char rcmd, char **rbuf, size_t rlen, struct sbuf **shead, struct sbuf **stail, struct config *conf, int *backup_end, struct sbuf **genhead, struct sbuf **sighead)
+static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config *conf, int *backup_end)
 {
 	int ret=0;
-	switch(rcmd)
+	switch(rbuf->cmd)
 	{
 		case CMD_FILE:
 		{
 			struct sbuf *sb;
 			if(!(sb=sbuf_init())) goto error;
-			sb->path=*rbuf;
-			sb->plen=rlen;
-			*rbuf=NULL;
-			sbuf_add_to_list(sb, shead, stail, genhead, sighead);
+			sb->path=rbuf->buf;
+			sb->plen=rbuf->len;
+			rbuf->buf=NULL;
+			sbuf_add_to_list(sb, slist);
 printf("got request for: %s\n", sb->path);
 			return 0;
 		}
 		case CMD_WARNING:
-			logp("WARNING: %s\n", rbuf);
-			do_filecounter(conf->cntr, rcmd, 0);
+			logp("WARNING: %s\n", rbuf->cmd);
+			do_filecounter(conf->cntr, rbuf->cmd, 0);
 			goto end;
 		case CMD_GEN:
-			if(!strcmp(*rbuf, "backup_end"))
+			if(!strcmp(rbuf->buf, "backup_end"))
 			{
 				*backup_end=1;
 				goto end;
@@ -60,15 +60,16 @@ printf("got request for: %s\n", sb->path);
 			break;
 	}
 
-	logp("unexpected cmd in %s, got '%c:%s'\n", __FUNCTION__, rcmd, *rbuf);
+	logp("unexpected cmd in %s, got '%c:%s'\n",
+		__FUNCTION__, rbuf->cmd, rbuf->buf);
 error:
 	ret=-1;
 end:
-	if(*rbuf) { free(*rbuf); *rbuf=NULL; }
+	if(rbuf->buf) { free(rbuf->buf); rbuf->buf=NULL; }
 	return ret;
 }
 
-static int add_to_scan_list(struct sbuf **fhead, struct sbuf **ftail, int *scanning, struct config *conf, bool *top_level)
+static int add_to_scan_list(struct slist *flist, int *scanning, struct config *conf, bool *top_level)
 {
 	int ff_ret;
 	struct sbuf *sb;
@@ -82,7 +83,7 @@ static int add_to_scan_list(struct sbuf **fhead, struct sbuf **ftail, int *scann
 			sbuf_free(sb);
 			return 0;
 		}
-		sbuf_add_to_list(sb, fhead, ftail, NULL, NULL);
+		sbuf_add_to_list(sb, flist);
 	}
 	else if(ff_ret<0)
 	{
@@ -98,16 +99,17 @@ static int add_to_scan_list(struct sbuf **fhead, struct sbuf **ftail, int *scann
 	return 0;
 }
 
-static int add_to_blks_list(struct config *conf, struct sbuf *shead, struct sbuf *stail, struct win *win, struct sbuf **genhead, int *blkgrps_queue)
+static int add_to_blks_list(struct config *conf, struct slist *slist, struct win *win, int *blkgrps_queue)
 {
 	struct blkgrp *bnew=NULL;
-	if(!*genhead) return 0;
-printf("get for: %s\n", (*genhead)->path);
-	if(!(*genhead)->opened)
+	struct sbuf *genhead=slist->mark1;
+	if(!genhead) return 0;
+printf("get for: %s\n", genhead->path);
+	if(!genhead->opened)
 	{
-		if(sbuf_open_file(*genhead, conf)) return -1;
+		if(sbuf_open_file(genhead, conf)) return -1;
 	}
-	if(blks_generate(&bnew, &conf->rconf, *genhead, win)) return -1;
+	if(blks_generate(&bnew, &conf->rconf, genhead, win)) return -1;
 	if(!bnew || !bnew->b)
 	{
 		// Inefficiency - a whole blkgrp was allocated and then
@@ -115,27 +117,27 @@ printf("get for: %s\n", (*genhead)->path);
 		blkgrp_free(bnew);
 		// No more to read from the file. Close it and move to the
 		// next file in the list.
-		sbuf_close_file(*genhead);
-		*genhead=(*genhead)->next;
+		sbuf_close_file(genhead);
+		slist->mark1=genhead->next;
 	}
 	else
 	{
 		// Got another group of blks.
-		if((*genhead)->bhead)
+		if(genhead->bhead)
 		{
 			// Add to the end of the list.
 			// Each entry keeps a count of its position in the
 			// list for this file.
-			bnew->path_index=(*genhead)->btail->path_index+1;
-			(*genhead)->btail->next=bnew;
-			(*genhead)->btail=bnew;
+			bnew->path_index=genhead->btail->path_index+1;
+			genhead->btail->next=bnew;
+			genhead->btail=bnew;
 		}
 		else
 		{
 			// Start new list.
-			(*genhead)->bhead=bnew;
-			(*genhead)->btail=bnew;
-			(*genhead)->bsighead=bnew;
+			genhead->bhead=bnew;
+			genhead->btail=bnew;
+			genhead->bsighead=bnew;
 		}
 		// So as to not use up all the memory, keep track of how many
 		// groups of blocks have been loaded.
@@ -144,13 +146,13 @@ printf("get for: %s\n", (*genhead)->path);
 	return 0;
 }
 
-static void get_wbuf_from_blks(char *wcmd, char **wbuf, size_t *wlen, struct sbuf **shead, struct sbuf **stail, struct sbuf **sighead, int *blkgrps_queue)
+static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int *blkgrps_queue)
 {
 	static int i=0;
 	static char buf[48];
 	struct blk *blk;
 	struct blkgrp *blkgrp;
-	struct sbuf *sb=*sighead;
+	struct sbuf *sb=slist->mark2;
 
 	if(!sb
 	  || !(blkgrp=sb->bsighead))
@@ -158,17 +160,17 @@ static void get_wbuf_from_blks(char *wcmd, char **wbuf, size_t *wlen, struct sbu
 
 	if(!sb->sent_stat)
 	{
-		*wcmd=CMD_ATTRIBS_SIGS;
-		*wbuf=sb->attribs;
-		*wlen=sb->alen;
+		wbuf->cmd=CMD_ATTRIBS_SIGS;
+		wbuf->buf=sb->attribs;
+		wbuf->len=sb->alen;
 		sb->sent_stat=1;
 		return;
 	}
 	else if(!sb->sent_path)
 	{
-		*wcmd=CMD_PATH_SIGS;
-		*wbuf=sb->path;
-		*wlen=sb->plen;
+		wbuf->cmd=CMD_PATH_SIGS;
+		wbuf->buf=sb->path;
+		wbuf->len=sb->plen;
 		sb->sent_path=1;
 		return;
 	}
@@ -187,9 +189,9 @@ static void get_wbuf_from_blks(char *wcmd, char **wbuf, size_t *wlen, struct sbu
 		);
 	printf("%s (%d)\n", sb->path, blkgrp->b);
 	printf("%s\n", buf);
-	*wcmd=CMD_SIG;
-	*wlen=strlen(buf);
-	*wbuf=buf;
+	wbuf->cmd=CMD_SIG;
+	wbuf->len=strlen(buf);
+	wbuf->buf=buf;
 
 	// Move on.
 	if(++i<blkgrp->b) return;
@@ -201,44 +203,44 @@ static void get_wbuf_from_blks(char *wcmd, char **wbuf, size_t *wlen, struct sbu
 // actual data blocks have been dealt with.
 	blkgrp_free(blkgrp);
 	if(sb->bsighead) return;
-	*sighead=sb->next;
+	slist->mark2=sb->next;
 }
 
-static void get_wbuf_from_scan(char *wcmd, char **wbuf, size_t *wlen, struct sbuf **fhead, struct sbuf **ftail)
+static void get_wbuf_from_scan(struct iobuf *wbuf, struct slist *flist)
 {
-	struct sbuf *sb=*fhead;
+	struct sbuf *sb=flist->head;
 	if(!sb) return;
 	if(!sb->sent_stat)
 	{
-		*wcmd=CMD_ATTRIBS;
-		*wbuf=sb->attribs;
-		*wlen=sb->alen;
+		wbuf->cmd=CMD_ATTRIBS;
+		wbuf->buf=sb->attribs;
+		wbuf->len=sb->alen;
 		sb->sent_stat=1;
 	}
 	else if(!sb->sent_path)
 	{
-		*wcmd=sb->cmd;
-		*wbuf=sb->path;
-		*wlen=sb->plen;
+		wbuf->cmd=sb->cmd;
+		wbuf->buf=sb->path;
+		wbuf->len=sb->plen;
 		sb->sent_path=1;
 	}
 	else if(sb->linkto && !sb->sent_link)
 	{
-		*wcmd=sb->cmd;
-		*wbuf=sb->linkto;
-		*wlen=sb->alen;
+		wbuf->cmd=sb->cmd;
+		wbuf->buf=sb->linkto;
+		wbuf->len=sb->alen;
 		sb->sent_link=1;
 	}
 	else
 	{
-		*fhead=(*fhead)->next;
+		flist->head=flist->head->next;
 		sbuf_free(sb);
-		if(*fhead)
+		if(flist->head)
 		{
 			// Go ahead and get the next one from the list.
-			get_wbuf_from_scan(wcmd, wbuf, wlen, fhead, ftail);
+			get_wbuf_from_scan(wbuf, flist);
 		}
-		else *ftail=NULL;
+		else flist->tail=NULL;
 	}
 }
 
@@ -247,24 +249,25 @@ static int backup_client(struct config *conf, int estimate)
 	int ret=0;
 	bool top_level=true;
 	int scanning=1;
-	char wcmd=CMD_ERROR;
-	char *wbuf=NULL;
-	size_t wlen=0;
-	struct sbuf *shead=NULL;
-	struct sbuf *stail=NULL;
-	struct sbuf *fhead=NULL;
-	struct sbuf *ftail=NULL;
-	char rcmd=CMD_ERROR;
-	char *rbuf=NULL;
-	size_t rlen=0;
 	int backup_end=0;
 	struct win *win=NULL; // Rabin sliding window.
 	int blkgrps_queue_max=10;
 	int blkgrps_queue=0;
-	struct sbuf *genhead=NULL;
-	struct sbuf *sighead=NULL;
+	struct slist *flist=NULL;
+	struct slist *slist=NULL;
+	struct iobuf *rbuf=NULL;
+	struct iobuf *wbuf=NULL;
 
-	logp("Backup begin\n");
+	logp("Begin backup\n");
+
+	if(!(flist=slist_init())
+	  || !(slist=slist_init())
+	  || !(wbuf=iobuf_init())
+	  || !(rbuf=iobuf_init()))
+	{
+		ret=-1;
+		goto end;
+	}
 
 	if(find_files_init()
 	  || !(win=win_alloc(&conf->rconf)))
@@ -272,43 +275,38 @@ static int backup_client(struct config *conf, int estimate)
 
 	while(!backup_end)
 	{
-		if(!wlen)
+		if(!wbuf->len)
 		{
-			get_wbuf_from_blks(&wcmd, &wbuf, &wlen,
-				&shead, &stail, &sighead, &blkgrps_queue);
-			if(!wlen)
+			get_wbuf_from_blks(wbuf, slist, &blkgrps_queue);
+			if(!wbuf->len)
 			{
-				get_wbuf_from_scan(&wcmd, &wbuf, &wlen,
-					&fhead, &ftail);
+				get_wbuf_from_scan(wbuf, flist);
 			}
 		}
 
-		if(async_rw(&rcmd, &rbuf, &rlen, wcmd, wbuf, &wlen))
+		if(async_rw_ng(rbuf, wbuf))
 		{
 			logp("error in async_rw\n");
 			goto end;
 		}
 
-		if(rbuf && deal_with_read(rcmd, &rbuf, rlen,
-			&shead, &stail, conf, &backup_end, &genhead, &sighead))
-				goto end;
+		if(rbuf->buf && deal_with_read(rbuf, slist, conf, &backup_end))
+			goto end;
 
 		if(scanning)
 		{
-			if(add_to_scan_list(&fhead, &ftail,
-				&scanning, conf, &top_level))
+			if(add_to_scan_list(flist, &scanning, conf, &top_level))
 			{
 				ret=-1;
 				break;
 			}
 		}
 
-		if(blkgrps_queue<blkgrps_queue_max && shead)
+		if(blkgrps_queue<blkgrps_queue_max && slist->head)
 		{
 			printf("get more blocks: %d<%d\n",
 				blkgrps_queue, blkgrps_queue_max);
-			if(add_to_blks_list(conf, shead, stail,
-				win, &genhead, &blkgrps_queue))
+			if(add_to_blks_list(conf, slist, win, &blkgrps_queue))
 			{
 				ret=-1;
 				break;
@@ -316,9 +314,8 @@ static int backup_client(struct config *conf, int estimate)
 			// Hack - the above can return without having got
 			// anything when it runs out of file to read.
 			// So have another go.
-			if(!blkgrps_queue && genhead
-			  && add_to_blks_list(conf, shead, stail,
-				win, &genhead, &blkgrps_queue))
+			if(!blkgrps_queue && slist->mark1
+			  && add_to_blks_list(conf, slist, win, &blkgrps_queue))
 			{
 				ret=-1;
 				break;
@@ -343,12 +340,17 @@ static int backup_client(struct config *conf, int estimate)
 end:
 	find_files_free();
 	win_free(win);
-	sbuf_free_list(fhead); fhead=NULL;
+	slist_free(flist);
+	slist_free(slist);
+	iobuf_free(rbuf);
+	// Write buffer did not allocate 'buf'.
+	wbuf->buf=NULL;
+	iobuf_free(wbuf);
 
 	print_endcounter(conf->p1cntr);
 	//print_filecounters(conf->p1cntr, conf->cntr, ACTION_BACKUP);
 	if(ret) logp("Error in backup\n");
-	logp("Backup end\n");
+	logp("End backup\n");
 
 	return ret;
 }

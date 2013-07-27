@@ -355,7 +355,7 @@ static int client_can_restore(struct config *cconf, const char *client)
 	return cconf->client_can_restore;
 }
 
-static void maybe_do_notification(int status, const char *client, const char *basedir, const char *storagedir, const char *filename, const char *brv, struct config *cconf, struct cntr *p1cntr, struct cntr *cntr)
+static void maybe_do_notification(int status, const char *client, const char *basedir, const char *storagedir, const char *filename, const char *brv, struct config *cconf)
 {
 	int a=0;
 	const char *args[12];
@@ -371,27 +371,27 @@ static void maybe_do_notification(int status, const char *client, const char *ba
 		args[a++]="0";
 		args[a++]=NULL;
 		run_script(args, cconf->notify_failure_arg, cconf->nfcount,
-			cntr, 1, 1);
+			cconf->cntr, 1, 1);
 	}
 	else if((cconf->notify_success_warnings_only
-		&& (p1cntr->warning+cntr->warning)>0)
+		&& (cconf->p1cntr->warning+cconf->cntr->warning)>0)
 	  || (cconf->notify_success_changes_only
-		&& (cntr->total_changed>0))
+		&& (cconf->cntr->total_changed>0))
 	  || (!cconf->notify_success_warnings_only
 		&& !cconf->notify_success_changes_only))
 	{
 		char warnings[32]="";
 		snprintf(warnings, sizeof(warnings), "%llu",
-			p1cntr->warning+cntr->warning);
+			cconf->p1cntr->warning+cconf->cntr->warning);
 		args[0]=cconf->notify_success_script;
 		args[a++]=warnings;
 		args[a++]=NULL;
 		run_script(args, cconf->notify_success_arg, cconf->nscount,
-			cntr, 1, 1);
+			cconf->cntr, 1, 1);
 	}
 }
 
-static int child(struct config *conf, struct config *cconf, const char *client, const char *cversion, const char *incexc, int srestore, char cmd, char *buf, char **gotlock, int *timer_ret, struct cntr *p1cntr, struct cntr *cntr)
+static int child(struct config *conf, struct config *cconf, const char *client, const char *cversion, const char *incexc, int srestore, char cmd, char *buf, char **gotlock, int *timer_ret)
 {
 	int ret=0;
 	char msg[256]="";
@@ -512,10 +512,9 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			async_write_str(CMD_GEN, okstr);
 			ret=do_backup_server(basedir, current, working,
 			  currentdata, finishing, cconf,
-			  manifest, client, cversion, p1cntr, cntr, incexc);
+			  manifest, client, cversion, incexc);
 			maybe_do_notification(ret, client,
-				basedir, current, "log", "backup",
-				cconf, p1cntr, cntr);
+				basedir, current, "log", "backup", cconf);
 		}
 	}
 	else if(cmd==CMD_GEN
@@ -579,7 +578,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			reset_conf_val(restoreregex, &(cconf->regex));
 			async_write_str(CMD_GEN, "ok");
 			ret=do_restore_server(basedir, act, client, srestore,
-				&dir_for_notify, p1cntr, cntr, cconf);
+				&dir_for_notify, cconf);
 			if(dir_for_notify)
 			{
 				maybe_do_notification(ret, client,
@@ -588,7 +587,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 						"restorelog":"verifylog",
 					act==ACTION_RESTORE?
 						"restore":"verify",
-					cconf, p1cntr, cntr);
+					cconf);
 				free(dir_for_notify);
 			}
 		}
@@ -608,7 +607,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 				goto end;
 			}
 			backupno=buf+strlen("delete ");
-			ret=do_delete_server(basedir, backupno, client, p1cntr, cntr);
+			ret=do_delete_server(basedir, backupno, client, cconf);
 		}
 	}
 	else if(cmd==CMD_GEN
@@ -656,7 +655,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			}
 			async_write_str(CMD_GEN, "ok");
 			ret=do_list_server(basedir, backupno,
-				listregex, browsedir, client, p1cntr, cntr);
+				listregex, browsedir, client, cconf);
 		}
 	}
 	else
@@ -1194,7 +1193,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	}
 
 	if(!ret) ret=child(&conf, &cconf, client, cversion, incexc, srestore,
-			cmd, buf, &gotlock, &timer_ret, &p1cntr, &cntr);
+			cmd, buf, &gotlock, &timer_ret);
 
 	if((!ret || cconf.server_script_post_run_on_fail)
 	  && cconf.server_script_post)

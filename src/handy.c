@@ -898,7 +898,7 @@ void reuseaddr(int fd)
 
 #ifndef HAVE_WIN32
 
-void write_status(const char *client, char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr)
+void write_status(const char *client, char phase, const char *path, struct config *conf)
 {
 	static time_t lasttime=0;
 	if(status_wfd>=0 && client)
@@ -920,8 +920,7 @@ void write_status(const char *client, char phase, const char *path, struct cntr 
 		}
 		lasttime=now;
 
-		counters_to_str(wbuf, sizeof(wbuf),
-			client, phase, path, p1cntr, cntr);
+		counters_to_str(wbuf, sizeof(wbuf), client, phase, path, conf);
 
 		w=wbuf;
 		while(*w)

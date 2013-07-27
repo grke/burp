@@ -15,7 +15,7 @@
 #include <math.h>
 #include <dirent.h>
 
-int recursive_hardlink(const char *src, const char *dst, const char *client, struct cntr *p1cntr, struct cntr *cntr, struct config *conf)
+int recursive_hardlink(const char *src, const char *dst, const char *client, struct config *conf)
 {
 	int n=-1;
 	int ret=0;
@@ -62,7 +62,7 @@ int recursive_hardlink(const char *src, const char *dst, const char *client, str
 		if(dir[n]->d_type==DT_DIR)
 		{
 			if(recursive_hardlink(fullpatha, fullpathb, client,
-				p1cntr, cntr, conf))
+				conf))
 			{
 				free(fullpatha);
 				free(fullpathb);
@@ -80,7 +80,7 @@ int recursive_hardlink(const char *src, const char *dst, const char *client, str
 		else if(S_ISDIR(statp.st_mode))
 		{
 			if(recursive_hardlink(fullpatha, fullpathb, client,
-				p1cntr, cntr, conf))
+				conf))
 			{
 				free(fullpatha);
 				free(fullpathb);
@@ -91,7 +91,7 @@ int recursive_hardlink(const char *src, const char *dst, const char *client, str
 		{
 			//logp("hardlinking %s to %s\n", fullpathb, fullpatha);
 			write_status(client, STATUS_SHUFFLING, fullpathb,
-				p1cntr, cntr);
+				conf);
 			if(do_link(fullpatha, fullpathb, &statp, conf,
 				FALSE /* do not overwrite target */))
 			{

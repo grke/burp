@@ -74,4 +74,13 @@ extern void sbuf_add_to_list(struct sbuf *sb, struct slist *slist);
 
 extern int sbuf_pathcmp(struct sbuf *a, struct sbuf *b);
 
+extern void sbuf_from_iobuf_path(struct sbuf *sb, struct iobuf *iobuf);
+extern void sbuf_from_iobuf_attr(struct sbuf *sb, struct iobuf *iobuf);
+extern void sbuf_from_iobuf_link(struct sbuf *sb, struct iobuf *iobuf);
+
+extern void iobuf_from_sbuf_path(struct iobuf *iobuf, struct sbuf *sb);
+extern void iobuf_from_sbuf_attr(struct iobuf *iobuf, struct sbuf *sb);
+extern void iobuf_from_sbuf_link(struct iobuf *iobuf, struct sbuf *sb);
+extern void iobuf_from_str(struct iobuf *iobuf, char cmd, char *str);
+
 #endif

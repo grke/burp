@@ -16,7 +16,7 @@ char *prepend_len(const char *prep, size_t plen, const char *fname, size_t flen,
 
 	if(!(rpath=(char *)malloc(l)))
 	{
-		logp("could not malloc for prepend to %s\n", fname);
+		log_out_of_memory(__FUNCTION__);
 		return NULL;
 	}
 	if(plen) memcpy(rpath,           prep,  plen);

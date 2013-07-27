@@ -80,7 +80,7 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, int
 }
 */
 /*
-static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, enum action act, const char *client, char status, struct cntr *p1cntr, struct cntr *cntr, struct config *cconf)
+static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, enum action act, const char *client, char status, struct config *cconf)
 {
 	//logp("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path);
 	return 0;
@@ -214,7 +214,7 @@ static int check_srestore(struct config *cconf, const char *path)
 
 // a = length of struct bu array
 // i = position to restore from
-static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, regex_t *regex, int srestore, enum action act, const char *client, char **dir_for_notify, struct cntr *p1cntr, struct cntr *cntr, struct config *cconf)
+static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, regex_t *regex, int srestore, enum action act, const char *client, char **dir_for_notify, struct config *cconf)
 {
 	int ret=0;
 	gzFile zp=NULL;
@@ -294,7 +294,7 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 
 	if(cconf->send_client_counters)
 	{
-		if(send_counters(client, p1cntr, cntr))
+		if(send_counters(client, cconf))
 		{
 			ret=-1;
 		}
@@ -412,7 +412,7 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 	return ret;
 }
 
-int do_restore_server(const char *basedir, enum action act, const char *client, int srestore, char **dir_for_notify, struct cntr *p1cntr, struct cntr *cntr, struct config *cconf)
+int do_restore_server(const char *basedir, enum action act, const char *client, int srestore, char **dir_for_notify, struct config *cconf)
 {
 	int a=0;
 	int i=0;
@@ -449,8 +449,7 @@ int do_restore_server(const char *basedir, enum action act, const char *client, 
 		// No backup specified, do the most recent.
 		ret=restore_manifest(arr, a, a-1,
 			tmppath1, tmppath2, regex, srestore, act, client,
-			dir_for_notify,
-			p1cntr, cntr, cconf);
+			dir_for_notify, cconf);
 		found=TRUE;
 	}
 
@@ -463,8 +462,7 @@ int do_restore_server(const char *basedir, enum action act, const char *client, 
 			//logp("got: %s\n", arr[i].path);
 			ret|=restore_manifest(arr, a, i,
 				tmppath1, tmppath2, regex,
-				srestore, act, client, dir_for_notify,
-				p1cntr, cntr, cconf);
+				srestore, act, client, dir_for_notify, cconf);
 			break;
 		}
 	}

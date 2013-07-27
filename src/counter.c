@@ -474,9 +474,11 @@ void print_endcounter(struct cntr *cntr)
 }
 
 #ifndef HAVE_WIN32
-void counters_to_str(char *str, size_t len, const char *client, char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr)
+void counters_to_str(char *str, size_t len, const char *client, char phase, const char *path, struct config *conf)
 {
 	int l=0;
+	struct cntr *cntr=conf->cntr;
+	struct cntr *p1cntr=conf->p1cntr;
 	snprintf(str, len,
 		"%s\t%c\t%c\t%c\t"
 		"%llu/%llu/%llu/%llu/%llu\t"
@@ -785,14 +787,14 @@ int str_to_counters(const char *str, char **client, char *status, char *phase, c
 }
 
 #ifndef HAVE_WIN32
-int send_counters(const char *client, struct cntr *p1cntr, struct cntr *cntr)
+int send_counters(const char *client, struct config *conf)
 {
 	char buf[4096]="";
 	counters_to_str(buf, sizeof(buf),
 		client,
 		STATUS_RUNNING,
 		" " /* normally the path for status server */,
-		p1cntr, cntr);
+		conf);
 	if(async_write_str(CMD_GEN, buf))
 	{
 		logp("Error when sending counters to client.\n");
@@ -802,7 +804,7 @@ int send_counters(const char *client, struct cntr *p1cntr, struct cntr *cntr)
 }
 #endif
 
-int recv_counters(struct cntr *p1cntr, struct cntr *cntr)
+int recv_counters(struct config *conf)
 {
 	size_t l=0;
 	char cmd='\0';
@@ -819,7 +821,7 @@ int recv_counters(struct cntr *p1cntr, struct cntr *cntr)
 		if(buf) free(buf);
 		return -1;
 	}
-	if(str_to_counters(buf, NULL, NULL, NULL, NULL, p1cntr, cntr, NULL, NULL))
+	if(str_to_counters(buf, NULL, NULL, NULL, NULL, conf->p1cntr, conf->cntr, NULL, NULL))
 	{
 		logp("Error when parsing counters from server.\n");
 		if(buf) free(buf);

@@ -26,6 +26,7 @@ struct sbuf *sbuf_init(void)
 void sbuf_free(struct sbuf *sb)
 {
 //	sbuf_close_file(sb);
+	if(!sb) return;
 	if(sb->path) free(sb->path);
 	if(sb->attribs) free(sb->attribs);
 	if(sb->linkto) free(sb->linkto);
@@ -68,6 +69,7 @@ void sbuf_add_to_list(struct sbuf *sb, struct slist *slist)
 		// on the tail.
 		if(!slist->mark1) slist->mark1=slist->tail;
 		if(!slist->mark2) slist->mark2=slist->tail;
+		if(!slist->mark3) slist->mark3=slist->tail;
 	}
 	else
 	{
@@ -96,55 +98,9 @@ int sbuf_is_endfile(struct sbuf *sb)
 	return sb->cmd==CMD_END_FILE;
 }
 
-static int do_sbuf_fill_from_net(struct sbuf *sb, struct cntr *cntr)
-{
-	int ars;
-	if((ars=async_read_stat(NULL, NULL, sb, cntr))) return ars;
-	if((ars=async_read(&(sb->cmd), &(sb->path), &(sb->plen)))) return ars;
-	if(sbuf_is_link(sb))
-	{
-		char cmd=0;
-		if((ars=async_read(&cmd, &(sb->linkto), &(sb->llen))))
-			return ars;
-		if(!cmd_is_link(cmd))
-		{
-			logp("got non-link cmd after link cmd: %c %s\n",
-				cmd, sb->linkto);
-			return -1;
-		}
-	}
-	return 0;
-}
-
-static int do_sbuf_fill_from_file(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
-{
-	int ars;
-	//free_sbuf(sb);
-	if((ars=async_read_stat(fp, zp, sb, cntr))) return ars;
-	if((ars=async_read_fp(fp, zp, &(sb->cmd), &(sb->path), &(sb->plen))))
-		return ars;
-	//sb->path[sb->plen]='\0'; sb->plen--; // avoid new line
-	if(sbuf_is_link(sb))
-	{
-		char cmd;
-		if((ars=async_read_fp(fp, zp, &cmd,
-			&(sb->linkto), &(sb->llen))))
-				return ars;
-	//	sb->linkto[sb->llen]='\0'; sb->llen--; // avoid new line
-		if(!cmd_is_link(cmd))
-		{
-			logp("got non-link cmd after link cmd: %c %s\n",
-				cmd, sb->linkto);
-			return -1;
-		}
-	}
-	return 0;
-}
-
 int sbuf_fill(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
 {
-	if(fp || zp) return do_sbuf_fill_from_file(fp, zp, sb, cntr);
-	return do_sbuf_fill_from_net(sb, cntr);
+	return -1;
 }
 
 static int sbuf_to_fp(struct sbuf *sb, FILE *mp, int write_endfile)
@@ -259,7 +215,7 @@ printf("closed: %s\n", sb->path);
 ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize)
 {
 #ifdef HAVE_WIN32
-	return (ssize_t)bread(sb->bfd, buf, bufsize);
+	return (ssize_t)bread(&sb->bfd, buf, bufsize);
 #else
 	return fread(buf, 1, bufsize, sb->fp);
 #endif

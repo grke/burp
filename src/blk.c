@@ -4,11 +4,20 @@
 #include "blk.h"
 #include "log.h"
 
-struct blk *blk_alloc(uint32_t max_data_length)
+struct blk *blk_alloc(void)
 {
 	struct blk *blk=NULL;
-	if((blk=(struct blk *)calloc(1, sizeof(struct blk)))
-	  && (blk->data=(char *)calloc(1, sizeof(char)*max_data_length)))
+	if((blk=(struct blk *)calloc(1, sizeof(struct blk))))
+		return blk;
+	log_out_of_memory(__FUNCTION__);
+	return NULL;
+}
+
+struct blk *blk_alloc_with_data(uint32_t max_data_length)
+{
+	struct blk *blk=NULL;
+	if(!(blk=blk_alloc())) return NULL;
+	if((blk->data=(char *)calloc(1, sizeof(char)*max_data_length)))
 		return blk;
 	log_out_of_memory(__FUNCTION__);
 	blk_free(blk);
@@ -64,7 +73,7 @@ struct blkgrp *blkgrp_alloc(struct rconf *rconf)
 	blkgrp->buf_end=blkgrp->buf;
 	blkgrp->cp=blkgrp->buf;
 
-	if(!(blkgrp->blks[0]=blk_alloc(rconf->blk_max))) return NULL;
+	if(!(blkgrp->blks[0]=blk_alloc_with_data(rconf->blk_max))) return NULL;
 
 	return blkgrp;
 }

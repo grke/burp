@@ -1281,10 +1281,10 @@ void cmd_to_text(char cmd, char *buf, size_t len)
 			snprintf(buf, len, "File attribute information"); break;
 		case CMD_ATTRIBS_SIGS:
 			snprintf(buf, len, "File attribute information preceding block signatures"); break;
-		case CMD_PATH_SIGS:
-			snprintf(buf, len, "Path for a set of blocks"); break;
 		case CMD_SIG:
 			snprintf(buf, len, "Block signature"); break;
+		case CMD_DATA_REQ:
+			snprintf(buf, len, "Request for block of data"); break;
 		case CMD_FILE:
 			snprintf(buf, len, "Plain file"); break;
 		case CMD_ENC_FILE:

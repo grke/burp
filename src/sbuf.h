@@ -37,6 +37,8 @@ struct sbuf
 	int need_path;
 	int need_link;
 
+	uint64_t no;
+
 	FILE *fp;
 	BFILE bfd;
 	int opened; // Get rid of this.
@@ -54,6 +56,7 @@ struct slist
 	struct sbuf *tail;
 	struct sbuf *mark1;
 	struct sbuf *mark2;
+	struct sbuf *mark3;
 };
 
 extern struct sbuf *sbuf_init(void);

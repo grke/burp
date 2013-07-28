@@ -15,6 +15,8 @@
 #include "sbuf.h"
 
 // Encode a stat structure into a base64 character string.
+// FIX THIS: Do compression from sb and put it near the beginning, before
+// it gets too entrenched in burp2.
 int encode_stat(struct sbuf *sb, int compression)
 {
 	char *p;
@@ -27,6 +29,8 @@ int encode_stat(struct sbuf *sb, int compression)
 	}
 	p=sb->attribs;
 
+	p += to_base64(sb->no, p);
+	*p++ = ' ';
 	p += to_base64(statp->st_dev, p);
 	*p++ = ' ';
 	p += to_base64(statp->st_ino, p);
@@ -69,7 +73,7 @@ int encode_stat(struct sbuf *sb, int compression)
 	*p++ = ' ';
 
 #ifdef HAVE_WIN32
-	p += to_base64(winattr, p);
+	p += to_base64(sb->winattr, p);
 #else
 	p += to_base64(0, p); // place holder
 #endif
@@ -101,12 +105,14 @@ int encode_stat(struct sbuf *sb, int compression)
 #endif
 
 // Decode a stat packet from base64 characters.
-void decode_stat(struct sbuf *sb, int *compression)
+void decode_stat(struct sbuf *sb, uint64_t *file_no, int *compression)
 {
 	const char *p=sb->attribs;
 	struct stat *statp=&sb->statp;
 	int64_t val;
 
+	p += from_base64(&val, p);
+	sb->no=val;
 	p += from_base64(&val, p);
 	plug(statp->st_dev, val);
 	p++;
@@ -209,6 +215,13 @@ static int set_file_times(const char *path, struct utimbuf *ut, struct stat *sta
 		return -1;
 	}
 	return 0;
+}
+
+uint64_t decode_file_no(struct sbuf *sb)
+{
+	int64_t val;
+	from_base64(&val, sb->attribs);
+	return (uint64_t)val;
 }
 
 bool set_attributes(const char *path, char cmd, struct stat *statp, int64_t winattr, struct cntr *cntr)

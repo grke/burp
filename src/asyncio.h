@@ -55,12 +55,6 @@ extern int async_read_expect(char cmd, const char *expect);
 extern void log_and_send(const char *msg);
 extern void log_and_send_oom(const char *function);
 
-// Read from fp if given, is read from our fd.
-extern int async_read_stat(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr);
-
-// not really async
-extern int async_read_fp(FILE *fp, gzFile zp, char *cmd, char **rdst, size_t *rlen);
-
 // for debug purposes
 extern void settimers(int sec, int usec);
 

@@ -11,27 +11,10 @@ static char *gcp=NULL;
 static char *gbuf=NULL;
 static char *gbuf_end=NULL;
 
-static void add_blk_to_list(struct blk *blk, struct sbuf *sb, uint64_t *bindex)
-{
-//printf("add blk to list\n");
-	blk->index=(*bindex)++;
-	if(sb->btail)
-	{
-		// Add a new one.
-		sb->btail->next=blk;
-		sb->btail=blk;
-	}
-	else
-	{
-		// Start the list.
-		sb->bhead=blk;
-		sb->btail=blk;
-		sb->bsighead=blk;
-	}
-}
+static int first=0;
 
 // This is where the magic happens.
-static int blk_read(struct rconf *rconf, char *buf, char *buf_end, struct win *win, struct sbuf *sb, uint64_t *bindex)
+static int blk_read(struct rconf *rconf, char *buf, char *buf_end, struct win *win, struct sbuf *sb, struct blist *blist)
 {
 	char c;
 	char *cp;
@@ -58,7 +41,13 @@ static int blk_read(struct rconf *rconf, char *buf, char *buf_end, struct win *w
 		 && (blk->length == rconf->blk_max
 		  || (win->checksum % rconf->blk_avg) == rconf->prime))
 		{
-			add_blk_to_list(blk, sb, bindex);
+			if(first)
+			{
+				sb->bstart=blk;
+				sb->bsighead=blk;
+				first=0;
+			}
+			blk_add_to_list(blk, blist);
 			blk=NULL;
 
 			// Maybe we have enough blocks to return now.
@@ -73,15 +62,22 @@ static int blk_read(struct rconf *rconf, char *buf, char *buf_end, struct win *w
 	return 0;
 }
 
-int blks_generate(struct rconf *rconf, struct sbuf *sb, struct win *win, uint64_t *bindex)
+int blks_generate(struct config *conf, struct sbuf *sb, struct blist *blist, struct win *win)
 {
 	ssize_t bytes;
 
+	if(!sb->opened)
+	{
+		if(sbuf_open_file(sb, conf)) return -1;
+		first=1;
+	}
+
 	if(!gbuf)
 	{
-		if(!(gbuf=(char *)malloc(rconf->blk_max)))
+		if(!(gbuf=(char *)malloc(conf->rconf.blk_max)))
 		{
 			log_out_of_memory(__FUNCTION__);
+			sbuf_close_file(sb);
 			return -1;
 		}
 		gbuf_end=gbuf;
@@ -92,14 +88,17 @@ int blks_generate(struct rconf *rconf, struct sbuf *sb, struct win *win, uint64_
 	{
 		// Could have got a fill before buf ran out -
 		// need to resume from the same place in that case.
-		if(blk_read(rconf, gbuf, gbuf_end, win, sb, bindex))
+		if(blk_read(&conf->rconf, gbuf, gbuf_end, win, sb, blist))
+		{
+			sbuf_close_file(sb);
 			return -1;
+		}
 	}
-	while((bytes=sbuf_read(sb, gbuf, rconf->blk_max)))
+	while((bytes=sbuf_read(sb, gbuf, conf->rconf.blk_max)))
 	{
 		gcp=gbuf;
 		gbuf_end=gbuf+bytes;
-		if(blk_read(rconf, gbuf, gbuf_end, win, sb, bindex))
+		if(blk_read(&conf->rconf, gbuf, gbuf_end, win, sb, blist))
 			return -1;
 		// Maybe we have enough blocks to return now.
 		//if(sb->b==SIG_MAX) return 0;
@@ -109,9 +108,20 @@ int blks_generate(struct rconf *rconf, struct sbuf *sb, struct win *win, uint64_
 	// Make sure to deal with anything left over.
 	if(blk)
 	{
-		if(blk->length) add_blk_to_list(blk, sb, bindex);
+		if(blk->length)
+		{
+			if(first)
+			{
+				sb->bstart=blk;
+				sb->bsighead=blk;
+				first=0;
+			}
+			blk_add_to_list(blk, blist);
+		}
 		else blk_free(blk);
 		blk=NULL;
 	}
-	return 1;
+	if(blist->tail) sb->bend=blist->tail;
+	sbuf_close_file(sb);
+	return 0;
 }

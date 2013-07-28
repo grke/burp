@@ -4,6 +4,8 @@
 #define COUNTER_VERSION_1	'1'
 #define COUNTER_VERSION_2	'2'
 
+#include "burp.h"
+
 struct cntr
 {
 	unsigned long long gtotal;

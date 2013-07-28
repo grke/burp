@@ -48,8 +48,8 @@ struct sbuf
 	int opened; // Get rid of this.
 
 
-	struct blk *bhead;
-	struct blk *btail;
+	struct blk *bstart;
+	struct blk *bend;
 	struct blk *bsighead;
 
 	struct sbuf *next;

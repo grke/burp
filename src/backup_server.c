@@ -94,7 +94,7 @@ static int already_got_block(struct blk *blk)
 static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config *conf, int *backup_end, gzFile cmanfp)
 {
 	int ret=0;
-	static uint64_t bindex=1;
+	//static uint64_t bindex=1;
 	static struct sbuf *snew=NULL;
 	static struct sbuf *inew=NULL;
 
@@ -140,6 +140,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config
 		case CMD_SIG:
 		{
 			printf("CMD_SIG: %s\n", rbuf->buf);
+/*
 
 			// Goes on slist->mark2
 			struct blk *blk;
@@ -168,6 +169,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config
 				sb->no, blk->index,
 				slist->mark2->path);
 			if(already_got_block(blk)) blk->got=1;
+*/
 
 			goto end;
 		}

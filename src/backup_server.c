@@ -94,6 +94,7 @@ static int already_got_block(struct blk *blk)
 static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config *conf, int *backup_end, gzFile cmanfp)
 {
 	int ret=0;
+	static uint64_t bindex=1;
 	static struct sbuf *snew=NULL;
 	static struct sbuf *inew=NULL;
 
@@ -139,15 +140,15 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config
 		case CMD_SIG:
 		{
 			printf("CMD_SIG: %s\n", rbuf->buf);
-/*
+
 			// Goes on slist->mark2
 			struct blk *blk;
 			struct sbuf *sb=slist->mark2;
 			if(!(blk=blk_alloc())) goto error;
+			blk->index=bindex++;
 			if(sb->btail)
 			{
 				// Need to add a new blk.
-				blk->index=sb->btail->index+1;
 				sb->btail->next=blk;
 				sb->btail=blk;
 			}
@@ -167,7 +168,6 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config
 				sb->no, blk->index,
 				slist->mark2->path);
 			if(already_got_block(blk)) blk->got=1;
-*/
 
 			goto end;
 		}
@@ -241,21 +241,17 @@ end:
 	return ret;
 }
 
-/*
-static int encode_req(struct sbuf *sb, struct blk *blk, char *req)
+static int encode_req(struct blk *blk, char *req)
 {
 	char *p=req;
-	p+=to_base64(sb->no, p);
-	*p++=' ';
 	p+=to_base64(blk->index, p);
 	*p=0;
 	return 0;
 }
-*/
 
 static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist)
 {
-//	static char req[32]="";
+	static char req[32]="";
 	struct blk *blk;
 	struct sbuf *sb=slist->mark3;
 
@@ -266,30 +262,22 @@ static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist)
 	}
 	if(!sb)
 	{
-		slist->mark3=sb;
+		slist->mark3=NULL;
 		return;
 	}
 	if(!(blk=sb->bsighead)) return;
 
-/*
-	if(blkgrp->req_blk<blkgrp->b)
+	encode_req(blk, req);
+	wbuf->cmd=CMD_DATA_REQ;
+	wbuf->buf=req;
+	wbuf->len=strlen(req);
+printf("data request: %lu\n", blk->index);
+
+	if(!(sb->bsighead=blk->next))
 	{
-		encode_req(sb, blkgrp, req);
-//		wbuf->cmd=CMD_DATA_REQ;
-//		wbuf->buf=req;
-//		wbuf->len=strlen(req);
-		blkgrp->req_blk++;
+printf("skip ahead\n");
+		slist->mark3=sb->next;
 	}
-	if(blkgrp->req_blk==blkgrp->b)
-	{
-		sb->bsighead=blkgrp->next;
-		blkgrp->req_blk=0;
-		if(!sb->bsighead)
-		{
-			slist->mark3=sb->next;
-		}
-	}
-*/
 }
 
 static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist)

@@ -33,4 +33,15 @@ extern void        blk_free(struct blk *blk);
 extern int         blk_md5_update(struct blk *blk);
 extern char *      blk_get_md5sum_str(unsigned char *checksum);
 
+struct blist
+{
+	struct blk *head;
+	struct blk *tail;
+	struct blk *mark1;
+};
+
+extern struct blist *blist_init(void);
+extern void blist_free(struct blist *blist);
+extern void blk_add_to_list(struct blk *blk, struct blist *blist);
+
 #endif // __RABIN_BLK_H

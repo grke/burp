@@ -4,9 +4,9 @@
 #include <stdio.h>
 
 #include "rabin_win.h"
-#include "rconf.h"
+#include "conf.h"
 #include "sbuf.h"
 
-extern int blks_generate(struct rconf *rconf, struct sbuf *sb, struct win *win, uint64_t *bindex);
+extern int blks_generate(struct config *conf, struct sbuf *sb, struct blist *blist, struct win *win);
 
 #endif

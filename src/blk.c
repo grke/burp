@@ -59,3 +59,51 @@ int blk_md5_update(struct blk *blk)
 	}
 	return 0;
 }
+
+struct blist *blist_init(void)
+{
+	struct blist *blist;
+	if(!(blist=(struct blist *)calloc(1, sizeof(struct blist))))
+		log_out_of_memory(__FUNCTION__);
+	return blist;
+}
+
+void blist_free(struct blist *blist)
+{
+	struct blk *b;
+	struct blk *head;
+	if(!blist) return;
+	b=blist->head;
+	head=b;
+	while(head)
+	{
+		b=head;
+		head=head->next;
+		blk_free(b);
+	}
+	free(blist);
+}
+
+void blk_add_to_list(struct blk *blk, struct blist *blist)
+{
+	static int bindex=1;
+	blk->index=bindex++;
+	if(blist->tail)
+	{
+		// Add to the end of the list.
+		blist->tail->next=blk;
+		blist->tail=blk;
+		// Markers might have fallen off the end. Start them again
+		// on the tail.
+		if(!blist->mark1) blist->mark1=blist->tail;
+	}
+	else
+	{
+		// Start the list.
+		blist->head=blk;
+		blist->tail=blk;
+		// Pointers to the head that can move along the list
+		// at a different rate.
+		blist->mark1=blk;
+	}
+}

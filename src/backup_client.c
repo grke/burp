@@ -142,22 +142,15 @@ static int add_to_scan_list(struct slist *flist, int *scanning, struct config *c
 	return 0;
 }
 
-static int add_to_blks_list(struct config *conf, struct slist *slist, struct win *win, uint64_t *bindex)
+static int add_to_blks_list(struct config *conf, struct slist *slist, struct blist *blist, struct win *win)
 {
-	int bg_ret;
 	struct sbuf *sb=slist->mark1;
 	if(!sb) return 0;
 printf("get for: %s\n", sb->path);
-	if(!sb->opened)
-	{
-		if(sbuf_open_file(sb, conf)) return -1;
-	}
-	if((bg_ret=blks_generate(&conf->rconf, sb, win, bindex))>0)
-	{
-		sbuf_close_file(sb);
-		slist->mark1=sb->next;
-	}
-	else if(bg_ret<0) return -1; // error
+	if(blks_generate(conf, sb, blist, win)) return -1;
+
+	// If it closed the file, move to the next one.
+	if(!sb->opened) slist->mark1=sb->next;
 
 	return 0;
 }
@@ -289,14 +282,15 @@ static int backup_client(struct config *conf, int estimate)
 	struct win *win=NULL; // Rabin sliding window.
 	struct slist *flist=NULL;
 	struct slist *slist=NULL;
+	struct blist *blist=NULL;
 	struct iobuf *rbuf=NULL;
 	struct iobuf *wbuf=NULL;
-	uint64_t bindex=1;
 
 	logp("Begin backup\n");
 
 	if(!(flist=slist_init())
 	  || !(slist=slist_init())
+	  || !(blist=blist_init())
 	  || !(wbuf=iobuf_init())
 	  || !(rbuf=iobuf_init()))
 	{
@@ -343,7 +337,7 @@ static int backup_client(struct config *conf, int estimate)
 
 		if(slist->head)
 		{
-			if(add_to_blks_list(conf, slist, win, &bindex))
+			if(add_to_blks_list(conf, slist, blist, win))
 			{
 				ret=-1;
 				break;
@@ -374,6 +368,7 @@ end:
 	win_free(win);
 	slist_free(flist);
 	slist_free(slist);
+	blist_free(blist);
 	iobuf_free(rbuf);
 	// Write buffer did not allocate 'buf'.
 	wbuf->buf=NULL;

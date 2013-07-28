@@ -29,7 +29,7 @@ int encode_stat(struct sbuf *sb, int compression)
 	}
 	p=sb->attribs;
 
-	p += to_base64(sb->no, p);
+	p += to_base64(sb->index, p);
 	*p++ = ' ';
 	p += to_base64(statp->st_dev, p);
 	*p++ = ' ';
@@ -112,7 +112,7 @@ void decode_stat(struct sbuf *sb, uint64_t *file_no, int *compression)
 	int64_t val;
 
 	p += from_base64(&val, p);
-	sb->no=val;
+	sb->index=val;
 	p++;
 	p += from_base64(&val, p);
 	plug(statp->st_dev, val);

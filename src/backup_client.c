@@ -55,7 +55,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			sbuf_from_iobuf_path(sb, rbuf);
 			rbuf->buf=NULL;
 			// Give it a number to simplify tracking.
-			sb->no=file_no++;
+			sb->index=file_no++;
 			sbuf_add_to_list(sb, slist);
 printf("got request for: %s\n", sb->path);
 
@@ -151,9 +151,9 @@ printf("get for: %s\n", sb->path);
 
 static void get_wbuf_from_data(struct iobuf *wbuf, struct slist *slist, struct blist *blist)
 {
-	struct sbuf *sb;
 	struct blk *blk;
 	struct blk *mark1;
+	struct sbuf *sb;
 
 	// mark2 cannot go past mark1.
 	if(!(blk=blist->mark2)) return;
@@ -174,6 +174,23 @@ static void get_wbuf_from_data(struct iobuf *wbuf, struct slist *slist, struct b
 		}
 	}
 	blist->mark2=blk;
+
+	// Need to free stuff that is no longer needed.
+/*
+
+	sb=slist->head;
+	while(sb)
+	{
+		if(sb->bend && sb->bend->index < blk->index)
+		{
+printf("FREE %lu (%lu %lu)\n", slist->head->index, sb->bend->index, blk->index);
+			sb=slist->head->next;
+			sbuf_free(slist->head);
+			slist->head=sb;
+		}
+		else break;
+	}
+*/
 }
 
 static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist)
@@ -311,7 +328,11 @@ static int backup_client(struct config *conf, int estimate)
 			}
 		}
 
-		if(slist->head)
+		if(slist->head
+		// Need to limit how many blocks are allocated at once.
+		//  && (!blist->head
+		//	|| blist->tail->index - blist->head->index<1000)
+		)
 		{
 			if(add_to_blks_list(conf, slist, blist, win))
 			{

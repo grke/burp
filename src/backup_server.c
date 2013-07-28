@@ -109,7 +109,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			// New set of stuff incoming. Clean up.
 			if(inew->attribs) free(inew->attribs);
 			sbuf_from_iobuf_attr(inew, rbuf);
-			inew->no=decode_file_no(inew);
+			inew->index=decode_file_no(inew);
 			rbuf->buf=NULL;
 
 			// Need to go through slist to find the matching
@@ -118,12 +118,12 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 				struct sbuf *sb;
 				for(sb=slist->mark2; sb; sb=sb->next)
 				{
-					if(!sb->no) continue;
-					if(inew->no==sb->no) break;
+					if(!sb->index) continue;
+					if(inew->index==sb->index) break;
 				}
 				if(!sb)
 				{
-					logp("Could not find %d in request list %d\n", inew->no, sb->no);
+					logp("Could not find %d in request list %d\n", inew->index, sb->index);
 					goto error;
 				}
 				// Replace the attribs with the more recent
@@ -164,7 +164,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 				blk->weak, blk->strong))
 					goto error;
 			printf("Need data for %lu %lu %s\n",
-				sb->no, blk->index,
+				sb->index, blk->index,
 				slist->mark2->path);
 			if(already_got_block(blk)) blk->got=1;
 
@@ -301,7 +301,7 @@ static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist)
 	// Only need to request the path at this stage.
 	iobuf_from_sbuf_path(wbuf, sb);
 	sb->sent_path=1;
-	sb->no=file_no++;
+	sb->index=file_no++;
 }
 
 static int write_to_manifest(gzFile mzp, struct slist *slist)

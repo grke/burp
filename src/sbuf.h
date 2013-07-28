@@ -41,7 +41,7 @@ struct sbuf
 	int changed;
 	int header_written_to_manifest;
 
-	uint64_t no;
+	uint64_t index;
 
 	FILE *fp;
 	BFILE bfd;

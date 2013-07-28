@@ -22,6 +22,7 @@ struct blk
 	char weak[16+1];
 	char strong[32+1];
 
+	int requested;
 	int got;
 	uint64_t index;
 	struct blk *next;
@@ -37,7 +38,10 @@ struct blist
 {
 	struct blk *head;
 	struct blk *tail;
+// On the client, keep track of last blk requested by the server.
 	struct blk *mark1;
+// On the client, keep track of last data sent by the client.
+	struct blk *mark2;
 };
 
 extern struct blist *blist_init(void);

@@ -42,7 +42,7 @@ static uint64_t decode_req(const char *buf)
 
 //static int data_requests=0;
 
-static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config *conf, int *backup_end)
+static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist  *blist, struct config *conf, int *backup_end)
 {
 	int ret=0;
 	static uint64_t file_no=1;
@@ -64,30 +64,24 @@ printf("got request for: %s\n", sb->path);
 		case CMD_DATA_REQ:
 		{
 			uint64_t index;
-//			struct sbuf *sb;
+			struct blk *blk;
 			index=decode_req(rbuf->buf);
 
 			// Find the matching entry.
 			printf("Request for data: %lu\n", index);
-/*
-			for(sb=slist->head; sb; sb=sb->next)
-				if(sno==sb->no) break;
-			if(!sb)
+
+			//printf("mark1: %lu\n", blist->mark1->index);
+			for(blk=blist->mark1; blk; blk=blk->next)
+				if(index==blk->index) break;
+			if(!blk)
 			{
-				logp("Could not find %d in client list\n", sno);
+				logp("Could not find requested block %lu\n",
+					index);
 				goto error;
 			}
-			printf("It was: %s\n", sb->path);
-			for(blkgrp=sb->bhead; blkgrp; blkgrp=blkgrp->next)
-				if(blkgrp_ind==blkgrp->index) break;
-			if(!blkgrp)
-			{
-				logp("Could not find blkgrp %d for client file %s\n", blkgrp_ind, sb->path);
-				goto error;
-			}
-			blkgrp->blks[req_blk]->requested=1;
-			data_requests++;
-*/
+			blk->requested=1;
+			blist->mark1=blk;
+			printf("Found %lu\n", index);
 			goto end;
 		}
 		case CMD_WARNING:
@@ -155,54 +149,31 @@ printf("get for: %s\n", sb->path);
 	return 0;
 }
 
-static void get_wbuf_from_data(struct iobuf *wbuf, struct slist *slist)
+static void get_wbuf_from_data(struct iobuf *wbuf, struct slist *slist, struct blist *blist)
 {
-/*
 	struct sbuf *sb;
-	if(!data_requests) return;
+	struct blk *blk;
+	struct blk *mark1;
 
-	// Have at least one pending request.
-	// Try to find it, freeing things along the way.
-	while((sb=slist->head))
+	// mark2 cannot go past mark1.
+	if(!(blk=blist->mark2)) return;
+	if(!(mark1=blist->mark1)) return;
+	if(blk->index>=mark1->index) return;
+
+	for(; blk && blk->index < mark1->index; blk=blk->next)
 	{
-		struct blkgrp *bg;
-		while((bg=sb->bhead))
+		if(blk->requested)
 		{
-			for(; bg->req_blk<bg->b; bg->req_blk++)
-			{
-				if(bg->blks[bg->req_blk]->requested)
-				{
-					struct blk *blk=bg->blks[bg->req_blk];
-					printf("WANT TO SEND ");
-					printf("%s%s\n", blk->weak, blk->strong);
-					wbuf->cmd=CMD_DATA;
-					wbuf->buf=blk->data;
-					wbuf->len=blk->length;
-					data_requests--;
-					bg->req_blk++;
-					return;
-				}
-				else
-				{
-					blk_free(bg->blks[bg->req_blk]);
-					bg->blks[bg->req_blk]=NULL;
-				}
-			}
-			if(sb->btail==sb->bhead) sb->btail=sb->bhead->next;
-			if(sb->bsighead==sb->bhead) sb->bsighead=sb->bhead->next;
-			sb->bhead=sb->bhead->next;
+			printf("WANT TO SEND ");
+			printf("%lu %s%s\n", blk->index, blk->weak, blk->strong);
+			wbuf->cmd=CMD_DATA;
+			wbuf->buf=blk->data;
+			wbuf->len=blk->length;
+			blk->requested=0;
+			break;
 		}
-
-		// Move along.
-		slist->head=sb->next;
-		// It is possible for the markers to drop behind.
-		if(slist->tail==sb) slist->tail=sb->next;
-		if(slist->mark1==sb) slist->mark1=sb->next;
-		if(slist->mark2==sb) slist->mark2=sb->next;
-		if(slist->mark3==sb) slist->mark3=sb->next;
-		sbuf_free(sb);
 	}
-*/
+	blist->mark2=blk;
 }
 
 static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist)
@@ -311,7 +282,7 @@ static int backup_client(struct config *conf, int estimate)
 	{
 		if(!wbuf->len)
 		{
-			get_wbuf_from_data(wbuf, slist);
+			get_wbuf_from_data(wbuf, slist, blist);
 			if(!wbuf->len)
 			{
 				get_wbuf_from_blks(wbuf, slist);
@@ -328,8 +299,8 @@ static int backup_client(struct config *conf, int estimate)
 			goto end;
 		}
 
-		if(rbuf->buf && deal_with_read(rbuf, slist, conf, &backup_end))
-			goto end;
+		if(rbuf->buf && deal_with_read(rbuf, slist, blist,
+			conf, &backup_end)) goto end;
 
 		if(scanning)
 		{

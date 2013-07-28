@@ -59,31 +59,3 @@ int blk_md5_update(struct blk *blk)
 	}
 	return 0;
 }
-
-struct blkgrp *blkgrp_alloc(struct rconf *rconf)
-{
-	struct blkgrp *blkgrp=NULL;
-	if(!(blkgrp=(struct blkgrp *)calloc(1, sizeof(struct blkgrp)))
-	// I guess buf could be much bigger than this.
-	  || !(blkgrp->buf=(char *)malloc(rconf->blk_max)))
-	{
-		log_out_of_memory(__FUNCTION__);
-		return NULL;
-	}
-	blkgrp->buf_end=blkgrp->buf;
-	blkgrp->cp=blkgrp->buf;
-
-	if(!(blkgrp->blks[0]=blk_alloc_with_data(rconf->blk_max))) return NULL;
-
-	return blkgrp;
-}
-
-void blkgrp_free(struct blkgrp *blkgrp)
-{
-	int b;
-	if(!blkgrp) return;
-	for(b=0; b<blkgrp->b+1; b++)
-		if(blkgrp->blks[b]) blk_free(blkgrp->blks[b]);
-	if(blkgrp->buf) free(blkgrp->buf);
-	free(blkgrp);
-}

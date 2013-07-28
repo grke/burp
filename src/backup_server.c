@@ -102,7 +102,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config
 	switch(rbuf->cmd)
 	{
 		case CMD_DATA:
-			printf("Got data %d!\n", rbuf->len);
+			printf("Got data %lu!\n", rbuf->len);
 			goto end;
 
 		case CMD_ATTRIBS_SIGS:
@@ -138,52 +138,37 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config
 			return 0;
 		case CMD_SIG:
 		{
+			printf("CMD_SIG: %s\n", rbuf->buf);
+/*
 			// Goes on slist->mark2
 			struct blk *blk;
-			struct blkgrp *blkgrp;
 			struct sbuf *sb=slist->mark2;
-			if(!sb->btail)
+			if(!(blk=blk_alloc())) goto error;
+			if(sb->btail)
 			{
-				// Need the first blkgrp.
-				struct blkgrp *bnew;
-				if(!(bnew=blkgrp_alloc(&conf->rconf)))
-					goto error;
-				sb->bhead=bnew;
-				sb->btail=bnew;
-				sb->bsighead=bnew;
+				// Need to add a new blk.
+				blk->index=sb->btail->index+1;
+				sb->btail->next=blk;
+				sb->btail=blk;
 			}
-			else if(sb->btail->b==SIG_MAX)
+			else
 			{
-				// Need to add a new blkgrp.
-				struct blkgrp *bnew;
-				if(!(bnew=blkgrp_alloc(&conf->rconf)))
-					goto error;
-				bnew->index=sb->btail->index+1;
-				sb->btail->next=bnew;
-				sb->btail=bnew;
+				// Need to add the first blk.
+				sb->bhead=blk;
+				sb->btail=blk;
+				sb->bsighead=blk;
 			}
-			// Now, just add the new sig to the end.
-			blkgrp=sb->btail;
 
-			blk=blkgrp->blks[blkgrp->b];
 			// FIX THIS: Should not just load into strings.
 			if(split_sig(rbuf->buf, rbuf->len,
 				blk->weak, blk->strong))
 					goto error;
-			printf("Need data for %d %d %d %s\n",
-				sb->no, blkgrp->index,  blkgrp->b,
+			printf("Need data for %lu %lu %s\n",
+				sb->no, blk->index,
 				slist->mark2->path);
-/*
-			printf("bg %d blk %d, %s %s\n",
-				blkgrp->index,
-				blkgrp->b,
-				blk->weak, blk->strong);
-*/
 			if(already_got_block(blk)) blk->got=1;
+*/
 
-			// Get space ready for the next one.
-			if(!(blkgrp->blks[++blkgrp->b]=blk_alloc()))
-				goto error;
 			goto end;
 		}
 
@@ -256,22 +241,22 @@ end:
 	return ret;
 }
 
-static int encode_req(struct sbuf *sb, struct blkgrp *blkgrp, char *req)
+/*
+static int encode_req(struct sbuf *sb, struct blk *blk, char *req)
 {
 	char *p=req;
 	p+=to_base64(sb->no, p);
 	*p++=' ';
-	p+=to_base64(blkgrp->index, p);
-	*p++=' ';
-	p+=to_base64(blkgrp->req_blk, p);
+	p+=to_base64(blk->index, p);
 	*p=0;
 	return 0;
 }
+*/
 
 static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist)
 {
-	static char req[32]="";
-	struct blkgrp *blkgrp;
+//	static char req[32]="";
+	struct blk *blk;
 	struct sbuf *sb=slist->mark3;
 
 	while(sb && !(sb->changed))
@@ -284,11 +269,9 @@ static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist)
 		slist->mark3=sb;
 		return;
 	}
-	if(!(blkgrp=sb->bsighead)) return;
+	if(!(blk=sb->bsighead)) return;
 
-	if(blkgrp->req_blk==SIG_MAX)
-		sb->bsighead=blkgrp->next;
-
+/*
 	if(blkgrp->req_blk<blkgrp->b)
 	{
 		encode_req(sb, blkgrp, req);
@@ -297,7 +280,6 @@ static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist)
 //		wbuf->len=strlen(req);
 		blkgrp->req_blk++;
 	}
-/*
 	if(blkgrp->req_blk==blkgrp->b)
 	{
 		sb->bsighead=blkgrp->next;
@@ -345,6 +327,7 @@ static int write_to_manifest(gzFile mzp, struct slist *slist)
 			}
 
 			// Need to write the sigs to the manifest too.
+/*
 			if(sb->bhead) for(; sb->b<sb->bhead->b; sb->b++)
 			{
 				if(sb->bhead->blks[sb->b]->got)
@@ -358,6 +341,7 @@ static int write_to_manifest(gzFile mzp, struct slist *slist)
 					break;
 				}
 			}
+*/
 			break;
 		}
 		else

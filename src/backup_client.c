@@ -32,6 +32,7 @@ static int maybe_send_extrameta(struct sbuf *sb, char cmd, struct cntr *p1cntr)
 #endif
 */
 
+/*
 static int decode_req(const char *buf, uint64_t *sno, uint64_t *blkgrp_ind, uint64_t *req_blk)
 {
 	int64_t val;
@@ -47,8 +48,9 @@ static int decode_req(const char *buf, uint64_t *sno, uint64_t *blkgrp_ind, uint
 	p++;
 	return 0;
 }
+*/
 
-static int data_requests=0;
+//static int data_requests=0;
 
 static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config *conf, int *backup_end)
 {
@@ -66,6 +68,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config
 			sb->no=file_no++;
 			sbuf_add_to_list(sb, slist);
 printf("got request for: %s\n", sb->path);
+
 			return 0;
 		}
 /*
@@ -152,50 +155,23 @@ static int add_to_scan_list(struct slist *flist, int *scanning, struct config *c
 	return 0;
 }
 
-static int add_to_blks_list(struct config *conf, struct slist *slist, struct win *win, int *blkgrps_queue)
+static int add_to_blks_list(struct config *conf, struct slist *slist, struct win *win, uint64_t *bindex)
 {
-	struct blkgrp *bnew=NULL;
-	struct sbuf *genhead=slist->mark1;
-	if(!genhead) return 0;
-printf("get for: %s\n", genhead->path);
-	if(!genhead->opened)
+	int bg_ret;
+	struct sbuf *sb=slist->mark1;
+	if(!sb) return 0;
+printf("get for: %s\n", sb->path);
+	if(!sb->opened)
 	{
-		if(sbuf_open_file(genhead, conf)) return -1;
+		if(sbuf_open_file(sb, conf)) return -1;
 	}
-	if(blks_generate(&bnew, &conf->rconf, genhead, win)) return -1;
-	if(!bnew || !bnew->b)
+	if((bg_ret=blks_generate(&conf->rconf, sb, win, bindex))>0)
 	{
-		// Inefficiency - a whole blkgrp was allocated and then
-		// not used. FIX THIS.
-		blkgrp_free(bnew);
-		// No more to read from the file. Close it and move to the
-		// next file in the list.
-		sbuf_close_file(genhead);
-		slist->mark1=genhead->next;
+		sbuf_close_file(sb);
+		slist->mark1=sb->next;
 	}
-	else
-	{
-		// Got another group of blks.
-		if(genhead->bhead)
-		{
-			// Add to the end of the list.
-			// Each entry keeps a count of its position in the
-			// list for this file.
-			bnew->index=genhead->btail->index+1;
-			genhead->btail->next=bnew;
-			genhead->btail=bnew;
-		}
-		else
-		{
-			// Start new list.
-			genhead->bhead=bnew;
-			genhead->btail=bnew;
-			genhead->bsighead=bnew;
-		}
-		// So as to not use up all the memory, keep track of how many
-		// groups of blocks have been loaded.
-		(*blkgrps_queue)++;
-	}
+	else if(bg_ret<0) return -1; // error
+
 	return 0;
 }
 
@@ -249,17 +225,14 @@ static void get_wbuf_from_data(struct iobuf *wbuf, struct slist *slist)
 */
 }
 
-static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int *blkgrps_queue)
+static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist)
 {
-	static int i=0;
 	static char buf[49];
 	struct blk *blk;
-	struct blkgrp *blkgrp;
 	struct sbuf *sb=slist->mark2;
 
-	if(!sb
-	  || !(blkgrp=sb->bsighead))
-		return;
+	if(!sb) return;
+	if(!(blk=sb->bsighead)) return;
 
 	if(!sb->sent_stat)
 	{
@@ -269,7 +242,6 @@ static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int *blk
 		return;
 	}
 
-	blk=blkgrp->blks[i];
 // Check return of this - maybe should be done elsewhere.
 	blk_md5_update(blk);
 
@@ -280,21 +252,13 @@ static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int *blk
 	snprintf(blk->strong, sizeof(blk->strong),
 		"%s", blk_get_md5sum_str(blk->md5sum));
 	snprintf(buf, sizeof(buf), "%s%s", blk->weak, blk->strong);
-	printf("%s (%d)\n", sb->path, blkgrp->b);
+	printf("%s\n", sb->path);
 	printf("%s\n", buf);
 	iobuf_from_str(wbuf, CMD_SIG, buf);
 
 	// Move on.
-	if(++i<blkgrp->b) return;
-	(*blkgrps_queue)--;
-	i=0;
-	sb->bsighead=blkgrp->next;
-
-// Free stuff for now. FIX THIS: It should not actually be freed until the
-// actual data blocks have been dealt with.
-//	blkgrp_free(blkgrp);
-	if(sb->bsighead) return;
-	slist->mark2=sb->next;
+	if(!(sb->bsighead=blk->next))
+		slist->mark2=sb->next;
 }
 
 static void get_wbuf_from_scan(struct iobuf *wbuf, struct slist *flist)
@@ -336,13 +300,11 @@ static int backup_client(struct config *conf, int estimate)
 	int scanning=1;
 	int backup_end=0;
 	struct win *win=NULL; // Rabin sliding window.
-	// FIX THIS: It should count blks instead of blkgrps.
-	int blkgrps_queue_max=10;
-	int blkgrps_queue=0;
 	struct slist *flist=NULL;
 	struct slist *slist=NULL;
 	struct iobuf *rbuf=NULL;
 	struct iobuf *wbuf=NULL;
+	uint64_t bindex=1;
 
 	logp("Begin backup\n");
 
@@ -366,7 +328,7 @@ static int backup_client(struct config *conf, int estimate)
 			get_wbuf_from_data(wbuf, slist);
 			if(!wbuf->len)
 			{
-				get_wbuf_from_blks(wbuf, slist, &blkgrps_queue);
+				get_wbuf_from_blks(wbuf, slist);
 				if(!wbuf->len)
 				{
 					get_wbuf_from_scan(wbuf, flist);
@@ -392,11 +354,9 @@ static int backup_client(struct config *conf, int estimate)
 			}
 		}
 
-		if(blkgrps_queue<blkgrps_queue_max && slist->head)
+		if(slist->head)
 		{
-			printf("get more blocks: %d<%d\n",
-				blkgrps_queue, blkgrps_queue_max);
-			if(add_to_blks_list(conf, slist, win, &blkgrps_queue))
+			if(add_to_blks_list(conf, slist, win, &bindex))
 			{
 				ret=-1;
 				break;
@@ -404,12 +364,7 @@ static int backup_client(struct config *conf, int estimate)
 			// Hack - the above can return without having got
 			// anything when it runs out of file to read.
 			// So have another go.
-			if(!blkgrps_queue && slist->mark1
-			  && add_to_blks_list(conf, slist, win, &blkgrps_queue))
-			{
-				ret=-1;
-				break;
-			}
+			// Maybe.
 		}
 		else
 		{

@@ -6,32 +6,41 @@
 #include "rabin_win.h"
 #include "log.h"
 
-/*
-static int blks_output(struct rconf *rconf, struct blk **blkbuf, int *b)
+static struct blk *blk=NULL;
+static char *gcp=NULL;
+static char *gbuf=NULL;
+static char *gbuf_end=NULL;
+
+static void add_blk_to_list(struct blk *blk, struct sbuf *sb, uint64_t *bindex)
 {
-	int d;
-	for(d=0; d<*b; d++)
+//printf("add blk to list\n");
+	blk->index=(*bindex)++;
+	if(sb->btail)
 	{
-		if(blk_output(rconf, blkbuf[d]))
-			return -1;
-		blkbuf[d]->length=0;
-		blkbuf[d]->fingerprint=0;
+		// Add a new one.
+		sb->btail->next=blk;
+		sb->btail=blk;
 	}
-	*b=0;
-	return 0;
+	else
+	{
+		// Start the list.
+		sb->bhead=blk;
+		sb->btail=blk;
+		sb->bsighead=blk;
+	}
 }
-*/
 
 // This is where the magic happens.
-static int blk_read(struct rconf *rconf, char *buf, char *buf_end, struct win *win, struct blkgrp *blkgrp)
+static int blk_read(struct rconf *rconf, char *buf, char *buf_end, struct win *win, struct sbuf *sb, uint64_t *bindex)
 {
 	char c;
 	char *cp;
-	struct blk *blk;
 
-	for(cp=blkgrp->cp; cp!=buf_end; cp++)
+	if(!blk && !(blk=blk_alloc_with_data(rconf->blk_max)))
+		return -1;
+
+	for(cp=gcp; cp!=gbuf_end; cp++)
 	{
-		blk=blkgrp->blks[blkgrp->b];
 		c=*cp;
 
 		blk->fingerprint = (blk->fingerprint * rconf->prime) + c;
@@ -49,50 +58,60 @@ static int blk_read(struct rconf *rconf, char *buf, char *buf_end, struct win *w
 		 && (blk->length == rconf->blk_max
 		  || (win->checksum % rconf->blk_avg) == rconf->prime))
 		{
+			add_blk_to_list(blk, sb, bindex);
+			blk=NULL;
+
 			// Maybe we have enough blocks to return now.
-			if(++(blkgrp->b)==SIG_MAX) return 0;
+			//if(++(sb->b)==SIG_MAX) return 0;
+
 			// Make space for another.
-			if(!(blkgrp->blks[blkgrp->b]=
-				blk_alloc_with_data(rconf->blk_max)))
-					return -1;
+			if(!(blk=blk_alloc_with_data(rconf->blk_max)))
+				return -1;
 		}
 	}
-	blkgrp->cp=buf;
+	gcp=buf;
 	return 0;
 }
 
-static int do_blks_generate(struct blkgrp *blkgrp, struct rconf *rconf, struct sbuf *sb, struct win *win)
+int blks_generate(struct rconf *rconf, struct sbuf *sb, struct win *win, uint64_t *bindex)
 {
 	ssize_t bytes;
-	if(blkgrp->cp!=blkgrp->buf)
+
+	if(!gbuf)
 	{
-		// Could have got a fill of blkgrp before buf ran out -
+		if(!(gbuf=(char *)malloc(rconf->blk_max)))
+		{
+			log_out_of_memory(__FUNCTION__);
+			return -1;
+		}
+		gbuf_end=gbuf;
+		gcp=gbuf;
+	}
+
+	if(gcp!=gbuf)
+	{
+		// Could have got a fill before buf ran out -
 		// need to resume from the same place in that case.
-		if(blk_read(rconf, blkgrp->buf, blkgrp->buf_end, win, blkgrp))
+		if(blk_read(rconf, gbuf, gbuf_end, win, sb, bindex))
 			return -1;
 	}
-	while((bytes=sbuf_read(sb, blkgrp->buf, rconf->blk_max)))
+	while((bytes=sbuf_read(sb, gbuf, rconf->blk_max)))
 	{
-		blkgrp->cp=blkgrp->buf;
-		blkgrp->buf_end=blkgrp->buf+bytes;
-		if(blk_read(rconf, blkgrp->buf, blkgrp->buf_end, win, blkgrp))
+		gcp=gbuf;
+		gbuf_end=gbuf+bytes;
+		if(blk_read(rconf, gbuf, gbuf_end, win, sb, bindex))
 			return -1;
 		// Maybe we have enough blocks to return now.
-		if(blkgrp->b==SIG_MAX) return 0;
+		//if(sb->b==SIG_MAX) return 0;
 	}
 
 	// Getting here means there is no more to read from the file.
 	// Make sure to deal with anything left over.
-	if(blkgrp->blks[blkgrp->b]->length) blkgrp->b++;
-	return 0;
-}
-
-int blks_generate(struct blkgrp **bnew, struct rconf *rconf, struct sbuf *sb, struct win *win)
-{
-	if(!(*bnew=blkgrp_alloc(rconf))) return -1;
-
-	if(!do_blks_generate(*bnew, rconf, sb, win)) return 0;
-
-	blkgrp_free(*bnew); *bnew=NULL;
-	return -1;
+	if(blk)
+	{
+		if(blk->length) add_blk_to_list(blk, sb, bindex);
+		else blk_free(blk);
+		blk=NULL;
+	}
+	return 1;
 }

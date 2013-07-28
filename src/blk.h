@@ -19,6 +19,10 @@ struct blk
 	// FIX THIS: Only for ease of use while developing.
 	char weak[16+1];
 	char strong[32+1];
+
+	// On the server, used to mark blocks that we already have.
+	int got;
+	int requested;
 };
 
 extern struct blk *blk_alloc(void);
@@ -32,11 +36,12 @@ typedef struct blkgrp blkgrp_t;
 
 struct blkgrp
 {
-	uint64_t path_index;
+	uint64_t index;
 	char *buf;
 	char *buf_end;
 	char *cp;
 	int b;
+	int req_blk;
 	struct blk *blks[SIG_MAX];
 	struct blkgrp *next;
 };

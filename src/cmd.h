@@ -10,6 +10,7 @@
 #define CMD_ATTRIBS_SIGS 'R'	/* File stat information preceding sigs */
 #define CMD_SIG		'S'	/* Signature of a block */
 #define CMD_DATA_REQ	'D'	/* Request for block data */
+#define CMD_DATA	'B'	/* Block data */
 
 // File types
 #define CMD_FILE	'f'	/* Plain file */

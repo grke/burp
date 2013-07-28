@@ -113,6 +113,7 @@ void decode_stat(struct sbuf *sb, uint64_t *file_no, int *compression)
 
 	p += from_base64(&val, p);
 	sb->no=val;
+	p++;
 	p += from_base64(&val, p);
 	plug(statp->st_dev, val);
 	p++;

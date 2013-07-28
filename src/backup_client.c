@@ -32,23 +32,13 @@ static int maybe_send_extrameta(struct sbuf *sb, char cmd, struct cntr *p1cntr)
 #endif
 */
 
-/*
-static int decode_req(const char *buf, uint64_t *sno, uint64_t *blkgrp_ind, uint64_t *req_blk)
+static uint64_t decode_req(const char *buf)
 {
 	int64_t val;
 	const char *p=buf;
 	p+=from_base64(&val, p);
-	*sno=(uint64_t)val;
-	p++;
-	p+=from_base64(&val, p);
-	*blkgrp_ind=(uint64_t)val;
-	p++;
-	p+=from_base64(&val, p);
-	*req_blk=(uint64_t)val;
-	p++;
-	return 0;
+	return (uint64_t)val;
 }
-*/
 
 //static int data_requests=0;
 
@@ -71,18 +61,15 @@ printf("got request for: %s\n", sb->path);
 
 			return 0;
 		}
-/*
 		case CMD_DATA_REQ:
 		{
-			uint64_t sno;
-			uint64_t blkgrp_ind;
-			uint64_t req_blk;
-			struct sbuf *sb;
-			struct blkgrp *blkgrp;
-			decode_req(rbuf->buf, &sno, &blkgrp_ind, &req_blk);
+			uint64_t index;
+//			struct sbuf *sb;
+			index=decode_req(rbuf->buf);
+
 			// Find the matching entry.
-			printf("Request for data: %d %d %d\n",
-				sno, blkgrp_ind, req_blk);
+			printf("Request for data: %lu\n", index);
+/*
 			for(sb=slist->head; sb; sb=sb->next)
 				if(sno==sb->no) break;
 			if(!sb)
@@ -100,9 +87,9 @@ printf("got request for: %s\n", sb->path);
 			}
 			blkgrp->blks[req_blk]->requested=1;
 			data_requests++;
+*/
 			goto end;
 		}
-*/
 		case CMD_WARNING:
 			logp("WARNING: %s\n", rbuf->cmd);
 			do_filecounter(conf->cntr, rbuf->cmd, 0);

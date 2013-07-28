@@ -7,6 +7,6 @@
 #include "rconf.h"
 #include "sbuf.h"
 
-extern int blks_generate(struct blkgrp **bnew, struct rconf *rconf, struct sbuf *sb, struct win *win);
+extern int blks_generate(struct rconf *rconf, struct sbuf *sb, struct win *win, uint64_t *bindex);
 
 #endif

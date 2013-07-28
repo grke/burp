@@ -47,11 +47,10 @@ struct sbuf
 	BFILE bfd;
 	int opened; // Get rid of this.
 
-	struct blkgrp *bhead;
-	struct blkgrp *btail;
-	struct blkgrp *bsighead;
 
-	int b;
+	struct blk *bhead;
+	struct blk *btail;
+	struct blk *bsighead;
 
 	struct sbuf *next;
 };

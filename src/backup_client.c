@@ -1,5 +1,6 @@
 #include "burp.h"
 #include "prog.h"
+#include "base64.h"
 #include "msg.h"
 #include "lock.h"
 #include "handy.h"
@@ -31,6 +32,24 @@ static int maybe_send_extrameta(struct sbuf *sb, char cmd, struct cntr *p1cntr)
 #endif
 */
 
+static int decode_req(const char *buf, uint64_t *sno, uint64_t *blkgrp_ind, uint64_t *req_blk)
+{
+	int64_t val;
+	const char *p=buf;
+	p+=from_base64(&val, p);
+	*sno=(uint64_t)val;
+	p++;
+	p+=from_base64(&val, p);
+	*blkgrp_ind=(uint64_t)val;
+	p++;
+	p+=from_base64(&val, p);
+	*req_blk=(uint64_t)val;
+	p++;
+	return 0;
+}
+
+static int data_requests=0;
+
 static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config *conf, int *backup_end)
 {
 	int ret=0;
@@ -49,6 +68,38 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config
 printf("got request for: %s\n", sb->path);
 			return 0;
 		}
+/*
+		case CMD_DATA_REQ:
+		{
+			uint64_t sno;
+			uint64_t blkgrp_ind;
+			uint64_t req_blk;
+			struct sbuf *sb;
+			struct blkgrp *blkgrp;
+			decode_req(rbuf->buf, &sno, &blkgrp_ind, &req_blk);
+			// Find the matching entry.
+			printf("Request for data: %d %d %d\n",
+				sno, blkgrp_ind, req_blk);
+			for(sb=slist->head; sb; sb=sb->next)
+				if(sno==sb->no) break;
+			if(!sb)
+			{
+				logp("Could not find %d in client list\n", sno);
+				goto error;
+			}
+			printf("It was: %s\n", sb->path);
+			for(blkgrp=sb->bhead; blkgrp; blkgrp=blkgrp->next)
+				if(blkgrp_ind==blkgrp->index) break;
+			if(!blkgrp)
+			{
+				logp("Could not find blkgrp %d for client file %s\n", blkgrp_ind, sb->path);
+				goto error;
+			}
+			blkgrp->blks[req_blk]->requested=1;
+			data_requests++;
+			goto end;
+		}
+*/
 		case CMD_WARNING:
 			logp("WARNING: %s\n", rbuf->cmd);
 			do_filecounter(conf->cntr, rbuf->cmd, 0);
@@ -130,7 +181,7 @@ printf("get for: %s\n", genhead->path);
 			// Add to the end of the list.
 			// Each entry keeps a count of its position in the
 			// list for this file.
-			bnew->path_index=genhead->btail->path_index+1;
+			bnew->index=genhead->btail->index+1;
 			genhead->btail->next=bnew;
 			genhead->btail=bnew;
 		}
@@ -146,6 +197,56 @@ printf("get for: %s\n", genhead->path);
 		(*blkgrps_queue)++;
 	}
 	return 0;
+}
+
+static void get_wbuf_from_data(struct iobuf *wbuf, struct slist *slist)
+{
+/*
+	struct sbuf *sb;
+	if(!data_requests) return;
+
+	// Have at least one pending request.
+	// Try to find it, freeing things along the way.
+	while((sb=slist->head))
+	{
+		struct blkgrp *bg;
+		while((bg=sb->bhead))
+		{
+			for(; bg->req_blk<bg->b; bg->req_blk++)
+			{
+				if(bg->blks[bg->req_blk]->requested)
+				{
+					struct blk *blk=bg->blks[bg->req_blk];
+					printf("WANT TO SEND ");
+					printf("%s%s\n", blk->weak, blk->strong);
+					wbuf->cmd=CMD_DATA;
+					wbuf->buf=blk->data;
+					wbuf->len=blk->length;
+					data_requests--;
+					bg->req_blk++;
+					return;
+				}
+				else
+				{
+					blk_free(bg->blks[bg->req_blk]);
+					bg->blks[bg->req_blk]=NULL;
+				}
+			}
+			if(sb->btail==sb->bhead) sb->btail=sb->bhead->next;
+			if(sb->bsighead==sb->bhead) sb->bsighead=sb->bhead->next;
+			sb->bhead=sb->bhead->next;
+		}
+
+		// Move along.
+		slist->head=sb->next;
+		// It is possible for the markers to drop behind.
+		if(slist->tail==sb) slist->tail=sb->next;
+		if(slist->mark1==sb) slist->mark1=sb->next;
+		if(slist->mark2==sb) slist->mark2=sb->next;
+		if(slist->mark3==sb) slist->mark3=sb->next;
+		sbuf_free(sb);
+	}
+*/
 }
 
 static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int *blkgrps_queue)
@@ -191,7 +292,7 @@ static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int *blk
 
 // Free stuff for now. FIX THIS: It should not actually be freed until the
 // actual data blocks have been dealt with.
-	blkgrp_free(blkgrp);
+//	blkgrp_free(blkgrp);
 	if(sb->bsighead) return;
 	slist->mark2=sb->next;
 }
@@ -262,10 +363,14 @@ static int backup_client(struct config *conf, int estimate)
 	{
 		if(!wbuf->len)
 		{
-			get_wbuf_from_blks(wbuf, slist, &blkgrps_queue);
+			get_wbuf_from_data(wbuf, slist);
 			if(!wbuf->len)
 			{
-				get_wbuf_from_scan(wbuf, flist);
+				get_wbuf_from_blks(wbuf, slist, &blkgrps_queue);
+				if(!wbuf->len)
+				{
+					get_wbuf_from_scan(wbuf, flist);
+				}
 			}
 		}
 

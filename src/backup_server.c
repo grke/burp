@@ -1,5 +1,6 @@
 #include "burp.h"
 #include "prog.h"
+#include "base64.h"
 #include "msg.h"
 #include "lock.h"
 #include "handy.h"
@@ -77,7 +78,20 @@ static int split_sig(const char *buf, unsigned int s, char *weak, char *strong)
 	return 0;
 }
 
-static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config *conf, int *backup_end)
+static int backup_needed(struct sbuf *sb, gzFile cmanfp)
+{
+	if(sb->cmd==CMD_FILE) return 1;
+	// TODO: Check previous manifest and modification time.
+	return 0;
+}
+
+static int already_got_block(struct blk *blk)
+{
+	// If already got, need to overwrite the references.
+	return 0;
+}
+
+static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config *conf, int *backup_end, gzFile cmanfp)
 {
 	int ret=0;
 	static struct sbuf *snew=NULL;
@@ -87,6 +101,10 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config
 
 	switch(rbuf->cmd)
 	{
+		case CMD_DATA:
+			printf("Got data %d!\n", rbuf->len);
+			goto end;
+
 		case CMD_ATTRIBS_SIGS:
 			// New set of stuff incoming. Clean up.
 			if(inew->attribs) free(inew->attribs);
@@ -140,7 +158,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config
 				struct blkgrp *bnew;
 				if(!(bnew=blkgrp_alloc(&conf->rconf)))
 					goto error;
-				bnew->path_index=sb->btail->path_index+1;
+				bnew->index=sb->btail->index+1;
 				sb->btail->next=bnew;
 				sb->btail=bnew;
 			}
@@ -153,14 +171,15 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config
 				blk->weak, blk->strong))
 					goto error;
 			printf("Need data for %d %d %d %s\n",
-				sb->no, blkgrp->path_index,  blkgrp->b,
+				sb->no, blkgrp->index,  blkgrp->b,
 				slist->mark2->path);
 /*
 			printf("bg %d blk %d, %s %s\n",
-				blkgrp->path_index,
+				blkgrp->index,
 				blkgrp->b,
 				blk->weak, blk->strong);
 */
+			if(already_got_block(blk)) blk->got=1;
 
 			// Get space ready for the next one.
 			if(!(blkgrp->blks[++blkgrp->b]=blk_alloc()))
@@ -197,6 +216,8 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config
 					snew->need_link=1;
 				else
 				{
+					if(backup_needed(snew, cmanfp))
+						snew->changed=1;
 					sbuf_add_to_list(snew, slist);
 					snew=NULL;
 				}
@@ -235,24 +256,67 @@ end:
 	return ret;
 }
 
-static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist)
+static int encode_req(struct sbuf *sb, struct blkgrp *blkgrp, char *req)
 {
-}
-
-static int backup_needed(struct sbuf *sb, gzFile cmanfp)
-{
-	if(sb->cmd==CMD_FILE) return 1;
-	// TODO: Check previous manifest and modification time.
+	char *p=req;
+	p+=to_base64(sb->no, p);
+	*p++=' ';
+	p+=to_base64(blkgrp->index, p);
+	*p++=' ';
+	p+=to_base64(blkgrp->req_blk, p);
+	*p=0;
 	return 0;
 }
 
-static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist, gzFile cmanfp)
+static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist)
+{
+	static char req[32]="";
+	struct blkgrp *blkgrp;
+	struct sbuf *sb=slist->mark3;
+
+	while(sb && !(sb->changed))
+	{
+		printf("Changed %d: %s\n", sb->changed, sb->path);
+		sb=sb->next;
+	}
+	if(!sb)
+	{
+		slist->mark3=sb;
+		return;
+	}
+	if(!(blkgrp=sb->bsighead)) return;
+
+	if(blkgrp->req_blk==SIG_MAX)
+		sb->bsighead=blkgrp->next;
+
+	if(blkgrp->req_blk<blkgrp->b)
+	{
+		encode_req(sb, blkgrp, req);
+//		wbuf->cmd=CMD_DATA_REQ;
+//		wbuf->buf=req;
+//		wbuf->len=strlen(req);
+		blkgrp->req_blk++;
+	}
+/*
+	if(blkgrp->req_blk==blkgrp->b)
+	{
+		sb->bsighead=blkgrp->next;
+		blkgrp->req_blk=0;
+		if(!sb->bsighead)
+		{
+			slist->mark3=sb->next;
+		}
+	}
+*/
+}
+
+static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist)
 {
 	static uint64_t file_no=1;
 	struct sbuf *sb=slist->mark1;
 	if(!sb) return;
 
-	if(sb->sent_path || !backup_needed(sb, cmanfp))
+	if(sb->sent_path || !sb->changed)
 	{
 		slist->mark1=sb->next;
 		return;
@@ -262,6 +326,57 @@ static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist, gzFile 
 	iobuf_from_sbuf_path(wbuf, sb);
 	sb->sent_path=1;
 	sb->no=file_no++;
+}
+
+static int write_to_manifest(gzFile mzp, struct slist *slist)
+{
+	struct sbuf *sb;
+	if(!slist) return 0;
+
+	while((sb=slist->head))
+	{
+		if(sb->changed)
+		{
+			// Changed...
+			if(!sb->header_written_to_manifest)
+			{
+				if(sbuf_to_manifest(sb, NULL, mzp)) return -1;
+				sb->header_written_to_manifest=1;
+			}
+
+			// Need to write the sigs to the manifest too.
+			if(sb->bhead) for(; sb->b<sb->bhead->b; sb->b++)
+			{
+				if(sb->bhead->blks[sb->b]->got)
+				{
+					// FIX THIS: Write it to the manifest.
+					continue;
+				}
+				else
+				{
+					// Still waiting.
+					break;
+				}
+			}
+			break;
+		}
+		else
+		{
+			// No change, can go straight in.
+			if(sbuf_to_manifest(sb, NULL, mzp)) return -1;
+			// Also need to write in the unchanged sigs.
+
+			// Move along.
+			slist->head=sb->next;
+			// It is possible for the markers to drop behind.
+			if(slist->tail==sb) slist->tail=sb->next;
+			if(slist->mark1==sb) slist->mark1=sb->next;
+			if(slist->mark2==sb) slist->mark2=sb->next;
+			if(slist->mark3==sb) slist->mark3=sb->next;
+			sbuf_free(sb);
+		}
+	}
+	return 0;
 }
 
 static int backup_server(gzFile cmanfp, const char *manifest, const char *client, struct config *conf)
@@ -288,7 +403,7 @@ static int backup_server(gzFile cmanfp, const char *manifest, const char *client
 			get_wbuf_from_sigs(wbuf, slist);
 			if(!wbuf->len)
 			{
-				get_wbuf_from_files(wbuf, slist, cmanfp);
+				get_wbuf_from_files(wbuf, slist);
 			}
 		}
 
@@ -299,7 +414,10 @@ static int backup_server(gzFile cmanfp, const char *manifest, const char *client
 			goto end;
 		}
 
-		if(rbuf->buf && deal_with_read(rbuf, slist, conf, &backup_end))
+		if(rbuf->buf && deal_with_read(rbuf, slist, conf,
+			&backup_end, cmanfp)) goto end;
+
+		if(write_to_manifest(mzp, slist))
 			goto end;
 	}
 	ret=0;

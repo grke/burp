@@ -80,6 +80,7 @@ void sbuf_add_to_list(struct sbuf *sb, struct slist *slist)
 		// at a different rate.
 		slist->mark1=sb;
 		slist->mark2=sb;
+		slist->mark3=sb;
 	}
 }
 
@@ -113,6 +114,7 @@ static int sbuf_to_fp(struct sbuf *sb, FILE *mp, int write_endfile)
 		if(sb->linkto
 		  && send_msg_fp(mp, sb->cmd, sb->linkto, sb->llen))
 			return -1;
+/*
 		if(write_endfile && (sb->cmd==CMD_FILE
 		  || sb->cmd==CMD_ENC_FILE
 		  || sb->cmd==CMD_METADATA
@@ -122,6 +124,7 @@ static int sbuf_to_fp(struct sbuf *sb, FILE *mp, int write_endfile)
 			if(send_msg_fp(mp, CMD_END_FILE,
 				sb->endfile, sb->elen)) return -1;
 		}
+*/
 	}
 	return 0;
 }
@@ -136,6 +139,7 @@ static int sbuf_to_zp(struct sbuf *sb, gzFile zp, int write_endfile)
 		if(sb->linkto
 		  && send_msg_zp(zp, sb->cmd, sb->linkto, sb->llen))
 			return -1;
+/*
 		if(write_endfile && (sb->cmd==CMD_FILE
 		  || sb->cmd==CMD_ENC_FILE
 		  || sb->cmd==CMD_METADATA
@@ -145,6 +149,7 @@ static int sbuf_to_zp(struct sbuf *sb, gzFile zp, int write_endfile)
 			if(send_msg_zp(zp, CMD_END_FILE,
 				sb->endfile, sb->elen)) return -1;
 		}
+*/
 	}
 	return 0;
 }

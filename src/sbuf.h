@@ -32,10 +32,14 @@ struct sbuf
 	int sent_stat;
 	int sent_path;
 	int sent_link;
+	int sent_data_requests;
 
 	// Keep track of what needs to be received.
 	int need_path;
 	int need_link;
+
+	int changed;
+	int header_written_to_manifest;
 
 	uint64_t no;
 
@@ -47,6 +51,8 @@ struct sbuf
 	struct blkgrp *btail;
 	struct blkgrp *bsighead;
 
+	int b;
+
 	struct sbuf *next;
 };
 
@@ -54,8 +60,11 @@ struct slist
 {
 	struct sbuf *head;
 	struct sbuf *tail;
+// On server, marks the most recent file requested.
 	struct sbuf *mark1;
+// On server, marks where incoming sigs will be added.
 	struct sbuf *mark2;
+// On server, marks ???
 	struct sbuf *mark3;
 };
 

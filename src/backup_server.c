@@ -91,10 +91,9 @@ static int already_got_block(struct blk *blk)
 	return 0;
 }
 
-static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config *conf, int *backup_end, gzFile cmanfp)
+static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist *blist, struct config *conf, int *backup_end, gzFile cmanfp)
 {
 	int ret=0;
-	//static uint64_t bindex=1;
 	static struct sbuf *snew=NULL;
 	static struct sbuf *inew=NULL;
 
@@ -133,6 +132,14 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config
 				sb->attribs=inew->attribs;
 				sb->alen=inew->alen;
 				inew->attribs=NULL;
+
+				slist->mark2->bend=blist->tail;
+
+				// FUCKED.
+				if(!slist->mark3->bsighead)
+				{
+					slist->mark3=slist->mark3->next;
+				}
 				slist->mark2=sb;
 				// Incoming sigs now need to get added to mark2
 			}
@@ -140,24 +147,16 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config
 		case CMD_SIG:
 		{
 			printf("CMD_SIG: %s\n", rbuf->buf);
-/*
 
 			// Goes on slist->mark2
 			struct blk *blk;
 			struct sbuf *sb=slist->mark2;
 			if(!(blk=blk_alloc())) goto error;
-			blk->index=bindex++;
-			if(sb->btail)
+
+			blk_add_to_list(blk, blist);
+			if(!sb->bstart)
 			{
-				// Need to add a new blk.
-				sb->btail->next=blk;
-				sb->btail=blk;
-			}
-			else
-			{
-				// Need to add the first blk.
-				sb->bhead=blk;
-				sb->btail=blk;
+				sb->bstart=blk;
 				sb->bsighead=blk;
 			}
 
@@ -169,7 +168,6 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config
 				sb->no, blk->index,
 				slist->mark2->path);
 			if(already_got_block(blk)) blk->got=1;
-*/
 
 			goto end;
 		}
@@ -256,18 +254,22 @@ static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist)
 	static char req[32]="";
 	struct blk *blk;
 	struct sbuf *sb=slist->mark3;
+printf("a\n");
 
 	while(sb && !(sb->changed))
 	{
 		printf("Changed %d: %s\n", sb->changed, sb->path);
 		sb=sb->next;
 	}
+printf("b\n");
 	if(!sb)
 	{
 		slist->mark3=NULL;
 		return;
 	}
+printf("c\n");
 	if(!(blk=sb->bsighead)) return;
+printf("d\n");
 
 	encode_req(blk, req);
 	wbuf->cmd=CMD_DATA_REQ;
@@ -275,10 +277,18 @@ static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist)
 	wbuf->len=strlen(req);
 printf("data request: %lu\n", blk->index);
 
-	if(!(sb->bsighead=blk->next))
+	// Move on.
+	if(blk==sb->bend)
 	{
-printf("skip ahead\n");
+printf("e\n");
 		slist->mark3=sb->next;
+		sb->bsighead=sb->bstart;
+	}
+	else
+	{
+printf("f\n");
+		sb->bsighead=blk->next;
+printf("g: %s\n", sb->bsighead?"yes":"no");
 	}
 }
 
@@ -359,12 +369,14 @@ static int backup_server(gzFile cmanfp, const char *manifest, const char *client
 	gzFile mzp=NULL;
 	int backup_end=0;
 	struct slist *slist=NULL;
+	struct blist *blist=NULL;
 	struct iobuf *rbuf=NULL;
 	struct iobuf *wbuf=NULL;
 
 	logp("Begin backup\n");
 
 	if(!(slist=slist_init())
+	  || !(blist=blist_init())
 	  || !(wbuf=iobuf_init())
 	  || !(rbuf=iobuf_init())
 	  || !(mzp=gzopen_file(manifest, comp_level(conf))))
@@ -388,11 +400,11 @@ static int backup_server(gzFile cmanfp, const char *manifest, const char *client
 			goto end;
 		}
 
-		if(rbuf->buf && deal_with_read(rbuf, slist, conf,
+		if(rbuf->buf && deal_with_read(rbuf, slist, blist, conf,
 			&backup_end, cmanfp)) goto end;
 
-		if(write_to_manifest(mzp, slist))
-			goto end;
+//		if(write_to_manifest(mzp, slist))
+//			goto end;
 	}
 	ret=0;
 
@@ -404,6 +416,7 @@ end:
 	}
 	logp("End backup\n");
 	slist_free(slist);
+	blist_free(blist);
 	iobuf_free(rbuf);
 	// Write buffer did not allocate 'buf'. 
 	wbuf->buf=NULL;

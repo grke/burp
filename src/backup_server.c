@@ -133,13 +133,12 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 				sb->alen=inew->alen;
 				inew->attribs=NULL;
 
+				// Mark the end of the previous file.
 				slist->mark2->bend=blist->tail;
 
-				// FUCKED.
 				if(!slist->mark3->bsighead)
-				{
 					slist->mark3=slist->mark3->next;
-				}
+
 				slist->mark2=sb;
 				// Incoming sigs now need to get added to mark2
 			}
@@ -254,22 +253,22 @@ static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist)
 	static char req[32]="";
 	struct blk *blk;
 	struct sbuf *sb=slist->mark3;
-printf("a\n");
 
 	while(sb && !(sb->changed))
 	{
 		printf("Changed %d: %s\n", sb->changed, sb->path);
 		sb=sb->next;
 	}
-printf("b\n");
 	if(!sb)
 	{
 		slist->mark3=NULL;
 		return;
 	}
-printf("c\n");
 	if(!(blk=sb->bsighead)) return;
-printf("d\n");
+
+	// If we do not know where the file ends yet, avoid falling off the
+	// end of the list.
+	if(!sb->bend && !blk->next) return;
 
 	encode_req(blk, req);
 	wbuf->cmd=CMD_DATA_REQ;
@@ -280,16 +279,11 @@ printf("data request: %lu\n", blk->index);
 	// Move on.
 	if(blk==sb->bend)
 	{
-printf("e\n");
 		slist->mark3=sb->next;
 		sb->bsighead=sb->bstart;
 	}
 	else
-	{
-printf("f\n");
 		sb->bsighead=blk->next;
-printf("g: %s\n", sb->bsighead?"yes":"no");
-	}
 }
 
 static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist)

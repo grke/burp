@@ -11,6 +11,7 @@
 #include "auth_server.h"
 #include "backup_server.h"
 #include "current_backups_server.h"
+#include "attribs.h"
 
 static int write_incexc(const char *realworking, const char *incexc)
 {
@@ -64,6 +65,18 @@ static int open_log(const char *realworking, const char *client, const char *cve
 	return 0;
 }
 
+static int split_sig(const char *buf, unsigned int s, char *weak, char *strong)
+{
+	if(s!=48)
+	{
+		fprintf(stderr, "Signature wrong length: %u\n", s);
+		return -1;
+	}
+	memcpy(weak, buf, 16);
+	memcpy(strong, buf+16, 32);
+	return 0;
+}
+
 static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config *conf, int *backup_end)
 {
 	int ret=0;
@@ -75,33 +88,24 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config
 	switch(rbuf->cmd)
 	{
 		case CMD_ATTRIBS_SIGS:
-			if(inew->path)
-			{
-				// New set of stuff incoming. Clean up.
-				if(inew->attribs) free(inew->attribs);
-				free(inew->path); inew->path=NULL;
-			}
+			// New set of stuff incoming. Clean up.
+			if(inew->attribs) free(inew->attribs);
 			sbuf_from_iobuf_attr(inew, rbuf);
-			inew->need_path=1;
+			inew->no=decode_file_no(inew);
 			rbuf->buf=NULL;
-			return 0;
-		case CMD_PATH_SIGS:
-			// Attribs should come first, so if we have not
-			// already set up inew->attribs, it is an error.
-			if(!inew->attribs) goto error;
-			sbuf_from_iobuf_path(inew, rbuf);
-			inew->need_path=0;
-			rbuf->buf=NULL;
+
 			// Need to go through slist to find the matching
 			// entry.
 			{
-				int p=-1;
-				struct sbuf *sb=slist->mark2;
-				while(sb && (p=sbuf_pathcmp(inew, sb))>0)
-					sb=sb->next;
-				if(p!=0)
+				struct sbuf *sb;
+				for(sb=slist->mark2; sb; sb=sb->next)
 				{
-					logp("Could not find %s in request list\n", inew->path);
+					if(!sb->no) continue;
+					if(inew->no==sb->no) break;
+				}
+				if(!sb)
+				{
+					logp("Could not find %d in request list %d\n", inew->no, sb->no);
 					goto error;
 				}
 				// Replace the attribs with the more recent
@@ -115,38 +119,54 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config
 			}
 			return 0;
 		case CMD_SIG:
-			printf("sig for %c:%s\n",
-				slist->mark2->cmd, slist->mark2->path);
-			printf("%c:%s\n", rbuf->cmd, rbuf->buf);
+		{
+			// Goes on slist->mark2
+			struct blk *blk;
+			struct blkgrp *blkgrp;
+			struct sbuf *sb=slist->mark2;
+			if(!sb->btail)
 			{
-				// Goes on slist->mark2
-				struct sbuf *sb=slist->mark2;
-				if(!sb->btail)
-				{
-					// Need the first blkgrp.
-					struct blkgrp *bnew;
-					if(!(bnew=blkgrp_alloc(&conf->rconf)))
-						goto error;
-					sb->bhead=bnew;
-					sb->btail=bnew;
-					sb->bsighead=bnew;
-				}
-				else if(sb->btail->b==SIG_MAX)
-				{
-					// Need to add a new blkgrp.
-					struct blkgrp *bnew;
-					if(!(bnew=blkgrp_alloc(&conf->rconf)))
-						goto error;
-					bnew->path_index=sb->btail->path_index+1;
-					sb->btail->next=bnew;
-					sb->btail=bnew;
-				}
-				// Now, just add the new sig to the end.
-
-				// FIX THIS - Make server side blkgrp/blk
-				// allocation smaller than client side.
+				// Need the first blkgrp.
+				struct blkgrp *bnew;
+				if(!(bnew=blkgrp_alloc(&conf->rconf)))
+					goto error;
+				sb->bhead=bnew;
+				sb->btail=bnew;
+				sb->bsighead=bnew;
 			}
+			else if(sb->btail->b==SIG_MAX)
+			{
+				// Need to add a new blkgrp.
+				struct blkgrp *bnew;
+				if(!(bnew=blkgrp_alloc(&conf->rconf)))
+					goto error;
+				bnew->path_index=sb->btail->path_index+1;
+				sb->btail->next=bnew;
+				sb->btail=bnew;
+			}
+			// Now, just add the new sig to the end.
+			blkgrp=sb->btail;
+
+			blk=blkgrp->blks[blkgrp->b];
+			// FIX THIS: Should not just load into strings.
+			if(split_sig(rbuf->buf, rbuf->len,
+				blk->weak, blk->strong))
+					goto error;
+			printf("Need data for %d %d %d %s\n",
+				sb->no, blkgrp->path_index,  blkgrp->b,
+				slist->mark2->path);
+/*
+			printf("bg %d blk %d, %s %s\n",
+				blkgrp->path_index,
+				blkgrp->b,
+				blk->weak, blk->strong);
+*/
+
+			// Get space ready for the next one.
+			if(!(blkgrp->blks[++blkgrp->b]=blk_alloc()))
+				goto error;
 			goto end;
+		}
 
 		case CMD_ATTRIBS:
 		{
@@ -228,6 +248,7 @@ static int backup_needed(struct sbuf *sb, gzFile cmanfp)
 
 static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist, gzFile cmanfp)
 {
+	static uint64_t file_no=1;
 	struct sbuf *sb=slist->mark1;
 	if(!sb) return;
 
@@ -238,10 +259,9 @@ static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist, gzFile 
 	}
 
 	// Only need to request the path at this stage.
-	wbuf->cmd=sb->cmd;
-	wbuf->buf=sb->path;
-	wbuf->len=sb->plen;
+	iobuf_from_sbuf_path(wbuf, sb);
 	sb->sent_path=1;
+	sb->no=file_no++;
 }
 
 static int backup_server(gzFile cmanfp, const char *manifest, const char *client, struct config *conf)

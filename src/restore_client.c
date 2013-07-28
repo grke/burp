@@ -617,8 +617,8 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore)
 // Windows needs to have the VSS data written first, and the actual data
 // written immediately afterwards. The server is transferring them in two
 // chunks. So, leave bfd open after a Windows metadata transfer.
-//	BFILE bfd;
 #ifdef HAVE_WIN32
+	BFILE bfd;
 	binit(&bfd, 0);
 #endif
 

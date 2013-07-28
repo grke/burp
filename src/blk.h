@@ -15,9 +15,14 @@ struct blk
 	uint32_t length;
 	uint64_t fingerprint;
 	unsigned char md5sum[MD5_DIGEST_LENGTH+1];
+
+	// FIX THIS: Only for ease of use while developing.
+	char weak[16+1];
+	char strong[32+1];
 };
 
-extern struct blk *blk_alloc(uint32_t max_data_length);
+extern struct blk *blk_alloc(void);
+extern struct blk *blk_alloc_with_data(uint32_t max_data_length);
 extern void        blk_free(struct blk *blk);
 extern int         blk_md5_update(struct blk *blk);
 extern char *      blk_get_md5sum_str(unsigned char *checksum);

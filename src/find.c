@@ -896,8 +896,8 @@ int ftype_to_cmd(struct sbuf *sb, struct config *conf, bool top_level)
 #ifdef HAVE_WIN32
 	if(sb->winattr & FILE_ATTRIBUTE_ENCRYPTED)
 	{
-		if(sb->type==FT_REG
-		  || sb->type==FT_DIR)
+		if(sb->ftype==FT_REG
+		  || sb->ftype==FT_DIR)
 		{
 			sb->cmd=CMD_EFS_FILE;
 			sb->plen=strlen(sb->path);
@@ -906,7 +906,7 @@ int ftype_to_cmd(struct sbuf *sb, struct config *conf, bool top_level)
 
 		// Hopefully, here is never reached.
 		logw(conf->p1cntr, "EFS type %d not yet supported: %s",
-			sb->type, sb->path);
+			sb->ftype, sb->path);
 		return -1;
 	}
 #endif

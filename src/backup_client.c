@@ -34,6 +34,7 @@ static int maybe_send_extrameta(struct sbuf *sb, char cmd, struct cntr *p1cntr)
 static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config *conf, int *backup_end)
 {
 	int ret=0;
+	static uint64_t file_no=1;
 	switch(rbuf->cmd)
 	{
 		case CMD_FILE:
@@ -42,6 +43,8 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct config
 			if(!(sb=sbuf_init())) goto error;
 			sbuf_from_iobuf_path(sb, rbuf);
 			rbuf->buf=NULL;
+			// Give it a number to simplify tracking.
+			sb->no=file_no++;
 			sbuf_add_to_list(sb, slist);
 printf("got request for: %s\n", sb->path);
 			return 0;
@@ -148,7 +151,7 @@ printf("get for: %s\n", genhead->path);
 static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int *blkgrps_queue)
 {
 	static int i=0;
-	static char buf[48];
+	static char buf[49];
 	struct blk *blk;
 	struct blkgrp *blkgrp;
 	struct sbuf *sb=slist->mark2;
@@ -164,26 +167,18 @@ static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int *blk
 		sb->sent_stat=1;
 		return;
 	}
-	else if(!sb->sent_path)
-	{
-		iobuf_from_sbuf_path(wbuf, sb);
-		wbuf->cmd=CMD_PATH_SIGS;  // hack
-		sb->sent_path=1;
-		return;
-	}
 
 	blk=blkgrp->blks[i];
 // Check return of this - maybe should be done elsewhere.
 	blk_md5_update(blk);
-	snprintf(buf, sizeof(buf),
-		// Fingerprint is 4 bytes.
-		"%016lX"
-		// MD5sum is 32 characters long.
-		"%s"
-		,
-		blk->fingerprint,
-		blk_get_md5sum_str(blk->md5sum)
-		);
+
+	// Fingerprint is 4 bytes.
+	snprintf(blk->weak, sizeof(blk->weak),
+		"%016lX", blk->fingerprint);
+	// MD5sum is 32 characters long.
+	snprintf(blk->strong, sizeof(blk->strong),
+		"%s", blk_get_md5sum_str(blk->md5sum));
+	snprintf(buf, sizeof(buf), "%s%s", blk->weak, blk->strong);
 	printf("%s (%d)\n", sb->path, blkgrp->b);
 	printf("%s\n", buf);
 	iobuf_from_str(wbuf, CMD_SIG, buf);
@@ -240,6 +235,7 @@ static int backup_client(struct config *conf, int estimate)
 	int scanning=1;
 	int backup_end=0;
 	struct win *win=NULL; // Rabin sliding window.
+	// FIX THIS: It should count blks instead of blkgrps.
 	int blkgrps_queue_max=10;
 	int blkgrps_queue=0;
 	struct slist *flist=NULL;

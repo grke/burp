@@ -36,6 +36,7 @@ FILED_OBJS = \
 	$(OBJDIR)/base64.o \
 	$(OBJDIR)/berrno.o \
 	$(OBJDIR)/bfile.o \
+	$(OBJDIR)/blk.o \
 	$(OBJDIR)/ca_client.o \
 	$(OBJDIR)/client.o \
 	$(OBJDIR)/client_vss.o \
@@ -55,6 +56,8 @@ FILED_OBJS = \
 	$(OBJDIR)/msg.o \
 	$(OBJDIR)/prepend.o \
 	$(OBJDIR)/prog.o \
+	$(OBJDIR)/rabin.o \
+	$(OBJDIR)/rabin_win.o \
 	$(OBJDIR)/regexp.o \
 	$(OBJDIR)/restore_client.o \
 	$(OBJDIR)/sbuf.o \

@@ -237,8 +237,13 @@ static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist)
 	iobuf_from_str(wbuf, CMD_SIG, buf);
 
 	// Move on.
-	if(!(sb->bsighead=blk->next))
+	if(blk==sb->bend)
+	{
 		slist->mark2=sb->next;
+		sb->bsighead=sb->bstart;
+	}
+	else
+		sb->bsighead=blk->next;
 }
 
 static void get_wbuf_from_scan(struct iobuf *wbuf, struct slist *flist)

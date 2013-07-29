@@ -10,19 +10,37 @@
 <FONT COLOR=#99CCFF>
 <pre>
 QUICK START
+===========
 
+HOW TO BUILD
+------------
 The following assumes that you are not installing the burp server via a
 distribution's package management system.
 
 You need to compile burp on a unix-based operating system first. Make sure that
 you have openssl, zlib, librsync and uthash libraries and development libraries
-installed. With debian or ubuntu, this command should install them for you:
+installed. 
 
-apt-get install librsync-dev libz-dev libssl-dev uthash-dev
+Debian/Ubuntu dependencies:
+   
+    With debian or ubuntu, this command should install them for you:
+    apt-get install librsync-dev libz-dev libssl-dev uthash-dev
 
-Change to the burp source directory and run "./configure", then "make". All
-being well, burp will compile successfully. Then run "make install" as root to
+RHEL/CentOS dependencies:
+	
+    On RHEL, you need to install below crucial packages:
+    yum install zlib-devel openssl-devel ncurses-devel libacl-devel openssl-perl
+
+    You also need non-default packages librsync-devel and uthash, both of which
+    can be custom built and installed. See rhel/ subdirectory for more details.
+
+Then change to the burp source directory and run "./configure", then "make". All
+being well, burp will compile successfully. Then finally, run "make install" as root to
 install.
+
+
+UNIX SERVER
+-----------
 
 Start the burp server with this command: burp -c /etc/burp/burp-server.conf
 
@@ -36,6 +54,7 @@ The server is now ready for clients to connect to it.
 
 
 UNIX CLIENT
+-----------
 
 If you are going to run the client on the same machine on which you installed
 the server, the client will already be installed because the client is built
@@ -60,7 +79,9 @@ MAILTO=
 Whether or not an instance of the client results in an actual backup depends
 upon the timer settings in the server config files.
 
+
 WINDOWS CLIENT
+--------------
 
 Pick the 32-bit or 64-bit Burp installer as appropriate - visit
 http://burp.grke.org/ to find one of them.
@@ -424,9 +445,18 @@ SERVER CONFIGURATION FILE OPTIONS
        use: Convert the working directory into a complete backup.
 
        resume: Simply continue the previous backup from the point at which  it
-       left  off. NOTE: If the client has changed its include/exclude configu‐
-       ration since the backup was interrupted, the recovery method will auto‐
-       matically switch to 'use'.
+       left  off,  at  file  granularity.  NOTE: If the client has changed its
+       include/exclude configuration since the	backup	was  interrupted,  the
+       recovery method will automatically switch to 'use'.
+
+       resume_partial=[0|1]
+	      Turn  this  on  to enable 'resume partial' code. Requires 'work‐
+	      ing_dir_recovery_method=resume'. When  resuming  an  interrupted
+	      transfer	of a single file, it attempts to use previously trans‐
+	      ferred blocks of that file in order to be more  efficient.  How‐
+	      ever, situations have been reported where the file on the server
+	      side just gets bigger forever, so this feature now  defaults  to
+	      being turned off.
 
        client_can_delete=[0|1]
 	      Turn  this off to prevent clients from deleting backups with the
@@ -852,6 +882,13 @@ INCLUDES / EXCLUDES
        include_regex=[regular expression]
 	      Not implemented.
 
+       include_glob=[glob expression]
+	      Include paths that  match  the  glob  expression.  For  example,
+	      '/home/*/Documents'  will  include  '/home/user1/Documents'  and
+	      '/home/user2/Documents' if user1 and user2 exist. On  Unix  sys‐
+	      tems, glob(3) is used. For Windows systems, the functionality is
+	      limited to one '*'.
+
        exclude_regex=[regular expression]
 	      Exclude paths that match the regular expression.
 
@@ -955,8 +992,8 @@ SERVER CLIENTCONFDIR FILE
        Additionally,  the  following  options  can be overridden here for each
        client:
 	      directory directory_tree	timestamp_format  password_check  keep
-	      working_dir_recovery_method    librsync	 version_warn	syslog
-	      client_can_delete    client_can_force_backup     client_can_list
+	      working_dir_recovery_method resume_partial librsync version_warn
+	      syslog client_can_delete client_can_force_backup client_can_list
 	      client_can_restore  client_can_verify restore_client compression
 	      timer_script timer_arg notify_success_script  notify_success_arg
 	      notify_success_warnings_only  notify_failure_script notify_fail‐

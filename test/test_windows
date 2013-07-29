@@ -10,12 +10,15 @@ server="$1"
 client="$2"
 user="$3"
 pass="$4"
+thirtytwobit="$5"
 
 if [ -z "$server" ] \
   || [ -z "$client" ] \
   || [ -z "$user" ] \
   || [ -z "$pass" ] ; then
 	echo "Usage: $myscript [server address] [client address] [client user] [client pass]"
+	echo "By default, the 64bit client is tested."
+	echo "Add a fifth argument to test the  32bit client"
 	exit 1
 fi
 
@@ -69,10 +72,15 @@ build_and_install()
 
 	# Now build the Windows installer.
 	cdir "$build/src/win32"
-	make WIN64=yes || fail
+	if [ -n "$thirtytwobit" ] ; then
+		make || fail
+		installer=$(find -name burp-win32-installer*.exe)
+	else
+		make WIN64=yes || fail
+		installer=$(find -name burp-win64-installer*.exe)
+	fi
 
 	# Now copy the Windows installer to the client
-	installer=$(find -name burp-win64-installer*.exe)
 	[ -z "$client" ] && fail
 	"$path/scp_expect" "$pass" "$installer" "$user@$client:" || fail
 

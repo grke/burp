@@ -149,11 +149,34 @@ printf("get for: %s\n", sb->path);
 	return 0;
 }
 
+static void free_stuff(struct slist *slist, struct blist *blist)
+{
+	struct sbuf *sb=slist->head;
+	while(sb && sb->bend && sb->bend->index < blist->mark2->index)
+	{
+		struct blk *blk=blist->head;
+printf("FREE %lu (%lu %lu) %s\n", sb->index, sb->bend->index, blist->mark2->index, sb->path);
+		if(slist->mark2==sb) slist->mark2=sb->next;
+		sb=sb->next;
+		sbuf_free(slist->head);
+		slist->head=sb;
+
+		// Can now free blocks up to sb->bstart.
+		while(blk && blk!=sb->bstart)
+		{
+			blk=blk->next;
+printf("FREE BLK %lu\n", blist->head->index);
+			blk_free(blist->head);
+			blist->head=blk;
+		}
+	}
+}
+
 static void get_wbuf_from_data(struct iobuf *wbuf, struct slist *slist, struct blist *blist)
 {
 	struct blk *blk;
 	struct blk *mark1;
-	struct sbuf *sb;
+	//struct sbuf *sb;
 
 	// mark2 cannot go past mark1.
 	if(!(blk=blist->mark2)) return;
@@ -176,21 +199,7 @@ static void get_wbuf_from_data(struct iobuf *wbuf, struct slist *slist, struct b
 	blist->mark2=blk;
 
 	// Need to free stuff that is no longer needed.
-/*
-
-	sb=slist->head;
-	while(sb)
-	{
-		if(sb->bend && sb->bend->index < blk->index)
-		{
-printf("FREE %lu (%lu %lu)\n", slist->head->index, sb->bend->index, blk->index);
-			sb=slist->head->next;
-			sbuf_free(slist->head);
-			slist->head=sb;
-		}
-		else break;
-	}
-*/
+	free_stuff(slist, blist);
 }
 
 static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist)
@@ -204,6 +213,7 @@ static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist)
 
 	if(!sb->sent_stat)
 	{
+//printf("want to send stat: %s\n", sb->path);
 		iobuf_from_sbuf_attr(wbuf, sb);
 		wbuf->cmd=CMD_ATTRIBS_SIGS; // hack
 		sb->sent_stat=1;

@@ -47,7 +47,6 @@ struct sbuf
 	BFILE bfd;
 	int opened; // Get rid of this.
 
-
 	struct blk *bstart;
 	struct blk *bend;
 	struct blk *bsighead;

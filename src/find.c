@@ -129,6 +129,7 @@ static void free_linkhash(void)
 			lp=lp->next;
 			if(lc)
 			{
+				if(lc->name) free(lc->name);
 				free(lc);
 				count++;
 			}
@@ -603,8 +604,6 @@ static ff_e found_other(struct sbuf *sb, struct config *conf,
 static ff_e find_files(struct sbuf *sb, struct config *conf,
 	char *path, dev_t parent_device, bool top_level)
 {
-	int len;
-
 	if(sb->path) free(sb->path);
 	if(!(sb->path=strdup(path)))
 	{
@@ -661,8 +660,8 @@ static ff_e find_files(struct sbuf *sb, struct config *conf,
 		}
 
 		// File not previously dumped. Chain it into our list.
-		len=strlen(path)+1;
-		if(!(lp=(struct f_link *)malloc(sizeof(struct f_link)+len)))
+		if(!(lp=(struct f_link *)malloc(sizeof(struct f_link)))
+		  || !(lp->name=strdup(path)))
 		{
 			log_out_of_memory(__FUNCTION__);
 			return FF_ERROR;
@@ -670,7 +669,6 @@ static ff_e find_files(struct sbuf *sb, struct config *conf,
 		lp->ino=sb->statp.st_ino;
 		lp->dev=sb->statp.st_dev;
 
-		snprintf(lp->name, len, "%s", path);
 		lp->next=linkhash[linkhash_ind];
 		linkhash[linkhash_ind]=lp;
 	}

@@ -91,7 +91,7 @@ static int already_got_block(struct blk *blk)
 	return 0;
 }
 
-static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist *blist, struct config *conf, int *backup_end, gzFile cmanfp)
+static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist *blist, struct config *conf, int *scan_end, int *backup_end, gzFile cmanfp)
 {
 	int ret=0;
 	static struct sbuf *snew=NULL;
@@ -136,8 +136,8 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 				// Mark the end of the previous file.
 				slist->mark2->bend=blist->tail;
 
-				if(!slist->mark3->bsighead)
-					slist->mark3=slist->mark3->next;
+				//if(!slist->mark3->bsighead)
+				//	slist->mark3=slist->mark3->next;
 
 				slist->mark2=sb;
 				// Incoming sigs now need to get added to mark2
@@ -222,7 +222,12 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			do_filecounter(conf->cntr, rbuf->cmd, 0);
 			goto end;
 		case CMD_GEN:
-			if(!strcmp(rbuf->buf, "backup_end"))
+			if(!strcmp(rbuf->buf, "scan_end"))
+			{
+				*scan_end=1;
+				goto end;
+			}
+			else if(!strcmp(rbuf->buf, "backup_end"))
 			{
 				*backup_end=1;
 				goto end;
@@ -230,7 +235,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			break;
 	}
 
-	logp("unexpected cmd in %s, got '%c:%s'\n", __FUNCTION__, rcmd, *rbuf);
+	logp("unexpected cmd in %s, got '%c:%s'\n", __FUNCTION__, rbuf->cmd, rbuf->buf);
 error:
 	ret=-1;
 	sbuf_free(inew); inew=NULL;
@@ -254,21 +259,28 @@ static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist)
 	struct blk *blk;
 	struct sbuf *sb=slist->mark3;
 
+printf("a\n");
+
 	while(sb && !(sb->changed))
 	{
 		printf("Changed %d: %s\n", sb->changed, sb->path);
 		sb=sb->next;
 	}
+printf("b\n");
 	if(!sb)
 	{
 		slist->mark3=NULL;
 		return;
 	}
+printf("c\n");
 	if(!(blk=sb->bsighead)) return;
+printf("d\n");
 
 	// If we do not know where the file ends yet, avoid falling off the
 	// end of the list.
 	if(!sb->bend && !blk->next) return;
+printf("e\n");
+
 
 	encode_req(blk, req);
 	wbuf->cmd=CMD_DATA_REQ;
@@ -286,11 +298,21 @@ printf("data request: %lu\n", blk->index);
 		sb->bsighead=blk->next;
 }
 
-static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist)
+static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist, int scan_end, int *requests_end)
 {
 	static uint64_t file_no=1;
 	struct sbuf *sb=slist->mark1;
-	if(!sb) return;
+	if(!sb)
+	{
+		if(scan_end && !*requests_end)
+		{
+			wbuf->cmd=CMD_GEN;
+			wbuf->buf=(char *)"requests_end";
+			wbuf->len=strlen(wbuf->buf);
+			*requests_end=1;
+		}
+		return;
+	}
 
 	if(sb->sent_path || !sb->changed)
 	{
@@ -361,7 +383,9 @@ static int backup_server(gzFile cmanfp, const char *manifest, const char *client
 {
 	int ret=-1;
 	gzFile mzp=NULL;
+	int scan_end=0;
 	int backup_end=0;
+	int requests_end=0;
 	struct slist *slist=NULL;
 	struct blist *blist=NULL;
 	struct iobuf *rbuf=NULL;
@@ -383,7 +407,8 @@ static int backup_server(gzFile cmanfp, const char *manifest, const char *client
 			get_wbuf_from_sigs(wbuf, slist);
 			if(!wbuf->len)
 			{
-				get_wbuf_from_files(wbuf, slist);
+				get_wbuf_from_files(wbuf, slist,
+					scan_end, &requests_end);
 			}
 		}
 
@@ -395,7 +420,7 @@ static int backup_server(gzFile cmanfp, const char *manifest, const char *client
 		}
 
 		if(rbuf->buf && deal_with_read(rbuf, slist, blist, conf,
-			&backup_end, cmanfp)) goto end;
+			&scan_end, &backup_end, cmanfp)) goto end;
 
 //		if(write_to_manifest(mzp, slist))
 //			goto end;

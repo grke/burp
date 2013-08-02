@@ -54,8 +54,9 @@ static int blk_read(struct rconf *rconf, char *buf, char *buf_end, struct win *w
 			//if(++(sb->b)==SIG_MAX) return 0;
 
 			// Make space for another.
-			if(!(blk=blk_alloc_with_data(rconf->blk_max)))
-				return -1;
+			//if(!(blk=blk_alloc_with_data(rconf->blk_max)))
+			//	return -1;
+			return 0;
 		}
 	}
 	gcp=buf;
@@ -102,6 +103,7 @@ int blks_generate(struct config *conf, struct sbuf *sb, struct blist *blist, str
 			return -1;
 		// Maybe we have enough blocks to return now.
 		//if(sb->b==SIG_MAX) return 0;
+		return 0;
 	}
 
 	// Getting here means there is no more to read from the file.

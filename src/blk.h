@@ -39,9 +39,9 @@ struct blist
 	struct blk *head;
 	struct blk *tail;
 // On the client, keep track of last blk requested by the server.
-	struct blk *mark1;
+	struct blk *bark1;
 // On the client, keep track of last data sent by the client.
-	struct blk *mark2;
+	struct blk *bark2;
 };
 
 extern struct blist *blist_init(void);

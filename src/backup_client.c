@@ -42,7 +42,7 @@ static uint64_t decode_req(const char *buf)
 
 //static int data_requests=0;
 
-static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist  *blist, struct config *conf, int *backup_end)
+static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist  *blist, struct config *conf, int *backup_end, int *requests_end)
 {
 	int ret=0;
 	static uint64_t file_no=1;
@@ -70,8 +70,8 @@ printf("got request for: %s\n", sb->path);
 			// Find the matching entry.
 			printf("Request for data: %lu\n", index);
 
-			//printf("mark1: %lu\n", blist->mark1->index);
-			for(blk=blist->mark1; blk; blk=blk->next)
+			printf("mark1: %lu\n", blist->bark1->index);
+			for(blk=blist->bark1; blk; blk=blk->next)
 				if(index==blk->index) break;
 			if(!blk)
 			{
@@ -80,7 +80,7 @@ printf("got request for: %s\n", sb->path);
 				goto error;
 			}
 			blk->requested=1;
-			blist->mark1=blk;
+			blist->bark1=blk;
 			printf("Found %lu\n", index);
 			goto end;
 		}
@@ -89,7 +89,12 @@ printf("got request for: %s\n", sb->path);
 			do_filecounter(conf->cntr, rbuf->cmd, 0);
 			goto end;
 		case CMD_GEN:
-			if(!strcmp(rbuf->buf, "backup_end"))
+			if(!strcmp(rbuf->buf, "requests_end"))
+			{
+				*requests_end=1;
+				goto end;
+			}
+			else if(!strcmp(rbuf->buf, "backup_end"))
 			{
 				*backup_end=1;
 				goto end;
@@ -140,7 +145,7 @@ static int add_to_blks_list(struct config *conf, struct slist *slist, struct bli
 {
 	struct sbuf *sb=slist->mark1;
 	if(!sb) return 0;
-printf("get for: %s\n", sb->path);
+//printf("get for: %s\n", sb->path);
 	if(blks_generate(conf, sb, blist, win)) return -1;
 
 	// If it closed the file, move to the next one.
@@ -152,10 +157,10 @@ printf("get for: %s\n", sb->path);
 static void free_stuff(struct slist *slist, struct blist *blist)
 {
 	struct sbuf *sb=slist->head;
-	while(sb && sb->bend && sb->bend->index < blist->mark2->index)
+	while(sb && sb->bend && sb->bend->index < blist->bark2->index)
 	{
 		struct blk *blk=blist->head;
-printf("FREE %lu (%lu %lu) %s\n", sb->index, sb->bend->index, blist->mark2->index, sb->path);
+printf("FREE %lu (%lu %lu) %s\n", sb->index, sb->bend->index, blist->bark2->index, sb->path);
 		if(slist->mark2==sb) slist->mark2=sb->next;
 		sb=sb->next;
 		sbuf_free(slist->head);
@@ -175,15 +180,15 @@ printf("FREE BLK %lu\n", blist->head->index);
 static void get_wbuf_from_data(struct iobuf *wbuf, struct slist *slist, struct blist *blist)
 {
 	struct blk *blk;
-	struct blk *mark1;
+	struct blk *bark1;
 	//struct sbuf *sb;
 
 	// mark2 cannot go past mark1.
-	if(!(blk=blist->mark2)) return;
-	if(!(mark1=blist->mark1)) return;
-	if(blk->index>=mark1->index) return;
+	if(!(blk=blist->bark2)) return;
+	if(!(bark1=blist->bark1)) return;
+	if(blk->index>=bark1->index) return;
 
-	for(; blk && blk->index < mark1->index; blk=blk->next)
+	for(; blk && blk->index < bark1->index; blk=blk->next)
 	{
 		if(blk->requested)
 		{
@@ -193,22 +198,33 @@ static void get_wbuf_from_data(struct iobuf *wbuf, struct slist *slist, struct b
 			wbuf->buf=blk->data;
 			wbuf->len=blk->length;
 			blk->requested=0;
+			blist->bark2=blk;
 			break;
 		}
 	}
-	blist->mark2=blk;
 
 	// Need to free stuff that is no longer needed.
 	free_stuff(slist, blist);
 }
 
-static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist)
+static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int requests_end, int *sigs_end)
 {
 	static char buf[49];
 	struct blk *blk;
 	struct sbuf *sb=slist->mark2;
 
-	if(!sb) return;
+	if(!sb)
+	{
+printf("here: %d\n", requests_end);
+		if(requests_end && !*sigs_end)
+		{
+			wbuf->buf=(char *)"sigs_end";
+			wbuf->len=strlen(wbuf->buf);
+			wbuf->cmd=CMD_GEN;
+			*sigs_end=1;
+		}
+		return;
+	}
 	if(!(blk=sb->bsighead)) return;
 
 	if(!sb->sent_stat)
@@ -230,8 +246,8 @@ static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist)
 	snprintf(blk->strong, sizeof(blk->strong),
 		"%s", blk_get_md5sum_str(blk->md5sum));
 	snprintf(buf, sizeof(buf), "%s%s", blk->weak, blk->strong);
-	printf("%s\n", sb->path);
-	printf("%s\n", buf);
+//	printf("%s\n", sb->path);
+//	printf("%s\n", buf);
 	iobuf_from_str(wbuf, CMD_SIG, buf);
 
 	// Move on.
@@ -272,7 +288,13 @@ static void get_wbuf_from_scan(struct iobuf *wbuf, struct slist *flist)
 			// Go ahead and get the next one from the list.
 			get_wbuf_from_scan(wbuf, flist);
 		}
-		else flist->tail=NULL;
+		else
+		{
+			flist->tail=NULL;
+			wbuf->cmd=CMD_GEN;
+			wbuf->buf=(char *)"scan_end";
+			wbuf->len=strlen("scan_end");
+		}
 	}
 }
 
@@ -281,7 +303,9 @@ static int backup_client(struct config *conf, int estimate)
 	int ret=0;
 	bool top_level=true;
 	int scanning=1;
+	int sigs_end=0;
 	int backup_end=0;
+	int requests_end=0;
 	struct win *win=NULL; // Rabin sliding window.
 	struct slist *flist=NULL;
 	struct slist *slist=NULL;
@@ -312,7 +336,8 @@ static int backup_client(struct config *conf, int estimate)
 			get_wbuf_from_data(wbuf, slist, blist);
 			if(!wbuf->len)
 			{
-				get_wbuf_from_blks(wbuf, slist);
+				get_wbuf_from_blks(wbuf, slist,
+					requests_end, &sigs_end);
 				if(!wbuf->len)
 				{
 					get_wbuf_from_scan(wbuf, flist);
@@ -327,7 +352,7 @@ static int backup_client(struct config *conf, int estimate)
 		}
 
 		if(rbuf->buf && deal_with_read(rbuf, slist, blist,
-			conf, &backup_end)) goto end;
+			conf, &backup_end, &requests_end)) goto end;
 
 		if(scanning)
 		{

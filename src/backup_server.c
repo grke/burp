@@ -94,6 +94,7 @@ static int already_got_block(struct blk *blk)
 static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist *blist, struct config *conf, int *scan_end, int *sigs_end, int *backup_end, gzFile cmanfp)
 {
 	int ret=0;
+	static uint64_t data_index=1;
 	static struct sbuf *snew=NULL;
 	static struct sbuf *inew=NULL;
 
@@ -102,7 +103,8 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 	switch(rbuf->cmd)
 	{
 		case CMD_DATA:
-			printf("Got data %lu!\n", rbuf->len);
+			printf("Got data %lu (%lu)!\n", rbuf->len, data_index);
+			data_index++;
 			goto end;
 
 		case CMD_ATTRIBS_SIGS:

@@ -67,9 +67,10 @@ void sbuf_add_to_list(struct sbuf *sb, struct slist *slist)
 		slist->tail=sb;
 		// Markers might have fallen off the end. Start them again
 		// on the tail.
-		if(!slist->mark1) slist->mark1=slist->tail;
-		if(!slist->mark2) slist->mark2=slist->tail;
-		if(!slist->mark3) slist->mark3=slist->tail;
+		if(!slist->last_requested) slist->last_requested=slist->tail;
+		if(!slist->add_sigs_here) slist->add_sigs_here=slist->tail;
+		if(!slist->blks_to_request) slist->blks_to_request=slist->tail;
+		if(!slist->blks_to_send) slist->blks_to_send=slist->tail;
 	}
 	else
 	{
@@ -78,9 +79,10 @@ void sbuf_add_to_list(struct sbuf *sb, struct slist *slist)
 		slist->tail=sb;
 		// Pointers to the head that can move along the list
 		// at a different rate.
-		slist->mark1=sb;
-		slist->mark2=sb;
-		slist->mark3=sb;
+		slist->last_requested=sb;
+		slist->add_sigs_here=sb;
+		slist->blks_to_request=sb;
+		slist->blks_to_send=sb;
 	}
 }
 

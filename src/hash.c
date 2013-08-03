@@ -4,6 +4,7 @@
 #include <uthash.h>
 
 #include "hash.h"
+#include "log.h"
 
 struct weak_entry *hash_table=NULL;
 
@@ -27,11 +28,11 @@ struct weak_entry *add_weak_entry(uint64_t weakint)
 	struct weak_entry *newweak;
 	if(!(newweak=(struct weak_entry *)malloc(sizeof(struct weak_entry))))
 	{
-		fprintf(stderr, "Out of memory in %s\n", __FUNCTION__);
+		log_out_of_memory(__FUNCTION__);
 		return NULL;
 	}
 	newweak->weak=weakint;
-//fprintf(stderr, "addweak: %016lX\n", weakint);
+//logp("addweak: %016lX\n", weakint);
 	newweak->strong=NULL;
 	HASH_ADD_INT(hash_table, weak, newweak);
 	return newweak;
@@ -43,7 +44,7 @@ struct strong_entry *add_strong_entry(struct weak_entry *weak_entry, const char 
 	if(!(newstrong=(struct strong_entry *)malloc(sizeof(struct strong_entry)))
 	  || !(newstrong->path=strdup(dpth_mk(dpth))))
 	{
-		fprintf(stderr, "Out of memory in %s\n", __FUNCTION__);
+		log_out_of_memory(__FUNCTION__);
 		return NULL;
 	}
 	snprintf(newstrong->strong, sizeof(newstrong->strong), "%s", strong);

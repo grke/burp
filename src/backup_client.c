@@ -40,50 +40,63 @@ static uint64_t decode_req(const char *buf)
 	return (uint64_t)val;
 }
 
-//static int data_requests=0;
+static int add_to_file_requests(struct slist *slist, struct iobuf *rbuf)
+{
+	static uint64_t file_no=1;
+	struct sbuf *sb;
+
+	if(!(sb=sbuf_init())) return -1;
+
+	sbuf_from_iobuf_path(sb, rbuf);
+	rbuf->buf=NULL;
+	// Give it a number to simplify tracking.
+	sb->index=file_no++;
+	sbuf_add_to_list(sb, slist);
+printf("got request for: %s\n", sb->path);
+
+	return 0;
+}
+
+static int add_to_data_requests(struct blist *blist, struct iobuf *rbuf)
+{
+	uint64_t index;
+	struct blk *blk;
+	index=decode_req(rbuf->buf);
+
+	// Find the matching entry.
+	printf("Request for data: %lu\n", index);
+
+	//printf("last_requested: %lu\n", blist->last_requested->index);
+	for(blk=blist->last_requested; blk; blk=blk->next)
+		if(index==blk->index) break;
+	if(!blk)
+	{
+		logp("Could not find requested block %lu\n",
+			index);
+		return -1;
+	}
+	blk->requested=1;
+	blist->last_requested=blk;
+	//printf("Found %lu\n", index);
+	return 0;
+}
 
 static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist  *blist, struct config *conf, int *backup_end, int *requests_end, int *blk_requests_end)
 {
 	int ret=0;
-	static uint64_t file_no=1;
 	switch(rbuf->cmd)
 	{
+		/* Incoming file request. */
 		case CMD_FILE:
-		{
-			struct sbuf *sb;
-			if(!(sb=sbuf_init())) goto error;
-			sbuf_from_iobuf_path(sb, rbuf);
-			rbuf->buf=NULL;
-			// Give it a number to simplify tracking.
-			sb->index=file_no++;
-			sbuf_add_to_list(sb, slist);
-printf("got request for: %s\n", sb->path);
-
+			if(add_to_file_requests(slist, rbuf)) goto error;
 			return 0;
-		}
+
+		/* Incoming data block request. */
 		case CMD_DATA_REQ:
-		{
-			uint64_t index;
-			struct blk *blk;
-			index=decode_req(rbuf->buf);
-
-			// Find the matching entry.
-			printf("Request for data: %lu\n", index);
-
-			//printf("mark1: %lu\n", blist->bark1->index);
-			for(blk=blist->bark1; blk; blk=blk->next)
-				if(index==blk->index) break;
-			if(!blk)
-			{
-				logp("Could not find requested block %lu\n",
-					index);
-				goto error;
-			}
-			blk->requested=1;
-			blist->bark1=blk;
-			//printf("Found %lu\n", index);
+			if(add_to_data_requests(blist, rbuf)) goto error;
 			goto end;
-		}
+
+		/* Incoming control/message stuff. */
 		case CMD_WARNING:
 			logp("WARNING: %s\n", rbuf->cmd);
 			do_filecounter(conf->cntr, rbuf->cmd, 0);
@@ -152,13 +165,13 @@ static int add_to_scan_list(struct slist *flist, int *scanning, struct config *c
 
 static int add_to_blks_list(struct config *conf, struct slist *slist, struct blist *blist, struct win *win)
 {
-	struct sbuf *sb=slist->mark1;
+	struct sbuf *sb=slist->last_requested;
 	if(!sb) return 0;
 //printf("get for: %s\n", sb->path);
 	if(blks_generate(conf, sb, blist, win)) return -1;
 
 	// If it closed the file, move to the next one.
-	if(!sb->opened) slist->mark1=sb->next;
+	if(!sb->opened) slist->last_requested=sb->next;
 
 	return 0;
 }
@@ -169,11 +182,11 @@ static void free_stuff(struct slist *slist, struct blist *blist)
 printf("in free\n");
 //printf("sb->bend: %s\n", sb->bend?"yes":"no");
 //printf("%d %d\n", slist->head==slist->tail, blist->bark2==sb->bend);
-	while(sb && sb->bend && sb->bend->index < blist->bark2->index)
+	while(sb && sb->bend && sb->bend->index < blist->last_sent->index)
 	{
 		struct blk *blk=blist->head;
-printf("FREE %lu (%lu %lu) %s\n", sb->index, sb->bend->index, blist->bark2->index, sb->path);
-		if(slist->mark2==sb) slist->mark2=sb->next;
+printf("FREE %lu (%lu %lu) %s\n", sb->index, sb->bend->index, blist->last_sent->index, sb->path);
+		if(slist->blks_to_send==sb) slist->blks_to_send=sb->next;
 		sb=sb->next;
 		sbuf_free(slist->head);
 		slist->head=sb;
@@ -192,16 +205,17 @@ printf("FREE BLK %lu\n", blist->head->index);
 static void get_wbuf_from_data(struct iobuf *wbuf, struct slist *slist, struct blist *blist)
 {
 	struct blk *blk;
-	struct blk *bark1;
+	struct blk *last_requested;
 
-	// mark2 cannot go past mark1.
-	if(!(blk=blist->bark2)) return;
-	if(!(bark1=blist->bark1)) return;
-	if(blk->index>bark1->index) return;
+	// last_sent cannot go past last_requested.
+	if(!(blk=blist->last_sent)
+	  || !(last_requested=blist->last_requested)
+	  || blk->index > last_requested->index)
+		return;
 
-	for(; blk && blk->index <= bark1->index; blk=blk->next)
+	for(; blk && blk->index <= last_requested->index; blk=blk->next)
 	{
-//printf("ee %lu %lu, %d\n", blk->index, bark1->index, blk->requested);
+//printf("ee %lu %lu, %d\n", blk->index, last_requested->index, blk->requested);
 		if(blk->requested)
 		{
 			printf("WANT TO SEND ");
@@ -210,33 +224,44 @@ static void get_wbuf_from_data(struct iobuf *wbuf, struct slist *slist, struct b
 			wbuf->buf=blk->data;
 			wbuf->len=blk->length;
 			blk->requested=0;
-			blist->bark2=blk;
+			blist->last_sent=blk;
 			break;
 		}
-		//blist->bark2=blk;
 	}
 	// Need to free stuff that is no longer needed.
 	free_stuff(slist, blist);
 }
 
-static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int requests_end, int *sigs_end)
+static void iobuf_from_blk_data(struct iobuf *wbuf, struct blk *blk)
 {
 	static char buf[49];
-	struct blk *blk;
-	struct sbuf *sb=slist->mark2;
+// Check return of this - maybe should be done elsewhere.
+	blk_md5_update(blk);
+
+	// Fingerprint is 4 bytes.
+	snprintf(blk->weak, sizeof(blk->weak), "%016lX", blk->fingerprint);
+	// MD5sum is 32 characters long.
+	snprintf(blk->strong, sizeof(blk->strong),
+		"%s", blk_get_md5sum_str(blk->md5sum));
+	snprintf(buf, sizeof(buf), "%s%s", blk->weak, blk->strong);
+	printf("%s\n", buf);
+	iobuf_from_str(wbuf, CMD_SIG, buf);
+}
+
+static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int requests_end, int *sigs_end)
+{
+	struct sbuf *sb=slist->blks_to_send;
 
 	if(!sb)
 	{
 		if(requests_end && !*sigs_end)
 		{
-			wbuf->buf=(char *)"sigs_end";
-			wbuf->len=strlen(wbuf->buf);
-			wbuf->cmd=CMD_GEN;
+			iobuf_from_str(wbuf, CMD_GEN, (char *)"sigs_end");
 			*sigs_end=1;
 		}
 		return;
 	}
-	if(!(blk=sb->bsighead)) return;
+	if(!sb->bsighead) return;
 
 	if(!sb->sent_stat)
 	{
@@ -247,28 +272,17 @@ static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int requ
 		return;
 	}
 
-// Check return of this - maybe should be done elsewhere.
-	blk_md5_update(blk);
-
-	// Fingerprint is 4 bytes.
-	snprintf(blk->weak, sizeof(blk->weak),
-		"%016lX", blk->fingerprint);
-	// MD5sum is 32 characters long.
-	snprintf(blk->strong, sizeof(blk->strong),
-		"%s", blk_get_md5sum_str(blk->md5sum));
-	snprintf(buf, sizeof(buf), "%s%s", blk->weak, blk->strong);
 	printf("Send sig: %s\n", sb->path);
-	printf("%s\n", buf);
-	iobuf_from_str(wbuf, CMD_SIG, buf);
+	iobuf_from_blk_data(wbuf, sb->bsighead);
 
 	// Move on.
-	if(blk==sb->bend)
+	if(sb->bsighead==sb->bend)
 	{
-		slist->mark2=sb->next;
+		slist->blks_to_send=sb->next;
 		sb->bsighead=sb->bstart;
 	}
 	else
-		sb->bsighead=blk->next;
+		sb->bsighead=sb->bsighead->next;
 }
 
 static void get_wbuf_from_scan(struct iobuf *wbuf, struct slist *flist)
@@ -302,9 +316,7 @@ static void get_wbuf_from_scan(struct iobuf *wbuf, struct slist *flist)
 		else
 		{
 			flist->tail=NULL;
-			wbuf->cmd=CMD_GEN;
-			wbuf->buf=(char *)"scan_end";
-			wbuf->len=strlen("scan_end");
+			iobuf_from_str(wbuf, CMD_GEN, (char *)"scan_end");
 		}
 	}
 }
@@ -404,7 +416,7 @@ static int backup_client(struct config *conf, int estimate)
 			// and the last block of the last file, and
 			// the write buffer is empty, we got to the end.
 			if(slist->head==slist->tail
-			  && blist->bark2==slist->tail->bend
+			  && blist->last_sent==slist->tail->bend
 			  && !wbuf->len)
 				break;
 		}

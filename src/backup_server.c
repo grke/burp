@@ -19,7 +19,7 @@ static int fprint_tag(FILE *fp, char cmd, unsigned int s)
 {
 	if(fprintf(fp, "%c%04X", cmd, s)!=5)
 	{
-		fprintf(stderr, "Short fprintf\n");
+		logp("Short fprintf\n");
 		return -1;
 	}
 	return 0;
@@ -31,7 +31,7 @@ static int fwrite_buf(char cmd, const char *buf, unsigned int s, FILE *fp)
 	if(fprint_tag(fp, cmd, s)) return -1;
 	if((bytes=fwrite(buf, 1, s, fp))!=s)
 	{
-		fprintf(stderr, "Short write: %d\n", (int)bytes);
+		logp("Short write: %d\n", (int)bytes);
 		return -1;
 	}
 	return 0;
@@ -127,12 +127,11 @@ static char *get_fq_path(const char *path)
 
 static int already_got_block(struct blk *blk, struct dpth *dpth)
 {
-	static uint64_t weakint;
 	static struct weak_entry *weak_entry;
 
-	weakint=strtoull(blk->weak, 0, 16);
+	blk->fingerprint=strtoull(blk->weak, 0, 16);
 	// If already got, need to overwrite the references.
-	if((weak_entry=find_weak_entry(weakint)))
+	if((weak_entry=find_weak_entry(blk->fingerprint)))
 	{
 		struct strong_entry *strong_entry;
 		if((strong_entry=find_strong_entry(weak_entry, blk->strong)))
@@ -149,7 +148,7 @@ static int already_got_block(struct blk *blk, struct dpth *dpth)
 /*
 		else
 		{
-			fprintf(stderr, "COLLISION: %s %s\n", weak, strong);
+			logp("COLLISION: %s %s\n", weak, strong);
 			collisions++;
 		}
 */
@@ -158,10 +157,120 @@ static int already_got_block(struct blk *blk, struct dpth *dpth)
 	return 0;
 }
 
+static int add_data_to_store(struct blist *blist, struct iobuf *rbuf, struct dpth *dpth)
+{
+	char tmp[64];
+	static struct blk *blk=NULL;
+	static uint64_t data_index=1;
+//	static struct weak_entry *weak_entry;
+
+	printf("Got data %lu (%lu)!\n", rbuf->len, data_index);
+	data_index++;
+
+	// Find the first one in the list that was requested.
+	// FIX THIS: Going up the list here, and then later
+	// when writing to the manifest is not efficient.
+	if(!blk) blk=blist->head;
+	for(; blk && !blk->requested; blk=blk->next) { }
+	if(!blk)
+	{
+		logp("Received data but could not find next requested block.\n");
+		return -1;
+	}
+
+	// Add it to the data store straight away.
+	if(fwrite_dat(CMD_DATA, rbuf->buf, rbuf->len, dpth)) return -1;
+
+	// argh
+	snprintf(tmp, sizeof(tmp), "%s%s\n", blk->weak, blk->strong);
+	if(fwrite_sig(CMD_SIG, tmp, strlen(tmp), dpth)) return -1;
+
+
+	// Add to hash table.
+//	if(!(weak_entry=add_weak_entry(blk->fingerprint))) return -1;
+//	if(!(weak_entry->strong=add_strong_entry(weak_entry, blk->strong, dpth)))
+//		return -1;
+
+
+	// Need to write the refs to the manifest too.
+	// Mark that we have got the block, and write it to
+	// the manifest later.
+	if(!(blk->data=strdup(get_fq_path(dpth_mk(dpth)))))
+	{
+		log_out_of_memory(__FUNCTION__);
+		return -1;
+	}
+
+	if(dpth_incr_sig(dpth)) return -1;
+
+	blk->length=strlen(blk->data);
+	blk->got=1;
+	blk=blk->next;
+
+	return 0;
+}
+
+static int set_up_for_sig_info(struct slist *slist, struct blist *blist, struct sbuf *inew)
+{
+	struct sbuf *sb;
+
+	for(sb=slist->add_sigs_here; sb; sb=sb->next)
+	{
+		if(!sb->index) continue;
+		if(inew->index==sb->index) break;
+	}
+	if(!sb)
+	{
+		logp("Could not find %lu in request list %d\n", inew->index, sb->index);
+		return -1;
+	}
+	// Replace the attribs with the more recent
+	// values.
+	free(sb->attribs);
+	sb->attribs=inew->attribs;
+	sb->alen=inew->alen;
+	inew->attribs=NULL;
+
+	// Mark the end of the previous file.
+	slist->add_sigs_here->bend=blist->tail;
+
+	slist->add_sigs_here=sb;
+
+	// Incoming sigs now need to get added to 'add_sigs_here'
+	return 0;
+}
+
+static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobuf *rbuf, struct dpth *dpth)
+{
+	// Goes on slist->add_sigs_here
+	struct blk *blk;
+	struct sbuf *sb;
+
+	printf("CMD_SIG: %s\n", rbuf->buf);
+
+	sb=slist->add_sigs_here;
+	if(!(blk=blk_alloc())) return -1;
+
+	blk_add_to_list(blk, blist);
+	if(!sb->bstart) sb->bstart=blk;
+	if(!sb->bsighead) sb->bsighead=blk;
+
+	// FIX THIS: Should not just load into strings.
+	if(split_sig(rbuf->buf, rbuf->len, blk->weak, blk->strong)) return -1;
+
+	// If already got, this function will set blk->data
+	// to be the location of the already got block.
+	if(already_got_block(blk, dpth)) return -1;
+
+	if(!blk->got) printf("Need data for %lu %lu %s\n", sb->index,
+		blk->index, slist->add_sigs_here->path);
+
+	return 0;
+}
+
 static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist *blist, struct config *conf, int *scan_end, int *sigs_end, int *backup_end, gzFile cmanfp, struct dpth *dpth)
 {
 	int ret=0;
-	static uint64_t data_index=1;
 	static struct sbuf *snew=NULL;
 	static struct sbuf *inew=NULL;
 
@@ -169,48 +278,12 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 
 	switch(rbuf->cmd)
 	{
+		/* Incoming block data. */
 		case CMD_DATA:
-		{
-			char tmp[64];
-			static struct blk *blk=NULL;
-			printf("Got data %lu (%lu)!\n", rbuf->len, data_index);
-			data_index++;
-
-			// Find the first one in the list that was requested.
-			// FIX THIS: Going up the list here, and then later
-			// when writing to the manifest is not efficient.
-			if(!blk) blk=blist->head;
-			for(; blk && !blk->requested; blk=blk->next) { }
-			if(!blk)
-			{
-				logp("Received data but could not find next requested block.\n");
-				goto error;
-			}
-			// Add it to the data store straight away.
-			if(fwrite_dat(CMD_DATA, rbuf->buf, rbuf->len, dpth))
-				goto error;
-                       	// argh
-                       	snprintf(tmp, sizeof(tmp),
-                               	"%s%s\n", blk->weak, blk->strong);
-                       	if(fwrite_sig(CMD_SIG, tmp, strlen(tmp), dpth))
-				goto error;
-
-			// Need to write the refs to the manifest too.
-			// Mark that we have got the block, and write it to
-			// the manifest later.
-			if(!(blk->data=strdup(get_fq_path(dpth_mk(dpth)))))
-			{
-				log_out_of_memory(__FUNCTION__);
-				goto error;
-			}
-			if(dpth_incr_sig(dpth)) goto error;
-			blk->length=strlen(blk->data);
-			blk->got=1;
-			blk=blk->next;
-
+			if(add_data_to_store(blist, rbuf, dpth)) goto error;
 			goto end;
-		}
 
+		/* Incoming block signatures. */
 		case CMD_ATTRIBS_SIGS:
 			// New set of stuff incoming. Clean up.
 			if(inew->attribs) free(inew->attribs);
@@ -220,64 +293,15 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 
 			// Need to go through slist to find the matching
 			// entry.
-			{
-				struct sbuf *sb;
-				for(sb=slist->mark2; sb; sb=sb->next)
-				{
-					if(!sb->index) continue;
-					if(inew->index==sb->index) break;
-				}
-				if(!sb)
-				{
-					logp("Could not find %d in request list %d\n", inew->index, sb->index);
-					goto error;
-				}
-				// Replace the attribs with the more recent
-				// values.
-				free(sb->attribs);
-				sb->attribs=inew->attribs;
-				sb->alen=inew->alen;
-				inew->attribs=NULL;
-
-				// Mark the end of the previous file.
-				slist->mark2->bend=blist->tail;
-
-				slist->mark2=sb;
-				// Incoming sigs now need to get added to mark2
-			}
+			if(set_up_for_sig_info(slist, blist, inew)) goto error;
 			return 0;
 		case CMD_SIG:
-		{
-			printf("CMD_SIG: %s\n", rbuf->buf);
-
-			// Goes on slist->mark2
-			struct blk *blk;
-			struct sbuf *sb=slist->mark2;
-			if(!(blk=blk_alloc())) goto error;
-
-			blk_add_to_list(blk, blist);
-			if(!sb->bstart) sb->bstart=blk;
-			if(!sb->bsighead) sb->bsighead=blk;
-
-			// FIX THIS: Should not just load into strings.
-			if(split_sig(rbuf->buf, rbuf->len,
-				blk->weak, blk->strong))
-					goto error;
-
-			// If already got, this function will set blk->data
-			// to be the location of the already got block.
-			if(already_got_block(blk, dpth))
+			if(add_to_sig_list(slist, blist, rbuf, dpth))
 				goto error;
-
-			if(!blk->got) printf("Need data for %lu %lu %s\n",
-				sb->index, blk->index,
-				slist->mark2->path);
-
 			goto end;
-		}
 
+		/* Incoming scan information. */
 		case CMD_ATTRIBS:
-		{
 			// Attribs should come first, so if we already
 			// set up snew, it is an error.
 			if(snew) break;
@@ -286,7 +310,6 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			snew->need_path=1;
 			rbuf->buf=NULL;
 			return 0;
-		}
 		case CMD_FILE:
 		case CMD_DIRECTORY:
 		case CMD_SOFT_LINK:
@@ -322,6 +345,8 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 				return 0;
 			}
 			break;
+
+		/* Incoming control/message stuff. */
 		case CMD_WARNING:
 			logp("WARNING: %s\n", rbuf);
 			do_filecounter(conf->cntr, rbuf->cmd, 0);
@@ -369,8 +394,7 @@ static int encode_req(struct blk *blk, char *req)
 static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, int sigs_end, int *blk_requests_end)
 {
 	static char req[32]="";
-	struct blk *blk;
-	struct sbuf *sb=slist->mark3;
+	struct sbuf *sb=slist->blks_to_request;
 
 	while(sb && !(sb->changed))
 	{
@@ -379,44 +403,41 @@ static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, int sigs
 	}
 	if(!sb)
 	{
-		slist->mark3=NULL;
+		slist->blks_to_request=NULL;
 		return;
 	}
-	if(!(blk=sb->bsighead))
+	if(!sb->bsighead)
 	{
 		// Trying to move onto the next file.
 		// ??? Does this really work?
-		if(sb->bend) slist->mark3=sb->next;
+		if(sb->bend) slist->blks_to_request=sb->next;
 		if(sigs_end && !*blk_requests_end)
 		{
-			wbuf->cmd=CMD_GEN;
-			wbuf->buf=(char *)"blk_requests_end";
-			wbuf->len=strlen(wbuf->buf);
+			iobuf_from_str(wbuf,
+				CMD_GEN, (char *)"blk_requests_end");
 			*blk_requests_end=1;
 		}
 		return;
 	}
 
-	if(!blk->got)
+	if(!sb->bsighead->got)
 	{
-		encode_req(blk, req);
-		wbuf->cmd=CMD_DATA_REQ;
-		wbuf->buf=req;
-		wbuf->len=strlen(req);
-	printf("data request: %lu\n", blk->index);
-		blk->requested=1;
+		encode_req(sb->bsighead, req);
+		iobuf_from_str(wbuf, CMD_DATA_REQ, req);
+	printf("data request: %lu\n", sb->bsighead->index);
+		sb->bsighead->requested=1;
 	}
 
 	// Move on.
-	if(blk==sb->bend)
+	if(sb->bsighead==sb->bend)
 	{
-		slist->mark3=sb->next;
+		slist->blks_to_request=sb->next;
 		sb->bsighead=sb->bstart;
 //		if(!sb->bsighead) printf("sb->bsighead fell off end a\n");
 	}
 	else
 	{
-		sb->bsighead=blk->next;
+		sb->bsighead=sb->bsighead->next;
 //		if(!sb->bsighead) printf("sb->bsighead fell off end b\n");
 	}
 }
@@ -424,14 +445,12 @@ static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, int sigs
 static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist, int scan_end, int *requests_end)
 {
 	static uint64_t file_no=1;
-	struct sbuf *sb=slist->mark1;
+	struct sbuf *sb=slist->last_requested;
 	if(!sb)
 	{
 		if(scan_end && !*requests_end)
 		{
-			wbuf->cmd=CMD_GEN;
-			wbuf->buf=(char *)"requests_end";
-			wbuf->len=strlen(wbuf->buf);
+			iobuf_from_str(wbuf, CMD_GEN, (char *)"requests_end");
 			*requests_end=1;
 		}
 		return;
@@ -439,7 +458,7 @@ static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist, int sca
 
 	if(sb->sent_path || !sb->changed)
 	{
-		slist->mark1=sb->next;
+		slist->last_requested=sb->next;
 		return;
 	}
 
@@ -498,9 +517,9 @@ static int write_to_manifest(gzFile mzp, struct slist *slist, struct dpth *dpth)
 
 			// It is possible for the markers to drop behind.
 			if(slist->tail==sb) slist->tail=sb->next;
-			if(slist->mark1==sb) slist->mark1=sb->next;
-			if(slist->mark2==sb) slist->mark2=sb->next;
-			if(slist->mark3==sb) slist->mark3=sb->next;
+			if(slist->last_requested==sb) slist->last_requested=sb->next;
+			if(slist->add_sigs_here==sb) slist->add_sigs_here=sb->next;
+			if(slist->blks_to_request==sb) slist->blks_to_request=sb->next;
 			sbuf_free(sb);
 		}
 	}

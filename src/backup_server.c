@@ -91,7 +91,7 @@ static int already_got_block(struct blk *blk)
 	return 0;
 }
 
-static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist *blist, struct config *conf, int *scan_end, int *backup_end, gzFile cmanfp)
+static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist *blist, struct config *conf, int *scan_end, int *sigs_end, int *backup_end, gzFile cmanfp)
 {
 	int ret=0;
 	static struct sbuf *snew=NULL;
@@ -135,15 +135,6 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 
 				// Mark the end of the previous file.
 				slist->mark2->bend=blist->tail;
-
-printf("HERE mark3: %s\n", slist->mark3?slist->mark3->path:"no");
-if(slist->mark3)
-{
-	printf("  bsighead %s\n", slist->mark3->bsighead?"yes":"no");
-}
-
-//				if(!slist->mark3->bsighead)
-//					slist->mark3=slist->mark3->next;
 
 				slist->mark2=sb;
 				// Incoming sigs now need to get added to mark2
@@ -232,11 +223,12 @@ if(slist->mark3)
 			}
 			else if(!strcmp(rbuf->buf, "sigs_end"))
 			{
-				*scan_end=1;
+				*sigs_end=1;
 				goto end;
 			}
 			else if(!strcmp(rbuf->buf, "backup_end"))
 			{
+printf("got backup_end\n");
 				*backup_end=1;
 				goto end;
 			}
@@ -261,7 +253,7 @@ static int encode_req(struct blk *blk, char *req)
 	return 0;
 }
 
-static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist)
+static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, int sigs_end)
 {
 	static char req[32]="";
 	struct blk *blk;
@@ -282,6 +274,12 @@ static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist)
 		// Trying to move onto the next file.
 		// ??? Does this really work?
 		if(sb->bend) slist->mark3=sb->next;
+		if(sigs_end)
+		{
+			wbuf->cmd=CMD_GEN;
+			wbuf->buf=(char *)"blk_requests_end";
+			wbuf->len=strlen(wbuf->buf);
+		}
 		return;
 	}
 
@@ -393,6 +391,7 @@ static int backup_server(gzFile cmanfp, const char *manifest, const char *client
 	int ret=-1;
 	gzFile mzp=NULL;
 	int scan_end=0;
+	int sigs_end=0;
 	int backup_end=0;
 	int requests_end=0;
 	struct slist *slist=NULL;
@@ -413,7 +412,7 @@ static int backup_server(gzFile cmanfp, const char *manifest, const char *client
 	{
 		if(!wbuf->len)
 		{
-			get_wbuf_from_sigs(wbuf, slist);
+			get_wbuf_from_sigs(wbuf, slist, sigs_end);
 			if(!wbuf->len)
 			{
 				get_wbuf_from_files(wbuf, slist,
@@ -421,7 +420,7 @@ static int backup_server(gzFile cmanfp, const char *manifest, const char *client
 			}
 		}
 
-		if(wbuf->len) printf("send request: %s\n", wbuf->buf);
+		//if(wbuf->len) printf("send request: %s\n", wbuf->buf);
 		if(async_rw_ng(rbuf, wbuf))
 		{
 			logp("error in async_rw\n");
@@ -429,7 +428,7 @@ static int backup_server(gzFile cmanfp, const char *manifest, const char *client
 		}
 
 		if(rbuf->buf && deal_with_read(rbuf, slist, blist, conf,
-			&scan_end, &backup_end, cmanfp)) goto end;
+			&scan_end, &sigs_end, &backup_end, cmanfp)) goto end;
 
 //		if(write_to_manifest(mzp, slist))
 //			goto end;
@@ -544,7 +543,7 @@ int do_backup_server(const char *basedir, const char *current, const char *worki
 		goto error;
 	}
 
-	async_write_str(CMD_GEN, "backup_end");
+	//async_write_str(CMD_GEN, "backup_end");
 	logp("Backup ending - disconnect from client.\n");
 
 	// Close the connection with the client, the rest of the job

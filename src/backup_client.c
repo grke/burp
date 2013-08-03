@@ -42,7 +42,7 @@ static uint64_t decode_req(const char *buf)
 
 //static int data_requests=0;
 
-static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist  *blist, struct config *conf, int *backup_end, int *requests_end)
+static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist  *blist, struct config *conf, int *backup_end, int *requests_end, int *blk_requests_end)
 {
 	int ret=0;
 	static uint64_t file_no=1;
@@ -92,6 +92,11 @@ printf("got request for: %s\n", sb->path);
 			if(!strcmp(rbuf->buf, "requests_end"))
 			{
 				*requests_end=1;
+				goto end;
+			}
+			else if(!strcmp(rbuf->buf, "blk_requests_end"))
+			{
+				*blk_requests_end=1;
 				goto end;
 			}
 			else if(!strcmp(rbuf->buf, "backup_end"))
@@ -158,6 +163,7 @@ static int add_to_blks_list(struct config *conf, struct slist *slist, struct bli
 static void free_stuff(struct slist *slist, struct blist *blist)
 {
 	struct sbuf *sb=slist->head;
+printf("in free\n");
 	while(sb && sb->bend && sb->bend->index < blist->bark2->index)
 	{
 		struct blk *blk=blist->head;
@@ -305,6 +311,7 @@ static int backup_client(struct config *conf, int estimate)
 	int sigs_end=0;
 	int backup_end=0;
 	int requests_end=0;
+	int blk_requests_end=0;
 	struct win *win=NULL; // Rabin sliding window.
 	struct slist *flist=NULL;
 	struct slist *slist=NULL;
@@ -351,7 +358,8 @@ static int backup_client(struct config *conf, int estimate)
 		}
 
 		if(rbuf->buf && deal_with_read(rbuf, slist, blist,
-			conf, &backup_end, &requests_end)) goto end;
+			conf, &backup_end, &requests_end, &blk_requests_end))
+				goto end;
 
 		if(scanning)
 		{
@@ -384,11 +392,14 @@ static int backup_client(struct config *conf, int estimate)
 			//	blkgrps_queue, blkgrps_queue_max);
 		}
 
-		// FIX THIS
-		//else break;
+		if(blk_requests_end)
+		{
+			if(!slist->mark2) break;
+			printf("still have: %s\n", slist->mark2->path);
+		}
 	}
 
-	if(async_write_str(CMD_GEN, "scan_end"))
+	if(async_write_str(CMD_GEN, "backup_end"))
 	{
 		ret=-1;
 		goto end;

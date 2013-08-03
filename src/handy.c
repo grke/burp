@@ -1467,3 +1467,24 @@ end:
 	close_file_for_send(NULL, &fp);
 	return ret;
 }
+
+int split_sig(const char *buf, unsigned int s, char *weak, char *strong)
+{
+	if(s!=48)
+	{
+		fprintf(stderr, "Signature wrong length: %u\n", s);
+		return -1;
+	}
+	memcpy(weak, buf, 16);
+	memcpy(strong, buf+16, 32);
+	return 0;
+}
+
+int build_path_w(const char *path)
+{
+	char *rpath=NULL;
+	if(build_path(path, "", strlen(path), &rpath, NULL))
+		return -1;
+	free(rpath);
+	return 0;
+}

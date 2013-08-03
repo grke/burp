@@ -95,8 +95,8 @@ void blk_add_to_list(struct blk *blk, struct blist *blist)
 		blist->tail=blk;
 		// Markers might have fallen off the end. Start them again
 		// on the tail.
-		if(!blist->bark1) blist->bark1=blist->tail;
-		if(!blist->bark2) blist->bark2=blist->tail;
+		if(!blist->last_requested) blist->last_requested=blist->tail;
+		if(!blist->last_sent) blist->last_sent=blist->tail;
 	}
 	else
 	{
@@ -105,7 +105,7 @@ void blk_add_to_list(struct blk *blk, struct blist *blist)
 		blist->tail=blk;
 		// Pointers to the head that can move along the list
 		// at a different rate.
-		blist->bark1=blk;
-		blist->bark2=blk;
+		blist->last_requested=blk;
+		blist->last_sent=blk;
 	}
 }

@@ -58,12 +58,10 @@ struct slist
 {
 	struct sbuf *head;
 	struct sbuf *tail;
-// On server, marks the most recent file requested.
-	struct sbuf *mark1;
-// On server, marks where incoming sigs will be added.
-	struct sbuf *mark2;
-// On server, marks ???
-	struct sbuf *mark3;
+	struct sbuf *last_requested; // last file requested
+	struct sbuf *add_sigs_here; // server only
+	struct sbuf *blks_to_request; // server only
+	struct sbuf *blks_to_send; // client only
 };
 
 extern struct sbuf *sbuf_init(void);

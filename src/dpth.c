@@ -82,20 +82,18 @@ int split_stream(FILE *ifp, struct dpth *dpth, void *flag,
         {
                 if(bytes!=5)
                 {
-                        fprintf(stderr, "Short read: %d wanted: %d\n",
-                                (int)bytes, 5);
+                        logp("Short read: %d wanted: %d\n", (int)bytes, 5);
                         goto end;
                 }
                 if((sscanf(buf, "%c%04X", &cmd, &s))!=2)
                 {
-                        fprintf(stderr, "sscanf failed: %s\n", buf);
+                        logp("sscanf failed: %s\n", buf);
                         goto end;
                 }
 
                 if((bytes=fread(buf, 1, s, ifp))!=s)
                 {
-                        fprintf(stderr, "Short read: %d wanted: %d\n",
-                                (int)bytes, (int)s);
+                        logp("Short read: %d wanted: %d\n", (int)bytes, (int)s);
                         goto error;
                 }
 
@@ -118,7 +116,7 @@ int split_stream(FILE *ifp, struct dpth *dpth, void *flag,
                 }
                 else
                 {
-                        fprintf(stderr, "unknown cmd: %c\n", cmd);
+                        logp("unknown cmd: %c\n", cmd);
                         goto error;
                 }
         }

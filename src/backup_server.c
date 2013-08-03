@@ -13,6 +13,51 @@
 #include "backup_server.h"
 #include "current_backups_server.h"
 #include "attribs.h"
+#include "hash.h"
+
+static int fprint_tag(FILE *fp, char cmd, unsigned int s)
+{
+	if(fprintf(fp, "%c%04X", cmd, s)!=5)
+	{
+		fprintf(stderr, "Short fprintf\n");
+		return -1;
+	}
+	return 0;
+}
+
+static int fwrite_buf(char cmd, const char *buf, unsigned int s, FILE *fp)
+{
+	static size_t bytes;
+	if(fprint_tag(fp, cmd, s)) return -1;
+	if((bytes=fwrite(buf, 1, s, fp))!=s)
+	{
+		fprintf(stderr, "Short write: %d\n", (int)bytes);
+		return -1;
+	}
+	return 0;
+}
+
+static FILE *file_open_w(const char *path, const char *mode)
+{
+	FILE *fp;
+	if(build_path_w(path)) return NULL;
+	fp=open_file(path, "wb");
+	return fp;
+}
+
+static int fwrite_dat(char cmd, const char *buf, unsigned int s, struct dpth *dpth)
+{
+	if(!dpth->dfp && !(dpth->dfp=file_open_w(dpth->path_dat, "wb")))
+		return -1;
+	return fwrite_buf(cmd, buf, s, dpth->dfp);
+}
+
+static int fwrite_sig(char cmd, const char *buf, unsigned int s, struct dpth *dpth)
+{
+	if(!dpth->sfp && !(dpth->sfp=file_open_w(dpth->path_sig, "wb")))
+		return -1;
+	return fwrite_buf(cmd, buf, s, dpth->sfp);
+}
 
 static int write_incexc(const char *realworking, const char *incexc)
 {
@@ -66,18 +111,6 @@ static int open_log(const char *realworking, const char *client, const char *cve
 	return 0;
 }
 
-static int split_sig(const char *buf, unsigned int s, char *weak, char *strong)
-{
-	if(s!=48)
-	{
-		fprintf(stderr, "Signature wrong length: %u\n", s);
-		return -1;
-	}
-	memcpy(weak, buf, 16);
-	memcpy(strong, buf+16, 32);
-	return 0;
-}
-
 static int backup_needed(struct sbuf *sb, gzFile cmanfp)
 {
 	if(sb->cmd==CMD_FILE) return 1;
@@ -85,13 +118,47 @@ static int backup_needed(struct sbuf *sb, gzFile cmanfp)
 	return 0;
 }
 
-static int already_got_block(struct blk *blk)
+static char *get_fq_path(const char *path)
 {
+	static char fq_path[24];
+	snprintf(fq_path, sizeof(fq_path), "%s\n", path);
+	return fq_path;
+}
+
+static int already_got_block(struct blk *blk, struct dpth *dpth)
+{
+	static uint64_t weakint;
+	static struct weak_entry *weak_entry;
+
+	weakint=strtoull(blk->weak, 0, 16);
 	// If already got, need to overwrite the references.
+	if((weak_entry=find_weak_entry(weakint)))
+	{
+		struct strong_entry *strong_entry;
+		if((strong_entry=find_strong_entry(weak_entry, blk->strong)))
+		{
+			if(!(blk->data=strdup(get_fq_path(strong_entry->path))))
+			{
+				log_out_of_memory(__FUNCTION__);
+				return -1;
+			}
+			blk->length=strlen(blk->data);
+	printf("FOUND: %s %s\n", blk->weak, blk->strong);
+			blk->got=1;
+		}
+/*
+		else
+		{
+			fprintf(stderr, "COLLISION: %s %s\n", weak, strong);
+			collisions++;
+		}
+*/
+	}
+
 	return 0;
 }
 
-static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist *blist, struct config *conf, int *scan_end, int *sigs_end, int *backup_end, gzFile cmanfp)
+static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist *blist, struct config *conf, int *scan_end, int *sigs_end, int *backup_end, gzFile cmanfp, struct dpth *dpth)
 {
 	int ret=0;
 	static uint64_t data_index=1;
@@ -103,9 +170,46 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 	switch(rbuf->cmd)
 	{
 		case CMD_DATA:
+		{
+			char tmp[64];
+			static struct blk *blk=NULL;
 			printf("Got data %lu (%lu)!\n", rbuf->len, data_index);
 			data_index++;
+
+			// Find the first one in the list that was requested.
+			// FIX THIS: Going up the list here, and then later
+			// when writing to the manifest is not efficient.
+			if(!blk) blk=blist->head;
+			for(; blk && !blk->requested; blk=blk->next) { }
+			if(!blk)
+			{
+				logp("Received data but could not find next requested block.\n");
+				goto error;
+			}
+			// Add it to the data store straight away.
+			if(fwrite_dat(CMD_DATA, rbuf->buf, rbuf->len, dpth))
+				goto error;
+                       	// argh
+                       	snprintf(tmp, sizeof(tmp),
+                               	"%s%s\n", blk->weak, blk->strong);
+                       	if(fwrite_sig(CMD_SIG, tmp, strlen(tmp), dpth))
+				goto error;
+
+			// Need to write the refs to the manifest too.
+			// Mark that we have got the block, and write it to
+			// the manifest later.
+			if(!(blk->data=strdup(get_fq_path(dpth_mk(dpth)))))
+			{
+				log_out_of_memory(__FUNCTION__);
+				goto error;
+			}
+			if(dpth_incr_sig(dpth)) goto error;
+			blk->length=strlen(blk->data);
+			blk->got=1;
+			blk=blk->next;
+
 			goto end;
+		}
 
 		case CMD_ATTRIBS_SIGS:
 			// New set of stuff incoming. Clean up.
@@ -159,10 +263,15 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			if(split_sig(rbuf->buf, rbuf->len,
 				blk->weak, blk->strong))
 					goto error;
-			printf("Need data for %lu %lu %s\n",
+
+			// If already got, this function will set blk->data
+			// to be the location of the already got block.
+			if(already_got_block(blk, dpth))
+				goto error;
+
+			if(!blk->got) printf("Need data for %lu %lu %s\n",
 				sb->index, blk->index,
 				slist->mark2->path);
-			if(already_got_block(blk)) blk->got=1;
 
 			goto end;
 		}
@@ -285,11 +394,15 @@ static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, int sigs
 		return;
 	}
 
-	encode_req(blk, req);
-	wbuf->cmd=CMD_DATA_REQ;
-	wbuf->buf=req;
-	wbuf->len=strlen(req);
-printf("data request: %lu\n", blk->index);
+	if(!blk->got)
+	{
+		encode_req(blk, req);
+		wbuf->cmd=CMD_DATA_REQ;
+		wbuf->buf=req;
+		wbuf->len=strlen(req);
+	printf("data request: %lu\n", blk->index);
+		blk->requested=1;
+	}
 
 	// Move on.
 	if(blk==sb->bend)
@@ -333,62 +446,65 @@ static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist, int sca
 	sb->index=file_no++;
 }
 
-static int write_to_manifest(gzFile mzp, struct slist *slist)
+static int write_to_manifest(gzFile mzp, struct slist *slist, struct dpth *dpth)
 {
 	struct sbuf *sb;
 	if(!slist) return 0;
 
 	while((sb=slist->head))
 	{
+//printf("HEREA\n");
 		if(sb->changed)
 		{
 			// Changed...
+			struct blk *blk;
+//printf("HERE\n");
+			
 			if(!sb->header_written_to_manifest)
 			{
 				if(sbuf_to_manifest(sb, NULL, mzp)) return -1;
 				sb->header_written_to_manifest=1;
 			}
 
-			// Need to write the sigs to the manifest too.
-/*
-			if(sb->bhead) for(; sb->b<sb->bhead->b; sb->b++)
+			for(blk=sb->bstart; blk && blk->got; blk=blk->next)
 			{
-				if(sb->bhead->blks[sb->b]->got)
+				gzprintf(mzp, "S%04X%s",
+					blk->length, blk->data);
+				if(blk==sb->bend)
 				{
-					// FIX THIS: Write it to the manifest.
-					continue;
-				}
-				else
-				{
-					// Still waiting.
+					slist->head=sb->next;
+					// free sb?
 					break;
 				}
+
+				sb->bstart=blk->next;
+				// free blk?
 			}
-*/
 			break;
 		}
 		else
 		{
-/*
 			// No change, can go straight in.
 			if(sbuf_to_manifest(sb, NULL, mzp)) return -1;
+
+			// FIX THIS:
 			// Also need to write in the unchanged sigs.
 
 			// Move along.
 			slist->head=sb->next;
+
 			// It is possible for the markers to drop behind.
 			if(slist->tail==sb) slist->tail=sb->next;
 			if(slist->mark1==sb) slist->mark1=sb->next;
 			if(slist->mark2==sb) slist->mark2=sb->next;
 			if(slist->mark3==sb) slist->mark3=sb->next;
 			sbuf_free(sb);
-*/
 		}
 	}
 	return 0;
 }
 
-static int backup_server(gzFile cmanfp, const char *manifest, const char *client, struct config *conf)
+static int backup_server(gzFile cmanfp, const char *manifest, const char *client, const char *datadir, struct config *conf)
 {
 	int ret=-1;
 	gzFile mzp=NULL;
@@ -400,14 +516,18 @@ static int backup_server(gzFile cmanfp, const char *manifest, const char *client
 	struct blist *blist=NULL;
 	struct iobuf *rbuf=NULL;
 	struct iobuf *wbuf=NULL;
+	struct dpth *dpth=NULL;
 
 	logp("Begin backup\n");
+	printf("DATADIR: %s\n", datadir);
 
 	if(!(slist=slist_init())
 	  || !(blist=blist_init())
 	  || !(wbuf=iobuf_init())
 	  || !(rbuf=iobuf_init())
-	  || !(mzp=gzopen_file(manifest, comp_level(conf))))
+	  || !(mzp=gzopen_file(manifest, comp_level(conf)))
+	  || !(dpth=dpth_alloc(datadir))
+	  || dpth_init(dpth))
 		goto end;
 
 	while(!backup_end)
@@ -430,10 +550,11 @@ static int backup_server(gzFile cmanfp, const char *manifest, const char *client
 		}
 
 		if(rbuf->buf && deal_with_read(rbuf, slist, blist, conf,
-			&scan_end, &sigs_end, &backup_end, cmanfp)) goto end;
+			&scan_end, &sigs_end, &backup_end, cmanfp, dpth))
+				goto end;
 
-//		if(write_to_manifest(mzp, slist))
-//			goto end;
+		if(write_to_manifest(mzp, slist, dpth))
+			goto end;
 	}
 	ret=0;
 
@@ -450,6 +571,7 @@ end:
 	// Write buffer did not allocate 'buf'. 
 	wbuf->buf=NULL;
 	iobuf_free(wbuf);
+	dpth_free(dpth);
 	return ret;
 }
 
@@ -464,22 +586,17 @@ int do_backup_server(const char *basedir, const char *current, const char *worki
 	// Real path to the working directory
 	char *realworking=NULL;
 	char tstmp[64]="";
-	struct dpth dpth;
 	gzFile cmanfp=NULL;
 	struct stat statp;
+	char *datadir=NULL;
 
 	logp("in do_backup_server\n");
 
 	if(!(timestamp=prepend_s(working, "timestamp", strlen("timestamp")))
-	  || !(cmanifest=prepend_s(current, "manifest.gz", strlen("manifest.gz"))))
+	  || !(cmanifest=prepend_s(current, "manifest.gz", strlen("manifest.gz")))
+	  || !(datadir=prepend_s(basedir, "data", strlen("data"))))
 	{
 		log_and_send_oom(__FUNCTION__);
-		goto error;
-	}
-
-	if(init_dpth(&dpth, currentdata, cconf))
-	{
-		log_and_send("could not init_dpth\n");
 		goto error;
 	}
 
@@ -539,7 +656,7 @@ int do_backup_server(const char *basedir, const char *current, const char *worki
 		}
 	}
 
-	if(backup_server(cmanfp, manifest, client, cconf))
+	if(backup_server(cmanfp, manifest, client, datadir, cconf))
 	{
 		logp("error in backup\n");
 		goto error;
@@ -562,6 +679,7 @@ end:
 	gzclose_fp(&cmanfp);
 	if(timestamp) free(timestamp);
 	if(cmanifest) free(cmanifest);
+	if(datadir) free(datadir);
 	set_logfp(NULL, cconf); // does an fclose on logfp.
 	return ret;
 }

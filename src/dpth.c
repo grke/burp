@@ -1,107 +1,187 @@
-#include "burp.h"
-#include "bfile.h"
-#include "handy.h"
-#include "prog.h"
-#include "msg.h"
-#include "asyncio.h"
-#include "counter.h"
-#include "dpth.h"
-#include "find.h"
-
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <sys/types.h>
 #include <dirent.h>
 
-void mk_dpth(struct dpth *dpth, struct config *cconf, char cmd)
+#include "dpth.h"
+#include "prepend.h"
+#include "handy.h"
+#include "hash.h"
+#include "log.h"
+#include "msg.h"
+
+#define MAX_STORAGE_SUBDIRS	30000
+
+static char *dpth_mk_prim(struct dpth *dpth)
 {
-	// file data
-	snprintf(dpth->path, sizeof(dpth->path), "%04X/%04X/%04X%s",
-	  dpth->prim, dpth->seco, dpth->tert,
-	  /* Because of the way EFS works, it cannot be compressed. */
-	  (cconf->compression && cmd!=CMD_EFS_FILE)?".gz":"");
+	static char path[8];
+	snprintf(path, sizeof(path), "%04X", dpth->prim);
+	return path;
 }
 
-static void mk_dpth_prim(struct dpth *dpth)
+static char *dpth_mk_seco(struct dpth *dpth)
 {
-	snprintf(dpth->path, sizeof(dpth->path), "%04X", dpth->prim);
+	static char path[16];
+	snprintf(path, sizeof(path), "%04X/%04X", dpth->prim, dpth->seco);
+	return path;
 }
 
-static void mk_dpth_seco(struct dpth *dpth)
+static char *dpth_mk_tert(struct dpth *dpth)
 {
-	snprintf(dpth->path, sizeof(dpth->path), "%04X/%04X",
-		dpth->prim, dpth->seco);
+	static char path[24];
+	snprintf(path, sizeof(path), "%04X/%04X/%04X",
+		dpth->prim, dpth->seco, dpth->tert);
+	return path;
 }
 
-static int get_highest_entry(const char *path)
+char *dpth_mk(struct dpth *dpth)
+{
+	static char path[32];
+	snprintf(path, sizeof(path), "%04X/%04X/%04X/%04X",
+		dpth->prim, dpth->seco, dpth->tert, dpth->sig);
+	return path;
+}
+
+static int process_sig(char cmd, const char *buf, unsigned int s, struct dpth *dpth, void *ignored)
+{
+        static uint64_t weakint;
+        static struct weak_entry *weak_entry;
+        static char weak[16+1];
+        static char strong[32+1];
+
+        if(split_sig(buf, s, weak, strong)) return -1;
+
+        weakint=strtoull(weak, 0, 16);
+
+	weak_entry=find_weak_entry(weakint);
+
+	// Add to hash table.
+	if(!weak_entry && !(weak_entry=add_weak_entry(weakint)))
+		return -1;
+	if(!(weak_entry->strong=add_strong_entry(weak_entry, strong, dpth)))
+		return -1;
+	dpth->sig++;
+
+	return 0;
+}
+
+int split_stream(FILE *ifp, struct dpth *dpth, void *flag,
+  int (*process_dat)(char, const char *, unsigned int, struct dpth *, void *),
+  int (*process_man)(char, const char *, unsigned int, struct dpth *, void *),
+  int (*process_sig)(char, const char *, unsigned int, struct dpth *, void *))
+{
+        int ret=0;
+        char cmd='\0';
+        size_t bytes;
+        char buf[1048576];
+        unsigned int s;
+
+        while((bytes=fread(buf, 1, 5, ifp)))
+        {
+                if(bytes!=5)
+                {
+                        fprintf(stderr, "Short read: %d wanted: %d\n",
+                                (int)bytes, 5);
+                        goto end;
+                }
+                if((sscanf(buf, "%c%04X", &cmd, &s))!=2)
+                {
+                        fprintf(stderr, "sscanf failed: %s\n", buf);
+                        goto end;
+                }
+
+                if((bytes=fread(buf, 1, s, ifp))!=s)
+                {
+                        fprintf(stderr, "Short read: %d wanted: %d\n",
+                                (int)bytes, (int)s);
+                        goto error;
+                }
+
+                if(cmd=='a')
+                {
+                        if(process_dat && process_dat(cmd, buf, s, dpth, &flag))
+                                goto error;
+                }
+                else if(cmd=='f')
+                {
+                        if(process_man && process_man(cmd, buf, s, dpth, &flag))
+                                goto error;
+                }
+                else if(cmd=='S')
+                {
+			s--;
+			buf[s]=0;
+                        if(process_sig && process_sig(cmd, buf, s, dpth, &flag))
+                                goto error;
+                }
+                else
+                {
+                        fprintf(stderr, "unknown cmd: %c\n", cmd);
+                        goto error;
+                }
+        }
+
+        goto end;
+error:
+        ret=-1;
+end:
+        return ret;
+}
+
+// Returns 0 on OK, -1 on error. *max gets set to the next entry.
+static int get_highest_entry(const char *path, int *max, struct dpth *dpth)
 {
 	int ent=0;
-	int max=0;
+	int ret=0;
 	DIR *d=NULL;
+	char *tmp=NULL;
 	struct dirent *dp=NULL;
+	FILE *ifp=NULL;
 
-	if(!(d=opendir(path))) return -1;
+	*max=-1;
+	if(!(d=opendir(path))) goto end;
 	while((dp=readdir(d)))
 	{
 		if(dp->d_ino==0
 		  || !strcmp(dp->d_name, ".")
 		  || !strcmp(dp->d_name, ".."))
-		continue;
+			continue;
 		ent=strtol(dp->d_name, NULL, 16);
-		if(ent>max) max=ent;
+		if(ent>*max) *max=ent;
+		if(dpth)
+		{
+			dpth->tert=ent;
+			dpth->sig=0;
+			if(!(tmp=prepend_s(path,
+				dp->d_name, strlen(dp->d_name))))
+					goto error;
+			if(!(ifp=open_file(tmp, "rb")))
+				goto error;
+fprintf(stderr, "LOAD: %s\n", tmp);
+			if(split_stream(ifp, dpth, NULL,
+				NULL, NULL, process_sig))
+					goto error;
+			free(tmp); tmp=NULL;
+			fclose(ifp); ifp=NULL;
+		}
 	}
-	closedir(d);
-	return max;
+
+	goto end;
+error:
+	ret=-1;
+end:
+	if(d) closedir(d);
+	if(ifp) fclose(ifp);
+	if(tmp) free(tmp);
+	return ret;
 }
 
-int init_dpth(struct dpth *dpth, const char *currentdata, struct config *cconf)
+static int get_next_entry(const char *path, int *max, struct dpth *dpth)
 {
-	char *tmp=NULL;
-	//logp("in init_dpth\n");
-	dpth->looped=0;
-	dpth->prim=0;
-	dpth->seco=0;
-	dpth->tert=0;
-
-	if((dpth->prim=get_highest_entry(currentdata))<0)
-	{
-		// Could not open directory. Set all zeros.
-		dpth->prim=0;
-//		mk_dpth(dpth, cconf);
-		return 0;
-	}
-	mk_dpth_prim(dpth);
-	if(!(tmp=prepend_s(currentdata, dpth->path, strlen(dpth->path))))
-	{
-		log_and_send_oom(__FUNCTION__);
-		return -1;
-	}
-	if((dpth->seco=get_highest_entry(tmp))<0)
-	{
-		// Could not open directory. Set zero.
-		dpth->seco=0;
-//		mk_dpth(dpth, cconf);
-		free(tmp);
-		return 0;
-	}
-	free(tmp);
-	mk_dpth_seco(dpth);
-	if(!(tmp=prepend_s(currentdata, dpth->path, strlen(dpth->path))))
-	{
-		log_and_send_oom(__FUNCTION__);
-		return -1;
-	}
-	if((dpth->tert=get_highest_entry(tmp))<0)
-	{
-		// Could not open directory. Set zero.
-		dpth->tert=0;
-//		mk_dpth(dpth, cconf);
-		free(tmp);
-		return 0;
-	}
-	// At this point, we have the latest data file. Increment to get the
-	// next free one.
-	if(incr_dpth(dpth, cconf)) return -1;
-
-	//logp("init_dpth: %d/%d/%d\n", dpth->prim, dpth->seco, dpth->tert);
-	//logp("init_dpth: %s\n", dpth->path);
+	if(get_highest_entry(path, max, dpth)) return -1;
+	(*max)++;
 	return 0;
 }
 
@@ -109,56 +189,137 @@ int init_dpth(struct dpth *dpth, const char *currentdata, struct config *cconf)
 // 65535^3 = 281,462,092,005,375 data entries
 // recommend a filesystem with lots of inodes?
 // Hmm, but ext3 only allows 32000 subdirs, although that many files are OK.
-int incr_dpth(struct dpth *dpth, struct config *cconf)
+static int dpth_incr(struct dpth *dpth)
 {
-	if(dpth->tert++>=0xFFFF)
-	{
-		dpth->tert=0;
-		if(dpth->seco++>=cconf->max_storage_subdirs)
-		{
-			dpth->seco=0;
-			if(dpth->prim++>=cconf->max_storage_subdirs)
-			{
-				dpth->prim=0;
-				// Start again from zero, so make sure that
-				// the initial open of a data file is in an
-				// incrementing loop with O_CREAT|O_EXCL.
-				if(++(dpth->looped)>1)
-				{
-					logp("Could not find any free data file entries out of the 15000*%d*%d available!\n", cconf->max_storage_subdirs, cconf->max_storage_subdirs);
-					logp("Recommend moving the client storage directory aside and starting again.\n");
-					return -1;
-				}
-			}
-		}
-	}
-	//printf("before incr_dpth: %s %04X/%04X/%04X\n", dpth->path, dpth->prim, dpth->seco, dpth->tert);
-//	mk_dpth(dpth, cconf);
-	//printf("after incr_dpth: %s\n", dpth->path);
+	if(dpth->tert++<0xFFFF) return 0;
+	dpth->tert=0;
+	if(dpth->seco++<MAX_STORAGE_SUBDIRS) return 0;
+	dpth->seco=0;
+	if(dpth->prim++<MAX_STORAGE_SUBDIRS) return 0;
+	dpth->prim=0;
+	logp("Could not find any free data file entries out of the 15000*%d*%d available!\n", MAX_STORAGE_SUBDIRS, MAX_STORAGE_SUBDIRS);
+	logp("Recommend moving the client storage directory aside and starting again.\n");
+	return -1;
+}
+
+static char *dpth_get_path_dat(struct dpth *dpth)
+{
+	char *path=dpth_mk_tert(dpth);
+	return prepend_s(dpth->base_path_dat, path, strlen(path));
+}
+
+static char *dpth_get_path_man(struct dpth *dpth)
+{
+	int high;
+	char tmp[16];
+
+	if(get_next_entry(dpth->base_path_man, &high, NULL))
+		return NULL;
+	snprintf(tmp, sizeof(tmp), "%d", high);
+	return prepend_s(dpth->base_path_man, tmp, strlen(tmp));
+}
+
+static char *dpth_get_path_sig(struct dpth *dpth)
+{
+	char *path=dpth_mk_tert(dpth);
+	return prepend_s(dpth->base_path_sig, path, strlen(path));
+}
+
+int dpth_incr_sig(struct dpth *dpth)
+{
+	if(++(dpth->sig)<SIG_MAX) return 0;
+	dpth->sig=0;
+
+	// Do not need to close dpth->mfp and open a new one, because there is
+	// only one manifest per backup.
+	if(close_fp(&(dpth->dfp))
+	  || close_fp(&(dpth->sfp)))
+		return -1;
+	if(dpth_incr(dpth)) return -1;
+	if(dpth->path_dat) free(dpth->path_dat);
+	if(dpth->path_sig) free(dpth->path_sig);
+
+	// Should do the open here too, instead of in parse.c.
+	dpth->path_dat=dpth_get_path_dat(dpth);
+	dpth->path_sig=dpth_get_path_sig(dpth);
 	return 0;
 }
 
-int set_dpth_from_string(struct dpth *dpth, const char *datapath, struct config *cconf)
+struct dpth *dpth_alloc(const char *base_path)
 {
-	unsigned int a=0;
-	unsigned int b=0;
-	unsigned int c=0;
+        struct dpth *dpth;
+        if(!(dpth=(struct dpth *)calloc(1, sizeof(struct dpth)))
+	  || !(dpth->base_path=strdup(base_path)))
+	{
+		log_out_of_memory(__FUNCTION__);
+                goto error;
+	}
+	if((dpth->base_path_dat=prepend_s(base_path, "dat", strlen("dat")))
+	  && (dpth->base_path_man=prepend_s(base_path, "man", strlen("man")))
+	  && (dpth->base_path_sig=prepend_s(base_path, "sig", strlen("sig"))))
+		goto end;
+error:
+	dpth_free(dpth);
+	dpth=NULL;
+end:
+	return dpth;
+}
 
-	if(!datapath
-	  || *datapath=='t') // The path used the tree style structure.
-		return 0;
+int dpth_init(struct dpth *dpth)
+{
+	int max;
+	int ret=0;
+	char *tmp=NULL;
 
-	if((sscanf(datapath, "%04X/%04X/%04X", &a, &b, &c))!=3)
-		return -1;
+	if(get_highest_entry(dpth->base_path_sig, &max, NULL))
+		goto error;
+	if(max<0) max=0;
+	dpth->prim=max;
+	tmp=dpth_mk_prim(dpth);
+	if(!(tmp=prepend_s(dpth->base_path_sig, tmp, strlen(tmp))))
+		goto error;
 
-	/* only set it if it is a higher one */
-	if(dpth->prim > (int)a
-	  || dpth->seco > (int)b
-	  || dpth->tert > (int)c) return 0;
+	if(get_highest_entry(tmp, &max, NULL))
+		goto error;
+	if(max<0) max=0;
+	dpth->seco=max;
+	free(tmp);
+	tmp=dpth_mk_seco(dpth);
+	if(!(tmp=prepend_s(dpth->base_path_sig, tmp, strlen(tmp))))
+		goto error;
 
-	dpth->prim=a;
-	dpth->seco=b;
-	dpth->tert=c;
-//	mk_dpth(dpth, cconf);
-	return 0;
+	if(get_next_entry(tmp, &max, dpth))
+		goto error;
+	if(max<0) max=0;
+	dpth->tert=max;
+
+	dpth->sig=0;
+
+	if(!(dpth->path_dat=dpth_get_path_dat(dpth))) goto error;
+	if(!(dpth->path_man=dpth_get_path_man(dpth))) goto error;
+	if(!(dpth->path_sig=dpth_get_path_sig(dpth))) goto error;
+
+	goto end;
+error:
+	ret=-1;
+end:
+	if(tmp) free(tmp);
+	return ret;
+}
+
+void dpth_free(struct dpth *dpth)
+{
+	if(!dpth) return;
+	if(dpth->base_path) free(dpth->base_path);
+	if(dpth->base_path_dat) free(dpth->base_path_dat);
+	if(dpth->base_path_man) free(dpth->base_path_man);
+	if(dpth->base_path_sig) free(dpth->base_path_sig);
+	if(dpth->path_dat) free(dpth->path_dat);
+	if(dpth->path_man) free(dpth->path_man);
+	if(dpth->path_sig) free(dpth->path_sig);
+	if(dpth->dfp) fclose(dpth->dfp);
+	if(dpth->mfp) fclose(dpth->mfp);
+	if(dpth->sfp) fclose(dpth->sfp);
+	free(dpth);
+	dpth=NULL;
 }

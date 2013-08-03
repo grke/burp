@@ -1,18 +1,31 @@
-#ifndef DPTH_H
-#define DPTH_H
+#ifndef __DPTH_H
+#define __DPTH_H
+
+#define SIG_MAX 0xFFF		// 4096 signatures per data file.
 
 struct dpth
 {
+	char *base_path;
+	char *base_path_sig;
+	char *base_path_dat;
+	char *base_path_man;
+	char *path_dat;
+	char *path_man;
+	char *path_sig;
+	FILE *dfp;		// file pointer - data
+	FILE *mfp;		// file pointer - manifest
+	FILE *sfp;		// file pointer - signatures
 	int prim;
 	int seco;
 	int tert;
-	char path[32];
-	int looped;
+	int sig;
 };
 
-extern int init_dpth(struct dpth *dpth, const char *currentdata, struct config *cconf);
-extern int incr_dpth(struct dpth *dpth, struct config *cconf);
-extern int set_dpth_from_string(struct dpth *dpth, const char *datapath, struct config *conf);
-extern void mk_dpth(struct dpth *dpth, struct config *cconf, char cmd);
+extern struct dpth *dpth_alloc(const char *base_path);
+extern int dpth_init(struct dpth *dpth);
+extern void dpth_free(struct dpth *dpth);
+
+extern int dpth_incr_sig(struct dpth *dpth);
+extern char *dpth_mk(struct dpth *dpth);
 
 #endif

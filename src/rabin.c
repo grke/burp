@@ -44,9 +44,9 @@ static int blk_read(struct rconf *rconf, char *buf, char *buf_end, struct win *w
 			if(first)
 			{
 				sb->bstart=blk;
-				sb->bsighead=blk;
 				first=0;
 			}
+			if(!sb->bsighead) sb->bsighead=blk;
 			blk_add_to_list(blk, blist);
 			blk=NULL;
 
@@ -115,9 +115,9 @@ int blks_generate(struct config *conf, struct sbuf *sb, struct blist *blist, str
 			if(first)
 			{
 				sb->bstart=blk;
-				sb->bsighead=blk;
 				first=0;
 			}
+			if(!sb->bsighead) sb->bsighead=blk;
 			blk_add_to_list(blk, blist);
 		}
 		else blk_free(blk);

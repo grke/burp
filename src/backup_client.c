@@ -91,16 +91,19 @@ printf("got request for: %s\n", sb->path);
 		case CMD_GEN:
 			if(!strcmp(rbuf->buf, "requests_end"))
 			{
+printf("FILE REQUESTS END\n");
 				*requests_end=1;
 				goto end;
 			}
 			else if(!strcmp(rbuf->buf, "blk_requests_end"))
 			{
+printf("BLK REQUESTS END\n");
 				*blk_requests_end=1;
 				goto end;
 			}
 			else if(!strcmp(rbuf->buf, "backup_end"))
 			{
+printf("BACKUP END\n");
 				*backup_end=1;
 				goto end;
 			}
@@ -163,7 +166,9 @@ static int add_to_blks_list(struct config *conf, struct slist *slist, struct bli
 static void free_stuff(struct slist *slist, struct blist *blist)
 {
 	struct sbuf *sb=slist->head;
-//printf("in free\n");
+printf("in free\n");
+//printf("sb->bend: %s\n", sb->bend?"yes":"no");
+//printf("%d %d\n", slist->head==slist->tail, blist->bark2==sb->bend);
 	while(sb && sb->bend && sb->bend->index < blist->bark2->index)
 	{
 		struct blk *blk=blist->head;
@@ -208,6 +213,7 @@ static void get_wbuf_from_data(struct iobuf *wbuf, struct slist *slist, struct b
 			blist->bark2=blk;
 			break;
 		}
+		//blist->bark2=blk;
 	}
 	// Need to free stuff that is no longer needed.
 	free_stuff(slist, blist);
@@ -394,8 +400,13 @@ static int backup_client(struct config *conf, int estimate)
 
 		if(blk_requests_end)
 		{
-			//if(!slist->mark2) break;
-			//printf("still have: %s\n", slist->mark2->path);
+			// If got to the end of the file request list
+			// and the last block of the last file, and
+			// the write buffer is empty, we got to the end.
+			if(slist->head==slist->tail
+			  && blist->bark2==slist->tail->bend
+			  && !wbuf->len)
+				break;
 		}
 	}
 

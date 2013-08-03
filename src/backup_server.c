@@ -329,17 +329,19 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 		case CMD_GEN:
 			if(!strcmp(rbuf->buf, "scan_end"))
 			{
+printf("SCAN END\n");
 				*scan_end=1;
 				goto end;
 			}
 			else if(!strcmp(rbuf->buf, "sigs_end"))
 			{
+printf("SIGS END\n");
 				*sigs_end=1;
 				goto end;
 			}
 			else if(!strcmp(rbuf->buf, "backup_end"))
 			{
-printf("got backup_end\n");
+printf("BACKUP END\n");
 				*backup_end=1;
 				goto end;
 			}
@@ -364,7 +366,7 @@ static int encode_req(struct blk *blk, char *req)
 	return 0;
 }
 
-static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, int sigs_end)
+static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, int sigs_end, int *blk_requests_end)
 {
 	static char req[32]="";
 	struct blk *blk;
@@ -385,11 +387,12 @@ static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, int sigs
 		// Trying to move onto the next file.
 		// ??? Does this really work?
 		if(sb->bend) slist->mark3=sb->next;
-		if(sigs_end)
+		if(sigs_end && !*blk_requests_end)
 		{
 			wbuf->cmd=CMD_GEN;
 			wbuf->buf=(char *)"blk_requests_end";
 			wbuf->len=strlen(wbuf->buf);
+			*blk_requests_end=1;
 		}
 		return;
 	}
@@ -512,6 +515,7 @@ static int backup_server(gzFile cmanfp, const char *manifest, const char *client
 	int sigs_end=0;
 	int backup_end=0;
 	int requests_end=0;
+	int blk_requests_end=0;
 	struct slist *slist=NULL;
 	struct blist *blist=NULL;
 	struct iobuf *rbuf=NULL;
@@ -534,7 +538,8 @@ static int backup_server(gzFile cmanfp, const char *manifest, const char *client
 	{
 		if(!wbuf->len)
 		{
-			get_wbuf_from_sigs(wbuf, slist, sigs_end);
+			get_wbuf_from_sigs(wbuf, slist,
+				sigs_end, &blk_requests_end);
 			if(!wbuf->len)
 			{
 				get_wbuf_from_files(wbuf, slist,

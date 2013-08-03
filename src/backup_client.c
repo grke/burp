@@ -136,6 +136,7 @@ static int add_to_scan_list(struct slist *flist, int *scanning, struct config *c
 	else
 	{
 		// No more file system to scan.
+		printf("NO MORE SCANNING\n");
 		*scanning=0;
 	}
 	return 0;
@@ -181,15 +182,15 @@ static void get_wbuf_from_data(struct iobuf *wbuf, struct slist *slist, struct b
 {
 	struct blk *blk;
 	struct blk *bark1;
-	//struct sbuf *sb;
 
 	// mark2 cannot go past mark1.
 	if(!(blk=blist->bark2)) return;
 	if(!(bark1=blist->bark1)) return;
-	if(blk->index>=bark1->index) return;
+	if(blk->index>bark1->index) return;
 
-	for(; blk && blk->index < bark1->index; blk=blk->next)
+	for(; blk && blk->index <= bark1->index; blk=blk->next)
 	{
+printf("ee %lu %lu, %d\n", blk->index, bark1->index, blk->requested);
 		if(blk->requested)
 		{
 			printf("WANT TO SEND ");
@@ -202,7 +203,6 @@ static void get_wbuf_from_data(struct iobuf *wbuf, struct slist *slist, struct b
 			break;
 		}
 	}
-
 	// Need to free stuff that is no longer needed.
 	free_stuff(slist, blist);
 }
@@ -215,7 +215,6 @@ static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int requ
 
 	if(!sb)
 	{
-printf("here: %d\n", requests_end);
 		if(requests_end && !*sigs_end)
 		{
 			wbuf->buf=(char *)"sigs_end";
@@ -246,8 +245,8 @@ printf("here: %d\n", requests_end);
 	snprintf(blk->strong, sizeof(blk->strong),
 		"%s", blk_get_md5sum_str(blk->md5sum));
 	snprintf(buf, sizeof(buf), "%s%s", blk->weak, blk->strong);
-//	printf("%s\n", sb->path);
-//	printf("%s\n", buf);
+	printf("Send sig: %s\n", sb->path);
+	printf("%s\n", buf);
 	iobuf_from_str(wbuf, CMD_SIG, buf);
 
 	// Move on.

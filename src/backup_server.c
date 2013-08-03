@@ -136,8 +136,14 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 				// Mark the end of the previous file.
 				slist->mark2->bend=blist->tail;
 
-				//if(!slist->mark3->bsighead)
-				//	slist->mark3=slist->mark3->next;
+printf("HERE mark3: %s\n", slist->mark3?slist->mark3->path:"no");
+if(slist->mark3)
+{
+	printf("  bsighead %s\n", slist->mark3->bsighead?"yes":"no");
+}
+
+//				if(!slist->mark3->bsighead)
+//					slist->mark3=slist->mark3->next;
 
 				slist->mark2=sb;
 				// Incoming sigs now need to get added to mark2
@@ -153,11 +159,8 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			if(!(blk=blk_alloc())) goto error;
 
 			blk_add_to_list(blk, blist);
-			if(!sb->bstart)
-			{
-				sb->bstart=blk;
-				sb->bsighead=blk;
-			}
+			if(!sb->bstart) sb->bstart=blk;
+			if(!sb->bsighead) sb->bsighead=blk;
 
 			// FIX THIS: Should not just load into strings.
 			if(split_sig(rbuf->buf, rbuf->len,
@@ -227,6 +230,11 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 				*scan_end=1;
 				goto end;
 			}
+			else if(!strcmp(rbuf->buf, "sigs_end"))
+			{
+				*scan_end=1;
+				goto end;
+			}
 			else if(!strcmp(rbuf->buf, "backup_end"))
 			{
 				*backup_end=1;
@@ -259,28 +267,23 @@ static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist)
 	struct blk *blk;
 	struct sbuf *sb=slist->mark3;
 
-printf("a\n");
-
 	while(sb && !(sb->changed))
 	{
 		printf("Changed %d: %s\n", sb->changed, sb->path);
 		sb=sb->next;
 	}
-printf("b\n");
 	if(!sb)
 	{
 		slist->mark3=NULL;
 		return;
 	}
-printf("c\n");
-	if(!(blk=sb->bsighead)) return;
-printf("d\n");
-
-	// If we do not know where the file ends yet, avoid falling off the
-	// end of the list.
-	if(!sb->bend && !blk->next) return;
-printf("e\n");
-
+	if(!(blk=sb->bsighead))
+	{
+		// Trying to move onto the next file.
+		// ??? Does this really work?
+		if(sb->bend) slist->mark3=sb->next;
+		return;
+	}
 
 	encode_req(blk, req);
 	wbuf->cmd=CMD_DATA_REQ;
@@ -293,9 +296,13 @@ printf("data request: %lu\n", blk->index);
 	{
 		slist->mark3=sb->next;
 		sb->bsighead=sb->bstart;
+//		if(!sb->bsighead) printf("sb->bsighead fell off end a\n");
 	}
 	else
+	{
 		sb->bsighead=blk->next;
+//		if(!sb->bsighead) printf("sb->bsighead fell off end b\n");
+	}
 }
 
 static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist, int scan_end, int *requests_end)
@@ -362,6 +369,7 @@ static int write_to_manifest(gzFile mzp, struct slist *slist)
 		}
 		else
 		{
+/*
 			// No change, can go straight in.
 			if(sbuf_to_manifest(sb, NULL, mzp)) return -1;
 			// Also need to write in the unchanged sigs.
@@ -374,6 +382,7 @@ static int write_to_manifest(gzFile mzp, struct slist *slist)
 			if(slist->mark2==sb) slist->mark2=sb->next;
 			if(slist->mark3==sb) slist->mark3=sb->next;
 			sbuf_free(sb);
+*/
 		}
 	}
 	return 0;

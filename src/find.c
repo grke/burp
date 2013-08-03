@@ -675,10 +675,14 @@ static ff_e find_files(struct sbuf *sb, struct config *conf,
 
 	// This is not a link to a previously dumped file, so dump it.
 	if(S_ISREG(sb->statp.st_mode))
+	{
 		return found_regular_file(sb, conf, path, top_level);
+	}
 	else if(S_ISDIR(sb->statp.st_mode))
+	{
 		return found_directory(sb, conf, path,
 			parent_device, top_level);
+	}
 	else if(S_ISLNK(sb->statp.st_mode))
 	{
 #ifdef S_IFLNK
@@ -701,7 +705,9 @@ static ff_e find_files(struct sbuf *sb, struct config *conf,
 		return found_soft_link(sb, conf, path, top_level);
 	}
 	else
+	{
 		return found_other(sb, conf, path, top_level);
+	}
 }
 
 static int set_up_new_ff_dir(struct sbuf *sb)
@@ -769,7 +775,7 @@ static int deal_with_ff_ret(struct sbuf *sb, ff_e ff_ret)
 			// Now sb should be set up with the next entry.
 			return 0;
 		case FF_NOT_FOUND:
-			// Should never get here.
+			return 0;
 		case FF_ERROR:
 		default:
 			break;
@@ -803,8 +809,9 @@ int find_file_next(struct sbuf *sb, struct config *conf, bool *top_level)
 			conf->excreg, conf->ercount,
 			path))
 		{
-			while((ff_ret=find_files(sb, conf,
-				path, ff_dir->dev, false))==FF_NOT_FOUND) { }
+			ff_ret=find_files(sb, conf, path, ff_dir->dev, false);
+			//if(ff_ret==FF_NOT_FOUND)
+			//	return find_file_next(sb, conf, top_level);
 		}
 		else
 		{
@@ -837,11 +844,8 @@ int find_file_next(struct sbuf *sb, struct config *conf, bool *top_level)
 			ff_dir_list=ff_dir->next;
 		}
 
-		if(ff_ret!=FF_NOT_FOUND)
-		{
-			if(deal_with_ff_ret(sb, ff_ret)) goto error;
-			return 0;
-		}
+		if(deal_with_ff_ret(sb, ff_ret)) goto error;
+		return 0;
 	}
 
 	if(sd>=conf->sdcount)

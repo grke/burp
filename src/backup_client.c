@@ -70,7 +70,7 @@ printf("got request for: %s\n", sb->path);
 			// Find the matching entry.
 			printf("Request for data: %lu\n", index);
 
-			printf("mark1: %lu\n", blist->bark1->index);
+			//printf("mark1: %lu\n", blist->bark1->index);
 			for(blk=blist->bark1; blk; blk=blk->next)
 				if(index==blk->index) break;
 			if(!blk)
@@ -81,7 +81,7 @@ printf("got request for: %s\n", sb->path);
 			}
 			blk->requested=1;
 			blist->bark1=blk;
-			printf("Found %lu\n", index);
+			//printf("Found %lu\n", index);
 			goto end;
 		}
 		case CMD_WARNING:
@@ -163,7 +163,7 @@ static int add_to_blks_list(struct config *conf, struct slist *slist, struct bli
 static void free_stuff(struct slist *slist, struct blist *blist)
 {
 	struct sbuf *sb=slist->head;
-printf("in free\n");
+//printf("in free\n");
 	while(sb && sb->bend && sb->bend->index < blist->bark2->index)
 	{
 		struct blk *blk=blist->head;
@@ -196,7 +196,7 @@ static void get_wbuf_from_data(struct iobuf *wbuf, struct slist *slist, struct b
 
 	for(; blk && blk->index <= bark1->index; blk=blk->next)
 	{
-printf("ee %lu %lu, %d\n", blk->index, bark1->index, blk->requested);
+//printf("ee %lu %lu, %d\n", blk->index, bark1->index, blk->requested);
 		if(blk->requested)
 		{
 			printf("WANT TO SEND ");
@@ -372,8 +372,8 @@ static int backup_client(struct config *conf, int estimate)
 
 		if(slist->head
 		// Need to limit how many blocks are allocated at once.
-		//  && (!blist->head
-		//	|| blist->tail->index - blist->head->index<1000)
+	//	  && (!blist->head
+	//		|| blist->tail->index - blist->head->index<100)
 		)
 		{
 			if(add_to_blks_list(conf, slist, blist, win))
@@ -388,14 +388,14 @@ static int backup_client(struct config *conf, int estimate)
 		}
 		else
 		{
-			//printf("enough blocks: %d>=%d\n",
-			//	blkgrps_queue, blkgrps_queue_max);
+	//		if(blist->tail && blist->head)
+	//		printf("enough blocks: %lu\n", blist->tail->index - blist->head->index);
 		}
 
 		if(blk_requests_end)
 		{
-			if(!slist->mark2) break;
-			printf("still have: %s\n", slist->mark2->path);
+			//if(!slist->mark2) break;
+			//printf("still have: %s\n", slist->mark2->path);
 		}
 	}
 

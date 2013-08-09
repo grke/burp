@@ -178,46 +178,42 @@ static int add_to_blks_list(struct config *conf, struct slist *slist, struct bli
 
 static void free_stuff(struct slist *slist, struct blist *blist)
 {
-	struct sbuf *sb=slist->head;
-printf("in free\n");
-//printf("sb->bend: %s\n", sb->bend?"yes":"no");
-//printf("%d %d\n", slist->head==slist->tail, blist->bark2==sb->bend);
-	while(sb && sb->bend && sb->bend->index < blist->last_sent->index)
+	struct blk *blk;
+	blk=blist->head;
+//printf("in free: %s\n", blk?"yes":"no");
+	while(blk && blk!=blist->last_sent)
 	{
-		struct blk *blk=blist->head;
-printf("FREE %lu (%lu %lu) %s\n", sb->index, sb->bend->index, blist->last_sent->index, sb->path);
-		if(slist->blks_to_send==sb) slist->blks_to_send=sb->next;
-		sb=sb->next;
-		sbuf_free(slist->head);
-		slist->head=sb;
-
-		// Can now free blocks up to sb->bstart.
-		while(blk && blk!=sb->bstart)
+		if(blk==slist->head->bstart)
+			slist->head->bstart=NULL;
+		if(blk==slist->head->bend)
 		{
-			blk=blk->next;
-printf("FREE BLK %lu\n", blist->head->index);
-			blk_free(blist->head);
-			blist->head=blk;
+			struct sbuf *sb;
+			sb=slist->head;
+			sb->bend=NULL;
+			// FIX THIS: free here
+			if(!(slist->head=slist->head->next))
+				slist->tail=NULL;
+printf("FREE SB %lu %s\n", sb->index, sb->path);
+			sbuf_free(sb);
 		}
+		blk=blk->next;
+printf("FREE BLK %lu\n", blist->head->index);
+		blk_free(blist->head);
+		blist->head=blk;
 	}
 }
 
 static void get_wbuf_from_data(struct iobuf *wbuf, struct slist *slist, struct blist *blist)
 {
 	struct blk *blk;
-	struct blk *last_requested;
 
-	// last_sent cannot go past last_requested.
-	if(!(blk=blist->last_sent)
-	  || !(last_requested=blist->last_requested)
-	  || blk->index > last_requested->index)
-		return;
+//printf("get wbuf: %s\n", blist->last_sent?"yes":"no");
 
-	for(; blk && blk->index <= last_requested->index; blk=blk->next)
+	for(blk=blist->last_sent; blk; blk=blk->next)
 	{
-//printf("ee %lu %lu, %d\n", blk->index, last_requested->index, blk->requested);
 		if(blk->requested)
 		{
+			printf("ee %lu %lu, %d\n", blk->index, blist->last_requested->index, blk->requested);
 			printf("WANT TO SEND ");
 			printf("%lu %s%s\n", blk->index, blk->weak, blk->strong);
 			wbuf->cmd=CMD_DATA;
@@ -227,6 +223,7 @@ static void get_wbuf_from_data(struct iobuf *wbuf, struct slist *slist, struct b
 			blist->last_sent=blk;
 			break;
 		}
+		if(blk==blist->last_requested) break;
 	}
 	// Need to free stuff that is no longer needed.
 	free_stuff(slist, blist);

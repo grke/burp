@@ -25,8 +25,9 @@ struct sbuf
 	size_t alen;
 	int compression;
 
-	char *endfile;
-	size_t elen;
+	ssize_t bytes_read;
+//	char *endfile;
+//	size_t elen;
 
 	// Keep track of what has been sent.
 	int sent_stat;

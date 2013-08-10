@@ -14,17 +14,16 @@ static char *gbuf_end=NULL;
 static int first=0;
 
 // This is where the magic happens.
-static int blk_read(struct rconf *rconf, char *buf, char *buf_end, struct win *win, struct sbuf *sb, struct blist *blist)
+static int blk_read(struct rconf *rconf, struct win *win, struct sbuf *sb, struct blist *blist)
 {
 	char c;
-	char *cp;
 
 	if(!blk && !(blk=blk_alloc_with_data(rconf->blk_max)))
 		return -1;
 
-	for(cp=gcp; cp!=gbuf_end; cp++)
+	for(; gcp<gbuf_end; gcp++)
 	{
-		c=*cp;
+		c=*gcp;
 
 		blk->fingerprint = (blk->fingerprint * rconf->prime) + c;
 		win->checksum    = (win->checksum    * rconf->prime) + c
@@ -50,16 +49,10 @@ static int blk_read(struct rconf *rconf, char *buf, char *buf_end, struct win *w
 			blk_add_to_list(blk, blist);
 			blk=NULL;
 
-			// Maybe we have enough blocks to return now.
-			//if(++(sb->b)==SIG_MAX) return 0;
-
-			// Make space for another.
-			//if(!(blk=blk_alloc_with_data(rconf->blk_max)))
-			//	return -1;
+			gcp++;
 			return 0;
 		}
 	}
-	gcp=buf;
 	return 0;
 }
 
@@ -85,24 +78,24 @@ int blks_generate(struct config *conf, struct sbuf *sb, struct blist *blist, str
 		gcp=gbuf;
 	}
 
-	if(gcp!=gbuf)
+	if(gcp<gbuf_end)
 	{
 		// Could have got a fill before buf ran out -
 		// need to resume from the same place in that case.
-		if(blk_read(&conf->rconf, gbuf, gbuf_end, win, sb, blist))
+		if(blk_read(&conf->rconf, win, sb, blist))
 		{
 			sbuf_close_file(sb);
 			return -1;
 		}
+		return 0;
 	}
 	while((bytes=sbuf_read(sb, gbuf, conf->rconf.blk_max)))
 	{
 		gcp=gbuf;
 		gbuf_end=gbuf+bytes;
-		if(blk_read(&conf->rconf, gbuf, gbuf_end, win, sb, blist))
+		sb->bytes_read+=bytes;
+		if(blk_read(&conf->rconf, win, sb, blist))
 			return -1;
-		// Maybe we have enough blocks to return now.
-		//if(sb->b==SIG_MAX) return 0;
 		return 0;
 	}
 

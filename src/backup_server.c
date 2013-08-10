@@ -161,10 +161,9 @@ static int add_data_to_store(struct blist *blist, struct iobuf *rbuf, struct dpt
 {
 	char tmp[64];
 	static struct blk *blk=NULL;
-	static uint64_t data_index=1;
 //	static struct weak_entry *weak_entry;
 
-	printf("Got data %lu (%lu)!\n", rbuf->len, data_index);
+	printf("Got data %lu!\n", rbuf->len);
 
 	// Find the first one in the list that was requested.
 	// FIX THIS: Going up the list here, and then later
@@ -176,12 +175,6 @@ static int add_data_to_store(struct blist *blist, struct iobuf *rbuf, struct dpt
 		logp("Received data but could not find next requested block.\n");
 		return -1;
 	}
-	if(blk->index!=data_index)
-	{
-		printf("blk->index!=data_index %d %d\n", (int)blk->index, (int)data_index);
-		return -1;
-	}
-	data_index++;
 
 	// Add it to the data store straight away.
 	if(fwrite_dat(CMD_DATA, rbuf->buf, rbuf->len, dpth)) return -1;
@@ -258,6 +251,13 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobu
 	blk_add_to_list(blk, blist);
 	if(!sb->bstart) sb->bstart=blk;
 	if(!sb->bsighead) sb->bsighead=blk;
+
+	if(!strncmp(rbuf->buf,
+		"0000000000000000D41D8CD98F00B204E9800998ECF8427E", rbuf->len))
+	{
+		blk->got=1;
+		return 0;
+	}
 
 	// FIX THIS: Should not just load into strings.
 	if(split_sig(rbuf->buf, rbuf->len, blk->weak, blk->strong)) return -1;
@@ -400,7 +400,7 @@ static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, int sigs
 	static char req[32]="";
 	struct sbuf *sb=slist->blks_to_request;
 
-	while(sb && !(sb->changed))
+	while(sb && !sb->changed)
 	{
 		printf("Changed %d: %s\n", sb->changed, sb->path);
 		sb=sb->next;
@@ -480,12 +480,10 @@ static int write_to_manifest(gzFile mzp, struct slist *slist, struct dpth *dpth,
 
 	while((sb=slist->head))
 	{
-printf("HEREA\n");
 		if(sb->changed)
 		{
 			// Changed...
 			struct blk *blk;
-printf("HEREB\n");
 
 			if(!sb->header_written_to_manifest)
 			{
@@ -499,8 +497,9 @@ printf("HEREB\n");
 				&& (blk->next || backup_end);
 				blk=blk->next)
 			{
-				gzprintf(mzp, "S%04X%s",
-					blk->length, blk->data);
+				if(blk->data)
+					gzprintf(mzp, "S%04X%s",
+						blk->length, blk->data);
 				if(blk==sb->bend)
 				{
 					slist->head=sb->next;

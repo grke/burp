@@ -116,6 +116,17 @@ int blks_generate(struct config *conf, struct sbuf *sb, struct blist *blist, str
 		else blk_free(blk);
 		blk=NULL;
 	}
+	else if(!sb->bytes_read)
+	{
+		// Empty file, set up an empty block so that the server
+		// can skip over it.
+printf("EMPTY\n");
+		if(!(blk=blk_alloc())) return -1;
+		sb->bstart=blk;
+		sb->bsighead=blk;
+		blk_add_to_list(blk, blist);
+		blk=NULL;
+	}
 	if(blist->tail) sb->bend=blist->tail;
 	sbuf_close_file(sb);
 	return 0;

@@ -28,7 +28,7 @@ static int fprint_tag(FILE *fp, char cmd, unsigned int s)
 static int fwrite_buf(char cmd, const char *buf, unsigned int s, FILE *fp)
 {
 	static size_t bytes;
-	if(fprint_tag(fp, cmd, s)) return -1;
+	//if(fprint_tag(fp, cmd, s)) return -1;
 	if((bytes=fwrite(buf, 1, s, fp))!=s)
 	{
 		logp("Short write: %d\n", (int)bytes);
@@ -165,18 +165,23 @@ static int add_data_to_store(struct blist *blist, struct iobuf *rbuf, struct dpt
 //	static struct weak_entry *weak_entry;
 
 	printf("Got data %lu (%lu)!\n", rbuf->len, data_index);
-	data_index++;
 
 	// Find the first one in the list that was requested.
 	// FIX THIS: Going up the list here, and then later
 	// when writing to the manifest is not efficient.
 	if(!blk) blk=blist->head;
-	for(; blk && !blk->requested; blk=blk->next) { }
+	for(; blk && (!blk->requested || blk->got); blk=blk->next) { }
 	if(!blk)
 	{
 		logp("Received data but could not find next requested block.\n");
 		return -1;
 	}
+	if(blk->index!=data_index)
+	{
+		printf("blk->index!=data_index %d %d\n", (int)blk->index, (int)data_index);
+		return -1;
+	}
+	data_index++;
 
 	// Add it to the data store straight away.
 	if(fwrite_dat(CMD_DATA, rbuf->buf, rbuf->len, dpth)) return -1;
@@ -224,8 +229,7 @@ static int set_up_for_sig_info(struct slist *slist, struct blist *blist, struct 
 		logp("Could not find %lu in request list %d\n", inew->index, sb->index);
 		return -1;
 	}
-	// Replace the attribs with the more recent
-	// values.
+	// Replace the attribs with the more recent values.
 	free(sb->attribs);
 	sb->attribs=inew->attribs;
 	sb->alen=inew->alen;
@@ -469,27 +473,31 @@ printf("want sigs for: %s\n", sb->path);
 	sb->index=file_no++;
 }
 
-static int write_to_manifest(gzFile mzp, struct slist *slist, struct dpth *dpth)
+static int write_to_manifest(gzFile mzp, struct slist *slist, struct dpth *dpth, int backup_end)
 {
 	struct sbuf *sb;
 	if(!slist) return 0;
 
 	while((sb=slist->head))
 	{
-//printf("HEREA\n");
+printf("HEREA\n");
 		if(sb->changed)
 		{
 			// Changed...
 			struct blk *blk;
-//printf("HERE\n");
-			
+printf("HEREB\n");
+
 			if(!sb->header_written_to_manifest)
 			{
 				if(sbuf_to_manifest(sb, NULL, mzp)) return -1;
 				sb->header_written_to_manifest=1;
 			}
 
-			for(blk=sb->bstart; blk && blk->got; blk=blk->next)
+			for(blk=sb->bstart;
+				blk
+				&& blk->got
+				&& (blk->next || backup_end);
+				blk=blk->next)
 			{
 				gzprintf(mzp, "S%04X%s",
 					blk->length, blk->data);
@@ -578,7 +586,7 @@ static int backup_server(gzFile cmanfp, const char *manifest, const char *client
 			&scan_end, &sigs_end, &backup_end, cmanfp, dpth))
 				goto end;
 
-		if(write_to_manifest(mzp, slist, dpth))
+		if(write_to_manifest(mzp, slist, dpth, backup_end))
 			goto end;
 	}
 	ret=0;

@@ -30,7 +30,7 @@ void sbuf_free(struct sbuf *sb)
 	if(sb->path) free(sb->path);
 	if(sb->attribs) free(sb->attribs);
 	if(sb->linkto) free(sb->linkto);
-	if(sb->endfile) free(sb->endfile);
+//	if(sb->endfile) free(sb->endfile);
 	free(sb);
 }
 

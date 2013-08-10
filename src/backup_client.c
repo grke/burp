@@ -190,7 +190,6 @@ static void free_stuff(struct slist *slist, struct blist *blist)
 			struct sbuf *sb;
 			sb=slist->head;
 			sb->bend=NULL;
-			// FIX THIS: free here
 			if(!(slist->head=slist->head->next))
 				slist->tail=NULL;
 printf("FREE SB %lu %s\n", sb->index, sb->path);
@@ -412,10 +411,17 @@ static int backup_client(struct config *conf, int estimate)
 			// If got to the end of the file request list
 			// and the last block of the last file, and
 			// the write buffer is empty, we got to the end.
-			if(slist->head==slist->tail
-			  && blist->last_sent==slist->tail->bend
-			  && !wbuf->len)
-				break;
+			if(slist->head==slist->tail)
+			{
+				printf("blk_requests_end a\n");
+				if(blist->last_sent==slist->tail->bend)
+				{
+					printf("blk_requests_end b\n");
+					if(!wbuf->len)
+						break;
+				}
+			}
+
 		}
 	}
 

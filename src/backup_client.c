@@ -71,8 +71,7 @@ static int add_to_data_requests(struct blist *blist, struct iobuf *rbuf)
 		if(index==blk->index) break;
 	if(!blk)
 	{
-		logp("Could not find requested block %lu\n",
-			index);
+		logp("Could not find requested block %lu\n", index);
 		return -1;
 	}
 	blk->requested=1;
@@ -261,7 +260,7 @@ static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int requ
 
 	if(!sb->sent_stat)
 	{
-//printf("want to send stat: %s\n", sb->path);
+printf("want to send stat: %s\n", sb->path);
 		iobuf_from_sbuf_attr(wbuf, sb);
 		wbuf->cmd=CMD_ATTRIBS_SIGS; // hack
 		sb->sent_stat=1;

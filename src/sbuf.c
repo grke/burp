@@ -207,7 +207,7 @@ int sbuf_open_file(struct sbuf *sb, struct config *conf)
 		logw(conf->cntr, "Could not open %s\n", sb->path);
 		return -1;
 	}
-printf("opened: %s\n", sb->path);
+//printf("opened: %s\n", sb->path);
 	sb->opened=1;
 	return 0;
 }
@@ -216,7 +216,7 @@ void sbuf_close_file(struct sbuf *sb)
 {
 	close_file_for_send(&sb->bfd, &sb->fp);
 	sb->opened=0;
-printf("closed: %s\n", sb->path);
+//printf("closed: %s\n", sb->path);
 }
 
 ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize)

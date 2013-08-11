@@ -64,7 +64,7 @@ static int add_to_data_requests(struct blist *blist, struct iobuf *rbuf)
 	index=decode_req(rbuf->buf);
 
 	// Find the matching entry.
-	printf("Request for data: %lu\n", index);
+//	printf("Request for data: %lu\n", index);
 
 	//printf("last_requested: %lu\n", blist->last_requested->index);
 	for(blk=blist->last_requested; blk; blk=blk->next)
@@ -191,11 +191,11 @@ static void free_stuff(struct slist *slist, struct blist *blist)
 			sb->bend=NULL;
 			if(!(slist->head=slist->head->next))
 				slist->tail=NULL;
-printf("FREE SB %lu %s\n", sb->index, sb->path);
+//printf("FREE SB %lu %s\n", sb->index, sb->path);
 			sbuf_free(sb);
 		}
 		blk=blk->next;
-printf("FREE BLK %lu\n", blist->head->index);
+//printf("FREE BLK %lu\n", blist->head->index);
 		blk_free(blist->head);
 		blist->head=blk;
 	}
@@ -211,14 +211,15 @@ static void get_wbuf_from_data(struct iobuf *wbuf, struct slist *slist, struct b
 	{
 		if(blk->requested)
 		{
-			printf("ee %lu %lu, %d\n", blk->index, blist->last_requested->index, blk->requested);
-			printf("WANT TO SEND ");
-			printf("%lu %s%s\n", blk->index, blk->weak, blk->strong);
+//			printf("ee %lu %lu, %d\n", blk->index, blist->last_requested->index, blk->requested);
+//			printf("WANT TO SEND ");
+//			printf("%lu %s%s\n", blk->index, blk->weak, blk->strong);
 			wbuf->cmd=CMD_DATA;
 			wbuf->buf=blk->data;
 			wbuf->len=blk->length;
 			blk->requested=0;
 			blist->last_sent=blk;
+//printf("d");
 			break;
 		}
 		if(blk==blist->last_requested) break;
@@ -239,7 +240,7 @@ static void iobuf_from_blk_data(struct iobuf *wbuf, struct blk *blk)
 	snprintf(blk->strong, sizeof(blk->strong),
 		"%s", blk_get_md5sum_str(blk->md5sum));
 	snprintf(buf, sizeof(buf), "%s%s", blk->weak, blk->strong);
-	printf("%s\n", buf);
+//	printf("%s\n", buf);
 	iobuf_from_str(wbuf, CMD_SIG, buf);
 }
 
@@ -260,14 +261,15 @@ static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int requ
 
 	if(!sb->sent_stat)
 	{
-printf("want to send stat: %s\n", sb->path);
+//printf("want to send stat: %s\n", sb->path);
 		iobuf_from_sbuf_attr(wbuf, sb);
 		wbuf->cmd=CMD_ATTRIBS_SIGS; // hack
 		sb->sent_stat=1;
 		return;
 	}
 
-	printf("Send sig: %s\n", sb->path);
+//	printf("Send sig: %s\n", sb->path);
+//printf("s");
 	iobuf_from_blk_data(wbuf, sb->bsighead);
 
 	// Move on.
@@ -305,6 +307,7 @@ static void get_wbuf_from_scan(struct iobuf *wbuf, struct slist *flist)
 		sbuf_free(sb);
 		if(flist->head)
 		{
+//printf("f");
 			// Go ahead and get the next one from the list.
 			get_wbuf_from_scan(wbuf, flist);
 		}
@@ -412,10 +415,10 @@ static int backup_client(struct config *conf, int estimate)
 			// the write buffer is empty, we got to the end.
 			if(slist->head==slist->tail)
 			{
-				printf("blk_requests_end a\n");
+//				printf("blk_requests_end a\n");
 				if(blist->last_sent==slist->tail->bend)
 				{
-					printf("blk_requests_end b\n");
+//					printf("blk_requests_end b\n");
 					if(!wbuf->len)
 						break;
 				}

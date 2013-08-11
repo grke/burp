@@ -28,7 +28,7 @@ static int fprint_tag(FILE *fp, char cmd, unsigned int s)
 static int fwrite_buf(char cmd, const char *buf, unsigned int s, FILE *fp)
 {
 	static size_t bytes;
-	//if(fprint_tag(fp, cmd, s)) return -1;
+	if(fprint_tag(fp, cmd, s)) return -1;
 	if((bytes=fwrite(buf, 1, s, fp))!=s)
 	{
 		logp("Short write: %d\n", (int)bytes);
@@ -163,7 +163,7 @@ static int add_data_to_store(struct blist *blist, struct iobuf *rbuf, struct dpt
 	static struct blk *blk=NULL;
 //	static struct weak_entry *weak_entry;
 
-	printf("Got data %lu!\n", rbuf->len);
+//	printf("Got data %lu!\n", rbuf->len);
 
 	// Find the first one in the list that was requested.
 	// FIX THIS: Going up the list here, and then later
@@ -243,7 +243,7 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobu
 	struct blk *blk;
 	struct sbuf *sb;
 
-	printf("CMD_SIG: %s\n", rbuf->buf);
+//	printf("CMD_SIG: %s\n", rbuf->buf);
 
 	sb=slist->add_sigs_here;
 	if(!(blk=blk_alloc())) return -1;
@@ -266,8 +266,8 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobu
 	// to be the location of the already got block.
 	if(already_got_block(blk, dpth)) return -1;
 
-	if(!blk->got) printf("Need data for %lu %lu %s\n", sb->index,
-		blk->index, slist->add_sigs_here->path);
+//	if(!blk->got) printf("Need data for %lu %lu %s\n", sb->index,
+//		blk->index, slist->add_sigs_here->path);
 
 	return 0;
 }
@@ -327,7 +327,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 				sbuf_from_iobuf_path(snew, rbuf);
 				snew->need_path=0;
 				rbuf->buf=NULL;
-			printf("got request for: %s\n", snew->path);
+//			printf("got request for: %s\n", snew->path);
 				if(cmd_is_link(rbuf->cmd))
 					snew->need_link=1;
 				else
@@ -402,7 +402,7 @@ static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, int sigs
 
 	while(sb && !sb->changed)
 	{
-		printf("Changed %d: %s\n", sb->changed, sb->path);
+//		printf("Changed %d: %s\n", sb->changed, sb->path);
 		sb=sb->next;
 	}
 	if(!sb)
@@ -428,7 +428,7 @@ static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, int sigs
 	{
 		encode_req(sb->bsighead, req);
 		iobuf_from_str(wbuf, CMD_DATA_REQ, req);
-	printf("data request: %lu\n", sb->bsighead->index);
+//	printf("data request: %lu\n", sb->bsighead->index);
 		sb->bsighead->requested=1;
 	}
 
@@ -468,7 +468,7 @@ static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist, int sca
 
 	// Only need to request the path at this stage.
 	iobuf_from_sbuf_path(wbuf, sb);
-printf("want sigs for: %s\n", sb->path);
+//printf("want sigs for: %s\n", sb->path);
 	sb->sent_path=1;
 	sb->index=file_no++;
 }

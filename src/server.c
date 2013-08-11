@@ -1579,7 +1579,7 @@ static int run_server(struct config *conf, const char *configfile, int *rfd, con
 		{
 			// Happens when a client exits.
 			//logp("error on listening socket.\n");
-			if(!conf->forking) break;
+			if(!conf->forking) { gentleshutdown++; break; }
 			continue;
 		}
 
@@ -1587,7 +1587,7 @@ static int run_server(struct config *conf, const char *configfile, int *rfd, con
 		{
 			// Happens when a client exits.
 			//logp("error on status socket.\n");
-			if(!conf->forking) break;
+			if(!conf->forking) { gentleshutdown++; break; }
 			continue;
 		}
 
@@ -1600,6 +1600,7 @@ static int run_server(struct config *conf, const char *configfile, int *rfd, con
 				ret=1;
 				break;
 			}
+			if(!conf->forking) { gentleshutdown++; break; }
 		}
 
 		if(sfd>=0 && FD_ISSET(sfd, &fsr))
@@ -1612,6 +1613,7 @@ static int run_server(struct config *conf, const char *configfile, int *rfd, con
 				ret=1;
 				break;
 			}
+			if(!conf->forking) { gentleshutdown++; break; }
 		}
 
 		for(c=0; c<conf->max_children; c++)
@@ -1712,9 +1714,14 @@ static int run_server(struct config *conf, const char *configfile, int *rfd, con
 				{
 				  if(!chlds[d].status_server && chlds[d].data)
 				  {
+					static size_t slen;
+					static size_t wlen;
+					slen=strlen(chlds[d].data);
 				//	printf("try write\n");
-					write(chlds[c].wfd, chlds[d].data,
-						strlen(chlds[d].data));
+					wlen=write(chlds[c].wfd, chlds[d].data,
+						slen);
+					if(wlen!=slen)
+						logp("Short write to child fd %d: %d!=%d\n", chlds[c].wfd, wlen, slen);
 				  }
 				}
 			}

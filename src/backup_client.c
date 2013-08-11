@@ -179,7 +179,6 @@ static void free_stuff(struct slist *slist, struct blist *blist)
 {
 	struct blk *blk;
 	blk=blist->head;
-//printf("in free: %s\n", blk?"yes":"no");
 	while(blk && blk!=blist->last_sent)
 	{
 		if(blk==slist->head->bstart)
@@ -191,7 +190,7 @@ static void free_stuff(struct slist *slist, struct blist *blist)
 			sb->bend=NULL;
 			if(!(slist->head=slist->head->next))
 				slist->tail=NULL;
-//printf("FREE SB %lu %s\n", sb->index, sb->path);
+printf("FREE SB %lu %s\n", sb->index, sb->path);
 			sbuf_free(sb);
 		}
 		blk=blk->next;
@@ -388,24 +387,21 @@ static int backup_client(struct config *conf, int estimate)
 
 		if(slist->head
 		// Need to limit how many blocks are allocated at once.
-	//	  && (!blist->head
-	//		|| blist->tail->index - blist->head->index<100)
+		  && (!blist->head
+			|| blist->tail->index - blist->head->index<10000)
 		)
 		{
+//printf("get more blocks\n");
 			if(add_to_blks_list(conf, slist, blist, win))
 			{
 				ret=-1;
 				break;
 			}
-			// Hack - the above can return without having got
-			// anything when it runs out of file to read.
-			// So have another go.
-			// Maybe.
 		}
 		else
 		{
-	//		if(blist->tail && blist->head)
-	//		printf("enough blocks: %lu\n", blist->tail->index - blist->head->index);
+//			if(blist->tail && blist->head)
+//			printf("enough blocks: %lu\n", blist->tail->index - blist->head->index);
 		}
 
 		if(blk_requests_end)
@@ -434,6 +430,8 @@ static int backup_client(struct config *conf, int estimate)
 	}
 
 end:
+blk_print_alloc_stats();
+sbuf_print_alloc_stats();
 	find_files_free();
 	win_free(win);
 	slist_free(flist);
@@ -508,6 +506,12 @@ int do_backup_client(struct config *conf, enum action act)
 	win32_stop_vss();
 #endif
 #endif
+
+
+	while(1)
+	{
+		sleep(1);
+	}
 
 	return ret;
 }

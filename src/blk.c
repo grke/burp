@@ -4,11 +4,19 @@
 #include "blk.h"
 #include "log.h"
 
+static int alloc_count=0;
+static int free_count=0;
+static int data_count=0;
+static int data_free_count=0;
+
 struct blk *blk_alloc(void)
 {
 	struct blk *blk=NULL;
 	if((blk=(struct blk *)calloc(1, sizeof(struct blk))))
+	{
+		alloc_count++;
 		return blk;
+	}
 	log_out_of_memory(__FUNCTION__);
 	return NULL;
 }
@@ -18,7 +26,10 @@ struct blk *blk_alloc_with_data(uint32_t max_data_length)
 	struct blk *blk=NULL;
 	if(!(blk=blk_alloc())) return NULL;
 	if((blk->data=(char *)calloc(1, sizeof(char)*max_data_length)))
+	{
+		data_count++;
 		return blk;
+	}
 	log_out_of_memory(__FUNCTION__);
 	blk_free(blk);
 	return NULL;
@@ -27,8 +38,19 @@ struct blk *blk_alloc_with_data(uint32_t max_data_length)
 void blk_free(struct blk *blk)
 {
 	if(!blk) return;
-	if(blk->data) free(blk->data);
+	if(blk->data)
+	{
+		data_free_count++;
+		free(blk->data);
+	}
 	free(blk);
+free_count++;
+}
+
+void blk_print_alloc_stats(void)
+{
+	printf("alloc_count: %d, free_count: %d\n", alloc_count, free_count);
+	printf("data_count: %d, data_free_count: %d\n", data_count, data_free_count);
 }
 
 char *blk_get_md5sum_str(unsigned char *checksum)

@@ -10,6 +10,9 @@
 #include "sbuf.h"
 #include "attribs.h"
 
+static int alloc_count=0;
+static int free_count=0;
+
 struct sbuf *sbuf_init(void)
 {
 	struct sbuf *sb;
@@ -20,6 +23,7 @@ struct sbuf *sbuf_init(void)
 	}
 	sb->cmd=CMD_ERROR;
 	sb->compression=-1;
+alloc_count++;
 	return sb;
 }
 
@@ -27,11 +31,17 @@ void sbuf_free(struct sbuf *sb)
 {
 //	sbuf_close_file(sb);
 	if(!sb) return;
+free_count++;
 	if(sb->path) free(sb->path);
 	if(sb->attribs) free(sb->attribs);
 	if(sb->linkto) free(sb->linkto);
 //	if(sb->endfile) free(sb->endfile);
 	free(sb);
+}
+
+void sbuf_print_alloc_stats(void)
+{
+	printf("sb_alloc: %d free: %d\n", alloc_count, free_count);
 }
 
 struct slist *slist_init(void)
@@ -230,6 +240,7 @@ ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize)
 
 void sbuf_from_iobuf_path(struct sbuf *sb, struct iobuf *iobuf)
 {
+	if(sb->path) printf("SBUFA ALREADY SET!\n");
 	sb->cmd=iobuf->cmd;
 	sb->path=iobuf->buf;
 	sb->plen=iobuf->len;
@@ -237,40 +248,41 @@ void sbuf_from_iobuf_path(struct sbuf *sb, struct iobuf *iobuf)
 
 void sbuf_from_iobuf_attr(struct sbuf *sb, struct iobuf *iobuf)
 {
+	if(sb->attribs) printf("SBUFB ALREADY SET!\n");
 	sb->attribs=iobuf->buf;
 	sb->alen=iobuf->len;
 }
 
 void sbuf_from_iobuf_link(struct sbuf *sb, struct iobuf *iobuf)
 {
+	if(sb->linkto) printf("SBUFC ALREADY SET!\n");
 	sb->linkto=iobuf->buf;
 	sb->llen=iobuf->len;
 }
 
+static void set_iobuf(struct iobuf *iobuf, char cmd, char *buf, size_t len)
+{
+	iobuf->cmd=cmd;
+	iobuf->buf=buf;
+	iobuf->len=len;
+}
+
 void iobuf_from_sbuf_path(struct iobuf *iobuf, struct sbuf *sb)
 {
-	iobuf->cmd=sb->cmd;
-	iobuf->buf=sb->path;
-	iobuf->len=sb->plen;
+	set_iobuf(iobuf, sb->cmd, sb->path, sb->plen);
 }
 
 void iobuf_from_sbuf_attr(struct iobuf *iobuf, struct sbuf *sb)
 {
-	iobuf->cmd=CMD_ATTRIBS;
-	iobuf->buf=sb->attribs;
-	iobuf->len=sb->alen;
+	set_iobuf(iobuf, CMD_ATTRIBS, sb->attribs, sb->alen);
 }
 
 void iobuf_from_sbuf_link(struct iobuf *iobuf, struct sbuf *sb)
 {
-	iobuf->cmd=sb->cmd;
-	iobuf->buf=sb->linkto;
-	iobuf->len=sb->llen;
+	set_iobuf(iobuf, sb->cmd, sb->linkto, sb->llen);
 }
 
 void iobuf_from_str(struct iobuf *iobuf, char cmd, char *str)
 {
-	iobuf->cmd=cmd;
-	iobuf->buf=str;
-	iobuf->len=strlen(str);
+	set_iobuf(iobuf, cmd, str, strlen(str));
 }

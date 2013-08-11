@@ -169,7 +169,10 @@ static int add_data_to_store(struct blist *blist, struct iobuf *rbuf, struct dpt
 	// FIX THIS: Going up the list here, and then later
 	// when writing to the manifest is not efficient.
 	if(!blk) blk=blist->head;
-	for(; blk && (!blk->requested || blk->got); blk=blk->next) { }
+	for(; blk && (!blk->requested || blk->got); blk=blk->next)
+	{
+//		printf("try: %d\n", blk->index);
+	}
 	if(!blk)
 	{
 		logp("Received data but could not find next requested block.\n");
@@ -473,7 +476,7 @@ static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist, int sca
 	sb->index=file_no++;
 }
 
-static int write_to_manifest(gzFile mzp, struct slist *slist, struct dpth *dpth, int backup_end)
+static int write_to_manifest(gzFile mzp, struct slist *slist, struct blist *blist, struct dpth *dpth, int backup_end)
 {
 	struct sbuf *sb;
 	if(!slist) return 0;
@@ -491,11 +494,9 @@ static int write_to_manifest(gzFile mzp, struct slist *slist, struct dpth *dpth,
 				sb->header_written_to_manifest=1;
 			}
 
-			for(blk=sb->bstart;
-				blk
+			while((blk=sb->bstart)
 				&& blk->got
-				&& (blk->next || backup_end);
-				blk=blk->next)
+				&& (blk->next || backup_end))
 			{
 				if(blk->data)
 					gzprintf(mzp, "S%04X%s",
@@ -503,13 +504,16 @@ static int write_to_manifest(gzFile mzp, struct slist *slist, struct dpth *dpth,
 				if(blk==sb->bend)
 				{
 					slist->head=sb->next;
-					// free sb?
+					sbuf_free(sb);
 					break;
 				}
 
 				sb->bstart=blk->next;
-				// free blk?
+//printf("free: %d\n", blk->index);
+				blk_free(blk);
 			}
+			if(!(blist->head=sb->bstart))
+				blist->tail=NULL;
 			break;
 		}
 		else
@@ -585,7 +589,7 @@ static int backup_server(gzFile cmanfp, const char *manifest, const char *client
 			&scan_end, &sigs_end, &backup_end, cmanfp, dpth))
 				goto end;
 
-		if(write_to_manifest(mzp, slist, dpth, backup_end))
+		if(write_to_manifest(mzp, slist, blist, dpth, backup_end))
 			goto end;
 	}
 	ret=0;

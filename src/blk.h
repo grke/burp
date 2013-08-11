@@ -48,4 +48,6 @@ extern struct blist *blist_init(void);
 extern void blist_free(struct blist *blist);
 extern void blk_add_to_list(struct blk *blk, struct blist *blist);
 
+extern void blk_print_alloc_stats(void);
+
 #endif // __RABIN_BLK_H

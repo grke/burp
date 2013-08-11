@@ -92,4 +92,6 @@ extern void iobuf_from_sbuf_attr(struct iobuf *iobuf, struct sbuf *sb);
 extern void iobuf_from_sbuf_link(struct iobuf *iobuf, struct sbuf *sb);
 extern void iobuf_from_str(struct iobuf *iobuf, char cmd, char *str);
 
+extern void sbuf_print_alloc_stats(void);
+
 #endif

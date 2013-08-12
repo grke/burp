@@ -507,11 +507,11 @@ int do_backup_client(struct config *conf, enum action act)
 #endif
 #endif
 
-
+/*
 	while(1)
 	{
 		sleep(1);
 	}
-
+*/
 	return ret;
 }

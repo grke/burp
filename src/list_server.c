@@ -57,62 +57,119 @@ err:
 
 static int list_manifest(const char *fullpath, regex_t *regex, const char *browsedir, const char *client, struct config *conf)
 {
-/*
-	int ars=0;
-	int ret=0;
+	int ret=-1;
 	int quit=0;
 	gzFile zp=NULL;
-	struct sbuf *mb;
 	char *manifest=NULL;
 	size_t bdlen=0;
+	struct sbuf *sb=NULL;
+	struct iobuf *rbuf=NULL;
+	char lead[5]="";
+	int sb_ok=0;
+	unsigned int s;
 
-	if(!(mb=sbuf_init())) return -1;
+	if(!(sb=sbuf_init())
+	  || !(rbuf=iobuf_init()))
+		return -1;
 
 	if(!(manifest=prepend_s(fullpath,
 		"manifest.gz", strlen("manifest.gz"))))
 	{
 		log_and_send_oom(__FUNCTION__);
-		return -1;
+		goto error;
 	}
 	if(!(zp=gzopen_file(manifest, "rb")))
 	{
 		log_and_send("could not open manifest");
-		free(manifest);
-		return -1;
+		goto error;
 	}
-	free(manifest);
 
 	if(browsedir) bdlen=strlen(browsedir);
 
 	while(!quit)
 	{
 		int show=0;
-		//logp("list manifest loop\n");
-		// Need to parse while sending, to take note of the regex.
+		size_t got;
 
-		sbuf_free(mb);
-		if((ars=sbuf_fill(NULL, zp, &mb, cntr)))
+		if((got=gzread(zp, lead, sizeof(lead)))!=5)
 		{
-			if(ars<0) ret=-1;
-			// ars==1 means it ended ok.
-			break;
+			if(!got) break; // Finished OK.
+			log_and_send("short read in manifest");
+			goto error;
 		}
+		if((sscanf(lead, "%c%04X", &rbuf->cmd, &s))!=2)
+		{
+			log_and_send("sscanf failed reading manifest");
+			goto error;
+		}
+		rbuf->len=(size_t)s;
+		if(!(rbuf->buf=(char *)malloc(rbuf->len+2)))
+		{
+			log_and_send_oom(__FUNCTION__);
+			goto error;
+		}
+		if(gzread(zp, rbuf->buf, rbuf->len+1)!=(int)rbuf->len+1)
+		{
+			log_and_send("short read in manifest");
+			goto error;
+		}
+		rbuf->buf[rbuf->len]='\0';
 
-		if(mb.cmd!=CMD_DIRECTORY
-		 && mb.cmd!=CMD_FILE
-		 && mb.cmd!=CMD_ENC_FILE
-		 && mb.cmd!=CMD_EFS_FILE
-		 && mb.cmd!=CMD_SPECIAL
-		 && !cmd_is_link(mb.cmd))
-			continue;
+		switch(rbuf->cmd)
+		{
+			case CMD_ATTRIBS:
+				sbuf_from_iobuf_attr(sb, rbuf);
+				rbuf->buf=NULL;
+				break;
 
-		//if(mb.path[mb.plen]=='\n') mb.path[mb.plen]='\0';
-		write_status(client, STATUS_LISTING, mb.path, p1cntr, cntr);
+			case CMD_FILE:
+			case CMD_DIRECTORY:
+			case CMD_SOFT_LINK:
+			case CMD_HARD_LINK:
+			case CMD_SPECIAL:
+				if(!sb->attribs)
+				{
+					log_and_send("read cmd with no attribs");
+					goto error;
+				}
+				if(sb->need_link)
+				{
+					if(cmd_is_link(rbuf->cmd))
+					{
+						sbuf_from_iobuf_link(sb, rbuf);
+						sb->need_link=0;
+						sb_ok=1;
+					}
+					else
+					{
+						log_and_send("got non-link after link in manifest");
+						goto error;
+					}
+				}
+				else
+				{
+					sbuf_from_iobuf_path(sb, rbuf);
+					if(cmd_is_link(rbuf->cmd))
+						sb->need_link=1;
+					else
+						sb_ok=1;
+				}
+				rbuf->buf=NULL;
+				break;
+
+			default:
+				break;
+		}
+		if(rbuf->buf) { free(rbuf->buf); rbuf->buf=NULL; }
+
+		if(!sb_ok) continue;
+
+		write_status(client, STATUS_LISTING, sb->path, conf);
 
 		if(browsedir)
 		{
 			int r;
-			if((r=check_browsedir(browsedir, &(mb.path), bdlen))<0)
+			if((r=check_browsedir(browsedir, &sb->path, bdlen))<0)
 			{
 				quit++;
 				ret=-1;
@@ -122,24 +179,35 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 		}
 		else
 		{
-			if(check_regex(regex, mb.path))
+			if(check_regex(regex, sb->path))
 				show++;
 		}
 		if(show)
 		{
-			if(async_write(CMD_STAT, mb.statbuf, mb.slen)
-			  || async_write(mb.cmd, mb.path, mb.plen))
+			if(async_write(CMD_ATTRIBS, sb->attribs, sb->alen)
+			  || async_write(sb->cmd, sb->path, sb->plen))
 			{ quit++; ret=-1; }
-			else if(sbuf_is_link(&mb)
-			  && async_write(mb.cmd, mb.linkto, mb.llen))
+			else if(sbuf_is_link(sb)
+			  && async_write(sb->cmd, sb->linkto, sb->llen))
 			{ quit++; ret=-1; }
 		}
+
+		if(sb->path) { free(sb->path); sb->path=NULL; }
+		if(sb->attribs) { free(sb->attribs); sb->attribs=NULL; }
+		if(sb->linkto) { free(sb->linkto); sb->linkto=NULL; }
+		sb_ok=0;
 	}
+
+	goto end;
+error:
+	ret=-1;
+end:
 	gzclose_fp(&zp);
-	free_sbuf(&mb);
+	sbuf_free(sb);
+	if(rbuf->buf) { free(rbuf->buf); rbuf->buf=NULL; }
+	iobuf_free(rbuf);
+	if(manifest) free(manifest);
 	return ret;
-*/
-	return 0;
 }
 
 static void send_backup_name_to_client(struct bu *arr)
@@ -160,7 +228,7 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 	unsigned long index=0;
 	regex_t *regex=NULL;
 
-	logp("in do_list\n");
+	//printf("in do_list\n");
 
 	if(compile_regex(&regex, listregex)) return -1;
 

@@ -204,7 +204,8 @@ static int add_data_to_store(struct blist *blist, struct iobuf *rbuf, struct dpt
 
 	if(dpth_incr_sig(dpth)) return -1;
 
-	blk->length=strlen(blk->data);
+	// Subtract 1 to exclude the newline.
+	blk->length=strlen(blk->data)-1;
 	blk->got=1;
 	blk=blk->next;
 

@@ -105,14 +105,14 @@ int encode_stat(struct sbuf *sb, int compression)
 #endif
 
 // Decode a stat packet from base64 characters.
-void decode_stat(struct sbuf *sb, uint64_t *file_no, int *compression)
+// FIX THIS: Do everything with a struct sb.
+void decode_stat_low_level(struct stat *statp, const char *attribs, uint64_t *index, uint64_t *winattr, int *compression)
 {
-	const char *p=sb->attribs;
-	struct stat *statp=&sb->statp;
+	const char *p=attribs;
 	int64_t val;
 
 	p += from_base64(&val, p);
-	sb->index=val;
+	*index=val;
 	p++;
 	p += from_base64(&val, p);
 	plug(statp->st_dev, val);
@@ -183,7 +183,7 @@ void decode_stat(struct sbuf *sb, uint64_t *file_no, int *compression)
 	}
 	else
 		val = 0;
-	sb->winattr=val;
+	*winattr=val;
 
 	// Compression.
 	if(*p == ' ' || (*p != 0 && *(p+1) == ' '))
@@ -195,6 +195,15 @@ void decode_stat(struct sbuf *sb, uint64_t *file_no, int *compression)
 	}
 	else
 		*compression=-1;
+}
+
+void decode_stat(struct sbuf *sb, int *compression)
+{
+	uint64_t index;
+	uint64_t winattr;
+	decode_stat_low_level(&sb->statp, sb->attribs, &index, &winattr, compression);
+	sb->index=index;
+	sb->winattr=winattr;
 }
 
 static int set_file_times(const char *path, struct utimbuf *ut, struct stat *statp, struct cntr *cntr)

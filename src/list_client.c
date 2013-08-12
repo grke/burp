@@ -201,8 +201,9 @@ int do_list_client(struct config *conf, enum action act, int json)
 	{
 		char fcmd=0;
 		size_t flen=0;
-		//int64_t winattr=0;
-		//int compression=-1;
+		uint64_t winattr=0;
+		int compression=-1;
+		uint64_t index;
 		char *fname=NULL;
 		if(async_read(&scmd, &statbuf, &slen))
 		{
@@ -245,7 +246,8 @@ int do_list_client(struct config *conf, enum action act, int json)
 		}
 
 		// FIXME - with the sbuf stuff.
-		//decode_stat(statbuf, &statp, &winattr, &compression);
+		decode_stat_low_level(&statp, statbuf,
+			&index, &winattr, &compression);
 
 		if(async_read(&fcmd, &fname, &flen))
 		{

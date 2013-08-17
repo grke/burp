@@ -176,7 +176,7 @@ int sbuf_open_file(struct sbuf *sb, struct config *conf)
 		logw(conf->cntr, "%s has vanished\n", sb->path);
 		return -1;
 	}
-	if(encode_stat(sb, conf->compression)) return -1;
+	if(attribs_encode(sb, conf->compression)) return -1;
 
 	if(open_file_for_send(
 #ifdef HAVE_WIN32
@@ -315,6 +315,7 @@ static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, struct conf
 			case CMD_ATTRIBS:
 				sbuf_from_iobuf_attr(sb, rbuf);
 				rbuf->buf=NULL;
+				attribs_decode(sb, &sb->compression);
 				break;
 
 			case CMD_FILE:
@@ -332,6 +333,7 @@ static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, struct conf
 					if(cmd_is_link(rbuf->cmd))
 					{
 						sbuf_from_iobuf_link(sb, rbuf);
+						rbuf->buf=NULL;
 						sb->need_link=0;
 						return 0;
 					}
@@ -344,6 +346,7 @@ static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, struct conf
 				else
 				{
 					sbuf_from_iobuf_path(sb, rbuf);
+					rbuf->buf=NULL;
 					if(cmd_is_link(rbuf->cmd))
 						sb->need_link=1;
 					else
@@ -355,7 +358,7 @@ static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, struct conf
 				// Fill in the block, if the caller provided
 				// a pointer for one.
 				if(!blk) break;
-				printf("got sig: %s\n", rbuf->buf);
+			//	printf("got sig: %s\n", rbuf->buf);
 				break;
 			case CMD_WARNING:
 				logw(conf->cntr, "%s", rbuf->buf);

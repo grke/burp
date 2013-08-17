@@ -17,7 +17,7 @@
 // Encode a stat structure into a base64 character string.
 // FIX THIS: Do compression from sb and put it near the beginning, before
 // it gets too entrenched in burp2.
-int encode_stat(struct sbuf *sb, int compression)
+int attribs_encode(struct sbuf *sb, int compression)
 {
 	char *p;
 	struct stat *statp=&sb->statp;
@@ -106,7 +106,7 @@ int encode_stat(struct sbuf *sb, int compression)
 
 // Decode a stat packet from base64 characters.
 // FIX THIS: Do everything with a struct sb.
-void decode_stat_low_level(struct stat *statp, const char *attribs, uint64_t *index, uint64_t *winattr, int *compression)
+void attribs_decode_low_level(struct stat *statp, const char *attribs, uint64_t *index, uint64_t *winattr, int *compression)
 {
 	const char *p=attribs;
 	int64_t val;
@@ -197,11 +197,11 @@ void decode_stat_low_level(struct stat *statp, const char *attribs, uint64_t *in
 		*compression=-1;
 }
 
-void decode_stat(struct sbuf *sb, int *compression)
+void attribs_decode(struct sbuf *sb, int *compression)
 {
 	uint64_t index;
 	uint64_t winattr;
-	decode_stat_low_level(&sb->statp, sb->attribs, &index, &winattr, compression);
+	attribs_decode_low_level(&sb->statp, sb->attribs, &index, &winattr, compression);
 	sb->index=index;
 	sb->winattr=winattr;
 }
@@ -234,7 +234,7 @@ uint64_t decode_file_no(struct sbuf *sb)
 	return (uint64_t)val;
 }
 
-int set_attributes(const char *path, char cmd, struct stat *statp, int64_t winattr, struct config *conf)
+int attribs_set(const char *path, char cmd, struct stat *statp, int64_t winattr, struct config *conf)
 {
 	struct utimbuf ut;
 
@@ -253,7 +253,7 @@ int set_attributes(const char *path, char cmd, struct stat *statp, int64_t winat
 	 *   try to do a chmod as that will update the file behind it.
 	 */
 
-	/* watch out, a metadata restore will have cmd set to CMD_METADATA or
+	/* Watch out, a metadata restore will have cmd set to CMD_METADATA or
 	   CMD_ENC_META, but that is OK at the moment because we are not doing
 	   meta stuff on links. */
 	if(cmd==CMD_SOFT_LINK)
@@ -263,7 +263,7 @@ int set_attributes(const char *path, char cmd, struct stat *statp, int64_t winat
 		{
 			berrno be;
 			logw(conf->cntr, "Unable to set file owner %s: ERR=%s",
-					path, be.bstrerror());
+				path, be.bstrerror());
 			return -1;
 		}
 	}
@@ -273,14 +273,14 @@ int set_attributes(const char *path, char cmd, struct stat *statp, int64_t winat
 		{
 			berrno be;
 			logw(conf->cntr, "Unable to set file owner %s: ERR=%s",
-					path, be.bstrerror());
+				path, be.bstrerror());
 			return -1;
 		}
 		if(chmod(path, statp->st_mode) < 0)
 		{
 			berrno be;
 			logw(conf->cntr, "Unable to set file modes %s: ERR=%s",
-					path, be.bstrerror());
+				path, be.bstrerror());
 			return -1;
 		}
 

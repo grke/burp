@@ -20,7 +20,7 @@ struct sbuf
 	// stat data
 	struct stat statp;
 	char *attribs; // base64 encoded statp
-	int64_t winattr;
+	uint64_t winattr;
 	int ftype;	// FT_ type from burpconfig.h.
 	size_t alen;
 	int compression;

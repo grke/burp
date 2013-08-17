@@ -5,7 +5,7 @@
 #include "handy.h"
 #include "asyncio.h"
 
-void reset_filecounter(struct cntr *c, time_t t)
+static void reset_filecounter(struct cntr *c, time_t t)
 {
 	if(!c) return;
 	c->gtotal=0;
@@ -69,6 +69,12 @@ void reset_filecounter(struct cntr *c, time_t t)
 	c->sentbyte=0;
 
 	c->start=t;
+}
+
+void reset_filecounters(struct config *conf, time_t t)
+{
+	reset_filecounter(conf->p1cntr, t);
+	reset_filecounter(conf->cntr, t);
 }
 
 const char *bytes_to_human(unsigned long long counter)
@@ -348,9 +354,11 @@ static void bottom_part(struct cntr *a, struct cntr *b, enum action act)
 	}
 }
 
-void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act)
+void print_filecounters(struct config *conf, enum action act)
 {
 	time_t now=time(NULL);
+	struct cntr *c=conf->cntr;
+	struct cntr *p1c=conf->p1cntr;
 	if(!p1c || !c) return;
 
 	border();

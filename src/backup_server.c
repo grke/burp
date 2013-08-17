@@ -282,7 +282,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 	static struct sbuf *snew=NULL;
 	static struct sbuf *inew=NULL;
 
-	if(!inew && !(inew=sbuf_init())) goto error;
+	if(!inew && !(inew=sbuf_alloc())) goto error;
 
 	switch(rbuf->cmd)
 	{
@@ -313,7 +313,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			// Attribs should come first, so if we already
 			// set up snew, it is an error.
 			if(snew) break;
-			if(!(snew=sbuf_init())) goto error;
+			if(!(snew=sbuf_alloc())) goto error;
 			sbuf_from_iobuf_attr(snew, rbuf);
 			snew->need_path=1;
 			rbuf->buf=NULL;
@@ -491,7 +491,7 @@ static int write_to_manifest(gzFile mzp, struct slist *slist, struct blist *blis
 
 			if(!sb->header_written_to_manifest)
 			{
-				if(sbuf_to_manifest(sb, NULL, mzp)) return -1;
+				if(sbuf_to_manifest(sb, mzp)) return -1;
 				sb->header_written_to_manifest=1;
 			}
 
@@ -520,7 +520,7 @@ static int write_to_manifest(gzFile mzp, struct slist *slist, struct blist *blis
 		else
 		{
 			// No change, can go straight in.
-			if(sbuf_to_manifest(sb, NULL, mzp)) return -1;
+			if(sbuf_to_manifest(sb, mzp)) return -1;
 
 			// FIX THIS:
 			// Also need to write in the unchanged sigs.
@@ -557,10 +557,10 @@ static int backup_server(gzFile cmanfp, const char *manifest, const char *client
 	logp("Begin backup\n");
 	printf("DATADIR: %s\n", datadir);
 
-	if(!(slist=slist_init())
-	  || !(blist=blist_init())
-	  || !(wbuf=iobuf_init())
-	  || !(rbuf=iobuf_init())
+	if(!(slist=slist_alloc())
+	  || !(blist=blist_alloc())
+	  || !(wbuf=iobuf_alloc())
+	  || !(rbuf=iobuf_alloc())
 	  || !(mzp=gzopen_file(manifest, comp_level(conf)))
 	  || !(dpth=dpth_alloc(datadir))
 	  || dpth_init(dpth))

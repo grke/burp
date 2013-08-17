@@ -13,7 +13,7 @@
 static int alloc_count=0;
 static int free_count=0;
 
-struct sbuf *sbuf_init(void)
+struct sbuf *sbuf_alloc(void)
 {
 	struct sbuf *sb;
 	if(!(sb=(struct sbuf *)calloc(1, sizeof(struct sbuf))))
@@ -27,16 +27,21 @@ alloc_count++;
 	return sb;
 }
 
+void sbuf_free_contents(struct sbuf *sb)
+{
+	if(sb->path) { free(sb->path); sb->path=NULL; }
+	if(sb->attribs) { free(sb->attribs); sb->attribs=NULL; }
+	if(sb->linkto) { free(sb->linkto); sb->linkto=NULL; }
+//	if(sb->endfile) { free(sb->endfile); sb->endfile=NULL; }
+}
+
 void sbuf_free(struct sbuf *sb)
 {
 //	sbuf_close_file(sb);
 	if(!sb) return;
-free_count++;
-	if(sb->path) free(sb->path);
-	if(sb->attribs) free(sb->attribs);
-	if(sb->linkto) free(sb->linkto);
-//	if(sb->endfile) free(sb->endfile);
+	sbuf_free_contents(sb);
 	free(sb);
+free_count++;
 }
 
 void sbuf_print_alloc_stats(void)
@@ -44,7 +49,7 @@ void sbuf_print_alloc_stats(void)
 	printf("sb_alloc: %d free: %d\n", alloc_count, free_count);
 }
 
-struct slist *slist_init(void)
+struct slist *slist_alloc(void)
 {
 	struct slist *slist;
 	if(!(slist=(struct slist *)calloc(1, sizeof(struct slist))))
@@ -116,32 +121,7 @@ int sbuf_fill(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
 	return -1;
 }
 
-static int sbuf_to_fp(struct sbuf *sb, FILE *mp, int write_endfile)
-{
-	if(sb->path)
-	{
-		if(send_msg_fp(mp, CMD_ATTRIBS, sb->attribs, sb->alen)
-		  || send_msg_fp(mp, sb->cmd, sb->path, sb->plen))
-			return -1;
-		if(sb->linkto
-		  && send_msg_fp(mp, sb->cmd, sb->linkto, sb->llen))
-			return -1;
-/*
-		if(write_endfile && (sb->cmd==CMD_FILE
-		  || sb->cmd==CMD_ENC_FILE
-		  || sb->cmd==CMD_METADATA
-		  || sb->cmd==CMD_ENC_METADATA
-		  || sb->cmd==CMD_EFS_FILE))
-		{
-			if(send_msg_fp(mp, CMD_END_FILE,
-				sb->endfile, sb->elen)) return -1;
-		}
-*/
-	}
-	return 0;
-}
-
-static int sbuf_to_zp(struct sbuf *sb, gzFile zp, int write_endfile)
+int sbuf_to_manifest(struct sbuf *sb, gzFile zp)
 {
 	if(sb->path)
 	{
@@ -164,14 +144,6 @@ static int sbuf_to_zp(struct sbuf *sb, gzFile zp, int write_endfile)
 */
 	}
 	return 0;
-}
-
-int sbuf_to_manifest(struct sbuf *sb, FILE *mp, gzFile zp)
-{
-	if(mp) return sbuf_to_fp(sb, mp, 1);
-	if(zp) return sbuf_to_zp(sb, zp, 1);
-	logp("No valid file pointer given to sbuf_to_manifest()\n");
-	return -1;
 }
 
 // Like pathcmp, but sort entries that have the same paths so that metadata
@@ -285,4 +257,123 @@ void iobuf_from_sbuf_link(struct iobuf *iobuf, struct sbuf *sb)
 void iobuf_from_str(struct iobuf *iobuf, char cmd, char *str)
 {
 	set_iobuf(iobuf, cmd, str, strlen(str));
+}
+
+static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, struct config *conf)
+{
+	static char lead[5]="";
+	static iobuf *rbuf=NULL;
+	static unsigned int s;
+
+	if(!rbuf && !(rbuf=iobuf_alloc()))
+	{
+		log_and_send_oom(__FUNCTION__);
+		return -1;
+	}
+	while(1)
+	{
+		if(zp)
+		{
+			size_t got;
+
+			if((got=gzread(zp, lead, sizeof(lead)))!=5)
+			{
+				if(!got) break; // Finished OK.
+				log_and_send("short read in manifest");
+				return 1;
+			}
+			if((sscanf(lead, "%c%04X", &rbuf->cmd, &s))!=2)
+			{
+				log_and_send("sscanf failed reading manifest");
+				break;
+			}
+			rbuf->len=(size_t)s;
+			if(!(rbuf->buf=(char *)malloc(rbuf->len+2)))
+			{
+				log_and_send_oom(__FUNCTION__);
+				break;
+			}
+			if(gzread(zp, rbuf->buf, rbuf->len+1)!=(int)rbuf->len+1)
+			{
+				log_and_send("short read in manifest");
+				break;
+			}
+			rbuf->buf[rbuf->len]='\0';
+		}
+		else
+		{
+			// read from net
+			if(async_read_ng(rbuf))
+			{
+				logp("error in async_read\n");
+				break;
+			}
+		}
+
+		switch(rbuf->cmd)
+		{
+			case CMD_ATTRIBS:
+				sbuf_from_iobuf_attr(sb, rbuf);
+				rbuf->buf=NULL;
+				break;
+
+			case CMD_FILE:
+			case CMD_DIRECTORY:
+			case CMD_SOFT_LINK:
+			case CMD_HARD_LINK:
+			case CMD_SPECIAL:
+				if(!sb->attribs)
+				{
+					log_and_send("read cmd with no attribs");
+					break;
+				}
+				if(sb->need_link)
+				{
+					if(cmd_is_link(rbuf->cmd))
+					{
+						sbuf_from_iobuf_link(sb, rbuf);
+						sb->need_link=0;
+						return 0;
+					}
+					else
+					{
+						log_and_send("got non-link after link in manifest");
+						break;
+					}
+				}
+				else
+				{
+					sbuf_from_iobuf_path(sb, rbuf);
+					if(cmd_is_link(rbuf->cmd))
+						sb->need_link=1;
+					else
+						return 0;
+				}
+				rbuf->buf=NULL;
+				break;
+			case CMD_SIG:
+				// Fill in the block, if the caller provided
+				// a pointer for one.
+				if(!blk) break;
+				printf("got sig: %s\n", rbuf->buf);
+				break;
+			case CMD_WARNING:
+				logw(conf->cntr, "%s", rbuf->buf);
+				break;
+			default:
+				break;
+		}
+		if(rbuf->buf) { free(rbuf->buf); rbuf->buf=NULL; }
+	}
+	return -1;
+}
+
+int sbuf_fill_from_gzfile(struct sbuf *sb, gzFile zp, struct blk *blk, struct config *conf)
+{
+	return do_sbuf_fill(sb, zp, blk, conf);
+}
+
+int sbuf_fill_from_net(struct sbuf *sb, struct blk *blk, struct config *conf)
+{
+	return do_sbuf_fill(sb, NULL, blk, conf);
 }

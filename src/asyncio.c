@@ -410,8 +410,8 @@ int async_rw(char *rcmd, char **rdst, size_t *rlen, char wcmd, const char *wsrc,
 		  && (!doread || !FD_ISSET(fd, &fsr))
 		  && (!dowrite || !FD_ISSET(fd, &fsw)))
 		{
-			logp("SELECT HIT TIMEOUT - doread: %d, dowrite: %d\n",
-				doread, dowrite);
+			//logp("SELECT HIT TIMEOUT - doread: %d, dowrite: %d\n",
+			//	doread, dowrite);
 			// Be careful to avoid 'read quick' mode.
 			if((setsec || setusec)
 			  && max_network_timeout>0 && network_timeout--<=0)
@@ -456,13 +456,13 @@ int async_rw(char *rcmd, char **rdst, size_t *rlen, char wcmd, const char *wsrc,
 
 int async_rw_ng(struct iobuf *rbuf, struct iobuf *wbuf)
 {
-	// TODO: make this whole file use iobuf directly instead of just being
-	// a wrapper around the old stuff.
-	return async_rw(&(rbuf->cmd), &(rbuf->buf), &(rbuf->len),
-		wbuf->cmd, wbuf->buf, &(wbuf->len));
+	// FIX THIS: make this whole file use iobuf directly instead of just
+	// being a wrapper around the old stuff.
+	return async_rw(&rbuf->cmd, &rbuf->buf, &rbuf->len,
+		wbuf->cmd, wbuf->buf, &wbuf->len);
 }
 
-int async_rw_ensure_read(char *rcmd, char **rdst, size_t *rlen, char wcmd, const char *wsrc, size_t wlen)
+static int async_rw_ensure_read(char *rcmd, char **rdst, size_t *rlen, char wcmd, const char *wsrc, size_t wlen)
 {
 	size_t w=wlen;
 	if(doing_estimate) return 0;
@@ -471,7 +471,7 @@ int async_rw_ensure_read(char *rcmd, char **rdst, size_t *rlen, char wcmd, const
 	return 0;
 }
 
-int async_rw_ensure_write(char *rcmd, char **rdst, size_t *rlen, char wcmd, const char *wsrc, size_t wlen)
+static int async_rw_ensure_write(char *rcmd, char **rdst, size_t *rlen, char wcmd, const char *wsrc, size_t wlen)
 {
 	size_t w=wlen;
 	if(doing_estimate) return 0;
@@ -499,9 +499,25 @@ int async_read(char *rcmd, char **rdst, size_t *rlen)
 	return async_rw_ensure_read(rcmd, rdst, rlen, '\0', NULL, 0);
 }
 
+int async_read_ng(struct iobuf *rbuf)
+{
+	// FIX THIS: make this whole file use iobuf directly instead of just
+	// being a wrapper around the old stuff.
+	return async_rw_ensure_read(&rbuf->cmd, &rbuf->buf, &rbuf->len,
+		'\0', NULL, 0);
+}
+
 int async_write(char wcmd, const char *wsrc, size_t wlen)
 {
 	return async_rw_ensure_write(NULL, NULL, NULL, wcmd, wsrc, wlen);
+}
+
+int async_write_ng(struct iobuf *wbuf)
+{
+	// FIX THIS: make this whole file use iobuf directly instead of just
+	// being a wrapper around the old stuff.
+	return async_rw_ensure_read(NULL, NULL, NULL,
+		wbuf->cmd, wbuf->buf, wbuf->len);
 }
 
 int async_write_str(char wcmd, const char *wsrc)
@@ -566,7 +582,7 @@ int logw(struct cntr *cntr, const char *fmt, ...)
 	return r;
 }
 
-struct iobuf *iobuf_init(void)
+struct iobuf *iobuf_alloc(void)
 {
 	struct iobuf *iobuf;
 	if(!(iobuf=(struct iobuf *)calloc(1, sizeof(struct iobuf))))

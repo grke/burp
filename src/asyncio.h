@@ -19,7 +19,7 @@ struct iobuf
 	size_t len;
 };
 
-extern struct iobuf *iobuf_init(void);
+extern struct iobuf *iobuf_alloc(void);
 extern void iobuf_free(struct iobuf *iobuf);
 
 extern int async_init(int afd, SSL *assl, struct config *conf, int estimate);
@@ -36,17 +36,13 @@ extern int async_rw(char *rcmd, char **rdst, size_t *rlen,
         char wcmd, const char *wsrc, size_t *wlen);
 extern int async_rw_ng(struct iobuf *rbuf, struct iobuf *wbuf);
 
-extern int async_rw_ensure_read(char *rcmd, char **rdst, size_t *rlen,
-	char wcmd, const char *wsrc, size_t wlen);
-
-extern int async_rw_ensure_write(char *rcmd, char **rdst, size_t *rlen,
-	char wcmd, const char *wsrc, size_t wlen);
-
 extern int async_read_quick(char *rcmd, char **rdst, size_t *rlen);
 
 extern int async_read(char *rcmd, char **rdst, size_t *rlen);
+extern int async_read_ng(struct iobuf *rbuf);
 
 extern int async_write(char wcmd, const char *wsrc, size_t wlen);
+extern int async_write_ng(struct iobuf *wbuf);
 
 extern int async_write_str(char wcmd, const char *wsrc);
 

@@ -234,17 +234,16 @@ uint64_t decode_file_no(struct sbuf *sb)
 	return (uint64_t)val;
 }
 
-bool set_attributes(const char *path, char cmd, struct stat *statp, int64_t winattr, struct cntr *cntr)
+int set_attributes(const char *path, char cmd, struct stat *statp, int64_t winattr, struct config *conf)
 {
 	struct utimbuf ut;
-	bool ok=true;
 
 	ut.actime=statp->st_atime;
 	ut.modtime=statp->st_mtime;
 
 #ifdef HAVE_WIN32
 	win32_chmod(path, statp->st_mode, winattr);
-	set_file_times(path, &ut, statp, cntr);
+	set_file_times(path, &ut, statp, conf->cntr);
 	return true;
 #endif
 
@@ -263,9 +262,9 @@ bool set_attributes(const char *path, char cmd, struct stat *statp, int64_t wina
 		if(lchown(path, statp->st_uid, statp->st_gid)<0)
 		{
 			berrno be;
-			logw(cntr, "Unable to set file owner %s: ERR=%s",
+			logw(conf->cntr, "Unable to set file owner %s: ERR=%s",
 					path, be.bstrerror());
-			ok=false;
+			return -1;
 		}
 	}
 	else
@@ -273,19 +272,20 @@ bool set_attributes(const char *path, char cmd, struct stat *statp, int64_t wina
 		if(chown(path, statp->st_uid, statp->st_gid)<0)
 		{
 			berrno be;
-			logw(cntr, "Unable to set file owner %s: ERR=%s",
+			logw(conf->cntr, "Unable to set file owner %s: ERR=%s",
 					path, be.bstrerror());
-			ok=false;
+			return -1;
 		}
 		if(chmod(path, statp->st_mode) < 0)
 		{
 			berrno be;
-			logw(cntr, "Unable to set file modes %s: ERR=%s",
+			logw(conf->cntr, "Unable to set file modes %s: ERR=%s",
 					path, be.bstrerror());
-			ok=false;
+			return -1;
 		}
 
-		if(set_file_times(path, &ut, statp, cntr)) ok=false;
+		if(set_file_times(path, &ut, statp, conf->cntr))
+			return -1;
 #ifdef HAVE_CHFLAGS
 		/*
 		 * FreeBSD user flags
@@ -297,12 +297,12 @@ bool set_attributes(const char *path, char cmd, struct stat *statp, int64_t wina
 		if(chflags(path, statp->st_flags)<0)
 		{
 			berrno be;
-			logw(cntr, "Unable to set file flags %s: ERR=%s",
-					path, be.bstrerror());
-			ok=false;
+			logw(conf->cntr, "Unable to set file flags %s: ERR=%s",
+				path, be.bstrerror());
+			return -1;
 		}
 #endif
 	}
 
-	return ok;
+	return 0;
 }

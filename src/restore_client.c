@@ -14,16 +14,17 @@
 #include "extrameta.h"
 #include "attribs.h"
 
-/*
-static int restore_interrupt(struct sbuf *sb, const char *msg, struct cntr *cntr)
+static int restore_interrupt(struct sbuf *sb, const char *msg, struct config *conf)
 {
+	return 0;
+/* FIX THIS
 	int ret=0;
 	int quit=0;
 	char *buf=NULL;
 
-	if(!cntr) return 0;
+	if(!conf->cntr) return 0;
 
-	do_filecounter(cntr, CMD_WARNING, 1);
+	do_filecounter(conf->cntr, CMD_WARNING, 1);
 	logp("WARNING: %s\n", msg);
 	if(async_write_str(CMD_WARNING, msg)) return -1;
 
@@ -68,22 +69,21 @@ static int restore_interrupt(struct sbuf *sb, const char *msg, struct cntr *cntr
 	}
 	if(buf) free(buf);
 	return ret;
-}
 */
+}
 
-/*
-static int make_link(const char *fname, const char *lnk, char cmd, const char *restoreprefix, struct cntr *cntr)
+static int make_link(const char *fname, const char *lnk, char cmd, struct config *conf)
 {
 	int ret=-1;
 
 #ifdef HAVE_WIN32
-	logw(cntr, "windows seems not to support hardlinks or symlinks\n");
+	logw(conf->cntr, "windows seems not to support hardlinks or symlinks\n");
 #else
 	unlink(fname);
 	if(cmd==CMD_HARD_LINK)
 	{
 		char *flnk=NULL;
-		if(!(flnk=prepend_s(restoreprefix, lnk, strlen(lnk))))
+		if(!(flnk=prepend_s(conf->restoreprefix, lnk, strlen(lnk))))
 		{
 			log_out_of_memory(__FUNCTION__);
 			return -1;
@@ -110,9 +110,16 @@ static int make_link(const char *fname, const char *lnk, char cmd, const char *r
 
 	return ret;
 }
-*/
-/*
-static int open_for_restore(BFILE *bfd, FILE **fp, const char *path, struct sbuf *sb, int vss_restore, struct config *conf, struct cntr *cntr)
+
+static int open_for_restore(
+#ifdef HAVE_WIN32
+	BFILE *bfd,
+#endif
+	FILE **fp,
+	const char *path,
+	struct sbuf *sb,
+	int vss_restore,
+	struct config *conf)
 {
 #ifdef HAVE_WIN32
 	int bopenret;
@@ -165,16 +172,25 @@ static int open_for_restore(BFILE *bfd, FILE **fp, const char *path, struct sbuf
 		snprintf(msg, sizeof(msg),
 			"Could not open for writing %s: %s",
 				path, strerror(errno));
-		if(restore_interrupt(sb, msg, cntr))
+		if(restore_interrupt(sb, msg, conf))
 			return -1;
 	}
 #endif
 	return 0;
 }
-*/
 
-/*
-static int restore_file_or_get_meta(BFILE *bfd, struct sbuf *sb, const char *fname, enum action act, const char *encpassword, struct cntr *cntr, char **metadata, size_t *metalen, int vss_restore, struct config *conf)
+static int restore_file_or_get_meta(
+#ifdef HAVE_WIN32
+	BFILE *bfd,
+#endif
+	struct sbuf *sb,
+	const char *fname,
+	enum action act,
+	const char *encpassword,
+	char **metadata,
+	size_t *metalen,
+	int vss_restore,
+	struct config *conf)
 {
 	size_t len=0;
 	int ret=0;
@@ -183,7 +199,7 @@ static int restore_file_or_get_meta(BFILE *bfd, struct sbuf *sb, const char *fna
 
 	if(act==ACTION_VERIFY)
 	{
-		do_filecounter(cntr, sb->cmd, 1);
+		do_filecounter(conf->cntr, sb->cmd, 1);
 		return 0;
 	}
 
@@ -192,7 +208,7 @@ static int restore_file_or_get_meta(BFILE *bfd, struct sbuf *sb, const char *fna
 		char msg[256]="";
 		// failed - do a warning
 		snprintf(msg, sizeof(msg), "build path failed: %s", fname);
-		if(restore_interrupt(sb, msg, cntr))
+		if(restore_interrupt(sb, msg, conf))
 			ret=-1;
 		goto end;
 	}
@@ -203,8 +219,12 @@ static int restore_file_or_get_meta(BFILE *bfd, struct sbuf *sb, const char *fna
 	if(!metadata)
 	{
 #endif
-		if(open_for_restore(bfd, &fp,
-			rpath, sb, vss_restore, conf, cntr))
+
+		if(open_for_restore(
+#ifdef HAVE_WIN32
+			bfd,
+#endif
+			&fp, rpath, sb, vss_restore, conf))
 		{
 			ret=-1;
 			goto end;
@@ -215,8 +235,8 @@ static int restore_file_or_get_meta(BFILE *bfd, struct sbuf *sb, const char *fna
 
 	if(!ret)
 	{
-		int enccompressed=0;
-		unsigned long long rcvdbytes=0;
+		//int enccompressed=0;
+		//unsigned long long rcvdbytes=0;
 		unsigned long long sentbytes=0;
 
 //		enccompressed=dpth_is_compressed(sb->compression, sb->datapth);
@@ -233,9 +253,11 @@ static int restore_file_or_get_meta(BFILE *bfd, struct sbuf *sb, const char *fna
 
 		if(metadata)
 		{
+/*
 			ret=transfer_gzfile_in(sb, fname, NULL, NULL,
 				&rcvdbytes, &sentbytes,
 				encpassword, enccompressed, cntr, metadata);
+*/
 			*metalen=sentbytes;
 			// skip setting the file counter, as we do not actually
 			// restore until a bit later
@@ -245,14 +267,18 @@ static int restore_file_or_get_meta(BFILE *bfd, struct sbuf *sb, const char *fna
 		{
 			int c=0;
 #ifdef HAVE_WIN32
+/*
 			ret=transfer_gzfile_in(sb, fname, bfd, NULL,
 				&rcvdbytes, &sentbytes,
 				encpassword, enccompressed, cntr, NULL);
+*/
 			//c=bclose(bfd);
 #else
+/*
 			ret=transfer_gzfile_in(sb, fname, NULL, fp,
 				&rcvdbytes, &sentbytes,
 				encpassword, enccompressed, cntr, NULL);
+*/
 			c=close_fp(&fp);
 #endif
 			if(c)
@@ -261,7 +287,7 @@ static int restore_file_or_get_meta(BFILE *bfd, struct sbuf *sb, const char *fna
 				ret=-1;
 			}
 			if(!ret) set_attributes(rpath, sb->cmd,
-				&(sb->statp), sb->winattr, cntr);
+				&(sb->statp), sb->winattr, conf);
 		}
 		if(ret)
 		{
@@ -269,20 +295,18 @@ static int restore_file_or_get_meta(BFILE *bfd, struct sbuf *sb, const char *fna
 			snprintf(msg, sizeof(msg),
 				"Could not transfer file in: %s",
 					rpath);
-			if(restore_interrupt(sb, msg, cntr))
+			if(restore_interrupt(sb, msg, conf))
 				ret=-1;
 			goto end;
 		}
 	}
-	if(!ret) do_filecounter(cntr, sb->cmd, 1);
+	if(!ret) do_filecounter(conf->cntr, sb->cmd, 1);
 end:
 	if(rpath) free(rpath);
 	return ret;
 }
-*/
 
-/*
-static int restore_special(struct sbuf *sb, const char *fname, enum action act, struct cntr *cntr)
+static int restore_special(struct sbuf *sb, const char *fname, enum action act, struct config *conf)
 {
 	int ret=0;
 	char *rpath=NULL;
@@ -294,7 +318,7 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
 
 	if(act==ACTION_VERIFY)
 	{
-		do_filecounter(cntr, CMD_SPECIAL, 1);
+		do_filecounter(conf->cntr, CMD_SPECIAL, 1);
 		return 0;
 	}
 
@@ -303,7 +327,7 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
 		char msg[256]="";
 		// failed - do a warning
 		snprintf(msg, sizeof(msg), "build path failed: %s", fname);
-		if(restore_interrupt(sb, msg, cntr))
+		if(restore_interrupt(sb, msg, conf))
 			ret=-1;
 		goto end;
 	}
@@ -314,12 +338,12 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
 			char msg[256]="";
 			snprintf(msg, sizeof(msg),
 				"Cannot make fifo: %s\n", strerror(errno));
-			logw(cntr, "%s", msg);
+			logw(conf->cntr, "%s", msg);
 		}
 		else
 		{
-			set_attributes(rpath, CMD_SPECIAL, &statp, sb->winattr, cntr);
-			do_filecounter(cntr, CMD_SPECIAL, 1);
+			set_attributes(rpath, CMD_SPECIAL, &statp, sb->winattr, conf);
+			do_filecounter(conf->cntr, CMD_SPECIAL, 1);
 		}
 //
 //	}
@@ -327,21 +351,21 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
 //		char msg[256]="";
 //		snprintf(msg, sizeof(msg),
 //			"Skipping restore of socket: %s\n", fname);
-//		logw(cntr, "%s", msg);
+//		logw(conf->cntr, "%s", msg);
 //
 #ifdef S_IFDOOR     // Solaris high speed RPC mechanism
 	} else if (S_ISDOOR(statp.st_mode)) {
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
 			"Skipping restore of door file: %s\n", fname);
-		logw(cntr, "%s", msg);
+		logw(conf->cntr, "%s", msg);
 #endif
 #ifdef S_IFPORT     // Solaris event port for handling AIO
 	} else if (S_ISPORT(statp.st_mode)) {
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
 			"Skipping restore of event port file: %s\n", fname);
-		logw(cntr, "%s", msg);
+		logw(conf->cntr, "%s", msg);
 #endif
 	} else {
             if(mknod(fname, statp.st_mode, statp.st_rdev) && errno!=EEXIST)
@@ -349,12 +373,12 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
 			"Cannot make node: %s\n", strerror(errno));
-		logw(cntr, "%s", msg);
+		logw(conf->cntr, "%s", msg);
             }
 	    else
 	    {
-		set_attributes(rpath, CMD_SPECIAL, &statp, sb->winattr, cntr);
-		do_filecounter(cntr, CMD_SPECIAL, 1);
+		set_attributes(rpath, CMD_SPECIAL, &statp, sb->winattr, conf);
+		do_filecounter(conf->cntr, CMD_SPECIAL, 1);
 	    }
          }
 #endif
@@ -362,9 +386,8 @@ end:
 	if(rpath) free(rpath);
 	return ret;
 }
-*/
-/*
-static int restore_dir(struct sbuf *sb, const char *dname, enum action act, struct cntr *cntr)
+
+static int restore_dir(struct sbuf *sb, const char *dname, enum action act, struct config *conf)
 {
 	int ret=0;
 	char *rpath=NULL;
@@ -376,7 +399,7 @@ static int restore_dir(struct sbuf *sb, const char *dname, enum action act, stru
 			// failed - do a warning
 			snprintf(msg, sizeof(msg),
 				"build path failed: %s", dname);
-			if(restore_interrupt(sb, msg, cntr))
+			if(restore_interrupt(sb, msg, conf))
 				ret=-1;
 			goto end;
 		}
@@ -388,7 +411,7 @@ static int restore_dir(struct sbuf *sb, const char *dname, enum action act, stru
 				snprintf(msg, sizeof(msg), "mkdir error: %s",
 					strerror(errno));
 				// failed - do a warning
-				if(restore_interrupt(sb, msg, cntr))
+				if(restore_interrupt(sb, msg, conf))
 					ret=-1;
 				goto end;
 			}
@@ -396,19 +419,17 @@ static int restore_dir(struct sbuf *sb, const char *dname, enum action act, stru
 		else
 		{
 			set_attributes(rpath,
-				sb->cmd, &(sb->statp), sb->winattr, cntr);
+				sb->cmd, &(sb->statp), sb->winattr, conf);
 		}
-		if(!ret) do_filecounter(cntr, sb->cmd, 1);
+		if(!ret) do_filecounter(conf->cntr, sb->cmd, 1);
 	}
-	else do_filecounter(cntr, sb->cmd, 1);
+	else do_filecounter(conf->cntr, sb->cmd, 1);
 end:
 	if(rpath) free(rpath);
 	return ret;
 }
-*/
 
-/*
-static int restore_link(struct sbuf *sb, const char *fname, const char *restoreprefix, enum action act, struct cntr *cntr)
+static int restore_link(struct sbuf *sb, const char *fname, enum action act, struct config *conf)
 {
 	int ret=0;
 
@@ -421,34 +442,40 @@ static int restore_link(struct sbuf *sb, const char *fname, const char *restorep
 			// failed - do a warning
 			snprintf(msg, sizeof(msg), "build path failed: %s",
 				fname);
-			if(restore_interrupt(sb, msg, cntr))
+			if(restore_interrupt(sb, msg, conf))
 				ret=-1;
 			goto end;
 		}
-		else if(make_link(fname, sb->linkto, sb->cmd,
-			restoreprefix, cntr))
+		else if(make_link(fname, sb->linkto, sb->cmd, conf))
 		{
 			// failed - do a warning
-			if(restore_interrupt(sb, "could not create link", cntr))
+			if(restore_interrupt(sb, "could not create link", conf))
 				ret=-1;
 			goto end;
 		}
 		else if(!ret)
 		{
 			set_attributes(fname,
-				sb->cmd, &(sb->statp), sb->winattr, cntr);
-			do_filecounter(cntr, sb->cmd, 1);
+				sb->cmd, &(sb->statp), sb->winattr, conf);
+			do_filecounter(conf->cntr, sb->cmd, 1);
 		}
 		if(rpath) free(rpath);
 	}
-	else do_filecounter(cntr, sb->cmd, 1);
+	else do_filecounter(conf->cntr, sb->cmd, 1);
 end:
 	return ret;
 }
-*/
 
-/*
-static int restore_metadata(BFILE *bfd, struct sbuf *sb, const char *fname, enum action act, const char *encpassword, int vss_restore, struct config *conf, struct cntr *cntr)
+static int restore_metadata(
+#ifdef HAVE_WIN32
+	BFILE *bfd,
+#endif
+	struct sbuf *sb,
+	const char *fname,
+	enum action act,
+	const char *encpassword,
+	int vss_restore,
+	struct config *conf)
 {
 	// If it is directory metadata, try to make sure the directory
 	// exists. Pass in NULL as the cntr, so no counting is done.
@@ -465,14 +492,22 @@ static int restore_metadata(BFILE *bfd, struct sbuf *sb, const char *fname, enum
 			return -1;
 
 		// Read in the metadata...
-		if(restore_file_or_get_meta(bfd, sb, fname, act, encpassword,
-			cntr, &metadata, &metalen, vss_restore, conf))
+		if(restore_file_or_get_meta(
+#ifdef HAVE_WIN32
+			bfd,
+#endif
+			sb, fname, act, encpassword,
+			&metadata, &metalen, vss_restore, conf))
 				return -1;
 		if(metadata)
 		{
 			
-			if(set_extrameta(bfd, fname, sb->cmd,
-				&(sb->statp), metadata, metalen, cntr))
+			if(set_extrameta(
+#ifdef HAVE_WIN32
+				bfd,
+#endif
+				fname, sb->cmd,
+				&(sb->statp), metadata, metalen, conf))
 			{
 				free(metadata);
 				// carry on if we could not do it
@@ -483,16 +518,15 @@ static int restore_metadata(BFILE *bfd, struct sbuf *sb, const char *fname, enum
 			// set attributes again, since we just diddled with
 			// the file
 			set_attributes(fname, sb->cmd,
-				&(sb->statp), sb->winattr, cntr);
+				&(sb->statp), sb->winattr, conf);
 #endif
-			do_filecounter(cntr, sb->cmd, 1);
+			do_filecounter(conf->cntr, sb->cmd, 1);
 		}
 	}
-	else do_filecounter(cntr, sb->cmd, 1);
+	else do_filecounter(conf->cntr, sb->cmd, 1);
 	return 0;
 }
-*/
-/*
+
 static void strip_invalid_characters(char **path)
 {
 #ifdef HAVE_WIN32
@@ -515,7 +549,6 @@ static void strip_invalid_characters(char **path)
       }
 #endif
 }
-*/
 
 static const char *act_str(enum action act)
 {
@@ -525,22 +558,22 @@ static const char *act_str(enum action act)
 	return ret;
 }
 
-/*
 // Return 1 for ok, -1 for error, 0 for too many components stripped.
-static int strip_path_components(struct sbuf *sb, char **path, int strip, struct cntr *cntr)
+static int strip_path_components(struct sbuf *sb, struct config *conf)
 {
 	int s=0;
 	char *tmp=NULL;
-	char *cp=*path;
+	char *cp=sb->path;
 	char *dp=NULL;
+	int strip=conf->strip;
 	for(s=0; cp && *cp && s<strip; s++)
 	{
 		if(!(dp=strchr(cp, '/')))
 		{
 			char msg[256]="";
 			snprintf(msg, sizeof(msg),
-				"Stripped too many components: %s", *path);
-			if(restore_interrupt(sb, msg, cntr))
+				"Stripped too many components: %s", sb->path);
+			if(restore_interrupt(sb, msg, conf))
 				return -1;
 			return 0;
 		}
@@ -550,8 +583,8 @@ static int strip_path_components(struct sbuf *sb, char **path, int strip, struct
 	{
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
-			"Stripped too many components: %s", *path);
-		if(restore_interrupt(sb, msg, cntr))
+			"Stripped too many components: %s", sb->path);
+		if(restore_interrupt(sb, msg, conf))
 			return -1;
 		return 0;
 	}
@@ -560,13 +593,17 @@ static int strip_path_components(struct sbuf *sb, char **path, int strip, struct
 		log_and_send_oom(__FUNCTION__);
 		return -1;
 	}
-	free(*path);
-	*path=tmp;
+	free(sb->path);
+	sb->path=tmp;
 	return 1;
 }
-*/
-/*
-static int overwrite_ok(struct sbuf *sb, struct config *conf, BFILE *bfd, const char *fullpath)
+
+static int overwrite_ok(struct sbuf *sb,
+	struct config *conf,
+#ifdef HAVE_WIN32
+	BFILE *bfd,
+#endif
+	const char *fullpath)
 {
 	struct stat checkstat;
 
@@ -604,15 +641,14 @@ static int overwrite_ok(struct sbuf *sb, struct config *conf, BFILE *bfd, const 
 
 	return 1;
 }
-*/
 
 int do_restore_client(struct config *conf, enum action act, int vss_restore)
 {
-	//int ars=0;
-	int ret=0;
-	//int quit=0;
+	int ars=0;
+	int ret=-1;
 	char msg[512]="";
-	//struct sbuf sb;
+	struct sbuf *sb=NULL;
+	struct blk *blk=NULL;
 	int wroteendcounter=0;
 // Windows needs to have the VSS data written first, and the actual data
 // written immediately afterwards. The server is transferring them in two
@@ -628,40 +664,41 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore)
 		conf->backup?conf->backup:"", conf->regex?conf->regex:"");
 	if(async_write_str(CMD_GEN, msg)
 	  || async_read_expect(CMD_GEN, "ok"))
-		return -1;
+		goto end;
 	logp("doing %s confirmed\n", act_str(act));
 
 	if(conf->send_client_counters && recv_counters(conf))
-		return -1;
+		goto end;
 
 #if defined(HAVE_WIN32)
 	if(act==ACTION_RESTORE) win32_enable_backup_privileges();
 #endif
 
-/*
-	init_sbuf(&sb);
-	while(!quit)
+	if(!(sb=sbuf_alloc())
+	  || !(blk=blk_alloc()))
+	{
+		log_and_send_oom(__FUNCTION__);
+		goto end;
+	}
+
+	while(1)
 	{
 		char *fullpath=NULL;
 
-		free_sbuf(&sb);
-		if((ars=sbuf_fill(NULL, NULL, &sb, cntr)))
+		if((ars=sbuf_fill_from_net(sb, blk, conf)))
 		{
-			if(ars<0) ret=-1;
-			else
-			{
-				// ars==1 means it ended ok.
-				print_endcounter(cntr);
-				print_filecounters(p1cntr, cntr, act);
-				wroteendcounter++;
-				logp("got %s end\n", act_str(act));
-				if(async_write_str(CMD_GEN, "ok_restore_end"))
-					ret=-1;
-			}
+			if(ars<0) goto end;
+			// ars==1 means it ended ok.
+			print_endcounter(conf->cntr);
+			print_filecounters(conf->p1cntr, conf->cntr, act);
+			wroteendcounter++;
+			logp("got %s end\n", act_str(act));
+			if(async_write_str(CMD_GEN, "ok_restore_end"))
+				goto end;
 			break;
 		}
 
-		switch(sb.cmd)
+		switch(sb->cmd)
 		{
 			case CMD_DIRECTORY:
 			case CMD_FILE:
@@ -675,14 +712,9 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore)
 				if(conf->strip)
 				{
 					int s;
-					s=strip_path_components(&sb, &(sb.path),
-						conf->strip, cntr);
-					if(s<0) // error
-					{
-						ret=-1;
-						quit++;
-					}
-					else if(s==0)
+					s=strip_path_components(sb, conf);
+					if(s<0) goto end;
+					if(s==0)
 					{
 						// Too many components stripped
 						// - carry on.
@@ -691,26 +723,26 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore)
 					// It is OK, sb.path is now stripped.
 				}
 				if(!(fullpath=prepend_s(conf->restoreprefix,
-					sb.path, strlen(sb.path))))
+					sb->path, strlen(sb->path))))
 				{
 					log_and_send_oom(__FUNCTION__);
-					ret=-1;
-					quit++;
+					goto end;
 				}
 				if(act==ACTION_RESTORE)
 				{
 				  strip_invalid_characters(&fullpath);
-				  if(!overwrite_ok(&sb, conf, &bfd, fullpath))
+				  if(!overwrite_ok(sb, conf,
+#ifdef HAVE_WIN32
+					&bfd,
+#endif
+					fullpath))
 				  {
 					char msg[512]="";
 					// Something exists at that path.
 					snprintf(msg, sizeof(msg),
 						"Path exists: %s", fullpath);
-					if(restore_interrupt(&sb, msg, cntr))
-					{
-						ret=-1;
-						quit++;
-					}
+					if(restore_interrupt(sb, msg, conf))
+						goto end;
 					else
 					{
 						if(fullpath) free(fullpath);
@@ -723,101 +755,99 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore)
 				break;
 		}
 
-		if(!quit && !ret) switch(sb.cmd)
+		switch(sb->cmd)
 		{
 			case CMD_WARNING:
-				do_filecounter(cntr, sb.cmd, 1);
+				do_filecounter(conf->cntr, sb->cmd, 1);
 				printf("\n");
-				logp("%s", sb.path);
+				logp("%s", sb->path);
 				break;
 			case CMD_DIRECTORY:
-                                if(restore_dir(&sb, fullpath, act, cntr))
-				{
-					ret=-1;
-					quit++;
-				}
+                                if(restore_dir(sb, fullpath, act, conf))
+					goto end;
 				break;
 			case CMD_FILE:
 				// Have it a separate statement to the
 				// encrypted version so that encrypted and not
 				// encrypted files can be restored at the
 				// same time.
-				if(restore_file_or_get_meta(&bfd, &sb,
-					fullpath, act,
-					NULL, cntr, NULL, NULL,
+				if(restore_file_or_get_meta(
+#ifdef HAVE_WIN32
+					&bfd,
+#endif
+					sb, fullpath, act,
+					NULL, NULL, NULL,
 					vss_restore, conf))
 				{
 					logp("restore_file error\n");
-					ret=-1;
-					quit++;
+					goto end;
 				}
 				break;
 			case CMD_ENC_FILE:
-				if(restore_file_or_get_meta(&bfd, &sb,
-					fullpath, act,
-					conf->encryption_password, cntr,
+				if(restore_file_or_get_meta(
+#ifdef HAVE_WIN32
+					&bfd,
+#endif
+					sb, fullpath, act,
+					conf->encryption_password,
 					NULL, NULL, vss_restore, conf))
 				{
 					logp("restore_file error\n");
-					ret=-1;
-					quit++;
+					goto end;
 				}
 				break;
 			case CMD_SOFT_LINK:
 			case CMD_HARD_LINK:
-				if(restore_link(&sb, fullpath,
-					conf->restoreprefix, act, cntr))
-				{
-					ret=-1;
-					quit++;
-				}
+				if(restore_link(sb, fullpath, act, conf))
+					goto end;
 				break;
 			case CMD_SPECIAL:
-				if(restore_special(&sb, fullpath, act, cntr))
-				{
-					ret=-1;
-					quit++;
-				}
+				if(restore_special(sb, fullpath, act, conf))
+					goto end;
 				break;
 			case CMD_METADATA:
-				if(restore_metadata(&bfd, &sb, fullpath, act,
-					NULL, vss_restore, conf, cntr))
-				{
-					ret=-1;
-					quit++;
-				}
+				if(restore_metadata(
+#ifdef HAVE_WIN32
+					&bfd,
+#endif
+					sb, fullpath, act,
+					NULL, vss_restore, conf))
+						goto end;
 				break;
 			case CMD_ENC_METADATA:
-				if(restore_metadata(&bfd, &sb, fullpath, act,
+				if(restore_metadata(
+#ifdef HAVE_WIN32
+					&bfd,
+#endif
+					sb, fullpath, act,
 					conf->encryption_password,
-					vss_restore, conf, cntr))
-				{
-					ret=-1;
-					quit++;
-				}
+					vss_restore, conf))
+						goto end;
 				break;
 			case CMD_EFS_FILE:
-				if(restore_file_or_get_meta(&bfd, &sb,
+				if(restore_file_or_get_meta(
+#ifdef HAVE_WIN32
+					&bfd,
+#endif
+					sb,
 					fullpath, act,
-					NULL, cntr,
+					NULL,
 					NULL, NULL, vss_restore, conf))
 				{
 					logp("restore_file error\n");
-					ret=-1;
-					quit++;
+					goto end;
 				}
 				break;
 			default:
-				logp("unknown cmd: %c\n", sb.cmd);
-				quit++; ret=-1;
-				break;
+				logp("unknown cmd: %c\n", sb->cmd);
+				goto end;
 		}
 
 		if(fullpath) free(fullpath);
 	}
-	free_sbuf(&sb);
-*/
 
+	ret=0;
+end:
 #ifdef HAVE_WIN32
 	// It is possible for a bfd to still be open.
 	bclose(&bfd);
@@ -831,6 +861,8 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore)
 
 	if(!ret) logp("%s finished\n", act_str(act));
 	else logp("ret: %d\n", ret);
+
+	sbuf_free(sb);
 
 	return ret;
 }

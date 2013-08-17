@@ -149,7 +149,7 @@ int ca_client_setup(struct config *conf)
 	if(async_write_str(CMD_GEN, "csr"))
 		return -1;
 
-	if(async_rw_ensure_read(&cmd, &buf, &len, '\0', NULL, 0))
+	if(async_read(&cmd, &buf, &len))
 	{
 		logp("problem reading from server csr\n");
 		goto end;

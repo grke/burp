@@ -44,7 +44,7 @@ struct blist
 	struct blk *last_sent;
 };
 
-extern struct blist *blist_init(void);
+extern struct blist *blist_alloc(void);
 extern void blist_free(struct blist *blist);
 extern void blk_add_to_list(struct blk *blk, struct blist *blist);
 

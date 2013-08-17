@@ -65,10 +65,11 @@ struct slist
 	struct sbuf *blks_to_send; // client only
 };
 
-extern struct sbuf *sbuf_init(void);
+extern struct sbuf *sbuf_alloc(void);
+extern void sbuf_free_contents(struct sbuf *sb);
 extern void sbuf_free(struct sbuf *sb);
 
-extern struct slist *slist_init(void);
+extern struct slist *slist_alloc(void);
 extern void slist_free(struct slist *slist);
 
 extern int sbuf_open_file(struct sbuf *sb, struct config *conf);
@@ -78,7 +79,7 @@ extern ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize);
 extern int cmd_is_link(char cmd);
 extern int sbuf_is_link(struct sbuf *sb);
 extern int sbuf_fill(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr);
-extern int sbuf_to_manifest(struct sbuf *sb, FILE *mp, gzFile zp);
+extern int sbuf_to_manifest(struct sbuf *sb, gzFile zp);
 extern void sbuf_add_to_list(struct sbuf *sb, struct slist *slist);
 
 extern int sbuf_pathcmp(struct sbuf *a, struct sbuf *b);
@@ -93,5 +94,8 @@ extern void iobuf_from_sbuf_link(struct iobuf *iobuf, struct sbuf *sb);
 extern void iobuf_from_str(struct iobuf *iobuf, char cmd, char *str);
 
 extern void sbuf_print_alloc_stats(void);
+
+extern int sbuf_fill_from_gzfile(struct sbuf *sb, gzFile zp, struct blk *blk, struct config *conf);
+extern int sbuf_fill_from_net(struct sbuf *sb, struct blk *blk, struct config *conf);
 
 #endif

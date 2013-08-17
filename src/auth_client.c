@@ -24,7 +24,7 @@ int authorise_client(struct config *conf, char **server_version)
 		logp("problem with auth\n");
 		return -1;
 	}
-	if(async_rw_ensure_read(&cmd, &buf, &l, '\0', NULL, 0)
+	if(async_read(&cmd, &buf, &l)
 	  || cmd!=CMD_GEN || strncmp(buf, "whoareyou", strlen("whoareyou")))
 	{
 		logp("problem with auth\n");

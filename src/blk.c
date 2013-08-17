@@ -82,7 +82,7 @@ int blk_md5_update(struct blk *blk)
 	return 0;
 }
 
-struct blist *blist_init(void)
+struct blist *blist_alloc(void)
 {
 	struct blist *blist;
 	if(!(blist=(struct blist *)calloc(1, sizeof(struct blist))))

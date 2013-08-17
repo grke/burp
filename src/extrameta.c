@@ -32,7 +32,7 @@ int has_extrameta(const char *path, char cmd)
         return 0;
 }
 
-int get_extrameta(BFILE *bfd, const char *path, struct stat *statp, char **extrameta, size_t *elen, int64_t winattr, struct cntr *cntr, size_t *datalen)
+int get_extrameta(BFILE *bfd, const char *path, struct stat *statp, char **extrameta, size_t *elen, int64_t winattr, struct config *conf, size_t *datalen)
 {
 #if defined (WIN32_VSS)
 	if(get_vss(bfd, path, statp, extrameta, elen, winattr, cntr,
@@ -45,7 +45,7 @@ int get_extrameta(BFILE *bfd, const char *path, struct stat *statp, char **extra
     defined(HAVE_OPENBSD_OS) || \
     defined(HAVE_NETBSD_OS)
 #ifdef HAVE_ACL
-	if(get_acl(path, statp, extrameta, elen, cntr)) return -1;
+	if(get_acl(path, statp, extrameta, elen, conf->cntr)) return -1;
 #endif
 #endif
 #if defined(HAVE_LINUX_OS) || \
@@ -53,13 +53,22 @@ int get_extrameta(BFILE *bfd, const char *path, struct stat *statp, char **extra
     defined(HAVE_OPENBSD_OS) || \
     defined(HAVE_NETBSD_OS)
 #ifdef HAVE_XATTR
-	if(get_xattr(path, statp, extrameta, elen, cntr)) return -1;
+	if(get_xattr(path, statp, extrameta, elen, conf->cntr)) return -1;
 #endif
 #endif
         return 0;
 }
 
-int set_extrameta(BFILE *bfd, const char *path, char cmd, struct stat *statp, const char *extrameta, size_t metalen, struct cntr *cntr)
+int set_extrameta(
+#ifdef HAVE_WIN32
+	BFILE *bfd,
+#endif
+	const char *path,
+	char cmd,
+	struct stat *statp,
+	const char *extrameta,
+	size_t metalen,
+	struct config *conf)
 {
 	size_t l=0;
 	char cmdtmp='\0';
@@ -74,7 +83,7 @@ int set_extrameta(BFILE *bfd, const char *path, char cmd, struct stat *statp, co
 		char *m=NULL;
 		if((sscanf(metadata, "%c%08X", &cmdtmp, &s))!=2)
 		{
-			logw(cntr, "sscanf of metadata failed for %s: %s\n",
+			logw(conf->cntr, "sscanf of metadata failed for %s: %s\n",
 				path, metadata);
 			return -1;
 		}
@@ -95,7 +104,7 @@ int set_extrameta(BFILE *bfd, const char *path, char cmd, struct stat *statp, co
 		{
 #if defined(HAVE_WIN32)
 			case META_VSS:
-				if(set_vss(bfd, m, s, cntr))
+				if(set_vss(bfd, m, s, conf->cntr))
 					errors++;
 				break;
 #endif
@@ -105,11 +114,11 @@ int set_extrameta(BFILE *bfd, const char *path, char cmd, struct stat *statp, co
     defined(HAVE_NETBSD_OS)
 #ifdef HAVE_ACL
 			case META_ACCESS_ACL:
-				if(set_acl(path, statp, m, s, cmdtmp, cntr))
+				if(set_acl(path, statp, m, s, cmdtmp, conf->cntr))
 					errors++;
 				break;
 			case META_DEFAULT_ACL:
-				if(set_acl(path, statp, m, s, cmdtmp, cntr))
+				if(set_acl(path, statp, m, s, cmdtmp, conf->cntr))
 					errors++;
 				break;
 #endif
@@ -117,7 +126,7 @@ int set_extrameta(BFILE *bfd, const char *path, char cmd, struct stat *statp, co
 #if defined(HAVE_LINUX_OS)
 #ifdef HAVE_XATTR
 			case META_XATTR:
-				if(set_xattr(path, statp, m, s, cmdtmp, cntr))
+				if(set_xattr(path, statp, m, s, cmdtmp, conf->cntr))
 					errors++;
 				break;
 #endif
@@ -127,14 +136,14 @@ int set_extrameta(BFILE *bfd, const char *path, char cmd, struct stat *statp, co
     defined(HAVE_NETBSD_OS)
 #ifdef HAVE_XATTR
 			case META_XATTR_BSD:
-				if(set_xattr(path, statp, m, s, cmdtmp, cntr))
+				if(set_xattr(path, statp, m, s, cmdtmp, conf->cntr))
 					errors++;
 				break;
 #endif
 #endif
 			default:
 				logp("unknown metadata: %c\n", cmdtmp);
-				logw(cntr, "unknown metadata: %c\n", cmdtmp);
+				logw(conf->cntr, "unknown metadata: %c\n", cmdtmp);
 				errors++;
 				break;
 				

@@ -45,7 +45,7 @@ static int add_to_file_requests(struct slist *slist, struct iobuf *rbuf)
 	static uint64_t file_no=1;
 	struct sbuf *sb;
 
-	if(!(sb=sbuf_init())) return -1;
+	if(!(sb=sbuf_alloc())) return -1;
 
 	sbuf_from_iobuf_path(sb, rbuf);
 	rbuf->buf=NULL;
@@ -135,7 +135,7 @@ static int add_to_scan_list(struct slist *flist, int *scanning, struct config *c
 {
 	int ff_ret;
 	struct sbuf *sb;
-	if(!(sb=sbuf_init())) return -1;
+	if(!(sb=sbuf_alloc())) return -1;
 	if(!(ff_ret=find_file_next(sb, conf, top_level)))
 	{
 		// Got something.
@@ -336,11 +336,11 @@ static int backup_client(struct config *conf, int estimate)
 
 	logp("Begin backup\n");
 
-	if(!(flist=slist_init())
-	  || !(slist=slist_init())
-	  || !(blist=blist_init())
-	  || !(wbuf=iobuf_init())
-	  || !(rbuf=iobuf_init()))
+	if(!(flist=slist_alloc())
+	  || !(slist=slist_alloc())
+	  || !(blist=blist_alloc())
+	  || !(wbuf=iobuf_alloc())
+	  || !(rbuf=iobuf_alloc()))
 	{
 		ret=-1;
 		goto end;

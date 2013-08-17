@@ -10,7 +10,26 @@
 #define META_VSS		'V'
 
 extern int has_extrameta(const char *path, char cmd);
-extern int get_extrameta(BFILE *bfd, const char *path, struct stat *statp, char **extrameta, size_t *elen, int64_t winattr, struct cntr *cntr, size_t *datalen);
-extern int set_extrameta(BFILE *bfd, const char *path, char cmd, struct stat *statp, const char *extrameta, size_t metalen, struct cntr *cntr);
+extern int get_extrameta(
+#ifdef HAVE_WIN32
+	BFILE *bfd,
+#endif
+	const char *path,
+	struct stat *statp,
+	char **extrameta,
+	size_t *elen,
+	int64_t winattr,
+	struct config *conf,
+	size_t *datalen);
+extern int set_extrameta(
+#ifdef HAVE_WIN32
+	BFILE *bfd,
+#endif
+	const char *path,
+	char cmd,
+	struct stat *statp,
+	const char *extrameta,
+	size_t metalen,
+	struct config *conf);
 
 #endif // _EXTRAMETA_H

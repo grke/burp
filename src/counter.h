@@ -71,7 +71,7 @@ struct cntr
 	time_t start;
 };
 
-extern void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act);
+extern void print_filecounters(struct config *conf, enum action act);
 extern void print_endcounter(struct cntr *c);
 extern void do_filecounter(struct cntr *c, char ch, int print);
 extern void do_filecounter_same(struct cntr *c, char ch);
@@ -80,7 +80,7 @@ extern void do_filecounter_deleted(struct cntr *c, char ch);
 extern void do_filecounter_bytes(struct cntr *c, unsigned long long bytes);
 extern void do_filecounter_sentbytes(struct cntr *c, unsigned long long bytes);
 extern void do_filecounter_recvbytes(struct cntr *c, unsigned long long bytes);
-extern void reset_filecounter(struct cntr *c, time_t t);
+extern void reset_filecounters(struct config *conf, time_t t);
 extern const char *bytes_to_human(unsigned long long counter);
 
 #ifndef HAVE_WIN32

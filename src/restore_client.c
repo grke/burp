@@ -286,7 +286,7 @@ static int restore_file_or_get_meta(
 				logp("error closing %s in restore_file_or_get_meta\n", fname);
 				ret=-1;
 			}
-			if(!ret) set_attributes(rpath, sb->cmd,
+			if(!ret) attribs_set(rpath, sb->cmd,
 				&(sb->statp), sb->winattr, conf);
 		}
 		if(ret)
@@ -342,7 +342,7 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
 		}
 		else
 		{
-			set_attributes(rpath, CMD_SPECIAL, &statp, sb->winattr, conf);
+			attribs_set(rpath, CMD_SPECIAL, &statp, sb->winattr, conf);
 			do_filecounter(conf->cntr, CMD_SPECIAL, 1);
 		}
 //
@@ -377,7 +377,7 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
             }
 	    else
 	    {
-		set_attributes(rpath, CMD_SPECIAL, &statp, sb->winattr, conf);
+		attribs_set(rpath, CMD_SPECIAL, &statp, sb->winattr, conf);
 		do_filecounter(conf->cntr, CMD_SPECIAL, 1);
 	    }
          }
@@ -418,7 +418,7 @@ static int restore_dir(struct sbuf *sb, const char *dname, enum action act, stru
 		}
 		else
 		{
-			set_attributes(rpath,
+			attribs_set(rpath,
 				sb->cmd, &(sb->statp), sb->winattr, conf);
 		}
 		if(!ret) do_filecounter(conf->cntr, sb->cmd, 1);
@@ -455,7 +455,7 @@ static int restore_link(struct sbuf *sb, const char *fname, enum action act, str
 		}
 		else if(!ret)
 		{
-			set_attributes(fname,
+			attribs_set(fname,
 				sb->cmd, &(sb->statp), sb->winattr, conf);
 			do_filecounter(conf->cntr, sb->cmd, 1);
 		}
@@ -517,7 +517,7 @@ static int restore_metadata(
 #ifndef HAVE_WIN32
 			// set attributes again, since we just diddled with
 			// the file
-			set_attributes(fname, sb->cmd,
+			attribs_set(fname, sb->cmd,
 				&(sb->statp), sb->winattr, conf);
 #endif
 			do_filecounter(conf->cntr, sb->cmd, 1);
@@ -690,7 +690,7 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore)
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
 			print_endcounter(conf->cntr);
-			print_filecounters(conf->p1cntr, conf->cntr, act);
+			print_filecounters(conf, act);
 			wroteendcounter++;
 			logp("got %s end\n", act_str(act));
 			if(async_write_str(CMD_GEN, "ok_restore_end"))
@@ -757,11 +757,6 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore)
 
 		switch(sb->cmd)
 		{
-			case CMD_WARNING:
-				do_filecounter(conf->cntr, sb->cmd, 1);
-				printf("\n");
-				logp("%s", sb->path);
-				break;
 			case CMD_DIRECTORY:
                                 if(restore_dir(sb, fullpath, act, conf))
 					goto end;
@@ -843,6 +838,8 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore)
 				goto end;
 		}
 
+		sbuf_free_contents(sb);
+
 		if(fullpath) free(fullpath);
 	}
 
@@ -856,7 +853,7 @@ end:
 	if(!wroteendcounter)
 	{
 		print_endcounter(conf->cntr);
-		print_filecounters(conf->p1cntr, conf->cntr, act);
+		print_filecounters(conf, act);
 	}
 
 	if(!ret) logp("%s finished\n", act_str(act));

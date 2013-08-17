@@ -246,7 +246,7 @@ int do_list_client(struct config *conf, enum action act, int json)
 		}
 
 		// FIXME - with the sbuf stuff.
-		decode_stat_low_level(&statp, statbuf,
+		attribs_decode_low_level(&statp, statbuf,
 			&index, &winattr, &compression);
 
 		if(async_read(&fcmd, &fname, &flen))

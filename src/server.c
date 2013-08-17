@@ -1033,8 +1033,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	conf.cntr=&cntr;
 	cconf.p1cntr=&p1cntr;
 	cconf.cntr=&cntr;
-	reset_filecounter(&p1cntr, time(NULL));
-	reset_filecounter(&cntr, time(NULL));
+	reset_filecounters(&conf, time(NULL));
 
 	if(forking) close_fd(rfd);
 

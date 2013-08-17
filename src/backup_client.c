@@ -490,8 +490,7 @@ int do_backup_client(struct config *conf, enum action act)
 	// Scan the file system and send the results to the server.
 	if(!ret) ret=backup_client(conf, act==ACTION_ESTIMATE);
 
-	if(act==ACTION_ESTIMATE)
-		print_filecounters(conf->p1cntr, conf->cntr, ACTION_ESTIMATE);
+	if(act==ACTION_ESTIMATE) print_filecounters(conf, ACTION_ESTIMATE);
 
 #if defined(HAVE_WIN32)
 	if(act==ACTION_BACKUP_TIMED)

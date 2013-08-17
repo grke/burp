@@ -121,8 +121,7 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 
 	conf->p1cntr=&p1cntr;
 	conf->cntr=&cntr;
-	reset_filecounter(&p1cntr, time(NULL));
-	reset_filecounter(&cntr, time(NULL));
+	reset_filecounters(conf, time(NULL));
 
 	setup_signals_client();
 //	settimers(0, 100);

@@ -236,7 +236,7 @@ static int restore_remaining_dirs(struct slist *slist, struct bu *arr, int a, in
 	return 0;
 }
 
-static int do_restore_manifest(const char *client, struct bu *arr, int a, int i, const char *manifest, regex_t *regex, int srestore, struct config *conf, enum action act, char status)
+static int do_restore_manifest(const char *client, const char *datadir, struct bu *arr, int a, int i, const char *manifest, regex_t *regex, int srestore, struct config *conf, enum action act, char status, struct dpth *dpth)
 {
 	//int s=0;
 	//size_t len=0;
@@ -259,7 +259,9 @@ static int do_restore_manifest(const char *client, struct bu *arr, int a, int i,
 	}
 	if(!(sb=sbuf_alloc())
 	  || !(blk=blk_alloc())
-	  || !(slist=slist_alloc()))
+	  || !(slist=slist_alloc())
+	  || !(dpth=dpth_alloc(datadir))
+	  || dpth_init(dpth))
 	{
 		log_and_send_oom(__FUNCTION__);
 		goto end;
@@ -267,8 +269,8 @@ static int do_restore_manifest(const char *client, struct bu *arr, int a, int i,
 
 	while(1)
 	{
-//		char *buf=NULL;
 /* FIX THIS to allow the client to interrupt the flow for a file.
+		char *buf=NULL;
 		if(async_read_quick(&cmd, &buf, &len))
 		{
 			logp("read quick error\n");
@@ -302,10 +304,20 @@ static int do_restore_manifest(const char *client, struct bu *arr, int a, int i,
 		}
 */
 
-		if((ars=sbuf_fill_from_gzfile(sb, zp, blk, conf)))
+		if((ars=sbuf_fill_from_gzfile(sb, zp, blk, dpth, conf)))
 		{
 			if(ars>0) break; // Reached the end.
+			logp("Error in sbuf_fill_from_gzfile()\n");
 			goto end; // Error;
+		}
+
+		if(blk->data)
+		{
+			//printf("send data: %d\n", blk->length);
+			if(async_write(CMD_DATA, blk->data, blk->length))
+				return -1;
+			blk->data=NULL;
+			continue;
 		}
 
 		if((!srestore || check_srestore(conf, sb->path))
@@ -332,12 +344,13 @@ end:
 	sbuf_free(sb);
 	slist_free(slist);
 	gzclose_fp(&zp);
+	dpth_free(dpth);
 	return ret;
 }
 
 // a = length of struct bu array
 // i = position to restore from
-static int restore_manifest(struct bu *arr, int a, int i, regex_t *regex, int srestore, enum action act, const char *client, char **dir_for_notify, struct config *conf)
+static int restore_manifest(struct bu *arr, int a, int i, regex_t *regex, int srestore, enum action act, const char *client, const char *basedir, char **dir_for_notify, struct dpth *dpth, struct config *conf)
 {
 	int ret=-1;
 	char *manifest=NULL;
@@ -356,7 +369,8 @@ static int restore_manifest(struct bu *arr, int a, int i, regex_t *regex, int sr
 	 || (act==ACTION_RESTORE && !(logpathz=prepend_s(arr[i].path, "restorelog.gz", strlen("restorelog.gz"))))
 	 || (act==ACTION_VERIFY && !(logpath=prepend_s(arr[i].path, "verifylog", strlen("verifylog"))))
 	 || (act==ACTION_VERIFY && !(logpathz=prepend_s(arr[i].path, "verifylog.gz", strlen("verifylog.gz"))))
-	 || !(manifest=prepend_s(arr[i].path, "manifest.gz", strlen("manifest.gz"))))
+	 || !(manifest=prepend_s(arr[i].path, "manifest.gz", strlen("manifest.gz")))
+	 || !(datadir=prepend_s(basedir, "data", strlen("data"))))
 	{
 		log_and_send_oom(__FUNCTION__);
 		goto end;
@@ -381,8 +395,8 @@ static int restore_manifest(struct bu *arr, int a, int i, regex_t *regex, int sr
 	  && send_counters(client, conf))
 		goto end;
 
-	if(do_restore_manifest(client, arr, a, i, manifest, regex,
-		srestore, conf, act, status)) goto end;
+	if(do_restore_manifest(client, datadir, arr, a, i, manifest, regex,
+		srestore, conf, act, status, dpth)) goto end;
 
 	ret=0;
 end:
@@ -407,6 +421,7 @@ int do_restore_server(const char *basedir, enum action act, const char *client, 
 	struct bu *arr=NULL;
 	unsigned long index=0;
 	regex_t *regex=NULL;
+	struct dpth *dpth=NULL;
 
 	logp("in do_restore\n");
 
@@ -421,8 +436,8 @@ int do_restore_server(const char *basedir, enum action act, const char *client, 
 	if(!(index=strtoul(conf->backup, NULL, 10)) && a>0)
 	{
 		// No backup specified, do the most recent.
-		ret=restore_manifest(arr, a, a-1, regex, srestore, act, client,
-			dir_for_notify, conf);
+		ret=restore_manifest(arr, a, a-1, regex, srestore, act,
+			client, basedir, dir_for_notify, dpth, conf);
 		found=TRUE;
 	}
 
@@ -434,7 +449,8 @@ int do_restore_server(const char *basedir, enum action act, const char *client, 
 			found=TRUE;
 			//logp("got: %s\n", arr[i].path);
 			ret|=restore_manifest(arr, a, i, regex,
-				srestore, act, client, dir_for_notify, conf);
+				srestore, act, client, basedir,
+				dir_for_notify, dpth, conf);
 			break;
 		}
 	}

@@ -95,7 +95,7 @@ extern void iobuf_from_str(struct iobuf *iobuf, char cmd, char *str);
 
 extern void sbuf_print_alloc_stats(void);
 
-extern int sbuf_fill_from_gzfile(struct sbuf *sb, gzFile zp, struct blk *blk, struct config *conf);
+extern int sbuf_fill_from_gzfile(struct sbuf *sb, gzFile zp, struct blk *blk, struct dpth *dpth, struct config *conf);
 extern int sbuf_fill_from_net(struct sbuf *sb, struct blk *blk, struct config *conf);
 
 #endif

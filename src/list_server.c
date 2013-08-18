@@ -82,7 +82,7 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 	{
 		int show=0;
 
-		if(sbuf_fill_from_gzfile(sb, zp, NULL, conf)) goto error;
+		if(sbuf_fill_from_gzfile(sb, zp, NULL, NULL, conf)) goto error;
 
 		write_status(client, STATUS_LISTING, sb->path, conf);
 

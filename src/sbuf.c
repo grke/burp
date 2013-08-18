@@ -259,7 +259,101 @@ void iobuf_from_str(struct iobuf *iobuf, char cmd, char *str)
 	set_iobuf(iobuf, cmd, str, strlen(str));
 }
 
-static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, struct config *conf)
+// For retrieving stored data.
+static struct iobuf readbuf[SIG_MAX];
+static unsigned int readbuflen=0;
+
+static int read_next_data(FILE *fp, int r)
+{
+	char cmd='\0';
+	size_t bytes;
+	unsigned int len;
+	char buf[5];
+	if(fread(buf, 1, 5, fp)!=5) return 0;
+	if((sscanf(buf, "%c%04X", &cmd, &len))!=2)
+	{
+		logp("sscanf failed in %s: %s\n", __FUNCTION__, buf);
+		return -1;
+	}
+	if(cmd!=CMD_DATA)
+	{
+		logp("unknown cmd in %s: %c\n", __FUNCTION__, cmd);
+		return -1;
+	}
+	if(!(readbuf[r].buf=(char *)realloc(readbuf[r].buf, len)))
+	{
+		logp("Out of memory in %s\n", __FUNCTION__);
+		return -1;
+	}
+	if((bytes=fread(readbuf[r].buf, 1, len, fp))!=len)
+	{
+		logp("Short read: %d wanted: %d\n", (int)bytes, (int)len);
+		return -1;
+	}
+	readbuf[r].len=len;
+	printf("read: %d:%d %04X\n", r, len, r);
+
+	return 0;
+}
+
+static int retrieve_blk_data(struct iobuf *sigbuf, struct dpth *dpth, struct blk *blk)
+{
+	static char *current_dat=NULL;
+	char *cp;
+	char tmp[32]="";
+	char datpath[256];
+	unsigned int datno;
+
+	snprintf(tmp, sigbuf->len+1, "%s", sigbuf->buf);
+//printf("here: %s\n", tmp);
+	snprintf(datpath, sizeof(datpath), "%s/%s", dpth->base_path_dat, tmp);
+	if(!(cp=strrchr(datpath, '/')))
+	{
+		logp("Could not parse data path: %s\n", datpath);
+		return -1;
+	}
+	*cp=0;
+	cp++;
+	datno=strtoul(cp, NULL, 16);
+	if(!current_dat || strcmp(current_dat, datpath))
+	{
+		int r;
+		FILE *dfp;
+		if(current_dat) free(current_dat);
+		if(!(current_dat=strdup(datpath)))
+		{
+			logp("Out of memory in %s\n", __FUNCTION__);
+			current_dat=NULL;
+			return -1;
+		}
+		printf("swap to: %s\n", current_dat);
+
+		if(!(dfp=open_file(datpath, "rb"))) return -1;
+		for(r=0; r<SIG_MAX; r++)
+		{
+			if(read_next_data(dfp, r))
+			{
+				fclose(dfp);
+				return -1;
+			}
+		}
+		readbuflen=r;
+		fclose(dfp);
+	}
+	//printf("lookup: %s (%s)\n", datpath, cp);
+	if(datno>readbuflen)
+	{
+		logp("dat index %d is greater than readbuflen: %d\n",
+			datno, readbuflen);
+		return -1;
+	}
+	blk->data=readbuf[datno].buf;
+	blk->length=readbuf[datno].len;
+
+        return 0;
+}
+
+static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, struct dpth *dpth, struct config *conf)
 {
 	static char lead[5]="";
 	static iobuf *rbuf=NULL;
@@ -310,6 +404,8 @@ static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, struct conf
 			}
 		}
 
+//printf("%c:%s\n", rbuf->cmd, rbuf->buf);
+
 		switch(rbuf->cmd)
 		{
 			case CMD_ATTRIBS:
@@ -356,10 +452,25 @@ static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, struct conf
 				break;
 			case CMD_SIG:
 				// Fill in the block, if the caller provided
-				// a pointer for one.
+				// a pointer for one. Server only.
 				if(!blk) break;
-			//	printf("got sig: %s\n", rbuf->buf);
-				break;
+//				printf("got sig: %s\n", rbuf->buf);
+				if(retrieve_blk_data(rbuf, dpth, blk))
+				{
+					logp("Could not retrieve blk data.\n");
+					free(rbuf->buf); rbuf->buf=NULL;
+					return -1;
+				}
+				return 0;
+			case CMD_DATA:
+				// Need to write the block to disk.
+				// Client only.
+				if(!blk) break;
+//				printf("got data: %d\n", rbuf->len);
+				blk->data=rbuf->buf;
+				blk->length=rbuf->len;
+				rbuf->buf=NULL;
+				return 0;
 			case CMD_WARNING:
 				logw(conf->cntr, "%s", rbuf->buf);
 				break;
@@ -389,12 +500,12 @@ static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, struct conf
 	return -1;
 }
 
-int sbuf_fill_from_gzfile(struct sbuf *sb, gzFile zp, struct blk *blk, struct config *conf)
+int sbuf_fill_from_gzfile(struct sbuf *sb, gzFile zp, struct blk *blk, struct dpth *dpth, struct config *conf)
 {
-	return do_sbuf_fill(sb, zp, blk, conf);
+	return do_sbuf_fill(sb, zp, blk, dpth, conf);
 }
 
 int sbuf_fill_from_net(struct sbuf *sb, struct blk *blk, struct config *conf)
 {
-	return do_sbuf_fill(sb, NULL, blk, conf);
+	return do_sbuf_fill(sb, NULL, blk, NULL, conf);
 }

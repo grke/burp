@@ -33,7 +33,6 @@ struct sbuf
 	int sent_stat;
 	int sent_path;
 	int sent_link;
-	int sent_data_requests;
 
 	// Keep track of what needs to be received.
 	int need_path;

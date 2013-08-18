@@ -276,7 +276,6 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
 			attribs_set(rpath, CMD_SPECIAL, &statp, sb->winattr, conf);
 			do_filecounter(conf->cntr, CMD_SPECIAL, 1);
 		}
-//
 //	}
 //	else if(S_ISSOCK(statp.st_mode)) {
 //		char msg[256]="";

@@ -4,6 +4,7 @@
 #include "berrno.h"
 #include "log.h"
 #include "bfile.h"
+#include "attribs.h"
 
 #ifdef HAVE_DARWIN_OS
 #include <sys/paths.h>
@@ -13,14 +14,6 @@
 
 char *unix_name_to_win32(char *name);
 extern "C" HANDLE get_osfhandle(int fd);
-
-void binit(BFILE *bfd, int64_t winattr)
-{
-	memset(bfd, 0, sizeof(BFILE));
-	bfd->mode=BF_CLOSED;
-	bfd->use_backup_api=have_win32_api();
-	bfd->winattr=winattr;
-}
 
 /*
  * Enables using the Backup API (win32_data).
@@ -46,7 +39,7 @@ bool have_win32_api()
 //#define CREATE_FOR_DIR	2
 //#define OVERWRITE_HIDDEN	4
 
-static int bopen_encrypted(BFILE *bfd, const char *fname, int flags, mode_t mode, int isdir)
+static int bopen_encrypted(BFILE *bfd, const char *fname, int flags, mode_t mode)
 {
 	int ret=0;
 	ULONG ulFlags=0;
@@ -71,7 +64,11 @@ static int bopen_encrypted(BFILE *bfd, const char *fname, int flags, mode_t mode
 	{
 		ulFlags |= CREATE_FOR_IMPORT;
 		ulFlags |= OVERWRITE_HIDDEN;
-		if(isdir) ulFlags |= CREATE_FOR_DIR;
+		if(bfd->winattr & FILE_ATTRIBUTE_DIRECTORY)
+		{
+			mkdir(fname, 0777);
+			ulFlags |= CREATE_FOR_DIR;
+		}
 	}
 	else
 	{
@@ -115,7 +112,7 @@ static int bfile_error(BFILE *bfd)
 	return -1;
 }
 
-int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode, int isdir)
+int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
 {
 	DWORD dwaccess;
 	DWORD dwflags;
@@ -124,7 +121,7 @@ int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode, int isdir)
 	char *win32_fname_wchar=NULL;
 
 	if(bfd->winattr & FILE_ATTRIBUTE_ENCRYPTED)
-		return bopen_encrypted(bfd, fname, flags, mode, isdir);
+		return bopen_encrypted(bfd, fname, flags, mode);
 
 	if(!(p_CreateFileA || p_CreateFileW)) return 0;
 
@@ -137,6 +134,10 @@ int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode, int isdir)
 	if(flags & O_CREAT)
 	{
 		/* Create */
+
+		if(bfd->winattr & FILE_ATTRIBUTE_DIRECTORY)
+			mkdir(fname, 0777);
+
 		if(bfd->use_backup_api)
 		{
 			dwaccess=GENERIC_WRITE
@@ -268,7 +269,6 @@ int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode, int isdir)
 			return -1;
 		}
 	}
-	bfd->errmsg=NULL;
 	bfd->lpContext=NULL;
 	if(win32_fname_wchar) free(win32_fname_wchar);
 	if(win32_fname) free(win32_fname);
@@ -280,33 +280,26 @@ static int bclose_encrypted(BFILE *bfd)
 	CloseEncryptedFileRaw(bfd->pvContext);
 	bfd->pvContext=NULL;
 	bfd->mode = BF_CLOSED;
-	return 0;
-}
-
-/*
- * Returns  0 on success
- *         -1 on error
- */
-int bclose(BFILE *bfd)
-{
-	int stat = 0;
-
-	if(!bfd) return 0;
-
-	if(bfd->errmsg)
-	{
-		free(bfd->errmsg);
-		bfd->errmsg = NULL;
-	}
+	attribs_set(bfd->path, &bfd->statp, bfd->winattr, bfd->conf);
 	if(bfd->path)
 	{
 		free(bfd->path);
 		bfd->path=NULL;
 	}
+	return 0;
+}
+
+// Return 0 on success, -1 on error.
+int bclose(BFILE *bfd)
+{
+	int ret=-1;
+
+	if(!bfd) return 0;
+
 	if(bfd->mode==BF_CLOSED) return 0;
 
 	if(bfd->winattr & FILE_ATTRIBUTE_ENCRYPTED)
-		return bclose_encrypted(bfd);
+		return bclose_encrypted(bfd, conf);
 
 	/*
 	 * We need to tell the API to release the buffer it
@@ -324,7 +317,10 @@ int bclose(BFILE *bfd)
 			1,                /* Abort */
 			1,                /* ProcessSecurity */
 			&bfd->lpContext)) /* Read context */
-				return bfile_error(NULL);
+		{
+			bfile_error(NULL);
+			goto end;
+		}
 	}
 	else if(bfd->use_backup_api && bfd->mode==BF_WRITE)
 	{
@@ -337,13 +333,29 @@ int bclose(BFILE *bfd)
 			1,                /* Abort */
 			1,                /* ProcessSecurity */
 			&bfd->lpContext)) /* Write context */
-				return bfile_error(NULL);
+		{
+			bfile_error(NULL);
+			goto end;
+		}
 	}
-	if(!CloseHandle(bfd->fh)) return bfile_error(NULL);
+	if(!CloseHandle(bfd->fh))
+	{
+		bfile_error(NULL);
+		goto end;
+	}
 
 	bfd->mode=BF_CLOSED;
 	bfd->lpContext=NULL;
-	return stat;
+	attribs_set(bfd->path, &bfd->statp, bfd->winattr, bfd->conf);
+
+	ret=0;
+end:
+	if(bfd->path)
+	{
+		free(bfd->path);
+		bfd->path=NULL;
+	}
+	return ret;
 }
 
 // Returns: bytes read on success, or 0 on EOF, -1 on error.
@@ -404,4 +416,69 @@ ssize_t bwrite(BFILE *bfd, void *buf, size_t count)
 
 #else
 
+int bclose(BFILE *bfd)
+{
+	if(!bfd || bfd->mode==BF_CLOSED) return 0;
+
+	bfd->mode=BF_CLOSED;
+	if(!close(bfd->fd))
+	{
+		bfd->fd=-1;
+		attribs_set(bfd->path, &bfd->statp, bfd->winattr, bfd->conf);
+		if(bfd->path)
+		{
+			free(bfd->path);
+			bfd->path=NULL;
+		}
+		return 0;
+	}
+	if(bfd->path)
+	{
+		free(bfd->path);
+		bfd->path=NULL;
+	}
+	return -1;
+}
+
+int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
+{
+	if(bfd->mode!=BF_CLOSED && bclose(bfd))
+		return -1;
+	if(!(bfd->fd=open(fname, flags, mode))<0)
+		return -1;
+	if(flags & O_CREAT || flags & O_WRONLY)
+		bfd->mode=BF_WRITE;
+	else
+		bfd->mode=BF_READ;
+	if(!(bfd->path=strdup(fname)))
+	{
+		log_out_of_memory(__FUNCTION__);
+		return -1;
+	}
+	return 0;
+}
+
+ssize_t bread(BFILE *bfd, void *buf, size_t count)
+{
+	return read(bfd->fd, buf, count);
+}
+
+ssize_t bwrite(BFILE *bfd, void *buf, size_t count)
+{
+	return write(bfd->fd, buf, count);
+}
+
 #endif
+
+void binit(BFILE *bfd, int64_t winattr, struct config *conf)
+{
+	memset(bfd, 0, sizeof(BFILE));
+	bfd->mode=BF_CLOSED;
+	bfd->winattr=winattr;
+	bfd->conf=conf;
+#ifdef HAVE_WIN32
+	bfd->use_backup_api=have_win32_api();
+#else
+	bfd->fd=-1;
+#endif
+}

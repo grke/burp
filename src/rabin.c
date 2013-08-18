@@ -60,7 +60,7 @@ int blks_generate(struct config *conf, struct sbuf *sb, struct blist *blist, str
 {
 	ssize_t bytes;
 
-	if(!sb->opened)
+	if(sb->bfd.mode==BF_CLOSED)
 	{
 		if(sbuf_open_file(sb, conf)) return -1;
 		first=1;

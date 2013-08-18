@@ -234,7 +234,7 @@ uint64_t decode_file_no(struct sbuf *sb)
 	return (uint64_t)val;
 }
 
-int attribs_set(const char *path, char cmd, struct stat *statp, int64_t winattr, struct config *conf)
+int attribs_set(const char *path, struct stat *statp, int64_t winattr, struct config *conf)
 {
 	struct utimbuf ut;
 
@@ -256,7 +256,7 @@ int attribs_set(const char *path, char cmd, struct stat *statp, int64_t winattr,
 	/* Watch out, a metadata restore will have cmd set to CMD_METADATA or
 	   CMD_ENC_META, but that is OK at the moment because we are not doing
 	   meta stuff on links. */
-	if(cmd==CMD_SOFT_LINK)
+	if(S_ISLNK(statp->st_mode))
 	{
 		// Change owner of link, not of real file.
 		if(lchown(path, statp->st_uid, statp->st_gid)<0)

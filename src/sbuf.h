@@ -43,9 +43,7 @@ struct sbuf
 
 	uint64_t index;
 
-	FILE *fp;
 	BFILE bfd;
-	int opened; // Get rid of this.
 
 	struct blk *bstart;
 	struct blk *bend;

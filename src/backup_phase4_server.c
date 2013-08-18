@@ -1028,6 +1028,8 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 		recursive_delete(deleteme, NULL, TRUE /* delete all */);
 	}
 
+	print_stats_to_file(p1cntr, cntr, cconf, client, finishing, ACTION_BACKUP);
+
 	// Rename the finishing symlink so that it becomes the current symlink
 	do_rename(finishing, current);
 

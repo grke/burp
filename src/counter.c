@@ -1,6 +1,7 @@
 #include "burp.h"
 #include "prog.h"
 #include "cmd.h"
+#include "msg.h"
 #include "handy.h"
 #include "asyncio.h"
 
@@ -543,6 +544,149 @@ void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act)
 	bottom_part(p1c, c, act);
 
 	border();
+}
+
+static void quint_print_to_file(FILE *fp, const char *prefix, unsigned long long a, unsigned long long b, unsigned long long c, unsigned long long d, unsigned long long e)
+{
+	fprintf(fp, "%s:%llu\n", prefix, a);
+	fprintf(fp, "%s_changed:%llu\n", prefix, b);
+	fprintf(fp, "%s_same:%llu\n", prefix, c);
+	fprintf(fp, "%s_deleted:%llu\n", prefix, d);
+	fprintf(fp, "%s_total:%llu\n", prefix, a+b+c);
+	fprintf(fp, "%s_scanned:%llu\n", prefix, e);
+}
+
+int print_stats_to_file(struct cntr *p1c, struct cntr *c, struct config *conf, const char *client, const char *directory, enum action act)
+{
+	FILE *fp;
+	char *path;
+	time_t now;
+
+	if(act!=ACTION_BACKUP && act!=ACTION_BACKUP_TIMED) return 0;
+
+	now=time(NULL);
+	if(!(path=prepend_s(directory, "backup_stats", strlen("backup_stats"))))
+		return -1;
+	if(!(fp=open_file(path, "wb")))
+	{
+		free(path);
+		return -1;
+	}
+	fprintf(fp, "client:%s\n", client);
+	fprintf(fp, "time_start:%lu\n", p1c->start);
+	fprintf(fp, "time_end:%lu\n", now);
+	fprintf(fp, "time_taken:%lu\n", now-p1c->start);
+	quint_print_to_file(fp, "files",
+		c->file,
+		c->file_changed,
+		c->file_same,
+		c->file_deleted,
+		p1c->file);
+
+	quint_print_to_file(fp, "files_encrypted",
+		c->enc,
+		c->enc_changed,
+		c->enc_same,
+		c->enc_deleted,
+		p1c->enc);
+
+	quint_print_to_file(fp, "meta_data",
+		c->meta,
+		c->meta_changed,
+		c->meta_same,
+		c->meta_deleted,
+		p1c->meta);
+
+	quint_print_to_file(fp, "meta_data_encrypted",
+		c->encmeta,
+		c->encmeta_changed,
+		c->encmeta_same,
+		c->encmeta_deleted,
+		p1c->encmeta);
+
+	quint_print_to_file(fp, "directories",
+		c->dir,
+		c->dir_changed,
+		c->dir_same,
+		c->dir_deleted,
+		p1c->dir);
+
+	quint_print_to_file(fp, "soft_links",
+		c->slink,
+		c->slink_changed,
+		c->slink_same,
+		c->slink_deleted,
+		p1c->slink);
+
+	quint_print_to_file(fp, "hard_links",
+		c->hlink,
+		c->hlink_changed,
+		c->hlink_same,
+		c->hlink_deleted,
+		p1c->hlink);
+
+	quint_print_to_file(fp, "special_files",
+		c->special,
+		c->special_changed,
+		c->special_same,
+		c->special_deleted,
+		p1c->special);
+
+	quint_print_to_file(fp, "efs_files",
+		c->efs,
+		c->efs_changed,
+		c->efs_same,
+		c->efs_deleted,
+		p1c->efs);
+
+	quint_print_to_file(fp, "vss_headers",
+		c->vss,
+		c->vss_changed,
+		c->vss_same,
+		c->vss_deleted,
+		p1c->vss);
+
+	quint_print_to_file(fp, "vss_headers_encrypted",
+		c->encvss,
+		c->encvss_changed,
+		c->encvss_same,
+		c->encvss_deleted,
+		p1c->encvss);
+
+	quint_print_to_file(fp, "vss_footers",
+		c->vss_t,
+		c->vss_t_changed,
+		c->vss_t_same,
+		c->vss_t_deleted,
+		p1c->vss_t);
+
+	quint_print_to_file(fp, "vss_footers_encrypted",
+		c->encvss_t,
+		c->encvss_t_changed,
+		c->encvss_t_same,
+		c->encvss_t_deleted,
+		p1c->encvss_t);
+
+	quint_print_to_file(fp, "total",
+		c->total,
+		c->total_changed,
+		c->total_same,
+		c->total_deleted,
+		p1c->total);
+
+	fprintf(fp, "warnings:%llu\n", c->warning + p1c->warning);
+	fprintf(fp, "bytes_estimated:%llu\n", p1c->byte);
+	fprintf(fp, "bytes_in_backup:%llu\n", c->byte);
+	fprintf(fp, "bytes_received:%llu\n", c->recvbyte);
+	fprintf(fp, "bytes_sent:%llu\n", c->sentbyte);
+
+	if(close_fp(&fp))
+	{
+		free(path);
+		return -1;
+	}
+	free(path);
+	return 0;
 }
 
 void print_endcounter(struct cntr *cntr)

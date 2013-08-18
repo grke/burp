@@ -178,36 +178,23 @@ int sbuf_open_file(struct sbuf *sb, struct config *conf)
 	}
 	if(attribs_encode(sb, conf->compression)) return -1;
 
-	if(open_file_for_send(
-#ifdef HAVE_WIN32
-		&sb->bfd, NULL,
-#else
-		NULL, &sb->fp,
-#endif
-		sb->path, sb->winattr, conf->cntr))
+	if(open_file_for_send(&sb->bfd, sb->path, sb->winattr, conf))
 	{
 		logw(conf->cntr, "Could not open %s\n", sb->path);
 		return -1;
 	}
-//printf("opened: %s\n", sb->path);
-	sb->opened=1;
 	return 0;
 }
 
 void sbuf_close_file(struct sbuf *sb)
 {
-	close_file_for_send(&sb->bfd, &sb->fp);
-	sb->opened=0;
+	close_file_for_send(&sb->bfd);
 //printf("closed: %s\n", sb->path);
 }
 
 ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize)
 {
-#ifdef HAVE_WIN32
 	return (ssize_t)bread(&sb->bfd, buf, bufsize);
-#else
-	return fread(buf, 1, bufsize, sb->fp);
-#endif
 }
 
 void sbuf_from_iobuf_path(struct sbuf *sb, struct iobuf *iobuf)

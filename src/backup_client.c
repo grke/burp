@@ -170,7 +170,7 @@ static int add_to_blks_list(struct config *conf, struct slist *slist, struct bli
 	if(blks_generate(conf, sb, blist, win)) return -1;
 
 	// If it closed the file, move to the next one.
-	if(!sb->opened) slist->last_requested=sb->next;
+	if(sb->bfd.mode==BF_CLOSED) slist->last_requested=sb->next;
 
 	return 0;
 }

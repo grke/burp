@@ -313,56 +313,22 @@ struct bsid {
 };
 #endif
 
-int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, int64_t winattr, struct cntr *cntr)
+int open_file_for_send(BFILE *bfd, const char *fname, int64_t winattr, struct config *conf)
 {
-	if(fp)
+	binit(bfd, winattr, conf);
+	if(bopen(bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0))
 	{
-		if(!(*fp=fopen(fname, "rb")))
-		{
-			logw(cntr,
-				"Could not open %s: %s\n", fname, strerror(errno));
-			return -1;
-		}
+		berrno be;
+		logw(conf->cntr, "Could not open %s: %s\n",
+			fname, be.bstrerror(errno));
+		return -1;
 	}
-#ifdef HAVE_WIN32
-	else
-	{
-		if(bfd->mode!=BF_CLOSED)
-		{
-			if(bfd->path && !strcmp(bfd->path, fname))
-			{
-				// Already open after reading the VSS data.
-				// Time now for the actual file data.
-				return 0;
-			}
-			else
-			{
-				// Close the open bfd so that it can be
-				// used again
-				close_file_for_send(bfd, NULL);
-			}
-		}
-		binit(bfd, winattr);
-		if(bopen(bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0,
-			(winattr & FILE_ATTRIBUTE_DIRECTORY))<=0)
-		{
-			berrno be;
-			logw(cntr, "Could not open %s: %s\n",
-				fname, be.bstrerror(errno));
-			return -1;
-		}
-	}
-#endif
 	return 0;
 }
 
-int close_file_for_send(BFILE *bfd, FILE **fp)
+int close_file_for_send(BFILE *bfd)
 {
-	if(fp) return close_fp(fp);
-#ifdef HAVE_WIN32
-	if(bfd) return bclose(bfd);
-#endif
-	return -1;
+	return bclose(bfd);
 }
 
 /* OK, this function is getting a bit out of control.
@@ -1454,7 +1420,7 @@ int send_a_file(const char *path, struct cntr *p1cntr)
 	int ret=0;
 	FILE *fp=NULL;
 	unsigned long long bytes=0;
-	if(open_file_for_send(NULL, &fp, path, 0, p1cntr)
+	if(!(fp=open_file(path, "rb"))
 	  || send_whole_file_gz(path, "datapth", 0, &bytes, NULL,
 		p1cntr, 9, // compression
 		NULL, fp, NULL, 0, -1))
@@ -1464,7 +1430,7 @@ int send_a_file(const char *path, struct cntr *p1cntr)
 	}
 	logp("Sent %s\n", path);
 end:
-	close_file_for_send(NULL, &fp);
+	close_fp(&fp);
 	return ret;
 }
 

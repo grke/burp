@@ -15,11 +15,6 @@
 
 #include <librsync.h>
 
-static int restore_file(struct sbuf *sb, struct bu *arr, int a, int i, struct config *conf)
-{
-	return 0;
-}
-
 static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, enum action act, const char *client, char status, struct config *conf)
 {
 	//logp("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path);

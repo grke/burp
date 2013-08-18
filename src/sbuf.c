@@ -278,9 +278,9 @@ static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, struct conf
 
 			if((got=gzread(zp, lead, sizeof(lead)))!=5)
 			{
-				if(!got) break; // Finished OK.
+				if(!got) return 1; // Finished OK.
 				log_and_send("short read in manifest");
-				return 1;
+				break;
 			}
 			if((sscanf(lead, "%c%04X", &rbuf->cmd, &s))!=2)
 			{
@@ -363,6 +363,24 @@ static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, struct conf
 			case CMD_WARNING:
 				logw(conf->cntr, "%s", rbuf->buf);
 				break;
+			case CMD_GEN:
+				if(!strcmp(rbuf->buf, "restore_end"))
+				{
+					free(rbuf->buf); rbuf->buf=NULL;
+					return 1;
+				}
+				else
+				{
+					logp("unexpected cmd in %s: %s\n",
+						__FUNCTION__, rbuf->buf);
+					free(rbuf->buf); rbuf->buf=NULL;
+					return -1;
+				}
+				break;
+			case CMD_ERROR:
+				printf("got error: %s\n", rbuf->buf);
+				free(rbuf->buf); rbuf->buf=NULL;
+				return -1;
 			default:
 				break;
 		}

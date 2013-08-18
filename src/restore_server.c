@@ -15,72 +15,6 @@
 
 #include <librsync.h>
 
-/*
-static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, int compression)
-{
-	int ret=0;
-	struct stat statp;
-
-	if(lstat(oldpath, &statp))
-	{
-		logp("could not lstat %s\n", oldpath);
-		return -1;
-	}
-
-	if(dpth_is_compressed(compression, oldpath))
-	{
-		FILE *source=NULL;
-		FILE *dest=NULL;
-
-		//logp("inflating...\n");
-
-		if(!(dest=open_file(infpath, "wb")))
-		{
-			close_fp(&dest);
-			return -1;
-		}
-
-		if(!statp.st_size)
-		{
-			// Empty file - cannot inflate.
-			// just close the destination and we have duplicated a
-			// zero length file.
-			logp("asked to inflate zero length file: %s\n", oldpath);
-			close_fp(&dest);
-			return 0;
-		}
-
-		if(!(source=open_file(oldpath, "rb")))
-		{
-			close_fp(&dest);
-			return -1;
-		}
-
-		if((ret=zlib_inflate(source, dest))!=Z_OK)
-			logp("zlib_inflate returned: %d\n", ret);
-
-		close_fp(&source);
-		if(close_fp(&dest))
-		{
-			logp("error closing %s in inflate_or_link_oldfile\n",
-				dest);
-			return -1;
-		}
-	}
-	else
-	{
-		// Not compressed - just hard link it.
-		if(link(oldpath, infpath))
-		{
-			logp("hardlink %s to %s failed: %s\n",
-				infpath, oldpath, strerror(errno));
-			ret=-1;
-		}
-	}
-	return ret;
-}
-*/
-
 static int restore_file(struct sbuf *sb, struct bu *arr, int a, int i, struct config *conf)
 {
 	return 0;
@@ -88,7 +22,7 @@ static int restore_file(struct sbuf *sb, struct bu *arr, int a, int i, struct co
 
 static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, enum action act, const char *client, char status, struct config *conf)
 {
-	logp("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path);
+	//logp("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path);
 	write_status(client, status, sb->path, conf);
 
 	switch(sb->cmd)
@@ -134,7 +68,7 @@ static int do_restore_end(enum action act, struct config *conf)
 			goto end;
 		else if(cmd==CMD_GEN && !strcmp(buf, "ok_restore_end"))
 		{
-			logp("got ok_restore_end\n");
+			//logp("got ok_restore_end\n");
 			break;
 		}
 		else if(cmd==CMD_WARNING)
@@ -174,28 +108,21 @@ static int restore_ent(const char *client,
 	//printf("want to restore: %s\n", sb->path);
 
 	// Check if we have any directories waiting to be restored.
-	// FIX THIS.
-	xb=slist->head;
-	while(xb)
+	while((xb=slist->head))
 	{
-printf("try: %s\n", xb->path);
 		if(is_subdir(xb->path, (*sb)->path))
 		{
 			// We are still in a subdir.
-printf("%s is subdir of %s\n", (*sb)->path, xb->path);
 			break;
 		}
 		else
 		{
-			printf(" but first do: %s\n", xb->path);
 			// Can now restore because nothing else is
 			// fiddling in a subdirectory.
-			if(restore_sbuf(xb, arr, a, i,
-				act, client, status, conf))
-					goto end;
+			if(restore_sbuf(xb, arr, a, i, act, client, status,
+				conf)) goto end;
 			slist->head=xb->next;
 			sbuf_free(xb);
-			xb=slist->head;
 		}
 	}
 
@@ -205,7 +132,6 @@ printf("%s is subdir of %s\n", (*sb)->path, xb->path);
 	// directory, so will also come out at the end.
 	if(S_ISDIR((*sb)->statp.st_mode))
 	{
-printf("ALLOC: %s\n", (*sb)->path);
 		// Add to the head of the list instead of the tail.
 		(*sb)->next=slist->head;
 		slist->head=*sb;
@@ -323,6 +249,7 @@ static int do_restore_manifest(const char *client, struct bu *arr, int a, int i,
 	gzFile zp=NULL;
 	struct sbuf *sb=NULL;
 	struct blk *blk=NULL;
+	int ars=0;
 
 	// Now, do the actual restore.
 	if(!(zp=gzopen_file(manifest, "rb")))
@@ -340,7 +267,6 @@ static int do_restore_manifest(const char *client, struct bu *arr, int a, int i,
 
 	while(1)
 	{
-		//int ars=0;
 //		char *buf=NULL;
 /* FIX THIS to allow the client to interrupt the flow for a file.
 		if(async_read_quick(&cmd, &buf, &len))
@@ -376,7 +302,11 @@ static int do_restore_manifest(const char *client, struct bu *arr, int a, int i,
 		}
 */
 
-		if(sbuf_fill_from_gzfile(sb, zp, blk, conf)) goto end;
+		if((ars=sbuf_fill_from_gzfile(sb, zp, blk, conf)))
+		{
+			if(ars>0) break; // Reached the end.
+			goto end; // Error;
+		}
 
 		if((!srestore || check_srestore(conf, sb->path))
 		  && check_regex(regex, sb->path)

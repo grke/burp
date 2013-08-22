@@ -111,8 +111,13 @@ static int open_log(const char *realworking, const char *client, const char *cve
 	return 0;
 }
 
-static int backup_needed(struct sbuf *sb, gzFile cmanfp)
+static int backup_needed(struct sbuf *sb, gzFile cmanzp, gzFile unzp)
 {
+	static struct sbuf *csb=NULL;
+	if(!csb && !(csb=sbuf_alloc())) return -1;
+
+	// Need to locate the entry in the current manifest.
+
 	if(sb->cmd==CMD_FILE) return 1;
 	// TODO: Check previous manifest and modification time.
 	return 0;
@@ -276,7 +281,7 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobu
 	return 0;
 }
 
-static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist *blist, struct config *conf, int *scan_end, int *sigs_end, int *backup_end, gzFile cmanfp, struct dpth *dpth)
+static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist *blist, struct config *conf, int *scan_end, int *sigs_end, int *backup_end, gzFile cmanzp, gzFile unzp, struct dpth *dpth)
 {
 	int ret=0;
 	static struct sbuf *snew=NULL;
@@ -336,7 +341,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 					snew->need_link=1;
 				else
 				{
-					if(backup_needed(snew, cmanfp))
+					if(backup_needed(snew, cmanzp, unzp))
 						snew->changed=1;
 					sbuf_add_to_list(snew, slist);
 					snew=NULL;
@@ -539,7 +544,7 @@ static int write_to_manifest(gzFile mzp, struct slist *slist, struct blist *blis
 	return 0;
 }
 
-static int backup_server(gzFile cmanfp, const char *manifest, const char *client, const char *datadir, struct config *conf)
+static int backup_server(gzFile cmanzp, gzFile chzp, gzFile unzp, const char *manifest, const char *client, const char *datadir, struct config *conf)
 {
 	int ret=-1;
 	gzFile mzp=NULL;
@@ -587,7 +592,7 @@ static int backup_server(gzFile cmanfp, const char *manifest, const char *client
 		}
 
 		if(rbuf->buf && deal_with_read(rbuf, slist, blist, conf,
-			&scan_end, &sigs_end, &backup_end, cmanfp, dpth))
+			&scan_end, &sigs_end, &backup_end, cmanzp, unzp, dpth))
 				goto end;
 
 		if(write_to_manifest(mzp, slist, blist, dpth, backup_end))
@@ -623,15 +628,21 @@ int do_backup_server(const char *basedir, const char *current, const char *worki
 	// Real path to the working directory
 	char *realworking=NULL;
 	char tstmp[64]="";
-	gzFile cmanfp=NULL;
 	struct stat statp;
 	char *datadir=NULL;
+	char *changed=NULL;
+	char *unchanged=NULL;
+	gzFile cmanzp=NULL;
+	gzFile chzp=NULL;
+	gzFile unzp=NULL;
 
 	logp("in do_backup_server\n");
 
 	if(!(timestamp=prepend_s(working, "timestamp", strlen("timestamp")))
 	  || !(cmanifest=prepend_s(current, "manifest.gz", strlen("manifest.gz")))
-	  || !(datadir=prepend_s(basedir, "data", strlen("data"))))
+	  || !(datadir=prepend_s(basedir, "data", strlen("data")))
+	  || !(changed=prepend_s(working, "changed", strlen("changed")))
+	  || !(unchanged=prepend_s(working, "unchanged", strlen("unchanged"))))
 	{
 		log_and_send_oom(__FUNCTION__);
 		goto error;
@@ -684,16 +695,15 @@ int do_backup_server(const char *basedir, const char *current, const char *worki
 	}
 
 	// Open the previous (current) manifest.
-	if(!lstat(cmanifest, &statp))
-	{
-		if(!(cmanfp=gzopen_file(cmanifest, "rb")))
-		{
-			logp("could not open old manifest %s\n", cmanifest);
+	if(!lstat(cmanifest, &statp)
+	  && !(cmanzp=gzopen_file(cmanifest, "rb")))
 			goto error;
-		}
-	}
 
-	if(backup_server(cmanfp, manifest, client, datadir, cconf))
+	if(!(chzp=gzopen_file(changed, "wb"))
+	  || !(unzp=gzopen_file(unchanged, "wb")))
+		goto error;
+
+	if(backup_server(cmanzp, chzp, unzp, manifest, client, datadir, cconf))
 	{
 		logp("error in backup\n");
 		goto error;
@@ -713,10 +723,14 @@ int do_backup_server(const char *basedir, const char *current, const char *worki
 error:
 	ret=-1;
 end:
-	gzclose_fp(&cmanfp);
+	gzclose_fp(&cmanzp);
+	gzclose_fp(&chzp);
+	gzclose_fp(&unzp);
 	if(timestamp) free(timestamp);
 	if(cmanifest) free(cmanifest);
 	if(datadir) free(datadir);
+	if(changed) free(changed);
+	if(unchanged) free(unchanged);
 	set_logfp(NULL, cconf); // does an fclose on logfp.
 	return ret;
 }

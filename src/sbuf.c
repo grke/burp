@@ -438,15 +438,29 @@ static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, struct dpth
 				rbuf->buf=NULL;
 				break;
 			case CMD_SIG:
-				// Fill in the block, if the caller provided
+				// Fill in the sig/block, if the caller provided
 				// a pointer for one. Server only.
 				if(!blk) break;
 //				printf("got sig: %s\n", rbuf->buf);
-				if(retrieve_blk_data(rbuf, dpth, blk))
+				if(dpth)
 				{
-					logp("Could not retrieve blk data.\n");
+					if(retrieve_blk_data(rbuf, dpth, blk))
+					{
+						logp("Could not retrieve blk data.\n");
+						free(rbuf->buf); rbuf->buf=NULL;
+						return -1;
+					}
+				}
+				else
+				{
+					// Just fill in the sig details.
+					if(split_sig(rbuf->buf, rbuf->len,
+						blk->weak, blk->strong))
+					{
+						free(rbuf->buf); rbuf->buf=NULL;
+						return -1;
+					}
 					free(rbuf->buf); rbuf->buf=NULL;
-					return -1;
 				}
 				return 0;
 			case CMD_DATA:

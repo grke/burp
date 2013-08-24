@@ -958,7 +958,7 @@ int ftype_to_cmd(struct sbuf *sb, struct config *conf, bool top_level)
 		case FT_NOOPEN:
 			return ft_err(sb, conf, "Could not open directory");
 	}
-	logw(conf->p1cntr, _("Err: Unknown file sb->type %d: %s"),
+	logw(conf->p1cntr, _("Err: Unknown file sb->ftype %d: %s"),
 		sb->ftype, sb->path);
 	return -1;
 }

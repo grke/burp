@@ -82,6 +82,7 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 	{
 		int show=0;
 
+		// FIX THIS: -1 means error, 1 means end of file.
 		if(sbuf_fill_from_gzfile(sb, zp, NULL, NULL, conf)) goto error;
 
 		write_status(client, STATUS_LISTING, sb->path, conf);

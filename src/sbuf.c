@@ -199,7 +199,7 @@ ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize)
 
 void sbuf_from_iobuf_path(struct sbuf *sb, struct iobuf *iobuf)
 {
-	if(sb->path) printf("SBUFA ALREADY SET!\n");
+	//if(sb->path) printf("SBUFA ALREADY SET!\n");
 	sb->cmd=iobuf->cmd;
 	sb->path=iobuf->buf;
 	sb->plen=iobuf->len;
@@ -207,14 +207,14 @@ void sbuf_from_iobuf_path(struct sbuf *sb, struct iobuf *iobuf)
 
 void sbuf_from_iobuf_attr(struct sbuf *sb, struct iobuf *iobuf)
 {
-	if(sb->attribs) printf("SBUFB ALREADY SET!\n");
+//	if(sb->attribs) printf("SBUFB ALREADY SET!\n");
 	sb->attribs=iobuf->buf;
 	sb->alen=iobuf->len;
 }
 
 void sbuf_from_iobuf_link(struct sbuf *sb, struct iobuf *iobuf)
 {
-	if(sb->linkto) printf("SBUFC ALREADY SET!\n");
+//	if(sb->linkto) printf("SBUFC ALREADY SET!\n");
 	sb->linkto=iobuf->buf;
 	sb->llen=iobuf->len;
 }
@@ -278,7 +278,7 @@ static int read_next_data(FILE *fp, int r)
 		return -1;
 	}
 	readbuf[r].len=len;
-	printf("read: %d:%d %04X\n", r, len, r);
+	//printf("read: %d:%d %04X\n", r, len, r);
 
 	return 0;
 }
@@ -292,8 +292,9 @@ static int retrieve_blk_data(struct iobuf *sigbuf, struct dpth *dpth, struct blk
 	unsigned int datno;
 
 	snprintf(tmp, sigbuf->len+1, "%s", sigbuf->buf);
-//printf("here: %s\n", tmp);
+//printf("here %lu: %s\n", sigbuf->len+1, tmp);
 	snprintf(datpath, sizeof(datpath), "%s/%s", dpth->base_path_dat, tmp);
+//printf("x: %s\n", datpath);
 	if(!(cp=strrchr(datpath, '/')))
 	{
 		logp("Could not parse data path: %s\n", datpath);
@@ -302,6 +303,7 @@ static int retrieve_blk_data(struct iobuf *sigbuf, struct dpth *dpth, struct blk
 	*cp=0;
 	cp++;
 	datno=strtoul(cp, NULL, 16);
+//printf("y: %s\n", datpath);
 	if(!current_dat || strcmp(current_dat, datpath))
 	{
 		int r;
@@ -366,6 +368,7 @@ static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, struct dpth
 			if((sscanf(lead, "%c%04X", &rbuf->cmd, &s))!=2)
 			{
 				log_and_send("sscanf failed reading manifest");
+				logp("%s\n", lead);
 				break;
 			}
 			rbuf->len=(size_t)s;
@@ -391,7 +394,7 @@ static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, struct dpth
 			}
 		}
 
-//printf("%c:%s\n", rbuf->cmd, rbuf->buf);
+//printf("HERE: %c:%s\n", rbuf->cmd, rbuf->buf);
 
 		switch(rbuf->cmd)
 		{
@@ -454,12 +457,11 @@ static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, struct dpth
 				else
 				{
 					// Just fill in the sig details.
-					if(split_sig(rbuf->buf, rbuf->len,
-						blk->weak, blk->strong))
-					{
-						free(rbuf->buf); rbuf->buf=NULL;
-						return -1;
-					}
+					// This is silly, it is using strong
+					// when it should not. FIX THIS.
+					snprintf(blk->strong,
+						sizeof(blk->strong),
+						"%s", rbuf->buf);
 					free(rbuf->buf); rbuf->buf=NULL;
 				}
 				return 0;

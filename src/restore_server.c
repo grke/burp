@@ -302,7 +302,8 @@ static int do_restore_manifest(const char *client, const char *datadir, struct b
 		if((ars=sbuf_fill_from_gzfile(sb, zp, blk, dpth, conf)))
 		{
 			if(ars>0) break; // Reached the end.
-			logp("Error in sbuf_fill_from_gzfile()\n");
+			logp("In %s, error from sbuf_fill_from_gzfile()\n",
+				__FUNCTION__);
 			goto end; // Error;
 		}
 

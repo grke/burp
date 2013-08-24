@@ -383,7 +383,8 @@ static int already_got_block(struct blk *blk, struct dpth *dpth)
 static int add_data_to_store(struct blist *blist, struct iobuf *rbuf, struct dpth *dpth)
 {
 	char tmp[64];
-	static struct blk *blk=NULL;
+//	static struct blk *blk=NULL;
+	struct blk *blk=NULL;
 //	static struct weak_entry *weak_entry;
 
 //	printf("Got data %lu!\n", rbuf->len);
@@ -922,7 +923,7 @@ static int backup_server(gzFile *cmanzp, const char *changed, const char *unchan
 			}
 		}
 
-		//if(wbuf->len) printf("send request: %s\n", wbuf->buf);
+		if(wbuf->len) printf("send request: %s\n", wbuf->buf);
 		if(async_rw_ng(rbuf, wbuf))
 		{
 			logp("error in async_rw\n");

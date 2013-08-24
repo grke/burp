@@ -37,8 +37,7 @@ struct sbuf
 	// Keep track of what needs to be received.
 	int need_path;
 	int need_link;
-
-	int changed;
+	int need_data;
 	int header_written_to_manifest;
 
 	uint64_t index;

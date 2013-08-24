@@ -111,6 +111,10 @@ printf("FILE REQUESTS END\n");
 			{
 printf("BLK REQUESTS END\n");
 				*blk_requests_end=1;
+/*
+				if(!blist->last_sent)
+					blist->last_sent=blist->head;
+*/
 				goto end;
 			}
 			else if(!strcmp(rbuf->buf, "backup_end"))
@@ -190,7 +194,7 @@ static void free_stuff(struct slist *slist, struct blist *blist)
 			sb->bend=NULL;
 			if(!(slist->head=slist->head->next))
 				slist->tail=NULL;
-printf("FREE SB %lu %s\n", sb->index, sb->path);
+//printf("FREE SB %lu %s\n", sb->index, sb->path);
 			sbuf_free(sb);
 		}
 		blk=blk->next;
@@ -200,12 +204,11 @@ printf("FREE SB %lu %s\n", sb->index, sb->path);
 	}
 }
 
-static void get_wbuf_from_data(struct iobuf *wbuf, struct slist *slist, struct blist *blist)
+static void get_wbuf_from_data(struct iobuf *wbuf, struct slist *slist, struct blist *blist, int blk_requests_end)
 {
 	struct blk *blk;
 
 //printf("get wbuf: %s\n", blist->last_sent?"yes":"no");
-
 	for(blk=blist->last_sent; blk; blk=blk->next)
 	{
 		if(blk->requested)
@@ -218,8 +221,22 @@ static void get_wbuf_from_data(struct iobuf *wbuf, struct slist *slist, struct b
 			wbuf->len=blk->length;
 			blk->requested=0;
 			blist->last_sent=blk;
-//printf("d");
 			break;
+		}
+		else
+		{
+			if(blk_requests_end)
+			{
+				// Force onwards when the server has said that
+				// there are no more blocks to request.
+				// FIX THIS - the server should occasionally
+				// send a message to say that no blocks are
+				// needed up to a certain point in the list.
+				// This general mechanism can then be used
+				// for blk_requests_end also.
+				blist->last_sent=blk;
+				continue;
+			}
 		}
 		if(blk==blist->last_requested) break;
 	}
@@ -267,8 +284,7 @@ static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int requ
 		return;
 	}
 
-//	printf("Send sig: %s\n", sb->path);
-//printf("s");
+//	printf("Send blk: %s\n", sb->path);
 	iobuf_from_blk_data(wbuf, sb->bsighead);
 
 	// Move on.
@@ -354,7 +370,8 @@ static int backup_client(struct config *conf, int estimate)
 	{
 		if(!wbuf->len)
 		{
-			get_wbuf_from_data(wbuf, slist, blist);
+			get_wbuf_from_data(wbuf, slist, blist,
+				blk_requests_end);
 			if(!wbuf->len)
 			{
 				get_wbuf_from_blks(wbuf, slist,
@@ -411,10 +428,9 @@ static int backup_client(struct config *conf, int estimate)
 			// the write buffer is empty, we got to the end.
 			if(slist->head==slist->tail)
 			{
-//				printf("blk_requests_end a\n");
-				if(blist->last_sent==slist->tail->bend)
+				if(!slist->tail
+				  || blist->last_sent==slist->tail->bend)
 				{
-//					printf("blk_requests_end b\n");
 					if(!wbuf->len)
 						break;
 				}

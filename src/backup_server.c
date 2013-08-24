@@ -111,15 +111,233 @@ static int open_log(const char *realworking, const char *client, const char *cve
 	return 0;
 }
 
-static int backup_needed(struct sbuf *sb, gzFile cmanzp, gzFile unzp)
+static int data_needed(struct sbuf *sb)
+{
+	if(sb->cmd==CMD_FILE) return 1;
+	return 0;
+}
+
+// Can this be merged with copy_unchanged_entry()?
+static int forward_through_sigs(struct sbuf **csb, gzFile *cmanzp, struct config *conf)
+{
+	static int ars;
+	char *copy;
+
+	if(!(copy=strdup((*csb)->path)))
+	{
+		log_out_of_memory(__FUNCTION__);
+		return -1;
+	}
+
+	while(1)
+	{
+		if((ars=sbuf_fill_from_gzfile(*csb,
+			*cmanzp, NULL, NULL, conf))<0) return -1;
+		else if(ars>0)
+		{
+			// Reached the end.
+			// blk is not getting freed. Never mind.
+			sbuf_free(*csb);
+			*csb=NULL;
+			gzclose_fp(cmanzp);
+			free(copy);
+			return 0;
+		}
+		else
+		{
+			// Got something.
+			if(strcmp((*csb)->path, copy))
+			{
+				// Found the next entry.
+				free(copy);
+				return 0;
+			}
+		}
+	}
+
+	free(copy);
+	return -1;
+}
+
+static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, struct blk **blk, gzFile *cmanzp, gzFile unzp, struct config *conf)
+{
+	static int ars;
+	static char *copy;
+	// Use the most recent stat for the new manifest.
+	if(sbuf_to_manifest(sb, unzp)) return -1;
+
+	if(!(copy=strdup((*csb)->path)))
+	{
+		log_out_of_memory(__FUNCTION__);
+		return -1;
+	}
+
+	while(1)
+	{
+		if((ars=sbuf_fill_from_gzfile(*csb,
+			*cmanzp, *blk, NULL, conf))<0) return -1;
+		else if(ars>0)
+		{
+			// Reached the end.
+			sbuf_free(*csb);
+			blk_free(*blk);
+			*csb=NULL;
+			*blk=NULL;
+			gzclose_fp(cmanzp);
+			free(copy);
+			return 0;
+		}
+		else
+		{
+			// Got something.
+			if(strcmp((*csb)->path, copy))
+			{
+				// Found the next entry.
+				free(copy);
+				return 0;
+			}
+			// Should have the next signature.
+			// Write it to the unchanged file.
+			// FIX THIS: check for errors
+			gzprintf(unzp, "S%04X%s\n",
+				strlen((*blk)->strong), (*blk)->strong);
+		}
+	}
+
+	free(copy);
+	return -1;
+}
+
+// Return -1 for error, 0 for entry not changed, 1 for entry changed (or new).
+static int entry_changed(struct sbuf *sb, gzFile *cmanzp, gzFile unzp, struct config *conf)
 {
 	static struct sbuf *csb=NULL;
-	if(!csb && !(csb=sbuf_alloc())) return -1;
+	static struct blk *blk=NULL;
 
-	// Need to locate the entry in the current manifest.
+	if(!csb)
+	{
+		if(!*cmanzp) return 1;
+		if(!(csb=sbuf_alloc())) return -1;
+	}
 
-	if(sb->cmd==CMD_FILE) return 1;
-	// TODO: Check previous manifest and modification time.
+	if(csb->path)
+	{
+		// Already have an entry.
+	}
+	else
+	{
+		static int ars;
+		// Need to read another.
+		if(!blk && !(blk=blk_alloc())) return -1;
+		if((ars=sbuf_fill_from_gzfile(csb, *cmanzp, blk, NULL, conf))<0)
+			return -1;
+		else if(ars>0)
+		{
+			// Reached the end.
+			sbuf_free(csb);
+			blk_free(blk);
+			csb=NULL;
+			blk=NULL;
+			gzclose_fp(cmanzp);
+			return 1;
+		}
+		else
+		{
+			if(!csb->path)
+			{
+				logp("Should have an path at this point, but do not, in %s\n", __FUNCTION__);
+				return -1;
+			}
+			// Got an entry.
+		}
+	}
+
+	while(1)
+	{
+		static int pcmp;
+		static int sbret;
+
+		if(!(pcmp=sbuf_pathcmp(csb, sb)))
+		{
+			// Located the entry in the current manifest.
+			// If the file type changed, I think it is time to back
+			// it up again (for example, EFS changing to normal
+			// file, or back again).
+			if(csb->cmd!=sb->cmd)
+			{
+				printf("got changed: %c %s %c %s %lu %lu\n", csb->cmd, csb->path, sb->cmd, sb->path, csb->statp.st_mtime, sb->statp.st_mtime);
+				if(forward_through_sigs(&csb, cmanzp, conf))
+					return -1;
+				return 1;
+			}
+
+			// mtime is the actual file data.
+			// ctime is the attributes or meta data.
+			if(csb->statp.st_mtime==sb->statp.st_mtime
+			  && csb->statp.st_ctime==sb->statp.st_ctime)
+			{
+				// Got an unchanged file.
+//				printf("got unchanged: %c %s %c %s %lu %lu\n", csb->cmd, csb->path, sb->cmd, sb->path, csb->statp.st_mtime, sb->statp.st_mtime);
+				if(copy_unchanged_entry(&csb, sb, &blk,
+					cmanzp, unzp, conf)) return -1;
+				return 0;
+			}
+
+			if(csb->statp.st_mtime==sb->statp.st_mtime
+			  && csb->statp.st_ctime!=sb->statp.st_ctime)
+			{
+				// File data stayed the same, but attributes or
+				// meta data changed. We already have the
+				// attributes, but may need to get extra meta
+				// data.
+				// FIX THIS
+//				printf("got unchanged: %c %s %c %s %lu %lu\n", csb->cmd, csb->path, sb->cmd, sb->path, csb->statp.st_mtime, sb->statp.st_mtime);
+				if(copy_unchanged_entry(&csb, sb, &blk,
+					cmanzp, unzp, conf)) return -1;
+				return 0;
+			}
+
+			printf("got changed: %c %s %c %s %lu %lu\n", csb->cmd, csb->path, sb->cmd, sb->path, csb->statp.st_mtime, sb->statp.st_mtime);
+
+			// File data changed.
+			if(forward_through_sigs(&csb, cmanzp, conf))
+				return -1;
+			return 1;
+		}
+		else if(pcmp>0)
+		{
+			// Ahead - this is a new file.
+			printf("got new file: %s %c %c\n", csb->path, csb->cmd, sb->cmd);
+			return 1;
+		}
+		else
+		{
+			// Behind - need to read more data from the old
+			// manifest.
+		}
+
+		if((sbret=sbuf_fill_from_gzfile(csb,
+			*cmanzp, blk, NULL, conf))<0)
+		{
+			// Error
+			return -1;
+		}
+		else if(sbret>0)
+		{
+			// Reached the end.
+			sbuf_free(csb);
+			blk_free(blk);
+			csb=NULL;
+			blk=NULL;
+			gzclose_fp(cmanzp);
+			return 1;
+		}
+		else
+		{
+			// Got something, go back around the loop.
+		}
+	}
+
 	return 0;
 }
 
@@ -146,7 +364,7 @@ static int already_got_block(struct blk *blk, struct dpth *dpth)
 				log_out_of_memory(__FUNCTION__);
 				return -1;
 			}
-			blk->length=strlen(blk->data);
+			blk->length=strlen(blk->data)-1; // Chop newline.
 	printf("FOUND: %s %s\n", blk->weak, blk->strong);
 			blk->got=1;
 		}
@@ -262,6 +480,7 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobu
 	if(!sb->bsighead) sb->bsighead=blk;
 
 	if(!strncmp(rbuf->buf,
+		// FIX THIS - represents zero length block.
 		"0000000000000000D41D8CD98F00B204E9800998ECF8427E", rbuf->len))
 	{
 		blk->got=1;
@@ -275,15 +494,17 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobu
 	// to be the location of the already got block.
 	if(already_got_block(blk, dpth)) return -1;
 
-//	if(!blk->got) printf("Need data for %lu %lu %s\n", sb->index,
-//		blk->index, slist->add_sigs_here->path);
+	if(!blk->got) printf("Need data for %lu %lu %s\n", sb->index,
+		blk->index, slist->add_sigs_here->path);
 
 	return 0;
 }
 
-static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist *blist, struct config *conf, int *scan_end, int *sigs_end, int *backup_end, gzFile cmanzp, gzFile unzp, struct dpth *dpth)
+static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist *blist, struct config *conf, int *scan_end, int *sigs_end, int *backup_end, gzFile *cmanzp, gzFile unzp, struct dpth *dpth)
 {
 	int ret=0;
+	static int ec=0;
+	static int compression; // currently unused
 	static struct sbuf *snew=NULL;
 	static struct sbuf *inew=NULL;
 
@@ -320,6 +541,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			if(snew) break;
 			if(!(snew=sbuf_alloc())) goto error;
 			sbuf_from_iobuf_attr(snew, rbuf);
+			attribs_decode(snew, &compression);
 			snew->need_path=1;
 			rbuf->buf=NULL;
 			return 0;
@@ -341,9 +563,16 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 					snew->need_link=1;
 				else
 				{
-					if(backup_needed(snew, cmanzp, unzp))
-						snew->changed=1;
-					sbuf_add_to_list(snew, slist);
+					if(!(ec=entry_changed(snew,
+							cmanzp, unzp, conf)))
+						sbuf_free(snew);
+					else if(ec<0)
+						goto error;
+					else
+					{
+						snew->need_data=data_needed(snew);
+						sbuf_add_to_list(snew, slist);
+					}
 					snew=NULL;
 				}
 				return 0;
@@ -409,18 +638,25 @@ static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, int sigs
 	static char req[32]="";
 	struct sbuf *sb=slist->blks_to_request;
 
-	while(sb && !sb->changed)
+	while(sb && !sb->need_data)
 	{
-//		printf("Changed %d: %s\n", sb->changed, sb->path);
+//		printf("Do not need data %d: %s\n", sb->need_data, sb->path);
 		sb=sb->next;
 	}
 	if(!sb)
 	{
 		slist->blks_to_request=NULL;
+		if(sigs_end && !*blk_requests_end)
+		{
+			iobuf_from_str(wbuf,
+				CMD_GEN, (char *)"blk_requests_end");
+			*blk_requests_end=1;
+		}
 		return;
 	}
 	if(!sb->bsighead)
 	{
+//printf("HERE X %d %d: %s\n", sigs_end, *blk_requests_end, sb->path);
 		// Trying to move onto the next file.
 		// ??? Does this really work?
 		if(sb->bend) slist->blks_to_request=sb->next;
@@ -469,7 +705,7 @@ static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist, int sca
 		return;
 	}
 
-	if(sb->sent_path || !sb->changed)
+	if(sb->sent_path || !sb->need_data)
 	{
 		slist->last_requested=sb->next;
 		return;
@@ -482,21 +718,21 @@ static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist, int sca
 	sb->index=file_no++;
 }
 
-static int write_to_manifest(gzFile mzp, struct slist *slist, struct blist *blist, struct dpth *dpth, int backup_end)
+static int write_to_changed_file(gzFile chzp, struct slist *slist, struct blist *blist, struct dpth *dpth, int backup_end)
 {
 	struct sbuf *sb;
 	if(!slist) return 0;
 
 	while((sb=slist->head))
 	{
-		if(sb->changed)
+		if(sb->need_data)
 		{
-			// Changed...
+			// Need data...
 			struct blk *blk;
 
 			if(!sb->header_written_to_manifest)
 			{
-				if(sbuf_to_manifest(sb, mzp)) return -1;
+				if(sbuf_to_manifest(sb, chzp)) return -1;
 				sb->header_written_to_manifest=1;
 			}
 
@@ -505,7 +741,8 @@ static int write_to_manifest(gzFile mzp, struct slist *slist, struct blist *blis
 				&& (blk->next || backup_end))
 			{
 				if(blk->data)
-					gzprintf(mzp, "S%04X%s",
+					// FIX THIS: check for errors
+					gzprintf(chzp, "S%04X%s",
 						blk->length, blk->data);
 				if(blk==sb->bend)
 				{
@@ -525,7 +762,7 @@ static int write_to_manifest(gzFile mzp, struct slist *slist, struct blist *blis
 		else
 		{
 			// No change, can go straight in.
-			if(sbuf_to_manifest(sb, mzp)) return -1;
+			if(sbuf_to_manifest(sb, chzp)) return -1;
 
 			// FIX THIS:
 			// Also need to write in the unchanged sigs.
@@ -544,10 +781,108 @@ static int write_to_manifest(gzFile mzp, struct slist *slist, struct blist *blis
 	return 0;
 }
 
-static int backup_server(gzFile cmanzp, gzFile chzp, gzFile unzp, const char *manifest, const char *client, const char *datadir, struct config *conf)
+// This is basically backup_phase3_server() from burp1. It merges the unchanged
+// and changed data into a single file.
+static int phase3(const char *changed, const char *unchanged, const char *manifest, struct config *conf)
+{
+	int ars=0;
+	int ret=1;
+	int pcmp=0;
+	gzFile mzp=NULL;
+	gzFile chzp=NULL;
+	gzFile unzp=NULL;
+	struct sbuf *usb=NULL;
+	struct sbuf *csb=NULL;
+	struct blk *blk=NULL;
+
+	logp("Start phase3\n");
+
+	if(!(usb=sbuf_alloc())
+	  || !(csb=sbuf_alloc())
+	  || !(chzp=gzopen_file(changed, "rb"))
+	  || !(unzp=gzopen_file(unchanged, "rb"))
+	  || !(mzp=gzopen_file(manifest, comp_level(conf))))
+		goto end;
+
+	while(unzp || chzp)
+	{
+		if(!blk && !(blk=blk_alloc())) return -1;
+
+		if(unzp
+		  && usb
+		  && !usb->path
+		  && (ars=sbuf_fill_from_gzfile(usb, unzp, NULL, NULL, conf)))
+		{
+			if(ars<0) goto end;
+			// ars==1 means it ended ok.
+			gzclose_fp(&unzp);
+		}
+
+		if(chzp
+		  && csb
+		  && !csb->path
+		  && (ars=sbuf_fill_from_gzfile(csb, chzp, NULL, NULL, conf)))
+		{
+			if(ars<0) goto end;
+			// ars==1 means it ended ok.
+			gzclose_fp(&chzp);
+		}
+
+		if((usb && usb->path) && (!csb || !csb->path))
+		{
+			if(copy_unchanged_entry(&usb, usb,
+				&blk, &unzp, mzp, conf)) goto end;
+		}
+		else if((!usb || !usb->path) && (csb && csb->path))
+		{
+			if(copy_unchanged_entry(&csb, csb,
+				&blk, &chzp, mzp, conf)) goto end;
+		}
+		else if((!usb || !usb->path) && (!csb || !(csb->path)))
+		{
+			continue;
+		}
+		else if(!(pcmp=sbuf_pathcmp(usb, csb)))
+		{
+			// They were the same - write one.
+			if(copy_unchanged_entry(&csb, csb,
+				&blk, &chzp, mzp, conf)) goto end;
+		}
+		else if(pcmp<0)
+		{
+			if(copy_unchanged_entry(&usb, usb,
+				&blk, &unzp, mzp, conf)) goto end;
+		}
+		else
+		{
+			if(copy_unchanged_entry(&csb, csb,
+				&blk, &chzp, mzp, conf)) goto end;
+		}
+	}
+
+	if(gzclose_fp(&mzp))
+	{
+		logp("Error closing %s in %s\n", manifest, __FUNCTION__);
+		goto end;
+	}
+
+	ret=0;
+	unlink(changed);
+	unlink(unchanged);
+	logp("End phase3\n");
+end:
+	gzclose_fp(&mzp);
+	gzclose_fp(&chzp);
+	gzclose_fp(&unzp);
+	sbuf_free(csb);
+	sbuf_free(usb);
+	blk_free(blk);
+	return ret;
+}
+
+static int backup_server(gzFile *cmanzp, const char *changed, const char *unchanged, const char *manifest, const char *client, const char *datadir, struct config *conf)
 {
 	int ret=-1;
-	gzFile mzp=NULL;
 	int scan_end=0;
 	int sigs_end=0;
 	int backup_end=0;
@@ -558,6 +893,8 @@ static int backup_server(gzFile cmanzp, gzFile chzp, gzFile unzp, const char *ma
 	struct iobuf *rbuf=NULL;
 	struct iobuf *wbuf=NULL;
 	struct dpth *dpth=NULL;
+	gzFile chzp=NULL;
+	gzFile unzp=NULL;
 
 	logp("Begin backup\n");
 	printf("DATADIR: %s\n", datadir);
@@ -566,9 +903,10 @@ static int backup_server(gzFile cmanzp, gzFile chzp, gzFile unzp, const char *ma
 	  || !(blist=blist_alloc())
 	  || !(wbuf=iobuf_alloc())
 	  || !(rbuf=iobuf_alloc())
-	  || !(mzp=gzopen_file(manifest, comp_level(conf)))
 	  || !(dpth=dpth_alloc(datadir))
-	  || dpth_init(dpth))
+	  || dpth_init(dpth)
+	  || !(chzp=gzopen_file(changed, "wb"))
+	  || !(unzp=gzopen_file(unchanged, "wb")))
 		goto end;
 
 	while(!backup_end)
@@ -595,18 +933,30 @@ static int backup_server(gzFile cmanzp, gzFile chzp, gzFile unzp, const char *ma
 			&scan_end, &sigs_end, &backup_end, cmanzp, unzp, dpth))
 				goto end;
 
-		if(write_to_manifest(mzp, slist, blist, dpth, backup_end))
+		if(write_to_changed_file(chzp, slist, blist, dpth, backup_end))
 			goto end;
 	}
+
+	if(gzclose_fp(&chzp))
+	{
+		logp("Error closing %s in %s\n", changed, __FUNCTION__);
+		goto end;
+	}
+	if(gzclose_fp(&unzp))
+	{
+		logp("Error closing %s in %s\n", unchanged, __FUNCTION__);
+		goto end;
+	}
+
+	if(phase3(changed, unchanged, manifest, conf))
+		goto end;
+
 	ret=0;
 
 end:
-	if(gzclose(mzp))
-	{
-		logp("error closing %s in %s\n", manifest, __FUNCTION__);
-		ret=-1;
-	}
 	logp("End backup\n");
+	gzclose_fp(&chzp);
+	gzclose_fp(&unzp);
 	slist_free(slist);
 	blist_free(blist);
 	iobuf_free(rbuf);
@@ -615,6 +965,36 @@ end:
 	iobuf_free(wbuf);
 	dpth_free(dpth);
 	return ret;
+}
+
+// Clean mess left over from a previously interrupted backup.
+static int clean_rubble(const char *basedir, const char *working)
+{
+	int len=0;
+	char *real=NULL;
+	char lnk[32]="";
+	if((len=readlink(working, lnk, sizeof(lnk)-1))<0)
+		return 0;
+	else if(!len)
+	{
+		unlink(working);
+		return 0;
+	}
+	lnk[len]='\0';
+	if(!(real=prepend_s(basedir, lnk, strlen(lnk))))
+	{
+		log_and_send_oom(__FUNCTION__);
+		return -1;
+	}
+	if(recursive_delete(real, "", TRUE))
+	{
+		char msg[256]="";
+		snprintf(msg, sizeof(msg), "Could not remove interrupted directory: %s", real);
+		log_and_send(msg);
+		return -1;
+	}
+	unlink(working);
+	return 0;
 }
 
 int do_backup_server(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *manifest, const char *client, const char *cversion, const char *incexc)
@@ -633,8 +1013,6 @@ int do_backup_server(const char *basedir, const char *current, const char *worki
 	char *changed=NULL;
 	char *unchanged=NULL;
 	gzFile cmanzp=NULL;
-	gzFile chzp=NULL;
-	gzFile unzp=NULL;
 
 	logp("in do_backup_server\n");
 
@@ -655,6 +1033,9 @@ int do_backup_server(const char *basedir, const char *current, const char *worki
 		log_and_send_oom(__FUNCTION__);
 		goto error;
 	}
+
+	if(clean_rubble(basedir, working)) goto error;
+
 	// Add the working symlink before creating the directory.
 	// This is because bedup checks the working symlink before
 	// going into a directory. If the directory got created first,
@@ -699,11 +1080,8 @@ int do_backup_server(const char *basedir, const char *current, const char *worki
 	  && !(cmanzp=gzopen_file(cmanifest, "rb")))
 			goto error;
 
-	if(!(chzp=gzopen_file(changed, "wb"))
-	  || !(unzp=gzopen_file(unchanged, "wb")))
-		goto error;
-
-	if(backup_server(cmanzp, chzp, unzp, manifest, client, datadir, cconf))
+	if(backup_server(&cmanzp, changed, unchanged, manifest,
+		client, datadir, cconf))
 	{
 		logp("error in backup\n");
 		goto error;
@@ -724,8 +1102,6 @@ error:
 	ret=-1;
 end:
 	gzclose_fp(&cmanzp);
-	gzclose_fp(&chzp);
-	gzclose_fp(&unzp);
 	if(timestamp) free(timestamp);
 	if(cmanifest) free(cmanifest);
 	if(datadir) free(datadir);

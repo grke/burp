@@ -278,9 +278,10 @@ int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
 static int bclose_encrypted(BFILE *bfd)
 {
 	CloseEncryptedFileRaw(bfd->pvContext);
+	if(bfd->mode==BF_WRITE)
+		attribs_set(bfd->path, &bfd->statp, bfd->winattr, bfd->conf);
 	bfd->pvContext=NULL;
-	bfd->mode = BF_CLOSED;
-	attribs_set(bfd->path, &bfd->statp, bfd->winattr, bfd->conf);
+	bfd->mode=BF_CLOSED;
 	if(bfd->path)
 	{
 		free(bfd->path);
@@ -344,9 +345,10 @@ int bclose(BFILE *bfd)
 		goto end;
 	}
 
-	bfd->mode=BF_CLOSED;
+	if(bfd->mode==BF_WRITE)
+		attribs_set(bfd->path, &bfd->statp, bfd->winattr, bfd->conf);
 	bfd->lpContext=NULL;
-	attribs_set(bfd->path, &bfd->statp, bfd->winattr, bfd->conf);
+	bfd->mode=BF_CLOSED;
 
 	ret=0;
 end:
@@ -420,11 +422,13 @@ int bclose(BFILE *bfd)
 {
 	if(!bfd || bfd->mode==BF_CLOSED) return 0;
 
-	bfd->mode=BF_CLOSED;
 	if(!close(bfd->fd))
 	{
+		if(bfd->mode==BF_WRITE)
+			attribs_set(bfd->path,
+				&bfd->statp, bfd->winattr, bfd->conf);
+		bfd->mode=BF_CLOSED;
 		bfd->fd=-1;
-		attribs_set(bfd->path, &bfd->statp, bfd->winattr, bfd->conf);
 		if(bfd->path)
 		{
 			free(bfd->path);

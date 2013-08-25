@@ -11,6 +11,8 @@
 #define CMD_SIG		'S'	/* Signature of a block */
 #define CMD_DATA_REQ	'D'	/* Request for block data */
 #define CMD_DATA	'B'	/* Block data */
+#define CMD_WRAP_UP	'U'	/* Control packet - client can free blocks up
+				   to the given index. */
 
 // File types
 #define CMD_FILE	'f'	/* Plain file */

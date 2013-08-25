@@ -399,6 +399,24 @@ static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, struct dpth
 		switch(rbuf->cmd)
 		{
 			case CMD_ATTRIBS:
+				// I think these frees are hacks. Probably,
+				// the calling function should deal with this.
+				// FIX THIS.
+				if(sb->attribs)
+				{
+					free(sb->attribs);
+					sb->attribs=NULL;
+				}
+				if(sb->path)
+				{
+					free(sb->path);
+					sb->path=NULL;
+				}
+				if(sb->linkto)
+				{
+					free(sb->linkto);
+					sb->linkto=NULL;
+				}
 				sbuf_from_iobuf_attr(sb, rbuf);
 				rbuf->buf=NULL;
 				attribs_decode(sb, &sb->compression);

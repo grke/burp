@@ -14,6 +14,7 @@ static char *gbuf_end=NULL;
 static int first=0;
 
 // This is where the magic happens.
+// Return -1 for error, 1 for got a block, 0 for no block got.
 static int blk_read(struct rconf *rconf, struct win *win, struct sbuf *sb, struct blist *blist)
 {
 	char c;
@@ -45,12 +46,16 @@ static int blk_read(struct rconf *rconf, struct win *win, struct sbuf *sb, struc
 				sb->bstart=blk;
 				first=0;
 			}
-			if(!sb->bsighead) sb->bsighead=blk;
+			if(!sb->bsighead)
+			{
+printf("SET A: %s\n", sb->path);
+				sb->bsighead=blk;
+			}
 			blk_add_to_list(blk, blist);
 			blk=NULL;
 
 			gcp++;
-			return 0;
+			return 1;
 		}
 	}
 	return 0;
@@ -58,7 +63,8 @@ static int blk_read(struct rconf *rconf, struct win *win, struct sbuf *sb, struc
 
 int blks_generate(struct config *conf, struct sbuf *sb, struct blist *blist, struct win *win)
 {
-	ssize_t bytes;
+	static int r;
+	static ssize_t bytes;
 
 	if(sb->bfd.mode==BF_CLOSED)
 	{
@@ -82,20 +88,31 @@ int blks_generate(struct config *conf, struct sbuf *sb, struct blist *blist, str
 	{
 		// Could have got a fill before buf ran out -
 		// need to resume from the same place in that case.
-		if(blk_read(&conf->rconf, win, sb, blist))
+		if((r=blk_read(&conf->rconf, win, sb, blist)))
 		{
-			sbuf_close_file(sb);
-			return -1;
+			if(r<0)
+			{
+				// Error
+				sbuf_close_file(sb);
+				return -1;
+			}
+			// Got a block.
+			return 0;
 		}
-		return 0;
+		// Did not get a block. Carry on and read more.
 	}
 	while((bytes=sbuf_read(sb, gbuf, conf->rconf.blk_max)))
 	{
 		gcp=gbuf;
 		gbuf_end=gbuf+bytes;
 		sb->bytes_read+=bytes;
-		if(blk_read(&conf->rconf, win, sb, blist))
-			return -1;
+		if((r=blk_read(&conf->rconf, win, sb, blist)))
+		{
+			if(r<0) return -1; // Error.
+			return 0; // Got a block
+		}
+		// Did not get a block. Maybe should try again?
+		// If there are async timeouts, look at this!
 		return 0;
 	}
 
@@ -110,7 +127,10 @@ int blks_generate(struct config *conf, struct sbuf *sb, struct blist *blist, str
 				sb->bstart=blk;
 				first=0;
 			}
-			if(!sb->bsighead) sb->bsighead=blk;
+			if(!sb->bsighead)
+			{
+				sb->bsighead=blk;
+			}
 			blk_add_to_list(blk, blist);
 		}
 		else blk_free(blk);
@@ -120,7 +140,6 @@ int blks_generate(struct config *conf, struct sbuf *sb, struct blist *blist, str
 	{
 		// Empty file, set up an empty block so that the server
 		// can skip over it.
-//printf("EMPTY\n");
 		if(!(blk=blk_alloc())) return -1;
 		sb->bstart=blk;
 		sb->bsighead=blk;

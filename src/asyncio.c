@@ -410,8 +410,9 @@ int async_rw(char *rcmd, char **rdst, size_t *rlen, char wcmd, const char *wsrc,
 		  && (!doread || !FD_ISSET(fd, &fsr))
 		  && (!dowrite || !FD_ISSET(fd, &fsw)))
 		{
-			//logp("SELECT HIT TIMEOUT - doread: %d, dowrite: %d\n",
+			//printf("SELECT HIT TIMEOUT - doread: %d, dowrite: %d\n",
 			//	doread, dowrite);
+			//printf("%d %d\n", readbuflen, writebuflen);
 			// Be careful to avoid 'read quick' mode.
 			if((setsec || setusec)
 			  && max_network_timeout>0 && network_timeout--<=0)
@@ -437,6 +438,7 @@ int async_rw(char *rcmd, char **rdst, size_t *rlen, char wcmd, const char *wsrc,
 			if(do_read(&read_blocked_on_write)) return -1;
 			if((r=parse_readbuf(rcmd, rdst, rlen)))
 				logp("error in second parse_readbuf\n");
+//printf("did read\n");
 			return r;
                 }
 
@@ -447,6 +449,7 @@ int async_rw(char *rcmd, char **rdst, size_t *rlen, char wcmd, const char *wsrc,
 
 			if((r=do_write(&write_blocked_on_read)))
 				logp("error in do_write\n");
+//printf("did write\n");
 			return r;
 		}
         }

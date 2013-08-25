@@ -307,7 +307,7 @@ static int entry_changed(struct sbuf *sb, gzFile *cmanzp, gzFile unzp, struct co
 		else if(pcmp>0)
 		{
 			// Ahead - this is a new file.
-			printf("got new file: %s %c %c\n", csb->path, csb->cmd, sb->cmd);
+			printf("got new file: %c %s\n", sb->cmd, sb->path);
 			return 1;
 		}
 		else
@@ -368,13 +368,11 @@ static int already_got_block(struct blk *blk, struct dpth *dpth)
 	printf("FOUND: %s %s\n", blk->weak, blk->strong);
 			blk->got=1;
 		}
-/*
 		else
 		{
-			logp("COLLISION: %s %s\n", weak, strong);
-			collisions++;
+	printf("COLLISION: %s %s\n", blk->weak, blk->strong);
+//			collisions++;
 		}
-*/
 	}
 
 	return 0;
@@ -385,7 +383,7 @@ static int add_data_to_store(struct blist *blist, struct iobuf *rbuf, struct dpt
 	char tmp[64];
 //	static struct blk *blk=NULL;
 	struct blk *blk=NULL;
-//	static struct weak_entry *weak_entry;
+	static struct weak_entry *weak_entry;
 
 //	printf("Got data %lu!\n", rbuf->len);
 
@@ -412,9 +410,9 @@ static int add_data_to_store(struct blist *blist, struct iobuf *rbuf, struct dpt
 
 
 	// Add to hash table.
-//	if(!(weak_entry=add_weak_entry(blk->fingerprint))) return -1;
-//	if(!(weak_entry->strong=add_strong_entry(weak_entry, blk->strong, dpth)))
-//		return -1;
+	if(!(weak_entry=add_weak_entry(blk->fingerprint))) return -1;
+	if(!(weak_entry->strong=add_strong_entry(weak_entry, blk->strong, dpth)))
+		return -1;
 
 
 	// Need to write the refs to the manifest too.
@@ -465,8 +463,9 @@ static int set_up_for_sig_info(struct slist *slist, struct blist *blist, struct 
 	return 0;
 }
 
-static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobuf *rbuf, struct dpth *dpth)
+static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobuf *rbuf, struct dpth *dpth, uint64_t *wrap_up)
 {
+	static int consecutive_found_block=0;
 	// Goes on slist->add_sigs_here
 	struct blk *blk;
 	struct sbuf *sb;
@@ -494,14 +493,25 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobu
 	// If already got, this function will set blk->data
 	// to be the location of the already got block.
 	if(already_got_block(blk, dpth)) return -1;
-
-	if(!blk->got) printf("Need data for %lu %lu %s\n", sb->index,
-		blk->index, slist->add_sigs_here->path);
+	if(blk->got)
+	{
+		if(++consecutive_found_block>5000)
+		{
+			*wrap_up=blk->index;
+			consecutive_found_block=0;
+		}
+	}
+	else
+	{
+		consecutive_found_block=0;
+		printf("Need data for %lu %lu %s\n", sb->index,
+			blk->index, slist->add_sigs_here->path);
+	}
 
 	return 0;
 }
 
-static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist *blist, struct config *conf, int *scan_end, int *sigs_end, int *backup_end, gzFile *cmanzp, gzFile unzp, struct dpth *dpth)
+static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist *blist, struct config *conf, int *scan_end, int *sigs_end, int *backup_end, gzFile *cmanzp, gzFile unzp, struct dpth *dpth, uint64_t *wrap_up)
 {
 	int ret=0;
 	static int ec=0;
@@ -531,7 +541,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			if(set_up_for_sig_info(slist, blist, inew)) goto error;
 			return 0;
 		case CMD_SIG:
-			if(add_to_sig_list(slist, blist, rbuf, dpth))
+			if(add_to_sig_list(slist, blist, rbuf, dpth, wrap_up))
 				goto error;
 			goto end;
 
@@ -868,8 +878,8 @@ static int phase3(const char *changed, const char *unchanged, const char *manife
 	}
 
 	ret=0;
-	unlink(changed);
-	unlink(unchanged);
+//	unlink(changed);
+//	unlink(unchanged);
 	logp("End phase3\n");
 end:
 	gzclose_fp(&mzp);
@@ -879,6 +889,18 @@ end:
 	sbuf_free(usb);
 	blk_free(blk);
 	return ret;
+}
+
+static void get_wbuf_from_wrap_up(struct iobuf *wbuf, uint64_t *wrap_up)
+{
+	static char *p;
+	static char tmp[32];
+	if(!*wrap_up) return;
+	p=tmp;
+	p+=to_base64(*wrap_up, tmp);
+	*p='\0';
+	iobuf_from_str(wbuf, CMD_WRAP_UP, tmp);
+	*wrap_up=0;
 }
 
 static int backup_server(gzFile *cmanzp, const char *changed, const char *unchanged, const char *manifest, const char *client, const char *datadir, struct config *conf)
@@ -896,6 +918,9 @@ static int backup_server(gzFile *cmanzp, const char *changed, const char *unchan
 	struct dpth *dpth=NULL;
 	gzFile chzp=NULL;
 	gzFile unzp=NULL;
+	// This is used to tell the client that a number of consecutive blocks
+	// have been found and can be freed.
+	uint64_t wrap_up=0;
 
 	logp("Begin backup\n");
 	printf("DATADIR: %s\n", datadir);
@@ -914,16 +939,20 @@ static int backup_server(gzFile *cmanzp, const char *changed, const char *unchan
 	{
 		if(!wbuf->len)
 		{
-			get_wbuf_from_sigs(wbuf, slist,
-				sigs_end, &blk_requests_end);
+			get_wbuf_from_wrap_up(wbuf, &wrap_up);
 			if(!wbuf->len)
 			{
-				get_wbuf_from_files(wbuf, slist,
-					scan_end, &requests_end);
+				get_wbuf_from_sigs(wbuf, slist,
+					sigs_end, &blk_requests_end);
+				if(!wbuf->len)
+				{
+					get_wbuf_from_files(wbuf, slist,
+						scan_end, &requests_end);
+				}
 			}
 		}
 
-		if(wbuf->len) printf("send request: %s\n", wbuf->buf);
+//		if(wbuf->len) printf("send request: %s\n", wbuf->buf);
 		if(async_rw_ng(rbuf, wbuf))
 		{
 			logp("error in async_rw\n");
@@ -931,7 +960,8 @@ static int backup_server(gzFile *cmanzp, const char *changed, const char *unchan
 		}
 
 		if(rbuf->buf && deal_with_read(rbuf, slist, blist, conf,
-			&scan_end, &sigs_end, &backup_end, cmanzp, unzp, dpth))
+			&scan_end, &sigs_end, &backup_end,
+			cmanzp, unzp, dpth, &wrap_up))
 				goto end;
 
 		if(write_to_changed_file(chzp, slist, blist, dpth, backup_end))

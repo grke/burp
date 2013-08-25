@@ -96,6 +96,29 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			goto end;
 
 		/* Incoming control/message stuff. */
+		case CMD_WRAP_UP:
+		{
+			int64_t wrap_up;
+			struct blk *blk;
+			from_base64(&wrap_up, rbuf->buf);
+			printf("GOT: %016lX\n", wrap_up);
+			for(blk=blist->head; blk; blk=blk->next)
+			{
+				if(blk->index==(uint64_t)wrap_up)
+				{
+					blist->last_requested=blk;
+					blist->last_sent=blk;
+					break;
+				}
+			}
+			if(!blk)
+			{
+				logp("Could not find wrap up index: %016lX\n",
+					wrap_up);
+				goto error;
+			}
+			goto end;
+		}
 		case CMD_WARNING:
 			logp("WARNING: %s\n", rbuf->cmd);
 			do_filecounter(conf->cntr, rbuf->cmd, 0);
@@ -273,7 +296,9 @@ static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int requ
 		}
 		return;
 	}
+//printf("x: %s\n", sb->path);
 	if(!sb->bsighead) return;
+//printf("w\n");
 
 	if(!sb->sent_stat)
 	{
@@ -281,8 +306,10 @@ static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int requ
 		iobuf_from_sbuf_attr(wbuf, sb);
 		wbuf->cmd=CMD_ATTRIBS_SIGS; // hack
 		sb->sent_stat=1;
+//printf("v\n");
 		return;
 	}
+//printf("u\n");
 
 //	printf("Send blk: %s\n", sb->path);
 	iobuf_from_blk_data(wbuf, sb->bsighead);
@@ -290,11 +317,15 @@ static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int requ
 	// Move on.
 	if(sb->bsighead==sb->bend)
 	{
+//printf("t\n");
 		slist->blks_to_send=sb->next;
 		sb->bsighead=sb->bstart;
 	}
 	else
+	{
+//printf("s\n");
 		sb->bsighead=sb->bsighead->next;
+	}
 }
 
 static void get_wbuf_from_scan(struct iobuf *wbuf, struct slist *flist)
@@ -370,19 +401,24 @@ static int backup_client(struct config *conf, int estimate)
 	{
 		if(!wbuf->len)
 		{
+//printf("w a\n");
 			get_wbuf_from_data(wbuf, slist, blist,
 				blk_requests_end);
 			if(!wbuf->len)
 			{
+//printf("w b\n");
 				get_wbuf_from_blks(wbuf, slist,
 					requests_end, &sigs_end);
 				if(!wbuf->len)
 				{
+//printf("w c\n");
 					get_wbuf_from_scan(wbuf, flist);
+//if(!wbuf->len) printf("w d\n");
 				}
 			}
 		}
 
+//		printf("wlen: %d\n", wbuf->len);
 		if(async_rw_ng(rbuf, wbuf))
 		{
 			logp("error in async_rw\n");
@@ -414,11 +450,12 @@ static int backup_client(struct config *conf, int estimate)
 				ret=-1;
 				break;
 			}
+//printf("now: %d\n", blist->tail->index - blist->head->index);
 		}
 		else
 		{
 //			if(blist->tail && blist->head)
-//			printf("enough blocks: %lu\n", blist->tail->index - blist->head->index);
+//	 		printf("enough blocks: %lu\n", blist->tail->index - blist->head->index);
 		}
 
 		if(blk_requests_end)

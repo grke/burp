@@ -125,7 +125,17 @@ int sbuf_to_manifest(struct sbuf *sb, gzFile zp)
 {
 	if(sb->path)
 	{
-		if(send_msg_zp(zp, CMD_ATTRIBS, sb->attribs, sb->alen)
+		// Hackity hack: Strip the file index from the beginning of
+		// the attribs so that manifests where nothing changed are
+		// identical to each other. Better would be to preserve the
+		// index.
+		char *cp;
+		if(!(cp=strchr(sb->attribs, ' ')))
+		{
+			logp("Strange attributes: %s\n", sb->attribs);
+			return -1;
+		}
+		if(send_msg_zp(zp, CMD_ATTRIBS, cp, sb->alen-(cp-sb->attribs))
 		  || send_msg_zp(zp, sb->cmd, sb->path, sb->plen))
 			return -1;
 		if(sb->linkto

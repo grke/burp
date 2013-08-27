@@ -710,11 +710,14 @@ static ff_e find_files(struct sbuf *sb, struct config *conf,
 	}
 }
 
-static int set_up_new_ff_dir(struct sbuf *sb)
+static int set_up_new_ff_dir(struct sbuf *sb, struct config *conf)
 {
 	static DIR *directory;
 	static struct ff_dir *ff_dir;
 	static size_t len;
+//#ifndef HAVE_WIN32
+//	int fd;
+//#endif
 
 	len=strlen(sb->path)+2;
 	if(!(ff_dir=(struct ff_dir *)calloc(1, sizeof(struct ff_dir)))
@@ -727,6 +730,25 @@ static int set_up_new_ff_dir(struct sbuf *sb)
 	snprintf(ff_dir->dirname, len, "%s", sb->path);
 
 	errno = 0;
+/*
+#ifndef HAVE_WIN32
+	// Shenanigans to set O_NOATIME on a directory.
+printf("NOATIME: %d\n", O_NOATIME);
+	if((fd=open(sb->path, O_RDONLY|O_DIRECTORY|O_NOATIME))<0)
+	{
+		logp("Could not open directory: %s\n", sb->path);
+		return -1;
+	}
+	if(!(directory=fdopendir(fd)))
+	{
+		close(fd);
+		sb->ftype=FT_NOOPEN;
+		free(ff_dir->dirname);
+		free(ff_dir);
+		return 0;
+	}
+#else
+*/
 	if(!(directory=opendir(sb->path)))
 	{
 		sb->ftype=FT_NOOPEN;
@@ -734,13 +756,25 @@ static int set_up_new_ff_dir(struct sbuf *sb)
 		free(ff_dir);
 		return 0;
 	}
+//#endif
+
 	if(get_files_in_directory(directory, &(ff_dir->nl), &(ff_dir->count)))
 	{
 		closedir(directory);
 		free_ff_dir(ff_dir);
+/*
+#ifndef HAVE_WIN32
+		close(fd);
+#endif
+*/
 		return -1;
 	}
 	closedir(directory);
+/*
+#ifndef HAVE_WIN32
+	close(fd);
+#endif
+*/
 
 	if(!ff_dir->count)
 	{
@@ -764,12 +798,12 @@ static int set_up_new_ff_dir(struct sbuf *sb)
 	return 0;
 }
 
-static int deal_with_ff_ret(struct sbuf *sb, ff_e ff_ret)
+static int deal_with_ff_ret(struct sbuf *sb, ff_e ff_ret, struct config *conf)
 {
 	switch(ff_ret)
 	{
 		case FF_DIRECTORY:
-			if(set_up_new_ff_dir(sb)) return -1;
+			if(set_up_new_ff_dir(sb, conf)) return -1;
 			// Fall through to record the directory itself.
 		case FF_FOUND:
 			// Now sb should be set up with the next entry.
@@ -844,7 +878,7 @@ int find_file_next(struct sbuf *sb, struct config *conf, bool *top_level)
 			ff_dir_list=ff_dir->next;
 		}
 
-		if(deal_with_ff_ret(sb, ff_ret)) goto error;
+		if(deal_with_ff_ret(sb, ff_ret, conf)) goto error;
 		return 0;
 	}
 
@@ -861,7 +895,7 @@ int find_file_next(struct sbuf *sb, struct config *conf, bool *top_level)
 			(dev_t)-1, 1 /* top_level */))==FF_NOT_FOUND) { }
 		sd++;
 
-		if(deal_with_ff_ret(sb, ff_ret)) goto error;
+		if(deal_with_ff_ret(sb, ff_ret, conf)) goto error;
 	}
 
 	return 0;

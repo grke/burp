@@ -1361,7 +1361,7 @@ long version_to_long(const char *version)
 
 /* These receive_a_file() and send_file() functions are for use by extra_comms
    and the CA stuff, rather than backups/restores. */
-int receive_a_file(const char *path, struct cntr *p1cntr)
+int receive_a_file(const char *path, struct config *conf)
 {
 	int c=0;
 	int ret=0;
@@ -1374,12 +1374,12 @@ int receive_a_file(const char *path, struct cntr *p1cntr)
 	unsigned long long sentbytes=0;
 
 #ifdef HAVE_WIN32
-	binit(&bfd, 0);
+	binit(&bfd, 0, conf);
 	bfd.use_backup_api=0;
 	//set_win32_backup(&bfd);
 	if(bopen(&bfd, path,
 		O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,
-		S_IRUSR | S_IWUSR, 0)<=0)
+		S_IRUSR | S_IWUSR)<=0)
 	{
 		berrno be;
 		logp("Could not open for writing %s: %s\n",
@@ -1397,11 +1397,11 @@ int receive_a_file(const char *path, struct cntr *p1cntr)
 
 #ifdef HAVE_WIN32
 	ret=transfer_gzfile_in(NULL, path, &bfd, NULL,
-		&rcvdbytes, &sentbytes, NULL, 0, p1cntr, NULL);
+		&rcvdbytes, &sentbytes, NULL, 0, conf->p1cntr, NULL);
 	c=bclose(&bfd);
 #else
 	ret=transfer_gzfile_in(NULL, path, NULL, fp,
-		&rcvdbytes, &sentbytes, NULL, 0, p1cntr, NULL);
+		&rcvdbytes, &sentbytes, NULL, 0, conf->p1cntr, NULL);
 	c=close_fp(&fp);
 #endif
 end:
@@ -1417,14 +1417,14 @@ end:
 /* Windows will use this function, when sending a certificate signing request.
    It is not using the Windows API stuff because it needs to arrive on the
    server side without any junk in it. */
-int send_a_file(const char *path, struct cntr *p1cntr)
+int send_a_file(const char *path, struct config *conf)
 {
 	int ret=0;
 	FILE *fp=NULL;
 	unsigned long long bytes=0;
 	if(!(fp=open_file(path, "rb"))
 	  || send_whole_file_gz(path, "datapth", 0, &bytes, NULL,
-		p1cntr, 9, // compression
+		conf->p1cntr, 9, // compression
 		NULL, fp, NULL, 0, -1))
 	{
 		ret=-1;

@@ -29,7 +29,7 @@ _Z30make_win32_path_UTF8_2_wchar_wPKc
 _Z4forkv
 _Z4killii
 _Z4pipePi
-_Z11win32_lstatPKcP4statPx
+_Z11win32_lstatPKcP4statPy
 ; _Z4statPKcP4stat
 _Z5chownPKcjj
 _Z5fcntlii
@@ -70,6 +70,6 @@ _Z10__vsprintfPcPKcS_
 _Z11__vsnprintfPcjPKcS_
 _Z4doprPcjPKcS_PFvS_PjjiE
 _Z9__sprintfPcPKcz
- 
+
 ; winapi.o
 _Z17InitWinAPIWrapperv

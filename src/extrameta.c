@@ -35,7 +35,7 @@ int has_extrameta(const char *path, char cmd)
 int get_extrameta(BFILE *bfd, const char *path, struct stat *statp, char **extrameta, size_t *elen, int64_t winattr, struct config *conf, size_t *datalen)
 {
 #if defined (WIN32_VSS)
-	if(get_vss(bfd, path, statp, extrameta, elen, winattr, cntr,
+	if(get_vss(bfd, path, statp, extrameta, elen, winattr, conf,
 		datalen)) return -1;
 #endif
 	// Important to do xattr directly after acl, because xattr is excluding
@@ -104,8 +104,7 @@ int set_extrameta(
 		{
 #if defined(HAVE_WIN32)
 			case META_VSS:
-				if(set_vss(bfd, m, s, conf->cntr))
-					errors++;
+				if(set_vss(bfd, m, s, conf)) errors++;
 				break;
 #endif
 #if defined(HAVE_LINUX_OS) || \

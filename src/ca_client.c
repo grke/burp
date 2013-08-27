@@ -176,7 +176,7 @@ int ca_client_setup(struct config *conf)
 	if(generate_key_and_csr(conf, csr_path)) goto end;
 
 	// Then copy the csr to the server.
-	if(send_a_file(csr_path, conf->p1cntr)) goto end;
+	if(send_a_file(csr_path, conf)) goto end;
 
 	snprintf(ssl_cert_tmp, sizeof(ssl_cert_tmp), "%s.%d",
 		conf->ssl_cert, getpid());
@@ -184,10 +184,10 @@ int ca_client_setup(struct config *conf)
 		conf->ssl_cert_ca, getpid());
 
 	// The server will then sign it, and give it back.
-	if(receive_a_file(ssl_cert_tmp, conf->p1cntr)) goto end;
+	if(receive_a_file(ssl_cert_tmp, conf)) goto end;
 
 	// The server will also send the CA certificate.
-	if(receive_a_file(ssl_cert_ca_tmp, conf->p1cntr)) goto end;
+	if(receive_a_file(ssl_cert_ca_tmp, conf)) goto end;
 
 	if(do_rename(ssl_cert_tmp, conf->ssl_cert)
 	  || do_rename(ssl_cert_ca_tmp, conf->ssl_cert_ca))

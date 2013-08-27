@@ -240,7 +240,7 @@ int readdir(unsigned int fd, struct dirent *dirp, unsigned int count);
 long int random(void);
 void srandom(unsigned int seed);
 int lstat(const char *, struct stat *);
-int win32_lstat(const char *, struct stat *, int64_t *);
+int win32_lstat(const char *, struct stat *, uint64_t *);
 int stat(const char *file, struct stat *sb);
 long pathconf(const char *, int);
 int readlink(const char *, char *, int);

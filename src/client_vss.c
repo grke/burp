@@ -241,7 +241,7 @@ static int ensure_read(BFILE *bfd, char *buf, size_t s, int print_err)
 	return 0;
 }
 
-int get_vss(BFILE *bfd, const char *path, struct stat *statp, char **vssdata, size_t *vlen, int64_t winattr, struct cntr *cntr, size_t *datalen)
+int get_vss(BFILE *bfd, const char *path, struct stat *statp, char **vssdata, size_t *vlen, int64_t winattr, struct config *conf, size_t *datalen)
 {
 	bsid sid;
 	char *tmp=NULL;
@@ -314,7 +314,7 @@ static int ensure_write(BFILE *bfd, const char *buf, size_t got)
 	return -1;
 }
 
-int set_vss(BFILE *bfd, const char *vssdata, size_t vlen, struct cntr *cntr)
+int set_vss(BFILE *bfd, const char *vssdata, size_t vlen, struct config *conf)
 {
 	// Just need to write the VSS stuff to the file.
 	if(!vlen || !vssdata) return 0;

@@ -608,7 +608,7 @@ static const char *errorString(void)
 
 
 static int
-statDir(const char *file, struct stat *sb, int64_t *winattr)
+statDir(const char *file, struct stat *sb, uint64_t *winattr)
 {
    WIN32_FIND_DATAW info_w;       // window's file info
    WIN32_FIND_DATAA info_a;       // window's file info
@@ -780,7 +780,7 @@ statDir(const char *file, struct stat *sb, int64_t *winattr)
 }
 
 static int
-do_fstat(intptr_t fd, struct stat *sb, int64_t *winattr)
+do_fstat(intptr_t fd, struct stat *sb, uint64_t *winattr)
 {
    BY_HANDLE_FILE_INFORMATION info;
 
@@ -836,12 +836,12 @@ do_fstat(intptr_t fd, struct stat *sb, int64_t *winattr)
 int
 fstat(intptr_t fd, struct stat *sb)
 {
-	int64_t winattr=0;
+	uint64_t winattr=0;
 	return do_fstat(fd, sb, &winattr);
 }
 
 static int
-stat2(const char *file, struct stat *sb, int64_t *winattr)
+stat2(const char *file, struct stat *sb, uint64_t *winattr)
 {
    HANDLE h = INVALID_HANDLE_VALUE;
    int rval = 0;
@@ -894,7 +894,7 @@ stat2(const char *file, struct stat *sb, int64_t *winattr)
 }
 
 static int
-do_stat(const char *file, struct stat *sb, int64_t *winattr)
+do_stat(const char *file, struct stat *sb, uint64_t *winattr)
 {
    WIN32_FILE_ATTRIBUTE_DATA data;
    errno = 0;
@@ -1025,12 +1025,12 @@ int fcntl(int fd, int cmd, long arg)
 int
 lstat(const char *file, struct stat *sb)
 {
-   int64_t winattr=0;
+   uint64_t winattr=0;
    return do_stat(file, sb, &winattr);
 }
 
 int
-win32_lstat(const char *file, struct stat *sb, int64_t *winattr)
+win32_lstat(const char *file, struct stat *sb, uint64_t *winattr)
 {
    return do_stat(file, sb, winattr);
 }

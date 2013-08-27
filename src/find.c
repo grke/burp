@@ -370,10 +370,12 @@ static ff_e found_regular_file(struct sbuf *sb, struct config *conf,
 	char *path, bool top_level)
 {
 	// If the user specified a minimum or maximum file size, obey it.
-	if(conf->min_file_size && sb->statp.st_size<conf->min_file_size)
-		return FF_NOT_FOUND;
-	if(conf->max_file_size && sb->statp.st_size>conf->max_file_size)
-		return FF_NOT_FOUND;
+	if(conf->min_file_size
+		&& sb->statp.st_size<(unsigned int)conf->min_file_size)
+			return FF_NOT_FOUND;
+	if(conf->max_file_size
+		&& sb->statp.st_size>(unsigned int)conf->max_file_size)
+			return FF_NOT_FOUND;
 
 	sb->ftype=FT_REG;
 

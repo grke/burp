@@ -9,13 +9,13 @@
 #include "client_vss.h"
 #include "autoupgrade_client.h"
 
-static int receive_file(const char *autoupgrade_dir, const char *file, struct cntr *p1cntr)
+static int receive_file(const char *autoupgrade_dir, const char *file, struct config *conf)
 {
 	int ret=0;
 	char *incoming=NULL;
 	if(!(incoming=prepend_s(autoupgrade_dir, file, strlen(file))))
 		return -1;
-	ret=receive_a_file(incoming, p1cntr);
+	ret=receive_a_file(incoming, conf);
 	if(incoming) free(incoming);
 	return ret;
 }
@@ -93,13 +93,13 @@ int autoupgrade_client(struct config *conf)
 	snprintf(package_name, sizeof(package_name), "package");
 #endif
 
-	if(receive_file(conf->autoupgrade_dir, script_name, conf->p1cntr))
+	if(receive_file(conf->autoupgrade_dir, script_name, conf))
 	{
 		logp("Problem receiving %s/%s\n",
 			conf->autoupgrade_dir, script_name);
 		goto end;
 	}
-	if(receive_file(conf->autoupgrade_dir, package_name, conf->p1cntr))
+	if(receive_file(conf->autoupgrade_dir, package_name, conf))
 	{
 		logp("Problem receiving %s/%s\n",
 			conf->autoupgrade_dir, package_name);

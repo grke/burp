@@ -300,7 +300,7 @@ int bclose(BFILE *bfd)
 	if(bfd->mode==BF_CLOSED) return 0;
 
 	if(bfd->winattr & FILE_ATTRIBUTE_ENCRYPTED)
-		return bclose_encrypted(bfd, conf);
+		return bclose_encrypted(bfd);
 
 	/*
 	 * We need to tell the API to release the buffer it

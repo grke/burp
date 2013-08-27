@@ -57,8 +57,8 @@ extern long version_to_long(const char *version);
 
 /* These receive_a_file() and send_file() functions are for use by extra_comms
    and the CA stuff, rather than backups/restores. */
-extern int receive_a_file(const char *path, struct cntr *p1cntr);
-extern int send_a_file(const char *path, struct cntr *p1cntr);
+extern int receive_a_file(const char *path, struct config *conf);
+extern int send_a_file(const char *path, struct config *conf);
 
 extern int split_sig(const char *buf, unsigned int s, char *weak, char *strong);
 extern int build_path_w(const char *path);

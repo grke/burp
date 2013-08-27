@@ -58,6 +58,7 @@ FILED_OBJS = \
 	$(OBJDIR)/prog.o \
 	$(OBJDIR)/rabin.o \
 	$(OBJDIR)/rabin_win.o \
+	$(OBJDIR)/rconf.o \
 	$(OBJDIR)/regexp.o \
 	$(OBJDIR)/restore_client.o \
 	$(OBJDIR)/sbuf.o \

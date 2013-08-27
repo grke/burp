@@ -291,7 +291,7 @@ static int entry_changed(struct sbuf *sb, gzFile *cmanzp, gzFile unzp, struct co
 				// attributes, but may need to get extra meta
 				// data.
 				// FIX THIS
-//				printf("got unchanged: %c %s %c %s %lu %lu\n", csb->cmd, csb->path, sb->cmd, sb->path, csb->statp.st_mtime, sb->statp.st_mtime);
+//				printf("got unchanged b: %c %s %c %s %lu %lu\n", csb->cmd, csb->path, sb->cmd, sb->path, csb->statp.st_mtime, sb->statp.st_mtime);
 				if(copy_unchanged_entry(&csb, sb, &blk,
 					cmanzp, unzp, conf)) return -1;
 				return 0;

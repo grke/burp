@@ -296,7 +296,7 @@ static int sign_client_cert(const char *client, struct config *conf)
 	   to end and delete any new files. */
 
 	// Get the CSR from the client.
-	if(receive_a_file(csrpath, conf->p1cntr)) goto end;
+	if(receive_a_file(csrpath, conf)) goto end;
 
 	// Now, sign it.
 	logp("Signing certificate signing request from %s\n", client);
@@ -324,11 +324,11 @@ static int sign_client_cert(const char *client, struct config *conf)
 
 	// Now, we should have a signed certificate.
 	// Need to send it back to the client.
-	if(send_a_file(crtpath, conf->p1cntr))
+	if(send_a_file(crtpath, conf))
 		goto end;
 
 	// Also need to send the CA public certificate back to the client.
-	if(send_a_file(conf->ssl_cert_ca, conf->p1cntr))
+	if(send_a_file(conf->ssl_cert_ca, conf))
 		goto end;
 
 	ret=1;

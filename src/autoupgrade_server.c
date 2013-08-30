@@ -85,12 +85,12 @@ int autoupgrade_server(long ser_ver, long cli_ver, const char *os, struct config
 	if(async_write_str(CMD_GEN, "autoupgrade ok"))
 		goto end;
 
-	if(send_a_file(script_path, conf->p1cntr))
+	if(send_a_file(script_path, conf))
 	{
 		logp("Problem sending %s\n", script_path);
 		goto end;
 	}
-	if(send_a_file(package_path, conf->p1cntr))
+	if(send_a_file(package_path, conf))
 	{
 		logp("Problem sending %s\n", package_path);
 		goto end;

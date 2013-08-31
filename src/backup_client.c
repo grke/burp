@@ -101,7 +101,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			int64_t wrap_up;
 			struct blk *blk;
 			from_base64(&wrap_up, rbuf->buf);
-			printf("GOT: %016lX\n", wrap_up);
+//			printf("GOT: %016lX\n", wrap_up);
 			for(blk=blist->head; blk; blk=blk->next)
 			{
 				if(blk->index==(uint64_t)wrap_up)
@@ -113,7 +113,11 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			}
 			if(!blk)
 			{
+#ifdef HAVE_WIN32
+				logp("Could not find wrap up index: %016I64X\n",
+#else
 				logp("Could not find wrap up index: %016lX\n",
+#endif
 					wrap_up);
 				goto error;
 			}
@@ -274,7 +278,13 @@ static void iobuf_from_blk_data(struct iobuf *wbuf, struct blk *blk)
 	blk_md5_update(blk);
 
 	// Fingerprint is 4 bytes.
-	snprintf(blk->weak, sizeof(blk->weak), "%016lX", blk->fingerprint);
+	snprintf(blk->weak, sizeof(blk->weak),
+#ifdef HAVE_WIN32
+		"%016I64X",
+#else
+		"%016lX",
+#endif
+		blk->fingerprint);
 	// MD5sum is 32 characters long.
 	snprintf(blk->strong, sizeof(blk->strong),
 		"%s", blk_get_md5sum_str(blk->md5sum));

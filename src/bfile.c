@@ -39,9 +39,9 @@ bool have_win32_api()
 //#define CREATE_FOR_DIR	2
 //#define OVERWRITE_HIDDEN	4
 
+// Return 0 for success, non zero for error.
 static int bopen_encrypted(BFILE *bfd, const char *fname, int flags, mode_t mode)
 {
-	int ret=0;
 	ULONG ulFlags=0;
 	char *win32_fname=NULL;
 	char *win32_fname_wchar=NULL;
@@ -49,7 +49,7 @@ static int bopen_encrypted(BFILE *bfd, const char *fname, int flags, mode_t mode
 	if(!(p_OpenEncryptedFileRawA || p_OpenEncryptedFileRawW))
 	{
 		logp("no OpenEncryptedFileRaw pointers.\n");
-		return 0;
+		return -1;
 	}
 	if(p_OpenEncryptedFileRawW && p_MultiByteToWideChar)
 	{
@@ -57,7 +57,7 @@ static int bopen_encrypted(BFILE *bfd, const char *fname, int flags, mode_t mode
 			logp("could not get widename!");
 	}
 	if(!(win32_fname=unix_name_to_win32((char *)fname)))
-		return 0;
+		return -1;
 
 	if((flags & O_CREAT) /* Create */
 	  || (flags & O_WRONLY)) /* Open existing for write */
@@ -78,6 +78,7 @@ static int bopen_encrypted(BFILE *bfd, const char *fname, int flags, mode_t mode
 
 	if(p_OpenEncryptedFileRawW && p_MultiByteToWideChar)
 	{
+		int ret;
         	// unicode open
 		ret=p_OpenEncryptedFileRawW((LPCWSTR)win32_fname_wchar,
 			ulFlags, &(bfd->pvContext));
@@ -87,6 +88,7 @@ static int bopen_encrypted(BFILE *bfd, const char *fname, int flags, mode_t mode
 	}
 	else
 	{
+		int ret;
 		// ascii open
 		ret=p_OpenEncryptedFileRawA(win32_fname,
 			ulFlags, &(bfd->pvContext));
@@ -98,7 +100,7 @@ static int bopen_encrypted(BFILE *bfd, const char *fname, int flags, mode_t mode
 end:
    	if(win32_fname_wchar) free(win32_fname_wchar);
    	if(win32_fname) free(win32_fname);
-	return bfd->mode==BF_CLOSED?-1:1;
+	return bfd->mode==BF_CLOSED;
 }
 
 static int bfile_error(BFILE *bfd)
@@ -112,6 +114,7 @@ static int bfile_error(BFILE *bfd)
 	return -1;
 }
 
+// Return 0 for success, non zero for error.
 int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
 {
 	DWORD dwaccess;
@@ -123,9 +126,9 @@ int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
 	if(bfd->winattr & FILE_ATTRIBUTE_ENCRYPTED)
 		return bopen_encrypted(bfd, fname, flags, mode);
 
-	if(!(p_CreateFileA || p_CreateFileW)) return 0;
+	if(!(p_CreateFileA || p_CreateFileW)) return -1;
 
-	if(!(win32_fname=unix_name_to_win32((char *)fname))) return 0;
+	if(!(win32_fname=unix_name_to_win32((char *)fname))) return -1;
 
 	if(p_CreateFileW && p_MultiByteToWideChar
 	  && !(win32_fname_wchar=make_win32_path_UTF8_2_wchar_w(fname)))
@@ -253,6 +256,7 @@ int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
 				OPEN_EXISTING, /* CreationDisposition */
 				dwflags,       /* Flags and attributes */
 				NULL);         /* TemplateFile */
+
 		bfd->mode=BF_READ;
 	}
 
@@ -272,7 +276,7 @@ int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
 	bfd->lpContext=NULL;
 	if(win32_fname_wchar) free(win32_fname_wchar);
 	if(win32_fname) free(win32_fname);
-	return bfd->mode==BF_CLOSED?-1:1;
+	return bfd->mode==BF_CLOSED;
 }
 
 static int bclose_encrypted(BFILE *bfd)

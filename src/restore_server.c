@@ -100,7 +100,7 @@ static int restore_ent(const char *client,
 	int ret=-1;
 	struct sbuf *xb;
 
-	//printf("want to restore: %s\n", sb->path);
+	//printf("want to restore: %s\n", (*sb)->path);
 
 	// Check if we have any directories waiting to be restored.
 	while((xb=slist->head))

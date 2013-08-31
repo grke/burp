@@ -15,7 +15,7 @@ enum bf_mode
 struct BFILE
 {
 	enum bf_mode mode;   /* set if file is open */
-	int64_t winattr;     /* needed for deciding to open with
+	uint64_t winattr;     /* needed for deciding to open with
 				encrypted functions or not */
 	struct stat statp;
 	char *path;

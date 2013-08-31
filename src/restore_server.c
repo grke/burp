@@ -125,6 +125,9 @@ static int restore_ent(const char *client,
 	// that the permissions come out right.
 	// Meta data of directories will also have the stat stuff set to be a
 	// directory, so will also come out at the end.
+	// FIX THIS: for Windows, need to read and remember the blocks that
+	// go with the directories. Probably have to do the same for metadata
+	// that goes with directories.
 	if(S_ISDIR((*sb)->statp.st_mode))
 	{
 		// Add to the head of the list instead of the tail.

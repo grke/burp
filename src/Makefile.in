@@ -69,7 +69,6 @@ SVRSRCS =	acl.c \
 		status_server.c \
 		strlist.c \
 		xattr.c \
-		zlibio.c \
 
 SVROBJS = $(SVRSRCS:.c=.o)
 

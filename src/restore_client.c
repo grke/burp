@@ -126,8 +126,7 @@ static int open_for_restore(
 	else
 		bfd->use_backup_api=0;
 #endif
-	if(bopen(bfd, path,
-		O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,
+	if(bopen(bfd, path, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,
 		S_IRUSR | S_IWUSR)<=0)
 	{
 		berrno be;

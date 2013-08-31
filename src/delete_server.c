@@ -4,7 +4,6 @@
 #include "lock.h"
 #include "handy.h"
 #include "asyncio.h"
-#include "zlibio.h"
 #include "counter.h"
 #include "dpth.h"
 #include "sbuf.h"

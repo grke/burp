@@ -876,8 +876,8 @@ int find_file_next(struct sbuf *sb, struct config *conf, bool *top_level)
 
 		if(ff_dir->c>=ff_dir->count)
 		{
-			free_ff_dir(ff_dir_list);
 			ff_dir_list=ff_dir->next;
+			free_ff_dir(ff_dir);
 		}
 
 		if(deal_with_ff_ret(sb, ff_ret, conf)) goto error;

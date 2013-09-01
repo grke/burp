@@ -68,7 +68,6 @@ FILED_OBJS = \
 	$(OBJDIR)/vss_XP.o \
 	$(OBJDIR)/vss_W2K3.o \
 	$(OBJDIR)/vss_Vista.o \
-	$(OBJDIR)/zlibio.o \
 	$(OBJDIR)/burp.res
 
 ALL_OBJS = $(FILED_OBJS)

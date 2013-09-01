@@ -99,7 +99,12 @@ static int restore_ent(const char *client,
 	int ret=-1;
 	struct sbuf *xb;
 
-	//printf("want to restore: %s\n", (*sb)->path);
+	if(!(*sb)->path)
+	{
+		printf("Got NULL path!\n");
+		return -1;
+	}
+	printf("want to restore: %s\n", (*sb)->path);
 
 	// Check if we have any directories waiting to be restored.
 	while((xb=slist->head))
@@ -137,8 +142,10 @@ static int restore_ent(const char *client,
 		if(!(*sb=sbuf_alloc())) goto end;
 	}
 	else
+	{
 		if(restore_sbuf(*sb, arr, a, i, act, client, status, conf))
 			goto end;
+	}
 	ret=0;
 end:
 	return ret;
@@ -311,7 +318,6 @@ static int do_restore_manifest(const char *client, const char *datadir, struct b
 
 		if(blk->data)
 		{
-			//printf("send data: %d\n", blk->length);
 			if(async_write(CMD_DATA, blk->data, blk->length))
 				return -1;
 			blk->data=NULL;

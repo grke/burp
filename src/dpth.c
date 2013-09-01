@@ -60,8 +60,11 @@ static int process_sig(char cmd, const char *buf, unsigned int s, struct dpth *d
 	// Add to hash table.
 	if(!weak_entry && !(weak_entry=add_weak_entry(weakint)))
 		return -1;
-	if(!(weak_entry->strong=add_strong_entry(weak_entry, strong, dpth)))
-		return -1;
+	if(!find_strong_entry(weak_entry, strong))
+	{
+		if(!(weak_entry->strong=add_strong_entry(weak_entry,
+			strong, dpth))) return -1;
+	}
 	dpth->sig++;
 
 	return 0;
@@ -206,41 +209,10 @@ static char *dpth_get_path_dat(struct dpth *dpth)
 	return prepend_s(dpth->base_path_dat, path, strlen(path));
 }
 
-static char *dpth_get_path_man(struct dpth *dpth)
-{
-	int high;
-	char tmp[16];
-
-	if(get_next_entry(dpth->base_path_man, &high, NULL))
-		return NULL;
-	snprintf(tmp, sizeof(tmp), "%d", high);
-	return prepend_s(dpth->base_path_man, tmp, strlen(tmp));
-}
-
 static char *dpth_get_path_sig(struct dpth *dpth)
 {
 	char *path=dpth_mk_tert(dpth);
 	return prepend_s(dpth->base_path_sig, path, strlen(path));
-}
-
-int dpth_incr_sig(struct dpth *dpth)
-{
-	if(++(dpth->sig)<SIG_MAX) return 0;
-	dpth->sig=0;
-
-	// Do not need to close dpth->mfp and open a new one, because there is
-	// only one manifest per backup.
-	if(close_fp(&(dpth->dfp))
-	  || close_fp(&(dpth->sfp)))
-		return -1;
-	if(dpth_incr(dpth)) return -1;
-	if(dpth->path_dat) free(dpth->path_dat);
-	if(dpth->path_sig) free(dpth->path_sig);
-
-	// Should do the open here too, instead of in parse.c.
-	dpth->path_dat=dpth_get_path_dat(dpth);
-	dpth->path_sig=dpth_get_path_sig(dpth);
-	return 0;
 }
 
 struct dpth *dpth_alloc(const char *base_path)
@@ -253,7 +225,6 @@ struct dpth *dpth_alloc(const char *base_path)
                 goto error;
 	}
 	if((dpth->base_path_dat=prepend_s(base_path, "dat", strlen("dat")))
-	  && (dpth->base_path_man=prepend_s(base_path, "man", strlen("man")))
 	  && (dpth->base_path_sig=prepend_s(base_path, "sig", strlen("sig"))))
 		goto end;
 error:
@@ -261,6 +232,43 @@ error:
 	dpth=NULL;
 end:
 	return dpth;
+}
+
+// The files get closed and path_dat/path_sig get freed in backup_server.c
+// now, but it is nasty.
+static struct dpth_fp *dpth_fp_alloc(struct dpth *dpth)
+{
+	struct dpth_fp *dpth_fp;
+        if(!(dpth_fp=(struct dpth_fp *)calloc(1, sizeof(struct dpth_fp)))
+	  || !(dpth_fp->path_dat=dpth_get_path_dat(dpth))
+	  || !(dpth_fp->path_sig=dpth_get_path_sig(dpth)))
+	{
+		log_out_of_memory(__FUNCTION__);
+		return NULL;
+	}
+	return dpth_fp;
+}
+
+static struct dpth_fp *gdpth_fp=NULL;
+
+struct dpth_fp *get_dpth_fp(struct dpth *dpth)
+{
+	if(!gdpth_fp) gdpth_fp=dpth_fp_alloc(dpth);
+	return gdpth_fp;
+}
+
+struct dpth_fp *dpth_incr_sig(struct dpth *dpth)
+{
+	if(++(dpth->sig)<SIG_MAX)
+	{
+		return gdpth_fp;
+	}
+	dpth->sig=0;
+
+	if(dpth_incr(dpth)) return NULL;
+
+	gdpth_fp=dpth_fp_alloc(dpth);
+	return gdpth_fp;
 }
 
 int dpth_init(struct dpth *dpth)
@@ -293,10 +301,6 @@ int dpth_init(struct dpth *dpth)
 
 	dpth->sig=0;
 
-	if(!(dpth->path_dat=dpth_get_path_dat(dpth))) goto error;
-	if(!(dpth->path_man=dpth_get_path_man(dpth))) goto error;
-	if(!(dpth->path_sig=dpth_get_path_sig(dpth))) goto error;
-
 	goto end;
 error:
 	ret=-1;
@@ -310,14 +314,27 @@ void dpth_free(struct dpth *dpth)
 	if(!dpth) return;
 	if(dpth->base_path) free(dpth->base_path);
 	if(dpth->base_path_dat) free(dpth->base_path_dat);
-	if(dpth->base_path_man) free(dpth->base_path_man);
 	if(dpth->base_path_sig) free(dpth->base_path_sig);
-	if(dpth->path_dat) free(dpth->path_dat);
-	if(dpth->path_man) free(dpth->path_man);
-	if(dpth->path_sig) free(dpth->path_sig);
-	if(dpth->dfp) fclose(dpth->dfp);
-	if(dpth->mfp) fclose(dpth->mfp);
-	if(dpth->sfp) fclose(dpth->sfp);
 	free(dpth);
 	dpth=NULL;
+}
+
+int dpth_fp_close(struct dpth_fp *dpth_fp)
+{
+	if(dpth_fp)
+	{
+		if(close_fp(&(dpth_fp->sfp))) return -1;
+		if(close_fp(&(dpth_fp->dfp))) return -1;
+		if(dpth_fp->path_dat) free(dpth_fp->path_dat);
+		if(dpth_fp->path_sig) free(dpth_fp->path_sig);
+		free(dpth_fp);
+	}
+	return 0;
+}
+
+int dpth_fp_maybe_close(struct dpth_fp *dpth_fp)
+{
+	if(dpth_fp && ++(dpth_fp->count)>=SIG_MAX)
+		return dpth_fp_close(dpth_fp);
+	return 0;
 }

@@ -22,6 +22,8 @@ struct blk
 	char weak[16+1];
 	char strong[32+1];
 
+	struct dpth_fp *dpth_fp;
+
 	int requested;
 	int got;
 	uint64_t index;

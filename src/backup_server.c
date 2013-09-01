@@ -44,18 +44,28 @@ static FILE *file_open_w(const char *path, const char *mode)
 	return fp;
 }
 
-static int fwrite_dat(char cmd, const char *buf, unsigned int s, struct dpth *dpth)
+static int fwrite_dat(struct iobuf *rbuf, struct dpth_fp *dpth_fp)
 {
-	if(!dpth->dfp && !(dpth->dfp=file_open_w(dpth->path_dat, "wb")))
+	if(!dpth_fp->dfp
+	  && !(dpth_fp->dfp=file_open_w(dpth_fp->path_dat, "wb")))
 		return -1;
-	return fwrite_buf(cmd, buf, s, dpth->dfp);
+	return fwrite_buf(CMD_DATA, rbuf->buf, rbuf->len, dpth_fp->dfp);
 }
 
-static int fwrite_sig(char cmd, const char *buf, unsigned int s, struct dpth *dpth)
+static int fwrite_sig(struct blk *blk, struct dpth_fp *dpth_fp)
 {
-	if(!dpth->sfp && !(dpth->sfp=file_open_w(dpth->path_sig, "wb")))
+	int ret;
+	char tmp[64];
+	// argh
+	snprintf(tmp, sizeof(tmp), "%s%s\n", blk->weak, blk->strong);
+	if(!dpth_fp->sfp
+	  && !(dpth_fp->sfp=file_open_w(dpth_fp->path_sig, "wb")))
 		return -1;
-	return fwrite_buf(cmd, buf, s, dpth->sfp);
+	ret=fwrite_buf(CMD_SIG, tmp, strlen(tmp), dpth_fp->sfp);
+
+	if(dpth_fp_maybe_close(dpth_fp)) return -1;
+
+	return ret;
 }
 
 static int write_incexc(const char *realworking, const char *incexc)
@@ -355,7 +365,7 @@ static int already_got_block(struct blk *blk, struct dpth *dpth)
 	// If already got, need to overwrite the references.
 	if((weak_entry=find_weak_entry(blk->fingerprint)))
 	{
-		struct strong_entry *strong_entry;
+		static struct strong_entry *strong_entry;
 		if((strong_entry=find_strong_entry(weak_entry, blk->strong)))
 		{
 			if(!(blk->data=strdup(get_fq_path(strong_entry->path))))
@@ -366,6 +376,7 @@ static int already_got_block(struct blk *blk, struct dpth *dpth)
 			blk->length=strlen(blk->data)-1; // Chop newline.
 	printf("FOUND: %s %s\n", blk->weak, blk->strong);
 			blk->got=1;
+			return 0;
 		}
 		else
 		{
@@ -373,16 +384,43 @@ static int already_got_block(struct blk *blk, struct dpth *dpth)
 //			collisions++;
 		}
 	}
+	else
+	{
+		// Add both to hash table.
+		if(!(weak_entry=add_weak_entry(blk->fingerprint)))
+			return -1;
+	}
+
+	if(weak_entry)
+	{
+		// Have a weak entry, still need to add a strong entry.
+		if(!(weak_entry->strong=add_strong_entry(weak_entry,
+			blk->strong, dpth)))
+				return -1;
+
+		// Set up the details of where the block will be saved.
+		if(!(blk->data=strdup(get_fq_path(dpth_mk(dpth)))))
+		{
+			log_out_of_memory(__FUNCTION__);
+			return -1;
+		}
+		// Subtract 1 to exclude the newline.
+		blk->length=strlen(blk->data)-1;
+
+		if(!(blk->dpth_fp=get_dpth_fp(dpth))) return -1;
+		if(!dpth_incr_sig(dpth)) return -1;
+
+		return 0;
+	}
 
 	return 0;
 }
 
 static int add_data_to_store(struct blist *blist, struct iobuf *rbuf, struct dpth *dpth)
 {
-	char tmp[64];
 //	static struct blk *blk=NULL;
 	struct blk *blk=NULL;
-	static struct weak_entry *weak_entry;
+//	static struct weak_entry *weak_entry;
 
 //	printf("Got data %lu!\n", rbuf->len);
 
@@ -401,32 +439,10 @@ static int add_data_to_store(struct blist *blist, struct iobuf *rbuf, struct dpt
 	}
 
 	// Add it to the data store straight away.
-	if(fwrite_dat(CMD_DATA, rbuf->buf, rbuf->len, dpth)) return -1;
-
-	// argh
-	snprintf(tmp, sizeof(tmp), "%s%s\n", blk->weak, blk->strong);
-	if(fwrite_sig(CMD_SIG, tmp, strlen(tmp), dpth)) return -1;
-
-
-	// Add to hash table.
-	if(!(weak_entry=add_weak_entry(blk->fingerprint))) return -1;
-	if(!(weak_entry->strong=add_strong_entry(weak_entry, blk->strong, dpth)))
+	if(fwrite_dat(rbuf, blk->dpth_fp)
+	  || fwrite_sig(blk, blk->dpth_fp))
 		return -1;
 
-
-	// Need to write the refs to the manifest too.
-	// Mark that we have got the block, and write it to
-	// the manifest later.
-	if(!(blk->data=strdup(get_fq_path(dpth_mk(dpth)))))
-	{
-		log_out_of_memory(__FUNCTION__);
-		return -1;
-	}
-
-	if(dpth_incr_sig(dpth)) return -1;
-
-	// Subtract 1 to exclude the newline.
-	blk->length=strlen(blk->data)-1;
 	blk->got=1;
 	blk=blk->next;
 
@@ -492,6 +508,7 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobu
 	// If already got, this function will set blk->data
 	// to be the location of the already got block.
 	if(already_got_block(blk, dpth)) return -1;
+
 	if(blk->got)
 	{
 		if(++consecutive_found_block>5000)
@@ -499,6 +516,8 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobu
 			*wrap_up=blk->index;
 			consecutive_found_block=0;
 		}
+		printf("Do not need data for %lu %lu %s\n", sb->index,
+			blk->index, slist->add_sigs_here->path);
 	}
 	else
 	{
@@ -735,8 +754,10 @@ static int write_to_changed_file(gzFile chzp, struct slist *slist, struct blist 
 
 	while((sb=slist->head))
 	{
+//printf("consider: %s\n", sb->path);
 		if(sb->need_data)
 		{
+			int hack=0;
 			// Need data...
 			struct blk *blk;
 
@@ -754,10 +775,19 @@ static int write_to_changed_file(gzFile chzp, struct slist *slist, struct blist 
 					// FIX THIS: check for errors
 					gzprintf(chzp, "S%04X%s",
 						blk->length, blk->data);
+				else
+				{
+					printf("!!!!!!!!!!!!! no data\n");
+					exit(1);
+				}
 				if(blk==sb->bend)
 				{
 					slist->head=sb->next;
+					//break;
+					if(!(blist->head=sb->bstart))
+						blist->tail=NULL;
 					sbuf_free(sb);
+					hack=1;
 					break;
 				}
 
@@ -765,6 +795,7 @@ static int write_to_changed_file(gzFile chzp, struct slist *slist, struct blist 
 //printf("free: %d\n", blk->index);
 				blk_free(blk);
 			}
+			if(hack) continue;
 			if(!(blist->head=sb->bstart))
 				blist->tail=NULL;
 			break;
@@ -902,6 +933,16 @@ static void get_wbuf_from_wrap_up(struct iobuf *wbuf, uint64_t *wrap_up)
 	*wrap_up=0;
 }
 
+/*
+static void dump_slist(struct slist *slist, const char *msg)
+{
+	struct sbuf *sb;
+	printf("%s\n", msg);
+	for(sb=slist->head; sb; sb=sb->next)
+		printf("%s\n", sb->path);
+}
+*/
+
 static int backup_server(gzFile *cmanzp, const char *changed, const char *unchanged, const char *manifest, const char *client, const char *datadir, struct config *conf)
 {
 	int ret=-1;
@@ -915,6 +956,7 @@ static int backup_server(gzFile *cmanzp, const char *changed, const char *unchan
 	struct iobuf *rbuf=NULL;
 	struct iobuf *wbuf=NULL;
 	struct dpth *dpth=NULL;
+	struct dpth_fp *dpth_fp=NULL;
 	gzFile chzp=NULL;
 	gzFile unzp=NULL;
 	// This is used to tell the client that a number of consecutive blocks
@@ -993,6 +1035,7 @@ end:
 	// Write buffer did not allocate 'buf'. 
 	wbuf->buf=NULL;
 	iobuf_free(wbuf);
+	if((dpth_fp=get_dpth_fp(dpth))) dpth_fp_close(dpth_fp);
 	dpth_free(dpth);
 	return ret;
 }

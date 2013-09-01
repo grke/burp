@@ -338,7 +338,7 @@ static int retrieve_blk_data(struct iobuf *sigbuf, struct dpth *dpth, struct blk
 		readbuflen=r;
 		fclose(dfp);
 	}
-	//printf("lookup: %s (%s)\n", datpath, cp);
+//	printf("lookup: %s (%s)\n", datpath, cp);
 	if(datno>readbuflen)
 	{
 		logp("dat index %d is greater than readbuflen: %d\n",
@@ -347,6 +347,7 @@ static int retrieve_blk_data(struct iobuf *sigbuf, struct dpth *dpth, struct blk
 	}
 	blk->data=readbuf[datno].buf;
 	blk->length=readbuf[datno].len;
+	printf("length: %d\n", blk->length);
 
         return 0;
 }
@@ -403,7 +404,7 @@ static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, struct dpth
 			}
 		}
 
-//printf("HERE: %c:%s\n", rbuf->cmd, rbuf->buf);
+//printf("HERE: %c\n", rbuf->cmd);
 
 		switch(rbuf->cmd)
 		{
@@ -471,7 +472,7 @@ static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, struct dpth
 				// Fill in the sig/block, if the caller provided
 				// a pointer for one. Server only.
 				if(!blk) break;
-//				printf("got sig: %s\n", rbuf->buf);
+		//		printf("got sig: %s\n", rbuf->buf);
 				if(dpth)
 				{
 					if(retrieve_blk_data(rbuf, dpth, blk))
@@ -523,7 +524,9 @@ static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, struct dpth
 				free(rbuf->buf); rbuf->buf=NULL;
 				return -1;
 			default:
-				break;
+				printf("got unexpected cmd: %c\n", rbuf->cmd);
+				free(rbuf->buf); rbuf->buf=NULL;
+				return -1;
 		}
 		if(rbuf->buf) { free(rbuf->buf); rbuf->buf=NULL; }
 	}

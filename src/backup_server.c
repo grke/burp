@@ -775,11 +775,14 @@ static int write_to_changed_file(gzFile chzp, struct slist *slist, struct blist 
 					// FIX THIS: check for errors
 					gzprintf(chzp, "S%04X%s",
 						blk->length, blk->data);
+/*
 				else
 				{
-					printf("!!!!!!!!!!!!! no data\n");
+					printf("!!!!!!!!!!!!! no data; %s\n",
+						sb->path);
 					exit(1);
 				}
+*/
 				if(blk==sb->bend)
 				{
 					slist->head=sb->next;

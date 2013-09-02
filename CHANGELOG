@@ -1,3 +1,6 @@
+2013-08-02 Changes in burp-1.4.2
+  * Add a machine-readable statistics file to each backup directory.
+
 2013-07-29 Changes in burp-1.4.0
   * Add Abbas Khan's RHEL spec files and related things.
   * Add Benjamin Sans's include_glob feature.

@@ -127,8 +127,9 @@ end:
 static void send_backup_name_to_client(struct bu *arr)
 {
 	char msg[64]="";
-	snprintf(msg, sizeof(msg), "%s%s",
-		arr->timestamp, arr->deletable?" (deletable)":"");
+	//snprintf(msg, sizeof(msg), "%s%s",
+	//	arr->timestamp, arr->deletable?" (deletable)":"");
+	snprintf(msg, sizeof(msg), "%s", arr->timestamp);
 	async_write(CMD_TIMESTAMP, msg, strlen(msg));
 }
 

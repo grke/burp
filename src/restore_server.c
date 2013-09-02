@@ -14,7 +14,7 @@
 
 #include <librsync.h>
 
-static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, enum action act, const char *client, char status, struct config *conf)
+static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, enum action act, const char *client, char status, struct config *conf, int *need_data)
 {
 	//logp("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path);
 	write_status(client, status, sb->path, conf);
@@ -29,6 +29,7 @@ static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, enum acti
 			if(async_write(CMD_ATTRIBS, sb->attribs, sb->alen)
 			  || async_write(sb->cmd, sb->path, sb->plen))
 				return -1;
+			*need_data=1;
 			return 0;
 		default:
 			if(async_write(CMD_ATTRIBS, sb->attribs, sb->alen))
@@ -94,7 +95,8 @@ static int restore_ent(const char *client,
 	int i,
 	enum action act,
 	char status,
-	struct config *conf)
+	struct config *conf,
+	int *need_data)
 {
 	int ret=-1;
 	struct sbuf *xb;
@@ -119,7 +121,7 @@ static int restore_ent(const char *client,
 			// Can now restore because nothing else is
 			// fiddling in a subdirectory.
 			if(restore_sbuf(xb, arr, a, i, act, client, status,
-				conf)) goto end;
+				conf, need_data)) goto end;
 			slist->head=xb->next;
 			sbuf_free(xb);
 		}
@@ -143,8 +145,9 @@ static int restore_ent(const char *client,
 	}
 	else
 	{
-		if(restore_sbuf(*sb, arr, a, i, act, client, status, conf))
-			goto end;
+		if(restore_sbuf(*sb, arr, a, i, act, client, status, conf,
+			need_data))
+				goto end;
 	}
 	ret=0;
 end:
@@ -227,14 +230,14 @@ end:
 */
 }
 
-static int restore_remaining_dirs(struct slist *slist, struct bu *arr, int a, int i, enum action act, const char *client, char status, struct config *conf)
+static int restore_remaining_dirs(struct slist *slist, struct bu *arr, int a, int i, enum action act, const char *client, char status, struct config *conf, int *need_data)
 {
 	struct sbuf *sb;
 	// Restore any directories that are left in the list.
 	for(sb=slist->head; sb; sb=sb->next)
 	{
 		if(restore_sbuf(sb, arr, a, i,
-			act, client, status, conf))
+			act, client, status, conf, need_data))
 				return -1;
 	}
 	return 0;
@@ -254,6 +257,7 @@ static int do_restore_manifest(const char *client, const char *datadir, struct b
 	struct sbuf *sb=NULL;
 	struct blk *blk=NULL;
 	int ars=0;
+	int need_data=0;
 
 	// Now, do the actual restore.
 	if(!(zp=gzopen_file(manifest, "rb")))
@@ -308,7 +312,8 @@ static int do_restore_manifest(const char *client, const char *datadir, struct b
 		}
 */
 
-		if((ars=sbuf_fill_from_gzfile(sb, zp, blk, dpth, conf)))
+		if((ars=sbuf_fill_from_gzfile(sb, zp,
+			need_data?blk:NULL, dpth, conf)))
 		{
 			if(ars>0) break; // Reached the end.
 			logp("In %s, error from sbuf_fill_from_gzfile()\n",
@@ -324,17 +329,22 @@ static int do_restore_manifest(const char *client, const char *datadir, struct b
 			continue;
 		}
 
+		need_data=0;
+
 		if((!srestore || check_srestore(conf, sb->path))
-		  && check_regex(regex, sb->path)
-		  && restore_ent(client, &sb, slist,
-			arr, a, i, act, status, conf))
-				goto end;
+		  && check_regex(regex, sb->path))
+		{
+			if(restore_ent(client, &sb, slist,
+				arr, a, i, act, status, conf, &need_data))
+					goto end;
+		}
 
 		sbuf_free_contents(sb);
 	}
 
-	if(restore_remaining_dirs(slist, arr, a, i, act, client, status, conf))
-		goto end;
+	if(restore_remaining_dirs(slist, arr, a, i, act, client,
+		status, conf, &need_data))
+			goto end;
 
 	ret=do_restore_end(act, conf);
 

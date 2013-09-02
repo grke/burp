@@ -132,14 +132,18 @@ static void show_all_backups(struct strlist **backups, int bcount, int *x, int c
 	{
 		if(!b)
 		{
-		  snprintf(msg, sizeof(msg), "Backup list: %s%s", backups[b]->path,
-			backups[b]->flag?" (deletable)":"");
+//		  snprintf(msg, sizeof(msg), "Backup list: %s%s",
+//			backups[b]->path, backups[b]->flag?" (deletable)":"");
+		  snprintf(msg, sizeof(msg), "Backup list: %s",
+			backups[b]->path);
 		  print_line(msg, (*x)++, col);
 		}
 		else
 		{
-		  snprintf(msg, sizeof(msg), "             %s%s", backups[b]->path,
-			backups[b]->flag?" (deletable)":"");
+//		  snprintf(msg, sizeof(msg), "             %s%s",
+//			backups[b]->path, backups[b]->flag?" (deletable)":"");
+		  snprintf(msg, sizeof(msg), "             %s",
+			backups[b]->path);
 		  print_line(msg, (*x)++, col);
 		}
 	}

@@ -48,7 +48,6 @@ static int blk_read(struct rconf *rconf, struct win *win, struct sbuf *sb, struc
 			}
 			if(!sb->bsighead)
 			{
-printf("SET A: %s\n", sb->path);
 				sb->bsighead=blk;
 			}
 			blk_add_to_list(blk, blist);

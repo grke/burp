@@ -39,6 +39,7 @@ void sbuf_free(struct sbuf *sb)
 //	sbuf_close_file(sb);
 	if(!sb) return;
 	sbuf_free_contents(sb);
+//printf("sbuf_free: %p\n", sb);
 	free(sb);
 free_count++;
 }

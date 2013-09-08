@@ -52,7 +52,7 @@ static int add_to_file_requests(struct slist *slist, struct iobuf *rbuf)
 	// Give it a number to simplify tracking.
 	sb->index=file_no++;
 	sbuf_add_to_list(sb, slist);
-printf("got request for: %s\n", sb->path);
+//printf("got request for: %s\n", sb->path);
 
 	return 0;
 }
@@ -451,7 +451,7 @@ static int backup_client(struct config *conf, int estimate)
 		if(slist->head
 		// Need to limit how many blocks are allocated at once.
 		  && (!blist->head
-			|| blist->tail->index - blist->head->index<10000)
+			|| blist->tail->index - blist->head->index<20000)
 		)
 		{
 //printf("get more blocks\n");

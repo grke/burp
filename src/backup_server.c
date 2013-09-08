@@ -374,13 +374,13 @@ static int already_got_block(struct blk *blk, struct dpth *dpth)
 				return -1;
 			}
 			blk->length=strlen(blk->data)-1; // Chop newline.
-	printf("FOUND: %s %s\n", blk->weak, blk->strong);
+//	printf("FOUND: %s %s\n", blk->weak, blk->strong);
 			blk->got=1;
 			return 0;
 		}
 		else
 		{
-	printf("COLLISION: %s %s\n", blk->weak, blk->strong);
+//	printf("COLLISION: %s %s\n", blk->weak, blk->strong);
 //			collisions++;
 		}
 	}
@@ -516,14 +516,14 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobu
 			*wrap_up=blk->index;
 			consecutive_found_block=0;
 		}
-		printf("Do not need data for %lu %lu %s\n", sb->index,
-			blk->index, slist->add_sigs_here->path);
+//		printf("Do not need data for %lu %lu %s\n", sb->index,
+//			blk->index, slist->add_sigs_here->path);
 	}
 	else
 	{
 		consecutive_found_block=0;
-		printf("Need data for %lu %lu %s\n", sb->index,
-			blk->index, slist->add_sigs_here->path);
+//		printf("Need data for %lu %lu %s\n", sb->index,
+//			blk->index, slist->add_sigs_here->path);
 	}
 
 	return 0;
@@ -747,6 +747,15 @@ static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist, int sca
 	sb->index=file_no++;
 }
 
+static void sanity_before_sbuf_free(struct slist *slist, struct sbuf *sb)
+{
+	// It is possible for the markers to drop behind.
+	if(slist->tail==sb) slist->tail=sb->next;
+	if(slist->last_requested==sb) slist->last_requested=sb->next;
+	if(slist->add_sigs_here==sb) slist->add_sigs_here=sb->next;
+	if(slist->blks_to_request==sb) slist->blks_to_request=sb->next;
+}
+
 static int write_to_changed_file(gzFile chzp, struct slist *slist, struct blist *blist, struct dpth *dpth, int backup_end)
 {
 	struct sbuf *sb;
@@ -789,6 +798,7 @@ static int write_to_changed_file(gzFile chzp, struct slist *slist, struct blist 
 					//break;
 					if(!(blist->head=sb->bstart))
 						blist->tail=NULL;
+					sanity_before_sbuf_free(slist, sb);
 					sbuf_free(sb);
 					hack=1;
 					break;
@@ -808,17 +818,10 @@ static int write_to_changed_file(gzFile chzp, struct slist *slist, struct blist 
 			// No change, can go straight in.
 			if(sbuf_to_manifest(sb, chzp)) return -1;
 
-			// FIX THIS:
-			// Also need to write in the unchanged sigs.
-
 			// Move along.
 			slist->head=sb->next;
 
-			// It is possible for the markers to drop behind.
-			if(slist->tail==sb) slist->tail=sb->next;
-			if(slist->last_requested==sb) slist->last_requested=sb->next;
-			if(slist->add_sigs_here==sb) slist->add_sigs_here=sb->next;
-			if(slist->blks_to_request==sb) slist->blks_to_request=sb->next;
+			sanity_before_sbuf_free(slist, sb);
 			sbuf_free(sb);
 		}
 	}

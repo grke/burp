@@ -274,7 +274,7 @@ static int entry_changed(struct sbuf *sb, gzFile *cmanzp, gzFile unzp, struct co
 			// file, or back again).
 			if(csb->cmd!=sb->cmd)
 			{
-				printf("got changed: %c %s %c %s %lu %lu\n", csb->cmd, csb->path, sb->cmd, sb->path, csb->statp.st_mtime, sb->statp.st_mtime);
+//				printf("got changed: %c %s %c %s %lu %lu\n", csb->cmd, csb->path, sb->cmd, sb->path, csb->statp.st_mtime, sb->statp.st_mtime);
 				if(forward_through_sigs(&csb, cmanzp, conf))
 					return -1;
 				return 1;

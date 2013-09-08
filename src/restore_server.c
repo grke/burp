@@ -106,7 +106,7 @@ static int restore_ent(const char *client,
 		printf("Got NULL path!\n");
 		return -1;
 	}
-	printf("want to restore: %s\n", (*sb)->path);
+	//printf("want to restore: %s\n", (*sb)->path);
 
 	// Check if we have any directories waiting to be restored.
 	while((xb=slist->head))
@@ -268,8 +268,7 @@ static int do_restore_manifest(const char *client, const char *datadir, struct b
 	if(!(sb=sbuf_alloc())
 	  || !(blk=blk_alloc())
 	  || !(slist=slist_alloc())
-	  || !(dpth=dpth_alloc(datadir))
-	  || dpth_init(dpth))
+	  || !(dpth=dpth_alloc(datadir)))
 	{
 		log_and_send_oom(__FUNCTION__);
 		goto end;

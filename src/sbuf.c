@@ -257,10 +257,16 @@ void iobuf_from_str(struct iobuf *iobuf, char cmd, char *str)
 }
 
 // For retrieving stored data.
-static struct iobuf readbuf[SIG_MAX];
-static unsigned int readbuflen=0;
+struct rblk
+{
+	char *datpath;
+	struct iobuf readbuf[SIG_MAX];
+	unsigned int readbuflen;
+};
 
-static int read_next_data(FILE *fp, int r)
+#define RBLK_MAX	10
+
+static int read_next_data(FILE *fp, struct rblk *rblk, int ind, int r)
 {
 	char cmd='\0';
 	size_t bytes;
@@ -277,29 +283,93 @@ static int read_next_data(FILE *fp, int r)
 		logp("unknown cmd in %s: %c\n", __FUNCTION__, cmd);
 		return -1;
 	}
-	if(!(readbuf[r].buf=(char *)realloc(readbuf[r].buf, len)))
+	if(!(rblk[ind].readbuf[r].buf=
+		(char *)realloc(rblk[ind].readbuf[r].buf, len)))
 	{
 		logp("Out of memory in %s\n", __FUNCTION__);
 		return -1;
 	}
-	if((bytes=fread(readbuf[r].buf, 1, len, fp))!=len)
+	if((bytes=fread(rblk[ind].readbuf[r].buf, 1, len, fp))!=len)
 	{
 		logp("Short read: %d wanted: %d\n", (int)bytes, (int)len);
 		return -1;
 	}
-	readbuf[r].len=len;
+	rblk[ind].readbuf[r].len=len;
 	//printf("read: %d:%d %04X\n", r, len, r);
 
 	return 0;
 }
 
+static int load_rblk(struct rblk *rblks, int ind, const char *datpath)
+{
+	int r;
+	FILE *dfp;
+	if(rblks[ind].datpath) free(rblks[ind].datpath);
+	if(!(rblks[ind].datpath=strdup(datpath)))
+	{
+		logp("Out of memory in %s\n", __FUNCTION__);
+		return -1;
+	}
+	printf("swap %d to: %s\n", ind, datpath);
+
+	if(!(dfp=open_file(datpath, "rb"))) return -1;
+	for(r=0; r<SIG_MAX; r++)
+	{
+		if(read_next_data(dfp, rblks, ind, r))
+		{
+			fclose(dfp);
+			return -1;
+		}
+	}
+	rblks[ind].readbuflen=r;
+	fclose(dfp);
+	return 0;
+}
+
+static struct rblk *get_rblk(struct rblk *rblks, const char *datpath)
+{
+	static int current_ind=0;
+	static int last_swap_ind=0;
+	int ind=current_ind;
+
+	while(1)
+	{
+		if(!rblks[ind].datpath)
+		{
+			if(load_rblk(rblks, ind, datpath)) return NULL;
+			last_swap_ind=ind;
+			current_ind=ind;
+			return &rblks[current_ind];
+		}
+		else if(!strcmp(rblks[ind].datpath, datpath))
+		{
+			current_ind=ind;
+			return &rblks[current_ind];
+		}
+		ind++;
+		if(ind==RBLK_MAX) ind=0;
+		if(ind==current_ind)
+		{
+			// Went through all RBLK_MAX entries.
+			// Replace the oldest one.
+			ind=last_swap_ind+1;
+			if(ind==RBLK_MAX) ind=0;
+			if(load_rblk(rblks, ind, datpath)) return NULL;
+			last_swap_ind=ind;
+			current_ind=ind;
+			return &rblks[current_ind];
+		}
+	}
+}
+
 static int retrieve_blk_data(struct iobuf *sigbuf, struct dpth *dpth, struct blk *blk)
 {
-	static char *current_dat=NULL;
+	static struct rblk *rblks=NULL;
 	char *cp;
 	char tmp[32]="";
 	char datpath[256];
 	unsigned int datno;
+	struct rblk *rblk;
 
 	snprintf(tmp, sigbuf->len+1, "%s", sigbuf->buf);
 //printf("here %lu: %s\n", sigbuf->len+1, tmp);
@@ -314,41 +384,29 @@ static int retrieve_blk_data(struct iobuf *sigbuf, struct dpth *dpth, struct blk
 	cp++;
 	datno=strtoul(cp, NULL, 16);
 //printf("y: %s\n", datpath);
-	if(!current_dat || strcmp(current_dat, datpath))
-	{
-		int r;
-		FILE *dfp;
-		if(current_dat) free(current_dat);
-		if(!(current_dat=strdup(datpath)))
-		{
-			logp("Out of memory in %s\n", __FUNCTION__);
-			current_dat=NULL;
-			return -1;
-		}
-		printf("swap to: %s\n", current_dat);
 
-		if(!(dfp=open_file(datpath, "rb"))) return -1;
-		for(r=0; r<SIG_MAX; r++)
-		{
-			if(read_next_data(dfp, r))
-			{
-				fclose(dfp);
-				return -1;
-			}
-		}
-		readbuflen=r;
-		fclose(dfp);
-	}
-//	printf("lookup: %s (%s)\n", datpath, cp);
-	if(datno>readbuflen)
+	if(!rblks
+	  && !(rblks=(struct rblk *)calloc(RBLK_MAX, sizeof(struct rblk))))
 	{
-		logp("dat index %d is greater than readbuflen: %d\n",
-			datno, readbuflen);
+		logp("Out of memory in %s\n", __FUNCTION__);
 		return -1;
 	}
-	blk->data=readbuf[datno].buf;
-	blk->length=readbuf[datno].len;
-	printf("length: %d\n", blk->length);
+
+	if(!(rblk=get_rblk(rblks, datpath)))
+	{
+		return -1;
+	}
+
+//	printf("lookup: %s (%s)\n", datpath, cp);
+	if(datno>rblk->readbuflen)
+	{
+		logp("dat index %d is greater than readbuflen: %d\n",
+			datno, rblk->readbuflen);
+		return -1;
+	}
+	blk->data=rblk->readbuf[datno].buf;
+	blk->length=rblk->readbuf[datno].len;
+//	printf("length: %d\n", blk->length);
 
         return 0;
 }

@@ -1,3 +1,5 @@
+  * Fix long list and status monitor output when a directory argument is given.
+
   * Fix truncation of timestamps in the live status monitor.
   * Default the 'resume partial' feature to being off, and add an option to
     turn it on.

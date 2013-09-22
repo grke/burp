@@ -13,13 +13,14 @@
 #include "list_server.h"
 #include "current_backups_server.h"
 
-int check_browsedir(const char *browsedir, char **path, size_t bdlen)
+int check_browsedir(const char *browsedir, char **path, size_t bdlen, char **last_bd_match)
 {
 	char *cp=NULL;
 	char *copy=NULL;
 	if(strncmp(browsedir, *path, bdlen))
 		return 0;
-	if((*path)[bdlen+1]=='\0') return 0;
+	if((*path)[bdlen+1]=='\0' || (bdlen>1 && (*path)[bdlen]!='/'))
+		return 0;
 
 	/* Lots of messing around related to whether browsedir was '', '/', or
    	   something else. */
@@ -47,8 +48,20 @@ int check_browsedir(const char *browsedir, char **path, size_t bdlen)
 		else if(strlen(copy)>2 && copy[1]==':' && copy[2]=='/')
 			copy[2]='\0';
 	}
+	if(*last_bd_match)
+	{
+		if(!strcmp(*last_bd_match, copy))
+		{
+			// Got a duplicate match.
+			free(copy);
+			return 0;
+		}
+		free(*last_bd_match);
+	}
 	free(*path);
 	*path=copy;
+	if(!(*last_bd_match=strdup(copy)))
+		goto err;
 	return 1;
 err:
 	if(copy) free(copy);
@@ -64,6 +77,7 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 	gzFile zp=NULL;
 	struct sbuf mb;
 	char *manifest=NULL;
+	char *last_bd_match=NULL;
 	size_t bdlen=0;
 
 	init_sbuf(&mb);
@@ -112,7 +126,8 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 		if(browsedir)
 		{
 			int r;
-			if((r=check_browsedir(browsedir, &(mb.path), bdlen))<0)
+			if((r=check_browsedir(browsedir,
+				&(mb.path), bdlen, &last_bd_match))<0)
 			{
 				quit++;
 				ret=-1;
@@ -137,6 +152,7 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 	}
 	gzclose_fp(&zp);
 	free_sbuf(&mb);
+	if(last_bd_match) free(last_bd_match);
 	return ret;
 }
 

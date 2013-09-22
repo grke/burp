@@ -679,6 +679,7 @@ static int browse_manifest(int cfd, gzFile zp, const char *browse)
 	struct sbuf sb;
 	struct cntr cntr;
 	size_t blen=0;
+	char *last_bd_match=NULL;
 	reset_filecounter(&cntr, time(NULL));
 	init_sbuf(&sb);
 	if(browse) blen=strlen(browse);
@@ -701,7 +702,8 @@ static int browse_manifest(int cfd, gzFile zp, const char *browse)
 		  && !cmd_is_link(sb.cmd))
 			continue;
 
-		if((r=check_browsedir(browse, &sb.path, blen))<0)
+		if((r=check_browsedir(browse,
+			&sb.path, blen, &last_bd_match))<0)
 		{
 			ret=-1;
 			break;
@@ -718,6 +720,7 @@ static int browse_manifest(int cfd, gzFile zp, const char *browse)
 		}
 	}
 	free_sbuf(&sb);
+	if(last_bd_match) free(last_bd_match);
 	return ret;
 }
 

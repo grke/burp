@@ -1,4 +1,6 @@
   * Fix long list and status monitor output when a directory argument is given.
+  * Fix restore problem with backups containing both compressed and
+    uncompressed files.
 
 2013-07-29 Changes in burp-1.3.36:
   * Fix truncation of timestamps in the live status monitor.

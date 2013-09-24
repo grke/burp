@@ -78,7 +78,7 @@ int do_patch(const char *dst, const char *del, const char *upd, bool gzupd, int 
 	return result;
 }
 
-static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, int compression)
+static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, struct config *cconf, int compression)
 {
 	int ret=0;
 	struct stat statp;
@@ -132,12 +132,9 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, int
 	else
 	{
 		// Not compressed - just hard link it.
-		if(link(oldpath, infpath))
-		{
-			logp("hardlink %s to %s failed: %s\n",
-				infpath, oldpath, strerror(errno));
-			ret=-1;
-		}
+		if(do_link(oldpath, infpath, &statp, cconf,
+			TRUE /* allow overwrite of infpath */))
+				return -1;
 	}
 	return ret;
 }
@@ -349,7 +346,7 @@ static int restore_file(struct bu *arr, int a, int i, const char *datapth, const
 				{
 					// Need to gunzip the first one.
 					if(inflate_or_link_oldfile(best, tmp,
-						compression))
+						cconf, compression))
 					{
 						logp("error when inflating %s\n", best);
 						free(path);

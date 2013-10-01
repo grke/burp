@@ -1,3 +1,4 @@
+  * Bug fix for include_glob xmalloc success check on Windows.
   * Fix long list and status monitor output when a directory argument is given.
   * Fix restore problem with backups containing both compressed and
     uncompressed files.

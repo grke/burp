@@ -39,7 +39,7 @@ static size_t xstrlen(const char *in)
 static void *xmalloc(size_t size)
 {
 	void *ret=malloc(size);
-	if(!ret) return ret;
+	if(ret) return ret;
 	logp("xmalloc can not allocate %lu bytes", (u_long)size);
 	exit(2);
 }

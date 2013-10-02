@@ -2,6 +2,9 @@
   * Fix long list and status monitor output when a directory argument is given.
   * Fix restore problem with backups containing both compressed and
     uncompressed files.
+  * Bug fix for an interrupted backup causing a resume when a restore_client
+    connects.
+  * Bug fix for defaulting 'resume partial' to off.
 
 2013-09-02 Changes in burp-1.4.2
   * Add a machine-readable statistics file to each backup directory.

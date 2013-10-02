@@ -574,7 +574,8 @@ static int resume_partial_new_file(struct sbuf *p1b, struct cntr *cntr, const ch
 		goto end;
 	}
 
-	if(!lstat(partial, &statp) && S_ISREG(statp.st_mode))
+	if(cconf->resume_partial
+	  && !lstat(partial, &statp) && S_ISREG(statp.st_mode))
 	{
 		// A previous resume was going on.
 		// Need to concatenate the possible delta onto the partial
@@ -655,7 +656,8 @@ static int resume_partial_new_file(struct sbuf *p1b, struct cntr *cntr, const ch
 	}
 
 	logp("Resume partial new file: %s %s\n", cb.path, rpath);
-	if(!lstat(rpath, &statp) && S_ISREG(statp.st_mode))
+	if(cconf->resume_partial
+	  && !lstat(rpath, &statp) && S_ISREG(statp.st_mode))
 	{
 		if(!(cb.endfile=strdup(
 			get_endfile_str(statp.st_size, checksum))))

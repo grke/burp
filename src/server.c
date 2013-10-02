@@ -711,6 +711,15 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 	}
 	if(!strcmp(wdrm, "resume"))
 	{
+		if(cconf->restore_client)
+		{
+			// This client is not the original client, resuming	
+			// might cause all sorts of trouble.
+			log_and_send("Found interrupted backup - not resuming because the connected client is not the original");
+			ret=-1;
+			goto end;
+		}
+
 		logp("Found interrupted backup.\n");
 
 		// Check that the current incexc configuration is the same

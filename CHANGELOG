@@ -1,3 +1,4 @@
+2013-10-02 Changes in burp-1.3.38:
   * Fix long list and status monitor output when a directory argument is given.
   * Fix restore problem with backups containing both compressed and
     uncompressed files.

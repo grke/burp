@@ -42,8 +42,8 @@ The main author of Burp is Graham Keeling.
 <BR>
 <h3><font color="#99CCFF">Current stable version: 1.3.10</font></h3>
 <h4><font color="#99CCFF">Old stable: 1.3.0</font></h4>
-<h5><font color="#99CCFF">Candidate stable: 1.3.36</font></h5>
-<h5><font color="#99CCFF">New features: 1.4.2</font></h5>
+<h5><font color="#99CCFF">Candidate stable: 1.3.38</font></h5>
+<h5><font color="#99CCFF">New features: 1.4.4</font></h5>
 <table border="0"><tr><td align="center">
 <script type="text/javascript"><!--
 google_ad_client = "ca-pub-0612005306689013";
@@ -65,6 +65,43 @@ src="http://pagead2.googlesyndication.com/pagead/show_ads.js">
 <TR>
 <TD></TD>
 <TD ALIGN="LEFT">
+
+<P>
+<FONT COLOR="#99CCFF">2013-10-02:
+<BR>
+Many thanks to the following donors for financially supporting burp during
+September:
+<pre>
+  *  &pound;43.00 Sebastien C.
+</pre>
+</FONT>
+</p>
+
+<P>
+<FONT COLOR="#99CCFF">2013-10-02: burp-1.4.4 and burp-1.3.38 are released.
+<br>
+1.4.4 is for new features. 1.3.38 is the candidate for a stable version, to
+which only bug fixes will be added.
+<pre>
+Changes in burp-1.4.4
+  * Bug fix for include_glob xmalloc success check on Windows.
+  * Fix long list and status monitor output when a directory argument is given.
+  * Fix restore problem with backups containing both compressed and
+    uncompressed files.
+  * Bug fix for an interrupted backup causing a resume when a restore_client
+    connects.
+  * Bug fix for defaulting 'resume partial' to off.
+
+Changes in burp-1.3.38:
+  * Fix long list and status monitor output when a directory argument is given.
+  * Fix restore problem with backups containing both compressed and
+    uncompressed files.
+  * Bug fix for an interrupted backup causing a resume when a restore_client
+    connects.
+  * Bug fix for defaulting 'resume partial' to off.
+</pre>
+</FONT>
+</P>
 
 <P>
 <FONT COLOR="#99CCFF">2013-09-02:

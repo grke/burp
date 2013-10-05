@@ -532,7 +532,7 @@ static int set_up_for_sig_info(struct slist *slist, struct blist *blist, struct 
 	return 0;
 }
 
-static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobuf *rbuf, struct dpth *dpth, uint64_t *wrap_up, gzFile spzp)
+static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobuf *rbuf, struct dpth *dpth, uint64_t *wrap_up)
 {
 	static int consecutive_found_block=0;
 	// Goes on slist->add_sigs_here
@@ -563,8 +563,6 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobu
 	// to be the location of the already got block.
 	if(already_got_block(blk, dpth)) return -1;
 
-	gzprintf(spzp, "S%04X%s\n", rbuf->len, rbuf->buf);
-
 	if(blk->got)
 	{
 		if(++consecutive_found_block>5000)
@@ -585,7 +583,7 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobu
 	return 0;
 }
 
-static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist *blist, struct config *conf, int *scan_end, int *sigs_end, int *backup_end, const char *cmanifest, gzFile *cmanzp, gzFile unzp, struct dpth *dpth, uint64_t *wrap_up, gzFile spzp)
+static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist *blist, struct config *conf, int *scan_end, int *sigs_end, int *backup_end, const char *cmanifest, gzFile *cmanzp, gzFile unzp, struct dpth *dpth, uint64_t *wrap_up)
 {
 	int ret=0;
 	static int ec=0;
@@ -615,9 +613,8 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			if(set_up_for_sig_info(slist, blist, inew)) goto error;
 			return 0;
 		case CMD_SIG:
-			if(add_to_sig_list(slist, blist,
-				rbuf, dpth, wrap_up, spzp))
-					goto error;
+			if(add_to_sig_list(slist, blist, rbuf, dpth, wrap_up))
+				goto error;
 			goto end;
 
 		/* Incoming scan information. */
@@ -907,7 +904,7 @@ static void dump_slist(struct slist *slist, const char *msg)
 }
 */
 
-static int backup_server(const char *cmanifest, gzFile *cmanzp, const char *changed, const char *unchanged, const char *sparse, const char *manifest, const char *client, const char *datadir, struct config *conf)
+static int backup_server(const char *cmanifest, gzFile *cmanzp, const char *changed, const char *unchanged, const char *manifest, const char *client, const char *datadir, struct config *conf)
 {
 	int ret=-1;
 	int scan_end=0;
@@ -923,7 +920,6 @@ static int backup_server(const char *cmanifest, gzFile *cmanzp, const char *chan
 	struct dpth_fp *dpth_fp=NULL;
 	gzFile chzp=NULL;
 	gzFile unzp=NULL;
-	gzFile spzp=NULL;
 	// This is used to tell the client that a number of consecutive blocks
 	// have been found and can be freed.
 	uint64_t wrap_up=0;
@@ -938,8 +934,7 @@ static int backup_server(const char *cmanifest, gzFile *cmanzp, const char *chan
 	  || !(dpth=dpth_alloc(datadir))
 	  || dpth_init(dpth)
 	  || !(chzp=gzopen_file(changed, "wb"))
-	  || !(unzp=gzopen_file(unchanged, "wb"))
-	  || !(spzp=gzopen_file(sparse, "wb")))
+	  || !(unzp=gzopen_file(unchanged, "wb")))
 		goto end;
 
 	while(!backup_end)
@@ -968,7 +963,7 @@ static int backup_server(const char *cmanifest, gzFile *cmanzp, const char *chan
 
 		if(rbuf->buf && deal_with_read(rbuf, slist, blist, conf,
 			&scan_end, &sigs_end, &backup_end,
-			cmanifest, cmanzp, unzp, dpth, &wrap_up, spzp))
+			cmanifest, cmanzp, unzp, dpth, &wrap_up))
 				goto end;
 
 		if(write_to_changed_file(chzp, slist, blist, dpth, backup_end))
@@ -985,11 +980,6 @@ static int backup_server(const char *cmanifest, gzFile *cmanzp, const char *chan
 		logp("Error closing %s in %s\n", unchanged, __FUNCTION__);
 		goto end;
 	}
-	if(gzclose_fp(&spzp))
-	{
-		logp("Error closing %s in %s\n", unchanged, __FUNCTION__);
-		goto end;
-	}
 
 	if(phase3(changed, unchanged, manifest, conf))
 		goto end;
@@ -1000,7 +990,6 @@ end:
 	logp("End backup\n");
 	gzclose_fp(&chzp);
 	gzclose_fp(&unzp);
-	gzclose_fp(&spzp);
 	slist_free(slist);
 	blist_free(blist);
 	iobuf_free(rbuf);
@@ -1056,7 +1045,6 @@ int do_backup_server(const char *basedir, const char *current, const char *worki
 	char *datadir=NULL;
 	char *changed=NULL;
 	char *unchanged=NULL;
-	char *sparse=NULL;
 	gzFile cmanzp=NULL;
 
 	logp("in do_backup_server\n");
@@ -1065,8 +1053,7 @@ int do_backup_server(const char *basedir, const char *current, const char *worki
 	  || !(cmanifest=prepend_s(current, "manifest", strlen("manifest")))
 	  || !(datadir=prepend_s(basedir, "data", strlen("data")))
 	  || !(changed=prepend_s(working, "changed", strlen("changed")))
-	  || !(unchanged=prepend_s(working, "unchanged", strlen("unchanged")))
-	  || !(sparse=prepend_s(working, "sparse", strlen("sparse"))))
+	  || !(unchanged=prepend_s(working, "unchanged", strlen("unchanged"))))
 	{
 		log_and_send_oom(__FUNCTION__);
 		goto error;
@@ -1125,7 +1112,7 @@ int do_backup_server(const char *basedir, const char *current, const char *worki
 	if(open_next_current_manifest(cmanifest, &cmanzp))
 		goto error;
 
-	if(backup_server(cmanifest, &cmanzp, changed, unchanged, sparse,
+	if(backup_server(cmanifest, &cmanzp, changed, unchanged,
 		manifest, client, datadir, cconf))
 	{
 		logp("error in backup\n");
@@ -1152,7 +1139,6 @@ end:
 	if(datadir) free(datadir);
 	if(changed) free(changed);
 	if(unchanged) free(unchanged);
-	if(sparse) free(sparse);
 	set_logfp(NULL, cconf); // does an fclose on logfp.
 	return ret;
 }

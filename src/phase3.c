@@ -15,6 +15,9 @@
 #include "hash.h"
 #include "phase3.h"
 
+static char sort_blk[SIG_MAX][16+1];
+static int sort_ind=0;
+
 static char *get_next_tmp_path(const char *manifest)
 {
 	static char tmp[32];
@@ -40,6 +43,27 @@ static gzFile get_new_manifest(const char *manifest, gzFile spzp, struct config 
 	gzprintf(spzp, "%s\n", tmp);
 	free(man_path);
 	return zp;
+}
+
+static int myblksort(const char *a, const char *b)
+{
+	return strcmp(a, b);
+}
+
+static int write_hooks(gzFile spzp)
+{
+	int i=0;
+	if(!sort_ind) return 0;
+	qsort(sort_blk, sort_ind, 16+1,
+		(int (*)(const void *, const void *))myblksort);
+	for(i=0; i<sort_ind; i++)
+	{
+		// Do not bother with duplicates.
+		if(i && !strcmp(sort_blk[i], sort_blk[i-1])) continue;
+		gzprintf(spzp, "%s\n", sort_blk[i]);
+	}
+	sort_ind=0;
+	return 0;
 }
 
 static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, struct blk **blk, gzFile *cmanzp, gzFile *mzp, gzFile spzp, const char *manifest, struct config *conf)
@@ -96,12 +120,17 @@ static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, struct blk *
 
 			// FIX THIS: Should be checking bits on
 			// blk->fingerprint, rather than a character.
-			if(*((*blk)->weak)=='F') gzprintf_sig(spzp, *blk);
+			if(*((*blk)->weak)=='F')
+			{
+				snprintf(sort_blk[sort_ind++], 16+1,
+					(*blk)->weak);
+			}
 
 			if(++sig_count>SIG_MAX)
 			{
 				sig_count=0;
 				gzclose_fp(mzp);
+				write_hooks(spzp);
 			}
 		}
 	}
@@ -205,9 +234,11 @@ int phase3(const char *changed, const char *unchanged, const char *manifest, str
 		goto end;
 	}
 
+	if(spzp) write_hooks(spzp);
+
 	ret=0;
-//	unlink(changed);
-//	unlink(unchanged);
+	unlink(changed);
+	unlink(unchanged);
 	logp("End phase3\n");
 end:
 	gzclose_fp(&mzp);

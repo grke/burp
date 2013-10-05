@@ -423,7 +423,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 	  || !(finishing=prepend_s(basedir, "finishing", strlen("finishing")))
 	  || !(current=prepend_s(basedir, "current", strlen("current")))
 	  || !(currentdata=prepend_s(current, "data", strlen("data")))
-	  || !(manifest=prepend_s(working, "manifest.gz", strlen("manifest.gz")))
+	  || !(manifest=prepend_s(working, "manifest", strlen("manifest")))
 	  || !(datadirtmp=prepend_s(working, "data.tmp", strlen("data.tmp")))
 	  || !(lockbasedir=prepend_s(client_lockdir, client, strlen(client)))
 	  || !(lockfile=prepend_s(lockbasedir, "lockfile", strlen("lockfile"))))

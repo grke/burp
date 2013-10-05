@@ -544,11 +544,14 @@ static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, struct dpth
 				else
 				{
 					// Just fill in the sig details.
-					// This is silly, it is using strong
-					// when it should not. FIX THIS.
-					snprintf(blk->strong,
-						sizeof(blk->strong),
-						"%s", rbuf->buf);
+					if(split_sig_with_save_path(rbuf->buf,
+						rbuf->len,
+						blk->weak, blk->strong,
+						blk->save_path))
+					{
+						free(rbuf->buf); rbuf->buf=NULL;
+						return -1;
+					}
 					free(rbuf->buf); rbuf->buf=NULL;
 				}
 				return 0;

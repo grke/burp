@@ -21,6 +21,7 @@ struct blk
 	// FIX THIS: Only for ease of use while developing.
 	char weak[16+1];
 	char strong[32+1];
+	char save_path[19+1]; // eg "0000/0000/0000/0000"
 
 	struct dpth_fp *dpth_fp;
 

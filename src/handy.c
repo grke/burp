@@ -1448,6 +1448,20 @@ int split_sig(const char *buf, unsigned int s, char *weak, char *strong)
 	return 0;
 }
 
+int split_sig_with_save_path(const char *buf, unsigned int s, char *weak, char *strong, char *save_path)
+{
+	if(s!=67)
+	{
+		fprintf(stderr, "Signature with save_path wrong length: %u\n",
+			s);
+		return -1;
+	}
+	memcpy(weak, buf, 16);
+	memcpy(strong, buf+16, 32);
+	memcpy(save_path, buf+48, 19);
+	return 0;
+}
+
 int build_path_w(const char *path)
 {
 	char *rpath=NULL;

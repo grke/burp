@@ -54,6 +54,7 @@ SVRSRCS =	acl.c \
 		lock.c \
 		log.c \
 		msg.c \
+		phase3.c \
 		prepend.c \
 		prog.c \
 		rabin.c \

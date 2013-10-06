@@ -41,6 +41,10 @@
 #define CMD_TIMESTAMP	'b'	/* Backup timestamp (in response to list) */
 
 
+#define CMD_MANIFEST	'M'	/* Path to a manifest */
+#define CMD_FINGERPRINT	'F'	/* Fingerprint part of a signature */
+
+
 /* These things are for the status server/client */
 
 #define	STATUS_IDLE		'i'

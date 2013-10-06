@@ -44,6 +44,7 @@ char *dpth_mk(struct dpth *dpth)
 	return path;
 }
 
+/*
 static int process_sig(char cmd, const char *buf, unsigned int s, struct dpth *dpth, void *ignored)
 {
         static uint64_t weakint;
@@ -69,6 +70,7 @@ static int process_sig(char cmd, const char *buf, unsigned int s, struct dpth *d
 
 	return 0;
 }
+*/
 
 int split_stream(FILE *ifp, struct dpth *dpth, void *flag,
   int (*process_dat)(char, const char *, unsigned int, struct dpth *, void *),
@@ -151,6 +153,7 @@ static int get_highest_entry(const char *path, int *max, struct dpth *dpth)
 			continue;
 		ent=strtol(dp->d_name, NULL, 16);
 		if(ent>*max) *max=ent;
+/*
 		if(dpth)
 		{
 			dpth->tert=ent;
@@ -167,11 +170,12 @@ fprintf(stderr, "LOAD: %s\n", tmp);
 			free(tmp); tmp=NULL;
 			fclose(ifp); ifp=NULL;
 		}
+*/
 	}
 
 	goto end;
-error:
-	ret=-1;
+//error:
+//	ret=-1;
 end:
 	if(d) closedir(d);
 	if(ifp) fclose(ifp);
@@ -277,12 +281,12 @@ int dpth_init(struct dpth *dpth)
 	int ret=0;
 	char *tmp=NULL;
 
-	if(get_highest_entry(dpth->base_path_sig, &max, NULL))
+	if(get_highest_entry(dpth->base_path_dat, &max, NULL))
 		goto error;
 	if(max<0) max=0;
 	dpth->prim=max;
 	tmp=dpth_mk_prim(dpth);
-	if(!(tmp=prepend_s(dpth->base_path_sig, tmp, strlen(tmp))))
+	if(!(tmp=prepend_s(dpth->base_path_dat, tmp, strlen(tmp))))
 		goto error;
 
 	if(get_highest_entry(tmp, &max, NULL))
@@ -291,7 +295,7 @@ int dpth_init(struct dpth *dpth)
 	dpth->seco=max;
 	free(tmp);
 	tmp=dpth_mk_seco(dpth);
-	if(!(tmp=prepend_s(dpth->base_path_sig, tmp, strlen(tmp))))
+	if(!(tmp=prepend_s(dpth->base_path_dat, tmp, strlen(tmp))))
 		goto error;
 
 	if(get_next_entry(tmp, &max, dpth))

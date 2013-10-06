@@ -65,4 +65,6 @@ extern int split_sig_with_save_path(const char *buf, unsigned int s, char *weak,
 
 extern int build_path_w(const char *path);
 
+extern int astrcat(char **buf, const char *append);
+
 #endif

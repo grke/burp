@@ -903,7 +903,7 @@ void write_status(const char *client, char phase, const char *path, struct confi
 	}
 }
 
-static int astrcat(char **buf, const char *append)
+int astrcat(char **buf, const char *append)
 {
 	int l=0;
 	char *copy=NULL;
@@ -1289,6 +1289,10 @@ void cmd_to_text(char cmd, char *buf, size_t len)
 			snprintf(buf, len, "Plain file changed"); break;
 		case CMD_TIMESTAMP:
 			snprintf(buf, len, "Backup timestamp"); break;
+		case CMD_MANIFEST:
+			snprintf(buf, len, "Path to a manifest"); break;
+		case CMD_FINGERPRINT:
+			snprintf(buf, len, "Fingerprint part of a signature"); break;
 		default:
 			snprintf(buf, len, "----------------"); break;
 	}

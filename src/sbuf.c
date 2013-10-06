@@ -544,6 +544,8 @@ static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, struct dpth
 				else
 				{
 					// Just fill in the sig details.
+					// FIX THIS: should have a separate
+					// case CMD_XXX.
 					if(split_sig_with_save_path(rbuf->buf,
 						rbuf->len,
 						blk->weak, blk->strong,
@@ -581,6 +583,11 @@ static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, struct dpth
 					return -1;
 				}
 				break;
+			case CMD_MANIFEST:
+			case CMD_FINGERPRINT:
+				sbuf_from_iobuf_path(sb, rbuf);
+				rbuf->buf=NULL;
+				return 0;
 			case CMD_ERROR:
 				printf("got error: %s\n", rbuf->buf);
 				free(rbuf->buf); rbuf->buf=NULL;

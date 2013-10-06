@@ -53,6 +53,7 @@ static int fwrite_dat(struct iobuf *rbuf, struct dpth_fp *dpth_fp)
 	return fwrite_buf(CMD_DATA, rbuf->buf, rbuf->len, dpth_fp->dfp);
 }
 
+/*
 static int fwrite_sig(struct blk *blk, struct dpth_fp *dpth_fp)
 {
 	int ret;
@@ -68,6 +69,7 @@ static int fwrite_sig(struct blk *blk, struct dpth_fp *dpth_fp)
 
 	return ret;
 }
+*/
 
 static int write_incexc(const char *realworking, const char *incexc)
 {
@@ -493,9 +495,8 @@ static int add_data_to_store(struct blist *blist, struct iobuf *rbuf, struct dpt
 	}
 
 	// Add it to the data store straight away.
-	if(fwrite_dat(rbuf, blk->dpth_fp)
-	  || fwrite_sig(blk, blk->dpth_fp))
-		return -1;
+	if(fwrite_dat(rbuf, blk->dpth_fp)) return -1;
+	//if(fwrite_sig(blk, blk->dpth_fp)) return -1;
 
 	blk->got=1;
 	blk=blk->next;
@@ -904,7 +905,7 @@ static void dump_slist(struct slist *slist, const char *msg)
 }
 */
 
-static int backup_server(const char *cmanifest, gzFile *cmanzp, const char *changed, const char *unchanged, const char *manifest, const char *client, const char *datadir, struct config *conf)
+static int backup_server(const char *cmanifest, gzFile *cmanzp, const char *changed, const char *unchanged, const char *manifest, const char *client, const char *datadir, const char *rmanifest, struct config *conf)
 {
 	int ret=-1;
 	int scan_end=0;
@@ -981,7 +982,7 @@ static int backup_server(const char *cmanifest, gzFile *cmanzp, const char *chan
 		goto end;
 	}
 
-	if(phase3(changed, unchanged, manifest, conf))
+	if(phase3(changed, unchanged, manifest, rmanifest, datadir, conf))
 		goto end;
 
 	ret=0;
@@ -1041,6 +1042,8 @@ int do_backup_server(const char *basedir, const char *current, const char *worki
 	char *cmanifest=NULL;
 	// Real path to the working directory
 	char *realworking=NULL;
+	// real path to the last manifest (after backup has finished)
+	char *rmanifest=NULL;
 	char tstmp[64]="";
 	char *datadir=NULL;
 	char *changed=NULL;
@@ -1061,7 +1064,8 @@ int do_backup_server(const char *basedir, const char *current, const char *worki
 
 	if(get_new_timestamp(cconf, basedir, tstmp, sizeof(tstmp)))
 		goto error;
-	if(!(realworking=prepend_s(basedir, tstmp, strlen(tstmp))))
+	if(!(realworking=prepend_s(basedir, tstmp, strlen(tstmp)))
+	 || !(rmanifest=prepend_s(realworking, "manifest", strlen("manifest"))))
 	{
 		log_and_send_oom(__FUNCTION__);
 		goto error;
@@ -1113,7 +1117,7 @@ int do_backup_server(const char *basedir, const char *current, const char *worki
 		goto error;
 
 	if(backup_server(cmanifest, &cmanzp, changed, unchanged,
-		manifest, client, datadir, cconf))
+		manifest, client, datadir, rmanifest, cconf))
 	{
 		logp("error in backup\n");
 		goto error;
@@ -1139,6 +1143,7 @@ end:
 	if(datadir) free(datadir);
 	if(changed) free(changed);
 	if(unchanged) free(unchanged);
+	if(rmanifest) free(rmanifest);
 	set_logfp(NULL, cconf); // does an fclose on logfp.
 	return ret;
 }

@@ -150,11 +150,6 @@ printf("hash load %s\n", path);
 			if(process_sig(cmd, buf, s))
 				goto end;
 		}
-		else
-		{
-			buf[s]=0;
-			printf(" and: %s\n", buf);
-		}
 	}
 
 	ret=0;

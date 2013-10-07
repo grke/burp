@@ -477,25 +477,9 @@ static int set_up_for_sig_info(struct slist *slist, struct blist *blist, struct 
 	return 0;
 }
 
-static int add_to_sig_list(struct slist *slist, struct blist *blist, struct blist *iblist, struct iobuf *rbuf, struct dpth *dpth, uint64_t *wrap_up, struct config *conf)
+static int post_deduplication(struct slist *slist, struct blist *blist, struct blist *iblist)
 {
-	int ia;
-	// Goes on slist->add_sigs_here
-	struct blk *blk;
 	struct sbuf *sb;
-
-//	printf("CMD_SIG: %s\n", rbuf->buf);
-
-	if(!(blk=blk_alloc())) return -1;
-	blk_add_to_list(blk, iblist);
-
-	// FIX THIS: Should not just load into strings.
-	if(split_sig(rbuf->buf, rbuf->len, blk->weak, blk->strong)) return -1;
-
-	if((ia=deduplicate_maybe(iblist, blk, dpth, conf, wrap_up))<0)
-		return -1;
-	else if(!ia)
-		return 0; // Nothing to do for now.
 
 	// Getting here means deduplication happened.
 	// Can now add the blocks to blist. These are the ones that we
@@ -518,6 +502,28 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist, struct blis
 	iblist->tail=NULL;
 
 	return 0;
+}
+
+static int add_to_sig_list(struct slist *slist, struct blist *blist, struct blist *iblist, struct iobuf *rbuf, struct dpth *dpth, uint64_t *wrap_up, struct config *conf)
+{
+	int ia;
+	// Goes on slist->add_sigs_here
+	struct blk *blk;
+
+	//printf("CMD_SIG: %s\n", rbuf->buf);
+
+	if(!(blk=blk_alloc())) return -1;
+	blk_add_to_list(blk, iblist);
+
+	// FIX THIS: Should not just load into strings.
+	if(split_sig(rbuf->buf, rbuf->len, blk->weak, blk->strong)) return -1;
+
+	if((ia=deduplicate_maybe(iblist, blk, dpth, conf, wrap_up))<0)
+		return -1;
+	else if(!ia)
+		return 0; // Nothing to do for now.
+
+	return post_deduplication(slist, blist, iblist);
 }
 
 static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist *blist, struct blist *iblist, struct config *conf, int *scan_end, int *sigs_end, int *backup_end, const char *cmanifest, gzFile *cmanzp, gzFile unzp, struct dpth *dpth, uint64_t *wrap_up, const char *datadir)
@@ -623,6 +629,14 @@ printf("SCAN END\n");
 			}
 			else if(!strcmp(rbuf->buf, "sigs_end"))
 			{
+				if(iblist->head)
+				{
+					if(deduplicate(iblist,
+						dpth, conf, wrap_up)
+					  || post_deduplication(slist,
+						blist, iblist))
+							goto error;
+				}
 printf("SIGS END\n");
 				*sigs_end=1;
 				goto end;

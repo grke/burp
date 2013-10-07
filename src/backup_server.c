@@ -14,6 +14,7 @@
 #include "attribs.h"
 #include "hash.h"
 #include "phase3.h"
+#include "champ_chooser.h"
 
 static int fprint_tag(FILE *fp, char cmd, unsigned int s)
 {
@@ -415,63 +416,6 @@ static int entry_changed(struct sbuf *sb, const char *cmanifest, gzFile *cmanzp,
 	return 0;
 }
 
-static char *get_fq_path(const char *path)
-{
-	static char fq_path[24];
-	snprintf(fq_path, sizeof(fq_path), "%s\n", path);
-	return fq_path;
-}
-
-static int already_got_block(struct blk *blk, struct dpth *dpth)
-{
-	static struct weak_entry *weak_entry;
-
-	blk->fingerprint=strtoull(blk->weak, 0, 16);
-	// If already got, need to overwrite the references.
-	if((weak_entry=find_weak_entry(blk->fingerprint)))
-	{
-		static struct strong_entry *strong_entry;
-		if((strong_entry=find_strong_entry(weak_entry, blk->strong)))
-		{
-			snprintf(blk->save_path, sizeof(blk->save_path),
-				"%s", get_fq_path(strong_entry->path));
-//	printf("FOUND: %s %s\n", blk->weak, blk->strong);
-			blk->got=1;
-			return 0;
-		}
-		else
-		{
-//	printf("COLLISION: %s %s\n", blk->weak, blk->strong);
-//			collisions++;
-		}
-	}
-	else
-	{
-		// Add both to hash table.
-		if(!(weak_entry=add_weak_entry(blk->fingerprint)))
-			return -1;
-	}
-
-	if(weak_entry)
-	{
-		// Have a weak entry, still need to add a strong entry.
-		if(!(weak_entry->strong=add_strong_entry(weak_entry,
-			blk->strong, dpth)))
-				return -1;
-
-		// Set up the details of where the block will be saved.
-		snprintf(blk->save_path, sizeof(blk->save_path),
-			"%s", get_fq_path(dpth_mk(dpth)));
-
-		if(!(blk->dpth_fp=get_dpth_fp(dpth))) return -1;
-		if(!dpth_incr_sig(dpth)) return -1;
-
-		return 0;
-	}
-
-	return 0;
-}
-
 static int add_data_to_store(struct blist *blist, struct iobuf *rbuf, struct dpth *dpth)
 {
 //	static struct blk *blk=NULL;
@@ -533,58 +477,50 @@ static int set_up_for_sig_info(struct slist *slist, struct blist *blist, struct 
 	return 0;
 }
 
-static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobuf *rbuf, struct dpth *dpth, uint64_t *wrap_up)
+static int add_to_sig_list(struct slist *slist, struct blist *blist, struct blist *iblist, struct iobuf *rbuf, struct dpth *dpth, uint64_t *wrap_up, struct config *conf)
 {
-	static int consecutive_found_block=0;
+	int ia;
 	// Goes on slist->add_sigs_here
 	struct blk *blk;
 	struct sbuf *sb;
 
 //	printf("CMD_SIG: %s\n", rbuf->buf);
 
-	sb=slist->add_sigs_here;
 	if(!(blk=blk_alloc())) return -1;
-
-	blk_add_to_list(blk, blist);
-	if(!sb->bstart) sb->bstart=blk;
-	if(!sb->bsighead) sb->bsighead=blk;
-
-	if(!strncmp(rbuf->buf,
-		// FIX THIS - represents zero length block.
-		"0000000000000000D41D8CD98F00B204E9800998ECF8427E", rbuf->len))
-	{
-		blk->got=1;
-		return 0;
-	}
+	blk_add_to_list(blk, iblist);
 
 	// FIX THIS: Should not just load into strings.
 	if(split_sig(rbuf->buf, rbuf->len, blk->weak, blk->strong)) return -1;
 
-	// If already got, this function will set blk->data
-	// to be the location of the already got block.
-	if(already_got_block(blk, dpth)) return -1;
+	if((ia=deduplicate_maybe(iblist, blk, dpth, conf, wrap_up))<0)
+		return -1;
+	else if(!ia)
+		return 0; // Nothing to do for now.
 
-	if(blk->got)
-	{
-		if(++consecutive_found_block>5000)
-		{
-			*wrap_up=blk->index;
-			consecutive_found_block=0;
-		}
-//		printf("Do not need data for %lu %lu %s\n", sb->index,
-//			blk->index, slist->add_sigs_here->path);
-	}
-	else
-	{
-		consecutive_found_block=0;
-//		printf("Need data for %lu %lu %s\n", sb->index,
-//			blk->index, slist->add_sigs_here->path);
-	}
+	// Getting here means deduplication happened.
+	// Can now add the blocks to blist. These are the ones that we
+	// want to request, or to write the references to the new
+	// manifest.
+
+	sb=slist->add_sigs_here;
+
+	if(!sb->bstart) sb->bstart=iblist->head;
+	sb->bend=iblist->tail;
+
+	if(!blist->head) blist->head=iblist->head;
+	else if(blist->tail) blist->tail->next=iblist->head;
+
+	blist->tail=iblist->tail;
+
+	if(!sb->bsighead) sb->bsighead=iblist->head;
+
+	iblist->head=NULL;
+	iblist->tail=NULL;
 
 	return 0;
 }
 
-static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist *blist, struct config *conf, int *scan_end, int *sigs_end, int *backup_end, const char *cmanifest, gzFile *cmanzp, gzFile unzp, struct dpth *dpth, uint64_t *wrap_up)
+static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist *blist, struct blist *iblist, struct config *conf, int *scan_end, int *sigs_end, int *backup_end, const char *cmanifest, gzFile *cmanzp, gzFile unzp, struct dpth *dpth, uint64_t *wrap_up, const char *datadir)
 {
 	int ret=0;
 	static int ec=0;
@@ -614,8 +550,9 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			if(set_up_for_sig_info(slist, blist, inew)) goto error;
 			return 0;
 		case CMD_SIG:
-			if(add_to_sig_list(slist, blist, rbuf, dpth, wrap_up))
-				goto error;
+			if(add_to_sig_list(slist, blist, iblist,
+				rbuf, dpth, wrap_up, conf))
+					goto error;
 			goto end;
 
 		/* Incoming scan information. */
@@ -915,6 +852,7 @@ static int backup_server(const char *cmanifest, gzFile *cmanzp, const char *chan
 	int blk_requests_end=0;
 	struct slist *slist=NULL;
 	struct blist *blist=NULL;
+	struct blist *iblist=NULL;
 	struct iobuf *rbuf=NULL;
 	struct iobuf *wbuf=NULL;
 	struct dpth *dpth=NULL;
@@ -928,8 +866,10 @@ static int backup_server(const char *cmanifest, gzFile *cmanzp, const char *chan
 	logp("Begin backup\n");
 	printf("DATADIR: %s\n", datadir);
 
-	if(!(slist=slist_alloc())
+	if(champ_chooser_init(datadir, conf)
+	  || !(slist=slist_alloc())
 	  || !(blist=blist_alloc())
+	  || !(iblist=blist_alloc())
 	  || !(wbuf=iobuf_alloc())
 	  || !(rbuf=iobuf_alloc())
 	  || !(dpth=dpth_alloc(datadir))
@@ -937,6 +877,8 @@ static int backup_server(const char *cmanifest, gzFile *cmanzp, const char *chan
 	  || !(chzp=gzopen_file(changed, "wb"))
 	  || !(unzp=gzopen_file(unchanged, "wb")))
 		goto end;
+
+printf("x\n");
 
 	while(!backup_end)
 	{
@@ -962,9 +904,9 @@ static int backup_server(const char *cmanifest, gzFile *cmanzp, const char *chan
 			goto end;
 		}
 
-		if(rbuf->buf && deal_with_read(rbuf, slist, blist, conf,
+		if(rbuf->buf && deal_with_read(rbuf, slist, blist, iblist, conf,
 			&scan_end, &sigs_end, &backup_end,
-			cmanifest, cmanzp, unzp, dpth, &wrap_up))
+			cmanifest, cmanzp, unzp, dpth, &wrap_up, datadir))
 				goto end;
 
 		if(write_to_changed_file(chzp, slist, blist, dpth, backup_end))
@@ -993,12 +935,16 @@ end:
 	gzclose_fp(&unzp);
 	slist_free(slist);
 	blist_free(blist);
+	blist_free(iblist);
 	iobuf_free(rbuf);
 	// Write buffer did not allocate 'buf'. 
-	wbuf->buf=NULL;
+	if(wbuf) wbuf->buf=NULL;
 	iobuf_free(wbuf);
-	if((dpth_fp=get_dpth_fp(dpth))) dpth_fp_close(dpth_fp);
-	dpth_free(dpth);
+	if(dpth)
+	{
+		if((dpth_fp=get_dpth_fp(dpth))) dpth_fp_close(dpth_fp);
+		dpth_free(dpth);
+	}
 	return ret;
 }
 

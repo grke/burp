@@ -364,10 +364,10 @@ static int merge_sparse_indexes(const char *global, const char *sparse, struct c
 	  || !(gsb=sbuf_alloc())
 	  || !(tmpfile=prepend(global, "tmp", strlen("tmp"), "."))
 	  || !(nzp=gzopen_file(sparse, "rb"))
+	  || build_path_w(tmpfile)
 	  || !(tzp=gzopen_file(tmpfile, "wb"))
 	  || (!lstat(global, &statp) && !(gzp=gzopen_file(global, "rb"))))
 		goto end;
-
 
 	while(gzp || nzp)
 	{

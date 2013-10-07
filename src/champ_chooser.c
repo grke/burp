@@ -229,7 +229,7 @@ static int already_got_block(struct blk *blk, struct dpth *dpth)
 		{
 			snprintf(blk->save_path, sizeof(blk->save_path),
 				"%s", get_fq_path(strong_entry->path));
-      printf("FOUND: %s %s\n", blk->weak, blk->strong);
+printf("FOUND: %s %s\n", blk->weak, blk->strong);
 			blk->got=1;
 			return 0;
 		}
@@ -242,16 +242,16 @@ static int already_got_block(struct blk *blk, struct dpth *dpth)
 	else
 	{
 		// Add both to hash table.
-		if(!(weak_entry=add_weak_entry(blk->fingerprint)))
-			return -1;
+//		if(!(weak_entry=add_weak_entry(blk->fingerprint)))
+//			return -1;
 	}
 
 	if(weak_entry)
 	{
 		// Have a weak entry, still need to add a strong entry.
-		if(!(weak_entry->strong=add_strong_entry(weak_entry,
-			blk->strong, dpth_mk(dpth))))
-				return -1;
+//		if(!(weak_entry->strong=add_strong_entry(weak_entry,
+//			blk->strong, dpth_mk(dpth))))
+//				return -1;
 
 		// Set up the details of where the block will be saved.
 		snprintf(blk->save_path, sizeof(blk->save_path),
@@ -290,7 +290,9 @@ printf("i size: %d\n", in->size);
 	return best;
 }
 
-int deduplicate(struct blist *iblist, struct incoming *in, struct dpth *dpth, struct config *conf, uint64_t *wrap_up)
+static struct incoming *in=NULL;
+
+int deduplicate(struct blist *iblist, struct dpth *dpth, struct config *conf, uint64_t *wrap_up)
 {
 	struct blk *blk;
 	struct candidate *champ;
@@ -300,10 +302,16 @@ printf("in deduplicate()\n");
 	{
 		printf("Got champ: %s\n", champ->path);
 	}
+	else
+	{
+		printf("No champ\n");
+	}
 
 	// Deduplicate here.
-	if(hash_load(champ->path, conf)) return -1;
-printf("in deduplicate() a\n");
+	if(champ)
+	{
+		if(hash_load(champ->path, conf)) return -1;
+	}
 
 	for(blk=iblist->head; blk; blk=blk->next)
 	{
@@ -323,13 +331,11 @@ printf("in deduplicate() a\n");
 	}
 	if(*wrap_up) *wrap_up=iblist->tail->index;
 
-printf("in deduplicate() b\n");
 
 	// Start the incoming array again.
 	in->size=0;
 	// Destroy the deduplication hash table.
 	hash_delete_all();
-printf("in deduplicate() c\n");
 
 	return 0;
 }
@@ -339,7 +345,6 @@ printf("in deduplicate() c\n");
 int deduplicate_maybe(struct blist *iblist, struct blk *blk, struct dpth *dpth, struct config *conf, uint64_t *wrap_up)
 {
 	static int count=0;
-	static struct incoming *in=NULL;
 	if(!in && !(in=incoming_alloc())) return -1;
 
 	blk->fingerprint=strtoull(blk->weak, 0, 16);
@@ -351,6 +356,6 @@ int deduplicate_maybe(struct blist *iblist, struct blk *blk, struct dpth *dpth, 
 	if(++count!=SIG_MAX) return 0;
 	count=0;
 
-	if(deduplicate(iblist, in, dpth, conf, wrap_up)<0) return -1;
+	if(deduplicate(iblist, dpth, conf, wrap_up)<0) return -1;
 	return 1; // deduplication was successful
 }

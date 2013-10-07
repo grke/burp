@@ -34,6 +34,7 @@ SVRSRCS =	acl.c \
 		blk.c \
 		ca_client.c \
 		ca_server.c \
+		champ_chooser.c \
 		client.c \
 		client_vss.c \
 		conf.c \

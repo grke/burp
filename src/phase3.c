@@ -310,6 +310,11 @@ static int sort_sparse_indexes(const char *sparse, struct config *conf)
 
 	for(x=0; x<h; x++)
 	{
+		// Skip duplicates.
+		if(x>0 && !hookscmp(
+		  (const struct hooks **)&hooks[x],
+		  (const struct hooks **)&hooks[x-1])) continue;
+
 		if(gzprintf_hooks(tzp, hooks[x]))
 			goto end;
 	}

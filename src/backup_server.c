@@ -46,31 +46,35 @@ static FILE *file_open_w(const char *path, const char *mode)
 	return fp;
 }
 
-static int fwrite_dat(struct iobuf *rbuf, struct dpth_fp *dpth_fp)
+static int fwrite_dat(struct iobuf *rbuf, struct blk *blk, struct dpth *dpth)
 {
-	if(!dpth_fp->dfp
-	  && !(dpth_fp->dfp=file_open_w(dpth_fp->path_dat, "wb")))
-		return -1;
-	return fwrite_buf(CMD_DATA, rbuf->buf, rbuf->len, dpth_fp->dfp);
+	static FILE *fp=NULL;
+	static char *last_save_path=NULL;
+//printf("want to write: %s\n", blk->save_path);
+
+	if(!fp || (last_save_path && strncmp(last_save_path, blk->save_path,
+		14))) // Just the first three components, excluding sig number.
+	{
+		char *path;
+		if(!(path=prepend_s(dpth->base_path, blk->save_path, 14)))
+			return -1;
+		if(fp && close_fp(&fp))
+			return -1;
+		if(!(fp=file_open_w(path, "wb")))
+		{
+			free(path);
+			return -1;
+		}
+		free(path);
+		if(last_save_path) free(last_save_path);
+		if(!(last_save_path=strdup(blk->save_path)))
+		{
+			log_out_of_memory(__FUNCTION__);
+			return -1;
+		}
+	}
+	return fwrite_buf(CMD_DATA, rbuf->buf, rbuf->len, fp);
 }
-
-/*
-static int fwrite_sig(struct blk *blk, struct dpth_fp *dpth_fp)
-{
-	int ret;
-	char tmp[64];
-	// argh
-	snprintf(tmp, sizeof(tmp), "%s%s\n", blk->weak, blk->strong);
-	if(!dpth_fp->sfp
-	  && !(dpth_fp->sfp=file_open_w(dpth_fp->path_sig, "wb")))
-		return -1;
-	ret=fwrite_buf(CMD_SIG, tmp, strlen(tmp), dpth_fp->sfp);
-
-	if(dpth_fp_maybe_close(dpth_fp)) return -1;
-
-	return ret;
-}
-*/
 
 static int write_incexc(const char *realworking, const char *incexc)
 {
@@ -418,8 +422,8 @@ static int entry_changed(struct sbuf *sb, const char *cmanifest, gzFile *cmanzp,
 
 static int add_data_to_store(struct blist *blist, struct iobuf *rbuf, struct dpth *dpth)
 {
-//	static struct blk *blk=NULL;
-	struct blk *blk=NULL;
+	static struct blk *blk=NULL;
+//	struct blk *blk=NULL;
 //	static struct weak_entry *weak_entry;
 
 //	printf("Got data %lu!\n", rbuf->len);
@@ -428,7 +432,7 @@ static int add_data_to_store(struct blist *blist, struct iobuf *rbuf, struct dpt
 	// FIX THIS: Going up the list here, and then later
 	// when writing to the manifest is not efficient.
 	if(!blk) blk=blist->head;
-	for(; blk && (!blk->requested || blk->got); blk=blk->next)
+	for(; blk && (!blk->requested || blk->got==GOT); blk=blk->next)
 	{
 //		printf("try: %d\n", blk->index);
 	}
@@ -437,12 +441,13 @@ static int add_data_to_store(struct blist *blist, struct iobuf *rbuf, struct dpt
 		logp("Received data but could not find next requested block.\n");
 		return -1;
 	}
+//	printf("Got blk %lu!\n", blk->index);
 
 	// Add it to the data store straight away.
-	if(fwrite_dat(rbuf, blk->dpth_fp)) return -1;
-	//if(fwrite_sig(blk, blk->dpth_fp)) return -1;
+//if(!blk->dpth_fp) printf("no!\n");
+	if(fwrite_dat(rbuf, blk, dpth)) return -1;
 
-	blk->got=1;
+	blk->got=GOT;
 	blk=blk->next;
 
 	return 0;
@@ -477,56 +482,50 @@ static int set_up_for_sig_info(struct slist *slist, struct blist *blist, struct 
 	return 0;
 }
 
-static int post_deduplication(struct slist *slist, struct blist *blist, struct blist *iblist)
+/*
+static void dump_blks(const char *msg, struct blk *b)
 {
-	struct sbuf *sb;
-
-	// Getting here means deduplication happened.
-	// Can now add the blocks to blist. These are the ones that we
-	// want to request, or to write the references to the new
-	// manifest.
-
-	sb=slist->add_sigs_here;
-
-	if(!sb->bstart) sb->bstart=iblist->head;
-	sb->bend=iblist->tail;
-
-	if(!blist->head) blist->head=iblist->head;
-	else if(blist->tail) blist->tail->next=iblist->head;
-
-	blist->tail=iblist->tail;
-
-	if(!sb->bsighead) sb->bsighead=iblist->head;
-
-	iblist->head=NULL;
-	iblist->tail=NULL;
-
-	return 0;
+	struct blk *xx;
+	for(xx=b; xx; xx=xx->next)
+		printf("%s: %d %d %p\n", msg, xx->index, xx->got, xx);
 }
+*/
 
-static int add_to_sig_list(struct slist *slist, struct blist *blist, struct blist *iblist, struct iobuf *rbuf, struct dpth *dpth, uint64_t *wrap_up, struct config *conf)
+static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobuf *rbuf, struct dpth *dpth, uint64_t *wrap_up, struct config *conf)
 {
 	int ia;
 	// Goes on slist->add_sigs_here
 	struct blk *blk;
+        struct sbuf *sb;
 
-	//printf("CMD_SIG: %s\n", rbuf->buf);
+	printf("CMD_SIG: %s\n", rbuf->buf);
 
 	if(!(blk=blk_alloc())) return -1;
-	blk_add_to_list(blk, iblist);
+	blk_add_to_list(blk, blist);
+
+	sb=slist->add_sigs_here;
+        if(!sb->bstart) sb->bstart=blk;
+        if(!sb->bsighead) sb->bsighead=blk;
 
 	// FIX THIS: Should not just load into strings.
 	if(split_sig(rbuf->buf, rbuf->len, blk->weak, blk->strong)) return -1;
 
-	if((ia=deduplicate_maybe(iblist, blk, dpth, conf, wrap_up))<0)
+	if((ia=deduplicate_maybe(blist, blk, dpth, conf, wrap_up))<0)
+	{
+		printf("dm -1\n");
 		return -1;
+	}
 	else if(!ia)
+	{
+		printf("dm 0\n");
 		return 0; // Nothing to do for now.
+	}
 
-	return post_deduplication(slist, blist, iblist);
+	printf("dm post\n");
+	return 0;
 }
 
-static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist *blist, struct blist *iblist, struct config *conf, int *scan_end, int *sigs_end, int *backup_end, const char *cmanifest, gzFile *cmanzp, gzFile unzp, struct dpth *dpth, uint64_t *wrap_up, const char *datadir)
+static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist *blist, struct config *conf, int *scan_end, int *sigs_end, int *backup_end, const char *cmanifest, gzFile *cmanzp, gzFile unzp, struct dpth *dpth, uint64_t *wrap_up, const char *datadir)
 {
 	int ret=0;
 	static int ec=0;
@@ -556,7 +555,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			if(set_up_for_sig_info(slist, blist, inew)) goto error;
 			return 0;
 		case CMD_SIG:
-			if(add_to_sig_list(slist, blist, iblist,
+			if(add_to_sig_list(slist, blist,
 				rbuf, dpth, wrap_up, conf))
 					goto error;
 			goto end;
@@ -629,14 +628,6 @@ printf("SCAN END\n");
 			}
 			else if(!strcmp(rbuf->buf, "sigs_end"))
 			{
-				if(iblist->head)
-				{
-					if(deduplicate(iblist,
-						dpth, conf, wrap_up)
-					  || post_deduplication(slist,
-						blist, iblist))
-							goto error;
-				}
 printf("SIGS END\n");
 				*sigs_end=1;
 				goto end;
@@ -668,14 +659,15 @@ static int encode_req(struct blk *blk, char *req)
 	return 0;
 }
 
-static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, int sigs_end, int *blk_requests_end)
+static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, struct blist *blist, int sigs_end, int *blk_requests_end, struct dpth *dpth, struct config *conf, uint64_t *wrap_up)
 {
 	static char req[32]="";
 	struct sbuf *sb=slist->blks_to_request;
+//printf("get wbuf from sigs: %p\n", sb);
 
 	while(sb && !sb->need_data)
 	{
-//		printf("Do not need data %d: %s\n", sb->need_data, sb->path);
+		printf("Do not need data %d: %s\n", sb->need_data, sb->path);
 		sb=sb->next;
 	}
 	if(!sb)
@@ -687,28 +679,42 @@ static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, int sigs
 				CMD_GEN, (char *)"blk_requests_end");
 			*blk_requests_end=1;
 		}
-		return;
+		return 0;
 	}
 	if(!sb->bsighead)
 	{
 //printf("HERE X %d %d: %s\n", sigs_end, *blk_requests_end, sb->path);
 		// Trying to move onto the next file.
 		// ??? Does this really work?
-		if(sb->bend) slist->blks_to_request=sb->next;
+		if(sb->bend)
+		{
+			slist->blks_to_request=sb->next;
+			printf("move to next\n");
+		}
 		if(sigs_end && !*blk_requests_end)
 		{
 			iobuf_from_str(wbuf,
 				CMD_GEN, (char *)"blk_requests_end");
 			*blk_requests_end=1;
 		}
-		return;
+		return 0;
+	}
+//printf("HERE Y %p %p %lu %d\n", sb->bsighead, sb->bsighead->next, sb->bsighead->index, sb->bsighead->got);
+
+	if(sb->bsighead->got==INCOMING)
+	{
+		if(sigs_end
+		  && deduplicate(sb->bsighead, dpth, conf, wrap_up))
+			return -1;
+		return 0;
 	}
 
-	if(!sb->bsighead->got)
+	if(sb->bsighead->got==NOT_GOT)
 	{
 		encode_req(sb->bsighead, req);
 		iobuf_from_str(wbuf, CMD_DATA_REQ, req);
-//	printf("data request: %lu\n", sb->bsighead->index);
+printf("DATA REQUEST: %lu %04lX %s\n",
+	sb->bsighead->index, sb->bsighead->index, sb->bsighead->weak);
 		sb->bsighead->requested=1;
 	}
 
@@ -724,6 +730,7 @@ static void get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, int sigs
 		sb->bsighead=sb->bsighead->next;
 //		if(!sb->bsighead) printf("sb->bsighead fell off end b\n");
 	}
+	return 0;
 }
 
 static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist, int scan_end, int *requests_end)
@@ -783,23 +790,23 @@ static int write_to_changed_file(gzFile chzp, struct slist *slist, struct blist 
 			}
 
 			while((blk=sb->bstart)
-				&& blk->got
+				&& blk->got==GOT
 				&& (blk->next || backup_end))
 			{
 				if(*(blk->save_path))
 				{
 					gzprintf_sig_and_path(chzp, blk);
 				}
-/*
 				else
 				{
 					printf("!!!!!!!!!!!!! no data; %s\n",
 						sb->path);
 					exit(1);
 				}
-*/
+
 				if(blk==sb->bend)
 				{
+printf("blk==sb->bend END FILE\n");
 					slist->head=sb->next;
 					//break;
 					if(!(blist->head=sb->bstart))
@@ -811,7 +818,6 @@ static int write_to_changed_file(gzFile chzp, struct slist *slist, struct blist 
 				}
 
 				sb->bstart=blk->next;
-//printf("free: %d\n", blk->index);
 				blk_free(blk);
 			}
 			if(hack) continue;
@@ -825,6 +831,7 @@ static int write_to_changed_file(gzFile chzp, struct slist *slist, struct blist 
 			if(sbuf_to_manifest(sb, chzp)) return -1;
 
 			// Move along.
+printf("END FILE\n");
 			slist->head=sb->next;
 
 			sanity_before_sbuf_free(slist, sb);
@@ -866,11 +873,9 @@ static int backup_server(const char *cmanifest, gzFile *cmanzp, const char *chan
 	int blk_requests_end=0;
 	struct slist *slist=NULL;
 	struct blist *blist=NULL;
-	struct blist *iblist=NULL;
 	struct iobuf *rbuf=NULL;
 	struct iobuf *wbuf=NULL;
 	struct dpth *dpth=NULL;
-	struct dpth_fp *dpth_fp=NULL;
 	gzFile chzp=NULL;
 	gzFile unzp=NULL;
 	// This is used to tell the client that a number of consecutive blocks
@@ -883,7 +888,6 @@ static int backup_server(const char *cmanifest, gzFile *cmanzp, const char *chan
 	if(champ_chooser_init(datadir, conf)
 	  || !(slist=slist_alloc())
 	  || !(blist=blist_alloc())
-	  || !(iblist=blist_alloc())
 	  || !(wbuf=iobuf_alloc())
 	  || !(rbuf=iobuf_alloc())
 	  || !(dpth=dpth_alloc(datadir))
@@ -892,8 +896,6 @@ static int backup_server(const char *cmanifest, gzFile *cmanzp, const char *chan
 	  || !(unzp=gzopen_file(unchanged, "wb")))
 		goto end;
 
-printf("x\n");
-
 	while(!backup_end)
 	{
 		if(!wbuf->len)
@@ -901,8 +903,10 @@ printf("x\n");
 			get_wbuf_from_wrap_up(wbuf, &wrap_up);
 			if(!wbuf->len)
 			{
-				get_wbuf_from_sigs(wbuf, slist,
-					sigs_end, &blk_requests_end);
+				if(get_wbuf_from_sigs(wbuf, slist, blist,
+					sigs_end, &blk_requests_end, dpth,
+						conf, &wrap_up))
+							goto end;
 				if(!wbuf->len)
 				{
 					get_wbuf_from_files(wbuf, slist,
@@ -914,17 +918,24 @@ printf("x\n");
 //		if(wbuf->len) printf("send request: %s\n", wbuf->buf);
 		if(async_rw_ng(rbuf, wbuf))
 		{
-			logp("error in async_rw\n");
+			logp("error in async_rw in %s()\n", __FUNCTION__);
 			goto end;
 		}
 
-		if(rbuf->buf && deal_with_read(rbuf, slist, blist, iblist, conf,
+		if(rbuf->buf && deal_with_read(rbuf, slist, blist, conf,
 			&scan_end, &sigs_end, &backup_end,
 			cmanifest, cmanzp, unzp, dpth, &wrap_up, datadir))
 				goto end;
 
 		if(write_to_changed_file(chzp, slist, blist, dpth, backup_end))
 			goto end;
+	}
+
+	if(blist->head)
+	{
+		printf("FINISHING but still want block: %lu\n",
+			blist->head->index);
+		goto end;
 	}
 
 	if(gzclose_fp(&chzp))
@@ -949,16 +960,11 @@ end:
 	gzclose_fp(&unzp);
 	slist_free(slist);
 	blist_free(blist);
-	blist_free(iblist);
 	iobuf_free(rbuf);
 	// Write buffer did not allocate 'buf'. 
 	if(wbuf) wbuf->buf=NULL;
 	iobuf_free(wbuf);
-	if(dpth)
-	{
-		if((dpth_fp=get_dpth_fp(dpth))) dpth_fp_close(dpth_fp);
-		dpth_free(dpth);
-	}
+	if(dpth) dpth_free(dpth);
 	return ret;
 }
 

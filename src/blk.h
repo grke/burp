@@ -6,7 +6,12 @@
 #include <openssl/md5.h>
 #include "rconf.h"
 
-#define SIG_MAX 0xFFF
+enum got
+{
+	INCOMING=0,
+	NOT_GOT,
+	GOT
+};
 
 typedef struct blk blk_t;
 
@@ -23,10 +28,10 @@ struct blk
 	char strong[32+1];
 	char save_path[19+1]; // eg "0000/0000/0000/0000"
 
-	struct dpth_fp *dpth_fp;
+//	struct dpth_fp *dpth_fp;
 
 	int requested;
-	int got;
+	enum got got;
 	uint64_t index;
 	struct blk *next;
 };

@@ -789,4 +789,3 @@ int gzprintf_sig(gzFile zp, struct blk *blk)
 		blk->weak, blk->strong);
 	return 0;
 }
-

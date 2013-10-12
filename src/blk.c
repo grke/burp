@@ -37,6 +37,7 @@ struct blk *blk_alloc_with_data(uint32_t max_data_length)
 
 void blk_free(struct blk *blk)
 {
+return;
 	if(!blk) return;
 	if(blk->data)
 	{
@@ -109,6 +110,7 @@ void blist_free(struct blist *blist)
 void blk_add_to_list(struct blk *blk, struct blist *blist)
 {
 	static int bindex=1;
+printf("blk_add_to_list: %d\n", bindex);
 	blk->index=bindex++;
 	if(blist->tail)
 	{

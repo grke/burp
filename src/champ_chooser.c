@@ -155,8 +155,8 @@ int champ_chooser_init(const char *datadir, struct config *conf)
 			weak=strtoull(sb->path, 0, 16);
 			if(candidate_add(weak, candidate))
 				goto end;
-			printf("%s - %s %lu\n",
-				candidate->path, sb->path, weak);
+//			printf("%s - %s %lu\n",
+//				candidate->path, sb->path, weak);
 		}
 		else
 		{
@@ -229,8 +229,8 @@ static int already_got_block(struct blk *blk, struct dpth *dpth)
 		{
 			snprintf(blk->save_path, sizeof(blk->save_path),
 				"%s", get_fq_path(strong_entry->path));
-printf("FOUND: %s %s\n", blk->weak, blk->strong);
-			blk->got=1;
+//printf("FOUND: %s %s\n", blk->weak, blk->strong);
+			blk->got=GOT;
 			return 0;
 		}
 		else
@@ -246,22 +246,26 @@ printf("FOUND: %s %s\n", blk->weak, blk->strong);
 //			return -1;
 	}
 
-	if(weak_entry)
-	{
-		// Have a weak entry, still need to add a strong entry.
+	blk->got=NOT_GOT;
+
+//	if(weak_entry)
+//	{
+//		// Have a weak entry, still need to add a strong entry.
 //		if(!(weak_entry->strong=add_strong_entry(weak_entry,
 //			blk->strong, dpth_mk(dpth))))
 //				return -1;
 
 		// Set up the details of where the block will be saved.
 		snprintf(blk->save_path, sizeof(blk->save_path),
-			"%s", get_fq_path(dpth_mk(dpth)));
+//			"%s", get_fq_path(dpth_mk(dpth)));
+			"%s", dpth_mk(dpth));
+//printf("here: %s\n", blk->save_path);
 
-		if(!(blk->dpth_fp=get_dpth_fp(dpth))) return -1;
-		if(!dpth_incr_sig(dpth)) return -1;
+//		if(!(blk->dpth_fp=get_dpth_fp(dpth))) return -1;
+		if(dpth_incr_sig(dpth)) return -1;
 
-		return 0;
-	}
+//		return 0;
+//	}
 
 	return 0;
 }
@@ -292,12 +296,13 @@ printf("i size: %d\n", in->size);
 
 static struct incoming *in=NULL;
 
-int deduplicate(struct blist *iblist, struct dpth *dpth, struct config *conf, uint64_t *wrap_up)
+int deduplicate(struct blk *blks, struct dpth *dpth, struct config *conf, uint64_t *wrap_up)
 {
 	struct blk *blk;
 	struct candidate *champ;
+
 printf("in deduplicate()\n");
-	*wrap_up=0;
+	//*wrap_up=0;
 	if((champ=champ_chooser(in)))
 	{
 		printf("Got champ: %s\n", champ->path);
@@ -313,23 +318,25 @@ printf("in deduplicate()\n");
 		if(hash_load(champ->path, conf)) return -1;
 	}
 
-	for(blk=iblist->head; blk; blk=blk->next)
+	for(blk=blks; blk; blk=blk->next)
 	{
+//printf("try: %d\n", blk->index);
 		// FIX THIS - represents zero length block.
 		if(!blk->fingerprint // All zeroes.
 		  && !strcmp(blk->strong, "D41D8CD98F00B204E9800998ECF8427E"))
 		{
-			blk->got=1;
+			blk->got=GOT;
 			continue;
 		}
 
 		// If already got, this function will set blk->save_path
 		// to be the location of the already got block.
 		if(already_got_block(blk, dpth)) return -1;
+printf("after agb: %d %d\n", blk->index, blk->got);
 
-		if(blk->got && !*wrap_up) *wrap_up=1;
+		//if(blk->got==GOT && !*wrap_up) *wrap_up=1;
 	}
-	if(*wrap_up) *wrap_up=iblist->tail->index;
+	//if(*wrap_up) *wrap_up=blist->tail->index;
 
 
 	// Start the incoming array again.
@@ -342,20 +349,25 @@ printf("in deduplicate()\n");
 
 // Return 0 for OK, -1 for error, 1 to mean that the list of blocks has been
 // deduplicated.
-int deduplicate_maybe(struct blist *iblist, struct blk *blk, struct dpth *dpth, struct config *conf, uint64_t *wrap_up)
+int deduplicate_maybe(struct blist *blist, struct blk *blk, struct dpth *dpth, struct config *conf, uint64_t *wrap_up)
 {
 	static int count=0;
+	static struct blk *blks=NULL;
+	if(!blks) blks=blk;
 	if(!in && !(in=incoming_alloc())) return -1;
 
 	blk->fingerprint=strtoull(blk->weak, 0, 16);
+printf("%s\n", blk->weak);
 	if(*(blk->weak)=='F')
 	{
 		if(incoming_grow_maybe(in)) return -1;
 		in->weak[in->size-1]=blk->fingerprint;
 	}
-	if(++count!=SIG_MAX) return 0;
+	if(++count<SIG_MAX) return 0;
 	count=0;
 
-	if(deduplicate(iblist, dpth, conf, wrap_up)<0) return -1;
+	if(deduplicate(blks, dpth, conf, wrap_up)<0) return -1;
+	blks=NULL;
+printf("\n");
 	return 1; // deduplication was successful
 }

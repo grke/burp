@@ -28,14 +28,6 @@ static char *dpth_mk_seco(struct dpth *dpth)
 	return path;
 }
 
-static char *dpth_mk_tert(struct dpth *dpth)
-{
-	static char path[24];
-	snprintf(path, sizeof(path), "%04X/%04X/%04X",
-		dpth->prim, dpth->seco, dpth->tert);
-	return path;
-}
-
 char *dpth_mk(struct dpth *dpth)
 {
 	static char path[32];
@@ -97,72 +89,22 @@ static int dpth_incr(struct dpth *dpth)
 	return -1;
 }
 
-static char *dpth_get_path_dat(struct dpth *dpth)
-{
-	char *path=dpth_mk_tert(dpth);
-	return prepend_s(dpth->base_path_dat, path, strlen(path));
-}
-
-static char *dpth_get_path_sig(struct dpth *dpth)
-{
-	char *path=dpth_mk_tert(dpth);
-	return prepend_s(dpth->base_path_sig, path, strlen(path));
-}
-
 struct dpth *dpth_alloc(const char *base_path)
 {
         struct dpth *dpth;
-        if(!(dpth=(struct dpth *)calloc(1, sizeof(struct dpth)))
-	  || !(dpth->base_path=strdup(base_path)))
-	{
-		log_out_of_memory(__FUNCTION__);
-                goto error;
-	}
-	if((dpth->base_path_dat=prepend_s(base_path, "dat", strlen("dat")))
-	  && (dpth->base_path_sig=prepend_s(base_path, "sig", strlen("sig"))))
-		goto end;
-error:
+        if((dpth=(struct dpth *)calloc(1, sizeof(struct dpth)))
+	  && (dpth->base_path=strdup(base_path)))
+		return dpth;
+	log_out_of_memory(__FUNCTION__);
 	dpth_free(dpth);
-	dpth=NULL;
-end:
-	return dpth;
+	return NULL;
 }
 
-// The files get closed and path_dat/path_sig get freed in backup_server.c
-// now, but it is nasty.
-static struct dpth_fp *dpth_fp_alloc(struct dpth *dpth)
+int dpth_incr_sig(struct dpth *dpth)
 {
-	struct dpth_fp *dpth_fp;
-        if(!(dpth_fp=(struct dpth_fp *)calloc(1, sizeof(struct dpth_fp)))
-	  || !(dpth_fp->path_dat=dpth_get_path_dat(dpth))
-	  || !(dpth_fp->path_sig=dpth_get_path_sig(dpth)))
-	{
-		log_out_of_memory(__FUNCTION__);
-		return NULL;
-	}
-	return dpth_fp;
-}
-
-static struct dpth_fp *gdpth_fp=NULL;
-
-struct dpth_fp *get_dpth_fp(struct dpth *dpth)
-{
-	if(!gdpth_fp) gdpth_fp=dpth_fp_alloc(dpth);
-	return gdpth_fp;
-}
-
-struct dpth_fp *dpth_incr_sig(struct dpth *dpth)
-{
-	if(++(dpth->sig)<SIG_MAX)
-	{
-		return gdpth_fp;
-	}
+	if(++dpth->sig<SIG_MAX) return 0;
 	dpth->sig=0;
-
-	if(dpth_incr(dpth)) return NULL;
-
-	gdpth_fp=dpth_fp_alloc(dpth);
-	return gdpth_fp;
+	return dpth_incr(dpth);
 }
 
 int dpth_init(struct dpth *dpth)
@@ -171,12 +113,12 @@ int dpth_init(struct dpth *dpth)
 	int ret=0;
 	char *tmp=NULL;
 
-	if(get_highest_entry(dpth->base_path_dat, &max, NULL))
+	if(get_highest_entry(dpth->base_path, &max, NULL))
 		goto error;
 	if(max<0) max=0;
 	dpth->prim=max;
 	tmp=dpth_mk_prim(dpth);
-	if(!(tmp=prepend_s(dpth->base_path_dat, tmp, strlen(tmp))))
+	if(!(tmp=prepend_s(dpth->base_path, tmp, strlen(tmp))))
 		goto error;
 
 	if(get_highest_entry(tmp, &max, NULL))
@@ -185,7 +127,7 @@ int dpth_init(struct dpth *dpth)
 	dpth->seco=max;
 	free(tmp);
 	tmp=dpth_mk_seco(dpth);
-	if(!(tmp=prepend_s(dpth->base_path_dat, tmp, strlen(tmp))))
+	if(!(tmp=prepend_s(dpth->base_path, tmp, strlen(tmp))))
 		goto error;
 
 	if(get_next_entry(tmp, &max, dpth))
@@ -207,28 +149,6 @@ void dpth_free(struct dpth *dpth)
 {
 	if(!dpth) return;
 	if(dpth->base_path) free(dpth->base_path);
-	if(dpth->base_path_dat) free(dpth->base_path_dat);
-	if(dpth->base_path_sig) free(dpth->base_path_sig);
 	free(dpth);
 	dpth=NULL;
-}
-
-int dpth_fp_close(struct dpth_fp *dpth_fp)
-{
-	if(dpth_fp)
-	{
-		if(close_fp(&(dpth_fp->sfp))) return -1;
-		if(close_fp(&(dpth_fp->dfp))) return -1;
-		if(dpth_fp->path_dat) free(dpth_fp->path_dat);
-		if(dpth_fp->path_sig) free(dpth_fp->path_sig);
-		free(dpth_fp);
-	}
-	return 0;
-}
-
-int dpth_fp_maybe_close(struct dpth_fp *dpth_fp)
-{
-	if(dpth_fp && ++(dpth_fp->count)>=SIG_MAX)
-		return dpth_fp_close(dpth_fp);
-	return 0;
 }

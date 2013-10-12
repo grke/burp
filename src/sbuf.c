@@ -373,7 +373,7 @@ static int retrieve_blk_data(struct iobuf *sigbuf, struct dpth *dpth, struct blk
 
 	snprintf(tmp, sigbuf->len+1, "%s", sigbuf->buf);
 //printf("here %lu: %s\n", sigbuf->len+1, tmp);
-	snprintf(datpath, sizeof(datpath), "%s/%s", dpth->base_path_dat, tmp);
+	snprintf(datpath, sizeof(datpath), "%s/%s", dpth->base_path, tmp);
 //printf("x: %s\n", datpath);
 	if(!(cp=strrchr(datpath, '/')))
 	{

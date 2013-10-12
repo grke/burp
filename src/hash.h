@@ -6,8 +6,6 @@
 
 #include "dpth.h"
 
-#define SIG_MAX	0xFFF
-
 typedef struct strong_entry strong_entry_t;
 
 struct strong_entry

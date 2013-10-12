@@ -64,7 +64,7 @@ static int add_to_data_requests(struct blist *blist, struct iobuf *rbuf)
 	index=decode_req(rbuf->buf);
 
 	// Find the matching entry.
-//	printf("Request for data: %lu\n", index);
+	printf("Request for data: %lu\n", index);
 
 	//printf("last_requested: %lu\n", blist->last_requested->index);
 	for(blk=blist->last_requested; blk; blk=blk->next)
@@ -101,7 +101,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			int64_t wrap_up;
 			struct blk *blk;
 			from_base64(&wrap_up, rbuf->buf);
-//			printf("GOT: %016lX\n", wrap_up);
+			printf("GOT WRAP UP: %016lX\n", wrap_up);
 			for(blk=blist->head; blk; blk=blk->next)
 			{
 				if(blk->index==(uint64_t)wrap_up)
@@ -241,8 +241,8 @@ static void get_wbuf_from_data(struct iobuf *wbuf, struct slist *slist, struct b
 		if(blk->requested)
 		{
 //			printf("ee %lu %lu, %d\n", blk->index, blist->last_requested->index, blk->requested);
-//			printf("WANT TO SEND ");
-//			printf("%lu %s%s\n", blk->index, blk->weak, blk->strong);
+			printf("WANT TO SEND ");
+			printf("%lu %s%s\n", blk->index, blk->weak, blk->strong);
 			wbuf->cmd=CMD_DATA;
 			wbuf->buf=blk->data;
 			wbuf->len=blk->length;
@@ -321,7 +321,6 @@ static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int requ
 	}
 //printf("u\n");
 
-//	printf("Send blk: %s\n", sb->path);
 	iobuf_from_blk_data(wbuf, sb->bsighead);
 
 	// Move on.
@@ -363,7 +362,6 @@ static void get_wbuf_from_scan(struct iobuf *wbuf, struct slist *flist)
 		sbuf_free(sb);
 		if(flist->head)
 		{
-//printf("f");
 			// Go ahead and get the next one from the list.
 			get_wbuf_from_scan(wbuf, flist);
 		}
@@ -450,8 +448,8 @@ static int backup_client(struct config *conf, int estimate)
 
 		if(slist->head
 		// Need to limit how many blocks are allocated at once.
-		  && (!blist->head
-			|| blist->tail->index - blist->head->index<20000)
+//		  && (!blist->head
+//			|| blist->tail->index - blist->head->index<20000)
 		)
 		{
 //printf("get more blocks\n");
@@ -462,11 +460,13 @@ static int backup_client(struct config *conf, int estimate)
 			}
 //printf("now: %d\n", blist->tail->index - blist->head->index);
 		}
+/*
 		else
 		{
 //			if(blist->tail && blist->head)
 //	 		printf("enough blocks: %lu\n", blist->tail->index - blist->head->index);
 		}
+*/
 
 		if(blk_requests_end)
 		{

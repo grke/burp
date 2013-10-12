@@ -131,13 +131,12 @@ static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, struct blk *
 					(*blk)->weak);
 			}
 
-			if(++sig_count>SIG_MAX)
-			{
-				sig_count=0;
-				gzclose_fp(mzp);
-				if(write_hooks(sparse, spzp))
-					break;
-			}
+			if(++sig_count<SIG_MAX) continue;
+
+			sig_count=0;
+			gzclose_fp(mzp);
+			if(write_hooks(sparse, spzp))
+				break;
 		}
 	}
 
@@ -240,6 +239,8 @@ static int gzprintf_hooks(gzFile tzp, struct hooks *hooks)
 	static char ftmp[16+1];
 	size_t len=strlen(hooks->fingerprints);
 
+	printf("NW: %c%04lX%s\n", CMD_MANIFEST,
+		strlen(hooks->path), hooks->path);
 	gzprintf(tzp, "%c%04lX%s\n", CMD_MANIFEST,
 		strlen(hooks->path), hooks->path);
 	for(f=hooks->fingerprints; f<hooks->fingerprints+len; f+=16)
@@ -558,8 +559,8 @@ int phase3(const char *changed, const char *unchanged, const char *manifest, con
 		goto end;
 	}
 
-	unlink(changed);
-	unlink(unchanged);
+//	unlink(changed);
+//	unlink(unchanged);
 
 	if(sort_sparse_indexes(sparse, conf)
 	  || merge_sparse_indexes(global_sparse, sparse, conf))

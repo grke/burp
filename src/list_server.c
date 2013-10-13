@@ -56,24 +56,21 @@ err:
 
 static int list_manifest(const char *fullpath, regex_t *regex, const char *browsedir, const char *client, struct config *conf)
 {
-	int ret=-1;
+	int ret=0;
 	gzFile zp=NULL;
 	char *manifest=NULL;
 	size_t bdlen=0;
 	struct sbuf *sb=NULL;
+	int ars;
 
-	if(!(manifest=prepend_s(fullpath,
-		"manifest.gz", strlen("manifest.gz"))))
+	if(!(manifest=prepend_s(fullpath, "manifest", strlen("manifest"))))
 	{
 		log_and_send_oom(__FUNCTION__);
 		goto error;
 	}
-	if(!(zp=gzopen_file(manifest, "rb")))
-	{
-		log_and_send("could not open manifest");
+	if(open_next_manifest(manifest, &zp))
 		goto error;
-	}
-	if(!(sb=sbuf_alloc())) return -1;
+	if(!(sb=sbuf_alloc())) goto error;
 
 	if(browsedir) bdlen=strlen(browsedir);
 
@@ -82,7 +79,21 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 		int show=0;
 
 		// FIX THIS: -1 means error, 1 means end of file.
-		if(sbuf_fill_from_gzfile(sb, zp, NULL, NULL, conf)) goto error;
+		if((ars=sbuf_fill_from_gzfile(sb, zp, NULL, NULL, conf))<0)
+			goto error;
+		else if(ars>0)
+		{
+			// Reached the end.
+			// Maybe there is another manifest file to continue
+			// with.
+			gzclose_fp(&zp);
+			if(open_next_manifest(manifest, &zp))
+				goto error;
+			// If we got another file, continue.
+			if(zp) continue;
+			// Otherwise, finish.
+			goto end;
+		}
 
 		write_status(client, STATUS_LISTING, sb->path, conf);
 
@@ -114,7 +125,6 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 		sbuf_free_contents(sb);
 	}
 
-	goto end;
 error:
 	ret=-1;
 end:

@@ -362,18 +362,16 @@ static struct rblk *get_rblk(struct rblk *rblks, const char *datpath)
 	}
 }
 
-static int retrieve_blk_data(struct iobuf *sigbuf, struct dpth *dpth, struct blk *blk)
+static int retrieve_blk_data(struct dpth *dpth, struct blk *blk)
 {
 	static struct rblk *rblks=NULL;
 	char *cp;
-	char tmp[32]="";
 	char datpath[256];
 	unsigned int datno;
 	struct rblk *rblk;
 
-	snprintf(tmp, sigbuf->len+1, "%s", sigbuf->buf);
-//printf("here %lu: %s\n", sigbuf->len+1, tmp);
-	snprintf(datpath, sizeof(datpath), "%s/%s", dpth->base_path, tmp);
+	snprintf(datpath, sizeof(datpath),
+		"%s/%s", dpth->base_path, blk->save_path);
 //printf("x: %s\n", datpath);
 	if(!(cp=strrchr(datpath, '/')))
 	{
@@ -531,30 +529,26 @@ static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, struct dpth
 				// Fill in the sig/block, if the caller provided
 				// a pointer for one. Server only.
 				if(!blk) break;
-		//		printf("got sig: %s\n", rbuf->buf);
+				//printf("got sig: %s\n", rbuf->buf);
+
+				// Just fill in the sig details.
+				if(split_sig_with_save_path(rbuf->buf,
+					rbuf->len,
+					blk->weak, blk->strong,
+					blk->save_path))
+				{
+					free(rbuf->buf); rbuf->buf=NULL;
+					return -1;
+				}
+				free(rbuf->buf); rbuf->buf=NULL;
 				if(dpth)
 				{
-					if(retrieve_blk_data(rbuf, dpth, blk))
+					if(retrieve_blk_data(dpth, blk))
 					{
 						logp("Could not retrieve blk data.\n");
 						free(rbuf->buf); rbuf->buf=NULL;
 						return -1;
 					}
-				}
-				else
-				{
-					// Just fill in the sig details.
-					// FIX THIS: should have a separate
-					// case CMD_XXX.
-					if(split_sig_with_save_path(rbuf->buf,
-						rbuf->len,
-						blk->weak, blk->strong,
-						blk->save_path))
-					{
-						free(rbuf->buf); rbuf->buf=NULL;
-						return -1;
-					}
-					free(rbuf->buf); rbuf->buf=NULL;
 				}
 				return 0;
 			case CMD_DATA:

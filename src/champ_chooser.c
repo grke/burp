@@ -46,13 +46,14 @@ static struct sparse *sparse_add(uint64_t weak)
         return sparse;
 }
 
-struct candidate *candidate_alloc(char *path, uint16_t *score)
+struct candidate *candidate_alloc(char *path, int *score)
 {
 	struct candidate *candidate;
 	if((candidate=(struct candidate *)malloc(sizeof(struct candidate))))
 	{
 		candidate->path=path;
 		candidate->score=score;
+printf("candidate alloc: %p %d\n", score, *score);
 		return candidate;
 	}
 	log_out_of_memory(__FUNCTION__);
@@ -83,10 +84,12 @@ static int candidate_add(uint64_t weak, struct candidate *candidate)
 // that all the scores can be reset quickly.
 struct scores
 {
-	uint16_t *scores;
+	int *scores;
 	size_t size;
 	size_t allocated;
 };
+
+struct scores *scores=NULL;
 
 static struct scores *scores_alloc(void)
 {
@@ -103,7 +106,7 @@ static int scores_grow_maybe(struct scores *scores)
 	// Make the scores array bigger.
 	scores->allocated+=32;
 	if((scores->scores=
-	  (uint16_t *)realloc(scores->scores, sizeof(uint16_t)*scores->allocated)))
+	  (int *)realloc(scores->scores, sizeof(int)*scores->allocated)))
 		return 0;
 	log_out_of_memory(__FUNCTION__);
 	return -1;
@@ -123,12 +126,11 @@ int champ_chooser_init(const char *datadir, struct config *conf)
 	gzFile zp=NULL;
 	struct sbuf *sb=NULL;
 	struct candidate *candidate=NULL;
-	struct scores *scores=NULL;
 	char *sparse_path=NULL;
 	struct stat statp;
 
 	if(!(sb=sbuf_alloc())
-	  || !(scores=scores_alloc())
+	  || (!scores && !(scores=scores_alloc()))
 	  || !(sparse_path=prepend_s(datadir, "sparse", strlen("sparse")))
 	  || (!lstat(sparse_path, &statp)
 		&& !(zp=gzopen_file(sparse_path, "rb"))))
@@ -144,8 +146,9 @@ int champ_chooser_init(const char *datadir, struct config *conf)
 		}
 		if(sb->cmd==CMD_MANIFEST)
 		{
-			if(scores_grow_maybe(scores)
-			  || !(candidate=candidate_alloc(sb->path,
+			if(scores_grow_maybe(scores)) goto end;
+			//scores_reset(scores);
+			if(!(candidate=candidate_alloc(sb->path,
 				&(scores->scores[scores->size-1])))) goto end;
 			sb->path=NULL;
 		}
@@ -167,7 +170,17 @@ int champ_chooser_init(const char *datadir, struct config *conf)
 		sbuf_free_contents(sb);
 	}
 
-	scores_reset(scores);
+	//scores_reset(scores);
+/*
+	{
+		int a;
+		scores->scores[2]=3;
+		for(a=0; a<scores->size; a++)
+		{
+			printf("HERE: %d\n", scores->scores[a]);
+		}
+	}
+*/
 	ret=0;
 end:
 	gzclose_fp(&zp);
@@ -230,6 +243,7 @@ static int already_got_block(struct blk *blk, struct dpth *dpth)
 			snprintf(blk->save_path, sizeof(blk->save_path),
 				"%s", get_fq_path(strong_entry->path));
 //printf("FOUND: %s %s\n", blk->weak, blk->strong);
+printf("F");
 			blk->got=GOT;
 			return 0;
 		}
@@ -247,6 +261,7 @@ static int already_got_block(struct blk *blk, struct dpth *dpth)
 	}
 
 	blk->got=NOT_GOT;
+printf(".");
 
 //	if(weak_entry)
 //	{
@@ -277,6 +292,9 @@ static struct candidate *champ_chooser(struct incoming *in)
 	static struct sparse *sparse;
 	static struct candidate *best;
 	best=NULL;
+   struct timespec tstart={0,0}, tend={0,0};
+
+    clock_gettime(CLOCK_MONOTONIC, &tstart);
 printf("i size: %d\n", in->size);
 	for(i=0; i<in->size; i++)
 	{
@@ -285,12 +303,17 @@ printf("i size: %d\n", in->size);
 		for(s=0; s<sparse->size; s++)
 		{
 			sparse->candidates[s]->score++;
+//printf("%016lX can %d, score %p %d\n", in->weak[i], s, score, *score);
 			if(!best || sparse->candidates[s]->score>best->score)
 				best=sparse->candidates[s];
 			// FIX THIS: figure out a way of giving preference to
 			// newer candidates.
 		}
 	}
+    clock_gettime(CLOCK_MONOTONIC, &tend);
+    printf("champ_chooser took about %.5f seconds\n",
+           ((double)tend.tv_sec + 1.0e-9*tend.tv_nsec) - 
+           ((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec));
 	return best;
 }
 
@@ -305,7 +328,7 @@ printf("in deduplicate()\n");
 	//*wrap_up=0;
 	if((champ=champ_chooser(in)))
 	{
-		printf("Got champ: %s\n", champ->path);
+		printf("Got champ: %s %d\n", champ->path, *(champ->score));
 	}
 	else
 	{
@@ -332,17 +355,20 @@ printf("in deduplicate()\n");
 		// If already got, this function will set blk->save_path
 		// to be the location of the already got block.
 		if(already_got_block(blk, dpth)) return -1;
+
 //printf("after agb: %lu %d\n", blk->index, blk->got);
 
 		//if(blk->got==GOT && !*wrap_up) *wrap_up=1;
 	}
 	//if(*wrap_up) *wrap_up=blist->tail->index;
+printf("\n");
 
 
 	// Start the incoming array again.
 	in->size=0;
 	// Destroy the deduplication hash table.
 	hash_delete_all();
+	//scores_reset(scores);
 
 	return 0;
 }

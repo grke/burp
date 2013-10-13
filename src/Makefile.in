@@ -127,7 +127,7 @@ burp:  Makefile $(SVROBJS) @WIN32@
 	@echo "Linking $@ ..."
 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -o $@ $(SVROBJS) \
 	  $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
-	  $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS)
+	  $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS) -lrt
 
 static-burp: Makefile $(SVROBJS) @WIN32@
 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -o $@ $(SVROBJS) \

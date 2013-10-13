@@ -4,7 +4,7 @@
 struct candidate
 {
 	char *path;
-	uint16_t *score;
+	int *score;
 };
 
 extern int champ_chooser_init(const char *sparse, struct config *conf);

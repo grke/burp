@@ -332,7 +332,7 @@ printf("in deduplicate()\n");
 		// If already got, this function will set blk->save_path
 		// to be the location of the already got block.
 		if(already_got_block(blk, dpth)) return -1;
-printf("after agb: %d %d\n", blk->index, blk->got);
+//printf("after agb: %lu %d\n", blk->index, blk->got);
 
 		//if(blk->got==GOT && !*wrap_up) *wrap_up=1;
 	}
@@ -357,7 +357,7 @@ int deduplicate_maybe(struct blist *blist, struct blk *blk, struct dpth *dpth, s
 	if(!in && !(in=incoming_alloc())) return -1;
 
 	blk->fingerprint=strtoull(blk->weak, 0, 16);
-printf("%s\n", blk->weak);
+//printf("%s\n", blk->weak);
 	if(*(blk->weak)=='F')
 	{
 		if(incoming_grow_maybe(in)) return -1;
@@ -368,6 +368,6 @@ printf("%s\n", blk->weak);
 
 	if(deduplicate(blks, dpth, conf, wrap_up)<0) return -1;
 	blks=NULL;
-printf("\n");
+//printf("\n");
 	return 1; // deduplication was successful
 }

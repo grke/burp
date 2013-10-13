@@ -64,7 +64,7 @@ static int add_to_data_requests(struct blist *blist, struct iobuf *rbuf)
 	index=decode_req(rbuf->buf);
 
 	// Find the matching entry.
-	printf("Request for data: %lu\n", index);
+//	printf("Request for data: %lu\n", index);
 
 	//printf("last_requested: %lu\n", blist->last_requested->index);
 	for(blk=blist->last_requested; blk; blk=blk->next)
@@ -241,8 +241,8 @@ static void get_wbuf_from_data(struct iobuf *wbuf, struct slist *slist, struct b
 		if(blk->requested)
 		{
 //			printf("ee %lu %lu, %d\n", blk->index, blist->last_requested->index, blk->requested);
-			printf("WANT TO SEND ");
-			printf("%lu %s%s\n", blk->index, blk->weak, blk->strong);
+//			printf("WANT TO SEND ");
+//			printf("%lu %s%s\n", blk->index, blk->weak, blk->strong);
 			wbuf->cmd=CMD_DATA;
 			wbuf->buf=blk->data;
 			wbuf->len=blk->length;

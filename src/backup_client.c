@@ -448,8 +448,8 @@ static int backup_client(struct config *conf, int estimate)
 
 		if(slist->head
 		// Need to limit how many blocks are allocated at once.
-//		  && (!blist->head
-//			|| blist->tail->index - blist->head->index<20000)
+		  && (!blist->head
+			|| blist->tail->index - blist->head->index<20000)
 		)
 		{
 //printf("get more blocks\n");

@@ -789,3 +789,33 @@ int gzprintf_sig(gzFile zp, struct blk *blk)
 		blk->weak, blk->strong);
 	return 0;
 }
+
+static char *get_next_man_path(const char *manifest_dir)
+{
+	static char tmp[32];
+	static uint64_t count=0;
+	snprintf(tmp, sizeof(tmp), "%08lX", count++);
+	return prepend_s(manifest_dir, tmp, sizeof(tmp));
+}
+
+int open_next_manifest(const char *manifest_dir, gzFile *zp)
+{
+	static struct stat statp;
+	char *man_path=NULL;
+
+	if(!(man_path=get_next_man_path(manifest_dir)))
+	{
+		if(man_path) free(man_path);
+		return -1;
+	}
+
+	if(lstat(man_path, &statp)) return 0;
+
+	if(build_path_w(man_path) || !(*zp=gzopen_file(man_path, "rb")))
+	{
+		if(man_path) free(man_path);
+		return -1;
+	}
+	free(man_path);
+	return 0;
+}

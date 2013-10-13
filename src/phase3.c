@@ -27,6 +27,7 @@ static char *get_next_tmp_path(const char *manifest)
 	return tmp;
 }
 
+// FIX THIS: should probably used the shared function in current_backups.c.
 static gzFile get_new_manifest(const char *manifest, const char *rmanifest, gzFile spzp, struct config *conf)
 {
 	char *tmp;

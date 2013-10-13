@@ -134,37 +134,6 @@ static int data_needed(struct sbuf *sb)
 	return 0;
 }
 
-static char *get_next_man_path(const char *manifest)
-{
-        static char tmp[32];
-        static uint64_t count=0;
-        snprintf(tmp, sizeof(tmp), "%08lX", count++);
-        return prepend_s(manifest, tmp, sizeof(tmp));
-}
-
-static int open_next_current_manifest(const char *cmanifest, gzFile *cmanzp)
-{
-	static struct stat statp;
-        char *man_path=NULL;
-
-	if(!(man_path=get_next_man_path(cmanifest)))
-	{
-		if(man_path) free(man_path);
-		return -1;
-	}
-
-	if(lstat(man_path, &statp)) return 0;
-
-	if(build_path_w(man_path)
-	  || !(*cmanzp=gzopen_file(man_path, "rb")))
-	{
-		if(man_path) free(man_path);
-		return -1;
-	}
-	free(man_path);
-	return 0;
-}
-
 // Can this be merged with copy_unchanged_entry()?
 static int forward_through_sigs(struct sbuf **csb, const char *cmanifest, gzFile *cmanzp, struct config *conf)
 {
@@ -187,7 +156,7 @@ static int forward_through_sigs(struct sbuf **csb, const char *cmanifest, gzFile
 			// Maybe there is another manifest file to continue
 			// with.
 			gzclose_fp(cmanzp);
-			if(open_next_current_manifest(cmanifest, cmanzp))
+			if(open_next_manifest(cmanifest, cmanzp))
 				return -1;
 			// If we got another file, continue.
 			if(*cmanzp) continue;
@@ -240,7 +209,7 @@ static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, struct blk *
 			// Maybe there is another manifest file to continue
 			// with.
 			gzclose_fp(cmanzp);
-			if(open_next_current_manifest(cmanifest, cmanzp))
+			if(open_next_manifest(cmanifest, cmanzp))
 				return -1;
 			// If we got another file, continue.
 			if(*cmanzp) continue;
@@ -303,7 +272,7 @@ static int entry_changed(struct sbuf *sb, const char *cmanifest, gzFile *cmanzp,
 			// Maybe there is another manifest file to continue
 			// with.
 			gzclose_fp(cmanzp);
-			if(open_next_current_manifest(cmanifest, cmanzp))
+			if(open_next_manifest(cmanifest, cmanzp))
 				return -1;
 			// If we got another file, try again.
 			if(*cmanzp)
@@ -379,7 +348,7 @@ static int entry_changed(struct sbuf *sb, const char *cmanifest, gzFile *cmanzp,
 				return 0;
 			}
 
-			printf("got changed: %c %s %c %s %lu %lu\n", csb->cmd, csb->path, sb->cmd, sb->path, csb->statp.st_mtime, sb->statp.st_mtime);
+//			printf("got changed: %c %s %c %s %lu %lu\n", csb->cmd, csb->path, sb->cmd, sb->path, csb->statp.st_mtime, sb->statp.st_mtime);
 
 			// File data changed.
 			if(forward_through_sigs(&csb, cmanifest, cmanzp, conf))
@@ -1090,7 +1059,7 @@ int do_backup_server(const char *basedir, const char *current, const char *worki
 	}
 
 	// Open the previous (current) manifest.
-	if(open_next_current_manifest(cmanifest, &cmanzp))
+	if(open_next_manifest(cmanifest, &cmanzp))
 		goto error;
 
 	if(backup_server(cmanifest, &cmanzp, changed, unchanged,

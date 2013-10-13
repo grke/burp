@@ -260,9 +260,9 @@ static int do_restore_manifest(const char *client, const char *datadir, struct b
 	int need_data=0;
 
 	// Now, do the actual restore.
-	if(!(zp=gzopen_file(manifest, "rb")))
+	if(open_next_manifest(manifest, &zp))
 	{
-		log_and_send("could not open manifest");
+		log_and_send("could not open next manifest");
 		goto end;
 	}
 	if(!(sb=sbuf_alloc())
@@ -312,12 +312,25 @@ static int do_restore_manifest(const char *client, const char *datadir, struct b
 */
 
 		if((ars=sbuf_fill_from_gzfile(sb, zp,
-			need_data?blk:NULL, dpth, conf)))
+			need_data?blk:NULL, dpth, conf))<0)
 		{
-			if(ars>0) break; // Reached the end.
+
 			logp("In %s, error from sbuf_fill_from_gzfile()\n",
 				__FUNCTION__);
 			goto end; // Error;
+		}
+		else if(ars>0)
+		{
+			// Reached the end.
+			// Maybe there is another manifest file to continue
+			// with.
+			gzclose_fp(&zp);
+			if(open_next_manifest(manifest, &zp))
+				goto end;
+			// If we got another file, continue.
+			if(zp) continue;
+			// Otherwise, finish.
+			break;
 		}
 
 		if(blk->data)
@@ -382,7 +395,7 @@ static int restore_manifest(struct bu *arr, int a, int i, regex_t *regex, int sr
 	 || (act==ACTION_RESTORE && !(logpathz=prepend_s(arr[i].path, "restorelog.gz", strlen("restorelog.gz"))))
 	 || (act==ACTION_VERIFY && !(logpath=prepend_s(arr[i].path, "verifylog", strlen("verifylog"))))
 	 || (act==ACTION_VERIFY && !(logpathz=prepend_s(arr[i].path, "verifylog.gz", strlen("verifylog.gz"))))
-	 || !(manifest=prepend_s(arr[i].path, "manifest.gz", strlen("manifest.gz")))
+	 || !(manifest=prepend_s(arr[i].path, "manifest", strlen("manifest")))
 	 || !(datadir=prepend_s(basedir, "data", strlen("data"))))
 	{
 		log_and_send_oom(__FUNCTION__);

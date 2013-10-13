@@ -220,6 +220,7 @@ static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, struct blk *
 {
 	static int ars;
 	static char *copy;
+//printf("in cue\n");
 	// Use the most recent stat for the new manifest.
 	if(sbuf_to_manifest(sb, unzp)) return -1;
 
@@ -277,6 +278,7 @@ static int entry_changed(struct sbuf *sb, const char *cmanifest, gzFile *cmanzp,
 {
 	static struct sbuf *csb=NULL;
 	static struct blk *blk=NULL;
+//printf("in ec\n");
 
 	if(!csb)
 	{
@@ -328,6 +330,7 @@ static int entry_changed(struct sbuf *sb, const char *cmanifest, gzFile *cmanzp,
 		}
 		// Got an entry.
 	}
+//printf("in ec2\n");
 
 	while(1)
 	{
@@ -431,20 +434,23 @@ static int add_data_to_store(struct blist *blist, struct iobuf *rbuf, struct dpt
 	// Find the first one in the list that was requested.
 	// FIX THIS: Going up the list here, and then later
 	// when writing to the manifest is not efficient.
-	if(!blk) blk=blist->head;
+	//if(!blk)
+		blk=blist->head;
+	logp("adts: %p\n", blk); fflush(stdout);
 	for(; blk && (!blk->requested || blk->got==GOT); blk=blk->next)
 	{
-//		printf("try: %d\n", blk->index);
+		logp("try: %d %d\n", blk->index, blk->got);
 	}
 	if(!blk)
 	{
 		logp("Received data but could not find next requested block.\n");
+		if(!blist->head) logp("and blist->head is null\n");
+		else logp("head index: %d\n", blist->head->index);
 		return -1;
 	}
 //	printf("Got blk %lu!\n", blk->index);
 
 	// Add it to the data store straight away.
-//if(!blk->dpth_fp) printf("no!\n");
 	if(fwrite_dat(rbuf, blk, dpth)) return -1;
 
 	blk->got=GOT;
@@ -498,7 +504,7 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobu
 	struct blk *blk;
         struct sbuf *sb;
 
-	printf("CMD_SIG: %s\n", rbuf->buf);
+//	printf("CMD_SIG: %s\n", rbuf->buf);
 
 	if(!(blk=blk_alloc())) return -1;
 	blk_add_to_list(blk, blist);
@@ -512,16 +518,16 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobu
 
 	if((ia=deduplicate_maybe(blist, blk, dpth, conf, wrap_up))<0)
 	{
-		printf("dm -1\n");
+//		printf("dm -1\n");
 		return -1;
 	}
 	else if(!ia)
 	{
-		printf("dm 0\n");
+//		printf("dm 0\n");
 		return 0; // Nothing to do for now.
 	}
 
-	printf("dm post\n");
+//	printf("dm post\n");
 	return 0;
 }
 
@@ -667,7 +673,7 @@ static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, struct bl
 
 	while(sb && !sb->need_data)
 	{
-		printf("Do not need data %d: %s\n", sb->need_data, sb->path);
+//		printf("Do not need data %d: %s\n", sb->need_data, sb->path);
 		sb=sb->next;
 	}
 	if(!sb)
@@ -701,6 +707,7 @@ static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, struct bl
 	}
 //printf("HERE Y %p %p %lu %d\n", sb->bsighead, sb->bsighead->next, sb->bsighead->index, sb->bsighead->got);
 
+//printf("check: %p %s\n", sb->bsighead, sb->path); fflush(stdout);
 	if(sb->bsighead->got==INCOMING)
 	{
 		if(sigs_end
@@ -713,8 +720,8 @@ static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, struct bl
 	{
 		encode_req(sb->bsighead, req);
 		iobuf_from_str(wbuf, CMD_DATA_REQ, req);
-printf("DATA REQUEST: %lu %04lX %s\n",
-	sb->bsighead->index, sb->bsighead->index, sb->bsighead->weak);
+//printf("DATA REQUEST: %lu %04lX %s\n",
+//	sb->bsighead->index, sb->bsighead->index, sb->bsighead->weak);
 		sb->bsighead->requested=1;
 	}
 
@@ -730,6 +737,7 @@ printf("DATA REQUEST: %lu %04lX %s\n",
 		sb->bsighead=sb->bsighead->next;
 //		if(!sb->bsighead) printf("sb->bsighead fell off end b\n");
 	}
+//printf("end get_wbuf_fs\n");
 	return 0;
 }
 
@@ -773,6 +781,7 @@ static int write_to_changed_file(gzFile chzp, struct slist *slist, struct blist 
 {
 	struct sbuf *sb;
 	if(!slist) return 0;
+//printf("in wtcf\n");
 
 	while((sb=slist->head))
 	{
@@ -806,7 +815,7 @@ static int write_to_changed_file(gzFile chzp, struct slist *slist, struct blist 
 
 				if(blk==sb->bend)
 				{
-printf("blk==sb->bend END FILE\n");
+//printf("blk==sb->bend END FILE\n");
 					slist->head=sb->next;
 					//break;
 					if(!(blist->head=sb->bstart))
@@ -817,6 +826,8 @@ printf("blk==sb->bend END FILE\n");
 					break;
 				}
 
+				if(sb->bsighead==sb->bstart)
+					sb->bsighead=blk->next;
 				sb->bstart=blk->next;
 				blk_free(blk);
 			}
@@ -831,7 +842,7 @@ printf("blk==sb->bend END FILE\n");
 			if(sbuf_to_manifest(sb, chzp)) return -1;
 
 			// Move along.
-printf("END FILE\n");
+//printf("END FILE\n");
 			slist->head=sb->next;
 
 			sanity_before_sbuf_free(slist, sb);

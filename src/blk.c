@@ -15,6 +15,7 @@ struct blk *blk_alloc(void)
 	if((blk=(struct blk *)calloc(1, sizeof(struct blk))))
 	{
 		alloc_count++;
+//printf("alloc: %p\n", blk);
 		return blk;
 	}
 	log_out_of_memory(__FUNCTION__);
@@ -37,8 +38,8 @@ struct blk *blk_alloc_with_data(uint32_t max_data_length)
 
 void blk_free(struct blk *blk)
 {
-return;
 	if(!blk) return;
+//printf("free: %p %d\n", blk, blk->got); fflush(stdout);
 	if(blk->data)
 	{
 		data_free_count++;
@@ -110,7 +111,7 @@ void blist_free(struct blist *blist)
 void blk_add_to_list(struct blk *blk, struct blist *blist)
 {
 	static int bindex=1;
-printf("blk_add_to_list: %d\n", bindex);
+//printf("blk_add_to_list: %d\n", bindex);
 	blk->index=bindex++;
 	if(blist->tail)
 	{

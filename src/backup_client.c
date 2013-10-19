@@ -290,6 +290,7 @@ static void iobuf_from_blk_data(struct iobuf *wbuf, struct blk *blk)
 		"%s", blk_get_md5sum_str(blk->md5sum));
 	snprintf(buf, sizeof(buf), "%s%s", blk->weak, blk->strong);
 //	printf("%s\n", buf);
+//	printf("%d\n", blk->index);
 	iobuf_from_str(wbuf, CMD_SIG, buf);
 }
 
@@ -430,6 +431,7 @@ static int backup_client(struct config *conf, int estimate)
 		if(async_rw_ng(rbuf, wbuf))
 		{
 			logp("error in async_rw\n");
+			ret=-1;
 			goto end;
 		}
 

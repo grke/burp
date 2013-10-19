@@ -21,6 +21,7 @@
 #include "incexc_recv.h"
 #include "incexc_send.h"
 #include "ca_server.h"
+#include "champ_chooser.h"
 
 #include <netdb.h>
 #include <librsync.h>
@@ -1743,6 +1744,8 @@ int server(struct config *conf, const char *configfile, int generate_ca_only)
 	// error, and the server stops.
 	char *oldport=NULL;
 	char *oldstatusport=NULL;
+
+	//return champ_test(conf);
 
 	if(ca_server_setup(conf)) return 1;
 	if(generate_ca_only)

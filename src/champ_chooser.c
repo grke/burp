@@ -27,7 +27,7 @@ static struct sparse *sparse_table=NULL;
 
 static struct sparse *sparse_find(uint64_t weak)
 {
-	struct sparse *sparse;
+	struct sparse *sparse=NULL;
 	HASH_FIND_INT(sparse_table, &weak, sparse);
 	return sparse;
 }
@@ -42,18 +42,17 @@ static struct sparse *sparse_add(uint64_t weak)
         }
         sparse->weak=weak;
 //printf("sparse_add: %016lX\n", weak);
-        HASH_ADD_INT(sparse_table, weak, sparse);
+	HASH_ADD_INT(sparse_table, weak, sparse);
         return sparse;
 }
 
-struct candidate *candidate_alloc(char *path, int *score)
+struct candidate *candidate_alloc(char *path)
 {
 	struct candidate *candidate;
 	if((candidate=(struct candidate *)malloc(sizeof(struct candidate))))
 	{
 		candidate->path=path;
-		candidate->score=score;
-printf("candidate alloc: %p %d\n", score, *score);
+//printf("candidate alloc: %p %hu\n", score, *score);
 		return candidate;
 	}
 	log_out_of_memory(__FUNCTION__);
@@ -84,12 +83,12 @@ static int candidate_add(uint64_t weak, struct candidate *candidate)
 // that all the scores can be reset quickly.
 struct scores
 {
-	int *scores;
+	uint16_t *scores;
 	size_t size;
 	size_t allocated;
 };
 
-struct scores *scores=NULL;
+static struct scores *scores=NULL;
 
 static struct scores *scores_alloc(void)
 {
@@ -100,14 +99,27 @@ static struct scores *scores_alloc(void)
 	return NULL;
 }
 
-static int scores_grow_maybe(struct scores *scores)
+static void dump_scores(const char *msg, struct scores *scores, int len)
 {
-	if(++scores->size<scores->allocated) return 0;
-	// Make the scores array bigger.
-	scores->allocated+=32;
-	if((scores->scores=
-	  (int *)realloc(scores->scores, sizeof(int)*scores->allocated)))
-		return 0;
+	int a;
+printf("%p\n", scores);
+//printf("%d %d\n", len, scores->allocated);
+	for(a=0; a<len; a++)
+	{
+		printf("%s %d %p: %d\n",
+			msg, a, &(scores->scores[a]), scores->scores[a]);
+	}
+}
+
+// Return -1 or error, 0 on OK.
+static int scores_grow(struct scores *scores, size_t count)
+{
+	printf("grow scores to %lu\n", count);
+	scores->size=count;
+	scores->allocated=count;
+	if((scores->scores=(uint16_t *)realloc(scores->scores,
+		sizeof(uint16_t)*scores->allocated)))
+			return 0;
 	log_out_of_memory(__FUNCTION__);
 	return -1;
 }
@@ -116,6 +128,13 @@ static void scores_reset(struct scores *scores)
 {
 	if(!scores->scores) return;
 	memset(scores->scores, 0, sizeof(scores->scores[0])*scores->allocated);
+}
+
+static void set_candidate_score_pointers(struct candidate **candidates, size_t clen, struct scores *scores)
+{
+	size_t a;
+	for(a=0; a<clen; a++)
+		candidates[a]->score=&(scores->scores[a]);
 }
 
 int champ_chooser_init(const char *datadir, struct config *conf)
@@ -128,6 +147,8 @@ int champ_chooser_init(const char *datadir, struct config *conf)
 	struct candidate *candidate=NULL;
 	char *sparse_path=NULL;
 	struct stat statp;
+	struct candidate **candidates=NULL;
+	size_t clen=0;
 
 	if(!(sb=sbuf_alloc())
 	  || (!scores && !(scores=scores_alloc()))
@@ -146,10 +167,18 @@ int champ_chooser_init(const char *datadir, struct config *conf)
 		}
 		if(sb->cmd==CMD_MANIFEST)
 		{
-			if(scores_grow_maybe(scores)) goto end;
-			//scores_reset(scores);
-			if(!(candidate=candidate_alloc(sb->path,
-				&(scores->scores[scores->size-1])))) goto end;
+			if(!(candidate=candidate_alloc(sb->path)))
+				goto end;
+
+			if(!(candidates=(struct candidate **)
+				realloc(candidates,
+				(clen+1)*sizeof(struct candidate *))))
+			{
+				log_out_of_memory(__FUNCTION__);
+				return -1;
+			}
+			candidates[clen++]=candidate;
+
 			sb->path=NULL;
 		}
 		else if(sb->cmd==CMD_FINGERPRINT)
@@ -170,27 +199,17 @@ int champ_chooser_init(const char *datadir, struct config *conf)
 		sbuf_free_contents(sb);
 	}
 
-	//scores_reset(scores);
-/*
-	{
-		int a;
-		scores->scores[2]=3;
-		for(a=0; a<scores->size; a++)
-		{
-			printf("HERE: %d\n", scores->scores[a]);
-		}
-	}
-*/
+	if(scores_grow(scores, clen)) goto end;
+	set_candidate_score_pointers(candidates, clen, scores);
+
+	scores_reset(scores);
+	dump_scores("init", scores, scores->size);
+
 	ret=0;
 end:
 	gzclose_fp(&zp);
 	sbuf_free(sb);
 	if(sparse_path) free(sparse_path);
-	if(scores)
-	{
-		if(scores->scores) free(scores->scores);
-		free(scores);
-	}
 	return ret;
 }
 
@@ -216,6 +235,7 @@ static int incoming_grow_maybe(struct incoming *in)
 	if(++in->size<in->allocated) return 0;
 	// Make the incoming array bigger.
 	in->allocated+=32;
+printf("grow incoming to %d\n", in->allocated);
 	if((in->weak=(uint64_t *)
 		realloc(in->weak, in->allocated*sizeof(uint64_t))))
 			return 0;
@@ -291,21 +311,40 @@ static struct candidate *champ_chooser(struct incoming *in)
 	static uint16_t s;
 	static struct sparse *sparse;
 	static struct candidate *best;
+	static uint16_t *score;
 	best=NULL;
+//	dump_scores("chooser", scores);
    struct timespec tstart={0,0}, tend={0,0};
 
     clock_gettime(CLOCK_MONOTONIC, &tstart);
 printf("i size: %d\n", in->size);
+if(in->size) printf("first: %016lX\n", in->weak[0]);
 	for(i=0; i<in->size; i++)
 	{
+//printf("find: %d %016lX\n", i, in->weak[i]);
 		if(!(sparse=sparse_find(in->weak[i])))
 			continue;
 		for(s=0; s<sparse->size; s++)
 		{
-			sparse->candidates[s]->score++;
-//printf("%016lX can %d, score %p %d\n", in->weak[i], s, score, *score);
-			if(!best || sparse->candidates[s]->score>best->score)
+			score=sparse->candidates[s]->score;
+			(*score)++;
+//printf("%d candidate, %p\n", i, sparse->candidates[s]);
+//printf("%d candidate, score %p %d\n", i, score, *score);
+			if(*score>1000)
+			{
+				dump_scores("exiting", scores, scores->size);
+				exit(1);
+			}
+			if(!best
+			// Maybe should check for candidate!=best here too.
+			  || *score>*(best->score))
+			{
 				best=sparse->candidates[s];
+				printf("%s is now best:\n",
+					best->path);
+				printf("    score %p %d\n",
+					best->score, *(best->score));
+			}
 			// FIX THIS: figure out a way of giving preference to
 			// newer candidates.
 		}
@@ -314,6 +353,10 @@ printf("i size: %d\n", in->size);
     printf("champ_chooser took about %.5f seconds\n",
            ((double)tend.tv_sec + 1.0e-9*tend.tv_nsec) - 
            ((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec));
+if(best)
+printf("%s is choice: score %p %d\n", best->path, best->score, *(best->score));
+else
+printf("no choice\n");
 	return best;
 }
 
@@ -323,9 +366,9 @@ int deduplicate(struct blk *blks, struct dpth *dpth, struct config *conf, uint64
 {
 	struct blk *blk;
 	struct candidate *champ;
+	static int consecutive_got=0;
 
 printf("in deduplicate()\n");
-	//*wrap_up=0;
 	if((champ=champ_chooser(in)))
 	{
 		printf("Got champ: %s %d\n", champ->path, *(champ->score));
@@ -358,9 +401,21 @@ printf("in deduplicate()\n");
 
 //printf("after agb: %lu %d\n", blk->index, blk->got);
 
-		//if(blk->got==GOT && !*wrap_up) *wrap_up=1;
+		// If there are a number of consecutive blocks that we have
+		// already got, help the client out and tell it to forget them,
+		// because there is a limit to the number that it will keep
+		// in memory.
+		if(blk->got==GOT)
+		{
+			if(consecutive_got++>10000)
+			{
+				*wrap_up=blk->index;
+				consecutive_got=0;
+			}
+		}
+		else
+			consecutive_got=0;
 	}
-	//if(*wrap_up) *wrap_up=blist->tail->index;
 printf("\n");
 
 
@@ -368,18 +423,18 @@ printf("\n");
 	in->size=0;
 	// Destroy the deduplication hash table.
 	hash_delete_all();
-	//scores_reset(scores);
+	scores_reset(scores);
 
 	return 0;
 }
 
 // Return 0 for OK, -1 for error, 1 to mean that the list of blocks has been
 // deduplicated.
-int deduplicate_maybe(struct blist *blist, struct blk *blk, struct dpth *dpth, struct config *conf, uint64_t *wrap_up)
+int deduplicate_maybe(struct blk *blk, struct dpth *dpth, struct config *conf, uint64_t *wrap_up)
 {
 	static int count=0;
 	static struct blk *blks=NULL;
-	if(!blks) blks=blk;
+	if(!blks && !(blks=blk)) return -1;
 	if(!in && !(in=incoming_alloc())) return -1;
 
 	blk->fingerprint=strtoull(blk->weak, 0, 16);
@@ -390,6 +445,7 @@ int deduplicate_maybe(struct blist *blist, struct blk *blk, struct dpth *dpth, s
 		in->weak[in->size-1]=blk->fingerprint;
 	}
 	if(++count<SIG_MAX) return 0;
+//	if(++count<2) return 0;
 	count=0;
 
 	if(deduplicate(blks, dpth, conf, wrap_up)<0) return -1;
@@ -397,3 +453,46 @@ int deduplicate_maybe(struct blist *blist, struct blk *blk, struct dpth *dpth, s
 //printf("\n");
 	return 1; // deduplication was successful
 }
+
+
+
+
+
+
+
+
+
+static struct blk *gen_test_blk(void)
+{
+	static int count=0;
+	struct blk *blk=NULL;
+	if(!(blk=blk_alloc())) return NULL;
+	count++;
+	snprintf(blk->weak, sizeof(blk->weak), "F363D8CDA1A9B115");
+	if(count>100000) exit(1);
+	return blk;
+}
+
+int champ_test(struct config *conf)
+{
+	int ia;
+	uint64_t wrap_up=0;
+	struct dpth *dpth=NULL;
+	struct blk *blk=NULL;
+	const char *datadir="/var/spool/burp/testclient/data";
+
+	if(!(dpth=dpth_alloc(datadir)) || dpth_init(dpth))
+		return -1;
+
+	if(champ_chooser_init(datadir, conf)) return -1;
+
+	while((blk=gen_test_blk()))
+	{
+		if((ia=deduplicate_maybe(blk, dpth, conf, &wrap_up))<0)
+		{
+			return -1;
+		}
+	}
+	return -1;
+}
+

@@ -358,7 +358,7 @@ static int entry_changed(struct sbuf *sb, const char *cmanifest, gzFile *cmanzp,
 		else if(pcmp>0)
 		{
 			// Ahead - this is a new file.
-			printf("got new file: %c %s\n", sb->cmd, sb->path);
+//			printf("got new file: %c %s\n", sb->cmd, sb->path);
 			return 1;
 		}
 		else
@@ -443,7 +443,7 @@ static int set_up_for_sig_info(struct slist *slist, struct blist *blist, struct 
 		return -1;
 	}
 	// Replace the attribs with the more recent values.
-	free(sb->attribs);
+	if(sb->attribs) free(sb->attribs);
 	sb->attribs=inew->attribs;
 	sb->alen=inew->alen;
 	inew->attribs=NULL;
@@ -485,7 +485,7 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobu
 	// FIX THIS: Should not just load into strings.
 	if(split_sig(rbuf->buf, rbuf->len, blk->weak, blk->strong)) return -1;
 
-	if((ia=deduplicate_maybe(blist, blk, dpth, conf, wrap_up))<0)
+	if((ia=deduplicate_maybe(blk, dpth, conf, wrap_up))<0)
 	{
 //		printf("dm -1\n");
 		return -1;
@@ -878,6 +878,8 @@ static int backup_server(const char *cmanifest, gzFile *cmanzp, const char *chan
 
 	while(!backup_end)
 	{
+//printf("loop a: %d %d %d %d %d\n",
+//	backup_end, scan_end, sigs_end, requests_end, blk_requests_end);
 		if(!wbuf->len)
 		{
 			get_wbuf_from_wrap_up(wbuf, &wrap_up);

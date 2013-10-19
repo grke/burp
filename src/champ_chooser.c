@@ -383,6 +383,8 @@ static struct candidate *champ_chooser(struct incoming *in, struct candidate *ch
 
 static struct incoming *in=NULL;
 
+#define CHAMPS_MAX 10
+
 int deduplicate(struct blk *blks, struct dpth *dpth, struct config *conf, uint64_t *wrap_up)
 {
 	struct blk *blk;
@@ -400,13 +402,11 @@ printf("in deduplicate()\n");
 		printf("Got champ: %s %d\n", champ->path, *(champ->score));
 		scores_reset(scores);
 		if(hash_load(champ->path, conf)) return -1;
-		if(++count==3)
-		{
-			printf("Loaded 3 champs\n");
-			break;
-		}
+		if(++count==CHAMPS_MAX) break;
 		champ_last=champ;
 	}
+
+	printf("Loaded %d champs\n", count);
 
 	for(blk=blks; blk; blk=blk->next)
 	{

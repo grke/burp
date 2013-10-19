@@ -778,6 +778,8 @@ static int write_to_changed_file(gzFile chzp, struct slist *slist, struct blist 
 /*
 				else
 				{
+					// This gets hit if there is a zero
+					// length file.
 					printf("!!!!!!!!!!!!! no data; %s\n",
 						sb->path);
 					exit(1);

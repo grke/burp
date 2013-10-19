@@ -775,12 +775,14 @@ static int write_to_changed_file(gzFile chzp, struct slist *slist, struct blist 
 				{
 					gzprintf_sig_and_path(chzp, blk);
 				}
+/*
 				else
 				{
 					printf("!!!!!!!!!!!!! no data; %s\n",
 						sb->path);
 					exit(1);
 				}
+*/
 
 				if(blk==sb->bend)
 				{

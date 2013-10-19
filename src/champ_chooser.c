@@ -126,8 +126,46 @@ static int scores_grow(struct scores *scores, size_t count)
 
 static void scores_reset(struct scores *scores)
 {
-	if(!scores->scores) return;
-	memset(scores->scores, 0, sizeof(scores->scores[0])*scores->allocated);
+	if(!scores->scores || !scores->size) return;
+	memset(scores->scores, 0, sizeof(scores->scores[0])*scores->size);
+}
+
+struct incoming
+{
+	uint64_t *weak;
+	uint8_t *found;
+	uint16_t size;
+	uint16_t allocated;
+};
+
+static struct incoming *incoming_alloc(void)
+{
+	struct incoming *in;
+	if((in=(struct incoming *)calloc(1, sizeof(struct incoming))))
+		return in;
+	log_out_of_memory(__FUNCTION__);
+	return NULL;
+}
+
+static int incoming_grow_maybe(struct incoming *in)
+{
+	if(++in->size<in->allocated) return 0;
+	// Make the incoming array bigger.
+	in->allocated+=32;
+printf("grow incoming to %d\n", in->allocated);
+	if((in->weak=(uint64_t *)
+		realloc(in->weak, in->allocated*sizeof(uint64_t)))
+	  && (in->found=(uint8_t *)
+		realloc(in->found, in->allocated*sizeof(uint8_t))))
+			return 0;
+	log_out_of_memory(__FUNCTION__);
+	return -1;
+}
+
+static void incoming_found_reset(struct incoming *in)
+{
+	if(!in->found || !in->size) return;
+	memset(in->found, 0, sizeof(in->found[0])*in->size);
 }
 
 static void set_candidate_score_pointers(struct candidate **candidates, size_t clen, struct scores *scores)
@@ -213,36 +251,6 @@ end:
 	return ret;
 }
 
-
-struct incoming
-{
-	uint64_t *weak;
-	uint16_t size;
-	uint16_t allocated;
-};
-
-static struct incoming *incoming_alloc(void)
-{
-	struct incoming *in;
-	if((in=(struct incoming *)calloc(1, sizeof(struct incoming))))
-		return in;
-	log_out_of_memory(__FUNCTION__);
-	return NULL;
-}
-
-static int incoming_grow_maybe(struct incoming *in)
-{
-	if(++in->size<in->allocated) return 0;
-	// Make the incoming array bigger.
-	in->allocated+=32;
-printf("grow incoming to %d\n", in->allocated);
-	if((in->weak=(uint64_t *)
-		realloc(in->weak, in->allocated*sizeof(uint64_t))))
-			return 0;
-	log_out_of_memory(__FUNCTION__);
-	return -1;
-}
-
 static char *get_fq_path(const char *path)
 {
 	static char fq_path[24];
@@ -305,31 +313,43 @@ printf(".");
 	return 0;
 }
 
-static struct candidate *champ_chooser(struct incoming *in)
+static struct candidate *champ_chooser(struct incoming *in, struct candidate *champ_last)
 {
 	static uint16_t i;
 	static uint16_t s;
 	static struct sparse *sparse;
 	static struct candidate *best;
+	static struct candidate *candidate;
 	static uint16_t *score;
-	best=NULL;
-//	dump_scores("chooser", scores);
-   struct timespec tstart={0,0}, tend={0,0};
 
-    clock_gettime(CLOCK_MONOTONIC, &tstart);
-printf("i size: %d\n", in->size);
-if(in->size) printf("first: %016lX\n", in->weak[0]);
+	best=NULL;
+
+	struct timespec tstart={0,0}, tend={0,0};
+	clock_gettime(CLOCK_MONOTONIC, &tstart);
+
 	for(i=0; i<in->size; i++)
 	{
-//printf("find: %d %016lX\n", i, in->weak[i]);
+		if(in->found[i]) continue;
+
 		if(!(sparse=sparse_find(in->weak[i])))
 			continue;
 		for(s=0; s<sparse->size; s++)
 		{
-			score=sparse->candidates[s]->score;
+			candidate=sparse->candidates[s];
+			if(candidate==champ_last)
+			{
+				// Want to exclude sparse entries that have
+				// already been found.
+				in->found[i]=1;
+				// Need to go back up the list, subtracting
+				// scores.
+				int t;
+				for(t=s-1; t>=0; t--)
+					(*(candidate->score))--;
+				break;
+			}
+			score=candidate->score;
 			(*score)++;
-//printf("%d candidate, %p\n", i, sparse->candidates[s]);
-//printf("%d candidate, score %p %d\n", i, score, *score);
 			if(*score>1000)
 			{
 				dump_scores("exiting", scores, scores->size);
@@ -339,7 +359,7 @@ if(in->size) printf("first: %016lX\n", in->weak[0]);
 			// Maybe should check for candidate!=best here too.
 			  || *score>*(best->score))
 			{
-				best=sparse->candidates[s];
+				best=candidate;
 				printf("%s is now best:\n",
 					best->path);
 				printf("    score %p %d\n",
@@ -349,14 +369,15 @@ if(in->size) printf("first: %016lX\n", in->weak[0]);
 			// newer candidates.
 		}
 	}
-    clock_gettime(CLOCK_MONOTONIC, &tend);
-    printf("champ_chooser took about %.5f seconds\n",
-           ((double)tend.tv_sec + 1.0e-9*tend.tv_nsec) - 
-           ((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec));
-if(best)
-printf("%s is choice: score %p %d\n", best->path, best->score, *(best->score));
-else
-printf("no choice\n");
+	clock_gettime(CLOCK_MONOTONIC, &tend);
+	printf("champ_chooser took about %.5f seconds\n",
+		((double)tend.tv_sec + 1.0e-9*tend.tv_nsec) - 
+		((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec));
+
+	if(best)
+		printf("%s is choice:\nscore %p %d\n", best->path, best->score, *(best->score));
+	else
+		printf("no choice\n");
 	return best;
 }
 
@@ -366,22 +387,25 @@ int deduplicate(struct blk *blks, struct dpth *dpth, struct config *conf, uint64
 {
 	struct blk *blk;
 	struct candidate *champ;
+	struct candidate *champ_last=NULL;
 	static int consecutive_got=0;
+	static int count=0;
 
 printf("in deduplicate()\n");
-	if((champ=champ_chooser(in)))
+
+	incoming_found_reset(in);
+	count=0;
+	while((champ=champ_chooser(in, champ_last)))
 	{
 		printf("Got champ: %s %d\n", champ->path, *(champ->score));
-	}
-	else
-	{
-		printf("No champ\n");
-	}
-
-	// Deduplicate here.
-	if(champ)
-	{
+		scores_reset(scores);
 		if(hash_load(champ->path, conf)) return -1;
+		if(++count==3)
+		{
+			printf("Loaded 3 champs\n");
+			break;
+		}
+		champ_last=champ;
 	}
 
 	for(blk=blks; blk; blk=blk->next)
@@ -423,7 +447,6 @@ printf("\n");
 	in->size=0;
 	// Destroy the deduplication hash table.
 	hash_delete_all();
-	scores_reset(scores);
 
 	return 0;
 }

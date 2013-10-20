@@ -15,6 +15,7 @@
 #include "hash.h"
 #include "phase3.h"
 #include "champ_chooser.h"
+#include "manio.h"
 
 static int fprint_tag(FILE *fp, char cmd, unsigned int s)
 {
@@ -135,7 +136,7 @@ static int data_needed(struct sbuf *sb)
 }
 
 // Can this be merged with copy_unchanged_entry()?
-static int forward_through_sigs(struct sbuf **csb, const char *cmanifest, gzFile *cmanzp, struct config *conf)
+static int forward_through_sigs(struct sbuf **csb, struct manio *cmanio, struct config *conf)
 {
 	static int ars;
 	char *copy;
@@ -148,24 +149,13 @@ static int forward_through_sigs(struct sbuf **csb, const char *cmanifest, gzFile
 
 	while(1)
 	{
-		if((ars=sbuf_fill_from_gzfile(*csb,
-			*cmanzp, NULL, NULL, conf))<0) return -1;
+		if((ars=manio_sbuf_fill(cmanio, *csb,
+			NULL, NULL, conf))<0) return -1;
 		else if(ars>0)
 		{
-			// Reached the end.
-			// Maybe there is another manifest file to continue
-			// with.
-			gzclose_fp(cmanzp);
-			if(open_next_manifest(cmanifest, cmanzp))
-				return -1;
-			// If we got another file, continue.
-			if(*cmanzp) continue;
-			// Otherwise, finish.
-
+			// Finished.
 			// blk is not getting freed. Never mind.
-			sbuf_free(*csb);
-			*csb=NULL;
-			gzclose_fp(cmanzp);
+			sbuf_free(*csb); *csb=NULL;
 			free(copy);
 			return 0;
 		}
@@ -185,11 +175,11 @@ static int forward_through_sigs(struct sbuf **csb, const char *cmanifest, gzFile
 	return -1;
 }
 
-static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, struct blk **blk, const char *cmanifest, gzFile *cmanzp, gzFile unzp, struct config *conf)
+static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, struct blk **blk, struct manio *cmanio, gzFile unzp, struct config *conf)
 {
 	static int ars;
 	static char *copy;
-//printf("in cue\n");
+
 	// Use the most recent stat for the new manifest.
 	if(sbuf_to_manifest(sb, unzp)) return -1;
 
@@ -201,41 +191,27 @@ static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, struct blk *
 
 	while(1)
 	{
-		if((ars=sbuf_fill_from_gzfile(*csb,
-			*cmanzp, *blk, NULL, conf))<0) return -1;
+		if((ars=manio_sbuf_fill(cmanio, *csb, *blk, NULL, conf))<0)
+			return -1;
 		else if(ars>0)
 		{
-			// Reached the end.
-			// Maybe there is another manifest file to continue
-			// with.
-			gzclose_fp(cmanzp);
-			if(open_next_manifest(cmanifest, cmanzp))
-				return -1;
-			// If we got another file, continue.
-			if(*cmanzp) continue;
-			// Otherwise, finish.
-
-			sbuf_free(*csb);
-			blk_free(*blk);
-			*csb=NULL;
-			*blk=NULL;
-			gzclose_fp(cmanzp);
+			// Finished.
+			sbuf_free(*csb); *csb=NULL;
+			blk_free(*blk); *blk=NULL;
 			free(copy);
 			return 0;
 		}
-		else
+
+		// Got something.
+		if(strcmp((*csb)->path, copy))
 		{
-			// Got something.
-			if(strcmp((*csb)->path, copy))
-			{
-				// Found the next entry.
-				free(copy);
-				return 0;
-			}
-			// Should have the next signature.
-			// Write it to the unchanged file.
-			gzprintf_sig_and_path(unzp, *blk);
+			// Found the next entry.
+			free(copy);
+			return 0;
 		}
+		// Should have the next signature.
+		// Write it to the unchanged file.
+		gzprintf_sig_and_path(unzp, *blk);
 	}
 
 	free(copy);
@@ -243,17 +219,15 @@ static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, struct blk *
 }
 
 // Return -1 for error, 0 for entry not changed, 1 for entry changed (or new).
-static int entry_changed(struct sbuf *sb, const char *cmanifest, gzFile *cmanzp, gzFile unzp, struct config *conf)
+static int entry_changed(struct sbuf *sb, struct manio *cmanio, gzFile unzp, struct config *conf)
 {
+	static int finished=0;
 	static struct sbuf *csb=NULL;
 	static struct blk *blk=NULL;
-//printf("in ec\n");
 
-	if(!csb)
-	{
-		if(!*cmanzp) return 1;
-		if(!(csb=sbuf_alloc())) return -1;
-	}
+	if(finished) return 1;
+
+	if(!csb && !(csb=sbuf_alloc())) return -1;
 
 	if(csb->path)
 	{
@@ -264,33 +238,15 @@ static int entry_changed(struct sbuf *sb, const char *cmanifest, gzFile *cmanzp,
 		static int ars;
 		// Need to read another.
 		if(!blk && !(blk=blk_alloc())) return -1;
-		if((ars=sbuf_fill_from_gzfile(csb, *cmanzp, blk, NULL, conf))<0)
+		if((ars=manio_sbuf_fill(cmanio, csb, blk, NULL, conf))<0)
 			return -1;
 		else if(ars>0)
 		{
 			// Reached the end.
-			// Maybe there is another manifest file to continue
-			// with.
-			gzclose_fp(cmanzp);
-			if(open_next_manifest(cmanifest, cmanzp))
-				return -1;
-			// If we got another file, try again.
-			if(*cmanzp)
-			{
-				if((ars=sbuf_fill_from_gzfile(csb,
-					*cmanzp, blk, NULL, conf))<0)
-						return -1;
-			}
-			if(ars>0)
-			{
-				// Otherwise, finish.
-				sbuf_free(csb);
-				blk_free(blk);
-				csb=NULL;
-				blk=NULL;
-				gzclose_fp(cmanzp);
-				return 1;
-			}
+			sbuf_free(csb); csb=NULL;
+			blk_free(blk); blk=NULL;
+			finished=1;
+			return 1;
 		}
 		if(!csb->path)
 		{
@@ -299,7 +255,6 @@ static int entry_changed(struct sbuf *sb, const char *cmanifest, gzFile *cmanzp,
 		}
 		// Got an entry.
 	}
-//printf("in ec2\n");
 
 	while(1)
 	{
@@ -315,8 +270,8 @@ static int entry_changed(struct sbuf *sb, const char *cmanifest, gzFile *cmanzp,
 			if(csb->cmd!=sb->cmd)
 			{
 //				printf("got changed: %c %s %c %s %lu %lu\n", csb->cmd, csb->path, sb->cmd, sb->path, csb->statp.st_mtime, sb->statp.st_mtime);
-				if(forward_through_sigs(&csb,
-					cmanifest, cmanzp, conf)) return -1;
+				if(forward_through_sigs(&csb, cmanio, conf))
+					return -1;
 				return 1;
 			}
 
@@ -328,7 +283,7 @@ static int entry_changed(struct sbuf *sb, const char *cmanifest, gzFile *cmanzp,
 				// Got an unchanged file.
 //				printf("got unchanged: %c %s %c %s %lu %lu\n", csb->cmd, csb->path, sb->cmd, sb->path, csb->statp.st_mtime, sb->statp.st_mtime);
 				if(copy_unchanged_entry(&csb, sb, &blk,
-					cmanifest, cmanzp, unzp, conf))
+					cmanio, unzp, conf))
 						return -1;
 				return 0;
 			}
@@ -343,7 +298,7 @@ static int entry_changed(struct sbuf *sb, const char *cmanifest, gzFile *cmanzp,
 				// FIX THIS
 //				printf("got unchanged b: %c %s %c %s %lu %lu\n", csb->cmd, csb->path, sb->cmd, sb->path, csb->statp.st_mtime, sb->statp.st_mtime);
 				if(copy_unchanged_entry(&csb, sb, &blk,
-					cmanifest, cmanzp, unzp, conf))
+					cmanio, unzp, conf))
 						return -1;
 				return 0;
 			}
@@ -351,7 +306,7 @@ static int entry_changed(struct sbuf *sb, const char *cmanifest, gzFile *cmanzp,
 //			printf("got changed: %c %s %c %s %lu %lu\n", csb->cmd, csb->path, sb->cmd, sb->path, csb->statp.st_mtime, sb->statp.st_mtime);
 
 			// File data changed.
-			if(forward_through_sigs(&csb, cmanifest, cmanzp, conf))
+			if(forward_through_sigs(&csb, cmanio, conf))
 				return -1;
 			return 1;
 		}
@@ -367,26 +322,16 @@ static int entry_changed(struct sbuf *sb, const char *cmanifest, gzFile *cmanzp,
 			// manifest.
 		}
 
-		if((sbret=sbuf_fill_from_gzfile(csb,
-			*cmanzp, blk, NULL, conf))<0)
-		{
-			// Error
+		if((sbret=manio_sbuf_fill(cmanio, csb, blk, NULL, conf))<0)
 			return -1;
-		}
 		else if(sbret>0)
 		{
 			// Reached the end.
-			sbuf_free(csb);
-			blk_free(blk);
-			csb=NULL;
-			blk=NULL;
-			gzclose_fp(cmanzp);
+			sbuf_free(csb); csb=NULL;
+			blk_free(blk); blk=NULL;
 			return 1;
 		}
-		else
-		{
-			// Got something, go back around the loop.
-		}
+		// Got something, go back around the loop.
 	}
 
 	return 0;
@@ -500,7 +445,7 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobu
 	return 0;
 }
 
-static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist *blist, struct config *conf, int *scan_end, int *sigs_end, int *backup_end, const char *cmanifest, gzFile *cmanzp, gzFile unzp, struct dpth *dpth, uint64_t *wrap_up, const char *datadir)
+static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist *blist, struct config *conf, int *scan_end, int *sigs_end, int *backup_end, struct manio *cmanio, gzFile unzp, struct dpth *dpth, uint64_t *wrap_up, const char *datadir)
 {
 	int ret=0;
 	static int ec=0;
@@ -564,8 +509,8 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 					snew->need_link=1;
 				else
 				{
-					if(!(ec=entry_changed(snew, cmanifest,
-							cmanzp, unzp, conf)))
+					if(!(ec=entry_changed(snew, cmanio,
+							unzp, conf)))
 						sbuf_free(snew);
 					else if(ec<0)
 						goto error;
@@ -847,7 +792,7 @@ static void dump_slist(struct slist *slist, const char *msg)
 }
 */
 
-static int backup_server(const char *cmanifest, gzFile *cmanzp, const char *changed, const char *unchanged, const char *manifest, const char *client, const char *datadir, const char *rmanifest, struct config *conf)
+static int backup_server(const char *cmanifest_dir, const char *changed, const char *unchanged, const char *manifest, const char *client, const char *datadir, const char *rmanifest, struct config *conf)
 {
 	int ret=-1;
 	int scan_end=0;
@@ -860,6 +805,7 @@ static int backup_server(const char *cmanifest, gzFile *cmanzp, const char *chan
 	struct iobuf *rbuf=NULL;
 	struct iobuf *wbuf=NULL;
 	struct dpth *dpth=NULL;
+	struct manio *cmanio=NULL;
 	gzFile chzp=NULL;
 	gzFile unzp=NULL;
 	// This is used to tell the client that a number of consecutive blocks
@@ -870,6 +816,8 @@ static int backup_server(const char *cmanifest, gzFile *cmanzp, const char *chan
 	printf("DATADIR: %s\n", datadir);
 
 	if(champ_chooser_init(datadir, conf)
+	  || !(cmanio=manio_alloc())
+	  || manio_init_read(cmanio, cmanifest_dir)
 	  || !(slist=slist_alloc())
 	  || !(blist=blist_alloc())
 	  || !(wbuf=iobuf_alloc())
@@ -910,7 +858,7 @@ static int backup_server(const char *cmanifest, gzFile *cmanzp, const char *chan
 
 		if(rbuf->buf && deal_with_read(rbuf, slist, blist, conf,
 			&scan_end, &sigs_end, &backup_end,
-			cmanifest, cmanzp, unzp, dpth, &wrap_up, datadir))
+			cmanio, unzp, dpth, &wrap_up, datadir))
 				goto end;
 
 		if(write_to_changed_file(chzp, slist, blist, dpth, backup_end))
@@ -950,7 +898,8 @@ end:
 	// Write buffer did not allocate 'buf'. 
 	if(wbuf) wbuf->buf=NULL;
 	iobuf_free(wbuf);
-	if(dpth) dpth_free(dpth);
+	dpth_free(dpth);
+	manio_free(cmanio);
 	return ret;
 }
 
@@ -990,8 +939,8 @@ int do_backup_server(const char *basedir, const char *current, const char *worki
 	char msg[256]="";
 	// The timestamp file of this backup
 	char *timestamp=NULL;
-	// path to the last manifest
-	char *cmanifest=NULL;
+	// path to the last manifest directory
+	char *cmanifest_dir=NULL;
 	// Real path to the working directory
 	char *realworking=NULL;
 	// real path to the last manifest (after backup has finished)
@@ -1000,12 +949,11 @@ int do_backup_server(const char *basedir, const char *current, const char *worki
 	char *datadir=NULL;
 	char *changed=NULL;
 	char *unchanged=NULL;
-	gzFile cmanzp=NULL;
 
 	logp("in do_backup_server\n");
 
 	if(!(timestamp=prepend_s(working, "timestamp", strlen("timestamp")))
-	  || !(cmanifest=prepend_s(current, "manifest", strlen("manifest")))
+	  || !(cmanifest_dir=prepend_s(current, "manifest", strlen("manifest")))
 	  || !(datadir=prepend_s(basedir, "data", strlen("data")))
 	  || !(changed=prepend_s(working, "changed", strlen("changed")))
 	  || !(unchanged=prepend_s(working, "unchanged", strlen("unchanged"))))
@@ -1064,11 +1012,7 @@ int do_backup_server(const char *basedir, const char *current, const char *worki
 		goto error;
 	}
 
-	// Open the previous (current) manifest.
-	if(open_next_manifest(cmanifest, &cmanzp))
-		goto error;
-
-	if(backup_server(cmanifest, &cmanzp, changed, unchanged,
+	if(backup_server(cmanifest_dir, changed, unchanged,
 		manifest, client, datadir, rmanifest, cconf))
 	{
 		logp("error in backup\n");
@@ -1089,9 +1033,8 @@ int do_backup_server(const char *basedir, const char *current, const char *worki
 error:
 	ret=-1;
 end:
-	gzclose_fp(&cmanzp);
 	if(timestamp) free(timestamp);
-	if(cmanifest) free(cmanifest);
+	if(cmanifest_dir) free(cmanifest_dir);
 	if(datadir) free(datadir);
 	if(changed) free(changed);
 	if(unchanged) free(unchanged);

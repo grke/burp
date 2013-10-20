@@ -54,6 +54,7 @@ SVRSRCS =	acl.c \
 		list_server.c \
 		lock.c \
 		log.c \
+		manio.c \
 		msg.c \
 		phase3.c \
 		prepend.c \

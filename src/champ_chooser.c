@@ -304,11 +304,7 @@ int add_fresh_candidate(const char *path, struct config *conf)
 	if(scores_grow(scores, candidates_len)) goto end;
 	set_candidate_score_pointers(candidates, candidates_len, scores);
 	scores_reset(scores);
-{
-	int a;
-	for(a=0; a<candidates_len; a++)
-		printf("HERE: %d %s\n", candidates_len, candidates[a]->path);
-}
+	printf("HERE: %d candidates\n", candidates_len);
 
 	ret=0;
 end:

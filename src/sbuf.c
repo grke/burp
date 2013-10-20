@@ -587,7 +587,8 @@ static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, struct dpth
 				free(rbuf->buf); rbuf->buf=NULL;
 				return -1;
 			default:
-				printf("got unexpected cmd: %c\n", rbuf->cmd);
+				printf("got unexpected cmd in %s: %c\n",
+					__FUNCTION__, rbuf->cmd);
 				free(rbuf->buf); rbuf->buf=NULL;
 				return -1;
 		}

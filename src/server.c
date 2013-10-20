@@ -407,8 +407,6 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 	char *currentdata=NULL;
 	// where the data goes initially
 	char *datadirtmp=NULL;
-	// The final compressed manifest 
-	char *manifest=NULL;
 	// A symlink that indicates that the
 	// data from the client is complete and just some work on the server 
 	// is needed to finish. The 'working' symlink gets renamed to this
@@ -424,7 +422,6 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 	  || !(finishing=prepend_s(basedir, "finishing", strlen("finishing")))
 	  || !(current=prepend_s(basedir, "current", strlen("current")))
 	  || !(currentdata=prepend_s(current, "data", strlen("data")))
-	  || !(manifest=prepend_s(working, "manifest", strlen("manifest")))
 	  || !(datadirtmp=prepend_s(working, "data.tmp", strlen("data.tmp")))
 	  || !(lockbasedir=prepend_s(client_lockdir, client, strlen(client)))
 	  || !(lockfile=prepend_s(lockbasedir, "lockfile", strlen("lockfile"))))
@@ -511,8 +508,8 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 				cconf->compression);
 			async_write_str(CMD_GEN, okstr);
 			ret=do_backup_server(basedir, current, working,
-			  currentdata, finishing, cconf,
-			  manifest, client, cversion, incexc);
+				currentdata, finishing, cconf,
+				client, cversion, incexc);
 			maybe_do_notification(ret, client,
 				basedir, current, "log", "backup", cconf);
 		}
@@ -672,7 +669,6 @@ end:
 	if(working) free(working);
 	if(currentdata) free(currentdata);
 	if(datadirtmp) free(datadirtmp);
-	if(manifest) free(manifest);
 	if(lockbasedir) free(lockbasedir);
 	if(lockfile) free(lockfile);
 	return ret;

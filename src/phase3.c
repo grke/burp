@@ -15,49 +15,26 @@
 #include "hash.h"
 #include "phase3.h"
 #include "handy.h"
+#include "manio.h"
+#include "champ_chooser.h"
 
 static char sort_blk[SIG_MAX][16+1];
 static int sort_ind=0;
 
-static char *get_next_tmp_path(const char *manifest)
+static int write_header(gzFile spzp, const char *fpath, struct config *conf)
 {
-	static char tmp[32];
-	static uint64_t count=0;
-	snprintf(tmp, sizeof(tmp), "%08lX", count++);
-	return tmp;
-}
-
-// FIX THIS: should probably used the shared function in current_backups.c.
-static gzFile get_new_manifest(const char *manifest, const char *rmanifest, gzFile spzp, struct config *conf)
-{
-	char *tmp;
 	const char *cp;
-	gzFile zp=NULL;
-	char *man_path=NULL;
-	if(!(tmp=get_next_tmp_path(manifest)))
-		return NULL;
-
-	if(!(man_path=prepend_s(manifest, tmp, sizeof(tmp)))
-	  || !(zp=gzopen_file(man_path, comp_level(conf))))
-	{
-		if(man_path) free(man_path);
-		return NULL;
-	}
-	// Make sure the path to this manifest in the sparse index file is
-	// relative (does not start with a slash), and that it is the real path
-	// (not the symlinked 'working' path).
-	cp=rmanifest+strlen(conf->directory);
+	cp=fpath+strlen(conf->directory);
 	while(cp && *cp=='/') cp++;
-	gzprintf(spzp, "%c%04X%s/%s\n", CMD_MANIFEST,
-		strlen(cp)+strlen(tmp)+1, cp, tmp);
-	free(man_path);
-	return zp;
+	gzprintf(spzp, "%c%04X%s\n", CMD_MANIFEST, strlen(cp), cp);
+	return 0;
 }
 
-static int write_hooks(const char *sparse, gzFile spzp)
+static int write_hooks(gzFile spzp, const char *fpath, struct config *conf)
 {
 	int i=0;
 	if(!sort_ind) return 0;
+	if(write_header(spzp, fpath, conf)) return -1;
 	qsort(sort_blk, sort_ind, 16+1,
 		(int (*)(const void *, const void *))strcmp);
 	for(i=0; i<sort_ind; i++)
@@ -71,18 +48,14 @@ static int write_hooks(const char *sparse, gzFile spzp)
 	return 0;
 }
 
-static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, struct blk **blk, gzFile *cmanzp, gzFile *mzp, gzFile spzp, const char *manifest, const char *rmanifest, const char *sparse, struct config *conf)
+static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, int *finished, struct blk **blk, struct manio *cmanio, struct manio *newmanio, const char *manifest_dir, struct config *conf)
 {
 	static int ars;
 	static char *copy;
-	static int sig_count=0;
-
-	if(!*mzp && !(*mzp=get_new_manifest(manifest,
-		rmanifest, spzp, conf)))
-			return -1;
+	//static int sig_count=0;
 
 	// Use the most recent stat for the new manifest.
-	if(sbuf_to_manifest(sb, *mzp)) return -1;
+	if(manio_write_sbuf(newmanio, sb)) return -1;
 
 	if(!(copy=strdup((*csb)->path)))
 	{
@@ -92,53 +65,29 @@ static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, struct blk *
 
 	while(1)
 	{
-		if((ars=sbuf_fill_from_gzfile(*csb,
-			*cmanzp, *blk, NULL, conf))<0) return -1;
+		if((ars=manio_sbuf_fill(cmanio, *csb, *blk, NULL, conf))<0)
+			return -1;
 		else if(ars>0)
 		{
 			// Reached the end.
-
-			sbuf_free(*csb);
-			blk_free(*blk);
-			*csb=NULL;
-			*blk=NULL;
-			gzclose_fp(cmanzp);
-			//gzclose_fp(mzp);
+			*finished=1;
+			sbuf_free(*csb); *csb=NULL;
+			blk_free(*blk); *blk=NULL;
 			free(copy);
 			return 0;
 		}
-		else
+		// Got something.
+		if(strcmp((*csb)->path, copy))
 		{
-			// Got something.
-			if(strcmp((*csb)->path, copy))
-			{
-				// Found the next entry.
-				free(copy);
-				return 0;
-			}
-
-			if(!*mzp && !(*mzp=get_new_manifest(manifest,
-				rmanifest, spzp, conf)))
-					break;
-			// Should have the next signature.
-			// Write it to the unchanged file.
-			gzprintf_sig_and_path(*mzp, *blk);
-
-			// FIX THIS: Should be checking bits on
-			// blk->fingerprint, rather than a character.
-			if(*((*blk)->weak)=='F')
-			{
-				snprintf(sort_blk[sort_ind++], 16+1,
-					(*blk)->weak);
-			}
-
-			if(++sig_count<SIG_MAX) continue;
-
-			sig_count=0;
-			gzclose_fp(mzp);
-			if(write_hooks(sparse, spzp))
-				break;
+			// Found the next entry.
+			free(copy);
+			return 0;
 		}
+
+		// Should have the next signature.
+		// Write it to the file.
+		if(manio_write_sig_and_path(newmanio, *blk))
+			break;
 	}
 
 	free(copy);
@@ -455,71 +404,136 @@ end:
 	return ret;
 }
 
+static int sparse_generation(struct manio *newmanio, const char *datadir, const char *manifest_dir, struct config *conf)
+{
+	int ars;
+	int ret=-1;
+	gzFile spzp=NULL;
+	char *sparse=NULL;
+	struct sbuf *sb=NULL;
+	char *global_sparse=NULL;
+	struct blk *blk=NULL;
+	int sig_count=0;
+	char *fpath=NULL;
+
+	if(!(sparse=prepend_s(manifest_dir, "sparse", strlen("sparse")))
+	  || !(global_sparse=prepend_s(datadir, "sparse", strlen("sparse")))
+	  || !(sb=sbuf_alloc())
+	  || !(blk=blk_alloc())
+	  || build_path_w(sparse)
+	  || !(spzp=gzopen_file(sparse, "wb")))
+		goto end;
+
+	while(1)
+	{
+		if((ars=manio_sbuf_fill(newmanio, sb, blk, NULL, conf))<0)
+			goto end; // Error
+		else if(ars>0)
+			break; // Finished
+
+		// FIX THIS: I am sure this is not really necessary.
+		if(!fpath || strcmp(fpath, newmanio->fpath))
+		{
+			if(fpath) free(fpath);
+			if(!(fpath=strdup(newmanio->fpath)))
+			{
+				log_out_of_memory(__FUNCTION__);
+				goto end;
+			}
+		}
+
+		if(!*(blk->weak)) continue;
+
+		if(is_hook(blk->weak))
+			snprintf(sort_blk[sort_ind++], 16+1, blk->weak);
+		*(blk->weak)='\0';
+
+		// FIX THIS: Also want to make this whole business
+		// less fragile.
+		if(++sig_count<SIG_MAX) continue;
+		sig_count=0;
+
+		if(write_hooks(spzp, fpath, conf)) goto end;
+	}
+
+	if(sig_count && write_hooks(spzp, fpath, conf)) goto end;
+
+	if(gzclose_fp(&spzp))
+	{
+		logp("Error closing %s in %s\n", sparse, __FUNCTION__);
+		goto end;
+	}
+
+	if(sort_sparse_indexes(sparse, conf)
+	  || merge_sparse_indexes(global_sparse, sparse, conf))
+		goto end;
+
+	ret=0;
+end:
+	if(sparse) free(sparse);
+	if(global_sparse) free(global_sparse);
+	gzclose_fp(&spzp);
+	sbuf_free(sb);
+	blk_free(blk);
+	return ret;
+}
+
 // This is basically backup_phase3_server() from burp1. It used to merge the
 // unchanged and changed data into a single file. Now it splits the manifests
 // into several files.
-int phase3(const char *changed, const char *unchanged, const char *manifest, const char *rmanifest, const char *datadir, struct config *conf)
+int phase3(struct manio *chmanio, struct manio *unmanio, const char *manifest_dir, const char *datadir, struct config *conf)
 {
 	int ars=0;
 	int ret=1;
 	int pcmp=0;
-	gzFile mzp=NULL;
-	gzFile chzp=NULL;
-	gzFile unzp=NULL;
-	gzFile spzp=NULL;
 	struct sbuf *usb=NULL;
 	struct sbuf *csb=NULL;
 	struct blk *blk=NULL;
-	char *sparse=NULL;
-	char *global_sparse=NULL;
+	int finished_ch=0;
+	int finished_un=0;
+	struct manio *newmanio=NULL;
 
 	logp("Start phase3\n");
 
-	if(!(sparse=prepend_s(manifest, "sparse", strlen("sparse")))
-	  || !(global_sparse=prepend_s(datadir, "sparse", strlen("sparse")))
-	  || build_path_w(sparse)
+	if(!(newmanio=manio_alloc())
+	  || manio_init_write(newmanio, manifest_dir)
 	  || !(usb=sbuf_alloc())
-	  || !(csb=sbuf_alloc())
-	  || !(chzp=gzopen_file(changed, "rb"))
-	  || !(unzp=gzopen_file(unchanged, "rb"))
-	  || !(spzp=gzopen_file(sparse, "wb")))
+	  || !(csb=sbuf_alloc()))
 		goto end;
 
-	while(unzp || chzp)
+	while(!finished_ch || !finished_un)
 	{
 		if(!blk && !(blk=blk_alloc())) return -1;
 
-		if(unzp
+		if(!finished_un
 		  && usb
 		  && !usb->path
-		  && (ars=sbuf_fill_from_gzfile(usb, unzp, NULL, NULL, conf)))
+		  && (ars=manio_sbuf_fill(unmanio, usb, NULL, NULL, conf)))
 		{
-			if(ars<0) goto end;
-			// ars==1 means it ended ok.
-			gzclose_fp(&unzp);
+			if(ars<0) goto end; // Error.
+			finished_un=1; // OK.
 		}
 
-		if(chzp
+		if(!finished_ch
 		  && csb
 		  && !csb->path
-		  && (ars=sbuf_fill_from_gzfile(csb, chzp, NULL, NULL, conf)))
+		  && (ars=manio_sbuf_fill(chmanio, csb, NULL, NULL, conf)))
 		{
-			if(ars<0) goto end;
-			// ars==1 means it ended ok.
-			gzclose_fp(&chzp);
+			if(ars<0) goto end; // Error.
+			finished_ch=1; // OK.
 		}
 
 		if((usb && usb->path) && (!csb || !csb->path))
 		{
-			if(copy_unchanged_entry(&usb, usb,
-				&blk, &unzp, &mzp, spzp,
-				manifest, rmanifest, sparse, conf)) goto end;
+			if(copy_unchanged_entry(&usb, usb, &finished_un,
+				&blk, unmanio, newmanio, manifest_dir,
+				conf)) goto end;
 		}
 		else if((!usb || !usb->path) && (csb && csb->path))
 		{
-			if(copy_unchanged_entry(&csb, csb,
-				&blk, &chzp, &mzp, spzp,
-				manifest, rmanifest, sparse, conf)) goto end;
+			if(copy_unchanged_entry(&csb, csb, &finished_ch,
+				&blk, chmanio, newmanio, manifest_dir,
+				conf)) goto end;
 		}
 		else if((!usb || !usb->path) && (!csb || !(csb->path)))
 		{
@@ -528,57 +542,47 @@ int phase3(const char *changed, const char *unchanged, const char *manifest, con
 		else if(!(pcmp=sbuf_pathcmp(usb, csb)))
 		{
 			// They were the same - write one.
-			if(copy_unchanged_entry(&csb, csb,
-				&blk, &chzp, &mzp, spzp,
-				manifest, rmanifest, sparse, conf)) goto end;
+			if(copy_unchanged_entry(&csb, csb, &finished_ch,
+				&blk, chmanio, newmanio, manifest_dir,
+				conf)) goto end;
 		}
 		else if(pcmp<0)
 		{
-			if(copy_unchanged_entry(&usb, usb,
-				&blk, &unzp, &mzp, spzp,
-				manifest, rmanifest, sparse, conf)) goto end;
+			if(copy_unchanged_entry(&usb, usb, &finished_un,
+				&blk, unmanio, newmanio, manifest_dir,
+				conf)) goto end;
 		}
 		else
 		{
-			if(copy_unchanged_entry(&csb, csb,
-				&blk, &chzp, &mzp, spzp,
-				manifest, rmanifest, sparse, conf)) goto end;
+			if(copy_unchanged_entry(&csb, csb, &finished_ch,
+				&blk, chmanio, newmanio, manifest_dir,
+				conf)) goto end;
 		}
 	}
 
-	if(gzclose_fp(&mzp))
+	// Flush to disk and set up for reading.
+	if(manio_set_mode_read(newmanio))
 	{
-		logp("Error closing %s in %s\n", manifest, __FUNCTION__);
+		logp("Error setting %s to read in %s\n",
+			newmanio->directory, __FUNCTION__);
 		goto end;
 	}
 
-	if(spzp && write_hooks(sparse, spzp))
+	if(sparse_generation(newmanio, datadir, manifest_dir, conf))
 		goto end;
-	if(gzclose_fp(&spzp))
-	{
-		logp("Error closing %s in %s\n", sparse, __FUNCTION__);
-		goto end;
-	}
 
-//	unlink(changed);
-//	unlink(unchanged);
-
-	if(sort_sparse_indexes(sparse, conf)
-	  || merge_sparse_indexes(global_sparse, sparse, conf))
-		goto end;
+//	Delete all from changed here.
+//	Delete all from unchanged here.
 
 	ret=0;
 
 	logp("End phase3\n");
 end:
-	gzclose_fp(&mzp);
-	gzclose_fp(&chzp);
-	gzclose_fp(&unzp);
-	gzclose_fp(&spzp);
+	manio_close(newmanio);
+	manio_close(chmanio);
+	manio_close(unmanio);
 	sbuf_free(csb);
 	sbuf_free(usb);
 	blk_free(blk);
-	if(sparse) free(sparse);
-	if(global_sparse) free(global_sparse);
 	return ret;
 }

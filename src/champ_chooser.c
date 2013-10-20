@@ -14,6 +14,7 @@
 #include "handy.h"
 #include "hash.h"
 #include "champ_chooser.h"
+#include "conf.h"
 
 struct sparse
 {
@@ -41,27 +42,26 @@ static struct sparse *sparse_add(uint64_t weak)
                 return NULL;
         }
         sparse->weak=weak;
-//printf("sparse_add: %016lX\n", weak);
 	HASH_ADD_INT(sparse_table, weak, sparse);
         return sparse;
 }
 
-struct candidate *candidate_alloc(char *path)
+struct candidate *candidate_alloc(void)
 {
 	struct candidate *candidate;
-	if((candidate=(struct candidate *)malloc(sizeof(struct candidate))))
-	{
-		candidate->path=path;
-//printf("candidate alloc: %p %hu\n", score, *score);
-		return candidate;
-	}
-	log_out_of_memory(__FUNCTION__);
-	return NULL;
+	if(!(candidate=(struct candidate *)calloc(1, sizeof(struct candidate))))
+		log_out_of_memory(__FUNCTION__);
+	return candidate;
 }
 
-static int candidate_add(uint64_t weak, struct candidate *candidate)
+static int candidate_add_to_sparse(const char *weakstr, struct candidate *candidate)
 {
 	static struct sparse *sparse;
+	static uint64_t weak;
+
+	// Convert to uint64_t.
+	weak=strtoull(weakstr, 0, 16);
+
 	sparse=sparse_find(weak);
 
 	if(!sparse && !(sparse=sparse_add(weak)))
@@ -168,25 +168,41 @@ static void incoming_found_reset(struct incoming *in)
 	memset(in->found, 0, sizeof(in->found[0])*in->size);
 }
 
+static struct candidate **candidates=NULL;
+static size_t candidates_len=0;
+
 static void set_candidate_score_pointers(struct candidate **candidates, size_t clen, struct scores *scores)
 {
 	size_t a;
-	for(a=0; a<clen; a++)
+	for(a=0; a<candidates_len; a++)
 		candidates[a]->score=&(scores->scores[a]);
+}
+
+static struct candidate *add_new_candidate(void)
+{
+	struct candidate *candidate;
+
+	if(!(candidate=candidate_alloc())) return NULL;
+
+	if(!(candidates=(struct candidate **) realloc(candidates,
+		(candidates_len+1)*sizeof(struct candidate *))))
+	{
+		log_out_of_memory(__FUNCTION__);
+		return NULL;
+	}
+	candidates[candidates_len++]=candidate;
+	return candidate;
 }
 
 int champ_chooser_init(const char *datadir, struct config *conf)
 {
 	int ars;
 	int ret=-1;
-	uint64_t weak;
 	gzFile zp=NULL;
 	struct sbuf *sb=NULL;
-	struct candidate *candidate=NULL;
 	char *sparse_path=NULL;
 	struct stat statp;
-	struct candidate **candidates=NULL;
-	size_t clen=0;
+	struct candidate *candidate=NULL;
 
 	if(!(sb=sbuf_alloc())
 	  || (!scores && !(scores=scores_alloc()))
@@ -205,28 +221,14 @@ int champ_chooser_init(const char *datadir, struct config *conf)
 		}
 		if(sb->cmd==CMD_MANIFEST)
 		{
-			if(!(candidate=candidate_alloc(sb->path)))
-				goto end;
-
-			if(!(candidates=(struct candidate **)
-				realloc(candidates,
-				(clen+1)*sizeof(struct candidate *))))
-			{
-				log_out_of_memory(__FUNCTION__);
-				return -1;
-			}
-			candidates[clen++]=candidate;
-
+			if(!(candidate=add_new_candidate())) goto end;
+			candidate->path=sb->path;
 			sb->path=NULL;
 		}
 		else if(sb->cmd==CMD_FINGERPRINT)
 		{
-			// Convert to uint64_t.
-			weak=strtoull(sb->path, 0, 16);
-			if(candidate_add(weak, candidate))
+			if(candidate_add_to_sparse(sb->path, candidate))
 				goto end;
-//			printf("%s - %s %lu\n",
-//				candidate->path, sb->path, weak);
 		}
 		else
 		{
@@ -237,10 +239,10 @@ int champ_chooser_init(const char *datadir, struct config *conf)
 		sbuf_free_contents(sb);
 	}
 
-	if(scores_grow(scores, clen)) goto end;
-	set_candidate_score_pointers(candidates, clen, scores);
-
+	if(scores_grow(scores, candidates_len)) goto end;
+	set_candidate_score_pointers(candidates, candidates_len, scores);
 	scores_reset(scores);
+
 	dump_scores("init", scores, scores->size);
 
 	ret=0;
@@ -248,6 +250,71 @@ end:
 	gzclose_fp(&zp);
 	sbuf_free(sb);
 	if(sparse_path) free(sparse_path);
+	return ret;
+}
+
+int is_hook(const char *str)
+{
+	// FIX THIS: should work on bits, not just the character.
+	return *str=='F';
+}
+
+// When a backup is ongoing, use this to add newly complete candidates.
+int add_fresh_candidate(const char *path, struct config *conf)
+{
+	int ars;
+	int ret=-1;
+	gzFile zp=NULL;
+	const char *cp=NULL;
+	struct sbuf *sb=NULL;
+	struct candidate *candidate=NULL;
+	struct blk *blk=NULL;
+
+	if(!(candidate=add_new_candidate())) goto end;
+	cp=path+strlen(conf->directory);
+	while(cp && *cp=='/') cp++;
+	if(!(candidate->path=strdup(cp)))
+	{
+		log_out_of_memory(__FUNCTION__);
+		goto end;
+	}
+
+	if(!(sb=sbuf_alloc())
+	  || !(blk=blk_alloc())
+	  || !(zp=gzopen_file(path, "rb")))
+		goto end;
+	while(zp)
+	{
+		if((ars=sbuf_fill_from_gzfile(sb, zp, blk, NULL, conf))<0)
+			goto end;
+		else if(ars>0)
+		{
+			// Reached the end.
+			break;
+		}
+		if(!*(blk->weak)) continue;
+		if(is_hook(blk->weak))
+		{
+			if(candidate_add_to_sparse(blk->weak,
+				candidate)) goto end;
+		}
+		*blk->weak='\0';
+	}
+
+	if(scores_grow(scores, candidates_len)) goto end;
+	set_candidate_score_pointers(candidates, candidates_len, scores);
+	scores_reset(scores);
+{
+	int a;
+	for(a=0; a<candidates_len; a++)
+		printf("HERE: %d %s\n", candidates_len, candidates[a]->path);
+}
+
+	ret=0;
+end:
+	gzclose_fp(&zp);
+	sbuf_free(sb);
+	blk_free(blk);
 	return ret;
 }
 
@@ -462,7 +529,7 @@ int deduplicate_maybe(struct blk *blk, struct dpth *dpth, struct config *conf, u
 
 	blk->fingerprint=strtoull(blk->weak, 0, 16);
 //printf("%s\n", blk->weak);
-	if(*(blk->weak)=='F')
+	if(is_hook(blk->weak))
 	{
 		if(incoming_grow_maybe(in)) return -1;
 		in->weak[in->size-1]=blk->fingerprint;

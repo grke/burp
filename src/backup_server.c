@@ -159,15 +159,13 @@ static int forward_through_sigs(struct sbuf **csb, struct manio *cmanio, struct 
 			free(copy);
 			return 0;
 		}
-		else
+
+		// Got something.
+		if(strcmp((*csb)->path, copy))
 		{
-			// Got something.
-			if(strcmp((*csb)->path, copy))
-			{
-				// Found the next entry.
-				free(copy);
-				return 0;
-			}
+			// Found the next entry.
+			free(copy);
+			return 0;
 		}
 	}
 
@@ -175,13 +173,13 @@ static int forward_through_sigs(struct sbuf **csb, struct manio *cmanio, struct 
 	return -1;
 }
 
-static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, struct blk **blk, struct manio *cmanio, gzFile unzp, struct config *conf)
+static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, struct blk **blk, struct manio *cmanio, struct manio *unmanio, struct config *conf)
 {
 	static int ars;
 	static char *copy;
 
 	// Use the most recent stat for the new manifest.
-	if(sbuf_to_manifest(sb, unzp)) return -1;
+	if(manio_write_sbuf(unmanio, sb)) return -1;
 
 	if(!(copy=strdup((*csb)->path)))
 	{
@@ -191,8 +189,8 @@ static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, struct blk *
 
 	while(1)
 	{
-		if((ars=manio_sbuf_fill(cmanio, *csb, *blk, NULL, conf))<0)
-			return -1;
+		if((ars=manio_sbuf_fill(cmanio, *csb,
+			*blk, NULL, conf))<0) return -1;
 		else if(ars>0)
 		{
 			// Finished.
@@ -211,7 +209,7 @@ static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, struct blk *
 		}
 		// Should have the next signature.
 		// Write it to the unchanged file.
-		gzprintf_sig_and_path(unzp, *blk);
+		manio_write_sig_and_path(unmanio, *blk);
 	}
 
 	free(copy);
@@ -219,7 +217,7 @@ static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, struct blk *
 }
 
 // Return -1 for error, 0 for entry not changed, 1 for entry changed (or new).
-static int entry_changed(struct sbuf *sb, struct manio *cmanio, gzFile unzp, struct config *conf)
+static int entry_changed(struct sbuf *sb, struct manio *cmanio, struct manio *unmanio, struct config *conf)
 {
 	static int finished=0;
 	static struct sbuf *csb=NULL;
@@ -283,7 +281,7 @@ static int entry_changed(struct sbuf *sb, struct manio *cmanio, gzFile unzp, str
 				// Got an unchanged file.
 //				printf("got unchanged: %c %s %c %s %lu %lu\n", csb->cmd, csb->path, sb->cmd, sb->path, csb->statp.st_mtime, sb->statp.st_mtime);
 				if(copy_unchanged_entry(&csb, sb, &blk,
-					cmanio, unzp, conf))
+					cmanio, unmanio, conf))
 						return -1;
 				return 0;
 			}
@@ -298,7 +296,7 @@ static int entry_changed(struct sbuf *sb, struct manio *cmanio, gzFile unzp, str
 				// FIX THIS
 //				printf("got unchanged b: %c %s %c %s %lu %lu\n", csb->cmd, csb->path, sb->cmd, sb->path, csb->statp.st_mtime, sb->statp.st_mtime);
 				if(copy_unchanged_entry(&csb, sb, &blk,
-					cmanio, unzp, conf))
+					cmanio, unmanio, conf))
 						return -1;
 				return 0;
 			}
@@ -350,7 +348,6 @@ static int add_data_to_store(struct blist *blist, struct iobuf *rbuf, struct dpt
 	// when writing to the manifest is not efficient.
 	//if(!blk)
 		blk=blist->head;
-	logp("adts: %p\n", blk); fflush(stdout);
 	for(; blk && (!blk->requested || blk->got==GOT); blk=blk->next)
 	{
 		logp("try: %d %d\n", blk->index, blk->got);
@@ -445,7 +442,7 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobu
 	return 0;
 }
 
-static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist *blist, struct config *conf, int *scan_end, int *sigs_end, int *backup_end, struct manio *cmanio, gzFile unzp, struct dpth *dpth, uint64_t *wrap_up, const char *datadir)
+static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist *blist, struct config *conf, int *scan_end, int *sigs_end, int *backup_end, struct manio *cmanio, struct manio *unmanio, struct dpth *dpth, uint64_t *wrap_up, const char *data_dir)
 {
 	int ret=0;
 	static int ec=0;
@@ -510,7 +507,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 				else
 				{
 					if(!(ec=entry_changed(snew, cmanio,
-							unzp, conf)))
+							unmanio, conf)))
 						sbuf_free(snew);
 					else if(ec<0)
 						goto error;
@@ -691,7 +688,7 @@ static void sanity_before_sbuf_free(struct slist *slist, struct sbuf *sb)
 	if(slist->blks_to_request==sb) slist->blks_to_request=sb->next;
 }
 
-static int write_to_changed_file(gzFile chzp, struct slist *slist, struct blist *blist, struct dpth *dpth, int backup_end)
+static int write_to_changed_file(struct manio *chmanio, struct slist *slist, struct blist *blist, struct dpth *dpth, int backup_end, struct config *conf)
 {
 	struct sbuf *sb;
 	if(!slist) return 0;
@@ -708,7 +705,7 @@ static int write_to_changed_file(gzFile chzp, struct slist *slist, struct blist 
 
 			if(!sb->header_written_to_manifest)
 			{
-				if(sbuf_to_manifest(sb, chzp)) return -1;
+				if(manio_write_sbuf(chmanio, sb)) return -1;
 				sb->header_written_to_manifest=1;
 			}
 
@@ -718,7 +715,20 @@ static int write_to_changed_file(gzFile chzp, struct slist *slist, struct blist 
 			{
 				if(*(blk->save_path))
 				{
-					gzprintf_sig_and_path(chzp, blk);
+					if(manio_write_sig_and_path(chmanio,
+						blk)) return -1;
+					if(chmanio->sig_count==0)
+					{
+						// Have finished a manifest
+						// file. Want to start using
+						// it as a dedup candidate
+						// now.
+						printf("START USING: %s\n",
+							chmanio->fpath);
+						if(add_fresh_candidate(
+							chmanio->fpath,
+							conf)) return -1;
+					}
 				}
 /*
 				else
@@ -757,7 +767,7 @@ static int write_to_changed_file(gzFile chzp, struct slist *slist, struct blist 
 		else
 		{
 			// No change, can go straight in.
-			if(sbuf_to_manifest(sb, chzp)) return -1;
+			if(manio_write_sbuf(chmanio, sb)) return -1;
 
 			// Move along.
 //printf("END FILE\n");
@@ -792,7 +802,7 @@ static void dump_slist(struct slist *slist, const char *msg)
 }
 */
 
-static int backup_server(const char *cmanifest_dir, const char *changed, const char *unchanged, const char *manifest, const char *client, const char *datadir, const char *rmanifest, struct config *conf)
+static int backup_server(const char *cmanifest_dir, const char *changed_dir, const char *unchanged_dir, const char *client, const char *data_dir, const char *manifest_dir, struct config *conf)
 {
 	int ret=-1;
 	int scan_end=0;
@@ -805,27 +815,29 @@ static int backup_server(const char *cmanifest_dir, const char *changed, const c
 	struct iobuf *rbuf=NULL;
 	struct iobuf *wbuf=NULL;
 	struct dpth *dpth=NULL;
-	struct manio *cmanio=NULL;
-	gzFile chzp=NULL;
-	gzFile unzp=NULL;
+	struct manio *cmanio=NULL;	// current manifest
+	struct manio *chmanio=NULL;	// changed manifest
+	struct manio *unmanio=NULL;	// unchanged manifest
 	// This is used to tell the client that a number of consecutive blocks
 	// have been found and can be freed.
 	uint64_t wrap_up=0;
 
 	logp("Begin backup\n");
-	printf("DATADIR: %s\n", datadir);
+	printf("DATADIR: %s\n", data_dir);
 
-	if(champ_chooser_init(datadir, conf)
+	if(champ_chooser_init(data_dir, conf)
 	  || !(cmanio=manio_alloc())
+	  || !(chmanio=manio_alloc())
+	  || !(unmanio=manio_alloc())
 	  || manio_init_read(cmanio, cmanifest_dir)
+	  || manio_init_write(chmanio, changed_dir)
+	  || manio_init_write(unmanio, unchanged_dir)
 	  || !(slist=slist_alloc())
 	  || !(blist=blist_alloc())
 	  || !(wbuf=iobuf_alloc())
 	  || !(rbuf=iobuf_alloc())
-	  || !(dpth=dpth_alloc(datadir))
-	  || dpth_init(dpth)
-	  || !(chzp=gzopen_file(changed, "wb"))
-	  || !(unzp=gzopen_file(unchanged, "wb")))
+	  || !(dpth=dpth_alloc(data_dir))
+	  || dpth_init(dpth))
 		goto end;
 
 	while(!backup_end)
@@ -858,11 +870,12 @@ static int backup_server(const char *cmanifest_dir, const char *changed, const c
 
 		if(rbuf->buf && deal_with_read(rbuf, slist, blist, conf,
 			&scan_end, &sigs_end, &backup_end,
-			cmanio, unzp, dpth, &wrap_up, datadir))
+			cmanio, unmanio, dpth, &wrap_up, data_dir))
 				goto end;
 
-		if(write_to_changed_file(chzp, slist, blist, dpth, backup_end))
-			goto end;
+		if(write_to_changed_file(chmanio,
+			slist, blist, dpth, backup_end, conf))
+				goto end;
 	}
 
 	if(blist->head)
@@ -872,26 +885,17 @@ static int backup_server(const char *cmanifest_dir, const char *changed, const c
 		goto end;
 	}
 
-	if(gzclose_fp(&chzp))
-	{
-		logp("Error closing %s in %s\n", changed, __FUNCTION__);
+	// Flush to disk and set up for read.
+	if(manio_set_mode_read(chmanio)
+	  || manio_set_mode_read(unmanio))
 		goto end;
-	}
-	if(gzclose_fp(&unzp))
-	{
-		logp("Error closing %s in %s\n", unchanged, __FUNCTION__);
-		goto end;
-	}
 
-	if(phase3(changed, unchanged, manifest, rmanifest, datadir, conf))
+	if(phase3(chmanio, unmanio, manifest_dir, data_dir, conf))
 		goto end;
 
 	ret=0;
-
 end:
 	logp("End backup\n");
-	gzclose_fp(&chzp);
-	gzclose_fp(&unzp);
 	slist_free(slist);
 	blist_free(blist);
 	iobuf_free(rbuf);
@@ -900,6 +904,8 @@ end:
 	iobuf_free(wbuf);
 	dpth_free(dpth);
 	manio_free(cmanio);
+	manio_free(chmanio);
+	manio_free(unmanio);
 	return ret;
 }
 
@@ -933,7 +939,7 @@ static int clean_rubble(const char *basedir, const char *working)
 	return 0;
 }
 
-int do_backup_server(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *manifest, const char *client, const char *cversion, const char *incexc)
+int do_backup_server(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *client, const char *cversion, const char *incexc)
 {
 	int ret=0;
 	char msg[256]="";
@@ -943,20 +949,20 @@ int do_backup_server(const char *basedir, const char *current, const char *worki
 	char *cmanifest_dir=NULL;
 	// Real path to the working directory
 	char *realworking=NULL;
-	// real path to the last manifest (after backup has finished)
-	char *rmanifest=NULL;
+	// Real path to the manifest directory
+	char *manifest_dir=NULL;
 	char tstmp[64]="";
-	char *datadir=NULL;
-	char *changed=NULL;
-	char *unchanged=NULL;
+	char *data_dir=NULL;
+	char *changed_dir=NULL;
+	char *unchanged_dir=NULL;
 
 	logp("in do_backup_server\n");
 
 	if(!(timestamp=prepend_s(working, "timestamp", strlen("timestamp")))
 	  || !(cmanifest_dir=prepend_s(current, "manifest", strlen("manifest")))
-	  || !(datadir=prepend_s(basedir, "data", strlen("data")))
-	  || !(changed=prepend_s(working, "changed", strlen("changed")))
-	  || !(unchanged=prepend_s(working, "unchanged", strlen("unchanged"))))
+	  || !(data_dir=prepend_s(basedir, "data", strlen("data")))
+	  || !(changed_dir=prepend_s(working, "changed", strlen("changed")))
+	  || !(unchanged_dir=prepend_s(working, "unchanged", strlen("unchanged"))))
 	{
 		log_and_send_oom(__FUNCTION__);
 		goto error;
@@ -965,7 +971,7 @@ int do_backup_server(const char *basedir, const char *current, const char *worki
 	if(get_new_timestamp(cconf, basedir, tstmp, sizeof(tstmp)))
 		goto error;
 	if(!(realworking=prepend_s(basedir, tstmp, strlen(tstmp)))
-	 || !(rmanifest=prepend_s(realworking, "manifest", strlen("manifest"))))
+	 || !(manifest_dir=prepend_s(realworking, "manifest", strlen("manifest"))))
 	{
 		log_and_send_oom(__FUNCTION__);
 		goto error;
@@ -1012,8 +1018,8 @@ int do_backup_server(const char *basedir, const char *current, const char *worki
 		goto error;
 	}
 
-	if(backup_server(cmanifest_dir, changed, unchanged,
-		manifest, client, datadir, rmanifest, cconf))
+	if(backup_server(cmanifest_dir, changed_dir, unchanged_dir,
+		client, data_dir, manifest_dir, cconf))
 	{
 		logp("error in backup\n");
 		goto error;
@@ -1035,10 +1041,10 @@ error:
 end:
 	if(timestamp) free(timestamp);
 	if(cmanifest_dir) free(cmanifest_dir);
-	if(datadir) free(datadir);
-	if(changed) free(changed);
-	if(unchanged) free(unchanged);
-	if(rmanifest) free(rmanifest);
+	if(data_dir) free(data_dir);
+	if(changed_dir) free(changed_dir);
+	if(unchanged_dir) free(unchanged_dir);
+	if(manifest_dir) free(manifest_dir);
 	set_logfp(NULL, cconf); // does an fclose on logfp.
 	return ret;
 }

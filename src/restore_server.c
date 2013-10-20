@@ -11,6 +11,7 @@
 #include "regexp.h"
 #include "current_backups_server.h"
 #include "restore_server.h"
+#include "manio.h"
 
 #include <librsync.h>
 
@@ -253,19 +254,15 @@ static int do_restore_manifest(const char *client, const char *datadir, struct b
 //	int scount=0;
 	struct slist *slist=NULL;
 	int ret=-1;
-	gzFile zp=NULL;
 	struct sbuf *sb=NULL;
 	struct blk *blk=NULL;
 	int ars=0;
 	int need_data=0;
+	struct manio *manio=NULL;
 
-	// Now, do the actual restore.
-	if(open_next_manifest(manifest, &zp))
-	{
-		log_and_send("could not open next manifest");
-		goto end;
-	}
-	if(!(sb=sbuf_alloc())
+	if(!(manio=manio_alloc())
+	  || manio_init_read(manio, manifest)
+	  || !(sb=sbuf_alloc())
 	  || !(blk=blk_alloc())
 	  || !(slist=slist_alloc())
 	  || !(dpth=dpth_alloc(datadir)))
@@ -311,27 +308,15 @@ static int do_restore_manifest(const char *client, const char *datadir, struct b
 		}
 */
 
-		if((ars=sbuf_fill_from_gzfile(sb, zp,
+		if((ars=manio_sbuf_fill(manio, sb,
 			need_data?blk:NULL, dpth, conf))<0)
 		{
-
-			logp("In %s, error from sbuf_fill_from_gzfile()\n",
+			logp("Error from sbuf_fill_from_gzfile() in $s\n",
 				__FUNCTION__);
 			goto end; // Error;
 		}
 		else if(ars>0)
-		{
-			// Reached the end.
-			// Maybe there is another manifest file to continue
-			// with.
-			gzclose_fp(&zp);
-			if(open_next_manifest(manifest, &zp))
-				goto end;
-			// If we got another file, continue.
-			if(zp) continue;
-			// Otherwise, finish.
-			break;
-		}
+			break; // Finished OK.
 
 		if(blk->data)
 		{
@@ -369,8 +354,8 @@ end:
 	blk_free(blk);
 	sbuf_free(sb);
 	slist_free(slist);
-	gzclose_fp(&zp);
 	dpth_free(dpth);
+	manio_free(manio);
 	return ret;
 }
 

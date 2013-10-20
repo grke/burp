@@ -10,6 +10,7 @@
 #include "regexp.h"
 #include "list_server.h"
 #include "current_backups_server.h"
+#include "manio.h"
 
 int check_browsedir(const char *browsedir, char **path, size_t bdlen)
 {
@@ -57,20 +58,20 @@ err:
 static int list_manifest(const char *fullpath, regex_t *regex, const char *browsedir, const char *client, struct config *conf)
 {
 	int ret=0;
-	gzFile zp=NULL;
-	char *manifest=NULL;
 	size_t bdlen=0;
 	struct sbuf *sb=NULL;
 	int ars;
+	struct manio *manio=NULL;
+	char *manifest_dir=NULL;
 
-	if(!(manifest=prepend_s(fullpath, "manifest", strlen("manifest"))))
+	if(!(manifest_dir=prepend_s(fullpath, "manifest", strlen("manifest")))
+	  || !(manio=manio_alloc())
+	  || manio_init_read(manio, manifest_dir)
+	  || !(sb=sbuf_alloc()))
 	{
 		log_and_send_oom(__FUNCTION__);
 		goto error;
 	}
-	if(open_next_manifest(manifest, &zp))
-		goto error;
-	if(!(sb=sbuf_alloc())) goto error;
 
 	if(browsedir) bdlen=strlen(browsedir);
 
@@ -78,22 +79,10 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 	{
 		int show=0;
 
-		// FIX THIS: -1 means error, 1 means end of file.
-		if((ars=sbuf_fill_from_gzfile(sb, zp, NULL, NULL, conf))<0)
+		if((ars=manio_sbuf_fill(manio, sb, NULL, NULL, conf))<0)
 			goto error;
 		else if(ars>0)
-		{
-			// Reached the end.
-			// Maybe there is another manifest file to continue
-			// with.
-			gzclose_fp(&zp);
-			if(open_next_manifest(manifest, &zp))
-				goto error;
-			// If we got another file, continue.
-			if(zp) continue;
-			// Otherwise, finish.
-			goto end;
-		}
+			goto end; // Finished OK.
 
 		write_status(client, STATUS_LISTING, sb->path, conf);
 
@@ -128,9 +117,9 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 error:
 	ret=-1;
 end:
-	gzclose_fp(&zp);
 	sbuf_free(sb);
-	if(manifest) free(manifest);
+	if(manifest_dir) free(manifest_dir);
+	manio_free(manio);
 	return ret;
 }
 

@@ -22,6 +22,9 @@
 #include "ca_client.h"
 
 #include <sys/types.h>
+#ifndef HAVE_WIN32
+#include <sys/utsname.h>
+#endif
 
 // Return 0 for OK, -1 for error, 1 for timer conditions not met.
 static int maybe_check_timer(const char *phase1str, struct config *conf, int *resume)
@@ -402,6 +405,30 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 		if(server_supports(feat, ":incexc:")
 		  && (ret=incexc_send_client(conf, &p1cntr)))
 			goto end;
+
+		if(server_supports(feat, ":uname:"))
+		{
+			char *clientos=NULL;
+#ifdef HAVE_WIN32
+#ifdef _WIN64
+			clientos="Windows 64bit";
+#else
+			clientos="Windows 32bit";
+#endif
+#else
+			struct utsname utsname;
+			if(!uname(&utsname))
+				clientos=utsname.sysname;
+#endif
+			if(clientos)
+			{
+				char msg[128]="";
+				snprintf(msg, sizeof(msg),
+					"uname=%s", clientos);
+				if(async_write_str(CMD_GEN, msg))
+					goto end;
+			}
+		}
 
 		if((ret=async_write_str(CMD_GEN, "extra_comms_end"))
 		  || (ret=async_read_expect(CMD_GEN, "extra_comms_end ok")))

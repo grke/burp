@@ -827,7 +827,12 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *ucfp, con
 					datadirtmp, deltmppath,
 					dpth, resume_partial,
 					cntr, cconf);
-			else
+			// On Windows, we have to back up the whole file if
+			// ctime changed, otherwise things like permission
+			// changes do not get noticed. So, in that case, fall
+			// through to the changed stuff below.
+			// Non-Windows clients finish here.
+			else if(!cconf->client_is_windows)
 				return process_unchanged_file(cb, ucfp, cntr);
 		}
 

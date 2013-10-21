@@ -1467,7 +1467,6 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 				if(!strncasecmp("Windows",
 					uname, strlen("Windows")))
 						cconf->client_is_windows=1;
-				logp("Client identifies as: %s\n", uname);
 			}
 			else if(!strncmp(buf,
 				"orig_client=", strlen("orig_client="))

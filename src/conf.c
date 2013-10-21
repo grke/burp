@@ -118,6 +118,7 @@ void init_config(struct config *conf)
 	conf->keep=NULL;
 	conf->kpcount=0;
 	conf->max_hardlinks=10000;
+	conf->client_is_windows=0;
 
 	conf->timer_script=NULL;
 	conf->timer_arg=NULL;

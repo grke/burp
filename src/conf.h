@@ -31,6 +31,9 @@ struct config
 	float ratelimit;
 	int network_timeout;
 
+	// If the client tells us it is windows, this is set on the server side.
+	int client_is_windows;
+
 // server options
 	char *directory;
 	char *timestamp_format;

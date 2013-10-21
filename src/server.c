@@ -268,6 +268,9 @@ static int open_log(const char *realworking, const char *client, const char *cve
 	free(logpath);
 
 	logp("Client version: %s\n", cversion?:"");
+	if(conf->client_is_windows)
+		logp("Client is Windows\n");
+	
 	// Make sure a warning appears in the backup log.
 	// The client will already have been sent a message with logw.
 	// This time, prevent it sending a logw to the client by specifying
@@ -1309,7 +1312,10 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 		  || append_to_feat(&feat, "incexc:")
 			/* clients can give the server an alternative client
 			   to restore from */
-		  || append_to_feat(&feat, "orig_client:"))
+		  || append_to_feat(&feat, "orig_client:")
+			/* clients can tell the server what kind of system
+			   they are. */
+		  || append_to_feat(&feat, "uname:"))
 			return -1;
 
 		/* Clients can receive restore initiated from the server. */
@@ -1452,6 +1458,16 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 				// resume/verify/restore.
 				logp("Client supports being sent counters.\n");
 				cconf->send_client_counters=1;
+			}
+			else if(!strncmp(buf,
+				"uname=", strlen("uname="))
+			  && strlen(buf)>strlen("uname="))
+			{
+				char *uname=buf+strlen("uname=");
+				if(!strncasecmp("Windows",
+					uname, strlen("Windows")))
+						cconf->client_is_windows=1;
+				logp("Client identifies as: %s\n", uname);
 			}
 			else if(!strncmp(buf,
 				"orig_client=", strlen("orig_client="))

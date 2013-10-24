@@ -2,6 +2,12 @@
     otherwise changes to metadata when the file content is unchanged will not
     be noticed.
   * Add 'delete' to the client help output.
+  * Bug fix for the include_glob code being run on the server side.
+  * Bug fix for in the include_glob code not initialising the glob_t struct
+    correctly.
+  * Get 'include_glob=' in the clientconfdir server side file to work without
+    also needing an 'include='.
+
 
 2013-10-02 Changes in burp-1.4.4:
   * Bug fix for include_glob xmalloc success check on Windows.

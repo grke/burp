@@ -1335,7 +1335,8 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 		/* Clients can receive incexc config from the server.
 		   Only give it as an option if the server has some starting
 		   directory configured in the clientconfdir. */
-		if(cconf->sdcount && append_to_feat(&feat, "sincexc:"))
+		if((cconf->sdcount || cconf->igcount)
+		  && append_to_feat(&feat, "sincexc:"))
 			return -1;
 
 		/* Clients can be sent counters on resume/verify/restore. */

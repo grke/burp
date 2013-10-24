@@ -1265,9 +1265,11 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 	do_strlist_sort(l->fslist, conf->fscount, &(conf->fschgdir));
 	do_strlist_sort(l->nblist, conf->nbcount, &(conf->nobackup));
 
-	if (conf->mode != MODE_SERVER) {
+	/* The glob stuff should only run on the client side. */
+	if (conf->mode == MODE_CLIENT) {
 #ifndef HAVE_WIN32
-		/* Disable globing if we are the server */
+printf("HERE %s: %d\n", config_path, conf->mode);
+		memset(&globbuf, 0, sizeof(globbuf));
 		for(i=0; i<conf->igcount; i++)
 			glob(conf->incglob[i]->path, i>0?GLOB_APPEND:0, NULL, &globbuf);
 

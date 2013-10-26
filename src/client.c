@@ -408,7 +408,7 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 
 		if(server_supports(feat, ":uname:"))
 		{
-			char *clientos=NULL;
+			const char *clientos=NULL;
 #ifdef HAVE_WIN32
 #ifdef _WIN64
 			clientos="Windows 64bit";
@@ -418,7 +418,7 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 #else
 			struct utsname utsname;
 			if(!uname(&utsname))
-				clientos=utsname.sysname;
+				clientos=(const char *)utsname.sysname;
 #endif
 			if(clientos)
 			{

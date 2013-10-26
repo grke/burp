@@ -748,7 +748,13 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 	*   all the files in it.
 	*/
 	errno = 0;
+#ifdef O_DIRECTORY
+	int dfd;
+	if((dfd=open(fname, O_RDONLY|O_DIRECTORY|O_NOATIME))<0
+	  || !(directory=fdopendir(dfd)))
+#else
 	if(!(directory=opendir(fname)))
+#endif
 	{
 		ff_pkt->type=FT_NOOPEN;
 		ff_pkt->ff_errno=errno;

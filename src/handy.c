@@ -317,7 +317,9 @@ int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, int64_t winattr
 {
 	if(fp)
 	{
-		if(!(*fp=fopen(fname, "rb")))
+		static int fd;
+		if((fd=open(fname, O_RDONLY|O_NOATIME))<0
+		  || !(*fp=fdopen(fd, "rb")))
 		{
 			logw(cntr,
 				"Could not open %s: %s\n", fname, strerror(errno));

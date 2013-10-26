@@ -7,7 +7,8 @@
     correctly.
   * Get 'include_glob=' in the clientconfdir server side file to work without
     also needing an 'include='.
-
+  * When backing up, open files with O_NOATIME flag so that the access time is
+    not changed.
 
 2013-10-02 Changes in burp-1.4.4:
   * Bug fix for include_glob xmalloc success check on Windows.

@@ -27,7 +27,7 @@
 #endif
 
 // Return 0 for OK, -1 for error, 1 for timer conditions not met.
-static int maybe_check_timer(const char *phase1str, struct config *conf, int *resume)
+static int maybe_check_timer(enum action act, const char *phase1str, struct config *conf, int *resume)
 {
 	char rcmd=0;
 	char *rdst=NULL;
@@ -43,6 +43,12 @@ static int maybe_check_timer(const char *phase1str, struct config *conf, int *re
                 free(rdst);
                 logp("Timer conditions on the server were not met\n");
                 return 1;
+        }
+        else if(rcmd==CMD_GEN && !strcmp(rdst, "timer conditions met"))
+        {
+                free(rdst);
+                logp("Timer conditions on the server were met\n");
+		if(act==ACTION_TIMER_CHECK) return 0;
         }
         else if(rcmd!=CMD_GEN)
         {
@@ -176,6 +182,92 @@ static int server_supports_autoupgrade(const char *feat)
 
 static int s_server_session_id_context=1;
 
+static int backup_wrapper(enum action act, const char *phase1str, const char *incexc, int resume, struct cntr *p1cntr, struct cntr *cntr, struct config *conf)
+{
+	int ret=0;
+	// Set bulk packets quality of service flags on backup.
+	if(incexc)
+	{
+		logp("Server is overriding the configuration\n");
+		logp("with the following settings:\n");
+		if(log_incexcs_buf(incexc))
+		{
+			ret=-1;
+			goto end;
+		}
+	}
+	if(!conf->sdcount)
+	{
+		logp("Found no include paths!\n");
+		ret=-1;
+		goto end;
+	}
+
+	if(!(ret=maybe_check_timer(act, phase1str,
+		conf, &resume)))
+	{
+		if(act==ACTION_TIMER_CHECK) goto end;
+		
+		if(conf->backup_script_pre)
+		{
+			int a=0;
+			const char *args[12];
+			args[a++]=conf->backup_script_pre;
+			args[a++]="pre";
+			args[a++]="reserved2";
+			args[a++]="reserved3";
+			args[a++]="reserved4";
+			args[a++]="reserved5";
+			args[a++]=NULL;
+			if(run_script(args,
+				conf->backup_script_pre_arg,
+				conf->bprecount,
+				p1cntr, 1, 1)) ret=-1;
+		}
+
+		if(!ret && do_backup_client(conf,
+			resume, act, p1cntr, cntr))
+				ret=-1;
+
+		if((conf->backup_script_post_run_on_fail
+		  || !ret) && conf->backup_script_post)
+		{
+			int a=0;
+			const char *args[12];
+			args[a++]=conf->backup_script_post;
+			args[a++]="post";
+			// Tell post script whether the restore
+			// failed.
+			args[a++]=ret?"1":"0";
+			args[a++]="reserved3";
+			args[a++]="reserved4";
+			args[a++]="reserved5";
+			args[a++]=NULL;
+			if(run_script(args,
+				conf->backup_script_post_arg,
+				conf->bpostcount,
+				cntr, 1, 1)) ret=-1;
+		}
+	}
+
+	if(ret<0)
+		logp("error in backup\n");
+	else if(ret>0)
+	{
+		// Timer script said no.
+		// Have a distinct return value to
+		// differentiate between other cases
+		// (ssl reconnection and restore/verify
+		// warnings).
+		ret=3;
+	}
+	else
+		logp("backup finished ok\n");
+
+end:
+	return ret;
+}
+
 /* May return 1 to mean try again. This happens after a successful certificate
    signing request so that it connects again straight away with the new
    key/certificate.
@@ -195,7 +287,6 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 	struct cntr p1cntr;
 	char *incexc=NULL;
 	char *server_version=NULL;
-	const char *phase1str="backupphase1";
 
 	reset_filecounter(&p1cntr, time(NULL));
 	reset_filecounter(&cntr, time(NULL));
@@ -246,7 +337,9 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 		goto end;
 
 	// Set quality of service bits on backup packets.
-	if(act==ACTION_BACKUP || act==ACTION_BACKUP_TIMED)
+	if(act==ACTION_BACKUP
+	  || act==ACTION_BACKUP_TIMED
+	  || act==ACTION_TIMER_CHECK)
 		set_bulk_packets();
 
 	if(act!=ACTION_ESTIMATE)
@@ -379,7 +472,8 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 		// :sincexc: is for the server giving the client the
 		// incexc config.
 		if(act==ACTION_BACKUP
-		  || act==ACTION_BACKUP_TIMED)
+		  || act==ACTION_BACKUP_TIMED
+		  || act==ACTION_TIMER_CHECK)
 		{
 			if(!incexc && server_supports(feat, ":sincexc:"))
 			{
@@ -443,89 +537,18 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 	rfd=-1;
 	switch(act)
 	{
-		case ACTION_BACKUP_TIMED:
-			phase1str="backupphase1timed";
 		case ACTION_BACKUP:
-		{
-			// Set bulk packets quality of service flags on backup.
-			if(incexc)
-			{
-				logp("Server is overriding the configuration\n");
-				logp("with the following settings:\n");
-				if(log_incexcs_buf(incexc))
-				{
-					ret=-1;
-					goto end;
-				}
-			}
-			if(!conf->sdcount)
-			{
-				logp("Found no include paths!\n");
-				ret=-1;
-				goto end;
-			}
-
-			if(!(ret=maybe_check_timer(phase1str,
-				conf, &resume)))
-			{
-				if(conf->backup_script_pre)
-				{
-					int a=0;
-					const char *args[12];
-					args[a++]=conf->backup_script_pre;
-					args[a++]="pre";
-					args[a++]="reserved2";
-					args[a++]="reserved3";
-					args[a++]="reserved4";
-					args[a++]="reserved5";
-					args[a++]=NULL;
-					if(run_script(args,
-						conf->backup_script_pre_arg,
-						conf->bprecount,
-						&p1cntr, 1, 1)) ret=-1;
-				}
-
-				if(!ret && do_backup_client(conf,
-					resume, act, &p1cntr, &cntr))
-						ret=-1;
-
-				if((conf->backup_script_post_run_on_fail
-				  || !ret) && conf->backup_script_post)
-				{
-					int a=0;
-					const char *args[12];
-					args[a++]=conf->backup_script_post;
-					args[a++]="post";
-					// Tell post script whether the restore
-					// failed.
-					args[a++]=ret?"1":"0";
-					args[a++]="reserved3";
-					args[a++]="reserved4";
-					args[a++]="reserved5";
-					args[a++]=NULL;
-					if(run_script(args,
-						conf->backup_script_post_arg,
-						conf->bpostcount,
-						&cntr, 1, 1)) ret=-1;
-				}
-			}
-
-			if(ret<0)
-				logp("error in backup\n");
-			else if(ret>0)
-			{
-				// Timer script said no.
-				// Have a distinct return value to
-				// differentiate between other cases
-				// (ssl reconnection and restore/verify
-				// warnings).
-				ret=3;
-			}
-			else
-				logp("backup finished ok\n");
-			
+			ret=backup_wrapper(act, "backupphase1",
+				incexc, resume, &p1cntr, &cntr, conf);
 			break;
-		}
+		case ACTION_BACKUP_TIMED:
+			ret=backup_wrapper(act, "backupphase1timed",
+				incexc, resume, &p1cntr, &cntr, conf);
+			break;
+		case ACTION_TIMER_CHECK:
+			ret=backup_wrapper(act, "backupphase1timedcheck",
+				incexc, resume, &p1cntr, &cntr, conf);
+			break;
 		case ACTION_RESTORE:
 		case ACTION_VERIFY:
 		{

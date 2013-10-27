@@ -996,10 +996,16 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 				ret=-1;
 				goto end;
 			}
-			if(!strcmp(buf, "backupphase1timed"))
+			if(!strncmp(buf,
+			  "backupphase1timed", strlen("backupphase1timed")))
 			{
 				int a=0;
 				const char *args[12];
+				int checkonly=!strncmp(buf,
+				  "backupphase1timedcheck",
+				  strlen("backupphase1timedcheck"));
+				if(checkonly)
+				  logp("Client asked for a timer check only.\n");
 				args[a++]=cconf->timer_script;
 				args[a++]=client;
 				args[a++]=current;
@@ -1023,12 +1029,26 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 				}
 				if(*timer_ret)
 				{
-					logp("Not running backup of %s\n",
+					if(!checkonly)
+					  logp("Not running backup of %s\n",
 						client);
 					async_write_str(CMD_GEN,
 						"timer conditions not met");
 					goto end;
 				}
+				if(checkonly)
+				{
+					// Client was only checking the timer
+					// and does not actually want to back
+					// up.
+					ret=0;
+				  	logp("Client asked for a timer check only,\n");
+				  	logp("so a backup is not happening right now.\n");
+					async_write_str(CMD_GEN,
+						"timer conditions met");
+					goto end;
+				}
+				
 				logp("Running backup of %s\n", client);
 			}
 			else

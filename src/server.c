@@ -1028,6 +1028,10 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 				{
 					ret=*timer_ret;
 					logp("Error running timer script for %s\n", client);
+					maybe_do_notification(ret, client, "",
+						"error running timer script",
+						"", "backup", cconf, p1cntr,
+						cntr);
 					goto end;
 				}
 				if(*timer_ret)

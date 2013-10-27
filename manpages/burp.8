@@ -54,8 +54,8 @@ Show a particular path in a backup (requires \-C and \-b).
 
 .SH CLIENT OPTIONS
 .TP
-\fB\-a\fR \fB[b|t|r|l|L|v|D|e]\fR
-Short for 'action'. The arguments mean backup, timed backup, restore, list, long list, verify, delete, or estimate, respectively.
+\fB\-a\fR \fB[b|t|r|l|L|v|D|e|T]\fR
+Short for 'action'. The arguments mean backup, timed backup, restore, list, long list, verify, delete, estimate, or timer check respectively.
 .TP
 \fB\-b\fR \fB[number|a]\fR
 Short for 'backup number'. The argument is a number, or 'a' to select all
@@ -137,6 +137,9 @@ Deletes backup number 1. Note that burp will not delete backup directories that 
 .TP
 \fBburp \-a t\fR
 Timed backup. The same as 'burp \-a b', except that a script is run on the server before deciding to go ahead. The intention is that this command will be run on a repeating cron job with a short interval, and that the server will decide when it is time for a new backup.
+.TP
+\fBburp \-a T\fR
+Check whether it is time to do backup, but don't actually do a backup. The client will return 0 to mean that it is time, or 3 to mean that it is not time. Any other return code indicates an error.
 .TP
 \fBburp \-a L \-b 1 \-d ''\fR
 Long list the top level directory of backup 1.

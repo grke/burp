@@ -1,3 +1,5 @@
+  * Add client option '-a T', which checks whether it is yet time for a backup
+    without actually doing a backup.
   * Make the server request the whole file when ctime changes on Windows,
     otherwise changes to metadata when the file content is unchanged will not
     be noticed.

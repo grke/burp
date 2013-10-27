@@ -1268,7 +1268,6 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 	/* The glob stuff should only run on the client side. */
 	if (conf->mode == MODE_CLIENT) {
 #ifndef HAVE_WIN32
-printf("HERE %s: %d\n", config_path, conf->mode);
 		memset(&globbuf, 0, sizeof(globbuf));
 		for(i=0; i<conf->igcount; i++)
 			glob(conf->incglob[i]->path, i>0?GLOB_APPEND:0, NULL, &globbuf);

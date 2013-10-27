@@ -16,16 +16,6 @@
 
 2013-10-02 Changes in burp-1.4.4:
   * Bug fix for include_glob xmalloc success check on Windows.
-
-2013-10-02 Changes in burp-1.3.38:
-  * Fix long list and status monitor output when a directory argument is given.
-  * Fix restore problem with backups containing both compressed and
-    uncompressed files.
-  * Bug fix for an interrupted backup causing a resume when a restore_client
-    connects.
-  * Bug fix for defaulting 'resume partial' to off.
-
-2013-10-02 Changes in burp-1.3.38:
   * Fix long list and status monitor output when a directory argument is given.
   * Fix restore problem with backups containing both compressed and
     uncompressed files.
@@ -39,6 +29,14 @@
 2013-07-29 Changes in burp-1.4.0
   * Add Abbas Khan's RHEL spec files and related things.
   * Add Benjamin Sans's include_glob feature.
+
+2013-10-02 Changes in burp-1.3.38:
+  * Fix long list and status monitor output when a directory argument is given.
+  * Fix restore problem with backups containing both compressed and
+    uncompressed files.
+  * Bug fix for an interrupted backup causing a resume when a restore_client
+    connects.
+  * Bug fix for defaulting 'resume partial' to off.
 
 2013-07-29 Changes in burp-1.3.36:
   * Fix truncation of timestamps in the live status monitor.

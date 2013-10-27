@@ -983,7 +983,13 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			finishing, gotlock, cconf,
 			phase1data, phase2data, unchangeddata,
 			manifest, client, p1cntr, cntr, &resume, incexc))
-				ret=-1;
+		{	
+			ret=-1;
+			maybe_do_notification(ret, client,
+				"", "error in get_lock_and_clean()",
+				"", "backup",
+				cconf, p1cntr, cntr);
+		}
 		else
 		{
 			char okstr[32]="";
@@ -994,6 +1000,9 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 					"could not mkpath %s", current);
 				log_and_send(msg);
 				ret=-1;
+				maybe_do_notification(ret, client, "",
+					"error creating new current directory",
+					"", "backup", cconf, p1cntr, cntr);
 				goto end;
 			}
 			if(!strcmp(buf, "backupphase1timed"))

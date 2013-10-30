@@ -1,3 +1,4 @@
+2013-10-30 Changes in burp-1.4.4:
   * Add client option '-a T', which checks whether it is yet time for a backup
     without actually doing a backup.
   * Make the server request the whole file when ctime changes on Windows,

@@ -31,54 +31,32 @@ int send_msg_zp(gzFile zp, char cmd, const char *buf, size_t s)
 	return 0;
 }
 
-static int do_write(BFILE *bfd, FILE *fp, unsigned char *out, size_t outlen, char **metadata, unsigned long long *sent)
+static int do_write(BFILE *bfd, FILE *fp, unsigned char *out, size_t outlen, unsigned long long *sent)
 {
 	int ret=0;
-	if(metadata)
-	{
-		// Append it to our metadata.
-		out[outlen]='\0';
-		//printf("\nadd outlen: %lu\n", outlen);
-		if(!(*metadata=prepend_len(*metadata, *sent,
-				(const char *)out, outlen,
-				"", 0, (size_t *)sent)))
-		{
-			logp("error when appending metadata\n");
-			async_write_str(CMD_ERROR, "error when appending metadata");
-			return -1;
-		}
-	}
-	else
-	{
 #ifdef HAVE_WIN32
-		if((ret=bwrite(bfd, out, outlen))<=0)
-		{
-			logp("error when appending %d: %d\n", outlen, ret);
-			async_write_str(CMD_ERROR, "write failed");
-			return -1;
-		}
-#else
-		if((fp && (ret=fwrite(out, 1, outlen, fp))<=0))
-		{
-			logp("error when appending %d: %d\n", outlen, ret);
-			async_write_str(CMD_ERROR, "write failed");
-			return -1;
-		}
-#endif
-		*sent+=outlen;
+	if((ret=bwrite(bfd, out, outlen))<=0)
+	{
+		logp("error when appending %d: %d\n", outlen, ret);
+		async_write_str(CMD_ERROR, "write failed");
+		return -1;
 	}
+#else
+	if((fp && (ret=fwrite(out, 1, outlen, fp))<=0))
+	{
+		logp("error when appending %d: %d\n", outlen, ret);
+		async_write_str(CMD_ERROR, "write failed");
+		return -1;
+	}
+#endif
+	*sent+=outlen;
 	return 0;
 }
 
-static int do_inflate(z_stream *zstrm, BFILE *bfd, FILE *fp, unsigned char *out, unsigned char *buftouse, size_t lentouse, char **metadata, const char *encpassword, int enccompressed, unsigned long long *sent)
+static int do_inflate(z_stream *zstrm, BFILE *bfd, FILE *fp, unsigned char *out, unsigned char *buftouse, size_t lentouse, unsigned long long *sent)
 {
 	int zret=Z_OK;
 	unsigned have=0;
-
-	// Do not want to inflate encrypted data that was not compressed.
-	// Just write it straight out.
-	if(encpassword && !enccompressed)
-		return do_write(bfd, fp, buftouse, lentouse, metadata, sent);
 
 	zstrm->avail_in=lentouse;
 	zstrm->next_in=buftouse;
@@ -101,18 +79,8 @@ static int do_inflate(z_stream *zstrm, BFILE *bfd, FILE *fp, unsigned char *out,
 		have=ZCHUNK-zstrm->avail_out;
 		if(!have) continue;
 
-		if(do_write(bfd, fp, out, have, metadata, sent))
+		if(do_write(bfd, fp, out, have, sent))
 			return -1;
-/*
-		if(md5)
-		{
-			if(!MD5_Update(md5, out, have))
-			{
-				logp("MD5 update error\n");
-				return -1;
-			}
-		}
-*/
 	} while(!zstrm->avail_out);
 	return 0;
 }
@@ -180,7 +148,7 @@ static int transfer_efs_in(BFILE *bfd, unsigned long long *rcvd, unsigned long l
 
 #endif
 
-int transfer_gzfile_in(struct sbuf *sb, const char *path, BFILE *bfd, FILE *fp, unsigned long long *rcvd, unsigned long long *sent, const char *encpassword, int enccompressed, struct cntr *cntr, char **metadata)
+int transfer_gzfile_in(const char *path, BFILE *bfd, FILE *fp, unsigned long long *rcvd, unsigned long long *sent, struct cntr *cntr)
 {
 	char cmd=0;
 	char *buf=NULL;
@@ -188,28 +156,8 @@ int transfer_gzfile_in(struct sbuf *sb, const char *path, BFILE *bfd, FILE *fp, 
 	int quit=0;
 	int ret=-1;
 	unsigned char out[ZCHUNK];
-	size_t doutlen=0;
-	//unsigned char doutbuf[1000+EVP_MAX_BLOCK_LENGTH];
-	unsigned char doutbuf[ZCHUNK-EVP_MAX_BLOCK_LENGTH];
 
 	z_stream zstrm;
-
-	EVP_CIPHER_CTX *enc_ctx=NULL;
-
-	// Checksum stuff
-	//MD5_CTX md5;
-	//unsigned char checksum[MD5_DIGEST_LENGTH+1];
-
-#ifdef HAVE_WIN32
-	if(sb && sb->cmd==CMD_EFS_FILE)
-		return transfer_efs_in(bfd, rcvd, sent, cntr);
-#endif
-
-	//if(!MD5_Init(&md5))
-	//{
-	//	logp("MD5_Init() failed");
-	//	return -1;
-	//}
 
 	zstrm.zalloc=Z_NULL;
 	zstrm.zfree=Z_NULL;
@@ -223,21 +171,10 @@ int transfer_gzfile_in(struct sbuf *sb, const char *path, BFILE *bfd, FILE *fp, 
 		return -1;
 	}
 
-	if(encpassword && !(enc_ctx=enc_setup(0, encpassword)))
-	{
-		inflateEnd(&zstrm);
-		return -1;
-	}
-
 	while(!quit)
 	{
 		if(async_read(&cmd, &buf, &len))
 		{
-			if(enc_ctx)
-			{
-				EVP_CIPHER_CTX_cleanup(enc_ctx);
-				free(enc_ctx);
-			}
 			inflateEnd(&zstrm);
 			return -1;
 		}
@@ -247,63 +184,22 @@ int transfer_gzfile_in(struct sbuf *sb, const char *path, BFILE *bfd, FILE *fp, 
 		switch(cmd)
 		{
 			case CMD_APPEND: // append
-				if(!fp && !bfd && !metadata)
+				if(!fp && !bfd)
 				{
-					logp("given append, but no file or metadata to write to\n");
-					async_write_str(CMD_ERROR, "append with no file or metadata");
+					logp("given append, but no file to write to\n");
+					async_write_str(CMD_ERROR, "append with no file");
 					quit++; ret=-1;
 				}
 				else
 				{
 					size_t lentouse;
 					unsigned char *buftouse=NULL;
-/*
-					if(!MD5_Update(&md5, buf, len))
-					{
-						logp("MD5 update enc error\n");
-						quit++; ret=-1;
-						break;
-					}
-*/
-					// If doing decryption, it needs
-					// to be done before uncompressing.
-					if(enc_ctx)
-					{
-					  // updating our checksum needs to
-					  // be done first
-/*
-					  if(!MD5_Update(&md5, buf, len))
-					  {
-						logp("MD5 update enc error\n");
-						quit++; ret=-1;
-						break;
-					  }
-					  else 
-*/
-					  if(!EVP_CipherUpdate(enc_ctx,
-						doutbuf, (int *)&doutlen,
-						(unsigned char *)buf,
-						len))
-					  {
-						logp("Decryption error\n");
-						quit++; ret=-1;
-					  	break;
-					  }
-					  if(!doutlen) break;
-					  lentouse=doutlen;
-					  buftouse=doutbuf;
-					}
-					else
-					{
-					  lentouse=len;
-					  buftouse=(unsigned char *)buf;
-					}
+					lentouse=len;
+					buftouse=(unsigned char *)buf;
 					//logp("want to write: %d\n", zstrm.avail_in);
 
 					if(do_inflate(&zstrm, bfd, fp, out,
-						buftouse, lentouse, metadata,
-						encpassword,
-						enccompressed,
+						buftouse, lentouse,
 						sent))
 					{
 						ret=-1; quit++;
@@ -312,44 +208,6 @@ int transfer_gzfile_in(struct sbuf *sb, const char *path, BFILE *bfd, FILE *fp, 
 				}
 				break;
 			case CMD_END_FILE: // finish up
-				if(enc_ctx)
-				{
-					if(!EVP_CipherFinal_ex(enc_ctx,
-						doutbuf, (int *)&doutlen))
-					{
-						logp("Decryption failure at the end.\n");
-						ret=-1; quit++;
-						break;
-					}
-					if(doutlen && do_inflate(&zstrm, bfd,
-					  fp, out, doutbuf, doutlen, metadata,
-					  encpassword,
-					  enccompressed, sent))
-					{
-						ret=-1; quit++;
-						break;
-					}
-				}
-/*
-				if(MD5_Final(checksum, &md5))
-				{
-					char *oldsum=NULL;
-					const char *newsum=NULL;
-
-					if((oldsum=strchr(buf, ':')))
-					{
-						oldsum++;
-						newsum=get_checksum_str(checksum);
-						// log if the checksum differed
-						if(strcmp(newsum, oldsum))
-							logw(cntr, "md5sum for '%s' did not match! (%s!=%s)\n", path, newsum, oldsum);
-					}
-				}
-				else
-				{
-					logp("MD5_Final() failed\n");
-				}
-*/
 				quit++;
 				ret=0;
 				break;
@@ -367,11 +225,6 @@ int transfer_gzfile_in(struct sbuf *sb, const char *path, BFILE *bfd, FILE *fp, 
 		buf=NULL;
 	}
 	inflateEnd(&zstrm);
-	if(enc_ctx)
-	{
-		EVP_CIPHER_CTX_cleanup(enc_ctx);
-		free(enc_ctx);
-	}
 
 	if(ret) logp("transfer file returning: %d\n", ret);
 	return ret;

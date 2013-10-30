@@ -247,30 +247,6 @@ int write_endfile(unsigned long long bytes, unsigned char *checksum)
 	return async_write_str(CMD_END_FILE, get_endfile_str(bytes, checksum));
 }
 
-static int do_encryption(EVP_CIPHER_CTX *ctx, unsigned char *inbuf, size_t inlen, unsigned char *outbuf, size_t *outlen, MD5_CTX *md5)
-{
-	if(!inlen) return 0;
-	if(!EVP_CipherUpdate(ctx, outbuf, (int *)outlen, inbuf, (int)inlen))
-	{
-		logp("Encryption failure.\n");
-		return -1;
-	}
-	if(*outlen>0)
-	{
-		int ret;
-		if(!(ret=async_write(CMD_APPEND, (const char *)outbuf, *outlen)))
-		{
-			if(!MD5_Update(md5, outbuf, *outlen))
-			{
-				logp("MD5_Update() failed\n");
-				return -1;
-			}
-		}
-		return ret;
-	}
-	return 0;
-}
-
 EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password)
 {
 	EVP_CIPHER_CTX *ctx=NULL;
@@ -340,31 +316,17 @@ int close_file_for_send(BFILE *bfd)
    Encryption off and compression off uses send_whole_file().
    Perhaps a separate function is needed for encryption on compression off.
 */
-int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen, size_t datalen)
+int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, struct cntr *cntr, int compression, FILE *fp)
 {
 	int ret=0;
 	int zret=0;
 	MD5_CTX md5;
-	size_t metalen=0;
-	const char *metadata=NULL;
 
 	unsigned have;
 	z_stream strm;
 	int flush=Z_NO_FLUSH;
 	unsigned char in[ZCHUNK];
 	unsigned char out[ZCHUNK];
-
-	size_t eoutlen;
-	unsigned char eoutbuf[ZCHUNK+EVP_MAX_BLOCK_LENGTH];
-
-	EVP_CIPHER_CTX *enc_ctx=NULL;
-#ifdef HAVE_WIN32
-	int do_known_byte_count=0;
-	if(datalen>0) do_known_byte_count=1;
-#endif
-
-	if(encpassword && !(enc_ctx=enc_setup(1, encpassword)))
-		return -1;
 
 	if(!MD5_Init(&md5))
 	{
@@ -373,11 +335,6 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 	}
 
 //logp("send_whole_file_gz: %s%s\n", fname, extrameta?" (meta)":"");
-
-	if((metadata=extrameta))
-	{
-		metalen=elen;
-	}
 
 	/* allocate deflate state */
 	strm.zalloc = Z_NULL;
@@ -392,40 +349,7 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 
 	do
 	{
-		if(metadata)
-		{
-			if(metalen>ZCHUNK)
-				strm.avail_in=ZCHUNK;
-			else
-				strm.avail_in=metalen;
-			memcpy(in, metadata, strm.avail_in);
-			metadata+=strm.avail_in;
-			metalen-=strm.avail_in;
-		}
-		else
-		{
-			if(fp) strm.avail_in=fread(in, 1, ZCHUNK, fp);
-#ifdef HAVE_WIN32
-			else
-			{
-			  // Windows VSS headers give us how much data to
-			  // expect to read.
-			  if(do_known_byte_count)
-			  {
-				  if(datalen<=0) strm.avail_in=0;
-				  else strm.avail_in=
-					 (uint32_t)bread(bfd, in,
-						min((size_t)ZCHUNK, datalen));
-				  datalen-=strm.avail_in;
-			  }
-			  else
-			  {
-				  strm.avail_in=
-					 (uint32_t)bread(bfd, in, ZCHUNK);
-			  }
-			}
-#endif
-		}
+		strm.avail_in=fread(in, 1, ZCHUNK, fp);
 		if(!compression && !strm.avail_in) break;
 
 		if(strm.avail_in<0)
@@ -437,20 +361,13 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 		*bytes+=strm.avail_in;
 
 		// The checksum needs to be later if encryption is being used.
-		if(!enc_ctx)
+		if(!MD5_Update(&md5, in, strm.avail_in))
 		{
-			if(!MD5_Update(&md5, in, strm.avail_in))
-			{
-				logp("MD5_Update() failed\n");
-				ret=-1;
-				break;
-			}
+			logp("MD5_Update() failed\n");
+			ret=-1;
+			break;
 		}
 
-#ifdef HAVE_WIN32
-		if(do_known_byte_count && datalen<=0) flush=Z_FINISH;
-		else
-#endif
 		if(strm.avail_in) flush=Z_NO_FLUSH;
 		else flush=Z_FINISH;
 
@@ -479,15 +396,7 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 				memcpy(out, in, have);
 			}
 
-			if(enc_ctx)
-			{
-				if(do_encryption(enc_ctx, out, have, eoutbuf, &eoutlen, &md5))
-				{
-					ret=-1;
-					break;
-				}
-			}
-			else if(async_write(CMD_APPEND, (const char *)out, have))
+			if(async_write(CMD_APPEND, (const char *)out, have))
 			{
 				ret=-1;
 				break;
@@ -527,35 +436,10 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 			logp("ret OK, but zstream not finished: %d\n", zret);
 			ret=-1;
 		}
-		else if(enc_ctx)
-		{
-			if(!EVP_CipherFinal_ex(enc_ctx,
-				eoutbuf, (int *)&eoutlen))
-			{
-				logp("Encryption failure at the end\n");
-				ret=-1;
-			}
-			else if(eoutlen>0)
-			{
-			  if(async_write(CMD_APPEND, (const char *)eoutbuf, eoutlen))
-				ret=-1;
-			  else if(!MD5_Update(&md5, eoutbuf, eoutlen))
-			  {
-				logp("MD5_Update() failed\n");
-				ret=-1;
-			  }
-			}
-		}
 	}
 
 cleanup:
 	deflateEnd(&strm);
-
-	if(enc_ctx)
-	{
-		EVP_CIPHER_CTX_cleanup(enc_ctx);
-		free(enc_ctx);
-	}
 
 	if(!ret)
 	{
@@ -1400,12 +1284,12 @@ int receive_a_file(const char *path, struct config *conf)
 #endif
 
 #ifdef HAVE_WIN32
-	ret=transfer_gzfile_in(NULL, path, &bfd, NULL,
-		&rcvdbytes, &sentbytes, NULL, 0, conf->p1cntr, NULL);
+	ret=transfer_gzfile_in(path, &bfd, NULL,
+		&rcvdbytes, &sentbytes, conf->p1cntr);
 	c=bclose(&bfd);
 #else
-	ret=transfer_gzfile_in(NULL, path, NULL, fp,
-		&rcvdbytes, &sentbytes, NULL, 0, conf->p1cntr, NULL);
+	ret=transfer_gzfile_in(path, NULL, fp,
+		&rcvdbytes, &sentbytes, conf->p1cntr);
 	c=close_fp(&fp);
 #endif
 end:
@@ -1427,9 +1311,9 @@ int send_a_file(const char *path, struct config *conf)
 	FILE *fp=NULL;
 	unsigned long long bytes=0;
 	if(!(fp=open_file(path, "rb"))
-	  || send_whole_file_gz(path, "datapth", 0, &bytes, NULL,
+	  || send_whole_file_gz(path, "datapth", 0, &bytes,
 		conf->p1cntr, 9, // compression
-		NULL, fp, NULL, 0, -1))
+		fp))
 	{
 		ret=-1;
 		goto end;

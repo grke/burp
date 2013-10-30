@@ -445,7 +445,7 @@ static int sparse_generation(struct manio *newmanio, const char *datadir, const 
 		if(!*(blk->weak)) continue;
 
 		if(is_hook(blk->weak))
-			snprintf(sort_blk[sort_ind++], 16+1, blk->weak);
+			snprintf(sort_blk[sort_ind++], 16+1, "%s", blk->weak);
 		*(blk->weak)='\0';
 
 		// FIX THIS: Also want to make this whole business

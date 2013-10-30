@@ -291,6 +291,11 @@ static void get_conf_val_int(const char *field, const char *value, const char *w
 	if(!strcmp(field, want)) *dest=atoi(value);
 }
 
+static void get_conf_val_uint8(const char *field, const char *value, const char *want, uint8_t *dest)
+{
+	if(!strcmp(field, want)) *dest=(uint8_t)atoi(value);
+}
+
 int config_get_pair(char buf[], char **field, char **value)
 {
 	char *cp=NULL;
@@ -630,37 +635,37 @@ struct llists
 
 static int load_config_ints(struct config *conf, const char *field, const char *value)
 {
-	get_conf_val_int(field, value, "syslog",
+	get_conf_val_uint8(field, value, "syslog",
 		&(conf->log_to_syslog));
-	get_conf_val_int(field, value, "stdout",
+	get_conf_val_uint8(field, value, "stdout",
 		&(conf->log_to_stdout));
-	get_conf_val_int(field, value, "progress_counter",
+	get_conf_val_uint8(field, value, "progress_counter",
 		&(conf->progress_counter));
-	get_conf_val_int(field, value, "hardlinked_archive",
+	get_conf_val_uint8(field, value, "hardlinked_archive",
 		&(conf->hardlinked_archive));
 	get_conf_val_int(field, value, "max_hardlinks",
 		&(conf->max_hardlinks));
-	get_conf_val_int(field, value, "version_warn",
+	get_conf_val_uint8(field, value, "version_warn",
 		&(conf->version_warn));
-	get_conf_val_int(field, value, "cross_all_filesystems",
+	get_conf_val_uint8(field, value, "cross_all_filesystems",
 		&(conf->cross_all_filesystems));
-	get_conf_val_int(field, value, "read_all_fifos",
+	get_conf_val_uint8(field, value, "read_all_fifos",
 		&(conf->read_all_fifos));
-	get_conf_val_int(field, value, "read_all_blockdevs",
+	get_conf_val_uint8(field, value, "read_all_blockdevs",
 		&(conf->read_all_blockdevs));
-	get_conf_val_int(field, value, "backup_script_post_run_on_fail",
+	get_conf_val_uint8(field, value, "backup_script_post_run_on_fail",
 		&(conf->backup_script_post_run_on_fail));
-	get_conf_val_int(field, value, "server_script_post_run_on_fail",
+	get_conf_val_uint8(field, value, "server_script_post_run_on_fail",
 		&(conf->server_script_post_run_on_fail));
-	get_conf_val_int(field, value, "server_script_pre_notify",
+	get_conf_val_uint8(field, value, "server_script_pre_notify",
 		&(conf->server_script_pre_notify));
-	get_conf_val_int(field, value, "server_script_post_notify",
+	get_conf_val_uint8(field, value, "server_script_post_notify",
 		&(conf->server_script_post_notify));
-	get_conf_val_int(field, value, "server_script_notify",
+	get_conf_val_uint8(field, value, "server_script_notify",
 		&(conf->server_script_notify));
-	get_conf_val_int(field, value, "notify_success_warnings_only",
+	get_conf_val_uint8(field, value, "notify_success_warnings_only",
 		&(conf->notify_success_warnings_only));
-	get_conf_val_int(field, value, "notify_success_changes_only",
+	get_conf_val_uint8(field, value, "notify_success_changes_only",
 		&(conf->notify_success_changes_only));
 	get_conf_val_int(field, value, "network_timeout",
 		&(conf->network_timeout));
@@ -670,29 +675,29 @@ static int load_config_ints(struct config *conf, const char *field, const char *
 		&(conf->max_status_children));
 	get_conf_val_int(field, value, "max_storage_subdirs",
 		&(conf->max_storage_subdirs));
-	get_conf_val_int(field, value, "overwrite",
+	get_conf_val_uint8(field, value, "overwrite",
 		&(conf->overwrite));
 	get_conf_val_int(field, value, "strip",
 		&(conf->strip));
-	get_conf_val_int(field, value, "fork",
+	get_conf_val_uint8(field, value, "fork",
 		&(conf->forking));
-	get_conf_val_int(field, value, "daemon",
+	get_conf_val_uint8(field, value, "daemon",
 		&(conf->daemon));
-	get_conf_val_int(field, value, "directory_tree",
+	get_conf_val_uint8(field, value, "directory_tree",
 		&(conf->directory_tree));
-	get_conf_val_int(field, value, "client_can_delete",
+	get_conf_val_uint8(field, value, "client_can_delete",
 		&(conf->client_can_delete));
-	get_conf_val_int(field, value, "client_can_force_backup",
+	get_conf_val_uint8(field, value, "client_can_force_backup",
 		&(conf->client_can_force_backup));
-	get_conf_val_int(field, value, "client_can_list",
+	get_conf_val_uint8(field, value, "client_can_list",
 		&(conf->client_can_list));
-	get_conf_val_int(field, value, "client_can_restore",
+	get_conf_val_uint8(field, value, "client_can_restore",
 		&(conf->client_can_restore));
-	get_conf_val_int(field, value, "client_can_verify",
+	get_conf_val_uint8(field, value, "client_can_verify",
 		&(conf->client_can_verify));
-	get_conf_val_int(field, value, "server_can_restore",
+	get_conf_val_uint8(field, value, "server_can_restore",
 		&(conf->server_can_restore));
-	get_conf_val_int(field, value, "password_check",
+	get_conf_val_uint8(field, value, "password_check",
 		&(conf->password_check));
 
 	return 0;

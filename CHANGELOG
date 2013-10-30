@@ -1,3 +1,4 @@
+2013-10-30 Changes in burp-1.3.40
   * Make the server request the whole file when ctime changes on Windows,
     otherwise changes to metadata when the file content is unchanged will not
     be noticed.

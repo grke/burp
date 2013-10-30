@@ -19,9 +19,9 @@ struct config
 	char *status_port;
 	enum burp_mode mode;
 	char *lockfile;
-	int log_to_syslog;
-	int log_to_stdout;
-	int progress_counter;
+	uint8_t log_to_syslog;
+	uint8_t log_to_stdout;
+	uint8_t progress_counter;
 	char *ssl_cert_ca;
 	char *ssl_cert;
 	char *ssl_key;
@@ -44,14 +44,14 @@ struct config
 	mode_t umask;
 	int max_hardlinks;
 	int max_storage_subdirs;
-	int forking;
-	int daemon;
-	int directory_tree;
+	uint8_t forking;
+	uint8_t daemon;
+	uint8_t directory_tree;
 	char *ca_conf;
 	char *ca_name;
 	char *ca_server_name;
 	char *ca_burp_ca;
-	int password_check;
+	uint8_t password_check;
 
 // client options
 	char *cname;
@@ -74,18 +74,18 @@ struct config
 	int ercount; struct strlist **excreg; // exclude (regular expression)
 	int exfscount; struct strlist **excfs; // exclude filesystems
 	int excmcount; struct strlist **excom; // exclude from compression
-	int cross_all_filesystems;
-	int read_all_fifos;
+	uint8_t cross_all_filesystems;
+	uint8_t read_all_fifos;
 	struct strlist **fifos;
 	int ffcount;
-	int read_all_blockdevs;
+	uint8_t read_all_blockdevs;
 	struct strlist **blockdevs;
 	int bdcount;
 	ssize_t min_file_size;
 	ssize_t max_file_size;
 	char *vss_drives;
   // These are to do with restore.
-	int overwrite;
+	uint8_t overwrite;
 	int strip;
 	char *backup;
 	char *restoreprefix;
@@ -100,24 +100,24 @@ struct config
 	char *backup_script_post;
 	struct strlist **backup_script_post_arg;
 	int bpostcount;
-	int   backup_script_post_run_on_fail;
+	uint8_t backup_script_post_run_on_fail;
 	char *restore_script_pre;
 	struct strlist **restore_script_pre_arg;
 	int rprecount;
 	char *restore_script_post;
 	struct strlist **restore_script_post_arg;
 	int rpostcount;
-	int restore_script_post_run_on_fail;
+	uint8_t restore_script_post_run_on_fail;
 
 	char *server_script_pre;
 	struct strlist **server_script_pre_arg;
 	int sprecount;
-	int server_script_pre_notify;
+	uint8_t server_script_pre_notify;
 	char *server_script_post;
 	struct strlist **server_script_post_arg;
 	int spostcount;
-	int server_script_post_run_on_fail;
-	int server_script_post_notify;
+	uint8_t server_script_post_run_on_fail;
+	uint8_t server_script_post_notify;
 
 	// Rabin conf
 	struct rconf rconf;
@@ -134,17 +134,17 @@ struct config
 	char *server_script;
 	struct strlist **server_script_arg;
 	int sscount;
-	int server_script_notify;
+	uint8_t server_script_notify;
 
 // Client options on the server.
 // They can be set globally in the server config, or for each client.
-	int hardlinked_archive;
+	uint8_t hardlinked_archive;
 
 	int kpcount;
 	struct strlist **keep;
 
-	int compression;
-	int version_warn;
+	uint8_t compression;
+	uint8_t version_warn;
 
 	char *timer_script;
 	struct strlist **timer_arg;
@@ -153,8 +153,8 @@ struct config
 	char *notify_success_script;
 	struct strlist **notify_success_arg;
 	int nscount;
-	int notify_success_warnings_only;
-	int notify_success_changes_only;
+	uint8_t notify_success_warnings_only;
+	uint8_t notify_success_changes_only;
 
 	char *notify_failure_script;
 	struct strlist **notify_failure_arg;
@@ -166,17 +166,17 @@ struct config
 
 	char *dedup_group;
 
-	int client_can_delete;
-	int client_can_force_backup;
-	int client_can_list;
-	int client_can_restore;
-	int client_can_verify;
+	uint8_t client_can_delete;
+	uint8_t client_can_force_backup;
+	uint8_t client_can_list;
+	uint8_t client_can_restore;
+	uint8_t client_can_verify;
 
-	int server_can_restore;
+	uint8_t server_can_restore;
 
 // Set to 1 on both client and server when the server is able to send counters
 // on resume/verify/restore.
-	int send_client_counters;
+	uint8_t send_client_counters;
 
 // Set on the server to the restore client name (the one that you connected
 // with) when the client has switched to a different set of client backups.

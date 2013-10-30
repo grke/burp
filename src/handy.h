@@ -25,7 +25,6 @@ extern int build_path(const char *datadir, const char *fname, size_t flen, char 
 extern int open_file_for_send(BFILE *bfd, const char *fname, int64_t winattr, struct config *conf);
 extern int close_file_for_send(BFILE *bfd);
 extern int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen, size_t datalen);
-extern int send_whole_file(char cmd, const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, struct cntr *cntr, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen, size_t datalen);
 extern int set_non_blocking(int fd);
 extern int set_blocking(int fd);
 extern int do_rename(const char *oldpath, const char *newpath);

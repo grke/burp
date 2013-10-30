@@ -85,69 +85,6 @@ static int do_inflate(z_stream *zstrm, BFILE *bfd, FILE *fp, unsigned char *out,
 	return 0;
 }
 
-#ifdef HAVE_WIN32
-
-struct winbuf
-{
-	unsigned long long *rcvd;
-	unsigned long long *sent;
-	struct cntr *cntr;
-};
-
-static DWORD WINAPI read_efs(PBYTE pbData, PVOID pvCallbackContext, PULONG ulLength)
-{
-	char cmd='\0';
-	size_t len=0;
-	char *buf=NULL;
-	struct winbuf *mybuf=(struct winbuf *)pvCallbackContext;
-
-	while(1)
-	{
-		if(async_read(&cmd, &buf, &len))
-			return ERROR_FUNCTION_FAILED;
-		(*(mybuf->rcvd))+=len;
-
-		switch(cmd)
-		{
-			case CMD_APPEND:
-				memcpy(pbData, buf, len);
-				*ulLength=(ULONG)len;
-				(*(mybuf->sent))+=len;
-				free(buf);
-				return ERROR_SUCCESS;
-			case CMD_END_FILE:
-				*ulLength=0;
-				free(buf);
-				return ERROR_SUCCESS;
-			case CMD_WARNING:
-				logp("WARNING: %s\n", buf);
-				do_filecounter(mybuf->cntr, cmd, 0);
-				free(buf);
-				continue;
-			default:
-				logp("unknown append cmd: %c\n", cmd);
-				free(buf);
-				break;
-		}
-	}
-	return ERROR_FUNCTION_FAILED;
-}
-
-static int transfer_efs_in(BFILE *bfd, unsigned long long *rcvd, unsigned long long *sent, struct cntr *cntr)
-{
-	int ret=0;
-	struct winbuf mybuf;
-	mybuf.rcvd=rcvd;
-	mybuf.sent=sent;
-	mybuf.cntr=cntr;
-	if((ret=WriteEncryptedFileRaw((PFE_IMPORT_FUNC)read_efs,
-		&mybuf, bfd->pvContext)))
-			logp("WriteEncryptedFileRaw returned %d\n", ret);
-	return ret;
-}
-
-#endif
-
 int transfer_gzfile_in(const char *path, BFILE *bfd, FILE *fp, unsigned long long *rcvd, unsigned long long *sent, struct cntr *cntr)
 {
 	char cmd=0;

@@ -403,6 +403,7 @@ static int backup_client(struct config *conf, int estimate)
 	}
 
 	if(find_files_init()
+	  || blks_generate_init(conf)
 	  || !(win=win_alloc(&conf->rconf)))
 		goto end;
 

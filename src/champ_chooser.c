@@ -136,6 +136,8 @@ struct incoming
 	uint8_t *found;
 	uint16_t size;
 	uint16_t allocated;
+
+	uint16_t got;
 };
 
 static struct incoming *incoming_alloc(void)
@@ -166,6 +168,7 @@ static void incoming_found_reset(struct incoming *in)
 {
 	if(!in->found || !in->size) return;
 	memset(in->found, 0, sizeof(in->found[0])*in->size);
+	in->got=0;
 }
 
 static struct candidate **candidates=NULL;
@@ -304,7 +307,7 @@ int add_fresh_candidate(const char *path, struct config *conf)
 	if(scores_grow(scores, candidates_len)) goto end;
 	set_candidate_score_pointers(candidates, candidates_len, scores);
 	scores_reset(scores);
-	printf("HERE: %d candidates\n", candidates_len);
+	printf("HERE: %d candidates\n", (int)candidates_len);
 
 	ret=0;
 end:
@@ -321,6 +324,8 @@ static char *get_fq_path(const char *path)
 	return fq_path;
 }
 
+static struct incoming *in=NULL;
+
 static int already_got_block(struct blk *blk, struct dpth *dpth)
 {
 	static struct weak_entry *weak_entry;
@@ -334,8 +339,9 @@ static int already_got_block(struct blk *blk, struct dpth *dpth)
 			snprintf(blk->save_path, sizeof(blk->save_path),
 				"%s", get_fq_path(strong_entry->path));
 //printf("FOUND: %s %s\n", blk->weak, blk->strong);
-printf("F");
+//printf("F");
 			blk->got=GOT;
+			in->got++;
 			return 0;
 		}
 		else
@@ -344,34 +350,14 @@ printf("F");
 //                      collisions++;
 		}
 	}
-	else
-	{
-		// Add both to hash table.
-//		if(!(weak_entry=add_weak_entry(blk->fingerprint)))
-//			return -1;
-	}
 
 	blk->got=NOT_GOT;
-printf(".");
+//printf(".");
 
-//	if(weak_entry)
-//	{
-//		// Have a weak entry, still need to add a strong entry.
-//		if(!(weak_entry->strong=add_strong_entry(weak_entry,
-//			blk->strong, dpth_mk(dpth))))
-//				return -1;
-
-		// Set up the details of where the block will be saved.
-		snprintf(blk->save_path, sizeof(blk->save_path),
-//			"%s", get_fq_path(dpth_mk(dpth)));
-			"%s", dpth_mk(dpth));
-//printf("here: %s\n", blk->save_path);
-
-//		if(!(blk->dpth_fp=get_dpth_fp(dpth))) return -1;
-		if(dpth_incr_sig(dpth)) return -1;
-
-//		return 0;
-//	}
+	// Set up the details of where the block will be saved.
+	snprintf(blk->save_path, sizeof(blk->save_path),
+		"%s", dpth_mk(dpth));
+	if(dpth_incr_sig(dpth)) return -1;
 
 	return 0;
 }
@@ -444,8 +430,6 @@ static struct candidate *champ_chooser(struct incoming *in, struct candidate *ch
 	return best;
 }
 
-static struct incoming *in=NULL;
-
 #define CHAMPS_MAX 10
 
 int deduplicate(struct blk *blks, struct dpth *dpth, struct config *conf, uint64_t *wrap_up)
@@ -455,6 +439,7 @@ int deduplicate(struct blk *blks, struct dpth *dpth, struct config *conf, uint64
 	struct candidate *champ_last=NULL;
 	static int consecutive_got=0;
 	static int count=0;
+	static int blk_count=0;
 
 printf("in deduplicate()\n");
 
@@ -471,14 +456,18 @@ printf("in deduplicate()\n");
 
 	printf("Loaded %d champs\n", count);
 
+	blk_count=0;
 	for(blk=blks; blk; blk=blk->next)
 	{
 //printf("try: %d\n", blk->index);
+		blk_count++;
+
 		// FIX THIS - represents zero length block.
 		if(!blk->fingerprint // All zeroes.
 		  && !strcmp(blk->strong, "D41D8CD98F00B204E9800998ECF8427E"))
 		{
 			blk->got=GOT;
+			in->got++;
 			continue;
 		}
 
@@ -503,7 +492,7 @@ printf("in deduplicate()\n");
 		else
 			consecutive_got=0;
 	}
-printf("\n");
+printf("     ALREADY GOT %d/%d incoming blocks\n", in->got, blk_count);
 
 
 	// Start the incoming array again.

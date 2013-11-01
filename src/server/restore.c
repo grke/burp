@@ -1,17 +1,17 @@
-#include "burp.h"
-#include "prog.h"
-#include "msg.h"
-#include "lock.h"
-#include "handy.h"
-#include "asyncio.h"
-#include "counter.h"
+#include "../burp.h"
+#include "../prog.h"
+#include "../msg.h"
+#include "../lock.h"
+#include "../handy.h"
+#include "../asyncio.h"
+#include "../counter.h"
+#include "../sbuf.h"
+#include "../blk.h"
+#include "../regexp.h"
+#include "current_backups.h"
 #include "dpth.h"
-#include "sbuf.h"
-#include "blk.h"
-#include "regexp.h"
-#include "current_backups_server.h"
-#include "restore_server.h"
 #include "manio.h"
+#include "restore.h"
 
 #include <librsync.h>
 
@@ -311,7 +311,7 @@ static int do_restore_manifest(const char *client, const char *datadir, struct b
 		if((ars=manio_sbuf_fill(manio, sb,
 			need_data?blk:NULL, dpth, conf))<0)
 		{
-			logp("Error from sbuf_fill_from_gzfile() in $s\n",
+			logp("Error from manio_sbuf_fill() in $s\n",
 				__FUNCTION__);
 			goto end; // Error;
 		}

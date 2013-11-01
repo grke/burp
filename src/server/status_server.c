@@ -1,15 +1,15 @@
-#include "burp.h"
-#include "prog.h"
-#include "msg.h"
-#include "lock.h"
-#include "handy.h"
-#include "asyncio.h"
-#include "counter.h"
-#include "sbuf.h"
-#include "current_backups_server.h"
+#include "../burp.h"
+#include "../prog.h"
+#include "../msg.h"
+#include "../lock.h"
+#include "../handy.h"
+#include "../asyncio.h"
+#include "../counter.h"
+#include "../sbuf.h"
+
+#include "list.h"
 #include "status_server.h"
-#include "list_client.h"
-#include "list_server.h"
+#include "current_backups.h"
 
 #include <dirent.h>
 

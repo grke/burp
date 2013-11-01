@@ -5,7 +5,6 @@
 #include "handy.h"
 #include "asyncio.h"
 #include "counter.h"
-#include "dpth.h"
 #include "sbuf.h"
 #include "attribs.h"
 
@@ -362,16 +361,13 @@ static struct rblk *get_rblk(struct rblk *rblks, const char *datpath)
 	}
 }
 
-static int retrieve_blk_data(struct dpth *dpth, struct blk *blk)
+static int retrieve_blk_data(char *datpath, struct blk *blk)
 {
 	static struct rblk *rblks=NULL;
 	char *cp;
-	char datpath[256];
 	unsigned int datno;
 	struct rblk *rblk;
 
-	snprintf(datpath, sizeof(datpath),
-		"%s/%s", dpth->base_path, blk->save_path);
 //printf("x: %s\n", datpath);
 	if(!(cp=strrchr(datpath, '/')))
 	{
@@ -409,7 +405,7 @@ static int retrieve_blk_data(struct dpth *dpth, struct blk *blk)
         return 0;
 }
 
-static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, struct dpth *dpth, struct config *conf)
+static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct config *conf)
 {
 	static char lead[5]="";
 	static iobuf *rbuf=NULL;
@@ -541,9 +537,9 @@ static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, struct dpth
 					return -1;
 				}
 				free(rbuf->buf); rbuf->buf=NULL;
-				if(dpth)
+				if(datpath)
 				{
-					if(retrieve_blk_data(dpth, blk))
+					if(retrieve_blk_data(datpath, blk))
 					{
 						logp("Could not retrieve blk data.\n");
 						free(rbuf->buf); rbuf->buf=NULL;
@@ -597,9 +593,9 @@ static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, struct dpth
 	return -1;
 }
 
-int sbuf_fill_from_gzfile(struct sbuf *sb, gzFile zp, struct blk *blk, struct dpth *dpth, struct config *conf)
+int sbuf_fill_from_gzfile(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct config *conf)
 {
-	return do_sbuf_fill(sb, zp, blk, dpth, conf);
+	return do_sbuf_fill(sb, zp, blk, datpath, conf);
 }
 
 int sbuf_fill_from_net(struct sbuf *sb, struct blk *blk, struct config *conf)

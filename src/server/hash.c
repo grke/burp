@@ -3,12 +3,12 @@
 #include <string.h>
 #include <uthash.h>
 
+#include "../cmd.h"
+#include "../conf.h"
+#include "../log.h"
+#include "../msg.h"
+#include "../handy.h"
 #include "hash.h"
-#include "cmd.h"
-#include "conf.h"
-#include "log.h"
-#include "msg.h"
-#include "handy.h"
 
 struct weak_entry *hash_table=NULL;
 

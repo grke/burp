@@ -1,13 +1,13 @@
 /* Client of the server status. Runs on the server machine and connects to the
    burp server to get status information. */
 
-#include "burp.h"
-#include "prog.h"
-#include "handy.h"
-#include "lock.h"
-#include "cmd.h"
-#include "current_backups_server.h"
-#include "counter.h"
+#include "../burp.h"
+#include "../prog.h"
+#include "../handy.h"
+#include "../lock.h"
+#include "../cmd.h"
+#include "../counter.h"
+#include "current_backups.h"
 
 #ifdef HAVE_NCURSES_H
 #include "ncurses.h"

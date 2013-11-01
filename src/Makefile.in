@@ -19,44 +19,32 @@ first_rule: all
 dummy:
 
 #
-SVRSRCS =	acl.c \
+SRCS =		acl.c \
 		asyncio.c \
 		attribs.c \
-		auth_server.c \
 		auth_client.c \
 		autoupgrade_client.c \
-		autoupgrade_server.c \
 		backup_client.c \
-		backup_server.c \
 		base64.c \
 		berrno.c \
 		bfile.c \
 		blk.c \
 		ca_client.c \
-		ca_server.c \
-		champ_chooser.c \
 		client.c \
 		client_vss.c \
 		conf.c \
 		counter.c \
-		current_backups_server.c \
 		delete_client.c \
-		delete_server.c \
-		dpth.c \
 		extrameta.c \
 		find.c \
 		forkchild.c \
 		handy.c \
-		hash.c \
 		incexc_recv.c \
 		incexc_send.c \
 		list_client.c \
-		list_server.c \
 		lock.c \
 		log.c \
-		manio.c \
 		msg.c \
-		phase3.c \
 		prepend.c \
 		prog.c \
 		rabin.c \
@@ -64,16 +52,13 @@ SVRSRCS =	acl.c \
 		rconf.c \
 		regexp.c \
 		restore_client.c \
-		restore_server.c \
 		sbuf.c \
-		server.c \
 		ssl.c \
-		status_client_ncurses.c \
-		status_server.c \
 		strlist.c \
 		xattr.c \
 
-SVROBJS = $(SVRSRCS:.c=.o)
+OBJS = $(SRCS:.c=.o)
+SVROBJS = server/server.a
 
 # these are the objects that are changed by the .configure process
 EXTRAOBJS = @OBJLIST@
@@ -124,14 +109,14 @@ win32:	$(WIN32OBJS)
 	fi
 	@rm -f burp.exe
 
-burp:  Makefile $(SVROBJS) @WIN32@
+burp:  Makefile $(OBJS) @WIN32@
 	@echo "Linking $@ ..."
-	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -o $@ $(SVROBJS) \
+	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -o $@ $(SVROBJS) $(OBJS)\
 	  $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
 	  $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS) -lrt
 
-static-burp: Makefile $(SVROBJS) @WIN32@
-	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -o $@ $(SVROBJS) \
+static-burp: Makefile $(OBJS) @WIN32@
+	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -o $@ $(SVROBJS) $(OBJS) \
 	   $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
 	   $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS)
 

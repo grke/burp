@@ -1,10 +1,10 @@
-#include "burp.h"
-#include "prog.h"
-#include "counter.h"
-#include "handy.h"
-#include "cmd.h"
-#include "asyncio.h"
-#include "autoupgrade_server.h"
+#include "../burp.h"
+#include "../prog.h"
+#include "../counter.h"
+#include "../handy.h"
+#include "../cmd.h"
+#include "../asyncio.h"
+#include "autoupgrade.h"
 
 // Return -1 on error or success, 0 to continue normally.
 int autoupgrade_server(long ser_ver, long cli_ver, const char *os, struct config *conf)

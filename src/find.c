@@ -749,13 +749,16 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 	*/
 	errno = 0;
 #ifdef O_DIRECTORY
-	int dfd;
+	int dfd=-1;
 	if((dfd=open(fname, O_RDONLY|O_DIRECTORY|O_NOATIME))<0
 	  || !(directory=fdopendir(dfd)))
 #else
 	if(!(directory=opendir(fname)))
 #endif
 	{
+#ifdef O_DIRECTORY
+		if(dfd>=0) close(dfd);
+#endif
 		ff_pkt->type=FT_NOOPEN;
 		ff_pkt->ff_errno=errno;
 		rtn_stat=send_file(ff_pkt, top_level, conf, cntr);

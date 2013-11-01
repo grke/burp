@@ -5,12 +5,13 @@
 #include <sys/types.h>
 #include <dirent.h>
 
+#include "../prepend.h"
+#include "../handy.h"
+#include "../log.h"
+#include "../msg.h"
 #include "dpth.h"
-#include "prepend.h"
-#include "handy.h"
 #include "hash.h"
-#include "log.h"
-#include "msg.h"
+#include "sbuf.h"
 
 #define MAX_STORAGE_SUBDIRS	30000
 

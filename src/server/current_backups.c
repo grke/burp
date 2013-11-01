@@ -1,13 +1,13 @@
-#include "burp.h"
-#include "prog.h"
-#include "msg.h"
-#include "lock.h"
-#include "handy.h"
-#include "asyncio.h"
-#include "counter.h"
+#include "../burp.h"
+#include "../prog.h"
+#include "../msg.h"
+#include "../lock.h"
+#include "../handy.h"
+#include "../asyncio.h"
+#include "../counter.h"
+#include "../sbuf.h"
+#include "current_backups.h"
 #include "dpth.h"
-#include "sbuf.h"
-#include "current_backups_server.h"
 
 #include <netdb.h>
 #include <librsync.h>
@@ -208,6 +208,7 @@ int read_timestamp(const char *path, char buf[], size_t len)
 {
 	FILE *fp=NULL;
 	char *cp=NULL;
+	char *fgetret=NULL;
 
 	//if(!(fp=open_file(path, "rb")))
 	// avoid alarming message
@@ -216,10 +217,10 @@ int read_timestamp(const char *path, char buf[], size_t len)
 		*buf=0;
 		return -1;
 	}
-	fgets(buf, len, fp);
+	fgetret=fgets(buf, len, fp);
 	fclose(fp);
+	if(!fgetret) return -1;
 	if((cp=strrchr(buf, '\n'))) *cp='\0';
-	if(!*buf) return -1;
 	return 0;
 }
 

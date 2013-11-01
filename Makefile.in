@@ -15,7 +15,7 @@ first_rule: all
 dummy:
 
 # --client-only directories
-fd_subdirs = src
+fd_subdirs = src/server src
 
 # Non-client-only directores
 subdirs =    src/cats src/tools
@@ -47,7 +47,7 @@ depend:
 	@for I in ${all_subdirs}; \
 	  do (cd $$I; echo "==>Entering directory `pwd`"; $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1); done
 	
-burp: Makefile	   
+burp: Makefile
 	@for I in ${fd_subdirs}; \
 	  do (cd $$I; echo "==>Entering directory `pwd`"; \
 	      $(MAKE) all || (echo ""; echo ""; echo "	 ====== Error in `pwd` ======; \

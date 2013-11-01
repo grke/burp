@@ -3,7 +3,8 @@
 #include "msg.h"
 #include "lock.h"
 #include "handy.h"
-#include "status_client.h"
+#include "server/status_client.h"
+#include "server/main.h"
 
 static char *get_config_path(void)
 {

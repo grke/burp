@@ -5,7 +5,6 @@
 #include "handy.h"
 #include "asyncio.h"
 #include "counter.h"
-#include "dpth.h"
 #include "sbuf.h"
 #include "auth_client.h"
 

@@ -1,13 +1,13 @@
-#include "burp.h"
-#include "prog.h"
-#include "conf.h"
-#include "ca_server.h"
-#include "log.h"
-#include "msg.h"
-#include "handy.h"
-#include "cmd.h"
-#include "asyncio.h"
-#include "current_backups_server.h"
+#include "../burp.h"
+#include "../prog.h"
+#include "../conf.h"
+#include "../log.h"
+#include "../msg.h"
+#include "../handy.h"
+#include "../cmd.h"
+#include "../asyncio.h"
+#include "ca.h"
+#include "current_backups.h"
 
 static int setup_stuff_done=0;
 

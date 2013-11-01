@@ -10,7 +10,6 @@
 #include "restore_client.h"
 #include "forkchild.h"
 #include "sbuf.h"
-#include "dpth.h"
 #include "extrameta.h"
 #include "attribs.h"
 

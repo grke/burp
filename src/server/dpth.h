@@ -1,8 +1,6 @@
 #ifndef __DPTH_H
 #define __DPTH_H
 
-#define SIG_MAX 0x1000		// 4096 signatures per data file.
-
 struct dpth
 {
 	char *base_path;

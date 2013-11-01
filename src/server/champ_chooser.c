@@ -7,15 +7,15 @@
 #include <uthash.h>
 #include <assert.h>
 
+#include "../log.h"
+#include "../cmd.h"
+#include "../msg.h"
+#include "../sbuf.h"
+#include "../handy.h"
+#include "../conf.h"
 #include "dpth.h"
-#include "log.h"
-#include "cmd.h"
-#include "msg.h"
-#include "sbuf.h"
-#include "handy.h"
-#include "hash.h"
 #include "champ_chooser.h"
-#include "conf.h"
+#include "hash.h"
 
 struct sparse
 {

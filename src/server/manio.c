@@ -3,14 +3,14 @@
 #include <malloc.h>
 #include <string.h>
 
-#include "log.h"
-#include "msg.h"
-#include "manio.h"
-#include "handy.h"
-#include "sbuf.h"
-#include "cmd.h"
-#include "conf.h"
+#include "../log.h"
+#include "../msg.h"
+#include "../handy.h"
+#include "../sbuf.h"
+#include "../cmd.h"
+#include "../conf.h"
 #include "dpth.h"
+#include "manio.h"
 
 #define MANIO_MODE_READ		"rb"
 #define MANIO_MODE_WRITE	"wb"
@@ -118,6 +118,7 @@ static int open_next_fpath(struct manio *manio)
 int manio_sbuf_fill(struct manio *manio, struct sbuf *sb, struct blk *blk, struct dpth *dpth, struct config *conf)
 {
 	int ars;
+	static char datpath[256];
 
 	while(1)
 	{
@@ -126,8 +127,10 @@ int manio_sbuf_fill(struct manio *manio, struct sbuf *sb, struct blk *blk, struc
 			if(open_next_fpath(manio)) goto error;
 			if(!manio->zp) return 1; // No more files to read.
 		}
-		if((ars=sbuf_fill_from_gzfile(sb,
-			manio->zp, blk, dpth, conf))<0) goto error;
+		if(dpth) snprintf(datpath, sizeof(datpath),
+			"%s/%s", dpth->base_path, blk->save_path);
+		if((ars=sbuf_fill_from_gzfile(sb, manio->zp, blk,
+			dpth?datpath:NULL, conf))<0) goto error;
 		else if(!ars)
 			return 0; // Got something.
 

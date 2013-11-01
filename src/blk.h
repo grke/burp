@@ -12,6 +12,8 @@
 // in storage, it will send a message to the client so that the client can
 // free those blocks from its memory and carry on.
 #define BLKS_CONSECUTIVE_NOTIFY	10000
+// 4096 signatures per data file.
+#define SIG_MAX 0x1000
 
 enum got
 {

@@ -4,7 +4,6 @@
 #include "msg.h"
 #include "asyncio.h"
 #include "counter.h"
-#include "find.h"
 #include "berrno.h"
 #include "forkchild.h"
 

@@ -1,10 +1,10 @@
-#include "burp.h"
-#include "prog.h"
+#include "../burp.h"
+#include "../prog.h"
+#include "../cmd.h"
+#include "../log.h"
+#include "../asyncio.h"
+#include "../handy.h"
 #include "acl.h"
-#include "cmd.h"
-#include "log.h"
-#include "asyncio.h"
-#include "handy.h"
 #include "extrameta.h"
 
 #ifdef HAVE_ACL

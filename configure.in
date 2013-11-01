@@ -1560,6 +1560,7 @@ AC_OUTPUT([autoconf/Make.common \
 	   Makefile \
 	   manpages/Makefile \
 	   src/Makefile \
+	   src/client/Makefile \
 	   src/server/Makefile \
 	   $PFILES ],  
      [ ]

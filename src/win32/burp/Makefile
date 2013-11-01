@@ -26,29 +26,30 @@ vpath %.cpp $(MAINDIR)/src $(BUILDDIR)/libwin32
 
 ##########################################################################
 
-FILED_OBJS = \
+CLIENT_OBJS = \
 	$(OBJDIR)/alist.o \
 	$(OBJDIR)/asyncio.o \
 	$(OBJDIR)/attribs.o \
-	$(OBJDIR)/auth_client.o \
-	$(OBJDIR)/autoupgrade_client.o \
-	$(OBJDIR)/backup_client.o \
 	$(OBJDIR)/base64.o \
 	$(OBJDIR)/berrno.o \
 	$(OBJDIR)/bfile.o \
 	$(OBJDIR)/blk.o \
-	$(OBJDIR)/ca_client.o \
-	$(OBJDIR)/client.o \
-	$(OBJDIR)/client_vss.o \
+	$(OBJDIR)/client/auth.o \
+	$(OBJDIR)/client/autoupgrade.o \
+	$(OBJDIR)/client/backup.o \
+	$(OBJDIR)/client/ca.o \
+	$(OBJDIR)/client/cvss.o \
+	$(OBJDIR)/client/delete.o \
+	$(OBJDIR)/client/extrameta.o \
+	$(OBJDIR)/client/find.o \
+	$(OBJDIR)/client/list.o \
+	$(OBJDIR)/client/main.o \
+	$(OBJDIR)/client/restore.o \
 	$(OBJDIR)/conf.o \
 	$(OBJDIR)/counter.o \
-	$(OBJDIR)/delete_client.o \
-	$(OBJDIR)/extrameta.o \
-	$(OBJDIR)/find.o \
 	$(OBJDIR)/forkchild.o \
 	$(OBJDIR)/incexc_recv.o \
 	$(OBJDIR)/incexc_send.o \
-	$(OBJDIR)/list_client.o \
 	$(OBJDIR)/handy.o \
 	$(OBJDIR)/lock.o \
 	$(OBJDIR)/log.o \
@@ -60,7 +61,6 @@ FILED_OBJS = \
 	$(OBJDIR)/rabin_win.o \
 	$(OBJDIR)/rconf.o \
 	$(OBJDIR)/regexp.o \
-	$(OBJDIR)/restore_client.o \
 	$(OBJDIR)/sbuf.o \
 	$(OBJDIR)/ssl.o \
 	$(OBJDIR)/strlist.o \
@@ -70,9 +70,9 @@ FILED_OBJS = \
 	$(OBJDIR)/vss_Vista.o \
 	$(OBJDIR)/burp.res
 
-ALL_OBJS = $(FILED_OBJS)
+ALL_OBJS = $(CLIENT_OBJS)
 
-FILED_LIBS = \
+CLIENT_LIBS = \
 	$(LIBS_SSL) \
 	$(LIBS_CRYPTO) \
 	$(LIBS_ZLIB) \
@@ -101,8 +101,8 @@ clean:
 # Rules
 #
 
-$(BINDIR)/burp.exe: $(FILED_OBJS) $(LIBS_BURP)
-	$(call link_conapp,$(FILED_LIBS))
+$(BINDIR)/burp.exe: $(CLIENT_OBJS) $(LIBS_BURP)
+	$(call link_conapp,$(CLIENT_LIBS))
 
 $(BINDIR)/burp_ca.bat:
 	cp $(MAINDIR)/configs/certs/CA/burp_ca.bat $(BINDIR)

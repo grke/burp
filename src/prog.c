@@ -3,6 +3,7 @@
 #include "msg.h"
 #include "lock.h"
 #include "handy.h"
+#include "client/main.h"
 #include "server/status_client.h"
 #include "server/main.h"
 

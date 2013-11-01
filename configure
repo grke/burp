@@ -24412,7 +24412,7 @@ if test "x${subsysdir}" = "x${sbindir}" ; then
    exit 1
 fi
 
-ac_config_files="$ac_config_files autoconf/Make.common Makefile manpages/Makefile src/Makefile src/server/Makefile $PFILES"
+ac_config_files="$ac_config_files autoconf/Make.common Makefile manpages/Makefile src/Makefile src/client/Makefile src/server/Makefile $PFILES"
 
 ac_config_commands="$ac_config_commands default"
 
@@ -25525,6 +25525,7 @@ do
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "manpages/Makefile") CONFIG_FILES="$CONFIG_FILES manpages/Makefile" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
+    "src/client/Makefile") CONFIG_FILES="$CONFIG_FILES src/client/Makefile" ;;
     "src/server/Makefile") CONFIG_FILES="$CONFIG_FILES src/server/Makefile" ;;
     "$PFILES") CONFIG_FILES="$CONFIG_FILES $PFILES" ;;
     "default") CONFIG_COMMANDS="$CONFIG_COMMANDS default" ;;

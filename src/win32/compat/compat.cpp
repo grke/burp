@@ -1,7 +1,6 @@
 #include "burp.h"
 #include "compat.h"
 #include "prog.h"
-#include "find.h"
 #include "time.h"
 #include "mem_pool.h"
 

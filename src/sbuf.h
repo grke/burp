@@ -21,24 +21,22 @@ struct sbuf
 	struct stat statp;
 	char *attribs; // base64 encoded statp
 	uint64_t winattr;
-	int ftype;	// FT_ type from burpconfig.h.
+	uint16_t ftype;	// FT_ type from burpconfig.h.
 	size_t alen;
 	int compression;
 
 	ssize_t bytes_read;
-//	char *endfile;
-//	size_t elen;
 
 	// Keep track of what has been sent.
-	int sent_stat;
-	int sent_path;
-	int sent_link;
+	uint8_t sent_stat;
+	uint8_t sent_path;
+	uint8_t sent_link;
 
 	// Keep track of what needs to be received.
-	int need_path;
-	int need_link;
-	int need_data;
-	int header_written_to_manifest;
+	uint8_t need_path;
+	uint8_t need_link;
+	uint8_t need_data;
+	uint8_t header_written_to_manifest;
 
 	uint64_t index;
 

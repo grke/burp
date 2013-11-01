@@ -717,9 +717,6 @@ static int set_up_new_ff_dir(struct sbuf *sb, struct config *conf)
 	static DIR *directory;
 	static struct ff_dir *ff_dir;
 	static size_t len;
-//#ifndef HAVE_WIN32
-//	int fd;
-//#endif
 
 	len=strlen(sb->path)+2;
 	if(!(ff_dir=(struct ff_dir *)calloc(1, sizeof(struct ff_dir)))
@@ -732,51 +729,31 @@ static int set_up_new_ff_dir(struct sbuf *sb, struct config *conf)
 	snprintf(ff_dir->dirname, len, "%s", sb->path);
 
 	errno = 0;
-/*
-#ifndef HAVE_WIN32
+#ifdef O_DIRECTORY
+	int dfd=-1;
 	// Shenanigans to set O_NOATIME on a directory.
-printf("NOATIME: %d\n", O_NOATIME);
-	if((fd=open(sb->path, O_RDONLY|O_DIRECTORY|O_NOATIME))<0)
-	{
-		logp("Could not open directory: %s\n", sb->path);
-		return -1;
-	}
-	if(!(directory=fdopendir(fd)))
-	{
-		close(fd);
-		sb->ftype=FT_NOOPEN;
-		free(ff_dir->dirname);
-		free(ff_dir);
-		return 0;
-	}
+	if((dfd=open(sb->path, O_RDONLY|O_DIRECTORY|O_NOATIME))<0
+	  || !(directory=fdopendir(dfd)))
 #else
-*/
 	if(!(directory=opendir(sb->path)))
+#endif
 	{
+#ifdef O_DIRECTORY
+		if(dfd>=0) close(dfd);
+#endif
 		sb->ftype=FT_NOOPEN;
 		free(ff_dir->dirname);
 		free(ff_dir);
 		return 0;
 	}
-//#endif
 
 	if(get_files_in_directory(directory, &(ff_dir->nl), &(ff_dir->count)))
 	{
 		closedir(directory);
 		free_ff_dir(ff_dir);
-/*
-#ifndef HAVE_WIN32
-		close(fd);
-#endif
-*/
 		return -1;
 	}
 	closedir(directory);
-/*
-#ifndef HAVE_WIN32
-	close(fd);
-#endif
-*/
 
 	if(!ff_dir->count)
 	{

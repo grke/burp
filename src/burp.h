@@ -127,4 +127,13 @@ extern "C" {
 #undef HAVE_LIBZ                      /* no good without headers */
 #endif
 
+#if HAVE_UTIME_H
+#include <utime.h>
+#else
+struct utimbuf {
+	long actime;
+	long modtime;
+};
+#endif
+
 #endif

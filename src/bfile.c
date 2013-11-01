@@ -1,6 +1,5 @@
 #include "burp.h"
 #include "prog.h"
-#include "find.h"
 #include "berrno.h"
 #include "log.h"
 #include "bfile.h"

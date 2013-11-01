@@ -1,17 +1,8 @@
 #ifndef __FIND_H
 #define __FIND_H
 
-#include "conf.h"
-#include "sbuf.h"
-
-#if HAVE_UTIME_H
-#include <utime.h>
-#else
-struct utimbuf {
-    long actime;
-    long modtime;
-};
-#endif
+#include "../conf.h"
+#include "../sbuf.h"
 
 extern int find_files_init(void);
 extern int find_file_next(struct sbuf *sb,

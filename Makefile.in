@@ -14,13 +14,9 @@ thisdir = .
 first_rule: all
 dummy:
 
-# --client-only directories
-fd_subdirs = src/server src
+bin_subdirs = src/client src/server src
 
-# Non-client-only directores
-subdirs =    src/cats src/tools
-
-all_subdirs = ${fd_subdirs} manpages
+all_subdirs = ${bin_subdirs} manpages
 
 DIST =	INSTALL README.configure configure Makefile Makefile.in ChangeLog
 
@@ -48,7 +44,7 @@ depend:
 	  do (cd $$I; echo "==>Entering directory `pwd`"; $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1); done
 	
 burp: Makefile
-	@for I in ${fd_subdirs}; \
+	@for I in ${bin_subdirs}; \
 	  do (cd $$I; echo "==>Entering directory `pwd`"; \
 	      $(MAKE) all || (echo ""; echo ""; echo "	 ====== Error in `pwd` ======; \
 			    echo ""; echo "";)); \

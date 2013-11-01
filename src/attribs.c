@@ -11,7 +11,6 @@
 #include "cmd.h"
 #include "berrno.h"
 #include "asyncio.h"
-#include "find.h"
 #include "sbuf.h"
 
 // Encode a stat structure into a base64 character string.

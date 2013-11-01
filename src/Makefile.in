@@ -19,29 +19,19 @@ first_rule: all
 dummy:
 
 #
-SRCS =		acl.c \
+SRCS = \
 		asyncio.c \
 		attribs.c \
-		auth_client.c \
-		autoupgrade_client.c \
-		backup_client.c \
 		base64.c \
 		berrno.c \
 		bfile.c \
 		blk.c \
-		ca_client.c \
-		client.c \
-		client_vss.c \
 		conf.c \
 		counter.c \
-		delete_client.c \
-		extrameta.c \
-		find.c \
 		forkchild.c \
 		handy.c \
 		incexc_recv.c \
 		incexc_send.c \
-		list_client.c \
 		lock.c \
 		log.c \
 		msg.c \
@@ -51,14 +41,12 @@ SRCS =		acl.c \
 		rabin_win.c \
 		rconf.c \
 		regexp.c \
-		restore_client.c \
 		sbuf.c \
 		ssl.c \
 		strlist.c \
-		xattr.c \
 
 OBJS = $(SRCS:.c=.o)
-SVROBJS = server/server.a
+SUBDIROBJS = server/server.a client/client.a
 
 # these are the objects that are changed by the .configure process
 EXTRAOBJS = @OBJLIST@
@@ -111,13 +99,13 @@ win32:	$(WIN32OBJS)
 
 burp:  Makefile $(OBJS) @WIN32@
 	@echo "Linking $@ ..."
-	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -o $@ $(SVROBJS) $(OBJS)\
-	  $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
+	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -o $@ \
+	$(SUBDIROBJS) $(OBJS) $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
 	  $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS) -lrt
 
 static-burp: Makefile $(OBJS) @WIN32@
-	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -o $@ $(SVROBJS) $(OBJS) \
-	   $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
+	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -o $@ \
+	$(SUBDIROBJS) $(OBJS) $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
 	   $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS)
 
 Makefile: $(srcdir)/Makefile.in $(topdir)/config.status

@@ -6,6 +6,13 @@
 #include <openssl/md5.h>
 #include "rconf.h"
 
+// The highest number of blocks that the client will hold in memory.
+#define BLKS_MAX_IN_MEM		20000
+// When, during a backup, the server finds this many consecutive blocks already
+// in storage, it will send a message to the client so that the client can
+// free those blocks from its memory and carry on.
+#define BLKS_CONSECUTIVE_NOTIFY	10000
+
 enum got
 {
 	INCOMING=0,

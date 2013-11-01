@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <uthash.h>
+#include <assert.h>
 
 #include "dpth.h"
 #include "log.h"
@@ -399,11 +400,7 @@ static struct candidate *champ_chooser(struct incoming *in, struct candidate *ch
 			}
 			score=candidate->score;
 			(*score)++;
-			if(*score>1000)
-			{
-				dump_scores("exiting", scores, scores->size);
-				exit(1);
-			}
+			assert(*score<1000);
 			if(!best
 			// Maybe should check for candidate!=best here too.
 			  || *score>*(best->score))
@@ -483,7 +480,7 @@ printf("in deduplicate()\n");
 		// in memory.
 		if(blk->got==GOT)
 		{
-			if(consecutive_got++>10000)
+			if(consecutive_got++>BLKS_CONSECUTIVE_NOTIFY)
 			{
 				*wrap_up=blk->index;
 				consecutive_got=0;

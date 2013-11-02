@@ -344,21 +344,25 @@ static struct rblk *get_rblk(struct rblk *rblks, const char *datpath)
 
 static int retrieve_blk_data(char *datpath, struct blk *blk)
 {
+	static char fulldatpath[256]="";
 	static struct rblk *rblks=NULL;
 	char *cp;
 	unsigned int datno;
 	struct rblk *rblk;
 
-//printf("x: %s\n", datpath);
-	if(!(cp=strrchr(datpath, '/')))
+	snprintf(fulldatpath, sizeof(fulldatpath),
+		"%s/%s", datpath, blk->save_path);
+
+//printf("x: %s\n", fulldatpath);
+	if(!(cp=strrchr(fulldatpath, '/')))
 	{
-		logp("Could not parse data path: %s\n", datpath);
+		logp("Could not parse data path: %s\n", fulldatpath);
 		return -1;
 	}
 	*cp=0;
 	cp++;
 	datno=strtoul(cp, NULL, 16);
-//printf("y: %s\n", datpath);
+//printf("y: %s\n", fulldatpath);
 
 	if(!rblks
 	  && !(rblks=(struct rblk *)calloc(RBLK_MAX, sizeof(struct rblk))))
@@ -367,12 +371,12 @@ static int retrieve_blk_data(char *datpath, struct blk *blk)
 		return -1;
 	}
 
-	if(!(rblk=get_rblk(rblks, datpath)))
+	if(!(rblk=get_rblk(rblks, fulldatpath)))
 	{
 		return -1;
 	}
 
-//	printf("lookup: %s (%s)\n", datpath, cp);
+//	printf("lookup: %s (%s)\n", fulldatpath, cp);
 	if(datno>rblk->readbuflen)
 	{
 		logp("dat index %d is greater than readbuflen: %d\n",

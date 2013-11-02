@@ -106,7 +106,6 @@ static int open_next_fpath(struct manio *manio)
 int manio_sbuf_fill(struct manio *manio, struct sbuf *sb, struct blk *blk, struct dpth *dpth, struct config *conf)
 {
 	int ars;
-	static char datpath[256];
 
 	while(1)
 	{
@@ -115,10 +114,8 @@ int manio_sbuf_fill(struct manio *manio, struct sbuf *sb, struct blk *blk, struc
 			if(open_next_fpath(manio)) goto error;
 			if(!manio->zp) return 1; // No more files to read.
 		}
-		if(dpth && blk) snprintf(datpath, sizeof(datpath),
-			"%s/%s", dpth->base_path, blk->save_path);
 		if((ars=sbuf_fill_from_gzfile(sb, manio->zp, blk,
-			(dpth && blk)?datpath:NULL, conf))<0) goto error;
+			dpth?dpth->base_path:NULL, conf))<0) goto error;
 		else if(!ars)
 			return 0; // Got something.
 

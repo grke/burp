@@ -463,6 +463,11 @@ int init_client_socket(const char *host, const char *port)
 void reuseaddr(int fd)
 {
 	int tmpfd=0;
+#ifdef HAVE_OLD_SOCKOPT
+#define sockopt_val_t char *
+#else
+#define sockopt_val_t void *
+#endif
 	if(setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
 		(sockopt_val_t)&tmpfd, sizeof(tmpfd))<0)
 			logp("Error: setsockopt SO_REUSEADDR: %s",

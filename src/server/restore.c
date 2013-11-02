@@ -413,7 +413,7 @@ int do_restore_server(const char *basedir, enum action act, const char *client, 
 	int a=0;
 	int i=0;
 	int ret=0;
-	int found=0;
+	uint8_t found=0;
 	struct bu *arr=NULL;
 	unsigned long index=0;
 	regex_t *regex=NULL;
@@ -434,7 +434,7 @@ int do_restore_server(const char *basedir, enum action act, const char *client, 
 		// No backup specified, do the most recent.
 		ret=restore_manifest(arr, a, a-1, regex, srestore, act,
 			client, basedir, dir_for_notify, dpth, conf);
-		found=TRUE;
+		found=1;
 	}
 
 	if(!found) for(i=0; i<a; i++)
@@ -442,7 +442,7 @@ int do_restore_server(const char *basedir, enum action act, const char *client, 
 		if(!strcmp(arr[i].timestamp, conf->backup)
 			|| arr[i].index==index)
 		{
-			found=TRUE;
+			found=1;
 			//logp("got: %s\n", arr[i].path);
 			ret|=restore_manifest(arr, a, i, regex,
 				srestore, act, client, basedir,

@@ -94,5 +94,4 @@ extern int str_to_counters(const char *str, char **client, char *status,
 	struct strlist ***backups, int *bcount);
 extern int recv_counters(struct config *conf);
 
-
 #endif

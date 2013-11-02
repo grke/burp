@@ -1,7 +1,6 @@
 #ifndef __HASH_H
 #define __HASH_H
 
-#include <stdint.h>
 #include <uthash.h>
 
 #include "dpth.h"

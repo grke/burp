@@ -1,10 +1,24 @@
 #ifndef _SRC_INCLUDES_H
 #define _SRC_INCLUDES_H
 
+// There is probably somewhere better to put these.
+enum action
+{
+	ACTION_BACKUP=0,
+	ACTION_RESTORE,
+	ACTION_VERIFY,
+	ACTION_LIST,
+	ACTION_LONG_LIST,
+	ACTION_BACKUP_TIMED,
+	ACTION_STATUS,
+	ACTION_STATUS_SNAPSHOT,
+	ACTION_ESTIMATE,
+	ACTION_DELETE,
+};
+
 #include "asyncio.h"
 #include "attribs.h"
 #include "base64.h"
-#include "bc_types.h"
 #include "berrno.h"
 #include "bfile.h"
 #include "blk.h"

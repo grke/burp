@@ -218,7 +218,7 @@ int ca_server_setup(struct config *conf)
 
 	if(burp_ca_init(conf, ca_dir))
 	{
-		recursive_delete(ca_dir, "", TRUE);
+		recursive_delete(ca_dir, "", 1);
 		ret=-1;
 		goto end;
 	}

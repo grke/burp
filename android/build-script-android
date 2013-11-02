@@ -84,20 +84,6 @@ do_build()
 	cd $SRCDIR
 	rm -rf openssl-1.0.0j
 
-	echo "build librsync"
-	cd $SRCDIR
-	rm -rf librsync-0.9.7
-	tar -zxvf librsync-0.9.7.tar.gz || fail
-	cd librsync-0.9.7 || fail
-	patch -Np1 <$SRCDIR/librsync_0.9.7-5-debian.patch || fail
-	rm config.sub
-	./autogen.sh || fail
-	./configure --host=$HOST --prefix=$DEPKGS || fail
-	make || fail
-	make install || fail
-	cd $SRCDIR
-	rm -rf librsync-0.9.7
-
 	echo "Finished OK"
 
 }

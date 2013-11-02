@@ -325,7 +325,7 @@ static int load_data_from_disk(struct config *conf, struct cstat ***clist, int *
 
 		init_config(&cconf);
 		if(set_client_global_config(conf, &cconf, (*clist)[q]->name)
-		  || load_config((*clist)[q]->conffile, &cconf, FALSE))
+		  || load_config((*clist)[q]->conffile, &cconf, 0))
 		{
 			free_config(&cconf);
 			cstat_blank((*clist)[q]);

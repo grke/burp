@@ -97,7 +97,7 @@ int reload(struct config *conf, const char *configfile, bool firsttime, int oldm
 
 	init_config(conf);
 
-	if(load_config(configfile, conf, TRUE)) return 1;
+	if(load_config(configfile, conf, 1)) return 1;
 
 	/* change umask */
 	umask(conf->umask);

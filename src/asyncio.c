@@ -1,13 +1,4 @@
-#include "burp.h"
-#include "prog.h"
-#include "counter.h"
-#include "asyncio.h"
-#include "librsync.h"
-#include "handy.h"
-#include "attribs.h"
-#include "ssl.h"
-#include "sbuf.h"
-#include "conf.h"
+#include "include.h"
 
 /* For IPTOS / IPTOS_THROUGHPUT */
 #ifdef HAVE_WIN32

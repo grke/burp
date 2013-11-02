@@ -7,9 +7,9 @@ VPATH = 	.
 # one up
 basedir = ..
 # top dir
-topdir = ..
+topdir = ../..
 # this dir relative to top dir
-thisdir = src
+thisdir = src/rabin
 
 DEBUG=@DEBUG@
 
@@ -20,30 +20,12 @@ dummy:
 
 #
 SRCS = \
-		asyncio.c \
-		attribs.c \
-		base64.c \
-		berrno.c \
-		bfile.c \
-		blk.c \
-		conf.c \
-		counter.c \
-		forkchild.c \
-		handy.c \
-		incexc_recv.c \
-		incexc_send.c \
-		lock.c \
-		log.c \
-		msg.c \
-		prepend.c \
-		prog.c \
-		regexp.c \
-		sbuf.c \
-		ssl.c \
-		strlist.c \
+	rabin.c		\
+	rconf.c		\
+	win.c		\
 
 OBJS = $(SRCS:.c=.o)
-SUBDIROBJS = server/server.a client/client.a rabin/rabin.a
+LOBJS = $(SRCS:.c=.lo)
 
 # these are the objects that are changed by the .configure process
 EXTRAOBJS = @OBJLIST@
@@ -56,7 +38,7 @@ win32 = $(WIN32OBJS) -luser32 -lgdi32
 
 WIN32LIBS = $(@WIN32@)
 
-.SUFFIXES:	.c .o
+.SUFFIXES:	.c .o .lo
 .PHONY:
 .DONTCARE:
 
@@ -64,62 +46,28 @@ WIN32LIBS = $(@WIN32@)
 .c.o:
 #	@echo "Compiling $<"
 	$(ECHO_CMD)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+.c.lo:
+#	@echo "Compiling $<"
+	$(ECHO_CMD)$(LIBTOOL_COMPILE) $(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 #-------------------------------------------------------------------------
-all: Makefile @WIN32@ burp @STATIC@
-	@echo "==== Make of burp is good ===="
+all: Makefile rabin.a
+	@echo "==== Make of rabin.a is good ===="
 	@echo " "
 
-win32/winlib.a:
-	@if test -f win32/Makefile -a "${GMAKE}" != "none"; then \
-	   (cd win32; $(GMAKE) DESTDIR=$(DESTDIR)); \
-	fi
-	@rm -f burp.exe
-
-win32/winmain.o:
-	@if test -f win32/Makefile -a "${GMAKE}" != "none"; then \
-	   (cd win32; $(GMAKE) DESTDIR=$(DESTDIR)); \
-	fi
-	@rm -f burp.exe
-
-win32/winres.res:
-	@if test -f win32/Makefile -a "${GMAKE}" != "none"; then \
-	   (cd win32; $(GMAKE) DESTDIR=$(DESTDIR)); \
-	fi
-	@rm -f burp.exe
-
-# win32 libraries if needed
-win32:	$(WIN32OBJS)
-	@if test -f win32/Makefile -a "${GMAKE}" != "none"; then \
-	   (cd win32; $(GMAKE) DESTDIR=$(DESTDIR)); \
-	fi
-	@rm -f burp.exe
-
-burp:  Makefile $(OBJS) @WIN32@
-	@echo "Linking $@ ..."
-	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -o $@ \
-	$(SUBDIROBJS) $(OBJS) $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
-	  $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS) -lrt
-
-static-burp: Makefile $(OBJS) @WIN32@
-	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -o $@ \
-	$(SUBDIROBJS) $(OBJS) $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
-	   $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS)
+rabin.a: $(OBJS)
+	@echo "Making $@ ..."
+	$(AR) rc  $@ $(OBJS)
+	$(RANLIB) $@
 
 Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
 	cd $(topdir) \
 	  && CONFIG_FILES=$(thisdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
 
 libtool-clean:
-	@$(RMF) -r .libs _libs
+	@$(RMF) -r .libs _libs *.la *.lo
 
 clean:	libtool-clean
-	@$(RMF) burp core core.* a.out *.o *.bak *~ *.intpro *.extpro 1 2 3
-	@$(RMF) static-burp config.h
-	@$(RMF) Makefile
-	@$(RMF) uthash.h
-#	@if test -f win32/Makefile -a "${GMAKE}" != "none"; then \
-#	   (cd win32; $(GMAKE) clean); \
-#	fi
+	@$(RMF) a.out *.o *.bak *~ *.intpro *.extpro *.a Makefile
 
 realclean: clean
 	@$(RMF) x
@@ -138,18 +86,9 @@ devclean: realclean
 	   (cd win32; $(GMAKE) devclean); \
 	fi
 
-install: all
-	rm -f $(DESTDIR)/sbin/burp ; \
-	rm -f $(DESTDIR)/usr/sbin/burp ; \
-	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) burp $(DESTDIR)$(sbindir)/burp 
-	@if test -f static-burp; then \
-	   $(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) static-burp $(DESTDIR)$(sbindir)/static-burp; \
-	fi
+install:
 
 uninstall:
-	(cd $(DESTDIR)$(sbindir); $(RMF) burp static-burp)
-
-
 
 # Semi-automatic generation of dependencies:
 # Use gcc -MM because X11 `makedepend' doesn't work on all systems

@@ -1,15 +1,4 @@
-#include "../burp.h"
-#include "../prog.h"
-#include "../msg.h"
-#include "../lock.h"
-#include "../handy.h"
-#include "../asyncio.h"
-#include "../counter.h"
-#include "../sbuf.h"
-
-#include "list.h"
-#include "status_server.h"
-#include "current_backups.h"
+#include "include.h"
 
 #include <dirent.h>
 

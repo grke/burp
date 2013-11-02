@@ -24,4 +24,4 @@ int readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result);
 
 extern int ftype_to_cmd(struct sbuf *sb, struct config *conf, bool top_level);
 
-#endif /* __FIND_H */
+#endif

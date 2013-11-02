@@ -1,13 +1,4 @@
-#include "../burp.h"
-#include "../prog.h"
-#include "../counter.h"
-#include "../msg.h"
-#include "../handy.h"
-#include "../cmd.h"
-#include "../asyncio.h"
-#include "../berrno.h"
-#include "autoupgrade.h"
-#include "cvss.h"
+#include "include.h"
 
 static int receive_file(const char *autoupgrade_dir, const char *file, struct config *conf)
 {

@@ -1,5 +1,5 @@
 #ifndef _BURP_H
-#define _BURP_H 1
+#define _BURP_H
 
 #ifdef __cplusplus
 /* Workaround for SGI IRIX 6.5 */
@@ -11,13 +11,10 @@
 #else
 #include "config.h"
 #endif
-#define __CONFIG_H
-
 
 #define _REENTRANT    1
 #define _THREAD_SAFE  1
 #define _POSIX_PTHREAD_SEMANTICS 1
-
 
 /* System includes */
 #if HAVE_STDINT_H

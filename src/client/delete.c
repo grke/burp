@@ -1,9 +1,4 @@
-#include "../burp.h"
-#include "../prog.h"
-#include "../msg.h"
-#include "../handy.h"
-#include "../asyncio.h"
-#include "delete.h"
+#include "include.h"
 
 int do_delete_client(struct config *conf)
 {

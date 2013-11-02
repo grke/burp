@@ -1,7 +1,4 @@
-#include "burp.h"
-#include "conf.h"
-#include "prog.h"
-#include "log.h"
+#include "include.h"
 
 void strlists_free(struct strlist **bd, int count)
 {

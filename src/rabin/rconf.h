@@ -1,8 +1,6 @@
 #ifndef __RCONF_H
 #define __RCONF_H
 
-#include <stdint.h>
-
 struct rconf
 {
 	uint64_t prime;
@@ -14,6 +12,8 @@ struct rconf
 	uint32_t blk_min;
 	uint32_t blk_avg;
 	uint32_t blk_max;
+
+	uint64_t multiplier;
 };
 
 extern void rconf_init(struct rconf *rconf);

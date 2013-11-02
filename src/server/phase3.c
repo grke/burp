@@ -1,22 +1,4 @@
-#include "../burp.h"
-#include "../prog.h"
-#include "../base64.h"
-#include "../msg.h"
-#include "../lock.h"
-#include "../handy.h"
-#include "../asyncio.h"
-#include "../counter.h"
-#include "../sbuf.h"
-#include "../attribs.h"
-#include "../handy.h"
-#include "auth.h"
-#include "backup.h"
-#include "champ_chooser.h"
-#include "current_backups.h"
-#include "dpth.h"
-#include "hash.h"
-#include "manio.h"
-#include "phase3.h"
+#include "include.h"
 
 static char sort_blk[SIG_MAX][16+1];
 static int sort_ind=0;

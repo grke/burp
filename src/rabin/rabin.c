@@ -1,10 +1,4 @@
-#include <stdlib.h>
-#include <string.h>
-
-#include "blk.h"
-#include "rabin.h"
-#include "rabin_win.h"
-#include "log.h"
+#include "include.h"
 
 static struct blk *blk=NULL;
 static char *gcp=NULL;

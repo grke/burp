@@ -4,14 +4,7 @@
  *   other non-Unix systems, or Unix systems with ACLs, ...
  */
 
-#include "burp.h"
-#include "base64.h"
-#include "prog.h"
-#include "attribs.h"
-#include "cmd.h"
-#include "berrno.h"
-#include "asyncio.h"
-#include "sbuf.h"
+#include "include.h"
 
 // Encode a stat structure into a base64 character string.
 // FIX THIS: Do compression from sb and put it near the beginning, before

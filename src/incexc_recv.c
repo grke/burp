@@ -1,12 +1,4 @@
-#include "burp.h"
-#include "prog.h"
-#include "counter.h"
-#include "conf.h"
-#include "msg.h"
-#include "handy.h"
-#include "cmd.h"
-#include "asyncio.h"
-#include "incexc_recv.h"
+#include "include.h"
 
 static int incexc_recv(char **incexc, const char *reqstr, const char *repstr, const char *endreqstr, const char *endrepstr, struct config *conf)
 {

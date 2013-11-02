@@ -3,4 +3,4 @@
 
 extern int do_delete_client(struct config *conf);
 
-#endif // _DELETE_CLIENT_H
+#endif

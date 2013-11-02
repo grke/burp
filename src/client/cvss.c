@@ -1,12 +1,4 @@
-#include "../burp.h"
-#include "../prog.h"
-#include "../msg.h"
-#include "../handy.h"
-#include "../asyncio.h"
-#include "../counter.h"
-#include "../berrno.h"
-#include "cvss.h"
-#include "extrameta.h"
+#include "include.h"
 
 #if defined(WIN32_VSS)
 #include "vss.h"

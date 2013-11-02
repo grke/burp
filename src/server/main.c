@@ -1,31 +1,6 @@
-#include "../burp.h"
-#include "../prog.h"
-#include "../msg.h"
-#include "../lock.h"
-#include "../handy.h"
-#include "../asyncio.h"
-#include "../counter.h"
-#include "../sbuf.h"
-#include "../ssl.h"
-#include "../berrno.h"
-#include "../forkchild.h"
-#include "../incexc_recv.h"
-#include "../incexc_send.h"
-#include "auth.h"
-#include "autoupgrade.h"
-#include "backup.h"
-#include "ca.h"
-#include "champ_chooser.h"
-#include "current_backups.h"
-#include "delete.h"
-#include "dpth.h"
-#include "list.h"
-#include "main.h"
-#include "restore.h"
-#include "status_server.h"
+#include "include.h"
 
 #include <netdb.h>
-#include <librsync.h>
 
 static int sfd=-1; // status fd for the main server
 

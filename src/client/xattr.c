@@ -1,11 +1,4 @@
-#include "../burp.h"
-#include "../prog.h"
-#include "../cmd.h"
-#include "../log.h"
-#include "../asyncio.h"
-#include "../handy.h"
-#include "extrameta.h"
-#include "xattr.h"
+#include "include.h"
 
 #ifdef HAVE_XATTR
 #if defined(HAVE_LINUX_OS) \

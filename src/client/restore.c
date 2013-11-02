@@ -1,17 +1,4 @@
-#include "../burp.h"
-#include "../prog.h"
-#include "../msg.h"
-#include "../lock.h"
-#include "../handy.h"
-#include "../asyncio.h"
-#include "../counter.h"
-#include "../berrno.h"
-#include "../forkchild.h"
-#include "../sbuf.h"
-#include "../attribs.h"
-#include "cvss.h"
-#include "extrameta.h"
-#include "restore.h"
+#include "include.h"
 
 static int restore_interrupt(struct sbuf *sb, const char *msg, struct config *conf)
 {

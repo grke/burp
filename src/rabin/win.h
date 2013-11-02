@@ -1,10 +1,6 @@
 #ifndef __RABIN_WIN_H
 #define __RABIN_WIN_H
 
-#include <stdint.h>
-#include <malloc.h>
-#include "rconf.h"
-
 // The sliding window.
 struct win
 {
@@ -18,4 +14,4 @@ struct win
 extern struct win *win_alloc(struct rconf *rconf);
 extern void win_free(struct win *win);
 
-#endif // __RABIN_WIN_H
+#endif

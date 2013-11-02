@@ -1,21 +1,6 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <uthash.h>
 #include <assert.h>
 
-#include "../log.h"
-#include "../cmd.h"
-#include "../msg.h"
-#include "../sbuf.h"
-#include "../handy.h"
-#include "../conf.h"
-#include "dpth.h"
-#include "champ_chooser.h"
-#include "hash.h"
+#include "include.h"
 
 struct sparse
 {

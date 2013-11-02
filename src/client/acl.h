@@ -12,4 +12,4 @@ extern int set_acl(const char *path, struct stat *statp, const char *acltext, si
 #endif
 #endif
 
-#endif // _BURP_ACL_H
+#endif

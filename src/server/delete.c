@@ -1,15 +1,4 @@
-#include "../burp.h"
-#include "../prog.h"
-#include "../msg.h"
-#include "../lock.h"
-#include "../handy.h"
-#include "../asyncio.h"
-#include "../counter.h"
-#include "../sbuf.h"
-#include "../regexp.h"
-#include "dpth.h"
-#include "list.h"
-#include "current_backups.h"
+#include "include.h"
 
 int do_delete_server(const char *basedir, const char *backup, const char *client, struct config *conf)
 {

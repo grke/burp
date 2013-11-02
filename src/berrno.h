@@ -1,3 +1,8 @@
+#ifndef _BERRNO_H
+#define _BERRNO_H
+
+#include <errno.h>
+
 /*
  * Extra bits set to interpret errno value differently from errno
  */
@@ -47,3 +52,5 @@ inline const char *berrno::bstrerror(int errnum)
    m_berrno = errnum;
    return berrno::bstrerror();
 }
+
+#endif

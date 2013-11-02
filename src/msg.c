@@ -1,10 +1,4 @@
-#include "burp.h"
-#include "prog.h"
-#include "msg.h"
-#include "counter.h"
-#include "asyncio.h"
-#include "handy.h"
-#include "sbuf.h"
+#include "include.h"
 
 int send_msg_fp(FILE *fp, char cmd, const char *buf, size_t s)
 {

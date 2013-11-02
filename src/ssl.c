@@ -1,6 +1,4 @@
-#include "burp.h"
-#include "conf.h"
-#include "log.h"
+#include "include.h"
 
 static BIO *bio_err=0;
 static const char *pass=NULL;

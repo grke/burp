@@ -1,8 +1,16 @@
-#include <stdio.h>
-#include <stdint.h>
+#include "include.h"
 
-#include "rconf.h"
+static uint64_t get_multiplier(uint32_t win, uint64_t prime)
+{
+	unsigned int i;
+	uint64_t multiplier=1;
 
+	for(i=0; i < win; i++) multiplier*=prime;
+
+	return multiplier;
+}
+
+// Hey you. Probably best not fuck with these.
 void rconf_init(struct rconf *rconf)
 {
 	rconf->prime=3;		// Not configurable.
@@ -14,25 +22,27 @@ void rconf_init(struct rconf *rconf)
 	rconf->blk_min=4096;	// Minimum block size.
 	rconf->blk_avg=5000;	// Average block size.
 	rconf->blk_max=8192;	// Maximum block size.
+
+	rconf->multiplier=get_multiplier(rconf->win, rconf->prime);
 }
 
 int rconf_check(struct rconf *rconf)
 {
 	if(rconf->win < rconf->win_min || rconf->win > rconf->win_max)
 	{
-		fprintf(stderr, "Sliding window size not between %u and %u.\n",
+		logp("Sliding window size not between %u and %u.\n",
 			rconf->win_min, rconf->win_max);
 		return -1;
 	}
 	if(rconf->blk_min >= rconf->blk_max)
 	{
-		fprintf(stderr, "Minimum block size must be less than the maximum block size.\n");
+		logp("Minimum block size must be less than the maximum block size.\n");
 		return -1;
 	}
 	if( rconf->blk_avg < rconf->blk_min
 	 || rconf->blk_avg > rconf->blk_max)
 	{
-		fprintf(stderr, "Average block size must be between the minimum and maximum block sizes, %u and %u\n", rconf->blk_min, rconf->blk_max);
+		logp("Average block size must be between the minimum and maximum block sizes, %u and %u\n", rconf->blk_min, rconf->blk_max);
 		return -1;
 	}
 	

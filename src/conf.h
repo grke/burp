@@ -2,8 +2,8 @@
 #define _CONF_FILE_H
 
 #include "counter.h"
-#include "rconf.h"
 #include "strlist.h"
+#include "rabin/rconf.h"
 
 enum burp_mode
 {

@@ -27,7 +27,8 @@ extern int manio_init_write(struct manio *manio, const char *directory);
 extern int manio_set_mode_read(struct manio *manio);
 extern int manio_set_mode_write(struct manio *manio);
 
-extern int manio_sbuf_fill(struct manio *manio, struct sbuf *sb, struct blk *blk, struct dpth *dpth, struct config *conf);
+extern int manio_sbuf_fill(struct manio *manio, struct sbuf *sb,
+	struct blk *blk, struct dpth *dpth, struct config *conf);
 
 extern int manio_write_sig(struct manio *manio, struct blk *blk);
 extern int manio_write_sig_and_path(struct manio *manio, struct blk *blk);

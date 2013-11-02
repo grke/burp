@@ -1,5 +1,5 @@
 #ifndef _BURPCONFIG_H
-#define _BURPCONFIG_H 1
+#define _BURPCONFIG_H
 
 /* Burp common configuration defines */
 /* Graham says: probably most of this stuff can be deleted - it is debris

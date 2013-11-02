@@ -3,4 +3,4 @@
 
 extern int autoupgrade_client(struct config *conf);
 
-#endif // _AUTOUPGRADE_CLIENT_H
+#endif

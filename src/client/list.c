@@ -1,13 +1,4 @@
-#include "../burp.h"
-#include "../prog.h"
-#include "../msg.h"
-#include "../lock.h"
-#include "../handy.h"
-#include "../asyncio.h"
-#include "../counter.h"
-#include "../sbuf.h"
-#include "../attribs.h"
-#include "list.h"
+#include "include.h"
 
 /* Note: The chars in this function are not the same as in the CMD_ set.
    These are for printing to the screen only. */

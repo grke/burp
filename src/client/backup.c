@@ -147,29 +147,34 @@ end:
 	return ret;
 }
 
-static int add_to_scan_list(struct slist *flist, int *scanning, struct config *conf, bool *top_level)
+static int add_to_scan_list(struct slist *flist, int *scanning, struct config *conf)
 {
 	int ff_ret;
 	struct sbuf *sb;
 	if(!(sb=sbuf_alloc())) return -1;
-	if(!(ff_ret=find_file_next(sb, conf, top_level)))
+	while(!(ff_ret=find_file_next(sb, conf)))
 	{
-		// Got something.
-		if(ftype_to_cmd(sb, conf, *top_level))
+		if(sb->path)
 		{
-			// It is not something we really want to send.
-			sbuf_free(sb);
+			// Got something.
+			if(ftype_to_cmd(sb, conf))
+			{
+				// It is not something we really want to send.
+				sbuf_free(sb);
+				if(!(sb=sbuf_alloc())) return -1;
+				continue;
+			}
+			sbuf_add_to_list(sb, flist);
 			return 0;
 		}
-		sbuf_add_to_list(sb, flist);
 	}
-	else if(ff_ret<0)
+	if(ff_ret<0)
 	{
 		// Error.
 		sbuf_free(sb);
 		return ff_ret;
 	}
-	else
+	else if(ff_ret>0)
 	{
 		// No more file system to scan.
 		printf("NO MORE SCANNING\n");
@@ -357,7 +362,6 @@ static void get_wbuf_from_scan(struct iobuf *wbuf, struct slist *flist)
 static int backup_client(struct config *conf, int estimate)
 {
 	int ret=0;
-	bool top_level=true;
 	int scanning=1;
 	int sigs_end=0;
 	int backup_end=0;
@@ -417,7 +421,7 @@ static int backup_client(struct config *conf, int estimate)
 
 		if(scanning)
 		{
-			if(add_to_scan_list(flist, &scanning, conf, &top_level))
+			if(add_to_scan_list(flist, &scanning, conf))
 			{
 				ret=-1;
 				break;

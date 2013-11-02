@@ -45,6 +45,8 @@ struct ff_dir
 
 static struct ff_dir *ff_dir_list=NULL;
 
+static uint8_t top_level=0;
+
 /*
  * Structure for keeping track of hard linked files, we
  *   keep an entry for each hardlinked file that we save,
@@ -178,6 +180,7 @@ static int in_include_ext(struct strlist **incext, int incount, const char *path
 	const char *cp=NULL;
 	// If not doing include_ext, let the file get backed up. 
 	if(!incount) return 1;
+printf("check inc %d: %s\n", incount, path);
 
 	// The flag of the first item contains the maximum number of characters
 	// that need to be checked.
@@ -304,12 +307,12 @@ static int file_is_included_no_incext(struct strlist **ielist, int iecount, stru
 	return ret;
 }
 
-int file_is_included(struct strlist **ielist, int iecount,
+static int file_is_included(struct strlist **ielist, int iecount,
 	struct strlist **incexc, int incount,
 	struct strlist **excext, int excount,
 	struct strlist **increg, int ircount,
 	struct strlist **excreg, int ercount,
-	const char *path, bool top_level)
+	const char *path)
 {
 	// Always save the top level directory.
 	// This will help in the simulation of browsing backups because it
@@ -375,7 +378,7 @@ static int nobackup_directory(struct config *conf, const char *path)
 
 #define MODE_RALL (S_IRUSR|S_IRGRP|S_IROTH)
 static ff_e found_regular_file(struct sbuf *sb, struct config *conf,
-	char *path, bool top_level)
+	char *path)
 {
 	// If the user specified a minimum or maximum file size, obey it.
 	if(conf->min_file_size
@@ -390,8 +393,7 @@ static ff_e found_regular_file(struct sbuf *sb, struct config *conf,
 	return FF_FOUND;
 }
 
-static ff_e found_soft_link(struct sbuf *sb, struct config *conf,
-	char *path, bool top_level)
+static ff_e found_soft_link(struct sbuf *sb, struct config *conf, char *path)
 {
 	int size;
 	char *linkto=NULL;
@@ -526,7 +528,7 @@ static int get_files_in_directory(DIR *directory, struct dirent ***nl, int *coun
 }
 
 static ff_e found_directory(struct sbuf *sb, struct config *conf,
-	char *path, dev_t parent_device, bool top_level)
+	char *path, dev_t parent_device)
 {
 	int nbret=0;
 
@@ -576,8 +578,7 @@ static ff_e found_directory(struct sbuf *sb, struct config *conf,
 	return FF_DIRECTORY;
 }
 
-static ff_e found_other(struct sbuf *sb, struct config *conf,
-	char *path, bool top_level)
+static ff_e found_other(struct sbuf *sb, struct config *conf, char *path)
 {
 #ifdef HAVE_FREEBSD_OS
 	/*
@@ -612,7 +613,7 @@ static ff_e found_other(struct sbuf *sb, struct config *conf,
 }
 
 static ff_e find_files(struct sbuf *sb, struct config *conf,
-	char *path, dev_t parent_device, bool top_level)
+	char *path, dev_t parent_device)
 {
 	if(sb->path) free(sb->path);
 	if(!(sb->path=strdup(path)))
@@ -686,12 +687,11 @@ static ff_e find_files(struct sbuf *sb, struct config *conf,
 	// This is not a link to a previously dumped file, so dump it.
 	if(S_ISREG(sb->statp.st_mode))
 	{
-		return found_regular_file(sb, conf, path, top_level);
+		return found_regular_file(sb, conf, path);
 	}
 	else if(S_ISDIR(sb->statp.st_mode))
 	{
-		return found_directory(sb, conf, path,
-			parent_device, top_level);
+		return found_directory(sb, conf, path, parent_device);
 	}
 	else if(S_ISLNK(sb->statp.st_mode))
 	{
@@ -707,16 +707,15 @@ static ff_e find_files(struct sbuf *sb, struct config *conf,
 			{
 				sb->statp.st_mode ^= S_IFLNK;
 				sb->statp.st_mode |= S_IFBLK;
-				return found_other(sb, conf, path,
-					top_level);
+				return found_other(sb, conf, path);
 			}
 		}
 #endif
-		return found_soft_link(sb, conf, path, top_level);
+		return found_soft_link(sb, conf, path);
 	}
 	else
 	{
-		return found_other(sb, conf, path, top_level);
+		return found_other(sb, conf, path);
 	}
 }
 
@@ -806,7 +805,7 @@ static int deal_with_ff_ret(struct sbuf *sb, ff_e ff_ret, struct config *conf)
 
 // Returns -1 on error. 1 on finished, 0 on more stuff to do.
 // Fills ff with information about the next file to back up.
-int find_file_next(struct sbuf *sb, struct config *conf, bool *top_level)
+int find_file_next(struct sbuf *sb, struct config *conf)
 {
 	static ff_e ff_ret;
 
@@ -817,6 +816,8 @@ int find_file_next(struct sbuf *sb, struct config *conf, bool *top_level)
 		static struct dirent *nl;
 		static struct ff_dir *ff_dir;
 		char *path=NULL;
+
+		if(top_level) top_level=0;
 
 		ff_dir=ff_dir_list;
 		nl=ff_dir->nl[ff_dir->c++];
@@ -830,9 +831,9 @@ int find_file_next(struct sbuf *sb, struct config *conf, bool *top_level)
 			conf->excreg, conf->ercount,
 			path))
 		{
-			ff_ret=find_files(sb, conf, path, ff_dir->dev, false);
+			ff_ret=find_files(sb, conf, path, ff_dir->dev);
 			//if(ff_ret==FF_NOT_FOUND)
-			//	return find_file_next(sb, conf, top_level);
+			//	return find_file_next(sb, conf);
 		}
 		else
 		{
@@ -877,9 +878,13 @@ int find_file_next(struct sbuf *sb, struct config *conf, bool *top_level)
 	if(conf->startdir[sd]->flag)
 	{
 		// Keep going until it does not give 'not found'.
+		top_level=1;
 		while((ff_ret=find_files(sb, conf,
 			conf->startdir[sd]->path,
-			(dev_t)-1, 1 /* top_level */))==FF_NOT_FOUND) { }
+			(dev_t)-1))==FF_NOT_FOUND)
+		{
+			if(top_level) top_level=0;
+		}
 		sd++;
 
 		if(deal_with_ff_ret(sb, ff_ret, conf)) goto error;
@@ -905,16 +910,14 @@ static int ft_err(struct sbuf *sb, struct config *conf, const char *msg)
 }
 
 // Return -1 if the entry is not to be sent, 0 if it is.
-int ftype_to_cmd(struct sbuf *sb, struct config *conf, bool top_level)
+int ftype_to_cmd(struct sbuf *sb, struct config *conf)
 {
-	// Does file_is_included() need to be here. It would be better in
-	// find.c.
 	if(!file_is_included(conf->incexcdir, conf->iecount,
 		conf->incext, conf->incount,
 		conf->excext, conf->excount,
 		conf->increg, conf->ircount,
 		conf->excreg, conf->ercount,
-		sb->path, top_level)) return -1;
+		sb->path)) return -1;
 
 #ifdef HAVE_WIN32
 	if(sb->winattr & FILE_ATTRIBUTE_ENCRYPTED)

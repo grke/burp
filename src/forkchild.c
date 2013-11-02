@@ -1,7 +1,4 @@
-#include "burp.h"
-#include "prog.h"
-#include "msg.h"
-#include "log.h"
+#include "include.h"
 
 #ifdef HAVE_WIN32
 	// Windows version of forkchild is in src/win32/compat/compat.cpp

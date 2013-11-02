@@ -1,20 +1,5 @@
-#include "../burp.h"
-#include "../prog.h"
-#include "../base64.h"
-#include "../msg.h"
-#include "../lock.h"
-#include "../handy.h"
-#include "../asyncio.h"
-#include "../counter.h"
-#include "../attribs.h"
-#include "../sbuf.h"
-#include "../blk.h"
-#include "../rabin.h"
-#include "../rabin_win.h"
-#include "backup.h"
-#include "cvss.h"
-#include "extrameta.h"
-#include "find.h"
+#include "include.h"
+#include "../rabin/include.h"
 
 /* Ignore extrameta for now.
 #ifndef HAVE_WIN32

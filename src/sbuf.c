@@ -1,12 +1,4 @@
-#include "burp.h"
-#include "prog.h"
-#include "msg.h"
-#include "lock.h"
-#include "handy.h"
-#include "asyncio.h"
-#include "counter.h"
-#include "sbuf.h"
-#include "attribs.h"
+#include "include.h"
 
 static int alloc_count=0;
 static int free_count=0;
@@ -140,17 +132,6 @@ int sbuf_to_manifest(struct sbuf *sb, gzFile zp)
 		if(sb->linkto
 		  && send_msg_zp(zp, sb->cmd, sb->linkto, sb->llen))
 			return -1;
-/*
-		if(write_endfile && (sb->cmd==CMD_FILE
-		  || sb->cmd==CMD_ENC_FILE
-		  || sb->cmd==CMD_METADATA
-		  || sb->cmd==CMD_ENC_METADATA
-		  || sb->cmd==CMD_EFS_FILE))
-		{
-			if(send_msg_zp(zp, CMD_END_FILE,
-				sb->endfile, sb->elen)) return -1;
-		}
-*/
 	}
 	return 0;
 }

@@ -12,4 +12,4 @@ extern int set_xattr(const char *path, struct stat *statp, const char *xattrtext
 #endif
 #endif
 
-#endif // _BURP_XATTR_H
+#endif

@@ -1,13 +1,4 @@
-#include "burp.h"
-#include "prog.h"
-#include "counter.h"
-#include "conf.h"
-#include "msg.h"
-#include "handy.h"
-#include "cmd.h"
-#include "asyncio.h"
-#include "strlist.h"
-#include "incexc_send.h"
+#include "include.h"
 
 static int send_incexc_str(const char *pre, const char *str)
 {

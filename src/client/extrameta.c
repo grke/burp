@@ -1,12 +1,4 @@
-#include "../burp.h"
-#include "../prog.h"
-#include "../cmd.h"
-#include "../sbuf.h"
-#include "../asyncio.h"
-#include "acl.h"
-#include "cvss.h"
-#include "extrameta.h"
-#include "xattr.h"
+#include "include.h"
 
 int has_extrameta(const char *path, char cmd)
 {

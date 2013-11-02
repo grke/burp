@@ -1562,6 +1562,7 @@ AC_OUTPUT([autoconf/Make.common \
 	   src/Makefile \
 	   src/client/Makefile \
 	   src/server/Makefile \
+	   src/rabin/Makefile \
 	   $PFILES ],  
      [ ]
 )

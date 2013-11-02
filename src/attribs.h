@@ -1,6 +1,8 @@
 #ifndef __ATTRIBS_H
 #define __ATTRIBS_H
 
+#include <stdint.h>
+
 extern int attribs_encode(struct sbuf *sb, int compression);
 extern void attribs_decode(struct sbuf *sb, int *compression);
 extern int attribs_set(const char *path, struct stat *statp, int64_t winattr, struct config *conf);

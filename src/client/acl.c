@@ -1,11 +1,4 @@
-#include "../burp.h"
-#include "../prog.h"
-#include "../cmd.h"
-#include "../log.h"
-#include "../asyncio.h"
-#include "../handy.h"
-#include "acl.h"
-#include "extrameta.h"
+#include "include.h"
 
 #ifdef HAVE_ACL
 #if defined(HAVE_LINUX_OS) || \

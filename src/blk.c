@@ -1,8 +1,7 @@
 #include <malloc.h>
 
-#include "rconf.h"
-#include "blk.h"
-#include "log.h"
+#include "include.h"
+#include "rabin/rconf.h"
 
 static int alloc_count=0;
 static int free_count=0;

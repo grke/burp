@@ -1,6 +1,4 @@
-#include "burp.h"
-#include "log.h"
-#include "asyncio.h"
+#include "include.h"
 
 #include <stdlib.h>
 

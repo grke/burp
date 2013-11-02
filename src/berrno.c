@@ -1,5 +1,4 @@
-#include "burp.h"
-#include "berrno.h"
+#include "include.h"
 
 static int b_strerror(int errnum, char *buf, size_t bufsiz)
 {

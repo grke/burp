@@ -1,6 +1,4 @@
-#include "burp.h"
-#include "conf.h"
-#include "log.h"
+#include "include.h"
 
 static const char *prog="unknown";
 
@@ -72,21 +70,6 @@ void logc(const char *fmt, ...)
 const char *progname(void)
 {
 	return prog;
-}
-
-/* Same as the function in msg.c, which should be in its own file.
-   Copying and pasting here because fixing it will cause annoying merge
-   problems with burp2. */
-static FILE *open_file(const char *fname, const char *mode)
-{
-	FILE *fp=NULL;
-
-	if(!(fp=fopen(fname, mode)))
-	{
-		logp("could not open %s: %s\n", fname, strerror(errno));
-		return NULL;
-	}
-	return fp;
 }
 
 int set_logfp(const char *path, struct config *conf)

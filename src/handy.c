@@ -1,11 +1,4 @@
-#include "burp.h"
-#include "handy.h"
-#include "prog.h"
-#include "msg.h"
-#include "asyncio.h"
-#include "counter.h"
-#include "berrno.h"
-#include "forkchild.h"
+#include "include.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -228,7 +221,7 @@ char *get_checksum_str(unsigned char *checksum)
 	return str;
 }
 
-char *get_endfile_str(unsigned long long bytes)
+static char *get_endfile_str(unsigned long long bytes)
 {
 	static char endmsg[128]="";
 	snprintf(endmsg, sizeof(endmsg),
@@ -241,52 +234,10 @@ char *get_endfile_str(unsigned long long bytes)
 	return endmsg;
 }
 
-int write_endfile(unsigned long long bytes)
+static int write_endfile(unsigned long long bytes)
 {
 	return async_write_str(CMD_END_FILE, get_endfile_str(bytes));
 }
-
-EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password)
-{
-	EVP_CIPHER_CTX *ctx=NULL;
-	const char *enc_iv="[lkd.$G£"; // never change this.
-
-	if(!(ctx=(EVP_CIPHER_CTX *)malloc(sizeof(EVP_CIPHER_CTX))))
-	{
-		log_out_of_memory(__FUNCTION__);
-		return NULL;
-	}
-        memset(ctx, 0, sizeof(EVP_CIPHER_CTX));
-	// Don't set key or IV because we will modify the parameters.
-	EVP_CIPHER_CTX_init(ctx);
-	if(!(EVP_CipherInit_ex(ctx, EVP_bf_cbc(), NULL, NULL, NULL, encrypt)))
-	{
-		logp("EVP_CipherInit_ex failed\n");
-		free(ctx);
-		return NULL;
-	}
-	EVP_CIPHER_CTX_set_key_length(ctx, strlen(encryption_password));
-	// We finished modifying parameters so now we can set key and IV
-
-	if(!EVP_CipherInit_ex(ctx, NULL, NULL,
-		(unsigned char *)encryption_password,
-		(unsigned char *)enc_iv, encrypt))
-	{
-		logp("Second EVP_CipherInit_ex failed\n");
-		free(ctx);
-		return NULL;
-	}
-	return ctx;
-}
-
-#ifdef HAVE_WIN32
-struct bsid {
-	int32_t dwStreamId;
-	int32_t dwStreamAttributes;
-	int64_t Size;
-	int32_t dwStreamNameSize;
-};
-#endif
 
 int open_file_for_send(BFILE *bfd, const char *fname, int64_t winattr, struct config *conf)
 {

@@ -1,13 +1,4 @@
-#include "../burp.h"
-#include "../prog.h"
-#include "../msg.h"
-#include "../lock.h"
-#include "../handy.h"
-#include "../asyncio.h"
-#include "../counter.h"
-#include "../sbuf.h"
-#include "auth.h"
-#include "dpth.h"
+#include "include.h"
 
 #include <netdb.h>
 

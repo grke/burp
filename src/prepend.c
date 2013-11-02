@@ -1,7 +1,4 @@
-#include "burp.h"
-#include "prog.h"
-
-#include "prepend.h"
+#include "include.h"
 
 /* This may be given binary data, of which we need to already know the length */
 char *prepend_len(const char *prep, size_t plen, const char *fname, size_t flen, const char *sep, size_t slen, size_t *newlen)

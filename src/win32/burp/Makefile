@@ -57,9 +57,9 @@ CLIENT_OBJS = \
 	$(OBJDIR)/msg.o \
 	$(OBJDIR)/prepend.o \
 	$(OBJDIR)/prog.o \
-	$(OBJDIR)/rabin.o \
-	$(OBJDIR)/rabin_win.o \
-	$(OBJDIR)/rconf.o \
+	$(OBJDIR)/rabin/rabin.o \
+	$(OBJDIR)/rabin/rconf.o \
+	$(OBJDIR)/rabin/win.o \
 	$(OBJDIR)/regexp.o \
 	$(OBJDIR)/sbuf.o \
 	$(OBJDIR)/ssl.o \

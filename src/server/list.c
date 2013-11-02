@@ -1,16 +1,4 @@
-#include "../burp.h"
-#include "../prog.h"
-#include "../msg.h"
-#include "../lock.h"
-#include "../handy.h"
-#include "../asyncio.h"
-#include "../counter.h"
-#include "../sbuf.h"
-#include "../regexp.h"
-#include "current_backups.h"
-#include "dpth.h"
-#include "list.h"
-#include "manio.h"
+#include "include.h"
 
 int check_browsedir(const char *browsedir, char **path, size_t bdlen)
 {

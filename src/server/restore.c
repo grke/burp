@@ -1,19 +1,4 @@
-#include "../burp.h"
-#include "../prog.h"
-#include "../msg.h"
-#include "../lock.h"
-#include "../handy.h"
-#include "../asyncio.h"
-#include "../counter.h"
-#include "../sbuf.h"
-#include "../blk.h"
-#include "../regexp.h"
-#include "current_backups.h"
-#include "dpth.h"
-#include "manio.h"
-#include "restore.h"
-
-#include <librsync.h>
+#include "include.h"
 
 static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, enum action act, const char *client, char status, struct config *conf, int *need_data)
 {

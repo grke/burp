@@ -1,14 +1,4 @@
-#include "../burp.h"
-#include "../prog.h"
-#include "../conf.h"
-#include "../log.h"
-#include "../msg.h"
-#include "../handy.h"
-#include "../cmd.h"
-#include "../asyncio.h"
-#include "../counter.h"
-#include "ca.h"
-#include "cvss.h"
+#include "include.h"
 
 static int generate_key_and_csr(struct config *conf, const char *csr_path)
 {

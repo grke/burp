@@ -1,12 +1,4 @@
-#include "burp.h"
-#include "prog.h"
-#include "counter.h"
-#include "conf.h"
-#include "msg.h"
-#include "lock.h"
-#include "strlist.h"
-#include "prepend.h"
-#include "regexp.h"
+#include "include.h"
 
 /* Init only stuff related to includes/excludes.
    This is so that the server can override them all on the client. */

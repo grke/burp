@@ -1,9 +1,4 @@
-#include "burp.h"
-#include "prog.h"
-#include "cmd.h"
-#include "counter.h"
-#include "handy.h"
-#include "asyncio.h"
+#include "include.h"
 
 static void reset_filecounter(struct cntr *c, time_t t)
 {

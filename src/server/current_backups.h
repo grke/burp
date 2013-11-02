@@ -34,4 +34,4 @@ extern int delete_backup(const char *basedir, struct bu *arr, int a, int b, cons
 extern int gzprintf_sig_and_path(gzFile zp, struct blk *blk);
 extern int gzprintf_sig(gzFile zp, struct blk *blk);
 
-#endif // _CURRENT_BACKUPS_H
+#endif

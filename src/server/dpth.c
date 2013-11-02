@@ -1,17 +1,6 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <sys/types.h>
-#include <dirent.h>
+#include "include.h"
 
-#include "../prepend.h"
-#include "../handy.h"
-#include "../log.h"
-#include "../msg.h"
-#include "dpth.h"
-#include "hash.h"
-#include "sbuf.h"
+#include <dirent.h>
 
 #define MAX_STORAGE_SUBDIRS	30000
 

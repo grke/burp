@@ -1,8 +1,4 @@
-#include <stdio.h>
-
-#include "rconf.h"
-#include "rabin_win.h"
-#include "log.h"
+#include "include.h"
 
 struct win *win_alloc(struct rconf *rconf)
 {

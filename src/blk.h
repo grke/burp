@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <openssl/md5.h>
-#include "rconf.h"
+#include "rabin/rconf.h"
 
 // The highest number of blocks that the client will hold in memory.
 #define BLKS_MAX_IN_MEM		20000

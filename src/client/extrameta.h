@@ -32,4 +32,4 @@ extern int set_extrameta(
 	size_t metalen,
 	struct config *conf);
 
-#endif // _EXTRAMETA_H
+#endif

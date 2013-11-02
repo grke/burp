@@ -1,16 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <malloc.h>
-#include <string.h>
-
-#include "../log.h"
-#include "../msg.h"
-#include "../handy.h"
-#include "../sbuf.h"
-#include "../cmd.h"
-#include "../conf.h"
-#include "dpth.h"
-#include "manio.h"
+#include "include.h"
 
 #define MANIO_MODE_READ		"rb"
 #define MANIO_MODE_WRITE	"wb"

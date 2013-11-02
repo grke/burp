@@ -15,4 +15,4 @@ extern int set_vss(BFILE *bfd,
 extern int win32_enable_backup_privileges();
 #endif  /* HAVE_WIN32 */
 
-#endif // _CLIENT_VSS_H
+#endif

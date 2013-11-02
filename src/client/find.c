@@ -1,12 +1,5 @@
-#include "../burp.h"
-#include "../prog.h"
-#include "../log.h"
-#include "../asyncio.h"
-#include "../handy.h"
-#include "../regexp.h"
-#include "../attribs.h"
-#include "backup.h"
-#include "find.h"
+#include "include.h"
+
 #ifdef HAVE_DARWIN_OS
 #include <sys/param.h>
 #include <sys/mount.h>

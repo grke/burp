@@ -1,7 +1,4 @@
-#include "burp.h"
-#include "lock.h"
-#include "log.h"
-#include "handy.h"
+#include "include.h"
 
 int get_lock(const char *path)
 {

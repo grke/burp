@@ -3,4 +3,4 @@
 
 extern int do_delete_server(const char *basedir, const char *backup, const char *client, struct config *conf);
 
-#endif // _DELETE_SERVER_H
+#endif

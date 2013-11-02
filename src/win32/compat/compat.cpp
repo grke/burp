@@ -2,8 +2,7 @@
 #include "compat.h"
 #include "time.h"
 #include "mem_pool.h"
-
-#define b_errno_win32 (1<<29)
+#include "berrno.h"
 
 #define MAX_PATHLENGTH  1024
 

@@ -115,10 +115,10 @@ int manio_sbuf_fill(struct manio *manio, struct sbuf *sb, struct blk *blk, struc
 			if(open_next_fpath(manio)) goto error;
 			if(!manio->zp) return 1; // No more files to read.
 		}
-		if(dpth) snprintf(datpath, sizeof(datpath),
+		if(dpth && blk) snprintf(datpath, sizeof(datpath),
 			"%s/%s", dpth->base_path, blk->save_path);
 		if((ars=sbuf_fill_from_gzfile(sb, manio->zp, blk,
-			dpth?datpath:NULL, conf))<0) goto error;
+			(dpth && blk)?datpath:NULL, conf))<0) goto error;
 		else if(!ars)
 			return 0; // Got something.
 

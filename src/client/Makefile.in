@@ -96,7 +96,7 @@ devclean: realclean
 	   (cd win32; $(GMAKE) devclean); \
 	fi
 
-install:
+install: all
 
 uninstall:
 

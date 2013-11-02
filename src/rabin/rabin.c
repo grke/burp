@@ -98,7 +98,17 @@ int blks_generate(struct config *conf, struct sbuf *sb, struct blist *blist, str
 
 	// Getting here means there is no more to read from the file.
 	// Make sure to deal with anything left over.
-	if(blk)
+
+	if(!sb->bytes_read)
+	{
+		// Empty file, set up an empty block so that the server
+		// can skip over it.
+		if(!(sb->bstart=blk_alloc())) return -1;
+		sb->bsighead=blk;
+		blk_add_to_list(blk, blist);
+		blk=NULL;
+	}
+	else if(blk)
 	{
 		if(blk->length)
 		{
@@ -114,16 +124,6 @@ int blks_generate(struct config *conf, struct sbuf *sb, struct blist *blist, str
 			blk_add_to_list(blk, blist);
 		}
 		else blk_free(blk);
-		blk=NULL;
-	}
-	else if(!sb->bytes_read)
-	{
-		// Empty file, set up an empty block so that the server
-		// can skip over it.
-		if(!(blk=blk_alloc())) return -1;
-		sb->bstart=blk;
-		sb->bsighead=blk;
-		blk_add_to_list(blk, blist);
 		blk=NULL;
 	}
 	if(blist->tail) sb->bend=blist->tail;

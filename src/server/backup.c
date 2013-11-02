@@ -398,7 +398,7 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobu
 	struct blk *blk;
         struct sbuf *sb;
 
-//	printf("CMD_SIG: %s\n", rbuf->buf);
+	//printf("CMD_SIG: %s\n", rbuf->buf);
 
 	if(!(blk=blk_alloc())) return -1;
 	blk_add_to_list(blk, blist);
@@ -522,7 +522,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 		case CMD_GEN:
 			if(!strcmp(rbuf->buf, "scan_end"))
 			{
-printf("SCAN END\n");
+printf("GOT SCAN END\n");
 				*scan_end=1;
 				goto end;
 			}
@@ -675,7 +675,6 @@ static int write_to_changed_file(struct manio *chmanio, struct slist *slist, str
 {
 	struct sbuf *sb;
 	if(!slist) return 0;
-//printf("in wtcf\n");
 
 	while((sb=slist->head))
 	{

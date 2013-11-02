@@ -294,7 +294,6 @@ static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int requ
 	}
 //printf("x: %s\n", sb->path);
 	if(!sb->bsighead) return;
-//printf("w\n");
 
 	if(!sb->sent_stat)
 	{
@@ -302,23 +301,19 @@ static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int requ
 		iobuf_from_sbuf_attr(wbuf, sb);
 		wbuf->cmd=CMD_ATTRIBS_SIGS; // hack
 		sb->sent_stat=1;
-//printf("v\n");
 		return;
 	}
-//printf("u\n");
 
 	iobuf_from_blk_data(wbuf, sb->bsighead);
 
 	// Move on.
 	if(sb->bsighead==sb->bend)
 	{
-//printf("t\n");
 		slist->blks_to_send=sb->next;
 		sb->bsighead=sb->bstart;
 	}
 	else
 	{
-//printf("s\n");
 		sb->bsighead=sb->bsighead->next;
 	}
 }
@@ -396,24 +391,19 @@ static int backup_client(struct config *conf, int estimate)
 	{
 		if(!wbuf->len)
 		{
-//printf("w a\n");
 			get_wbuf_from_data(wbuf, slist, blist,
 				blk_requests_end);
 			if(!wbuf->len)
 			{
-//printf("w b\n");
 				get_wbuf_from_blks(wbuf, slist,
 					requests_end, &sigs_end);
 				if(!wbuf->len)
 				{
-//printf("w c\n");
 					get_wbuf_from_scan(wbuf, flist);
-//if(!wbuf->len) printf("w d\n");
 				}
 			}
 		}
 
-//		printf("wlen: %d\n", wbuf->len);
 		if(async_rw_ng(rbuf, wbuf))
 		{
 			logp("error in async_rw\n");
@@ -440,21 +430,12 @@ static int backup_client(struct config *conf, int estimate)
 		   || blist->tail->index - blist->head->index<BLKS_MAX_IN_MEM)
 		)
 		{
-//printf("get more blocks\n");
 			if(add_to_blks_list(conf, slist, blist, win))
 			{
 				ret=-1;
 				break;
 			}
-//printf("now: %d\n", blist->tail->index - blist->head->index);
 		}
-/*
-		else
-		{
-//			if(blist->tail && blist->head)
-//	 		printf("enough blocks: %lu\n", blist->tail->index - blist->head->index);
-		}
-*/
 
 		if(blk_requests_end)
 		{

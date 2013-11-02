@@ -517,8 +517,7 @@ int deduplicate_maybe(struct blk *blk, struct dpth *dpth, struct config *conf, u
 
 
 
-
-
+/*
 static struct blk *gen_test_blk(void)
 {
 	static int count=0;
@@ -552,4 +551,4 @@ int champ_test(struct config *conf)
 	}
 	return -1;
 }
-
+*/

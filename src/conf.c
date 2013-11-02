@@ -1176,7 +1176,7 @@ static void set_max_ext(struct strlist **list, int count)
 	if(count) list[0]->flag=max+1;
 }
 
-static int finalise_config(const char *config_path, struct config *conf, struct llists *l, bool loadall)
+static int finalise_config(const char *config_path, struct config *conf, struct llists *l, uint8_t loadall)
 {
 	int i=0;
 	int r=0;
@@ -1391,7 +1391,7 @@ static void set_got_args(struct llists *l, struct config *conf)
 	l->got_rc_args=conf->rccount;
 }
 
-int load_config(const char *config_path, struct config *conf, bool loadall)
+int load_config(const char *config_path, struct config *conf, uint8_t loadall)
 {
 	struct llists l;
 
@@ -1449,7 +1449,7 @@ int parse_incexcs_buf(struct config *conf, const char *incexc)
 	free(copy);
 
 	if(ret) return ret;
-	return finalise_config("server override", conf, &l, FALSE);
+	return finalise_config("server override", conf, &l, 0);
 }
 
 int log_incexcs_buf(const char *incexc)
@@ -1480,7 +1480,7 @@ int log_incexcs_buf(const char *incexc)
 int parse_incexcs_path(struct config *conf, const char *path)
 {
 	free_incexcs(conf);
-	return load_config(path, conf, FALSE);
+	return load_config(path, conf, 0);
 }
 
 static int set_global_str(char **dst, const char *src)
@@ -1600,7 +1600,7 @@ int load_client_config(struct config *conf, struct config *cconf, const char *cl
 	// Some client settings can be globally set in the server config and
 	// overridden in the client specific config.
 	if(set_client_global_config(conf, cconf, client)
-	  || load_config(cpath, cconf, FALSE))
+	  || load_config(cpath, cconf, 0))
 	{
 		free(cpath);
 		return -1;

@@ -1,11 +1,6 @@
 #ifndef __BFILE_H
 #define __BFILE_H
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <stdint.h>
-
 enum bf_mode
 {
 	BF_CLOSED=0,
@@ -16,7 +11,7 @@ enum bf_mode
 struct BFILE
 {
 	enum bf_mode mode;   /* set if file is open */
-	uint64_t winattr;     /* needed for deciding to open with
+	uint64_t winattr;    /* needed for deciding to open with
 				encrypted functions or not */
 	struct stat statp;
 	char *path;
@@ -46,4 +41,4 @@ bool    set_win32_backup(BFILE *bfd);
 bool    have_win32_api();
 #endif
 
-#endif /* __BFILE_H */
+#endif

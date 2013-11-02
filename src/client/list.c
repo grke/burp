@@ -28,7 +28,7 @@ static char *encode_mode(mode_t mode, char *buf)
 	return cp;
 }
 
-static char *encode_time(utime_t utime, char *buf)
+static char *encode_time(uint64_t utime, char *buf)
 {
 	const struct tm *tm;
 	int n = 0;

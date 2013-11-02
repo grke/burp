@@ -282,7 +282,6 @@ extern "C" void syslog(int type, const char *fmt, ...);
 #define getpid _getpid
 
 #define getppid() 0
-#define gethostid() 0
 #define getuid() 0
 #define getgid() 0
 

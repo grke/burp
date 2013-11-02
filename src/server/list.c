@@ -125,7 +125,7 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 	int a=0;
 	int i=0;
 	int ret=0;
-	int found=0;
+	uint8_t found=0;
 	struct bu *arr=NULL;
 	unsigned long index=0;
 	regex_t *regex=NULL;
@@ -149,7 +149,7 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 		// Search all backups for things matching the regex.
 		if(listregex && backup && *backup=='a')
 		{
-			found=TRUE;
+			found=1;
 			async_write(CMD_TIMESTAMP,
 				arr[i].timestamp, strlen(arr[i].timestamp));
 			ret+=list_manifest(arr[i].path, regex, browsedir,
@@ -162,7 +162,7 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 			  && (!strcmp(arr[i].timestamp, backup)
 				|| arr[i].index==index))
 			{
-				found=TRUE;
+				found=1;
 				send_backup_name_to_client(&(arr[i]));
 				ret=list_manifest(arr[i].path, regex,
 					browsedir, client, conf);
@@ -171,7 +171,7 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 		// List the backups.
 		else
 		{
-			found=TRUE;
+			found=1;
 			send_backup_name_to_client(&(arr[i]));
 		}
 	}

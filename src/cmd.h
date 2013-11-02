@@ -61,4 +61,4 @@
 #define	STATUS_VERIFYING	'9'
 #define	STATUS_DELETING		'0'
 
-#endif // _CMD_H
+#endif

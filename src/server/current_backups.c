@@ -1,7 +1,6 @@
 #include "include.h"
 
 #include <netdb.h>
-#include <librsync.h>
 #include <math.h>
 #include <dirent.h>
 
@@ -83,7 +82,7 @@ int recursive_hardlink(const char *src, const char *dst, const char *client, str
 			write_status(client, STATUS_SHUFFLING, fullpathb,
 				conf);
 			if(do_link(fullpatha, fullpathb, &statp, conf,
-				FALSE /* do not overwrite target */))
+				0 /* do not overwrite target */))
 			{
 				free(fullpatha);
 				free(fullpathb);
@@ -108,7 +107,7 @@ int recursive_hardlink(const char *src, const char *dst, const char *client, str
 #define RECDEL_OK			0
 #define RECDEL_ENTRIES_REMAINING	1
 
-int recursive_delete(const char *d, const char *file, bool delfiles)
+int recursive_delete(const char *d, const char *file, uint8_t delfiles)
 {
 	int n=-1;
 	int ret=RECDEL_OK;
@@ -550,7 +549,7 @@ int delete_backup(const char *basedir, struct bu *arr, int a, int b, const char 
 
 	if(!(deleteme=prepend_s(basedir, "deleteme", strlen("deleteme")))
 	  || do_rename(arr[b].path, deleteme)
-	  || recursive_delete(deleteme, NULL, TRUE))
+	  || recursive_delete(deleteme, NULL, 1))
 	{
 		logp("Error when trying to delete %s\n", arr[b].path);
 		free(deleteme);
@@ -687,19 +686,6 @@ int remove_old_backups(const char *basedir, struct config *cconf, const char *cl
 	return 0;
 }
 
-/* Need to base librsync block length on the size of the old file, otherwise
-   the risk of librsync collisions and silent corruption increases as the
-   size of the new file gets bigger. */
-size_t get_librsync_block_len(const char *endfile)
-{
-	size_t ret=0;
-	unsigned long long oldlen=0;
-	oldlen=strtoull(endfile, NULL, 10);
-	ret=(size_t)(ceil(sqrt(oldlen)/16)*16); // round to a multiple of 16.
-	if(ret<64) return 64; // minimum of 64 bytes.
-	return ret;
-}
-
 #define DUP_CHUNK	4096
 static int duplicate_file(const char *oldpath, const char *newpath)
 {
@@ -734,7 +720,7 @@ finish:
 	return ret;
 }
 
-int do_link(const char *oldpath, const char *newpath, struct stat *statp, struct config *conf, bool overwrite)
+int do_link(const char *oldpath, const char *newpath, struct stat *statp, struct config *conf, uint8_t overwrite)
 {
 	/* Avoid creating too many hardlinks */
 	if(statp->st_nlink >= (unsigned int)conf->max_hardlinks)

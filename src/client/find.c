@@ -11,6 +11,21 @@
 
 #include <dirent.h>
 
+// File types.
+#define FT_LNK_H      1  // hard link to file already saved.
+#define FT_REG        3  // Regular file.
+#define FT_LNK_S      4  // Soft Link.
+#define FT_DIR        5  // Directory.
+#define FT_SPEC       6  // Special file -- chr, blk, fifo, sock.
+#define FT_NOFOLLOW   8  // Could not follow link.
+#define FT_NOSTAT     9  // Could not stat file.
+#define FT_NOFSCHG   14  // Different file system, prohibited.
+#define FT_NOOPEN    15  // Could not open directory.
+#define FT_RAW       16  // Raw block device.
+#define FT_FIFO      17  // Raw fifo device.
+#define FT_REPARSE   21  // Win NTFS reparse point.
+#define FT_JUNCTION  26  // Win32 Junction point.
+
 static int32_t name_max; // Filename max length.
 static int32_t path_max; // path name max length.
 

@@ -911,7 +911,7 @@ static int clean_rubble(const char *basedir, const char *working)
 		log_and_send_oom(__FUNCTION__);
 		return -1;
 	}
-	if(recursive_delete(real, "", TRUE))
+	if(recursive_delete(real, "", 1))
 	{
 		char msg[256]="";
 		snprintf(msg, sizeof(msg), "Could not remove interrupted directory: %s", real);

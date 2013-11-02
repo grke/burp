@@ -1241,7 +1241,7 @@ static int run_status_server(int *rfd, int *cfd, const char *configfile)
 	// Reload global config, in case things have changed. This means that
 	// the server does not need to be restarted for most config changes.
 	init_config(&conf);
-	if(load_config(configfile, &conf, TRUE)) return -1;
+	if(load_config(configfile, &conf, 1)) return -1;
 
 	ret=status_server(cfd, &conf);
 

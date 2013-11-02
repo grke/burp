@@ -1,10 +1,7 @@
 #ifndef __RABIN_BLK_H
 #define __RABIN_BLK_H
 
-#include <stdio.h>
-#include <stdint.h>
 #include <openssl/md5.h>
-#include "rabin/rconf.h"
 
 // The highest number of blocks that the client will hold in memory.
 #define BLKS_MAX_IN_MEM		20000
@@ -37,8 +34,6 @@ struct blk
 	char strong[32+1];
 	char save_path[19+1]; // eg "0000/0000/0000/0000"
 
-//	struct dpth_fp *dpth_fp;
-
 	int requested;
 	enum got got;
 	uint64_t index;
@@ -67,4 +62,4 @@ extern void blk_add_to_list(struct blk *blk, struct blist *blist);
 
 extern void blk_print_alloc_stats(void);
 
-#endif // __RABIN_BLK_H
+#endif

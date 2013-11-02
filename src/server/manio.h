@@ -1,7 +1,6 @@
 #ifndef _MANIO_H
 #define _MANIO_H
 
-#include <stdint.h>
 #include <zlib.h>
 
 // Manifests are split up into several files in a directory.

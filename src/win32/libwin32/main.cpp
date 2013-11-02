@@ -8,43 +8,31 @@
 #define _WIN32_WINNT 0x0501
 #include <commctrl.h>
 
-/* Globals */
+// Globals
 HINSTANCE appInstance;
 bool have_service_api;
 
-
-/*
- *
- * Main Windows entry point.
- *
- */
+// Main Windows entry point.
 int main(int argc, char *argv[])
 {
-   //int i=0;
+	InitWinAPIWrapper();
 
-   //for(i=0; i<argc; i++)
-   //{
-//	printf("argv[%d]: %s\n", i, argv[i]);
-//	fflush(stdout);
-//   }
+	// Start up Volume Shadow Copy (only on FD)
+	VSSInit();
 
-   OSDependentInit();
+	// Startup networking
+	WSA_Init();
 
-   /* Start up Volume Shadow Copy (only on FD) */
-   VSSInit();
+	// Set this process to be the last application to be shut down.
+	if(p_SetProcessShutdownParameters)
+		p_SetProcessShutdownParameters(0x100, 0);
 
-   /* Startup networking */
-   WSA_Init();
+	// Call the Unix Burp daemon
+	BurpMain(argc, argv);
 
-   /* Set this process to be the last application to be shut down. */
-   if (p_SetProcessShutdownParameters) {
-      p_SetProcessShutdownParameters(0x100, 0);
-   }
+	// Terminate our main message loop
+	PostQuitMessage(0);
 
-   /* Call the Unix Burp daemon */
-   BurpMain(argc, argv);
-   PostQuitMessage(0);                /* terminate our main message loop */
-
-   WSACleanup();
-   _exit(0);
+	WSACleanup();
+	_exit(0);
 }

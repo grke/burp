@@ -193,7 +193,7 @@ struct config
 };
 
 extern void init_config(struct config *conf);
-extern int load_config(const char *config_path, struct config *conf, bool loadall);
+extern int load_config(const char *config_path, struct config *conf, uint8_t loadall);
 extern void free_config(struct config *conf);
 extern int set_client_global_config(struct config *conf, struct config *cconf, const char *client);
 extern int is_subdir(const char *dir, const char *sub);

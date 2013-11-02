@@ -29,6 +29,9 @@ struct s_pool_ctl {
    struct abufhead *free_buf;         /* pointer to free buffers */
 };
 
+// Maximum Name length including EOS.
+#define MAX_NAME_LENGTH 128
+
 /* Burp Name length plus extra */
 #define NLEN (MAX_NAME_LENGTH+2)
 
@@ -49,6 +52,11 @@ struct abufhead {
    int32_t pool;                      /* pool */
    struct abufhead *next;             /* pointer to next free buffer */
 };
+
+/* This probably should be done on a machine by machine basis, but it works */
+/* This is critical for the smartalloc routines to properly align memory */
+#define ALIGN_SIZE (sizeof(double))
+#define BALIGN(x) (((x) + ALIGN_SIZE - 1) & ~(ALIGN_SIZE -1))
 
 #define HEAD_SIZE BALIGN(sizeof(struct abufhead))
 

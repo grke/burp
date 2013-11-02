@@ -528,8 +528,8 @@ all_tests()
 	start_script_client
 #	add_run_verify 1
 	add_run_restore 1 "$restoredir"1
-#	add_do_diff_client "$includedir" "$restoredir"1/"$includedir" \
-#		"client restore differed from the original!"
+	add_do_diff_client "$includedir" "$restoredir"1/"$includedir" \
+		"client restore differed from the original!"
 	run_script_client
 	end_test 1
 

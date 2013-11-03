@@ -231,7 +231,7 @@ static int restore_remaining_dirs(struct slist *slist, struct bu *arr, int a, in
    side. If it thinks it is, it will then do it.
    Return -1 on error, 1 if it copied the data across, 0 if it did not. */
 static int maybe_copy_data_files_across(const char *manifest,
-	int srestore, regex_t *regex, struct config *conf)
+	const char *datadir, int srestore, regex_t *regex, struct config *conf)
 {
 	int ars;
 	int ret=-1;
@@ -318,12 +318,28 @@ static int maybe_copy_data_files_across(const char *manifest,
 	// Send each of the data files that we found to the client.
 	HASH_ITER(hh, hash_table, weak_entry, tmpw)
 	{
+		char msg[32];
 		char path[32];
+		char *fdatpath=NULL;
 		snprintf(path, sizeof(path), "%014lX", weak_entry->weak);
 		path[4]='/';
 		path[9]='/';
-		printf("got: %s\n", path);
+		snprintf(msg, sizeof(msg), "dat=%s", path);
+		printf("got: %s\n", msg);
+		if(async_write_str(CMD_GEN, msg)) goto end;
+		if(!(fdatpath=prepend_s(datadir, path, strlen(path))))
+			goto end;
+		if(send_a_file(fdatpath, conf))
+		{
+			free(fdatpath);
+			goto end;
+		}
+		free(fdatpath);
 	}
+
+	if(async_write_str(CMD_GEN, "datfilesend")
+	  || async_read_expect(CMD_GEN, "datfilesend_ok"))
+		goto end;
 
 	// Send the manifest to the client.
 
@@ -355,7 +371,7 @@ static int do_restore_manifest(const char *client, const char *datadir,
 	int need_data=0;
 	struct manio *manio=NULL;
 
-	if((ars=maybe_copy_data_files_across(manifest,
+	if((ars=maybe_copy_data_files_across(manifest, datadir,
 		srestore, regex, conf))>0)
 	{
 		// Restore has completed OK.

@@ -276,7 +276,6 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 	strm.opaque = Z_NULL;
 	if((zret=deflateInit2(&strm, compression, Z_DEFLATED, (15+16),
 		8, Z_DEFAULT_STRATEGY))!=Z_OK)
-
 	{
 		return -1;
 	}

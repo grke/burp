@@ -552,8 +552,52 @@ static char *get_restore_style(struct config *conf)
 
 int restore_spool(struct config *conf, enum action act, int vss_restore)
 {
+	char cmd;
+	int ret=-1;
+	size_t len=0;
+	char *buf=NULL;
+	char *basedir=NULL;
+
 	logp("Spooling restore to: %s\n", conf->restore_spool);
-	return 0;
+
+	if(!(basedir=prepend_s(conf->restore_spool,
+		"incoming-data", strlen("incoming-data"))))
+			goto end;
+
+	while(1)
+	{
+		if(async_read(&cmd, &buf, &len)) goto end;
+		if(cmd==CMD_GEN)
+		{
+			if(!strncmp(buf, "dat=", 4))
+			{
+				char *fpath=NULL;
+				if(!(fpath=prepend_s(basedir,
+					buf+4, strlen(buf)+4))) goto end;
+				if(build_path_w(fpath))
+					goto end;
+				if(receive_a_file(fpath, conf))
+					goto end;
+				free(buf); buf=NULL;
+				continue;
+			}
+			else if(!strcmp(buf, "datfilesend"))
+			{
+				if(async_write_str(CMD_GEN, "datfilesend_ok"))
+					goto end;
+				break;
+			}
+		}
+		logp("unexpected command while receiving data files: %c %s\n",
+			cmd, buf);
+		goto end;
+	}
+
+	ret=0;
+end:
+	if(buf) free(buf);
+	if(basedir) free(basedir);
+	return ret;
 }
 
 int do_restore_client(struct config *conf, enum action act, int vss_restore)

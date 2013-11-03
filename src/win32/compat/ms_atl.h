@@ -5,49 +5,17 @@
 
 template <class T> class CComPtr
 {
-
 public:
-
-/* Attribute(s) ... */
         T* p;
-
-/* Creation ... */
-        CComPtr()
-        {
-           p = NULL;
-        }
-        
-/* Destructor ... */
-        ~CComPtr()
-        {
-           if (p)
-              p->Release();
-        }
+        CComPtr() { p=NULL; }
+        ~CComPtr() { if (p) p->Release(); }
 };
 
 class CComBSTR
 {
-
 public:
-
         BSTR p;
-
-/* Creation ... */
-        CComBSTR()
-        {
-           p = NULL;
-        }
-
-/* Destructor ... */
-        ~CComBSTR()
-        {
-             ::SysFreeString(p);
-        }
-
-/* Address-of operator */
-        BSTR* operator&()
-        {
-           return &p;
-        }
-
+        CComBSTR() { p = NULL; }
+        ~CComBSTR() { ::SysFreeString(p); }
+        BSTR* operator&() { return &p; }
 };

@@ -1011,35 +1011,17 @@ int geteuid(void)
 	return 0;
 }
 
-int execvp(const char *, char *[])
-{
-   errno=ENOSYS;
-   return -1;
-}
-
-int fork(void)
+static int system_error(void)
 {
 	errno=ENOSYS;
 	return -1;
 }
 
-int pipe(int[])
-{
-	errno=ENOSYS;
-	return -1;
-}
-
-int waitpid(int, int *, int)
-{
-	errno=ENOSYS;
-	return -1;
-}
-
-int readlink(const char *, char *, int)
-{
-	errno=ENOSYS;
-	return -1;
-}
+int execvp(const char *, char *[]) { return system_error(); }
+int fork(void) { return system_error(); }
+int pipe(int[]) { return system_error(); }
+int waitpid(int, int *, int) { return system_error(); }
+int readlink(const char *, char *, int) { return system_error(); }
 
 int strncasecmp(const char *s1, const char *s2, int len)
 {
@@ -1312,8 +1294,7 @@ long pathconf(const char *path, int name)
 		case _PC_NAME_MAX:
 			return 255;
 	}
-	errno=ENOSYS;
-	return -1;
+	return system_error();
 }
 
 int WSA_Init(void)
@@ -1324,8 +1305,7 @@ int WSA_Init(void)
 	if(WSAStartup(wVersionRequested, &wsaData))
 	{
 		printf("Can not start Windows Sockets\n");
-		errno=ENOSYS;
-		return -1;
+		return system_error();
 	}
 
 	return 0;
@@ -1779,6 +1759,11 @@ const char * getArgv0(const char *cmdline)
 	return rval;
 }
 
+static int dwAltNameLength_ok(DWORD dwAltNameLength)
+{
+	return dwAltNameLength>0 && dwAltNameLength<MAX_PATHLENGTH;
+}
+
 /* Extracts the executable or script name from the first string in 
    cmdline.
   
@@ -1899,8 +1884,7 @@ bool GetApplicationName(const char *cmdline, char **pexe, const char **pargs)
 				dwAltNameLength=SearchPath(NULL, pPathname,
 				  ExtensionList[index], MAX_PATHLENGTH,
 				  pAltPathname, NULL);
-				if(dwAltNameLength>0
-				  && dwAltNameLength<=MAX_PATHLENGTH)
+				if(dwAltNameLength_ok(dwAltNameLength))
 				{
 					memcpy(pPathname, pAltPathname,
 						dwAltNameLength);
@@ -1926,7 +1910,7 @@ bool GetApplicationName(const char *cmdline, char **pexe, const char **pargs)
 		// locations.
 		dwAltNameLength=SearchPath(NULL, pPathname,
 			NULL, MAX_PATHLENGTH, pAltPathname, NULL);
-		if(dwAltNameLength>0 && dwAltNameLength<MAX_PATHLENGTH)
+		if(dwAltNameLength_ok(dwAltNameLength))
 		{
 			memcpy(pPathname, pAltPathname, dwAltNameLength);
 			pPathname[dwAltNameLength] = '\0';
@@ -1938,7 +1922,7 @@ bool GetApplicationName(const char *cmdline, char **pexe, const char **pargs)
 		dwAltNameLength=GetShortPathName(pPathname,
 			pAltPathname, MAX_PATHLENGTH);
 
-		if(dwAltNameLength>0 && dwAltNameLength<=MAX_PATHLENGTH)
+		if(dwAltNameLength_ok(dwAltNameLength))
 		{
 			*pexe=(char *)malloc(dwAltNameLength+1);
 			if(!*pexe) return false;

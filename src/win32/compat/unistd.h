@@ -1,3 +1,3 @@
-#if defined(__GNUC__)
+#ifdef __GNUC__
 #include_next<unistd.h>
 #endif

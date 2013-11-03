@@ -30,7 +30,7 @@ public:
 private:
 	virtual BOOL Initialize(DWORD dwContext, BOOL bDuringRestore=FALSE)=0;
 	virtual BOOL WaitAndCheckForAsyncOperation(IVssAsync *pAsync)=0;
-	virtual void QuerySnapshotSet(GUID snapshotSetID)=0;
+	virtual BOOL QuerySnapshotSet(GUID snapshotSetID)=0;
 
 protected:
 	HMODULE m_hLib;
@@ -64,7 +64,7 @@ public:
 private:
 	virtual BOOL Initialize(DWORD dwContext, BOOL bDuringRestore);
 	virtual BOOL WaitAndCheckForAsyncOperation(IVssAsync *pAsync);
-	virtual void QuerySnapshotSet(GUID snapshotSetID);
+	virtual BOOL QuerySnapshotSet(GUID snapshotSetID);
 	BOOL CheckWriterStatus();   
 };
 
@@ -79,7 +79,7 @@ public:
 private:
 	virtual BOOL Initialize(DWORD dwContext, BOOL bDuringRestore);
 	virtual BOOL WaitAndCheckForAsyncOperation(IVssAsync *pAsync);
-	virtual void QuerySnapshotSet(GUID snapshotSetID);
+	virtual BOOL QuerySnapshotSet(GUID snapshotSetID);
 	BOOL CheckWriterStatus();
 };
 
@@ -94,7 +94,7 @@ public:
 private:
 	virtual BOOL Initialize(DWORD dwContext, BOOL bDuringRestore);
 	virtual BOOL WaitAndCheckForAsyncOperation(IVssAsync *pAsync);
-	virtual void QuerySnapshotSet(GUID snapshotSetID);
+	virtual BOOL QuerySnapshotSet(GUID snapshotSetID);
 	BOOL CheckWriterStatus();
 };
 

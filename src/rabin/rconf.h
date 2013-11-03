@@ -1,6 +1,10 @@
 #ifndef __RCONF_H
 #define __RCONF_H
 
+#define RABIN_MIN	4096
+#define RABIN_AVG	5000
+#define RABIN_MAX	8192
+
 struct rconf
 {
 	uint64_t prime;

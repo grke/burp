@@ -22,7 +22,6 @@ void sbuf_free_contents(struct sbuf *sb)
 	if(sb->path) { free(sb->path); sb->path=NULL; }
 	if(sb->attribs) { free(sb->attribs); sb->attribs=NULL; }
 	if(sb->linkto) { free(sb->linkto); sb->linkto=NULL; }
-//	if(sb->endfile) { free(sb->endfile); sb->endfile=NULL; }
 }
 
 void sbuf_free(struct sbuf *sb)

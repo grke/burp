@@ -157,9 +157,6 @@ static int check_srestore(struct config *conf, const char *path)
 	int i=0;
 	for(i=0; i<conf->iecount; i++)
 	{
-		//printf(" %d %s %s\n",
-		//	conf->incexcdir[i]->flag, conf->incexcdir[i]->path,
-		//	path);
 		if(srestore_matches(conf->incexcdir[i], path))
 			return 1;
 	}
@@ -229,7 +226,120 @@ static int restore_remaining_dirs(struct slist *slist, struct bu *arr, int a, in
 	return 0;
 }
 
-static int do_restore_manifest(const char *client, const char *datadir, struct bu *arr, int a, int i, const char *manifest, regex_t *regex, int srestore, struct config *conf, enum action act, char status, struct dpth *dpth)
+/* This function reads the manifest to determine whether it may be more
+   efficient to just copy the data files across and unpack them on the other
+   side. If it thinks it is, it will then do it.
+   Return -1 on error, 1 if it copied the data across, 0 if it did not. */
+static int maybe_copy_data_files_across(const char *manifest,
+	int srestore, regex_t *regex, struct config *conf)
+{
+	int ars;
+	int ret=-1;
+	struct sbuf *sb=NULL;
+	struct blk *blk=NULL;
+	struct manio *manio=NULL;
+	uint64_t blkcount=0;
+	uint64_t datcount=0;
+	uint64_t weakint;
+	struct weak_entry *tmpw;
+	struct weak_entry *weak_entry;
+	uint64_t estimate_blks;
+	uint64_t estimate_dats;
+
+	// If the client has no restore_spool directory, we have to fall back
+	// to the stream style restore.
+	if(!conf->restore_spool) return 0;
+	
+	if(!(manio=manio_alloc())
+	  || manio_init_read(manio, manifest)
+	  || !(sb=sbuf_alloc())
+	  || !(blk=blk_alloc()))
+		goto end;
+
+	while(1)
+	{
+		if((ars=manio_sbuf_fill(manio, sb, blk, NULL, conf))<0)
+		{
+			logp("Error from manio_sbuf_fill() in $s\n",
+				__FUNCTION__);
+			goto end; // Error;
+		}
+		else if(ars>0)
+			break; // Finished OK.
+		if(!*blk->save_path) continue;
+
+		if((!srestore || check_srestore(conf, sb->path))
+		  && check_regex(regex, sb->path))
+		{
+			blkcount++;
+			// Truncate the save_path so that we are left with the
+			// file that the block is saved in.
+			blk->save_path[14]='\0';
+			// Replace slashes so that we can use the path as an
+			// index to a hash table.
+			blk->save_path[4]='0';
+			blk->save_path[9]='0';
+		//	printf("here: %s\n", blk->save_path);
+			weakint=strtoull(blk->save_path, 0, 16);
+			if(!find_weak_entry(weakint))
+			{
+				if(!add_weak_entry(weakint))
+					goto end;
+				datcount++;
+			}
+		}
+	}
+
+	estimate_blks=blkcount*RABIN_AVG;
+	estimate_dats=datcount*SIG_MAX*RABIN_AVG;
+	printf("%lu blocks = %lu bytes in stream approx\n",
+		blkcount, estimate_blks);
+	printf("%lu data files = %lu bytes approx\n",
+		datcount, estimate_dats);
+
+	if(estimate_dats >= 90*(estimate_blks/100))
+	{
+		printf("Stream is more than 90%% size of data files.\n");
+		printf("Use restore stream\n");
+		return 0;
+	}
+	else
+	{
+		printf("Data files are less than 90%% size of stream.\n");
+		printf("Use data files\n");
+	}
+
+	printf("Client is using restore_spool: %s\n", conf->restore_spool);
+
+	if(async_write_str(CMD_GEN, "restore_spool")
+	  || async_read_expect(CMD_GEN, "restore_spool_ok"))
+		goto end;
+
+	// Send each of the data files that we found to the client.
+	HASH_ITER(hh, hash_table, weak_entry, tmpw)
+	{
+		char path[32];
+		snprintf(path, sizeof(path), "%014lX", weak_entry->weak);
+		path[4]='/';
+		path[9]='/';
+		printf("got: %s\n", path);
+	}
+
+	// Send the manifest to the client.
+
+	ret=1;
+end:
+	blk_free(blk);
+	sbuf_free(sb);
+	manio_free(manio);
+	hash_delete_all();
+	return ret;
+}
+
+static int do_restore_manifest(const char *client, const char *datadir,
+	struct bu *arr, int a, int i, const char *manifest, regex_t *regex,
+	int srestore, struct config *conf, enum action act, char status,
+	struct dpth *dpth)
 {
 	//int s=0;
 	//size_t len=0;
@@ -245,16 +355,26 @@ static int do_restore_manifest(const char *client, const char *datadir, struct b
 	int need_data=0;
 	struct manio *manio=NULL;
 
+	if((ars=maybe_copy_data_files_across(manifest,
+		srestore, regex, conf))>0)
+	{
+		// Restore has completed OK.
+		ret=0;
+		goto end;
+	}
+	else if(ars<0) goto end; // Error.
+
+	if(async_write_str(CMD_GEN, "restore_stream")
+	  || async_read_expect(CMD_GEN, "restore_stream_ok"))
+		goto end;
+
 	if(!(manio=manio_alloc())
 	  || manio_init_read(manio, manifest)
 	  || !(sb=sbuf_alloc())
 	  || !(blk=blk_alloc())
 	  || !(slist=slist_alloc())
 	  || !(dpth=dpth_alloc(datadir)))
-	{
-		log_and_send_oom(__FUNCTION__);
 		goto end;
-	}
 
 	while(1)
 	{

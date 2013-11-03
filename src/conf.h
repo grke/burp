@@ -90,6 +90,7 @@ struct config
 	char *backup;
 	char *restoreprefix;
 	char *regex;
+	char *restore_spool;
   // To do with listing.
 	char *browsefile;
 	char *browsedir;

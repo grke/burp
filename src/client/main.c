@@ -310,6 +310,19 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 		  && (ret=incexc_send_client(conf)))
 			goto end;
 
+		if(act==ACTION_RESTORE)
+		{
+			// Client may have a temporary directory for restores.
+			if(conf->restore_spool)
+			{
+				char str[512]="";
+				snprintf(str, sizeof(str),
+				  "restore_spool=%s", conf->restore_spool);
+				if(async_write_str(CMD_GEN, str))
+					goto end;
+			}
+		}
+
 		if((ret=async_write_str(CMD_GEN, "extra_comms_end"))
 		  || (ret=async_read_expect(CMD_GEN, "extra_comms_end ok")))
 		{

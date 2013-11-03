@@ -523,6 +523,39 @@ static int write_data(BFILE *bfd, struct blk *blk)
 	return 0;
 }
 
+static char *get_restore_style(struct config *conf)
+{
+	char cmd;
+	size_t len=0;
+	char *buf=NULL;
+	if(async_read(&cmd, &buf, &len)) return NULL;
+	if(cmd==CMD_GEN)
+	{
+		if(!strcmp(buf, "restore_stream")
+		  || !strcmp(buf, "restore_spool"))
+		{
+			char msg[32]="";
+			snprintf(msg, sizeof(msg), "%s_ok", buf);
+			if(async_write_str(CMD_GEN, msg))
+			{
+				log_out_of_memory(__FUNCTION__);
+				free(buf);
+				return NULL;
+			}
+			return buf;
+		}
+	}
+	logp("unexpected restore style: %c:%s", cmd, buf);
+	free(buf);
+	return NULL;
+}
+
+int restore_spool(struct config *conf, enum action act, int vss_restore)
+{
+	logp("Spooling restore to: %s\n", conf->restore_spool);
+	return 0;
+}
+
 int do_restore_client(struct config *conf, enum action act, int vss_restore)
 {
 	int ars=0;
@@ -534,6 +567,7 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore)
 	BFILE bfd;
 	binit(&bfd, 0, conf);
 	char *fullpath=NULL;
+	char *style=NULL;
 
 	logp("doing %s\n", act_str(act));
 
@@ -547,9 +581,20 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore)
 	if(conf->send_client_counters && recv_counters(conf))
 		goto end;
 
+	if(!(style=get_restore_style(conf)))
+		goto end;
+
 #if defined(HAVE_WIN32)
 	if(act==ACTION_RESTORE) win32_enable_backup_privileges();
 #endif
+
+	if(!strcmp(style, "restore_spool"))
+	{
+		ret=restore_spool(conf, act, vss_restore);
+		goto end;
+	}
+
+	logp("Streaming restore direct\n");
 
 	if(!(sb=sbuf_alloc())
 	  || !(blk=blk_alloc()))
@@ -727,6 +772,7 @@ end:
 	else logp("ret: %d\n", ret);
 
 	sbuf_free(sb);
+	if(style) free(style);
 
 	return ret;
 }

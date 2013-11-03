@@ -958,6 +958,19 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 					break;
 				}
 			}
+			else if(!strncmp(buf,
+				"restore_spool=", strlen("restore_spool=")))
+			{
+				// Client supports temporary spool directory
+				// for restores.
+				if(!(cconf->restore_spool=
+					strdup(buf+strlen("restore_spool="))))
+				{
+					log_and_send_oom(__FUNCTION__);
+					ret=-1;
+					break;
+				}
+			}
 			else
 			{
 				logp("unexpected command from client: %c:%s\n",

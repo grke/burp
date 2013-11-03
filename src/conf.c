@@ -164,6 +164,7 @@ void init_config(struct config *conf)
 	conf->dedup_group=NULL;
 	conf->browsefile=NULL;
 	conf->browsedir=NULL;
+	conf->restore_spool=NULL;
 
 	conf->client_can_delete=1;
 	conf->client_can_force_backup=1;
@@ -255,6 +256,7 @@ void free_config(struct config *conf)
 	if(conf->dedup_group) free(conf->dedup_group);
 	if(conf->browsefile) free(conf->browsefile);
 	if(conf->browsedir) free(conf->browsedir);
+	if(conf->restore_spool) free(conf->restore_spool);
 	if(conf->restore_client) free(conf->restore_client);
 	if(conf->restore_path) free(conf->restore_path);
 	if(conf->orig_client) free(conf->orig_client);
@@ -747,6 +749,8 @@ static int load_config_strings(struct config *conf, const char *field, const cha
 	if(get_conf_val(field, value, "browsedir", &(conf->browsedir)))
 		return -1;
 	if(get_conf_val(field, value, "browsefile", &(conf->browsefile)))
+		return -1;
+	if(get_conf_val(field, value, "restore_spool", &(conf->restore_spool)))
 		return -1;
 	if(get_conf_val(field, value, "autoupgrade_dir",
 		&(conf->autoupgrade_dir))) return -1;

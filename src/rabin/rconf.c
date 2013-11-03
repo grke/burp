@@ -19,9 +19,9 @@ void rconf_init(struct rconf *rconf)
 	rconf->win=31;		// Sliding window size.
 	rconf->win_max=63;	// Not configurable.
 
-	rconf->blk_min=4096;	// Minimum block size.
-	rconf->blk_avg=5000;	// Average block size.
-	rconf->blk_max=8192;	// Maximum block size.
+	rconf->blk_min=RABIN_MIN; // Minimum block size.
+	rconf->blk_avg=RABIN_AVG; // Average block size.
+	rconf->blk_max=RABIN_MAX; // Maximum block size.
 
 	rconf->multiplier=get_multiplier(rconf->win, rconf->prime);
 }

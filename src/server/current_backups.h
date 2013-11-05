@@ -18,7 +18,6 @@ struct bu
 };
 
 extern int recursive_hardlink(const char *src, const char *dst, const char *client, struct config *conf);
-extern int recursive_delete(const char *d, const char *file, uint8_t delfiles);
 extern void free_current_backups(struct bu **arr, int a);
 extern int get_current_backups(const char *basedir, struct bu **arr, int *a, int log);
 extern int get_new_timestamp(struct config *cconf, const char *basedir, char *buf, size_t s);

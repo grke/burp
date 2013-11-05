@@ -3,6 +3,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <dirent.h>
 
 #ifdef HAVE_WIN32
 #include <winsock2.h>
@@ -1069,6 +1070,7 @@ int split_sig_with_save_path(const char *buf, unsigned int s, char *weak, char *
 	{
 		fprintf(stderr, "Signature with save_path wrong length: %u\n",
 			s);
+		fprintf(stderr, "%s\n", buf);
 		return -1;
 	}
 	memcpy(weak, buf, 16);
@@ -1084,4 +1086,95 @@ int build_path_w(const char *path)
 		return -1;
 	free(rpath);
 	return 0;
+}
+
+#define RECDEL_ERROR			-1
+#define RECDEL_OK			0
+#define RECDEL_ENTRIES_REMAINING	1
+
+int recursive_delete(const char *d, const char *file, uint8_t delfiles)
+{
+	int n=-1;
+	int ret=RECDEL_OK;
+	struct dirent **dir;
+	struct stat statp;
+	char *directory=NULL;
+
+	if(!file)
+	{
+		if(!(directory=prepend_s(d, "", 0))) return RECDEL_ERROR;
+	}
+	else if(!(directory=prepend_s(d, file, strlen(file))))
+	{
+		log_out_of_memory(__FUNCTION__);
+		return RECDEL_ERROR;
+	}
+
+	if(lstat(directory, &statp))
+	{
+		// path does not exist.
+		free(directory);
+		return RECDEL_OK;
+	}
+
+	if((n=scandir(directory, &dir, 0, 0))<0)
+	{
+		logp("scandir %s: %s\n", directory, strerror(errno));
+		free(directory);
+		return RECDEL_ERROR;
+	}
+	while(n--)
+	{
+		char *fullpath=NULL;
+		if(dir[n]->d_ino==0
+		  || !strcmp(dir[n]->d_name, ".")
+		  || !strcmp(dir[n]->d_name, ".."))
+			{ free(dir[n]); continue; }
+		if(!(fullpath=prepend_s(directory,
+			dir[n]->d_name, strlen(dir[n]->d_name))))
+				break;
+
+		if(is_dir(fullpath, dir[n]))
+		{
+			int r;
+			if((r=recursive_delete(directory,
+				dir[n]->d_name, delfiles))==RECDEL_ERROR)
+			{
+				free(fullpath);
+				break;
+			}
+			// do not overwrite ret with OK if it previously
+			// had ENTRIES_REMAINING
+			if(r==RECDEL_ENTRIES_REMAINING) ret=r;
+		}
+		else if(delfiles)
+		{
+			if(unlink(fullpath))
+			{
+				logp("unlink %s: %s\n",
+					fullpath, strerror(errno));
+				ret=RECDEL_ENTRIES_REMAINING;
+			}
+		}
+		else
+		{
+			ret=RECDEL_ENTRIES_REMAINING;
+		}
+		free(fullpath);
+		free(dir[n]);
+	}
+	if(n>0)
+	{
+		ret=RECDEL_ERROR;
+		for(; n>0; n--) free(dir[n]);
+	}
+	free(dir);
+
+	if(ret==RECDEL_OK && rmdir(directory))
+	{
+		logp("rmdir %s: %s\n", directory, strerror(errno));
+		ret=RECDEL_ERROR;
+	}
+	free(directory);
+	return ret;
 }

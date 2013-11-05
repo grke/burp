@@ -106,11 +106,6 @@ int sbuf_is_endfile(struct sbuf *sb)
 	return sb->cmd==CMD_END_FILE;
 }
 
-int sbuf_fill(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
-{
-	return -1;
-}
-
 int sbuf_to_manifest(struct sbuf *sb, gzFile zp)
 {
 	if(sb->path)
@@ -389,7 +384,7 @@ static int retrieve_blk_data(char *datpath, struct blk *blk)
         return 0;
 }
 
-static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct config *conf)
+int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct config *conf)
 {
 	static char lead[5]="";
 	static iobuf *rbuf=NULL;
@@ -579,10 +574,10 @@ static int do_sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpa
 
 int sbuf_fill_from_gzfile(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct config *conf)
 {
-	return do_sbuf_fill(sb, zp, blk, datpath, conf);
+	return sbuf_fill(sb, zp, blk, datpath, conf);
 }
 
 int sbuf_fill_from_net(struct sbuf *sb, struct blk *blk, struct config *conf)
 {
-	return do_sbuf_fill(sb, NULL, blk, NULL, conf);
+	return sbuf_fill(sb, NULL, blk, NULL, conf);
 }

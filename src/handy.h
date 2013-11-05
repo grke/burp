@@ -63,4 +63,6 @@ extern int build_path_w(const char *path);
 
 extern int astrcat(char **buf, const char *append);
 
+extern int recursive_delete(const char *d, const char *file, uint8_t delfiles);
+
 #endif

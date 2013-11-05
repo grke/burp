@@ -550,17 +550,16 @@ static char *get_restore_style(struct config *conf)
 	return NULL;
 }
 
-int restore_spool(struct config *conf, enum action act, int vss_restore)
+int restore_spool(struct config *conf, enum action act, int vss_restore, char **datpath)
 {
 	char cmd;
 	int ret=-1;
 	size_t len=0;
 	char *buf=NULL;
-	char *basedir=NULL;
 
 	logp("Spooling restore to: %s\n", conf->restore_spool);
 
-	if(!(basedir=prepend_s(conf->restore_spool,
+	if(!(*datpath=prepend_s(conf->restore_spool,
 		"incoming-data", strlen("incoming-data"))))
 			goto end;
 
@@ -572,7 +571,7 @@ int restore_spool(struct config *conf, enum action act, int vss_restore)
 			if(!strncmp(buf, "dat=", 4))
 			{
 				char *fpath=NULL;
-				if(!(fpath=prepend_s(basedir,
+				if(!(fpath=prepend_s(*datpath,
 					buf+4, strlen(buf)+4))) goto end;
 				if(build_path_w(fpath))
 					goto end;
@@ -596,7 +595,6 @@ int restore_spool(struct config *conf, enum action act, int vss_restore)
 	ret=0;
 end:
 	if(buf) free(buf);
-	if(basedir) free(basedir);
 	return ret;
 }
 
@@ -612,6 +610,7 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore)
 	binit(&bfd, 0, conf);
 	char *fullpath=NULL;
 	char *style=NULL;
+	char *datpath=NULL;
 
 	logp("doing %s\n", act_str(act));
 
@@ -634,11 +633,13 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore)
 
 	if(!strcmp(style, "restore_spool"))
 	{
-		ret=restore_spool(conf, act, vss_restore);
-		goto end;
+		if(restore_spool(conf, act, vss_restore, &datpath))
+			goto end;
 	}
-
-	logp("Streaming restore direct\n");
+	else
+	{
+		logp("Streaming restore direct\n");
+	}
 
 	if(!(sb=sbuf_alloc())
 	  || !(blk=blk_alloc()))
@@ -649,7 +650,7 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore)
 
 	while(1)
 	{
-		if((ars=sbuf_fill_from_net(sb, blk, conf)))
+		if((ars=sbuf_fill(sb, NULL, blk, datpath, conf)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
@@ -666,7 +667,7 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore)
 		{
 			int wret;
 			wret=write_data(&bfd, blk);
-			free(blk->data);
+			if(!datpath) free(blk->data);
 			blk->data=NULL;
 			if(wret) goto end;
 			continue;
@@ -817,6 +818,11 @@ end:
 
 	sbuf_free(sb);
 	if(style) free(style);
+	if(datpath)
+	{
+		recursive_delete(datpath, NULL, 1);
+		free(datpath);
+	}
 
 	return ret;
 }

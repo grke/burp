@@ -231,7 +231,11 @@ static int restore_remaining_dirs(struct slist *slist, struct bu *arr, int a, in
    side. If it thinks it is, it will then do it.
    Return -1 on error, 1 if it copied the data across, 0 if it did not. */
 static int maybe_copy_data_files_across(const char *manifest,
-	const char *datadir, int srestore, regex_t *regex, struct config *conf)
+	const char *datadir, int srestore, regex_t *regex, struct config *conf,
+
+	const char *client, struct slist *slist,
+	struct bu *arr, int a, int i,
+	enum action act, char status)
 {
 	int ars;
 	int ret=-1;
@@ -245,6 +249,9 @@ static int maybe_copy_data_files_across(const char *manifest,
 	struct weak_entry *weak_entry;
 	uint64_t estimate_blks;
 	uint64_t estimate_dats;
+	uint64_t estimate_one_dat;
+	int need_data=0;
+	char sig[128]="";
 
 	// If the client has no restore_spool directory, we have to fall back
 	// to the stream style restore.
@@ -266,7 +273,11 @@ static int maybe_copy_data_files_across(const char *manifest,
 		}
 		else if(ars>0)
 			break; // Finished OK.
-		if(!*blk->save_path) continue;
+		if(!*blk->save_path)
+		{
+			sbuf_free_contents(sb);
+			continue;
+		}
 
 		if((!srestore || check_srestore(conf, sb->path))
 		  && check_regex(regex, sb->path))
@@ -288,16 +299,25 @@ static int maybe_copy_data_files_across(const char *manifest,
 				datcount++;
 			}
 		}
+
+		sbuf_free_contents(sb);
 	}
 
 	estimate_blks=blkcount*RABIN_AVG;
-	estimate_dats=datcount*SIG_MAX*RABIN_AVG;
+	estimate_one_dat=SIG_MAX*RABIN_AVG;
+	estimate_dats=datcount*estimate_one_dat;
 	printf("%lu blocks = %lu bytes in stream approx\n",
 		blkcount, estimate_blks);
 	printf("%lu data files = %lu bytes approx\n",
 		datcount, estimate_dats);
 
-	if(estimate_dats >= 90*(estimate_blks/100))
+	if(estimate_blks < estimate_one_dat)
+	{
+		printf("Stream is less than the size of a data file.\n");
+		printf("Use restore stream\n");
+		return 0;
+	}
+	else if(estimate_dats >= 90*(estimate_blks/100))
 	{
 		printf("Stream is more than 90%% size of data files.\n");
 		printf("Use restore stream\n");
@@ -342,6 +362,44 @@ static int maybe_copy_data_files_across(const char *manifest,
 		goto end;
 
 	// Send the manifest to the client.
+	if(manio_init_read(manio, manifest))
+		goto end;
+	*blk->save_path='\0';
+	while(1)
+	{
+		if((ars=manio_sbuf_fill(manio, sb, blk, NULL, conf))<0)
+		{
+			logp("Error from manio_sbuf_fill() in $s\n",
+				__FUNCTION__);
+			goto end; // Error;
+		}
+		else if(ars>0)
+			break; // Finished OK.
+
+		if(*blk->save_path)
+		{
+			//if(async_write(CMD_DATA, blk->data, blk->length))
+			//	return -1;
+			snprintf(sig, sizeof(sig), "%s%s%s",
+				blk->weak, blk->strong, blk->save_path);
+			if(async_write_str(CMD_SIG, sig))
+				goto end;
+			*blk->save_path='\0';
+			continue;
+		}
+
+		need_data=0;
+
+		if((!srestore || check_srestore(conf, sb->path))
+		  && check_regex(regex, sb->path))
+		{
+			if(restore_ent(client, &sb, slist,
+				arr, a, i, act, status, conf, &need_data))
+					goto end;
+		}
+
+		sbuf_free_contents(sb);
+	}
 
 	ret=1;
 end:
@@ -352,33 +410,18 @@ end:
 	return ret;
 }
 
-static int do_restore_manifest(const char *client, const char *datadir,
+static int restore_stream(const char *client, const char *datadir,
+	struct slist *slist,
 	struct bu *arr, int a, int i, const char *manifest, regex_t *regex,
-	int srestore, struct config *conf, enum action act, char status,
-	struct dpth *dpth)
+	int srestore, struct config *conf, enum action act, char status)
 {
-	//int s=0;
-	//size_t len=0;
-	// For out-of-sequence directory restoring so that the
-	// timestamps come out right:
-	// FIX THIS!
-//	int scount=0;
-	struct slist *slist=NULL;
+	int ars;
 	int ret=-1;
+	int need_data=0;
 	struct sbuf *sb=NULL;
 	struct blk *blk=NULL;
-	int ars=0;
-	int need_data=0;
+	struct dpth *dpth=NULL;
 	struct manio *manio=NULL;
-
-	if((ars=maybe_copy_data_files_across(manifest, datadir,
-		srestore, regex, conf))>0)
-	{
-		// Restore has completed OK.
-		ret=0;
-		goto end;
-	}
-	else if(ars<0) goto end; // Error.
 
 	if(async_write_str(CMD_GEN, "restore_stream")
 	  || async_read_expect(CMD_GEN, "restore_stream_ok"))
@@ -388,7 +431,6 @@ static int do_restore_manifest(const char *client, const char *datadir,
 	  || manio_init_read(manio, manifest)
 	  || !(sb=sbuf_alloc())
 	  || !(blk=blk_alloc())
-	  || !(slist=slist_alloc())
 	  || !(dpth=dpth_alloc(datadir)))
 		goto end;
 
@@ -460,6 +502,49 @@ static int do_restore_manifest(const char *client, const char *datadir,
 		sbuf_free_contents(sb);
 	}
 
+	ret=0;
+end:
+	blk_free(blk);
+	sbuf_free(sb);
+	manio_free(manio);
+	dpth_free(dpth);
+	return ret;
+}
+
+static int do_restore_manifest(const char *client, const char *datadir,
+	struct bu *arr, int a, int i, const char *manifest, regex_t *regex,
+	int srestore, struct config *conf, enum action act, char status)
+{
+	//int s=0;
+	//size_t len=0;
+	// For out-of-sequence directory restoring so that the
+	// timestamps come out right:
+	// FIX THIS!
+//	int scount=0;
+	struct slist *slist=NULL;
+	int ret=-1;
+	int ars=0;
+	int need_data=0;
+
+	if(!(slist=slist_alloc()))
+		goto end;
+
+	if(!(ars=maybe_copy_data_files_across(manifest, datadir,
+		srestore, regex, conf,
+		client, slist, arr, a, i,
+		act, status)))
+	{
+		// Instead of copying all the blocks across, do it as a stream,
+		// in the style of burp-1.x.x.
+		if(restore_stream(client, datadir, slist,
+			arr, a, i, manifest, regex,
+			srestore, conf, act, status)) 
+				goto end;
+	}
+	else if(ars<0) goto end; // Error.
+
+	// Restore has nearly completed OK.
+
 	if(restore_remaining_dirs(slist, arr, a, i, act, client,
 		status, conf, &need_data))
 			goto end;
@@ -472,17 +557,13 @@ static int do_restore_manifest(const char *client, const char *datadir,
 	reset_filecounters(conf, time(NULL));
 	ret=0;
 end:
-	blk_free(blk);
-	sbuf_free(sb);
 	slist_free(slist);
-	dpth_free(dpth);
-	manio_free(manio);
 	return ret;
 }
 
 // a = length of struct bu array
 // i = position to restore from
-static int restore_manifest(struct bu *arr, int a, int i, regex_t *regex, int srestore, enum action act, const char *client, const char *basedir, char **dir_for_notify, struct dpth *dpth, struct config *conf)
+static int restore_manifest(struct bu *arr, int a, int i, regex_t *regex, int srestore, enum action act, const char *client, const char *basedir, char **dir_for_notify, struct config *conf)
 {
 	int ret=-1;
 	char *manifest=NULL;
@@ -528,7 +609,7 @@ static int restore_manifest(struct bu *arr, int a, int i, regex_t *regex, int sr
 		goto end;
 
 	if(do_restore_manifest(client, datadir, arr, a, i, manifest, regex,
-		srestore, conf, act, status, dpth)) goto end;
+		srestore, conf, act, status)) goto end;
 
 	ret=0;
 end:
@@ -553,7 +634,6 @@ int do_restore_server(const char *basedir, enum action act, const char *client, 
 	struct bu *arr=NULL;
 	unsigned long index=0;
 	regex_t *regex=NULL;
-	struct dpth *dpth=NULL;
 
 	logp("in do_restore\n");
 
@@ -569,7 +649,7 @@ int do_restore_server(const char *basedir, enum action act, const char *client, 
 	{
 		// No backup specified, do the most recent.
 		ret=restore_manifest(arr, a, a-1, regex, srestore, act,
-			client, basedir, dir_for_notify, dpth, conf);
+			client, basedir, dir_for_notify, conf);
 		found=1;
 	}
 
@@ -582,7 +662,7 @@ int do_restore_server(const char *basedir, enum action act, const char *client, 
 			//logp("got: %s\n", arr[i].path);
 			ret|=restore_manifest(arr, a, i, regex,
 				srestore, act, client, basedir,
-				dir_for_notify, dpth, conf);
+				dir_for_notify, conf);
 			break;
 		}
 	}

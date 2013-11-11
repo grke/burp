@@ -228,6 +228,12 @@ int do_list_client(struct config *conf, enum action act, int json)
 	  || async_read_expect(CMD_GEN, "ok"))
 		return -1;
 
+	if(json)
+	{
+		open_tag(0, NULL);
+		open_tag(1, "backups");
+	}
+
 	// This should probably should use the sbuf stuff.
 	while(1)
 	{
@@ -246,12 +252,6 @@ int do_list_client(struct config *conf, enum action act, int json)
 			// A backup timestamp, just print it.
 			if(json)
 			{
-				if(!started)
-				{
-					open_tag(0, NULL);
-					open_tag(1, "backups");
-					started++;
-				}
 				json_backup_begin(statbuf, conf);
 			}
 			else

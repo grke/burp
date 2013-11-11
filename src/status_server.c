@@ -710,7 +710,7 @@ static int browse_manifest(int cfd, gzFile zp, const char *browse)
 		}
 		if(!r) continue;
 
-		ls_output(ls, sb.path, &(sb.statp));
+		ls_to_buf(ls, sb.path, &(sb.statp));
 
 		if(send_data_to_client(cfd, ls, strlen(ls))
 		  || send_data_to_client(cfd, "\n", 1))

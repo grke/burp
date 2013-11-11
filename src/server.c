@@ -2370,7 +2370,8 @@ int server(struct config *conf, const char *configfile, int generate_ca_only)
 			if(reload(conf, configfile,
 				0 /* not first time */,
 				conf->max_children,
-				conf->max_status_children))
+				conf->max_status_children,
+				0 /* not json output */))
 					ret=1;
 		}
 		hupreload=0;

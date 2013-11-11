@@ -53,12 +53,13 @@ static char *encode_time(utime_t utime, char *buf)
 	return buf+n;
 }
 
-void ls_output(char *buf, const char *fname, struct stat *statp)
+void ls_to_buf(char *buf, const char *fname, struct stat *statp)
 {
-	char *p;
-	const char *f;
 	int n;
+	char *p;
 	time_t time;
+	const char *f;
+	*buf='\0';
 
 	p=encode_mode(statp->st_mode, buf);
 	n=sprintf(p, " %2d ", (uint32_t)statp->st_nlink);
@@ -78,7 +79,16 @@ void ls_output(char *buf, const char *fname, struct stat *statp)
 	*p=0;
 }
 
-static char *escape(const char *str)
+static void ls_long_output(const char *fname, const char *lname, struct stat *statp)
+{
+	static char buf[2048];
+	ls_to_buf(buf, fname, statp);
+	printf("%s", buf);
+	if(lname) printf(" -> %s", lname);
+	printf("\n");
+}
+
+static char *json_escape(const char *str)
 {
 	int i;
 	int j;
@@ -151,13 +161,18 @@ static void open_tag(int level, const char *tag)
 	}
 }
 
-static void ls_output_json(char *buf, const int len, const char fcmd, const char *fname, char **p_esc_fname, const char *lname, char **p_esc_lname, struct stat *statp)
+static void ls_long_output_json(const char *fname, const char *lname, struct stat *statp)
 {
-	if(p_esc_fname) *p_esc_fname=escape(fname);
-	if(p_esc_lname) *p_esc_lname=escape(lname);
-	snprintf(buf, len,
-		"     \"name\": \"%%s\",\n"
-		"     \"link\": \"%%s\",\n"
+	static char buf[2048];
+	char *esc_fname=NULL;
+	char *esc_lname=NULL;
+	*buf='\0';
+
+	if(fname) esc_fname=json_escape(fname);
+	if(lname) esc_lname=json_escape(lname);
+	open_tag(4, NULL);
+	printf( "     \"name\": \"%s\",\n"
+		"     \"link\": \"%s\",\n"
 		"     \"st_dev\": %lu,\n"
 		"     \"st_ino\": %lu,\n"
 		"     \"st_mode\": %u,\n"
@@ -169,6 +184,8 @@ static void ls_output_json(char *buf, const int len, const char fcmd, const char
 		"     \"st_atime\": %ld,\n"
 		"     \"st_mtime\": %ld,\n"
 		"     \"st_ctime\": %ld",
+		esc_fname?esc_fname:"",
+		esc_lname?esc_lname:"",
 		(long unsigned int)statp->st_dev,
 		(long unsigned int)statp->st_ino,
 		(unsigned int)statp->st_mode,
@@ -180,9 +197,11 @@ static void ls_output_json(char *buf, const int len, const char fcmd, const char
 		(long int)statp->st_atime,
 		(long int)statp->st_mtime,
 		(long int)statp->st_ctime);
+	if(esc_fname) free(esc_fname);
+	if(esc_lname) free(esc_lname);
 }
 
-static void json_backup_begin(char *statbuf, struct config *conf)
+static void json_backup(char *statbuf, struct config *conf)
 {
 	char *cp=NULL;
 	if((cp=strstr(statbuf, " (deletable)")))
@@ -206,6 +225,35 @@ static void json_backup_begin(char *statbuf, struct config *conf)
 	}
 }
 
+static void ls_short_output(const char *fname)
+{
+	printf("%s\n", fname);
+}
+
+static void ls_short_output_json(const char *fname)
+{
+	open_tag(4, NULL);
+	printf("     \"%s\"", fname);
+}
+
+static int list_item(int json, enum action act, const char *fname, const char *lname, struct stat *statp)
+{
+	if(act==ACTION_LONG_LIST)
+	{
+		if(json)
+			ls_long_output_json(fname, lname, statp);
+		else
+			ls_long_output(fname, lname, statp);
+	}
+	else
+	{
+		if(json)
+			ls_short_output_json(fname);
+		else
+			ls_short_output(fname);
+	}
+}
+
 int do_list_client(struct config *conf, enum action act, int json)
 {
 	int ret=0;
@@ -214,7 +262,6 @@ int do_list_client(struct config *conf, enum action act, int json)
 	char scmd=0;
 	struct stat statp;
 	char *statbuf=NULL;
-	char ls[2048]="";
 	char *dpth=NULL;
 	int started=0;
 //logp("in do_list\n");
@@ -252,7 +299,7 @@ int do_list_client(struct config *conf, enum action act, int json)
 			// A backup timestamp, just print it.
 			if(json)
 			{
-				json_backup_begin(statbuf, conf);
+				json_backup(statbuf, conf);
 			}
 			else
 			{
@@ -292,35 +339,7 @@ int do_list_client(struct config *conf, enum action act, int json)
 			|| fcmd==CMD_EFS_FILE
 			|| fcmd==CMD_SPECIAL)
 		{
-			*ls='\0';
-			if(act==ACTION_LONG_LIST)
-			{
-				if(json)
-				{
-					char *esc_fname = NULL;
-					open_tag(4, NULL);
-					ls_output_json(ls, sizeof(ls), fcmd,
-					  fname, &esc_fname, NULL,
-					  NULL, &statp);
-					printf(ls, esc_fname?esc_fname:"", "");
-					if(esc_fname) free(esc_fname);
-				}
-				else
-				{
-					ls_output(ls, fname, &statp);
-					printf("%s\n", ls);
-				}
-			}
-			else
-			{
-				if(json)
-				{
-					open_tag(4, NULL);
-					printf("     \"%s\"", fname);
-				}
-				else
-					printf("%s\n", fname);
-			}
+			list_item(json, act, fname, NULL, &statp);
 		}
 		else if(cmd_is_link(fcmd)) // symlink or hardlink
 		{
@@ -330,45 +349,12 @@ int do_list_client(struct config *conf, enum action act, int json)
 			if(async_read(&lcmd, &lname, &llen)
 			  || lcmd!=fcmd)
 			{
-			  logp("could not get second part of link %c:%s\n",
-				fcmd, fname);
-			  ret=-1;
+				logp("could not get link %c:%s\n", fcmd, fname);
+				ret=-1;
 			}
 			else
 			{
-				if(act==ACTION_LONG_LIST)
-				{
-					*ls='\0';
-					if(json)
-					{
-						char *esc_fname=NULL;
-						char *esc_lname=NULL;
-						open_tag(4, NULL);
-						ls_output_json(ls, sizeof(ls),
-						  fcmd, fname, &esc_fname,
-						  lname, &esc_lname, &statp);
-						printf(ls, esc_fname?
-						  esc_fname:"",
-						  esc_lname? esc_lname:"");
-						if(esc_fname) free(esc_fname);
-						if(esc_lname) free(esc_lname);
-					}
-					else
-					{
-						ls_output(ls, fname, &statp);
-						printf("%s -> %s\n", ls, lname);
-					}
-				}
-				else
-				{
-					if(json)
-					{
-						open_tag(4, NULL);
-						printf("     \"%s\"", fname);
-					}
-					else
-						printf("%s\n", fname);
-				}
+				list_item(json, act, fname, lname, &statp);
 			}
 			if(lname) free(lname);
 		}

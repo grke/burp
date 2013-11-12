@@ -1726,9 +1726,10 @@ int server(struct config *conf, const char *configfile, int generate_ca_only)
 			oldstatusport=conf->status_port?
 				strdup(conf->status_port):NULL;
 			if(reload(conf, configfile,
-				0 /* not first time */,
+				0, // Not first time.
 				conf->max_children,
-				conf->max_status_children))
+				conf->max_status_children,
+				0)) // Not JSON output.
 					ret=1;
 		}
 		hupreload=0;

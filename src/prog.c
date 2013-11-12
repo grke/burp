@@ -91,7 +91,7 @@ static void usage_client(void)
 #endif
 }
 
-int reload(struct config *conf, const char *configfile, bool firsttime, int oldmax_children, int oldmax_status_children)
+int reload(struct config *conf, const char *configfile, bool firsttime, int oldmax_children, int oldmax_status_children, int json)
 {
 	if(!firsttime) logp("Reloading config\n");
 
@@ -101,6 +101,9 @@ int reload(struct config *conf, const char *configfile, bool firsttime, int oldm
 
 	/* change umask */
 	umask(conf->umask);
+
+        // Try to make JSON output clean.
+        if(json) conf->log_to_stdout=0;
 
 	// This will turn on syslogging which could not be turned on before
 	// load_config.
@@ -276,7 +279,8 @@ int main (int argc, char *argv[])
 	if(reload(&conf, configfile,
 	  1 /* first time */,
 	  0 /* no oldmax_children setting */,
-	  0 /* no oldmax_status_children setting */)) return 1;
+	  0 /* no oldmax_status_children setting */,
+	  json)) return 1;
 
 	if((act==ACTION_RESTORE || act==ACTION_VERIFY) && !backup)
 	{

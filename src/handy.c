@@ -995,7 +995,7 @@ int receive_a_file(const char *path, struct config *conf)
 	//set_win32_backup(&bfd);
 	if(bopen(&bfd, path,
 		O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,
-		S_IRUSR | S_IWUSR)<=0)
+		S_IRUSR | S_IWUSR))
 	{
 		berrno be;
 		logp("Could not open for writing %s: %s\n",

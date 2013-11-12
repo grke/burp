@@ -17,8 +17,8 @@ int main(int argc, char *argv[])
 {
 	InitWinAPIWrapper();
 
-	// Start up Volume Shadow Copy (only on FD)
-	VSSInit();
+	// Start up Volume Shadow Copy.
+	if(VSSInit()) _exit(1);
 
 	// Startup networking
 	WSA_Init();

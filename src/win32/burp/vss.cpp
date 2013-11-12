@@ -19,12 +19,12 @@ static const GUID VSS_SWPRV_ProviderID = {
 };
 
 
-void VSSCleanup()
+void VSSCleanup(void)
 {
 	if(g_pVSSClient) delete (g_pVSSClient);
 }
 
-void VSSInit()
+int VSSInit(void)
 {
 	// Decide which vss class to initialize.
 	if(g_MajorVersion==5)
@@ -34,21 +34,25 @@ void VSSInit()
 			case 1: 
 				g_pVSSClient=new VSSClientXP();
 				atexit(VSSCleanup);
-				return;
+				return 0;
 			case 2: 
 				g_pVSSClient=new VSSClient2003();
 				atexit(VSSCleanup);
-				return;
+				return 0;
 		}
 		// Vista or Longhorn or later.
 		//       } else if(g_MajorVersion==6 && g_MinorVersion==0) {
 	}
-	else if(g_MajorVersion> 6)
+	else if(g_MajorVersion>=6)
 	{
 		g_pVSSClient=new VSSClientVista();
 		atexit(VSSCleanup);
-		return;
+		return 0;
 	}
+
+	fprintf(stderr, "Unknown VSS version: %d.%d\n",
+		(int)g_MajorVersion, (int)g_MinorVersion);
+	return -1;
 }
 
 BOOL VSSPathConvert(const char *szFilePath,
@@ -63,7 +67,7 @@ BOOL VSSPathConvertW(const wchar_t *szFilePath,
 	return g_pVSSClient->GetShadowPathW(szFilePath, szShadowPath, nBuflen);
 }
 
-VSSClient::VSSClient()
+VSSClient::VSSClient(void)
 {
 	m_bCoInitializeCalled=false;
 	m_bCoInitializeSecurityCalled=false;
@@ -78,7 +82,7 @@ VSSClient::VSSClient()
 	memset(m_szShadowCopyName, 0, sizeof(m_szShadowCopyName));
 }
 
-VSSClient::~VSSClient()
+VSSClient::~VSSClient(void)
 {
 	// Release the IVssBackupComponents interface 
 	// WARNING: this must be done BEFORE calling CoUninitialize()
@@ -96,7 +100,7 @@ VSSClient::~VSSClient()
 	if(m_bCoInitializeCalled) CoUninitialize();
 }
 
-BOOL VSSClient::InitializeForBackup()
+BOOL VSSClient::InitializeForBackup(void)
 {
 	//return Initialize (VSS_CTX_BACKUP);
 	return Initialize(0);
@@ -178,9 +182,9 @@ BOOL VSSClient::GetShadowPathW(const wchar_t *szFilePath,
 }
 
 
-const size_t VSSClient::GetWriterCount()
+const size_t VSSClient::GetWriterCount(void)
 {
-	alist* pV=(alist*)m_pAlistWriterInfoText;
+	alist *pV=(alist *)m_pAlistWriterInfoText;
 	return pV->size();
 }
 
@@ -190,29 +194,27 @@ const char* VSSClient::GetWriterInfo(int nIndex)
 	return (char*)pV->get(nIndex);
 }
 
-
 const int VSSClient::GetWriterState(int nIndex)
 {
-	alist* pV=(alist*)m_pAlistWriterState;   
+	alist *pV=(alist *)m_pAlistWriterState;   
 	return (intptr_t)pV->get(nIndex);
 }
 
-void VSSClient::AppendWriterInfo(int nState, const char* pszInfo)
+void VSSClient::AppendWriterInfo(int nState, const char *pszInfo)
 {
-	alist* pT=(alist*) m_pAlistWriterInfoText;
-	alist* pS=(alist*) m_pAlistWriterState;
+	alist *pT=(alist *)m_pAlistWriterInfoText;
+	alist *pS=(alist *)m_pAlistWriterState;
 
 	pT->push(strdup(pszInfo));
 	pS->push((void*)nState);   
 }
 
-void VSSClient::DestroyWriterInfo()
+void VSSClient::DestroyWriterInfo(void)
 {
-	alist* pT=(alist*)m_pAlistWriterInfoText;
-	alist* pS=(alist*)m_pAlistWriterState;
+	alist *pT=(alist *)m_pAlistWriterInfoText;
+	alist *pS=(alist *)m_pAlistWriterState;
 
 	while(!pT->empty()) free(pT->pop());
-
 	while(!pS->empty()) pS->pop();      
 }
 

@@ -2,4 +2,4 @@
 #define LC_APP_NAME "burp"
 #define APP_DESC "Burp Service"
 
-extern void VSSInit();
+extern int VSSInit(void);

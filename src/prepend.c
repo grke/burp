@@ -49,3 +49,8 @@ char *prepend_s(const char *prep, const char *fname, size_t len)
 	}
 	return prepend(prep, fname, len, "/");
 }
+
+char *prepend_str(const char *prep, const char *fname)
+{
+	return prepend_s(prep, fname, strlen(fname));
+}

@@ -254,13 +254,13 @@ end:
 }
 */
 
-static int get_lock_w(const char *lockbasedir, const char *lockfile, char **gotlock)
+static int get_lock_w(struct sdirs *sdirs, char **gotlock)
 {
 	int ret=0;
 	char *copy=NULL;
 	// Make sure the lock directory exists.
-	if(!(copy=strdup(lockfile))
-	  || mkpath(&copy, lockbasedir))
+	if(!(copy=strdup(sdirs->lockfile))
+	  || mkpath(&copy, sdirs->lockbase))
 	{
 		async_write_str(CMD_ERROR, "problem with lock directory");
 		if(copy) free(copy);
@@ -268,17 +268,17 @@ static int get_lock_w(const char *lockbasedir, const char *lockfile, char **gotl
 	}
 	free(copy);
 
-	if(get_lock(lockfile))
+	if(get_lock(sdirs->lockfile))
 	{
 		logp("another instance of client is already running,\n");
-		logp("or %s is not writable.\n", lockfile);
+		logp("or %s is not writable.\n", sdirs->lockfile);
 		async_write_str(CMD_ERROR, "another instance is already running");
 		ret=-1;
 	}
 	else
 	{
 		if(*gotlock) free(*gotlock);
-		if(!(*gotlock=strdup(lockfile)))
+		if(!(*gotlock=strdup(sdirs->lockfile)))
 		{
 			log_out_of_memory(__FUNCTION__);
 			ret=-1;
@@ -331,13 +331,13 @@ static int client_can_restore(struct config *cconf, const char *client)
 	return cconf->client_can_restore;
 }
 
-static void maybe_do_notification(int status, const char *client, const char *basedir, const char *storagedir, const char *filename, const char *brv, struct config *cconf)
+static void maybe_do_notification(int status, const char *client, const char *clientdir, const char *storagedir, const char *filename, const char *brv, struct config *cconf)
 {
 	int a=0;
 	const char *args[12];
 	args[a++]=NULL; // Fill in the script name later.
 	args[a++]=client;
-	args[a++]=basedir;
+	args[a++]=clientdir;
 	args[a++]=storagedir;
 	args[a++]=filename;
 	args[a++]=brv;
@@ -371,41 +371,23 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 {
 	int ret=0;
 	char msg[256]="";
-	char *basedir=NULL;
-	// Do not allow a single client to connect more than once
-	char *lockbasedir=NULL;
-	char *lockfile=NULL;
-	// The previous backup
-	char *current=NULL;
-	// The one we are working on
-	char *working=NULL;
-	// The full path to the latest backup data
-	char *currentdata=NULL;
-	// where the data goes initially
-	char *datadirtmp=NULL;
-	// A symlink that indicates that the
-	// data from the client is complete and just some work on the server 
-	// is needed to finish. The 'working' symlink gets renamed to this
-	// at the appropriate moment.
-	char *finishing=NULL;
-	char *client_lockdir=NULL;
+	struct sdirs *sdirs=NULL;
 
-	if(!(client_lockdir=conf->client_lockdir))
-		client_lockdir=cconf->directory;
+	if(!(sdirs=sdirs_alloc())
+	  || sdirs_init(sdirs, cconf, client))
+		return -1;
 
-	if(!(basedir=prepend_s(cconf->directory, client, strlen(client)))
-	  || !(working=prepend_s(basedir, "working", strlen("working")))
-	  || !(finishing=prepend_s(basedir, "finishing", strlen("finishing")))
-	  || !(current=prepend_s(basedir, "current", strlen("current")))
-	  || !(currentdata=prepend_s(current, "data", strlen("data")))
-	  || !(datadirtmp=prepend_s(working, "data.tmp", strlen("data.tmp")))
-	  || !(lockbasedir=prepend_s(client_lockdir, client, strlen(client)))
-	  || !(lockfile=prepend_s(lockbasedir, "lockfile", strlen("lockfile"))))
+	// Make sure some directories exist.
+	if(mkpath(&sdirs->current, sdirs->dedup))
 	{
-		log_and_send_oom(__FUNCTION__);
+		snprintf(msg, sizeof(msg),
+			"could not mkpath %s", sdirs->current);
+		log_and_send(msg);
 		ret=-1;
+		goto end;
 	}
-	else if(cmd==CMD_GEN
+	
+	if(cmd==CMD_GEN
 	  && !strncmp(buf, "backup", strlen("backup")))
 	{
 		if(cconf->restore_client)
@@ -419,28 +401,19 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 
 		// Set quality of service bits on backups.
 		set_bulk_packets();
-		if(get_lock_w(lockbasedir, lockfile, gotlock))
+		if(get_lock_w(sdirs, gotlock))
 			ret=-1;
 		else
 		{
 			char okstr[32]="";
-			// create basedir, without the /current part
-			if(mkpath(&current, cconf->directory))
-			{
-				snprintf(msg, sizeof(msg),
-					"could not mkpath %s", current);
-				log_and_send(msg);
-				ret=-1;
-				goto end;
-			}
 			if(!strcmp(buf, "backup_timed"))
 			{
 				int a=0;
 				const char *args[12];
 				args[a++]=cconf->timer_script;
 				args[a++]=client;
-				args[a++]=current;
-				args[a++]=cconf->directory;
+				args[a++]=sdirs->current;
+				args[a++]=sdirs->client;
 				args[a++]="reserved1";
 				args[a++]="reserved2";
 				args[a++]=NULL;
@@ -483,11 +456,11 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			snprintf(okstr, sizeof(okstr), "ok:%d",
 				cconf->compression);
 			async_write_str(CMD_GEN, okstr);
-			ret=do_backup_server(basedir, current, working,
-				currentdata, finishing, cconf,
+			ret=do_backup_server(sdirs, cconf,
 				client, cversion, incexc);
 			maybe_do_notification(ret, client,
-				basedir, current, "log", "backup", cconf);
+				sdirs->client, sdirs->current,
+				"log", "backup", cconf);
 		}
 	}
 	else if(cmd==CMD_GEN
@@ -511,7 +484,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 		reset_conf_val(backupnostr, &(cconf->backup));
 		if((cp=strchr(cconf->backup, ':'))) *cp='\0';
 
-		if(get_lock_w(lockbasedir, lockfile, gotlock))
+		if(get_lock_w(sdirs, gotlock))
 			ret=-1;
 		else
 		{
@@ -550,12 +523,12 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			}
 			reset_conf_val(restoreregex, &(cconf->regex));
 			async_write_str(CMD_GEN, "ok");
-			ret=do_restore_server(basedir, act, client, srestore,
-				&dir_for_notify, cconf);
+			ret=do_restore_server(sdirs, act, client,
+				srestore, &dir_for_notify, cconf);
 			if(dir_for_notify)
 			{
 				maybe_do_notification(ret, client,
-					basedir, dir_for_notify,
+					sdirs->client, dir_for_notify,
 					act==ACTION_RESTORE?
 						"restorelog":"verifylog",
 					act==ACTION_RESTORE?
@@ -567,7 +540,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 	}
 	else if(cmd==CMD_GEN && !strncmp(buf, "delete ", strlen("delete ")))
 	{
-		if(get_lock_w(lockbasedir, lockfile, gotlock))
+		if(get_lock_w(sdirs, gotlock))
 			ret=-1;
 		else
 		{
@@ -580,14 +553,15 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 				goto end;
 			}
 			backupno=buf+strlen("delete ");
-			ret=do_delete_server(basedir, backupno, client, cconf);
+			ret=do_delete_server(sdirs->client,
+				backupno, client, cconf);
 		}
 	}
 	else if(cmd==CMD_GEN
 	  && (!strncmp(buf, "list ", strlen("list "))
 	      || !strncmp(buf, "listb ", strlen("listb "))))
 	{
-		if(get_lock_w(lockbasedir, lockfile, gotlock))
+		if(get_lock_w(sdirs, gotlock))
 			ret=-1;
 		else
 		{
@@ -627,7 +601,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 				backupno=buf+strlen("listb ");
 			}
 			async_write_str(CMD_GEN, "ok");
-			ret=do_list_server(basedir, backupno,
+			ret=do_list_server(sdirs->client, backupno,
 				listregex, browsedir, client, cconf);
 		}
 	}
@@ -639,14 +613,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 	}
 
 end:
-	if(basedir) free(basedir);
-	if(current) free(current);
-	if(finishing) free(finishing);
-	if(working) free(working);
-	if(currentdata) free(currentdata);
-	if(datadirtmp) free(datadirtmp);
-	if(lockbasedir) free(lockbasedir);
-	if(lockfile) free(lockfile);
+	sdirs_free(sdirs);
 	return ret;
 }
 

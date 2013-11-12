@@ -784,7 +784,7 @@ static void dump_slist(struct slist *slist, const char *msg)
 }
 */
 
-static int backup_server(const char *cmanifest_dir, const char *changed_dir, const char *unchanged_dir, const char *client, const char *data_dir, const char *manifest_dir, struct config *conf)
+static int backup_server(struct sdirs *sdirs, const char *client, const char *manifest_dir, struct config *conf)
 {
 	int ret=-1;
 	int scan_end=0;
@@ -805,20 +805,20 @@ static int backup_server(const char *cmanifest_dir, const char *changed_dir, con
 	uint64_t wrap_up=0;
 
 	logp("Begin backup\n");
-	printf("DATADIR: %s\n", data_dir);
+	printf("DATADIR: %s\n", sdirs->data);
 
-	if(champ_chooser_init(data_dir, conf)
+	if(champ_chooser_init(sdirs->data, conf)
 	  || !(cmanio=manio_alloc())
 	  || !(chmanio=manio_alloc())
 	  || !(unmanio=manio_alloc())
-	  || manio_init_read(cmanio, cmanifest_dir)
-	  || manio_init_write(chmanio, changed_dir)
-	  || manio_init_write(unmanio, unchanged_dir)
+	  || manio_init_read(cmanio, sdirs->cmanifest)
+	  || manio_init_write(chmanio, sdirs->changed)
+	  || manio_init_write(unmanio, sdirs->unchanged)
 	  || !(slist=slist_alloc())
 	  || !(blist=blist_alloc())
 	  || !(wbuf=iobuf_alloc())
 	  || !(rbuf=iobuf_alloc())
-	  || !(dpth=dpth_alloc(data_dir))
+	  || !(dpth=dpth_alloc(sdirs->data))
 	  || dpth_init(dpth))
 		goto end;
 
@@ -852,7 +852,7 @@ static int backup_server(const char *cmanifest_dir, const char *changed_dir, con
 
 		if(rbuf->buf && deal_with_read(rbuf, slist, blist, conf,
 			&scan_end, &sigs_end, &backup_end,
-			cmanio, unmanio, dpth, &wrap_up, data_dir))
+			cmanio, unmanio, dpth, &wrap_up, sdirs->data))
 				goto end;
 
 		if(write_to_changed_file(chmanio,
@@ -872,7 +872,7 @@ static int backup_server(const char *cmanifest_dir, const char *changed_dir, con
 	  || manio_set_mode_read(unmanio))
 		goto end;
 
-	if(phase3(chmanio, unmanio, manifest_dir, data_dir, conf))
+	if(phase3(chmanio, unmanio, manifest_dir, sdirs->data, conf))
 		goto end;
 
 	ret=0;
@@ -892,20 +892,20 @@ end:
 }
 
 // Clean mess left over from a previously interrupted backup.
-static int clean_rubble(const char *basedir, const char *working)
+static int clean_rubble(struct sdirs *sdirs)
 {
 	int len=0;
 	char *real=NULL;
 	char lnk[32]="";
-	if((len=readlink(working, lnk, sizeof(lnk)-1))<0)
+	if((len=readlink(sdirs->working, lnk, sizeof(lnk)-1))<0)
 		return 0;
 	else if(!len)
 	{
-		unlink(working);
+		unlink(sdirs->working);
 		return 0;
 	}
 	lnk[len]='\0';
-	if(!(real=prepend_s(basedir, lnk, strlen(lnk))))
+	if(!(real=prepend_s(sdirs->client, lnk, strlen(lnk))))
 	{
 		log_and_send_oom(__FUNCTION__);
 		return -1;
@@ -917,56 +917,39 @@ static int clean_rubble(const char *basedir, const char *working)
 		log_and_send(msg);
 		return -1;
 	}
-	unlink(working);
+	unlink(sdirs->working);
 	return 0;
 }
 
-int do_backup_server(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *client, const char *cversion, const char *incexc)
+int do_backup_server(struct sdirs *sdirs, struct config *cconf, const char *client, const char *cversion, const char *incexc)
 {
 	int ret=0;
 	char msg[256]="";
-	// The timestamp file of this backup
-	char *timestamp=NULL;
-	// path to the last manifest directory
-	char *cmanifest_dir=NULL;
 	// Real path to the working directory
 	char *realworking=NULL;
 	// Real path to the manifest directory
 	char *manifest_dir=NULL;
 	char tstmp[64]="";
-	char *data_dir=NULL;
-	char *changed_dir=NULL;
-	char *unchanged_dir=NULL;
 
 	logp("in do_backup_server\n");
 
-	if(!(timestamp=prepend_s(working, "timestamp", strlen("timestamp")))
-	  || !(cmanifest_dir=prepend_s(current, "manifest", strlen("manifest")))
-	  || !(data_dir=prepend_s(basedir, "data", strlen("data")))
-	  || !(changed_dir=prepend_s(working, "changed", strlen("changed")))
-	  || !(unchanged_dir=prepend_s(working, "unchanged", strlen("unchanged"))))
-	{
-		log_and_send_oom(__FUNCTION__);
+	if(get_new_timestamp(cconf, sdirs->client, tstmp, sizeof(tstmp)))
 		goto error;
-	}
-
-	if(get_new_timestamp(cconf, basedir, tstmp, sizeof(tstmp)))
-		goto error;
-	if(!(realworking=prepend_s(basedir, tstmp, strlen(tstmp)))
+	if(!(realworking=prepend_s(sdirs->client, tstmp, strlen(tstmp)))
 	 || !(manifest_dir=prepend_s(realworking, "manifest", strlen("manifest"))))
 	{
 		log_and_send_oom(__FUNCTION__);
 		goto error;
 	}
 
-	if(clean_rubble(basedir, working)) goto error;
+	if(clean_rubble(sdirs)) goto error;
 
 	// Add the working symlink before creating the directory.
 	// This is because bedup checks the working symlink before
 	// going into a directory. If the directory got created first,
 	// bedup might go into it in the moment before the symlink
 	// gets added.
-	if(symlink(tstmp, working)) // relative link to the real work dir
+	if(symlink(tstmp, sdirs->working)) // relative link to the real work dir
 	{
 		snprintf(msg, sizeof(msg),
 		  "could not point working symlink to: %s",
@@ -977,19 +960,19 @@ int do_backup_server(const char *basedir, const char *current, const char *worki
 	else if(mkdir(realworking, 0777))
 	{
 		snprintf(msg, sizeof(msg),
-		  "could not mkdir for next backup: %s", working);
+		  "could not mkdir for next backup: %s", sdirs->working);
 		log_and_send(msg);
-		unlink(working);
+		unlink(sdirs->working);
 		goto error;
 	}
 	else if(open_log(realworking, client, cversion, cconf))
 	{
 		goto error;
 	}
-	else if(write_timestamp(timestamp, tstmp))
+	else if(write_timestamp(sdirs->timestamp, tstmp))
 	{
 		snprintf(msg, sizeof(msg),
-		  "unable to write timestamp %s", timestamp);
+		  "unable to write timestamp %s", sdirs->timestamp);
 		log_and_send(msg);
 		goto error;
 	}
@@ -1000,8 +983,7 @@ int do_backup_server(const char *basedir, const char *current, const char *worki
 		goto error;
 	}
 
-	if(backup_server(cmanifest_dir, changed_dir, unchanged_dir,
-		client, data_dir, manifest_dir, cconf))
+	if(backup_server(sdirs, client, manifest_dir, cconf))
 	{
 		logp("error in backup\n");
 		goto error;
@@ -1015,18 +997,14 @@ int do_backup_server(const char *basedir, const char *current, const char *worki
 	async_free();
 
 	// Move the symlink to indicate that we are now finished.
-	if(do_rename(working, current)) goto error;
+	if(do_rename(sdirs->working, sdirs->current)) goto error;
 
 	goto end;
 error:
 	ret=-1;
 end:
-	if(timestamp) free(timestamp);
-	if(cmanifest_dir) free(cmanifest_dir);
-	if(data_dir) free(data_dir);
-	if(changed_dir) free(changed_dir);
-	if(unchanged_dir) free(unchanged_dir);
-	if(manifest_dir) free(manifest_dir);
 	set_logfp(NULL, cconf); // does an fclose on logfp.
+	if(manifest_dir) free(manifest_dir);
+	if(realworking) free(realworking);
 	return ret;
 }

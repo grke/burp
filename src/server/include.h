@@ -17,6 +17,7 @@
 #include "manio.h"
 #include "phase3.h"
 #include "restore.h"
+#include "sdirs.h"
 #include "status_client.h"
 #include "status_server.h"
 

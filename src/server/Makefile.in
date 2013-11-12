@@ -34,6 +34,7 @@ SRCS = \
 	manio.c		\
 	phase3.c	\
 	restore.c	\
+	sdirs.c		\
 	status_client_ncurses.c	\
 	status_server.c	\
 

@@ -245,6 +245,7 @@ int waitpid(int, int *, int);
 
 struct timespec;
 int readdir(unsigned int fd, struct dirent *dirp, unsigned int count);
+int readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result);
 long int random(void);
 void srandom(unsigned int seed);
 int lstat(const char *, struct stat *);

@@ -563,11 +563,10 @@ end:
 
 // a = length of struct bu array
 // i = position to restore from
-static int restore_manifest(struct bu *arr, int a, int i, regex_t *regex, int srestore, enum action act, const char *client, const char *basedir, char **dir_for_notify, struct config *conf)
+static int restore_manifest(struct bu *arr, int a, int i, regex_t *regex, int srestore, enum action act, const char *client, struct sdirs *sdirs, char **dir_for_notify, struct config *conf)
 {
 	int ret=-1;
 	char *manifest=NULL;
-	char *datadir=NULL;
 //	FILE *logfp=NULL;
 	char *logpath=NULL;
 	char *logpathz=NULL;
@@ -582,8 +581,7 @@ static int restore_manifest(struct bu *arr, int a, int i, regex_t *regex, int sr
 	 || (act==ACTION_RESTORE && !(logpathz=prepend_s(arr[i].path, "restorelog.gz", strlen("restorelog.gz"))))
 	 || (act==ACTION_VERIFY && !(logpath=prepend_s(arr[i].path, "verifylog", strlen("verifylog"))))
 	 || (act==ACTION_VERIFY && !(logpathz=prepend_s(arr[i].path, "verifylog.gz", strlen("verifylog.gz"))))
-	 || !(manifest=prepend_s(arr[i].path, "manifest", strlen("manifest")))
-	 || !(datadir=prepend_s(basedir, "data", strlen("data"))))
+	 || !(manifest=prepend_s(arr[i].path, "manifest", strlen("manifest"))))
 	{
 		log_and_send_oom(__FUNCTION__);
 		goto end;
@@ -608,7 +606,7 @@ static int restore_manifest(struct bu *arr, int a, int i, regex_t *regex, int sr
 	  && send_counters(client, conf))
 		goto end;
 
-	if(do_restore_manifest(client, datadir, arr, a, i, manifest, regex,
+	if(do_restore_manifest(client, sdirs->data, arr, a, i, manifest, regex,
 		srestore, conf, act, status)) goto end;
 
 	ret=0;
@@ -619,13 +617,12 @@ end:
 		compress_file(logpath, logpathz, conf);
 	}
 	if(manifest) free(manifest);
-	if(datadir) free(datadir);
 	if(logpath) free(logpath);
 	if(logpathz) free(logpathz);
 	return ret;
 }
 
-int do_restore_server(const char *basedir, enum action act, const char *client, int srestore, char **dir_for_notify, struct config *conf)
+int do_restore_server(struct sdirs *sdirs, enum action act, const char *client, int srestore, char **dir_for_notify, struct config *conf)
 {
 	int a=0;
 	int i=0;
@@ -639,7 +636,7 @@ int do_restore_server(const char *basedir, enum action act, const char *client, 
 
 	if(compile_regex(&regex, conf->regex)) return -1;
 
-	if(get_current_backups(basedir, &arr, &a, 1))
+	if(get_current_backups(sdirs->client, &arr, &a, 1))
 	{
 		if(regex) { regfree(regex); free(regex); }
 		return -1;
@@ -649,7 +646,7 @@ int do_restore_server(const char *basedir, enum action act, const char *client, 
 	{
 		// No backup specified, do the most recent.
 		ret=restore_manifest(arr, a, a-1, regex, srestore, act,
-			client, basedir, dir_for_notify, conf);
+			client, sdirs, dir_for_notify, conf);
 		found=1;
 	}
 
@@ -661,7 +658,7 @@ int do_restore_server(const char *basedir, enum action act, const char *client, 
 			found=1;
 			//logp("got: %s\n", arr[i].path);
 			ret|=restore_manifest(arr, a, i, regex,
-				srestore, act, client, basedir,
+				srestore, act, client, sdirs,
 				dir_for_notify, conf);
 			break;
 		}

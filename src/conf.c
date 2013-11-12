@@ -1026,6 +1026,8 @@ static int server_conf_checks(struct config *conf, const char *path, int *r)
 {
 	if(!conf->directory)
 		conf_problem(path, "directory unset", r);
+	if(!conf->dedup_group)
+		conf_problem(path, "dedup_group unset", r);
 	if(!conf->timestamp_format
 	  && !(conf->timestamp_format=strdup("%Y-%m-%d %H:%M:%S")))
 		conf_problem(path, "timestamp_format unset", r);

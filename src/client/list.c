@@ -4,158 +4,245 @@
    These are for printing to the screen only. */
 static char *encode_mode(mode_t mode, char *buf)
 {
-	char *cp = buf;
-
-	*cp++ = S_ISDIR(mode) ? 'd' :
-		S_ISBLK(mode) ? 'b' :
-		S_ISCHR(mode) ? 'c' :
-		S_ISLNK(mode) ? 'l' :
-		S_ISFIFO(mode) ? 'p' :
-		S_ISSOCK(mode) ? 's' : '-';
-	*cp++ = mode & S_IRUSR ? 'r' : '-';
-	*cp++ = mode & S_IWUSR ? 'w' : '-';
-	*cp++ = (mode & S_ISUID ?
-		(mode & S_IXUSR ? 's' : 'S') : (mode & S_IXUSR ? 'x' : '-'));
-	*cp++ = mode & S_IRGRP ? 'r' : '-';
-	*cp++ = mode & S_IWGRP ? 'w' : '-';
-	*cp++ = (mode & S_ISGID ?
-		(mode & S_IXGRP ? 's' : 'S') : (mode & S_IXGRP ? 'x' : '-'));
-	*cp++ = mode & S_IROTH ? 'r' : '-';
-	*cp++ = mode & S_IWOTH ? 'w' : '-';
-	*cp++ = (mode & S_ISVTX ?
-		(mode & S_IXOTH ? 't' : 'T') : (mode & S_IXOTH ? 'x' : '-'));
-	*cp = '\0';
+	char *cp=buf;
+	*cp++=S_ISDIR(mode)?'d':S_ISBLK(mode)?'b':S_ISCHR(mode)?'c':
+	      S_ISLNK(mode)?'l':S_ISFIFO(mode)?'p':S_ISSOCK(mode)?'s':'-';
+	*cp++=mode&S_IRUSR?'r':'-';
+	*cp++=mode&S_IWUSR?'w':'-';
+	*cp++=(mode&S_ISUID?(mode&S_IXUSR?'s':'S'):(mode&S_IXUSR?'x':'-'));
+	*cp++=mode&S_IRGRP?'r':'-';
+	*cp++=mode&S_IWGRP?'w':'-';
+	*cp++=(mode&S_ISGID?(mode&S_IXGRP?'s':'S'):(mode&S_IXGRP?'x':'-'));
+	*cp++=mode&S_IROTH?'r':'-';
+	*cp++=mode&S_IWOTH?'w':'-';
+	*cp++=(mode&S_ISVTX?(mode&S_IXOTH?'t':'T'):(mode&S_IXOTH?'x':'-'));
+	*cp='\0';
 	return cp;
 }
 
 static char *encode_time(uint64_t utime, char *buf)
 {
 	const struct tm *tm;
-	int n = 0;
-	time_t time = utime;
+	int n=0;
+	time_t time=utime;
 
-#if defined(HAVE_WIN32)
-	/*
-	 * Avoid a seg fault in Microsoft's CRT localtime_r(),
+#ifdef HAVE_WIN32
+	/* Avoid a seg fault in Microsoft's CRT localtime_r(),
 	 *  which incorrectly references a NULL returned from gmtime() if
-	 *  time is negative before or after the timezone adjustment.
-	 */
+	 *  time is negative before or after the timezone adjustment. */
 	struct tm *gtm;
 
-	if(!(gtm = gmtime(&time))) return buf;
+	if(!(gtm=gmtime(&time))) return buf;
 
-	if(gtm->tm_year == 1970 && gtm->tm_mon == 1 && gtm->tm_mday < 3)
-		return buf;
+	if(gtm->tm_year==1970 && gtm->tm_mon==1 && gtm->tm_mday<3) return buf;
 #endif
 
 	if((tm=localtime(&time)))
-	{
-		n = sprintf(buf, "%04d-%02d-%02d %02d:%02d:%02d",
-			tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
+		n=sprintf(buf, "%04d-%02d-%02d %02d:%02d:%02d",
+			tm->tm_year+1900, tm->tm_mon+1, tm->tm_mday,
 			tm->tm_hour, tm->tm_min, tm->tm_sec);
-	}
 	return buf+n;
 }
 
-void ls_output(char *buf, const char *fname, struct stat *statp)
+void ls_to_buf(char *buf, const char *fname, struct stat *statp)
 {
-	char *p;
-	const char *f;
 	int n;
+	char *p;
 	time_t time;
+	const char *f;
+	*buf='\0';
 
-	p = encode_mode(statp->st_mode, buf);
-	n = sprintf(p, " %2d ", (uint32_t)statp->st_nlink);
-	p += n;
-	n = sprintf(p, "%5d %5d",
-		(uint32_t)statp->st_uid,
+	p=encode_mode(statp->st_mode, buf);
+	n=sprintf(p, " %2d ", (uint32_t)statp->st_nlink);
+	p+=n;
+	n=sprintf(p, "%5d %5d", (uint32_t)statp->st_uid,
 		(uint32_t)statp->st_gid);
-	p += n;
-	n = sprintf(p, " %7lu ", (unsigned long) statp->st_size);
-	p += n;
-	if (statp->st_ctime > statp->st_mtime)
-		time = statp->st_ctime;
-	else
-		time = statp->st_mtime;
+	p+=n;
+	n=sprintf(p, " %7lu ", (unsigned long)statp->st_size);
+	p+=n;
+	if(statp->st_ctime>statp->st_mtime) time=statp->st_ctime;
+	else time=statp->st_mtime;
 
-	/* Display most recent time */
-	p = encode_time(time, p);
-	*p++ = ' ';
-	for (f=fname; *f; )
-		*p++ = *f++;
-	*p = 0;
+	// Display most recent time.
+	p=encode_time(time, p);
+	*p++=' ';
+	for(f=fname; *f; ) *p++=*f++;
+	*p=0;
 }
 
-static char *escape(const char *str)
+static void ls_long_output(const char *fname, const char *lname, struct stat *statp)
 {
-	int i, j;
-	const char echars[] = "\\\"";
-	int n = 0;
-	char *estr = NULL;
+	static char buf[2048];
+	ls_to_buf(buf, fname, statp);
+	printf("%s", buf);
+	if(lname) printf(" -> %s", lname);
+	printf("\n");
+}
 
-	if(!str)
-		return NULL;
+static char *json_escape(const char *str)
+{
+	int i;
+	int j;
+	int n=0;
+	char *estr=NULL;
+	const char echars[]="\\\"";
 
-	n = strlen(str);
-	estr = (char *) malloc(2 * n * sizeof(char));
+	if(!str) return NULL;
+
+	n=strlen(str);
+	estr=(char *)malloc(2*n*sizeof(char));
 	if(!estr)
 	{
 		log_out_of_memory(__FUNCTION__);
 		return NULL;
 	}
-	for(i = 0, j = 0; i < n; i++, j++)
+	for(i=0, j=0; i<n; i++, j++)
 	{
-		int k = sizeof(echars);
-		for(; k && str[i] != echars[k-1]; k--);
-		if(k)
-			estr[j++] = '\\';
-		estr[j] = str[i];
+		int k=sizeof(echars);
+		for(; k && str[i]!=echars[k-1]; k--);
+		if(k) estr[j++]='\\';
+		estr[j]=str[i];
 	}
-	estr[j] = '\0';
+	estr[j]='\0';
 	return estr;
 }
 
-static void ls_output_json(char *buf, const int len, const int first_entry, const char fcmd, const char *fname, char **p_esc_fname, const char *lname, char **p_esc_lname, struct stat *statp)
+static int current_tag=-1;
+
+static void print_spaces(int count)
 {
-	if (p_esc_fname)
-		*p_esc_fname = escape(fname);
-	if (p_esc_lname)
-		*p_esc_lname = escape(lname);
-	snprintf(buf,
-		 len,
-		 "%s"
-		 "%s"
-		 "\t\t\t{\n"
-		 "\t\t\t\t\"type\": \"%c\",\n"
-		 "\t\t\t\t\"name\": \"%%s\",\n"
-		 "\t\t\t\t\"link\": \"%%s\",\n"
-		 "\t\t\t\t\"st_dev\": %lu,\n"
-		 "\t\t\t\t\"st_ino\": %lu,\n"
-		 "\t\t\t\t\"st_mode\": %u,\n"
-		 "\t\t\t\t\"st_nlink\": %lu,\n"
-		 "\t\t\t\t\"st_uid\": %u,\n"
-		 "\t\t\t\t\"st_gid\": %u,\n"
-		 "\t\t\t\t\"st_rdev\": %lu,\n"
-		 "\t\t\t\t\"st_size\": %ld,\n"
-		 "\t\t\t\t\"st_atime\": %ld,\n"
-		 "\t\t\t\t\"st_mtime\": %ld,\n"
-		 "\t\t\t\t\"st_ctime\": %ld\n"
-		 "\t\t\t}\n",
-		 first_entry? ("\t\"items\":\n"
-			       "\t\t[\n"):"",
-		 first_entry? "":"\t\t\t,\n",
-		 fcmd,
-		 (long unsigned int)statp->st_dev,
-		 (long unsigned int)statp->st_ino,
-		 (unsigned int)statp->st_mode,
-		 (long unsigned int)statp->st_nlink,
-		 (unsigned int)statp->st_uid,
-		 (unsigned int)statp->st_gid,
-		 (long unsigned int)statp->st_rdev,
-		 (long int)statp->st_size,
-		 (long int)statp->st_atime,
-		 (long int)statp->st_mtime,
-		 (long int)statp->st_ctime);
+	static int i;
+	for(i=0; i<count; i++) printf(" ");
+}
+
+static void close_tag(int level)
+{
+	for(; current_tag>=level; current_tag--)
+	{
+		printf("\n");
+		print_spaces(current_tag);
+		printf("%c", current_tag%2?']':'}');
+	}
+}
+
+static void open_tag(int level, const char *tag)
+{
+	if(current_tag>level)
+	{
+		close_tag(level);
+		printf(",\n");
+	}
+	if(current_tag==level)
+	{
+		printf("\n");
+		print_spaces(current_tag);
+		printf("},\n");
+		print_spaces(current_tag);
+		printf("{\n");
+	}
+	for(; current_tag<level; current_tag++)
+	{
+		if(tag)
+		{
+			print_spaces(current_tag+1);
+			printf("\"%s\":\n", tag);
+		}
+		print_spaces(current_tag+1);
+		printf("%c\n", current_tag%2?'{':'[');
+	}
+}
+
+static void ls_long_output_json(const char *fname, const char *lname, struct stat *statp)
+{
+	static char buf[2048];
+	char *esc_fname=NULL;
+	char *esc_lname=NULL;
+	*buf='\0';
+
+	if(fname) esc_fname=json_escape(fname);
+	if(lname) esc_lname=json_escape(lname);
+	open_tag(4, NULL);
+	printf( "     \"name\": \"%s\",\n"
+		"     \"link\": \"%s\",\n"
+		"     \"st_dev\": %lu,\n"
+		"     \"st_ino\": %lu,\n"
+		"     \"st_mode\": %u,\n"
+		"     \"st_nlink\": %lu,\n"
+		"     \"st_uid\": %u,\n"
+		"     \"st_gid\": %u,\n"
+		"     \"st_rdev\": %lu,\n"
+		"     \"st_size\": %ld,\n"
+		"     \"st_atime\": %ld,\n"
+		"     \"st_mtime\": %ld,\n"
+		"     \"st_ctime\": %ld",
+		esc_fname?esc_fname:"",
+		esc_lname?esc_lname:"",
+		(long unsigned int)statp->st_dev,
+		(long unsigned int)statp->st_ino,
+		(unsigned int)statp->st_mode,
+		(long unsigned int)statp->st_nlink,
+		(unsigned int)statp->st_uid,
+		(unsigned int)statp->st_gid,
+		(long unsigned int)statp->st_rdev,
+		(long int)statp->st_size,
+		(long int)statp->st_atime,
+		(long int)statp->st_mtime,
+		(long int)statp->st_ctime);
+	if(esc_fname) free(esc_fname);
+	if(esc_lname) free(esc_lname);
+}
+
+static void json_backup(char *statbuf, struct config *conf)
+{
+	char *cp=NULL;
+	if((cp=strstr(statbuf, " (deletable)")))
+	{
+		*cp='\0';
+		cp++;
+	}
+
+	open_tag(2, NULL);
+	printf("   \"timestamp\": \"%s\",\n", statbuf);
+	printf("   \"deletable\": \"%s\"", cp?"true":"false");
+
+	if(conf->backup)
+	{
+		printf(",\n");
+		printf("   \"directory\": \"%s\",\n",
+			conf->browsedir?conf->browsedir:"");
+		printf("   \"regex\": \"%s\",\n",
+			conf->regex?conf->regex:"");
+		open_tag(3, "items");
+	}
+}
+
+static void ls_short_output(const char *fname)
+{
+	printf("%s\n", fname);
+}
+
+static void ls_short_output_json(const char *fname)
+{
+	open_tag(4, NULL);
+	printf("     \"%s\"", fname);
+}
+
+static void list_item(int json, enum action act, const char *fname, const char *lname, struct stat *statp)
+{
+	if(act==ACTION_LONG_LIST)
+	{
+		if(json)
+			ls_long_output_json(fname, lname, statp);
+		else
+			ls_long_output(fname, lname, statp);
+	}
+	else
+	{
+		if(json)
+			ls_short_output_json(fname);
+		else
+			ls_short_output(fname);
+	}
 }
 
 int do_list_client(struct config *conf, enum action act, int json)
@@ -166,11 +253,7 @@ int do_list_client(struct config *conf, enum action act, int json)
 	char scmd=0;
 	struct stat statp;
 	char *statbuf=NULL;
-	char ls[2048]="";
 	char *dpth=NULL;
-	int first_entry=1;
-	// format long list as JSON
-	int emit_json = (act==ACTION_LONG_LIST && conf->backup && json);
 //logp("in do_list\n");
 	if(conf->browsedir)
 	  snprintf(msg, sizeof(msg), "listb %s:%s",
@@ -182,20 +265,22 @@ int do_list_client(struct config *conf, enum action act, int json)
 	  || async_read_expect(CMD_GEN, "ok"))
 		return -1;
 
-	if(emit_json)
+	if(json)
 	{
-		printf("{\n");
+		open_tag(0, NULL);
+		open_tag(1, "backups");
 	}
-	
-	// This should use the sbuf stuff.
+
+	// This should probably should use the sbuf stuff.
 	while(1)
 	{
 		char fcmd=0;
 		size_t flen=0;
 		uint64_t winattr=0;
 		int compression=-1;
-		uint64_t index;
 		char *fname=NULL;
+		uint64_t index;
+
 		if(async_read(&scmd, &statbuf, &slen))
 		{
 			//ret=-1; break;
@@ -204,17 +289,9 @@ int do_list_client(struct config *conf, enum action act, int json)
 		if(scmd==CMD_TIMESTAMP)
 		{
 			// A backup timestamp, just print it.
-			if(emit_json)
+			if(json)
 			{
-				printf("\t\"backup\":\n"
-				       "\t\t{\n"
-				       "\t\t\t\"timestamp\": \"%s\",\n"
-				       "\t\t\t\"directory\": \"%s\",\n"
-				       "\t\t\t\"regex\": \"%s\"\n"
-				       "\t\t},\n",
-				       statbuf,
-				       conf->browsedir? conf->browsedir:"",
-				       conf->regex? conf->regex:"");
+				json_backup(statbuf, conf);
 			}
 			else
 			{
@@ -251,31 +328,7 @@ int do_list_client(struct config *conf, enum action act, int json)
 			|| fcmd==CMD_EFS_FILE
 			|| fcmd==CMD_SPECIAL)
 		{
-			*ls='\0';
-			if(act==ACTION_LONG_LIST)
-			{
-				if(emit_json)
-				{
-					char *esc_fname = NULL;
-					ls_output_json(ls, sizeof(ls), first_entry, fcmd, fname, &esc_fname, NULL, NULL, &statp);
-					printf(ls, esc_fname? esc_fname:"", "");
-					if(esc_fname)
-						free(esc_fname);
-				}
-				else
-				{
-					ls_output(ls, fname, &statp);
-					printf("%s\n", ls);
-				}
-			}
-			else
-			{
-				printf("%s\n", fname);
-			}
-			if (first_entry)
-			{
-				first_entry = 0;
-			}
+			list_item(json, act, fname, NULL, &statp);
 		}
 		else if(cmd_is_link(fcmd)) // symlink or hardlink
 		{
@@ -285,39 +338,12 @@ int do_list_client(struct config *conf, enum action act, int json)
 			if(async_read(&lcmd, &lname, &llen)
 			  || lcmd!=fcmd)
 			{
-				logp("could not get second part of link %c:%s\n", fcmd, fname);
+				logp("could not get link %c:%s\n", fcmd, fname);
 				ret=-1;
 			}
 			else
 			{
-				if(act==ACTION_LONG_LIST)
-				{
-					*ls='\0';
-					if(emit_json)
-					{
-						char *esc_fname = NULL;
-						char *esc_lname = NULL;
-						ls_output_json(ls, sizeof(ls), first_entry, fcmd, fname, &esc_fname, lname, &esc_lname, &statp);
-						printf(ls, esc_fname? esc_fname:"", esc_lname? esc_lname:"");
-						if(esc_fname)
-							free(esc_fname);
-						if(esc_lname)
-							free(esc_lname);
-					}
-					else
-					{
-						ls_output(ls, fname, &statp);
-						printf("%s -> %s\n", ls, lname);
-					}
-				}
-				else
-				{
-					printf("%s\n", fname);
-				}
-				if (first_entry)
-				{
-					first_entry = 0;
-				}
+				list_item(json, act, fname, lname, &statp);
 			}
 			if(lname) free(lname);
 		}
@@ -328,16 +354,10 @@ int do_list_client(struct config *conf, enum action act, int json)
 		if(fname) free(fname);
 		if(statbuf) { free(statbuf); statbuf=NULL; }
 	}
+	if(json) close_tag(0);
+	printf("\n");
 	if(statbuf) free(statbuf);
 	if(dpth) free(dpth);
-	if(emit_json)
-	{
-		if(!first_entry)
-		{
-			printf("\t\t]\n");
-		}
-		printf("}\n");
-	}
 	if(!ret) logp("List finished ok\n");
 	return ret;
 }

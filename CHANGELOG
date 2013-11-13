@@ -1,5 +1,6 @@
   * Be sure to close directory file descriptor if fdopendir() fails.
   * Extend the JSON list functionality so that covers all types of listing.
+  * Allow the backup to carry on if a filename was too long for the server.
 
 2013-10-30 Changes in burp-1.4.4:
   * Add client option '-a T', which checks whether it is yet time for a backup

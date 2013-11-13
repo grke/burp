@@ -17,6 +17,8 @@ static char vss_trail_symbol=CMD_VSS_T;
 static char metasymbol=CMD_METADATA;
 #endif
 
+static long server_name_max;
+
 static int maybe_send_extrameta(const char *path, char cmd, const char *attribs, struct cntr *p1cntr)
 {
 	if(has_extrameta(path, cmd))
@@ -40,6 +42,25 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *p1cn
 	conf->increg, conf->ircount,
 	conf->excreg, conf->ercount,
 	ff->fname, top_level)) return 0;
+
+  if(server_name_max)
+  {
+	  if(top_level)
+	  {
+		char *cp=NULL;
+		// Need to figure out the length of the filename component.
+		if((cp=strrchr(ff->fname, '/'))) ff->flen=strlen(cp+1);
+		else ff->flen=strlen(ff->fname);	
+	  }
+	  if(ff->flen>server_name_max)
+	  {
+		logw(p1cntr, "File name too long (%lu > %lu): %s",
+			ff->flen, server_name_max, ff->fname);
+		return 0;
+	  }
+  }
+
+
 #ifdef HAVE_WIN32
 // Useful Windows attributes debug
 /*
@@ -94,8 +115,6 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 		}
 	}
 #endif
-
-   //logp("%d: %s\n", ff->type, ff->fname);
 
    switch (ff->type) {
 #ifndef HAVE_WIN32
@@ -242,7 +261,7 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
    return 0;
 }
 
-int backup_phase1_client(struct config *conf, int estimate, struct cntr *p1cntr, struct cntr *cntr)
+int backup_phase1_client(struct config *conf, long name_max, int estimate, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int sd=0;
 	int ret=0;
@@ -264,6 +283,8 @@ int backup_phase1_client(struct config *conf, int estimate, struct cntr *p1cntr,
 	}
 
 	ff=init_find_files();
+	server_name_max=name_max;
+	printf("BAX: %lu\n", name_max);
 	for(; sd < conf->sdcount; sd++)
 	{
 		if(conf->startdir[sd]->flag)

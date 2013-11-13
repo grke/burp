@@ -26,7 +26,7 @@ static const int fnmode = 0;
 /*
  * Initialize the find files "global" variables
  */
-FF_PKT *init_find_files()
+FF_PKT *init_find_files(void)
 {
   FF_PKT *ff;
 
@@ -580,8 +580,10 @@ static int process_files_in_directory(struct dirent **nl, int count, int *rtn_st
 			}
 		}
 		q=(*link)+len;
-		for(i=0; i<strlen(nl[m]->d_name); i++) *q++=*p++;
+		for(i=0; i<strlen(nl[m]->d_name); i++)
+			*q++=*p++;
 		*q=0;
+		ff_pkt->flen=i;
 
 		if(file_is_included_no_incext(conf->incexcdir, conf->iecount,
 			conf->excext, conf->excount,

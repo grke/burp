@@ -86,6 +86,7 @@ struct HFSPLUS_INFO {
 struct FF_PKT {
    char *top_fname;                   /* full filename before descending */
    char *fname;                       /* full filename */
+   long flen;                         /* length of name component */
    char *link;                        /* link if file linked */
    struct stat statp;                 /* stat packet */
    int64_t winattr;                   /* windows attributes */
@@ -111,7 +112,7 @@ struct FF_PKT {
 #endif
 };
 
-FF_PKT *init_find_files();
+FF_PKT *init_find_files(void);
 int term_find_files(FF_PKT *ff);
 int find_files_begin(FF_PKT *ff_pkt, struct config *conf, char *fname, struct cntr *cntr);
 int pathcmp(const char *a, const char *b);

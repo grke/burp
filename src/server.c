@@ -1287,6 +1287,15 @@ static int append_to_feat(char **feat, const char *str)
 	return 0;
 }
 
+static int add_name_max(char **feat, struct config *cconf)
+{
+	char msg[32];
+	long name_max;
+	name_max=pathconf(cconf->directory, _PC_NAME_MAX);
+	snprintf(msg, sizeof(msg), "name_max=%lu", name_max);
+	return append_to_feat(feat, msg);
+}
+
 static int extra_comms(char **client, const char *cversion, char **incexc, int *srestore, struct config *conf, struct config *cconf, struct cntr *p1cntr)
 {
 	int ret=0;
@@ -1374,6 +1383,10 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 
 		/* Clients can be sent counters on resume/verify/restore. */
 		if(append_to_feat(&feat, "counters:"))
+			return -1;
+
+		/* Tell the client the largest file name that is supported. */
+		if(add_name_max(&feat, cconf))
 			return -1;
 
 		//printf("feat: %s\n", feat);

@@ -1290,8 +1290,11 @@ static int append_to_feat(char **feat, const char *str)
 static int add_name_max(char **feat, struct config *cconf)
 {
 	char msg[32];
-	long name_max;
-	name_max=pathconf(cconf->directory, _PC_NAME_MAX);
+	long name_max=0;
+	// Only need to be careful about name lengths if the files are
+	// being saved in a directory tree.
+	if(cconf->directory_tree)
+		name_max=pathconf(cconf->directory, _PC_NAME_MAX);
 	snprintf(msg, sizeof(msg), "name_max=%lu", name_max);
 	return append_to_feat(feat, msg);
 }

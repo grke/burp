@@ -499,10 +499,8 @@ int compress_filename(const char *d, const char *file, const char *zfile, struct
 	return 0;
 }
 
-int delete_backup(const char *basedir, struct bu *arr, int a, int b, const char *client)
+int delete_backup(const char *basedir, struct bu *arr, int a, int b, const char *client, struct config *cconf)
 {
-	char *deleteme=NULL;
-
 	logp("deleting %s backup %lu\n", client, arr[b].index);
 
 	if(b==a-1)
@@ -557,15 +555,12 @@ int delete_backup(const char *basedir, struct bu *arr, int a, int b, const char 
 		free(current);
 	}
 
-	if(!(deleteme=prepend_s(basedir, "deleteme", strlen("deleteme")))
-	  || do_rename(arr[b].path, deleteme)
-	  || recursive_delete(deleteme, NULL, TRUE))
+	if(deleteme_move(basedir, arr[b].path, arr[b].basename, cconf)
+	  || deleteme_maybe_delete(cconf, basedir))
 	{
 		logp("Error when trying to delete %s\n", arr[b].path);
-		free(deleteme);
 		return -1;
 	}
-	free(deleteme);
 
 	return 0;
 }
@@ -634,7 +629,7 @@ int do_remove_old_backups(const char *basedir, struct config *cconf, const char 
 				    {
 					//printf("deleting backup %lu (%lu)\n", arr[b].index, arr[b].trindex);
 					if(delete_backup(basedir, arr,
-						a, b, client))
+						a, b, client, cconf))
 					{
 						ret=-1;
 						break;
@@ -664,7 +659,7 @@ int do_remove_old_backups(const char *basedir, struct config *cconf, const char 
 		}
 		for(; b>=0 && b<a; b--)
 		{
-			if(delete_backup(basedir, arr, a, b, client))
+			if(delete_backup(basedir, arr, a, b, client, cconf))
 			{
 				ret=-1;
 				break;
@@ -770,4 +765,59 @@ int do_link(const char *oldpath, const char *newpath, struct stat *statp, struct
 		return -1;
 	}
 	return 0;
+}
+
+static char *deleteme_get_path(const char *basedir, struct config *cconf)
+{
+	static char *deleteme=NULL;
+	if(deleteme) { free(deleteme); deleteme=NULL; }
+	if(cconf->manual_delete) return cconf->manual_delete;
+	return prepend_s(basedir, "deleteme", strlen("deleteme"));
+}
+
+int deleteme_move(const char *basedir, const char *fullpath, const char *path,
+	struct config *cconf)
+{
+	int ret=-1;
+	char *tmp=NULL;
+	char *dest=NULL;
+	char *deleteme=NULL;
+	int attempts=0;
+	struct stat statp;
+	char suffix[16]="";
+
+	if(!(deleteme=deleteme_get_path(basedir, cconf))
+	  || !(tmp=prepend_s(deleteme, path, strlen(path)))
+	  || mkpath(&tmp, deleteme)
+	  || !(dest=prepend("", tmp, strlen(tmp), "")))
+		goto end;
+
+	// Try to generate destination paths if the desired one is already
+	// taken.
+	while(1)
+	{
+		if(lstat(dest, &statp)) break;
+		snprintf(suffix, sizeof(suffix), ".%d", ++attempts);
+		if(dest) free(dest);
+		if(!(dest=prepend(tmp, suffix, strlen(suffix), "")))
+			goto end;
+		if(attempts>=10) break; // Give up.
+	}
+
+	ret=do_rename(fullpath, dest);
+
+end:
+	if(dest) free(dest);
+	if(tmp) free(tmp);
+	return ret;
+}
+
+int deleteme_maybe_delete(struct config *cconf, const char *basedir)
+{
+	char *deleteme;
+	// If manual_delete is on, they will have to delete the files
+	// manually, via a cron job or something.
+	if(cconf->manual_delete) return 0;
+	if(!(deleteme=deleteme_get_path(basedir, cconf))) return -1;
+	return recursive_delete(deleteme, NULL, TRUE /* delete all */);
 }

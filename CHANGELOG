@@ -4,6 +4,10 @@
   * Regenerate server certificates if the CA directory exists and is empty.
   * Add machine-readable statistics files for restores and verifies in the
     backup directories.
+  * Bug fix for server not exiting after one connection with '-n'.
+  * Add 'manual_delete=<directory>' option. This makes the server move
+    directories to be deleted to the specified directory, with the intention
+    that they will be deleted manually (perhaps by a cron job) later.
 
 2013-10-30 Changes in burp-1.4.4:
   * Add client option '-a T', which checks whether it is yet time for a backup

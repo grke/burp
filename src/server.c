@@ -1189,7 +1189,8 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 				goto end;
 			}
 			backupno=buf+strlen("delete ");
-			ret=do_delete_server(basedir, backupno, client, p1cntr, cntr);
+			ret=do_delete_server(basedir, backupno, client,
+				p1cntr, cntr, cconf);
 		}
 	}
 	else if(cmd==CMD_GEN
@@ -2218,6 +2219,7 @@ static int run_server(struct config *conf, const char *configfile, int *rfd, con
 				ret=1;
 				break;
 			}
+			if(!conf->forking) break;
 		}
 
 		if(sfd>=0 && FD_ISSET(sfd, &fsr))
@@ -2230,6 +2232,7 @@ static int run_server(struct config *conf, const char *configfile, int *rfd, con
 				ret=1;
 				break;
 			}
+			if(!conf->forking) break;
 		}
 
 		for(c=0; c<conf->max_children; c++)
@@ -2376,6 +2379,7 @@ int server(struct config *conf, const char *configfile, int generate_ca_only)
 		ret=run_server(conf, configfile,
 			&rfd, oldport, oldstatusport);
 		if(ret) break;
+		if(!conf->forking) break;
 		if(hupreload && !gentleshutdown)
 		{
 			if(oldport) free(oldport);

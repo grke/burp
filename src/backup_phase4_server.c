@@ -835,7 +835,6 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 	char *currentdupdata=NULL;
 	char *timestamp=NULL;
 	char *fullrealcurrent=NULL;
-	char *deleteme=NULL;
 	char *logpath=NULL;
 	char *hlinkedpath=NULL;
 	int len=0;
@@ -862,7 +861,6 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 	  || !(currentdupdata=prepend_s(currentdup, "data", strlen("data")))
 	  || !(timestamp=prepend_s(finishing, "timestamp", strlen("timestamp")))
 	  || !(fullrealcurrent=prepend_s(basedir, realcurrent, strlen(realcurrent)))
-	  || !(deleteme=prepend_s(basedir, "deleteme", strlen("deleteme")))
 	  || !(logpath=prepend_s(finishing, "log", strlen("log")))
 	  || !(hlinkedpath=prepend_s(currentdup, "hardlinked", strlen("hardlinked"))))
 	{
@@ -1012,23 +1010,19 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 
 	// Rename the old current to something that we know to
 	// delete.
-	if(previous_backup && do_rename(fullrealcurrent, deleteme))
+	if(previous_backup
+	  && deleteme_move(basedir, fullrealcurrent, realcurrent, cconf))
 	{
 		ret=-1;
 		goto endfunc;
 	}
 
-	if(!lstat(deleteme, &statp))
-	{
-		// Rename the currentdup directory...
-		// IMPORTANT TODO: read the path to fullrealcurrent
-		// from the deleteme timestamp.
-		do_rename(currentdup, fullrealcurrent);
+	do_rename(currentdup, fullrealcurrent);
 
-		recursive_delete(deleteme, NULL, TRUE /* delete all */);
-	}
+	deleteme_maybe_delete(cconf, basedir);
 
-	print_stats_to_file(p1cntr, cntr, cconf, client, finishing, ACTION_BACKUP);
+	print_stats_to_file(p1cntr, cntr, cconf,
+		client, finishing, ACTION_BACKUP);
 
 	// Rename the finishing symlink so that it becomes the current symlink
 	do_rename(finishing, current);
@@ -1050,7 +1044,6 @@ endfunc:
 	if(currentdupdata) free(currentdupdata);
 	if(timestamp) free(timestamp);
 	if(fullrealcurrent) free(fullrealcurrent);
-	if(deleteme) free(deleteme);
 	if(logpath) free(logpath);
 	if(hlinkedpath) free(hlinkedpath);
 

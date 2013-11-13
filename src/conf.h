@@ -53,6 +53,7 @@ struct config
 	char *ca_server_name;
 	char *ca_burp_ca;
 	int password_check;
+	char *manual_delete;
 
 // client options
 	char *cname;

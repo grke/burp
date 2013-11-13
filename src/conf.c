@@ -79,6 +79,7 @@ void init_config(struct config *conf)
 	conf->directory=NULL;
 	conf->timestamp_format=NULL;
 	conf->password_check=1;
+	conf->manual_delete=NULL;
 	conf->ca_conf=NULL;
 	conf->ca_name=NULL;
 	conf->ca_server_name=NULL;
@@ -236,6 +237,7 @@ void free_config(struct config *conf)
 	if(conf->client_lockdir) free(conf->client_lockdir);
 	if(conf->autoupgrade_dir) free(conf->autoupgrade_dir);
 	if(conf->autoupgrade_os) free(conf->autoupgrade_os);
+	if(conf->manual_delete) free(conf->manual_delete);
 
 	if(conf->timer_script) free(conf->timer_script);
 	strlists_free(conf->timer_arg, conf->tacount);
@@ -373,8 +375,7 @@ void convert_backslashes(char **path)
 }
 #endif
 
-#define ABSOLUTE_ERROR	"ERROR: Please use absolute include/exclude paths.\n"
-static int path_checks(const char *path)
+static int path_checks(const char *path, const char *err_msg)
 {
 	const char *p=NULL;
 	for(p=path; *p; p++)
@@ -382,7 +383,7 @@ static int path_checks(const char *path)
 		if(*p!='.' || *(p+1)!='.') continue;
 		if((p==path || *(p-1)=='/') && (*(p+2)=='/' || !*(p+2)))
 		{
-			logp(ABSOLUTE_ERROR);
+			logp(err_msg);
 			return -1;
 		}
 	}
@@ -395,7 +396,7 @@ static int path_checks(const char *path)
 #endif
 	)
 	{
-		logp(ABSOLUTE_ERROR);
+		logp(err_msg);
 		return -1;
 	}
 	return 0;
@@ -772,6 +773,8 @@ static int load_config_strings(struct config *conf, const char *field, const cha
 		return -1;
 	if(get_conf_val(field, value, "browsefile", &(conf->browsefile)))
 		return -1;
+	if(get_conf_val(field, value, "manual_delete", &(conf->manual_delete)))
+		return -1;
 	if(get_conf_val(field, value, "working_dir_recovery_method",
 		&(conf->working_dir_recovery_method))) return -1;
 	if(get_conf_val(field, value, "autoupgrade_dir",
@@ -1131,6 +1134,12 @@ static int server_conf_checks(struct config *conf, const char *path, int *r)
 		}
 		if(ca_err) return -1;
 	}
+	if(conf->manual_delete)
+	{
+		if(path_checks(conf->manual_delete,
+			"ERROR: Please use an absolute manual_delete path.\n"))
+				return -1;
+	}
 
 	return 0;
 }
@@ -1290,8 +1299,9 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 #ifdef HAVE_WIN32
 		convert_backslashes(&(l->ielist[i]->path));
 #endif
-		if(path_checks(l->ielist[i]->path))
-			return -1;
+		if(path_checks(l->ielist[i]->path,
+			"ERROR: Please use absolute include/exclude paths.\n"))
+				return -1;
 		
 		if(!l->ielist[i]->flag) continue; // an exclude
 
@@ -1570,6 +1580,7 @@ int set_client_global_config(struct config *conf, struct config *cconf, const ch
 	cconf->log_to_stdout=conf->log_to_stdout;
 	cconf->progress_counter=conf->progress_counter;
 	cconf->password_check=conf->password_check;
+	cconf->manual_delete=conf->manual_delete;
 	cconf->client_can_delete=conf->client_can_delete;
 	cconf->client_can_force_backup=conf->client_can_force_backup;
 	cconf->client_can_list=conf->client_can_list;

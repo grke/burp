@@ -13,7 +13,7 @@
 #include "list_server.h"
 #include "current_backups_server.h"
 
-int do_delete_server(const char *basedir, const char *backup, const char *client, struct cntr *p1cntr, struct cntr *cntr)
+int do_delete_server(const char *basedir, const char *backup, const char *client, struct cntr *p1cntr, struct cntr *cntr, struct config *cconf)
 {
 	int a=0;
 	int i=0;
@@ -46,7 +46,7 @@ int do_delete_server(const char *basedir, const char *backup, const char *client
 					found=1;
 					async_write_str(CMD_GEN, "ok");
 					if(delete_backup(basedir,
-						arr, a, i, client))
+						arr, a, i, client, cconf))
 					{
 						free_current_backups(&arr, a);
 						ret=-1;

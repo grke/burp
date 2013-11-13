@@ -79,7 +79,7 @@ static int maybe_check_timer(enum action act, const char *phase1str, struct conf
 }
 
 // Return 0 for OK, -1 for error, 1 for timer conditions not met.
-static int do_backup_client(struct config *conf, int resume, enum action act, struct cntr *p1cntr, struct cntr *cntr)
+static int do_backup_client(struct config *conf, long name_max, int resume, enum action act, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ret=0;
 
@@ -117,7 +117,7 @@ static int do_backup_client(struct config *conf, int resume, enum action act, st
 
 	// Scan the file system and send the results to the server.
 	// Skip phase1 if the server wanted to resume.
-	if(!ret && !resume) ret=backup_phase1_client(conf,
+	if(!ret && !resume) ret=backup_phase1_client(conf, name_max,
 		act==ACTION_ESTIMATE, p1cntr, cntr);
 
 	// Now, the server will be telling us what data we need to send.
@@ -166,23 +166,22 @@ static void setup_signals_client(void)
 #endif
 }
 
-static int server_supports(const char *feat, const char *wanted)
+static const char *server_supports(const char *feat, const char *wanted)
 {
-	if(strstr(feat, wanted)) return 1;
-	return 0;
+	return strstr(feat, wanted);
 }
 
-static int server_supports_autoupgrade(const char *feat)
+static const char *server_supports_autoupgrade(const char *feat)
 {
 	// 1.3.0 servers did not list the features, but the only feature
 	// that was supported was autoupgrade.
-	if(!strcmp(feat, "extra_comms_begin ok")) return 1;
+	if(!strcmp(feat, "extra_comms_begin ok")) return "ok";
 	return server_supports(feat, ":autoupgrade:");
 }
 
 static int s_server_session_id_context=1;
 
-static int backup_wrapper(enum action act, const char *phase1str, const char *incexc, int resume, struct cntr *p1cntr, struct cntr *cntr, struct config *conf)
+static int backup_wrapper(enum action act, const char *phase1str, const char *incexc, int resume, long name_max, struct cntr *p1cntr, struct cntr *cntr, struct config *conf)
 {
 	int ret=0;
 	// Set bulk packets quality of service flags on backup.
@@ -225,7 +224,7 @@ static int backup_wrapper(enum action act, const char *phase1str, const char *in
 				p1cntr, 1, 1)) ret=-1;
 		}
 
-		if(!ret && do_backup_client(conf,
+		if(!ret && do_backup_client(conf, name_max,
 			resume, act, p1cntr, cntr))
 				ret=-1;
 
@@ -287,6 +286,8 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 	struct cntr p1cntr;
 	char *incexc=NULL;
 	char *server_version=NULL;
+	const char *cp=NULL;
+	long name_max=0;
 
 	reset_filecounter(&p1cntr, time(NULL));
 	reset_filecounter(&cntr, time(NULL));
@@ -448,6 +449,9 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 			}
 		}
 
+		if((cp=server_supports(feat, ":name_max=")))
+			name_max=strtol(cp+strlen(":name_max="), NULL, 10);
+
 		if(conf->orig_client)
 		{
 			char str[512]="";
@@ -539,15 +543,15 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 	{
 		case ACTION_BACKUP:
 			ret=backup_wrapper(act, "backupphase1",
-				incexc, resume, &p1cntr, &cntr, conf);
+			  incexc, resume, name_max, &p1cntr, &cntr, conf);
 			break;
 		case ACTION_BACKUP_TIMED:
 			ret=backup_wrapper(act, "backupphase1timed",
-				incexc, resume, &p1cntr, &cntr, conf);
+			  incexc, resume, name_max, &p1cntr, &cntr, conf);
 			break;
 		case ACTION_TIMER_CHECK:
 			ret=backup_wrapper(act, "backupphase1timedcheck",
-				incexc, resume, &p1cntr, &cntr, conf);
+			  incexc, resume, name_max, &p1cntr, &cntr, conf);
 			break;
 		case ACTION_RESTORE:
 		case ACTION_VERIFY:
@@ -596,8 +600,8 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 			break;
 		}
 		case ACTION_ESTIMATE:
-			if(!ret) ret=do_backup_client(conf, 0, act,
-					&p1cntr, &cntr);
+			if(!ret) ret=do_backup_client(conf, name_max,
+					0, act, &p1cntr, &cntr);
 			break;
 		case ACTION_DELETE:
 			if(!ret) ret=do_delete_client(conf);

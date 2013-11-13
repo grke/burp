@@ -783,6 +783,9 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 		//print_endcounter(cntr);
 		print_filecounters(p1cntr, cntr, act);
 
+		print_stats_to_file(p1cntr, cntr, cconf,
+			client, arr[i].path, act);
+
 		reset_filecounter(p1cntr, time(NULL));
 		reset_filecounter(cntr, time(NULL));
 	}

@@ -284,7 +284,6 @@ int backup_phase1_client(struct config *conf, long name_max, int estimate, struc
 
 	ff=init_find_files();
 	server_name_max=name_max;
-	printf("BAX: %lu\n", name_max);
 	for(; sd < conf->sdcount; sd++)
 	{
 		if(conf->startdir[sd]->flag)

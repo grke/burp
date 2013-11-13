@@ -187,7 +187,7 @@ This allows you to tweak the format of the timestamps of individual backups. See
 Allows you to turn client password checking on or off. The default is on. SSL certificates will still be checked if you turn passwords off. This option can be overridden by the client configuration files in clientconfdir on the server.
 .TP
 \fBmanual_delete=[path]\fR
-If a path is given, the server will move directories to be deleted into the directory specified by the path, but will not actually delete them. The path must be on the same file system as the backup storage. The idea is that a busy server may be configured to run the deletions outside of the backup timebands, when the server is less busy, via a cron job. The default is unset, which means that the server will automatically delete the directories at the end of a backup.
+If a path is given, the server will move directories to be deleted into the directory specified by the path, but will not actually delete them. The path must be on the same file system as the backup storage. The idea is that a busy server may be configured to run the deletions outside of the backup timebands, when the server is less busy, via a cron job. The default is unset, which means that the server will automatically delete the directories at the end of a backup. This option can be overridden by the client configuration files in clientconfdir on the server.
 .TP
 \fBclientconfdir=[path]\fR
 Path to the directory that contains client configuration files.
@@ -592,6 +592,7 @@ Additionally, the following options can be overridden here for each client:
 \fBworking_dir_recovery_method\fR
 \fBresume_partial\fR
 \fBlibrsync\fR
+\fBmanual_delete\fR
 \fBversion_warn\fR
 \fBsyslog\fR
 \fBclient_can_delete\fR

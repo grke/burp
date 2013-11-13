@@ -69,7 +69,7 @@ static int make_link(const char *fname, const char *lnk, char cmd, struct config
 	if(cmd==CMD_HARD_LINK)
 	{
 		char *flnk=NULL;
-		if(!(flnk=prepend_s(conf->restoreprefix, lnk, strlen(lnk))))
+		if(!(flnk=prepend_s(conf->restoreprefix, lnk)))
 		{
 			log_out_of_memory(__FUNCTION__);
 			return -1;
@@ -140,7 +140,6 @@ static int start_restore_file(
 	struct config *conf)
 {
 	int ret=-1;
-	size_t len=0;
 	char *rpath=NULL;
 
 	if(act==ACTION_VERIFY)
@@ -149,7 +148,7 @@ static int start_restore_file(
 		return 0;
 	}
 
-	if(build_path(fname, "", len, &rpath, NULL))
+	if(build_path(fname, "", &rpath, NULL))
 	{
 		char msg[256]="";
 		// failed - do a warning
@@ -187,7 +186,7 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
 		return 0;
 	}
 
-	if(build_path(fname, "", 0, &rpath, NULL))
+	if(build_path(fname, "", &rpath, NULL))
 	{
 		char msg[256]="";
 		// failed - do a warning
@@ -257,7 +256,7 @@ static int restore_dir(struct sbuf *sb, const char *dname, enum action act, stru
 	char *rpath=NULL;
 	if(act==ACTION_RESTORE)
 	{
-		if(build_path(dname, "", 0, &rpath, NULL))
+		if(build_path(dname, "", &rpath, NULL))
 		{
 			char msg[256]="";
 			// failed - do a warning
@@ -299,7 +298,7 @@ static int restore_link(struct sbuf *sb, const char *fname, enum action act, str
 	if(act==ACTION_RESTORE)
 	{
 		char *rpath=NULL;
-		if(build_path(fname, "", strlen(fname), &rpath, NULL))
+		if(build_path(fname, "", &rpath, NULL))
 		{
 			char msg[256]="";
 			// failed - do a warning
@@ -559,9 +558,8 @@ int restore_spool(struct config *conf, enum action act, int vss_restore, char **
 
 	logp("Spooling restore to: %s\n", conf->restore_spool);
 
-	if(!(*datpath=prepend_s(conf->restore_spool,
-		"incoming-data", strlen("incoming-data"))))
-			goto end;
+	if(!(*datpath=prepend_s(conf->restore_spool, "incoming-data")))
+		goto end;
 
 	while(1)
 	{
@@ -571,8 +569,8 @@ int restore_spool(struct config *conf, enum action act, int vss_restore, char **
 			if(!strncmp(buf, "dat=", 4))
 			{
 				char *fpath=NULL;
-				if(!(fpath=prepend_s(*datpath,
-					buf+4, strlen(buf)+4))) goto end;
+				if(!(fpath=prepend_s(*datpath, buf+4)))
+					goto end;
 				if(build_path_w(fpath))
 					goto end;
 				if(receive_a_file(fpath, conf))
@@ -699,7 +697,7 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore)
 				}
 				if(fullpath) free(fullpath);
 				if(!(fullpath=prepend_s(conf->restoreprefix,
-					sb->path, strlen(sb->path))))
+					sb->path)))
 				{
 					log_and_send_oom(__FUNCTION__);
 					goto end;

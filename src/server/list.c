@@ -52,7 +52,7 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 	struct manio *manio=NULL;
 	char *manifest_dir=NULL;
 
-	if(!(manifest_dir=prepend_s(fullpath, "manifest", strlen("manifest")))
+	if(!(manifest_dir=prepend_s(fullpath, "manifest"))
 	  || !(manio=manio_alloc())
 	  || manio_init_read(manio, manifest_dir)
 	  || !(sb=sbuf_alloc()))

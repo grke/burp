@@ -30,11 +30,11 @@ int autoupgrade_server(long ser_ver, long cli_ver, const char *os, struct config
 		goto end;
 	}
 
-	if(!(base_path=prepend_s(conf->autoupgrade_dir, os, strlen(os)))
-	  || !(path=prepend_s(base_path, VERSION, strlen(VERSION)))
-	  || !(script_path_top=prepend_s(base_path, "script", strlen("script")))
-	  || !(script_path_specific=prepend_s(path, "script", strlen("script")))
-	  || !(package_path=prepend_s(path, "package", strlen("package"))))
+	if(!(base_path=prepend_s(conf->autoupgrade_dir, os))
+	  || !(path=prepend_s(base_path, VERSION))
+	  || !(script_path_top=prepend_s(base_path, "script"))
+	  || !(script_path_specific=prepend_s(path, "script"))
+	  || !(package_path=prepend_s(path, "package")))
 	{
 		async_write_str(CMD_GEN, "do not autoupgrade");
 		goto end;

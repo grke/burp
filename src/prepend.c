@@ -32,7 +32,7 @@ char *prepend(const char *prep, const char *fname, size_t len, const char *sep)
 		sep, (sep && *fname)?strlen(sep):0, NULL);
 }
 
-char *prepend_s(const char *prep, const char *fname, size_t len)
+char *prepend_slash(const char *prep, const char *fname, size_t len)
 {
 	if(!prep || !*prep)
 	{
@@ -50,7 +50,7 @@ char *prepend_s(const char *prep, const char *fname, size_t len)
 	return prepend(prep, fname, len, "/");
 }
 
-char *prepend_str(const char *prep, const char *fname)
+char *prepend_s(const char *prep, const char *fname)
 {
-	return prepend_s(prep, fname, strlen(fname));
+	return prepend_slash(prep, fname, strlen(fname));
 }

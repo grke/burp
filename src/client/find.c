@@ -363,9 +363,8 @@ static int nobackup_directory(struct config *conf, const char *path)
 	for(i=0; i<conf->nbcount; i++)
 	{
 		char *fullpath=NULL;
-		if(!(fullpath=prepend_s(path,
-		  conf->nobackup[i]->path, strlen(conf->nobackup[i]->path))))
-				return -1;
+		if(!(fullpath=prepend_s(path, conf->nobackup[i]->path)))
+			return -1;
 		if(!lstat(fullpath, &statp))
 		{
 			free(fullpath);

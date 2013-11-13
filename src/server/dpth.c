@@ -108,7 +108,7 @@ int dpth_init(struct dpth *dpth)
 	if(max<0) max=0;
 	dpth->prim=max;
 	tmp=dpth_mk_prim(dpth);
-	if(!(tmp=prepend_s(dpth->base_path, tmp, strlen(tmp))))
+	if(!(tmp=prepend_s(dpth->base_path, tmp)))
 		goto error;
 
 	if(get_highest_entry(tmp, &max, NULL))
@@ -117,7 +117,7 @@ int dpth_init(struct dpth *dpth)
 	dpth->seco=max;
 	free(tmp);
 	tmp=dpth_mk_seco(dpth);
-	if(!(tmp=prepend_s(dpth->base_path, tmp, strlen(tmp))))
+	if(!(tmp=prepend_s(dpth->base_path, tmp)))
 		goto error;
 
 	if(get_next_entry(tmp, &max, dpth))

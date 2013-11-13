@@ -11,8 +11,7 @@ int recursive_hardlink(const char *src, const char *dst, const char *client, str
 	struct dirent **dir;
 	char *tmp=NULL;
 	//logp("in rec hl: %s %s\n", src, dst);
-	if(!(tmp=prepend_s(dst, "dummy", strlen("dummy"))))
-		return -1;
+	if(!(tmp=prepend_s(dst, "dummy"))) return -1;
 	if(mkpath(&tmp, dst))
 	{
 		logp("could not mkpath for %s\n", tmp);
@@ -36,10 +35,8 @@ int recursive_hardlink(const char *src, const char *dst, const char *client, str
 		  || !strcmp(dir[n]->d_name, ".")
 		  || !strcmp(dir[n]->d_name, ".."))
 			{ free(dir[n]); continue; }
-		if(!(fullpatha=prepend_s(src,
-			dir[n]->d_name, strlen(dir[n]->d_name)))
-		|| !(fullpathb=prepend_s(dst,
-			dir[n]->d_name, strlen(dir[n]->d_name))))
+		if(!(fullpatha=prepend_s(src, dir[n]->d_name))
+		  || !(fullpathb=prepend_s(dst, dir[n]->d_name)))
 		{
 			if(fullpatha) free(fullpatha);
 			if(fullpathb) free(fullpathb);
@@ -156,7 +153,7 @@ static int get_link(const char *basedir, const char *lnk, char real[], size_t r)
 {
 	int len=0;
 	char *tmp=NULL;
-	if(!(tmp=prepend_s(basedir, lnk, strlen(lnk))))
+	if(!(tmp=prepend_s(basedir, lnk)))
 	{
 		log_out_of_memory(__FUNCTION__);
 		return -1;
@@ -207,12 +204,9 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 			continue;
 		if(!(basename=prepend("",
 			dp->d_name, strlen(dp->d_name), ""))
-		 || !(fullpath=prepend_s(basedir,
-			basename, strlen(basename)))
-		 || !(timestamp=prepend_s(fullpath,
-			"timestamp", strlen("timestamp")))
-		 || !(hlinkedpath=prepend_s(fullpath,
-			"hardlinked", strlen("hardlinked"))))
+		 || !(fullpath=prepend_s(basedir, basename))
+		 || !(timestamp=prepend_s(fullpath, "timestamp"))
+		 || !(hlinkedpath=prepend_s(fullpath, "hardlinked")))
 		{
 			ret=-1;
 			if(basename) free(basename);
@@ -236,8 +230,8 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 		if(!lstat(hlinkedpath, &statp)) hardlinked++;
 
 		if(!(*arr=(struct bu *)realloc(*arr,(i+1)*sizeof(struct bu)))
-		  || !((*arr)[i].data=prepend_s(fullpath, "data", strlen("data")))
-		  || !((*arr)[i].delta=prepend_s(fullpath, "deltas.reverse", strlen("deltas.reverse"))))
+		  || !((*arr)[i].data=prepend_s(fullpath, "data"))
+		  || !((*arr)[i].delta=prepend_s(fullpath, "deltas.reverse")))
 		{
 			if(log) log_and_send_oom(__FUNCTION__);
 			free(basename);
@@ -387,8 +381,8 @@ int compress_filename(const char *d, const char *file, const char *zfile, struct
 {
 	char *fullfile=NULL;
 	char *fullzfile=NULL;
-	if(!(fullfile=prepend_s(d, file, strlen(file)))
-	  || !(fullzfile=prepend_s(d, zfile, strlen(zfile)))
+	if(!(fullfile=prepend_s(d, file))
+	  || !(fullzfile=prepend_s(d, zfile))
 	  || compress_file(fullfile, fullzfile, cconf))
 	{
 		if(fullfile) free(fullfile);
@@ -408,7 +402,7 @@ int delete_backup(const char *basedir, struct bu *arr, int a, int b, const char 
 	{
 		char *current=NULL;
 		// This is the current backup. Special measures are needed.
-		if(!(current=prepend_s(basedir, "current", strlen("current"))))
+		if(!(current=prepend_s(basedir, "current")))
 			return -1;
 		if(!b)
 		{
@@ -456,7 +450,7 @@ int delete_backup(const char *basedir, struct bu *arr, int a, int b, const char 
 		free(current);
 	}
 
-	if(!(deleteme=prepend_s(basedir, "deleteme", strlen("deleteme")))
+	if(!(deleteme=prepend_s(basedir, "deleteme"))
 	  || do_rename(arr[b].path, deleteme)
 	  || recursive_delete(deleteme, NULL, 1))
 	{

@@ -84,7 +84,7 @@ static int get_next_fpath(struct manio *manio)
 	static char tmp[32];
 	snprintf(tmp, sizeof(tmp), "%08lX", manio->fcount++);
 	if(manio->fpath) free(manio->fpath);
-	return !(manio->fpath=prepend_s(manio->directory, tmp, sizeof(tmp)));
+	return !(manio->fpath=prepend_s(manio->directory, tmp));
 }
 
 static int open_next_fpath(struct manio *manio)

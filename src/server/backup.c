@@ -40,7 +40,7 @@ static int fwrite_dat(struct iobuf *rbuf, struct blk *blk, struct dpth *dpth)
 		14))) // Just the first three components, excluding sig number.
 	{
 		char *path;
-		if(!(path=prepend_s(dpth->base_path, blk->save_path, 14)))
+		if(!(path=prepend_slash(dpth->base_path, blk->save_path, 14)))
 			return -1;
 		if(fp && close_fp(&fp))
 			return -1;
@@ -65,7 +65,7 @@ static int write_incexc(const char *realworking, const char *incexc)
 	int ret=-1;
 	FILE *fp=NULL;
 	char *path=NULL;
-	if(!(path=prepend_s(realworking, "incexc", strlen("incexc"))))
+	if(!(path=prepend_s(realworking, "incexc")))
 		goto end;
 	if(!(fp=open_file(path, "wb")))
 		goto end;
@@ -85,7 +85,7 @@ static int open_log(const char *realworking, const char *client, const char *cve
 {
 	char *logpath=NULL;
 
-	if(!(logpath=prepend_s(realworking, "log", strlen("log"))))
+	if(!(logpath=prepend_s(realworking, "log")))
 	{
 		log_and_send_oom(__FUNCTION__);
 		return -1;
@@ -905,7 +905,7 @@ static int clean_rubble(struct sdirs *sdirs)
 		return 0;
 	}
 	lnk[len]='\0';
-	if(!(real=prepend_s(sdirs->client, lnk, strlen(lnk))))
+	if(!(real=prepend_s(sdirs->client, lnk)))
 	{
 		log_and_send_oom(__FUNCTION__);
 		return -1;
@@ -935,8 +935,8 @@ int do_backup_server(struct sdirs *sdirs, struct config *cconf, const char *clie
 
 	if(get_new_timestamp(cconf, sdirs->client, tstmp, sizeof(tstmp)))
 		goto error;
-	if(!(realworking=prepend_s(sdirs->client, tstmp, strlen(tstmp)))
-	 || !(manifest_dir=prepend_s(realworking, "manifest", strlen("manifest"))))
+	if(!(realworking=prepend_s(sdirs->client, tstmp))
+	 || !(manifest_dir=prepend_s(realworking, "manifest")))
 	{
 		log_and_send_oom(__FUNCTION__);
 		goto error;

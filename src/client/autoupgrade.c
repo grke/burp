@@ -4,8 +4,7 @@ static int receive_file(const char *autoupgrade_dir, const char *file, struct co
 {
 	int ret=0;
 	char *incoming=NULL;
-	if(!(incoming=prepend_s(autoupgrade_dir, file, strlen(file))))
-		return -1;
+	if(!(incoming=prepend_s(autoupgrade_dir, file))) return -1;
 	ret=receive_a_file(incoming, conf);
 	if(incoming) free(incoming);
 	return ret;
@@ -97,8 +96,8 @@ int autoupgrade_client(struct config *conf)
 		goto end;
 	}
 
-	if(!(script_path=prepend_s(conf->autoupgrade_dir,
-		script_name, strlen(script_name)))) goto end;
+	if(!(script_path=prepend_s(conf->autoupgrade_dir, script_name)))
+		goto end;
 
 	chmod(script_path, 0755);
 

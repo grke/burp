@@ -25,28 +25,28 @@ int sdirs_init(struct sdirs *sdirs, struct config *conf, const char *client)
 	}
 
 	if(!(sdirs->base=strdup(conf->directory))
-	  || !(sdirs->dedup=prepend_str(sdirs->base, conf->dedup_group))
-	  || !(sdirs->data=prepend_str(sdirs->dedup, "data"))
-	  || !(sdirs->clients=prepend_str(sdirs->dedup, "clients"))
-	  || !(sdirs->client=prepend_str(sdirs->clients, client)))
+	  || !(sdirs->dedup=prepend_s(sdirs->base, conf->dedup_group))
+	  || !(sdirs->data=prepend_s(sdirs->dedup, "data"))
+	  || !(sdirs->clients=prepend_s(sdirs->dedup, "clients"))
+	  || !(sdirs->client=prepend_s(sdirs->clients, client)))
 		goto error;
 
-	if(!(sdirs->working=prepend_str(sdirs->client, "working"))
-	  || !(sdirs->finishing=prepend_str(sdirs->client, "finishing"))
-	  || !(sdirs->current=prepend_str(sdirs->client, "current")))
+	if(!(sdirs->working=prepend_s(sdirs->client, "working"))
+	  || !(sdirs->finishing=prepend_s(sdirs->client, "finishing"))
+	  || !(sdirs->current=prepend_s(sdirs->client, "current")))
 		goto error;
 
-	if(!(sdirs->timestamp=prepend_str(sdirs->working, "timestamp"))
-	  || !(sdirs->changed=prepend_str(sdirs->working, "changed"))
-	  || !(sdirs->unchanged=prepend_str(sdirs->working, "unchanged"))
-	  || !(sdirs->cmanifest=prepend_str(sdirs->current, "manifest")))
+	if(!(sdirs->timestamp=prepend_s(sdirs->working, "timestamp"))
+	  || !(sdirs->changed=prepend_s(sdirs->working, "changed"))
+	  || !(sdirs->unchanged=prepend_s(sdirs->working, "unchanged"))
+	  || !(sdirs->cmanifest=prepend_s(sdirs->current, "manifest")))
 		goto error;
 
 	if(!(client_lockdir=conf->client_lockdir))
 		client_lockdir=sdirs->client;
 	if(!(sdirs->lock=strdup(client_lockdir))
-	  || !(sdirs->lockbase=prepend_str(sdirs->lock, client))
-	  || !(sdirs->lockfile=prepend_str(sdirs->lockbase, "lockfile")))
+	  || !(sdirs->lockbase=prepend_s(sdirs->lock, client))
+	  || !(sdirs->lockfile=prepend_s(sdirs->lockbase, "lockfile")))
 		goto error;
 
 	return 0;

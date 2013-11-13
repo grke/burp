@@ -109,7 +109,7 @@ int hash_load(const char *champ, struct config *conf)
 	unsigned int s;
 	gzFile zp=NULL;
 
-	if(!(path=prepend_s(conf->directory, champ, strlen(champ)))
+	if(!(path=prepend_s(conf->directory, champ))
 	  || !(zp=gzopen_file(path, "rb")))
 		goto end;
 printf("hash load %s\n", path);

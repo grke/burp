@@ -228,8 +228,7 @@ static int incexc_matches(const char *fullrealwork, const char *incexc)
 	char buf[4096]="";
 	const char *inc=NULL;
 	char *old_incexc_path=NULL;
-	if(!(old_incexc_path=prepend_s(fullrealwork,
-		"incexc", strlen("incexc"))))
+	if(!(old_incexc_path=prepend_s(fullrealwork, "incexc")))
 			return -1;
 	if(!(fp=open_file(old_incexc_path, "rb")))
 	{
@@ -307,8 +306,8 @@ static char *get_restorepath(struct config *cconf, const char *client)
 {
 	char *tmp=NULL;
 	char *restorepath=NULL;
-	if(!(tmp=prepend_s(cconf->directory, client, strlen(client)))
-	 || !(restorepath=prepend_s(tmp, "restore", strlen("restore"))))
+	if(!(tmp=prepend_s(cconf->directory, client))
+	 || !(restorepath=prepend_s(tmp, "restore")))
 	{
 		if(tmp) free(tmp);
 		return NULL;

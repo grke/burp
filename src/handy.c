@@ -159,10 +159,10 @@ int mkpath(char **rpath, const char *limit)
 	return 0;
 }
 
-int build_path(const char *datadir, const char *fname, size_t flen, char **rpath, const char *limit)
+int build_path(const char *datadir, const char *fname, char **rpath, const char *limit)
 {
 	//logp("build path: '%s/%s'\n", datadir, fname);
-	if(!(*rpath=prepend_s(datadir, fname, flen))) return -1;
+	if(!(*rpath=prepend_s(datadir, fname))) return -1;
 	if(mkpath(rpath, limit))
 	{
 		if(*rpath) { free(*rpath); *rpath=NULL; }
@@ -1082,7 +1082,7 @@ int split_sig_with_save_path(const char *buf, unsigned int s, char *weak, char *
 int build_path_w(const char *path)
 {
 	char *rpath=NULL;
-	if(build_path(path, "", strlen(path), &rpath, NULL))
+	if(build_path(path, "", &rpath, NULL))
 		return -1;
 	free(rpath);
 	return 0;
@@ -1111,9 +1111,9 @@ static int do_recursive_delete(const char *d, const char *file, uint8_t delfiles
 
 	if(!file)
 	{
-		if(!(directory=prepend_s(d, "", 0))) return RECDEL_ERROR;
+		if(!(directory=prepend_s(d, ""))) return RECDEL_ERROR;
 	}
-	else if(!(directory=prepend_s(d, file, strlen(file))))
+	else if(!(directory=prepend_s(d, file)))
 	{
 		log_out_of_memory(__FUNCTION__);
 		return RECDEL_ERROR;
@@ -1156,8 +1156,7 @@ static int do_recursive_delete(const char *d, const char *file, uint8_t delfiles
 		  || !strcmp(entry->d_name, ".")
 		  || !strcmp(entry->d_name, ".."))
 			continue;
-		if(!(fullpath=prepend_s(directory,
-			entry->d_name, strlen(entry->d_name))))
+		if(!(fullpath=prepend_s(directory, entry->d_name)))
 		{
 			ret=RECDEL_ERROR;
 			break;

@@ -195,7 +195,7 @@ int champ_chooser_init(const char *datadir, struct config *conf)
 
 	if(!(sb=sbuf_alloc())
 	  || (!scores && !(scores=scores_alloc()))
-	  || !(sparse_path=prepend_s(datadir, "sparse", strlen("sparse")))
+	  || !(sparse_path=prepend_s(datadir, "sparse"))
 	  || (!lstat(sparse_path, &statp)
 		&& !(zp=gzopen_file(sparse_path, "rb"))))
 			goto end;

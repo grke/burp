@@ -20,7 +20,7 @@ extern int gzclose_fp(gzFile *fp);
 extern int is_dir(const char *path, struct dirent *d);
 extern int is_dir_lstat(const char *path);
 extern int mkpath(char **rpath, const char *limit);
-extern int build_path(const char *datadir, const char *fname, size_t flen, char **rpath, const char *limit);
+extern int build_path(const char *datadir, const char *fname, char **rpath, const char *limit);
 
 extern int open_file_for_send(BFILE *bfd, const char *fname, int64_t winattr, struct config *conf);
 extern int close_file_for_send(BFILE *bfd);

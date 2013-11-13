@@ -398,8 +398,8 @@ static int sparse_generation(struct manio *newmanio, const char *datadir, const 
 	int sig_count=0;
 	char *fpath=NULL;
 
-	if(!(sparse=prepend_s(manifest_dir, "sparse", strlen("sparse")))
-	  || !(global_sparse=prepend_s(datadir, "sparse", strlen("sparse")))
+	if(!(sparse=prepend_s(manifest_dir, "sparse"))
+	  || !(global_sparse=prepend_s(datadir, "sparse"))
 	  || !(sb=sbuf_alloc())
 	  || !(blk=blk_alloc())
 	  || build_path_w(sparse)

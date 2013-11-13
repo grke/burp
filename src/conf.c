@@ -986,8 +986,7 @@ static int parse_config_line(struct config *conf, struct llists *l, const char *
 				return -1;
 			}
 			if((cp=strrchr(copy, '/'))) *cp='\0';
-			if(!(tmp=prepend_s(copy,
-				extrafile, strlen(extrafile))))
+			if(!(tmp=prepend_s(copy, extrafile)))
 			{
 				log_out_of_memory(__FUNCTION__);
 				free(extrafile);
@@ -1595,7 +1594,7 @@ int load_client_config(struct config *conf, struct config *cconf, const char *cl
 {
 	char *cpath=NULL;
 	init_config(cconf);
-	if(!(cpath=prepend_s(conf->clientconfdir, client, strlen(client))))
+	if(!(cpath=prepend_s(conf->clientconfdir, client)))
 		return -1;
 	if(looks_like_tmp_or_hidden_file(client))
 	{

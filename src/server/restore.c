@@ -347,7 +347,7 @@ static int maybe_copy_data_files_across(const char *manifest,
 		snprintf(msg, sizeof(msg), "dat=%s", path);
 		printf("got: %s\n", msg);
 		if(async_write_str(CMD_GEN, msg)) goto end;
-		if(!(fdatpath=prepend_s(datadir, path, strlen(path))))
+		if(!(fdatpath=prepend_s(datadir, path)))
 			goto end;
 		if(send_a_file(fdatpath, conf))
 		{
@@ -577,11 +577,15 @@ static int restore_manifest(struct bu *arr, int a, int i, regex_t *regex, int sr
 	else if(act==ACTION_VERIFY) status=STATUS_VERIFYING;
 
 	if(
-	    (act==ACTION_RESTORE && !(logpath=prepend_s(arr[i].path, "restorelog", strlen("restorelog"))))
-	 || (act==ACTION_RESTORE && !(logpathz=prepend_s(arr[i].path, "restorelog.gz", strlen("restorelog.gz"))))
-	 || (act==ACTION_VERIFY && !(logpath=prepend_s(arr[i].path, "verifylog", strlen("verifylog"))))
-	 || (act==ACTION_VERIFY && !(logpathz=prepend_s(arr[i].path, "verifylog.gz", strlen("verifylog.gz"))))
-	 || !(manifest=prepend_s(arr[i].path, "manifest", strlen("manifest"))))
+	    (act==ACTION_RESTORE
+		&& !(logpath=prepend_s(arr[i].path, "restorelog")))
+	 || (act==ACTION_RESTORE
+		&& !(logpathz=prepend_s(arr[i].path, "restorelog.gz")))
+	 || (act==ACTION_VERIFY
+		&& !(logpath=prepend_s(arr[i].path, "verifylog")))
+	 || (act==ACTION_VERIFY
+		&& !(logpathz=prepend_s(arr[i].path, "verifylog.gz")))
+	 || !(manifest=prepend_s(arr[i].path, "manifest")))
 	{
 		log_and_send_oom(__FUNCTION__);
 		goto end;

@@ -36,7 +36,7 @@ int cstat_sort(const void *a, const void *b)
 
 static int cstat_add_initial_details(struct cstat *c, const char *name, const char *clientconfdir)
 {
-	if(!(c->conffile=prepend_s(clientconfdir, name, strlen(name)))
+	if(!(c->conffile=prepend_s(clientconfdir, name))
 	  || !(c->name=strdup(name)))
 	{
 		log_out_of_memory(__FUNCTION__);
@@ -131,12 +131,12 @@ static int set_cstat_from_conf(struct cstat *c, struct config *conf, struct conf
 	if(c->current) { free(c->current); c->current=NULL; }
 	if(c->timestamp) { free(c->timestamp); c->timestamp=NULL; }
 
-	if(!(c->basedir=prepend_s(cconf->directory, c->name, strlen(c->name)))
-	  || !(c->working=prepend_s(c->basedir, "working", strlen("working")))
-	  || !(c->current=prepend_s(c->basedir, "current", strlen("current")))
-	  || !(c->timestamp=prepend_s(c->current, "timestamp", strlen("timestamp")))
-	  || !(lockbasedir=prepend_s(client_lockdir, c->name, strlen(c->name)))
-	  || !(c->lockfile=prepend_s(lockbasedir, "lockfile", strlen("lockfile"))))
+	if(!(c->basedir=prepend_s(cconf->directory, c->name))
+	  || !(c->working=prepend_s(c->basedir, "working"))
+	  || !(c->current=prepend_s(c->basedir, "current"))
+	  || !(c->timestamp=prepend_s(c->current, "timestamp"))
+	  || !(lockbasedir=prepend_s(client_lockdir, c->name))
+	  || !(c->lockfile=prepend_s(lockbasedir, "lockfile")))
 	{
 		if(lockbasedir) free(lockbasedir);
 		log_out_of_memory(__FUNCTION__);
@@ -649,7 +649,7 @@ static int list_backup_file_name(int cfd, const char *dir, const char *file)
 	char *path=NULL;
 	char msg[256]="";
 	struct stat statp;
-	if(!(path=prepend_s(dir, file, strlen(file))))
+	if(!(path=prepend_s(dir, file)))
 		return -1;
 	if(lstat(path, &statp) || !S_ISREG(statp.st_mode))
 	{
@@ -721,7 +721,7 @@ static int list_backup_file_contents(int cfd, const char *dir, const char *file,
 	gzFile zp=NULL;
 	char *path=NULL;
 	char buf[256]="";
-	if(!(path=prepend_s(dir, file, strlen(file))))
+	if(!(path=prepend_s(dir, file)))
 		return -1;
 	if(!(zp=gzopen_file(path, "rb")))
 	{

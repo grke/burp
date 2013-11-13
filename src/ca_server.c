@@ -65,13 +65,50 @@ static int symlink_file(const char *oldpath, const char *newpath)
 	return 0;
 }
 
+static int dir_exists_and_is_non_empty(const char *path)
+{
+	DIR *dirp;
+	int count=0;
+	struct stat buf;
+	struct dirent *entry;     
+
+	if(lstat(path, &buf)) return 0;
+
+	if(!S_ISDIR(buf.st_mode))
+	{
+		// Not a directory.
+		logp("%s is not a directory!\n", path);
+		return -1;
+	}
+
+	if(!(dirp=opendir(path)))
+	{
+		logp("Could not open %s: %s\n", path, strerror(errno));
+		return -1;
+	}
+
+	while((entry=readdir(dirp)))
+	{
+		if(!strcmp(entry->d_name, ".")
+		  || !strcmp(entry->d_name, ".."))
+			continue;
+		count++;
+	}
+	closedir(dirp);
+	return count;
+}
+
 static int burp_ca_init(struct config *conf, const char *ca_dir)
 {
 	int a=0;
 	const char *args[15];
 	char linktarget[1024]="";
 
-	if(is_dir_lstat(ca_dir)) return 0;
+	if(dir_exists_and_is_non_empty(ca_dir)) return 0;
+	// Work around for burp_ca, which refuses to do anything if the
+	// directory exists.
+	rmdir(ca_dir);
+	sync();
 
 	setup_stuff_done++;
 

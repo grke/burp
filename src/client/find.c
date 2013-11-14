@@ -837,8 +837,8 @@ int find_file_next(struct sbuf *sb, struct config *conf)
 		else
 		{
 			ff_ret=FF_NOT_FOUND;
-/* BIG TODO: Make this bit work. Probably have to remember that we are inside
-   a directory that was excluded.
+/* BIG FIX THIS: Make this bit work. Probably have to remember that we are
+   inside a directory that was excluded.
 			// Excluded, but there might be a subdirectory that is
 			// included.
 			int ex=0;

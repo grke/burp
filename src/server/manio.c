@@ -143,7 +143,6 @@ int manio_write_sig(struct manio *manio, struct blk *blk)
 	if(!manio->zp && open_next_fpath(manio)) return -1;
 	// FIX THIS: check for errors
 	// FIX THIS: get rid of strlen()
-	// FIX THIS too
 	gzprintf(manio->zp, "%c%04X%s%s\n", CMD_SIG,
 		strlen(blk->weak)+strlen(blk->strong),
 		blk->weak, blk->strong);

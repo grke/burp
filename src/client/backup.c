@@ -246,11 +246,6 @@ static void get_wbuf_from_data(struct iobuf *wbuf, struct slist *slist, struct b
 			{
 				// Force onwards when the server has said that
 				// there are no more blocks to request.
-				// FIX THIS - the server should occasionally
-				// send a message to say that no blocks are
-				// needed up to a certain point in the list.
-				// This general mechanism can then be used
-				// for blk_requests_end also.
 				blist->last_sent=blk;
 				continue;
 			}

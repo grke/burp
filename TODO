@@ -1,2 +1,63 @@
-The list of things to do is now at:
+The list of things to do is at:
 https://github.com/grke/burp/issues
+
+However, that is currently relating only to burp1 issues.
+
+
+So, this is a list of important stuff that needs to be done for burp2,
+roughly in order of most important to least.
+
+* Get a lock before writing to a data file.
+
+* Get a lock before regenerating a sparse index.
+
+* Make Windows directory restores work.
+
+* Review how the sparse indexes are generated. Probably too many of them are
+  made at the moment.
+
+* Sorting the hooks at the end of a backup probably uses too much memory.
+
+* Separate phase1/phase2 again.
+
+* Fix counters (needs phase1/2)
+
+* Make recovery from partially complete backups work (needs phase1/2). Hooks
+  need to be generated from already transferred manifests. Need to forward
+  through already written 'changed/unchanged' manifest.
+
+* Make include/exclude/include work again (needs phase1/2 to make it easy).
+  By this, I mean including something inside a directory that is excluded.
+
+* Don't store fingerprints and md5sums as strings.
+
+* Check for errors in gzprintfs() in manio.c and current_backups.c.
+
+* Make verify work.
+
+* Make CMD_INTERRUPT work (on restore, maybe others too).
+
+* Make it possible to delete unused data files.
+
+* Make the status monitor work.
+
+* Make the status monitor use sdirs.
+
+* Add data compression.
+
+* Add data encryption.
+
+* Make acl/xattrs work as far as burp1 does.
+
+* Make Windows EFS work.
+
+* Make Windows 'image' backups work.
+
+* Make asyncio use iobuf for everything instead of just being a wrapper around
+  the old stuff.
+
+* Make src/client/list.c use sbuf.
+
+* champ_chooser: figure out a way of giving preference to newer candidates.
+
+* Separate chld stuff out of server/main.c.

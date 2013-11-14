@@ -31,8 +31,6 @@ roughly in order of most important to least.
 
 * Don't store fingerprints and md5sums as strings.
 
-* Check for errors in gzprintfs() in manio.c and current_backups.c.
-
 * Make verify work.
 
 * Make CMD_INTERRUPT work (on restore, maybe others too).

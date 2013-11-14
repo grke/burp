@@ -192,7 +192,11 @@ static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, struct blk *
 		}
 		// Should have the next signature.
 		// Write it to the unchanged file.
-		manio_write_sig_and_path(unmanio, *blk);
+		if(manio_write_sig_and_path(unmanio, *blk))
+		{
+			free(copy);
+			return -1;
+		}
 	}
 
 	free(copy);

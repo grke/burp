@@ -59,5 +59,3 @@ roughly in order of most important to least.
 * Make src/client/list.c use sbuf.
 
 * champ_chooser: figure out a way of giving preference to newer candidates.
-
-* Separate chld stuff out of server/main.c.

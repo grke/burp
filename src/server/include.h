@@ -8,6 +8,7 @@
 #include "backup.h"
 #include "ca.h"
 #include "champ_chooser.h"
+#include "chld.h"
 #include "current_backups.h"
 #include "delete.h"
 #include "dpth.h"

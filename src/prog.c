@@ -346,8 +346,7 @@ int main (int argc, char *argv[])
 			ret=status_client_ncurses(&conf, act, sclient);
 		}
 		else
-			ret=server(&conf, configfile,
-				generate_ca_only);
+			ret=server(&conf, configfile, generate_ca_only);
 #endif
 	}
 	else

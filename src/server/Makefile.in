@@ -25,6 +25,7 @@ SRCS = \
 	backup.c	\
 	ca.c		\
 	champ_chooser.c	\
+	chld.c		\
 	current_backups.c \
 	delete.c	\
 	dpth.c		\

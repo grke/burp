@@ -138,26 +138,29 @@ static int check_sig_count(struct manio *manio)
 	return 0;
 }
 
-int manio_write_sig(struct manio *manio, struct blk *blk)
+static int write_sig_msg(struct manio *manio, const char *msg)
 {
 	if(!manio->zp && open_next_fpath(manio)) return -1;
-	// FIX THIS: check for errors
-	// FIX THIS: get rid of strlen()
-	gzprintf(manio->zp, "%c%04X%s%s\n", CMD_SIG,
-		strlen(blk->weak)+strlen(blk->strong),
-		blk->weak, blk->strong);
+	if(send_msg_zp(manio->zp, CMD_SIG, msg, strlen(msg))) return -1;
 	return check_sig_count(manio);
+}
+
+static char *sig_to_msg(struct blk *blk, int save_path)
+{
+	static char msg[128];
+	snprintf(msg, sizeof(msg), "%s%s%s",
+		blk->weak, blk->strong, save_path?blk->save_path:"");
+	return msg;
+}
+
+int manio_write_sig(struct manio *manio, struct blk *blk)
+{
+	return write_sig_msg(manio, sig_to_msg(blk, 0 /* no save_path */));
 }
 
 int manio_write_sig_and_path(struct manio *manio, struct blk *blk)
 {
-	if(!manio->zp && open_next_fpath(manio)) return -1;
-	// FIX THIS: check for errors
-	// FIX THIS: get rid of strlen()
-	gzprintf(manio->zp, "%c%04X%s%s%s\n", CMD_SIG,
-		strlen(blk->weak)+strlen(blk->strong)+strlen(blk->save_path),
-		blk->weak, blk->strong, blk->save_path);
-	return check_sig_count(manio);
+	return write_sig_msg(manio, sig_to_msg(blk, 1 /* save_path */));
 }
 
 int manio_write_sbuf(struct manio *manio, struct sbuf *sb)

@@ -651,22 +651,3 @@ int do_link(const char *oldpath, const char *newpath, struct stat *statp, struct
 	}
 	return 0;
 }
-
-int gzprintf_sig_and_path(gzFile zp, struct blk *blk)
-{
-	// FIX THIS: check for errors
-	// FIX THIS: get rid of strlen()
-	gzprintf(zp, "%c%04X%s%s%s\n", CMD_SIG,
-		strlen(blk->weak)+strlen(blk->strong)+strlen(blk->save_path),
-		blk->weak, blk->strong, blk->save_path);
-	return 0;
-}
-
-int gzprintf_sig(gzFile zp, struct blk *blk)
-{
-	// FIX THIS too
-	gzprintf(zp, "%c%04X%s%s\n", CMD_SIG,
-		strlen(blk->weak)+strlen(blk->strong),
-		blk->weak, blk->strong);
-	return 0;
-}

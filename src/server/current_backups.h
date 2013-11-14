@@ -29,7 +29,4 @@ extern int remove_old_backups(const char *basedir, struct config *cconf, const c
 extern int do_link(const char *oldpath, const char *newpath, struct stat *statp, struct config *conf, uint8_t overwrite);
 extern int delete_backup(const char *basedir, struct bu *arr, int a, int b, const char *client);
 
-extern int gzprintf_sig_and_path(gzFile zp, struct blk *blk);
-extern int gzprintf_sig(gzFile zp, struct blk *blk);
-
 #endif

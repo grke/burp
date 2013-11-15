@@ -114,7 +114,7 @@ static int open_log(const char *realworking, const char *client, const char *cve
 
 static int data_needed(struct sbuf *sb)
 {
-	if(sb->pbuf.cmd==CMD_FILE) return 1;
+	if(sb->path.cmd==CMD_FILE) return 1;
 	return 0;
 }
 
@@ -124,7 +124,7 @@ static int forward_through_sigs(struct sbuf **csb, struct manio *cmanio, struct 
 	static int ars;
 	char *copy;
 
-	if(!(copy=strdup((*csb)->pbuf.buf)))
+	if(!(copy=strdup((*csb)->path.buf)))
 	{
 		log_out_of_memory(__FUNCTION__);
 		return -1;
@@ -144,7 +144,7 @@ static int forward_through_sigs(struct sbuf **csb, struct manio *cmanio, struct 
 		}
 
 		// Got something.
-		if(strcmp((*csb)->pbuf.buf, copy))
+		if(strcmp((*csb)->path.buf, copy))
 		{
 			// Found the next entry.
 			free(copy);
@@ -164,7 +164,7 @@ static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, struct blk *
 	// Use the most recent stat for the new manifest.
 	if(manio_write_sbuf(unmanio, sb)) return -1;
 
-	if(!(copy=strdup((*csb)->pbuf.buf)))
+	if(!(copy=strdup((*csb)->path.buf)))
 	{
 		log_out_of_memory(__FUNCTION__);
 		return -1;
@@ -184,7 +184,7 @@ static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, struct blk *
 		}
 
 		// Got something.
-		if(strcmp((*csb)->pbuf.buf, copy))
+		if(strcmp((*csb)->path.buf, copy))
 		{
 			// Found the next entry.
 			free(copy);
@@ -214,7 +214,7 @@ static int entry_changed(struct sbuf *sb, struct manio *cmanio, struct manio *un
 
 	if(!csb && !(csb=sbuf_alloc())) return -1;
 
-	if(csb->pbuf.buf)
+	if(csb->path.buf)
 	{
 		// Already have an entry.
 	}
@@ -233,7 +233,7 @@ static int entry_changed(struct sbuf *sb, struct manio *cmanio, struct manio *un
 			finished=1;
 			return 1;
 		}
-		if(!csb->pbuf.buf)
+		if(!csb->path.buf)
 		{
 			logp("Should have an path at this point, but do not, in %s\n", __FUNCTION__);
 			return -1;
@@ -252,7 +252,7 @@ static int entry_changed(struct sbuf *sb, struct manio *cmanio, struct manio *un
 			// If the file type changed, I think it is time to back
 			// it up again (for example, EFS changing to normal
 			// file, or back again).
-			if(csb->pbuf.cmd!=sb->pbuf.cmd)
+			if(csb->path.cmd!=sb->path.cmd)
 			{
 //				printf("got changed: %c %s %c %s %lu %lu\n", csb->cmd, csb->path, sb->cmd, sb->path, csb->statp.st_mtime, sb->statp.st_mtime);
 				if(forward_through_sigs(&csb, cmanio, conf))
@@ -372,10 +372,10 @@ static int set_up_for_sig_info(struct slist *slist, struct blist *blist, struct 
 		return -1;
 	}
 	// Replace the attribs with the more recent values.
-	if(sb->abuf.buf) free(sb->abuf.buf);
-	sb->abuf.buf=inew->abuf.buf;
-	sb->abuf.len=inew->abuf.len;
-	inew->abuf.buf=NULL;
+	if(sb->attr.buf) free(sb->attr.buf);
+	sb->attr.buf=inew->attr.buf;
+	sb->attr.len=inew->attr.len;
+	inew->attr.buf=NULL;
 
 	// Mark the end of the previous file.
 	slist->add_sigs_here->bend=blist->tail;
@@ -448,8 +448,8 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 		/* Incoming block signatures. */
 		case CMD_ATTRIBS_SIGS:
 			// New set of stuff incoming. Clean up.
-			if(inew->abuf.buf) free(inew->abuf.buf);
-			sbuf_from_iobuf_attr(inew, rbuf);
+			if(inew->attr.buf) free(inew->attr.buf);
+			iobuf_copy(&inew->attr, rbuf);
 			inew->index=decode_file_no(inew);
 			rbuf->buf=NULL;
 
@@ -469,7 +469,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			// set up snew, it is an error.
 			if(snew) break;
 			if(!(snew=sbuf_alloc())) goto error;
-			sbuf_from_iobuf_attr(snew, rbuf);
+			iobuf_copy(&snew->attr, rbuf);
 			attribs_decode(snew);
 			snew->need_path=1;
 			rbuf->buf=NULL;
@@ -484,7 +484,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			if(!snew) goto error;
 			if(snew->need_path)
 			{
-				sbuf_from_iobuf_path(snew, rbuf);
+				iobuf_copy(&snew->path, rbuf);
 				snew->need_path=0;
 				rbuf->buf=NULL;
 //			printf("got request for: %s\n", snew->path);
@@ -508,7 +508,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			}
 			else if(snew->need_link)
 			{
-				sbuf_from_iobuf_link(snew, rbuf);
+				iobuf_copy(&snew->link, rbuf);
 				snew->need_link=0;
 				rbuf->buf=NULL;
 				sbuf_add_to_list(snew, slist);
@@ -659,7 +659,7 @@ static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist, int sca
 	}
 
 	// Only need to request the path at this stage.
-	iobuf_copy(wbuf, &sb->pbuf);
+	iobuf_copy(wbuf, &sb->path);
 //printf("want sigs for: %s\n", sb->path);
 	sb->sent_path=1;
 	sb->index=file_no++;
@@ -681,7 +681,7 @@ static int write_to_changed_file(struct manio *chmanio, struct slist *slist, str
 
 	while((sb=slist->head))
 	{
-//printf("consider: %s %d\n", sb->pbuf.buf, sb->need_data);
+//printf("consider: %s %d\n", sb->path.buf, sb->need_data);
 		if(sb->need_data)
 		{
 			int hack=0;

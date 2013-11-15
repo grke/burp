@@ -72,29 +72,29 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 		else if(ars>0)
 			goto end; // Finished OK.
 
-		write_status(client, STATUS_LISTING, sb->pbuf.buf, conf);
+		write_status(client, STATUS_LISTING, sb->path.buf, conf);
 
 		if(browsedir)
 		{
 			int r;
 			if((r=check_browsedir(browsedir,
-				&sb->pbuf.buf, bdlen))<0)
+				&sb->path.buf, bdlen))<0)
 					goto error;
 			if(!r) continue;
 			show++;
 		}
 		else
 		{
-			if(check_regex(regex, sb->pbuf.buf))
+			if(check_regex(regex, sb->path.buf))
 				show++;
 		}
 		if(show)
 		{
-			if(async_write(&sb->abuf)
-			  || async_write(&sb->pbuf))
+			if(async_write(&sb->attr)
+			  || async_write(&sb->path))
 				goto error;
 			if(sbuf_is_link(sb)
-			  && async_write(&sb->lbuf))
+			  && async_write(&sb->link))
 				goto error;
 		}
 

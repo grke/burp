@@ -2,33 +2,33 @@
 
 static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, enum action act, const char *client, char status, struct config *conf, int *need_data)
 {
-	//logp("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->pbuf.buf);
-	write_status(client, status, sb->pbuf.buf, conf);
+	//logp("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path.buf);
+	write_status(client, status, sb->path.buf, conf);
 
-	switch(sb->pbuf.cmd)
+	switch(sb->path.cmd)
 	{
 		case CMD_FILE:
 		case CMD_ENC_FILE:
 		case CMD_METADATA:
 		case CMD_ENC_METADATA:
 		case CMD_EFS_FILE:
-			if(async_write(&sb->abuf)
-			  || async_write(&sb->pbuf))
+			if(async_write(&sb->attr)
+			  || async_write(&sb->path))
 				return -1;
 			*need_data=1;
 			return 0;
 		default:
-			if(async_write(&sb->abuf)
-			  || async_write(&sb->pbuf))
+			if(async_write(&sb->attr)
+			  || async_write(&sb->path))
 				return -1;
 			// If it is a link, send what
 			// it points to.
 			else if(sbuf_is_link(sb))
 			{
-				if(async_write(&sb->lbuf))
+				if(async_write(&sb->link))
 					return -1;
 			}
-			do_filecounter(conf->cntr, sb->pbuf.cmd, 0);
+			do_filecounter(conf->cntr, sb->path.cmd, 0);
 			return 0;
 	}
 }
@@ -87,7 +87,7 @@ static int restore_ent(const char *client,
 	int ret=-1;
 	struct sbuf *xb;
 
-	if(!(*sb)->pbuf.buf)
+	if(!(*sb)->path.buf)
 	{
 		printf("Got NULL path!\n");
 		return -1;
@@ -97,7 +97,7 @@ static int restore_ent(const char *client,
 	// Check if we have any directories waiting to be restored.
 	while((xb=slist->head))
 	{
-		if(is_subdir(xb->pbuf.buf, (*sb)->pbuf.buf))
+		if(is_subdir(xb->path.buf, (*sb)->path.buf))
 		{
 			// We are still in a subdir.
 			break;
@@ -279,8 +279,8 @@ static int maybe_copy_data_files_across(const char *manifest,
 			continue;
 		}
 
-		if((!srestore || check_srestore(conf, sb->pbuf.buf))
-		  && check_regex(regex, sb->pbuf.buf))
+		if((!srestore || check_srestore(conf, sb->path.buf))
+		  && check_regex(regex, sb->path.buf))
 		{
 			blkcount++;
 			// Truncate the save_path so that we are left with the
@@ -390,8 +390,8 @@ static int maybe_copy_data_files_across(const char *manifest,
 
 		need_data=0;
 
-		if((!srestore || check_srestore(conf, sb->pbuf.buf))
-		  && check_regex(regex, sb->pbuf.buf))
+		if((!srestore || check_srestore(conf, sb->path.buf))
+		  && check_regex(regex, sb->path.buf))
 		{
 			if(restore_ent(client, &sb, slist,
 				arr, a, i, act, status, conf, &need_data))
@@ -495,8 +495,8 @@ static int restore_stream(const char *client, const char *datadir,
 
 		need_data=0;
 
-		if((!srestore || check_srestore(conf, sb->pbuf.buf))
-		  && check_regex(regex, sb->pbuf.buf))
+		if((!srestore || check_srestore(conf, sb->path.buf))
+		  && check_regex(regex, sb->path.buf))
 		{
 			if(restore_ent(client, &sb, slist,
 				arr, a, i, act, status, conf, &need_data))

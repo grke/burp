@@ -32,7 +32,7 @@ static int add_to_file_requests(struct slist *slist, struct iobuf *rbuf)
 
 	if(!(sb=sbuf_alloc())) return -1;
 
-	sbuf_from_iobuf_path(sb, rbuf);
+	iobuf_copy(&sb->path, rbuf);
 	rbuf->buf=NULL;
 	// Give it a number to simplify tracking.
 	sb->index=file_no++;
@@ -154,7 +154,7 @@ static int add_to_scan_list(struct slist *flist, int *scanning, struct config *c
 	if(!(sb=sbuf_alloc())) return -1;
 	while(!(ff_ret=find_file_next(sb, conf)))
 	{
-		if(sb->pbuf.buf)
+		if(sb->path.buf)
 		{
 			// Got something.
 			if(ftype_to_cmd(sb, conf))
@@ -298,7 +298,7 @@ static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int requ
 	if(!sb->sent_stat)
 	{
 //printf("want to send stat: %s\n", sb->path);
-		iobuf_copy(wbuf, &sb->abuf);
+		iobuf_copy(wbuf, &sb->attr);
 		wbuf->cmd=CMD_ATTRIBS_SIGS; // hack
 		sb->sent_stat=1;
 		return;
@@ -324,17 +324,17 @@ static void get_wbuf_from_scan(struct iobuf *wbuf, struct slist *flist)
 	if(!sb) return;
 	if(!sb->sent_stat)
 	{
-		iobuf_copy(wbuf, &sb->abuf);
+		iobuf_copy(wbuf, &sb->attr);
 		sb->sent_stat=1;
 	}
 	else if(!sb->sent_path)
 	{
-		iobuf_copy(wbuf, &sb->pbuf);
+		iobuf_copy(wbuf, &sb->path);
 		sb->sent_path=1;
 	}
-	else if(sb->lbuf.buf && !sb->sent_link)
+	else if(sb->link.buf && !sb->sent_link)
 	{
-		iobuf_copy(wbuf, &sb->lbuf);
+		iobuf_copy(wbuf, &sb->link);
 		sb->sent_link=1;
 	}
 	else

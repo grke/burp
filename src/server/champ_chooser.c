@@ -208,21 +208,21 @@ int champ_chooser_init(const char *datadir, struct config *conf)
 			// Reached the end.
 			break;
 		}
-		if(sb->pbuf.cmd==CMD_MANIFEST)
+		if(sb->path.cmd==CMD_MANIFEST)
 		{
 			if(!(candidate=add_new_candidate())) goto end;
-			candidate->path=sb->pbuf.buf;
-			sb->pbuf.buf=NULL;
+			candidate->path=sb->path.buf;
+			sb->path.buf=NULL;
 		}
-		else if(sb->pbuf.cmd==CMD_FINGERPRINT)
+		else if(sb->path.cmd==CMD_FINGERPRINT)
 		{
-			if(candidate_add_to_sparse(sb->pbuf.buf, candidate))
+			if(candidate_add_to_sparse(sb->path.buf, candidate))
 				goto end;
 		}
 		else
 		{
 			logp("Unexpected line in %s: %c:%s\n",
-				sparse_path, sb->pbuf.cmd, sb->pbuf.buf);
+				sparse_path, sb->path.cmd, sb->path.buf);
 			goto end;
 		}
 		sbuf_free_contents(sb);

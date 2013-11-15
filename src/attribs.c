@@ -14,12 +14,12 @@ int attribs_encode(struct sbuf *sb)
 	char *p;
 	struct stat *statp=&sb->statp;
 
-	if(!(sb->abuf.buf=(char *)malloc(128)))
+	if(!(sb->attr.buf=(char *)malloc(128)))
 	{
 		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
-	p=sb->abuf.buf;
+	p=sb->attr.buf;
 
 	p += to_base64(sb->index, p);
 	*p++ = ' ';
@@ -75,7 +75,7 @@ int attribs_encode(struct sbuf *sb)
 
 	*p = 0;
 
-	sb->abuf.len=p-sb->abuf.buf;
+	sb->attr.len=p-sb->attr.buf;
 
 	return 0;
 }
@@ -100,7 +100,7 @@ int attribs_encode(struct sbuf *sb)
 // FIX THIS: Do everything with a struct sb.
 void attribs_decode_low_level(struct sbuf *sb)
 {
-	const char *p=sb->abuf.buf;
+	const char *p=sb->attr.buf;
 	struct stat *statp=&sb->statp;
 	int64_t val;
 
@@ -219,7 +219,7 @@ static int set_file_times(const char *path, struct utimbuf *ut, struct stat *sta
 uint64_t decode_file_no(struct sbuf *sb)
 {
 	int64_t val;
-	from_base64(&val, sb->abuf.buf);
+	from_base64(&val, sb->attr.buf);
 	return (uint64_t)val;
 }
 

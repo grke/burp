@@ -10,9 +10,9 @@ typedef struct sbuf sbuf_t;
 
 struct sbuf
 {
-	struct iobuf pbuf; // File data.
-	struct iobuf lbuf; // Link data.
-	struct iobuf abuf; // Attribute data.
+	struct iobuf path; // File data.
+	struct iobuf link; // Link data.
+	struct iobuf attr; // Attribute data.
 
 	struct stat statp;
 	uint64_t winattr;
@@ -70,10 +70,6 @@ extern int sbuf_to_manifest(struct sbuf *sb, gzFile zp);
 extern void sbuf_add_to_list(struct sbuf *sb, struct slist *slist);
 
 extern int sbuf_pathcmp(struct sbuf *a, struct sbuf *b);
-
-extern void sbuf_from_iobuf_path(struct sbuf *sb, struct iobuf *iobuf);
-extern void sbuf_from_iobuf_attr(struct sbuf *sb, struct iobuf *iobuf);
-extern void sbuf_from_iobuf_link(struct sbuf *sb, struct iobuf *iobuf);
 
 extern void sbuf_print_alloc_stats(void);
 

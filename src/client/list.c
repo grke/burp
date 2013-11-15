@@ -67,7 +67,7 @@ void ls_to_buf(char *lsbuf, struct sbuf *sb)
 	// Display most recent time.
 	p=encode_time(time, p);
 	*p++=' ';
-	for(f=sb->pbuf.buf; *f; ) *p++=*f++;
+	for(f=sb->path.buf; *f; ) *p++=*f++;
 	*p=0;
 }
 
@@ -76,7 +76,7 @@ static void ls_long_output(struct sbuf *sb)
 	static char lsbuf[2048];
 	ls_to_buf(lsbuf, sb);
 	printf("%s", lsbuf);
-	if(sb->lbuf.buf) printf(" -> %s", sb->lbuf.buf);
+	if(sb->link.buf) printf(" -> %s", sb->link.buf);
 	printf("\n");
 }
 
@@ -158,8 +158,8 @@ static void ls_long_output_json(struct sbuf *sb)
 	static char buf[2048];
 	char *esc_fname=NULL;
 	char *esc_lname=NULL;
-	char *fname=sb->pbuf.buf;
-	char *lname=sb->lbuf.buf;
+	char *fname=sb->path.buf;
+	char *lname=sb->link.buf;
 	struct stat *statp=&sb->statp;
 	*buf='\0';
 
@@ -222,13 +222,13 @@ static void json_backup(char *statbuf, struct config *conf)
 
 static void ls_short_output(struct sbuf *sb)
 {
-	printf("%s\n", sb->pbuf.buf);
+	printf("%s\n", sb->path.buf);
 }
 
 static void ls_short_output_json(struct sbuf *sb)
 {
 	open_tag(4, NULL);
-	printf("     \"%s\"", sb->pbuf.buf);
+	printf("     \"%s\"", sb->path.buf);
 }
 
 static void list_item(int json, enum action act, struct sbuf *sb)
@@ -265,9 +265,9 @@ int do_list_client(struct config *conf, enum action act, int json)
 		goto end;
 
 	if(!(sb=sbuf_alloc())) goto end;
-	iobuf_init(&sb->pbuf);
-	iobuf_init(&sb->lbuf);
-	iobuf_init(&sb->abuf);
+	iobuf_init(&sb->path);
+	iobuf_init(&sb->link);
+	iobuf_init(&sb->attr);
 
 	if(json)
 	{
@@ -279,15 +279,15 @@ int do_list_client(struct config *conf, enum action act, int json)
 	// This should probably should use the sbuf stuff.
 	while(1)
 	{
-		iobuf_free_content(&sb->abuf);
-		if(async_read(&sb->abuf)) break;
-		if(sb->abuf.cmd==CMD_TIMESTAMP)
+		iobuf_free_content(&sb->attr);
+		if(async_read(&sb->attr)) break;
+		if(sb->attr.cmd==CMD_TIMESTAMP)
 		{
 			// A backup timestamp, just print it.
-			if(json) json_backup(sb->abuf.buf, conf);
+			if(json) json_backup(sb->attr.buf, conf);
 			else
 			{
-				printf("Backup: %s\n", sb->abuf.buf);
+				printf("Backup: %s\n", sb->attr.buf);
 				if(conf->browsedir)
 					printf("Listing directory: %s\n",
 					       conf->browsedir);
@@ -297,36 +297,36 @@ int do_list_client(struct config *conf, enum action act, int json)
 			}
 			continue;
 		}
-		else if(sb->abuf.cmd!=CMD_ATTRIBS)
+		else if(sb->attr.cmd!=CMD_ATTRIBS)
 		{
-			iobuf_log_unexpected(&sb->abuf, __FUNCTION__);
+			iobuf_log_unexpected(&sb->attr, __FUNCTION__);
 			goto end;
 		}
 
 		attribs_decode_low_level(sb);
 
-		iobuf_free_content(&sb->pbuf);
-		if(async_read(&sb->pbuf))
+		iobuf_free_content(&sb->path);
+		if(async_read(&sb->path))
 		{
 			logp("got stat without an object\n");
 			goto end;
 		}
-		else if(sb->pbuf.cmd==CMD_DIRECTORY
-			|| sb->pbuf.cmd==CMD_FILE
-			|| sb->pbuf.cmd==CMD_ENC_FILE
-			|| sb->pbuf.cmd==CMD_EFS_FILE
-			|| sb->pbuf.cmd==CMD_SPECIAL)
+		else if(sb->path.cmd==CMD_DIRECTORY
+			|| sb->path.cmd==CMD_FILE
+			|| sb->path.cmd==CMD_ENC_FILE
+			|| sb->path.cmd==CMD_EFS_FILE
+			|| sb->path.cmd==CMD_SPECIAL)
 		{
 			list_item(json, act, sb);
 		}
-		else if(cmd_is_link(sb->pbuf.cmd)) // symlink or hardlink
+		else if(cmd_is_link(sb->path.cmd)) // symlink or hardlink
 		{
-			iobuf_free_content(&sb->lbuf);
-			if(async_read(&sb->lbuf)
-			  || sb->lbuf.cmd!=sb->pbuf.cmd)
+			iobuf_free_content(&sb->link);
+			if(async_read(&sb->link)
+			  || sb->link.cmd!=sb->path.cmd)
 			{
 				logp("could not get link %c:%s\n",
-					sb->pbuf.cmd, sb->pbuf.buf);
+					sb->path.cmd, sb->path.buf);
 				goto end;
 			}
 			else
@@ -335,7 +335,7 @@ int do_list_client(struct config *conf, enum action act, int json)
 		else
 		{
 			fprintf(stderr, "unlistable %c:%s\n",
-				sb->pbuf.cmd, sb->pbuf.buf?sb->pbuf.buf:"");
+				sb->path.cmd, sb->path.buf?sb->path.buf:"");
 		}
 	}
 
@@ -343,9 +343,9 @@ int do_list_client(struct config *conf, enum action act, int json)
 end:
 	if(json && json_started) close_tag(0);
 	printf("\n");
-	iobuf_free_content(&sb->pbuf);
-	iobuf_free_content(&sb->lbuf);
-	iobuf_free_content(&sb->abuf);
+	iobuf_free_content(&sb->path);
+	iobuf_free_content(&sb->link);
+	iobuf_free_content(&sb->attr);
 	if(dpth) free(dpth);
 	if(sb) sbuf_free(sb);
 	if(!ret) logp("List finished ok\n");

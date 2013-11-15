@@ -39,7 +39,7 @@ static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, int *finishe
 	// Use the most recent stat for the new manifest.
 	if(manio_write_sbuf(newmanio, sb)) return -1;
 
-	if(!(copy=strdup((*csb)->pbuf.buf)))
+	if(!(copy=strdup((*csb)->path.buf)))
 	{
 		log_out_of_memory(__FUNCTION__);
 		return -1;
@@ -59,7 +59,7 @@ static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, int *finishe
 			return 0;
 		}
 		// Got something.
-		if(strcmp((*csb)->pbuf.buf, copy))
+		if(strcmp((*csb)->path.buf, copy))
 		{
 			// Found the next entry.
 			free(copy);
@@ -133,7 +133,7 @@ static int get_next_set_of_hooks(struct hooks **hnew, struct sbuf *sb, gzFile sp
 				break;
 			return 1;
 		}
-		if(sb->pbuf.cmd==CMD_MANIFEST)
+		if(sb->path.cmd==CMD_MANIFEST)
 		{
 			if(hooks_alloc(hnew, path, fingerprints))
 				break;
@@ -143,21 +143,20 @@ static int get_next_set_of_hooks(struct hooks **hnew, struct sbuf *sb, gzFile sp
 				*fingerprints=NULL;
 			}
 			if(*path) free(*path);
-			*path=sb->pbuf.buf;
-			sb->pbuf.buf=NULL;
+			*path=sb->path.buf;
+			sb->path.buf=NULL;
 			sbuf_free_contents(sb);
 			if(*hnew) return 0;
 		}
-		else if(sb->pbuf.cmd==CMD_FINGERPRINT)
+		else if(sb->path.cmd==CMD_FINGERPRINT)
 		{
-			if(astrcat(fingerprints, sb->pbuf.buf))
+			if(astrcat(fingerprints, sb->path.buf))
 				break;
 			sbuf_free_contents(sb);
 		}
 		else
 		{
-			logp("Unexpected line in %s: %c:%s\n",
-				sparse, sb->pbuf.cmd, sb->pbuf.buf);
+			iobuf_log_unexpected(&sb->path, __FUNCTION__);
 			break;
 		}
 	}
@@ -489,7 +488,7 @@ int phase3(struct manio *chmanio, struct manio *unmanio, const char *manifest_di
 
 		if(!finished_un
 		  && usb
-		  && !usb->pbuf.buf
+		  && !usb->path.buf
 		  && (ars=manio_sbuf_fill(unmanio, usb, NULL, NULL, conf)))
 		{
 			if(ars<0) goto end; // Error.
@@ -498,26 +497,26 @@ int phase3(struct manio *chmanio, struct manio *unmanio, const char *manifest_di
 
 		if(!finished_ch
 		  && csb
-		  && !csb->pbuf.buf
+		  && !csb->path.buf
 		  && (ars=manio_sbuf_fill(chmanio, csb, NULL, NULL, conf)))
 		{
 			if(ars<0) goto end; // Error.
 			finished_ch=1; // OK.
 		}
 
-		if((usb && usb->pbuf.buf) && (!csb || !csb->pbuf.buf))
+		if((usb && usb->path.buf) && (!csb || !csb->path.buf))
 		{
 			if(copy_unchanged_entry(&usb, usb, &finished_un,
 				&blk, unmanio, newmanio, manifest_dir,
 				conf)) goto end;
 		}
-		else if((!usb || !usb->pbuf.buf) && (csb && csb->pbuf.buf))
+		else if((!usb || !usb->path.buf) && (csb && csb->path.buf))
 		{
 			if(copy_unchanged_entry(&csb, csb, &finished_ch,
 				&blk, chmanio, newmanio, manifest_dir,
 				conf)) goto end;
 		}
-		else if((!usb || !usb->pbuf.buf) && (!csb || !(csb->pbuf.buf)))
+		else if((!usb || !usb->path.buf) && (!csb || !(csb->path.buf)))
 		{
 			continue;
 		}

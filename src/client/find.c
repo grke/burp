@@ -410,9 +410,9 @@ static ff_e found_soft_link(struct sbuf *sb, struct config *conf, char *path)
 		return FF_FOUND;
 	}
 	linkto[size]=0;
-	sb->lbuf.cmd=CMD_SOFT_LINK;
-	sb->lbuf.buf=linkto;
-	sb->lbuf.len=strlen(linkto);
+	sb->link.cmd=CMD_SOFT_LINK;
+	sb->link.buf=linkto;
+	sb->link.len=strlen(linkto);
 	sb->ftype=FT_LNK_S;
 	return FF_FOUND;
 }
@@ -536,7 +536,7 @@ static ff_e found_directory(struct sbuf *sb, struct config *conf,
 	 * Ignore this directory and everything below if one of the files
 	 * defined by the 'nobackup' option exists.
 	 */
-	if((nbret=nobackup_directory(conf, sb->pbuf.buf)))
+	if((nbret=nobackup_directory(conf, sb->path.buf)))
 	{
 		if(nbret<0) return FF_ERROR;
 		return FF_NOT_FOUND;
@@ -561,13 +561,13 @@ static ff_e found_directory(struct sbuf *sb, struct config *conf,
 #endif
 		))
 	{
-		if(fstype_excluded(conf, sb->pbuf.buf))
+		if(fstype_excluded(conf, sb->path.buf))
 		{
 			// Just back up the directory entry, not the contents.
 			sb->ftype=FT_DIR;
 			return FF_FOUND;
 		}
-		if(!fs_change_is_allowed(conf, sb->pbuf.buf))
+		if(!fs_change_is_allowed(conf, sb->path.buf))
 		{
 			sb->ftype=FT_NOFSCHG;
 			return FF_FOUND;
@@ -589,18 +589,18 @@ static ff_e found_other(struct sbuf *sb, struct config *conf, char *path)
 	 * crw-r----- 1 root  operator - 116, 0x00040002 Jun 9 19:32 /dev/rad0s3
 	 */
 	if((S_ISBLK(sb->statp.st_mode) || S_ISCHR(sb->statp.st_mode))
-		&& need_to_read_blockdev(conf, sb->pbuf.buf))
+		&& need_to_read_blockdev(conf, sb->path.buf))
 	{
 #else
 	if(S_ISBLK(sb->statp.st_mode)
-		&& need_to_read_blockdev(conf, sb->pbuf.buf))
+		&& need_to_read_blockdev(conf, sb->path.buf))
 	{
 #endif
 		/* raw partition */
 		sb->ftype = FT_RAW;
 	}
 	else if(S_ISFIFO(sb->statp.st_mode)
-		&& need_to_read_fifo(conf, sb->pbuf.buf))
+		&& need_to_read_fifo(conf, sb->path.buf))
 	{
 		sb->ftype=FT_FIFO;
 	}
@@ -615,8 +615,8 @@ static ff_e found_other(struct sbuf *sb, struct config *conf, char *path)
 static ff_e find_files(struct sbuf *sb, struct config *conf,
 	char *path, dev_t parent_device)
 {
-	if(sb->pbuf.buf) free(sb->pbuf.buf);
-	if(!(sb->pbuf.buf=strdup(path)))
+	if(sb->path.buf) free(sb->path.buf);
+	if(!(sb->path.buf=strdup(path)))
 	{
                 log_out_of_memory(__FUNCTION__);
 		return FF_ERROR;
@@ -633,7 +633,7 @@ static ff_e find_files(struct sbuf *sb, struct config *conf,
 	}
 
 	sb->compression=in_exclude_comp(conf->excom, conf->excmcount,
-		sb->pbuf.buf, conf->compression);
+		sb->path.buf, conf->compression);
 	if(attribs_encode(sb)) return FF_ERROR;
 
 	/*
@@ -659,13 +659,13 @@ static ff_e find_files(struct sbuf *sb, struct config *conf,
 			if(lp->ino==(ino_t)sb->statp.st_ino
 				&& lp->dev==(dev_t)sb->statp.st_dev)
 			{
-				sb->lbuf.cmd=CMD_HARD_LINK;
-				if(!(sb->lbuf.buf=strdup(lp->name)))
+				sb->link.cmd=CMD_HARD_LINK;
+				if(!(sb->link.buf=strdup(lp->name)))
 				{
                 			log_out_of_memory(__FUNCTION__);
 					return FF_ERROR;
 				}
-				sb->lbuf.len=strlen(sb->lbuf.buf);
+				sb->link.len=strlen(sb->link.buf);
 				// Handle link, file already saved.
 				sb->ftype=FT_LNK_H;
 				return FF_FOUND;
@@ -727,7 +727,7 @@ static int set_up_new_ff_dir(struct sbuf *sb, struct config *conf)
 	static struct ff_dir *ff_dir;
 	static size_t len;
 
-	len=strlen(sb->pbuf.buf)+2;
+	len=strlen(sb->path.buf)+2;
 	if(!(ff_dir=(struct ff_dir *)calloc(1, sizeof(struct ff_dir)))
 	  || !(ff_dir->dirname=(char *)malloc(len)))
 	{
@@ -735,16 +735,16 @@ static int set_up_new_ff_dir(struct sbuf *sb, struct config *conf)
 		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
-	snprintf(ff_dir->dirname, len, "%s", sb->pbuf.buf);
+	snprintf(ff_dir->dirname, len, "%s", sb->path.buf);
 
 	errno = 0;
 #ifdef O_DIRECTORY
 	int dfd=-1;
 	// Shenanigans to set O_NOATIME on a directory.
-	if((dfd=open(sb->pbuf.buf, O_RDONLY|O_DIRECTORY|O_NOATIME))<0
+	if((dfd=open(sb->path.buf, O_RDONLY|O_DIRECTORY|O_NOATIME))<0
 	  || !(directory=fdopendir(dfd)))
 #else
-	if(!(directory=opendir(sb->pbuf.buf)))
+	if(!(directory=opendir(sb->path.buf)))
 #endif
 	{
 #ifdef O_DIRECTORY
@@ -908,7 +908,7 @@ error:
 static int ft_err(struct sbuf *sb, struct config *conf, const char *msg)
 {
 	logw(conf->p1cntr, _("Err: %s %s: %s"),
-		msg, sb->pbuf.buf, strerror(errno));
+		msg, sb->path.buf, strerror(errno));
 	return -1;
 }
 
@@ -920,7 +920,7 @@ int ftype_to_cmd(struct sbuf *sb, struct config *conf)
 		conf->excext, conf->excount,
 		conf->increg, conf->ircount,
 		conf->excreg, conf->ercount,
-		sb->pbuf.buf)) return -1;
+		sb->path.buf)) return -1;
 
 #ifdef HAVE_WIN32
 	if(sb->winattr & FILE_ATTRIBUTE_ENCRYPTED)
@@ -928,14 +928,14 @@ int ftype_to_cmd(struct sbuf *sb, struct config *conf)
 		if(sb->ftype==FT_REG
 		  || sb->ftype==FT_DIR)
 		{
-			sb->pbuf.cmd=CMD_EFS_FILE;
-			sb->pbuf.len=strlen(sb->pbuf.buf);
+			sb->path.cmd=CMD_EFS_FILE;
+			sb->path.len=strlen(sb->path.buf);
 			return 0;
 		}
 
 		// Hopefully, here is never reached.
 		logw(conf->p1cntr, "EFS type %d not yet supported: %s",
-			sb->ftype, sb->pbuf.buf);
+			sb->ftype, sb->path.buf);
 		return -1;
 	}
 #endif
@@ -946,36 +946,36 @@ int ftype_to_cmd(struct sbuf *sb, struct config *conf)
 		case FT_REG:
 		case FT_FIFO:
 		case FT_RAW:
-			if(conf->encryption_password) sb->pbuf.cmd=CMD_ENC_FILE;
-			else sb->pbuf.cmd=CMD_FILE;
-			sb->pbuf.len=strlen(sb->pbuf.buf);
+			if(conf->encryption_password) sb->path.cmd=CMD_ENC_FILE;
+			else sb->path.cmd=CMD_FILE;
+			sb->path.len=strlen(sb->path.buf);
 			return 0;
 		case FT_DIR:
 		case FT_REPARSE:
 		case FT_JUNCTION:
 #ifdef HAVE_WIN32
-			if(conf->encryption_password) sb->pbuf.cmd=CMD_ENC_FILE;
-			else sb->pbuf.cmd=CMD_FILE;
+			if(conf->encryption_password) sb->path.cmd=CMD_ENC_FILE;
+			else sb->path.cmd=CMD_FILE;
 #else
-			sb->pbuf.cmd=CMD_DIRECTORY;
+			sb->path.cmd=CMD_DIRECTORY;
 #endif
-			sb->pbuf.len=strlen(sb->pbuf.buf);
+			sb->path.len=strlen(sb->path.buf);
 			return 0;
 		case FT_NOFSCHG:
-			logw(conf->p1cntr, "%s%s [will not descend: file system change not allowed]\n", "Dir: ", sb->pbuf.buf);
+			logw(conf->p1cntr, "%s%s [will not descend: file system change not allowed]\n", "Dir: ", sb->path.buf);
 			return -1;
 #ifndef HAVE_WIN32
 		case FT_SPEC: // special file - fifo, socket, device node...
-			sb->pbuf.cmd=CMD_SPECIAL;
-			sb->pbuf.len=strlen(sb->pbuf.buf);
+			sb->path.cmd=CMD_SPECIAL;
+			sb->path.len=strlen(sb->path.buf);
 			return 0;
 		case FT_LNK_S:
-			sb->pbuf.cmd=CMD_SOFT_LINK;
-			sb->pbuf.len=strlen(sb->pbuf.buf);
+			sb->path.cmd=CMD_SOFT_LINK;
+			sb->path.len=strlen(sb->path.buf);
 			return 0;
 		case FT_LNK_H:
-			sb->pbuf.cmd=CMD_HARD_LINK;
-			sb->pbuf.len=strlen(sb->pbuf.buf);
+			sb->path.cmd=CMD_HARD_LINK;
+			sb->path.len=strlen(sb->path.buf);
 			return 0;
 #endif
 		case FT_NOFOLLOW:
@@ -986,6 +986,6 @@ int ftype_to_cmd(struct sbuf *sb, struct config *conf)
 			return ft_err(sb, conf, "Could not open directory");
 	}
 	logw(conf->p1cntr, _("Err: Unknown file sb->ftype %d: %s"),
-		sb->ftype, sb->pbuf.buf);
+		sb->ftype, sb->path.buf);
 	return -1;
 }

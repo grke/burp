@@ -137,6 +137,7 @@ static int comms(int rfd, SSL *ssl, char **incexc, char **server_version,
 	}
 
 	feat=rbuf->buf;
+	rbuf->buf=NULL;
 	if(strncmp(feat,
 	  "extra_comms_begin ok", strlen("extra_comms_begin ok")))
 	{

@@ -3,69 +3,75 @@
 int authorise_client(struct config *conf, char **server_version)
 {
 	int ret=-1;
-	struct iobuf rbuf;
 	char hello[256]="";
+	struct iobuf *rbuf=NULL;
+
 	snprintf(hello, sizeof(hello), "hello:%s", VERSION);
 	if(async_write_str(CMD_GEN, hello))
 	{
 		logp("problem with auth\n");
 		goto end;
 	}
-	iobuf_init(&rbuf);
-	if(async_read(&rbuf)
-	  || rbuf.cmd!=CMD_GEN
-	  || strncmp(rbuf.buf, "whoareyou", strlen("whoareyou")))
+
+	if(!(rbuf=iobuf_async_read())
+	  || rbuf->cmd!=CMD_GEN
+	  || strncmp(rbuf->buf, "whoareyou", strlen("whoareyou")))
 	{
 		logp("problem with auth\n");
 		goto end;
 	}
-	if(rbuf.buf)
+	if(rbuf->buf)
 	{
 		char *cp=NULL;
-		if((cp=strchr(rbuf.buf, ':')))
+		if((cp=strchr(rbuf->buf, ':')))
 		{
 			cp++;
-			if(cp) *server_version=strdup(cp);
+			if(cp)
+			{
+				if(!(*server_version=strdup(cp)))
+				{
+					log_out_of_memory(__FUNCTION__);
+					goto end;
+				}
+			}
 		}
-		free(rbuf.buf);
+		iobuf_free_content(rbuf);
 	}
-	iobuf_init(&rbuf);
 
 	if(async_write_str(CMD_GEN, conf->cname)
 	  || async_read_expect(CMD_GEN, "okpassword")
 	  || async_write_str(CMD_GEN, conf->password)
-	  || async_read(&rbuf))
+	  || async_read(rbuf))
 	{
 		logp("problem with auth\n");
 		goto end;
 	}
 
-	if(rbuf.cmd==CMD_WARNING) // special case for the version warning
+	if(rbuf->cmd==CMD_WARNING) // special case for the version warning
 	{
-		//logw(conf->p1cntr, rbuf.buf);
-		logp("WARNING: %s\n", rbuf.buf);
+		//logw(conf->p1cntr, rbuf->buf);
+		logp("WARNING: %s\n", rbuf->buf);
 		conf->p1cntr->warning++;
-		free(rbuf.buf);
-		iobuf_init(&rbuf);
-		if(async_read(&rbuf))
+		iobuf_free_content(rbuf);
+		if(async_read(rbuf))
 		{
 			logp("problem with auth\n");
 			goto end;
 		}
 	}
-	if(rbuf.cmd==CMD_GEN && !strcmp(rbuf.buf, "ok"))
+	if(rbuf->cmd==CMD_GEN && !strcmp(rbuf->buf, "ok"))
 	{
 		// It is OK.
 		logp("auth ok\n");
 	}
 	else
 	{
-		logp("problem with auth: got %c %s\n", rbuf.cmd, rbuf.buf);
+		iobuf_log_unexpected(rbuf, __FUNCTION__);
 		goto end;
 	}
 
 	ret=0;
 end:
-	if(rbuf.buf) free(rbuf.buf);
+	iobuf_free(rbuf);
 	return ret;
 }

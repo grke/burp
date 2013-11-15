@@ -660,7 +660,7 @@ static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist, int sca
 	}
 
 	// Only need to request the path at this stage.
-	iobuf_from_sbuf_path(wbuf, sb);
+	iobuf_copy(wbuf, &sb->pbuf);
 //printf("want sigs for: %s\n", sb->path);
 	sb->sent_path=1;
 	sb->index=file_no++;

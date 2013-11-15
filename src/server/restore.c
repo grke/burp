@@ -424,8 +424,9 @@ static int restore_stream(const char *client, const char *datadir,
 	struct manio *manio=NULL;
 	struct iobuf wbuf;
 
-	if(async_write_str(CMD_GEN, "restore_stream")
-	  || async_read_expect(CMD_GEN, "restore_stream_ok"))
+	if(async_write_str(CMD_GEN, "restore_stream"))
+		goto end;
+	if(async_read_expect(CMD_GEN, "restore_stream_ok"))
 		goto end;
 
 	if(!(manio=manio_alloc())

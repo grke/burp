@@ -126,9 +126,6 @@ int setup_signals(int oldmax_children, int max_children, int oldmax_status_child
 		oldmax_status_children, max_status_children);
 
 	setup_signal(SIGCHLD, sigchld_handler);
-	//setup_signal(SIGABRT, sighandler);
-	//setup_signal(SIGTERM, sighandler);
-	//setup_signal(SIGINT, sighandler);
 	setup_signal(SIGHUP, huphandler);
 	setup_signal(SIGUSR2, usr2handler);
 
@@ -796,7 +793,6 @@ end:
 
 static int init_vers(struct vers *vers, const char *cversion)
 {
-exit(0);
 	memset(vers, 0, sizeof(struct vers));
 	return ((vers->min=version_to_long("1.2.7"))<0
 	  || (vers->cli=version_to_long(cversion))<0
@@ -808,7 +804,6 @@ exit(0);
 static int extra_comms(char **client, const char *cversion, char **incexc, int *srestore, struct config *conf, struct config *cconf)
 {
 	int ret=-1;
-	struct iobuf *rbuf=NULL;
 	struct vers vers;
 	//char *restorepath=NULL;
 
@@ -870,7 +865,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	struct config cconf;
 	struct cntr p1cntr;
 	struct cntr cntr;
-	struct iobuf rbuf;
+	struct iobuf *rbuf=NULL;
 
 	conf.p1cntr=&p1cntr;
 	conf.cntr=&cntr;
@@ -983,8 +978,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 
 	set_non_blocking(*cfd);
 
-	iobuf_init(&rbuf);
-	if(async_read(&rbuf))
+	if(!(rbuf=iobuf_async_read()))
 	{
 		ret=-1;
 	}
@@ -996,7 +990,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 		const char *args[12];
 		args[a++]=cconf.server_script_pre;
 		args[a++]="pre";
-		args[a++]=rbuf.buf?rbuf.buf:"";
+		args[a++]=rbuf->buf?rbuf->buf:"";
 		args[a++]=client;
 		args[a++]="reserved4";
 		args[a++]="reserved5";
@@ -1036,7 +1030,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	}
 
 	if(!ret) ret=child(&conf, &cconf, client, cversion, incexc, srestore,
-			&rbuf, &gotlock, &timer_ret);
+			rbuf, &gotlock, &timer_ret);
 
 	if((!ret || cconf.server_script_post_run_on_fail)
 	  && cconf.server_script_post)
@@ -1046,7 +1040,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 		const char *args[12];
 		args[a++]=cconf.server_script_post;
 		args[a++]="post";
-		args[a++]=rbuf.buf?rbuf.buf:"", // action requested by client
+		args[a++]=rbuf->buf?rbuf->buf:"", // action requested by client
 		args[a++]=client;
 		args[a++]=ret?"1":"0", // indicate success or failure
 		// indicate whether the timer script said OK or not
@@ -1096,10 +1090,10 @@ finish:
 	logp("exit child\n");
 	if(client) free(client);
 	if(cversion) free(cversion);
-	if(rbuf.buf) free(rbuf.buf);
 	if(incexc) free(incexc);
 	free_config(&conf);
 	free_config(&cconf);
+	iobuf_free(rbuf);
 	return ret;
 }
 

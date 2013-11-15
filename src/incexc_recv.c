@@ -1,45 +1,40 @@
 #include "include.h"
 
+static const char *endreqstrf;
+static const char *endrepstrf;
+
+static int add_to_incexc(char **incexc, const char *src, size_t len, const char *sep)
+{
+	char *tmp;
+	if(!(tmp=prepend(*incexc?:"", src, len, *incexc?"\n":""))) return -1;
+	if(*incexc) free(*incexc);
+	*incexc=tmp;
+	return 0;
+}
+
+static int incexc_recv_func(struct iobuf *rbuf,
+        struct config *conf, void *param)
+{
+	char **incexc=(char **)param;
+	if(!strcmp(rbuf->buf, endreqstrf))
+	{
+		if(async_write_str(CMD_GEN, endrepstrf)) return -1;
+		return 1;
+	}
+	return add_to_incexc(incexc, rbuf->buf, rbuf->len, *incexc?"\n":"");
+}
+
+
 static int incexc_recv(char **incexc, const char *reqstr, const char *repstr, const char *endreqstr, const char *endrepstr, struct config *conf)
 {
-	int ret=-1;
-	char *tmp=NULL;
-	struct iobuf *rbuf=NULL;
-	if(async_write_str(CMD_GEN, repstr))
-		goto end;
+	if(async_write_str(CMD_GEN, repstr)) return -1;
 
-	if(!(rbuf=iobuf_alloc())) goto end;
-	while(1)
-	{
-		iobuf_free_content(rbuf);
-		if(async_read(rbuf)) break;
-		if(rbuf->cmd!=CMD_GEN)
-		{
-			iobuf_log_unexpected(rbuf, __FUNCTION__);
-			goto end;
-		}
-		if(!strcmp(rbuf->buf, endreqstr))
-		{
-			if(async_write_str(CMD_GEN, endrepstr))
-				goto end;
-			ret=0;
-			break;
-		}
-		if(!(tmp=prepend(*incexc?:"", rbuf->buf, rbuf->len,
-			*incexc?"\n":""))) goto end;
-		if(*incexc) free(*incexc);
-		*incexc=tmp;
-	}
+	endreqstrf=endreqstr;
+	endrepstrf=endrepstr;
+	async_simple_loop(conf, incexc, incexc_recv_func);
+
 	// Need to put another new line at the end.
-	if(*incexc)
-	{
-		if(!(tmp=prepend(*incexc, "\n", 1, ""))) goto end;
-		free(*incexc);
-		*incexc=tmp;
-	}
-end:
-	iobuf_free(rbuf);
-	return ret;
+	return add_to_incexc(incexc, "\n", 1, "");
 }
 
 int incexc_recv_client(char **incexc, struct config *conf)

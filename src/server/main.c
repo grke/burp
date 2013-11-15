@@ -838,7 +838,7 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 	}
 	else
 	{
-		if(send_features(*client, conf)) goto end;
+		if(send_features(*client, cconf)) goto end;
 	}
 
 	if(extra_comms_read(&vers, client,

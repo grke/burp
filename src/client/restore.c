@@ -522,28 +522,30 @@ static int write_data(BFILE *bfd, struct blk *blk)
 	return 0;
 }
 
-static char *get_restore_style(struct config *conf)
+static char *restore_style=NULL;
+
+static int restore_style_func(struct iobuf *rbuf,
+	struct config *conf, void *param)
 {
 	char msg[32]="";
-	struct iobuf *rbuf;
-	if(!(rbuf=iobuf_async_read())) return NULL;
-	if(rbuf->cmd!=CMD_GEN
-	  || (strcmp(rbuf->buf, "restore_stream")
-	   && strcmp(rbuf->buf, "restore_spool")))
+	restore_style=NULL;
+	if(strcmp(rbuf->buf, "restore_stream")
+	   && strcmp(rbuf->buf, "restore_spool"))
 	{
 		iobuf_log_unexpected(rbuf, __FUNCTION__);
-		goto error;
+		return -1;
 	}
 	snprintf(msg, sizeof(msg), "%s_ok", rbuf->buf);
 	if(async_write_str(CMD_GEN, msg))
-	{
-		log_out_of_memory(__FUNCTION__);
-		goto error;
-	}
-	return rbuf->buf;
-error:
-	iobuf_free(rbuf);
-	return NULL;
+		return -1;
+	restore_style=rbuf->buf;
+	return 1;
+}
+
+static char *get_restore_style(struct config *conf)
+{
+	if(async_simple_loop(conf, NULL, restore_style_func)) return NULL;
+	return restore_style;
 }
 
 static int restore_spool_func(struct iobuf *rbuf,

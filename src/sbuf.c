@@ -164,7 +164,8 @@ int sbuf_open_file(struct sbuf *sb, struct config *conf)
 		logw(conf->cntr, "%s has vanished\n", sb->pbuf.buf);
 		return -1;
 	}
-	if(attribs_encode(sb, conf->compression)) return -1;
+	sb->compression=conf->compression;
+	if(attribs_encode(sb)) return -1;
 
 	if(open_file_for_send(&sb->bfd, sb->pbuf.buf, sb->winattr, conf))
 	{
@@ -438,7 +439,7 @@ int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct
 				}
 				sbuf_from_iobuf_attr(sb, rbuf);
 				rbuf->buf=NULL;
-				attribs_decode(sb, &sb->compression);
+				attribs_decode(sb);
 				break;
 
 			case CMD_FILE:

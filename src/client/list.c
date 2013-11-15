@@ -279,10 +279,6 @@ int do_list_client(struct config *conf, enum action act, int json)
 	// This should probably should use the sbuf stuff.
 	while(1)
 	{
-		uint64_t winattr=0;
-		int compression=-1;
-		uint64_t index;
-
 		iobuf_free_content(&sb->abuf);
 		if(async_read(&sb->abuf)) break;
 		if(sb->abuf.cmd==CMD_TIMESTAMP)
@@ -307,9 +303,7 @@ int do_list_client(struct config *conf, enum action act, int json)
 			goto end;
 		}
 
-		// FIXME - with the sbuf stuff.
-		attribs_decode_low_level(&sb->statp, sb->abuf.buf,
-			&index, &winattr, &compression);
+		attribs_decode_low_level(sb);
 
 		iobuf_free_content(&sb->pbuf);
 		if(async_read(&sb->pbuf))

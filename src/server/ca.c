@@ -337,9 +337,9 @@ end:
 int ca_server_maybe_sign_client_cert(const char *client, const char *cversion, struct config *conf)
 {
 	int ret=0;
-	char *buf=NULL;
 	long min_ver=0;
 	long cli_ver=0;
+	struct iobuf rbuf;
 
 	if((min_ver=version_to_long("1.3.2"))<0
 	 || (cli_ver=version_to_long(cversion))<0)
@@ -349,16 +349,15 @@ int ca_server_maybe_sign_client_cert(const char *client, const char *cversion, s
 
 	while(1)
 	{
-		char cmd;
-		size_t len=0;
-		if(async_read(&cmd, &buf, &len))
+		iobuf_init(&rbuf);
+		if(async_read(&rbuf))
 		{
 			ret=-1;
 			break;
 		}
-		if(cmd==CMD_GEN)
+		if(rbuf.cmd==CMD_GEN)
 		{
-			if(!strcmp(buf, "csr"))
+			if(!strcmp(rbuf.buf, "csr"))
 			{
 				// Client wants to sign a certificate.
 				logp("Client %s wants a certificate signed\n",
@@ -378,7 +377,7 @@ int ca_server_maybe_sign_client_cert(const char *client, const char *cversion, s
 				break;
 
 			}
-			else if(!strcmp(buf, "nocsr"))
+			else if(!strcmp(rbuf.buf, "nocsr"))
 			{
 				// Client does not want to sign a certificate.
 				// No problem, just carry on.
@@ -388,21 +387,21 @@ int ca_server_maybe_sign_client_cert(const char *client, const char *cversion, s
 			}
 			else
 			{
-				logp("unexpected command from client when expecting csr: %c:%s\n", cmd, buf);
+				logp("unexpected command from client when expecting csr: %c:%s\n", rbuf.cmd, rbuf.buf);
 				ret=-1;
 				break;
 			}
 		}
 		else
 		{
-			logp("unexpected command from client when expecting csr: %c:%s\n", cmd, buf);
+			logp("unexpected command from client when expecting csr: %c:%s\n", rbuf.cmd, rbuf.buf);
 			ret=-1;
 			break;
 		}
 
-		if(buf) free(buf); buf=NULL;
+		if(rbuf.buf) { free(rbuf.buf); rbuf.buf=NULL; }
 	}
 
-	if(buf) free(buf);
+	if(rbuf.buf) free(rbuf.buf);
 	return ret;
 }

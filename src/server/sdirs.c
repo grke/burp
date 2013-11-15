@@ -11,7 +11,8 @@ struct sdirs *sdirs_alloc(void)
 
 int sdirs_init(struct sdirs *sdirs, struct config *conf, const char *client)
 {
-	char *client_lockdir;
+	int ret=0;
+	char *lockbase=NULL;
 
 	if(!conf->directory)
 	{
@@ -42,17 +43,28 @@ int sdirs_init(struct sdirs *sdirs, struct config *conf, const char *client)
 	  || !(sdirs->cmanifest=prepend_s(sdirs->current, "manifest")))
 		goto error;
 
-	if(!(client_lockdir=conf->client_lockdir))
-		client_lockdir=sdirs->client;
-	if(!(sdirs->lock=strdup(client_lockdir))
-	  || !(sdirs->lockbase=prepend_s(sdirs->lock, client))
-	  || !(sdirs->lockfile=prepend_s(sdirs->lockbase, "lockfile")))
+	if(conf->client_lockdir)
+	{
+		if(!(sdirs->lock=strdup(conf->client_lockdir))
+		  || !(lockbase=prepend_s(sdirs->lock, client)))
+			goto error;
+	}
+	else
+	{
+		if(!(sdirs->lock=strdup(sdirs->client))
+		  || !(lockbase=strdup(sdirs->client)))
+			goto error;
+	}
+	if(!(sdirs->lockfile=prepend_s(lockbase, "lockfile")))
 		goto error;
 
-	return 0;
+	goto end;
 error:
 	sdirs_free(sdirs);
-	return -1;
+	ret=-1;
+end:
+	if(lockbase) free(lockbase);
+	return ret;
 }
 
 void sdirs_free(struct sdirs *sdirs)
@@ -75,7 +87,6 @@ void sdirs_free(struct sdirs *sdirs)
         if(sdirs->cmanifest) free(sdirs->cmanifest);
 
         if(sdirs->lock) free(sdirs->lock);
-        if(sdirs->lockbase) free(sdirs->lockbase);
         if(sdirs->lockfile) free(sdirs->lockfile);
 
 	free(sdirs);

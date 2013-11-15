@@ -14,12 +14,12 @@ int attribs_encode(struct sbuf *sb, int compression)
 	char *p;
 	struct stat *statp=&sb->statp;
 
-	if(!(sb->attribs=(char *)malloc(128)))
+	if(!(sb->abuf.buf=(char *)malloc(128)))
 	{
 		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
-	p=sb->attribs;
+	p=sb->abuf.buf;
 
 	p += to_base64(sb->index, p);
 	*p++ = ' ';
@@ -75,7 +75,7 @@ int attribs_encode(struct sbuf *sb, int compression)
 
 	*p = 0;
 
-	sb->alen=p-sb->attribs;
+	sb->abuf.len=p-sb->abuf.buf;
 
 	return 0;
 }
@@ -193,7 +193,8 @@ void attribs_decode(struct sbuf *sb, int *compression)
 {
 	uint64_t index;
 	uint64_t winattr;
-	attribs_decode_low_level(&sb->statp, sb->attribs, &index, &winattr, compression);
+	attribs_decode_low_level(&sb->statp, sb->abuf.buf,
+		&index, &winattr, compression);
 	sb->index=index;
 	sb->winattr=winattr;
 }
@@ -222,7 +223,7 @@ static int set_file_times(const char *path, struct utimbuf *ut, struct stat *sta
 uint64_t decode_file_no(struct sbuf *sb)
 {
 	int64_t val;
-	from_base64(&val, sb->attribs);
+	from_base64(&val, sb->abuf.buf);
 	return (uint64_t)val;
 }
 

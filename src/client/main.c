@@ -5,41 +5,41 @@
 // Return 0 for OK, -1 for error, 1 for timer conditions not met.
 static int maybe_check_timer(const char *backupstr, struct config *conf)
 {
-	char rcmd=0;
-	char *rdst=NULL;
-	size_t rlen=0;
+	int ret=-1;
 	int complen=0;
+	struct iobuf *rbuf=NULL;
 
-        if(async_write_str(CMD_GEN, backupstr)) return -1;
+        if(async_write_str(CMD_GEN, backupstr)) goto end;
 
-        if(async_read(&rcmd, &rdst, &rlen)) return -1;
+        if(!(rbuf=iobuf_async_read())) return -1;
 
-        if(rcmd==CMD_GEN && !strcmp(rdst, "timer conditions not met"))
+        if(rbuf->cmd==CMD_GEN && !strcmp(rbuf->buf, "timer conditions not met"))
         {
-                free(rdst);
                 logp("Timer conditions on the server were not met\n");
-                return 1;
+		ret=1;
+		goto end;
         }
-        else if(rcmd!=CMD_GEN)
+        else if(rbuf->cmd!=CMD_GEN)
         {
-                logp("unexpected command from server: %c:%s\n", rcmd ,rdst);
-                free(rdst);
-                return -1;
+		iobuf_log_unexpected(rbuf, __FUNCTION__);
+		goto end;
         }
 
-	if(!strncmp(rdst, "ok", 2))
+	if(!strncmp(rbuf->buf, "ok", 2))
 		complen=3;
 	else
 	{
-                logp("unexpected command from server: %c:%s\n", rcmd ,rdst);
-                free(rdst);
-                return -1;
+		iobuf_log_unexpected(rbuf, __FUNCTION__);
+		goto end;
 	}
         // The server now tells us the compression level in the OK response.
-        if(strlen(rdst)>3) conf->compression=atoi(rdst+complen);
+        if(strlen(rbuf->buf)>3) conf->compression=atoi(rbuf->buf+complen);
         logp("Compression level: %d\n", conf->compression);
 
-	return 0;
+	ret=0;
+end:
+	iobuf_free(rbuf);
+	return ret;
 }
 
 /*
@@ -78,6 +78,185 @@ static int server_supports_autoupgrade(const char *feat)
 	return server_supports(feat, ":autoupgrade:");
 }
 
+static int comms(int rfd, SSL *ssl, char **incexc, char **server_version,
+	enum action *action, struct config *conf)
+{
+	int ret=0;
+	int ca_ret=0;
+	char *feat=NULL;
+	struct iobuf *rbuf=NULL;
+
+	if(authorise_client(conf, server_version)) goto error;
+
+	if(*server_version)
+	{
+		logp("Server version: %s\n", *server_version);
+		// Servers before 1.3.2 did not tell us their versions.
+		// 1.3.2 and above can do the automatic CA stuff that
+		// follows.
+		if((ca_ret=ca_client_setup(conf))<0)
+		{
+			// Error
+			logp("Error with certificate signing request\n");
+			goto error;
+		}
+		else if(ca_ret>0)
+		{
+			// Certificate signed successfully.
+			// Everything is OK, but we will reconnect now, in
+			// order to use the new keys/certificates.
+			ret=1;
+			goto end;
+		}
+	}
+
+	set_non_blocking(rfd);
+
+	if(ssl_check_cert(ssl, conf))
+	{
+		logp("check cert failed\n");
+		goto error;
+	}
+
+	if(async_write_str(CMD_GEN, "extra_comms_begin"))
+	{
+		logp("Problem requesting extra_comms_begin\n");
+		goto error;
+	}
+	// Servers greater than 1.3.0 will list the extra_comms
+	// features they support.
+	else if(!(rbuf=iobuf_async_read()))
+	{
+		logp("Problem reading response to extra_comms_begin\n");
+		goto error;
+	}
+	else if(rbuf->cmd!=CMD_GEN)
+	{
+		iobuf_log_unexpected(rbuf, __FUNCTION__);
+		goto error;
+	}
+
+	feat=rbuf->buf;
+	if(strncmp(feat,
+	  "extra_comms_begin ok", strlen("extra_comms_begin ok")))
+	{
+		iobuf_log_unexpected(rbuf, __FUNCTION__);
+		goto error;
+	}
+
+	// Can add extra bits here. The first extra bit is the
+	// autoupgrade stuff.
+
+	if(server_supports_autoupgrade(feat))
+	{
+		if(conf->autoupgrade_dir && conf->autoupgrade_os
+		  && autoupgrade_client(conf))
+			goto error;
+	}
+
+	// :srestore: means that the server wants to do a restore.
+	if(server_supports(feat, ":srestore:"))
+	{
+		if(conf->server_can_restore)
+		{
+			logp("Server is initiating a restore\n");
+			if(*incexc) { free(*incexc); *incexc=NULL; }
+			if(incexc_recv_client_restore(incexc, conf))
+				goto error;
+			if(*incexc)
+			{
+				if(parse_incexcs_buf(conf, *incexc))
+					goto error;
+				*action=ACTION_RESTORE;
+				log_restore_settings(conf, 1);
+			}
+		}
+		else
+		{
+			logp("Server wants to initiate a restore\n");
+			logp("Client configuration says no\n");
+			if(async_write_str(CMD_GEN, "srestore not ok"))
+				goto error;
+		}
+	}
+
+	if(conf->orig_client)
+	{
+		char str[512]="";
+		snprintf(str, sizeof(str),
+			"orig_client=%s", conf->orig_client);
+		if(!server_supports(feat, ":orig_client:"))
+		{
+			logp("Server does not support switching client.\n");
+			goto error;
+		}
+		if(async_write_str(CMD_GEN, str)
+		  || async_read_expect(CMD_GEN, "orig_client ok"))
+		{
+			logp("Problem requesting %s\n", str);
+			goto error;
+		}
+		logp("Switched to client %s\n", conf->orig_client);
+	}
+
+	// :sincexc: is for the server giving the client the
+	// incexc config.
+	if(*action==ACTION_BACKUP
+	  || *action==ACTION_BACKUP_TIMED)
+	{
+		if(!*incexc && server_supports(feat, ":sincexc:"))
+		{
+			logp("Server is setting includes/excludes.\n");
+			if(*incexc) { free(*incexc); *incexc=NULL; }
+			if(incexc_recv_client(incexc, conf))
+				goto error;
+			if(*incexc && parse_incexcs_buf(conf, *incexc))
+				goto error;
+		}
+	}
+
+	if(server_supports(feat, ":counters:"))
+	{
+		if(async_write_str(CMD_GEN, "countersok"))
+			goto error;
+		conf->send_client_counters=1;
+	}
+
+	// :incexc: is for the client sending the server the
+	// incexc config so that it better knows what to do on
+	// resume.
+	if(server_supports(feat, ":incexc:")
+	  && incexc_send_client(conf))
+		goto error;
+
+	if(*action==ACTION_RESTORE)
+	{
+		// Client may have a temporary directory for restores.
+		if(conf->restore_spool)
+		{
+			char str[512]="";
+			snprintf(str, sizeof(str),
+			  "restore_spool=%s", conf->restore_spool);
+			if(async_write_str(CMD_GEN, str))
+				goto error;
+		}
+	}
+
+	if(async_write_str(CMD_GEN, "extra_comms_end")
+	  || async_read_expect(CMD_GEN, "extra_comms_end ok"))
+	{
+		logp("Problem requesting extra_comms_end\n");
+		goto error;
+	}
+
+	goto end;
+error:
+	ret=-1;
+end:
+	iobuf_free(rbuf);
+	return ret;
+}
+
 static int s_server_session_id_context=1;
 
 /* May return 1 to mean try again. This happens after a successful certificate
@@ -99,6 +278,7 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 	char *incexc=NULL;
 	char *server_version=NULL;
 	const char *backupstr="backup";
+	enum action action=act;
 
 	conf->p1cntr=&p1cntr;
 	conf->cntr=&cntr;
@@ -108,14 +288,13 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 //	settimers(0, 100);
 	logp("begin client\n");
 
-	if(act!=ACTION_ESTIMATE)
+	if(action!=ACTION_ESTIMATE)
 	{
 		ssl_load_globals();
 		if(!(ctx=ssl_initialise_ctx(conf)))
 		{
 			logp("error initialising ssl ctx\n");
-			ret=-1;
-			goto end;
+			goto error;
 		}
 
 		SSL_CTX_set_session_id_context(ctx,
@@ -123,242 +302,59 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 			sizeof(s_server_session_id_context));
 
 		if((rfd=init_client_socket(conf->server, conf->port))<0)
-		{
-			ret=-1;
-			goto end;
-		}
+			goto error;
 
 		if(!(ssl=SSL_new(ctx))
 		  || !(sbio=BIO_new_socket(rfd, BIO_NOCLOSE)))
 		{
 			ERR_error_string_n(ERR_get_error(), buf, sizeof(buf));
 			logp("Problem joining SSL to the socket: %s\n", buf);
-			ret=-1;
-			goto end;
+			goto error;
 		}
 		SSL_set_bio(ssl, sbio, sbio);
 		if(SSL_connect(ssl)<=0)
 		{
 			ERR_error_string_n(ERR_get_error(), buf, sizeof(buf));
 			logp("SSL connect error: %s\n", buf);
-			ret=-1;
-			goto end;
+			goto error;
 		}
 	}
 
-	if((ret=async_init(rfd, ssl, conf, act==ACTION_ESTIMATE)))
-		goto end;
+	if(async_init(rfd, ssl, conf, action==ACTION_ESTIMATE))
+		goto error;
 
 	// Set quality of service bits on backup packets.
-	if(act==ACTION_BACKUP || act==ACTION_BACKUP_TIMED)
+	if(action==ACTION_BACKUP || action==ACTION_BACKUP_TIMED)
 		set_bulk_packets();
 
-	if(act!=ACTION_ESTIMATE)
+	if(action!=ACTION_ESTIMATE)
 	{
-		char cmd=0;
-		size_t len=0;
-		char *feat=NULL;
-		int ca_ret=0;
-		if((ret=authorise_client(conf, &server_version)))
-			goto end;
-
-		if(server_version)
-		{
-			logp("Server version: %s\n", server_version);
-			// Servers before 1.3.2 did not tell us their versions.
-			// 1.3.2 and above can do the automatic CA stuff that
-			// follows.
-			if((ca_ret=ca_client_setup(conf))<0)
-			{
-				// Error
-				logp("Error with certificate signing request\n");
-				ret=-1;
-				goto end;
-			}
-			else if(ca_ret>0)
-			{
-				// Certificate signed successfully.
-				// Everything is OK, but we will reconnect now, in
-				// order to use the new keys/certificates.
-				ret=1;
-				goto end;
-			}
-		}
-
-		set_non_blocking(rfd);
-
-		if((ret=ssl_check_cert(ssl, conf)))
-		{
-			logp("check cert failed\n");
-			goto end;
-		}
-
-		if((ret=async_write_str(CMD_GEN, "extra_comms_begin")))
-		{
-			logp("Problem requesting extra_comms_begin\n");
-			goto end;
-		}
-		// Servers greater than 1.3.0 will list the extra_comms
-		// features they support.
-		else if((ret=async_read(&cmd, &feat, &len)))
-		{
-			logp("Problem reading response to extra_comms_begin\n");
-			goto end;
-		}
-		else if(cmd!=CMD_GEN)
-		{
-			logp("Unexpected command from server when reading response to extra_comms_begin: %c:%s\n", cmd, feat);
-			ret=-1;
-			goto end;
-		}
-		else if(strncmp(feat,
-		  "extra_comms_begin ok", strlen("extra_comms_begin ok")))
-		{
-			logp("Unexpected response from server when reading response to extra_comms_begin: %c:%s\n", cmd, feat);
-			ret=-1;
-			goto end;
-		}
-
-		// Can add extra bits here. The first extra bit is the
-		// autoupgrade stuff.
-
-		if(server_supports_autoupgrade(feat))
-		{
-			if(conf->autoupgrade_dir && conf->autoupgrade_os
-			  && (ret=autoupgrade_client(conf)))
-				goto end;
-		}
-
-		// :srestore: means that the server wants to do a restore.
-		if(server_supports(feat, ":srestore:"))
-		{
-			if(conf->server_can_restore)
-			{
-				logp("Server is initiating a restore\n");
-				if(incexc) { free(incexc); incexc=NULL; }
-				if((ret=incexc_recv_client_restore(&incexc,
-					conf)))
-						goto end;
-				if(incexc)
-				{
-					if((ret=parse_incexcs_buf(conf,
-						incexc))) goto end;
-					act=ACTION_RESTORE;
-					log_restore_settings(conf, 1);
-				}
-			}
-			else
-			{
-				logp("Server wants to initiate a restore\n");
-				logp("Client configuration says no\n");
-				if(async_write_str(CMD_GEN, "srestore not ok"))
-				{
-					ret=-1;
-					goto end;
-				}
-			}
-		}
-
-		if(conf->orig_client)
-		{
-			char str[512]="";
-			snprintf(str, sizeof(str),
-				"orig_client=%s", conf->orig_client);
-			if(!server_supports(feat, ":orig_client:"))
-			{
-				logp("Server does not support switching client.\n");
-				ret=-1;
-				goto end;
-			}
-			if((ret=async_write_str(CMD_GEN, str))
-			  || (ret=async_read_expect(CMD_GEN, "orig_client ok")))
-			{
-				logp("Problem requesting %s\n", str);
-				ret=-1;
-				goto end;
-			}
-			logp("Switched to client %s\n", conf->orig_client);
-		}
-
-		// :sincexc: is for the server giving the client the
-		// incexc config.
-		if(act==ACTION_BACKUP
-		  || act==ACTION_BACKUP_TIMED)
-		{
-			if(!incexc && server_supports(feat, ":sincexc:"))
-			{
-				logp("Server is setting includes/excludes.\n");
-				if(incexc) { free(incexc); incexc=NULL; }
-				if((ret=incexc_recv_client(&incexc,
-					conf))) goto end;
-				if(incexc && (ret=parse_incexcs_buf(conf,
-					incexc))) goto end;
-			}
-		}
-
-		if(server_supports(feat, ":counters:"))
-		{
-			if(async_write_str(CMD_GEN, "countersok"))
-				goto end;
-			conf->send_client_counters=1;
-		}
-
-		// :incexc: is for the client sending the server the
-		// incexc config so that it better knows what to do on
-		// resume.
-		if(server_supports(feat, ":incexc:")
-		  && (ret=incexc_send_client(conf)))
-			goto end;
-
-		if(act==ACTION_RESTORE)
-		{
-			// Client may have a temporary directory for restores.
-			if(conf->restore_spool)
-			{
-				char str[512]="";
-				snprintf(str, sizeof(str),
-				  "restore_spool=%s", conf->restore_spool);
-				if(async_write_str(CMD_GEN, str))
-					goto end;
-			}
-		}
-
-		if((ret=async_write_str(CMD_GEN, "extra_comms_end"))
-		  || (ret=async_read_expect(CMD_GEN, "extra_comms_end ok")))
-		{
-			logp("Problem requesting extra_comms_end\n");
-			goto end;
-		}
-
-		if(feat) free(feat);
+		if(comms(rfd, ssl, &incexc, &server_version, &action, conf))
+			goto error;
 	}
 
 	rfd=-1;
-	switch(act)
+	switch(action)
 	{
 		case ACTION_BACKUP_TIMED:
 			backupstr="backup_timed";
 		case ACTION_BACKUP:
 		{
+			int bret=0;
 			// Set bulk packets quality of service flags on backup.
 			if(incexc)
 			{
 				logp("Server is overriding the configuration\n");
 				logp("with the following settings:\n");
-				if(log_incexcs_buf(incexc))
-				{
-					ret=-1;
-					goto end;
-				}
+				if(log_incexcs_buf(incexc)) goto error;
 			}
 			if(!conf->sdcount)
 			{
 				logp("Found no include paths!\n");
-				ret=-1;
-				goto end;
+				goto error;
 			}
 
-			if(!(ret=maybe_check_timer(backupstr, conf)))
+			if(!(bret=maybe_check_timer(backupstr, conf)))
 			{
 				if(conf->backup_script_pre)
 				{
@@ -374,14 +370,14 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 					if(run_script(args,
 						conf->backup_script_pre_arg,
 						conf->bprecount,
-						conf->p1cntr, 1, 1)) ret=-1;
+						conf->p1cntr, 1, 1)) bret=-1;
 				}
 
-				if(!ret && do_backup_client(conf, act))
-					ret=-1;
+				if(!bret && do_backup_client(conf, action))
+					bret=-1;
 
 				if((conf->backup_script_post_run_on_fail
-				  || !ret) && conf->backup_script_post)
+				  || !bret) && conf->backup_script_post)
 				{
 					int a=0;
 					const char *args[12];
@@ -389,7 +385,7 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 					args[a++]="post";
 					// Tell post script whether the restore
 					// failed.
-					args[a++]=ret?"1":"0";
+					args[a++]=bret?"1":"0";
 					args[a++]="reserved3";
 					args[a++]="reserved4";
 					args[a++]="reserved5";
@@ -397,12 +393,15 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 					if(run_script(args,
 						conf->backup_script_post_arg,
 						conf->bpostcount,
-						conf->cntr, 1, 1)) ret=-1;
+						conf->cntr, 1, 1)) bret=-1;
 				}
 			}
 
 			if(ret<0)
+			{
 				logp("error in backup\n");
+				goto error;
+			}
 			else if(ret>0)
 			{
 				// Timer script said no.
@@ -420,6 +419,7 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 		case ACTION_RESTORE:
 		case ACTION_VERIFY:
 		{
+			int rret=0;
 			if(conf->restore_script_pre)
 			{
 				int a=0;
@@ -434,12 +434,12 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 				if(run_script(args,
 					conf->restore_script_pre_arg,
 					conf->rprecount,
-					conf->cntr, 1, 1)) ret=-1;
+					conf->cntr, 1, 1)) rret=-1;
 			}
-			if(!ret && do_restore_client(conf,
-				act, vss_restore)) ret=-1;
+			if(!rret && do_restore_client(conf,
+				action, vss_restore)) rret=-1;
 			if((conf->restore_script_post_run_on_fail
-			  || !ret) && conf->restore_script_post)
+			  || !rret) && conf->restore_script_post)
 			{
 				int a=0;
 				const char *args[12];
@@ -447,7 +447,7 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 				args[a++]="post";
 				// Tell post script whether the restore
 				// failed.
-				args[a++]=ret?"1":"0";
+				args[a++]=rret?"1":"0";
 				args[a++]="reserved3";
 				args[a++]="reserved4";
 				args[a++]="reserved5";
@@ -455,33 +455,39 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 				if(run_script(args,
 					conf->restore_script_post_arg,
 					conf->rpostcount,
-					conf->cntr, 1, 1)) ret=-1;
+					conf->cntr, 1, 1)) rret=-1;
 			}
 
 			// Return non-zero if there were warnings,
 			// so that the test script can easily check.
 			if(conf->p1cntr->warning+conf->cntr->warning)
-				ret=2;
+			{
+				rret=2;
+				goto end;
+			}
 
 			break;
 		}
 		case ACTION_ESTIMATE:
-			if(!ret) ret=do_backup_client(conf, act);
+			if(do_backup_client(conf, action)) goto error;
 			break;
 		case ACTION_DELETE:
-			if(!ret) ret=do_delete_client(conf);
+			if(do_delete_client(conf)) goto error;
 			break;
 		case ACTION_LIST:
 		case ACTION_LONG_LIST:
 		default:
-			ret=do_list_client(conf, act, json);
+			if(do_list_client(conf, action, json)) goto error;
 			break;
 	}
 
+	goto end;
+error:
+	ret=-1;
 end:
 	close_fd(&rfd);
 	async_free();
-	if(act!=ACTION_ESTIMATE) ssl_destroy_ctx(ctx);
+	if(action!=ACTION_ESTIMATE) ssl_destroy_ctx(ctx);
 
 	if(incexc) free(incexc);
 	if(server_version) free(server_version);

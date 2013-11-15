@@ -91,72 +91,41 @@ static int do_sends_restore(struct config *conf)
 	return 0;
 }
 
-static int do_finish(const char *endreqstr, const char *endrepstr)
+static int do_request_response(const char *reqstr, const char *repstr)
 {
 	int ret=-1;
-	char cmd='\0';
-	char *buf=NULL;
-	size_t len=0;
-	if(async_write_str(CMD_GEN, endreqstr))
+	struct iobuf rbuf;
+	iobuf_init(&rbuf);
+
+	if(async_write_str(CMD_GEN, reqstr)
+	  || async_read(&rbuf))
 		goto end;
-	if(async_read(&cmd, &buf, &len))
-		goto end;
-	if(cmd==CMD_GEN)
+	if(rbuf.cmd==CMD_GEN)
 	{
-		if(strcmp(buf, endrepstr))
+		if(strcmp(rbuf.buf, repstr))
 		{
-			logp("unexpected response to %s: %s\n", endreqstr,
-				buf);
+			logp("unexpected response to %s: %s\n", reqstr,
+				rbuf.buf);
 			goto end;
 		}
 	}
 	else
 	{
-		logp("unexpected response to %s: %c:%s\n", endreqstr,
-			cmd, buf);
+		logp("unexpected response to %s: %c:%s\n", reqstr,
+			rbuf.cmd, rbuf.buf);
 		goto end;
 	}
 	ret=0;
 end:
-	if(buf) free(buf);
-	return ret;
-}
-
-static int do_start(const char *reqstr, const char *repstr)
-{
-	int ret=-1;
-	char cmd='\0';
-	char *buf=NULL;
-	size_t len=0;
-
-	if(async_write_str(CMD_GEN, reqstr))
-		goto end;
-	if(async_read(&cmd, &buf, &len))
-		goto end;
-	if(cmd==CMD_GEN)
-	{
-		if(strcmp(buf, repstr))
-		{
-			logp("unexpected response to %s: %s\n", reqstr, buf);
-			goto end;
-		}
-	}
-	else
-	{
-		logp("unexpected response to %s: %c:%s\n", reqstr, cmd, buf);
-		goto end;
-	}
-	ret=0;
-end:
-	if(buf) free(buf);
+	if(rbuf.buf) free(rbuf.buf);
 	return ret;
 }
 
 int incexc_send_client(struct config *conf)
 {
-	if(do_start("incexc", "incexc ok")
+	if(do_request_response("incexc", "incexc ok")
 	  || do_sends(conf)
-	  || do_finish("incexc end", "incexc end ok"))
+	  || do_request_response("incexc end", "incexc end ok"))
 		return -1;
 	return 0;
 }
@@ -166,7 +135,7 @@ int incexc_send_server(struct config *conf)
 	/* 'sincexc' and 'sincexc ok' have already been exchanged,
 	   so go straight into doing the sends. */
 	if(do_sends(conf)
-	  || do_finish("sincexc end", "sincexc end ok"))
+	  || do_request_response("sincexc end", "sincexc end ok"))
 		return -1;
 	return 0;
 }
@@ -176,7 +145,7 @@ int incexc_send_server_restore(struct config *conf)
 	/* 'srestore' and 'srestore ok' have already been exchanged,
 	   so go straight into doing the sends. */
 	if(do_sends_restore(conf)
-	  || do_finish("srestore end", "srestore end ok"))
+	  || do_request_response("srestore end", "srestore end ok"))
 		return -1;
 	return 0;
 }

@@ -2,74 +2,70 @@
 
 int authorise_client(struct config *conf, char **server_version)
 {
-	char cmd=0;
-	char *buf=NULL;
-	size_t l=0;
+	int ret=-1;
+	struct iobuf rbuf;
 	char hello[256]="";
-	snprintf(hello, sizeof(hello),
-		"hello:%s",
-		VERSION);
+	snprintf(hello, sizeof(hello), "hello:%s", VERSION);
 	if(async_write_str(CMD_GEN, hello))
 	{
 		logp("problem with auth\n");
-		return -1;
+		goto end;
 	}
-	if(async_read(&cmd, &buf, &l)
-	  || cmd!=CMD_GEN || strncmp(buf, "whoareyou", strlen("whoareyou")))
+	iobuf_init(&rbuf);
+	if(async_read(&rbuf)
+	  || rbuf.cmd!=CMD_GEN
+	  || strncmp(rbuf.buf, "whoareyou", strlen("whoareyou")))
 	{
 		logp("problem with auth\n");
-		if(buf) free(buf);
-		return -1;
+		goto end;
 	}
-	if(buf)
+	if(rbuf.buf)
 	{
 		char *cp=NULL;
-		if((cp=strchr(buf, ':')))
+		if((cp=strchr(rbuf.buf, ':')))
 		{
 			cp++;
 			if(cp) *server_version=strdup(cp);
 		}
-		free(buf);
-		buf=NULL;
+		free(rbuf.buf);
 	}
-
+	iobuf_init(&rbuf);
 
 	if(async_write_str(CMD_GEN, conf->cname)
 	  || async_read_expect(CMD_GEN, "okpassword")
 	  || async_write_str(CMD_GEN, conf->password)
-	  || async_read(&cmd, &buf, &l))
+	  || async_read(&rbuf))
 	{
 		logp("problem with auth\n");
-		return -1;
+		goto end;
 	}
 
-	if(cmd==CMD_WARNING) // special case for the version warning
+	if(rbuf.cmd==CMD_WARNING) // special case for the version warning
 	{
-		//logw(conf->p1cntr, buf);
-		logp("WARNING: %s\n", buf);
+		//logw(conf->p1cntr, rbuf.buf);
+		logp("WARNING: %s\n", rbuf.buf);
 		conf->p1cntr->warning++;
-		free(buf); buf=NULL;
-		if(async_read(&cmd, &buf, &l))
+		free(rbuf.buf);
+		iobuf_init(&rbuf);
+		if(async_read(&rbuf))
 		{
 			logp("problem with auth\n");
-			free(buf);
-			return -1;
+			goto end;
 		}
 	}
-	if(cmd==CMD_GEN && !strcmp(buf, "ok"))
+	if(rbuf.cmd==CMD_GEN && !strcmp(rbuf.buf, "ok"))
 	{
 		// It is OK.
 		logp("auth ok\n");
 	}
 	else
 	{
-		logp("problem with auth: got %c %s\n", cmd, buf);
-		free(buf);
-		return -1;
+		logp("problem with auth: got %c %s\n", rbuf.cmd, rbuf.buf);
+		goto end;
 	}
 
-	if (buf)
-		free(buf);
-	
-	return 0;
+	ret=0;
+end:
+	if(rbuf.buf) free(rbuf.buf);
+	return ret;
 }

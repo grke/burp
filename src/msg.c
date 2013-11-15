@@ -81,14 +81,13 @@ static int do_inflate(z_stream *zstrm, BFILE *bfd, FILE *fp, unsigned char *out,
 
 int transfer_gzfile_in(const char *path, BFILE *bfd, FILE *fp, unsigned long long *rcvd, unsigned long long *sent, struct cntr *cntr)
 {
-	char cmd=0;
-	char *buf=NULL;
-	size_t len=0;
 	int quit=0;
 	int ret=-1;
 	unsigned char out[ZCHUNK];
-
+	struct iobuf rbuf;
 	z_stream zstrm;
+
+	iobuf_init(&rbuf);
 
 	zstrm.zalloc=Z_NULL;
 	zstrm.zfree=Z_NULL;
@@ -104,15 +103,16 @@ int transfer_gzfile_in(const char *path, BFILE *bfd, FILE *fp, unsigned long lon
 
 	while(!quit)
 	{
-		if(async_read(&cmd, &buf, &len))
+		iobuf_init(&rbuf);
+		if(async_read(&rbuf))
 		{
 			inflateEnd(&zstrm);
 			return -1;
 		}
-		(*rcvd)+=len;
+		(*rcvd)+=rbuf.len;
 
-		//logp("transfer in: %c:%s\n", cmd, buf);
-		switch(cmd)
+		//logp("transfer in: %c:%s\n", rbuf.cmd, rbuf.buf);
+		switch(rbuf.cmd)
 		{
 			case CMD_APPEND: // append
 				if(!fp && !bfd)
@@ -125,8 +125,8 @@ int transfer_gzfile_in(const char *path, BFILE *bfd, FILE *fp, unsigned long lon
 				{
 					size_t lentouse;
 					unsigned char *buftouse=NULL;
-					lentouse=len;
-					buftouse=(unsigned char *)buf;
+					lentouse=rbuf.len;
+					buftouse=(unsigned char *)rbuf.buf;
 					//logp("want to write: %d\n", zstrm.avail_in);
 
 					if(do_inflate(&zstrm, bfd, fp, out,
@@ -143,21 +143,21 @@ int transfer_gzfile_in(const char *path, BFILE *bfd, FILE *fp, unsigned long lon
 				ret=0;
 				break;
 			case CMD_WARNING:
-				logp("WARNING: %s\n", buf);
-				do_filecounter(cntr, cmd, 0);
+				logp("WARNING: %s\n", rbuf.buf);
+				do_filecounter(cntr, rbuf.cmd, 0);
 				break;
 			default:
-				logp("unknown append cmd: %c\n", cmd);
+				logp("unknown append cmd: %c\n", rbuf.cmd);
 				quit++;
 				ret=-1;
 				break;
 		}
-		if(buf) free(buf);
-		buf=NULL;
+		if(rbuf.buf) { free(rbuf.buf); rbuf.buf=NULL; }
 	}
 	inflateEnd(&zstrm);
 
 	if(ret) logp("transfer file returning: %d\n", ret);
+	if(rbuf.buf) free(rbuf.buf);
 	return ret;
 }
 

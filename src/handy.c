@@ -78,7 +78,6 @@ int mkpath(char **rpath, const char *limit)
 {
 	char *cp=NULL;
 	struct stat buf;
-	//printf("mkpath: %s\n", *rpath);
 	if((cp=strrchr(*rpath, '/')))
 	{
 #ifdef HAVE_WIN32
@@ -176,32 +175,32 @@ int build_path(const char *datadir, const char *fname, char **rpath, const char 
 int do_quick_read(const char *datapth, struct cntr *cntr)
 {
 	int r=0;
-	char cmd;
-	size_t len=0;
-	char *buf=NULL;
-	if(async_read_quick(&cmd, &buf, &len)) return -1;
+	static struct iobuf rbuf;
+	iobuf_init(&rbuf);
+	if(async_read_quick(&rbuf)) return -1;
 
-	if(buf)
+	if(rbuf.buf)
 	{
-		if(cmd==CMD_WARNING)
+		if(rbuf.cmd==CMD_WARNING)
 		{
-			logp("WARNING: %s\n", buf);
-			do_filecounter(cntr, cmd, 0);
+			logp("WARNING: %s\n", rbuf.buf);
+			do_filecounter(cntr, rbuf.cmd, 0);
 		}
-		else if(cmd==CMD_INTERRUPT)
+		else if(rbuf.cmd==CMD_INTERRUPT)
 		{
 			// Client wants to interrupt - double check that
 			// it is still talking about the file that we are
 			// sending.
-			if(datapth && !strcmp(buf, datapth))
+			if(datapth && !strcmp(rbuf.buf, datapth))
 				r=1;
 		}
 		else
 		{
-			logp("unexpected cmd in quick read: %c:%s\n", cmd, buf);
+			logp("unexpected cmd in quick read: %c:%s\n",
+				rbuf.cmd, rbuf.buf);
 			r=-1;
 		}
-		free(buf);
+		free(rbuf.buf);
 	}
 	return r;
 }
@@ -269,6 +268,8 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 	unsigned char in[ZCHUNK];
 	unsigned char out[ZCHUNK];
 
+	struct iobuf wbuf;
+
 //logp("send_whole_file_gz: %s%s\n", fname, extrameta?" (meta)":"");
 
 	/* allocate deflate state */
@@ -299,22 +300,22 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 
 		strm.next_in=in;
 
-		/* run deflate() on input until output buffer not full, finish
-			compression if all of source has been read in */
+		// Run deflate() on input until output buffer not full, finish
+		// compression if all of source has been read in.
 		do
 		{
 			if(compression)
 			{
-				strm.avail_out = ZCHUNK;
-				strm.next_out = out;
-				zret = deflate(&strm, flush); /* no bad return value */
-				if(zret==Z_STREAM_ERROR) /* state not clobbered */
+				strm.avail_out=ZCHUNK;
+				strm.next_out=out;
+				zret=deflate(&strm, flush);
+				if(zret==Z_STREAM_ERROR)
 				{
 					logp("z_stream_error\n");
 					ret=-1;
 					break;
 				}
-				have = ZCHUNK-strm.avail_out;
+				have=ZCHUNK-strm.avail_out;
 			}
 			else
 			{
@@ -322,7 +323,10 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 				memcpy(out, in, have);
 			}
 
-			if(async_write(CMD_APPEND, (const char *)out, have))
+			wbuf.cmd=CMD_APPEND;
+			wbuf.buf=(char *)out;
+			wbuf.len=have;
+			if(async_write(&wbuf))
 			{
 				ret=-1;
 				break;
@@ -335,13 +339,13 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 					ret=-1;
 					break;
 				}
-				if(qr) // client wants to interrupt
+				if(qr) // Client wants to interrupt.
 				{
 					goto cleanup;
 				}
 			}
 			if(!compression) break;
-		} while (!strm.avail_out);
+		} while(!strm.avail_out);
 
 		if(ret) break;
 

@@ -78,6 +78,7 @@ static int server_supports_autoupgrade(const char *feat)
 	return server_supports(feat, ":autoupgrade:");
 }
 
+// Returns -1 for error, 0 for OK, 1 for certificate signed.
 static int comms(int rfd, SSL *ssl, char **incexc, char **server_version,
 	enum action *action, struct config *conf)
 {
@@ -330,8 +331,10 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 
 	if(action!=ACTION_ESTIMATE)
 	{
-		if(comms(rfd, ssl, &incexc, &server_version, &action, conf))
-			goto error;
+		// Returns -1 for error, 0 for OK, 1 for certificate signed.
+		if((ret=comms(rfd, ssl,
+			&incexc, &server_version, &action, conf)))
+				goto end;
 	}
 
 	rfd=-1;

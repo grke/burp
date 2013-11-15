@@ -79,8 +79,7 @@ static int rewrite_client_conf(struct config *conf)
 	close_fp(&sp);
 	if(close_fp(&dp))
 	{
-		logp("error closing %s in rewrite_client_conf\n", tmp);
-		ret=-1;
+		logp("error closing %s in %s\n", tmp, __FUNCTION__);
 		goto end;
 	}
 #ifdef HAVE_WIN32
@@ -137,7 +136,7 @@ int ca_client_setup(struct config *conf)
 	// Tell the server we want to do a signing request.
 	if(async_write_str(CMD_GEN, "csr")) goto end;
 
-	if((rbuf=iobuf_async_read()))
+	if(!(rbuf=iobuf_async_read()))
 	{
 		logp("problem reading from server csr\n");
 		goto end;
@@ -186,6 +185,7 @@ int ca_client_setup(struct config *conf)
 	// Need to rewrite our configuration file to contain the server
 	// name (ssl_peer_cn)
 	if(rewrite_client_conf(conf)) goto end_cleanup;
+printf("x\n");
 
 	// My goodness, everything seems to have gone OK. Stand back!
 	ret=1;

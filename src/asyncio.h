@@ -29,6 +29,8 @@ extern int async_write(struct iobuf *wbuf);
 
 extern int async_write_str(char wcmd, const char *wsrc);
 extern int async_read_expect(char cmd, const char *expect);
+extern int async_simple_loop(struct config *conf, void *param,
+        int callback(struct iobuf *rbuf, struct config *conf, void *param));
 
 extern void log_and_send(const char *msg);
 extern void log_and_send_oom(const char *function);

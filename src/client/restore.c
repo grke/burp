@@ -546,47 +546,37 @@ error:
 	return NULL;
 }
 
-int restore_spool(struct config *conf, enum action act, int vss_restore, char **datpath)
+static int restore_spool_func(struct iobuf *rbuf,
+	struct config *conf, void *param)
 {
-	int ret=-1;
-	struct iobuf *rbuf=NULL;
+	static char **datpath;
+	datpath=(char **)param;
+	if(!strncmp(rbuf->buf, "dat=", 4))
+	{
+		char *fpath=NULL;
+		if(!(fpath=prepend_s(*datpath, rbuf->buf+4))
+		  || build_path_w(fpath)
+		  || receive_a_file(fpath, conf))
+			return -1;
+		iobuf_free_content(rbuf);
+	}
+	else if(!strcmp(rbuf->buf, "datfilesend"))
+	{
+		if(async_write_str(CMD_GEN, "datfilesend_ok"))
+			return -1;
+		return 1;
+	}
+	return 0;
+}
 
+int restore_spool(struct config *conf, char **datpath)
+{
 	logp("Spooling restore to: %s\n", conf->restore_spool);
 
-	if(!(rbuf=iobuf_alloc())
-	  || !(*datpath=prepend_s(conf->restore_spool, "incoming-data")))
-		goto end;
+	if(!(*datpath=prepend_s(conf->restore_spool, "incoming-data")))
+		return -1;
 
-	while(1)
-	{
-		if(async_read(rbuf)) goto end;
-		if(rbuf->cmd!=CMD_GEN)
-		{
-			iobuf_log_unexpected(rbuf, __FUNCTION__);
-			goto end;
-		}
-		if(!strncmp(rbuf->buf, "dat=", 4))
-		{
-			char *fpath=NULL;
-			if(!(fpath=prepend_s(*datpath, rbuf->buf+4))
-			  || build_path_w(fpath)
-			  || receive_a_file(fpath, conf))
-				goto end;
-			iobuf_free_content(rbuf);
-			continue;
-		}
-		else if(!strcmp(rbuf->buf, "datfilesend"))
-		{
-			if(async_write_str(CMD_GEN, "datfilesend_ok"))
-				goto end;
-			break;
-		}
-	}
-
-	ret=0;
-end:
-	iobuf_free(rbuf);
-	return ret;
+	return async_simple_loop(conf, datpath, restore_spool_func);
 }
 
 int do_restore_client(struct config *conf, enum action act, int vss_restore)
@@ -624,7 +614,7 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore)
 
 	if(!strcmp(style, "restore_spool"))
 	{
-		if(restore_spool(conf, act, vss_restore, &datpath))
+		if(restore_spool(conf, &datpath))
 			goto end;
 	}
 	else

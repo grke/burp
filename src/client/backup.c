@@ -298,7 +298,7 @@ static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int requ
 	if(!sb->sent_stat)
 	{
 //printf("want to send stat: %s\n", sb->path);
-		iobuf_from_sbuf_attr(wbuf, sb);
+		iobuf_copy(wbuf, &sb->abuf);
 		wbuf->cmd=CMD_ATTRIBS_SIGS; // hack
 		sb->sent_stat=1;
 		return;
@@ -324,17 +324,17 @@ static void get_wbuf_from_scan(struct iobuf *wbuf, struct slist *flist)
 	if(!sb) return;
 	if(!sb->sent_stat)
 	{
-		iobuf_from_sbuf_attr(wbuf, sb);
+		iobuf_copy(wbuf, &sb->abuf);
 		sb->sent_stat=1;
 	}
 	else if(!sb->sent_path)
 	{
-		iobuf_from_sbuf_path(wbuf, sb);
+		iobuf_copy(wbuf, &sb->pbuf);
 		sb->sent_path=1;
 	}
 	else if(sb->lbuf.buf && !sb->sent_link)
 	{
-		iobuf_from_sbuf_link(wbuf, sb);
+		iobuf_copy(wbuf, &sb->lbuf);
 		sb->sent_link=1;
 	}
 	else

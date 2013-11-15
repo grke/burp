@@ -208,33 +208,6 @@ void sbuf_from_iobuf_link(struct sbuf *sb, struct iobuf *iobuf)
 	sb->lbuf.len=iobuf->len;
 }
 
-static void set_iobuf(struct iobuf *iobuf, char cmd, char *buf, size_t len)
-{
-	iobuf->cmd=cmd;
-	iobuf->buf=buf;
-	iobuf->len=len;
-}
-
-void iobuf_from_sbuf_path(struct iobuf *iobuf, struct sbuf *sb)
-{
-	set_iobuf(iobuf, sb->pbuf.cmd, sb->pbuf.buf, sb->pbuf.len);
-}
-
-void iobuf_from_sbuf_attr(struct iobuf *iobuf, struct sbuf *sb)
-{
-	set_iobuf(iobuf, CMD_ATTRIBS, sb->abuf.buf, sb->abuf.len);
-}
-
-void iobuf_from_sbuf_link(struct iobuf *iobuf, struct sbuf *sb)
-{
-	set_iobuf(iobuf, sb->lbuf.cmd, sb->lbuf.buf, sb->lbuf.len);
-}
-
-void iobuf_from_str(struct iobuf *iobuf, char cmd, char *str)
-{
-	set_iobuf(iobuf, cmd, str, strlen(str));
-}
-
 // For retrieving stored data.
 struct rblk
 {

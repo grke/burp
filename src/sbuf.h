@@ -11,18 +11,14 @@ typedef struct sbuf sbuf_t;
 struct sbuf
 {
 	// file data
-	char cmd;
-	char *path;
-	size_t plen;
-	char *linkto;
-	size_t llen;
+	struct iobuf pbuf;
+	struct iobuf lbuf;
 
 	// stat data
+	struct iobuf abuf;
 	struct stat statp;
-	char *attribs; // base64 encoded statp
 	uint64_t winattr;
 	uint16_t ftype;	// FT_ type from burpconfig.h.
-	size_t alen;
 	int compression;
 
 	ssize_t bytes_read;

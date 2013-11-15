@@ -172,16 +172,13 @@ end:
 static int get_lock_w(struct sdirs *sdirs, char **gotlock)
 {
 	int ret=0;
-	char *copy=NULL;
 	// Make sure the lock directory exists.
-	if(!(copy=strdup(sdirs->lockfile))
-	  || mkpath(&copy, sdirs->lockbase))
+printf("before: %s %s\n", sdirs->lockfile, sdirs->lock);
+	if(mkpath(&sdirs->lockfile, sdirs->lock))
 	{
 		async_write_str(CMD_ERROR, "problem with lock directory");
-		if(copy) free(copy);
 		return -1;
 	}
-	free(copy);
 
 	if(get_lock(sdirs->lockfile))
 	{
@@ -282,7 +279,7 @@ static void maybe_do_notification(int status, const char *client, const char *cl
 	}
 }
 
-static int child(struct config *conf, struct config *cconf, const char *client, const char *cversion, const char *incexc, int srestore, char cmd, char *buf, char **gotlock, int *timer_ret)
+static int child(struct config *conf, struct config *cconf, const char *client, const char *cversion, const char *incexc, int srestore, struct iobuf *rbuf, char **gotlock, int *timer_ret)
 {
 	int ret=0;
 	char msg[256]="";
@@ -302,8 +299,8 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 		goto end;
 	}
 	
-	if(cmd==CMD_GEN
-	  && !strncmp(buf, "backup", strlen("backup")))
+	if(rbuf->cmd==CMD_GEN
+	  && !strncmp(rbuf->buf, "backup", strlen("backup")))
 	{
 		if(cconf->restore_client)
 		{
@@ -321,7 +318,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 		else
 		{
 			char okstr[32]="";
-			if(!strcmp(buf, "backup_timed"))
+			if(!strcmp(rbuf->buf, "backup_timed"))
 			{
 				int a=0;
 				const char *args[12];
@@ -366,8 +363,6 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 				}
 			}
 
-			buf=NULL;
-
 			snprintf(okstr, sizeof(okstr), "ok:%d",
 				cconf->compression);
 			async_write_str(CMD_GEN, okstr);
@@ -378,22 +373,22 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 				"log", "backup", cconf);
 		}
 	}
-	else if(cmd==CMD_GEN
-	  && (!strncmp(buf, "restore ", strlen("restore "))
-		|| !strncmp(buf, "verify ", strlen("verify "))))
+	else if(rbuf->cmd==CMD_GEN
+	  && (!strncmp(rbuf->buf, "restore ", strlen("restore "))
+		|| !strncmp(rbuf->buf, "verify ", strlen("verify "))))
 	{
 		char *cp=NULL;
 		enum action act;
 		char *backupnostr=NULL;
 		// Hmm. inefficient.
-	  	if(!strncmp(buf, "restore ", strlen("restore ")))
+	  	if(!strncmp(rbuf->buf, "restore ", strlen("restore ")))
 		{
-			backupnostr=buf+strlen("restore ");
+			backupnostr=rbuf->buf+strlen("restore ");
 			act=ACTION_RESTORE;
 		}
 		else
 		{
-			backupnostr=buf+strlen("verify ");
+			backupnostr=rbuf->buf+strlen("verify ");
 			act=ACTION_VERIFY;
 		}
 		reset_conf_val(backupnostr, &(cconf->backup));
@@ -431,7 +426,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 				goto end;
 			}
 
-			if((restoreregex=strchr(buf, ':')))
+			if((restoreregex=strchr(rbuf->buf, ':')))
 			{
 				*restoreregex='\0';
 				restoreregex++;
@@ -453,7 +448,8 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			}
 		}
 	}
-	else if(cmd==CMD_GEN && !strncmp(buf, "delete ", strlen("delete ")))
+	else if(rbuf->cmd==CMD_GEN
+	  && !strncmp(rbuf->buf, "delete ", strlen("delete ")))
 	{
 		if(get_lock_w(sdirs, gotlock))
 			ret=-1;
@@ -467,14 +463,14 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 					"Client delete is not allowed");
 				goto end;
 			}
-			backupno=buf+strlen("delete ");
+			backupno=rbuf->buf+strlen("delete ");
 			ret=do_delete_server(sdirs->client,
 				backupno, client, cconf);
 		}
 	}
-	else if(cmd==CMD_GEN
-	  && (!strncmp(buf, "list ", strlen("list "))
-	      || !strncmp(buf, "listb ", strlen("listb "))))
+	else if(rbuf->cmd==CMD_GEN
+	  && (!strncmp(rbuf->buf, "list ", strlen("list "))
+	      || !strncmp(rbuf->buf, "listb ", strlen("listb "))))
 	{
 		if(get_lock_w(sdirs, gotlock))
 			ret=-1;
@@ -492,18 +488,18 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 				goto end;
 			}
 
-			if(!strncmp(buf, "list ", strlen("list ")))
+			if(!strncmp(rbuf->buf, "list ", strlen("list ")))
 			{
-				if((listregex=strrchr(buf, ':')))
+				if((listregex=strrchr(rbuf->buf, ':')))
 				{
 					*listregex='\0';
 					listregex++;
 				}
-				backupno=buf+strlen("list ");
+				backupno=rbuf->buf+strlen("list ");
 			}
-			else if(!strncmp(buf, "listb ", strlen("listb ")))
+			else if(!strncmp(rbuf->buf, "listb ", strlen("listb ")))
 			{
-				if((browsedir=strchr(buf, ':')))
+				if((browsedir=strchr(rbuf->buf, ':')))
 				{
 					*browsedir='\0';
 					browsedir++;
@@ -513,7 +509,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 				if(strcmp(browsedir, "/")
 				 && browsedir[strlen(browsedir)-1]=='/')
 				  browsedir[strlen(browsedir)-1]='\0';
-				backupno=buf+strlen("listb ");
+				backupno=rbuf->buf+strlen("listb ");
 			}
 			async_write_str(CMD_GEN, "ok");
 			ret=do_list_server(sdirs->client, backupno,
@@ -522,7 +518,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 	}
 	else
 	{
-		logp("unknown command: %c:%s\n", cmd, buf);
+		logp("unknown command: %c:%s\n", rbuf->cmd, rbuf->buf);
 		async_write_str(CMD_ERROR, "unknown command");
 		ret=-1;
 	}
@@ -554,12 +550,12 @@ static int append_to_feat(char **feat, const char *str)
 static int extra_comms(char **client, const char *cversion, char **incexc, int *srestore, struct config *conf, struct config *cconf)
 {
 	int ret=0;
-	char *buf=NULL;
 	long min_ver=0;
 	long cli_ver=0;
 	long ser_ver=0;
 	long feat_list_ver=0;
 	long directory_tree_ver=0;
+	struct iobuf rbuf;
 	//char *restorepath=NULL;
 
 	if((min_ver=version_to_long("1.2.7"))<0
@@ -649,29 +645,27 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 
 	while(1)
 	{
-		char cmd;
-		size_t len=0;
-
-		if(async_read(&cmd, &buf, &len))
+		iobuf_init(&rbuf);
+		if(async_read(&rbuf))
 		{
 			ret=-1;
 			break;
 		}
 
-		if(cmd==CMD_GEN)
+		if(rbuf.cmd==CMD_GEN)
 		{
-			if(!strcmp(buf, "extra_comms_end"))
+			if(!strcmp(rbuf.buf, "extra_comms_end"))
 			{
 				if(async_write_str(CMD_GEN,
 					"extra_comms_end ok"))
 						ret=-1;
 				break;
 			}
-			else if(!strncmp(buf,
+			else if(!strncmp(rbuf.buf,
 				"autoupgrade:", strlen("autoupgrade:")))
 			{
 				char *os=NULL;
-				os=buf+strlen("autoupgrade:");
+				os=rbuf.buf+strlen("autoupgrade:");
 				if(os && *os
 				  && autoupgrade_server(ser_ver, cli_ver, os,
 					conf))
@@ -680,7 +674,7 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 					break;
 				}
 			}
-			else if(!strcmp(buf, "srestore ok"))
+			else if(!strcmp(rbuf.buf, "srestore ok"))
 			{
 				// Client can accept the restore.
 				// Load the restore config, then send it.
@@ -700,7 +694,7 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 				// can read it again.
 				//unlink(cconf->restore_path);
 			}
-			else if(!strcmp(buf, "srestore not ok"))
+			else if(!strcmp(rbuf.buf, "srestore not ok"))
 			{
 				// Client will not accept the restore.
 				unlink(cconf->restore_path);
@@ -708,7 +702,7 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 				cconf->restore_path=NULL;
 				logp("Client not accepting server initiated restore.\n");
 			}
-			else if(!strcmp(buf, "sincexc ok"))
+			else if(!strcmp(rbuf.buf, "sincexc ok"))
 			{
 				// Client can accept incexc conf from the
 				// server.
@@ -718,7 +712,7 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 					break;
 				}
 			}
-			else if(!strcmp(buf, "incexc"))
+			else if(!strcmp(rbuf.buf, "incexc"))
 			{
 				// Client is telling server its incexc
 				// configuration so that it can better decide
@@ -746,22 +740,22 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 					*incexc=tmp;
 				}
 			}
-			else if(!strcmp(buf, "countersok"))
+			else if(!strcmp(rbuf.buf, "countersok"))
 			{
 				// Client can accept counters on
 				// resume/verify/restore.
 				logp("Client supports being sent counters.\n");
 				cconf->send_client_counters=1;
 			}
-			else if(!strncmp(buf,
+			else if(!strncmp(rbuf.buf,
 				"orig_client=", strlen("orig_client="))
-			  && strlen(buf)>strlen("orig_client="))
+			  && strlen(rbuf.buf)>strlen("orig_client="))
 			{
 				int r=0;
 				int rcok=0;
 				struct config *sconf=NULL;
 				const char *orig_client=NULL;
-				orig_client=buf+strlen("orig_client=");
+				orig_client=rbuf.buf+strlen("orig_client=");
 
 				if(!(sconf=(struct config *)
 					malloc(sizeof(struct config))))
@@ -840,13 +834,13 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 					break;
 				}
 			}
-			else if(!strncmp(buf,
+			else if(!strncmp(rbuf.buf,
 				"restore_spool=", strlen("restore_spool=")))
 			{
 				// Client supports temporary spool directory
 				// for restores.
 				if(!(cconf->restore_spool=
-					strdup(buf+strlen("restore_spool="))))
+				  strdup(rbuf.buf+strlen("restore_spool="))))
 				{
 					log_and_send_oom(__FUNCTION__);
 					ret=-1;
@@ -856,7 +850,7 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 			else
 			{
 				logp("unexpected command from client: %c:%s\n",
-					cmd, buf);
+					rbuf.cmd, rbuf.buf);
 				ret=-1;
 				break;
 			}
@@ -864,25 +858,22 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 		else
 		{
 			logp("unexpected command from client: %c:%s\n",
-				cmd, buf);
+				rbuf.cmd, rbuf.buf);
 			ret=-1;
 			break;
 		}
 
-		if(buf); free(buf); buf=NULL;
+		if(rbuf.buf) free(rbuf.buf); rbuf.buf=NULL;
 	}
 
-	if(buf) free(buf);
+	if(rbuf.buf) free(rbuf.buf);
 	return ret;
 }
 
 static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, int forking)
 {
 	int ret=0;
-	char cmd;
 	int ca_ret=0;
-	size_t len=0;
-	char *buf=NULL;
 	SSL *ssl=NULL;
 	BIO *sbio=NULL;
 	char *incexc=NULL;
@@ -895,6 +886,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	struct config cconf;
 	struct cntr p1cntr;
 	struct cntr cntr;
+	struct iobuf rbuf;
 
 	conf.p1cntr=&p1cntr;
 	conf.cntr=&cntr;
@@ -1007,7 +999,8 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 
 	set_non_blocking(*cfd);
 
-	if(async_read(&cmd, &buf, &len))
+	iobuf_init(&rbuf);
+	if(async_read(&rbuf))
 	{
 		ret=-1;
 	}
@@ -1019,7 +1012,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 		const char *args[12];
 		args[a++]=cconf.server_script_pre;
 		args[a++]="pre";
-		args[a++]=buf?buf:"";
+		args[a++]=rbuf.buf?rbuf.buf:"";
 		args[a++]=client;
 		args[a++]="reserved4";
 		args[a++]="reserved5";
@@ -1059,7 +1052,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	}
 
 	if(!ret) ret=child(&conf, &cconf, client, cversion, incexc, srestore,
-			cmd, buf, &gotlock, &timer_ret);
+			&rbuf, &gotlock, &timer_ret);
 
 	if((!ret || cconf.server_script_post_run_on_fail)
 	  && cconf.server_script_post)
@@ -1069,7 +1062,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 		const char *args[12];
 		args[a++]=cconf.server_script_post;
 		args[a++]="post";
-		args[a++]=buf?buf:"", // the action requested by the client
+		args[a++]=rbuf.buf?rbuf.buf:"", // action requested by client
 		args[a++]=client;
 		args[a++]=ret?"1":"0", // indicate success or failure
 		// indicate whether the timer script said OK or not
@@ -1119,7 +1112,7 @@ finish:
 	logp("exit child\n");
 	if(client) free(client);
 	if(cversion) free(cversion);
-	if(buf) free(buf);
+	if(rbuf.buf) free(rbuf.buf);
 	if(incexc) free(incexc);
 	free_config(&conf);
 	free_config(&cconf);

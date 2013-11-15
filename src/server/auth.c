@@ -86,33 +86,33 @@ void version_warn(struct cntr *cntr, const char *client, const char *cversion)
 
 int authorise_server(struct config *conf, char **client, char **cversion, struct config *cconf)
 {
-	char cmd;
 	char *cp=NULL;
-	size_t len=0;
-	char *buf=NULL;
 	char *password=NULL;
 	char whoareyou[256]="";
-	if(async_read(&cmd, &buf, &len))
+	struct iobuf rbuf;
+	iobuf_init(&rbuf);
+	if(async_read(&rbuf))
 	{
 		logp("unable to read initial message\n");
 		return -1;
 	}
-	if(cmd!=CMD_GEN || strncmp(buf, "hello", strlen("hello")))
+	if(rbuf.cmd!=CMD_GEN || strncmp(rbuf.buf, "hello", strlen("hello")))
 	{
-		logp("unexpected command given: %c %s\n", cmd, buf);
-		free(buf);
+		logp("unexpected command given: %c %s\n", rbuf.cmd, rbuf.buf);
+		free(rbuf.buf);
 		return -1;
 	}
 	// String may look like...
 	// "hello"
 	// "hello:(version)"
 	// (version) is a version number
-	if((cp=strchr(buf, ':')))
+	if((cp=strchr(rbuf.buf, ':')))
 	{
 		cp++;
 		if(cp) *cversion=strdup(cp);
 	}
-	free(buf); buf=NULL;
+	free(rbuf.buf);
+	iobuf_init(&rbuf);
 
 	snprintf(whoareyou, sizeof(whoareyou), "whoareyou");
 	if(*cversion)
@@ -130,25 +130,26 @@ int authorise_server(struct config *conf, char **client, char **cversion, struct
 	}
 
 	async_write_str(CMD_GEN, whoareyou);
-	if(async_read(&cmd, &buf, &len) || !len)
+	if(async_read(&rbuf))
 	{
 		logp("unable to get client name\n");
 		if(*cversion) free(*cversion); *cversion=NULL;
 		return -1;
 	}
-	*client=buf;
-	buf=NULL;
+	*client=rbuf.buf;
+	iobuf_init(&rbuf);
+
 	async_write_str(CMD_GEN, "okpassword");
-	if(async_read(&cmd, &buf, &len) || !len)
+	if(async_read(&rbuf))
 	{
 		logp("unable to get password for client %s\n", *client);
 		if(*client) free(*client); *client=NULL;
 		if(*cversion) free(*cversion); *cversion=NULL;
-		free(buf); buf=NULL;
+		free(rbuf.buf);
 		return -1;
 	}
-	password=buf;
-	buf=NULL;
+	password=rbuf.buf;
+	iobuf_init(&rbuf);
 
 	if(check_client_and_password(conf, *client, password, cconf))
 	{

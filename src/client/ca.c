@@ -106,14 +106,12 @@ end:
    nothing done. */
 int ca_client_setup(struct config *conf)
 {
-	char cmd;
 	int ret=-1;
-	size_t len=0;
-	char *buf=NULL;
+	struct stat statp;
+	struct iobuf rbuf;
 	char csr_path[256]="";
 	char ssl_cert_tmp[512]="";
 	char ssl_cert_ca_tmp[512]="";
-	struct stat statp;
 
 	// Do not continue if we have none of the following things set.
 	if(  !conf->ca_burp_ca
@@ -139,19 +137,21 @@ int ca_client_setup(struct config *conf)
 	if(async_write_str(CMD_GEN, "csr"))
 		return -1;
 
-	if(async_read(&cmd, &buf, &len))
+	iobuf_init(&rbuf);
+	if(async_read(&rbuf))
 	{
 		logp("problem reading from server csr\n");
 		goto end;
 	}
-	if(cmd!=CMD_GEN || strncmp(buf, "csr ok:", strlen("csr ok:")))
+	if(rbuf.cmd!=CMD_GEN || strncmp(rbuf.buf, "csr ok:", strlen("csr ok:")))
 	{
-		logp("unexpected command from server: %c:%s\n", cmd, buf);
+		logp("unexpected command from server: %c:%s\n",
+			rbuf.cmd, rbuf.buf);
 		goto end;
 	}
 	// The server appends its name after 'csr ok:'
 	if(conf->ssl_peer_cn) free(conf->ssl_peer_cn);
-	if(!(conf->ssl_peer_cn=strdup(buf+strlen("csr ok:"))))
+	if(!(conf->ssl_peer_cn=strdup(rbuf.buf+strlen("csr ok:"))))
 	{
 		log_out_of_memory(__FUNCTION__);
 		goto end;
@@ -190,7 +190,7 @@ int ca_client_setup(struct config *conf)
 	// My goodness, everything seems to have gone OK. Stand back!
 	ret=1;
 end:
-	if(buf) free(buf);
+	if(rbuf.buf) free(rbuf.buf);
 	if(ret<0)
 	{
 		// On error, remove any possibly newly created files, so that

@@ -248,12 +248,12 @@ static void list_item(int json, enum action act, const char *fname, const char *
 int do_list_client(struct config *conf, enum action act, int json)
 {
 	int ret=0;
-	size_t slen=0;
 	char msg[512]="";
-	char scmd=0;
 	struct stat statp;
-	char *statbuf=NULL;
 	char *dpth=NULL;
+	struct iobuf rsbuf;
+	struct iobuf rfbuf;
+	struct iobuf rlbuf;
 //logp("in do_list\n");
 	if(conf->browsedir)
 	  snprintf(msg, sizeof(msg), "listb %s:%s",
@@ -265,6 +265,10 @@ int do_list_client(struct config *conf, enum action act, int json)
 	  || async_read_expect(CMD_GEN, "ok"))
 		return -1;
 
+	iobuf_init(&rsbuf);
+	iobuf_init(&rfbuf);
+	iobuf_init(&rlbuf);
+
 	if(json)
 	{
 		open_tag(0, NULL);
@@ -274,28 +278,26 @@ int do_list_client(struct config *conf, enum action act, int json)
 	// This should probably should use the sbuf stuff.
 	while(1)
 	{
-		char fcmd=0;
-		size_t flen=0;
 		uint64_t winattr=0;
 		int compression=-1;
-		char *fname=NULL;
 		uint64_t index;
 
-		if(async_read(&scmd, &statbuf, &slen))
+		iobuf_init(&rsbuf);
+		if(async_read(&rsbuf))
 		{
 			//ret=-1; break;
 			break;
 		}
-		if(scmd==CMD_TIMESTAMP)
+		if(rsbuf.cmd==CMD_TIMESTAMP)
 		{
 			// A backup timestamp, just print it.
 			if(json)
 			{
-				json_backup(statbuf, conf);
+				json_backup(rsbuf.buf, conf);
 			}
 			else
 			{
-				printf("Backup: %s\n", statbuf);
+				printf("Backup: %s\n", rsbuf.buf);
 				if(conf->browsedir)
 					printf("Listing directory: %s\n",
 					       conf->browsedir);
@@ -303,60 +305,62 @@ int do_list_client(struct config *conf, enum action act, int json)
 					printf("With regex: %s\n",
 					       conf->regex);
 			}
-			if(statbuf) { free(statbuf); statbuf=NULL; }
+			if(rsbuf.buf) { free(rsbuf.buf); rsbuf.buf=NULL; }
 			continue;
 		}
-		else if(scmd!=CMD_ATTRIBS)
+		else if(rsbuf.cmd!=CMD_ATTRIBS)
 		{
 			logp("expected %c cmd - got %c:%s\n",
-				CMD_ATTRIBS, scmd, statbuf);
+				CMD_ATTRIBS, rsbuf.cmd, rsbuf.buf);
 			ret=-1; break;
 		}
 
 		// FIXME - with the sbuf stuff.
-		attribs_decode_low_level(&statp, statbuf,
+		attribs_decode_low_level(&statp, rsbuf.buf,
 			&index, &winattr, &compression);
 
-		if(async_read(&fcmd, &fname, &flen))
+		iobuf_init(&rfbuf);
+		if(async_read(&rfbuf))
 		{
 			logp("got stat without an object\n");
 			ret=-1; break;
 		}
-		else if(fcmd==CMD_DIRECTORY
-			|| fcmd==CMD_FILE
-			|| fcmd==CMD_ENC_FILE
-			|| fcmd==CMD_EFS_FILE
-			|| fcmd==CMD_SPECIAL)
+		else if(rfbuf.cmd==CMD_DIRECTORY
+			|| rfbuf.cmd==CMD_FILE
+			|| rfbuf.cmd==CMD_ENC_FILE
+			|| rfbuf.cmd==CMD_EFS_FILE
+			|| rfbuf.cmd==CMD_SPECIAL)
 		{
-			list_item(json, act, fname, NULL, &statp);
+			list_item(json, act, rfbuf.buf, NULL, &statp);
 		}
-		else if(cmd_is_link(fcmd)) // symlink or hardlink
+		else if(cmd_is_link(rfbuf.cmd)) // symlink or hardlink
 		{
-			char lcmd=0;
-			size_t llen=0;
-			char *lname=NULL;
-			if(async_read(&lcmd, &lname, &llen)
-			  || lcmd!=fcmd)
+			iobuf_init(&rlbuf);
+			if(async_read(&rlbuf)
+			  || rlbuf.cmd!=rfbuf.cmd)
 			{
-				logp("could not get link %c:%s\n", fcmd, fname);
+				logp("could not get link %c:%s\n",
+					rfbuf.cmd, rfbuf.buf);
 				ret=-1;
 			}
 			else
 			{
-				list_item(json, act, fname, lname, &statp);
+				list_item(json, act,
+					rfbuf.buf, rlbuf.buf, &statp);
 			}
-			if(lname) free(lname);
+			if(rlbuf.buf) free(rlbuf.buf);
 		}
 		else
 		{
-			fprintf(stderr, "unlistable %c:%s\n", fcmd, fname?:"");
+			fprintf(stderr, "unlistable %c:%s\n",
+				rfbuf.cmd, rfbuf.buf?rfbuf.buf:"");
 		}
-		if(fname) free(fname);
-		if(statbuf) { free(statbuf); statbuf=NULL; }
+		if(rfbuf.buf) { free(rfbuf.buf); rfbuf.buf=NULL; }
+		if(rsbuf.buf) { free(rsbuf.buf); rsbuf.buf=NULL; }
 	}
 	if(json) close_tag(0);
 	printf("\n");
-	if(statbuf) free(statbuf);
+	if(rsbuf.buf) free(rsbuf.buf);
 	if(dpth) free(dpth);
 	if(!ret) logp("List finished ok\n");
 	return ret;

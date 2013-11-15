@@ -2,71 +2,71 @@
 
 static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, enum action act, const char *client, char status, struct config *conf, int *need_data)
 {
-	//logp("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path);
-	write_status(client, status, sb->path, conf);
+	//logp("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->pbuf.buf);
+	write_status(client, status, sb->pbuf.buf, conf);
 
-	switch(sb->cmd)
+	switch(sb->pbuf.cmd)
 	{
 		case CMD_FILE:
 		case CMD_ENC_FILE:
 		case CMD_METADATA:
 		case CMD_ENC_METADATA:
 		case CMD_EFS_FILE:
-			if(async_write(CMD_ATTRIBS, sb->attribs, sb->alen)
-			  || async_write(sb->cmd, sb->path, sb->plen))
+			if(async_write(&sb->abuf)
+			  || async_write(&sb->pbuf))
 				return -1;
 			*need_data=1;
 			return 0;
 		default:
-			if(async_write(CMD_ATTRIBS, sb->attribs, sb->alen))
-				return -1;
-			if(async_write(sb->cmd, sb->path, sb->plen))
+			if(async_write(&sb->abuf)
+			  || async_write(&sb->pbuf))
 				return -1;
 			// If it is a link, send what
 			// it points to.
 			else if(sbuf_is_link(sb))
 			{
-				if(async_write(sb->cmd, sb->linkto, sb->llen))
+				if(async_write(&sb->lbuf))
 					return -1;
 			}
-			do_filecounter(conf->cntr, sb->cmd, 0);
+			do_filecounter(conf->cntr, sb->pbuf.cmd, 0);
 			return 0;
 	}
 }
 
 static int do_restore_end(enum action act, struct config *conf)
 {
-	char cmd;
 	int ret=-1;
-	size_t len=0;
+	struct iobuf rbuf;
 
 	if(async_write_str(CMD_GEN, "restore_end")) goto end;
 
 	while(1)
 	{
 		char *buf=NULL;
-		if(async_read(&cmd, &buf, &len))
+		iobuf_init(&rbuf);
+		if(async_read(&rbuf))
 			goto end;
-		else if(cmd==CMD_GEN && !strcmp(buf, "ok_restore_end"))
+		else if(rbuf.cmd==CMD_GEN
+		  && !strcmp(rbuf.buf, "ok_restore_end"))
 		{
 			//logp("got ok_restore_end\n");
 			break;
 		}
-		else if(cmd==CMD_WARNING)
+		else if(rbuf.cmd==CMD_WARNING)
 		{
 			logp("WARNING: %s\n", buf);
-			do_filecounter(conf->cntr, cmd, 0);
+			do_filecounter(conf->cntr, rbuf.cmd, 0);
 		}
-		else if(cmd==CMD_INTERRUPT)
+		else if(rbuf.cmd==CMD_INTERRUPT)
 		{
 			// ignore - client wanted to interrupt a file
 		}
 		else
 		{
-			logp("unexpected cmd from client at end of restore: %c:%s\n", cmd, buf);
+			logp("unexpected cmd from client at end of restore: %c:%s\n", rbuf.cmd, rbuf.buf);
 			goto end;
 		}
-		if(buf) { free(buf); buf=NULL; }
+		if(rbuf.buf) free(rbuf.buf);
 	}
 	ret=0;
 end:
@@ -87,7 +87,7 @@ static int restore_ent(const char *client,
 	int ret=-1;
 	struct sbuf *xb;
 
-	if(!(*sb)->path)
+	if(!(*sb)->pbuf.buf)
 	{
 		printf("Got NULL path!\n");
 		return -1;
@@ -97,7 +97,7 @@ static int restore_ent(const char *client,
 	// Check if we have any directories waiting to be restored.
 	while((xb=slist->head))
 	{
-		if(is_subdir(xb->path, (*sb)->path))
+		if(is_subdir(xb->pbuf.buf, (*sb)->pbuf.buf))
 		{
 			// We are still in a subdir.
 			break;
@@ -279,8 +279,8 @@ static int maybe_copy_data_files_across(const char *manifest,
 			continue;
 		}
 
-		if((!srestore || check_srestore(conf, sb->path))
-		  && check_regex(regex, sb->path))
+		if((!srestore || check_srestore(conf, sb->pbuf.buf))
+		  && check_regex(regex, sb->pbuf.buf))
 		{
 			blkcount++;
 			// Truncate the save_path so that we are left with the
@@ -390,8 +390,8 @@ static int maybe_copy_data_files_across(const char *manifest,
 
 		need_data=0;
 
-		if((!srestore || check_srestore(conf, sb->path))
-		  && check_regex(regex, sb->path))
+		if((!srestore || check_srestore(conf, sb->pbuf.buf))
+		  && check_regex(regex, sb->pbuf.buf))
 		{
 			if(restore_ent(client, &sb, slist,
 				arr, a, i, act, status, conf, &need_data))
@@ -422,6 +422,7 @@ static int restore_stream(const char *client, const char *datadir,
 	struct blk *blk=NULL;
 	struct dpth *dpth=NULL;
 	struct manio *manio=NULL;
+	struct iobuf wbuf;
 
 	if(async_write_str(CMD_GEN, "restore_stream")
 	  || async_read_expect(CMD_GEN, "restore_stream_ok"))
@@ -483,16 +484,18 @@ static int restore_stream(const char *client, const char *datadir,
 
 		if(blk->data)
 		{
-			if(async_write(CMD_DATA, blk->data, blk->length))
-				return -1;
+			wbuf.cmd=CMD_DATA;
+			wbuf.buf=blk->data;
+			wbuf.len=blk->length;
+			if(async_write(&wbuf)) return -1;
 			blk->data=NULL;
 			continue;
 		}
 
 		need_data=0;
 
-		if((!srestore || check_srestore(conf, sb->path))
-		  && check_regex(regex, sb->path))
+		if((!srestore || check_srestore(conf, sb->pbuf.buf))
+		  && check_regex(regex, sb->pbuf.buf))
 		{
 			if(restore_ent(client, &sb, slist,
 				arr, a, i, act, status, conf, &need_data))

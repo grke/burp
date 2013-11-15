@@ -4,49 +4,45 @@ static int incexc_recv(char **incexc, const char *reqstr, const char *repstr, co
 {
 	int ret=-1;
 	char *tmp=NULL;
-	char *buf=NULL;
+	struct iobuf rbuf;
 	if(async_write_str(CMD_GEN, repstr))
 		goto end;
 	while(1)
 	{
-		char cmd;
-		size_t len=0;
+		iobuf_init(&rbuf);
 
-		if(async_read(&cmd, &buf, &len))
-			break;
-		if(cmd==CMD_GEN)
+		if(async_read(&rbuf)) break;
+		if(rbuf.cmd==CMD_GEN)
 		{
-			if(!strcmp(buf, endreqstr))
+			if(!strcmp(rbuf.buf, endreqstr))
 			{
 				if(async_write_str(CMD_GEN, endrepstr))
 					goto end;
 				ret=0;
 				break;
 			}
-			if(!(tmp=prepend(*incexc?:"", buf, strlen(buf),
-				*incexc?"\n":"")))
-					goto end;
+			if(!(tmp=prepend(*incexc?:"", rbuf.buf, rbuf.len,
+				*incexc?"\n":""))) goto end;
 			if(*incexc) free(*incexc);
 			*incexc=tmp;
 		}
 		else
 		{
 			logp("unexpected command when receiving %s: %c:%s\n",
-				reqstr, cmd, buf);
+				reqstr, rbuf.cmd, rbuf.buf);
 			break;
 		}
-		if(buf) { free(buf); buf=NULL; }
+		if(rbuf.buf) { free(rbuf.buf); rbuf.buf=NULL; }
 	}
 	// Need to put another new line at the end.
 	if(*incexc)
 	{
-		if(!(tmp=prepend(*incexc, "\n", 1, "")))
-			goto end;
+		if(!(tmp=prepend(*incexc, "\n", 1, ""))) goto end;
 		free(*incexc);
 		*incexc=tmp;
 	}
 end:
-	if(buf) free(buf);
+	if(rbuf.buf) free(rbuf.buf);
 	return ret;
 }
 

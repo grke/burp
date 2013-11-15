@@ -20,7 +20,6 @@ struct sdirs
 	char *cmanifest;
 
 	char *lock;
-	char *lockbase;
 	char *lockfile;
 };
 

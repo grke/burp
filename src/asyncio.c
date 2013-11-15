@@ -31,7 +31,7 @@ static void truncate_buf(char **buf, size_t *buflen)
 	*buflen=0;
 }
 
-static int parse_readbuf(char *cmd, char **dest, size_t *rlen)
+static int parse_readbuf(struct iobuf *rbuf)
 {
 	unsigned int s=0;
 	char cmdtmp='\0';
@@ -48,20 +48,20 @@ static int parse_readbuf(char *cmd, char **dest, size_t *rlen)
 	}
 	if(readbuflen>=s+5)
 	{
-		*cmd=cmdtmp;
-		if(!(*dest=(char *)malloc(s+1)))
+		rbuf->cmd=cmdtmp;
+		if(!(rbuf->buf=(char *)malloc(s+1)))
 		{
 			log_out_of_memory(__FUNCTION__);
 			truncate_buf(&readbuf, &readbuflen);
 			return -1;
 		}
-		if(!(memcpy(*dest, readbuf+5, s)))
+		if(!(memcpy(rbuf->buf, readbuf+5, s)))
 		{
 			logp("memcpy failed in parse_readbuf\n");
 			truncate_buf(&readbuf, &readbuflen);
 			return -1;
 		}
-		(*dest)[s]='\0';
+		rbuf->buf[s]='\0';
 		if(!(memmove(readbuf, readbuf+s+5, readbuflen-s-5)))
 		{
 			logp("memmove failed in parse_readbuf\n");
@@ -69,7 +69,7 @@ static int parse_readbuf(char *cmd, char **dest, size_t *rlen)
 			return -1;
 		}
 		readbuflen-=s+5;
-		*rlen=s;
+		rbuf->len=s;
 	}
 	return 0;
 }
@@ -179,6 +179,13 @@ static int do_write(int *write_blocked_on_read)
 	{
 	  case SSL_ERROR_NONE:
 		//logp("wrote: %d\n", w);
+/*
+char msg[1024];
+snprintf(msg, writebuflen, "%s", writebuf);
+logp("want : %s\n", msg);
+snprintf(msg, w, "%s", writebuf);
+logp("wrote: %s\n", msg);
+*/
 		if(ratelimit) bytes+=w;
 		memmove(writebuf, writebuf+w, writebuflen-w);
 		writebuflen-=w;
@@ -210,19 +217,21 @@ static int append_to_write_buffer(const char *buf, size_t len)
 	return 0;
 }
 
-int async_append_all_to_write_buffer(char wcmd, const char *wsrc, size_t *wlen)
+int async_append_all_to_write_buffer(struct iobuf *wbuf)
 {
 	size_t sblen=0;
 	char sbuf[10]="";
-	if(writebuflen+6+(*wlen) >= writebufmaxsize-1)
+	if(writebuflen+6+(wbuf->len) >= writebufmaxsize-1)
 		return 1;
 
-	snprintf(sbuf, sizeof(sbuf), "%c%04X", wcmd, (unsigned int)*wlen);
+	snprintf(sbuf, sizeof(sbuf), "%c%04X",
+		wbuf->cmd, (unsigned int)wbuf->len);
 	sblen=strlen(sbuf);
 	append_to_write_buffer(sbuf, sblen);
-	append_to_write_buffer(wsrc, *wlen);
-	//logp("appended to wbuf: %c (%d) (%d)\n", wcmd, *wlen+sblen, writebuflen);
-	*wlen=0;
+	append_to_write_buffer(wbuf->buf, wbuf->len);
+	//logp("appended to wbuf: %c (%d) (%d)\n",
+	//	wbuf->cmd, wbuf->len+sblen, writebuflen);
+	wbuf->len=0;
 	return 0;
 }
 
@@ -327,7 +336,7 @@ void settimers(int sec, int usec)
 	setusec=usec;
 }
 
-int async_rw(char *rcmd, char **rdst, size_t *rlen, char wcmd, const char *wsrc, size_t *wlen)
+int async_rw(struct iobuf *rbuf, struct iobuf *wbuf)
 {
         int mfd=-1;
         fd_set fsr;
@@ -348,25 +357,22 @@ int async_rw(char *rcmd, char **rdst, size_t *rlen, char wcmd, const char *wsrc,
 		return -1;
 	}
 
-	if(rdst) doread++; // Given a pointer to allocate and read into.
+	if(rbuf) doread++;
 
-	if(*wlen)
-	{
-		// More stuff to append to the write buffer.
-		async_append_all_to_write_buffer(wcmd, wsrc, wlen);
-	}
+	if(wbuf && wbuf->len)
+		async_append_all_to_write_buffer(wbuf);
 
 	if(writebuflen && !write_blocked_on_read)
 		dowrite++; // The write buffer is not yet empty.
 
 	if(doread)
 	{
-		if(parse_readbuf(rcmd, rdst, rlen))
+		if(parse_readbuf(rbuf))
 		{
 			logp("error in parse_readbuf\n");
 			return -1;
 		}
-		if(*rcmd && *rdst) return 0;
+		if(rbuf->buf) return 0;
 
 		if(read_blocked_on_write) doread=0;
 	}
@@ -427,9 +433,9 @@ int async_rw(char *rcmd, char **rdst, size_t *rlen, char wcmd, const char *wsrc,
 			int r;
 			read_blocked_on_write=0;
 			if(do_read(&read_blocked_on_write)) return -1;
-			if((r=parse_readbuf(rcmd, rdst, rlen)))
+			if((r=parse_readbuf(rbuf)))
 				logp("error in second parse_readbuf\n");
-//printf("did read\n");
+//printf("read: %c:%s\n", rbuf->cmd, rbuf->buf);
 			return r;
                 }
 
@@ -448,93 +454,65 @@ int async_rw(char *rcmd, char **rdst, size_t *rlen, char wcmd, const char *wsrc,
         return 0;
 }
 
-int async_rw_ng(struct iobuf *rbuf, struct iobuf *wbuf)
+static int async_rw_ensure_read(struct iobuf *rbuf, struct iobuf *wbuf)
 {
-	// FIX THIS: make this whole file use iobuf directly instead of just
-	// being a wrapper around the old stuff.
-	return async_rw(&rbuf->cmd, &rbuf->buf, &rbuf->len,
-		wbuf->cmd, wbuf->buf, &wbuf->len);
-}
-
-static int async_rw_ensure_read(char *rcmd, char **rdst, size_t *rlen, char wcmd, const char *wsrc, size_t wlen)
-{
-	size_t w=wlen;
 	if(doing_estimate) return 0;
-	while(!*rdst) if(async_rw(rcmd, rdst, rlen, wcmd, wsrc, &w))
-		return -1;
+	while(!rbuf->buf) if(async_rw(rbuf, wbuf)) return -1;
 	return 0;
 }
 
-static int async_rw_ensure_write(char *rcmd, char **rdst, size_t *rlen, char wcmd, const char *wsrc, size_t wlen)
+static int async_rw_ensure_write(struct iobuf *rbuf, struct iobuf *wbuf)
 {
-	size_t w=wlen;
 	if(doing_estimate) return 0;
-	while(w) if(async_rw(rcmd, rdst, rlen, wcmd, wsrc, &w))
-		return -1;
+	while(wbuf->len) if(async_rw(rbuf, wbuf)) return -1;
 	return 0;
 }
 
-int async_read_quick(char *rcmd, char **rdst, size_t *rlen)
+int async_read_quick(struct iobuf *rbuf)
 {
 	int r;
-	size_t w=0;
 	int savesec=setsec;
 	int saveusec=setusec;
 	setsec=0;
 	setusec=0;
-	r=async_rw(rcmd, rdst, rlen, '\0', NULL, &w);
+	r=async_rw(rbuf, NULL);
 	setsec=savesec;
 	setusec=saveusec;
 	return r;
 }
 
-int async_read(char *rcmd, char **rdst, size_t *rlen)
+int async_read(struct iobuf *rbuf)
 {
-	return async_rw_ensure_read(rcmd, rdst, rlen, '\0', NULL, 0);
+	return async_rw_ensure_read(rbuf, NULL);
 }
 
-int async_read_ng(struct iobuf *rbuf)
+int async_write(struct iobuf *wbuf)
 {
-	// FIX THIS: make this whole file use iobuf directly instead of just
-	// being a wrapper around the old stuff.
-	return async_rw_ensure_read(&rbuf->cmd, &rbuf->buf, &rbuf->len,
-		'\0', NULL, 0);
-}
-
-int async_write(char wcmd, const char *wsrc, size_t wlen)
-{
-	return async_rw_ensure_write(NULL, NULL, NULL, wcmd, wsrc, wlen);
-}
-
-int async_write_ng(struct iobuf *wbuf)
-{
-	// FIX THIS: make this whole file use iobuf directly instead of just
-	// being a wrapper around the old stuff.
-	return async_rw_ensure_read(NULL, NULL, NULL,
-		wbuf->cmd, wbuf->buf, wbuf->len);
+	return async_rw_ensure_write(NULL, wbuf);
 }
 
 int async_write_str(char wcmd, const char *wsrc)
 {
-	size_t w;
-	w=strlen(wsrc);
-	return async_write(wcmd, wsrc, w);
+	struct iobuf wbuf;
+	wbuf.cmd=wcmd;
+	wbuf.buf=(char *)wsrc;
+	wbuf.len=strlen(wsrc);
+	return async_write(&wbuf);
 }
 
 int async_read_expect(char cmd, const char *expect)
 {
 	int ret=0;
-	char rcmd=0;
-	char *rdst=NULL;
-	size_t rlen=0;
-	if(async_read(&rcmd, &rdst, &rlen)) return -1;
-	if(rcmd!=cmd || strcmp(rdst, expect))
+	struct iobuf rbuf;
+	iobuf_init(&rbuf);
+	if(async_read(&rbuf)) return -1;
+	if(rbuf.cmd!=cmd || strcmp(rbuf.buf, expect))
 	{
 		logp("expected '%c:%s', got '%c:%s'\n",
-			cmd, expect, rcmd, rdst);
+			cmd, expect, rbuf.cmd, rbuf.buf);
 		ret=-1;
 	}
-	free(rdst);
+	free(rbuf.buf);
 	return ret;
 }
 
@@ -574,23 +552,4 @@ int logw(struct cntr *cntr, const char *fmt, ...)
 	va_end(ap);
 	do_filecounter(cntr, CMD_WARNING, 1);
 	return r;
-}
-
-struct iobuf *iobuf_alloc(void)
-{
-	struct iobuf *iobuf;
-	if(!(iobuf=(struct iobuf *)calloc(1, sizeof(struct iobuf))))
-	{
-		log_out_of_memory(__FUNCTION__);
-		return NULL;
-	}
-	iobuf->cmd=CMD_ERROR;
-	return iobuf;
-}
-
-void iobuf_free(struct iobuf *iobuf)
-{
-	if(!iobuf) return;
-	if(iobuf->buf) free(iobuf->buf);
-	free(iobuf);
 }

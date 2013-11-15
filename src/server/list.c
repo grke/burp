@@ -72,30 +72,29 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 		else if(ars>0)
 			goto end; // Finished OK.
 
-		write_status(client, STATUS_LISTING, sb->path, conf);
+		write_status(client, STATUS_LISTING, sb->pbuf.buf, conf);
 
 		if(browsedir)
 		{
 			int r;
-			if((r=check_browsedir(browsedir, &sb->path, bdlen))<0)
-			{
-				goto error;
-			}
+			if((r=check_browsedir(browsedir,
+				&sb->pbuf.buf, bdlen))<0)
+					goto error;
 			if(!r) continue;
 			show++;
 		}
 		else
 		{
-			if(check_regex(regex, sb->path))
+			if(check_regex(regex, sb->pbuf.buf))
 				show++;
 		}
 		if(show)
 		{
-			if(async_write(CMD_ATTRIBS, sb->attribs, sb->alen)
-			  || async_write(sb->cmd, sb->path, sb->plen))
+			if(async_write(&sb->abuf)
+			  || async_write(&sb->pbuf))
 				goto error;
 			if(sbuf_is_link(sb)
-			  && async_write(sb->cmd, sb->linkto, sb->llen))
+			  && async_write(&sb->lbuf))
 				goto error;
 		}
 
@@ -117,7 +116,7 @@ static void send_backup_name_to_client(struct bu *arr)
 	//snprintf(msg, sizeof(msg), "%s%s",
 	//	arr->timestamp, arr->deletable?" (deletable)":"");
 	snprintf(msg, sizeof(msg), "%s", arr->timestamp);
-	async_write(CMD_TIMESTAMP, msg, strlen(msg));
+	async_write_str(CMD_TIMESTAMP, msg);
 }
 
 int do_list_server(const char *basedir, const char *backup, const char *listregex, const char *browsedir, const char *client, struct config *conf)
@@ -150,8 +149,7 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 		if(listregex && backup && *backup=='a')
 		{
 			found=1;
-			async_write(CMD_TIMESTAMP,
-				arr[i].timestamp, strlen(arr[i].timestamp));
+			async_write_str(CMD_TIMESTAMP, arr[i].timestamp);
 			ret+=list_manifest(arr[i].path, regex, browsedir,
 				client, conf);
 		}

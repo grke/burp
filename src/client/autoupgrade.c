@@ -16,14 +16,12 @@ int autoupgrade_client(struct config *conf)
 	int ret=-1;
 	char *cp=NULL;
 	char *copy=NULL;
-	char *buf=NULL;
-	size_t len=0;
-	char cmd='\0';
 	char *script_path=NULL;
 	char script_name[32]="";
 	char package_name[32]="";
 	char write_str[256]="";
 	const char *args[2];
+	struct iobuf rbuf;
 
 	if(!conf->autoupgrade_dir)
 	{
@@ -52,25 +50,26 @@ int autoupgrade_client(struct config *conf)
 	if(async_write_str(CMD_GEN, write_str))
 		goto end;
 
-	if(async_read(&cmd, &buf, &len))
-		goto end;
+	iobuf_init(&rbuf);
+	if(async_read(&rbuf)) goto end;
 
-	if(cmd==CMD_GEN)
+	if(rbuf.cmd==CMD_GEN)
 	{
-		if(!strcmp(buf, "do not autoupgrade"))
+		if(!strcmp(rbuf.buf, "do not autoupgrade"))
 		{
 			ret=0;
 			goto end;
 		}
-		else if(strcmp(buf, "autoupgrade ok"))
+		else if(strcmp(rbuf.buf, "autoupgrade ok"))
 		{
-			logp("unexpected response to autoupgrade from server: %s\n", buf);
+			logp("unexpected response to autoupgrade from server: %s\n", rbuf.buf);
 			goto end;
 		}
 	}
 	else
 	{
-		logp("unexpected response to autoupgrade from server: %c:%s\n", cmd, buf);
+		logp("unexpected response to autoupgrade from server: %c:%s\n",
+			rbuf.cmd, rbuf.buf);
 		goto end;
 	}
 
@@ -119,7 +118,7 @@ int autoupgrade_client(struct config *conf)
 	exit(0);
 end:
 	if(copy) free(copy);
-	if(buf) free(buf);
+	if(rbuf.buf) free(rbuf.buf);
 	if(script_path) free(script_path);
 	return ret;
 }

@@ -144,7 +144,7 @@ static int start_restore_file(
 
 	if(act==ACTION_VERIFY)
 	{
-		do_filecounter(conf->cntr, sb->cmd, 1);
+		do_filecounter(conf->cntr, sb->pbuf.cmd, 1);
 		return 0;
 	}
 
@@ -162,7 +162,7 @@ static int start_restore_file(
 	if(open_for_restore(bfd, rpath, sb, vss_restore, conf))
 		goto end;
 
-	do_filecounter(conf->cntr, sb->cmd, 1);
+	do_filecounter(conf->cntr, sb->pbuf.cmd, 1);
 
 	ret=0;
 end:
@@ -283,9 +283,9 @@ static int restore_dir(struct sbuf *sb, const char *dname, enum action act, stru
 		{
 			attribs_set(rpath, &(sb->statp), sb->winattr, conf);
 		}
-		if(!ret) do_filecounter(conf->cntr, sb->cmd, 1);
+		if(!ret) do_filecounter(conf->cntr, sb->pbuf.cmd, 1);
 	}
-	else do_filecounter(conf->cntr, sb->cmd, 1);
+	else do_filecounter(conf->cntr, sb->pbuf.cmd, 1);
 end:
 	if(rpath) free(rpath);
 	return ret;
@@ -308,7 +308,7 @@ static int restore_link(struct sbuf *sb, const char *fname, enum action act, str
 				ret=-1;
 			goto end;
 		}
-		else if(make_link(fname, sb->linkto, sb->cmd, conf))
+		else if(make_link(fname, sb->lbuf.buf, sb->lbuf.cmd, conf))
 		{
 			// failed - do a warning
 			if(restore_interrupt(sb, "could not create link", conf))
@@ -318,11 +318,11 @@ static int restore_link(struct sbuf *sb, const char *fname, enum action act, str
 		else if(!ret)
 		{
 			attribs_set(fname, &(sb->statp), sb->winattr, conf);
-			do_filecounter(conf->cntr, sb->cmd, 1);
+			do_filecounter(conf->cntr, sb->pbuf.cmd, 1);
 		}
 		if(rpath) free(rpath);
 	}
-	else do_filecounter(conf->cntr, sb->cmd, 1);
+	else do_filecounter(conf->cntr, sb->pbuf.cmd, 1);
 end:
 	return ret;
 }
@@ -368,7 +368,7 @@ static int restore_metadata(
 #ifdef HAVE_WIN32
 				bfd,
 #endif
-				fname, sb->cmd,
+				fname, sb->pbuf.cmd,
 				&(sb->statp), metadata, metalen, conf))
 			{
 				free(metadata);
@@ -381,7 +381,7 @@ static int restore_metadata(
 			// the file
 			attribs_set(fname, &(sb->statp), sb->winattr, conf);
 #endif
-			do_filecounter(conf->cntr, sb->cmd, 1);
+			do_filecounter(conf->cntr, sb->pbuf.cmd, 1);
 		}
 	}
 	else do_filecounter(conf->cntr, sb->cmd, 1);
@@ -425,7 +425,7 @@ static int strip_path_components(struct sbuf *sb, struct config *conf)
 {
 	int s=0;
 	char *tmp=NULL;
-	char *cp=sb->path;
+	char *cp=sb->pbuf.buf;
 	char *dp=NULL;
 	int strip=conf->strip;
 	for(s=0; cp && *cp && s<strip; s++)
@@ -434,7 +434,7 @@ static int strip_path_components(struct sbuf *sb, struct config *conf)
 		{
 			char msg[256]="";
 			snprintf(msg, sizeof(msg),
-				"Stripped too many components: %s", sb->path);
+			  "Stripped too many components: %s", sb->pbuf.buf);
 			if(restore_interrupt(sb, msg, conf))
 				return -1;
 			return 0;
@@ -445,7 +445,7 @@ static int strip_path_components(struct sbuf *sb, struct config *conf)
 	{
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
-			"Stripped too many components: %s", sb->path);
+			"Stripped too many components: %s", sb->pbuf.buf);
 		if(restore_interrupt(sb, msg, conf))
 			return -1;
 		return 0;
@@ -455,8 +455,8 @@ static int strip_path_components(struct sbuf *sb, struct config *conf)
 		log_and_send_oom(__FUNCTION__);
 		return -1;
 	}
-	free(sb->path);
-	sb->path=tmp;
+	free(sb->pbuf.buf);
+	sb->pbuf.buf=tmp;
 	return 1;
 }
 
@@ -478,14 +478,14 @@ static int overwrite_ok(struct sbuf *sb,
 #endif
 
 	if(!S_ISDIR(sb->statp.st_mode)
-	  && sb->cmd!=CMD_METADATA
-	  && sb->cmd!=CMD_ENC_METADATA)
+	  && sb->pbuf.cmd!=CMD_METADATA
+	  && sb->pbuf.cmd!=CMD_ENC_METADATA)
 	{
 #ifdef HAVE_WIN32
 		// If Windows previously got some VSS data, it needs to append
 		// the file data to the already open bfd.
 		if(bfd->mode!=BF_CLOSED
-		  && (sb->cmd==CMD_FILE || sb->cmd==CMD_ENC_FILE)
+		  && (sb->pbuf.cmd==CMD_FILE || sb->pbuf.cmd==CMD_ENC_FILE)
 		  && bfd->path && !strcmp(bfd->path, fullpath))
 		{
 			return 1;
@@ -493,7 +493,7 @@ static int overwrite_ok(struct sbuf *sb,
 #endif
 		// If we have file data and the destination is
 		// a fifo, it is OK to write to the fifo.
-		if((sb->cmd==CMD_FILE || sb->cmd==CMD_ENC_FILE)
+		if((sb->pbuf.cmd==CMD_FILE || sb->pbuf.cmd==CMD_ENC_FILE)
 	  	  && S_ISFIFO(sb->statp.st_mode))
 			return 1;
 
@@ -524,75 +524,69 @@ static int write_data(BFILE *bfd, struct blk *blk)
 
 static char *get_restore_style(struct config *conf)
 {
-	char cmd;
-	size_t len=0;
-	char *buf=NULL;
-	if(async_read(&cmd, &buf, &len)) return NULL;
-	if(cmd==CMD_GEN)
+	struct iobuf *rbuf;
+	if(!(rbuf=iobuf_async_read())) return NULL;
+	if(rbuf->cmd==CMD_GEN)
 	{
-		if(!strcmp(buf, "restore_stream")
-		  || !strcmp(buf, "restore_spool"))
+		if(!strcmp(rbuf->buf, "restore_stream")
+		  || !strcmp(rbuf->buf, "restore_spool"))
 		{
 			char msg[32]="";
-			snprintf(msg, sizeof(msg), "%s_ok", buf);
+			snprintf(msg, sizeof(msg), "%s_ok", rbuf->buf);
 			if(async_write_str(CMD_GEN, msg))
 			{
 				log_out_of_memory(__FUNCTION__);
-				free(buf);
+				iobuf_free(rbuf);
 				return NULL;
 			}
-			return buf;
+			return rbuf->buf;
 		}
 	}
-	logp("unexpected restore style: %c:%s", cmd, buf);
-	free(buf);
+	iobuf_log_unexpected(rbuf, __FUNCTION__);
+	iobuf_free(rbuf);
 	return NULL;
 }
 
 int restore_spool(struct config *conf, enum action act, int vss_restore, char **datpath)
 {
-	char cmd;
 	int ret=-1;
-	size_t len=0;
-	char *buf=NULL;
+	struct iobuf *rbuf=NULL;
 
 	logp("Spooling restore to: %s\n", conf->restore_spool);
 
-	if(!(*datpath=prepend_s(conf->restore_spool, "incoming-data")))
+	if(!(rbuf=iobuf_alloc())
+	  || !(*datpath=prepend_s(conf->restore_spool, "incoming-data")))
 		goto end;
 
 	while(1)
 	{
-		if(async_read(&cmd, &buf, &len)) goto end;
-		if(cmd==CMD_GEN)
+		if(async_read(rbuf)) goto end;
+		if(rbuf->cmd==CMD_GEN)
 		{
-			if(!strncmp(buf, "dat=", 4))
+			if(!strncmp(rbuf->buf, "dat=", 4))
 			{
 				char *fpath=NULL;
-				if(!(fpath=prepend_s(*datpath, buf+4)))
+				if(!(fpath=prepend_s(*datpath, rbuf->buf+4))
+				  || build_path_w(fpath)
+				  || receive_a_file(fpath, conf))
 					goto end;
-				if(build_path_w(fpath))
-					goto end;
-				if(receive_a_file(fpath, conf))
-					goto end;
-				free(buf); buf=NULL;
+				iobuf_free_content(rbuf);
 				continue;
 			}
-			else if(!strcmp(buf, "datfilesend"))
+			else if(!strcmp(rbuf->buf, "datfilesend"))
 			{
 				if(async_write_str(CMD_GEN, "datfilesend_ok"))
 					goto end;
 				break;
 			}
 		}
-		logp("unexpected command while receiving data files: %c %s\n",
-			cmd, buf);
+		iobuf_log_unexpected(rbuf, __FUNCTION__);
 		goto end;
 	}
 
 	ret=0;
 end:
-	if(buf) free(buf);
+	iobuf_free(rbuf);
 	return ret;
 }
 
@@ -671,7 +665,7 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore)
 			continue;
 		}
 
-		switch(sb->cmd)
+		switch(sb->pbuf.cmd)
 		{
 			case CMD_DIRECTORY:
 			case CMD_FILE:
@@ -697,7 +691,7 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore)
 				}
 				if(fullpath) free(fullpath);
 				if(!(fullpath=prepend_s(conf->restoreprefix,
-					sb->path)))
+					sb->pbuf.buf)))
 				{
 					log_and_send_oom(__FUNCTION__);
 					goto end;
@@ -726,7 +720,7 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore)
 				break;
 		}
 
-		switch(sb->cmd)
+		switch(sb->pbuf.cmd)
 		{
 			case CMD_DIRECTORY:
                                 if(restore_dir(sb, fullpath, act, conf))
@@ -794,7 +788,7 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore)
 				break;
 */
 			default:
-				logp("unknown cmd: %c\n", sb->cmd);
+				logp("unknown cmd: %c\n", sb->pbuf.cmd);
 				goto end;
 		}
 		sbuf_free_contents(sb);

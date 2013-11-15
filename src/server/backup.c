@@ -114,7 +114,7 @@ static int open_log(const char *realworking, const char *client, const char *cve
 
 static int data_needed(struct sbuf *sb)
 {
-	if(sb->cmd==CMD_FILE) return 1;
+	if(sb->pbuf.cmd==CMD_FILE) return 1;
 	return 0;
 }
 
@@ -124,7 +124,7 @@ static int forward_through_sigs(struct sbuf **csb, struct manio *cmanio, struct 
 	static int ars;
 	char *copy;
 
-	if(!(copy=strdup((*csb)->path)))
+	if(!(copy=strdup((*csb)->pbuf.buf)))
 	{
 		log_out_of_memory(__FUNCTION__);
 		return -1;
@@ -144,7 +144,7 @@ static int forward_through_sigs(struct sbuf **csb, struct manio *cmanio, struct 
 		}
 
 		// Got something.
-		if(strcmp((*csb)->path, copy))
+		if(strcmp((*csb)->pbuf.buf, copy))
 		{
 			// Found the next entry.
 			free(copy);
@@ -164,7 +164,7 @@ static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, struct blk *
 	// Use the most recent stat for the new manifest.
 	if(manio_write_sbuf(unmanio, sb)) return -1;
 
-	if(!(copy=strdup((*csb)->path)))
+	if(!(copy=strdup((*csb)->pbuf.buf)))
 	{
 		log_out_of_memory(__FUNCTION__);
 		return -1;
@@ -184,7 +184,7 @@ static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, struct blk *
 		}
 
 		// Got something.
-		if(strcmp((*csb)->path, copy))
+		if(strcmp((*csb)->pbuf.buf, copy))
 		{
 			// Found the next entry.
 			free(copy);
@@ -214,7 +214,7 @@ static int entry_changed(struct sbuf *sb, struct manio *cmanio, struct manio *un
 
 	if(!csb && !(csb=sbuf_alloc())) return -1;
 
-	if(csb->path)
+	if(csb->pbuf.buf)
 	{
 		// Already have an entry.
 	}
@@ -233,7 +233,7 @@ static int entry_changed(struct sbuf *sb, struct manio *cmanio, struct manio *un
 			finished=1;
 			return 1;
 		}
-		if(!csb->path)
+		if(!csb->pbuf.buf)
 		{
 			logp("Should have an path at this point, but do not, in %s\n", __FUNCTION__);
 			return -1;
@@ -252,7 +252,7 @@ static int entry_changed(struct sbuf *sb, struct manio *cmanio, struct manio *un
 			// If the file type changed, I think it is time to back
 			// it up again (for example, EFS changing to normal
 			// file, or back again).
-			if(csb->cmd!=sb->cmd)
+			if(csb->pbuf.cmd!=sb->pbuf.cmd)
 			{
 //				printf("got changed: %c %s %c %s %lu %lu\n", csb->cmd, csb->path, sb->cmd, sb->path, csb->statp.st_mtime, sb->statp.st_mtime);
 				if(forward_through_sigs(&csb, cmanio, conf))
@@ -372,10 +372,10 @@ static int set_up_for_sig_info(struct slist *slist, struct blist *blist, struct 
 		return -1;
 	}
 	// Replace the attribs with the more recent values.
-	if(sb->attribs) free(sb->attribs);
-	sb->attribs=inew->attribs;
-	sb->alen=inew->alen;
-	inew->attribs=NULL;
+	if(sb->abuf.buf) free(sb->abuf.buf);
+	sb->abuf.buf=inew->abuf.buf;
+	sb->abuf.len=inew->abuf.len;
+	inew->abuf.buf=NULL;
 
 	// Mark the end of the previous file.
 	slist->add_sigs_here->bend=blist->tail;
@@ -449,7 +449,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 		/* Incoming block signatures. */
 		case CMD_ATTRIBS_SIGS:
 			// New set of stuff incoming. Clean up.
-			if(inew->attribs) free(inew->attribs);
+			if(inew->abuf.buf) free(inew->abuf.buf);
 			sbuf_from_iobuf_attr(inew, rbuf);
 			inew->index=decode_file_no(inew);
 			rbuf->buf=NULL;
@@ -682,7 +682,7 @@ static int write_to_changed_file(struct manio *chmanio, struct slist *slist, str
 
 	while((sb=slist->head))
 	{
-//printf("consider: %s\n", sb->path);
+//printf("consider: %s %d\n", sb->pbuf.buf, sb->need_data);
 		if(sb->need_data)
 		{
 			int hack=0;
@@ -763,6 +763,7 @@ static int write_to_changed_file(struct manio *chmanio, struct slist *slist, str
 			sbuf_free(sb);
 		}
 	}
+//printf("no more shead\n");
 	return 0;
 }
 
@@ -848,7 +849,7 @@ static int backup_server(struct sdirs *sdirs, const char *client, const char *ma
 		}
 
 //		if(wbuf->len) printf("send request: %s\n", wbuf->buf);
-		if(async_rw_ng(rbuf, wbuf))
+		if(async_rw(rbuf, wbuf))
 		{
 			logp("error in async_rw in %s()\n", __FUNCTION__);
 			goto end;
@@ -859,6 +860,17 @@ static int backup_server(struct sdirs *sdirs, const char *client, const char *ma
 			cmanio, unmanio, dpth, &wrap_up, sdirs->data))
 				goto end;
 
+		if(write_to_changed_file(chmanio,
+			slist, blist, dpth, backup_end, conf))
+				goto end;
+	}
+
+	// Hack: If there are some entries left after the last entry that
+	// contains block data, it will not be written to the changed file
+	// yet because the last entry of block data has not had sb->bend set.
+	if(slist->head && slist->head->next)
+	{
+		slist->head=slist->head->next;
 		if(write_to_changed_file(chmanio,
 			slist, blist, dpth, backup_end, conf))
 				goto end;

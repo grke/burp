@@ -32,6 +32,7 @@ enum action
 #include "incexc_recv.h"
 #include "incexc_send.h"
 #include "include.h"
+#include "iobuf.h"
 #include "lock.h"
 #include "log.h"
 #include "msg.h"

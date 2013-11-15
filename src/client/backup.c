@@ -154,7 +154,7 @@ static int add_to_scan_list(struct slist *flist, int *scanning, struct config *c
 	if(!(sb=sbuf_alloc())) return -1;
 	while(!(ff_ret=find_file_next(sb, conf)))
 	{
-		if(sb->path)
+		if(sb->pbuf.buf)
 		{
 			// Got something.
 			if(ftype_to_cmd(sb, conf))
@@ -332,7 +332,7 @@ static void get_wbuf_from_scan(struct iobuf *wbuf, struct slist *flist)
 		iobuf_from_sbuf_path(wbuf, sb);
 		sb->sent_path=1;
 	}
-	else if(sb->linkto && !sb->sent_link)
+	else if(sb->lbuf.buf && !sb->sent_link)
 	{
 		iobuf_from_sbuf_link(wbuf, sb);
 		sb->sent_link=1;
@@ -403,7 +403,7 @@ static int backup_client(struct config *conf, int estimate)
 			}
 		}
 
-		if(async_rw_ng(rbuf, wbuf))
+		if(async_rw(rbuf, wbuf))
 		{
 			logp("error in async_rw\n");
 			ret=-1;

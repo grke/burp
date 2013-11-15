@@ -516,6 +516,50 @@ int async_read_expect(char cmd, const char *expect)
 	return ret;
 }
 
+
+int async_simple_loop(struct config *conf, void *param,
+        int callback(struct iobuf *rbuf, struct config *conf, void *param))
+{
+	int ars;
+	static struct iobuf *rbuf=NULL;
+	if(!rbuf && !(rbuf=iobuf_alloc()))
+		return -1;
+	while(1)
+	{
+		iobuf_free_content(rbuf);
+		if(async_read(rbuf)) return -1;
+		if(rbuf->cmd!=CMD_GEN)
+		{
+			if(rbuf->cmd==CMD_WARNING)
+			{
+				logp("WARNING: %s\n", rbuf->buf);
+				do_filecounter(conf->cntr, rbuf->cmd, 0);
+			}
+			else if(rbuf->cmd==CMD_INTERRUPT)
+			{
+				// Ignore - client wanted to interrupt a file.
+			}
+			else
+			{
+				iobuf_log_unexpected(rbuf, __FUNCTION__);
+				return -1;
+			}
+			continue;
+		}
+		if((ars=callback(rbuf, conf, param))<0)
+		{
+			// Error.
+			return -1;
+		}
+		else if(ars>0)
+		{
+			// OK.
+			return 0;
+		}
+	}
+	return -1; // Not reached.
+}
+
 void log_and_send(const char *msg)
 {
 	logp("%s\n", msg);

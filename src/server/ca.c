@@ -234,7 +234,9 @@ end:
 	return ret;
 }
 
-/* Return 1 for everything OK, signed and returned, -1 for error */
+static int csr_done=0;
+
+// Return 0 for everything OK, signed and returned, -1 for error.
 static int sign_client_cert(const char *client, struct config *conf)
 {
 	int a=0;
@@ -244,6 +246,7 @@ static int sign_client_cert(const char *client, struct config *conf)
 	char crtpath[512]="";
 	struct stat statp;
 	const char *args[15];
+	csr_done=0;
 	snprintf(csrpath, sizeof(csrpath), "%s/%s.csr", gca_dir, client);
 	snprintf(crtpath, sizeof(crtpath), "%s/%s.crt", gca_dir, client);
 
@@ -322,7 +325,8 @@ static int sign_client_cert(const char *client, struct config *conf)
 	if(send_a_file(conf->ssl_cert_ca, conf))
 		goto end;
 
-	ret=1;
+	ret=0;
+	csr_done++;
 end:
 	if(ret<0)
 	{
@@ -332,14 +336,45 @@ end:
 	return ret;
 }
 
+static int csr_func(struct iobuf *rbuf, struct config *conf, void *param)
+{
+	static const char **client;
+	client=(const char **)param;
+	if(!strcmp(rbuf->buf, "csr"))
+	{
+		// Client wants to sign a certificate.
+		logp("Client %s wants a certificate signed\n", *client);
+		if(!conf->ca_conf || !gca_dir)
+		{
+			logp("But server is not configured to sign client certificate requests.\n");
+			logp("See option 'ca_conf'.\n");
+			async_write_str(CMD_ERROR, "server not configured to sign client certificates");
+			return -1;
+		}
+		return !sign_client_cert(*client, conf);
+	}
+	else if(!strcmp(rbuf->buf, "nocsr"))
+	{
+		// Client does not want to sign a certificate.
+		// No problem, just carry on.
+		logp("Client %s does not want a certificate signed\n", *client);
+		if(async_write_str(CMD_GEN, "nocsr ok"))
+			return -1;
+		return 1;
+	}
+	else
+	{
+		iobuf_log_unexpected(rbuf, __FUNCTION__);
+		return -1;
+	}
+}
+
 /* Return 1 for everything OK, signed and returned, -1 for error, 0 for
    nothing done. */
 int ca_server_maybe_sign_client_cert(const char *client, const char *cversion, struct config *conf)
 {
-	int ret=0;
 	long min_ver=0;
 	long cli_ver=0;
-	struct iobuf rbuf;
 
 	if((min_ver=version_to_long("1.3.2"))<0
 	 || (cli_ver=version_to_long(cversion))<0)
@@ -347,61 +382,6 @@ int ca_server_maybe_sign_client_cert(const char *client, const char *cversion, s
 	// Clients before 1.3.2 did not know how to send cert signing requests.
 	if(cli_ver<min_ver) return 0;
 
-	while(1)
-	{
-		iobuf_init(&rbuf);
-		if(async_read(&rbuf))
-		{
-			ret=-1;
-			break;
-		}
-		if(rbuf.cmd==CMD_GEN)
-		{
-			if(!strcmp(rbuf.buf, "csr"))
-			{
-				// Client wants to sign a certificate.
-				logp("Client %s wants a certificate signed\n",
-					client);
-				if(!conf->ca_conf || !gca_dir)
-				{
-					logp("But server is not configured to sign client certificate requests.\n");
-					logp("See option 'ca_conf'.\n");
-					async_write_str(CMD_ERROR, "server not configured to sign client certificates");
-					ret=-1;
-					break;
-				}
-				// sign_client_cert() will return 1 for
-				// everything signed and returned, or -1
-				// for error
-				ret=sign_client_cert(client, conf);
-				break;
-
-			}
-			else if(!strcmp(rbuf.buf, "nocsr"))
-			{
-				// Client does not want to sign a certificate.
-				// No problem, just carry on.
-				logp("Client %s does not want a certificate signed\n", client);
-				ret=async_write_str(CMD_GEN, "nocsr ok");
-				break;
-			}
-			else
-			{
-				logp("unexpected command from client when expecting csr: %c:%s\n", rbuf.cmd, rbuf.buf);
-				ret=-1;
-				break;
-			}
-		}
-		else
-		{
-			logp("unexpected command from client when expecting csr: %c:%s\n", rbuf.cmd, rbuf.buf);
-			ret=-1;
-			break;
-		}
-
-		if(rbuf.buf) { free(rbuf.buf); rbuf.buf=NULL; }
-	}
-
-	if(rbuf.buf) free(rbuf.buf);
-	return ret;
+	if(async_simple_loop(conf, &client, csr_func)) return -1;
+	return csr_done;
 }

@@ -33,44 +33,22 @@ static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, enum acti
 	}
 }
 
-static int do_restore_end(enum action act, struct config *conf)
+static int restore_end_func(struct iobuf *rbuf,
+        struct config *conf, void *param)
 {
-	int ret=-1;
-	struct iobuf *rbuf=NULL;
-
-	if(async_write_str(CMD_GEN, "restore_end")) goto end;
-	if(!(rbuf=iobuf_alloc())) goto end;
-
-	while(1)
+	if(!strcmp(rbuf->buf, "ok_restore_end"))
 	{
-		iobuf_free_content(rbuf);
-		if(async_read(rbuf)) goto end;
-
-		if(rbuf->cmd==CMD_GEN
-		  && !strcmp(rbuf->buf, "ok_restore_end"))
-		{
-			//logp("got ok_restore_end\n");
-			break;
-		}
-		else if(rbuf->cmd==CMD_WARNING)
-		{
-			logp("WARNING: %s\n", rbuf->buf);
-			do_filecounter(conf->cntr, rbuf->cmd, 0);
-		}
-		else if(rbuf->cmd==CMD_INTERRUPT)
-		{
-			// ignore - client wanted to interrupt a file
-		}
-		else
-		{
-			iobuf_log_unexpected(rbuf, __FUNCTION__);
-			goto end;
-		}
+		//logp("got ok_restore_end\n");
+		return 1;
 	}
-	ret=0;
-end:
-	iobuf_free(rbuf);
-	return ret;
+	iobuf_log_unexpected(rbuf, __FUNCTION__);
+	return -1;
+}
+
+static int do_restore_end(struct config *conf)
+{
+	if(async_write_str(CMD_GEN, "restore_end")) return -1;
+	return async_simple_loop(conf, NULL, restore_end_func);
 }
 
 static int restore_ent(const char *client,
@@ -553,7 +531,7 @@ static int do_restore_manifest(const char *client, const char *datadir,
 		status, conf, &need_data))
 			goto end;
 
-	ret=do_restore_end(act, conf);
+	ret=do_restore_end(conf);
 
 	print_endcounter(conf->cntr);
 	print_filecounters(conf, act);

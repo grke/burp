@@ -11,8 +11,8 @@ struct sbuf *sbuf_alloc(void)
 		log_out_of_memory(__FUNCTION__);
 		return NULL;
 	}
-	sb->pbuf.cmd=CMD_ERROR;
-	sb->abuf.cmd=CMD_ATTRIBS;
+	sb->path.cmd=CMD_ERROR;
+	sb->attr.cmd=CMD_ATTRIBS;
 	sb->compression=-1;
 alloc_count++;
 	return sb;
@@ -20,9 +20,9 @@ alloc_count++;
 
 void sbuf_free_contents(struct sbuf *sb)
 {
-	if(sb->pbuf.buf) { free(sb->pbuf.buf); sb->pbuf.buf=NULL; }
-	if(sb->abuf.buf) { free(sb->abuf.buf); sb->abuf.buf=NULL; }
-	if(sb->lbuf.buf) { free(sb->lbuf.buf); sb->lbuf.buf=NULL; }
+	if(sb->path.buf) { free(sb->path.buf); sb->path.buf=NULL; }
+	if(sb->attr.buf) { free(sb->attr.buf); sb->attr.buf=NULL; }
+	if(sb->link.buf) { free(sb->link.buf); sb->link.buf=NULL; }
 }
 
 void sbuf_free(struct sbuf *sb)
@@ -99,34 +99,34 @@ int cmd_is_link(char cmd)
 
 int sbuf_is_link(struct sbuf *sb)
 {
-	return cmd_is_link(sb->pbuf.cmd);
+	return cmd_is_link(sb->path.cmd);
 }
 
 int sbuf_is_endfile(struct sbuf *sb)
 {
-	return sb->pbuf.cmd==CMD_END_FILE;
+	return sb->path.cmd==CMD_END_FILE;
 }
 
 int sbuf_to_manifest(struct sbuf *sb, gzFile zp)
 {
-	if(sb->pbuf.buf)
+	if(sb->path.buf)
 	{
 		// Hackity hack: Strip the file index from the beginning of
 		// the attribs so that manifests where nothing changed are
 		// identical to each other. Better would be to preserve the
 		// index.
 		char *cp;
-		if(!(cp=strchr(sb->abuf.buf, ' ')))
+		if(!(cp=strchr(sb->attr.buf, ' ')))
 		{
-			logp("Strange attributes: %s\n", sb->abuf.buf);
+			logp("Strange attributes: %s\n", sb->attr.buf);
 			return -1;
 		}
 		if(send_msg_zp(zp, CMD_ATTRIBS,
-			cp, sb->abuf.len-(cp-sb->abuf.buf))
-		  || send_msg_zp(zp, sb->pbuf.cmd, sb->pbuf.buf, sb->pbuf.len))
+			cp, sb->attr.len-(cp-sb->attr.buf))
+		  || send_msg_zp(zp, sb->path.cmd, sb->path.buf, sb->path.len))
 			return -1;
-		if(sb->lbuf.buf
-		  && send_msg_zp(zp, sb->lbuf.cmd, sb->lbuf.buf, sb->lbuf.len))
+		if(sb->link.buf
+		  && send_msg_zp(zp, sb->link.cmd, sb->link.buf, sb->link.len))
 			return -1;
 	}
 	return 0;
@@ -137,17 +137,17 @@ int sbuf_to_manifest(struct sbuf *sb, gzFile zp)
 int sbuf_pathcmp(struct sbuf *a, struct sbuf *b)
 {
 	int r;
-	if((r=pathcmp(a->pbuf.buf, b->pbuf.buf))) return r;
-	if(a->pbuf.cmd==CMD_METADATA || a->pbuf.cmd==CMD_ENC_METADATA)
+	if((r=pathcmp(a->path.buf, b->path.buf))) return r;
+	if(a->path.cmd==CMD_METADATA || a->path.cmd==CMD_ENC_METADATA)
 	{
-		if(b->pbuf.cmd==CMD_METADATA
-		  || b->pbuf.cmd==CMD_ENC_METADATA) return 0;
+		if(b->path.cmd==CMD_METADATA
+		  || b->path.cmd==CMD_ENC_METADATA) return 0;
 		else return 1;
 	}
 	else
 	{
-		if(b->pbuf.cmd==CMD_METADATA
-		  || b->pbuf.cmd==CMD_ENC_METADATA) return -1;
+		if(b->path.cmd==CMD_METADATA
+		  || b->path.cmd==CMD_ENC_METADATA) return -1;
 		else return 0;
 	}
 }
@@ -155,21 +155,21 @@ int sbuf_pathcmp(struct sbuf *a, struct sbuf *b)
 int sbuf_open_file(struct sbuf *sb, struct config *conf)
 {
 #ifdef HAVE_WIN32
-	if(win32_lstat(sb->pbuf.buf, &sb->statp, &sb->winattr))
+	if(win32_lstat(sb->path.buf, &sb->statp, &sb->winattr))
 #else
-	if(lstat(sb->pbuf.buf, &sb->statp))
+	if(lstat(sb->path.buf, &sb->statp))
 #endif
 	{
 		// This file is no longer available.
-		logw(conf->cntr, "%s has vanished\n", sb->pbuf.buf);
+		logw(conf->cntr, "%s has vanished\n", sb->path.buf);
 		return -1;
 	}
 	sb->compression=conf->compression;
 	if(attribs_encode(sb)) return -1;
 
-	if(open_file_for_send(&sb->bfd, sb->pbuf.buf, sb->winattr, conf))
+	if(open_file_for_send(&sb->bfd, sb->path.buf, sb->winattr, conf))
 	{
-		logw(conf->cntr, "Could not open %s\n", sb->pbuf.buf);
+		logw(conf->cntr, "Could not open %s\n", sb->path.buf);
 		return -1;
 	}
 	return 0;
@@ -184,29 +184,6 @@ void sbuf_close_file(struct sbuf *sb)
 ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize)
 {
 	return (ssize_t)bread(&sb->bfd, buf, bufsize);
-}
-
-void sbuf_from_iobuf_path(struct sbuf *sb, struct iobuf *iobuf)
-{
-	//if(sb->path) printf("SBUFA ALREADY SET!\n");
-	sb->pbuf.cmd=iobuf->cmd;
-	sb->pbuf.buf=iobuf->buf;
-	sb->pbuf.len=iobuf->len;
-}
-
-void sbuf_from_iobuf_attr(struct sbuf *sb, struct iobuf *iobuf)
-{
-//	if(sb->abuf.buf) printf("SBUFB ALREADY SET!\n");
-	sb->abuf.buf=iobuf->buf;
-	sb->abuf.len=iobuf->len;
-}
-
-void sbuf_from_iobuf_link(struct sbuf *sb, struct iobuf *iobuf)
-{
-//	if(sb->lbuf.buf) printf("SBUFC ALREADY SET!\n");
-	sb->lbuf.cmd=iobuf->cmd;
-	sb->lbuf.buf=iobuf->buf;
-	sb->lbuf.len=iobuf->len;
 }
 
 // For retrieving stored data.
@@ -422,22 +399,22 @@ int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct
 				// I think these frees are hacks. Probably,
 				// the calling function should deal with this.
 				// FIX THIS.
-				if(sb->abuf.buf)
+				if(sb->attr.buf)
 				{
-					free(sb->abuf.buf);
-					sb->abuf.buf=NULL;
+					free(sb->attr.buf);
+					sb->attr.buf=NULL;
 				}
-				if(sb->pbuf.buf)
+				if(sb->path.buf)
 				{
-					free(sb->pbuf.buf);
-					sb->pbuf.buf=NULL;
+					free(sb->path.buf);
+					sb->path.buf=NULL;
 				}
-				if(sb->lbuf.buf)
+				if(sb->link.buf)
 				{
-					free(sb->lbuf.buf);
-					sb->lbuf.buf=NULL;
+					free(sb->link.buf);
+					sb->link.buf=NULL;
 				}
-				sbuf_from_iobuf_attr(sb, rbuf);
+				iobuf_copy(&sb->attr, rbuf);
 				rbuf->buf=NULL;
 				attribs_decode(sb);
 				break;
@@ -447,7 +424,7 @@ int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct
 			case CMD_SOFT_LINK:
 			case CMD_HARD_LINK:
 			case CMD_SPECIAL:
-				if(!sb->abuf.buf)
+				if(!sb->attr.buf)
 				{
 					log_and_send("read cmd with no attribs");
 					break;
@@ -456,7 +433,7 @@ int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct
 				{
 					if(cmd_is_link(rbuf->cmd))
 					{
-						sbuf_from_iobuf_link(sb, rbuf);
+						iobuf_copy(&sb->link, rbuf);
 						rbuf->buf=NULL;
 						sb->need_link=0;
 						return 0;
@@ -469,7 +446,7 @@ int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct
 				}
 				else
 				{
-					sbuf_from_iobuf_path(sb, rbuf);
+					iobuf_copy(&sb->path, rbuf);
 					rbuf->buf=NULL;
 					if(cmd_is_link(rbuf->cmd))
 						sb->need_link=1;
@@ -527,7 +504,7 @@ int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct
 				break;
 			case CMD_MANIFEST:
 			case CMD_FINGERPRINT:
-				sbuf_from_iobuf_path(sb, rbuf);
+				iobuf_copy(&sb->path, rbuf);
 				rbuf->buf=NULL;
 				return 0;
 			case CMD_ERROR:

@@ -631,9 +631,10 @@ static ff_e find_files(struct sbuf *sb, struct config *conf,
 		sb->ftype=FT_NOSTAT;
 		return FF_FOUND;
 	}
-	if(attribs_encode(sb, in_exclude_comp(conf->excom, conf->excmcount,
-		sb->pbuf.buf, conf->compression)))
-			return FF_ERROR;
+
+	sb->compression=in_exclude_comp(conf->excom, conf->excmcount,
+		sb->pbuf.buf, conf->compression);
+	if(attribs_encode(sb)) return FF_ERROR;
 
 	/*
 	 * Handle hard linked files.

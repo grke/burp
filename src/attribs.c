@@ -7,9 +7,9 @@
 #include "include.h"
 
 // Encode a stat structure into a base64 character string.
-// FIX THIS: Do compression from sb and put it near the beginning, before
+// FIX THIS: Put compression near the beginning, before
 // it gets too entrenched in burp2.
-int attribs_encode(struct sbuf *sb, int compression)
+int attribs_encode(struct sbuf *sb)
 {
 	char *p;
 	struct stat *statp=&sb->statp;
@@ -71,7 +71,7 @@ int attribs_encode(struct sbuf *sb, int compression)
 #endif
 	*p++ = ' ';
 
-	p += to_base64(compression, p);
+	p += to_base64(sb->compression, p);
 
 	*p = 0;
 
@@ -98,13 +98,14 @@ int attribs_encode(struct sbuf *sb, int compression)
 
 // Decode a stat packet from base64 characters.
 // FIX THIS: Do everything with a struct sb.
-void attribs_decode_low_level(struct stat *statp, const char *attribs, uint64_t *index, uint64_t *winattr, int *compression)
+void attribs_decode_low_level(struct sbuf *sb)
 {
-	const char *p=attribs;
+	const char *p=sb->abuf.buf;
+	struct stat *statp=&sb->statp;
 	int64_t val;
 
 	p += from_base64(&val, p);
-	*index=val;
+	sb->index=val;
 	p++;
 	p += from_base64(&val, p);
 	plug(statp->st_dev, val);
@@ -175,7 +176,7 @@ void attribs_decode_low_level(struct stat *statp, const char *attribs, uint64_t 
 	}
 	else
 		val = 0;
-	*winattr=val;
+	sb->winattr=val;
 
 	// Compression.
 	if(*p == ' ' || (*p != 0 && *(p+1) == ' '))
@@ -183,20 +184,15 @@ void attribs_decode_low_level(struct stat *statp, const char *attribs, uint64_t 
 		p++;
 		if(!*p) return;
 		p += from_base64(&val, p);
-		*compression=val;
+		sb->compression=val;
 	}
 	else
-		*compression=-1;
+		sb->compression=-1;
 }
 
-void attribs_decode(struct sbuf *sb, int *compression)
+void attribs_decode(struct sbuf *sb)
 {
-	uint64_t index;
-	uint64_t winattr;
-	attribs_decode_low_level(&sb->statp, sb->abuf.buf,
-		&index, &winattr, compression);
-	sb->index=index;
-	sb->winattr=winattr;
+	attribs_decode_low_level(sb);
 }
 
 static int set_file_times(const char *path, struct utimbuf *ut, struct stat *statp, struct cntr *cntr)

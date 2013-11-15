@@ -433,7 +433,6 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 {
 	int ret=0;
 	static int ec=0;
-	static int compression; // currently unused
 	static struct sbuf *snew=NULL;
 	static struct sbuf *inew=NULL;
 
@@ -471,7 +470,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			if(snew) break;
 			if(!(snew=sbuf_alloc())) goto error;
 			sbuf_from_iobuf_attr(snew, rbuf);
-			attribs_decode(snew, &compression);
+			attribs_decode(snew);
 			snew->need_path=1;
 			rbuf->buf=NULL;
 			return 0;

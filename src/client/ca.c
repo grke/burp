@@ -108,7 +108,7 @@ int ca_client_setup(struct config *conf)
 {
 	int ret=-1;
 	struct stat statp;
-	struct iobuf rbuf;
+	struct iobuf *rbuf=NULL;
 	char csr_path[256]="";
 	char ssl_cert_tmp[512]="";
 	char ssl_cert_ca_tmp[512]="";
@@ -127,31 +127,31 @@ int ca_client_setup(struct config *conf)
 		  || async_read_expect(CMD_GEN, "nocsr ok"))
 		{
 			logp("problem reading from server nocsr\n");
-			return -1;
+			goto end;
 		}
 		logp("nocsr ok\n");
-		return 0;
+		ret=0;
+		goto end;
 	}
 
 	// Tell the server we want to do a signing request.
-	if(async_write_str(CMD_GEN, "csr"))
-		return -1;
+	if(async_write_str(CMD_GEN, "csr")) goto end;
 
-	iobuf_init(&rbuf);
-	if(async_read(&rbuf))
+	if((rbuf=iobuf_async_read()))
 	{
 		logp("problem reading from server csr\n");
 		goto end;
 	}
-	if(rbuf.cmd!=CMD_GEN || strncmp(rbuf.buf, "csr ok:", strlen("csr ok:")))
+	if(rbuf->cmd!=CMD_GEN
+	  || strncmp(rbuf->buf, "csr ok:", strlen("csr ok:")))
 	{
 		logp("unexpected command from server: %c:%s\n",
-			rbuf.cmd, rbuf.buf);
+			rbuf->cmd, rbuf->buf);
 		goto end;
 	}
 	// The server appends its name after 'csr ok:'
 	if(conf->ssl_peer_cn) free(conf->ssl_peer_cn);
-	if(!(conf->ssl_peer_cn=strdup(rbuf.buf+strlen("csr ok:"))))
+	if(!(conf->ssl_peer_cn=strdup(rbuf->buf+strlen("csr ok:"))))
 	{
 		log_out_of_memory(__FUNCTION__);
 		goto end;
@@ -163,10 +163,10 @@ int ca_client_setup(struct config *conf)
 	// request.
 	snprintf(csr_path, sizeof(csr_path), "%s/%s.csr",
 		conf->ca_csr_dir, conf->cname);
-	if(generate_key_and_csr(conf, csr_path)) goto end;
+	if(generate_key_and_csr(conf, csr_path)) goto end_cleanup;
 
 	// Then copy the csr to the server.
-	if(send_a_file(csr_path, conf)) goto end;
+	if(send_a_file(csr_path, conf)) goto end_cleanup;
 
 	snprintf(ssl_cert_tmp, sizeof(ssl_cert_tmp), "%s.%d",
 		conf->ssl_cert, getpid());
@@ -174,23 +174,22 @@ int ca_client_setup(struct config *conf)
 		conf->ssl_cert_ca, getpid());
 
 	// The server will then sign it, and give it back.
-	if(receive_a_file(ssl_cert_tmp, conf)) goto end;
+	if(receive_a_file(ssl_cert_tmp, conf)) goto end_cleanup;
 
 	// The server will also send the CA certificate.
-	if(receive_a_file(ssl_cert_ca_tmp, conf)) goto end;
+	if(receive_a_file(ssl_cert_ca_tmp, conf)) goto end_cleanup;
 
 	if(do_rename(ssl_cert_tmp, conf->ssl_cert)
 	  || do_rename(ssl_cert_ca_tmp, conf->ssl_cert_ca))
-		goto end;
+		goto end_cleanup;
 
 	// Need to rewrite our configuration file to contain the server
 	// name (ssl_peer_cn)
-	if(rewrite_client_conf(conf)) goto end;
+	if(rewrite_client_conf(conf)) goto end_cleanup;
 
 	// My goodness, everything seems to have gone OK. Stand back!
 	ret=1;
-end:
-	if(rbuf.buf) free(rbuf.buf);
+end_cleanup:
 	if(ret<0)
 	{
 		// On error, remove any possibly newly created files, so that
@@ -202,5 +201,7 @@ end:
 		unlink(ssl_cert_tmp);
 		unlink(ssl_cert_ca_tmp);
 	}
+end:
+	iobuf_free(rbuf);
 	return ret;
 }

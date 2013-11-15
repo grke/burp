@@ -524,25 +524,24 @@ static int write_data(BFILE *bfd, struct blk *blk)
 
 static char *get_restore_style(struct config *conf)
 {
+	char msg[32]="";
 	struct iobuf *rbuf;
 	if(!(rbuf=iobuf_async_read())) return NULL;
-	if(rbuf->cmd==CMD_GEN)
+	if(rbuf->cmd!=CMD_GEN
+	  || (strcmp(rbuf->buf, "restore_stream")
+	   && strcmp(rbuf->buf, "restore_spool")))
 	{
-		if(!strcmp(rbuf->buf, "restore_stream")
-		  || !strcmp(rbuf->buf, "restore_spool"))
-		{
-			char msg[32]="";
-			snprintf(msg, sizeof(msg), "%s_ok", rbuf->buf);
-			if(async_write_str(CMD_GEN, msg))
-			{
-				log_out_of_memory(__FUNCTION__);
-				iobuf_free(rbuf);
-				return NULL;
-			}
-			return rbuf->buf;
-		}
+		iobuf_log_unexpected(rbuf, __FUNCTION__);
+		goto error;
 	}
-	iobuf_log_unexpected(rbuf, __FUNCTION__);
+	snprintf(msg, sizeof(msg), "%s_ok", rbuf->buf);
+	if(async_write_str(CMD_GEN, msg))
+	{
+		log_out_of_memory(__FUNCTION__);
+		goto error;
+	}
+	return rbuf->buf;
+error:
 	iobuf_free(rbuf);
 	return NULL;
 }
@@ -561,27 +560,27 @@ int restore_spool(struct config *conf, enum action act, int vss_restore, char **
 	while(1)
 	{
 		if(async_read(rbuf)) goto end;
-		if(rbuf->cmd==CMD_GEN)
+		if(rbuf->cmd!=CMD_GEN)
 		{
-			if(!strncmp(rbuf->buf, "dat=", 4))
-			{
-				char *fpath=NULL;
-				if(!(fpath=prepend_s(*datpath, rbuf->buf+4))
-				  || build_path_w(fpath)
-				  || receive_a_file(fpath, conf))
-					goto end;
-				iobuf_free_content(rbuf);
-				continue;
-			}
-			else if(!strcmp(rbuf->buf, "datfilesend"))
-			{
-				if(async_write_str(CMD_GEN, "datfilesend_ok"))
-					goto end;
-				break;
-			}
+			iobuf_log_unexpected(rbuf, __FUNCTION__);
+			goto end;
 		}
-		iobuf_log_unexpected(rbuf, __FUNCTION__);
-		goto end;
+		if(!strncmp(rbuf->buf, "dat=", 4))
+		{
+			char *fpath=NULL;
+			if(!(fpath=prepend_s(*datpath, rbuf->buf+4))
+			  || build_path_w(fpath)
+			  || receive_a_file(fpath, conf))
+				goto end;
+			iobuf_free_content(rbuf);
+			continue;
+		}
+		else if(!strcmp(rbuf->buf, "datfilesend"))
+		{
+			if(async_write_str(CMD_GEN, "datfilesend_ok"))
+				goto end;
+			break;
+		}
 	}
 
 	ret=0;

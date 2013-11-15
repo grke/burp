@@ -367,14 +367,16 @@ int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct
 	static char lead[5]="";
 	static iobuf *rbuf=NULL;
 	static unsigned int s;
+	int ret=-1;
 
 	if(!rbuf && !(rbuf=iobuf_alloc()))
 	{
 		log_and_send_oom(__FUNCTION__);
-		return -1;
+		goto end;
 	}
 	while(1)
 	{
+		iobuf_free_content(rbuf);
 		if(zp)
 		{
 			size_t got;
@@ -406,16 +408,12 @@ int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct
 		}
 		else
 		{
-			// read from net
-			iobuf_init(rbuf);
 			if(async_read(rbuf))
 			{
 				logp("error in async_read\n");
 				break;
 			}
 		}
-
-//printf("HERE: %c\n", rbuf->cmd);
 
 		switch(rbuf->cmd)
 		{
@@ -490,18 +488,14 @@ int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct
 					rbuf->len,
 					blk->weak, blk->strong,
 					blk->save_path))
-				{
-					free(rbuf->buf); rbuf->buf=NULL;
-					return -1;
-				}
+						goto end;
 				free(rbuf->buf); rbuf->buf=NULL;
 				if(datpath)
 				{
 					if(retrieve_blk_data(datpath, blk))
 					{
 						logp("Could not retrieve blk data.\n");
-						free(rbuf->buf); rbuf->buf=NULL;
-						return -1;
+						goto end;
 					}
 				}
 				return 0;
@@ -520,15 +514,14 @@ int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct
 			case CMD_GEN:
 				if(!strcmp(rbuf->buf, "restore_end"))
 				{
-					free(rbuf->buf); rbuf->buf=NULL;
-					return 1;
+					ret=1;
+					goto end;
 				}
 				else
 				{
-					logp("unexpected cmd in %s: %s\n",
-						__FUNCTION__, rbuf->buf);
-					free(rbuf->buf); rbuf->buf=NULL;
-					return -1;
+					iobuf_log_unexpected(rbuf,
+						__FUNCTION__);
+					goto end;
 				}
 				break;
 			case CMD_MANIFEST:
@@ -538,17 +531,15 @@ int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct
 				return 0;
 			case CMD_ERROR:
 				printf("got error: %s\n", rbuf->buf);
-				free(rbuf->buf); rbuf->buf=NULL;
-				return -1;
+				goto end;
 			default:
-				printf("got unexpected cmd in %s: %c\n",
-					__FUNCTION__, rbuf->cmd);
-				free(rbuf->buf); rbuf->buf=NULL;
-				return -1;
+				iobuf_log_unexpected(rbuf, __FUNCTION__);
+				goto end;
 		}
-		if(rbuf->buf) free(rbuf->buf);
 	}
-	return -1;
+end:
+	iobuf_free_content(rbuf);
+	return ret;
 }
 
 int sbuf_fill_from_gzfile(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct config *conf)

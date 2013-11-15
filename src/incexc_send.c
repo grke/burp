@@ -93,32 +93,8 @@ static int do_sends_restore(struct config *conf)
 
 static int do_request_response(const char *reqstr, const char *repstr)
 {
-	int ret=-1;
-	struct iobuf rbuf;
-	iobuf_init(&rbuf);
-
-	if(async_write_str(CMD_GEN, reqstr)
-	  || async_read(&rbuf))
-		goto end;
-	if(rbuf.cmd==CMD_GEN)
-	{
-		if(strcmp(rbuf.buf, repstr))
-		{
-			logp("unexpected response to %s: %s\n", reqstr,
-				rbuf.buf);
-			goto end;
-		}
-	}
-	else
-	{
-		logp("unexpected response to %s: %c:%s\n", reqstr,
-			rbuf.cmd, rbuf.buf);
-		goto end;
-	}
-	ret=0;
-end:
-	if(rbuf.buf) free(rbuf.buf);
-	return ret;
+	return (async_write_str(CMD_GEN, reqstr)
+	  || async_read_expect(CMD_GEN, repstr));
 }
 
 int incexc_send_client(struct config *conf)

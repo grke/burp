@@ -809,27 +809,27 @@ int send_counters(const char *client, struct config *conf)
 
 int recv_counters(struct config *conf)
 {
-	struct iobuf rbuf;
-	iobuf_init(&rbuf);
+	int ret=-1;
+	struct iobuf *rbuf=NULL;
 
-	if(async_read(&rbuf))
+	if(!(rbuf=iobuf_async_read()))
 	{
 		logp("Error when reading counters from server.\n");
-		return -1;
+		goto end;
 	}
-	if(rbuf.cmd!=CMD_GEN)
+	if(rbuf->cmd!=CMD_GEN)
 	{
-		logp("Unexpected command when reading counters from server: %c:%s", rbuf.cmd, rbuf.buf);
-		free(rbuf.buf);
-		return -1;
+		iobuf_log_unexpected(rbuf, __FUNCTION__);
+		goto end;
 	}
-	if(str_to_counters(rbuf.buf, NULL, NULL, NULL, NULL,
+	if(str_to_counters(rbuf->buf, NULL, NULL, NULL, NULL,
 		conf->p1cntr, conf->cntr, NULL, NULL))
 	{
 		logp("Error when parsing counters from server.\n");
-		free(rbuf.buf);
-		return -1;
+		goto end;
 	}
-	free(rbuf.buf);
-	return 0;
+	ret=0;
+end:
+	iobuf_free(rbuf);
+	return ret;
 }

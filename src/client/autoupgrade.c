@@ -52,20 +52,17 @@ int autoupgrade_client(struct config *conf)
 
 	if(!(rbuf=iobuf_async_read())) goto end;
 
-	if(rbuf->cmd==CMD_GEN)
+	if(rbuf->cmd!=CMD_GEN)
 	{
-		if(!strcmp(rbuf->buf, "do not autoupgrade"))
-		{
-			ret=0;
-			goto end;
-		}
-		else if(strcmp(rbuf->buf, "autoupgrade ok"))
-		{
-			logp("unexpected response to autoupgrade from server: %s\n", rbuf->buf);
-			goto end;
-		}
+		iobuf_log_unexpected(rbuf, __FUNCTION__);
+		goto end;
 	}
-	else
+	if(!strcmp(rbuf->buf, "do not autoupgrade"))
+	{
+		ret=0;
+		goto end;
+	}
+	if(strcmp(rbuf->buf, "autoupgrade ok"))
 	{
 		iobuf_log_unexpected(rbuf, __FUNCTION__);
 		goto end;

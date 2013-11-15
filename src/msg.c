@@ -47,13 +47,13 @@ static int do_write(BFILE *bfd, FILE *fp, unsigned char *out, size_t outlen, uns
 	return 0;
 }
 
-static int do_inflate(z_stream *zstrm, BFILE *bfd, FILE *fp, unsigned char *out, unsigned char *buftouse, size_t lentouse, unsigned long long *sent)
+static int do_inflate(z_stream *zstrm, BFILE *bfd, FILE *fp, unsigned char *out, struct iobuf *rbuf, unsigned long long *sent)
 {
 	int zret=Z_OK;
 	unsigned have=0;
 
-	zstrm->avail_in=lentouse;
-	zstrm->next_in=buftouse;
+	zstrm->avail_in=rbuf->len;
+	zstrm->next_in=(unsigned char *)rbuf->buf;
 
 	do
 	{
@@ -63,12 +63,11 @@ static int do_inflate(z_stream *zstrm, BFILE *bfd, FILE *fp, unsigned char *out,
 		switch(zret)
 		{
 			case Z_NEED_DICT:
-			  zret=Z_DATA_ERROR;
+				zret=Z_DATA_ERROR;
 			case Z_DATA_ERROR:
 			case Z_MEM_ERROR:
-			  logp("zstrm inflate error: %d\n", zret);
-			  return -1;
-			  break;
+				logp("zstrm inflate error: %d\n", zret);
+				return -1;
 		}
 		have=ZCHUNK-zstrm->avail_out;
 		if(!have) continue;
@@ -84,10 +83,10 @@ int transfer_gzfile_in(const char *path, BFILE *bfd, FILE *fp, unsigned long lon
 	int quit=0;
 	int ret=-1;
 	unsigned char out[ZCHUNK];
-	struct iobuf rbuf;
+	struct iobuf *rbuf=NULL;
 	z_stream zstrm;
 
-	iobuf_init(&rbuf);
+	if(!(rbuf=iobuf_alloc())) goto end;
 
 	zstrm.zalloc=Z_NULL;
 	zstrm.zfree=Z_NULL;
@@ -98,66 +97,52 @@ int transfer_gzfile_in(const char *path, BFILE *bfd, FILE *fp, unsigned long lon
 	if(inflateInit2(&zstrm, (15+16)))
 	{
 		logp("unable to init inflate\n");
-		return -1;
+		goto end;
 	}
 
 	while(!quit)
 	{
-		iobuf_init(&rbuf);
-		if(async_read(&rbuf))
-		{
-			inflateEnd(&zstrm);
-			return -1;
-		}
-		(*rcvd)+=rbuf.len;
+		iobuf_free_content(rbuf);
+		if(async_read(rbuf)) goto end_inflate;
+		(*rcvd)+=rbuf->len;
 
-		//logp("transfer in: %c:%s\n", rbuf.cmd, rbuf.buf);
-		switch(rbuf.cmd)
+		//logp("transfer in: %c:%s\n", rbuf->cmd, rbuf->buf);
+		switch(rbuf->cmd)
 		{
 			case CMD_APPEND: // append
 				if(!fp && !bfd)
 				{
 					logp("given append, but no file to write to\n");
-					async_write_str(CMD_ERROR, "append with no file");
-					quit++; ret=-1;
+					async_write_str(CMD_ERROR,
+						"append with no file");
+					goto end_inflate;
 				}
 				else
 				{
-					size_t lentouse;
-					unsigned char *buftouse=NULL;
-					lentouse=rbuf.len;
-					buftouse=(unsigned char *)rbuf.buf;
-					//logp("want to write: %d\n", zstrm.avail_in);
-
 					if(do_inflate(&zstrm, bfd, fp, out,
-						buftouse, lentouse,
-						sent))
-					{
-						ret=-1; quit++;
-						break;
-					}
+						rbuf, sent))
+							goto end_inflate;
 				}
 				break;
 			case CMD_END_FILE: // finish up
-				quit++;
-				ret=0;
-				break;
+				goto end_ok;
 			case CMD_WARNING:
-				logp("WARNING: %s\n", rbuf.buf);
-				do_filecounter(cntr, rbuf.cmd, 0);
+				logp("WARNING: %s\n", rbuf->buf);
+				do_filecounter(cntr, rbuf->cmd, 0);
 				break;
 			default:
-				logp("unknown append cmd: %c\n", rbuf.cmd);
-				quit++;
-				ret=-1;
-				break;
+				iobuf_log_unexpected(rbuf, __FUNCTION__);
+				goto end_inflate;
 		}
-		if(rbuf.buf) { free(rbuf.buf); rbuf.buf=NULL; }
 	}
-	inflateEnd(&zstrm);
 
+end_ok:
+	ret=0;
+end_inflate:
+	inflateEnd(&zstrm);
+end:
 	if(ret) logp("transfer file returning: %d\n", ret);
-	if(rbuf.buf) free(rbuf.buf);
+	iobuf_free(rbuf);
 	return ret;
 }
 

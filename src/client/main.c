@@ -2,27 +2,18 @@
 
 #include <sys/types.h>
 
-// Return 0 for OK, -1 for error, 1 for timer conditions not met.
-static int maybe_check_timer(const char *backupstr, struct config *conf)
+static int timer_ret=0;
+
+static int maybe_check_timer_func(struct iobuf *rbuf,
+        struct config *conf, void *param)
 {
-	int ret=-1;
 	int complen=0;
-	struct iobuf *rbuf=NULL;
-
-        if(async_write_str(CMD_GEN, backupstr)) goto end;
-
-        if(!(rbuf=iobuf_async_read())) return -1;
-
-        if(rbuf->cmd==CMD_GEN && !strcmp(rbuf->buf, "timer conditions not met"))
+	timer_ret=0;
+        if(!strcmp(rbuf->buf, "timer conditions not met"))
         {
                 logp("Timer conditions on the server were not met\n");
-		ret=1;
-		goto end;
-        }
-        else if(rbuf->cmd!=CMD_GEN)
-        {
-		iobuf_log_unexpected(rbuf, __FUNCTION__);
-		goto end;
+		timer_ret=1;
+		return 1;
         }
 
 	if(!strncmp(rbuf->buf, "ok", 2))
@@ -30,16 +21,21 @@ static int maybe_check_timer(const char *backupstr, struct config *conf)
 	else
 	{
 		iobuf_log_unexpected(rbuf, __FUNCTION__);
-		goto end;
+		return -1;
 	}
         // The server now tells us the compression level in the OK response.
         if(strlen(rbuf->buf)>3) conf->compression=atoi(rbuf->buf+complen);
         logp("Compression level: %d\n", conf->compression);
+	return 1;
+}
 
-	ret=0;
-end:
-	iobuf_free(rbuf);
-	return ret;
+// Return 0 for OK, -1 for error, 1 for timer conditions not met.
+static int maybe_check_timer(const char *backupstr, struct config *conf)
+{
+        if(async_write_str(CMD_GEN, backupstr)
+	  || async_simple_loop(conf, NULL, maybe_check_timer_func))
+		return -1;
+	return timer_ret;
 }
 
 /*

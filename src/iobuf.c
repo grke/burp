@@ -45,7 +45,7 @@ struct iobuf *iobuf_async_read(void)
 
 void iobuf_log_unexpected(struct iobuf *iobuf, const char *func)
 {
-	logp("unexpected command from server in %s(): %c:%s\n",
+	logp("unexpected command in %s(): %c:%s\n",
 		func, iobuf->cmd, iobuf->buf);
 }
 

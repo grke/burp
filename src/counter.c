@@ -807,16 +807,16 @@ int send_counters(const char *client, struct config *conf)
 }
 #endif
 
-static int recv_counters_func(struct iobuf *rbuf,
+static enum asl_ret recv_counters_func(struct iobuf *rbuf,
         struct config *conf, void *param)
 {
 	if(str_to_counters(rbuf->buf, NULL, NULL, NULL, NULL,
 		conf->p1cntr, conf->cntr, NULL, NULL))
 	{
 		logp("Error when parsing counters from server.\n");
-		return -1;
+		return ASL_END_ERROR;
 	}
-	return 1;
+	return ASL_END_OK;
 }
 
 int recv_counters(struct config *conf)

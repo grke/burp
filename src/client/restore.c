@@ -524,7 +524,7 @@ static int write_data(BFILE *bfd, struct blk *blk)
 
 static char *restore_style=NULL;
 
-static int restore_style_func(struct iobuf *rbuf,
+static enum asl_ret restore_style_func(struct iobuf *rbuf,
 	struct config *conf, void *param)
 {
 	char msg[32]="";
@@ -533,13 +533,13 @@ static int restore_style_func(struct iobuf *rbuf,
 	   && strcmp(rbuf->buf, "restore_spool"))
 	{
 		iobuf_log_unexpected(rbuf, __FUNCTION__);
-		return -1;
+		return ASL_END_ERROR;
 	}
 	snprintf(msg, sizeof(msg), "%s_ok", rbuf->buf);
 	if(async_write_str(CMD_GEN, msg))
-		return -1;
+		return ASL_END_ERROR;
 	restore_style=rbuf->buf;
-	return 1;
+	return ASL_END_OK;
 }
 
 static char *get_restore_style(struct config *conf)
@@ -548,7 +548,7 @@ static char *get_restore_style(struct config *conf)
 	return restore_style;
 }
 
-static int restore_spool_func(struct iobuf *rbuf,
+static enum asl_ret restore_spool_func(struct iobuf *rbuf,
 	struct config *conf, void *param)
 {
 	static char **datpath;
@@ -559,16 +559,16 @@ static int restore_spool_func(struct iobuf *rbuf,
 		if(!(fpath=prepend_s(*datpath, rbuf->buf+4))
 		  || build_path_w(fpath)
 		  || receive_a_file(fpath, conf))
-			return -1;
+			return ASL_END_ERROR;
 		iobuf_free_content(rbuf);
 	}
 	else if(!strcmp(rbuf->buf, "datfilesend"))
 	{
 		if(async_write_str(CMD_GEN, "datfilesend_ok"))
-			return -1;
-		return 1;
+			return ASL_END_ERROR;
+		return ASL_END_OK;
 	}
-	return 0;
+	return ASL_CONTINUE;
 }
 
 int restore_spool(struct config *conf, char **datpath)

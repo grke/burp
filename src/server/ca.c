@@ -336,7 +336,8 @@ end:
 	return ret;
 }
 
-static int csr_func(struct iobuf *rbuf, struct config *conf, void *param)
+static enum asl_ret csr_func(struct iobuf *rbuf,
+	struct config *conf, void *param)
 {
 	static const char **client;
 	client=(const char **)param;
@@ -349,9 +350,11 @@ static int csr_func(struct iobuf *rbuf, struct config *conf, void *param)
 			logp("But server is not configured to sign client certificate requests.\n");
 			logp("See option 'ca_conf'.\n");
 			async_write_str(CMD_ERROR, "server not configured to sign client certificates");
-			return -1;
+			return ASL_END_ERROR;
 		}
-		return !sign_client_cert(*client, conf);
+		if(sign_client_cert(*client, conf))
+			return ASL_END_ERROR;
+		return ASL_END_OK;
 	}
 	else if(!strcmp(rbuf->buf, "nocsr"))
 	{
@@ -359,13 +362,13 @@ static int csr_func(struct iobuf *rbuf, struct config *conf, void *param)
 		// No problem, just carry on.
 		logp("Client %s does not want a certificate signed\n", *client);
 		if(async_write_str(CMD_GEN, "nocsr ok"))
-			return -1;
-		return 1;
+			return ASL_END_ERROR;
+		return ASL_END_OK;
 	}
 	else
 	{
 		iobuf_log_unexpected(rbuf, __FUNCTION__);
-		return -1;
+		return ASL_END_ERROR;
 	}
 }
 

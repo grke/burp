@@ -2,18 +2,14 @@
 
 #include <sys/types.h>
 
-static int timer_ret=0;
-
-static int maybe_check_timer_func(struct iobuf *rbuf,
+static enum asl_ret maybe_check_timer_func(struct iobuf *rbuf,
         struct config *conf, void *param)
 {
 	int complen=0;
-	timer_ret=0;
         if(!strcmp(rbuf->buf, "timer conditions not met"))
         {
                 logp("Timer conditions on the server were not met\n");
-		timer_ret=1;
-		return 1;
+		return ASL_END_OK_RETURN_1;
         }
 
 	if(!strncmp(rbuf->buf, "ok", 2))
@@ -21,21 +17,20 @@ static int maybe_check_timer_func(struct iobuf *rbuf,
 	else
 	{
 		iobuf_log_unexpected(rbuf, __FUNCTION__);
-		return -1;
+		return ASL_END_ERROR;
 	}
         // The server now tells us the compression level in the OK response.
         if(strlen(rbuf->buf)>3) conf->compression=atoi(rbuf->buf+complen);
         logp("Compression level: %d\n", conf->compression);
-	return 1;
+	return ASL_END_OK;
 }
 
 // Return 0 for OK, -1 for error, 1 for timer conditions not met.
 static int maybe_check_timer(const char *backupstr, struct config *conf)
 {
-        if(async_write_str(CMD_GEN, backupstr)
-	  || async_simple_loop(conf, NULL, maybe_check_timer_func))
+        if(async_write_str(CMD_GEN, backupstr))
 		return -1;
-	return timer_ret;
+	return async_simple_loop(conf, NULL, maybe_check_timer_func);
 }
 
 /*

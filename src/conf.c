@@ -1428,6 +1428,9 @@ int parse_incexcs_buf(struct config *conf, const char *incexc)
 	char *tok=NULL;
 	char *copy=NULL;
 	struct llists l;
+
+	if(!incexc) return 0;
+	
 	memset(&l, 0, sizeof(struct llists));
 	set_got_args(&l, conf);
 	if(!(copy=strdup(incexc)))

@@ -1017,9 +1017,11 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 		goto endfunc;
 	}
 
-	do_rename(currentdup, fullrealcurrent);
-
-	deleteme_maybe_delete(cconf, basedir);
+	if(deleteme_maybe_delete(cconf, basedir))
+	{
+		ret=-1;
+		goto endfunc;
+	}
 
 	print_stats_to_file(p1cntr, cntr, cconf,
 		client, finishing, ACTION_BACKUP);

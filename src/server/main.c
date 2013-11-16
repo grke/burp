@@ -849,23 +849,139 @@ end:
 	return ret;
 }
 
+static int run_server_script(const char *client,
+	const char *pre_or_post, struct iobuf *rbuf, const char *script,
+	struct strlist **script_arg, int argcount,
+	uint8_t notify, struct config *cconf, int backup_ret, int timer_ret)
+{
+	int a=0;
+	int ret=0;
+	char *logbuf=NULL;
+	const char *args[12];
+
+	args[a++]=script;
+	args[a++]=pre_or_post;
+	args[a++]=rbuf->buf?rbuf->buf:"", // Action requested by client.
+	args[a++]=client;
+	args[a++]=backup_ret?"1":"0", // Indicate success or failure.
+	// Indicate whether the timer script said OK or not.
+	args[a++]=timer_ret?"1":"0",
+	args[a++]=NULL;
+
+	// Do not have a client storage directory, so capture the
+	// output in a buffer to pass to the notification script.
+	if(run_script_to_buf(args, script_arg, argcount, NULL, 1, 1, &logbuf))
+	{
+		char msg[256];
+		snprintf(msg, sizeof(msg),
+			"server %s script %s returned an error",
+			pre_or_post, script);
+		log_and_send(msg);
+		ret=-1;
+		if(!notify) goto end;
+
+		a=0;
+		args[a++]=cconf->notify_failure_script;
+		args[a++]=client;
+		// magic - set basedir blank and the
+		// notify script will know to get the content
+		// from the next argument (usually storagedir)
+		args[a++]=""; // usually basedir
+		args[a++]=logbuf?logbuf:""; //usually storagedir
+		args[a++]=""; // usually file
+		args[a++]=""; // usually brv
+		args[a++]=""; // usually warnings
+		args[a++]=NULL;
+		run_script(args, cconf->notify_failure_arg, cconf->nfcount,
+			NULL, 1, 1);
+	}
+end:
+	if(logbuf) free(logbuf);
+	return ret;
+}
+
+static int child_w(char **client, const char *cversion,
+	struct config *conf, struct config *cconf)
+{
+	int ret=-1;
+	int srestore=0;
+	int timer_ret=0;
+	char *gotlock=NULL;
+	struct iobuf *rbuf=NULL;
+	char *incexc=NULL;
+
+	/* Has to be before the chuser/chgrp stuff to allow clients to switch
+	   to different clients when both clients have different user/group
+	   settings. */
+	if(extra_comms(client, cversion, &incexc, &srestore, conf, cconf))
+	{
+		log_and_send("running extra comms failed on server");
+		goto end;
+	}
+
+	/* Now that the client conf is loaded, we might want to chuser or
+	   chgrp.
+	   The main process could have already done this, so we don't want
+	   to try doing it again if cconf has the same values, because it
+	   will fail. */
+	if( (!conf->user  || (cconf->user && strcmp(conf->user, cconf->user)))
+	  ||(!conf->group ||(cconf->group && strcmp(conf->group,cconf->group))))
+	{
+		if(chuser_and_or_chgrp(cconf->user, cconf->group))
+		{
+			log_and_send("chuser_and_or_chgrp failed on server");
+			goto end;
+		}
+	}
+
+	if(!(rbuf=iobuf_async_read())) goto end;
+
+	ret=0;
+
+	// FIX THIS: Make the script components part of a struct, and just
+	// pass in the correct struct. Same below.
+	if(cconf->server_script_pre)
+		ret=run_server_script(*client, "pre", rbuf,
+			cconf->server_script_pre,
+			cconf->server_script_pre_arg,
+			cconf->sprecount,
+			cconf->server_script_pre_notify,
+			cconf, ret, timer_ret);
+
+	if(!ret) ret=child(conf, cconf, *client, cversion, incexc, srestore,
+			rbuf, &gotlock, &timer_ret);
+
+	if((!ret || cconf->server_script_post_run_on_fail)
+	  && cconf->server_script_post)
+		ret=run_server_script(*client, "post", rbuf,
+			cconf->server_script_post,
+			cconf->server_script_post_arg,
+			cconf->spostcount,
+			cconf->server_script_post_notify,
+			cconf, ret, timer_ret);
+
+end:
+	if(gotlock)
+	{
+		unlink(gotlock);
+		free(gotlock);
+	}
+	iobuf_free(rbuf);
+	return ret;
+}
+
 static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, int forking)
 {
-	int ret=0;
+	int ret=-1;
 	int ca_ret=0;
 	SSL *ssl=NULL;
 	BIO *sbio=NULL;
-	char *incexc=NULL;
 	char *client=NULL;
 	char *cversion=NULL;
-	int srestore=0;
-	char *gotlock=NULL;
-	int timer_ret=0;
 	struct config conf;
 	struct config cconf;
 	struct cntr p1cntr;
 	struct cntr cntr;
-	struct iobuf *rbuf=NULL;
 
 	conf.p1cntr=&p1cntr;
 	conf.cntr=&cntr;
@@ -885,52 +1001,42 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	  || !(ssl=SSL_new(ctx)))
 	{
 		logp("There was a problem joining ssl to the socket\n");
-		ret=-1;
-		goto finish;
+		goto end;
 	}
 	SSL_set_bio(ssl, sbio, sbio);
 
 	/* Do not try to check peer certificate straight away.
 	   Clients can send a certificate signing request when they have
-	   no certificate.
-	*/
+	   no certificate. */
 	SSL_set_verify(ssl, SSL_VERIFY_PEER
 		/* | SSL_VERIFY_FAIL_IF_NO_PEER_CERT */, 0);
 
-	if((ret=SSL_accept(ssl))<=0)
+	if(SSL_accept(ssl)<=0)
 	{
 		char buf[256]="";
 		ERR_error_string_n(ERR_get_error(), buf, sizeof(buf));
 		logp("SSL_accept: %s\n", buf);
-		ret=-1;
-		goto finish;
+		goto end;
 	}
-	ret=0;
 	if(async_init(*cfd, ssl, &conf, 0))
-	{
-		ret=-1;
-		goto finish;
-	}
+		goto end;
 	if(authorise_server(&conf, &client, &cversion, &cconf)
 		|| !client || !*client)
 	{
-		// add an annoying delay in case they are tempted to
-		// try repeatedly
+		// Add an annoying delay in case they are tempted to
+		// try repeatedly.
 		log_and_send("unable to authorise on server");
 		sleep(1);
-		ret=-1;
-		goto finish;
+		goto end;
 	}
 
 	/* At this point, the client might want to get a new certificate
 	   signed. Clients on 1.3.2 or newer can do this. */
 	if((ca_ret=ca_server_maybe_sign_client_cert(client, cversion, &conf))<0)
 	{
-		// Error.
 		logp("Error signing client certificate request for %s\n",
 			client);
-		ret=-1;
-		goto finish;
+		goto end;
 	}
 	else if(ca_ret>0)
 	{
@@ -940,160 +1046,28 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 		// connection and its new certificates.
 		logp("Signed and returned client certificate request for %s\n",
 			client);
-		goto finish;
+		ret=0;
+		goto end;
 	}
 
 	/* Now it is time to check the certificate. */ 
 	if(ssl_check_cert(ssl, &cconf))
 	{
 		log_and_send("check cert failed on server");
-		return -1;
-	}
-
-	/* Has to be before the chuser/chgrp stuff to allow clients to switch
-	   to different clients when both clients have different user/group
-	   settings. */
-	if(extra_comms(&client, cversion, &incexc, &srestore, &conf, &cconf))
-	{
-		log_and_send("running extra comms failed on server");
-		ret=-1;
-		goto finish;
-	}
-
-	// Now that the client conf is loaded, we might want to chuser or
-	// chgrp.
-	// The main process could have already done this, so we don't want
-	// to try doing it again if cconf has the same values, because it
-	// will fail.
-	if(  (!conf.user  || (cconf.user && strcmp(conf.user, cconf.user)))
-	  || (!conf.group || (cconf.group && strcmp(conf.group, cconf.group))))
-	{
-		if(chuser_and_or_chgrp(cconf.user, cconf.group))
-		{
-			log_and_send("chuser_and_or_chgrp failed on server");
-			ret=-1;
-			goto finish;
-		}
+		goto end;
 	}
 
 	set_non_blocking(*cfd);
 
-	if(!(rbuf=iobuf_async_read()))
-	{
-		ret=-1;
-	}
-
-	if(cconf.server_script_pre)
-	{
-		int a=0;
-		char *logbuf=NULL;
-		const char *args[12];
-		args[a++]=cconf.server_script_pre;
-		args[a++]="pre";
-		args[a++]=rbuf->buf?rbuf->buf:"";
-		args[a++]=client;
-		args[a++]="reserved4";
-		args[a++]="reserved5";
-		args[a++]=NULL;
-		// At this point, there is no client directory and therefore
-		// log file on the server.
-		// So to log the output, we have to catch it in a buffer,
-		// then pass the buffer to the notification script.
-		if(run_script_to_buf(args, cconf.server_script_pre_arg,
-			cconf.sprecount, NULL, 1, 1, &logbuf))
-		{
-			log_and_send("server pre script returned an error");
-			ret=-1;
-			if(cconf.server_script_pre_notify)
-			{
-				a=0;
-				args[a++]=cconf.notify_failure_script;
-				args[a++]=client;
-				// magic - set basedir blank and the
-				// notify script will know to get the content
-				// from the next argument (usually storagedir)
-				args[a++]=""; // usually basedir
-				args[a++]=logbuf?logbuf:""; //usually storagedir
-				args[a++]=""; // usually file
-				args[a++]=""; // usually brv
-				args[a++]=""; // usually warnings
-				args[a++]=NULL;
-				run_script(args,
-					cconf.notify_failure_arg,
-					cconf.nfcount,
-					NULL, 1, 1);
-			}
-			// Do not finish here, because the server post script
-			// might want to run.
-		}
-		if(logbuf) free(logbuf);
-	}
-
-	if(!ret) ret=child(&conf, &cconf, client, cversion, incexc, srestore,
-			rbuf, &gotlock, &timer_ret);
-
-	if((!ret || cconf.server_script_post_run_on_fail)
-	  && cconf.server_script_post)
-	{
-		int a=0;
-		char *logbuf=NULL;
-		const char *args[12];
-		args[a++]=cconf.server_script_post;
-		args[a++]="post";
-		args[a++]=rbuf->buf?rbuf->buf:"", // action requested by client
-		args[a++]=client;
-		args[a++]=ret?"1":"0", // indicate success or failure
-		// indicate whether the timer script said OK or not
-		args[a++]=timer_ret?"1":"0",
-		args[a++]=NULL;
-		// Do not have a client storage directory, so capture the
-		// output in a buffer to pass to the notification script.
-		if(run_script_to_buf(args,
-			cconf.server_script_post_arg, cconf.spostcount,
-			NULL, 1, 1, &logbuf))
-		{
-			log_and_send("server post script returned an error");
-			ret=-1;
-			if(cconf.server_script_post_notify)
-			{
-				a=0;
-				args[a++]=cconf.notify_failure_script;
-				args[a++]=client;
-				// magic - set basedir blank and the
-				// notify script will know to get the content
-				// from the next argument (usually storagedir)
-				args[a++]=""; // usually basedir
-				args[a++]=logbuf?logbuf:""; //usually storagedir
-				args[a++]=""; // usually file
-				args[a++]=""; // usually brv
-				args[a++]=""; // usually warnings
-				args[a++]=NULL;
-				run_script(args,
-					cconf.notify_failure_arg,
-					cconf.nfcount,
-					NULL, 1, 1);
-			}
-			if(logbuf) free(logbuf);
-			goto finish;
-		}
-		if(logbuf) free(logbuf);
-	}
-
-finish:
+	ret=child_w(&client, cversion, &conf, &cconf);
+end:
 	*cfd=-1;
-	if(gotlock)
-	{
-		unlink(gotlock);
-		free(gotlock);
-	}
 	async_free(); // this closes cfd for us.
 	logp("exit child\n");
 	if(client) free(client);
 	if(cversion) free(cversion);
-	if(incexc) free(incexc);
 	free_config(&conf);
 	free_config(&cconf);
-	iobuf_free(rbuf);
 	return ret;
 }
 

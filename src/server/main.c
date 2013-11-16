@@ -708,8 +708,7 @@ static int extra_comms_read(struct vers *vers, char **client, int *srestore, cha
 			}
 			logp("Client wants to switch to client: %s\n",
 				orig_client);
-			if(load_client_config(conf, sconf,
-				orig_client))
+			if(config_load_client(conf, sconf, orig_client))
 			{
 				char msg[256]="";
 				snprintf(msg, sizeof(msg),
@@ -742,7 +741,7 @@ static int extra_comms_read(struct vers *vers, char **client, int *srestore, cha
 			}
 			sconf->restore_path=cconf->restore_path;
 			cconf->restore_path=NULL;
-			free_config(cconf);
+			config_free(cconf);
 			memcpy(cconf, sconf, sizeof(struct config));
 			sconf=NULL;
 			cconf->restore_client=*client;
@@ -993,9 +992,9 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 
 	// Reload global config, in case things have changed. This means that
 	// the server does not need to be restarted for most config changes.
-	init_config(&conf);
-	init_config(&cconf);
-	if(load_config(configfile, &conf, 1)) return -1;
+	config_init(&conf);
+	config_init(&cconf);
+	if(config_load(configfile, &conf, 1)) return -1;
 
 	if(!(sbio=BIO_new_socket(*cfd, BIO_NOCLOSE))
 	  || !(ssl=SSL_new(ctx)))
@@ -1066,8 +1065,8 @@ end:
 	logp("exit child\n");
 	if(client) free(client);
 	if(cversion) free(cversion);
-	free_config(&conf);
-	free_config(&cconf);
+	config_free(&conf);
+	config_free(&cconf);
 	return ret;
 }
 
@@ -1080,8 +1079,8 @@ static int run_status_server(int *rfd, int *cfd, const char *configfile)
 
 	// Reload global config, in case things have changed. This means that
 	// the server does not need to be restarted for most config changes.
-	init_config(&conf);
-	if(load_config(configfile, &conf, 1)) return -1;
+	config_init(&conf);
+	if(config_load(configfile, &conf, 1)) return -1;
 
 	ret=status_server(cfd, &conf);
 
@@ -1089,7 +1088,7 @@ static int run_status_server(int *rfd, int *cfd, const char *configfile)
 
 	logp("exit status server\n");
 
-	free_config(&conf);
+	config_free(&conf);
 
 	return ret;
 }
@@ -1154,7 +1153,7 @@ static int process_incoming_client(int rfd, struct config *conf, SSL_CTX *ctx, c
 			close(pipe_rfd[0]); // close read end
 			close(pipe_wfd[1]); // close write end
 
-			free_config(conf);
+			config_free(conf);
 
 			set_blocking(pipe_rfd[1]);
 			status_wfd=pipe_rfd[1];
@@ -1190,7 +1189,6 @@ static int process_incoming_client(int rfd, struct config *conf, SSL_CTX *ctx, c
 	}
 	else
 	{
-		//free_config(conf);
 		if(is_status_server)
 			return run_status_server(&rfd, &cfd, configfile);
 		else

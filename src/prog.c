@@ -95,9 +95,9 @@ int reload(struct config *conf, const char *configfile, bool firsttime, int oldm
 {
 	if(!firsttime) logp("Reloading config\n");
 
-	init_config(conf);
+	config_init(conf);
 
-	if(load_config(configfile, conf, 1)) return 1;
+	if(config_load(configfile, conf, 1)) return 1;
 
 	/* change umask */
 	umask(conf->umask);
@@ -106,7 +106,7 @@ int reload(struct config *conf, const char *configfile, bool firsttime, int oldm
         if(json) conf->log_to_stdout=0;
 
 	// This will turn on syslogging which could not be turned on before
-	// load_config.
+	// config_load.
 	set_logfp(NULL, conf);
 
 #ifndef HAVE_WIN32
@@ -357,7 +357,7 @@ int main (int argc, char *argv[])
 	}
 
 	if(gotlock) unlink(conf.lockfile);
-	free_config(&conf);
+	config_free(&conf);
 
 	// If there was no forking, logfp ends up getting closed before this
 	// and will segfault if we try to do it again.

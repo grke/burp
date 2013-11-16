@@ -3,66 +3,7 @@
 static void reset_filecounter(struct cntr *c, time_t t)
 {
 	if(!c) return;
-	c->gtotal=0;
-	c->gtotal_same=0;
-	c->gtotal_changed=0;
-	c->gtotal_deleted=0;
-
-	c->total=0;
-	c->total_same=0;
-	c->total_changed=0;
-	c->total_deleted=0;
-
-	c->file=0;
-	c->file_same=0;
-	c->file_changed=0;
-	c->file_deleted=0;
-
-	c->enc=0;
-	c->enc_same=0;
-	c->enc_changed=0;
-	c->enc_deleted=0;
-
-	c->meta=0;
-	c->meta_same=0;
-	c->meta_changed=0;
-	c->meta_deleted=0;
-
-	c->encmeta=0;
-	c->encmeta_same=0;
-	c->encmeta_changed=0;
-	c->encmeta_deleted=0;
-
-	c->dir=0;
-	c->dir_same=0;
-	c->dir_changed=0;
-	c->dir_deleted=0;
-
-	c->slink=0;
-	c->slink_same=0;
-	c->slink_changed=0;
-	c->slink_deleted=0;
-
-	c->hlink=0;
-	c->hlink_same=0;
-	c->hlink_changed=0;
-	c->hlink_deleted=0;
-
-	c->special=0;
-	c->special_same=0;
-	c->special_changed=0;
-	c->special_deleted=0;
-
-	c->efs=0;
-	c->efs_same=0;
-	c->efs_changed=0;
-	c->efs_deleted=0;
-
-	c->warning=0;
-	c->byte=0;
-	c->recvbyte=0;
-	c->sentbyte=0;
-
+	memset(c, 0, sizeof(struct cntr));
 	c->start=t;
 }
 

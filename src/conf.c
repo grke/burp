@@ -2,6 +2,8 @@
 
 /* Init only stuff related to includes/excludes.
    This is so that the server can override them all on the client. */
+// FIX THIS: Maybe have this as a substructure of a struct config.
+// Could then just memset them all to zero here.
 static void init_incexcs(struct config *conf)
 {
 	conf->startdir=NULL; conf->sdcount=0;
@@ -48,123 +50,25 @@ static void free_incexcs(struct config *conf)
 	init_incexcs(conf);
 }
 
-void init_config(struct config *conf)
+void config_init(struct config *conf)
 {
-	conf->configfile=NULL;
-	conf->mode=MODE_UNSET;
-	conf->port=NULL;
-	conf->status_port=NULL;
-	conf->hardlinked_archive=0;
+	// Set everything to 0.
+	// FIX THIS: get rid of this by calloc-ing struct configs.
+	memset(conf, 0, sizeof(struct config));
+
+	// Turn on defaults that are non-zero.
 	conf->forking=1;
 	conf->daemon=1;
 	conf->directory_tree=1;
-	conf->clientconfdir=NULL;
-	conf->cname=NULL;
-	conf->directory=NULL;
-	conf->timestamp_format=NULL;
 	conf->password_check=1;
-	conf->ca_conf=NULL;
-	conf->ca_name=NULL;
-	conf->ca_server_name=NULL;
-	conf->ca_burp_ca=NULL;
-	conf->ca_csr_dir=NULL;
-	conf->lockfile=NULL;
-	conf->log_to_syslog=0;
 	conf->log_to_stdout=1;
-	conf->progress_counter=0;
-	conf->password=NULL;
-	conf->passwd=NULL;
-	conf->server=NULL;
-	conf->ratelimit=0;
 	conf->network_timeout=60*60*2; // two hours
-	conf->cross_all_filesystems=0;
-	conf->read_all_fifos=0;
-	conf->read_all_blockdevs=0;
-	conf->min_file_size=0;
-	conf->max_file_size=0;
-	conf->autoupgrade_dir=NULL;
-	conf->autoupgrade_os=NULL;
-	conf->ssl_cert_ca=NULL;
-	conf->ssl_cert=NULL;
-	conf->ssl_key=NULL;
-	conf->ssl_key_password=NULL;
-	conf->ssl_ciphers=NULL;
-	conf->ssl_dhfile=NULL;
-	conf->ssl_peer_cn=NULL;
-	conf->encryption_password=NULL;
-	conf->max_children=0;
-	conf->max_status_children=0;
 	// ext3 maximum number of subdirs is 32000, so leave a little room.
 	conf->max_storage_subdirs=30000;
 	conf->compression=9;
 	conf->version_warn=1;
-	conf->client_lockdir=NULL;
 	conf->umask=0022;
-	conf->user=NULL;
-	conf->group=NULL;
-	conf->keep=NULL;
-	conf->kpcount=0;
 	conf->max_hardlinks=10000;
-
-	conf->timer_script=NULL;
-	conf->timer_arg=NULL;
-	conf->tacount=0;
-
-	conf->notify_success_script=NULL;
-	conf->notify_success_arg=NULL;
-	conf->nscount=0;
-	conf->notify_success_warnings_only=0;
-	conf->notify_success_changes_only=0;
-
-	conf->notify_failure_script=NULL;
-	conf->notify_failure_arg=NULL;
-	conf->nfcount=0;
-
-	conf->backup_script_pre=NULL;
-	conf->backup_script_pre_arg=NULL;
-	conf->bprecount=0;
-
-	conf->backup_script_post=NULL;
-	conf->backup_script_post_arg=NULL;
-	conf->bpostcount=0;
-	conf->backup_script_post_run_on_fail=0;
-
-	conf->restore_script_pre=NULL;
-	conf->restore_script_pre_arg=NULL;
-	conf->rprecount=0;
-
-	conf->restore_script_post=NULL;
-	conf->restore_script_post_arg=NULL;
-	conf->rpostcount=0;
-	conf->restore_script_post_run_on_fail=0;
-
-	conf->server_script_pre=NULL;
-	conf->server_script_pre_arg=NULL;
-	conf->sprecount=0;
-	conf->server_script_pre_notify=0;
-
-	conf->server_script_post=NULL;
-	conf->server_script_post_arg=NULL;
-	conf->spostcount=0;
-	conf->server_script_post_run_on_fail=0;
-	conf->server_script_post_notify=0;
-
-	conf->backup_script=NULL;
-	conf->backup_script_arg=NULL;
-	conf->bscount=0;
-	conf->restore_script=NULL;
-	conf->restore_script_arg=NULL;
-	conf->rscount=0;
-
-	conf->server_script=NULL;
-	conf->server_script_arg=NULL;
-	conf->sscount=0;
-	conf->server_script_notify=0;
-
-	conf->dedup_group=NULL;
-	conf->browsefile=NULL;
-	conf->browsedir=NULL;
-	conf->restore_spool=NULL;
 
 	conf->client_can_delete=1;
 	conf->client_can_force_backup=1;
@@ -172,21 +76,12 @@ void init_config(struct config *conf)
 	conf->client_can_restore=1;
 	conf->client_can_verify=1;
 
-	conf->rclients=NULL;
-	conf->rccount=0;
-
 	conf->server_can_restore=1;
 
-	conf->send_client_counters=0;
-	conf->restore_client=NULL;
-	conf->restore_path=NULL;
-	conf->orig_client=NULL;
-
-	init_incexcs(conf);
 	rconf_init(&conf->rconf);
 }
 
-void free_config(struct config *conf)
+void config_free(struct config *conf)
 {
 	if(!conf) return;
 	if(conf->port) free(conf->port);
@@ -263,7 +158,7 @@ void free_config(struct config *conf)
 
 	free_incexcs(conf);
 
-	init_config(conf);
+	config_init(conf);
 }
 
 static int get_conf_val(const char *field, const char *value, const char *want, char **dest)
@@ -941,7 +836,7 @@ static int load_config_field_and_value(struct config *conf, const char *field, c
 
 /* Recursing, so need to define load_config_lines ahead of parse_config_line.
 */
-int load_config_lines(const char *config_path, struct config *conf, struct llists *l);
+static int load_config_lines(const char *config_path, struct config *conf, struct llists *l);
 
 static int parse_config_line(struct config *conf, struct llists *l, const char *config_path, char buf[], int line)
 {
@@ -1359,7 +1254,7 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 }
 
 
-int load_config_lines(const char *config_path, struct config *conf, struct llists *l)
+static int load_config_lines(const char *config_path, struct config *conf, struct llists *l)
 {
 	int line=0;
 	FILE *fp=NULL;
@@ -1396,14 +1291,14 @@ static void set_got_args(struct llists *l, struct config *conf)
 	l->got_rc_args=conf->rccount;
 }
 
-int load_config(const char *config_path, struct config *conf, uint8_t loadall)
+int config_load(const char *config_path, struct config *conf, uint8_t loadall)
 {
 	struct llists l;
 
 	memset(&l, 0, sizeof(struct llists));
 	set_got_args(&l, conf);
 
-	//logp("in load_config\n");
+	//logp("in config_load\n");
 	if(loadall)
 	{
 		if(conf->configfile) free(conf->configfile);
@@ -1488,7 +1383,7 @@ int log_incexcs_buf(const char *incexc)
 int parse_incexcs_path(struct config *conf, const char *path)
 {
 	free_incexcs(conf);
-	return load_config(path, conf, 0);
+	return config_load(path, conf, 0);
 }
 
 static int set_global_str(char **dst, const char *src)
@@ -1518,7 +1413,7 @@ static int set_global_arglist(struct strlist ***dst, struct strlist **src, int *
 }
 
 /* Remember to update the list in the man page when you change these.*/
-int set_client_global_config(struct config *conf, struct config *cconf, const char *client)
+int config_set_client_global(struct config *conf, struct config *cconf, const char *client)
 {
 	cconf->log_to_syslog=conf->log_to_syslog;
 	cconf->log_to_stdout=conf->log_to_stdout;
@@ -1593,10 +1488,10 @@ int set_client_global_config(struct config *conf, struct config *cconf, const ch
 	return 0;
 }
 
-int load_client_config(struct config *conf, struct config *cconf, const char *client)
+int config_load_client(struct config *conf, struct config *cconf, const char *client)
 {
 	char *cpath=NULL;
-	init_config(cconf);
+	config_init(cconf);
 	if(!(cpath=prepend_s(conf->clientconfdir, client)))
 		return -1;
 	if(looks_like_tmp_or_hidden_file(client))
@@ -1607,8 +1502,8 @@ int load_client_config(struct config *conf, struct config *cconf, const char *cl
 	}
 	// Some client settings can be globally set in the server config and
 	// overridden in the client specific config.
-	if(set_client_global_config(conf, cconf, client)
-	  || load_config(cpath, cconf, 0))
+	if(config_set_client_global(conf, cconf, client)
+	  || config_load(cpath, cconf, 0))
 	{
 		free(cpath);
 		return -1;

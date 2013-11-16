@@ -323,23 +323,23 @@ static int load_data_from_disk(struct config *conf, struct cstat ***clist, int *
 		}
 		(*clist)[q]->conf_mtime=statp.st_mtime;
 
-		init_config(&cconf);
-		if(set_client_global_config(conf, &cconf, (*clist)[q]->name)
-		  || load_config((*clist)[q]->conffile, &cconf, 0))
+		config_init(&cconf);
+		if(config_set_client_global(conf, &cconf, (*clist)[q]->name)
+		  || config_load((*clist)[q]->conffile, &cconf, 0))
 		{
-			free_config(&cconf);
+			config_free(&cconf);
 			cstat_blank((*clist)[q]);
 			continue;
 		}
 
 		if(set_cstat_from_conf((*clist)[q], conf, &cconf))
 		{
-			free_config(&cconf);
+			config_free(&cconf);
 			ret=-1;
 			break;
 		}
 
-		free_config(&cconf);
+		config_free(&cconf);
 	}
 
 	for(q=0; q<*clen; q++)

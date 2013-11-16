@@ -1,6 +1,7 @@
 #include "include.h"
 
-static int receive_file(const char *autoupgrade_dir, const char *file, struct config *conf)
+static int receive_file(const char *autoupgrade_dir,
+	const char *file, struct config *conf)
 {
 	int ret=0;
 	char *incoming=NULL;
@@ -8,6 +9,19 @@ static int receive_file(const char *autoupgrade_dir, const char *file, struct co
 	ret=receive_a_file(incoming, conf);
 	if(incoming) free(incoming);
 	return ret;
+}
+
+static enum asl_ret autoupgrade_func(struct iobuf *rbuf,
+	struct config *conf, void *param)
+{
+	if(!strcmp(rbuf->buf, "do not autoupgrade"))
+		return ASL_END_OK;
+	if(strcmp(rbuf->buf, "autoupgrade ok"))
+	{
+		iobuf_log_unexpected(rbuf, __FUNCTION__);
+		return ASL_END_ERROR;
+	}
+	return ASL_END_OK_RETURN_1;
 }
 
 int autoupgrade_client(struct config *conf)
@@ -50,23 +64,12 @@ int autoupgrade_client(struct config *conf)
 	if(async_write_str(CMD_GEN, write_str))
 		goto end;
 
-	if(!(rbuf=iobuf_async_read())) goto end;
-
-	if(rbuf->cmd!=CMD_GEN)
+	if(!(a=async_simple_loop(conf, NULL, autoupgrade_func)))
 	{
-		iobuf_log_unexpected(rbuf, __FUNCTION__);
+		ret=0; // No autoupgrade.
 		goto end;
 	}
-	if(!strcmp(rbuf->buf, "do not autoupgrade"))
-	{
-		ret=0;
-		goto end;
-	}
-	if(strcmp(rbuf->buf, "autoupgrade ok"))
-	{
-		iobuf_log_unexpected(rbuf, __FUNCTION__);
-		goto end;
-	}
+	else if(a<0) // Error.
 
 #ifdef HAVE_WIN32
 	win32_enable_backup_privileges();

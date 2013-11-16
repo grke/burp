@@ -516,11 +516,9 @@ int async_read_expect(char cmd, const char *expect)
 	return ret;
 }
 
-
 int async_simple_loop(struct config *conf, void *param,
-        int callback(struct iobuf *rbuf, struct config *conf, void *param))
+  enum asl_ret callback(struct iobuf *rbuf, struct config *conf, void *param))
 {
-	int ars;
 	static struct iobuf *rbuf=NULL;
 	if(!rbuf && !(rbuf=iobuf_alloc()))
 		return -1;
@@ -546,15 +544,14 @@ int async_simple_loop(struct config *conf, void *param,
 			}
 			continue;
 		}
-		if((ars=callback(rbuf, conf, param))<0)
+		switch(callback(rbuf, conf, param))
 		{
-			// Error.
-			return -1;
-		}
-		else if(ars>0)
-		{
-			// OK.
-			return 0;
+			case ASL_CONTINUE: break;
+			case ASL_END_OK: return 0;
+			case ASL_END_OK_RETURN_1: return 1;
+			case ASL_END_ERROR:
+			default:
+				return -1;
 		}
 	}
 	return -1; // Not reached.

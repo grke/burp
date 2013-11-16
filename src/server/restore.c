@@ -33,16 +33,16 @@ static int restore_sbuf(struct sbuf *sb, struct bu *arr, int a, int i, enum acti
 	}
 }
 
-static int restore_end_func(struct iobuf *rbuf,
+static enum asl_ret restore_end_func(struct iobuf *rbuf,
         struct config *conf, void *param)
 {
 	if(!strcmp(rbuf->buf, "ok_restore_end"))
 	{
 		//logp("got ok_restore_end\n");
-		return 1;
+		return ASL_END_OK;
 	}
 	iobuf_log_unexpected(rbuf, __FUNCTION__);
-	return -1;
+	return ASL_END_ERROR;
 }
 
 static int do_restore_end(struct config *conf)

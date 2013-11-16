@@ -12,16 +12,18 @@ static int add_to_incexc(char **incexc, const char *src, size_t len, const char 
 	return 0;
 }
 
-static int incexc_recv_func(struct iobuf *rbuf,
+static enum asl_ret incexc_recv_func(struct iobuf *rbuf,
         struct config *conf, void *param)
 {
 	char **incexc=(char **)param;
 	if(!strcmp(rbuf->buf, endreqstrf))
 	{
-		if(async_write_str(CMD_GEN, endrepstrf)) return -1;
-		return 1;
+		if(async_write_str(CMD_GEN, endrepstrf)) return ASL_END_ERROR;
+		return ASL_END_OK;
 	}
-	return add_to_incexc(incexc, rbuf->buf, rbuf->len, *incexc?"\n":"");
+	if(add_to_incexc(incexc, rbuf->buf, rbuf->len, *incexc?"\n":""))
+		return ASL_END_ERROR;
+	return ASL_CONTINUE;
 }
 
 
@@ -31,7 +33,8 @@ static int incexc_recv(char **incexc, const char *reqstr, const char *repstr, co
 
 	endreqstrf=endreqstr;
 	endrepstrf=endrepstr;
-	async_simple_loop(conf, incexc, incexc_recv_func);
+	if(async_simple_loop(conf, incexc, incexc_recv_func))
+		return -1;
 
 	// Need to put another new line at the end.
 	return add_to_incexc(incexc, "\n", 1, "");

@@ -29,8 +29,17 @@ extern int async_write(struct iobuf *wbuf);
 
 extern int async_write_str(char wcmd, const char *wsrc);
 extern int async_read_expect(char cmd, const char *expect);
+
+enum asl_ret
+{
+	ASL_END_ERROR=-1,
+	ASL_CONTINUE=0,
+	ASL_END_OK=1,
+	ASL_END_OK_RETURN_1=2
+};
+
 extern int async_simple_loop(struct config *conf, void *param,
-        int callback(struct iobuf *rbuf, struct config *conf, void *param));
+  enum asl_ret callback(struct iobuf *rbuf, struct config *conf, void *param));
 
 extern void log_and_send(const char *msg);
 extern void log_and_send_oom(const char *function);

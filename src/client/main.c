@@ -69,14 +69,130 @@ static int server_supports_autoupgrade(const char *feat)
 	return server_supports(feat, ":autoupgrade:");
 }
 
+// Servers greater than 1.3.0 will list the extra_comms features they support.
+static enum asl_ret comms_func(struct iobuf *rbuf,
+        struct config *conf, void *param)
+{
+	char *incexc=NULL;
+	enum asl_ret ret=ASL_END_ERROR;
+	enum action *action=(enum action *)param;
+
+	if(strncmp(rbuf->buf,
+	  "extra_comms_begin ok", strlen("extra_comms_begin ok")))
+	{
+		iobuf_log_unexpected(rbuf, __FUNCTION__);
+		goto end;
+	}
+
+	// Can add extra bits here. The first extra bit is the
+	// autoupgrade stuff.
+
+	if(server_supports_autoupgrade(rbuf->buf))
+	{
+		if(conf->autoupgrade_dir && conf->autoupgrade_os
+		  && autoupgrade_client(conf))
+			goto end;
+	}
+
+	// :srestore: means that the server wants to do a restore.
+	if(server_supports(rbuf->buf, ":srestore:"))
+	{
+		if(conf->server_can_restore)
+		{
+			logp("Server is initiating a restore\n");
+			if(incexc_recv_client_restore(&incexc, conf))
+				goto end;
+			if(incexc)
+			{
+				if(parse_incexcs_buf(conf, incexc))
+					goto end;
+				*action=ACTION_RESTORE;
+				log_restore_settings(conf, 1);
+			}
+		}
+		else
+		{
+			logp("Server wants to initiate a restore\n");
+			logp("Client configuration says no\n");
+			if(async_write_str(CMD_GEN, "srestore not ok"))
+				goto end;
+		}
+	}
+
+	if(conf->orig_client)
+	{
+		char str[512]="";
+		snprintf(str, sizeof(str),
+			"orig_client=%s", conf->orig_client);
+		if(!server_supports(rbuf->buf, ":orig_client:"))
+		{
+			logp("Server does not support switching client.\n");
+			goto end;
+		}
+		if(async_write_str(CMD_GEN, str)
+		  || async_read_expect(CMD_GEN, "orig_client ok"))
+		{
+			logp("Problem requesting %s\n", str);
+			goto end;
+		}
+		logp("Switched to client %s\n", conf->orig_client);
+	}
+
+	// :sincexc: is for the server giving the client the
+	// incexc config.
+	if(*action==ACTION_BACKUP
+	  || *action==ACTION_BACKUP_TIMED)
+	{
+		if(!incexc && server_supports(rbuf->buf, ":sincexc:"))
+		{
+			if(incexc_recv_client(&incexc, conf)
+			  || parse_incexcs_buf(conf, incexc))
+				goto end;
+			logp("Server is overriding the configuration\n");
+			logp("with the following settings:\n");
+			if(log_incexcs_buf(incexc)) goto end;
+		}
+	}
+
+	if(server_supports(rbuf->buf, ":counters:"))
+	{
+		if(async_write_str(CMD_GEN, "countersok"))
+			goto end;
+		conf->send_client_counters=1;
+	}
+
+	// :incexc: is for the client sending the server the
+	// incexc config so that it better knows what to do on
+	// resume.
+	if(server_supports(rbuf->buf, ":incexc:")
+	  && incexc_send_client(conf))
+		goto end;
+
+	if(*action==ACTION_RESTORE)
+	{
+		// Client may have a temporary directory for restores.
+		if(conf->restore_spool)
+		{
+			char str[512]="";
+			snprintf(str, sizeof(str),
+			  "restore_spool=%s", conf->restore_spool);
+			if(async_write_str(CMD_GEN, str))
+				goto end;
+		}
+	}
+
+	ret=ASL_END_OK;
+end:
+	if(incexc) free(incexc);
+	return ret;
+}
+
 // Returns -1 for error, 0 for OK, 1 for certificate signed.
-static int comms(int rfd, SSL *ssl, char **incexc, char **server_version,
+static int comms(int rfd, SSL *ssl, char **server_version,
 	enum action *action, struct config *conf)
 {
 	int ret=0;
 	int ca_ret=0;
-	char *feat=NULL;
-	struct iobuf *rbuf=NULL;
 
 	if(authorise_client(conf, server_version)) goto error;
 
@@ -115,125 +231,9 @@ static int comms(int rfd, SSL *ssl, char **incexc, char **server_version,
 		logp("Problem requesting extra_comms_begin\n");
 		goto error;
 	}
-	// Servers greater than 1.3.0 will list the extra_comms
-	// features they support.
-	else if(!(rbuf=iobuf_async_read()))
-	{
-		logp("Problem reading response to extra_comms_begin\n");
+
+	if(async_simple_loop(conf, action, comms_func))
 		goto error;
-	}
-	else if(rbuf->cmd!=CMD_GEN)
-	{
-		iobuf_log_unexpected(rbuf, __FUNCTION__);
-		goto error;
-	}
-
-	feat=rbuf->buf;
-	rbuf->buf=NULL;
-	if(strncmp(feat,
-	  "extra_comms_begin ok", strlen("extra_comms_begin ok")))
-	{
-		iobuf_log_unexpected(rbuf, __FUNCTION__);
-		goto error;
-	}
-
-	// Can add extra bits here. The first extra bit is the
-	// autoupgrade stuff.
-
-	if(server_supports_autoupgrade(feat))
-	{
-		if(conf->autoupgrade_dir && conf->autoupgrade_os
-		  && autoupgrade_client(conf))
-			goto error;
-	}
-
-	// :srestore: means that the server wants to do a restore.
-	if(server_supports(feat, ":srestore:"))
-	{
-		if(conf->server_can_restore)
-		{
-			logp("Server is initiating a restore\n");
-			if(*incexc) { free(*incexc); *incexc=NULL; }
-			if(incexc_recv_client_restore(incexc, conf))
-				goto error;
-			if(*incexc)
-			{
-				if(parse_incexcs_buf(conf, *incexc))
-					goto error;
-				*action=ACTION_RESTORE;
-				log_restore_settings(conf, 1);
-			}
-		}
-		else
-		{
-			logp("Server wants to initiate a restore\n");
-			logp("Client configuration says no\n");
-			if(async_write_str(CMD_GEN, "srestore not ok"))
-				goto error;
-		}
-	}
-
-	if(conf->orig_client)
-	{
-		char str[512]="";
-		snprintf(str, sizeof(str),
-			"orig_client=%s", conf->orig_client);
-		if(!server_supports(feat, ":orig_client:"))
-		{
-			logp("Server does not support switching client.\n");
-			goto error;
-		}
-		if(async_write_str(CMD_GEN, str)
-		  || async_read_expect(CMD_GEN, "orig_client ok"))
-		{
-			logp("Problem requesting %s\n", str);
-			goto error;
-		}
-		logp("Switched to client %s\n", conf->orig_client);
-	}
-
-	// :sincexc: is for the server giving the client the
-	// incexc config.
-	if(*action==ACTION_BACKUP
-	  || *action==ACTION_BACKUP_TIMED)
-	{
-		if(!*incexc && server_supports(feat, ":sincexc:"))
-		{
-			logp("Server is setting includes/excludes.\n");
-			if(*incexc) { free(*incexc); *incexc=NULL; }
-			if(incexc_recv_client(incexc, conf))
-				goto error;
-			if(*incexc && parse_incexcs_buf(conf, *incexc))
-				goto error;
-		}
-	}
-
-	if(server_supports(feat, ":counters:"))
-	{
-		if(async_write_str(CMD_GEN, "countersok"))
-			goto error;
-		conf->send_client_counters=1;
-	}
-
-	// :incexc: is for the client sending the server the
-	// incexc config so that it better knows what to do on
-	// resume.
-	if(server_supports(feat, ":incexc:")
-	  && incexc_send_client(conf))
-		goto error;
-
-	if(*action==ACTION_RESTORE)
-	{
-		// Client may have a temporary directory for restores.
-		if(conf->restore_spool)
-		{
-			char str[512]="";
-			snprintf(str, sizeof(str),
-			  "restore_spool=%s", conf->restore_spool);
-			if(async_write_str(CMD_GEN, str))
-				goto error;
-		}
-	}
 
 	if(async_write_str(CMD_GEN, "extra_comms_end")
 	  || async_read_expect(CMD_GEN, "extra_comms_end ok"))
@@ -246,7 +246,6 @@ static int comms(int rfd, SSL *ssl, char **incexc, char **server_version,
 error:
 	ret=-1;
 end:
-	iobuf_free(rbuf);
 	return ret;
 }
 
@@ -268,7 +267,6 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 	SSL_CTX *ctx=NULL;
 	struct cntr cntr;
 	struct cntr p1cntr;
-	char *incexc=NULL;
 	char *server_version=NULL;
 	const char *backupstr="backup";
 	enum action action=act;
@@ -323,9 +321,8 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 	if(action!=ACTION_ESTIMATE)
 	{
 		// Returns -1 for error, 0 for OK, 1 for certificate signed.
-		if((ret=comms(rfd, ssl,
-			&incexc, &server_version, &action, conf)))
-				goto end;
+		if((ret=comms(rfd, ssl, &server_version, &action, conf)))
+			goto end;
 	}
 
 	rfd=-1;
@@ -336,13 +333,6 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 		case ACTION_BACKUP:
 		{
 			int bret=0;
-			// Set bulk packets quality of service flags on backup.
-			if(incexc)
-			{
-				logp("Server is overriding the configuration\n");
-				logp("with the following settings:\n");
-				if(log_incexcs_buf(incexc)) goto error;
-			}
 			if(!conf->sdcount)
 			{
 				logp("Found no include paths!\n");
@@ -484,7 +474,6 @@ end:
 	async_free();
 	if(action!=ACTION_ESTIMATE) ssl_destroy_ctx(ctx);
 
-	if(incexc) free(incexc);
 	if(server_version) free(server_version);
 
         //logp("end client\n");

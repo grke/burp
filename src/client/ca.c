@@ -101,13 +101,30 @@ end:
 	return ret;
 }
 
+static enum asl_ret csr_client_func(struct iobuf *rbuf,
+        struct config *conf, void *param)
+{
+	if(strncmp(rbuf->buf, "csr ok:", strlen("csr ok:")))
+	{
+		iobuf_log_unexpected(rbuf, __FUNCTION__);
+		return ASL_END_ERROR;
+	}
+	// The server appends its name after 'csr ok:'
+	if(conf->ssl_peer_cn) free(conf->ssl_peer_cn);
+	if(!(conf->ssl_peer_cn=strdup(rbuf->buf+strlen("csr ok:"))))
+	{
+		log_out_of_memory(__FUNCTION__);
+		return ASL_END_ERROR;
+	}
+	return ASL_END_OK;
+}
+
 /* Return 1 for everything OK, signed and returned, -1 for error, 0 for
    nothing done. */
 int ca_client_setup(struct config *conf)
 {
 	int ret=-1;
 	struct stat statp;
-	struct iobuf *rbuf=NULL;
 	char csr_path[256]="";
 	char ssl_cert_tmp[512]="";
 	char ssl_cert_ca_tmp[512]="";
@@ -134,27 +151,9 @@ int ca_client_setup(struct config *conf)
 	}
 
 	// Tell the server we want to do a signing request.
-	if(async_write_str(CMD_GEN, "csr")) goto end;
-
-	if(!(rbuf=iobuf_async_read()))
-	{
-		logp("problem reading from server csr\n");
+	if(async_write_str(CMD_GEN, "csr")
+	  || async_simple_loop(conf, NULL, csr_client_func))
 		goto end;
-	}
-	if(rbuf->cmd!=CMD_GEN
-	  || strncmp(rbuf->buf, "csr ok:", strlen("csr ok:")))
-	{
-		logp("unexpected command from server: %c:%s\n",
-			rbuf->cmd, rbuf->buf);
-		goto end;
-	}
-	// The server appends its name after 'csr ok:'
-	if(conf->ssl_peer_cn) free(conf->ssl_peer_cn);
-	if(!(conf->ssl_peer_cn=strdup(rbuf->buf+strlen("csr ok:"))))
-	{
-		log_out_of_memory(__FUNCTION__);
-		goto end;
-	}
 
 	logp("Server will sign a certificate request\n");
 
@@ -202,6 +201,5 @@ end_cleanup:
 		unlink(ssl_cert_ca_tmp);
 	}
 end:
-	iobuf_free(rbuf);
 	return ret;
 }

@@ -336,7 +336,7 @@ end:
 	return ret;
 }
 
-static enum asl_ret csr_func(struct iobuf *rbuf,
+static enum asl_ret csr_server_func(struct iobuf *rbuf,
 	struct config *conf, void *param)
 {
 	static const char **client;
@@ -385,6 +385,6 @@ int ca_server_maybe_sign_client_cert(const char *client, const char *cversion, s
 	// Clients before 1.3.2 did not know how to send cert signing requests.
 	if(cli_ver<min_ver) return 0;
 
-	if(async_simple_loop(conf, &client, csr_func)) return -1;
+	if(async_simple_loop(conf, &client, csr_server_func)) return -1;
 	return csr_done;
 }

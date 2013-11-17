@@ -423,6 +423,11 @@ void counters_to_str(char *str, size_t len, const char *client, char phase, cons
 	int l=0;
 	struct cntr *cntr=conf->cntr;
 	struct cntr *p1cntr=conf->p1cntr;
+	if(!cntr || !p1cntr)
+	{
+		*str='\0';
+		return;
+	}
 	snprintf(str, len,
 		"%s\t%c\t%c\t%c\t"
 		"%llu/%llu/%llu/%llu/%llu\t"

@@ -482,40 +482,41 @@ void reuseaddr(int fd)
 
 void write_status(const char *client, char phase, const char *path, struct config *conf)
 {
+	char *w=NULL;
+	time_t now=0;
+	time_t diff=0;
+	static char wbuf[1024]="";
 	static time_t lasttime=0;
-	if(status_wfd>=0 && client)
+
+	if(!client) return;
+
+	// Only update every 2 seconds.
+	now=time(NULL);
+	diff=now-lasttime;
+	if(diff<2)
 	{
-		char *w=NULL;
-		time_t now=0;
-		time_t diff=0;
-		static char wbuf[1024]="";
+		// Might as well do this in case they fiddled their
+		// clock back in time.
+		if(diff<0) lasttime=now;
+		return;
+	}
+	lasttime=now;
 
-		// Only update every 2 seconds.
-		now=time(NULL);
-		diff=now-lasttime;
-		if(diff<2)
+	counters_to_str(wbuf, sizeof(wbuf), client, phase, path, conf);
+
+	if(status_wfd<0) return;
+
+	w=wbuf;
+	while(*w)
+	{
+		size_t wl=0;
+		if((wl=write(status_wfd, w, strlen(w)))<0)
 		{
-			// Might as well do this in case they fiddled their
-			// clock back in time.
-			if(diff<0) lasttime=now;
-			return;
+			logp("error writing status down pipe to server: %s\n", strerror(errno));
+			close_fd(&status_wfd);
+			break;
 		}
-		lasttime=now;
-
-		counters_to_str(wbuf, sizeof(wbuf), client, phase, path, conf);
-
-		w=wbuf;
-		while(*w)
-		{
-			size_t wl=0;
-			if((wl=write(status_wfd, w, strlen(w)))<0)
-			{
-				logp("error writing status down pipe to server: %s\n", strerror(errno));
-				close_fd(&status_wfd);
-				break;
-			}
-			w+=wl;
-		}
+		w+=wl;
 	}
 }
 

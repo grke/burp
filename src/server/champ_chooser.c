@@ -42,13 +42,23 @@ struct candidate *candidate_alloc(void)
 
 static int candidate_add_to_sparse(const char *weakstr, struct candidate *candidate)
 {
-	static struct sparse *sparse;
+	static size_t s;
 	static uint64_t weak;
+	static struct sparse *sparse;
 
 	// Convert to uint64_t.
 	weak=strtoull(weakstr, 0, 16);
 
-	sparse=sparse_find(weak);
+	if((sparse=sparse_find(weak)))
+	{
+		// Do not add it to the list if it has already been added.
+		for(s=0; s<sparse->size; s++)
+			if((sparse->candidates[s]==candidate))
+			{
+//				printf("not adding %s\n", candidate->path);
+				return 0;
+			}
+	}
 
 	if(!sparse && !(sparse=sparse_add(weak)))
 		return -1;
@@ -221,8 +231,7 @@ int champ_chooser_init(const char *datadir, struct config *conf)
 		}
 		else
 		{
-			logp("Unexpected line in %s: %c:%s\n",
-				sparse_path, sb->path.cmd, sb->path.buf);
+			iobuf_log_unexpected(&sb->path, __FUNCTION__);
 			goto end;
 		}
 		sbuf_free_contents(sb);
@@ -362,6 +371,9 @@ static struct candidate *champ_chooser(struct incoming *in, struct candidate *ch
 	struct timespec tstart={0,0}, tend={0,0};
 	clock_gettime(CLOCK_MONOTONIC, &tstart);
 
+//printf("incoming size: %d\n", in->size);
+	scores_reset(scores);
+
 	for(i=0; i<in->size; i++)
 	{
 		if(in->found[i]) continue;
@@ -373,19 +385,23 @@ static struct candidate *champ_chooser(struct incoming *in, struct candidate *ch
 			candidate=sparse->candidates[s];
 			if(candidate==champ_last)
 			{
+				int t;
 				// Want to exclude sparse entries that have
 				// already been found.
 				in->found[i]=1;
 				// Need to go back up the list, subtracting
 				// scores.
-				int t;
 				for(t=s-1; t>=0; t--)
-					(*(candidate->score))--;
+				{
+					(*(sparse->candidates[t]->score))--;
+//	printf("%d %s   fix: %d\n", i, candidate->path, *(sparse->candidates[t]->score));
+				}
 				break;
 			}
 			score=candidate->score;
 			(*score)++;
-			assert(*score<1000);
+//			printf("%d %s score: %d\n", i, candidate->path, *score);
+			assert(*score<=in->size);
 			if(!best
 			// Maybe should check for candidate!=best here too.
 			  || *score>*(best->score))
@@ -430,7 +446,6 @@ printf("in deduplicate()\n");
 	while((champ=champ_chooser(in, champ_last)))
 	{
 		printf("Got champ: %s %d\n", champ->path, *(champ->score));
-		scores_reset(scores);
 		if(hash_load(champ->path, conf)) return -1;
 		if(++count==CHAMPS_MAX) break;
 		champ_last=champ;

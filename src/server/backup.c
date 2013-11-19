@@ -544,7 +544,7 @@ printf("BACKUP END\n");
 			break;
 	}
 
-	logp("unexpected cmd in %s, got '%c:%s'\n", __FUNCTION__, rbuf->cmd, rbuf->buf);
+	iobuf_log_unexpected(rbuf, __FUNCTION__);
 error:
 	ret=-1;
 	sbuf_free(inew); inew=NULL;

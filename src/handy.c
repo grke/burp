@@ -196,11 +196,10 @@ int do_quick_read(const char *datapth, struct cntr *cntr)
 		}
 		else
 		{
-			logp("unexpected cmd in quick read: %c:%s\n",
-				rbuf.cmd, rbuf.buf);
+			iobuf_log_unexpected(&rbuf, __FUNCTION__);
 			r=-1;
 		}
-		free(rbuf.buf);
+		iobuf_free_content(&rbuf);
 	}
 	return r;
 }

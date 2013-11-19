@@ -98,8 +98,8 @@ int authorise_server(struct config *conf, char **client, char **cversion, struct
 	}
 	if(rbuf.cmd!=CMD_GEN || strncmp(rbuf.buf, "hello", strlen("hello")))
 	{
-		logp("unexpected command given: %c %s\n", rbuf.cmd, rbuf.buf);
-		free(rbuf.buf);
+		iobuf_log_unexpected(&rbuf, __FUNCTION__);
+		iobuf_free_content(&rbuf);
 		return -1;
 	}
 	// String may look like...
@@ -111,7 +111,7 @@ int authorise_server(struct config *conf, char **client, char **cversion, struct
 		cp++;
 		if(cp) *cversion=strdup(cp);
 	}
-	free(rbuf.buf);
+	iobuf_free_content(&rbuf);
 	iobuf_init(&rbuf);
 
 	snprintf(whoareyou, sizeof(whoareyou), "whoareyou");
@@ -145,7 +145,7 @@ int authorise_server(struct config *conf, char **client, char **cversion, struct
 		logp("unable to get password for client %s\n", *client);
 		if(*client) free(*client); *client=NULL;
 		if(*cversion) free(*cversion); *cversion=NULL;
-		free(rbuf.buf);
+		iobuf_free_content(&rbuf);
 		return -1;
 	}
 	password=rbuf.buf;

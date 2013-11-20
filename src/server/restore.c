@@ -245,7 +245,7 @@ static int maybe_copy_data_files_across(const char *manifest,
 	{
 		if((ars=manio_sbuf_fill(manio, sb, blk, NULL, conf))<0)
 		{
-			logp("Error from manio_sbuf_fill() in $s\n",
+			logp("Error from manio_sbuf_fill() in %s\n",
 				__FUNCTION__);
 			goto end; // Error;
 		}
@@ -347,7 +347,7 @@ static int maybe_copy_data_files_across(const char *manifest,
 	{
 		if((ars=manio_sbuf_fill(manio, sb, blk, NULL, conf))<0)
 		{
-			logp("Error from manio_sbuf_fill() in $s\n",
+			logp("Error from manio_sbuf_fill() in %s\n",
 				__FUNCTION__);
 			goto end; // Error;
 		}
@@ -454,7 +454,7 @@ static int restore_stream(const char *client, const char *datadir,
 		if((ars=manio_sbuf_fill(manio, sb,
 			need_data?blk:NULL, dpth, conf))<0)
 		{
-			logp("Error from manio_sbuf_fill() in $s\n",
+			logp("Error from manio_sbuf_fill() in %s\n",
 				__FUNCTION__);
 			goto end; // Error;
 		}
@@ -588,9 +588,9 @@ static int restore_manifest(struct bu *arr, int a, int i, regex_t *regex, int sr
 	// First, do a pass through the manifest to set up the counters.
 	if(load_counters(manifest, regex, conf)) goto end;
 
-	if(conf->send_client_counters
-	  && send_counters(client, conf))
-		goto end;
+//	if(conf->send_client_counters
+//	  && send_counters(client, conf))
+//		goto end;
 
 	if(do_restore_manifest(client, sdirs->data, arr, a, i, manifest, regex,
 		srestore, conf, act, status)) goto end;

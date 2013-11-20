@@ -408,7 +408,7 @@ void print_filecounters(struct config *conf, enum action act)
 
 void print_endcounter(struct cntr *cntr)
 {
-	if(cntr->gtotal) logc(
+	if(cntr && cntr->gtotal) logc(
 #ifdef HAVE_WIN32
 		" %I64u\n\n",
 #else

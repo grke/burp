@@ -512,7 +512,7 @@ int async_read_expect(char cmd, const char *expect)
 			cmd, expect, rbuf.cmd, rbuf.buf);
 		ret=-1;
 	}
-	free(rbuf.buf);
+	iobuf_free_content(&rbuf);
 	return ret;
 }
 

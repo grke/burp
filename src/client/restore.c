@@ -539,6 +539,7 @@ static enum asl_ret restore_style_func(struct iobuf *rbuf,
 	if(async_write_str(CMD_GEN, msg))
 		return ASL_END_ERROR;
 	restore_style=rbuf->buf;
+	rbuf->buf=NULL;
 	return ASL_END_OK;
 }
 
@@ -604,11 +605,10 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore)
 		goto end;
 	logp("doing %s confirmed\n", act_str(act));
 
-	if(conf->send_client_counters && recv_counters(conf))
-		goto end;
-
 	if(!(style=get_restore_style(conf)))
 		goto end;
+//	if(conf->send_client_counters && recv_counters(conf))
+//		goto end;
 
 #if defined(HAVE_WIN32)
 	if(act==ACTION_RESTORE) win32_enable_backup_privileges();

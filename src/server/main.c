@@ -266,8 +266,9 @@ static void maybe_do_notification(int status, const char *client, const char *cl
 		&& !cconf->notify_success_changes_only))
 	{
 		char warnings[32]="";
-		snprintf(warnings, sizeof(warnings), "%llu",
-			cconf->p1cntr->warning+cconf->cntr->warning);
+	// FIX THIS: conf/cntr init problem.
+	//	snprintf(warnings, sizeof(warnings), "%llu",
+	//		cconf->p1cntr->warning+cconf->cntr->warning);
 		args[0]=cconf->notify_success_script;
 		args[a++]=warnings;
 		args[a++]=NULL;

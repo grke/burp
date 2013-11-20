@@ -57,3 +57,8 @@ roughly in order of most important to least.
 * Make src/client/list.c use sbuf.
 
 * champ_chooser: figure out a way of giving preference to newer candidates.
+
+* Fix conf/cntr init problem.
+
+* Check notifications work (warnings are turned off because of conf/cntr init
+  problem.

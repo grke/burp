@@ -467,7 +467,7 @@ int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct
 					blk->weak, blk->strong,
 					blk->save_path))
 						goto end;
-				free(rbuf->buf); rbuf->buf=NULL;
+				iobuf_free_content(rbuf);
 				if(datpath)
 				{
 					if(retrieve_blk_data(datpath, blk))

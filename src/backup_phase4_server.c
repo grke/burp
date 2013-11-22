@@ -1010,11 +1010,14 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 
 	// Rename the old current to something that we know to
 	// delete.
-	if(previous_backup
-	  && deleteme_move(basedir, fullrealcurrent, realcurrent, cconf))
+	if(previous_backup)
 	{
-		ret=-1;
-		goto endfunc;
+		if(deleteme_move(basedir, fullrealcurrent, realcurrent, cconf)
+		  || do_rename(currentdup, fullrealcurrent))
+		{
+			ret=-1;
+			goto endfunc;
+		}
 	}
 
 	if(deleteme_maybe_delete(cconf, basedir))

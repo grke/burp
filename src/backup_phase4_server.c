@@ -1010,6 +1010,10 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 	sync(); // try to help CIFS
 	recursive_delete(currentdupdata, NULL, FALSE /* do not del files */);
 
+	// If deleteme already exists, delete it.
+	if(!lstat(deleteme, &statp))
+		recursive_delete(deleteme, NULL, TRUE /* delete all */);
+
 	// Rename the old current to something that we know to
 	// delete.
 	if(previous_backup && do_rename(fullrealcurrent, deleteme))

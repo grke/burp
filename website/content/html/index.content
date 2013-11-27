@@ -67,6 +67,32 @@ src="http://pagead2.googlesyndication.com/pagead/show_ads.js">
 <TD ALIGN="LEFT">
 
 <P>
+<FONT COLOR="#99CCFF">2013-11-27: burp-1.4.8 and burp-1.3.42 are released.
+<br>
+1.4.8 is for new features. 1.3.42 is the candidate for a stable version, to
+which only bug fixes will be added.
+<pre>
+Changes in burp-1.4.8:
+  * Be sure to close directory file descriptor if fdopendir() fails.
+  * Extend the JSON list functionality so that covers all types of listing.
+  * Allow the backup to carry on if a filename was too long for the server.
+  * Regenerate server certificates if the CA directory exists and is empty.
+  * Add machine-readable statistics files for restores and verifies in the
+    backup directories.
+  * Bug fix for server not exiting after one connection with '-n'.
+  * Add 'manual_delete=<directory>' option. This makes the server move
+    directories to be deleted to the specified directory, with the intention
+    that they will be deleted manually (perhaps by a cron job) later.
+
+Changes in burp-1.3.42:
+  * In backup phase 4, a 'deleteme' directory may already exist if the server
+    was previously interrupted whilst deleting it. If so, delete it before
+    attempting to rename anything to it.
+</pre>
+</FONT>
+</P>
+
+<P>
 <FONT COLOR="#99CCFF">2013-10-30: burp-1.4.6 and burp-1.3.40 are released.
 <br>
 1.4.6 is for new features. 1.3.40 is the candidate for a stable version, to

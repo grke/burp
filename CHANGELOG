@@ -1,3 +1,4 @@
+2013-11-27 Changes in burp-1.4.8:
   * Be sure to close directory file descriptor if fdopendir() fails.
   * Extend the JSON list functionality so that covers all types of listing.
   * Allow the backup to carry on if a filename was too long for the server.
@@ -9,7 +10,7 @@
     directories to be deleted to the specified directory, with the intention
     that they will be deleted manually (perhaps by a cron job) later.
 
-2013-10-30 Changes in burp-1.4.4:
+2013-10-30 Changes in burp-1.4.6:
   * Add client option '-a T', which checks whether it is yet time for a backup
     without actually doing a backup.
   * Make the server request the whole file when ctime changes on Windows,

@@ -546,6 +546,8 @@ void print_filecounters(struct cntr *p1c, struct cntr *c, enum action act)
 	border();
 }
 
+#ifndef HAVE_WIN32
+
 static void quint_print_to_file(FILE *fp, const char *prefix, unsigned long long a, unsigned long long b, unsigned long long c, unsigned long long d, unsigned long long e, enum action act)
 {
 	if(act==ACTION_BACKUP
@@ -745,6 +747,8 @@ int print_stats_to_file(struct cntr *p1c, struct cntr *c, struct config *conf, c
 	free(path);
 	return 0;
 }
+
+#endif
 
 void print_endcounter(struct cntr *cntr)
 {

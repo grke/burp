@@ -236,7 +236,7 @@ static void ls_short_output_json(const char *fname)
 	printf("     \"%s\"", fname);
 }
 
-static int list_item(int json, enum action act, const char *fname, const char *lname, struct stat *statp)
+static void list_item(int json, enum action act, const char *fname, const char *lname, struct stat *statp)
 {
 	if(act==ACTION_LONG_LIST)
 	{
@@ -263,7 +263,6 @@ int do_list_client(struct config *conf, enum action act, int json)
 	struct stat statp;
 	char *statbuf=NULL;
 	char *dpth=NULL;
-	int started=0;
 //logp("in do_list\n");
 	if(conf->browsedir)
 	  snprintf(msg, sizeof(msg), "listb %s:%s",

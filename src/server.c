@@ -786,6 +786,8 @@ end:
 	return ret;
 }
 
+/* Return 0 for everything OK. -1 for error, or 1 to mean that a backup is
+   currently finalising. */
 static int get_lock_and_clean(const char *basedir, const char *lockbasedir, const char *lockfile, const char *current, const char *working, const char *currentdata, const char *finishing, char **gotlock, struct config *cconf, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *manifest, const char *client, struct cntr *p1cntr, struct cntr *cntr, int *resume, const char *incexc)
 {
 	int ret=0;
@@ -796,7 +798,7 @@ static int get_lock_and_clean(const char *basedir, const char *lockbasedir, cons
 	{
 		async_write_str(CMD_ERROR, "problem with lock directory");
 		if(copy) free(copy);
-		return -1;
+		goto error;
 	}
 	free(copy);
 
@@ -809,14 +811,15 @@ static int get_lock_and_clean(const char *basedir, const char *lockbasedir, cons
 			logp("finalising previous backup\n");
 			snprintf(msg, sizeof(msg), "Finalising previous backup of client. Please try again later.");
 			async_write_str(CMD_ERROR, msg);
+			return 1;
 		}
 		else
 		{
 			logp("another instance of client is already running,\n");
 			logp("or %s is not writable.\n", lockfile);
 			async_write_str(CMD_ERROR, "another instance is already running");
+			goto error;
 		}
-		ret=-1;
 	}
 	else
 	{
@@ -824,16 +827,17 @@ static int get_lock_and_clean(const char *basedir, const char *lockbasedir, cons
 		if(!(*gotlock=strdup(lockfile)))
 		{
 			log_out_of_memory(__FUNCTION__);
-			ret=-1;
+			goto error;
 		}
 	}
 
-	if(!ret && check_for_rubble(basedir, current, working, currentdata,
+	if(check_for_rubble(basedir, current, working, currentdata,
 		finishing, cconf, phase1data, phase2data, unchangeddata,
 		manifest, client, p1cntr, cntr, resume, incexc))
-			ret=-1;
-
-	return ret;
+			goto error;
+	return 0;
+error:
+	return -1;
 }
 
 /* I am sure I wrote this function already, somewhere else. */
@@ -978,17 +982,19 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 
 		// Set quality of service bits on backups.
 		set_bulk_packets();
-		if(get_lock_and_clean(basedir, lockbasedir, lockfile, current,
+		if((ret=get_lock_and_clean(basedir,
+			lockbasedir, lockfile, current,
 			working, currentdata,
 			finishing, gotlock, cconf,
 			phase1data, phase2data, unchangeddata,
-			manifest, client, p1cntr, cntr, &resume, incexc))
-		{	
-			ret=-1;
-			maybe_do_notification(ret, client,
+			manifest, client, p1cntr, cntr, &resume, incexc)))
+		{
+			// -1 on error, or 1 if the backup is still finalising.
+			if(ret<0) maybe_do_notification(ret, client,
 				"", "error in get_lock_and_clean()",
 				"", "backup",
 				cconf, p1cntr, cntr);
+			goto end;
 		}
 		else
 		{
@@ -1111,12 +1117,19 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 		reset_conf_val(backupnostr, &(cconf->backup));
 		if((cp=strchr(cconf->backup, ':'))) *cp='\0';
 
-		if(get_lock_and_clean(basedir, lockbasedir, lockfile,
+		if((ret=get_lock_and_clean(basedir, lockbasedir, lockfile,
 			current, working,
 			currentdata, finishing, gotlock, cconf,
 			phase1data, phase2data, unchangeddata,
-			manifest, client, p1cntr, cntr, &resume, incexc))
-				ret=-1;
+			manifest, client, p1cntr, cntr, &resume, incexc)))
+		{
+			// -1 on error, or 1 if the backup is still finalising.
+			if(ret<0) maybe_do_notification(ret, client,
+				"", "error in get_lock_and_clean()",
+				"",
+				act==ACTION_RESTORE?"restore":"verify",
+				cconf, p1cntr, cntr);
+		}
 		else
 		{
 			char *restoreregex=NULL;

@@ -1,3 +1,7 @@
+2013-12-01 Changes in burp-1.4.10:
+  * Bug fix for false failure notification when a client tries to connect again
+    while a backup is still in progress.
+
 2013-11-27 Changes in burp-1.4.8:
   * Be sure to close directory file descriptor if fdopendir() fails.
   * Extend the JSON list functionality so that covers all types of listing.

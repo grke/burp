@@ -67,6 +67,19 @@ src="http://pagead2.googlesyndication.com/pagead/show_ads.js">
 <TD ALIGN="LEFT">
 
 <P>
+<FONT COLOR="#99CCFF">2013-12-01: burp-1.4.10 and burp-1.3.44 are released.
+<br>
+1.4.10 is for new features. 1.3.44 is the candidate for a stable version, to
+which only bug fixes will be added.
+<pre>
+Changes in burp-1.4.10 and burp-1.3.44:
+  * Bug fix for false failure notification when a client tries to connect again
+    while a backup is still in progress.
+</pre>
+</FONT>
+</P>
+
+<P>
 <FONT COLOR="#99CCFF">2013-11-29:
 <BR>
 Many thanks to the following donors for financially supporting burp during

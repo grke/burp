@@ -786,8 +786,8 @@ end:
 	return ret;
 }
 
-/* Return 0 for everything OK. -1 for error, or 1 to mean that a backup is
-   currently finalising. */
+/* Return 0 for everything OK. -1 for error, or 1 to mean that a lock is still
+   in place. */
 static int get_lock_and_clean(const char *basedir, const char *lockbasedir, const char *lockfile, const char *current, const char *working, const char *currentdata, const char *finishing, char **gotlock, struct config *cconf, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *manifest, const char *client, struct cntr *p1cntr, struct cntr *cntr, int *resume, const char *incexc)
 {
 	int ret=0;
@@ -811,15 +811,14 @@ static int get_lock_and_clean(const char *basedir, const char *lockbasedir, cons
 			logp("finalising previous backup\n");
 			snprintf(msg, sizeof(msg), "Finalising previous backup of client. Please try again later.");
 			async_write_str(CMD_ERROR, msg);
-			return 1;
 		}
 		else
 		{
 			logp("another instance of client is already running,\n");
 			logp("or %s is not writable.\n", lockfile);
 			async_write_str(CMD_ERROR, "another instance is already running");
-			goto error;
 		}
+		return 1;
 	}
 	else
 	{
@@ -989,7 +988,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			phase1data, phase2data, unchangeddata,
 			manifest, client, p1cntr, cntr, &resume, incexc)))
 		{
-			// -1 on error, or 1 if the backup is still finalising.
+			// -1 on error, or 1 if a lock was in place.
 			if(ret<0) maybe_do_notification(ret, client,
 				"", "error in get_lock_and_clean()",
 				"", "backup",
@@ -1103,7 +1102,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			phase1data, phase2data, unchangeddata,
 			manifest, client, p1cntr, cntr, &resume, incexc)))
 		{
-			// -1 on error, or 1 if the backup is still finalising.
+			// -1 on error, or 1 if a lock was in place
 			if(ret<0) maybe_do_notification(ret, client,
 				"", "error in get_lock_and_clean()",
 				"",

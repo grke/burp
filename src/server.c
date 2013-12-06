@@ -802,7 +802,14 @@ static int get_lock_and_clean(const char *basedir, const char *lockbasedir, cons
 	}
 	free(copy);
 
-	if(get_lock(lockfile))
+	if((ret=get_lock(lockfile))<0)
+	{
+		char msg[256]="";
+		snprintf(msg, sizeof(msg), "problem with lockfile on server");
+		async_write_str(CMD_ERROR, msg);
+		goto error;
+	}
+	else if(ret>0)
 	{
 		struct stat statp;
 		if(!lstat(finishing, &statp))

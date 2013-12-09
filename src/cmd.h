@@ -11,7 +11,7 @@
 #define CMD_SIG		'S'	/* Signature of a block */
 #define CMD_DATA_REQ	'D'	/* Request for block data */
 #define CMD_DATA	'B'	/* Block data */
-#define CMD_WRAP_UP	'U'	/* Control packet - client can free blocks up
+#define CMD_WRAP_UP	'W'	/* Control packet - client can free blocks up
 				   to the given index. */
 
 // File types
@@ -60,5 +60,12 @@
 #define	STATUS_RESTORING	'8'
 #define	STATUS_VERIFYING	'9'
 #define	STATUS_DELETING		'0'
+
+// Legacy stuff
+#define CMD_DATAPTH     't'     /* Path to data on the server */
+#define CMD_VSS         'v'     /* Windows VSS metadata */
+#define CMD_ENC_VSS     'V'     /* Encrypted Windows VSS metadata */
+#define CMD_VSS_T       'u'     /* Windows VSS footer */
+#define CMD_ENC_VSS_T   'U'     /* Encrypted Windows VSS footer */
 
 #endif

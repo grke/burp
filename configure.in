@@ -1185,6 +1185,20 @@ if test $have_uthash = no  ; then
 	cp ${srcdir}/uthash/uthash.h ${srcdir}/src
 fi
 
+AC_CHECK_HEADERS(librsync.h)
+AC_CHECK_LIB(rsync, rs_delta_begin, [RSYNC_LIBS="-lrsync"])
+have_librsync=no
+if test x$RSYNC_LIBS = x-lrsync; then
+   AC_DEFINE(HAVE_LIBRSYNC, 1, [Defined to 1 if librsync was found])
+   have_librsync=yes
+fi
+AC_SUBST(RSYNC_LIBS)
+
+if test $have_librsync = no  ; then
+        echo "Please install librsync"
+        exit 1
+fi
+
 AC_CHECK_HEADERS(ncurses.h)
 AC_CHECK_LIB(ncurses, curs_set, [NCURSES_LIBS="-lncurses"])
 have_ncurses=no
@@ -1560,6 +1574,7 @@ AC_OUTPUT([autoconf/Make.common \
 	   Makefile \
 	   manpages/Makefile \
 	   src/Makefile \
+	   src/legacy/Makefile \
 	   src/client/Makefile \
 	   src/server/Makefile \
 	   src/rabin/Makefile \

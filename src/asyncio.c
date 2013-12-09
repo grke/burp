@@ -491,13 +491,18 @@ int async_write(struct iobuf *wbuf)
 	return async_rw_ensure_write(NULL, wbuf);
 }
 
-int async_write_str(char wcmd, const char *wsrc)
+int async_write_strn(char wcmd, const char *wsrc, size_t len)
 {
 	struct iobuf wbuf;
 	wbuf.cmd=wcmd;
 	wbuf.buf=(char *)wsrc;
-	wbuf.len=strlen(wsrc);
+	wbuf.len=len;
 	return async_write(&wbuf);
+}
+
+int async_write_str(char wcmd, const char *wsrc)
+{
+	return async_write_strn(wcmd, wsrc, strlen(wsrc));
 }
 
 int async_read_expect(char cmd, const char *expect)

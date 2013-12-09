@@ -33,6 +33,9 @@ struct config
 	float ratelimit;
 	int network_timeout;
 
+	// If the client tells us it is windows, this is set on the server side.
+	uint8_t client_is_windows;
+
 // server options
 	char *directory;
 	char *timestamp_format;
@@ -52,6 +55,7 @@ struct config
 	char *ca_server_name;
 	char *ca_burp_ca;
 	uint8_t password_check;
+	char *manual_delete;
 
 // client options
 	char *cname;
@@ -83,6 +87,8 @@ struct config
 	int bdcount;
 	ssize_t min_file_size;
 	ssize_t max_file_size;
+	int split_vss;
+	int strip_vss;
 	char *vss_drives;
   // These are to do with restore.
 	uint8_t overwrite;
@@ -144,8 +150,12 @@ struct config
 	int kpcount;
 	struct strlist **keep;
 
+	char *working_dir_recovery_method;
+	uint8_t librsync;
+
 	uint8_t compression;
 	uint8_t version_warn;
+	uint8_t resume_partial;
 
 	char *timer_script;
 	struct strlist **timer_arg;

@@ -261,6 +261,12 @@
 /* Define to 1 if you have the `resolv' library (-lresolv). */
 #undef HAVE_LIBRESOLV
 
+/* Defined to 1 if librsync was found */
+#undef HAVE_LIBRSYNC
+
+/* Define to 1 if you have the <librsync.h> header file. */
+#undef HAVE_LIBRSYNC_H
+
 /* Define to 1 if you have the `socket' library (-lsocket). */
 #undef HAVE_LIBSOCKET
 

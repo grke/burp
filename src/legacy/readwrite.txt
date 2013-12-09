@@ -1,0 +1,23 @@
+backup
+Client backup new file  -> file,      gzip fd           yes
+Server backup new file  -> fd,        file              yes
+Server make sig         -> gzip file, gzip fd           yes
+Client read sig         -> gzip fd                      yes
+Client make delta       -> file,      gzip fd           yes
+Server save delta       -> fd,        file              yes
+
+backup finishup file
+Server read delta       -> gzfile                       yes
+Server make new file    -> gzip file, gzip file         yes
+
+backup finishup
+Server make rev sig     -> gzip file, file              yes
+Server read rev sig     -> file                         yes
+Server make rev delta   -> gzip file, gzip file         yes
+
+restore
+Server read rev delta   -> gzip file                    yes
+Server make new revfile -> gzip file, file              yes
+Server make new revfile -> file,      file              yes
+Server restore file     -> file,      gzip fd           yes
+Client restore file     -> gzip fd,   file              yes

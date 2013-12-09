@@ -18,6 +18,8 @@ static void init_incexcs(struct config *conf)
 	conf->excom=NULL; conf->excmcount=0; // exclude from compression
 	conf->fifos=NULL; conf->ffcount=0;
 	conf->blockdevs=NULL; conf->bdcount=0;
+	conf->split_vss=0;
+	conf->strip_vss=0;
 	conf->vss_drives=NULL;
 	/* stuff to do with restore */
 	conf->overwrite=0;
@@ -65,8 +67,10 @@ void config_init(struct config *conf)
 	conf->network_timeout=60*60*2; // two hours
 	// ext3 maximum number of subdirs is 32000, so leave a little room.
 	conf->max_storage_subdirs=30000;
+	conf->librsync=1;
 	conf->compression=9;
 	conf->version_warn=1;
+	conf->resume_partial=0;
 	conf->umask=0022;
 	conf->max_hardlinks=10000;
 
@@ -99,6 +103,8 @@ void config_free(struct config *conf)
 	if(conf->password) free(conf->password);
 	if(conf->passwd) free(conf->passwd);
 	if(conf->server) free(conf->server);
+ 	if(conf->working_dir_recovery_method)
+		free(conf->working_dir_recovery_method);
  	if(conf->ssl_cert_ca) free(conf->ssl_cert_ca);
         if(conf->ssl_cert) free(conf->ssl_cert);
         if(conf->ssl_key) free(conf->ssl_key);
@@ -112,6 +118,7 @@ void config_free(struct config *conf)
 	if(conf->client_lockdir) free(conf->client_lockdir);
 	if(conf->autoupgrade_dir) free(conf->autoupgrade_dir);
 	if(conf->autoupgrade_os) free(conf->autoupgrade_os);
+	if(conf->manual_delete) free(conf->manual_delete);
 
 	if(conf->timer_script) free(conf->timer_script);
 	strlists_free(conf->timer_arg, conf->tacount);
@@ -255,8 +262,7 @@ static void convert_backslashes(char **path)
 }
 #endif
 
-#define ABSOLUTE_ERROR	"ERROR: Please use absolute include/exclude paths.\n"
-static int path_checks(const char *path)
+static int path_checks(const char *path, const char *err_msg)
 {
 	const char *p=NULL;
 	for(p=path; *p; p++)
@@ -264,7 +270,7 @@ static int path_checks(const char *path)
 		if(*p!='.' || *(p+1)!='.') continue;
 		if((p==path || *(p-1)=='/') && (*(p+2)=='/' || !*(p+2)))
 		{
-			logp(ABSOLUTE_ERROR);
+			logp(err_msg);
 			return -1;
 		}
 	}
@@ -277,7 +283,7 @@ static int path_checks(const char *path)
 #endif
 	)
 	{
-		logp(ABSOLUTE_ERROR);
+		logp(err_msg);
 		return -1;
 	}
 	return 0;
@@ -534,8 +540,12 @@ static int load_config_ints(struct config *conf, const char *field, const char *
 		&(conf->hardlinked_archive));
 	get_conf_val_int(field, value, "max_hardlinks",
 		&(conf->max_hardlinks));
+	get_conf_val_uint8(field, value, "librsync",
+		&(conf->librsync));
 	get_conf_val_uint8(field, value, "version_warn",
 		&(conf->version_warn));
+	get_conf_val_uint8(field, value, "resume_partial",
+		&(conf->resume_partial));
 	get_conf_val_uint8(field, value, "cross_all_filesystems",
 		&(conf->cross_all_filesystems));
 	get_conf_val_uint8(field, value, "read_all_fifos",
@@ -566,6 +576,10 @@ static int load_config_ints(struct config *conf, const char *field, const char *
 		&(conf->max_storage_subdirs));
 	get_conf_val_uint8(field, value, "overwrite",
 		&(conf->overwrite));
+	get_conf_val_int(field, value, "split_vss",
+		&(conf->split_vss));
+	get_conf_val_int(field, value, "strip_vss",
+		&(conf->strip_vss));
 	get_conf_val_int(field, value, "strip",
 		&(conf->strip));
 	get_conf_val_uint8(field, value, "fork",
@@ -645,8 +659,12 @@ static int load_config_strings(struct config *conf, const char *field, const cha
 		return -1;
 	if(get_conf_val(field, value, "browsefile", &(conf->browsefile)))
 		return -1;
+	if(get_conf_val(field, value, "manual_delete", &(conf->manual_delete)))
+		return -1;
 	if(get_conf_val(field, value, "restore_spool", &(conf->restore_spool)))
 		return -1;
+	if(get_conf_val(field, value, "working_dir_recovery_method",
+		&(conf->working_dir_recovery_method))) return -1;
 	if(get_conf_val(field, value, "autoupgrade_dir",
 		&(conf->autoupgrade_dir))) return -1;
 	if(get_conf_val(field, value, "autoupgrade_os",
@@ -927,6 +945,11 @@ static int server_conf_checks(struct config *conf, const char *path, int *r)
 		conf_problem(path, "timestamp_format unset", r);
 	if(!conf->clientconfdir)
 		conf_problem(path, "clientconfdir unset", r);
+	if(!conf->working_dir_recovery_method
+	  || (strcmp(conf->working_dir_recovery_method, "delete")
+	   && strcmp(conf->working_dir_recovery_method, "resume")
+	   && strcmp(conf->working_dir_recovery_method, "use")))
+		conf_problem(path, "unknown working_dir_recovery_method", r);
 	if(!conf->ssl_cert)
 		conf_problem(path, "ssl_cert unset", r);
 	if(!conf->ssl_cert_ca)
@@ -997,6 +1020,12 @@ static int server_conf_checks(struct config *conf, const char *path, int *r)
 			ca_err++;
 		}
 		if(ca_err) return -1;
+	}
+	if(conf->manual_delete)
+	{
+		if(path_checks(conf->manual_delete,
+			"ERROR: Please use an absolute manual_delete path.\n"))
+				return -1;
 	}
 
 	return 0;
@@ -1135,8 +1164,9 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 #ifdef HAVE_WIN32
 		convert_backslashes(&(l->ielist[i]->path));
 #endif
-		if(path_checks(l->ielist[i]->path))
-			return -1;
+		if(path_checks(l->ielist[i]->path,
+			"ERROR: Please use absolute include/exclude paths.\n"))
+				return -1;
 		
 		if(!l->ielist[i]->flag) continue; // an exclude
 
@@ -1419,14 +1449,17 @@ int config_set_client_global(struct config *conf, struct config *cconf, const ch
 	cconf->log_to_stdout=conf->log_to_stdout;
 	cconf->progress_counter=conf->progress_counter;
 	cconf->password_check=conf->password_check;
+	cconf->manual_delete=conf->manual_delete;
 	cconf->client_can_delete=conf->client_can_delete;
 	cconf->client_can_force_backup=conf->client_can_force_backup;
 	cconf->client_can_list=conf->client_can_list;
 	cconf->client_can_restore=conf->client_can_restore;
 	cconf->client_can_verify=conf->client_can_verify;
 	cconf->hardlinked_archive=conf->hardlinked_archive;
+	cconf->librsync=conf->librsync;
 	cconf->compression=conf->compression;
 	cconf->version_warn=conf->version_warn;
+	cconf->resume_partial=conf->resume_partial;
 	cconf->notify_success_warnings_only=conf->notify_success_warnings_only;
 	cconf->notify_success_changes_only=conf->notify_success_changes_only;
 	cconf->server_script_post_run_on_fail=conf->server_script_post_run_on_fail;
@@ -1438,6 +1471,8 @@ int config_set_client_global(struct config *conf, struct config *cconf, const ch
 		return -1;
 	if(set_global_str(&(cconf->timestamp_format), conf->timestamp_format))
 		return -1;
+	if(set_global_str(&(cconf->working_dir_recovery_method),
+		conf->working_dir_recovery_method)) return -1;
 	if(set_global_str(&(cconf->timer_script), conf->timer_script))
 		return -1;
 	if(set_global_str(&(cconf->user), conf->user))

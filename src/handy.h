@@ -65,4 +65,6 @@ extern int astrcat(char **buf, const char *append);
 
 extern int recursive_delete(const char *d, const char *file, uint8_t delfiles);
 
+extern int do_quick_read(const char *datapth, struct cntr *cntr);
+
 #endif

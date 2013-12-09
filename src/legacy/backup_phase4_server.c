@@ -1,0 +1,1033 @@
+#include "include.h"
+#include "../server/current_backups.h"
+
+#include <netdb.h>
+#include <librsync.h>
+
+static int make_rev_sig(const char *dst, const char *sig, const char *endfile, int compression, struct config *conf)
+{
+	FILE *dstfp=NULL;
+	gzFile dstzp=NULL;
+	FILE *sigp=NULL;
+	rs_result result;
+//logp("make rev sig: %s %s\n", dst, sig);
+
+	if(dpth_is_compressed(compression, dst))
+		dstzp=gzopen_file(dst, "rb");
+	else
+		dstfp=open_file(dst, "rb");
+
+	if((!dstzp && !dstfp)
+	  || !(sigp=open_file(sig, "wb")))
+	{
+		gzclose_fp(&dstzp);
+		close_fp(&dstfp);
+		return -1;
+	}
+	result=rs_sig_gzfile(dstfp, dstzp, sigp,
+		get_librsync_block_len(endfile),
+		RS_DEFAULT_STRONG_LEN, NULL, conf->cntr);
+	gzclose_fp(&dstzp);
+	close_fp(&dstfp);
+	if(close_fp(&sigp))
+	{
+		logp("error closing %s in make_rev_sig\n", sig);
+		return -1;
+	}
+//logp("end of make rev sig\n");
+	return result;
+}
+
+static int make_rev_delta(const char *src, const char *sig, const char *del, int compression, struct config *cconf)
+{
+	gzFile srczp=NULL;
+	FILE *srcfp=NULL;
+	FILE *sigp=NULL;
+	rs_result result;
+	rs_signature_t *sumset=NULL;
+
+//logp("make rev delta: %s %s %s\n", src, sig, del);
+	if(!(sigp=open_file(sig, "rb"))) return -1;
+	if((result=rs_loadsig_file(sigp, &sumset, NULL))
+	  || (result=rs_build_hash_table(sumset)))
+	{
+		fclose(sigp);
+		rs_free_sumset(sumset);
+		return result;
+	}
+	fclose(sigp);
+
+//logp("make rev deltb: %s %s %s\n", src, sig, del);
+
+	if(dpth_is_compressed(compression, src))
+		srczp=gzopen_file(src, "rb");
+	else
+		srcfp=open_file(src, "rb");
+
+	if(!srczp && !srcfp)
+	{
+		rs_free_sumset(sumset);
+		return -1;
+	}
+
+	if(cconf->compression)
+	{
+		gzFile delzp=NULL;
+		if(!(delzp=gzopen_file(del, comp_level(cconf))))
+		{
+			gzclose_fp(&srczp);
+			close_fp(&srcfp);
+			rs_free_sumset(sumset);
+			return -1;
+		}
+		result=rs_delta_gzfile(sumset, srcfp, srczp, NULL, delzp, NULL, cconf->cntr);
+		if(gzclose_fp(&delzp))
+		{
+			logp("error closing %s in make_rev_delta\n", del);
+			result=RS_IO_ERROR;
+		}
+	}
+	else
+	{
+		FILE *delfp=NULL;
+		if(!(delfp=open_file(del, "wb")))
+		{
+			gzclose_fp(&srczp);
+			close_fp(&srcfp);
+			rs_free_sumset(sumset);
+			return -1;
+		}
+		result=rs_delta_gzfile(sumset, srcfp, srczp, delfp, NULL, NULL, cconf->cntr);
+		if(close_fp(&delfp))
+		{
+			logp("error closing %s in make_rev_delta\n", del);
+			gzclose_fp(&srczp);
+			close_fp(&srcfp);
+			rs_free_sumset(sumset);
+			return -1;
+		}
+	}
+
+	rs_free_sumset(sumset);
+	gzclose_fp(&srczp);
+	close_fp(&srcfp);
+
+	return result;
+}
+
+
+static int gen_rev_delta(const char *sigpath, const char *deltadir, const char *oldpath, const char *finpath, const char *path, const char *endfile, int compression, struct config *cconf)
+{
+	int ret=0;
+	char *delpath=NULL;
+	if(!(delpath=prepend_s(deltadir, path)))
+	{
+		log_out_of_memory(__FUNCTION__);
+		ret=-1;
+	}
+	//logp("Generating reverse delta...\n");
+/*
+	logp("delpath: %s\n", delpath);
+	logp("finpath: %s\n", finpath);
+	logp("sigpath: %s\n", sigpath);
+	logp("oldpath: %s\n", oldpath);
+*/
+	if(mkpath(&delpath, deltadir))
+	{
+		logp("could not mkpaths for: %s\n", delpath);
+		ret=-1;
+	}
+	else if(make_rev_sig(finpath, sigpath,
+		endfile, compression, cconf))
+	{
+		logp("could not make signature from: %s\n", finpath);
+		ret=-1;
+	}
+	else if(make_rev_delta(oldpath, sigpath, delpath,
+		compression, cconf))
+	{
+		logp("could not make delta from: %s\n", oldpath);
+		ret=-1;
+	}
+	else unlink(sigpath);	
+	if(delpath) free(delpath);
+	return ret;
+}
+
+static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, const char *datadirtmp, const char *datapth, int compression, struct strlist **partials, int pcount, int *is_partial, struct config *cconf)
+{
+	int p=0;
+	int ret=0;
+	char *partial=NULL;
+	struct stat statp;
+	const char *opath=oldpath;
+
+	// First, check whether this is in our list of partial files.
+	// If it is, use the path to the partial file. The delta will apply
+	// to it.
+	for(p=0; p<pcount; p++)
+	{
+		if(!strcmp(partials[p]->path, datapth))
+		{
+			char *tmp=NULL;
+			// It is a partial transfer, it is in "data.tmp/p".
+			// Build the full path to it.
+			if(!(tmp=prepend_s(datadirtmp, "p"))) return -1;
+			partial=prepend_s(tmp, datapth);
+			free(tmp);
+			if(!partial) return -1;
+			logp("Dealing with partial resumed file: %s\n",
+				partial);
+			opath=partial;
+			*is_partial=1;
+			break;
+		}
+	}
+
+	if(lstat(opath, &statp))
+	{
+		logp("could not lstat %s\n", opath);
+		if(partial) free(partial);
+		return -1;
+	}
+
+	if(dpth_is_compressed(compression, opath))
+	{
+		FILE *source=NULL;
+		FILE *dest=NULL;
+
+		//logp("inflating...\n");
+
+		if(!(dest=open_file(infpath, "wb")))
+		{
+			close_fp(&dest);
+			if(partial) free(partial);
+			return -1;
+		}
+
+		if(!statp.st_size)
+		{
+			// Empty file - cannot inflate.
+			// just close the destination and we have duplicated a
+			// zero length file.
+			logp("asked to inflate zero length file: %s\n", opath);
+			if(close_fp(&dest))
+			{
+				if(partial) free(partial);
+				logp("error closing %s in %s\n",
+					infpath, __FUNCTION__);
+				return -1;
+			}
+			return 0;
+		}
+		if(!(source=open_file(opath, "rb")))
+		{
+			if(partial) free(partial);
+			close_fp(&dest);
+			return -1;
+		}
+		if((ret=zlib_inflate(source, dest))!=Z_OK)
+		logp("zlib_inflate returned: %d\n", ret);
+		close_fp(&source);
+		if(close_fp(&dest))
+		{
+			if(partial) free(partial);
+			logp("error closing %s in %s\n",
+				infpath, __FUNCTION__);
+			return -1;
+		}
+	}
+	else
+	{
+		// If it was not a compressed file, just hard link it.
+		// It is possible that infpath already exists, if the server
+		// was interrupted on a previous run just after this point.
+		if(do_link(opath, infpath, &statp, cconf,
+			TRUE /* allow overwrite of infpath */))
+				ret=-1;
+	
+	}
+	if(partial) free(partial);
+	return ret;
+}
+
+static int jiggle(const char *datapth, const char *currentdata, const char *datadirtmp, const char *datadir, const char *deltabdir, const char *deltafdir, const char *sigpath, const char *endfile, const char *deletionsfile, FILE **delfp, struct sbufl *sb, int hardlinked, int compression, struct strlist **partials, int pcount, struct config *cconf)
+{
+	int ret=0;
+	struct stat statp;
+	char *oldpath=NULL;
+	char *newpath=NULL;
+	char *finpath=NULL;
+	char *deltafpath=NULL;
+
+	if(!(oldpath=prepend_s(currentdata, datapth))
+	  || !(newpath=prepend_s(datadirtmp, datapth))
+	  || !(finpath=prepend_s(datadir, datapth))
+	  || !(deltafpath=prepend_s(deltafdir, datapth)))
+	{
+		log_out_of_memory(__FUNCTION__);
+		ret=-1;	
+		goto cleanup;
+	}
+	else if(!lstat(finpath, &statp) && S_ISREG(statp.st_mode))
+	{
+		// Looks like an interrupted jiggle
+		// did this file already.
+		static int donemsg=0;
+		if(!lstat(deltafpath, &statp) && S_ISREG(statp.st_mode))
+		{
+			logp("deleting unneeded forward delta: %s\n",
+				deltafpath);
+			unlink(deltafpath);
+		}
+		if(!donemsg)
+		{
+			logp("skipping already present file: %s\n", finpath);
+			logp("to save log space, skips of other already present files will not be logged\n");
+			donemsg++;
+		}
+	}
+	else if(mkpath(&finpath, datadir))
+	{
+		logp("could not create path for: %s\n", finpath);
+		ret=-1;
+		goto cleanup;
+	}
+	else if(mkpath(&newpath, datadirtmp))
+	{
+		logp("could not create path for: %s\n", newpath);
+		ret=-1;
+		goto cleanup;
+	}
+	else if(!lstat(deltafpath, &statp) && S_ISREG(statp.st_mode))
+	{
+		int lrs;
+		int is_partial=0;
+		char *infpath=NULL;
+
+		// Got a forward patch to do.
+		// First, need to gunzip the old file,
+		// otherwise the librsync patch will take
+		// forever, because it will be doing seeks
+		// all over the place, and gzseeks are slow.
+	  	if(!(infpath=prepend_s(deltafdir, "inflate")))
+		{
+			log_out_of_memory(__FUNCTION__);
+			ret=-1;
+			goto cleanup;
+		}
+
+		//logp("Fixing up: %s\n", datapth);
+		if(inflate_or_link_oldfile(oldpath, infpath, datadirtmp,
+			datapth, compression, partials, pcount, &is_partial,
+			cconf))
+		{
+			logp("error when inflating old file: %s\n", oldpath);
+			ret=-1;
+			free(infpath);
+			goto cleanup;
+		}
+
+		if((lrs=do_patch(infpath, deltafpath, newpath,
+			cconf->compression,
+			compression /* from the manifest */, cconf)))
+		{
+			logp("WARNING: librsync error when patching %s: %d\n",
+				oldpath, lrs);
+			do_filecounter(cconf->cntr, CMD_WARNING, 1);
+			// Try to carry on with the rest of the backup
+			// regardless.
+			//ret=-1;
+			// Remove anything that got written.
+			unlink(newpath);
+			unlink(infpath);
+			free(infpath);
+
+			// First, note that we want to remove this entry from
+			// the manifest.
+			if(!*delfp && !(*delfp=open_file(deletionsfile, "ab")))
+			{
+				// Could not mark this file as deleted. Fatal.
+				ret=-1;
+				goto cleanup;
+			}
+			if(sbufl_to_manifest(sb, *delfp, NULL))
+				ret=-1;
+			if(fflush(*delfp))
+			{
+				logp("error fflushing deletions file in jiggle: %s\n", strerror(errno));
+				ret=-1;
+			}
+
+			goto cleanup;
+		}
+
+		// Get rid of the inflated old file.
+		unlink(infpath);
+		free(infpath);
+
+		// Need to generate a reverse diff,
+		// unless we are keeping a hardlinked
+		// archive.
+		if(!hardlinked && !is_partial)
+		{
+			if(gen_rev_delta(sigpath, deltabdir,
+				oldpath, newpath, datapth, endfile,
+				compression, cconf))
+			{
+				ret=-1;
+				goto cleanup;
+			}
+		}
+
+		// Power interruptions should be
+		// recoverable. If it happens before
+		// this point, the data jiggle for
+		// this file has to be done again.
+		// Once finpath is in place, no more
+		// jiggle is required.
+
+		// Use the fresh new file.
+		if(do_rename(newpath, finpath))
+		{
+			ret=-1;
+			goto cleanup;
+		}
+		else
+		{
+			// Remove the forward delta, as it is
+			// no longer needed. There is a
+			// reverse diff and the finished
+			// finished file is in place.
+			//logp("Deleting delta.forward...\n");
+			unlink(deltafpath);
+
+			// Remove the old file. If a power
+			// cut happens just before this,
+			// the old file will hang around
+			// forever.
+			// TODO: Put in something to
+			// detect this.
+			// ie, both a reverse delta and the
+			// old file exist.
+			if(!hardlinked)
+			{
+				//logp("Deleting oldpath...\n");
+				unlink(oldpath);
+			}
+		}
+	}
+	else if(!lstat(newpath, &statp) && S_ISREG(statp.st_mode))
+	{
+		// Use the fresh new file.
+		// This needs to happen after checking
+		// for the forward delta, because the
+		// patching stuff writes to newpath.
+		//logp("Using newly received file\n");
+		if(do_rename(newpath, finpath))
+		{
+			ret=-1;
+			goto cleanup;
+		}
+	}
+	else if(!lstat(oldpath, &statp) && S_ISREG(statp.st_mode))
+	{
+		// Use the old unchanged file.
+		// Hard link it first.
+		//logp("Hard linking to old file: %s\n", datapth);
+		if(do_link(oldpath, finpath, &statp, cconf,
+		  FALSE /* do not overwrite finpath (should never need to) */))
+		{
+			ret=-1;
+			goto cleanup;
+		}
+		else
+		{
+			// If we are not keeping a hardlinked
+			// archive, delete the old link.
+			if(!hardlinked)
+			{
+				//logp("Unlinking old file: %s\n", oldpath);
+				unlink(oldpath);
+			}
+		}
+	}
+	else
+	{
+		logp("could not find: %s\n", oldpath);
+		ret=-1;
+		goto cleanup;
+	}
+
+cleanup:
+	if(oldpath) { free(oldpath); oldpath=NULL; }
+	if(newpath) { free(newpath); newpath=NULL; }
+	if(finpath) { free(finpath); finpath=NULL; }
+	if(deltafpath) { free(deltafpath); deltafpath=NULL; }
+
+	return ret;
+}
+
+/* If cconf->hardlinked_archive set, hardlink everything.
+   If unset and there is more than one 'keep' value, periodically hardlink,
+   based on the first 'keep' value. This is so that we have more choice
+   of backups to delete than just the oldest.
+*/
+static int do_hardlinked_archive(struct config *cconf, unsigned long bno)
+{
+	int kp=0;
+	int ret=0;
+	if(cconf->hardlinked_archive)
+	{
+		logp("need to hardlink archive\n");
+		return 1;
+	}
+	if(cconf->kpcount<=1)
+	{
+		logp("do not need to hardlink archive\n");
+		return 0;
+	}
+
+	// If they have specified more than one 'keep' value, need to
+	// periodically hardlink, based on the first 'keep' value.
+	kp=cconf->keep[0]->flag;
+
+	logp("first keep value: %d, backup: %lu (%lu-2=%lu)\n",
+			kp, bno, bno, bno-2);
+
+	ret=(bno-2)%kp;
+	logp("%sneed to hardlink archive (%lu%%%d=%d)\n",
+		ret?"do not ":"", bno-2, kp, ret);
+
+	return !ret;
+}
+
+static int maybe_delete_files_from_manifest(const char *manifest, const char *deletionsfile, struct config *cconf)
+{
+	int ars=0;
+	int ret=0;
+	int pcmp=0;
+	FILE *dfp=NULL;
+	struct sbufl db;
+	struct sbufl mb;
+	gzFile nmzp=NULL;
+	gzFile omzp=NULL;
+	char *manifesttmp=NULL;
+	struct stat statp;
+
+	if(lstat(deletionsfile, &statp))
+	{
+		// No deletions, no problem.
+		return 0;
+	}
+	logp("Performing deletions on manifest\n");
+
+	if(!(manifesttmp=get_tmp_filename(manifest)))
+	{
+		ret=-1;
+		goto end;
+	}
+
+        if(!(dfp=open_file(deletionsfile, "rb"))
+	  || !(omzp=gzopen_file(manifest, "rb"))
+	  || !(nmzp=gzopen_file(manifesttmp, comp_level(cconf))))
+	{
+		ret=-1;
+		goto end;
+	}
+
+	init_sbufl(&db);
+	init_sbufl(&mb);
+
+	while(omzp || dfp)
+	{
+		if(dfp && !db.path && (ars=sbufl_fill(dfp, NULL, &db, cconf->cntr)))
+		{
+			if(ars<0) { ret=-1; break; }
+			// ars==1 means it ended ok.
+			close_fp(&dfp);
+		}
+		if(omzp && !mb.path && (ars=sbufl_fill(NULL, omzp, &mb, cconf->cntr)))
+		{
+			if(ars<0) { ret=-1; break; }
+			// ars==1 means it ended ok.
+			gzclose_fp(&omzp);
+		}
+
+		if(mb.path && !db.path)
+		{
+			if(sbufl_to_manifest(&mb, NULL, nmzp)) { ret=-1; break; }
+			free_sbufl(&mb);
+		}
+		else if(!mb.path && db.path)
+		{
+			free_sbufl(&db);
+		}
+		else if(!mb.path && !db.path) 
+		{
+			continue;
+		}
+		else if(!(pcmp=sbufl_pathcmp(&mb, &db)))
+		{
+			// They were the same - do not write.
+			free_sbufl(&mb);
+			free_sbufl(&db);
+		}
+		else if(pcmp<0)
+		{
+			// Behind in manifest. Write.
+			if(sbufl_to_manifest(&mb, NULL, nmzp)) { ret=-1; break; }
+			free_sbufl(&mb);
+		}
+		else
+		{
+			// Behind in deletions file. Do not write.
+			free_sbufl(&db);
+		}
+	}
+
+end:
+	if(gzclose_fp(&nmzp))
+	{
+		logp("error closing %s in maybe_delete_files_from_manifest\n",
+			manifesttmp);
+		ret=-1;
+	}
+	
+	close_fp(&dfp);
+	gzclose_fp(&omzp);
+	free_sbufl(&db);
+	free_sbufl(&mb);
+	if(!ret)
+	{
+		unlink(deletionsfile);
+		if(do_rename(manifesttmp, manifest))
+		{
+			free(manifesttmp);
+			return -1;
+		}
+	}
+	if(manifesttmp)
+	{
+		unlink(manifesttmp);
+		free(manifesttmp);
+	}
+	return ret;
+}
+
+static int get_partials_list(const char *path, const char *datapth, struct strlist ***partials, int *pcount)
+{
+	int n=-1;
+	int ret=0;
+	struct dirent **dir;
+
+	if((n=scandir(path, &dir, 0, 0))<0)
+	{
+		logp("scandir %s: %s\n", path, strerror(errno));
+		return -1;
+	}
+	while(n--)
+	{
+		char *fullpath=NULL;
+
+		if(dir[n]->d_ino==0
+		  || !strcmp(dir[n]->d_name, ".")
+		  || !strcmp(dir[n]->d_name, ".."))
+		{ free(dir[n]); continue; }
+
+		if(!(fullpath=prepend_s(path, dir[n]->d_name)))
+			break;
+
+		if(is_dir(fullpath, dir[n]))
+		{
+			char *newdatapth=NULL;
+			if(!(newdatapth=prepend_s(datapth, dir[n]->d_name)))
+				break;
+			if(get_partials_list(fullpath, newdatapth,
+				partials, pcount))
+			{
+				free(fullpath);
+				free(newdatapth);
+				break;
+			}
+			free(newdatapth);
+		}
+		else
+		{
+			char *tmp=NULL;
+			// Add to list.
+			if(!(tmp=prepend_s(datapth, dir[n]->d_name)))
+				break;
+			logp("Found partial resumed file: %s\n", tmp);
+			if(strlist_add(partials, pcount, tmp, 0))
+			{
+				free(tmp);
+				break;
+			}
+			free(tmp);
+		}
+		
+		free(fullpath);
+		free(dir[n]);
+	}
+        if(n>0)
+        {
+                ret=-1;
+                for(; n>0; n--) free(dir[n]);
+        }
+        free(dir);
+
+	return ret;
+}
+
+static int get_partials_list_w(const char *datadirtmp, struct strlist ***partials, int *pcount)
+{
+	int ret=0;
+	char *path=NULL;
+	char *datapth=NULL;
+	// Build the full path to it.
+	if(!(path=prepend_s(datadirtmp, "p"))) return -1;
+	if(is_dir_lstat(path))
+		ret=get_partials_list(path, datapth, partials, pcount);
+	free(path);
+
+	return ret;
+}
+
+/* Need to make all the stuff that this does atomic so that existing backups
+   never get broken, even if somebody turns the power off on the server. */ 
+static int atomic_data_jiggle(const char *finishing, const char *working, const char *manifest, const char *current, const char *currentdata, const char *datadir, const char *datadirtmp, const char *deletionsfile, struct config *cconf, const char *client, int hardlinked, unsigned long bno)
+{
+	int ret=0;
+	int ars=0;
+	char *datapth=NULL;
+	char *tmpman=NULL;
+	struct stat statp;
+
+	char *deltabdir=NULL;
+	char *deltafdir=NULL;
+	char *sigpath=NULL;
+	gzFile zp=NULL;
+	struct sbufl sb;
+
+	FILE *delfp=NULL;
+
+	int pcount=0;
+	struct strlist **partials=NULL;
+
+	logp("Doing the atomic data jiggle...\n");
+
+	if(!(tmpman=get_tmp_filename(manifest)))
+	{
+		ret=-1;
+		goto end;
+	}
+	if(lstat(manifest, &statp))
+	{
+		// Manifest does not exist - maybe the server was killed before
+		// it could be renamed.
+		logp("%s did not exist - trying %s\n", manifest, tmpman);
+		do_rename(tmpman, manifest);
+	}
+	free(tmpman);
+	if(!(zp=gzopen_file(manifest, "rb")))
+	{
+		ret=-1;
+		goto end;
+	}
+
+	if(!(deltabdir=prepend_s(current, "deltas.reverse"))
+	  || !(deltafdir=prepend_s(finishing, "deltas.forward"))
+	  || !(sigpath=prepend_s(current, "sig.tmp")))
+	{
+		log_out_of_memory(__FUNCTION__);
+		ret=-1;
+		goto end;
+	}
+
+	if(get_partials_list_w(datadirtmp, &partials, &pcount))
+	{
+		ret=-1;
+		goto end;
+	}
+
+	mkdir(datadir, 0777);
+
+	init_sbufl(&sb);
+	while(!(ars=sbufl_fill(NULL, zp, &sb, cconf->cntr)))
+	{
+		if(sb.datapth)
+		{
+			write_status(client, STATUS_SHUFFLING,
+				sb.datapth, cconf);
+
+			if((ret=jiggle(sb.datapth, currentdata, datadirtmp,
+				datadir, deltabdir, deltafdir,
+				sigpath, sb.endfile, deletionsfile, &delfp,
+				&sb, hardlinked, sb.compression,
+				partials, pcount, cconf)))
+					break;
+		}
+		free_sbufl(&sb);
+	}
+	if(!ret)
+	{
+		if(ars>0) ret=0;
+		else ret=-1;
+	}
+
+	if(close_fp(&delfp))
+	{
+		logp("error closing %s in atomic_data_jiggle\n", deletionsfile);
+		ret=-1;
+	}
+	gzclose_fp(&zp);
+
+	if(maybe_delete_files_from_manifest(manifest, deletionsfile, cconf))
+		ret=-1;
+
+	// Remove the temporary data directory, we have probably removed
+	// useful files from it.
+	sync(); // try to help CIFS
+	recursive_delete(deltafdir, NULL, FALSE /* do not del files */);
+
+end:
+	strlists_free(partials, pcount);
+	if(zp) gzclose_fp(&zp);
+	if(delfp) close_fp(&delfp);
+	if(deltabdir) free(deltabdir);
+	if(deltafdir) free(deltafdir);
+	if(sigpath) free(sigpath);
+	if(datapth) free(datapth);
+	return ret;
+}
+
+int backup_phase4_server(const char *basedir, const char *working, const char *current, const char *currentdata, const char *finishing, struct config *cconf, const char *client)
+{
+	int ret=0;
+	struct stat statp;
+	char *manifest=NULL;
+	char *deletionsfile=NULL;
+	char *datadir=NULL;
+	char *datadirtmp=NULL;
+	char *currentdup=NULL;
+	char *currentduptmp=NULL;
+	char *currentdupdata=NULL;
+	char *timestamp=NULL;
+	char *fullrealcurrent=NULL;
+	char *logpath=NULL;
+	char *hlinkedpath=NULL;
+	int len=0;
+	char realcurrent[256]="";
+
+	unsigned long bno=0;
+	int hardlinked=0;
+	char tstmp[64]="";
+	int newdup=0;
+	int previous_backup=0;
+
+	if((len=readlink(current, realcurrent, sizeof(realcurrent)-1))<0)
+		len=0;
+	realcurrent[len]='\0';
+
+	if(!(datadir=prepend_s(finishing, "data"))
+	  || !(datadirtmp=prepend_s(finishing, "data.tmp"))
+	  || !(manifest=prepend_s(finishing, "manifest.gz"))
+	  || !(deletionsfile=prepend_s(finishing, "deletions"))
+	  || !(currentdup=prepend_s(finishing, "currentdup"))
+	  || !(currentduptmp=prepend_s(finishing, "currentdup.tmp"))
+	  || !(currentdupdata=prepend_s(currentdup, "data"))
+	  || !(timestamp=prepend_s(finishing, "timestamp"))
+	  || !(fullrealcurrent=prepend_s(basedir, realcurrent))
+	  || !(logpath=prepend_s(finishing, "log"))
+	  || !(hlinkedpath=prepend_s(currentdup, "hardlinked")))
+	{
+		ret=-1;
+		goto endfunc;
+	}
+
+	if(set_logfp(logpath, cconf))
+	{
+		ret=-1;
+		goto endfunc;
+	}
+
+	logp("Begin phase4 (shuffle files)\n");
+
+	write_status(client, STATUS_SHUFFLING, NULL, cconf);
+
+	if(!lstat(current, &statp)) // Had a previous backup
+	{
+		previous_backup++;
+
+		if(lstat(currentdup, &statp))
+		{
+			// Have not duplicated the current backup yet.
+			if(!lstat(currentduptmp, &statp))
+			{
+				logp("Removing previous currentduptmp directory: %s\n", currentduptmp);
+				if(recursive_delete(currentduptmp,
+					NULL, TRUE /* del files */))
+				{
+					logp("Could not delete %s\n",
+						currentduptmp);
+					ret=-1;
+					goto endfunc;
+				}
+			}
+			logp("Duplicating current backup.\n");
+			if(recursive_hardlink(current, currentduptmp, client,
+				cconf)
+			  || do_rename(currentduptmp, currentdup))
+			{
+				ret=-1;
+				goto endfunc;
+			}
+			newdup++;
+		}
+
+		if(read_timestamp(timestamp, tstmp, sizeof(tstmp)))
+		{
+			logp("could not read timestamp file: %s\n", timestamp);
+			ret=-1;
+			goto endfunc;
+		}
+		// Get the backup number.
+		bno=strtoul(tstmp, NULL, 10);
+
+		if(newdup)
+		{
+			// When we have just created currentdup, determine
+			// hardlinked archive from the conf and the backup
+			// number...
+			hardlinked=do_hardlinked_archive(cconf, bno);
+		}
+		else
+		{
+			// ...if recovering, find out what currentdup started
+			// out as.
+			// Otherwise it is possible that things can be messed
+			// up by somebody swapping between hardlinked and
+			// not hardlinked at the same time as a resume happens.
+			if(lstat(hlinkedpath, &statp))
+			{
+				logp("previous attempt started not hardlinked\n");
+				hardlinked=0;
+			}
+			else
+			{
+				logp("previous attempt started hardlinked\n");
+				hardlinked=1;
+			}
+		}
+
+		if(hardlinked)
+		{
+			// Create a file to indicate that the previous backup
+			// does not have others depending on it.
+			FILE *hfp=NULL;
+			if(!(hfp=open_file(hlinkedpath, "wb")))
+			{
+				ret=-1;
+				goto endfunc;
+			}
+			// Stick the next backup timestamp in it. It might
+			// be useful one day when wondering when the next
+			// backup, now deleted, was made.
+			fprintf(hfp, "%s\n", tstmp);
+			if(close_fp(&hfp))
+			{
+				logp("error closing hardlinked indication\n");
+				ret=-1;
+				goto endfunc;
+			}
+			logp(" doing hardlinked archive\n");
+			logp(" will not generate reverse deltas\n");
+		}
+		else
+		{
+			logp(" not doing hardlinked archive\n");
+			logp(" will generate reverse deltas\n");
+			unlink(hlinkedpath);
+		}
+	}
+	else
+	{
+		// No previous backup. Set hardlinked=1 so that the jiggle
+		// does not attempt to produce reverse deltas when it fixes
+		// up a partial file.
+		//hardlinked=1;
+	}
+
+	if(atomic_data_jiggle(finishing,
+		working, manifest, currentdup,
+		currentdupdata,
+		datadir, datadirtmp, deletionsfile, cconf, client,
+		hardlinked, bno))
+	{
+		logp("could not finish up backup.\n");
+		ret=-1;
+		goto endfunc;
+	}
+
+	write_status(client, STATUS_SHUFFLING,
+		"deleting temporary files", cconf);
+
+	// Remove the temporary data directory, we have now removed
+	// everything useful from it.
+	recursive_delete(datadirtmp, NULL, TRUE /* del files */);
+
+	// Clean up the currentdata directory - this is now the 'old'
+	// currentdata directory. Any files that were deleted from
+	// the client will be left in there, so call recursive_delete
+	// with the option that makes it not delete files.
+	// This will have the effect of getting rid of unnecessary
+	// directories.
+	sync(); // try to help CIFS
+	recursive_delete(currentdupdata, NULL, FALSE /* do not del files */);
+
+	// Rename the old current to something that we know to
+	// delete.
+	if(previous_backup)
+	{
+		if(deleteme_move(basedir, fullrealcurrent, realcurrent, cconf)
+		  || do_rename(currentdup, fullrealcurrent))
+		{
+			ret=-1;
+			goto endfunc;
+		}
+	}
+
+	if(deleteme_maybe_delete(cconf, basedir))
+	{
+		ret=-1;
+		goto endfunc;
+	}
+
+	print_stats_to_file(cconf, client, finishing, ACTION_BACKUP);
+
+	// Rename the finishing symlink so that it becomes the current symlink
+	do_rename(finishing, current);
+
+	print_filecounters(cconf, ACTION_BACKUP);
+	logp("Backup completed.\n");
+	logp("End phase4 (shuffle files)\n");
+	set_logfp(NULL, cconf); // will close logfp.
+
+	compress_filename(current, "log", "log.gz", cconf);
+
+endfunc:
+	if(datadir) free(datadir);
+	if(datadirtmp) free(datadirtmp);
+	if(manifest) free(manifest);
+	if(deletionsfile) free(deletionsfile);
+	if(currentdup) free(currentdup);
+	if(currentduptmp) free(currentduptmp);
+	if(currentdupdata) free(currentdupdata);
+	if(timestamp) free(timestamp);
+	if(fullrealcurrent) free(fullrealcurrent);
+	if(logpath) free(logpath);
+	if(hlinkedpath) free(hlinkedpath);
+
+	return ret;
+}

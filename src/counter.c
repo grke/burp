@@ -6,7 +6,7 @@ static void reset_filecounter(struct cntr *c, time_t t)
 	memset(c, 0, sizeof(struct cntr));
 	c->start=t;
 }
-
+ 
 void reset_filecounters(struct config *conf, time_t t)
 {
 	reset_filecounter(conf->p1cntr, t);
@@ -89,6 +89,14 @@ void do_filecounter(struct cntr *c, char ch, int print)
 			++(c->special); ++(c->total); break;
 		case CMD_EFS_FILE:
 			++(c->efs); ++(c->total); break;
+		case CMD_VSS:
+			++(c->vss); ++(c->total); break;
+		case CMD_ENC_VSS:
+			++(c->encvss); ++(c->total); break;
+		case CMD_VSS_T:
+			++(c->vss_t); ++(c->total); break;
+		case CMD_ENC_VSS_T:
+			++(c->encvss_t); ++(c->total); break;
 
 		case CMD_WARNING:
 			++(c->warning); return; // do not add to total
@@ -137,6 +145,14 @@ void do_filecounter_same(struct cntr *c, char ch)
 			++(c->special_same); ++(c->total_same); break;
 		case CMD_EFS_FILE:
 			++(c->efs_same); ++(c->total_same); break;
+		case CMD_VSS:
+			++(c->vss_same); ++(c->total_same); break;
+		case CMD_ENC_VSS:
+			++(c->encvss_same); ++(c->total_same); break;
+		case CMD_VSS_T:
+			++(c->vss_t_same); ++(c->total_same); break;
+		case CMD_ENC_VSS_T:
+			++(c->encvss_t_same); ++(c->total_same); break;
 	}
 	++(c->gtotal_same);
 }
@@ -165,6 +181,14 @@ void do_filecounter_changed(struct cntr *c, char ch)
 			++(c->special_changed); ++(c->total_changed); break;
 		case CMD_EFS_FILE:
 			++(c->efs_changed); ++(c->total_changed); break;
+		case CMD_VSS:
+			++(c->vss_changed); ++(c->total_changed); break;
+		case CMD_ENC_VSS:
+			++(c->encvss_changed); ++(c->total_changed); break;
+		case CMD_VSS_T:
+			++(c->vss_t_changed); ++(c->total_changed); break;
+		case CMD_ENC_VSS_T:
+			++(c->encvss_t_changed); ++(c->total_changed); break;
 	}
 	++(c->gtotal_changed);
 }
@@ -192,6 +216,14 @@ void do_filecounter_deleted(struct cntr *c, char ch)
 			++(c->special_deleted); ++(c->total_deleted); break;
 		case CMD_EFS_FILE:
 			++(c->efs_deleted); ++(c->total_deleted); break;
+		case CMD_VSS:
+			++(c->vss_deleted); ++(c->total_deleted); break;
+		case CMD_ENC_VSS:
+			++(c->encvss_deleted); ++(c->total_deleted); break;
+		case CMD_VSS_T:
+			++(c->vss_t_deleted); ++(c->total_deleted); break;
+		case CMD_ENC_VSS_T:
+			++(c->encvss_t_deleted); ++(c->total_deleted); break;
 	}
 	++(c->gtotal_deleted);
 }
@@ -293,8 +325,8 @@ static void bottom_part(struct cntr *a, struct cntr *b, enum action act)
 void print_filecounters(struct config *conf, enum action act)
 {
 	time_t now=time(NULL);
-	struct cntr *c=conf->cntr;
 	struct cntr *p1c=conf->p1cntr;
+	struct cntr *c=conf->cntr;
 	if(!p1c || !c) return;
 
 	border();
@@ -392,6 +424,38 @@ void print_filecounters(struct config *conf, enum action act)
 		p1c->efs,
 		act);
 
+	quint_print("VSS headers:",
+		c->vss,
+		c->vss_changed,
+		c->vss_same,
+		c->vss_deleted,
+		p1c->vss,
+		act);
+
+	quint_print("VSS headers (enc):",
+		c->encvss,
+		c->encvss_changed,
+		c->encvss_same,
+		c->encvss_deleted,
+		p1c->encvss,
+		act);
+
+	quint_print("VSS footers:",
+		c->vss_t,
+		c->vss_t_changed,
+		c->vss_t_same,
+		c->vss_t_deleted,
+		p1c->vss_t,
+		act);
+
+	quint_print("VSS footers (enc):",
+		c->encvss_t,
+		c->encvss_t_changed,
+		c->encvss_t_same,
+		c->encvss_t_deleted,
+		p1c->encvss_t,
+		act);
+
 	quint_print("Grand total:",
 		c->total,
 		c->total_changed,
@@ -406,30 +470,235 @@ void print_filecounters(struct config *conf, enum action act)
 	border();
 }
 
+#ifndef HAVE_WIN32
+
+static void quint_print_to_file(FILE *fp, const char *prefix, unsigned long long a, unsigned long long b, unsigned long long c, unsigned long long d, unsigned long long e, enum action act)
+{
+	if(act==ACTION_BACKUP
+	  || act==ACTION_BACKUP_TIMED)
+	{
+		fprintf(fp, "%s:%llu\n", prefix, a);
+		fprintf(fp, "%s_changed:%llu\n", prefix, b);
+		fprintf(fp, "%s_same:%llu\n", prefix, c);
+		fprintf(fp, "%s_deleted:%llu\n", prefix, d);
+	}
+	fprintf(fp, "%s_total:%llu\n", prefix, a+b+c);
+	fprintf(fp, "%s_scanned:%llu\n", prefix, e);
+}
+
+static void bottom_part_to_file(FILE *fp, struct cntr *a, struct cntr *b, enum action act)
+{
+	fprintf(fp, "warnings:%llu\n", b->warning + a->warning);
+	fprintf(fp, "bytes_estimated:%llu\n", a->byte);
+
+	if(act==ACTION_BACKUP
+	  || act==ACTION_BACKUP_TIMED)
+        {
+		fprintf(fp, "bytes_in_backup:%llu\n", b->byte);
+        }
+
+	if(act==ACTION_RESTORE)
+	{
+		fprintf(fp, "bytes_attempted:%llu\n", b->byte);
+	}
+	if(act==ACTION_VERIFY)
+	{
+		fprintf(fp, "bytes_checked:%llu\n", b->byte);
+	}
+
+	if(act==ACTION_BACKUP
+	  || act==ACTION_BACKUP_TIMED)
+	{
+		fprintf(fp, "bytes_received:%llu\n", b->recvbyte);
+	}
+	if(act==ACTION_BACKUP
+	  || act==ACTION_BACKUP_TIMED
+	  || act==ACTION_RESTORE)
+	{
+		fprintf(fp, "bytes_sent:%llu\n", b->sentbyte);
+	}
+}
+
+int print_stats_to_file(struct config *conf, const char *client, const char *directory, enum action act)
+{
+	FILE *fp;
+	char *path;
+	time_t now;
+	const char *fname=NULL;
+	struct cntr *p1c=conf->p1cntr;
+	struct cntr *c=conf->cntr;
+
+	if(act==ACTION_BACKUP
+	  ||  act==ACTION_BACKUP_TIMED)
+		fname="backup_stats";
+	else if(act==ACTION_RESTORE)
+		fname="restore_stats";
+	else if(act==ACTION_VERIFY)
+		fname="verify_stats";
+	else
+		return 0;
+
+	now=time(NULL);
+
+	if(!(path=prepend_s(directory, fname)))
+		return -1;
+	if(!(fp=open_file(path, "wb")))
+	{
+		free(path);
+		return -1;
+	}
+	fprintf(fp, "client:%s\n", client);
+	fprintf(fp, "time_start:%lu\n", p1c->start);
+	fprintf(fp, "time_end:%lu\n", now);
+	fprintf(fp, "time_taken:%lu\n", now-p1c->start);
+	quint_print_to_file(fp, "files",
+		c->file,
+		c->file_changed,
+		c->file_same,
+		c->file_deleted,
+		p1c->file,
+		act);
+
+	quint_print_to_file(fp, "files_encrypted",
+		c->enc,
+		c->enc_changed,
+		c->enc_same,
+		c->enc_deleted,
+		p1c->enc,
+		act);
+
+	quint_print_to_file(fp, "meta_data",
+		c->meta,
+		c->meta_changed,
+		c->meta_same,
+		c->meta_deleted,
+		p1c->meta,
+		act);
+
+	quint_print_to_file(fp, "meta_data_encrypted",
+		c->encmeta,
+		c->encmeta_changed,
+		c->encmeta_same,
+		c->encmeta_deleted,
+		p1c->encmeta,
+		act);
+
+	quint_print_to_file(fp, "directories",
+		c->dir,
+		c->dir_changed,
+		c->dir_same,
+		c->dir_deleted,
+		p1c->dir,
+		act);
+
+	quint_print_to_file(fp, "soft_links",
+		c->slink,
+		c->slink_changed,
+		c->slink_same,
+		c->slink_deleted,
+		p1c->slink,
+		act);
+
+	quint_print_to_file(fp, "hard_links",
+		c->hlink,
+		c->hlink_changed,
+		c->hlink_same,
+		c->hlink_deleted,
+		p1c->hlink,
+		act);
+
+	quint_print_to_file(fp, "special_files",
+		c->special,
+		c->special_changed,
+		c->special_same,
+		c->special_deleted,
+		p1c->special,
+		act);
+
+	quint_print_to_file(fp, "efs_files",
+		c->efs,
+		c->efs_changed,
+		c->efs_same,
+		c->efs_deleted,
+		p1c->efs,
+		act);
+
+	quint_print_to_file(fp, "vss_headers",
+		c->vss,
+		c->vss_changed,
+		c->vss_same,
+		c->vss_deleted,
+		p1c->vss,
+		act);
+
+	quint_print_to_file(fp, "vss_headers_encrypted",
+		c->encvss,
+		c->encvss_changed,
+		c->encvss_same,
+		c->encvss_deleted,
+		p1c->encvss,
+		act);
+
+	quint_print_to_file(fp, "vss_footers",
+		c->vss_t,
+		c->vss_t_changed,
+		c->vss_t_same,
+		c->vss_t_deleted,
+		p1c->vss_t,
+		act);
+
+	quint_print_to_file(fp, "vss_footers_encrypted",
+		c->encvss_t,
+		c->encvss_t_changed,
+		c->encvss_t_same,
+		c->encvss_t_deleted,
+		p1c->encvss_t,
+		act);
+
+	quint_print_to_file(fp, "total",
+		c->total,
+		c->total_changed,
+		c->total_same,
+		c->total_deleted,
+		p1c->total,
+		act);
+
+	bottom_part_to_file(fp, p1c, c, act);
+
+	if(close_fp(&fp))
+	{
+		free(path);
+		return -1;
+	}
+	free(path);
+	return 0;
+}
+
+#endif
+
 void print_endcounter(struct cntr *cntr)
 {
-	if(cntr && cntr->gtotal) logc(
+	if(cntr->gtotal) logc(
 #ifdef HAVE_WIN32
-		" %I64u\n\n",
+			" %I64u\n\n",
 #else
-		" %llu\n\n",
+			" %llu\n\n",
 #endif
-		cntr->gtotal);
+			cntr->gtotal);
 }
 
 #ifndef HAVE_WIN32
 void counters_to_str(char *str, size_t len, const char *client, char phase, const char *path, struct config *conf)
 {
 	int l=0;
-	struct cntr *cntr=conf->cntr;
 	struct cntr *p1cntr=conf->p1cntr;
-	if(!cntr || !p1cntr)
-	{
-		*str='\0';
-		return;
-	}
+	struct cntr *cntr=conf->cntr;
 	snprintf(str, len,
 		"%s\t%c\t%c\t%c\t"
+		"%llu/%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu/%llu\t"
+		"%llu/%llu/%llu/%llu/%llu\t"
 		"%llu/%llu/%llu/%llu/%llu\t"
 		"%llu/%llu/%llu/%llu/%llu\t"
 		"%llu/%llu/%llu/%llu/%llu\t"
@@ -498,6 +767,30 @@ void counters_to_str(char *str, size_t len, const char *client, char phase, cons
 			cntr->special_same,
 			cntr->special_deleted,
 			p1cntr->special,
+
+			cntr->vss,
+			cntr->vss_changed,
+			cntr->vss_same,
+			cntr->vss_deleted,
+			p1cntr->vss,
+
+			cntr->encvss,
+			cntr->encvss_changed,
+			cntr->encvss_same,
+			cntr->encvss_deleted,
+			p1cntr->encvss,
+
+			cntr->vss_t,
+			cntr->vss_t_changed,
+			cntr->vss_t_same,
+			cntr->vss_t_deleted,
+			p1cntr->vss_t,
+
+			cntr->encvss_t,
+			cntr->encvss_t_changed,
+			cntr->encvss_t_same,
+			cntr->encvss_t_deleted,
+			p1cntr->encvss_t,
 
 			cntr->gtotal,
 			cntr->gtotal_changed,
@@ -708,6 +1001,34 @@ int str_to_counters(const char *str, char **client, char *status, char *phase, c
 						&(cntr->special_same),
 						&(cntr->special_deleted),
 						&(p1cntr->special)); }
+			else if(*counter_version==COUNTER_VERSION_2
+			  && t==x++) { extract_ul(tok,
+						&(cntr->vss),
+						&(cntr->vss_changed),
+						&(cntr->vss_same),
+						&(cntr->vss_deleted),
+						&(p1cntr->vss)); }
+			else if(*counter_version==COUNTER_VERSION_2
+			  && t==x++) { extract_ul(tok,
+						&(cntr->encvss),
+						&(cntr->encvss_changed),
+						&(cntr->encvss_same),
+						&(cntr->encvss_deleted),
+						&(p1cntr->encvss)); }
+			else if(*counter_version==COUNTER_VERSION_2
+			  && t==x++) { extract_ul(tok,
+						&(cntr->vss_t),
+						&(cntr->vss_t_changed),
+						&(cntr->vss_t_same),
+						&(cntr->vss_t_deleted),
+						&(p1cntr->vss_t)); }
+			else if(*counter_version==COUNTER_VERSION_2
+			  && t==x++) { extract_ul(tok,
+						&(cntr->encvss_t),
+						&(cntr->encvss_t_changed),
+						&(cntr->encvss_t_same),
+						&(cntr->encvss_t_deleted),
+						&(p1cntr->encvss_t)); }
 			else if(t==x++) { extract_ul(tok,
 						&(cntr->gtotal),
 						&(cntr->gtotal_changed),
@@ -754,14 +1075,11 @@ int send_counters(const char *client, struct config *conf)
 #endif
 
 static enum asl_ret recv_counters_func(struct iobuf *rbuf,
-        struct config *conf, void *param)
+	struct config *conf, void *param)
 {
 	if(str_to_counters(rbuf->buf, NULL, NULL, NULL, NULL,
 		conf->p1cntr, conf->cntr, NULL, NULL))
-	{
-		logp("Error when parsing counters from server.\n");
-		return ASL_END_ERROR;
-	}
+			return ASL_END_ERROR;
 	return ASL_END_OK;
 }
 

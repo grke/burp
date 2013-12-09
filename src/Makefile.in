@@ -44,7 +44,7 @@ SRCS = \
 		strlist.c \
 
 OBJS = $(SRCS:.c=.o)
-SUBDIROBJS = server/server.a client/client.a rabin/rabin.a
+SUBDIROBJS = server/server.a client/client.a rabin/rabin.a legacy/legacy.a
 
 # these are the objects that are changed by the .configure process
 EXTRAOBJS = @OBJLIST@
@@ -99,12 +99,12 @@ burp:  Makefile $(OBJS) $(SUBDIROBJS) @WIN32@
 	@echo "Linking $@ ..."
 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -o $@ \
 	$(SUBDIROBJS) $(OBJS) $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
-	  $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS) -lrt
+	  $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS) $(RSYNC_LIBS) -lrt
 
 static-burp: Makefile $(OBJS) $(SUBDIROBJS) @WIN32@
 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -o $@ \
 	$(SUBDIROBJS) $(OBJS) $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
-	   $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS)
+	   $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS) $(RSYNC_LIBS)
 
 Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
 	cd $(topdir) \

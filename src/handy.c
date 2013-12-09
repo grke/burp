@@ -909,6 +909,18 @@ void cmd_to_text(char cmd, char *buf, size_t len)
 			snprintf(buf, len, "Path to a manifest"); break;
 		case CMD_FINGERPRINT:
 			snprintf(buf, len, "Fingerprint part of a signature"); break;
+		// Legacy.
+		case CMD_DATAPTH:
+			snprintf(buf, len, "Path to data on the server"); break;
+		case CMD_VSS:
+			snprintf(buf, len, "Windows VSS header"); break;
+		case CMD_ENC_VSS:
+			snprintf(buf, len, "Encrypted windows VSS header"); break;
+		case CMD_VSS_T:
+			snprintf(buf, len, "Windows VSS footer"); break;
+		case CMD_ENC_VSS_T:
+			snprintf(buf, len, "Encrypted windows VSS footer"); break;
+
 		default:
 			snprintf(buf, len, "----------------"); break;
 	}

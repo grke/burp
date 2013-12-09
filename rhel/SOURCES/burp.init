@@ -1,0 +1,77 @@
+#! /bin/sh
+#
+# burp init file distributed with brup package
+# author: bassu@phi9.com
+#
+# burp 	       Start burp server
+#
+# chkconfig: 2345 08 92
+# description: Burp backup server
+#
+# processname: burp
+# config: /etc/burp/burp-server.conf
+# pidfile: /var/run/burp.server.pid
+
+. /etc/init.d/functions
+
+RETVAL=0
+prog=burp
+burp=${BURP-/usr/sbin/burp}
+pidfile=${PIDFILE-/var/run/burp.server.pid}
+lockfile=${LOCKFILE-/var/lock/subsys/burp}
+conffile=${CONFFILE-/etc/burp/burp-server.conf}
+
+start () {
+    	status -p ${pidfile} ${burp} &>/dev/null && { echo "$prog is already running"; exit 1; }
+	echo -n $"Starting $prog: "
+	daemon --pidfile=${pidfile} ${burp} -c ${conffile}
+	RETVAL=$?
+	echo
+	[ $RETVAL -eq 0 ] && touch ${lockfile}
+}
+stop () {
+	echo -n $"Stopping $prog: "
+	killproc -p ${pidfile} ${prog}
+	RETVAL=$?
+	echo
+	if [ $RETVAL -eq 0 ] ; then
+		rm -f ${lockfile} ${pidfile}
+	fi
+}
+
+restart () {
+        stop
+        start
+}
+
+reload () {
+	echo -n $"Reloading $prog: "
+	killproc -p ${pidfile} ${prog} -HUP
+	RETVAL=$?
+	echo
+}
+
+case "$1" in
+  start)
+	start
+	;;
+  stop)
+	stop
+	;;
+  status)
+	status -p ${pidfile} ${burp}
+	RETVAL=$?
+	;;
+  restart)
+	restart
+	;;
+  reload)
+	reload
+	;;
+  *)
+	echo $"Usage: $0 {start|stop|status|restart|reload}"
+	RETVAL=2
+        ;;
+esac
+
+exit $RETVAL

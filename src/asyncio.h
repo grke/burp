@@ -27,8 +27,11 @@ extern int async_read_quick(struct iobuf *rbuf);
 extern int async_read(struct iobuf *rbuf);
 extern int async_write(struct iobuf *wbuf);
 
+extern int async_write_strn(char wcmd, const char *wsrc, size_t len);
 extern int async_write_str(char wcmd, const char *wsrc);
 extern int async_read_expect(char cmd, const char *expect);
+
+extern int async_append_all_to_write_buffer(struct iobuf *wbuf);
 
 enum asl_ret
 {

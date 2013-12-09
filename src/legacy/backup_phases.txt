@@ -1,0 +1,15 @@
+backup_phase1_client: Scan the client filesystem and send stats to the server.
+backup_phase1_server: Receive the stats from the client.
+
+backup_phase2_server: Request and receive changes from the client and create
+	an unchanged list and a changed list.
+backup_phase2_client: Send the changes that the server requests. The work of
+	the client is now finished.
+
+backup_phase3_server: Generate the new manifest list for the backup out of
+	the unchanged list and the changed list.
+
+backup_phase4_server: Finish off the backup by jiggling the received data
+	around and putting everything in the correct place. Need to
+	generate reverse deltas in order to save space for the previous backup
+	(unless hardlinked_archive is turned on).

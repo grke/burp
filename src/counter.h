@@ -1,5 +1,5 @@
-#ifndef _COUNTER_ROUTINES
-#define _COUNTER_ROUTINES
+#ifndef _COUNTER_H
+#define _COUNTER_H
 
 #define COUNTER_VERSION_1	'1'
 #define COUNTER_VERSION_2	'2'
@@ -63,6 +63,26 @@ struct cntr
 	unsigned long long efs_changed;
 	unsigned long long efs_deleted;
 
+	unsigned long long vss;
+	unsigned long long vss_same;
+	unsigned long long vss_changed;
+	unsigned long long vss_deleted;
+
+	unsigned long long encvss;
+	unsigned long long encvss_same;
+	unsigned long long encvss_changed;
+	unsigned long long encvss_deleted;
+
+	unsigned long long vss_t;
+	unsigned long long vss_t_same;
+	unsigned long long vss_t_changed;
+	unsigned long long vss_t_deleted;
+
+	unsigned long long encvss_t;
+	unsigned long long encvss_t_same;
+	unsigned long long encvss_t_changed;
+	unsigned long long encvss_t_deleted;
+
 	unsigned long long warning;
 	unsigned long long byte;
 	unsigned long long recvbyte;
@@ -71,7 +91,9 @@ struct cntr
 	time_t start;
 };
 
+extern const char *bytes_to_human(unsigned long long counter);
 extern void print_filecounters(struct config *conf, enum action act);
+extern int print_stats_to_file(struct config *conf, const char *client, const char *directory, enum action act);
 extern void print_endcounter(struct cntr *c);
 extern void do_filecounter(struct cntr *c, char ch, int print);
 extern void do_filecounter_same(struct cntr *c, char ch);
@@ -81,7 +103,6 @@ extern void do_filecounter_bytes(struct cntr *c, unsigned long long bytes);
 extern void do_filecounter_sentbytes(struct cntr *c, unsigned long long bytes);
 extern void do_filecounter_recvbytes(struct cntr *c, unsigned long long bytes);
 extern void reset_filecounters(struct config *conf, time_t t);
-extern const char *bytes_to_human(unsigned long long counter);
 
 #ifndef HAVE_WIN32
 extern void counters_to_str(char *str, size_t len, const char *client,

@@ -138,8 +138,6 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	int ca_ret=0;
 	SSL *ssl=NULL;
 	BIO *sbio=NULL;
-	char *client=NULL;
-	char *cversion=NULL;
 	struct config conf;
 	struct config cconf;
 	struct cntr p1cntr;
@@ -182,8 +180,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	}
 	if(async_init(*cfd, ssl, &conf, 0))
 		goto end;
-	if(authorise_server(&conf, &client, &cversion, &cconf)
-		|| !client || !*client)
+	if(authorise_server(&conf, &cconf) || !cconf.cname || !*(cconf.cname))
 	{
 		// Add an annoying delay in case they are tempted to
 		// try repeatedly.
@@ -194,10 +191,10 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 
 	/* At this point, the client might want to get a new certificate
 	   signed. Clients on 1.3.2 or newer can do this. */
-	if((ca_ret=ca_server_maybe_sign_client_cert(client, cversion, &conf))<0)
+	if((ca_ret=ca_server_maybe_sign_client_cert(&conf, &cconf))<0)
 	{
 		logp("Error signing client certificate request for %s\n",
-			client);
+			cconf.cname);
 		goto end;
 	}
 	else if(ca_ret>0)
@@ -207,7 +204,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 		// so that the client can start again with a new
 		// connection and its new certificates.
 		logp("Signed and returned client certificate request for %s\n",
-			client);
+			cconf.cname);
 		ret=0;
 		goto end;
 	}
@@ -226,8 +223,6 @@ end:
 	*cfd=-1;
 	async_free(); // this closes cfd for us.
 	logp("exit child\n");
-	if(client) free(client);
-	if(cversion) free(cversion);
 	config_free(&conf);
 	config_free(&cconf);
 	return ret;

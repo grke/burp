@@ -324,7 +324,15 @@ static int load_data_from_disk(struct config *conf, struct cstat ***clist, int *
 		(*clist)[q]->conf_mtime=statp.st_mtime;
 
 		config_init(&cconf);
-		if(config_set_client_global(conf, &cconf, (*clist)[q]->name)
+		if(cconf.cname) free(cconf.cname);
+		if(!(cconf.cname=strdup((*clist)[q]->name)))
+		{
+			log_out_of_memory(__FUNCTION__);
+			config_free(&cconf);
+			ret=-1;
+			break;
+		}
+		if(config_set_client_global(conf, &cconf)
 		  || config_load((*clist)[q]->conffile, &cconf, 0))
 		{
 			config_free(&cconf);

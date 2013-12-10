@@ -184,23 +184,23 @@ static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, str
 			int r=0;
 			int rcok=0;
 			struct config *sconf=NULL;
-			const char *orig_client=NULL;
-			orig_client=rbuf->buf+strlen("orig_client=");
 
 			if(!(sconf=(struct config *)
-				malloc(sizeof(struct config))))
+				malloc(sizeof(struct config)))
+			  || !(sconf->cname=strdup(
+				rbuf->buf+strlen("orig_client="))))
 			{
 				log_out_of_memory(__FUNCTION__);
 				goto end;
 			}
 			logp("Client wants to switch to client: %s\n",
-				orig_client);
-			if(config_load_client(conf, sconf, orig_client))
+				sconf->cname);
+			if(config_load_client(conf, sconf))
 			{
 				char msg[256]="";
 				snprintf(msg, sizeof(msg),
 				  "Could not load alternate config: %s",
-				  orig_client);
+				  sconf->cname);
 				log_and_send(msg);
 				goto end;
 			}
@@ -221,7 +221,7 @@ static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, str
 				char msg[256]="";
 				snprintf(msg, sizeof(msg),
 				  "Access to client is not allowed: %s",
-					orig_client);
+					sconf->cname);
 				log_and_send(msg);
 				goto end;
 			}
@@ -229,15 +229,14 @@ static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, str
 			cconf->restore_path=NULL;
 			config_free(cconf);
 			memcpy(cconf, sconf, sizeof(struct config));
+			free(sconf);
 			sconf=NULL;
 			cconf->restore_client=cconf->cname;
-			if(!(cconf->cname=strdup(orig_client))
-			  || !(cconf->orig_client=strdup(orig_client)))
+			if(!(cconf->orig_client=strdup(cconf->cname)))
 			{
 				log_and_send_oom(__FUNCTION__);
 				goto end;
 			}
-			orig_client=NULL;
 
 			// If this started out as a server-initiated
 			// restore, need to load the restore file

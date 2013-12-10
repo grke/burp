@@ -209,8 +209,7 @@ extern void config_init(struct config *conf);
 extern int config_load(const char *config_path, struct config *conf,
 	uint8_t loadall);
 extern void config_free(struct config *conf);
-extern int config_set_client_global(struct config *conf, struct config *cconf,
-	const char *client);
+extern int config_set_client_global(struct config *conf, struct config *cconf);
 
 extern int is_subdir(const char *dir, const char *sub);
 extern int pathcmp(const char *a, const char *b);
@@ -218,7 +217,6 @@ extern int config_get_pair(char buf[], char **field, char **value);
 extern int parse_incexcs_buf(struct config *conf, const char *incexc);
 extern int log_incexcs_buf(const char *incexc);
 extern int parse_incexcs_path(struct config *conf, const char *path);
-extern int config_load_client(struct config *conf, struct config *cconf,
-	const char *client);
+extern int config_load_client(struct config *conf, struct config *cconf);
 
 #endif

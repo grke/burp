@@ -82,7 +82,7 @@ end:
 }
 
 // Used by the legacy stuff.
-int open_log(const char *realworking, struct config *conf)
+int open_log(const char *realworking, struct config *cconf)
 {
 	char *logpath=NULL;
 
@@ -91,7 +91,7 @@ int open_log(const char *realworking, struct config *conf)
 		log_and_send_oom(__FUNCTION__);
 		return -1;
 	}
-	if(set_logfp(logpath, conf))
+	if(set_logfp(logpath, cconf))
 	{
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
@@ -102,13 +102,12 @@ int open_log(const char *realworking, struct config *conf)
 	}
 	free(logpath);
 
-	logp("Client version: %s\n", conf->peer_version?:"");
+	logp("Client version: %s\n", cconf->peer_version?:"");
 	// Make sure a warning appears in the backup log.
 	// The client will already have been sent a message with logw.
 	// This time, prevent it sending a logw to the client by specifying
 	// NULL for cntr.
-	if(conf->version_warn)
-		version_warn(NULL, conf->cname, conf->peer_version);
+	if(cconf->version_warn) version_warn(NULL, cconf);
 
 	return 0;
 }

@@ -36,6 +36,8 @@ struct config
 	// If the client tells us it is windows, this is set on the server side.
 	uint8_t client_is_windows;
 
+	char *peer_version;
+
 // server options
 	char *directory;
 	char *timestamp_format;
@@ -58,7 +60,7 @@ struct config
 	char *manual_delete;
 
 // client options
-	char *cname;
+	char *cname; // set on the server when client connects
 	char *password; // also a clientconfdir option
 	char *passwd; // also a clientconfdir option
 	char *server;

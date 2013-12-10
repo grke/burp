@@ -92,6 +92,7 @@ void config_free(struct config *conf)
 	if(conf->configfile) free(conf->configfile);
 	if(conf->clientconfdir) free(conf->clientconfdir);
 	if(conf->cname) free(conf->cname);
+	if(conf->peer_version) free(conf->peer_version);
 	if(conf->directory) free(conf->directory);
 	if(conf->timestamp_format) free(conf->timestamp_format);
 	if(conf->ca_conf) free(conf->ca_conf);

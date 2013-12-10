@@ -479,7 +479,7 @@ void reuseaddr(int fd)
 
 #ifndef HAVE_WIN32
 
-void write_status(const char *client, char phase, const char *path, struct config *conf)
+void write_status(char phase, const char *path, struct config *conf)
 {
 	char *w=NULL;
 	time_t now=0;
@@ -487,7 +487,7 @@ void write_status(const char *client, char phase, const char *path, struct confi
 	static char wbuf[1024]="";
 	static time_t lasttime=0;
 
-	if(!client) return;
+	if(!conf->cname) return;
 
 	// Only update every 2 seconds.
 	now=time(NULL);
@@ -501,7 +501,7 @@ void write_status(const char *client, char phase, const char *path, struct confi
 	}
 	lasttime=now;
 
-	counters_to_str(wbuf, sizeof(wbuf), client, phase, path, conf);
+	counters_to_str(wbuf, sizeof(wbuf), phase, path, conf);
 
 	if(status_wfd<0) return;
 
@@ -717,9 +717,11 @@ char *comp_level(struct config *conf)
 }
 
 /* Function based on src/lib/priv.c from bacula. */
-int chuser_and_or_chgrp(const char *user, const char *group)
+int chuser_and_or_chgrp(struct config *conf)
 {
 #if defined(HAVE_PWD_H) && defined(HAVE_GRP_H)
+	char *user=conf->user;
+	char *group=conf->group;
 	struct passwd *passw = NULL;
 	struct group *grp = NULL;
 	gid_t gid;
@@ -1223,4 +1225,9 @@ int recursive_delete(const char *d, const char *file, uint8_t delfiles)
 	int32_t name_max;
 	get_max(&name_max, _PC_NAME_MAX);
 	return do_recursive_delete(d, file, delfiles, name_max);
+}
+
+int strncmp_w(const char *s1, const char *s2)
+{
+	return strncmp(s1, s2, strlen(s2));
 }

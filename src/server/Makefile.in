@@ -25,16 +25,19 @@ SRCS = \
 	backup.c	\
 	ca.c		\
 	champ_chooser.c	\
-	chld.c		\
+	child.c		\
+	chlds.c		\
 	current_backups.c \
 	delete.c	\
 	dpth.c		\
+	extra_comms.c	\
 	hash.c		\
 	list.c		\
 	main.c		\
 	manio.c		\
 	phase3.c	\
 	restore.c	\
+	run_action.c	\
 	sdirs.c		\
 	status_client_ncurses.c	\
 	status_server.c	\

@@ -104,7 +104,7 @@ end:
 static enum asl_ret csr_client_func(struct iobuf *rbuf,
         struct config *conf, void *param)
 {
-	if(strncmp(rbuf->buf, "csr ok:", strlen("csr ok:")))
+	if(strncmp_w(rbuf->buf, "csr ok:"))
 	{
 		iobuf_log_unexpected(rbuf, __FUNCTION__);
 		return ASL_END_ERROR;

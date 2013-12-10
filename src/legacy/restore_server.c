@@ -1,6 +1,7 @@
 #include "include.h"
 
 #include "../server/current_backups.h"
+#include "../server/sdirs.h"
 
 #include <librsync.h>
 
@@ -411,10 +412,10 @@ static int restore_file(struct bu *arr, int a, int i, const char *datapth, const
 	return 0;
 }
 
-static int restore_sbufl(struct sbufl *sb, struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, enum action act, const char *client, char status, struct config *cconf)
+static int restore_sbufl(struct sbufl *sb, struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, enum action act, char status, struct config *cconf)
 {
 	//logp("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path);
-	write_status(client, status, sb->path, cconf);
+	write_status(status, sb->path, cconf);
 
 	if((sb->datapth && async_write_str(CMD_DATAPTH, sb->datapth))
 	  || async_write_strn(CMD_ATTRIBS, sb->statbuf, sb->slen))
@@ -491,7 +492,7 @@ end:
 	return ret;
 }
 
-static int restore_ent(const char *client, struct sbufl *sb, struct sbufl ***sblist, int *scount, struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, enum action act, char status, struct config *cconf)
+static int restore_ent(struct sbufl *sb, struct sbufl ***sblist, int *scount, struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, enum action act, char status, struct config *cconf)
 {
 	int s=0;
 	int ret=0;
@@ -510,7 +511,7 @@ static int restore_ent(const char *client, struct sbufl *sb, struct sbufl ***sbl
 			// Can now restore sblist[s] because nothing else is
 			// fiddling in a subdirectory.
 			if(restore_sbufl((*sblist)[s], arr, a, i, tmppath1,
-				tmppath2, act, client, status,
+				tmppath2, act, status,
 				cconf))
 			{
 				ret=-1;
@@ -538,7 +539,7 @@ static int restore_ent(const char *client, struct sbufl *sb, struct sbufl ***sbl
 		init_sbufl(sb);
 	}
 	else if(!ret && restore_sbufl(sb, arr, a, i, tmppath1, tmppath2, act,
-		client, status, cconf))
+		status, cconf))
 			ret=-1;
 	return ret;
 }
@@ -547,7 +548,7 @@ static int srestore_matches(struct strlist *s, const char *path)
 {
 	int r=0;
 	if(!s->flag) return 0; // Do not know how to do excludes yet.
-	if((r=strncmp(s->path, path, strlen(s->path)))) return 0; // no match
+	if((r=strncmp_w(path, s->path))) return 0; // no match
 	if(!r) return 1; // exact match
 	if(*(path+strlen(s->path)+1)=='/')
 		return 1; // matched directory contents
@@ -571,7 +572,7 @@ static int check_srestore(struct config *cconf, const char *path)
 
 // a = length of struct bu array
 // i = position to restore from
-static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, regex_t *regex, int srestore, enum action act, const char *client, char **dir_for_notify, struct config *cconf)
+static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, regex_t *regex, int srestore, enum action act, char **dir_for_notify, struct config *cconf)
 {
 	int ret=0;
 	gzFile zp=NULL;
@@ -666,10 +667,7 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 
 	if(cconf->send_client_counters)
 	{
-		if(send_counters(client, cconf))
-		{
-			ret=-1;
-		}
+		if(send_counters(cconf)) ret=-1;
 	}
 
 	// Now, do the actual restore.
@@ -737,8 +735,7 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 				if((!srestore
 				    || check_srestore(cconf, sb.path))
 				  && check_regex(regex, sb.path)
-				  && restore_ent(client,
-					&sb, &sblist, &scount,
+				  && restore_ent(&sb, &sblist, &scount,
 					arr, a, i, tmppath1, tmppath2,
 					act, status, cconf))
 				{
@@ -753,8 +750,7 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 		if(!ret) for(s=scount-1; s>=0; s--)
 		{
 			if(restore_sbufl(sblist[s], arr, a, i,
-				tmppath1, tmppath2, act, client, status,
-				cconf))
+				tmppath1, tmppath2, act, status, cconf))
 			{
 				ret=-1;
 				break;
@@ -767,7 +763,7 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 		//print_endcounter(cconf->cntr);
 		print_filecounters(cconf, act);
 
-		print_stats_to_file(cconf, client, arr[i].path, act);
+		print_stats_to_file(cconf, arr[i].path, act);
 
 		reset_filecounters(cconf, time(NULL));
 	}
@@ -780,7 +776,8 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 	return ret;
 }
 
-int do_restore_server(const char *basedir, enum action act, const char *client, int srestore, char **dir_for_notify, struct cntr *p1cntr, struct cntr *cntr, struct config *cconf)
+int do_restore_server(struct sdirs *sdirs, struct config *cconf,
+	enum action act, int srestore, char **dir_for_notify)
 {
 	int a=0;
 	int i=0;
@@ -796,15 +793,15 @@ int do_restore_server(const char *basedir, enum action act, const char *client, 
 
 	if(compile_regex(&regex, cconf->regex)) return -1;
 
-	if(!(tmppath1=prepend_s(basedir, "tmp1"))
-	  || !(tmppath2=prepend_s(basedir, "tmp2")))
+	if(!(tmppath1=prepend_s(sdirs->client, "tmp1"))
+	  || !(tmppath2=prepend_s(sdirs->client, "tmp2")))
 	{
 		if(tmppath1) free(tmppath1);
 		if(regex) { regfree(regex); free(regex); }
 		return -1;
 	}
 
-	if(get_current_backups(basedir, &arr, &a, 1))
+	if(get_current_backups(sdirs, &arr, &a, 1))
 	{
 		if(tmppath1) free(tmppath1);
 		if(tmppath2) free(tmppath2);
@@ -816,7 +813,7 @@ int do_restore_server(const char *basedir, enum action act, const char *client, 
 	{
 		// No backup specified, do the most recent.
 		ret=restore_manifest(arr, a, a-1,
-			tmppath1, tmppath2, regex, srestore, act, client,
+			tmppath1, tmppath2, regex, srestore, act,
 			dir_for_notify, cconf);
 		found=TRUE;
 	}
@@ -830,7 +827,7 @@ int do_restore_server(const char *basedir, enum action act, const char *client, 
 			//logp("got: %s\n", arr[i].path);
 			ret|=restore_manifest(arr, a, i,
 				tmppath1, tmppath2, regex,
-				srestore, act, client, dir_for_notify,
+				srestore, act, dir_for_notify,
 				cconf);
 			break;
 		}

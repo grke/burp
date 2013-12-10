@@ -9,62 +9,110 @@ struct sdirs *sdirs_alloc(void)
 	return NULL;
 }
 
-int sdirs_init(struct sdirs *sdirs, struct config *conf, const char *client)
+static int do_lock_dirs(struct sdirs *sdirs, struct config *conf)
 {
-	int ret=0;
+	int ret=-1;
 	char *lockbase=NULL;
-
-	if(!conf->directory)
-	{
-		logp("conf->directory unset in %s\n", __FUNCTION__);
-		goto error;
-	}
-	if(!conf->dedup_group)
-	{
-		logp("conf->dedup_group unset in %s\n", __FUNCTION__);
-		goto error;
-	}
-
-	if(!(sdirs->base=strdup(conf->directory))
-	  || !(sdirs->dedup=prepend_s(sdirs->base, conf->dedup_group))
-	  || !(sdirs->data=prepend_s(sdirs->dedup, "data"))
-	  || !(sdirs->clients=prepend_s(sdirs->dedup, "clients"))
-	  || !(sdirs->client=prepend_s(sdirs->clients, client)))
-		goto error;
-
-	if(!(sdirs->working=prepend_s(sdirs->client, "working"))
-	  || !(sdirs->finishing=prepend_s(sdirs->client, "finishing"))
-	  || !(sdirs->current=prepend_s(sdirs->client, "current")))
-		goto error;
-
-	if(!(sdirs->timestamp=prepend_s(sdirs->working, "timestamp"))
-	  || !(sdirs->changed=prepend_s(sdirs->working, "changed"))
-	  || !(sdirs->unchanged=prepend_s(sdirs->working, "unchanged"))
-	  || !(sdirs->cmanifest=prepend_s(sdirs->current, "manifest")))
-		goto error;
-
 	if(conf->client_lockdir)
 	{
 		if(!(sdirs->lock=strdup(conf->client_lockdir))
-		  || !(lockbase=prepend_s(sdirs->lock, client)))
-			goto error;
+		  || !(lockbase=prepend_s(sdirs->lock, conf->cname)))
+			goto end;
 	}
 	else
 	{
 		if(!(sdirs->lock=strdup(sdirs->client))
 		  || !(lockbase=strdup(sdirs->client)))
-			goto error;
+			goto end;
 	}
 	if(!(sdirs->lockfile=prepend_s(lockbase, "lockfile")))
-		goto error;
-
-	goto end;
-error:
-	sdirs_free(sdirs);
-	ret=-1;
+		goto end;
+	ret=0;
 end:
 	if(lockbase) free(lockbase);
 	return ret;
+}
+
+// Maybe should be in a legacy directory.
+static int do_legacy_dirs(struct sdirs *sdirs, struct config *conf)
+{
+	if(!(sdirs->client=prepend_s(sdirs->base, conf->cname))
+	  || !(sdirs->working=prepend_s(sdirs->client, "working"))
+	  || !(sdirs->finishing=prepend_s(sdirs->client, "finishing"))
+	  || !(sdirs->current=prepend_s(sdirs->client, "current"))
+	  || !(sdirs->currentdata=prepend_s(sdirs->current, "data"))
+	  || !(sdirs->timestamp=prepend_s(sdirs->working, "timestamp"))
+	  || !(sdirs->manifest=prepend_s(sdirs->working, "manifest.gz"))
+	  || !(sdirs->datadirtmp=prepend_s(sdirs->working, "data.tmp"))
+	  || !(sdirs->phase1data=prepend_s(sdirs->working, "phase1.gz"))
+	  || !(sdirs->phase2data=prepend_s(sdirs->working, "phase2"))
+	  || !(sdirs->unchangeddata=prepend_s(sdirs->working, "unchanged"))
+	  || !(sdirs->unchangeddata=prepend_s(sdirs->working, "unchanged"))
+	  || !(sdirs->cmanifest=prepend_s(sdirs->current, "manifest.gz"))
+	  || !(sdirs->cincexc=prepend_s(sdirs->current, "incexc"))
+	  || !(sdirs->deltmppath=prepend_s(sdirs->working, "deltmppath")))
+		return -1;
+	return 0;
+}
+
+static int do_v2_dirs(struct sdirs *sdirs, struct config *conf)
+{
+	if(!conf->dedup_group)
+	{
+		logp("conf->dedup_group unset in %s\n", __FUNCTION__);
+		return -1;
+	}
+	if(!(sdirs->dedup=prepend_s(sdirs->base, conf->dedup_group))
+	  || !(sdirs->data=prepend_s(sdirs->dedup, "data"))
+	  || !(sdirs->clients=prepend_s(sdirs->dedup, "clients"))
+	  || !(sdirs->client=prepend_s(sdirs->clients, conf->cname))
+	  || !(sdirs->working=prepend_s(sdirs->client, "working"))
+	  || !(sdirs->finishing=prepend_s(sdirs->client, "finishing"))
+	  || !(sdirs->current=prepend_s(sdirs->client, "current"))
+	  || !(sdirs->timestamp=prepend_s(sdirs->working, "timestamp"))
+	  || !(sdirs->changed=prepend_s(sdirs->working, "changed"))
+	  || !(sdirs->unchanged=prepend_s(sdirs->working, "unchanged"))
+	  || !(sdirs->cmanifest=prepend_s(sdirs->current, "manifest")))
+		return -1;
+	return 0;
+}
+
+static int sdirs_do_init(struct sdirs *sdirs, struct config *conf, int legacy)
+{
+	if(!conf->directory)
+	{
+		logp("conf->directory unset in %s\n", __FUNCTION__);
+		goto error;
+	}
+
+	if(!(sdirs->base=strdup(conf->directory)))
+		goto error;
+
+	if(legacy)
+	{
+		if(do_legacy_dirs(sdirs, conf)) goto error;
+	}
+	else
+	{
+		if(do_v2_dirs(sdirs, conf)) goto error;
+	}
+
+	if(do_lock_dirs(sdirs, conf)) goto error;
+
+	return 0;
+error:
+	sdirs_free(sdirs);
+	return -1;
+}
+
+int sdirs_init(struct sdirs *sdirs, struct config *conf)
+{
+	return sdirs_do_init(sdirs, conf, 0 /* not legacy */);
+}
+
+int sdirs_init_legacy(struct sdirs *sdirs, struct config *conf)
+{
+	return sdirs_do_init(sdirs, conf, 1 /* legacy */);
 }
 
 void sdirs_free(struct sdirs *sdirs)
@@ -88,6 +136,16 @@ void sdirs_free(struct sdirs *sdirs)
 
         if(sdirs->lock) free(sdirs->lock);
         if(sdirs->lockfile) free(sdirs->lockfile);
+
+	// Legacy directories
+	if(sdirs->currentdata) free(sdirs->currentdata);
+	if(sdirs->manifest) free(sdirs->manifest);
+	if(sdirs->datadirtmp) free(sdirs->datadirtmp);
+	if(sdirs->phase1data) free(sdirs->phase1data);
+	if(sdirs->phase2data) free(sdirs->phase2data);
+	if(sdirs->unchangeddata) free(sdirs->unchangeddata);
+	if(sdirs->cincexc) free(sdirs->cincexc);
+	if(sdirs->deltmppath) free(sdirs->deltmppath);
 
 	free(sdirs);
 	sdirs=NULL;

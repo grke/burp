@@ -81,7 +81,8 @@ end:
 	return ret;
 }
 
-static int open_log(const char *realworking, const char *client, const char *cversion, struct config *conf)
+// Used by the legacy stuff.
+int open_log(const char *realworking, struct config *conf)
 {
 	char *logpath=NULL;
 
@@ -101,13 +102,13 @@ static int open_log(const char *realworking, const char *client, const char *cve
 	}
 	free(logpath);
 
-	logp("Client version: %s\n", cversion?:"");
+	logp("Client version: %s\n", conf->peer_version?:"");
 	// Make sure a warning appears in the backup log.
 	// The client will already have been sent a message with logw.
 	// This time, prevent it sending a logw to the client by specifying
 	// NULL for cntr.
 	if(conf->version_warn)
-		version_warn(NULL, client, cversion);
+		version_warn(NULL, conf->cname, conf->peer_version);
 
 	return 0;
 }
@@ -788,7 +789,7 @@ static void dump_slist(struct slist *slist, const char *msg)
 }
 */
 
-static int backup_server(struct sdirs *sdirs, const char *client, const char *manifest_dir, struct config *conf)
+static int backup_server(struct sdirs *sdirs, const char *manifest_dir, struct config *conf)
 {
 	int ret=-1;
 	int scan_end=0;
@@ -936,7 +937,7 @@ static int clean_rubble(struct sdirs *sdirs)
 	return 0;
 }
 
-int do_backup_server(struct sdirs *sdirs, struct config *cconf, const char *client, const char *cversion, const char *incexc)
+int do_backup_server(struct sdirs *sdirs, struct config *cconf, const char *incexc)
 {
 	int ret=0;
 	char msg[256]="";
@@ -948,7 +949,7 @@ int do_backup_server(struct sdirs *sdirs, struct config *cconf, const char *clie
 
 	logp("in do_backup_server\n");
 
-	if(get_new_timestamp(cconf, sdirs->client, tstmp, sizeof(tstmp)))
+	if(get_new_timestamp(sdirs, cconf, tstmp, sizeof(tstmp)))
 		goto error;
 	if(!(realworking=prepend_s(sdirs->client, tstmp))
 	 || !(manifest_dir=prepend_s(realworking, "manifest")))
@@ -980,7 +981,7 @@ int do_backup_server(struct sdirs *sdirs, struct config *cconf, const char *clie
 		unlink(sdirs->working);
 		goto error;
 	}
-	else if(open_log(realworking, client, cversion, cconf))
+	else if(open_log(realworking, cconf))
 	{
 		goto error;
 	}
@@ -998,7 +999,7 @@ int do_backup_server(struct sdirs *sdirs, struct config *cconf, const char *clie
 		goto error;
 	}
 
-	if(backup_server(sdirs, client, manifest_dir, cconf))
+	if(backup_server(sdirs, manifest_dir, cconf))
 	{
 		logp("error in backup\n");
 		goto error;

@@ -93,7 +93,8 @@ struct cntr
 
 extern const char *bytes_to_human(unsigned long long counter);
 extern void print_filecounters(struct config *conf, enum action act);
-extern int print_stats_to_file(struct config *conf, const char *client, const char *directory, enum action act);
+extern int print_stats_to_file(struct config *conf,
+	const char *directory, enum action act);
 extern void print_endcounter(struct cntr *c);
 extern void do_filecounter(struct cntr *c, char ch, int print);
 extern void do_filecounter_same(struct cntr *c, char ch);
@@ -105,9 +106,9 @@ extern void do_filecounter_recvbytes(struct cntr *c, unsigned long long bytes);
 extern void reset_filecounters(struct config *conf, time_t t);
 
 #ifndef HAVE_WIN32
-extern void counters_to_str(char *str, size_t len, const char *client,
+extern void counters_to_str(char *str, size_t len,
 	char phase, const char *path, struct config *conf);
-extern int send_counters(const char *client, struct config *conf);
+extern int send_counters(struct config *conf);
 #endif
 
 extern int str_to_counters(const char *str, char **client, char *status,

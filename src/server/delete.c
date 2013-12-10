@@ -1,6 +1,7 @@
 #include "include.h"
 
-int do_delete_server(const char *basedir, const char *backup, const char *client, struct config *conf)
+int do_delete_server(struct sdirs *sdirs, struct config *conf,
+	const char *backup)
 {
 	int a=0;
 	int i=0;
@@ -11,12 +12,12 @@ int do_delete_server(const char *basedir, const char *backup, const char *client
 
 	logp("in do_delete\n");
 
-	if(get_current_backups(basedir, &arr, &a, 1))
+	if(get_current_backups(sdirs, &arr, &a, 1))
 	{
 		return -1;
 	}
 
-	write_status(client, STATUS_DELETING, NULL, conf);
+	write_status(STATUS_DELETING, NULL, conf);
 
 	if(backup && *backup) index=strtoul(backup, NULL, 10);
 
@@ -32,8 +33,8 @@ int do_delete_server(const char *basedir, const char *backup, const char *client
 				{
 					found=1;
 					async_write_str(CMD_GEN, "ok");
-					if(delete_backup(basedir,
-						arr, a, i, client))
+					if(delete_backup(sdirs, conf,
+						arr, a, i))
 					{
 						free_current_backups(&arr, a);
 						ret=-1;

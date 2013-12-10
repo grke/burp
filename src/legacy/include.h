@@ -30,6 +30,7 @@
 #include "restore_client.h"
 #include "restore_server.h"
 #include "rs_buf.h"
+#include "run_action_server.h"
 #include "sbuf.h"
 #include "ssl.h"
 #include "xattr.h"

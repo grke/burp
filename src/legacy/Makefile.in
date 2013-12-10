@@ -42,9 +42,9 @@ SRCS = \
 	restore_client.c \
 	restore_server.c \
 	rs_buf.c \
+	run_action_server.c \
 	sbuf.c \
 	ssl.c \
-	vss_strip.c \
 	xattr.c \
 	zlibio.c \
 

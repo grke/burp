@@ -4,7 +4,7 @@
 #include <math.h>
 #include <dirent.h>
 
-int recursive_hardlink(const char *src, const char *dst, const char *client, struct config *conf)
+int recursive_hardlink(const char *src, const char *dst, struct config *conf)
 {
 	int n=-1;
 	int ret=0;
@@ -47,8 +47,7 @@ int recursive_hardlink(const char *src, const char *dst, const char *client, str
 // Faster evaluation on most systems.
 		if(dir[n]->d_type==DT_DIR)
 		{
-			if(recursive_hardlink(fullpatha, fullpathb, client,
-				conf))
+			if(recursive_hardlink(fullpatha, fullpathb, conf))
 			{
 				free(fullpatha);
 				free(fullpathb);
@@ -65,8 +64,7 @@ int recursive_hardlink(const char *src, const char *dst, const char *client, str
 		}
 		else if(S_ISDIR(statp.st_mode))
 		{
-			if(recursive_hardlink(fullpatha, fullpathb, client,
-				conf))
+			if(recursive_hardlink(fullpatha, fullpathb, conf))
 			{
 				free(fullpatha);
 				free(fullpathb);
@@ -76,8 +74,7 @@ int recursive_hardlink(const char *src, const char *dst, const char *client, str
 		else
 		{
 			//logp("hardlinking %s to %s\n", fullpathb, fullpatha);
-			write_status(client, STATUS_SHUFFLING, fullpathb,
-				conf);
+			write_status(STATUS_SHUFFLING, fullpathb, conf);
 			if(do_link(fullpatha, fullpathb, &statp, conf,
 				0 /* do not overwrite target */))
 			{
@@ -149,11 +146,11 @@ void free_current_backups(struct bu **arr, int a)
 	*arr=NULL;
 }
 
-static int get_link(const char *basedir, const char *lnk, char real[], size_t r)
+static int get_link(const char *dir, const char *lnk, char real[], size_t r)
 {
 	int len=0;
 	char *tmp=NULL;
-	if(!(tmp=prepend_s(basedir, lnk)))
+	if(!(tmp=prepend_s(dir, lnk)))
 	{
 		log_out_of_memory(__FUNCTION__);
 		return -1;
@@ -164,7 +161,7 @@ static int get_link(const char *basedir, const char *lnk, char real[], size_t r)
 	return 0;
 }
 
-int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
+int get_current_backups_str(const char *dir, struct bu **arr, int *a, int log)
 {
 	int i=0;
 	int j=0;
@@ -178,10 +175,10 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 
 	// Find out what certain directories really are, if they exist,
 	// so they can be excluded.
-	if(get_link(basedir, "working", realwork, sizeof(realwork))
-	  || get_link(basedir, "finishing", realfinishing, sizeof(realfinishing)))
+	if(get_link(dir, "working", realwork, sizeof(realwork))
+	  || get_link(dir, "finishing", realfinishing, sizeof(realfinishing)))
 			return -1;
-	if(!(d=opendir(basedir)))
+	if(!(d=opendir(dir)))
 	{
 		if(log) log_and_send("could not open backup directory");
 		return -1;
@@ -204,7 +201,7 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 			continue;
 		if(!(basename=prepend("",
 			dp->d_name, strlen(dp->d_name), ""))
-		 || !(fullpath=prepend_s(basedir, basename))
+		 || !(fullpath=prepend_s(dir, basename))
 		 || !(timestamp=prepend_s(fullpath, "timestamp"))
 		 || !(hlinkedpath=prepend_s(fullpath, "hardlinked")))
 		{
@@ -281,7 +278,13 @@ int get_current_backups(const char *basedir, struct bu **arr, int *a, int log)
 	return ret;
 }
 
-int get_new_timestamp(struct config *cconf, const char *basedir, char *buf, size_t s)
+int get_current_backups(struct sdirs *sdirs, struct bu **arr, int *a, int log)
+{
+	return get_current_backups_str(sdirs->client, arr, a, log);
+}
+
+int get_new_timestamp(struct sdirs *sdirs, struct config *cconf,
+	char *buf, size_t s)
 {
 	int a=0;
 	time_t t=0;
@@ -297,7 +300,7 @@ int get_new_timestamp(struct config *cconf, const char *basedir, char *buf, size
 
 	// get_current_backups orders the array with the highest index number 
 	// last
-	if(get_current_backups(basedir, &arr, &a, 1)) return -1;
+	if(get_current_backups(sdirs, &arr, &a, 1)) return -1;
 	if(a) index=arr[a-1].index;
 
 	free_current_backups(&arr, a);
@@ -392,17 +395,18 @@ int compress_filename(const char *d, const char *file, const char *zfile, struct
 	return 0;
 }
 
-int delete_backup(const char *basedir, struct bu *arr, int a, int b, const char *client)
+int delete_backup(struct sdirs *sdirs, struct config *conf,
+	struct bu *arr, int a, int b)
 {
 	char *deleteme=NULL;
 
-	logp("deleting %s backup %lu\n", client, arr[b].index);
+	logp("deleting %s backup %lu\n", conf->cname, arr[b].index);
 
 	if(b==a-1)
 	{
 		char *current=NULL;
 		// This is the current backup. Special measures are needed.
-		if(!(current=prepend_s(basedir, "current")))
+		if(!(current=prepend_s(sdirs->client, "current")))
 			return -1;
 		if(!b)
 		{
@@ -450,7 +454,7 @@ int delete_backup(const char *basedir, struct bu *arr, int a, int b, const char 
 		free(current);
 	}
 
-	if(!(deleteme=prepend_s(basedir, "deleteme"))
+	if(!(deleteme=prepend_s(sdirs->client, "deleteme"))
 	  || do_rename(arr[b].path, deleteme)
 	  || recursive_delete(deleteme, NULL, 1))
 	{
@@ -463,7 +467,7 @@ int delete_backup(const char *basedir, struct bu *arr, int a, int b, const char 
 	return 0;
 }
 
-int do_remove_old_backups(const char *basedir, struct config *cconf, const char *client)
+int do_remove_old_backups(struct sdirs *sdirs, struct config *cconf)
 {
 	int a=0;
 	int b=0;
@@ -476,7 +480,7 @@ int do_remove_old_backups(const char *basedir, struct config *cconf, const char 
 
 	kplist=cconf->keep;
 
-	if(get_current_backups(basedir, &arr, &a, 1)) return -1;
+	if(get_current_backups(sdirs, &arr, &a, 1)) return -1;
 
 	// For each of the 'keep' values, generate ranges in which to keep
 	// one backup.
@@ -526,8 +530,8 @@ int do_remove_old_backups(const char *basedir, struct config *cconf, const char 
 				       && arr[b].deletable)
 				    {
 					//printf("deleting backup %lu (%lu)\n", arr[b].index, arr[b].trindex);
-					if(delete_backup(basedir, arr,
-						a, b, client))
+					if(delete_backup(sdirs, cconf,
+						arr, a, b))
 					{
 						ret=-1;
 						break;
@@ -557,7 +561,7 @@ int do_remove_old_backups(const char *basedir, struct config *cconf, const char 
 		}
 		for(; b>=0 && b<a; b--)
 		{
-			if(delete_backup(basedir, arr, a, b, client))
+			if(delete_backup(sdirs, cconf, arr, a, b))
 			{
 				ret=-1;
 				break;
@@ -573,7 +577,7 @@ int do_remove_old_backups(const char *basedir, struct config *cconf, const char 
 	return deleted;
 }
 
-int remove_old_backups(const char *basedir, struct config *cconf, const char *client)
+int remove_old_backups(struct sdirs *sdirs, struct config *cconf)
 {
 	int deleted=0;
 	// Deleting a backup might mean that more become available to get rid
@@ -581,7 +585,7 @@ int remove_old_backups(const char *basedir, struct config *cconf, const char *cl
 	// Keep trying to delete until we cannot delete any more.
 	while(1)
 	{
-		if((deleted=do_remove_old_backups(basedir, cconf, client))<0)
+		if((deleted=do_remove_old_backups(sdirs, cconf))<0)
 			return -1;
 		else if(!deleted)
 			break;

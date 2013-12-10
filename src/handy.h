@@ -33,11 +33,11 @@ extern char *get_checksum_str(unsigned char *checksum);
 extern void add_fd_to_sets(int fd, fd_set *read_set, fd_set *write_set, fd_set *err_set, int *max_fd);
 extern int init_client_socket(const char *host, const char *port);
 extern void reuseaddr(int fd);
-extern void write_status(const char *client, char phase, const char *path, struct config *conf);
+extern void write_status(char phase, const char *path, struct config *conf);
 extern int run_script_to_buf(const char **args, struct strlist **userargs, int userargc, struct cntr *cntr, int do_wait, int logfunc, char **logbuf);
 extern int run_script(const char **args, struct strlist **userargs, int userargc, struct cntr *cntr, int do_wait, int logfunc);
 extern char *comp_level(struct config *conf);
-extern int chuser_and_or_chgrp(const char *user, const char *group);
+extern int chuser_and_or_chgrp(struct config *conf);
 extern const char *getdatestr(time_t t);
 extern const char *time_taken(time_t d);
 extern int dpth_is_compressed(int compressed, const char *datapath);
@@ -66,5 +66,7 @@ extern int astrcat(char **buf, const char *append);
 extern int recursive_delete(const char *d, const char *file, uint8_t delfiles);
 
 extern int do_quick_read(const char *datapth, struct cntr *cntr);
+
+extern int strncmp_w(const char *s1, const char *s2);
 
 #endif

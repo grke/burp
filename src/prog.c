@@ -116,7 +116,7 @@ int reload(struct config *conf, const char *configfile, bool firsttime, int oldm
 #endif
 
 	// Do not try to change user or group after the first time.
-	if(firsttime && chuser_and_or_chgrp(conf->user, conf->group))
+	if(firsttime && chuser_and_or_chgrp(conf))
 		return 1;
 
 	return 0;

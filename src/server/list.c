@@ -43,7 +43,7 @@ err:
 	return -1;
 }
 
-static int list_manifest(const char *fullpath, regex_t *regex, const char *browsedir, const char *client, struct config *conf)
+static int list_manifest(const char *fullpath, regex_t *regex, const char *browsedir, struct config *conf)
 {
 	int ret=0;
 	size_t bdlen=0;
@@ -72,7 +72,7 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 		else if(ars>0)
 			goto end; // Finished OK.
 
-		write_status(client, STATUS_LISTING, sb->path.buf, conf);
+		write_status(STATUS_LISTING, sb->path.buf, conf);
 
 		if(browsedir)
 		{
@@ -119,7 +119,8 @@ static void send_backup_name_to_client(struct bu *arr)
 	async_write_str(CMD_TIMESTAMP, msg);
 }
 
-int do_list_server(const char *basedir, const char *backup, const char *listregex, const char *browsedir, const char *client, struct config *conf)
+int do_list_server(struct sdirs *sdirs, struct config *conf,
+	const char *backup, const char *listregex, const char *browsedir)
 {
 	int a=0;
 	int i=0;
@@ -133,13 +134,13 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 
 	if(compile_regex(&regex, listregex)) return -1;
 
-	if(get_current_backups(basedir, &arr, &a, 1))
+	if(get_current_backups(sdirs, &arr, &a, 1))
 	{
 		if(regex) { regfree(regex); free(regex); }
 		return -1;
 	}
 
-	write_status(client, STATUS_LISTING, NULL, conf);
+	write_status(STATUS_LISTING, NULL, conf);
 
 	if(backup && *backup) index=strtoul(backup, NULL, 10);
 
@@ -150,8 +151,7 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 		{
 			found=1;
 			async_write_str(CMD_TIMESTAMP, arr[i].timestamp);
-			ret+=list_manifest(arr[i].path, regex, browsedir,
-				client, conf);
+			ret+=list_manifest(arr[i].path, regex, browsedir, conf);
 		}
 		// Search or list a particular backup.
 		else if(backup && *backup)
@@ -163,7 +163,7 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 				found=1;
 				send_backup_name_to_client(&(arr[i]));
 				ret=list_manifest(arr[i].path, regex,
-					browsedir, client, conf);
+					browsedir, conf);
 			}
 		}
 		// List the backups.

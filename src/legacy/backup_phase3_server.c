@@ -1,7 +1,9 @@
 #include "include.h"
+#include "../server/sdirs.h"
 
 // Combine the phase1 and phase2 files into a new manifest.
-int backup_phase3_server(const char *phase2data, const char *unchangeddata, const char *manifest, int recovery, int compress, const char *client, struct cntr *p1cntr, struct cntr *cntr, struct config *cconf)
+int backup_phase3_server(struct sdirs *sdirs, struct config *cconf,
+	int recovery, int compress)
 {
 	int ars=0;
 	int ret=0;
@@ -16,10 +18,10 @@ int backup_phase3_server(const char *phase2data, const char *unchangeddata, cons
 
 	logp("Begin phase3 (merge manifests)\n");
 
-	if(!(manifesttmp=get_tmp_filename(manifest))) return -1;
+	if(!(manifesttmp=get_tmp_filename(sdirs->manifest))) return -1;
 
-        if(!(ucfp=open_file(unchangeddata, "rb"))
-	  || !(p2fp=open_file(phase2data, "rb"))
+        if(!(ucfp=open_file(sdirs->unchangeddata, "rb"))
+	  || !(p2fp=open_file(sdirs->phase2data, "rb"))
 	  || (compress && !(mzp=gzopen_file(manifesttmp, comp_level(cconf))))
           || (!compress && !(mp=open_file(manifesttmp, "wb"))))
 	{
@@ -36,13 +38,13 @@ int backup_phase3_server(const char *phase2data, const char *unchangeddata, cons
 
 	while(ucfp || p2fp)
 	{
-		if(ucfp && !ucb.path && (ars=sbufl_fill(ucfp, NULL, &ucb, cntr)))
+		if(ucfp && !ucb.path && (ars=sbufl_fill(ucfp, NULL, &ucb, cconf->cntr)))
 		{
 			if(ars<0) { ret=-1; break; }
 			// ars==1 means it ended ok.
 			close_fp(&ucfp);
 		}
-		if(p2fp && !p2b.path && (ars=sbufl_fill(p2fp, NULL, &p2b, cntr)))
+		if(p2fp && !p2b.path && (ars=sbufl_fill(p2fp, NULL, &p2b, cconf->cntr)))
 		{
 			if(ars<0) { ret=-1; break; }
 			// ars==1 means it ended ok.
@@ -55,13 +57,13 @@ int backup_phase3_server(const char *phase2data, const char *unchangeddata, cons
 
 		if(ucb.path && !p2b.path)
 		{
-			write_status(client, STATUS_MERGING, ucb.path, cconf);
+			write_status(STATUS_MERGING, ucb.path, cconf);
 			if(sbufl_to_manifest(&ucb, mp, mzp)) { ret=-1; break; }
 			free_sbufl(&ucb);
 		}
 		else if(!ucb.path && p2b.path)
 		{
-			write_status(client, STATUS_MERGING, p2b.path, cconf);
+			write_status(STATUS_MERGING, p2b.path, cconf);
 			if(sbufl_to_manifest(&p2b, mp, mzp)) { ret=-1; break; }
 			free_sbufl(&p2b);
 		}
@@ -72,20 +74,20 @@ int backup_phase3_server(const char *phase2data, const char *unchangeddata, cons
 		else if(!(pcmp=sbufl_pathcmp(&ucb, &p2b)))
 		{
 			// They were the same - write one and free both.
-			write_status(client, STATUS_MERGING, p2b.path, cconf);
+			write_status(STATUS_MERGING, p2b.path, cconf);
 			if(sbufl_to_manifest(&p2b, mp, mzp)) { ret=-1; break; }
 			free_sbufl(&p2b);
 			free_sbufl(&ucb);
 		}
 		else if(pcmp<0)
 		{
-			write_status(client, STATUS_MERGING, ucb.path, cconf);
+			write_status(STATUS_MERGING, ucb.path, cconf);
 			if(sbufl_to_manifest(&ucb, mp, mzp)) { ret=-1; break; }
 			free_sbufl(&ucb);
 		}
 		else
 		{
-			write_status(client, STATUS_MERGING, p2b.path, cconf);
+			write_status(STATUS_MERGING, p2b.path, cconf);
 			if(sbufl_to_manifest(&p2b, mp, mzp)) { ret=-1; break; }
 			free_sbufl(&p2b);
 		}
@@ -111,12 +113,12 @@ int backup_phase3_server(const char *phase2data, const char *unchangeddata, cons
 
 	if(!ret)
 	{
-		if(do_rename(manifesttmp, manifest))
+		if(do_rename(manifesttmp, sdirs->manifest))
 			ret=-1;
 		else
 		{
-			unlink(phase2data);
-			unlink(unchangeddata);
+			unlink(sdirs->phase2data);
+			unlink(sdirs->unchangeddata);
 		}
 	}
 

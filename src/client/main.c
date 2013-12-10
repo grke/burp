@@ -12,7 +12,7 @@ static enum asl_ret maybe_check_timer_func(struct iobuf *rbuf,
 		return ASL_END_OK_RETURN_1;
         }
 
-	if(!strncmp(rbuf->buf, "ok", 2))
+	if(!strncmp_w(rbuf->buf, "ok"))
 		complen=3;
 	else
 	{
@@ -77,8 +77,7 @@ static enum asl_ret comms_func(struct iobuf *rbuf,
 	enum asl_ret ret=ASL_END_ERROR;
 	enum action *action=(enum action *)param;
 
-	if(strncmp(rbuf->buf,
-	  "extra_comms_begin ok", strlen("extra_comms_begin ok")))
+	if(strncmp_w(rbuf->buf, "extra_comms_begin ok"))
 	{
 		iobuf_log_unexpected(rbuf, __FUNCTION__);
 		goto end;

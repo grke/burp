@@ -1,5 +1,15 @@
 #include "include.h"
 
+struct chld
+{
+	pid_t pid;  // child pid
+	int rfd;    // read end of the pipe from the child
+	int wfd;    // write end of a different pipe to the child
+	char *data; // last message sent from the child
+	char *name; // client name
+	int status_server; // set to 1 if this is a status server child.
+};
+
 static struct chld *chlds;
 
 static void chld_free(struct chld *chld)

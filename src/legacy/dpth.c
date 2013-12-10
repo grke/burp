@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../server/sdirs.h"
 
 void mk_dpth(struct dpth *dpth, struct config *cconf, char cmd)
 {
@@ -41,7 +42,7 @@ static int get_highest_entry(const char *path)
 	return max;
 }
 
-int init_dpth(struct dpth *dpth, const char *currentdata, struct config *cconf)
+int init_dpth(struct dpth *dpth, struct sdirs *sdirs, struct config *cconf)
 {
 	char *tmp=NULL;
 	//logp("in init_dpth\n");
@@ -50,7 +51,7 @@ int init_dpth(struct dpth *dpth, const char *currentdata, struct config *cconf)
 	dpth->seco=0;
 	dpth->tert=0;
 
-	if((dpth->prim=get_highest_entry(currentdata))<0)
+	if((dpth->prim=get_highest_entry(sdirs->currentdata))<0)
 	{
 		// Could not open directory. Set all zeros.
 		dpth->prim=0;
@@ -58,7 +59,7 @@ int init_dpth(struct dpth *dpth, const char *currentdata, struct config *cconf)
 		return 0;
 	}
 	mk_dpth_prim(dpth);
-	if(!(tmp=prepend_s(currentdata, dpth->path)))
+	if(!(tmp=prepend_s(sdirs->currentdata, dpth->path)))
 	{
 		log_and_send_oom(__FUNCTION__);
 		return -1;
@@ -73,7 +74,7 @@ int init_dpth(struct dpth *dpth, const char *currentdata, struct config *cconf)
 	}
 	free(tmp);
 	mk_dpth_seco(dpth);
-	if(!(tmp=prepend_s(currentdata, dpth->path)))
+	if(!(tmp=prepend_s(sdirs->currentdata, dpth->path)))
 	{
 		log_and_send_oom(__FUNCTION__);
 		return -1;

@@ -1,6 +1,7 @@
 #include "include.h"
+#include "../server/sdirs.h"
 
-int backup_phase1_server(const char *phase1data, const char *client, struct config *conf)
+int backup_phase1_server(struct sdirs *sdirs, struct config *conf)
 {
 	int ars=0;
 	int ret=0;
@@ -11,7 +12,7 @@ int backup_phase1_server(const char *phase1data, const char *client, struct conf
 
 	logp("Begin phase1 (file system scan)\n");
 
-	if(!(phase1tmp=get_tmp_filename(phase1data)))
+	if(!(phase1tmp=get_tmp_filename(sdirs->phase1data)))
 		return -1;
 
 	if(!(p1zp=gzopen_file(phase1tmp, comp_level(conf))))
@@ -36,7 +37,7 @@ int backup_phase1_server(const char *phase1data, const char *client, struct conf
 					ret=-1;
 			break;
 		}
-		write_status(client, STATUS_SCANNING, sb.path, conf);
+		write_status(STATUS_SCANNING, sb.path, conf);
 		if(sbufl_to_manifest_phase1(&sb, NULL, p1zp))
 		{
 			ret=-1;
@@ -59,7 +60,7 @@ int backup_phase1_server(const char *phase1data, const char *client, struct conf
 		logp("error closing %s in backup_phase1_server\n", phase1tmp);
 		ret=-1;
 	}
-	if(!ret && do_rename(phase1tmp, phase1data))
+	if(!ret && do_rename(phase1tmp, sdirs->phase1data))
 		ret=-1;
 	free(phase1tmp);
 
@@ -197,7 +198,7 @@ static int forward_sbufl(FILE *fp, gzFile zp, struct sbufl *b, struct sbufl *tar
 	return 0;
 }
 
-int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpth *dpth, struct config *cconf, const char *client)
+int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpth *dpth, struct config *cconf)
 {
 	int ret=0;
 	struct sbufl p1b;
@@ -258,8 +259,7 @@ int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpth *dpth, struct con
 
 	if(cconf->send_client_counters)
 	{
-		if(send_counters(client, cconf))
-			goto error;
+		if(send_counters(cconf)) goto error;
 	}
 
 	goto end;

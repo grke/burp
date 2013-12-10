@@ -519,7 +519,8 @@ static void bottom_part_to_file(FILE *fp, struct cntr *a, struct cntr *b, enum a
 	}
 }
 
-int print_stats_to_file(struct config *conf, const char *client, const char *directory, enum action act)
+int print_stats_to_file(struct config *conf,
+	const char *directory, enum action act)
 {
 	FILE *fp;
 	char *path;
@@ -547,7 +548,7 @@ int print_stats_to_file(struct config *conf, const char *client, const char *dir
 		free(path);
 		return -1;
 	}
-	fprintf(fp, "client:%s\n", client);
+	fprintf(fp, "client:%s\n", conf->cname);
 	fprintf(fp, "time_start:%lu\n", p1c->start);
 	fprintf(fp, "time_end:%lu\n", now);
 	fprintf(fp, "time_taken:%lu\n", now-p1c->start);
@@ -688,7 +689,7 @@ void print_endcounter(struct cntr *cntr)
 }
 
 #ifndef HAVE_WIN32
-void counters_to_str(char *str, size_t len, const char *client, char phase, const char *path, struct config *conf)
+void counters_to_str(char *str, size_t len, char phase, const char *path, struct config *conf)
 {
 	int l=0;
 	struct cntr *p1cntr=conf->p1cntr;
@@ -710,7 +711,7 @@ void counters_to_str(char *str, size_t len, const char *client, char phase, cons
 		"%llu/%llu/%llu/%llu/%llu\t"
 		"%llu/%llu/%llu/%llu/%llu\t"
 		"%llu\t%llu\t%llu\t%llu\t%llu\t%li\t%s\n",
-			client,
+			conf->cname,
 			COUNTER_VERSION_2,
 			STATUS_RUNNING, phase,
 
@@ -1057,11 +1058,10 @@ int str_to_counters(const char *str, char **client, char *status, char *phase, c
 }
 
 #ifndef HAVE_WIN32
-int send_counters(const char *client, struct config *conf)
+int send_counters(struct config *conf)
 {
 	char buf[4096]="";
 	counters_to_str(buf, sizeof(buf),
-		client,
 		STATUS_RUNNING,
 		" " /* normally the path for status server */,
 		conf);

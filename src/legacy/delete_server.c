@@ -1,7 +1,8 @@
 #include "include.h"
 #include "../server/current_backups.h"
 
-int do_delete_server(const char *basedir, const char *backup, const char *client, struct config *cconf)
+int do_delete_server(struct sdirs *sdirs, struct config *cconf,
+	const char *backup)
 {
 	int a=0;
 	int i=0;
@@ -12,12 +13,10 @@ int do_delete_server(const char *basedir, const char *backup, const char *client
 
 	logp("in do_delete\n");
 
-	if(get_current_backups(basedir, &arr, &a, 1))
-	{
+	if(get_current_backups(sdirs, &arr, &a, 1))
 		return -1;
-	}
 
-	write_status(client, STATUS_DELETING, NULL, cconf);
+	write_status(STATUS_DELETING, NULL, cconf);
 
 	if(backup && *backup) index=strtoul(backup, NULL, 10);
 
@@ -33,8 +32,8 @@ int do_delete_server(const char *basedir, const char *backup, const char *client
 				{
 					found=1;
 					async_write_str(CMD_GEN, "ok");
-					if(delete_backup(basedir,
-						arr, a, i, client))
+					if(delete_backup(sdirs, cconf,
+						arr, a, i))
 					{
 						free_current_backups(&arr, a);
 						ret=-1;
@@ -44,7 +43,8 @@ int do_delete_server(const char *basedir, const char *backup, const char *client
 				}
 				else
 				{
-					async_write_str(CMD_ERROR, "backup not deletable");
+					async_write_str(CMD_ERROR,
+						"backup not deletable");
 					free_current_backups(&arr, a);
 					ret=-1;
 					goto end;

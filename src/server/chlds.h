@@ -1,16 +1,6 @@
 #ifndef __CHLDS_H
 #define __CHLDS_H
 
-struct chld
-{
-	pid_t pid;  // child pid
-	int rfd;    // read end of the pipe from the child
-	int wfd;    // write end of a different pipe to the child
-	char *data; // last message sent from the child
-	char *name; // client name
-	int status_server; // set to 1 if this is a status server child.
-};
-
 extern void chlds_free(void);
 
 extern void chld_check_for_exiting(void);

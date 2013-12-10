@@ -1,7 +1,9 @@
 #ifndef BACKUP_SERVER_H
 #define BACKUP_SERVER_H
 
+extern int open_log(const char *realworking, struct config *conf);
+
 extern int do_backup_server(struct sdirs *sdirs, struct config *cconf,
-	const char *client, const char *cversion, const char *incexc);
+	const char *incexc);
 
 #endif

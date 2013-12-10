@@ -58,7 +58,8 @@ err:
 	return -1;
 }
 
-static int list_manifest(const char *fullpath, regex_t *regex, const char *browsedir, const char *client, struct config *conf)
+static int list_manifest(const char *fullpath, regex_t *regex,
+	const char *browsedir, struct config *conf)
 {
 	int ars=0;
 	int ret=0;
@@ -109,7 +110,7 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 			continue;
 
 		//if(mb.path[mb.plen]=='\n') mb.path[mb.plen]='\0';
-		write_status(client, STATUS_LISTING, mb.path, conf);
+		write_status(STATUS_LISTING, mb.path, conf);
 
 		if(browsedir)
 		{
@@ -152,7 +153,8 @@ static void send_backup_name_to_client(struct bu *arr)
 	async_write_str(CMD_TIMESTAMP, msg);
 }
 
-int do_list_server(const char *basedir, const char *backup, const char *listregex, const char *browsedir, const char *client, struct config *conf)
+int do_list_server(struct sdirs *sdirs, struct config *conf,
+	const char *backup, const char *listregex, const char *browsedir)
 {
 	int a=0;
 	int i=0;
@@ -166,13 +168,13 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 
 	if(compile_regex(&regex, listregex)) return -1;
 
-	if(get_current_backups(basedir, &arr, &a, 1))
+	if(get_current_backups(sdirs, &arr, &a, 1))
 	{
 		if(regex) { regfree(regex); free(regex); }
 		return -1;
 	}
 
-	write_status(client, STATUS_LISTING, NULL, conf);
+	write_status(STATUS_LISTING, NULL, conf);
 
 	if(backup && *backup) index=strtoul(backup, NULL, 10);
 
@@ -184,7 +186,7 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 			found=TRUE;
 			async_write_str(CMD_TIMESTAMP, arr[i].timestamp);
 			ret+=list_manifest(arr[i].path, regex, browsedir,
-				client, conf);
+				conf);
 		}
 		// Search or list a particular backup.
 		else if(backup && *backup)
@@ -196,7 +198,7 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 				found=TRUE;
 				send_backup_name_to_client(&(arr[i]));
 				ret=list_manifest(arr[i].path, regex,
-					browsedir, client, conf);
+					browsedir, conf);
 			}
 		}
 		// List the backups.

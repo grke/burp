@@ -15,7 +15,7 @@ int authorise_client(struct config *conf, char **server_version)
 
 	if(!(rbuf=iobuf_async_read())
 	  || rbuf->cmd!=CMD_GEN
-	  || strncmp(rbuf->buf, "whoareyou", strlen("whoareyou")))
+	  || strncmp_w(rbuf->buf, "whoareyou"))
 	{
 		logp("problem with auth\n");
 		goto end;

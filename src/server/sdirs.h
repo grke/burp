@@ -21,11 +21,22 @@ struct sdirs
 
 	char *lock;
 	char *lockfile;
+	uint8_t gotlock;
+
+	// Legacy directories.
+	char *currentdata;
+	char *manifest;
+	char *datadirtmp;
+	char *phase1data;
+	char *phase2data;
+	char *unchangeddata;
+	char *cincexc;
+	char *deltmppath;
 };
 
 extern struct sdirs *sdirs_alloc(void);
-extern int sdirs_init(struct sdirs *sdirs,
-	struct config *conf, const char *client);
+extern int sdirs_init(struct sdirs *sdirs, struct config *conf);
+extern int sdirs_init_legacy(struct sdirs *sdirs, struct config *conf);
 extern void sdirs_free(struct sdirs *sdirs);
 
 #endif

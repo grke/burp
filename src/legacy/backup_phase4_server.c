@@ -1,5 +1,6 @@
 #include "include.h"
 #include "../server/current_backups.h"
+#include "../server/sdirs.h"
 
 #include <netdb.h>
 #include <librsync.h>
@@ -696,7 +697,11 @@ static int get_partials_list_w(const char *datadirtmp, struct strlist ***partial
 
 /* Need to make all the stuff that this does atomic so that existing backups
    never get broken, even if somebody turns the power off on the server. */ 
-static int atomic_data_jiggle(const char *finishing, const char *working, const char *manifest, const char *current, const char *currentdata, const char *datadir, const char *datadirtmp, const char *deletionsfile, struct config *cconf, const char *client, int hardlinked, unsigned long bno)
+static int atomic_data_jiggle(struct sdirs *sdirs, struct config *cconf,
+	const char *manifest, const char *currentdup, const char *currentdata,
+	const char *datadir, const char *datadirtmp,
+	const char *deletionsfile,
+	int hardlinked, unsigned long bno)
 {
 	int ret=0;
 	int ars=0;
@@ -736,9 +741,9 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 		goto end;
 	}
 
-	if(!(deltabdir=prepend_s(current, "deltas.reverse"))
-	  || !(deltafdir=prepend_s(finishing, "deltas.forward"))
-	  || !(sigpath=prepend_s(current, "sig.tmp")))
+	if(!(deltabdir=prepend_s(currentdup, "deltas.reverse"))
+	  || !(deltafdir=prepend_s(sdirs->finishing, "deltas.forward"))
+	  || !(sigpath=prepend_s(currentdup, "sig.tmp")))
 	{
 		log_out_of_memory(__FUNCTION__);
 		ret=-1;
@@ -758,8 +763,7 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 	{
 		if(sb.datapth)
 		{
-			write_status(client, STATUS_SHUFFLING,
-				sb.datapth, cconf);
+			write_status(STATUS_SHUFFLING, sb.datapth, cconf);
 
 			if((ret=jiggle(sb.datapth, currentdata, datadirtmp,
 				datadir, deltabdir, deltafdir,
@@ -802,7 +806,7 @@ end:
 	return ret;
 }
 
-int backup_phase4_server(const char *basedir, const char *working, const char *current, const char *currentdata, const char *finishing, struct config *cconf, const char *client)
+int backup_phase4_server(struct sdirs *sdirs, struct config *cconf)
 {
 	int ret=0;
 	struct stat statp;
@@ -826,20 +830,20 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 	int newdup=0;
 	int previous_backup=0;
 
-	if((len=readlink(current, realcurrent, sizeof(realcurrent)-1))<0)
+	if((len=readlink(sdirs->current, realcurrent, sizeof(realcurrent)-1))<0)
 		len=0;
 	realcurrent[len]='\0';
 
-	if(!(datadir=prepend_s(finishing, "data"))
-	  || !(datadirtmp=prepend_s(finishing, "data.tmp"))
-	  || !(manifest=prepend_s(finishing, "manifest.gz"))
-	  || !(deletionsfile=prepend_s(finishing, "deletions"))
-	  || !(currentdup=prepend_s(finishing, "currentdup"))
-	  || !(currentduptmp=prepend_s(finishing, "currentdup.tmp"))
+	if(!(datadir=prepend_s(sdirs->finishing, "data"))
+	  || !(datadirtmp=prepend_s(sdirs->finishing, "data.tmp"))
+	  || !(manifest=prepend_s(sdirs->finishing, "manifest.gz"))
+	  || !(deletionsfile=prepend_s(sdirs->finishing, "deletions"))
+	  || !(currentdup=prepend_s(sdirs->finishing, "currentdup"))
+	  || !(currentduptmp=prepend_s(sdirs->finishing, "currentdup.tmp"))
 	  || !(currentdupdata=prepend_s(currentdup, "data"))
-	  || !(timestamp=prepend_s(finishing, "timestamp"))
-	  || !(fullrealcurrent=prepend_s(basedir, realcurrent))
-	  || !(logpath=prepend_s(finishing, "log"))
+	  || !(timestamp=prepend_s(sdirs->finishing, "timestamp"))
+	  || !(fullrealcurrent=prepend_s(sdirs->client, realcurrent))
+	  || !(logpath=prepend_s(sdirs->finishing, "log"))
 	  || !(hlinkedpath=prepend_s(currentdup, "hardlinked")))
 	{
 		ret=-1;
@@ -854,9 +858,9 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 
 	logp("Begin phase4 (shuffle files)\n");
 
-	write_status(client, STATUS_SHUFFLING, NULL, cconf);
+	write_status(STATUS_SHUFFLING, NULL, cconf);
 
-	if(!lstat(current, &statp)) // Had a previous backup
+	if(!lstat(sdirs->current, &statp)) // Had a previous backup
 	{
 		previous_backup++;
 
@@ -876,8 +880,7 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 				}
 			}
 			logp("Duplicating current backup.\n");
-			if(recursive_hardlink(current, currentduptmp, client,
-				cconf)
+			if(recursive_hardlink(sdirs->current, currentduptmp, cconf)
 			  || do_rename(currentduptmp, currentdup))
 			{
 				ret=-1;
@@ -959,10 +962,8 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 		//hardlinked=1;
 	}
 
-	if(atomic_data_jiggle(finishing,
-		working, manifest, currentdup,
-		currentdupdata,
-		datadir, datadirtmp, deletionsfile, cconf, client,
+	if(atomic_data_jiggle(sdirs, cconf, manifest, currentdup,
+		currentdupdata, datadir, datadirtmp, deletionsfile,
 		hardlinked, bno))
 	{
 		logp("could not finish up backup.\n");
@@ -970,8 +971,7 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 		goto endfunc;
 	}
 
-	write_status(client, STATUS_SHUFFLING,
-		"deleting temporary files", cconf);
+	write_status(STATUS_SHUFFLING, "deleting temporary files", cconf);
 
 	// Remove the temporary data directory, we have now removed
 	// everything useful from it.
@@ -990,7 +990,7 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 	// delete.
 	if(previous_backup)
 	{
-		if(deleteme_move(basedir, fullrealcurrent, realcurrent, cconf)
+		if(deleteme_move(sdirs->client, fullrealcurrent, realcurrent, cconf)
 		  || do_rename(currentdup, fullrealcurrent))
 		{
 			ret=-1;
@@ -998,23 +998,23 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 		}
 	}
 
-	if(deleteme_maybe_delete(cconf, basedir))
+	if(deleteme_maybe_delete(cconf, sdirs->client))
 	{
 		ret=-1;
 		goto endfunc;
 	}
 
-	print_stats_to_file(cconf, client, finishing, ACTION_BACKUP);
+	print_stats_to_file(cconf, sdirs->finishing, ACTION_BACKUP);
 
 	// Rename the finishing symlink so that it becomes the current symlink
-	do_rename(finishing, current);
+	do_rename(sdirs->finishing, sdirs->current);
 
 	print_filecounters(cconf, ACTION_BACKUP);
 	logp("Backup completed.\n");
 	logp("End phase4 (shuffle files)\n");
 	set_logfp(NULL, cconf); // will close logfp.
 
-	compress_filename(current, "log", "log.gz", cconf);
+	compress_filename(sdirs->current, "log", "log.gz", cconf);
 
 endfunc:
 	if(datadir) free(datadir);

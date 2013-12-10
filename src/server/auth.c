@@ -96,7 +96,7 @@ int authorise_server(struct config *conf, char **client, char **cversion, struct
 		logp("unable to read initial message\n");
 		return -1;
 	}
-	if(rbuf.cmd!=CMD_GEN || strncmp(rbuf.buf, "hello", strlen("hello")))
+	if(rbuf.cmd!=CMD_GEN || strncmp_w(rbuf.buf, "hello"))
 	{
 		iobuf_log_unexpected(&rbuf, __FUNCTION__);
 		iobuf_free_content(&rbuf);

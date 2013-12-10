@@ -374,17 +374,17 @@ static enum asl_ret csr_server_func(struct iobuf *rbuf,
 
 /* Return 1 for everything OK, signed and returned, -1 for error, 0 for
    nothing done. */
-int ca_server_maybe_sign_client_cert(const char *client, const char *cversion, struct config *conf)
+int ca_server_maybe_sign_client_cert(struct config *conf, struct config *cconf)
 {
 	long min_ver=0;
 	long cli_ver=0;
 
 	if((min_ver=version_to_long("1.3.2"))<0
-	 || (cli_ver=version_to_long(cversion))<0)
+	 || (cli_ver=version_to_long(cconf->peer_version))<0)
 		return -1;
 	// Clients before 1.3.2 did not know how to send cert signing requests.
 	if(cli_ver<min_ver) return 0;
 
-	if(async_simple_loop(conf, &client, csr_server_func)) return -1;
+	if(async_simple_loop(conf, &cconf->cname, csr_server_func)) return -1;
 	return csr_done;
 }

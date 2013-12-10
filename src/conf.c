@@ -56,6 +56,7 @@ void config_init(struct config *conf)
 {
 	// Set everything to 0.
 	// FIX THIS: get rid of this by calloc-ing struct configs.
+	// look out for sconf in extra_comms.c, which is malloc-d.
 	memset(conf, 0, sizeof(struct config));
 
 	// Turn on defaults that are non-zero.
@@ -1444,7 +1445,7 @@ static int set_global_arglist(struct strlist ***dst, struct strlist **src, int *
 }
 
 /* Remember to update the list in the man page when you change these.*/
-int config_set_client_global(struct config *conf, struct config *cconf, const char *client)
+int config_set_client_global(struct config *conf, struct config *cconf)
 {
 	cconf->log_to_syslog=conf->log_to_syslog;
 	cconf->log_to_stdout=conf->log_to_stdout;
@@ -1518,27 +1519,39 @@ int config_set_client_global(struct config *conf, struct config *cconf, const ch
 
 	// If ssl_peer_cn is not set, default it to the client name.
 	if(!conf->ssl_peer_cn
-	  && set_global_str(&(cconf->ssl_peer_cn), client))
+	  && set_global_str(&(cconf->ssl_peer_cn), cconf->cname))
 		return -1;
 
 	return 0;
 }
 
-int config_load_client(struct config *conf, struct config *cconf, const char *client)
+static void config_init_save_cname_and_version(struct config *cconf)
+{
+	char *cname=cconf->cname;
+	char *cversion=cconf->peer_version;
+
+	cconf->cname=NULL;
+	cconf->peer_version=NULL;
+	config_init(cconf);
+	cconf->cname=cname;
+	cconf->peer_version=cversion;
+}
+
+int config_load_client(struct config *conf, struct config *cconf)
 {
 	char *cpath=NULL;
-	config_init(cconf);
-	if(!(cpath=prepend_s(conf->clientconfdir, client)))
+	config_init_save_cname_and_version(cconf);
+	if(!(cpath=prepend_s(conf->clientconfdir, cconf->cname)))
 		return -1;
-	if(looks_like_tmp_or_hidden_file(client))
+	if(looks_like_tmp_or_hidden_file(cconf->cname))
 	{
-		logp("client name '%s' is invalid\n", client);
+		logp("client name '%s' is invalid\n", cconf->cname);
 		free(cpath);
 		return -1;
 	}
 	// Some client settings can be globally set in the server config and
 	// overridden in the client specific config.
-	if(config_set_client_global(conf, cconf, client)
+	if(config_set_client_global(conf, cconf)
 	  || config_load(cpath, cconf, 0))
 	{
 		free(cpath);

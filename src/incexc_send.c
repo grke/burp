@@ -47,6 +47,8 @@ static int do_sends(struct config *conf)
 {
 	if(  send_incexc_from_strlist("include", "exclude",
 		conf->iecount, conf->incexcdir)
+	  || send_incexc_from_strlist("include_glob", "include_glob",
+		conf->igcount, conf->incglob)
 	  || send_incexc_from_strlist("cross_filesystem", "cross_filesystem",
 		conf->fscount, conf->fschgdir)
 	  || send_incexc_from_strlist("nobackup", "nobackup",

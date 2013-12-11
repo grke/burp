@@ -1,8 +1,4 @@
 #include "include.h"
-#include "../server/backup.h"
-#include "../server/current_backups.h"
-#include "../server/run_action.h"
-#include "../server/sdirs.h"
 
 #include <librsync.h>
 
@@ -476,6 +472,8 @@ end:
 static int get_lock_and_clean(struct sdirs *sdirs, struct config *cconf,
 	const char *incexc, int *resume)
 {
+	struct stat statp;
+
 	// Make sure the lock directory exists.
 	if(mkpath(&sdirs->lockfile, sdirs->lock))
 	{
@@ -483,50 +481,25 @@ static int get_lock_and_clean(struct sdirs *sdirs, struct config *cconf,
 		return -1;
 	}
 
-	if(get_lock(sdirs->lockfile))
-	{
-		struct stat statp;
-		if(!lstat(sdirs->finishing, &statp))
-		{
-			char msg[256]="";
-			logp("finalising previous backup\n");
-			snprintf(msg, sizeof(msg), "Finalising previous backup of client. Please try again later.");
-			async_write_str(CMD_ERROR, msg);
-			return 1;
-		}
-		else
-		{
-			logp("another instance of client is already running,\n");
-			logp("or %s is not writable.\n", sdirs->lockfile);
-			async_write_str(CMD_ERROR, "another instance is already running");
-			goto error;
-		}
-	}
-	else
+	if(!get_lock(sdirs->lockfile))
 	{
 		sdirs->gotlock++;
+		return check_for_rubble(sdirs, cconf, incexc, resume);
 	}
-
-	if(check_for_rubble(sdirs, cconf, incexc, resume)) goto error;
-
-	return 0;
-error:
-	return -1;
-}
-
-/* I am sure I wrote this function already, somewhere else. */
-static int reset_conf_val(const char *src, char **dest)
-{
-	if(src)
+	if(!lstat(sdirs->finishing, &statp))
 	{
-		if(*dest) free(*dest);
-		if(!(*dest=strdup(src)))
-		{
-			log_out_of_memory(__FUNCTION__);
-			return -1;
-		}
+		char msg[256]="";
+		logp("finalising previous backup\n");
+		snprintf(msg, sizeof(msg),
+			"Finalising previous backup of client. "
+			"Please try again later.");
+		async_write_str(CMD_ERROR, msg);
+		return 1;
 	}
-	return 0;
+	logp("another instance of client is already running,\n");
+	logp("or %s is not writable.\n", sdirs->lockfile);
+	async_write_str(CMD_ERROR, "another instance is already running");
+	return -1;
 }
 
 static int client_can_restore(struct config *cconf)
@@ -681,7 +654,7 @@ int run_action_server_legacy(struct sdirs *sdirs, struct config *cconf,
 			backupnostr=rbuf->buf+strlen("verify ");
 			act=ACTION_VERIFY;
 		}
-		reset_conf_val(backupnostr, &(cconf->backup));
+		conf_val_reset(backupnostr, &(cconf->backup));
 		if((cp=strchr(cconf->backup, ':'))) *cp='\0';
 
 		if((ret=get_lock_and_clean(sdirs, cconf, incexc, &resume)))
@@ -728,7 +701,7 @@ int run_action_server_legacy(struct sdirs *sdirs, struct config *cconf,
 				*restoreregex='\0';
 				restoreregex++;
 			}
-			reset_conf_val(restoreregex, &(cconf->regex));
+			conf_val_reset(restoreregex, &(cconf->regex));
 			async_write_str(CMD_GEN, "ok");
 			ret=do_restore_server(sdirs, cconf, act, srestore,
 				&dir_for_notify);

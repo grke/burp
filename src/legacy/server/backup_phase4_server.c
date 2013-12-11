@@ -1,9 +1,8 @@
 #include "include.h"
-#include "../server/current_backups.h"
-#include "../server/sdirs.h"
 
 #include <netdb.h>
 #include <librsync.h>
+#include <dirent.h>
 
 static int make_rev_sig(const char *dst, const char *sig, const char *endfile, int compression, struct config *conf)
 {

@@ -1,7 +1,5 @@
 #include "include.h"
 
-#include "../server/current_backups.h"
-
 int check_browsedir(const char *browsedir, char **path, size_t bdlen, char **last_bd_match)
 {
 	char *cp=NULL;

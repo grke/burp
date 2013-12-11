@@ -51,12 +51,6 @@ void free_sbufl(struct sbufl *sb)
 	init_sbufl(sb);
 }
 
-int cmd_is_link(char cmd)
-{
-	return (cmd==CMD_SOFT_LINK
-		|| cmd==CMD_HARD_LINK);
-}
-
 int sbufl_is_link(struct sbufl *sb)
 {
 	return cmd_is_link(sb->cmd);

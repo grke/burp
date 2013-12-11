@@ -45,7 +45,6 @@ struct sbufl
 
 extern void init_sbufl(struct sbufl *sb);
 extern void free_sbufl(struct sbufl *sb);
-extern int cmd_is_link(char cmd);
 extern int sbufl_is_link(struct sbufl *sb);
 extern int sbufl_fill(FILE *fp, gzFile zp, struct sbufl *sb, struct cntr *cntr);
 extern int sbufl_fill_phase1(FILE *fp, gzFile zp, struct sbufl *sb, struct cntr *cntr);

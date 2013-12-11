@@ -60,7 +60,8 @@ static int send_features(struct config *cconf)
 	/* Clients can receive incexc config from the server.
 	   Only give it as an option if the server has some starting
 	   directory configured in the clientconfdir. */
-	if(cconf->sdcount && append_to_feat(&feat, "sincexc:"))
+	if((cconf->sdcount || cconf->igcount)
+	  && append_to_feat(&feat, "sincexc:"))
 		goto end;
 
 	/* Clients can be sent counters on resume/verify/restore. */

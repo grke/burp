@@ -1,5 +1,5 @@
-#ifndef DPTH_H
-#define DPTH_H
+#ifndef DPTHL_H
+#define DPTHL_H
 
 struct dpth
 {

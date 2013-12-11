@@ -1,8 +1,5 @@
 #include "include.h"
 
-#include "../server/current_backups.h"
-#include "../server/sdirs.h"
-
 #include <librsync.h>
 
 // Also used by backup_phase4_server.c
@@ -134,7 +131,7 @@ static int send_file(const char *fname, int patches, const char *best, const cha
 	int ret=0;
 	size_t datalen=0;
 	FILE *fp=NULL;
-	if(open_file_for_sendl(NULL, &fp, best, winattr, &datalen, cconf->cntr))
+	if(open_file_for_sendl(NULL, &fp, best, winattr, &datalen, cconf))
 		return -1;
 	//logp("sending: %s\n", best);
 	if(async_write_str(cmd, fname))

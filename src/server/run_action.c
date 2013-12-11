@@ -55,21 +55,6 @@ printf("before: %s %s\n", sdirs->lockfile, sdirs->lock);
 	return -1;
 }
 
-/* I am sure I wrote this function already, somewhere else. */
-static int reset_conf_val(const char *src, char **dest)
-{
-	if(src)
-	{
-		if(*dest) free(*dest);
-		if(!(*dest=strdup(src)))
-		{
-			log_out_of_memory(__FUNCTION__);
-			return -1;
-		}
-	}
-	return 0;
-}
-
 static int client_can_restore(struct config *cconf)
 {
 	struct stat statp;
@@ -135,8 +120,7 @@ static int run_backup(struct sdirs *sdirs, struct config *cconf,
 		// This client is not the original client, so a
 		// backup might cause all sorts of trouble.
 		logp("Not allowing backup of %s\n", cconf->cname);
-		async_write_str(CMD_GEN, "Backup is not allowed");
-		return 0;
+		return async_write_str(CMD_GEN, "Backup is not allowed");
 	}
 
 	// Set quality of service bits on backups.
@@ -172,20 +156,19 @@ static int run_backup(struct sdirs *sdirs, struct config *cconf,
 		if(*timer_ret)
 		{
 			logp("Not running backup of %s\n", cconf->cname);
-			async_write_str(CMD_GEN, "timer conditions not met");
-			return 0;
+			return async_write_str(CMD_GEN,
+				"timer conditions not met");
 		}
 		logp("Running backup of %s\n", cconf->cname);
 	}
 	else if(!cconf->client_can_force_backup)
 	{
 		logp("Not allowing forced backup of %s\n", cconf->cname);
-		async_write_str(CMD_GEN, "Forced backup is not allowed");
-		return 0;
+		return async_write_str(CMD_GEN, "Forced backup is not allowed");
 	}
 
 	snprintf(okstr, sizeof(okstr), "ok:%d", cconf->compression);
-	async_write_str(CMD_GEN, okstr);
+	if(async_write_str(CMD_GEN, okstr)) return -1;
 	ret=do_backup_server(sdirs, cconf, incexc);
 	maybe_do_notification(ret, sdirs->client, sdirs->current,
 		"log", "backup", cconf);
@@ -214,7 +197,8 @@ static int run_restore(struct sdirs *sdirs, struct config *cconf,
 		backupnostr=rbuf->buf+strlen("verify ");
 		act=ACTION_VERIFY;
 	}
-	reset_conf_val(backupnostr, &(cconf->backup));
+	if(conf_val_reset(backupnostr, &(cconf->backup)))
+		return -1;
 	if((cp=strchr(cconf->backup, ':'))) *cp='\0';
 
 	if(get_lock_sdirs(sdirs)) return -1;
@@ -227,16 +211,14 @@ static int run_restore(struct sdirs *sdirs, struct config *cconf,
 		else if(!r)
 		{
 			logp("Not allowing restore of %s\n", cconf->cname);
-			async_write_str(CMD_GEN,
+			return async_write_str(CMD_GEN,
 				"Client restore is not allowed");
-			return 0;
 		}
 	}
 	if(act==ACTION_VERIFY && !cconf->client_can_verify)
 	{
 		logp("Not allowing verify of %s\n", cconf->cname);
-		async_write_str(CMD_GEN, "Client verify is not allowed");
-		return 0;
+		return async_write_str(CMD_GEN, "Client verify is not allowed");
 	}
 
 	if((restoreregex=strchr(rbuf->buf, ':')))
@@ -244,8 +226,9 @@ static int run_restore(struct sdirs *sdirs, struct config *cconf,
 		*restoreregex='\0';
 		restoreregex++;
 	}
-	reset_conf_val(restoreregex, &(cconf->regex));
-	async_write_str(CMD_GEN, "ok");
+	if(conf_val_reset(restoreregex, &(cconf->regex))
+	  || async_write_str(CMD_GEN, "ok"))
+		return -1;
 	ret=do_restore_server(sdirs, act,
 		srestore, &dir_for_notify, cconf);
 	if(dir_for_notify)
@@ -314,7 +297,7 @@ static int run_list(struct sdirs *sdirs, struct config *cconf,
 		  browsedir[strlen(browsedir)-1]='\0';
 		backupno=rbuf->buf+strlen("listb ");
 	}
-	async_write_str(CMD_GEN, "ok");
+	if(async_write_str(CMD_GEN, "ok")) return -1;
 	return do_list_server(sdirs, cconf, backupno, listregex, browsedir);
 }
 

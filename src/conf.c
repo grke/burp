@@ -1,4 +1,5 @@
 #include "include.h"
+#include "glob_windows.h"
 
 /* Init only stuff related to includes/excludes.
    This is so that the server can override them all on the client. */
@@ -16,6 +17,7 @@ static void init_incexcs(struct config *conf)
 	conf->excreg=NULL; conf->ercount=0; // include (regular expression)
 	conf->excfs=NULL; conf->exfscount=0; // exclude filesystems
 	conf->excom=NULL; conf->excmcount=0; // exclude from compression
+	conf->incglob=NULL; conf->igcount=0; // exclude from compression
 	conf->fifos=NULL; conf->ffcount=0;
 	conf->blockdevs=NULL; conf->bdcount=0;
 	conf->split_vss=0;
@@ -43,6 +45,7 @@ static void free_incexcs(struct config *conf)
 	strlists_free(conf->excreg, conf->ercount); // exclude (regular expression)
 	strlists_free(conf->excfs, conf->exfscount); // exclude filesystems
 	strlists_free(conf->excom, conf->excmcount); // exclude from compression
+	strlists_free(conf->incglob, conf->igcount); // include (glob)
 	strlists_free(conf->fifos, conf->ffcount);
 	strlists_free(conf->blockdevs, conf->bdcount);
 	if(conf->backup) free(conf->backup);
@@ -257,7 +260,7 @@ static int get_conf_val_args(const char *field, const char *value, const char *o
 
 /* Windows users have a nasty habit of putting in backslashes. Convert them. */
 #ifdef HAVE_WIN32
-static void convert_backslashes(char **path)
+void convert_backslashes(char **path)
 {
 	char *p=NULL;
 	for(p=*path; *p; p++) if(*p=='\\') *p='/';
@@ -366,17 +369,24 @@ static int get_file_size(const char *value, ssize_t *dest, const char *config_pa
 	return 0;
 }
 
-static int pre_post_override(char **override, char **pre, char **post)
+int conf_val_reset(const char *src, char **dest)
 {
-	if(!override || !*override) return 0;
-	if(*pre) free(*pre);
-	if(*post) free(*post);
-	if(!(*pre=strdup(*override))
-	  || !(*post=strdup(*override)))
+	if(!src) return 0;
+	if(dest && *dest) free(*dest);
+	if(!(*dest=strdup(src)))
 	{
 		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
+	return 0;
+}
+
+static int pre_post_override(char **override, char **pre, char **post)
+{
+	if(!override || !*override) return 0;
+	if(conf_val_reset(*override, pre)
+	  || conf_val_reset(*override, post))
+		return -1;
 	free(*override);
 	*override=NULL;
 	return 0;
@@ -507,6 +517,7 @@ struct llists
 	struct strlist **erlist; // exclude (regular expression)
 	struct strlist **exfslist; // exclude filesystems
 	struct strlist **excomlist; // exclude from compression
+	struct strlist **iglist; // include (glob)
 	struct strlist **talist;
 	struct strlist **nslist;
 	struct strlist **nflist;
@@ -708,6 +719,8 @@ static int load_config_strings(struct config *conf, const char *field, const cha
 		NULL, &(conf->ircount), &(l->irlist), 0)) return -1;
 	if(get_conf_val_args(field, value, "exclude_regex", NULL,
 		NULL, &(conf->ercount), &(l->erlist), 0)) return -1;
+	if(get_conf_val_args(field, value, "exclude_regex", NULL,
+		NULL, &(conf->igcount), &(l->iglist), 0)) return -1;
 	if(get_conf_val_args(field, value, "exclude_fs", NULL,
 		NULL, &(conf->exfscount), &(l->exfslist), 0)) return -1;
 	if(get_conf_val_args(field, value, "exclude_comp", NULL,
@@ -1109,9 +1122,12 @@ static void set_max_ext(struct strlist **list, int count)
 
 static int finalise_config(const char *config_path, struct config *conf, struct llists *l, uint8_t loadall)
 {
-	int i=0;
 	int r=0;
+	int i=0;
 	struct strlist **sdlist=NULL;
+#ifndef HAVE_WIN32
+	glob_t globbuf;
+#endif
 
 	// Set the strlist flag for the excluded fstypes
 	for(i=0; i<conf->exfscount; i++)
@@ -1148,6 +1164,8 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 	do_strlist_sort(l->exfslist, conf->exfscount, &(conf->excfs));
 	// exclude from compression
 	do_strlist_sort(l->excomlist, conf->excmcount, &(conf->excom));
+	// include (glob)
+	do_strlist_sort(l->iglist, conf->igcount, &(conf->incglob));
 
 	set_max_ext(conf->incext, conf->incount);
 	set_max_ext(conf->excext, conf->excount);
@@ -1156,8 +1174,28 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 	do_strlist_sort(l->fflist, conf->ffcount, &(conf->fifos));
 	do_strlist_sort(l->bdlist, conf->bdcount, &(conf->blockdevs));
 	do_strlist_sort(l->fslist, conf->fscount, &(conf->fschgdir));
-	do_strlist_sort(l->ielist, conf->iecount, &(conf->incexcdir));
 	do_strlist_sort(l->nblist, conf->nbcount, &(conf->nobackup));
+
+	/* The glob stuff should only run on the client side. */
+	if(conf->mode==MODE_CLIENT)
+	{
+#ifndef HAVE_WIN32
+		memset(&globbuf, 0, sizeof(globbuf));
+		for(i=0; i<conf->igcount; i++)
+			glob(conf->incglob[i]->path,
+				i>0?GLOB_APPEND:0, NULL, &globbuf);
+
+		for(i=0; (unsigned int)i<globbuf.gl_pathc; i++)
+			strlist_add(&(l->ielist),
+				&(conf->iecount), globbuf.gl_pathv[i], 1);
+
+		globfree(&globbuf);
+#else
+		windows_glob(conf, &(l->ielist));
+#endif
+        }
+
+	do_strlist_sort(l->ielist, conf->iecount, &(conf->incexcdir));
 
 	// This decides which directories to start backing up, and which
 	// are subdirectories which don't need to be started separately.

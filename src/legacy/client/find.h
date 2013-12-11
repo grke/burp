@@ -87,7 +87,7 @@ struct FF_PKT {
    long flen;                         /* length of name component */
    char *link;                        /* link if file linked */
    struct stat statp;                 /* stat packet */
-   int64_t winattr;                   /* windows attributes */
+   uint64_t winattr;                  /* windows attributes */
    int32_t FileIndex;                 /* FileIndex of this file */
    int32_t LinkFI;                    /* FileIndex of main hard linked file */
    struct f_link *linked;             /* Set if this file is hard linked */
@@ -124,10 +124,5 @@ int in_include_regex(struct strlist **incre, int incount, const char *fname);
 int in_exclude_regex(struct strlist **excre, int excount, const char *fname);
 // Returns the level of compression.
 int in_exclude_comp(struct strlist **excom, int excmcount, const char *fname, int compression);
-
-/* from attribs.c */
-void encode_stat(char *buf, struct stat *statp, int64_t winattr, int compression);
-void decode_stat(const char *buf, struct stat *statp, int64_t *winattr, int *compression);
-bool set_attributes(const char *path, char cmd, struct stat *statp, int64_t winattr, struct cntr *cntr);
 
 #endif

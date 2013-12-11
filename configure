@@ -630,6 +630,7 @@ CAP_LIBS
 AFS_LIBS
 AFS_CFLAGS
 NCURSES_LIBS
+RSYNC_LIBS
 CRYPT_LIBS
 ZLIBS
 ALLOCA
@@ -23532,6 +23533,72 @@ if test $have_uthash = no  ; then
 	cp ${srcdir}/uthash/uthash.h ${srcdir}/src
 fi
 
+for ac_header in librsync.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "librsync.h" "ac_cv_header_librsync_h" "$ac_includes_default"
+if test "x$ac_cv_header_librsync_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBRSYNC_H 1
+_ACEOF
+
+fi
+
+done
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for rs_delta_begin in -lrsync" >&5
+$as_echo_n "checking for rs_delta_begin in -lrsync... " >&6; }
+if ${ac_cv_lib_rsync_rs_delta_begin+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lrsync  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char rs_delta_begin ();
+int
+main ()
+{
+return rs_delta_begin ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_rsync_rs_delta_begin=yes
+else
+  ac_cv_lib_rsync_rs_delta_begin=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_rsync_rs_delta_begin" >&5
+$as_echo "$ac_cv_lib_rsync_rs_delta_begin" >&6; }
+if test "x$ac_cv_lib_rsync_rs_delta_begin" = xyes; then :
+  RSYNC_LIBS="-lrsync"
+fi
+
+have_librsync=no
+if test x$RSYNC_LIBS = x-lrsync; then
+
+$as_echo "#define HAVE_LIBRSYNC 1" >>confdefs.h
+
+   have_librsync=yes
+fi
+
+
+if test $have_librsync = no  ; then
+        echo "Please install librsync"
+        exit 1
+fi
+
 for ac_header in ncurses.h
 do :
   ac_fn_c_check_header_mongrel "$LINENO" "ncurses.h" "ac_cv_header_ncurses_h" "$ac_includes_default"
@@ -24412,7 +24479,7 @@ if test "x${subsysdir}" = "x${sbindir}" ; then
    exit 1
 fi
 
-ac_config_files="$ac_config_files autoconf/Make.common Makefile manpages/Makefile src/Makefile src/legacy/Makefile src/client/Makefile src/server/Makefile src/rabin/Makefile $PFILES"
+ac_config_files="$ac_config_files autoconf/Make.common Makefile manpages/Makefile src/Makefile src/client/Makefile src/server/Makefile src/rabin/Makefile src/legacy/Makefile src/legacy/client/Makefile src/legacy/server/Makefile $PFILES"
 
 ac_config_commands="$ac_config_commands default"
 
@@ -25525,10 +25592,12 @@ do
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "manpages/Makefile") CONFIG_FILES="$CONFIG_FILES manpages/Makefile" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
-    "src/legacy/Makefile") CONFIG_FILES="$CONFIG_FILES src/legacy/Makefile" ;;
     "src/client/Makefile") CONFIG_FILES="$CONFIG_FILES src/client/Makefile" ;;
     "src/server/Makefile") CONFIG_FILES="$CONFIG_FILES src/server/Makefile" ;;
     "src/rabin/Makefile") CONFIG_FILES="$CONFIG_FILES src/rabin/Makefile" ;;
+    "src/legacy/Makefile") CONFIG_FILES="$CONFIG_FILES src/legacy/Makefile" ;;
+    "src/legacy/client/Makefile") CONFIG_FILES="$CONFIG_FILES src/legacy/client/Makefile" ;;
+    "src/legacy/server/Makefile") CONFIG_FILES="$CONFIG_FILES src/legacy/server/Makefile" ;;
     "$PFILES") CONFIG_FILES="$CONFIG_FILES $PFILES" ;;
     "default") CONFIG_COMMANDS="$CONFIG_COMMANDS default" ;;
 

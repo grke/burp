@@ -66,7 +66,8 @@ struct bsid {
 };
 #endif
 
-int open_file_for_sendl(BFILE *bfd, FILE **fp, const char *fname, int64_t winattr, size_t *datalen, struct cntr *cntr)
+int open_file_for_sendl(BFILE *bfd, FILE **fp, const char *fname,
+	int64_t winattr, size_t *datalen, struct config *conf)
 {
 	if(fp)
 	{
@@ -74,7 +75,7 @@ int open_file_for_sendl(BFILE *bfd, FILE **fp, const char *fname, int64_t winatt
 		if((fd=open(fname, O_RDONLY|O_NOATIME))<0
 		  || !(*fp=fdopen(fd, "rb")))
 		{
-			logw(cntr,
+			logw(conf->cntr,
 				"Could not open %s: %s\n", fname, strerror(errno));
 			return -1;
 		}
@@ -97,13 +98,12 @@ int open_file_for_sendl(BFILE *bfd, FILE **fp, const char *fname, int64_t winatt
 				close_file_for_sendl(bfd, NULL);
 			}
 		}
-		binit(bfd, winattr);
+		binit(bfd, winattr, conf);
 		*datalen=0;
-		if(bopen(bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0,
-			(winattr & FILE_ATTRIBUTE_DIRECTORY))<=0)
+		if(bopen(bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0)<=0)
 		{
 			berrno be;
-			logw(cntr, "Could not open %s: %s\n",
+			logw(conf->cntr, "Could not open %s: %s\n",
 				fname, be.bstrerror(errno));
 			return -1;
 		}
@@ -148,7 +148,10 @@ int write_endfile(unsigned long long bytes, unsigned char *checksum)
    Encryption off and compression off uses send_whole_file().
    Perhaps a separate function is needed for encryption on compression off.
 */
-int send_whole_file_gzl(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen, size_t datalen)
+int send_whole_file_gzl(const char *fname, const char *datapth, int quick_read,
+	unsigned long long *bytes, const char *encpassword, struct cntr *cntr,
+	int compression, BFILE *bfd, FILE *fp, const char *extrameta,
+	size_t elen, size_t datalen)
 {
 	int ret=0;
 	int zret=0;
@@ -393,7 +396,8 @@ struct winbuf
 	unsigned long long *bytes;
 };
 
-static DWORD WINAPI write_efs(PBYTE pbData, PVOID pvCallbackContext, ULONG ulLength)
+static DWORD WINAPI write_efs(PBYTE pbData,
+	PVOID pvCallbackContext, ULONG ulLength)
 {
 	struct winbuf *mybuf=(struct winbuf *)pvCallbackContext;
 	(*(mybuf->bytes))+=ulLength;
@@ -402,7 +406,7 @@ static DWORD WINAPI write_efs(PBYTE pbData, PVOID pvCallbackContext, ULONG ulLen
 		logp("MD5_Update() failed\n");
 		return ERROR_FUNCTION_FAILED;
 	}
-	if(async_write(CMD_APPEND, (const char *)pbData, ulLength))
+	if(async_write_strn(CMD_APPEND, (const char *)pbData, ulLength))
 	{
 		return ERROR_FUNCTION_FAILED;
 	}
@@ -418,7 +422,10 @@ static DWORD WINAPI write_efs(PBYTE pbData, PVOID pvCallbackContext, ULONG ulLen
 }
 #endif
 
-int send_whole_filel(char cmd, const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, struct cntr *cntr, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen, size_t datalen)
+int send_whole_filel(char cmd, const char *fname, const char *datapth,
+	int quick_read, unsigned long long *bytes, struct cntr *cntr,
+	BFILE *bfd, FILE *fp, const char *extrameta,
+	size_t elen, size_t datalen)
 {
 	int ret=0;
 	size_t s=0;
@@ -509,7 +516,7 @@ int send_whole_filel(char cmd, const char *fname, const char *datapth, int quick
 				ret=-1;
 				break;
 			}
-			if(async_write(CMD_APPEND, buf, s))
+			if(async_write_strn(CMD_APPEND, buf, s))
 			{
 				ret=-1;
 				break;

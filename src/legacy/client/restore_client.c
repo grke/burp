@@ -105,7 +105,6 @@ static int make_link(const char *fname, const char *lnk, char cmd, const char *r
 static int open_for_restore(BFILE *bfd, FILE **fp, const char *path, struct sbufl *sb, int vss_restore, struct config *conf)
 {
 #ifdef HAVE_WIN32
-	int bopenret;
 	if(bfd->mode!=BF_CLOSED)
 	{
 		if(bfd->path && !strcmp(bfd->path, path))
@@ -124,21 +123,13 @@ static int open_for_restore(BFILE *bfd, FILE **fp, const char *path, struct sbuf
 			}
 		}
 	}
-	binit(bfd, sb->winattr);
+	binit(bfd, sb->winattr, conf);
 	if(vss_restore)
 		set_win32_backup(bfd);
 	else
 		bfd->use_backup_api=0;
-	if(S_ISDIR(sb->statp.st_mode))
-	{
-		mkdir(path, 0777);
-		bopenret=bopen(bfd, path, O_WRONLY | O_BINARY, 0, 1);
-	}
-	else
-		bopenret=bopen(bfd, path,
-		  O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,
-		  S_IRUSR | S_IWUSR, 0);
-	if(bopenret<=0)
+	if(bopen(bfd, path, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,
+		S_IRUSR | S_IWUSR)<=0)
 	{
 		berrno be;
 		char msg[256]="";
@@ -159,6 +150,9 @@ static int open_for_restore(BFILE *bfd, FILE **fp, const char *path, struct sbuf
 			return -1;
 	}
 #endif
+	// Add attributes to bfd so that they can be set when it is closed.
+	bfd->winattr=sb->winattr;
+	memcpy(&bfd->statp, &sb->statp, sizeof(struct stat));
 	return 0;
 }
 
@@ -453,8 +447,12 @@ static int restore_metadata(BFILE *bfd, struct sbufl *sb, const char *fname, enu
 		if(metadata)
 		{
 			
-			if(set_extrameta(bfd, fname, sb->cmd,
-				&(sb->statp), metadata, metalen, conf->cntr))
+			if(set_extrameta(
+#ifdef HAVE_WIN32
+				bfd,
+#endif
+				fname, sb->cmd,
+				&(sb->statp), metadata, metalen, conf))
 			{
 				free(metadata);
 				// carry on if we could not do it
@@ -590,7 +588,7 @@ static int overwrite_ok(struct sbufl *sb, struct config *conf, BFILE *bfd, const
 	return 1;
 }
 
-int do_restore_client(struct config *conf, enum action act, int vss_restore)
+int do_restore_client_legacy(struct config *conf, enum action act, int vss_restore)
 {
 	int ars=0;
 	int ret=0;
@@ -603,7 +601,7 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore)
 // chunks. So, leave bfd open after a Windows metadata transfer.
 	BFILE bfd;
 #ifdef HAVE_WIN32
-	binit(&bfd, 0);
+	binit(&bfd, 0, conf);
 #endif
 
 	logp("doing %s\n", act_str(act));

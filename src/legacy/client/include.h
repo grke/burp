@@ -7,11 +7,11 @@
 #include "../../client/extrameta.h"
 
 #include "acl.h"
-#include "backup_phase1_client.h"
-#include "backup_phase2_client.h"
+#include "backup_phase1.h"
+#include "backup_phase2.h"
 #include "find.h"
 #include "include.h"
-#include "restore_client.h"
+#include "restore.h"
 #include "xattr.h"
 
 #endif

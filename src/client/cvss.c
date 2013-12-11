@@ -34,7 +34,7 @@ int win32_start_vss(struct config *conf)
 		// Tell vss which drives to snapshot.
 		if(conf->vss_drives)
 		{
-			int i=0;
+			unsigned int i=0;
 			for(i=0; i<strlen(conf->vss_drives) && i<26; i++)
 			  szWinDriveLetters[i]=toupper(conf->vss_drives[i]);
 			szWinDriveLetters[i]='\0';

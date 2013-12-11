@@ -21,10 +21,10 @@ dummy:
 #
 SRCS = \
 	acl.c \
-	backup_phase1_client.c \
-	backup_phase2_client.c \
+	backup_phase1.c \
+	backup_phase2.c \
 	find.c \
-	restore_client.c \
+	restore.c \
 	xattr.c \
 
 OBJS = $(SRCS:.c=.o)

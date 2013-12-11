@@ -20,16 +20,16 @@ dummy:
 
 #
 SRCS = \
-	backup_phase1_server.c \
-	backup_phase2_server.c \
-	backup_phase3_server.c \
-	backup_phase4_server.c \
-	current_backups_server.c \
-	delete_server.c \
+	backup_phase1.c \
+	backup_phase2.c \
+	backup_phase3.c \
+	backup_phase4.c \
+	current_backups.c \
+	delete.c \
 	dpth.c \
-	list_server.c \
-	restore_server.c \
-	run_action_server.c \
+	list.c \
+	restore.c \
+	run_action.c \
 	vss_strip.c \
 	zlibio.c \
 

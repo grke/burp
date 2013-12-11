@@ -8,17 +8,16 @@
 #include "../../server/run_action.h"
 #include "../../server/sdirs.h"
 
-
-#include "backup_phase1_server.h"
-#include "backup_phase2_server.h"
-#include "backup_phase3_server.h"
-#include "backup_phase4_server.h"
-#include "current_backups_server.h"
-#include "delete_server.h"
+#include "backup_phase1.h"
+#include "backup_phase2.h"
+#include "backup_phase3.h"
+#include "backup_phase4.h"
+#include "current_backups.h"
+#include "delete.h"
 #include "dpth.h"
-#include "list_server.h"
-#include "restore_server.h"
-#include "run_action_server.h"
+#include "list.h"
+#include "restore.h"
+#include "run_action.h"
 #include "zlibio.h"
 
 #endif

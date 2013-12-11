@@ -80,6 +80,7 @@ struct config
 	int ercount; struct strlist **excreg; // exclude (regular expression)
 	int exfscount; struct strlist **excfs; // exclude filesystems
 	int excmcount; struct strlist **excom; // exclude from compression
+	int igcount; struct strlist **incglob; // include (glob expression)
 	uint8_t cross_all_filesystems;
 	uint8_t read_all_fifos;
 	struct strlist **fifos;
@@ -218,5 +219,10 @@ extern int parse_incexcs_buf(struct config *conf, const char *incexc);
 extern int log_incexcs_buf(const char *incexc);
 extern int parse_incexcs_path(struct config *conf, const char *path);
 extern int config_load_client(struct config *conf, struct config *cconf);
+extern int conf_val_reset(const char *src, char **dest);
+
+#ifdef HAVE_WIN32
+extern void convert_backslashes(char **path);
+#endif
 
 #endif

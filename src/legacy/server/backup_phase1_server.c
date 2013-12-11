@@ -1,5 +1,4 @@
 #include "include.h"
-#include "../server/sdirs.h"
 
 int backup_phase1_server(struct sdirs *sdirs, struct config *conf)
 {

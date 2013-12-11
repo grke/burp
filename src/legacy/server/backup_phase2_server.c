@@ -1,5 +1,4 @@
 #include "include.h"
-#include "../server/sdirs.h"
 
 static int treedata(struct sbufl *sb)
 {

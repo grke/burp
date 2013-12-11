@@ -1,5 +1,4 @@
 #include "include.h"
-#include "../server/current_backups.h"
 
 int do_delete_server(struct sdirs *sdirs, struct config *cconf,
 	const char *backup)

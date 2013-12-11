@@ -1,5 +1,4 @@
 #include "include.h"
-#include "../server/sdirs.h"
 
 // Combine the phase1 and phase2 files into a new manifest.
 int backup_phase3_server(struct sdirs *sdirs, struct config *cconf,

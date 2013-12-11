@@ -1,7 +1,5 @@
 #include "include.h"
 
-#include "cmd.h"
-
 static char filesymbol=CMD_FILE;
 #ifdef HAVE_WIN32
 static char metasymbol=CMD_VSS;

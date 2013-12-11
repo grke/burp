@@ -113,7 +113,7 @@ static int load_signature_and_send_delta(BFILE *bfd, FILE *in, unsigned long lon
 static int send_whole_file_w(char cmd, const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen, size_t datalen)
 {
 	if((compression || encpassword) && cmd!=CMD_EFS_FILE)
-		return send_whole_file_gz(fname, datapth, quick_read,
+		return send_whole_file_gzl(fname, datapth, quick_read,
 		  bytes, 
 		  encpassword, cntr, compression, bfd, fp, extrameta, elen,
 		  datalen);
@@ -157,7 +157,7 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 	// data to expect.
 	size_t datalen=0;
 #ifdef HAVE_WIN32
-	binit(&bfd, 0);
+	binit(&bfd, 0, conf);
 #endif
 
 	struct sbufl sb;
@@ -218,7 +218,7 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 			  || rbuf->cmd==CMD_EFS_FILE)
 			{
 				int forget=0;
-				int64_t winattr=0;
+				uint64_t winattr=0;
 				struct stat statbuf;
 				char *extrameta=NULL;
 				size_t elen=0;
@@ -281,7 +281,7 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 						NULL, &fp,
 #endif
 						sb.path, winattr,
-						&datalen, conf->cntr))
+						&datalen, conf))
 							forget++;
 				}
 
@@ -309,12 +309,10 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 					if(get_extrameta(
 #ifdef HAVE_WIN32
 						&bfd,
-#else
-						NULL,
 #endif
 						sb.path,
 						&statbuf, &extrameta, &elen,
-						winattr, conf->cntr,
+						winattr, conf,
 						&datalen))
 					{
 						logw(conf->cntr, "Meta data error for %s", sb.path);

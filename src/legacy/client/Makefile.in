@@ -7,9 +7,9 @@ VPATH = 	.
 # one up
 basedir = ..
 # top dir
-topdir = ../..
+topdir = ../../..
 # this dir relative to top dir
-thisdir = src/legacy
+thisdir = src/legacy/client
 
 DEBUG=@DEBUG@
 
@@ -20,11 +20,12 @@ dummy:
 
 #
 SRCS = \
-	attribs.c \
-	handy.c \
-	msg.c \
-	rs_buf.c \
-	sbufl.c
+	acl.c \
+	backup_phase1_client.c \
+	backup_phase2_client.c \
+	find.c \
+	restore_client.c \
+	xattr.c \
 
 OBJS = $(SRCS:.c=.o)
 LOBJS = $(SRCS:.c=.lo)
@@ -52,11 +53,11 @@ WIN32LIBS = $(@WIN32@)
 #	@echo "Compiling $<"
 	$(ECHO_CMD)$(LIBTOOL_COMPILE) $(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 #-------------------------------------------------------------------------
-all: Makefile legacy.a
-	@echo "==== Make of legacy.a is good ===="
+all: Makefile client_legacy.a
+	@echo "==== Make of client_legacy.a is good ===="
 	@echo " "
 
-legacy.a: $(OBJS)
+client_legacy.a: $(OBJS)
 	@echo "Making $@ ..."
 	$(AR) rc  $@ $(OBJS)
 	$(RANLIB) $@

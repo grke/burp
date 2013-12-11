@@ -48,9 +48,22 @@ CLIENT_OBJS = \
 	$(OBJDIR)/conf.o \
 	$(OBJDIR)/counter.o \
 	$(OBJDIR)/forkchild.o \
+	$(OBJDIR)/glob_windows.o \
+	$(OBJDIR)/handy.o \
 	$(OBJDIR)/incexc_recv.o \
 	$(OBJDIR)/incexc_send.o \
-	$(OBJDIR)/handy.o \
+	$(OBJDIR)/iobuf.o \
+	$(OBJDIR)/legacy/attribs.o \
+	$(OBJDIR)/legacy/client/acl.o \
+	$(OBJDIR)/legacy/client/backup_phase1_client.o \
+	$(OBJDIR)/legacy/client/backup_phase2_client.o \
+	$(OBJDIR)/legacy/client/find.o \
+	$(OBJDIR)/legacy/client/restore_client.o \
+	$(OBJDIR)/legacy/client/xattr.o \
+	$(OBJDIR)/legacy/handy.o \
+	$(OBJDIR)/legacy/msg.o \
+	$(OBJDIR)/legacy/rs_buf.o \
+	$(OBJDIR)/legacy/sbufl.o \
 	$(OBJDIR)/lock.o \
 	$(OBJDIR)/log.o \
 	$(OBJDIR)/main.o \
@@ -77,6 +90,7 @@ CLIENT_LIBS = \
 	$(LIBS_CRYPTO) \
 	$(LIBS_ZLIB) \
 	$(LIBS_NETWORK) \
+	$(LIBS_RSYNC) \
 	$(LIBS_PCRE) \
 	-lole32 \
 	-loleaut32 \

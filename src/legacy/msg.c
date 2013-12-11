@@ -1,31 +1,7 @@
 #include "include.h"
 
-int send_msg_fp(FILE *fp, char cmd, const char *buf, size_t s)
-{
-	if(fprintf(fp, "%c%04X", cmd, (unsigned int)s)!=5
-	  || fwrite(buf, 1, s, fp)!=s
-	  || fprintf(fp, "\n")!=1)
-	{
-		logp("Unable to write message to file: %s\n", strerror(errno));
-		return -1;
-	}
-	return 0;
-}
-
-int send_msg_zp(gzFile zp, char cmd, const char *buf, size_t s)
-{
-	if(gzprintf(zp, "%c%04X", cmd, s)!=5
-	  || gzwrite(zp, buf, s)!=(int)s
-	  || gzprintf(zp, "\n")!=1)
-	{
-		logp("Unable to write message to compressed file: %s\n",
-			strerror(errno));
-		return -1;
-	}
-	return 0;
-}
-
-static int do_write(BFILE *bfd, FILE *fp, unsigned char *out, size_t outlen, char **metadata, unsigned long long *sent)
+static int do_write(BFILE *bfd, FILE *fp, unsigned char *out, size_t outlen,
+	char **metadata, unsigned long long *sent)
 {
 	int ret=0;
 	if(metadata)
@@ -64,7 +40,10 @@ static int do_write(BFILE *bfd, FILE *fp, unsigned char *out, size_t outlen, cha
 	return 0;
 }
 
-static int do_inflate(z_stream *zstrm, BFILE *bfd, FILE *fp, unsigned char *out, unsigned char *buftouse, size_t lentouse, char **metadata, const char *encpassword, int enccompressed, unsigned long long *sent)
+static int do_inflate(z_stream *zstrm, BFILE *bfd, FILE *fp,
+	unsigned char *out, unsigned char *buftouse, size_t lentouse,
+	char **metadata, const char *encpassword, int enccompressed,
+	unsigned long long *sent)
 {
 	int zret=Z_OK;
 	unsigned have=0;
@@ -122,44 +101,46 @@ struct winbuf
 
 static DWORD WINAPI read_efs(PBYTE pbData, PVOID pvCallbackContext, PULONG ulLength)
 {
-	char cmd='\0';
-	size_t len=0;
-	char *buf=NULL;
+	struct iobuf *rbuf=NULL;
 	struct winbuf *mybuf=(struct winbuf *)pvCallbackContext;
+
+	if(!(rbuf && !(rbuf=iobuf_alloc())))
+		return ERROR_FUNCTION_FAILED;
 
 	while(1)
 	{
-		if(async_read(&cmd, &buf, &len))
+		if(async_read(rbuf))
 			return ERROR_FUNCTION_FAILED;
-		(*(mybuf->rcvd))+=len;
+		(*(mybuf->rcvd))+=rbuf->len;
 
-		switch(cmd)
+		switch(rbuf->cmd)
 		{
 			case CMD_APPEND:
-				memcpy(pbData, buf, len);
-				*ulLength=(ULONG)len;
-				(*(mybuf->sent))+=len;
-				free(buf);
+				memcpy(pbData, rbuf->buf, rbuf->len);
+				*ulLength=(ULONG)rbuf->len;
+				(*(mybuf->sent))+=rbuf->len;
+				iobuf_free_content(rbuf);
 				return ERROR_SUCCESS;
 			case CMD_END_FILE:
 				*ulLength=0;
-				free(buf);
+				iobuf_free_content(rbuf);
 				return ERROR_SUCCESS;
 			case CMD_WARNING:
-				logp("WARNING: %s\n", buf);
-				do_filecounter(mybuf->cntr, cmd, 0);
-				free(buf);
+				logp("WARNING: %s\n", rbuf->buf);
+				do_filecounter(mybuf->cntr, rbuf->cmd, 0);
+				iobuf_free_content(rbuf);
 				continue;
 			default:
-				logp("unknown append cmd: %c\n", cmd);
-				free(buf);
+				iobuf_log_unexpected(rbuf, __FUNCTION__);
+				iobuf_free_content(rbuf);
 				break;
 		}
 	}
 	return ERROR_FUNCTION_FAILED;
 }
 
-static int transfer_efs_in(BFILE *bfd, unsigned long long *rcvd, unsigned long long *sent, struct cntr *cntr)
+static int transfer_efs_in(BFILE *bfd, unsigned long long *rcvd,
+	unsigned long long *sent, struct cntr *cntr)
 {
 	int ret=0;
 	struct winbuf mybuf;
@@ -174,7 +155,10 @@ static int transfer_efs_in(BFILE *bfd, unsigned long long *rcvd, unsigned long l
 
 #endif
 
-int transfer_gzfile_in(struct sbufl *sb, const char *path, BFILE *bfd, FILE *fp, unsigned long long *rcvd, unsigned long long *sent, const char *encpassword, int enccompressed, struct cntr *cntr, char **metadata)
+int transfer_gzfile_in(struct sbufl *sb, const char *path, BFILE *bfd,
+	FILE *fp, unsigned long long *rcvd, unsigned long long *sent,
+	const char *encpassword, int enccompressed,
+	struct cntr *cntr, char **metadata)
 {
 	int quit=0;
 	int ret=-1;
@@ -368,28 +352,4 @@ int transfer_gzfile_in(struct sbufl *sb, const char *path, BFILE *bfd, FILE *fp,
 
 	if(ret) logp("transfer file returning: %d\n", ret);
 	return ret;
-}
-
-FILE *open_file(const char *fname, const char *mode)
-{
-	FILE *fp=NULL;
-
-	if(!(fp=fopen(fname, mode)))
-	{
-		logp("could not open %s: %s\n", fname, strerror(errno));
-		return NULL; 
-	}
-	return fp;
-}
-
-gzFile gzopen_file(const char *fname, const char *mode)
-{
-	gzFile fp=NULL;
-
-	if(!(fp=gzopen(fname, mode)))
-	{
-		logp("could not open %s: %s\n", fname, strerror(errno));
-		return NULL; 
-	}
-	return fp;
 }

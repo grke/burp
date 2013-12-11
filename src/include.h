@@ -14,6 +14,7 @@
 #include "conf.h"
 #include "counter.h"
 #include "forkchild.h"
+#include "glob_windows.h"
 #include "handy.h"
 #include "incexc_recv.h"
 #include "incexc_send.h"

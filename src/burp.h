@@ -93,6 +93,7 @@
 
 #ifndef HAVE_WIN32
 	#include <sys/stat.h>
+	#include <glob.h>
 #endif
 
 #if HAVE_SYS_WAIT_H

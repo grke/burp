@@ -84,6 +84,9 @@ LIBS_SSL := \
 LIBS_CRYPTO := \
 	$(DEPKGS)/lib/libcrypto.dll.a
 
+LIBS_RSYNC := \
+	$(DEPKGS)/lib/librsync.a
+
 LIBS_PCRE := \
 	$(DEPKGS)/lib/libpcreposix.dll.a
 

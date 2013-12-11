@@ -14,7 +14,13 @@ thisdir = .
 first_rule: all
 dummy:
 
-bin_subdirs = src/client src/server src/rabin src/legacy src
+bin_subdirs = src/client \
+		src/server \
+		src/rabin \
+		src/legacy \
+		src/legacy/client \
+		src/legacy/server \
+		src
 
 all_subdirs = ${bin_subdirs} manpages
 

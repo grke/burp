@@ -1,5 +1,7 @@
 #include "include.h"
 #include "../rabin/include.h"
+#include "../legacy/client/backup_phase1.h"
+#include "../legacy/client/backup_phase2.h"
 
 /* Ignore extrameta for now.
 #ifndef HAVE_WIN32
@@ -144,42 +146,6 @@ error:
 end:
 	iobuf_free_content(rbuf);
 	return ret;
-}
-
-static int add_to_scan_list(struct slist *flist, int *scanning, struct config *conf)
-{
-	int ff_ret;
-	struct sbuf *sb;
-	if(!(sb=sbuf_alloc())) return -1;
-	while(!(ff_ret=find_file_next(sb, conf)))
-	{
-		if(sb->path.buf)
-		{
-			// Got something.
-			if(ftype_to_cmd(sb, conf))
-			{
-				// It is not something we really want to send.
-				sbuf_free(sb);
-				if(!(sb=sbuf_alloc())) return -1;
-				continue;
-			}
-			sbuf_add_to_list(sb, flist);
-			return 0;
-		}
-	}
-	if(ff_ret<0)
-	{
-		// Error.
-		sbuf_free(sb);
-		return ff_ret;
-	}
-	else if(ff_ret>0)
-	{
-		// No more file system to scan.
-		printf("NO MORE SCANNING\n");
-		*scanning=0;
-	}
-	return 0;
 }
 
 static int add_to_blks_list(struct config *conf, struct slist *slist, struct blist *blist, struct win *win)
@@ -356,13 +322,11 @@ static void get_wbuf_from_scan(struct iobuf *wbuf, struct slist *flist)
 static int backup_phase2_client(struct config *conf, int resume)
 {
 	int ret=0;
-	int scanning=1;
 	int sigs_end=0;
 	int backup_end=0;
 	int requests_end=0;
 	int blk_requests_end=0;
 	struct win *win=NULL; // Rabin sliding window.
-	struct slist *flist=NULL;
 	struct slist *slist=NULL;
 	struct blist *blist=NULL;
 	struct iobuf *rbuf=NULL;
@@ -370,8 +334,7 @@ static int backup_phase2_client(struct config *conf, int resume)
 
 	logp("Begin backup\n");
 
-	if(!(flist=slist_alloc())
-	  || !(slist=slist_alloc())
+	if(!(slist=slist_alloc())
 	  || !(blist=blist_alloc())
 	  || !(wbuf=iobuf_alloc())
 	  || !(rbuf=iobuf_alloc()))
@@ -380,8 +343,7 @@ static int backup_phase2_client(struct config *conf, int resume)
 		goto end;
 	}
 
-	if(find_files_init()
-	  || blks_generate_init(conf)
+	if(blks_generate_init(conf)
 	  || !(win=win_alloc(&conf->rconf)))
 		goto end;
 
@@ -395,10 +357,6 @@ static int backup_phase2_client(struct config *conf, int resume)
 			{
 				get_wbuf_from_blks(wbuf, slist,
 					requests_end, &sigs_end);
-				if(!wbuf->len)
-				{
-					get_wbuf_from_scan(wbuf, flist);
-				}
 			}
 		}
 
@@ -412,15 +370,6 @@ static int backup_phase2_client(struct config *conf, int resume)
 		if(rbuf->buf && deal_with_read(rbuf, slist, blist,
 			conf, &backup_end, &requests_end, &blk_requests_end))
 				goto end;
-
-		if(scanning)
-		{
-			if(add_to_scan_list(flist, &scanning, conf))
-			{
-				ret=-1;
-				break;
-			}
-		}
 
 		if(slist->head
 		// Need to limit how many blocks are allocated at once.
@@ -462,9 +411,7 @@ static int backup_phase2_client(struct config *conf, int resume)
 end:
 blk_print_alloc_stats();
 sbuf_print_alloc_stats();
-	find_files_free();
 	win_free(win);
-	slist_free(flist);
 	slist_free(slist);
 	blist_free(blist);
 	iobuf_free(rbuf);
@@ -481,12 +428,12 @@ sbuf_print_alloc_stats();
 }
 
 // Return 0 for OK, -1 for error, 1 for timer conditions not met.
-int do_backup_client(struct config *conf, enum action act,
+int do_backup_client(struct config *conf, enum action action,
 	long name_max, int resume)
 {
 	int ret=0;
 
-	if(act==ACTION_ESTIMATE)
+	if(action==ACTION_ESTIMATE)
 		logp("do estimate client\n");
 	else
 		logp("do backup client\n");
@@ -496,7 +443,7 @@ int do_backup_client(struct config *conf, enum action act,
 #if defined(WIN32_VSS)
 	if((ret=win32_start_vss(conf))) return ret;
 #endif
-	if(act==ACTION_BACKUP_TIMED)
+	if(action==ACTION_BACKUP_TIMED)
 	{
 		// Run timed backups with lower priority.
 		// I found that this has to be done after the snapshot, or the
@@ -520,8 +467,15 @@ int do_backup_client(struct config *conf, enum action act,
 
 	// Scan the file system and send the results to the server.
 	// Skip phase1 if the server wanted to resume.
-	if(!ret && !resume) ret=backup_phase1_client(conf, name_max,
-		action==ACTION_ESTIMATE);
+	if(!ret && !resume)
+	{
+		if(conf->legacy)
+			ret=backup_phase1_client_legacy(conf, name_max,
+				action==ACTION_ESTIMATE);
+		else
+			ret=backup_phase1_client(conf, name_max,
+				action==ACTION_ESTIMATE);
+	}
 
 	if(action!=ACTION_ESTIMATE && !ret)
 	{
@@ -533,10 +487,10 @@ int do_backup_client(struct config *conf, enum action act,
 			ret=backup_phase2_client(conf, resume);
 	}
 
-	if(act==ACTION_ESTIMATE) print_filecounters(conf, ACTION_ESTIMATE);
+	if(action==ACTION_ESTIMATE) print_filecounters(conf, ACTION_ESTIMATE);
 
 #if defined(HAVE_WIN32)
-	if(act==ACTION_BACKUP_TIMED)
+	if(action==ACTION_BACKUP_TIMED)
 	{
 		if(SetThreadPriority(GetCurrentThread(),
 					THREAD_MODE_BACKGROUND_END))

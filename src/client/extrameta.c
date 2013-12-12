@@ -24,7 +24,17 @@ int has_extrameta(const char *path, char cmd)
         return 0;
 }
 
-int get_extrameta(BFILE *bfd, const char *path, struct stat *statp, char **extrameta, size_t *elen, int64_t winattr, struct config *conf, size_t *datalen)
+int get_extrameta(
+#ifdef HAVE_WIN32
+	BFILE *bfd,
+#endif
+	const char *path,
+	struct stat *statp,
+	char **extrameta,
+	size_t *elen,
+	int64_t winattr,
+	struct config *conf,
+	size_t *datalen)
 {
 #if defined (WIN32_VSS)
 	if(get_vss(bfd, path, statp, extrameta, elen, winattr, conf,

@@ -5,11 +5,11 @@
 
 #include "../../client/cvss.h"
 #include "../../client/extrameta.h"
+#include "../../client/find.h"
 
 #include "acl.h"
 #include "backup_phase1.h"
 #include "backup_phase2.h"
-#include "find.h"
 #include "include.h"
 #include "restore.h"
 #include "xattr.h"

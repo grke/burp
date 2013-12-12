@@ -22,7 +22,7 @@ static int maybe_send_extrameta(const char *path, char cmd, const char *attribs,
 	return 0;
 }
 
-int send_file(FF_PKT *ff, bool top_level, struct config *conf)
+int send_file_legacy(FF_PKT *ff, bool top_level, struct config *conf)
 {
    char msg[128]="";
    char attribs[MAXSTRING];
@@ -53,35 +53,10 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf)
 
 
 #ifdef HAVE_WIN32
-// Useful Windows attributes debug
-/*
-	printf("\n%llu", ff->winattr);
-	printf("\n%s\n", ff->fname);
-if(ff->winattr & FILE_ATTRIBUTE_READONLY) printf("readonly\n");
-if(ff->winattr & FILE_ATTRIBUTE_HIDDEN) printf("hidden\n");
-if(ff->winattr & FILE_ATTRIBUTE_SYSTEM) printf("system\n");
-if(ff->winattr & FILE_ATTRIBUTE_DIRECTORY) printf("directory\n");
-if(ff->winattr & FILE_ATTRIBUTE_ARCHIVE) printf("archive\n");
-if(ff->winattr & FILE_ATTRIBUTE_DEVICE) printf("device\n");
-if(ff->winattr & FILE_ATTRIBUTE_NORMAL) printf("normal\n");
-if(ff->winattr & FILE_ATTRIBUTE_TEMPORARY) printf("temporary\n");
-if(ff->winattr & FILE_ATTRIBUTE_SPARSE_FILE) printf("sparse\n");
-if(ff->winattr & FILE_ATTRIBUTE_REPARSE_POINT) printf("reparse\n");
-if(ff->winattr & FILE_ATTRIBUTE_COMPRESSED) printf("compressed\n");
-if(ff->winattr & FILE_ATTRIBUTE_OFFLINE) printf("offline\n");
-if(ff->winattr & FILE_ATTRIBUTE_NOT_CONTENT_INDEXED) printf("notcont\n");
-if(ff->winattr & FILE_ATTRIBUTE_ENCRYPTED) printf("encrypted\n");
-if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
-*/
 	if(ff->winattr & FILE_ATTRIBUTE_ENCRYPTED)
 	{
-//		if(ff->type!=FT_DIREND)
-//			logw(conf->p1cntr, "EFS not yet supported: %s", ff->fname);
-//		return 0;
-
-		if(ff->type==FT_REGE
-		  || ff->type==FT_REG
-		  || ff->type==FT_DIRBEGIN)
+		if(ff->type==FT_REG
+		  || ff->type==FT_DIR)
 		{
 			encode_stat(attribs,
 				&ff->statp, ff->winattr, conf->compression);
@@ -94,8 +69,6 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 					(unsigned long long)ff->statp.st_size);
 			return 0;
 		}
-		else if(ff->type==FT_DIREND)
-			return 0;
 		else
 		{
 			// Hopefully, here is never reached.
@@ -109,7 +82,7 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 
    switch (ff->type) {
 #ifndef HAVE_WIN32
-   case FT_LNKSAVED:
+   case FT_LNK_H:
         //printf("Lnka: %s -> %s\n", ff->fname, ff->link);
    	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
 	if(async_write_str(CMD_ATTRIBS, attribs)
@@ -124,7 +97,6 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
       break;
    case FT_RAW:
    case FT_FIFO:
-   case FT_REGE:
    case FT_REG:
       encode_stat(attribs, &ff->statp, ff->winattr,
 		in_exclude_comp(conf->excom, conf->excmcount,
@@ -155,7 +127,7 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 #endif
       break;
 #ifndef HAVE_WIN32
-   case FT_LNK:
+   case FT_LNK_S:
 	//printf("link: %s -> %s\n", ff->fname, ff->link);
    	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
         if(conf->split_vss && !conf->strip_vss
@@ -170,10 +142,8 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 		return -1;
 #endif
       break;
-   case FT_DIREND:
-      return 0;
    case FT_NOFSCHG:
-   case FT_DIRBEGIN:
+   case FT_DIR:
    case FT_REPARSE:
    case FT_JUNCTION:
 	{
@@ -227,20 +197,11 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 		return -1;
 #endif
       break;
-   case FT_NOACCESS:
-      logw(conf->p1cntr, _("Err: Could not access %s: %s"), ff->fname, strerror(errno));
-      break;
    case FT_NOFOLLOW:
       logw(conf->p1cntr, _("Err: Could not follow ff->link %s: %s"), ff->fname, strerror(errno));
       break;
    case FT_NOSTAT:
       logw(conf->p1cntr, _("Err: Could not stat %s: %s"), ff->fname, strerror(errno));
-      break;
-   case FT_NOCHG:
-      logw(conf->p1cntr, _("Skip: File not saved. No change. %s"), ff->fname);
-      break;
-   case FT_ISARCH:
-      logw(conf->p1cntr, _("Err: Attempt to backup archive. Not saved. %s"), ff->fname);
       break;
    case FT_NOOPEN:
       logw(conf->p1cntr, _("Err: Could not open directory %s: %s"), ff->fname, strerror(errno));
@@ -252,7 +213,7 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
    return 0;
 }
 
-int backup_phase1_client(struct config *conf, long name_max, int estimate)
+int backup_phase1_client_legacy(struct config *conf, long name_max, int estimate)
 {
 	int sd=0;
 	int ret=0;
@@ -273,7 +234,7 @@ int backup_phase1_client(struct config *conf, long name_max, int estimate)
 #endif
 	}
 
-	ff=init_find_files();
+	ff=find_files_init();
 	server_name_max=name_max;
 	for(; sd < conf->sdcount; sd++)
 	{
@@ -284,7 +245,7 @@ int backup_phase1_client(struct config *conf, long name_max, int estimate)
 					break;
 		}
 	}
-	term_find_files(ff);
+	find_files_free(ff);
 
 	print_endcounter(conf->p1cntr);
 	//print_filecounters(conf, ACTION_BACKUP);

@@ -353,7 +353,7 @@ static void get_wbuf_from_scan(struct iobuf *wbuf, struct slist *flist)
 	}
 }
 
-static int backup_client(struct config *conf, int estimate)
+static int backup_phase2_client(struct config *conf, int resume)
 {
 	int ret=0;
 	int scanning=1;
@@ -518,22 +518,19 @@ int do_backup_client(struct config *conf, enum action act,
 	}
 #endif
 
-	if(conf->legacy)
-	{
-/*
-		// Scan the file system and send the results to the server.
-		// Skip phase1 if the server wanted to resume.
-		if(!ret && !resume) ret=backup_phase1_client(conf, name_max,
-			action==ACTION_ESTIMATE);
+	// Scan the file system and send the results to the server.
+	// Skip phase1 if the server wanted to resume.
+	if(!ret && !resume) ret=backup_phase1_client(conf, name_max,
+		action==ACTION_ESTIMATE);
 
-		// Now, the server will be telling us what data we need to send.
-		if(action!=ACTION_ESTIMATE && !ret)
-			ret=backup_phase2_client(conf, resume, cntr);
-*/
-	}
-	else
+	if(action!=ACTION_ESTIMATE && !ret)
 	{
-		if(!ret) ret=backup_client(conf, act==ACTION_ESTIMATE);
+		// Now, the server will be telling us what data we need to
+		// send.
+		if(conf->legacy)
+			ret=backup_phase2_client_legacy(conf, resume);
+		else
+			ret=backup_phase2_client(conf, resume);
 	}
 
 	if(act==ACTION_ESTIMATE) print_filecounters(conf, ACTION_ESTIMATE);

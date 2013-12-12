@@ -112,7 +112,7 @@ struct FF_PKT {
 
 FF_PKT *init_find_files(void);
 int term_find_files(FF_PKT *ff);
-int find_files_begin(FF_PKT *ff_pkt, struct config *conf, char *fname, struct cntr *cntr);
+int find_files_begin(FF_PKT *ff_pkt, struct config *conf, char *fname);
 int pathcmp(const char *a, const char *b);
 int file_is_included(struct strlist **ielist, int iecount,
 	struct strlist **incext, int incount,

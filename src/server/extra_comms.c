@@ -157,7 +157,6 @@ static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, str
 			// Client is telling server its incexc
 			// configuration so that it can better decide
 			// what to do on resume.
-			if(*incexc) { free(*incexc); *incexc=NULL; }
 			if(incexc_recv_server(incexc, conf)) goto end;
 			if(*incexc)
 			{

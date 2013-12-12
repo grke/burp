@@ -481,7 +481,8 @@ sbuf_print_alloc_stats();
 }
 
 // Return 0 for OK, -1 for error, 1 for timer conditions not met.
-int do_backup_client(struct config *conf, enum action act)
+int do_backup_client(struct config *conf, enum action act,
+	long name_max, int resume)
 {
 	int ret=0;
 
@@ -517,8 +518,23 @@ int do_backup_client(struct config *conf, enum action act)
 	}
 #endif
 
-	// Scan the file system and send the results to the server.
-	if(!ret) ret=backup_client(conf, act==ACTION_ESTIMATE);
+	if(conf->legacy)
+	{
+/*
+		// Scan the file system and send the results to the server.
+		// Skip phase1 if the server wanted to resume.
+		if(!ret && !resume) ret=backup_phase1_client(conf, name_max,
+			action==ACTION_ESTIMATE);
+
+		// Now, the server will be telling us what data we need to send.
+		if(action!=ACTION_ESTIMATE && !ret)
+			ret=backup_phase2_client(conf, resume, cntr);
+*/
+	}
+	else
+	{
+		if(!ret) ret=backup_client(conf, act==ACTION_ESTIMATE);
+	}
 
 	if(act==ACTION_ESTIMATE) print_filecounters(conf, ACTION_ESTIMATE);
 
@@ -536,11 +552,5 @@ int do_backup_client(struct config *conf, enum action act)
 #endif
 #endif
 
-/*
-	while(1)
-	{
-		sleep(1);
-	}
-*/
 	return ret;
 }

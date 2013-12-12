@@ -10,19 +10,19 @@ static char metasymbol=CMD_METADATA;
 
 static long server_name_max;
 
-static int maybe_send_extrameta(const char *path, char cmd, const char *attribs, struct cntr *p1cntr)
+static int maybe_send_extrameta(const char *path, char cmd, const char *attribs, struct config *conf)
 {
 	if(has_extrameta(path, cmd))
 	{
 		if(async_write_str(CMD_ATTRIBS, attribs)
 		  || async_write_str(metasymbol, path))
 			return -1;
-		do_filecounter(p1cntr, metasymbol, 1);
+		do_filecounter(conf->p1cntr, metasymbol, 1);
 	}
 	return 0;
 }
 
-int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *p1cntr)
+int send_file(FF_PKT *ff, bool top_level, struct config *conf)
 {
    char msg[128]="";
    char attribs[MAXSTRING];
@@ -45,7 +45,7 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf, struct cntr *p1cn
 	  }
 	  if(ff->flen>server_name_max)
 	  {
-		logw(p1cntr, "File name too long (%lu > %lu): %s",
+		logw(conf->p1cntr, "File name too long (%lu > %lu): %s",
 			ff->flen, server_name_max, ff->fname);
 		return 0;
 	  }
@@ -76,7 +76,7 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 	if(ff->winattr & FILE_ATTRIBUTE_ENCRYPTED)
 	{
 //		if(ff->type!=FT_DIREND)
-//			logw(p1cntr, "EFS not yet supported: %s", ff->fname);
+//			logw(conf->p1cntr, "EFS not yet supported: %s", ff->fname);
 //		return 0;
 
 		if(ff->type==FT_REGE
@@ -88,9 +88,9 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 			if(async_write_str(CMD_ATTRIBS, attribs)
 			  || async_write_str(CMD_EFS_FILE, ff->fname))
 				return -1;
-			do_filecounter(p1cntr, CMD_EFS_FILE, 1);
+			do_filecounter(conf->p1cntr, CMD_EFS_FILE, 1);
 			if(ff->type==FT_REG)
-				do_filecounter_bytes(p1cntr,
+				do_filecounter_bytes(conf->p1cntr,
 					(unsigned long long)ff->statp.st_size);
 			return 0;
 		}
@@ -99,7 +99,7 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 		else
 		{
 			// Hopefully, here is never reached.
-			logw(p1cntr, "EFS type %d not yet supported: %s",
+			logw(conf->p1cntr, "EFS type %d not yet supported: %s",
 				ff->type,
 				ff->fname);
 			return 0;
@@ -116,9 +116,9 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 	  || async_write_str(CMD_HARD_LINK, ff->fname)
 	  || async_write_str(CMD_HARD_LINK, ff->link))
 		return -1;
-	do_filecounter(p1cntr, CMD_HARD_LINK, 1);
+	do_filecounter(conf->p1cntr, CMD_HARD_LINK, 1);
 	// At least FreeBSD 8.2 can have different xattrs on hard links.
-	if(maybe_send_extrameta(ff->fname, CMD_HARD_LINK, attribs, p1cntr))
+	if(maybe_send_extrameta(ff->fname, CMD_HARD_LINK, attribs, conf))
 		return -1;
 #endif
       break;
@@ -131,15 +131,15 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 			ff->fname, conf->compression));
 #ifdef HAVE_WIN32
       if(conf->split_vss && !conf->strip_vss
-	&& maybe_send_extrameta(ff->fname, filesymbol, attribs, p1cntr))
+	&& maybe_send_extrameta(ff->fname, filesymbol, attribs, conf))
 		return -1;
 #endif
       if(async_write_str(CMD_ATTRIBS, attribs)
 	|| async_write_str(filesymbol, ff->fname))
 		return -1;
-      do_filecounter(p1cntr, filesymbol, 1);
+      do_filecounter(conf->p1cntr, filesymbol, 1);
       if(ff->type==FT_REG)
-	do_filecounter_bytes(p1cntr, (unsigned long long)ff->statp.st_size);
+	do_filecounter_bytes(conf->p1cntr, (unsigned long long)ff->statp.st_size);
 #ifdef HAVE_WIN32
       // Possible trailing VSS meta data
       if(conf->split_vss && !conf->strip_vss)
@@ -147,10 +147,10 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 	if(async_write_str(CMD_ATTRIBS, attribs)
 	 || async_write_str(vss_trail_symbol, ff->fname))
 		return -1;
-        do_filecounter(p1cntr, vss_trail_symbol, 1);
+        do_filecounter(conf->p1cntr, vss_trail_symbol, 1);
       }
 #else
-      if(maybe_send_extrameta(ff->fname, filesymbol, attribs, p1cntr))
+      if(maybe_send_extrameta(ff->fname, filesymbol, attribs, conf))
 		return -1;
 #endif
       break;
@@ -159,14 +159,14 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 	//printf("link: %s -> %s\n", ff->fname, ff->link);
    	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
         if(conf->split_vss && !conf->strip_vss
-	  && maybe_send_extrameta(ff->fname, CMD_SOFT_LINK, attribs, p1cntr))
+	  && maybe_send_extrameta(ff->fname, CMD_SOFT_LINK, attribs, conf))
 		return -1;
 	if(async_write_str(CMD_ATTRIBS, attribs)
 	  || async_write_str(CMD_SOFT_LINK, ff->fname)
 	  || async_write_str(CMD_SOFT_LINK, ff->link))
 		return -1;
-	do_filecounter(p1cntr, CMD_SOFT_LINK, 1);
-        if(maybe_send_extrameta(ff->fname, CMD_SOFT_LINK, attribs, p1cntr))
+	do_filecounter(conf->p1cntr, CMD_SOFT_LINK, 1);
+        if(maybe_send_extrameta(ff->fname, CMD_SOFT_LINK, attribs, conf))
 		return -1;
 #endif
       break;
@@ -184,7 +184,7 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 	 {
 		snprintf(msg, sizeof(msg),
 			"%s%s%s\n", "Dir: ", ff->fname, errmsg);
-		logw(p1cntr, "%s", msg);
+		logw(conf->p1cntr, "%s", msg);
 	 }
 	 else
 	 {
@@ -195,23 +195,23 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
 		{
 			if(!conf->strip_vss
 			  && maybe_send_extrameta(ff->fname,
-				CMD_DIRECTORY, attribs, p1cntr)) return -1;
+				CMD_DIRECTORY, attribs, conf)) return -1;
 	      		if(async_write_str(CMD_ATTRIBS, attribs)) return -1;
 			if(async_write_str(CMD_DIRECTORY, ff->fname)) return -1;
-			do_filecounter(p1cntr, CMD_DIRECTORY, 1);
+			do_filecounter(conf->p1cntr, CMD_DIRECTORY, 1);
 		}
 		else
 		{
 	      		if(async_write_str(CMD_ATTRIBS, attribs)) return -1;
 			if(async_write_str(filesymbol, ff->fname)) return -1;
-			do_filecounter(p1cntr, filesymbol, 1);
+			do_filecounter(conf->p1cntr, filesymbol, 1);
 		}
 #else
 	      	if(async_write_str(CMD_ATTRIBS, attribs)
 		  || async_write_str(CMD_DIRECTORY, ff->fname)) return -1;
-		do_filecounter(p1cntr, CMD_DIRECTORY, 1);
+		do_filecounter(conf->p1cntr, CMD_DIRECTORY, 1);
         	if(maybe_send_extrameta(ff->fname, CMD_DIRECTORY,
-			attribs, p1cntr)) return -1;
+			attribs, conf)) return -1;
 #endif
 	 }
 	}
@@ -222,37 +222,37 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
       if(async_write_str(CMD_ATTRIBS, attribs)
 	  || async_write_str(CMD_SPECIAL, ff->fname))
 		return -1;
-      do_filecounter(p1cntr, CMD_SPECIAL, 1);
-      if(maybe_send_extrameta(ff->fname, CMD_SPECIAL, attribs, p1cntr))
+      do_filecounter(conf->p1cntr, CMD_SPECIAL, 1);
+      if(maybe_send_extrameta(ff->fname, CMD_SPECIAL, attribs, conf))
 		return -1;
 #endif
       break;
    case FT_NOACCESS:
-      logw(p1cntr, _("Err: Could not access %s: %s"), ff->fname, strerror(errno));
+      logw(conf->p1cntr, _("Err: Could not access %s: %s"), ff->fname, strerror(errno));
       break;
    case FT_NOFOLLOW:
-      logw(p1cntr, _("Err: Could not follow ff->link %s: %s"), ff->fname, strerror(errno));
+      logw(conf->p1cntr, _("Err: Could not follow ff->link %s: %s"), ff->fname, strerror(errno));
       break;
    case FT_NOSTAT:
-      logw(p1cntr, _("Err: Could not stat %s: %s"), ff->fname, strerror(errno));
+      logw(conf->p1cntr, _("Err: Could not stat %s: %s"), ff->fname, strerror(errno));
       break;
    case FT_NOCHG:
-      logw(p1cntr, _("Skip: File not saved. No change. %s"), ff->fname);
+      logw(conf->p1cntr, _("Skip: File not saved. No change. %s"), ff->fname);
       break;
    case FT_ISARCH:
-      logw(p1cntr, _("Err: Attempt to backup archive. Not saved. %s"), ff->fname);
+      logw(conf->p1cntr, _("Err: Attempt to backup archive. Not saved. %s"), ff->fname);
       break;
    case FT_NOOPEN:
-      logw(p1cntr, _("Err: Could not open directory %s: %s"), ff->fname, strerror(errno));
+      logw(conf->p1cntr, _("Err: Could not open directory %s: %s"), ff->fname, strerror(errno));
       break;
    default:
-      logw(p1cntr, _("Err: Unknown file ff->type %d: %s"), ff->type, ff->fname);
+      logw(conf->p1cntr, _("Err: Unknown file ff->type %d: %s"), ff->type, ff->fname);
       break;
    }
    return 0;
 }
 
-int backup_phase1_client(struct config *conf, long name_max, int estimate, struct cntr *p1cntr, struct cntr *cntr)
+int backup_phase1_client(struct config *conf, long name_max, int estimate)
 {
 	int sd=0;
 	int ret=0;
@@ -280,14 +280,14 @@ int backup_phase1_client(struct config *conf, long name_max, int estimate, struc
 		if(conf->startdir[sd]->flag)
 		{
 			if((ret=find_files_begin(ff, conf,
-				conf->startdir[sd]->path, p1cntr)))
+				conf->startdir[sd]->path)))
 					break;
 		}
 	}
 	term_find_files(ff);
 
-	print_endcounter(p1cntr);
-	//print_filecounters(p1cntr, cntr, ACTION_BACKUP);
+	print_endcounter(conf->p1cntr);
+	//print_filecounters(conf, ACTION_BACKUP);
 	if(ret) logp("Error in phase 1\n");
 	logp("Phase 1 end (file system scan)\n");
 

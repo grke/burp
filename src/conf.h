@@ -38,6 +38,8 @@ struct config
 
 	char *peer_version;
 
+	uint8_t legacy; // Whether to run in burp1 style or not.
+
 // server options
 	char *directory;
 	char *timestamp_format;

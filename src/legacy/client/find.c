@@ -371,7 +371,7 @@ static int nobackup_directory(struct config *conf, const char *path)
 }
 
 static int found_regular_file(FF_PKT *ff_pkt, struct config *conf,
-	struct cntr *cntr, char *fname, bool top_level,
+	char *fname, bool top_level,
 	struct utimbuf *restore_times)
 {
 	int rtn_stat;
@@ -391,13 +391,13 @@ static int found_regular_file(FF_PKT *ff_pkt, struct config *conf,
 		ff_pkt->type=FT_REGE;
 	else
 		ff_pkt->type=FT_REG;
-	rtn_stat=send_file(ff_pkt, top_level, conf, cntr);
+	rtn_stat=send_file(ff_pkt, top_level, conf);
 	if(ff_pkt->linked) ff_pkt->linked->FileIndex=ff_pkt->FileIndex;
 	return rtn_stat;
 }
 
 static int found_soft_link(FF_PKT *ff_pkt, struct config *conf,
-	struct cntr *cntr, char *fname, bool top_level)
+	char *fname, bool top_level)
 {
 	int size;
 	int rtn_stat;
@@ -408,7 +408,7 @@ static int found_soft_link(FF_PKT *ff_pkt, struct config *conf,
 		/* Could not follow link */
 		ff_pkt->type=FT_NOFOLLOW;
 		ff_pkt->ff_errno=errno;
-		rtn_stat=send_file(ff_pkt, top_level, conf, cntr);
+		rtn_stat=send_file(ff_pkt, top_level, conf);
 		if(ff_pkt->linked)
 			ff_pkt->linked->FileIndex=ff_pkt->FileIndex;
 		return rtn_stat;
@@ -416,14 +416,14 @@ static int found_soft_link(FF_PKT *ff_pkt, struct config *conf,
 	buffer[size]=0;
 	ff_pkt->link=buffer;	/* point to link */
 	ff_pkt->type=FT_LNK;	/* got a real link */
-	rtn_stat = send_file(ff_pkt, top_level, conf, cntr);
+	rtn_stat = send_file(ff_pkt, top_level, conf);
 	if(ff_pkt->linked) ff_pkt->linked->FileIndex=ff_pkt->FileIndex;
 	return rtn_stat;
 }
 
-static int backup_dir_and_return(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr, const char *fname, bool top_level, FF_PKT *dir_ff_pkt, struct utimbuf *restore_times)
+static int backup_dir_and_return(FF_PKT *ff_pkt, struct config *conf,  const char *fname, bool top_level, FF_PKT *dir_ff_pkt, struct utimbuf *restore_times)
 {
-	int rtn_stat=send_file(ff_pkt, top_level, conf, cntr);
+	int rtn_stat=send_file(ff_pkt, top_level, conf);
 	if(ff_pkt->linked)
 		ff_pkt->linked->FileIndex=ff_pkt->FileIndex;
 	free_dir_ff_pkt(dir_ff_pkt);
@@ -432,14 +432,14 @@ static int backup_dir_and_return(FF_PKT *ff_pkt, struct config *conf, struct cnt
 	return rtn_stat;
 }
 
-int fstype_excluded(struct config *conf, const char *fname, struct cntr *cntr)
+int fstype_excluded(struct config *conf, const char *fname)
 {
 #if defined(HAVE_LINUX_OS)
 	int i=0;
 	struct statfs buf;
 	if(statfs(fname, &buf))
 	{
-		logw(cntr, "Could not statfs %s: %s\n", fname, strerror(errno));
+		logw(conf->p1cntr, "Could not statfs %s: %s\n", fname, strerror(errno));
 		return -1;
 	}
 	for(i=0; i<conf->exfscount; i++)
@@ -549,10 +549,10 @@ static int get_files_in_directory(DIR *directory, struct dirent ***nl, int *coun
 /* prototype, because process_files_in_directory() recurses using find_files()
  */
 static int
-find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
+find_files(FF_PKT *ff_pkt, struct config *conf,
   char *fname, dev_t parent_device, bool top_level);
 
-static int process_files_in_directory(struct dirent **nl, int count, int *rtn_stat, char **link, size_t len, size_t *link_len, struct config *conf, struct cntr *cntr, FF_PKT *ff_pkt, dev_t our_device)
+static int process_files_in_directory(struct dirent **nl, int count, int *rtn_stat, char **link, size_t len, size_t *link_len, struct config *conf, FF_PKT *ff_pkt, dev_t our_device)
 {
 	int m=0;
 	for(m=0; m<count; m++)
@@ -584,7 +584,7 @@ static int process_files_in_directory(struct dirent **nl, int count, int *rtn_st
 			*link))
 		{
 			*rtn_stat=find_files(ff_pkt,
-				conf, cntr, *link, our_device, false);
+				conf, *link, our_device, false);
 			if(ff_pkt->linked)
 				ff_pkt->linked->FileIndex = ff_pkt->FileIndex;
 		}
@@ -600,7 +600,7 @@ static int process_files_in_directory(struct dirent **nl, int count, int *rtn_st
 				{
 					int ey;
 					if((*rtn_stat=find_files(ff_pkt, conf,
-						cntr, conf->incexcdir[ex]->path,
+						conf->incexcdir[ex]->path,
 						 our_device, false)))
 							break;
 					// Now need to skip subdirectories of
@@ -622,7 +622,7 @@ static int process_files_in_directory(struct dirent **nl, int count, int *rtn_st
 }
 
 static int found_directory(FF_PKT *ff_pkt, struct config *conf,
-	struct cntr *cntr, char *fname, dev_t parent_device, bool top_level,
+	char *fname, dev_t parent_device, bool top_level,
 	struct utimbuf *restore_times)
 {
 	int rtn_stat;
@@ -675,7 +675,7 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 	windows_reparse_point_fiddling(ff_pkt);
 #endif
 
-	rtn_stat=send_file(ff_pkt, top_level, conf, cntr);
+	rtn_stat=send_file(ff_pkt, top_level, conf);
 	if(rtn_stat || ff_pkt->type==FT_REPARSE || ff_pkt->type==FT_JUNCTION)
 	{
 		 /* ignore or error status */
@@ -715,10 +715,10 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 #endif
 		))
 	{
-		if(fstype_excluded(conf, ff_pkt->fname, cntr))
+		if(fstype_excluded(conf, ff_pkt->fname))
 		{
 			free(link);
-			return backup_dir_and_return(ff_pkt, conf, cntr,
+			return backup_dir_and_return(ff_pkt, conf,
 				fname, top_level, dir_ff_pkt, restore_times);
 		}
 		if(!fs_change_is_allowed(conf, ff_pkt->fname))
@@ -731,7 +731,7 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 	if(!recurse)
 	{
 		free(link);
-		return backup_dir_and_return(ff_pkt, conf, cntr,
+		return backup_dir_and_return(ff_pkt, conf,
 			fname, top_level, dir_ff_pkt, restore_times);
 	}
 
@@ -756,7 +756,7 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 #endif
 		ff_pkt->type=FT_NOOPEN;
 		ff_pkt->ff_errno=errno;
-		rtn_stat=send_file(ff_pkt, top_level, conf, cntr);
+		rtn_stat=send_file(ff_pkt, top_level, conf);
 		if(ff_pkt->linked)
 			ff_pkt->linked->FileIndex=ff_pkt->FileIndex;
 		free(link);
@@ -781,7 +781,7 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 	if(nl)
 	{
 		if(process_files_in_directory(nl, count,
-			&rtn_stat, &link, len, &link_len, conf, cntr,
+			&rtn_stat, &link, len, &link_len, conf,
 			ff_pkt, our_device))
 		{
 			free(link);
@@ -801,7 +801,7 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 	*/
 		/* handle directory entry */
 	if(!rtn_stat)
-		send_file(dir_ff_pkt, top_level, conf, cntr);
+		send_file(dir_ff_pkt, top_level, conf);
 	if(ff_pkt->linked)
 		ff_pkt->linked->FileIndex = dir_ff_pkt->FileIndex;
 	free_dir_ff_pkt(dir_ff_pkt);
@@ -812,7 +812,7 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 }
 
 static int found_other(FF_PKT *ff_pkt, struct config *conf,
-	struct cntr *cntr, char *fname, bool top_level)
+	char *fname, bool top_level)
 {
 	int rtn_stat;
 #ifdef HAVE_FREEBSD_OS
@@ -843,7 +843,7 @@ static int found_other(FF_PKT *ff_pkt, struct config *conf,
 		/* The only remaining are special (character, ...) files */
 		ff_pkt->type=FT_SPEC;
 	}
-	rtn_stat=send_file(ff_pkt, top_level, conf, cntr);
+	rtn_stat=send_file(ff_pkt, top_level, conf);
 	if(ff_pkt->linked) ff_pkt->linked->FileIndex = ff_pkt->FileIndex;
 	return rtn_stat;
 }
@@ -856,7 +856,7 @@ static int found_other(FF_PKT *ff_pkt, struct config *conf,
  *  descending into a directory.
  */
 static int
-find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
+find_files(FF_PKT *ff_pkt, struct config *conf,
   char *fname, dev_t parent_device, bool top_level)
 {
 	int len;
@@ -873,7 +873,7 @@ find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
 	{
 		ff_pkt->type=FT_NOSTAT;
 		ff_pkt->ff_errno=errno;
-		return send_file(ff_pkt, top_level, conf, cntr);
+		return send_file(ff_pkt, top_level, conf);
 	}
 
 	/* Save current times of this directory in case we need to
@@ -900,7 +900,7 @@ find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
 		{
 			ff_pkt->type=FT_NOSTAT;
 			ff_pkt->ff_errno=errno;
-			return send_file(ff_pkt, top_level, conf, cntr);
+			return send_file(ff_pkt, top_level, conf);
 		}
 	}
 #endif
@@ -950,7 +950,7 @@ find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
 			ff_pkt->type=FT_LNKSAVED;
 			ff_pkt->LinkFI=lp->FileIndex;
 			ff_pkt->linked=0;
-			rtn_stat=send_file(ff_pkt, top_level, conf, cntr);
+			rtn_stat=send_file(ff_pkt, top_level, conf);
 			return rtn_stat;
 		  }
 		}
@@ -979,7 +979,7 @@ find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
 
 	/* This is not a link to a previously dumped file, so dump it.  */
 	if(S_ISREG(ff_pkt->statp.st_mode))
-		return found_regular_file(ff_pkt, conf, cntr, fname,
+		return found_regular_file(ff_pkt, conf, fname,
 			top_level, &restore_times);
 	else if(S_ISLNK(ff_pkt->statp.st_mode))
 	{
@@ -995,22 +995,22 @@ find_files(FF_PKT *ff_pkt, struct config *conf, struct cntr *cntr,
 			{
 				ff_pkt->statp.st_mode ^= S_IFLNK;
 				ff_pkt->statp.st_mode |= S_IFBLK;
-				return found_other(ff_pkt, conf, cntr, fname,
+				return found_other(ff_pkt, conf, fname,
 					top_level);
 			}
 		}
 #endif
-		return found_soft_link(ff_pkt, conf, cntr, fname, top_level);
+		return found_soft_link(ff_pkt, conf, fname, top_level);
 	}
 	else if(S_ISDIR(ff_pkt->statp.st_mode))
-		return found_directory(ff_pkt, conf, cntr, fname,
+		return found_directory(ff_pkt, conf, fname,
 			parent_device, top_level, &restore_times);
 	else
-		return found_other(ff_pkt, conf, cntr, fname, top_level);
+		return found_other(ff_pkt, conf, fname, top_level);
 }
 
-int find_files_begin(FF_PKT *ff_pkt, struct config *conf, char *fname, struct cntr *cntr)
+int find_files_begin(FF_PKT *ff_pkt, struct config *conf, char *fname)
 {
-	return find_files(ff_pkt, conf, cntr, fname, (dev_t)-1,
+	return find_files(ff_pkt, conf, fname, (dev_t)-1,
 		1 /* top_level */);
 }

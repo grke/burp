@@ -29,6 +29,7 @@ static enum asl_ret incexc_recv_func(struct iobuf *rbuf,
 
 static int incexc_recv(char **incexc, const char *reqstr, const char *repstr, const char *endreqstr, const char *endrepstr, struct config *conf)
 {
+	if(*incexc) { free(*incexc); *incexc=NULL; }
 	if(async_write_str(CMD_GEN, repstr)) return -1;
 
 	endreqstrf=endreqstr;

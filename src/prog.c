@@ -66,6 +66,7 @@ static void usage_client(void)
 	printf("                  L: long list\n");
 	printf("                  r: restore\n");
 	printf("                  t: timed backup\n");
+	printf("                  T: check backup timer, but do not actually backup\n");
 	printf("                  v: verify\n");
 	printf("  -b <number>    Backup number (default: the most recent backup)\n");
 	printf("  -c <path>      Path to config file (default: %s).\n", get_config_path());
@@ -184,6 +185,8 @@ int main (int argc, char *argv[])
 					act=ACTION_BACKUP;
 				else if(!strncmp(optarg, "timedbackup", 1))
 					act=ACTION_BACKUP_TIMED;
+				else if(!strncmp(optarg, "Timercheck", 1))
+       					act=ACTION_TIMER_CHECK;
 				else if(!strncmp(optarg, "restore", 1))
 					act=ACTION_RESTORE;
 				else if(!strncmp(optarg, "verify", 1))

@@ -40,6 +40,7 @@ CLIENT_OBJS = \
 	$(OBJDIR)/client/ca.o \
 	$(OBJDIR)/client/cvss.o \
 	$(OBJDIR)/client/delete.o \
+	$(OBJDIR)/client/extra_comms.o \
 	$(OBJDIR)/client/extrameta.o \
 	$(OBJDIR)/client/find.o \
 	$(OBJDIR)/client/list.o \

@@ -10,6 +10,7 @@
 #include "ca.h"
 #include "cvss.h"
 #include "delete.h"
+#include "extra_comms.h"
 #include "extrameta.h"
 #include "find.h"
 #include "list.h"

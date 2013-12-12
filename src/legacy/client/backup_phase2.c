@@ -432,7 +432,7 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 	return ret;
 }
 
-int backup_phase2_client(struct config *conf, int resume)
+int backup_phase2_client_legacy(struct config *conf, int resume)
 {
 	int ret=0;
 

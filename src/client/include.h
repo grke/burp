@@ -7,6 +7,7 @@
 #include "auth.h"
 #include "autoupgrade.h"
 #include "backup.h"
+#include "backup_phase1.h"
 #include "ca.h"
 #include "cvss.h"
 #include "delete.h"

@@ -97,7 +97,6 @@ int attribs_encode(struct sbuf *sb)
 #endif
 
 // Decode a stat packet from base64 characters.
-// FIX THIS: Do everything with a struct sb.
 void attribs_decode_low_level(struct sbuf *sb)
 {
 	const char *p=sb->attr.buf;

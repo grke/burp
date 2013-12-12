@@ -543,6 +543,8 @@ struct llists
 
 static int load_config_ints(struct config *conf, const char *field, const char *value)
 {
+	get_conf_val_uint8(field, value, "legacy",
+		&(conf->legacy));
 	get_conf_val_uint8(field, value, "syslog",
 		&(conf->log_to_syslog));
 	get_conf_val_uint8(field, value, "stdout",
@@ -1485,6 +1487,7 @@ static int set_global_arglist(struct strlist ***dst, struct strlist **src, int *
 /* Remember to update the list in the man page when you change these.*/
 int config_set_client_global(struct config *conf, struct config *cconf)
 {
+	cconf->legacy=conf->legacy;
 	cconf->log_to_syslog=conf->log_to_syslog;
 	cconf->log_to_stdout=conf->log_to_stdout;
 	cconf->progress_counter=conf->progress_counter;

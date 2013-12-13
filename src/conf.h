@@ -72,24 +72,22 @@ struct config
 	char *ca_csr_dir;
 
   // This block of client stuff is all to do with what files to backup.
-	int sdcount; struct strlist **startdir;
-	int iecount; struct strlist **incexcdir;
-	int fscount; struct strlist **fschgdir;
-	int nbcount; struct strlist **nobackup;
-	int incount; struct strlist **incext; // include extensions
-	int excount; struct strlist **excext; // exclude extensions
-	int ircount; struct strlist **increg; // include (regular expression)
-	int ercount; struct strlist **excreg; // exclude (regular expression)
-	int exfscount; struct strlist **excfs; // exclude filesystems
-	int excmcount; struct strlist **excom; // exclude from compression
-	int igcount; struct strlist **incglob; // include (glob expression)
+	struct strlist *startdir;
+	struct strlist *incexcdir;
+	struct strlist *fschgdir;
+	struct strlist *nobackup;
+	struct strlist *incext; // include extensions
+	struct strlist *excext; // exclude extensions
+	struct strlist *increg; // include (regular expression)
+	struct strlist *excreg; // exclude (regular expression)
+	struct strlist *excfs; // exclude filesystems
+	struct strlist *excom; // exclude from compression
+	struct strlist *incglob; // include (glob expression)
 	uint8_t cross_all_filesystems;
 	uint8_t read_all_fifos;
-	struct strlist **fifos;
-	int ffcount;
+	struct strlist *fifos;
 	uint8_t read_all_blockdevs;
-	struct strlist **blockdevs;
-	int bdcount;
+	struct strlist *blockdevs;
 	ssize_t min_file_size;
 	ssize_t max_file_size;
 	int split_vss;
@@ -107,27 +105,21 @@ struct config
 	char *browsedir;
 
 	char *backup_script_pre;
-	struct strlist **backup_script_pre_arg;
-	int bprecount;
+	struct strlist *backup_script_pre_arg;
 	char *backup_script_post;
-	struct strlist **backup_script_post_arg;
-	int bpostcount;
+	struct strlist *backup_script_post_arg;
 	uint8_t backup_script_post_run_on_fail;
 	char *restore_script_pre;
-	struct strlist **restore_script_pre_arg;
-	int rprecount;
+	struct strlist *restore_script_pre_arg;
 	char *restore_script_post;
-	struct strlist **restore_script_post_arg;
-	int rpostcount;
+	struct strlist *restore_script_post_arg;
 	uint8_t restore_script_post_run_on_fail;
 
 	char *server_script_pre;
-	struct strlist **server_script_pre_arg;
-	int sprecount;
+	struct strlist *server_script_pre_arg;
 	uint8_t server_script_pre_notify;
 	char *server_script_post;
-	struct strlist **server_script_post_arg;
-	int spostcount;
+	struct strlist *server_script_post_arg;
 	uint8_t server_script_post_run_on_fail;
 	uint8_t server_script_post_notify;
 
@@ -137,23 +129,19 @@ struct config
 	// Use these when you want to give the same args to both post and pre
 	// scripts.
 	char *backup_script;
-	struct strlist **backup_script_arg;
-	int bscount;
+	struct strlist *backup_script_arg;
 	char *restore_script;
-	struct strlist **restore_script_arg;
-	int rscount;
+	struct strlist *restore_script_arg;
 
 	char *server_script;
-	struct strlist **server_script_arg;
-	int sscount;
+	struct strlist *server_script_arg;
 	uint8_t server_script_notify;
 
 // Client options on the server.
 // They can be set globally in the server config, or for each client.
 	uint8_t hardlinked_archive;
 
-	int kpcount;
-	struct strlist **keep;
+	struct strlist *keep;
 
 	char *working_dir_recovery_method;
 	uint8_t librsync;
@@ -163,22 +151,18 @@ struct config
 	uint8_t resume_partial;
 
 	char *timer_script;
-	struct strlist **timer_arg;
-	int tacount;
+	struct strlist *timer_arg;
 
 	char *notify_success_script;
-	struct strlist **notify_success_arg;
-	int nscount;
+	struct strlist *notify_success_arg;
 	uint8_t notify_success_warnings_only;
 	uint8_t notify_success_changes_only;
 
 	char *notify_failure_script;
-	struct strlist **notify_failure_arg;
-	int nfcount;
+	struct strlist *notify_failure_arg;
 
 // List of clients that are permitted to restore the files from our client.
-	struct strlist **rclients;
-	int rccount;
+	struct strlist *rclients;
 
 	char *dedup_group;
 

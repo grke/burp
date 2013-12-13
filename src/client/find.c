@@ -24,8 +24,6 @@ struct f_link
 	char *name;		/* The name */
 };
 
-typedef struct f_link link_t;
-
 // List of all hard linked files found.
 static struct f_link **linkhash=NULL;
 
@@ -35,8 +33,8 @@ static struct f_link **linkhash=NULL;
 
 static void init_max(int32_t *max, int32_t default_max)
 {
-	*max = pathconf(".", default_max);
-	if(*max < 1024) *max = 1024;
+	*max=pathconf(".", default_max);
+	if(*max<1024) *max=1024;
 	// Add for EOS.
 	(*max)++;
 }
@@ -49,8 +47,8 @@ FF_PKT *find_files_init(void)
 	ff=(FF_PKT *)calloc(1, sizeof(FF_PKT));
 	memset(ff, 0, sizeof(FF_PKT));
 
-	if(!(linkhash=(link_t **)
-		calloc(1, LINK_HASHTABLE_SIZE*sizeof(link_t *))))
+	if(!(linkhash=(f_link **)
+		calloc(1, LINK_HASHTABLE_SIZE*sizeof(f_link *))))
 	{
 		log_out_of_memory(__FUNCTION__);
 		return NULL;
@@ -118,146 +116,129 @@ static int myalphasort(const struct dirent **a, const struct dirent **b)
 	return pathcmp((*a)->d_name, (*b)->d_name);
 }
 
-/* Return 1 to include the file, 0 to exclude it. */
-static int in_include_ext(struct strlist **incext, int incount, const char *fname)
+// Return 1 to include the file, 0 to exclude it.
+static int in_include_ext(struct strlist *incext, const char *fname)
 {
 	int i=0;
+	struct strlist *l;
 	const char *cp=NULL;
 	// If not doing include_ext, let the file get backed up. 
-	if(!incount) return 1;
+	if(!incext) return 1;
 
 	// The flag of the first item contains the maximum number of characters
 	// that need to be checked.
-	for(cp=fname+strlen(fname)-1; i<incext[0]->flag && cp>=fname; cp--, i++)
+	// FIX THIS: The next two functions do things very similar to this.
+	for(cp=fname+strlen(fname)-1; i<incext->flag && cp>=fname; cp--, i++)
 	{
-		if(*cp=='.')
-		{
-			for(i=0; i<incount; i++)
-				if(!strcasecmp(incext[i]->path, cp+1))
-					return 1;
-			// If file has no extension, it cannot be included.
-			return 0;
-		}
+		if(*cp!='.') continue;
+		for(l=incext; l; l=l->next)
+			if(!strcasecmp(l->path, cp+1))
+				return 1;
+		// If file has no extension, it cannot be included.
+		return 0;
 	}
 	return 0;
 }
 
-static int in_exclude_ext(struct strlist **excext, int excount,
-	const char *fname)
+static int in_exclude_ext(struct strlist *excext, const char *fname)
 {
 	int i=0;
+	struct strlist *l;
 	const char *cp=NULL;
 	// If not doing exclude_ext, let the file get backed up.
-	if(!excount) return 0;
+	if(!excext) return 0;
 
 	// The flag of the first item contains the maximum number of characters
 	// that need to be checked.
-	for(cp=fname+strlen(fname)-1; i<excext[0]->flag && cp>=fname; cp--, i++)
+	for(cp=fname+strlen(fname)-1; i<excext->flag && cp>=fname; cp--, i++)
 	{
-		if(*cp=='.')
-		{
-			for(i=0; i<excount; i++)
-				if(!strcasecmp(excext[i]->path, cp+1))
-					return 1;
-			// If file has no extension, it is included.
-			return 0;
-		}
+		if(*cp!='.') continue;
+		for(l=excext; l; l=l->next)
+			if(!strcasecmp(l->path, cp+1))
+				return 1;
+		// If file has no extension, it is included.
+		return 0;
 	}
-
 	return 0;
 }
 
 // Returns the level of compression.
-int in_exclude_comp(struct strlist **excom, int excmcount,
-	const char *fname, int compression)
+int in_exclude_comp(struct strlist *excom, const char *fname, int compression)
 {
 	int i=0;
+	struct strlist *l;
 	const char *cp=NULL;
 	// If not doing compression, or there are no excludes, return
 	// straight away.
-	if(!compression || !excmcount) return compression;
+	if(!compression || !excom) return compression;
 
 	// The flag of the first item contains the maximum number of characters
 	// that need to be checked.
-	for(cp=fname+strlen(fname)-1; i<excom[0]->flag && cp>=fname; cp--, i++)
+	for(cp=fname+strlen(fname)-1; i<excom->flag && cp>=fname; cp--, i++)
 	{
-		if(*cp=='.')
-		{
-			for(i=0; i<excmcount; i++)
-				if(!strcasecmp(excom[i]->path, cp+1))
-					return 0;
-			return compression;
-		}
+		if(*cp!='.') continue;
+		for(l=excom; l; l=l->next)
+			if(!strcasecmp(l->path, cp+1))
+				return 0;
+		return compression;
 	}
 	return compression;
 }
 
 /* Return 1 to include the file, 0 to exclude it. */
 /* Currently not used - it needs more thinking about. */
-int in_include_regex(struct strlist **increg, int ircount, const char *fname)
+int in_include_regex(struct strlist *increg, const char *fname)
 {
-	int i;
 	// If not doing include_regex, let the file get backed up.
-	if(!ircount) return 1;
-	for(i=0; i<ircount; i++)
-	{
-		if(check_regex(increg[i]->re, fname))
+	if(!increg) return 1;
+	for(; increg; increg=increg->next)
+		if(check_regex(increg->re, fname))
 			return 1;
-	}
 	return 0;
 }
 
-int in_exclude_regex(struct strlist **excreg, int ercount, const char *fname)
+int in_exclude_regex(struct strlist *excreg, const char *fname)
 {
-	int i;
 	// If not doing exclude_regex, let the file get backed up.
-	//if(!ercount) return 0; (will return 0 anyway)
-	for(i=0; i<ercount; i++)
-        {
-		if(check_regex(excreg[i]->re, fname))
+	for(; excreg; excreg=excreg->next)
+		if(check_regex(excreg->re, fname))
 			return 1;
-	}
 	return 0;
 }
 
 // When recursing into directories, do not want to check the include_ext list.
-static int file_is_included_no_incext(struct strlist **ielist, int iecount, struct strlist **excext, int excount, struct strlist **excreg, int ercount, const char *fname)
+static int file_is_included_no_incext(struct config *conf, const char *fname)
 {
-	int i=0;
 	int ret=0;
 	int longest=0;
 	int matching=0;
-	int best=-1;
+	struct strlist *l=NULL;
+	struct strlist *best=NULL;
 
-	if(in_exclude_ext(excext, excount, fname)
-	  || in_exclude_regex(excreg, ercount, fname))
+	if(in_exclude_ext(conf->excext, fname)
+	  || in_exclude_regex(conf->excreg, fname))
 		return 0;
 
 	// Check include/exclude directories.
-	for(i=0; i<iecount; i++)
+	for(l=conf->incexcdir; l; l=l->next)
 	{
-		//logp("try: %d %s\n", i, ielist[i]->path);
-		matching=is_subdir(ielist[i]->path, fname);
+		//logp("try: %d %s\n", i, l->path);
+		matching=is_subdir(l->path, fname);
 		if(matching>longest)
 		{
 			longest=matching;
-			best=i;
+			best=l;
 		}
 	}
 	//logp("best: %d\n", best);
-	if(best<0) ret=0;
-	else ret=ielist[best]->flag;
+	if(!best) ret=0;
+	else ret=best->flag;
 
 	//logp("return: %d\n", ret);
 	return ret;
 }
 
-int file_is_included(struct strlist **ielist, int iecount,
-	struct strlist **incexc, int incount,
-	struct strlist **excext, int excount,
-	struct strlist **increg, int ircount,
-	struct strlist **excreg, int ercount,
-	const char *fname, bool top_level)
+int file_is_included(struct config *conf, const char *fname, bool top_level)
 {
 	// Always save the top level directory.
 	// This will help in the simulation of browsing backups because it
@@ -268,47 +249,45 @@ int file_is_included(struct strlist **ielist, int iecount,
 	// in this example) as the stats of the parent directories (/home,
 	// for example). Trust me on this.
 	if(!top_level
-	  && !in_include_ext(incexc, incount, fname)) return 0;
+	  && !in_include_ext(conf->incext, fname)) return 0;
 
-	return file_is_included_no_incext(ielist, iecount,
-		excext, excount, excreg, ercount, fname);
+	return file_is_included_no_incext(conf, fname);
 }
 
 static int fs_change_is_allowed(struct config *conf, const char *fname)
 {
-	int i=0;
+	struct strlist *l;
 	if(conf->cross_all_filesystems) return 1;
-	for(i=0; i<conf->fscount; i++)
-		if(!strcmp(conf->fschgdir[i]->path, fname)) return 1;
+	for(l=conf->fschgdir; l; l=l->next)
+		if(!strcmp(l->path, fname)) return 1;
 	return 0;
 }
 
 static int need_to_read_fifo(struct config *conf, const char *fname)
 {
-	int i=0;
+	struct strlist *l;
 	if(conf->read_all_fifos) return 1;
-	for(i=0; i<conf->ffcount; i++)
-		if(!strcmp(conf->fifos[i]->path, fname)) return 1;
+	for(l=conf->fifos; l; l=l->next)
+		if(!strcmp(l->path, fname)) return 1;
 	return 0;
 }
 
 static int need_to_read_blockdev(struct config *conf, const char *fname)
 {
-	int i=0;
+	struct strlist *l;
 	if(conf->read_all_blockdevs) return 1;
-	for(i=0; i<conf->bdcount; i++)
-		if(!strcmp(conf->blockdevs[i]->path, fname)) return 1;
+	for(l=conf->blockdevs; l; l=l->next)
+		if(!strcmp(l->path, fname)) return 1;
 	return 0;
 }
 
-static int nobackup_directory(struct config *conf, const char *path)
+static int nobackup_directory(struct strlist *nobackup, const char *path)
 {
-	int i=0;
 	struct stat statp;
-	for(i=0; i<conf->nbcount; i++)
+	for(; nobackup; nobackup=nobackup->next)
 	{
 		char *fullpath=NULL;
-		if(!(fullpath=prepend_s(path, conf->nobackup[i]->path)))
+		if(!(fullpath=prepend_s(path, nobackup->path)))
 			return -1;
 		if(!lstat(fullpath, &statp))
 		{
@@ -342,7 +321,6 @@ static int found_soft_link(FF_PKT *ff_pkt, struct config *conf,
 	char *fname, bool top_level)
 {
 	int size;
-	int rtn_stat;
 	char *buffer=(char *)alloca(path_max+name_max+102);
 
 	if((size=readlink(fname, buffer, path_max+name_max+101))<0)
@@ -353,27 +331,26 @@ static int found_soft_link(FF_PKT *ff_pkt, struct config *conf,
 	}
 	buffer[size]=0;
 	ff_pkt->link=buffer;	/* point to link */
-	ff_pkt->type=FT_LNK_S;	/* got a real link */
-	rtn_stat = send_file(ff_pkt, top_level, conf);
-	return rtn_stat;
+	ff_pkt->type=FT_LNK_S;	/* got a soft link */
+	return send_file(ff_pkt, top_level, conf);
 }
 
 int fstype_excluded(struct config *conf, const char *fname)
 {
 #if defined(HAVE_LINUX_OS)
-	int i=0;
 	struct statfs buf;
+	struct strlist *l;
 	if(statfs(fname, &buf))
 	{
-		logw(conf->p1cntr, "Could not statfs %s: %s\n", fname, strerror(errno));
+		logw(conf->p1cntr, "Could not statfs %s: %s\n",
+			fname, strerror(errno));
 		return -1;
 	}
-	for(i=0; i<conf->exfscount; i++)
+	for(l=conf->excfs; l; l=l->next)
 	{
-		if(conf->excfs[i]->flag==buf.f_type)
+		if(l->flag==buf.f_type)
 		{
-			//printf("excluding: %s (%s)\n",
-			//	fname, conf->excfs[i]->path);
+			//printf("excluding: %s (%s)\n", fname, l->path);
 			return -1;
 		}
 	}
@@ -503,38 +480,32 @@ static int process_files_in_directory(struct dirent **nl, int count, int *rtn_st
 		*q=0;
 		ff_pkt->flen=i;
 
-		if(file_is_included_no_incext(conf->incexcdir, conf->iecount,
-			conf->excext, conf->excount,
-			conf->excreg, conf->ercount,
-			*link))
+		if(file_is_included_no_incext(conf, *link))
 		{
 			*rtn_stat=find_files(ff_pkt,
 				conf, *link, our_device, false);
 		}
 		else
-		{ 
+		{
+			struct strlist *x;
 			// Excluded, but there might be a subdirectory that is
 			// included.
-			int ex=0;
-			for(ex=0; ex<conf->iecount; ex++)
+			for(x=conf->incexcdir; x; x=x->next)
 			{
-				if(conf->incexcdir[ex]->flag
-				  && is_subdir(*link, conf->incexcdir[ex]->path))
+				if(x->flag
+				  && is_subdir(*link, x->path))
 				{
-					int ey;
+					struct strlist *y;
 					if((*rtn_stat=find_files(ff_pkt, conf,
-						conf->incexcdir[ex]->path,
-						 our_device, false)))
+						x->path, our_device, false)))
 							break;
 					// Now need to skip subdirectories of
 					// the thing that we just stuck in
 					// find_one_file(), or we might get
 					// some things backed up twice.
-					for(ey=ex+1; ey<conf->iecount; ey++)
-					  if(is_subdir(
-						conf->incexcdir[ex]->path,
-						conf->incexcdir[ey]->path))
-							ex++;
+					for(y=x->next; y; y=y->next)
+						if(is_subdir(x->path, y->path))
+							y=y->next;
 				}
 			}
 		}
@@ -565,7 +536,7 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 	* Ignore this directory and everything below if one of the files defined
 	* by the 'nobackup' option exists.
 	*/
-	if((nbret=nobackup_directory(conf, ff_pkt->fname)))
+	if((nbret=nobackup_directory(conf->nobackup, ff_pkt->fname)))
 	{
 		if(nbret<0) return -1; // error
 		return 0; // do not back it up.
@@ -770,7 +741,7 @@ static int find_files(FF_PKT *ff_pkt, struct config *conf,
 		for(lp=linkhash[linkhash_ind]; lp; lp=lp->next)
 		{
 			if(lp->ino==(ino_t)ff_pkt->statp.st_ino
-				&& lp->dev==(dev_t)ff_pkt->statp.st_dev)
+			  && lp->dev==(dev_t)ff_pkt->statp.st_dev)
 			{
 				if(!strcmp(lp->name, fname)) return 0;
 				ff_pkt->link=lp->name;
@@ -805,10 +776,10 @@ static int find_files(FF_PKT *ff_pkt, struct config *conf,
 		   If they have specified the symlink in a read_blockdev
 		   argument, treat it as a block device.
 		*/
-		int i=0;
-		for(i=0; i<conf->bdcount; i++)
+		struct strlist *l;
+		for(l=conf->blockdevs; l; l=l->next)
 		{
-			if(!strcmp(conf->blockdevs[i]->path, fname))
+			if(!strcmp(l->path, fname))
 			{
 				ff_pkt->statp.st_mode ^= S_IFLNK;
 				ff_pkt->statp.st_mode |= S_IFBLK;

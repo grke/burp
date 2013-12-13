@@ -578,7 +578,8 @@ void setup_signal(int sig, void handler(int sig))
 	sigaction(sig, &sa, NULL);
 }
 
-static int run_script_select(FILE **sout, FILE **serr, struct cntr *cntr, int logfunc, char **logbuf)
+static int run_script_select(FILE **sout, FILE **serr,
+	struct cntr *cntr, int logfunc, char **logbuf)
 {
 	int mfd=-1;
 	fd_set fsr;
@@ -633,7 +634,8 @@ static int run_script_select(FILE **sout, FILE **serr, struct cntr *cntr, int lo
 
 #endif
 
-int run_script_to_buf(const char **args, struct strlist **userargs, int userargc, struct cntr *cntr, int do_wait, int logfunc, char **logbuf)
+int run_script_to_buf(const char **args, struct strlist *userargs,
+	struct cntr *cntr, int do_wait, int logfunc, char **logbuf)
 {
 	int a=0;
 	int l=0;
@@ -641,14 +643,14 @@ int run_script_to_buf(const char **args, struct strlist **userargs, int userargc
 	FILE *serr=NULL;
 	FILE *sout=NULL;
 	char *cmd[64]={ NULL };
+	struct strlist *sl;
 #ifndef HAVE_WIN32
 	int s=0;
 #endif
 	if(!args || !args[0]) return 0;
 
 	for(a=0; args[a]; a++) cmd[l++]=(char *)args[a];
-	for(a=0; a<userargc && l<64-1; a++)
-		cmd[l++]=userargs[a]->path;
+	for(sl=userargs; sl; sl=sl->next) cmd[l++]=sl->path;
 	cmd[l++]=NULL;
 
 #ifndef HAVE_WIN32
@@ -703,9 +705,10 @@ int run_script_to_buf(const char **args, struct strlist **userargs, int userargc
 #endif
 }
 
-int run_script(const char **args, struct strlist **userargs, int userargc, struct cntr *cntr, int do_wait, int logfunc)
+int run_script(const char **args, struct strlist *userargs,
+	struct cntr *cntr, int do_wait, int logfunc)
 {
-	return run_script_to_buf(args, userargs, userargc, cntr, do_wait,
+	return run_script_to_buf(args, userargs, cntr, do_wait,
 		logfunc, NULL /* do not save output to buffer */);
 }
 
@@ -945,7 +948,7 @@ void print_all_cmds(void)
 
 void log_restore_settings(struct config *cconf, int srestore)
 {
-	int i=0;
+	struct strlist *l;
 	logp("Restore settings:\n");
 	if(cconf->orig_client)
 		logp("orig_client = %s\n", cconf->orig_client);
@@ -959,11 +962,8 @@ void log_restore_settings(struct config *cconf, int srestore)
 	if(cconf->restoreprefix)
 		logp("restoreprefix = %s\n", cconf->restoreprefix);
 	if(cconf->regex) logp("regex = %s\n", cconf->regex);
-	for(i=0; i<cconf->iecount; i++)
-	{
-		if(cconf->incexcdir[i]->flag)
-			logp("include = %s\n", cconf->incexcdir[i]->path);
-	}
+	for(l=cconf->incexcdir; l; l=l->next)
+		if(l->flag) logp("include = %s\n", l->path);
 }
 
 long version_to_long(const char *version)

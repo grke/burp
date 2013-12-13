@@ -579,7 +579,6 @@ int run_action_server_legacy(struct sdirs *sdirs, struct config *cconf,
 				args[a++]=NULL;
 				if((*timer_ret=run_script(args,
 				  cconf->timer_arg,
-				  cconf->tacount,
 				  /* cntr is NULL so that run_script does not
 				     write warnings down the socket, otherwise
 				     the client will never print the 'timer

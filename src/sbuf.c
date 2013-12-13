@@ -53,8 +53,7 @@ void slist_free(struct slist *slist)
 	struct sbuf *sb;
 	struct sbuf *shead;
 	if(!slist) return;
-	sb=slist->head;
-	shead=sb;
+	shead=slist->head;
 	while(shead)
 	{
 		sb=shead;

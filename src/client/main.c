@@ -70,7 +70,7 @@ static int backup_wrapper(enum action action, const char *phase1str, const char 
 			goto end;
 		}
 	}
-	if(!conf->sdcount)
+	if(!conf->startdir)
 	{
 		logp("Found no include paths!\n");
 		ret=-1;
@@ -95,7 +95,6 @@ static int backup_wrapper(enum action action, const char *phase1str, const char 
 			args[a++]=NULL;
 			if(run_script(args,
 				conf->backup_script_pre_arg,
-				conf->bprecount,
 				p1cntr, 1, 1)) ret=-1;
 		}
 
@@ -118,7 +117,6 @@ static int backup_wrapper(enum action action, const char *phase1str, const char 
 			args[a++]=NULL;
 			if(run_script(args,
 				conf->backup_script_post_arg,
-				conf->bpostcount,
 				cntr, 1, 1)) ret=-1;
 		}
 	}
@@ -289,7 +287,7 @@ static int do_client(struct config *conf, enum action action, int vss_restore, i
 				args[a++]=NULL;
 				if(run_script(args,
 					conf->restore_script_pre_arg,
-					conf->rprecount, &cntr, 1, 1)) ret=-1;
+					&cntr, 1, 1)) ret=-1;
 			}
 			if(!ret && do_restore_client(conf,
 				action, vss_restore)) ret=-1;
@@ -309,7 +307,7 @@ static int do_client(struct config *conf, enum action action, int vss_restore, i
 				args[a++]=NULL;
 				if(run_script(args,
 					conf->restore_script_post_arg,
-					conf->rpostcount, &cntr, 1, 1)) ret=-1;
+					&cntr, 1, 1)) ret=-1;
 			}
 
 			// Return non-zero if there were warnings,

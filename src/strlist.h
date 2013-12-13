@@ -14,10 +14,12 @@ struct strlist
 	long flag;
 	char *path;
 	regex_t *re;
+	strlist_t *next;
 };
 
-extern void strlists_free(struct strlist **bd, int count);
-extern int strlist_add(struct strlist ***bdlist, int *count, char *path, long flag);
-extern int strlist_sort(struct strlist **a, struct strlist **b);
+extern void strlists_free(struct strlist **strlist);
+extern int strlist_add(struct strlist **strlist, char *path, long flag);
+extern int strlist_add_sorted(struct strlist **strlist, char *path, long flag);
+extern int strlist_compile_regexes(struct strlist *strlist);
 
 #endif

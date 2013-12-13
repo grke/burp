@@ -1,7 +1,7 @@
 #include "include.h"
 
 static int run_server_script(const char *pre_or_post, struct iobuf *rbuf,
-	const char *script, struct strlist **script_arg, int argcount,
+	const char *script, struct strlist *script_arg,
 	uint8_t notify, struct config *cconf, int backup_ret, int timer_ret)
 {
 	int a=0;
@@ -20,7 +20,7 @@ static int run_server_script(const char *pre_or_post, struct iobuf *rbuf,
 
 	// Do not have a client storage directory, so capture the
 	// output in a buffer to pass to the notification script.
-	if(run_script_to_buf(args, script_arg, argcount, NULL, 1, 1, &logbuf))
+	if(run_script_to_buf(args, script_arg, NULL, 1, 1, &logbuf))
 	{
 		char msg[256];
 		snprintf(msg, sizeof(msg),
@@ -42,7 +42,7 @@ static int run_server_script(const char *pre_or_post, struct iobuf *rbuf,
 		args[a++]=""; // usually brv
 		args[a++]=""; // usually warnings
 		args[a++]=NULL;
-		run_script(args, cconf->notify_failure_arg, cconf->nfcount,
+		run_script(args, cconf->notify_failure_arg,
 			NULL, 1, 1);
 	}
 end:
@@ -97,7 +97,6 @@ int child(struct config *conf, struct config *cconf)
 		ret=run_server_script("pre", rbuf,
 			cconf->server_script_pre,
 			cconf->server_script_pre_arg,
-			cconf->sprecount,
 			cconf->server_script_pre_notify,
 			cconf, ret, timer_ret);
 
@@ -109,7 +108,6 @@ int child(struct config *conf, struct config *cconf)
 		ret=run_server_script("post", rbuf,
 			cconf->server_script_post,
 			cconf->server_script_post_arg,
-			cconf->spostcount,
 			cconf->server_script_post_notify,
 			cconf, ret, timer_ret);
 

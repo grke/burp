@@ -471,32 +471,29 @@ int do_remove_old_backups(struct sdirs *sdirs, struct config *cconf)
 {
 	int a=0;
 	int b=0;
-        int x=0;
 	int ret=0;
 	int deleted=0;
 	unsigned long m=1;
 	struct bu *arr=NULL;
-	struct strlist **kplist=NULL;
-
-	kplist=cconf->keep;
+	struct strlist *keep=NULL;
 
 	if(get_current_backups(sdirs, &arr, &a, 1)) return -1;
 
 	// For each of the 'keep' values, generate ranges in which to keep
 	// one backup.
-        for(x=0; x<cconf->kpcount; x++)
+	for(keep=cconf->keep; keep; keep=keep->next)
         {
 		unsigned long n=0;
-		n=m * kplist[x]->flag;
+		n=m * keep->flag;
 
-                //printf("keep[%d]: %d - m:%lu n:%lu\n",
-		//	x, cconf->keep[x]->flag, m, n);
-		if(x+1 < cconf->kpcount)
+                //printf("keep: %d - m:%lu n:%lu\n",
+		//	x, keep->flag, m, n);
+		if(keep->next)
 		{
 			unsigned long r=0;
 			unsigned long s=0;
 			unsigned long upto=0;
-			upto=n*cconf->keep[x+1]->flag;
+			upto=n*keep->next->flag;
 			//printf("upto: %lu\n", upto);
 			// This is going over each range.
 			for(r=upto; r>n; r-=n)

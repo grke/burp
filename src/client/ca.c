@@ -19,7 +19,7 @@ static int generate_key_and_csr(struct config *conf, const char *csr_path)
 	args[a++]="--name";
 	args[a++]=conf->cname;
 	args[a++]=NULL;
-	if(run_script(args, NULL, 0, NULL /* cntr */, 1 /* wait */,
+	if(run_script(args, NULL, NULL /* cntr */, 1 /* wait */,
 		0 /* do not use logp - stupid openssl prints lots of dots
 		     one at a time with no way to turn it off */))
 	{

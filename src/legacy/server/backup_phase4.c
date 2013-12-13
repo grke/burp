@@ -154,40 +154,15 @@ static int gen_rev_delta(const char *sigpath, const char *deltadir, const char *
 	return ret;
 }
 
-static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, const char *datadirtmp, const char *datapth, int compression, struct strlist **partials, int pcount, int *is_partial, struct config *cconf)
+static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, const char *datadirtmp, const char *datapth, int compression, struct config *cconf)
 {
-	int p=0;
 	int ret=0;
-	char *partial=NULL;
 	struct stat statp;
 	const char *opath=oldpath;
-
-	// First, check whether this is in our list of partial files.
-	// If it is, use the path to the partial file. The delta will apply
-	// to it.
-	for(p=0; p<pcount; p++)
-	{
-		if(!strcmp(partials[p]->path, datapth))
-		{
-			char *tmp=NULL;
-			// It is a partial transfer, it is in "data.tmp/p".
-			// Build the full path to it.
-			if(!(tmp=prepend_s(datadirtmp, "p"))) return -1;
-			partial=prepend_s(tmp, datapth);
-			free(tmp);
-			if(!partial) return -1;
-			logp("Dealing with partial resumed file: %s\n",
-				partial);
-			opath=partial;
-			*is_partial=1;
-			break;
-		}
-	}
 
 	if(lstat(opath, &statp))
 	{
 		logp("could not lstat %s\n", opath);
-		if(partial) free(partial);
 		return -1;
 	}
 
@@ -201,7 +176,6 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, con
 		if(!(dest=open_file(infpath, "wb")))
 		{
 			close_fp(&dest);
-			if(partial) free(partial);
 			return -1;
 		}
 
@@ -213,7 +187,6 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, con
 			logp("asked to inflate zero length file: %s\n", opath);
 			if(close_fp(&dest))
 			{
-				if(partial) free(partial);
 				logp("error closing %s in %s\n",
 					infpath, __FUNCTION__);
 				return -1;
@@ -222,7 +195,6 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, con
 		}
 		if(!(source=open_file(opath, "rb")))
 		{
-			if(partial) free(partial);
 			close_fp(&dest);
 			return -1;
 		}
@@ -231,7 +203,6 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, con
 		close_fp(&source);
 		if(close_fp(&dest))
 		{
-			if(partial) free(partial);
 			logp("error closing %s in %s\n",
 				infpath, __FUNCTION__);
 			return -1;
@@ -247,11 +218,10 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, con
 				ret=-1;
 	
 	}
-	if(partial) free(partial);
 	return ret;
 }
 
-static int jiggle(const char *datapth, const char *currentdata, const char *datadirtmp, const char *datadir, const char *deltabdir, const char *deltafdir, const char *sigpath, const char *endfile, const char *deletionsfile, FILE **delfp, struct sbufl *sb, int hardlinked, int compression, struct strlist **partials, int pcount, struct config *cconf)
+static int jiggle(const char *datapth, const char *currentdata, const char *datadirtmp, const char *datadir, const char *deltabdir, const char *deltafdir, const char *sigpath, const char *endfile, const char *deletionsfile, FILE **delfp, struct sbufl *sb, int hardlinked, int compression, struct config *cconf)
 {
 	int ret=0;
 	struct stat statp;
@@ -302,7 +272,6 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 	else if(!lstat(deltafpath, &statp) && S_ISREG(statp.st_mode))
 	{
 		int lrs;
-		int is_partial=0;
 		char *infpath=NULL;
 
 		// Got a forward patch to do.
@@ -319,8 +288,7 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 
 		//logp("Fixing up: %s\n", datapth);
 		if(inflate_or_link_oldfile(oldpath, infpath, datadirtmp,
-			datapth, compression, partials, pcount, &is_partial,
-			cconf))
+			datapth, compression, cconf))
 		{
 			logp("error when inflating old file: %s\n", oldpath);
 			ret=-1;
@@ -366,10 +334,9 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 		unlink(infpath);
 		free(infpath);
 
-		// Need to generate a reverse diff,
-		// unless we are keeping a hardlinked
-		// archive.
-		if(!hardlinked && !is_partial)
+		// Need to generate a reverse diff, unless we are keeping a
+		// hardlinked archive.
+		if(!hardlinked)
 		{
 			if(gen_rev_delta(sigpath, deltabdir,
 				oldpath, newpath, datapth, endfile,
@@ -482,7 +449,7 @@ static int do_hardlinked_archive(struct config *cconf, unsigned long bno)
 		logp("need to hardlink archive\n");
 		return 1;
 	}
-	if(cconf->kpcount<=1)
+	if(!cconf->keep || !cconf->keep->next)
 	{
 		logp("do not need to hardlink archive\n");
 		return 0;
@@ -490,7 +457,7 @@ static int do_hardlinked_archive(struct config *cconf, unsigned long bno)
 
 	// If they have specified more than one 'keep' value, need to
 	// periodically hardlink, based on the first 'keep' value.
-	kp=cconf->keep[0]->flag;
+	kp=cconf->keep->flag;
 
 	logp("first keep value: %d, backup: %lu (%lu-2=%lu)\n",
 			kp, bno, bno, bno-2);
@@ -615,85 +582,6 @@ end:
 	return ret;
 }
 
-static int get_partials_list(const char *path, const char *datapth, struct strlist ***partials, int *pcount)
-{
-	int n=-1;
-	int ret=0;
-	struct dirent **dir;
-
-	if((n=scandir(path, &dir, 0, 0))<0)
-	{
-		logp("scandir %s: %s\n", path, strerror(errno));
-		return -1;
-	}
-	while(n--)
-	{
-		char *fullpath=NULL;
-
-		if(dir[n]->d_ino==0
-		  || !strcmp(dir[n]->d_name, ".")
-		  || !strcmp(dir[n]->d_name, ".."))
-		{ free(dir[n]); continue; }
-
-		if(!(fullpath=prepend_s(path, dir[n]->d_name)))
-			break;
-
-		if(is_dir(fullpath, dir[n]))
-		{
-			char *newdatapth=NULL;
-			if(!(newdatapth=prepend_s(datapth, dir[n]->d_name)))
-				break;
-			if(get_partials_list(fullpath, newdatapth,
-				partials, pcount))
-			{
-				free(fullpath);
-				free(newdatapth);
-				break;
-			}
-			free(newdatapth);
-		}
-		else
-		{
-			char *tmp=NULL;
-			// Add to list.
-			if(!(tmp=prepend_s(datapth, dir[n]->d_name)))
-				break;
-			logp("Found partial resumed file: %s\n", tmp);
-			if(strlist_add(partials, pcount, tmp, 0))
-			{
-				free(tmp);
-				break;
-			}
-			free(tmp);
-		}
-		
-		free(fullpath);
-		free(dir[n]);
-	}
-        if(n>0)
-        {
-                ret=-1;
-                for(; n>0; n--) free(dir[n]);
-        }
-        free(dir);
-
-	return ret;
-}
-
-static int get_partials_list_w(const char *datadirtmp, struct strlist ***partials, int *pcount)
-{
-	int ret=0;
-	char *path=NULL;
-	char *datapth=NULL;
-	// Build the full path to it.
-	if(!(path=prepend_s(datadirtmp, "p"))) return -1;
-	if(is_dir_lstat(path))
-		ret=get_partials_list(path, datapth, partials, pcount);
-	free(path);
-
-	return ret;
-}
-
 /* Need to make all the stuff that this does atomic so that existing backups
    never get broken, even if somebody turns the power off on the server. */ 
 static int atomic_data_jiggle(struct sdirs *sdirs, struct config *cconf,
@@ -715,9 +603,6 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct config *cconf,
 	struct sbufl sb;
 
 	FILE *delfp=NULL;
-
-	int pcount=0;
-	struct strlist **partials=NULL;
 
 	logp("Doing the atomic data jiggle...\n");
 
@@ -749,12 +634,6 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct config *cconf,
 		goto end;
 	}
 
-	if(get_partials_list_w(datadirtmp, &partials, &pcount))
-	{
-		ret=-1;
-		goto end;
-	}
-
 	mkdir(datadir, 0777);
 
 	init_sbufl(&sb);
@@ -767,8 +646,7 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct config *cconf,
 			if((ret=jiggle(sb.datapth, currentdata, datadirtmp,
 				datadir, deltabdir, deltafdir,
 				sigpath, sb.endfile, deletionsfile, &delfp,
-				&sb, hardlinked, sb.compression,
-				partials, pcount, cconf)))
+				&sb, hardlinked, sb.compression, cconf)))
 					break;
 		}
 		free_sbufl(&sb);
@@ -795,7 +673,6 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct config *cconf,
 	recursive_delete(deltafdir, NULL, FALSE /* do not del files */);
 
 end:
-	strlists_free(partials, pcount);
 	if(zp) gzclose_fp(&zp);
 	if(delfp) close_fp(&delfp);
 	if(deltabdir) free(deltabdir);
@@ -952,13 +829,6 @@ int backup_phase4_server(struct sdirs *sdirs, struct config *cconf)
 			logp(" will generate reverse deltas\n");
 			unlink(hlinkedpath);
 		}
-	}
-	else
-	{
-		// No previous backup. Set hardlinked=1 so that the jiggle
-		// does not attempt to produce reverse deltas when it fixes
-		// up a partial file.
-		//hardlinked=1;
 	}
 
 	if(atomic_data_jiggle(sdirs, cconf, manifest, currentdup,

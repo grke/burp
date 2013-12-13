@@ -60,7 +60,7 @@ static int send_features(struct config *cconf)
 	/* Clients can receive incexc config from the server.
 	   Only give it as an option if the server has some starting
 	   directory configured in the clientconfdir. */
-	if((cconf->sdcount || cconf->igcount)
+	if((cconf->startdir || cconf->incglob)
 	  && append_to_feat(&feat, "sincexc:"))
 		goto end;
 
@@ -181,8 +181,8 @@ static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, str
 		else if(!strncmp_w(rbuf->buf, "orig_client=")
 		  && strlen(rbuf->buf)>strlen("orig_client="))
 		{
-			int r=0;
 			int rcok=0;
+			struct strlist *r;
 			struct config *sconf=NULL;
 
 			if(!(sconf=(struct config *)
@@ -205,11 +205,9 @@ static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, str
 				goto end;
 			}
 			sconf->send_client_counters=cconf->send_client_counters;
-			for(r=0; r<sconf->rccount; r++)
+			for(r=sconf->rclients; r; r=r->next)
 			{
-				if(sconf->rclients[r]
-				  && !strcmp(sconf->rclients[r]->path,
-					cconf->cname))
+				if(!strcmp(r->path, cconf->cname))
 				{
 					rcok++;
 					break;

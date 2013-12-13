@@ -33,7 +33,6 @@ int readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result);
  */
 struct FF_PKT
 {
-	char *top_fname;	/* full filename before descending */
 	char *fname;		/* full filename */
 	long flen;		/* length of name component */
 	char *link;		/* link if file linked */
@@ -45,18 +44,12 @@ struct FF_PKT
 extern FF_PKT *find_files_init(void);
 extern void find_files_free(FF_PKT *ff);
 extern int find_files_begin(FF_PKT *ff_pkt, struct config *conf, char *fname);
-extern int file_is_included(struct strlist **ielist, int iecount,
-	struct strlist **incext, int incount,
-	struct strlist **excext, int excount,
-	struct strlist **increg, int ircount,
-	struct strlist **excreg, int ercount,
-	const char *fname, bool top_level);
-extern int in_include_regex(struct strlist **incre, int incount,
-	const char *fname);
-extern int in_exclude_regex(struct strlist **excre, int excount,
-	const char *fname);
+extern int file_is_included(struct config *conf, const char *fname,
+	bool top_level);
+extern int in_include_regex(struct strlist *incre, const char *fname);
+extern int in_exclude_regex(struct strlist *excre, const char *fname);
 // Returns the level of compression.
-extern int in_exclude_comp(struct strlist **excom, int excmcount,
-	const char *fname, int compression);
+extern int in_exclude_comp(struct strlist *excom, const char *fname,
+	int compression);
 
 #endif

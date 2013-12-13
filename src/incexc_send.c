@@ -31,44 +31,41 @@ static int send_incexc_long(const char *pre, long mylong)
 	return send_incexc_str(pre, tmp);
 }
 
-static int send_incexc_from_strlist(const char *prepend_on, const char *prepend_off, int count, struct strlist **list)
+static int send_incexc_from_strlist(const char *prepend_on, const char *prepend_off, struct strlist *list)
 {
-	int i=0;
-	for(i=0; i<count; i++)
-	{
-		if(send_incexc_str(list[i]->flag?prepend_on:prepend_off,
-			list[i]->path))
-				return -1;
-	}
+	struct strlist *l;
+	for(l=list; l; l=l->next)
+		if(send_incexc_str(l->flag?prepend_on:prepend_off, l->path))
+			return -1;
 	return 0;
 }
 
 static int do_sends(struct config *conf)
 {
 	if(  send_incexc_from_strlist("include", "exclude",
-		conf->iecount, conf->incexcdir)
+		conf->incexcdir)
 	  || send_incexc_from_strlist("include_glob", "include_glob",
-		conf->igcount, conf->incglob)
+		conf->incglob)
 	  || send_incexc_from_strlist("cross_filesystem", "cross_filesystem",
-		conf->fscount, conf->fschgdir)
+		conf->fschgdir)
 	  || send_incexc_from_strlist("nobackup", "nobackup",
-		conf->nbcount, conf->nobackup)
+		conf->nobackup)
 	  || send_incexc_from_strlist("include_ext", "include_ext",
-		conf->incount, conf->incext)
+		conf->incext)
 	  || send_incexc_from_strlist("exclude_ext", "exclude_ext",
-		conf->excount, conf->excext)
+		conf->excext)
 	  || send_incexc_from_strlist("include_regex", "include_regex",
-		conf->ircount, conf->increg)
+		conf->increg)
 	  || send_incexc_from_strlist("exclude_regex", "exclude_regex",
-		conf->ercount, conf->excreg)
+		conf->excreg)
 	  || send_incexc_from_strlist("exclude_fs", "exclude_fs",
-		conf->exfscount, conf->excfs)
+		conf->excfs)
 	  || send_incexc_from_strlist("exclude_comp", "exclude_comp",
-		conf->excmcount, conf->excom)
+		conf->excom)
 	  || send_incexc_from_strlist("read_fifo", "read_fifo",
-		conf->ffcount, conf->fifos)
+		conf->fifos)
 	  || send_incexc_from_strlist("read_blockdev", "read_blockdev",
-		conf->bdcount, conf->blockdevs)
+		conf->blockdevs)
 	  || send_incexc_int("cross_all_filesystems",
 		conf->cross_all_filesystems)
 	  || send_incexc_int("read_all_fifos", conf->read_all_fifos)
@@ -81,8 +78,7 @@ static int do_sends(struct config *conf)
 
 static int do_sends_restore(struct config *conf)
 {
-	if(  send_incexc_from_strlist("include", "exclude",
-		conf->iecount, conf->incexcdir)
+	if(  send_incexc_from_strlist("include", "exclude", conf->incexcdir)
 	  || send_incexc_str("orig_client", conf->orig_client)
 	  || send_incexc_str("backup", conf->backup)
 	  || send_incexc_str("restoreprefix", conf->restoreprefix)

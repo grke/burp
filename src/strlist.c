@@ -1,54 +1,89 @@
 #include "include.h"
 
-void strlists_free(struct strlist **bd, int count)
+// Maybe rename this stuff to 'struct pathlist'.
+
+static void strlist_free(struct strlist *strlist)
 {
-	int b=0;
-	if(bd)
-	{
-		for(b=0; b<count; b++)
-		{
-			if(bd[b])
-			{
-				if(bd[b]->path) free(bd[b]->path);
-				free(bd[b]);
-			}
-		}
-		free(bd);
-	}
+	if(!strlist) return;
+	if(strlist->path) free(strlist->path);
+	if(strlist->re) regfree(strlist->re);
+	free(strlist);
 }
 
-int strlist_add(struct strlist ***bdlist, int *count, char *path, long flag)
+void strlists_free(struct strlist **strlist)
 {
-	//int b=0;
-	struct strlist *bdnew=NULL;
-	struct strlist **bdtmp=NULL;
+	struct strlist *s;
+	struct strlist *shead=*strlist;
+	while(shead)
+	{
+		s=shead;
+		shead=shead->next;
+		strlist_free(s);
+	}
+	*strlist=NULL;
+}
+
+static struct strlist *strlist_alloc(char *path, long flag)
+{
+	struct strlist *slnew=NULL;
 	if(!path)
 	{
-		logp("add_strlist called with NULL path!\n");
-		return -1;
+		logp("%s called with NULL path!\n", __FUNCTION__);
+		return NULL;
 	}
-	if(!(bdtmp=(struct strlist **)realloc(*bdlist,
-		((*count)+1)*sizeof(struct strlist *))))
+	if(!(slnew=(struct strlist *)calloc(1, sizeof(struct strlist)))
+	  || !(slnew->path=strdup(path)))
 	{
 		log_out_of_memory(__FUNCTION__);
-		return -1;
+		return NULL;
 	}
-	*bdlist=bdtmp;
-	if(!(bdnew=(struct strlist *)malloc(sizeof(struct strlist)))
-	  || !(bdnew->path=strdup(path)))
-	{
-		log_out_of_memory(__FUNCTION__);
-		return -1;
-	}
-	bdnew->flag=flag;
-	(*bdlist)[(*count)++]=bdnew;
+	slnew->flag=flag;
+	return slnew;
+}
 
-	//for(b=0; b<*count; b++)
-	//	printf("now: %d %s\n", b, (*bdlist)[b]->path);
+static int do_strlist_add(struct strlist **strlist,
+	char *path, long flag, int sorted)
+{
+	struct strlist *s=NULL;
+	struct strlist *slast=NULL;
+	struct strlist *slnew=NULL;
+
+	if(!(slnew=strlist_alloc(path, flag))) return -1;
+	if(!*strlist) *strlist=slnew;
+
+	// Insert into a sorted position in the list, or if the sorted flag
+	// was zero, add to the end of the list.
+	// FIX THIS: Unsorted means that it goes through the whole list to
+	// find the last entry. Can this be made better?
+	for(s=*strlist; s; s=s->next)
+	{
+		if(sorted && pathcmp(path, s->path)>0) break;
+		slast=s;
+	}
+	if(slast)
+	{
+		slnew->next=slast->next;
+		slast->next=slnew;
+	}
+	else
+		*strlist=slnew;
+
 	return 0;
 }
 
-int strlist_sort(struct strlist **a, struct strlist **b)
+int strlist_add(struct strlist **strlist, char *path, long flag)
 {
-	return pathcmp((*a)->path, (*b)->path);
+	return do_strlist_add(strlist, path, flag, 0 /* unsorted */);
+}
+
+int strlist_add_sorted(struct strlist **strlist, char *path, long flag)
+{
+	return do_strlist_add(strlist, path, flag, 1 /* sorted */);
+}
+
+int strlist_compile_regexes(struct strlist *strlist)
+{
+        struct strlist *l;
+        for(l=strlist; l; l=l->next) compile_regex(&l->re, l->path);
+	return 0;
 }

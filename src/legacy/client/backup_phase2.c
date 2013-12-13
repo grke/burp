@@ -270,8 +270,7 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 				if(!forget)
 				{
 					compression=in_exclude_comp(conf->excom,
-					  conf->excmcount, sb.path,
-					  conf->compression);
+					  sb.path, conf->compression);
 					encode_stat(attribs,
 					  &statbuf, winattr, compression);
 					if(open_file_for_sendl(

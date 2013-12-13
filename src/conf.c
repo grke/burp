@@ -7,19 +7,19 @@
 // Could then just memset them all to zero here.
 static void init_incexcs(struct config *conf)
 {
-	conf->startdir=NULL; conf->sdcount=0;
-	conf->incexcdir=NULL; conf->iecount=0;
-	conf->fschgdir=NULL; conf->fscount=0;
-	conf->nobackup=NULL; conf->nbcount=0;
-	conf->incext=NULL; conf->incount=0; // include extensions
-	conf->excext=NULL; conf->excount=0; // exclude extensions
-	conf->increg=NULL; conf->ircount=0; // include (regular expression)
-	conf->excreg=NULL; conf->ercount=0; // include (regular expression)
-	conf->excfs=NULL; conf->exfscount=0; // exclude filesystems
-	conf->excom=NULL; conf->excmcount=0; // exclude from compression
-	conf->incglob=NULL; conf->igcount=0; // exclude from compression
-	conf->fifos=NULL; conf->ffcount=0;
-	conf->blockdevs=NULL; conf->bdcount=0;
+	conf->startdir=NULL;
+	conf->incexcdir=NULL;
+	conf->fschgdir=NULL;
+	conf->nobackup=NULL;
+	conf->incext=NULL; // include extensions
+	conf->excext=NULL; // exclude extensions
+	conf->increg=NULL; // include (regular expression)
+	conf->excreg=NULL; // include (regular expression)
+	conf->excfs=NULL; // exclude filesystems
+	conf->excom=NULL; // exclude from compression
+	conf->incglob=NULL; // exclude from compression
+	conf->fifos=NULL;
+	conf->blockdevs=NULL;
 	conf->split_vss=0;
 	conf->strip_vss=0;
 	conf->vss_drives=NULL;
@@ -35,19 +35,19 @@ static void init_incexcs(struct config *conf)
    This is so that the server can override them all on the client. */
 static void free_incexcs(struct config *conf)
 {
-	strlists_free(conf->startdir, conf->sdcount);
-	strlists_free(conf->incexcdir, conf->iecount);
-	strlists_free(conf->fschgdir, conf->fscount);
-	strlists_free(conf->nobackup, conf->nbcount);
-	strlists_free(conf->incext, conf->incount); // include extensions
-	strlists_free(conf->excext, conf->excount); // exclude extensions
-	strlists_free(conf->increg, conf->ircount); // include (regular expression)
-	strlists_free(conf->excreg, conf->ercount); // exclude (regular expression)
-	strlists_free(conf->excfs, conf->exfscount); // exclude filesystems
-	strlists_free(conf->excom, conf->excmcount); // exclude from compression
-	strlists_free(conf->incglob, conf->igcount); // include (glob)
-	strlists_free(conf->fifos, conf->ffcount);
-	strlists_free(conf->blockdevs, conf->bdcount);
+	strlists_free(&conf->startdir);
+	strlists_free(&conf->incexcdir);
+	strlists_free(&conf->fschgdir);
+	strlists_free(&conf->nobackup);
+	strlists_free(&conf->incext); // include extensions
+	strlists_free(&conf->excext); // exclude extensions
+	strlists_free(&conf->increg); // include (regular expression)
+	strlists_free(&conf->excreg); // exclude (regular expression)
+	strlists_free(&conf->excfs); // exclude filesystems
+	strlists_free(&conf->excom); // exclude from compression
+	strlists_free(&conf->incglob); // include (glob)
+	strlists_free(&conf->fifos);
+	strlists_free(&conf->blockdevs);
 	if(conf->backup) free(conf->backup);
 	if(conf->restoreprefix) free(conf->restoreprefix);
 	if(conf->regex) free(conf->regex);
@@ -126,39 +126,39 @@ void config_free(struct config *conf)
 	if(conf->manual_delete) free(conf->manual_delete);
 
 	if(conf->timer_script) free(conf->timer_script);
-	strlists_free(conf->timer_arg, conf->tacount);
+	strlists_free(&conf->timer_arg);
 
 	if(conf->notify_success_script) free(conf->notify_success_script);
-	strlists_free(conf->notify_success_arg, conf->nscount);
+	strlists_free(&conf->notify_success_arg);
 
 	if(conf->notify_failure_script) free(conf->notify_failure_script);
-	strlists_free(conf->notify_failure_arg, conf->nfcount);
+	strlists_free(&conf->notify_failure_arg);
 
-	strlists_free(conf->rclients, conf->rccount);
+	strlists_free(&conf->rclients);
 
 	if(conf->backup_script_pre) free(conf->backup_script_pre);
-	strlists_free(conf->backup_script_pre_arg, conf->bprecount);
+	strlists_free(&conf->backup_script_pre_arg);
 	if(conf->backup_script_post) free(conf->backup_script_post);
-	strlists_free(conf->backup_script_post_arg, conf->bpostcount);
+	strlists_free(&conf->backup_script_post_arg);
 	if(conf->restore_script_pre) free(conf->restore_script_pre);
-	strlists_free(conf->restore_script_pre_arg, conf->rprecount);
+	strlists_free(&conf->restore_script_pre_arg);
 	if(conf->restore_script_post) free(conf->restore_script_post);
-	strlists_free(conf->restore_script_post_arg, conf->rpostcount);
+	strlists_free(&conf->restore_script_post_arg);
 
 	if(conf->server_script_pre) free(conf->server_script_pre);
-	strlists_free(conf->server_script_pre_arg, conf->sprecount);
+	strlists_free(&conf->server_script_pre_arg);
 	if(conf->server_script_post) free(conf->server_script_post);
-	strlists_free(conf->server_script_post_arg, conf->spostcount);
+	strlists_free(&conf->server_script_post_arg);
 
 	if(conf->backup_script) free(conf->backup_script);
 	if(conf->restore_script) free(conf->restore_script);
-	strlists_free(conf->backup_script_arg, conf->bscount);
-	strlists_free(conf->restore_script_arg, conf->rscount);
+	strlists_free(&conf->backup_script_arg);
+	strlists_free(&conf->restore_script_arg);
 
 	if(conf->server_script) free(conf->server_script);
-	strlists_free(conf->server_script_arg, conf->sscount);
+	strlists_free(&conf->server_script_arg);
 
-	strlists_free(conf->keep, conf->kpcount);
+	strlists_free(&conf->keep);
 
 	if(conf->dedup_group) free(conf->dedup_group);
 	if(conf->browsefile) free(conf->browsefile);
@@ -239,23 +239,38 @@ int config_get_pair(char buf[], char **field, char **value)
 	return 0;
 }
 
-static int get_conf_val_args(const char *field, const char *value, const char *opt, struct strlist ***args, int *got_args, int *count, struct strlist ***list, int include)
+static int do_get_conf_val_args(const char *field, const char *value,
+	const char *opt, struct strlist **list, int include, int sorted)
 {
 	char *tmp=NULL;
 	if(get_conf_val(field, value, opt, &tmp)) return -1;
-	if(tmp)
+	if(!tmp) return 0;
+	if(1) // FIX THIS
 	{
-		if(got_args && *got_args && args)
-		{
-			strlists_free(*args, *count);
-			*got_args=0;
-			*args=NULL;
-			*count=0;
-		}
-		if(strlist_add(list, count, tmp, include)) return -1;
-		free(tmp); tmp=NULL;
+		strlists_free(list);
 	}
+	if(sorted)
+	{
+		if(strlist_add_sorted(list, tmp, include)) return -1;
+	}
+	else
+	{
+		if(strlist_add(list, tmp, include)) return -1;
+	}
+	free(tmp); tmp=NULL;
 	return 0;
+}
+
+static int get_conf_val_args(const char *field, const char *value,
+	const char *opt, struct strlist **list, int include)
+{
+	return do_get_conf_val_args(field, value, opt, list, include, 0);
+}
+
+static int get_conf_val_args_sorted(const char *field, const char *value,
+	const char *opt, struct strlist **list, int include)
+{
+	return do_get_conf_val_args(field, value, opt, list, include, 1);
 }
 
 /* Windows users have a nasty habit of putting in backslashes. Convert them. */
@@ -392,42 +407,22 @@ static int pre_post_override(char **override, char **pre, char **post)
 	return 0;
 }
 
-static int setup_script_arg_override(struct strlist **list, int count, struct strlist ***prelist, struct strlist ***postlist, int *precount, int *postcount)
+/*
+static int setup_script_arg_override(struct strlist *list, struct strlist **prelist, struct strlist **postlist)
 {
-	int i=0;
+	struct strlist *l;
 	if(!list) return 0;
-	strlists_free(*prelist, *precount);
-	strlists_free(*postlist, *postcount);
-	*precount=0;
-	*postcount=0;
-	for(i=0; i<count; i++)
+	strlists_free(prelist);
+	strlists_free(postlist);
+	for(l=list; l; l=l->next)
 	{
-		if(strlist_add(prelist, precount,
-			list[i]->path, 0)) return -1;
-		if(strlist_add(postlist, postcount,
-			list[i]->path, 0)) return -1;
+		if(strlist_add(prelist, l->path, 0)
+		  || strlist_add(postlist, l->path, 0))
+			return -1;
 	}
 	return 0;
 }
-
-static void do_strlist_sort(struct strlist **list, int count, struct strlist ***dest)
-{
-	if(count) qsort(list, count, sizeof(*list),
-		(int (*)(const void *, const void *))strlist_sort);
-	*dest=list;
-}
-
-static void do_build_regex(struct strlist **list, int count, struct strlist ***dest)
-{
-	int i;
-	for(i=0; i<count; i++)
-	{
-		*dest=list;
-		compile_regex(&(list[i]->re), list[i]->path);
-        }
-
-}
-
+*/
 
 #ifdef HAVE_LINUX_OS
 struct fstype
@@ -502,44 +497,6 @@ static int fstype_to_flag(const char *fstype, long *flag)
 #endif
 	return -1;
 }
-
-struct llists
-{
-	struct strlist **kplist;
-	struct strlist **ielist;
-	struct strlist **fslist;
-	struct strlist **nblist;
-	struct strlist **fflist; // fifos to read
-	struct strlist **bdlist; // blockdevs to read
-	struct strlist **inlist; // include extensions
-	struct strlist **exlist; // exclude extensions
-	struct strlist **irlist; // include (regular expression)
-	struct strlist **erlist; // exclude (regular expression)
-	struct strlist **exfslist; // exclude filesystems
-	struct strlist **excomlist; // exclude from compression
-	struct strlist **iglist; // include (glob)
-	struct strlist **talist;
-	struct strlist **nslist;
-	struct strlist **nflist;
-	struct strlist **bprelist;
-	struct strlist **bpostlist;
-	struct strlist **rprelist;
-	struct strlist **rpostlist;
-	struct strlist **sprelist;
-	struct strlist **spostlist;
-	struct strlist **bslist;
-	struct strlist **rslist;
-	struct strlist **sslist;
-	struct strlist **rclist;
-	int got_kp_args;
-	int got_timer_args;
-	int got_ns_args;
-	int got_nf_args;
-	int got_spre_args;
-	int got_spost_args;
-	int got_ss_args;
-	int got_rc_args;
-};
 
 static int load_config_ints(struct config *conf, const char *field, const char *value)
 {
@@ -621,7 +578,7 @@ static int load_config_ints(struct config *conf, const char *field, const char *
 	return 0;
 }
 
-static int load_config_strings(struct config *conf, const char *field, const char *value, struct llists *l)
+static int load_config_strings(struct config *conf, const char *field, const char *value)
 {
 	if(get_conf_val(field, value, "port", &(conf->port)))
 		return -1;
@@ -698,102 +655,86 @@ static int load_config_strings(struct config *conf, const char *field, const cha
 		&(conf->client_lockdir))) return -1;
 	if(get_conf_val(field, value, "encryption_password",
 		&(conf->encryption_password))) return -1;
-	if(get_conf_val_args(field, value, "keep", &(conf->keep),
-		&(l->got_kp_args), &(conf->kpcount), &(l->kplist), 1))
-			return -1;
-	if(get_conf_val_args(field, value, "include", NULL,
-		NULL, &(conf->iecount), &(l->ielist), 1)) return -1;
-	if(get_conf_val_args(field, value, "exclude", NULL,
-		NULL, &(conf->iecount), &(l->ielist), 0)) return -1;
-	if(get_conf_val_args(field, value, "cross_filesystem", NULL,
-		NULL, &(conf->fscount), &(l->fslist), 0)) return -1;
-	if(get_conf_val_args(field, value, "nobackup", NULL,
-		NULL, &(conf->nbcount), &(l->nblist), 0)) return -1;
-	if(get_conf_val_args(field, value, "read_fifo", NULL,
-		NULL, &(conf->ffcount), &(l->fflist), 0)) return -1;
-	if(get_conf_val_args(field, value, "read_blockdev", NULL,
-		NULL, &(conf->bdcount), &(l->bdlist), 0)) return -1;
-	if(get_conf_val_args(field, value, "include_ext", NULL,
-		NULL, &(conf->incount), &(l->inlist), 0)) return -1;
-	if(get_conf_val_args(field, value, "exclude_ext", NULL,
-		NULL, &(conf->excount), &(l->exlist), 0)) return -1;
-	if(get_conf_val_args(field, value, "include_regex", NULL,
-		NULL, &(conf->ircount), &(l->irlist), 0)) return -1;
-	if(get_conf_val_args(field, value, "exclude_regex", NULL,
-		NULL, &(conf->ercount), &(l->erlist), 0)) return -1;
-	if(get_conf_val_args(field, value, "exclude_regex", NULL,
-		NULL, &(conf->igcount), &(l->iglist), 0)) return -1;
-	if(get_conf_val_args(field, value, "exclude_fs", NULL,
-		NULL, &(conf->exfscount), &(l->exfslist), 0)) return -1;
-	if(get_conf_val_args(field, value, "exclude_comp", NULL,
-		NULL, &(conf->excmcount), &(l->excomlist), 0)) return -1;
-	if(get_conf_val(field, value, "timer_script", &(conf->timer_script)))
+	if(get_conf_val_args(field, value, "keep", &conf->keep, 1))
 		return -1;
-	if(get_conf_val_args(field, value, "timer_arg", &(conf->timer_arg),
-		&(l->got_timer_args), &(conf->tacount),
-		&(l->talist), 0)) return -1;
+	if(get_conf_val_args_sorted(field, value, "include",
+		&conf->incexcdir, 1)) return -1;
+	if(get_conf_val_args_sorted(field, value, "exclude",
+		&conf->incexcdir, 0)) return -1;
+	if(get_conf_val_args_sorted(field, value, "cross_filesystem",
+		&conf->fschgdir, 0)) return -1;
+	if(get_conf_val_args_sorted(field, value, "nobackup",
+		&conf->nobackup, 0)) return -1;
+	if(get_conf_val_args_sorted(field, value, "read_fifo",
+		&conf->fifos, 0)) return -1;
+	if(get_conf_val_args_sorted(field, value, "read_blockdev",
+		&conf->blockdevs, 0)) return -1;
+	if(get_conf_val_args_sorted(field, value, "include_ext",
+		&conf->incext, 0)) return -1;
+	if(get_conf_val_args_sorted(field, value, "exclude_ext",
+		&conf->excext, 0)) return -1;
+	if(get_conf_val_args_sorted(field, value, "include_regex",
+		&conf->increg, 0)) return -1;
+	if(get_conf_val_args_sorted(field, value, "exclude_regex",
+		&conf->excreg, 0)) return -1;
+	if(get_conf_val_args_sorted(field, value, "include_glob",
+		&conf->incglob, 0)) return -1;
+	if(get_conf_val_args_sorted(field, value, "exclude_fs",
+		&conf->excfs, 0)) return -1;
+	if(get_conf_val_args_sorted(field, value, "exclude_comp",
+		&conf->excom, 0)) return -1;
+
+	if(get_conf_val(field, value, "timer_script",
+		&(conf->timer_script))) return -1;
+	if(get_conf_val_args(field, value, "timer_arg",
+		&(conf->timer_arg), 0)) return -1;
 	if(get_conf_val(field, value, "notify_success_script",
 		&(conf->notify_success_script))) return -1;
 	if(get_conf_val_args(field, value, "notify_success_arg",
-		&(conf->notify_success_arg),
-		&(l->got_ns_args), &(conf->nscount),
-		&(l->nslist), 0)) return -1;
+		&(conf->notify_success_arg), 0)) return -1;
 	if(get_conf_val(field, value, "notify_failure_script",
 		&(conf->notify_failure_script))) return -1;
 	if(get_conf_val_args(field, value, "notify_failure_arg",
-		&(conf->notify_failure_arg), &(l->got_nf_args),
-		&(conf->nfcount), &(l->nflist), 0)) return -1;
+		&(conf->notify_failure_arg), 0)) return -1;
 	if(get_conf_val(field, value, "backup_script_pre",
 		&(conf->backup_script_pre))) return -1;
 	if(get_conf_val_args(field, value, "backup_script_pre_arg",
-		&(conf->backup_script_pre_arg), NULL, &(conf->bprecount),
-		&(l->bprelist), 0)) return -1;
+		&(conf->backup_script_pre_arg), 0)) return -1;
 	if(get_conf_val(field, value, "backup_script_post",
 		&(conf->backup_script_post))) return -1;
 	if(get_conf_val_args(field, value, "backup_script_post_arg",
-		&(conf->backup_script_post_arg), NULL, &(conf->bpostcount),
-		&(l->bpostlist), 0)) return -1;
+		&(conf->backup_script_post_arg), 0)) return -1;
 	if(get_conf_val(field, value, "restore_script_pre",
 		&(conf->restore_script_pre))) return -1;
 	if(get_conf_val_args(field, value, "restore_script_pre_arg",
-		&(conf->restore_script_pre_arg), NULL, &(conf->rprecount),
-		&(l->rprelist), 0)) return -1;
+		&(conf->restore_script_pre_arg), 0)) return -1;
 	if(get_conf_val(field, value, "restore_script_post",
 		&(conf->restore_script_post))) return -1;
 	if(get_conf_val_args(field, value, "restore_script_post_arg",
-		&(conf->restore_script_post_arg), NULL, &(conf->rpostcount),
-		&(l->rpostlist), 0)) return -1;
-
+		&(conf->restore_script_post_arg), 0)) return -1;
 	if(get_conf_val(field, value, "server_script_pre",
 		&(conf->server_script_pre))) return -1;
 	if(get_conf_val_args(field, value, "server_script_pre_arg",
-		&(conf->server_script_pre_arg), &(l->got_spre_args),
-		&(conf->sprecount), &(l->sprelist), 0)) return -1;
+		&(conf->server_script_pre_arg), 0)) return -1;
 	if(get_conf_val(field, value, "server_script_post",
 		&(conf->server_script_post))) return -1;
 	if(get_conf_val_args(field, value, "server_script_post_arg",
-		&(conf->server_script_post_arg), &(l->got_spost_args),
-		&(conf->spostcount), &(l->spostlist), 0)) return -1;
-
-	if(get_conf_val(field, value, "backup_script", &(conf->backup_script)))
-		return -1;
+		&(conf->server_script_post_arg), 0)) return -1;
+	if(get_conf_val(field, value, "backup_script",
+		&(conf->backup_script))) return -1;
 	if(get_conf_val_args(field, value, "backup_script_arg",
-		&(conf->backup_script_arg), NULL, &(conf->bscount),
-		&(l->bslist), 0)) return -1;
+		&(conf->backup_script_arg), 0)) return -1;
 	if(get_conf_val(field, value, "restore_script",
 		&(conf->restore_script))) return -1;
 	if(get_conf_val_args(field, value, "restore_script_arg",
-		&(conf->restore_script_arg), NULL, &(conf->rscount),
-		&(l->rslist), 0)) return -1;
+		&(conf->restore_script_arg), 0)) return -1;
 	if(get_conf_val(field, value, "server_script",
 		&(conf->server_script))) return -1;
 	if(get_conf_val_args(field, value, "server_script_arg",
-		&(conf->server_script_arg), &(l->got_ss_args),
-		&(conf->sscount), &(l->sslist), 0)) return -1;
+		&(conf->server_script_arg), 0)) return -1;
 
-	if(get_conf_val_args(field, value, "restore_client",
-		&(conf->rclients), &(l->got_rc_args),
-		&(conf->rccount), &(l->rclist), 0)) return -1;
+	if(get_conf_val_args_sorted(field, value, "restore_client",
+		&(conf->rclients), 0)) return -1;
 
 	if(get_conf_val(field, value, "dedup_group", &(conf->dedup_group)))
 		return -1;
@@ -804,7 +745,7 @@ static int load_config_strings(struct config *conf, const char *field, const cha
 	return 0;
 }
 
-static int load_config_field_and_value(struct config *conf, const char *field, const char *value, struct llists *l, const char *config_path, int line)
+static int load_config_field_and_value(struct config *conf, const char *field, const char *value, const char *config_path, int line)
 {
 	if(!strcmp(field, "mode"))
 	{
@@ -863,7 +804,7 @@ static int load_config_field_and_value(struct config *conf, const char *field, c
 	{
 		if(load_config_ints(conf, field, value))
 			return -1;
-		if(load_config_strings(conf, field, value, l))
+		if(load_config_strings(conf, field, value))
 			return -1;
 	}
 	return 0;
@@ -871,9 +812,9 @@ static int load_config_field_and_value(struct config *conf, const char *field, c
 
 /* Recursing, so need to define load_config_lines ahead of parse_config_line.
 */
-static int load_config_lines(const char *config_path, struct config *conf, struct llists *l);
+static int load_config_lines(const char *config_path, struct config *conf);
 
-static int parse_config_line(struct config *conf, struct llists *l, const char *config_path, char buf[], int line)
+static int parse_config_line(struct config *conf, const char *config_path, char buf[], int line)
 {
 	char *field=NULL;
 	char *value=NULL;
@@ -927,7 +868,7 @@ static int parse_config_line(struct config *conf, struct llists *l, const char *
 			extrafile=tmp;
 		}
 
-		if(load_config_lines(extrafile, conf, l))
+		if(load_config_lines(extrafile, conf))
 		{
 			free(extrafile);
 			return -1;
@@ -939,9 +880,8 @@ static int parse_config_line(struct config *conf, struct llists *l, const char *
 	if(config_get_pair(buf, &field, &value)) return -1;
 	if(!field || !value) return 0;
 
-	if(load_config_field_and_value(conf,
-		field, value, l, config_path, line))
-			return -1;
+	if(load_config_field_and_value(conf, field, value, config_path, line))
+		return -1;
 	return 0;
 }
 
@@ -988,7 +928,7 @@ static int server_conf_checks(struct config *conf, const char *path, int *r)
 		logp("%s: max_status_children unset - using 5\n", path);
 		conf->max_status_children=5;
 	}
-	if(!conf->kpcount)
+	if(!conf->keep)
 		conf_problem(path, "keep unset", r);
 	if(conf->max_hardlinks<2)
 		conf_problem(path, "max_hardlinks too low", r);
@@ -1093,172 +1033,175 @@ static int client_conf_checks(struct config *conf, const char *path, int *r)
 
 	if(!r)
 	{
+		struct strlist *l;
 		logp("Listing configured paths:\n");
-		for(int b=0; b<conf->iecount; b++)
-			logp("%s: %s\n",
-				conf->incexcdir[b]->flag?
-					"include":"exclude",
-				conf->incexcdir[b]->path);
+		for(l=conf->incexcdir; l; l=l->next)
+			logp("%s: %s\n", l->flag?"include":"exclude", l->path);
 		logp("Listing starting paths:\n");
-		for(int b=0; b<conf->sdcount; b++)
-			if(conf->startdir[b]->flag)
-				logp("%s\n", conf->startdir[b]->path);
+		for(l=conf->startdir; l; l=l->next)
+			if(l->flag) logp("%s\n", l->path);
 	}
+	return 0;
+}
+
+static int finalise_keep_args(struct config *conf)
+{
+	struct strlist *k;
+	struct strlist *last=NULL;
+	unsigned long long mult=1;
+	for(k=conf->keep; k; k=k->next)
+	{
+		if(!(k->flag=atoi(k->path)))
+		{
+			logp("'keep' value cannot be set to '%s'\n", k->path);
+			return -1;
+		}
+		mult*=k->flag;
+
+		// An error if you try to keep backups every second
+		// for 100 years.
+		if(mult>52560000)
+		{
+			logp("Your 'keep' values are far too high. High enough to keep a backup every second for 10 years. Please lower them to something sensible.\n");
+			return -1;
+		}
+		last=k;
+	}
+	// If more than one keep value is set, add one to the last one.
+	// This is so that, for example, having set 7, 4, 6, then
+	// a backup of age 7*4*6=168 or more is guaranteed to be kept.
+	// Otherwise, only 7*4*5=140 would be guaranteed to be kept.
+	if(conf->keep && conf->keep->next) last->flag++;
+	return 0;
+}
+
+// This decides which directories to start backing up, and which
+// are subdirectories which don't need to be started separately.
+static int finalise_start_dirs(struct config *conf)
+{
+	struct strlist *s=NULL;
+	struct strlist *last_ie=NULL;
+	struct strlist *last_sd=NULL;
+
+	for(s=conf->incexcdir; s; s=s->next)
+	{
+#ifdef HAVE_WIN32
+		convert_backslashes(&s->path);
+#endif
+		if(path_checks(s->path,
+			"ERROR: Please use absolute include/exclude paths.\n"))
+				return -1;
+		
+		if(!s->flag) continue; // an exclude
+
+		// Ensure that we do not backup the same directory twice.
+		if(last_ie && !strcmp(s->path, last_ie->path))
+		{
+			logp("Directory appears twice in config: %s\n",
+				s->path);
+			return -1;
+		}
+		// If it is not a subdirectory of the most recent start point,
+		// we have found another start point.
+		if(!conf->startdir
+		  || !is_subdir(last_sd->path, s->path))
+		{
+			// Do not use strlist_add_sorted, because last_sd is
+			// relying on incexcdir already being sorted.
+			if(strlist_add(&conf->startdir,s->path, s->flag))
+				return -1;
+			last_sd=s;
+		}
+		last_ie=s;
+	}
+	return 0;
+}
+
+// The glob stuff should only run on the client side.
+static int finalise_glob(struct config *conf)
+{
+	int i;
+	struct strlist *l;
+	struct strlist *last=NULL;
+#ifndef HAVE_WIN32
+	glob_t globbuf;
+#endif
+	if(conf->mode!=MODE_CLIENT) return 0;
+#ifndef HAVE_WIN32
+	memset(&globbuf, 0, sizeof(globbuf));
+	for(l=conf->incglob; l; l=l->next)
+	{
+		glob(l->path, last?GLOB_APPEND:0, NULL, &globbuf);
+		last=l;
+	}
+
+	for(i=0; (unsigned int)i<globbuf.gl_pathc; i++)
+		strlist_add_sorted(&conf->incexcdir, globbuf.gl_pathv[i], 1);
+
+	globfree(&globbuf);
+#else
+	windows_glob(conf, &(l->ielist));
+#endif
 	return 0;
 }
 
 // Set the flag of the first item in a list that looks at extensions to the
 // maximum number of characters that need to be checked, plus one. This is for
 // a bit of added efficiency.
-static void set_max_ext(struct strlist **list, int count)
+static void set_max_ext(struct strlist *list)
 {
-	int i=0;
 	int max=0;
-	for(i=0; i<count; i++)
+	struct strlist *l;
+	for(l=list; l; l=l->next)
 	{
-		int s=strlen(list[i]->path);
+		int s=strlen(l->path);
 		if(s>max) max=s;
 	}
-	if(count) list[0]->flag=max+1;
+	if(l) l->flag=max+1;
 }
 
-static int finalise_config(const char *config_path, struct config *conf, struct llists *l, uint8_t loadall)
+static int finalise_fstypes(struct config *conf)
 {
-	int r=0;
-	int i=0;
-	struct strlist **sdlist=NULL;
-#ifndef HAVE_WIN32
-	glob_t globbuf;
-#endif
-
+	struct strlist *l;
 	// Set the strlist flag for the excluded fstypes
-	for(i=0; i<conf->exfscount; i++)
+	for(l=conf->excfs; l; l=l->next)
 	{
-		l->exfslist[i]->flag=0;
-		if(!strncasecmp(l->exfslist[i]->path, "0x", 2))
+		l->flag=0;
+		if(!strncasecmp(l->path, "0x", 2))
 		{
-			l->exfslist[i]->flag=strtol((l->exfslist[i]->path)+2,
-				NULL, 16);
-			logp("Excluding file system type 0x%08X\n",
-				l->exfslist[i]->flag);
+			l->flag=strtol((l->path)+2, NULL, 16);
+			logp("Excluding file system type 0x%08X\n", l->flag);
 		}
 		else
 		{
-			if(fstype_to_flag(l->exfslist[i]->path,
-				&(l->exfslist[i]->flag)))
+			if(fstype_to_flag(l->path, &(l->flag)))
 			{
-				logp("Unknown exclude fs type: %s\n",
-					l->exfslist[i]->path);
-				l->exfslist[i]->flag=0;
+				logp("Unknown exclude fs type: %s\n", l->path);
+				l->flag=0;
 			}
 		}
 	}
+	return 0;
+}
 
-	// include extensions
-	do_strlist_sort(l->inlist, conf->incount, &(conf->incext));
-	// exclude extensions
-	do_strlist_sort(l->exlist, conf->excount, &(conf->excext));
-	// include (regular expression)
-	do_build_regex(l->irlist, conf->ircount, &(conf->increg));
-	// exclude (regular expression)
-	do_build_regex(l->erlist, conf->ercount, &(conf->excreg));
-	// exclude filesystems
-	do_strlist_sort(l->exfslist, conf->exfscount, &(conf->excfs));
-	// exclude from compression
-	do_strlist_sort(l->excomlist, conf->excmcount, &(conf->excom));
-	// include (glob)
-	do_strlist_sort(l->iglist, conf->igcount, &(conf->incglob));
+static int finalise_config(const char *config_path, struct config *conf, uint8_t loadall)
+{
+	int r=0;
 
-	set_max_ext(conf->incext, conf->incount);
-	set_max_ext(conf->excext, conf->excount);
-	set_max_ext(conf->excom, conf->excmcount);
+	if(finalise_fstypes(conf)) return -1;
 
-	do_strlist_sort(l->fflist, conf->ffcount, &(conf->fifos));
-	do_strlist_sort(l->bdlist, conf->bdcount, &(conf->blockdevs));
-	do_strlist_sort(l->fslist, conf->fscount, &(conf->fschgdir));
-	do_strlist_sort(l->nblist, conf->nbcount, &(conf->nobackup));
+	strlist_compile_regexes(conf->increg);
+	strlist_compile_regexes(conf->excreg);
 
-	/* The glob stuff should only run on the client side. */
-	if(conf->mode==MODE_CLIENT)
-	{
-#ifndef HAVE_WIN32
-		memset(&globbuf, 0, sizeof(globbuf));
-		for(i=0; i<conf->igcount; i++)
-			glob(conf->incglob[i]->path,
-				i>0?GLOB_APPEND:0, NULL, &globbuf);
+	set_max_ext(conf->incext);
+	set_max_ext(conf->excext);
+	set_max_ext(conf->excom);
 
-		for(i=0; (unsigned int)i<globbuf.gl_pathc; i++)
-			strlist_add(&(l->ielist),
-				&(conf->iecount), globbuf.gl_pathv[i], 1);
+	if(finalise_glob(conf)) return -1;
 
-		globfree(&globbuf);
-#else
-		windows_glob(conf, &(l->ielist));
-#endif
-        }
+	if(finalise_start_dirs(conf)) return -1;
 
-	do_strlist_sort(l->ielist, conf->iecount, &(conf->incexcdir));
-
-	// This decides which directories to start backing up, and which
-	// are subdirectories which don't need to be started separately.
-	for(i=0; i<conf->iecount; i++)
-	{
-#ifdef HAVE_WIN32
-		convert_backslashes(&(l->ielist[i]->path));
-#endif
-		if(path_checks(l->ielist[i]->path,
-			"ERROR: Please use absolute include/exclude paths.\n"))
-				return -1;
-		
-		if(!l->ielist[i]->flag) continue; // an exclude
-
-		// Ensure that we do not backup the same directory twice.
-		if(i>0 && !strcmp(l->ielist[i]->path, l->ielist[i-1]->path))
-		{
-			logp("Directory appears twice in config: %s\n",
-				l->ielist[i]->path);
-			return -1;
-		}
-		// If it is not a subdirectory of the most recent start point,
-		// we have found another start point.
-		if(!conf->sdcount || !is_subdir(sdlist[(conf->sdcount)-1]->path,
-			l->ielist[i]->path))
-		{
-			if(strlist_add(&sdlist, &(conf->sdcount),
-				l->ielist[i]->path, l->ielist[i]->flag))
-					return -1;
-		}
-	}
-	conf->startdir=sdlist;
-
-	if(!l->got_kp_args)
-	{
-		unsigned long long mult=1;
-		for(i=0; i<conf->kpcount; i++)
-		{
-			if(!(l->kplist[i]->flag=atoi(l->kplist[i]->path)))
-			{
-				logp("'keep' value cannot be set to '%s'\n",
-					l->kplist[i]->path);
-				return -1;
-			}
-			mult*=l->kplist[i]->flag;
-
-			// An error if you try to keep backups every second
-			// for 100 years.
-			if(mult>52560000)
-			{
-				logp("Your 'keep' values are far too high. High enough to keep a backup every second for 10 years. Please lower them to something sensible.\n");
-				return -1;
-			}
-		}
-		// If more than one keep value is set, add one to the last one.
-		// This is so that, for example, having set 7, 4, 6, then
-		// a backup of age 7*4*6=168 or more is guaranteed to be kept.
-		// Otherwise, only 7*4*5=140 would be guaranteed to be kept.
-		if(conf->kpcount>1) l->kplist[i-1]->flag++;
-		conf->keep=l->kplist;
-	}
+	if(finalise_keep_args(conf)) return -1;
 
 	pre_post_override(&(conf->backup_script),
 		&(conf->backup_script_pre), &(conf->backup_script_post));
@@ -1271,22 +1214,19 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 		conf->server_script_pre_notify=conf->server_script_notify;
 		conf->server_script_post_notify=conf->server_script_notify;
 	}
+/*
+	if(!conf->timer_arg) conf->timer_arg=l->talist;
+	if(!conf->notify_success_arg) conf->notify_success_arg=l->nslist;
+	if(!conf->notify_failure_arg) conf->notify_failure_arg=l->nflist;
+	if(!conf->server_script_arg) conf->server_script_arg=l->sslist;
+	if(!conf->rclients) conf->rclients=l->rclist;
 
-	if(!l->got_timer_args) conf->timer_arg=l->talist;
-	if(!l->got_ns_args) conf->notify_success_arg=l->nslist;
-	if(!l->got_nf_args) conf->notify_failure_arg=l->nflist;
-	if(!l->got_ss_args) conf->server_script_arg=l->sslist;
-	if(!l->got_rc_args) conf->rclients=l->rclist;
-
-	setup_script_arg_override(l->bslist, conf->bscount,
-		&(l->bprelist), &(l->bpostlist),
-		&(conf->bprecount), &(conf->bpostcount));
-	setup_script_arg_override(l->rslist, conf->rscount,
-		&(l->rprelist), &(l->rpostlist),
-		&(conf->rprecount), &(conf->rpostcount));
-	setup_script_arg_override(conf->server_script_arg, conf->sscount,
-		&(l->sprelist), &(l->spostlist),
-		&(conf->sprecount), &(conf->spostcount));
+	setup_script_arg_override(l->bslist,
+		&(l->bprelist), &(l->bpostlist));
+	setup_script_arg_override(l->rslist,
+		&(l->rprelist), &(l->rpostlist));
+	setup_script_arg_override(conf->server_script_arg,
+		&(l->sprelist), &(l->spostlist));
 
 	conf->backup_script_pre_arg=l->bprelist;
 	conf->backup_script_post_arg=l->bpostlist;
@@ -1295,6 +1235,7 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 
 	if(!l->got_spre_args) conf->server_script_pre_arg=l->sprelist;
 	if(!l->got_spost_args) conf->server_script_post_arg=l->spostlist;
+*/
 
 	if(!loadall) return 0;
 
@@ -1326,7 +1267,7 @@ static int finalise_config(const char *config_path, struct config *conf, struct 
 }
 
 
-static int load_config_lines(const char *config_path, struct config *conf, struct llists *l)
+static int load_config_lines(const char *config_path, struct config *conf)
 {
 	int line=0;
 	FILE *fp=NULL;
@@ -1340,7 +1281,7 @@ static int load_config_lines(const char *config_path, struct config *conf, struc
 	while(fgets(buf, sizeof(buf), fp))
 	{
 		line++;
-		if(parse_config_line(conf, l, config_path, buf, line))
+		if(parse_config_line(conf, config_path, buf, line))
 			goto err;
 	}
 	if(fp) fclose(fp);
@@ -1351,25 +1292,8 @@ err:
 	return -1;
 }
 
-static void set_got_args(struct llists *l, struct config *conf)
-{
-	l->got_timer_args=conf->tacount;
-	l->got_ns_args=conf->nscount;
-	l->got_nf_args=conf->nfcount;
-	l->got_kp_args=conf->kpcount;
-	l->got_spre_args=conf->sprecount;
-	l->got_spost_args=conf->spostcount;
-	l->got_ss_args=conf->sscount;
-	l->got_rc_args=conf->rccount;
-}
-
 int config_load(const char *config_path, struct config *conf, uint8_t loadall)
 {
-	struct llists l;
-
-	memset(&l, 0, sizeof(struct llists));
-	set_got_args(&l, conf);
-
 	//logp("in config_load\n");
 	if(loadall)
 	{
@@ -1381,10 +1305,10 @@ int config_load(const char *config_path, struct config *conf, uint8_t loadall)
 		}
 	}
 
-	if(load_config_lines(config_path, conf, &l))
+	if(load_config_lines(config_path, conf))
 		return -1;
 
-	return finalise_config(config_path, conf, &l, loadall);
+	return finalise_config(config_path, conf, loadall);
 }
 
 /* The client runs this when the server overrides the incexcs. */
@@ -1394,12 +1318,9 @@ int parse_incexcs_buf(struct config *conf, const char *incexc)
 	int line=0;
 	char *tok=NULL;
 	char *copy=NULL;
-	struct llists l;
 
 	if(!incexc) return 0;
 	
-	memset(&l, 0, sizeof(struct llists));
-	set_got_args(&l, conf);
 	if(!(copy=strdup(incexc)))
 	{
 		log_out_of_memory(__FUNCTION__);
@@ -1415,7 +1336,7 @@ int parse_incexcs_buf(struct config *conf, const char *incexc)
 	do
 	{
 		line++;
-		if(parse_config_line(conf, &l, "", tok, line))
+		if(parse_config_line(conf, "", tok, line))
 		{
 			ret=-1;
 			break;
@@ -1424,7 +1345,7 @@ int parse_incexcs_buf(struct config *conf, const char *incexc)
 	free(copy);
 
 	if(ret) return ret;
-	return finalise_config("server override", conf, &l, 0);
+	return finalise_config("server override", conf, 0);
 }
 
 int log_incexcs_buf(const char *incexc)
@@ -1468,19 +1389,14 @@ static int set_global_str(char **dst, const char *src)
 	return 0;
 }
 
-static int set_global_arglist(struct strlist ***dst, struct strlist **src, int *dstcount, int srccount)
+static int set_global_arglist(struct strlist **dst, struct strlist *src)
 {
-	if(!*dst && src)
-	{
-		int i=0;
-		struct strlist **list=NULL;
-		for(i=0; i<srccount; i++)
-		{
-			if(strlist_add(&list, dstcount,
-				src[i]->path, src[i]->flag)) return -1;
-		}
-		*dst=list;
-	}
+	struct strlist *s=NULL;
+	// Not using strlist_add_sorted, as they should be set in the order
+	// that they were first found.
+	for(s=src; s; s=s->next)
+		if(strlist_add(dst, s->path, s->flag))
+			return -1;
 	return 0;
 }
 
@@ -1526,37 +1442,30 @@ int config_set_client_global(struct config *conf, struct config *cconf)
 		conf->notify_success_script)) return -1;
 	if(set_global_str(&(cconf->notify_failure_script),
 		conf->notify_failure_script)) return -1;
-	if(set_global_arglist(&(cconf->timer_arg), conf->timer_arg,
-		&(cconf->tacount), conf->tacount)) return -1;
+	if(set_global_arglist(&(cconf->timer_arg),
+		conf->timer_arg)) return -1;
 	if(set_global_arglist(&(cconf->notify_success_arg),
-		conf->notify_success_arg,
-		&(cconf->nscount), conf->nscount)) return -1;
+		conf->notify_success_arg)) return -1;
 	if(set_global_arglist(&(cconf->notify_failure_arg),
-		conf->notify_failure_arg,
-		&(cconf->nfcount), conf->nfcount)) return -1;
+		conf->notify_failure_arg)) return -1;
 	if(set_global_arglist(&(cconf->keep),
-		conf->keep,
-		&(cconf->kpcount), conf->kpcount)) return -1;
+		conf->keep)) return -1;
 	if(set_global_str(&(cconf->dedup_group), conf->dedup_group))
 		return -1;
 	if(set_global_str(&(cconf->server_script_pre),
 		conf->server_script_pre)) return -1;
 	if(set_global_arglist(&(cconf->server_script_pre_arg),
-		conf->server_script_pre_arg,
-		&(cconf->sprecount), conf->sprecount)) return -1;
+		conf->server_script_pre_arg)) return -1;
 	if(set_global_str(&(cconf->server_script_post),
 		conf->server_script_post)) return -1;
 	if(set_global_arglist(&(cconf->server_script_post_arg),
-		conf->server_script_post_arg,
-		&(cconf->spostcount), conf->spostcount)) return -1;
+		conf->server_script_post_arg)) return -1;
 	if(set_global_str(&(cconf->server_script),
 		conf->server_script)) return -1;
 	if(set_global_arglist(&(cconf->server_script_arg),
-		conf->server_script_arg,
-		&(cconf->sscount), conf->sscount)) return -1;
+		conf->server_script_arg)) return -1;
 	if(set_global_arglist(&(cconf->rclients),
-		conf->rclients,
-		&(cconf->rccount), conf->rccount)) return -1;
+		conf->rclients)) return -1;
 
 	// If ssl_peer_cn is not set, default it to the client name.
 	if(!conf->ssl_peer_cn

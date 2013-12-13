@@ -238,7 +238,7 @@ int windows_glob(struct config *conf, struct strlist ***ielist)
 					tmppath=xstrcat(tmppath, ffd.cFileName);
 					tmppath=xstrcat(tmppath, splitstr1[1]);
 				}
-				strlist_add(ielist, &(conf->iecount), tmppath, 1);
+				strlist_add_sorted(ielist, tmppath, 1);
 				xfree(tmppath);
 				tmppath = NULL;
 			}

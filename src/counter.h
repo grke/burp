@@ -113,7 +113,7 @@ extern int send_counters(struct config *conf);
 
 extern int str_to_counters(const char *str, char **client, char *status,
 	char *phase, char **path, struct cntr *p1cntr, struct cntr *cntr,
-	struct strlist ***backups, int *bcount);
+	struct strlist **backups);
 extern int recv_counters(struct config *conf);
 
 #endif

@@ -55,12 +55,7 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf)
 {
 	char attribs[MAXSTRING];
 
-	if(!file_is_included(conf->incexcdir, conf->iecount,
-		conf->incext, conf->incount,
-		conf->excext, conf->excount,
-		conf->increg, conf->ircount,
-		conf->excreg, conf->ercount,
-		ff->fname, top_level)) return 0;
+	if(!file_is_included(conf, ff->fname, top_level)) return 0;
 
 	if(server_name_max)
 	{
@@ -89,13 +84,13 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf)
 	}
 #endif
 
-	switch (ff->type)
+	switch(ff->type)
 	{
 		case FT_REG:
 		case FT_RAW:
 		case FT_FIFO:
 			return do_to_server(conf, ff, attribs, filesymbol,
-				in_exclude_comp(conf->excom, conf->excmcount,
+				in_exclude_comp(conf->excom,
 					ff->fname, conf->compression));
 		case FT_DIR:
 		case FT_REPARSE:
@@ -125,9 +120,9 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf)
 
 int backup_phase1_client(struct config *conf, long name_max, int estimate)
 {
-	int sd=0;
 	int ret=0;
 	FF_PKT *ff=NULL;
+	struct strlist *l;
 
 	// First, tell the server about everything that needs to be backed up.
 
@@ -144,9 +139,8 @@ int backup_phase1_client(struct config *conf, long name_max, int estimate)
 
 	ff=find_files_init();
 	server_name_max=name_max;
-	for(; sd < conf->sdcount; sd++)
-		if(conf->startdir[sd]->flag
-		  && (ret=find_files_begin(ff, conf, conf->startdir[sd]->path)))
+	for(l=conf->startdir; l; l=l->next) if(l->flag)
+		if((ret=find_files_begin(ff, conf, l->path)))
 			break;
 	find_files_free(ff);
 

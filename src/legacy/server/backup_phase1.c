@@ -70,7 +70,6 @@ int backup_phase1_server(struct sdirs *sdirs, struct config *conf)
 	return ret;
 }
 
-
 // Used on resume, this just reads the phase1 file and sets up the counters.
 static int read_phase1(gzFile zp, struct cntr *p1cntr)
 {

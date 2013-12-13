@@ -872,16 +872,16 @@ static char *get_backup_str(const char *s, int *deletable)
 	return str;
 }
 
-static int add_to_backup_list(struct strlist ***backups, int *bcount, const char *tok)
+static int add_to_backup_list(struct strlist **backups, const char *tok)
 {
 	int deletable=0;
 	const char *str=NULL;
 	if(!(str=get_backup_str(tok, &deletable))) return 0;
-	if(strlist_add(backups, bcount, (char *)str, deletable)) return -1;
+	if(strlist_add(backups, (char *)str, deletable)) return -1;
 	return 0;
 }
 
-int str_to_counters(const char *str, char **client, char *status, char *phase, char **path, struct cntr *p1cntr, struct cntr *cntr, struct strlist ***backups, int *bcount)
+int str_to_counters(const char *str, char **client, char *status, char *phase, char **path, struct cntr *p1cntr, struct cntr *cntr, struct strlist **backups)
 {
 	int t=0;
 	char *tok=NULL;
@@ -935,7 +935,7 @@ int str_to_counters(const char *str, char **client, char *status, char *phase, c
 					  do
 					  {
 						if(add_to_backup_list(backups,
-								bcount, tok))
+							tok))
 						{
 							free(copy);
 							return -1;
@@ -1078,7 +1078,7 @@ static enum asl_ret recv_counters_func(struct iobuf *rbuf,
 	struct config *conf, void *param)
 {
 	if(str_to_counters(rbuf->buf, NULL, NULL, NULL, NULL,
-		conf->p1cntr, conf->cntr, NULL, NULL))
+		conf->p1cntr, conf->cntr, NULL))
 			return ASL_END_ERROR;
 	return ASL_END_OK;
 }

@@ -131,12 +131,10 @@ static int srestore_matches(struct strlist *s, const char *path)
 // Used when restore is initiated from the server.
 static int check_srestore(struct config *conf, const char *path)
 {
-	int i=0;
-	for(i=0; i<conf->iecount; i++)
-	{
-		if(srestore_matches(conf->incexcdir[i], path))
+	struct strlist *l;
+	for(l=conf->incexcdir; l; l=l->next)
+		if(srestore_matches(l, path))
 			return 1;
-	}
 	return 0;
 }
 

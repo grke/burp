@@ -87,7 +87,7 @@ void maybe_do_notification(int status, const char *clientdir,
 		args[0]=cconf->notify_failure_script;
 		args[a++]="0";
 		args[a++]=NULL;
-		run_script(args, cconf->notify_failure_arg, cconf->nfcount,
+		run_script(args, cconf->notify_failure_arg,
 			cconf->cntr, 1, 1);
 	}
 	else if((cconf->notify_success_warnings_only
@@ -104,7 +104,7 @@ void maybe_do_notification(int status, const char *clientdir,
 		args[0]=cconf->notify_success_script;
 		args[a++]=warnings;
 		args[a++]=NULL;
-		run_script(args, cconf->notify_success_arg, cconf->nscount,
+		run_script(args, cconf->notify_success_arg,
 			cconf->cntr, 1, 1);
 	}
 }
@@ -141,7 +141,6 @@ static int run_backup(struct sdirs *sdirs, struct config *cconf,
 		args[a++]=NULL;
 		if((*timer_ret=run_script(args,
 		  cconf->timer_arg,
-		  cconf->tacount,
 		  /* cntr is NULL so that run_script does not
 		     write warnings down the socket, otherwise
 		     the client will never print the 'timer

@@ -39,6 +39,7 @@ int extra_comms(struct config *conf,
 		logp("Problem reading response to extra_comms_begin\n");
 		goto end;
 	}
+	feat=rbuf->buf;
 	if(rbuf->cmd!=CMD_GEN
 	  || strncmp(feat,
 		"extra_comms_begin ok", strlen("extra_comms_begin ok")))
@@ -49,7 +50,7 @@ int extra_comms(struct config *conf,
 
 	// Can add extra bits here. The first extra bit is the
 	// autoupgrade stuff.
-	if(server_supports_autoupgrade(feat)
+	if(server_supports_autoupgrade(rbuf->buf)
 	  && conf->autoupgrade_dir
 	  && conf->autoupgrade_os
 	  && (ret=autoupgrade_client(conf)))
@@ -163,6 +164,6 @@ int extra_comms(struct config *conf,
 	}
 
 end:
-	if(feat) free(feat);
+	iobuf_free(rbuf);
 	return ret;
 }

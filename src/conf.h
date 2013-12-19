@@ -104,38 +104,40 @@ struct config
 	char *browsefile;
 	char *browsedir;
 
-	char *backup_script_pre;
-	struct strlist *backup_script_pre_arg;
-	char *backup_script_post;
-	struct strlist *backup_script_post_arg;
-	uint8_t backup_script_post_run_on_fail;
-	char *restore_script_pre;
-	struct strlist *restore_script_pre_arg;
-	char *restore_script_post;
-	struct strlist *restore_script_post_arg;
-	uint8_t restore_script_post_run_on_fail;
+  // backup scripts
+	char *b_script_pre;
+	struct strlist *b_script_pre_arg;
+	char *b_script_post;
+	struct strlist *b_script_post_arg;
+	uint8_t b_script_post_run_on_fail;
+	char *r_script_pre;
+	struct strlist *r_script_pre_arg;
+	char *r_script_post;
+	struct strlist *r_script_post_arg;
+	uint8_t r_script_post_run_on_fail;
 
-	char *server_script_pre;
-	struct strlist *server_script_pre_arg;
-	uint8_t server_script_pre_notify;
-	char *server_script_post;
-	struct strlist *server_script_post_arg;
-	uint8_t server_script_post_run_on_fail;
-	uint8_t server_script_post_notify;
+  // server scripts
+	char *s_script_pre;
+	struct strlist *s_script_pre_arg;
+	uint8_t s_script_pre_notify;
+	char *s_script_post;
+	struct strlist *s_script_post_arg;
+	uint8_t s_script_post_run_on_fail;
+	uint8_t s_script_post_notify;
 
 	// Rabin conf
 	struct rconf rconf;
 
 	// Use these when you want to give the same args to both post and pre
 	// scripts.
-	char *backup_script;
-	struct strlist *backup_script_arg;
-	char *restore_script;
-	struct strlist *restore_script_arg;
+	char *b_script;
+	struct strlist *b_script_arg;
+	char *r_script;
+	struct strlist *r_script_arg;
 
-	char *server_script;
-	struct strlist *server_script_arg;
-	uint8_t server_script_notify;
+	char *s_script;
+	struct strlist *s_script_arg;
+	uint8_t s_script_notify;
 
 // Client options on the server.
 // They can be set globally in the server config, or for each client.
@@ -143,7 +145,7 @@ struct config
 
 	struct strlist *keep;
 
-	char *working_dir_recovery_method;
+	char *recovery_method;
 	uint8_t librsync;
 
 	uint8_t compression;
@@ -153,13 +155,14 @@ struct config
 	char *timer_script;
 	struct strlist *timer_arg;
 
-	char *notify_success_script;
-	struct strlist *notify_success_arg;
-	uint8_t notify_success_warnings_only;
-	uint8_t notify_success_changes_only;
+  // notify scripts
+	char *n_success_script;
+	struct strlist *n_success_arg;
+	uint8_t n_success_warnings_only;
+	uint8_t n_success_changes_only;
 
-	char *notify_failure_script;
-	struct strlist *notify_failure_arg;
+	char *n_failure_script;
+	struct strlist *n_failure_arg;
 
 // List of clients that are permitted to restore the files from our client.
 	struct strlist *rclients;
@@ -192,19 +195,19 @@ struct config
 	struct cntr *cntr;
 };
 
-extern void config_init(struct config *conf);
-extern int config_load(const char *config_path, struct config *conf,
+extern void config_init(struct config *c);
+extern int config_load(const char *config_path, struct config *c,
 	uint8_t loadall);
-extern void config_free(struct config *conf);
-extern int config_set_client_global(struct config *conf, struct config *cconf);
+extern void config_free(struct config *c);
+extern int config_set_client_global(struct config *c, struct config *cc);
 
 extern int is_subdir(const char *dir, const char *sub);
 extern int pathcmp(const char *a, const char *b);
 extern int config_get_pair(char buf[], char **field, char **value);
-extern int parse_incexcs_buf(struct config *conf, const char *incexc);
+extern int parse_incexcs_buf(struct config *c, const char *incexc);
 extern int log_incexcs_buf(const char *incexc);
-extern int parse_incexcs_path(struct config *conf, const char *path);
-extern int config_load_client(struct config *conf, struct config *cconf);
+extern int parse_incexcs_path(struct config *c, const char *path);
+extern int config_load_client(struct config *c, struct config *cc);
 extern int conf_val_reset(const char *src, char **dest);
 
 #ifdef HAVE_WIN32

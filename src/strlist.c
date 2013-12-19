@@ -49,7 +49,6 @@ static int do_strlist_add(struct strlist **strlist,
 	struct strlist *slnew=NULL;
 
 	if(!(slnew=strlist_alloc(path, flag))) return -1;
-	if(!*strlist) *strlist=slnew;
 
 	// Insert into a sorted position in the list, or if the sorted flag
 	// was zero, add to the end of the list.
@@ -66,7 +65,9 @@ static int do_strlist_add(struct strlist **strlist,
 		slast->next=slnew;
 	}
 	else
+	{
 		*strlist=slnew;
+	}
 
 	return 0;
 }

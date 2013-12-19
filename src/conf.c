@@ -5,199 +5,201 @@
    This is so that the server can override them all on the client. */
 // FIX THIS: Maybe have this as a substructure of a struct config.
 // Could then just memset them all to zero here.
-static void init_incexcs(struct config *conf)
+static void init_incexcs(struct config *c)
 {
-	conf->startdir=NULL;
-	conf->incexcdir=NULL;
-	conf->fschgdir=NULL;
-	conf->nobackup=NULL;
-	conf->incext=NULL; // include extensions
-	conf->excext=NULL; // exclude extensions
-	conf->increg=NULL; // include (regular expression)
-	conf->excreg=NULL; // include (regular expression)
-	conf->excfs=NULL; // exclude filesystems
-	conf->excom=NULL; // exclude from compression
-	conf->incglob=NULL; // exclude from compression
-	conf->fifos=NULL;
-	conf->blockdevs=NULL;
-	conf->split_vss=0;
-	conf->strip_vss=0;
-	conf->vss_drives=NULL;
+	c->startdir=NULL;
+	c->incexcdir=NULL;
+	c->fschgdir=NULL;
+	c->nobackup=NULL;
+	c->incext=NULL; // include extensions
+	c->excext=NULL; // exclude extensions
+	c->increg=NULL; // include (regular expression)
+	c->excreg=NULL; // include (regular expression)
+	c->excfs=NULL; // exclude filesystems
+	c->excom=NULL; // exclude from compression
+	c->incglob=NULL; // exclude from compression
+	c->fifos=NULL;
+	c->blockdevs=NULL;
+	c->split_vss=0;
+	c->strip_vss=0;
+	c->vss_drives=NULL;
 	/* stuff to do with restore */
-	conf->overwrite=0;
-	conf->strip=0;
-	conf->backup=NULL;
-	conf->restoreprefix=NULL;
-	conf->regex=NULL;
+	c->overwrite=0;
+	c->strip=0;
+	c->backup=NULL;
+	c->restoreprefix=NULL;
+	c->regex=NULL;
 }
 
 /* Free only stuff related to includes/excludes.
    This is so that the server can override them all on the client. */
-static void free_incexcs(struct config *conf)
+static void free_incexcs(struct config *c)
 {
-	strlists_free(&conf->startdir);
-	strlists_free(&conf->incexcdir);
-	strlists_free(&conf->fschgdir);
-	strlists_free(&conf->nobackup);
-	strlists_free(&conf->incext); // include extensions
-	strlists_free(&conf->excext); // exclude extensions
-	strlists_free(&conf->increg); // include (regular expression)
-	strlists_free(&conf->excreg); // exclude (regular expression)
-	strlists_free(&conf->excfs); // exclude filesystems
-	strlists_free(&conf->excom); // exclude from compression
-	strlists_free(&conf->incglob); // include (glob)
-	strlists_free(&conf->fifos);
-	strlists_free(&conf->blockdevs);
-	if(conf->backup) free(conf->backup);
-	if(conf->restoreprefix) free(conf->restoreprefix);
-	if(conf->regex) free(conf->regex);
-	if(conf->vss_drives) free(conf->vss_drives);
-	init_incexcs(conf);
+	strlists_free(&c->startdir);
+	strlists_free(&c->incexcdir);
+	strlists_free(&c->fschgdir);
+	strlists_free(&c->nobackup);
+	strlists_free(&c->incext); // include extensions
+	strlists_free(&c->excext); // exclude extensions
+	strlists_free(&c->increg); // include (regular expression)
+	strlists_free(&c->excreg); // exclude (regular expression)
+	strlists_free(&c->excfs); // exclude filesystems
+	strlists_free(&c->excom); // exclude from compression
+	strlists_free(&c->incglob); // include (glob)
+	strlists_free(&c->fifos);
+	strlists_free(&c->blockdevs);
+	if(c->backup) free(c->backup);
+	if(c->restoreprefix) free(c->restoreprefix);
+	if(c->regex) free(c->regex);
+	if(c->vss_drives) free(c->vss_drives);
+	init_incexcs(c);
 }
 
-void config_init(struct config *conf)
+void config_init(struct config *c)
 {
 	// Set everything to 0.
 	// FIX THIS: get rid of this by calloc-ing struct configs.
 	// look out for sconf in extra_comms.c, which is malloc-d.
-	memset(conf, 0, sizeof(struct config));
+	memset(c, 0, sizeof(struct config));
 
 	// Turn on defaults that are non-zero.
-	conf->forking=1;
-	conf->daemon=1;
-	conf->directory_tree=1;
-	conf->password_check=1;
-	conf->log_to_stdout=1;
-	conf->network_timeout=60*60*2; // two hours
+	c->forking=1;
+	c->daemon=1;
+	c->directory_tree=1;
+	c->password_check=1;
+	c->log_to_stdout=1;
+	c->network_timeout=60*60*2; // two hours
 	// ext3 maximum number of subdirs is 32000, so leave a little room.
-	conf->max_storage_subdirs=30000;
-	conf->librsync=1;
-	conf->compression=9;
-	conf->version_warn=1;
-	conf->resume_partial=0;
-	conf->umask=0022;
-	conf->max_hardlinks=10000;
+	c->max_storage_subdirs=30000;
+	c->librsync=1;
+	c->compression=9;
+	c->version_warn=1;
+	c->resume_partial=0;
+	c->umask=0022;
+	c->max_hardlinks=10000;
 
-	conf->client_can_delete=1;
-	conf->client_can_force_backup=1;
-	conf->client_can_list=1;
-	conf->client_can_restore=1;
-	conf->client_can_verify=1;
+	c->client_can_delete=1;
+	c->client_can_force_backup=1;
+	c->client_can_list=1;
+	c->client_can_restore=1;
+	c->client_can_verify=1;
 
-	conf->server_can_restore=1;
+	c->server_can_restore=1;
 
-	rconf_init(&conf->rconf);
+	rconf_init(&c->rconf);
 }
 
-void config_free(struct config *conf)
+void config_free(struct config *c)
 {
-	if(!conf) return;
-	if(conf->port) free(conf->port);
-	if(conf->configfile) free(conf->configfile);
-	if(conf->clientconfdir) free(conf->clientconfdir);
-	if(conf->cname) free(conf->cname);
-	if(conf->peer_version) free(conf->peer_version);
-	if(conf->directory) free(conf->directory);
-	if(conf->timestamp_format) free(conf->timestamp_format);
-	if(conf->ca_conf) free(conf->ca_conf);
-	if(conf->ca_name) free(conf->ca_name);
-	if(conf->ca_server_name) free(conf->ca_server_name);
-	if(conf->ca_burp_ca) free(conf->ca_burp_ca);
-	if(conf->ca_csr_dir) free(conf->ca_csr_dir);
-	if(conf->lockfile) free(conf->lockfile);
-	if(conf->password) free(conf->password);
-	if(conf->passwd) free(conf->passwd);
-	if(conf->server) free(conf->server);
- 	if(conf->working_dir_recovery_method)
-		free(conf->working_dir_recovery_method);
- 	if(conf->ssl_cert_ca) free(conf->ssl_cert_ca);
-        if(conf->ssl_cert) free(conf->ssl_cert);
-        if(conf->ssl_key) free(conf->ssl_key);
-        if(conf->ssl_key_password) free(conf->ssl_key_password);
-        if(conf->ssl_ciphers) free(conf->ssl_ciphers);
-        if(conf->ssl_dhfile) free(conf->ssl_dhfile);
-        if(conf->ssl_peer_cn) free(conf->ssl_peer_cn);
-        if(conf->user) free(conf->user);
-        if(conf->group) free(conf->group);
-        if(conf->encryption_password) free(conf->encryption_password);
-	if(conf->client_lockdir) free(conf->client_lockdir);
-	if(conf->autoupgrade_dir) free(conf->autoupgrade_dir);
-	if(conf->autoupgrade_os) free(conf->autoupgrade_os);
-	if(conf->manual_delete) free(conf->manual_delete);
+	if(!c) return;
+	if(c->port) free(c->port);
+	if(c->configfile) free(c->configfile);
+	if(c->clientconfdir) free(c->clientconfdir);
+	if(c->cname) free(c->cname);
+	if(c->peer_version) free(c->peer_version);
+	if(c->directory) free(c->directory);
+	if(c->timestamp_format) free(c->timestamp_format);
+	if(c->ca_conf) free(c->ca_conf);
+	if(c->ca_name) free(c->ca_name);
+	if(c->ca_server_name) free(c->ca_server_name);
+	if(c->ca_burp_ca) free(c->ca_burp_ca);
+	if(c->ca_csr_dir) free(c->ca_csr_dir);
+	if(c->lockfile) free(c->lockfile);
+	if(c->password) free(c->password);
+	if(c->passwd) free(c->passwd);
+	if(c->server) free(c->server);
+ 	if(c->recovery_method) free(c->recovery_method);
+ 	if(c->ssl_cert_ca) free(c->ssl_cert_ca);
+        if(c->ssl_cert) free(c->ssl_cert);
+        if(c->ssl_key) free(c->ssl_key);
+        if(c->ssl_key_password) free(c->ssl_key_password);
+        if(c->ssl_ciphers) free(c->ssl_ciphers);
+        if(c->ssl_dhfile) free(c->ssl_dhfile);
+        if(c->ssl_peer_cn) free(c->ssl_peer_cn);
+        if(c->user) free(c->user);
+        if(c->group) free(c->group);
+        if(c->encryption_password) free(c->encryption_password);
+	if(c->client_lockdir) free(c->client_lockdir);
+	if(c->autoupgrade_dir) free(c->autoupgrade_dir);
+	if(c->autoupgrade_os) free(c->autoupgrade_os);
+	if(c->manual_delete) free(c->manual_delete);
 
-	if(conf->timer_script) free(conf->timer_script);
-	strlists_free(&conf->timer_arg);
+	if(c->timer_script) free(c->timer_script);
+	strlists_free(&c->timer_arg);
 
-	if(conf->notify_success_script) free(conf->notify_success_script);
-	strlists_free(&conf->notify_success_arg);
+	if(c->n_success_script) free(c->n_success_script);
+	strlists_free(&c->n_success_arg);
 
-	if(conf->notify_failure_script) free(conf->notify_failure_script);
-	strlists_free(&conf->notify_failure_arg);
+	if(c->n_failure_script) free(c->n_failure_script);
+	strlists_free(&c->n_failure_arg);
 
-	strlists_free(&conf->rclients);
+	strlists_free(&c->rclients);
 
-	if(conf->backup_script_pre) free(conf->backup_script_pre);
-	strlists_free(&conf->backup_script_pre_arg);
-	if(conf->backup_script_post) free(conf->backup_script_post);
-	strlists_free(&conf->backup_script_post_arg);
-	if(conf->restore_script_pre) free(conf->restore_script_pre);
-	strlists_free(&conf->restore_script_pre_arg);
-	if(conf->restore_script_post) free(conf->restore_script_post);
-	strlists_free(&conf->restore_script_post_arg);
+	if(c->b_script_pre) free(c->b_script_pre);
+	strlists_free(&c->b_script_pre_arg);
+	if(c->b_script_post) free(c->b_script_post);
+	strlists_free(&c->b_script_post_arg);
+	if(c->r_script_pre) free(c->r_script_pre);
+	strlists_free(&c->r_script_pre_arg);
+	if(c->r_script_post) free(c->r_script_post);
+	strlists_free(&c->r_script_post_arg);
 
-	if(conf->server_script_pre) free(conf->server_script_pre);
-	strlists_free(&conf->server_script_pre_arg);
-	if(conf->server_script_post) free(conf->server_script_post);
-	strlists_free(&conf->server_script_post_arg);
+	if(c->s_script_pre) free(c->s_script_pre);
+	strlists_free(&c->s_script_pre_arg);
+	if(c->s_script_post) free(c->s_script_post);
+	strlists_free(&c->s_script_post_arg);
 
-	if(conf->backup_script) free(conf->backup_script);
-	if(conf->restore_script) free(conf->restore_script);
-	strlists_free(&conf->backup_script_arg);
-	strlists_free(&conf->restore_script_arg);
+	if(c->b_script) free(c->b_script);
+	if(c->r_script) free(c->r_script);
+	strlists_free(&c->b_script_arg);
+	strlists_free(&c->r_script_arg);
 
-	if(conf->server_script) free(conf->server_script);
-	strlists_free(&conf->server_script_arg);
+	if(c->s_script) free(c->s_script);
+	strlists_free(&c->s_script_arg);
 
-	strlists_free(&conf->keep);
+	strlists_free(&c->keep);
 
-	if(conf->dedup_group) free(conf->dedup_group);
-	if(conf->browsefile) free(conf->browsefile);
-	if(conf->browsedir) free(conf->browsedir);
-	if(conf->restore_spool) free(conf->restore_spool);
-	if(conf->restore_client) free(conf->restore_client);
-	if(conf->restore_path) free(conf->restore_path);
-	if(conf->orig_client) free(conf->orig_client);
+	if(c->dedup_group) free(c->dedup_group);
+	if(c->browsefile) free(c->browsefile);
+	if(c->browsedir) free(c->browsedir);
+	if(c->restore_spool) free(c->restore_spool);
+	if(c->restore_client) free(c->restore_client);
+	if(c->restore_path) free(c->restore_path);
+	if(c->orig_client) free(c->orig_client);
 
-	free_incexcs(conf);
+	free_incexcs(c);
 
-	config_init(conf);
+	config_init(c);
 }
 
-static int get_conf_val(const char *field, const char *value, const char *want, char **dest)
+// Get configuration value.
+static int gcv(const char *f, const char *v, const char *want, char **dest)
 {
-	if(!strcmp(field, want))
+	if(strcmp(f, want)) return 0;
+	if(*dest) free(*dest);
+	if(!(*dest=strdup(v)))
 	{
-		if(*dest) free(*dest);
-		if(!(*dest=strdup(value)))
-		{
-			logp("could not strdup %s value: %s\n", field, value);
-			return -1;
-		}
+		logp("could not strdup %s value: %s\n", f, v);
+		return -1;
 	}
 	return 0;
 }
 
-static void get_conf_val_int(const char *field, const char *value, const char *want, int *dest)
+// Get configuration value integer.
+static void gcv_int(const char *f, const char *v, const char *want, int *dest)
 {
-	if(!strcmp(field, want)) *dest=atoi(value);
+	if(!strcmp(f, want)) *dest=atoi(v);
 }
 
-static void get_conf_val_uint8(const char *field, const char *value, const char *want, uint8_t *dest)
+// Get configuration value 8 bit integer.
+static void gcv_uint8(const char *f, const char *v,
+	const char *want, uint8_t *dest)
 {
-	if(!strcmp(field, want)) *dest=(uint8_t)atoi(value);
+	if(!strcmp(f, want)) *dest=(uint8_t)atoi(v);
 }
 
-int config_get_pair(char buf[], char **field, char **value)
+// Get field and value pair.
+int config_get_pair(char buf[], char **f, char **v)
 {
 	char *cp=NULL;
 	char *eq=NULL;
@@ -207,43 +209,44 @@ int config_get_pair(char buf[], char **field, char **value)
 	for(cp=buf; *cp && isspace(*cp); cp++) { }
 	if(!*cp || *cp=='#')
 	{
-		*field=NULL;
-		*value=NULL;
+		*f=NULL;
+		*v=NULL;
 		return 0;
 	}
-	*field=cp;
-	if(!(eq=strchr(*field, '='))) return -1;
+	*f=cp;
+	if(!(eq=strchr(*f, '='))) return -1;
 	*eq='\0';
 
 	// strip white space from before the equals sign
 	for(cp=eq-1; *cp && isspace(*cp); cp--) *cp='\0';
 	// skip white space after the equals sign
 	for(cp=eq+1; *cp && isspace(*cp); cp++) { }
-	*value=cp;
+	*v=cp;
 	// strip white space at the end of the line
 	for(cp+=strlen(cp)-1; *cp && isspace(*cp); cp--) { *cp='\0'; }
 	// remove quotes from around the value.
 	// TODO: Make this more sophisticated - it should understand escapes,
 	// for example.
-	cp=*value;
+	cp=*v;
 	end=cp+strlen(cp)-1;
 	if((*cp=='\'' && *end=='\'')
 	  || (*cp=='\"' && *end=='\"'))
 	{
-		*value=cp+1; 
+		*v=cp+1; 
 		*end='\0';
 	}
 
-	if(!*field || !**field || !*value || !**value) return -1;
+	if(!*f || !**f || !*v || !**v) return -1;
 
 	return 0;
 }
 
-static int do_get_conf_val_args(const char *field, const char *value,
+// Get configuration value args.
+static int do_gcv_a(const char *f, const char *v,
 	const char *opt, struct strlist **list, int include, int sorted)
 {
 	char *tmp=NULL;
-	if(get_conf_val(field, value, opt, &tmp)) return -1;
+	if(gcv(f, v, opt, &tmp)) return -1;
 	if(!tmp) return 0;
 	if(1) // FIX THIS
 	{
@@ -257,20 +260,22 @@ static int do_get_conf_val_args(const char *field, const char *value,
 	{
 		if(strlist_add(list, tmp, include)) return -1;
 	}
-	free(tmp); tmp=NULL;
+	free(tmp);
 	return 0;
 }
 
-static int get_conf_val_args(const char *field, const char *value,
+// Get configuration value args (unsorted).
+static int gcv_a(const char *f, const char *v,
 	const char *opt, struct strlist **list, int include)
 {
-	return do_get_conf_val_args(field, value, opt, list, include, 0);
+	return do_gcv_a(f, v, opt, list, include, 0);
 }
 
-static int get_conf_val_args_sorted(const char *field, const char *value,
+// Get configuration value args (sorted).
+static int gcv_a_sort(const char *f, const char *v,
 	const char *opt, struct strlist **list, int include)
 {
-	return do_get_conf_val_args(field, value, opt, list, include, 1);
+	return do_gcv_a(f, v, opt, list, include, 1);
 }
 
 /* Windows users have a nasty habit of putting in backslashes. Convert them. */
@@ -364,12 +369,12 @@ static int conf_error(const char *config_path, int line)
 	return -1;
 }
 
-static int get_file_size(const char *value, ssize_t *dest, const char *config_path, int line)
+static int get_file_size(const char *v, ssize_t *dest, const char *config_path, int line)
 {
 	// Store in bytes, allow k/m/g.
 	const char *cp=NULL;
-	*dest=strtoul(value, NULL, 10);
-	for(cp=value; *cp && (isspace(*cp) || isdigit(*cp)); cp++) { }
+	*dest=strtoul(v, NULL, 10);
+	for(cp=v; *cp && (isspace(*cp) || isdigit(*cp)); cp++) { }
 	if(tolower(*cp)=='k') *dest*=1024;
 	else if(tolower(*cp)=='m') *dest*=1024*1024;
 	else if(tolower(*cp)=='g') *dest*=1024*1024*1024;
@@ -498,288 +503,189 @@ static int fstype_to_flag(const char *fstype, long *flag)
 	return -1;
 }
 
-static int load_config_ints(struct config *conf, const char *field, const char *value)
+static int load_config_ints(struct config *c,
+	const char *f, // field
+	const char *v) //value
 {
-	get_conf_val_uint8(field, value, "legacy",
-		&(conf->legacy));
-	get_conf_val_uint8(field, value, "syslog",
-		&(conf->log_to_syslog));
-	get_conf_val_uint8(field, value, "stdout",
-		&(conf->log_to_stdout));
-	get_conf_val_uint8(field, value, "progress_counter",
-		&(conf->progress_counter));
-	get_conf_val_uint8(field, value, "hardlinked_archive",
-		&(conf->hardlinked_archive));
-	get_conf_val_int(field, value, "max_hardlinks",
-		&(conf->max_hardlinks));
-	get_conf_val_uint8(field, value, "librsync",
-		&(conf->librsync));
-	get_conf_val_uint8(field, value, "version_warn",
-		&(conf->version_warn));
-	get_conf_val_uint8(field, value, "resume_partial",
-		&(conf->resume_partial));
-	get_conf_val_uint8(field, value, "cross_all_filesystems",
-		&(conf->cross_all_filesystems));
-	get_conf_val_uint8(field, value, "read_all_fifos",
-		&(conf->read_all_fifos));
-	get_conf_val_uint8(field, value, "read_all_blockdevs",
-		&(conf->read_all_blockdevs));
-	get_conf_val_uint8(field, value, "backup_script_post_run_on_fail",
-		&(conf->backup_script_post_run_on_fail));
-	get_conf_val_uint8(field, value, "server_script_post_run_on_fail",
-		&(conf->server_script_post_run_on_fail));
-	get_conf_val_uint8(field, value, "server_script_pre_notify",
-		&(conf->server_script_pre_notify));
-	get_conf_val_uint8(field, value, "server_script_post_notify",
-		&(conf->server_script_post_notify));
-	get_conf_val_uint8(field, value, "server_script_notify",
-		&(conf->server_script_notify));
-	get_conf_val_uint8(field, value, "notify_success_warnings_only",
-		&(conf->notify_success_warnings_only));
-	get_conf_val_uint8(field, value, "notify_success_changes_only",
-		&(conf->notify_success_changes_only));
-	get_conf_val_int(field, value, "network_timeout",
-		&(conf->network_timeout));
-	get_conf_val_int(field, value, "max_children",
-		&(conf->max_children));
-	get_conf_val_int(field, value, "max_status_children",
-		&(conf->max_status_children));
-	get_conf_val_int(field, value, "max_storage_subdirs",
-		&(conf->max_storage_subdirs));
-	get_conf_val_uint8(field, value, "overwrite",
-		&(conf->overwrite));
-	get_conf_val_int(field, value, "split_vss",
-		&(conf->split_vss));
-	get_conf_val_int(field, value, "strip_vss",
-		&(conf->strip_vss));
-	get_conf_val_int(field, value, "strip",
-		&(conf->strip));
-	get_conf_val_uint8(field, value, "fork",
-		&(conf->forking));
-	get_conf_val_uint8(field, value, "daemon",
-		&(conf->daemon));
-	get_conf_val_uint8(field, value, "directory_tree",
-		&(conf->directory_tree));
-	get_conf_val_uint8(field, value, "client_can_delete",
-		&(conf->client_can_delete));
-	get_conf_val_uint8(field, value, "client_can_force_backup",
-		&(conf->client_can_force_backup));
-	get_conf_val_uint8(field, value, "client_can_list",
-		&(conf->client_can_list));
-	get_conf_val_uint8(field, value, "client_can_restore",
-		&(conf->client_can_restore));
-	get_conf_val_uint8(field, value, "client_can_verify",
-		&(conf->client_can_verify));
-	get_conf_val_uint8(field, value, "server_can_restore",
-		&(conf->server_can_restore));
-	get_conf_val_uint8(field, value, "password_check",
-		&(conf->password_check));
+	gcv_uint8(f, v, "legacy", &(c->legacy));
+	gcv_uint8(f, v, "syslog", &(c->log_to_syslog));
+	gcv_uint8(f, v, "stdout", &(c->log_to_stdout));
+	gcv_uint8(f, v, "progress_counter", &(c->progress_counter));
+	gcv_uint8(f, v, "hardlinked_archive", &(c->hardlinked_archive));
+	gcv_int(f, v, "max_hardlinks", &(c->max_hardlinks));
+	gcv_uint8(f, v, "librsync", &(c->librsync));
+	gcv_uint8(f, v, "version_warn", &(c->version_warn));
+	gcv_uint8(f, v, "resume_partial", &(c->resume_partial));
+	gcv_uint8(f, v, "cross_all_filesystems", &(c->cross_all_filesystems));
+	gcv_uint8(f, v, "read_all_fifos", &(c->read_all_fifos));
+	gcv_uint8(f, v, "read_all_blockdevs", &(c->read_all_blockdevs));
+	gcv_uint8(f, v, "backup_script_post_run_on_fail",
+					&(c->b_script_post_run_on_fail));
+	gcv_uint8(f, v, "server_script_post_run_on_fail",
+					&(c->s_script_post_run_on_fail));
+	gcv_uint8(f, v, "server_script_pre_notify",
+					&(c->s_script_pre_notify));
+	gcv_uint8(f, v, "server_script_post_notify",
+					&(c->s_script_post_notify));
+	gcv_uint8(f, v, "server_script_notify", &(c->s_script_notify));
+	gcv_uint8(f, v, "notify_success_warnings_only",
+					&(c->n_success_warnings_only));
+	gcv_uint8(f, v, "notify_success_changes_only",
+					&(c->n_success_changes_only));
+	gcv_int(f, v, "network_timeout", &(c->network_timeout));
+	gcv_int(f, v, "max_children", &(c->max_children));
+	gcv_int(f, v, "max_status_children", &(c->max_status_children));
+	gcv_int(f, v, "max_storage_subdirs", &(c->max_storage_subdirs));
+	gcv_uint8(f, v, "overwrite", &(c->overwrite));
+	gcv_int(f, v, "split_vss", &(c->split_vss));
+	gcv_int(f, v, "strip_vss", &(c->strip_vss));
+	gcv_int(f, v, "strip", &(c->strip));
+	gcv_uint8(f, v, "fork", &(c->forking));
+	gcv_uint8(f, v, "daemon", &(c->daemon));
+	gcv_uint8(f, v, "directory_tree", &(c->directory_tree));
+	gcv_uint8(f, v, "client_can_delete", &(c->client_can_delete));
+	gcv_uint8(f, v, "client_can_force_backup",
+					&(c->client_can_force_backup));
+	gcv_uint8(f, v, "client_can_list", &(c->client_can_list));
+	gcv_uint8(f, v, "client_can_restore", &(c->client_can_restore));
+	gcv_uint8(f, v, "client_can_verify", &(c->client_can_verify));
+	gcv_uint8(f, v, "server_can_restore", &(c->server_can_restore));
+	gcv_uint8(f, v, "password_check", &(c->password_check));
 
 	return 0;
 }
 
-static int load_config_strings(struct config *conf, const char *field, const char *value)
+static int load_config_strings(struct config *c,
+	const char *f, // field
+	const char *v  // value
+	)
 {
-	if(get_conf_val(field, value, "port", &(conf->port)))
-		return -1;
-	if(get_conf_val(field, value, "status_port", &(conf->status_port)))
-		return -1;
-	if(get_conf_val(field, value, "ssl_cert_ca", &(conf->ssl_cert_ca)))
-		return -1;
-	if(get_conf_val(field, value, "ssl_cert", &(conf->ssl_cert)))
-		return -1;
-	if(get_conf_val(field, value, "ssl_key", &(conf->ssl_key)))
-		return -1;
+	if(  gcv(f, v, "port", &(c->port))
+	  || gcv(f, v, "status_port", &(c->status_port))
+	  || gcv(f, v, "ssl_cert_ca", &(c->ssl_cert_ca))
+	  || gcv(f, v, "ssl_cert", &(c->ssl_cert))
+	  || gcv(f, v, "ssl_key", &(c->ssl_key))
 	// ssl_cert_password is a synonym for ssl_key_password
-	if(get_conf_val(field, value, "ssl_cert_password",
-		&(conf->ssl_key_password))) return -1;
-	if(get_conf_val(field, value, "ssl_key_password",
-		&(conf->ssl_key_password))) return -1;
-	if(get_conf_val(field, value, "ssl_dhfile", &(conf->ssl_dhfile)))
-		return -1;
-	if(get_conf_val(field, value, "ssl_peer_cn", &(conf->ssl_peer_cn)))
-		return -1;
-	if(get_conf_val(field, value, "ssl_ciphers", &(conf->ssl_ciphers)))
-		return -1;
-	if(get_conf_val(field, value, "clientconfdir", &(conf->clientconfdir)))
-		return -1;
-	if(get_conf_val(field, value, "cname", &(conf->cname)))
-		return -1;
-	if(get_conf_val(field, value, "directory", &(conf->directory)))
-		return -1;
-	if(get_conf_val(field, value, "timestamp_format",
-		&(conf->timestamp_format))) return -1;
-	if(get_conf_val(field, value, "ca_conf", &(conf->ca_conf)))
-		return -1;
-	if(get_conf_val(field, value, "ca_name", &(conf->ca_name)))
-		return -1;
-	if(get_conf_val(field, value, "ca_server_name",
-		&(conf->ca_server_name))) return -1;
-	if(get_conf_val(field, value, "ca_burp_ca",
-		&(conf->ca_burp_ca))) return -1;
-	if(get_conf_val(field, value, "ca_csr_dir",
-		&(conf->ca_csr_dir))) return -1;
-	if(get_conf_val(field, value, "backup", &(conf->backup)))
-		return -1;
-	if(get_conf_val(field, value, "restoreprefix", &(conf->restoreprefix)))
-		return -1;
-	if(get_conf_val(field, value, "regex", &(conf->regex)))
-		return -1;
-	if(get_conf_val(field, value, "vss_drives", &(conf->vss_drives)))
-		return -1;
-	if(get_conf_val(field, value, "browsedir", &(conf->browsedir)))
-		return -1;
-	if(get_conf_val(field, value, "browsefile", &(conf->browsefile)))
-		return -1;
-	if(get_conf_val(field, value, "manual_delete", &(conf->manual_delete)))
-		return -1;
-	if(get_conf_val(field, value, "restore_spool", &(conf->restore_spool)))
-		return -1;
-	if(get_conf_val(field, value, "working_dir_recovery_method",
-		&(conf->working_dir_recovery_method))) return -1;
-	if(get_conf_val(field, value, "autoupgrade_dir",
-		&(conf->autoupgrade_dir))) return -1;
-	if(get_conf_val(field, value, "autoupgrade_os",
-		&(conf->autoupgrade_os))) return -1;
-	if(get_conf_val(field, value, "lockfile", &(conf->lockfile)))
-		return -1;
+	  || gcv(f, v, "ssl_cert_password", &(c->ssl_key_password))
+	  || gcv(f, v, "ssl_key_password", &(c->ssl_key_password))
+	  || gcv(f, v, "ssl_dhfile", &(c->ssl_dhfile))
+	  || gcv(f, v, "ssl_peer_cn", &(c->ssl_peer_cn))
+	  || gcv(f, v, "ssl_ciphers", &(c->ssl_ciphers))
+	  || gcv(f, v, "clientconfdir", &(c->clientconfdir))
+	  || gcv(f, v, "cname", &(c->cname))
+	  || gcv(f, v, "directory", &(c->directory))
+	  || gcv(f, v, "timestamp_format", &(c->timestamp_format))
+	  || gcv(f, v, "ca_conf", &(c->ca_conf))
+	  || gcv(f, v, "ca_name", &(c->ca_name))
+	  || gcv(f, v, "ca_server_name", &(c->ca_server_name))
+	  || gcv(f, v, "ca_burp_ca", &(c->ca_burp_ca))
+	  || gcv(f, v, "ca_csr_dir", &(c->ca_csr_dir))
+	  || gcv(f, v, "backup", &(c->backup))
+	  || gcv(f, v, "restoreprefix", &(c->restoreprefix))
+	  || gcv(f, v, "regex", &(c->regex))
+	  || gcv(f, v, "vss_drives", &(c->vss_drives))
+	  || gcv(f, v, "browsedir", &(c->browsedir))
+	  || gcv(f, v, "browsefile", &(c->browsefile))
+	  || gcv(f, v, "manual_delete", &(c->manual_delete))
+	  || gcv(f, v, "restore_spool", &(c->restore_spool))
+	  || gcv(f, v, "working_dir_recovery_method", &(c->recovery_method))
+	  || gcv(f, v, "autoupgrade_dir", &(c->autoupgrade_dir))
+	  || gcv(f, v, "autoupgrade_os", &(c->autoupgrade_os))
+	  || gcv(f, v, "lockfile", &(c->lockfile))
 	// "pidfile" is a synonym for "lockfile".
-	if(get_conf_val(field, value, "pidfile", &(conf->lockfile)))
-		return -1;
-	if(get_conf_val(field, value, "password", &(conf->password))) return -1;
-	if(get_conf_val(field, value, "passwd", &(conf->passwd))) return -1;
-	if(get_conf_val(field, value, "server", &(conf->server))) return -1;
-	if(get_conf_val(field, value, "user", &(conf->user))) return -1;
-	if(get_conf_val(field, value, "group", &(conf->group))) return -1;
-	if(get_conf_val(field, value, "client_lockdir",
-		&(conf->client_lockdir))) return -1;
-	if(get_conf_val(field, value, "encryption_password",
-		&(conf->encryption_password))) return -1;
-	if(get_conf_val_args(field, value, "keep", &conf->keep, 1))
-		return -1;
-	if(get_conf_val_args_sorted(field, value, "include",
-		&conf->incexcdir, 1)) return -1;
-	if(get_conf_val_args_sorted(field, value, "exclude",
-		&conf->incexcdir, 0)) return -1;
-	if(get_conf_val_args_sorted(field, value, "cross_filesystem",
-		&conf->fschgdir, 0)) return -1;
-	if(get_conf_val_args_sorted(field, value, "nobackup",
-		&conf->nobackup, 0)) return -1;
-	if(get_conf_val_args_sorted(field, value, "read_fifo",
-		&conf->fifos, 0)) return -1;
-	if(get_conf_val_args_sorted(field, value, "read_blockdev",
-		&conf->blockdevs, 0)) return -1;
-	if(get_conf_val_args_sorted(field, value, "include_ext",
-		&conf->incext, 0)) return -1;
-	if(get_conf_val_args_sorted(field, value, "exclude_ext",
-		&conf->excext, 0)) return -1;
-	if(get_conf_val_args_sorted(field, value, "include_regex",
-		&conf->increg, 0)) return -1;
-	if(get_conf_val_args_sorted(field, value, "exclude_regex",
-		&conf->excreg, 0)) return -1;
-	if(get_conf_val_args_sorted(field, value, "include_glob",
-		&conf->incglob, 0)) return -1;
-	if(get_conf_val_args_sorted(field, value, "exclude_fs",
-		&conf->excfs, 0)) return -1;
-	if(get_conf_val_args_sorted(field, value, "exclude_comp",
-		&conf->excom, 0)) return -1;
-
-	if(get_conf_val(field, value, "timer_script",
-		&(conf->timer_script))) return -1;
-	if(get_conf_val_args(field, value, "timer_arg",
-		&(conf->timer_arg), 0)) return -1;
-	if(get_conf_val(field, value, "notify_success_script",
-		&(conf->notify_success_script))) return -1;
-	if(get_conf_val_args(field, value, "notify_success_arg",
-		&(conf->notify_success_arg), 0)) return -1;
-	if(get_conf_val(field, value, "notify_failure_script",
-		&(conf->notify_failure_script))) return -1;
-	if(get_conf_val_args(field, value, "notify_failure_arg",
-		&(conf->notify_failure_arg), 0)) return -1;
-	if(get_conf_val(field, value, "backup_script_pre",
-		&(conf->backup_script_pre))) return -1;
-	if(get_conf_val_args(field, value, "backup_script_pre_arg",
-		&(conf->backup_script_pre_arg), 0)) return -1;
-	if(get_conf_val(field, value, "backup_script_post",
-		&(conf->backup_script_post))) return -1;
-	if(get_conf_val_args(field, value, "backup_script_post_arg",
-		&(conf->backup_script_post_arg), 0)) return -1;
-	if(get_conf_val(field, value, "restore_script_pre",
-		&(conf->restore_script_pre))) return -1;
-	if(get_conf_val_args(field, value, "restore_script_pre_arg",
-		&(conf->restore_script_pre_arg), 0)) return -1;
-	if(get_conf_val(field, value, "restore_script_post",
-		&(conf->restore_script_post))) return -1;
-	if(get_conf_val_args(field, value, "restore_script_post_arg",
-		&(conf->restore_script_post_arg), 0)) return -1;
-	if(get_conf_val(field, value, "server_script_pre",
-		&(conf->server_script_pre))) return -1;
-	if(get_conf_val_args(field, value, "server_script_pre_arg",
-		&(conf->server_script_pre_arg), 0)) return -1;
-	if(get_conf_val(field, value, "server_script_post",
-		&(conf->server_script_post))) return -1;
-	if(get_conf_val_args(field, value, "server_script_post_arg",
-		&(conf->server_script_post_arg), 0)) return -1;
-	if(get_conf_val(field, value, "backup_script",
-		&(conf->backup_script))) return -1;
-	if(get_conf_val_args(field, value, "backup_script_arg",
-		&(conf->backup_script_arg), 0)) return -1;
-	if(get_conf_val(field, value, "restore_script",
-		&(conf->restore_script))) return -1;
-	if(get_conf_val_args(field, value, "restore_script_arg",
-		&(conf->restore_script_arg), 0)) return -1;
-	if(get_conf_val(field, value, "server_script",
-		&(conf->server_script))) return -1;
-	if(get_conf_val_args(field, value, "server_script_arg",
-		&(conf->server_script_arg), 0)) return -1;
-
-	if(get_conf_val_args_sorted(field, value, "restore_client",
-		&(conf->rclients), 0)) return -1;
-
-	if(get_conf_val(field, value, "dedup_group", &(conf->dedup_group)))
-		return -1;
-
-	if(get_conf_val(field, value, "orig_client", &(conf->orig_client)))
+	  || gcv(f, v, "pidfile", &(c->lockfile))
+	  || gcv(f, v, "password", &(c->password))
+	  || gcv(f, v, "passwd", &(c->passwd))
+	  || gcv(f, v, "server", &(c->server))
+	  || gcv(f, v, "user", &(c->user))
+	  || gcv(f, v, "group", &(c->group))
+	  || gcv(f, v, "client_lockdir", &(c->client_lockdir))
+	  || gcv(f, v, "encryption_password", &(c->encryption_password))
+	  || gcv_a(f, v, "keep", &c->keep, 1)
+	  || gcv_a_sort(f, v, "include", &c->incexcdir, 1)
+	  || gcv_a_sort(f, v, "exclude", &c->incexcdir, 0)
+	  || gcv_a_sort(f, v, "cross_filesystem", &c->fschgdir, 0)
+	  || gcv_a_sort(f, v, "nobackup", &c->nobackup, 0)
+	  || gcv_a_sort(f, v, "read_fifo", &c->fifos, 0)
+	  || gcv_a_sort(f, v, "read_blockdev", &c->blockdevs, 0)
+	  || gcv_a_sort(f, v, "include_ext", &c->incext, 0)
+	  || gcv_a_sort(f, v, "exclude_ext", &c->excext, 0)
+	  || gcv_a_sort(f, v, "include_regex", &c->increg, 0)
+	  || gcv_a_sort(f, v, "exclude_regex", &c->excreg, 0)
+	  || gcv_a_sort(f, v, "include_glob", &c->incglob, 0)
+	  || gcv_a_sort(f, v, "exclude_fs", &c->excfs, 0)
+	  || gcv_a_sort(f, v, "exclude_comp", &c->excom, 0)
+	  || gcv(f, v, "timer_script", &(c->timer_script))
+	  || gcv_a(f, v, "timer_arg", &(c->timer_arg), 0)
+	  || gcv(f, v, "notify_success_script", &(c->n_success_script))
+	  || gcv_a(f, v, "notify_success_arg", &(c->n_success_arg), 0)
+	  || gcv(f, v, "notify_failure_script", &(c->n_failure_script))
+	  || gcv_a(f, v, "notify_failure_arg", &(c->n_failure_arg), 0)
+	  || gcv(f, v, "backup_script_pre", &(c->b_script_pre))
+	  || gcv_a(f, v, "backup_script_pre_arg", &(c->b_script_pre_arg), 0)
+	  || gcv(f, v, "backup_script_post", &(c->b_script_post))
+	  || gcv_a(f, v, "backup_script_post_arg", &(c->b_script_post_arg), 0)
+	  || gcv(f, v, "restore_script_pre", &(c->r_script_pre))
+	  || gcv_a(f, v, "restore_script_pre_arg", &(c->r_script_pre_arg), 0)
+	  || gcv(f, v, "restore_script_post", &(c->r_script_post))
+	  || gcv_a(f, v, "restore_script_post_arg", &(c->r_script_post_arg), 0)
+	  || gcv(f, v, "server_script_pre", &(c->s_script_pre))
+	  || gcv_a(f, v, "server_script_pre_arg", &(c->s_script_pre_arg), 0)
+	  || gcv(f, v, "server_script_post", &(c->s_script_post))
+	  || gcv_a(f, v, "server_script_post_arg", &(c->s_script_post_arg), 0)
+	  || gcv(f, v, "backup_script", &(c->b_script))
+	  || gcv_a(f, v, "backup_script_arg", &(c->b_script_arg), 0)
+	  || gcv(f, v, "restore_script", &(c->r_script))
+	  || gcv_a(f, v, "restore_script_arg", &(c->r_script_arg), 0)
+	  || gcv(f, v, "server_script", &(c->s_script))
+	  || gcv_a(f, v, "server_script_arg", &(c->s_script_arg), 0)
+	  || gcv_a_sort(f, v, "restore_client", &(c->rclients), 0)
+	  || gcv(f, v, "dedup_group", &(c->dedup_group))
+	  || gcv(f, v, "orig_client", &(c->orig_client)))
 		return -1;
 
 	return 0;
 }
 
-static int load_config_field_and_value(struct config *conf, const char *field, const char *value, const char *config_path, int line)
+static int load_config_field_and_value(struct config *c,
+	const char *f, // field
+	const char *v, // value
+	const char *config_path,
+	int line)
 {
-	if(!strcmp(field, "mode"))
+	if(!strcmp(f, "mode"))
 	{
-		if(!strcmp(value, "server"))
+		if(!strcmp(v, "server"))
 		{
-			conf->mode=MODE_SERVER;
-			conf->progress_counter=0; // default to off for server
+			c->mode=MODE_SERVER;
+			c->progress_counter=0; // default to off for server
 		}
-		else if(!strcmp(value, "client"))
+		else if(!strcmp(v, "client"))
 		{
-			conf->mode=MODE_CLIENT;
-			conf->progress_counter=1; // default to on for client
+			c->mode=MODE_CLIENT;
+			c->progress_counter=1; // default to on for client
 		}
 		else return -1;
 	}
-	else if(!strcmp(field, "compression"))
+	else if(!strcmp(f, "compression"))
 	{
 		const char *cp=NULL;
-		cp=value;
-		if(!strncmp(value, "gzip", strlen("gzip")))
-			cp=value+strlen("gzip");
+		cp=v;
+		if(!strncmp(v, "gzip", strlen("gzip")))
+			cp=v+strlen("gzip");
 		if(strlen(cp)!=1 || !isdigit(*cp))
 			return -1;
 
-		conf->compression=atoi(cp);
+		c->compression=atoi(cp);
 	}
-	else if(!strcmp(field, "umask"))
+	else if(!strcmp(f, "umask"))
 	{
-		conf->umask=strtol(value, NULL, 8);
+		c->umask=strtol(v, NULL, 8);
 	}
-	else if(!strcmp(field, "ratelimit"))
+	else if(!strcmp(f, "ratelimit"))
 	{
 		float f=0;
-		f=atof(value);
+		f=atof(v);
 		// User is specifying Mega bits per second.
 		// Need to convert to bytes per second.
 		f=(f*1024*1024)/8;
@@ -788,23 +694,22 @@ static int load_config_field_and_value(struct config *conf, const char *field, c
 			logp("ratelimit should be greater than zero\n");
 			return -1;
 		}
-		conf->ratelimit=f;
+		c->ratelimit=f;
 	}
-	else if(!strcmp(field, "min_file_size"))
+	else if(!strcmp(f, "min_file_size"))
 	{
-		if(get_file_size(value, &(conf->min_file_size),
-			config_path, line)) return -1;
+		if(get_file_size(v, &(c->min_file_size), config_path, line))
+			return -1;
 	}
-	else if(!strcmp(field, "max_file_size"))
+	else if(!strcmp(f, "max_file_size"))
 	{
-		if(get_file_size(value, &(conf->max_file_size),
+		if(get_file_size(v, &(c->max_file_size),
 			config_path, line)) return -1;
 	}
 	else
 	{
-		if(load_config_ints(conf, field, value))
-			return -1;
-		if(load_config_strings(conf, field, value))
+		if(load_config_ints(c, f, v)
+		  || load_config_strings(c, f, v))
 			return -1;
 	}
 	return 0;
@@ -812,12 +717,13 @@ static int load_config_field_and_value(struct config *conf, const char *field, c
 
 /* Recursing, so need to define load_config_lines ahead of parse_config_line.
 */
-static int load_config_lines(const char *config_path, struct config *conf);
+static int load_config_lines(const char *config_path, struct config *c);
 
-static int parse_config_line(struct config *conf, const char *config_path, char buf[], int line)
+static int parse_config_line(struct config *c, const char *config_path,
+	char buf[], int line)
 {
-	char *field=NULL;
-	char *value=NULL;
+	char *f=NULL; // field
+	char *v=NULL; // value
 
 	if(!strncmp(buf, ". ", 2))
 	{
@@ -868,7 +774,7 @@ static int parse_config_line(struct config *conf, const char *config_path, char 
 			extrafile=tmp;
 		}
 
-		if(load_config_lines(extrafile, conf))
+		if(load_config_lines(extrafile, c))
 		{
 			free(extrafile);
 			return -1;
@@ -877,10 +783,10 @@ static int parse_config_line(struct config *conf, const char *config_path, char 
 		return 0;
 	}
 
-	if(config_get_pair(buf, &field, &value)) return -1;
-	if(!field || !value) return 0;
+	if(config_get_pair(buf, &f, &v)) return -1;
+	if(!f || !v) return 0;
 
-	if(load_config_field_and_value(conf, field, value, config_path, line))
+	if(load_config_field_and_value(c, f, v, config_path, line))
 		return -1;
 	return 0;
 }
@@ -891,96 +797,96 @@ static void conf_problem(const char *config_path, const char *msg, int *r)
 	(*r)--;
 }
 
-static int server_conf_checks(struct config *conf, const char *path, int *r)
+static int server_conf_checks(struct config *c, const char *path, int *r)
 {
-	if(!conf->directory)
+	if(!c->directory)
 		conf_problem(path, "directory unset", r);
-	if(!conf->dedup_group)
+	if(!c->dedup_group)
 		conf_problem(path, "dedup_group unset", r);
-	if(!conf->timestamp_format
-	  && !(conf->timestamp_format=strdup("%Y-%m-%d %H:%M:%S")))
+	if(!c->timestamp_format
+	  && !(c->timestamp_format=strdup("%Y-%m-%d %H:%M:%S")))
 		conf_problem(path, "timestamp_format unset", r);
-	if(!conf->clientconfdir)
+	if(!c->clientconfdir)
 		conf_problem(path, "clientconfdir unset", r);
-	if(!conf->working_dir_recovery_method
-	  || (strcmp(conf->working_dir_recovery_method, "delete")
-	   && strcmp(conf->working_dir_recovery_method, "resume")
-	   && strcmp(conf->working_dir_recovery_method, "use")))
+	if(!c->recovery_method
+	  || (strcmp(c->recovery_method, "delete")
+	   && strcmp(c->recovery_method, "resume")
+	   && strcmp(c->recovery_method, "use")))
 		conf_problem(path, "unknown working_dir_recovery_method", r);
-	if(!conf->ssl_cert)
+	if(!c->ssl_cert)
 		conf_problem(path, "ssl_cert unset", r);
-	if(!conf->ssl_cert_ca)
+	if(!c->ssl_cert_ca)
 		conf_problem(path, "ssl_cert_ca unset", r);
-	if(!conf->ssl_dhfile)
+	if(!c->ssl_dhfile)
 		conf_problem(path, "ssl_dhfile unset", r);
-	if(conf->encryption_password)
+	if(c->encryption_password)
 		conf_problem(path,
 		  "encryption_password should not be set on the server!", r);
-	if(!conf->status_port) // carry on if not set.
+	if(!c->status_port) // carry on if not set.
 		logp("%s: status_port unset", path);
-	if(!conf->max_children)
+	if(!c->max_children)
 	{
 		logp("%s: max_children unset - using 5\n", path);
-		conf->max_children=5;
+		c->max_children=5;
 	}
-	if(!conf->max_status_children)
+	if(!c->max_status_children)
 	{
 		logp("%s: max_status_children unset - using 5\n", path);
-		conf->max_status_children=5;
+		c->max_status_children=5;
 	}
-	if(!conf->keep)
+	if(!c->keep)
 		conf_problem(path, "keep unset", r);
-	if(conf->max_hardlinks<2)
+	if(c->max_hardlinks<2)
 		conf_problem(path, "max_hardlinks too low", r);
-	if(conf->max_children<=0)
+	if(c->max_children<=0)
 		conf_problem(path, "max_children too low", r);
-	if(conf->max_status_children<=0)
+	if(c->max_status_children<=0)
 		conf_problem(path, "max_status_children too low", r);
-	if(conf->max_storage_subdirs<=1000)
+	if(c->max_storage_subdirs<=1000)
 		conf_problem(path, "max_storage_subdirs too low", r);
-	if(conf->ca_conf)
+	if(c->ca_conf)
 	{
 		int ca_err=0;
-		if(!conf->ca_name)
+		if(!c->ca_name)
 		{
 			logp("ca_conf set, but ca_name not set\n");
 			ca_err++;
 		}
-		if(!conf->ca_server_name)
+		if(!c->ca_server_name)
 		{
 			logp("ca_conf set, but ca_server_name not set\n");
 			ca_err++;
 		}
-		if(!conf->ca_burp_ca)
+		if(!c->ca_burp_ca)
 		{
 			logp("ca_conf set, but ca_burp_ca not set\n");
 			ca_err++;
 		}
-		if(!conf->ssl_dhfile)
+		if(!c->ssl_dhfile)
 		{
 			logp("ca_conf set, but ssl_dhfile not set\n");
 			ca_err++;
 		}
-		if(!conf->ssl_cert_ca)
+		if(!c->ssl_cert_ca)
 		{
 			logp("ca_conf set, but ssl_cert_ca not set\n");
 			ca_err++;
 		}
-		if(!conf->ssl_cert)
+		if(!c->ssl_cert)
 		{
 			logp("ca_conf set, but ssl_cert not set\n");
 			ca_err++;
 		}
-		if(!conf->ssl_key)
+		if(!c->ssl_key)
 		{
 			logp("ca_conf set, but ssl_key not set\n");
 			ca_err++;
 		}
 		if(ca_err) return -1;
 	}
-	if(conf->manual_delete)
+	if(c->manual_delete)
 	{
-		if(path_checks(conf->manual_delete,
+		if(path_checks(c->manual_delete,
 			"ERROR: Please use an absolute manual_delete path.\n"))
 				return -1;
 	}
@@ -988,68 +894,72 @@ static int server_conf_checks(struct config *conf, const char *path, int *r)
 	return 0;
 }
 
-static int client_conf_checks(struct config *conf, const char *path, int *r)
+static int client_conf_checks(struct config *c, const char *path, int *r)
 {
-	if(!conf->cname)
+	if(!c->cname)
 		conf_problem(path, "client name unset", r);
-	if(!conf->password)
+	if(!c->password)
 		conf_problem(path, "password unset", r);
-	if(!conf->server)
+	if(!c->server)
 		conf_problem(path, "server unset", r);
-	if(!conf->ssl_cert)
+	if(!c->ssl_cert)
 		conf_problem(path, "ssl_cert unset", r);
-	if(!conf->ssl_cert_ca)
+	if(!c->ssl_cert_ca)
 		conf_problem(path, "ssl_cert_ca unset", r);
-	if(!conf->ssl_peer_cn)
+	if(!c->ssl_peer_cn)
 	{
 		logp("ssl_peer_cn unset\n");
-		if(conf->server)
+		if(c->server)
 		{
-			logp("falling back to '%s'\n", conf->server);
-			if(!(conf->ssl_peer_cn=strdup(conf->server)))
+			logp("falling back to '%s'\n", c->server);
+			if(!(c->ssl_peer_cn=strdup(c->server)))
 			{
 				log_out_of_memory(__FUNCTION__);
 				return -1;
 			}
 		}
 	}
-	if(!conf->lockfile)
+	if(!c->lockfile)
 		conf_problem(path, "lockfile unset", r);
-	if(conf->autoupgrade_os
-	  && strstr(conf->autoupgrade_os, ".."))
+	if(c->autoupgrade_os
+	  && strstr(c->autoupgrade_os, ".."))
 		conf_problem(path,
 			"autoupgrade_os must not contain a '..' component", r);
-	if(conf->ca_burp_ca)
+	if(c->ca_burp_ca)
 	{
-	  if(!conf->ca_csr_dir)
-	   conf_problem(path, "ca_burp_ca set, but ca_csr_dir not set\n", r);
-	  if(!conf->ssl_cert_ca)
-	   conf_problem(path, "ca_burp_ca set, but ssl_cert_ca not set\n", r);
-	  if(!conf->ssl_cert)
-	   conf_problem(path, "ca_burp_ca set, but ssl_cert not set\n", r);
-	  if(!conf->ssl_key)
-	   conf_problem(path, "ca_burp_ca set, but ssl_key not set\n", r);
+		if(!c->ca_csr_dir)
+			conf_problem(path,
+				"ca_burp_ca set, but ca_csr_dir not set\n", r);
+		if(!c->ssl_cert_ca)
+			conf_problem(path,
+				"ca_burp_ca set, but ssl_cert_ca not set\n", r);
+		if(!c->ssl_cert)
+			conf_problem(path,
+				"ca_burp_ca set, but ssl_cert not set\n", r);
+		if(!c->ssl_key)
+			conf_problem(path,
+				"ca_burp_ca set, but ssl_key not set\n", r);
 	}
 
 	if(!r)
 	{
 		struct strlist *l;
 		logp("Listing configured paths:\n");
-		for(l=conf->incexcdir; l; l=l->next)
+		for(l=c->incexcdir; l; l=l->next)
 			logp("%s: %s\n", l->flag?"include":"exclude", l->path);
 		logp("Listing starting paths:\n");
-		for(l=conf->startdir; l; l=l->next)
+		for(l=c->startdir; l; l=l->next)
 			if(l->flag) logp("%s\n", l->path);
 	}
 	return 0;
 }
 
-static int finalise_keep_args(struct config *conf)
+static int finalise_keep_args(struct config *c)
 {
 	struct strlist *k;
 	struct strlist *last=NULL;
 	unsigned long long mult=1;
-	for(k=conf->keep; k; k=k->next)
+	for(k=c->keep; k; k=k->next)
 	{
 		if(!(k->flag=atoi(k->path)))
 		{
@@ -1071,19 +981,19 @@ static int finalise_keep_args(struct config *conf)
 	// This is so that, for example, having set 7, 4, 6, then
 	// a backup of age 7*4*6=168 or more is guaranteed to be kept.
 	// Otherwise, only 7*4*5=140 would be guaranteed to be kept.
-	if(conf->keep && conf->keep->next) last->flag++;
+	if(c->keep && c->keep->next) last->flag++;
 	return 0;
 }
 
 // This decides which directories to start backing up, and which
 // are subdirectories which don't need to be started separately.
-static int finalise_start_dirs(struct config *conf)
+static int finalise_start_dirs(struct config *c)
 {
 	struct strlist *s=NULL;
 	struct strlist *last_ie=NULL;
 	struct strlist *last_sd=NULL;
 
-	for(s=conf->incexcdir; s; s=s->next)
+	for(s=c->incexcdir; s; s=s->next)
 	{
 #ifdef HAVE_WIN32
 		convert_backslashes(&s->path);
@@ -1103,12 +1013,12 @@ static int finalise_start_dirs(struct config *conf)
 		}
 		// If it is not a subdirectory of the most recent start point,
 		// we have found another start point.
-		if(!conf->startdir
+		if(!c->startdir
 		  || !is_subdir(last_sd->path, s->path))
 		{
 			// Do not use strlist_add_sorted, because last_sd is
 			// relying on incexcdir already being sorted.
-			if(strlist_add(&conf->startdir,s->path, s->flag))
+			if(strlist_add(&c->startdir,s->path, s->flag))
 				return -1;
 			last_sd=s;
 		}
@@ -1118,7 +1028,7 @@ static int finalise_start_dirs(struct config *conf)
 }
 
 // The glob stuff should only run on the client side.
-static int finalise_glob(struct config *conf)
+static int finalise_glob(struct config *c)
 {
 	int i;
 	struct strlist *l;
@@ -1126,17 +1036,17 @@ static int finalise_glob(struct config *conf)
 #ifndef HAVE_WIN32
 	glob_t globbuf;
 #endif
-	if(conf->mode!=MODE_CLIENT) return 0;
+	if(c->mode!=MODE_CLIENT) return 0;
 #ifndef HAVE_WIN32
 	memset(&globbuf, 0, sizeof(globbuf));
-	for(l=conf->incglob; l; l=l->next)
+	for(l=c->incglob; l; l=l->next)
 	{
 		glob(l->path, last?GLOB_APPEND:0, NULL, &globbuf);
 		last=l;
 	}
 
 	for(i=0; (unsigned int)i<globbuf.gl_pathc; i++)
-		strlist_add_sorted(&conf->incexcdir, globbuf.gl_pathv[i], 1);
+		strlist_add_sorted(&c->incexcdir, globbuf.gl_pathv[i], 1);
 
 	globfree(&globbuf);
 #else
@@ -1160,11 +1070,11 @@ static void set_max_ext(struct strlist *list)
 	if(l) l->flag=max+1;
 }
 
-static int finalise_fstypes(struct config *conf)
+static int finalise_fstypes(struct config *c)
 {
 	struct strlist *l;
 	// Set the strlist flag for the excluded fstypes
-	for(l=conf->excfs; l; l=l->next)
+	for(l=c->excfs; l; l=l->next)
 	{
 		l->flag=0;
 		if(!strncasecmp(l->path, "0x", 2))
@@ -1184,76 +1094,70 @@ static int finalise_fstypes(struct config *conf)
 	return 0;
 }
 
-static int finalise_config(const char *config_path, struct config *conf, uint8_t loadall)
+static int finalise_config(const char *config_path, struct config *c, uint8_t loadall)
 {
 	int r=0;
 
-	if(finalise_fstypes(conf)) return -1;
+	if(finalise_fstypes(c)) return -1;
 
-	strlist_compile_regexes(conf->increg);
-	strlist_compile_regexes(conf->excreg);
+	strlist_compile_regexes(c->increg);
+	strlist_compile_regexes(c->excreg);
 
-	set_max_ext(conf->incext);
-	set_max_ext(conf->excext);
-	set_max_ext(conf->excom);
+	set_max_ext(c->incext);
+	set_max_ext(c->excext);
+	set_max_ext(c->excom);
 
-	if(finalise_glob(conf)) return -1;
+	if(finalise_glob(c)) return -1;
 
-	if(finalise_start_dirs(conf)) return -1;
+	if(finalise_start_dirs(c)) return -1;
 
-	if(finalise_keep_args(conf)) return -1;
+	if(finalise_keep_args(c)) return -1;
 
-	pre_post_override(&(conf->backup_script),
-		&(conf->backup_script_pre), &(conf->backup_script_post));
-	pre_post_override(&(conf->restore_script),
-		&(conf->restore_script_pre), &(conf->restore_script_post));
-	pre_post_override(&(conf->server_script),
-		&(conf->server_script_pre), &(conf->server_script_post));
-	if(conf->server_script_notify)
+	pre_post_override(&c->b_script, &c->b_script_pre, &c->b_script_post);
+	pre_post_override(&c->r_script, &c->r_script_pre, &c->r_script_post);
+	pre_post_override(&c->s_script, &c->s_script_pre, &c->s_script_post);
+	if(c->s_script_notify)
 	{
-		conf->server_script_pre_notify=conf->server_script_notify;
-		conf->server_script_post_notify=conf->server_script_notify;
+		c->s_script_pre_notify=c->s_script_notify;
+		c->s_script_post_notify=c->s_script_notify;
 	}
 /*
-	if(!conf->timer_arg) conf->timer_arg=l->talist;
-	if(!conf->notify_success_arg) conf->notify_success_arg=l->nslist;
-	if(!conf->notify_failure_arg) conf->notify_failure_arg=l->nflist;
-	if(!conf->server_script_arg) conf->server_script_arg=l->sslist;
-	if(!conf->rclients) conf->rclients=l->rclist;
+	if(!c->timer_arg) c->timer_arg=l->talist;
+	if(!c->n_success_arg) c->n_success_arg=l->nslist;
+	if(!c->n_failure_arg) c->n_failure_arg=l->nflist;
+	if(!c->server_script_arg) c->server_script_arg=l->sslist;
+	if(!c->rclients) c->rclients=l->rclist;
 
-	setup_script_arg_override(l->bslist,
-		&(l->bprelist), &(l->bpostlist));
-	setup_script_arg_override(l->rslist,
-		&(l->rprelist), &(l->rpostlist));
-	setup_script_arg_override(conf->server_script_arg,
-		&(l->sprelist), &(l->spostlist));
+	setup_script_arg_override(l->bslist, &l->bprelist, &l->bpostlist);
+	setup_script_arg_override(l->rslist, &l->rprelist, &l->rpostlist);
+	setup_script_arg_override(c->s_script_arg, &l->sprelist, &l->spostlist);
 
-	conf->backup_script_pre_arg=l->bprelist;
-	conf->backup_script_post_arg=l->bpostlist;
-	conf->restore_script_pre_arg=l->rprelist;
-	conf->restore_script_post_arg=l->rpostlist;
+	c->b_script_pre_arg=l->bprelist;
+	c->b_script_post_arg=l->bpostlist;
+	c->r_script_pre_arg=l->rprelist;
+	c->r_script_post_arg=l->rpostlist;
 
-	if(!l->got_spre_args) conf->server_script_pre_arg=l->sprelist;
-	if(!l->got_spost_args) conf->server_script_post_arg=l->spostlist;
+	if(!l->got_spre_args) c->s_script_pre_arg=l->sprelist;
+	if(!l->got_spost_args) c->s_script_post_arg=l->spostlist;
 */
 
 	if(!loadall) return 0;
 
-	if(!conf->port) conf_problem(config_path, "port unset", &r);
+	if(!c->port) conf_problem(config_path, "port unset", &r);
 
-	if(rconf_check(&conf->rconf)) r--;
+	if(rconf_check(&c->rconf)) r--;
 
 	// Let the caller check the 'keep' value.
 
-	if(!conf->ssl_key_password) conf->ssl_key_password=strdup("");
+	if(!c->ssl_key_password) c->ssl_key_password=strdup("");
 
-	switch(conf->mode)
+	switch(c->mode)
 	{
 		case MODE_SERVER:
-			if(server_conf_checks(conf, config_path, &r)) r--;
+			if(server_conf_checks(c, config_path, &r)) r--;
 			break;
 		case MODE_CLIENT:
-			if(client_conf_checks(conf, config_path, &r)) r--;
+			if(client_conf_checks(c, config_path, &r)) r--;
 			break;
 		case MODE_UNSET:
 		default:
@@ -1267,7 +1171,7 @@ static int finalise_config(const char *config_path, struct config *conf, uint8_t
 }
 
 
-static int load_config_lines(const char *config_path, struct config *conf)
+static int load_config_lines(const char *config_path, struct config *c)
 {
 	int line=0;
 	FILE *fp=NULL;
@@ -1281,7 +1185,7 @@ static int load_config_lines(const char *config_path, struct config *conf)
 	while(fgets(buf, sizeof(buf), fp))
 	{
 		line++;
-		if(parse_config_line(conf, config_path, buf, line))
+		if(parse_config_line(c, config_path, buf, line))
 			goto err;
 	}
 	if(fp) fclose(fp);
@@ -1292,27 +1196,27 @@ err:
 	return -1;
 }
 
-int config_load(const char *config_path, struct config *conf, uint8_t loadall)
+int config_load(const char *config_path, struct config *c, uint8_t loadall)
 {
 	//logp("in config_load\n");
 	if(loadall)
 	{
-		if(conf->configfile) free(conf->configfile);
-		if(!(conf->configfile=strdup(config_path)))
+		if(c->configfile) free(c->configfile);
+		if(!(c->configfile=strdup(config_path)))
 		{
 			log_out_of_memory(__FUNCTION__);
 			return -1;
 		}
 	}
 
-	if(load_config_lines(config_path, conf))
+	if(load_config_lines(config_path, c))
 		return -1;
 
-	return finalise_config(config_path, conf, loadall);
+	return finalise_config(config_path, c, loadall);
 }
 
 /* The client runs this when the server overrides the incexcs. */
-int parse_incexcs_buf(struct config *conf, const char *incexc)
+int parse_incexcs_buf(struct config *c, const char *incexc)
 {
 	int ret=0;
 	int line=0;
@@ -1326,7 +1230,7 @@ int parse_incexcs_buf(struct config *conf, const char *incexc)
 		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
-	free_incexcs(conf);
+	free_incexcs(c);
 	if(!(tok=strtok(copy, "\n")))
 	{
 		logp("unable to parse server incexc\n");
@@ -1336,7 +1240,7 @@ int parse_incexcs_buf(struct config *conf, const char *incexc)
 	do
 	{
 		line++;
-		if(parse_config_line(conf, "", tok, line))
+		if(parse_config_line(c, "", tok, line))
 		{
 			ret=-1;
 			break;
@@ -1345,7 +1249,7 @@ int parse_incexcs_buf(struct config *conf, const char *incexc)
 	free(copy);
 
 	if(ret) return ret;
-	return finalise_config("server override", conf, 0);
+	return finalise_config("server override", c, 0);
 }
 
 int log_incexcs_buf(const char *incexc)
@@ -1373,10 +1277,10 @@ int log_incexcs_buf(const char *incexc)
 }
 
 /* The server runs this when parsing a restore file on the server. */
-int parse_incexcs_path(struct config *conf, const char *path)
+int parse_incexcs_path(struct config *c, const char *path)
 {
-	free_incexcs(conf);
-	return config_load(path, conf, 0);
+	free_incexcs(c);
+	return config_load(path, c, 0);
 }
 
 static int set_global_str(char **dst, const char *src)
@@ -1401,108 +1305,108 @@ static int set_global_arglist(struct strlist **dst, struct strlist *src)
 }
 
 /* Remember to update the list in the man page when you change these.*/
-int config_set_client_global(struct config *conf, struct config *cconf)
+int config_set_client_global(struct config *c, struct config *cc)
 {
-	cconf->legacy=conf->legacy;
-	cconf->log_to_syslog=conf->log_to_syslog;
-	cconf->log_to_stdout=conf->log_to_stdout;
-	cconf->progress_counter=conf->progress_counter;
-	cconf->password_check=conf->password_check;
-	cconf->manual_delete=conf->manual_delete;
-	cconf->client_can_delete=conf->client_can_delete;
-	cconf->client_can_force_backup=conf->client_can_force_backup;
-	cconf->client_can_list=conf->client_can_list;
-	cconf->client_can_restore=conf->client_can_restore;
-	cconf->client_can_verify=conf->client_can_verify;
-	cconf->hardlinked_archive=conf->hardlinked_archive;
-	cconf->librsync=conf->librsync;
-	cconf->compression=conf->compression;
-	cconf->version_warn=conf->version_warn;
-	cconf->resume_partial=conf->resume_partial;
-	cconf->notify_success_warnings_only=conf->notify_success_warnings_only;
-	cconf->notify_success_changes_only=conf->notify_success_changes_only;
-	cconf->server_script_post_run_on_fail=conf->server_script_post_run_on_fail;
-	cconf->server_script_pre_notify=conf->server_script_pre_notify;
-	cconf->server_script_post_notify=conf->server_script_post_notify;
-	cconf->server_script_notify=conf->server_script_notify;
-	cconf->directory_tree=conf->directory_tree;
-	if(set_global_str(&(cconf->directory), conf->directory))
+	cc->legacy=c->legacy;
+	cc->log_to_syslog=c->log_to_syslog;
+	cc->log_to_stdout=c->log_to_stdout;
+	cc->progress_counter=c->progress_counter;
+	cc->password_check=c->password_check;
+	cc->manual_delete=c->manual_delete;
+	cc->client_can_delete=c->client_can_delete;
+	cc->client_can_force_backup=c->client_can_force_backup;
+	cc->client_can_list=c->client_can_list;
+	cc->client_can_restore=c->client_can_restore;
+	cc->client_can_verify=c->client_can_verify;
+	cc->hardlinked_archive=c->hardlinked_archive;
+	cc->librsync=c->librsync;
+	cc->compression=c->compression;
+	cc->version_warn=c->version_warn;
+	cc->resume_partial=c->resume_partial;
+	cc->n_success_warnings_only=c->n_success_warnings_only;
+	cc->n_success_changes_only=c->n_success_changes_only;
+	cc->s_script_post_run_on_fail=c->s_script_post_run_on_fail;
+	cc->s_script_pre_notify=c->s_script_pre_notify;
+	cc->s_script_post_notify=c->s_script_post_notify;
+	cc->s_script_notify=c->s_script_notify;
+	cc->directory_tree=c->directory_tree;
+	if(set_global_str(&(cc->directory), c->directory))
 		return -1;
-	if(set_global_str(&(cconf->timestamp_format), conf->timestamp_format))
+	if(set_global_str(&(cc->timestamp_format), c->timestamp_format))
 		return -1;
-	if(set_global_str(&(cconf->working_dir_recovery_method),
-		conf->working_dir_recovery_method)) return -1;
-	if(set_global_str(&(cconf->timer_script), conf->timer_script))
+	if(set_global_str(&(cc->recovery_method),
+		c->recovery_method)) return -1;
+	if(set_global_str(&(cc->timer_script), c->timer_script))
 		return -1;
-	if(set_global_str(&(cconf->user), conf->user))
+	if(set_global_str(&(cc->user), c->user))
 		return -1;
-	if(set_global_str(&(cconf->group), conf->group))
+	if(set_global_str(&(cc->group), c->group))
 		return -1;
-	if(set_global_str(&(cconf->notify_success_script),
-		conf->notify_success_script)) return -1;
-	if(set_global_str(&(cconf->notify_failure_script),
-		conf->notify_failure_script)) return -1;
-	if(set_global_arglist(&(cconf->timer_arg),
-		conf->timer_arg)) return -1;
-	if(set_global_arglist(&(cconf->notify_success_arg),
-		conf->notify_success_arg)) return -1;
-	if(set_global_arglist(&(cconf->notify_failure_arg),
-		conf->notify_failure_arg)) return -1;
-	if(set_global_arglist(&(cconf->keep),
-		conf->keep)) return -1;
-	if(set_global_str(&(cconf->dedup_group), conf->dedup_group))
+	if(set_global_str(&(cc->n_success_script),
+		c->n_success_script)) return -1;
+	if(set_global_str(&(cc->n_failure_script),
+		c->n_failure_script)) return -1;
+	if(set_global_arglist(&(cc->timer_arg),
+		c->timer_arg)) return -1;
+	if(set_global_arglist(&(cc->n_success_arg),
+		c->n_success_arg)) return -1;
+	if(set_global_arglist(&(cc->n_failure_arg),
+		c->n_failure_arg)) return -1;
+	if(set_global_arglist(&(cc->keep),
+		c->keep)) return -1;
+	if(set_global_str(&(cc->dedup_group), c->dedup_group))
 		return -1;
-	if(set_global_str(&(cconf->server_script_pre),
-		conf->server_script_pre)) return -1;
-	if(set_global_arglist(&(cconf->server_script_pre_arg),
-		conf->server_script_pre_arg)) return -1;
-	if(set_global_str(&(cconf->server_script_post),
-		conf->server_script_post)) return -1;
-	if(set_global_arglist(&(cconf->server_script_post_arg),
-		conf->server_script_post_arg)) return -1;
-	if(set_global_str(&(cconf->server_script),
-		conf->server_script)) return -1;
-	if(set_global_arglist(&(cconf->server_script_arg),
-		conf->server_script_arg)) return -1;
-	if(set_global_arglist(&(cconf->rclients),
-		conf->rclients)) return -1;
+	if(set_global_str(&(cc->s_script_pre),
+		c->s_script_pre)) return -1;
+	if(set_global_arglist(&(cc->s_script_pre_arg),
+		c->s_script_pre_arg)) return -1;
+	if(set_global_str(&(cc->s_script_post),
+		c->s_script_post)) return -1;
+	if(set_global_arglist(&(cc->s_script_post_arg),
+		c->s_script_post_arg)) return -1;
+	if(set_global_str(&(cc->s_script),
+		c->s_script)) return -1;
+	if(set_global_arglist(&(cc->s_script_arg),
+		c->s_script_arg)) return -1;
+	if(set_global_arglist(&(cc->rclients),
+		c->rclients)) return -1;
 
 	// If ssl_peer_cn is not set, default it to the client name.
-	if(!conf->ssl_peer_cn
-	  && set_global_str(&(cconf->ssl_peer_cn), cconf->cname))
+	if(!c->ssl_peer_cn
+	  && set_global_str(&(cc->ssl_peer_cn), cc->cname))
 		return -1;
 
 	return 0;
 }
 
-static void config_init_save_cname_and_version(struct config *cconf)
+static void config_init_save_cname_and_version(struct config *cc)
 {
-	char *cname=cconf->cname;
-	char *cversion=cconf->peer_version;
+	char *cname=cc->cname;
+	char *cversion=cc->peer_version;
 
-	cconf->cname=NULL;
-	cconf->peer_version=NULL;
-	config_init(cconf);
-	cconf->cname=cname;
-	cconf->peer_version=cversion;
+	cc->cname=NULL;
+	cc->peer_version=NULL;
+	config_init(cc);
+	cc->cname=cname;
+	cc->peer_version=cversion;
 }
 
-int config_load_client(struct config *conf, struct config *cconf)
+int config_load_client(struct config *c, struct config *cc)
 {
 	char *cpath=NULL;
-	config_init_save_cname_and_version(cconf);
-	if(!(cpath=prepend_s(conf->clientconfdir, cconf->cname)))
+	config_init_save_cname_and_version(cc);
+	if(!(cpath=prepend_s(c->clientconfdir, cc->cname)))
 		return -1;
-	if(looks_like_tmp_or_hidden_file(cconf->cname))
+	if(looks_like_tmp_or_hidden_file(cc->cname))
 	{
-		logp("client name '%s' is invalid\n", cconf->cname);
+		logp("client name '%s' is invalid\n", cc->cname);
 		free(cpath);
 		return -1;
 	}
 	// Some client settings can be globally set in the server config and
 	// overridden in the client specific config.
-	if(config_set_client_global(conf, cconf)
-	  || config_load(cpath, cconf, 0))
+	if(config_set_client_global(c, cc)
+	  || config_load(cpath, cc, 0))
 	{
 		free(cpath);
 		return -1;

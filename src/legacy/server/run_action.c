@@ -309,7 +309,7 @@ static int check_for_rubble(struct sdirs *sdirs, struct config *cconf,
 	char *logpath=NULL;
 	char *fullrealwork=NULL;
 	char *phase1datatmp=NULL;
-	const char *wdrm=cconf->working_dir_recovery_method;
+	const char *wdrm=cconf->recovery_method;
 
 	// If there is a 'finishing' symlink, we need to
 	// run the finish_backup stuff.

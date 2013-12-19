@@ -82,11 +82,11 @@ static int backup_wrapper(enum action action, const char *phase1str, const char 
 	{
 		if(action==ACTION_TIMER_CHECK) goto end;
 		
-		if(conf->backup_script_pre)
+		if(conf->b_script_pre)
 		{
 			int a=0;
 			const char *args[12];
-			args[a++]=conf->backup_script_pre;
+			args[a++]=conf->b_script_pre;
 			args[a++]="pre";
 			args[a++]="reserved2";
 			args[a++]="reserved3";
@@ -94,19 +94,19 @@ static int backup_wrapper(enum action action, const char *phase1str, const char 
 			args[a++]="reserved5";
 			args[a++]=NULL;
 			if(run_script(args,
-				conf->backup_script_pre_arg,
+				conf->b_script_pre_arg,
 				p1cntr, 1, 1)) ret=-1;
 		}
 
 		if(!ret && do_backup_client(conf, action, name_max, resume))
 			ret=-1;
 
-		if((conf->backup_script_post_run_on_fail
-		  || !ret) && conf->backup_script_post)
+		if((conf->b_script_post_run_on_fail
+		  || !ret) && conf->b_script_post)
 		{
 			int a=0;
 			const char *args[12];
-			args[a++]=conf->backup_script_post;
+			args[a++]=conf->b_script_post;
 			args[a++]="post";
 			// Tell post script whether the restore
 			// failed.
@@ -116,7 +116,7 @@ static int backup_wrapper(enum action action, const char *phase1str, const char 
 			args[a++]="reserved5";
 			args[a++]=NULL;
 			if(run_script(args,
-				conf->backup_script_post_arg,
+				conf->b_script_post_arg,
 				cntr, 1, 1)) ret=-1;
 		}
 	}
@@ -274,29 +274,28 @@ static int do_client(struct config *conf, enum action action, int vss_restore, i
 		case ACTION_RESTORE:
 		case ACTION_VERIFY:
 		{
-			if(conf->restore_script_pre)
+			if(conf->r_script_pre)
 			{
 				int a=0;
 				const char *args[12];
-				args[a++]=conf->restore_script_pre;
+				args[a++]=conf->r_script_pre;
 				args[a++]="pre";
 				args[a++]="reserved2";
 				args[a++]="reserved3";
 				args[a++]="reserved4";
 				args[a++]="reserved5";
 				args[a++]=NULL;
-				if(run_script(args,
-					conf->restore_script_pre_arg,
+				if(run_script(args, conf->r_script_pre_arg,
 					&cntr, 1, 1)) ret=-1;
 			}
 			if(!ret && do_restore_client(conf,
 				action, vss_restore)) ret=-1;
-			if((conf->restore_script_post_run_on_fail
-			  || !ret) && conf->restore_script_post)
+			if((conf->r_script_post_run_on_fail
+			  || !ret) && conf->r_script_post)
 			{
 				int a=0;
 				const char *args[12];
-				args[a++]=conf->restore_script_pre;
+				args[a++]=conf->r_script_pre;
 				args[a++]="post";
 				// Tell post script whether the restore
 				// failed.
@@ -306,7 +305,7 @@ static int do_client(struct config *conf, enum action action, int vss_restore, i
 				args[a++]="reserved5";
 				args[a++]=NULL;
 				if(run_script(args,
-					conf->restore_script_post_arg,
+					conf->r_script_post_arg,
 					&cntr, 1, 1)) ret=-1;
 			}
 

@@ -694,6 +694,7 @@ void counters_to_str(char *str, size_t len, char phase, const char *path, struct
 	int l=0;
 	struct cntr *p1cntr=conf->p1cntr;
 	struct cntr *cntr=conf->cntr;
+return;
 	snprintf(str, len,
 		"%s\t%c\t%c\t%c\t"
 		"%llu/%llu/%llu/%llu/%llu\t"

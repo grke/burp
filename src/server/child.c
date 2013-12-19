@@ -31,7 +31,7 @@ static int run_server_script(const char *pre_or_post, struct iobuf *rbuf,
 		if(!notify) goto end;
 
 		a=0;
-		args[a++]=cconf->notify_failure_script;
+		args[a++]=cconf->n_failure_script;
 		args[a++]=cconf->cname;
 		// magic - set basedir blank and the
 		// notify script will know to get the content
@@ -42,8 +42,7 @@ static int run_server_script(const char *pre_or_post, struct iobuf *rbuf,
 		args[a++]=""; // usually brv
 		args[a++]=""; // usually warnings
 		args[a++]=NULL;
-		run_script(args, cconf->notify_failure_arg,
-			NULL, 1, 1);
+		run_script(args, cconf->n_failure_arg, NULL, 1, 1);
 	}
 end:
 	if(logbuf) free(logbuf);
@@ -93,22 +92,21 @@ int child(struct config *conf, struct config *cconf)
 
 	// FIX THIS: Make the script components part of a struct, and just
 	// pass in the correct struct. Same below.
-	if(cconf->server_script_pre)
+	if(cconf->s_script_pre)
 		ret=run_server_script("pre", rbuf,
-			cconf->server_script_pre,
-			cconf->server_script_pre_arg,
-			cconf->server_script_pre_notify,
+			cconf->s_script_pre,
+			cconf->s_script_pre_arg,
+			cconf->s_script_pre_notify,
 			cconf, ret, timer_ret);
 
 	if(!ret) ret=run_action(cconf, sdirs, rbuf,
 			incexc, srestore, &timer_ret);
 
-	if((!ret || cconf->server_script_post_run_on_fail)
-	  && cconf->server_script_post)
+	if((!ret || cconf->s_script_post_run_on_fail) && cconf->s_script_post)
 		ret=run_server_script("post", rbuf,
-			cconf->server_script_post,
-			cconf->server_script_post_arg,
-			cconf->server_script_post_notify,
+			cconf->s_script_post,
+			cconf->s_script_post_arg,
+			cconf->s_script_post_notify,
 			cconf, ret, timer_ret);
 
 end:

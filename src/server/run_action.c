@@ -84,27 +84,26 @@ void maybe_do_notification(int status, const char *clientdir,
 	args[a++]=brv;
 	if(status)
 	{
-		args[0]=cconf->notify_failure_script;
+		args[0]=cconf->n_failure_script;
 		args[a++]="0";
 		args[a++]=NULL;
-		run_script(args, cconf->notify_failure_arg,
-			cconf->cntr, 1, 1);
+		run_script(args, cconf->n_failure_arg, cconf->cntr, 1, 1);
 	}
-	else if((cconf->notify_success_warnings_only
+	else if((cconf->n_success_warnings_only
 		&& (cconf->p1cntr->warning+cconf->cntr->warning)>0)
-	  || (cconf->notify_success_changes_only
+	  || (cconf->n_success_changes_only
 		&& (cconf->cntr->total_changed>0))
-	  || (!cconf->notify_success_warnings_only
-		&& !cconf->notify_success_changes_only))
+	  || (!cconf->n_success_warnings_only
+		&& !cconf->n_success_changes_only))
 	{
 		char warnings[32]="";
 	// FIX THIS: conf/cntr init problem.
 	//	snprintf(warnings, sizeof(warnings), "%llu",
 	//		cconf->p1cntr->warning+cconf->cntr->warning);
-		args[0]=cconf->notify_success_script;
+		args[0]=cconf->n_success_script;
 		args[a++]=warnings;
 		args[a++]=NULL;
-		run_script(args, cconf->notify_success_arg,
+		run_script(args, cconf->n_success_arg,
 			cconf->cntr, 1, 1);
 	}
 }

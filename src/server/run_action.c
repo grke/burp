@@ -305,8 +305,8 @@ static void unknown_command(struct iobuf *rbuf)
 	async_write_str(CMD_ERROR, "unknown command");
 }
 
-int run_action(struct config *cconf, struct sdirs *sdirs, struct iobuf *rbuf,
-	const char *incexc, int srestore, int *timer_ret)
+int run_action_server(struct config *cconf, struct sdirs *sdirs,
+	struct iobuf *rbuf, const char *incexc, int srestore, int *timer_ret)
 {
 	int ret=-1;
 	char msg[256]="";

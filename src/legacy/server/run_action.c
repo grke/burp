@@ -516,9 +516,8 @@ static int client_can_restore(struct config *cconf)
 	return cconf->client_can_restore;
 }
 
-int run_action_server_legacy(struct sdirs *sdirs, struct config *cconf,
-	struct iobuf *rbuf,
-	const char *incexc, int srestore, int *timer_ret)
+int run_action_server_legacy(struct config *cconf, struct sdirs *sdirs,
+        struct iobuf *rbuf, const char *incexc, int srestore, int *timer_ret)
 {
 	int ret=0;
 	char msg[256]="";

@@ -10,6 +10,7 @@ int backup_phase1_server(struct sdirs *sdirs, struct config *conf)
 	char *phase1tmp=NULL;
 
 	logp("Begin phase1 (file system scan)\n");
+printf("legacy\n");
 
 	if(!(phase1tmp=get_tmp_filename(sdirs->phase1data)))
 		return -1;

@@ -1,3 +1,6 @@
+  * Make 'make test' skip tests if no source of randomness seems to exist
+    for openssl to use.
+
 2013-12-01 Changes in burp-1.4.10:
   * Bug fix for false failure notification when a client tries to connect again
     while a backup is still in progress.

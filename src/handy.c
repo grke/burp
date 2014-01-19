@@ -313,7 +313,7 @@ struct bsid {
 };
 #endif
 
-int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, int64_t winattr, size_t *datalen, struct cntr *cntr)
+int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, struct stat *statp, int64_t winattr, size_t *datalen, struct cntr *cntr)
 {
 	if(fp)
 	{
@@ -344,7 +344,7 @@ int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, int64_t winattr
 				close_file_for_send(bfd, NULL);
 			}
 		}
-		binit(bfd, winattr);
+		binit(bfd, statp, winattr);
 		*datalen=0;
 		if(bopen(bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0,
 			(winattr & FILE_ATTRIBUTE_DIRECTORY))<=0)
@@ -1412,7 +1412,7 @@ int receive_a_file(const char *path, struct cntr *p1cntr)
 	unsigned long long sentbytes=0;
 
 #ifdef HAVE_WIN32
-	binit(&bfd, 0);
+	binit(&bfd, NULL, 0);
 	bfd.use_backup_api=0;
 	//set_win32_backup(&bfd);
 	if(bopen(&bfd, path,
@@ -1461,7 +1461,7 @@ int send_a_file(const char *path, struct cntr *p1cntr)
 	FILE *fp=NULL;
 	size_t datalen=0;
 	unsigned long long bytes=0;
-	if(open_file_for_send(NULL, &fp, path, 0, &datalen, p1cntr)
+	if(open_file_for_send(NULL, &fp, path, NULL, 0, &datalen, p1cntr)
 	  || send_whole_file_gz(path, "datapth", 0, &bytes, NULL,
 		p1cntr, 9, // compression
 		NULL, fp, NULL, 0, -1))

@@ -139,12 +139,12 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, str
 	return ret;
 }
 
-static int send_file(const char *fname, int patches, const char *best, const char *datapth, unsigned long long *bytes, char cmd, int64_t winattr, int compression, struct cntr *cntr, struct config *cconf)
+static int send_file(const char *fname, int patches, const char *best, const char *datapth, unsigned long long *bytes, char cmd, struct stat *statp, int64_t winattr, int compression, struct cntr *cntr, struct config *cconf)
 {
 	int ret=0;
 	size_t datalen=0;
 	FILE *fp=NULL;
-	if(open_file_for_send(NULL, &fp, best, winattr, &datalen, cntr))
+	if(open_file_for_send(NULL, &fp, best, statp, winattr, &datalen, cntr))
 		return -1;
 	//logp("sending: %s\n", best);
 	if(async_write(cmd, fname, strlen(fname)))

@@ -174,7 +174,7 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 	// data to expect.
 	size_t datalen=0;
 #ifdef HAVE_WIN32
-	binit(&bfd, 0);
+	binit(&bfd, NULL, 0);
 #endif
 
 	struct sbuf sb;
@@ -294,7 +294,7 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 #else
 						NULL, &fp,
 #endif
-						sb.path, winattr,
+						sb.path, &statbuf, winattr,
 						&datalen, cntr))
 							forget++;
 				}

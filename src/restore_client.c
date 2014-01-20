@@ -113,6 +113,7 @@ static int make_link(const char *fname, const char *lnk, char cmd, const char *r
 	return ret;
 }
 
+#ifdef HAVE_WIN32
 static int bclose_and_set_attributes(BFILE *bfd, struct cntr *cntr)
 {
 	char *path=NULL;
@@ -134,6 +135,7 @@ static int bclose_and_set_attributes(BFILE *bfd, struct cntr *cntr)
 	}
 	return 0;
 }
+#endif
 
 static int open_for_restore(BFILE *bfd, FILE **fp, const char *path, struct sbuf *sb, int vss_restore, struct config *conf, struct cntr *cntr)
 {

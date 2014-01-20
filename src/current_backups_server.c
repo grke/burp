@@ -758,7 +758,7 @@ int do_link(const char *oldpath, const char *newpath, struct stat *statp, struct
 			}
 			else
 			{
-				logp("Successful hard link of '%s' to '%s' after unlinking the former\n", newpath, oldpath);
+				//logp("Successful hard link of '%s' to '%s' after unlinking the former\n", newpath, oldpath);
 				return 0;
 			}
 		}

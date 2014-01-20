@@ -144,7 +144,7 @@ static int send_file(const char *fname, int patches, const char *best, const cha
 	int ret=0;
 	size_t datalen=0;
 	FILE *fp=NULL;
-	if(open_file_for_send(NULL, &fp, best, winattr, &datalen, cntr))
+	if(open_file_for_send(NULL, &fp, best, NULL, winattr, &datalen, cntr))
 		return -1;
 	//logp("sending: %s\n", best);
 	if(async_write(cmd, fname, strlen(fname)))

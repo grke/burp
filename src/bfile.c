@@ -38,11 +38,17 @@
 char *unix_name_to_win32(char *name);
 extern "C" HANDLE get_osfhandle(int fd);
 
-void binit(BFILE *bfd, int64_t winattr)
+void binit(BFILE *bfd, struct stat *statp, int64_t winattr)
 {
    memset(bfd, 0, sizeof(BFILE));
    bfd->mode = BF_CLOSED;
    bfd->use_backup_api = have_win32_api();
+   if(statp)
+   {
+   	bfd->statp.st_atime = statp->st_atime;
+   	bfd->statp.st_mtime = statp->st_mtime;
+   	bfd->statp.st_mode = statp->st_mode;
+   }
    bfd->winattr = winattr;
    bfd->pvContext = NULL;
    bfd->path = NULL;

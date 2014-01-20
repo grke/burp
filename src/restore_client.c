@@ -113,6 +113,30 @@ static int make_link(const char *fname, const char *lnk, char cmd, const char *r
 	return ret;
 }
 
+#ifdef HAVE_WIN32
+static int bclose_and_set_attributes(BFILE *bfd, struct cntr *cntr)
+{
+	char *path=NULL;
+	if(bfd->path && !(path=strdup(bfd->path)))
+	{
+		log_out_of_memory(__FUNCTION__);
+		return -1;
+	}
+	if(bclose(bfd))
+	{
+		if(path) free(path);
+		logp("error closing %s in %s()\n", path, __FUNCTION__);
+			return -1;
+	}
+	if(path)
+	{
+		set_attributes(path, '\0', &bfd->statp, bfd->winattr, cntr);
+		free(path);
+	}
+	return 0;
+}
+#endif
+
 static int open_for_restore(BFILE *bfd, FILE **fp, const char *path, struct sbuf *sb, int vss_restore, struct config *conf, struct cntr *cntr)
 {
 #ifdef HAVE_WIN32
@@ -127,15 +151,11 @@ static int open_for_restore(BFILE *bfd, FILE **fp, const char *path, struct sbuf
 		}
 		else
 		{
-			if(bclose(bfd))
-			{
-				logp("error closing %s in %s()\n",
-					path, __FUNCTION__);
+			if(bclose_and_set_attributes(bfd, cntr))
 				return -1;
-			}
 		}
 	}
-	binit(bfd, sb->winattr);
+	binit(bfd, &sb->statp, sb->winattr);
 	if(vss_restore)
 		set_win32_backup(bfd);
 	else
@@ -260,8 +280,11 @@ static int restore_file_or_get_meta(BFILE *bfd, struct sbuf *sb, const char *fna
 				logp("error closing %s in restore_file_or_get_meta\n", fname);
 				ret=-1;
 			}
+#ifndef HAVE_WIN32
+// Windows will set attributes when closing the file.
 			if(!ret) set_attributes(rpath, sb->cmd,
 				&(sb->statp), sb->winattr, cntr);
+#endif
 		}
 		if(ret)
 		{
@@ -614,7 +637,7 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore, str
 // chunks. So, leave bfd open after a Windows metadata transfer.
 	BFILE bfd;
 #ifdef HAVE_WIN32
-	binit(&bfd, 0);
+	binit(&bfd, NULL, 0);
 #endif
 
 	logp("doing %s\n", act_str(act));
@@ -824,7 +847,7 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore, str
 
 #ifdef HAVE_WIN32
 	// It is possible for a bfd to still be open.
-	bclose(&bfd);
+	bclose_and_set_attributes(&bfd, cntr);
 #endif
 
 	if(!wroteendcounter)

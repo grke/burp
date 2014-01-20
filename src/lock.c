@@ -3,6 +3,7 @@
 #include "log.h"
 #include "handy.h"
 
+// Return 0 for lock got, 1 for lock not got, -1 for error.
 int get_lock(const char *path)
 {
 #if defined(HAVE_WIN32) || !defined(HAVE_LOCKF)
@@ -30,7 +31,12 @@ int get_lock(const char *path)
 	if((fdlock=open(path, O_WRONLY|O_CREAT, 0666))==-1)
 		return -1;
 	if(lockf(fdlock, F_TLOCK, 0))
-		return -1;
+	{
+		if(errno==EACCES || errno==EAGAIN)
+			return 1; // Lock not got.
+		logp("Could not get lock %s: %s\n", path, strerror(errno));
+		return -1; // Some other error.
+	}
 	snprintf(text, sizeof(text), "%d\n%s\n", (int)getpid(), progname());
 	if(write(fdlock, text, strlen(text))!=(ssize_t)strlen(text))
 	{

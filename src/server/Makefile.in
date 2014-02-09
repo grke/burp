@@ -23,6 +23,7 @@ SRCS = \
 	auth.c		\
 	autoupgrade.c	\
 	backup.c	\
+	backup_phase1.c \
 	ca.c		\
 	champ_chooser.c	\
 	child.c		\

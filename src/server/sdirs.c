@@ -44,7 +44,6 @@ static int do_legacy_dirs(struct sdirs *sdirs, struct config *conf)
 	  || !(sdirs->timestamp=prepend_s(sdirs->working, "timestamp"))
 	  || !(sdirs->manifest=prepend_s(sdirs->working, "manifest.gz"))
 	  || !(sdirs->datadirtmp=prepend_s(sdirs->working, "data.tmp"))
-	  || !(sdirs->phase1data=prepend_s(sdirs->working, "phase1.gz"))
 	  || !(sdirs->phase2data=prepend_s(sdirs->working, "phase2"))
 	  || !(sdirs->unchangeddata=prepend_s(sdirs->working, "unchanged"))
 	  || !(sdirs->unchangeddata=prepend_s(sdirs->working, "unchanged"))
@@ -72,7 +71,8 @@ static int do_v2_dirs(struct sdirs *sdirs, struct config *conf)
 	  || !(sdirs->timestamp=prepend_s(sdirs->working, "timestamp"))
 	  || !(sdirs->changed=prepend_s(sdirs->working, "changed"))
 	  || !(sdirs->unchanged=prepend_s(sdirs->working, "unchanged"))
-	  || !(sdirs->cmanifest=prepend_s(sdirs->current, "manifest")))
+	  || !(sdirs->cmanifest=prepend_s(sdirs->current, "manifest"))
+	  || !(sdirs->phase1data=prepend_s(sdirs->working, "phase1.gz")))
 		return -1;
 	return 0;
 }
@@ -133,6 +133,7 @@ void sdirs_free(struct sdirs *sdirs)
         if(sdirs->changed) free(sdirs->changed);
         if(sdirs->unchanged) free(sdirs->unchanged);
         if(sdirs->cmanifest) free(sdirs->cmanifest);
+	if(sdirs->phase1data) free(sdirs->phase1data);
 
         if(sdirs->lock) free(sdirs->lock);
         if(sdirs->lockfile) free(sdirs->lockfile);
@@ -141,7 +142,6 @@ void sdirs_free(struct sdirs *sdirs)
 	if(sdirs->currentdata) free(sdirs->currentdata);
 	if(sdirs->manifest) free(sdirs->manifest);
 	if(sdirs->datadirtmp) free(sdirs->datadirtmp);
-	if(sdirs->phase1data) free(sdirs->phase1data);
 	if(sdirs->phase2data) free(sdirs->phase2data);
 	if(sdirs->unchangeddata) free(sdirs->unchangeddata);
 	if(sdirs->cincexc) free(sdirs->cincexc);

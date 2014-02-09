@@ -18,6 +18,7 @@ struct sdirs
 	char *changed;
 	char *unchanged;
 	char *cmanifest;
+	char *phase1data;
 
 	char *lock;
 	char *lockfile;
@@ -27,7 +28,6 @@ struct sdirs
 	char *currentdata;
 	char *manifest;
 	char *datadirtmp;
-	char *phase1data;
 	char *phase2data;
 	char *unchangeddata;
 	char *cincexc;

@@ -811,6 +811,12 @@ static int backup_server(struct sdirs *sdirs, const char *manifest_dir, struct c
 	logp("Begin backup\n");
 	printf("DATADIR: %s\n", sdirs->data);
 
+	if(backup_phase1_server(sdirs, conf))
+	{
+		logp("error in phase1\n");
+		goto end;
+	}
+
 	if(champ_chooser_init(sdirs->data, conf)
 	  || !(cmanio=manio_alloc())
 	  || !(chmanio=manio_alloc())

@@ -6,6 +6,7 @@
 #include "auth.h"
 #include "autoupgrade.h"
 #include "backup.h"
+#include "backup_phase1.h"
 #include "ca.h"
 #include "champ_chooser.h"
 #include "child.h"

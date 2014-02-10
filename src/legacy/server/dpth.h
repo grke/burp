@@ -1,7 +1,7 @@
-#ifndef DPTHL_H
-#define DPTHL_H
+#ifndef DPTH_LEGACY_H
+#define DPTH_LEGACY_H
 
-struct dpth
+struct dpthl
 {
 	int prim;
 	int seco;
@@ -10,11 +10,11 @@ struct dpth
 	int looped;
 };
 
-extern int init_dpth(struct dpth *dpth,
+extern int init_dpthl(struct dpthl *dpthl,
 	struct sdirs *sdirs, struct config *cconf);
-extern int incr_dpth(struct dpth *dpth, struct config *cconf);
-extern int set_dpth_from_string(struct dpth *dpth,
+extern int incr_dpthl(struct dpthl *dpthl, struct config *cconf);
+extern int set_dpthl_from_string(struct dpthl *dpthl,
 	const char *datapath, struct config *conf);
-extern void mk_dpth(struct dpth *dpth, struct config *cconf, char cmd);
+extern void mk_dpthl(struct dpthl *dpthl, struct config *cconf, char cmd);
 
 #endif

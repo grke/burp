@@ -469,6 +469,7 @@ int do_backup_client(struct config *conf, enum action action,
 	// Skip phase1 if the server wanted to resume.
 	if(!ret && !resume)
 	{
+printf("client legacy: %d\n", conf->legacy);
 		if(conf->legacy)
 			ret=backup_phase1_client_legacy(conf, name_max,
 				action==ACTION_ESTIMATE);

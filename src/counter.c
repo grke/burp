@@ -529,6 +529,9 @@ int print_stats_to_file(struct config *conf,
 	struct cntr *p1c=conf->p1cntr;
 	struct cntr *c=conf->cntr;
 
+	// FIX THIS - at the end of a backup, the counters should be set.
+	if(!p1c || !c) return 0;
+
 	if(act==ACTION_BACKUP
 	  ||  act==ACTION_BACKUP_TIMED)
 		fname="backup_stats";

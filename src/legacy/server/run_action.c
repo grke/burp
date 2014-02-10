@@ -474,7 +474,6 @@ static int get_lock_and_clean(struct sdirs *sdirs, struct config *cconf,
 	const char *incexc, int *resume)
 {
 	struct stat statp;
-printf("in get_lock_and_clean: %s %s\n", sdirs->lockfile, sdirs->lock);
 
 	// Make sure the lock directory exists.
 	if(mkpath(&sdirs->lockfile, sdirs->lock))

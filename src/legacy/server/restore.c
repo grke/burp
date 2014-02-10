@@ -20,7 +20,7 @@ int do_patch(const char *dst, const char *del, const char *upd, bool gzupd, int 
 		return -1;
 	}
 
-	if(dpth_is_compressed(compression, del))
+	if(dpthl_is_compressed(compression, del))
 		delzp=gzopen(del, "rb");
 	else
 		delfp=fopen(del, "rb");
@@ -76,7 +76,7 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, str
 		return -1;
 	}
 
-	if(dpth_is_compressed(compression, oldpath))
+	if(dpthl_is_compressed(compression, oldpath))
 	{
 		FILE *source=NULL;
 		FILE *dest=NULL;
@@ -160,7 +160,7 @@ static int send_file(const char *fname, int patches, const char *best, const cha
 		// It might have been stored uncompressed. Gzip it during
 		// the send. If the client knew what kind of file it would be
 		// receiving, this step could disappear.
-		else if(!dpth_is_compressed(compression, datapth))
+		else if(!dpthl_is_compressed(compression, datapth))
 		{
 			ret=send_whole_file_gzl(best, datapth, 1, bytes,
 				NULL, cconf->cntr, 9, NULL, fp, NULL, 0, -1);
@@ -200,7 +200,7 @@ static int verify_file(const char *fname, int patches, const char *best, const c
 	if(patches
 	  || cmd==CMD_ENC_FILE || cmd==CMD_ENC_METADATA || cmd==CMD_EFS_FILE
 	  || cmd==CMD_ENC_VSS
-	  || (!patches && !dpth_is_compressed(compression, best)))
+	  || (!patches && !dpthl_is_compressed(compression, best)))
 	{
 		// If we did some patches or encryption, or the compression
 		// was turned off, the resulting file is not gzipped.

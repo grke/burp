@@ -2,6 +2,6 @@
 #define _BACKUP_PHASE2_SERVER_H
 
 extern int backup_phase2_server(struct sdirs *sdirs, struct config *cconf,
-	gzFile *cmanfp, struct dpth *dpth, int resume);
+	gzFile *cmanfp, struct dpthl *dpthl, int resume);
 
 #endif

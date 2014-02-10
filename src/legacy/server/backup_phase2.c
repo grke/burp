@@ -17,7 +17,7 @@ static int treedata(struct sbufl *sb)
 }
 
 static char *set_new_datapth(struct sdirs *sdirs, struct config *cconf,
-	struct sbufl *sb, struct dpth *dpth, int *istreedata)
+	struct sbufl *sb, struct dpthl *dpthl, int *istreedata)
 {
 	char *rpath=NULL;
 	if(cconf->directory_tree) *istreedata=treedata(sb);
@@ -34,8 +34,8 @@ static char *set_new_datapth(struct sdirs *sdirs, struct config *cconf,
 	}
 	else
 	{
-		mk_dpth(dpth, cconf, sb->cmd);
-		if(!(sb->datapth=strdup(dpth->path))) // file data path
+		mk_dpthl(dpthl, cconf, sb->cmd);
+		if(!(sb->datapth=strdup(dpthl->path))) // file data path
 		{
 			log_and_send_oom(__FUNCTION__);
 			return NULL;
@@ -51,14 +51,14 @@ static char *set_new_datapth(struct sdirs *sdirs, struct config *cconf,
 }
 
 static int start_to_receive_new_file(struct sdirs *sdirs, struct config *cconf,
-	struct sbufl *sb, struct dpth *dpth)
+	struct sbufl *sb, struct dpthl *dpthl)
 {
 	char *rpath=NULL;
 	int istreedata=0;
 
 //logp("start to receive: %s\n", sb->path);
 
-	if(!(rpath=set_new_datapth(sdirs, cconf, sb, dpth, &istreedata)))
+	if(!(rpath=set_new_datapth(sdirs, cconf, sb, dpthl, &istreedata)))
 		return -1;
 	
 	if(!(sb->fp=open_file(rpath, "wb")))
@@ -67,7 +67,7 @@ static int start_to_receive_new_file(struct sdirs *sdirs, struct config *cconf,
 		if(rpath) free(rpath);
 		return -1;
 	}
-	if(!istreedata) incr_dpth(dpth, cconf);
+	if(!istreedata) incr_dpthl(dpthl, cconf);
 	if(rpath) free(rpath);
 	return 0; 
 }
@@ -411,7 +411,7 @@ static int process_changed_file(struct sdirs *sdirs, struct config *cconf,
 		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
-	if(dpth_is_compressed(cb->compression, curpath))
+	if(dpthl_is_compressed(cb->compression, curpath))
 		p1b->sigzp=gzopen_file(curpath, "rb");
 	else
 		p1b->sigfp=open_file(curpath, "rb");
@@ -496,7 +496,7 @@ static int changed_non_file(struct sbufl *p1b, FILE *ucfp, char cmd, struct conf
 }
 
 static int resume_partial_new_file(struct sdirs *sdirs, struct config *cconf,
-	struct sbufl *p1b, struct dpth *dpth)
+	struct sbufl *p1b, struct dpthl *dpthl)
 {
 	int ret=0;
 	int junk=0;
@@ -518,7 +518,7 @@ static int resume_partial_new_file(struct sdirs *sdirs, struct config *cconf,
 	cb.compression=p1b->compression;
 	cb.path=strdup(p1b->path);
 	cb.statbuf=strdup(p1b->statbuf);
-	if(!(rpath=set_new_datapth(sdirs, cconf, &cb, dpth, &istreedata)))
+	if(!(rpath=set_new_datapth(sdirs, cconf, &cb, dpthl, &istreedata)))
 	{
 		ret=-1;
 		goto end;
@@ -607,7 +607,7 @@ static int resume_partial_new_file(struct sdirs *sdirs, struct config *cconf,
 			ret=-1;
 			goto end;
 		}
-		if(!istreedata) incr_dpth(dpth, cconf);
+		if(!istreedata) incr_dpthl(dpthl, cconf);
 
 		goto end;
 	}
@@ -660,7 +660,7 @@ static int resume_partial_new_file(struct sdirs *sdirs, struct config *cconf,
 			ret=-1;
 			goto end;
 		}
-		if(!istreedata) incr_dpth(dpth, cconf);
+		if(!istreedata) incr_dpthl(dpthl, cconf);
 		goto end;
 	}
 
@@ -675,14 +675,14 @@ end:
 }
 
 static int process_new(struct sdirs *sdirs, struct config *cconf,
-	struct sbufl *p1b, FILE *ucfp, struct dpth *dpth, int *resume_partial)
+	struct sbufl *p1b, FILE *ucfp, struct dpthl *dpthl, int *resume_partial)
 {
 	if(*resume_partial
 	  && p1b->cmd==CMD_FILE
 	  && cconf->librsync
 	  && p1b->compression==cconf->compression)
 	{
-		if(resume_partial_new_file(sdirs, cconf, p1b, dpth)) return -1;
+		if(resume_partial_new_file(sdirs, cconf, p1b, dpthl)) return -1;
 
 		// Burp only transfers one file at a time, so
 		// if there was an interruption, there is only
@@ -722,9 +722,9 @@ static int process_unchanged_file(struct sbufl *cb, FILE *ucfp, struct config *c
 
 static int process_new_file(struct sdirs *sdirs, struct config *cconf,
 	struct sbufl *cb, struct sbufl *p1b, FILE *ucfp,
-	struct dpth *dpth, int *resume_partial)
+	struct dpthl *dpthl, int *resume_partial)
 {
-	if(process_new(sdirs, cconf, p1b, ucfp, dpth, resume_partial))
+	if(process_new(sdirs, cconf, p1b, ucfp, dpthl, resume_partial))
 		return -1;
 	free_sbufl(cb);
 	return 1;
@@ -733,7 +733,7 @@ static int process_new_file(struct sdirs *sdirs, struct config *cconf,
 // return 1 to say that a file was processed
 static int maybe_process_file(struct sdirs *sdirs, struct config *cconf,
 	struct sbufl *cb, struct sbufl *p1b, FILE *ucfp,
-	struct dpth *dpth, int *resume_partial)
+	struct dpthl *dpthl, int *resume_partial)
 {
 	int pcmp;
 //	logp("in maybe_proc %s\n", p1b->path);
@@ -746,7 +746,7 @@ static int maybe_process_file(struct sdirs *sdirs, struct config *cconf,
 		// back again).
 		if(cb->cmd!=p1b->cmd)
 			return process_new_file(sdirs, cconf, cb, p1b, ucfp,
-				dpth, resume_partial);
+				dpthl, resume_partial);
 
 		// mtime is the actual file data.
 		// ctime is the attributes or meta data.
@@ -780,7 +780,7 @@ static int maybe_process_file(struct sdirs *sdirs, struct config *cconf,
 			  || cb->cmd==CMD_EFS_FILE
 			  || p1b->cmd==CMD_EFS_FILE)
 				return process_new_file(sdirs, cconf, cb,
-					p1b, ucfp, dpth, resume_partial);
+					p1b, ucfp, dpthl, resume_partial);
 			// On Windows, we have to back up the whole file if
 			// ctime changed, otherwise things like permission
 			// changes do not get noticed. So, in that case, fall
@@ -814,16 +814,16 @@ static int maybe_process_file(struct sdirs *sdirs, struct config *cconf,
 		  || cb->cmd==CMD_ENC_VSS_T
 		  || p1b->cmd==CMD_ENC_VSS_T)
 			return process_new_file(sdirs, cconf, cb, p1b, ucfp,
-				dpth, resume_partial);
+				dpthl, resume_partial);
 
 		// Get new files if they have switched between compression on
 		// or off.
-		if(cb->datapth && dpth_is_compressed(cb->compression, cb->datapth))
+		if(cb->datapth && dpthl_is_compressed(cb->compression, cb->datapth))
 			oldcompressed=1;
 		if( ( oldcompressed && !cconf->compression)
 		 || (!oldcompressed &&  cconf->compression))
 			return process_new_file(sdirs, cconf, cb, p1b, ucfp,
-				dpth, resume_partial);
+				dpthl, resume_partial);
 
 		// Otherwise, do the delta stuff (if possible).
 		if(filedata(p1b->cmd))
@@ -845,7 +845,7 @@ static int maybe_process_file(struct sdirs *sdirs, struct config *cconf,
 		//logp("ahead: %s\n", p1b->path);
 		// ahead - need to get the whole file
 		if(process_new(sdirs, cconf, p1b, ucfp,
-			dpth, resume_partial)) return -1;
+			dpthl, resume_partial)) return -1;
 		// do not free
 		return 1;
 	}
@@ -957,7 +957,7 @@ static int finish_delta(struct sdirs *sdirs, struct sbufl *rb)
 
 // returns 1 for finished ok.
 static int do_stuff_to_receive(struct sdirs *sdirs, struct config *cconf,
-	struct sbufl *rb, FILE *p2fp, struct dpth *dpth, char **last_requested)
+	struct sbufl *rb, FILE *p2fp, struct dpthl *dpthl, char **last_requested)
 {
 	int ret=0;
 	struct iobuf *rbuf=NULL;
@@ -1094,7 +1094,7 @@ static int do_stuff_to_receive(struct sdirs *sdirs, struct config *cconf,
 			{
 				// Receiving a whole new file.
 				if(start_to_receive_new_file(sdirs, cconf, rb,
-					dpth))
+					dpthl))
 				{
 					logp("error in start_to_receive_new_file\n");
 					ret=-1;
@@ -1130,7 +1130,7 @@ static int do_stuff_to_receive(struct sdirs *sdirs, struct config *cconf,
 }
 
 int backup_phase2_server(struct sdirs *sdirs, struct config *cconf,
-	gzFile *cmanfp, struct dpth *dpth, int resume)
+	gzFile *cmanfp, struct dpthl *dpthl, int resume)
 {
 	int ars=0;
 	int ret=0;
@@ -1173,7 +1173,7 @@ int backup_phase2_server(struct sdirs *sdirs, struct config *cconf,
 	if(!(p2fp=open_file(sdirs->phase2data, "r+b")))
 		goto error;
 
-	if(resume && do_resume(p1zp, p2fp, ucfp, dpth, cconf))
+	if(resume && do_resume(p1zp, p2fp, ucfp, dpthl, cconf))
 		goto error;
 
 	logp("Begin phase2 (receive file data)\n");
@@ -1186,7 +1186,7 @@ int backup_phase2_server(struct sdirs *sdirs, struct config *cconf,
 	//		rb.path?:"no rb.path", rb.path?'X':rb.cmd);
 		write_status(STATUS_BACKUP, rb.path?rb.path:p1b.path, cconf);
 		if((last_requested || !p1zp || writebuflen)
-		  && (ars=do_stuff_to_receive(sdirs, cconf, &rb, p2fp, dpth,
+		  && (ars=do_stuff_to_receive(sdirs, cconf, &rb, p2fp, dpthl,
 			&last_requested)))
 		{
 			if(ars<0) goto error;
@@ -1218,7 +1218,7 @@ int backup_phase2_server(struct sdirs *sdirs, struct config *cconf,
 			// No old manifest, need to ask for a new file.
 			//logp("no cmanfp\n");
 			if(process_new(sdirs, cconf, &p1b, ucfp,
-				dpth, &resume_partial)) goto error;
+				dpthl, &resume_partial)) goto error;
 		   }
 		   else
 		   {
@@ -1230,7 +1230,7 @@ int backup_phase2_server(struct sdirs *sdirs, struct config *cconf,
 			{
 				if((ars=maybe_process_file(sdirs, cconf,
 					&cb, &p1b, ucfp,
-					dpth, &resume_partial)))
+					dpthl, &resume_partial)))
 				{
 					if(ars<0) goto error;
 					// Do not free it - need to send stuff.
@@ -1249,7 +1249,7 @@ int backup_phase2_server(struct sdirs *sdirs, struct config *cconf,
 					gzclose_fp(cmanfp);
 		//logp("ran out of current manifest\n");
 					if(process_new(sdirs, cconf,
-						&p1b, ucfp, dpth,
+						&p1b, ucfp, dpthl,
 						&resume_partial))
 							goto error;
 					break;
@@ -1257,7 +1257,7 @@ int backup_phase2_server(struct sdirs *sdirs, struct config *cconf,
 		//logp("against: %s\n", cb.path);
 				if((ars=maybe_process_file(sdirs, cconf,
 					&cb, &p1b, ucfp,
-					dpth, &resume_partial)))
+					dpthl, &resume_partial)))
 				{
 					if(ars<0) goto error;
 					// Do not free it - need to send stuff.

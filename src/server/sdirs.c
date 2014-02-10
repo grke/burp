@@ -44,6 +44,7 @@ static int do_legacy_dirs(struct sdirs *sdirs, struct config *conf)
 	  || !(sdirs->timestamp=prepend_s(sdirs->working, "timestamp"))
 	  || !(sdirs->manifest=prepend_s(sdirs->working, "manifest.gz"))
 	  || !(sdirs->datadirtmp=prepend_s(sdirs->working, "data.tmp"))
+	  || !(sdirs->phase1data=prepend_s(sdirs->working, "phase1.gz"))
 	  || !(sdirs->phase2data=prepend_s(sdirs->working, "phase2"))
 	  || !(sdirs->unchangeddata=prepend_s(sdirs->working, "unchanged"))
 	  || !(sdirs->unchangeddata=prepend_s(sdirs->working, "unchanged"))
@@ -77,7 +78,7 @@ static int do_v2_dirs(struct sdirs *sdirs, struct config *conf)
 	return 0;
 }
 
-static int sdirs_do_init(struct sdirs *sdirs, struct config *conf, int legacy)
+extern int sdirs_init(struct sdirs *sdirs, struct config *conf)
 {
 	if(!conf->directory)
 	{
@@ -88,7 +89,7 @@ static int sdirs_do_init(struct sdirs *sdirs, struct config *conf, int legacy)
 	if(!(sdirs->base=strdup(conf->directory)))
 		goto error;
 
-	if(legacy)
+	if(conf->legacy)
 	{
 		if(do_legacy_dirs(sdirs, conf)) goto error;
 	}
@@ -103,16 +104,6 @@ static int sdirs_do_init(struct sdirs *sdirs, struct config *conf, int legacy)
 error:
 	sdirs_free(sdirs);
 	return -1;
-}
-
-int sdirs_init(struct sdirs *sdirs, struct config *conf)
-{
-	return sdirs_do_init(sdirs, conf, 0 /* not legacy */);
-}
-
-int sdirs_init_legacy(struct sdirs *sdirs, struct config *conf)
-{
-	return sdirs_do_init(sdirs, conf, 1 /* legacy */);
 }
 
 void sdirs_free(struct sdirs *sdirs)

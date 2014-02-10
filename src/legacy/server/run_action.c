@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../server/backup_phase1.h"
 
 #include <librsync.h>
 
@@ -85,16 +86,16 @@ static int do_backup_server(struct sdirs *sdirs, struct config *cconf,
 	char *realworking=NULL;
 	char tstmp[64]="";
 
-	struct dpth dpth;
+	struct dpthl dpthl;
 
 	gzFile cmanfp=NULL;
 	struct stat statp;
 
 	logp("in do_backup_server\n");
 
-	if(init_dpth(&dpth, sdirs, cconf))
+	if(init_dpthl(&dpthl, sdirs, cconf))
 	{
-		log_and_send("could not init_dpth\n");
+		log_and_send("could not init_dpthl\n");
 		goto error;
 	}
 
@@ -199,7 +200,7 @@ static int do_backup_server(struct sdirs *sdirs, struct config *cconf,
 
 	//if(cmanfp) logp("Current manifest: %s\n", sdirs->cmanifest);
 
-	if(backup_phase2_server(sdirs, cconf, &cmanfp, &dpth, resume))
+	if(backup_phase2_server(sdirs, cconf, &cmanfp, &dpthl, resume))
 	{
 		logp("error in backup phase 2\n");
 		goto error;
@@ -473,6 +474,7 @@ static int get_lock_and_clean(struct sdirs *sdirs, struct config *cconf,
 	const char *incexc, int *resume)
 {
 	struct stat statp;
+printf("in get_lock_and_clean: %s %s\n", sdirs->lockfile, sdirs->lock);
 
 	// Make sure the lock directory exists.
 	if(mkpath(&sdirs->lockfile, sdirs->lock))

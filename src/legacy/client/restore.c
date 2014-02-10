@@ -200,7 +200,7 @@ static int restore_file_or_get_meta(BFILE *bfd, struct sbufl *sb, const char *fn
 		unsigned long long rcvdbytes=0;
 		unsigned long long sentbytes=0;
 
-		enccompressed=dpth_is_compressed(sb->compression, sb->datapth);
+		enccompressed=dpthl_is_compressed(sb->compression, sb->datapth);
 /*
 		printf("%s \n", fname);
 		if(encpassword && !enccompressed)

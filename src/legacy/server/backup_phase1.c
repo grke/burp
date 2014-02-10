@@ -36,7 +36,7 @@ static int read_phase1(gzFile zp, struct cntr *p1cntr)
 	return 0;
 }
 
-static int forward_sbufl(FILE *fp, gzFile zp, struct sbufl *b, struct sbufl *target, int isphase1, int seekback, int do_counters, int same, struct dpth *dpth, struct config *cconf)
+static int forward_sbufl(FILE *fp, gzFile zp, struct sbufl *b, struct sbufl *target, int isphase1, int seekback, int do_counters, int same, struct dpthl *dpthl, struct config *cconf)
 {
 	int ars=0;
 	struct sbufl latest;
@@ -61,7 +61,7 @@ static int forward_sbufl(FILE *fp, gzFile zp, struct sbufl *b, struct sbufl *tar
 
 		// Make sure we end up with the highest datapth we can possibly
 		// find.
-		if(b->datapth && set_dpth_from_string(dpth, b->datapth, cconf))
+		if(b->datapth && set_dpthl_from_string(dpthl, b->datapth, cconf))
 		{
 			free_sbufl(b);
 			free_sbufl(&latest);
@@ -128,7 +128,7 @@ static int forward_sbufl(FILE *fp, gzFile zp, struct sbufl *b, struct sbufl *tar
 	return 0;
 }
 
-int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpth *dpth, struct config *cconf)
+int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpthl *dpthl, struct config *cconf)
 {
 	int ret=0;
 	struct sbufl p1b;
@@ -152,7 +152,7 @@ int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpth *dpth, struct con
 		0, /* no seekback */
 		0, /* no counters */
 		0, /* changed */
-		dpth, cconf)) goto error;
+		dpthl, cconf)) goto error;
 	rewind(p2fp);
 	// Go to the beginning of p2fp and seek forward to the p2btmp entry.
 	// This is to guard against a partially written entry at the end of
@@ -162,7 +162,7 @@ int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpth *dpth, struct con
 		0, /* no seekback */
 		1, /* do_counters */
 		0, /* changed */
-		dpth, cconf)) goto error;
+		dpthl, cconf)) goto error;
 	logp("  phase2:    %s (%s)\n", p2b.path, p2b.datapth);
 
 	// Now need to go to the appropriate places in p1zp and unchanged.
@@ -173,7 +173,7 @@ int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpth *dpth, struct con
 		0, /* no seekback */
 		0, /* no counters */
 		0, /* ignored */
-		dpth, cconf)) goto error;
+		dpthl, cconf)) goto error;
 	logp("  phase1:    %s\n", p1b.path);
 
 	if(forward_sbufl(ucfp, NULL, &ucb, &p2b,
@@ -181,11 +181,11 @@ int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpth *dpth, struct con
 		1, /* seekback */
 		1, /* do_counters */
 		1, /* same */
-		dpth, cconf)) goto error;
+		dpthl, cconf)) goto error;
 	logp("  unchanged: %s\n", ucb.path);
 
 	// Now should have all file pointers in the right places to resume.
-	if(incr_dpth(dpth, cconf)) goto error;
+	if(incr_dpthl(dpthl, cconf)) goto error;
 
 	if(cconf->send_client_counters)
 	{

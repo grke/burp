@@ -12,7 +12,7 @@ static int make_rev_sig(const char *dst, const char *sig, const char *endfile, i
 	rs_result result;
 //logp("make rev sig: %s %s\n", dst, sig);
 
-	if(dpth_is_compressed(compression, dst))
+	if(dpthl_is_compressed(compression, dst))
 		dstzp=gzopen_file(dst, "rb");
 	else
 		dstfp=open_file(dst, "rb");
@@ -59,7 +59,7 @@ static int make_rev_delta(const char *src, const char *sig, const char *del, int
 
 //logp("make rev deltb: %s %s %s\n", src, sig, del);
 
-	if(dpth_is_compressed(compression, src))
+	if(dpthl_is_compressed(compression, src))
 		srczp=gzopen_file(src, "rb");
 	else
 		srcfp=open_file(src, "rb");
@@ -166,7 +166,7 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, con
 		return -1;
 	}
 
-	if(dpth_is_compressed(compression, opath))
+	if(dpthl_is_compressed(compression, opath))
 	{
 		FILE *source=NULL;
 		FILE *dest=NULL;

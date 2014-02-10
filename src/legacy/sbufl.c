@@ -171,7 +171,7 @@ static int async_read_stat(FILE *fp, gzFile zp, struct sbufl *sb, struct cntr *c
 		{
 			decode_stat(rbuf->buf, &(sb->statp),
 				&(sb->winattr), &(sb->compression));
-			sb->statbuf=rbuf->buf;
+			sb->statbuf=rbuf->buf; rbuf->buf=NULL;
 			sb->slen=rbuf->len;
 			sb->datapth=d;
 
@@ -199,20 +199,23 @@ static int async_read_stat(FILE *fp, gzFile zp, struct sbufl *sb, struct cntr *c
 static int do_sbufl_fill_from_net(struct sbufl *sb, struct cntr *cntr)
 {
 	int ars;
-	struct iobuf rbuf;
+	static struct iobuf *rbuf=NULL;
+	if(!rbuf && !(rbuf=iobuf_alloc())) return -1;
+	iobuf_free_content(rbuf);
 	if((ars=async_read_stat(NULL, NULL, sb, cntr))) return ars;
-	if((ars=async_read(&rbuf))) return ars;
-	sb->cmd=rbuf.cmd;
-	sb->path=rbuf.buf;
-	sb->plen=rbuf.len;
+	if((ars=async_read(rbuf))) return ars;
+	sb->cmd=rbuf->cmd;
+	sb->path=rbuf->buf; rbuf->buf=NULL;
+	sb->plen=rbuf->len;
 	if(sbufl_is_link(sb))
 	{
-		if((ars=async_read(&rbuf))) return ars;
-		sb->linkto=rbuf.buf;
-		sb->llen=rbuf.len;
-		if(!cmd_is_link(rbuf.cmd))
+		iobuf_free_content(rbuf);
+		if((ars=async_read(rbuf))) return ars;
+		sb->linkto=rbuf->buf;
+		sb->llen=rbuf->len;
+		if(!cmd_is_link(rbuf->cmd))
 		{
-			iobuf_log_unexpected(&rbuf, __FUNCTION__);
+			iobuf_log_unexpected(rbuf, __FUNCTION__);
 			return -1;
 		}
 	}

@@ -18,8 +18,7 @@ int send_msg_zp(gzFile zp, char cmd, const char *buf, size_t s)
 	  || gzwrite(zp, buf, s)!=(int)s
 	  || gzprintf(zp, "\n")!=1)
 	{
-		logp("Unable to write message to compressed file: %s\n",
-			strerror(errno));
+		logp("Unable to write message to compressed file\n");
 		return -1;
 	}
 	return 0;

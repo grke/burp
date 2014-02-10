@@ -1,8 +1,8 @@
 #include "include.h"
 
 #include "../legacy/burpconfig.h"
+#include "../legacy/sbufl.h"
 
-/*
 int backup_phase1_server(struct sdirs *sdirs, struct config *conf)
 {
 	int ars=0;
@@ -72,26 +72,31 @@ int backup_phase1_server(struct sdirs *sdirs, struct config *conf)
 
 	return ret;
 }
-*/
+
+/*
+static enum asl_ret phase1_server_func(struct iobuf *rbuf,
+	struct config *conf, void *param)
+{
+	static struct manio *manio;
+	manio=(struct manio *)param;
+}
 
 int backup_phase1_server(struct sdirs *sdirs, struct config *conf)
 {
 	int ret=-1;
-	struct iobuf *rbuf=NULL;
 	struct manio *manio=NULL;
 	logp("Begin phase1 (file system scan)\n");
 
 	if(!(manio=manio_alloc())
-	  || manio_init_write(manio, sdirs->phase1data)
-	  || !(rbuf=iobuf_alloc()))
+	  || manio_init_write(manio, sdirs->phase1data))
 		goto end;
 
-	// async_simple_loop goes here
+	if(async_simple_loop(conf, manio, phase1_server_func)) goto end;
 
 	ret=0;
 end:
 	logp("End phase1 (file system scan)\n");
 	manio_free(manio);
-	iobuf_free(rbuf);
 	return ret;
 }
+*/

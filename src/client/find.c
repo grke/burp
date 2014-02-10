@@ -1,6 +1,7 @@
 #include "include.h"
 
 #include "../legacy/burpconfig.h"
+#include "../legacy/client/backup_phase1.h"
 
 #ifdef HAVE_LINUX_OS
 #include <sys/statfs.h>
@@ -299,6 +300,15 @@ static int nobackup_directory(struct strlist *nobackup, const char *path)
 	return 0;
 }
 
+// FIX THIS: Set the function instead of switching on a value.
+static int send_file_w(FF_PKT *ff, bool top_level, struct config *conf)
+{
+	if(conf->legacy)
+		return send_file_legacy(ff, top_level, conf);
+	else
+		return send_file(ff, top_level, conf);
+}
+
 static int found_regular_file(FF_PKT *ff_pkt, struct config *conf,
 	char *fname, bool top_level)
 {
@@ -314,7 +324,7 @@ static int found_regular_file(FF_PKT *ff_pkt, struct config *conf,
 
 	ff_pkt->type=FT_REG;
 
-	return send_file(ff_pkt, top_level, conf);
+	return send_file_w(ff_pkt, top_level, conf);
 }
 
 static int found_soft_link(FF_PKT *ff_pkt, struct config *conf,
@@ -327,12 +337,12 @@ static int found_soft_link(FF_PKT *ff_pkt, struct config *conf,
 	{
 		/* Could not follow link */
 		ff_pkt->type=FT_NOFOLLOW;
-		return send_file(ff_pkt, top_level, conf);
+		return send_file_w(ff_pkt, top_level, conf);
 	}
 	buffer[size]=0;
 	ff_pkt->link=buffer;	/* point to link */
 	ff_pkt->type=FT_LNK_S;	/* got a soft link */
-	return send_file(ff_pkt, top_level, conf);
+	return send_file_w(ff_pkt, top_level, conf);
 }
 
 int fstype_excluded(struct config *conf, const char *fname)
@@ -565,7 +575,7 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 	windows_reparse_point_fiddling(ff_pkt);
 #endif
 
-	rtn_stat=send_file(ff_pkt, top_level, conf);
+	rtn_stat=send_file_w(ff_pkt, top_level, conf);
 	if(rtn_stat || ff_pkt->type==FT_REPARSE || ff_pkt->type==FT_JUNCTION)
 	{
 		 /* ignore or error status */
@@ -591,7 +601,7 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 		if(fstype_excluded(conf, ff_pkt->fname))
 		{
 			free(link);
-			return send_file(ff_pkt, top_level, conf);
+			return send_file_w(ff_pkt, top_level, conf);
 		}
 		if(!fs_change_is_allowed(conf, ff_pkt->fname))
 		{
@@ -603,7 +613,7 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 	if(!recurse)
 	{
 		free(link);
-		return send_file(ff_pkt, top_level, conf);
+		return send_file_w(ff_pkt, top_level, conf);
 	}
 
 	/* reset "link" */
@@ -626,7 +636,7 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 		if(dfd>=0) close(dfd);
 #endif
 		ff_pkt->type=FT_NOOPEN;
-		rtn_stat=send_file(ff_pkt, top_level, conf);
+		rtn_stat=send_file_w(ff_pkt, top_level, conf);
 		free(link);
 		return rtn_stat;
 	}
@@ -693,7 +703,7 @@ static int found_other(FF_PKT *ff_pkt, struct config *conf,
 		/* The only remaining are special (character, ...) files */
 		ff_pkt->type=FT_SPEC;
 	}
-	return send_file(ff_pkt, top_level, conf);
+	return send_file_w(ff_pkt, top_level, conf);
 }
 
 /*
@@ -718,7 +728,7 @@ static int find_files(FF_PKT *ff_pkt, struct config *conf,
 #endif
 	{
 		ff_pkt->type=FT_NOSTAT;
-		return send_file(ff_pkt, top_level, conf);
+		return send_file_w(ff_pkt, top_level, conf);
 	}
 
 	/*
@@ -747,7 +757,7 @@ static int find_files(FF_PKT *ff_pkt, struct config *conf,
 				ff_pkt->link=lp->name;
 				/* Handle link, file already saved */
 				ff_pkt->type=FT_LNK_H;
-				return send_file(ff_pkt, top_level, conf);
+				return send_file_w(ff_pkt, top_level, conf);
 			}
 		}
 

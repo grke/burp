@@ -545,7 +545,8 @@ static enum asl_ret restore_style_func(struct iobuf *rbuf,
 
 static char *get_restore_style(struct config *conf)
 {
-	if(async_simple_loop(conf, NULL, restore_style_func)) return NULL;
+	if(async_simple_loop(conf, NULL, __FUNCTION__,
+		restore_style_func)) return NULL;
 	return restore_style;
 }
 
@@ -574,12 +575,14 @@ static enum asl_ret restore_spool_func(struct iobuf *rbuf,
 
 int restore_spool(struct config *conf, char **datpath)
 {
+printf("in restore_spool\n");
 	logp("Spooling restore to: %s\n", conf->restore_spool);
 
 	if(!(*datpath=prepend_s(conf->restore_spool, "incoming-data")))
 		return -1;
 
-	return async_simple_loop(conf, datpath, restore_spool_func);
+	return async_simple_loop(conf, datpath,
+		__FUNCTION__, restore_spool_func);
 }
 
 int do_restore_client(struct config *conf, enum action act, int vss_restore)

@@ -42,6 +42,7 @@ enum asl_ret
 };
 
 extern int async_simple_loop(struct config *conf, void *param,
+  const char *caller,
   enum asl_ret callback(struct iobuf *rbuf, struct config *conf, void *param));
 
 extern void log_and_send(const char *msg);

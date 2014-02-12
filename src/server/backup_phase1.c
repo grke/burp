@@ -91,7 +91,8 @@ int backup_phase1_server(struct sdirs *sdirs, struct config *conf)
 	  || manio_init_write(manio, sdirs->phase1data))
 		goto end;
 
-	if(async_simple_loop(conf, manio, phase1_server_func)) goto end;
+	if(async_simple_loop(conf, manio, __FUNCTION__, phase1_server_func))
+		goto end;
 
 	ret=0;
 end:

@@ -1,5 +1,7 @@
 #include "include.h"
 
+#include "../legacy/client/restore.h"
+
 #ifndef HAVE_WIN32
 #include <sys/utsname.h>
 #endif
@@ -256,6 +258,8 @@ static int do_client(struct config *conf, enum action action, int vss_restore, i
 		}
 	}
 
+printf("client legacy: %d\n", conf->legacy);
+
 	rfd=-1;
 	switch(action)
 	{
@@ -288,8 +292,21 @@ static int do_client(struct config *conf, enum action action, int vss_restore, i
 				if(run_script(args, conf->r_script_pre_arg,
 					&cntr, 1, 1)) ret=-1;
 			}
-			if(!ret && do_restore_client(conf,
-				action, vss_restore)) ret=-1;
+			if(!ret)
+			{
+				// FIX THIS: Really need to abstract these
+				// functions to be a single pointer.
+				if(conf->legacy)
+				{
+					if(do_restore_client_legacy(conf,
+						action, vss_restore)) ret=-1;
+				}
+				else
+				{
+					if(do_restore_client(conf,
+						action, vss_restore)) ret=-1;
+				}
+			}
 			if((conf->r_script_post_run_on_fail
 			  || !ret) && conf->r_script_post)
 			{

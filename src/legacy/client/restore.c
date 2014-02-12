@@ -615,8 +615,9 @@ int do_restore_client_legacy(struct config *conf, enum action act, int vss_resto
 
 	if(conf->send_client_counters)
 	{
-		if(recv_counters(conf))
-			return -1;
+// FIX THIS
+//		if(recv_counters(conf))
+//			return -1;
 	}
 
 #if defined(HAVE_WIN32)

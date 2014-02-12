@@ -64,7 +64,7 @@ int autoupgrade_client(struct config *conf)
 	if(async_write_str(CMD_GEN, write_str))
 		goto end;
 
-	if(!(a=async_simple_loop(conf, NULL, autoupgrade_func)))
+	if(!(a=async_simple_loop(conf, NULL, __FUNCTION__, autoupgrade_func)))
 	{
 		ret=0; // No autoupgrade.
 		goto end;

@@ -385,6 +385,7 @@ int ca_server_maybe_sign_client_cert(struct config *conf, struct config *cconf)
 	// Clients before 1.3.2 did not know how to send cert signing requests.
 	if(cli_ver<min_ver) return 0;
 
-	if(async_simple_loop(conf, &cconf->cname, csr_server_func)) return -1;
+	if(async_simple_loop(conf, &cconf->cname, __FUNCTION__,
+		csr_server_func)) return -1;
 	return csr_done;
 }

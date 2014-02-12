@@ -1089,5 +1089,5 @@ static enum asl_ret recv_counters_func(struct iobuf *rbuf,
 
 int recv_counters(struct config *conf)
 {
-	return async_simple_loop(conf, NULL, recv_counters_func);
+	return async_simple_loop(conf, NULL, __FUNCTION__, recv_counters_func);
 }

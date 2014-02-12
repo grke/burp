@@ -152,7 +152,7 @@ int ca_client_setup(struct config *conf)
 
 	// Tell the server we want to do a signing request.
 	if(async_write_str(CMD_GEN, "csr")
-	  || async_simple_loop(conf, NULL, csr_client_func))
+	  || async_simple_loop(conf, NULL, __FUNCTION__, csr_client_func))
 		goto end;
 
 	logp("Server will sign a certificate request\n");

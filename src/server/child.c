@@ -102,7 +102,7 @@ int child(struct config *conf, struct config *cconf)
 
 	if(!ret)
 	{
-printf("HERE: %d\n", cconf->legacy);
+printf("run_action legacy: %d\n", cconf->legacy);
 		if(cconf->legacy)
 			ret=run_action_server_legacy(cconf, sdirs, rbuf,
 				incexc, srestore, &timer_ret);

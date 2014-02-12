@@ -521,7 +521,7 @@ int async_read_expect(char cmd, const char *expect)
 	return ret;
 }
 
-int async_simple_loop(struct config *conf, void *param,
+int async_simple_loop(struct config *conf, void *param, const char *caller,
   enum asl_ret callback(struct iobuf *rbuf, struct config *conf, void *param))
 {
 	static struct iobuf *rbuf=NULL;
@@ -544,7 +544,7 @@ int async_simple_loop(struct config *conf, void *param,
 			}
 			else
 			{
-				iobuf_log_unexpected(rbuf, __FUNCTION__);
+				logp("unexpected command in %s(), called from %s(): %c:%s\n", __FUNCTION__, caller, rbuf->cmd, rbuf->buf);
 				return -1;
 			}
 			continue;

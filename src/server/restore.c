@@ -48,7 +48,7 @@ static enum asl_ret restore_end_func(struct iobuf *rbuf,
 static int do_restore_end(struct config *conf)
 {
 	if(async_write_str(CMD_GEN, "restore_end")) return -1;
-	return async_simple_loop(conf, NULL, restore_end_func);
+	return async_simple_loop(conf, NULL, __FUNCTION__, restore_end_func);
 }
 
 static int restore_ent(struct sbuf **sb,

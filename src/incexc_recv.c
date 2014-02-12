@@ -34,7 +34,7 @@ static int incexc_recv(char **incexc, const char *reqstr, const char *repstr, co
 
 	endreqstrf=endreqstr;
 	endrepstrf=endrepstr;
-	if(async_simple_loop(conf, incexc, incexc_recv_func))
+	if(async_simple_loop(conf, incexc, __FUNCTION__, incexc_recv_func))
 		return -1;
 
 	// Need to put another new line at the end.

@@ -702,8 +702,8 @@ int run_action_server_legacy(struct config *cconf, struct sdirs *sdirs,
 			}
 			conf_val_reset(restoreregex, &(cconf->regex));
 			async_write_str(CMD_GEN, "ok");
-			ret=do_restore_server(sdirs, cconf, act, srestore,
-				&dir_for_notify);
+			ret=do_restore_server_legacy(sdirs,
+				cconf, act, srestore, &dir_for_notify);
 			if(dir_for_notify)
 			{
 				maybe_do_notification(ret,
@@ -781,7 +781,7 @@ int run_action_server_legacy(struct config *cconf, struct sdirs *sdirs,
 				backupno=rbuf->buf+strlen("listb ");
 			}
 			async_write_str(CMD_GEN, "ok");
-			ret=do_list_server(sdirs, cconf, backupno,
+			ret=do_list_server_legacy(sdirs, cconf, backupno,
 				listregex, browsedir);
 		}
 	}

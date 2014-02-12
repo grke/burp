@@ -770,7 +770,7 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 	return ret;
 }
 
-int do_restore_server(struct sdirs *sdirs, struct config *cconf,
+int do_restore_server_legacy(struct sdirs *sdirs, struct config *cconf,
 	enum action act, int srestore, char **dir_for_notify)
 {
 	int a=0;

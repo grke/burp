@@ -99,22 +99,21 @@ static int list_manifest(const char *fullpath, regex_t *regex,
 			break;
 		}
 
-		if(mb.cmd!=CMD_DIRECTORY
-		 && mb.cmd!=CMD_FILE
-		 && mb.cmd!=CMD_ENC_FILE
-		 && mb.cmd!=CMD_EFS_FILE
-		 && mb.cmd!=CMD_SPECIAL
-		 && !cmd_is_link(mb.cmd))
+		if(mb.path.cmd!=CMD_DIRECTORY
+		 && mb.path.cmd!=CMD_FILE
+		 && mb.path.cmd!=CMD_ENC_FILE
+		 && mb.path.cmd!=CMD_EFS_FILE
+		 && mb.path.cmd!=CMD_SPECIAL
+		 && !cmd_is_link(mb.path.cmd))
 			continue;
 
-		//if(mb.path[mb.plen]=='\n') mb.path[mb.plen]='\0';
-		write_status(STATUS_LISTING, mb.path, conf);
+		write_status(STATUS_LISTING, mb.path.buf, conf);
 
 		if(browsedir)
 		{
 			int r;
 			if((r=check_browsedir(browsedir,
-				&(mb.path), bdlen, &last_bd_match))<0)
+				&(mb.path.buf), bdlen, &last_bd_match))<0)
 			{
 				quit++;
 				ret=-1;
@@ -124,17 +123,23 @@ static int list_manifest(const char *fullpath, regex_t *regex,
 		}
 		else
 		{
-			if(check_regex(regex, mb.path))
+			if(check_regex(regex, mb.path.buf))
 				show++;
 		}
 		if(show)
 		{
-			if(async_write_strn(CMD_ATTRIBS, mb.statbuf, mb.slen)
-			  || async_write_strn(mb.cmd, mb.path, mb.plen))
-			{ quit++; ret=-1; }
+			if(async_write(&mb.attr)
+			  || async_write(&mb.path))
+			{
+				quit++;
+				ret=-1;
+			}
 			else if(sbufl_is_link(&mb)
-			  && async_write_strn(mb.cmd, mb.linkto, mb.llen))
-			{ quit++; ret=-1; }
+			  && async_write(&mb.link))
+			{
+				quit++;
+				ret=-1;
+			}
 		}
 	}
 	gzclose_fp(&zp);

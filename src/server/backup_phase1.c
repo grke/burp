@@ -39,19 +39,19 @@ int backup_phase1_server(struct sdirs *sdirs, struct config *conf)
 				ret=-1;
 			break;
 		}
-		write_status(STATUS_SCANNING, sb.path, conf);
+		write_status(STATUS_SCANNING, sb.path.buf, conf);
 		if(sbufl_to_manifest_phase1(&sb, NULL, p1zp))
 		{
 			ret=-1;
 			break;
 		}
-		do_filecounter(conf->p1cntr, sb.cmd, 0);
+		do_filecounter(conf->p1cntr, sb.path.cmd, 0);
 
-		if(sb.cmd==CMD_FILE
-		  || sb.cmd==CMD_ENC_FILE
-		  || sb.cmd==CMD_METADATA
-		  || sb.cmd==CMD_ENC_METADATA
-		  || sb.cmd==CMD_EFS_FILE)
+		if(sb.path.cmd==CMD_FILE
+		  || sb.path.cmd==CMD_ENC_FILE
+		  || sb.path.cmd==CMD_METADATA
+		  || sb.path.cmd==CMD_ENC_METADATA
+		  || sb.path.cmd==CMD_EFS_FILE)
 			do_filecounter_bytes(conf->p1cntr,
 				(unsigned long long)sb.statp.st_size);
 	}

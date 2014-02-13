@@ -97,7 +97,7 @@ int attribs_encode(struct sbuf *sb)
 #endif
 
 // Decode a stat packet from base64 characters.
-void attribs_decode_low_level(struct sbuf *sb)
+void attribs_decode(struct sbuf *sb)
 {
 	const char *p=sb->attr.buf;
 	struct stat *statp=&sb->statp;
@@ -189,11 +189,6 @@ void attribs_decode_low_level(struct sbuf *sb)
 		sb->compression=-1;
 }
 
-void attribs_decode(struct sbuf *sb)
-{
-	attribs_decode_low_level(sb);
-}
-
 static int set_file_times(const char *path, struct utimbuf *ut, struct stat *statp, struct cntr *cntr)
 {
 	int e;
@@ -222,7 +217,7 @@ uint64_t decode_file_no(struct sbuf *sb)
 	return (uint64_t)val;
 }
 
-int attribs_set(const char *path, struct stat *statp, int64_t winattr, struct config *conf)
+int attribs_set(const char *path, struct stat *statp, uint64_t winattr, struct config *conf)
 {
 	struct utimbuf ut;
 

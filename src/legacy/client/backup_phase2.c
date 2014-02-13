@@ -110,34 +110,35 @@ static int load_signature_and_send_delta(BFILE *bfd, FILE *in, unsigned long lon
 	return r;
 }
 
-static int send_whole_file_w(char cmd, const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen, size_t datalen)
+static int send_whole_file_w(struct sbufl *sb, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen, size_t datalen)
 {
-	if((compression || encpassword) && cmd!=CMD_EFS_FILE)
-		return send_whole_file_gzl(fname, datapth, quick_read,
+	if((compression || encpassword) && sb->path.cmd!=CMD_EFS_FILE)
+		return send_whole_file_gzl(sb->path.buf, datapth, quick_read,
 		  bytes, 
 		  encpassword, cntr, compression, bfd, fp, extrameta, elen,
 		  datalen);
 	else
-		return send_whole_filel(cmd, fname, datapth, quick_read, bytes, 
+		return send_whole_filel(sb->path.cmd, sb->path.buf,
+		  datapth, quick_read, bytes, 
 		  cntr, bfd, fp, extrameta, elen,
 		  datalen);
 }
 
-static int forget_file(struct sbufl *sb, char cmd, struct cntr *cntr)
+static int forget_file(struct sbufl *sb, struct config *conf)
 {
 	// Tell the server to forget about this
 	// file, otherwise it might get stuck
 	// on a select waiting for it to arrive.
-	if(async_write_str(CMD_INTERRUPT, sb->path))
+	if(async_write_str(CMD_INTERRUPT, sb->path.buf))
 		return 0;
 
-	if(cmd==CMD_FILE && sb->datapth)
+	if(sb->path.cmd==CMD_FILE && sb->datapth.buf)
 	{
 		rs_signature_t *sumset=NULL;
 		// The server will be sending
 		// us a signature. Munch it up
 		// then carry on.
-		if(load_signature(&sumset, cntr))
+		if(load_signature(&sumset, conf->cntr))
 			return -1;
 		else rs_free_sumset(sumset);
 	}
@@ -148,7 +149,6 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 {
 	int ret=0;
 	int quit=0;
-	char attribs[MAXSTRING];
 	// For efficiency, open Windows files for the VSS data, and do not
 	// close them until another time around the loop, when the actual
 	// data is read.
@@ -194,7 +194,7 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 			//logp("now: %c:%s\n", rbuf->cmd, rbuf->buf);
 			if(rbuf->cmd==CMD_DATAPTH)
 			{
-				sb.datapth=rbuf->buf;
+				iobuf_copy(&sb.datapth, rbuf);
 				rbuf->buf=NULL;
 				continue;
 			}
@@ -218,26 +218,23 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 			  || rbuf->cmd==CMD_EFS_FILE)
 			{
 				int forget=0;
-				uint64_t winattr=0;
-				struct stat statbuf;
 				char *extrameta=NULL;
 				size_t elen=0;
 				unsigned long long bytes=0;
 				FILE *fp=NULL;
-				int compression=conf->compression;
+				sb.compression=conf->compression;
 
-				sb.path=rbuf->buf;
+				iobuf_copy(&sb.path, rbuf);
 				rbuf->buf=NULL;
 
 #ifdef HAVE_WIN32
-				if(win32_lstat(sb.path, &statbuf, &winattr))
+				if(win32_lstat(sb.path.buf, &sb.statp, &sb.winattr))
 #else
-				if(lstat(sb.path, &statbuf))
+				if(lstat(sb.path.buf, &sb.statp))
 #endif
 				{
 					logw(conf->cntr, "Path has vanished: %s", sb.path);
-					if(forget_file(&sb,
-						rbuf->cmd, conf->cntr))
+					if(forget_file(&sb, conf))
 					{
 						ret=-1;
 						quit++;
@@ -247,7 +244,7 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 				}
 
 				if(conf->min_file_size
-				  && statbuf.st_size<
+				  && sb.statp.st_size<
 					(boffset_t)conf->min_file_size
 				  && (rbuf->cmd==CMD_FILE
 				  || rbuf->cmd==CMD_ENC_FILE
@@ -257,7 +254,7 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 					forget++;
 				}
 				else if(conf->max_file_size
-				  && statbuf.st_size>
+				  && sb.statp.st_size>
 					(boffset_t)conf->max_file_size
 				  && (rbuf->cmd==CMD_FILE
 				  || rbuf->cmd==CMD_ENC_FILE
@@ -269,25 +266,28 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 
 				if(!forget)
 				{
-					compression=in_exclude_comp(conf->excom,
-					  sb.path, conf->compression);
-					encode_stat(attribs,
-					  &statbuf, winattr, compression);
-					if(open_file_for_sendl(
+					sb.compression=in_exclude_comp(
+					  conf->excom,
+					  sb.path.buf, conf->compression);
+					if(encode_stat(&sb))
+					{
+						ret=-1;
+						quit++;
+					}
+					else if(open_file_for_sendl(
 #ifdef HAVE_WIN32
 						&bfd, NULL,
 #else
 						NULL, &fp,
 #endif
-						sb.path, winattr,
+						sb.path.buf, sb.winattr,
 						&datalen, conf))
 							forget++;
 				}
 
 				if(forget)
 				{
-					if(forget_file(&sb,
-					  rbuf->cmd, conf->cntr))
+					if(forget_file(&sb, conf))
 					{
 						ret=-1;
 						quit++;
@@ -309,9 +309,9 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 #ifdef HAVE_WIN32
 						&bfd,
 #endif
-						sb.path,
-						&statbuf, &extrameta, &elen,
-						winattr, conf,
+						sb.path.buf,
+						&sb.statp, &extrameta, &elen,
+						sb.winattr, conf,
 						&datalen))
 					{
 						logw(conf->cntr, "Meta data error for %s", sb.path);
@@ -339,13 +339,13 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 					}
 				}
 
-				if(rbuf->cmd==CMD_FILE && sb.datapth)
+				if(rbuf->cmd==CMD_FILE && sb.datapth.buf)
 				{
 					unsigned long long sentbytes=0;
 					// Need to do sig/delta stuff.
-					if(async_write_str(CMD_DATAPTH, sb.datapth)
-					  || async_write_str(CMD_ATTRIBS, attribs)
-					  || async_write_str(CMD_FILE, sb.path)
+					if(async_write(&sb.datapth)
+					  || async_write(&sb.attr)
+					  || async_write(&sb.path)
 					  || load_signature_and_send_delta(
 						&bfd, fp,
 						&bytes, &sentbytes, conf->cntr,
@@ -368,12 +368,12 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 					//	sb.path);
 					// send the whole file.
 
-					if((async_write_str(CMD_ATTRIBS, attribs)
-					  || async_write_str(rbuf->cmd, sb.path))
-					  || send_whole_file_w(rbuf->cmd, sb.path,
+					if((async_write(&sb.attr)
+					  || async_write(&sb.path))
+					  || send_whole_file_w(&sb,
 						NULL, 0, &bytes,
 						conf->encryption_password,
-						conf->cntr, compression,
+						conf->cntr, sb.compression,
 						&bfd, fp,
 						extrameta, elen,
 						datalen))

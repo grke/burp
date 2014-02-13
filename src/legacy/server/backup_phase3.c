@@ -37,13 +37,13 @@ int backup_phase3_server(struct sdirs *sdirs, struct config *cconf,
 
 	while(ucfp || p2fp)
 	{
-		if(ucfp && !ucb.path && (ars=sbufl_fill(ucfp, NULL, &ucb, cconf->cntr)))
+		if(ucfp && !ucb.path.buf && (ars=sbufl_fill(ucfp, NULL, &ucb, cconf->cntr)))
 		{
 			if(ars<0) { ret=-1; break; }
 			// ars==1 means it ended ok.
 			close_fp(&ucfp);
 		}
-		if(p2fp && !p2b.path && (ars=sbufl_fill(p2fp, NULL, &p2b, cconf->cntr)))
+		if(p2fp && !p2b.path.buf && (ars=sbufl_fill(p2fp, NULL, &p2b, cconf->cntr)))
 		{
 			if(ars<0) { ret=-1; break; }
 			// ars==1 means it ended ok.
@@ -54,39 +54,39 @@ int backup_phase3_server(struct sdirs *sdirs, struct config *cconf,
 			if(recovery) break;
 		}
 
-		if(ucb.path && !p2b.path)
+		if(ucb.path.buf && !p2b.path.buf)
 		{
-			write_status(STATUS_MERGING, ucb.path, cconf);
+			write_status(STATUS_MERGING, ucb.path.buf, cconf);
 			if(sbufl_to_manifest(&ucb, mp, mzp)) { ret=-1; break; }
 			free_sbufl(&ucb);
 		}
-		else if(!ucb.path && p2b.path)
+		else if(!ucb.path.buf && p2b.path.buf)
 		{
-			write_status(STATUS_MERGING, p2b.path, cconf);
+			write_status(STATUS_MERGING, p2b.path.buf, cconf);
 			if(sbufl_to_manifest(&p2b, mp, mzp)) { ret=-1; break; }
 			free_sbufl(&p2b);
 		}
-		else if(!ucb.path && !p2b.path) 
+		else if(!ucb.path.buf && !p2b.path.buf) 
 		{
 			continue;
 		}
 		else if(!(pcmp=sbufl_pathcmp(&ucb, &p2b)))
 		{
 			// They were the same - write one and free both.
-			write_status(STATUS_MERGING, p2b.path, cconf);
+			write_status(STATUS_MERGING, p2b.path.buf, cconf);
 			if(sbufl_to_manifest(&p2b, mp, mzp)) { ret=-1; break; }
 			free_sbufl(&p2b);
 			free_sbufl(&ucb);
 		}
 		else if(pcmp<0)
 		{
-			write_status(STATUS_MERGING, ucb.path, cconf);
+			write_status(STATUS_MERGING, ucb.path.buf, cconf);
 			if(sbufl_to_manifest(&ucb, mp, mzp)) { ret=-1; break; }
 			free_sbufl(&ucb);
 		}
 		else
 		{
-			write_status(STATUS_MERGING, p2b.path, cconf);
+			write_status(STATUS_MERGING, p2b.path.buf, cconf);
 			if(sbufl_to_manifest(&p2b, mp, mzp)) { ret=-1; break; }
 			free_sbufl(&p2b);
 		}

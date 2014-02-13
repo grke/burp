@@ -63,3 +63,12 @@ void iobuf_from_str(struct iobuf *iobuf, char cmd, char *str)
 	iobuf->len=strlen(str);
 }
 
+int iobuf_send_msg_fp(struct iobuf *iobuf, FILE *fp)
+{
+	return send_msg_fp(fp, iobuf->cmd, iobuf->buf, iobuf->len);
+}
+
+int iobuf_send_msg_zp(struct iobuf *iobuf, gzFile zp)
+{
+	return send_msg_zp(zp, iobuf->cmd, iobuf->buf, iobuf->len);
+}

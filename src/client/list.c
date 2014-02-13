@@ -303,7 +303,7 @@ int do_list_client(struct config *conf, enum action act, int json)
 			goto end;
 		}
 
-		attribs_decode_low_level(sb);
+		attribs_decode(sb);
 
 		iobuf_free_content(&sb->path);
 		if(async_read(&sb->path))

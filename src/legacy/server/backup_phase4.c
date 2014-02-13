@@ -508,29 +508,29 @@ static int maybe_delete_files_from_manifest(const char *manifest, const char *de
 
 	while(omzp || dfp)
 	{
-		if(dfp && !db.path && (ars=sbufl_fill(dfp, NULL, &db, cconf->cntr)))
+		if(dfp && !db.path.buf && (ars=sbufl_fill(dfp, NULL, &db, cconf->cntr)))
 		{
 			if(ars<0) { ret=-1; break; }
 			// ars==1 means it ended ok.
 			close_fp(&dfp);
 		}
-		if(omzp && !mb.path && (ars=sbufl_fill(NULL, omzp, &mb, cconf->cntr)))
+		if(omzp && !mb.path.buf && (ars=sbufl_fill(NULL, omzp, &mb, cconf->cntr)))
 		{
 			if(ars<0) { ret=-1; break; }
 			// ars==1 means it ended ok.
 			gzclose_fp(&omzp);
 		}
 
-		if(mb.path && !db.path)
+		if(mb.path.buf && !db.path.buf)
 		{
 			if(sbufl_to_manifest(&mb, NULL, nmzp)) { ret=-1; break; }
 			free_sbufl(&mb);
 		}
-		else if(!mb.path && db.path)
+		else if(!mb.path.buf && db.path.buf)
 		{
 			free_sbufl(&db);
 		}
-		else if(!mb.path && !db.path) 
+		else if(!mb.path.buf && !db.path.buf) 
 		{
 			continue;
 		}
@@ -639,13 +639,13 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct config *cconf,
 	init_sbufl(&sb);
 	while(!(ars=sbufl_fill(NULL, zp, &sb, cconf->cntr)))
 	{
-		if(sb.datapth)
+		if(sb.datapth.buf)
 		{
-			write_status(STATUS_SHUFFLING, sb.datapth, cconf);
+			write_status(STATUS_SHUFFLING, sb.datapth.buf, cconf);
 
-			if((ret=jiggle(sb.datapth, currentdata, datadirtmp,
+			if((ret=jiggle(sb.datapth.buf, currentdata, datadirtmp,
 				datadir, deltabdir, deltafdir,
-				sigpath, sb.endfile, deletionsfile, &delfp,
+				sigpath, sb.endfile.buf, deletionsfile, &delfp,
 				&sb, hardlinked, sb.compression, cconf)))
 					break;
 		}

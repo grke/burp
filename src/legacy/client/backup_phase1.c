@@ -10,11 +10,11 @@ static char metasymbol=CMD_METADATA;
 
 static long server_name_max;
 
-static int maybe_send_extrameta(const char *path, char cmd, const char *attribs, struct config *conf)
+static int maybe_send_extrameta(const char *path, char cmd, struct sbufl *sb, struct config *conf)
 {
 	if(has_extrameta(path, cmd))
 	{
-		if(async_write_str(CMD_ATTRIBS, attribs)
+		if(async_write(&sb->attr)
 		  || async_write_str(metasymbol, path))
 			return -1;
 		do_filecounter(conf->p1cntr, metasymbol, 1);
@@ -22,10 +22,20 @@ static int maybe_send_extrameta(const char *path, char cmd, const char *attribs,
 	return 0;
 }
 
+// FIX THIS: make the find file stuff return an sb - requires the burp2 stuff
+// to be compatible with the old stuff.
+static int encode_stat_w(struct sbufl *sb, FF_PKT *ff, int compression)
+{
+	sb->winattr=ff->winattr;
+	sb->compression=compression;
+	memcpy(&sb->statp, &ff->statp, sizeof(sb->statp));
+	return encode_stat(sb);
+}
+
 int send_file_legacy(FF_PKT *ff, bool top_level, struct config *conf)
 {
    char msg[128]="";
-   char attribs[MAXSTRING];
+   static struct sbufl sb;
 
    if(!file_is_included(conf, ff->fname, top_level)) return 0;
 
@@ -53,9 +63,8 @@ int send_file_legacy(FF_PKT *ff, bool top_level, struct config *conf)
 		if(ff->type==FT_REG
 		  || ff->type==FT_DIR)
 		{
-			encode_stat(attribs,
-				&ff->statp, ff->winattr, conf->compression);
-			if(async_write_str(CMD_ATTRIBS, attribs)
+			if(encode_stat_w(&sb, ff, conf->compression)
+			  || async_write(sb.attr)
 			  || async_write_str(CMD_EFS_FILE, ff->fname))
 				return -1;
 			do_filecounter(conf->p1cntr, CMD_EFS_FILE, 1);
@@ -79,28 +88,29 @@ int send_file_legacy(FF_PKT *ff, bool top_level, struct config *conf)
 #ifndef HAVE_WIN32
    case FT_LNK_H:
         //printf("Lnka: %s -> %s\n", ff->fname, ff->link);
-   	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
-	if(async_write_str(CMD_ATTRIBS, attribs)
+   	if(encode_stat_w(&sb, ff, conf->compression)
+	  || async_write(&sb.attr)
 	  || async_write_str(CMD_HARD_LINK, ff->fname)
 	  || async_write_str(CMD_HARD_LINK, ff->link))
 		return -1;
 	do_filecounter(conf->p1cntr, CMD_HARD_LINK, 1);
 	// At least FreeBSD 8.2 can have different xattrs on hard links.
-	if(maybe_send_extrameta(ff->fname, CMD_HARD_LINK, attribs, conf))
+	if(maybe_send_extrameta(ff->fname, CMD_HARD_LINK, &sb, conf))
 		return -1;
 #endif
       break;
    case FT_RAW:
    case FT_FIFO:
    case FT_REG:
-      encode_stat(attribs, &ff->statp, ff->winattr,
-		in_exclude_comp(conf->excom, ff->fname, conf->compression));
+      if(encode_stat_w(&sb, ff,
+		in_exclude_comp(conf->excom, ff->fname, conf->compression)))
+			return -1;
 #ifdef HAVE_WIN32
       if(conf->split_vss && !conf->strip_vss
 	&& maybe_send_extrameta(ff->fname, filesymbol, attribs, conf))
 		return -1;
 #endif
-      if(async_write_str(CMD_ATTRIBS, attribs)
+      if(async_write(&sb.attr)
 	|| async_write_str(filesymbol, ff->fname))
 		return -1;
       do_filecounter(conf->p1cntr, filesymbol, 1);
@@ -116,23 +126,24 @@ int send_file_legacy(FF_PKT *ff, bool top_level, struct config *conf)
         do_filecounter(conf->p1cntr, vss_trail_symbol, 1);
       }
 #else
-      if(maybe_send_extrameta(ff->fname, filesymbol, attribs, conf))
+      if(maybe_send_extrameta(ff->fname, filesymbol, &sb, conf))
 		return -1;
 #endif
       break;
 #ifndef HAVE_WIN32
    case FT_LNK_S:
 	//printf("link: %s -> %s\n", ff->fname, ff->link);
-   	encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
-        if(conf->split_vss && !conf->strip_vss
-	  && maybe_send_extrameta(ff->fname, CMD_SOFT_LINK, attribs, conf))
+   	if(encode_stat_w(&sb, ff, conf->compression))
 		return -1;
-	if(async_write_str(CMD_ATTRIBS, attribs)
+        if(conf->split_vss && !conf->strip_vss
+	  && maybe_send_extrameta(ff->fname, CMD_SOFT_LINK, &sb, conf))
+		return -1;
+	if(async_write(&sb.attr)
 	  || async_write_str(CMD_SOFT_LINK, ff->fname)
 	  || async_write_str(CMD_SOFT_LINK, ff->link))
 		return -1;
 	do_filecounter(conf->p1cntr, CMD_SOFT_LINK, 1);
-        if(maybe_send_extrameta(ff->fname, CMD_SOFT_LINK, attribs, conf))
+        if(maybe_send_extrameta(ff->fname, CMD_SOFT_LINK, &sb, conf))
 		return -1;
 #endif
       break;
@@ -152,8 +163,8 @@ int send_file_legacy(FF_PKT *ff, bool top_level, struct config *conf)
 	 }
 	 else
 	 {
-		encode_stat(attribs,
-			&ff->statp, ff->winattr, conf->compression);
+		if(encode_stat_w(&sb, ff, conf->compression))
+			return -1;
 #ifdef HAVE_WIN32
 		if(conf->split_vss || conf->strip_vss)
 		{
@@ -171,23 +182,23 @@ int send_file_legacy(FF_PKT *ff, bool top_level, struct config *conf)
 			do_filecounter(conf->p1cntr, filesymbol, 1);
 		}
 #else
-	      	if(async_write_str(CMD_ATTRIBS, attribs)
+	      	if(async_write(&sb.attr)
 		  || async_write_str(CMD_DIRECTORY, ff->fname)) return -1;
 		do_filecounter(conf->p1cntr, CMD_DIRECTORY, 1);
         	if(maybe_send_extrameta(ff->fname, CMD_DIRECTORY,
-			attribs, conf)) return -1;
+			&sb, conf)) return -1;
 #endif
 	 }
 	}
       break;
 #ifndef HAVE_WIN32
    case FT_SPEC: // special file - fifo, socket, device node...
-      encode_stat(attribs, &ff->statp, ff->winattr, conf->compression);
-      if(async_write_str(CMD_ATTRIBS, attribs)
-	  || async_write_str(CMD_SPECIAL, ff->fname))
+      if(encode_stat_w(&sb, ff, conf->compression)
+	|| async_write(&sb.attr)
+	|| async_write_str(CMD_SPECIAL, ff->fname))
 		return -1;
       do_filecounter(conf->p1cntr, CMD_SPECIAL, 1);
-      if(maybe_send_extrameta(ff->fname, CMD_SPECIAL, attribs, conf))
+      if(maybe_send_extrameta(ff->fname, CMD_SPECIAL, &sb, conf))
 		return -1;
 #endif
       break;

@@ -2,20 +2,24 @@
 
 void init_sbufl(struct sbufl *sb)
 {
-	sb->cmd=CMD_ERROR;
-	sb->path=NULL;
-	sb->plen=0;
-	sb->linkto=NULL;
-	sb->llen=0;
-	sb->datapth=NULL;
-	sb->statbuf=NULL;
-	sb->slen=0;
-	sb->compression=-1;
+	sb->path.cmd=CMD_ERROR;
+	sb->path.buf=NULL;
+	sb->path.len=0;
+
+	sb->attr.cmd=CMD_ATTRIBS;
+	sb->attr.buf=NULL;
+	sb->attr.len=0;
+
+	sb->link.cmd=CMD_SOFT_LINK;
+	sb->link.buf=NULL;
+	sb->link.len=0;
 
 	sb->send_path=0;
 	sb->send_stat=0;
 	sb->send_datapth=0;
 	sb->send_endofsig=0;
+
+	sb->compression=-1;
 
 	memset(&(sb->rsbuf), 0, sizeof(sb->rsbuf));
 	memset(&(sb->statp), 0, sizeof(sb->statp));
@@ -26,25 +30,30 @@ void init_sbufl(struct sbufl *sb)
 	sb->sigfp=NULL;
 	sb->sigzp=NULL;
 
-	sb->receivedelta=0;
+	sb->receive_delta=0;
 
 	sb->fp=NULL;
 	sb->zp=NULL;
 
-	sb->endfile=NULL;
-	sb->elen=0;
+	sb->datapth.cmd=CMD_DATAPTH;
+	sb->datapth.buf=NULL;
+	sb->datapth.len=0;
+
+	sb->endfile.cmd=CMD_END_FILE;
+	sb->endfile.buf=NULL;
+	sb->endfile.len=0;
 }
 
 void free_sbufl(struct sbufl *sb)
 {
-	if(sb->path) free(sb->path);
-	if(sb->linkto) free(sb->linkto);
-	if(sb->datapth) free(sb->datapth);
-	if(sb->statbuf) free(sb->statbuf);
+	iobuf_free_content(&sb->path);
+	iobuf_free_content(&sb->attr);
+	iobuf_free_content(&sb->link);
+	iobuf_free_content(&sb->datapth);
 	if(sb->sigjob) rs_job_free(sb->sigjob);
 	if(sb->infb) rs_filebuf_free(sb->infb);
 	if(sb->outfb) rs_filebuf_free(sb->outfb);
-	if(sb->endfile) free(sb->endfile);
+	iobuf_free_content(&sb->endfile);
 	close_fp(&sb->sigfp);
 	gzclose_fp(&sb->sigzp);
 	close_fp(&sb->fp);
@@ -54,12 +63,12 @@ void free_sbufl(struct sbufl *sb)
 
 int sbufl_is_link(struct sbufl *sb)
 {
-	return cmd_is_link(sb->cmd);
+	return cmd_is_link(sb->path.cmd);
 }
 
 int sbufl_is_endfile(struct sbufl *sb)
 {
-	return sb->cmd==CMD_END_FILE;
+	return sb->path.cmd==CMD_END_FILE;
 }
 
 static int async_read_fp_msg(FILE *fp, gzFile zp, char **buf, size_t len)
@@ -130,7 +139,6 @@ static int async_read_fp(FILE *fp, gzFile zp, struct iobuf *rbuf)
 static int async_read_stat(FILE *fp, gzFile zp, struct sbufl *sb, struct cntr *cntr)
 {
 	static struct iobuf *rbuf=NULL;
-	char *d=NULL;
 
 	if(!rbuf && !(rbuf=iobuf_alloc())) return -1;
 
@@ -143,7 +151,6 @@ static int async_read_stat(FILE *fp, gzFile zp, struct sbufl *sb, struct cntr *c
 			if((asr=async_read_fp(fp, zp, rbuf)))
 			{
 				//logp("async_read_fp returned: %d\n", asr);
-				if(d) free(d);
 				return asr;
 			}
 			if(rbuf->buf[rbuf->len]=='\n')
@@ -164,17 +171,14 @@ static int async_read_stat(FILE *fp, gzFile zp, struct sbufl *sb, struct cntr *c
 		}
 		if(rbuf->cmd==CMD_DATAPTH)
 		{
-			if(d) free(d);
-			d=rbuf->buf;
+			iobuf_copy(&sb->datapth, rbuf);
 			rbuf->buf=NULL;
 		}
 		else if(rbuf->cmd==CMD_ATTRIBS)
 		{
-			decode_stat(rbuf->buf, &(sb->statp),
-				&(sb->winattr), &(sb->compression));
-			sb->statbuf=rbuf->buf; rbuf->buf=NULL;
-			sb->slen=rbuf->len;
-			sb->datapth=d;
+			iobuf_copy(&sb->attr, rbuf);
+			rbuf->buf=NULL;
+			decode_stat(sb);
 
 			return 0;
 		}
@@ -184,7 +188,6 @@ static int async_read_stat(FILE *fp, gzFile zp, struct sbufl *sb, struct cntr *c
 		  || (rbuf->cmd==CMD_GEN && !strcmp(rbuf->buf, "backupphase2"))
 		  || (rbuf->cmd==CMD_GEN && !strcmp(rbuf->buf, "estimateend")))
 		{
-			if(d) free(d);
 			return 1;
 		}
 		else
@@ -193,7 +196,6 @@ static int async_read_stat(FILE *fp, gzFile zp, struct sbufl *sb, struct cntr *c
 			break;
 		}
 	}
-	if(d) free(d);
 	return -1;
 }
 
@@ -205,15 +207,13 @@ static int do_sbufl_fill_from_net(struct sbufl *sb, struct cntr *cntr)
 	iobuf_free_content(rbuf);
 	if((ars=async_read_stat(NULL, NULL, sb, cntr))) return ars;
 	if((ars=async_read(rbuf))) return ars;
-	sb->cmd=rbuf->cmd;
-	sb->path=rbuf->buf; rbuf->buf=NULL;
-	sb->plen=rbuf->len;
+	iobuf_copy(&sb->path, rbuf);
+	rbuf->buf=NULL;
 	if(sbufl_is_link(sb))
 	{
 		iobuf_free_content(rbuf);
 		if((ars=async_read(rbuf))) return ars;
-		sb->linkto=rbuf->buf;
-		sb->llen=rbuf->len;
+		iobuf_copy(&sb->link, rbuf);
 		if(!cmd_is_link(rbuf->cmd))
 		{
 			iobuf_log_unexpected(rbuf, __FUNCTION__);
@@ -230,34 +230,29 @@ static int do_sbufl_fill_from_file(FILE *fp, gzFile zp, struct sbufl *sb, int ph
 	//free_sbufl(sb);
 	if((ars=async_read_stat(fp, zp, sb, cntr))) return ars;
 	if((ars=async_read_fp(fp, zp, &rbuf))) return ars;
-	sb->cmd=rbuf.cmd;
-	sb->path=rbuf.buf;
-	sb->plen=rbuf.len;
-	//sb->path[sb->plen]='\0'; sb->plen--; // avoid new line
+	iobuf_copy(&sb->path, &rbuf);
 	if(sbufl_is_link(sb))
 	{
 		if((ars=async_read_fp(fp, zp, &rbuf))) return ars;
-		sb->linkto=rbuf.buf;
-		sb->llen=rbuf.len;
+		iobuf_copy(&sb->link, &rbuf);
 		if(!cmd_is_link(rbuf.cmd))
 		{
 			iobuf_log_unexpected(&rbuf, __FUNCTION__);
 			return -1;
 		}
 	}
-	else if(!phase1 && (sb->cmd==CMD_FILE
-			|| sb->cmd==CMD_ENC_FILE
-			|| sb->cmd==CMD_METADATA
-			|| sb->cmd==CMD_ENC_METADATA
-			|| sb->cmd==CMD_VSS
-			|| sb->cmd==CMD_ENC_VSS
-			|| sb->cmd==CMD_VSS_T
-			|| sb->cmd==CMD_ENC_VSS_T
-			|| sb->cmd==CMD_EFS_FILE))
+	else if(!phase1 && (sb->path.cmd==CMD_FILE
+			|| sb->path.cmd==CMD_ENC_FILE
+			|| sb->path.cmd==CMD_METADATA
+			|| sb->path.cmd==CMD_ENC_METADATA
+			|| sb->path.cmd==CMD_VSS
+			|| sb->path.cmd==CMD_ENC_VSS
+			|| sb->path.cmd==CMD_VSS_T
+			|| sb->path.cmd==CMD_ENC_VSS_T
+			|| sb->path.cmd==CMD_EFS_FILE))
 	{
 		if((ars=async_read_fp(fp, zp, &rbuf))) return ars;
-		sb->endfile=rbuf.buf;
-		sb->elen=rbuf.len;
+		iobuf_copy(&sb->endfile, &rbuf);
 		if(rbuf.cmd!=CMD_END_FILE)
 		{
 			iobuf_log_unexpected(&rbuf, __FUNCTION__);
@@ -280,60 +275,54 @@ int sbufl_fill_phase1(FILE *fp, gzFile zp, struct sbufl *sb, struct cntr *cntr)
 
 static int sbufl_to_fp(struct sbufl *sb, FILE *mp, int write_endfile)
 {
-	if(sb->path)
+	if(!sb->path.buf) return 0;
+	if(sb->datapth.buf
+	  || iobuf_send_msg_fp(&sb->datapth, mp))
+		return -1;
+	if(iobuf_send_msg_fp(&sb->attr, mp)
+	  || iobuf_send_msg_fp(&sb->path, mp))
+		return -1;
+	if(sb->link.buf
+	  && iobuf_send_msg_fp(&sb->link, mp))
+		return -1;
+	if(write_endfile && (sb->path.cmd==CMD_FILE
+	  || sb->path.cmd==CMD_ENC_FILE
+	  || sb->path.cmd==CMD_METADATA
+	  || sb->path.cmd==CMD_ENC_METADATA
+	  || sb->path.cmd==CMD_VSS
+	  || sb->path.cmd==CMD_ENC_VSS
+	  || sb->path.cmd==CMD_VSS_T
+	  || sb->path.cmd==CMD_ENC_VSS_T
+	  || sb->path.cmd==CMD_EFS_FILE))
 	{
-		if(sb->datapth
-		  && send_msg_fp(mp, CMD_DATAPTH,
-			sb->datapth, strlen(sb->datapth))) return -1;
-		if(send_msg_fp(mp, CMD_ATTRIBS, sb->statbuf, sb->slen)
-		  || send_msg_fp(mp, sb->cmd, sb->path, sb->plen))
-			return -1;
-		if(sb->linkto
-		  && send_msg_fp(mp, sb->cmd, sb->linkto, sb->llen))
-			return -1;
-		if(write_endfile && (sb->cmd==CMD_FILE
-		  || sb->cmd==CMD_ENC_FILE
-		  || sb->cmd==CMD_METADATA
-		  || sb->cmd==CMD_ENC_METADATA
-		  || sb->cmd==CMD_VSS
-		  || sb->cmd==CMD_ENC_VSS
-		  || sb->cmd==CMD_VSS_T
-		  || sb->cmd==CMD_ENC_VSS_T
-		  || sb->cmd==CMD_EFS_FILE))
-		{
-			if(send_msg_fp(mp, CMD_END_FILE,
-				sb->endfile, sb->elen)) return -1;
-		}
+		if(iobuf_send_msg_fp(&sb->endfile, mp)) return -1;
 	}
 	return 0;
 }
 
 static int sbufl_to_zp(struct sbufl *sb, gzFile zp, int write_endfile)
 {
-	if(sb->path)
+	if(!sb->path.buf) return 0;
+	if(sb->datapth.buf
+	  || iobuf_send_msg_zp(&sb->datapth, zp))
+		return -1;
+	if(iobuf_send_msg_zp(&sb->attr, zp)
+	  || iobuf_send_msg_zp(&sb->path, zp))
+		return -1;
+	if(sb->link.buf
+	  && iobuf_send_msg_zp(&sb->link, zp))
+		return -1;
+	if(write_endfile && (sb->path.cmd==CMD_FILE
+	  || sb->path.cmd==CMD_ENC_FILE
+	  || sb->path.cmd==CMD_METADATA
+	  || sb->path.cmd==CMD_ENC_METADATA
+	  || sb->path.cmd==CMD_VSS
+	  || sb->path.cmd==CMD_ENC_VSS
+	  || sb->path.cmd==CMD_VSS_T
+	  || sb->path.cmd==CMD_ENC_VSS_T
+	  || sb->path.cmd==CMD_EFS_FILE))
 	{
-		if(sb->datapth
-		  && send_msg_zp(zp, CMD_DATAPTH,
-			sb->datapth, strlen(sb->datapth))) return -1;
-		if(send_msg_zp(zp, CMD_ATTRIBS, sb->statbuf, sb->slen)
-		  || send_msg_zp(zp, sb->cmd, sb->path, sb->plen))
-			return -1;
-		if(sb->linkto
-		  && send_msg_zp(zp, sb->cmd, sb->linkto, sb->llen))
-			return -1;
-		if(write_endfile && (sb->cmd==CMD_FILE
-		  || sb->cmd==CMD_ENC_FILE
-		  || sb->cmd==CMD_METADATA
-		  || sb->cmd==CMD_ENC_METADATA
-		  || sb->cmd==CMD_VSS
-		  || sb->cmd==CMD_ENC_VSS
-		  || sb->cmd==CMD_VSS_T
-		  || sb->cmd==CMD_ENC_VSS_T
-		  || sb->cmd==CMD_EFS_FILE))
-		{
-			if(send_msg_zp(zp, CMD_END_FILE,
-				sb->endfile, sb->elen)) return -1;
-		}
+		if(iobuf_send_msg_zp(&sb->endfile, zp)) return -1;
 	}
 	return 0;
 }
@@ -358,7 +347,7 @@ void print_sbufl_arr(struct sbufl **list, int count, const char *str)
 {
 	int b=0;
 	for(b=0; b<count; b++)
-		printf("%s%d: '%s'\n", str, b, list[b]->path);
+		printf("%s%d: '%s'\n", str, b, list[b]->path.buf);
 }
 
 int add_to_sbufl_arr(struct sbufl ***sblist, struct sbufl *sb, int *count)
@@ -424,27 +413,27 @@ int del_from_sbufl_arr(struct sbufl ***sblist, int *count)
 int sbufl_pathcmp(struct sbufl *a, struct sbufl *b)
 {
 	int r;
-	if((r=pathcmp(a->path, b->path))) return r;
-	if(a->cmd==CMD_METADATA || a->cmd==CMD_ENC_METADATA)
+	if((r=pathcmp(a->path.buf, b->path.buf))) return r;
+	if(a->path.cmd==CMD_METADATA || a->path.cmd==CMD_ENC_METADATA)
 	{
-		if(b->cmd==CMD_METADATA || b->cmd==CMD_ENC_METADATA) return 0;
+		if(b->path.cmd==CMD_METADATA || b->path.cmd==CMD_ENC_METADATA) return 0;
 		else return 1;
 	}
-	else if(a->cmd==CMD_VSS || a->cmd==CMD_ENC_VSS)
+	else if(a->path.cmd==CMD_VSS || a->path.cmd==CMD_ENC_VSS)
 	{
-		if(b->cmd==CMD_VSS || b->cmd==CMD_ENC_VSS) return 0;
+		if(b->path.cmd==CMD_VSS || b->path.cmd==CMD_ENC_VSS) return 0;
 		else return -1;
 	}
-	else if(a->cmd==CMD_VSS_T || a->cmd==CMD_ENC_VSS_T)
+	else if(a->path.cmd==CMD_VSS_T || a->path.cmd==CMD_ENC_VSS_T)
 	{
-		if(b->cmd==CMD_VSS_T || b->cmd==CMD_ENC_VSS_T) return 0;
+		if(b->path.cmd==CMD_VSS_T || b->path.cmd==CMD_ENC_VSS_T) return 0;
 		else return 1;
 	}
 	else
 	{
-		if(b->cmd==CMD_METADATA || b->cmd==CMD_ENC_METADATA) return -1;
-		else if(b->cmd==CMD_VSS || b->cmd==CMD_ENC_VSS) return 1;
-		else if(b->cmd==CMD_VSS_T || b->cmd==CMD_ENC_VSS_T) return -1;
+		if(b->path.cmd==CMD_METADATA || b->path.cmd==CMD_ENC_METADATA) return -1;
+		else if(b->path.cmd==CMD_VSS || b->path.cmd==CMD_ENC_VSS) return 1;
+		else if(b->path.cmd==CMD_VSS_T || b->path.cmd==CMD_ENC_VSS_T) return -1;
 		else return 0;
 	}
 }

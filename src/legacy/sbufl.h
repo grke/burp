@@ -5,19 +5,12 @@
 
 struct sbufl
 {
-	// file data
-	char cmd;
-	size_t plen;
-	char *path;
-
-	size_t llen;
-	char *linkto;
-
-	size_t slen;
-	char *statbuf;
+	struct iobuf path; // File data.
+	struct iobuf link; // Link data.
+	struct iobuf attr; // Attribute data.
 
 	struct stat statp;
-	int64_t winattr;
+	uint64_t winattr;
 	int compression;
 
 	// Keep track of what needs to be sent.
@@ -26,8 +19,6 @@ struct sbufl
 	uint8_t send_datapth;
 	uint8_t send_endofsig;
 
-	char *datapth;
-
 	rs_buffers_t rsbuf;
 	rs_job_t *sigjob;
 	rs_filebuf_t *infb;
@@ -35,14 +26,14 @@ struct sbufl
 	FILE *sigfp;
 	gzFile sigzp;
 
-	int receive_delta;
+	uint8_t receive_delta;
 
 	// Used when saving stuff on the server.
 	FILE *fp;
 	gzFile zp;
 
-	char *endfile;
-	size_t elen;
+	struct iobuf datapth;
+	struct iobuf endfile;
 };
 
 extern void init_sbufl(struct sbufl *sb);

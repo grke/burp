@@ -21,13 +21,13 @@ static int read_phase1(gzFile zp, struct cntr *p1cntr)
 			}
 			return 0;
 		}
-		do_filecounter(p1cntr, p1b.cmd, 0);
+		do_filecounter(p1cntr, p1b.path.cmd, 0);
 
-		if(p1b.cmd==CMD_FILE
-		  || p1b.cmd==CMD_ENC_FILE
-		  || p1b.cmd==CMD_METADATA
-		  || p1b.cmd==CMD_ENC_METADATA
-		  || p1b.cmd==CMD_EFS_FILE)
+		if(p1b.path.cmd==CMD_FILE
+		  || p1b.path.cmd==CMD_ENC_FILE
+		  || p1b.path.cmd==CMD_METADATA
+		  || p1b.path.cmd==CMD_ENC_METADATA
+		  || p1b.path.cmd==CMD_EFS_FILE)
 			do_filecounter_bytes(p1cntr,
 				(unsigned long long)p1b.statp.st_size);
 	}
@@ -61,7 +61,8 @@ static int forward_sbufl(FILE *fp, gzFile zp, struct sbufl *b, struct sbufl *tar
 
 		// Make sure we end up with the highest datapth we can possibly
 		// find.
-		if(b->datapth && set_dpthl_from_string(dpthl, b->datapth, cconf))
+		if(b->datapth.buf
+		  && set_dpthl_from_string(dpthl, b->datapth.buf, cconf))
 		{
 			free_sbufl(b);
 			free_sbufl(&latest);
@@ -76,9 +77,9 @@ static int forward_sbufl(FILE *fp, gzFile zp, struct sbufl *b, struct sbufl *tar
 			if(ars<0)
 			{
 				free_sbufl(b);
-				if(latest.path)
+				if(latest.path.buf)
 				{
-					logp("Error after %s in forward_sbufl()\n", latest.path?latest.path:"");
+					logp("Error after %s in forward_sbufl()\n", latest.path.buf?latest.path.buf:"");
 				}
 				free_sbufl(&latest);
 				return -1;
@@ -108,12 +109,12 @@ static int forward_sbufl(FILE *fp, gzFile zp, struct sbufl *b, struct sbufl *tar
 
 		if(do_counters)
 		{
-			if(same) do_filecounter_same(cconf->cntr, b->cmd);
-			else do_filecounter_changed(cconf->cntr, b->cmd);
-			if(b->endfile)
+			if(same) do_filecounter_same(cconf->cntr, b->path.cmd);
+			else do_filecounter_changed(cconf->cntr, b->path.cmd);
+			if(b->endfile.buf)
 			{
 				unsigned long long e=0;
-				e=strtoull(b->endfile, NULL, 10);
+				e=strtoull(b->endfile.buf, NULL, 10);
 				do_filecounter_bytes(cconf->cntr, e);
 				do_filecounter_recvbytes(cconf->cntr, e);
 			}

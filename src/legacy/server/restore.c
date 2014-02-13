@@ -126,21 +126,21 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, str
 	return ret;
 }
 
-static int send_file(const char *fname, int patches, const char *best, const char *datapth, unsigned long long *bytes, char cmd, int64_t winattr, int compression, struct config *cconf)
+static int send_file(struct sbufl *sb, int patches, const char *best, unsigned long long *bytes, struct config *cconf)
 {
 	int ret=0;
 	size_t datalen=0;
 	FILE *fp=NULL;
-	if(open_file_for_sendl(NULL, &fp, best, winattr, &datalen, cconf))
+	if(open_file_for_sendl(NULL, &fp, best, sb->winattr, &datalen, cconf))
 		return -1;
 	//logp("sending: %s\n", best);
-	if(async_write_str(cmd, fname))
+	if(async_write(&sb->path))
 		ret=-1;
 	else if(patches)
 	{
 		// If we did some patches, the resulting file
 		// is not gzipped. Gzip it during the send. 
-		ret=send_whole_file_gzl(best, datapth, 1, bytes, NULL,
+		ret=send_whole_file_gzl(best, sb->datapth.buf, 1, bytes, NULL,
 			cconf->cntr, 9, NULL, fp, NULL, 0, -1);
 	}
 	else
@@ -148,28 +148,30 @@ static int send_file(const char *fname, int patches, const char *best, const cha
 		// If it was encrypted, it may or may not have been compressed
 		// before encryption. Send it as it as, and let the client
 		// sort it out.
-		if(cmd==CMD_ENC_FILE
-		  || cmd==CMD_ENC_METADATA
-		  || cmd==CMD_ENC_VSS
-		  || cmd==CMD_ENC_VSS_T
-		  || cmd==CMD_EFS_FILE)
+		if(sb->path.cmd==CMD_ENC_FILE
+		  || sb->path.cmd==CMD_ENC_METADATA
+		  || sb->path.cmd==CMD_ENC_VSS
+		  || sb->path.cmd==CMD_ENC_VSS_T
+		  || sb->path.cmd==CMD_EFS_FILE)
 		{
-			ret=send_whole_filel(cmd, best, datapth, 1, bytes,
+			ret=send_whole_filel(sb->path.cmd, best,
+				sb->datapth.buf, 1, bytes,
 				cconf->cntr, NULL, fp, NULL, 0, -1);
 		}
 		// It might have been stored uncompressed. Gzip it during
 		// the send. If the client knew what kind of file it would be
 		// receiving, this step could disappear.
-		else if(!dpthl_is_compressed(compression, datapth))
+		else if(!dpthl_is_compressed(sb->compression, sb->datapth.buf))
 		{
-			ret=send_whole_file_gzl(best, datapth, 1, bytes,
+			ret=send_whole_file_gzl(best, sb->datapth.buf, 1, bytes,
 				NULL, cconf->cntr, 9, NULL, fp, NULL, 0, -1);
 		}
 		else
 		{
 			// If we did not do some patches, the resulting
 			// file might already be gzipped. Send it as it is.
-			ret=send_whole_filel(cmd, best, datapth, 1, bytes,
+			ret=send_whole_filel(sb->path.cmd, best,
+				sb->datapth.buf, 1, bytes,
 				cconf->cntr, NULL, fp, NULL, 0, -1);
 		}
 	}
@@ -177,7 +179,7 @@ static int send_file(const char *fname, int patches, const char *best, const cha
 	return ret;
 }
 
-static int verify_file(const char *fname, int patches, const char *best, const char *datapth, unsigned long long *bytes, const char *endfile, char cmd, int compression, struct cntr *cntr)
+static int verify_file(struct sbufl *sb, int patches, const char *best, unsigned long long *bytes, struct config *cconf)
 {
 	MD5_CTX md5;
 	size_t b=0;
@@ -186,9 +188,9 @@ static int verify_file(const char *fname, int patches, const char *best, const c
 	unsigned char in[ZCHUNK];
 	unsigned char checksum[MD5_DIGEST_LENGTH+1];
 	unsigned long long cbytes=0;
-	if(!(cp=strrchr(endfile, ':')))
+	if(!(cp=strrchr(sb->endfile.buf, ':')))
 	{
-		logw(cntr, "%s has no md5sum!\n", datapth);
+		logw(cconf->cntr, "%s has no md5sum!\n", sb->datapth.buf);
 		return 0;
 	}
 	cp++;
@@ -198,16 +200,18 @@ static int verify_file(const char *fname, int patches, const char *best, const c
 		return -1;
 	}
 	if(patches
-	  || cmd==CMD_ENC_FILE || cmd==CMD_ENC_METADATA || cmd==CMD_EFS_FILE
-	  || cmd==CMD_ENC_VSS
-	  || (!patches && !dpthl_is_compressed(compression, best)))
+	  || sb->path.cmd==CMD_ENC_FILE
+	  || sb->path.cmd==CMD_ENC_METADATA
+	  || sb->path.cmd==CMD_EFS_FILE
+	  || sb->path.cmd==CMD_ENC_VSS
+	  || (!patches && !dpthl_is_compressed(sb->compression, best)))
 	{
 		// If we did some patches or encryption, or the compression
 		// was turned off, the resulting file is not gzipped.
 		FILE *fp=NULL;
 		if(!(fp=open_file(best, "rb")))
 		{
-			logw(cntr, "could not open %s\n", best);
+			logw(cconf->cntr, "could not open %s\n", best);
 			return 0;
 		}
 		while((b=fread(in, 1, ZCHUNK, fp))>0)
@@ -222,7 +226,7 @@ static int verify_file(const char *fname, int patches, const char *best, const c
 		}
 		if(!feof(fp))
 		{
-			logw(cntr, "error while reading %s\n", best);
+			logw(cconf->cntr, "error while reading %s\n", best);
 			close_fp(&fp);
 			return 0;
 		}
@@ -233,7 +237,7 @@ static int verify_file(const char *fname, int patches, const char *best, const c
 		gzFile zp=NULL;
 		if(!(zp=gzopen_file(best, "rb")))
 		{
-			logw(cntr, "could not gzopen %s\n", best);
+			logw(cconf->cntr, "could not gzopen %s\n", best);
 			return 0;
 		}
 		while((b=gzread(zp, in, ZCHUNK))>0)
@@ -248,7 +252,7 @@ static int verify_file(const char *fname, int patches, const char *best, const c
 		}
 		if(!gzeof(zp))
 		{
-			logw(cntr, "error while gzreading %s\n", best);
+			logw(cconf->cntr, "error while gzreading %s\n", best);
 			gzclose_fp(&zp);
 			return 0;
 		}
@@ -264,20 +268,22 @@ static int verify_file(const char *fname, int patches, const char *best, const c
 	if(strcmp(newsum, cp))
 	{
 		logp("%s %s\n", newsum, cp);
-		logw(cntr, "md5sum for '%s (%s)' did not match!\n", fname, datapth);
-		logp("md5sum for '%s (%s)' did not match!\n", fname, datapth);
+		logw(cconf->cntr, "md5sum for '%s (%s)' did not match!\n",
+			sb->path.buf, sb->datapth.buf);
+		logp("md5sum for '%s (%s)' did not match!\n",
+			sb->path.buf, sb->datapth.buf);
 		return 0;
 	}
 	*bytes+=cbytes;
 
 	// Just send the file name to the client, so that it can show counters.
-	if(async_write_str(cmd, fname)) return -1;
+	if(async_write(&sb->path)) return -1;
 	return 0;
 }
 
 // a = length of struct bu array
 // i = position to restore from
-static int restore_file(struct bu *arr, int a, int i, const char *datapth, const char *fname, const char *tmppath1, const char *tmppath2, int act, const char *endfile, char cmd, int64_t winattr, int compression, struct config *cconf)
+static int restore_file(struct bu *arr, int a, int i, struct sbufl *sb, const char *tmppath1, const char *tmppath2, int act, struct config *cconf)
 {
 	int x=0;
 	// Go up the array until we find the file in the data directory.
@@ -285,7 +291,7 @@ static int restore_file(struct bu *arr, int a, int i, const char *datapth, const
 	{
 		char *path=NULL;
 		struct stat statp;
-		if(!(path=prepend_s(arr[x].data, datapth)))
+		if(!(path=prepend_s(arr[x].data, sb->datapth.buf)))
 		{
 			log_and_send_oom(__FUNCTION__);
 			return -1;
@@ -313,7 +319,8 @@ static int restore_file(struct bu *arr, int a, int i, const char *datapth, const
 			{
 				char *dpath=NULL;
 
-				if(!(dpath=prepend_s(arr[x].delta, datapth)))
+				if(!(dpath=prepend_s(arr[x].delta,
+					sb->datapth.buf)))
 				{
 					log_and_send_oom(__FUNCTION__);
 					free(path);
@@ -331,7 +338,7 @@ static int restore_file(struct bu *arr, int a, int i, const char *datapth, const
 				{
 					// Need to gunzip the first one.
 					if(inflate_or_link_oldfile(best, tmp,
-						cconf, compression))
+						cconf, sb->compression))
 					{
 						logp("error when inflating %s\n", best);
 						free(path);
@@ -345,7 +352,7 @@ static int restore_file(struct bu *arr, int a, int i, const char *datapth, const
 
 				if(do_patch(best, dpath, tmp,
 				  FALSE /* do not gzip the result */,
-				  compression /* from the manifest */,
+				  sb->compression /* from the manifest */,
 				  cconf))
 				{
 					char msg[256]="";
@@ -368,34 +375,32 @@ static int restore_file(struct bu *arr, int a, int i, const char *datapth, const
 
 			if(act==ACTION_RESTORE)
 			{
-				if(send_file(fname, patches, best, datapth,
-					&bytes, cmd, winattr, compression,
-					cconf))
+				if(send_file(sb, patches, best, &bytes, cconf))
 				{
 					free(path);
 					return -1;
 				}
 				else
 				{
-					do_filecounter(cconf->cntr, cmd, 0);
+					do_filecounter(cconf->cntr,
+						sb->path.cmd, 0);
 					do_filecounter_bytes(cconf->cntr,
-                 			    strtoull(endfile, NULL, 10));
+                 			  strtoull(sb->endfile.buf, NULL, 10));
 				}
 			}
 			else if(act==ACTION_VERIFY)
 			{
-				if(verify_file(fname, patches, best, datapth,
-					&bytes, endfile, cmd, compression,
-					cconf->cntr))
+				if(verify_file(sb, patches, best, &bytes, cconf))
 				{
 					free(path);
 					return -1;
 				}
 				else
 				{
-					do_filecounter(cconf->cntr, cmd, 0);
+					do_filecounter(cconf->cntr,
+						sb->path.cmd, 0);
 					do_filecounter_bytes(cconf->cntr,
-                 			    strtoull(endfile, NULL, 10));
+                 			  strtoull(sb->endfile.buf, NULL, 10));
 				}
 			}
 			do_filecounter_sentbytes(cconf->cntr, bytes);
@@ -404,7 +409,8 @@ static int restore_file(struct bu *arr, int a, int i, const char *datapth, const
 		}
 	}
 
-	logw(cconf->cntr, "restore could not find %s (%s)\n", fname, datapth);
+	logw(cconf->cntr, "restore could not find %s (%s)\n",
+		sb->path.buf, sb->datapth.buf);
 	//return -1;
 	return 0;
 }
@@ -412,38 +418,33 @@ static int restore_file(struct bu *arr, int a, int i, const char *datapth, const
 static int restore_sbufl(struct sbufl *sb, struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, enum action act, char status, struct config *cconf)
 {
 	//logp("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path);
-	write_status(status, sb->path, cconf);
+	write_status(status, sb->path.buf, cconf);
 
-	if((sb->datapth && async_write_str(CMD_DATAPTH, sb->datapth))
-	  || async_write_strn(CMD_ATTRIBS, sb->statbuf, sb->slen))
+	if((sb->datapth.buf && async_write(&sb->datapth))
+	  || async_write(&sb->attr))
 		return -1;
-	else if(sb->cmd==CMD_FILE
-	  || sb->cmd==CMD_ENC_FILE
-	  || sb->cmd==CMD_METADATA
-	  || sb->cmd==CMD_ENC_METADATA
-	  || sb->cmd==CMD_VSS
-	  || sb->cmd==CMD_ENC_VSS
-	  || sb->cmd==CMD_VSS_T
-	  || sb->cmd==CMD_ENC_VSS_T
-	  || sb->cmd==CMD_EFS_FILE)
+	else if(sb->path.cmd==CMD_FILE
+	  || sb->path.cmd==CMD_ENC_FILE
+	  || sb->path.cmd==CMD_METADATA
+	  || sb->path.cmd==CMD_ENC_METADATA
+	  || sb->path.cmd==CMD_VSS
+	  || sb->path.cmd==CMD_ENC_VSS
+	  || sb->path.cmd==CMD_VSS_T
+	  || sb->path.cmd==CMD_ENC_VSS_T
+	  || sb->path.cmd==CMD_EFS_FILE)
 	{
-		return restore_file(arr, a, i, sb->datapth,
-		  sb->path, tmppath1, tmppath2, act,
-		  sb->endfile, sb->cmd, sb->winattr,
-		  sb->compression, cconf);
+		return restore_file(arr, a, i, sb,
+		  tmppath1, tmppath2, act, cconf);
 	}
 	else
 	{
-		if(async_write_strn(sb->cmd, sb->path, sb->plen))
+		if(async_write(&sb->path))
 			return -1;
 		// If it is a link, send what
 		// it points to.
-		else if(sbufl_is_link(sb))
-		{
-			if(async_write_strn(sb->cmd, sb->linkto, sb->llen))
-				return -1;
-		}
-		do_filecounter(cconf->cntr, sb->cmd, 0);
+		else if(sbufl_is_link(sb)
+		  && async_write(&sb->link)) return -1;
+		do_filecounter(cconf->cntr, sb->path.cmd, 0);
 	}
 	return 0;
 }
@@ -496,7 +497,7 @@ static int restore_ent(struct sbufl *sb, struct sbufl ***sblist, int *scount, st
 	// Check if we have any directories waiting to be restored.
 	for(s=(*scount)-1; s>=0; s--)
 	{
-		if(is_subdir((*sblist)[s]->path, sb->path))
+		if(is_subdir((*sblist)[s]->path.buf, sb->path.buf))
 		{
 			// We are still in a subdir.
 			//printf(" subdir (%s %s)\n",
@@ -630,13 +631,14 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 			else
 			{
 				if((!srestore
-				    || check_srestore(cconf, sb.path))
-				  && check_regex(regex, sb.path))
+				    || check_srestore(cconf, sb.path.buf))
+				  && check_regex(regex, sb.path.buf))
 				{
-					do_filecounter(cconf->p1cntr, sb.cmd, 0);
-					if(sb.endfile)
+					do_filecounter(cconf->p1cntr,
+						sb.path.cmd, 0);
+					if(sb.endfile.buf)
 					  do_filecounter_bytes(cconf->p1cntr,
-                 			    strtoull(sb.endfile, NULL, 10));
+                 			    strtoull(sb.endfile.buf, NULL, 10));
 /*
 					if(sb.cmd==CMD_FILE
 					  || sb.cmd==CMD_ENC_FILE
@@ -727,8 +729,8 @@ static int restore_manifest(struct bu *arr, int a, int i, const char *tmppath1, 
 			else
 			{
 				if((!srestore
-				    || check_srestore(cconf, sb.path))
-				  && check_regex(regex, sb.path)
+				    || check_srestore(cconf, sb.path.buf))
+				  && check_regex(regex, sb.path.buf)
 				  && restore_ent(&sb, &sblist, &scount,
 					arr, a, i, tmppath1, tmppath2,
 					act, status, cconf))

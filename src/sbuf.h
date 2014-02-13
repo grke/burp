@@ -18,8 +18,6 @@ struct sbuf
 	uint64_t winattr;
 	int compression;
 
-	ssize_t bytes_read;
-
 	// Keep track of what has been sent.
 	uint8_t sent_stat;
 	uint8_t sent_path;
@@ -30,6 +28,8 @@ struct sbuf
 	uint8_t need_link;
 	uint8_t need_data;
 	uint8_t header_written_to_manifest;
+
+	ssize_t bytes_read;
 
 	uint64_t index;
 

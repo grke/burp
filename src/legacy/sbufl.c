@@ -7,13 +7,15 @@ void init_sbufl(struct sbufl *sb)
 	sb->plen=0;
 	sb->linkto=NULL;
 	sb->llen=0;
-	sb->sendpath=0;
 	sb->datapth=NULL;
-	sb->senddatapth=0;
 	sb->statbuf=NULL;
 	sb->slen=0;
 	sb->compression=-1;
-	sb->sendstat=0;
+
+	sb->send_path=0;
+	sb->send_stat=0;
+	sb->send_datapth=0;
+	sb->send_endofsig=0;
 
 	memset(&(sb->rsbuf), 0, sizeof(sb->rsbuf));
 	memset(&(sb->statp), 0, sizeof(sb->statp));
@@ -23,7 +25,6 @@ void init_sbufl(struct sbufl *sb)
 	sb->outfb=NULL;
 	sb->sigfp=NULL;
 	sb->sigzp=NULL;
-	sb->sendendofsig=0;
 
 	sb->receivedelta=0;
 

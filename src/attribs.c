@@ -232,7 +232,7 @@ int attribs_set(const char *path, struct stat *statp, int64_t winattr, struct co
 #ifdef HAVE_WIN32
 	win32_chmod(path, statp->st_mode, winattr);
 	set_file_times(path, &ut, statp, conf->cntr);
-	return true;
+	return 0;
 #endif
 
 	/* ***FIXME**** optimize -- don't do if already correct */

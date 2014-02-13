@@ -7,23 +7,26 @@ struct sbufl
 {
 	// file data
 	char cmd;
-	char *path;
 	size_t plen;
-	char *linkto;
+	char *path;
+
 	size_t llen;
-	int sendpath; // flag indicating it needs to be sent
+	char *linkto;
 
-	// path to data on the server.
-	char *datapth;
-	int senddatapth; // flag indicating it needs to be sent
-
-	// stat data
+	size_t slen;
 	char *statbuf;
+
 	struct stat statp;
 	int64_t winattr;
-	size_t slen;
 	int compression;
-	int sendstat; // flag indicating it needs to be sent
+
+	// Keep track of what needs to be sent.
+	uint8_t send_stat;
+	uint8_t send_path;
+	uint8_t send_datapth;
+	uint8_t send_endofsig;
+
+	char *datapth;
 
 	rs_buffers_t rsbuf;
 	rs_job_t *sigjob;
@@ -31,9 +34,8 @@ struct sbufl
 	rs_filebuf_t *outfb;
 	FILE *sigfp;
 	gzFile sigzp;
-	int sendendofsig;
 
-	int receivedelta;
+	int receive_delta;
 
 	// Used when saving stuff on the server.
 	FILE *fp;

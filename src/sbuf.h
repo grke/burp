@@ -16,7 +16,6 @@ struct sbuf
 
 	struct stat statp;
 	uint64_t winattr;
-	uint16_t ftype;	// FT_ type from burpconfig.h.
 	int compression;
 
 	ssize_t bytes_read;

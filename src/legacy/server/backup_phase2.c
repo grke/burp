@@ -459,9 +459,9 @@ static int process_changed_file(struct sdirs *sdirs, struct config *cconf,
 	}
 
 	// Flag the things that need to be sent (to the client)
-	p1b->senddatapth++;
-	p1b->sendstat++;
-	p1b->sendpath++;
+	p1b->send_datapth++;
+	p1b->send_stat++;
+	p1b->send_path++;
 
 	//logp("sending sig for %s\n", p1b->path);
 	//logp("(%s)\n", p1b->datapth);
@@ -693,8 +693,8 @@ static int process_new(struct sdirs *sdirs, struct config *cconf,
 	{
 		//logp("need to process new file: %s\n", p1b->path);
 		// Flag the things that need to be sent (to the client)
-		p1b->sendstat++;
-		p1b->sendpath++;
+		p1b->send_stat++;
+		p1b->send_path++;
 	}
 	else
 	{
@@ -865,32 +865,32 @@ static int maybe_process_file(struct sdirs *sdirs, struct config *cconf,
 static int do_stuff_to_send(struct sbufl *p1b, char **last_requested)
 {
 	static struct iobuf wbuf;
-	if(p1b->senddatapth)
+	if(p1b->send_datapth)
 	{
 		iobuf_from_str(&wbuf, CMD_DATAPTH, p1b->datapth);
 		if(async_append_all_to_write_buffer(&wbuf)) return 1;
-		p1b->senddatapth=0;
+		p1b->send_datapth=0;
 	}
-	if(p1b->sendstat)
+	if(p1b->send_stat)
 	{
 		wbuf.cmd=CMD_ATTRIBS;
 		wbuf.buf=p1b->statbuf;
 		wbuf.len=p1b->slen;
 		if(async_append_all_to_write_buffer(&wbuf)) return 1;
-		p1b->sendstat=0;
+		p1b->send_stat=0;
 	}
-	if(p1b->sendpath)
+	if(p1b->send_path)
 	{
 		wbuf.cmd=p1b->cmd;
 		wbuf.buf=p1b->path;
 		wbuf.len=p1b->plen;
 		if(async_append_all_to_write_buffer(&wbuf)) return 1;
-		p1b->sendpath=0;
+		p1b->send_path=0;
 		if(*last_requested) free(*last_requested);
 		*last_requested=strdup(p1b->path);
 		//if(async_rw(NULL, NULL)) return -1;
 	}
-	if(p1b->sigjob && !p1b->sendendofsig)
+	if(p1b->sigjob && !p1b->send_endofsig)
 	{
 		rs_result sigresult;
 
@@ -900,7 +900,7 @@ static int do_stuff_to_send(struct sbufl *p1b, char **last_requested)
 
 		if(sigresult==RS_DONE)
 		{
-			p1b->sendendofsig++;
+			p1b->send_endofsig++;
 		}
 		else if(sigresult==RS_BLOCKED || sigresult==RS_RUNNING)
 		{
@@ -913,11 +913,11 @@ static int do_stuff_to_send(struct sbufl *p1b, char **last_requested)
 			return -1;
 		}
 	}
-	if(p1b->sendendofsig)
+	if(p1b->send_endofsig)
 	{
 		iobuf_from_str(&wbuf, CMD_END_FILE, (char *)"endfile");
 		if(async_append_all_to_write_buffer(&wbuf)) return 1;
-		p1b->sendendofsig=0;
+		p1b->send_endofsig=0;
 	}
 	return 0;
 }
@@ -935,7 +935,7 @@ static int start_to_receive_delta(struct sdirs *sdirs, struct config *cconf,
 		if(!(rb->fp=open_file(sdirs->deltmppath, "wb")))
 			return -1;
 	}
-	rb->receivedelta++;
+	rb->receive_delta++;
 
 	return 0;
 }
@@ -1016,7 +1016,7 @@ static int do_stuff_to_receive(struct sdirs *sdirs, struct config *cconf,
 				rb->endfile=rbuf->buf;
 				rb->elen=rbuf->len;
 				rbuf->buf=NULL;
-				if(!ret && rb->receivedelta
+				if(!ret && rb->receive_delta
 				  && finish_delta(sdirs, rb))
 					ret=-1;
 				else if(!ret)
@@ -1026,7 +1026,7 @@ static int do_stuff_to_receive(struct sdirs *sdirs, struct config *cconf,
 					else
 					{
 					  char cmd=rb->cmd;
-					  if(rb->receivedelta)
+					  if(rb->receive_delta)
 						do_filecounter_changed(
 							cconf->cntr, cmd);
 					  else

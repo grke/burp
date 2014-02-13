@@ -243,8 +243,8 @@ static int restore_file_or_get_meta(BFILE *bfd, struct sbufl *sb, const char *fn
 				logp("error closing %s in restore_file_or_get_meta\n", fname);
 				ret=-1;
 			}
-			if(!ret) set_attributes(rpath, sb->cmd,
-				&(sb->statp), sb->winattr, conf->cntr);
+			if(!ret) attribs_set(rpath,
+				&(sb->statp), sb->winattr, conf);
 		}
 		if(ret)
 		{
@@ -299,7 +299,7 @@ static int restore_special(struct sbufl *sb, const char *fname, enum action act,
 		}
 		else
 		{
-			set_attributes(rpath, CMD_SPECIAL, &statp, sb->winattr, conf->cntr);
+			attribs_set(rpath, &statp, sb->winattr, conf);
 			do_filecounter(conf->cntr, CMD_SPECIAL, 1);
 		}
 /*
@@ -334,7 +334,7 @@ static int restore_special(struct sbufl *sb, const char *fname, enum action act,
             }
 	    else
 	    {
-		set_attributes(rpath, CMD_SPECIAL, &statp, sb->winattr, conf->cntr);
+		attribs_set(rpath, &statp, sb->winattr, conf);
 		do_filecounter(conf->cntr, CMD_SPECIAL, 1);
 	    }
          }
@@ -375,8 +375,7 @@ static int restore_dir(struct sbufl *sb, const char *dname, enum action act, str
 		}
 		else
 		{
-			set_attributes(rpath,
-				sb->cmd, &(sb->statp), sb->winattr, conf->cntr);
+			attribs_set(rpath, &(sb->statp), sb->winattr, conf);
 		}
 		if(!ret) do_filecounter(conf->cntr, sb->cmd, 1);
 	}
@@ -413,8 +412,7 @@ static int restore_link(struct sbufl *sb, const char *fname, const char *restore
 		}
 		else if(!ret)
 		{
-			set_attributes(fname,
-				sb->cmd, &(sb->statp), sb->winattr, conf->cntr);
+			attribs_set(fname, &(sb->statp), sb->winattr, conf);
 			do_filecounter(conf->cntr, sb->cmd, 1);
 		}
 		if(rpath) free(rpath);
@@ -462,8 +460,7 @@ static int restore_metadata(BFILE *bfd, struct sbufl *sb, const char *fname, enu
 #ifndef HAVE_WIN32
 			// set attributes again, since we just diddled with
 			// the file
-			set_attributes(fname, sb->cmd,
-				&(sb->statp), sb->winattr, conf->cntr);
+			attribs_set(fname, &(sb->statp), sb->winattr, conf);
 #endif
 			do_filecounter(conf->cntr, sb->cmd, 1);
 		}

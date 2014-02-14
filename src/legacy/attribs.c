@@ -15,10 +15,14 @@ int encode_stat(struct sbufl *sb)
    char *p;
    struct stat *statp=&sb->statp;
 
-   if(!sb->attr.buf && !(sb->attr.buf=(char *)malloc(128)))
+   if(!sb->attr.buf)
    {
-	log_out_of_memory(__FUNCTION__);
-	return -1;
+	sb->attr.cmd=CMD_ATTRIBS; // should not be needed
+	if(!(sb->attr.buf=(char *)malloc(128)))
+	{
+		log_out_of_memory(__FUNCTION__);
+		return -1;
+	}
    }
    p=sb->attr.buf;
 

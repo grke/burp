@@ -277,7 +277,7 @@ static int sbufl_to_fp(struct sbufl *sb, FILE *mp, int write_endfile)
 {
 	if(!sb->path.buf) return 0;
 	if(sb->datapth.buf
-	  || iobuf_send_msg_fp(&sb->datapth, mp))
+	  && iobuf_send_msg_fp(&sb->datapth, mp))
 		return -1;
 	if(iobuf_send_msg_fp(&sb->attr, mp)
 	  || iobuf_send_msg_fp(&sb->path, mp))
@@ -304,7 +304,7 @@ static int sbufl_to_zp(struct sbufl *sb, gzFile zp, int write_endfile)
 {
 	if(!sb->path.buf) return 0;
 	if(sb->datapth.buf
-	  || iobuf_send_msg_zp(&sb->datapth, zp))
+	  && iobuf_send_msg_zp(&sb->datapth, zp))
 		return -1;
 	if(iobuf_send_msg_zp(&sb->attr, zp)
 	  || iobuf_send_msg_zp(&sb->path, zp))

@@ -229,8 +229,12 @@ int async_append_all_to_write_buffer(struct iobuf *wbuf)
 	sblen=strlen(sbuf);
 	append_to_write_buffer(sbuf, sblen);
 	append_to_write_buffer(wbuf->buf, wbuf->len);
-	//logp("appended to wbuf: %c (%d) (%d)\n",
-	//	wbuf->cmd, wbuf->len+sblen, writebuflen);
+//{
+//	char msg[256]="";
+//	snprintf(msg, wbuf->len+1, "%s", wbuf->buf);
+//	printf("appended to wbuf: %c (%d) (%d) %s\n",
+//		wbuf->cmd, wbuf->len+sblen, writebuflen, msg);
+//}
 	wbuf->len=0;
 	return 0;
 }

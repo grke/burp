@@ -5,4 +5,7 @@ TO BUILD:
 - Run rpmbuild against each RPM:
   rpmbuild -v -ba SPECS/<filename.spec>
 
+NOTE:
 
+Graham says: I think that it is not necessary to build librsync and uthash, as
+they are apparently available from the EPEL repository.

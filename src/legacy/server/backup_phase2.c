@@ -403,8 +403,7 @@ static int process_changed_file(struct sdirs *sdirs, struct config *cconf,
 	//logp("need to process changed file: %s (%s)\n", cb->path, cb->datapth);
 
 	// Move datapth onto p1b.
-	if(p1b->datapth.buf) free(p1b->datapth.buf);
-	p1b->datapth.buf=cb->datapth.buf;
+	iobuf_copy(&p1b->datapth, &cb->datapth);
 	cb->datapth.buf=NULL;
 
 	if(!(curpath=prepend_s(adir, p1b->datapth.buf)))

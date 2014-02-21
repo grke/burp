@@ -17,11 +17,13 @@ Debian/Ubuntu dependencies:
 
 RHEL/CentOS dependencies:
 	
-    On RHEL, you need to install below crucial packages:
+    On RHEL, you need to install these crucial packages:
     yum install zlib-devel openssl-devel ncurses-devel libacl-devel openssl-perl
 
-    You also need non-default packages librsync-devel and uthash, both of which
-    can be custom built and installed. See rhel/ subdirectory for more details.
+    You also need the packages librsync-devel and uthash.
+    These can be custom built and installed. See rhel/ subdirectory for more
+    details.
+    Alternatively, they can be 'yum install'ed from the EPEL repository.
 
 Then change to the burp source directory and run "./configure", then "make". All
 being well, burp will compile successfully. Then finally, run "make install" as root to
@@ -39,7 +41,34 @@ runs, its startup will be a slower than usual because it needs to generate its
 SSL certificates. However, this will probably only be noticeable on old
 machines.
 
-The server is now ready for clients to connect to it. 
+The server is now ready for clients to connect to it.
+
+
+A NOTE ON ADDING CLIENTS
+------------------------
+
+Each client is represented by a file in the server directory
+'/etc/burp/clientconfdir'.
+The client name is the same as the file name, and the file contains a field
+called 'password'.
+Clients have a 'burp.conf' configuration file.
+For a client to connect to the server successfully, it has to contain a 'cname'
+and a 'password' field that match a clientconfdir file on the server.
+
+There is more on this in the 'SERVER CLIENTCONFDIR FILE' section in the man
+page.
+
+When a client connects to the server for the first time, SSL certificate
+exchange takes place, which further secures subsequent connections.
+
+The burp server usually comes with a client called 'testclient', password
+'abcdefgh', already configured. This is assmumed to exist in the following
+instructions about a unix client.
+For the Windows client, you can either use 'testclient' or create a new
+clientconfdir file. It is normally easiest to do something like this on the
+server:
+cd /etc/burp/clientconfdir
+cp testclient windowsclient
 
 
 UNIX CLIENT
@@ -78,9 +107,13 @@ http://burp.grke.org/ to find one of them.
 If you need to compile one yourself, instructions can be found at
 src/win32/README in the source package.
 
+You will need to run the installer as administrator.
+
 The Windows installer will ask you for the address of your server, the client
-name, and the client password. Burp will then install its files to:
-C:/Program Files/Burp
+name, and the client password. Make sure that a matching file exists in
+/etc/burp/clientconfdir on the server.
+
+Burp will then install its files to: C:/Program Files/Burp
 (Note that the "C:/Program Files/" part may differ, depending on Windows'
 language settings).
 If you need to change client configuration settings, the file can be found at:

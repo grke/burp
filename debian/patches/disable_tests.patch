@@ -1,0 +1,30 @@
+Description: Disable test when no randomness available
+ This solved isues on build systems with no /dev/random or /dev/urandom
+Author: Graham Keeling <keeling@spamcop.net>
+Bug-Debian: http://bugs.debian.org/675761
+
+---
+Origin: upstream, https://github.com/grke/burp/issues/186
+Bug: <url in upstream bugtracker>
+Reviewed-By: Bastiaan Franciscus van den Dikkenberg <bas@dikkenberg.net>
+Last-Update: <2014-01-09>
+
+--- burp-1.3.46.orig/test/test_self
++++ burp-1.3.46/test/test_self
+@@ -12,6 +12,16 @@ path="$PWD"
+ build="$path/build"
+ target="$path/target"
+ 
++if ! [ -c /dev/random -o -c /dev/urandom ] &&
++   ! [ -e /var/run/egd-pool -o -e /dev/egd-pool -o -e /etc/egd-pool -o -e /etc/entropy ]
++then
++	echo "************************************************************"
++	echo "WARNING: SKIPPING TESTS BECAUSE YOUR BUILD ENVIRONMENT SEEMS"
++	echo "TO HAVE NO SOURCE OF RANDOMNESS FOR OPENSSL TO USE!"
++	echo "************************************************************"
++	exit 0
++fi
++
+ fail()
+ {
+ 	echo

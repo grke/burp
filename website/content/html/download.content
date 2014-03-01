@@ -8,10 +8,16 @@
 <TD ALIGN="CENTER" WIDTH="100%">
 <P>
 <FONT COLOR="#99CCFF">
-For downloads, please visit the
+For the latest downloads, please visit the
 <a href="http://sourceforge.net/projects/burp">burp sourceforge page</a>.
 </FONT>
 </P>
+<p>
+<FONT COLOR="#99CCFF">
+Old versions and source for the windows build tools are currently hosted
+<a href="downloads">here</a>.
+</FONT>
+</p>
 <P>
 <FONT COLOR="#99CCFF">
 Or, if you are very keen, there is a git repository:
@@ -30,6 +36,7 @@ OpenSUSE
 </pre>
 </FONT>
 </P>
+
 
 </TD>
 </TR>

@@ -51,13 +51,15 @@ BURP - BackUp and Restore Program
 <table width="100%">
 <tr>
 <td width="10%"></td>
-<td align="left" width="30%">
+<td align="center" width="30%">
 <form action="https://www.paypal.com/cgi-bin/webscr" method="post">
 <input type="hidden" name="cmd" value="_s-xclick">
 <input type="hidden" name="hosted_button_id" value="XC8N3XB7T6UFQ">
 <input type="image" src="http://burp.grke.org/images/paypal.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online.">
 <img alt="" border="0" src="https://www.paypal.com/en_GB/i/scr/pixel.gif" width="1" height="1">
 </form>
+<br>
+<script id='fbrv8cz'>(function(i){var f,s=document.getElementById(i);f=document.createElement('iframe');f.src='//api.flattr.com/button/view/?uid=grke.net&button=compact&url='+encodeURIComponent(document.URL);f.title='Flattr';f.height=20;f.width=110;f.style.borderWidth=0;s.parentNode.insertBefore(f,s);})('fbrv8cz');</script>
 
 </td>
 <td align="centre" width="50%">

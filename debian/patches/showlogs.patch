@@ -1,0 +1,27 @@
+Description: When a test is failed show the availebol log files
+
+--- burp-1.3.46.orig/test/test_main
++++ burp-1.3.46/test/test_main
+@@ -79,6 +79,22 @@ fail()
+ 	echo
+ 	echo "Test failed: $@"
+ 	echo
++	if [ -n "$serverlog" ] ; then
++		echo "Displaying $serverlog"
++		cat $serverlog
++	fi
++	if [ -n "$clientlog" ] ; then
++		echo "Dispalying $clientlog"
++		cat $clientlog
++	fi
++	if [ -n "$beduplog" ] ; then
++		echo "Displaying $beduplog"
++		cat $beduplog
++	fi
++	if [ -n "$difflog" ] ; then
++		echo "Displaying $difflog"
++		cat $difflog
++	fi
+ 	kill_server
+ 	exit 1
+ }

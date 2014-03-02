@@ -2,18 +2,19 @@ Source: burp
 Section: utils
 Priority: extra
 Maintainer: Bastiaan Franciscus van den Dikkenberg <bas@dikkenberg.net>
-Build-Depends: debhelper (>= 9), autotools-dev, libncurses5-dev, libssl-dev, zlib1g-dev, librsync-dev, libacl1-dev, libattr1-dev, uthash-dev, openssl
-Standards-Version: 3.9.3
+Build-Depends: debhelper (>= 9), autotools-dev, libncurses5-dev, libssl-dev, zlib1g-dev,
+               librsync-dev, libacl1-dev, libattr1-dev, uthash-dev, openssl
+Standards-Version: 3.9.5.0
 Homepage: http://burp.grke.net/
-Vcs-Git: git://github.com/grke/burp.git
-Vcs-Browser: https://github.com/grke/burp
+Vcs-Git: git://anonscm.debian.org/collab-maint/burp.git
+Vcs-Browser: http://anonscm.debian.org/gitweb/?p=collab-maint/burp.git;a=summary
 
 Package: burp
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Simple cross-platform network BackUp and Restore Program
  Burp is a client/server backup system that saves space and network
- usage by using librsync, and uses the Volume Snapshot Service when
+ usage by using librsync. It uses the Volume Snapshot Service for
  backing up Windows clients.
 
 Package: burp-dbg
@@ -22,7 +23,7 @@ Section: debug
 Depends: burp (= ${binary:Version}), ${misc:Depends}
 Description: debugging symbols for Burp
  Burp is a client/server backup system that saves space and network
- usage by using librsync, and uses the Volume Snapshot Service when
+ usage by using librsync. It uses the Volume Snapshot Service for
  backing up Windows clients.
  .
- This package contains debugging symbols for burp.
+ This package contains the debugging symbols for burp.

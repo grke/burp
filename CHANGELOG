@@ -4,6 +4,8 @@
   * Bug fix for false failure notification - differentiate between
     not getting a lock and getting an error when trying to get a lock.
   * Turn off excessive logging on some restores.
+  * Debian packaging changes.
+  * Rename configure.in to configure.ac to avoid Debian build warnings.
 
 2013-12-01 Changes in burp-1.4.10:
   * Bug fix for false failure notification when a client tries to connect again

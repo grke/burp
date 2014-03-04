@@ -128,16 +128,14 @@ run_bedup()
 wait_for_backup_to_finish()
 {
 	local waited=0
-	local working="$target/var/spool/burp/testclient/working"
-	local finishing="$target/var/spool/burp/testclient/finishing"
+	local lockfile="$target/var/spool/burp/testclient/lockfile"
 
 	SLEEPTIME=2
 	# Repeatedly check to see whether the server has finished, rather
 	# than just sleeping some length of time. 
 	while true ; do
 		sleep $SLEEPTIME
-		[ ! -e "$working" -a ! -e "$finishing" ] \
-			&& sleep $SLEEPTIME && break
+		[ ! -e "$lockfile" ] && sleep $SLEEPTIME && break
 		waited=$((waited+$SLEEPTIME))
 		[ "$waited" -gt 120 ] && \
 		  fail "client backup seemed to be complete after 2 minutes"

@@ -470,7 +470,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			if(snew) break;
 			if(!(snew=sbuf_alloc())) goto error;
 			iobuf_copy(&snew->attr, rbuf);
-			attribs_decode(snew);
+			sbuf_attribs_decode(snew, conf);
 			snew->need_path=1;
 			rbuf->buf=NULL;
 			return 0;

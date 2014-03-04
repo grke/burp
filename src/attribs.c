@@ -9,20 +9,28 @@
 // Encode a stat structure into a base64 character string.
 // FIX THIS: Put compression near the beginning, before
 // it gets too entrenched in burp2.
-int attribs_encode(struct sbuf *sb)
+int attribs_encode(struct stat *statp, struct iobuf *attr,
+	uint64_t winattr, int compression, uint64_t *index)
 {
 	char *p;
-	struct stat *statp=&sb->statp;
 
-	if(!(sb->attr.buf=(char *)malloc(128)))
+	if(!attr->buf)
 	{
-		log_out_of_memory(__FUNCTION__);
-		return -1;
+		attr->cmd=CMD_ATTRIBS; // should not be needed
+		if(!(attr->buf=(char *)malloc(128)))
+		{
+			log_out_of_memory(__FUNCTION__);
+			return -1;
+		}
 	}
-	p=sb->attr.buf;
+	p=attr->buf;
 
-	p += to_base64(sb->index, p);
-	*p++ = ' ';
+	if(index)
+	{
+		// Legacy stuff does not have this field.
+		p += to_base64(*index, p);
+		*p++ = ' ';
+	}
 	p += to_base64(statp->st_dev, p);
 	*p++ = ' ';
 	p += to_base64(statp->st_ino, p);
@@ -65,17 +73,17 @@ int attribs_encode(struct sbuf *sb)
 	*p++ = ' ';
 
 #ifdef HAVE_WIN32
-	p += to_base64(sb->winattr, p);
+	p += to_base64(winattr, p);
 #else
 	p += to_base64(0, p); // place holder
 #endif
 	*p++ = ' ';
 
-	p += to_base64(sb->compression, p);
+	p += to_base64(compression, p);
 
 	*p = 0;
 
-	sb->attr.len=p-sb->attr.buf;
+	attr->len=p-attr->buf;
 
 	return 0;
 }
@@ -97,15 +105,20 @@ int attribs_encode(struct sbuf *sb)
 #endif
 
 // Decode a stat packet from base64 characters.
-void attribs_decode(struct sbuf *sb)
+void attribs_decode(struct stat *statp, struct iobuf *attr,
+	uint64_t *winattr, int *compression,
+	uint64_t *index)
 {
-	const char *p=sb->attr.buf;
-	struct stat *statp=&sb->statp;
+	const char *p=attr->buf;
 	int64_t val;
 
-	p += from_base64(&val, p);
-	sb->index=val;
-	p++;
+	if(index)
+	{
+		// Legacy stuff does not have this field.
+		p += from_base64(&val, p);
+		*index=val;
+		p++;
+	}
 	p += from_base64(&val, p);
 	plug(statp->st_dev, val);
 	p++;
@@ -175,7 +188,7 @@ void attribs_decode(struct sbuf *sb)
 	}
 	else
 		val = 0;
-	sb->winattr=val;
+	*winattr=val;
 
 	// Compression.
 	if(*p == ' ' || (*p != 0 && *(p+1) == ' '))
@@ -183,13 +196,14 @@ void attribs_decode(struct sbuf *sb)
 		p++;
 		if(!*p) return;
 		p += from_base64(&val, p);
-		sb->compression=val;
+		*compression=val;
 	}
 	else
-		sb->compression=-1;
+		*compression=-1;
 }
 
-static int set_file_times(const char *path, struct utimbuf *ut, struct stat *statp, struct cntr *cntr)
+static int set_file_times(const char *path, struct utimbuf *ut,
+	struct stat *statp, struct cntr *cntr)
 {
 	int e;
 // The mingw64 utime() appears not to work on read-only files.

@@ -29,7 +29,7 @@ static int encode_stat_w(struct sbufl *sb, FF_PKT *ff, int compression)
 	sb->winattr=ff->winattr;
 	sb->compression=compression;
 	memcpy(&sb->statp, &ff->statp, sizeof(sb->statp));
-	return encode_stat(sb);
+	return sbufl_attribs_encode(sb);
 }
 
 int send_file_legacy(FF_PKT *ff, bool top_level, struct config *conf)

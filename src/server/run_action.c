@@ -296,6 +296,7 @@ static int run_list(struct sdirs *sdirs, struct config *cconf,
 		backupno=rbuf->buf+strlen("listb ");
 	}
 	if(async_write_str(CMD_GEN, "ok")) return -1;
+
 	return do_list_server(sdirs, cconf, backupno, listregex, browsedir);
 }
 

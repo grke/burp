@@ -178,7 +178,7 @@ static int async_read_stat(FILE *fp, gzFile zp, struct sbufl *sb, struct cntr *c
 		{
 			iobuf_copy(&sb->attr, rbuf);
 			rbuf->buf=NULL;
-			decode_stat(sb);
+			sbufl_attribs_decode(sb);
 
 			return 0;
 		}
@@ -437,3 +437,16 @@ int sbufl_pathcmp(struct sbufl *a, struct sbufl *b)
 		else return 0;
 	}
 }
+
+int sbufl_attribs_encode(struct sbufl *sb)
+{
+	return attribs_encode(&sb->statp, &sb->attr,
+		sb->winattr, sb->compression, NULL);
+}
+
+void sbufl_attribs_decode(struct sbufl *sb)
+{
+	return attribs_decode(&sb->statp, &sb->attr,
+		&sb->winattr, &sb->compression, NULL);
+}
+

@@ -130,7 +130,7 @@ int do_list_server(struct sdirs *sdirs, struct config *conf,
 	unsigned long index=0;
 	regex_t *regex=NULL;
 
-	//printf("in do_list\n");
+	printf("in do_list_server\n");
 
 	if(compile_regex(&regex, listregex)) return -1;
 

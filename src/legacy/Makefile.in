@@ -20,7 +20,6 @@ dummy:
 
 #
 SRCS = \
-	attribs.c \
 	handy.c \
 	msg.c \
 	rs_buf.c \

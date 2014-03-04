@@ -5,7 +5,7 @@ static int treedata(struct sbufl *sb)
 	// Windows is sending directory data as if it is file data - this
 	// cannot be saved in a tree structure.
 	// So, need to decode the stat to test for whether it is a directory.
-	decode_stat(sb);
+	sbufl_attribs_decode(sb);
 	if(S_ISDIR(sb->statp.st_mode)) return 0;
 
 	if(sb->path.cmd==CMD_FILE

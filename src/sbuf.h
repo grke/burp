@@ -10,6 +10,9 @@ typedef struct sbuf sbuf_t;
 
 struct sbuf
 {
+	// FIX THIS: path/link/attr/statp/winattr/compression is the same
+	// in struct sbufl. Should be able to put them all a separate struct
+	// that buf sbuf and sbufl share.
 	struct iobuf path; // File data.
 	struct iobuf link; // Link data.
 	struct iobuf attr; // Attribute data.
@@ -58,6 +61,9 @@ extern void sbuf_free(struct sbuf *sb);
 
 extern struct slist *slist_alloc(void);
 extern void slist_free(struct slist *slist);
+
+extern int sbuf_attribs_encode(struct sbuf *sb, struct config *conf);
+extern void sbuf_attribs_decode(struct sbuf *sb, struct config *conf);
 
 extern int sbuf_open_file(struct sbuf *sb, struct config *conf);
 extern void sbuf_close_file(struct sbuf *sb);

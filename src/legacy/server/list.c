@@ -168,6 +168,7 @@ int do_list_server_legacy(struct sdirs *sdirs, struct config *conf,
 	regex_t *regex=NULL;
 
 	logp("in do_list\n");
+	printf("in do_list_server_legacy\n");
 
 	if(compile_regex(&regex, listregex)) return -1;
 

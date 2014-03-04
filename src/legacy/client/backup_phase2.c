@@ -269,7 +269,7 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 					sb.compression=in_exclude_comp(
 					  conf->excom,
 					  sb.path.buf, conf->compression);
-					if(encode_stat(&sb))
+					if(sbufl_attribs_encode(&sb))
 					{
 						ret=-1;
 						quit++;

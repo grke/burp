@@ -5,7 +5,6 @@
 
 #include "burpconfig.h"
 
-#include "attribs.h"
 #include "handy.h"
 #include "msg.h"
 #include "rs_buf.h"

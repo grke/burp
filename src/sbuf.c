@@ -164,7 +164,7 @@ int sbuf_open_file(struct sbuf *sb, struct config *conf)
 		return -1;
 	}
 	sb->compression=conf->compression;
-	if(attribs_encode(sb)) return -1;
+	if(sbuf_attribs_encode(sb, conf)) return -1;
 
 	if(open_file_for_send(&sb->bfd, sb->path.buf, sb->winattr, conf))
 	{
@@ -415,7 +415,7 @@ int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct
 				}
 				iobuf_copy(&sb->attr, rbuf);
 				rbuf->buf=NULL;
-				attribs_decode(sb);
+				sbuf_attribs_decode(sb, conf);
 				break;
 
 			case CMD_FILE:
@@ -527,4 +527,18 @@ int sbuf_fill_from_gzfile(struct sbuf *sb, gzFile zp, struct blk *blk, char *dat
 int sbuf_fill_from_net(struct sbuf *sb, struct blk *blk, struct config *conf)
 {
 	return sbuf_fill(sb, NULL, blk, NULL, conf);
+}
+
+int sbuf_attribs_encode(struct sbuf *sb, struct config *conf)
+{
+	return attribs_encode(&sb->statp, &sb->attr,
+		sb->winattr, sb->compression,
+		conf->legacy?NULL:&sb->index);
+}
+
+void sbuf_attribs_decode(struct sbuf *sb, struct config *conf)
+{
+	return attribs_decode(&sb->statp, &sb->attr,
+		&sb->winattr, &sb->compression,
+		conf->legacy?NULL:&sb->index);
 }

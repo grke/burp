@@ -6,6 +6,8 @@
   * Turn off excessive logging on some restores.
   * Debian packaging changes.
   * Rename configure.in to configure.ac to avoid Debian build warnings.
+  * Make test script check for lock file instead of working/finishing symlinks
+    when checking whether an operation has finished yet.
 
 2013-12-01 Changes in burp-1.4.10:
   * Bug fix for false failure notification when a client tries to connect again

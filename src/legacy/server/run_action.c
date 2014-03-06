@@ -781,7 +781,7 @@ int run_action_server_legacy(struct config *cconf, struct sdirs *sdirs,
 				backupno=rbuf->buf+strlen("listb ");
 			}
 			async_write_str(CMD_GEN, "ok");
-			ret=do_list_server_legacy(sdirs, cconf, backupno,
+			ret=do_list_server(sdirs, cconf, backupno,
 				listregex, browsedir);
 		}
 	}

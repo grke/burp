@@ -27,7 +27,6 @@ SRCS = \
 	current_backups.c \
 	delete.c \
 	dpth.c \
-	list.c \
 	restore.c \
 	run_action.c \
 	vss_strip.c \

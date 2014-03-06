@@ -15,7 +15,6 @@
 #include "current_backups.h"
 #include "delete.h"
 #include "dpth.h"
-#include "list.h"
 #include "restore.h"
 #include "run_action.h"
 #include "zlibio.h"

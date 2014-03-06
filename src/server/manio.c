@@ -15,11 +15,10 @@ static void manio_free_contents(struct manio *manio)
 {
 	if(!manio) return;
 	manio_close(manio);
-	if(manio->directory) { free(manio->directory); manio->directory=NULL; }
-	if(manio->fpath) { free(manio->fpath); manio->fpath=NULL; }
-	if(manio->mode) { free(manio->mode); manio->mode=NULL; }
-	manio->fcount=0;
-	manio->sig_count=0;
+	if(manio->directory) free(manio->directory);
+	if(manio->fpath) free(manio->fpath);
+	if(manio->mode) free(manio->mode);
+	memset(manio, 0, sizeof(struct manio));
 }
 
 int manio_close(struct manio *manio)
@@ -57,6 +56,11 @@ int manio_set_mode_write(struct manio *manio)
 	return manio_set_mode(manio, MANIO_MODE_WRITE);
 }
 
+void manio_set_legacy(struct manio *manio)
+{
+	manio->legacy=1;
+}
+
 static int manio_init(struct manio *manio, const char *directory, const char *mode)
 {
 	manio_free_contents(manio);
@@ -79,11 +83,18 @@ int manio_init_write(struct manio *manio, const char *directory)
 	return manio_init(manio, directory, MANIO_MODE_WRITE);
 }
 
+static int get_next_fpath_legacy(struct manio *manio)
+{
+	if(manio->fpath) free(manio->fpath);
+	return !(manio->fpath=strdup(manio->directory));
+}
+
 static int get_next_fpath(struct manio *manio)
 {
 	static char tmp[32];
-	snprintf(tmp, sizeof(tmp), "%08lX", manio->fcount++);
+	if(manio->legacy) return get_next_fpath_legacy(manio);
 	if(manio->fpath) free(manio->fpath);
+	snprintf(tmp, sizeof(tmp), "%08lX", manio->fcount++);
 	return !(manio->fpath=prepend_s(manio->directory, tmp));
 }
 
@@ -122,6 +133,9 @@ int manio_sbuf_fill(struct manio *manio, struct sbuf *sb, struct blk *blk, struc
 		// Reached the end of the current file.
 		// Maybe there is another file to continue with.
 		manio_close(manio);
+
+		// If in legacy mode, there is only one file, so end.
+		if(conf->legacy) return 1;
 	}
 
 error:

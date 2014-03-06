@@ -1,12 +1,14 @@
 #include "include.h"
 
-int check_browsedir(const char *browsedir, char **path, size_t bdlen)
+int check_browsedir(const char *browsedir, char **path,
+	size_t bdlen, char **last_bd_match)
 {
 	char *cp=NULL;
 	char *copy=NULL;
 	if(strncmp(browsedir, *path, bdlen))
 		return 0;
-	if((*path)[bdlen+1]=='\0') return 0;
+	if((*path)[bdlen+1]=='\0' || (bdlen>1 && (*path)[bdlen]!='/'))
+		return 0;
 
 	/* Lots of messing around related to whether browsedir was '', '/', or
    	   something else. */
@@ -34,8 +36,20 @@ int check_browsedir(const char *browsedir, char **path, size_t bdlen)
 		else if(strlen(copy)>2 && copy[1]==':' && copy[2]=='/')
 			copy[2]='\0';
 	}
+	if(*last_bd_match)
+	{
+		if(!strcmp(*last_bd_match, copy))
+		{
+			// Got a duplicate match.
+			free(copy);
+			return 0;
+		}
+		free(*last_bd_match);
+	}
 	free(*path);
 	*path=copy;
+	if(!(*last_bd_match=strdup(copy)))
+		goto err;
 	return 1;
 err:
 	if(copy) free(copy);
@@ -43,16 +57,19 @@ err:
 	return -1;
 }
 
-static int list_manifest(const char *fullpath, regex_t *regex, const char *browsedir, struct config *conf)
+static int list_manifest(const char *fullpath, regex_t *regex,
+	const char *browsedir, struct config *conf)
 {
+	int ars=0;
 	int ret=0;
-	size_t bdlen=0;
 	struct sbuf *sb=NULL;
-	int ars;
 	struct manio *manio=NULL;
 	char *manifest_dir=NULL;
+	char *last_bd_match=NULL;
+	size_t bdlen=0;
 
-	if(!(manifest_dir=prepend_s(fullpath, "manifest"))
+	if(!(manifest_dir=prepend_s(fullpath,
+		conf->legacy?"manifest.gz":"manifest"))
 	  || !(manio=manio_alloc())
 	  || manio_init_read(manio, manifest_dir)
 	  || !(sb=sbuf_alloc()))
@@ -60,6 +77,7 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 		log_and_send_oom(__FUNCTION__);
 		goto error;
 	}
+	if(conf->legacy) manio_set_legacy(manio);
 
 	if(browsedir) bdlen=strlen(browsedir);
 
@@ -78,7 +96,7 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 		{
 			int r;
 			if((r=check_browsedir(browsedir,
-				&sb->path.buf, bdlen))<0)
+				&sb->path.buf, bdlen, &last_bd_match))<0)
 					goto error;
 			if(!r) continue;
 			show++;
@@ -107,6 +125,7 @@ end:
 	sbuf_free(sb);
 	if(manifest_dir) free(manifest_dir);
 	manio_free(manio);
+	if(last_bd_match) free(last_bd_match);
 	return ret;
 }
 

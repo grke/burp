@@ -423,6 +423,16 @@ int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct
 			case CMD_SOFT_LINK:
 			case CMD_HARD_LINK:
 			case CMD_SPECIAL:
+			// Stuff not currently supported in burp-2, but OK
+			// to find in burp-1.
+			case CMD_ENC_FILE:
+			case CMD_METADATA:
+			case CMD_ENC_METADATA:
+			case CMD_EFS_FILE:
+			case CMD_VSS:
+			case CMD_ENC_VSS:
+			case CMD_VSS_T:
+			case CMD_ENC_VSS_T:
 				if(!sb->attr.buf)
 				{
 					log_and_send("read cmd with no attribs");
@@ -509,6 +519,11 @@ int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct
 			case CMD_ERROR:
 				printf("got error: %s\n", rbuf->buf);
 				goto end;
+			// Stuff that is currently legacy. OK to find these
+			// in burp-1, but not burp-2.
+			case CMD_DATAPTH:
+			case CMD_END_FILE:
+				if(conf->legacy) continue;
 			default:
 				iobuf_log_unexpected(rbuf, __FUNCTION__);
 				goto end;

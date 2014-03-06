@@ -3,6 +3,17 @@
 
 #include "include.h"
 
+// Keep track of what needs to be sent.
+#define SBUFL_SEND_STAT		0x01
+#define SBUFL_SEND_PATH		0x02
+#define SBUFL_SEND_DATAPTH	0x04
+#define SBUFL_SEND_ENDOFSIG	0x08
+// Keep track of what is being received.
+#define SBUFL_RECV_DELTA	0x10
+#define SBUFL_UNUSED_A		0x20
+#define SBUFL_UNUSED_B		0x40
+#define SBUFL_UNUSED_C		0x80
+
 struct sbufl
 {
 	struct iobuf path; // File data.
@@ -13,11 +24,7 @@ struct sbufl
 	uint64_t winattr;
 	int compression;
 
-	// Keep track of what needs to be sent.
-	uint8_t send_stat;
-	uint8_t send_path;
-	uint8_t send_datapth;
-	uint8_t send_endofsig;
+	uint8_t flags;
 
 	rs_buffers_t rsbuf;
 	rs_job_t *sigjob;
@@ -25,8 +32,6 @@ struct sbufl
 	rs_filebuf_t *outfb;
 	FILE *sigfp;
 	gzFile sigzp;
-
-	uint8_t receive_delta;
 
 	// Used when saving stuff on the server.
 	FILE *fp;

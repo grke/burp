@@ -6,11 +6,22 @@
 #include "bfile.h"
 #include "blk.h"
 
+// Keep track of what has been sent.
+#define SBUF_SENT_STAT			0x01
+#define SBUF_SENT_PATH			0x02
+#define SBUF_SENT_LINK			0x04
+// Keep track of what needs to be received.
+#define SBUF_NEED_PATH			0x08
+#define SBUF_NEED_LINK			0x10
+#define SBUF_NEED_DATA			0x20
+#define SBUF_HEADER_WRITTEN_TO_MANIFEST	0x40
+#define SBUF_UNUSED			0x80
+
 typedef struct sbuf sbuf_t;
 
 struct sbuf
 {
-	// FIX THIS: path/link/attr/statp/winattr/compression is the same
+	// FIX THIS: path/link/attr/statp/winattr/compression/flags is the same
 	// in struct sbufl. Should be able to put them all a separate struct
 	// that buf sbuf and sbufl share.
 	struct iobuf path; // File data.
@@ -21,16 +32,7 @@ struct sbuf
 	uint64_t winattr;
 	int compression;
 
-	// Keep track of what has been sent.
-	uint8_t sent_stat;
-	uint8_t sent_path;
-	uint8_t sent_link;
-
-	// Keep track of what needs to be received.
-	uint8_t need_path;
-	uint8_t need_link;
-	uint8_t need_data;
-	uint8_t header_written_to_manifest;
+	uint8_t flags;
 
 	ssize_t bytes_read;
 

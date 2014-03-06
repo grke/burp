@@ -260,12 +260,12 @@ static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int requ
 //printf("x: %s\n", sb->path);
 	if(!sb->bsighead) return;
 
-	if(!sb->sent_stat)
+	if(!(sb->flags & SBUF_SENT_STAT))
 	{
 //printf("want to send stat: %s\n", sb->path);
 		iobuf_copy(wbuf, &sb->attr);
 		wbuf->cmd=CMD_ATTRIBS_SIGS; // hack
-		sb->sent_stat=1;
+		sb->flags |= SBUF_SENT_STAT;
 		return;
 	}
 
@@ -287,20 +287,20 @@ static void get_wbuf_from_scan(struct iobuf *wbuf, struct slist *flist)
 {
 	struct sbuf *sb=flist->head;
 	if(!sb) return;
-	if(!sb->sent_stat)
+	if(!(sb->flags & SBUF_SENT_STAT))
 	{
 		iobuf_copy(wbuf, &sb->attr);
-		sb->sent_stat=1;
+		sb->flags |= SBUF_SENT_STAT;
 	}
-	else if(!sb->sent_path)
+	else if(!(sb->flags & SBUF_SENT_PATH))
 	{
 		iobuf_copy(wbuf, &sb->path);
-		sb->sent_path=1;
+		sb->flags |= SBUF_SENT_PATH;
 	}
-	else if(sb->link.buf && !sb->sent_link)
+	else if(sb->link.buf && !(sb->flags & SBUF_SENT_LINK))
 	{
 		iobuf_copy(wbuf, &sb->link);
-		sb->sent_link=1;
+		sb->flags |= SBUF_SENT_LINK;
 	}
 	else
 	{

@@ -438,13 +438,13 @@ int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct
 					log_and_send("read cmd with no attribs");
 					break;
 				}
-				if(sb->need_link)
+				if(sb->flags & SBUF_NEED_LINK)
 				{
 					if(cmd_is_link(rbuf->cmd))
 					{
 						iobuf_copy(&sb->link, rbuf);
 						rbuf->buf=NULL;
-						sb->need_link=0;
+						sb->flags &= ~SBUF_NEED_LINK;
 						return 0;
 					}
 					else
@@ -458,7 +458,7 @@ int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct
 					iobuf_copy(&sb->path, rbuf);
 					rbuf->buf=NULL;
 					if(cmd_is_link(rbuf->cmd))
-						sb->need_link=1;
+						sb->flags |= SBUF_NEED_LINK;
 					else
 						return 0;
 				}

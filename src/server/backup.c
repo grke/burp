@@ -471,7 +471,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			if(!(snew=sbuf_alloc())) goto error;
 			iobuf_copy(&snew->attr, rbuf);
 			sbuf_attribs_decode(snew, conf);
-			snew->need_path=1;
+			snew->flags |= SBUF_NEED_PATH;
 			rbuf->buf=NULL;
 			return 0;
 		case CMD_FILE:
@@ -482,14 +482,14 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			// Attribs should come first, so if we have not
 			// already set up snew, it is an error.
 			if(!snew) goto error;
-			if(snew->need_path)
+			if(snew->flags & SBUF_NEED_PATH)
 			{
 				iobuf_copy(&snew->path, rbuf);
-				snew->need_path=0;
+				snew->flags &= ~SBUF_NEED_PATH;
 				rbuf->buf=NULL;
 //			printf("got request for: %s\n", snew->path);
 				if(cmd_is_link(rbuf->cmd))
-					snew->need_link=1;
+					snew->flags |= SBUF_NEED_LINK;
 				else
 				{
 					if(!(ec=entry_changed(snew, cmanio,
@@ -499,17 +499,20 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 						goto error;
 					else
 					{
-						snew->need_data=data_needed(snew);
+						if(data_needed(snew))
+						  snew->flags|=SBUF_NEED_DATA;
+						else
+						  snew->flags&=~SBUF_NEED_DATA;
 						sbuf_add_to_list(snew, slist);
 					}
 					snew=NULL;
 				}
 				return 0;
 			}
-			else if(snew->need_link)
+			else if(snew->flags & SBUF_NEED_LINK)
 			{
 				iobuf_copy(&snew->link, rbuf);
-				snew->need_link=0;
+				snew->flags &= ~SBUF_NEED_LINK;
 				rbuf->buf=NULL;
 				sbuf_add_to_list(snew, slist);
 				snew=NULL;
@@ -568,7 +571,7 @@ static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, struct bl
 	struct sbuf *sb=slist->blks_to_request;
 //printf("get wbuf from sigs: %p\n", sb);
 
-	while(sb && !sb->need_data)
+	while(sb && !(sb->flags & SBUF_NEED_DATA))
 	{
 //		printf("Do not need data %d: %s\n", sb->need_data, sb->path);
 		sb=sb->next;
@@ -652,7 +655,7 @@ static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist, int sca
 		return;
 	}
 
-	if(sb->sent_path || !sb->need_data)
+	if(sb->flags & SBUF_SENT_PATH || !(sb->flags & SBUF_NEED_DATA))
 	{
 		slist->last_requested=sb->next;
 		return;
@@ -661,7 +664,7 @@ static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist, int sca
 	// Only need to request the path at this stage.
 	iobuf_copy(wbuf, &sb->path);
 //printf("want sigs for: %s\n", sb->path);
-	sb->sent_path=1;
+	sb->flags |= SBUF_SENT_PATH;
 	sb->index=file_no++;
 }
 
@@ -682,16 +685,16 @@ static int write_to_changed_file(struct manio *chmanio, struct slist *slist, str
 	while((sb=slist->head))
 	{
 //printf("consider: %s %d\n", sb->path.buf, sb->need_data);
-		if(sb->need_data)
+		if(sb->flags & SBUF_NEED_DATA)
 		{
 			int hack=0;
 			// Need data...
 			struct blk *blk;
 
-			if(!sb->header_written_to_manifest)
+			if(!(sb->flags & SBUF_HEADER_WRITTEN_TO_MANIFEST))
 			{
 				if(manio_write_sbuf(chmanio, sb)) return -1;
-				sb->header_written_to_manifest=1;
+				sb->flags |= SBUF_HEADER_WRITTEN_TO_MANIFEST;
 			}
 
 			while((blk=sb->bstart)

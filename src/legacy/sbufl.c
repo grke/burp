@@ -14,10 +14,7 @@ void init_sbufl(struct sbufl *sb)
 	sb->link.buf=NULL;
 	sb->link.len=0;
 
-	sb->send_path=0;
-	sb->send_stat=0;
-	sb->send_datapth=0;
-	sb->send_endofsig=0;
+	sb->flags=0;
 
 	sb->compression=-1;
 
@@ -29,8 +26,6 @@ void init_sbufl(struct sbufl *sb)
 	sb->outfb=NULL;
 	sb->sigfp=NULL;
 	sb->sigzp=NULL;
-
-	sb->receive_delta=0;
 
 	sb->fp=NULL;
 	sb->zp=NULL;

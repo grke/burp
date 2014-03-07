@@ -1033,8 +1033,10 @@ static int finalise_glob(struct config *c)
 #ifdef HAVE_WIN32
 	windows_glob(c);
 #else
+	int i;
 	glob_t globbuf;
 	struct strlist *l;
+	struct strlist *last=NULL;
 	memset(&globbuf, 0, sizeof(globbuf));
 	for(l=c->incglob; l; l=l->next)
 	{

@@ -29,7 +29,6 @@ SRCS = \
 	dpth.c \
 	restore.c \
 	run_action.c \
-	vss_strip.c \
 	zlibio.c \
 
 OBJS = $(SRCS:.c=.o)
@@ -58,7 +57,7 @@ WIN32LIBS = $(@WIN32@)
 #	@echo "Compiling $<"
 	$(ECHO_CMD)$(LIBTOOL_COMPILE) $(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 #-------------------------------------------------------------------------
-all: Makefile server_legacy.a
+all: Makefile server_legacy.a vss_strip
 	@echo "==== Make of server_legacy.a is good ===="
 	@echo " "
 
@@ -66,6 +65,10 @@ server_legacy.a: $(OBJS)
 	@echo "Making $@ ..."
 	$(AR) rc  $@ $(OBJS)
 	$(RANLIB) $@
+
+vss_strip: Makefile vss_strip.o
+	@echo "Linking $@ ..."
+	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -o $@ vss_strip.o
 
 Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
 	cd $(topdir) \
@@ -75,7 +78,7 @@ libtool-clean:
 	@$(RMF) -r .libs _libs *.la *.lo
 
 clean:	libtool-clean
-	@$(RMF) a.out *.o *.bak *~ *.intpro *.extpro *.a Makefile
+	@$(RMF) a.out *.o *.bak *~ *.intpro *.extpro *.a Makefile vss_strip
 
 realclean: clean
 	@$(RMF) x

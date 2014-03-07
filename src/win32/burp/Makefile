@@ -54,11 +54,9 @@ CLIENT_OBJS = \
 	$(OBJDIR)/incexc_recv.o \
 	$(OBJDIR)/incexc_send.o \
 	$(OBJDIR)/iobuf.o \
-	$(OBJDIR)/legacy/attribs.o \
 	$(OBJDIR)/legacy/client/acl.o \
 	$(OBJDIR)/legacy/client/backup_phase1.o \
 	$(OBJDIR)/legacy/client/backup_phase2.o \
-	$(OBJDIR)/legacy/client/find.o \
 	$(OBJDIR)/legacy/client/restore.o \
 	$(OBJDIR)/legacy/client/xattr.o \
 	$(OBJDIR)/legacy/handy.o \

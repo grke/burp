@@ -188,7 +188,7 @@ int transfer_gzfile_in(struct sbuf *sb, const char *path, BFILE *bfd, FILE *fp, 
 	int quit=0;
 	int ret=-1;
 	unsigned char out[ZCHUNK];
-	size_t doutlen=0;
+	int doutlen=0;
 	//unsigned char doutbuf[1000+EVP_MAX_BLOCK_LENGTH];
 	unsigned char doutbuf[ZCHUNK-EVP_MAX_BLOCK_LENGTH];
 
@@ -281,7 +281,7 @@ int transfer_gzfile_in(struct sbuf *sb, const char *path, BFILE *bfd, FILE *fp, 
 					  else 
 */
 					  if(!EVP_CipherUpdate(enc_ctx,
-						doutbuf, (int *)&doutlen,
+						doutbuf, &doutlen,
 						(unsigned char *)buf,
 						len))
 					  {
@@ -290,7 +290,7 @@ int transfer_gzfile_in(struct sbuf *sb, const char *path, BFILE *bfd, FILE *fp, 
 					  	break;
 					  }
 					  if(!doutlen) break;
-					  lentouse=doutlen;
+					  lentouse=(size_t)doutlen;
 					  buftouse=doutbuf;
 					}
 					else
@@ -315,15 +315,15 @@ int transfer_gzfile_in(struct sbuf *sb, const char *path, BFILE *bfd, FILE *fp, 
 				if(enc_ctx)
 				{
 					if(!EVP_CipherFinal_ex(enc_ctx,
-						doutbuf, (int *)&doutlen))
+						doutbuf, &doutlen))
 					{
 						logp("Decryption failure at the end.\n");
 						ret=-1; quit++;
 						break;
 					}
 					if(doutlen && do_inflate(&zstrm, bfd,
-					  fp, out, doutbuf, doutlen, metadata,
-					  encpassword,
+					  fp, out, doutbuf, (size_t)doutlen,
+					  metadata, encpassword,
 					  enccompressed, sent))
 					{
 						ret=-1; quit++;

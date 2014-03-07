@@ -64,7 +64,7 @@ int send_file_legacy(FF_PKT *ff, bool top_level, struct config *conf)
 		  || ff->type==FT_DIR)
 		{
 			if(encode_stat_w(&sb, ff, conf->compression)
-			  || async_write(sb.attr)
+			  || async_write(&sb.attr)
 			  || async_write_str(CMD_EFS_FILE, ff->fname))
 				return -1;
 			do_filecounter(conf->p1cntr, CMD_EFS_FILE, 1);
@@ -107,7 +107,7 @@ int send_file_legacy(FF_PKT *ff, bool top_level, struct config *conf)
 			return -1;
 #ifdef HAVE_WIN32
       if(conf->split_vss && !conf->strip_vss
-	&& maybe_send_extrameta(ff->fname, filesymbol, attribs, conf))
+	&& maybe_send_extrameta(ff->fname, filesymbol, &sb, conf))
 		return -1;
 #endif
       if(async_write(&sb.attr)
@@ -120,7 +120,7 @@ int send_file_legacy(FF_PKT *ff, bool top_level, struct config *conf)
       // Possible trailing VSS meta data
       if(conf->split_vss && !conf->strip_vss)
       {
-	if(async_write_str(CMD_ATTRIBS, attribs)
+	if(async_write(&sb.attr)
 	 || async_write_str(vss_trail_symbol, ff->fname))
 		return -1;
         do_filecounter(conf->p1cntr, vss_trail_symbol, 1);
@@ -170,14 +170,14 @@ int send_file_legacy(FF_PKT *ff, bool top_level, struct config *conf)
 		{
 			if(!conf->strip_vss
 			  && maybe_send_extrameta(ff->fname,
-				CMD_DIRECTORY, attribs, conf)) return -1;
-	      		if(async_write_str(CMD_ATTRIBS, attribs)) return -1;
+				CMD_DIRECTORY, &sb, conf)) return -1;
+	      		if(async_write(&sb.attr)) return -1;
 			if(async_write_str(CMD_DIRECTORY, ff->fname)) return -1;
 			do_filecounter(conf->p1cntr, CMD_DIRECTORY, 1);
 		}
 		else
 		{
-	      		if(async_write_str(CMD_ATTRIBS, attribs)) return -1;
+	      		if(async_write(&sb.attr)) return -1;
 			if(async_write_str(filesymbol, ff->fname)) return -1;
 			do_filecounter(conf->p1cntr, filesymbol, 1);
 		}

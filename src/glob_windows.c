@@ -109,7 +109,8 @@ static char **xstrsplit(const char *src, const char *token, size_t *size)
 	{
 		if((int)*size>n*10)
 		{
-			char **newstr=(char **)xrealloc(ret, n++*10*sizeof(char *));
+			char **newstr=(char **)
+				xrealloc(ret, n++*10*sizeof(char *));
 			if(!newstr)
 			{
 				for(; *size>0; (*size)--) xfree(ret[*size-1]);
@@ -162,24 +163,26 @@ static char *xstrsub(const char *src, int begin, int len)
 	return ret;
 }
 
-int windows_glob(struct config *conf, struct strlist ***ielist)
+int windows_glob(struct config *conf)
 {
-	int i;
+	struct strlist *ig;
         WIN32_FIND_DATA ffd;
         HANDLE hFind = INVALID_HANDLE_VALUE;
 
-	for(i=0; i<conf->igcount; i++)
+	for(ig=conf->incglob; ig; ig=ig->next)
 	{
 		char *sav=NULL;
-		char *tmppath = NULL;
-		char **splitstr1 = NULL;
-		size_t len1 = 0;
-		convert_backslashes(&(conf->incglob[i]->path));
-		if(conf->incglob[i]->path[strlen(conf->incglob[i]->path)-1]!='*')
-			splitstr1=xstrsplit(conf->incglob[i]->path, "*", &len1);
+		char *tmppath=NULL;
+		char **splitstr1=NULL;
+		size_t len1=0;
+		convert_backslashes(&ig->path);
+		if(ig->path[strlen(ig->path)-1]!='*')
+			splitstr1=xstrsplit(ig->path, "*", &len1);
 		if(len1>2)
 		{
-			logp("include_glob error: '%s' contains at list two '*' which is not currently supported\n", conf->incglob[i]->path);
+			logp("include_glob error: '%s' contains at least"
+				" two '*' which is not currently supported\n",
+					ig->path);
 			xfree_list(splitstr1, len1);
 			continue;
 		}
@@ -193,7 +196,7 @@ int windows_glob(struct config *conf, struct strlist ***ielist)
 			tmppath = NULL;
 		}
 		else
-			hFind = FindFirstFileA(conf->incglob[i]->path, &ffd);
+			hFind = FindFirstFileA(ig->path, &ffd);
 		if(INVALID_HANDLE_VALUE==hFind)
 		{
 			LPVOID lpMsgBuf;
@@ -224,13 +227,15 @@ int windows_glob(struct config *conf, struct strlist ***ielist)
 			{
 				if(len1<2)
 				{
-					if(conf->incglob[i]->path[xstrlen(conf->incglob[i]->path)-1] == '*')
+					if(ig->path[xstrlen(ig->path)-1]=='*')
 					{
-						tmppath=xstrsub(conf->incglob[i]->path, 0, xstrlen(conf->incglob[i]->path)-1);
-						tmppath=xstrcat(tmppath, ffd.cFileName);
+						tmppath=xstrsub(ig->path, 0,
+							xstrlen(ig->path)-1);
+						tmppath=xstrcat(tmppath,
+							ffd.cFileName);
 					}
 					else
-						tmppath=xstrdup(conf->incglob[i]->path);
+						tmppath=xstrdup(ig->path);
 				}
 				else
 				{
@@ -238,9 +243,10 @@ int windows_glob(struct config *conf, struct strlist ***ielist)
 					tmppath=xstrcat(tmppath, ffd.cFileName);
 					tmppath=xstrcat(tmppath, splitstr1[1]);
 				}
-				strlist_add_sorted(ielist, tmppath, 1);
+				strlist_add_sorted(&conf->incexcdir,
+					tmppath, 1);
 				xfree(tmppath);
-				tmppath = NULL;
+				tmppath=NULL;
 			}
 		}
 		while(FindNextFileA(hFind, &ffd)!=0);

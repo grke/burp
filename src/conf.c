@@ -1030,14 +1030,11 @@ static int finalise_start_dirs(struct config *c)
 // The glob stuff should only run on the client side.
 static int finalise_glob(struct config *c)
 {
-	int i;
-	struct strlist *l;
-	struct strlist *last=NULL;
-#ifndef HAVE_WIN32
+#ifdef HAVE_WIN32
+	windows_glob(c);
+#else
 	glob_t globbuf;
-#endif
-	if(c->mode!=MODE_CLIENT) return 0;
-#ifndef HAVE_WIN32
+	struct strlist *l;
 	memset(&globbuf, 0, sizeof(globbuf));
 	for(l=c->incglob; l; l=l->next)
 	{
@@ -1049,8 +1046,6 @@ static int finalise_glob(struct config *c)
 		strlist_add_sorted(&c->incexcdir, globbuf.gl_pathv[i], 1);
 
 	globfree(&globbuf);
-#else
-	windows_glob(conf, &(l->ielist));
 #endif
 	return 0;
 }
@@ -1107,7 +1102,7 @@ static int finalise_config(const char *config_path, struct config *c, uint8_t lo
 	set_max_ext(c->excext);
 	set_max_ext(c->excom);
 
-	if(finalise_glob(c)) return -1;
+	if(c->mode==MODE_CLIENT && finalise_glob(c)) return -1;
 
 	if(finalise_start_dirs(c)) return -1;
 

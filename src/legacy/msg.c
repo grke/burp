@@ -177,7 +177,7 @@ int transfer_gzfile_in(struct sbufl *sb, const char *path, BFILE *bfd,
 	//unsigned char checksum[MD5_DIGEST_LENGTH+1];
 
 #ifdef HAVE_WIN32
-	if(sb && sb->cmd==CMD_EFS_FILE)
+	if(sb && sb->path.cmd==CMD_EFS_FILE)
 		return transfer_efs_in(bfd, rcvd, sent, cntr);
 #endif
 

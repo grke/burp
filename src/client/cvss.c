@@ -43,14 +43,15 @@ int win32_start_vss(struct config *conf)
 		{
 			// Not given anything specific. Figure out what to do
 			// from the given starting directories.
-			int i=0;
 			int j=0;
-			for(i=0, j=0; i<conf->sdcount && j<26; i++)
+			struct strlist *s;
+			for(s=conf->startdir, j=0; s && j<26; s=s->next)
 			{
 				const char *path=NULL;
-				if(!conf->startdir[i]->flag) continue;
-				path=conf->startdir[i]->path;
-				if(strlen(path)>2 && isalpha(path[0]) && path[1]==':')
+				if(!s->flag) continue;
+				path=s->path;
+				if(strlen(path)>2
+				  && isalpha(path[0]) && path[1]==':')
 				{
 					int x=0;
 					// Try not to add the same letter twice.

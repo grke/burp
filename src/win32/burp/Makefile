@@ -37,6 +37,7 @@ CLIENT_OBJS = \
 	$(OBJDIR)/client/auth.o \
 	$(OBJDIR)/client/autoupgrade.o \
 	$(OBJDIR)/client/backup.o \
+	$(OBJDIR)/client/backup_phase1.o \
 	$(OBJDIR)/client/ca.o \
 	$(OBJDIR)/client/cvss.o \
 	$(OBJDIR)/client/delete.o \

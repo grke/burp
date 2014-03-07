@@ -621,7 +621,7 @@ The 'data' directory contains complete backup files.
 .TP
 The 'deltas.reverse' directory contains reverse deltas that can be applied to the data from the next backup in the sequence (indicated by the contents of the 'forward' file).
 .TP
-Anything with a .gz suffix is compressed in gzip format.  You can use standard tools, such as zcat, zless or cp, to view them or copy them elsewhere.
+Anything with a .gz suffix is compressed in gzip format.  You can use standard tools, such as zcat, zless or cp, to view them or copy them elsewhere. Files from Windows backups will probably contain VSS headers and/or footers. For help stripping these, see the vss_strip man page.
 
 .SH Server initiated backups
 .TP

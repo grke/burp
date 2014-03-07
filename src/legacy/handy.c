@@ -1,9 +1,9 @@
 #include "include.h"
 
-static int do_encryption(EVP_CIPHER_CTX *ctx, unsigned char *inbuf, size_t inlen, unsigned char *outbuf, size_t *outlen, MD5_CTX *md5)
+static int do_encryption(EVP_CIPHER_CTX *ctx, unsigned char *inbuf, int inlen, unsigned char *outbuf, int *outlen, MD5_CTX *md5)
 {
 	if(!inlen) return 0;
-	if(!EVP_CipherUpdate(ctx, outbuf, (int *)outlen, inbuf, (int)inlen))
+	if(!EVP_CipherUpdate(ctx, outbuf, outlen, inbuf, inlen))
 	{
 		logp("Encryption failure.\n");
 		return -1;
@@ -11,7 +11,8 @@ static int do_encryption(EVP_CIPHER_CTX *ctx, unsigned char *inbuf, size_t inlen
 	if(*outlen>0)
 	{
 		int ret;
-		if(!(ret=async_write_strn(CMD_APPEND, (char *)outbuf, *outlen)))
+		if(!(ret=async_write_strn(CMD_APPEND,
+			(char *)outbuf, (size_t)*outlen)))
 		{
 			if(!MD5_Update(md5, outbuf, *outlen))
 			{
@@ -159,13 +160,13 @@ int send_whole_file_gzl(const char *fname, const char *datapth, int quick_read,
 	size_t metalen=0;
 	const char *metadata=NULL;
 
-	unsigned have;
+	int have;
 	z_stream strm;
 	int flush=Z_NO_FLUSH;
 	unsigned char in[ZCHUNK];
 	unsigned char out[ZCHUNK];
 
-	size_t eoutlen;
+	int eoutlen;
 	unsigned char eoutbuf[ZCHUNK+EVP_MAX_BLOCK_LENGTH];
 
 	EVP_CIPHER_CTX *enc_ctx=NULL;
@@ -300,7 +301,8 @@ int send_whole_file_gzl(const char *fname, const char *datapth, int quick_read,
 			}
 			else
 			{
-				if(async_write_strn(CMD_APPEND, (char *)out, have))
+				if(async_write_strn(CMD_APPEND,
+					(char *)out, (size_t)have))
 				{
 					ret=-1;
 					break;
@@ -343,16 +345,16 @@ int send_whole_file_gzl(const char *fname, const char *datapth, int quick_read,
 		}
 		else if(enc_ctx)
 		{
-			if(!EVP_CipherFinal_ex(enc_ctx,
-				eoutbuf, (int *)&eoutlen))
+			if(!EVP_CipherFinal_ex(enc_ctx, eoutbuf, &eoutlen))
 			{
 				logp("Encryption failure at the end\n");
 				ret=-1;
 			}
 			else if(eoutlen>0)
 			{
-			  if(async_write_strn(CMD_APPEND, (char *)eoutbuf, eoutlen))
-				ret=-1;
+			  if(async_write_strn(CMD_APPEND,
+				(char *)eoutbuf, (size_t)eoutlen))
+					ret=-1;
 			  else if(!MD5_Update(&md5, eoutbuf, eoutlen))
 			  {
 				logp("MD5_Update() failed\n");

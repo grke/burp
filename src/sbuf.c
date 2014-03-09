@@ -3,7 +3,7 @@
 static int alloc_count=0;
 static int free_count=0;
 
-struct sbuf *sbuf_alloc(void)
+struct sbuf *sbuf_alloc(struct config *conf)
 {
 	struct sbuf *sb;
 	if(!(sb=(struct sbuf *)calloc(1, sizeof(struct sbuf))))
@@ -14,23 +14,61 @@ struct sbuf *sbuf_alloc(void)
 	sb->path.cmd=CMD_ERROR;
 	sb->attr.cmd=CMD_ATTRIBS;
 	sb->compression=-1;
+	if(conf->legacy)
+	{
+		if(!(sb->burp1=(struct burp1 *)calloc(1, sizeof(struct burp1))))
+		{
+			log_out_of_memory(__FUNCTION__);
+			return NULL;
+		}
+	}
+	else
+	{
+		if(!(sb->burp2=(struct burp2 *)calloc(1, sizeof(struct burp2))))
+		{
+			log_out_of_memory(__FUNCTION__);
+			return NULL;
+		}
+	}
 alloc_count++;
 	return sb;
 }
 
+static void burp1_free_contents(struct burp1 *burp1)
+{
+	if(burp1->sigjob) { rs_job_free(burp1->sigjob); burp1->sigjob=NULL; }
+	if(burp1->infb) { rs_filebuf_free(burp1->infb); burp1->infb=NULL; }
+	if(burp1->outfb) { rs_filebuf_free(burp1->outfb); burp1->outfb=NULL; }
+	close_fp(&burp1->sigfp); burp1->sigfp=NULL;
+	gzclose_fp(&burp1->sigzp); burp1->sigzp=NULL;
+	close_fp(&burp1->fp); burp1->fp=NULL;
+	gzclose_fp(&burp1->zp); burp1->zp=NULL;
+	iobuf_free_content(&burp1->datapth);
+	iobuf_free_content(&burp1->endfile);
+	burp1->datapth.cmd=CMD_DATAPTH;
+	burp1->endfile.cmd=CMD_END_FILE;
+}
+
+static void burp2_free_contents(struct burp2 *burp2)
+{
+	return;
+}
+
 void sbuf_free_contents(struct sbuf *sb)
 {
-	if(sb->path.buf) { free(sb->path.buf); sb->path.buf=NULL; }
-	if(sb->attr.buf) { free(sb->attr.buf); sb->attr.buf=NULL; }
-	if(sb->link.buf) { free(sb->link.buf); sb->link.buf=NULL; }
+	iobuf_free_content(&sb->path);
+	iobuf_free_content(&sb->attr);
+	iobuf_free_content(&sb->link);
+	if(sb->burp1) burp1_free_contents(sb->burp1);
+	if(sb->burp2) burp2_free_contents(sb->burp2);
 }
 
 void sbuf_free(struct sbuf *sb)
 {
-//	sbuf_close_file(sb);
 	if(!sb) return;
 	sbuf_free_contents(sb);
-//printf("sbuf_free: %p\n", sb);
+	if(sb->burp1) { free(sb->burp1); sb->burp1=NULL; }
+	if(sb->burp2) { free(sb->burp2); sb->burp2=NULL; }
 	free(sb);
 free_count++;
 }
@@ -139,17 +177,34 @@ int sbuf_pathcmp(struct sbuf *a, struct sbuf *b)
 	if((r=pathcmp(a->path.buf, b->path.buf))) return r;
 	if(a->path.cmd==CMD_METADATA || a->path.cmd==CMD_ENC_METADATA)
 	{
-		if(b->path.cmd==CMD_METADATA
-		  || b->path.cmd==CMD_ENC_METADATA) return 0;
+		if(b->path.cmd==CMD_METADATA || b->path.cmd==CMD_ENC_METADATA)
+			return 0;
+		else return 1;
+	}
+	else if(a->path.cmd==CMD_VSS || a->path.cmd==CMD_ENC_VSS)
+	{
+		if(b->path.cmd==CMD_VSS || b->path.cmd==CMD_ENC_VSS)
+			return 0;
+		else return -1;
+	}
+	else if(a->path.cmd==CMD_VSS_T || a->path.cmd==CMD_ENC_VSS_T)
+	{
+		if(b->path.cmd==CMD_VSS_T || b->path.cmd==CMD_ENC_VSS_T)
+			return 0;
 		else return 1;
 	}
 	else
 	{
-		if(b->path.cmd==CMD_METADATA
-		  || b->path.cmd==CMD_ENC_METADATA) return -1;
+		if(b->path.cmd==CMD_METADATA || b->path.cmd==CMD_ENC_METADATA)
+			return -1;
+		else if(b->path.cmd==CMD_VSS || b->path.cmd==CMD_ENC_VSS)
+			return 1;
+		else if(b->path.cmd==CMD_VSS_T || b->path.cmd==CMD_ENC_VSS_T)
+			return -1;
 		else return 0;
 	}
 }
+
 
 int sbuf_open_file(struct sbuf *sb, struct config *conf)
 {
@@ -164,9 +219,9 @@ int sbuf_open_file(struct sbuf *sb, struct config *conf)
 		return -1;
 	}
 	sb->compression=conf->compression;
-	if(sbuf_attribs_encode(sb, conf)) return -1;
+	if(attribs_encode(sb)) return -1;
 
-	if(open_file_for_send(&sb->bfd, sb->path.buf, sb->winattr, conf))
+	if(open_file_for_send(&sb->burp2->bfd, sb->path.buf, sb->winattr, conf))
 	{
 		logw(conf->cntr, "Could not open %s\n", sb->path.buf);
 		return -1;
@@ -176,13 +231,13 @@ int sbuf_open_file(struct sbuf *sb, struct config *conf)
 
 void sbuf_close_file(struct sbuf *sb)
 {
-	close_file_for_send(&sb->bfd);
+	close_file_for_send(&sb->burp2->bfd);
 //printf("closed: %s\n", sb->path);
 }
 
 ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize)
 {
-	return (ssize_t)bread(&sb->bfd, buf, bufsize);
+	return (ssize_t)bread(&sb->burp2->bfd, buf, bufsize);
 }
 
 // For retrieving stored data.
@@ -415,7 +470,7 @@ int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct
 				}
 				iobuf_copy(&sb->attr, rbuf);
 				rbuf->buf=NULL;
-				sbuf_attribs_decode(sb, conf);
+				attribs_decode(sb);
 				break;
 
 			case CMD_FILE:
@@ -542,18 +597,4 @@ int sbuf_fill_from_gzfile(struct sbuf *sb, gzFile zp, struct blk *blk, char *dat
 int sbuf_fill_from_net(struct sbuf *sb, struct blk *blk, struct config *conf)
 {
 	return sbuf_fill(sb, NULL, blk, NULL, conf);
-}
-
-int sbuf_attribs_encode(struct sbuf *sb, struct config *conf)
-{
-	return attribs_encode(&sb->statp, &sb->attr,
-		sb->winattr, sb->compression,
-		conf->legacy?NULL:&sb->index);
-}
-
-void sbuf_attribs_decode(struct sbuf *sb, struct config *conf)
-{
-	return attribs_decode(&sb->statp, &sb->attr,
-		&sb->winattr, &sb->compression,
-		conf->legacy?NULL:&sb->index);
 }

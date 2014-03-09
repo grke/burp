@@ -217,7 +217,7 @@ static int sort_sparse_indexes(const char *sparse, struct config *conf)
 	char *path=NULL;
 	char *fingerprints=NULL;
 
-	if(!(sb=sbuf_alloc())
+	if(!(sb=sbuf_alloc(conf))
 	  || !(tmpfile=prepend(sparse, "tmp", strlen("tmp"), "."))
 	  || !(spzp=gzopen_file(sparse, "rb"))
 	  || !(tzp=gzopen_file(tmpfile, "wb")))
@@ -292,8 +292,8 @@ static int merge_sparse_indexes(const char *global, const char *sparse, struct c
 	struct hooks *nnew=NULL;
 	struct stat statp;
 
-	if(!(nsb=sbuf_alloc())
-	  || !(gsb=sbuf_alloc())
+	if(!(nsb=sbuf_alloc(conf))
+	  || !(gsb=sbuf_alloc(conf))
 	  || !(tmpfile=prepend(global, "tmp", strlen("tmp"), "."))
 	  || !(nzp=gzopen_file(sparse, "rb"))
 	  || build_path_w(tmpfile)
@@ -399,7 +399,7 @@ static int sparse_generation(struct manio *newmanio, const char *datadir, const 
 
 	if(!(sparse=prepend_s(manifest_dir, "sparse"))
 	  || !(global_sparse=prepend_s(datadir, "sparse"))
-	  || !(sb=sbuf_alloc())
+	  || !(sb=sbuf_alloc(conf))
 	  || !(blk=blk_alloc())
 	  || build_path_w(sparse)
 	  || !(spzp=gzopen_file(sparse, "wb")))
@@ -478,8 +478,8 @@ int phase3(struct manio *chmanio, struct manio *unmanio, const char *manifest_di
 
 	if(!(newmanio=manio_alloc())
 	  || manio_init_write(newmanio, manifest_dir)
-	  || !(usb=sbuf_alloc())
-	  || !(csb=sbuf_alloc()))
+	  || !(usb=sbuf_alloc(conf))
+	  || !(csb=sbuf_alloc(conf)))
 		goto end;
 
 	while(!finished_ch || !finished_un)

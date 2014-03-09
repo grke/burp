@@ -627,7 +627,7 @@ int do_restore_client(struct config *conf, enum action act, int vss_restore)
 		logp("Streaming restore direct\n");
 	}
 
-	if(!(sb=sbuf_alloc())
+	if(!(sb=sbuf_alloc(conf))
 	  || !(blk=blk_alloc()))
 	{
 		log_and_send_oom(__FUNCTION__);

@@ -1,71 +1,5 @@
 #include "include.h"
 
-void init_sbufl(struct sbufl *sb)
-{
-	sb->path.cmd=CMD_ERROR;
-	sb->path.buf=NULL;
-	sb->path.len=0;
-
-	sb->attr.cmd=CMD_ATTRIBS;
-	sb->attr.buf=NULL;
-	sb->attr.len=0;
-
-	sb->link.cmd=CMD_SOFT_LINK;
-	sb->link.buf=NULL;
-	sb->link.len=0;
-
-	sb->flags=0;
-
-	sb->compression=-1;
-
-	memset(&(sb->rsbuf), 0, sizeof(sb->rsbuf));
-	memset(&(sb->statp), 0, sizeof(sb->statp));
-	sb->winattr=0;
-	sb->sigjob=NULL;
-	sb->infb=NULL;
-	sb->outfb=NULL;
-	sb->sigfp=NULL;
-	sb->sigzp=NULL;
-
-	sb->fp=NULL;
-	sb->zp=NULL;
-
-	sb->datapth.cmd=CMD_DATAPTH;
-	sb->datapth.buf=NULL;
-	sb->datapth.len=0;
-
-	sb->endfile.cmd=CMD_END_FILE;
-	sb->endfile.buf=NULL;
-	sb->endfile.len=0;
-}
-
-void free_sbufl(struct sbufl *sb)
-{
-	iobuf_free_content(&sb->path);
-	iobuf_free_content(&sb->attr);
-	iobuf_free_content(&sb->link);
-	iobuf_free_content(&sb->datapth);
-	if(sb->sigjob) rs_job_free(sb->sigjob);
-	if(sb->infb) rs_filebuf_free(sb->infb);
-	if(sb->outfb) rs_filebuf_free(sb->outfb);
-	iobuf_free_content(&sb->endfile);
-	close_fp(&sb->sigfp);
-	gzclose_fp(&sb->sigzp);
-	close_fp(&sb->fp);
-	gzclose_fp(&sb->zp);
-	init_sbufl(sb);
-}
-
-int sbufl_is_link(struct sbufl *sb)
-{
-	return cmd_is_link(sb->path.cmd);
-}
-
-int sbufl_is_endfile(struct sbufl *sb)
-{
-	return sb->path.cmd==CMD_END_FILE;
-}
-
 static int async_read_fp_msg(FILE *fp, gzFile zp, char **buf, size_t len)
 {
 	char *b=NULL;
@@ -131,7 +65,7 @@ static int async_read_fp(FILE *fp, gzFile zp, struct iobuf *rbuf)
 	return asr;
 }
 
-static int async_read_stat(FILE *fp, gzFile zp, struct sbufl *sb, struct cntr *cntr)
+static int async_read_stat(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
 {
 	static struct iobuf *rbuf=NULL;
 
@@ -166,14 +100,14 @@ static int async_read_stat(FILE *fp, gzFile zp, struct sbufl *sb, struct cntr *c
 		}
 		if(rbuf->cmd==CMD_DATAPTH)
 		{
-			iobuf_copy(&sb->datapth, rbuf);
+			iobuf_copy(&(sb->burp1->datapth), rbuf);
 			rbuf->buf=NULL;
 		}
 		else if(rbuf->cmd==CMD_ATTRIBS)
 		{
 			iobuf_copy(&sb->attr, rbuf);
 			rbuf->buf=NULL;
-			sbufl_attribs_decode(sb);
+			attribs_decode(sb);
 
 			return 0;
 		}
@@ -194,7 +128,7 @@ static int async_read_stat(FILE *fp, gzFile zp, struct sbufl *sb, struct cntr *c
 	return -1;
 }
 
-static int do_sbufl_fill_from_net(struct sbufl *sb, struct cntr *cntr)
+static int do_sbufl_fill_from_net(struct sbuf *sb, struct cntr *cntr)
 {
 	int ars;
 	static struct iobuf *rbuf=NULL;
@@ -204,7 +138,7 @@ static int do_sbufl_fill_from_net(struct sbufl *sb, struct cntr *cntr)
 	if((ars=async_read(rbuf))) return ars;
 	iobuf_copy(&sb->path, rbuf);
 	rbuf->buf=NULL;
-	if(sbufl_is_link(sb))
+	if(sbuf_is_link(sb))
 	{
 		iobuf_free_content(rbuf);
 		if((ars=async_read(rbuf))) return ars;
@@ -218,7 +152,7 @@ static int do_sbufl_fill_from_net(struct sbufl *sb, struct cntr *cntr)
 	return 0;
 }
 
-static int do_sbufl_fill_from_file(FILE *fp, gzFile zp, struct sbufl *sb, int phase1, struct cntr *cntr)
+static int do_sbufl_fill_from_file(FILE *fp, gzFile zp, struct sbuf *sb, int phase1, struct cntr *cntr)
 {
 	int ars;
 	struct iobuf rbuf;
@@ -226,7 +160,7 @@ static int do_sbufl_fill_from_file(FILE *fp, gzFile zp, struct sbufl *sb, int ph
 	if((ars=async_read_stat(fp, zp, sb, cntr))) return ars;
 	if((ars=async_read_fp(fp, zp, &rbuf))) return ars;
 	iobuf_copy(&sb->path, &rbuf);
-	if(sbufl_is_link(sb))
+	if(sbuf_is_link(sb))
 	{
 		if((ars=async_read_fp(fp, zp, &rbuf))) return ars;
 		iobuf_copy(&sb->link, &rbuf);
@@ -247,7 +181,7 @@ static int do_sbufl_fill_from_file(FILE *fp, gzFile zp, struct sbufl *sb, int ph
 			|| sb->path.cmd==CMD_EFS_FILE))
 	{
 		if((ars=async_read_fp(fp, zp, &rbuf))) return ars;
-		iobuf_copy(&sb->endfile, &rbuf);
+		iobuf_copy(&(sb->burp1->endfile), &rbuf);
 		if(rbuf.cmd!=CMD_END_FILE)
 		{
 			iobuf_log_unexpected(&rbuf, __FUNCTION__);
@@ -257,22 +191,22 @@ static int do_sbufl_fill_from_file(FILE *fp, gzFile zp, struct sbufl *sb, int ph
 	return 0;
 }
 
-int sbufl_fill(FILE *fp, gzFile zp, struct sbufl *sb, struct cntr *cntr)
+int sbufl_fill(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
 {
 	if(fp || zp) return do_sbufl_fill_from_file(fp, zp, sb, 0, cntr);
 	return do_sbufl_fill_from_net(sb, cntr);
 }
 
-int sbufl_fill_phase1(FILE *fp, gzFile zp, struct sbufl *sb, struct cntr *cntr)
+int sbufl_fill_phase1(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
 {
 	return do_sbufl_fill_from_file(fp, zp, sb, 1, cntr);
 }
 
-static int sbufl_to_fp(struct sbufl *sb, FILE *mp, int write_endfile)
+static int sbufl_to_fp(struct sbuf *sb, FILE *mp, int write_endfile)
 {
 	if(!sb->path.buf) return 0;
-	if(sb->datapth.buf
-	  && iobuf_send_msg_fp(&sb->datapth, mp))
+	if(sb->burp1->datapth.buf
+	  && iobuf_send_msg_fp(&(sb->burp1->datapth), mp))
 		return -1;
 	if(iobuf_send_msg_fp(&sb->attr, mp)
 	  || iobuf_send_msg_fp(&sb->path, mp))
@@ -290,16 +224,16 @@ static int sbufl_to_fp(struct sbufl *sb, FILE *mp, int write_endfile)
 	  || sb->path.cmd==CMD_ENC_VSS_T
 	  || sb->path.cmd==CMD_EFS_FILE))
 	{
-		if(iobuf_send_msg_fp(&sb->endfile, mp)) return -1;
+		if(iobuf_send_msg_fp(&sb->burp1->endfile, mp)) return -1;
 	}
 	return 0;
 }
 
-static int sbufl_to_zp(struct sbufl *sb, gzFile zp, int write_endfile)
+static int sbufl_to_zp(struct sbuf *sb, gzFile zp, int write_endfile)
 {
 	if(!sb->path.buf) return 0;
-	if(sb->datapth.buf
-	  && iobuf_send_msg_zp(&sb->datapth, zp))
+	if(sb->burp1->datapth.buf
+	  && iobuf_send_msg_zp(&(sb->burp1->datapth), zp))
 		return -1;
 	if(iobuf_send_msg_zp(&sb->attr, zp)
 	  || iobuf_send_msg_zp(&sb->path, zp))
@@ -317,12 +251,12 @@ static int sbufl_to_zp(struct sbufl *sb, gzFile zp, int write_endfile)
 	  || sb->path.cmd==CMD_ENC_VSS_T
 	  || sb->path.cmd==CMD_EFS_FILE))
 	{
-		if(iobuf_send_msg_zp(&sb->endfile, zp)) return -1;
+		if(iobuf_send_msg_zp(&sb->burp1->endfile, zp)) return -1;
 	}
 	return 0;
 }
 
-int sbufl_to_manifest(struct sbufl *sb, FILE *mp, gzFile zp)
+int sbufl_to_manifest(struct sbuf *sb, FILE *mp, gzFile zp)
 {
 	if(mp) return sbufl_to_fp(sb, mp, 1);
 	if(zp) return sbufl_to_zp(sb, zp, 1);
@@ -330,7 +264,7 @@ int sbufl_to_manifest(struct sbufl *sb, FILE *mp, gzFile zp)
 	return -1;
 }
 
-int sbufl_to_manifest_phase1(struct sbufl *sb, FILE *mp, gzFile zp)
+int sbufl_to_manifest_phase1(struct sbuf *sb, FILE *mp, gzFile zp)
 {
 	if(mp) return sbufl_to_fp(sb, mp, 0);
 	if(zp) return sbufl_to_zp(sb, zp, 0);
@@ -338,59 +272,50 @@ int sbufl_to_manifest_phase1(struct sbufl *sb, FILE *mp, gzFile zp)
 	return -1;
 }
 
-void print_sbufl_arr(struct sbufl **list, int count, const char *str)
+int add_to_sbufl_arr(struct sbuf ***sblist, struct sbuf *sb, int *count)
 {
-	int b=0;
-	for(b=0; b<count; b++)
-		printf("%s%d: '%s'\n", str, b, list[b]->path.buf);
-}
-
-int add_to_sbufl_arr(struct sbufl ***sblist, struct sbufl *sb, int *count)
-{
-	struct sbufl *sbnew=NULL;
-        struct sbufl **sbtmp=NULL;
-	//print_sbufl_arr(*sblist, *count, "BEFORE");
-        if(!(sbtmp=(struct sbufl **)realloc(*sblist,
-                ((*count)+1)*sizeof(struct sbufl *))))
+	struct sbuf *sbnew=NULL;
+        struct sbuf **sbtmp=NULL;
+        if(!(sbtmp=(struct sbuf **)realloc(*sblist,
+                ((*count)+1)*sizeof(struct sbuf *))))
         {
                 log_out_of_memory(__FUNCTION__);
                 return -1;
         }
         *sblist=sbtmp;
-	if(!(sbnew=(struct sbufl *)malloc(sizeof(struct sbufl))))
+	if(!(sbnew=(struct sbuf *)malloc(sizeof(struct sbuf))))
 	{
                 log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
-	memcpy(sbnew, sb, sizeof(struct sbufl));
+	memcpy(sbnew, sb, sizeof(struct sbuf));
 
         (*sblist)[(*count)++]=sbnew;
-	//print_sbufl_arr(*sblist, *count, "AFTER");
 
         return 0;
 }
 
-void free_sbufls(struct sbufl **sb, int count)
+void free_sbufls(struct sbuf **sb, int count)
 {
 	int s=0;
 	if(sb)
 	{
 		for(s=0; s<count; s++)
-			if(sb[s]) { free_sbufl(sb[s]); sb[s]=NULL; }
+			if(sb[s]) { sbuf_free(sb[s]); sb[s]=NULL; }
 		free(sb);
 		sb=NULL;
 	}
 }
 
-int del_from_sbufl_arr(struct sbufl ***sblist, int *count)
+int del_from_sbufl_arr(struct sbuf ***sblist, int *count)
 {
-        struct sbufl **sbtmp=NULL;
+        struct sbuf **sbtmp=NULL;
 
 	(*count)--;
 	if((*sblist)[*count])
-		{ free_sbufl((*sblist)[*count]); (*sblist)[*count]=NULL; }
-        if(*count && !(sbtmp=(struct sbufl **)realloc(*sblist,
-                (*count)*sizeof(struct sbufl *))))
+		{ sbuf_free((*sblist)[*count]); (*sblist)[*count]=NULL; }
+        if(*count && !(sbtmp=(struct sbuf **)realloc(*sblist,
+                (*count)*sizeof(struct sbuf *))))
         {
                 log_out_of_memory(__FUNCTION__);
                 return -1;
@@ -402,46 +327,3 @@ int del_from_sbufl_arr(struct sbufl ***sblist, int *count)
 
 	return 0;
 }
-
-// Like pathcmp, but sort entries that have the same paths so that metadata
-// comes later, and vss comes earlier, and trailing vss comes later.
-int sbufl_pathcmp(struct sbufl *a, struct sbufl *b)
-{
-	int r;
-	if((r=pathcmp(a->path.buf, b->path.buf))) return r;
-	if(a->path.cmd==CMD_METADATA || a->path.cmd==CMD_ENC_METADATA)
-	{
-		if(b->path.cmd==CMD_METADATA || b->path.cmd==CMD_ENC_METADATA) return 0;
-		else return 1;
-	}
-	else if(a->path.cmd==CMD_VSS || a->path.cmd==CMD_ENC_VSS)
-	{
-		if(b->path.cmd==CMD_VSS || b->path.cmd==CMD_ENC_VSS) return 0;
-		else return -1;
-	}
-	else if(a->path.cmd==CMD_VSS_T || a->path.cmd==CMD_ENC_VSS_T)
-	{
-		if(b->path.cmd==CMD_VSS_T || b->path.cmd==CMD_ENC_VSS_T) return 0;
-		else return 1;
-	}
-	else
-	{
-		if(b->path.cmd==CMD_METADATA || b->path.cmd==CMD_ENC_METADATA) return -1;
-		else if(b->path.cmd==CMD_VSS || b->path.cmd==CMD_ENC_VSS) return 1;
-		else if(b->path.cmd==CMD_VSS_T || b->path.cmd==CMD_ENC_VSS_T) return -1;
-		else return 0;
-	}
-}
-
-int sbufl_attribs_encode(struct sbufl *sb)
-{
-	return attribs_encode(&sb->statp, &sb->attr,
-		sb->winattr, sb->compression, NULL);
-}
-
-void sbufl_attribs_decode(struct sbufl *sb)
-{
-	return attribs_decode(&sb->statp, &sb->attr,
-		&sb->winattr, &sb->compression, NULL);
-}
-

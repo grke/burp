@@ -203,7 +203,7 @@ int champ_chooser_init(const char *datadir, struct config *conf)
 	struct stat statp;
 	struct candidate *candidate=NULL;
 
-	if(!(sb=sbuf_alloc())
+	if(!(sb=sbuf_alloc(conf))
 	  || (!scores && !(scores=scores_alloc()))
 	  || !(sparse_path=prepend_s(datadir, "sparse"))
 	  || (!lstat(sparse_path, &statp)
@@ -277,7 +277,7 @@ int add_fresh_candidate(const char *path, struct config *conf)
 		goto end;
 	}
 
-	if(!(sb=sbuf_alloc())
+	if(!(sb=sbuf_alloc(conf))
 	  || !(blk=blk_alloc())
 	  || !(zp=gzopen_file(path, "rb")))
 		goto end;

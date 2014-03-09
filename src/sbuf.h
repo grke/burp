@@ -5,7 +5,9 @@
 #include <zlib.h>
 #include "bfile.h"
 #include "blk.h"
+#include "legacy/rs_buf.h"
 
+// Bits in sbuf flags.
 // Keep track of what has been sent.
 #define SBUF_SENT_STAT			0x01
 #define SBUF_SENT_PATH			0x02
@@ -17,13 +19,42 @@
 #define SBUF_HEADER_WRITTEN_TO_MANIFEST	0x40
 #define SBUF_UNUSED			0x80
 
+// Structure used only by burp1 style functionality.
+struct burp1
+{
+        rs_buffers_t rsbuf;
+        rs_job_t *sigjob;
+        rs_filebuf_t *infb;
+        rs_filebuf_t *outfb;
+        FILE *sigfp;
+        gzFile sigzp;
+
+        // Used when saving stuff on the server.
+        FILE *fp;
+        gzFile zp;
+
+        struct iobuf datapth;
+        struct iobuf endfile;
+};
+
+// Structure used only by burp2 style functionality.
+struct burp2
+{
+	ssize_t bytes_read;
+
+	uint64_t index;
+
+	BFILE bfd;
+
+	struct blk *bstart;
+	struct blk *bend;
+	struct blk *bsighead;
+};
+
 typedef struct sbuf sbuf_t;
 
 struct sbuf
 {
-	// FIX THIS: path/link/attr/statp/winattr/compression/flags is the same
-	// in struct sbufl. Should be able to put them all a separate struct
-	// that buf sbuf and sbufl share.
 	struct iobuf path; // File data.
 	struct iobuf link; // Link data.
 	struct iobuf attr; // Attribute data.
@@ -34,15 +65,9 @@ struct sbuf
 
 	uint8_t flags;
 
-	ssize_t bytes_read;
-
-	uint64_t index;
-
-	BFILE bfd;
-
-	struct blk *bstart;
-	struct blk *bend;
-	struct blk *bsighead;
+	// These maybe should be a single pointer that is casted.
+	struct burp1 *burp1;
+	struct burp2 *burp2;
 
 	struct sbuf *next;
 };
@@ -57,15 +82,12 @@ struct slist
 	struct sbuf *blks_to_send; // client only
 };
 
-extern struct sbuf *sbuf_alloc(void);
+extern struct sbuf *sbuf_alloc(struct config *conf);
 extern void sbuf_free_contents(struct sbuf *sb);
 extern void sbuf_free(struct sbuf *sb);
 
 extern struct slist *slist_alloc(void);
 extern void slist_free(struct slist *slist);
-
-extern int sbuf_attribs_encode(struct sbuf *sb, struct config *conf);
-extern void sbuf_attribs_decode(struct sbuf *sb, struct config *conf);
 
 extern int sbuf_open_file(struct sbuf *sb, struct config *conf);
 extern void sbuf_close_file(struct sbuf *sb);

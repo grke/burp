@@ -155,7 +155,7 @@ static int transfer_efs_in(BFILE *bfd, unsigned long long *rcvd,
 
 #endif
 
-int transfer_gzfile_in(struct sbufl *sb, const char *path, BFILE *bfd,
+int transfer_gzfile_in(struct sbuf *sb, const char *path, BFILE *bfd,
 	FILE *fp, unsigned long long *rcvd, unsigned long long *sent,
 	const char *encpassword, int enccompressed,
 	struct cntr *cntr, char **metadata)

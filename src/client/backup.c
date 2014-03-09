@@ -27,17 +27,18 @@ static uint64_t decode_req(const char *buf)
 	return (uint64_t)val;
 }
 
-static int add_to_file_requests(struct slist *slist, struct iobuf *rbuf)
+static int add_to_file_requests(struct slist *slist, struct iobuf *rbuf,
+	struct config *conf)
 {
 	static uint64_t file_no=1;
 	struct sbuf *sb;
 
-	if(!(sb=sbuf_alloc())) return -1;
+	if(!(sb=sbuf_alloc(conf))) return -1;
 
 	iobuf_copy(&sb->path, rbuf);
 	rbuf->buf=NULL;
 	// Give it a number to simplify tracking.
-	sb->index=file_no++;
+	sb->burp2->index=file_no++;
 	sbuf_add_to_list(sb, slist);
 //printf("got request for: %s\n", sb->path);
 
@@ -74,7 +75,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 	{
 		/* Incoming file request. */
 		case CMD_FILE:
-			if(add_to_file_requests(slist, rbuf)) goto error;
+			if(add_to_file_requests(slist, rbuf, conf)) goto error;
 			return 0;
 
 		/* Incoming data block request. */
@@ -156,7 +157,7 @@ static int add_to_blks_list(struct config *conf, struct slist *slist, struct bli
 	if(blks_generate(conf, sb, blist, win)) return -1;
 
 	// If it closed the file, move to the next one.
-	if(sb->bfd.mode==BF_CLOSED) slist->last_requested=sb->next;
+	if(sb->burp2->bfd.mode==BF_CLOSED) slist->last_requested=sb->next;
 
 	return 0;
 }
@@ -167,13 +168,13 @@ static void free_stuff(struct slist *slist, struct blist *blist)
 	blk=blist->head;
 	while(blk && blk!=blist->last_sent)
 	{
-		if(blk==slist->head->bstart)
-			slist->head->bstart=NULL;
-		if(blk==slist->head->bend)
+		if(blk==slist->head->burp2->bstart)
+			slist->head->burp2->bstart=NULL;
+		if(blk==slist->head->burp2->bend)
 		{
 			struct sbuf *sb;
 			sb=slist->head;
-			sb->bend=NULL;
+			sb->burp2->bend=NULL;
 			if(!(slist->head=slist->head->next))
 				slist->tail=NULL;
 //printf("FREE SB %lu %s\n", sb->index, sb->path);
@@ -258,7 +259,7 @@ static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int requ
 		return;
 	}
 //printf("x: %s\n", sb->path);
-	if(!sb->bsighead) return;
+	if(!sb->burp2->bsighead) return;
 
 	if(!(sb->flags & SBUF_SENT_STAT))
 	{
@@ -269,17 +270,17 @@ static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int requ
 		return;
 	}
 
-	iobuf_from_blk_data(wbuf, sb->bsighead);
+	iobuf_from_blk_data(wbuf, sb->burp2->bsighead);
 
 	// Move on.
-	if(sb->bsighead==sb->bend)
+	if(sb->burp2->bsighead==sb->burp2->bend)
 	{
 		slist->blks_to_send=sb->next;
-		sb->bsighead=sb->bstart;
+		sb->burp2->bsighead=sb->burp2->bstart;
 	}
 	else
 	{
-		sb->bsighead=sb->bsighead->next;
+		sb->burp2->bsighead=sb->burp2->bsighead->next;
 	}
 }
 
@@ -392,7 +393,7 @@ static int backup_phase2_client(struct config *conf, int resume)
 			if(slist->head==slist->tail)
 			{
 				if(!slist->tail
-				  || blist->last_sent==slist->tail->bend)
+				  || blist->last_sent==slist->tail->burp2->bend)
 				{
 					if(!wbuf->len)
 						break;

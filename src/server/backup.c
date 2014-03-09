@@ -212,7 +212,7 @@ static int entry_changed(struct sbuf *sb, struct manio *cmanio, struct manio *un
 
 	if(finished) return 1;
 
-	if(!csb && !(csb=sbuf_alloc())) return -1;
+	if(!csb && !(csb=sbuf_alloc(conf))) return -1;
 
 	if(csb->path.buf)
 	{
@@ -363,12 +363,13 @@ static int set_up_for_sig_info(struct slist *slist, struct blist *blist, struct 
 
 	for(sb=slist->add_sigs_here; sb; sb=sb->next)
 	{
-		if(!sb->index) continue;
-		if(inew->index==sb->index) break;
+		if(!sb->burp2->index) continue;
+		if(inew->burp2->index==sb->burp2->index) break;
 	}
 	if(!sb)
 	{
-		logp("Could not find %lu in request list %d\n", inew->index, sb->index);
+		logp("Could not find %lu in request list %d\n",
+			inew->burp2->index, sb->burp2->index);
 		return -1;
 	}
 	// Replace the attribs with the more recent values.
@@ -378,7 +379,7 @@ static int set_up_for_sig_info(struct slist *slist, struct blist *blist, struct 
 	inew->attr.buf=NULL;
 
 	// Mark the end of the previous file.
-	slist->add_sigs_here->bend=blist->tail;
+	slist->add_sigs_here->burp2->bend=blist->tail;
 
 	slist->add_sigs_here=sb;
 
@@ -408,8 +409,8 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobu
 	blk_add_to_list(blk, blist);
 
 	sb=slist->add_sigs_here;
-        if(!sb->bstart) sb->bstart=blk;
-        if(!sb->bsighead) sb->bsighead=blk;
+        if(!sb->burp2->bstart) sb->burp2->bstart=blk;
+        if(!sb->burp2->bsighead) sb->burp2->bsighead=blk;
 
 	// FIX THIS: Should not just load into strings.
 	if(split_sig(rbuf->buf, rbuf->len, blk->weak, blk->strong)) return -1;
@@ -436,7 +437,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 	static struct sbuf *snew=NULL;
 	static struct sbuf *inew=NULL;
 
-	if(!inew && !(inew=sbuf_alloc())) goto error;
+	if(!inew && !(inew=sbuf_alloc(conf))) goto error;
 
 	switch(rbuf->cmd)
 	{
@@ -450,7 +451,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			// New set of stuff incoming. Clean up.
 			if(inew->attr.buf) free(inew->attr.buf);
 			iobuf_copy(&inew->attr, rbuf);
-			inew->index=decode_file_no(inew);
+			inew->burp2->index=decode_file_no(inew);
 			rbuf->buf=NULL;
 
 			// Need to go through slist to find the matching
@@ -468,9 +469,9 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			// Attribs should come first, so if we already
 			// set up snew, it is an error.
 			if(snew) break;
-			if(!(snew=sbuf_alloc())) goto error;
+			if(!(snew=sbuf_alloc(conf))) goto error;
 			iobuf_copy(&snew->attr, rbuf);
-			sbuf_attribs_decode(snew, conf);
+			attribs_decode(snew);
 			snew->flags |= SBUF_NEED_PATH;
 			rbuf->buf=NULL;
 			return 0;
@@ -587,12 +588,12 @@ static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, struct bl
 		}
 		return 0;
 	}
-	if(!sb->bsighead)
+	if(!sb->burp2->bsighead)
 	{
 //printf("HERE X %d %d: %s\n", sigs_end, *blk_requests_end, sb->path);
 		// Trying to move onto the next file.
 		// ??? Does this really work?
-		if(sb->bend)
+		if(sb->burp2->bend)
 		{
 			slist->blks_to_request=sb->next;
 			printf("move to next\n");
@@ -605,37 +606,37 @@ static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, struct bl
 		}
 		return 0;
 	}
-//printf("HERE Y %p %p %lu %d\n", sb->bsighead, sb->bsighead->next, sb->bsighead->index, sb->bsighead->got);
+//printf("HERE Y %p %p %lu %d\n", sb->burp2->bsighead, sb->burp2->bsighead->next, sb->burp2->bsighead->index, sb->burp2->bsighead->got);
 
-//printf("check: %p %s\n", sb->bsighead, sb->path); fflush(stdout);
-	if(sb->bsighead->got==INCOMING)
+//printf("check: %p %s\n", sb->burp2->bsighead, sb->path); fflush(stdout);
+	if(sb->burp2->bsighead->got==INCOMING)
 	{
 		if(sigs_end
-		  && deduplicate(sb->bsighead, dpth, conf, wrap_up))
+		  && deduplicate(sb->burp2->bsighead, dpth, conf, wrap_up))
 			return -1;
 		return 0;
 	}
 
-	if(sb->bsighead->got==NOT_GOT)
+	if(sb->burp2->bsighead->got==NOT_GOT)
 	{
-		encode_req(sb->bsighead, req);
+		encode_req(sb->burp2->bsighead, req);
 		iobuf_from_str(wbuf, CMD_DATA_REQ, req);
 //printf("DATA REQUEST: %lu %04lX %s\n",
-//	sb->bsighead->index, sb->bsighead->index, sb->bsighead->weak);
-		sb->bsighead->requested=1;
+//	sb->burp2->bsighead->index, sb->burp2->bsighead->index, sb->burp2->bsighead->weak);
+		sb->burp2->bsighead->requested=1;
 	}
 
 	// Move on.
-	if(sb->bsighead==sb->bend)
+	if(sb->burp2->bsighead==sb->burp2->bend)
 	{
 		slist->blks_to_request=sb->next;
-		sb->bsighead=sb->bstart;
-//		if(!sb->bsighead) printf("sb->bsighead fell off end a\n");
+		sb->burp2->bsighead=sb->burp2->bstart;
+//		if(!sb->burp2->bsighead) printf("sb->burp2->bsighead fell off end a\n");
 	}
 	else
 	{
-		sb->bsighead=sb->bsighead->next;
-//		if(!sb->bsighead) printf("sb->bsighead fell off end b\n");
+		sb->burp2->bsighead=sb->burp2->bsighead->next;
+//		if(!sb->burp2->bsighead) printf("sb->burp2->bsighead fell off end b\n");
 	}
 //printf("end get_wbuf_fs\n");
 	return 0;
@@ -665,7 +666,7 @@ static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist, int sca
 	iobuf_copy(wbuf, &sb->path);
 //printf("want sigs for: %s\n", sb->path);
 	sb->flags |= SBUF_SENT_PATH;
-	sb->index=file_no++;
+	sb->burp2->index=file_no++;
 }
 
 static void sanity_before_sbuf_free(struct slist *slist, struct sbuf *sb)
@@ -697,7 +698,7 @@ static int write_to_changed_file(struct manio *chmanio, struct slist *slist, str
 				sb->flags |= SBUF_HEADER_WRITTEN_TO_MANIFEST;
 			}
 
-			while((blk=sb->bstart)
+			while((blk=sb->burp2->bstart)
 				&& blk->got==GOT
 				&& (blk->next || backup_end))
 			{
@@ -729,12 +730,12 @@ static int write_to_changed_file(struct manio *chmanio, struct slist *slist, str
 				}
 */
 
-				if(blk==sb->bend)
+				if(blk==sb->burp2->bend)
 				{
-//printf("blk==sb->bend END FILE\n");
+//printf("blk==sb->burp2->bend END FILE\n");
 					slist->head=sb->next;
 					//break;
-					if(!(blist->head=sb->bstart))
+					if(!(blist->head=sb->burp2->bstart))
 						blist->tail=NULL;
 					sanity_before_sbuf_free(slist, sb);
 					sbuf_free(sb);
@@ -742,13 +743,13 @@ static int write_to_changed_file(struct manio *chmanio, struct slist *slist, str
 					break;
 				}
 
-				if(sb->bsighead==sb->bstart)
-					sb->bsighead=blk->next;
-				sb->bstart=blk->next;
+				if(sb->burp2->bsighead==sb->burp2->bstart)
+					sb->burp2->bsighead=blk->next;
+				sb->burp2->bstart=blk->next;
 				blk_free(blk);
 			}
 			if(hack) continue;
-			if(!(blist->head=sb->bstart))
+			if(!(blist->head=sb->burp2->bstart))
 				blist->tail=NULL;
 			break;
 		}
@@ -875,7 +876,8 @@ static int backup_server(struct sdirs *sdirs, const char *manifest_dir, struct c
 
 	// Hack: If there are some entries left after the last entry that
 	// contains block data, it will not be written to the changed file
-	// yet because the last entry of block data has not had sb->bend set.
+	// yet because the last entry of block data has not had
+	// sb->burp2->bend set.
 	if(slist->head && slist->head->next)
 	{
 		slist->head=slist->head->next;

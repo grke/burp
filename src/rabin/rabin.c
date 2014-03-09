@@ -46,12 +46,12 @@ static int blk_read(struct rconf *rconf, struct win *win, struct sbuf *sb, struc
 		{
 			if(first)
 			{
-				sb->bstart=blk;
+				sb->burp2->bstart=blk;
 				first=0;
 			}
-			if(!sb->bsighead)
+			if(!sb->burp2->bsighead)
 			{
-				sb->bsighead=blk;
+				sb->burp2->bsighead=blk;
 			}
 			blk_add_to_list(blk, blist);
 			blk=NULL;
@@ -67,7 +67,7 @@ int blks_generate(struct config *conf, struct sbuf *sb, struct blist *blist, str
 {
 	static ssize_t bytes;
 
-	if(sb->bfd.mode==BF_CLOSED)
+	if(sb->burp2->bfd.mode==BF_CLOSED)
 	{
 		if(sbuf_open_file(sb, conf)) return -1;
 		first=1;
@@ -88,7 +88,7 @@ int blks_generate(struct config *conf, struct sbuf *sb, struct blist *blist, str
 	{
 		gcp=gbuf;
 		gbuf_end=gbuf+bytes;
-		sb->bytes_read+=bytes;
+		sb->burp2->bytes_read+=bytes;
 		if(blk_read(&conf->rconf, win, sb, blist))
 			return 0; // Got a block
 		// Did not get a block. Maybe should try again?
@@ -99,12 +99,12 @@ int blks_generate(struct config *conf, struct sbuf *sb, struct blist *blist, str
 	// Getting here means there is no more to read from the file.
 	// Make sure to deal with anything left over.
 
-	if(!sb->bytes_read)
+	if(!sb->burp2->bytes_read)
 	{
 		// Empty file, set up an empty block so that the server
 		// can skip over it.
-		if(!(sb->bstart=blk_alloc())) return -1;
-		sb->bsighead=blk;
+		if(!(sb->burp2->bstart=blk_alloc())) return -1;
+		sb->burp2->bsighead=blk;
 		blk_add_to_list(blk, blist);
 		blk=NULL;
 	}
@@ -114,19 +114,19 @@ int blks_generate(struct config *conf, struct sbuf *sb, struct blist *blist, str
 		{
 			if(first)
 			{
-				sb->bstart=blk;
+				sb->burp2->bstart=blk;
 				first=0;
 			}
-			if(!sb->bsighead)
+			if(!sb->burp2->bsighead)
 			{
-				sb->bsighead=blk;
+				sb->burp2->bsighead=blk;
 			}
 			blk_add_to_list(blk, blist);
 		}
 		else blk_free(blk);
 		blk=NULL;
 	}
-	if(blist->tail) sb->bend=blist->tail;
+	if(blist->tail) sb->burp2->bend=blist->tail;
 	sbuf_close_file(sb);
 	return 0;
 }

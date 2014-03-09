@@ -264,7 +264,7 @@ int do_list_client(struct config *conf, enum action act, int json)
 	  || async_read_expect(CMD_GEN, "ok"))
 		goto end;
 
-	if(!(sb=sbuf_alloc())) goto end;
+	if(!(sb=sbuf_alloc(conf))) goto end;
 	iobuf_init(&sb->path);
 	iobuf_init(&sb->link);
 	iobuf_init(&sb->attr);
@@ -303,7 +303,7 @@ int do_list_client(struct config *conf, enum action act, int json)
 			goto end;
 		}
 
-		sbuf_attribs_decode(sb, conf);
+		attribs_decode(sb);
 
 		iobuf_free_content(&sb->path);
 		if(async_read(&sb->path))

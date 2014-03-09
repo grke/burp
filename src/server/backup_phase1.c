@@ -6,70 +6,66 @@
 int backup_phase1_server(struct sdirs *sdirs, struct config *conf)
 {
 	int ars=0;
-	int ret=0;
+	int ret=-1;
 	int quit=0;
-	struct sbufl sb;
+	struct sbuf *sb=NULL;
 	gzFile p1zp=NULL;
 	char *phase1tmp=NULL;
 
 	logp("Begin phase1 (file system scan)\n");
 
 	if(!(phase1tmp=get_tmp_filename(sdirs->phase1data)))
-		return -1;
-
+		goto end;
 	if(!(p1zp=gzopen_file(phase1tmp, comp_level(conf))))
-	{
-		free(phase1tmp);
-		return -1;
-	}
+		goto end;
+	if(!(sb=sbuf_alloc(conf)))
+		goto end;
 
-	init_sbufl(&sb);
 	while(!quit)
 	{
-		free_sbufl(&sb);
-		if((ars=sbufl_fill(NULL, NULL, &sb, conf->p1cntr)))
+		sbuf_free_contents(sb);
+		if((ars=sbufl_fill(NULL, NULL, sb, conf->p1cntr)))
 		{
-			if(ars<0) ret=-1;
+			if(ars<0) goto end;
 			//ars==1 means it ended ok.
 			// Last thing the client sends is 'backupphase2', and
 			// it wants an 'ok' reply.
 			if(async_write_str(CMD_GEN, "ok")
 				|| send_msg_zp(p1zp, CMD_GEN,
 					"phase1end", strlen("phase1end")))
-				ret=-1;
+				goto end;
 			break;
 		}
-		write_status(STATUS_SCANNING, sb.path.buf, conf);
-		if(sbufl_to_manifest_phase1(&sb, NULL, p1zp))
-		{
-			ret=-1;
-			break;
-		}
-		do_filecounter(conf->p1cntr, sb.path.cmd, 0);
+		write_status(STATUS_SCANNING, sb->path.buf, conf);
+		if(sbufl_to_manifest_phase1(sb, NULL, p1zp))
+			goto end;
+		do_filecounter(conf->p1cntr, sb->path.cmd, 0);
 
-		if(sb.path.cmd==CMD_FILE
-		  || sb.path.cmd==CMD_ENC_FILE
-		  || sb.path.cmd==CMD_METADATA
-		  || sb.path.cmd==CMD_ENC_METADATA
-		  || sb.path.cmd==CMD_EFS_FILE)
+		if(sb->path.cmd==CMD_FILE
+		  || sb->path.cmd==CMD_ENC_FILE
+		  || sb->path.cmd==CMD_METADATA
+		  || sb->path.cmd==CMD_ENC_METADATA
+		  || sb->path.cmd==CMD_EFS_FILE)
 			do_filecounter_bytes(conf->p1cntr,
-				(unsigned long long)sb.statp.st_size);
+				(unsigned long long)sb->statp.st_size);
 	}
 
-	free_sbufl(&sb);
 	if(gzclose(p1zp))
 	{
 		logp("error closing %s in backup_phase1_server\n", phase1tmp);
-		ret=-1;
+		goto end;
 	}
-	if(!ret && do_rename(phase1tmp, sdirs->phase1data))
-		ret=-1;
-	free(phase1tmp);
+	if(do_rename(phase1tmp, sdirs->phase1data))
+		goto end;
 
 	//print_filecounters(p1cntr, cntr, ACTION_BACKUP);
 
 	logp("End phase1 (file system scan)\n");
-
+	ret=0;
+end:
+	free(phase1tmp);
+	gzclose(p1zp);
+	sbuf_free(sb);
 	return ret;
 }
 

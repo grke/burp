@@ -72,7 +72,7 @@ static int list_manifest(const char *fullpath, regex_t *regex,
 		conf->legacy?"manifest.gz":"manifest"))
 	  || !(manio=manio_alloc())
 	  || manio_init_read(manio, manifest_dir)
-	  || !(sb=sbuf_alloc()))
+	  || !(sb=sbuf_alloc(conf)))
 	{
 		log_and_send_oom(__FUNCTION__);
 		goto error;

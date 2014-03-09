@@ -31,7 +31,7 @@ static int make_rev_sig(const char *dst, const char *sig, const char *endfile, i
 	close_fp(&dstfp);
 	if(close_fp(&sigp))
 	{
-		logp("error closing %s in make_rev_sig\n", sig);
+		logp("error closing %s in %s\n", sig, __FUNCTION__);
 		return -1;
 	}
 //logp("end of make rev sig\n");
@@ -80,7 +80,8 @@ static int make_rev_delta(const char *src, const char *sig, const char *del, int
 			rs_free_sumset(sumset);
 			return -1;
 		}
-		result=rs_delta_gzfile(sumset, srcfp, srczp, NULL, delzp, NULL, cconf->cntr);
+		result=rs_delta_gzfile(sumset, srcfp, srczp,
+			NULL, delzp, NULL, cconf->cntr);
 		if(gzclose_fp(&delzp))
 		{
 			logp("error closing %s in make_rev_delta\n", del);
@@ -97,7 +98,8 @@ static int make_rev_delta(const char *src, const char *sig, const char *del, int
 			rs_free_sumset(sumset);
 			return -1;
 		}
-		result=rs_delta_gzfile(sumset, srcfp, srczp, delfp, NULL, NULL, cconf->cntr);
+		result=rs_delta_gzfile(sumset, srcfp, srczp,
+			delfp, NULL, NULL, cconf->cntr);
 		if(close_fp(&delfp))
 		{
 			logp("error closing %s in make_rev_delta\n", del);
@@ -116,14 +118,14 @@ static int make_rev_delta(const char *src, const char *sig, const char *del, int
 }
 
 
-static int gen_rev_delta(const char *sigpath, const char *deltadir, const char *oldpath, const char *finpath, const char *path, const char *endfile, int compression, struct config *cconf)
+static int gen_rev_delta(const char *sigpath, const char *deltadir, const char *oldpath, const char *finpath, const char *path, struct sbuf *sb, struct config *cconf)
 {
-	int ret=0;
+	int ret=-1;
 	char *delpath=NULL;
 	if(!(delpath=prepend_s(deltadir, path)))
 	{
 		log_out_of_memory(__FUNCTION__);
-		ret=-1;
+		goto end;
 	}
 	//logp("Generating reverse delta...\n");
 /*
@@ -135,28 +137,30 @@ static int gen_rev_delta(const char *sigpath, const char *deltadir, const char *
 	if(mkpath(&delpath, deltadir))
 	{
 		logp("could not mkpaths for: %s\n", delpath);
-		ret=-1;
+		goto end;
 	}
 	else if(make_rev_sig(finpath, sigpath,
-		endfile, compression, cconf))
+		sb->burp1->endfile.buf, sb->compression, cconf))
 	{
 		logp("could not make signature from: %s\n", finpath);
-		ret=-1;
+		goto end;
 	}
-	else if(make_rev_delta(oldpath, sigpath, delpath,
-		compression, cconf))
+	else if(make_rev_delta(oldpath, sigpath,
+		delpath, sb->compression, cconf))
 	{
 		logp("could not make delta from: %s\n", oldpath);
-		ret=-1;
+		goto end;
 	}
 	else unlink(sigpath);	
+
+	ret=0;
+end:
 	if(delpath) free(delpath);
 	return ret;
 }
 
 static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, const char *datadirtmp, const char *datapth, int compression, struct config *cconf)
 {
-	int ret=0;
 	struct stat statp;
 	const char *opath=oldpath;
 
@@ -168,6 +172,7 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, con
 
 	if(dpthl_is_compressed(compression, opath))
 	{
+		int zret;
 		FILE *source=NULL;
 		FILE *dest=NULL;
 
@@ -198,13 +203,17 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, con
 			close_fp(&dest);
 			return -1;
 		}
-		if((ret=zlib_inflate(source, dest))!=Z_OK)
-		logp("zlib_inflate returned: %d\n", ret);
+		zret=zlib_inflate(source, dest);
 		close_fp(&source);
 		if(close_fp(&dest))
 		{
 			logp("error closing %s in %s\n",
 				infpath, __FUNCTION__);
+			return -1;
+		}
+		if(zret!=Z_OK)
+		{
+			logp("zlib_inflate returned: %d\n", zret);
 			return -1;
 		}
 	}
@@ -215,20 +224,21 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, con
 		// was interrupted on a previous run just after this point.
 		if(do_link(opath, infpath, &statp, cconf,
 			TRUE /* allow overwrite of infpath */))
-				ret=-1;
+				return -1;
 	
 	}
-	return ret;
+	return 0;
 }
 
-static int jiggle(const char *datapth, const char *currentdata, const char *datadirtmp, const char *datadir, const char *deltabdir, const char *deltafdir, const char *sigpath, const char *endfile, const char *deletionsfile, FILE **delfp, struct sbufl *sb, int hardlinked, int compression, struct config *cconf)
+static int jiggle(struct sbuf *sb, const char *currentdata, const char *datadirtmp, const char *datadir, const char *deltabdir, const char *deltafdir, const char *sigpath, const char *deletionsfile, FILE **delfp, int hardlinked, struct config *cconf)
 {
-	int ret=0;
+	int ret=-1;
 	struct stat statp;
 	char *oldpath=NULL;
 	char *newpath=NULL;
 	char *finpath=NULL;
 	char *deltafpath=NULL;
+	const char *datapth=sb->burp1->datapth.buf;
 
 	if(!(oldpath=prepend_s(currentdata, datapth))
 	  || !(newpath=prepend_s(datadirtmp, datapth))
@@ -236,8 +246,7 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 	  || !(deltafpath=prepend_s(deltafdir, datapth)))
 	{
 		log_out_of_memory(__FUNCTION__);
-		ret=-1;	
-		goto cleanup;
+		goto end;
 	}
 	else if(!lstat(finpath, &statp) && S_ISREG(statp.st_mode))
 	{
@@ -260,14 +269,12 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 	else if(mkpath(&finpath, datadir))
 	{
 		logp("could not create path for: %s\n", finpath);
-		ret=-1;
-		goto cleanup;
+		goto end;
 	}
 	else if(mkpath(&newpath, datadirtmp))
 	{
 		logp("could not create path for: %s\n", newpath);
-		ret=-1;
-		goto cleanup;
+		goto end;
 	}
 	else if(!lstat(deltafpath, &statp) && S_ISREG(statp.st_mode))
 	{
@@ -282,23 +289,21 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 	  	if(!(infpath=prepend_s(deltafdir, "inflate")))
 		{
 			log_out_of_memory(__FUNCTION__);
-			ret=-1;
-			goto cleanup;
+			goto end;
 		}
 
 		//logp("Fixing up: %s\n", datapth);
 		if(inflate_or_link_oldfile(oldpath, infpath, datadirtmp,
-			datapth, compression, cconf))
+			datapth, sb->compression, cconf))
 		{
 			logp("error when inflating old file: %s\n", oldpath);
-			ret=-1;
 			free(infpath);
-			goto cleanup;
+			goto end;
 		}
 
 		if((lrs=do_patch(infpath, deltafpath, newpath,
 			cconf->compression,
-			compression /* from the manifest */, cconf)))
+			sb->compression /* from the manifest */, cconf)))
 		{
 			logp("WARNING: librsync error when patching %s: %d\n",
 				oldpath, lrs);
@@ -316,18 +321,18 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 			if(!*delfp && !(*delfp=open_file(deletionsfile, "ab")))
 			{
 				// Could not mark this file as deleted. Fatal.
-				ret=-1;
-				goto cleanup;
+				goto end;
 			}
 			if(sbufl_to_manifest(sb, *delfp, NULL))
-				ret=-1;
+				goto end;
 			if(fflush(*delfp))
 			{
 				logp("error fflushing deletions file in jiggle: %s\n", strerror(errno));
-				ret=-1;
+				goto end;
 			}
-
-			goto cleanup;
+	
+			ret=0;
+			goto end;
 		}
 
 		// Get rid of the inflated old file.
@@ -339,12 +344,8 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 		if(!hardlinked)
 		{
 			if(gen_rev_delta(sigpath, deltabdir,
-				oldpath, newpath, datapth, endfile,
-				compression, cconf))
-			{
-				ret=-1;
-				goto cleanup;
-			}
+				oldpath, newpath, datapth, sb, cconf))
+					goto end;
 		}
 
 		// Power interruptions should be
@@ -356,10 +357,7 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 
 		// Use the fresh new file.
 		if(do_rename(newpath, finpath))
-		{
-			ret=-1;
-			goto cleanup;
-		}
+			goto end;
 		else
 		{
 			// Remove the forward delta, as it is
@@ -392,10 +390,7 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 		// patching stuff writes to newpath.
 		//logp("Using newly received file\n");
 		if(do_rename(newpath, finpath))
-		{
-			ret=-1;
-			goto cleanup;
-		}
+			goto end;
 	}
 	else if(!lstat(oldpath, &statp) && S_ISREG(statp.st_mode))
 	{
@@ -404,10 +399,7 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 		//logp("Hard linking to old file: %s\n", datapth);
 		if(do_link(oldpath, finpath, &statp, cconf,
 		  FALSE /* do not overwrite finpath (should never need to) */))
-		{
-			ret=-1;
-			goto cleanup;
-		}
+			goto end;
 		else
 		{
 			// If we are not keeping a hardlinked
@@ -422,15 +414,15 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 	else
 	{
 		logp("could not find: %s\n", oldpath);
-		ret=-1;
-		goto cleanup;
+		goto end;
 	}
 
-cleanup:
-	if(oldpath) { free(oldpath); oldpath=NULL; }
-	if(newpath) { free(newpath); newpath=NULL; }
-	if(finpath) { free(finpath); finpath=NULL; }
-	if(deltafpath) { free(deltafpath); deltafpath=NULL; }
+	ret=0;
+end:
+	if(oldpath) free(oldpath);
+	if(newpath) free(newpath);
+	if(finpath) free(finpath);
+	if(deltafpath) free(deltafpath);
 
 	return ret;
 }
@@ -472,87 +464,80 @@ static int do_hardlinked_archive(struct config *cconf, unsigned long bno)
 static int maybe_delete_files_from_manifest(const char *manifest, const char *deletionsfile, struct config *cconf)
 {
 	int ars=0;
-	int ret=0;
+	int ret=-1;
 	int pcmp=0;
 	FILE *dfp=NULL;
-	struct sbufl db;
-	struct sbufl mb;
 	gzFile nmzp=NULL;
 	gzFile omzp=NULL;
+	struct sbuf *db=NULL;
+	struct sbuf *mb=NULL;
 	char *manifesttmp=NULL;
 	struct stat statp;
 
-	if(lstat(deletionsfile, &statp))
-	{
-		// No deletions, no problem.
+	if(lstat(deletionsfile, &statp)) // No deletions, no problem.
 		return 0;
-	}
 	logp("Performing deletions on manifest\n");
 
 	if(!(manifesttmp=get_tmp_filename(manifest)))
-	{
-		ret=-1;
 		goto end;
-	}
 
         if(!(dfp=open_file(deletionsfile, "rb"))
 	  || !(omzp=gzopen_file(manifest, "rb"))
-	  || !(nmzp=gzopen_file(manifesttmp, comp_level(cconf))))
-	{
-		ret=-1;
+	  || !(nmzp=gzopen_file(manifesttmp, comp_level(cconf)))
+	  || !(db=sbuf_alloc(cconf))
+	  || !(mb=sbuf_alloc(cconf)))
 		goto end;
-	}
-
-	init_sbufl(&db);
-	init_sbufl(&mb);
 
 	while(omzp || dfp)
 	{
-		if(dfp && !db.path.buf && (ars=sbufl_fill(dfp, NULL, &db, cconf->cntr)))
+		if(dfp && !db->path.buf
+		  && (ars=sbufl_fill(dfp, NULL, db, cconf->cntr)))
 		{
-			if(ars<0) { ret=-1; break; }
+			if(ars<0) goto end;
 			// ars==1 means it ended ok.
 			close_fp(&dfp);
 		}
-		if(omzp && !mb.path.buf && (ars=sbufl_fill(NULL, omzp, &mb, cconf->cntr)))
+		if(omzp && !mb->path.buf
+		  && (ars=sbufl_fill(NULL, omzp, mb, cconf->cntr)))
 		{
-			if(ars<0) { ret=-1; break; }
+			if(ars<0) goto end;
 			// ars==1 means it ended ok.
 			gzclose_fp(&omzp);
 		}
 
-		if(mb.path.buf && !db.path.buf)
+		if(mb->path.buf && !db->path.buf)
 		{
-			if(sbufl_to_manifest(&mb, NULL, nmzp)) { ret=-1; break; }
-			free_sbufl(&mb);
+			if(sbufl_to_manifest(mb, NULL, nmzp)) goto end;
+			sbuf_free_contents(mb);
 		}
-		else if(!mb.path.buf && db.path.buf)
+		else if(!mb->path.buf && db->path.buf)
 		{
-			free_sbufl(&db);
+			sbuf_free_contents(db);
 		}
-		else if(!mb.path.buf && !db.path.buf) 
+		else if(!mb->path.buf && !db->path.buf) 
 		{
 			continue;
 		}
-		else if(!(pcmp=sbufl_pathcmp(&mb, &db)))
+		else if(!(pcmp=sbuf_pathcmp(mb, db)))
 		{
 			// They were the same - do not write.
-			free_sbufl(&mb);
-			free_sbufl(&db);
+			sbuf_free_contents(mb);
+			sbuf_free_contents(db);
 		}
 		else if(pcmp<0)
 		{
 			// Behind in manifest. Write.
-			if(sbufl_to_manifest(&mb, NULL, nmzp)) { ret=-1; break; }
-			free_sbufl(&mb);
+			if(sbufl_to_manifest(mb, NULL, nmzp)) goto end;
+			sbuf_free_contents(mb);
 		}
 		else
 		{
 			// Behind in deletions file. Do not write.
-			free_sbufl(&db);
+			sbuf_free_contents(db);
 		}
 	}
 
+	ret=0;
 end:
 	if(gzclose_fp(&nmzp))
 	{
@@ -563,8 +548,8 @@ end:
 	
 	close_fp(&dfp);
 	gzclose_fp(&omzp);
-	free_sbufl(&db);
-	free_sbufl(&mb);
+	sbuf_free(db);
+	sbuf_free(mb);
 	if(!ret)
 	{
 		unlink(deletionsfile);
@@ -590,8 +575,8 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct config *cconf,
 	const char *deletionsfile,
 	int hardlinked, unsigned long bno)
 {
-	int ret=0;
 	int ars=0;
+	int ret=-1;
 	char *datapth=NULL;
 	char *tmpman=NULL;
 	struct stat statp;
@@ -600,17 +585,14 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct config *cconf,
 	char *deltafdir=NULL;
 	char *sigpath=NULL;
 	gzFile zp=NULL;
-	struct sbufl sb;
+	struct sbuf *sb=NULL;
 
 	FILE *delfp=NULL;
 
 	logp("Doing the atomic data jiggle...\n");
 
 	if(!(tmpman=get_tmp_filename(manifest)))
-	{
-		ret=-1;
 		goto end;
-	}
 	if(lstat(manifest, &statp))
 	{
 		// Manifest does not exist - maybe the server was killed before
@@ -620,52 +602,44 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct config *cconf,
 	}
 	free(tmpman);
 	if(!(zp=gzopen_file(manifest, "rb")))
-	{
-		ret=-1;
 		goto end;
-	}
 
 	if(!(deltabdir=prepend_s(currentdup, "deltas.reverse"))
 	  || !(deltafdir=prepend_s(sdirs->finishing, "deltas.forward"))
-	  || !(sigpath=prepend_s(currentdup, "sig.tmp")))
+	  || !(sigpath=prepend_s(currentdup, "sig.tmp"))
+	  || !(sb=sbuf_alloc(cconf)))
 	{
 		log_out_of_memory(__FUNCTION__);
-		ret=-1;
 		goto end;
 	}
 
 	mkdir(datadir, 0777);
 
-	init_sbufl(&sb);
-	while(!(ars=sbufl_fill(NULL, zp, &sb, cconf->cntr)))
+	while(!(ars=sbufl_fill(NULL, zp, sb, cconf->cntr)))
 	{
-		if(sb.datapth.buf)
+		if(sb->burp1->datapth.buf)
 		{
-			write_status(STATUS_SHUFFLING, sb.datapth.buf, cconf);
+			write_status(STATUS_SHUFFLING,
+				sb->burp1->datapth.buf, cconf);
 
-			if((ret=jiggle(sb.datapth.buf, currentdata, datadirtmp,
+			if((ret=jiggle(sb, currentdata, datadirtmp,
 				datadir, deltabdir, deltafdir,
-				sigpath, sb.endfile.buf, deletionsfile, &delfp,
-				&sb, hardlinked, sb.compression, cconf)))
-					break;
+				sigpath, deletionsfile, &delfp,
+				hardlinked, cconf)))
+					goto end;
 		}
-		free_sbufl(&sb);
+		sbuf_free_contents(sb);
 	}
-	if(!ret)
-	{
-		if(ars>0) ret=0;
-		else ret=-1;
-	}
+	if(ars<0) goto end;
 
 	if(close_fp(&delfp))
 	{
 		logp("error closing %s in atomic_data_jiggle\n", deletionsfile);
-		ret=-1;
+		goto end;
 	}
-	gzclose_fp(&zp);
 
 	if(maybe_delete_files_from_manifest(manifest, deletionsfile, cconf))
-		ret=-1;
+		goto end;
 
 	// Remove the temporary data directory, we have probably removed
 	// useful files from it.
@@ -679,6 +653,7 @@ end:
 	if(deltafdir) free(deltafdir);
 	if(sigpath) free(sigpath);
 	if(datapth) free(datapth);
+	if(sb) sbuf_free(sb);
 	return ret;
 }
 

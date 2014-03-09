@@ -110,7 +110,7 @@ static int load_signature_and_send_delta(BFILE *bfd, FILE *in, unsigned long lon
 	return r;
 }
 
-static int send_whole_file_w(struct sbufl *sb, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen, size_t datalen)
+static int send_whole_file_w(struct sbuf *sb, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen, size_t datalen)
 {
 	if((compression || encpassword) && sb->path.cmd!=CMD_EFS_FILE)
 		return send_whole_file_gzl(sb->path.buf, datapth, quick_read,
@@ -124,7 +124,7 @@ static int send_whole_file_w(struct sbufl *sb, const char *datapth, int quick_re
 		  datalen);
 }
 
-static int forget_file(struct sbufl *sb, struct config *conf)
+static int forget_file(struct sbuf *sb, struct config *conf)
 {
 	// Tell the server to forget about this
 	// file, otherwise it might get stuck
@@ -132,7 +132,7 @@ static int forget_file(struct sbufl *sb, struct config *conf)
 	if(async_write_str(CMD_INTERRUPT, sb->path.buf))
 		return 0;
 
-	if(sb->path.cmd==CMD_FILE && sb->datapth.buf)
+	if(sb->path.cmd==CMD_FILE && sb->burp1->datapth.buf)
 	{
 		rs_signature_t *sumset=NULL;
 		// The server will be sending
@@ -147,8 +147,7 @@ static int forget_file(struct sbufl *sb, struct config *conf)
 
 static int do_backup_phase2_client(struct config *conf, int resume)
 {
-	int ret=0;
-	int quit=0;
+	int ret=-1;
 	// For efficiency, open Windows files for the VSS data, and do not
 	// close them until another time around the loop, when the actual
 	// data is read.
@@ -160,41 +159,37 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 	binit(&bfd, 0, conf);
 #endif
 
-	struct sbufl sb;
+	struct sbuf *sb=NULL;
 	struct iobuf *rbuf=NULL;
 
-	init_sbufl(&sb);
+	if(!(sb=sbuf_alloc(conf))) goto end;
 
 	if(!resume)
 	{
 		// Only do this bit if the server did not tell us to resume.
 		if(async_write_str(CMD_GEN, "backupphase2")
 		  || async_read_expect(CMD_GEN, "ok"))
-			return -1;
+			goto end;
 	}
 	else if(conf->send_client_counters)
 	{
 		// On resume, the server might update the client with the
  		// counters.
 		if(recv_counters(conf))
-			return -1;	
+			goto end;
 	}
 
-	if(!(rbuf=iobuf_alloc())) return -1;
+	if(!(rbuf=iobuf_alloc())) goto end;
 
-	while(!quit)
+	while(1)
 	{
-		if(async_read(rbuf))
-		{
-			ret=-1;
-			quit++;
-		}
+		if(async_read(rbuf)) goto end;
 		else if(rbuf->buf)
 		{
 			//logp("now: %c:%s\n", rbuf->cmd, rbuf->buf);
 			if(rbuf->cmd==CMD_DATAPTH)
 			{
-				iobuf_copy(&sb.datapth, rbuf);
+				iobuf_copy(&(sb->burp1->datapth), rbuf);
 				rbuf->buf=NULL;
 				continue;
 			}
@@ -222,77 +217,70 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 				size_t elen=0;
 				unsigned long long bytes=0;
 				FILE *fp=NULL;
-				sb.compression=conf->compression;
+				sb->compression=conf->compression;
 
-				iobuf_copy(&sb.path, rbuf);
+				iobuf_copy(&sb->path, rbuf);
 				rbuf->buf=NULL;
 
 #ifdef HAVE_WIN32
-				if(win32_lstat(sb.path.buf, &sb.statp, &sb.winattr))
+				if(win32_lstat(sb->path.buf,
+					&sb->statp, &sb->winattr))
 #else
-				if(lstat(sb.path.buf, &sb.statp))
+				if(lstat(sb->path.buf, &sb->statp))
 #endif
 				{
-					logw(conf->cntr, "Path has vanished: %s", sb.path);
-					if(forget_file(&sb, conf))
-					{
-						ret=-1;
-						quit++;
-					}
-					free_sbufl(&sb);
+					logw(conf->cntr,
+						"Path has vanished: %s",
+						sb->path);
+					if(forget_file(sb, conf)) goto end;
+					sbuf_free_contents(sb);
 					continue;
 				}
 
 				if(conf->min_file_size
-				  && sb.statp.st_size<
+				  && sb->statp.st_size<
 					(boffset_t)conf->min_file_size
 				  && (rbuf->cmd==CMD_FILE
 				  || rbuf->cmd==CMD_ENC_FILE
 				  || rbuf->cmd==CMD_EFS_FILE))
 				{
-					logw(conf->cntr, "File size decreased below min_file_size after initial scan: %c:%s", rbuf->cmd, sb.path);
+					logw(conf->cntr, "File size decreased below min_file_size after initial scan: %c:%s", rbuf->cmd, sb->path);
 					forget++;
 				}
 				else if(conf->max_file_size
-				  && sb.statp.st_size>
+				  && sb->statp.st_size>
 					(boffset_t)conf->max_file_size
 				  && (rbuf->cmd==CMD_FILE
 				  || rbuf->cmd==CMD_ENC_FILE
 				  || rbuf->cmd==CMD_EFS_FILE))
 				{
-					logw(conf->cntr, "File size increased above max_file_size after initial scan: %c:%s", rbuf->cmd, sb.path);
+					logw(conf->cntr, "File size increased above max_file_size after initial scan: %c:%s", rbuf->cmd, sb->path);
 					forget++;
 				}
 
 				if(!forget)
 				{
-					sb.compression=in_exclude_comp(
+					sb->compression=in_exclude_comp(
 					  conf->excom,
-					  sb.path.buf, conf->compression);
-					if(sbufl_attribs_encode(&sb))
-					{
-						ret=-1;
-						quit++;
-					}
+					  sb->path.buf, conf->compression);
+					if(attribs_encode(sb))
+						goto end;
 					else if(open_file_for_sendl(
 #ifdef HAVE_WIN32
 						&bfd, NULL,
 #else
 						NULL, &fp,
 #endif
-						sb.path.buf, sb.winattr,
+						sb->path.buf, sb->winattr,
 						&datalen, conf))
 							forget++;
 				}
 
 				if(forget)
 				{
-					if(forget_file(&sb, conf))
-					{
-						ret=-1;
-						quit++;
-					}
-					free_sbufl(&sb);
+					if(forget_file(sb, conf))
+						goto end;
+					sbuf_free_contents(sb);
 					continue;
 				}
 
@@ -309,13 +297,13 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 #ifdef HAVE_WIN32
 						&bfd,
 #endif
-						sb.path.buf,
-						&sb.statp, &extrameta, &elen,
-						sb.winattr, conf,
+						sb->path.buf,
+						&sb->statp, &extrameta, &elen,
+						sb->winattr, conf,
 						&datalen))
 					{
-						logw(conf->cntr, "Meta data error for %s", sb.path);
-						free_sbufl(&sb);
+						logw(conf->cntr, "Meta data error for %s", sb->path);
+						sbuf_free_contents(sb);
 						close_file_for_sendl(&bfd, &fp);
 						continue;
 					}
@@ -332,28 +320,28 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 					}
 					else
 					{
-						logw(conf->cntr, "No meta data after all: %s", sb.path);
-						free_sbufl(&sb);
+						logw(conf->cntr, "No meta data after all: %s", sb->path);
+						sbuf_free_contents(sb);
 						close_file_for_sendl(&bfd, &fp);
 						continue;
 					}
 				}
 
-				if(rbuf->cmd==CMD_FILE && sb.datapth.buf)
+				if(rbuf->cmd==CMD_FILE
+				  && sb->burp1->datapth.buf)
 				{
 					unsigned long long sentbytes=0;
 					// Need to do sig/delta stuff.
-					if(async_write(&sb.datapth)
-					  || async_write(&sb.attr)
-					  || async_write(&sb.path)
+					if(async_write(&(sb->burp1->datapth))
+					  || async_write(&sb->attr)
+					  || async_write(&sb->path)
 					  || load_signature_and_send_delta(
 						&bfd, fp,
 						&bytes, &sentbytes, conf->cntr,
 						datalen))
 					{
-						logp("error in sig/delta for %s (%s)\n", sb.path, sb.datapth);
-						ret=-1;
-						quit++;
+						logp("error in sig/delta for %s (%s)\n", sb->path, sb->burp1->datapth);
+						goto end;
 					}
 					else
 					{
@@ -368,19 +356,15 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 					//	sb.path);
 					// send the whole file.
 
-					if((async_write(&sb.attr)
-					  || async_write(&sb.path))
-					  || send_whole_file_w(&sb,
+					if((async_write(&sb->attr)
+					  || async_write(&sb->path))
+					  || send_whole_file_w(sb,
 						NULL, 0, &bytes,
 						conf->encryption_password,
-						conf->cntr, sb.compression,
+						conf->cntr, sb->compression,
 						&bfd, fp,
-						extrameta, elen,
-						datalen))
-					{
-						ret=-1;
-						quit++;
-					}
+						extrameta, elen, datalen))
+							goto end;
 					else
 					{
 						do_filecounter(conf->cntr, rbuf->cmd, 1);
@@ -401,7 +385,7 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 #else
 				close_file_for_sendl(NULL, &fp);
 #endif
-				free_sbufl(&sb);
+				sbuf_free_contents(sb);
 				if(extrameta) free(extrameta);
 			}
 			else if(rbuf->cmd==CMD_WARNING)
@@ -411,23 +395,27 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 			}
 			else if(rbuf->cmd==CMD_GEN && !strcmp(rbuf->buf, "backupphase2end"))
 			{
-				if(async_write_str(CMD_GEN, "okbackupphase2end"))
-					ret=-1;
-				quit++;
+				if(async_write_str(CMD_GEN,
+					"okbackupphase2end"))
+						goto end;
+				break;
 			}
 			else
 			{
 				iobuf_log_unexpected(rbuf, __FUNCTION__);
-				ret=-1;
-				quit++;
+				goto end;
 			}
 		}
 	}
+
+	ret=0;
+end:
 #ifdef HAVE_WIN32
 	// It is possible for a bfd to still be open.
 	close_file_for_sendl(&bfd, NULL);
 #endif
 	iobuf_free(rbuf);
+	sbuf_free(sb);
 	return ret;
 }
 

@@ -104,7 +104,7 @@ static int restore_ent(struct sbuf **sb,
 		slist->head=*sb;
 
 		// Allocate a new sb.
-		if(!(*sb=sbuf_alloc())) goto end;
+		if(!(*sb=sbuf_alloc(conf))) goto end;
 	}
 	else
 	{
@@ -233,7 +233,7 @@ static int maybe_copy_data_files_across(const char *manifest,
 	
 	if(!(manio=manio_alloc())
 	  || manio_init_read(manio, manifest)
-	  || !(sb=sbuf_alloc())
+	  || !(sb=sbuf_alloc(conf))
 	  || !(blk=blk_alloc()))
 		goto end;
 
@@ -404,7 +404,7 @@ static int restore_stream(const char *datadir, struct slist *slist,
 
 	if(!(manio=manio_alloc())
 	  || manio_init_read(manio, manifest)
-	  || !(sb=sbuf_alloc())
+	  || !(sb=sbuf_alloc(conf))
 	  || !(blk=blk_alloc())
 	  || !(dpth=dpth_alloc(datadir)))
 		goto end;

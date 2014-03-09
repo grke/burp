@@ -1,11 +1,11 @@
 #include "include.h"
 
-static int treedata(struct sbufl *sb)
+static int treedata(struct sbuf *sb)
 {
 	// Windows is sending directory data as if it is file data - this
 	// cannot be saved in a tree structure.
 	// So, need to decode the stat to test for whether it is a directory.
-	sbufl_attribs_decode(sb);
+	attribs_decode(sb);
 	if(S_ISDIR(sb->statp.st_mode)) return 0;
 
 	if(sb->path.cmd==CMD_FILE
@@ -16,7 +16,7 @@ static int treedata(struct sbufl *sb)
 }
 
 static char *set_new_datapth(struct sdirs *sdirs, struct config *cconf,
-	struct sbufl *sb, struct dpthl *dpthl, int *istreedata)
+	struct sbuf *sb, struct dpthl *dpthl, int *istreedata)
 {
 	static char *tmp=NULL;
 	char *rpath=NULL;
@@ -41,9 +41,9 @@ static char *set_new_datapth(struct sdirs *sdirs, struct config *cconf,
 			return NULL;
 		}
 	}
-	iobuf_from_str(&sb->datapth, CMD_DATAPTH, tmp);
+	iobuf_from_str(&sb->burp1->datapth, CMD_DATAPTH, tmp);
 	if(build_path(sdirs->datadirtmp,
-		sb->datapth.buf, &rpath, sdirs->datadirtmp))
+		sb->burp1->datapth.buf, &rpath, sdirs->datadirtmp))
 	{
 		log_and_send("build path failed");
 		return NULL;
@@ -52,7 +52,7 @@ static char *set_new_datapth(struct sdirs *sdirs, struct config *cconf,
 }
 
 static int start_to_receive_new_file(struct sdirs *sdirs, struct config *cconf,
-	struct sbufl *sb, struct dpthl *dpthl)
+	struct sbuf *sb, struct dpthl *dpthl)
 {
 	char *rpath=NULL;
 	int istreedata=0;
@@ -62,7 +62,7 @@ static int start_to_receive_new_file(struct sdirs *sdirs, struct config *cconf,
 	if(!(rpath=set_new_datapth(sdirs, cconf, sb, dpthl, &istreedata)))
 		return -1;
 	
-	if(!(sb->fp=open_file(rpath, "wb")))
+	if(!(sb->burp1->fp=open_file(rpath, "wb")))
 	{
 		log_and_send("make file failed");
 		if(rpath) free(rpath);
@@ -87,7 +87,7 @@ static int filedata(char cmd)
 }
 
 static int process_changed_file(struct sdirs *sdirs, struct config *cconf,
-	struct sbufl *cb, struct sbufl *p1b,
+	struct sbuf *cb, struct sbuf *p1b,
 	const char *adir)
 {
 	size_t blocklen=0;
@@ -95,19 +95,19 @@ static int process_changed_file(struct sdirs *sdirs, struct config *cconf,
 	//logp("need to process changed file: %s (%s)\n", cb->path, cb->datapth);
 
 	// Move datapth onto p1b.
-	iobuf_copy(&p1b->datapth, &cb->datapth);
-	cb->datapth.buf=NULL;
+	iobuf_copy(&p1b->burp1->datapth, &cb->burp1->datapth);
+	cb->burp1->datapth.buf=NULL;
 
-	if(!(curpath=prepend_s(adir, p1b->datapth.buf)))
+	if(!(curpath=prepend_s(adir, p1b->burp1->datapth.buf)))
 	{
 		log_out_of_memory(__FUNCTION__);
 		return -1;
 	}
 	if(dpthl_is_compressed(cb->compression, curpath))
-		p1b->sigzp=gzopen_file(curpath, "rb");
+		p1b->burp1->sigzp=gzopen_file(curpath, "rb");
 	else
-		p1b->sigfp=open_file(curpath, "rb");
-	if(!p1b->sigzp && !p1b->sigfp)
+		p1b->burp1->sigfp=open_file(curpath, "rb");
+	if(!p1b->burp1->sigzp && !p1b->burp1->sigfp)
 	{
 		logp("could not open %s: %s\n", curpath, strerror(errno));
 		free(curpath);
@@ -115,20 +115,21 @@ static int process_changed_file(struct sdirs *sdirs, struct config *cconf,
 	}
 	free(curpath);
 
-	blocklen=get_librsync_block_len(cb->endfile.buf);
-	if(!(p1b->sigjob=rs_sig_begin(blocklen, RS_DEFAULT_STRONG_LEN)))
+	blocklen=get_librsync_block_len(cb->burp1->endfile.buf);
+	if(!(p1b->burp1->sigjob=rs_sig_begin(blocklen, RS_DEFAULT_STRONG_LEN)))
 	{
 		logp("could not start signature job.\n");
 		return -1;
 	}
-	//logp("sig begin: %s\n", p1b->datapth);
-	if(!(p1b->infb=rs_filebuf_new(NULL,
-		p1b->sigfp, p1b->sigzp, -1, blocklen, -1, cconf->cntr)))
+	//logp("sig begin: %s\n", p1b->burp1->datapth.buf);
+	if(!(p1b->burp1->infb=rs_filebuf_new(NULL,
+		p1b->burp1->sigfp, p1b->burp1->sigzp,
+		-1, blocklen, -1, cconf->cntr)))
 	{
 		logp("could not rs_filebuf_new for infb.\n");
 		return -1;
 	}
-	if(!(p1b->outfb=rs_filebuf_new(NULL, NULL, NULL,
+	if(!(p1b->burp1->outfb=rs_filebuf_new(NULL, NULL, NULL,
 		async_get_fd(), ASYNC_BUF_LEN, -1, cconf->cntr)))
 	{
 		logp("could not rs_filebuf_new for in_outfb.\n");
@@ -146,7 +147,7 @@ static int process_changed_file(struct sdirs *sdirs, struct config *cconf,
 	return 0;
 }
 
-static int new_non_file(struct sbufl *p1b, FILE *ucfp, char cmd, struct config *cconf)
+static int new_non_file(struct sbuf *p1b, FILE *ucfp, char cmd, struct config *cconf)
 {
 	// Is something that does not need more data backed up.
 	// Like a directory or a link or something like that.
@@ -157,23 +158,23 @@ static int new_non_file(struct sbufl *p1b, FILE *ucfp, char cmd, struct config *
 		return -1;
 	else
 		do_filecounter(cconf->cntr, cmd, 0);
-	free_sbufl(p1b);
+	sbuf_free_contents(p1b);
 	return 0;
 }
 
-static int changed_non_file(struct sbufl *p1b, FILE *ucfp, char cmd, struct config *cconf)
+static int changed_non_file(struct sbuf *p1b, FILE *ucfp, char cmd, struct config *cconf)
 {
 	// As new_non_file.
 	if(sbufl_to_manifest(p1b, ucfp, NULL))
 		return -1;
 	else
 		do_filecounter_changed(cconf->cntr, cmd);
-	free_sbufl(p1b);
+	sbuf_free_contents(p1b);
 	return 0;
 }
 
 static int process_new(struct sdirs *sdirs, struct config *cconf,
-	struct sbufl *p1b, FILE *ucfp, struct dpthl *dpthl)
+	struct sbuf *p1b, FILE *ucfp, struct dpthl *dpthl)
 {
 	if(filedata(p1b->path.cmd))
 	{
@@ -189,41 +190,41 @@ static int process_new(struct sdirs *sdirs, struct config *cconf,
 	return 0;
 }
 
-static int process_unchanged_file(struct sbufl *cb, FILE *ucfp, struct config *cconf)
+static int process_unchanged_file(struct sbuf *cb, FILE *ucfp, struct config *cconf)
 {
 	if(sbufl_to_manifest(cb, ucfp, NULL))
 	{
-		free_sbufl(cb);
+		sbuf_free_contents(cb);
 		return -1;
 	}
 	else
 	{
 		do_filecounter_same(cconf->cntr, cb->path.cmd);
 	}
-	if(cb->endfile.buf) do_filecounter_bytes(cconf->cntr,
-		 strtoull(cb->endfile.buf, NULL, 10));
-	free_sbufl(cb);
+	if(cb->burp1->endfile.buf) do_filecounter_bytes(cconf->cntr,
+		 strtoull(cb->burp1->endfile.buf, NULL, 10));
+	sbuf_free_contents(cb);
 	return 1;
 }
 
 static int process_new_file(struct sdirs *sdirs, struct config *cconf,
-	struct sbufl *cb, struct sbufl *p1b, FILE *ucfp,
+	struct sbuf *cb, struct sbuf *p1b, FILE *ucfp,
 	struct dpthl *dpthl)
 {
 	if(process_new(sdirs, cconf, p1b, ucfp, dpthl))
 		return -1;
-	free_sbufl(cb);
+	sbuf_free_contents(cb);
 	return 1;
 }
 
 // return 1 to say that a file was processed
 static int maybe_process_file(struct sdirs *sdirs, struct config *cconf,
-	struct sbufl *cb, struct sbufl *p1b, FILE *ucfp,
+	struct sbuf *cb, struct sbuf *p1b, FILE *ucfp,
 	struct dpthl *dpthl)
 {
 	int pcmp;
 //	logp("in maybe_proc %s\n", p1b->path);
-	if(!(pcmp=sbufl_pathcmp(cb, p1b)))
+	if(!(pcmp=sbuf_pathcmp(cb, p1b)))
 	{
 		int oldcompressed=0;
 
@@ -304,8 +305,8 @@ static int maybe_process_file(struct sdirs *sdirs, struct config *cconf,
 
 		// Get new files if they have switched between compression on
 		// or off.
-		if(cb->datapth.buf
-		  && dpthl_is_compressed(cb->compression, cb->datapth.buf))
+		if(cb->burp1->datapth.buf
+		  && dpthl_is_compressed(cb->compression, cb->burp1->datapth.buf))
 			oldcompressed=1;
 		if( ( oldcompressed && !cconf->compression)
 		 || (!oldcompressed &&  cconf->compression))
@@ -323,7 +324,7 @@ static int maybe_process_file(struct sdirs *sdirs, struct config *cconf,
 			if(changed_non_file(p1b, ucfp, p1b->path.cmd, cconf))
 				return -1;
 		}
-		free_sbufl(cb);
+		sbuf_free_contents(cb);
 		return 1;
 	}
 	else if(pcmp>0)
@@ -347,12 +348,12 @@ static int maybe_process_file(struct sdirs *sdirs, struct config *cconf,
 }
 
 // Return 1 if there is still stuff needing to be sent.
-static int do_stuff_to_send(struct sbufl *p1b, char **last_requested)
+static int do_stuff_to_send(struct sbuf *p1b, char **last_requested)
 {
 	static struct iobuf wbuf;
 	if(p1b->flags & SBUFL_SEND_DATAPTH)
 	{
-		iobuf_copy(&wbuf, &p1b->datapth);
+		iobuf_copy(&wbuf, &p1b->burp1->datapth);
 		if(async_append_all_to_write_buffer(&wbuf)) return 1;
 		p1b->flags &= ~SBUFL_SEND_DATAPTH;
 	}
@@ -371,12 +372,12 @@ static int do_stuff_to_send(struct sbufl *p1b, char **last_requested)
 		*last_requested=strdup(p1b->path.buf);
 		//if(async_rw(NULL, NULL)) return -1;
 	}
-	if(p1b->sigjob && !(p1b->flags & SBUFL_SEND_ENDOFSIG))
+	if(p1b->burp1->sigjob && !(p1b->flags & SBUFL_SEND_ENDOFSIG))
 	{
 		rs_result sigresult;
 
-		sigresult=rs_async(p1b->sigjob,
-			&(p1b->rsbuf), p1b->infb, p1b->outfb);
+		sigresult=rs_async(p1b->burp1->sigjob, &(p1b->burp1->rsbuf),
+			p1b->burp1->infb, p1b->burp1->outfb);
 //logp("after rs_async: %d %c %s\n", sigresult, p1b->cmd, p1b->path);
 
 		if(sigresult==RS_DONE)
@@ -404,16 +405,16 @@ static int do_stuff_to_send(struct sbufl *p1b, char **last_requested)
 }
 
 static int start_to_receive_delta(struct sdirs *sdirs, struct config *cconf,
-	struct sbufl *rb)
+	struct sbuf *rb)
 {
 	if(cconf->compression)
 	{
-		if(!(rb->zp=gzopen_file(sdirs->deltmppath, comp_level(cconf))))
+		if(!(rb->burp1->zp=gzopen_file(sdirs->deltmppath, comp_level(cconf))))
 			return -1;
 	}
 	else
 	{
-		if(!(rb->fp=open_file(sdirs->deltmppath, "wb")))
+		if(!(rb->burp1->fp=open_file(sdirs->deltmppath, "wb")))
 			return -1;
 	}
 	rb->flags |= SBUFL_RECV_DELTA;
@@ -421,12 +422,12 @@ static int start_to_receive_delta(struct sdirs *sdirs, struct config *cconf,
 	return 0;
 }
 
-static int finish_delta(struct sdirs *sdirs, struct sbufl *rb)
+static int finish_delta(struct sdirs *sdirs, struct sbuf *rb)
 {
 	int ret=0;
 	char *deltmp=NULL;
 	char *delpath=NULL;
-	if(!(deltmp=prepend_s("deltas.forward", rb->datapth.buf))
+	if(!(deltmp=prepend_s("deltas.forward", rb->burp1->datapth.buf))
 	  || !(delpath=prepend_s(sdirs->working, deltmp))
 	  || mkpath(&delpath, sdirs->working)
 	  || do_rename(sdirs->deltmppath, delpath))
@@ -438,7 +439,7 @@ static int finish_delta(struct sdirs *sdirs, struct sbufl *rb)
 
 // returns 1 for finished ok.
 static int do_stuff_to_receive(struct sdirs *sdirs, struct config *cconf,
-	struct sbufl *rb, FILE *p2fp, struct dpthl *dpthl, char **last_requested)
+	struct sbuf *rb, FILE *p2fp, struct dpthl *dpthl, char **last_requested)
 {
 	int ret=0;
 	struct iobuf *rbuf=NULL;
@@ -460,17 +461,17 @@ static int do_stuff_to_receive(struct sdirs *sdirs, struct config *cconf,
 			logp("WARNING: %s\n", rbuf->buf);
 			do_filecounter(cconf->cntr, rbuf->cmd, 0);
 		}
-		else if(rb->fp || rb->zp)
+		else if(rb->burp1->fp || rb->burp1->zp)
 		{
 			// Currently writing a file (or meta data)
 			if(rbuf->cmd==CMD_APPEND)
 			{
 				int app;
 				//logp("rbuf->len: %d\n", rbuf->len);
-				if((rb->zp
-				  && (app=gzwrite(rb->zp, rbuf->buf, rbuf->len))<=0)
-				|| (rb->fp
-				  && (app=fwrite(rbuf->buf, 1, rbuf->len, rb->fp))<=0))
+				if((rb->burp1->zp
+				  && (app=gzwrite(rb->burp1->zp, rbuf->buf, rbuf->len))<=0)
+				|| (rb->burp1->fp
+				  && (app=fwrite(rbuf->buf, 1, rbuf->len, rb->burp1->fp))<=0))
 				{
 					logp("error when appending: %d\n", app);
 					async_write_str(CMD_ERROR, "write failed");
@@ -484,17 +485,17 @@ static int do_stuff_to_receive(struct sdirs *sdirs, struct config *cconf,
 				// Write it to the phase2 file, and free the
 				// buffers.
 
-				if(close_fp(&(rb->fp)))
+				if(close_fp(&(rb->burp1->fp)))
 				{
 					logp("error closing delta for %s in receive\n", rb->path);
 					ret=-1;
 				}
-				if(gzclose_fp(&(rb->zp)))
+				if(gzclose_fp(&(rb->burp1->zp)))
 				{
 					logp("error gzclosing delta for %s in receive\n", rb->path);
 					ret=-1;
 				}
-				iobuf_copy(&rb->endfile, rbuf);
+				iobuf_copy(&rb->burp1->endfile, rbuf);
 				rbuf->buf=NULL;
 				if(!ret && rb->flags & SBUFL_RECV_DELTA
 				  && finish_delta(sdirs, rb))
@@ -525,17 +526,18 @@ static int do_stuff_to_receive(struct sdirs *sdirs, struct config *cconf,
 				if(!ret)
 				{
 					char *cp=NULL;
-					cp=strchr(rb->endfile.buf, ':');
-					if(rb->endfile.buf)
+					cp=strchr(rb->burp1->endfile.buf, ':');
+					if(rb->burp1->endfile.buf)
 					 do_filecounter_bytes(cconf->cntr,
-					  strtoull(rb->endfile.buf, NULL, 10));
+					  strtoull(rb->burp1->endfile.buf,
+					  NULL, 10));
 					if(cp)
 					{
 						// checksum stuff goes here
 					}
 				}
 
-				free_sbufl(rb);
+				sbuf_free_contents(rb);
 			}
 			else
 			{
@@ -546,7 +548,7 @@ static int do_stuff_to_receive(struct sdirs *sdirs, struct config *cconf,
 		// Otherwise, expecting to be told of a file to save.
 		else if(rbuf->cmd==CMD_DATAPTH)
 		{
-			iobuf_copy(&rb->datapth, rbuf);
+			iobuf_copy(&rb->burp1->datapth, rbuf);
 			rbuf->buf=NULL;
 		}
 		else if(rbuf->cmd==CMD_ATTRIBS)
@@ -559,7 +561,7 @@ static int do_stuff_to_receive(struct sdirs *sdirs, struct config *cconf,
 			iobuf_copy(&rb->path, rbuf);
 			rbuf->buf=NULL;
 
-			if(rb->datapth.buf)
+			if(rb->burp1->datapth.buf)
 			{
 				// Receiving a delta.
 				if(start_to_receive_delta(sdirs, cconf, rb))
@@ -622,14 +624,15 @@ int backup_phase2_server(struct sdirs *sdirs, struct config *cconf,
 	// unchanged data
 	FILE *ucfp=NULL;
 
-	struct sbufl cb;	// file list in current manifest
-	struct sbufl p1b;	// file list from client
+	struct sbuf *cb=NULL; // file list in current manifest
+	struct sbuf *p1b=NULL; // file list from client
 
-	struct sbufl rb;	// receiving file from client
+	struct sbuf *rb=NULL; // receiving file from client
 
-	init_sbufl(&cb);
-	init_sbufl(&p1b);
-	init_sbufl(&rb);
+	if(!(cb=sbuf_alloc(cconf))
+	  || !(p1b=sbuf_alloc(cconf))
+	  || !(rb=sbuf_alloc(cconf)))
+		goto error;
 
 	if(!(p1zp=gzopen_file(sdirs->phase1data, "rb")))
 		goto error;
@@ -660,11 +663,12 @@ int backup_phase2_server(struct sdirs *sdirs, struct config *cconf,
 		int sts=0;
 	//	logp("in loop, %s %s %c\n",
 	//		*cmanfp?"got cmanfp":"no cmanfp",
-	//		rb.path?:"no rb.path", rb.path?'X':rb.cmd);
+	//		rb->path.buf?:"no rb->path",
+	// 		rb->path.buf?'X':rb->path.cmd);
 		write_status(STATUS_BACKUP,
-			rb.path.buf?rb.path.buf:p1b.path.buf, cconf);
+			rb->path.buf?rb->path.buf:p1b->path.buf, cconf);
 		if((last_requested || !p1zp || writebuflen)
-		  && (ars=do_stuff_to_receive(sdirs, cconf, &rb, p2fp, dpthl,
+		  && (ars=do_stuff_to_receive(sdirs, cconf, rb, p2fp, dpthl,
 			&last_requested)))
 		{
 			if(ars<0) goto error;
@@ -672,14 +676,14 @@ int backup_phase2_server(struct sdirs *sdirs, struct config *cconf,
 			break;
 		}
 
-		if((sts=do_stuff_to_send(&p1b, &last_requested))<0)
+		if((sts=do_stuff_to_send(p1b, &last_requested))<0)
 			goto error;
 
 		if(!sts && p1zp)
 		{
-		   free_sbufl(&p1b);
+		   sbuf_free_contents(p1b);
 
-		   if((ars=sbufl_fill_phase1(NULL, p1zp, &p1b, cconf->cntr)))
+		   if((ars=sbufl_fill_phase1(NULL, p1zp, p1b, cconf->cntr)))
 		   {
 			if(ars<0) goto error;
 			// ars==1 means it ended ok.
@@ -695,7 +699,7 @@ int backup_phase2_server(struct sdirs *sdirs, struct config *cconf,
 		   {
 			// No old manifest, need to ask for a new file.
 			//logp("no cmanfp\n");
-			if(process_new(sdirs, cconf, &p1b, ucfp, dpthl))
+			if(process_new(sdirs, cconf, p1b, ucfp, dpthl))
 				goto error;
 		   }
 		   else
@@ -704,10 +708,10 @@ int backup_phase2_server(struct sdirs *sdirs, struct config *cconf,
 
 			// Might already have it, or be ahead in the old
 			// manifest.
-			if(cb.path.buf)
+			if(cb->path.buf)
 			{
 				if((ars=maybe_process_file(sdirs, cconf,
-					&cb, &p1b, ucfp, dpthl)))
+					cb, p1b, ucfp, dpthl)))
 				{
 					if(ars<0) goto error;
 					// Do not free it - need to send stuff.
@@ -718,21 +722,22 @@ int backup_phase2_server(struct sdirs *sdirs, struct config *cconf,
 
 			while(*cmanfp)
 			{
-				free_sbufl(&cb);
-				if((ars=sbufl_fill(NULL, *cmanfp, &cb, cconf->cntr)))
+				sbuf_free_contents(cb);
+				if((ars=sbufl_fill(NULL,
+					*cmanfp, cb, cconf->cntr)))
 				{
 					// ars==1 means it ended ok.
 					if(ars<0) goto error;
 					gzclose_fp(cmanfp);
 		//logp("ran out of current manifest\n");
 					if(process_new(sdirs, cconf,
-						&p1b, ucfp, dpthl))
+						p1b, ucfp, dpthl))
 							goto error;
 					break;
 				}
 		//logp("against: %s\n", cb.path);
 				if((ars=maybe_process_file(sdirs, cconf,
-					&cb, &p1b, ucfp, dpthl)))
+					cb, p1b, ucfp, dpthl)))
 				{
 					if(ars<0) goto error;
 					// Do not free it - need to send stuff.
@@ -761,9 +766,9 @@ end:
 		ret=-1;
 	}
 	free(deltmppath);
-	free_sbufl(&cb);
-	free_sbufl(&p1b);
-	free_sbufl(&rb);
+	sbuf_free(cb);
+	sbuf_free(p1b);
+	sbuf_free(rb);
 	gzclose_fp(&p1zp);
 	if(!ret) unlink(sdirs->phase1data);
 

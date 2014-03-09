@@ -9,26 +9,27 @@
 // Encode a stat structure into a base64 character string.
 // FIX THIS: Put compression near the beginning, before
 // it gets too entrenched in burp2.
-int attribs_encode(struct stat *statp, struct iobuf *attr,
-	uint64_t winattr, int compression, uint64_t *index)
+int attribs_encode(struct sbuf *sb)
 {
-	char *p;
+	static char *p;
+	static struct stat *statp;
 
-	if(!attr->buf)
+	if(!sb->attr.buf)
 	{
-		attr->cmd=CMD_ATTRIBS; // should not be needed
-		if(!(attr->buf=(char *)malloc(128)))
+		sb->attr.cmd=CMD_ATTRIBS; // should not be needed
+		if(!(sb->attr.buf=(char *)malloc(128)))
 		{
 			log_out_of_memory(__FUNCTION__);
 			return -1;
 		}
 	}
-	p=attr->buf;
+	p=sb->attr.buf;
+	statp=&sb->statp;
 
-	if(index)
+	if(sb->burp2)
 	{
 		// Legacy stuff does not have this field.
-		p += to_base64(*index, p);
+		p += to_base64(sb->burp2->index, p);
 		*p++ = ' ';
 	}
 	p += to_base64(statp->st_dev, p);
@@ -73,17 +74,17 @@ int attribs_encode(struct stat *statp, struct iobuf *attr,
 	*p++ = ' ';
 
 #ifdef HAVE_WIN32
-	p += to_base64(winattr, p);
+	p += to_base64(sb->winattr, p);
 #else
 	p += to_base64(0, p); // place holder
 #endif
 	*p++ = ' ';
 
-	p += to_base64(compression, p);
+	p += to_base64(sb->compression, p);
 
 	*p = 0;
 
-	attr->len=p-attr->buf;
+	sb->attr.len=p-sb->attr.buf;
 
 	return 0;
 }
@@ -105,18 +106,20 @@ int attribs_encode(struct stat *statp, struct iobuf *attr,
 #endif
 
 // Decode a stat packet from base64 characters.
-void attribs_decode(struct stat *statp, struct iobuf *attr,
-	uint64_t *winattr, int *compression,
-	uint64_t *index)
+void attribs_decode(struct sbuf *sb)
 {
-	const char *p=attr->buf;
-	int64_t val;
+	static const char *p;
+	static int64_t val;
+	static struct stat *statp;
 
-	if(index)
+	p=sb->attr.buf;
+	statp=&sb->statp;
+
+	if(sb->burp2)
 	{
 		// Legacy stuff does not have this field.
 		p += from_base64(&val, p);
-		*index=val;
+		sb->burp2->index=val;
 		p++;
 	}
 	p += from_base64(&val, p);
@@ -188,7 +191,7 @@ void attribs_decode(struct stat *statp, struct iobuf *attr,
 	}
 	else
 		val = 0;
-	*winattr=val;
+	sb->winattr=val;
 
 	// Compression.
 	if(*p == ' ' || (*p != 0 && *(p+1) == ' '))
@@ -196,10 +199,10 @@ void attribs_decode(struct stat *statp, struct iobuf *attr,
 		p++;
 		if(!*p) return;
 		p += from_base64(&val, p);
-		*compression=val;
+		sb->compression=val;
 	}
 	else
-		*compression=-1;
+		sb->compression=-1;
 }
 
 static int set_file_times(const char *path, struct utimbuf *ut,

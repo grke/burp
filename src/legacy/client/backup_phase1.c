@@ -65,8 +65,8 @@ int send_file_legacy(FF_PKT *ff, bool top_level, struct config *conf)
 		if(ff->type==FT_REG
 		  || ff->type==FT_DIR)
 		{
-			if(encode_stat_w(&sb, ff, conf->compression)
-			  || async_write(&sb.attr)
+			if(encode_stat_w(sb, ff, conf->compression)
+			  || async_write(&sb->attr)
 			  || async_write_str(CMD_EFS_FILE, ff->fname))
 				return -1;
 			do_filecounter(conf->p1cntr, CMD_EFS_FILE, 1);
@@ -173,13 +173,13 @@ int send_file_legacy(FF_PKT *ff, bool top_level, struct config *conf)
 			if(!conf->strip_vss
 			  && maybe_send_extrameta(ff->fname,
 				CMD_DIRECTORY, sb, conf)) return -1;
-	      		if(async_write(sb->attr)) return -1;
+	      		if(async_write(&sb->attr)) return -1;
 			if(async_write_str(CMD_DIRECTORY, ff->fname)) return -1;
 			do_filecounter(conf->p1cntr, CMD_DIRECTORY, 1);
 		}
 		else
 		{
-	      		if(async_write(sb->attr)) return -1;
+	      		if(async_write(&sb->attr)) return -1;
 			if(async_write_str(filesymbol, ff->fname)) return -1;
 			do_filecounter(conf->p1cntr, filesymbol, 1);
 		}

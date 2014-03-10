@@ -3,7 +3,6 @@
 static int restore_interrupt(struct sbuf *sb, const char *msg, struct config *conf)
 {
 	int ret=0;
-	int quit=0;
 	struct cntr *cntr=conf->cntr;
 	static struct iobuf *rbuf=NULL;
 
@@ -11,7 +10,7 @@ static int restore_interrupt(struct sbuf *sb, const char *msg, struct config *co
 
 	do_filecounter(cntr, CMD_WARNING, 1);
 	logp("WARNING: %s\n", msg);
-	if(async_write_str(CMD_WARNING, msg)) return -1;
+	if(async_write_str(CMD_WARNING, msg)) goto end;
 
 	// If it is file data, get the server
 	// to interrupt the flow and move on.
@@ -26,39 +25,33 @@ static int restore_interrupt(struct sbuf *sb, const char *msg, struct config *co
 		return 0;
 
 	if(!rbuf && !(rbuf=iobuf_alloc()))
-		return -1;
+		goto end;
 
 	if(async_write_str(CMD_INTERRUPT, sb->burp1->datapth.buf))
-	{
-		ret=-1;
-		quit++;
-	}
+		goto end;
 
 	// Read to the end file marker.
-	while(!quit)
+	while(1)
 	{
 		iobuf_free_content(rbuf);
 		if(async_read(rbuf))
-		{
-			ret=-1; quit++;
-		}
+			goto end;
 		if(!ret && rbuf->len)
 		{
 			if(rbuf->cmd==CMD_APPEND)
-			{
 				continue;
-			}
 			else if(rbuf->cmd==CMD_END_FILE)
-			{
 				break;
-			}
 			else
 			{
 				iobuf_log_unexpected(rbuf, __FUNCTION__);
-				ret=-1; quit++;
+				goto end;
 			}
 		}
 	}
+
+	ret=0;
+end:
 	iobuf_free_content(rbuf);
 	return ret;
 }
@@ -589,7 +582,6 @@ int do_restore_client_legacy(struct config *conf, enum action act, int vss_resto
 {
 	int ars=0;
 	int ret=-1;
-	int quit=0;
 	char msg[512]="";
 	struct sbuf *sb=NULL;
 	int wroteendcounter=0;
@@ -613,8 +605,7 @@ int do_restore_client_legacy(struct config *conf, enum action act, int vss_resto
 	if(conf->send_client_counters)
 	{
 // FIX THIS
-//		if(recv_counters(conf))
-//			return -1;
+//		if(recv_counters(conf)) goto end;
 	}
 
 #if defined(HAVE_WIN32)
@@ -622,7 +613,7 @@ int do_restore_client_legacy(struct config *conf, enum action act, int vss_resto
 #endif
 
 	if(!(sb=sbuf_alloc(conf))) goto end;
-	while(!quit)
+	while(1)
 	{
 		char *fullpath=NULL;
 
@@ -701,7 +692,7 @@ int do_restore_client_legacy(struct config *conf, enum action act, int vss_resto
 				break;
 		}
 
-		if(!quit && !ret) switch(sb->path.cmd)
+		switch(sb->path.cmd)
 		{
 			case CMD_WARNING:
 				do_filecounter(conf->cntr, sb->path.cmd, 1);

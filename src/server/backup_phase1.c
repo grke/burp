@@ -50,7 +50,7 @@ int backup_phase1_server(struct sdirs *sdirs, struct config *conf)
 				(unsigned long long)sb->statp.st_size);
 	}
 
-	if(gzclose(p1zp))
+	if(gzclose_fp(&p1zp))
 	{
 		logp("error closing %s in backup_phase1_server\n", phase1tmp);
 		goto end;
@@ -64,7 +64,7 @@ int backup_phase1_server(struct sdirs *sdirs, struct config *conf)
 	ret=0;
 end:
 	free(phase1tmp);
-	gzclose(p1zp);
+	gzclose_fp(&p1zp);
 	sbuf_free(sb);
 	return ret;
 }

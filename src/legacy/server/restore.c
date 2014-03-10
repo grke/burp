@@ -300,7 +300,7 @@ static int restore_file(struct bu *arr, int a, int i, struct sbuf *sb, const cha
 			return -1;
 		}
 
-		//logp("server file: %s\n", path);
+		//printf("server file: %s\n", path);
 
 		if(lstat(path, &statp) || !S_ISREG(statp.st_mode))
 		{
@@ -375,7 +375,6 @@ static int restore_file(struct bu *arr, int a, int i, struct sbuf *sb, const cha
 				patches++;
 			}
 
-
 			if(act==ACTION_RESTORE)
 			{
 				if(send_file(sb, patches, best, &bytes, cconf))
@@ -422,7 +421,7 @@ static int restore_file(struct bu *arr, int a, int i, struct sbuf *sb, const cha
 
 static int restore_sbufl(struct sbuf *sb, struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, enum action act, char status, struct config *cconf)
 {
-	//logp("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path);
+	//printf("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path.buf);
 	write_status(status, sb->path.buf, cconf);
 
 	if((sb->burp1->datapth.buf && async_write(&(sb->burp1->datapth)))
@@ -495,19 +494,19 @@ end:
 	return ret;
 }
 
-static int restore_ent(struct sbuf *sb, struct sbuf ***sblist, int *scount, struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, enum action act, char status, struct config *cconf)
+static int restore_ent(struct sbuf **sb, struct sbuf ***sblist, int *scount, struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, enum action act, char status, struct config *cconf)
 {
 	int s=0;
 	int ret=-1;
-	
+
 	// Check if we have any directories waiting to be restored.
 	for(s=(*scount)-1; s>=0; s--)
 	{
-		if(is_subdir((*sblist)[s]->path.buf, sb->path.buf))
+		if(is_subdir((*sblist)[s]->path.buf, (*sb)->path.buf))
 		{
 			// We are still in a subdir.
 			//printf(" subdir (%s %s)\n",
-			// (*sblist)[s]->path, sb->path);
+			// (*sblist)[s]->path, (*sb)->path);
 			break;
 		}
 		else
@@ -526,17 +525,15 @@ static int restore_ent(struct sbuf *sb, struct sbuf ***sblist, int *scount, stru
 	   that the permissions come out right. */
 	/* Meta data of directories will also have the stat stuff set to be a
 	   directory, so will also come out at the end. */
-	if(S_ISDIR(sb->statp.st_mode))
+	if(S_ISDIR((*sb)->statp.st_mode))
 	{
-		if(add_to_sbufl_arr(sblist, sb, scount))
+		if(add_to_sbufl_arr(sblist, *sb, scount))
 			goto end;
-
-		// Wipe out sb, without freeing up all the strings inside it,
-		// which have been added to sblist.
-		sb->burp1=NULL;
-		sbuf_free_contents(sb);
+		// Allocate a new sb to carry on with.
+		if(!(*sb=sbuf_alloc(cconf)))
+			goto end;
 	}
-	else if(restore_sbufl(sb, arr, a, i, tmppath1, tmppath2, act,
+	else if(restore_sbufl(*sb, arr, a, i, tmppath1, tmppath2, act,
 		status, cconf))
 			goto end;
 	ret=0;
@@ -676,7 +673,7 @@ static int actual_restore(struct bu *arr, int a, int i,
 			if((!srestore
 			    || check_srestore(cconf, sb->path.buf))
 			  && check_regex(regex, sb->path.buf)
-			  && restore_ent(sb, &sblist, &scount,
+			  && restore_ent(&sb, &sblist, &scount,
 				arr, a, i, tmppath1, tmppath2,
 				act, status, cconf))
 					goto end;

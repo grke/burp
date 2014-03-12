@@ -442,7 +442,7 @@ static int do_stuff_to_receive(struct sdirs *sdirs, struct config *cconf,
 	struct sbuf *rb, FILE *p2fp, struct dpthl *dpthl, char **last_requested)
 {
 	int ret=0;
-	struct iobuf *rbuf=NULL;
+	static struct iobuf *rbuf=NULL;
 
 	if(!rbuf && !(rbuf=iobuf_alloc())) return -1;
 

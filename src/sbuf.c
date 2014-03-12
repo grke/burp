@@ -173,36 +173,7 @@ int sbuf_to_manifest(struct sbuf *sb, gzFile zp)
 // comes later, and vss comes earlier, and trailing vss comes later.
 int sbuf_pathcmp(struct sbuf *a, struct sbuf *b)
 {
-	int r;
-	if((r=pathcmp(a->path.buf, b->path.buf))) return r;
-	if(a->path.cmd==CMD_METADATA || a->path.cmd==CMD_ENC_METADATA)
-	{
-		if(b->path.cmd==CMD_METADATA || b->path.cmd==CMD_ENC_METADATA)
-			return 0;
-		else return 1;
-	}
-	else if(a->path.cmd==CMD_VSS || a->path.cmd==CMD_ENC_VSS)
-	{
-		if(b->path.cmd==CMD_VSS || b->path.cmd==CMD_ENC_VSS)
-			return 0;
-		else return -1;
-	}
-	else if(a->path.cmd==CMD_VSS_T || a->path.cmd==CMD_ENC_VSS_T)
-	{
-		if(b->path.cmd==CMD_VSS_T || b->path.cmd==CMD_ENC_VSS_T)
-			return 0;
-		else return 1;
-	}
-	else
-	{
-		if(b->path.cmd==CMD_METADATA || b->path.cmd==CMD_ENC_METADATA)
-			return -1;
-		else if(b->path.cmd==CMD_VSS || b->path.cmd==CMD_ENC_VSS)
-			return 1;
-		else if(b->path.cmd==CMD_VSS_T || b->path.cmd==CMD_ENC_VSS_T)
-			return -1;
-		else return 0;
-	}
+	return iobuf_pathcmp(&a->path, &b->path);
 }
 
 

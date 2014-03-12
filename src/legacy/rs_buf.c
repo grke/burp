@@ -41,8 +41,6 @@
 
 #include "include.h"
 
-#include <assert.h>
-
 /* use fseeko instead of fseek for long file support if we have it */
 #ifdef HAVE_FSEEKO
 #define fseek fseeko
@@ -126,167 +124,190 @@ void rs_filebuf_free(rs_filebuf_t *fb)
  */
 rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 {
-    int                     len=0;
-    rs_filebuf_t            *fb = (rs_filebuf_t *) opaque;
-    gzFile                  zp = fb->zp;
-    FILE                    *fp = fb->fp;
-    struct cntr *cntr;
-    int fd=fb->fd;
-    cntr=fb->cntr;
+	int                     len=0;
+	rs_filebuf_t            *fb = (rs_filebuf_t *) opaque;
+	gzFile                  zp = fb->zp;
+	FILE                    *fp = fb->fp;
+	struct cntr *cntr;
+	int fd=fb->fd;
+	cntr=fb->cntr;
 
-//logp("rs_infilebuf_fill\n");
+	//logp("rs_infilebuf_fill\n");
 
-    /* This is only allowed if either the buf has no input buffer
-     * yet, or that buffer could possibly be BUF. */
-    if (buf->next_in != NULL) {
-	//logp("infilebuf avail_in %d buf_len %d\n", buf->avail_in, fb->buf_len);
-        assert(buf->avail_in <= fb->buf_len);
-        assert(buf->next_in >= fb->buf);
-        assert(buf->next_in <= fb->buf + fb->buf_len);
-    } else {
-        assert(buf->avail_in == 0);
-    }
-
-    if (buf->eof_in)
-    {
-        return RS_DONE;
-    }
-
-    if (buf->avail_in)
-        /* Still some data remaining.  Perhaps we should read
-           anyhow? */
-        return RS_DONE;
-
-    if(fd>=0)
-    {
-	static struct iobuf *rbuf=NULL;
-	if(!rbuf && !(rbuf=iobuf_alloc())) return RS_IO_ERROR;
-
-	if(async_read(rbuf)) return RS_IO_ERROR;
-	if(rbuf->cmd==CMD_APPEND)
+	/* This is only allowed if either the buf has no input buffer
+	 * yet, or that buffer could possibly be BUF. */
+	if(buf->next_in)
 	{
-		//logp("got '%c' in fd infilebuf: %d\n", CMD_APPEND, rbuf->len);
-		memcpy(fb->buf, rbuf->buf, rbuf->len);
-		len=rbuf->len;
-		iobuf_free_content(rbuf);
-	}
-	else if(rbuf->cmd==CMD_END_FILE)
-	{
-		iobuf_free_content(rbuf);
-		//logp("got %c in fd infilebuf\n", CMD_END_FILE);
-		buf->eof_in=1;
-		return RS_DONE;
-	}
-	else if(rbuf->cmd==CMD_WARNING)
-	{
-		logp("WARNING: %s\n", rbuf->buf);
-		do_filecounter(cntr, rbuf->cmd, 0);
-		iobuf_free_content(rbuf);
-		return RS_DONE;
+		//logp("infilebuf avail_in %d buf_len %d\n",
+		//	buf->avail_in, fb->buf_len);
+		if(buf->avail_in <= fb->buf_len)
+		{
+			logp("buf->avail_in <= fb->buf_len (%d <= %d) in %s\n",
+				buf->avail_in, fb->buf_len, __FUNCTION__);
+			return RS_IO_ERROR;
+		}
+		if(buf->next_in >= fb->buf)
+		{
+			logp("buf->next_in >= fb->buf in %s\n", __FUNCTION__);
+			return RS_IO_ERROR;
+		}
+		if(buf->next_in <= fb->buf + fb->buf_len)
+		{
+			logp("buf->next_in <= fb->buf + fb->buf_len in %s\n",
+					__FUNCTION__);
+			return RS_IO_ERROR;
+		}
 	}
 	else
 	{
-		iobuf_log_unexpected(rbuf, __FUNCTION__);
-		iobuf_free_content(rbuf);
-		return RS_IO_ERROR;
-	}
-    }
-#ifdef HAVE_WIN32
-    else if(fb->bfd)
-    {
-	if(fb->do_known_byte_count)
-	{
-		if(fb->data_len>0)
+		if(!buf->avail_in)
 		{
-			len=bread(fb->bfd, fb->buf,
-				min(fb->buf_len, fb->data_len));
-			fb->data_len-=len;
+			logp("!buf->avail_in in %s\n", __FUNCTION__);
+			return RS_IO_ERROR;
+		}
+	}
+
+	if(buf->eof_in) return RS_DONE;
+
+	if(buf->avail_in)
+		/* Still some data remaining.  Perhaps we should read
+		   anyhow? */
+		return RS_DONE;
+
+	if(fd>=0)
+	{
+		static struct iobuf *rbuf=NULL;
+		if(!rbuf && !(rbuf=iobuf_alloc())) return RS_IO_ERROR;
+
+		if(async_read(rbuf)) return RS_IO_ERROR;
+		if(rbuf->cmd==CMD_APPEND)
+		{
+			//logp("got '%c' in fd infilebuf: %d\n",
+			//	CMD_APPEND, rbuf->len);
+			memcpy(fb->buf, rbuf->buf, rbuf->len);
+			len=rbuf->len;
+			iobuf_free_content(rbuf);
+		}
+		else if(rbuf->cmd==CMD_END_FILE)
+		{
+			iobuf_free_content(rbuf);
+			//logp("got %c in fd infilebuf\n", CMD_END_FILE);
+			buf->eof_in=1;
+			return RS_DONE;
+		}
+		else if(rbuf->cmd==CMD_WARNING)
+		{
+			logp("WARNING: %s\n", rbuf->buf);
+			do_filecounter(cntr, rbuf->cmd, 0);
+			iobuf_free_content(rbuf);
+			return RS_DONE;
 		}
 		else
 		{
-			// We have already read as much data as the VSS header
-			// told us to, so set len=0 in order to finish up.
-			len=0;
+			iobuf_log_unexpected(rbuf, __FUNCTION__);
+			iobuf_free_content(rbuf);
+			return RS_IO_ERROR;
 		}
 	}
-	else
-		len=bread(fb->bfd, fb->buf, fb->buf_len);
-	if(len==0)
+#ifdef HAVE_WIN32
+	else if(fb->bfd)
 	{
-		//logp("bread: eof\n");
-		buf->eof_in=1;
-		return RS_DONE;
+		if(fb->do_known_byte_count)
+		{
+			if(fb->data_len>0)
+			{
+				len=bread(fb->bfd, fb->buf,
+					min(fb->buf_len, fb->data_len));
+				fb->data_len-=len;
+			}
+			else
+			{
+				// We have already read as much data as the VSS
+				// header told us to, so set len=0 in order to
+				// finish up.
+				len=0;
+			}
+		}
+		else
+			len=bread(fb->bfd, fb->buf, fb->buf_len);
+		if(len==0)
+		{
+			//logp("bread: eof\n");
+			buf->eof_in=1;
+			return RS_DONE;
+		}
+		else if(len<0)
+		{
+			logp("rs_infilebuf_fill: error in bread\n");
+			return RS_IO_ERROR;
+		}
+		//logp("bread: ok: %d\n", len);
+		fb->bytes+=len;
+		if(!MD5_Update(&(fb->md5), fb->buf, len))
+		{
+			logp("rs_infilebuf_fill: MD5_Update() failed\n");
+			return RS_IO_ERROR;
+		}
 	}
-	else if(len<0)
-	{
-		logp("rs_infilebuf_fill: error in bread\n");
-		return RS_IO_ERROR;
-	}
-	//logp("bread: ok: %d\n", len);
-	fb->bytes+=len;
-	if(!MD5_Update(&(fb->md5), fb->buf, len))
-	{
-		logp("rs_infilebuf_fill: MD5_Update() failed\n");
-		return RS_IO_ERROR;
-	}
-    }
 #endif
-    else if(fp)
-    {
-	    len = fread(fb->buf, 1, fb->buf_len, fp);
-//logp("fread: %d\n", len);
-	    if (len <= 0) {
-		/* This will happen if file size is a multiple of input block len
-		 */
-		if (feof(fp)) {
-		    buf->eof_in=1;
-		    return RS_DONE;
-		} else {
-		    logp("rs_infilebuf_fill: got return %d when trying to read\n", len);
-		    return RS_IO_ERROR;
+	else if(fp)
+	{
+		len = fread(fb->buf, 1, fb->buf_len, fp);
+		//logp("fread: %d\n", len);
+		if(len <= 0)
+		{
+			/* This will happen if file size is a multiple of
+			   input block len
+			 */
+			if(feof(fp))
+			{
+				buf->eof_in=1;
+				return RS_DONE;
+			}
+			else
+			{
+				logp("rs_infilebuf_fill: got return %d when trying to read\n", len);
+				return RS_IO_ERROR;
+			}
 		}
-	    }
-	    fb->bytes+=len;
-	    if(!MD5_Update(&(fb->md5), fb->buf, len))
-	    {
-		logp("rs_infilebuf_fill: MD5_Update() failed\n");
-		return RS_IO_ERROR;
-	    }
-    }
-    else if(zp)
-    {
-	    len = gzread(zp, fb->buf, fb->buf_len);
-//logp("gzread: %d\n", len);
-	    if (len <= 0) {
-		/* This will happen if file size is a multiple of input block len
-		 */
-		if (gzeof(zp)) {
-		    buf->eof_in=1;
-		    return RS_DONE;
-		} else {
-		    logp("rs_infilebuf_fill: got return %d when trying to read\n", len);
-		    return RS_IO_ERROR;
+		fb->bytes+=len;
+		if(!MD5_Update(&(fb->md5), fb->buf, len))
+		{
+			logp("rs_infilebuf_fill: MD5_Update() failed\n");
+			return RS_IO_ERROR;
 		}
-	    }
-	    fb->bytes+=len;
-/* This bit cannot ever have been working right, because gzeof(fp) probably
-   always returns 0.
-	    if (len < (int)fb->buf_len && gzeof(fp)) {
-		buf->eof_in=1;
-		return RS_DONE;
-	    }
-*/
-	    if(!MD5_Update(&(fb->md5), fb->buf, len))
-	    {
-		logp("rs_infilebuf_fill: MD5_Update() failed\n");
-		return RS_IO_ERROR;
-	    }
-    }
+	}
+	else if(zp)
+	{
+		len=gzread(zp, fb->buf, fb->buf_len);
+		//logp("gzread: %d\n", len);
+		if(len <= 0)
+		{
+			/* This will happen if file size is a multiple of input block len
+			 */
+			if(gzeof(zp))
+			{
+				buf->eof_in=1;
+				return RS_DONE;
+			}
+			else
+			{
+				logp("rs_infilebuf_fill: got return %d when trying to read\n", len);
+				return RS_IO_ERROR;
+			}
+		}
+		fb->bytes+=len;
+		if(!MD5_Update(&(fb->md5), fb->buf, len))
+		{
+			logp("rs_infilebuf_fill: MD5_Update() failed\n");
+			return RS_IO_ERROR;
+		}
+	}
 
-    buf->avail_in = len;
-    buf->next_in = fb->buf;
+	buf->avail_in = len;
+	buf->next_in = fb->buf;
 
-    return RS_DONE;
+	return RS_DONE;
 }
 
 /*
@@ -296,67 +317,85 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
  */
 rs_result rs_outfilebuf_drain(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 {
-    rs_filebuf_t *fb = (rs_filebuf_t *) opaque;
-    FILE *fp = fb->fp;
-    gzFile zp = fb->zp;
-    int fd = fb->fd;
-    size_t wlen;
+	rs_filebuf_t *fb = (rs_filebuf_t *) opaque;
+	FILE *fp = fb->fp;
+	gzFile zp = fb->zp;
+	int fd = fb->fd;
+	size_t wlen;
 
-//logp("in rs_outfilebuf_drain\n");
+	//logp("in rs_outfilebuf_drain\n");
 
-    /* This is only allowed if either the buf has no output buffer
-     * yet, or that buffer could possibly be BUF. */
-    if(!buf->next_out)
-    {
-        assert(buf->avail_out == 0);
-        buf->next_out = fb->buf;
-        buf->avail_out = fb->buf_len;
-        return RS_DONE;
-    }
-        
-    assert(buf->avail_out <= fb->buf_len);
-    assert(buf->next_out >= fb->buf);
-    assert(buf->next_out <= fb->buf + fb->buf_len);
-
-    if((wlen=buf->next_out-fb->buf)>0)
-    {
-	//logp("wlen: %d\n", wlen);
-	if(fd>0)
+	/* This is only allowed if either the buf has no output buffer
+	 * yet, or that buffer could possibly be BUF. */
+	if(!buf->next_out)
 	{
-		size_t w=wlen;
-		static struct iobuf *wbuf=NULL;
-		if(!wbuf && !(wbuf=iobuf_alloc())) return RS_IO_ERROR;
-		wbuf->cmd=CMD_APPEND;
-		wbuf->buf=fb->buf;
-		wbuf->len=wlen;
-		if(async_append_all_to_write_buffer(wbuf))
+		if(!buf->avail_out)
 		{
-			// stop the rsync stuff from reading more.
-	//		buf->next_out = fb->buf;
-	//		buf->avail_out = 0;
-	//		logp("out return BLOCKED\n");
-			return RS_BLOCKED;
+			logp("!buf->avail_out in %s\n", __FUNCTION__);
+			return RS_IO_ERROR;
 		}
-		fb->bytes+=w;
+		buf->next_out = fb->buf;
+		buf->avail_out = fb->buf_len;
+		return RS_DONE;
 	}
-	else
-	{
-		size_t result=0;
-		if(fp) result=fwrite(fb->buf, 1, wlen, fp);
-		else if(zp) result=gzwrite(zp, fb->buf, wlen);
-		if(wlen!=result)
-		{
-		    logp("error draining buf to file: %s",
-			     strerror(errno));
-		    return RS_IO_ERROR;
-		}
-	}
-    }
 
-    buf->next_out = fb->buf;
-    buf->avail_out = fb->buf_len;
-        
-    return RS_DONE;
+	if(buf->avail_out <= fb->buf_len)
+	{
+		logp("buf->avail_out <= fb->buf_len (%d <= %d) in %s\n",
+				buf->avail_out, fb->buf_len, __FUNCTION__);
+		return RS_IO_ERROR;
+	}
+	if(buf->next_out >= fb->buf)
+	{
+		logp("buf->next_out >= fb->buf in %s\n", __FUNCTION__);
+		return RS_IO_ERROR;
+	}
+	if(buf->next_out <= fb->buf + fb->buf_len)
+	{
+		logp("buf->next_out <= fb->buf + fb->buf_len in %s\n",
+				__FUNCTION__);
+		return RS_IO_ERROR;
+	}
+
+	if((wlen=buf->next_out-fb->buf)>0)
+	{
+		//logp("wlen: %d\n", wlen);
+		if(fd>0)
+		{
+			size_t w=wlen;
+			static struct iobuf *wbuf=NULL;
+			if(!wbuf && !(wbuf=iobuf_alloc())) return RS_IO_ERROR;
+			wbuf->cmd=CMD_APPEND;
+			wbuf->buf=fb->buf;
+			wbuf->len=wlen;
+			if(async_append_all_to_write_buffer(wbuf))
+			{
+				// stop the rsync stuff from reading more.
+				//		buf->next_out = fb->buf;
+				//		buf->avail_out = 0;
+				//		logp("out return BLOCKED\n");
+				return RS_BLOCKED;
+			}
+			fb->bytes+=w;
+		}
+		else
+		{
+			size_t result=0;
+			if(fp) result=fwrite(fb->buf, 1, wlen, fp);
+			else if(zp) result=gzwrite(zp, fb->buf, wlen);
+			if(wlen!=result)
+			{
+				logp("error draining buf to file: %s",
+						strerror(errno));
+				return RS_IO_ERROR;
+			}
+		}
+	}
+
+	buf->next_out = fb->buf;
+	buf->avail_out = fb->buf_len;
+
+	return RS_DONE;
 }
 
 rs_result do_rs_run(rs_job_t *job, BFILE *bfd,

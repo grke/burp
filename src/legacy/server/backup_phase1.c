@@ -36,15 +36,16 @@ static int read_phase1(gzFile zp, struct config *conf)
 	return 0;
 }
 
-static int forward_sbuf(FILE *fp, gzFile zp, struct sbuf *b, struct sbuf *target, int isphase1, int seekback, int do_counters, int same, struct dpthl *dpthl, struct config *cconf)
+static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
+	struct iobuf *target, int isphase1, int seekback, int do_counters,
+	int same, struct dpthl *dpthl, struct config *cconf)
 {
 	int ars=0;
 	off_t pos=0;
-	struct sbuf *latest;
+	static struct sbuf *sb=NULL;
 
-	if(!(latest=sbuf_alloc(cconf))) return -1;
-	free(latest->burp1);
-	latest->burp1=NULL;
+	if(!sb && !(sb=sbuf_alloc(cconf)))
+		goto error;
 
 	while(1)
 	{
@@ -57,18 +58,22 @@ static int forward_sbuf(FILE *fp, gzFile zp, struct sbuf *b, struct sbuf *target
 			goto error;
 		}
 
+		sbuf_free_contents(sb);
+
 		if(isphase1)
-			ars=sbufl_fill_phase1(fp, zp, b, cconf->cntr);
+			ars=sbufl_fill_phase1(fp, zp, sb, cconf->cntr);
 		else
-			ars=sbufl_fill(fp, zp, b, cconf->cntr);
+			ars=sbufl_fill(fp, zp, sb, cconf->cntr);
 
 		// Make sure we end up with the highest datapth we can possibly
-		// find.
-		if(b->burp1->datapth.buf
-		  && set_dpthl_from_string(dpthl, b->burp1->datapth.buf, cconf))
+		// find - set_dpthl_from_string() will only set it if it is
+		// higher.
+		if(sb->burp1->datapth.buf
+		  && set_dpthl_from_string(dpthl,
+			sb->burp1->datapth.buf, cconf))
 		{
 			logp("unable to set datapath: %s\n",
-				b->burp1->datapth.buf);
+				sb->burp1->datapth.buf);
 			goto error;
 		}
 
@@ -77,26 +82,18 @@ static int forward_sbuf(FILE *fp, gzFile zp, struct sbuf *b, struct sbuf *target
 			// ars==1 means it ended ok.
 			if(ars<0)
 			{
-				if(latest->path.buf)
+				if(result->buf)
 				{
 					logp("Error after %s in %s()\n",
-					  __FUNCTION__,
-					  latest->path.buf?latest->path.buf:"");
+						result->buf, __FUNCTION__);
 				}
 				goto error;
 			}
-			memcpy(b, latest, sizeof(struct sbuf));
-			latest->burp1=NULL; // Avoid burp1 getting freed.
-			sbuf_free(latest);
 			return 0;
 		}
-//printf("got: %s\n", b->path);
-		sbuf_free_contents(latest);
-		free(latest->burp1);
-		latest->burp1=NULL;
 
 		// If seeking to a particular point...
-		if(target && sbuf_pathcmp(target, b)<=0)
+		if(target->buf && iobuf_pathcmp(target, &sb->path)<=0)
 		{
 			// If told to 'seekback' to the immediately previous
 			// entry, do it here.
@@ -106,44 +103,60 @@ static int forward_sbuf(FILE *fp, gzFile zp, struct sbuf *b, struct sbuf *target
 					__FUNCTION__, strerror(errno));
 				goto error;
 			}
-			sbuf_free(latest);
 			return 0;
 		}
 
 		if(do_counters)
 		{
-			if(same) do_filecounter_same(cconf->cntr, b->path.cmd);
-			else do_filecounter_changed(cconf->cntr, b->path.cmd);
-			if(b->burp1->endfile.buf)
+			if(same) do_filecounter_same(cconf->cntr, sb->path.cmd);
+			else do_filecounter_changed(cconf->cntr, sb->path.cmd);
+			if(sb->burp1->endfile.buf)
 			{
 				unsigned long long e=0;
-				e=strtoull(b->burp1->endfile.buf, NULL, 10);
+				e=strtoull(sb->burp1->endfile.buf, NULL, 10);
 				do_filecounter_bytes(cconf->cntr, e);
 				do_filecounter_recvbytes(cconf->cntr, e);
 			}
 		}
 
-		memcpy(latest, b, sizeof(struct sbuf));
-		b->burp1=NULL; // Avoid burp1 getting freed.
-		sbuf_free_contents(b);
+		iobuf_free_content(result);
+		iobuf_copy(result, &sb->path);
+		sb->path.buf=NULL;
 	}
 
 error:
-	sbuf_free(latest);
+	sbuf_free_contents(sb);
 	return -1;
+}
+
+static int forward_fp(FILE *fp, struct iobuf *result, struct iobuf *target,
+	int isphase1, int seekback, int do_counters, int same,
+	struct dpthl *dpthl, struct config *cconf)
+{
+	return do_forward(fp, NULL, result, target, isphase1, seekback,
+		do_counters, same, dpthl, cconf);
+}
+
+static int forward_zp(gzFile zp, struct iobuf *result, struct iobuf *target,
+	int isphase1, int seekback, int do_counters, int same,
+	struct dpthl *dpthl, struct config *cconf)
+{
+	return do_forward(NULL, zp, result, target, isphase1, seekback,
+		do_counters, same, dpthl, cconf);
 }
 
 int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpthl *dpthl, struct config *cconf)
 {
 	int ret=0;
-	struct sbuf *p1b;
-	struct sbuf *p2b;
-	struct sbuf *p2btmp;
-	struct sbuf *ucb;
-	if(!(p1b=sbuf_alloc(cconf))
-	  || !(p2b=sbuf_alloc(cconf))
-	  || !(p2btmp=sbuf_alloc(cconf))
-	  || !(ucb=sbuf_alloc(cconf)))
+	struct iobuf *p1b=NULL;
+	struct iobuf *p2b=NULL;
+	struct iobuf *p2btmp=NULL;
+	struct iobuf *ucb=NULL;
+
+	if(!(p1b=iobuf_alloc())
+	  || !(p2b=iobuf_alloc())
+	  || !(p2btmp=iobuf_alloc())
+	  || !(ucb=iobuf_alloc()))
 		return -1;
 
 	logp("Begin phase1 (read previous file system scan)\n");
@@ -153,7 +166,7 @@ int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpthl *dpthl, struct c
 
 	logp("Setting up resume positions...\n");
 	// Go to the end of p2fp.
-	if(forward_sbuf(p2fp, NULL, p2btmp, NULL,
+	if(forward_fp(p2fp, p2btmp, NULL,
 		0, /* not phase1 */
 		0, /* no seekback */
 		0, /* no counters */
@@ -163,32 +176,32 @@ int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpthl *dpthl, struct c
 	// Go to the beginning of p2fp and seek forward to the p2btmp entry.
 	// This is to guard against a partially written entry at the end of
 	// p2fp, which will get overwritten.
-	if(forward_sbuf(p2fp, NULL, p2b, p2btmp,
+	if(forward_fp(p2fp, p2b, p2btmp,
 		0, /* not phase1 */
 		0, /* no seekback */
 		1, /* do_counters */
 		0, /* changed */
 		dpthl, cconf)) goto error;
-	logp("  phase2:    %s (%s)\n", p2b->path, p2b->burp1->datapth);
+	logp("  phase2:    %s\n", p2b->buf);
 
 	// Now need to go to the appropriate places in p1zp and unchanged.
 	// The unchanged file needs to be positioned just before the found
 	// entry, otherwise it ends up having a duplicated entry.
-	if(forward_sbuf(NULL, p1zp, p1b, p2b,
+	if(forward_zp(p1zp, p1b, p2b,
 		1, /* phase1 */
 		0, /* no seekback */
 		0, /* no counters */
 		0, /* ignored */
 		dpthl, cconf)) goto error;
-	logp("  phase1:    %s\n", p1b->path);
+	logp("  phase1:    %s\n", p1b->buf);
 
-	if(forward_sbuf(ucfp, NULL, ucb, p2b,
+	if(forward_fp(ucfp, ucb, p2b,
 		0, /* not phase1 */
 		1, /* seekback */
 		1, /* do_counters */
 		1, /* same */
 		dpthl, cconf)) goto error;
-	logp("  unchanged: %s\n", ucb->path);
+	logp("  unchanged: %s\n", ucb->buf);
 
 	// Now should have all file pointers in the right places to resume.
 	if(incr_dpthl(dpthl, cconf)) goto error;
@@ -202,10 +215,10 @@ int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpthl *dpthl, struct c
 error:
 	ret=-1;
 end:
-	sbuf_free(p1b);
-	sbuf_free(p2b);
-	sbuf_free(p2btmp);
-	sbuf_free(ucb);
+	iobuf_free(p1b);
+	iobuf_free(p2b);
+	iobuf_free(p2btmp);
+	iobuf_free(ucb);
 	logp("End phase1 (read previous file system scan)\n");
 	return ret;
 }

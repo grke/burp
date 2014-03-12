@@ -72,3 +72,31 @@ int iobuf_send_msg_zp(struct iobuf *iobuf, gzFile zp)
 {
 	return send_msg_zp(zp, iobuf->cmd, iobuf->buf, iobuf->len);
 }
+
+int iobuf_pathcmp(struct iobuf *a, struct iobuf *b)
+{
+	int r;
+	if((r=pathcmp(a->buf, b->buf))) return r;
+	if(a->cmd==CMD_METADATA || a->cmd==CMD_ENC_METADATA)
+	{
+		if(b->cmd==CMD_METADATA || b->cmd==CMD_ENC_METADATA) return 0;
+		else return 1;
+	}
+	else if(a->cmd==CMD_VSS || a->cmd==CMD_ENC_VSS)
+	{
+		if(b->cmd==CMD_VSS || b->cmd==CMD_ENC_VSS) return 0;
+		else return -1;
+	}
+	else if(a->cmd==CMD_VSS_T || a->cmd==CMD_ENC_VSS_T)
+	{
+		if(b->cmd==CMD_VSS_T || b->cmd==CMD_ENC_VSS_T) return 0;
+		else return 1;
+	}
+	else
+	{
+		if(b->cmd==CMD_METADATA || b->cmd==CMD_ENC_METADATA) return -1;
+		else if(b->cmd==CMD_VSS || b->cmd==CMD_ENC_VSS) return 1;
+		else if(b->cmd==CMD_VSS_T || b->cmd==CMD_ENC_VSS_T) return -1;
+		else return 0;
+	}
+}

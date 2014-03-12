@@ -375,6 +375,7 @@ static int do_stuff_to_send(struct sbuf *p1b, char **last_requested)
 	if(p1b->burp1->sigjob && !(p1b->flags & SBUFL_SEND_ENDOFSIG))
 	{
 		rs_result sigresult;
+printf("before rs_async\n");
 
 		sigresult=rs_async(p1b->burp1->sigjob, &(p1b->burp1->rsbuf),
 			p1b->burp1->infb, p1b->burp1->outfb);

@@ -140,29 +140,30 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 	{
 		//logp("infilebuf avail_in %d buf_len %d\n",
 		//	buf->avail_in, fb->buf_len);
-		if(buf->avail_in <= fb->buf_len)
+		if(buf->avail_in > fb->buf_len)
 		{
-			logp("buf->avail_in <= fb->buf_len (%d <= %d) in %s\n",
+			logp("buf->avail_in > fb->buf_len (%d > %d) in %s\n",
 				buf->avail_in, fb->buf_len, __FUNCTION__);
 			return RS_IO_ERROR;
 		}
-		if(buf->next_in >= fb->buf)
+		if(buf->next_in < fb->buf)
 		{
-			logp("buf->next_in >= fb->buf in %s\n", __FUNCTION__);
+			logp("buf->next_in < fb->buf in %s\n", __FUNCTION__);
 			return RS_IO_ERROR;
 		}
-		if(buf->next_in <= fb->buf + fb->buf_len)
+		if(buf->next_in > fb->buf + fb->buf_len)
 		{
-			logp("buf->next_in <= fb->buf + fb->buf_len in %s\n",
-					__FUNCTION__);
+			logp("buf->next_in > fb->buf + fb->buf_len in %s\n",
+				__FUNCTION__);
 			return RS_IO_ERROR;
 		}
 	}
 	else
 	{
-		if(!buf->avail_in)
+		if(buf->avail_in)
 		{
-			logp("!buf->avail_in in %s\n", __FUNCTION__);
+			logp("buf->avail_in is %d in %s\n",
+				buf->avail_in, __FUNCTION__);
 			return RS_IO_ERROR;
 		}
 	}
@@ -329,9 +330,10 @@ rs_result rs_outfilebuf_drain(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 	 * yet, or that buffer could possibly be BUF. */
 	if(!buf->next_out)
 	{
-		if(!buf->avail_out)
+		if(buf->avail_out)
 		{
-			logp("!buf->avail_out in %s\n", __FUNCTION__);
+			logp("buf->avail_out is %d in %s\n",
+				buf->avail_out, __FUNCTION__);
 			return RS_IO_ERROR;
 		}
 		buf->next_out = fb->buf;
@@ -339,21 +341,22 @@ rs_result rs_outfilebuf_drain(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 		return RS_DONE;
 	}
 
-	if(buf->avail_out <= fb->buf_len)
+	if(buf->avail_out > fb->buf_len)
 	{
-		logp("buf->avail_out <= fb->buf_len (%d <= %d) in %s\n",
-				buf->avail_out, fb->buf_len, __FUNCTION__);
+		logp("buf->avail_out > fb->buf_len (%d > %d) in %s\n",
+			buf->avail_out, fb->buf_len, __FUNCTION__);
 		return RS_IO_ERROR;
 	}
-	if(buf->next_out >= fb->buf)
+	if(buf->next_out < fb->buf)
 	{
-		logp("buf->next_out >= fb->buf in %s\n", __FUNCTION__);
+		logp("buf->next_out < fb->buf (%p < %p) in %s\n",
+			buf->next_out, fb->buf, __FUNCTION__);
 		return RS_IO_ERROR;
 	}
-	if(buf->next_out <= fb->buf + fb->buf_len)
+	if(buf->next_out > fb->buf + fb->buf_len)
 	{
-		logp("buf->next_out <= fb->buf + fb->buf_len in %s\n",
-				__FUNCTION__);
+		logp("buf->next_out > fb->buf + fb->buf_len in %s\n",
+			__FUNCTION__);
 		return RS_IO_ERROR;
 	}
 

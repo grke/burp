@@ -231,7 +231,7 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 				{
 					logw(conf->cntr,
 						"Path has vanished: %s",
-						sb->path);
+						sb->path.buf);
 					if(forget_file(sb, conf)) goto end;
 					sbuf_free_contents(sb);
 					continue;
@@ -244,7 +244,7 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 				  || rbuf->cmd==CMD_ENC_FILE
 				  || rbuf->cmd==CMD_EFS_FILE))
 				{
-					logw(conf->cntr, "File size decreased below min_file_size after initial scan: %c:%s", rbuf->cmd, sb->path);
+					logw(conf->cntr, "File size decreased below min_file_size after initial scan: %c:%s", rbuf->cmd, sb->path.buf);
 					forget++;
 				}
 				else if(conf->max_file_size
@@ -254,7 +254,7 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 				  || rbuf->cmd==CMD_ENC_FILE
 				  || rbuf->cmd==CMD_EFS_FILE))
 				{
-					logw(conf->cntr, "File size increased above max_file_size after initial scan: %c:%s", rbuf->cmd, sb->path);
+					logw(conf->cntr, "File size increased above max_file_size after initial scan: %c:%s", rbuf->cmd, sb->path.buf);
 					forget++;
 				}
 
@@ -302,7 +302,7 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 						sb->winattr, conf,
 						&datalen))
 					{
-						logw(conf->cntr, "Meta data error for %s", sb->path);
+						logw(conf->cntr, "Meta data error for %s", sb->path.buf);
 						sbuf_free_contents(sb);
 						close_file_for_sendl(&bfd, &fp);
 						continue;
@@ -320,7 +320,7 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 					}
 					else
 					{
-						logw(conf->cntr, "No meta data after all: %s", sb->path);
+						logw(conf->cntr, "No meta data after all: %s", sb->path.buf);
 						sbuf_free_contents(sb);
 						close_file_for_sendl(&bfd, &fp);
 						continue;
@@ -340,7 +340,7 @@ static int do_backup_phase2_client(struct config *conf, int resume)
 						&bytes, &sentbytes, conf->cntr,
 						datalen))
 					{
-						logp("error in sig/delta for %s (%s)\n", sb->path, sb->burp1->datapth);
+						logp("error in sig/delta for %s (%s)\n", sb->path.buf, sb->burp1->datapth.buf);
 						goto end;
 					}
 					else

@@ -36,6 +36,7 @@ alloc_count++;
 
 static void burp1_free_contents(struct burp1 *burp1)
 {
+	memset(&(burp1->rsbuf), 0, sizeof(burp1->rsbuf));
 	if(burp1->sigjob) { rs_job_free(burp1->sigjob); burp1->sigjob=NULL; }
 	if(burp1->infb) { rs_filebuf_free(burp1->infb); burp1->infb=NULL; }
 	if(burp1->outfb) { rs_filebuf_free(burp1->outfb); burp1->outfb=NULL; }
@@ -59,6 +60,10 @@ void sbuf_free_contents(struct sbuf *sb)
 	iobuf_free_content(&sb->path);
 	iobuf_free_content(&sb->attr);
 	iobuf_free_content(&sb->link);
+	memset(&(sb->statp), 0, sizeof(sb->statp));
+	sb->compression=-1;
+	sb->winattr=0;
+	sb->flags=0;
 	if(sb->burp1) burp1_free_contents(sb->burp1);
 	if(sb->burp2) burp2_free_contents(sb->burp2);
 }

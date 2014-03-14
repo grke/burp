@@ -1,6 +1,5 @@
 #include "include.h"
 #include "../rabin/include.h"
-#include "../legacy/client/backup_phase1.h"
 #include "../legacy/client/backup_phase2.h"
 
 /* Ignore extrameta for now.
@@ -469,15 +468,8 @@ int do_backup_client(struct config *conf, enum action action,
 	// Scan the file system and send the results to the server.
 	// Skip phase1 if the server wanted to resume.
 	if(!ret && !resume)
-	{
-printf("client legacy: %d\n", conf->legacy);
-		if(conf->legacy)
-			ret=backup_phase1_client_legacy(conf, name_max,
-				action==ACTION_ESTIMATE);
-		else
-			ret=backup_phase1_client(conf, name_max,
-				action==ACTION_ESTIMATE);
-	}
+		ret=backup_phase1_client(conf, name_max,
+			action==ACTION_ESTIMATE);
 
 	if(action!=ACTION_ESTIMATE && !ret)
 	{

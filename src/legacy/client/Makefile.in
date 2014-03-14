@@ -21,7 +21,6 @@ dummy:
 #
 SRCS = \
 	acl.c \
-	backup_phase1.c \
 	backup_phase2.c \
 	restore.c \
 	xattr.c \

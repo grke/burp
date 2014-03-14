@@ -68,32 +68,3 @@ end:
 	sbuf_free(sb);
 	return ret;
 }
-
-/*
-static enum asl_ret phase1_server_func(struct iobuf *rbuf,
-	struct config *conf, void *param)
-{
-	static struct manio *manio;
-	manio=(struct manio *)param;
-}
-
-int backup_phase1_server(struct sdirs *sdirs, struct config *conf)
-{
-	int ret=-1;
-	struct manio *manio=NULL;
-	logp("Begin phase1 (file system scan)\n");
-
-	if(!(manio=manio_alloc())
-	  || manio_init_write(manio, sdirs->phase1data))
-		goto end;
-
-	if(async_simple_loop(conf, manio, __FUNCTION__, phase1_server_func))
-		goto end;
-
-	ret=0;
-end:
-	logp("End phase1 (file system scan)\n");
-	manio_free(manio);
-	return ret;
-}
-*/

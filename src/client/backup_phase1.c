@@ -5,13 +5,16 @@
 static char filesymbol=CMD_FILE;
 static char metasymbol=CMD_METADATA;
 static char dirsymbol=CMD_DIRECTORY;
+#ifdef HAVE_WIN32
+static char vss_trail_symbol=CMD_VSS_T;
+#endif
 
 static long server_name_max;
 
 static int usual_stuff(struct config *conf, const char *path, const char *link,
-	const char *attribs, char cmd)
+	struct sbuf *sb, char cmd)
 {
-	if(async_write_str(CMD_ATTRIBS, attribs)
+	if(async_write_str(CMD_ATTRIBS, sb->attr.buf)
 	  || async_write_str(cmd, path)
 	  || ((cmd==CMD_HARD_LINK || cmd==CMD_SOFT_LINK)
 		&& async_write_str(cmd, link)))
@@ -21,10 +24,10 @@ static int usual_stuff(struct config *conf, const char *path, const char *link,
 }
 
 static int maybe_send_extrameta(const char *path, char cmd,
-	const char *attribs, struct config *conf)
+	struct sbuf *sb, struct config *conf, int symbol)
 {
 	if(!has_extrameta(path, cmd)) return 0;
-	return usual_stuff(conf, path, NULL, attribs, metasymbol);
+	return usual_stuff(conf, path, NULL, sb, symbol);
 }
 
 static int ft_err(struct config *conf, FF_PKT *ff, const char *msg)
@@ -33,27 +36,47 @@ static int ft_err(struct config *conf, FF_PKT *ff, const char *msg)
 		ff->fname, strerror(errno));
 }
 
-static int do_to_server(struct config *conf, FF_PKT *ff,
-	const char *attribs, char cmd, int compression) 
+static int do_to_server(struct config *conf, FF_PKT *ff, struct sbuf *sb,
+	char cmd, int compression) 
 {
-//	encode_stat(attribs, &ff->statp, ff->winattr, compression);
-	if(usual_stuff(conf, ff->fname, ff->link, attribs, cmd)) return -1;
+	sb->compression=compression;
+	sb->statp=ff->statp;
+	attribs_encode(sb);
+
+#ifdef HAVE_WIN32
+	if(conf->split_vss && !conf->strip_vss
+	  && maybe_send_extrameta(ff->fname, cmd, sb, conf, metasymbol))
+		return -1;
+#endif
+
+	if(usual_stuff(conf, ff->fname, ff->link, sb, cmd)) return -1;
 
 	if(ff->type==FT_REG)
 		do_filecounter_bytes(conf->p1cntr,
 			(unsigned long long)ff->statp.st_size);
-	return maybe_send_extrameta(ff->fname, cmd, attribs, conf);
+#ifdef HAVE_WIN32
+	if(conf->split_vss && !conf->strip_vss
+	// FIX THIS: May have to check that it is not a directory here.
+	  && !S_ISDIR(sb->statp.st_mode) // does this work?
+	  && maybe_send_extrameta(ff->fname, cmd, sb, conf, vss_trail_symbol))
+		return -1;
+	return 0;
+#else
+	return maybe_send_extrameta(ff->fname, cmd, sb, conf, metasymbol);
+#endif
 }
 
 static int to_server(struct config *conf, FF_PKT *ff,
-	const char *attribs, char cmd)
+	struct sbuf *sb, char cmd)
 {
-	return do_to_server(conf, ff, attribs, cmd, conf->compression);
+	return do_to_server(conf, ff, sb, cmd, conf->compression);
 }
 
 int send_file(FF_PKT *ff, bool top_level, struct config *conf)
 {
-	char attribs[MAXSTRING];
+	static struct sbuf *sb=NULL;
+
+	if(!sb && !(sb=sbuf_alloc(conf))) return -1;
 
 	if(!file_is_included(conf, ff->fname, top_level)) return 0;
 
@@ -78,7 +101,7 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf)
 	{
 		if(ff->type==FT_REG
 		  || ff->type==FT_DIR)
-			return to_server(conf, ff, attribs, CMD_EFS_FILE);
+			return to_server(conf, ff, sb, CMD_EFS_FILE);
 		return logw(conf->p1cntr, "EFS type %d not yet supported: %s",
 			ff->type, ff->fname);
 	}
@@ -89,19 +112,19 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf)
 		case FT_REG:
 		case FT_RAW:
 		case FT_FIFO:
-			return do_to_server(conf, ff, attribs, filesymbol,
+			return do_to_server(conf, ff, sb, filesymbol,
 				in_exclude_comp(conf->excom,
 					ff->fname, conf->compression));
 		case FT_DIR:
 		case FT_REPARSE:
 		case FT_JUNCTION:
-			return to_server(conf, ff, attribs, dirsymbol);
+			return to_server(conf, ff, sb, dirsymbol);
 		case FT_LNK_S:
-			return to_server(conf, ff, attribs, CMD_SOFT_LINK);
+			return to_server(conf, ff, sb, CMD_SOFT_LINK);
 		case FT_LNK_H:
-			return to_server(conf, ff, attribs, CMD_HARD_LINK);
+			return to_server(conf, ff, sb, CMD_HARD_LINK);
 		case FT_SPEC:
-			return to_server(conf, ff, attribs, CMD_SPECIAL);
+			return to_server(conf, ff, sb, CMD_SPECIAL);
 		case FT_NOFSCHG:
 			return logw(conf->p1cntr, "Dir: %s [will not descend: "
 				"file system change not allowed]\n", ff->fname);
@@ -120,9 +143,9 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf)
 
 int backup_phase1_client(struct config *conf, long name_max, int estimate)
 {
-	int ret=0;
+	int ret=-1;
 	FF_PKT *ff=NULL;
-	struct strlist *l;
+	struct strlist *l=NULL;
 
 	// First, tell the server about everything that needs to be backed up.
 
@@ -134,19 +157,21 @@ int backup_phase1_client(struct config *conf, long name_max, int estimate)
 		metasymbol=CMD_ENC_METADATA;
 #ifdef HAVE_WIN32
 		dirsymbol=filesymbol;
+		metasymbol=CMD_ENC_VSS;
+		vss_trail_symbol=CMD_ENC_VSS_T;
 #endif
 	}
 
 	ff=find_files_init();
 	server_name_max=name_max;
 	for(l=conf->startdir; l; l=l->next) if(l->flag)
-		if((ret=find_files_begin(ff, conf, l->path)))
-			break;
-	find_files_free(ff);
-
+		if(find_files_begin(ff, conf, l->path)) goto end;
+	ret=0;
+end:
 	print_endcounter(conf->p1cntr);
 	if(ret) logp("Error in phase 1\n");
 	logp("Phase 1 end (file system scan)\n");
+	find_files_free(ff);
 
 	return ret;
 }

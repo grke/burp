@@ -38,5 +38,3 @@ int check_regex(regex_t *regex, const char *buf)
 		default: return 0;
 	}
 }
-
-

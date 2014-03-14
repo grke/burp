@@ -6,10 +6,10 @@
 
 static int make_rev_sig(const char *dst, const char *sig, const char *endfile, int compression, struct config *conf)
 {
+	int ret=-1;
 	FILE *dstfp=NULL;
 	gzFile dstzp=NULL;
 	FILE *sigp=NULL;
-	rs_result result;
 //logp("make rev sig: %s %s\n", dst, sig);
 
 	if(dpthl_is_compressed(compression, dst))
@@ -18,15 +18,14 @@ static int make_rev_sig(const char *dst, const char *sig, const char *endfile, i
 		dstfp=open_file(dst, "rb");
 
 	if((!dstzp && !dstfp)
-	  || !(sigp=open_file(sig, "wb")))
-	{
-		gzclose_fp(&dstzp);
-		close_fp(&dstfp);
-		return -1;
-	}
-	result=rs_sig_gzfile(dstfp, dstzp, sigp,
+	  || !(sigp=open_file(sig, "wb"))
+	  || rs_sig_gzfile(dstfp, dstzp, sigp,
 		get_librsync_block_len(endfile),
-		RS_DEFAULT_STRONG_LEN, NULL, conf->cntr);
+		RS_DEFAULT_STRONG_LEN, NULL, conf->cntr)!=RS_DONE)
+			goto end;
+	ret=0;
+end:
+//logp("end of make rev sig\n");
 	gzclose_fp(&dstzp);
 	close_fp(&dstfp);
 	if(close_fp(&sigp))
@@ -34,23 +33,23 @@ static int make_rev_sig(const char *dst, const char *sig, const char *endfile, i
 		logp("error closing %s in %s\n", sig, __FUNCTION__);
 		return -1;
 	}
-//logp("end of make rev sig\n");
-	return result;
+	return ret;
 }
 
 static int make_rev_delta(const char *src, const char *sig, const char *del, int compression, struct config *cconf)
 {
 	int ret=-1;
-	gzFile srczp=NULL;
 	FILE *srcfp=NULL;
+	FILE *delfp=NULL;
 	FILE *sigp=NULL;
-	rs_result result;
+	gzFile srczp=NULL;
+	gzFile delzp=NULL;
 	rs_signature_t *sumset=NULL;
 
 //logp("make rev delta: %s %s %s\n", src, sig, del);
 	if(!(sigp=open_file(sig, "rb"))) return -1;
-	if((result=rs_loadsig_file(sigp, &sumset, NULL))
-	  || (result=rs_build_hash_table(sumset)))
+	if(rs_loadsig_file(sigp, &sumset, NULL)!=RS_DONE
+	  || rs_build_hash_table(sumset)!=RS_DONE)
 		goto end;
 
 //logp("make rev deltb: %s %s %s\n", src, sig, del);
@@ -63,38 +62,31 @@ static int make_rev_delta(const char *src, const char *sig, const char *del, int
 	if(!srczp && !srcfp) goto end;
 
 	if(cconf->compression)
-	{
-		gzFile delzp=NULL;
-		if(!(delzp=gzopen_file(del, comp_level(cconf)))) goto end;
-		result=rs_delta_gzfile(sumset, srcfp, srczp,
-			NULL, delzp, NULL, cconf->cntr);
-		if(gzclose_fp(&delzp))
-		{
-			logp("error closing %s in %s\n", del, __FUNCTION__);
-			goto end;
-		}
-	}
+		delzp=gzopen_file(del, comp_level(cconf));
 	else
-	{
-		FILE *delfp=NULL;
-		if(!(delfp=open_file(del, "wb"))) goto end;
-		result=rs_delta_gzfile(sumset, srcfp, srczp,
-			delfp, NULL, NULL, cconf->cntr);
-		if(close_fp(&delfp))
-		{
-			logp("error closing %s in %s\n", del, __FUNCTION__);
-			goto end;
-		}
-	}
+		delfp=open_file(del, "wb");
+	if(!delzp && !delfp) goto end;
 
+	if(rs_delta_gzfile(sumset, srcfp, srczp,
+		delfp, delzp, NULL, cconf->cntr)!=RS_DONE)
+			goto end;
 	ret=0;
 end:
 	if(sumset) rs_free_sumset(sumset);
 	gzclose_fp(&srczp);
 	close_fp(&srcfp);
 	close_fp(&sigp);
-
-	return result;
+	if(gzclose_fp(&delzp))
+	{
+		logp("error closing zp %s in %s\n", del, __FUNCTION__);
+		ret=-1;
+	}
+	if(close_fp(&delfp))
+	{
+		logp("error closing fp %s in %s\n", del, __FUNCTION__);
+		ret=-1;
+	}
+	return ret;
 }
 
 
@@ -139,7 +131,40 @@ end:
 	return ret;
 }
 
-static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, const char *datadirtmp, const char *datapth, int compression, struct config *cconf)
+static int inflate_oldfile(const char *opath, const char *infpath,
+	struct stat *statp)
+{
+	int zret;
+	int ret=-1;
+	FILE *dest=NULL;
+	FILE *source=NULL;
+
+	if(!(dest=open_file(infpath, "wb"))) goto end;
+
+	if(!statp->st_size)
+	{
+		// Empty file - cannot inflate.
+		// just close the destination and we have duplicated a
+		// zero length file.
+		logp("asked to inflate zero length file: %s\n", opath);
+		return 0;
+	}
+	if(!(source=open_file(opath, "rb"))) goto end;
+	if((zret=zlib_inflate(source, dest))!=Z_OK)
+	{
+		logp("zlib_inflate returned: %d\n", zret);
+		goto end;
+	}
+	ret=0;
+end:
+	close_fp(&source);
+	if(close_fp(&dest))
+		logp("error closing %s in %s\n", infpath, __FUNCTION__);
+	return ret;
+}
+
+static int inflate_or_link_oldfile(const char *oldpath, const char *infpath,
+	int compression, struct config *cconf)
 {
 	struct stat statp;
 	const char *opath=oldpath;
@@ -151,63 +176,13 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, con
 	}
 
 	if(dpthl_is_compressed(compression, opath))
-	{
-		int zret;
-		FILE *source=NULL;
-		FILE *dest=NULL;
+		return inflate_oldfile(opath, infpath, &statp);
 
-		//logp("inflating...\n");
-
-		if(!(dest=open_file(infpath, "wb")))
-		{
-			close_fp(&dest);
-			return -1;
-		}
-
-		if(!statp.st_size)
-		{
-			// Empty file - cannot inflate.
-			// just close the destination and we have duplicated a
-			// zero length file.
-			logp("asked to inflate zero length file: %s\n", opath);
-			if(close_fp(&dest))
-			{
-				logp("error closing %s in %s\n",
-					infpath, __FUNCTION__);
-				return -1;
-			}
-			return 0;
-		}
-		if(!(source=open_file(opath, "rb")))
-		{
-			close_fp(&dest);
-			return -1;
-		}
-		zret=zlib_inflate(source, dest);
-		close_fp(&source);
-		if(close_fp(&dest))
-		{
-			logp("error closing %s in %s\n",
-				infpath, __FUNCTION__);
-			return -1;
-		}
-		if(zret!=Z_OK)
-		{
-			logp("zlib_inflate returned: %d\n", zret);
-			return -1;
-		}
-	}
-	else
-	{
-		// If it was not a compressed file, just hard link it.
-		// It is possible that infpath already exists, if the server
-		// was interrupted on a previous run just after this point.
-		if(do_link(opath, infpath, &statp, cconf,
-			TRUE /* allow overwrite of infpath */))
-				return -1;
-	
-	}
-	return 0;
+	// If it was not a compressed file, just hard link it.
+	// It is possible that infpath already exists, if the server
+	// was interrupted on a previous run just after this point.
+	return do_link(opath, infpath, &statp, cconf,
+		TRUE /* allow overwrite of infpath */);
 }
 
 static int jiggle(struct sbuf *sb, const char *currentdata, const char *datadirtmp, const char *datadir, const char *deltabdir, const char *deltafdir, const char *sigpath, const char *deletionsfile, FILE **delfp, int hardlinked, struct config *cconf)
@@ -273,8 +248,8 @@ static int jiggle(struct sbuf *sb, const char *currentdata, const char *datadirt
 		}
 
 		//logp("Fixing up: %s\n", datapth);
-		if(inflate_or_link_oldfile(oldpath, infpath, datadirtmp,
-			datapth, sb->compression, cconf))
+		if(inflate_or_link_oldfile(oldpath, infpath,
+			sb->compression, cconf))
 		{
 			logp("error when inflating old file: %s\n", oldpath);
 			free(infpath);
@@ -819,7 +794,7 @@ int backup_phase4_server(struct sdirs *sdirs, struct config *cconf)
 	compress_filename(sdirs->current, "log", "log.gz", cconf);
 
 	ret=0;
-endfunc:
+end:
 	if(datadir) free(datadir);
 	if(datadirtmp) free(datadirtmp);
 	if(manifest) free(manifest);

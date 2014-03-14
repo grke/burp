@@ -76,20 +76,21 @@ int is_dir(const char *path, struct dirent *d)
 
 int mkpath(char **rpath, const char *limit)
 {
+	int ret=-1;
 	char *cp=NULL;
 	struct stat buf;
+#ifdef HAVE_WIN32
+	int windows_stupidity=0;
+#endif
 	if((cp=strrchr(*rpath, '/')))
 	{
-#ifdef HAVE_WIN32
-		int windows_stupidity=0;
 		*cp='\0';
+#ifdef HAVE_WIN32
 		if(strlen(*rpath)==2 && (*rpath)[1]==':')
 		{
 			(*rpath)[1]='\0';
 			windows_stupidity++;
 		}
-#else
-		*cp='\0';
 #endif
 		if(!**rpath)
 		{
@@ -99,7 +100,7 @@ int mkpath(char **rpath, const char *limit)
 		{
 			// does not exist - recurse further down, then come
 			// back and try to mkdir it.
-			if(mkpath(rpath, limit)) return -1;
+			if(mkpath(rpath, limit)) goto end;
 
 			// Require that the user has set up the required paths
 			// on the server correctly. I have seen problems with
@@ -120,20 +121,12 @@ int mkpath(char **rpath, const char *limit)
 			if(limit && pathcmp(*rpath, limit)<0)
 			{
 				logp("will not mkdir %s\n", *rpath);
-#ifdef HAVE_WIN32
-				if(windows_stupidity) (*rpath)[1]=':';
-#endif
-				*cp='/';
-				return -1;
+				goto end;
 			}
 			if(mkdir(*rpath, 0777))
 			{
 				logp("could not mkdir %s: %s\n", *rpath, strerror(errno));
-#ifdef HAVE_WIN32
-				if(windows_stupidity) (*rpath)[1]=':';
-#endif
-				*cp='/';
-				return -1;
+				goto end;
 			}
 		}
 		else if(S_ISDIR(buf.st_mode))
@@ -150,12 +143,15 @@ int mkpath(char **rpath, const char *limit)
 			logp("warning: wanted '%s' to be a directory\n",
 				*rpath);
 		}
-#ifdef HAVE_WIN32
-		if(windows_stupidity) (*rpath)[1]=':';
-#endif
-		*cp='/';
 	}
-	return 0;
+
+	ret=0;
+end:
+#ifdef HAVE_WIN32
+	if(windows_stupidity) (*rpath)[1]=':';
+#endif
+	if(cp) *cp='/';
+	return ret;
 }
 
 int build_path(const char *datadir, const char *fname, char **rpath, const char *limit)
@@ -277,9 +273,7 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 	strm.opaque = Z_NULL;
 	if((zret=deflateInit2(&strm, compression, Z_DEFLATED, (15+16),
 		8, Z_DEFAULT_STRATEGY))!=Z_OK)
-	{
-		return -1;
-	}
+			return -1;
 
 	do
 	{

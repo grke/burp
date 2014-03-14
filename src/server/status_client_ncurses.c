@@ -127,16 +127,12 @@ static void show_all_backups(struct strlist *backups, int *x, int col)
 	{
 		if(!last)
 		{
-//			snprintf(msg, sizeof(msg), "Backup list: %s%s",
-//				l->path, l->flag?" (deletable)":"");
 			snprintf(msg, sizeof(msg), "Backup list: %s",
 				l->path);
 			print_line(msg, (*x)++, col);
 		}
 		else
 		{
-//			snprintf(msg, sizeof(msg), "             %s%s",
-//				l->path, l->flag?" (deletable)":"");
 			snprintf(msg, sizeof(msg), "             %s",
 				l->path);
 			print_line(msg, (*x)++, col);
@@ -638,8 +634,8 @@ static void setup_signals(void)
 int status_client_ncurses(struct config *conf, enum action act, const char *sclient)
 {
 	int fd=0;
-        int ret=0;
 	int sel=0;
+        int ret=-1;
 	char *rbuf=NULL;
 	char buf[512]="";
 	int count=0;
@@ -648,7 +644,6 @@ int status_client_ncurses(struct config *conf, enum action act, const char *scli
 	int srbr=0;
 	char *client=NULL;
 	int enterpressed=0;
-//	int loop=0;
 	int reqdone=0;
 	struct cntr p1cntr;
 	struct cntr cntr;
@@ -691,7 +686,7 @@ int status_client_ncurses(struct config *conf, enum action act, const char *scli
 	dbfp=fopen("/tmp/dbfp", "w");
 #endif
 
-	while(!ret)
+	while(1)
 	{
 		int l;
 		int mfd=-1;
@@ -715,10 +710,7 @@ int status_client_ncurses(struct config *conf, enum action act, const char *scli
 			char *req=NULL;
 			if(details && client) req=client;
 			if(request_status(fd, req, conf))
-			{
-				ret=-1;
-				break;
-			}
+				goto end;
 			enterpressed=0;
 			if(act==ACTION_STATUS_SNAPSHOT)
 				reqdone++;
@@ -742,36 +734,24 @@ int status_client_ncurses(struct config *conf, enum action act, const char *scli
 			{
 				logp("select error: %s\n",
 					strerror(errno));
-				ret=-1;
-				break;
+				goto end;
 			}
 			continue;
 		}
 
-		if(FD_ISSET(fd, &fse))
-		{
-			ret=-1;
-			break;
-		}
+		if(FD_ISSET(fd, &fse)) goto end;
 
 #ifdef HAVE_NCURSES_H
 		if(actg==ACTION_STATUS)
 		{
-			if(FD_ISSET(stdinfd, &fse))
-			{
-				ret=-1;
-				break;
-			}
+			if(FD_ISSET(stdinfd, &fse)) goto end;
 			if(FD_ISSET(stdinfd, &fsr))
 			{
-				int quit=0;
-				
 				switch(getch())
 				{
 					case 'q':
 					case 'Q':
-						quit++;
-						break;
+						goto end_ok;
 					case KEY_UP:
 					case 'k':
 					case 'K':
@@ -816,7 +796,6 @@ int status_client_ncurses(struct config *conf, enum action act, const char *scli
 						break;
 					}
 				}
-				if(quit) break;
 
 				if(sel>=count) sel=count-1;
 				if(sel<0) sel=0;
@@ -826,17 +805,14 @@ int status_client_ncurses(struct config *conf, enum action act, const char *scli
 				// being responsive.
 				if(!details && !sclient)
 				{
-				  if((srbr=show_rbuf(last_rbuf,
-					conf, sel, &client,
-					&count, details, sclient,
-					&p1cntr, &cntr))<0)
-				  {
-					ret=-1;
-					break;
-				  }
-				  if(!details) print_star(sel);
-				
-				  refresh();
+					if((srbr=show_rbuf(last_rbuf,
+						conf, sel, &client,
+						&count, details, sclient,
+						&p1cntr, &cntr))<0)
+							goto end;
+					if(!details) print_star(sel);
+					
+					refresh();
 				}
 			}
 		}
@@ -875,24 +851,12 @@ int status_client_ncurses(struct config *conf, enum action act, const char *scli
 				}
 				continue;
 			}
-
-			//if(rbuf) printf("rbuf: %s\n", rbuf);
-/*
-			if(l<0)
-			{
-				ret=-1;
-				break;
-			}
-*/
 		}
 
 		if((srbr=show_rbuf(rbuf, conf,
 			sel, &client, &count, details, sclient,
 			&p1cntr, &cntr))<0)
-		{
-			ret=-1;
-			break;
-		}
+				goto end;
 		else if(srbr)
 		{
 			// Remember it, so that we can present the detailed
@@ -918,6 +882,10 @@ int status_client_ncurses(struct config *conf, enum action act, const char *scli
 			break;
 		}
 	}
+
+end_ok:
+	ret=0;
+end:
 #ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS) endwin();
 #endif

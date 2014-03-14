@@ -40,6 +40,7 @@ static int make_rev_sig(const char *dst, const char *sig, const char *endfile, i
 
 static int make_rev_delta(const char *src, const char *sig, const char *del, int compression, struct config *cconf)
 {
+	int ret=-1;
 	gzFile srczp=NULL;
 	FILE *srcfp=NULL;
 	FILE *sigp=NULL;
@@ -50,12 +51,7 @@ static int make_rev_delta(const char *src, const char *sig, const char *del, int
 	if(!(sigp=open_file(sig, "rb"))) return -1;
 	if((result=rs_loadsig_file(sigp, &sumset, NULL))
 	  || (result=rs_build_hash_table(sumset)))
-	{
-		fclose(sigp);
-		rs_free_sumset(sumset);
-		return result;
-	}
-	fclose(sigp);
+		goto end;
 
 //logp("make rev deltb: %s %s %s\n", src, sig, del);
 
@@ -64,55 +60,39 @@ static int make_rev_delta(const char *src, const char *sig, const char *del, int
 	else
 		srcfp=open_file(src, "rb");
 
-	if(!srczp && !srcfp)
-	{
-		rs_free_sumset(sumset);
-		return -1;
-	}
+	if(!srczp && !srcfp) goto end;
 
 	if(cconf->compression)
 	{
 		gzFile delzp=NULL;
-		if(!(delzp=gzopen_file(del, comp_level(cconf))))
-		{
-			gzclose_fp(&srczp);
-			close_fp(&srcfp);
-			rs_free_sumset(sumset);
-			return -1;
-		}
+		if(!(delzp=gzopen_file(del, comp_level(cconf)))) goto end;
 		result=rs_delta_gzfile(sumset, srcfp, srczp,
 			NULL, delzp, NULL, cconf->cntr);
 		if(gzclose_fp(&delzp))
 		{
-			logp("error closing %s in make_rev_delta\n", del);
-			result=RS_IO_ERROR;
+			logp("error closing %s in %s\n", del, __FUNCTION__);
+			goto end;
 		}
 	}
 	else
 	{
 		FILE *delfp=NULL;
-		if(!(delfp=open_file(del, "wb")))
-		{
-			gzclose_fp(&srczp);
-			close_fp(&srcfp);
-			rs_free_sumset(sumset);
-			return -1;
-		}
+		if(!(delfp=open_file(del, "wb"))) goto end;
 		result=rs_delta_gzfile(sumset, srcfp, srczp,
 			delfp, NULL, NULL, cconf->cntr);
 		if(close_fp(&delfp))
 		{
-			logp("error closing %s in make_rev_delta\n", del);
-			gzclose_fp(&srczp);
-			close_fp(&srcfp);
-			rs_free_sumset(sumset);
-			return -1;
+			logp("error closing %s in %s\n", del, __FUNCTION__);
+			goto end;
 		}
 	}
 
-	rs_free_sumset(sumset);
+	ret=0;
+end:
+	if(sumset) rs_free_sumset(sumset);
 	gzclose_fp(&srczp);
 	close_fp(&srcfp);
+	close_fp(&sigp);
 
 	return result;
 }
@@ -659,7 +639,7 @@ end:
 
 int backup_phase4_server(struct sdirs *sdirs, struct config *cconf)
 {
-	int ret=0;
+	int ret=-1;
 	struct stat statp;
 	char *manifest=NULL;
 	char *deletionsfile=NULL;
@@ -696,16 +676,10 @@ int backup_phase4_server(struct sdirs *sdirs, struct config *cconf)
 	  || !(fullrealcurrent=prepend_s(sdirs->client, realcurrent))
 	  || !(logpath=prepend_s(sdirs->finishing, "log"))
 	  || !(hlinkedpath=prepend_s(currentdup, "hardlinked")))
-	{
-		ret=-1;
-		goto endfunc;
-	}
+		goto end;
 
 	if(set_logfp(logpath, cconf))
-	{
-		ret=-1;
-		goto endfunc;
-	}
+		goto end;
 
 	logp("Begin phase4 (shuffle files)\n");
 
@@ -726,25 +700,20 @@ int backup_phase4_server(struct sdirs *sdirs, struct config *cconf)
 				{
 					logp("Could not delete %s\n",
 						currentduptmp);
-					ret=-1;
-					goto endfunc;
+					goto end;
 				}
 			}
 			logp("Duplicating current backup.\n");
 			if(recursive_hardlink(sdirs->current, currentduptmp, cconf)
 			  || do_rename(currentduptmp, currentdup))
-			{
-				ret=-1;
-				goto endfunc;
-			}
+				goto end;
 			newdup++;
 		}
 
 		if(read_timestamp(timestamp, tstmp, sizeof(tstmp)))
 		{
 			logp("could not read timestamp file: %s\n", timestamp);
-			ret=-1;
-			goto endfunc;
+			goto end;
 		}
 		// Get the backup number.
 		bno=strtoul(tstmp, NULL, 10);
@@ -781,10 +750,7 @@ int backup_phase4_server(struct sdirs *sdirs, struct config *cconf)
 			// does not have others depending on it.
 			FILE *hfp=NULL;
 			if(!(hfp=open_file(hlinkedpath, "wb")))
-			{
-				ret=-1;
-				goto endfunc;
-			}
+				goto end;
 			// Stick the next backup timestamp in it. It might
 			// be useful one day when wondering when the next
 			// backup, now deleted, was made.
@@ -792,8 +758,7 @@ int backup_phase4_server(struct sdirs *sdirs, struct config *cconf)
 			if(close_fp(&hfp))
 			{
 				logp("error closing hardlinked indication\n");
-				ret=-1;
-				goto endfunc;
+				goto end;
 			}
 			logp(" doing hardlinked archive\n");
 			logp(" will not generate reverse deltas\n");
@@ -811,8 +776,7 @@ int backup_phase4_server(struct sdirs *sdirs, struct config *cconf)
 		hardlinked, bno))
 	{
 		logp("could not finish up backup.\n");
-		ret=-1;
-		goto endfunc;
+		goto end;
 	}
 
 	write_status(STATUS_SHUFFLING, "deleting temporary files", cconf);
@@ -836,17 +800,11 @@ int backup_phase4_server(struct sdirs *sdirs, struct config *cconf)
 	{
 		if(deleteme_move(sdirs->client, fullrealcurrent, realcurrent, cconf)
 		  || do_rename(currentdup, fullrealcurrent))
-		{
-			ret=-1;
-			goto endfunc;
-		}
+			goto end;
 	}
 
 	if(deleteme_maybe_delete(cconf, sdirs->client))
-	{
-		ret=-1;
-		goto endfunc;
-	}
+		goto end;
 
 	print_stats_to_file(cconf, sdirs->finishing, ACTION_BACKUP);
 
@@ -860,6 +818,7 @@ int backup_phase4_server(struct sdirs *sdirs, struct config *cconf)
 
 	compress_filename(sdirs->current, "log", "log.gz", cconf);
 
+	ret=0;
 endfunc:
 	if(datadir) free(datadir);
 	if(datadirtmp) free(datadirtmp);

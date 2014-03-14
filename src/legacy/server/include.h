@@ -8,7 +8,6 @@
 #include "../../server/run_action.h"
 #include "../../server/sdirs.h"
 
-#include "backup_phase1.h"
 #include "backup_phase2.h"
 #include "backup_phase3.h"
 #include "backup_phase4.h"
@@ -16,6 +15,7 @@
 #include "delete.h"
 #include "dpth.h"
 #include "restore.h"
+#include "resume.h"
 #include "run_action.h"
 #include "zlibio.h"
 

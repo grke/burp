@@ -409,8 +409,9 @@ static int start_to_receive_delta(struct sdirs *sdirs, struct config *cconf,
 {
 	if(cconf->compression)
 	{
-		if(!(rb->burp1->zp=gzopen_file(sdirs->deltmppath, comp_level(cconf))))
-			return -1;
+		if(!(rb->burp1->zp=gzopen_file(sdirs->deltmppath,
+			comp_level(cconf))))
+				return -1;
 	}
 	else
 	{
@@ -441,10 +442,9 @@ static int finish_delta(struct sdirs *sdirs, struct sbuf *rb)
 static int do_stuff_to_receive(struct sdirs *sdirs, struct config *cconf,
 	struct sbuf *rb, FILE *p2fp, struct dpthl *dpthl, char **last_requested)
 {
-	int ret=0;
 	static struct iobuf *rbuf=NULL;
 
-	if(!rbuf && !(rbuf=iobuf_alloc())) return -1;
+	if(!rbuf && !(rbuf=iobuf_alloc())) goto error;
 
 	iobuf_free_content(rbuf);
 	// This also attempts to write anything in the write buffer.
@@ -468,6 +468,7 @@ static int do_stuff_to_receive(struct sdirs *sdirs, struct config *cconf,
 			{
 				int app;
 				//logp("rbuf->len: %d\n", rbuf->len);
+				do_filecounter_recvbytes(cconf->cntr, rbuf->len);
 				if((rb->burp1->zp
 				  && (app=gzwrite(rb->burp1->zp, rbuf->buf, rbuf->len))<=0)
 				|| (rb->burp1->fp
@@ -475,12 +476,12 @@ static int do_stuff_to_receive(struct sdirs *sdirs, struct config *cconf,
 				{
 					logp("error when appending: %d\n", app);
 					async_write_str(CMD_ERROR, "write failed");
-					ret=-1;
+					goto error;
 				}
-				do_filecounter_recvbytes(cconf->cntr, rbuf->len);
 			}
 			else if(rbuf->cmd==CMD_END_FILE)
 			{
+				static char *cp=NULL;
 				// Finished the file.
 				// Write it to the phase2 file, and free the
 				// buffers.
@@ -488,53 +489,43 @@ static int do_stuff_to_receive(struct sdirs *sdirs, struct config *cconf,
 				if(close_fp(&(rb->burp1->fp)))
 				{
 					logp("error closing delta for %s in receive\n", rb->path);
-					ret=-1;
+					goto error;
 				}
 				if(gzclose_fp(&(rb->burp1->zp)))
 				{
 					logp("error gzclosing delta for %s in receive\n", rb->path);
-					ret=-1;
+					goto error;
 				}
 				iobuf_copy(&rb->burp1->endfile, rbuf);
 				rbuf->buf=NULL;
-				if(!ret && rb->flags & SBUFL_RECV_DELTA
+				if(rb->flags & SBUFL_RECV_DELTA
 				  && finish_delta(sdirs, rb))
-					ret=-1;
-				else if(!ret)
+					goto error;
+
+				if(sbufl_to_manifest(rb, p2fp, NULL))
+					goto error;
+
+				if(rb->flags & SBUFL_RECV_DELTA)
+					do_filecounter_changed(
+						cconf->cntr, rb->path.cmd);
+				else
+					do_filecounter(
+						cconf->cntr, rb->path.cmd, 0);
+				if(*last_requested
+				    && !strcmp(rb->path.buf, *last_requested))
 				{
-					if(sbufl_to_manifest(rb, p2fp, NULL))
-						ret=-1;
-					else
-					{
-					  char cmd=rb->path.cmd;
-					  if(rb->flags & SBUFL_RECV_DELTA)
-						do_filecounter_changed(
-							cconf->cntr, cmd);
-					  else
-						do_filecounter(
-							cconf->cntr, cmd, 0);
-					  if(*last_requested
-					    && !strcmp(rb->path.buf,
-						*last_requested))
-					  {
-						free(*last_requested);
-						*last_requested=NULL;
-					  }
-					}
+					free(*last_requested);
+					*last_requested=NULL;
 				}
 
-				if(!ret)
+				cp=strchr(rb->burp1->endfile.buf, ':');
+				if(rb->burp1->endfile.buf)
+				 do_filecounter_bytes(cconf->cntr,
+				  strtoull(rb->burp1->endfile.buf,
+				  NULL, 10));
+				if(cp)
 				{
-					char *cp=NULL;
-					cp=strchr(rb->burp1->endfile.buf, ':');
-					if(rb->burp1->endfile.buf)
-					 do_filecounter_bytes(cconf->cntr,
-					  strtoull(rb->burp1->endfile.buf,
-					  NULL, 10));
-					if(cp)
-					{
 						// checksum stuff goes here
-					}
 				}
 
 				sbuf_free_contents(rb);
@@ -542,7 +533,7 @@ static int do_stuff_to_receive(struct sdirs *sdirs, struct config *cconf,
 			else
 			{
 				iobuf_log_unexpected(rbuf, __FUNCTION__);
-				ret=-1;
+				goto error;
 			}
 		}
 		// Otherwise, expecting to be told of a file to save.
@@ -567,7 +558,7 @@ static int do_stuff_to_receive(struct sdirs *sdirs, struct config *cconf,
 				if(start_to_receive_delta(sdirs, cconf, rb))
 				{
 					logp("error in start_to_receive_delta\n");
-					ret=-1;
+					goto error;
 				}
 			}
 			else
@@ -577,15 +568,13 @@ static int do_stuff_to_receive(struct sdirs *sdirs, struct config *cconf,
 					dpthl))
 				{
 					logp("error in start_to_receive_new_file\n");
-					ret=-1;
+					goto error;
 				}
 			}
 		}
-		else if(rbuf->cmd==CMD_GEN && !strcmp(rbuf->buf, "okbackupphase2end"))
-		{
-			ret=1;
-			//logp("got okbackupphase2end\n");
-		}
+		else if(rbuf->cmd==CMD_GEN
+		  && !strcmp(rbuf->buf, "okbackupphase2end"))
+			goto end_phase2;
 		else if(rbuf->cmd==CMD_INTERRUPT)
 		{
 			// Interrupt - forget about the last requested file
@@ -601,12 +590,15 @@ static int do_stuff_to_receive(struct sdirs *sdirs, struct config *cconf,
 		else
 		{
 			iobuf_log_unexpected(rbuf, __FUNCTION__);
-			ret=-1;
+			goto error;
 		}
 	}
 
-	//logp("returning: %d\n", ret);
-	return ret;
+	return 0;
+end_phase2:
+	return 1;
+error:
+	return -1;
 }
 
 int backup_phase2_server(struct sdirs *sdirs, struct config *cconf,

@@ -20,7 +20,6 @@ dummy:
 
 #
 SRCS = \
-	backup_phase1.c \
 	backup_phase2.c \
 	backup_phase3.c \
 	backup_phase4.c \
@@ -28,6 +27,7 @@ SRCS = \
 	delete.c \
 	dpth.c \
 	restore.c \
+	resume.c \
 	run_action.c \
 	zlibio.c \
 

@@ -4,6 +4,6 @@
 extern int open_log(const char *realworking, struct config *cconf);
 
 extern int do_backup_server(struct sdirs *sdirs, struct config *cconf,
-	const char *incexc);
+	const char *incexc, int resume);
 
 #endif

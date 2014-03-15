@@ -101,15 +101,8 @@ int child(struct config *conf, struct config *cconf)
 			cconf, ret, timer_ret);
 
 	if(!ret)
-	{
-printf("run_action legacy: %d\n", cconf->legacy);
-		if(cconf->legacy)
-			ret=run_action_server_legacy(cconf, sdirs, rbuf,
-				incexc, srestore, &timer_ret);
-		else
-			ret=run_action_server(cconf, sdirs, rbuf,
-				incexc, srestore, &timer_ret);
-	}
+		ret=run_action_server(cconf, sdirs, rbuf,
+			incexc, srestore, &timer_ret);
 
 	if((!ret || cconf->s_script_post_run_on_fail) && cconf->s_script_post)
 		ret=run_server_script("post", rbuf,

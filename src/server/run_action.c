@@ -1,43 +1,13 @@
 #include "include.h"
+#include "../legacy/server/run_action.c"
 
-/*
-static int incexc_matches(const char *fullrealwork, const char *incexc)
-{
-	int ret=0;
-	int got=0;
-	FILE *fp=NULL;
-	char buf[4096]="";
-	const char *inc=NULL;
-	char *old_incexc_path=NULL;
-	if(!(old_incexc_path=prepend_s(fullrealwork, "incexc")))
-			return -1;
-	if(!(fp=open_file(old_incexc_path, "rb")))
-	{
-		// Assume that no incexc file could be found because the client
-		// was on an old version. Assume resume is OK and return 1.
-		ret=1;
-		goto end;
-	}
-	inc=incexc;
-	while((got=fread(buf, 1, sizeof(buf), fp))>0)
-	{
-		if(strlen(inc)<(size_t)got) break;
-		if(strncmp(buf, inc, got)) break;
-		inc+=got;
-	}
-	if(inc && strlen(inc)) ret=0;
-	else ret=1;
-end:
-	close_fp(&fp);
-	free(old_incexc_path);
-	return ret;
-}
-*/
-
+/* Return 0 for everything OK. -1 for error, or 1 to mean that a backup is
+   currently finalising. */
 static int get_lock_sdirs(struct sdirs *sdirs)
 {
+	struct stat statp;
+
 	// Make sure the lock directory exists.
-printf("before: %s %s\n", sdirs->lockfile, sdirs->lock);
 	if(mkpath(&sdirs->lockfile, sdirs->lock))
 	{
 		async_write_str(CMD_ERROR, "problem with lock directory");
@@ -49,6 +19,18 @@ printf("before: %s %s\n", sdirs->lockfile, sdirs->lock);
 		sdirs->gotlock++;
 		return 0;
 	}
+
+	if(!lstat(sdirs->finishing, &statp))
+	{
+		char msg[256]="";
+		logp("finalising previous backup\n");
+		snprintf(msg, sizeof(msg),
+			"Finalising previous backup of client. "
+			"Please try again later.");
+		async_write_str(CMD_ERROR, msg);
+		return 1;
+	}
+
 	logp("another instance of client is already running,\n");
 	logp("or %s is not writable.\n", sdirs->lockfile);
 	async_write_str(CMD_ERROR, "another instance is already running");
@@ -109,7 +91,7 @@ void maybe_do_notification(int status, const char *clientdir,
 }
 
 static int run_backup(struct sdirs *sdirs, struct config *cconf,
-	struct iobuf *rbuf, const char *incexc, int *timer_ret)
+	struct iobuf *rbuf, const char *incexc, int *timer_ret, int resume)
 {
 	int ret=-1;
 	char okstr[32]="";
@@ -125,12 +107,13 @@ static int run_backup(struct sdirs *sdirs, struct config *cconf,
 	// Set quality of service bits on backups.
 	set_bulk_packets();
 
-	if(get_lock_sdirs(sdirs)) return -1;
-
-	if(!strcmp(rbuf->buf, "backup_timed"))
+	if(!strcmp(rbuf->buf, "backupphase1timed"))
 	{
 		int a=0;
 		const char *args[12];
+		int checkonly=!strncmp_w(rbuf->buf, "backupphase1timedcheck");
+		if(checkonly) logp("Client asked for a timer check only.\n");
+
 		args[a++]=cconf->timer_script;
 		args[a++]=cconf->cname;
 		args[a++]=sdirs->current;
@@ -149,13 +132,27 @@ static int run_backup(struct sdirs *sdirs, struct config *cconf,
 		{
 			logp("Error running timer script for %s\n",
 				cconf->cname);
+			maybe_do_notification(ret, "",
+				"error running timer script",
+				"", "backup", cconf);
 			return *timer_ret;
 		}
 		if(*timer_ret)
 		{
-			logp("Not running backup of %s\n", cconf->cname);
+			if(!checkonly)
+				logp("Not running backup of %s\n",
+					cconf->cname);
 			return async_write_str(CMD_GEN,
 				"timer conditions not met");
+		}
+		if(checkonly)
+		{
+			// Client was only checking the timer
+			// and does not actually want to back
+			// up.
+			logp("Client asked for a timer check only,\n");
+			logp("so a backup is not happening right now.\n");
+			return async_write_str(CMD_GEN, "timer conditions met");
 		}
 		logp("Running backup of %s\n", cconf->cname);
 	}
@@ -167,7 +164,10 @@ static int run_backup(struct sdirs *sdirs, struct config *cconf,
 
 	snprintf(okstr, sizeof(okstr), "ok:%d", cconf->compression);
 	if(async_write_str(CMD_GEN, okstr)) return -1;
-	ret=do_backup_server(sdirs, cconf, incexc);
+	if(cconf->legacy)
+		ret=do_backup_server_legacy(sdirs, cconf, incexc, resume);
+	else
+		ret=do_backup_server(sdirs, cconf, incexc, resume);
 	maybe_do_notification(ret, sdirs->client, sdirs->current,
 		"log", "backup", cconf);
 
@@ -198,8 +198,6 @@ static int run_restore(struct sdirs *sdirs, struct config *cconf,
 	if(conf_val_reset(backupnostr, &(cconf->backup)))
 		return -1;
 	if((cp=strchr(cconf->backup, ':'))) *cp='\0';
-
-	if(get_lock_sdirs(sdirs)) return -1;
 
 	if(act==ACTION_RESTORE)
 	{
@@ -245,7 +243,6 @@ static int run_delete(struct sdirs *sdirs, struct config *cconf,
 	struct iobuf *rbuf)
 {
 	char *backupno=NULL;
-	if(get_lock_sdirs(sdirs)) return -1;
 	if(!cconf->client_can_delete)
 	{
 		logp("Not allowing delete of %s\n", cconf->cname);
@@ -262,8 +259,6 @@ static int run_list(struct sdirs *sdirs, struct config *cconf,
 	char *backupno=NULL;
 	char *browsedir=NULL;
 	char *listregex=NULL;
-
-	if(get_lock_sdirs(sdirs)) return -1;
 
 	if(!cconf->client_can_list)
 	{
@@ -300,16 +295,18 @@ static int run_list(struct sdirs *sdirs, struct config *cconf,
 	return do_list_server(sdirs, cconf, backupno, listregex, browsedir);
 }
 
-static void unknown_command(struct iobuf *rbuf)
+static int unknown_command(struct iobuf *rbuf)
 {
 	iobuf_log_unexpected(rbuf, __FUNCTION__);
 	async_write_str(CMD_ERROR, "unknown command");
+	return -1;
 }
 
 int run_action_server(struct config *cconf, struct sdirs *sdirs,
 	struct iobuf *rbuf, const char *incexc, int srestore, int *timer_ret)
 {
-	int ret=-1;
+	int ret;
+	int resume=0;
 	char msg[256]="";
 
 	// Make sure some directories exist.
@@ -318,21 +315,45 @@ int run_action_server(struct config *cconf, struct sdirs *sdirs,
 		snprintf(msg, sizeof(msg),
 			"could not mkpath %s", sdirs->current);
 		log_and_send(msg);
+		return -1;
 	}
-	else if(rbuf->cmd!=CMD_GEN)
-		unknown_command(rbuf);
-	else if(!strncmp_w(rbuf->buf, "backup"))
-		ret=run_backup(sdirs, cconf, rbuf, incexc, timer_ret);
-	else if(!strncmp_w(rbuf->buf, "restore ")
-	  || !strncmp_w(rbuf->buf, "verify "))
-		ret=run_restore(sdirs, cconf, rbuf, srestore);
-	else if(!strncmp_w(rbuf->buf, "delete "))
-		ret=run_delete(sdirs, cconf, rbuf);
-	else if(!strncmp_w(rbuf->buf, "list ")
-	  || !strncmp_w(rbuf->buf, "listb "))
-		ret=run_list(sdirs, cconf, rbuf);
-	else
-		unknown_command(rbuf);
 
-	return ret;
+	if(rbuf->cmd!=CMD_GEN)
+		return unknown_command(rbuf);
+
+	if((ret=get_lock_sdirs(sdirs)))
+	{
+		// -1 on error or 1 if the backup is still finalising.
+		// FIX THIS: rbuf->buf is not just 'backup' or 'list', etc.
+		if(ret<0) maybe_do_notification(ret,
+			"", "error in get_lock_sdirs()",
+			"", rbuf->buf, cconf);
+		return ret;
+	}
+
+	if(check_for_rubble_legacy(sdirs, cconf, incexc, &resume))
+	{
+		// FIX THIS: rbuf->buf is not just 'backup' or 'list', etc.
+		maybe_do_notification(ret,
+			"", "error in check_for_rubble()",
+			"", rbuf->buf, cconf);
+		return -1;
+	}
+
+	if(!strncmp_w(rbuf->buf, "backup"))
+		return run_backup(sdirs, cconf,
+			rbuf, incexc, timer_ret, resume);
+
+	if(!strncmp_w(rbuf->buf, "restore ")
+	  || !strncmp_w(rbuf->buf, "verify "))
+		return run_restore(sdirs, cconf, rbuf, srestore);
+
+	if(!strncmp_w(rbuf->buf, "delete "))
+		return run_delete(sdirs, cconf, rbuf);
+
+	if(!strncmp_w(rbuf->buf, "list ")
+	  || !strncmp_w(rbuf->buf, "listb "))
+		return run_list(sdirs, cconf, rbuf);
+
+	return unknown_command(rbuf);
 }

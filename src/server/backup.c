@@ -947,7 +947,8 @@ static int clean_rubble(struct sdirs *sdirs)
 	return 0;
 }
 
-int do_backup_server(struct sdirs *sdirs, struct config *cconf, const char *incexc)
+int do_backup_server(struct sdirs *sdirs, struct config *cconf,
+	const char *incexc, int resume)
 {
 	int ret=0;
 	char msg[256]="";
@@ -1006,6 +1007,12 @@ int do_backup_server(struct sdirs *sdirs, struct config *cconf, const char *ince
 	{
 		snprintf(msg, sizeof(msg), "unable to write incexc");
 		log_and_send(msg);
+		goto error;
+	}
+
+	if(backup_phase1_server(sdirs, cconf))
+	{
+		logp("error in phase1\n");
 		goto error;
 	}
 

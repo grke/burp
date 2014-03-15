@@ -24,6 +24,38 @@ end:
 	return ret;
 }
 
+static int incexc_matches(const char *fullrealwork, const char *incexc)
+{
+	int ret=0;
+	int got=0;
+	FILE *fp=NULL;
+	char buf[4096]="";
+	const char *inc=NULL;
+	char *old_incexc_path=NULL;
+	if(!(old_incexc_path=prepend_s(fullrealwork, "incexc")))
+		return -1;
+	if(!(fp=open_file(old_incexc_path, "rb")))
+	{
+		// Assume that no incexc file could be found because the client
+		// was on an old version. Assume resume is OK and return 1.
+		ret=1;
+		goto end;
+	}
+	inc=incexc;
+	while((got=fread(buf, 1, sizeof(buf), fp))>0)
+	{
+		if(strlen(inc)<(size_t)got) break;
+		if(strncmp(buf, inc, got)) break;
+		inc+=got;
+	}
+	if(inc && strlen(inc)) ret=0;
+	else ret=1;
+end:
+	close_fp(&fp);
+	free(old_incexc_path);
+	return ret;
+}
+
 static int vss_opts_changed(struct sdirs *sdirs, struct config *cconf,
 	const char *incexc)
 {
@@ -76,7 +108,7 @@ static int vss_opts_changed(struct sdirs *sdirs, struct config *cconf,
 	return ret;
 }
 
-static int do_backup_server(struct sdirs *sdirs, struct config *cconf,
+int do_backup_server_legacy(struct sdirs *sdirs, struct config *cconf,
 	const char *incexc, int resume)
 {
 	int ret=0;
@@ -267,39 +299,7 @@ static int maybe_rebuild_manifest(struct sdirs *sdirs, struct config *cconf,
 		1 /* recovery mode */, compress);
 }
 
-static int incexc_matches(const char *fullrealwork, const char *incexc)
-{
-	int ret=0;
-	int got=0;
-	FILE *fp=NULL;
-	char buf[4096]="";
-	const char *inc=NULL;
-	char *old_incexc_path=NULL;
-	if(!(old_incexc_path=prepend_s(fullrealwork, "incexc")))
-		return -1;
-	if(!(fp=open_file(old_incexc_path, "rb")))
-	{
-		// Assume that no incexc file could be found because the client
-		// was on an old version. Assume resume is OK and return 1.
-		ret=1;
-		goto end;
-	}
-	inc=incexc;
-	while((got=fread(buf, 1, sizeof(buf), fp))>0)
-	{
-		if(strlen(inc)<(size_t)got) break;
-		if(strncmp(buf, inc, got)) break;
-		inc+=got;
-	}
-	if(inc && strlen(inc)) ret=0;
-	else ret=1;
-end:
-	close_fp(&fp);
-	free(old_incexc_path);
-	return ret;
-}
-
-static int check_for_rubble(struct sdirs *sdirs, struct config *cconf,
+int check_for_rubble_legacy(struct sdirs *sdirs, struct config *cconf,
 	const char *incexc, int *resume)
 {
 	int ret=0;
@@ -451,7 +451,7 @@ static int check_for_rubble(struct sdirs *sdirs, struct config *cconf,
 			ret=-1;
 			goto end;
 		}
-		ret=check_for_rubble(sdirs, cconf, incexc, resume);
+		ret=check_for_rubble_legacy(sdirs, cconf, incexc, resume);
 		goto end;
 	}
 
@@ -465,333 +465,5 @@ end:
 	if(logpath) free(logpath);
 	if(phase1datatmp) free(phase1datatmp);
 	set_logfp(NULL, cconf); // fclose the logfp
-	return ret;
-}
-
-/* Return 0 for everything OK. -1 for error, or 1 to mean that a backup is
-   currently finalising. */
-static int get_lock_and_clean(struct sdirs *sdirs, struct config *cconf,
-	const char *incexc, int *resume)
-{
-	struct stat statp;
-
-	// Make sure the lock directory exists.
-	if(mkpath(&sdirs->lockfile, sdirs->lock))
-	{
-		async_write_str(CMD_ERROR, "problem with lock directory");
-		return -1;
-	}
-
-	if(!get_lock(sdirs->lockfile))
-	{
-		sdirs->gotlock++;
-		return check_for_rubble(sdirs, cconf, incexc, resume);
-	}
-	if(!lstat(sdirs->finishing, &statp))
-	{
-		char msg[256]="";
-		logp("finalising previous backup\n");
-		snprintf(msg, sizeof(msg),
-			"Finalising previous backup of client. "
-			"Please try again later.");
-		async_write_str(CMD_ERROR, msg);
-		return 1;
-	}
-	logp("another instance of client is already running,\n");
-	logp("or %s is not writable.\n", sdirs->lockfile);
-	async_write_str(CMD_ERROR, "another instance is already running");
-	return -1;
-}
-
-static int client_can_restore(struct config *cconf)
-{
-	struct stat statp;
-	// If there is a restore file on the server, it is always OK.
-	if(cconf->restore_path
-	  && !lstat(cconf->restore_path, &statp))
-	{
-		// Remove the file.
-		unlink(cconf->restore_path);
-		return 1;
-	}
-	return cconf->client_can_restore;
-}
-
-int run_action_server_legacy(struct config *cconf, struct sdirs *sdirs,
-        struct iobuf *rbuf, const char *incexc, int srestore, int *timer_ret)
-{
-	int ret=0;
-	char msg[256]="";
-
-	if(rbuf->cmd==CMD_GEN && !strncmp_w(rbuf->buf, "backupphase1"))
-	{
-		int resume=0;
-
-		if(cconf->restore_client)
-		{
-			// This client is not the original client, so a
-			// backup might cause all sorts of trouble.
-			logp("Not allowing backup of %s\n", cconf->cname);
-			async_write_str(CMD_GEN, "Backup is not allowed");
-			goto end;
-		}
-
-		// Set quality of service bits on backups.
-		set_bulk_packets();
-		if((ret=get_lock_and_clean(sdirs, cconf, incexc, &resume)))
-		{
-			// -1 on error, or 1 if the backup is still finalising.
-			if(ret<0) maybe_do_notification(ret,
-				"", "error in get_lock_and_clean()",
-				"", "backup",
-				cconf);
-			goto end;
-		}
-		else
-		{
-			char okstr[32]="";
-			// create basedir, without the /current part
-			if(mkpath(&sdirs->current, cconf->directory))
-			{
-				snprintf(msg, sizeof(msg),
-					"could not mkpath %s", sdirs->current);
-				log_and_send(msg);
-				ret=-1;
-				maybe_do_notification(ret, "",
-					"error creating new current directory",
-					"", "backup", cconf);
-				goto end;
-			}
-			if(!strncmp_w(rbuf->buf, "backupphase1timed"))
-			{
-				int a=0;
-				const char *args[12];
-				int checkonly=!strncmp_w(rbuf->buf,
-				  "backupphase1timedcheck");
-				if(checkonly)
-				  logp("Client asked for a timer check only.\n");
-				args[a++]=cconf->timer_script;
-				args[a++]=cconf->cname;
-				args[a++]=sdirs->current;
-				args[a++]=cconf->directory;
-				args[a++]="reserved1";
-				args[a++]="reserved2";
-				args[a++]=NULL;
-				if((*timer_ret=run_script(args,
-				  cconf->timer_arg,
-				  /* cntr is NULL so that run_script does not
-				     write warnings down the socket, otherwise
-				     the client will never print the 'timer
-				     conditions not met' message below. */
-				  NULL,
-				  1 /* wait */, 1 /* use logp */))<0)
-				{
-					ret=*timer_ret;
-					logp("Error running timer script for %s\n", cconf->cname);
-					maybe_do_notification(ret, "",
-						"error running timer script",
-						"", "backup", cconf);
-					goto end;
-				}
-				if(*timer_ret)
-				{
-					if(!checkonly)
-					  logp("Not running backup of %s\n",
-						cconf->cname);
-					async_write_str(CMD_GEN,
-						"timer conditions not met");
-					goto end;
-				}
-				if(checkonly)
-				{
-					// Client was only checking the timer
-					// and does not actually want to back
-					// up.
-					ret=0;
-				  	logp("Client asked for a timer check only,\n");
-				  	logp("so a backup is not happening right now.\n");
-					async_write_str(CMD_GEN,
-						"timer conditions met");
-					goto end;
-				}
-				
-				logp("Running backup of %s\n", cconf->cname);
-			}
-			else if(!cconf->client_can_force_backup)
-			{
-				logp("Not allowing forced backup of %s\n", cconf->cname);
-				async_write_str(CMD_GEN, "Forced backup is not allowed");
-				goto end;
-			}
-
-			rbuf->buf=NULL;
-
-			snprintf(okstr, sizeof(okstr), "%s:%d",
-				resume?"resume":"ok", cconf->compression);
-			async_write_str(CMD_GEN, okstr);
-			ret=do_backup_server(sdirs, cconf, incexc, resume);
-			maybe_do_notification(ret,
-				sdirs->client, sdirs->current, "log", "backup",
-				cconf);
-		}
-	}
-	else if(rbuf->cmd==CMD_GEN
-	  && (!strncmp_w(rbuf->buf, "restore ") || !strncmp_w(rbuf->buf, "verify ")))
-	{
-		char *cp=NULL;
-		int resume=0; // ignored
-		enum action act;
-		char *backupnostr=NULL;
-		// Hmm. inefficient.
-	  	if(!strncmp_w(rbuf->buf, "restore "))
-		{
-			backupnostr=rbuf->buf+strlen("restore ");
-			act=ACTION_RESTORE;
-		}
-		else
-		{
-			backupnostr=rbuf->buf+strlen("verify ");
-			act=ACTION_VERIFY;
-		}
-		conf_val_reset(backupnostr, &(cconf->backup));
-		if((cp=strchr(cconf->backup, ':'))) *cp='\0';
-
-		if((ret=get_lock_and_clean(sdirs, cconf, incexc, &resume)))
-		{
-			// -1 on error, or 1 if the backup is still finalising.
-			if(ret<0) maybe_do_notification(ret,
-				"", "error in get_lock_and_clean()",
-				"",
-				act==ACTION_RESTORE?"restore":"verify",
-				cconf);
-		}
-		else
-		{
-			char *restoreregex=NULL;
-			char *dir_for_notify=NULL;
-
-			if(act==ACTION_RESTORE)
-			{
-				int r;
-				if((r=client_can_restore(cconf))<0)
-				{
-					ret=-1;
-					goto end;
-				}
-				else if(!r)
-				{
-					logp("Not allowing restore of %s\n",
-						cconf->cname);
-					async_write_str(CMD_GEN,
-					  "Client restore is not allowed");
-					goto end;
-				}
-			}
-			if(act==ACTION_VERIFY && !cconf->client_can_verify)
-			{
-				logp("Not allowing verify of %s\n", cconf->cname);
-				async_write_str(CMD_GEN,
-					"Client verify is not allowed");
-				goto end;
-			}
-
-			if((restoreregex=strchr(rbuf->buf, ':')))
-			{
-				*restoreregex='\0';
-				restoreregex++;
-			}
-			conf_val_reset(restoreregex, &(cconf->regex));
-			async_write_str(CMD_GEN, "ok");
-			ret=do_restore_server_legacy(sdirs,
-				cconf, act, srestore, &dir_for_notify);
-			if(dir_for_notify)
-			{
-				maybe_do_notification(ret,
-					sdirs->client, dir_for_notify,
-					act==ACTION_RESTORE?
-						"restorelog":"verifylog",
-					act==ACTION_RESTORE?
-						"restore":"verify",
-					cconf);
-				free(dir_for_notify);
-			}
-		}
-	}
-	else if(rbuf->cmd==CMD_GEN && !strncmp_w(rbuf->buf, "delete "))
-	{
-		int resume=0; // ignored
-		if(get_lock_and_clean(sdirs, cconf, incexc, &resume))
-			ret=-1;
-		else
-		{
-			char *backupno=NULL;
-			if(!cconf->client_can_delete)
-			{
-				logp("Not allowing delete of %s\n", cconf->cname);
-				async_write_str(CMD_GEN,
-					"Client delete is not allowed");
-				goto end;
-			}
-			backupno=rbuf->buf+strlen("delete ");
-			ret=do_delete_server(sdirs, cconf, backupno);
-		}
-	}
-	else if(rbuf->cmd==CMD_GEN
-	  && (!strncmp_w(rbuf->buf, "list ")
-	      || !strncmp_w(rbuf->buf, "listb ")))
-	{
-		int resume=0; // ignored
-		if(get_lock_and_clean(sdirs, cconf, incexc, &resume))
-			ret=-1;
-		else
-		{
-			char *backupno=NULL;
-			char *browsedir=NULL;
-			char *listregex=NULL;
-
-			if(!cconf->client_can_list)
-			{
-				logp("Not allowing list of %s\n", cconf->cname);
-				async_write_str(CMD_GEN,
-					"Client list is not allowed");
-				goto end;
-			}
-
-			if(!strncmp_w(rbuf->buf, "list "))
-			{
-				if((listregex=strrchr(rbuf->buf, ':')))
-				{
-					*listregex='\0';
-					listregex++;
-				}
-				backupno=rbuf->buf+strlen("list ");
-			}
-			else if(!strncmp_w(rbuf->buf, "listb "))
-			{
-				if((browsedir=strchr(rbuf->buf, ':')))
-				{
-					*browsedir='\0';
-					browsedir++;
-				}
-				// strip any trailing slashes
-				// (unless it is '/').
-				if(strcmp(browsedir, "/")
-				 && browsedir[strlen(browsedir)-1]=='/')
-				  browsedir[strlen(browsedir)-1]='\0';
-				backupno=rbuf->buf+strlen("listb ");
-			}
-			async_write_str(CMD_GEN, "ok");
-			ret=do_list_server(sdirs, cconf, backupno,
-				listregex, browsedir);
-		}
-	}
-	else
-	{
-		iobuf_log_unexpected(rbuf, __FUNCTION__);
-		async_write_str(CMD_ERROR, "unknown command");
-		ret=-1;
-	}
-
-end:
 	return ret;
 }

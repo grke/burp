@@ -7,7 +7,6 @@ int backup_phase1_server(struct sdirs *sdirs, struct config *conf)
 {
 	int ars=0;
 	int ret=-1;
-	int quit=0;
 	struct sbuf *sb=NULL;
 	gzFile p1zp=NULL;
 	char *phase1tmp=NULL;
@@ -21,10 +20,15 @@ int backup_phase1_server(struct sdirs *sdirs, struct config *conf)
 	if(!(sb=sbuf_alloc(conf)))
 		goto end;
 
-	while(!quit)
+	while(1)
 	{
 		sbuf_free_contents(sb);
-		if((ars=sbufl_fill(NULL, NULL, sb, conf->p1cntr)))
+		if(conf->legacy)
+			ars=sbufl_fill(NULL, NULL, sb, conf->p1cntr);
+		else
+			ars=sbuf_fill(sb, NULL, NULL, NULL, conf);
+
+		if(ars)
 		{
 			if(ars<0) goto end;
 			//ars==1 means it ended ok.

@@ -1,6 +1,6 @@
 #include "include.h"
 
-static int async_read_fp_msg(FILE *fp, gzFile zp, char **buf, size_t len)
+static int read_fp_msg(FILE *fp, gzFile zp, char **buf, size_t len)
 {
 	char *b=NULL;
 	ssize_t r=0;
@@ -36,14 +36,14 @@ static int async_read_fp_msg(FILE *fp, gzFile zp, char **buf, size_t len)
 	return 0;
 }
 
-static int async_read_fp(FILE *fp, gzFile zp, struct iobuf *rbuf)
+static int read_fp(FILE *fp, gzFile zp, struct iobuf *rbuf)
 {
 	int asr;
 	unsigned int r;
 	char *tmp=NULL;
 
 	// First, get the command and length
-	if((asr=async_read_fp_msg(fp, zp, &tmp, 5)))
+	if((asr=read_fp_msg(fp, zp, &tmp, 5)))
 	{
 		if(tmp) free(tmp);
 		return asr;
@@ -58,14 +58,14 @@ static int async_read_fp(FILE *fp, gzFile zp, struct iobuf *rbuf)
 	rbuf->len=r;
 	if(tmp) free(tmp);
 
-	if(!(asr=async_read_fp_msg(fp,
+	if(!(asr=read_fp_msg(fp,
 		zp, &rbuf->buf, rbuf->len+1))) // +1 for '\n'
 			rbuf->buf[rbuf->len]='\0'; // remove new line.
 
 	return asr;
 }
 
-static int async_read_stat(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
+static int read_stat(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
 {
 	static struct iobuf *rbuf=NULL;
 
@@ -77,9 +77,9 @@ static int async_read_stat(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cn
 		if(fp || zp)
 		{
 			int asr;
-			if((asr=async_read_fp(fp, zp, rbuf)))
+			if((asr=read_fp(fp, zp, rbuf)))
 			{
-				//logp("async_read_fp returned: %d\n", asr);
+				//logp("read_fp returned: %d\n", asr);
 				return asr;
 			}
 			if(rbuf->buf[rbuf->len]=='\n')
@@ -134,7 +134,7 @@ static int do_sbufl_fill_from_net(struct sbuf *sb, struct cntr *cntr)
 	static struct iobuf *rbuf=NULL;
 	if(!rbuf && !(rbuf=iobuf_alloc())) return -1;
 	iobuf_free_content(rbuf);
-	if((ars=async_read_stat(NULL, NULL, sb, cntr))) return ars;
+	if((ars=read_stat(NULL, NULL, sb, cntr))) return ars;
 	if((ars=async_read(rbuf))) return ars;
 	iobuf_copy(&sb->path, rbuf);
 	rbuf->buf=NULL;
@@ -157,12 +157,12 @@ static int do_sbufl_fill_from_file(FILE *fp, gzFile zp, struct sbuf *sb, int pha
 	int ars;
 	struct iobuf rbuf;
 	//free_sbufl(sb);
-	if((ars=async_read_stat(fp, zp, sb, cntr))) return ars;
-	if((ars=async_read_fp(fp, zp, &rbuf))) return ars;
+	if((ars=read_stat(fp, zp, sb, cntr))) return ars;
+	if((ars=read_fp(fp, zp, &rbuf))) return ars;
 	iobuf_copy(&sb->path, &rbuf);
 	if(sbuf_is_link(sb))
 	{
-		if((ars=async_read_fp(fp, zp, &rbuf))) return ars;
+		if((ars=read_fp(fp, zp, &rbuf))) return ars;
 		iobuf_copy(&sb->link, &rbuf);
 		if(!cmd_is_link(rbuf.cmd))
 		{
@@ -180,7 +180,7 @@ static int do_sbufl_fill_from_file(FILE *fp, gzFile zp, struct sbuf *sb, int pha
 			|| sb->path.cmd==CMD_ENC_VSS_T
 			|| sb->path.cmd==CMD_EFS_FILE))
 	{
-		if((ars=async_read_fp(fp, zp, &rbuf))) return ars;
+		if((ars=read_fp(fp, zp, &rbuf))) return ars;
 		iobuf_copy(&(sb->burp1->endfile), &rbuf);
 		if(rbuf.cmd!=CMD_END_FILE)
 		{
@@ -205,7 +205,7 @@ int sbufl_fill_phase1(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
 static int sbufl_to_fp(struct sbuf *sb, FILE *mp, int write_endfile)
 {
 	if(!sb->path.buf) return 0;
-	if(sb->burp1->datapth.buf
+	if(sb->burp1 && sb->burp1->datapth.buf
 	  && iobuf_send_msg_fp(&(sb->burp1->datapth), mp))
 		return -1;
 	if(iobuf_send_msg_fp(&sb->attr, mp)
@@ -224,7 +224,8 @@ static int sbufl_to_fp(struct sbuf *sb, FILE *mp, int write_endfile)
 	  || sb->path.cmd==CMD_ENC_VSS_T
 	  || sb->path.cmd==CMD_EFS_FILE))
 	{
-		if(iobuf_send_msg_fp(&sb->burp1->endfile, mp)) return -1;
+		if(sb->burp1
+		  && iobuf_send_msg_fp(&sb->burp1->endfile, mp)) return -1;
 	}
 	return 0;
 }
@@ -232,7 +233,7 @@ static int sbufl_to_fp(struct sbuf *sb, FILE *mp, int write_endfile)
 static int sbufl_to_zp(struct sbuf *sb, gzFile zp, int write_endfile)
 {
 	if(!sb->path.buf) return 0;
-	if(sb->burp1->datapth.buf
+	if(sb->burp1 && sb->burp1->datapth.buf
 	  && iobuf_send_msg_zp(&(sb->burp1->datapth), zp))
 		return -1;
 	if(iobuf_send_msg_zp(&sb->attr, zp)
@@ -251,7 +252,8 @@ static int sbufl_to_zp(struct sbuf *sb, gzFile zp, int write_endfile)
 	  || sb->path.cmd==CMD_ENC_VSS_T
 	  || sb->path.cmd==CMD_EFS_FILE))
 	{
-		if(iobuf_send_msg_zp(&sb->burp1->endfile, zp)) return -1;
+		if(sb->burp1
+		 && iobuf_send_msg_zp(&sb->burp1->endfile, zp)) return -1;
 	}
 	return 0;
 }

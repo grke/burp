@@ -431,11 +431,11 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobu
 	return 0;
 }
 
-static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist *blist, struct config *conf, int *scan_end, int *sigs_end, int *backup_end, struct manio *cmanio, struct manio *unmanio, struct dpth *dpth, uint64_t *wrap_up, const char *data_dir)
+static int deal_with_read(struct iobuf *rbuf,
+	struct slist *slist, struct blist *blist, struct config *conf,
+	int *sigs_end, int *backup_end, struct dpth *dpth, uint64_t *wrap_up)
 {
 	int ret=0;
-	static int ec=0;
-	static struct sbuf *snew=NULL;
 	static struct sbuf *inew=NULL;
 
 	if(!inew && !(inew=sbuf_alloc(conf))) goto error;
@@ -465,76 +465,13 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 					goto error;
 			goto end;
 
-		/* Incoming scan information. */
-		case CMD_ATTRIBS:
-			// Attribs should come first, so if we already
-			// set up snew, it is an error.
-			if(snew) break;
-			if(!(snew=sbuf_alloc(conf))) goto error;
-			iobuf_copy(&snew->attr, rbuf);
-			attribs_decode(snew);
-			snew->flags |= SBUF_NEED_PATH;
-			rbuf->buf=NULL;
-			return 0;
-		case CMD_FILE:
-		case CMD_DIRECTORY:
-		case CMD_SOFT_LINK:
-		case CMD_HARD_LINK:
-		case CMD_SPECIAL:
-			// Attribs should come first, so if we have not
-			// already set up snew, it is an error.
-			if(!snew) goto error;
-			if(snew->flags & SBUF_NEED_PATH)
-			{
-				iobuf_copy(&snew->path, rbuf);
-				snew->flags &= ~SBUF_NEED_PATH;
-				rbuf->buf=NULL;
-//			printf("got request for: %s\n", snew->path);
-				if(cmd_is_link(rbuf->cmd))
-					snew->flags |= SBUF_NEED_LINK;
-				else
-				{
-					if(!(ec=entry_changed(snew, cmanio,
-							unmanio, conf)))
-						sbuf_free(snew);
-					else if(ec<0)
-						goto error;
-					else
-					{
-						if(data_needed(snew))
-						  snew->flags|=SBUF_NEED_DATA;
-						else
-						  snew->flags&=~SBUF_NEED_DATA;
-						sbuf_add_to_list(snew, slist);
-					}
-					snew=NULL;
-				}
-				return 0;
-			}
-			else if(snew->flags & SBUF_NEED_LINK)
-			{
-				iobuf_copy(&snew->link, rbuf);
-				snew->flags &= ~SBUF_NEED_LINK;
-				rbuf->buf=NULL;
-				sbuf_add_to_list(snew, slist);
-				snew=NULL;
-				return 0;
-			}
-			break;
-
 		/* Incoming control/message stuff. */
 		case CMD_WARNING:
 			logp("WARNING: %s\n", rbuf);
 			do_filecounter(conf->cntr, rbuf->cmd, 0);
 			goto end;
 		case CMD_GEN:
-			if(!strcmp(rbuf->buf, "scan_end"))
-			{
-printf("GOT SCAN END\n");
-				*scan_end=1;
-				goto end;
-			}
-			else if(!strcmp(rbuf->buf, "sigs_end"))
+			if(!strcmp(rbuf->buf, "sigs_end"))
 			{
 printf("SIGS END\n");
 				*sigs_end=1;
@@ -553,7 +490,6 @@ printf("BACKUP END\n");
 error:
 	ret=-1;
 	sbuf_free(inew); inew=NULL;
-	sbuf_free(snew); snew=NULL;
 end:
 	if(rbuf->buf) { free(rbuf->buf); rbuf->buf=NULL; }
 	return ret;
@@ -643,13 +579,13 @@ static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, struct bl
 	return 0;
 }
 
-static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist, int scan_end, int *requests_end)
+static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist, struct manio *p1manio, int *requests_end)
 {
 	static uint64_t file_no=1;
 	struct sbuf *sb=slist->last_requested;
 	if(!sb)
 	{
-		if(scan_end && !*requests_end)
+		if(manio_closed(p1manio) && !*requests_end)
 		{
 			iobuf_from_str(wbuf, CMD_GEN, (char *)"requests_end");
 			*requests_end=1;
@@ -665,7 +601,7 @@ static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist, int sca
 
 	// Only need to request the path at this stage.
 	iobuf_copy(wbuf, &sb->path);
-//printf("want sigs for: %s\n", sb->path);
+//printf("want sigs for: %s\n", sb->path.buf);
 	sb->flags |= SBUF_SENT_PATH;
 	sb->burp2->index=file_no++;
 }
@@ -793,10 +729,51 @@ static void dump_slist(struct slist *slist, const char *msg)
 }
 */
 
-static int backup_server(struct sdirs *sdirs, const char *manifest_dir, struct config *conf)
+static int maybe_add_from_scan(struct manio *p1manio, struct manio *cmanio,
+	struct manio *unmanio, struct slist *slist, struct config *conf)
 {
 	int ret=-1;
-	int scan_end=0;
+	static int ars;
+	static int ec=0;
+	struct sbuf *snew;
+/*
+static int count=0;
+if(count>10) return 0;
+	count++;
+*/
+
+	if(!(snew=sbuf_alloc(conf))) goto end;
+
+	if((ars=manio_sbuf_fill(p1manio, snew, NULL, NULL, conf))<0) goto end;
+	else if(ars>0)
+	{
+printf("mafs finished\n");
+		return 0; // Finished.
+	}
+
+	if(!(ec=entry_changed(snew, cmanio, unmanio, conf)))
+	{
+		// No change, no need to add to slist.
+		ret=0;
+		goto end;
+	}
+	else if(ec<0) goto end; // Error.
+
+	if(data_needed(snew)) snew->flags|=SBUF_NEED_DATA;
+
+	sbuf_add_to_list(snew, slist);
+//printf("adding: %s\n", snew->path.buf);
+	return 0;
+end:
+	sbuf_free(snew);
+//printf("mafs az\n");
+	return ret;
+}
+
+static int do_backup_phase2_server(struct sdirs *sdirs,
+	const char *manifest_dir, int resume, struct config *conf)
+{
+	int ret=-1;
 	int sigs_end=0;
 	int backup_end=0;
 	int requests_end=0;
@@ -807,26 +784,24 @@ static int backup_server(struct sdirs *sdirs, const char *manifest_dir, struct c
 	struct iobuf *wbuf=NULL;
 	struct dpth *dpth=NULL;
 	struct manio *cmanio=NULL;	// current manifest
+	struct manio *p1manio=NULL;	// phase1 scan manifest
 	struct manio *chmanio=NULL;	// changed manifest
 	struct manio *unmanio=NULL;	// unchanged manifest
 	// This is used to tell the client that a number of consecutive blocks
 	// have been found and can be freed.
 	uint64_t wrap_up=0;
 
-	logp("Begin backup\n");
 	printf("DATADIR: %s\n", sdirs->data);
 
-	if(backup_phase1_server(sdirs, conf))
-	{
-		logp("error in phase1\n");
-		goto end;
-	}
+	logp("Phase 2 begin (recv backup data)\n");
 
 	if(champ_chooser_init(sdirs->data, conf)
 	  || !(cmanio=manio_alloc())
+	  || !(p1manio=manio_alloc())
 	  || !(chmanio=manio_alloc())
 	  || !(unmanio=manio_alloc())
 	  || manio_init_read(cmanio, sdirs->cmanifest)
+	  || manio_init_read(p1manio, sdirs->phase1data)
 	  || manio_init_write(chmanio, sdirs->changed)
 	  || manio_init_write(unmanio, sdirs->unchanged)
 	  || !(slist=slist_alloc())
@@ -837,10 +812,18 @@ static int backup_server(struct sdirs *sdirs, const char *manifest_dir, struct c
 	  || dpth_init(dpth))
 		goto end;
 
+	// The phase1 manifest looks the same as a burp1 one.
+	manio_set_protocol(p1manio, PROTO_BURP1);
+
 	while(!backup_end)
 	{
-//printf("loop a: %d %d %d %d %d\n",
-//	backup_end, scan_end, sigs_end, requests_end, blk_requests_end);
+//printf("loop a: %d %d %d %d\n",
+//	backup_end, sigs_end, requests_end, blk_requests_end);
+
+		if(!manio_closed(p1manio)
+		  && maybe_add_from_scan(p1manio, cmanio, unmanio, slist, conf))
+			goto end;
+
 		if(!wbuf->len)
 		{
 			get_wbuf_from_wrap_up(wbuf, &wrap_up);
@@ -853,7 +836,7 @@ static int backup_server(struct sdirs *sdirs, const char *manifest_dir, struct c
 				if(!wbuf->len)
 				{
 					get_wbuf_from_files(wbuf, slist,
-						scan_end, &requests_end);
+						p1manio, &requests_end);
 				}
 			}
 		}
@@ -866,8 +849,7 @@ static int backup_server(struct sdirs *sdirs, const char *manifest_dir, struct c
 		}
 
 		if(rbuf->buf && deal_with_read(rbuf, slist, blist, conf,
-			&scan_end, &sigs_end, &backup_end,
-			cmanio, unmanio, dpth, &wrap_up, sdirs->data))
+			&sigs_end, &backup_end, dpth, &wrap_up))
 				goto end;
 
 		if(write_to_changed_file(chmanio,
@@ -913,6 +895,7 @@ end:
 	iobuf_free(wbuf);
 	dpth_free(dpth);
 	manio_free(cmanio);
+	manio_free(p1manio);
 	manio_free(chmanio);
 	manio_free(unmanio);
 	return ret;
@@ -1017,7 +1000,7 @@ int do_backup_server(struct sdirs *sdirs, struct config *cconf,
 		goto error;
 	}
 
-	if(backup_server(sdirs, manifest_dir, cconf))
+	if(do_backup_phase2_server(sdirs, manifest_dir, resume, cconf))
 	{
 		logp("error in backup\n");
 		goto error;

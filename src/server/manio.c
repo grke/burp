@@ -56,9 +56,9 @@ int manio_set_mode_write(struct manio *manio)
 	return manio_set_mode(manio, MANIO_MODE_WRITE);
 }
 
-void manio_set_legacy(struct manio *manio)
+void manio_set_protocol(struct manio *manio, enum protocol protocol)
 {
-	manio->legacy=1;
+	manio->protocol=protocol;
 }
 
 static int manio_init(struct manio *manio, const char *directory, const char *mode)
@@ -70,6 +70,7 @@ static int manio_init(struct manio *manio, const char *directory, const char *mo
 		return -1;
 	}
 	if(manio_set_mode(manio, mode)) return -1;
+	manio_set_protocol(manio, PROTO_BURP2);
 	return 0;
 }
 
@@ -83,7 +84,7 @@ int manio_init_write(struct manio *manio, const char *directory)
 	return manio_init(manio, directory, MANIO_MODE_WRITE);
 }
 
-static int get_next_fpath_legacy(struct manio *manio)
+static int get_next_fpath_burp1(struct manio *manio)
 {
 	if(manio->fpath) free(manio->fpath);
 	return !(manio->fpath=strdup(manio->directory));
@@ -92,7 +93,7 @@ static int get_next_fpath_legacy(struct manio *manio)
 static int get_next_fpath(struct manio *manio)
 {
 	static char tmp[32];
-	if(manio->legacy) return get_next_fpath_legacy(manio);
+	if(manio->protocol==PROTO_BURP1) return get_next_fpath_burp1(manio);
 	if(manio->fpath) free(manio->fpath);
 	snprintf(tmp, sizeof(tmp), "%08lX", manio->fcount++);
 	return !(manio->fpath=prepend_s(manio->directory, tmp));
@@ -106,6 +107,8 @@ static int open_next_fpath(struct manio *manio)
 
 	if(!strcmp(manio->mode, MANIO_MODE_READ)
 	  && lstat(manio->fpath, &statp)) return 0;
+
+printf("manio path: %s\n", manio->fpath);
 
 	if(build_path_w(manio->fpath)
 	  || !(manio->zp=gzopen_file(manio->fpath, manio->mode)))
@@ -134,8 +137,8 @@ int manio_sbuf_fill(struct manio *manio, struct sbuf *sb, struct blk *blk, struc
 		// Maybe there is another file to continue with.
 		manio_close(manio);
 
-		// If in legacy mode, there is only one file, so end.
-		if(conf->protocol==PROTO_BURP1) return 1;
+		// If in burp1 mode, there is only one file, so end.
+		if(manio->protocol==PROTO_BURP1) return 1;
 	}
 
 error:
@@ -181,4 +184,10 @@ int manio_write_sbuf(struct manio *manio, struct sbuf *sb)
 {
 	if(!manio->zp && open_next_fpath(manio)) return -1;
 	return sbuf_to_manifest(sb, manio->zp);
+}
+
+int manio_closed(struct manio *manio)
+{
+	if(manio->zp || !manio->fpath) return 0;
+	return 1;
 }

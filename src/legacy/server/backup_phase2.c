@@ -633,16 +633,13 @@ int backup_phase2_server(struct sdirs *sdirs, struct config *cconf,
 	// we need to resume.
 	// First, open them in a+ mode, so that they will be created if they
 	// do not exist.
-	if(!(ucfp=open_file(sdirs->unchangeddata, "a+b")))
-		goto error;
-	if(!(p2fp=open_file(sdirs->phase2data, "a+b")))
+	if(!(ucfp=open_file(sdirs->unchangeddata, "a+b"))
+	  || !(p2fp=open_file(sdirs->phase2data, "a+b")))
 		goto error;
 	close_fp(&ucfp);
 	close_fp(&p2fp);
-
-	if(!(ucfp=open_file(sdirs->unchangeddata, "r+b")))
-		goto error;
-	if(!(p2fp=open_file(sdirs->phase2data, "r+b")))
+	if(!(ucfp=open_file(sdirs->unchangeddata, "r+b"))
+	  || !(p2fp=open_file(sdirs->phase2data, "r+b")))
 		goto error;
 
 	if(resume && do_resume(p1zp, p2fp, ucfp, dpthl, cconf))

@@ -16,7 +16,7 @@ struct manio
 	char *mode;		// Mode with which to open the files.
 	int sig_count;		// When writing, need to split the files
 				// after every X signatures written.
-	uint8_t legacy;		// Whether running in legacy mode or not.
+	enum protocol protocol;	// Whether running in burp1/burp2 mode.
 };
 
 extern struct manio *manio_alloc(void);
@@ -26,7 +26,7 @@ extern int manio_init_read(struct manio *manio, const char *directory);
 extern int manio_init_write(struct manio *manio, const char *directory);
 extern int manio_set_mode_read(struct manio *manio);
 extern int manio_set_mode_write(struct manio *manio);
-extern void manio_set_legacy(struct manio *manio);
+extern void manio_set_protocol(struct manio *manio, enum protocol protocol);
 
 extern int manio_sbuf_fill(struct manio *manio, struct sbuf *sb,
 	struct blk *blk, struct dpth *dpth, struct config *conf);
@@ -34,5 +34,7 @@ extern int manio_sbuf_fill(struct manio *manio, struct sbuf *sb,
 extern int manio_write_sig(struct manio *manio, struct blk *blk);
 extern int manio_write_sig_and_path(struct manio *manio, struct blk *blk);
 extern int manio_write_sbuf(struct manio *manio, struct sbuf *sb);
+
+extern int manio_closed(struct manio *manio);
 
 #endif

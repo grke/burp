@@ -13,11 +13,9 @@
 #define SBUF_SENT_PATH			0x02
 #define SBUF_SENT_LINK			0x04
 // Keep track of what needs to be received.
-#define SBUF_NEED_PATH			0x08
 #define SBUF_NEED_LINK			0x10
 #define SBUF_NEED_DATA			0x20
 #define SBUF_HEADER_WRITTEN_TO_MANIFEST	0x40
-#define SBUF_UNUSED			0x80
 
 // Structure used only by burp1 style functionality.
 struct burp1

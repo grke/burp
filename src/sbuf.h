@@ -43,6 +43,7 @@ struct burp2
 	ssize_t bytes_read;
 
 	uint64_t index;
+	uint32_t encryption;
 
 	BFILE bfd;
 
@@ -61,7 +62,7 @@ struct sbuf
 
 	struct stat statp;
 	uint64_t winattr;
-	int compression;
+	int32_t compression;
 
 	uint8_t flags;
 

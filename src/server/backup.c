@@ -103,6 +103,7 @@ int open_log(const char *realworking, struct config *cconf)
 	free(logpath);
 
 	logp("Client version: %s\n", cconf->peer_version?:"");
+	logp("Protocol: %d\n", cconf->protocol);
 	// Make sure a warning appears in the backup log.
 	// The client will already have been sent a message with logw.
 	// This time, prevent it sending a logw to the client by specifying

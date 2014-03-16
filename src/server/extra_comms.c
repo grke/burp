@@ -373,13 +373,21 @@ int extra_comms(char **incexc, int *srestore, struct config *conf, struct config
 		case PROTO_AUTO:
 			// The protocol has not been specified. Make a choice.
 			if(vers.cli<vers.burp2)
+			{
 				// Client is burp-1.x.x, use burp1.
 				cconf->protocol=conf->protocol=PROTO_BURP1;
+				logp("Client is burp-%s - using protocol=%d\n",
+					cconf->peer_version, PROTO_BURP1);
+			}
 			else
-				// Client is burp-2.x.x, use burp2. Could
-				// possibly check what the storage directory
-				// looks like in order to choose here.
+			{
+				// Client is burp-2.x.x, use burp2.
+				// This will probably never be reached because
+				// the negotiation will take care of it.
 				cconf->protocol=conf->protocol=PROTO_BURP2;
+				logp("Client is burp-%s - using protocol=%d\n",
+					cconf->peer_version, PROTO_BURP2);
+			}
 			break;
 		case PROTO_BURP1:
 			// It is OK for the client to be burp1 and for the

@@ -321,7 +321,7 @@ static void get_wbuf_from_scan(struct iobuf *wbuf, struct slist *flist)
 
 static int backup_phase2_client(struct config *conf, int resume)
 {
-	int ret=0;
+	int ret=-1;
 	int sigs_end=0;
 	int backup_end=0;
 	int requests_end=0;
@@ -332,18 +332,28 @@ static int backup_phase2_client(struct config *conf, int resume)
 	struct iobuf *rbuf=NULL;
 	struct iobuf *wbuf=NULL;
 
-	logp("Begin backup\n");
+	logp("Phase 2 begin (send backup data)\n");
+
+	if(!resume)
+	{
+		// Only do this bit if the server did not tell us to resume.
+		if(async_write_str(CMD_GEN, "backupphase2")
+		  || async_read_expect(CMD_GEN, "ok"))
+			goto end;
+	}
+	else if(conf->send_client_counters)
+	{
+		// On resume, the server might update the client with the
+		// counters.
+		if(recv_counters(conf))
+			goto end;
+        }
 
 	if(!(slist=slist_alloc())
 	  || !(blist=blist_alloc())
 	  || !(wbuf=iobuf_alloc())
-	  || !(rbuf=iobuf_alloc()))
-	{
-		ret=-1;
-		goto end;
-	}
-
-	if(blks_generate_init(conf)
+	  || !(rbuf=iobuf_alloc())
+	  || blks_generate_init(conf)
 	  || !(win=win_alloc(&conf->rconf)))
 		goto end;
 
@@ -363,7 +373,6 @@ static int backup_phase2_client(struct config *conf, int resume)
 		if(async_rw(rbuf, wbuf))
 		{
 			logp("error in async_rw\n");
-			ret=-1;
 			goto end;
 		}
 
@@ -378,10 +387,7 @@ static int backup_phase2_client(struct config *conf, int resume)
 		)
 		{
 			if(add_to_blks_list(conf, slist, blist, win))
-			{
-				ret=-1;
-				break;
-			}
+				goto end;
 		}
 
 		if(blk_requests_end)
@@ -403,11 +409,9 @@ static int backup_phase2_client(struct config *conf, int resume)
 	}
 
 	if(async_write_str(CMD_GEN, "backup_end"))
-	{
-		ret=-1;
 		goto end;
-	}
 
+	ret=0;
 end:
 blk_print_alloc_stats();
 sbuf_print_alloc_stats();

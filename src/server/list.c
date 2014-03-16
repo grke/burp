@@ -77,7 +77,7 @@ static int list_manifest(const char *fullpath, regex_t *regex,
 		log_and_send_oom(__FUNCTION__);
 		goto error;
 	}
-	if(conf->protocol==PROTO_BURP1) manio_set_legacy(manio);
+	manio_set_protocol(manio, conf->protocol);
 
 	if(browsedir) bdlen=strlen(browsedir);
 

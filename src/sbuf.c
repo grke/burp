@@ -532,8 +532,11 @@ int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct
 				logw(conf->cntr, "%s", rbuf->buf);
 				break;
 			case CMD_GEN:
-				if(!strcmp(rbuf->buf, "restore_end"))
+				if(!strcmp(rbuf->buf, "restore_end")
+				  || !strcmp(rbuf->buf, "phase1end")
+				  || !strcmp(rbuf->buf, "backupphase2"))
 				{
+					printf("HERE: %s\n", rbuf->buf);
 					ret=1;
 					goto end;
 				}

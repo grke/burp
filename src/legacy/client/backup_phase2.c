@@ -423,7 +423,7 @@ int backup_phase2_client_legacy(struct config *conf, int resume)
 {
 	int ret=0;
 
-	logp("Phase 2 begin (send file data)\n");
+	logp("Phase 2 begin (send backup data)\n");
 
 	ret=do_backup_phase2_client(conf, resume);
 

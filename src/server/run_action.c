@@ -164,7 +164,7 @@ static int run_backup(struct sdirs *sdirs, struct config *cconf,
 
 	snprintf(okstr, sizeof(okstr), "ok:%d", cconf->compression);
 	if(async_write_str(CMD_GEN, okstr)) return -1;
-	if(cconf->legacy)
+	if(cconf->protocol==PROTO_BURP1)
 		ret=do_backup_server_legacy(sdirs, cconf, incexc, resume);
 	else
 		ret=do_backup_server(sdirs, cconf, incexc, resume);

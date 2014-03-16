@@ -12,6 +12,13 @@ enum burp_mode
 	MODE_CLIENT
 };
 
+enum protocol
+{
+	PROTO_AUTO=0,
+	PROTO_BURP1,
+	PROTO_BURP2
+};
+
 struct config
 {
 	char *configfile;
@@ -38,7 +45,8 @@ struct config
 
 	char *peer_version;
 
-	uint8_t legacy; // Whether to run in burp1 style or not.
+	// Whether to run in burp1, or burp2 style, or to choose automatically.
+	enum protocol protocol;
 
 // server options
 	char *directory;

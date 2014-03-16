@@ -14,7 +14,7 @@ struct sbuf *sbuf_alloc(struct config *conf)
 	sb->path.cmd=CMD_ERROR;
 	sb->attr.cmd=CMD_ATTRIBS;
 	sb->compression=-1;
-	if(conf->legacy)
+	if(conf->protocol==PROTO_BURP1)
 	{
 		if(!(sb->burp1=(struct burp1 *)calloc(1, sizeof(struct burp1))))
 		{
@@ -554,7 +554,7 @@ int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct
 			// in burp-1, but not burp-2.
 			case CMD_DATAPTH:
 			case CMD_END_FILE:
-				if(conf->legacy) continue;
+				if(conf->protocol==PROTO_BURP1) continue;
 			default:
 				iobuf_log_unexpected(rbuf, __FUNCTION__);
 				goto end;

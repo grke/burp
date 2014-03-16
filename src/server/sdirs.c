@@ -89,7 +89,7 @@ extern int sdirs_init(struct sdirs *sdirs, struct config *conf)
 	if(!(sdirs->base=strdup(conf->directory)))
 		goto error;
 
-	if(conf->legacy)
+	if(conf->protocol==PROTO_BURP1)
 	{
 		if(do_legacy_dirs(sdirs, conf)) goto error;
 	}

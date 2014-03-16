@@ -69,7 +69,7 @@ static int list_manifest(const char *fullpath, regex_t *regex,
 	size_t bdlen=0;
 
 	if(!(manifest_dir=prepend_s(fullpath,
-		conf->legacy?"manifest.gz":"manifest"))
+		conf->protocol==PROTO_BURP1?"manifest.gz":"manifest"))
 	  || !(manio=manio_alloc())
 	  || manio_init_read(manio, manifest_dir)
 	  || !(sb=sbuf_alloc(conf)))
@@ -77,7 +77,7 @@ static int list_manifest(const char *fullpath, regex_t *regex,
 		log_and_send_oom(__FUNCTION__);
 		goto error;
 	}
-	if(conf->legacy) manio_set_legacy(manio);
+	if(conf->protocol==PROTO_BURP1) manio_set_legacy(manio);
 
 	if(browsedir) bdlen=strlen(browsedir);
 

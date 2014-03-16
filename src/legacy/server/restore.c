@@ -774,8 +774,8 @@ end:
 	return ret;
 }
 
-int do_restore_server_legacy(struct sdirs *sdirs, struct config *cconf,
-	enum action act, int srestore, char **dir_for_notify)
+int do_restore_server_legacy(struct sdirs *sdirs, enum action act,
+	int srestore, char **dir_for_notify, struct config *cconf)
 {
 	int a=0;
 	int i=0;

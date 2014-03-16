@@ -195,6 +195,8 @@ int sbuf_open_file(struct sbuf *sb, struct config *conf)
 		return -1;
 	}
 	sb->compression=conf->compression;
+	// Encryption not yet implemented in burp2.
+	//sb->burp2->encryption=conf->burp2->encryption_password?1:0;
 	if(attribs_encode(sb)) return -1;
 
 	if(open_file_for_send(&sb->burp2->bfd, sb->path.buf, sb->winattr, conf))

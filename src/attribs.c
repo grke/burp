@@ -7,8 +7,6 @@
 #include "include.h"
 
 // Encode a stat structure into a base64 character string.
-// FIX THIS: Put compression near the beginning, before
-// it gets too entrenched in burp2.
 int attribs_encode(struct sbuf *sb)
 {
 	static char *p;
@@ -28,8 +26,14 @@ int attribs_encode(struct sbuf *sb)
 
 	if(sb->burp2)
 	{
-		// Legacy stuff does not have this field.
+		// Burp1 does not have this field.
 		p += to_base64(sb->burp2->index, p);
+		*p++ = ' ';
+		// Burp2 puts compression near the beginning.
+		p += to_base64(sb->compression, p);
+		*p++ = ' ';
+		// Burp1 does not have this field.
+		p += to_base64(sb->burp2->encryption, p);
 		*p++ = ' ';
 	}
 	p += to_base64(statp->st_dev, p);
@@ -78,9 +82,13 @@ int attribs_encode(struct sbuf *sb)
 #else
 	p += to_base64(0, p); // place holder
 #endif
-	*p++ = ' ';
 
-	p += to_base64(sb->compression, p);
+	if(sb->burp1)
+	{
+		// Burp1 puts compression at the end.
+		*p++ = ' ';
+		p += to_base64(sb->compression, p);
+	}
 
 	*p = 0;
 
@@ -117,9 +125,17 @@ void attribs_decode(struct sbuf *sb)
 
 	if(sb->burp2)
 	{
-		// Legacy stuff does not have this field.
+		// Burp1 does not have this field.
 		p += from_base64(&val, p);
 		sb->burp2->index=val;
+		p++;
+		// Compression for burp2.
+		p += from_base64(&val, p);
+		sb->compression=val;
+		p++;
+		// Burp1 does not have this field.
+		p += from_base64(&val, p);
+		sb->burp2->encryption=val;
 		p++;
 	}
 	p += from_base64(&val, p);
@@ -193,16 +209,19 @@ void attribs_decode(struct sbuf *sb)
 		val = 0;
 	sb->winattr=val;
 
-	// Compression.
-	if(*p == ' ' || (*p != 0 && *(p+1) == ' '))
+	// Compression for burp1.
+	if(sb->burp1)
 	{
-		p++;
-		if(!*p) return;
-		p += from_base64(&val, p);
-		sb->compression=val;
+		if(*p == ' ' || (*p != 0 && *(p+1) == ' '))
+		{
+			p++;
+			if(!*p) return;
+			p += from_base64(&val, p);
+			sb->compression=val;
+		}
+		else
+			sb->compression=-1;
 	}
-	else
-		sb->compression=-1;
 }
 
 static int set_file_times(const char *path, struct utimbuf *ut,

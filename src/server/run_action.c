@@ -225,8 +225,12 @@ static int run_restore(struct sdirs *sdirs, struct config *cconf,
 	if(conf_val_reset(restoreregex, &(cconf->regex))
 	  || async_write_str(CMD_GEN, "ok"))
 		return -1;
-	ret=do_restore_server(sdirs, act,
-		srestore, &dir_for_notify, cconf);
+	if(cconf->protocol==PROTO_BURP1)
+		ret=do_restore_server_legacy(sdirs, act,
+			srestore, &dir_for_notify, cconf);
+	else
+		ret=do_restore_server(sdirs, act,
+			srestore, &dir_for_notify, cconf);
 	if(dir_for_notify)
 	{
 		maybe_do_notification(ret,

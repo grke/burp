@@ -507,7 +507,6 @@ static int load_config_ints(struct config *c,
 	const char *f, // field
 	const char *v) //value
 {
-	gcv_uint8(f, v, "legacy", &(c->legacy));
 	gcv_uint8(f, v, "syslog", &(c->log_to_syslog));
 	gcv_uint8(f, v, "stdout", &(c->log_to_stdout));
 	gcv_uint8(f, v, "progress_counter", &(c->progress_counter));
@@ -665,6 +664,13 @@ static int load_config_field_and_value(struct config *c,
 			c->mode=MODE_CLIENT;
 			c->progress_counter=1; // default to on for client
 		}
+		else return -1;
+	}
+	else if(!strcmp(f, "protocol"))
+	{
+		if(!strcmp(v, "0")) c->protocol=PROTO_AUTO;
+		else if(!strcmp(v, "1")) c->protocol=PROTO_BURP1;
+		else if(!strcmp(v, "2")) c->protocol=PROTO_BURP2;
 		else return -1;
 	}
 	else if(!strcmp(f, "compression"))
@@ -1304,7 +1310,7 @@ static int set_global_arglist(struct strlist **dst, struct strlist *src)
 /* Remember to update the list in the man page when you change these.*/
 int config_set_client_global(struct config *c, struct config *cc)
 {
-	cc->legacy=c->legacy;
+	cc->protocol=c->protocol;
 	cc->log_to_syslog=c->log_to_syslog;
 	cc->log_to_stdout=c->log_to_stdout;
 	cc->progress_counter=c->progress_counter;

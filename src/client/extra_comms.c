@@ -53,7 +53,7 @@ int extra_comms(struct config *conf,
 	if(server_supports_autoupgrade(rbuf->buf)
 	  && conf->autoupgrade_dir
 	  && conf->autoupgrade_os
-	  && (ret=autoupgrade_client(conf)))
+	  && autoupgrade_client(conf))
 		goto end;
 
 	// :srestore: means that the server wants to do a restore.
@@ -62,11 +62,11 @@ int extra_comms(struct config *conf,
 		if(conf->server_can_restore)
 		{
 			logp("Server is initiating a restore\n");
-			if((ret=incexc_recv_client_restore(incexc, conf)))
+			if(incexc_recv_client_restore(incexc, conf))
 				goto end;
 			if(*incexc)
 			{
-				if((ret=parse_incexcs_buf(conf, *incexc)))
+				if(parse_incexcs_buf(conf, *incexc))
 					goto end;
 				*action=ACTION_RESTORE;
 				log_restore_settings(conf, 1);
@@ -93,8 +93,8 @@ int extra_comms(struct config *conf,
 			logp("Server does not support switching client.\n");
 			goto end;
 		}
-		if((ret=async_write_str(CMD_GEN, str))
-		  || (ret=async_read_expect(CMD_GEN, "orig_client ok")))
+		if(async_write_str(CMD_GEN, str)
+		  || async_read_expect(CMD_GEN, "orig_client ok"))
 		{
 			logp("Problem requesting %s\n", str);
 			goto end;
@@ -111,10 +111,10 @@ int extra_comms(struct config *conf,
 		if(!incexc && server_supports(feat, ":sincexc:"))
 		{
 			logp("Server is setting includes/excludes.\n");
-			if((ret=incexc_recv_client(incexc, conf)))
+			if(incexc_recv_client(incexc, conf))
 				goto end;
-			if(*incexc && (ret=parse_incexcs_buf(conf,
-				*incexc))) goto end;
+			if(*incexc && parse_incexcs_buf(conf,
+				*incexc)) goto end;
 		}
 	}
 
@@ -129,7 +129,7 @@ int extra_comms(struct config *conf,
 	// incexc config so that it better knows what to do on
 	// resume.
 	if(server_supports(feat, ":incexc:")
-	  && (ret=incexc_send_client(conf)))
+	  && incexc_send_client(conf))
 		goto end;
 
 	if(server_supports(feat, ":uname:"))
@@ -156,13 +156,52 @@ int extra_comms(struct config *conf,
 		}
 	}
 
-	if((ret=async_write_str(CMD_GEN, "extra_comms_end"))
-	  || (ret=async_read_expect(CMD_GEN, "extra_comms_end ok")))
+	if(server_supports(feat, ":csetproto:"))
+	{
+		char msg[128]="";
+		// Use burp2 if no choice has been made on client side.
+		if(conf->protocol==PROTO_AUTO)
+		{
+			logp("Server has protocol=0 (auto)\n");
+			conf->protocol=PROTO_BURP2;
+		}
+		// Send choice to server.
+		snprintf(msg, sizeof(msg), "protocol=%d", conf->protocol);
+		if(async_write_str(CMD_GEN, msg))
+			goto end;
+		logp("Using protocol=%d\n", conf->protocol);
+	}
+	else if(server_supports(feat, ":forceproto=1:"))
+	{
+		logp("Server is forcing protocol 1\n");
+		if(conf->protocol!=PROTO_AUTO && conf->protocol!=PROTO_BURP1)
+		{
+			logp("But client has set protocol=%d!\n",
+				conf->protocol);
+			goto end;
+		}
+		conf->protocol=PROTO_BURP1;
+	}
+	else if(server_supports(feat, ":forceproto=2:"))
+	{
+		logp("Server is forcing protocol 2\n");
+		if(conf->protocol!=PROTO_AUTO && conf->protocol!=PROTO_BURP2)
+		{
+			logp("But client has set protocol=%d!\n",
+				conf->protocol);
+			goto end;
+		}
+		conf->protocol=PROTO_BURP2;
+	}
+
+	if(async_write_str(CMD_GEN, "extra_comms_end")
+	  || async_read_expect(CMD_GEN, "extra_comms_end ok"))
 	{
 		logp("Problem requesting extra_comms_end\n");
 		goto end;
 	}
 
+	ret=0;
 end:
 	iobuf_free(rbuf);
 	return ret;

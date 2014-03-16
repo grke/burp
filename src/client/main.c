@@ -258,8 +258,6 @@ static int do_client(struct config *conf, enum action action, int vss_restore, i
 		}
 	}
 
-printf("client legacy: %d\n", conf->legacy);
-
 	rfd=-1;
 	switch(action)
 	{
@@ -296,7 +294,7 @@ printf("client legacy: %d\n", conf->legacy);
 			{
 				// FIX THIS: Really need to abstract these
 				// functions to be a single pointer.
-				if(conf->legacy)
+				if(conf->protocol==PROTO_BURP1)
 				{
 					if(do_restore_client_legacy(conf,
 						action, vss_restore)) ret=-1;

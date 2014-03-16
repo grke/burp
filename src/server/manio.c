@@ -135,7 +135,7 @@ int manio_sbuf_fill(struct manio *manio, struct sbuf *sb, struct blk *blk, struc
 		manio_close(manio);
 
 		// If in legacy mode, there is only one file, so end.
-		if(conf->legacy) return 1;
+		if(conf->protocol==PROTO_BURP1) return 1;
 	}
 
 error:

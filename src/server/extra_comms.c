@@ -68,6 +68,25 @@ static int send_features(struct config *cconf)
 	if(append_to_feat(&feat, "counters:"))
 		goto end;
 
+	if(cconf->protocol==PROTO_AUTO)
+	{
+		/* If the server is configured to use either protocol, let the
+		   client know that it can choose. */
+		logp("Server is using protocol=0 (auto)\n");
+		if(append_to_feat(&feat, "csetproto:"))
+			goto end;
+	}
+	else
+	{
+		char p[32]="";
+		/* Tell the client what we are going to use. */
+		logp("Server is using protocol=%d\n", cconf->protocol);
+		snprintf(p, sizeof(p), "forceproto=%d:", cconf->protocol);
+		if(append_to_feat(&feat, p))
+			goto end;
+	}
+	
+
 	//printf("feat: %s\n", feat);
 
 	if(async_write_str(CMD_GEN, feat))
@@ -89,6 +108,7 @@ struct vers
 	long ser;
 	long feat_list;
 	long directory_tree;
+	long burp2;
 };
 
 static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, struct config *conf, struct config *cconf)
@@ -259,6 +279,28 @@ static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, str
 				goto end;
 			}
 		}
+		else if(!strncmp_w(rbuf->buf, "protocol="))
+		{
+			char msg[128]="";
+			// Client wants to set protocol.
+			if(cconf->protocol!=PROTO_AUTO)
+			{
+				snprintf(msg, sizeof(msg), "Client is trying to use %s but server is set to protocol=%d\n", rbuf->buf, cconf->protocol);
+				log_and_send_oom(__FUNCTION__);
+				goto end;
+			}
+			else if(!strcmp(rbuf->buf+strlen("protocol="), "1"))
+				cconf->protocol=conf->protocol=PROTO_BURP1;
+			else if(!strcmp(rbuf->buf+strlen("protocol="), "2"))
+				cconf->protocol=conf->protocol=PROTO_BURP2;
+			else
+			{
+				snprintf(msg, sizeof(msg), "Client is trying to use %s, which is unknown\n", rbuf->buf);
+				log_and_send_oom(__FUNCTION__);
+				goto end;
+			}
+			logp("Client has set protocol=%d\n", cconf->protocol);
+		}
 		else
 		{
 			iobuf_log_unexpected(rbuf, __FUNCTION__);
@@ -279,16 +321,16 @@ static int init_vers(struct vers *vers, struct config *cconf)
 	  || (vers->cli=version_to_long(cconf->peer_version))<0
 	  || (vers->ser=version_to_long(VERSION))<0
 	  || (vers->feat_list=version_to_long("1.3.0"))<0
-	  || (vers->directory_tree=version_to_long("1.3.6"))<0);
+	  || (vers->directory_tree=version_to_long("1.3.6"))<0
+	  || (vers->burp2=version_to_long("2.0.0"))<0);
 }
 
 int extra_comms(char **incexc, int *srestore, struct config *conf, struct config *cconf)
 {
-	int ret=-1;
 	struct vers vers;
 	//char *restorepath=NULL;
 
-	if(init_vers(&vers, cconf)) goto end;
+	if(init_vers(&vers, cconf)) goto error;
 
 	if(vers.cli<vers.directory_tree)
 	{
@@ -303,7 +345,7 @@ int extra_comms(char **incexc, int *srestore, struct config *conf, struct config
 	if(async_read_expect(CMD_GEN, "extra_comms_begin"))
 	{
 		logp("problem reading in extra_comms\n");
-		goto end;
+		goto error;
 	}
 	// Want to tell the clients the extra comms features that are
 	// supported, so that new clients are more likely to work with old
@@ -314,17 +356,44 @@ int extra_comms(char **incexc, int *srestore, struct config *conf, struct config
 		if(async_write_str(CMD_GEN, "extra_comms_begin ok"))
 		{
 			logp("problem writing in extra_comms\n");
-			goto end;
+			goto error;
 		}
 	}
 	else
 	{
-		if(send_features(cconf)) goto end;
+		if(send_features(cconf)) goto error;
 	}
 
-	if(extra_comms_read(&vers, srestore, incexc, conf, cconf)) goto end;
+	if(extra_comms_read(&vers, srestore, incexc, conf, cconf)) goto error;
 
-	ret=0;
-end:
-	return ret;
+	// This needs to come after extra_comms_read, as the client might
+	// have set BURP1 or BURP2.
+	switch(cconf->protocol)
+	{
+		case PROTO_AUTO:
+			// The protocol has not been specified. Make a choice.
+			if(vers.cli<vers.burp2)
+				// Client is burp-1.x.x, use burp1.
+				cconf->protocol=conf->protocol=PROTO_BURP1;
+			else
+				// Client is burp-2.x.x, use burp2. Could
+				// possibly check what the storage directory
+				// looks like in order to choose here.
+				cconf->protocol=conf->protocol=PROTO_BURP2;
+			break;
+		case PROTO_BURP1:
+			// It is OK for the client to be burp1 and for the
+			// server to be forced to burp1 protocol.
+			break;
+		case PROTO_BURP2:
+			if(vers.cli>=vers.burp2) break;
+			logp("protocol=%d is set server side, "
+			  "but client is burp version %s\n",
+			  cconf->peer_version);
+			goto error;
+	}
+
+	return 0;
+error:
+	return -1;
 }

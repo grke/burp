@@ -957,7 +957,6 @@ int do_backup_server(struct sdirs *sdirs, struct config *cconf,
 	// Real path to the manifest directory
 	char *manifest_dir=NULL;
 	char tstmp[64]="";
-printf("in do_backup_server\n");
 
 	logp("in do_backup_server\n");
 
@@ -971,7 +970,6 @@ printf("in do_backup_server\n");
 	}
 
 	if(clean_rubble(sdirs)) goto error;
-printf("in do_backup_server a\n");
 
 	// Add the working symlink before creating the directory.
 	// This is because bedup checks the working symlink before
@@ -1011,14 +1009,12 @@ printf("in do_backup_server a\n");
 		log_and_send(msg);
 		goto error;
 	}
-printf("in do_backup_server b\n");
 
 	if(backup_phase1_server(sdirs, cconf))
 	{
 		logp("error in phase1\n");
 		goto error;
 	}
-printf("in do_backup_server c\n");
 
 	if(backup_server(sdirs, manifest_dir, cconf))
 	{

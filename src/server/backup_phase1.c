@@ -23,7 +23,7 @@ int backup_phase1_server(struct sdirs *sdirs, struct config *conf)
 	while(1)
 	{
 		sbuf_free_contents(sb);
-		if(conf->legacy)
+		if(conf->protocol==PROTO_BURP1)
 			ars=sbufl_fill(NULL, NULL, sb, conf->p1cntr);
 		else
 			ars=sbuf_fill(sb, NULL, NULL, NULL, conf);

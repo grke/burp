@@ -475,7 +475,7 @@ int do_backup_client(struct config *conf, enum action action,
 	{
 		// Now, the server will be telling us what data we need to
 		// send.
-		if(conf->legacy)
+		if(conf->protocol==PROTO_BURP1)
 			ret=backup_phase2_client_legacy(conf, resume);
 		else
 			ret=backup_phase2_client(conf, resume);

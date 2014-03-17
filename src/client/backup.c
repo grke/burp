@@ -334,6 +334,14 @@ static int backup_phase2_client(struct config *conf, int resume)
 
 	logp("Phase 2 begin (send backup data)\n");
 
+	if(!(slist=slist_alloc())
+	  || !(blist=blist_alloc())
+	  || !(wbuf=iobuf_alloc())
+	  || !(rbuf=iobuf_alloc())
+	  || blks_generate_init(conf)
+	  || !(win=win_alloc(&conf->rconf)))
+		goto end;
+
 	if(!resume)
 	{
 		// Only do this bit if the server did not tell us to resume.
@@ -348,14 +356,6 @@ static int backup_phase2_client(struct config *conf, int resume)
 		if(recv_counters(conf))
 			goto end;
         }
-
-	if(!(slist=slist_alloc())
-	  || !(blist=blist_alloc())
-	  || !(wbuf=iobuf_alloc())
-	  || !(rbuf=iobuf_alloc())
-	  || blks_generate_init(conf)
-	  || !(win=win_alloc(&conf->rconf)))
-		goto end;
 
 	while(!backup_end)
 	{

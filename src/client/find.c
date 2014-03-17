@@ -44,10 +44,8 @@ FF_PKT *find_files_init(void)
 {
 	FF_PKT *ff;
 
-	ff=(FF_PKT *)calloc(1, sizeof(FF_PKT));
-	memset(ff, 0, sizeof(FF_PKT));
-
-	if(!(linkhash=(f_link **)
+	if(!(ff=(FF_PKT *)calloc(1, sizeof(FF_PKT)))
+	  || !(linkhash=(f_link **)
 		calloc(1, LINK_HASHTABLE_SIZE*sizeof(f_link *))))
 	{
 		log_out_of_memory(__FUNCTION__);
@@ -94,6 +92,7 @@ static int free_linkhash(void)
 			lp=lp->next;
 			if(lc)
 			{
+				if(lc->name) free(lc->name);
 				free(lc);
 				count++;
 			}
@@ -706,8 +705,6 @@ static int found_other(FF_PKT *ff_pkt, struct config *conf,
 static int find_files(FF_PKT *ff_pkt, struct config *conf,
 	char *fname, dev_t parent_device, bool top_level)
 {
-	int len;
-
 	ff_pkt->fname=fname;
 	ff_pkt->link=fname;
 
@@ -752,16 +749,14 @@ static int find_files(FF_PKT *ff_pkt, struct config *conf,
 		}
 
 		// File not previously dumped. Chain it into our list.
-		len=strlen(fname)+1;
-		if(!(lp=(struct f_link *)malloc(sizeof(struct f_link)+len)))
+		if(!(lp=(struct f_link *)malloc(sizeof(struct f_link)))
+		  || !(lp->name=strdup(fname)))
 		{
 			log_out_of_memory(__FUNCTION__);
 			return -1;
 		}
 		lp->ino=ff_pkt->statp.st_ino;
 		lp->dev=ff_pkt->statp.st_dev;
-		/* set later */
-		snprintf(lp->name, len, "%s", fname);
 		lp->next=linkhash[linkhash_ind];
 		linkhash[linkhash_ind]=lp;
 	}

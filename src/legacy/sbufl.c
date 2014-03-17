@@ -134,8 +134,8 @@ static int do_sbufl_fill_from_net(struct sbuf *sb, struct cntr *cntr)
 	static struct iobuf *rbuf=NULL;
 	if(!rbuf && !(rbuf=iobuf_alloc())) return -1;
 	iobuf_free_content(rbuf);
-	if((ars=read_stat(NULL, NULL, sb, cntr))) return ars;
-	if((ars=async_read(rbuf))) return ars;
+	if((ars=read_stat(NULL, NULL, sb, cntr))
+	  || (ars=async_read(rbuf))) return ars;
 	iobuf_copy(&sb->path, rbuf);
 	rbuf->buf=NULL;
 	if(sbuf_is_link(sb))
@@ -143,6 +143,7 @@ static int do_sbufl_fill_from_net(struct sbuf *sb, struct cntr *cntr)
 		iobuf_free_content(rbuf);
 		if((ars=async_read(rbuf))) return ars;
 		iobuf_copy(&sb->link, rbuf);
+		rbuf->buf=NULL;
 		if(!cmd_is_link(rbuf->cmd))
 		{
 			iobuf_log_unexpected(rbuf, __FUNCTION__);

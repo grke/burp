@@ -585,7 +585,7 @@ int async_get_fd(void)
 	return fd;
 }
 
-// should be in src/lib/log.c
+// should be in src/log.c
 int logw(struct cntr *cntr, const char *fmt, ...)
 {
 	int r=0;

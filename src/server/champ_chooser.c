@@ -110,6 +110,7 @@ printf("%p\n", scores);
 // Return -1 or error, 0 on OK.
 static int scores_grow(struct scores *scores, size_t count)
 {
+	if(!count) return 0;
 	printf("grow scores to %lu\n", count);
 	scores->size=count;
 	scores->allocated=count;

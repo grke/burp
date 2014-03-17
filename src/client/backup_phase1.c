@@ -162,7 +162,7 @@ int backup_phase1_client(struct config *conf, long name_max, int estimate)
 #endif
 	}
 
-	ff=find_files_init();
+	if(!(ff=find_files_init())) goto end;
 	server_name_max=name_max;
 	for(l=conf->startdir; l; l=l->next) if(l->flag)
 		if(find_files_begin(ff, conf, l->path)) goto end;

@@ -529,7 +529,8 @@ int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct
 				rbuf->buf=NULL;
 				return 0;
 			case CMD_WARNING:
-				logw(conf->cntr, "%s", rbuf->buf);
+				logp("WARNING: %s\n", rbuf->buf);
+				do_filecounter(conf->cntr, CMD_WARNING, 1);
 				break;
 			case CMD_GEN:
 				if(!strcmp(rbuf->buf, "restore_end")

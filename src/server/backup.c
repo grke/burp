@@ -601,7 +601,7 @@ static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist, struct 
 
 	// Only need to request the path at this stage.
 	iobuf_copy(wbuf, &sb->path);
-printf("want sigs for: %s\n", sb->path.buf);
+//printf("want sigs for: %s\n", sb->path.buf);
 	sb->flags |= SBUF_SENT_PATH;
 	sb->burp2->index=file_no++;
 }
@@ -735,33 +735,37 @@ static int maybe_add_from_scan(struct manio *p1manio, struct manio *cmanio,
 	int ret=-1;
 	static int ars;
 	static int ec=0;
-	struct sbuf *snew;
+	struct sbuf *snew=NULL;
 
-	// Limit the amount loaded into memory at any one time.
-	if(slist && slist->head)
+	while(1)
 	{
-if(!slist->head) printf("no slist head\n");
-printf("%d %d\n", slist->head->burp2->index, slist->tail->burp2->index>4096);
-		if(slist->head->burp2->index-slist->tail->burp2->index>4096)
-			return 0;
+		if(manio_closed(p1manio)) return 0;
+		// Limit the amount loaded into memory at any one time.
+		if(slist && slist->head)
+		{
+//			printf("%d %d\n", slist->head->burp2->index,
+//				slist->tail->burp2->index>4096);
+			if(slist->head->burp2->index
+			  - slist->tail->burp2->index>4096)
+				return 0;
+		}
+		if(!(snew=sbuf_alloc(conf))) goto end;
+
+		if((ars=manio_sbuf_fill(p1manio, snew, NULL, NULL, conf))<0)
+			goto end;
+		else if(ars>0) return 0; // Finished.
+
+		if(!(ec=entry_changed(snew, cmanio, unmanio, conf)))
+		{
+			// No change, no need to add to slist.
+			continue;
+		}
+		else if(ec<0) goto end; // Error.
+
+		if(data_needed(snew)) snew->flags|=SBUF_NEED_DATA;
+
+		sbuf_add_to_list(snew, slist);
 	}
-
-	if(!(snew=sbuf_alloc(conf))) goto end;
-
-	if((ars=manio_sbuf_fill(p1manio, snew, NULL, NULL, conf))<0) goto end;
-	else if(ars>0) return 0; // Finished.
-
-	if(!(ec=entry_changed(snew, cmanio, unmanio, conf)))
-	{
-		// No change, no need to add to slist.
-		ret=0;
-		goto end;
-	}
-	else if(ec<0) goto end; // Error.
-
-	if(data_needed(snew)) snew->flags|=SBUF_NEED_DATA;
-
-	sbuf_add_to_list(snew, slist);
 	return 0;
 end:
 	sbuf_free(snew);
@@ -789,8 +793,6 @@ static int do_backup_phase2_server(struct sdirs *sdirs,
 	// have been found and can be freed.
 	uint64_t wrap_up=0;
 
-	printf("DATADIR: %s\n", sdirs->data);
-
 	logp("Phase 2 begin (recv backup data)\n");
 
 	if(champ_chooser_init(sdirs->data, conf)
@@ -813,13 +815,14 @@ static int do_backup_phase2_server(struct sdirs *sdirs,
 	// The phase1 manifest looks the same as a burp1 one.
 	manio_set_protocol(p1manio, PROTO_BURP1);
 
+//printf("after inits\n");
+
 	while(!backup_end)
 	{
 //printf("loop a: %d %d %d %d\n",
 //	backup_end, sigs_end, requests_end, blk_requests_end);
 
-		if(!manio_closed(p1manio)
-		  && maybe_add_from_scan(p1manio, cmanio, unmanio, slist, conf))
+		if(maybe_add_from_scan(p1manio, cmanio, unmanio, slist, conf))
 			goto end;
 
 		if(!wbuf->len)

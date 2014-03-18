@@ -650,5 +650,7 @@ int server(struct config *conf, const char *configfile, int generate_ca_only)
 	// The signal handler stuff sets up chlds. Need to free them.
 	chlds_free();
 
+// FIX THIS: Have an enum for a return value, so that it is more obvious what
+// is happening, like client.c does.
 	return ret;
 }

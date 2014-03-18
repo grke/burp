@@ -107,7 +107,7 @@ static int run_backup(struct sdirs *sdirs, struct config *cconf,
 	// Set quality of service bits on backups.
 	set_bulk_packets();
 
-	if(!strcmp(rbuf->buf, "backupphase1timed"))
+	if(!strncmp_w(rbuf->buf, "backupphase1timed"))
 	{
 		int a=0;
 		const char *args[12];

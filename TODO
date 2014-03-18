@@ -7,9 +7,6 @@ However, that is currently relating only to burp1 issues.
 So, this is a list of important stuff that needs to be done for burp2,
 roughly in order of most important to least.
 
-* Integrate with legacy code to allow old clients to continue operating, and
-  to allow new clients to operate in legacy mode.
-
 * Get a lock before writing to a data file.
 
 * Get a lock before regenerating a sparse index.
@@ -21,16 +18,11 @@ roughly in order of most important to least.
 
 * Sorting the hooks at the end of a backup probably uses too much memory.
 
-* Separate phase1/phase2 again.
+* Fix counters
 
-* Fix counters (needs phase1/2)
-
-* Make recovery from partially complete backups work (needs phase1/2). Hooks
+* Make recovery from partially complete backups work. Hooks
   need to be generated from already transferred manifests. Need to forward
   through already written 'changed/unchanged' manifest.
-
-* Make include/exclude/include work again (needs phase1/2 to make it easy).
-  By this, I mean including something inside a directory that is excluded.
 
 * Don't store fingerprints and md5sums as strings.
 

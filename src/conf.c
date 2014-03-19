@@ -248,10 +248,6 @@ static int do_gcv_a(const char *f, const char *v,
 	char *tmp=NULL;
 	if(gcv(f, v, opt, &tmp)) return -1;
 	if(!tmp) return 0;
-	if(1) // FIX THIS
-	{
-		strlists_free(list);
-	}
 	if(sorted)
 	{
 		if(strlist_add_sorted(list, tmp, include)) return -1;
@@ -1064,13 +1060,15 @@ static int finalise_glob(struct config *c)
 static void set_max_ext(struct strlist *list)
 {
 	int max=0;
-	struct strlist *l;
+	struct strlist *l=NULL;
+	struct strlist *last=NULL;
 	for(l=list; l; l=l->next)
 	{
 		int s=strlen(l->path);
 		if(s>max) max=s;
+		last=l;
 	}
-	if(l) l->flag=max+1;
+	if(last) last->flag=max+1;
 }
 
 static int finalise_fstypes(struct config *c)

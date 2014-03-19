@@ -162,7 +162,6 @@ int main (int argc, char *argv[])
 	const char *regex=NULL;
 	const char *browsefile=NULL;
 	const char *browsedir=NULL;
-	FILE *fp=NULL;
 	const char *configfile=get_config_path();
 	const char *orig_client=NULL;
 	// The orig_client is the original client that the normal client
@@ -362,8 +361,5 @@ int main (int argc, char *argv[])
 	if(gotlock) unlink(conf.lockfile);
 	config_free(&conf);
 
-	// If there was no forking, logfp ends up getting closed before this
-	// and will segfault if we try to do it again.
-	if(fp && conf.forking) fclose(fp);
 	return ret;
 }

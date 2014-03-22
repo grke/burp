@@ -138,24 +138,30 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *conffile, int
 	int ca_ret=0;
 	SSL *ssl=NULL;
 	BIO *sbio=NULL;
-	struct conf conf;
-	struct conf cconf;
-	struct cntr p1cntr;
-	struct cntr cntr;
+	struct conf *conf=NULL;
+	struct conf *cconf=NULL;
+	struct cntr *p1cntr=NULL;
+	struct cntr *cntr=NULL;
 
-	conf.p1cntr=&p1cntr;
-	conf.cntr=&cntr;
-	cconf.p1cntr=&p1cntr;
-	cconf.cntr=&cntr;
-	reset_filecounters(&conf, time(NULL));
+	if(!(conf=conf_alloc())
+	  || !(cconf=conf_alloc())
+	  || !(cntr=cntr_alloc())
+	  || !(p1cntr=cntr_alloc()))
+		goto end;
+
+	conf->cntr=cntr;
+	cconf->cntr=cntr;
+	conf->p1cntr=p1cntr;
+	cconf->p1cntr=p1cntr;
+	reset_filecounters(conf, time(NULL));
 
 	if(forking) close_fd(rfd);
 
 	// Reload global config, in case things have changed. This means that
 	// the server does not need to be restarted for most conf changes.
-	conf_init(&conf);
-	conf_init(&cconf);
-	if(conf_load(conffile, &conf, 1)) return -1;
+	conf_init(conf);
+	conf_init(cconf);
+	if(conf_load(conffile, conf, 1)) goto end;
 
 	if(!(sbio=BIO_new_socket(*cfd, BIO_NOCLOSE))
 	  || !(ssl=SSL_new(ctx)))
@@ -178,9 +184,9 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *conffile, int
 		logp("SSL_accept: %s\n", buf);
 		goto end;
 	}
-	if(async_init(*cfd, ssl, &conf, 0))
+	if(async_init(*cfd, ssl, conf, 0))
 		goto end;
-	if(authorise_server(&conf, &cconf) || !cconf.cname || !*(cconf.cname))
+	if(authorise_server(conf, cconf) || !cconf->cname || !*(cconf->cname))
 	{
 		// Add an annoying delay in case they are tempted to
 		// try repeatedly.
@@ -191,10 +197,10 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *conffile, int
 
 	/* At this point, the client might want to get a new certificate
 	   signed. Clients on 1.3.2 or newer can do this. */
-	if((ca_ret=ca_server_maybe_sign_client_cert(&conf, &cconf))<0)
+	if((ca_ret=ca_server_maybe_sign_client_cert(conf, cconf))<0)
 	{
 		logp("Error signing client certificate request for %s\n",
-			cconf.cname);
+			cconf->cname);
 		goto end;
 	}
 	else if(ca_ret>0)
@@ -204,13 +210,13 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *conffile, int
 		// so that the client can start again with a new
 		// connection and its new certificates.
 		logp("Signed and returned client certificate request for %s\n",
-			cconf.cname);
+			cconf->cname);
 		ret=0;
 		goto end;
 	}
 
 	/* Now it is time to check the certificate. */ 
-	if(ssl_check_cert(ssl, &cconf))
+	if(ssl_check_cert(ssl, cconf))
 	{
 		log_and_send("check cert failed on server");
 		goto end;
@@ -218,36 +224,37 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *conffile, int
 
 	set_non_blocking(*cfd);
 
-	ret=child(&conf, &cconf);
+	ret=child(conf, cconf);
 end:
 	*cfd=-1;
 	async_free(); // this closes cfd for us.
 	logp("exit child\n");
-	conf_free_content(&conf);
-	conf_free_content(&cconf);
+	cntr_free(&cntr);
+	cntr_free(&p1cntr);
+	conf_free(conf);
+	conf_free(cconf);
 	return ret;
 }
 
 static int run_status_server(int *rfd, int *cfd, const char *conffile)
 {
-	int ret=0;
-	struct conf conf;
+	int ret=-1;
+	struct conf *conf=NULL;
 
 	close_fd(rfd);
 
 	// Reload global config, in case things have changed. This means that
 	// the server does not need to be restarted for most conf changes.
-	conf_init(&conf);
-	if(conf_load(conffile, &conf, 1)) return -1;
+	if(!(conf=conf_alloc())) goto end;
+	conf_init(conf);
+	if(conf_load(conffile, conf, 1)) goto end;
 
-	ret=status_server(cfd, &conf);
+	ret=status_server(cfd, conf);
 
 	close_fd(cfd);
-
+end:
 	logp("exit status server\n");
-
-	conf_free_content(&conf);
-
+	conf_free(conf);
 	return ret;
 }
 

@@ -1,5 +1,20 @@
 #include "include.h"
 
+struct cntr *cntr_alloc(void)
+{
+	struct cntr *cntr=NULL;
+	if(!(cntr=(struct cntr *)calloc(1, sizeof(struct cntr))))
+		log_out_of_memory(__FUNCTION__);
+	return cntr;
+}
+
+void cntr_free(struct cntr **cntr)
+{
+	if(!cntr || !*cntr) return;
+	free(*cntr);
+	*cntr=NULL;
+}
+
 static void reset_filecounter(struct cntr *c, time_t t)
 {
 	if(!c) return;

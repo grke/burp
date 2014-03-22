@@ -1,6 +1,14 @@
 #include "include.h"
 #include "glob_windows.h"
 
+struct conf *conf_alloc(void)
+{
+	struct conf *conf;
+	if(!(conf=(struct conf *)calloc(1, sizeof(struct conf))))
+		log_out_of_memory(__FUNCTION__);
+	return conf;
+}
+
 /* Init only stuff related to includes/excludes.
    This is so that the server can override them all on the client. */
 // FIX THIS: Maybe have this as a substructure of a struct conf.
@@ -170,6 +178,13 @@ void conf_free_content(struct conf *c)
 	free_incexcs(c);
 
 	conf_init(c);
+}
+
+void conf_free(struct conf *c)
+{
+	if(!c) return;
+	conf_free_content(c);
+	free(c);
 }
 
 // Get configuration value.

@@ -31,7 +31,7 @@ static int generate_key_and_csr(struct conf *conf, const char *csr_path)
 	return 0;
 }
 
-/* Rewrite the config file with the ssl_peer_cn value changed to what the
+/* Rewrite the conf file with the ssl_peer_cn value changed to what the
    server told us it should be. */
 static int rewrite_client_conf(struct conf *conf)
 {
@@ -42,11 +42,11 @@ static int rewrite_client_conf(struct conf *conf)
 	char *tmp=NULL;
 	char buf[4096]="";
 
-	logp("Rewriting config file: %s\n", conf->configfile);
+	logp("Rewriting conf file: %s\n", conf->conffile);
 	snprintf(p, sizeof(p), ".%d", getpid());
-	if(!(tmp=prepend(conf->configfile, p, strlen(p), "")))
+	if(!(tmp=prepend(conf->conffile, p, strlen(p), "")))
 		goto end;
-	if(!(sp=open_file(conf->configfile, "rb"))
+	if(!(sp=open_file(conf->conffile, "rb"))
 	  || !(dp=open_file(tmp, "wb")))
 		goto end;
 
@@ -61,7 +61,7 @@ static int rewrite_client_conf(struct conf *conf)
 			log_out_of_memory(__FUNCTION__);
 			goto end;
 		}
-		if(config_get_pair(buf, &field, &value)
+		if(conf_get_pair(buf, &field, &value)
 		  || !field || !value
 		  || strcmp(field, "ssl_peer_cn"))
 		{
@@ -84,9 +84,9 @@ static int rewrite_client_conf(struct conf *conf)
 	}
 #ifdef HAVE_WIN32
 	// Need to delete the destination, or Windows gets upset.
-	unlink(conf->configfile);
+	unlink(conf->conffile);
 #endif
-	if(do_rename(tmp, conf->configfile)) goto end;
+	if(do_rename(tmp, conf->conffile)) goto end;
 
 	ret=0;
 end:

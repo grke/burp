@@ -21,7 +21,7 @@ enum protocol
 
 struct conf
 {
-	char *configfile;
+	char *conffile;
 	char *port;
 	char *status_port;
 	enum burp_mode mode;
@@ -202,19 +202,19 @@ struct conf
 	struct cntr *cntr;
 };
 
-extern void config_init(struct conf *c);
-extern int config_load(const char *config_path, struct conf *c,
+extern void conf_init(struct conf *c);
+extern int conf_load(const char *conf_path, struct conf *c,
 	uint8_t loadall);
-extern void config_free(struct conf *c);
-extern int config_set_client_global(struct conf *c, struct conf *cc);
+extern void conf_free_content(struct conf *c);
+extern int conf_set_client_global(struct conf *c, struct conf *cc);
 
 extern int is_subdir(const char *dir, const char *sub);
 extern int pathcmp(const char *a, const char *b);
-extern int config_get_pair(char buf[], char **field, char **value);
+extern int conf_get_pair(char buf[], char **field, char **value);
 extern int parse_incexcs_buf(struct conf *c, const char *incexc);
 extern int log_incexcs_buf(const char *incexc);
 extern int parse_incexcs_path(struct conf *c, const char *path);
-extern int config_load_client(struct conf *c, struct conf *cc);
+extern int conf_load_client(struct conf *c, struct conf *cc);
 extern int conf_val_reset(const char *src, char **dest);
 
 #ifdef HAVE_WIN32

@@ -324,31 +324,31 @@ static int load_data_from_disk(struct conf *conf, struct cstat ***clist, int *cl
 		}
 		(*clist)[q]->conf_mtime=statp.st_mtime;
 
-		config_init(&cconf);
+		conf_init(&cconf);
 		if(cconf.cname) free(cconf.cname);
 		if(!(cconf.cname=strdup((*clist)[q]->name)))
 		{
 			log_out_of_memory(__FUNCTION__);
-			config_free(&cconf);
+			conf_free_content(&cconf);
 			ret=-1;
 			break;
 		}
-		if(config_set_client_global(conf, &cconf)
-		  || config_load((*clist)[q]->conffile, &cconf, 0))
+		if(conf_set_client_global(conf, &cconf)
+		  || conf_load((*clist)[q]->conffile, &cconf, 0))
 		{
-			config_free(&cconf);
+			conf_free_content(&cconf);
 			cstat_blank((*clist)[q]);
 			continue;
 		}
 
 		if(set_cstat_from_conf((*clist)[q], conf, &cconf))
 		{
-			config_free(&cconf);
+			conf_free_content(&cconf);
 			ret=-1;
 			break;
 		}
 
-		config_free(&cconf);
+		conf_free_content(&cconf);
 	}
 
 	for(q=0; q<*clen; q++)

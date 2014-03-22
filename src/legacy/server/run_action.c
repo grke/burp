@@ -62,8 +62,8 @@ static int vss_opts_changed(struct sdirs *sdirs, struct conf *cconf,
 	int ret=0;
 	struct conf oldconf;
 	struct conf newconf;
-	config_init(&oldconf);
-	config_init(&newconf);
+	conf_init(&oldconf);
+	conf_init(&newconf);
 
 	// Figure out the old config, which is in the incexc file left
 	// in the current backup directory on the server.

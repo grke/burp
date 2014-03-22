@@ -112,7 +112,7 @@ int child(struct config *conf, struct config *cconf)
 			cconf, ret, timer_ret);
 
 end:
-	if(sdirs && sdirs->gotlock) unlink(sdirs->lockfile);
+	if(sdirs) lock_release(sdirs->lock);
         sdirs_free(sdirs);
 	iobuf_free(rbuf);
 	return ret;

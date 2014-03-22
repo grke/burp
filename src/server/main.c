@@ -403,13 +403,23 @@ static int daemonise(void)
 	return 0;
 }
 
-static int relock(const char *lockfile)
+static int relock(struct lock *lock)
 {
 	int tries=5;
 	for(; tries>0; tries--)
 	{
-		if(!get_lock(lockfile)) return 0;
-		sleep(2);
+		lock_get(lock);
+		switch(lock->status)
+		{
+			case GET_LOCK_GOT: return 0;
+			case GET_LOCK_NOT_GOT:
+				sleep(2);
+				break;
+			case GET_LOCK_ERROR:
+			default:
+				logp("Error when trying to re-get lockfile after forking.\n");
+				return -1;
+		}
 	}
 	logp("Unable to re-get lockfile after forking.\n");
 	return -1;
@@ -595,7 +605,8 @@ static int run_server(struct config *conf, const char *configfile, int *rfd, con
 	return ret;
 }
 
-int server(struct config *conf, const char *configfile, int generate_ca_only)
+int server(struct config *conf, const char *configfile,
+	struct lock *lock, int generate_ca_only)
 {
 	int ret=0;
 	int rfd=-1; // normal client port
@@ -616,7 +627,7 @@ int server(struct config *conf, const char *configfile, int generate_ca_only)
 
 	if(conf->forking && conf->daemon)
 	{
-		if(daemonise() || relock(conf->lockfile)) return 1;
+		if(daemonise() || relock(lock)) return 1;
 	}
 
 	ssl_load_globals();

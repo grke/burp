@@ -272,6 +272,53 @@ end:
 	return ret;
 }
 
+static void try_lock_msg(int seconds)
+{
+	logp("Unable to get sparse lock for %d seconds.\n", seconds);
+}
+
+static int try_to_get_lock(struct lock *lock)
+{
+	// Sleeping for 1800*2 seconds makes 1 hour.
+	// This should be super generous.
+	int lock_tries=0;
+	int lock_tries_max=1800;
+	int sleeptime=2;
+
+	while(1)
+	{
+		lock_get(lock);
+		switch(lock->status)
+		{
+			case GET_LOCK_GOT:
+				logp("Got sparse lock\n");
+				return 0;
+			case GET_LOCK_NOT_GOT:
+				lock_tries++;
+				if(lock_tries>lock_tries_max)
+				{
+					try_lock_msg(lock_tries_max*sleeptime);
+					return -1;
+				}
+				// Log every 10 seconds.
+				if(lock_tries%(10/sleeptime))
+				{
+					try_lock_msg(lock_tries_max*sleeptime);
+					logp("Giving up.\n");
+					return -1;
+				}
+				sleep(sleeptime);
+				continue;
+			case GET_LOCK_ERROR:
+			default:
+				logp("Unable to get global sparse lock.\n");
+				return -1;
+		}
+	}
+	// Never reached.
+	return -1;
+}
+
 /* Merge the new sparse indexes into the global sparse index. */
 static int merge_sparse_indexes(const char *global, const char *sparse, struct config *conf)
 {
@@ -291,13 +338,24 @@ static int merge_sparse_indexes(const char *global, const char *sparse, struct c
 	struct hooks *gnew=NULL;
 	struct hooks *nnew=NULL;
 	struct stat statp;
+	char *lockfile=NULL;
+	struct lock *lock=NULL;
 
 	if(!(nsb=sbuf_alloc(conf))
 	  || !(gsb=sbuf_alloc(conf))
 	  || !(tmpfile=prepend(global, "tmp", strlen("tmp"), "."))
 	  || !(nzp=gzopen_file(sparse, "rb"))
-	  || build_path_w(tmpfile)
-	  || !(tzp=gzopen_file(tmpfile, "wb"))
+	  || build_path_w(tmpfile))
+		goto end;
+
+	// Get a lock before messing with the global sparse index.
+	if(!(lockfile=prepend(global, "lock", strlen("lock"), "."))
+	  || !(lock=lock_alloc_and_init(lockfile)))
+		goto end;
+
+	if(try_to_get_lock(lock)) goto end;
+
+	if(!(tzp=gzopen_file(tmpfile, "wb"))
 	  || (!lstat(global, &statp) && !(gzp=gzopen_file(global, "rb"))))
 		goto end;
 
@@ -373,6 +431,9 @@ end:
 	gzclose_fp(&tzp);
 	gzclose_fp(&gzp);
 	gzclose_fp(&nzp);
+	lock_release(lock);
+	lock_free(&lock);
+	if(lockfile) free(lockfile);
 	sbuf_free(gsb);
 	sbuf_free(nsb);
 	hooks_free(&gnew);

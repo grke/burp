@@ -324,6 +324,7 @@ static struct incoming *in=NULL;
 
 static int already_got_block(struct blk *blk, struct dpth *dpth)
 {
+	static char *path;
 	static struct weak_entry *weak_entry;
 
 	// If already got, need to overwrite the references.
@@ -351,8 +352,8 @@ static int already_got_block(struct blk *blk, struct dpth *dpth)
 //printf(".");
 
 	// Set up the details of where the block will be saved.
-	snprintf(blk->save_path, sizeof(blk->save_path),
-		"%s", dpth_mk(dpth));
+	if(!(path=dpth_mk(dpth))) return -1;
+	snprintf(blk->save_path, sizeof(blk->save_path), "%s", path);
 	if(dpth_incr_sig(dpth)) return -1;
 
 	return 0;

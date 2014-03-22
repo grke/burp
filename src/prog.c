@@ -148,12 +148,12 @@ static void usage(void)
 #endif
 int main (int argc, char *argv[])
 {
-	int ret=0;
+	int ret=1;
 	int option=0;
 	int daemon=1;
 	int forking=1;
-	int gotlock=0;
 	int strip=0;
+	struct lock *lock=NULL;
 	struct config conf;
 	int forceoverwrite=0;
 	enum action act=ACTION_LIST;
@@ -174,6 +174,10 @@ int main (int argc, char *argv[])
 	int json=0;
 
 	init_log(argv[0]);
+
+	// FIX THIS: Should change struct config so you have to alloc a
+	// pointer first, then initialise all its args.
+	memset(&conf, 0, sizeof(struct config));
 
 	while((option=getopt(argc, argv, "a:b:c:C:d:ghfFil:nr:s:vxjz:?"))!=-1)
 	{
@@ -207,7 +211,7 @@ int main (int argc, char *argv[])
 				else
 				{
 					usage();
-					return 1;
+					goto end;
 				}
 				break;
 			case 'b':
@@ -239,7 +243,8 @@ int main (int argc, char *argv[])
 				break;
 			case 'i':
 				print_all_cmds();
-				return 0;
+				ret=0;
+				goto end;
 			case 'l':
 				logp("-l <logfile> option obsoleted\n");
 				break;
@@ -254,7 +259,8 @@ int main (int argc, char *argv[])
 				break;
 			case 'v':
 				printf("%s-%s\n", progname(), VERSION);
-				return 0;
+				ret=0;
+				goto end;
 			case 'x':
 				vss_restore=0;
 				break;
@@ -268,21 +274,20 @@ int main (int argc, char *argv[])
 			case '?':
 			default:
 				usage();
-				return 1;
-				break;
+				goto end;
 		}
 	}
 	if(optind<argc)
 	{
 		usage();
-		return 1;
+		goto end;
 	}
 
 	if(reload(&conf, configfile,
 	  1 /* first time */,
 	  0 /* no oldmax_children setting */,
 	  0 /* no oldmax_status_children setting */,
-	  json)) return 1;
+	  json)) goto end;
 
 	if((act==ACTION_RESTORE || act==ACTION_VERIFY) && !backup)
 	{
@@ -293,7 +298,7 @@ int main (int argc, char *argv[])
 	if(act==ACTION_DELETE && !backup)
 	{
 		logp("No backup specified for deletion.\n");
-		return 1;
+		goto end;
 	}
 
 	if(conf.mode==MODE_CLIENT)
@@ -303,7 +308,7 @@ int main (int argc, char *argv[])
 			if(!(conf.orig_client=strdup(orig_client)))
 			{
 				log_out_of_memory(__FUNCTION__);
-				return 1;
+				goto end;
 			}
 		}
 	}
@@ -315,15 +320,22 @@ int main (int argc, char *argv[])
 	}
 	else
 	{
-		if(get_lock(conf.lockfile))
+		if(!(lock=lock_alloc_and_init(conf.lockfile)))
+			goto end;
+		lock_get(lock);
+		switch(lock->status)
 		{
-			logp("Could not get lockfile.\n");
-			logp("Another process is probably running,\n");
-			logp("or you do not have permissions to write to %s.\n",
-				conf.lockfile);
-			return 1;
+			case GET_LOCK_GOT: break;
+			case GET_LOCK_NOT_GOT:
+				logp("Could not get lockfile.\n");
+				logp("Another process is probably running,\n");
+				goto end;
+			case GET_LOCK_ERROR:
+			default:
+				logp("Could not get lockfile.\n");
+				logp("Maybe you do not have permissions to write to %s.\n", conf.lockfile);
+				goto end;
 		}
-		gotlock++;
 	}
 
 	conf.overwrite=forceoverwrite;
@@ -335,7 +347,7 @@ int main (int argc, char *argv[])
 	  || replace_conf_str(regex, &(conf.regex))
 	  || replace_conf_str(browsefile, &(conf.browsefile))
 	  || replace_conf_str(browsedir, &(conf.browsedir)))
-		return -1;
+		goto end;
 	if(conf.mode==MODE_SERVER)
 	{
 #ifdef HAVE_WIN32
@@ -348,7 +360,7 @@ int main (int argc, char *argv[])
 			ret=status_client_ncurses(&conf, act, sclient);
 		}
 		else
-			ret=server(&conf, configfile, generate_ca_only);
+			ret=server(&conf, configfile, lock, generate_ca_only);
 #endif
 	}
 	else
@@ -358,8 +370,9 @@ int main (int argc, char *argv[])
 		logp("after client\n");
 	}
 
-	if(gotlock) unlink(conf.lockfile);
+end:
+	lock_release(lock);
+	lock_free(&lock);
 	config_free(&conf);
-
 	return ret;
 }

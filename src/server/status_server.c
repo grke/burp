@@ -208,7 +208,7 @@ static int set_summary(struct cstat *c)
 	else
 	{
 		char *prog=NULL;
-		if(!test_lock(c->lockfile)) // could have got lock
+		if(!lock_test(c->lockfile)) // could have got lock
 		{
 			//time_t t=0;
 			//if(!lstat(c->working, &statp)) t=statp.st_ctime;

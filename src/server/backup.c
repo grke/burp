@@ -1,65 +1,5 @@
 #include "include.h"
 
-static int fprint_tag(FILE *fp, char cmd, unsigned int s)
-{
-	if(fprintf(fp, "%c%04X", cmd, s)!=5)
-	{
-		logp("Short fprintf\n");
-		return -1;
-	}
-	return 0;
-}
-
-static int fwrite_buf(char cmd, const char *buf, unsigned int s, FILE *fp)
-{
-	static size_t bytes;
-	if(fprint_tag(fp, cmd, s)) return -1;
-	if((bytes=fwrite(buf, 1, s, fp))!=s)
-	{
-		logp("Short write: %d\n", (int)bytes);
-		return -1;
-	}
-	return 0;
-}
-
-static FILE *file_open_w(const char *path, const char *mode)
-{
-	FILE *fp;
-	if(build_path_w(path)) return NULL;
-	fp=open_file(path, "wb");
-	return fp;
-}
-
-static int fwrite_dat(struct iobuf *rbuf, struct blk *blk, struct dpth *dpth)
-{
-	static FILE *fp=NULL;
-	static char *last_save_path=NULL;
-//printf("want to write: %s\n", blk->save_path);
-
-	if(!fp || (last_save_path && strncmp(last_save_path, blk->save_path,
-		14))) // Just the first three components, excluding sig number.
-	{
-		char *path;
-		if(!(path=prepend_slash(dpth->base_path, blk->save_path, 14)))
-			return -1;
-		if(fp && close_fp(&fp))
-			return -1;
-		if(!(fp=file_open_w(path, "wb")))
-		{
-			free(path);
-			return -1;
-		}
-		free(path);
-		if(last_save_path) free(last_save_path);
-		if(!(last_save_path=strdup(blk->save_path)))
-		{
-			log_out_of_memory(__FUNCTION__);
-			return -1;
-		}
-	}
-	return fwrite_buf(CMD_DATA, rbuf->buf, rbuf->len, fp);
-}
-
 static int write_incexc(const char *realworking, const char *incexc)
 {
 	int ret=-1;
@@ -326,8 +266,6 @@ static int entry_changed(struct sbuf *sb, struct manio *cmanio, struct manio *un
 static int add_data_to_store(struct blist *blist, struct iobuf *rbuf, struct dpth *dpth)
 {
 	static struct blk *blk=NULL;
-//	struct blk *blk=NULL;
-//	static struct weak_entry *weak_entry;
 
 //	printf("Got data %lu!\n", rbuf->len);
 
@@ -350,7 +288,7 @@ static int add_data_to_store(struct blist *blist, struct iobuf *rbuf, struct dpt
 //	printf("Got blk %lu!\n", blk->index);
 
 	// Add it to the data store straight away.
-	if(fwrite_dat(rbuf, blk, dpth)) return -1;
+	if(dpth_fwrite(dpth, rbuf, blk)) return -1;
 
 	blk->got=GOT;
 	blk=blk->next;
@@ -872,10 +810,19 @@ static int do_backup_phase2_server(struct sdirs *sdirs,
 
 	if(blist->head)
 	{
-		printf("FINISHING but still want block: %lu\n",
+		logp("ERROR: finishing but still want block: %lu\n",
 			blist->head->index);
 		goto end;
 	}
+
+	// Need to release the last left. There should be one at most.
+	if(dpth->head && dpth->head->next)
+	{
+		logp("ERROR: More data locks remaining after: %s\n",
+			dpth->head->save_path);
+		goto end;
+	}
+	if(dpth_release_all(dpth)) goto end;
 
 	// Flush to disk and set up for read.
 	if(manio_set_mode_read(chmanio)
@@ -894,6 +841,7 @@ end:
 	// Write buffer did not allocate 'buf'. 
 	if(wbuf) wbuf->buf=NULL;
 	iobuf_free(wbuf);
+	dpth_release_all(dpth);
 	dpth_free(dpth);
 	manio_free(cmanio);
 	manio_free(p1manio);

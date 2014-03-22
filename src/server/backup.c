@@ -22,7 +22,7 @@ end:
 }
 
 // Used by the legacy stuff.
-int open_log(const char *realworking, struct config *cconf)
+int open_log(const char *realworking, struct conf *cconf)
 {
 	char *logpath=NULL;
 
@@ -60,7 +60,7 @@ static int data_needed(struct sbuf *sb)
 }
 
 // Can this be merged with copy_unchanged_entry()?
-static int forward_through_sigs(struct sbuf **csb, struct manio *cmanio, struct config *conf)
+static int forward_through_sigs(struct sbuf **csb, struct manio *cmanio, struct conf *conf)
 {
 	static int ars;
 	char *copy;
@@ -97,7 +97,7 @@ static int forward_through_sigs(struct sbuf **csb, struct manio *cmanio, struct 
 	return -1;
 }
 
-static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, struct blk **blk, struct manio *cmanio, struct manio *unmanio, struct config *conf)
+static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, struct blk **blk, struct manio *cmanio, struct manio *unmanio, struct conf *conf)
 {
 	static int ars;
 	static char *copy;
@@ -145,7 +145,7 @@ static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, struct blk *
 }
 
 // Return -1 for error, 0 for entry not changed, 1 for entry changed (or new).
-static int entry_changed(struct sbuf *sb, struct manio *cmanio, struct manio *unmanio, struct config *conf)
+static int entry_changed(struct sbuf *sb, struct manio *cmanio, struct manio *unmanio, struct conf *conf)
 {
 	static int finished=0;
 	static struct sbuf *csb=NULL;
@@ -335,7 +335,7 @@ static void dump_blks(const char *msg, struct blk *b)
 }
 */
 
-static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobuf *rbuf, struct dpth *dpth, uint64_t *wrap_up, struct config *conf)
+static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobuf *rbuf, struct dpth *dpth, uint64_t *wrap_up, struct conf *conf)
 {
 	int ia;
 	// Goes on slist->add_sigs_here
@@ -370,7 +370,7 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobu
 }
 
 static int deal_with_read(struct iobuf *rbuf,
-	struct slist *slist, struct blist *blist, struct config *conf,
+	struct slist *slist, struct blist *blist, struct conf *conf,
 	int *sigs_end, int *backup_end, struct dpth *dpth, uint64_t *wrap_up)
 {
 	int ret=0;
@@ -441,7 +441,7 @@ static int encode_req(struct blk *blk, char *req)
 	return 0;
 }
 
-static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, struct blist *blist, int sigs_end, int *blk_requests_end, struct dpth *dpth, struct config *conf, uint64_t *wrap_up)
+static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, struct blist *blist, int sigs_end, int *blk_requests_end, struct dpth *dpth, struct conf *conf, uint64_t *wrap_up)
 {
 	static char req[32]="";
 	struct sbuf *sb=slist->blks_to_request;
@@ -553,7 +553,7 @@ static void sanity_before_sbuf_free(struct slist *slist, struct sbuf *sb)
 	if(slist->blks_to_request==sb) slist->blks_to_request=sb->next;
 }
 
-static int write_to_changed_file(struct manio *chmanio, struct slist *slist, struct blist *blist, struct dpth *dpth, int backup_end, struct config *conf)
+static int write_to_changed_file(struct manio *chmanio, struct slist *slist, struct blist *blist, struct dpth *dpth, int backup_end, struct conf *conf)
 {
 	struct sbuf *sb;
 	if(!slist) return 0;
@@ -668,7 +668,7 @@ static void dump_slist(struct slist *slist, const char *msg)
 */
 
 static int maybe_add_from_scan(struct manio *p1manio, struct manio *cmanio,
-	struct manio *unmanio, struct slist *slist, struct config *conf)
+	struct manio *unmanio, struct slist *slist, struct conf *conf)
 {
 	int ret=-1;
 	static int ars;
@@ -711,7 +711,7 @@ end:
 }
 
 static int do_backup_phase2_server(struct sdirs *sdirs,
-	const char *manifest_dir, int resume, struct config *conf)
+	const char *manifest_dir, int resume, struct conf *conf)
 {
 	int ret=-1;
 	int sigs_end=0;
@@ -880,7 +880,7 @@ static int clean_rubble(struct sdirs *sdirs)
 	return 0;
 }
 
-int do_backup_server(struct sdirs *sdirs, struct config *cconf,
+int do_backup_server(struct sdirs *sdirs, struct conf *cconf,
 	const char *incexc, int resume)
 {
 	int ret=0;

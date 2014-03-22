@@ -13,7 +13,7 @@ extern int status_rfd; // for the child to read information from the parent.
 
 extern size_t writebuflen;
 
-extern int async_init(int afd, SSL *assl, struct config *conf, int estimate);
+extern int async_init(int afd, SSL *assl, struct conf *conf, int estimate);
 extern void async_free(void);
 
 extern int async_get_fd(void);
@@ -41,9 +41,9 @@ enum asl_ret
 	ASL_END_OK_RETURN_1=2
 };
 
-extern int async_simple_loop(struct config *conf, void *param,
+extern int async_simple_loop(struct conf *conf, void *param,
   const char *caller,
-  enum asl_ret callback(struct iobuf *rbuf, struct config *conf, void *param));
+  enum asl_ret callback(struct iobuf *rbuf, struct conf *conf, void *param));
 
 extern void log_and_send(const char *msg);
 extern void log_and_send_oom(const char *function);

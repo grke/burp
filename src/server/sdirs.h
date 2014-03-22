@@ -34,7 +34,7 @@ struct sdirs
 };
 
 extern struct sdirs *sdirs_alloc(void);
-extern int sdirs_init(struct sdirs *sdirs, struct config *conf);
+extern int sdirs_init(struct sdirs *sdirs, struct conf *conf);
 extern void sdirs_free(struct sdirs *sdirs);
 
 #endif

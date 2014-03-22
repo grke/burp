@@ -439,7 +439,7 @@ static void blank_screen(int row, int col)
 	printf("%s\n\n", date);
 }
 
-static int parse_rbuf(const char *rbuf, struct config *conf, int row, int col, int sel, char **client, int *count, int details, const char *sclient, struct cntr *p1cntr, struct cntr *cntr)
+static int parse_rbuf(const char *rbuf, struct conf *conf, int row, int col, int sel, char **client, int *count, int details, const char *sclient, struct cntr *p1cntr, struct cntr *cntr)
 {
 	char *cp=NULL;
 	char *dp=NULL;
@@ -543,7 +543,7 @@ static void print_star(int sel)
 }
 
 // Return 1 if it was shown, -1 on error, 0 otherwise.
-static int show_rbuf(const char *rbuf, struct config *conf, int sel, char **client, int *count, int details, const char *sclient, struct cntr *p1cntr, struct cntr *cntr)
+static int show_rbuf(const char *rbuf, struct conf *conf, int sel, char **client, int *count, int details, const char *sclient, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int rbuflen=0;
 	if(!rbuf) return 0;
@@ -574,7 +574,7 @@ static int show_rbuf(const char *rbuf, struct config *conf, int sel, char **clie
 	return 0;
 }
 
-static int request_status(int fd, const char *client, struct config *conf)
+static int request_status(int fd, const char *client, struct conf *conf)
 {
 	int l;
 	char buf[256]="";
@@ -631,7 +631,7 @@ static void setup_signals(void)
 	signal(SIGPIPE, &sighandler);
 }
 
-int status_client_ncurses(struct config *conf, enum action act, const char *sclient)
+int status_client_ncurses(struct conf *conf, enum action act, const char *sclient)
 {
 	int fd=0;
 	int sel=0;

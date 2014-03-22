@@ -11,7 +11,7 @@ static char vss_trail_symbol=CMD_VSS_T;
 
 static long server_name_max;
 
-static int usual_stuff(struct config *conf, const char *path, const char *link,
+static int usual_stuff(struct conf *conf, const char *path, const char *link,
 	struct sbuf *sb, char cmd)
 {
 	if(async_write_str(CMD_ATTRIBS, sb->attr.buf)
@@ -24,19 +24,19 @@ static int usual_stuff(struct config *conf, const char *path, const char *link,
 }
 
 static int maybe_send_extrameta(const char *path, char cmd,
-	struct sbuf *sb, struct config *conf, int symbol)
+	struct sbuf *sb, struct conf *conf, int symbol)
 {
 	if(!has_extrameta(path, cmd)) return 0;
 	return usual_stuff(conf, path, NULL, sb, symbol);
 }
 
-static int ft_err(struct config *conf, FF_PKT *ff, const char *msg)
+static int ft_err(struct conf *conf, FF_PKT *ff, const char *msg)
 {
 	return logw(conf->p1cntr, _("Err: %s %s: %s"), msg,
 		ff->fname, strerror(errno));
 }
 
-static int do_to_server(struct config *conf, FF_PKT *ff, struct sbuf *sb,
+static int do_to_server(struct conf *conf, FF_PKT *ff, struct sbuf *sb,
 	char cmd, int compression) 
 {
 	sb->compression=compression;
@@ -66,13 +66,13 @@ static int do_to_server(struct config *conf, FF_PKT *ff, struct sbuf *sb,
 #endif
 }
 
-static int to_server(struct config *conf, FF_PKT *ff,
+static int to_server(struct conf *conf, FF_PKT *ff,
 	struct sbuf *sb, char cmd)
 {
 	return do_to_server(conf, ff, sb, cmd, conf->compression);
 }
 
-int send_file(FF_PKT *ff, bool top_level, struct config *conf)
+int send_file(FF_PKT *ff, bool top_level, struct conf *conf)
 {
 	static struct sbuf *sb=NULL;
 
@@ -141,7 +141,7 @@ int send_file(FF_PKT *ff, bool top_level, struct config *conf)
 	}
 }
 
-int backup_phase1_client(struct config *conf, long name_max, int estimate)
+int backup_phase1_client(struct conf *conf, long name_max, int estimate)
 {
 	int ret=-1;
 	FF_PKT *ff=NULL;

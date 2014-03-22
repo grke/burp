@@ -124,7 +124,7 @@ static int send_whole_file_w(struct sbuf *sb, const char *datapth, int quick_rea
 		  datalen);
 }
 
-static int forget_file(struct sbuf *sb, struct config *conf)
+static int forget_file(struct sbuf *sb, struct conf *conf)
 {
 	// Tell the server to forget about this
 	// file, otherwise it might get stuck
@@ -145,7 +145,7 @@ static int forget_file(struct sbuf *sb, struct config *conf)
 	return 0;
 }
 
-static int do_backup_phase2_client(struct config *conf, int resume)
+static int do_backup_phase2_client(struct conf *conf, int resume)
 {
 	int ret=-1;
 	// For efficiency, open Windows files for the VSS data, and do not
@@ -419,7 +419,7 @@ end:
 	return ret;
 }
 
-int backup_phase2_client_legacy(struct config *conf, int resume)
+int backup_phase2_client_legacy(struct conf *conf, int resume)
 {
 	int ret=0;
 

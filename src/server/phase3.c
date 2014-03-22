@@ -3,7 +3,7 @@
 static char sort_blk[SIG_MAX][16+1];
 static int sort_ind=0;
 
-static int write_header(gzFile spzp, const char *fpath, struct config *conf)
+static int write_header(gzFile spzp, const char *fpath, struct conf *conf)
 {
 	const char *cp;
 	cp=fpath+strlen(conf->directory);
@@ -12,7 +12,7 @@ static int write_header(gzFile spzp, const char *fpath, struct config *conf)
 	return 0;
 }
 
-static int write_hooks(gzFile spzp, const char *fpath, struct config *conf)
+static int write_hooks(gzFile spzp, const char *fpath, struct conf *conf)
 {
 	int i=0;
 	if(!sort_ind) return 0;
@@ -30,7 +30,7 @@ static int write_hooks(gzFile spzp, const char *fpath, struct config *conf)
 	return 0;
 }
 
-static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, int *finished, struct blk **blk, struct manio *cmanio, struct manio *newmanio, const char *manifest_dir, struct config *conf)
+static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, int *finished, struct blk **blk, struct manio *cmanio, struct manio *newmanio, const char *manifest_dir, struct conf *conf)
 {
 	static int ars;
 	static char *copy;
@@ -119,7 +119,7 @@ static int add_to_hooks_list(struct hooks ***hooks, int *h, struct hooks **hnew)
 }
 
 // Return 0 for OK, -1 for error, 1 for finished reading the file.
-static int get_next_set_of_hooks(struct hooks **hnew, struct sbuf *sb, gzFile spzp, char **path, char **fingerprints, const char *sparse, struct config *conf)
+static int get_next_set_of_hooks(struct hooks **hnew, struct sbuf *sb, gzFile spzp, char **path, char **fingerprints, const char *sparse, struct conf *conf)
 {
 	int ars;
 	while(1)
@@ -202,7 +202,7 @@ static void hooks_free(struct hooks **hooks)
    F0010F00731D531BAE08D
    F0010F0490AE87E44FE31
 */
-static int sort_sparse_indexes(const char *sparse, struct config *conf)
+static int sort_sparse_indexes(const char *sparse, struct conf *conf)
 {
 	int h=0;
 	int x=0;
@@ -320,7 +320,7 @@ static int try_to_get_lock(struct lock *lock)
 }
 
 /* Merge the new sparse indexes into the global sparse index. */
-static int merge_sparse_indexes(const char *global, const char *sparse, struct config *conf)
+static int merge_sparse_indexes(const char *global, const char *sparse, struct conf *conf)
 {
 	int ars;
 	int fcmp;
@@ -446,7 +446,7 @@ end:
 	return ret;
 }
 
-static int sparse_generation(struct manio *newmanio, const char *datadir, const char *manifest_dir, struct config *conf)
+static int sparse_generation(struct manio *newmanio, const char *datadir, const char *manifest_dir, struct conf *conf)
 {
 	int ars;
 	int ret=-1;
@@ -523,7 +523,7 @@ end:
 // This is basically backup_phase3_server() from burp1. It used to merge the
 // unchanged and changed data into a single file. Now it splits the manifests
 // into several files.
-int phase3(struct manio *chmanio, struct manio *unmanio, const char *manifest_dir, const char *datadir, struct config *conf)
+int phase3(struct manio *chmanio, struct manio *unmanio, const char *manifest_dir, const char *datadir, struct conf *conf)
 {
 	int ars=0;
 	int ret=1;

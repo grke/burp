@@ -4,7 +4,7 @@
 #include <math.h>
 #include <dirent.h>
 
-int recursive_hardlink(const char *src, const char *dst, struct config *conf)
+int recursive_hardlink(const char *src, const char *dst, struct conf *conf)
 {
 	int n=-1;
 	int ret=0;
@@ -283,7 +283,7 @@ int get_current_backups(struct sdirs *sdirs, struct bu **arr, int *a, int log)
 	return get_current_backups_str(sdirs->client, arr, a, log);
 }
 
-int get_new_timestamp(struct sdirs *sdirs, struct config *cconf,
+int get_new_timestamp(struct sdirs *sdirs, struct conf *cconf,
 	char *buf, size_t s)
 {
 	int a=0;
@@ -324,7 +324,7 @@ int write_timestamp(const char *timestamp, const char *tstmp)
 	return 0;
 }
 
-static int compress(const char *src, const char *dst, struct config *cconf)
+static int compress(const char *src, const char *dst, struct conf *cconf)
 {
 	int res;
 	int got;
@@ -355,7 +355,7 @@ static int compress(const char *src, const char *dst, struct config *cconf)
 	return gzclose_fp(&zp); // this can give an error when out of space
 }
 
-int compress_file(const char *src, const char *dst, struct config *cconf)
+int compress_file(const char *src, const char *dst, struct conf *cconf)
 {
 	char *dsttmp=NULL;
 	pid_t pid=getpid();
@@ -380,7 +380,7 @@ int compress_file(const char *src, const char *dst, struct config *cconf)
 	return 0;
 }
 
-int compress_filename(const char *d, const char *file, const char *zfile, struct config *cconf)
+int compress_filename(const char *d, const char *file, const char *zfile, struct conf *cconf)
 {
 	char *fullfile=NULL;
 	char *fullzfile=NULL;
@@ -395,7 +395,7 @@ int compress_filename(const char *d, const char *file, const char *zfile, struct
 	return 0;
 }
 
-int delete_backup(struct sdirs *sdirs, struct config *conf,
+int delete_backup(struct sdirs *sdirs, struct conf *conf,
 	struct bu *arr, int a, int b)
 {
 	char *deleteme=NULL;
@@ -467,7 +467,7 @@ int delete_backup(struct sdirs *sdirs, struct config *conf,
 	return 0;
 }
 
-int do_remove_old_backups(struct sdirs *sdirs, struct config *cconf)
+int do_remove_old_backups(struct sdirs *sdirs, struct conf *cconf)
 {
 	int a=0;
 	int b=0;
@@ -574,7 +574,7 @@ int do_remove_old_backups(struct sdirs *sdirs, struct config *cconf)
 	return deleted;
 }
 
-int remove_old_backups(struct sdirs *sdirs, struct config *cconf)
+int remove_old_backups(struct sdirs *sdirs, struct conf *cconf)
 {
 	int deleted=0;
 	// Deleting a backup might mean that more become available to get rid
@@ -624,7 +624,7 @@ finish:
 	return ret;
 }
 
-int do_link(const char *oldpath, const char *newpath, struct stat *statp, struct config *conf, uint8_t overwrite)
+int do_link(const char *oldpath, const char *newpath, struct stat *statp, struct conf *conf, uint8_t overwrite)
 {
 	/* Avoid creating too many hardlinks */
 	if(statp->st_nlink >= (unsigned int)conf->max_hardlinks)

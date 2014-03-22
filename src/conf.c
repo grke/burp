@@ -3,9 +3,9 @@
 
 /* Init only stuff related to includes/excludes.
    This is so that the server can override them all on the client. */
-// FIX THIS: Maybe have this as a substructure of a struct config.
+// FIX THIS: Maybe have this as a substructure of a struct conf.
 // Could then just memset them all to zero here.
-static void init_incexcs(struct config *c)
+static void init_incexcs(struct conf *c)
 {
 	c->startdir=NULL;
 	c->incexcdir=NULL;
@@ -33,7 +33,7 @@ static void init_incexcs(struct config *c)
 
 /* Free only stuff related to includes/excludes.
    This is so that the server can override them all on the client. */
-static void free_incexcs(struct config *c)
+static void free_incexcs(struct conf *c)
 {
 	strlists_free(&c->startdir);
 	strlists_free(&c->incexcdir);
@@ -55,12 +55,12 @@ static void free_incexcs(struct config *c)
 	init_incexcs(c);
 }
 
-void config_init(struct config *c)
+void config_init(struct conf *c)
 {
 	// Set everything to 0.
-	// FIX THIS: get rid of this by calloc-ing struct configs.
+	// FIX THIS: get rid of this by calloc-ing struct confs.
 	// look out for sconf in extra_comms.c, which is malloc-d.
-	memset(c, 0, sizeof(struct config));
+	memset(c, 0, sizeof(struct conf));
 
 	// Turn on defaults that are non-zero.
 	c->forking=1;
@@ -89,7 +89,7 @@ void config_init(struct config *c)
 	rconf_init(&c->rconf);
 }
 
-void config_free(struct config *c)
+void config_free(struct conf *c)
 {
 	if(!c) return;
 	if(c->port) free(c->port);
@@ -499,7 +499,7 @@ static int fstype_to_flag(const char *fstype, long *flag)
 	return -1;
 }
 
-static int load_config_ints(struct config *c,
+static int load_config_ints(struct conf *c,
 	const char *f, // field
 	const char *v) //value
 {
@@ -550,7 +550,7 @@ static int load_config_ints(struct config *c,
 	return 0;
 }
 
-static int load_config_strings(struct config *c,
+static int load_config_strings(struct conf *c,
 	const char *f, // field
 	const char *v  // value
 	)
@@ -642,7 +642,7 @@ static int load_config_strings(struct config *c,
 	return 0;
 }
 
-static int load_config_field_and_value(struct config *c,
+static int load_config_field_and_value(struct conf *c,
 	const char *f, // field
 	const char *v, // value
 	const char *config_path,
@@ -719,9 +719,9 @@ static int load_config_field_and_value(struct config *c,
 
 /* Recursing, so need to define load_config_lines ahead of parse_config_line.
 */
-static int load_config_lines(const char *config_path, struct config *c);
+static int load_config_lines(const char *config_path, struct conf *c);
 
-static int parse_config_line(struct config *c, const char *config_path,
+static int parse_config_line(struct conf *c, const char *config_path,
 	char buf[], int line)
 {
 	char *f=NULL; // field
@@ -799,7 +799,7 @@ static void conf_problem(const char *config_path, const char *msg, int *r)
 	(*r)--;
 }
 
-static int server_conf_checks(struct config *c, const char *path, int *r)
+static int server_conf_checks(struct conf *c, const char *path, int *r)
 {
 	if(!c->directory)
 		conf_problem(path, "directory unset", r);
@@ -896,7 +896,7 @@ static int server_conf_checks(struct config *c, const char *path, int *r)
 	return 0;
 }
 
-static int client_conf_checks(struct config *c, const char *path, int *r)
+static int client_conf_checks(struct conf *c, const char *path, int *r)
 {
 	if(!c->cname)
 		conf_problem(path, "client name unset", r);
@@ -956,7 +956,7 @@ static int client_conf_checks(struct config *c, const char *path, int *r)
 	return 0;
 }
 
-static int finalise_keep_args(struct config *c)
+static int finalise_keep_args(struct conf *c)
 {
 	struct strlist *k;
 	struct strlist *last=NULL;
@@ -989,7 +989,7 @@ static int finalise_keep_args(struct config *c)
 
 // This decides which directories to start backing up, and which
 // are subdirectories which don't need to be started separately.
-static int finalise_start_dirs(struct config *c)
+static int finalise_start_dirs(struct conf *c)
 {
 	struct strlist *s=NULL;
 	struct strlist *last_ie=NULL;
@@ -1030,7 +1030,7 @@ static int finalise_start_dirs(struct config *c)
 }
 
 // The glob stuff should only run on the client side.
-static int finalise_glob(struct config *c)
+static int finalise_glob(struct conf *c)
 {
 #ifdef HAVE_WIN32
 	windows_glob(c);
@@ -1071,7 +1071,7 @@ static void set_max_ext(struct strlist *list)
 	if(last) last->flag=max+1;
 }
 
-static int finalise_fstypes(struct config *c)
+static int finalise_fstypes(struct conf *c)
 {
 	struct strlist *l;
 	// Set the strlist flag for the excluded fstypes
@@ -1095,7 +1095,7 @@ static int finalise_fstypes(struct config *c)
 	return 0;
 }
 
-static int finalise_config(const char *config_path, struct config *c, uint8_t loadall)
+static int finalise_config(const char *config_path, struct conf *c, uint8_t loadall)
 {
 	int r=0;
 
@@ -1172,7 +1172,7 @@ static int finalise_config(const char *config_path, struct config *c, uint8_t lo
 }
 
 
-static int load_config_lines(const char *config_path, struct config *c)
+static int load_config_lines(const char *config_path, struct conf *c)
 {
 	int line=0;
 	FILE *fp=NULL;
@@ -1197,7 +1197,7 @@ err:
 	return -1;
 }
 
-int config_load(const char *config_path, struct config *c, uint8_t loadall)
+int config_load(const char *config_path, struct conf *c, uint8_t loadall)
 {
 	//logp("in config_load\n");
 	if(loadall)
@@ -1217,7 +1217,7 @@ int config_load(const char *config_path, struct config *c, uint8_t loadall)
 }
 
 /* The client runs this when the server overrides the incexcs. */
-int parse_incexcs_buf(struct config *c, const char *incexc)
+int parse_incexcs_buf(struct conf *c, const char *incexc)
 {
 	int ret=0;
 	int line=0;
@@ -1278,7 +1278,7 @@ int log_incexcs_buf(const char *incexc)
 }
 
 /* The server runs this when parsing a restore file on the server. */
-int parse_incexcs_path(struct config *c, const char *path)
+int parse_incexcs_path(struct conf *c, const char *path)
 {
 	free_incexcs(c);
 	return config_load(path, c, 0);
@@ -1306,7 +1306,7 @@ static int set_global_arglist(struct strlist **dst, struct strlist *src)
 }
 
 /* Remember to update the list in the man page when you change these.*/
-int config_set_client_global(struct config *c, struct config *cc)
+int config_set_client_global(struct conf *c, struct conf *cc)
 {
 	cc->protocol=c->protocol;
 	cc->log_to_syslog=c->log_to_syslog;
@@ -1380,7 +1380,7 @@ int config_set_client_global(struct config *c, struct config *cc)
 	return 0;
 }
 
-static void config_init_save_cname_and_version(struct config *cc)
+static void config_init_save_cname_and_version(struct conf *cc)
 {
 	char *cname=cc->cname;
 	char *cversion=cc->peer_version;
@@ -1392,7 +1392,7 @@ static void config_init_save_cname_and_version(struct config *cc)
 	cc->peer_version=cversion;
 }
 
-int config_load_client(struct config *c, struct config *cc)
+int config_load_client(struct conf *c, struct conf *cc)
 {
 	char *cpath=NULL;
 	config_init_save_cname_and_version(cc);

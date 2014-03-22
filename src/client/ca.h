@@ -1,6 +1,6 @@
 #ifndef CA_CLIENT_H
 #define CA_CLIENT_H
 
-extern int ca_client_setup(struct config *conf);
+extern int ca_client_setup(struct conf *conf);
 
 #endif

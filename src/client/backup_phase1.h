@@ -4,8 +4,8 @@
 #include "include.h"
 #include "find.h"
 
-extern int send_file(FF_PKT *ff, bool top_level, struct config *conf);
-extern int backup_phase1_client(struct config *conf,
+extern int send_file(FF_PKT *ff, bool top_level, struct conf *conf);
+extern int backup_phase1_client(struct conf *conf,
 	long name_max, int estimate);
 
 #endif

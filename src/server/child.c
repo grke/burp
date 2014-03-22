@@ -3,7 +3,7 @@
 
 static int run_server_script(const char *pre_or_post, struct iobuf *rbuf,
 	const char *script, struct strlist *script_arg,
-	uint8_t notify, struct config *cconf, int backup_ret, int timer_ret)
+	uint8_t notify, struct conf *cconf, int backup_ret, int timer_ret)
 {
 	int a=0;
 	int ret=0;
@@ -50,7 +50,7 @@ end:
 	return ret;
 }
 
-int child(struct config *conf, struct config *cconf)
+int child(struct conf *conf, struct conf *cconf)
 {
 	int ret=-1;
 	int srestore=0;

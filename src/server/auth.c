@@ -19,7 +19,7 @@ static int check_passwd(const char *passwd, const char *plain_text)
 	return -1;
 }
 
-static int check_client_and_password(struct config *conf, const char *password, struct config *cconf)
+static int check_client_and_password(struct conf *conf, const char *password, struct conf *cconf)
 {
 	// Cannot load it until here, because we need to have the name of the
 	// client.
@@ -69,7 +69,7 @@ static int check_client_and_password(struct config *conf, const char *password, 
 	return 0;
 }
 
-void version_warn(struct cntr *cntr, struct config *cconf)
+void version_warn(struct cntr *cntr, struct conf *cconf)
 {
 	if(!cconf->peer_version || strcmp(cconf->peer_version, VERSION))
 	{
@@ -84,7 +84,7 @@ void version_warn(struct cntr *cntr, struct config *cconf)
 	}
 }
 
-int authorise_server(struct config *conf, struct config *cconf)
+int authorise_server(struct conf *conf, struct conf *cconf)
 {
 	char *cp=NULL;
 	char *password=NULL;

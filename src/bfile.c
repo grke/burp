@@ -472,7 +472,7 @@ ssize_t bwrite(BFILE *bfd, void *buf, size_t count)
 
 #endif
 
-void binit(BFILE *bfd, int64_t winattr, struct config *conf)
+void binit(BFILE *bfd, int64_t winattr, struct conf *conf)
 {
 	memset(bfd, 0, sizeof(BFILE));
 	bfd->mode=BF_CLOSED;

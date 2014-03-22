@@ -92,7 +92,7 @@ static void usage_client(void)
 #endif
 }
 
-int reload(struct config *conf, const char *configfile, bool firsttime, int oldmax_children, int oldmax_status_children, int json)
+int reload(struct conf *conf, const char *configfile, bool firsttime, int oldmax_children, int oldmax_status_children, int json)
 {
 	if(!firsttime) logp("Reloading config\n");
 
@@ -154,7 +154,7 @@ int main (int argc, char *argv[])
 	int forking=1;
 	int strip=0;
 	struct lock *lock=NULL;
-	struct config conf;
+	struct conf conf;
 	int forceoverwrite=0;
 	enum action act=ACTION_LIST;
 	const char *backup=NULL;
@@ -175,9 +175,9 @@ int main (int argc, char *argv[])
 
 	init_log(argv[0]);
 
-	// FIX THIS: Should change struct config so you have to alloc a
+	// FIX THIS: Should change struct conf so you have to alloc a
 	// pointer first, then initialise all its args.
-	memset(&conf, 0, sizeof(struct config));
+	memset(&conf, 0, sizeof(struct conf));
 
 	while((option=getopt(argc, argv, "a:b:c:C:d:ghfFil:nr:s:vxjz:?"))!=-1)
 	{

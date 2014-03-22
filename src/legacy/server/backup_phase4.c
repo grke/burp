@@ -4,7 +4,7 @@
 #include <librsync.h>
 #include <dirent.h>
 
-static int make_rev_sig(const char *dst, const char *sig, const char *endfile, int compression, struct config *conf)
+static int make_rev_sig(const char *dst, const char *sig, const char *endfile, int compression, struct conf *conf)
 {
 	int ret=-1;
 	FILE *dstfp=NULL;
@@ -36,7 +36,7 @@ end:
 	return ret;
 }
 
-static int make_rev_delta(const char *src, const char *sig, const char *del, int compression, struct config *cconf)
+static int make_rev_delta(const char *src, const char *sig, const char *del, int compression, struct conf *cconf)
 {
 	int ret=-1;
 	FILE *srcfp=NULL;
@@ -90,7 +90,7 @@ end:
 }
 
 
-static int gen_rev_delta(const char *sigpath, const char *deltadir, const char *oldpath, const char *finpath, const char *path, struct sbuf *sb, struct config *cconf)
+static int gen_rev_delta(const char *sigpath, const char *deltadir, const char *oldpath, const char *finpath, const char *path, struct sbuf *sb, struct conf *cconf)
 {
 	int ret=-1;
 	char *delpath=NULL;
@@ -164,7 +164,7 @@ end:
 }
 
 static int inflate_or_link_oldfile(const char *oldpath, const char *infpath,
-	int compression, struct config *cconf)
+	int compression, struct conf *cconf)
 {
 	struct stat statp;
 	const char *opath=oldpath;
@@ -185,7 +185,7 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath,
 		TRUE /* allow overwrite of infpath */);
 }
 
-static int jiggle(struct sbuf *sb, const char *currentdata, const char *datadirtmp, const char *datadir, const char *deltabdir, const char *deltafdir, const char *sigpath, const char *deletionsfile, FILE **delfp, int hardlinked, struct config *cconf)
+static int jiggle(struct sbuf *sb, const char *currentdata, const char *datadirtmp, const char *datadir, const char *deltabdir, const char *deltafdir, const char *sigpath, const char *deletionsfile, FILE **delfp, int hardlinked, struct conf *cconf)
 {
 	int ret=-1;
 	struct stat statp;
@@ -387,7 +387,7 @@ end:
    based on the first 'keep' value. This is so that we have more choice
    of backups to delete than just the oldest.
 */
-static int do_hardlinked_archive(struct config *cconf, unsigned long bno)
+static int do_hardlinked_archive(struct conf *cconf, unsigned long bno)
 {
 	int kp=0;
 	int ret=0;
@@ -416,7 +416,7 @@ static int do_hardlinked_archive(struct config *cconf, unsigned long bno)
 	return !ret;
 }
 
-static int maybe_delete_files_from_manifest(const char *manifest, const char *deletionsfile, struct config *cconf)
+static int maybe_delete_files_from_manifest(const char *manifest, const char *deletionsfile, struct conf *cconf)
 {
 	int ars=0;
 	int ret=-1;
@@ -524,7 +524,7 @@ end:
 
 /* Need to make all the stuff that this does atomic so that existing backups
    never get broken, even if somebody turns the power off on the server. */ 
-static int atomic_data_jiggle(struct sdirs *sdirs, struct config *cconf,
+static int atomic_data_jiggle(struct sdirs *sdirs, struct conf *cconf,
 	const char *manifest, const char *currentdup, const char *currentdata,
 	const char *datadir, const char *datadirtmp,
 	const char *deletionsfile,
@@ -612,7 +612,7 @@ end:
 	return ret;
 }
 
-int backup_phase4_server(struct sdirs *sdirs, struct config *cconf)
+int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf)
 {
 	int ret=-1;
 	struct stat statp;

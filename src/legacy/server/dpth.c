@@ -3,7 +3,7 @@
 
 #include <dirent.h>
 
-void mk_dpthl(struct dpthl *dpthl, struct config *cconf, char cmd)
+void mk_dpthl(struct dpthl *dpthl, struct conf *cconf, char cmd)
 {
 	// file data
 	snprintf(dpthl->path, sizeof(dpthl->path), "%04X/%04X/%04X%s",
@@ -44,7 +44,7 @@ static int get_highest_entry(const char *path)
 	return max;
 }
 
-int init_dpthl(struct dpthl *dpthl, struct sdirs *sdirs, struct config *cconf)
+int init_dpthl(struct dpthl *dpthl, struct sdirs *sdirs, struct conf *cconf)
 {
 	char *tmp=NULL;
 	//logp("in init_dpthl\n");
@@ -102,7 +102,7 @@ int init_dpthl(struct dpthl *dpthl, struct sdirs *sdirs, struct config *cconf)
 // 65535^3 = 281,462,092,005,375 data entries
 // recommend a filesystem with lots of inodes?
 // Hmm, but ext3 only allows 32000 subdirs, although that many files are OK.
-int incr_dpthl(struct dpthl *dpthl, struct config *cconf)
+int incr_dpthl(struct dpthl *dpthl, struct conf *cconf)
 {
 	if(dpthl->tert++>=0xFFFF)
 	{
@@ -131,7 +131,7 @@ int incr_dpthl(struct dpthl *dpthl, struct config *cconf)
 	return 0;
 }
 
-int set_dpthl_from_string(struct dpthl *dpthl, const char *datapath, struct config *cconf)
+int set_dpthl_from_string(struct dpthl *dpthl, const char *datapath, struct conf *cconf)
 {
 	unsigned int a=0;
 	unsigned int b=0;

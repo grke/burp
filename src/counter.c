@@ -7,7 +7,7 @@ static void reset_filecounter(struct cntr *c, time_t t)
 	c->start=t;
 }
  
-void reset_filecounters(struct config *conf, time_t t)
+void reset_filecounters(struct conf *conf, time_t t)
 {
 	reset_filecounter(conf->p1cntr, t);
 	reset_filecounter(conf->cntr, t);
@@ -322,7 +322,7 @@ static void bottom_part(struct cntr *a, struct cntr *b, enum action act)
 	}
 }
 
-void print_filecounters(struct config *conf, enum action act)
+void print_filecounters(struct conf *conf, enum action act)
 {
 	time_t now=time(NULL);
 	struct cntr *p1c=conf->p1cntr;
@@ -519,7 +519,7 @@ static void bottom_part_to_file(FILE *fp, struct cntr *a, struct cntr *b, enum a
 	}
 }
 
-int print_stats_to_file(struct config *conf,
+int print_stats_to_file(struct conf *conf,
 	const char *directory, enum action act)
 {
 	FILE *fp;
@@ -692,7 +692,7 @@ void print_endcounter(struct cntr *cntr)
 }
 
 #ifndef HAVE_WIN32
-void counters_to_str(char *str, size_t len, char phase, const char *path, struct config *conf)
+void counters_to_str(char *str, size_t len, char phase, const char *path, struct conf *conf)
 {
 	int l=0;
 	struct cntr *p1cntr=conf->p1cntr;
@@ -1062,7 +1062,7 @@ int str_to_counters(const char *str, char **client, char *status, char *phase, c
 }
 
 #ifndef HAVE_WIN32
-int send_counters(struct config *conf)
+int send_counters(struct conf *conf)
 {
 	char buf[4096]="";
 	counters_to_str(buf, sizeof(buf),
@@ -1079,7 +1079,7 @@ int send_counters(struct config *conf)
 #endif
 
 static enum asl_ret recv_counters_func(struct iobuf *rbuf,
-	struct config *conf, void *param)
+	struct conf *conf, void *param)
 {
 	if(str_to_counters(rbuf->buf, NULL, NULL, NULL, NULL,
 		conf->p1cntr, conf->cntr, NULL))
@@ -1087,7 +1087,7 @@ static enum asl_ret recv_counters_func(struct iobuf *rbuf,
 	return ASL_END_OK;
 }
 
-int recv_counters(struct config *conf)
+int recv_counters(struct conf *conf)
 {
 	return async_simple_loop(conf, NULL, __FUNCTION__, recv_counters_func);
 }

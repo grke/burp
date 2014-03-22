@@ -2,6 +2,7 @@
 
 #include <dirent.h>
 
+// FIX THIS: should probably use struct sdirs.
 struct cstat
 {
 	char *name;
@@ -118,7 +119,7 @@ static void cstat_blank(struct cstat *c)
 	c->lockfile_mtime=0;
 }
 
-static int set_cstat_from_conf(struct cstat *c, struct config *conf, struct config *cconf)
+static int set_cstat_from_conf(struct cstat *c, struct conf *conf, struct conf *cconf)
 {
 	char *lockbasedir=NULL;
 	char *client_lockdir=NULL;
@@ -241,7 +242,7 @@ static int set_summary(struct cstat *c)
 	return 0;
 }
 
-static int load_data_from_disk(struct config *conf, struct cstat ***clist, int *clen)
+static int load_data_from_disk(struct conf *conf, struct cstat ***clist, int *clen)
 {
 	int q=0;
 	int m=0;
@@ -300,7 +301,7 @@ static int load_data_from_disk(struct config *conf, struct cstat ***clist, int *
 		// Look at the client conf files to see if they have changed,
 		// and reload bits and pieces if they have.
 		struct stat statp;
-		struct config cconf;
+		struct conf cconf;
 
 		if(!(*clist)[q]->conffile) continue;
 
@@ -958,7 +959,7 @@ end:
 }
 
 /* Incoming status request */
-int status_server(int *cfd, struct config *conf)
+int status_server(int *cfd, struct conf *conf)
 {
 	int l;
 	int ret=0;

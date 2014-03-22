@@ -17,7 +17,7 @@ static const char *server_supports_autoupgrade(const char *feat)
 	return server_supports(feat, ":autoupgrade:");
 }
 
-int extra_comms(struct config *conf,
+int extra_comms(struct conf *conf,
 	enum action *action, char **incexc, long *name_max)
 {
 	int ret=-1;

@@ -163,7 +163,7 @@ static char *xstrsub(const char *src, int begin, int len)
 	return ret;
 }
 
-int windows_glob(struct config *conf)
+int windows_glob(struct conf *conf)
 {
 	struct strlist *ig;
         WIN32_FIND_DATA ffd;

@@ -99,7 +99,7 @@ static int process_sig(char cmd, const char *buf, unsigned int s)
 	return 0;
 }
 
-int hash_load(const char *champ, struct config *conf)
+int hash_load(const char *champ, struct conf *conf)
 {
 	int ret=-1;
 	char cmd='\0';

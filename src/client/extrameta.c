@@ -37,7 +37,7 @@ int get_extrameta(
 	char **extrameta,
 	size_t *elen,
 	int64_t winattr,
-	struct config *conf,
+	struct conf *conf,
 	size_t *datalen)
 {
 #if defined (WIN32_VSS)
@@ -74,7 +74,7 @@ int set_extrameta(
 	struct stat *statp,
 	const char *extrameta,
 	size_t metalen,
-	struct config *conf)
+	struct conf *conf)
 {
 	size_t l=0;
 	char cmdtmp='\0';

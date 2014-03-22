@@ -91,7 +91,7 @@ int chld_setup(int oldmax_children, int max_children, int oldmax_status_children
 
 static int next_free_slot;
 
-int chld_add_incoming(struct config *conf, int is_status_server)
+int chld_add_incoming(struct conf *conf, int is_status_server)
 {
 	int p=0;
 	int c_count=0;
@@ -140,7 +140,7 @@ void chld_forked(pid_t childpid, int rfd, int wfd, int is_status_server)
 	set_blocking(chlds[next_free_slot].rfd);
 }
 
-int chld_add_fd_to_normal_sets(struct config *conf, fd_set *fsr, fd_set *fse, int *mfd)
+int chld_add_fd_to_normal_sets(struct conf *conf, fd_set *fsr, fd_set *fse, int *mfd)
 {
 	static int c;
 	static int count;
@@ -156,7 +156,7 @@ int chld_add_fd_to_normal_sets(struct config *conf, fd_set *fsr, fd_set *fse, in
 	return count;
 }
 
-int chld_add_fd_to_status_sets(struct config *conf, fd_set *fsw, fd_set *fse, int *mfd)
+int chld_add_fd_to_status_sets(struct conf *conf, fd_set *fsw, fd_set *fse, int *mfd)
 {
 	static int c;
 	static int count;
@@ -172,7 +172,7 @@ int chld_add_fd_to_status_sets(struct config *conf, fd_set *fsw, fd_set *fse, in
 	return count;
 }
 
-int chld_fd_isset_normal(struct config *conf, fd_set *fsr, fd_set *fse)
+int chld_fd_isset_normal(struct conf *conf, fd_set *fsr, fd_set *fse)
 {
 	static int c;
 	for(c=0; c<conf->max_children; c++)
@@ -220,7 +220,7 @@ int chld_fd_isset_normal(struct config *conf, fd_set *fsr, fd_set *fse)
 	return 0;
 }
 
-int chld_fd_isset_status(struct config *conf, fd_set *fsw, fd_set *fse)
+int chld_fd_isset_status(struct conf *conf, fd_set *fsw, fd_set *fse)
 {
 	static int c;
 	for(c=0; c<conf->max_children; c++)

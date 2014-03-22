@@ -234,7 +234,7 @@ static int write_endfile(unsigned long long bytes)
 	return async_write_str(CMD_END_FILE, get_endfile_str(bytes));
 }
 
-int open_file_for_send(BFILE *bfd, const char *fname, int64_t winattr, struct config *conf)
+int open_file_for_send(BFILE *bfd, const char *fname, int64_t winattr, struct conf *conf)
 {
 	binit(bfd, winattr, conf);
 	if(bopen(bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0))
@@ -473,7 +473,7 @@ void reuseaddr(int fd)
 
 #ifndef HAVE_WIN32
 
-void write_status(char phase, const char *path, struct config *conf)
+void write_status(char phase, const char *path, struct conf *conf)
 {
 	char *w=NULL;
 	time_t now=0;
@@ -706,7 +706,7 @@ int run_script(const char **args, struct strlist *userargs,
 		logfunc, NULL /* do not save output to buffer */);
 }
 
-char *comp_level(struct config *conf)
+char *comp_level(struct conf *conf)
 {
 	static char comp[8]="";
 	snprintf(comp, sizeof(comp), "wb%d", conf->compression);
@@ -714,7 +714,7 @@ char *comp_level(struct config *conf)
 }
 
 /* Function based on src/lib/priv.c from bacula. */
-int chuser_and_or_chgrp(struct config *conf)
+int chuser_and_or_chgrp(struct conf *conf)
 {
 #if defined(HAVE_PWD_H) && defined(HAVE_GRP_H)
 	char *user=conf->user;
@@ -940,7 +940,7 @@ void print_all_cmds(void)
 	printf("\n");
 }
 
-void log_restore_settings(struct config *cconf, int srestore)
+void log_restore_settings(struct conf *cconf, int srestore)
 {
 	struct strlist *l;
 	logp("Restore settings:\n");
@@ -989,7 +989,7 @@ long version_to_long(const char *version)
 
 /* These receive_a_file() and send_file() functions are for use by extra_comms
    and the CA stuff, rather than backups/restores. */
-int receive_a_file(const char *path, struct config *conf)
+int receive_a_file(const char *path, struct conf *conf)
 {
 	int c=0;
 	int ret=0;
@@ -1045,7 +1045,7 @@ end:
 /* Windows will use this function, when sending a certificate signing request.
    It is not using the Windows API stuff because it needs to arrive on the
    server side without any junk in it. */
-int send_a_file(const char *path, struct config *conf)
+int send_a_file(const char *path, struct conf *conf)
 {
 	int ret=0;
 	FILE *fp=NULL;

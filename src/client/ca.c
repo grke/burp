@@ -1,6 +1,6 @@
 #include "include.h"
 
-static int generate_key_and_csr(struct config *conf, const char *csr_path)
+static int generate_key_and_csr(struct conf *conf, const char *csr_path)
 {
 	int a=0;
 	const char *args[12];
@@ -33,7 +33,7 @@ static int generate_key_and_csr(struct config *conf, const char *csr_path)
 
 /* Rewrite the config file with the ssl_peer_cn value changed to what the
    server told us it should be. */
-static int rewrite_client_conf(struct config *conf)
+static int rewrite_client_conf(struct conf *conf)
 {
 	int ret=-1;
 	char p[32]="";
@@ -102,7 +102,7 @@ end:
 }
 
 static enum asl_ret csr_client_func(struct iobuf *rbuf,
-        struct config *conf, void *param)
+        struct conf *conf, void *param)
 {
 	if(strncmp_w(rbuf->buf, "csr ok:"))
 	{
@@ -121,7 +121,7 @@ static enum asl_ret csr_client_func(struct iobuf *rbuf,
 
 /* Return 1 for everything OK, signed and returned, -1 for error, 0 for
    nothing done. */
-int ca_client_setup(struct config *conf)
+int ca_client_setup(struct conf *conf)
 {
 	int ret=-1;
 	struct stat statp;

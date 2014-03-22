@@ -1,7 +1,7 @@
 #include "include.h"
 
 static int restore_sbuf(struct sbuf *sb, enum action act,
-	char status, struct config *conf, int *need_data)
+	char status, struct conf *conf, int *need_data)
 {
 	//logp("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path.buf);
 	write_status(status, sb->path.buf, conf);
@@ -35,7 +35,7 @@ static int restore_sbuf(struct sbuf *sb, enum action act,
 }
 
 static enum asl_ret restore_end_func(struct iobuf *rbuf,
-        struct config *conf, void *param)
+        struct conf *conf, void *param)
 {
 	if(!strcmp(rbuf->buf, "ok_restore_end"))
 	{
@@ -46,7 +46,7 @@ static enum asl_ret restore_end_func(struct iobuf *rbuf,
 	return ASL_END_ERROR;
 }
 
-static int do_restore_end(struct config *conf)
+static int do_restore_end(struct conf *conf)
 {
 	if(async_write_str(CMD_GEN, "restore_end")) return -1;
 	return async_simple_loop(conf, NULL, __FUNCTION__, restore_end_func);
@@ -56,7 +56,7 @@ static int restore_ent(struct sbuf **sb,
 	struct slist *slist,
 	enum action act,
 	char status,
-	struct config *conf,
+	struct conf *conf,
 	int *need_data)
 {
 	int ret=-1;
@@ -127,7 +127,7 @@ static int srestore_matches(struct strlist *s, const char *path)
 }
 
 // Used when restore is initiated from the server.
-static int check_srestore(struct config *conf, const char *path)
+static int check_srestore(struct conf *conf, const char *path)
 {
 	struct strlist *l;
 	for(l=conf->incexcdir; l; l=l->next)
@@ -136,7 +136,7 @@ static int check_srestore(struct config *conf, const char *path)
 	return 0;
 }
 
-static int load_counters(const char *manifest, regex_t *regex, struct config *conf)
+static int load_counters(const char *manifest, regex_t *regex, struct conf *conf)
 {
 	return 0;
 /*
@@ -187,7 +187,7 @@ end:
 }
 
 static int restore_remaining_dirs(struct slist *slist, enum action act,
-	char status, struct config *conf, int *need_data)
+	char status, struct conf *conf, int *need_data)
 {
 	struct sbuf *sb;
 	// Restore any directories that are left in the list.
@@ -204,7 +204,7 @@ static int restore_remaining_dirs(struct slist *slist, enum action act,
    side. If it thinks it is, it will then do it.
    Return -1 on error, 1 if it copied the data across, 0 if it did not. */
 static int maybe_copy_data_files_across(const char *manifest,
-	const char *datadir, int srestore, regex_t *regex, struct config *conf,
+	const char *datadir, int srestore, regex_t *regex, struct conf *conf,
 	struct slist *slist,
 	enum action act, char status)
 {
@@ -383,7 +383,7 @@ end:
 
 static int restore_stream(const char *datadir, struct slist *slist,
 	struct bu *bu, const char *manifest, regex_t *regex,
-	int srestore, struct config *conf, enum action act, char status)
+	int srestore, struct conf *conf, enum action act, char status)
 {
 	int ars;
 	int ret=-1;
@@ -487,7 +487,7 @@ end:
 
 static int do_restore_manifest(const char *datadir,
 	struct bu *bu, const char *manifest, regex_t *regex,
-	int srestore, struct config *conf, enum action act, char status)
+	int srestore, struct conf *conf, enum action act, char status)
 {
 	//int s=0;
 	//size_t len=0;
@@ -536,7 +536,7 @@ end:
 
 // a = length of struct bu array
 // i = position to restore from
-static int restore_manifest(struct bu *bu, regex_t *regex, int srestore, enum action act, struct sdirs *sdirs, char **dir_for_notify, struct config *conf)
+static int restore_manifest(struct bu *bu, regex_t *regex, int srestore, enum action act, struct sdirs *sdirs, char **dir_for_notify, struct conf *conf)
 {
 	int ret=-1;
 	char *manifest=NULL;
@@ -599,7 +599,7 @@ end:
 	return ret;
 }
 
-int do_restore_server(struct sdirs *sdirs, enum action act, int srestore, char **dir_for_notify, struct config *conf)
+int do_restore_server(struct sdirs *sdirs, enum action act, int srestore, char **dir_for_notify, struct conf *conf)
 {
 	int a=0;
 	int i=0;

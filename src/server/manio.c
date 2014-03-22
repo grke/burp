@@ -117,7 +117,7 @@ printf("manio path: %s\n", manio->fpath);
 }
 
 // Return -1 for error, 0 for stuff read OK, 1 for end of files.
-int manio_sbuf_fill(struct manio *manio, struct sbuf *sb, struct blk *blk, struct dpth *dpth, struct config *conf)
+int manio_sbuf_fill(struct manio *manio, struct sbuf *sb, struct blk *blk, struct dpth *dpth, struct conf *conf)
 {
 	int ars;
 

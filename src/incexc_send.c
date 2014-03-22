@@ -40,7 +40,7 @@ static int send_incexc_from_strlist(const char *prepend_on, const char *prepend_
 	return 0;
 }
 
-static int do_sends(struct config *conf)
+static int do_sends(struct conf *conf)
 {
 	if(  send_incexc_from_strlist("include", "exclude",
 		conf->incexcdir)
@@ -76,7 +76,7 @@ static int do_sends(struct config *conf)
 	return 0;
 }
 
-static int do_sends_restore(struct config *conf)
+static int do_sends_restore(struct conf *conf)
 {
 	if(  send_incexc_from_strlist("include", "exclude", conf->incexcdir)
 	  || send_incexc_str("orig_client", conf->orig_client)
@@ -95,7 +95,7 @@ static int do_request_response(const char *reqstr, const char *repstr)
 	  || async_read_expect(CMD_GEN, repstr));
 }
 
-int incexc_send_client(struct config *conf)
+int incexc_send_client(struct conf *conf)
 {
 	if(do_request_response("incexc", "incexc ok")
 	  || do_sends(conf)
@@ -104,7 +104,7 @@ int incexc_send_client(struct config *conf)
 	return 0;
 }
 
-int incexc_send_server(struct config *conf)
+int incexc_send_server(struct conf *conf)
 {
 	/* 'sincexc' and 'sincexc ok' have already been exchanged,
 	   so go straight into doing the sends. */
@@ -114,7 +114,7 @@ int incexc_send_server(struct config *conf)
 	return 0;
 }
 
-int incexc_send_server_restore(struct config *conf)
+int incexc_send_server_restore(struct conf *conf)
 {
 	/* 'srestore' and 'srestore ok' have already been exchanged,
 	   so go straight into doing the sends. */

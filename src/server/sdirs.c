@@ -8,7 +8,7 @@ struct sdirs *sdirs_alloc(void)
 	return sdirs;
 }
 
-static int do_lock_dirs(struct sdirs *sdirs, struct config *conf)
+static int do_lock_dirs(struct sdirs *sdirs, struct conf *conf)
 {
 	int ret=-1;
 	char *lockbase=NULL;
@@ -36,7 +36,7 @@ end:
 }
 
 // Maybe should be in a legacy directory.
-static int do_legacy_dirs(struct sdirs *sdirs, struct config *conf)
+static int do_legacy_dirs(struct sdirs *sdirs, struct conf *conf)
 {
 	if(!(sdirs->client=prepend_s(sdirs->base, conf->cname))
 	  || !(sdirs->working=prepend_s(sdirs->client, "working"))
@@ -57,7 +57,7 @@ static int do_legacy_dirs(struct sdirs *sdirs, struct config *conf)
 	return 0;
 }
 
-static int do_v2_dirs(struct sdirs *sdirs, struct config *conf)
+static int do_v2_dirs(struct sdirs *sdirs, struct conf *conf)
 {
 	if(!conf->dedup_group)
 	{
@@ -80,7 +80,7 @@ static int do_v2_dirs(struct sdirs *sdirs, struct config *conf)
 	return 0;
 }
 
-extern int sdirs_init(struct sdirs *sdirs, struct config *conf)
+extern int sdirs_init(struct sdirs *sdirs, struct conf *conf)
 {
 	if(!conf->directory)
 	{

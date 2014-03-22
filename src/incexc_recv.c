@@ -13,7 +13,7 @@ static int add_to_incexc(char **incexc, const char *src, size_t len, const char 
 }
 
 static enum asl_ret incexc_recv_func(struct iobuf *rbuf,
-        struct config *conf, void *param)
+        struct conf *conf, void *param)
 {
 	char **incexc=(char **)param;
 	if(!strcmp(rbuf->buf, endreqstrf))
@@ -27,7 +27,7 @@ static enum asl_ret incexc_recv_func(struct iobuf *rbuf,
 }
 
 
-static int incexc_recv(char **incexc, const char *reqstr, const char *repstr, const char *endreqstr, const char *endrepstr, struct config *conf)
+static int incexc_recv(char **incexc, const char *reqstr, const char *repstr, const char *endreqstr, const char *endrepstr, struct conf *conf)
 {
 	if(*incexc) { free(*incexc); *incexc=NULL; }
 	if(async_write_str(CMD_GEN, repstr)) return -1;
@@ -41,7 +41,7 @@ static int incexc_recv(char **incexc, const char *reqstr, const char *repstr, co
 	return add_to_incexc(incexc, "\n", 1, "");
 }
 
-int incexc_recv_client(char **incexc, struct config *conf)
+int incexc_recv_client(char **incexc, struct conf *conf)
 {
 	return incexc_recv(incexc,
 		"sincexc", "sincexc ok",
@@ -49,7 +49,7 @@ int incexc_recv_client(char **incexc, struct config *conf)
 		conf);
 }
 
-int incexc_recv_client_restore(char **incexc, struct config *conf)
+int incexc_recv_client_restore(char **incexc, struct conf *conf)
 {
 	return incexc_recv(incexc,
 		"srestore", "srestore ok",
@@ -57,7 +57,7 @@ int incexc_recv_client_restore(char **incexc, struct config *conf)
 		conf);
 }
 
-int incexc_recv_server(char **incexc, struct config *conf)
+int incexc_recv_server(char **incexc, struct conf *conf)
 {
 	return incexc_recv(incexc,
 		"incexc", "incexc ok",

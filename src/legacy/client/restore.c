@@ -1,6 +1,6 @@
 #include "include.h"
 
-static int restore_interrupt(struct sbuf *sb, const char *msg, struct config *conf)
+static int restore_interrupt(struct sbuf *sb, const char *msg, struct conf *conf)
 {
 	int ret=0;
 	struct cntr *cntr=conf->cntr;
@@ -56,7 +56,7 @@ end:
 	return ret;
 }
 
-static int make_link(const char *fname, const char *lnk, char cmd, const char *restoreprefix, struct config *conf)
+static int make_link(const char *fname, const char *lnk, char cmd, const char *restoreprefix, struct conf *conf)
 {
 	int ret=-1;
 
@@ -95,7 +95,7 @@ static int make_link(const char *fname, const char *lnk, char cmd, const char *r
 	return ret;
 }
 
-static int open_for_restore(BFILE *bfd, FILE **fp, const char *path, struct sbuf *sb, int vss_restore, struct config *conf)
+static int open_for_restore(BFILE *bfd, FILE **fp, const char *path, struct sbuf *sb, int vss_restore, struct conf *conf)
 {
 #ifdef HAVE_WIN32
 	if(bfd->mode!=BF_CLOSED)
@@ -149,7 +149,7 @@ static int open_for_restore(BFILE *bfd, FILE **fp, const char *path, struct sbuf
 	return 0;
 }
 
-static int restore_file_or_get_meta(BFILE *bfd, struct sbuf *sb, const char *fname, enum action act, const char *encpassword, char **metadata, size_t *metalen, int vss_restore, struct config *conf)
+static int restore_file_or_get_meta(BFILE *bfd, struct sbuf *sb, const char *fname, enum action act, const char *encpassword, char **metadata, size_t *metalen, int vss_restore, struct conf *conf)
 {
 	int ret=0;
 	char *rpath=NULL;
@@ -256,7 +256,7 @@ end:
 	return ret;
 }
 
-static int restore_special(struct sbuf *sb, const char *fname, enum action act, struct config *conf)
+static int restore_special(struct sbuf *sb, const char *fname, enum action act, struct conf *conf)
 {
 	int ret=0;
 	char *rpath=NULL;
@@ -337,7 +337,7 @@ end:
 	return ret;
 }
 
-static int restore_dir(struct sbuf *sb, const char *dname, enum action act, struct config *conf)
+static int restore_dir(struct sbuf *sb, const char *dname, enum action act, struct conf *conf)
 {
 	int ret=0;
 	char *rpath=NULL;
@@ -378,7 +378,7 @@ end:
 	return ret;
 }
 
-static int restore_link(struct sbuf *sb, const char *fname, const char *restoreprefix, enum action act, struct config *conf)
+static int restore_link(struct sbuf *sb, const char *fname, const char *restoreprefix, enum action act, struct conf *conf)
 {
 	int ret=0;
 
@@ -415,7 +415,7 @@ end:
 	return ret;
 }
 
-static int restore_metadata(BFILE *bfd, struct sbuf *sb, const char *fname, enum action act, const char *encpassword, int vss_restore, struct config *conf)
+static int restore_metadata(BFILE *bfd, struct sbuf *sb, const char *fname, enum action act, const char *encpassword, int vss_restore, struct conf *conf)
 {
 	// If it is directory metadata, try to make sure the directory
 	// exists. Pass in NULL as the cntr, so no counting is done.
@@ -494,7 +494,7 @@ static const char *act_str(enum action act)
 }
 
 /* Return 1 for ok, -1 for error, 0 for too many components stripped. */
-static int strip_path_components(struct sbuf *sb, char **path, struct config *conf)
+static int strip_path_components(struct sbuf *sb, char **path, struct conf *conf)
 {
 	int s=0;
 	char *tmp=NULL;
@@ -532,7 +532,7 @@ static int strip_path_components(struct sbuf *sb, char **path, struct config *co
 	return 1;
 }
 
-static int overwrite_ok(struct sbuf *sb, struct config *conf, BFILE *bfd, const char *fullpath)
+static int overwrite_ok(struct sbuf *sb, struct conf *conf, BFILE *bfd, const char *fullpath)
 {
 	struct stat checkstat;
 
@@ -578,7 +578,7 @@ static int overwrite_ok(struct sbuf *sb, struct config *conf, BFILE *bfd, const 
 	return 1;
 }
 
-int do_restore_client_legacy(struct config *conf, enum action act, int vss_restore)
+int do_restore_client_legacy(struct conf *conf, enum action act, int vss_restore)
 {
 	int ars=0;
 	int ret=-1;

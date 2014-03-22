@@ -81,14 +81,14 @@ struct slist
 	struct sbuf *blks_to_send; // client only
 };
 
-extern struct sbuf *sbuf_alloc(struct config *conf);
+extern struct sbuf *sbuf_alloc(struct conf *conf);
 extern void sbuf_free_contents(struct sbuf *sb);
 extern void sbuf_free(struct sbuf *sb);
 
 extern struct slist *slist_alloc(void);
 extern void slist_free(struct slist *slist);
 
-extern int sbuf_open_file(struct sbuf *sb, struct config *conf);
+extern int sbuf_open_file(struct sbuf *sb, struct conf *conf);
 extern void sbuf_close_file(struct sbuf *sb);
 extern ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize);
 
@@ -102,10 +102,10 @@ extern int sbuf_pathcmp(struct sbuf *a, struct sbuf *b);
 extern void sbuf_print_alloc_stats(void);
 
 extern int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk,
-	char *datpath, struct config *conf);
+	char *datpath, struct conf *conf);
 extern int sbuf_fill_from_gzfile(struct sbuf *sb, gzFile zp, struct blk *blk,
-	char *datpath, struct config *conf);
+	char *datpath, struct conf *conf);
 extern int sbuf_fill_from_net(struct sbuf *sb, struct blk *blk,
-	struct config *conf);
+	struct conf *conf);
 
 #endif

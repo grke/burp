@@ -51,7 +51,7 @@ error:
 	return -1;
 }
 
-static int client_can_restore(struct config *cconf)
+static int client_can_restore(struct conf *cconf)
 {
 	struct stat statp;
 	// If there is a restore file on the server, it is always OK.
@@ -68,7 +68,7 @@ static int client_can_restore(struct config *cconf)
 // Used by legacy stuff.
 void maybe_do_notification(int status, const char *clientdir,
 	const char *storagedir, const char *filename,
-	const char *brv, struct config *cconf)
+	const char *brv, struct conf *cconf)
 {
 	int a=0;
 	const char *args[12];
@@ -104,7 +104,7 @@ void maybe_do_notification(int status, const char *clientdir,
 	}
 }
 
-static int run_backup(struct sdirs *sdirs, struct config *cconf,
+static int run_backup(struct sdirs *sdirs, struct conf *cconf,
 	struct iobuf *rbuf, const char *incexc, int *timer_ret, int resume)
 {
 	int ret=-1;
@@ -188,7 +188,7 @@ static int run_backup(struct sdirs *sdirs, struct config *cconf,
 	return ret;
 }
 
-static int run_restore(struct sdirs *sdirs, struct config *cconf,
+static int run_restore(struct sdirs *sdirs, struct conf *cconf,
 	struct iobuf *rbuf, int srestore)
 {
 	int ret=-1;
@@ -257,7 +257,7 @@ static int run_restore(struct sdirs *sdirs, struct config *cconf,
 	return ret;
 }
 
-static int run_delete(struct sdirs *sdirs, struct config *cconf,
+static int run_delete(struct sdirs *sdirs, struct conf *cconf,
 	struct iobuf *rbuf)
 {
 	char *backupno=NULL;
@@ -271,7 +271,7 @@ static int run_delete(struct sdirs *sdirs, struct config *cconf,
 	return do_delete_server(sdirs, cconf, backupno);
 }
 
-static int run_list(struct sdirs *sdirs, struct config *cconf,
+static int run_list(struct sdirs *sdirs, struct conf *cconf,
 	struct iobuf *rbuf)
 {
 	char *backupno=NULL;
@@ -320,7 +320,7 @@ static int unknown_command(struct iobuf *rbuf)
 	return -1;
 }
 
-int run_action_server(struct config *cconf, struct sdirs *sdirs,
+int run_action_server(struct conf *cconf, struct sdirs *sdirs,
 	struct iobuf *rbuf, const char *incexc, int srestore, int *timer_ret)
 {
 	int ret;

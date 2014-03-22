@@ -3,7 +3,7 @@
 #include <librsync.h>
 
 // Also used by backup_phase4_server.c
-int do_patch(const char *dst, const char *del, const char *upd, bool gzupd, int compression, struct config *cconf)
+int do_patch(const char *dst, const char *del, const char *upd, bool gzupd, int compression, struct conf *cconf)
 {
 	FILE *dstp=NULL;
 	FILE *delfp=NULL;
@@ -65,7 +65,7 @@ int do_patch(const char *dst, const char *del, const char *upd, bool gzupd, int 
 	return result;
 }
 
-static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, struct config *cconf, int compression)
+static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, struct conf *cconf, int compression)
 {
 	int ret=0;
 	struct stat statp;
@@ -126,7 +126,7 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, str
 	return ret;
 }
 
-static int send_file(struct sbuf *sb, int patches, const char *best, unsigned long long *bytes, struct config *cconf)
+static int send_file(struct sbuf *sb, int patches, const char *best, unsigned long long *bytes, struct conf *cconf)
 {
 	int ret=0;
 	size_t datalen=0;
@@ -182,7 +182,7 @@ static int send_file(struct sbuf *sb, int patches, const char *best, unsigned lo
 	return ret;
 }
 
-static int verify_file(struct sbuf *sb, int patches, const char *best, unsigned long long *bytes, struct config *cconf)
+static int verify_file(struct sbuf *sb, int patches, const char *best, unsigned long long *bytes, struct conf *cconf)
 {
 	MD5_CTX md5;
 	size_t b=0;
@@ -286,7 +286,7 @@ static int verify_file(struct sbuf *sb, int patches, const char *best, unsigned 
 
 // a = length of struct bu array
 // i = position to restore from
-static int restore_file(struct bu *arr, int a, int i, struct sbuf *sb, const char *tmppath1, const char *tmppath2, int act, struct config *cconf)
+static int restore_file(struct bu *arr, int a, int i, struct sbuf *sb, const char *tmppath1, const char *tmppath2, int act, struct conf *cconf)
 {
 	int x=0;
 	// Go up the array until we find the file in the data directory.
@@ -419,7 +419,7 @@ static int restore_file(struct bu *arr, int a, int i, struct sbuf *sb, const cha
 	return 0;
 }
 
-static int restore_sbufl(struct sbuf *sb, struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, enum action act, char status, struct config *cconf)
+static int restore_sbufl(struct sbuf *sb, struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, enum action act, char status, struct conf *cconf)
 {
 	//printf("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path.buf);
 	write_status(status, sb->path.buf, cconf);
@@ -453,7 +453,7 @@ static int restore_sbufl(struct sbuf *sb, struct bu *arr, int a, int i, const ch
 	return 0;
 }
 
-static int do_restore_end(enum action act, struct config *conf)
+static int do_restore_end(enum action act, struct conf *conf)
 {
 	int ret=-1;
 	struct iobuf *rbuf=NULL;
@@ -494,7 +494,7 @@ end:
 	return ret;
 }
 
-static int restore_ent(struct sbuf **sb, struct sbuf ***sblist, int *scount, struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, enum action act, char status, struct config *cconf)
+static int restore_ent(struct sbuf **sb, struct sbuf ***sblist, int *scount, struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, enum action act, char status, struct conf *cconf)
 {
 	int s=0;
 	int ret=-1;
@@ -553,7 +553,7 @@ static int srestore_matches(struct strlist *s, const char *path)
 }
 
 /* Used when restore is initiated from the server. */
-static int check_srestore(struct config *cconf, const char *path)
+static int check_srestore(struct conf *cconf, const char *path)
 {
 	struct strlist *l;
 	for(l=cconf->incexcdir; l; l=l->next)
@@ -566,7 +566,7 @@ static int check_srestore(struct config *cconf, const char *path)
 
 static int setup_counters(const char *manifest, regex_t *regex, int srestore,
 	const char *tmppath1, const char *tmppath2,
-	enum action act, char status, struct config *cconf)
+	enum action act, char status, struct conf *cconf)
 {
 	int ars=0;
 	int ret=-1;
@@ -610,7 +610,7 @@ static int actual_restore(struct bu *arr, int a, int i,
 	const char *manifest, regex_t *regex, int srestore,
 	const char *tmppath1, const char *tmppath2,
 	enum action act, char status,
-	struct config *cconf)
+	struct conf *cconf)
 {
 	int s=0;
 	int ret=-1;
@@ -707,7 +707,7 @@ end:
 static int restore_manifest(struct bu *arr, int a, int i,
 	const char *tmppath1, const char *tmppath2,
 	regex_t *regex, int srestore, enum action act,
-	char **dir_for_notify, struct config *cconf)
+	char **dir_for_notify, struct conf *cconf)
 {
 	int ret=-1;
 	char *manifest=NULL;
@@ -775,7 +775,7 @@ end:
 }
 
 int do_restore_server_legacy(struct sdirs *sdirs, enum action act,
-	int srestore, char **dir_for_notify, struct config *cconf)
+	int srestore, char **dir_for_notify, struct conf *cconf)
 {
 	int a=0;
 	int i=0;

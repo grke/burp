@@ -1,6 +1,6 @@
 #include "include.h"
 
-int do_delete_server(struct sdirs *sdirs, struct config *conf,
+int do_delete_server(struct sdirs *sdirs, struct conf *conf,
 	const char *backup)
 {
 	int a=0;

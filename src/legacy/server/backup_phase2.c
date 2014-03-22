@@ -15,7 +15,7 @@ static int treedata(struct sbuf *sb)
 	return 0;
 }
 
-static char *set_new_datapth(struct sdirs *sdirs, struct config *cconf,
+static char *set_new_datapth(struct sdirs *sdirs, struct conf *cconf,
 	struct sbuf *sb, struct dpthl *dpthl, int *istreedata)
 {
 	static char *tmp=NULL;
@@ -51,7 +51,7 @@ static char *set_new_datapth(struct sdirs *sdirs, struct config *cconf,
 	return rpath;
 }
 
-static int start_to_receive_new_file(struct sdirs *sdirs, struct config *cconf,
+static int start_to_receive_new_file(struct sdirs *sdirs, struct conf *cconf,
 	struct sbuf *sb, struct dpthl *dpthl)
 {
 	char *rpath=NULL;
@@ -86,7 +86,7 @@ static int filedata(char cmd)
 	  || cmd==CMD_EFS_FILE);
 }
 
-static int process_changed_file(struct sdirs *sdirs, struct config *cconf,
+static int process_changed_file(struct sdirs *sdirs, struct conf *cconf,
 	struct sbuf *cb, struct sbuf *p1b,
 	const char *adir)
 {
@@ -147,7 +147,7 @@ static int process_changed_file(struct sdirs *sdirs, struct config *cconf,
 	return 0;
 }
 
-static int new_non_file(struct sbuf *p1b, FILE *ucfp, char cmd, struct config *cconf)
+static int new_non_file(struct sbuf *p1b, FILE *ucfp, char cmd, struct conf *cconf)
 {
 	// Is something that does not need more data backed up.
 	// Like a directory or a link or something like that.
@@ -162,7 +162,7 @@ static int new_non_file(struct sbuf *p1b, FILE *ucfp, char cmd, struct config *c
 	return 0;
 }
 
-static int changed_non_file(struct sbuf *p1b, FILE *ucfp, char cmd, struct config *cconf)
+static int changed_non_file(struct sbuf *p1b, FILE *ucfp, char cmd, struct conf *cconf)
 {
 	// As new_non_file.
 	if(sbufl_to_manifest(p1b, ucfp, NULL))
@@ -173,7 +173,7 @@ static int changed_non_file(struct sbuf *p1b, FILE *ucfp, char cmd, struct confi
 	return 0;
 }
 
-static int process_new(struct sdirs *sdirs, struct config *cconf,
+static int process_new(struct sdirs *sdirs, struct conf *cconf,
 	struct sbuf *p1b, FILE *ucfp, struct dpthl *dpthl)
 {
 	if(filedata(p1b->path.cmd))
@@ -190,7 +190,7 @@ static int process_new(struct sdirs *sdirs, struct config *cconf,
 	return 0;
 }
 
-static int process_unchanged_file(struct sbuf *cb, FILE *ucfp, struct config *cconf)
+static int process_unchanged_file(struct sbuf *cb, FILE *ucfp, struct conf *cconf)
 {
 	if(sbufl_to_manifest(cb, ucfp, NULL))
 	{
@@ -207,7 +207,7 @@ static int process_unchanged_file(struct sbuf *cb, FILE *ucfp, struct config *cc
 	return 1;
 }
 
-static int process_new_file(struct sdirs *sdirs, struct config *cconf,
+static int process_new_file(struct sdirs *sdirs, struct conf *cconf,
 	struct sbuf *cb, struct sbuf *p1b, FILE *ucfp,
 	struct dpthl *dpthl)
 {
@@ -218,7 +218,7 @@ static int process_new_file(struct sdirs *sdirs, struct config *cconf,
 }
 
 // return 1 to say that a file was processed
-static int maybe_process_file(struct sdirs *sdirs, struct config *cconf,
+static int maybe_process_file(struct sdirs *sdirs, struct conf *cconf,
 	struct sbuf *cb, struct sbuf *p1b, FILE *ucfp,
 	struct dpthl *dpthl)
 {
@@ -404,7 +404,7 @@ static int do_stuff_to_send(struct sbuf *p1b, char **last_requested)
 	return 0;
 }
 
-static int start_to_receive_delta(struct sdirs *sdirs, struct config *cconf,
+static int start_to_receive_delta(struct sdirs *sdirs, struct conf *cconf,
 	struct sbuf *rb)
 {
 	if(cconf->compression)
@@ -439,7 +439,7 @@ static int finish_delta(struct sdirs *sdirs, struct sbuf *rb)
 }
 
 // returns 1 for finished ok.
-static int do_stuff_to_receive(struct sdirs *sdirs, struct config *cconf,
+static int do_stuff_to_receive(struct sdirs *sdirs, struct conf *cconf,
 	struct sbuf *rb, FILE *p2fp, struct dpthl *dpthl, char **last_requested)
 {
 	static struct iobuf *rbuf=NULL;
@@ -601,7 +601,7 @@ error:
 	return -1;
 }
 
-int backup_phase2_server(struct sdirs *sdirs, struct config *cconf,
+int backup_phase2_server(struct sdirs *sdirs, struct conf *cconf,
 	gzFile *cmanfp, struct dpthl *dpthl, int resume)
 {
 	int ars=0;

@@ -3,7 +3,7 @@
 #include "../../server/backup_phase1.h"
 
 // Used on resume, this just reads the phase1 file and sets up the counters.
-static int read_phase1(gzFile zp, struct config *conf)
+static int read_phase1(gzFile zp, struct conf *conf)
 {
 	int ars=0;
 	struct sbuf *p1b;
@@ -38,7 +38,7 @@ static int read_phase1(gzFile zp, struct config *conf)
 
 static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
 	struct iobuf *target, int isphase1, int seekback, int do_counters,
-	int same, struct dpthl *dpthl, struct config *cconf)
+	int same, struct dpthl *dpthl, struct conf *cconf)
 {
 	int ars=0;
 	off_t pos=0;
@@ -131,7 +131,7 @@ error:
 
 static int forward_fp(FILE *fp, struct iobuf *result, struct iobuf *target,
 	int isphase1, int seekback, int do_counters, int same,
-	struct dpthl *dpthl, struct config *cconf)
+	struct dpthl *dpthl, struct conf *cconf)
 {
 	return do_forward(fp, NULL, result, target, isphase1, seekback,
 		do_counters, same, dpthl, cconf);
@@ -139,13 +139,13 @@ static int forward_fp(FILE *fp, struct iobuf *result, struct iobuf *target,
 
 static int forward_zp(gzFile zp, struct iobuf *result, struct iobuf *target,
 	int isphase1, int seekback, int do_counters, int same,
-	struct dpthl *dpthl, struct config *cconf)
+	struct dpthl *dpthl, struct conf *cconf)
 {
 	return do_forward(NULL, zp, result, target, isphase1, seekback,
 		do_counters, same, dpthl, cconf);
 }
 
-int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpthl *dpthl, struct config *cconf)
+int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpthl *dpthl, struct conf *cconf)
 {
 	int ret=0;
 	struct iobuf *p1b=NULL;

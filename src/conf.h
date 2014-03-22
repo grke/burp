@@ -19,7 +19,7 @@ enum protocol
 	PROTO_BURP2
 };
 
-struct config
+struct conf
 {
 	char *configfile;
 	char *port;
@@ -40,15 +40,15 @@ struct config
 	float ratelimit;
 	int network_timeout;
 
-	// If the client tells us it is windows, this is set on the server side.
+  // If the client tells us it is windows, this is set on the server side.
 	uint8_t client_is_windows;
 
 	char *peer_version;
 
-	// Whether to run in burp1, or burp2 style, or to choose automatically.
+  // Whether to run in burp1, or burp2 style, or to choose automatically.
 	enum protocol protocol;
 
-// server options
+// Server options.
 	char *directory;
 	char *timestamp_format;
 	char *clientconfdir;
@@ -69,7 +69,7 @@ struct config
 	uint8_t password_check;
 	char *manual_delete;
 
-// client options
+// Client options.
 	char *cname; // set on the server when client connects
 	char *password; // also a clientconfdir option
 	char *passwd; // also a clientconfdir option
@@ -112,7 +112,7 @@ struct config
 	char *browsefile;
 	char *browsedir;
 
-  // backup scripts
+  // Backup scripts.
 	char *b_script_pre;
 	struct strlist *b_script_pre_arg;
 	char *b_script_post;
@@ -124,7 +124,7 @@ struct config
 	struct strlist *r_script_post_arg;
 	uint8_t r_script_post_run_on_fail;
 
-  // server scripts
+  // Server scripts.
 	char *s_script_pre;
 	struct strlist *s_script_pre_arg;
 	uint8_t s_script_pre_notify;
@@ -133,11 +133,11 @@ struct config
 	uint8_t s_script_post_run_on_fail;
 	uint8_t s_script_post_notify;
 
-	// Rabin conf
+  // Rabin conf
 	struct rconf rconf;
 
-	// Use these when you want to give the same args to both post and pre
-	// scripts.
+  // Use these when you want to give the same args to both post and pre
+  // scripts.
 	char *b_script;
 	struct strlist *b_script_arg;
 	char *r_script;
@@ -163,7 +163,7 @@ struct config
 	char *timer_script;
 	struct strlist *timer_arg;
 
-  // notify scripts
+  // Notify scripts
 	char *n_success_script;
 	struct strlist *n_success_arg;
 	uint8_t n_success_warnings_only;
@@ -171,8 +171,7 @@ struct config
 
 	char *n_failure_script;
 	struct strlist *n_failure_arg;
-
-// List of clients that are permitted to restore the files from our client.
+  // List of clients that are permitted to restore the files from our client.
 	struct strlist *rclients;
 
 	char *dedup_group;
@@ -203,19 +202,19 @@ struct config
 	struct cntr *cntr;
 };
 
-extern void config_init(struct config *c);
-extern int config_load(const char *config_path, struct config *c,
+extern void config_init(struct conf *c);
+extern int config_load(const char *config_path, struct conf *c,
 	uint8_t loadall);
-extern void config_free(struct config *c);
-extern int config_set_client_global(struct config *c, struct config *cc);
+extern void config_free(struct conf *c);
+extern int config_set_client_global(struct conf *c, struct conf *cc);
 
 extern int is_subdir(const char *dir, const char *sub);
 extern int pathcmp(const char *a, const char *b);
 extern int config_get_pair(char buf[], char **field, char **value);
-extern int parse_incexcs_buf(struct config *c, const char *incexc);
+extern int parse_incexcs_buf(struct conf *c, const char *incexc);
 extern int log_incexcs_buf(const char *incexc);
-extern int parse_incexcs_path(struct config *c, const char *path);
-extern int config_load_client(struct config *c, struct config *cc);
+extern int parse_incexcs_path(struct conf *c, const char *path);
+extern int config_load_client(struct conf *c, struct conf *cc);
 extern int conf_val_reset(const char *src, char **dest);
 
 #ifdef HAVE_WIN32

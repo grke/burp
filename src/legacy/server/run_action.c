@@ -56,12 +56,12 @@ end:
 	return ret;
 }
 
-static int vss_opts_changed(struct sdirs *sdirs, struct config *cconf,
+static int vss_opts_changed(struct sdirs *sdirs, struct conf *cconf,
 	const char *incexc)
 {
 	int ret=0;
-	struct config oldconf;
-	struct config newconf;
+	struct conf oldconf;
+	struct conf newconf;
 	config_init(&oldconf);
 	config_init(&newconf);
 
@@ -108,7 +108,7 @@ static int vss_opts_changed(struct sdirs *sdirs, struct config *cconf,
 	return ret;
 }
 
-int do_backup_server_legacy(struct sdirs *sdirs, struct config *cconf,
+int do_backup_server_legacy(struct sdirs *sdirs, struct conf *cconf,
 	const char *incexc, int resume)
 {
 	int ret=0;
@@ -285,7 +285,7 @@ end:
 	return ret;
 }
 
-static int maybe_rebuild_manifest(struct sdirs *sdirs, struct config *cconf,
+static int maybe_rebuild_manifest(struct sdirs *sdirs, struct conf *cconf,
 	int compress)
 {
 	struct stat statp;
@@ -299,7 +299,7 @@ static int maybe_rebuild_manifest(struct sdirs *sdirs, struct config *cconf,
 		1 /* recovery mode */, compress);
 }
 
-int check_for_rubble_legacy(struct sdirs *sdirs, struct config *cconf,
+int check_for_rubble_legacy(struct sdirs *sdirs, struct conf *cconf,
 	const char *incexc, int *resume)
 {
 	int ret=0;

@@ -19,7 +19,7 @@ static int append_to_feat(char **feat, const char *str)
 	return 0;
 }
 
-static char *get_restorepath(struct config *cconf)
+static char *get_restorepath(struct conf *cconf)
 {
 	char *tmp=NULL;
 	char *restorepath=NULL;
@@ -33,7 +33,7 @@ static char *get_restorepath(struct config *cconf)
 	return restorepath;
 }
 
-static int send_features(struct config *cconf)
+static int send_features(struct conf *cconf)
 {
 	int ret=-1;
 	char *feat=NULL;
@@ -111,7 +111,7 @@ struct vers
 	long burp2;
 };
 
-static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, struct config *conf, struct config *cconf)
+static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, struct conf *conf, struct conf *cconf)
 {
 	int ret=-1;
 	struct iobuf *rbuf=NULL;
@@ -203,10 +203,10 @@ static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, str
 		{
 			int rcok=0;
 			struct strlist *r;
-			struct config *sconf=NULL;
+			struct conf *sconf=NULL;
 
-			if(!(sconf=(struct config *)
-				malloc(sizeof(struct config)))
+			if(!(sconf=(struct conf *)
+				malloc(sizeof(struct conf)))
 			  || !(sconf->cname=strdup(
 				rbuf->buf+strlen("orig_client="))))
 			{
@@ -246,7 +246,7 @@ static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, str
 			sconf->restore_path=cconf->restore_path;
 			cconf->restore_path=NULL;
 			config_free(cconf);
-			memcpy(cconf, sconf, sizeof(struct config));
+			memcpy(cconf, sconf, sizeof(struct conf));
 			free(sconf);
 			sconf=NULL;
 			cconf->restore_client=cconf->cname;
@@ -314,7 +314,7 @@ end:
 	return ret;
 }
 
-static int init_vers(struct vers *vers, struct config *cconf)
+static int init_vers(struct vers *vers, struct conf *cconf)
 {
 	memset(vers, 0, sizeof(struct vers));
 	return ((vers->min=version_to_long("1.2.7"))<0
@@ -325,7 +325,7 @@ static int init_vers(struct vers *vers, struct config *cconf)
 	  || (vers->burp2=version_to_long("2.0.0"))<0);
 }
 
-int extra_comms(char **incexc, int *srestore, struct config *conf, struct config *cconf)
+int extra_comms(char **incexc, int *srestore, struct conf *conf, struct conf *cconf)
 {
 	struct vers vers;
 	//char *restorepath=NULL;

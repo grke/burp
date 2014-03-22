@@ -1,6 +1,6 @@
 #include "include.h"
 
-int do_delete_client(struct config *conf)
+int do_delete_client(struct conf *conf)
 {
 	char msg[128]="";
 	snprintf(msg, sizeof(msg), "delete %s", conf->backup?conf->backup:"");

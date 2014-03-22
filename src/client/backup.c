@@ -27,7 +27,7 @@ static uint64_t decode_req(const char *buf)
 }
 
 static int add_to_file_requests(struct slist *slist, struct iobuf *rbuf,
-	struct config *conf)
+	struct conf *conf)
 {
 	static uint64_t file_no=1;
 	struct sbuf *sb;
@@ -67,7 +67,7 @@ static int add_to_data_requests(struct blist *blist, struct iobuf *rbuf)
 	return 0;
 }
 
-static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist  *blist, struct config *conf, int *backup_end, int *requests_end, int *blk_requests_end)
+static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist  *blist, struct conf *conf, int *backup_end, int *requests_end, int *blk_requests_end)
 {
 	int ret=0;
 	switch(rbuf->cmd)
@@ -148,7 +148,7 @@ end:
 	return ret;
 }
 
-static int add_to_blks_list(struct config *conf, struct slist *slist, struct blist *blist, struct win *win)
+static int add_to_blks_list(struct conf *conf, struct slist *slist, struct blist *blist, struct win *win)
 {
 	struct sbuf *sb=slist->last_requested;
 	if(!sb) return 0;
@@ -319,7 +319,7 @@ static void get_wbuf_from_scan(struct iobuf *wbuf, struct slist *flist)
 	}
 }
 
-static int backup_phase2_client(struct config *conf, int resume)
+static int backup_phase2_client(struct conf *conf, int resume)
 {
 	int ret=-1;
 	int sigs_end=0;
@@ -432,7 +432,7 @@ sbuf_print_alloc_stats();
 }
 
 // Return 0 for OK, -1 for error, 1 for timer conditions not met.
-int do_backup_client(struct config *conf, enum action action,
+int do_backup_client(struct conf *conf, enum action action,
 	long name_max, int resume)
 {
 	int ret=0;

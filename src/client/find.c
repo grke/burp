@@ -206,7 +206,7 @@ int in_exclude_regex(struct strlist *excreg, const char *fname)
 }
 
 // When recursing into directories, do not want to check the include_ext list.
-static int file_is_included_no_incext(struct config *conf, const char *fname)
+static int file_is_included_no_incext(struct conf *conf, const char *fname)
 {
 	int ret=0;
 	int longest=0;
@@ -237,7 +237,7 @@ static int file_is_included_no_incext(struct config *conf, const char *fname)
 	return ret;
 }
 
-int file_is_included(struct config *conf, const char *fname, bool top_level)
+int file_is_included(struct conf *conf, const char *fname, bool top_level)
 {
 	// Always save the top level directory.
 	// This will help in the simulation of browsing backups because it
@@ -253,7 +253,7 @@ int file_is_included(struct config *conf, const char *fname, bool top_level)
 	return file_is_included_no_incext(conf, fname);
 }
 
-static int fs_change_is_allowed(struct config *conf, const char *fname)
+static int fs_change_is_allowed(struct conf *conf, const char *fname)
 {
 	struct strlist *l;
 	if(conf->cross_all_filesystems) return 1;
@@ -262,7 +262,7 @@ static int fs_change_is_allowed(struct config *conf, const char *fname)
 	return 0;
 }
 
-static int need_to_read_fifo(struct config *conf, const char *fname)
+static int need_to_read_fifo(struct conf *conf, const char *fname)
 {
 	struct strlist *l;
 	if(conf->read_all_fifos) return 1;
@@ -271,7 +271,7 @@ static int need_to_read_fifo(struct config *conf, const char *fname)
 	return 0;
 }
 
-static int need_to_read_blockdev(struct config *conf, const char *fname)
+static int need_to_read_blockdev(struct conf *conf, const char *fname)
 {
 	struct strlist *l;
 	if(conf->read_all_blockdevs) return 1;
@@ -298,7 +298,7 @@ static int nobackup_directory(struct strlist *nobackup, const char *path)
 	return 0;
 }
 
-static int found_regular_file(FF_PKT *ff_pkt, struct config *conf,
+static int found_regular_file(FF_PKT *ff_pkt, struct conf *conf,
 	char *fname, bool top_level)
 {
 	boffset_t sizeleft;
@@ -316,7 +316,7 @@ static int found_regular_file(FF_PKT *ff_pkt, struct config *conf,
 	return send_file(ff_pkt, top_level, conf);
 }
 
-static int found_soft_link(FF_PKT *ff_pkt, struct config *conf,
+static int found_soft_link(FF_PKT *ff_pkt, struct conf *conf,
 	char *fname, bool top_level)
 {
 	int size;
@@ -334,7 +334,7 @@ static int found_soft_link(FF_PKT *ff_pkt, struct config *conf,
 	return send_file(ff_pkt, top_level, conf);
 }
 
-int fstype_excluded(struct config *conf, const char *fname)
+int fstype_excluded(struct conf *conf, const char *fname)
 {
 #if defined(HAVE_LINUX_OS)
 	struct statfs buf;
@@ -450,10 +450,10 @@ static int get_files_in_directory(DIR *directory, struct dirent ***nl, int *coun
 
 /* prototype, because process_files_in_directory() recurses using find_files()
  */
-static int find_files(FF_PKT *ff_pkt, struct config *conf,
+static int find_files(FF_PKT *ff_pkt, struct conf *conf,
 	char *fname, dev_t parent_device, bool top_level);
 
-static int process_files_in_directory(struct dirent **nl, int count, int *rtn_stat, char **link, size_t len, size_t *link_len, struct config *conf, FF_PKT *ff_pkt, dev_t our_device)
+static int process_files_in_directory(struct dirent **nl, int count, int *rtn_stat, char **link, size_t len, size_t *link_len, struct conf *conf, FF_PKT *ff_pkt, dev_t our_device)
 {
 	int m=0;
 	for(m=0; m<count; m++)
@@ -514,7 +514,7 @@ static int process_files_in_directory(struct dirent **nl, int count, int *rtn_st
 	return 0;
 }
 
-static int found_directory(FF_PKT *ff_pkt, struct config *conf,
+static int found_directory(FF_PKT *ff_pkt, struct conf *conf,
 	char *fname, dev_t parent_device, bool top_level)
 {
 	int rtn_stat;
@@ -661,7 +661,7 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 	return rtn_stat;
 }
 
-static int found_other(FF_PKT *ff_pkt, struct config *conf,
+static int found_other(FF_PKT *ff_pkt, struct conf *conf,
 	char *fname, bool top_level)
 {
 #ifdef HAVE_FREEBSD_OS
@@ -702,7 +702,7 @@ static int found_other(FF_PKT *ff_pkt, struct config *conf,
  * top_level is 1 when not recursing or 0 when
  *  descending into a directory.
  */
-static int find_files(FF_PKT *ff_pkt, struct config *conf,
+static int find_files(FF_PKT *ff_pkt, struct conf *conf,
 	char *fname, dev_t parent_device, bool top_level)
 {
 	ff_pkt->fname=fname;
@@ -792,7 +792,7 @@ static int find_files(FF_PKT *ff_pkt, struct config *conf,
 		return found_other(ff_pkt, conf, fname, top_level);
 }
 
-int find_files_begin(FF_PKT *ff_pkt, struct config *conf, char *fname)
+int find_files_begin(FF_PKT *ff_pkt, struct conf *conf, char *fname)
 {
 	return find_files(ff_pkt, conf, fname, (dev_t)-1, 1 /* top_level */);
 }

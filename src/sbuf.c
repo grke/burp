@@ -3,7 +3,7 @@
 static int alloc_count=0;
 static int free_count=0;
 
-struct sbuf *sbuf_alloc(struct config *conf)
+struct sbuf *sbuf_alloc(struct conf *conf)
 {
 	struct sbuf *sb;
 	if(!(sb=(struct sbuf *)calloc(1, sizeof(struct sbuf))))
@@ -182,7 +182,7 @@ int sbuf_pathcmp(struct sbuf *a, struct sbuf *b)
 }
 
 
-int sbuf_open_file(struct sbuf *sb, struct config *conf)
+int sbuf_open_file(struct sbuf *sb, struct conf *conf)
 {
 #ifdef HAVE_WIN32
 	if(win32_lstat(sb->path.buf, &sb->statp, &sb->winattr))
@@ -372,7 +372,7 @@ static int retrieve_blk_data(char *datpath, struct blk *blk)
         return 0;
 }
 
-int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct config *conf)
+int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct conf *conf)
 {
 	static char lead[5]="";
 	static iobuf *rbuf=NULL;
@@ -571,12 +571,12 @@ end:
 	return ret;
 }
 
-int sbuf_fill_from_gzfile(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct config *conf)
+int sbuf_fill_from_gzfile(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct conf *conf)
 {
 	return sbuf_fill(sb, zp, blk, datpath, conf);
 }
 
-int sbuf_fill_from_net(struct sbuf *sb, struct blk *blk, struct config *conf)
+int sbuf_fill_from_net(struct sbuf *sb, struct blk *blk, struct conf *conf)
 {
 	return sbuf_fill(sb, NULL, blk, NULL, conf);
 }

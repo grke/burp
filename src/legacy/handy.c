@@ -68,7 +68,7 @@ struct bsid {
 #endif
 
 int open_file_for_sendl(BFILE *bfd, FILE **fp, const char *fname,
-	int64_t winattr, size_t *datalen, struct config *conf)
+	int64_t winattr, size_t *datalen, struct conf *conf)
 {
 	if(fp)
 	{

@@ -194,7 +194,7 @@ static struct candidate *add_new_candidate(void)
 	return candidate;
 }
 
-int champ_chooser_init(const char *datadir, struct config *conf)
+int champ_chooser_init(const char *datadir, struct conf *conf)
 {
 	int ars;
 	int ret=-1;
@@ -259,7 +259,7 @@ int is_hook(const char *str)
 }
 
 // When a backup is ongoing, use this to add newly complete candidates.
-int add_fresh_candidate(const char *path, struct config *conf)
+int add_fresh_candidate(const char *path, struct conf *conf)
 {
 	int ars;
 	int ret=-1;
@@ -432,7 +432,7 @@ static struct candidate *champ_chooser(struct incoming *in, struct candidate *ch
 
 #define CHAMPS_MAX 10
 
-int deduplicate(struct blk *blks, struct dpth *dpth, struct config *conf, uint64_t *wrap_up)
+int deduplicate(struct blk *blks, struct dpth *dpth, struct conf *conf, uint64_t *wrap_up)
 {
 	struct blk *blk;
 	struct candidate *champ;
@@ -504,7 +504,7 @@ printf("     ALREADY GOT %d/%d incoming blocks\n", in->got, blk_count);
 
 // Return 0 for OK, -1 for error, 1 to mean that the list of blocks has been
 // deduplicated.
-int deduplicate_maybe(struct blk *blk, struct dpth *dpth, struct config *conf, uint64_t *wrap_up)
+int deduplicate_maybe(struct blk *blk, struct dpth *dpth, struct conf *conf, uint64_t *wrap_up)
 {
 	static int count=0;
 	static struct blk *blks=NULL;
@@ -546,7 +546,7 @@ static struct blk *gen_test_blk(void)
 	return blk;
 }
 
-int champ_test(struct config *conf)
+int champ_test(struct conf *conf)
 {
 	int ia;
 	uint64_t wrap_up=0;

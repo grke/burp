@@ -29,6 +29,6 @@ extern struct weak_entry   *add_weak_entry(uint64_t weakint);
 extern struct strong_entry *add_strong_entry(struct weak_entry *weak_entry, const char *strong, const char *path);
 
 extern void hash_delete_all(void);
-extern int hash_load(const char *champ, struct config *conf);
+extern int hash_load(const char *champ, struct conf *conf);
 
 #endif

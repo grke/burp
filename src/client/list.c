@@ -196,7 +196,7 @@ static void ls_long_output_json(struct sbuf *sb)
 	if(esc_lname) free(esc_lname);
 }
 
-static void json_backup(char *statbuf, struct config *conf)
+static void json_backup(char *statbuf, struct conf *conf)
 {
 	char *cp=NULL;
 	if((cp=strstr(statbuf, " (deletable)")))
@@ -245,7 +245,7 @@ static void list_item(int json, enum action act, struct sbuf *sb)
 	}
 }
 
-int do_list_client(struct config *conf, enum action act, int json)
+int do_list_client(struct conf *conf, enum action act, int json)
 {
 	int ret=-1;
 	char msg[512]="";

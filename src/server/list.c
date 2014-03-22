@@ -58,7 +58,7 @@ err:
 }
 
 static int list_manifest(const char *fullpath, regex_t *regex,
-	const char *browsedir, struct config *conf)
+	const char *browsedir, struct conf *conf)
 {
 	int ars=0;
 	int ret=0;
@@ -138,7 +138,7 @@ static void send_backup_name_to_client(struct bu *arr)
 	async_write_str(CMD_TIMESTAMP, msg);
 }
 
-int do_list_server(struct sdirs *sdirs, struct config *conf,
+int do_list_server(struct sdirs *sdirs, struct conf *conf,
 	const char *backup, const char *listregex, const char *browsedir)
 {
 	int a=0;

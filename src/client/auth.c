@@ -1,6 +1,6 @@
 #include "include.h"
 
-int authorise_client(struct config *conf, char **server_version)
+int authorise_client(struct conf *conf, char **server_version)
 {
 	int ret=-1;
 	char hello[256]="";

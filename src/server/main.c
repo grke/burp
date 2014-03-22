@@ -138,8 +138,8 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	int ca_ret=0;
 	SSL *ssl=NULL;
 	BIO *sbio=NULL;
-	struct config conf;
-	struct config cconf;
+	struct conf conf;
+	struct conf cconf;
 	struct cntr p1cntr;
 	struct cntr cntr;
 
@@ -231,7 +231,7 @@ end:
 static int run_status_server(int *rfd, int *cfd, const char *configfile)
 {
 	int ret=0;
-	struct config conf;
+	struct conf conf;
 
 	close_fd(rfd);
 
@@ -251,7 +251,7 @@ static int run_status_server(int *rfd, int *cfd, const char *configfile)
 	return ret;
 }
 
-static int process_incoming_client(int rfd, struct config *conf, SSL_CTX *ctx, const char *configfile, int is_status_server)
+static int process_incoming_client(int rfd, struct conf *conf, SSL_CTX *ctx, const char *configfile, int is_status_server)
 {
 	int cfd=-1;
 	socklen_t client_length=0;
@@ -425,7 +425,7 @@ static int relock(struct lock *lock)
 	return -1;
 }
 
-static int run_server(struct config *conf, const char *configfile, int *rfd, const char *oldport, const char *oldstatusport)
+static int run_server(struct conf *conf, const char *configfile, int *rfd, const char *oldport, const char *oldstatusport)
 {
 	int ret=0;
 	SSL_CTX *ctx=NULL;
@@ -605,7 +605,7 @@ static int run_server(struct config *conf, const char *configfile, int *rfd, con
 	return ret;
 }
 
-int server(struct config *conf, const char *configfile,
+int server(struct conf *conf, const char *configfile,
 	struct lock *lock, int generate_ca_only)
 {
 	int ret=0;

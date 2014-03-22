@@ -253,7 +253,7 @@ uint64_t decode_file_no(struct sbuf *sb)
 	return (uint64_t)val;
 }
 
-int attribs_set(const char *path, struct stat *statp, uint64_t winattr, struct config *conf)
+int attribs_set(const char *path, struct stat *statp, uint64_t winattr, struct conf *conf)
 {
 	struct utimbuf ut;
 

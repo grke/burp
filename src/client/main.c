@@ -20,7 +20,7 @@ enum cliret
 };
 
 static enum cliret maybe_check_timer(enum action action, const char *phase1str,
-	struct config *conf, int *resume)
+	struct conf *conf, int *resume)
 {
 	int complen=0;
 	struct iobuf rbuf;
@@ -75,7 +75,7 @@ timer_not_met:
 }
 
 static enum cliret backup_wrapper(enum action action, const char *phase1str,
-	const char *incexc, int resume, long name_max, struct config *conf)
+	const char *incexc, int resume, long name_max, struct conf *conf)
 {
 	enum cliret ret=CLIENT_OK;
 
@@ -152,7 +152,7 @@ timer_not_met:
 
 static int s_server_session_id_context=1;
 
-static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx, struct config *conf)
+static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx, struct conf *conf)
 {
 	BIO *sbio=NULL;
 	char buf[256]="";
@@ -189,7 +189,7 @@ static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx, struct config *conf)
 
 static enum cliret initial_comms(SSL *ssl, int rfd,
 	enum action *action, char **incexc, long *name_max, 
-	struct config *conf)
+	struct conf *conf)
 {
 	char *server_version=NULL;
 	enum cliret ret=CLIENT_OK;
@@ -244,7 +244,7 @@ end:
 }
 
 static enum cliret restore_wrapper(enum action action, int vss_restore,
-	struct config *conf)
+	struct conf *conf)
 {
 	enum cliret ret=CLIENT_OK;
 
@@ -303,7 +303,7 @@ static enum cliret restore_wrapper(enum action action, int vss_restore,
 	return ret;
 }
 
-static enum cliret do_client(struct config *conf, enum action action,
+static enum cliret do_client(struct conf *conf, enum action action,
 	int vss_restore, int json)
 {
 	enum cliret ret=CLIENT_OK;
@@ -389,7 +389,7 @@ end:
 	return ret;
 }
 
-int client(struct config *conf, enum action action, int vss_restore, int json)
+int client(struct conf *conf, enum action action, int vss_restore, int json)
 {
 	enum cliret ret=CLIENT_OK;
 	

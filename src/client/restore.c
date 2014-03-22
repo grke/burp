@@ -1,6 +1,6 @@
 #include "include.h"
 
-static int restore_interrupt(struct sbuf *sb, const char *msg, struct config *conf)
+static int restore_interrupt(struct sbuf *sb, const char *msg, struct conf *conf)
 {
 	return 0;
 /* FIX THIS
@@ -58,7 +58,7 @@ static int restore_interrupt(struct sbuf *sb, const char *msg, struct config *co
 */
 }
 
-static int make_link(const char *fname, const char *lnk, char cmd, struct config *conf)
+static int make_link(const char *fname, const char *lnk, char cmd, struct conf *conf)
 {
 	int ret=-1;
 
@@ -102,7 +102,7 @@ static int open_for_restore(
 	const char *path,
 	struct sbuf *sb,
 	int vss_restore,
-	struct config *conf)
+	struct conf *conf)
 {
 	bclose(bfd);
 	binit(bfd, sb->winattr, conf);
@@ -137,7 +137,7 @@ static int start_restore_file(
 	char **metadata,
 	size_t *metalen,
 	int vss_restore,
-	struct config *conf)
+	struct conf *conf)
 {
 	int ret=-1;
 	char *rpath=NULL;
@@ -170,7 +170,7 @@ end:
 	return ret;
 }
 
-static int restore_special(struct sbuf *sb, const char *fname, enum action act, struct config *conf)
+static int restore_special(struct sbuf *sb, const char *fname, enum action act, struct conf *conf)
 {
 	int ret=0;
 	char *rpath=NULL;
@@ -250,7 +250,7 @@ end:
 	return ret;
 }
 
-static int restore_dir(struct sbuf *sb, const char *dname, enum action act, struct config *conf)
+static int restore_dir(struct sbuf *sb, const char *dname, enum action act, struct conf *conf)
 {
 	int ret=0;
 	char *rpath=NULL;
@@ -291,7 +291,7 @@ end:
 	return ret;
 }
 
-static int restore_link(struct sbuf *sb, const char *fname, enum action act, struct config *conf)
+static int restore_link(struct sbuf *sb, const char *fname, enum action act, struct conf *conf)
 {
 	int ret=0;
 
@@ -337,7 +337,7 @@ static int restore_metadata(
 	enum action act,
 	const char *encpassword,
 	int vss_restore,
-	struct config *conf)
+	struct conf *conf)
 {
 	// If it is directory metadata, try to make sure the directory
 	// exists. Pass in NULL as the cntr, so no counting is done.
@@ -421,7 +421,7 @@ static const char *act_str(enum action act)
 }
 
 // Return 1 for ok, -1 for error, 0 for too many components stripped.
-static int strip_path_components(struct sbuf *sb, struct config *conf)
+static int strip_path_components(struct sbuf *sb, struct conf *conf)
 {
 	int s=0;
 	char *tmp=NULL;
@@ -461,7 +461,7 @@ static int strip_path_components(struct sbuf *sb, struct config *conf)
 }
 
 static int overwrite_ok(struct sbuf *sb,
-	struct config *conf,
+	struct conf *conf,
 #ifdef HAVE_WIN32
 	BFILE *bfd,
 #endif
@@ -525,7 +525,7 @@ static int write_data(BFILE *bfd, struct blk *blk)
 static char *restore_style=NULL;
 
 static enum asl_ret restore_style_func(struct iobuf *rbuf,
-	struct config *conf, void *param)
+	struct conf *conf, void *param)
 {
 	char msg[32]="";
 	restore_style=NULL;
@@ -543,7 +543,7 @@ static enum asl_ret restore_style_func(struct iobuf *rbuf,
 	return ASL_END_OK;
 }
 
-static char *get_restore_style(struct config *conf)
+static char *get_restore_style(struct conf *conf)
 {
 	if(async_simple_loop(conf, NULL, __FUNCTION__,
 		restore_style_func)) return NULL;
@@ -551,7 +551,7 @@ static char *get_restore_style(struct config *conf)
 }
 
 static enum asl_ret restore_spool_func(struct iobuf *rbuf,
-	struct config *conf, void *param)
+	struct conf *conf, void *param)
 {
 	static char **datpath;
 	datpath=(char **)param;
@@ -573,7 +573,7 @@ static enum asl_ret restore_spool_func(struct iobuf *rbuf,
 	return ASL_CONTINUE;
 }
 
-int restore_spool(struct config *conf, char **datpath)
+int restore_spool(struct conf *conf, char **datpath)
 {
 printf("in restore_spool\n");
 	logp("Spooling restore to: %s\n", conf->restore_spool);
@@ -585,7 +585,7 @@ printf("in restore_spool\n");
 		__FUNCTION__, restore_spool_func);
 }
 
-int do_restore_client(struct config *conf, enum action act, int vss_restore)
+int do_restore_client(struct conf *conf, enum action act, int vss_restore)
 {
 	int ars=0;
 	int ret=-1;

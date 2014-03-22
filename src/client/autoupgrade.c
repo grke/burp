@@ -1,7 +1,7 @@
 #include "include.h"
 
 static int receive_file(const char *autoupgrade_dir,
-	const char *file, struct config *conf)
+	const char *file, struct conf *conf)
 {
 	int ret=0;
 	char *incoming=NULL;
@@ -12,7 +12,7 @@ static int receive_file(const char *autoupgrade_dir,
 }
 
 static enum asl_ret autoupgrade_func(struct iobuf *rbuf,
-	struct config *conf, void *param)
+	struct conf *conf, void *param)
 {
 	if(!strcmp(rbuf->buf, "do not autoupgrade"))
 		return ASL_END_OK;
@@ -24,7 +24,7 @@ static enum asl_ret autoupgrade_func(struct iobuf *rbuf,
 	return ASL_END_OK_RETURN_1;
 }
 
-int autoupgrade_client(struct config *conf)
+int autoupgrade_client(struct conf *conf)
 {
 	int a=0;
 	int ret=-1;

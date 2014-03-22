@@ -17,7 +17,7 @@ size_t get_librsync_block_len(const char *endfile)
 	return ret;
 }
 
-static char *deleteme_get_path(const char *basedir, struct config *cconf)
+static char *deleteme_get_path(const char *basedir, struct conf *cconf)
 {
 	static char *deleteme=NULL;
 	if(deleteme) { free(deleteme); deleteme=NULL; }
@@ -26,7 +26,7 @@ static char *deleteme_get_path(const char *basedir, struct config *cconf)
 }
 
 int deleteme_move(const char *basedir, const char *fullpath, const char *path,
-	struct config *cconf)
+	struct conf *cconf)
 {
 	int ret=-1;
 	char *tmp=NULL;
@@ -62,7 +62,7 @@ end:
 	return ret;
 }
 
-int deleteme_maybe_delete(struct config *cconf, const char *basedir)
+int deleteme_maybe_delete(struct conf *cconf, const char *basedir)
 {
 	char *deleteme;
 	// If manual_delete is on, they will have to delete the files

@@ -239,7 +239,7 @@ int async_append_all_to_write_buffer(struct iobuf *wbuf)
 	return 0;
 }
 
-int async_init(int afd, SSL *assl, struct config *conf, int estimate)
+int async_init(int afd, SSL *assl, struct conf *conf, int estimate)
 {
 	fd=afd;
 	ssl=assl;
@@ -525,8 +525,8 @@ int async_read_expect(char cmd, const char *expect)
 	return ret;
 }
 
-int async_simple_loop(struct config *conf, void *param, const char *caller,
-  enum asl_ret callback(struct iobuf *rbuf, struct config *conf, void *param))
+int async_simple_loop(struct conf *conf, void *param, const char *caller,
+  enum asl_ret callback(struct iobuf *rbuf, struct conf *conf, void *param))
 {
 	static struct iobuf *rbuf=NULL;
 	if(!rbuf && !(rbuf=iobuf_alloc()))

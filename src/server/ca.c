@@ -6,7 +6,7 @@ static int setup_stuff_done=0;
    signing requests. */
 static char *gca_dir=NULL;
 
-static char *get_ca_dir(struct config *conf)
+static char *get_ca_dir(struct conf *conf)
 {
 	FILE *fp=NULL;
 	char buf[4096]="";
@@ -56,7 +56,7 @@ static int symlink_file(const char *oldpath, const char *newpath)
 	return 0;
 }
 
-static int burp_ca_init(struct config *conf, const char *ca_dir)
+static int burp_ca_init(struct conf *conf, const char *ca_dir)
 {
 	int a=0;
 	const char *args[15];
@@ -159,7 +159,7 @@ static int burp_ca_init(struct config *conf, const char *ca_dir)
 	return 0;
 }
 
-static int maybe_make_dhfile(struct config *conf, const char *ca_dir)
+static int maybe_make_dhfile(struct conf *conf, const char *ca_dir)
 {
 	int a=0;
 	const char *args[12];
@@ -196,7 +196,7 @@ static int maybe_make_dhfile(struct config *conf, const char *ca_dir)
 	return 0;
 }
 
-int ca_server_setup(struct config *conf)
+int ca_server_setup(struct conf *conf)
 {
 	int ret=0;
 	char *ca_dir=NULL;
@@ -237,7 +237,7 @@ end:
 static int csr_done=0;
 
 // Return 0 for everything OK, signed and returned, -1 for error.
-static int sign_client_cert(const char *client, struct config *conf)
+static int sign_client_cert(const char *client, struct conf *conf)
 {
 	int a=0;
 	int ret=-1;
@@ -337,7 +337,7 @@ end:
 }
 
 static enum asl_ret csr_server_func(struct iobuf *rbuf,
-	struct config *conf, void *param)
+	struct conf *conf, void *param)
 {
 	static const char **client;
 	client=(const char **)param;
@@ -374,7 +374,7 @@ static enum asl_ret csr_server_func(struct iobuf *rbuf,
 
 /* Return 1 for everything OK, signed and returned, -1 for error, 0 for
    nothing done. */
-int ca_server_maybe_sign_client_cert(struct config *conf, struct config *cconf)
+int ca_server_maybe_sign_client_cert(struct conf *conf, struct conf *cconf)
 {
 	long min_ver=0;
 	long cli_ver=0;

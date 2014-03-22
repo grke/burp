@@ -3,7 +3,7 @@
 #include "../legacy/burpconfig.h"
 #include "../legacy/sbufl.h"
 
-int backup_phase1_server(struct sdirs *sdirs, struct config *conf)
+int backup_phase1_server(struct sdirs *sdirs, struct conf *conf)
 {
 	int ars=0;
 	int ret=-1;

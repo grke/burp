@@ -72,7 +72,7 @@ const char *progname(void)
 	return prog;
 }
 
-int set_logfp(const char *path, struct config *conf)
+int set_logfp(const char *path, struct conf *conf)
 {
 	if(logfp) fclose(logfp);
 	logfp=NULL;

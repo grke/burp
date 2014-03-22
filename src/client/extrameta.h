@@ -18,7 +18,7 @@ extern int get_extrameta(
 	char **extrameta,
 	size_t *elen,
 	int64_t winattr,
-	struct config *conf,
+	struct conf *conf,
 	size_t *datalen);
 
 extern int set_extrameta(
@@ -30,6 +30,6 @@ extern int set_extrameta(
 	struct stat *statp,
 	const char *extrameta,
 	size_t metalen,
-	struct config *conf);
+	struct conf *conf);
 
 #endif

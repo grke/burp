@@ -23,7 +23,7 @@ static int check_client_and_password(struct conf *conf, const char *password, st
 {
 	// Cannot load it until here, because we need to have the name of the
 	// client.
-	if(config_load_client(conf, cconf)) return -1;
+	if(conf_load_client(conf, cconf)) return -1;
 
 	if(!cconf->ssl_peer_cn)
 	{

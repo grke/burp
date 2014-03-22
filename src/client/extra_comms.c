@@ -126,7 +126,7 @@ int extra_comms(struct conf *conf,
 	}
 
 	// :incexc: is for the client sending the server the
-	// incexc config so that it better knows what to do on
+	// incexc conf so that it better knows what to do on
 	// resume.
 	if(server_supports(feat, ":incexc:")
 	  && incexc_send_client(conf))

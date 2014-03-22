@@ -3,7 +3,7 @@
 #include "server/status_client.h"
 #include "server/main.h"
 
-static char *get_config_path(void)
+static char *get_conf_path(void)
 {
 	static char path[256]="";
 #ifdef HAVE_WIN32
@@ -36,7 +36,7 @@ static void usage_server(void)
 	printf(" Options:\n");
 	printf("  -a s          Run the status monitor.\n");
 	printf("  -a S          Screen dump of the status monitor (for reporting).\n");
-	printf("  -c <path>     Path to config file (default: %s).\n", get_config_path());
+	printf("  -c <path>     Path to conf file (default: %s).\n", get_conf_path());
 	printf("  -d <path>     a single client in the status monitor\n");
 	printf("  -F            Stay in the foreground.\n");
 	printf("  -g            Generate initial CA certificates and exit.\n");
@@ -69,7 +69,7 @@ static void usage_client(void)
 	printf("                  T: check backup timer, but do not actually backup\n");
 	printf("                  v: verify\n");
 	printf("  -b <number>    Backup number (default: the most recent backup)\n");
-	printf("  -c <path>      Path to config file (default: %s).\n", get_config_path());
+	printf("  -c <path>      Path to conf file (default: %s).\n", get_conf_path());
 	printf("  -d <directory> Directory to restore to, or directory to list\n");
 	printf("  -f             Allow overwrite during restore.\n");
 	printf("  -h|-?          Print this text and exit.\n");
@@ -92,13 +92,13 @@ static void usage_client(void)
 #endif
 }
 
-int reload(struct conf *conf, const char *configfile, bool firsttime, int oldmax_children, int oldmax_status_children, int json)
+int reload(struct conf *conf, const char *conffile, bool firsttime, int oldmax_children, int oldmax_status_children, int json)
 {
 	if(!firsttime) logp("Reloading config\n");
 
-	config_init(conf);
+	conf_init(conf);
 
-	if(config_load(configfile, conf, 1)) return 1;
+	if(conf_load(conffile, conf, 1)) return 1;
 
 	/* change umask */
 	umask(conf->umask);
@@ -107,7 +107,7 @@ int reload(struct conf *conf, const char *configfile, bool firsttime, int oldmax
         if(json) conf->log_to_stdout=0;
 
 	// This will turn on syslogging which could not be turned on before
-	// config_load.
+	// conf_load.
 	set_logfp(NULL, conf);
 
 #ifndef HAVE_WIN32
@@ -162,7 +162,7 @@ int main (int argc, char *argv[])
 	const char *regex=NULL;
 	const char *browsefile=NULL;
 	const char *browsedir=NULL;
-	const char *configfile=get_config_path();
+	const char *conffile=get_conf_path();
 	const char *orig_client=NULL;
 	// The orig_client is the original client that the normal client
 	// would like to restore from.
@@ -218,7 +218,7 @@ int main (int argc, char *argv[])
 				backup=optarg;
 				break;
 			case 'c':
-				configfile=optarg;
+				conffile=optarg;
 				break;
 			case 'C':
 				orig_client=optarg;
@@ -283,7 +283,7 @@ int main (int argc, char *argv[])
 		goto end;
 	}
 
-	if(reload(&conf, configfile,
+	if(reload(&conf, conffile,
 	  1 /* first time */,
 	  0 /* no oldmax_children setting */,
 	  0 /* no oldmax_status_children setting */,
@@ -360,7 +360,7 @@ int main (int argc, char *argv[])
 			ret=status_client_ncurses(&conf, act, sclient);
 		}
 		else
-			ret=server(&conf, configfile, lock, generate_ca_only);
+			ret=server(&conf, conffile, lock, generate_ca_only);
 #endif
 	}
 	else
@@ -373,6 +373,6 @@ int main (int argc, char *argv[])
 end:
 	lock_release(lock);
 	lock_free(&lock);
-	config_free(&conf);
+	conf_free_content(&conf);
 	return ret;
 }

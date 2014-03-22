@@ -15,7 +15,7 @@ static char *get_ca_dir(struct conf *conf)
 	{
 		char *field=NULL;
 		char *value=NULL;
-		if(config_get_pair(buf, &field, &value)
+		if(conf_get_pair(buf, &field, &value)
 		  || !field || !value) continue;
 
 		if(!strcasecmp(field, "CA_DIR"))

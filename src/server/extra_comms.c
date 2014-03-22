@@ -41,7 +41,7 @@ static int send_features(struct conf *cconf)
 	if(append_to_feat(&feat, "extra_comms_begin ok:")
 		/* clients can autoupgrade */
 	  || append_to_feat(&feat, "autoupgrade:")
-		/* clients can give server incexc config so that the
+		/* clients can give server incexc conf so that the
 		   server knows better what to do on resume */
 	  || append_to_feat(&feat, "incexc:")
 		/* clients can give the server an alternative client
@@ -57,7 +57,7 @@ static int send_features(struct conf *cconf)
 	  && append_to_feat(&feat, "srestore:"))
 		goto end;
 
-	/* Clients can receive incexc config from the server.
+	/* Clients can receive incexc conf from the server.
 	   Only give it as an option if the server has some starting
 	   directory configured in the clientconfdir. */
 	if((cconf->startdir || cconf->incglob)
@@ -215,7 +215,7 @@ static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, str
 			}
 			logp("Client wants to switch to client: %s\n",
 				sconf->cname);
-			if(config_load_client(conf, sconf))
+			if(conf_load_client(conf, sconf))
 			{
 				char msg[256]="";
 				snprintf(msg, sizeof(msg),
@@ -245,7 +245,7 @@ static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, str
 			}
 			sconf->restore_path=cconf->restore_path;
 			cconf->restore_path=NULL;
-			config_free(cconf);
+			conf_free_content(cconf);
 			memcpy(cconf, sconf, sizeof(struct conf));
 			free(sconf);
 			sconf=NULL;

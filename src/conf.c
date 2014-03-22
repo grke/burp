@@ -55,7 +55,7 @@ static void free_incexcs(struct conf *c)
 	init_incexcs(c);
 }
 
-void config_init(struct conf *c)
+void conf_init(struct conf *c)
 {
 	// Set everything to 0.
 	// FIX THIS: get rid of this by calloc-ing struct confs.
@@ -89,11 +89,11 @@ void config_init(struct conf *c)
 	rconf_init(&c->rconf);
 }
 
-void config_free(struct conf *c)
+void conf_free_content(struct conf *c)
 {
 	if(!c) return;
 	if(c->port) free(c->port);
-	if(c->configfile) free(c->configfile);
+	if(c->conffile) free(c->conffile);
 	if(c->clientconfdir) free(c->clientconfdir);
 	if(c->cname) free(c->cname);
 	if(c->peer_version) free(c->peer_version);
@@ -169,7 +169,7 @@ void config_free(struct conf *c)
 
 	free_incexcs(c);
 
-	config_init(c);
+	conf_init(c);
 }
 
 // Get configuration value.
@@ -199,7 +199,7 @@ static void gcv_uint8(const char *f, const char *v,
 }
 
 // Get field and value pair.
-int config_get_pair(char buf[], char **f, char **v)
+int conf_get_pair(char buf[], char **f, char **v)
 {
 	char *cp=NULL;
 	char *eq=NULL;
@@ -359,13 +359,13 @@ int pathcmp(const char *a, const char *b)
 	return -1; // y is longer
 }
 
-static int conf_error(const char *config_path, int line)
+static int conf_error(const char *conf_path, int line)
 {
-	logp("%s: parse error on line %d\n", config_path, line);
+	logp("%s: parse error on line %d\n", conf_path, line);
 	return -1;
 }
 
-static int get_file_size(const char *v, ssize_t *dest, const char *config_path, int line)
+static int get_file_size(const char *v, ssize_t *dest, const char *conf_path, int line)
 {
 	// Store in bytes, allow k/m/g.
 	const char *cp=NULL;
@@ -380,7 +380,7 @@ static int get_file_size(const char *v, ssize_t *dest, const char *config_path, 
 	{
 		logp("Unknown file size type '%s' - please use b/kb/mb/gb\n",
 			cp);
-		return conf_error(config_path, line);
+		return conf_error(conf_path, line);
 	}
 	return 0;
 }
@@ -499,7 +499,7 @@ static int fstype_to_flag(const char *fstype, long *flag)
 	return -1;
 }
 
-static int load_config_ints(struct conf *c,
+static int load_conf_ints(struct conf *c,
 	const char *f, // field
 	const char *v) //value
 {
@@ -550,7 +550,7 @@ static int load_config_ints(struct conf *c,
 	return 0;
 }
 
-static int load_config_strings(struct conf *c,
+static int load_conf_strings(struct conf *c,
 	const char *f, // field
 	const char *v  // value
 	)
@@ -642,10 +642,10 @@ static int load_config_strings(struct conf *c,
 	return 0;
 }
 
-static int load_config_field_and_value(struct conf *c,
+static int load_conf_field_and_value(struct conf *c,
 	const char *f, // field
 	const char *v, // value
-	const char *config_path,
+	const char *conf_path,
 	int line)
 {
 	if(!strcmp(f, "mode"))
@@ -700,28 +700,28 @@ static int load_config_field_and_value(struct conf *c,
 	}
 	else if(!strcmp(f, "min_file_size"))
 	{
-		if(get_file_size(v, &(c->min_file_size), config_path, line))
+		if(get_file_size(v, &(c->min_file_size), conf_path, line))
 			return -1;
 	}
 	else if(!strcmp(f, "max_file_size"))
 	{
 		if(get_file_size(v, &(c->max_file_size),
-			config_path, line)) return -1;
+			conf_path, line)) return -1;
 	}
 	else
 	{
-		if(load_config_ints(c, f, v)
-		  || load_config_strings(c, f, v))
+		if(load_conf_ints(c, f, v)
+		  || load_conf_strings(c, f, v))
 			return -1;
 	}
 	return 0;
 }
 
-/* Recursing, so need to define load_config_lines ahead of parse_config_line.
+/* Recursing, so need to define load_conf_lines ahead of parse_conf_line.
 */
-static int load_config_lines(const char *config_path, struct conf *c);
+static int load_conf_lines(const char *conf_path, struct conf *c);
 
-static int parse_config_line(struct conf *c, const char *config_path,
+static int parse_conf_line(struct conf *c, const char *conf_path,
 	char buf[], int line)
 {
 	char *f=NULL; // field
@@ -754,11 +754,11 @@ static int parse_config_line(struct conf *c, const char *config_path,
 #endif
 		{
 			// It is relative to the directory that the
-			// current config file is in.
+			// current conf file is in.
 			char *cp=NULL;
 			char *copy=NULL;
 			char *tmp=NULL;
-			if(!(copy=strdup(config_path)))
+			if(!(copy=strdup(conf_path)))
 			{
 				log_out_of_memory(__FUNCTION__);
 				free(extrafile);
@@ -776,7 +776,7 @@ static int parse_config_line(struct conf *c, const char *config_path,
 			extrafile=tmp;
 		}
 
-		if(load_config_lines(extrafile, c))
+		if(load_conf_lines(extrafile, c))
 		{
 			free(extrafile);
 			return -1;
@@ -785,17 +785,17 @@ static int parse_config_line(struct conf *c, const char *config_path,
 		return 0;
 	}
 
-	if(config_get_pair(buf, &f, &v)) return -1;
+	if(conf_get_pair(buf, &f, &v)) return -1;
 	if(!f || !v) return 0;
 
-	if(load_config_field_and_value(c, f, v, config_path, line))
+	if(load_conf_field_and_value(c, f, v, conf_path, line))
 		return -1;
 	return 0;
 }
 
-static void conf_problem(const char *config_path, const char *msg, int *r)
+static void conf_problem(const char *conf_path, const char *msg, int *r)
 {
-	logp("%s: %s\n", config_path, msg);
+	logp("%s: %s\n", conf_path, msg);
 	(*r)--;
 }
 
@@ -1009,7 +1009,7 @@ static int finalise_start_dirs(struct conf *c)
 		// Ensure that we do not backup the same directory twice.
 		if(last_ie && !strcmp(s->path, last_ie->path))
 		{
-			logp("Directory appears twice in config: %s\n",
+			logp("Directory appears twice in conf: %s\n",
 				s->path);
 			return -1;
 		}
@@ -1095,7 +1095,7 @@ static int finalise_fstypes(struct conf *c)
 	return 0;
 }
 
-static int finalise_config(const char *config_path, struct conf *c, uint8_t loadall)
+static int conf_finalise(const char *conf_path, struct conf *c, uint8_t loadall)
 {
 	int r=0;
 
@@ -1144,7 +1144,7 @@ static int finalise_config(const char *config_path, struct conf *c, uint8_t load
 
 	if(!loadall) return 0;
 
-	if(!c->port) conf_problem(config_path, "port unset", &r);
+	if(!c->port) conf_problem(conf_path, "port unset", &r);
 
 	if(rconf_check(&c->rconf)) r--;
 
@@ -1155,15 +1155,15 @@ static int finalise_config(const char *config_path, struct conf *c, uint8_t load
 	switch(c->mode)
 	{
 		case MODE_SERVER:
-			if(server_conf_checks(c, config_path, &r)) r--;
+			if(server_conf_checks(c, conf_path, &r)) r--;
 			break;
 		case MODE_CLIENT:
-			if(client_conf_checks(c, config_path, &r)) r--;
+			if(client_conf_checks(c, conf_path, &r)) r--;
 			break;
 		case MODE_UNSET:
 		default:
 			logp("%s: mode unset - need 'server' or 'client'\n",
-				config_path);
+				conf_path);
 			r--;
 			break;
 	}
@@ -1172,48 +1172,48 @@ static int finalise_config(const char *config_path, struct conf *c, uint8_t load
 }
 
 
-static int load_config_lines(const char *config_path, struct conf *c)
+static int load_conf_lines(const char *conf_path, struct conf *c)
 {
 	int line=0;
 	FILE *fp=NULL;
 	char buf[4096]="";
 
-	if(!(fp=fopen(config_path, "r")))
+	if(!(fp=fopen(conf_path, "r")))
 	{
-		logp("could not open '%s' for reading.\n", config_path);
+		logp("could not open '%s' for reading.\n", conf_path);
 		return -1;
 	}
 	while(fgets(buf, sizeof(buf), fp))
 	{
 		line++;
-		if(parse_config_line(c, config_path, buf, line))
+		if(parse_conf_line(c, conf_path, buf, line))
 			goto err;
 	}
 	if(fp) fclose(fp);
 	return 0;
 err:
-	conf_error(config_path, line);
+	conf_error(conf_path, line);
 	if(fp) fclose(fp);
 	return -1;
 }
 
-int config_load(const char *config_path, struct conf *c, uint8_t loadall)
+int conf_load(const char *conf_path, struct conf *c, uint8_t loadall)
 {
-	//logp("in config_load\n");
+	//logp("in conf_load\n");
 	if(loadall)
 	{
-		if(c->configfile) free(c->configfile);
-		if(!(c->configfile=strdup(config_path)))
+		if(c->conffile) free(c->conffile);
+		if(!(c->conffile=strdup(conf_path)))
 		{
 			log_out_of_memory(__FUNCTION__);
 			return -1;
 		}
 	}
 
-	if(load_config_lines(config_path, c))
+	if(load_conf_lines(conf_path, c))
 		return -1;
 
-	return finalise_config(config_path, c, loadall);
+	return conf_finalise(conf_path, c, loadall);
 }
 
 /* The client runs this when the server overrides the incexcs. */
@@ -1241,7 +1241,7 @@ int parse_incexcs_buf(struct conf *c, const char *incexc)
 	do
 	{
 		line++;
-		if(parse_config_line(c, "", tok, line))
+		if(parse_conf_line(c, "", tok, line))
 		{
 			ret=-1;
 			break;
@@ -1250,7 +1250,7 @@ int parse_incexcs_buf(struct conf *c, const char *incexc)
 	free(copy);
 
 	if(ret) return ret;
-	return finalise_config("server override", c, 0);
+	return conf_finalise("server override", c, 0);
 }
 
 int log_incexcs_buf(const char *incexc)
@@ -1281,7 +1281,7 @@ int log_incexcs_buf(const char *incexc)
 int parse_incexcs_path(struct conf *c, const char *path)
 {
 	free_incexcs(c);
-	return config_load(path, c, 0);
+	return conf_load(path, c, 0);
 }
 
 static int set_global_str(char **dst, const char *src)
@@ -1306,7 +1306,7 @@ static int set_global_arglist(struct strlist **dst, struct strlist *src)
 }
 
 /* Remember to update the list in the man page when you change these.*/
-int config_set_client_global(struct conf *c, struct conf *cc)
+int conf_set_client_global(struct conf *c, struct conf *cc)
 {
 	cc->protocol=c->protocol;
 	cc->log_to_syslog=c->log_to_syslog;
@@ -1380,22 +1380,22 @@ int config_set_client_global(struct conf *c, struct conf *cc)
 	return 0;
 }
 
-static void config_init_save_cname_and_version(struct conf *cc)
+static void conf_init_save_cname_and_version(struct conf *cc)
 {
 	char *cname=cc->cname;
 	char *cversion=cc->peer_version;
 
 	cc->cname=NULL;
 	cc->peer_version=NULL;
-	config_init(cc);
+	conf_init(cc);
 	cc->cname=cname;
 	cc->peer_version=cversion;
 }
 
-int config_load_client(struct conf *c, struct conf *cc)
+int conf_load_client(struct conf *c, struct conf *cc)
 {
 	char *cpath=NULL;
-	config_init_save_cname_and_version(cc);
+	conf_init_save_cname_and_version(cc);
 	if(!(cpath=prepend_s(c->clientconfdir, cc->cname)))
 		return -1;
 	if(looks_like_tmp_or_hidden_file(cc->cname))
@@ -1404,10 +1404,10 @@ int config_load_client(struct conf *c, struct conf *cc)
 		free(cpath);
 		return -1;
 	}
-	// Some client settings can be globally set in the server config and
-	// overridden in the client specific config.
-	if(config_set_client_global(c, cc)
-	  || config_load(cpath, cc, 0))
+	// Some client settings can be globally set in the server conf and
+	// overridden in the client specific conf.
+	if(conf_set_client_global(c, cc)
+	  || conf_load(cpath, cc, 0))
 	{
 		free(cpath);
 		return -1;

@@ -132,7 +132,7 @@ int setup_signals(int oldmax_children, int max_children, int oldmax_status_child
 	return 0;
 }
 
-static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, int forking)
+static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *conffile, int forking)
 {
 	int ret=-1;
 	int ca_ret=0;
@@ -152,10 +152,10 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 	if(forking) close_fd(rfd);
 
 	// Reload global config, in case things have changed. This means that
-	// the server does not need to be restarted for most config changes.
-	config_init(&conf);
-	config_init(&cconf);
-	if(config_load(configfile, &conf, 1)) return -1;
+	// the server does not need to be restarted for most conf changes.
+	conf_init(&conf);
+	conf_init(&cconf);
+	if(conf_load(conffile, &conf, 1)) return -1;
 
 	if(!(sbio=BIO_new_socket(*cfd, BIO_NOCLOSE))
 	  || !(ssl=SSL_new(ctx)))
@@ -223,12 +223,12 @@ end:
 	*cfd=-1;
 	async_free(); // this closes cfd for us.
 	logp("exit child\n");
-	config_free(&conf);
-	config_free(&cconf);
+	conf_free_content(&conf);
+	conf_free_content(&cconf);
 	return ret;
 }
 
-static int run_status_server(int *rfd, int *cfd, const char *configfile)
+static int run_status_server(int *rfd, int *cfd, const char *conffile)
 {
 	int ret=0;
 	struct conf conf;
@@ -236,9 +236,9 @@ static int run_status_server(int *rfd, int *cfd, const char *configfile)
 	close_fd(rfd);
 
 	// Reload global config, in case things have changed. This means that
-	// the server does not need to be restarted for most config changes.
-	config_init(&conf);
-	if(config_load(configfile, &conf, 1)) return -1;
+	// the server does not need to be restarted for most conf changes.
+	conf_init(&conf);
+	if(conf_load(conffile, &conf, 1)) return -1;
 
 	ret=status_server(cfd, &conf);
 
@@ -246,12 +246,12 @@ static int run_status_server(int *rfd, int *cfd, const char *configfile)
 
 	logp("exit status server\n");
 
-	config_free(&conf);
+	conf_free_content(&conf);
 
 	return ret;
 }
 
-static int process_incoming_client(int rfd, struct conf *conf, SSL_CTX *ctx, const char *configfile, int is_status_server)
+static int process_incoming_client(int rfd, struct conf *conf, SSL_CTX *ctx, const char *conffile, int is_status_server)
 {
 	int cfd=-1;
 	socklen_t client_length=0;
@@ -311,17 +311,17 @@ static int process_incoming_client(int rfd, struct conf *conf, SSL_CTX *ctx, con
 			close(pipe_rfd[0]); // close read end
 			close(pipe_wfd[1]); // close write end
 
-			config_free(conf);
+			conf_free_content(conf);
 
 			set_blocking(pipe_rfd[1]);
 			status_wfd=pipe_rfd[1];
 			status_rfd=pipe_wfd[0];
 
 			if(is_status_server)
-			  ret=run_status_server(&rfd, &cfd, configfile);
+			  ret=run_status_server(&rfd, &cfd, conffile);
 			else
 			  ret=run_child(&rfd, &cfd, ctx,
-				configfile, conf->forking);
+				conffile, conf->forking);
 			close_fd(&status_wfd);
 			close_fd(&status_rfd);
 			exit(ret);
@@ -348,9 +348,9 @@ static int process_incoming_client(int rfd, struct conf *conf, SSL_CTX *ctx, con
 	else
 	{
 		if(is_status_server)
-			return run_status_server(&rfd, &cfd, configfile);
+			return run_status_server(&rfd, &cfd, conffile);
 		else
-			return run_child(&rfd, &cfd, ctx, configfile,
+			return run_child(&rfd, &cfd, ctx, conffile,
 				conf->forking);
 	}
 	return 0;
@@ -425,7 +425,7 @@ static int relock(struct lock *lock)
 	return -1;
 }
 
-static int run_server(struct conf *conf, const char *configfile, int *rfd, const char *oldport, const char *oldstatusport)
+static int run_server(struct conf *conf, const char *conffile, int *rfd, const char *oldport, const char *oldstatusport)
 {
 	int ret=0;
 	SSL_CTX *ctx=NULL;
@@ -534,7 +534,7 @@ static int run_server(struct conf *conf, const char *configfile, int *rfd, const
 		{
 			// A normal client is incoming.
 			if(process_incoming_client(*rfd, conf, ctx,
-				configfile, 0 /* not a status client */))
+				conffile, 0 /* not a status client */))
 			{
 				ret=1;
 				break;
@@ -547,7 +547,7 @@ static int run_server(struct conf *conf, const char *configfile, int *rfd, const
 			// A status client is incoming.
 			//printf("status client?\n");
 			if(process_incoming_client(sfd, conf, ctx,
-				configfile, 1 /* a status client */))
+				conffile, 1 /* a status client */))
 			{
 				ret=1;
 				break;
@@ -605,7 +605,7 @@ static int run_server(struct conf *conf, const char *configfile, int *rfd, const
 	return ret;
 }
 
-int server(struct conf *conf, const char *configfile,
+int server(struct conf *conf, const char *conffile,
 	struct lock *lock, int generate_ca_only)
 {
 	int ret=0;
@@ -634,7 +634,7 @@ int server(struct conf *conf, const char *configfile,
 
 	while(!ret && !gentleshutdown)
 	{
-		ret=run_server(conf, configfile,
+		ret=run_server(conf, conffile,
 			&rfd, oldport, oldstatusport);
 		if(ret) break;
 		if(hupreload && !gentleshutdown)
@@ -644,7 +644,7 @@ int server(struct conf *conf, const char *configfile,
 			oldport=strdup(conf->port);
 			oldstatusport=conf->status_port?
 				strdup(conf->status_port):NULL;
-			if(reload(conf, configfile,
+			if(reload(conf, conffile,
 				0, // Not first time.
 				conf->max_children,
 				conf->max_status_children,

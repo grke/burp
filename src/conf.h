@@ -202,10 +202,13 @@ struct conf
 	struct cntr *cntr;
 };
 
+extern struct conf *conf_alloc(void);
 extern void conf_init(struct conf *c);
+extern void conf_free_content(struct conf *c);
+extern void conf_free(struct conf *c);
+
 extern int conf_load(const char *conf_path, struct conf *c,
 	uint8_t loadall);
-extern void conf_free_content(struct conf *c);
 extern int conf_set_client_global(struct conf *c, struct conf *cc);
 
 extern int is_subdir(const char *dir, const char *sub);

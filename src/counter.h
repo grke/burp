@@ -91,6 +91,9 @@ struct cntr
 	time_t start;
 };
 
+extern struct cntr *cntr_alloc(void);
+extern void cntr_free(struct cntr **cntr);
+
 extern const char *bytes_to_human(unsigned long long counter);
 extern void print_filecounters(struct conf *conf, enum action act);
 extern int print_stats_to_file(struct conf *conf,

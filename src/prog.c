@@ -92,7 +92,8 @@ static void usage_client(void)
 #endif
 }
 
-int reload(struct conf *conf, const char *conffile, bool firsttime, int oldmax_children, int oldmax_status_children, int json)
+int reload(struct conf *conf, const char *conffile, bool firsttime,
+	int oldmax_children, int oldmax_status_children, int json)
 {
 	if(!firsttime) logp("Reloading config\n");
 
@@ -154,7 +155,7 @@ int main (int argc, char *argv[])
 	int forking=1;
 	int strip=0;
 	struct lock *lock=NULL;
-	struct conf conf;
+	struct conf *conf=NULL;
 	int forceoverwrite=0;
 	enum action act=ACTION_LIST;
 	const char *backup=NULL;
@@ -174,10 +175,6 @@ int main (int argc, char *argv[])
 	int json=0;
 
 	init_log(argv[0]);
-
-	// FIX THIS: Should change struct conf so you have to alloc a
-	// pointer first, then initialise all its args.
-	memset(&conf, 0, sizeof(struct conf));
 
 	while((option=getopt(argc, argv, "a:b:c:C:d:ghfFil:nr:s:vxjz:?"))!=-1)
 	{
@@ -283,7 +280,10 @@ int main (int argc, char *argv[])
 		goto end;
 	}
 
-	if(reload(&conf, conffile,
+	if(!(conf=conf_alloc()))
+		goto end;
+
+	if(reload(conf, conffile,
 	  1 /* first time */,
 	  0 /* no oldmax_children setting */,
 	  0 /* no oldmax_status_children setting */,
@@ -301,11 +301,11 @@ int main (int argc, char *argv[])
 		goto end;
 	}
 
-	if(conf.mode==MODE_CLIENT)
+	if(conf->mode==MODE_CLIENT)
 	{
 		if(orig_client && *orig_client)
 		{
-			if(!(conf.orig_client=strdup(orig_client)))
+			if(!(conf->orig_client=strdup(orig_client)))
 			{
 				log_out_of_memory(__FUNCTION__);
 				goto end;
@@ -313,14 +313,14 @@ int main (int argc, char *argv[])
 		}
 	}
 
-	if(conf.mode==MODE_SERVER
+	if(conf->mode==MODE_SERVER
 	  && (act==ACTION_STATUS || act==ACTION_STATUS_SNAPSHOT))
 	{
 		// Server status mode needs to run without getting the lock.
 	}
 	else
 	{
-		if(!(lock=lock_alloc_and_init(conf.lockfile)))
+		if(!(lock=lock_alloc_and_init(conf->lockfile)))
 			goto end;
 		lock_get(lock);
 		switch(lock->status)
@@ -333,22 +333,22 @@ int main (int argc, char *argv[])
 			case GET_LOCK_ERROR:
 			default:
 				logp("Could not get lockfile.\n");
-				logp("Maybe you do not have permissions to write to %s.\n", conf.lockfile);
+				logp("Maybe you do not have permissions to write to %s.\n", conf->lockfile);
 				goto end;
 		}
 	}
 
-	conf.overwrite=forceoverwrite;
-	conf.strip=strip;
-	conf.forking=forking;
-	conf.daemon=daemon;
-	if(replace_conf_str(backup, &(conf.backup))
-	  || replace_conf_str(restoreprefix, &(conf.restoreprefix))
-	  || replace_conf_str(regex, &(conf.regex))
-	  || replace_conf_str(browsefile, &(conf.browsefile))
-	  || replace_conf_str(browsedir, &(conf.browsedir)))
+	conf->overwrite=forceoverwrite;
+	conf->strip=strip;
+	conf->forking=forking;
+	conf->daemon=daemon;
+	if(replace_conf_str(backup, &conf->backup)
+	  || replace_conf_str(restoreprefix, &conf->restoreprefix)
+	  || replace_conf_str(regex, &conf->regex)
+	  || replace_conf_str(browsefile, &conf->browsefile)
+	  || replace_conf_str(browsedir, &conf->browsedir))
 		goto end;
-	if(conf.mode==MODE_SERVER)
+	if(conf->mode==MODE_SERVER)
 	{
 #ifdef HAVE_WIN32
 		logp("Sorry, server mode is not implemented for Windows.\n");
@@ -357,22 +357,22 @@ int main (int argc, char *argv[])
 		{
 			// We are running on the server machine, being a client
 			// of the burp server, getting status information.
-			ret=status_client_ncurses(&conf, act, sclient);
+			ret=status_client_ncurses(conf, act, sclient);
 		}
 		else
-			ret=server(&conf, conffile, lock, generate_ca_only);
+			ret=server(conf, conffile, lock, generate_ca_only);
 #endif
 	}
 	else
 	{
 		logp("before client\n");
-		ret=client(&conf, act, vss_restore, json);
+		ret=client(conf, act, vss_restore, json);
 		logp("after client\n");
 	}
 
 end:
 	lock_release(lock);
 	lock_free(&lock);
-	conf_free_content(&conf);
+	conf_free(conf);
 	return ret;
 }

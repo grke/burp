@@ -242,6 +242,8 @@ static int set_summary(struct cstat *c)
 	return 0;
 }
 
+// FIX THIS: reduce code size - break into smaller functions and do the
+// returns better.
 static int load_data_from_disk(struct conf *conf, struct cstat ***clist, int *clen)
 {
 	int q=0;
@@ -301,7 +303,7 @@ static int load_data_from_disk(struct conf *conf, struct cstat ***clist, int *cl
 		// Look at the client conf files to see if they have changed,
 		// and reload bits and pieces if they have.
 		struct stat statp;
-		struct conf cconf;
+		struct conf *cconf=NULL;
 
 		if(!(*clist)[q]->conffile) continue;
 
@@ -324,31 +326,38 @@ static int load_data_from_disk(struct conf *conf, struct cstat ***clist, int *cl
 		}
 		(*clist)[q]->conf_mtime=statp.st_mtime;
 
-		conf_init(&cconf);
-		if(cconf.cname) free(cconf.cname);
-		if(!(cconf.cname=strdup((*clist)[q]->name)))
+		// FIX THIS: silly to alloc it every time. Do it once and
+		// reuse the struct.
+		if(!(cconf=conf_alloc()))
 		{
-			log_out_of_memory(__FUNCTION__);
-			conf_free_content(&cconf);
 			ret=-1;
 			break;
 		}
-		if(conf_set_client_global(conf, &cconf)
-		  || conf_load((*clist)[q]->conffile, &cconf, 0))
+		conf_init(cconf);
+		if(cconf->cname) free(cconf->cname);
+		if(!(cconf->cname=strdup((*clist)[q]->name)))
 		{
-			conf_free_content(&cconf);
+			log_out_of_memory(__FUNCTION__);
+			conf_free(cconf);
+			ret=-1;
+			break;
+		}
+		if(conf_set_client_global(conf, cconf)
+		  || conf_load((*clist)[q]->conffile, cconf, 0))
+		{
+			conf_free(cconf);
 			cstat_blank((*clist)[q]);
 			continue;
 		}
 
-		if(set_cstat_from_conf((*clist)[q], conf, &cconf))
+		if(set_cstat_from_conf((*clist)[q], conf, cconf))
 		{
-			conf_free_content(&cconf);
+			conf_free(cconf);
 			ret=-1;
 			break;
 		}
 
-		conf_free_content(&cconf);
+		conf_free(cconf);
 	}
 
 	for(q=0; q<*clen; q++)

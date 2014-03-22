@@ -2,7 +2,7 @@
 #define _SERVER_MAIN_H
 
 extern int server(struct config *conf, const char *configfile,
-	int generate_ca_only);
+	struct lock *lock, int generate_ca_only);
 
 extern int reload(struct config *conf, const char *configfile, bool firsttime,
 	int oldmax_children, int oldmax_status_children, int json);

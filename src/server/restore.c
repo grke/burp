@@ -523,7 +523,8 @@ static int do_restore_manifest(const char *datadir,
 
 	ret=do_restore_end(conf);
 
-	print_endcounter(conf->cntr);
+	// FIX THIS
+	//print_endcounter(conf->cntr);
 	print_filecounters(conf, act);
 
 	reset_filecounters(conf, time(NULL));

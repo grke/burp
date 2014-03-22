@@ -20,9 +20,8 @@ struct sdirs
 	char *cmanifest;
 	char *phase1data;
 
-	char *lock;
-	char *lockfile;
-	uint8_t gotlock;
+	char *lockdir;
+	struct lock *lock;
 
 	// Legacy directories.
 	char *currentdata;

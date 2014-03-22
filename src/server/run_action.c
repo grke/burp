@@ -1,6 +1,7 @@
 #include "include.h"
 #include "../legacy/server/run_action.c"
 
+// FIX THIS: Somewhat haphazard.
 /* Return 0 for everything OK. -1 for error, or 1 to mean that a backup is
    currently finalising. */
 static int get_lock_sdirs(struct sdirs *sdirs)
@@ -8,16 +9,28 @@ static int get_lock_sdirs(struct sdirs *sdirs)
 	struct stat statp;
 
 	// Make sure the lock directory exists.
-	if(mkpath(&sdirs->lockfile, sdirs->lock))
+	if(mkpath(&sdirs->lock->path, sdirs->lockdir))
 	{
 		async_write_str(CMD_ERROR, "problem with lock directory");
-		return -1;
+		goto error;
 	}
 
-	if(!get_lock(sdirs->lockfile))
+	lock_get(sdirs->lock);
+	switch(sdirs->lock->status)
 	{
-		sdirs->gotlock++;
-		return 0;
+		case GET_LOCK_GOT: break;
+		case GET_LOCK_NOT_GOT:
+			logp("Another instance of client is already running.\n");
+			async_write_str(CMD_ERROR,
+				"another instance is already running");
+			goto error;
+		case GET_LOCK_ERROR:
+		default:
+			logp("Problem with lock file on server: %s\n",
+				sdirs->lock->path);
+			async_write_str(CMD_ERROR,
+				"problem with lock file on server");
+			goto error;
 	}
 
 	if(!lstat(sdirs->finishing, &statp))
@@ -28,12 +41,13 @@ static int get_lock_sdirs(struct sdirs *sdirs)
 			"Finalising previous backup of client. "
 			"Please try again later.");
 		async_write_str(CMD_ERROR, msg);
-		return 1;
+		goto finalising;
 	}
 
-	logp("another instance of client is already running,\n");
-	logp("or %s is not writable.\n", sdirs->lockfile);
-	async_write_str(CMD_ERROR, "another instance is already running");
+	return 0;
+finalising:
+	return 1;
+error:
 	return -1;
 }
 
@@ -324,7 +338,7 @@ int run_action_server(struct config *cconf, struct sdirs *sdirs,
 
 	if(rbuf->cmd!=CMD_GEN)
 		return unknown_command(rbuf);
-
+printf("glsd\n");
 	if((ret=get_lock_sdirs(sdirs)))
 	{
 		// -1 on error or 1 if the backup is still finalising.
@@ -332,6 +346,7 @@ int run_action_server(struct config *cconf, struct sdirs *sdirs,
 		if(ret<0) maybe_do_notification(ret,
 			"", "error in get_lock_sdirs()",
 			"", rbuf->buf, cconf);
+printf("glsd: %d\n", ret);
 		return ret;
 	}
 

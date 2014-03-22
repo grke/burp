@@ -2,34 +2,36 @@
 
 struct sdirs *sdirs_alloc(void)
 {
-        struct sdirs *sdirs;
-        if((sdirs=(struct sdirs *)calloc(1, sizeof(struct sdirs))))
-		return sdirs;
-	log_out_of_memory(__FUNCTION__);
-	return NULL;
+	struct sdirs *sdirs=NULL;
+	if(!(sdirs=(struct sdirs *)calloc(1, sizeof(struct sdirs))))
+		log_out_of_memory(__FUNCTION__);
+	return sdirs;
 }
 
 static int do_lock_dirs(struct sdirs *sdirs, struct config *conf)
 {
 	int ret=-1;
 	char *lockbase=NULL;
+	char *lockfile=NULL;
 	if(conf->client_lockdir)
 	{
-		if(!(sdirs->lock=strdup(conf->client_lockdir))
-		  || !(lockbase=prepend_s(sdirs->lock, conf->cname)))
+		if(!(sdirs->lockdir=strdup(conf->client_lockdir))
+		  || !(lockbase=prepend_s(sdirs->lockdir, conf->cname)))
 			goto end;
 	}
 	else
 	{
-		if(!(sdirs->lock=strdup(sdirs->client))
+		if(!(sdirs->lockdir=strdup(sdirs->client))
 		  || !(lockbase=strdup(sdirs->client)))
 			goto end;
 	}
-	if(!(sdirs->lockfile=prepend_s(lockbase, "lockfile")))
+	if(!(lockfile=prepend_s(lockbase, "lockfile"))
+	  || !(sdirs->lock=lock_alloc_and_init(lockfile)))
 		goto end;
 	ret=0;
 end:
 	if(lockbase) free(lockbase);
+	if(lockfile) free(lockfile);
 	return ret;
 }
 
@@ -126,8 +128,8 @@ void sdirs_free(struct sdirs *sdirs)
         if(sdirs->cmanifest) free(sdirs->cmanifest);
 	if(sdirs->phase1data) free(sdirs->phase1data);
 
-        if(sdirs->lock) free(sdirs->lock);
-        if(sdirs->lockfile) free(sdirs->lockfile);
+	if(sdirs->lockdir) free(sdirs->lockdir);
+	lock_free(&sdirs->lock);
 
 	// Legacy directories
 	if(sdirs->currentdata) free(sdirs->currentdata);

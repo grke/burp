@@ -151,7 +151,9 @@ int backup_phase1_client(struct conf *conf, long name_max, int estimate)
 
 	logp("Phase 1 begin (file system scan)\n");
 
-	if(conf->encryption_password)
+	// Encryption not yet supported in burp2.
+	if(conf->protocol==PROTO_BURP1
+	  && conf->encryption_password)
 	{
 		filesymbol=CMD_ENC_FILE;
 		metasymbol=CMD_ENC_METADATA;

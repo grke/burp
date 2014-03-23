@@ -12,7 +12,8 @@ static char *get_next_str(char **data, size_t *l, struct conf *conf, ssize_t *s,
 
 	if((sscanf(*data, "%08X", (unsigned int *)s))!=1)
 	{
-		logw(conf, "sscanf of xattr '%s' %d failed for %s\n", *data, *l, path);
+		logw(conf, "sscanf of xattr '%s' %d failed for %s\n",
+			*data, *l, path);
 		return NULL;
 	}
 	*data+=8;
@@ -452,10 +453,14 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 	return 0;
 }
 
-static int do_set_xattr_bsd(const char *path, struct stat *statp, const char *xattrtext, size_t xlen, struct conf *conf)
+static int do_set_xattr_bsd(const char *path, struct stat *statp,
+	const char *xattrtext, size_t xlen, struct conf *conf)
 {
+	int ret=-1;
 	size_t l=0;
 	char *data=NULL;
+	char *value=NULL;
+	char *nspace=NULL;
 
 	data=(char *)xattrtext;
 	l=xlen;
@@ -463,55 +468,50 @@ static int do_set_xattr_bsd(const char *path, struct stat *statp, const char *xa
 	{
 		int cnt;
 		ssize_t vlen=0;
-		char *name=NULL;
-		char *value=NULL;
 		int cnspace=0;
-		char *nspace=NULL;
+		char *name=NULL;
 
-		if(!(nspace=get_next_str(&data, &l, conf, &vlen, path)))
-			return -1;
-		if(!(value=get_next_str(&data, &l, conf, &vlen, path)))
-		{
-			free(name);
-			return -1;
-		}
+		if(!(nspace=get_next_str(&data, &l, conf, &vlen, path))
+		  || !(value=get_next_str(&data, &l, conf, &vlen, path)))
+			goto end;
 
 		// Need to split the name into two parts.
 		if(!(name=strchr(nspace, '.')))
 		{
-			logw(conf, "could not split %s into namespace and name on %s\n", nspace, path);
-			free(nspace);
-			free(value);
-			return -1;
+			logw(conf,
+			  "could not split %s into namespace and name on %s\n",
+				nspace, path);
+			goto end;
 		}
 		*name='\0';
 		name++;
 
 		if(extattr_string_to_namespace(nspace, &cnspace))
 		{
-			logw(conf, "could not convert %s into namespace on %s",
+			logw(conf,
+				"could not convert %s into namespace on %s",
 				nspace, path);
-			free(nspace);
-			free(value);
-			return -1;
+			goto end;
 		}
 
 		//printf("set_link: %d %s %s %s\n", cnspace, nspace, name, value);
 		if((cnt=extattr_set_link(path,
 			cnspace, name, value, vlen))!=vlen)
 		{
-			logw(conf, "extattr_set_link error on %s %d!=vlen: %s\n",
+			logw(conf,
+				"extattr_set_link error on %s %d!=vlen: %s\n",
 				path, strerror(errno));
-			free(nspace);
-			free(value);
-			return -1;
+			goto end;
 		}
 
-		free(nspace);
-		free(value);
+		free(nspace); nspace=NULL;
+		free(value); value=NULL;
 	}
-
-	return 0;
+	ret=0;
+end:
+	if(value) free(value);
+	if(nspace) free(nspace);
+	return ret;
 }
 
 int set_xattr(const char *path, struct stat *statp, const char *xattrtext, size_t xlen, char cmd, struct conf *conf)
@@ -519,7 +519,8 @@ int set_xattr(const char *path, struct stat *statp, const char *xattrtext, size_
 	switch(cmd)
 	{
 		case META_XATTR_BSD:
-			return do_set_xattr_bsd(path, statp, xattrtext, xlen, conf);
+			return do_set_xattr_bsd(path, statp,
+				xattrtext, xlen, conf);
 		default:
 			logp("unknown xattr type: %c\n", cmd);
 			logw(conf, "unknown xattr type: %c\n", cmd);

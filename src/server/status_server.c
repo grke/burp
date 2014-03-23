@@ -242,15 +242,12 @@ static int set_summary(struct cstat *c)
 	return 0;
 }
 
-// FIX THIS: reduce code size - break into smaller functions and do the
-// returns better.
-static int load_data_from_disk(struct conf *conf, struct cstat ***clist, int *clen)
+static int get_client_names(struct conf *conf,
+	struct cstat ***clist, int *clen)
 {
 	int q=0;
 	int m=0;
 	int n=-1;
-	int ret=0;
-	//size_t l=0;
 	int newclient=0;
 
 	struct dirent **dir=NULL;
@@ -259,7 +256,7 @@ static int load_data_from_disk(struct conf *conf, struct cstat ***clist, int *cl
 	{
 		logp("could not scandir clientconfdir: %s\n",
 			conf->clientconfdir, strerror(errno));
-		return -1;
+		goto error;
 	}
         for(m=0; m<n; m++)
 	{
@@ -278,32 +275,32 @@ static int load_data_from_disk(struct conf *conf, struct cstat ***clist, int *cl
 			// We do not have this client yet. Add it.
 			newclient++;
 			if(cstat_add(clist, clen, dir[m]->d_name,
-				conf->clientconfdir))
-			{
-				ret=-1;
-				break;
-			}
+				conf->clientconfdir)) goto error;
 		}
 	}
 	for(m=0; m<n; m++) if(dir[m]) free(dir[m]);
 	if(dir) free(dir);
-	if(ret) return ret;
 
-	if(newclient)
-	{
-		//for(q=0; q<*clen; q++)
-		//{
-		//	logp("%d: %s\n", q, (*clist)[q]->name);
-		//}
-		qsort(*clist, *clen, sizeof(struct cstat *), cstat_sort);
-	}
+	if(newclient) qsort(*clist, *clen, sizeof(struct cstat *), cstat_sort);
+
+	return 0;
+error:
+	return -1;
+}
+
+static int reload_from_client_confs(struct conf *conf,
+	struct cstat ***clist, int *clen)
+{
+	int q;
+	static struct conf *cconf=NULL;
+
+	if(!cconf && !(cconf=conf_alloc())) goto error;
 
 	for(q=0; q<*clen; q++)
 	{
 		// Look at the client conf files to see if they have changed,
 		// and reload bits and pieces if they have.
 		struct stat statp;
-		struct conf *cconf=NULL;
 
 		if(!(*clist)[q]->conffile) continue;
 
@@ -326,61 +323,50 @@ static int load_data_from_disk(struct conf *conf, struct cstat ***clist, int *cl
 		}
 		(*clist)[q]->conf_mtime=statp.st_mtime;
 
-		// FIX THIS: silly to alloc it every time. Do it once and
-		// reuse the struct.
-		if(!(cconf=conf_alloc()))
-		{
-			ret=-1;
-			break;
-		}
-		conf_init(cconf);
-		if(cconf->cname) free(cconf->cname);
+		conf_free_content(cconf);
 		if(!(cconf->cname=strdup((*clist)[q]->name)))
 		{
 			log_out_of_memory(__FUNCTION__);
-			conf_free(cconf);
-			ret=-1;
-			break;
+			goto error;
 		}
 		if(conf_set_client_global(conf, cconf)
 		  || conf_load((*clist)[q]->conffile, cconf, 0))
 		{
-			conf_free(cconf);
 			cstat_blank((*clist)[q]);
 			continue;
 		}
 
 		if(set_cstat_from_conf((*clist)[q], conf, cconf))
-		{
-			conf_free(cconf);
-			ret=-1;
-			break;
-		}
-
-		conf_free(cconf);
+			goto error;
 	}
+	return 0;
+error:
+	conf_free(cconf);
+	cconf=NULL;
+	return -1;
+}
 
+static int reload_from_basedir(struct conf *conf,
+	struct cstat ***clist, int *clen)
+{
+	int q;
 	for(q=0; q<*clen; q++)
 	{
 		// Pretty much the same routine for the basedir,
 		// except also reload if we have running_detail.
+		time_t ltime=0;
 		struct stat statp;
 		struct stat lstatp;
-		time_t ltime=0;
 		if(!(*clist)[q]->basedir) continue;
 		if(stat((*clist)[q]->basedir, &statp))
 		{
 			// no basedir
 			if(!(*clist)[q]->summary && set_summary((*clist)[q]))
-			{
-				ret=-1;
-				break;
-			}
+				goto error;
 			continue;
 		}
 		if(!lstat((*clist)[q]->lockfile, &lstatp))
 			ltime=lstatp.st_mtime;
-		//logp("pre set summary for %s\n", (*clist)[q]->name);
 		if(statp.st_mtime==(*clist)[q]->basedir_mtime
 		  && ltime==(*clist)[q]->lockfile_mtime
 		  && (*clist)[q]->status!=STATUS_SERVER_CRASHED
@@ -392,19 +378,23 @@ static int load_data_from_disk(struct conf *conf, struct cstat ***clist, int *cl
 		(*clist)[q]->basedir_mtime=statp.st_mtime;
 		(*clist)[q]->lockfile_mtime=ltime;
 
-		if(set_summary((*clist)[q]))
-		{
-			ret=-1;
-			break;
-		}
+		if(set_summary((*clist)[q])) goto error;
 	}
+	return 0;
+error:
+	return -1;
+}
 
-	return ret;
+static int load_data_from_disk(struct conf *conf,
+	struct cstat ***clist, int *clen)
+{
+	return get_client_names(conf, clist, clen)
+	  || reload_from_client_confs(conf, clist, clen)
+	  || reload_from_basedir(conf, clist, clen);
 }
 
 static int send_data_to_client(int cfd, const char *data, size_t len)
 {
-	int ret=0;
 	const char *w=data;
 //printf("need to write: %d\n", len);
 	while(len>0)
@@ -429,8 +419,7 @@ static int send_data_to_client(int cfd, const char *data, size_t len)
 			{
 				logp("select error in %s: %s\n", __func__,
 					strerror(errno));
-				ret=-1;
-				break;
+				goto error;
 			}
 			continue;
 		}
@@ -445,16 +434,11 @@ static int send_data_to_client(int cfd, const char *data, size_t len)
 
 		if((wl=write(cfd, w, len))<=0)
 		{
-			if(errno==EPIPE)
-			{
-				ret=-1;
-				goto end;
-			}
+			if(errno==EPIPE) goto error;
 			if(errno!=EINTR)
 			{
 				logp("error writing in send_data_to_client(): %s\n", strerror(errno));
-				ret=-1;
-				goto end;
+				goto error;
 			}
 //			printf("got EINTR\n");
 		}
@@ -465,8 +449,9 @@ static int send_data_to_client(int cfd, const char *data, size_t len)
 		}
 //		printf("wrote: %d left: %d\n", wl, len);
 	}
-end:
-	return ret;
+	return 0;
+error:
+	return -1;
 }
 
 static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, const char *sel_client)
@@ -621,34 +606,30 @@ static int parse_parent_data_entry(char *tok, struct cstat **clist, int clen)
 
 static int parse_parent_data(const char *data, struct cstat **clist, int clen)
 {
+	int ret=-1;
 	char *tok=NULL;
 	char *copyall=NULL;
 
 	if(!(copyall=strdup(data)))
 	{
 		log_out_of_memory(__FUNCTION__);
-		return -1;
+		goto end;
 	}
 
 	if((tok=strtok(copyall, "\n")))
 	{
-		if(parse_parent_data_entry(tok, clist, clen))
-		{
-			free(copyall);
-			return -1;
-		}
+		if(parse_parent_data_entry(tok, clist, clen)) goto end;
 		while((tok=strtok(NULL, "\n")))
 		{
 			if(parse_parent_data_entry(tok, clist, clen))
-			{
-				free(copyall);
-				return -1;
-			}
+				goto end;
 		}
 	}
 
-	free(copyall);
-	return 0;
+	ret=0;
+end:
+	if(copyall) free(copyall);
+	return ret;
 }
 
 static cstat *get_cstat_by_client_name(struct cstat **clist, int clen, const char *client)
@@ -671,13 +652,11 @@ static int list_backup_file_name(int cfd, const char *dir, const char *file)
 	if(!(path=prepend_s(dir, file)))
 		return -1;
 	if(lstat(path, &statp) || !S_ISREG(statp.st_mode))
-	{
-		free(path);
-		return 0;
-	}
+		goto end; // Will return 0;
 	snprintf(msg, sizeof(msg), "%s\n", file);
 	ret=send_data_to_client(cfd, msg, strlen(msg));
-	free(path);
+end:
+	if(path) free(path);
 	return ret;
 }
 
@@ -735,59 +714,45 @@ static int browse_manifest(int cfd, gzFile zp, const char *browse)
 
 static int list_backup_file_contents(int cfd, const char *dir, const char *file, const char *browse)
 {
-	int ret=0;
+	int ret=-1;
 	size_t l=0;
 	gzFile zp=NULL;
 	char *path=NULL;
 	char buf[256]="";
-	if(!(path=prepend_s(dir, file)))
-		return -1;
-	if(!(zp=gzopen_file(path, "rb")))
-	{
-		free(path);
-		return -1;
-	}
+	if(!(path=prepend_s(dir, file))
+	  || !(zp=gzopen_file(path, "rb")))
+		goto end;
 
 	if(send_data_to_client(cfd, "-list begin-\n", strlen("-list begin-\n")))
-	{
-		ret=-1;
 		goto end;
-	}
 
 	if(!strcmp(file, "manifest.gz"))
 	{
-		ret=browse_manifest(cfd, zp, browse?:"");
+		if(browse_manifest(cfd, zp, browse?:"")) goto end;
 	}
 	else
 	{
 		while((l=gzread(zp, buf, sizeof(buf)))>0)
-		{
-			if(send_data_to_client(cfd, buf, l))
-			{
-				ret=-1;
-				break;
-			}
-		}
+			if(send_data_to_client(cfd, buf, l)) goto end;
 	}
 	if(send_data_to_client(cfd, "-list end-\n", strlen("-list end-\n")))
-	{
-		ret=-1;
 		goto end;
-	}
+	ret=0;
 end:
 	gzclose_fp(&zp);
+	if(path) free(path);
 	return ret;
 }
 
 static int list_backup_dir(int cfd, struct cstat *cli, unsigned long bno)
 {
         int a=0;
-	int ret=0;
+	int ret=-1;
         struct bu *arr=NULL;
 	if(get_current_backups_str(cli->basedir, &arr, &a, 0))
 	{
 		//logp("error when looking up current backups\n");
-		return -1;
+		goto end;
 	}
 	if(a>0)
 	{
@@ -797,22 +762,17 @@ static int list_backup_dir(int cfd, struct cstat *cli, unsigned long bno)
 		{
 			if(send_data_to_client(cfd, "-list begin-\n",
 				strlen("-list begin-\n")))
-			{
-				ret=-1;
-				goto end;
-			}
+					goto end;
 			list_backup_file_name(cfd,arr[i].path, "manifest.gz");
 			list_backup_file_name(cfd,arr[i].path, "log.gz");
 			list_backup_file_name(cfd,arr[i].path, "restorelog.gz");
 			list_backup_file_name(cfd,arr[i].path, "verifylog.gz");
 			if(send_data_to_client(cfd, "-list end-\n",
 				strlen("-list end-\n")))
-			{
-				ret=-1;
-				goto end;
-			}
+					goto end;
 		}
 	}
+	ret=0;
 end:
 	if(a>0) free_current_backups(&arr, a);
 	return ret;
@@ -848,14 +808,16 @@ static char *get_str(const char **buf, const char *pre, int last)
 	char *cp=NULL;
 	char *copy=NULL;
 	char *ret=NULL;
-	if(!buf || !*buf) return NULL;
+	if(!buf || !*buf) goto end;
 	len=strlen(pre);
-	if(strncmp(*buf, pre, len)) return NULL;
-	if(!(copy=strdup((*buf)+len))) return NULL;
+	if(strncmp(*buf, pre, len)
+	  || !(copy=strdup((*buf)+len)))
+		goto end;
 	if(!last && (cp=strchr(copy, ':'))) *cp='\0';
 	*buf+=len+strlen(copy)+1;
 	ret=strdup(copy);
-	free(copy);
+end:
+	if(copy) free(copy);
 	return ret;
 }
 
@@ -881,8 +843,7 @@ static int parse_rbuf(const char *rbuf, int cfd, struct cstat **clist, int clen)
 		if(!(file=strdup("manifest.gz")))
 		{
 			log_out_of_memory(__FUNCTION__);
-			ret=-1;
-			goto end;
+			goto error;
 		}
 		// Strip trailing slashes.
 		if(strlen(browse)>1 && browse[strlen(browse)-1]=='/')
@@ -935,30 +896,19 @@ static int parse_rbuf(const char *rbuf, int cfd, struct cstat **clist, int clen)
 		{
 			//printf("detail request: %s\n", rbuf);
 			if(send_summaries_to_client(cfd, clist, clen, client))
-			{
-				ret=-1;
-				goto end;
-			}
+				goto error;
 		}
 	}
 	else
 	{
 		//printf("summaries request\n");
 		if(send_summaries_to_client(cfd, clist, clen, NULL))
-		{
-			ret=-1;
-			goto end;
-		}
+			goto error;
 	}
 
-	// Kludge - exit straight away if doing snapshot type stuff. 
-/*
-	if(backup || file || browse)
-	{
-		ret=-1;
-		goto end;
-	}
-*/
+	goto end;
+error:
+	ret=-1;
 end:
 	if(client) free(client);
 	if(backup) free(backup);
@@ -971,7 +921,7 @@ end:
 int status_server(int *cfd, struct conf *conf)
 {
 	int l;
-	int ret=0;
+	int ret=-1;
 	char *rbuf=NULL;
 	char buf[512]="";
 	int clen=0;
@@ -986,7 +936,7 @@ int status_server(int *cfd, struct conf *conf)
 	if(load_data_from_disk(conf, &clist, &clen))
 	{
 		logp("load_data_from_disk returned error\n");
-		ret=-1;
+		goto end;
 	}
 	else while(1)
 	{
@@ -1015,8 +965,7 @@ int status_server(int *cfd, struct conf *conf)
 			{
 				logp("select error in %s: %s\n", __func__,
 					strerror(errno));
-				ret=-1;
-				break;
+				goto end;
 			}
 			continue;
 		}
@@ -1043,8 +992,7 @@ int status_server(int *cfd, struct conf *conf)
 			{
 				logp("read error in status_server: %s\n",
 					strerror(errno));
-				ret=-1;
-				break;
+				goto end;
 			}
 			else if(!l)
 			{
@@ -1053,11 +1001,7 @@ int status_server(int *cfd, struct conf *conf)
 			}
 			buf[l]='\0';
 
-			if(parse_parent_data(buf, clist, clen))
-			{
-				ret=-1;
-				break;
-			}
+			if(parse_parent_data(buf, clist, clen)) goto end;
 	//		continue;
 		}
 
@@ -1097,30 +1041,26 @@ int status_server(int *cfd, struct conf *conf)
 
 				if(parse_rbuf(rbuf, *cfd, clist, clen))
 				{
-					ret=-1;
 					free(rbuf);
 					rbuf=NULL;
-					break;
+					goto end;
 				}
 				free(rbuf);
 				rbuf=NULL;
 				if(send_data_to_client(*cfd, "\n", 1))
-					return -1;
+					goto end;
 			}
-	//		continue;
 		}
 
 		// Getting here means that the select timed out.
 		// Take the opportunity to reload the client information
 		// that we can get from the disk.
 
-		if(load_data_from_disk(conf, &clist, &clen))
-		{
-			ret=-1;
-			break;
-		}
+		if(load_data_from_disk(conf, &clist, &clen)) goto end;
 	}
 
+	ret=0;
+end:
 	close_fd(cfd);
 	return ret;
 }

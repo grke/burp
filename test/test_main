@@ -61,6 +61,9 @@ serverconf=etc/burp/burp-server.conf
 fsize=1024
 serverscript="$PWD/serverscript"
 clientscript="$PWD/clientscript"
+num=0 # Test number. Incremented for each test.
+pre=0 # Previous test number.
+protocol=2 
 
 kill_server()
 {
@@ -76,7 +79,7 @@ trap "kill_server" 0 1 2 3 15
 fail()
 {
 	echo
-	echo "Test failed: $@"
+	echo "Test $num failed: $@"
 	echo
 	kill_server
 	exit 1
@@ -145,7 +148,7 @@ EOF
 
 add_run_verify()
 {
-	local num="$1"
+	local num="all"
 cat >> "$clientscript" <<EOF
 echo "Starting test client verify of backup $num"
 "$burpbin" -c "$clientconfarg" -a v -b "$num" \
@@ -212,14 +215,13 @@ write_message()
 
 start_test()
 {
+	msg="$1"
+	pre=$num
+	num=$((num+1))
 	write_message "
-Test $1
-$2"
-}
-
-end_test()
-{
-	write_message "Test $1 OK"
+Test $num
+$msg"
+	add_normal_settings
 }
 
 add_change_source_files()
@@ -363,6 +365,18 @@ add_strip_vss_on()
 	sed_rep_client '$ astrip_vss = 1' "$clientconf"
 }
 
+add_burp1_off()
+{
+	sed_rep_client 's/^protocol = .*//g' "$clientconf"
+}
+
+add_burp1_on()
+{
+	add_burp1_off
+	[ "$protocol" = 1 ] && \
+		sed_rep_client '$ aprotocol = 1' "$clientconf"
+}
+
 makedir_server "$logs"
 
 cdir "$target"
@@ -375,7 +389,7 @@ start_script()
 fail()
 {
 	echo
-	echo "Test failed: \$@"
+	echo "Test $num failed: \$@"
 	echo
 	exit 1
 }
@@ -450,16 +464,33 @@ run_script_client()
 	rm -f "$clientscript"
 }
 
+end_test()
+{
+	run_script_client
+	write_message "Test $num OK"
+}
+
 run_scripts()
 {
 	run_script_server
 	run_script_client
 }
 
+add_backup_run_scripts_setup_verify_restore()
+{
+	add_run_backup
+	run_scripts
+	wait_for_backup_to_finish
+	start_script_client
+	[ "$protocol" = "burp1" ] && add_run_verify
+	add_run_restore $num "$restoredir"$num
+}
+
 add_normal_settings()
 {
 	start_script_server
 	start_script_client
+	add_burp1_on
 	add_compression_on
 	add_encryption_off
 	add_max_file_size_off
@@ -482,6 +513,14 @@ add_normal_settings()
 	fi
 }
 
+add_restore_diff()
+{
+	add_do_diff_client \
+		"$includedir" \
+		"$restoredir"$num/"$includedir" \
+		"client restore differed from the original!"
+}
+
 if [ -z "$NO_CA_GEN" ] ; then
 	pre_tweaks_server
 	pre_tweaks_client
@@ -499,8 +538,10 @@ echo
 
 if [ -z "$NO_CA_GEN" ] ; then
 	echo "Initialising server certificate authority"
-	# Need to do this outside of the server, because it might take a long time.
-	./usr/sbin/burp -c "$serverconf" -g >> "$serverlog" 2>&1 || fail "Initialising server certificate authority failed"
+	# Need to do this outside of the server,
+	# because it might take a long time.
+	./usr/sbin/burp -c "$serverconf" -g >> "$serverlog" 2>&1 \
+		|| fail "Initialising server certificate authority failed"
 	echo
 fi
 
@@ -512,224 +553,93 @@ serverpid=$!
 # Be kind, and wait a little for it to start.
 sleep 5
 
+file_size_test()
+{
+	start_test "File size $1"
+	add_$1_file_size_on
+	add_change_source_files
+	add_backup_run_scripts_setup_verify_restore
+	sign="+"
+	err="greater"
+	if [ "$1" = "min" ] ; then
+		sign="-"
+		err="less"
+	fi
+	add_run_not_find_client \
+		"\"$restoredir\"$num -size $sign${fsize}c -type f" \
+		"found file sizes $err than $fsize"
+	end_test
+}
+
+comp_enc_change_test()
+{
+	local comp="$1"
+	local encr="$2"
+	local change="$3"
+
+	start_test "Compression $comp, encryption $encr, change files $change"
+	add_compression_$comp
+	add_encryption_$encr
+	[ "$change" = "on" ] && add_change_source_files
+	add_backup_run_scripts_setup_verify_restore
+	add_restore_diff
+	end_test
+}
 
 all_tests()
 {
-	# ----- Test 1 -----
-	start_test 1 "First backup/restore comparison"
-	add_normal_settings
-	add_run_backup
-	run_scripts
-	wait_for_backup_to_finish
-	# Verify the specific backup number 1. Later tests will use 'all', which will
-	# verify all available backups. Might as well test both methods.
-	start_script_client
-#	add_run_verify 1
-	add_run_restore 1 "$restoredir"1
-	add_do_diff_client "$includedir" "$restoredir"1/"$includedir" \
-		"client restore differed from the original!"
-	run_script_client
-	end_test 1
+	comp_enc_change_test on  off off
+	comp_enc_change_test on  off off
+	comp_enc_change_test on  off on
+	comp_enc_change_test off off on
+	comp_enc_change_test off on  on
+	comp_enc_change_test on  on  on
+	file_size_test min
+	file_size_test max
 
-	# ----- Test 2 -----
-	start_test 2 "Second backup/restore comparison"
-	add_normal_settings
-	add_run_backup
-	run_scripts
-	wait_for_backup_to_finish
-	start_script_client
-#	add_run_verify all
-	# There should be no 'data' directory left in the first backup directory,
-	# because all the files should have moved over into the second backup
-	# directory.
-	backuppath1=$(echo "$target"/var/spool/burp/testclient/0000001*)
-	backuppath2=$(echo "$target"/var/spool/burp/testclient/0000002*)
-	# Make sure that restoring from either backup gives the same result.
-	add_run_restore 1 "$restoredir"1
-	add_run_restore 2 "$restoredir"2
-	add_do_diff_client "$includedir" "$restoredir"1/"$includedir" \
-		"client restore 1 differed from the original!"
-	add_do_diff_client "$restoredir"1/"$includedir" "$restoredir"2/"$includedir" \
-		"client restore 1 and 2 differ!"
-	run_script_client
-	end_test 2
-
-	# ----- Test 3 -----
-	start_test 3 "Third backup/restore comparison, with changes"
-	add_normal_settings
-	add_change_source_files
-	add_run_backup
-	run_scripts
-	wait_for_backup_to_finish
-	start_script_client
-#	add_run_verify all
-	add_run_restore 3 "$restoredir"3
-	add_do_diff_client "$includedir" "$restoredir"3/"$includedir" \
-		"client restore 3 differed from the original!"
-	# Make sure that restoring backup number 2 gives the same as restoring backup
-	# number 2 gave in test 2.
-	add_run_restore 2 "$restoredir"4
-	add_do_diff_client "$restoredir"2/"$includedir" "$restoredir"4/"$includedir" \
-		"client restore 2 and 4 differ!"
-	run_script_client
-	end_test 3
-
-	# ----- Test 4 -----
-	start_test 4 "Was deduplication, now just another backup/restore comparison"
-	add_normal_settings
-#	add_run_verify all
-	add_run_restore 3 "$restoredir"4
-	add_do_diff_client "$includedir" "$restoredir"4/"$includedir" \
-		"client restore 4 differed from the original!"
-	# Make sure that restoring backup number 2 gives the same as restoring backup
-	# number 2 gave in test 2.
-	add_run_restore 2 "$restoredir"4
-	add_do_diff_client "$restoredir"2/"$includedir" "$restoredir"4/"$includedir" \
-		"client restore 2 and 4 differ!"
-	# Run another backup, so we can continue to refer to them by the same number
-	# as the test number (easier on the brain).
-	add_run_backup
-	run_scripts
-	wait_for_backup_to_finish
-	end_test 4
-
-	# ----- Test 5 -----
-	start_test 5 "Turn compression off, change files, backup/restore comparison"
-	add_compression_off
-	add_encryption_off
-	add_max_file_size_off
-	add_min_file_size_off
-	add_change_source_files
-	add_run_backup
-	run_scripts
-	wait_for_backup_to_finish
-	start_script_client
-#	add_run_verify all
-	add_run_restore 5 "$restoredir"5
-	add_do_diff_client "$includedir" "$restoredir"5/"$includedir" \
-		"client restore 5 differed from the original!"
-	run_script_client
-	end_test 5
-
-	# ----- Test 6 -----
-	start_test 6 "Was encryption, now just another backup/restore comparison"
-	#start_test 6 "Turn compression off, encryption on, change files, backup/restore comparison"
-	add_normal_settings
-	add_compression_off
-#	add_encryption_on
-	add_change_source_files
-	add_run_backup
-	run_scripts
-	wait_for_backup_to_finish
-	start_script_client
-#	add_run_verify all
-	add_run_restore 6 "$restoredir"6
-	add_do_diff_client "$includedir" "$restoredir"6/"$includedir" \
-		"client restore 6 differed from the original!"
-	run_script_client
-	end_test 6
-
-	# ----- Test 7 -----
-	start_test 7 "Was encryption, now just another backup/restore comparison"
-	#start_test 7 "Turn compression on, encryption on, change files, backup/restore comparison"
-	add_normal_settings
-	add_compression_on
-#	add_encryption_on
-	add_change_source_files
-	add_run_backup
-	run_scripts
-	wait_for_backup_to_finish
-	start_script_client
-#	add_run_verify all
-	add_run_restore 7 "$restoredir"7
-	add_do_diff_client "$includedir" "$restoredir"7/"$includedir" \
-		"client restore 7 differed from the original!"
-	run_script_client
-	end_test 7
-
-	# ----- Test 8 -----
-	start_test 8 "Min file size, backup/restore comparison"
-	add_normal_settings
-	add_min_file_size_on
-	add_change_source_files
-	add_run_backup
-	run_scripts
-	wait_for_backup_to_finish
-	start_script_client
-#	add_run_verify all
-	add_run_restore 8 "$restoredir"8
-	add_run_not_find_client "\"$restoredir\"8 -size -${fsize}c -type f" "found file sizes greater than $fsize"
-	run_script_client
-	end_test 8
-
-	# ----- Test 9 -----
-	start_test 9 "Max file size, backup/restore comparison"
-	add_normal_settings
-	add_max_file_size_on
-	add_change_source_files
-	add_run_backup
-	run_scripts
-	wait_for_backup_to_finish
-	start_script_client
-#	add_run_verify all
-	add_run_restore 9 "$restoredir"9
-	add_run_not_find_client "\"$restoredir\"9 -size +${fsize}c -type f" "found file sizes less than $fsize"
-	run_script_client
-	end_test 9
-
-	# ----- Test 10 -----
-	start_test 10 "Exclude directory, backup/restore comparison"
-	add_normal_settings
+	start_test "Exclude directory"
 	add_exclude_on
-	add_run_backup
-	run_scripts
-	wait_for_backup_to_finish
-	start_script_client
-#	add_run_verify all
-	add_run_restore 10 "$restoredir"10
+	add_backup_run_scripts_setup_verify_restore
 	# On Windows, /C:/ gets converted to /C_/, so tweak the path.
-	exc=$(echo "${restoredir}10/$excludedir" | sed -e 's/\/C:\//\/C_\//g')
-	inc=$(echo "${restoredir}10/$includedir" | sed -e 's/\/C:\//\/C_\//g')
-	echo "[ -d \"$exc\" ] && fail \"$exc should not have been restored!\"" >> "$clientscript"
-	echo "[ ! -d \"$inc\" ] && fail \"$inc should have been restored!\"" >> "$clientscript"
-	run_script_client
-	end_test 10
+	exc=$(echo "${restoredir}$num/$excludedir" | sed -e 's/\/C:\//\/C_\//g')
+	inc=$(echo "${restoredir}$num/$includedir" | sed -e 's/\/C:\//\/C_\//g')
+	echo "[ -d \"$exc\" ] && fail \"$exc should not have been restored!\"" \
+		>> "$clientscript"
+	echo "[ ! -d \"$inc\" ] && fail \"$inc should have been restored!\"" \
+		>> "$clientscript"
+	end_test
 
-	# ----- Test 11 -----
-	start_test 11 "Exclude extension, backup/restore comparison"
-	add_normal_settings
+	start_test "Exclude extension"
 	add_exclude_ext_on
-	add_run_backup
-	run_scripts
-	wait_for_backup_to_finish
-	start_script_client
-#	add_run_verify all
-	add_run_restore 11 "$restoredir"11
-	add_run_not_find_client "\"$restoredir\"11 -type f -name '*.c'" \
-		"$restoredir11 should not contain any '.c' files"
-	run_script_client
-	end_test 11
+	add_backup_run_scripts_setup_verify_restore
+	add_run_not_find_client "\"$restoredir\"$num -type f -name '*.c'" \
+		"$restoredir$num should not contain any '.c' files"
+	end_test
 
-# include_ext is a bit broken at the moment.
-	# ----- Test 12 -----
-	start_test 12 "Include extension, backup/restore comparison"
-	add_normal_settings
+	start_test "Include extension"
 	add_include_ext_on
-	add_run_backup
-	run_scripts
-	wait_for_backup_to_finish
-	start_script_client
-#	add_run_verify all
-	add_run_restore 12 "$restoredir"12
-	add_run_not_find_client "\"$restoredir\"12 -type f -name '*.h'" \
-		"$restoredir12 should not contain any '.h' files"
-	add_run_find_client "\"$restoredir\"12 -type f -name '*.c'" \
-		fail "$restoredir12 should contain '.c' files"
-	run_script_client
-	end_test 12
+	add_backup_run_scripts_setup_verify_restore
+	add_run_not_find_client "\"$restoredir\"$num -type f -name '*.h'" \
+		"$restoredir$num should not contain any '.h' files"
+	add_run_find_client "\"$restoredir\"$num -type f -name '*.c'" \
+		fail "$restoredir$num should contain '.c' files"
+	end_test
 }
 
-all_tests
+run_tests()
+{
+	protocol="$1"
+	num=0
+	pre=0
+	echo
+	echo "Running burp$protocol tests"
+	all_tests
+}
+
+# Run in burp2 mode.
+run_tests 2
+# Run in burp1 mode.
+run_tests 1
 
 echo
 echo "All tests succeeded"

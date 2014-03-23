@@ -319,7 +319,7 @@ static enum cliret do_client(struct conf *conf, enum action action,
 
 	conf->p1cntr=&p1cntr;
 	conf->cntr=&cntr;
-	reset_filecounters(conf, time(NULL));
+	cntr_resets(conf, time(NULL));
 
 //	settimers(0, 100);
 	logp("begin client\n");

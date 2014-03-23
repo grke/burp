@@ -199,7 +199,7 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 		else if(rbuf->cmd==CMD_WARNING)
 		{
 			logp("WARNING: %s\n", rbuf->buf);
-			do_filecounter(cntr, rbuf->cmd, 0);
+			cntr_add(cntr, rbuf->cmd, 0);
 			iobuf_free_content(rbuf);
 			return RS_DONE;
 		}

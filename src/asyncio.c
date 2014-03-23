@@ -540,7 +540,7 @@ int async_simple_loop(struct conf *conf, void *param, const char *caller,
 			if(rbuf->cmd==CMD_WARNING)
 			{
 				logp("WARNING: %s\n", rbuf->buf);
-				do_filecounter(conf->cntr, rbuf->cmd, 0);
+				cntr_add(conf->cntr, rbuf->cmd, 0);
 			}
 			else if(rbuf->cmd==CMD_INTERRUPT)
 			{
@@ -600,6 +600,6 @@ int logw(struct cntr *cntr, const char *fmt, ...)
 		logp("WARNING: %s\n", buf);
 	}
 	va_end(ap);
-	do_filecounter(cntr, CMD_WARNING, 1);
+	cntr_add(cntr, CMD_WARNING, 1);
 	return r;
 }

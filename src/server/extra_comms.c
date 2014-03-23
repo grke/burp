@@ -64,7 +64,7 @@ static int send_features(struct conf *cconf)
 	  && append_to_feat(&feat, "sincexc:"))
 		goto end;
 
-	/* Clients can be sent counters on resume/verify/restore. */
+	/* Clients can be sent cntrs on resume/verify/restore. */
 	if(append_to_feat(&feat, "counters:"))
 		goto end;
 
@@ -196,7 +196,7 @@ static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, str
 			// Client can accept counters on
 			// resume/verify/restore.
 			logp("Client supports being sent counters.\n");
-			cconf->send_client_counters=1;
+			cconf->send_client_cntr=1;
 		}
 		else if(!strncmp_w(rbuf->buf, "orig_client=")
 		  && strlen(rbuf->buf)>strlen("orig_client="))
@@ -224,7 +224,7 @@ static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, str
 				log_and_send(msg);
 				goto end;
 			}
-			sconf->send_client_counters=cconf->send_client_counters;
+			sconf->send_client_cntr=cconf->send_client_cntr;
 			for(r=sconf->rclients; r; r=r->next)
 			{
 				if(!strcmp(r->path, cconf->cname))

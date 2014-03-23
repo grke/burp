@@ -406,7 +406,7 @@ static int deal_with_read(struct iobuf *rbuf,
 		/* Incoming control/message stuff. */
 		case CMD_WARNING:
 			logp("WARNING: %s\n", rbuf);
-			do_filecounter(conf->cntr, rbuf->cmd, 0);
+			cntr_add(conf->cntr, rbuf->cmd, 0);
 			goto end;
 		case CMD_GEN:
 			if(!strcmp(rbuf->buf, "sigs_end"))

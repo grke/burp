@@ -29,7 +29,7 @@ static int restore_sbuf(struct sbuf *sb, enum action act,
 				if(async_write(&sb->link))
 					return -1;
 			}
-			do_filecounter(conf->cntr, sb->path.cmd, 0);
+			cntr_add(conf->cntr, sb->path.cmd, 0);
 			return 0;
 	}
 }
@@ -136,7 +136,7 @@ static int check_srestore(struct conf *conf, const char *path)
 	return 0;
 }
 
-static int load_counters(const char *manifest, regex_t *regex, struct conf *conf)
+static int cntr_load(const char *manifest, regex_t *regex, struct conf *conf)
 {
 	return 0;
 /*
@@ -170,9 +170,9 @@ static int load_counters(const char *manifest, regex_t *regex, struct conf *conf
 				    || check_srestore(conf, sb.path))
 				  && check_regex(regex, sb.path))
 				{
-					do_filecounter(p1cntr, sb.cmd, 0);
+					cntr_add(p1cntr, sb.cmd, 0);
 					if(sb.endfile)
-					  do_filecounter_bytes(p1cntr,
+					  cntr_add_bytes(p1cntr,
                  			    strtoull(sb.endfile, NULL, 10));
 				}
 			}
@@ -421,7 +421,7 @@ static int restore_stream(const char *datadir, struct slist *slist,
 			if(cmd==CMD_WARNING)
 			{
 				logp("WARNING: %s\n", buf);
-				do_filecounter(conf->cntr, cmd, 0);
+				cntr_add(conf->cntr, cmd, 0);
 				free(buf); buf=NULL;
 				continue;
 			}
@@ -524,10 +524,10 @@ static int do_restore_manifest(const char *datadir,
 	ret=do_restore_end(conf);
 
 	// FIX THIS
-	//print_endcounter(conf->cntr);
-	print_filecounters(conf, act);
+	//cntr_print_end(conf->cntr);
+	cntr_print(conf, act);
 
-	reset_filecounters(conf, time(NULL));
+	cntr_resets(conf, time(NULL));
 	ret=0;
 end:
 	slist_free(slist);
@@ -577,10 +577,10 @@ static int restore_manifest(struct bu *bu, regex_t *regex, int srestore, enum ac
 	log_restore_settings(conf, srestore);
 
 	// First, do a pass through the manifest to set up the counters.
-	if(load_counters(manifest, regex, conf)) goto end;
+	if(cntr_load(manifest, regex, conf)) goto end;
 
-//	if(conf->send_client_counters
-//	  && send_counters(conf))
+//	if(conf->send_client_cntr
+//	  && cntr_send(conf))
 //		goto end;
 
 	if(do_restore_manifest(sdirs->data, bu, manifest, regex,

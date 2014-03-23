@@ -11,7 +11,7 @@ static int maybe_send_extrameta(struct sbuf *sb, char cmd, struct cntr *p1cntr)
 		if(async_write_str(CMD_ATTRIBS, sb->attribs)
 		  || async_write_str(CMD_METADATA, sb->path))
 			return -1;
-		do_filecounter(p1cntr, CMD_METADATA, 1);
+		cntr_add(p1cntr, CMD_METADATA, 1);
 	}
 	return 0;
 }
@@ -112,7 +112,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 		}
 		case CMD_WARNING:
 			logp("WARNING: %s\n", rbuf->cmd);
-			do_filecounter(conf->cntr, rbuf->cmd, 0);
+			cntr_add(conf->cntr, rbuf->cmd, 0);
 			goto end;
 		case CMD_GEN:
 			if(!strcmp(rbuf->buf, "requests_end"))
@@ -349,11 +349,11 @@ static int backup_phase2_client(struct conf *conf, int resume)
 		  || async_read_expect(CMD_GEN, "ok"))
 			goto end;
 	}
-	else if(conf->send_client_counters)
+	else if(conf->send_client_cntr)
 	{
 		// On resume, the server might update the client with the
 		// counters.
-		if(recv_counters(conf))
+		if(cntr_recv(conf))
 			goto end;
         }
 
@@ -423,8 +423,8 @@ sbuf_print_alloc_stats();
 	wbuf->buf=NULL;
 	iobuf_free(wbuf);
 
-	print_endcounter(conf->p1cntr);
-	//print_filecounters(conf->p1cntr, conf->cntr, ACTION_BACKUP);
+	cntr_print_end(conf->p1cntr);
+	//cntr_print(conf->p1cntr, conf->cntr, ACTION_BACKUP);
 	if(ret) logp("Error in backup\n");
 	logp("End backup\n");
 
@@ -485,7 +485,7 @@ int do_backup_client(struct conf *conf, enum action action,
 			ret=backup_phase2_client(conf, resume);
 	}
 
-	if(action==ACTION_ESTIMATE) print_filecounters(conf, ACTION_ESTIMATE);
+	if(action==ACTION_ESTIMATE) cntr_print(conf, ACTION_ESTIMATE);
 
 #if defined(HAVE_WIN32)
 	if(action==ACTION_BACKUP_TIMED)

@@ -1,7 +1,7 @@
 #ifndef _CONF_FILE_H
 #define _CONF_FILE_H
 
-#include "counter.h"
+#include "cntr.h"
 #include "strlist.h"
 #include "rabin/rconf.h"
 
@@ -186,7 +186,7 @@ struct conf
 
 // Set to 1 on both client and server when the server is able to send counters
 // on resume/verify/restore.
-	uint8_t send_client_counters;
+	uint8_t send_client_cntr;
 
 // Set on the server to the restore client name (the one that you connected
 // with) when the client has switched to a different set of client backups.

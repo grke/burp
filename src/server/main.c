@@ -153,7 +153,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *conffile, int
 	cconf->cntr=cntr;
 	conf->p1cntr=p1cntr;
 	cconf->p1cntr=p1cntr;
-	reset_filecounters(conf, time(NULL));
+	cntr_resets(conf, time(NULL));
 
 	if(forking) close_fd(rfd);
 

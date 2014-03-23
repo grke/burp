@@ -122,7 +122,7 @@ int extra_comms(struct conf *conf,
 	{
 		if(async_write_str(CMD_GEN, "countersok"))
 			goto end;
-		conf->send_client_counters=1;
+		conf->send_client_cntr=1;
 	}
 
 	// :incexc: is for the client sending the server the

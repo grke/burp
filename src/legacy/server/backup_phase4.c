@@ -262,7 +262,7 @@ static int jiggle(struct sbuf *sb, const char *currentdata, const char *datadirt
 		{
 			logp("WARNING: librsync error when patching %s: %d\n",
 				oldpath, lrs);
-			do_filecounter(cconf->cntr, CMD_WARNING, 1);
+			cntr_add(cconf->cntr, CMD_WARNING, 1);
 			// Try to carry on with the rest of the backup
 			// regardless.
 			//ret=-1;
@@ -786,7 +786,7 @@ int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf)
 	// Rename the finishing symlink so that it becomes the current symlink
 	do_rename(sdirs->finishing, sdirs->current);
 
-	print_filecounters(cconf, ACTION_BACKUP);
+	cntr_print(cconf, ACTION_BACKUP);
 	logp("Backup completed.\n");
 	logp("End phase4 (shuffle files)\n");
 	set_logfp(NULL, cconf); // will close logfp.

@@ -313,7 +313,6 @@ static int parse_rbuf(struct iobuf *rbuf, struct sbuf *sb,
 		// in again. Some time may have passed by now,
 		// and it is best to make it as fresh as
 		// possible.
-		iobuf_free_content(rbuf);
 	}
 	else if(rbuf->cmd==CMD_FILE
 	  || rbuf->cmd==CMD_ENC_FILE
@@ -331,13 +330,6 @@ static int parse_rbuf(struct iobuf *rbuf, struct sbuf *sb,
 	else if(rbuf->cmd==CMD_WARNING)
 	{
 		cntr_add(conf->cntr, rbuf->cmd, 0);
-		iobuf_free_content(rbuf);
-	}
-	else if(rbuf->cmd==CMD_GEN && !strcmp(rbuf->buf, "backupphase2end"))
-	{
-		if(async_write_str(CMD_GEN, "okbackupphase2end"))
-			return -1;
-		return 1;
 	}
 	else
 	{
@@ -349,7 +341,6 @@ static int parse_rbuf(struct iobuf *rbuf, struct sbuf *sb,
 
 static int do_backup_phase2_client(struct conf *conf, int resume)
 {
-	int ars;
 	int ret=-1;
 	// For efficiency, open Windows files for the VSS data, and do not
 	// close them until another time around the loop, when the actual
@@ -384,14 +375,20 @@ static int do_backup_phase2_client(struct conf *conf, int resume)
 
 	while(1)
 	{
+		iobuf_free_content(rbuf);
 		if(async_read(rbuf)) goto end;
 		else if(!rbuf->buf) continue;
 
-		if((ars=parse_rbuf(rbuf, sb, &bfd, &datalen, conf)))
+		if(rbuf->cmd==CMD_GEN && !strcmp(rbuf->buf, "backupphase2end"))
 		{
-			if(ars>0) ret=0; // Finished OK, otherwise error.
-			goto end;
+			if(async_write_str(CMD_GEN, "okbackupphase2end"))
+				goto end;
+			ret=0;
+			break;
 		}
+
+		if(parse_rbuf(rbuf, sb, &bfd, &datalen, conf))
+			goto end;
 	}
 
 end:

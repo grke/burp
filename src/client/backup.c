@@ -424,7 +424,7 @@ sbuf_print_alloc_stats();
 	iobuf_free(wbuf);
 
 	cntr_print_end(conf->p1cntr);
-	//cntr_print(conf->p1cntr, conf->cntr, ACTION_BACKUP);
+	cntr_print(conf, ACTION_BACKUP);
 	if(ret) logp("Error in backup\n");
 	logp("End backup\n");
 

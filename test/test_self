@@ -12,6 +12,16 @@ path="$PWD"
 build="$path/build"
 target="$path/target"
 
+if ! [ -c /dev/random -o -c /dev/urandom ] &&
+   ! [ -e /var/run/egd-pool -o -e /dev/egd-pool -o -e /etc/egd-pool -o -e /etc/entropy ]
+then
+	echo "************************************************************"
+	echo "WARNING: SKIPPING TESTS BECAUSE YOUR BUILD ENVIRONMENT SEEMS"
+	echo "TO HAVE NO SOURCE OF RANDOMNESS FOR OPENSSL TO USE!"
+	echo "************************************************************"
+	exit 0
+fi
+
 fail()
 {
 	echo

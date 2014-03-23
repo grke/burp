@@ -63,7 +63,7 @@ static int make_link(const char *fname, const char *lnk, char cmd, struct conf *
 	int ret=-1;
 
 #ifdef HAVE_WIN32
-	logw(conf->cntr, "windows seems not to support hardlinks or symlinks\n");
+	logw(conf, "windows seems not to support hardlinks or symlinks\n");
 #else
 	unlink(fname);
 	if(cmd==CMD_HARD_LINK)
@@ -175,7 +175,7 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
 	int ret=0;
 	char *rpath=NULL;
 #ifdef HAVE_WIN32
-	logw(conf->cntr, "Cannot restore special files to Windows: %s\n", fname);
+	logw(conf, "Cannot restore special files to Windows: %s\n", fname);
 	goto end;
 #else
 	struct stat statp=sb->statp;

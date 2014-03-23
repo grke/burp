@@ -10,17 +10,13 @@ static int do_encryption(EVP_CIPHER_CTX *ctx, unsigned char *inbuf, int inlen, u
 	}
 	if(*outlen>0)
 	{
-		int ret;
-		if(!(ret=async_write_strn(CMD_APPEND,
-			(char *)outbuf, (size_t)*outlen)))
+		if(async_write_strn(CMD_APPEND,
+			(char *)outbuf, (size_t)*outlen)) return -1;
+		if(!MD5_Update(md5, outbuf, *outlen))
 		{
-			if(!MD5_Update(md5, outbuf, *outlen))
-			{
-				logp("MD5_Update() failed\n");
-				return -1;
-			}
+			logp("MD5_Update() failed\n");
+			return -1;
 		}
-		return ret;
 	}
 	return 0;
 }
@@ -33,7 +29,7 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password)
 	if(!(ctx=(EVP_CIPHER_CTX *)malloc(sizeof(EVP_CIPHER_CTX))))
 	{
 		log_out_of_memory(__FUNCTION__);
-		return NULL;
+		goto error;
 	}
         memset(ctx, 0, sizeof(EVP_CIPHER_CTX));
 	// Don't set key or IV because we will modify the parameters.
@@ -41,8 +37,7 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password)
 	if(!(EVP_CipherInit_ex(ctx, EVP_bf_cbc(), NULL, NULL, NULL, encrypt)))
 	{
 		logp("EVP_CipherInit_ex failed\n");
-		free(ctx);
-		return NULL;
+		goto error;
 	}
 	EVP_CIPHER_CTX_set_key_length(ctx, strlen(encryption_password));
 	// We finished modifying parameters so now we can set key and IV
@@ -52,10 +47,12 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password)
 		(unsigned char *)enc_iv, encrypt))
 	{
 		logp("Second EVP_CipherInit_ex failed\n");
-		free(ctx);
-		return NULL;
+		goto error;
 	}
 	return ctx;
+error:
+	if(ctx) free(ctx);
+	return NULL;
 }
 
 #ifdef HAVE_WIN32
@@ -104,7 +101,7 @@ int open_file_for_sendl(BFILE *bfd, FILE **fp, const char *fname,
 		if(bopen(bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0)<=0)
 		{
 			berrno be;
-			logw(conf->cntr, "Could not open %s: %s\n",
+			logw(conf, "Could not open %s: %s\n",
 				fname, be.bstrerror(errno));
 			return -1;
 		}
@@ -394,7 +391,7 @@ struct winbuf
 	MD5_CTX *md5;
 	int quick_read;
 	const char *datapth;
-	struct cntr *cntr;
+	struct conf *conf;
 	unsigned long long *bytes;
 };
 
@@ -415,7 +412,7 @@ static DWORD WINAPI write_efs(PBYTE pbData,
 	if(mybuf->quick_read)
 	{
 		int qr;
-		if((qr=do_quick_read(mybuf->datapth, mybuf->cntr))<0)
+		if((qr=do_quick_read(mybuf->datapth, mybuf->conf))<0)
 			return ERROR_FUNCTION_FAILED;
 		if(qr) // client wants to interrupt
 			return ERROR_FUNCTION_FAILED;
@@ -479,7 +476,7 @@ int send_whole_filel(char cmd, const char *fname, const char *datapth,
 			mybuf.md5=&md5;
 			mybuf.quick_read=quick_read;
 			mybuf.datapth=datapth;
-			mybuf.cntr=cntr;
+			mybuf.conf=conf;
 			mybuf.bytes=bytes;
 			// The EFS read function, ReadEncryptedFileRaw(),
 			// works in an annoying way. You have to give it a
@@ -526,7 +523,7 @@ int send_whole_filel(char cmd, const char *fname, const char *datapth,
 			if(quick_read)
 			{
 				int qr;
-				if((qr=do_quick_read(datapth, cntr))<0)
+				if((qr=do_quick_read(datapth, conf))<0)
 				{
 					ret=-1;
 					break;

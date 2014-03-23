@@ -714,21 +714,21 @@ all_tests()
 
 # include_ext is a bit broken at the moment.
 	# ----- Test 12 -----
-#	start_test 12 "Include extension, backup/restore comparison"
-#	add_normal_settings
-#	add_include_ext_on
-#	add_run_backup
-#	run_scripts
-#	wait_for_backup_to_finish
-#	start_script_client
+	start_test 12 "Include extension, backup/restore comparison"
+	add_normal_settings
+	add_include_ext_on
+	add_run_backup
+	run_scripts
+	wait_for_backup_to_finish
+	start_script_client
 #	add_run_verify all
-#	add_run_restore 12 "$restoredir"12
-#	add_run_not_find_client "\"$restoredir\"12 -type f -name '*.h'" \
-#		"$restoredir12 should not contain any '.h' files"
-#	add_run_find_client "\"$restoredir\"12 -type f -name '*.c'" \
-#		fail "$restoredir12 should contain '.c' files"
-#	run_script_client
-#	end_test 12
+	add_run_restore 12 "$restoredir"12
+	add_run_not_find_client "\"$restoredir\"12 -type f -name '*.h'" \
+		"$restoredir12 should not contain any '.h' files"
+	add_run_find_client "\"$restoredir\"12 -type f -name '*.c'" \
+		fail "$restoredir12 should contain '.c' files"
+	run_script_client
+	end_test 12
 }
 
 all_tests

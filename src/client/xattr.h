@@ -7,8 +7,10 @@
  || defined(HAVE_OPENBSD_OS) \
  || defined(HAVE_NETBSD_OS)
 extern int has_xattr(const char *path, char cmd);
-extern int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xlen, struct cntr *cntr);
-extern int set_xattr(const char *path, struct stat *statp, const char *xattrtext, size_t xlen, char cmd, struct cntr *cntr);
+extern int get_xattr(const char *path, struct stat *statp,
+	char **xattrtext, size_t *xlen, struct conf *conf);
+extern int set_xattr(const char *path, struct stat *statp,
+	const char *xattrtext, size_t xlen, char cmd, struct conf *conf);
 #endif
 #endif
 

@@ -21,7 +21,7 @@ static int run_server_script(const char *pre_or_post, struct iobuf *rbuf,
 
 	// Do not have a client storage directory, so capture the
 	// output in a buffer to pass to the notification script.
-	if(run_script_to_buf(args, script_arg, NULL, 1, 1, &logbuf))
+	if(run_script_to_buf(args, script_arg, cconf, 1, 1, 0, &logbuf))
 	{
 		char msg[256];
 		snprintf(msg, sizeof(msg),
@@ -43,7 +43,7 @@ static int run_server_script(const char *pre_or_post, struct iobuf *rbuf,
 		args[a++]=""; // usually brv
 		args[a++]=""; // usually warnings
 		args[a++]=NULL;
-		run_script(args, cconf->n_failure_arg, NULL, 1, 1);
+		run_script(args, cconf->n_failure_arg, cconf, 1, 1, 0);
 	}
 end:
 	if(logbuf) free(logbuf);

@@ -586,7 +586,7 @@ int async_get_fd(void)
 }
 
 // should be in src/log.c
-int logw(struct cntr *cntr, const char *fmt, ...)
+int logw(struct conf *conf, const char *fmt, ...)
 {
 	int r=0;
 	char buf[512]="";
@@ -600,6 +600,6 @@ int logw(struct cntr *cntr, const char *fmt, ...)
 		logp("WARNING: %s\n", buf);
 	}
 	va_end(ap);
-	cntr_add(cntr, CMD_WARNING, 1);
+	cntr_add(conf->cntr, CMD_WARNING, 1);
 	return r;
 }

@@ -114,7 +114,7 @@ static enum cliret backup_wrapper(enum action action, const char *phase1str,
 		args[a++]="reserved4";
 		args[a++]="reserved5";
 		args[a++]=NULL;
-		if(run_script(args, conf->b_script_pre_arg, conf->p1cntr, 1, 1))
+		if(run_script(args, conf->b_script_pre_arg, conf, 1, 1, 1))
 			 ret=CLIENT_ERROR;
 	}
 
@@ -135,7 +135,7 @@ static enum cliret backup_wrapper(enum action action, const char *phase1str,
 		args[a++]="reserved4";
 		args[a++]="reserved5";
 		args[a++]=NULL;
-		if(run_script(args, conf->b_script_post_arg, conf->cntr, 1, 1))
+		if(run_script(args, conf->b_script_post_arg, conf, 1, 1, 1))
 			ret=CLIENT_ERROR;
 	}
 
@@ -259,7 +259,7 @@ static enum cliret restore_wrapper(enum action action, int vss_restore,
 		args[a++]="reserved4";
 		args[a++]="reserved5";
 		args[a++]=NULL;
-		if(run_script(args, conf->r_script_pre_arg, conf->cntr, 1, 1))
+		if(run_script(args, conf->r_script_pre_arg, conf, 1, 1, 1))
 			ret=CLIENT_ERROR;
 	}
 	if(ret==CLIENT_OK)
@@ -291,7 +291,7 @@ static enum cliret restore_wrapper(enum action action, int vss_restore,
 		args[a++]="reserved4";
 		args[a++]="reserved5";
 		args[a++]=NULL;
-		if(run_script(args, conf->r_script_post_arg, conf->cntr, 1, 1))
+		if(run_script(args, conf->r_script_post_arg, conf, 1, 1, 1))
 			ret=CLIENT_ERROR;
 	}
 

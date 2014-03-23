@@ -20,10 +20,8 @@ dummy:
 
 #
 SRCS = \
-	acl.c \
 	backup_phase2.c \
 	restore.c \
-	xattr.c \
 
 OBJS = $(SRCS:.c=.o)
 LOBJS = $(SRCS:.c=.lo)

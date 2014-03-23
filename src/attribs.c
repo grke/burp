@@ -225,7 +225,7 @@ void attribs_decode(struct sbuf *sb)
 }
 
 static int set_file_times(const char *path, struct utimbuf *ut,
-	struct stat *statp, struct cntr *cntr)
+	struct stat *statp, struct conf *conf)
 {
 	int e;
 // The mingw64 utime() appears not to work on read-only files.
@@ -239,7 +239,7 @@ static int set_file_times(const char *path, struct utimbuf *ut,
 	if(e<0)
 	{
 		berrno be;
-		logw(cntr, "Unable to set file times %s: ERR=%s",
+		logw(conf, "Unable to set file times %s: ERR=%s",
 			path, be.bstrerror());
 		return -1;
 	}
@@ -262,7 +262,7 @@ int attribs_set(const char *path, struct stat *statp, uint64_t winattr, struct c
 
 #ifdef HAVE_WIN32
 	win32_chmod(path, statp->st_mode, winattr);
-	set_file_times(path, &ut, statp, conf->cntr);
+	set_file_times(path, &ut, statp, conf);
 	return 0;
 #endif
 
@@ -281,7 +281,7 @@ int attribs_set(const char *path, struct stat *statp, uint64_t winattr, struct c
 		if(lchown(path, statp->st_uid, statp->st_gid)<0)
 		{
 			berrno be;
-			logw(conf->cntr, "Unable to set file owner %s: ERR=%s",
+			logw(conf, "Unable to set file owner %s: ERR=%s",
 				path, be.bstrerror());
 			return -1;
 		}
@@ -291,19 +291,19 @@ int attribs_set(const char *path, struct stat *statp, uint64_t winattr, struct c
 		if(chown(path, statp->st_uid, statp->st_gid)<0)
 		{
 			berrno be;
-			logw(conf->cntr, "Unable to set file owner %s: ERR=%s",
+			logw(conf, "Unable to set file owner %s: ERR=%s",
 				path, be.bstrerror());
 			return -1;
 		}
 		if(chmod(path, statp->st_mode) < 0)
 		{
 			berrno be;
-			logw(conf->cntr, "Unable to set file modes %s: ERR=%s",
+			logw(conf, "Unable to set file modes %s: ERR=%s",
 				path, be.bstrerror());
 			return -1;
 		}
 
-		if(set_file_times(path, &ut, statp, conf->cntr))
+		if(set_file_times(path, &ut, statp, conf))
 			return -1;
 #ifdef HAVE_CHFLAGS
 		/*
@@ -316,7 +316,7 @@ int attribs_set(const char *path, struct stat *statp, uint64_t winattr, struct c
 		if(chflags(path, statp->st_flags)<0)
 		{
 			berrno be;
-			logw(conf->cntr, "Unable to set file flags %s: ERR=%s",
+			logw(conf, "Unable to set file flags %s: ERR=%s",
 				path, be.bstrerror());
 			return -1;
 		}

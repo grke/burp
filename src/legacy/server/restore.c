@@ -142,7 +142,7 @@ static int send_file(struct sbuf *sb, int patches, const char *best, unsigned lo
 		// is not gzipped. Gzip it during the send. 
 		ret=send_whole_file_gzl(best, sb->burp1->datapth.buf,
 			1, bytes, NULL,
-			cconf->cntr, 9, NULL, fp, NULL, 0, -1);
+			cconf, 9, NULL, fp, NULL, 0, -1);
 	}
 	else
 	{
@@ -157,7 +157,7 @@ static int send_file(struct sbuf *sb, int patches, const char *best, unsigned lo
 		{
 			ret=send_whole_filel(sb->path.cmd, best,
 				sb->burp1->datapth.buf, 1, bytes,
-				cconf->cntr, NULL, fp, NULL, 0, -1);
+				cconf, NULL, fp, NULL, 0, -1);
 		}
 		// It might have been stored uncompressed. Gzip it during
 		// the send. If the client knew what kind of file it would be
@@ -167,7 +167,7 @@ static int send_file(struct sbuf *sb, int patches, const char *best, unsigned lo
 		{
 			ret=send_whole_file_gzl(best, sb->burp1->datapth.buf,
 				1, bytes,
-				NULL, cconf->cntr, 9, NULL, fp, NULL, 0, -1);
+				NULL, cconf, 9, NULL, fp, NULL, 0, -1);
 		}
 		else
 		{
@@ -175,7 +175,7 @@ static int send_file(struct sbuf *sb, int patches, const char *best, unsigned lo
 			// file might already be gzipped. Send it as it is.
 			ret=send_whole_filel(sb->path.cmd, best,
 				sb->burp1->datapth.buf, 1, bytes,
-				cconf->cntr, NULL, fp, NULL, 0, -1);
+				cconf, NULL, fp, NULL, 0, -1);
 		}
 	}
 	close_file_for_sendl(NULL, &fp);
@@ -193,7 +193,7 @@ static int verify_file(struct sbuf *sb, int patches, const char *best, unsigned 
 	unsigned long long cbytes=0;
 	if(!(cp=strrchr(sb->burp1->endfile.buf, ':')))
 	{
-		logw(cconf->cntr, "%s has no md5sum!\n", sb->burp1->datapth.buf);
+		logw(cconf, "%s has no md5sum!\n", sb->burp1->datapth.buf);
 		return 0;
 	}
 	cp++;
@@ -214,7 +214,7 @@ static int verify_file(struct sbuf *sb, int patches, const char *best, unsigned 
 		FILE *fp=NULL;
 		if(!(fp=open_file(best, "rb")))
 		{
-			logw(cconf->cntr, "could not open %s\n", best);
+			logw(cconf, "could not open %s\n", best);
 			return 0;
 		}
 		while((b=fread(in, 1, ZCHUNK, fp))>0)
@@ -229,7 +229,7 @@ static int verify_file(struct sbuf *sb, int patches, const char *best, unsigned 
 		}
 		if(!feof(fp))
 		{
-			logw(cconf->cntr, "error while reading %s\n", best);
+			logw(cconf, "error while reading %s\n", best);
 			close_fp(&fp);
 			return 0;
 		}
@@ -240,7 +240,7 @@ static int verify_file(struct sbuf *sb, int patches, const char *best, unsigned 
 		gzFile zp=NULL;
 		if(!(zp=gzopen_file(best, "rb")))
 		{
-			logw(cconf->cntr, "could not gzopen %s\n", best);
+			logw(cconf, "could not gzopen %s\n", best);
 			return 0;
 		}
 		while((b=gzread(zp, in, ZCHUNK))>0)
@@ -255,7 +255,7 @@ static int verify_file(struct sbuf *sb, int patches, const char *best, unsigned 
 		}
 		if(!gzeof(zp))
 		{
-			logw(cconf->cntr, "error while gzreading %s\n", best);
+			logw(cconf, "error while gzreading %s\n", best);
 			gzclose_fp(&zp);
 			return 0;
 		}
@@ -271,7 +271,7 @@ static int verify_file(struct sbuf *sb, int patches, const char *best, unsigned 
 	if(strcmp(newsum, cp))
 	{
 		logp("%s %s\n", newsum, cp);
-		logw(cconf->cntr, "md5sum for '%s (%s)' did not match!\n",
+		logw(cconf, "md5sum for '%s (%s)' did not match!\n",
 			sb->path.buf, sb->burp1->datapth.buf);
 		logp("md5sum for '%s (%s)' did not match!\n",
 			sb->path.buf, sb->burp1->datapth.buf);
@@ -413,7 +413,7 @@ static int restore_file(struct bu *arr, int a, int i, struct sbuf *sb, const cha
 		}
 	}
 
-	logw(cconf->cntr, "restore could not find %s (%s)\n",
+	logw(cconf, "restore could not find %s (%s)\n",
 		sb->path.buf, sb->burp1->datapth.buf);
 	//return -1;
 	return 0;

@@ -127,9 +127,7 @@ int lock_test(const char *path)
 int lock_release(struct lock *lock)
 {
 	int ret=0;
-printf("IN RELEASE\n");
 	if(!lock || lock->status!=GET_LOCK_GOT) return 0;
-printf("UNLOCK: %s\n", lock->path);
 	if(lock->path) unlink(lock->path);
 	if(lock->fd>=0)
 	{

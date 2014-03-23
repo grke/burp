@@ -168,7 +168,7 @@ int build_path(const char *datadir, const char *fname, char **rpath, const char 
 
 // return -1 for error, 0 for OK, 1 if the client wants to interrupt the
 // transfer.
-int do_quick_read(const char *datapth, struct cntr *cntr)
+int do_quick_read(const char *datapth, struct conf *conf)
 {
 	int r=0;
 	static struct iobuf rbuf;
@@ -180,7 +180,7 @@ int do_quick_read(const char *datapth, struct cntr *cntr)
 		if(rbuf.cmd==CMD_WARNING)
 		{
 			logp("WARNING: %s\n", rbuf.buf);
-			cntr_add(cntr, rbuf.cmd, 0);
+			cntr_add(conf->cntr, rbuf.cmd, 0);
 		}
 		else if(rbuf.cmd==CMD_INTERRUPT)
 		{
@@ -240,7 +240,7 @@ int open_file_for_send(BFILE *bfd, const char *fname, int64_t winattr, struct co
 	if(bopen(bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0))
 	{
 		berrno be;
-		logw(conf->cntr, "Could not open %s: %s\n",
+		logw(conf, "Could not open %s: %s\n",
 			fname, be.bstrerror(errno));
 		return -1;
 	}
@@ -252,7 +252,7 @@ int close_file_for_send(BFILE *bfd)
 	return bclose(bfd);
 }
 
-int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, struct cntr *cntr, int compression, FILE *fp)
+int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, struct conf *conf, int compression, FILE *fp)
 {
 	int ret=0;
 	int zret=0;
@@ -327,7 +327,7 @@ int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, u
 			if(quick_read && datapth)
 			{
 				int qr;
-				if((qr=do_quick_read(datapth, cntr))<0)
+				if((qr=do_quick_read(datapth, conf))<0)
 				{
 					ret=-1;
 					break;
@@ -513,6 +513,8 @@ void write_status(char phase, const char *path, struct conf *conf)
 	}
 }
 
+#endif
+
 int astrcat(char **buf, const char *append)
 {
 	int l=0;
@@ -531,179 +533,12 @@ int astrcat(char **buf, const char *append)
 	return 0;
 }
 
-static int log_script_output(FILE **fp, struct cntr *cntr, int logfunc, char **logbuf)
-{
-	char buf[256]="";
-	if(fp && *fp)
-	{
-		if(fgets(buf, sizeof(buf), *fp))
-		{
-			// logc does not print a prefix
-			if(logfunc) logp("%s", buf);
-			else logc("%s", buf);
-			if(logbuf && astrcat(logbuf, buf)) return -1;
-			if(cntr) logw(cntr, "%s", buf);
-		}
-		if(feof(*fp))
-		{
-			fclose(*fp);
-			*fp=NULL;
-		}
-	}
-	return 0;
-}
-
-static int got_sigchld=0;
-static int run_script_status=-1;
-
-static void run_script_sigchld_handler(int sig)
-{
-	//printf("in run_script_sigchld_handler\n");
-	got_sigchld=1;
-	run_script_status=-1;
-	waitpid(-1, &run_script_status, 0);
-}
-
 void setup_signal(int sig, void handler(int sig))
 {
 	struct sigaction sa;
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler=handler;
 	sigaction(sig, &sa, NULL);
-}
-
-static int run_script_select(FILE **sout, FILE **serr,
-	struct cntr *cntr, int logfunc, char **logbuf)
-{
-	int mfd=-1;
-	fd_set fsr;
-	struct timeval tval;
-	int soutfd=fileno(*sout);
-	int serrfd=fileno(*serr);
-	setlinebuf(*sout);
-	setlinebuf(*serr);
-	set_non_blocking(soutfd);
-	set_non_blocking(serrfd);
-
-	while(1)
-	{
-		mfd=-1;
-		FD_ZERO(&fsr);
-		if(*sout) add_fd_to_sets(soutfd, &fsr, NULL, NULL, &mfd);
-		if(*serr) add_fd_to_sets(serrfd, &fsr, NULL, NULL, &mfd);
-		tval.tv_sec=1;
-		tval.tv_usec=0;
-		if(select(mfd+1, &fsr, NULL, NULL, &tval)<0)
-		{
-			if(errno!=EAGAIN && errno!=EINTR)
-			{
-				logp("%s error: %s\n", __func__,
-					strerror(errno));
-				return -1;
-			}
-		}
-		if(FD_ISSET(soutfd, &fsr))
-		{
-			if(log_script_output(sout, NULL, logfunc, logbuf))
-				return -1;
-		}
-		if(FD_ISSET(serrfd, &fsr))
-		{
-			if(log_script_output(serr, cntr, logfunc, logbuf))
-				return -1;
-		}
-
-		if(!*sout && !*serr && got_sigchld)
-		{
-			//fclose(*sout); *sout=NULL;
-			//fclose(*serr); *serr=NULL;
-			got_sigchld=0;
-			return 0;
-		}
-	}
-
-	// Never get here.
-	return -1;
-}
-
-#endif
-
-int run_script_to_buf(const char **args, struct strlist *userargs,
-	struct cntr *cntr, int do_wait, int logfunc, char **logbuf)
-{
-	int a=0;
-	int l=0;
-	pid_t p;
-	FILE *serr=NULL;
-	FILE *sout=NULL;
-	char *cmd[64]={ NULL };
-	struct strlist *sl;
-#ifndef HAVE_WIN32
-	int s=0;
-#endif
-	if(!args || !args[0]) return 0;
-
-	for(a=0; args[a]; a++) cmd[l++]=(char *)args[a];
-	for(sl=userargs; sl; sl=sl->next) cmd[l++]=sl->path;
-	cmd[l++]=NULL;
-
-#ifndef HAVE_WIN32
-	setup_signal(SIGCHLD, run_script_sigchld_handler);
-#endif
-
-	fflush(stdout); fflush(stderr);
-	if(do_wait)
-	{
-		if((p=forkchild(NULL,
-			&sout, &serr, cmd[0], cmd))==-1) return -1;
-	}
-	else
-	{
-		if((p=forkchild_no_wait(NULL,
-			&sout, &serr, cmd[0], cmd))==-1) return -1;
-		return 0;
-	}
-#ifdef HAVE_WIN32
-	// My windows forkchild currently just executes, then returns.
-	return 0;
-#else
-	s=run_script_select(&sout, &serr, cntr, logfunc, logbuf);
-
-	// Set SIGCHLD back to default.
-	setup_signal(SIGCHLD, SIG_DFL);
-
-	if(s) return -1;
-
-	if(WIFEXITED(run_script_status))
-	{
-		int ret=WEXITSTATUS(run_script_status);
-		logp("%s returned: %d\n", cmd[0], ret);
-		if(cntr && ret) logw(cntr, "%s returned: %d\n",
-			cmd[0], ret);
-		return ret;
-	}
-	else if(WIFSIGNALED(run_script_status))
-	{
-		logp("%s terminated on signal %d\n",
-			cmd[0], WTERMSIG(run_script_status));
-		if(cntr) logw(cntr, "%s terminated on signal %d\n",
-			cmd[0], WTERMSIG(run_script_status));
-	}
-	else
-	{
-		logp("Strange return when trying to run %s\n", cmd[0]);
-		if(cntr) logw(cntr, "Strange return when trying to run %s\n",
-			cmd[0]);
-	}
-	return -1;
-#endif
-}
-
-int run_script(const char **args, struct strlist *userargs,
-	struct cntr *cntr, int do_wait, int logfunc)
-{
-	return run_script_to_buf(args, userargs, cntr, do_wait,
-		logfunc, NULL /* do not save output to buffer */);
 }
 
 char *comp_level(struct conf *conf)
@@ -1052,7 +887,7 @@ int send_a_file(const char *path, struct conf *conf)
 	unsigned long long bytes=0;
 	if(!(fp=open_file(path, "rb"))
 	  || send_whole_file_gz(path, "datapth", 0, &bytes,
-		conf->p1cntr, 9, // compression
+		conf, 9, // compression
 		fp))
 	{
 		ret=-1;

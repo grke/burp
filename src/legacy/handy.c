@@ -76,8 +76,8 @@ int open_file_for_sendl(BFILE *bfd, FILE **fp, const char *fname,
 		if((fd=open(fname, O_RDONLY|O_NOATIME))<0
 		  || !(*fp=fdopen(fd, "rb")))
 		{
-			logw(conf->cntr,
-				"Could not open %s: %s\n", fname, strerror(errno));
+			logw(conf, "Could not open %s: %s\n",
+				fname, strerror(errno));
 			return -1;
 		}
 	}
@@ -150,7 +150,7 @@ int write_endfile(unsigned long long bytes, unsigned char *checksum)
    Perhaps a separate function is needed for encryption on compression off.
 */
 int send_whole_file_gzl(const char *fname, const char *datapth, int quick_read,
-	unsigned long long *bytes, const char *encpassword, struct cntr *cntr,
+	unsigned long long *bytes, const char *encpassword, struct conf *conf,
 	int compression, BFILE *bfd, FILE *fp, const char *extrameta,
 	size_t elen, size_t datalen)
 {
@@ -311,7 +311,7 @@ int send_whole_file_gzl(const char *fname, const char *datapth, int quick_read,
 			if(quick_read && datapth)
 			{
 				int qr;
-				if((qr=do_quick_read(datapth, cntr))<0)
+				if((qr=do_quick_read(datapth, conf))<0)
 				{
 					ret=-1;
 					break;
@@ -425,7 +425,7 @@ static DWORD WINAPI write_efs(PBYTE pbData,
 #endif
 
 int send_whole_filel(char cmd, const char *fname, const char *datapth,
-	int quick_read, unsigned long long *bytes, struct cntr *cntr,
+	int quick_read, unsigned long long *bytes, struct conf *conf,
 	BFILE *bfd, FILE *fp, const char *extrameta,
 	size_t elen, size_t datalen)
 {
@@ -561,7 +561,7 @@ int send_whole_filel(char cmd, const char *fname, const char *datapth,
 			if(quick_read)
 			{
 				int qr;
-				if((qr=do_quick_read(datapth, cntr))<0)
+				if((qr=do_quick_read(datapth, conf))<0)
 				{
 					ret=-1;
 					break;

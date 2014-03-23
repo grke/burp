@@ -16,11 +16,11 @@ extern int close_file_for_sendl(BFILE *bfd, FILE **fp);
 
 extern int send_whole_file_gzl(const char *fname, const char *datapth,
 	int quick_read, unsigned long long *bytes, const char *encpassword,
-	struct cntr *cntr, int compression, BFILE *bfd, FILE *fp,
+	struct conf *conf, int compression, BFILE *bfd, FILE *fp,
 	const char *extrameta, size_t elen, size_t datalen);
 
 extern int send_whole_filel(char cmd, const char *fname, const char *datapth,
-	int quick_read, unsigned long long *bytes, struct cntr *cntr,
+	int quick_read, unsigned long long *bytes, struct conf *conf,
 	BFILE *bfd, FILE *fp,
 	const char *extrameta, size_t elen, size_t datalen);
 

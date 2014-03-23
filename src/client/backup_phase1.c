@@ -32,7 +32,7 @@ static int maybe_send_extrameta(const char *path, char cmd,
 
 static int ft_err(struct conf *conf, FF_PKT *ff, const char *msg)
 {
-	return logw(conf->p1cntr, _("Err: %s %s: %s"), msg,
+	return logw(conf, _("Err: %s %s: %s"), msg,
 		ff->fname, strerror(errno));
 }
 
@@ -91,7 +91,7 @@ int send_file(FF_PKT *ff, bool top_level, struct conf *conf)
 			else ff->flen=strlen(ff->fname);	
 		}
 		if(ff->flen>server_name_max)
-			return logw(conf->p1cntr,
+			return logw(conf,
 				"File name too long (%lu > %lu): %s",
 				ff->flen, server_name_max, ff->fname);
 	}
@@ -102,7 +102,7 @@ int send_file(FF_PKT *ff, bool top_level, struct conf *conf)
 		if(ff->type==FT_REG
 		  || ff->type==FT_DIR)
 			return to_server(conf, ff, sb, CMD_EFS_FILE);
-		return logw(conf->p1cntr, "EFS type %d not yet supported: %s",
+		return logw(conf, "EFS type %d not yet supported: %s",
 			ff->type, ff->fname);
 	}
 #endif
@@ -126,7 +126,7 @@ int send_file(FF_PKT *ff, bool top_level, struct conf *conf)
 		case FT_SPEC:
 			return to_server(conf, ff, sb, CMD_SPECIAL);
 		case FT_NOFSCHG:
-			return logw(conf->p1cntr, "Dir: %s [will not descend: "
+			return logw(conf, "Dir: %s [will not descend: "
 				"file system change not allowed]\n", ff->fname);
 		case FT_NOFOLLOW:
 			return ft_err(conf, ff, "Could not follow link");
@@ -135,8 +135,7 @@ int send_file(FF_PKT *ff, bool top_level, struct conf *conf)
 		case FT_NOOPEN:
 			return ft_err(conf, ff, "Could not open directory");
 		default:
-			return logw(conf->p1cntr,
-				_("Err: Unknown file type %d: %s"),
+			return logw(conf, _("Err: Unknown file type %d: %s"),
 				ff->type, ff->fname);
 	}
 }

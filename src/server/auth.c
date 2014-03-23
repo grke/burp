@@ -69,7 +69,7 @@ static int check_client_and_password(struct conf *conf, const char *password, st
 	return 0;
 }
 
-void version_warn(struct cntr *cntr, struct conf *cconf)
+void version_warn(struct conf *conf, struct conf *cconf)
 {
 	if(!cconf->peer_version || strcmp(cconf->peer_version, VERSION))
 	{
@@ -79,7 +79,7 @@ void version_warn(struct cntr *cntr, struct conf *cconf)
 			snprintf(msg, sizeof(msg), "Client '%s' has an unknown version. Please upgrade.", cconf->cname?cconf->cname:"unknown");
 		else
 			snprintf(msg, sizeof(msg), "Client '%s' version '%s' does not match server version '%s'. An upgrade is recommended.", cconf->cname?cconf->cname:"unknown", cconf->peer_version, VERSION);
-		if(cntr) logw(cntr, "%s", msg);
+		if(conf) logw(conf, "%s", msg);
 		logp("WARNING: %s\n", msg);
 	}
 }
@@ -154,8 +154,7 @@ int authorise_server(struct conf *conf, struct conf *cconf)
 		return -1;
 	}
 
-	if(cconf->version_warn)
-		version_warn(conf->p1cntr, cconf);
+	if(cconf->version_warn) version_warn(conf, cconf);
 
 	logp("auth ok for: %s%s\n", cconf->cname,
 		cconf->password_check?"":" (no password needed)");

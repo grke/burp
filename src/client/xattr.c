@@ -6,13 +6,13 @@
  || defined(HAVE_NETBSD_OS) \
  || defined(HAVE_OPENBSD_OS)
 
-static char *get_next_str(char **data, size_t *l, struct cntr *cntr, ssize_t *s, const char *path)
+static char *get_next_str(char **data, size_t *l, struct conf *conf, ssize_t *s, const char *path)
 {
 	char *ret=NULL;
 
 	if((sscanf(*data, "%08X", (unsigned int *)s))!=1)
 	{
-		logw(cntr, "sscanf of xattr '%s' %d failed for %s\n", *data, *l, path);
+		logw(conf, "sscanf of xattr '%s' %d failed for %s\n", *data, *l, path);
 		return NULL;
 	}
 	*data+=8;
@@ -46,7 +46,7 @@ int has_xattr(const char *path, char cmd)
 	return 0;
 }
 
-int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xlen, struct cntr *cntr)
+int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xlen, struct conf *conf)
 {
 	char *z=NULL;
 	size_t len=0;
@@ -58,7 +58,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 
 	if((len=llistxattr(path, NULL, 0))<=0)
 	{
-		logw(cntr, "could not llistxattr of '%s': %d\n", path, len);
+		logw(conf, "could not llistxattr of '%s': %d\n", path, len);
 		return 0; // carry on
 	}
 	if(!(xattrlist=(char *)malloc(len+1)))
@@ -69,7 +69,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 	memset(xattrlist, 0, len+1);
 	if((len=llistxattr(path, xattrlist, len))<=0)
 	{
-		logw(cntr, "could not llistxattr '%s': %d\n", path, len);
+		logw(conf, "could not llistxattr '%s': %d\n", path, len);
 		free(xattrlist);
 		return 0; // carry on
 	}
@@ -93,7 +93,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 
 		if((zlen=strlen(z))>maxlen)
 		{
-                	logw(cntr, "xattr element of '%s' too long: %d\n",
+                	logw(conf, "xattr element of '%s' too long: %d\n",
 				path, zlen);
 			if(toappend) { free(toappend); toappend=NULL; }
 			break;
@@ -117,7 +117,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 
 		if((vlen=lgetxattr(path, z, NULL, 0))<=0)
 		{
-			logw(cntr, "could not lgetxattr on %s for %s: %d\n",
+			logw(conf, "could not lgetxattr on %s for %s: %d\n",
 				path, z, vlen);
 			continue;
 		}
@@ -130,7 +130,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 		}
 		if((vlen=lgetxattr(path, z, val, vlen))<=0)
 		{
-			logw(cntr, "could not lgetxattr %s for %s: %d\n",
+			logw(conf, "could not lgetxattr %s for %s: %d\n",
 				path, z, vlen);
 			free(val);
 			continue;
@@ -139,7 +139,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 
 		if(vlen>maxlen)
 		{
-                	logw(cntr, "xattr value of '%s' too long: %d\n",
+                	logw(conf, "xattr value of '%s' too long: %d\n",
 				path, vlen);
 			if(toappend) { free(toappend); toappend=NULL; }
 			free(val);
@@ -166,7 +166,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 
 		if(totallen>maxlen)
 		{
-                	logw(cntr, "xattr length of '%s' grew too long: %d\n",
+                	logw(conf, "xattr length of '%s' grew too long: %d\n",
 				path, totallen);
 			free(val);
 			free(toappend);
@@ -196,7 +196,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 	return 0;
 }
 
-static int do_set_xattr(const char *path, struct stat *statp, const char *xattrtext, size_t xlen, struct cntr *cntr)
+static int do_set_xattr(const char *path, struct stat *statp, const char *xattrtext, size_t xlen, struct conf *conf)
 {
 	size_t l=0;
 	char *data=NULL;
@@ -209,9 +209,9 @@ static int do_set_xattr(const char *path, struct stat *statp, const char *xattrt
 		char *name=NULL;
 		char *value=NULL;
 
-		if(!(name=get_next_str(&data, &l, cntr, &s, path)))
+		if(!(name=get_next_str(&data, &l, conf, &s, path)))
 			return -1;
-		if(!(value=get_next_str(&data, &l, cntr, &s, path)))
+		if(!(value=get_next_str(&data, &l, conf, &s, path)))
 		{
 			free(name);
 			return -1;
@@ -219,7 +219,7 @@ static int do_set_xattr(const char *path, struct stat *statp, const char *xattrt
 
 		if(lsetxattr(path, name, value, strlen(value), 0))
 		{
-			logw(cntr, "lsetxattr error on %s: %s\n",
+			logw(conf, "lsetxattr error on %s: %s\n",
 				path, strerror(errno));
 			free(name);
 			free(value);
@@ -233,15 +233,15 @@ static int do_set_xattr(const char *path, struct stat *statp, const char *xattrt
 	return 0;
 }
 
-int set_xattr(const char *path, struct stat *statp, const char *xattrtext, size_t xlen, char cmd, struct cntr *cntr)
+int set_xattr(const char *path, struct stat *statp, const char *xattrtext, size_t xlen, char cmd, struct conf *conf)
 {
 	switch(cmd)
 	{
 		case META_XATTR:
-			return do_set_xattr(path, statp, xattrtext, xlen, cntr);
+			return do_set_xattr(path, statp, xattrtext, xlen, conf);
 		default:
 			logp("unknown xattr type: %c\n", cmd);
-			logw(cntr, "unknown xattr type: %c\n", cmd);
+			logw(conf, "unknown xattr type: %c\n", cmd);
 			break;
 	}
 	return -1;
@@ -274,7 +274,7 @@ int has_xattr(const char *path, char cmd)
 }
 
 #define BSD_BUF_SIZE	1024
-int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xlen, struct cntr *cntr)
+int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xlen, struct conf *conf)
 {
 	int i=0;
 	size_t maxlen=0xFFFFFFFF/2;
@@ -292,7 +292,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 		char cattrname[BSD_BUF_SIZE]="";
 		if((len=extattr_list_link(path, namespaces[i], NULL, 0))<0)
 		{
-			logw(cntr, "could not extattr_list_link of '%s': %d\n",
+			logw(conf, "could not extattr_list_link of '%s': %d\n",
 				path, len);
 			return 0; // carry on
 		}
@@ -311,7 +311,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 		memset(xattrlist, 0, len+1);
 		if((len=extattr_list_link(path, namespaces[i], xattrlist, len))<=0)
 		{
-			logw(cntr, "could not extattr_list_link '%s': %d\n",
+			logw(conf, "could not extattr_list_link '%s': %d\n",
 				path, len);
 			free(xattrlist);
 			return 0; // carry on
@@ -367,7 +367,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 			if((vlen=extattr_list_link(path, namespaces[i],
 				xattrlist, len))<0)
 			{
-				logw(cntr, "could not extattr_list_link on %s for %s: %d\n", path, namespaces[i], vlen);
+				logw(conf, "could not extattr_list_link on %s for %s: %d\n", path, namespaces[i], vlen);
 				continue;
 			}
 			if(!(val=(char *)malloc(vlen+1)))
@@ -380,7 +380,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 			if((vlen=extattr_get_link(path, namespaces[i],
 				cattrname, val, vlen))<0)
 			{
-				logw(cntr, "could not extattr_list_link %s for %s: %d\n", path, namespaces[i], vlen);
+				logw(conf, "could not extattr_list_link %s for %s: %d\n", path, namespaces[i], vlen);
 				free(val);
 				continue;
 			}
@@ -388,7 +388,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 
 			if(vlen>maxlen)
 			{
-				logw(cntr, "xattr value of '%s' too long: %d\n",
+				logw(conf, "xattr value of '%s' too long: %d\n",
 					path, vlen);
 				if(toappend) { free(toappend); toappend=NULL; }
 				free(val);
@@ -415,7 +415,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 
 			if(totallen>maxlen)
 			{
-				logw(cntr, "xattr length of '%s' grew too long: %d\n",
+				logw(conf, "xattr length of '%s' grew too long: %d\n",
 					path, totallen);
 				free(val);
 				free(toappend);
@@ -452,7 +452,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 	return 0;
 }
 
-static int do_set_xattr_bsd(const char *path, struct stat *statp, const char *xattrtext, size_t xlen, struct cntr *cntr)
+static int do_set_xattr_bsd(const char *path, struct stat *statp, const char *xattrtext, size_t xlen, struct conf *conf)
 {
 	size_t l=0;
 	char *data=NULL;
@@ -468,9 +468,9 @@ static int do_set_xattr_bsd(const char *path, struct stat *statp, const char *xa
 		int cnspace=0;
 		char *nspace=NULL;
 
-		if(!(nspace=get_next_str(&data, &l, cntr, &vlen, path)))
+		if(!(nspace=get_next_str(&data, &l, conf, &vlen, path)))
 			return -1;
-		if(!(value=get_next_str(&data, &l, cntr, &vlen, path)))
+		if(!(value=get_next_str(&data, &l, conf, &vlen, path)))
 		{
 			free(name);
 			return -1;
@@ -479,7 +479,7 @@ static int do_set_xattr_bsd(const char *path, struct stat *statp, const char *xa
 		// Need to split the name into two parts.
 		if(!(name=strchr(nspace, '.')))
 		{
-			logw(cntr, "could not split %s into namespace and name on %s\n", nspace, path);
+			logw(conf, "could not split %s into namespace and name on %s\n", nspace, path);
 			free(nspace);
 			free(value);
 			return -1;
@@ -489,7 +489,7 @@ static int do_set_xattr_bsd(const char *path, struct stat *statp, const char *xa
 
 		if(extattr_string_to_namespace(nspace, &cnspace))
 		{
-			logw(cntr, "could not convert %s into namespace on %s",
+			logw(conf, "could not convert %s into namespace on %s",
 				nspace, path);
 			free(nspace);
 			free(value);
@@ -500,7 +500,7 @@ static int do_set_xattr_bsd(const char *path, struct stat *statp, const char *xa
 		if((cnt=extattr_set_link(path,
 			cnspace, name, value, vlen))!=vlen)
 		{
-			logw(cntr, "extattr_set_link error on %s %d!=vlen: %s\n",
+			logw(conf, "extattr_set_link error on %s %d!=vlen: %s\n",
 				path, strerror(errno));
 			free(nspace);
 			free(value);
@@ -514,15 +514,15 @@ static int do_set_xattr_bsd(const char *path, struct stat *statp, const char *xa
 	return 0;
 }
 
-int set_xattr(const char *path, struct stat *statp, const char *xattrtext, size_t xlen, char cmd, struct cntr *cntr)
+int set_xattr(const char *path, struct stat *statp, const char *xattrtext, size_t xlen, char cmd, struct conf *conf)
 {
 	switch(cmd)
 	{
 		case META_XATTR_BSD:
-			return do_set_xattr_bsd(path, statp, xattrtext, xlen, cntr);
+			return do_set_xattr_bsd(path, statp, xattrtext, xlen, conf);
 		default:
 			logp("unknown xattr type: %c\n", cmd);
-			logw(cntr, "unknown xattr type: %c\n", cmd);
+			logw(conf, "unknown xattr type: %c\n", cmd);
 			break;
 	}
 	return -1;

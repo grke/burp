@@ -342,9 +342,7 @@ void cntr_print(struct conf *conf, enum action act)
 	time_t now=time(NULL);
 	struct cntr *p1c=conf->p1cntr;
 	struct cntr *c=conf->cntr;
-printf("in cntr print\n");
 	if(!p1c || !c) return;
-printf("in cntr print a\n");
 
 	border();
 	logc("Start time: %s\n", getdatestr(p1c->start));

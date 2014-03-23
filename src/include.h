@@ -25,6 +25,7 @@
 #include "msg.h"
 #include "prepend.h"
 #include "regexp.h"
+#include "run_script.h"
 #include "sbuf.h"
 #include "ssl.h"
 #include "strlist.h"

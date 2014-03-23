@@ -78,9 +78,9 @@ static int burp_ca_init(struct conf *conf, const char *ca_dir)
 	args[a++]="--config";
 	args[a++]=conf->ca_conf;
 	args[a++]=NULL;
-	if(run_script(args, NULL, NULL /* cntr */, 1 /* wait */,
-		0 /* do not use logp - stupid openssl prints lots of dots
-		     one at a time with no way to turn it off */))
+	if(run_script(args, NULL, conf, 1 /* wait */,
+		0, 0 /* do not use logp - stupid openssl prints lots of dots
+		        one at a time with no way to turn it off */))
 	{
 		logp("Error running %s\n", conf->ca_burp_ca);
 		return -1;
@@ -100,9 +100,9 @@ static int burp_ca_init(struct conf *conf, const char *ca_dir)
 	args[a++]="--config";
 	args[a++]=conf->ca_conf;
 	args[a++]=NULL;
-	if(run_script(args, NULL, NULL /* cntr */, 1 /* wait */,
-		0 /* do not use logp - stupid openssl prints lots of dots
-		     one at a time with no way to turn it off */))
+	if(run_script(args, NULL, conf, 1 /* wait */,
+		0, 0 /* do not use logp - stupid openssl prints lots of dots
+		        one at a time with no way to turn it off */))
 	{
 		logp("Error running %s\n", conf->ca_burp_ca);
 		return -1;
@@ -124,9 +124,9 @@ static int burp_ca_init(struct conf *conf, const char *ca_dir)
 	args[a++]="--config";
 	args[a++]=conf->ca_conf;
 	args[a++]=NULL;
-	if(run_script(args, NULL, NULL /* cntr */, 1 /* wait */,
-		0 /* do not use logp - stupid openssl prints lots of dots
-		     one at a time with no way to turn it off */))
+	if(run_script(args, NULL, conf, 1 /* wait */,
+		0, 0 /* do not use logp - stupid openssl prints lots of dots
+		        one at a time with no way to turn it off */))
 	{
 		logp("Error running %s\n", conf->ca_burp_ca);
 		return -1;
@@ -183,9 +183,9 @@ static int maybe_make_dhfile(struct conf *conf, const char *ca_dir)
 	args[a++]="--dir";
 	args[a++]=ca_dir;
 	args[a++]=NULL;
-	if(run_script(args, NULL, NULL /* cntr */, 1 /* wait */,
-		0 /* do not use logp - stupid openssl prints lots of dots
-		     one at a time with no way to turn it off */))
+	if(run_script(args, NULL, conf, 1 /* wait */,
+		0, 0 /* do not use logp - stupid openssl prints lots of dots
+		        one at a time with no way to turn it off */))
 	{
 		logp("Error running %s\n", conf->ca_burp_ca);
 		free(path);
@@ -308,9 +308,9 @@ static int sign_client_cert(const char *client, struct conf *conf)
 	args[a++]="--config";
 	args[a++]=conf->ca_conf;
 	args[a++]=NULL;
-	if(run_script(args, NULL, NULL /* cntr */, 1 /* wait */,
-		0 /* do not use logp - stupid openssl prints lots of dots
-		     one at a time with no way to turn it off */))
+	if(run_script(args, NULL, conf, 1 /* wait */,
+		0, 0 /* do not use logp - stupid openssl prints lots of dots
+		        one at a time with no way to turn it off */))
 	{
 		logp("Error running %s\n", conf->ca_burp_ca);
 		goto end;

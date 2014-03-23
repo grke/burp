@@ -34,6 +34,7 @@ CLIENT_OBJS = \
 	$(OBJDIR)/berrno.o \
 	$(OBJDIR)/bfile.o \
 	$(OBJDIR)/blk.o \
+	$(OBJDIR)/client/acl.o \
 	$(OBJDIR)/client/auth.o \
 	$(OBJDIR)/client/autoupgrade.o \
 	$(OBJDIR)/client/backup.o \
@@ -47,6 +48,7 @@ CLIENT_OBJS = \
 	$(OBJDIR)/client/list.o \
 	$(OBJDIR)/client/main.o \
 	$(OBJDIR)/client/restore.o \
+	$(OBJDIR)/client/xattr.o \
 	$(OBJDIR)/cntr.o \
 	$(OBJDIR)/conf.o \
 	$(OBJDIR)/forkchild.o \
@@ -55,10 +57,8 @@ CLIENT_OBJS = \
 	$(OBJDIR)/incexc_recv.o \
 	$(OBJDIR)/incexc_send.o \
 	$(OBJDIR)/iobuf.o \
-	$(OBJDIR)/legacy/client/acl.o \
 	$(OBJDIR)/legacy/client/backup_phase2.o \
 	$(OBJDIR)/legacy/client/restore.o \
-	$(OBJDIR)/legacy/client/xattr.o \
 	$(OBJDIR)/legacy/handy.o \
 	$(OBJDIR)/legacy/msg.o \
 	$(OBJDIR)/legacy/rs_buf.o \
@@ -73,6 +73,7 @@ CLIENT_OBJS = \
 	$(OBJDIR)/rabin/rconf.o \
 	$(OBJDIR)/rabin/win.o \
 	$(OBJDIR)/regexp.o \
+	$(OBJDIR)/run_script.o \
 	$(OBJDIR)/sbuf.o \
 	$(OBJDIR)/ssl.o \
 	$(OBJDIR)/strlist.o \

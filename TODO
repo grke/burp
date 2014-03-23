@@ -42,9 +42,6 @@ roughly in order of most important to least.
 
 * Make Windows 'image' backups work.
 
-* Make asyncio use iobuf for everything instead of just being a wrapper around
-  the old stuff.
-
 * champ_chooser: figure out a way of giving preference to newer candidates.
 
 * Fix conf/cntr init problem.

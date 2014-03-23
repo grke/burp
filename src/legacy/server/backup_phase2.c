@@ -157,7 +157,7 @@ static int new_non_file(struct sbuf *p1b, FILE *ucfp, char cmd, struct conf *cco
 	if(sbufl_to_manifest(p1b, ucfp, NULL))
 		return -1;
 	else
-		do_filecounter(cconf->cntr, cmd, 0);
+		cntr_add(cconf->cntr, cmd, 0);
 	sbuf_free_contents(p1b);
 	return 0;
 }
@@ -168,7 +168,7 @@ static int changed_non_file(struct sbuf *p1b, FILE *ucfp, char cmd, struct conf 
 	if(sbufl_to_manifest(p1b, ucfp, NULL))
 		return -1;
 	else
-		do_filecounter_changed(cconf->cntr, cmd);
+		cntr_add_changed(cconf->cntr, cmd);
 	sbuf_free_contents(p1b);
 	return 0;
 }
@@ -199,9 +199,9 @@ static int process_unchanged_file(struct sbuf *cb, FILE *ucfp, struct conf *ccon
 	}
 	else
 	{
-		do_filecounter_same(cconf->cntr, cb->path.cmd);
+		cntr_add_same(cconf->cntr, cb->path.cmd);
 	}
-	if(cb->burp1->endfile.buf) do_filecounter_bytes(cconf->cntr,
+	if(cb->burp1->endfile.buf) cntr_add_bytes(cconf->cntr,
 		 strtoull(cb->burp1->endfile.buf, NULL, 10));
 	sbuf_free_contents(cb);
 	return 1;
@@ -342,7 +342,7 @@ static int maybe_process_file(struct sdirs *sdirs, struct conf *cconf,
 		// manifest
 		// Count a deleted file - it was in the old manifest but not
 		// the new.
-		do_filecounter_deleted(cconf->cntr, cb->path.cmd);
+		cntr_add_deleted(cconf->cntr, cb->path.cmd);
 	}
 	return 0;
 }
@@ -459,7 +459,7 @@ static int do_stuff_to_receive(struct sdirs *sdirs, struct conf *cconf,
 		if(rbuf->cmd==CMD_WARNING)
 		{
 			logp("WARNING: %s\n", rbuf->buf);
-			do_filecounter(cconf->cntr, rbuf->cmd, 0);
+			cntr_add(cconf->cntr, rbuf->cmd, 0);
 		}
 		else if(rb->burp1->fp || rb->burp1->zp)
 		{
@@ -468,7 +468,7 @@ static int do_stuff_to_receive(struct sdirs *sdirs, struct conf *cconf,
 			{
 				int app;
 				//logp("rbuf->len: %d\n", rbuf->len);
-				do_filecounter_recvbytes(cconf->cntr, rbuf->len);
+				cntr_add_recvbytes(cconf->cntr, rbuf->len);
 				if((rb->burp1->zp
 				  && (app=gzwrite(rb->burp1->zp, rbuf->buf, rbuf->len))<=0)
 				|| (rb->burp1->fp
@@ -506,10 +506,10 @@ static int do_stuff_to_receive(struct sdirs *sdirs, struct conf *cconf,
 					goto error;
 
 				if(rb->flags & SBUFL_RECV_DELTA)
-					do_filecounter_changed(
+					cntr_add_changed(
 						cconf->cntr, rb->path.cmd);
 				else
-					do_filecounter(
+					cntr_add(
 						cconf->cntr, rb->path.cmd, 0);
 				if(*last_requested
 				    && !strcmp(rb->path.buf, *last_requested))
@@ -520,7 +520,7 @@ static int do_stuff_to_receive(struct sdirs *sdirs, struct conf *cconf,
 
 				cp=strchr(rb->burp1->endfile.buf, ':');
 				if(rb->burp1->endfile.buf)
-				 do_filecounter_bytes(cconf->cntr,
+				 cntr_add_bytes(cconf->cntr,
 				  strtoull(rb->burp1->endfile.buf,
 				  NULL, 10));
 				if(cp)

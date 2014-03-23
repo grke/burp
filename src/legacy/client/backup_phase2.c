@@ -171,11 +171,10 @@ static int do_backup_phase2_client(struct conf *conf, int resume)
 		  || async_read_expect(CMD_GEN, "ok"))
 			goto end;
 	}
-	else if(conf->send_client_counters)
+	else if(conf->send_client_cntr)
 	{
-		// On resume, the server might update the client with the
- 		// counters.
-		if(recv_counters(conf))
+		// On resume, the server might update the client with cntr.
+		if(cntr_recv(conf))
 			goto end;
 	}
 
@@ -345,9 +344,9 @@ static int do_backup_phase2_client(struct conf *conf, int resume)
 					}
 					else
 					{
-						do_filecounter(conf->cntr, CMD_FILE_CHANGED, 1);
-						do_filecounter_bytes(conf->cntr, bytes);
-						do_filecounter_sentbytes(conf->cntr, sentbytes);
+						cntr_add(conf->cntr, CMD_FILE_CHANGED, 1);
+						cntr_add_bytes(conf->cntr, bytes);
+						cntr_add_sentbytes(conf->cntr, sentbytes);
 					}
 				}
 				else
@@ -367,9 +366,9 @@ static int do_backup_phase2_client(struct conf *conf, int resume)
 							goto end;
 					else
 					{
-						do_filecounter(conf->cntr, rbuf->cmd, 1);
-						do_filecounter_bytes(conf->cntr, bytes);
-						do_filecounter_sentbytes(conf->cntr, bytes);
+						cntr_add(conf->cntr, rbuf->cmd, 1);
+						cntr_add_bytes(conf->cntr, bytes);
+						cntr_add_sentbytes(conf->cntr, bytes);
 					}
 				}
 #ifdef HAVE_WIN32
@@ -390,7 +389,7 @@ static int do_backup_phase2_client(struct conf *conf, int resume)
 			}
 			else if(rbuf->cmd==CMD_WARNING)
 			{
-				do_filecounter(conf->cntr, rbuf->cmd, 0);
+				cntr_add(conf->cntr, rbuf->cmd, 0);
 				iobuf_free_content(rbuf);
 			}
 			else if(rbuf->cmd==CMD_GEN && !strcmp(rbuf->buf, "backupphase2end"))
@@ -427,8 +426,8 @@ int backup_phase2_client_legacy(struct conf *conf, int resume)
 
 	ret=do_backup_phase2_client(conf, resume);
 
-	print_endcounter(conf->cntr);
-	print_filecounters(conf, ACTION_BACKUP);
+	cntr_print_end(conf->cntr);
+	cntr_print(conf, ACTION_BACKUP);
 
 	if(ret) logp("Error in phase 2\n");
 	logp("Phase 2 end (send file data)\n");

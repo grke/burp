@@ -43,14 +43,14 @@ int backup_phase1_server(struct sdirs *sdirs, struct conf *conf)
 		write_status(STATUS_SCANNING, sb->path.buf, conf);
 		if(sbufl_to_manifest_phase1(sb, NULL, p1zp))
 			goto end;
-		do_filecounter(conf->p1cntr, sb->path.cmd, 0);
+		cntr_add(conf->p1cntr, sb->path.cmd, 0);
 
 		if(sb->path.cmd==CMD_FILE
 		  || sb->path.cmd==CMD_ENC_FILE
 		  || sb->path.cmd==CMD_METADATA
 		  || sb->path.cmd==CMD_ENC_METADATA
 		  || sb->path.cmd==CMD_EFS_FILE)
-			do_filecounter_bytes(conf->p1cntr,
+			cntr_add_bytes(conf->p1cntr,
 				(unsigned long long)sb->statp.st_size);
 	}
 
@@ -62,7 +62,7 @@ int backup_phase1_server(struct sdirs *sdirs, struct conf *conf)
 	if(do_rename(phase1tmp, sdirs->phase1data))
 		goto end;
 
-	//print_filecounters(p1cntr, cntr, ACTION_BACKUP);
+	//cntr_print(p1cntr, cntr, ACTION_BACKUP);
 
 	logp("End phase1 (file system scan)\n");
 	ret=0;

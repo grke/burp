@@ -127,7 +127,7 @@ int transfer_gzfile_in(const char *path, BFILE *bfd, FILE *fp, unsigned long lon
 				goto end_ok;
 			case CMD_WARNING:
 				logp("WARNING: %s\n", rbuf->buf);
-				do_filecounter(cntr, rbuf->cmd, 0);
+				cntr_add(cntr, rbuf->cmd, 0);
 				break;
 			default:
 				iobuf_log_unexpected(rbuf, __FUNCTION__);

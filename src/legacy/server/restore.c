@@ -279,7 +279,7 @@ static int verify_file(struct sbuf *sb, int patches, const char *best, unsigned 
 	}
 	*bytes+=cbytes;
 
-	// Just send the file name to the client, so that it can show counters.
+	// Just send the file name to the client, so that it can show cntr.
 	if(async_write(&sb->path)) return -1;
 	return 0;
 }
@@ -384,9 +384,9 @@ static int restore_file(struct bu *arr, int a, int i, struct sbuf *sb, const cha
 				}
 				else
 				{
-					do_filecounter(cconf->cntr,
+					cntr_add(cconf->cntr,
 						sb->path.cmd, 0);
-					do_filecounter_bytes(cconf->cntr,
+					cntr_add_bytes(cconf->cntr,
                  			  strtoull(sb->burp1->endfile.buf,
 						NULL, 10));
 				}
@@ -400,14 +400,14 @@ static int restore_file(struct bu *arr, int a, int i, struct sbuf *sb, const cha
 				}
 				else
 				{
-					do_filecounter(cconf->cntr,
+					cntr_add(cconf->cntr,
 						sb->path.cmd, 0);
-					do_filecounter_bytes(cconf->cntr,
+					cntr_add_bytes(cconf->cntr,
                  			  strtoull(sb->burp1->endfile.buf,
 						NULL, 10));
 				}
 			}
-			do_filecounter_sentbytes(cconf->cntr, bytes);
+			cntr_add_sentbytes(cconf->cntr, bytes);
 			free(path);
 			return 0;
 		}
@@ -448,7 +448,7 @@ static int restore_sbufl(struct sbuf *sb, struct bu *arr, int a, int i, const ch
 		// it points to.
 		else if(sbuf_is_link(sb)
 		  && async_write(&sb->link)) return -1;
-		do_filecounter(cconf->cntr, sb->path.cmd, 0);
+		cntr_add(cconf->cntr, sb->path.cmd, 0);
 	}
 	return 0;
 }
@@ -476,7 +476,7 @@ static int do_restore_end(enum action act, struct conf *conf)
 		else if(rbuf->cmd==CMD_WARNING)
 		{
 			logp("WARNING: %s\n", rbuf->buf);
-			do_filecounter(conf->cntr, rbuf->cmd, 0);
+			cntr_add(conf->cntr, rbuf->cmd, 0);
 		}
 		else if(rbuf->cmd==CMD_INTERRUPT)
 		{
@@ -564,7 +564,7 @@ static int check_srestore(struct conf *cconf, const char *path)
 	return 0;
 }
 
-static int setup_counters(const char *manifest, regex_t *regex, int srestore,
+static int setup_cntr(const char *manifest, regex_t *regex, int srestore,
 	const char *tmppath1, const char *tmppath2,
 	enum action act, char status, struct conf *cconf)
 {
@@ -591,9 +591,9 @@ static int setup_counters(const char *manifest, regex_t *regex, int srestore,
 			if((!srestore || check_srestore(cconf, sb->path.buf))
 			  && check_regex(regex, sb->path.buf))
 			{
-				do_filecounter(cconf->p1cntr, sb->path.cmd, 0);
+				cntr_add(cconf->p1cntr, sb->path.cmd, 0);
 				if(sb->burp1->endfile.buf)
-				  do_filecounter_bytes(cconf->p1cntr,
+				  cntr_add_bytes(cconf->p1cntr,
 				    strtoull(sb->burp1->endfile.buf, NULL, 10));
 			}
 		}
@@ -645,7 +645,7 @@ static int actual_restore(struct bu *arr, int a, int i,
 			if(rbuf.cmd==CMD_WARNING)
 			{
 				logp("WARNING: %s\n", rbuf.buf);
-				do_filecounter(cconf->cntr, rbuf.cmd, 0);
+				cntr_add(cconf->cntr, rbuf.cmd, 0);
 				continue;
 			}
 			else if(rbuf.cmd==CMD_INTERRUPT)
@@ -690,11 +690,11 @@ static int actual_restore(struct bu *arr, int a, int i,
 
 	ret=do_restore_end(act, cconf);
 
-	print_filecounters(cconf, act);
+	cntr_print(cconf, act);
 
 	print_stats_to_file(cconf, arr[i].path, act);
 
-	reset_filecounters(cconf, time(NULL));
+	cntr_resets(cconf, time(NULL));
 end:
 	gzclose_fp(&zp);
 	sbuf_free(sb);
@@ -746,15 +746,15 @@ static int restore_manifest(struct bu *arr, int a, int i,
 
 	log_restore_settings(cconf, srestore);
 
-	// First, do a pass through the manifest to set up the counters.
+	// First, do a pass through the manifest to set up cntr.
 	// This is the equivalent of a phase1 scan during backup.
 
-	if(setup_counters(manifest, regex, srestore,
+	if(setup_cntr(manifest, regex, srestore,
 		tmppath1, tmppath2,
 		act, status, cconf))
 			goto end;
 
-	if(cconf->send_client_counters && send_counters(cconf))
+	if(cconf->send_client_cntr && cntr_send(cconf))
 		goto end;
 
 	// Now, do the actual restore.

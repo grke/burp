@@ -94,7 +94,7 @@ static int read_stat(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
 			if(rbuf->cmd==CMD_WARNING)
 			{
 				logp("WARNING: %s\n", rbuf->buf);
-				do_filecounter(cntr, rbuf->cmd, 0);
+				cntr_add(cntr, rbuf->cmd, 0);
 				continue;
 			}
 		}

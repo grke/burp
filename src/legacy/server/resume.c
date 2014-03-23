@@ -2,7 +2,7 @@
 
 #include "../../server/backup_phase1.h"
 
-// Used on resume, this just reads the phase1 file and sets up the counters.
+// Used on resume, this just reads the phase1 file and sets up cntr.
 static int read_phase1(gzFile zp, struct conf *conf)
 {
 	int ars=0;
@@ -21,14 +21,14 @@ static int read_phase1(gzFile zp, struct conf *conf)
 			}
 			return 0;
 		}
-		do_filecounter(conf->p1cntr, p1b->path.cmd, 0);
+		cntr_add(conf->p1cntr, p1b->path.cmd, 0);
 
 		if(p1b->path.cmd==CMD_FILE
 		  || p1b->path.cmd==CMD_ENC_FILE
 		  || p1b->path.cmd==CMD_METADATA
 		  || p1b->path.cmd==CMD_ENC_METADATA
 		  || p1b->path.cmd==CMD_EFS_FILE)
-			do_filecounter_bytes(conf->p1cntr,
+			cntr_add_bytes(conf->p1cntr,
 				(unsigned long long)p1b->statp.st_size);
 	}
 	sbuf_free(p1b);
@@ -37,7 +37,7 @@ static int read_phase1(gzFile zp, struct conf *conf)
 }
 
 static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
-	struct iobuf *target, int isphase1, int seekback, int do_counters,
+	struct iobuf *target, int isphase1, int seekback, int do_cntr,
 	int same, struct dpthl *dpthl, struct conf *cconf)
 {
 	int ars=0;
@@ -106,16 +106,16 @@ static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
 			return 0;
 		}
 
-		if(do_counters)
+		if(do_cntr)
 		{
-			if(same) do_filecounter_same(cconf->cntr, sb->path.cmd);
-			else do_filecounter_changed(cconf->cntr, sb->path.cmd);
+			if(same) cntr_add_same(cconf->cntr, sb->path.cmd);
+			else cntr_add_changed(cconf->cntr, sb->path.cmd);
 			if(sb->burp1->endfile.buf)
 			{
 				unsigned long long e=0;
 				e=strtoull(sb->burp1->endfile.buf, NULL, 10);
-				do_filecounter_bytes(cconf->cntr, e);
-				do_filecounter_recvbytes(cconf->cntr, e);
+				cntr_add_bytes(cconf->cntr, e);
+				cntr_add_recvbytes(cconf->cntr, e);
 			}
 		}
 
@@ -130,19 +130,19 @@ error:
 }
 
 static int forward_fp(FILE *fp, struct iobuf *result, struct iobuf *target,
-	int isphase1, int seekback, int do_counters, int same,
+	int isphase1, int seekback, int do_cntr, int same,
 	struct dpthl *dpthl, struct conf *cconf)
 {
 	return do_forward(fp, NULL, result, target, isphase1, seekback,
-		do_counters, same, dpthl, cconf);
+		do_cntr, same, dpthl, cconf);
 }
 
 static int forward_zp(gzFile zp, struct iobuf *result, struct iobuf *target,
-	int isphase1, int seekback, int do_counters, int same,
+	int isphase1, int seekback, int do_cntr, int same,
 	struct dpthl *dpthl, struct conf *cconf)
 {
 	return do_forward(NULL, zp, result, target, isphase1, seekback,
-		do_counters, same, dpthl, cconf);
+		do_cntr, same, dpthl, cconf);
 }
 
 int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpthl *dpthl, struct conf *cconf)
@@ -169,7 +169,7 @@ int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpthl *dpthl, struct c
 	if(forward_fp(p2fp, p2btmp, NULL,
 		0, /* not phase1 */
 		0, /* no seekback */
-		0, /* no counters */
+		0, /* no cntr */
 		0, /* changed */
 		dpthl, cconf)) goto error;
 	rewind(p2fp);
@@ -179,7 +179,7 @@ int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpthl *dpthl, struct c
 	if(forward_fp(p2fp, p2b, p2btmp,
 		0, /* not phase1 */
 		0, /* no seekback */
-		1, /* do_counters */
+		1, /* do_cntr */
 		0, /* changed */
 		dpthl, cconf)) goto error;
 	logp("  phase2:    %s\n", p2b->buf);
@@ -190,7 +190,7 @@ int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpthl *dpthl, struct c
 	if(forward_zp(p1zp, p1b, p2b,
 		1, /* phase1 */
 		0, /* no seekback */
-		0, /* no counters */
+		0, /* no cntr */
 		0, /* ignored */
 		dpthl, cconf)) goto error;
 	logp("  phase1:    %s\n", p1b->buf);
@@ -198,7 +198,7 @@ int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpthl *dpthl, struct c
 	if(forward_fp(ucfp, ucb, p2b,
 		0, /* not phase1 */
 		1, /* seekback */
-		1, /* do_counters */
+		1, /* do_cntr */
 		1, /* same */
 		dpthl, cconf)) goto error;
 	logp("  unchanged: %s\n", ucb->buf);
@@ -206,9 +206,9 @@ int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpthl *dpthl, struct c
 	// Now should have all file pointers in the right places to resume.
 	if(incr_dpthl(dpthl, cconf)) goto error;
 
-	if(cconf->send_client_counters)
+	if(cconf->send_client_cntr)
 	{
-		if(send_counters(cconf)) goto error;
+		if(cntr_send(cconf)) goto error;
 	}
 
 	goto end;

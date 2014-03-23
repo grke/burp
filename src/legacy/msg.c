@@ -127,7 +127,7 @@ static DWORD WINAPI read_efs(PBYTE pbData, PVOID pvCallbackContext, PULONG ulLen
 				return ERROR_SUCCESS;
 			case CMD_WARNING:
 				logp("WARNING: %s\n", rbuf->buf);
-				do_filecounter(mybuf->cntr, rbuf->cmd, 0);
+				cntr_add(mybuf->cntr, rbuf->cmd, 0);
 				iobuf_free_content(rbuf);
 				continue;
 			default:
@@ -334,7 +334,7 @@ int transfer_gzfile_in(struct sbuf *sb, const char *path, BFILE *bfd,
 				break;
 			case CMD_WARNING:
 				logp("WARNING: %s\n", rbuf->buf);
-				do_filecounter(cntr, rbuf->cmd, 0);
+				cntr_add(cntr, rbuf->cmd, 0);
 				break;
 			default:
 				iobuf_log_unexpected(rbuf, __FUNCTION__);

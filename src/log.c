@@ -50,7 +50,7 @@ void logp(const char *fmt, ...)
 	va_end(ap);
 }
 
-/* for the counters */
+// For the counters.
 void logc(const char *fmt, ...)
 {
 	char buf[512]="";

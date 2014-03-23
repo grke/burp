@@ -26,8 +26,8 @@ SRCS = \
 		berrno.c \
 		bfile.c \
 		blk.c \
+		cntr.c \
 		conf.c \
-		counter.c \
 		forkchild.c \
 		glob_windows.c \
 		handy.c \

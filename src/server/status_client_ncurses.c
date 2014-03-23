@@ -465,7 +465,7 @@ static int parse_rbuf(const char *rbuf, struct conf *conf, int row, int col, int
 		char *cntrclient=NULL;
 		*cp='\0';
 
-		if(str_to_counters(dp, &cntrclient, &status, &phase, &path,
+		if(str_to_cntr(dp, &cntrclient, &status, &phase, &path,
 			p1cntr, cntr, &backups))
 		{
 			free(copy);
@@ -645,6 +645,7 @@ int status_client_ncurses(struct conf *conf, enum action act, const char *sclien
 	char *client=NULL;
 	int enterpressed=0;
 	int reqdone=0;
+	// FIX THIS: alloc/dealloc.
 	struct cntr p1cntr;
 	struct cntr cntr;
 

@@ -8,7 +8,7 @@ static int restore_interrupt(struct sbuf *sb, const char *msg, struct conf *conf
 
 	if(!cntr) return 0;
 
-	do_filecounter(cntr, CMD_WARNING, 1);
+	cntr_add(cntr, CMD_WARNING, 1);
 	logp("WARNING: %s\n", msg);
 	if(async_write_str(CMD_WARNING, msg)) goto end;
 
@@ -157,7 +157,7 @@ static int restore_file_or_get_meta(BFILE *bfd, struct sbuf *sb, const char *fna
 
 	if(act==ACTION_VERIFY)
 	{
-		do_filecounter(conf->cntr, sb->path.cmd, 1);
+		cntr_add(conf->cntr, sb->path.cmd, 1);
 		return 0;
 	}
 
@@ -213,7 +213,7 @@ static int restore_file_or_get_meta(BFILE *bfd, struct sbuf *sb, const char *fna
 				encpassword, enccompressed,
 				conf->cntr, metadata);
 			*metalen=sentbytes;
-			// skip setting the file counter, as we do not actually
+			// skip setting cntr, as we do not actually
 			// restore until a bit later
 			goto end;
 		}
@@ -250,7 +250,7 @@ static int restore_file_or_get_meta(BFILE *bfd, struct sbuf *sb, const char *fna
 			goto end;
 		}
 	}
-	if(!ret) do_filecounter(conf->cntr, sb->path.cmd, 1);
+	if(!ret) cntr_add(conf->cntr, sb->path.cmd, 1);
 end:
 	if(rpath) free(rpath);
 	return ret;
@@ -268,7 +268,7 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
 
 	if(act==ACTION_VERIFY)
 	{
-		do_filecounter(conf->cntr, CMD_SPECIAL, 1);
+		cntr_add(conf->cntr, CMD_SPECIAL, 1);
 		return 0;
 	}
 
@@ -293,7 +293,7 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
 		else
 		{
 			attribs_set(rpath, &statp, sb->winattr, conf);
-			do_filecounter(conf->cntr, CMD_SPECIAL, 1);
+			cntr_add(conf->cntr, CMD_SPECIAL, 1);
 		}
 /*
 	}
@@ -328,7 +328,7 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
 	    else
 	    {
 		attribs_set(rpath, &statp, sb->winattr, conf);
-		do_filecounter(conf->cntr, CMD_SPECIAL, 1);
+		cntr_add(conf->cntr, CMD_SPECIAL, 1);
 	    }
          }
 #endif
@@ -370,9 +370,9 @@ static int restore_dir(struct sbuf *sb, const char *dname, enum action act, stru
 		{
 			attribs_set(rpath, &(sb->statp), sb->winattr, conf);
 		}
-		if(!ret) do_filecounter(conf->cntr, sb->path.cmd, 1);
+		if(!ret) cntr_add(conf->cntr, sb->path.cmd, 1);
 	}
-	else do_filecounter(conf->cntr, sb->path.cmd, 1);
+	else cntr_add(conf->cntr, sb->path.cmd, 1);
 end:
 	if(rpath) free(rpath);
 	return ret;
@@ -406,11 +406,11 @@ static int restore_link(struct sbuf *sb, const char *fname, const char *restorep
 		else if(!ret)
 		{
 			attribs_set(fname, &(sb->statp), sb->winattr, conf);
-			do_filecounter(conf->cntr, sb->path.cmd, 1);
+			cntr_add(conf->cntr, sb->path.cmd, 1);
 		}
 		if(rpath) free(rpath);
 	}
-	else do_filecounter(conf->cntr, sb->path.cmd, 1);
+	else cntr_add(conf->cntr, sb->path.cmd, 1);
 end:
 	return ret;
 }
@@ -455,10 +455,10 @@ static int restore_metadata(BFILE *bfd, struct sbuf *sb, const char *fname, enum
 			// the file
 			attribs_set(fname, &(sb->statp), sb->winattr, conf);
 #endif
-			do_filecounter(conf->cntr, sb->path.cmd, 1);
+			cntr_add(conf->cntr, sb->path.cmd, 1);
 		}
 	}
-	else do_filecounter(conf->cntr, sb->path.cmd, 1);
+	else cntr_add(conf->cntr, sb->path.cmd, 1);
 	return 0;
 }
 
@@ -584,7 +584,7 @@ int do_restore_client_legacy(struct conf *conf, enum action act, int vss_restore
 	int ret=-1;
 	char msg[512]="";
 	struct sbuf *sb=NULL;
-	int wroteendcounter=0;
+	int wroteendcntr=0;
 // Windows needs to have the VSS data written first, and the actual data
 // written immediately afterwards. The server is transferring them in two
 // chunks. So, leave bfd open after a Windows metadata transfer.
@@ -602,10 +602,10 @@ int do_restore_client_legacy(struct conf *conf, enum action act, int vss_restore
 		return -1;
 	logp("doing %s confirmed\n", act_str(act));
 
-	if(conf->send_client_counters)
+	if(conf->send_client_cntr)
 	{
 // FIX THIS
-//		if(recv_counters(conf)) goto end;
+//		if(cntr_recv(conf)) goto end;
 	}
 
 #if defined(HAVE_WIN32)
@@ -624,9 +624,9 @@ int do_restore_client_legacy(struct conf *conf, enum action act, int vss_restore
 			else
 			{
 				// ars==1 means it ended ok.
-				print_endcounter(conf->cntr);
-				print_filecounters(conf, act);
-				wroteendcounter++;
+				cntr_print_end(conf->cntr);
+				cntr_print(conf, act);
+				wroteendcntr++;
 				logp("got %s end\n", act_str(act));
 				if(async_write_str(CMD_GEN, "restoreend ok"))
 					goto end;
@@ -695,7 +695,7 @@ int do_restore_client_legacy(struct conf *conf, enum action act, int vss_restore
 		switch(sb->path.cmd)
 		{
 			case CMD_WARNING:
-				do_filecounter(conf->cntr, sb->path.cmd, 1);
+				cntr_add(conf->cntr, sb->path.cmd, 1);
 				printf("\n");
 				logp("%s", sb->path);
 				break;
@@ -779,10 +779,10 @@ end:
 	bclose(&bfd);
 #endif
 
-	if(!wroteendcounter)
+	if(!wroteendcntr)
 	{
-		print_endcounter(conf->cntr);
-		print_filecounters(conf, act);
+		cntr_print_end(conf->cntr);
+		cntr_print(conf, act);
 	}
 
 	if(!ret) logp("%s finished\n", act_str(act));

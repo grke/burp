@@ -180,7 +180,7 @@ int do_quick_read(const char *datapth, struct cntr *cntr)
 		if(rbuf.cmd==CMD_WARNING)
 		{
 			logp("WARNING: %s\n", rbuf.buf);
-			do_filecounter(cntr, rbuf.cmd, 0);
+			cntr_add(cntr, rbuf.cmd, 0);
 		}
 		else if(rbuf.cmd==CMD_INTERRUPT)
 		{
@@ -495,7 +495,7 @@ void write_status(char phase, const char *path, struct conf *conf)
 	}
 	lasttime=now;
 
-	counters_to_str(wbuf, sizeof(wbuf), phase, path, conf);
+	cntr_to_str(wbuf, sizeof(wbuf), phase, path, conf);
 
 	if(status_wfd<0) return;
 

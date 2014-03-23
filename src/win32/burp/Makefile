@@ -47,8 +47,8 @@ CLIENT_OBJS = \
 	$(OBJDIR)/client/list.o \
 	$(OBJDIR)/client/main.o \
 	$(OBJDIR)/client/restore.o \
+	$(OBJDIR)/cntr.o \
 	$(OBJDIR)/conf.o \
-	$(OBJDIR)/counter.o \
 	$(OBJDIR)/forkchild.o \
 	$(OBJDIR)/glob_windows.o \
 	$(OBJDIR)/handy.o \

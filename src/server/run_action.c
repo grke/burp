@@ -83,7 +83,7 @@ void maybe_do_notification(int status, const char *clientdir,
 		args[0]=cconf->n_failure_script;
 		args[a++]="0";
 		args[a++]=NULL;
-		run_script(args, cconf->n_failure_arg, cconf->cntr, 1, 1);
+		run_script(args, cconf->n_failure_arg, cconf, 1, 1, 1);
 	}
 	else if((cconf->n_success_warnings_only
 		&& (cconf->p1cntr->warning+cconf->cntr->warning)>0)
@@ -99,8 +99,7 @@ void maybe_do_notification(int status, const char *clientdir,
 		args[0]=cconf->n_success_script;
 		args[a++]=warnings;
 		args[a++]=NULL;
-		run_script(args, cconf->n_success_arg,
-			cconf->cntr, 1, 1);
+		run_script(args, cconf->n_success_arg, cconf, 1, 1, 1);
 	}
 }
 
@@ -137,12 +136,13 @@ static int run_backup(struct sdirs *sdirs, struct conf *cconf,
 		args[a++]=NULL;
 		if((*timer_ret=run_script(args,
 		  cconf->timer_arg,
-		  /* cntr is NULL so that run_script does not
-		     write warnings down the socket, otherwise
-		     the client will never print the 'timer
-		     conditions not met' message below. */
-		  NULL,
-		  1 /* wait */, 1 /* use logp */))<0)
+		  cconf,
+		  1 /* wait */, 1 /* use logp */,
+		  0 /* no logw so that run_script does not
+		       write warnings down the socket, otherwise
+		       the client will never print the 'timer
+		       conditions not met' message below. */
+		))<0)
 		{
 			logp("Error running timer script for %s\n",
 				cconf->cname);

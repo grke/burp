@@ -1,6 +1,6 @@
 #include "include.h"
 
-static int load_signature(rs_signature_t **sumset, struct cntr *cntr)
+static int load_signature(rs_signature_t **sumset, struct conf *conf)
 {
 	rs_result r;
 	rs_job_t *job;
@@ -8,7 +8,7 @@ static int load_signature(rs_signature_t **sumset, struct cntr *cntr)
 
 	job = rs_loadsig_begin(sumset);
 	if((r=do_rs_run(job,
-		NULL, NULL, NULL, NULL, NULL, async_get_fd(), -1, cntr)))
+		NULL, NULL, NULL, NULL, NULL, async_get_fd(), -1, conf->cntr)))
 	{
 		rs_free_sumset(*sumset);
 		return r;
@@ -23,7 +23,9 @@ static int load_signature(rs_signature_t **sumset, struct cntr *cntr)
 	return r;
 }
 
-static int load_signature_and_send_delta(BFILE *bfd, FILE *in, unsigned long long *bytes, unsigned long long *sentbytes, struct cntr *cntr, size_t datalen)
+static int load_signature_and_send_delta(BFILE *bfd, FILE *in,
+	unsigned long long *bytes, unsigned long long *sentbytes,
+	struct conf *conf, size_t datalen)
 {
 	rs_job_t *job;
 	rs_result r;
@@ -34,7 +36,7 @@ static int load_signature_and_send_delta(BFILE *bfd, FILE *in, unsigned long lon
 	rs_buffers_t rsbuf;
 	memset(&rsbuf, 0, sizeof(rsbuf));
 
-	if(load_signature(&sumset, cntr)) return -1;
+	if(load_signature(&sumset, conf)) return -1;
 
 //logp("start delta\n");
 
@@ -46,9 +48,9 @@ static int load_signature_and_send_delta(BFILE *bfd, FILE *in, unsigned long lon
 	}
 
 	if(!(infb=rs_filebuf_new(bfd,
-		in, NULL, -1, ASYNC_BUF_LEN, datalen, cntr))
+		in, NULL, -1, ASYNC_BUF_LEN, datalen, conf->cntr))
 	  || !(outfb=rs_filebuf_new(NULL, NULL,
-		NULL, async_get_fd(), ASYNC_BUF_LEN, -1, cntr)))
+		NULL, async_get_fd(), ASYNC_BUF_LEN, -1, conf->cntr)))
 	{
 		logp("could not rs_filebuf_new for delta\n");
 		if(infb) rs_filebuf_free(infb);
@@ -110,17 +112,20 @@ static int load_signature_and_send_delta(BFILE *bfd, FILE *in, unsigned long lon
 	return r;
 }
 
-static int send_whole_file_w(struct sbuf *sb, const char *datapth, int quick_read, unsigned long long *bytes, const char *encpassword, struct cntr *cntr, int compression, BFILE *bfd, FILE *fp, const char *extrameta, size_t elen, size_t datalen)
+static int send_whole_file_w(struct sbuf *sb, const char *datapth,
+	int quick_read, unsigned long long *bytes, const char *encpassword,
+	struct conf *conf, int compression, BFILE *bfd, FILE *fp,
+	const char *extrameta, size_t elen, size_t datalen)
 {
 	if((compression || encpassword) && sb->path.cmd!=CMD_EFS_FILE)
 		return send_whole_file_gzl(sb->path.buf, datapth, quick_read,
 		  bytes, 
-		  encpassword, cntr, compression, bfd, fp, extrameta, elen,
+		  encpassword, conf, compression, bfd, fp, extrameta, elen,
 		  datalen);
 	else
 		return send_whole_filel(sb->path.cmd, sb->path.buf,
 		  datapth, quick_read, bytes, 
-		  cntr, bfd, fp, extrameta, elen,
+		  conf, bfd, fp, extrameta, elen,
 		  datalen);
 }
 
@@ -138,7 +143,7 @@ static int forget_file(struct sbuf *sb, struct conf *conf)
 		// The server will be sending
 		// us a signature. Munch it up
 		// then carry on.
-		if(load_signature(&sumset, conf->cntr))
+		if(load_signature(&sumset, conf))
 			return -1;
 		else rs_free_sumset(sumset);
 	}
@@ -174,8 +179,7 @@ static int do_backup_phase2_client(struct conf *conf, int resume)
 	else if(conf->send_client_cntr)
 	{
 		// On resume, the server might update the client with cntr.
-		if(cntr_recv(conf))
-			goto end;
+		if(cntr_recv(conf)) goto end;
 	}
 
 	if(!(rbuf=iobuf_alloc())) goto end;
@@ -228,8 +232,7 @@ static int do_backup_phase2_client(struct conf *conf, int resume)
 				if(lstat(sb->path.buf, &sb->statp))
 #endif
 				{
-					logw(conf->cntr,
-						"Path has vanished: %s",
+					logw(conf, "Path has vanished: %s",
 						sb->path.buf);
 					if(forget_file(sb, conf)) goto end;
 					sbuf_free_contents(sb);
@@ -243,7 +246,7 @@ static int do_backup_phase2_client(struct conf *conf, int resume)
 				  || rbuf->cmd==CMD_ENC_FILE
 				  || rbuf->cmd==CMD_EFS_FILE))
 				{
-					logw(conf->cntr, "File size decreased below min_file_size after initial scan: %c:%s", rbuf->cmd, sb->path.buf);
+					logw(conf, "File size decreased below min_file_size after initial scan: %c:%s", rbuf->cmd, sb->path.buf);
 					forget++;
 				}
 				else if(conf->max_file_size
@@ -253,7 +256,7 @@ static int do_backup_phase2_client(struct conf *conf, int resume)
 				  || rbuf->cmd==CMD_ENC_FILE
 				  || rbuf->cmd==CMD_EFS_FILE))
 				{
-					logw(conf->cntr, "File size increased above max_file_size after initial scan: %c:%s", rbuf->cmd, sb->path.buf);
+					logw(conf, "File size increased above max_file_size after initial scan: %c:%s", rbuf->cmd, sb->path.buf);
 					forget++;
 				}
 
@@ -301,7 +304,7 @@ static int do_backup_phase2_client(struct conf *conf, int resume)
 						sb->winattr, conf,
 						&datalen))
 					{
-						logw(conf->cntr, "Meta data error for %s", sb->path.buf);
+						logw(conf, "Meta data error for %s", sb->path.buf);
 						sbuf_free_contents(sb);
 						close_file_for_sendl(&bfd, &fp);
 						continue;
@@ -319,7 +322,7 @@ static int do_backup_phase2_client(struct conf *conf, int resume)
 					}
 					else
 					{
-						logw(conf->cntr, "No meta data after all: %s", sb->path.buf);
+						logw(conf, "No meta data after all: %s", sb->path.buf);
 						sbuf_free_contents(sb);
 						close_file_for_sendl(&bfd, &fp);
 						continue;
@@ -336,7 +339,7 @@ static int do_backup_phase2_client(struct conf *conf, int resume)
 					  || async_write(&sb->path)
 					  || load_signature_and_send_delta(
 						&bfd, fp,
-						&bytes, &sentbytes, conf->cntr,
+						&bytes, &sentbytes, conf,
 						datalen))
 					{
 						logp("error in sig/delta for %s (%s)\n", sb->path.buf, sb->burp1->datapth.buf);
@@ -360,7 +363,7 @@ static int do_backup_phase2_client(struct conf *conf, int resume)
 					  || send_whole_file_w(sb,
 						NULL, 0, &bytes,
 						conf->encryption_password,
-						conf->cntr, sb->compression,
+						conf, sb->compression,
 						&bfd, fp,
 						extrameta, elen, datalen))
 							goto end;

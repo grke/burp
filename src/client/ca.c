@@ -19,9 +19,9 @@ static int generate_key_and_csr(struct conf *conf, const char *csr_path)
 	args[a++]="--name";
 	args[a++]=conf->cname;
 	args[a++]=NULL;
-	if(run_script(args, NULL, NULL /* cntr */, 1 /* wait */,
-		0 /* do not use logp - stupid openssl prints lots of dots
-		     one at a time with no way to turn it off */))
+	if(run_script(args, NULL, conf, 1 /* wait */,
+		0, 0 /* do not use logp - stupid openssl prints lots of dots
+		        one at a time with no way to turn it off */))
 	{
 		logp("error when running '%s --key --keypath %s --request --requestpath %s --name %s'\n",
 		  conf->ca_burp_ca, conf->ssl_key, csr_path, conf->cname);

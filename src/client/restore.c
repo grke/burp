@@ -202,7 +202,7 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
 			char msg[256]="";
 			snprintf(msg, sizeof(msg),
 				"Cannot make fifo: %s\n", strerror(errno));
-			logw(conf->cntr, "%s", msg);
+			logw(conf, "%s", msg);
 		}
 		else
 		{
@@ -214,21 +214,21 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
 //		char msg[256]="";
 //		snprintf(msg, sizeof(msg),
 //			"Skipping restore of socket: %s\n", fname);
-//		logw(conf->cntr, "%s", msg);
+//		logw(conf, "%s", msg);
 //
 #ifdef S_IFDOOR     // Solaris high speed RPC mechanism
 	} else if (S_ISDOOR(statp.st_mode)) {
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
 			"Skipping restore of door file: %s\n", fname);
-		logw(conf->cntr, "%s", msg);
+		logw(conf, "%s", msg);
 #endif
 #ifdef S_IFPORT     // Solaris event port for handling AIO
 	} else if (S_ISPORT(statp.st_mode)) {
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
 			"Skipping restore of event port file: %s\n", fname);
-		logw(conf->cntr, "%s", msg);
+		logw(conf, "%s", msg);
 #endif
 	} else {
             if(mknod(fname, statp.st_mode, statp.st_rdev) && errno!=EEXIST)
@@ -236,7 +236,7 @@ static int restore_special(struct sbuf *sb, const char *fname, enum action act, 
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
 			"Cannot make node: %s\n", strerror(errno));
-		logw(conf->cntr, "%s", msg);
+		logw(conf, "%s", msg);
             }
 	    else
 	    {

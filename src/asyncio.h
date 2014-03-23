@@ -52,7 +52,7 @@ extern void log_and_send_oom(const char *function);
 extern void settimers(int sec, int usec);
 
 // should be in src/lib/log.c
-int logw(struct cntr *cntr, const char *fmt, ...);
+int logw(struct conf *conf, const char *fmt, ...);
 
 extern int set_bulk_packets(void);
 

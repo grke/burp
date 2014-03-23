@@ -191,7 +191,7 @@ int sbuf_open_file(struct sbuf *sb, struct conf *conf)
 #endif
 	{
 		// This file is no longer available.
-		logw(conf->cntr, "%s has vanished\n", sb->path.buf);
+		logw(conf, "%s has vanished\n", sb->path.buf);
 		return -1;
 	}
 	sb->compression=conf->compression;
@@ -201,7 +201,7 @@ int sbuf_open_file(struct sbuf *sb, struct conf *conf)
 
 	if(open_file_for_send(&sb->burp2->bfd, sb->path.buf, sb->winattr, conf))
 	{
-		logw(conf->cntr, "Could not open %s\n", sb->path.buf);
+		logw(conf, "Could not open %s\n", sb->path.buf);
 		return -1;
 	}
 	return 0;

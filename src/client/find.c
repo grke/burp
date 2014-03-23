@@ -341,7 +341,7 @@ int fstype_excluded(struct conf *conf, const char *fname)
 	struct strlist *l;
 	if(statfs(fname, &buf))
 	{
-		logw(conf->p1cntr, "Could not statfs %s: %s\n",
+		logw(conf, "Could not statfs %s: %s\n",
 			fname, strerror(errno));
 		return -1;
 	}

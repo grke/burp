@@ -102,8 +102,8 @@ int autoupgrade_client(struct conf *conf)
 	a=0;
 	args[a++]=script_path;
 	args[a++]=NULL;
-	ret=run_script(args, NULL,
-		conf->p1cntr, 0 /* do not wait */, 1 /* use logp */);
+	ret=run_script(args, NULL, conf,
+		0 /* do not wait */, 1 /* use logp */, 1 /* use logw */);
 	/* To get round Windows problems to do with installing over files
 	   that the current process is running from, I am forking the child,
 	   then immediately exiting the parent process. */

@@ -205,9 +205,8 @@ static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, str
 			struct strlist *r;
 			struct conf *sconf=NULL;
 
-			if(!(sconf=(struct conf *)
-				malloc(sizeof(struct conf)))
-			  || !(sconf->cname=strdup(
+			if(!(sconf=conf_alloc())) goto end;
+			if(!(sconf->cname=strdup(
 				rbuf->buf+strlen("orig_client="))))
 			{
 				log_out_of_memory(__FUNCTION__);
@@ -314,7 +313,7 @@ end:
 	return ret;
 }
 
-static int init_vers(struct vers *vers, struct conf *cconf)
+static int vers_init(struct vers *vers, struct conf *cconf)
 {
 	memset(vers, 0, sizeof(struct vers));
 	return ((vers->min=version_to_long("1.2.7"))<0
@@ -330,7 +329,7 @@ int extra_comms(char **incexc, int *srestore, struct conf *conf, struct conf *cc
 	struct vers vers;
 	//char *restorepath=NULL;
 
-	if(init_vers(&vers, cconf)) goto error;
+	if(vers_init(&vers, cconf)) goto error;
 
 	if(vers.cli<vers.directory_tree)
 	{

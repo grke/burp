@@ -955,21 +955,27 @@ int do_backup_server(struct sdirs *sdirs, struct conf *cconf,
 		goto error;
 	}
 
-	//async_write_str(CMD_GEN, "backup_end");
-	logp("Backup ending - disconnect from client.\n");
-
 	// Close the connection with the client, the rest of the job
 	// we can do by ourselves.
 	async_free();
 
+	print_stats_to_file(cconf, sdirs->working, ACTION_BACKUP);
+
 	// Move the symlink to indicate that we are now finished.
 	if(do_rename(sdirs->working, sdirs->current)) goto error;
+
+	cntr_print(cconf, ACTION_BACKUP);
+
+	logp("Backup completed.\n");
+
+	set_logfp(NULL, cconf); // does an fclose on logfp.
+	compress_filename(sdirs->current, "log", "log.gz", cconf);
 
 	goto end;
 error:
 	ret=-1;
 end:
-	set_logfp(NULL, cconf); // does an fclose on logfp.
+	set_logfp(NULL, cconf);
 	if(manifest_dir) free(manifest_dir);
 	if(realworking) free(realworking);
 	return ret;

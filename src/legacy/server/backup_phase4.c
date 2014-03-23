@@ -769,8 +769,7 @@ int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf)
 	sync(); // try to help CIFS
 	recursive_delete(currentdupdata, NULL, FALSE /* do not del files */);
 
-	// Rename the old current to something that we know to
-	// delete.
+	// Rename the old current to something that we know to delete.
 	if(previous_backup)
 	{
 		if(deleteme_move(sdirs->client, fullrealcurrent, realcurrent, cconf)

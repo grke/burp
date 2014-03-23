@@ -66,8 +66,6 @@ static void free_incexcs(struct conf *c)
 void conf_init(struct conf *c)
 {
 	// Set everything to 0.
-	// FIX THIS: get rid of this by calloc-ing struct confs.
-	// look out for sconf in extra_comms.c, which is malloc-d.
 	memset(c, 0, sizeof(struct conf));
 
 	// Turn on defaults that are non-zero.

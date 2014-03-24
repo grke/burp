@@ -24479,7 +24479,7 @@ if test "x${subsysdir}" = "x${sbindir}" ; then
    exit 1
 fi
 
-ac_config_files="$ac_config_files autoconf/Make.common Makefile manpages/Makefile src/Makefile src/client/Makefile src/server/Makefile src/rabin/Makefile src/legacy/Makefile src/legacy/client/Makefile src/legacy/server/Makefile $PFILES"
+ac_config_files="$ac_config_files autoconf/Make.common Makefile manpages/Makefile src/Makefile src/rabin/Makefile src/burp1/Makefile src/burp1/client/Makefile src/burp1/server/Makefile src/burp2/client/Makefile src/burp2/server/Makefile $PFILES"
 
 ac_config_commands="$ac_config_commands default"
 
@@ -25592,12 +25592,12 @@ do
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "manpages/Makefile") CONFIG_FILES="$CONFIG_FILES manpages/Makefile" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
-    "src/client/Makefile") CONFIG_FILES="$CONFIG_FILES src/client/Makefile" ;;
-    "src/server/Makefile") CONFIG_FILES="$CONFIG_FILES src/server/Makefile" ;;
     "src/rabin/Makefile") CONFIG_FILES="$CONFIG_FILES src/rabin/Makefile" ;;
-    "src/legacy/Makefile") CONFIG_FILES="$CONFIG_FILES src/legacy/Makefile" ;;
-    "src/legacy/client/Makefile") CONFIG_FILES="$CONFIG_FILES src/legacy/client/Makefile" ;;
-    "src/legacy/server/Makefile") CONFIG_FILES="$CONFIG_FILES src/legacy/server/Makefile" ;;
+    "src/burp1/Makefile") CONFIG_FILES="$CONFIG_FILES src/burp1/Makefile" ;;
+    "src/burp1/client/Makefile") CONFIG_FILES="$CONFIG_FILES src/burp1/client/Makefile" ;;
+    "src/burp1/server/Makefile") CONFIG_FILES="$CONFIG_FILES src/burp1/server/Makefile" ;;
+    "src/burp2/client/Makefile") CONFIG_FILES="$CONFIG_FILES src/burp2/client/Makefile" ;;
+    "src/burp2/server/Makefile") CONFIG_FILES="$CONFIG_FILES src/burp2/server/Makefile" ;;
     "$PFILES") CONFIG_FILES="$CONFIG_FILES $PFILES" ;;
     "default") CONFIG_COMMANDS="$CONFIG_COMMANDS default" ;;
 

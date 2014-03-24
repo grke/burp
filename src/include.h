@@ -7,7 +7,6 @@
 #include "base64.h"
 #include "berrno.h"
 #include "bfile.h"
-#include "blk.h"
 #include "burpconfig.h"
 #include "burp.h"
 #include "cmd.h"

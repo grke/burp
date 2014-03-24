@@ -5,7 +5,7 @@
 #include <zlib.h>
 #include "bfile.h"
 #include "blk.h"
-#include "legacy/rs_buf.h"
+#include "burp1/rs_buf.h"
 
 // Bits in sbuf flags.
 // Keep track of what has been sent.

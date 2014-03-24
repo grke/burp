@@ -556,7 +556,7 @@ int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct
 			case CMD_ERROR:
 				printf("got error: %s\n", rbuf->buf);
 				goto end;
-			// Stuff that is currently legacy. OK to find these
+			// Stuff that is currently burp1. OK to find these
 			// in burp-1, but not burp-2.
 			case CMD_DATAPTH:
 			case CMD_END_FILE:

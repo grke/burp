@@ -1,7 +1,7 @@
 #include "include.h"
-#include "client/main.h"
-#include "server/status_client.h"
-#include "server/main.h"
+#include "burp2/client/main.h"
+#include "burp2/server/status_client.h"
+#include "burp2/server/main.h"
 
 static char *get_conf_path(void)
 {

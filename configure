@@ -24479,7 +24479,7 @@ if test "x${subsysdir}" = "x${sbindir}" ; then
    exit 1
 fi
 
-ac_config_files="$ac_config_files autoconf/Make.common Makefile manpages/Makefile src/Makefile src/rabin/Makefile src/burp1/Makefile src/burp1/client/Makefile src/burp1/server/Makefile src/burp2/client/Makefile src/burp2/server/Makefile $PFILES"
+ac_config_files="$ac_config_files autoconf/Make.common Makefile manpages/Makefile src/Makefile src/rabin/Makefile src/burp1/Makefile src/burp1/client/Makefile src/burp1/server/Makefile src/burp2/client/Makefile src/burp2/server/Makefile src/burp2/Makefile $PFILES"
 
 ac_config_commands="$ac_config_commands default"
 
@@ -25598,6 +25598,7 @@ do
     "src/burp1/server/Makefile") CONFIG_FILES="$CONFIG_FILES src/burp1/server/Makefile" ;;
     "src/burp2/client/Makefile") CONFIG_FILES="$CONFIG_FILES src/burp2/client/Makefile" ;;
     "src/burp2/server/Makefile") CONFIG_FILES="$CONFIG_FILES src/burp2/server/Makefile" ;;
+    "src/burp2/Makefile") CONFIG_FILES="$CONFIG_FILES src/burp2/Makefile" ;;
     "$PFILES") CONFIG_FILES="$CONFIG_FILES $PFILES" ;;
     "default") CONFIG_COMMANDS="$CONFIG_COMMANDS default" ;;
 

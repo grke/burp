@@ -120,7 +120,7 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, str
 	{
 		// Not compressed - just hard link it.
 		if(do_link(oldpath, infpath, &statp, cconf,
-			TRUE /* allow overwrite of infpath */))
+			1 /* allow overwrite of infpath */))
 				return -1;
 	}
 	return ret;

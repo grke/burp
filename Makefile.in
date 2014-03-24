@@ -14,12 +14,12 @@ thisdir = .
 first_rule: all
 dummy:
 
-bin_subdirs = src/client \
-		src/server \
-		src/rabin \
-		src/legacy \
-		src/legacy/client \
-		src/legacy/server \
+bin_subdirs = src/rabin \
+		src/burp1 \
+		src/burp1/client \
+		src/burp1/server \
+		src/burp2/client \
+		src/burp2/server \
 		src
 
 all_subdirs = ${bin_subdirs} manpages

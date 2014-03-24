@@ -1574,12 +1574,12 @@ AC_OUTPUT([autoconf/Make.common \
 	   Makefile \
 	   manpages/Makefile \
 	   src/Makefile \
-	   src/client/Makefile \
-	   src/server/Makefile \
 	   src/rabin/Makefile \
-	   src/legacy/Makefile \
-	   src/legacy/client/Makefile \
-	   src/legacy/server/Makefile \
+	   src/burp1/Makefile \
+	   src/burp1/client/Makefile \
+	   src/burp1/server/Makefile \
+	   src/burp2/client/Makefile \
+	   src/burp2/server/Makefile \
 	   $PFILES ],  
      [ ]
 )

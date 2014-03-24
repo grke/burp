@@ -4,7 +4,7 @@
 #include <sys/stat.h>
 #include <zlib.h>
 #include "bfile.h"
-#include "blk.h"
+#include "burp2/blk.h"
 #include "burp1/rs_buf.h"
 
 // Bits in sbuf flags.

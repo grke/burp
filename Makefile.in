@@ -20,6 +20,7 @@ bin_subdirs = src/rabin \
 		src/burp1/server \
 		src/burp2/client \
 		src/burp2/server \
+		src/burp2 \
 		src
 
 all_subdirs = ${bin_subdirs} manpages

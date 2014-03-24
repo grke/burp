@@ -25,7 +25,6 @@ SRCS = \
 		base64.c \
 		berrno.c \
 		bfile.c \
-		blk.c \
 		cntr.c \
 		conf.c \
 		forkchild.c \
@@ -51,7 +50,8 @@ SUBDIROBJS = burp2/server/server_burp2.a \
 		rabin/rabin.a \
 		burp1/client/client_burp1.a \
 		burp1/server/server_burp1.a \
-		burp1/burp1.a
+		burp1/burp1.a \
+		burp2/burp2.a
 
 
 # these are the objects that are changed by the .configure process

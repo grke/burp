@@ -1,7 +1,7 @@
 #ifndef _SERVER_INCLUDES_H
 #define _SERVER_INCLUDES_H
 
-#include "../../include.h"
+#include "../include.h"
 
 #include "auth.h"
 #include "autoupgrade.h"

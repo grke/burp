@@ -1,7 +1,7 @@
 #ifndef _CLIENT_INCLUDES_H
 #define _CLIENT_INCLUDES_H
 
-#include "../../include.h"
+#include "../include.h"
 
 #include "acl.h"
 #include "auth.h"

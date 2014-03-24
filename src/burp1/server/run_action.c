@@ -388,8 +388,7 @@ int check_for_rubble_burp1(struct sdirs *sdirs, struct conf *cconf,
 	{
 		// Try to remove it and start again.
 		logp("deleting old working directory\n");
-		if(recursive_delete(fullrealwork,
-			NULL, TRUE /* delete files */))
+		if(recursive_delete(fullrealwork, NULL, 1 /* delete files */))
 		{
 			log_and_send("Old working directory is in the way.\n");
 			ret=-1;

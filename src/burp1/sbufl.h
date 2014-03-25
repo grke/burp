@@ -1,5 +1,5 @@
-#ifndef LEGACY_SBUF_H
-#define LEGACY_SBUF_H
+#ifndef BURP1_SBUF_H
+#define BURP1_SBUF_H
 
 #include "include.h"
 

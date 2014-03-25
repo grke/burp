@@ -1,5 +1,5 @@
-#ifndef DPTH_LEGACY_H
-#define DPTH_LEGACY_H
+#ifndef DPTH_BURP1_H
+#define DPTH_BURP1_H
 
 struct dpthl
 {

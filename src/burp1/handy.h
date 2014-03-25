@@ -1,5 +1,5 @@
-#ifndef HANDY_LEGACY_H
-#define HANDY_LEGACY_H
+#ifndef HANDY_BURP1_H
+#define HANDY_BURP1_H
 
 #include <openssl/md5.h>
 #include <zlib.h>

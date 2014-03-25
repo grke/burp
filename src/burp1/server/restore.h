@@ -1,5 +1,5 @@
-#ifndef _RESTORE_SERVER_LEGACY_H
-#define _RESTORE_SERVER_LEGACY_H
+#ifndef _RESTORE_SERVER_BURP1_H
+#define _RESTORE_SERVER_BURP1_H
 
 extern int do_patch(const char *dst, const char *del, const char *upd,
 	bool gzupd, int compression, struct conf *cconf);

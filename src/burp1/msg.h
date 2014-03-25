@@ -1,5 +1,5 @@
-#ifndef _MSG_LEGACY_H
-#define _MSG_LEGACY_H
+#ifndef _MSG_BURP1_H
+#define _MSG_BURP1_H
 
 #include <zlib.h>
 #include "include.h"

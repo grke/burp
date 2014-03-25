@@ -182,7 +182,7 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath,
 	// It is possible that infpath already exists, if the server
 	// was interrupted on a previous run just after this point.
 	return do_link(opath, infpath, &statp, cconf,
-		TRUE /* allow overwrite of infpath */);
+		1 /* allow overwrite of infpath */);
 }
 
 static int jiggle(struct sbuf *sb, const char *currentdata, const char *datadirtmp, const char *datadir, const char *deltabdir, const char *deltafdir, const char *sigpath, const char *deletionsfile, FILE **delfp, int hardlinked, struct conf *cconf)
@@ -353,7 +353,7 @@ static int jiggle(struct sbuf *sb, const char *currentdata, const char *datadirt
 		// Hard link it first.
 		//logp("Hard linking to old file: %s\n", datapth);
 		if(do_link(oldpath, finpath, &statp, cconf,
-		  FALSE /* do not overwrite finpath (should never need to) */))
+		  0 /* do not overwrite finpath (should never need to) */))
 			goto end;
 		else
 		{
@@ -599,7 +599,7 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct conf *cconf,
 	// Remove the temporary data directory, we have probably removed
 	// useful files from it.
 	sync(); // try to help CIFS
-	recursive_delete(deltafdir, NULL, FALSE /* do not del files */);
+	recursive_delete(deltafdir, NULL, 0 /* do not del files */);
 
 end:
 	if(zp) gzclose_fp(&zp);
@@ -671,7 +671,7 @@ int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf)
 			{
 				logp("Removing previous currentduptmp directory: %s\n", currentduptmp);
 				if(recursive_delete(currentduptmp,
-					NULL, TRUE /* del files */))
+					NULL, 1 /* del files */))
 				{
 					logp("Could not delete %s\n",
 						currentduptmp);
@@ -758,7 +758,7 @@ int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf)
 
 	// Remove the temporary data directory, we have now removed
 	// everything useful from it.
-	recursive_delete(datadirtmp, NULL, TRUE /* del files */);
+	recursive_delete(datadirtmp, NULL, 1 /* del files */);
 
 	// Clean up the currentdata directory - this is now the 'old'
 	// currentdata directory. Any files that were deleted from
@@ -767,7 +767,7 @@ int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf)
 	// This will have the effect of getting rid of unnecessary
 	// directories.
 	sync(); // try to help CIFS
-	recursive_delete(currentdupdata, NULL, FALSE /* do not del files */);
+	recursive_delete(currentdupdata, NULL, 0 /* do not del files */);
 
 	// Rename the old current to something that we know to delete.
 	if(previous_backup)

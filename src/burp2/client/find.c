@@ -1,7 +1,5 @@
 #include "include.h"
 
-#include "../../burp1/burpconfig.h"
-
 #ifdef HAVE_LINUX_OS
 #include <sys/statfs.h>
 #endif

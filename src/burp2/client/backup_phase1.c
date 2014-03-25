@@ -1,7 +1,5 @@
 #include "include.h"
 
-#include "../../burp1/burpconfig.h"
-
 static char filesymbol=CMD_FILE;
 static char metasymbol=CMD_METADATA;
 static char dirsymbol=CMD_DIRECTORY;

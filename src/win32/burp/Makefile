@@ -55,6 +55,9 @@ CLIENT_OBJS = \
 	$(OBJDIR)/burp2/client/main.o \
 	$(OBJDIR)/burp2/client/restore.o \
 	$(OBJDIR)/burp2/client/xattr.o \
+	$(OBJDIR)/burp2/rabin/rabin.o \
+	$(OBJDIR)/burp2/rabin/rconf.o \
+	$(OBJDIR)/burp2/rabin/win.o \
 	$(OBJDIR)/cntr.o \
 	$(OBJDIR)/conf.o \
 	$(OBJDIR)/forkchild.o \
@@ -69,9 +72,6 @@ CLIENT_OBJS = \
 	$(OBJDIR)/msg.o \
 	$(OBJDIR)/prepend.o \
 	$(OBJDIR)/prog.o \
-	$(OBJDIR)/rabin/rabin.o \
-	$(OBJDIR)/rabin/rconf.o \
-	$(OBJDIR)/rabin/win.o \
 	$(OBJDIR)/regexp.o \
 	$(OBJDIR)/run_script.o \
 	$(OBJDIR)/sbuf.o \

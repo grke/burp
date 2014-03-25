@@ -1,6 +1,5 @@
 #include "include.h"
 
-#include "../burp1/burpconfig.h"
 #include "../burp1/sbufl.h"
 
 int backup_phase1_server(struct sdirs *sdirs, struct conf *conf)

@@ -57,6 +57,11 @@
 	#endif
 #endif
 
+#if defined(HAVE_WIN32)
+typedef int64_t boffset_t;
+#else
+typedef off_t boffset_t;
+#endif
 
 // Use the following for strings not to be translated.
 #define NT_(s) (s)   

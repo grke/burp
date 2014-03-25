@@ -39,6 +39,8 @@ void lock_get_quick(struct lock *lock)
 {
 #if defined(HAVE_WIN32) || !defined(HAVE_LOCKF)
 	// Would somebody please tell me how to get a lock on Windows?!
+	lock->status=GET_LOCK_GOT;
+	return;
 #else
 	char text[64]="";
 
@@ -58,7 +60,6 @@ void lock_get_quick(struct lock *lock)
 		logp("Could not write pid/progname to %s\n", lock->path);
 		goto error;
 	}
-#endif
 	lock->status=GET_LOCK_GOT;
 	return;
 error:
@@ -67,6 +68,7 @@ error:
 notgot:
 	lock->status=GET_LOCK_NOT_GOT;
 	return;
+#endif
 }
 
 // Return 0 for lock got, 1 for lock not got, -1 for error.

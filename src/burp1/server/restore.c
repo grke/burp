@@ -354,7 +354,7 @@ static int restore_file(struct bu *arr, int a, int i, struct sbuf *sb, const cha
 				}
 
 				if(do_patch(best, dpath, tmp,
-				  FALSE /* do not gzip the result */,
+				  0 /* do not gzip the result */,
 				  sb->compression /* from the manifest */,
 				  cconf))
 				{
@@ -813,7 +813,7 @@ int do_restore_server_burp1(struct sdirs *sdirs, enum action act,
 		ret=restore_manifest(arr, a, a-1,
 			tmppath1, tmppath2, regex, srestore, act,
 			dir_for_notify, cconf);
-		found=TRUE;
+		found=1;
 	}
 
 	if(!found) for(i=0; i<a; i++)
@@ -821,7 +821,7 @@ int do_restore_server_burp1(struct sdirs *sdirs, enum action act,
 		if(!strcmp(arr[i].timestamp, cconf->backup)
 			|| arr[i].index==index)
 		{
-			found=TRUE;
+			found=1;
 			//logp("got: %s\n", arr[i].path);
 			ret|=restore_manifest(arr, a, i,
 				tmppath1, tmppath2, regex,

@@ -3,7 +3,7 @@
 
 #include "cntr.h"
 #include "strlist.h"
-#include "rabin/rconf.h"
+#include "burp2/rabin/rconf.h"
 
 enum burp_mode
 {

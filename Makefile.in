@@ -14,7 +14,7 @@ thisdir = .
 first_rule: all
 dummy:
 
-bin_subdirs = src/rabin \
+bin_subdirs = src/burp2/rabin \
 		src/burp1 \
 		src/burp1/client \
 		src/burp1/server \

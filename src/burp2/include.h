@@ -1,5 +1,5 @@
-#ifndef _LEGACY_INCLUDES_H
-#define _LEGACY_INCLUDES_H
+#ifndef _BURP2_INCLUDES_H
+#define _BURP2_INCLUDES_H
 
 #include "../include.h"
 

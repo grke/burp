@@ -1,5 +1,5 @@
 #include "include.h"
-#include "../../rabin/include.h"
+#include "../../burp2/rabin/include.h"
 #include "../../burp1/client/backup_phase2.h"
 
 /* Ignore extrameta for now.

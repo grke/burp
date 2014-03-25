@@ -7,9 +7,9 @@ VPATH = 	.
 # one up
 basedir = ..
 # top dir
-topdir = ../..
+topdir = ../../..
 # this dir relative to top dir
-thisdir = src/rabin
+thisdir = src/burp2/rabin
 
 DEBUG=@DEBUG@
 

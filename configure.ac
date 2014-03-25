@@ -1574,7 +1574,7 @@ AC_OUTPUT([autoconf/Make.common \
 	   Makefile \
 	   manpages/Makefile \
 	   src/Makefile \
-	   src/rabin/Makefile \
+	   src/burp2/rabin/Makefile \
 	   src/burp1/Makefile \
 	   src/burp1/client/Makefile \
 	   src/burp1/server/Makefile \

@@ -47,7 +47,7 @@ SRCS = \
 OBJS = $(SRCS:.c=.o)
 SUBDIROBJS = burp2/server/server_burp2.a \
 		burp2/client/client_burp2.a \
-		rabin/rabin.a \
+		burp2/rabin/rabin.a \
 		burp1/client/client_burp1.a \
 		burp1/server/server_burp1.a \
 		burp1/burp1.a \

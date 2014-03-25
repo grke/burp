@@ -79,6 +79,7 @@ void conf_init(struct conf *c)
 	c->max_storage_subdirs=30000;
 	c->librsync=1;
 	c->compression=9;
+	c->ssl_compression=5;
 	c->version_warn=1;
 	c->resume_partial=0;
 	c->umask=0022;
@@ -655,6 +656,17 @@ static int load_conf_strings(struct conf *c,
 	return 0;
 }
 
+static int get_compression(const char *v)
+{
+	const char *cp=v;
+	if(!strncmp(v, "gzip", strlen("gzip"))
+	  || !(strncmp(v, "zlib", strlen("zlib"))))
+		cp=v+strlen("gzip"); // Or "zlib".
+	if(strlen(cp)==1 && isdigit(*cp))
+		return atoi(cp);
+	return -1;
+}
+
 static int load_conf_field_and_value(struct conf *c,
 	const char *f, // field
 	const char *v, // value
@@ -684,14 +696,13 @@ static int load_conf_field_and_value(struct conf *c,
 	}
 	else if(!strcmp(f, "compression"))
 	{
-		const char *cp=NULL;
-		cp=v;
-		if(!strncmp(v, "gzip", strlen("gzip")))
-			cp=v+strlen("gzip");
-		if(strlen(cp)!=1 || !isdigit(*cp))
+		if((c->compression=get_compression(v))<0)
 			return -1;
-
-		c->compression=atoi(cp);
+	}
+	else if(!strcmp(f, "ssl_compression"))
+	{
+		if((c->ssl_compression=get_compression(v))<0)
+			return -1;
 	}
 	else if(!strcmp(f, "umask"))
 	{

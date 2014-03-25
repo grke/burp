@@ -35,6 +35,7 @@ struct conf
 	char *ssl_key_password;
 	char *ssl_peer_cn;
 	char *ssl_ciphers;
+	int ssl_compression;
 	char *user;
 	char *group;
 	float ratelimit;

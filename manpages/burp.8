@@ -212,8 +212,8 @@ On the server, the number of times that a single file can be hardlinked. The bed
 \fBlibrsync=[0|1]\fR
 When set to 0, delta differencing will not take place. That is, when a file changes, the server will request the whole new file. The default is 1. This option can be overridden by the client configuration files in clientconfdir on the server.
 .TP
-\fBcompression=gzip[0-9]\fR
-Choose the level of gzip compression for files stored in backups. Setting 0 or gzip0 turns compression off. The default is gzip9. This option can be overridden by the client configuration files in clientconfdir on the server.
+\fBcompression=zlib[0-9] (or gzip[0-9])\fR
+Choose the level of zlib compression for files stored in backups. Setting 0 or zlib0 turns compression off. The default is zlib9. This option can be overridden by the client configuration files in clientconfdir on the server. 'gzip' is a synonym of 'zlib'.
 .TP
 \fBversion_warn=[0|1]\fR
 When this is on, which is the default, a warning will be issued when the client version does not match the server version. This option can be overridden by the client configuration files in clientconfdir on the server.
@@ -281,6 +281,10 @@ Synonym for ssl_key_password.
 .TP
 \fBssl_ciphers=[cipher list]\fR
 Allowed SSL ciphers. See openssl ciphers for details.
+.TP
+\fBssl_compression=zlib[0|5] (or gzip[0|5])\fR
+Choose the level of zlib compression over SSL. Setting 0 or zlib0 turns SSL compression off. Setting non-zero gives zlib5 compression (it is not currently possible for openssl to set any other level). The default is 5. 'gzip' is a synonym of 'zlib'.
+.TP
 .TP
 \fBssl_dhfile=[path]\fR
 Path to Diffie-Hellman parameter file. To generate one with openssl, use a command like this: openssl dhparam \-out dhfile.pem \-5 1024
@@ -621,7 +625,7 @@ The 'data' directory contains complete backup files.
 .TP
 The 'deltas.reverse' directory contains reverse deltas that can be applied to the data from the next backup in the sequence (indicated by the contents of the 'forward' file).
 .TP
-Anything with a .gz suffix is compressed in gzip format.  You can use standard tools, such as zcat, zless or cp, to view them or copy them elsewhere. Files from Windows backups will probably contain VSS headers and/or footers. For help stripping these, see the vss_strip man page.
+Anything with a .gz suffix is compressed in zlib (gzip) format.  You can use standard tools, such as zcat, zless or cp, to view them or copy them elsewhere. Files from Windows backups will probably contain VSS headers and/or footers. For help stripping these, see the vss_strip man page.
 
 .SH Server initiated backups
 .TP

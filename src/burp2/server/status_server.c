@@ -669,7 +669,6 @@ static int browse_manifest(int cfd, gzFile zp, const char *browse)
 	struct sbuf sb;
 	struct cntr cntr;
 	size_t blen=0;
-	cntr_reset(&cntr, time(NULL));
 	init_sbuf(&sb);
 	if(browse) blen=strlen(browse);
 	while(1)

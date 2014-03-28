@@ -1,88 +1,43 @@
 #ifndef _COUNTER_H
 #define _COUNTER_H
 
-#define COUNTER_VERSION_1	'1'
-#define COUNTER_VERSION_2	'2'
+#define CNTR_VER_1		0x00000001
+#define CNTR_VER_2		0x00000002
+#define CNTR_VER_4		0x00000004
+#define CNTR_SINGLE_FIELD	0x00000008
+#define CNTR_VER_2_4		CNTR_VER_2|CNTR_VER_4
+#define CNTR_VER_ALL		CNTR_VER_1|CNTR_VER_2_4
 
 #include "burp.h"
 
+#define CNTR_ENT_SIZE	256
+
+struct cntr_ent
+{
+	char cmd;
+	char *field;
+	char *label;
+	unsigned long long count;
+	unsigned long long same;
+	unsigned long long changed;
+	unsigned long long deleted;
+	unsigned long long phase1;
+	// Flags indicating the format that each entry is available for.
+	int versions;
+};
+
 struct cntr
 {
-	unsigned long long gtotal;
-	unsigned long long gtotal_same;
-	unsigned long long gtotal_changed;
-	unsigned long long gtotal_deleted;
+	// Due to burp history, I want to be able to specify an order in
+	// which to go through the counters. For example, old clients may
+	// expect to receive them in a particular order.
+	int colen;
+	char cmd_order[CNTR_ENT_SIZE];
+	// I also want to be able to index each entry by a cmd, for fast
+	// lookup when incrementing a counter.
+	struct cntr_ent **ent;
 
-	unsigned long long total;
-	unsigned long long total_same;
-	unsigned long long total_changed;
-	unsigned long long total_deleted;
-
-	unsigned long long file;
-	unsigned long long file_same;
-	unsigned long long file_changed;
-	unsigned long long file_deleted;
-
-	unsigned long long enc;
-	unsigned long long enc_same;
-	unsigned long long enc_changed;
-	unsigned long long enc_deleted;
-
-	unsigned long long meta;
-	unsigned long long meta_same;
-	unsigned long long meta_changed;
-	unsigned long long meta_deleted;
-
-	unsigned long long encmeta;
-	unsigned long long encmeta_same;
-	unsigned long long encmeta_changed;
-	unsigned long long encmeta_deleted;
-
-	unsigned long long dir;
-	unsigned long long dir_same;
-	unsigned long long dir_changed;
-	unsigned long long dir_deleted;
-
-	unsigned long long slink;
-	unsigned long long slink_same;
-	unsigned long long slink_changed;
-	unsigned long long slink_deleted;
-
-	unsigned long long hlink;
-	unsigned long long hlink_same;
-	unsigned long long hlink_changed;
-	unsigned long long hlink_deleted;
-
-	unsigned long long special;
-	unsigned long long special_same;
-	unsigned long long special_changed;
-	unsigned long long special_deleted;
-
-	unsigned long long efs;
-	unsigned long long efs_same;
-	unsigned long long efs_changed;
-	unsigned long long efs_deleted;
-
-	unsigned long long vss;
-	unsigned long long vss_same;
-	unsigned long long vss_changed;
-	unsigned long long vss_deleted;
-
-	unsigned long long encvss;
-	unsigned long long encvss_same;
-	unsigned long long encvss_changed;
-	unsigned long long encvss_deleted;
-
-	unsigned long long vss_t;
-	unsigned long long vss_t_same;
-	unsigned long long vss_t_changed;
-	unsigned long long vss_t_deleted;
-
-	unsigned long long encvss_t;
-	unsigned long long encvss_t_same;
-	unsigned long long encvss_t_changed;
-	unsigned long long encvss_t_deleted;
-
+	// These should have their own individual cmd entries.
 	unsigned long long warning;
 	unsigned long long byte;
 	unsigned long long recvbyte;
@@ -106,7 +61,6 @@ extern void cntr_add_deleted(struct cntr *c, char ch);
 extern void cntr_add_bytes(struct cntr *c, unsigned long long bytes);
 extern void cntr_add_sentbytes(struct cntr *c, unsigned long long bytes);
 extern void cntr_add_recvbytes(struct cntr *c, unsigned long long bytes);
-extern void cntr_resets(struct conf *conf, time_t t);
 
 #ifndef HAVE_WIN32
 extern void cntr_to_str(char *str, size_t len,

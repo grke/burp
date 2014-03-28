@@ -61,6 +61,14 @@
 #define	STATUS_VERIFYING	'9'
 #define	STATUS_DELETING		'0'
 
+#define CMD_TOTAL		'Y'
+#define CMD_GRAND_TOTAL		'Z'
+
+#define CMD_BYTES_ESTIMATED	'G'
+#define CMD_BYTES		'O'
+#define CMD_BYTES_RECV		'P'
+#define CMD_BYTES_SENT		'Q'
+
 // Legacy stuff
 #define CMD_DATAPTH     't'     /* Path to data on the server */
 #define CMD_VSS         'v'     /* Windows VSS metadata */

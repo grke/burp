@@ -159,8 +159,6 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *conffile, int
 	if(!(cntr=cntr_alloc()) || !(p1cntr=cntr_alloc())) goto end;
 	conf->cntr=cntr;
 	conf->p1cntr=p1cntr;
-	cntr_resets(conf, time(NULL));
-
 
 	if(!(sbio=BIO_new_socket(*cfd, BIO_NOCLOSE))
 	  || !(ssl=SSL_new(ctx)))

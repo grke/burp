@@ -8,24 +8,99 @@ struct cntr *cntr_alloc(void)
 	return cntr;
 }
 
-void cntr_free(struct cntr **cntr)
+int add_cntr_ent(struct cntr *cntr, int versions,
+	char cmd, const char *field, const char *label)
 {
-	if(!cntr || !*cntr) return;
-	free(*cntr);
-	*cntr=NULL;
+	struct cntr_ent *cenew=NULL;
+	if(!cntr->ent
+	  && !(cntr->ent=(struct cntr_ent **)calloc(1, CNTR_ENT_SIZE)))
+		goto error;
+	if(!(cenew=(struct cntr_ent *)calloc(1, sizeof(struct cntr)))
+	  || !(cenew->field=strdup(field))
+	  || !(cenew->label=strdup(label)))
+		goto error;
+	cenew->versions=versions;
+	cntr->ent[(unsigned int)cmd]=cenew;
+	cntr->cmd_order[cntr->colen++]=cmd;
+	return 0;
+error:
+	log_out_of_memory(__FUNCTION__);
+	if(cenew)
+	{
+		if(cenew->field) free(cenew->field);
+		if(cenew->label) free(cenew->label);
+		free(cenew);
+	}
+	return -1;
 }
 
-static void cntr_reset(struct cntr *c, time_t t)
+int cntr_init(struct cntr *cntr)
 {
-	if(!c) return;
-	memset(c, 0, sizeof(struct cntr));
-	c->start=t;
+	cntr->start=time(NULL);
+
+	// The order is important here, in order to keep compatibility with
+	// previous versions.
+
+	return add_cntr_ent(cntr, CNTR_VER_ALL,
+		CMD_TOTAL, "total", "Total")
+	  || add_cntr_ent(cntr, CNTR_VER_ALL,
+		CMD_FILE, "files", "Files")
+	  || add_cntr_ent(cntr, CNTR_VER_ALL,
+		CMD_ENC_FILE, "files_encrypted", "Files (encrypted)")
+	  || add_cntr_ent(cntr, CNTR_VER_ALL,
+		CMD_METADATA, "meta_data", "Meta data")
+	  || add_cntr_ent(cntr, CNTR_VER_ALL,
+		CMD_ENC_METADATA, "meta_data_encrypted", "Meta data (enc)")
+	  || add_cntr_ent(cntr, CNTR_VER_ALL,
+		CMD_DIRECTORY, "directories", "Directories")
+	  || add_cntr_ent(cntr, CNTR_VER_ALL,
+		CMD_HARD_LINK, "soft_links", "Hard links")
+	  || add_cntr_ent(cntr, CNTR_VER_ALL,
+		CMD_SOFT_LINK, "hard_links", "Soft links")
+	  || add_cntr_ent(cntr, CNTR_VER_ALL,
+		CMD_SPECIAL, "special_files", "Special files")
+	  || add_cntr_ent(cntr, CNTR_VER_2_4,
+		CMD_VSS, "vss_headers", "VSS headers")
+	  || add_cntr_ent(cntr, CNTR_VER_2_4,
+		CMD_ENC_VSS, "vss_headers_encrypted", "VSS headers (enc)")
+	  || add_cntr_ent(cntr, CNTR_VER_2_4,
+		CMD_VSS_T, "vss_footers", "VSS footers")
+	  || add_cntr_ent(cntr, CNTR_VER_2_4,
+		CMD_ENC_VSS_T, "vss_footers_encrypted", "VSS footers (enc)")
+	  || add_cntr_ent(cntr, CNTR_VER_2_4,
+		CMD_GRAND_TOTAL, "grand_total", "Grand total")
+	  || add_cntr_ent(cntr, CNTR_VER_4,
+		CMD_EFS_FILE, "efs_files", "EFS files")
+	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_SINGLE_FIELD,
+		CMD_WARNING, "warnings", "Warnings")
+	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_SINGLE_FIELD,
+		CMD_BYTES_ESTIMATED, "bytes_estimated", "Bytes estimated")
+	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_SINGLE_FIELD,
+		CMD_BYTES, "bytes", "Bytes")
+	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_SINGLE_FIELD,
+		CMD_BYTES_RECV, "bytes_received", "Bytes received")
+	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_SINGLE_FIELD,
+		CMD_BYTES_SENT, "bytes_sent", "Bytes sent");
 }
- 
-void cntr_resets(struct conf *conf, time_t t)
+
+static void cntr_ent_free(struct cntr_ent *cntr_ent)
 {
-	cntr_reset(conf->p1cntr, t);
-	cntr_reset(conf->cntr, t);
+	if(!cntr_ent) return;
+	if(cntr_ent->field) free(cntr_ent->field);
+	if(cntr_ent->label) free(cntr_ent->label);
+}
+
+void cntr_free(struct cntr **cntr)
+{
+	int c;
+	if(!cntr || !*cntr) return;
+	if((*cntr)->ent) for(c=0; c<(*cntr)->colen; c++)
+	{
+		cntr_ent_free((*cntr)->ent[c]);
+		free((*cntr)->ent);
+	}
+	free(*cntr);
+	*cntr=NULL;
 }
 
 const char *bytes_to_human(unsigned long long counter)
@@ -52,8 +127,6 @@ const char *bytes_to_human(unsigned long long counter)
 		snprintf(units, sizeof(units), "PB");
 	}
 	snprintf(ret, sizeof(ret), " (%.2f %s)", div, units);
-	//strcat(ret, units);
-	//strcat(ret, ")");
 	return ret;
 }
 
@@ -78,193 +151,92 @@ static void table_border(enum action act)
 
 void cntr_add(struct cntr *c, char ch, int print)
 {
+	struct cntr_ent *grand_total_ent;
 	if(!c) return;
+	grand_total_ent=c->ent[CMD_GRAND_TOTAL];
 	if(print)
 	{
-		if(!c->gtotal && !c->warning) logc("\n");
+		if(!grand_total_ent->count
+		  && !c->ent[CMD_WARNING]->count) logc("\n");
 		logc("%c", ch);
 	}
-	switch(ch)
+	if(ch==CMD_FILE_CHANGED)
 	{
-		case CMD_FILE:
-			++(c->file); ++(c->total); break;
-		case CMD_ENC_FILE:
-			++(c->enc); ++(c->total); break;
-		case CMD_METADATA:
-			++(c->meta); ++(c->total); break;
-		case CMD_ENC_METADATA:
-			++(c->encmeta); ++(c->total); break;
-		case CMD_DIRECTORY:
-			++(c->dir); ++(c->total); break;
-		case CMD_HARD_LINK:
-			++(c->hlink); ++(c->total); break;
-		case CMD_SOFT_LINK:
-			++(c->slink); ++(c->total); break;
-		case CMD_SPECIAL:
-			++(c->special); ++(c->total); break;
-		case CMD_EFS_FILE:
-			++(c->efs); ++(c->total); break;
-		case CMD_VSS:
-			++(c->vss); ++(c->total); break;
-		case CMD_ENC_VSS:
-			++(c->encvss); ++(c->total); break;
-		case CMD_VSS_T:
-			++(c->vss_t); ++(c->total); break;
-		case CMD_ENC_VSS_T:
-			++(c->encvss_t); ++(c->total); break;
-
-		case CMD_WARNING:
-			++(c->warning); return; // do not add to total
-		case CMD_ERROR:
-			return; // errors should be fatal - ignore
-
-		// Include CMD_FILE_CHANGED so that the client can show changed
-		// file symbols.
-		case CMD_FILE_CHANGED:
-			++(c->file_changed);
-			++(c->total_changed);
-			++(c->gtotal_changed);
-			break;
+		c->ent[CMD_FILE]->changed++;
+		c->ent[CMD_TOTAL]->changed++;
+		grand_total_ent->changed++;
 	}
-	if(!((++(c->gtotal))%64) && print)
+	else
+	{
+		c->ent[(unsigned int)ch]->count++;
+		if(ch==CMD_WARNING) return;
+		c->ent[CMD_TOTAL]->count++;
+	}
+
+	if(!((++grand_total_ent->count)%64) && print)
 		logc(
 #ifdef HAVE_WIN32
 			" %I64u\n",
 #else
 			" %llu\n",
 #endif
-			c->gtotal);
+			grand_total_ent->count);
 	fflush(stdout);
 }
 
 void cntr_add_same(struct cntr *c, char ch)
 {
 	if(!c) return;
-	switch(ch)
-	{
-		case CMD_FILE:
-			++(c->file_same); ++(c->total_same); break;
-		case CMD_ENC_FILE:
-			++(c->enc_same); ++(c->total_same); break;
-		case CMD_METADATA:
-			++(c->meta_same); ++(c->total_same); break;
-		case CMD_ENC_METADATA:
-			++(c->encmeta_same); ++(c->total_same); break;
-		case CMD_DIRECTORY:
-			++(c->dir_same); ++(c->total_same); break;
-		case CMD_HARD_LINK:
-			++(c->hlink_same); ++(c->total_same); break;
-		case CMD_SOFT_LINK:
-			++(c->slink_same); ++(c->total_same); break;
-		case CMD_SPECIAL:
-			++(c->special_same); ++(c->total_same); break;
-		case CMD_EFS_FILE:
-			++(c->efs_same); ++(c->total_same); break;
-		case CMD_VSS:
-			++(c->vss_same); ++(c->total_same); break;
-		case CMD_ENC_VSS:
-			++(c->encvss_same); ++(c->total_same); break;
-		case CMD_VSS_T:
-			++(c->vss_t_same); ++(c->total_same); break;
-		case CMD_ENC_VSS_T:
-			++(c->encvss_t_same); ++(c->total_same); break;
-	}
-	++(c->gtotal_same);
+	c->ent[(unsigned int)ch]->same++;
+	c->ent[(unsigned int)CMD_TOTAL]->same++;
+	c->ent[(unsigned int)CMD_GRAND_TOTAL]->same++;
 }
 
 void cntr_add_changed(struct cntr *c, char ch)
 {
 	if(!c) return;
-	switch(ch)
-	{
-		case CMD_FILE:
-		case CMD_FILE_CHANGED:
-			++(c->file_changed); ++(c->total_changed); break;
-		case CMD_ENC_FILE:
-			++(c->enc_changed); ++(c->total_changed); break;
-		case CMD_METADATA:
-			++(c->meta_changed); ++(c->total_changed); break;
-		case CMD_ENC_METADATA:
-			++(c->encmeta_changed); ++(c->total_changed); break;
-		case CMD_DIRECTORY:
-			++(c->dir_changed); ++(c->total_changed); break;
-		case CMD_HARD_LINK:
-			++(c->hlink_changed); ++(c->total_changed); break;
-		case CMD_SOFT_LINK:
-			++(c->slink_changed); ++(c->total_changed); break;
-		case CMD_SPECIAL:
-			++(c->special_changed); ++(c->total_changed); break;
-		case CMD_EFS_FILE:
-			++(c->efs_changed); ++(c->total_changed); break;
-		case CMD_VSS:
-			++(c->vss_changed); ++(c->total_changed); break;
-		case CMD_ENC_VSS:
-			++(c->encvss_changed); ++(c->total_changed); break;
-		case CMD_VSS_T:
-			++(c->vss_t_changed); ++(c->total_changed); break;
-		case CMD_ENC_VSS_T:
-			++(c->encvss_t_changed); ++(c->total_changed); break;
-	}
-	++(c->gtotal_changed);
+	c->ent[(unsigned int)ch]->changed++;
+	c->ent[CMD_TOTAL]->changed++;
+	c->ent[CMD_GRAND_TOTAL]->changed++;
+	if(!c) return;
 }
 
 void cntr_add_deleted(struct cntr *c, char ch)
 {
 	if(!c) return;
-	switch(ch)
-	{
-		case CMD_FILE:
-			++(c->file_deleted); ++(c->total_deleted); break;
-		case CMD_ENC_FILE:
-			++(c->enc_deleted); ++(c->total_deleted); break;
-		case CMD_METADATA:
-			++(c->meta_deleted); ++(c->total_deleted); break;
-		case CMD_ENC_METADATA:
-			++(c->encmeta_deleted); ++(c->total_deleted); break;
-		case CMD_DIRECTORY:
-			++(c->dir_deleted); ++(c->total_deleted); break;
-		case CMD_HARD_LINK:
-			++(c->hlink_deleted); ++(c->total_deleted); break;
-		case CMD_SOFT_LINK:
-			++(c->slink_deleted); ++(c->total_deleted); break;
-		case CMD_SPECIAL:
-			++(c->special_deleted); ++(c->total_deleted); break;
-		case CMD_EFS_FILE:
-			++(c->efs_deleted); ++(c->total_deleted); break;
-		case CMD_VSS:
-			++(c->vss_deleted); ++(c->total_deleted); break;
-		case CMD_ENC_VSS:
-			++(c->encvss_deleted); ++(c->total_deleted); break;
-		case CMD_VSS_T:
-			++(c->vss_t_deleted); ++(c->total_deleted); break;
-		case CMD_ENC_VSS_T:
-			++(c->encvss_t_deleted); ++(c->total_deleted); break;
-	}
-	++(c->gtotal_deleted);
+	c->ent[(unsigned int)ch]->deleted++;
+	c->ent[CMD_TOTAL]->deleted++;
+	c->ent[CMD_GRAND_TOTAL]->deleted++;
+	if(!c) return;
 }
 
 void cntr_add_bytes(struct cntr *c, unsigned long long bytes)
 {
 	if(!c) return;
-	c->byte+=bytes;
+	c->ent[CMD_BYTES]->count+=bytes;
 }
 
 void cntr_add_sentbytes(struct cntr *c, unsigned long long bytes)
 {
 	if(!c) return;
-	c->sentbyte+=bytes;
+	c->ent[CMD_BYTES_SENT]->count+=bytes;
 }
 
 void cntr_add_recvbytes(struct cntr *c, unsigned long long bytes)
 {
 	if(!c) return;
-	c->recvbyte+=bytes;
+	c->ent[CMD_BYTES_RECV]->count+=bytes;
 }
 
-static void quint_print(const char *msg, unsigned long long a, unsigned long long b, unsigned long long c, unsigned long long d, unsigned long long e, enum action act)
+static void quint_print(struct cntr_ent *ent, enum action act)
 {
+	unsigned long long a=ent->count;
+	unsigned long long b=ent->same;
+	unsigned long long c=ent->changed;
+	unsigned long long d=ent->deleted;
+	unsigned long long e=ent->phase1;
 	if(!e && !a && !b && !c) return;
-	logc("% 18s ", msg);
+	logc("% 18s ", ent->label);
 	if(act==ACTION_BACKUP
 	  || act==ACTION_BACKUP_TIMED)
 	{
@@ -339,6 +311,7 @@ static void bottom_part(struct cntr *a, struct cntr *b, enum action act)
 
 void cntr_print(struct conf *conf, enum action act)
 {
+	int x=0;
 	time_t now=time(NULL);
 	struct cntr *p1c=conf->p1cntr;
 	struct cntr *c=conf->cntr;
@@ -367,117 +340,8 @@ void cntr_print(struct conf *conf, enum action act)
 	}
 	table_border(act);
 
-	quint_print("Files:",
-		c->file,
-		c->file_changed,
-		c->file_same,
-		c->file_deleted,
-		p1c->file,
-		act);
-
-	quint_print("Files (encrypted):",
-		c->enc,
-		c->enc_changed,
-		c->enc_same,
-		c->enc_deleted,
-		p1c->enc,
-		act);
-
-	quint_print("Meta data:",
-		c->meta,
-		c->meta_changed,
-		c->meta_same,
-		c->meta_deleted,
-		p1c->meta,
-		act);
-
-	quint_print("Meta data (enc):",
-		c->encmeta,
-		c->encmeta_changed,
-		c->encmeta_same,
-		c->encmeta_deleted,
-		p1c->encmeta,
-		act);
-
-	quint_print("Directories:",
-		c->dir,
-		c->dir_changed,
-		c->dir_same,
-		c->dir_deleted,
-		p1c->dir,
-		act);
-
-	quint_print("Soft links:",
-		c->slink,
-		c->slink_changed,
-		c->slink_same,
-		c->slink_deleted,
-		p1c->slink,
-		act);
-
-	quint_print("Hard links:",
-		c->hlink,
-		c->hlink_changed,
-		c->hlink_same,
-		c->hlink_deleted,
-		p1c->hlink,
-		act);
-
-	quint_print("Special files:",
-		c->special,
-		c->special_changed,
-		c->special_same,
-		c->special_deleted,
-		p1c->special,
-		act);
-
-	quint_print("EFS files:",
-		c->efs,
-		c->efs_changed,
-		c->efs_same,
-		c->efs_deleted,
-		p1c->efs,
-		act);
-
-	quint_print("VSS headers:",
-		c->vss,
-		c->vss_changed,
-		c->vss_same,
-		c->vss_deleted,
-		p1c->vss,
-		act);
-
-	quint_print("VSS headers (enc):",
-		c->encvss,
-		c->encvss_changed,
-		c->encvss_same,
-		c->encvss_deleted,
-		p1c->encvss,
-		act);
-
-	quint_print("VSS footers:",
-		c->vss_t,
-		c->vss_t_changed,
-		c->vss_t_same,
-		c->vss_t_deleted,
-		p1c->vss_t,
-		act);
-
-	quint_print("VSS footers (enc):",
-		c->encvss_t,
-		c->encvss_t_changed,
-		c->encvss_t_same,
-		c->encvss_t_deleted,
-		p1c->encvss_t,
-		act);
-
-	quint_print("Grand total:",
-		c->total,
-		c->total_changed,
-		c->total_same,
-		c->total_deleted,
-		p1c->total,
-		act);
+	for(x=0; x<c->colen; x++)
+		quint_print(c->ent[(unsigned int)c->cmd_order[x]], act);
 
 	table_border(act);
 	bottom_part(p1c, c, act);
@@ -487,18 +351,24 @@ void cntr_print(struct conf *conf, enum action act)
 
 #ifndef HAVE_WIN32
 
-static void quint_print_to_file(FILE *fp, const char *prefix, unsigned long long a, unsigned long long b, unsigned long long c, unsigned long long d, unsigned long long e, enum action act)
+static void quint_print_to_file(FILE *fp, struct cntr_ent *ent, enum action act)
 {
+	unsigned long long a=ent->count;
+	unsigned long long b=ent->same;
+	unsigned long long c=ent->changed;
+	unsigned long long d=ent->deleted;
+	unsigned long long e=ent->phase1;
+	const char *field=ent->field;
 	if(act==ACTION_BACKUP
 	  || act==ACTION_BACKUP_TIMED)
 	{
-		fprintf(fp, "%s:%llu\n", prefix, a);
-		fprintf(fp, "%s_changed:%llu\n", prefix, b);
-		fprintf(fp, "%s_same:%llu\n", prefix, c);
-		fprintf(fp, "%s_deleted:%llu\n", prefix, d);
+		fprintf(fp, "%s:%llu\n", field, a);
+		fprintf(fp, "%s_changed:%llu\n", field, b);
+		fprintf(fp, "%s_same:%llu\n", field, c);
+		fprintf(fp, "%s_deleted:%llu\n", field, d);
 	}
-	fprintf(fp, "%s_total:%llu\n", prefix, a+b+c);
-	fprintf(fp, "%s_scanned:%llu\n", prefix, e);
+	fprintf(fp, "%s_total:%llu\n", field, a+b+c);
+	fprintf(fp, "%s_scanned:%llu\n", field, e);
 }
 
 static void bottom_part_to_file(FILE *fp, struct cntr *a, struct cntr *b, enum action act)
@@ -537,6 +407,7 @@ static void bottom_part_to_file(FILE *fp, struct cntr *a, struct cntr *b, enum a
 int print_stats_to_file(struct conf *conf,
 	const char *directory, enum action act)
 {
+	int x=0;
 	FILE *fp;
 	char *path;
 	time_t now;
@@ -570,117 +441,9 @@ int print_stats_to_file(struct conf *conf,
 	fprintf(fp, "time_start:%lu\n", p1c->start);
 	fprintf(fp, "time_end:%lu\n", now);
 	fprintf(fp, "time_taken:%lu\n", now-p1c->start);
-	quint_print_to_file(fp, "files",
-		c->file,
-		c->file_changed,
-		c->file_same,
-		c->file_deleted,
-		p1c->file,
-		act);
-
-	quint_print_to_file(fp, "files_encrypted",
-		c->enc,
-		c->enc_changed,
-		c->enc_same,
-		c->enc_deleted,
-		p1c->enc,
-		act);
-
-	quint_print_to_file(fp, "meta_data",
-		c->meta,
-		c->meta_changed,
-		c->meta_same,
-		c->meta_deleted,
-		p1c->meta,
-		act);
-
-	quint_print_to_file(fp, "meta_data_encrypted",
-		c->encmeta,
-		c->encmeta_changed,
-		c->encmeta_same,
-		c->encmeta_deleted,
-		p1c->encmeta,
-		act);
-
-	quint_print_to_file(fp, "directories",
-		c->dir,
-		c->dir_changed,
-		c->dir_same,
-		c->dir_deleted,
-		p1c->dir,
-		act);
-
-	quint_print_to_file(fp, "soft_links",
-		c->slink,
-		c->slink_changed,
-		c->slink_same,
-		c->slink_deleted,
-		p1c->slink,
-		act);
-
-	quint_print_to_file(fp, "hard_links",
-		c->hlink,
-		c->hlink_changed,
-		c->hlink_same,
-		c->hlink_deleted,
-		p1c->hlink,
-		act);
-
-	quint_print_to_file(fp, "special_files",
-		c->special,
-		c->special_changed,
-		c->special_same,
-		c->special_deleted,
-		p1c->special,
-		act);
-
-	quint_print_to_file(fp, "efs_files",
-		c->efs,
-		c->efs_changed,
-		c->efs_same,
-		c->efs_deleted,
-		p1c->efs,
-		act);
-
-	quint_print_to_file(fp, "vss_headers",
-		c->vss,
-		c->vss_changed,
-		c->vss_same,
-		c->vss_deleted,
-		p1c->vss,
-		act);
-
-	quint_print_to_file(fp, "vss_headers_encrypted",
-		c->encvss,
-		c->encvss_changed,
-		c->encvss_same,
-		c->encvss_deleted,
-		p1c->encvss,
-		act);
-
-	quint_print_to_file(fp, "vss_footers",
-		c->vss_t,
-		c->vss_t_changed,
-		c->vss_t_same,
-		c->vss_t_deleted,
-		p1c->vss_t,
-		act);
-
-	quint_print_to_file(fp, "vss_footers_encrypted",
-		c->encvss_t,
-		c->encvss_t_changed,
-		c->encvss_t_same,
-		c->encvss_t_deleted,
-		p1c->encvss_t,
-		act);
-
-	quint_print_to_file(fp, "total",
-		c->total,
-		c->total_changed,
-		c->total_same,
-		c->total_deleted,
-		p1c->total,
-		act);
+	for(x=0; x<c->colen; x++)
+		quint_print_to_file(fp,
+			c->ent[(unsigned int)c->cmd_order[x]], act);
 
 	bottom_part_to_file(fp, p1c, c, act);
 
@@ -697,136 +460,51 @@ int print_stats_to_file(struct conf *conf,
 
 void cntr_print_end(struct cntr *cntr)
 {
-	if(cntr->gtotal) logc(
+	struct cntr_ent *grand_total_ent=cntr->ent[CMD_GRAND_TOTAL];
+	if(grand_total_ent->count) logc(
 #ifdef HAVE_WIN32
 			" %I64u\n\n",
 #else
 			" %llu\n\n",
 #endif
-			cntr->gtotal);
+			grand_total_ent->count);
 }
 
 #ifndef HAVE_WIN32
-void cntr_to_str(char *str, size_t len, char phase, const char *path, struct conf *conf)
+void cntr_to_str(char *str, size_t len,
+	char phase, const char *path, struct conf *conf)
 {
 	int l=0;
-	struct cntr *p1cntr=conf->p1cntr;
+	int x=0;
+	char tmp[128]="";
+	struct cntr_ent *ent=NULL;
 	struct cntr *cntr=conf->cntr;
-return;
-	snprintf(str, len,
-		"%s\t%c\t%c\t%c\t"
-		"%llu/%llu/%llu/%llu/%llu\t"
-		"%llu/%llu/%llu/%llu/%llu\t"
-		"%llu/%llu/%llu/%llu/%llu\t"
-		"%llu/%llu/%llu/%llu/%llu\t"
-		"%llu/%llu/%llu/%llu/%llu\t"
-		"%llu/%llu/%llu/%llu/%llu\t"
-		"%llu/%llu/%llu/%llu/%llu\t"
-		"%llu/%llu/%llu/%llu/%llu\t"
-		"%llu/%llu/%llu/%llu/%llu\t"
-		"%llu/%llu/%llu/%llu/%llu\t"
-		"%llu/%llu/%llu/%llu/%llu\t"
-		"%llu/%llu/%llu/%llu/%llu\t"
-		"%llu/%llu/%llu/%llu/%llu\t"
-		"%llu/%llu/%llu/%llu/%llu\t"
-		"%llu\t%llu\t%llu\t%llu\t%llu\t%li\t%s\n",
-			conf->cname,
-			COUNTER_VERSION_2,
-			STATUS_RUNNING, phase,
+	snprintf(str, len, "%s\t%c\t%c\t%c\t",
+		conf->cname, CNTR_VER_4, STATUS_RUNNING, phase);
 
-			cntr->total,
-			cntr->total_changed,
-			cntr->total_same,
-			cntr->total_deleted,
-			p1cntr->total,
+	for(x=0; x<cntr->colen; x++)
+	{
+		ent=cntr->ent[(unsigned int)cntr->cmd_order[x]];
+		if(ent->versions & CNTR_SINGLE_FIELD)
+			snprintf(tmp, sizeof(tmp), "%llu\t",
+				ent->count);
+		else
+			snprintf(tmp, sizeof(tmp), "%llu/%llu/%llu/%llu/%llu\t",
+				ent->count, ent->same,
+				ent->changed, ent->deleted, ent->phase1);
+		// FIX THIS.
+		strcat(str, tmp);
+	}
 
-			cntr->file,
-			cntr->file_changed,
-			cntr->file_same,
-			cntr->file_deleted,
-			p1cntr->file,
-
-			cntr->enc,
-			cntr->enc_changed,
-			cntr->enc_same,
-			cntr->enc_deleted,
-			p1cntr->enc,
-
-			cntr->meta,
-			cntr->meta_changed,
-			cntr->meta_same,
-			cntr->meta_deleted,
-			p1cntr->meta,
-
-			cntr->encmeta,
-			cntr->encmeta_changed,
-			cntr->encmeta_same,
-			cntr->encmeta_deleted,
-			p1cntr->encmeta,
-
-			cntr->dir,
-			cntr->dir_changed,
-			cntr->dir_same,
-			cntr->dir_deleted,
-			p1cntr->dir,
-
-			cntr->slink,
-			cntr->slink_changed,
-			cntr->slink_same,
-			cntr->slink_deleted,
-			p1cntr->slink,
-
-			cntr->hlink,
-			cntr->hlink_changed,
-			cntr->hlink_same,
-			cntr->hlink_deleted,
-			p1cntr->hlink,
-
-			cntr->special,
-			cntr->special_changed,
-			cntr->special_same,
-			cntr->special_deleted,
-			p1cntr->special,
-
-			cntr->vss,
-			cntr->vss_changed,
-			cntr->vss_same,
-			cntr->vss_deleted,
-			p1cntr->vss,
-
-			cntr->encvss,
-			cntr->encvss_changed,
-			cntr->encvss_same,
-			cntr->encvss_deleted,
-			p1cntr->encvss,
-
-			cntr->vss_t,
-			cntr->vss_t_changed,
-			cntr->vss_t_same,
-			cntr->vss_t_deleted,
-			p1cntr->vss_t,
-
-			cntr->encvss_t,
-			cntr->encvss_t_changed,
-			cntr->encvss_t_same,
-			cntr->encvss_t_deleted,
-			p1cntr->encvss_t,
-
-			cntr->gtotal,
-			cntr->gtotal_changed,
-			cntr->gtotal_same,
-			cntr->gtotal_deleted,
-			p1cntr->gtotal,
-
-			cntr->warning,
-			p1cntr->byte,
-			cntr->byte,
-			cntr->recvbyte,
-			cntr->sentbyte,
-			p1cntr->start,
-			path?path:"");
+	snprintf(tmp, sizeof(tmp), "%li\t", cntr->start);
+	// FIX THIS.
+	strcat(str, tmp);
+	snprintf(tmp, sizeof(tmp), "%s\t\n", path?path:"");
+	// FIX THIS.
+	strcat(str, tmp);
 
 	// Make sure there is a new line at the end.
+	// FIX THIS.
 	l=strlen(str);
 	if(str[l-1]!='\n') str[l-1]='\n';
 }
@@ -900,14 +578,149 @@ static int add_to_backup_list(struct strlist **backups, const char *tok)
 	return 0;
 }
 
-int str_to_cntr(const char *str, char **client, char *status, char *phase, char **path, struct cntr *p1cntr, struct cntr *cntr, struct strlist **backups)
+static int extract_cntrs(struct cntr *cntr, int cntr_version, const char *tok,
+	char *status, char *phase, char **path, struct strlist **backups)
 {
 	int t=0;
+	while(1)
+	{
+		int x=1;
+		t++;
+		if(!(tok=strtok(NULL, "\t\n")))
+			break;
+		if     (t==x++) { if(status) *status=*tok; }
+		else if(t==x++)
+		{
+			if(status && (*status==STATUS_IDLE
+			  || *status==STATUS_SERVER_CRASHED
+			  || *status==STATUS_CLIENT_CRASHED))
+			{
+				if(backups)
+				{
+					// Build a list of backups.
+					do
+					{
+						if(add_to_backup_list(backups,
+							tok)) return -1;
+					} while((tok=strtok(NULL, "\t\n")));
+				}
+			}
+			else
+			{
+				if(phase) *phase=*tok;
+			}
+		}
+		else if(t==x++) { extract_ul(tok,
+					&(cntr->total),
+					&(cntr->total_changed),
+					&(cntr->total_same),
+					&(cntr->total_deleted),
+					&(p1cntr->total)); }
+		else if(t==x++) { extract_ul(tok,
+					&(cntr->file),
+					&(cntr->file_changed),
+					&(cntr->file_same),
+					&(cntr->file_deleted),
+					&(p1cntr->file)); }
+		else if(t==x++) { extract_ul(tok,
+					&(cntr->enc),
+					&(cntr->enc_changed),
+					&(cntr->enc_same),
+					&(cntr->enc_deleted),
+					&(p1cntr->enc)); }
+		else if(t==x++) { extract_ul(tok,
+					&(cntr->meta),
+					&(cntr->meta_changed),
+					&(cntr->meta_same),
+					&(cntr->meta_deleted),
+					&(p1cntr->meta)); }
+		else if(t==x++) { extract_ul(tok,
+					&(cntr->encmeta),
+					&(cntr->encmeta_changed),
+					&(cntr->encmeta_same),
+					&(cntr->encmeta_deleted),
+					&(p1cntr->encmeta)); }
+		else if(t==x++) { extract_ul(tok,
+					&(cntr->dir),
+					&(cntr->dir_changed),
+					&(cntr->dir_same),
+					&(cntr->dir_deleted),
+					&(p1cntr->dir)); }
+		else if(t==x++) { extract_ul(tok,
+					&(cntr->slink),
+					&(cntr->slink_changed),
+					&(cntr->slink_same),
+					&(cntr->slink_deleted),
+					&(p1cntr->slink)); }
+		else if(t==x++) { extract_ul(tok,
+					&(cntr->hlink),
+					&(cntr->hlink_changed),
+					&(cntr->hlink_same),
+					&(cntr->hlink_deleted),
+					&(p1cntr->hlink)); }
+		else if(t==x++) { extract_ul(tok,
+					&(cntr->special),
+					&(cntr->special_changed),
+					&(cntr->special_same),
+					&(cntr->special_deleted),
+					&(p1cntr->special)); }
+		else if(cntr_version & (CNTR_VER_2_4)
+		  && t==x++) { extract_ul(tok,
+					&(cntr->vss),
+					&(cntr->vss_changed),
+					&(cntr->vss_same),
+					&(cntr->vss_deleted),
+					&(p1cntr->vss)); }
+		else if(cntr_version & (CNTR_VER_2_4)
+		  && t==x++) { extract_ul(tok,
+					&(cntr->encvss),
+					&(cntr->encvss_changed),
+					&(cntr->encvss_same),
+					&(cntr->encvss_deleted),
+					&(p1cntr->encvss)); }
+		else if(cntr_version & (CNTR_VER_2_4)
+		  && t==x++) { extract_ul(tok,
+					&(cntr->vss_t),
+					&(cntr->vss_t_changed),
+					&(cntr->vss_t_same),
+					&(cntr->vss_t_deleted),
+					&(p1cntr->vss_t)); }
+		else if(cntr_version & (CNTR_VER_2_4)
+		  && t==x++) { extract_ul(tok,
+					&(cntr->encvss_t),
+					&(cntr->encvss_t_changed),
+					&(cntr->encvss_t_same),
+					&(cntr->encvss_t_deleted),
+					&(p1cntr->encvss_t)); }
+		else if(t==x++) { extract_ul(tok,
+					&(cntr->gtotal),
+					&(cntr->gtotal_changed),
+					&(cntr->gtotal_same),
+					&(cntr->gtotal_deleted),
+					&(p1cntr->gtotal)); }
+		else if(t==x++) { cntr->warning=
+					strtoull(tok, NULL, 10); }
+		else if(t==x++) { p1cntr->byte=
+					strtoull(tok, NULL, 10); }
+		else if(t==x++) { cntr->byte=
+					strtoull(tok, NULL, 10); }
+		else if(t==x++) { cntr->recvbyte=
+					strtoull(tok, NULL, 10); }
+		else if(t==x++) { cntr->sentbyte=
+					strtoull(tok, NULL, 10); }
+		else if(t==x++) { p1cntr->start=atol(tok); }
+		else if(t==x++) { if(path && !(*path=strdup(tok)))
+		  { log_out_of_memory(__FUNCTION__); return -1; } }
+	}
+	return 0;
+}
+
+int str_to_cntr(const char *str, char **client, char *status, char *phase,
+	char **path, struct cntr *p1cntr, struct cntr *cntr,
+	struct strlist **backups)
+{
 	char *tok=NULL;
 	char *copy=NULL;
-
-	cntr_reset(p1cntr, 0);
-	cntr_reset(cntr, 0);
 
 	if(!(copy=strdup(str)))
 	{
@@ -917,158 +730,29 @@ int str_to_cntr(const char *str, char **client, char *status, char *phase, char 
 
 	if((tok=strtok(copy, "\t\n")))
 	{
-		char *cntr_version=NULL;
+		int cntr_version=0;
+		char *cntr_version_tmp=NULL;
 		if(client && !(*client=strdup(tok)))
 		{
 			log_out_of_memory(__FUNCTION__);
 			return -1;
 		}
-		if(!(cntr_version=strtok(NULL, "\t\n")))
+		if(!(cntr_version_tmp=strtok(NULL, "\t\n")))
 		{
 			free(copy);
 			return 0;
 		}
+		cntr_version=atoi(cntr_version_tmp);
 		// First token after the client name is the version of
 		// the cntr parser thing, which now has to be noted
 		// because cntrs might be passed to the client instead
 		// of just the server status monitor.
-		if(*cntr_version==COUNTER_VERSION_2
-		  || *cntr_version==COUNTER_VERSION_1) // old version
+		if(cntr_version & (CNTR_VER_ALL)
+		  && extract_cntrs(cntr, cntr_version, tok,
+			status, phase, path, backups))
 		{
-		  while(1)
-		  {
-			int x=1;
-			t++;
-			if(!(tok=strtok(NULL, "\t\n")))
-				break;
-			if     (t==x++) { if(status) *status=*tok; }
-			else if(t==x++)
-			{
-				if(status && (*status==STATUS_IDLE
-				  || *status==STATUS_SERVER_CRASHED
-				  || *status==STATUS_CLIENT_CRASHED))
-				{
-					if(backups)
-					{
-						// Build a list of backups.
-					  do
-					  {
-						if(add_to_backup_list(backups,
-							tok))
-						{
-							free(copy);
-							return -1;
-						}
-					  } while((tok=strtok(NULL, "\t\n")));
-					}
-				}
-				else
-				{
-					if(phase) *phase=*tok;
-				}
-			}
-			else if(t==x++) { extract_ul(tok,
-						&(cntr->total),
-						&(cntr->total_changed),
-						&(cntr->total_same),
-						&(cntr->total_deleted),
-						&(p1cntr->total)); }
-			else if(t==x++) { extract_ul(tok,
-						&(cntr->file),
-						&(cntr->file_changed),
-						&(cntr->file_same),
-						&(cntr->file_deleted),
-						&(p1cntr->file)); }
-			else if(t==x++) { extract_ul(tok,
-						&(cntr->enc),
-						&(cntr->enc_changed),
-						&(cntr->enc_same),
-						&(cntr->enc_deleted),
-						&(p1cntr->enc)); }
-			else if(t==x++) { extract_ul(tok,
-						&(cntr->meta),
-						&(cntr->meta_changed),
-						&(cntr->meta_same),
-						&(cntr->meta_deleted),
-						&(p1cntr->meta)); }
-			else if(t==x++) { extract_ul(tok,
-						&(cntr->encmeta),
-						&(cntr->encmeta_changed),
-						&(cntr->encmeta_same),
-						&(cntr->encmeta_deleted),
-						&(p1cntr->encmeta)); }
-			else if(t==x++) { extract_ul(tok,
-						&(cntr->dir),
-						&(cntr->dir_changed),
-						&(cntr->dir_same),
-						&(cntr->dir_deleted),
-						&(p1cntr->dir)); }
-			else if(t==x++) { extract_ul(tok,
-						&(cntr->slink),
-						&(cntr->slink_changed),
-						&(cntr->slink_same),
-						&(cntr->slink_deleted),
-						&(p1cntr->slink)); }
-			else if(t==x++) { extract_ul(tok,
-						&(cntr->hlink),
-						&(cntr->hlink_changed),
-						&(cntr->hlink_same),
-						&(cntr->hlink_deleted),
-						&(p1cntr->hlink)); }
-			else if(t==x++) { extract_ul(tok,
-						&(cntr->special),
-						&(cntr->special_changed),
-						&(cntr->special_same),
-						&(cntr->special_deleted),
-						&(p1cntr->special)); }
-			else if(*cntr_version==COUNTER_VERSION_2
-			  && t==x++) { extract_ul(tok,
-						&(cntr->vss),
-						&(cntr->vss_changed),
-						&(cntr->vss_same),
-						&(cntr->vss_deleted),
-						&(p1cntr->vss)); }
-			else if(*cntr_version==COUNTER_VERSION_2
-			  && t==x++) { extract_ul(tok,
-						&(cntr->encvss),
-						&(cntr->encvss_changed),
-						&(cntr->encvss_same),
-						&(cntr->encvss_deleted),
-						&(p1cntr->encvss)); }
-			else if(*cntr_version==COUNTER_VERSION_2
-			  && t==x++) { extract_ul(tok,
-						&(cntr->vss_t),
-						&(cntr->vss_t_changed),
-						&(cntr->vss_t_same),
-						&(cntr->vss_t_deleted),
-						&(p1cntr->vss_t)); }
-			else if(*cntr_version==COUNTER_VERSION_2
-			  && t==x++) { extract_ul(tok,
-						&(cntr->encvss_t),
-						&(cntr->encvss_t_changed),
-						&(cntr->encvss_t_same),
-						&(cntr->encvss_t_deleted),
-						&(p1cntr->encvss_t)); }
-			else if(t==x++) { extract_ul(tok,
-						&(cntr->gtotal),
-						&(cntr->gtotal_changed),
-						&(cntr->gtotal_same),
-						&(cntr->gtotal_deleted),
-						&(p1cntr->gtotal)); }
-			else if(t==x++) { cntr->warning=
-						strtoull(tok, NULL, 10); }
-			else if(t==x++) { p1cntr->byte=
-						strtoull(tok, NULL, 10); }
-			else if(t==x++) { cntr->byte=
-						strtoull(tok, NULL, 10); }
-			else if(t==x++) { cntr->recvbyte=
-						strtoull(tok, NULL, 10); }
-			else if(t==x++) { cntr->sentbyte=
-						strtoull(tok, NULL, 10); }
-			else if(t==x++) { p1cntr->start=atol(tok); }
-			else if(t==x++) { if(path && !(*path=strdup(tok)))
-			  { log_out_of_memory(__FUNCTION__); return -1; } }
-		  }
+			free(copy);
+			return -1;
 		}
 	}
 

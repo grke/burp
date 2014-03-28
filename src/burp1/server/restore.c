@@ -694,7 +694,6 @@ static int actual_restore(struct bu *arr, int a, int i,
 
 	print_stats_to_file(cconf, arr[i].path, act);
 
-	cntr_resets(cconf, time(NULL));
 end:
 	gzclose_fp(&zp);
 	sbuf_free(sb);

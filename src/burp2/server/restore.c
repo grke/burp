@@ -523,11 +523,9 @@ static int do_restore_manifest(const char *datadir,
 
 	ret=do_restore_end(conf);
 
-	// FIX THIS
-	//cntr_print_end(conf->cntr);
+	cntr_print_end(conf->cntr);
 	cntr_print(conf, act);
 
-	cntr_resets(conf, time(NULL));
 	ret=0;
 end:
 	slist_free(slist);

@@ -108,7 +108,7 @@ static int open_next_fpath(struct manio *manio)
 	if(!strcmp(manio->mode, MANIO_MODE_READ)
 	  && lstat(manio->fpath, &statp)) return 0;
 
-printf("manio path: %s\n", manio->fpath);
+//printf("manio path: %s\n", manio->fpath);
 
 	if(build_path_w(manio->fpath)
 	  || !(manio->zp=gzopen_file(manio->fpath, manio->mode)))

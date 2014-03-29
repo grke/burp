@@ -50,8 +50,8 @@ free_count++;
 
 void blk_print_alloc_stats(void)
 {
-	printf("alloc_count: %d, free_count: %d\n", alloc_count, free_count);
-	printf("data_count: %d, data_free_count: %d\n", data_count, data_free_count);
+//	printf("alloc_count: %d, free_count: %d\n", alloc_count, free_count);
+//	printf("data_count: %d, data_free_count: %d\n", data_count, data_free_count);
 }
 
 char *blk_get_md5sum_str(unsigned char *checksum)

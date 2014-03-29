@@ -112,7 +112,7 @@ int hash_load(const char *champ, struct conf *conf)
 	if(!(path=prepend_s(conf->directory, champ))
 	  || !(zp=gzopen_file(path, "rb")))
 		goto end;
-printf("hash load %s\n", path);
+//printf("hash load %s\n", path);
 
 	while((bytes=gzread(zp, buf, 5)))
 	{

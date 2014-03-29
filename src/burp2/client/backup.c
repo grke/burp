@@ -117,13 +117,13 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 		case CMD_GEN:
 			if(!strcmp(rbuf->buf, "requests_end"))
 			{
-printf("FILE REQUESTS END\n");
+//printf("FILE REQUESTS END\n");
 				*requests_end=1;
 				goto end;
 			}
 			else if(!strcmp(rbuf->buf, "blk_requests_end"))
 			{
-printf("BLK REQUESTS END\n");
+//printf("BLK REQUESTS END\n");
 				*blk_requests_end=1;
 /*
 				if(!blist->last_sent)
@@ -133,7 +133,7 @@ printf("BLK REQUESTS END\n");
 			}
 			else if(!strcmp(rbuf->buf, "backup_end"))
 			{
-printf("BACKUP END\n");
+//printf("BACKUP END\n");
 				*backup_end=1;
 				goto end;
 			}
@@ -186,7 +186,9 @@ static void free_stuff(struct slist *slist, struct blist *blist)
 	}
 }
 
-static void get_wbuf_from_data(struct iobuf *wbuf, struct slist *slist, struct blist *blist, int blk_requests_end)
+static void get_wbuf_from_data(struct conf *conf,
+	struct iobuf *wbuf, struct slist *slist,
+	struct blist *blist, int blk_requests_end)
 {
 	struct blk *blk;
 
@@ -203,10 +205,13 @@ static void get_wbuf_from_data(struct iobuf *wbuf, struct slist *slist, struct b
 			wbuf->len=blk->length;
 			blk->requested=0;
 			blist->last_sent=blk;
+			cntr_add(conf->cntr, CMD_DATA, 1);
+			cntr_add_sentbytes(conf->cntr, blk->length);
 			break;
 		}
 		else
 		{
+			cntr_add_same(conf->cntr, CMD_DATA);
 			if(blk_requests_end)
 			{
 				// Force onwards when the server has said that
@@ -244,7 +249,8 @@ static void iobuf_from_blk_data(struct iobuf *wbuf, struct blk *blk)
 	iobuf_from_str(wbuf, CMD_SIG, buf);
 }
 
-static void get_wbuf_from_blks(struct iobuf *wbuf, struct slist *slist, int requests_end, int *sigs_end)
+static void get_wbuf_from_blks(struct iobuf *wbuf,
+	struct slist *slist, int requests_end, int *sigs_end)
 {
 	struct sbuf *sb=slist->blks_to_send;
 
@@ -361,7 +367,7 @@ static int backup_phase2_client(struct conf *conf, int resume)
 	{
 		if(!wbuf->len)
 		{
-			get_wbuf_from_data(wbuf, slist, blist,
+			get_wbuf_from_data(conf, wbuf, slist, blist,
 				blk_requests_end);
 			if(!wbuf->len)
 			{
@@ -414,7 +420,7 @@ static int backup_phase2_client(struct conf *conf, int resume)
 	ret=0;
 end:
 blk_print_alloc_stats();
-sbuf_print_alloc_stats();
+//sbuf_print_alloc_stats();
 	win_free(win);
 	slist_free(slist);
 	blist_free(blist);

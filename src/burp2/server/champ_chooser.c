@@ -95,6 +95,7 @@ static struct scores *scores_alloc(void)
 	return NULL;
 }
 
+/*
 static void dump_scores(const char *msg, struct scores *scores, int len)
 {
 	int a;
@@ -106,12 +107,13 @@ printf("%p\n", scores);
 			msg, a, &(scores->scores[a]), scores->scores[a]);
 	}
 }
+*/
 
 // Return -1 or error, 0 on OK.
 static int scores_grow(struct scores *scores, size_t count)
 {
 	if(!count) return 0;
-	printf("grow scores to %lu\n", count);
+	//printf("grow scores to %lu\n", count);
 	scores->size=count;
 	scores->allocated=count;
 	if((scores->scores=(uint16_t *)realloc(scores->scores,
@@ -151,7 +153,7 @@ static int incoming_grow_maybe(struct incoming *in)
 	if(++in->size<in->allocated) return 0;
 	// Make the incoming array bigger.
 	in->allocated+=32;
-printf("grow incoming to %d\n", in->allocated);
+//printf("grow incoming to %d\n", in->allocated);
 	if((in->weak=(uint64_t *)
 		realloc(in->weak, in->allocated*sizeof(uint64_t)))
 	  && (in->found=(uint8_t *)
@@ -242,7 +244,7 @@ int champ_chooser_init(const char *datadir, struct conf *conf)
 	set_candidate_score_pointers(candidates, candidates_len, scores);
 	scores_reset(scores);
 
-	dump_scores("init", scores, scores->size);
+//	dump_scores("init", scores, scores->size);
 
 	ret=0;
 end:
@@ -303,7 +305,7 @@ int add_fresh_candidate(const char *path, struct conf *conf)
 	if(scores_grow(scores, candidates_len)) goto end;
 	set_candidate_score_pointers(candidates, candidates_len, scores);
 	scores_reset(scores);
-	printf("HERE: %d candidates\n", (int)candidates_len);
+	//printf("HERE: %d candidates\n", (int)candidates_len);
 
 	ret=0;
 end:
@@ -370,8 +372,8 @@ static struct candidate *champ_chooser(struct incoming *in, struct candidate *ch
 
 	best=NULL;
 
-	struct timespec tstart={0,0}, tend={0,0};
-	clock_gettime(CLOCK_MONOTONIC, &tstart);
+	//struct timespec tstart={0,0}, tend={0,0};
+	//clock_gettime(CLOCK_MONOTONIC, &tstart);
 
 //printf("incoming size: %d\n", in->size);
 	scores_reset(scores);
@@ -409,24 +411,28 @@ static struct candidate *champ_chooser(struct incoming *in, struct candidate *ch
 			  || *score>*(best->score))
 			{
 				best=candidate;
+/*
 				printf("%s is now best:\n",
 					best->path);
 				printf("    score %p %d\n",
 					best->score, *(best->score));
+*/
 			}
 			// FIX THIS: figure out a way of giving preference to
 			// newer candidates.
 		}
 	}
-	clock_gettime(CLOCK_MONOTONIC, &tend);
-	printf("champ_chooser took about %.5f seconds\n",
-		((double)tend.tv_sec + 1.0e-9*tend.tv_nsec) - 
-		((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec));
+	//clock_gettime(CLOCK_MONOTONIC, &tend);
+	//printf("champ_chooser took about %.5f seconds\n",
+	//	((double)tend.tv_sec + 1.0e-9*tend.tv_nsec) - 
+	//	((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec));
 
+/*
 	if(best)
 		printf("%s is choice:\nscore %p %d\n", best->path, best->score, *(best->score));
 	else
 		printf("no choice\n");
+*/
 	return best;
 }
 
@@ -441,19 +447,17 @@ int deduplicate(struct blk *blks, struct dpth *dpth, struct conf *conf, uint64_t
 	static int count=0;
 	static int blk_count=0;
 
-printf("in deduplicate()\n");
+//printf("in deduplicate()\n");
 
 	incoming_found_reset(in);
 	count=0;
 	while((champ=champ_chooser(in, champ_last)))
 	{
-		printf("Got champ: %s %d\n", champ->path, *(champ->score));
+//		printf("Got champ: %s %d\n", champ->path, *(champ->score));
 		if(hash_load(champ->path, conf)) return -1;
 		if(++count==CHAMPS_MAX) break;
 		champ_last=champ;
 	}
-
-	printf("Loaded %d champs\n", count);
 
 	blk_count=0;
 	for(blk=blks; blk; blk=blk->next)
@@ -491,8 +495,11 @@ printf("in deduplicate()\n");
 		else
 			consecutive_got=0;
 	}
-printf("     ALREADY GOT %d/%d incoming blocks\n", in->got, blk_count);
 
+	logp("%d %s found %d/%d incoming %s\n", count,
+		count==1?"champ":"champs", in->got, blk_count,
+		blk_count==1?"block":"blocks");
+	cntr_add_same_val(conf->cntr, CMD_DATA, in->got);
 
 	// Start the incoming array again.
 	in->size=0;

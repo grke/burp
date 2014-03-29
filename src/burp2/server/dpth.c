@@ -87,9 +87,11 @@ static int add_lock_to_list(struct dpth *dpth,
 	if(dpth->tail) dpth->tail->next=dlnew;
 	else if(!dpth->head) dpth->head=dlnew;
 	dpth->tail=dlnew;
+/*
 printf("added: %s\n", dlnew->save_path);
 printf("head: %s\n", dpth->head->save_path);
 printf("tail: %s\n", dpth->tail->save_path);
+*/
 	return 0;
 }
 
@@ -282,7 +284,7 @@ static FILE *open_data_file_for_write(struct dpth *dpth, struct blk *blk)
 	FILE *fp=NULL;
 	char *path=NULL;
 	struct dpth_lock *head=dpth->head;
-printf("moving for: %s\n", blk->save_path);
+//printf("moving for: %s\n", blk->save_path);
 
 	// Sanity check. They should be coming through from the client
 	// in the same order in which we locked them.

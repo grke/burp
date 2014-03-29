@@ -75,6 +75,10 @@ extern void cntr_add_phase1(struct cntr *c,
 	char ch, int print);
 extern void cntr_add_val(struct cntr *c,
 	char ch, unsigned long long val, int print);
+extern void cntr_add_same_val(struct cntr *c,
+	char ch, unsigned long long val);
+extern void cntr_add_changed_val(struct cntr *c,
+	char ch, unsigned long long val);
 
 #ifndef HAVE_WIN32
 extern size_t cntr_to_str(struct cntr *cntr, char phase, const char *path);

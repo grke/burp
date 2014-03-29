@@ -78,11 +78,6 @@ void sbuf_free(struct sbuf *sb)
 free_count++;
 }
 
-void sbuf_print_alloc_stats(void)
-{
-	printf("sb_alloc: %d free: %d\n", alloc_count, free_count);
-}
-
 struct slist *slist_alloc(void)
 {
 	struct slist *slist;
@@ -537,7 +532,7 @@ int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct
 				  || !strcmp(rbuf->buf, "phase1end")
 				  || !strcmp(rbuf->buf, "backupphase2"))
 				{
-					printf("HERE: %s\n", rbuf->buf);
+//					printf("HERE: %s\n", rbuf->buf);
 					ret=1;
 					goto end;
 				}

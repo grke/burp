@@ -1,14 +1,23 @@
 Things to watch out for when upgrading.
 
-2.0.1
+2.0.4
 -----
-There has been a massive rewrite of the core of burp.
-The intention is that old backups will still be usable. Old clients will be
-able to work in burp1 mode with new servers.
-However, the new code will also be capable of doing variable length chunking
-for inline deduplication, with sparse indexing on the server side.
-Version 2.0.1 is in the middle of integrating the burp1 code, so most
-functionality is broken.
+There has been a massive rewrite of most of burp.
+
+The intention is that burp1 clients will continue to work in with burp2
+servers.
+Burp2 clients can also be configured to work in burp1 mode. See the 'protocol'
+option in the man page and example config files.
+Burp2 code is capable of doing variable length chunking for inline
+deduplication, with sparse indexing on the server side.
+
+Use this version with extreme caution.
+Burp2 is currently missing some features, such as acl/xattr, Windows EFS,
+encryption and compression support.
+The burp1 protocol should still work with these features, but be careful.
+The status monitor is also not working. 
+Due to the extent of the rewrite, pretty much anything may not working
+correctly.
 
 1.3.24
 ------

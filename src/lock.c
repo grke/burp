@@ -76,6 +76,8 @@ void lock_get(struct lock *lock)
 {
 #if defined(HAVE_WIN32) || !defined(HAVE_LOCKF)
 	// Would somebody please tell me how to get a lock on Windows?!
+	lock->status=GET_LOCK_GOT;
+	return;
 #else
 	char *cp=NULL;
         char *copy=NULL;
@@ -98,8 +100,8 @@ void lock_get(struct lock *lock)
 
 	// Try to make sure the pid gets onto the disk.
 	if(lock->status==GET_LOCK_GOT) fsync(lock->fd);
-#endif
 	return;
+#endif
 }
 
 int lock_test(const char *path)

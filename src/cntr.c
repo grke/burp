@@ -55,7 +55,13 @@ static size_t calc_max_status_len(struct cntr *cntr, const char *cname)
 	slen+=7;
 
 	// Second section.
-	snprintf(ullmax, sizeof(ullmax), "%llu", ULLONG_MAX);
+	snprintf(ullmax, sizeof(ullmax),
+#ifdef HAVE_WIN32
+			" %I64u\n",
+#else
+			" %llu\n",
+#endif
+				ULLONG_MAX);
 	for(x=0; x<cntr->colen; x++)
 	{
 		if(ent->versions & CNTR_SINGLE_FIELD)

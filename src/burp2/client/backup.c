@@ -423,8 +423,8 @@ sbuf_print_alloc_stats();
 	wbuf->buf=NULL;
 	iobuf_free(wbuf);
 
-	cntr_print_end(conf->p1cntr);
-	cntr_print(conf, ACTION_BACKUP);
+	cntr_print_end(conf->cntr);
+	cntr_print(conf->cntr, ACTION_BACKUP);
 	if(ret) logp("Error in backup\n");
 	logp("End backup\n");
 
@@ -485,7 +485,7 @@ int do_backup_client(struct conf *conf, enum action action,
 			ret=backup_phase2_client(conf, resume);
 	}
 
-	if(action==ACTION_ESTIMATE) cntr_print(conf, ACTION_ESTIMATE);
+	if(action==ACTION_ESTIMATE) cntr_print(conf->cntr, ACTION_ESTIMATE);
 
 #if defined(HAVE_WIN32)
 	if(action==ACTION_BACKUP_TIMED)

@@ -90,7 +90,8 @@ static int list_manifest(const char *fullpath, regex_t *regex,
 		else if(ars>0)
 			goto end; // Finished OK.
 
-		write_status(STATUS_LISTING, sb->path.buf, conf);
+		if(write_status(STATUS_LISTING, sb->path.buf, conf))
+			goto error;
 
 		if(browsedir)
 		{
@@ -153,13 +154,12 @@ int do_list_server(struct sdirs *sdirs, struct conf *conf,
 
 	if(compile_regex(&regex, listregex)) return -1;
 
-	if(get_current_backups(sdirs, &arr, &a, 1))
+	if(get_current_backups(sdirs, &arr, &a, 1)
+	  || write_status(STATUS_LISTING, NULL, conf))
 	{
 		if(regex) { regfree(regex); free(regex); }
 		return -1;
 	}
-
-	write_status(STATUS_LISTING, NULL, conf);
 
 	if(backup && *backup) index=strtoul(backup, NULL, 10);
 

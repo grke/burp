@@ -199,7 +199,6 @@ struct conf
 // to an alternative client;
 	char *orig_client;
 
-	struct cntr *p1cntr;
 	struct cntr *cntr;
 };
 

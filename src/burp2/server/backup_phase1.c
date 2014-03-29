@@ -23,7 +23,7 @@ int backup_phase1_server(struct sdirs *sdirs, struct conf *conf)
 	{
 		sbuf_free_contents(sb);
 		if(conf->protocol==PROTO_BURP1)
-			ars=sbufl_fill(NULL, NULL, sb, conf->p1cntr);
+			ars=sbufl_fill(NULL, NULL, sb, conf->cntr);
 		else
 			ars=sbuf_fill(sb, NULL, NULL, NULL, conf);
 
@@ -34,23 +34,23 @@ int backup_phase1_server(struct sdirs *sdirs, struct conf *conf)
 			// Last thing the client sends is 'backupphase2', and
 			// it wants an 'ok' reply.
 			if(async_write_str(CMD_GEN, "ok")
-				|| send_msg_zp(p1zp, CMD_GEN,
-					"phase1end", strlen("phase1end")))
-				goto end;
+			  || send_msg_zp(p1zp, CMD_GEN,
+				"phase1end", strlen("phase1end")))
+					goto end;
 			break;
 		}
-		write_status(STATUS_SCANNING, sb->path.buf, conf);
-		if(sbufl_to_manifest_phase1(sb, NULL, p1zp))
+		if(write_status(STATUS_SCANNING, sb->path.buf, conf)
+		  || sbufl_to_manifest_phase1(sb, NULL, p1zp))
 			goto end;
-		cntr_add(conf->p1cntr, sb->path.cmd, 0);
+		cntr_add_phase1(conf->cntr, sb->path.cmd, 0);
 
 		if(sb->path.cmd==CMD_FILE
 		  || sb->path.cmd==CMD_ENC_FILE
 		  || sb->path.cmd==CMD_METADATA
 		  || sb->path.cmd==CMD_ENC_METADATA
 		  || sb->path.cmd==CMD_EFS_FILE)
-			cntr_add_bytes(conf->p1cntr,
-				(unsigned long long)sb->statp.st_size);
+			cntr_add_val(conf->cntr, CMD_BYTES_ESTIMATED,
+				(unsigned long long)sb->statp.st_size, 0);
 	}
 
 	if(gzclose_fp(&p1zp))

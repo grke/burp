@@ -5,19 +5,16 @@ int do_delete_server(struct sdirs *sdirs, struct conf *conf,
 {
 	int a=0;
 	int i=0;
-	int ret=0;
+	int ret=-1;
 	int found=0;
 	struct bu *arr=NULL;
 	unsigned long index=0;
 
 	logp("in do_delete\n");
 
-	if(get_current_backups(sdirs, &arr, &a, 1))
-	{
-		return -1;
-	}
-
-	write_status(STATUS_DELETING, NULL, conf);
+	if(get_current_backups(sdirs, &arr, &a, 1)
+	  || write_status(STATUS_DELETING, NULL, conf))
+		goto end;
 
 	if(backup && *backup) index=strtoul(backup, NULL, 10);
 
@@ -32,21 +29,14 @@ int do_delete_server(struct sdirs *sdirs, struct conf *conf,
 				if(arr[i].deletable)
 				{
 					found=1;
-					async_write_str(CMD_GEN, "ok");
-					if(delete_backup(sdirs, conf,
-						arr, a, i))
-					{
-						free_current_backups(&arr, a);
-						ret=-1;
-						goto end;
-					}
-					break;
+					if(async_write_str(CMD_GEN, "ok")
+					  || delete_backup(sdirs, conf,
+						arr, a, i)) goto end;
 				}
 				else
 				{
-					async_write_str(CMD_ERROR, "backup not deletable");
-					free_current_backups(&arr, a);
-					ret=-1;
+					async_write_str(CMD_ERROR,
+						"backup not deletable");
 					goto end;
 				}
 				break;
@@ -57,9 +47,10 @@ int do_delete_server(struct sdirs *sdirs, struct conf *conf,
 	if(backup && *backup && !found)
 	{
 		async_write_str(CMD_ERROR, "backup not found");
-		ret=-1;
+		goto end;
 	}
 
+	ret=0;
 end:
 	free_current_backups(&arr, a);
 	return ret;

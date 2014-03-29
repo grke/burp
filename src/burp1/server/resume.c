@@ -11,7 +11,7 @@ static int read_phase1(gzFile zp, struct conf *conf)
 	while(1)
 	{
 		sbuf_free_contents(p1b);
-		if((ars=sbufl_fill_phase1(NULL, zp, p1b, conf->p1cntr)))
+		if((ars=sbufl_fill_phase1(NULL, zp, p1b, conf->cntr)))
 		{
 			// ars==1 means it ended ok.
 			if(ars<0)
@@ -21,15 +21,15 @@ static int read_phase1(gzFile zp, struct conf *conf)
 			}
 			return 0;
 		}
-		cntr_add(conf->p1cntr, p1b->path.cmd, 0);
+		cntr_add_phase1(conf->cntr, p1b->path.cmd, 0);
 
 		if(p1b->path.cmd==CMD_FILE
 		  || p1b->path.cmd==CMD_ENC_FILE
 		  || p1b->path.cmd==CMD_METADATA
 		  || p1b->path.cmd==CMD_ENC_METADATA
 		  || p1b->path.cmd==CMD_EFS_FILE)
-			cntr_add_bytes(conf->p1cntr,
-				(unsigned long long)p1b->statp.st_size);
+			cntr_add_val(conf->cntr, CMD_BYTES_ESTIMATED,
+				(unsigned long long)p1b->statp.st_size, 0);
 	}
 	sbuf_free(p1b);
 	// not reached
@@ -93,7 +93,7 @@ static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
 		}
 
 		// If seeking to a particular point...
-		if(target->buf && iobuf_pathcmp(target, &sb->path)<=0)
+		if(target && target->buf && iobuf_pathcmp(target, &sb->path)<=0)
 		{
 			// If told to 'seekback' to the immediately previous
 			// entry, do it here.
@@ -145,7 +145,8 @@ static int forward_zp(gzFile zp, struct iobuf *result, struct iobuf *target,
 		do_cntr, same, dpthl, cconf);
 }
 
-int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpthl *dpthl, struct conf *cconf)
+int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp,
+	struct dpthl *dpthl, struct conf *cconf)
 {
 	int ret=0;
 	struct iobuf *p1b=NULL;
@@ -206,10 +207,7 @@ int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpthl *dpthl, struct c
 	// Now should have all file pointers in the right places to resume.
 	if(incr_dpthl(dpthl, cconf)) goto error;
 
-	if(cconf->send_client_cntr)
-	{
-		if(cntr_send(cconf)) goto error;
-	}
+	if(cconf->send_client_cntr && cntr_send(cconf->cntr)) goto error;
 
 	goto end;
 error:

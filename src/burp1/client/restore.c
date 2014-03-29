@@ -584,7 +584,6 @@ int do_restore_client_burp1(struct conf *conf, enum action act, int vss_restore)
 	int ret=-1;
 	char msg[512]="";
 	struct sbuf *sb=NULL;
-	int wroteendcntr=0;
 // Windows needs to have the VSS data written first, and the actual data
 // written immediately afterwards. The server is transferring them in two
 // chunks. So, leave bfd open after a Windows metadata transfer.
@@ -624,10 +623,7 @@ int do_restore_client_burp1(struct conf *conf, enum action act, int vss_restore)
 			else
 			{
 				// ars==1 means it ended ok.
-				cntr_print_end(conf->cntr);
-				cntr_print(conf, act);
-				wroteendcntr++;
-				logp("got %s end\n", act_str(act));
+				//logp("got %s end\n", act_str(act));
 				if(async_write_str(CMD_GEN, "restoreend ok"))
 					goto end;
 			}
@@ -779,11 +775,8 @@ end:
 	bclose(&bfd);
 #endif
 
-	if(!wroteendcntr)
-	{
-		cntr_print_end(conf->cntr);
-		cntr_print(conf, act);
-	}
+	cntr_print_end(conf->cntr);
+	cntr_print(conf->cntr, act);
 
 	if(!ret) logp("%s finished\n", act_str(act));
 	else logp("ret: %d\n", ret);

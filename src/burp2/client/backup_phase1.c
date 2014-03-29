@@ -17,7 +17,7 @@ static int usual_stuff(struct conf *conf, const char *path, const char *link,
 	  || ((cmd==CMD_HARD_LINK || cmd==CMD_SOFT_LINK)
 		&& async_write_str(cmd, link)))
 			return -1;
-	cntr_add(conf->p1cntr, cmd, 1);
+	cntr_add_phase1(conf->cntr, cmd, 1);
 	return 0;
 }
 
@@ -50,8 +50,8 @@ static int do_to_server(struct conf *conf, FF_PKT *ff, struct sbuf *sb,
 	if(usual_stuff(conf, ff->fname, ff->link, sb, cmd)) return -1;
 
 	if(ff->type==FT_REG)
-		cntr_add_bytes(conf->p1cntr,
-			(unsigned long long)ff->statp.st_size);
+		cntr_add_val(conf->cntr, CMD_BYTES_ESTIMATED,
+			(unsigned long long)ff->statp.st_size, 0);
 #ifdef HAVE_WIN32
 	if(conf->split_vss && !conf->strip_vss
 	// FIX THIS: May have to check that it is not a directory here.
@@ -167,7 +167,7 @@ int backup_phase1_client(struct conf *conf, long name_max, int estimate)
 		if(find_files_begin(ff, conf, l->path)) goto end;
 	ret=0;
 end:
-	cntr_print_end(conf->p1cntr);
+	cntr_print_end_phase1(conf->cntr);
 	if(ret) logp("Error in phase 1\n");
 	logp("Phase 1 end (file system scan)\n");
 	find_files_free(ff);

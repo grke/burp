@@ -592,7 +592,6 @@ int do_restore_client(struct conf *conf, enum action act, int vss_restore)
 	char msg[512]="";
 	struct sbuf *sb=NULL;
 	struct blk *blk=NULL;
-	int wroteendcntr=0;
 	BFILE bfd;
 	binit(&bfd, 0, conf);
 	char *fullpath=NULL;
@@ -640,9 +639,6 @@ int do_restore_client(struct conf *conf, enum action act, int vss_restore)
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
-			cntr_print_end(conf->cntr);
-			cntr_print(conf, act);
-			wroteendcntr++;
 			logp("got %s end\n", act_str(act));
 			if(async_write_str(CMD_GEN, "ok_restore_end"))
 				goto end;
@@ -793,11 +789,8 @@ end:
 	// It is possible for a fd to still be open.
 	bclose(&bfd);
 
-	if(!wroteendcntr)
-	{
-		cntr_print_end(conf->cntr);
-		cntr_print(conf, act);
-	}
+	cntr_print_end(conf->cntr);
+	cntr_print(conf->cntr, act);
 
 	if(!ret) logp("%s finished\n", act_str(act));
 	else logp("ret: %d\n", ret);

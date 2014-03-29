@@ -12,7 +12,6 @@
 #include "backup_phase3.h"
 #include "backup_phase4.h"
 #include "current_backups.h"
-#include "delete.h"
 #include "dpth.h"
 #include "restore.h"
 #include "resume.h"

@@ -10,19 +10,39 @@
 <FONT COLOR=#99CCFF>
 <pre>
 QUICK START
+===========
 
+HOW TO BUILD
+------------
 The following assumes that you are not installing the burp server via a
 distribution's package management system.
 
 You need to compile burp on a unix-based operating system first. Make sure that
 you have openssl, zlib, librsync and uthash libraries and development libraries
-installed. With debian or ubuntu, this command should install them for you:
+installed. 
 
-apt-get install librsync-dev libz-dev libssl-dev uthash-dev
+Debian/Ubuntu dependencies:
+   
+    With debian or ubuntu, this command should install them for you:
+    apt-get install librsync-dev libz-dev libssl-dev uthash-dev
 
-Change to the burp source directory and run "./configure", then "make". All
-being well, burp will compile successfully. Then run "make install" as root to
+RHEL/CentOS dependencies:
+	
+    On RHEL, you need to install these crucial packages:
+    yum install zlib-devel openssl-devel ncurses-devel libacl-devel openssl-perl
+
+    You also need the packages librsync-devel and uthash.
+    These can be custom built and installed. See rhel/ subdirectory for more
+    details.
+    Alternatively, they can be 'yum install'ed from the EPEL repository.
+
+Then change to the burp source directory and run "./configure", then "make". All
+being well, burp will compile successfully. Then finally, run "make install" as root to
 install.
+
+
+UNIX SERVER
+-----------
 
 Start the burp server with this command: burp -c /etc/burp/burp-server.conf
 
@@ -32,10 +52,38 @@ runs, its startup will be a slower than usual because it needs to generate its
 SSL certificates. However, this will probably only be noticeable on old
 machines.
 
-The server is now ready for clients to connect to it. 
+The server is now ready for clients to connect to it.
+
+
+A NOTE ON ADDING CLIENTS
+------------------------
+
+Each client is represented by a file in the server directory
+'/etc/burp/clientconfdir'.
+The client name is the same as the file name, and the file contains a field
+called 'password'.
+Clients have a 'burp.conf' configuration file.
+For a client to connect to the server successfully, it has to contain a 'cname'
+and a 'password' field that match a clientconfdir file on the server.
+
+There is more on this in the 'SERVER CLIENTCONFDIR FILE' section in the man
+page.
+
+When a client connects to the server for the first time, SSL certificate
+exchange takes place, which further secures subsequent connections.
+
+The burp server usually comes with a client called 'testclient', password
+'abcdefgh', already configured. This is assmumed to exist in the following
+instructions about a unix client.
+For the Windows client, you can either use 'testclient' or create a new
+clientconfdir file. It is normally easiest to do something like this on the
+server:
+cd /etc/burp/clientconfdir
+cp testclient windowsclient
 
 
 UNIX CLIENT
+-----------
 
 If you are going to run the client on the same machine on which you installed
 the server, the client will already be installed because the client is built
@@ -60,7 +108,9 @@ MAILTO=
 Whether or not an instance of the client results in an actual backup depends
 upon the timer settings in the server config files.
 
+
 WINDOWS CLIENT
+--------------
 
 Pick the 32-bit or 64-bit Burp installer as appropriate - visit
 http://burp.grke.org/ to find one of them.
@@ -68,9 +118,13 @@ http://burp.grke.org/ to find one of them.
 If you need to compile one yourself, instructions can be found at
 src/win32/README in the source package.
 
+You will need to run the installer as administrator.
+
 The Windows installer will ask you for the address of your server, the client
-name, and the client password. Burp will then install its files to:
-C:/Program Files/Burp
+name, and the client password. Make sure that a matching file exists in
+/etc/burp/clientconfdir on the server.
+
+Burp will then install its files to: C:/Program Files/Burp
 (Note that the "C:/Program Files/" part may differ, depending on Windows'
 language settings).
 If you need to change client configuration settings, the file can be found at:
@@ -158,10 +212,10 @@ SERVER OPTIONS
 
 
 CLIENT OPTIONS
-       -a [b|t|r|l|L|v|D|e]
+       -a [b|t|r|l|L|v|D|e|T]
 	      Short for 'action'. The arguments  mean  backup,	timed  backup,
-	      restore,	list,  long list, verify, delete, or estimate, respec‐
-	      tively.
+	      restore,	list,  long  list,  verify, delete, estimate, or timer
+	      check respectively.
 
        -b [number|a]
 	      Short for 'backup number'. The argument is a number, or  'a'  to
@@ -199,7 +253,7 @@ CLIENT OPTIONS
 	      For use with restores - strip a number of  leading  path	compo‐
 	      nents.
 
-       -j     Format long file listing as JSON.
+       -j     Format list output as JSON.
 
        -x     For  Windows  clients  only  - do not use the Windows VSS API on
 	      restore. Give this option when you are restoring a  backup  that
@@ -265,21 +319,27 @@ EXAMPLES
 	      short  interval, and that the server will decide when it is time
 	      for a new backup.
 
+       burp -a T
+	      Check whether it is time to do backup, but don't actually  do  a
+	      backup.  The  client will return 0 to mean that it is time, or 3
+	      to mean that it is not time. Any other return code indicates  an
+	      error.
+
        burp -a L -b 1 -d ''
 	      Long list the top level directory of backup 1.
 
        burp -a L -b 1 -d '/home/graham'
-	      Long list the /home/graham directory of  backup  1.  These  '-d'
-	      versions	of  the  list function provide the ability to 'browse'
+	      Long  list  the  /home/graham  directory of backup 1. These '-d'
+	      versions of the list function provide the  ability  to  'browse'
 	      backups.
 
        burp -C altclient -a L
-	      Long list the top level directory of backup 1  on  client  'alt‐
+	      Long  list  the  top level directory of backup 1 on client 'alt‐
 	      client'.
 
        burp -C altclient -a r -b 1 -r myregex -d /tmp/restoredir
-	      Restores	all  the  files  in  backup number 1 from client 'alt‐
-	      client' that match the regular  expression  'myregex'  into  the
+	      Restores all the files in backup	number	1  from  client  'alt‐
+	      client'  that  match  the  regular expression 'myregex' into the
 	      directory /tmp/restoredir.
 
 
@@ -294,7 +354,7 @@ SERVER CONFIGURATION FILE OPTIONS
 	      Defines the main TCP port that the server listens on.
 
        status_port=[port number]
-	      Defines  the  TCP  port  that  the  server listens on for status
+	      Defines the TCP port that  the  server  listens  on  for	status
 	      requests.
 
        daemon=[0|1]
@@ -307,20 +367,32 @@ SERVER CONFIGURATION FILE OPTIONS
 	      Path to the directory in which to store backups.
 
        directory_tree=[0|1]
-	      When turned on (which is the default) and the client is on  ver‐
-	      sion  1.3.6  or  greater, the structure of the storage directory
+	      When  turned on (which is the default) and the client is on ver‐
+	      sion 1.3.6 or greater, the structure of  the  storage  directory
 	      will mimic that of the original filesystem on the client.
 
        timestamp_format=[strftime format]
-	      This allows you to tweak the format of the timestamps  of  indi‐
-	      vidual  backups.	See  'man strftime' to see available substitu‐
+	      This  allows  you to tweak the format of the timestamps of indi‐
+	      vidual backups. See 'man strftime' to  see  available  substitu‐
 	      tions. If this option is unset, burp uses "%Y-%m-%d %H:%M:%S".
 
        password_check=[0|1]
-	      Allows you to turn client  password  checking  on  or  off.  The
-	      default  is  on.	SSL  certificates will still be checked if you
-	      turn passwords off. This option can be overridden by the	client
+	      Allows  you  to  turn  client  password  checking on or off. The
+	      default is on. SSL certificates will still  be  checked  if  you
+	      turn  passwords off. This option can be overridden by the client
 	      configuration files in clientconfdir on the server.
+
+       manual_delete=[path]
+	      If a path is given, the  server  will  move  directories	to  be
+	      deleted  into  the directory specified by the path, but will not
+	      actually delete them. The path must be on the same  file	system
+	      as  the  backup  storage.  The idea is that a busy server may be
+	      configured to run the deletions outside of the backup timebands,
+	      when  the  server  is  less busy, via a cron job. The default is
+	      unset, which means that the server will automatically delete the
+	      directories  at the end of a backup. This option can be overrid‐
+	      den by the client configuration files in	clientconfdir  on  the
+	      server.
 
        clientconfdir=[path]
 	      Path to the directory that contains client configuration files.
@@ -424,9 +496,18 @@ SERVER CONFIGURATION FILE OPTIONS
        use: Convert the working directory into a complete backup.
 
        resume: Simply continue the previous backup from the point at which  it
-       left  off. NOTE: If the client has changed its include/exclude configu‐
-       ration since the backup was interrupted, the recovery method will auto‐
-       matically switch to 'use'.
+       left  off,  at  file  granularity.  NOTE: If the client has changed its
+       include/exclude configuration since the	backup	was  interrupted,  the
+       recovery method will automatically switch to 'use'.
+
+       resume_partial=[0|1]
+	      Turn  this  on  to enable 'resume partial' code. Requires 'work‐
+	      ing_dir_recovery_method=resume'. When  resuming  an  interrupted
+	      transfer	of a single file, it attempts to use previously trans‐
+	      ferred blocks of that file in order to be more  efficient.  How‐
+	      ever, situations have been reported where the file on the server
+	      side just gets bigger forever, so this feature now  defaults  to
+	      being turned off.
 
        client_can_delete=[0|1]
 	      Turn  this off to prevent clients from deleting backups with the
@@ -835,9 +916,9 @@ CLIENT CONFIGURATION FILE OPTIONS
 
 INCLUDES / EXCLUDES
        The following options specify exactly what is backed up. The client can
-       specify these options, or if you include at least one 'include=' in the
-       client configuration files on the server, the server will override them
-       all.
+       specify these options, or if  you  have	at  least  one	'include='  or
+       'include_glob='	in  the  client configuration files on the server, the
+       server will override them all.
 
        include=[path]
 	      Path to include in the backup. You  can  have  multiple  include
@@ -851,6 +932,13 @@ INCLUDES / EXCLUDES
 
        include_regex=[regular expression]
 	      Not implemented.
+
+       include_glob=[glob expression]
+	      Include paths that  match  the  glob  expression.  For  example,
+	      '/home/*/Documents'  will  include  '/home/user1/Documents'  and
+	      '/home/user2/Documents' if user1 and user2 exist. On  Unix  sys‐
+	      tems, glob(3) is used. For Windows systems, the functionality is
+	      limited to one '*'.
 
        exclude_regex=[regular expression]
 	      Exclude paths that match the regular expression.
@@ -955,56 +1043,58 @@ SERVER CLIENTCONFDIR FILE
        Additionally,  the  following  options  can be overridden here for each
        client:
 	      directory directory_tree	timestamp_format  password_check  keep
-	      working_dir_recovery_method    librsync	 version_warn	syslog
-	      client_can_delete    client_can_force_backup     client_can_list
-	      client_can_restore  client_can_verify restore_client compression
-	      timer_script timer_arg notify_success_script  notify_success_arg
-	      notify_success_warnings_only  notify_failure_script notify_fail‐
-	      ure_arg  dedup_group   server_script_pre	 server_script_pre_arg
+	      working_dir_recovery_method    resume_partial    librsync   man‐
+	      ual_delete      version_warn	syslog	     client_can_delete
+	      client_can_force_backup	 client_can_list    client_can_restore
+	      client_can_verify   restore_client   compression	  timer_script
+	      timer_arg  notify_success_script	notify_success_arg notify_suc‐
+	      cess_warnings_only   notify_failure_script    notify_failure_arg
+	      dedup_group	 server_script_pre	 server_script_pre_arg
 	      server_script_pre_notify			    server_script_post
 	      server_script_post_arg  server_script_post_notify  server_script
 	      server_script_arg 			  server_script_notify
 	      server_script_post_run_on_fail
 
-       Additionally, the includes and excludes	can  be  overridden  here,  as
+       Additionally,  the  includes  and  excludes  can be overridden here, as
        described in the section above.
 
-       As  with  the  other  configuration  files,  extra configuration can be
+       As with the other  configuration  files,  extra	configuration  can  be
        included with the '. path/to/config/file' syntax.
 
 
 Some notes on SSL certificates
-       The burp example configs come with example SSL certificates  and  keys.
+       The  burp  example configs come with example SSL certificates and keys.
        You can use these and burp will work. But if you are worried about net‐
-       work security, you should generate your own certificates and  keys  and
-       point  your config files to them. To create the example files, I used a
-       handy  interface  to  openssl,	called	 'tinyca'   (http://tinyca.sm-
-       zone.net/).  If	you  are  using  Debian,  you can run 'apt-get install
+       work  security,	you should generate your own certificates and keys and
+       point your config files to them. To create the example files, I used  a
+       handy   interface   to	openssl,  called  'tinyca'  (http://tinyca.sm-
+       zone.net/). If you are using  Debian,  you  can	run  'apt-get  install
        tinyca' to get it. There is also the option of using burp_ca, which you
        can find in the source distribution, courtesy of Patrick Koppen.
 
 
 Examining backups
-       As  well  as  using the client list options described above, you can go
-       directly to the storage directory on the  server.  The  backups	for  a
-       client  are in the directory named after the client. Inside each backup
+       As well as using the client list options described above,  you  can  go
+       directly  to  the  storage  directory  on the server. The backups for a
+       client are in the directory named after the client. Inside each	backup
        directory is a file called manifest.gz.
 
-       This contains a list of all the files in the  backup,  and  where  they
+       This  contains  a  list	of all the files in the backup, and where they
        originally came from on the client.
 
-       There  is  also a 'log.gz' file in the backup directory, which contains
+       There is also a 'log.gz' file in the backup directory,  which  contains
        the output generated by the server during the backup.
 
        The 'data' directory contains complete backup files.
 
-       The 'deltas.reverse' directory contains	reverse  deltas  that  can  be
-       applied	to the data from the next backup in the sequence (indicated by
+       The  'deltas.reverse'  directory  contains  reverse  deltas that can be
+       applied to the data from the next backup in the sequence (indicated  by
        the contents of the 'forward' file).
 
-       Anything with a .gz suffix is compressed in gzip format.  You  can  use
-       standard  tools,  such  as zcat, zless or cp, to view them or copy them
-       elsewhere.
+       Anything  with  a .gz suffix is compressed in gzip format.  You can use
+       standard tools, such as zcat, zless or cp, to view them	or  copy  them
+       elsewhere. Files from Windows backups will probably contain VSS headers
+       and/or footers. For help stripping these, see the vss_strip man page.
 
 
 Server initiated backups

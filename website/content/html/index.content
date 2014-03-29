@@ -40,8 +40,9 @@ The main author of Burp is Graham Keeling.
 </P>
 
 <BR>
-<h3><font color="#99CCFF">Current stable version: 1.3.10</font></h3>
-<h4><font color="#99CCFF">Old stable version: 1.3.0</font></h4>
+<h3><font color="#99CCFF">Current stable version: 1.3.48</font></h3>
+<h4><font color="#99CCFF">Old stable: 1.3.10</font></h4>
+<h5><font color="#99CCFF">New features: 1.4.10</font></h5>
 <table border="0"><tr><td align="center">
 <script type="text/javascript"><!--
 google_ad_client = "ca-pub-0612005306689013";
@@ -63,6 +64,289 @@ src="http://pagead2.googlesyndication.com/pagead/show_ads.js">
 <TR>
 <TD></TD>
 <TD ALIGN="LEFT">
+
+<P>
+<FONT COLOR="#99CCFF">2014-03-29:
+<BR>
+Many thanks to the following donors for financially supporting burp during
+March:
+<BR>
+<pre>
+  * &pound;10.00 Thomas O.
+  *  &euro; 0.45 Flattr
+</pre>
+</FONT>
+</p>
+
+<P>
+<FONT COLOR="#99CCFF">2014-03-29: burp-1.4.12 is released.
+<br>
+<pre>
+Changes in burp-1.4.12:
+  * Make 'make test' skip tests if no source of randomness seems to exist
+    for openssl to use.
+  * Bug fix for restoring correct file times on Windows clients.
+  * Bug fix for false failure notification - differentiate between
+    not getting a lock and getting an error when trying to get a lock.
+  * Turn off excessive logging on some restores.
+  * Debian packaging changes.
+  * Rename configure.in to configure.ac to avoid Debian build warnings.
+  * Make test script check for lock file instead of working/finishing symlinks
+    when checking whether an operation has finished yet.
+  * Fix encryption casting problem on 64 bit big endian platforms (eg, s390x,
+    ppc64, sparc64).
+</pre>
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">2014-03-01:
+<br>
+burp-1.3.48 is now the stable version.
+<br>
+burp-1.3.10 is now the old stable version.
+<br>
+burp-1.4.10 is the latest version.
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">2014-03-01:
+<BR>
+Nobody financially supported burp during February, but thank you to 6sync for
+continuing to provide web hosting.
+<BR>
+Additionally, for anybody that would like to support the project through
+Flattr, there is now a button at the bottom of the burp website.
+</FONT>
+</p>
+
+<P>
+<FONT COLOR="#99CCFF">2014-01-27: burp-1.3.48 is released.
+<br>
+<pre>
+Changes in burp-1.3.48:
+  * Bug fix for restoring correct file times on Windows clients.
+</pre>
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">2014-01-27:
+<BR>
+Many thanks to the following donors for financially supporting burp during
+January:
+<pre>
+  *  &pound;15.00 Calogero L.
+</pre>
+</FONT>
+</p>
+
+<P>
+<FONT COLOR="#99CCFF">2013-12-30: burp-1.3.46 is released.
+<br>
+<pre>
+Changes in burp-1.3.46:
+  * Another bug fix for false failure notification - differentiate between
+    not getting a lock and getting an error when trying to get a lock.
+  * Turn off excessive logging on some restores.
+</pre>
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">2013-12-30:
+<BR>
+Nobody financially supported burp during December, but thank you to 6sync for
+continuing to provide web hosting.
+</FONT>
+</p>
+
+<P>
+<FONT COLOR="#99CCFF">2013-12-01: burp-1.4.10 and burp-1.3.44 are released.
+<br>
+1.4.10 is for new features. 1.3.44 is the candidate for a stable version, to
+which only bug fixes will be added.
+<pre>
+Changes in burp-1.4.10 and burp-1.3.44:
+  * Bug fix for false failure notification when a client tries to connect again
+    while a backup is still in progress.
+</pre>
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">2013-11-29:
+<BR>
+Many thanks to the following donors for financially supporting burp during
+October and November:
+<pre>
+  * &euro;100.00 Saint G.
+  *  &pound;10.00 Florian W.
+  *  &pound;15.00 Nigel R.
+</pre>
+</FONT>
+</p>
+
+<P>
+<FONT COLOR="#99CCFF">2013-11-29: burp-1.4.8 and burp-1.3.42 are released.
+<br>
+1.4.8 is for new features. 1.3.42 is the candidate for a stable version, to
+which only bug fixes will be added.
+<pre>
+Changes in burp-1.4.8:
+  * Be sure to close directory file descriptor if fdopendir() fails.
+  * Extend the JSON list functionality so that covers all types of listing.
+  * Allow the backup to carry on if a filename was too long for the server.
+  * Regenerate server certificates if the CA directory exists and is empty.
+  * Add machine-readable statistics files for restores and verifies in the
+    backup directories.
+  * Bug fix for server not exiting after one connection with '-n'.
+  * Add 'manual_delete=<directory>' option. This makes the server move
+    directories to be deleted to the specified directory, with the intention
+    that they will be deleted manually (perhaps by a cron job) later.
+
+Changes in burp-1.3.42:
+  * In backup phase 4, a 'deleteme' directory may already exist if the server
+    was previously interrupted whilst deleting it. If so, delete it before
+    attempting to rename anything to it.
+</pre>
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">2013-10-30: burp-1.4.6 and burp-1.3.40 are released.
+<br>
+1.4.6 is for new features. 1.3.40 is the candidate for a stable version, to
+which only bug fixes will be added.
+<pre>
+Changes in burp-1.4.6
+  * Add client option '-a T', which checks whether it is yet time for a backup
+    without actually doing a backup.
+  * Make the server request the whole file when ctime changes on Windows,
+    otherwise changes to metadata when the file content is unchanged will not
+    be noticed.
+  * Add 'delete' to the client help output.
+  * Bug fix for the include_glob code being run on the server side.
+  * Bug fix for in the include_glob code not initialising the glob_t struct
+    correctly.
+  * Get 'include_glob=' in the clientconfdir server side file to work without
+    also needing an 'include='.
+  * When backing up, open files and directories with O_NOATIME flag so that the
+    access time is not changed.
+  * Bug fix for no failure notification being sent when the backup directory
+    cannot be created.
+
+Changes in burp-1.3.40:
+  * Make the server request the whole file when ctime changes on Windows,
+    otherwise changes to metadata when the file content is unchanged will not
+    be noticed.
+  * Add 'delete' to the client help output.
+  * When backing up, open files and directories with O_NOATIME flag so that the
+    access time is not changed.
+  * Bug fix for no failure notification being sent when the backup directory
+    cannot be created.
+</pre>
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">2013-10-02:
+<BR>
+Many thanks to the following donors for financially supporting burp during
+September:
+<pre>
+  *  &pound;43.00 Sebastien C.
+</pre>
+</FONT>
+</p>
+
+<P>
+<FONT COLOR="#99CCFF">2013-10-02: burp-1.4.4 and burp-1.3.38 are released.
+<br>
+1.4.4 is for new features. 1.3.38 is the candidate for a stable version, to
+which only bug fixes will be added.
+<pre>
+Changes in burp-1.4.4
+  * Bug fix for include_glob xmalloc success check on Windows.
+  * Fix long list and status monitor output when a directory argument is given.
+  * Fix restore problem with backups containing both compressed and
+    uncompressed files.
+  * Bug fix for an interrupted backup causing a resume when a restore_client
+    connects.
+  * Bug fix for defaulting 'resume partial' to off.
+
+Changes in burp-1.3.38:
+  * Fix long list and status monitor output when a directory argument is given.
+  * Fix restore problem with backups containing both compressed and
+    uncompressed files.
+  * Bug fix for an interrupted backup causing a resume when a restore_client
+    connects.
+  * Bug fix for defaulting 'resume partial' to off.
+</pre>
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">2013-09-02:
+<BR>
+Many thanks to the following donors for financially supporting burp during
+August:
+<pre>
+  *  &pound;43.00 Sebastien C.
+</pre>
+</FONT>
+</p>
+
+<P>
+<FONT COLOR="#99CCFF">2013-09-02: burp-1.4.2 is released. 
+<br>
+<pre>
+Changes in burp-1.4.2:
+  * Add a machine-readable statistics file to each backup directory.
+</pre>
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">2013-07-29:
+<BR>
+Many thanks to the following donors for financially supporting burp during
+July:
+<pre>
+  *  &pound;10.00 Jean L.
+</pre>
+</FONT>
+</p>
+
+<P>
+<FONT COLOR="#99CCFF">2013-07-29: burp-1.4.0 and burp-1.3.36 are released.
+<br>
+1.4.0 is for new features. 1.3.36 is the candidate for a stable version, to
+which only bug fixes will be added.
+<pre>
+Changes in burp-1.4.0
+  * Add Abbas Khan's RHEL spec files and related things.
+  * Add Benjamin Sans's include_glob feature.
+
+Changes in burp-1.3.36:
+  * Fix truncation of timestamps in the live status monitor.
+  * Default the 'resume partial' feature to being off, and add an option to
+    turn it on.
+  * Upgraded Windows cross tools to:
+        + binutils-2.23.1
+        + gcc-4.7.3
+        + gmp-5.1.2
+        + mingw-w64-v2.0.8
+        + mpc-1.0.1
+        + mpfr-3.1.2
+  * Upgraded Windows depkgs to:
+        + openssl-1.0.1e
+        + zlib-1.2.8
+        + pcre-8.33
+</pre>
+</FONT>
+</P>
 
 <P>
 <FONT COLOR="#99CCFF">2013-06-29:
@@ -190,286 +474,6 @@ Changes in burp-1.3.26:
   * Add '-v' option to bedup (output the names of duplicate files).
   * Add '-d' option to bedup (delete duplicates instead of hardlinking - not
     for use on burp storage directories).
-</pre>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2013-01-29:
-<BR>
-Many thanks to the following donors for financially supporting burp during
-January:
-<pre>
-  *  &pound;30.00 Sebastian A.
-  *  &pound;20.00 Graham D.
-  *  &pound;20.00 Brian H.
-</pre>
-</FONT>
-</p>
-
-<P>
-<FONT COLOR="#99CCFF">2013-01-29: burp-1.3.24 is released.
-<pre>
-Changes in burp-1.3.24:
-  * Bug fix for strip_vss/split_vss truncating backups of changed files on
-    Windows.
-  * Bug fix for autoupgrade failing on Windows if autoupgrade_dir has been
-    modified.
-  * Bug fix for listing backups created with split_vss=1.
-  * Bug fix for restoring uncompressed encrypted backups created with
-    split_vss=1.
-  * Bug fix for making backups with min_file_size and split_vss=1.
-  * Bug fix for Debian init do_stop() function from Peter Maloney.
-  * Bug fix for resuming backups where a file to patch has already been
-    hard linked into place. Also get the client to report a more helpful
-    message if any similar problem happens.
-  * Bug fix for signal handler race conditions.
-  * Bug fix for the forkchild child not exiting when execv fails.
-  * Changed the run_script() code to take an array.
-  * Added server_script_pre_notify and server_script_post_notify options.
-  * Rework the test script so that it can test Windows clients.
-  * Attempt a Windows signal handler to try to shut VSS down nicely on certain
-    signals, such as Ctrl-C.
-  * Include an example server side offsite rsync backup script. This is not
-    quite working properly, but it may still be useful.
-  * Bug fix to stop Windows going to sleep during a backup, from Avi Rozen.
-</pre>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2013-01-08:
-<BR>
-There is still a bug in the Windows strip_vss/split_vss options in burp-1.3.22.
-Files that change on Windows are truncated in the backup. If you are using
-either of those options, it is recommended that you turn them off until the
-next release of burp.
-</FONT>
-</p>
-
-<P>
-<FONT COLOR="#99CCFF">2013-01-02:
-<BR>
-Many thanks to the following donors for financially supporting burp during
-December:
-<pre>
-  *  &pound;50.00 Bryan B.
-  *   &pound;1.01 Romain M.
-</pre>
-</FONT>
-</p>
-
-<P>
-<FONT COLOR="#99CCFF">2013-01-02: burp-1.3.22 is released.
-<pre>
-Changes in burp-1.3.22:
-  * Contributions from Avi Rozen:
-        + Added a '-j' option to format the long file list as JSON. Intended
-          for use with burpfs (https://github.com/ZungBang/burpfs).
-        + Bug fix for list/verify/restore when regex is long and/or contains
-          a colon.
-        + Bug fix for split_vss backups being restored on a linux
-          restore_client with the -f (force) option. Prevents overwrite of the
-          destination file with the vss footer.
-  * Contributions for burp_ca from Patrick Koppen:
-        + Bug fix for the size option.
-        + Use shell numeric comparison instead of string comparison.
-        + Added subjectAltName patch (in case it is needed outside of burp).
-</pre>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2012-12-18: burp-1.3.20 is released.
-<pre>
-Changes in burp-1.3.20:
-  * Bug fix for split/strip_vss = 1 on the client side always causing all files
-    to be backed up.
-  * Make configure report /usr as the default prefix.
-</pre>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2012-12-05:
-<BR>
-Many thanks to the following donors for financially supporting burp during
-November:
-<pre>
-  *  &pound20.00 Johannes E.
-</pre>
-</FONT>
-</p>
-
-<P>
-<FONT COLOR="#99CCFF">2012-11-02: burp-1.3.18 is released.
-<pre>
-Changes in burp-1.3.18:
-  * Turn --enable-ipv6 configure option into --disable-ipv6.
-  * Print a carriage return when rewriting ssl_peer_cn on Windows.
-  * Make all places that log 'out of memory' also log the function name.
-  * Remove version_warn debug.
-  * Tweaks to the test script.
-  * Option to store Windows VSS headers separately to the actual file data.
-  * Option to strip Windows VSS headers from the actual file data.
-  * If no timebands are given to timer_script, default to not allowing a
-    backup.
-  * Add LC_TIME=C to LANG=C in the timer script.
-  * Add 'vss_strip' program, which is a tool for extracting the file data from
-    a file containing both VSS data and the file data.
-  * Add Patrick Koppen's patches:
-        - Add 'ssl_cipher' option.
-        - Add support for signal USR2 to Debian init script.
-        - Write pid first in pidfile.
-</pre>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2011-11-01: My attention has been brought to issue 10 of
-'Admin Magazine', which has just arrived in Australia. Burp is mentioned on the
-cover, and there is a 5 page article featuring it inside. "Burp coughs up the
-goods".
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2012-10-31:
-<BR>
-Nobody financially supported burp during October, but thank you to 6sync for
-continuing to provide web hosting.
-</FONT>
-</p>
-
-<P>
-<FONT COLOR="#99CCFF">2012-10-09: burp-1.3.16 is released. If you have any
-clients on 1.3.14, you should upgrade them to 1.3.16 as soon as possible.
-<pre>
-Changes in burp-1.3.16:
-  * Important bug fix for exclude_comp.
-  * Bug fix for read_blockdev.
-  * Add 'version_warn=[0|1]' option.
-</pre>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2012-09-27:
-<BR>
-Many thanks to the following donors for financially supporting burp during
-September:
-<pre>
-  *  &pound400.00 Robert L.
-</pre>
-</FONT>
-</p>
-
-<P>
-<FONT COLOR="#99CCFF">2012-09-27: burp-1.3.14 is released.
-<pre>
-Changes in burp-1.3.14:
-  * Remove '-l <logfile> / logfile=' options because they didn't work properly
-    and were adding too much complexity to the code.
-  * Add 'stdout=[0|1]' option, which defines whether to log messages to stdout.
-  * Add 'progress_counter=[0|1]' option for the client, which defines whether
-    to print counters to stdout.
-  * When syslogging, do not prepend a date to the log message.
-  * Don't count phase 2 counters twice when resuming.
-  * Ignore files in clientconfdir starting with '.' or ending with '~', as
-    these are hidden or temporary files.
-  * Fix bug where the client_can_* options were not being overridden in the
-    client specific conf files.
-  * Fix bug that stopped client_can_restore=0 working.
-  * Scan the manifest before restore/verify so that counters and status
-    monitor can show estimates.
-  * Add verify/restore notifications.
-  * Fix Windows batch file IF/ELSE syntax in Windows autoupgrade script.
-  * Have the server send the client the counters when resuming.
-  * Have the server send the client the counters when verifying/restoring, so
-    that it knows what to expect.
-  * Avi Rozen's bug fix for directory browsing on windows
-  * Do not skip restores of sockets.
-  * Add server_can_restore=[0|1] client side option, so that clients can refuse
-    server initiated restores.
-  * Allow server_can_restore and encryption_password to be set with the Windows
-    installer.
-  * Indicate to the server post script whether there was an error.
-  * Indicate to the server post script whether a timed backup was attempted.
-  * Add the ability to restore using a different client. See the
-    'restore_client' option in the man page.
-  * Add the ability to exclude compression on files by extension. See the
-    'exclude_comp' option in the man page.
-  * Make the functions that strcmp file extensions more efficient.
-  * Fixed bug introduced in 1.3.12 that made the client crash when scanning
-    files with very long names.
-</pre>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2012-08-28:
-<BR>
-Nobody financially supported burp during August, but thank you to 6sync for
-continuing to provide web hosting.
-</FONT>
-</p>
-
-<P>
-<FONT COLOR="#99CCFF">2012-08-28: burp-1.3.12 is released.
-<pre>
-Changes in burp-1.3.12:
-  * Remove 'forward' timestamp references in backup directories, to allow the
-    easier deletion of backup directories.
-  * Add missing_return_in_non_void_function.patch from Suse.
-  * Further break down find_files() into smaller functions.
-  * Make sure behaviour is sensible when a client runs out of storage
-    directories.
-  * On Windows, use PROGRAMFILES environment variable(s) instead of
-    C:/Program Files/Burp/.
-  * Stop the Windows installer writing/reading stuff to/from the registry and
-    the start menu.
-  * Allow the Windows installer options to be set on the Windows command line.
-  * Add password_check=[0|1] to options on the server. Defaults to on. Turning
-    it off disables client password checks (although SSL certificates are still
-    checked).
-  * Count deleted files.
-  * Remove unnecessary counter code.
-</pre>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#99CCFF">2012-07-28:
-<BR>
-Many thanks to the following donors for financially supporting burp during
-June and July:
-<pre>
-  *  &pound16.00 Talma J.
-</pre>
-</FONT>
-</p>
-
-<P>
-<FONT COLOR="#99CCFF">2012-07-28: burp-1.3.10 is released.
-<pre>
-Changes in burp-1.3.10:
-  * Added Tony Cheneau's IPv6 fixes.
-  * Fixed bug to do with directory_tree=1 that would stop resume working.
-  * Stop status monitor exiting on terminal resize.
-  * Small man page corrections about overwriting existing files.
-  * Don't use mingw64's utime() to set Windows file times, because it doesn't
-    work on read-only files.
-  * Tweak to timer_script to let it run with slightly older versions of 'date',
-    plus the FreeBSD version of 'date'.
-  * "burp -a l" should say that a backup is finalising.
-  * Upgraded Windows to gcc-4.6.3.
-  * Upgraded Windows to zlib-1.2.7.
-  * Upgraded Windows to openssl-1.0.0j.
-  * Added pcre-8.31 to Windows.
-  * Added Gonéri Le Bouder's exclude_regex option.
-  * Add a gentle shutdown server option - send signal 12 to the main process.
-  * Make librsync errors in phase4 non-fatal.
-  * Check for errors on gzclose() and fclose().
 </pre>
 </FONT>
 </P>

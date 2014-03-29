@@ -39,10 +39,11 @@ The main author of Burp is Graham Keeling.
 </FONT>
 </P>
 
-<BR>
+<h5><font color="#99CCFF">Stable candidate: 1.4.12</font></h5>
 <h3><font color="#99CCFF">Current stable version: 1.3.48</font></h3>
 <h4><font color="#99CCFF">Old stable: 1.3.10</font></h4>
-<h5><font color="#99CCFF">New features: 1.4.10</font></h5>
+
+<hr>
 <table border="0"><tr><td align="center">
 <script type="text/javascript"><!--
 google_ad_client = "ca-pub-0612005306689013";
@@ -56,6 +57,48 @@ google_ad_height = 60;
 src="http://pagead2.googlesyndication.com/pagead/show_ads.js">
 </script>
 </td></tr></table>
+<hr>
+
+<h3><font color="#99CCFF">Burp 2</font></h3>
+
+<P>
+<FONT COLOR="#99CCFF">
+An additional experimental version Burp, which I have labelled 'Burp 2' is now
+available.
+<BR>
+The intention is that Burp 1 clients will continue to work with Burp 2
+servers.
+<BR>
+Burp 2 clients can also be configured to work in Burp 1 mode. See the 'protocol'
+option in the man page and example config files.
+<BR>
+Burp 2 code is capable of doing variable length chunking for inline
+deduplication, with sparse indexing on the server side. For more details
+on the ideas and development, you may read the
+<a href="/images/burp2-report.pdf">report</a> that I wrote for my degree.
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">
+Use Burp 2 with extreme caution.
+<BR>
+It is currently missing some features, such as acl/xattr, Windows EFS,
+encryption and compression support.
+<BR>
+The Burp 1 protocol should still work with these features, but be careful.
+<BR>
+The status monitor is also not working.
+<BR>
+Due to the extent of the rewrite involved, pretty much anything may not working
+correctly.
+<BR>
+Do not expect Burp 2, and the backups that it makes, to be compatible
+with future releases of Burp 2.
+</FONT>
+</P>
+
+<hr>
 
 <h3><font color="#99CCFF">NEWS</font></h3>
 
@@ -73,10 +116,19 @@ March:
 <BR>
 <pre>
   * &pound;10.00 Thomas O.
-  *  &euro; 0.45 Flattr
+  * &euro; 0.45 Flattr
 </pre>
 </FONT>
 </p>
+
+<P>
+<FONT COLOR="#99CCFF">2014-03-29: burp-2.0.4 is released.
+<br>
+<pre>
+  * First release of burp-2. Use with extreme caution.
+</pre>
+</FONT>
+</P>
 
 <P>
 <FONT COLOR="#99CCFF">2014-03-29: burp-1.4.12 is released.

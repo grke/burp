@@ -4,7 +4,7 @@ Things to watch out for when upgrading.
 -----
 There has been a massive rewrite of most of burp.
 
-The intention is that burp1 clients will continue to work in with burp2
+The intention is that burp1 clients will continue to work with burp2
 servers.
 Burp2 clients can also be configured to work in burp1 mode. See the 'protocol'
 option in the man page and example config files.
@@ -18,6 +18,8 @@ The burp1 protocol should still work with these features, but be careful.
 The status monitor is also not working. 
 Due to the extent of the rewrite, pretty much anything may not working
 correctly.
+Do not expect burp2, and the backups that it makes, to be compatible
+with future releases of burp2.
 
 1.3.24
 ------

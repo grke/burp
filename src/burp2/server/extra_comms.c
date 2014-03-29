@@ -65,8 +65,10 @@ static int send_features(struct conf *cconf)
 		goto end;
 
 	/* Clients can be sent cntrs on resume/verify/restore. */
+/* FIX THIS: Disabled until I rewrite a better protocol.
 	if(append_to_feat(&feat, "counters:"))
 		goto end;
+*/
 
 	if(cconf->protocol==PROTO_AUTO)
 	{

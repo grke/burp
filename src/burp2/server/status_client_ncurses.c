@@ -17,6 +17,7 @@ static enum action actg=ACTION_STATUS;
 static FILE *dbfp=NULL;
 #endif
 
+/*
 static void print_line(const char *string, int row, int col)
 {
 	int k=0;
@@ -36,7 +37,9 @@ static void print_line(const char *string, int row, int col)
 		{ printf("%c", *cp); k++; }
 	printf("\n");
 }
+*/
 
+/*
 static char *running_status_to_text(char s)
 {
 	static char ret[16]="";
@@ -64,10 +67,12 @@ static char *running_status_to_text(char s)
 	}
 	return ret;
 }
+*/
 
 // Returns 1 if it printed a line, 0 otherwise.
 static int summary(const char *cntrclient, char status, char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr, struct strlist *backups, int count, int row, int col)
 {
+/*
 	char msg[1024]="";
 
 	if(status==STATUS_IDLE)
@@ -115,9 +120,10 @@ static int summary(const char *cntrclient, char status, char phase, const char *
 		print_line(msg, count, col);
 		return 1;
 	}
+*/
 	return 0;
 }
-
+/*
 static void show_all_backups(struct strlist *backups, int *x, int col)
 {
 	char msg[256]="";
@@ -140,8 +146,10 @@ static void show_all_backups(struct strlist *backups, int *x, int col)
 		last=l;
 	}
 }
+*/
 
 /* for the counters */
+/*
 static void to_msg(char msg[], size_t s, const char *fmt, ...)
 {
 	va_list ap;
@@ -149,7 +157,9 @@ static void to_msg(char msg[], size_t s, const char *fmt, ...)
 	vsnprintf(msg, s, fmt, ap);
 	va_end(ap);
 }
+*/
 
+/*
 static void print_detail(char phase,
 	const char *field,
 	unsigned long long a,
@@ -195,7 +205,9 @@ static void print_detail(char phase,
 	  print_line(msg, (*x)++, col);
 	}
 }
+*/
 
+/*
 static void table_header(char phase, int *x, int col)
 {
 	char msg[256]="";
@@ -212,7 +224,9 @@ static void table_header(char phase, int *x, int col)
 	}
 	print_line(msg, (*x)++, col);
 }
+*/
 
+/*
 static void print_detail2(const char *field, unsigned long long value1, const char *value2, int *x, int col)
 {
 	char msg[256]="";
@@ -220,7 +234,8 @@ static void print_detail2(const char *field, unsigned long long value1, const ch
 	snprintf(msg, sizeof(msg), "%s: %llu%s", field, value1, value2);
 	print_line(msg, (*x)++, col);
 }
-
+*/
+/*
 static void print_detail3(const char *field, const char *value, int *x, int col)
 {
 	char msg[256]="";
@@ -228,9 +243,11 @@ static void print_detail3(const char *field, const char *value, int *x, int col)
 	snprintf(msg, sizeof(msg), "%s: %s", field, value);
 	print_line(msg, (*x)++, col);
 }
+*/
 
 static void detail(const char *cntrclient, char status, char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr, struct strlist *backups, int row, int col)
 {
+/*
 	int x=0;
 	char msg[1024]="";
 	const char *tmp=NULL;
@@ -412,6 +429,7 @@ static void detail(const char *cntrclient, char status, char phase, const char *
 		printf("\n%s\n", path);
 #endif
 	}
+*/
 }
 
 static void blank_screen(int row, int col)
@@ -465,6 +483,7 @@ static int parse_rbuf(const char *rbuf, struct conf *conf, int row, int col, int
 		char *cntrclient=NULL;
 		*cp='\0';
 
+/*
 		if(str_to_cntr(dp, &cntrclient, &status, &phase, &path,
 			p1cntr, cntr, &backups))
 		{
@@ -473,6 +492,7 @@ static int parse_rbuf(const char *rbuf, struct conf *conf, int row, int col, int
 			if(cntrclient) free(cntrclient);
 			return -1;
 		}
+*/
 
 		if(!cntrclient) continue;
 

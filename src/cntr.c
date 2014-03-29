@@ -1,5 +1,16 @@
 #include "include.h"
 
+#include <limits.h>
+
+#define CNTR_PATH_BUF_LEN	256
+
+static void cntr_ent_free(struct cntr_ent *cntr_ent)
+{
+	if(!cntr_ent) return;
+	if(cntr_ent->field) free(cntr_ent->field);
+	if(cntr_ent->label) free(cntr_ent->label);
+}
+
 struct cntr *cntr_alloc(void)
 {
 	struct cntr *cntr=NULL;
@@ -13,92 +24,138 @@ int add_cntr_ent(struct cntr *cntr, int versions,
 {
 	struct cntr_ent *cenew=NULL;
 	if(!cntr->ent
-	  && !(cntr->ent=(struct cntr_ent **)calloc(1, CNTR_ENT_SIZE)))
-		goto error;
-	if(!(cenew=(struct cntr_ent *)calloc(1, sizeof(struct cntr)))
+	  && !(cntr->ent=(struct cntr_ent **)
+		calloc(1, CNTR_ENT_SIZE*sizeof(struct cntr_ent **))))
+			goto error;
+	if(!(cenew=(struct cntr_ent *)calloc(1, sizeof(struct cntr_ent)))
 	  || !(cenew->field=strdup(field))
 	  || !(cenew->label=strdup(label)))
 		goto error;
 	cenew->versions=versions;
-	cntr->ent[(unsigned int)cmd]=cenew;
+	cntr->ent[(uint8_t)cmd]=cenew;
 	cntr->cmd_order[cntr->colen++]=cmd;
 	return 0;
 error:
 	log_out_of_memory(__FUNCTION__);
-	if(cenew)
-	{
-		if(cenew->field) free(cenew->field);
-		if(cenew->label) free(cenew->label);
-		free(cenew);
-	}
+	cntr_ent_free(cenew);
 	return -1;
 }
 
-int cntr_init(struct cntr *cntr)
+static size_t calc_max_status_len(struct cntr *cntr, const char *cname)
 {
+	int x=0;
+	size_t slen=0;
+	char limax[64];
+	char ullmax[64];
+	struct cntr_ent *ent=NULL;
+
+	// See cntr_to_str().
+	// First section - name/version/status/phase
+	slen+=strlen(cname);
+	slen+=7;
+
+	// Second section.
+	snprintf(ullmax, sizeof(ullmax), "%llu", ULLONG_MAX);
+	for(x=0; x<cntr->colen; x++)
+	{
+		if(ent->versions & CNTR_SINGLE_FIELD)
+			// %llu\t
+			slen+=strlen(ullmax)+1;
+		else
+			// %llu/%llu/%llu/%llu/%llu\t
+			slen+=(strlen(ullmax)*5)+5;
+	}
+
+	// Fourth section - start time.
+	snprintf(limax, sizeof(limax), "%li", ULONG_MAX);
+	slen+=strlen(limax)+1; // %lit
+
+	// Fifth section - a path. Cannot know how long this might be. Guess.
+	slen+=CNTR_PATH_BUF_LEN+2; // %s\t\n
+
+	slen=1; // Terminating character.
+
+	return slen;
+}
+
+int cntr_init(struct cntr *cntr, const char *cname)
+{
+	if(!cname)
+	{
+		logp("%s called with no client name\n", __FUNCTION__);
+		return -1;
+	}
 	cntr->start=time(NULL);
 
-	// The order is important here, in order to keep compatibility with
-	// previous versions.
-
-	return add_cntr_ent(cntr, CNTR_VER_ALL,
-		CMD_TOTAL, "total", "Total")
-	  || add_cntr_ent(cntr, CNTR_VER_ALL,
+	if(
+	     add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_TABULATE,
 		CMD_FILE, "files", "Files")
-	  || add_cntr_ent(cntr, CNTR_VER_ALL,
+	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_TABULATE,
 		CMD_ENC_FILE, "files_encrypted", "Files (encrypted)")
-	  || add_cntr_ent(cntr, CNTR_VER_ALL,
+	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_TABULATE,
 		CMD_METADATA, "meta_data", "Meta data")
-	  || add_cntr_ent(cntr, CNTR_VER_ALL,
+	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_TABULATE,
 		CMD_ENC_METADATA, "meta_data_encrypted", "Meta data (enc)")
-	  || add_cntr_ent(cntr, CNTR_VER_ALL,
+	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_TABULATE,
 		CMD_DIRECTORY, "directories", "Directories")
-	  || add_cntr_ent(cntr, CNTR_VER_ALL,
+	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_TABULATE,
 		CMD_HARD_LINK, "soft_links", "Hard links")
-	  || add_cntr_ent(cntr, CNTR_VER_ALL,
+	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_TABULATE,
 		CMD_SOFT_LINK, "hard_links", "Soft links")
-	  || add_cntr_ent(cntr, CNTR_VER_ALL,
+	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_TABULATE,
 		CMD_SPECIAL, "special_files", "Special files")
-	  || add_cntr_ent(cntr, CNTR_VER_2_4,
+	  || add_cntr_ent(cntr, CNTR_VER_2_4|CNTR_TABULATE,
 		CMD_VSS, "vss_headers", "VSS headers")
-	  || add_cntr_ent(cntr, CNTR_VER_2_4,
+	  || add_cntr_ent(cntr, CNTR_VER_2_4|CNTR_TABULATE,
 		CMD_ENC_VSS, "vss_headers_encrypted", "VSS headers (enc)")
-	  || add_cntr_ent(cntr, CNTR_VER_2_4,
+	  || add_cntr_ent(cntr, CNTR_VER_2_4|CNTR_TABULATE,
 		CMD_VSS_T, "vss_footers", "VSS footers")
-	  || add_cntr_ent(cntr, CNTR_VER_2_4,
+	  || add_cntr_ent(cntr, CNTR_VER_2_4|CNTR_TABULATE,
 		CMD_ENC_VSS_T, "vss_footers_encrypted", "VSS footers (enc)")
-	  || add_cntr_ent(cntr, CNTR_VER_2_4,
-		CMD_GRAND_TOTAL, "grand_total", "Grand total")
-	  || add_cntr_ent(cntr, CNTR_VER_4,
+	  || add_cntr_ent(cntr, CNTR_VER_4|CNTR_TABULATE,
 		CMD_EFS_FILE, "efs_files", "EFS files")
+	  || add_cntr_ent(cntr, CNTR_VER_4|CNTR_TABULATE,
+		CMD_ERROR, "errors", "Errors")
+	  || add_cntr_ent(cntr, CNTR_VER_ALL,
+		CMD_TOTAL, "total", "Total")
+	  || add_cntr_ent(cntr, CNTR_VER_2_4|CNTR_TABULATE,
+		CMD_GRAND_TOTAL, "grand_total", "Grand total")
 	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_SINGLE_FIELD,
 		CMD_WARNING, "warnings", "Warnings")
 	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_SINGLE_FIELD,
-		CMD_BYTES_ESTIMATED, "bytes_estimated", "Bytes estimated")
+		CMD_BYTES_ESTIMATED, "bytes_estimated", "Bytes nstimated")
 	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_SINGLE_FIELD,
 		CMD_BYTES, "bytes", "Bytes")
 	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_SINGLE_FIELD,
 		CMD_BYTES_RECV, "bytes_received", "Bytes received")
 	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_SINGLE_FIELD,
-		CMD_BYTES_SENT, "bytes_sent", "Bytes sent");
-}
+		CMD_BYTES_SENT, "bytes_sent", "Bytes sent")
+	)
+		return -1;
 
-static void cntr_ent_free(struct cntr_ent *cntr_ent)
-{
-	if(!cntr_ent) return;
-	if(cntr_ent->field) free(cntr_ent->field);
-	if(cntr_ent->label) free(cntr_ent->label);
+	cntr->status_max_len=calc_max_status_len(cntr, cname);
+	if(!(cntr->status=(char *)calloc(1, cntr->status_max_len))
+	  || !(cntr->cname=strdup(cname)))
+	{
+		log_out_of_memory(__FUNCTION__);
+		return -1;
+	}
+
+	return 0;
 }
 
 void cntr_free(struct cntr **cntr)
 {
 	int c;
 	if(!cntr || !*cntr) return;
-	if((*cntr)->ent) for(c=0; c<(*cntr)->colen; c++)
+	if((*cntr)->ent)
 	{
-		cntr_ent_free((*cntr)->ent[c]);
+		for(c=0; c<(*cntr)->colen; c++)
+			cntr_ent_free(
+				(*cntr)->ent[(uint8_t)(*cntr)->cmd_order[c]]);
 		free((*cntr)->ent);
 	}
+	if((*cntr)->status) free((*cntr)->status);
 	free(*cntr);
 	*cntr=NULL;
 }
@@ -149,92 +206,149 @@ static void table_border(enum action act)
 	}
 }
 
-void cntr_add(struct cntr *c, char ch, int print)
+static void incr_count_val(struct cntr *cntr, char ch, unsigned long long val)
 {
-	struct cntr_ent *grand_total_ent;
-	if(!c) return;
-	grand_total_ent=c->ent[CMD_GRAND_TOTAL];
-	if(print)
-	{
-		if(!grand_total_ent->count
-		  && !c->ent[CMD_WARNING]->count) logc("\n");
-		logc("%c", ch);
-	}
-	if(ch==CMD_FILE_CHANGED)
-	{
-		c->ent[CMD_FILE]->changed++;
-		c->ent[CMD_TOTAL]->changed++;
-		grand_total_ent->changed++;
-	}
-	else
-	{
-		c->ent[(unsigned int)ch]->count++;
-		if(ch==CMD_WARNING) return;
-		c->ent[CMD_TOTAL]->count++;
-	}
+	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->count+=val;
+}
 
-	if(!((++grand_total_ent->count)%64) && print)
-		logc(
+static void incr_count(struct cntr *cntr, char ch)
+{
+	return incr_count_val(cntr, ch, 1);
+}
+
+static void incr_changed(struct cntr *cntr, char ch)
+{
+	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->changed++;
+}
+
+static void incr_same(struct cntr *cntr, char ch)
+{
+	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->same++;
+}
+
+static void incr_deleted(struct cntr *cntr, char ch)
+{
+	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->deleted++;
+}
+
+static void incr_phase1(struct cntr *cntr, char ch)
+{
+	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->phase1++;
+}
+
+static void print_end(unsigned long long val)
+{
+	if(val) logc(
 #ifdef HAVE_WIN32
 			" %I64u\n",
 #else
 			" %llu\n",
 #endif
-			grand_total_ent->count);
+			val);
+}
+
+void cntr_add(struct cntr *c, char ch, int print)
+{
+	struct cntr_ent *grand_total_ent;
+	if(!c) return;
+	if(!(grand_total_ent=c->ent[CMD_GRAND_TOTAL])) return;
+	if(print)
+	{
+		struct cntr_ent *warning;
+		if(!(warning=c->ent[CMD_WARNING])) return;
+		if(!grand_total_ent->count
+		  && !warning->count) logc("\n");
+		logc("%c", ch);
+	}
+	if(ch==CMD_FILE_CHANGED)
+	{
+		incr_changed(c, CMD_FILE);
+		incr_changed(c, CMD_TOTAL);
+		incr_changed(c, CMD_GRAND_TOTAL);
+	}
+	else
+	{
+		incr_count(c, ch);
+		if(ch==CMD_WARNING) return;
+		incr_count(c, CMD_TOTAL);
+	}
+
+	if(!((++grand_total_ent->count)%64) && print)
+		print_end(grand_total_ent->count);
 	fflush(stdout);
+}
+
+void cntr_add_phase1(struct cntr *c, char ch, int print)
+{
+	static struct cntr_ent *total;
+	incr_phase1(c, ch);
+
+	if(!print) return;
+	total=c->ent[(uint8_t)CMD_GRAND_TOTAL];
+	if(!total->phase1) logc("\n");
+	logc("%c", ch);
+	if(!((++total->phase1)%64))
+		print_end(total->phase1);
+	fflush(stdout);
+}
+
+void cntr_add_val(struct cntr *c, char ch, unsigned long long val, int print)
+{
+	incr_count_val(c, ch, val);
 }
 
 void cntr_add_same(struct cntr *c, char ch)
 {
-	if(!c) return;
-	c->ent[(unsigned int)ch]->same++;
-	c->ent[(unsigned int)CMD_TOTAL]->same++;
-	c->ent[(unsigned int)CMD_GRAND_TOTAL]->same++;
+	incr_same(c, ch);
+	incr_same(c, CMD_TOTAL);
+	incr_same(c, CMD_GRAND_TOTAL);
 }
 
 void cntr_add_changed(struct cntr *c, char ch)
 {
-	if(!c) return;
-	c->ent[(unsigned int)ch]->changed++;
-	c->ent[CMD_TOTAL]->changed++;
-	c->ent[CMD_GRAND_TOTAL]->changed++;
-	if(!c) return;
+	incr_changed(c, ch);
+	incr_changed(c, CMD_TOTAL);
+	incr_changed(c, CMD_GRAND_TOTAL);
 }
 
 void cntr_add_deleted(struct cntr *c, char ch)
 {
-	if(!c) return;
-	c->ent[(unsigned int)ch]->deleted++;
-	c->ent[CMD_TOTAL]->deleted++;
-	c->ent[CMD_GRAND_TOTAL]->deleted++;
-	if(!c) return;
+	incr_deleted(c, ch);
+	incr_deleted(c, CMD_TOTAL);
+	incr_deleted(c, CMD_GRAND_TOTAL);
 }
 
 void cntr_add_bytes(struct cntr *c, unsigned long long bytes)
 {
-	if(!c) return;
-	c->ent[CMD_BYTES]->count+=bytes;
+	incr_count_val(c, CMD_BYTES, bytes);
 }
 
 void cntr_add_sentbytes(struct cntr *c, unsigned long long bytes)
 {
-	if(!c) return;
-	c->ent[CMD_BYTES_SENT]->count+=bytes;
+	incr_count_val(c, CMD_BYTES_SENT, bytes);
 }
 
 void cntr_add_recvbytes(struct cntr *c, unsigned long long bytes)
 {
-	if(!c) return;
-	c->ent[CMD_BYTES_RECV]->count+=bytes;
+	incr_count_val(c, CMD_BYTES_RECV, bytes);
 }
 
 static void quint_print(struct cntr_ent *ent, enum action act)
 {
-	unsigned long long a=ent->count;
-	unsigned long long b=ent->same;
-	unsigned long long c=ent->changed;
-	unsigned long long d=ent->deleted;
-	unsigned long long e=ent->phase1;
+	unsigned long long a;
+	unsigned long long b;
+	unsigned long long c;
+	unsigned long long d;
+	unsigned long long e;
+	if(!ent) return;
+	a=ent->count;
+	b=ent->changed;
+	c=ent->same;
+	d=ent->deleted;
+	e=ent->phase1;
+
+	if(!(ent->versions & CNTR_TABULATE)) return;
+
 	if(!e && !a && !b && !c) return;
 	logc("% 18s ", ent->label);
 	if(act==ACTION_BACKUP
@@ -266,61 +380,70 @@ static void quint_print(struct cntr_ent *ent, enum action act)
 	}
 }
 
-static void bottom_part(struct cntr *a, struct cntr *b, enum action act)
+static unsigned long long get_count(struct cntr_ent **ent, char cmd)
 {
+	if(!ent[(uint8_t)cmd]) return 0;
+	return ent[(uint8_t)cmd]->count;
+}
+
+static void bottom_part(struct cntr *c, enum action act)
+{
+	unsigned long long l;
+	struct cntr_ent **e=c->ent;
 	logc("\n");
-	logc("             Warnings:   % 11llu\n",
-		b->warning + a->warning);
+	logc("             Warnings:   % 11llu\n", get_count(e, CMD_WARNING));
 	logc("\n");
-	logc("      Bytes estimated:   % 11llu", a->byte);
-	logc("%s\n", bytes_to_human(a->byte));
+	logc("      Bytes estimated:   % 11llu", get_count(e, CMD_BYTES_ESTIMATED));
+	logc("%s\n", bytes_to_human(get_count(e, CMD_BYTES_ESTIMATED)));
 
 	if(act==ACTION_ESTIMATE) return;
 
 	if(act==ACTION_BACKUP
 	  || act==ACTION_BACKUP_TIMED)
 	{
-		logc("      Bytes in backup:   % 11llu", b->byte);
-		logc("%s\n", bytes_to_human(b->byte));
+		l=get_count(e, CMD_BYTES);
+		logc("      Bytes in backup:   % 11llu", l);
+		logc("%s\n", bytes_to_human(l));
 	}
 	if(act==ACTION_RESTORE)
 	{
-		logc("      Bytes attempted:   % 11llu", b->byte);
-		logc("%s\n", bytes_to_human(b->byte));
+		l=get_count(e, CMD_BYTES);
+		logc("      Bytes attempted:   % 11llu", l);
+		logc("%s\n", bytes_to_human(l));
 	}
 	if(act==ACTION_VERIFY)
 	{
-		logc("        Bytes checked:   % 11llu", b->byte);
-		logc("%s\n", bytes_to_human(b->byte));
+		l=get_count(e, CMD_BYTES);
+		logc("        Bytes checked:   % 11llu", l);
+		logc("%s\n", bytes_to_human(l));
 	}
 
 	if(act==ACTION_BACKUP
 	  || act==ACTION_BACKUP_TIMED)
 	{
-		logc("       Bytes received:   % 11llu", b->recvbyte);
-		logc("%s\n", bytes_to_human(b->recvbyte));
+		l=get_count(e, CMD_BYTES_RECV);
+		logc("       Bytes received:   % 11llu", l);
+		logc("%s\n", bytes_to_human(l));
 	}
 	if(act==ACTION_BACKUP 
 	  || act==ACTION_BACKUP_TIMED
 	  || act==ACTION_RESTORE)
 	{
-		logc("           Bytes sent:   % 11llu", b->sentbyte);
-		logc("%s\n", bytes_to_human(b->sentbyte));
+		l=get_count(e, CMD_BYTES_SENT);
+		logc("           Bytes sent:   % 11llu", l);
+		logc("%s\n", bytes_to_human(l));
 	}
 }
 
-void cntr_print(struct conf *conf, enum action act)
+void cntr_print(struct cntr *cntr, enum action act)
 {
 	int x=0;
 	time_t now=time(NULL);
-	struct cntr *p1c=conf->p1cntr;
-	struct cntr *c=conf->cntr;
-	if(!p1c || !c) return;
 
 	border();
-	logc("Start time: %s\n", getdatestr(p1c->start));
+	logc("Start time: %s\n", getdatestr(cntr->start));
 	logc("  End time: %s\n", getdatestr(now));
-	logc("Time taken: %s\n", time_taken(now-p1c->start));
+	logc("Time taken: %s\n", time_taken(now-cntr->start));
 	if(act==ACTION_BACKUP
 	  || act==ACTION_BACKUP_TIMED)
 	{
@@ -340,11 +463,11 @@ void cntr_print(struct conf *conf, enum action act)
 	}
 	table_border(act);
 
-	for(x=0; x<c->colen; x++)
-		quint_print(c->ent[(unsigned int)c->cmd_order[x]], act);
+	for(x=0; x<cntr->colen; x++)
+		quint_print(cntr->ent[(uint8_t)cntr->cmd_order[x]], act);
 
 	table_border(act);
-	bottom_part(p1c, c, act);
+	bottom_part(cntr, act);
 
 	border();
 }
@@ -353,12 +476,19 @@ void cntr_print(struct conf *conf, enum action act)
 
 static void quint_print_to_file(FILE *fp, struct cntr_ent *ent, enum action act)
 {
-	unsigned long long a=ent->count;
-	unsigned long long b=ent->same;
-	unsigned long long c=ent->changed;
-	unsigned long long d=ent->deleted;
-	unsigned long long e=ent->phase1;
-	const char *field=ent->field;
+	unsigned long long a;
+	unsigned long long b;
+	unsigned long long c;
+	unsigned long long d;
+	unsigned long long e;
+	const char *field;
+	if(!ent) return;
+	a=ent->count;
+	b=ent->same;
+	c=ent->changed;
+	d=ent->deleted;
+	e=ent->phase1;
+	field=ent->field;
 	if(act==ACTION_BACKUP
 	  || act==ACTION_BACKUP_TIMED)
 	{
@@ -371,52 +501,44 @@ static void quint_print_to_file(FILE *fp, struct cntr_ent *ent, enum action act)
 	fprintf(fp, "%s_scanned:%llu\n", field, e);
 }
 
-static void bottom_part_to_file(FILE *fp, struct cntr *a, struct cntr *b, enum action act)
+static void bottom_part_to_file(struct cntr *cntr, FILE *fp, enum action act)
 {
-	fprintf(fp, "warnings:%llu\n", b->warning + a->warning);
-	fprintf(fp, "bytes_estimated:%llu\n", a->byte);
+	struct cntr_ent **e=cntr->ent;
+	fprintf(fp, "warnings:%llu\n",
+		get_count(e, CMD_WARNING));
+	fprintf(fp, "bytes_estimated:%llu\n",
+		get_count(e, CMD_BYTES_ESTIMATED));
 
 	if(act==ACTION_BACKUP
 	  || act==ACTION_BACKUP_TIMED)
-        {
-		fprintf(fp, "bytes_in_backup:%llu\n", b->byte);
-        }
+		fprintf(fp, "bytes_in_backup:%llu\n", get_count(e, CMD_BYTES));
 
 	if(act==ACTION_RESTORE)
-	{
-		fprintf(fp, "bytes_attempted:%llu\n", b->byte);
-	}
+		fprintf(fp, "bytes_attempted:%llu\n", get_count(e, CMD_BYTES));
 	if(act==ACTION_VERIFY)
-	{
-		fprintf(fp, "bytes_checked:%llu\n", b->byte);
-	}
+		fprintf(fp, "bytes_checked:%llu\n", get_count(e, CMD_BYTES));
 
 	if(act==ACTION_BACKUP
 	  || act==ACTION_BACKUP_TIMED)
-	{
-		fprintf(fp, "bytes_received:%llu\n", b->recvbyte);
-	}
+		fprintf(fp, "bytes_received:%llu\n",
+			get_count(e, CMD_BYTES_RECV));
+
 	if(act==ACTION_BACKUP
 	  || act==ACTION_BACKUP_TIMED
 	  || act==ACTION_RESTORE)
-	{
-		fprintf(fp, "bytes_sent:%llu\n", b->sentbyte);
-	}
+		fprintf(fp, "bytes_sent:%llu\n", get_count(e, CMD_BYTES_SENT));
+
 }
 
-int print_stats_to_file(struct conf *conf,
+int cntr_stats_to_file(struct cntr *cntr,
 	const char *directory, enum action act)
 {
 	int x=0;
+	int ret=-1;
 	FILE *fp;
 	char *path;
 	time_t now;
 	const char *fname=NULL;
-	struct cntr *p1c=conf->p1cntr;
-	struct cntr *c=conf->cntr;
-
-	// FIX THIS - at the end of a backup, the counters should be set.
-	if(!p1c || !c) return 0;
 
 	if(act==ACTION_BACKUP
 	  ||  act==ACTION_BACKUP_TIMED)
@@ -430,30 +552,26 @@ int print_stats_to_file(struct conf *conf,
 
 	now=time(NULL);
 
-	if(!(path=prepend_s(directory, fname)))
-		return -1;
-	if(!(fp=open_file(path, "wb")))
-	{
-		free(path);
-		return -1;
-	}
-	fprintf(fp, "client:%s\n", conf->cname);
-	fprintf(fp, "time_start:%lu\n", p1c->start);
+	if(!(path=prepend_s(directory, fname))
+	  || !(fp=open_file(path, "wb")))
+		goto end;
+
+	fprintf(fp, "client:%s\n", cntr->cname);
+	fprintf(fp, "time_start:%lu\n", cntr->start);
 	fprintf(fp, "time_end:%lu\n", now);
-	fprintf(fp, "time_taken:%lu\n", now-p1c->start);
-	for(x=0; x<c->colen; x++)
+	fprintf(fp, "time_taken:%lu\n", now-cntr->start);
+	for(x=0; x<cntr->colen; x++)
 		quint_print_to_file(fp,
-			c->ent[(unsigned int)c->cmd_order[x]], act);
+			cntr->ent[(uint8_t)cntr->cmd_order[x]], act);
 
-	bottom_part_to_file(fp, p1c, c, act);
+	bottom_part_to_file(cntr, fp, act);
 
-	if(close_fp(&fp))
-	{
-		free(path);
-		return -1;
-	}
+	if(close_fp(&fp)) goto end;
+	ret=0;
+end:
 	free(path);
-	return 0;
+	close_fp(&fp);
+	return ret;
 }
 
 #endif
@@ -461,55 +579,59 @@ int print_stats_to_file(struct conf *conf,
 void cntr_print_end(struct cntr *cntr)
 {
 	struct cntr_ent *grand_total_ent=cntr->ent[CMD_GRAND_TOTAL];
-	if(grand_total_ent->count) logc(
-#ifdef HAVE_WIN32
-			" %I64u\n\n",
-#else
-			" %llu\n\n",
-#endif
-			grand_total_ent->count);
+	if(grand_total_ent)
+	{
+		print_end(grand_total_ent->count);
+		logc("\n");
+	}
+}
+
+void cntr_print_end_phase1(struct cntr *cntr)
+{
+	struct cntr_ent *grand_total_ent=cntr->ent[CMD_GRAND_TOTAL];
+	if(grand_total_ent)
+	{
+		print_end(grand_total_ent->phase1);
+		logc("\n");
+	}
 }
 
 #ifndef HAVE_WIN32
-void cntr_to_str(char *str, size_t len,
-	char phase, const char *path, struct conf *conf)
+// Return string length.
+size_t cntr_to_str(struct cntr *cntr, char phase, const char *path)
 {
-	int l=0;
 	int x=0;
-	char tmp[128]="";
+	static char tmp[CNTR_PATH_BUF_LEN+3]="";
 	struct cntr_ent *ent=NULL;
-	struct cntr *cntr=conf->cntr;
-	snprintf(str, len, "%s\t%c\t%c\t%c\t",
-		conf->cname, CNTR_VER_4, STATUS_RUNNING, phase);
+	char *str=cntr->status;
+
+	snprintf(str, cntr->status_max_len-1, "%s\t%c\t%c\t%c\t",
+		cntr->cname, CNTR_VER_4, STATUS_RUNNING, phase);
 
 	for(x=0; x<cntr->colen; x++)
 	{
-		ent=cntr->ent[(unsigned int)cntr->cmd_order[x]];
+		if(!(ent=cntr->ent[(uint8_t)cntr->cmd_order[x]])) continue;
 		if(ent->versions & CNTR_SINGLE_FIELD)
-			snprintf(tmp, sizeof(tmp), "%llu\t",
-				ent->count);
+			snprintf(tmp,
+				sizeof(tmp), "%llu\t", ent->count);
 		else
-			snprintf(tmp, sizeof(tmp), "%llu/%llu/%llu/%llu/%llu\t",
+			snprintf(tmp,
+				sizeof(tmp), "%llu/%llu/%llu/%llu/%llu\t",
 				ent->count, ent->same,
 				ent->changed, ent->deleted, ent->phase1);
-		// FIX THIS.
 		strcat(str, tmp);
 	}
 
 	snprintf(tmp, sizeof(tmp), "%li\t", cntr->start);
-	// FIX THIS.
 	strcat(str, tmp);
 	snprintf(tmp, sizeof(tmp), "%s\t\n", path?path:"");
-	// FIX THIS.
 	strcat(str, tmp);
 
-	// Make sure there is a new line at the end.
-	// FIX THIS.
-	l=strlen(str);
-	if(str[l-1]!='\n') str[l-1]='\n';
+	return strlen(str);
 }
 #endif
 
+/*
 static int extract_ul(const char *value, unsigned long long *a, unsigned long long *b, unsigned long long *c, unsigned long long *d, unsigned long long *e)
 {
 	char *as=NULL;
@@ -548,7 +670,9 @@ static int extract_ul(const char *value, unsigned long long *a, unsigned long lo
 	free(copy);
 	return 0;
 }
+*/
 
+/*
 static char *get_backup_str(const char *s, int *deletable)
 {
 	static char str[32]="";
@@ -568,7 +692,9 @@ static char *get_backup_str(const char *s, int *deletable)
 	}
 	return str;
 }
+*/
 
+/*
 static int add_to_backup_list(struct strlist **backups, const char *tok)
 {
 	int deletable=0;
@@ -577,7 +703,9 @@ static int add_to_backup_list(struct strlist **backups, const char *tok)
 	if(strlist_add(backups, (char *)str, deletable)) return -1;
 	return 0;
 }
+*/
 
+/*
 static int extract_cntrs(struct cntr *cntr, int cntr_version, const char *tok,
 	char *status, char *phase, char **path, struct strlist **backups)
 {
@@ -714,11 +842,13 @@ static int extract_cntrs(struct cntr *cntr, int cntr_version, const char *tok,
 	}
 	return 0;
 }
+*/
 
 int str_to_cntr(const char *str, char **client, char *status, char *phase,
 	char **path, struct cntr *p1cntr, struct cntr *cntr,
 	struct strlist **backups)
 {
+/*
 	char *tok=NULL;
 	char *copy=NULL;
 
@@ -757,22 +887,23 @@ int str_to_cntr(const char *str, char **client, char *status, char *phase,
 	}
 
 	free(copy);
+*/
 	return 0;
 }
 
 #ifndef HAVE_WIN32
-int cntr_send(struct conf *conf)
+int cntr_send(struct cntr *cntr)
 {
+/*
+	size_t l;
 	char buf[4096]="";
-	cntr_to_str(buf, sizeof(buf),
-		STATUS_RUNNING,
-		" " /* normally the path for status server */,
-		conf);
-	if(async_write_str(CMD_GEN, buf))
+	l=cntr_to_str(conf->cntr, STATUS_RUNNING, " ");
+	if(async_write_strn(CMD_GEN, buf, l))
 	{
 		logp("Error when sending counters to client.\n");
 		return -1;
 	}
+*/
 	return 0;
 }
 #endif
@@ -780,9 +911,11 @@ int cntr_send(struct conf *conf)
 static enum asl_ret cntr_recv_func(struct iobuf *rbuf,
 	struct conf *conf, void *param)
 {
+/*
 	if(str_to_cntr(rbuf->buf, NULL, NULL, NULL, NULL,
 		conf->p1cntr, conf->cntr, NULL))
 			return ASL_END_ERROR;
+*/
 	return ASL_END_OK;
 }
 

@@ -226,7 +226,6 @@ int ssl_check_cert(SSL *ssl, struct conf *conf)
 {
 	X509 *peer;
 	char tmpbuf[256];
-	const COMP_METHOD *comp=NULL;
 
 	if(!conf->ssl_peer_cn)
 	{

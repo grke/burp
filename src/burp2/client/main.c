@@ -297,7 +297,7 @@ static enum cliret restore_wrapper(enum action action, int vss_restore,
 
 	// Return non-zero if there were warnings,
 	// so that the test script can easily check.
-	if(conf->p1cntr->warning+conf->cntr->warning)
+	if(conf->cntr->ent[CMD_WARNING]->count)
 		ret=CLIENT_RESTORE_WARNINGS;
 
 	return ret;
@@ -311,17 +311,17 @@ static enum cliret do_client(struct conf *conf, enum action action,
 	int resume=0;
 	SSL *ssl=NULL;
 	SSL_CTX *ctx=NULL;
-	struct cntr cntr;
-	struct cntr p1cntr;
+	struct cntr *cntr=NULL;
 	char *incexc=NULL;
 	long name_max=0;
 	enum action act=action;
 
-	conf->p1cntr=&p1cntr;
-	conf->cntr=&cntr;
-
 //	settimers(0, 100);
+
 	logp("begin client\n");
+
+	if(!(cntr=cntr_alloc()) || cntr_init(cntr, conf->cname)) goto error;
+	conf->cntr=cntr;
 
 	if(act!=ACTION_ESTIMATE
 	  && ssl_setup(&rfd, &ssl, &ctx, conf))
@@ -383,6 +383,8 @@ end:
 	async_free();
 	if(ctx) ssl_destroy_ctx(ctx);
 	if(incexc) free(incexc);
+	conf->cntr=NULL;
+	if(cntr) cntr_free(&cntr);
 
         //logp("end client\n");
 	return ret;

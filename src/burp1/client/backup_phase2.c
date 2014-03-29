@@ -410,7 +410,7 @@ int backup_phase2_client_burp1(struct conf *conf, int resume)
 	ret=do_backup_phase2_client(conf, resume);
 
 	cntr_print_end(conf->cntr);
-	cntr_print(conf, ACTION_BACKUP);
+	cntr_print(conf->cntr, ACTION_BACKUP);
 
 	if(ret) logp("Error in phase 2\n");
 	logp("Phase 2 end (send file data)\n");

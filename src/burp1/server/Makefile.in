@@ -24,7 +24,6 @@ SRCS = \
 	backup_phase3.c \
 	backup_phase4.c \
 	current_backups.c \
-	delete.c \
 	dpth.c \
 	restore.c \
 	resume.c \

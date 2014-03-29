@@ -140,7 +140,6 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *conffile, int
 	BIO *sbio=NULL;
 	struct conf *conf=NULL;
 	struct conf *cconf=NULL;
-	struct cntr *p1cntr=NULL;
 	struct cntr *cntr=NULL;
 
 	if(!(conf=conf_alloc())
@@ -154,11 +153,6 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *conffile, int
 	conf_init(conf);
 	conf_init(cconf);
 	if(conf_load(conffile, conf, 1)) goto end;
-
-	// Set up counters.
-	if(!(cntr=cntr_alloc()) || !(p1cntr=cntr_alloc())) goto end;
-	conf->cntr=cntr;
-	conf->p1cntr=p1cntr;
 
 	if(!(sbio=BIO_new_socket(*cfd, BIO_NOCLOSE))
 	  || !(ssl=SSL_new(ctx)))
@@ -192,10 +186,12 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *conffile, int
 		goto end;
 	}
 
-	// Add the counters to cconf now. It is reset during authorise_server,
-	// so cannot be done before.
+	// Set up counters. Have to wait until here to get cname.
+	if(!(cntr=cntr_alloc())
+	  || cntr_init(cntr, cconf->cname))
+		goto end;
+	conf->cntr=cntr;
 	cconf->cntr=cntr;
-	cconf->p1cntr=p1cntr;
 
 	/* At this point, the client might want to get a new certificate
 	   signed. Clients on 1.3.2 or newer can do this. */
@@ -231,10 +227,9 @@ end:
 	*cfd=-1;
 	async_free(); // this closes cfd for us.
 	logp("exit child\n");
-	cntr_free(&cntr);
-	cntr_free(&p1cntr);
-	conf_free(conf);
-	conf_free(cconf);
+	if(cntr) cntr_free(&cntr);
+	if(conf) conf_free(conf);
+	if(cconf) conf_free(cconf);
 	return ret;
 }
 

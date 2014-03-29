@@ -10,6 +10,8 @@ int recursive_hardlink(const char *src, const char *dst, struct conf *conf)
 	int ret=0;
 	struct dirent **dir;
 	char *tmp=NULL;
+	char *fullpatha=NULL;
+	char *fullpathb=NULL;
 	//logp("in rec hl: %s %s\n", src, dst);
 	if(!(tmp=prepend_s(dst, "dummy"))) return -1;
 	if(mkpath(&tmp, dst))
@@ -29,30 +31,22 @@ int recursive_hardlink(const char *src, const char *dst, struct conf *conf)
 	while(n--)
 	{
 		struct stat statp;
-		char *fullpatha=NULL;
-		char *fullpathb=NULL;
 		if(dir[n]->d_ino==0
 		  || !strcmp(dir[n]->d_name, ".")
 		  || !strcmp(dir[n]->d_name, ".."))
 			{ free(dir[n]); continue; }
-		if(!(fullpatha=prepend_s(src, dir[n]->d_name))
-		  || !(fullpathb=prepend_s(dst, dir[n]->d_name)))
-		{
-			if(fullpatha) free(fullpatha);
-			if(fullpathb) free(fullpathb);
-			break;
-		}
+		if(fullpatha) free(fullpatha);
+		if(fullpathb) free(fullpathb);
+		fullpatha=prepend_s(src, dir[n]->d_name);
+		fullpathb=prepend_s(dst, dir[n]->d_name);
+		if(!fullpatha || !fullpathb) break;
 
 #ifdef _DIRENT_HAVE_D_TYPE
 // Faster evaluation on most systems.
 		if(dir[n]->d_type==DT_DIR)
 		{
 			if(recursive_hardlink(fullpatha, fullpathb, conf))
-			{
-				free(fullpatha);
-				free(fullpathb);
 				break;
-			}
 		}
 		else
 #endif
@@ -65,26 +59,16 @@ int recursive_hardlink(const char *src, const char *dst, struct conf *conf)
 		else if(S_ISDIR(statp.st_mode))
 		{
 			if(recursive_hardlink(fullpatha, fullpathb, conf))
-			{
-				free(fullpatha);
-				free(fullpathb);
 				break;
-			}
 		}
 		else
 		{
 			//logp("hardlinking %s to %s\n", fullpathb, fullpatha);
-			write_status(STATUS_SHUFFLING, fullpathb, conf);
-			if(do_link(fullpatha, fullpathb, &statp, conf,
+			if(write_status(STATUS_SHUFFLING, fullpathb, conf)
+			  || do_link(fullpatha, fullpathb, &statp, conf,
 				0 /* do not overwrite target */))
-			{
-				free(fullpatha);
-				free(fullpathb);
 				break;
-			}
 		}
-		free(fullpatha);
-		free(fullpathb);
 		free(dir[n]);
 	}
 	if(n>0)
@@ -93,6 +77,9 @@ int recursive_hardlink(const char *src, const char *dst, struct conf *conf)
 		for(; n>0; n--) free(dir[n]);
 	}
 	free(dir);
+
+	if(fullpatha) free(fullpatha);
+	if(fullpathb) free(fullpathb);
 
 	return ret;
 }

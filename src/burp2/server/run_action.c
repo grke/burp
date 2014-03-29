@@ -72,6 +72,7 @@ void maybe_do_notification(int status, const char *clientdir,
 {
 	int a=0;
 	const char *args[12];
+	struct cntr *cntr=cconf->cntr;
 	args[a++]=NULL; // Fill in the script name later.
 	args[a++]=cconf->cname;
 	args[a++]=clientdir;
@@ -86,16 +87,15 @@ void maybe_do_notification(int status, const char *clientdir,
 		run_script(args, cconf->n_failure_arg, cconf, 1, 1, 1);
 	}
 	else if((cconf->n_success_warnings_only
-		&& (cconf->p1cntr->warning+cconf->cntr->warning)>0)
+		&& cntr->ent[CMD_WARNING]->count > 0)
 	  || (cconf->n_success_changes_only
-		&& (cconf->cntr->total_changed>0))
+		&& cntr->ent[CMD_TOTAL]->changed > 0)
 	  || (!cconf->n_success_warnings_only
 		&& !cconf->n_success_changes_only))
 	{
 		char warnings[32]="";
-	// FIX THIS: conf/cntr init problem.
-	//	snprintf(warnings, sizeof(warnings), "%llu",
-	//		cconf->p1cntr->warning+cconf->cntr->warning);
+		snprintf(warnings, sizeof(warnings), "%llu",
+			cntr->ent[CMD_WARNING]->count);
 		args[0]=cconf->n_success_script;
 		args[a++]=warnings;
 		args[a++]=NULL;
@@ -176,7 +176,8 @@ static int run_backup(struct sdirs *sdirs, struct conf *cconf,
 		return async_write_str(CMD_GEN, "Forced backup is not allowed");
 	}
 
-	snprintf(okstr, sizeof(okstr), "ok:%d", cconf->compression);
+	snprintf(okstr, sizeof(okstr), "%s:%d",
+		resume?"resume":"ok", cconf->compression);
 	if(async_write_str(CMD_GEN, okstr)) return -1;
 	if(cconf->protocol==PROTO_BURP1)
 		ret=do_backup_server_burp1(sdirs, cconf, incexc, resume);
@@ -338,7 +339,6 @@ int run_action_server(struct conf *cconf, struct sdirs *sdirs,
 
 	if(rbuf->cmd!=CMD_GEN)
 		return unknown_command(rbuf);
-printf("glsd\n");
 	if((ret=get_lock_sdirs(sdirs)))
 	{
 		// -1 on error or 1 if the backup is still finalising.
@@ -346,7 +346,6 @@ printf("glsd\n");
 		if(ret<0) maybe_do_notification(ret,
 			"", "error in get_lock_sdirs()",
 			"", rbuf->buf, cconf);
-printf("glsd: %d\n", ret);
 		return ret;
 	}
 

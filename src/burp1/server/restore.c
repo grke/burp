@@ -422,7 +422,7 @@ static int restore_file(struct bu *arr, int a, int i, struct sbuf *sb, const cha
 static int restore_sbufl(struct sbuf *sb, struct bu *arr, int a, int i, const char *tmppath1, const char *tmppath2, enum action act, char status, struct conf *cconf)
 {
 	//printf("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path.buf);
-	write_status(status, sb->path.buf, cconf);
+	if(write_status(status, sb->path.buf, cconf)) return -1;
 
 	if((sb->burp1->datapth.buf && async_write(&(sb->burp1->datapth)))
 	  || async_write(&sb->attr))
@@ -591,10 +591,13 @@ static int setup_cntr(const char *manifest, regex_t *regex, int srestore,
 			if((!srestore || check_srestore(cconf, sb->path.buf))
 			  && check_regex(regex, sb->path.buf))
 			{
-				cntr_add(cconf->p1cntr, sb->path.cmd, 0);
+				cntr_add_phase1(cconf->cntr,
+					sb->path.cmd, 0);
 				if(sb->burp1->endfile.buf)
-				  cntr_add_bytes(cconf->p1cntr,
-				    strtoull(sb->burp1->endfile.buf, NULL, 10));
+					cntr_add_val(cconf->cntr,
+						CMD_BYTES_ESTIMATED,
+				    		strtoull(sb->burp1->endfile.buf,
+							NULL, 10), 0);
 			}
 		}
 		sbuf_free_contents(sb);
@@ -690,9 +693,9 @@ static int actual_restore(struct bu *arr, int a, int i,
 
 	ret=do_restore_end(act, cconf);
 
-	cntr_print(cconf, act);
+	cntr_print(cconf->cntr, act);
 
-	print_stats_to_file(cconf, arr[i].path, act);
+	cntr_stats_to_file(cconf->cntr, arr[i].path, act);
 
 end:
 	gzclose_fp(&zp);
@@ -753,7 +756,7 @@ static int restore_manifest(struct bu *arr, int a, int i,
 		act, status, cconf))
 			goto end;
 
-	if(cconf->send_client_cntr && cntr_send(cconf))
+	if(cconf->send_client_cntr && cntr_send(cconf->cntr))
 		goto end;
 
 	// Now, do the actual restore.

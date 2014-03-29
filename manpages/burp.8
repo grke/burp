@@ -186,6 +186,9 @@ Allows you to turn client password checking on or off. The default is on. SSL ce
 \fBclientconfdir=[path]\fR
 Path to the directory that contains client configuration files.
 .TP
+\fBprotocol=[0|1|2]\fR
+Choose which style of backups and restores to use. 0 (the default) automatically decides based on the client version and which protocol is set on the client side. 1 forces burp1 style (file level granularity with a pseudo mirrored storage on the server and optional rsync). 2 forces burp2 style (inline deduplication with variable length blocks). If you choose a forced setting, it will be an error if the client also chooses a forced setting. This option can be overridden by the client configuration files in clientconfdir on the server.
+.TP
 \fBlockfile=[path]\fR
 Path to the lockfile that ensures that two server processes cannot run
 simultaneously.
@@ -388,6 +391,9 @@ Defines the TCP port that the server is listening on.
 \fBcname=[password]\fR
 Defines the client name to identify as to the server.
 .TP
+\fBprotocol=[0|1|2]\fR
+Choose which style of backups and restores to use. 0 (the default) automatically decides based on the server version and which protocol is set on the server side. 1 forces burp1 style (file level granularity with a pseudo mirrored storage on the server and optional rsync). 2 forces burp2 style (inline deduplication with variable length blocks). If you choose a forced setting, it will be an error if the server also chooses a forced setting.
+.TP
 \fBpassword=[password]\fR
 Defines the password to send to the server.
 .TP
@@ -570,6 +576,7 @@ The file name must match the name in the 'cname' field on the client.
 The file needs to contain a line like \fBpassword=[password]\fR that matches the same field on the client, or \fBpasswd=[encrypted password]\fR \- where the plain text password on the client will be tested against an encrypted password of the kind you might find in /etc/passwd.
 .TP
 Additionally, the following options can be overridden here for each client:
+\fBprotocol\fR
 \fBdirectory\fR
 \fBdirectory_tree\fR
 \fBtimestamp_format\fR

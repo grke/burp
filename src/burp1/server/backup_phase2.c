@@ -147,7 +147,7 @@ static int process_changed_file(struct sdirs *sdirs, struct conf *cconf,
 	return 0;
 }
 
-static int new_non_file(struct sbuf *p1b, FILE *ucfp, char cmd, struct conf *cconf)
+static int new_non_file(struct sbuf *p1b, FILE *ucfp, struct conf *cconf)
 {
 	// Is something that does not need more data backed up.
 	// Like a directory or a link or something like that.
@@ -157,7 +157,7 @@ static int new_non_file(struct sbuf *p1b, FILE *ucfp, char cmd, struct conf *cco
 	if(sbufl_to_manifest(p1b, ucfp, NULL))
 		return -1;
 	else
-		cntr_add(cconf->cntr, cmd, 0);
+		cntr_add(cconf->cntr, p1b->path.cmd, 0);
 	sbuf_free_contents(p1b);
 	return 0;
 }
@@ -176,6 +176,7 @@ static int changed_non_file(struct sbuf *p1b, FILE *ucfp, char cmd, struct conf 
 static int process_new(struct sdirs *sdirs, struct conf *cconf,
 	struct sbuf *p1b, FILE *ucfp, struct dpthl *dpthl)
 {
+	if(!p1b->path.buf) return 0;
 	if(filedata(p1b->path.cmd))
 	{
 		//logp("need to process new file: %s\n", p1b->path);
@@ -185,7 +186,7 @@ static int process_new(struct sdirs *sdirs, struct conf *cconf,
 	}
 	else
 	{
-		new_non_file(p1b, ucfp, p1b->path.cmd, cconf);
+		new_non_file(p1b, ucfp, cconf);
 	}
 	return 0;
 }
@@ -223,7 +224,6 @@ static int maybe_process_file(struct sdirs *sdirs, struct conf *cconf,
 	struct dpthl *dpthl)
 {
 	int pcmp;
-//	logp("in maybe_proc %s\n", p1b->path);
 	if(!(pcmp=sbuf_pathcmp(cb, p1b)))
 	{
 		int oldcompressed=0;
@@ -650,12 +650,13 @@ int backup_phase2_server(struct sdirs *sdirs, struct conf *cconf,
 	while(1)
 	{
 		int sts=0;
-	//	logp("in loop, %s %s %c\n",
-	//		*cmanfp?"got cmanfp":"no cmanfp",
-	//		rb->path.buf?:"no rb->path",
-	// 		rb->path.buf?'X':rb->path.cmd);
-		write_status(STATUS_BACKUP,
-			rb->path.buf?rb->path.buf:p1b->path.buf, cconf);
+		//printf("in loop, %s %s %c\n",
+		//	*cmanfp?"got cmanfp":"no cmanfp",
+		//	rb->path.buf?:"no rb->path",
+	 	//	rb->path.buf?'X':rb->path.cmd);
+		if(write_status(STATUS_BACKUP,
+			rb->path.buf?rb->path.buf:p1b->path.buf, cconf))
+				goto error;
 		if((last_requested || !p1zp || writebuflen)
 		  && (ars=do_stuff_to_receive(sdirs, cconf, rb, p2fp, dpthl,
 			&last_requested)))

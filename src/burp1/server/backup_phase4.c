@@ -574,8 +574,8 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct conf *cconf,
 	{
 		if(sb->burp1->datapth.buf)
 		{
-			write_status(STATUS_SHUFFLING,
-				sb->burp1->datapth.buf, cconf);
+			if(write_status(STATUS_SHUFFLING,
+				sb->burp1->datapth.buf, cconf)) goto end;
 
 			if((ret=jiggle(sb, currentdata, datadirtmp,
 				datadir, deltabdir, deltafdir,
@@ -658,7 +658,8 @@ int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf)
 
 	logp("Begin phase4 (shuffle files)\n");
 
-	write_status(STATUS_SHUFFLING, NULL, cconf);
+	if(write_status(STATUS_SHUFFLING, NULL, cconf))
+		goto end;
 
 	if(!lstat(sdirs->current, &statp)) // Had a previous backup
 	{
@@ -754,7 +755,8 @@ int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf)
 		goto end;
 	}
 
-	write_status(STATUS_SHUFFLING, "deleting temporary files", cconf);
+	if(write_status(STATUS_SHUFFLING, "deleting temporary files", cconf))
+		goto end;
 
 	// Remove the temporary data directory, we have now removed
 	// everything useful from it.
@@ -772,7 +774,8 @@ int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf)
 	// Rename the old current to something that we know to delete.
 	if(previous_backup)
 	{
-		if(deleteme_move(sdirs->client, fullrealcurrent, realcurrent, cconf)
+		if(deleteme_move(sdirs->client,
+			fullrealcurrent, realcurrent, cconf)
 		  || do_rename(currentdup, fullrealcurrent))
 			goto end;
 	}
@@ -780,12 +783,12 @@ int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf)
 	if(deleteme_maybe_delete(cconf, sdirs->client))
 		goto end;
 
-	print_stats_to_file(cconf, sdirs->finishing, ACTION_BACKUP);
+	cntr_stats_to_file(cconf->cntr, sdirs->finishing, ACTION_BACKUP);
 
 	// Rename the finishing symlink so that it becomes the current symlink
 	do_rename(sdirs->finishing, sdirs->current);
 
-	cntr_print(cconf, ACTION_BACKUP);
+	cntr_print(cconf->cntr, ACTION_BACKUP);
 	logp("Backup completed.\n");
 	logp("End phase4 (shuffle files)\n");
 	set_logfp(NULL, cconf); // will close logfp.

@@ -4,7 +4,7 @@ static int restore_sbuf(struct sbuf *sb, enum action act,
 	char status, struct conf *conf, int *need_data)
 {
 	//logp("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path.buf);
-	write_status(status, sb->path.buf, conf);
+	if(write_status(status, sb->path.buf, conf)) return -1;
 
 	switch(sb->path.cmd)
 	{
@@ -524,7 +524,7 @@ static int do_restore_manifest(const char *datadir,
 	ret=do_restore_end(conf);
 
 	cntr_print_end(conf->cntr);
-	cntr_print(conf, act);
+	cntr_print(conf->cntr, act);
 
 	ret=0;
 end:

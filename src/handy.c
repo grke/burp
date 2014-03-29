@@ -473,15 +473,17 @@ void reuseaddr(int fd)
 
 #ifndef HAVE_WIN32
 
-void write_status(char phase, const char *path, struct conf *conf)
+int write_status(char phase, const char *path, struct conf *conf)
 {
 	char *w=NULL;
 	time_t now=0;
 	time_t diff=0;
-	static char wbuf[1024]="";
+	size_t l=0;
+	size_t wl=0;
 	static time_t lasttime=0;
+return 0;
 
-	if(!conf->cname) return;
+	if(status_wfd<0) goto error;
 
 	// Only update every 2 seconds.
 	now=time(NULL);
@@ -491,26 +493,28 @@ void write_status(char phase, const char *path, struct conf *conf)
 		// Might as well do this in case they fiddled their
 		// clock back in time.
 		if(diff<0) lasttime=now;
-		return;
+		return 0;
 	}
 	lasttime=now;
 
-	cntr_to_str(wbuf, sizeof(wbuf), phase, path, conf);
+	// if(!(l=cntr_to_str(conf->cntr, &phase, path))) goto error;
 
-	if(status_wfd<0) return;
-
-	w=wbuf;
-	while(*w)
+	w=conf->cntr->status;
+	while(l>=0)
 	{
-		size_t wl=0;
-		if((wl=write(status_wfd, w, strlen(w)))<0)
+		if((wl=write(status_wfd, w, l))<0)
 		{
-			logp("error writing status down pipe to server: %s\n", strerror(errno));
-			close_fd(&status_wfd);
-			break;
+			logp("error writing status down pipe to server: %s\n",
+				strerror(errno));
+			goto error;
 		}
-		w+=wl;
+		l-=wl;
 	}
+
+	return 0;
+error:
+	close_fd(&status_wfd);
+	return -1;
 }
 
 #endif
@@ -860,11 +864,11 @@ int receive_a_file(const char *path, struct conf *conf)
 
 #ifdef HAVE_WIN32
 	ret=transfer_gzfile_in(path, &bfd, NULL,
-		&rcvdbytes, &sentbytes, conf->p1cntr);
+		&rcvdbytes, &sentbytes, conf->cntr);
 	c=bclose(&bfd);
 #else
 	ret=transfer_gzfile_in(path, NULL, fp,
-		&rcvdbytes, &sentbytes, conf->p1cntr);
+		&rcvdbytes, &sentbytes, conf->cntr);
 	c=close_fp(&fp);
 #endif
 end:

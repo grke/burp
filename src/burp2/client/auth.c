@@ -51,7 +51,7 @@ int authorise_client(struct conf *conf, char **server_version)
 	{
 		//logw(conf->p1cntr, rbuf->buf);
 		logp("WARNING: %s\n", rbuf->buf);
-		conf->p1cntr->warning++;
+		cntr_add(conf->cntr, rbuf->cmd, 0);
 		iobuf_free_content(rbuf);
 		if(async_read(rbuf))
 		{

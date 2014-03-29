@@ -959,12 +959,12 @@ int do_backup_server(struct sdirs *sdirs, struct conf *cconf,
 	// we can do by ourselves.
 	async_free();
 
-	print_stats_to_file(cconf, sdirs->working, ACTION_BACKUP);
+	cntr_stats_to_file(cconf->cntr, sdirs->working, ACTION_BACKUP);
 
 	// Move the symlink to indicate that we are now finished.
 	if(do_rename(sdirs->working, sdirs->current)) goto error;
 
-	cntr_print(cconf, ACTION_BACKUP);
+	cntr_print(cconf->cntr, ACTION_BACKUP);
 
 	logp("Backup completed.\n");
 

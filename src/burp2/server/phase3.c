@@ -170,8 +170,8 @@ static int gzprintf_hooks(gzFile tzp, struct hooks *hooks)
 	static char ftmp[16+1];
 	size_t len=strlen(hooks->fingerprints);
 
-	printf("NW: %c%04lX%s\n", CMD_MANIFEST,
-		strlen(hooks->path), hooks->path);
+//	printf("NW: %c%04lX%s\n", CMD_MANIFEST,
+//		strlen(hooks->path), hooks->path);
 	gzprintf(tzp, "%c%04lX%s\n", CMD_MANIFEST,
 		strlen(hooks->path), hooks->path);
 	for(f=hooks->fingerprints; f<hooks->fingerprints+len; f+=16)

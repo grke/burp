@@ -263,7 +263,8 @@ static int entry_changed(struct sbuf *sb, struct manio *cmanio, struct manio *un
 	return 0;
 }
 
-static int add_data_to_store(struct blist *blist, struct iobuf *rbuf, struct dpth *dpth)
+static int add_data_to_store(struct conf *conf,
+	struct blist *blist, struct iobuf *rbuf, struct dpth *dpth)
 {
 	static struct blk *blk=NULL;
 
@@ -289,6 +290,9 @@ static int add_data_to_store(struct blist *blist, struct iobuf *rbuf, struct dpt
 
 	// Add it to the data store straight away.
 	if(dpth_fwrite(dpth, rbuf, blk)) return -1;
+
+	cntr_add(conf->cntr, CMD_DATA, 0);
+	cntr_add_recvbytes(conf->cntr, blk->length);
 
 	blk->got=GOT;
 	blk=blk->next;
@@ -382,7 +386,8 @@ static int deal_with_read(struct iobuf *rbuf,
 	{
 		/* Incoming block data. */
 		case CMD_DATA:
-			if(add_data_to_store(blist, rbuf, dpth)) goto error;
+			if(add_data_to_store(conf, blist, rbuf, dpth))
+				goto error;
 			goto end;
 
 		/* Incoming block signatures. */
@@ -411,13 +416,13 @@ static int deal_with_read(struct iobuf *rbuf,
 		case CMD_GEN:
 			if(!strcmp(rbuf->buf, "sigs_end"))
 			{
-printf("SIGS END\n");
+//printf("SIGS END\n");
 				*sigs_end=1;
 				goto end;
 			}
 			else if(!strcmp(rbuf->buf, "backup_end"))
 			{
-printf("BACKUP END\n");
+//printf("BACKUP END\n");
 				*backup_end=1;
 				goto end;
 			}
@@ -587,8 +592,8 @@ static int write_to_changed_file(struct manio *chmanio, struct slist *slist, str
 						// file. Want to start using
 						// it as a dedup candidate
 						// now.
-						printf("START USING: %s\n",
-							chmanio->fpath);
+						//printf("START USING: %s\n",
+						//	chmanio->fpath);
 						if(add_fresh_candidate(
 							chmanio->fpath,
 							conf)) return -1;

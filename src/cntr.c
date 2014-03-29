@@ -115,6 +115,8 @@ int cntr_init(struct cntr *cntr, const char *cname)
 	  || add_cntr_ent(cntr, CNTR_VER_4|CNTR_TABULATE,
 		CMD_EFS_FILE, "efs_files", "EFS files")
 	  || add_cntr_ent(cntr, CNTR_VER_4|CNTR_TABULATE,
+		CMD_DATA, "blocks", "Blocks")
+	  || add_cntr_ent(cntr, CNTR_VER_4|CNTR_TABULATE,
 		CMD_ERROR, "errors", "Errors")
 	  || add_cntr_ent(cntr, CNTR_VER_ALL,
 		CMD_TOTAL, "total", "Total")
@@ -211,29 +213,49 @@ static void incr_count_val(struct cntr *cntr, char ch, unsigned long long val)
 	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->count+=val;
 }
 
+static void incr_same_val(struct cntr *cntr, char ch, unsigned long long val)
+{
+	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->same+=val;
+}
+
+static void incr_changed_val(struct cntr *cntr, char ch, unsigned long long val)
+{
+	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->changed+=val;
+}
+
+static void incr_deleted_val(struct cntr *cntr, char ch, unsigned long long val)
+{
+	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->deleted+=val;
+}
+
+static void incr_phase1_val(struct cntr *cntr, char ch, unsigned long long val)
+{
+	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->phase1+=val;
+}
+
 static void incr_count(struct cntr *cntr, char ch)
 {
 	return incr_count_val(cntr, ch, 1);
 }
 
-static void incr_changed(struct cntr *cntr, char ch)
-{
-	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->changed++;
-}
-
 static void incr_same(struct cntr *cntr, char ch)
 {
-	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->same++;
+	return incr_same_val(cntr, ch, 1);
+}
+
+static void incr_changed(struct cntr *cntr, char ch)
+{
+	return incr_changed_val(cntr, ch, 1);
 }
 
 static void incr_deleted(struct cntr *cntr, char ch)
 {
-	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->deleted++;
+	return incr_deleted_val(cntr, ch, 1);
 }
 
 static void incr_phase1(struct cntr *cntr, char ch)
 {
-	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->phase1++;
+	return incr_phase1_val(cntr, ch, 1);
 }
 
 static void print_end(unsigned long long val)
@@ -304,11 +326,25 @@ void cntr_add_same(struct cntr *c, char ch)
 	incr_same(c, CMD_GRAND_TOTAL);
 }
 
+void cntr_add_same_val(struct cntr *c, char ch, unsigned long long val)
+{
+	incr_same_val(c, ch, val);
+	incr_same_val(c, CMD_TOTAL, val);
+	incr_same_val(c, CMD_GRAND_TOTAL, val);
+}
+
 void cntr_add_changed(struct cntr *c, char ch)
 {
 	incr_changed(c, ch);
 	incr_changed(c, CMD_TOTAL);
 	incr_changed(c, CMD_GRAND_TOTAL);
+}
+
+void cntr_add_changed_val(struct cntr *c, char ch, unsigned long long val)
+{
+	incr_changed_val(c, ch, val);
+	incr_changed_val(c, CMD_TOTAL, val);
+	incr_changed_val(c, CMD_GRAND_TOTAL, val);
 }
 
 void cntr_add_deleted(struct cntr *c, char ch)

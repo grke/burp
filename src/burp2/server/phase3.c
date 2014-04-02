@@ -145,14 +145,14 @@ static int get_next_set_of_hooks(struct hooks **hnew, struct sbuf *sb, gzFile sp
 			if(*path) free(*path);
 			*path=sb->path.buf;
 			sb->path.buf=NULL;
-			sbuf_free_contents(sb);
+			sbuf_free_content(sb);
 			if(*hnew) return 0;
 		}
 		else if(sb->path.cmd==CMD_FINGERPRINT)
 		{
 			if(astrcat(fingerprints, sb->path.buf))
 				break;
-			sbuf_free_contents(sb);
+			sbuf_free_content(sb);
 		}
 		else
 		{

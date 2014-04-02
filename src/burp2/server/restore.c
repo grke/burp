@@ -265,7 +265,7 @@ static int maybe_copy_data_files_across(const char *manifest,
 			break; // Finished OK.
 		if(!*blk->save_path)
 		{
-			sbuf_free_contents(sb);
+			sbuf_free_content(sb);
 			continue;
 		}
 
@@ -290,7 +290,7 @@ static int maybe_copy_data_files_across(const char *manifest,
 			}
 		}
 
-		sbuf_free_contents(sb);
+		sbuf_free_content(sb);
 	}
 
 	estimate_blks=blkcount*RABIN_AVG;
@@ -388,7 +388,7 @@ static int maybe_copy_data_files_across(const char *manifest,
 					goto end;
 		}
 
-		sbuf_free_contents(sb);
+		sbuf_free_content(sb);
 	}
 
 	ret=1;
@@ -516,7 +516,7 @@ static int restore_stream(const char *datadir, struct slist *slist,
 					goto end;
 		}
 
-		sbuf_free_contents(sb);
+		sbuf_free_content(sb);
 	}
 
 	ret=0;

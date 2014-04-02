@@ -44,3 +44,5 @@ roughly in order of most important to least.
 
 * Check notifications work (warnings are turned off because of conf/cntr init
   problem.
+
+* Is settings includes on the server side working?

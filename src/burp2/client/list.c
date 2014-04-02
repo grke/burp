@@ -279,7 +279,8 @@ int do_list_client(struct conf *conf, enum action act, int json)
 	// This should probably should use the sbuf stuff.
 	while(1)
 	{
-		iobuf_free_content(&sb->attr);
+		sbuf_free_content(sb);
+
 		if(async_read(&sb->attr)) break;
 		if(sb->attr.cmd==CMD_TIMESTAMP)
 		{
@@ -305,7 +306,6 @@ int do_list_client(struct conf *conf, enum action act, int json)
 
 		attribs_decode(sb);
 
-		iobuf_free_content(&sb->path);
 		if(async_read(&sb->path))
 		{
 			logp("got stat without an object\n");
@@ -321,7 +321,6 @@ int do_list_client(struct conf *conf, enum action act, int json)
 		}
 		else if(cmd_is_link(sb->path.cmd)) // symlink or hardlink
 		{
-			iobuf_free_content(&sb->link);
 			if(async_read(&sb->link)
 			  || sb->link.cmd!=sb->path.cmd)
 			{

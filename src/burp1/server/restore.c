@@ -600,7 +600,7 @@ static int setup_cntr(const char *manifest, regex_t *regex, int srestore,
 							NULL, 10), 0);
 			}
 		}
-		sbuf_free_contents(sb);
+		sbuf_free_content(sb);
 	}
 	ret=0;
 end:
@@ -681,7 +681,7 @@ static int actual_restore(struct bu *arr, int a, int i,
 				act, status, cconf))
 					goto end;
 		}
-		sbuf_free_contents(sb);
+		sbuf_free_content(sb);
 	}
 	// Restore any directories that are left in the list.
 	if(!ret) for(s=scount-1; s>=0; s--)

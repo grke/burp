@@ -790,7 +790,7 @@ int do_restore_client(struct conf *conf, enum action act, int vss_restore)
 				logp("unknown cmd: %c\n", sb->path.cmd);
 				goto end;
 		}
-		sbuf_free_contents(sb);
+		sbuf_free_content(sb);
 	}
 
 	ret=0;

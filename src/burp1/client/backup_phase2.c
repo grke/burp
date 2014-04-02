@@ -293,7 +293,7 @@ error:
 #else
 	close_file_for_sendl(NULL, &fp);
 #endif
-	sbuf_free_contents(sb);
+	sbuf_free_content(sb);
 	if(extrameta) free(extrameta);
 	return ret;
 }

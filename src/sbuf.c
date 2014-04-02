@@ -34,7 +34,7 @@ alloc_count++;
 	return sb;
 }
 
-static void burp1_free_contents(struct burp1 *burp1)
+static void burp1_free_content(struct burp1 *burp1)
 {
 	memset(&(burp1->rsbuf), 0, sizeof(burp1->rsbuf));
 	if(burp1->sigjob) { rs_job_free(burp1->sigjob); burp1->sigjob=NULL; }
@@ -50,12 +50,12 @@ static void burp1_free_contents(struct burp1 *burp1)
 	burp1->endfile.cmd=CMD_END_FILE;
 }
 
-static void burp2_free_contents(struct burp2 *burp2)
+static void burp2_free_content(struct burp2 *burp2)
 {
 	return;
 }
 
-void sbuf_free_contents(struct sbuf *sb)
+void sbuf_free_content(struct sbuf *sb)
 {
 	iobuf_free_content(&sb->path);
 	iobuf_free_content(&sb->attr);
@@ -64,14 +64,14 @@ void sbuf_free_contents(struct sbuf *sb)
 	sb->compression=-1;
 	sb->winattr=0;
 	sb->flags=0;
-	if(sb->burp1) burp1_free_contents(sb->burp1);
-	if(sb->burp2) burp2_free_contents(sb->burp2);
+	if(sb->burp1) burp1_free_content(sb->burp1);
+	if(sb->burp2) burp2_free_content(sb->burp2);
 }
 
 void sbuf_free(struct sbuf *sb)
 {
 	if(!sb) return;
-	sbuf_free_contents(sb);
+	sbuf_free_content(sb);
 	if(sb->burp1) { free(sb->burp1); sb->burp1=NULL; }
 	if(sb->burp2) { free(sb->burp2); sb->burp2=NULL; }
 	free(sb);

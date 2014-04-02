@@ -10,7 +10,7 @@ static int read_phase1(gzFile zp, struct conf *conf)
 	if(!(p1b=sbuf_alloc(conf))) return -1;
 	while(1)
 	{
-		sbuf_free_contents(p1b);
+		sbuf_free_content(p1b);
 		if((ars=sbufl_fill_phase1(NULL, zp, p1b, conf->cntr)))
 		{
 			// ars==1 means it ended ok.
@@ -58,7 +58,7 @@ static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
 			goto error;
 		}
 
-		sbuf_free_contents(sb);
+		sbuf_free_content(sb);
 
 		if(isphase1)
 			ars=sbufl_fill_phase1(fp, zp, sb, cconf->cntr);
@@ -125,7 +125,7 @@ static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
 	}
 
 error:
-	sbuf_free_contents(sb);
+	sbuf_free_content(sb);
 	return -1;
 }
 

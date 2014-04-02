@@ -82,7 +82,7 @@ struct slist
 };
 
 extern struct sbuf *sbuf_alloc(struct conf *conf);
-extern void sbuf_free_contents(struct sbuf *sb);
+extern void sbuf_free_content(struct sbuf *sb);
 extern void sbuf_free(struct sbuf *sb);
 
 extern struct slist *slist_alloc(void);

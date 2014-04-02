@@ -616,7 +616,7 @@ int do_restore_client_burp1(struct conf *conf, enum action act, int vss_restore)
 	{
 		char *fullpath=NULL;
 
-		sbuf_free_contents(sb);
+		sbuf_free_content(sb);
 		if((ars=sbufl_fill(NULL, NULL, sb, conf->cntr)))
 		{
 			if(ars<0) goto end;

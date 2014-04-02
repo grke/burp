@@ -158,7 +158,7 @@ static int new_non_file(struct sbuf *p1b, FILE *ucfp, struct conf *cconf)
 		return -1;
 	else
 		cntr_add(cconf->cntr, p1b->path.cmd, 0);
-	sbuf_free_contents(p1b);
+	sbuf_free_content(p1b);
 	return 0;
 }
 
@@ -169,7 +169,7 @@ static int changed_non_file(struct sbuf *p1b, FILE *ucfp, char cmd, struct conf 
 		return -1;
 	else
 		cntr_add_changed(cconf->cntr, cmd);
-	sbuf_free_contents(p1b);
+	sbuf_free_content(p1b);
 	return 0;
 }
 
@@ -195,7 +195,7 @@ static int process_unchanged_file(struct sbuf *cb, FILE *ucfp, struct conf *ccon
 {
 	if(sbufl_to_manifest(cb, ucfp, NULL))
 	{
-		sbuf_free_contents(cb);
+		sbuf_free_content(cb);
 		return -1;
 	}
 	else
@@ -204,7 +204,7 @@ static int process_unchanged_file(struct sbuf *cb, FILE *ucfp, struct conf *ccon
 	}
 	if(cb->burp1->endfile.buf) cntr_add_bytes(cconf->cntr,
 		 strtoull(cb->burp1->endfile.buf, NULL, 10));
-	sbuf_free_contents(cb);
+	sbuf_free_content(cb);
 	return 1;
 }
 
@@ -214,7 +214,7 @@ static int process_new_file(struct sdirs *sdirs, struct conf *cconf,
 {
 	if(process_new(sdirs, cconf, p1b, ucfp, dpthl))
 		return -1;
-	sbuf_free_contents(cb);
+	sbuf_free_content(cb);
 	return 1;
 }
 
@@ -324,7 +324,7 @@ static int maybe_process_file(struct sdirs *sdirs, struct conf *cconf,
 			if(changed_non_file(p1b, ucfp, p1b->path.cmd, cconf))
 				return -1;
 		}
-		sbuf_free_contents(cb);
+		sbuf_free_content(cb);
 		return 1;
 	}
 	else if(pcmp>0)
@@ -528,7 +528,7 @@ static int do_stuff_to_receive(struct sdirs *sdirs, struct conf *cconf,
 						// checksum stuff goes here
 				}
 
-				sbuf_free_contents(rb);
+				sbuf_free_content(rb);
 			}
 			else
 			{
@@ -671,7 +671,7 @@ int backup_phase2_server(struct sdirs *sdirs, struct conf *cconf,
 
 		if(!sts && p1zp)
 		{
-		   sbuf_free_contents(p1b);
+		   sbuf_free_content(p1b);
 
 		   if((ars=sbufl_fill_phase1(NULL, p1zp, p1b, cconf->cntr)))
 		   {
@@ -712,7 +712,7 @@ int backup_phase2_server(struct sdirs *sdirs, struct conf *cconf,
 
 			while(*cmanfp)
 			{
-				sbuf_free_contents(cb);
+				sbuf_free_content(cb);
 				if((ars=sbufl_fill(NULL,
 					*cmanfp, cb, cconf->cntr)))
 				{

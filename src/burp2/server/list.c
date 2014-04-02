@@ -117,7 +117,7 @@ static int list_manifest(const char *fullpath, regex_t *regex,
 				goto error;
 		}
 
-		sbuf_free_contents(sb);
+		sbuf_free_content(sb);
 	}
 
 error:

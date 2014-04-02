@@ -463,11 +463,11 @@ static int maybe_delete_files_from_manifest(const char *manifest, const char *de
 		if(mb->path.buf && !db->path.buf)
 		{
 			if(sbufl_to_manifest(mb, NULL, nmzp)) goto end;
-			sbuf_free_contents(mb);
+			sbuf_free_content(mb);
 		}
 		else if(!mb->path.buf && db->path.buf)
 		{
-			sbuf_free_contents(db);
+			sbuf_free_content(db);
 		}
 		else if(!mb->path.buf && !db->path.buf) 
 		{
@@ -476,19 +476,19 @@ static int maybe_delete_files_from_manifest(const char *manifest, const char *de
 		else if(!(pcmp=sbuf_pathcmp(mb, db)))
 		{
 			// They were the same - do not write.
-			sbuf_free_contents(mb);
-			sbuf_free_contents(db);
+			sbuf_free_content(mb);
+			sbuf_free_content(db);
 		}
 		else if(pcmp<0)
 		{
 			// Behind in manifest. Write.
 			if(sbufl_to_manifest(mb, NULL, nmzp)) goto end;
-			sbuf_free_contents(mb);
+			sbuf_free_content(mb);
 		}
 		else
 		{
 			// Behind in deletions file. Do not write.
-			sbuf_free_contents(db);
+			sbuf_free_content(db);
 		}
 	}
 
@@ -583,7 +583,7 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct conf *cconf,
 				hardlinked, cconf)))
 					goto end;
 		}
-		sbuf_free_contents(sb);
+		sbuf_free_content(sb);
 	}
 	if(ars<0) goto end;
 

@@ -237,7 +237,7 @@ int champ_chooser_init(const char *datadir, struct conf *conf)
 			iobuf_log_unexpected(&sb->path, __FUNCTION__);
 			goto end;
 		}
-		sbuf_free_contents(sb);
+		sbuf_free_content(sb);
 	}
 
 	if(scores_grow(scores, candidates_len)) goto end;

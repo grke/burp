@@ -52,13 +52,13 @@ int backup_phase3_server(struct sdirs *sdirs, struct conf *cconf,
 		{
 			if(write_status(STATUS_MERGING, ucb->path.buf, cconf)
 			  || sbufl_to_manifest(ucb, mp, mzp)) goto end;
-			sbuf_free_contents(ucb);
+			sbuf_free_content(ucb);
 		}
 		else if(!ucb->path.buf && p2b->path.buf)
 		{
 			if(write_status(STATUS_MERGING, p2b->path.buf, cconf)
 			  || sbufl_to_manifest(p2b, mp, mzp)) goto end;
-			sbuf_free_contents(p2b);
+			sbuf_free_content(p2b);
 		}
 		else if(!ucb->path.buf && !p2b->path.buf) 
 		{
@@ -69,20 +69,20 @@ int backup_phase3_server(struct sdirs *sdirs, struct conf *cconf,
 			// They were the same - write one and free both.
 			if(write_status(STATUS_MERGING, p2b->path.buf, cconf)
 			  || sbufl_to_manifest(p2b, mp, mzp)) goto end;
-			sbuf_free_contents(ucb);
-			sbuf_free_contents(p2b);
+			sbuf_free_content(ucb);
+			sbuf_free_content(p2b);
 		}
 		else if(pcmp<0)
 		{
 			if(write_status(STATUS_MERGING, ucb->path.buf, cconf)
 			  || sbufl_to_manifest(ucb, mp, mzp)) goto end;
-			sbuf_free_contents(ucb);
+			sbuf_free_content(ucb);
 		}
 		else
 		{
 			if(write_status(STATUS_MERGING, p2b->path.buf, cconf)
 			  || sbufl_to_manifest(p2b, mp, mzp)) goto end;
-			sbuf_free_contents(p2b);
+			sbuf_free_content(p2b);
 		}
 	}
 

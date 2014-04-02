@@ -104,6 +104,7 @@ static int open_for_restore(
 	int vss_restore,
 	struct conf *conf)
 {
+	static int flags;
 	bclose(bfd);
 	binit(bfd, sb->winattr, conf);
 #ifdef HAVE_WIN32
@@ -112,8 +113,16 @@ static int open_for_restore(
 	else
 		bfd->use_backup_api=0;
 #endif
-	if(bopen(bfd, path, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,
-		S_IRUSR | S_IWUSR)<=0)
+	if(S_ISDIR(sb->statp.st_mode))
+	{
+		// Windows directories are treated as having file data.
+		flags=O_WRONLY|O_BINARY;
+		mkdir(path, 0777);
+	}
+	else
+		flags=O_WRONLY|O_BINARY|O_CREAT|O_TRUNC;
+
+	if(bopen(bfd, path, flags, S_IRUSR | S_IWUSR)<=0)
 	{
 		berrno be;
 		char msg[256]="";
@@ -639,7 +648,7 @@ int do_restore_client(struct conf *conf, enum action act, int vss_restore)
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
-			logp("got %s end\n", act_str(act));
+			//logp("got %s end\n", act_str(act));
 			if(async_write_str(CMD_GEN, "ok_restore_end"))
 				goto end;
 			break;

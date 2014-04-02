@@ -155,11 +155,13 @@ int backup_phase1_client(struct conf *conf, long name_max, int estimate)
 		filesymbol=CMD_ENC_FILE;
 		metasymbol=CMD_ENC_METADATA;
 #ifdef HAVE_WIN32
-		dirsymbol=filesymbol;
 		metasymbol=CMD_ENC_VSS;
 		vss_trail_symbol=CMD_ENC_VSS_T;
 #endif
 	}
+#ifdef HAVE_WIN32
+	dirsymbol=filesymbol;
+#endif
 
 	if(!(ff=find_files_init())) goto end;
 	server_name_max=name_max;

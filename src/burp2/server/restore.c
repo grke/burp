@@ -6,6 +6,31 @@ static int restore_sbuf(struct sbuf *sb, enum action act,
 	//logp("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path.buf);
 	if(write_status(status, sb->path.buf, conf)) return -1;
 
+	if(async_write(&sb->attr)
+	  || async_write(&sb->path))
+		return -1;
+	if(sbuf_is_link(sb)
+	  && async_write(&sb->link))
+		return -1;
+
+	if(sb->burp2->bstart)
+	{
+		// This will restore directory data on Windows.
+		struct blk *b=NULL;
+		struct blk *n=NULL;
+		b=sb->burp2->bstart;
+		while(b)
+		{
+			struct iobuf wbuf;
+			iobuf_set(&wbuf, CMD_DATA, b->data, b->length);
+			if(async_write(&wbuf)) return -1;
+			n=b->next;
+			blk_free(b);
+			b=n;
+		}
+		sb->burp2->bstart=sb->burp2->bend=NULL;
+	}
+
 	switch(sb->path.cmd)
 	{
 		case CMD_FILE:
@@ -13,22 +38,9 @@ static int restore_sbuf(struct sbuf *sb, enum action act,
 		case CMD_METADATA:
 		case CMD_ENC_METADATA:
 		case CMD_EFS_FILE:
-			if(async_write(&sb->attr)
-			  || async_write(&sb->path))
-				return -1;
 			*need_data=1;
 			return 0;
 		default:
-			if(async_write(&sb->attr)
-			  || async_write(&sb->path))
-				return -1;
-			// If it is a link, send what
-			// it points to.
-			else if(sbuf_is_link(sb))
-			{
-				if(async_write(&sb->link))
-					return -1;
-			}
 			cntr_add(conf->cntr, sb->path.cmd, 0);
 			return 0;
 	}
@@ -57,7 +69,8 @@ static int restore_ent(struct sbuf **sb,
 	enum action act,
 	char status,
 	struct conf *conf,
-	int *need_data)
+	int *need_data,
+	int *last_ent_was_dir)
 {
 	int ret=-1;
 	struct sbuf *xb;
@@ -79,6 +92,7 @@ static int restore_ent(struct sbuf **sb,
 		}
 		else
 		{
+//printf("do dir: %s\n", xb->path.buf);
 			// Can now restore because nothing else is
 			// fiddling in a subdirectory.
 			if(restore_sbuf(xb, act, status,
@@ -97,18 +111,21 @@ static int restore_ent(struct sbuf **sb,
 	// that goes with directories.
 	if(S_ISDIR((*sb)->statp.st_mode))
 	{
+//printf("add to head: %s\n", (*sb)->path.buf);
 		// Add to the head of the list instead of the tail.
 		(*sb)->next=slist->head;
 		slist->head=*sb;
+
+		*last_ent_was_dir=1;
 
 		// Allocate a new sb.
 		if(!(*sb=sbuf_alloc(conf))) goto end;
 	}
 	else
 	{
-		if(restore_sbuf(*sb, act, status, conf,
-			need_data))
-				goto end;
+		*last_ent_was_dir=0;
+		if(restore_sbuf(*sb, act, status, conf, need_data))
+			goto end;
 	}
 	ret=0;
 end:
@@ -193,6 +210,7 @@ static int restore_remaining_dirs(struct slist *slist, enum action act,
 	// Restore any directories that are left in the list.
 	for(sb=slist->head; sb; sb=sb->next)
 	{
+//printf("remaining dir: %s\n", sb->path.buf);
 		if(restore_sbuf(sb, act, status, conf, need_data))
 			return -1;
 	}
@@ -222,6 +240,7 @@ static int maybe_copy_data_files_across(const char *manifest,
 	uint64_t estimate_dats;
 	uint64_t estimate_one_dat;
 	int need_data=0;
+	int last_ent_was_dir=0;
 	char sig[128]="";
 
 	// If the client has no restore_spool directory, we have to fall back
@@ -364,8 +383,8 @@ static int maybe_copy_data_files_across(const char *manifest,
 		if((!srestore || check_srestore(conf, sb->path.buf))
 		  && check_regex(regex, sb->path.buf))
 		{
-			if(restore_ent(&sb, slist,
-				act, status, conf, &need_data))
+			if(restore_ent(&sb, slist, act, status, conf,
+				&need_data, &last_ent_was_dir))
 					goto end;
 		}
 
@@ -388,6 +407,7 @@ static int restore_stream(const char *datadir, struct slist *slist,
 	int ars;
 	int ret=-1;
 	int need_data=0;
+	int last_ent_was_dir=0;
 	struct sbuf *sb=NULL;
 	struct blk *blk=NULL;
 	struct dpth *dpth=NULL;
@@ -443,8 +463,7 @@ static int restore_stream(const char *datadir, struct slist *slist,
 		}
 */
 
-		if((ars=manio_sbuf_fill(manio, sb,
-			need_data?blk:NULL, dpth, conf))<0)
+		if((ars=manio_sbuf_fill(manio, sb, blk, dpth, conf))<0)
 		{
 			logp("Error from manio_sbuf_fill() in %s\n",
 				__FUNCTION__);
@@ -455,10 +474,34 @@ static int restore_stream(const char *datadir, struct slist *slist,
 
 		if(blk->data)
 		{
-			wbuf.cmd=CMD_DATA;
-			wbuf.buf=blk->data;
-			wbuf.len=blk->length;
-			if(async_write(&wbuf)) return -1;
+			if(need_data)
+			{
+				iobuf_set(&wbuf,
+					CMD_DATA, blk->data, blk->length);
+				if(async_write(&wbuf)) return -1;
+			}
+			else if(last_ent_was_dir)
+			{
+				struct sbuf *xb=slist->head;
+				if(!xb->burp2->bstart)
+					xb->burp2->bstart=xb->burp2->bend=blk;
+				else
+				{
+					xb->burp2->bend->next=blk;
+					xb->burp2->bend=blk;
+				}
+	  			if(!(blk=blk_alloc())) goto end;
+				continue;
+			}
+			else
+			{
+				char msg[256]="";
+				snprintf(msg, sizeof(msg),
+				  "Unexpected signature in manifest: %s%s%s",
+					blk->weak, blk->strong, blk->save_path);
+				logw(conf, msg);
+			}
+			free(blk->data);
 			blk->data=NULL;
 			continue;
 		}
@@ -468,8 +511,8 @@ static int restore_stream(const char *datadir, struct slist *slist,
 		if((!srestore || check_srestore(conf, sb->path.buf))
 		  && check_regex(regex, sb->path.buf))
 		{
-			if(restore_ent(&sb, slist,
-				act, status, conf, &need_data))
+			if(restore_ent(&sb, slist, act, status, conf,
+				&need_data, &last_ent_was_dir))
 					goto end;
 		}
 

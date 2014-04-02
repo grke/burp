@@ -117,7 +117,8 @@ static int open_next_fpath(struct manio *manio)
 }
 
 // Return -1 for error, 0 for stuff read OK, 1 for end of files.
-int manio_sbuf_fill(struct manio *manio, struct sbuf *sb, struct blk *blk, struct dpth *dpth, struct conf *conf)
+int manio_sbuf_fill(struct manio *manio, struct sbuf *sb, struct blk *blk,
+	struct dpth *dpth, struct conf *conf)
 {
 	int ars;
 

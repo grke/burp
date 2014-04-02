@@ -12,11 +12,16 @@ struct iobuf *iobuf_alloc(void)
 	return iobuf;
 }
 
+void iobuf_set(struct iobuf *iobuf, char cmd, char *buf, size_t len)
+{
+	iobuf->cmd=cmd;
+	iobuf->buf=buf;
+	iobuf->len=len;
+}
+
 void iobuf_init(struct iobuf *iobuf)
 {
-	iobuf->cmd=CMD_ERROR;
-	iobuf->buf=NULL;
-	iobuf->len=0;
+	iobuf_set(iobuf, CMD_ERROR, NULL, 0);
 }
 
 void iobuf_free_content(struct iobuf *iobuf)
@@ -51,16 +56,12 @@ void iobuf_log_unexpected(struct iobuf *iobuf, const char *func)
 
 void iobuf_copy(struct iobuf *dst, struct iobuf *src)
 {
-	dst->cmd=src->cmd;
-	dst->buf=src->buf;
-	dst->len=src->len;
+	iobuf_set(dst, src->cmd, src->buf, src->len);
 }
 
 void iobuf_from_str(struct iobuf *iobuf, char cmd, char *str)
 {
-	iobuf->cmd=cmd;
-	iobuf->buf=str;
-	iobuf->len=strlen(str);
+	iobuf_set(iobuf, cmd, str, strlen(str));
 }
 
 int iobuf_send_msg_fp(struct iobuf *iobuf, FILE *fp)

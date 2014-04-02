@@ -482,15 +482,24 @@ static int restore_stream(const char *datadir, struct slist *slist,
 			}
 			else if(last_ent_was_dir)
 			{
-				struct sbuf *xb=slist->head;
+				// Careful, blk is not allocating blk->data
+				// and the data there can get changed if we
+				// try to keep it for later. So, need to
+				// allocate new space and copy the bytes.
+				struct blk *nblk;
+				struct sbuf *xb;
+	  			if(!(nblk=blk_alloc_with_data(blk->length)))
+					goto end;
+				nblk->length=blk->length;
+				memcpy(nblk->data, blk->data, blk->length);
+				xb=slist->head;
 				if(!xb->burp2->bstart)
-					xb->burp2->bstart=xb->burp2->bend=blk;
+					xb->burp2->bstart=xb->burp2->bend=nblk;
 				else
 				{
-					xb->burp2->bend->next=blk;
-					xb->burp2->bend=blk;
+					xb->burp2->bend->next=nblk;
+					xb->burp2->bend=nblk;
 				}
-	  			if(!(blk=blk_alloc())) goto end;
 				continue;
 			}
 			else
@@ -501,7 +510,6 @@ static int restore_stream(const char *datadir, struct slist *slist,
 					blk->weak, blk->strong, blk->save_path);
 				logw(conf, msg);
 			}
-			free(blk->data);
 			blk->data=NULL;
 			continue;
 		}

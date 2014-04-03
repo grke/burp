@@ -1,8 +1,5 @@
 #include "include.h"
 
-static char sort_blk[SIG_MAX][16+1];
-static int sort_ind=0;
-
 static int write_header(gzFile spzp, const char *fpath, struct conf *conf)
 {
 	const char *cp;
@@ -12,21 +9,25 @@ static int write_header(gzFile spzp, const char *fpath, struct conf *conf)
 	return 0;
 }
 
-static int write_hooks(gzFile spzp, const char *fpath, struct conf *conf)
+#define WEAK_LEN	16
+#define WEAK_STR_LEN	WEAK_LEN+1
+
+static int write_hooks(gzFile spzp, const char *fpath,
+	char sort_blk[][WEAK_STR_LEN], int *sort_ind, struct conf *conf)
 {
 	int i=0;
-	if(!sort_ind) return 0;
+	if(!*sort_ind) return 0;
 	if(write_header(spzp, fpath, conf)) return -1;
-	qsort(sort_blk, sort_ind, 16+1,
+	qsort(sort_blk, *sort_ind, WEAK_STR_LEN,
 		(int (*)(const void *, const void *))strcmp);
-	for(i=0; i<sort_ind; i++)
+	for(i=0; i<*sort_ind; i++)
 	{
 		// Do not bother with duplicates.
 		if(i && !strcmp(sort_blk[i], sort_blk[i-1])) continue;
 		gzprintf(spzp, "%c%04X%s\n", CMD_FINGERPRINT,
 			strlen(sort_blk[i]), sort_blk[i]);
 	}
-	sort_ind=0;
+	*sort_ind=0;
 	return 0;
 }
 
@@ -167,14 +168,14 @@ static int get_next_set_of_hooks(struct hooks **hnew, struct sbuf *sb, gzFile sp
 static int gzprintf_hooks(gzFile tzp, struct hooks *hooks)
 {
 	static char *f;
-	static char ftmp[16+1];
+	static char ftmp[WEAK_STR_LEN];
 	size_t len=strlen(hooks->fingerprints);
 
 //	printf("NW: %c%04lX%s\n", CMD_MANIFEST,
 //		strlen(hooks->path), hooks->path);
 	gzprintf(tzp, "%c%04lX%s\n", CMD_MANIFEST,
 		strlen(hooks->path), hooks->path);
-	for(f=hooks->fingerprints; f<hooks->fingerprints+len; f+=16)
+	for(f=hooks->fingerprints; f<hooks->fingerprints+len; f+=WEAK_LEN)
 	{
 		snprintf(ftmp, sizeof(ftmp), "%s", f);
 		gzprintf(tzp, "%c%04lX%s\n", CMD_FINGERPRINT,
@@ -456,7 +457,8 @@ static int sparse_generation(struct manio *newmanio, const char *datadir, const 
 	char *global_sparse=NULL;
 	struct blk *blk=NULL;
 	int sig_count=0;
-	char *fpath=NULL;
+	char sort_blk[SIG_MAX][WEAK_STR_LEN];
+	int sort_ind=0;
 
 	if(!(sparse=prepend_s(manifest_dir, "sparse"))
 	  || !(global_sparse=prepend_s(datadir, "sparse"))
@@ -471,34 +473,25 @@ static int sparse_generation(struct manio *newmanio, const char *datadir, const 
 		if((ars=manio_sbuf_fill(newmanio, sb, blk, NULL, conf))<0)
 			goto end; // Error
 		else if(ars>0)
-			break; // Finished
-
-		// FIX THIS: I am sure this is not really necessary.
-		if(!fpath || strcmp(fpath, newmanio->fpath))
 		{
-			if(fpath) free(fpath);
-			if(!(fpath=strdup(newmanio->fpath)))
-			{
-				log_out_of_memory(__FUNCTION__);
-				goto end;
-			}
+			if(write_hooks(spzp, newmanio->fpath,
+				sort_blk, &sort_ind, conf)) goto end;
+			break; // Finished
 		}
 
 		if(!*(blk->weak)) continue;
 
 		if(is_hook(blk->weak))
-			snprintf(sort_blk[sort_ind++], 16+1, "%s", blk->weak);
+			snprintf(sort_blk[sort_ind++],
+				WEAK_STR_LEN, "%s", blk->weak);
 		*(blk->weak)='\0';
 
-		// FIX THIS: Also want to make this whole business
-		// less fragile.
 		if(++sig_count<SIG_MAX) continue;
 		sig_count=0;
 
-		if(write_hooks(spzp, fpath, conf)) goto end;
+		if(write_hooks(spzp, newmanio->fpath,
+			sort_blk, &sort_ind, conf)) goto end;
 	}
-
-	if(sig_count && write_hooks(spzp, fpath, conf)) goto end;
 
 	if(gzclose_fp(&spzp))
 	{

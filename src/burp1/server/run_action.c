@@ -266,14 +266,12 @@ int do_backup_server_burp1(struct sdirs *sdirs, struct conf *cconf,
 	// phase. 
 	if(do_rename(sdirs->working, sdirs->finishing))
 		goto error;
-	else
-	{
-		set_logfp(NULL, cconf); // does an fclose on logfp.
-		// finish_backup will open logfp again
-		ret=backup_phase4_server(sdirs, cconf);
-		if(!ret && cconf->keep>0)
-			ret=remove_old_backups(sdirs, cconf);
-	}
+
+	set_logfp(NULL, cconf); // does an fclose on logfp.
+	// finish_backup will open logfp again
+	ret=backup_phase4_server(sdirs, cconf);
+	if(!ret && cconf->keep>0)
+		ret=remove_old_backups(sdirs, cconf);
 
 	goto end;
 error:

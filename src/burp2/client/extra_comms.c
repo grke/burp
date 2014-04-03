@@ -102,13 +102,15 @@ int extra_comms(struct conf *conf,
 		logp("Switched to client %s\n", conf->orig_client);
 	}
 
+printf("HERE: %s\n", feat);
+
 	// :sincexc: is for the server giving the client the
 	// incexc config.
 	if(*action==ACTION_BACKUP
 	  || *action==ACTION_BACKUP_TIMED
 	  || *action==ACTION_TIMER_CHECK)
 	{
-		if(!incexc && server_supports(feat, ":sincexc:"))
+		if(!*incexc && server_supports(feat, ":sincexc:"))
 		{
 			logp("Server is setting includes/excludes.\n");
 			if(incexc_recv_client(incexc, conf))

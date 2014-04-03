@@ -976,6 +976,13 @@ int do_backup_server(struct sdirs *sdirs, struct conf *cconf,
 	set_logfp(NULL, cconf); // does an fclose on logfp.
 	compress_filename(sdirs->current, "log", "log.gz", cconf);
 
+	if(cconf->keep>0)
+	{
+		ret=remove_old_backups(sdirs, cconf);
+		// FIX THIS: Need to figure out which data files can be
+		// deleted.
+	}
+
 	goto end;
 error:
 	ret=-1;

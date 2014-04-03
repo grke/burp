@@ -84,29 +84,37 @@ int manio_init_write(struct manio *manio, const char *directory)
 	return manio_init(manio, directory, MANIO_MODE_WRITE);
 }
 
-static int get_next_fpath_burp1(struct manio *manio)
+static char *get_next_fpath_burp1(struct manio *manio)
 {
-	if(manio->fpath) free(manio->fpath);
-	return !(manio->fpath=strdup(manio->directory));
+	return strdup(manio->directory);
 }
 
-static int get_next_fpath(struct manio *manio)
+static char *get_next_fpath(struct manio *manio)
 {
 	static char tmp[32];
 	if(manio->protocol==PROTO_BURP1) return get_next_fpath_burp1(manio);
-	if(manio->fpath) free(manio->fpath);
 	snprintf(tmp, sizeof(tmp), "%08lX", manio->fcount++);
-	return !(manio->fpath=prepend_s(manio->directory, tmp));
+	return prepend_s(manio->directory, tmp);
 }
 
 static int open_next_fpath(struct manio *manio)
 {
+	char *last_path;
 	static struct stat statp;
 
-	if(get_next_fpath(manio)) return -1;
+	last_path=manio->fpath;
+	if(!(manio->fpath=get_next_fpath(manio))) return -1;
 
 	if(!strcmp(manio->mode, MANIO_MODE_READ)
-	  && lstat(manio->fpath, &statp)) return 0;
+	  && lstat(manio->fpath, &statp))
+	{
+		// It is useful to keep the last valid path when the
+		// files have run out.
+		free(manio->fpath);
+		manio->fpath=last_path;
+		return 0;
+	}
+	if(last_path) free(last_path);
 
 //printf("manio path: %s\n", manio->fpath);
 

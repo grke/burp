@@ -978,7 +978,7 @@ int do_backup_server(struct sdirs *sdirs, struct conf *cconf,
 
 	if(cconf->keep>0)
 	{
-		ret=remove_old_backups(sdirs, cconf);
+		//ret=remove_old_backups(sdirs, cconf);
 		// FIX THIS: Need to figure out which data files can be
 		// deleted.
 	}

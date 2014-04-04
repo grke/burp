@@ -457,7 +457,7 @@ static int sparse_generation(struct manio *newmanio, const char *datadir, const 
 	char *global_sparse=NULL;
 	struct blk *blk=NULL;
 	int sig_count=0;
-	char sort_blk[SIG_MAX][WEAK_STR_LEN];
+	char sort_blk[MANIFEST_SIG_MAX][WEAK_STR_LEN];
 	int sort_ind=0;
 
 	if(!(sparse=prepend_s(manifest_dir, "sparse"))
@@ -472,25 +472,32 @@ static int sparse_generation(struct manio *newmanio, const char *datadir, const 
 	{
 		if((ars=manio_sbuf_fill(newmanio, sb, blk, NULL, conf))<0)
 			goto end; // Error
-		else if(ars>0)
+		if(!ars) // Got another entry from newmanio.
 		{
-			if(write_hooks(spzp, newmanio->fpath,
-				sort_blk, &sort_ind, conf)) goto end;
-			break; // Finished
+			if(!*(blk->weak)) continue;
+
+			if(is_hook(blk->weak))
+				snprintf(sort_blk[sort_ind++],
+					WEAK_STR_LEN, "%s", blk->weak);
+			*(blk->weak)='\0';
+
+			if(++sig_count==MANIFEST_SIG_MAX)
+			{
+				logp("Too many signatures in manifest: %s\n",
+					newmanio->fpath);
+				goto end;
+			}
 		}
 
-		if(!*(blk->weak)) continue;
+		if(!newmanio->zp)
+		{
+			// No more from this manifest file.
+			if(write_hooks(spzp, newmanio->fpath,
+				sort_blk, &sort_ind, conf)) goto end;
+			sig_count=0;
+		}
 
-		if(is_hook(blk->weak))
-			snprintf(sort_blk[sort_ind++],
-				WEAK_STR_LEN, "%s", blk->weak);
-		*(blk->weak)='\0';
-
-		if(++sig_count<SIG_MAX) continue;
-		sig_count=0;
-
-		if(write_hooks(spzp, newmanio->fpath,
-			sort_blk, &sort_ind, conf)) goto end;
+		if(ars>0) break; // Got to the end of all the manifest files.
 	}
 
 	if(gzclose_fp(&spzp))

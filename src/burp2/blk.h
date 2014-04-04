@@ -9,8 +9,15 @@
 // in storage, it will send a message to the client so that the client can
 // free those blocks from its memory and carry on.
 #define BLKS_CONSECUTIVE_NOTIFY	10000
+
 // 4096 signatures per data file.
-#define SIG_MAX 0x1000
+#define DATA_FILE_SIG_MAX 0x1000
+
+// Range from 3596 to 4096 signatures for each manifest component.
+// This will allow the decision of where to split them to be dynamic in order
+// to reduce the number of candidate manifests a little bit.
+#define MANIFEST_SIG_MIN 0x0e0c
+#define MANIFEST_SIG_MAX 0x1000
 
 enum got
 {

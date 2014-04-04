@@ -294,7 +294,7 @@ static int maybe_copy_data_files_across(const char *manifest,
 	}
 
 	estimate_blks=blkcount*RABIN_AVG;
-	estimate_one_dat=SIG_MAX*RABIN_AVG;
+	estimate_one_dat=DATA_FILE_SIG_MAX*RABIN_AVG;
 	estimate_dats=datcount*estimate_one_dat;
 	printf("%lu blocks = %lu bytes in stream approx\n",
 		blkcount, estimate_blks);

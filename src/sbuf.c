@@ -217,19 +217,22 @@ ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize)
 struct rblk
 {
 	char *datpath;
-	struct iobuf readbuf[SIG_MAX];
+	struct iobuf readbuf[DATA_FILE_SIG_MAX];
 	unsigned int readbuflen;
 };
 
 #define RBLK_MAX	10
 
+// Return 0 on OK, -1 on error, 1 when there is no more to read.
 static int read_next_data(FILE *fp, struct rblk *rblk, int ind, int r)
 {
 	char cmd='\0';
 	size_t bytes;
 	unsigned int len;
 	char buf[5];
-	if(fread(buf, 1, 5, fp)!=5) return 0;
+	// FIX THIS: Check for the appropriate return value that means there
+	// is no more to read.
+	if(fread(buf, 1, 5, fp)!=5) return 1;
 	if((sscanf(buf, "%c%04X", &cmd, &len))!=2)
 	{
 		logp("sscanf failed in %s: %s\n", __FUNCTION__, buf);
@@ -270,12 +273,15 @@ static int load_rblk(struct rblk *rblks, int ind, const char *datpath)
 	printf("swap %d to: %s\n", ind, datpath);
 
 	if(!(dfp=open_file(datpath, "rb"))) return -1;
-	for(r=0; r<SIG_MAX; r++)
+	for(r=0; r<DATA_FILE_SIG_MAX; r++)
 	{
-		if(read_next_data(dfp, rblks, ind, r))
+		switch(read_next_data(dfp, rblks, ind, r)
 		{
-			fclose(dfp);
-			return -1;
+			case 0: continue;
+			case 1: break;
+			case -1:
+			default:
+				return -1;
 		}
 	}
 	rblks[ind].readbuflen=r;

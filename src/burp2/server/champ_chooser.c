@@ -525,7 +525,7 @@ int deduplicate_maybe(struct blk *blk, struct dpth *dpth, struct conf *conf, uin
 		if(incoming_grow_maybe(in)) return -1;
 		in->weak[in->size-1]=blk->fingerprint;
 	}
-	if(++count<SIG_MAX) return 0;
+	if(++count<MANIFEST_SIG_MAX) return 0;
 //	if(++count<2) return 0;
 	count=0;
 
@@ -534,12 +534,6 @@ int deduplicate_maybe(struct blk *blk, struct dpth *dpth, struct conf *conf, uin
 //printf("\n");
 	return 1; // deduplication was successful
 }
-
-
-
-
-
-
 
 /*
 static struct blk *gen_test_blk(void)

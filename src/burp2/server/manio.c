@@ -155,20 +155,53 @@ error:
 	return -1;
 }
 
-// Close the current file after SIG_MAX entries are written.
-static int check_sig_count(struct manio *manio)
+static int reset_sig_count_and_close(struct manio *manio)
 {
-	if(++manio->sig_count<SIG_MAX) return 0;
 	manio->sig_count=0;
 	if(manio_close(manio)) return -1;
 	return 0;
+}
+
+#define TOCHECK	4
+static int maybe_reset_sig_count_and_close(struct manio *manio, const char *msg)
+{
+	int i;
+	int j;
+	// I am currently making it look for four of the same consecutive
+	// characters in the signature.
+	for(i=0; i<16+32-TOCHECK+1; )
+	{
+		for(j=1; j<TOCHECK; j++)
+			if(msg[i]!=msg[i+j]) { i+=j+1; break; }
+		if(j==TOCHECK)
+			return reset_sig_count_and_close(manio);
+	}
+	return 0;
+}
+
+// After conditions are met, close the file currently being written to.
+// Allow the number of signatures to be vary between MANIFEST_SIG_MIN and
+// MANIFEST_SIG_MAX. This will hopefully allow fewer candidate manifests
+// generated, since the boundary will be able to vary.
+static int check_sig_count(struct manio *manio, const char *msg)
+{
+	manio->sig_count++;
+
+	if(manio->sig_count<MANIFEST_SIG_MIN)
+		return 0; // Not yet time to close.
+
+	if(manio->sig_count>=MANIFEST_SIG_MAX)
+		return reset_sig_count_and_close(manio); // Time to close.
+
+	// At this point, dynamically decide based on the current msg.
+	return maybe_reset_sig_count_and_close(manio, msg);
 }
 
 static int write_sig_msg(struct manio *manio, const char *msg)
 {
 	if(!manio->zp && open_next_fpath(manio)) return -1;
 	if(send_msg_zp(manio->zp, CMD_SIG, msg, strlen(msg))) return -1;
-	return check_sig_count(manio);
+	return check_sig_count(manio, msg);
 }
 
 static char *sig_to_msg(struct blk *blk, int save_path)

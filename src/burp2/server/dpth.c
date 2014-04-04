@@ -178,7 +178,7 @@ struct dpth *dpth_alloc(const char *base_path)
 
 int dpth_incr_sig(struct dpth *dpth)
 {
-	if(++dpth->sig<SIG_MAX) return 0;
+	if(++dpth->sig<DATA_FILE_SIG_MAX) return 0;
 	dpth->sig=0;
 	dpth->need_data_lock=1;
 	return dpth_incr(dpth);

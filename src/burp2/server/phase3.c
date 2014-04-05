@@ -472,24 +472,10 @@ static int sparse_generation(struct manio *newmanio, const char *datadir, const 
 	{
 		if((ars=manio_sbuf_fill(newmanio, sb, blk, NULL, conf))<0)
 			goto end; // Error
-		if(!ars) // Got another entry from newmanio.
-		{
-			if(!*(blk->weak)) continue;
+		if(ars>0)
+			break; // Got to the end of all the manifest files.
 
-			if(is_hook(blk->weak))
-				snprintf(sort_blk[sort_ind++],
-					WEAK_STR_LEN, "%s", blk->weak);
-			*(blk->weak)='\0';
-
-			if(++sig_count==MANIFEST_SIG_MAX)
-			{
-				logp("Too many signatures in manifest: %s\n",
-					newmanio->fpath);
-				goto end;
-			}
-		}
-
-		if(!newmanio->zp)
+		if(newmanio->first_entry)
 		{
 			// No more from this manifest file.
 			if(write_hooks(spzp, newmanio->fpath,
@@ -497,8 +483,23 @@ static int sparse_generation(struct manio *newmanio, const char *datadir, const 
 			sig_count=0;
 		}
 
-		if(ars>0) break; // Got to the end of all the manifest files.
+		if(!*(blk->weak)) continue;
+
+		if(is_hook(blk->weak))
+			snprintf(sort_blk[sort_ind++],
+				WEAK_STR_LEN, "%s", blk->weak);
+		*(blk->weak)='\0';
+
+		if(sig_count++==MANIFEST_SIG_MAX)
+		{
+			logp("Too many signatures in manifest: %s\n",
+				newmanio->fpath);
+			goto end;
+		}
 	}
+
+	if(write_hooks(spzp, newmanio->fpath, sort_blk, &sort_ind, conf))
+		goto end;
 
 	if(gzclose_fp(&spzp))
 	{

@@ -275,7 +275,7 @@ static int load_rblk(struct rblk *rblks, int ind, const char *datpath)
 	if(!(dfp=open_file(datpath, "rb"))) return -1;
 	for(r=0; r<DATA_FILE_SIG_MAX; r++)
 	{
-		switch(read_next_data(dfp, rblks, ind, r)
+		switch(read_next_data(dfp, rblks, ind, r))
 		{
 			case 0: continue;
 			case 1: break;

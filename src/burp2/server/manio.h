@@ -16,6 +16,8 @@ struct manio
 	char *mode;		// Mode with which to open the files.
 	int sig_count;		// When writing, need to split the files
 				// after every X signatures written.
+	uint8_t first_entry;	// Set to 1 when returning the first entry in
+				// a manifest component file.
 	enum protocol protocol;	// Whether running in burp1/burp2 mode.
 };
 

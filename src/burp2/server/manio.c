@@ -136,6 +136,11 @@ int manio_sbuf_fill(struct manio *manio, struct sbuf *sb, struct blk *blk,
 		{
 			if(open_next_fpath(manio)) goto error;
 			if(!manio->zp) return 1; // No more files to read.
+			manio->first_entry=1;
+		}
+		else
+		{
+			manio->first_entry=0;
 		}
 		if((ars=sbuf_fill_from_gzfile(sb, manio->zp, blk,
 			dpth?dpth->base_path:NULL, conf))<0) goto error;
@@ -163,7 +168,7 @@ static int reset_sig_count_and_close(struct manio *manio)
 }
 
 #define TOCHECK	4
-static int maybe_reset_sig_count_and_close(struct manio *manio, const char *msg)
+static int manio_find_boundary(const char *msg)
 {
 	int i;
 	int j;
@@ -174,7 +179,7 @@ static int maybe_reset_sig_count_and_close(struct manio *manio, const char *msg)
 		for(j=1; j<TOCHECK; j++)
 			if(msg[i]!=msg[i+j]) { i+=j+1; break; }
 		if(j==TOCHECK)
-			return reset_sig_count_and_close(manio);
+			return 1;
 	}
 	return 0;
 }
@@ -194,7 +199,9 @@ static int check_sig_count(struct manio *manio, const char *msg)
 		return reset_sig_count_and_close(manio); // Time to close.
 
 	// At this point, dynamically decide based on the current msg.
-	return maybe_reset_sig_count_and_close(manio, msg);
+	//if(manio_find_boundary(manio, msg))
+	//	return reset_sig_count_and_close(manio); // Time to close.
+	return 0;
 }
 
 static int write_sig_msg(struct manio *manio, const char *msg)

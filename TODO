@@ -7,8 +7,7 @@ However, that is currently relating only to burp1 issues.
 So, this is a list of important stuff that needs to be done for burp2,
 roughly in order of most important to least.
 
-* Review how the sparse indexes are generated. Probably too many of them are
-  made at the moment.
+* Check data file locks don't just make the child exit.
 
 * Sorting the hooks at the end of a backup probably uses too much memory.
 

@@ -17,6 +17,7 @@ static void manio_free_contents(struct manio *manio)
 	manio_close(manio);
 	if(manio->directory) free(manio->directory);
 	if(manio->fpath) free(manio->fpath);
+	if(manio->lpath) free(manio->lpath);
 	if(manio->mode) free(manio->mode);
 	memset(manio, 0, sizeof(struct manio));
 }
@@ -99,24 +100,15 @@ static char *get_next_fpath(struct manio *manio)
 
 static int open_next_fpath(struct manio *manio)
 {
-	char *last_path;
 	static struct stat statp;
 
-	last_path=manio->fpath;
+	if(manio->lpath) free(manio->lpath);
+	manio->lpath=manio->fpath;
 	if(!(manio->fpath=get_next_fpath(manio))) return -1;
 
 	if(!strcmp(manio->mode, MANIO_MODE_READ)
 	  && lstat(manio->fpath, &statp))
-	{
-		// It is useful to keep the last valid path when the
-		// files have run out.
-		free(manio->fpath);
-		manio->fpath=last_path;
 		return 0;
-	}
-	if(last_path) free(last_path);
-
-//printf("manio path: %s\n", manio->fpath);
 
 	if(build_path_w(manio->fpath)
 	  || !(manio->zp=gzopen_file(manio->fpath, manio->mode)))
@@ -199,8 +191,8 @@ static int check_sig_count(struct manio *manio, const char *msg)
 		return reset_sig_count_and_close(manio); // Time to close.
 
 	// At this point, dynamically decide based on the current msg.
-	//if(manio_find_boundary(manio, msg))
-	//	return reset_sig_count_and_close(manio); // Time to close.
+	if(manio_find_boundary(msg))
+		return reset_sig_count_and_close(manio); // Time to close.
 	return 0;
 }
 

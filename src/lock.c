@@ -45,7 +45,11 @@ void lock_get_quick(struct lock *lock)
 	char text[64]="";
 
 	if((lock->fd=open(lock->path, O_WRONLY|O_CREAT, 0666))<0)
+	{
+		logp("Could not open lock file %s: %s\n",
+			lock->path, strerror(errno));
 		goto error;
+	}
 	if(lockf(lock->fd, F_TLOCK, 0))
 	{
 		if(errno==EACCES || errno==EAGAIN)

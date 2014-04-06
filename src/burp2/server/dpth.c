@@ -23,7 +23,7 @@ static int dpth_incr(struct dpth *dpth)
 
 static int get_data_lock(struct lock *lock, struct dpth *dpth, const char *path)
 {
-	int ret=0;
+	int ret=-1;
 	char *p=NULL;
 	char *lockfile=NULL;
 	// Use just the first three components, excluding sig number.
@@ -32,11 +32,9 @@ static int get_data_lock(struct lock *lock, struct dpth *dpth, const char *path)
 		goto end;
 	if(lock_init(lock, lockfile)
 	  || build_path_w(lock->path))
-	{
-		ret=-1;
 		goto end;
-	}
 	lock_get_quick(lock);
+	ret=0;
 end:
 	if(p) free(p);
 	if(lockfile) free(lockfile);

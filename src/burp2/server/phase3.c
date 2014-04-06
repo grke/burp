@@ -478,7 +478,7 @@ static int sparse_generation(struct manio *newmanio, const char *datadir, const 
 		if(newmanio->first_entry)
 		{
 			// No more from this manifest file.
-			if(write_hooks(spzp, newmanio->fpath,
+			if(write_hooks(spzp, newmanio->lpath,
 				sort_blk, &sort_ind, conf)) goto end;
 			sig_count=0;
 		}
@@ -498,7 +498,7 @@ static int sparse_generation(struct manio *newmanio, const char *datadir, const 
 		}
 	}
 
-	if(write_hooks(spzp, newmanio->fpath, sort_blk, &sort_ind, conf))
+	if(write_hooks(spzp, newmanio->lpath, sort_blk, &sort_ind, conf))
 		goto end;
 
 	if(gzclose_fp(&spzp))

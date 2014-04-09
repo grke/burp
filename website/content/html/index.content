@@ -109,6 +109,21 @@ with future releases of Burp 2.
 <TD ALIGN="LEFT">
 
 <P>
+<FONT COLOR="#99CCFF">2014-04-09: OpenSSL Heartbleed bug
+<BR>
+It is being widely reported that some recent versions of openssl have a serious
+bug. If your computers (especially your servers) are using a version of openssl
+between 1.0.1 and 1.0.1f, you should upgrade them to openssl 1.0.1g as soon as
+possible. Since this openssl bug has been around for 2 years, you should
+probably consider your certificates to be compromised.
+<BR>
+Burp windows clients are currently using openssl 1.0.1e. I understand that it
+is a possibility that a malicious server could steal client information,
+so I will provide updated Windows installers shortly.
+</FONT>
+</p>
+
+<P>
 <FONT COLOR="#99CCFF">2014-03-29:
 <BR>
 Many thanks to the following donors for financially supporting burp during

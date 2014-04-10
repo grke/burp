@@ -17,20 +17,20 @@ int check_browsedir(const char *browsedir, char **path,
 		if(!strcmp(browsedir, "/"))
 		{
 			if(!(copy=strdup((*path)+bdlen)))
-				goto err;
+				goto error;
 			if((cp=strchr(copy+1, '/'))) *cp='\0';
 		}
 		else
 		{
 			if(!(copy=strdup((*path)+bdlen+1)))
-				goto err;
+				goto error;
 			if((cp=strchr(copy, '/'))) *cp='\0';
 		}
 	}
 	else
 	{
 		if(!(copy=strdup((*path)+bdlen)))
-			goto err;
+			goto error;
 		if(*copy=='/') *(copy+1)='\0';
 		// Messing around for Windows.
 		else if(strlen(copy)>2 && copy[1]==':' && copy[2]=='/')
@@ -49,9 +49,9 @@ int check_browsedir(const char *browsedir, char **path,
 	free(*path);
 	*path=copy;
 	if(!(*last_bd_match=strdup(copy)))
-		goto err;
+		goto error;
 	return 1;
-err:
+error:
 	if(copy) free(copy);
 	log_out_of_memory(__FUNCTION__);
 	return -1;
@@ -130,13 +130,13 @@ end:
 	return ret;
 }
 
-static void send_backup_name_to_client(struct bu *arr)
+static int send_backup_name_to_client(struct bu *arr)
 {
 	char msg[64]="";
 	//snprintf(msg, sizeof(msg), "%s%s",
 	//	arr->timestamp, arr->deletable?" (deletable)":"");
 	snprintf(msg, sizeof(msg), "%s", arr->timestamp);
-	async_write_str(CMD_TIMESTAMP, msg);
+	return async_write_str(CMD_TIMESTAMP, msg);
 }
 
 int do_list_server(struct sdirs *sdirs, struct conf *conf,
@@ -144,7 +144,7 @@ int do_list_server(struct sdirs *sdirs, struct conf *conf,
 {
 	int a=0;
 	int i=0;
-	int ret=0;
+	int ret=-1;
 	uint8_t found=0;
 	struct bu *arr=NULL;
 	unsigned long index=0;
@@ -152,14 +152,10 @@ int do_list_server(struct sdirs *sdirs, struct conf *conf,
 
 	printf("in do_list_server\n");
 
-	if(compile_regex(&regex, listregex)) return -1;
-
-	if(get_current_backups(sdirs, &arr, &a, 1)
+	if(compile_regex(&regex, listregex)
+	  || get_current_backups(sdirs, &arr, &a, 1)
 	  || write_status(STATUS_LISTING, NULL, conf))
-	{
-		if(regex) { regfree(regex); free(regex); }
-		return -1;
-	}
+		goto end;
 
 	if(backup && *backup) index=strtoul(backup, NULL, 10);
 
@@ -169,8 +165,9 @@ int do_list_server(struct sdirs *sdirs, struct conf *conf,
 		if(listregex && backup && *backup=='a')
 		{
 			found=1;
-			async_write_str(CMD_TIMESTAMP, arr[i].timestamp);
-			ret+=list_manifest(arr[i].path, regex, browsedir, conf);
+			if(async_write_str(CMD_TIMESTAMP, arr[i].timestamp)
+			  || list_manifest(arr[i].path, regex, browsedir, conf))
+				goto end;
 		}
 		// Search or list a particular backup.
 		else if(backup && *backup)
@@ -180,25 +177,28 @@ int do_list_server(struct sdirs *sdirs, struct conf *conf,
 				|| arr[i].index==index))
 			{
 				found=1;
-				send_backup_name_to_client(&(arr[i]));
-				ret=list_manifest(arr[i].path, regex,
-					browsedir, conf);
+				if(send_backup_name_to_client(&(arr[i]))
+				  || list_manifest(arr[i].path, regex,
+					browsedir, conf)) goto end;
 			}
 		}
 		// List the backups.
 		else
 		{
 			found=1;
-			send_backup_name_to_client(&(arr[i]));
+			if(send_backup_name_to_client(&(arr[i])))
+				goto end;
 		}
 	}
-	free_current_backups(&arr, a);
 
 	if(backup && *backup && !found)
 	{
 		async_write_str(CMD_ERROR, "backup not found");
-		ret=-1;
+		goto end;
 	}
+	ret=0;
+end:
 	if(regex) { regfree(regex); free(regex); }
+	free_current_backups(&arr, a);
 	return ret;
 }

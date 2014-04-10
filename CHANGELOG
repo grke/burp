@@ -1,3 +1,6 @@
+  * Fix function not returning anything when it should return an int
+    in list_server.c.
+
 2014-03-29 Changes in burp-1.4.12:
   * Make 'make test' skip tests if no source of randomness seems to exist
     for openssl to use.

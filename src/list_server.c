@@ -161,7 +161,7 @@ static int send_backup_name_to_client(struct bu *arr)
 	char msg[64]="";
 	snprintf(msg, sizeof(msg), "%s%s",
 		arr->timestamp, arr->deletable?" (deletable)":"");
-	async_write(CMD_TIMESTAMP, msg, strlen(msg));
+	return async_write(CMD_TIMESTAMP, msg, strlen(msg));
 }
 
 int do_list_server(const char *basedir, const char *backup, const char *listregex, const char *browsedir, const char *client, struct cntr *p1cntr, struct cntr *cntr)
@@ -194,8 +194,12 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 		if(listregex && backup && *backup=='a')
 		{
 			found=TRUE;
-			async_write(CMD_TIMESTAMP,
-				arr[i].timestamp, strlen(arr[i].timestamp));
+			if(async_write(CMD_TIMESTAMP,
+				arr[i].timestamp, strlen(arr[i].timestamp)))
+			{
+				ret=-1;
+				break;
+			}
 			ret+=list_manifest(arr[i].path, regex, browsedir,
 				client, p1cntr, cntr);
 		}
@@ -207,7 +211,11 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 				|| arr[i].index==index))
 			{
 				found=TRUE;
-				send_backup_name_to_client(&(arr[i]));
+				if(send_backup_name_to_client(&(arr[i])))
+				{
+					ret=-1;
+					break;
+				}
 				ret=list_manifest(arr[i].path, regex,
 					browsedir, client, p1cntr, cntr);
 			}
@@ -216,7 +224,11 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 		else
 		{
 			found=TRUE;
-			send_backup_name_to_client(&(arr[i]));
+			if(send_backup_name_to_client(&(arr[i])))
+			{
+				ret=-1;
+				break;
+			}
 		}
 	}
 	free_current_backups(&arr, a);

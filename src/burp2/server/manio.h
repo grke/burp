@@ -19,6 +19,12 @@ struct manio
 				// after every X signatures written.
 	uint8_t first_entry;	// Set to 1 when starting a new manifest
 				// component file.
+	char *hook_dir;
+	char **hook_sort;	// Array for sorting and writing hooks.
+	int hook_count;
+	char *dindex_dir;
+	char **dindex_sort;	// Array for sorting and writing dindex.
+	int dindex_count;
 	enum protocol protocol;	// Whether running in burp1/burp2 mode.
 };
 
@@ -29,6 +35,8 @@ extern int manio_init_read(struct manio *manio, const char *directory);
 extern int manio_init_write(struct manio *manio, const char *directory);
 extern int manio_set_mode_read(struct manio *manio);
 extern int manio_set_mode_write(struct manio *manio);
+extern int manio_init_write_hooks(struct manio *manio, const char *dir);
+extern int manio_init_write_dindex(struct manio *manio, const char *dir);
 extern void manio_set_protocol(struct manio *manio, enum protocol protocol);
 
 extern int manio_sbuf_fill(struct manio *manio, struct sbuf *sb,

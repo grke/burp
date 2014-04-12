@@ -529,6 +529,8 @@ int phase3(struct manio *chmanio, struct manio *unmanio, const char *manifest_di
 	int ars=0;
 	int ret=1;
 	int pcmp=0;
+	char *hooksdir=NULL;
+	char *dindexdir=NULL;
 	struct sbuf *usb=NULL;
 	struct sbuf *csb=NULL;
 	struct blk *blk=NULL;
@@ -539,7 +541,11 @@ int phase3(struct manio *chmanio, struct manio *unmanio, const char *manifest_di
 	logp("Start phase3\n");
 
 	if(!(newmanio=manio_alloc())
+	  || !(hooksdir=prepend_s(manifest_dir, "hooks"))
+	  || !(dindexdir=prepend_s(manifest_dir, "dindex"))
 	  || manio_init_write(newmanio, manifest_dir)
+	  || manio_init_write_hooks(newmanio, hooksdir)
+	  || manio_init_write_dindex(newmanio, dindexdir)
 	  || !(usb=sbuf_alloc(conf))
 	  || !(csb=sbuf_alloc(conf)))
 		goto end;
@@ -627,5 +633,7 @@ end:
 	sbuf_free(csb);
 	sbuf_free(usb);
 	blk_free(blk);
+	if(hooksdir) free(hooksdir);
+	if(dindexdir) free(dindexdir);
 	return ret;
 }

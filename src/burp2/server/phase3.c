@@ -1,37 +1,11 @@
 #include "include.h"
 
-static int write_header(gzFile spzp, const char *fpath, struct conf *conf)
-{
-	const char *cp;
-	cp=fpath+strlen(conf->directory);
-	while(cp && *cp=='/') cp++;
-	gzprintf(spzp, "%c%04X%s\n", CMD_MANIFEST, strlen(cp), cp);
-	return 0;
-}
-
 #define WEAK_LEN	16
 #define WEAK_STR_LEN	WEAK_LEN+1
 
-static int write_hooks(gzFile spzp, const char *fpath,
-	char sort_blk[][WEAK_STR_LEN], int *sort_ind, struct conf *conf)
-{
-	int i=0;
-	if(!*sort_ind) return 0;
-	if(write_header(spzp, fpath, conf)) return -1;
-	qsort(sort_blk, *sort_ind, WEAK_STR_LEN,
-		(int (*)(const void *, const void *))strcmp);
-	for(i=0; i<*sort_ind; i++)
-	{
-		// Do not bother with duplicates.
-		if(i && !strcmp(sort_blk[i], sort_blk[i-1])) continue;
-		gzprintf(spzp, "%c%04X%s\n", CMD_FINGERPRINT,
-			strlen(sort_blk[i]), sort_blk[i]);
-	}
-	*sort_ind=0;
-	return 0;
-}
-
-static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, int *finished, struct blk **blk, struct manio *cmanio, struct manio *newmanio, const char *manifest_dir, struct conf *conf)
+static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb,
+	int *finished, struct blk **blk, struct manio *cmanio,
+	struct manio *newmanio, const char *manifest_dir, struct conf *conf)
 {
 	static int ars;
 	static char *copy;
@@ -105,22 +79,10 @@ static int hooks_alloc(struct hooks **hnew, char **path, char **fingerprints)
 	return 0;
 }
 
-static int add_to_hooks_list(struct hooks ***hooks, int *h, struct hooks **hnew)
-{
-	if(!(*hooks=(struct hooks **)realloc(*hooks,
-		((*h)+1)*sizeof(struct hooks *))))
-	{
-		log_out_of_memory(__FUNCTION__);
-		return -1;
-	}
-	
-	(*hooks)[(*h)++]=*hnew;
-	*hnew=NULL;
-	return 0;
-}
-
 // Return 0 for OK, -1 for error, 1 for finished reading the file.
-static int get_next_set_of_hooks(struct hooks **hnew, struct sbuf *sb, gzFile spzp, char **path, char **fingerprints, const char *sparse, struct conf *conf)
+static int get_next_set_of_hooks(struct hooks **hnew, struct sbuf *sb,
+	gzFile spzp, char **path, char **fingerprints,
+	struct conf *conf)
 {
 	int ars;
 	while(1)
@@ -193,86 +155,6 @@ static void hooks_free(struct hooks **hooks)
 	*hooks=NULL;
 }
 
-/* Sort all the sparse indexes grouped by manifest file. Looks like:
-   M0038testclient/0000001 2013-10-06 06:17:06/manifest/00000021
-   F0010F0002FC6B8757464
-   F0010F03570783919AD5E
-   F0010F042F8D2767B4141
-   M0038testclient/0000001 2013-10-06 06:17:06/manifest/00000011
-   F0010F00065F673E9F196
-   F0010F00731D531BAE08D
-   F0010F0490AE87E44FE31
-*/
-static int sort_sparse_indexes(const char *sparse, struct conf *conf)
-{
-	int h=0;
-	int x=0;
-	int ars=0;
-	int ret=-1;
-	gzFile tzp=NULL;
-	gzFile spzp=NULL;
-	char *tmpfile=NULL;
-	struct sbuf *sb=NULL;
-	struct hooks *hnew=NULL;
-	struct hooks **hooks=NULL;
-	char *path=NULL;
-	char *fingerprints=NULL;
-
-	if(!(sb=sbuf_alloc(conf))
-	  || !(tmpfile=prepend(sparse, "tmp", strlen("tmp"), "."))
-	  || !(spzp=gzopen_file(sparse, "rb"))
-	  || !(tzp=gzopen_file(tmpfile, "wb")))
-		goto end;
-
-	while(1)
-	{
-		if((ars=get_next_set_of_hooks(&hnew, sb, spzp,
-			&path, &fingerprints, sparse, conf))<0)
-				goto end;
-		if(hnew && add_to_hooks_list(&hooks, &h, &hnew))
-			goto end;
-		if(ars>0)
-		{
-			// Finished OK.
-			break;
-		}
-	}
-
-	qsort(hooks, h, sizeof(struct hooks *),
-		(int (*)(const void *, const void *))hookscmp);
-
-	for(x=0; x<h; x++)
-	{
-		// Skip duplicates.
-		if(x>0 && !hookscmp(
-		  (const struct hooks **)&hooks[x],
-		  (const struct hooks **)&hooks[x-1])) continue;
-
-		if(gzprintf_hooks(tzp, hooks[x]))
-			goto end;
-	}
-
-	if(gzclose_fp(&tzp))
-	{
-		logp("Error closing %s in %s\n", tmpfile, __FUNCTION__);
-		goto end;
-	}
-
-	if(do_rename(tmpfile, sparse)) goto end;
-
-	ret=0;
-end:
-	sbuf_free(sb);
-	gzclose_fp(&spzp);
-	gzclose_fp(&tzp);
-	if(tmpfile) free(tmpfile);
-	if(path) free(path);
-	if(fingerprints) free(fingerprints);
-	for(x=0; x<h; x++) hooks_free(&(hooks[x]));
-	if(hooks) free(hooks);
-	return ret;
-}
-
 static void try_lock_msg(int seconds)
 {
 	logp("Unable to get sparse lock for %d seconds.\n", seconds);
@@ -320,33 +202,127 @@ static int try_to_get_lock(struct lock *lock)
 	return -1;
 }
 
-/* Merge the new sparse indexes into the global sparse index. */
-static int merge_sparse_indexes(const char *global, const char *sparse, struct conf *conf)
+/* Merge two files of sorted sparse indexes into each other. */
+static int merge_sparse_indexes(const char *srca, const char *srcb,
+	const char *dst, struct conf *conf)
 {
 	int ars;
 	int fcmp;
 	int ret=-1;
-	char *path=NULL;
-	char *gpath=NULL;
-	struct sbuf *gsb=NULL;
-	struct sbuf *nsb=NULL;
-	char *fingerprints=NULL;
-	char *gfingerprints=NULL;
-	gzFile tzp=NULL;
-	gzFile gzp=NULL;
-	gzFile nzp=NULL;
+	struct sbuf *asb=NULL;
+	struct sbuf *bsb=NULL;
+	char *afingerprints=NULL;
+	char *bfingerprints=NULL;
+	gzFile azp=NULL;
+	gzFile bzp=NULL;
+	gzFile dzp=NULL;
+	struct hooks *anew=NULL;
+	struct hooks *bnew=NULL;
+	char *apath=NULL;
+	char *bpath=NULL;
+
+	if(!(asb=sbuf_alloc(conf))
+	  || (srcb && !(bsb=sbuf_alloc(conf))))
+		goto end;
+	if(build_path_w(dst))
+		goto end;
+	if(!(azp=gzopen_file(srca, "rb"))
+	  || (srcb && !(bzp=gzopen_file(srcb, "rb")))
+	  || !(dzp=gzopen_file(dst, "wb")))
+		goto end;
+
+	while(azp || bzp || anew || bnew)
+	{
+		if(azp
+		  && asb
+		  && !anew
+		  && (ars=get_next_set_of_hooks(&anew, asb, azp,
+			&apath, &afingerprints, conf)))
+		{
+			if(ars<0) goto end;
+			// ars==1 means it ended ok.
+			gzclose_fp(&azp);
+		}
+
+		if(bzp
+		  && bsb
+		  && !bnew
+		  && (ars=get_next_set_of_hooks(&bnew, bsb, bzp,
+			&bpath, &bfingerprints, conf)))
+		{
+			if(ars<0) goto end;
+			// ars==1 means it ended ok.
+			gzclose_fp(&bzp);
+		}
+
+		if(anew && !bnew)
+		{
+			if(gzprintf_hooks(dzp, anew)) goto end;
+			hooks_free(&anew);
+		}
+		else if(!anew && bnew)
+		{
+			if(gzprintf_hooks(dzp, bnew)) goto end;
+			hooks_free(&bnew);
+		}
+		else if(!anew && !bnew)
+		{
+			continue;
+		}
+		else if(!(fcmp=hookscmp(
+		  (const struct hooks **)&anew,
+		  (const struct hooks **)&bnew)))
+		{
+			// They were the same - write the new one.
+			if(gzprintf_hooks(dzp, bnew)) goto end;
+			hooks_free(&anew);
+			hooks_free(&bnew);
+		}
+		else if(fcmp<0)
+		{
+			if(gzprintf_hooks(dzp, anew)) goto end;
+			hooks_free(&anew);
+		}
+		else
+		{
+			if(gzprintf_hooks(dzp, bnew)) goto end;
+			hooks_free(&bnew);
+		}
+	}
+
+	if(gzclose_fp(&dzp))
+	{
+		logp("Error closing %s in %s\n", tmpfile, __FUNCTION__);
+		goto end;
+	}
+
+	ret=0;
+end:
+	gzclose_fp(&azp);
+	gzclose_fp(&bzp);
+	gzclose_fp(&dzp);
+	sbuf_free(asb);
+	sbuf_free(bsb);
+	hooks_free(&anew);
+	hooks_free(&bnew);
+	if(afingerprints) free(afingerprints);
+	if(bfingerprints) free(bfingerprints);
+	if(apath) free(apath);
+	if(bpath) free(bpath);
+	return ret;
+}
+
+static int merge_into_global_sparse(const char *sparse, const char *global,
+	struct conf *conf)
+{
+	int ret=-1;
 	char *tmpfile=NULL;
-	struct hooks *gnew=NULL;
-	struct hooks *nnew=NULL;
 	struct stat statp;
 	char *lockfile=NULL;
 	struct lock *lock=NULL;
-
-	if(!(nsb=sbuf_alloc(conf))
-	  || !(gsb=sbuf_alloc(conf))
-	  || !(tmpfile=prepend(global, "tmp", strlen("tmp"), "."))
-	  || !(nzp=gzopen_file(sparse, "rb"))
-	  || build_path_w(tmpfile))
+	const char *globalsrc=NULL;
+	
+	if(!(tmpfile=prepend(global, "tmp", strlen("tmp"), ".")))
 		goto end;
 
 	// Get a lock before messing with the global sparse index.
@@ -356,175 +332,110 @@ static int merge_sparse_indexes(const char *global, const char *sparse, struct c
 
 	if(try_to_get_lock(lock)) goto end;
 
-	if(!(tzp=gzopen_file(tmpfile, "wb"))
-	  || (!lstat(global, &statp) && !(gzp=gzopen_file(global, "rb"))))
+	if(!lstat(global, &statp)) globalsrc=global;
+
+	if(merge_sparse_indexes(sparse, globalsrc, tmpfile, conf))
 		goto end;
-
-	while(gzp || nzp)
-	{
-		if(gzp
-		  && gsb
-		  && !gnew
-		  && (ars=get_next_set_of_hooks(&gnew, gsb, gzp,
-			&gpath, &gfingerprints, global, conf)))
-		{
-			if(ars<0) goto end;
-			// ars==1 means it ended ok.
-			gzclose_fp(&gzp);
-		}
-
-		if(nzp
-		  && nsb
-		  && !nnew
-		  && (ars=get_next_set_of_hooks(&nnew, nsb, nzp,
-			&path, &fingerprints, sparse, conf)))
-		{
-			if(ars<0) goto end;
-			// ars==1 means it ended ok.
-			gzclose_fp(&nzp);
-		}
-
-		if(gnew && !nnew)
-		{
-			if(gzprintf_hooks(tzp, gnew)) goto end;
-			hooks_free(&gnew);
-		}
-		else if(!gnew && nnew)
-		{
-			if(gzprintf_hooks(tzp, nnew)) goto end;
-			hooks_free(&nnew);
-		}
-		else if(!gnew && !nnew)
-		{
-			continue;
-		}
-		else if(!(fcmp=hookscmp(
-		  (const struct hooks **)&gnew,
-		  (const struct hooks **)&nnew)))
-		{
-			// They were the same - write the new one.
-			if(gzprintf_hooks(tzp, nnew)) goto end;
-			hooks_free(&gnew);
-			hooks_free(&nnew);
-		}
-		else if(fcmp<0)
-		{
-			if(gzprintf_hooks(tzp, gnew)) goto end;
-			hooks_free(&gnew);
-		}
-		else
-		{
-			if(gzprintf_hooks(tzp, nnew)) goto end;
-			hooks_free(&nnew);
-		}
-	}
-
-	if(gzclose_fp(&tzp))
-	{
-		logp("Error closing %s in %s\n", tmpfile, __FUNCTION__);
-		goto end;
-	}
 
 	if(do_rename(tmpfile, global)) goto end;
 
 	ret=0;
 end:
-	gzclose_fp(&tzp);
-	gzclose_fp(&gzp);
-	gzclose_fp(&nzp);
 	lock_release(lock);
 	lock_free(&lock);
 	if(lockfile) free(lockfile);
-	sbuf_free(gsb);
-	sbuf_free(nsb);
-	hooks_free(&gnew);
-	hooks_free(&nnew);
-	if(path) free(path);
-	if(gpath) free(gpath);
-	if(fingerprints) free(fingerprints);
-	if(gfingerprints) free(gfingerprints);
 	if(tmpfile) free(tmpfile);
 	return ret;
 }
 
-static int sparse_generation(struct manio *newmanio, const char *datadir, const char *manifest_dir, struct conf *conf)
+static int sparse_generation(struct manio *newmanio, uint64_t fcount,
+	const char *datadir, const char *manifest_dir, struct conf *conf)
 {
-	int ars;
 	int ret=-1;
-	gzFile spzp=NULL;
+	uint64_t i=0;
+	uint64_t pass=0;
 	char *sparse=NULL;
-	struct sbuf *sb=NULL;
 	char *global_sparse=NULL;
-	struct blk *blk=NULL;
-	int sig_count=0;
-	char sort_blk[MANIFEST_SIG_MAX][WEAK_STR_LEN];
-	int sort_ind=0;
+	char *h1dir=NULL;
+	char *h2dir=NULL;
+	char *hooksdir=NULL;
+	char *srca=NULL;
+	char *srcb=NULL;
+	char *dst=NULL;
+	char compa[32]="";
+	char compb[32]="";
+	char compd[32]="";
 
-	if(!(sparse=prepend_s(manifest_dir, "sparse"))
-	  || !(global_sparse=prepend_s(datadir, "sparse"))
-	  || !(sb=sbuf_alloc(conf))
-	  || !(blk=blk_alloc())
-	  || build_path_w(sparse)
-	  || !(spzp=gzopen_file(sparse, "wb")))
+	if(!(hooksdir=prepend_s(manifest_dir, "hooks"))
+	  || !(h1dir=prepend_s(manifest_dir, "h1"))
+	  || !(h2dir=prepend_s(manifest_dir, "h2")))
 		goto end;
 
 	while(1)
 	{
-		if((ars=manio_sbuf_fill(newmanio, sb, blk, NULL, conf))<0)
-			goto end; // Error
-		if(ars>0)
-			break; // Got to the end of all the manifest files.
-
-		if(newmanio->first_entry)
+		char *srcdir=NULL;
+		char *dstdir=NULL;
+		if(!pass)
 		{
-			// No more from this manifest file.
-			if(write_hooks(spzp, newmanio->lpath,
-				sort_blk, &sort_ind, conf)) goto end;
-			sig_count=0;
+			srcdir=hooksdir;
+			dstdir=h1dir;
 		}
-
-		if(!*(blk->weak)) continue;
-
-		if(is_hook(blk->weak))
-			snprintf(sort_blk[sort_ind++],
-				WEAK_STR_LEN, "%s", blk->weak);
-		*(blk->weak)='\0';
-
-		if(sig_count++==MANIFEST_SIG_MAX)
+		else if(pass%2)
 		{
-			logp("Too many signatures in manifest: %s\n",
-				newmanio->fpath);
-			goto end;
+			srcdir=h1dir;
+			dstdir=h2dir;
 		}
+		else
+		{
+			srcdir=h2dir;
+			dstdir=h1dir;
+		}
+		pass++;
+		for(i=0; i<fcount; i+=2)
+		{
+			if(srca) { free(srca); srca=NULL; }
+			if(srcb) { free(srcb); srcb=NULL; }
+			if(dst) { free(dst); dst=NULL; }
+			snprintf(compa, sizeof(compa), "%08lX", i);
+			snprintf(compb, sizeof(compb), "%08lX", i+1);
+			snprintf(compd, sizeof(compd), "%08lX", i/2);
+			if(!(srca=prepend_s(srcdir, compa))
+			  || !(dst=prepend_s(dstdir, compd)))
+				goto end;
+			if(i+1<fcount && !(srcb=prepend_s(srcdir, compb)))
+				goto end;
+			if(merge_sparse_indexes(srca, srcb, dst, conf))
+				goto end;
+		}
+		if((fcount=i/2)<2) break;
 	}
 
-	if(write_hooks(spzp, newmanio->lpath, sort_blk, &sort_ind, conf))
+	if(!(sparse=prepend_s(manifest_dir, "sparse"))
+	  || !(global_sparse=prepend_s(datadir, "sparse")))
 		goto end;
 
-	if(gzclose_fp(&spzp))
-	{
-		logp("Error closing %s in %s\n", sparse, __FUNCTION__);
-		goto end;
-	}
+	if(do_rename(dst, sparse)) goto end;
 
-	if(sort_sparse_indexes(sparse, conf)
-	  || merge_sparse_indexes(global_sparse, sparse, conf))
-		goto end;
+	if(merge_into_global_sparse(sparse, global_sparse, conf)) goto end;
 
 	ret=0;
 end:
 	if(sparse) free(sparse);
 	if(global_sparse) free(global_sparse);
-	gzclose_fp(&spzp);
-	sbuf_free(sb);
-	blk_free(blk);
+	if(srca) free(srca);
+	if(srcb) free(srcb);
+	recursive_delete(h1dir, NULL, 1);
+	recursive_delete(h2dir, NULL, 1);
+	if(h1dir) free(h1dir);
+	if(h2dir) free(h2dir);
 	return ret;
 }
 
 // This is basically backup_phase3_server() from burp1. It used to merge the
 // unchanged and changed data into a single file. Now it splits the manifests
 // into several files.
-int phase3(struct manio *chmanio, struct manio *unmanio, const char *manifest_dir, const char *datadir, struct conf *conf)
+int phase3(struct manio *chmanio, struct manio *unmanio,
+	const char *manifest_dir, const char *datadir, struct conf *conf)
 {
 	int ars=0;
 	int ret=1;
@@ -537,6 +448,7 @@ int phase3(struct manio *chmanio, struct manio *unmanio, const char *manifest_di
 	int finished_ch=0;
 	int finished_un=0;
 	struct manio *newmanio=NULL;
+	uint64_t fcount=0;
 
 	logp("Start phase3\n");
 
@@ -544,7 +456,7 @@ int phase3(struct manio *chmanio, struct manio *unmanio, const char *manifest_di
 	  || !(hooksdir=prepend_s(manifest_dir, "hooks"))
 	  || !(dindexdir=prepend_s(manifest_dir, "dindex"))
 	  || manio_init_write(newmanio, manifest_dir)
-	  || manio_init_write_hooks(newmanio, hooksdir)
+	  || manio_init_write_hooks(newmanio, conf->directory, hooksdir)
 	  || manio_init_write_dindex(newmanio, dindexdir)
 	  || !(usb=sbuf_alloc(conf))
 	  || !(csb=sbuf_alloc(conf)))
@@ -609,6 +521,8 @@ int phase3(struct manio *chmanio, struct manio *unmanio, const char *manifest_di
 		}
 	}
 
+	fcount=newmanio->fcount;
+
 	// Flush to disk and set up for reading.
 	if(manio_set_mode_read(newmanio))
 	{
@@ -617,7 +531,7 @@ int phase3(struct manio *chmanio, struct manio *unmanio, const char *manifest_di
 		goto end;
 	}
 
-	if(sparse_generation(newmanio, datadir, manifest_dir, conf))
+	if(sparse_generation(newmanio, fcount, datadir, manifest_dir, conf))
 		goto end;
 
 	recursive_delete(chmanio->directory, NULL, 1);

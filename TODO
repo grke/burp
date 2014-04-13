@@ -12,8 +12,6 @@ roughly in order of most important to least.
 
 * Check data file locks don't just make the child exit.
 
-* Sorting the hooks at the end of a backup probably uses too much memory.
-
 * Fix counters
 
 * Make recovery from partially complete backups work. Hooks

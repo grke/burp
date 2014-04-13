@@ -20,6 +20,7 @@ static void manio_free_contents(struct manio *manio)
 {
 	if(!manio) return;
 	manio_close(manio);
+	if(manio->base_dir) free(manio->base_dir);
 	if(manio->directory) free(manio->directory);
 	if(manio->fpath) free(manio->fpath);
 	if(manio->lpath) free(manio->lpath);
@@ -35,8 +36,116 @@ static void manio_free_contents(struct manio *manio)
 	memset(manio, 0, sizeof(struct manio));
 }
 
+static int write_hook_header(struct manio *manio, gzFile zp, const char *comp)
+{
+	const char *cp;
+	char *tmp=NULL;
+	cp=manio->directory+strlen(manio->base_dir);
+	while(cp && *cp=='/') cp++;
+	if(!(tmp=prepend_s(cp, comp))) return -1;
+	gzprintf(zp, "%c%04X%s\n", CMD_MANIFEST, strlen(tmp), tmp);
+	free(tmp);
+	return 0;
+}
+
+static int strsort(const void *a, const void *b)
+{
+	const char *x=*(const char**)a;
+	const char *y=*(const char**)b;
+	return strcmp(x, y);
+}
+
+static int sort_and_write_hooks(struct manio *manio)
+{
+	int i;
+	int ret=-1;
+	gzFile zp=NULL;
+	char comp[32]="";
+	char *path=NULL;
+	int hook_count=manio->hook_count;
+	char **hook_sort=manio->hook_sort;
+	if(!hook_sort) return 0;
+
+	snprintf(comp, sizeof(comp), "%08lX", manio->fcount-1);
+	if(!(path=prepend_s(manio->hook_dir, comp))
+	  || build_path_w(path)
+	  || !(zp=gzopen_file(path, manio->mode)))
+		goto end;
+
+	qsort(hook_sort, hook_count, sizeof(char *), strsort);
+
+	if(write_hook_header(manio, zp, comp)) goto end;
+	for(i=0; i<hook_count; i++)
+	{
+		// Do not bother with duplicates.
+		if(i && !strcmp(hook_sort[i],
+			hook_sort[i-1])) continue;
+		gzprintf(zp, "%c%04X%s\n", CMD_FINGERPRINT,
+			(unsigned int)strlen(hook_sort[i]), hook_sort[i]);
+	}
+	if(gzclose_fp(&zp))
+	{
+		logp("Error closing %s in %s: %s\n",
+			path, __FUNCTION__, strerror(errno));
+		goto end;
+	}
+	manio->hook_count=0;
+	ret=0;
+end:
+	gzclose_fp(&zp);
+	if(path) free(path);
+	return ret;
+}
+
+static int sort_and_write_dindex(struct manio *manio)
+{
+	int i;
+	int ret=-1;
+	gzFile zp=NULL;
+	char comp[32]="";
+	char *path=NULL;
+	int dindex_count=manio->dindex_count;
+	char **dindex_sort=manio->dindex_sort;
+	if(!dindex_sort) return 0;
+
+	snprintf(comp, sizeof(comp), "%08lX", manio->fcount-1);
+	if(!(path=prepend_s(manio->dindex_dir, comp))
+	  || build_path_w(path)
+	  || !(zp=gzopen_file(path, manio->mode)))
+		goto end;
+
+	qsort(dindex_sort, dindex_count, sizeof(char *), strsort);
+
+	for(i=0; i<dindex_count; i++)
+	{
+		// Do not bother with duplicates.
+		if(i && !strcmp(dindex_sort[i],
+			dindex_sort[i-1])) continue;
+		gzprintf(zp, "%c%04X%s\n", CMD_FINGERPRINT,
+			(unsigned int)strlen(dindex_sort[i]), dindex_sort[i]);
+	}
+	if(gzclose_fp(&zp))
+	{
+		logp("Error closing %s in %s: %s\n",
+			path, __FUNCTION__, strerror(errno));
+		goto end;
+	}
+	manio->dindex_count=0;
+	ret=0;
+end:
+	gzclose_fp(&zp);
+	if(path) free(path);
+	return ret;
+}
+
 int manio_close(struct manio *manio)
 {
+	if(sort_and_write_hooks(manio)
+	  || sort_and_write_dindex(manio))
+	{
+		gzclose_fp(&(manio->zp));
+		return -1;
+	}
 	return gzclose_fp(&(manio->zp));
 }
 
@@ -165,108 +274,10 @@ error:
 	return -1;
 }
 
-static int write_hook_header(struct manio *manio, gzFile zp, const char *comp)
-{
-	gzprintf(zp, "%c%04X%s\n", CMD_MANIFEST, strlen(comp), comp);
-	return 0;
-}
-
-static int strsort(const void *a, const void *b)
-{
-	const char *x=*(const char**)a;
-	const char *y=*(const char**)b;
-	return strcmp(x, y);
-}
-
-static int sort_and_write_hooks(struct manio *manio)
-{
-	int i;
-	int ret=-1;
-	gzFile zp=NULL;
-	char comp[32]="";
-	char *path=NULL;
-	int hook_count=manio->hook_count;
-	char **hook_sort=manio->hook_sort;
-	if(!hook_sort) return 0;
-
-	snprintf(comp, sizeof(comp), "%08lX", manio->fcount-1);
-	if(!(path=prepend_s(manio->hook_dir, comp))
-	  || build_path_w(path)
-	  || !(zp=gzopen_file(path, manio->mode)))
-		goto end;
-
-	qsort(hook_sort, hook_count, sizeof(char *), strsort);
-
-	write_hook_header(manio, zp, comp);
-	for(i=0; i<hook_count; i++)
-	{
-		// Do not bother with duplicates.
-		if(i && !strcmp(hook_sort[i],
-			hook_sort[i-1])) continue;
-		gzprintf(zp, "%c%04X%s\n", CMD_FINGERPRINT,
-			(unsigned int)strlen(hook_sort[i]), hook_sort[i]);
-	}
-	if(gzclose_fp(&zp))
-	{
-		logp("Error closing %s in %s: %s\n",
-			path, __FUNCTION__, strerror(errno));
-		goto end;
-	}
-	manio->hook_count=0;
-	ret=0;
-end:
-	gzclose_fp(&zp);
-	if(path) free(path);
-	return ret;
-}
-
-static int sort_and_write_dindex(struct manio *manio)
-{
-	int i;
-	int ret=-1;
-	gzFile zp=NULL;
-	char comp[32]="";
-	char *path=NULL;
-	int dindex_count=manio->dindex_count;
-	char **dindex_sort=manio->dindex_sort;
-	if(!dindex_sort) return 0;
-
-	snprintf(comp, sizeof(comp), "%08lX", manio->fcount-1);
-	if(!(path=prepend_s(manio->dindex_dir, comp))
-	  || build_path_w(path)
-	  || !(zp=gzopen_file(path, manio->mode)))
-		goto end;
-
-	qsort(dindex_sort, dindex_count, sizeof(char *), strsort);
-
-	for(i=0; i<dindex_count; i++)
-	{
-		// Do not bother with duplicates.
-		if(i && !strcmp(dindex_sort[i],
-			dindex_sort[i-1])) continue;
-		gzprintf(zp, "%c%04X%s\n", CMD_FINGERPRINT,
-			(unsigned int)strlen(dindex_sort[i]), dindex_sort[i]);
-	}
-	if(gzclose_fp(&zp))
-	{
-		logp("Error closing %s in %s: %s\n",
-			path, __FUNCTION__, strerror(errno));
-		goto end;
-	}
-	manio->dindex_count=0;
-	ret=0;
-end:
-	gzclose_fp(&zp);
-	if(path) free(path);
-	return ret;
-}
-
 static int reset_sig_count_and_close(struct manio *manio)
 {
-	manio->sig_count=0;
-	if(sort_and_write_hooks(manio)) return -1;
-	if(sort_and_write_dindex(manio)) return -1;
 	if(manio_close(manio)) return -1;
+	manio->sig_count=0;
 	return 0;
 }
 
@@ -337,7 +348,7 @@ int manio_write_sig_and_path(struct manio *manio, struct blk *blk)
 	}
 	if(manio->dindex_sort)
 	{
-		// Ignore obviously duplicates.
+		// Ignore obvious duplicates.
 		if(!manio->hook_count
 		  || strncmp(manio->dindex_sort[manio->hook_count-1],
 			blk->save_path, SAVE_PATH_LEN))
@@ -362,10 +373,12 @@ int manio_closed(struct manio *manio)
 	return 1;
 }
 
-int manio_init_write_hooks(struct manio *manio, const char *dir)
+int manio_init_write_hooks(struct manio *manio,
+	const char *base_dir, const char *dir)
 {
 	int i=0;
-	if(!(manio->hook_dir=strdup(dir))
+	if(!(manio->base_dir=strdup(base_dir))
+	  || !(manio->hook_dir=strdup(dir))
 	  || !(manio->hook_sort=
 		(char **)calloc(MANIFEST_SIG_MAX, sizeof(char*))))
 	{

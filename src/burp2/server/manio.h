@@ -10,6 +10,7 @@
 struct manio
 {
 	gzFile zp;		// File pointer.
+	char *base_dir;		// The base directory. 
 	char *directory;	// Directory containing the files.
 	uint64_t fcount;	// File name incrementer.
 	char *fpath;		// Current file path.
@@ -35,7 +36,8 @@ extern int manio_init_read(struct manio *manio, const char *directory);
 extern int manio_init_write(struct manio *manio, const char *directory);
 extern int manio_set_mode_read(struct manio *manio);
 extern int manio_set_mode_write(struct manio *manio);
-extern int manio_init_write_hooks(struct manio *manio, const char *dir);
+extern int manio_init_write_hooks(struct manio *manio,
+	const char *base_dir, const char *dir);
 extern int manio_init_write_dindex(struct manio *manio, const char *dir);
 extern void manio_set_protocol(struct manio *manio, enum protocol protocol);
 

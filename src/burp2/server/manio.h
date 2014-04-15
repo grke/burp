@@ -50,4 +50,10 @@ extern int manio_write_sbuf(struct manio *manio, struct sbuf *sb);
 
 extern int manio_closed(struct manio *manio);
 
+extern int manio_copy_entry(struct sbuf **csb, struct sbuf *sb,
+	struct blk **blk, struct manio *srcmanio,
+	struct manio *dstmanio, struct conf *conf);
+extern int manio_forward_through_sigs(struct sbuf **csb, struct blk **blk,
+	struct manio *manio, struct conf *conf);
+
 #endif

@@ -3,54 +3,6 @@
 #define WEAK_LEN	16
 #define WEAK_STR_LEN	WEAK_LEN+1
 
-static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb,
-	int *finished, struct blk **blk, struct manio *cmanio,
-	struct manio *newmanio, const char *manifest_dir, struct conf *conf)
-{
-	static int ars;
-	static char *copy;
-	//static int sig_count=0;
-
-	// Use the most recent stat for the new manifest.
-	if(manio_write_sbuf(newmanio, sb)) return -1;
-
-	if(!(copy=strdup((*csb)->path.buf)))
-	{
-		log_out_of_memory(__FUNCTION__);
-		return -1;
-	}
-
-	while(1)
-	{
-		if((ars=manio_sbuf_fill(cmanio, *csb, *blk, NULL, conf))<0)
-			return -1;
-		else if(ars>0)
-		{
-			// Reached the end.
-			*finished=1;
-			sbuf_free(*csb); *csb=NULL;
-			blk_free(*blk); *blk=NULL;
-			free(copy);
-			return 0;
-		}
-		// Got something.
-		if(strcmp((*csb)->path.buf, copy))
-		{
-			// Found the next entry.
-			free(copy);
-			return 0;
-		}
-
-		// Should have the next signature.
-		// Write it to the file.
-		if(manio_write_sig_and_path(newmanio, *blk))
-			break;
-	}
-
-	free(copy);
-	return -1;
-}
-
 struct hooks
 {
 	char *path;
@@ -84,17 +36,16 @@ static int get_next_set_of_hooks(struct hooks **hnew, struct sbuf *sb,
 	gzFile spzp, char **path, char **fingerprints,
 	struct conf *conf)
 {
-	int ars;
 	while(1)
 	{
-		if((ars=sbuf_fill_from_gzfile(sb, spzp, NULL, NULL, conf))<0)
-			break;
-		else if(ars>0)
+		switch(sbuf_fill_from_gzfile(sb, spzp, NULL, NULL, conf))
 		{
-			// Reached the end.
-			if(hooks_alloc(hnew, path, fingerprints))
-				break;
-			return 1;
+			case -1: goto error;
+			case 1:
+				// Reached the end.
+				if(hooks_alloc(hnew, path, fingerprints))
+					goto error;
+				return 1;
 		}
 		if(sb->path.cmd==CMD_MANIFEST)
 		{
@@ -124,6 +75,7 @@ static int get_next_set_of_hooks(struct hooks **hnew, struct sbuf *sb,
 		}
 	}
 
+error:
 	return -1;
 }
 
@@ -206,7 +158,6 @@ static int try_to_get_lock(struct lock *lock)
 static int merge_sparse_indexes(const char *srca, const char *srcb,
 	const char *dst, struct conf *conf)
 {
-	int ars;
 	int fcmp;
 	int ret=-1;
 	struct sbuf *asb=NULL;
@@ -235,24 +186,26 @@ static int merge_sparse_indexes(const char *srca, const char *srcb,
 	{
 		if(azp
 		  && asb
-		  && !anew
-		  && (ars=get_next_set_of_hooks(&anew, asb, azp,
-			&apath, &afingerprints, conf)))
+		  && !anew)
 		{
-			if(ars<0) goto end;
-			// ars==1 means it ended ok.
-			gzclose_fp(&azp);
+			switch(get_next_set_of_hooks(&anew, asb, azp,
+				&apath, &afingerprints, conf))
+			{
+				case -1: goto end;
+				case 1: gzclose_fp(&azp); // Finished OK.
+			}
 		}
 
 		if(bzp
 		  && bsb
-		  && !bnew
-		  && (ars=get_next_set_of_hooks(&bnew, bsb, bzp,
-			&bpath, &bfingerprints, conf)))
+		  && !bnew)
 		{
-			if(ars<0) goto end;
-			// ars==1 means it ended ok.
-			gzclose_fp(&bzp);
+			switch(get_next_set_of_hooks(&bnew, bsb, bzp,
+				&bpath, &bfingerprints, conf))
+			{
+				case -1: goto end;
+				case 1: gzclose_fp(&bzp); // Finished OK.
+			}
 		}
 
 		if(anew && !bnew)
@@ -437,7 +390,6 @@ end:
 int backup_phase3_server(struct sdirs *sdirs,
 	const char *manifest_dir, struct conf *conf)
 {
-	int ars=0;
 	int ret=1;
 	int pcmp=0;
 	char *hooksdir=NULL;
@@ -463,44 +415,54 @@ int backup_phase3_server(struct sdirs *sdirs,
 	  || manio_init_write_hooks(newmanio, conf->directory, hooksdir)
 	  || manio_init_write_dindex(newmanio, dindexdir)
 	  || manio_init_read(chmanio, sdirs->changed)
-	  || manio_init_read(chmanio, sdirs->unchanged)
+	  || manio_init_read(unmanio, sdirs->unchanged)
 	  || !(usb=sbuf_alloc(conf))
 	  || !(csb=sbuf_alloc(conf)))
 		goto end;
 
 	while(!finished_ch || !finished_un)
 	{
-		if(!blk && !(blk=blk_alloc())) return -1;
+		if(!blk && !(blk=blk_alloc())) goto end;
 
 		if(!finished_un
 		  && usb
-		  && !usb->path.buf
-		  && (ars=manio_sbuf_fill(unmanio, usb, NULL, NULL, conf)))
+		  && !usb->path.buf)
 		{
-			if(ars<0) goto end; // Error.
-			finished_un=1; // OK.
+			switch(manio_sbuf_fill(unmanio, usb, NULL, NULL, conf))
+			{
+				case -1: goto end;
+				case 1: finished_un++;
+			}
 		}
 
 		if(!finished_ch
 		  && csb
-		  && !csb->path.buf
-		  && (ars=manio_sbuf_fill(chmanio, csb, NULL, NULL, conf)))
+		  && !csb->path.buf)
 		{
-			if(ars<0) goto end; // Error.
-			finished_ch=1; // OK.
+			switch(manio_sbuf_fill(chmanio, csb, NULL, NULL, conf))
+			{
+				case -1: goto end;
+				case 1: finished_ch++;
+			}
 		}
 
 		if((usb && usb->path.buf) && (!csb || !csb->path.buf))
 		{
-			if(copy_unchanged_entry(&usb, usb, &finished_un,
-				&blk, unmanio, newmanio, manifest_dir,
-				conf)) goto end;
+			switch(manio_copy_entry(&usb, usb,
+				&blk, unmanio, newmanio, conf))
+			{
+				case -1: goto end;
+				case 1: finished_un++;
+			}
 		}
 		else if((!usb || !usb->path.buf) && (csb && csb->path.buf))
 		{
-			if(copy_unchanged_entry(&csb, csb, &finished_ch,
-				&blk, chmanio, newmanio, manifest_dir,
-				conf)) goto end;
+			switch(manio_copy_entry(&csb, csb,
+				&blk, chmanio, newmanio, conf))
+			{
+				case -1: goto end;
+				case 1: finished_ch++;
+			}
 		}
 		else if((!usb || !usb->path.buf) && (!csb || !(csb->path.buf)))
 		{
@@ -509,21 +471,30 @@ int backup_phase3_server(struct sdirs *sdirs,
 		else if(!(pcmp=sbuf_pathcmp(usb, csb)))
 		{
 			// They were the same - write one.
-			if(copy_unchanged_entry(&csb, csb, &finished_ch,
-				&blk, chmanio, newmanio, manifest_dir,
-				conf)) goto end;
+			switch(manio_copy_entry(&csb, csb,
+				&blk, chmanio, newmanio, conf))
+			{
+				case -1: goto end;
+				case 1: finished_ch++;
+			}
 		}
 		else if(pcmp<0)
 		{
-			if(copy_unchanged_entry(&usb, usb, &finished_un,
-				&blk, unmanio, newmanio, manifest_dir,
-				conf)) goto end;
+			switch(manio_copy_entry(&usb, usb,
+				&blk, unmanio, newmanio, conf))
+			{
+				case -1: goto end;
+				case 1: finished_un++;
+			}
 		}
 		else
 		{
-			if(copy_unchanged_entry(&csb, csb, &finished_ch,
-				&blk, chmanio, newmanio, manifest_dir,
-				conf)) goto end;
+			switch(manio_copy_entry(&csb, csb,
+				&blk, chmanio, newmanio, conf))
+			{
+				case -1: goto end;
+				case 1: finished_ch++;
+			}
 		}
 	}
 

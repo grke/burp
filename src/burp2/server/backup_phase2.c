@@ -6,91 +6,6 @@ static int data_needed(struct sbuf *sb)
 	return 0;
 }
 
-// Can this be merged with copy_unchanged_entry()?
-static int forward_through_sigs(struct sbuf **csb, struct manio *cmanio, struct conf *conf)
-{
-	static int ars;
-	char *copy;
-
-	if(!(copy=strdup((*csb)->path.buf)))
-	{
-		log_out_of_memory(__FUNCTION__);
-		return -1;
-	}
-
-	while(1)
-	{
-		if((ars=manio_sbuf_fill(cmanio, *csb,
-			NULL, NULL, conf))<0) return -1;
-		else if(ars>0)
-		{
-			// Finished.
-			// blk is not getting freed. Never mind.
-			sbuf_free(*csb); *csb=NULL;
-			free(copy);
-			return 0;
-		}
-
-		// Got something.
-		if(strcmp((*csb)->path.buf, copy))
-		{
-			// Found the next entry.
-			free(copy);
-			return 0;
-		}
-	}
-
-	free(copy);
-	return -1;
-}
-
-static int copy_unchanged_entry(struct sbuf **csb, struct sbuf *sb, struct blk **blk, struct manio *cmanio, struct manio *unmanio, struct conf *conf)
-{
-	static int ars;
-	static char *copy;
-
-	// Use the most recent stat for the new manifest.
-	if(manio_write_sbuf(unmanio, sb)) return -1;
-
-	if(!(copy=strdup((*csb)->path.buf)))
-	{
-		log_out_of_memory(__FUNCTION__);
-		return -1;
-	}
-
-	while(1)
-	{
-		if((ars=manio_sbuf_fill(cmanio, *csb,
-			*blk, NULL, conf))<0) return -1;
-		else if(ars>0)
-		{
-			// Finished.
-			sbuf_free(*csb); *csb=NULL;
-			blk_free(*blk); *blk=NULL;
-			free(copy);
-			return 0;
-		}
-
-		// Got something.
-		if(strcmp((*csb)->path.buf, copy))
-		{
-			// Found the next entry.
-			free(copy);
-			return 0;
-		}
-		// Should have the next signature.
-		// Write it to the unchanged file.
-		if(manio_write_sig_and_path(unmanio, *blk))
-		{
-			free(copy);
-			return -1;
-		}
-	}
-
-	free(copy);
-	return -1;
-}
-
 // Return -1 for error, 0 for entry not changed, 1 for entry changed (or new).
 static int entry_changed(struct sbuf *sb, struct manio *cmanio, struct manio *unmanio, struct conf *conf)
 {
@@ -123,7 +38,7 @@ static int entry_changed(struct sbuf *sb, struct manio *cmanio, struct manio *un
 		}
 		if(!csb->path.buf)
 		{
-			logp("Should have an path at this point, but do not, in %s\n", __FUNCTION__);
+			logp("Should have a path at this point, but do not, in %s\n", __FUNCTION__);
 			return -1;
 		}
 		// Got an entry.
@@ -143,8 +58,8 @@ static int entry_changed(struct sbuf *sb, struct manio *cmanio, struct manio *un
 			if(csb->path.cmd!=sb->path.cmd)
 			{
 //				printf("got changed: %c %s %c %s %lu %lu\n", csb->cmd, csb->path, sb->cmd, sb->path, csb->statp.st_mtime, sb->statp.st_mtime);
-				if(forward_through_sigs(&csb, cmanio, conf))
-					return -1;
+				if(manio_forward_through_sigs(&csb, &blk,
+					cmanio, conf)<0) return -1;
 				return 1;
 			}
 
@@ -155,9 +70,8 @@ static int entry_changed(struct sbuf *sb, struct manio *cmanio, struct manio *un
 			{
 				// Got an unchanged file.
 //				printf("got unchanged: %c %s %c %s %lu %lu\n", csb->cmd, csb->path, sb->cmd, sb->path, csb->statp.st_mtime, sb->statp.st_mtime);
-				if(copy_unchanged_entry(&csb, sb, &blk,
-					cmanio, unmanio, conf))
-						return -1;
+				if(manio_copy_entry(&csb, sb, &blk,
+					cmanio, unmanio, conf)<0) return -1;
 				return 0;
 			}
 
@@ -170,17 +84,16 @@ static int entry_changed(struct sbuf *sb, struct manio *cmanio, struct manio *un
 				// data.
 				// FIX THIS
 //				printf("got unchanged b: %c %s %c %s %lu %lu\n", csb->cmd, csb->path, sb->cmd, sb->path, csb->statp.st_mtime, sb->statp.st_mtime);
-				if(copy_unchanged_entry(&csb, sb, &blk,
-					cmanio, unmanio, conf))
-						return -1;
+				if(manio_copy_entry(&csb, sb, &blk,
+					cmanio, unmanio, conf)<0) return -1;
 				return 0;
 			}
 
 //			printf("got changed: %c %s %c %s %lu %lu\n", csb->cmd, csb->path, sb->cmd, sb->path, csb->statp.st_mtime, sb->statp.st_mtime);
 
 			// File data changed.
-			if(forward_through_sigs(&csb, cmanio, conf))
-				return -1;
+			if(manio_forward_through_sigs(&csb, &blk,
+				cmanio, conf)<0) return -1;
 			return 1;
 		}
 		else if(pcmp>0)

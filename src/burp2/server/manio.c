@@ -417,3 +417,59 @@ int manio_init_write_dindex(struct manio *manio, const char *dir)
 	}
 	return 0;
 }
+
+// Return -1 on error, 0 on OK, 1 for srcmanio finished.
+int manio_copy_entry(struct sbuf **csb, struct sbuf *sb,
+	struct blk **blk, struct manio *srcmanio,
+	struct manio *dstmanio, struct conf *conf)
+{
+	static int ars;
+	static char *copy=NULL;
+
+	// Use the most recent stat for the new manifest.
+	if(dstmanio && manio_write_sbuf(dstmanio, sb)) goto error;
+
+	if(!(copy=strdup((*csb)->path.buf)))
+	{
+		log_out_of_memory(__FUNCTION__);
+		goto error;
+	}
+
+	while(1)
+	{
+		if((ars=manio_sbuf_fill(srcmanio, *csb,
+			*blk, NULL, conf))<0) goto error;
+		else if(ars>0)
+		{
+			// Finished.
+			sbuf_free(*csb); *csb=NULL;
+			blk_free(*blk); *blk=NULL;
+			free(copy);
+			return 1;
+		}
+
+		// Got something.
+		if(strcmp((*csb)->path.buf, copy))
+		{
+			// Found the next entry.
+			free(copy);
+			return 0;
+		}
+		// Should have the next signature.
+		// Write it to the destination manifest.
+		if(dstmanio && manio_write_sig_and_path(dstmanio, *blk))
+			goto error;
+	}
+
+error:
+	if(copy) free(copy);
+	return -1;
+}
+
+int manio_forward_through_sigs(struct sbuf **csb, struct blk **blk,
+	struct manio *manio, struct conf *conf)
+{
+	// Call manio_copy_entry with nothing to write to, so
+	// that we forward through the sigs in manio.
+	return manio_copy_entry(csb, NULL, blk, manio, NULL, conf);
+}

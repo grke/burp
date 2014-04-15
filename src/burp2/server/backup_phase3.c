@@ -434,8 +434,8 @@ end:
 // This is basically backup_phase3_server() from burp1. It used to merge the
 // unchanged and changed data into a single file. Now it splits the manifests
 // into several files.
-int phase3(struct manio *chmanio, struct manio *unmanio,
-	const char *manifest_dir, const char *datadir, struct conf *conf)
+int backup_phase3_server(struct sdirs *sdirs,
+	const char *manifest_dir, struct conf *conf)
 {
 	int ars=0;
 	int ret=1;
@@ -448,16 +448,22 @@ int phase3(struct manio *chmanio, struct manio *unmanio,
 	int finished_ch=0;
 	int finished_un=0;
 	struct manio *newmanio=NULL;
+	struct manio *chmanio=NULL;
+	struct manio *unmanio=NULL;
 	uint64_t fcount=0;
 
 	logp("Start phase3\n");
 
 	if(!(newmanio=manio_alloc())
+	  || !(chmanio=manio_alloc())
+	  || !(unmanio=manio_alloc())
 	  || !(hooksdir=prepend_s(manifest_dir, "hooks"))
 	  || !(dindexdir=prepend_s(manifest_dir, "dindex"))
 	  || manio_init_write(newmanio, manifest_dir)
 	  || manio_init_write_hooks(newmanio, conf->directory, hooksdir)
 	  || manio_init_write_dindex(newmanio, dindexdir)
+	  || manio_init_read(chmanio, sdirs->changed)
+	  || manio_init_read(chmanio, sdirs->unchanged)
 	  || !(usb=sbuf_alloc(conf))
 	  || !(csb=sbuf_alloc(conf)))
 		goto end;
@@ -531,7 +537,7 @@ int phase3(struct manio *chmanio, struct manio *unmanio,
 		goto end;
 	}
 
-	if(sparse_generation(newmanio, fcount, datadir, manifest_dir, conf))
+	if(sparse_generation(newmanio, fcount, sdirs->data, manifest_dir, conf))
 		goto end;
 
 	recursive_delete(chmanio->directory, NULL, 1);
@@ -541,9 +547,9 @@ int phase3(struct manio *chmanio, struct manio *unmanio,
 
 	logp("End phase3\n");
 end:
-	manio_close(newmanio);
-	manio_close(chmanio);
-	manio_close(unmanio);
+	manio_free(newmanio);
+	manio_free(chmanio);
+	manio_free(unmanio);
 	sbuf_free(csb);
 	sbuf_free(usb);
 	blk_free(blk);

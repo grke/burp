@@ -24,6 +24,8 @@ SRCS = \
 	autoupgrade.o \
 	backup.o \
 	backup_phase1.o \
+	backup_phase2.o \
+	backup_phase3.o \
 	ca.o \
 	champ_chooser.o \
 	child.o \
@@ -36,7 +38,6 @@ SRCS = \
 	list.o \
 	main.o \
 	manio.o \
-	phase3.o \
 	restore.o \
 	run_action.o \
 	sdirs.o \

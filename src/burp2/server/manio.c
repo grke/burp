@@ -16,10 +16,11 @@ struct manio *manio_alloc(void)
 	return m;
 }
 
-static void manio_free_contents(struct manio *manio)
+static int manio_free_contents(struct manio *manio)
 {
-	if(!manio) return;
-	manio_close(manio);
+	int ret=0;
+	if(!manio) return ret;
+	if(manio_close(manio)) ret=-1;
 	if(manio->base_dir) free(manio->base_dir);
 	if(manio->directory) free(manio->directory);
 	if(manio->fpath) free(manio->fpath);
@@ -34,6 +35,7 @@ static void manio_free_contents(struct manio *manio)
 		free(manio->hook_sort);
 	}
 	memset(manio, 0, sizeof(struct manio));
+	return ret;
 }
 
 static int write_hook_header(struct manio *manio, gzFile zp, const char *comp)
@@ -140,6 +142,7 @@ end:
 
 int manio_close(struct manio *manio)
 {
+	if(manio_closed(manio)) return 0;
 	if(sort_and_write_hooks(manio)
 	  || sort_and_write_dindex(manio))
 	{
@@ -149,11 +152,13 @@ int manio_close(struct manio *manio)
 	return gzclose_fp(&(manio->zp));
 }
 
-void manio_free(struct manio *manio)
+int manio_free(struct manio *manio)
 {
-	if(!manio) return;
-	manio_free_contents(manio);
+	int ret=0;
+	if(!manio) return ret;
+	if(manio_free_contents(manio)) ret=-1;
 	free(manio);
+	return ret;
 }
 
 static int manio_set_mode(struct manio *manio, const char *mode)
@@ -186,7 +191,7 @@ void manio_set_protocol(struct manio *manio, enum protocol protocol)
 
 static int manio_init(struct manio *manio, const char *directory, const char *mode)
 {
-	manio_free_contents(manio);
+	if(manio_free_contents(manio)) return -1;
 	if(!(manio->directory=strdup(directory)))
 	{
 		log_out_of_memory(__FUNCTION__);
@@ -263,7 +268,7 @@ int manio_sbuf_fill(struct manio *manio, struct sbuf *sb, struct blk *blk,
 
 		// Reached the end of the current file.
 		// Maybe there is another file to continue with.
-		manio_close(manio);
+		if(manio_close(manio)) goto error;
 
 		// If in burp1 mode, there is only one file, so end.
 		if(manio->protocol==PROTO_BURP1) return 1;

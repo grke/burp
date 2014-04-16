@@ -673,6 +673,10 @@ int backup_phase2_server(struct sdirs *sdirs,
 				goto end;
 	}
 
+	if(manio_close(unmanio)
+	  || manio_close(chmanio))
+		goto end;
+
 	if(blist->head)
 	{
 		logp("ERROR: finishing but still want block: %lu\n",

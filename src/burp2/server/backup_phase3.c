@@ -501,12 +501,9 @@ int backup_phase3_server(struct sdirs *sdirs,
 	fcount=newmanio->fcount;
 
 	// Flush to disk and set up for reading.
-	if(manio_set_mode_read(newmanio))
-	{
-		logp("Error setting %s to read in %s\n",
-			newmanio->directory, __FUNCTION__);
+	if(manio_free(newmanio)
+	  || manio_init_read(newmanio, manifest_dir))
 		goto end;
-	}
 
 	if(sparse_generation(newmanio, fcount, sdirs->data, manifest_dir, conf))
 		goto end;

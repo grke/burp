@@ -7,7 +7,51 @@ static int data_needed(struct sbuf *sb)
 }
 
 // Return -1 for error, 0 for entry not changed, 1 for entry changed (or new).
-static int entry_changed(struct sbuf *sb, struct manio *cmanio, struct manio *unmanio, struct conf *conf)
+static int found_in_current_manifest(struct sbuf *csb, struct sbuf *sb,
+	struct manio *cmanio, struct manio *unmanio,
+	struct blk **blk, struct conf *conf)
+{
+	// Located the entry in the current manifest.
+	// If the file type changed, I think it is time to back it up again
+	// (for example, EFS changing to normal file, or back again).
+	if(csb->path.cmd!=sb->path.cmd)
+	{
+		if(manio_forward_through_sigs(&csb, blk, cmanio, conf)<0)
+			return -1;
+		return 1;
+	}
+
+	// mtime is the actual file data.
+	// ctime is the attributes or meta data.
+	if(csb->statp.st_mtime==sb->statp.st_mtime
+	  && csb->statp.st_ctime==sb->statp.st_ctime)
+	{
+		// Got an unchanged file.
+		if(manio_copy_entry(&csb, sb, blk, cmanio, unmanio, conf)<0)
+			return -1;
+		return 0;
+	}
+
+	if(csb->statp.st_mtime==sb->statp.st_mtime
+	  && csb->statp.st_ctime!=sb->statp.st_ctime)
+	{
+		// File data stayed the same, but attributes or meta data
+		// changed. We already have the attributes, but may need to
+		// get extra meta data.
+		// FIX THIS
+		if(manio_copy_entry(&csb, sb, blk, cmanio, unmanio, conf)<0)
+			return -1;
+		return 0;
+	}
+
+	// File data changed.
+	if(manio_forward_through_sigs(&csb, blk, cmanio, conf)<0) return -1;
+	return 1;
+}
+
+// Return -1 for error, 0 for entry not changed, 1 for entry changed (or new).
+static int entry_changed(struct sbuf *sb,
+	struct manio *cmanio, struct manio *unmanio, struct conf *conf)
 {
 	static int finished=0;
 	static struct sbuf *csb=NULL;
@@ -23,18 +67,16 @@ static int entry_changed(struct sbuf *sb, struct manio *cmanio, struct manio *un
 	}
 	else
 	{
-		static int ars;
 		// Need to read another.
 		if(!blk && !(blk=blk_alloc())) return -1;
-		if((ars=manio_sbuf_fill(cmanio, csb, blk, NULL, conf))<0)
-			return -1;
-		else if(ars>0)
+		switch(manio_sbuf_fill(cmanio, csb, blk, NULL, conf))
 		{
-			// Reached the end.
-			sbuf_free(csb); csb=NULL;
-			blk_free(blk); blk=NULL;
-			finished=1;
-			return 1;
+			case 1: // Reached the end.
+				sbuf_free(csb); csb=NULL;
+				blk_free(blk); blk=NULL;
+				finished=1;
+				return 1;
+			case -1: return -1;
 		}
 		if(!csb->path.buf)
 		{
@@ -46,78 +88,28 @@ static int entry_changed(struct sbuf *sb, struct manio *cmanio, struct manio *un
 
 	while(1)
 	{
-		static int pcmp;
-		static int sbret;
-
-		if(!(pcmp=sbuf_pathcmp(csb, sb)))
+		switch(sbuf_pathcmp(csb, sb))
 		{
-			// Located the entry in the current manifest.
-			// If the file type changed, I think it is time to back
-			// it up again (for example, EFS changing to normal
-			// file, or back again).
-			if(csb->path.cmd!=sb->path.cmd)
-			{
-//				printf("got changed: %c %s %c %s %lu %lu\n", csb->cmd, csb->path, sb->cmd, sb->path, csb->statp.st_mtime, sb->statp.st_mtime);
-				if(manio_forward_through_sigs(&csb, &blk,
-					cmanio, conf)<0) return -1;
-				return 1;
-			}
-
-			// mtime is the actual file data.
-			// ctime is the attributes or meta data.
-			if(csb->statp.st_mtime==sb->statp.st_mtime
-			  && csb->statp.st_ctime==sb->statp.st_ctime)
-			{
-				// Got an unchanged file.
-//				printf("got unchanged: %c %s %c %s %lu %lu\n", csb->cmd, csb->path, sb->cmd, sb->path, csb->statp.st_mtime, sb->statp.st_mtime);
-				if(manio_copy_entry(&csb, sb, &blk,
-					cmanio, unmanio, conf)<0) return -1;
-				return 0;
-			}
-
-			if(csb->statp.st_mtime==sb->statp.st_mtime
-			  && csb->statp.st_ctime!=sb->statp.st_ctime)
-			{
-				// File data stayed the same, but attributes or
-				// meta data changed. We already have the
-				// attributes, but may need to get extra meta
-				// data.
-				// FIX THIS
-//				printf("got unchanged b: %c %s %c %s %lu %lu\n", csb->cmd, csb->path, sb->cmd, sb->path, csb->statp.st_mtime, sb->statp.st_mtime);
-				if(manio_copy_entry(&csb, sb, &blk,
-					cmanio, unmanio, conf)<0) return -1;
-				return 0;
-			}
-
-//			printf("got changed: %c %s %c %s %lu %lu\n", csb->cmd, csb->path, sb->cmd, sb->path, csb->statp.st_mtime, sb->statp.st_mtime);
-
-			// File data changed.
-			if(manio_forward_through_sigs(&csb, &blk,
-				cmanio, conf)<0) return -1;
-			return 1;
+			case 0: return found_in_current_manifest(csb, sb,
+					cmanio, unmanio, &blk, conf);
+			case 1: return 1;
+			case -1:
+				// Behind - need to read more data from the old
+				// manifest.
+				switch(manio_sbuf_fill(cmanio,
+					csb, blk, NULL, conf))
+				{
+					case -1: return -1;
+					case 1:
+					{
+						// Reached the end.
+						sbuf_free(csb); csb=NULL;
+						blk_free(blk); blk=NULL;
+						return 1;
+					}
+				}
+				// Got something, go back around the loop.
 		}
-		else if(pcmp>0)
-		{
-			// Ahead - this is a new file.
-//			printf("got new file: %c %s\n", sb->cmd, sb->path);
-			return 1;
-		}
-		else
-		{
-			// Behind - need to read more data from the old
-			// manifest.
-		}
-
-		if((sbret=manio_sbuf_fill(cmanio, csb, blk, NULL, conf))<0)
-			return -1;
-		else if(sbret>0)
-		{
-			// Reached the end.
-			sbuf_free(csb); csb=NULL;
-			blk_free(blk); blk=NULL;
-			return 1;
-		}
-		// Got something, go back around the loop.
 	}
 
 	return 0;
@@ -128,14 +120,11 @@ static int add_data_to_store(struct conf *conf,
 {
 	static struct blk *blk=NULL;
 
-//	printf("Got data %lu!\n", rbuf->len);
-
 	// Find the first one in the list that was requested.
 	// FIX THIS: Going up the list here, and then later
 	// when writing to the manifest is not efficient.
-	//if(!blk)
-		blk=blist->head;
-	for(; blk && (!blk->requested || blk->got==GOT); blk=blk->next)
+	for(blk=blist->head;
+		blk && (!blk->requested || blk->got==GOT); blk=blk->next)
 	{
 		logp("try: %d %d\n", blk->index, blk->got);
 	}
@@ -146,7 +135,6 @@ static int add_data_to_store(struct conf *conf,
 		else logp("head index: %d\n", blist->head->index);
 		return -1;
 	}
-//	printf("Got blk %lu!\n", blk->index);
 
 	// Add it to the data store straight away.
 	if(dpth_fwrite(dpth, rbuf, blk)) return -1;
@@ -201,12 +189,9 @@ static void dump_blks(const char *msg, struct blk *b)
 
 static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobuf *rbuf, struct dpth *dpth, uint64_t *wrap_up, struct conf *conf)
 {
-	int ia;
 	// Goes on slist->add_sigs_here
 	struct blk *blk;
         struct sbuf *sb;
-
-	//printf("CMD_SIG: %s\n", rbuf->buf);
 
 	if(!(blk=blk_alloc())) return -1;
 	blk_add_to_list(blk, blist);
@@ -218,18 +203,12 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobu
 	// FIX THIS: Should not just load into strings.
 	if(split_sig(rbuf->buf, rbuf->len, blk->weak, blk->strong)) return -1;
 
-	if((ia=deduplicate_maybe(blk, dpth, conf, wrap_up))<0)
+	switch(deduplicate_maybe(blk, dpth, conf, wrap_up))
 	{
-//		printf("dm -1\n");
-		return -1;
-	}
-	else if(!ia)
-	{
-//		printf("dm 0\n");
-		return 0; // Nothing to do for now.
+		case 0: return 0; // Nothing to do for now.
+		case -1: return -1;
 	}
 
-//	printf("dm post\n");
 	return 0;
 }
 
@@ -276,13 +255,11 @@ static int deal_with_read(struct iobuf *rbuf,
 		case CMD_GEN:
 			if(!strcmp(rbuf->buf, "sigs_end"))
 			{
-//printf("SIGS END\n");
 				*sigs_end=1;
 				goto end;
 			}
 			else if(!strcmp(rbuf->buf, "backup_end"))
 			{
-//printf("BACKUP END\n");
 				*backup_end=1;
 				goto end;
 			}
@@ -310,13 +287,9 @@ static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, struct bl
 {
 	static char req[32]="";
 	struct sbuf *sb=slist->blks_to_request;
-//printf("get wbuf from sigs: %p\n", sb);
 
-	while(sb && !(sb->flags & SBUF_NEED_DATA))
-	{
-//		printf("Do not need data %d: %s\n", sb->need_data, sb->path);
-		sb=sb->next;
-	}
+	while(sb && !(sb->flags & SBUF_NEED_DATA)) sb=sb->next;
+
 	if(!sb)
 	{
 		slist->blks_to_request=NULL;
@@ -330,7 +303,6 @@ static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, struct bl
 	}
 	if(!sb->burp2->bsighead)
 	{
-//printf("HERE X %d %d: %s\n", sigs_end, *blk_requests_end, sb->path);
 		// Trying to move onto the next file.
 		// ??? Does this really work?
 		if(sb->burp2->bend)
@@ -346,9 +318,7 @@ static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, struct bl
 		}
 		return 0;
 	}
-//printf("HERE Y %p %p %lu %d\n", sb->burp2->bsighead, sb->burp2->bsighead->next, sb->burp2->bsighead->index, sb->burp2->bsighead->got);
 
-//printf("check: %p %s\n", sb->burp2->bsighead, sb->path); fflush(stdout);
 	if(sb->burp2->bsighead->got==INCOMING)
 	{
 		if(sigs_end
@@ -361,8 +331,6 @@ static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, struct bl
 	{
 		encode_req(sb->burp2->bsighead, req);
 		iobuf_from_str(wbuf, CMD_DATA_REQ, req);
-//printf("DATA REQUEST: %lu %04lX %s\n",
-//	sb->burp2->bsighead->index, sb->burp2->bsighead->index, sb->burp2->bsighead->weak);
 		sb->burp2->bsighead->requested=1;
 	}
 
@@ -371,14 +339,11 @@ static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, struct bl
 	{
 		slist->blks_to_request=sb->next;
 		sb->burp2->bsighead=sb->burp2->bstart;
-//		if(!sb->burp2->bsighead) printf("sb->burp2->bsighead fell off end a\n");
 	}
 	else
 	{
 		sb->burp2->bsighead=sb->burp2->bsighead->next;
-//		if(!sb->burp2->bsighead) printf("sb->burp2->bsighead fell off end b\n");
 	}
-//printf("end get_wbuf_fs\n");
 	return 0;
 }
 
@@ -404,7 +369,6 @@ static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist, struct 
 
 	// Only need to request the path at this stage.
 	iobuf_copy(wbuf, &sb->path);
-//printf("want sigs for: %s\n", sb->path.buf);
 	sb->flags |= SBUF_SENT_PATH;
 	sb->burp2->index=file_no++;
 }
@@ -425,7 +389,6 @@ static int write_to_changed_file(struct manio *chmanio, struct slist *slist, str
 
 	while((sb=slist->head))
 	{
-//printf("consider: %s %d\n", sb->path.buf, sb->need_data);
 		if(sb->flags & SBUF_NEED_DATA)
 		{
 			int hack=0;
@@ -472,9 +435,7 @@ static int write_to_changed_file(struct manio *chmanio, struct slist *slist, str
 
 				if(blk==sb->burp2->bend)
 				{
-//printf("blk==sb->burp2->bend END FILE\n");
 					slist->head=sb->next;
-					//break;
 					if(!(blist->head=sb->burp2->bstart))
 						blist->tail=NULL;
 					sanity_before_sbuf_free(slist, sb);
@@ -499,14 +460,12 @@ static int write_to_changed_file(struct manio *chmanio, struct slist *slist, str
 			if(manio_write_sbuf(chmanio, sb)) return -1;
 
 			// Move along.
-//printf("END FILE\n");
 			slist->head=sb->next;
 
 			sanity_before_sbuf_free(slist, sb);
 			sbuf_free(sb);
 		}
 	}
-//printf("no more shead\n");
 	return 0;
 }
 
@@ -546,8 +505,6 @@ static int maybe_add_from_scan(struct manio *p1manio, struct manio *cmanio,
 		// Limit the amount loaded into memory at any one time.
 		if(slist && slist->head)
 		{
-//			printf("%d %d\n", slist->head->burp2->index,
-//				slist->tail->burp2->index>4096);
 			if(slist->head->burp2->index
 			  - slist->tail->burp2->index>4096)
 				return 0;
@@ -618,13 +575,8 @@ int backup_phase2_server(struct sdirs *sdirs,
 	// The phase1 manifest looks the same as a burp1 one.
 	manio_set_protocol(p1manio, PROTO_BURP1);
 
-//printf("after inits\n");
-
 	while(!backup_end)
 	{
-//printf("loop a: %d %d %d %d\n",
-//	backup_end, sigs_end, requests_end, blk_requests_end);
-
 		if(maybe_add_from_scan(p1manio, cmanio, unmanio, slist, conf))
 			goto end;
 
@@ -645,7 +597,6 @@ int backup_phase2_server(struct sdirs *sdirs,
 			}
 		}
 
-//		if(wbuf->len) printf("send request: %s\n", wbuf->buf);
 		if(async_rw(rbuf, wbuf))
 		{
 			logp("error in async_rw in %s()\n", __FUNCTION__);

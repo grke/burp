@@ -8,6 +8,7 @@
 #include "autoupgrade.h"
 #include "backup.h"
 #include "backup_phase1.h"
+#include "backup_phase2.h"
 #include "ca.h"
 #include "cvss.h"
 #include "delete.h"

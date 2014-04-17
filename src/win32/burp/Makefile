@@ -45,6 +45,7 @@ CLIENT_OBJS = \
 	$(OBJDIR)/burp2/client/autoupgrade.o \
 	$(OBJDIR)/burp2/client/backup.o \
 	$(OBJDIR)/burp2/client/backup_phase1.o \
+	$(OBJDIR)/burp2/client/backup_phase2.o \
 	$(OBJDIR)/burp2/client/ca.o \
 	$(OBJDIR)/burp2/client/cvss.o \
 	$(OBJDIR)/burp2/client/delete.o \

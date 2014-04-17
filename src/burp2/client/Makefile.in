@@ -25,6 +25,7 @@ SRCS = \
 	autoupgrade.o \
 	backup.o \
 	backup_phase1.o \
+	backup_phase2.o \
 	ca.o \
 	cvss.o \
 	delete.o \

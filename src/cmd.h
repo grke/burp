@@ -76,4 +76,8 @@
 #define CMD_VSS_T       'u'     /* Windows VSS footer */
 #define CMD_ENC_VSS_T   'U'     /* Encrypted Windows VSS footer */
 
+
+extern void cmd_to_text(char cmd, char *buf, size_t len);
+extern void cmd_print_all(void);
+
 #endif

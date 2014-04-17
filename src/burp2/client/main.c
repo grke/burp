@@ -48,9 +48,9 @@ static enum cliret maybe_check_timer(enum action action, const char *phase1str,
 		if(action==ACTION_TIMER_CHECK) goto end;
         }
 
-	if(!strncmp(rbuf.buf, "ok", 2))
+	if(!strncmp_w(rbuf.buf, "ok"))
 		complen=3;
-	else if(!strncmp(rbuf.buf, "resume", 6))
+	else if(!strncmp_w(rbuf.buf, "resume"))
 	{
 		complen=7;
 		*resume=1;

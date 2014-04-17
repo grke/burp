@@ -58,9 +58,11 @@ CLIENT_OBJS = \
 	$(OBJDIR)/burp2/rabin/rabin.o \
 	$(OBJDIR)/burp2/rabin/rconf.o \
 	$(OBJDIR)/burp2/rabin/win.o \
+	$(OBJDIR)/cmd.o \
 	$(OBJDIR)/cntr.o \
 	$(OBJDIR)/conf.o \
 	$(OBJDIR)/forkchild.o \
+	$(OBJDIR)/fsops.o \
 	$(OBJDIR)/glob_windows.o \
 	$(OBJDIR)/handy.o \
 	$(OBJDIR)/incexc_recv.o \

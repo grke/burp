@@ -111,3 +111,23 @@ void log_out_of_memory(const char *function)
 	if(function) logp("out of memory in %s()\n", function);
 	else logp("out of memory in unknown function\n");
 }
+
+void log_restore_settings(struct conf *cconf, int srestore)
+{
+	struct strlist *l;
+	logp("Restore settings:\n");
+	if(cconf->orig_client)
+		logp("orig_client = %s\n", cconf->orig_client);
+	logp("backup = %s\n", cconf->backup);
+	if(srestore)
+	{
+		// This are unknown unless doing a server initiated restore.
+		logp("overwrite = %d\n", cconf->overwrite);
+		logp("strip = %d\n", cconf->strip);
+	}
+	if(cconf->restoreprefix)
+		logp("restoreprefix = %s\n", cconf->restoreprefix);
+	if(cconf->regex) logp("regex = %s\n", cconf->regex);
+	for(l=cconf->incexcdir; l; l=l->next)
+		if(l->flag) logp("include = %s\n", l->path);
+}

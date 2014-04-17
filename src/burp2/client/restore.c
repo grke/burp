@@ -564,7 +564,7 @@ static enum asl_ret restore_spool_func(struct iobuf *rbuf,
 {
 	static char **datpath;
 	datpath=(char **)param;
-	if(!strncmp(rbuf->buf, "dat=", 4))
+	if(!strncmp_w(rbuf->buf, "dat="))
 	{
 		char *fpath=NULL;
 		if(!(fpath=prepend_s(*datpath, rbuf->buf+4))

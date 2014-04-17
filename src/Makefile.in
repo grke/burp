@@ -25,9 +25,11 @@ SRCS = \
 		base64.c \
 		berrno.c \
 		bfile.c \
+		cmd.c \
 		cntr.c \
 		conf.c \
 		forkchild.c \
+		fsops.c \
 		glob_windows.c \
 		handy.c \
 		incexc_recv.c \

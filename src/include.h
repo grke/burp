@@ -13,6 +13,7 @@
 #include "cntr.h"
 #include "conf.h"
 #include "forkchild.h"
+#include "fsops.h"
 #include "glob_windows.h"
 #include "handy.h"
 #include "incexc_recv.h"

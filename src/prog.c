@@ -239,7 +239,7 @@ int main (int argc, char *argv[])
 #endif
 				break;
 			case 'i':
-				print_all_cmds();
+				cmd_print_all();
 				ret=0;
 				goto end;
 			case 'l':

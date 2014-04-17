@@ -8,5 +8,6 @@ extern const char *progname(void);
 extern int set_logfp(const char *path, struct conf *conf);
 extern FILE *get_logfp(void);
 extern void log_out_of_memory(const char *function);
+extern void log_restore_settings(struct conf *cconf, int srestore);
 
 #endif

@@ -502,6 +502,7 @@ int backup_phase3_server(struct sdirs *sdirs,
 
 	// Flush to disk and set up for reading.
 	if(manio_free(newmanio)
+	  || !(newmanio=manio_alloc())
 	  || manio_init_read(newmanio, manifest_dir))
 		goto end;
 

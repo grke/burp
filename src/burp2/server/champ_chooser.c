@@ -509,64 +509,26 @@ int deduplicate(struct blk *blks, struct dpth *dpth, struct conf *conf, uint64_t
 	return 0;
 }
 
-// Return 0 for OK, -1 for error, 1 to mean that the list of blocks has been
-// deduplicated.
-int deduplicate_maybe(struct blk *blk, struct dpth *dpth, struct conf *conf, uint64_t *wrap_up)
+int deduplicate_maybe(struct blk *blk, struct dpth *dpth,
+	struct conf *conf, uint64_t *wrap_up)
 {
 	static int count=0;
 	static struct blk *blks=NULL;
+
 	if(!blks && !(blks=blk)) return -1;
 	if(!in && !(in=incoming_alloc())) return -1;
 
 	blk->fingerprint=strtoull(blk->weak, 0, 16);
-//printf("%s\n", blk->weak);
 	if(is_hook(blk->weak))
 	{
 		if(incoming_grow_maybe(in)) return -1;
 		in->weak[in->size-1]=blk->fingerprint;
 	}
 	if(++count<MANIFEST_SIG_MAX) return 0;
-//	if(++count<2) return 0;
 	count=0;
 
 	if(deduplicate(blks, dpth, conf, wrap_up)<0) return -1;
 	blks=NULL;
-//printf("\n");
-	return 1; // deduplication was successful
+
+	return 0;
 }
-
-/*
-static struct blk *gen_test_blk(void)
-{
-	static int count=0;
-	struct blk *blk=NULL;
-	if(!(blk=blk_alloc())) return NULL;
-	count++;
-	snprintf(blk->weak, sizeof(blk->weak), "F363D8CDA1A9B115");
-	if(count>100000) exit(1);
-	return blk;
-}
-
-int champ_test(struct conf *conf)
-{
-	int ia;
-	uint64_t wrap_up=0;
-	struct dpth *dpth=NULL;
-	struct blk *blk=NULL;
-	const char *datadir="/var/spool/burp/testclient/data";
-
-	if(!(dpth=dpth_alloc(datadir)) || dpth_init(dpth))
-		return -1;
-
-	if(champ_chooser_init(datadir, conf)) return -1;
-
-	while((blk=gen_test_blk()))
-	{
-		if((ia=deduplicate_maybe(blk, dpth, conf, &wrap_up))<0)
-		{
-			return -1;
-		}
-	}
-	return -1;
-}
-*/

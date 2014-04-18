@@ -187,7 +187,9 @@ static void dump_blks(const char *msg, struct blk *b)
 }
 */
 
-static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobuf *rbuf, struct dpth *dpth, uint64_t *wrap_up, struct conf *conf)
+static int add_to_sig_list(struct slist *slist, struct blist *blist,
+	struct iobuf *rbuf, struct dpth *dpth,
+	uint64_t *wrap_up, struct conf *conf)
 {
 	// Goes on slist->add_sigs_here
 	struct blk *blk;
@@ -203,11 +205,7 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist, struct iobu
 	// FIX THIS: Should not just load into strings.
 	if(split_sig(rbuf->buf, rbuf->len, blk->weak, blk->strong)) return -1;
 
-	switch(deduplicate_maybe(blk, dpth, conf, wrap_up))
-	{
-		case 0: return 0; // Nothing to do for now.
-		case -1: return -1;
-	}
+	if(deduplicate_maybe(blk, dpth, conf, wrap_up)<0) return -1;
 
 	return 0;
 }
@@ -532,8 +530,8 @@ end:
 	return ret;
 }
 
-int backup_phase2_server(struct sdirs *sdirs,
-	const char *manifest_dir, int resume, struct conf *conf)
+int backup_phase2_server(struct sdirs *sdirs, const char *manifest_dir,
+	int champsock, int resume, struct conf *conf)
 {
 	int ret=-1;
 	int sigs_end=0;

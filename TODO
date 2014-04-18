@@ -7,7 +7,7 @@ However, that is currently relating only to burp1 issues.
 So, this is a list of important stuff that needs to be done for burp2,
 roughly in order of most important to least.
 
-* Probably need to make the champion chooser into a separate process (one
+* need to make the champion chooser into a separate process (one
   for each dedup_group) that multiple server children can query.
 
 * Check data file locks don't just make the child exit.

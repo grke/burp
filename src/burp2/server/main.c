@@ -299,7 +299,7 @@ static int process_incoming_client(int rfd, struct conf *conf, SSL_CTX *ctx, con
 	  {
 		case -1:
 			logp("fork failed: %s\n", strerror(errno));
-			break;
+			return -1;
 		case 0:
 		{
 			int ret;
@@ -346,7 +346,7 @@ static int process_incoming_client(int rfd, struct conf *conf, SSL_CTX *ctx, con
 				pipe_rfd[0], pipe_wfd[1], is_status_server);
 
 			close_fd(&cfd);
-			break;
+			return 0;
 	  }
 	}
 	else
@@ -357,7 +357,6 @@ static int process_incoming_client(int rfd, struct conf *conf, SSL_CTX *ctx, con
 			return run_child(&rfd, &cfd, ctx, conffile,
 				conf->forking);
 	}
-	return 0;
 }
 
 static int daemonise(void)

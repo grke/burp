@@ -66,6 +66,7 @@ static int do_v2_dirs(struct sdirs *sdirs, struct conf *conf)
 	}
 	if(!(sdirs->dedup=prepend_s(sdirs->base, conf->dedup_group))
 	  || !(sdirs->data=prepend_s(sdirs->dedup, "data"))
+	  || !(sdirs->champsock=prepend_s(sdirs->dedup, "cc.sock"))
 	  || !(sdirs->clients=prepend_s(sdirs->dedup, "clients"))
 	  || !(sdirs->client=prepend_s(sdirs->clients, conf->cname))
 	  || !(sdirs->working=prepend_s(sdirs->client, "working"))
@@ -114,6 +115,7 @@ void sdirs_free(struct sdirs *sdirs)
 
         if(sdirs->base) free(sdirs->base);
         if(sdirs->dedup) free(sdirs->dedup);
+        if(sdirs->champsock) free(sdirs->champsock);
         if(sdirs->data) free(sdirs->data);
         if(sdirs->clients) free(sdirs->clients);
         if(sdirs->client) free(sdirs->client);

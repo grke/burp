@@ -47,7 +47,9 @@ SRCS = \
 		strlist.c \
 
 OBJS = $(SRCS:.c=.o)
-SUBDIROBJS = burp2/server/server_burp2.a \
+SUBDIROBJS = \
+		burp2/server/server_burp2.a \
+		burp2/server/champ_chooser/champ_chooser.a \
 		burp2/client/client_burp2.a \
 		burp2/rabin/rabin.a \
 		burp1/client/client_burp1.a \

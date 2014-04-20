@@ -1,4 +1,5 @@
 #include "include.h"
+#include "champ_chooser/hash.h"
 
 static int restore_sbuf(struct sbuf *sb, enum action act,
 	char status, struct conf *conf, int *need_data)
@@ -234,8 +235,8 @@ static int maybe_copy_data_files_across(const char *manifest,
 	uint64_t blkcount=0;
 	uint64_t datcount=0;
 	uint64_t weakint;
-	struct weak_entry *tmpw;
-	struct weak_entry *weak_entry;
+	struct hash_weak *tmpw;
+	struct hash_weak *hash_weak;
 	uint64_t estimate_blks;
 	uint64_t estimate_dats;
 	uint64_t estimate_one_dat;
@@ -282,10 +283,9 @@ static int maybe_copy_data_files_across(const char *manifest,
 			blk->save_path[9]='0';
 		//	printf("here: %s\n", blk->save_path);
 			weakint=strtoull(blk->save_path, 0, 16);
-			if(!find_weak_entry(weakint))
+			if(!hash_weak_find(weakint))
 			{
-				if(!add_weak_entry(weakint))
-					goto end;
+				if(!hash_weak_add(weakint)) goto end;
 				datcount++;
 			}
 		}
@@ -326,12 +326,12 @@ static int maybe_copy_data_files_across(const char *manifest,
 		goto end;
 
 	// Send each of the data files that we found to the client.
-	HASH_ITER(hh, hash_table, weak_entry, tmpw)
+	HASH_ITER(hh, hash_table, hash_weak, tmpw)
 	{
 		char msg[32];
 		char path[32];
 		char *fdatpath=NULL;
-		snprintf(path, sizeof(path), "%014lX", weak_entry->weak);
+		snprintf(path, sizeof(path), "%014lX", hash_weak->weak);
 		path[4]='/';
 		path[9]='/';
 		snprintf(msg, sizeof(msg), "dat=%s", path);

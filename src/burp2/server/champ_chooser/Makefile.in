@@ -22,6 +22,7 @@ dummy:
 SRCS = \
 	candidate.o \
 	champ_chooser.o \
+	hash.o \
 	incoming.o \
 	scores.o \
 	sparse.o

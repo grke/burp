@@ -1,26 +1,27 @@
 #include "include.h"
 
-struct weak_entry *hash_table=NULL;
+struct hash_weak *hash_table=NULL;
 
-struct weak_entry *find_weak_entry(uint64_t weak)
+struct hash_weak *hash_weak_find(uint64_t weak)
 {
-	struct weak_entry *weak_entry;
-	HASH_FIND_INT(hash_table, &weak, weak_entry);
-	return weak_entry;
+	struct hash_weak *hash_weak;
+	HASH_FIND_INT(hash_table, &weak, hash_weak);
+	return hash_weak;
 }
 
-struct strong_entry *find_strong_entry(struct weak_entry *weak_entry, const char *strong)
+struct hash_strong *hash_strong_find(struct hash_weak *hash_weak,
+	const char *strong)
 {
-	struct strong_entry *s;
-	for(s=weak_entry->strong; s; s=s->next)
+	struct hash_strong *s;
+	for(s=hash_weak->strong; s; s=s->next)
 		if(!strcmp(s->strong, strong)) return s;
 	return NULL;
 }
 
-struct weak_entry *add_weak_entry(uint64_t weakint)
+struct hash_weak *hash_weak_add(uint64_t weakint)
 {
-	struct weak_entry *newweak;
-	if(!(newweak=(struct weak_entry *)malloc(sizeof(struct weak_entry))))
+	struct hash_weak *newweak;
+	if(!(newweak=(struct hash_weak *)malloc(sizeof(struct hash_weak))))
 	{
 		log_out_of_memory(__FUNCTION__);
 		return NULL;
@@ -32,23 +33,25 @@ struct weak_entry *add_weak_entry(uint64_t weakint)
 	return newweak;
 }
 
-struct strong_entry *add_strong_entry(struct weak_entry *weak_entry, const char *strong, const char *path)
+struct hash_strong *hash_strong_add(struct hash_weak *hash_weak,
+	const char *strong, const char *path)
 {
-	struct strong_entry *newstrong;
-	if(!(newstrong=(struct strong_entry *)malloc(sizeof(struct strong_entry)))
+	struct hash_strong *newstrong;
+	if(!(newstrong=(struct hash_strong *)
+		malloc(sizeof(struct hash_strong)))
 	  || !(newstrong->path=strdup(path)))
 	{
 		log_out_of_memory(__FUNCTION__);
 		return NULL;
 	}
 	snprintf(newstrong->strong, sizeof(newstrong->strong), "%s", strong);
-	newstrong->next=weak_entry->strong;
+	newstrong->next=hash_weak->strong;
 	return newstrong;
 }
 
-static void strong_entries_free(struct strong_entry *shead)
+static void hash_strongs_free(struct hash_strong *shead)
 {
-	static struct strong_entry *s;
+	static struct hash_strong *s;
 	s=shead;
 	while(shead)
 	{
@@ -61,21 +64,21 @@ static void strong_entries_free(struct strong_entry *shead)
 
 void hash_delete_all(void)
 {
-	struct weak_entry *tmp;
-	struct weak_entry *weak_entry;
+	struct hash_weak *tmp;
+	struct hash_weak *hash_weak;
 
-	HASH_ITER(hh, hash_table, weak_entry, tmp)
+	HASH_ITER(hh, hash_table, hash_weak, tmp)
 	{
-		HASH_DEL(hash_table, weak_entry);
-		strong_entries_free(weak_entry->strong);
-		free(weak_entry);
+		HASH_DEL(hash_table, hash_weak);
+		hash_strongs_free(hash_weak->strong);
+		free(hash_weak);
 	}
 }
 
 static int process_sig(char cmd, const char *buf, unsigned int s)
 {
 	static uint64_t weakint;
-	static struct weak_entry *weak_entry;
+	static struct hash_weak *hash_weak;
 	static char weak[16+1];
 	static char strong[32+1];
 	static char save_path[128+1];
@@ -85,14 +88,14 @@ static int process_sig(char cmd, const char *buf, unsigned int s)
 
 	weakint=strtoull(weak, 0, 16);
 
-	weak_entry=find_weak_entry(weakint);
+	hash_weak=hash_weak_find(weakint);
 
 	// Add to hash table.
-	if(!weak_entry && !(weak_entry=add_weak_entry(weakint)))
+	if(!hash_weak && !(hash_weak=hash_weak_add(weakint)))
 		return -1;
-	if(!find_strong_entry(weak_entry, strong))
+	if(!hash_strong_find(hash_weak, strong))
 	{
-		if(!(weak_entry->strong=add_strong_entry(weak_entry,
+		if(!(hash_weak->strong=hash_strong_add(hash_weak,
 			strong, save_path))) return -1;
 	}
 

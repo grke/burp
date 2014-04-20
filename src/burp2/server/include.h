@@ -16,7 +16,6 @@
 #include "delete.h"
 #include "dpth.h"
 #include "extra_comms.h"
-#include "hash.h"
 #include "list.h"
 #include "main.h"
 #include "manio.h"

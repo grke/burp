@@ -74,16 +74,17 @@ static char *get_fq_path(const char *path)
 static int already_got_block(struct blk *blk, struct dpth *dpth)
 {
 	static char *path;
-	static struct weak_entry *weak_entry;
+	static struct hash_weak *hash_weak;
 
 	// If already got, need to overwrite the references.
-	if((weak_entry=find_weak_entry(blk->fingerprint)))
+	if((hash_weak=hash_weak_find(blk->fingerprint)))
 	{
-		static struct strong_entry *strong_entry;
-		if((strong_entry=find_strong_entry(weak_entry, blk->strong)))
+		static struct hash_strong *hash_strong;
+		if((hash_strong=hash_strong_find(
+			hash_weak, blk->strong)))
 		{
 			snprintf(blk->save_path, sizeof(blk->save_path),
-				"%s", get_fq_path(strong_entry->path));
+				"%s", get_fq_path(hash_strong->path));
 //printf("FOUND: %s %s\n", blk->weak, blk->strong);
 //printf("F");
 			blk->got=GOT;

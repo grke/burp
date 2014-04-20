@@ -23,7 +23,7 @@ struct hash_weak *hash_weak_add(uint64_t weakint)
 	struct hash_weak *newweak;
 	if(!(newweak=(struct hash_weak *)malloc(sizeof(struct hash_weak))))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return NULL;
 	}
 	newweak->weak=weakint;
@@ -41,7 +41,7 @@ struct hash_strong *hash_strong_add(struct hash_weak *hash_weak,
 		malloc(sizeof(struct hash_strong)))
 	  || !(newstrong->path=strdup(path)))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return NULL;
 	}
 	snprintf(newstrong->strong, sizeof(newstrong->strong), "%s", strong);
@@ -127,7 +127,7 @@ int hash_load(const char *champ, struct conf *conf)
 		buf[6]=0;
 		if((sscanf(buf, "%c%04X", &cmd, &s))!=2)
 		{
-			logp("sscanf failed in %s: %s\n", __FUNCTION__, buf);
+			logp("sscanf failed in %s: %s\n", __func__, buf);
 			goto end;
 		}
 

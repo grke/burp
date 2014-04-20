@@ -10,7 +10,7 @@ static int champ_chooser_fork(struct sdirs *sdirs, struct conf *conf)
 	{
 		case -1:
 			logp("fork failed in %s: %s\n",
-				__FUNCTION__, strerror(errno));
+				__func__, strerror(errno));
 			return -1;
 		case 0:
 			// Child.
@@ -37,8 +37,7 @@ int connect_to_champ_chooser(struct sdirs *sdirs, struct conf *conf)
 
 	if((s=socket(AF_UNIX, SOCK_STREAM, 0))<0)
 	{
-		logp("socket error in %s: %s\n",
-			__FUNCTION__, strerror(errno));
+		logp("socket error in %s: %s\n", __func__, strerror(errno));
 		return -1;
 	}
 
@@ -64,7 +63,7 @@ int connect_to_champ_chooser(struct sdirs *sdirs, struct conf *conf)
 			else
 			{
 				logp("connect error in %s: %d %s\n",
-					__FUNCTION__, errno, strerror(errno));
+					__func__, errno, strerror(errno));
 			}
 		}
 		else

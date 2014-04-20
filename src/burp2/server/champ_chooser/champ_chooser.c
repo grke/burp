@@ -38,7 +38,7 @@ int champ_chooser_init(const char *datadir, struct conf *conf)
 		}
 		else
 		{
-			iobuf_log_unexpected(&sb->path, __FUNCTION__);
+			iobuf_log_unexpected(&sb->path, __func__);
 			goto end;
 		}
 		sbuf_free_content(sb);

@@ -7,7 +7,7 @@ static struct sparse *sparse_add(uint64_t weak)
         struct sparse *sparse;
         if(!(sparse=(struct sparse *)calloc(1, sizeof(struct sparse))))
         {
-                log_out_of_memory(__FUNCTION__);
+                log_out_of_memory(__func__);
                 return NULL;
         }
         sparse->weak=weak;
@@ -48,7 +48,7 @@ int sparse_add_candidate(const char *weakstr, struct candidate *candidate)
 		realloc(sparse->candidates,
 			(sparse->size+1)*sizeof(struct candidate *))))
 	{
-                log_out_of_memory(__FUNCTION__);
+                log_out_of_memory(__func__);
 		return -1;
 	}
 	sparse->candidates[sparse->size++]=candidate;

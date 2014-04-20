@@ -428,7 +428,8 @@ static int relock(struct lock *lock)
 	return -1;
 }
 
-static int run_server(struct conf *conf, const char *conffile, int *rfd, const char *oldport, const char *oldstatusport)
+static int run_server(struct conf *conf, const char *conffile, int *rfd,
+	const char *oldport, const char *oldstatusport)
 {
 	int ret=0;
 	SSL_CTX *ctx=NULL;
@@ -569,7 +570,7 @@ static int run_server(struct conf *conf, const char *conffile, int *rfd, const c
 		mfd=-1;
 		FD_ZERO(&fsw);
 		FD_ZERO(&fse);
-		if(!chld_add_fd_to_normal_sets(conf, &fsw, &fse, &mfd))
+		if(!chld_add_fd_to_status_sets(conf, &fsw, &fse, &mfd))
 		{
 			// Did not find any status server children.
 			// No need to do the select.

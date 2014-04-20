@@ -7,9 +7,9 @@ VPATH = 	.
 # one up
 basedir = ..
 # top dir
-topdir = ../../..
+topdir = ../../../..
 # this dir relative to top dir
-thisdir = src/burp2/server
+thisdir = src/burp2/server/champ_chooser
 
 DEBUG=@DEBUG@
 
@@ -20,28 +20,11 @@ dummy:
 
 #
 SRCS = \
-	auth.o \
-	autoupgrade.o \
-	backup.o \
-	backup_phase1.o \
-	backup_phase2.o \
-	backup_phase3.o \
-	ca.o \
-	child.o \
-	chlds.o \
-	current_backups.o \
-	delete.o \
-	dpth.o \
-	extra_comms.o \
-	hash.o \
-	list.o \
-	main.o \
-	manio.o \
-	restore.o \
-	run_action.o \
-	sdirs.o \
-	status_client_ncurses.o \
-	status_server.o
+	candidate.o \
+	champ_chooser.o \
+	incoming.o \
+	scores.o \
+	sparse.o
 
 OBJS = $(SRCS:.c=.o)
 LOBJS = $(SRCS:.c=.lo)
@@ -69,11 +52,11 @@ WIN32LIBS = $(@WIN32@)
 #	@echo "Compiling $<"
 	$(ECHO_CMD)$(LIBTOOL_COMPILE) $(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 #-------------------------------------------------------------------------
-all: Makefile server_burp2.a
-	@echo "==== Make of server_burp2.a is good ===="
+all: Makefile champ_chooser.a
+	@echo "==== Make of champ_chooser.a is good ===="
 	@echo " "
 
-server_burp2.a: $(OBJS)
+champ_chooser.a: $(OBJS)
 	@echo "Making $@ ..."
 	$(AR) rc  $@ $(OBJS)
 	$(RANLIB) $@

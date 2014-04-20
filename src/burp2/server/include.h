@@ -10,7 +10,6 @@
 #include "backup_phase2.h"
 #include "backup_phase3.h"
 #include "ca.h"
-#include "champ_chooser.h"
 #include "child.h"
 #include "chlds.h"
 #include "current_backups.h"

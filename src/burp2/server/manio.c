@@ -1,4 +1,5 @@
 #include "include.h"
+#include "champ_chooser/include.h"
 
 #define MANIO_MODE_READ		"rb"
 #define MANIO_MODE_WRITE	"wb"

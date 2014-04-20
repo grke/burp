@@ -20,6 +20,7 @@ bin_subdirs = src/burp2/rabin \
 		src/burp1/server \
 		src/burp2/client \
 		src/burp2/server \
+		src/burp2/server/champ_chooser \
 		src/burp2 \
 		src
 

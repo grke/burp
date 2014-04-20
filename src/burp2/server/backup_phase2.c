@@ -1,4 +1,5 @@
 #include "include.h"
+#include "champ_chooser/include.h"
 
 static int data_needed(struct sbuf *sb)
 {
@@ -415,7 +416,7 @@ static int write_to_changed_file(struct manio *chmanio, struct slist *slist, str
 						// now.
 						//printf("START USING: %s\n",
 						//	chmanio->fpath);
-						if(add_fresh_candidate(
+						if(candidate_add_fresh(
 							chmanio->fpath,
 							conf)) return -1;
 					}

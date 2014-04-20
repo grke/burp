@@ -5,6 +5,8 @@
 
 #include "candidate.h"
 #include "champ_chooser.h"
+#include "champ_client.h"
+#include "champ_server.h"
 #include "hash.h"
 #include "incoming.h"
 #include "scores.h"

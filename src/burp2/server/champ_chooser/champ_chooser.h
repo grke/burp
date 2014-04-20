@@ -9,6 +9,4 @@ extern int deduplicate_maybe(struct blk *blk, struct dpth *dpth,
 	struct conf *conf, uint64_t *wrap_up);
 extern int is_hook(const char *str);
 
-extern int connect_to_champ_chooser(struct sdirs *sdirs, struct conf *cconf);
-
 #endif

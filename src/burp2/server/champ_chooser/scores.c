@@ -9,7 +9,7 @@ struct scores *scores_alloc(void)
 	struct scores *scores;
 	if((scores=(struct scores *)calloc(1, sizeof(struct scores))))
 		return scores;
-	log_out_of_memory(__FUNCTION__);
+	log_out_of_memory(__func__);
 	return NULL;
 }
 
@@ -37,7 +37,7 @@ int scores_grow(struct scores *scores, size_t count)
 	if((scores->scores=(uint16_t *)realloc(scores->scores,
 		sizeof(uint16_t)*scores->allocated)))
 			return 0;
-	log_out_of_memory(__FUNCTION__);
+	log_out_of_memory(__func__);
 	return -1;
 }
 

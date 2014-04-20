@@ -9,7 +9,7 @@ struct incoming *incoming_alloc(void)
 	struct incoming *in;
 	if((in=(struct incoming *)calloc(1, sizeof(struct incoming))))
 		return in;
-	log_out_of_memory(__FUNCTION__);
+	log_out_of_memory(__func__);
 	return NULL;
 }
 
@@ -24,7 +24,7 @@ int incoming_grow_maybe(struct incoming *in)
 	  && (in->found=(uint8_t *)
 		realloc(in->found, in->allocated*sizeof(uint8_t))))
 			return 0;
-	log_out_of_memory(__FUNCTION__);
+	log_out_of_memory(__func__);
 	return -1;
 }
 

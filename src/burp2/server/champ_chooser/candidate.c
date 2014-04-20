@@ -9,7 +9,7 @@ struct candidate *candidate_alloc(void)
 {
 	struct candidate *candidate;
 	if(!(candidate=(struct candidate *)calloc(1, sizeof(struct candidate))))
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 	return candidate;
 }
 
@@ -30,7 +30,7 @@ struct candidate *candidates_add_new(void)
 	if(!(candidates=(struct candidate **)realloc(candidates,
 		(candidates_len+1)*sizeof(struct candidate *))))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return NULL;
 	}
 	candidates[candidates_len++]=candidate;
@@ -53,7 +53,7 @@ int candidate_add_fresh(const char *path, struct conf *conf)
 	while(cp && *cp=='/') cp++;
 	if(!(candidate->path=strdup(cp)))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		goto end;
 	}
 
@@ -73,8 +73,8 @@ int candidate_add_fresh(const char *path, struct conf *conf)
 		if(!*(blk->weak)) continue;
 		if(is_hook(blk->weak))
 		{
-			if(sparse_add_candidate(blk->weak,
-				candidate)) goto end;
+			if(sparse_add_candidate(blk->weak, candidate))
+				goto end;
 		}
 		*blk->weak='\0';
 	}

@@ -8,7 +8,7 @@ struct clifd
 {
 	int fd;
 	struct incoming *in;
-	struct scores *scores;
+	int score_index;
 	struct clifd *next;
 };
 
@@ -105,7 +105,7 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf *conf)
 {
 	int s;
 	int len;
-	int ret;
+	int ret=-1;
 	struct sockaddr_un local;
 	struct clifd *clifds=NULL;
 
@@ -113,9 +113,8 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf *conf)
 
 	if((s=socket(AF_UNIX, SOCK_STREAM, 0))<0)
 	{
-		logp("socket error in %s: %s\n",
-			__FUNCTION__, strerror(errno));
-		return -1;
+		logp("socket error in %s: %s\n", __func__, strerror(errno));
+		goto end;
 	}
 
 	local.sun_family=AF_UNIX;
@@ -124,21 +123,24 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf *conf)
 	len=strlen(local.sun_path)+sizeof(local.sun_family);
 	if(bind(s, (struct sockaddr *)&local, len)<0)
 	{
-		logp("bind error in %s: %s\n",
-			__FUNCTION__, strerror(errno));
-		return -1;
+		logp("bind error in %s: %s\n", __func__, strerror(errno));
+		goto end;
 	}
 
 	if(listen(s, conf->max_children)<0)
 	{
-		logp("listen error in %s: %s\n",
-			__FUNCTION__, strerror(errno));
-		return -1;
+		logp("listen error in %s: %s\n", __func__, strerror(errno));
+		goto end;
 	}
 
-	while(!champ_loop(s, &clifds, conf)) { }
-	close_fd(&s);
+	// Load the sparse indexes for this dedup group.
+	if(champ_chooser_init(sdirs->datadir, conf))
+		goto end;
 
+	while(!champ_loop(s, &clifds, conf)) { }
+
+end:
+	close_fd(&s);
 	unlink(sdirs->champsock);
 // FIX THIS: free clisocks.
 	return ret;

@@ -33,7 +33,6 @@ SRCS = \
 	delete.o \
 	dpth.o \
 	extra_comms.o \
-	hash.o \
 	list.o \
 	main.o \
 	manio.o \

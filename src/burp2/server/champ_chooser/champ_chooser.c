@@ -11,7 +11,6 @@ int champ_chooser_init(const char *datadir, struct conf *conf)
 	struct candidate *candidate=NULL;
 
 	if(!(sb=sbuf_alloc(conf))
-	  || (!scores && !(scores=scores_alloc()))
 	  || !(sparse_path=prepend_s(datadir, "sparse"))
 	  || (!lstat(sparse_path, &statp)
 		&& !(zp=gzopen_file(sparse_path, "rb"))))
@@ -43,12 +42,6 @@ int champ_chooser_init(const char *datadir, struct conf *conf)
 		}
 		sbuf_free_content(sb);
 	}
-
-	if(scores_grow(scores, candidates_len)) goto end;
-	candidates_set_score_pointers(candidates, candidates_len, scores);
-	scores_reset(scores);
-
-//	dump_scores("init", scores, scores->size);
 
 	ret=0;
 end:

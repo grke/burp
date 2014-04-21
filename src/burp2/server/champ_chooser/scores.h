@@ -10,13 +10,14 @@ struct scores
 {
 	uint16_t *scores;
 	size_t size;
-	size_t allocated;
 };
 
 extern struct scores *scores;
 
 extern struct scores *scores_alloc(void);
-extern int scores_grow(struct scores *scores, size_t count);
-extern void scores_reset(struct scores *scores);
+extern int scores_grow(struct scores *scores,
+	int max_score_index, size_t count);
+extern void scores_reset_all(struct scores *scores);
+extern void scores_reset(struct scores *scores, int score_index);
 
 #endif

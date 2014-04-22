@@ -8,40 +8,8 @@ struct clifd
 {
 	int fd;
 	struct incoming *in;
-	int score_index;
 	struct clifd *next;
 };
-
-static int scores_setup_for_new_client(struct clifd *clifds,
-	struct clifd *newfd)
-{
-	int s;
-	int max=0;
-	struct clifd *c;
-
-	// Find an unused score_index, or the next score_index.
-	// Also find the maximum score index.
-	for(s=0; ; s++)
-	{
-		for(c=clifds; c; c=c->next)
-		{
-			if(c->score_index>max) max=c->score_index;
-			if(s==c->score_index) break;
-		}
-		if(!c) break; // Got to the end of clifds.
-	}
-	newfd->score_index=s;
-	if(s>max) max=s;
-	max++;
-	
-	if(!scores && !(scores=scores_alloc())) goto error;
-	if(scores_grow(scores, candidates_len)) goto error;
-	candidates_set_score_pointers(candidates, candidates_len, scores);
-	scores_reset(scores);
-//	dump_scores("init", scores, scores->size);
-error:
-	return -1;
-}
 
 static int champ_chooser_incoming_client(int s, struct clifd **clifds)
 {
@@ -62,7 +30,6 @@ static int champ_chooser_incoming_client(int s, struct clifd **clifds)
 			__func__, strerror(errno));
 		goto error;
 	}
-	if(scores_setup_for_new_client(*clifds, newfd)) goto error;
 	newfd->next=*clifds;
 	*clifds=newfd;
 

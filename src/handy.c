@@ -77,10 +77,11 @@ static int write_endfile(unsigned long long bytes)
 	return async_write_str(CMD_END_FILE, get_endfile_str(bytes));
 }
 
-int open_file_for_send(BFILE *bfd, const char *fname, int64_t winattr, struct conf *conf)
+int open_file_for_send(BFILE *bfd, const char *fname,
+	int64_t winattr, int atime, struct conf *conf)
 {
 	binit(bfd, winattr, conf);
-	if(bopen(bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0))
+	if(bopen(bfd, fname, O_RDONLY|O_BINARY|atime?0:O_NOATIME, 0))
 	{
 		berrno be;
 		logw(conf, "Could not open %s: %s\n",
@@ -95,7 +96,9 @@ int close_file_for_send(BFILE *bfd)
 	return bclose(bfd);
 }
 
-int send_whole_file_gz(const char *fname, const char *datapth, int quick_read, unsigned long long *bytes, struct conf *conf, int compression, FILE *fp)
+int send_whole_file_gz(const char *fname, const char *datapth, int quick_read,
+	unsigned long long *bytes, struct conf *conf,
+	int compression, FILE *fp)
 {
 	int ret=0;
 	int zret=0;

@@ -194,7 +194,8 @@ int sbuf_open_file(struct sbuf *sb, struct conf *conf)
 	//sb->burp2->encryption=conf->burp2->encryption_password?1:0;
 	if(attribs_encode(sb)) return -1;
 
-	if(open_file_for_send(&sb->burp2->bfd, sb->path.buf, sb->winattr, conf))
+	if(open_file_for_send(&sb->burp2->bfd,
+		sb->path.buf, sb->winattr, conf->atime, conf))
 	{
 		logw(conf, "Could not open %s\n", sb->path.buf);
 		return -1;

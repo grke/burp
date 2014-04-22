@@ -193,7 +193,7 @@ static int deal_with_data(struct iobuf *rbuf, struct sbuf *sb,
 #else
 			NULL, &fp,
 #endif
-			sb->path.buf, sb->winattr, datalen, conf))
+			sb->path.buf, sb->winattr, datalen, conf->atime, conf))
 				forget++;
 	}
 

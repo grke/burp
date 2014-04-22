@@ -28,11 +28,11 @@ printf("%p\n", scores);
 */
 
 // Return -1 or error, 0 on OK.
-int scores_grow(struct scores *scores, int max_score_index, size_t count)
+int scores_grow(struct scores *scores, size_t count)
 {
-	if(!max_score_index || !count) return 0;
+	if(!count) return 0;
 	//printf("grow scores to %lu\n", max_score_index*count);
-	scores->size=max_score_index*count;
+	scores->size=count;
 	if((scores->scores=(uint16_t *)realloc(scores->scores,
 		sizeof(uint16_t)*scores->size)))
 			return 0;
@@ -40,14 +40,7 @@ int scores_grow(struct scores *scores, int max_score_index, size_t count)
 	return -1;
 }
 
-void scores_reset(struct scores *scores, int score_index)
-{
-	if(!scores->scores || !scores->size) return;
-	memset(scores->scores[score_index],
-		0, sizeof(scores->scores[0])*candidate_len);
-}
-
-void scores_reset_all(struct scores *scores)
+void scores_reset(struct scores *scores)
 {
 	if(!scores->scores || !scores->size) return;
 	memset(scores->scores, 0, sizeof(scores->scores[0])*scores->size);

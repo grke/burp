@@ -131,8 +131,8 @@ static int send_file(struct sbuf *sb, int patches, const char *best, unsigned lo
 	int ret=0;
 	size_t datalen=0;
 	FILE *fp=NULL;
-	if(open_file_for_sendl(NULL, &fp, best, sb->winattr, &datalen, cconf))
-		return -1;
+	if(open_file_for_sendl(NULL, &fp, best, sb->winattr, &datalen,
+		1 /* no O_NOATIME */, cconf)) return -1;
 	//logp("sending: %s\n", best);
 	if(async_write(&sb->path))
 		ret=-1;

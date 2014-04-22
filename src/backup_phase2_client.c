@@ -295,7 +295,7 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 						NULL, &fp,
 #endif
 						sb.path, &statbuf, winattr,
-						&datalen, cntr))
+						&datalen, conf->atime, cntr))
 							forget++;
 				}
 

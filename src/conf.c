@@ -31,6 +31,7 @@ static void init_incexcs(struct config *conf)
 	conf->split_vss=0;
 	conf->strip_vss=0;
 	conf->vss_drives=NULL;
+	conf->atime=0;
 	/* stuff to do with restore */
 	conf->overwrite=0;
 	conf->strip=0;
@@ -694,6 +695,8 @@ static int load_config_ints(struct config *conf, const char *field, const char *
 		&(conf->split_vss));
 	get_conf_val_int(field, value, "strip_vss",
 		&(conf->strip_vss));
+	get_conf_val_int(field, value, "atime",
+		&(conf->atime));
 	get_conf_val_int(field, value, "strip",
 		&(conf->strip));
 	get_conf_val_int(field, value, "fork",

@@ -15,7 +15,7 @@
      _a < _b ? _a : _b; })
 
 extern int open_file_for_send(BFILE *bfd, const char *fname,
-	int64_t winattr, struct conf *conf);
+	int64_t winattr, int atime, struct conf *conf);
 extern int close_file_for_send(BFILE *bfd);
 extern int send_whole_file_gz(const char *fname, const char *datapth,
 	int quick_read, unsigned long long *bytes, const char *encpassword,

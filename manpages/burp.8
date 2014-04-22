@@ -564,6 +564,9 @@ Open all block devices for reading and back up the contents as if they were regu
 .TP
 \fBvss_drives=[list of drive letters]\fR
 When backing up Windows computers, this option allows you to specify which drives have VSS snapshots taken of them. If you omit this option, burp will automatically decide based on the 'include' options. If you want no drives to have snapshots taken of them, you can specify '0'.
+.TP
+\fBatime=[0|1]\fR
+This allows you to control whether the client uses O_NOATIME when opening files and directories. The default is 0, which enables O_NOATIME. This means that the client can read files and directories without updating the access times. However, this is only possible if you are running as root, or are the owner of the file or directory. If this is not the case (perhaps you only have group or world access to the files), you will get errors until you set atime=1. With atime=1, the access times will be updated on the files and directories that get backed up.
 
 .SH SERVER CLIENTCONFDIR FILE
 .TP

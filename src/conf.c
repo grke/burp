@@ -31,6 +31,7 @@ static void init_incexcs(struct conf *c)
 	c->split_vss=0;
 	c->strip_vss=0;
 	c->vss_drives=NULL;
+	c->atime=0;
 	/* stuff to do with restore */
 	c->overwrite=0;
 	c->strip=0;
@@ -546,8 +547,9 @@ static int load_conf_ints(struct conf *c,
 	gcv_int(f, v, "max_status_children", &(c->max_status_children));
 	gcv_int(f, v, "max_storage_subdirs", &(c->max_storage_subdirs));
 	gcv_uint8(f, v, "overwrite", &(c->overwrite));
-	gcv_int(f, v, "split_vss", &(c->split_vss));
-	gcv_int(f, v, "strip_vss", &(c->strip_vss));
+	gcv_uint8(f, v, "split_vss", &(c->split_vss));
+	gcv_uint8(f, v, "strip_vss", &(c->strip_vss));
+	gcv_uint8(f, v, "atime", &(c->atime));
 	gcv_int(f, v, "strip", &(c->strip));
 	gcv_uint8(f, v, "fork", &(c->forking));
 	gcv_uint8(f, v, "daemon", &(c->daemon));

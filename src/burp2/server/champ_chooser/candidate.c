@@ -79,14 +79,9 @@ int candidate_add_fresh(const char *path, struct conf *conf)
 		*blk->weak='\0';
 	}
 
-	// FIX THIS: Need to make the scores struct know how many clients
-	// it currently has allocated scores for, so that scores_grow() can
-	// expand appropriately.
 	if(scores_grow(scores, candidates_len)) goto end;
 	candidates_set_score_pointers(candidates, candidates_len, scores);
-	// FIX THIS: make sure that resetting all the scores happens when
-	// nothing is choosing a champ.
-	scores_reset_all(scores);
+	scores_reset(scores);
 	//printf("HERE: %d candidates\n", (int)candidates_len);
 
 	ret=0;

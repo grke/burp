@@ -65,12 +65,12 @@ struct bsid {
 #endif
 
 int open_file_for_sendl(BFILE *bfd, FILE **fp, const char *fname,
-	int64_t winattr, size_t *datalen, struct conf *conf)
+	int64_t winattr, size_t *datalen, int atime, struct conf *conf)
 {
 	if(fp)
 	{
 		static int fd;
-		if((fd=open(fname, O_RDONLY|O_NOATIME))<0
+		if((fd=open(fname, O_RDONLY|atime?0:O_NOATIME))<0
 		  || !(*fp=fdopen(fd, "rb")))
 		{
 			logw(conf, "Could not open %s: %s\n",
@@ -98,7 +98,7 @@ int open_file_for_sendl(BFILE *bfd, FILE **fp, const char *fname,
 		}
 		binit(bfd, winattr, conf);
 		*datalen=0;
-		if(bopen(bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0)<=0)
+		if(bopen(bfd, fname, O_RDONLY|O_BINARY|atime?0:O_NOATIME, 0)<=0)
 		{
 			berrno be;
 			logw(conf, "Could not open %s: %s\n",

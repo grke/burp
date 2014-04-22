@@ -99,9 +99,10 @@ struct conf
 	struct strlist *blockdevs;
 	ssize_t min_file_size;
 	ssize_t max_file_size;
-	int split_vss;
-	int strip_vss;
+	uint8_t split_vss;
+	uint8_t strip_vss;
 	char *vss_drives;
+	uint8_t atime;
   // These are to do with restore.
 	uint8_t overwrite;
 	int strip;

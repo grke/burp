@@ -313,12 +313,12 @@ struct bsid {
 };
 #endif
 
-int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, struct stat *statp, int64_t winattr, size_t *datalen, struct cntr *cntr)
+int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, struct stat *statp, int64_t winattr, size_t *datalen, int atime, struct cntr *cntr)
 {
 	if(fp)
 	{
 		static int fd;
-		if((fd=open(fname, O_RDONLY|O_NOATIME))<0
+		if((fd=open(fname, O_RDONLY|atime?0:O_NOATIME))<0
 		  || !(*fp=fdopen(fd, "rb")))
 		{
 			logw(cntr,
@@ -346,7 +346,8 @@ int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, struct stat *st
 		}
 		binit(bfd, statp, winattr);
 		*datalen=0;
-		if(bopen(bfd, fname, O_RDONLY | O_BINARY | O_NOATIME, 0,
+		if(bopen(bfd, fname,
+			O_RDONLY | O_BINARY | atime?0:O_NOATIME, 0,
 			(winattr & FILE_ATTRIBUTE_DIRECTORY))<=0)
 		{
 			berrno be;
@@ -1460,7 +1461,8 @@ int send_a_file(const char *path, struct cntr *p1cntr)
 	FILE *fp=NULL;
 	size_t datalen=0;
 	unsigned long long bytes=0;
-	if(open_file_for_send(NULL, &fp, path, NULL, 0, &datalen, p1cntr)
+	if(open_file_for_send(NULL, &fp, path, NULL, 0, &datalen,
+		1 /* open file without O_NOATIME */, p1cntr)
 	  || send_whole_file_gz(path, "datapth", 0, &bytes, NULL,
 		p1cntr, 9, // compression
 		NULL, fp, NULL, 0, -1))

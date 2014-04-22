@@ -89,6 +89,7 @@ struct config
 	int split_vss;
 	int strip_vss;
 	char *vss_drives;
+	int atime;
   // These are to do with restore.
 	int overwrite;
 	int strip;

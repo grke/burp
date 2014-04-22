@@ -1,3 +1,5 @@
+  * Add an 'atime' option, which allows the user to choose whether to use
+    O_NOATIME or not.
   * Fix function not returning anything when it should return an int
     in list_server.c.
 

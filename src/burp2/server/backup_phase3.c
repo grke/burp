@@ -38,7 +38,9 @@ static int get_next_set_of_hooks(struct hooks **hnew, struct sbuf *sb,
 {
 	while(1)
 	{
-		switch(sbuf_fill_from_gzfile(sb, spzp, NULL, NULL, conf))
+		switch(sbuf_fill_from_gzfile(sb,
+			NULL /* struct async */,
+			spzp, NULL, NULL, conf))
 		{
 			case -1: goto error;
 			case 1:

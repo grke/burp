@@ -12,13 +12,14 @@ static int add_to_incexc(char **incexc, const char *src, size_t len, const char 
 	return 0;
 }
 
-static enum asl_ret incexc_recv_func(struct iobuf *rbuf,
+static enum asl_ret incexc_recv_func(struct async *as, struct iobuf *rbuf,
         struct conf *conf, void *param)
 {
 	char **incexc=(char **)param;
 	if(!strcmp(rbuf->buf, endreqstrf))
 	{
-		if(async_write_str(CMD_GEN, endrepstrf)) return ASL_END_ERROR;
+		if(async_write_str(as, CMD_GEN, endrepstrf))
+			return ASL_END_ERROR;
 		return ASL_END_OK;
 	}
 	if(add_to_incexc(incexc, rbuf->buf, rbuf->len, *incexc?"\n":""))
@@ -27,39 +28,44 @@ static enum asl_ret incexc_recv_func(struct iobuf *rbuf,
 }
 
 
-static int incexc_recv(char **incexc, const char *reqstr, const char *repstr, const char *endreqstr, const char *endrepstr, struct conf *conf)
+static int incexc_recv(struct async *as, char **incexc,
+	const char *reqstr, const char *repstr,
+	const char *endreqstr, const char *endrepstr, struct conf *conf)
 {
 	if(*incexc) { free(*incexc); *incexc=NULL; }
-	if(async_write_str(CMD_GEN, repstr)) return -1;
+	if(async_write_str(as, CMD_GEN, repstr)) return -1;
 
 	endreqstrf=endreqstr;
 	endrepstrf=endrepstr;
-	if(async_simple_loop(conf, incexc, __FUNCTION__, incexc_recv_func))
+	if(async_simple_loop(as, conf, incexc, __FUNCTION__, incexc_recv_func))
 		return -1;
 
 	// Need to put another new line at the end.
 	return add_to_incexc(incexc, "\n", 1, "");
 }
 
-int incexc_recv_client(char **incexc, struct conf *conf)
+int incexc_recv_client(struct async *as,
+	char **incexc, struct conf *conf)
 {
-	return incexc_recv(incexc,
+	return incexc_recv(as, incexc,
 		"sincexc", "sincexc ok",
 		"sincexc end", "sincexc end ok",
 		conf);
 }
 
-int incexc_recv_client_restore(char **incexc, struct conf *conf)
+int incexc_recv_client_restore(struct async *as,
+	char **incexc, struct conf *conf)
 {
-	return incexc_recv(incexc,
+	return incexc_recv(as, incexc,
 		"srestore", "srestore ok",
 		"srestore end", "srestore end ok",
 		conf);
 }
 
-int incexc_recv_server(char **incexc, struct conf *conf)
+int incexc_recv_server(struct async *as,
+	char **incexc, struct conf *conf)
 {
-	return incexc_recv(incexc,
+	return incexc_recv(as, incexc,
 		"incexc", "incexc ok",
 		"incexc end", "incexc end ok",
 		conf);

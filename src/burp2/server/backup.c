@@ -23,13 +23,13 @@ end:
 }
 
 // Used by the burp1 stuff.
-int open_log(const char *realworking, struct conf *cconf)
+int open_log(struct async *as, const char *realworking, struct conf *cconf)
 {
 	char *logpath=NULL;
 
 	if(!(logpath=prepend_s(realworking, "log")))
 	{
-		log_and_send_oom(__FUNCTION__);
+		log_and_send_oom(as, __FUNCTION__);
 		return -1;
 	}
 	if(set_logfp(logpath, cconf))
@@ -37,7 +37,7 @@ int open_log(const char *realworking, struct conf *cconf)
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
 				"could not open log file: %s", logpath);
-		log_and_send(msg);
+		log_and_send(as, msg);
 		free(logpath);
 		return -1;
 	}
@@ -49,13 +49,13 @@ int open_log(const char *realworking, struct conf *cconf)
 	// The client will already have been sent a message with logw.
 	// This time, prevent it sending a logw to the client by specifying
 	// NULL for cntr.
-	if(cconf->version_warn) version_warn(NULL, cconf);
+	if(cconf->version_warn) version_warn(as, NULL, cconf);
 
 	return 0;
 }
 
 // Clean mess left over from a previously interrupted backup.
-static int clean_rubble(struct sdirs *sdirs)
+static int clean_rubble(struct async *as, struct sdirs *sdirs)
 {
 	int len=0;
 	char *real=NULL;
@@ -70,21 +70,21 @@ static int clean_rubble(struct sdirs *sdirs)
 	lnk[len]='\0';
 	if(!(real=prepend_s(sdirs->client, lnk)))
 	{
-		log_and_send_oom(__FUNCTION__);
+		log_and_send_oom(as, __FUNCTION__);
 		return -1;
 	}
 	if(recursive_delete(real, "", 1))
 	{
 		char msg[256]="";
 		snprintf(msg, sizeof(msg), "Could not remove interrupted directory: %s", real);
-		log_and_send(msg);
+		log_and_send(as, msg);
 		return -1;
 	}
 	unlink(sdirs->working);
 	return 0;
 }
 
-int do_backup_server(struct sdirs *sdirs, struct conf *cconf,
+int do_backup_server(struct async **as, struct sdirs *sdirs, struct conf *cconf,
 	const char *incexc, int resume)
 {
 	int ret=0;
@@ -103,11 +103,11 @@ int do_backup_server(struct sdirs *sdirs, struct conf *cconf,
 	if(!(realworking=prepend_s(sdirs->client, tstmp))
 	 || !(manifest_dir=prepend_s(realworking, "manifest")))
 	{
-		log_and_send_oom(__FUNCTION__);
+		log_and_send_oom(*as, __FUNCTION__);
 		goto error;
 	}
 
-	if(clean_rubble(sdirs)) goto error;
+	if(clean_rubble(*as, sdirs)) goto error;
 
 	// Add the working symlink before creating the directory.
 	// This is because bedup checks the working symlink before
@@ -119,18 +119,18 @@ int do_backup_server(struct sdirs *sdirs, struct conf *cconf,
 		snprintf(msg, sizeof(msg),
 		  "could not point working symlink to: %s",
 		  realworking);
-		log_and_send(msg);
+		log_and_send(*as, msg);
 		goto error;
 	}
 	else if(mkdir(realworking, 0777))
 	{
 		snprintf(msg, sizeof(msg),
 		  "could not mkdir for next backup: %s", sdirs->working);
-		log_and_send(msg);
+		log_and_send(*as, msg);
 		unlink(sdirs->working);
 		goto error;
 	}
-	else if(open_log(realworking, cconf))
+	else if(open_log(*as, realworking, cconf))
 	{
 		goto error;
 	}
@@ -138,13 +138,13 @@ int do_backup_server(struct sdirs *sdirs, struct conf *cconf,
 	{
 		snprintf(msg, sizeof(msg),
 		  "unable to write timestamp %s", sdirs->timestamp);
-		log_and_send(msg);
+		log_and_send(*as, msg);
 		goto error;
 	}
 	else if(incexc && *incexc && write_incexc(realworking, incexc))
 	{
 		snprintf(msg, sizeof(msg), "unable to write incexc");
-		log_and_send(msg);
+		log_and_send(*as, msg);
 		goto error;
 	}
 
@@ -156,17 +156,18 @@ int do_backup_server(struct sdirs *sdirs, struct conf *cconf,
 	{
 		snprintf(msg, sizeof(msg),
 			"could not connect to champ chooser");
-		log_and_send(msg);
+		log_and_send(*as, msg);
 		goto error;
 	}
 
-	if(backup_phase1_server(sdirs, cconf))
+	if(backup_phase1_server(*as, sdirs, cconf))
 	{
 		logp("error in phase1\n");
 		goto error;
 	}
 
-	if(backup_phase2_server(sdirs, manifest_dir, champsock, resume, cconf))
+	if(backup_phase2_server(*as, sdirs, manifest_dir,
+		champsock, resume, cconf))
 	{
 		logp("error in phase2\n");
 		goto error;
@@ -174,7 +175,7 @@ int do_backup_server(struct sdirs *sdirs, struct conf *cconf,
 
 	// Close the connection with the client, the rest of the job
 	// we can do by ourselves.
-	async_free();
+	async_free(as);
 
 	if(backup_phase3_server(sdirs, manifest_dir, cconf))
 	{

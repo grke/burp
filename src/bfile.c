@@ -416,14 +416,14 @@ ssize_t bwrite(BFILE *bfd, void *buf, size_t count)
 
 #else
 
-int bclose(BFILE *bfd)
+int bclose(BFILE *bfd, struct async *as)
 {
 	if(!bfd || bfd->mode==BF_CLOSED) return 0;
 
 	if(!close(bfd->fd))
 	{
 		if(bfd->mode==BF_WRITE)
-			attribs_set(bfd->path,
+			attribs_set(as, bfd->path,
 				&bfd->statp, bfd->winattr, bfd->conf);
 		bfd->mode=BF_CLOSED;
 		bfd->fd=-1;
@@ -442,9 +442,10 @@ int bclose(BFILE *bfd)
 	return -1;
 }
 
-int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
+int bopen(BFILE *bfd,
+	struct async *as, const char *fname, int flags, mode_t mode)
 {
-	if(bfd->mode!=BF_CLOSED && bclose(bfd))
+	if(bfd->mode!=BF_CLOSED && bclose(bfd, as))
 		return -1;
 	if(!(bfd->fd=open(fname, flags, mode))<0)
 		return -1;

@@ -37,10 +37,10 @@ void iobuf_free(struct iobuf *iobuf)
 	if(iobuf) free(iobuf);
 }
 
-struct iobuf *iobuf_async_read(void)
+struct iobuf *iobuf_async_read(struct async *as)
 {
 	struct iobuf *iobuf;
-	if(!(iobuf=iobuf_alloc()) || async_read(iobuf))
+	if(!(iobuf=iobuf_alloc()) || async_read(as, iobuf))
 	{
 		iobuf_free(iobuf);
 		return NULL;

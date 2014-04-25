@@ -69,7 +69,7 @@ static int check_client_and_password(struct conf *conf, const char *password, st
 	return 0;
 }
 
-void version_warn(struct conf *conf, struct conf *cconf)
+void version_warn(struct async *as, struct conf *conf, struct conf *cconf)
 {
 	if(!cconf->peer_version || strcmp(cconf->peer_version, VERSION))
 	{
@@ -79,19 +79,19 @@ void version_warn(struct conf *conf, struct conf *cconf)
 			snprintf(msg, sizeof(msg), "Client '%s' has an unknown version. Please upgrade.", cconf->cname?cconf->cname:"unknown");
 		else
 			snprintf(msg, sizeof(msg), "Client '%s' version '%s' does not match server version '%s'. An upgrade is recommended.", cconf->cname?cconf->cname:"unknown", cconf->peer_version, VERSION);
-		if(conf) logw(conf, "%s", msg);
+		if(conf) logw(as, conf, "%s", msg);
 		logp("WARNING: %s\n", msg);
 	}
 }
 
-int authorise_server(struct conf *conf, struct conf *cconf)
+int authorise_server(struct async *as, struct conf *conf, struct conf *cconf)
 {
 	char *cp=NULL;
 	char *password=NULL;
 	char whoareyou[256]="";
 	struct iobuf rbuf;
 	iobuf_init(&rbuf);
-	if(async_read(&rbuf))
+	if(async_read(as, &rbuf))
 	{
 		logp("unable to read initial message\n");
 		return -1;
@@ -129,8 +129,8 @@ int authorise_server(struct conf *conf, struct conf *cconf)
 			"whoareyou:%s", VERSION);
 	}
 
-	async_write_str(CMD_GEN, whoareyou);
-	if(async_read(&rbuf))
+	async_write_str(as, CMD_GEN, whoareyou);
+	if(async_read(as, &rbuf))
 	{
 		logp("unable to get client name\n");
 		return -1;
@@ -138,8 +138,8 @@ int authorise_server(struct conf *conf, struct conf *cconf)
 	cconf->cname=rbuf.buf;
 	iobuf_init(&rbuf);
 
-	async_write_str(CMD_GEN, "okpassword");
-	if(async_read(&rbuf))
+	async_write_str(as, CMD_GEN, "okpassword");
+	if(async_read(as, &rbuf))
 	{
 		logp("unable to get password for client %s\n", cconf->cname);
 		iobuf_free_content(&rbuf);
@@ -154,12 +154,12 @@ int authorise_server(struct conf *conf, struct conf *cconf)
 		return -1;
 	}
 
-	if(cconf->version_warn) version_warn(conf, cconf);
+	if(cconf->version_warn) version_warn(as, conf, cconf);
 
 	logp("auth ok for: %s%s\n", cconf->cname,
 		cconf->password_check?"":" (no password needed)");
 	if(password) free(password);
 
-	async_write_str(CMD_GEN, "ok");
+	async_write_str(as, CMD_GEN, "ok");
 	return 0;
 }

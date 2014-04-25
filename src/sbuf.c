@@ -177,7 +177,7 @@ int sbuf_pathcmp(struct sbuf *a, struct sbuf *b)
 }
 
 
-int sbuf_open_file(struct sbuf *sb, struct conf *conf)
+int sbuf_open_file(struct sbuf *sb, struct async *as, struct conf *conf)
 {
 #ifdef HAVE_WIN32
 	if(win32_lstat(sb->path.buf, &sb->statp, &sb->winattr))
@@ -186,7 +186,7 @@ int sbuf_open_file(struct sbuf *sb, struct conf *conf)
 #endif
 	{
 		// This file is no longer available.
-		logw(conf, "%s has vanished\n", sb->path.buf);
+		logw(as, conf, "%s has vanished\n", sb->path.buf);
 		return -1;
 	}
 	sb->compression=conf->compression;
@@ -194,18 +194,18 @@ int sbuf_open_file(struct sbuf *sb, struct conf *conf)
 	//sb->burp2->encryption=conf->burp2->encryption_password?1:0;
 	if(attribs_encode(sb)) return -1;
 
-	if(open_file_for_send(&sb->burp2->bfd,
+	if(open_file_for_send(&sb->burp2->bfd, as,
 		sb->path.buf, sb->winattr, conf->atime, conf))
 	{
-		logw(conf, "Could not open %s\n", sb->path.buf);
+		logw(as, conf, "Could not open %s\n", sb->path.buf);
 		return -1;
 	}
 	return 0;
 }
 
-void sbuf_close_file(struct sbuf *sb)
+void sbuf_close_file(struct sbuf *sb, struct async *as)
 {
-	close_file_for_send(&sb->burp2->bfd);
+	close_file_for_send(&sb->burp2->bfd, as);
 //printf("closed: %s\n", sb->path);
 }
 
@@ -374,7 +374,8 @@ static int retrieve_blk_data(char *datpath, struct blk *blk)
         return 0;
 }
 
-int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct conf *conf)
+int sbuf_fill(struct sbuf *sb, struct async *as, gzFile zp,
+	struct blk *blk, char *datpath, struct conf *conf)
 {
 	static char lead[5]="";
 	static iobuf *rbuf=NULL;
@@ -383,7 +384,7 @@ int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct
 
 	if(!rbuf && !(rbuf=iobuf_alloc()))
 	{
-		log_and_send_oom(__FUNCTION__);
+		log_and_send_oom(as, __FUNCTION__);
 		goto end;
 	}
 	while(1)
@@ -396,31 +397,32 @@ int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct
 			if((got=gzread(zp, lead, sizeof(lead)))!=5)
 			{
 				if(!got) return 1; // Finished OK.
-				log_and_send("short read in manifest");
+				log_and_send(as, "short read in manifest");
 				break;
 			}
 			if((sscanf(lead, "%c%04X", &rbuf->cmd, &s))!=2)
 			{
-				log_and_send("sscanf failed reading manifest");
+				log_and_send(as,
+					"sscanf failed reading manifest");
 				logp("%s\n", lead);
 				break;
 			}
 			rbuf->len=(size_t)s;
 			if(!(rbuf->buf=(char *)malloc(rbuf->len+2)))
 			{
-				log_and_send_oom(__FUNCTION__);
+				log_and_send_oom(as, __FUNCTION__);
 				break;
 			}
 			if(gzread(zp, rbuf->buf, rbuf->len+1)!=(int)rbuf->len+1)
 			{
-				log_and_send("short read in manifest");
+				log_and_send(as, "short read in manifest");
 				break;
 			}
 			rbuf->buf[rbuf->len]='\0';
 		}
 		else
 		{
-			if(async_read(rbuf))
+			if(async_read(as, rbuf))
 			{
 				logp("error in async_read\n");
 				break;
@@ -470,7 +472,8 @@ int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct
 			case CMD_ENC_VSS_T:
 				if(!sb->attr.buf)
 				{
-					log_and_send("read cmd with no attribs");
+					log_and_send(as,
+						"read cmd with no attribs");
 					break;
 				}
 				if(sb->flags & SBUF_NEED_LINK)
@@ -484,7 +487,7 @@ int sbuf_fill(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct
 					}
 					else
 					{
-						log_and_send("got non-link after link in manifest");
+						log_and_send(as, "got non-link after link in manifest");
 						break;
 					}
 				}
@@ -573,12 +576,14 @@ end:
 	return ret;
 }
 
-int sbuf_fill_from_gzfile(struct sbuf *sb, gzFile zp, struct blk *blk, char *datpath, struct conf *conf)
+int sbuf_fill_from_gzfile(struct sbuf *sb, struct async *as,
+	gzFile zp, struct blk *blk, char *datpath, struct conf *conf)
 {
-	return sbuf_fill(sb, zp, blk, datpath, conf);
+	return sbuf_fill(sb, as, zp, blk, datpath, conf);
 }
 
-int sbuf_fill_from_net(struct sbuf *sb, struct blk *blk, struct conf *conf)
+int sbuf_fill_from_net(struct sbuf *sb, struct async *as,
+	struct blk *blk, struct conf *conf)
 {
-	return sbuf_fill(sb, NULL, blk, NULL, conf);
+	return sbuf_fill(sb, as, NULL, blk, NULL, conf);
 }

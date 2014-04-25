@@ -535,7 +535,8 @@ end:
 	return ret;
 }
 
-int backup_phase2_server(struct sdirs *sdirs, const char *manifest_dir,
+int backup_phase2_server(struct async *as,
+	struct sdirs *sdirs, const char *manifest_dir,
 	int champsock, int resume, struct conf *conf)
 {
 	int ret=-1;
@@ -600,7 +601,7 @@ int backup_phase2_server(struct sdirs *sdirs, const char *manifest_dir,
 			}
 		}
 
-		if(async_rw(rbuf, wbuf))
+		if(async_rw(as, rbuf, wbuf))
 		{
 			logp("error in async_rw in %s()\n", __FUNCTION__);
 			goto end;

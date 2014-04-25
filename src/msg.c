@@ -24,21 +24,22 @@ int send_msg_zp(gzFile zp, char cmd, const char *buf, size_t s)
 	return 0;
 }
 
-static int do_write(BFILE *bfd, FILE *fp, unsigned char *out, size_t outlen, unsigned long long *sent)
+static int do_write(struct async *as, BFILE *bfd, FILE *fp,
+	unsigned char *out, size_t outlen, unsigned long long *sent)
 {
 	int ret=0;
 #ifdef HAVE_WIN32
 	if((ret=bwrite(bfd, out, outlen))<=0)
 	{
 		logp("error when appending %d: %d\n", outlen, ret);
-		async_write_str(CMD_ERROR, "write failed");
+		async_write_str(as, CMD_ERROR, "write failed");
 		return -1;
 	}
 #else
 	if((fp && (ret=fwrite(out, 1, outlen, fp))<=0))
 	{
 		logp("error when appending %d: %d\n", outlen, ret);
-		async_write_str(CMD_ERROR, "write failed");
+		async_write_str(as, CMD_ERROR, "write failed");
 		return -1;
 	}
 #endif
@@ -46,7 +47,8 @@ static int do_write(BFILE *bfd, FILE *fp, unsigned char *out, size_t outlen, uns
 	return 0;
 }
 
-static int do_inflate(z_stream *zstrm, BFILE *bfd, FILE *fp, unsigned char *out, struct iobuf *rbuf, unsigned long long *sent)
+static int do_inflate(struct async *as, z_stream *zstrm, BFILE *bfd, FILE *fp,
+	unsigned char *out, struct iobuf *rbuf, unsigned long long *sent)
 {
 	int zret=Z_OK;
 	unsigned have=0;
@@ -71,13 +73,15 @@ static int do_inflate(z_stream *zstrm, BFILE *bfd, FILE *fp, unsigned char *out,
 		have=ZCHUNK-zstrm->avail_out;
 		if(!have) continue;
 
-		if(do_write(bfd, fp, out, have, sent))
+		if(do_write(as, bfd, fp, out, have, sent))
 			return -1;
 	} while(!zstrm->avail_out);
 	return 0;
 }
 
-int transfer_gzfile_in(const char *path, BFILE *bfd, FILE *fp, unsigned long long *rcvd, unsigned long long *sent, struct cntr *cntr)
+int transfer_gzfile_in(struct async *as, const char *path, BFILE *bfd,
+	FILE *fp, unsigned long long *rcvd, unsigned long long *sent,
+	struct cntr *cntr)
 {
 	int quit=0;
 	int ret=-1;
@@ -102,7 +106,7 @@ int transfer_gzfile_in(const char *path, BFILE *bfd, FILE *fp, unsigned long lon
 	while(!quit)
 	{
 		iobuf_free_content(rbuf);
-		if(async_read(rbuf)) goto end_inflate;
+		if(async_read(as, rbuf)) goto end_inflate;
 		(*rcvd)+=rbuf->len;
 
 		//logp("transfer in: %c:%s\n", rbuf->cmd, rbuf->buf);
@@ -112,13 +116,13 @@ int transfer_gzfile_in(const char *path, BFILE *bfd, FILE *fp, unsigned long lon
 				if(!fp && !bfd)
 				{
 					logp("given append, but no file to write to\n");
-					async_write_str(CMD_ERROR,
+					async_write_str(as, CMD_ERROR,
 						"append with no file");
 					goto end_inflate;
 				}
 				else
 				{
-					if(do_inflate(&zstrm, bfd, fp, out,
+					if(do_inflate(as, &zstrm, bfd, fp, out,
 						rbuf, sent))
 							goto end_inflate;
 				}

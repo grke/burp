@@ -17,8 +17,11 @@ int champ_chooser_init(const char *datadir, struct conf *conf)
 			goto end;
 	while(zp)
 	{
-		if((ars=sbuf_fill_from_gzfile(sb, zp, NULL, NULL, conf))<0)
-			goto end;
+		// FIX THIS: second argument should be struct async for
+		// the server child.
+		if((ars=sbuf_fill_from_gzfile(sb, NULL,
+			zp, NULL, NULL, conf))<0)
+				goto end;
 		else if(ars>0)
 		{
 			// Reached the end.

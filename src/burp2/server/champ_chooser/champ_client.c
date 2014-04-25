@@ -14,12 +14,14 @@ static int champ_chooser_fork(struct sdirs *sdirs, struct conf *conf)
 			return -1;
 		case 0:
 			// Child.
+			int cret;
 			set_logfp(NULL, conf);
 			switch(champ_chooser_server(sdirs, conf))
 			{
-				case 0: exit(0);
-				default: exit(1);
+				case 0: cret=0;
+				default: cret=1;
 			}
+			exit(cret);
 		default:
 			// Parent.
 			logp("forked champ chooser pid %d\n", childpid);
@@ -35,14 +37,22 @@ int connect_to_champ_chooser(struct sdirs *sdirs, struct conf *conf)
 	int tries_max=3;
 	struct sockaddr_un remote;
 
+	if(!lock_test(sdirs->champlock))
+	{
+		// Champ chooser is not running.
+		// Try to fork a new champ chooser process.
+		if(champ_chooser_fork(sdirs, conf)) return -1;
+	}
+
+	// Champ chooser will either be running now, or about to run.
+
 	if((s=socket(AF_UNIX, SOCK_STREAM, 0))<0)
 	{
 		logp("socket error in %s: %s\n", __func__, strerror(errno));
 		return -1;
 	}
 
-	printf("Trying to connect...\n");
-
+	memset(&remote, 0, sizeof(struct sockaddr_un));
 	remote.sun_family=AF_UNIX;
 	strcpy(remote.sun_path, sdirs->champsock);
 	len=strlen(remote.sun_path)+sizeof(remote.sun_family);
@@ -52,19 +62,8 @@ int connect_to_champ_chooser(struct sdirs *sdirs, struct conf *conf)
 		int sleeptimeleft=3;
 		if(connect(s, (struct sockaddr *)&remote, len)<0)
 		{
-			if(errno==ENOENT)
-			{
-				// Path did not exist.
-				// Try to fork a new champ chooser process and
-				// try again.
-				logp("Champ chooser socket does not exist.\n");
-				if(champ_chooser_fork(sdirs, conf)) break;
-			}
-			else
-			{
-				logp("connect error in %s: %d %s\n",
-					__func__, errno, strerror(errno));
-			}
+			logp("connect error in %s: %d %s\n",
+				__func__, errno, strerror(errno));
 		}
 		else
 		{

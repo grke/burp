@@ -6,7 +6,9 @@ struct sdirs
 {
 	char *base;
 	char *dedup;
+	char *champlock;
 	char *champsock;
+	char *champlog;
 	char *data;
 	char *clients;
 	char *client;

@@ -24,7 +24,7 @@ static void usr2handler(int sig)
 	gentleshutdown_logged=0;
 }
 
-static int init_listen_socket(const char *port, int alladdr)
+int init_listen_socket(const char *port, int alladdr)
 {
 	int rfd;
 	int gai_ret;

@@ -31,8 +31,9 @@ struct BFILE
 };
 
 void binit(BFILE *bfd, int64_t winattr, struct conf *conf);
-int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode);
-int bclose(BFILE *bfd);
+int bopen(BFILE *bfd, struct async *as,
+	const char *fname, int flags, mode_t mode);
+int bclose(BFILE *bfd, struct async *as);
 ssize_t bread(BFILE *bfd, void *buf, size_t count);
 ssize_t bwrite(BFILE *bfd, void *buf, size_t count);
 

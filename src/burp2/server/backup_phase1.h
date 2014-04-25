@@ -3,6 +3,7 @@
 
 #include "include.h"
 
-extern int backup_phase1_server(struct sdirs *sdirs, struct conf *cconf);
+extern int backup_phase1_server(struct async *as,
+	struct sdirs *sdirs, struct conf *cconf);
 
 #endif

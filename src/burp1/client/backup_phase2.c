@@ -296,7 +296,7 @@ error:
 	// different file path, or when this function
 	// exits.
 #else
-	close_file_for_sendl(NULL, &fp);
+	close_file_for_sendl(NULL, &fp, as);
 #endif
 	sbuf_free_content(sb);
 	if(extrameta) free(extrameta);
@@ -400,7 +400,7 @@ static int do_backup_phase2_client(struct async *as,
 end:
 #ifdef HAVE_WIN32
 	// It is possible for a bfd to still be open.
-	close_file_for_sendl(&bfd, NULL);
+	close_file_for_sendl(&bfd, NULL, as);
 #endif
 	iobuf_free(rbuf);
 	sbuf_free(sb);

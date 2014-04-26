@@ -109,7 +109,8 @@ static int bfile_error(BFILE *bfd)
 }
 
 // Return 0 for success, non zero for error.
-int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
+int bopen(BFILE *bfd, struct async *as,
+	const char *fname, int flags, mode_t mode)
 {
 	DWORD dwaccess;
 	DWORD dwflags;
@@ -273,11 +274,12 @@ int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
 	return bfd->mode==BF_CLOSED;
 }
 
-static int bclose_encrypted(BFILE *bfd)
+static int bclose_encrypted(BFILE *bfd, struct async *as)
 {
 	CloseEncryptedFileRaw(bfd->pvContext);
 	if(bfd->mode==BF_WRITE)
-		attribs_set(bfd->path, &bfd->statp, bfd->winattr, bfd->conf);
+		attribs_set(as,
+			bfd->path, &bfd->statp, bfd->winattr, bfd->conf);
 	bfd->pvContext=NULL;
 	bfd->mode=BF_CLOSED;
 	if(bfd->path)
@@ -289,7 +291,7 @@ static int bclose_encrypted(BFILE *bfd)
 }
 
 // Return 0 on success, -1 on error.
-int bclose(BFILE *bfd)
+int bclose(BFILE *bfd, struct async *as)
 {
 	int ret=-1;
 
@@ -298,7 +300,7 @@ int bclose(BFILE *bfd)
 	if(bfd->mode==BF_CLOSED) return 0;
 
 	if(bfd->winattr & FILE_ATTRIBUTE_ENCRYPTED)
-		return bclose_encrypted(bfd);
+		return bclose_encrypted(bfd, as);
 
 	/*
 	 * We need to tell the API to release the buffer it
@@ -344,7 +346,8 @@ int bclose(BFILE *bfd)
 	}
 
 	if(bfd->mode==BF_WRITE)
-		attribs_set(bfd->path, &bfd->statp, bfd->winattr, bfd->conf);
+		attribs_set(as,
+			bfd->path, &bfd->statp, bfd->winattr, bfd->conf);
 	bfd->lpContext=NULL;
 	bfd->mode=BF_CLOSED;
 

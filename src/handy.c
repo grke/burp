@@ -574,7 +574,7 @@ int receive_a_file(struct async *as, const char *path, struct conf *conf)
 	binit(&bfd, 0, conf);
 	bfd.use_backup_api=0;
 	//set_win32_backup(&bfd);
-	if(bopen(&bfd, path,
+	if(bopen(&bfd, as, path,
 		O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,
 		S_IRUSR | S_IWUSR))
 	{
@@ -595,7 +595,7 @@ int receive_a_file(struct async *as, const char *path, struct conf *conf)
 #ifdef HAVE_WIN32
 	ret=transfer_gzfile_in(as, path, &bfd, NULL,
 		&rcvdbytes, &sentbytes, conf->cntr);
-	c=bclose(&bfd);
+	c=bclose(&bfd, as);
 #else
 	ret=transfer_gzfile_in(as, path, NULL, fp,
 		&rcvdbytes, &sentbytes, conf->cntr);

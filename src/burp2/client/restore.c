@@ -58,12 +58,13 @@ static int restore_interrupt(struct sbuf *sb, const char *msg, struct conf *conf
 */
 }
 
-static int make_link(const char *fname, const char *lnk, char cmd, struct conf *conf)
+static int make_link(struct async *as,
+	const char *fname, const char *lnk, char cmd, struct conf *conf)
 {
 	int ret=-1;
 
 #ifdef HAVE_WIN32
-	logw(conf, "windows seems not to support hardlinks or symlinks\n");
+	logw(as, conf, "windows seems not to support hardlinks or symlinks\n");
 #else
 	unlink(fname);
 	if(cmd==CMD_HARD_LINK)
@@ -185,7 +186,7 @@ static int restore_special(struct async *as, struct sbuf *sb,
 	int ret=0;
 	char *rpath=NULL;
 #ifdef HAVE_WIN32
-	logw(conf, "Cannot restore special files to Windows: %s\n", fname);
+	logw(as, conf, "Cannot restore special files to Windows: %s\n", fname);
 	goto end;
 #else
 	struct stat statp=sb->statp;
@@ -320,7 +321,7 @@ static int restore_link(struct async *as, struct sbuf *sb,
 				ret=-1;
 			goto end;
 		}
-		else if(make_link(fname, sb->link.buf, sb->link.cmd, conf))
+		else if(make_link(as, fname, sb->link.buf, sb->link.cmd, conf))
 		{
 			// failed - do a warning
 			if(restore_interrupt(sb, "could not create link", conf))

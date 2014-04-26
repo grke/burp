@@ -13,7 +13,7 @@ extern int open_file_for_sendl(struct async *as,
 	BFILE *bfd, FILE **fp, const char *fname,
 	int64_t winattr, size_t *datalen, int atime, struct conf *conf);
 
-extern int close_file_for_sendl(BFILE *bfd, FILE **fp);
+extern int close_file_for_sendl(BFILE *bfd, FILE **fp, struct async *as);
 
 extern int send_whole_file_gzl(struct async *as,
 	const char *fname, const char *datapth,

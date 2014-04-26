@@ -182,7 +182,7 @@ static int send_file(struct async *as, struct sbuf *sb,
 				cconf, NULL, fp, NULL, 0, -1);
 		}
 	}
-	close_file_for_sendl(NULL, &fp);
+	close_file_for_sendl(NULL, &fp, as);
 	return ret;
 }
 

@@ -245,7 +245,8 @@ static void list_item(int json, enum action act, struct sbuf *sb)
 	}
 }
 
-int do_list_client(struct conf *conf, enum action act, int json)
+int do_list_client(struct async *as,
+	struct conf *conf, enum action act, int json)
 {
 	int ret=-1;
 	char msg[512]="";
@@ -260,8 +261,8 @@ int do_list_client(struct conf *conf, enum action act, int json)
 	else
 	  snprintf(msg, sizeof(msg), "list %s:%s",
 		conf->backup?conf->backup:"", conf->regex?conf->regex:"");
-	if(async_write_str(CMD_GEN, msg)
-	  || async_read_expect(CMD_GEN, "ok"))
+	if(async_write_str(as, CMD_GEN, msg)
+	  || async_read_expect(as, CMD_GEN, "ok"))
 		goto end;
 
 	if(!(sb=sbuf_alloc(conf))) goto end;
@@ -281,7 +282,7 @@ int do_list_client(struct conf *conf, enum action act, int json)
 	{
 		sbuf_free_content(sb);
 
-		if(async_read(&sb->attr)) break;
+		if(async_read(as, &sb->attr)) break;
 		if(sb->attr.cmd==CMD_TIMESTAMP)
 		{
 			// A backup timestamp, just print it.
@@ -306,7 +307,7 @@ int do_list_client(struct conf *conf, enum action act, int json)
 
 		attribs_decode(sb);
 
-		if(async_read(&sb->path))
+		if(async_read(as, &sb->path))
 		{
 			logp("got stat without an object\n");
 			goto end;
@@ -321,7 +322,7 @@ int do_list_client(struct conf *conf, enum action act, int json)
 		}
 		else if(cmd_is_link(sb->path.cmd)) // symlink or hardlink
 		{
-			if(async_read(&sb->link)
+			if(async_read(as, &sb->link)
 			  || sb->link.cmd!=sb->path.cmd)
 			{
 				logp("could not get link %c:%s\n",

@@ -44,7 +44,8 @@ static int get_highest_entry(const char *path)
 	return max;
 }
 
-int init_dpthl(struct dpthl *dpthl, struct sdirs *sdirs, struct conf *cconf)
+int init_dpthl(struct dpthl *dpthl, struct async *as,
+	struct sdirs *sdirs, struct conf *cconf)
 {
 	char *tmp=NULL;
 	//logp("in init_dpthl\n");
@@ -63,7 +64,7 @@ int init_dpthl(struct dpthl *dpthl, struct sdirs *sdirs, struct conf *cconf)
 	mk_dpthl_prim(dpthl);
 	if(!(tmp=prepend_s(sdirs->currentdata, dpthl->path)))
 	{
-		log_and_send_oom(__FUNCTION__);
+		log_and_send_oom(as, __func__);
 		return -1;
 	}
 	if((dpthl->seco=get_highest_entry(tmp))<0)
@@ -78,7 +79,7 @@ int init_dpthl(struct dpthl *dpthl, struct sdirs *sdirs, struct conf *cconf)
 	mk_dpthl_seco(dpthl);
 	if(!(tmp=prepend_s(sdirs->currentdata, dpthl->path)))
 	{
-		log_and_send_oom(__FUNCTION__);
+		log_and_send_oom(as, __func__);
 		return -1;
 	}
 	if((dpthl->tert=get_highest_entry(tmp))<0)

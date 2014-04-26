@@ -9,32 +9,35 @@ static char vss_trail_symbol=CMD_VSS_T;
 
 static long server_name_max;
 
-static int usual_stuff(struct conf *conf, const char *path, const char *link,
+static int usual_stuff(struct async *as,
+	struct conf *conf, const char *path, const char *link,
 	struct sbuf *sb, char cmd)
 {
-	if(async_write_str(CMD_ATTRIBS, sb->attr.buf)
-	  || async_write_str(cmd, path)
+	if(async_write_str(as, CMD_ATTRIBS, sb->attr.buf)
+	  || async_write_str(as, cmd, path)
 	  || ((cmd==CMD_HARD_LINK || cmd==CMD_SOFT_LINK)
-		&& async_write_str(cmd, link)))
+		&& async_write_str(as, cmd, link)))
 			return -1;
 	cntr_add_phase1(conf->cntr, cmd, 1);
 	return 0;
 }
 
-static int maybe_send_extrameta(const char *path, char cmd,
+static int maybe_send_extrameta(struct async *as, const char *path, char cmd,
 	struct sbuf *sb, struct conf *conf, int symbol)
 {
 	if(!has_extrameta(path, cmd)) return 0;
-	return usual_stuff(conf, path, NULL, sb, symbol);
+	return usual_stuff(as, conf, path, NULL, sb, symbol);
 }
 
-static int ft_err(struct conf *conf, FF_PKT *ff, const char *msg)
+static int ft_err(struct async *as,
+	struct conf *conf, FF_PKT *ff, const char *msg)
 {
-	return logw(conf, _("Err: %s %s: %s"), msg,
+	return logw(as, conf, _("Err: %s %s: %s"), msg,
 		ff->fname, strerror(errno));
 }
 
-static int do_to_server(struct conf *conf, FF_PKT *ff, struct sbuf *sb,
+static int do_to_server(struct async *as,
+	struct conf *conf, FF_PKT *ff, struct sbuf *sb,
 	char cmd, int compression) 
 {
 	sb->compression=compression;
@@ -47,7 +50,7 @@ static int do_to_server(struct conf *conf, FF_PKT *ff, struct sbuf *sb,
 		return -1;
 #endif
 
-	if(usual_stuff(conf, ff->fname, ff->link, sb, cmd)) return -1;
+	if(usual_stuff(as, conf, ff->fname, ff->link, sb, cmd)) return -1;
 
 	if(ff->type==FT_REG)
 		cntr_add_val(conf->cntr, CMD_BYTES_ESTIMATED,
@@ -60,17 +63,17 @@ static int do_to_server(struct conf *conf, FF_PKT *ff, struct sbuf *sb,
 		return -1;
 	return 0;
 #else
-	return maybe_send_extrameta(ff->fname, cmd, sb, conf, metasymbol);
+	return maybe_send_extrameta(as, ff->fname, cmd, sb, conf, metasymbol);
 #endif
 }
 
-static int to_server(struct conf *conf, FF_PKT *ff,
+static int to_server(struct async *as, struct conf *conf, FF_PKT *ff,
 	struct sbuf *sb, char cmd)
 {
-	return do_to_server(conf, ff, sb, cmd, conf->compression);
+	return do_to_server(as, conf, ff, sb, cmd, conf->compression);
 }
 
-int send_file(FF_PKT *ff, bool top_level, struct conf *conf)
+int send_file(struct async *as, FF_PKT *ff, bool top_level, struct conf *conf)
 {
 	static struct sbuf *sb=NULL;
 
@@ -89,7 +92,7 @@ int send_file(FF_PKT *ff, bool top_level, struct conf *conf)
 			else ff->flen=strlen(ff->fname);	
 		}
 		if(ff->flen>server_name_max)
-			return logw(conf,
+			return logw(as, conf,
 				"File name too long (%lu > %lu): %s",
 				ff->flen, server_name_max, ff->fname);
 	}
@@ -99,7 +102,7 @@ int send_file(FF_PKT *ff, bool top_level, struct conf *conf)
 	{
 		if(ff->type==FT_REG
 		  || ff->type==FT_DIR)
-			return to_server(conf, ff, sb, CMD_EFS_FILE);
+			return to_server(as, conf, ff, sb, CMD_EFS_FILE);
 		return logw(conf, "EFS type %d not yet supported: %s",
 			ff->type, ff->fname);
 	}
@@ -110,35 +113,37 @@ int send_file(FF_PKT *ff, bool top_level, struct conf *conf)
 		case FT_REG:
 		case FT_RAW:
 		case FT_FIFO:
-			return do_to_server(conf, ff, sb, filesymbol,
+			return do_to_server(as, conf, ff, sb, filesymbol,
 				in_exclude_comp(conf->excom,
 					ff->fname, conf->compression));
 		case FT_DIR:
 		case FT_REPARSE:
 		case FT_JUNCTION:
-			return to_server(conf, ff, sb, dirsymbol);
+			return to_server(as, conf, ff, sb, dirsymbol);
 		case FT_LNK_S:
-			return to_server(conf, ff, sb, CMD_SOFT_LINK);
+			return to_server(as, conf, ff, sb, CMD_SOFT_LINK);
 		case FT_LNK_H:
-			return to_server(conf, ff, sb, CMD_HARD_LINK);
+			return to_server(as, conf, ff, sb, CMD_HARD_LINK);
 		case FT_SPEC:
-			return to_server(conf, ff, sb, CMD_SPECIAL);
+			return to_server(as, conf, ff, sb, CMD_SPECIAL);
 		case FT_NOFSCHG:
-			return logw(conf, "Dir: %s [will not descend: "
+			return logw(as, conf, "Dir: %s [will not descend: "
 				"file system change not allowed]\n", ff->fname);
 		case FT_NOFOLLOW:
-			return ft_err(conf, ff, "Could not follow link");
+			return ft_err(as, conf, ff, "Could not follow link");
 		case FT_NOSTAT:
-			return ft_err(conf, ff, "Could not stat");
+			return ft_err(as, conf, ff, "Could not stat");
 		case FT_NOOPEN:
-			return ft_err(conf, ff, "Could not open directory");
+			return ft_err(as, conf, ff, "Could not open directory");
 		default:
-			return logw(conf, _("Err: Unknown file type %d: %s"),
+			return logw(as, conf,
+				_("Err: Unknown file type %d: %s"),
 				ff->type, ff->fname);
 	}
 }
 
-int backup_phase1_client(struct conf *conf, long name_max, int estimate)
+int backup_phase1_client(struct async *as,
+	struct conf *conf, long name_max, int estimate)
 {
 	int ret=-1;
 	FF_PKT *ff=NULL;

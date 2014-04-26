@@ -63,8 +63,9 @@ int candidate_add_fresh(const char *path, struct conf *conf)
 		goto end;
 	while(zp)
 	{
-		if((ars=sbuf_fill_from_gzfile(sb, zp, blk, NULL, conf))<0)
-			goto end;
+		if((ars=sbuf_fill_from_gzfile(sb, NULL /* struct async */,
+			zp, blk, NULL, conf))<0)
+				goto end;
 		else if(ars>0)
 		{
 			// Reached the end.

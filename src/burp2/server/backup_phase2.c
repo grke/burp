@@ -8,7 +8,8 @@ static int data_needed(struct sbuf *sb)
 }
 
 // Return -1 for error, 0 for entry not changed, 1 for entry changed (or new).
-static int found_in_current_manifest(struct sbuf *csb, struct sbuf *sb,
+static int found_in_current_manifest(struct async *as,
+	struct sbuf *csb, struct sbuf *sb,
 	struct manio *cmanio, struct manio *unmanio,
 	struct blk **blk, struct conf *conf)
 {
@@ -17,7 +18,7 @@ static int found_in_current_manifest(struct sbuf *csb, struct sbuf *sb,
 	// (for example, EFS changing to normal file, or back again).
 	if(csb->path.cmd!=sb->path.cmd)
 	{
-		if(manio_forward_through_sigs(&csb, blk, cmanio, conf)<0)
+		if(manio_forward_through_sigs(as, &csb, blk, cmanio, conf)<0)
 			return -1;
 		return 1;
 	}
@@ -28,8 +29,8 @@ static int found_in_current_manifest(struct sbuf *csb, struct sbuf *sb,
 	  && csb->statp.st_ctime==sb->statp.st_ctime)
 	{
 		// Got an unchanged file.
-		if(manio_copy_entry(&csb, sb, blk, cmanio, unmanio, conf)<0)
-			return -1;
+		if(manio_copy_entry(as, &csb, sb,
+			blk, cmanio, unmanio, conf)<0) return -1;
 		return 0;
 	}
 
@@ -40,18 +41,19 @@ static int found_in_current_manifest(struct sbuf *csb, struct sbuf *sb,
 		// changed. We already have the attributes, but may need to
 		// get extra meta data.
 		// FIX THIS
-		if(manio_copy_entry(&csb, sb, blk, cmanio, unmanio, conf)<0)
-			return -1;
+		if(manio_copy_entry(as, &csb, sb,
+			blk, cmanio, unmanio, conf)<0) return -1;
 		return 0;
 	}
 
 	// File data changed.
-	if(manio_forward_through_sigs(&csb, blk, cmanio, conf)<0) return -1;
+	if(manio_forward_through_sigs(as, &csb, blk, cmanio, conf)<0)
+		return -1;
 	return 1;
 }
 
 // Return -1 for error, 0 for entry not changed, 1 for entry changed (or new).
-static int entry_changed(struct sbuf *sb,
+static int entry_changed(struct async *as, struct sbuf *sb,
 	struct manio *cmanio, struct manio *unmanio, struct conf *conf)
 {
 	static int finished=0;
@@ -70,7 +72,7 @@ static int entry_changed(struct sbuf *sb,
 	{
 		// Need to read another.
 		if(!blk && !(blk=blk_alloc())) return -1;
-		switch(manio_sbuf_fill(cmanio, csb, blk, NULL, conf))
+		switch(manio_sbuf_fill(cmanio, as, csb, blk, NULL, conf))
 		{
 			case 1: // Reached the end.
 				sbuf_free(csb); csb=NULL;
@@ -91,13 +93,13 @@ static int entry_changed(struct sbuf *sb,
 	{
 		switch(sbuf_pathcmp(csb, sb))
 		{
-			case 0: return found_in_current_manifest(csb, sb,
+			case 0: return found_in_current_manifest(as, csb, sb,
 					cmanio, unmanio, &blk, conf);
 			case 1: return 1;
 			case -1:
 				// Behind - need to read more data from the old
 				// manifest.
-				switch(manio_sbuf_fill(cmanio,
+				switch(manio_sbuf_fill(cmanio, as,
 					csb, blk, NULL, conf))
 				{
 					case -1: return -1;
@@ -494,7 +496,8 @@ static void dump_slist(struct slist *slist, const char *msg)
 }
 */
 
-static int maybe_add_from_scan(struct manio *p1manio, struct manio *cmanio,
+static int maybe_add_from_scan(struct async *as,
+	struct manio *p1manio, struct manio *cmanio,
 	struct manio *unmanio, struct slist *slist, struct conf *conf)
 {
 	int ret=-1;
@@ -514,11 +517,11 @@ static int maybe_add_from_scan(struct manio *p1manio, struct manio *cmanio,
 		}
 		if(!(snew=sbuf_alloc(conf))) goto end;
 
-		if((ars=manio_sbuf_fill(p1manio, snew, NULL, NULL, conf))<0)
-			goto end;
+		if((ars=manio_sbuf_fill(p1manio,
+			as, snew, NULL, NULL, conf))<0) goto end;
 		else if(ars>0) return 0; // Finished.
 
-		if(!(ec=entry_changed(snew, cmanio, unmanio, conf)))
+		if(!(ec=entry_changed(as, snew, cmanio, unmanio, conf)))
 		{
 			// No change, no need to add to slist.
 			continue;
@@ -581,8 +584,9 @@ int backup_phase2_server(struct async *as,
 
 	while(!backup_end)
 	{
-		if(maybe_add_from_scan(p1manio, cmanio, unmanio, slist, conf))
-			goto end;
+		if(maybe_add_from_scan(as,
+			p1manio, cmanio, unmanio, slist, conf))
+				goto end;
 
 		if(!wbuf->len)
 		{

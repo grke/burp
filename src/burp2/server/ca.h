@@ -3,7 +3,7 @@
 
 extern int ca_server_setup(struct conf *conf);
 
-extern int ca_server_maybe_sign_client_cert(struct conf *conf,
-	struct conf *cconf);
+extern int ca_server_maybe_sign_client_cert(struct async *as,
+	struct conf *conf, struct conf *cconf);
 
 #endif

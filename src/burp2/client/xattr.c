@@ -6,13 +6,14 @@
  || defined(HAVE_NETBSD_OS) \
  || defined(HAVE_OPENBSD_OS)
 
-static char *get_next_str(char **data, size_t *l, struct conf *conf, ssize_t *s, const char *path)
+static char *get_next_str(struct async *as, char **data, size_t *l,
+	struct conf *conf, ssize_t *s, const char *path)
 {
 	char *ret=NULL;
 
 	if((sscanf(*data, "%08X", (unsigned int *)s))!=1)
 	{
-		logw(conf, "sscanf of xattr '%s' %d failed for %s\n",
+		logw(as, conf, "sscanf of xattr '%s' %d failed for %s\n",
 			*data, *l, path);
 		return NULL;
 	}
@@ -20,7 +21,7 @@ static char *get_next_str(char **data, size_t *l, struct conf *conf, ssize_t *s,
 	*l-=8;
 	if(!(ret=(char *)malloc((*s)+1)))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return NULL;
 	}
 	memcpy(ret, *data, *s);
@@ -47,7 +48,8 @@ int has_xattr(const char *path, char cmd)
 	return 0;
 }
 
-int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xlen, struct conf *conf)
+int get_xattr(struct async *as, const char *path, struct stat *statp,
+	char **xattrtext, size_t *xlen, struct conf *conf)
 {
 	char *z=NULL;
 	size_t len=0;
@@ -59,18 +61,18 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 
 	if((len=llistxattr(path, NULL, 0))<=0)
 	{
-		logw(conf, "could not llistxattr of '%s': %d\n", path, len);
+		logw(as, conf, "could not llistxattr of '%s': %d\n", path, len);
 		return 0; // carry on
 	}
 	if(!(xattrlist=(char *)malloc(len+1)))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return -1;
 	}
 	memset(xattrlist, 0, len+1);
 	if((len=llistxattr(path, xattrlist, len))<=0)
 	{
-		logw(conf, "could not llistxattr '%s': %d\n", path, len);
+		logw(as, conf, "could not llistxattr '%s': %d\n", path, len);
 		free(xattrlist);
 		return 0; // carry on
 	}
@@ -94,7 +96,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 
 		if((zlen=strlen(z))>maxlen)
 		{
-                	logw(conf, "xattr element of '%s' too long: %d\n",
+                	logw(as, conf, "xattr element of '%s' too long: %d\n",
 				path, zlen);
 			if(toappend) { free(toappend); toappend=NULL; }
 			break;
@@ -118,20 +120,20 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 
 		if((vlen=lgetxattr(path, z, NULL, 0))<=0)
 		{
-			logw(conf, "could not lgetxattr on %s for %s: %d\n",
+			logw(as, conf, "could not lgetxattr on %s for %s: %d\n",
 				path, z, vlen);
 			continue;
 		}
 		if(!(val=(char *)malloc(vlen+1)))
 		{
-			log_out_of_memory(__FUNCTION__);
+			log_out_of_memory(__func__);
 			free(xattrlist);
 			if(toappend) free(toappend);
 			return -1;
 		}
 		if((vlen=lgetxattr(path, z, val, vlen))<=0)
 		{
-			logw(conf, "could not lgetxattr %s for %s: %d\n",
+			logw(as, conf, "could not lgetxattr %s for %s: %d\n",
 				path, z, vlen);
 			free(val);
 			continue;
@@ -140,7 +142,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 
 		if(vlen>maxlen)
 		{
-                	logw(conf, "xattr value of '%s' too long: %d\n",
+                	logw(as, conf, "xattr value of '%s' too long: %d\n",
 				path, vlen);
 			if(toappend) { free(toappend); toappend=NULL; }
 			free(val);
@@ -158,7 +160,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 		  || !(toappend=prepend_len(toappend, totallen,
 			val, vlen, "", 0, &totallen)))
 		{
-			log_out_of_memory(__FUNCTION__);
+			log_out_of_memory(__func__);
 			free(val);
 			free(xattrlist);
 			return -1;
@@ -167,7 +169,8 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 
 		if(totallen>maxlen)
 		{
-                	logw(conf, "xattr length of '%s' grew too long: %d\n",
+                	logw(as, conf,
+				"xattr length of '%s' grew too long: %d\n",
 				path, totallen);
 			free(val);
 			free(toappend);
@@ -186,7 +189,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 		  || !(*xattrtext=prepend_len(*xattrtext, *xlen,
 			toappend, totallen, "", 0, xlen)))
 		{
-			log_out_of_memory(__FUNCTION__);
+			log_out_of_memory(__func__);
 			free(toappend);
 			free(xattrlist);
 			return -1;
@@ -197,7 +200,9 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 	return 0;
 }
 
-static int do_set_xattr(const char *path, struct stat *statp, const char *xattrtext, size_t xlen, struct conf *conf)
+static int do_set_xattr(struct async *as,
+	const char *path, struct stat *statp,
+	const char *xattrtext, size_t xlen, struct conf *conf)
 {
 	size_t l=0;
 	char *data=NULL;
@@ -210,9 +215,9 @@ static int do_set_xattr(const char *path, struct stat *statp, const char *xattrt
 		char *name=NULL;
 		char *value=NULL;
 
-		if(!(name=get_next_str(&data, &l, conf, &s, path)))
+		if(!(name=get_next_str(as, &data, &l, conf, &s, path)))
 			return -1;
-		if(!(value=get_next_str(&data, &l, conf, &s, path)))
+		if(!(value=get_next_str(as, &data, &l, conf, &s, path)))
 		{
 			free(name);
 			return -1;
@@ -220,7 +225,7 @@ static int do_set_xattr(const char *path, struct stat *statp, const char *xattrt
 
 		if(lsetxattr(path, name, value, strlen(value), 0))
 		{
-			logw(conf, "lsetxattr error on %s: %s\n",
+			logw(as, conf, "lsetxattr error on %s: %s\n",
 				path, strerror(errno));
 			free(name);
 			free(value);
@@ -234,15 +239,17 @@ static int do_set_xattr(const char *path, struct stat *statp, const char *xattrt
 	return 0;
 }
 
-int set_xattr(const char *path, struct stat *statp, const char *xattrtext, size_t xlen, char cmd, struct conf *conf)
+int set_xattr(struct async *as, const char *path, struct stat *statp,
+	const char *xattrtext, size_t xlen, char cmd, struct conf *conf)
 {
 	switch(cmd)
 	{
 		case META_XATTR:
-			return do_set_xattr(path, statp, xattrtext, xlen, conf);
+			return do_set_xattr(as,
+				path, statp, xattrtext, xlen, conf);
 		default:
 			logp("unknown xattr type: %c\n", cmd);
-			logw(conf, "unknown xattr type: %c\n", cmd);
+			logw(as, conf, "unknown xattr type: %c\n", cmd);
 			break;
 	}
 	return -1;
@@ -306,7 +313,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 		}
 		if(!(xattrlist=(char *)malloc(len+1)))
 		{
-			log_out_of_memory(__FUNCTION__);
+			log_out_of_memory(__func__);
 			return -1;
 		}
 		memset(xattrlist, 0, len+1);
@@ -373,7 +380,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 			}
 			if(!(val=(char *)malloc(vlen+1)))
 			{
-				log_out_of_memory(__FUNCTION__);
+				log_out_of_memory(__func__);
 				free(xattrlist);
 				if(toappend) free(toappend);
 				return -1;
@@ -407,7 +414,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 			  || !(toappend=prepend_len(toappend, totallen,
 				val, vlen, "", 0, &totallen)))
 			{
-				log_out_of_memory(__FUNCTION__);
+				log_out_of_memory(__func__);
 				free(val);
 				free(xattrlist);
 				return -1;
@@ -439,7 +446,7 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 			  || !(*xattrtext=prepend_len(*xattrtext, *xlen,
 				toappend, totallen, "", 0, xlen)))
 			{
-				log_out_of_memory(__FUNCTION__);
+				log_out_of_memory(__func__);
 				free(toappend);
 				free(xattrlist);
 				return -1;
@@ -453,7 +460,8 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 	return 0;
 }
 
-static int do_set_xattr_bsd(const char *path, struct stat *statp,
+static int do_set_xattr_bsd(struct async *as,
+	const char *path, struct stat *statp,
 	const char *xattrtext, size_t xlen, struct conf *conf)
 {
 	int ret=-1;
@@ -471,8 +479,8 @@ static int do_set_xattr_bsd(const char *path, struct stat *statp,
 		int cnspace=0;
 		char *name=NULL;
 
-		if(!(nspace=get_next_str(&data, &l, conf, &vlen, path))
-		  || !(value=get_next_str(&data, &l, conf, &vlen, path)))
+		if(!(nspace=get_next_str(as, &data, &l, conf, &vlen, path))
+		  || !(value=get_next_str(as, &data, &l, conf, &vlen, path)))
 			goto end;
 
 		// Need to split the name into two parts.
@@ -514,7 +522,9 @@ end:
 	return ret;
 }
 
-int set_xattr(const char *path, struct stat *statp, const char *xattrtext, size_t xlen, char cmd, struct conf *conf)
+int set_xattr(struct async *as, const char *path,
+	struct stat *statp, const char *xattrtext,
+	size_t xlen, char cmd, struct conf *conf)
 {
 	switch(cmd)
 	{

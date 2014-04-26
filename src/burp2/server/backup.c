@@ -98,7 +98,7 @@ int do_backup_server(struct async **as, struct sdirs *sdirs, struct conf *cconf,
 
 	logp("in do_backup_server\n");
 
-	if(get_new_timestamp(sdirs, cconf, tstmp, sizeof(tstmp)))
+	if(get_new_timestamp(*as, sdirs, cconf, tstmp, sizeof(tstmp)))
 		goto error;
 	if(!(realworking=prepend_s(sdirs->client, tstmp))
 	 || !(manifest_dir=prepend_s(realworking, "manifest")))

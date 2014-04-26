@@ -1,6 +1,8 @@
 #include "include.h"
 
-static int do_encryption(EVP_CIPHER_CTX *ctx, unsigned char *inbuf, int inlen, unsigned char *outbuf, int *outlen, MD5_CTX *md5)
+static int do_encryption(struct async *as, EVP_CIPHER_CTX *ctx,
+	unsigned char *inbuf, int inlen, unsigned char *outbuf, int *outlen,
+	MD5_CTX *md5)
 {
 	if(!inlen) return 0;
 	if(!EVP_CipherUpdate(ctx, outbuf, outlen, inbuf, inlen))
@@ -10,7 +12,7 @@ static int do_encryption(EVP_CIPHER_CTX *ctx, unsigned char *inbuf, int inlen, u
 	}
 	if(*outlen>0)
 	{
-		if(async_write_strn(CMD_APPEND,
+		if(async_write_strn(as, CMD_APPEND,
 			(char *)outbuf, (size_t)*outlen)) return -1;
 		if(!MD5_Update(md5, outbuf, *outlen))
 		{
@@ -64,7 +66,8 @@ struct bsid {
 };
 #endif
 
-int open_file_for_sendl(BFILE *bfd, FILE **fp, const char *fname,
+int open_file_for_sendl(struct async *as,
+	BFILE *bfd, FILE **fp, const char *fname,
 	int64_t winattr, size_t *datalen, int atime, struct conf *conf)
 {
 	if(fp)
@@ -73,7 +76,7 @@ int open_file_for_sendl(BFILE *bfd, FILE **fp, const char *fname,
 		if((fd=open(fname, O_RDONLY|atime?0:O_NOATIME))<0
 		  || !(*fp=fdopen(fd, "rb")))
 		{
-			logw(conf, "Could not open %s: %s\n",
+			logw(as, conf, "Could not open %s: %s\n",
 				fname, strerror(errno));
 			return -1;
 		}
@@ -132,9 +135,11 @@ char *get_endfile_str(unsigned long long bytes, unsigned char *checksum)
 	return endmsg;
 }
 
-int write_endfile(unsigned long long bytes, unsigned char *checksum)
+int write_endfile(struct async *as,
+	unsigned long long bytes, unsigned char *checksum)
 {
-	return async_write_str(CMD_END_FILE, get_endfile_str(bytes, checksum));
+	return async_write_str(as,
+		CMD_END_FILE, get_endfile_str(bytes, checksum));
 }
 
 /* OK, this function is getting a bit out of control.
@@ -146,7 +151,8 @@ int write_endfile(unsigned long long bytes, unsigned char *checksum)
    Encryption off and compression off uses send_whole_file().
    Perhaps a separate function is needed for encryption on compression off.
 */
-int send_whole_file_gzl(const char *fname, const char *datapth, int quick_read,
+int send_whole_file_gzl(struct async *as,
+	const char *fname, const char *datapth, int quick_read,
 	unsigned long long *bytes, const char *encpassword, struct conf *conf,
 	int compression, BFILE *bfd, FILE *fp, const char *extrameta,
 	size_t elen, size_t datalen)
@@ -290,7 +296,8 @@ int send_whole_file_gzl(const char *fname, const char *datapth, int quick_read,
 
 			if(enc_ctx)
 			{
-				if(do_encryption(enc_ctx, out, have, eoutbuf, &eoutlen, &md5))
+				if(do_encryption(as, enc_ctx, out, have,
+					eoutbuf, &eoutlen, &md5))
 				{
 					ret=-1;
 					break;
@@ -298,7 +305,7 @@ int send_whole_file_gzl(const char *fname, const char *datapth, int quick_read,
 			}
 			else
 			{
-				if(async_write_strn(CMD_APPEND,
+				if(async_write_strn(as, CMD_APPEND,
 					(char *)out, (size_t)have))
 				{
 					ret=-1;
@@ -308,7 +315,7 @@ int send_whole_file_gzl(const char *fname, const char *datapth, int quick_read,
 			if(quick_read && datapth)
 			{
 				int qr;
-				if((qr=do_quick_read(datapth, conf))<0)
+				if((qr=do_quick_read(as, datapth, conf))<0)
 				{
 					ret=-1;
 					break;
@@ -349,7 +356,7 @@ int send_whole_file_gzl(const char *fname, const char *datapth, int quick_read,
 			}
 			else if(eoutlen>0)
 			{
-			  if(async_write_strn(CMD_APPEND,
+			  if(async_write_strn(as, CMD_APPEND,
 				(char *)eoutbuf, (size_t)eoutlen))
 					ret=-1;
 			  else if(!MD5_Update(&md5, eoutbuf, eoutlen))
@@ -379,7 +386,7 @@ cleanup:
 			return -1;
 		}
 
-		return write_endfile(*bytes, checksum);
+		return write_endfile(as, *bytes, checksum);
 	}
 //logp("end of send\n");
 	return ret;
@@ -421,7 +428,8 @@ static DWORD WINAPI write_efs(PBYTE pbData,
 }
 #endif
 
-int send_whole_filel(char cmd, const char *fname, const char *datapth,
+int send_whole_filel(struct async *as,
+	char cmd, const char *fname, const char *datapth,
 	int quick_read, unsigned long long *bytes, struct conf *conf,
 	BFILE *bfd, FILE *fp, const char *extrameta,
 	size_t elen, size_t datalen)
@@ -456,7 +464,7 @@ int send_whole_filel(char cmd, const char *fname, const char *datapth,
 				logp("MD5_Update() failed\n");
 				ret=-1;
 			}
-			if(async_write_strn(CMD_APPEND, metadata, s))
+			if(async_write_strn(as, CMD_APPEND, metadata, s))
 			{
 				ret=-1;
 			}
@@ -550,7 +558,7 @@ int send_whole_filel(char cmd, const char *fname, const char *datapth,
 				ret=-1;
 				break;
 			}
-			if(async_write_strn(CMD_APPEND, buf, s))
+			if(async_write_strn(as, CMD_APPEND, buf, s))
 			{
 				ret=-1;
 				break;
@@ -558,7 +566,7 @@ int send_whole_filel(char cmd, const char *fname, const char *datapth,
 			if(quick_read)
 			{
 				int qr;
-				if((qr=do_quick_read(datapth, conf))<0)
+				if((qr=do_quick_read(as, datapth, conf))<0)
 				{
 					ret=-1;
 					break;
@@ -580,7 +588,7 @@ int send_whole_filel(char cmd, const char *fname, const char *datapth,
 			logp("MD5_Final() failed\n");
 			return -1;
 		}
-		return write_endfile(*bytes, checksum);
+		return write_endfile(as, *bytes, checksum);
 	}
 	return ret;
 }

@@ -65,7 +65,8 @@ static int read_fp(FILE *fp, gzFile zp, struct iobuf *rbuf)
 	return asr;
 }
 
-static int read_stat(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
+static int read_stat(struct async *as, FILE *fp,
+	gzFile zp, struct sbuf *sb, struct cntr *cntr)
 {
 	static struct iobuf *rbuf=NULL;
 
@@ -87,7 +88,7 @@ static int read_stat(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
 		}
 		else
 		{
-			if(async_read(rbuf))
+			if(async_read(as, rbuf))
 			{
 				break;
 			}
@@ -128,20 +129,21 @@ static int read_stat(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
 	return -1;
 }
 
-static int do_sbufl_fill_from_net(struct sbuf *sb, struct cntr *cntr)
+static int do_sbufl_fill_from_net(struct sbuf *sb, struct async *as,
+	struct cntr *cntr)
 {
 	int ars;
 	static struct iobuf *rbuf=NULL;
 	if(!rbuf && !(rbuf=iobuf_alloc())) return -1;
 	iobuf_free_content(rbuf);
-	if((ars=read_stat(NULL, NULL, sb, cntr))
-	  || (ars=async_read(rbuf))) return ars;
+	if((ars=read_stat(as, NULL, NULL, sb, cntr))
+	  || (ars=async_read(as, rbuf))) return ars;
 	iobuf_copy(&sb->path, rbuf);
 	rbuf->buf=NULL;
 	if(sbuf_is_link(sb))
 	{
 		iobuf_free_content(rbuf);
-		if((ars=async_read(rbuf))) return ars;
+		if((ars=async_read(as, rbuf))) return ars;
 		iobuf_copy(&sb->link, rbuf);
 		rbuf->buf=NULL;
 		if(!cmd_is_link(rbuf->cmd))
@@ -153,12 +155,13 @@ static int do_sbufl_fill_from_net(struct sbuf *sb, struct cntr *cntr)
 	return 0;
 }
 
-static int do_sbufl_fill_from_file(FILE *fp, gzFile zp, struct sbuf *sb, int phase1, struct cntr *cntr)
+static int do_sbufl_fill_from_file(struct sbuf *sb, FILE *fp, gzFile zp,
+	int phase1, struct cntr *cntr)
 {
 	int ars;
 	struct iobuf rbuf;
 	//free_sbufl(sb);
-	if((ars=read_stat(fp, zp, sb, cntr))) return ars;
+	if((ars=read_stat(NULL /* no async */, fp, zp, sb, cntr))) return ars;
 	if((ars=read_fp(fp, zp, &rbuf))) return ars;
 	iobuf_copy(&sb->path, &rbuf);
 	if(sbuf_is_link(sb))
@@ -192,15 +195,16 @@ static int do_sbufl_fill_from_file(FILE *fp, gzFile zp, struct sbuf *sb, int pha
 	return 0;
 }
 
-int sbufl_fill(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
+int sbufl_fill(struct sbuf *sb, struct async *as,
+	FILE *fp, gzFile zp, struct cntr *cntr)
 {
-	if(fp || zp) return do_sbufl_fill_from_file(fp, zp, sb, 0, cntr);
-	return do_sbufl_fill_from_net(sb, cntr);
+	if(fp || zp) return do_sbufl_fill_from_file(sb, fp, zp, 0, cntr);
+	return do_sbufl_fill_from_net(sb, as, cntr);
 }
 
-int sbufl_fill_phase1(FILE *fp, gzFile zp, struct sbuf *sb, struct cntr *cntr)
+int sbufl_fill_phase1(struct sbuf *sb, FILE *fp, gzFile zp, struct cntr *cntr)
 {
-	return do_sbufl_fill_from_file(fp, zp, sb, 1, cntr);
+	return do_sbufl_fill_from_file(sb, fp, zp, 1, cntr);
 }
 
 static int sbufl_to_fp(struct sbuf *sb, FILE *mp, int write_endfile)

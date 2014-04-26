@@ -1,6 +1,7 @@
 #include "include.h"
 
-static int do_write(BFILE *bfd, FILE *fp, unsigned char *out, size_t outlen,
+static int do_write(struct async *as,
+	BFILE *bfd, FILE *fp, unsigned char *out, size_t outlen,
 	char **metadata, unsigned long long *sent)
 {
 	int ret=0;
@@ -14,7 +15,8 @@ static int do_write(BFILE *bfd, FILE *fp, unsigned char *out, size_t outlen,
 				"", 0, (size_t *)sent)))
 		{
 			logp("error when appending metadata\n");
-			async_write_str(CMD_ERROR, "error when appending metadata");
+			async_write_str(as, CMD_ERROR,
+				"error when appending metadata");
 			return -1;
 		}
 	}
@@ -24,14 +26,14 @@ static int do_write(BFILE *bfd, FILE *fp, unsigned char *out, size_t outlen,
 		if((ret=bwrite(bfd, out, outlen))<=0)
 		{
 			logp("error when appending %d: %d\n", outlen, ret);
-			async_write_str(CMD_ERROR, "write failed");
+			async_write_str(as, CMD_ERROR, "write failed");
 			return -1;
 		}
 #else
 		if((fp && (ret=fwrite(out, 1, outlen, fp))<=0))
 		{
 			logp("error when appending %d: %d\n", outlen, ret);
-			async_write_str(CMD_ERROR, "write failed");
+			async_write_str(as, CMD_ERROR, "write failed");
 			return -1;
 		}
 #endif
@@ -40,7 +42,8 @@ static int do_write(BFILE *bfd, FILE *fp, unsigned char *out, size_t outlen,
 	return 0;
 }
 
-static int do_inflate(z_stream *zstrm, BFILE *bfd, FILE *fp,
+static int do_inflate(struct async *as,
+	z_stream *zstrm, BFILE *bfd, FILE *fp,
 	unsigned char *out, unsigned char *buftouse, size_t lentouse,
 	char **metadata, const char *encpassword, int enccompressed,
 	unsigned long long *sent)
@@ -51,7 +54,8 @@ static int do_inflate(z_stream *zstrm, BFILE *bfd, FILE *fp,
 	// Do not want to inflate encrypted data that was not compressed.
 	// Just write it straight out.
 	if(encpassword && !enccompressed)
-		return do_write(bfd, fp, buftouse, lentouse, metadata, sent);
+		return do_write(as,
+			bfd, fp, buftouse, lentouse, metadata, sent);
 
 	zstrm->avail_in=lentouse;
 	zstrm->next_in=buftouse;
@@ -74,7 +78,7 @@ static int do_inflate(z_stream *zstrm, BFILE *bfd, FILE *fp,
 		have=ZCHUNK-zstrm->avail_out;
 		if(!have) continue;
 
-		if(do_write(bfd, fp, out, have, metadata, sent))
+		if(do_write(as, bfd, fp, out, have, metadata, sent))
 			return -1;
 /*
 		if(md5)
@@ -155,7 +159,8 @@ static int transfer_efs_in(BFILE *bfd, unsigned long long *rcvd,
 
 #endif
 
-int transfer_gzfile_in(struct sbuf *sb, const char *path, BFILE *bfd,
+int transfer_gzfile_in(struct async *as,
+	struct sbuf *sb, const char *path, BFILE *bfd,
 	FILE *fp, unsigned long long *rcvd, unsigned long long *sent,
 	const char *encpassword, int enccompressed,
 	struct cntr *cntr, char **metadata)
@@ -210,7 +215,7 @@ int transfer_gzfile_in(struct sbuf *sb, const char *path, BFILE *bfd,
 	while(!quit)
 	{
 		iobuf_free_content(rbuf);
-		if(async_read(rbuf))
+		if(async_read(as, rbuf))
 		{
 			if(enc_ctx)
 			{
@@ -229,7 +234,8 @@ int transfer_gzfile_in(struct sbuf *sb, const char *path, BFILE *bfd,
 				if(!fp && !bfd && !metadata)
 				{
 					logp("given append, but no file or metadata to write to\n");
-					async_write_str(CMD_ERROR, "append with no file or metadata");
+					async_write_str(as, CMD_ERROR,
+					  "append with no file or metadata");
 					quit++; ret=-1;
 				}
 				else
@@ -279,7 +285,7 @@ int transfer_gzfile_in(struct sbuf *sb, const char *path, BFILE *bfd,
 					}
 					//logp("want to write: %d\n", zstrm.avail_in);
 
-					if(do_inflate(&zstrm, bfd, fp, out,
+					if(do_inflate(as, &zstrm, bfd, fp, out,
 						buftouse, lentouse, metadata,
 						encpassword,
 						enccompressed,
@@ -300,7 +306,8 @@ int transfer_gzfile_in(struct sbuf *sb, const char *path, BFILE *bfd,
 						ret=-1; quit++;
 						break;
 					}
-					if(doutlen && do_inflate(&zstrm, bfd,
+					if(doutlen && do_inflate(as,
+					  &zstrm, bfd,
 					  fp, out, doutbuf, (size_t)doutlen,
 					  metadata, encpassword,
 					  enccompressed, sent))
@@ -321,7 +328,7 @@ int transfer_gzfile_in(struct sbuf *sb, const char *path, BFILE *bfd,
 						newsum=get_checksum_str(checksum);
 						// log if the checksum differed
 						if(strcmp(newsum, oldsum))
-							logw(cntr, "md5sum for '%s' did not match! (%s!=%s)\n", path, newsum, oldsum);
+							logw(as, cntr, "md5sum for '%s' did not match! (%s!=%s)\n", path, newsum, oldsum);
 					}
 				}
 				else

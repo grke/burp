@@ -130,7 +130,7 @@ printf("HERE: %s\n", feat);
 	// incexc conf so that it better knows what to do on
 	// resume.
 	if(server_supports(feat, ":incexc:")
-	  && incexc_send_client(conf))
+	  && incexc_send_client(*as, conf))
 		goto end;
 
 	if(server_supports(feat, ":uname:"))

@@ -253,7 +253,7 @@ static int run_restore(struct async *as,
 			srestore, &dir_for_notify, cconf);
 	if(dir_for_notify)
 	{
-		maybe_do_notification(ret,
+		maybe_do_notification(as, ret,
 			sdirs->client, dir_for_notify,
 			act==ACTION_RESTORE?"restorelog":"verifylog",
 			act==ACTION_RESTORE?"restore":"verify",
@@ -274,7 +274,7 @@ static int run_delete(struct async *as,
 		return -1;
 	}
 	backupno=rbuf->buf+strlen("delete ");
-	return do_delete_server(sdirs, cconf, backupno);
+	return do_delete_server(as, sdirs, cconf, backupno);
 }
 
 static int run_list(struct async *as,

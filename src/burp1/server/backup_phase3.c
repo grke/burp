@@ -30,14 +30,14 @@ int backup_phase3_server(struct sdirs *sdirs, struct conf *cconf,
 	while(ucfp || p2fp)
 	{
 		if(ucfp && !ucb->path.buf
-		  && (ars=sbufl_fill(ucfp, NULL, ucb, cconf->cntr)))
+		  && (ars=sbufl_fill(ucb, NULL, ucfp, NULL, cconf->cntr)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
 			close_fp(&ucfp);
 		}
 		if(p2fp && !p2b->path.buf
-		  && (ars=sbufl_fill(p2fp, NULL, p2b, cconf->cntr)))
+		  && (ars=sbufl_fill(p2b, NULL, p2fp, NULL, cconf->cntr)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.

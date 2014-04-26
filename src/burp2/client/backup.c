@@ -50,7 +50,7 @@ int do_backup_client(struct async *as, struct conf *conf, enum action action,
 		// Now, the server will be telling us what data we need to
 		// send.
 		if(conf->protocol==PROTO_BURP1)
-			ret=backup_phase2_client_burp1(conf, resume);
+			ret=backup_phase2_client_burp1(as, conf, resume);
 		else
 			ret=backup_phase2_client(as, conf, resume);
 	}

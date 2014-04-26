@@ -430,7 +430,8 @@ int backup_phase3_server(struct sdirs *sdirs,
 		  && usb
 		  && !usb->path.buf)
 		{
-			switch(manio_sbuf_fill(unmanio, usb, NULL, NULL, conf))
+			switch(manio_sbuf_fill(unmanio, NULL /* no async */,
+				usb, NULL, NULL, conf))
 			{
 				case -1: goto end;
 				case 1: finished_un++;
@@ -441,7 +442,8 @@ int backup_phase3_server(struct sdirs *sdirs,
 		  && csb
 		  && !csb->path.buf)
 		{
-			switch(manio_sbuf_fill(chmanio, csb, NULL, NULL, conf))
+			switch(manio_sbuf_fill(chmanio, NULL /* no async */,
+				csb, NULL, NULL, conf))
 			{
 				case -1: goto end;
 				case 1: finished_ch++;
@@ -450,7 +452,8 @@ int backup_phase3_server(struct sdirs *sdirs,
 
 		if((usb && usb->path.buf) && (!csb || !csb->path.buf))
 		{
-			switch(manio_copy_entry(&usb, usb,
+			switch(manio_copy_entry(NULL /* no async */,
+				&usb, usb,
 				&blk, unmanio, newmanio, conf))
 			{
 				case -1: goto end;
@@ -459,8 +462,8 @@ int backup_phase3_server(struct sdirs *sdirs,
 		}
 		else if((!usb || !usb->path.buf) && (csb && csb->path.buf))
 		{
-			switch(manio_copy_entry(&csb, csb,
-				&blk, chmanio, newmanio, conf))
+			switch(manio_copy_entry(NULL /* no async */,
+				&csb, csb, &blk, chmanio, newmanio, conf))
 			{
 				case -1: goto end;
 				case 1: finished_ch++;
@@ -473,8 +476,8 @@ int backup_phase3_server(struct sdirs *sdirs,
 		else if(!(pcmp=sbuf_pathcmp(usb, csb)))
 		{
 			// They were the same - write one.
-			switch(manio_copy_entry(&csb, csb,
-				&blk, chmanio, newmanio, conf))
+			switch(manio_copy_entry(NULL /* no async */,
+				&csb, csb, &blk, chmanio, newmanio, conf))
 			{
 				case -1: goto end;
 				case 1: finished_ch++;
@@ -482,8 +485,8 @@ int backup_phase3_server(struct sdirs *sdirs,
 		}
 		else if(pcmp<0)
 		{
-			switch(manio_copy_entry(&usb, usb,
-				&blk, unmanio, newmanio, conf))
+			switch(manio_copy_entry(NULL /* no async */,
+				&usb, usb, &blk, unmanio, newmanio, conf))
 			{
 				case -1: goto end;
 				case 1: finished_un++;
@@ -491,8 +494,8 @@ int backup_phase3_server(struct sdirs *sdirs,
 		}
 		else
 		{
-			switch(manio_copy_entry(&csb, csb,
-				&blk, chmanio, newmanio, conf))
+			switch(manio_copy_entry(NULL /* no async */,
+				&csb, csb, &blk, chmanio, newmanio, conf))
 			{
 				case -1: goto end;
 				case 1: finished_ch++;

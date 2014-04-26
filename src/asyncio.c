@@ -233,7 +233,7 @@ int async_init(struct async *as,
 	return 0;
 }
 
-int set_bulk_packets(struct async *as)
+int async_set_bulk_packets(struct async *as)
 {
 #if defined(IP_TOS) && defined(IPTOS_THROUGHPUT)
 	int opt=IPTOS_THROUGHPUT;

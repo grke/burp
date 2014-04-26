@@ -2,7 +2,7 @@
 #include "../../burp1/client/backup_phase2.h"
 
 // Return 0 for OK, -1 for error, 1 for timer conditions not met.
-int do_backup_client(struct conf *conf, enum action action,
+int do_backup_client(struct async *as, struct conf *conf, enum action action,
 	long name_max, int resume)
 {
 	int ret=0;
@@ -42,7 +42,7 @@ int do_backup_client(struct conf *conf, enum action action,
 	// Scan the file system and send the results to the server.
 	// Skip phase1 if the server wanted to resume.
 	if(!ret && !resume)
-		ret=backup_phase1_client(conf, name_max,
+		ret=backup_phase1_client(as, conf, name_max,
 			action==ACTION_ESTIMATE);
 
 	if(action!=ACTION_ESTIMATE && !ret)
@@ -52,7 +52,7 @@ int do_backup_client(struct conf *conf, enum action action,
 		if(conf->protocol==PROTO_BURP1)
 			ret=backup_phase2_client_burp1(conf, resume);
 		else
-			ret=backup_phase2_client(conf, resume);
+			ret=backup_phase2_client(as, conf, resume);
 	}
 
 	if(action==ACTION_ESTIMATE) cntr_print(conf->cntr, ACTION_ESTIMATE);

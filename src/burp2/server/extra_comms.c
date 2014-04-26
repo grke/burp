@@ -7,7 +7,7 @@ static int append_to_feat(char **feat, const char *str)
 	{
 		if(!(*feat=strdup(str)))
 		{
-			log_out_of_memory(__FUNCTION__);
+			log_out_of_memory(__func__);
 			return -1;
 		}
 		return 0;
@@ -33,7 +33,7 @@ static char *get_restorepath(struct conf *cconf)
 	return restorepath;
 }
 
-static int send_features(struct conf *cconf)
+static int send_features(struct async *as, struct conf *cconf)
 {
 	int ret=-1;
 	char *feat=NULL;
@@ -91,7 +91,7 @@ static int send_features(struct conf *cconf)
 
 	//printf("feat: %s\n", feat);
 
-	if(async_write_str(CMD_GEN, feat))
+	if(async_write_str(as, CMD_GEN, feat))
 	{
 		logp("problem in extra_comms\n");
 		goto end;
@@ -113,7 +113,9 @@ struct vers
 	long burp2;
 };
 
-static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, struct conf *conf, struct conf *cconf)
+static int extra_comms_read(struct async **as,
+	struct vers *vers, int *srestore,
+	char **incexc, struct conf *conf, struct conf *cconf)
 {
 	int ret=-1;
 	struct iobuf *rbuf=NULL;
@@ -122,17 +124,17 @@ static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, str
 	while(1)
 	{
 		iobuf_free_content(rbuf);
-		if(async_read(rbuf)) goto end;
+		if(async_read(*as, rbuf)) goto end;
 
 		if(rbuf->cmd!=CMD_GEN)
 		{
-			iobuf_log_unexpected(rbuf, __FUNCTION__);
+			iobuf_log_unexpected(rbuf, __func__);
 			goto end;
 		}
 	
 		if(!strcmp(rbuf->buf, "extra_comms_end"))
 		{
-			if(async_write_str(CMD_GEN, "extra_comms_end ok"))
+			if(async_write_str(*as, CMD_GEN, "extra_comms_end ok"))
 				goto end;
 			break;
 		}
@@ -140,7 +142,7 @@ static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, str
 		{
 			char *os=NULL;
 			os=rbuf->buf+strlen("autoupgrade:");
-			if(os && *os && autoupgrade_server(vers->ser,
+			if(os && *os && autoupgrade_server(as, vers->ser,
 				vers->cli, os, conf)) goto end;
 		}
 		else if(!strcmp(rbuf->buf, "srestore ok"))
@@ -179,7 +181,7 @@ static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, str
 			// Client is telling server its incexc
 			// configuration so that it can better decide
 			// what to do on resume.
-			if(incexc_recv_server(incexc, conf)) goto end;
+			if(incexc_recv_server(*as, incexc, conf)) goto end;
 			if(*incexc)
 			{
 				char *tmp=NULL;
@@ -211,7 +213,7 @@ static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, str
 			if(!(sconf->cname=strdup(
 				rbuf->buf+strlen("orig_client="))))
 			{
-				log_out_of_memory(__FUNCTION__);
+				log_out_of_memory(__func__);
 				goto end;
 			}
 			logp("Client wants to switch to client: %s\n",
@@ -222,7 +224,7 @@ static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, str
 				snprintf(msg, sizeof(msg),
 				  "Could not load alternate config: %s",
 				  sconf->cname);
-				log_and_send(msg);
+				log_and_send(*as, msg);
 				goto end;
 			}
 			sconf->send_client_cntr=cconf->send_client_cntr;
@@ -241,7 +243,7 @@ static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, str
 				snprintf(msg, sizeof(msg),
 				  "Access to client is not allowed: %s",
 					sconf->cname);
-				log_and_send(msg);
+				log_and_send(*as, msg);
 				goto end;
 			}
 			sconf->restore_path=cconf->restore_path;
@@ -253,7 +255,7 @@ static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, str
 			cconf->restore_client=cconf->cname;
 			if(!(cconf->orig_client=strdup(cconf->cname)))
 			{
-				log_and_send_oom(__FUNCTION__);
+				log_and_send_oom(*as, __func__);
 				goto end;
 			}
 
@@ -266,7 +268,7 @@ static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, str
 					cconf->restore_path)) goto end;
 			}
 			logp("Switched to client %s\n", cconf->cname);
-			if(async_write_str(CMD_GEN, "orig_client ok"))
+			if(async_write_str(*as, CMD_GEN, "orig_client ok"))
 				goto end;
 		}
 		else if(!strncmp_w(rbuf->buf, "restore_spool="))
@@ -276,7 +278,7 @@ static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, str
 			if(!(cconf->restore_spool=
 			  strdup(rbuf->buf+strlen("restore_spool="))))
 			{
-				log_and_send_oom(__FUNCTION__);
+				log_and_send_oom(*as, __func__);
 				goto end;
 			}
 		}
@@ -287,7 +289,7 @@ static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, str
 			if(cconf->protocol!=PROTO_AUTO)
 			{
 				snprintf(msg, sizeof(msg), "Client is trying to use %s but server is set to protocol=%d\n", rbuf->buf, cconf->protocol);
-				log_and_send_oom(__FUNCTION__);
+				log_and_send_oom(*as, __func__);
 				goto end;
 			}
 			else if(!strcmp(rbuf->buf+strlen("protocol="), "1"))
@@ -297,14 +299,14 @@ static int extra_comms_read(struct vers *vers, int *srestore, char **incexc, str
 			else
 			{
 				snprintf(msg, sizeof(msg), "Client is trying to use %s, which is unknown\n", rbuf->buf);
-				log_and_send_oom(__FUNCTION__);
+				log_and_send_oom(*as, __func__);
 				goto end;
 			}
 			logp("Client has set protocol=%d\n", cconf->protocol);
 		}
 		else
 		{
-			iobuf_log_unexpected(rbuf, __FUNCTION__);
+			iobuf_log_unexpected(rbuf, __func__);
 			goto end;
 		}
 	}
@@ -326,7 +328,8 @@ static int vers_init(struct vers *vers, struct conf *cconf)
 	  || (vers->burp2=version_to_long("2.0.0"))<0);
 }
 
-int extra_comms(char **incexc, int *srestore, struct conf *conf, struct conf *cconf)
+int extra_comms(struct async **as,
+	char **incexc, int *srestore, struct conf *conf, struct conf *cconf)
 {
 	struct vers vers;
 	//char *restorepath=NULL;
@@ -343,7 +346,7 @@ int extra_comms(char **incexc, int *srestore, struct conf *conf, struct conf *cc
 	// this section for them.
 	if(vers.cli<vers.min) return 0;
 
-	if(async_read_expect(CMD_GEN, "extra_comms_begin"))
+	if(async_read_expect(*as, CMD_GEN, "extra_comms_begin"))
 	{
 		logp("problem reading in extra_comms\n");
 		goto error;
@@ -354,7 +357,7 @@ int extra_comms(char **incexc, int *srestore, struct conf *conf, struct conf *cc
 	if(vers.cli==vers.feat_list)
 	{
 		// 1.3.0 did not support the feature list.
-		if(async_write_str(CMD_GEN, "extra_comms_begin ok"))
+		if(async_write_str(*as, CMD_GEN, "extra_comms_begin ok"))
 		{
 			logp("problem writing in extra_comms\n");
 			goto error;
@@ -362,10 +365,11 @@ int extra_comms(char **incexc, int *srestore, struct conf *conf, struct conf *cc
 	}
 	else
 	{
-		if(send_features(cconf)) goto error;
+		if(send_features(*as, cconf)) goto error;
 	}
 
-	if(extra_comms_read(&vers, srestore, incexc, conf, cconf)) goto error;
+	if(extra_comms_read(as, &vers, srestore, incexc, conf, cconf))
+		goto error;
 
 	// This needs to come after extra_comms_read, as the client might
 	// have set BURP1 or BURP2.

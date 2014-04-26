@@ -490,8 +490,9 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, con
 			// Gather a list of successful backups to talk about.
         		int a=0;
         		struct bu *arr=NULL;
-			if(get_current_backups_str(clist[q]->basedir,
-				&arr, &a, 0))
+			if(get_current_backups_str(NULL /* FIX THIS - status
+				stuff should use a separate struct async */,
+				clist[q]->basedir, &arr, &a, 0))
 			{
 				//logp("error when looking up current backups\n");
 				tosend=clist[q]->summary;
@@ -748,7 +749,8 @@ static int list_backup_dir(int cfd, struct cstat *cli, unsigned long bno)
         int a=0;
 	int ret=-1;
         struct bu *arr=NULL;
-	if(get_current_backups_str(cli->basedir, &arr, &a, 0))
+	if(get_current_backups_str(NULL /* should use a separate struct async*/,
+		cli->basedir, &arr, &a, 0))
 	{
 		//logp("error when looking up current backups\n");
 		goto end;
@@ -781,7 +783,9 @@ static int list_backup_file(int cfd, struct cstat *cli, unsigned long bno, const
 {
         int a=0;
         struct bu *arr=NULL;
-	if(get_current_backups_str(cli->basedir, &arr, &a, 0))
+	if(get_current_backups_str(
+		NULL /* should use a separate struct async */,
+		cli->basedir, &arr, &a, 0))
 	{
 		//logp("error when looking up current backups\n");
 		return -1;

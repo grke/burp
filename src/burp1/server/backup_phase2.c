@@ -15,7 +15,8 @@ static int treedata(struct sbuf *sb)
 	return 0;
 }
 
-static char *set_new_datapth(struct sdirs *sdirs, struct conf *cconf,
+static char *set_new_datapth(struct async *as,
+	struct sdirs *sdirs, struct conf *cconf,
 	struct sbuf *sb, struct dpthl *dpthl, int *istreedata)
 {
 	static char *tmp=NULL;
@@ -28,7 +29,7 @@ static char *set_new_datapth(struct sdirs *sdirs, struct conf *cconf,
 		// the directory structure on the original client.
 		if(!(tmp=prepend_s("t", sb->path.buf)))
 		{
-			log_and_send_oom(__FUNCTION__);
+			log_and_send_oom(as, __FUNCTION__);
 			return NULL;
 		}
 	}
@@ -37,7 +38,7 @@ static char *set_new_datapth(struct sdirs *sdirs, struct conf *cconf,
 		mk_dpthl(dpthl, cconf, sb->path.cmd);
 		if(!(tmp=strdup(dpthl->path))) // file data path
 		{
-			log_and_send_oom(__FUNCTION__);
+			log_and_send_oom(as, __FUNCTION__);
 			return NULL;
 		}
 	}
@@ -45,13 +46,14 @@ static char *set_new_datapth(struct sdirs *sdirs, struct conf *cconf,
 	if(build_path(sdirs->datadirtmp,
 		sb->burp1->datapth.buf, &rpath, sdirs->datadirtmp))
 	{
-		log_and_send("build path failed");
+		log_and_send(as, "build path failed");
 		return NULL;
 	}
 	return rpath;
 }
 
-static int start_to_receive_new_file(struct sdirs *sdirs, struct conf *cconf,
+static int start_to_receive_new_file(struct async *as,
+	struct sdirs *sdirs, struct conf *cconf,
 	struct sbuf *sb, struct dpthl *dpthl)
 {
 	char *rpath=NULL;
@@ -59,12 +61,12 @@ static int start_to_receive_new_file(struct sdirs *sdirs, struct conf *cconf,
 
 //logp("start to receive: %s\n", sb->path);
 
-	if(!(rpath=set_new_datapth(sdirs, cconf, sb, dpthl, &istreedata)))
+	if(!(rpath=set_new_datapth(as, sdirs, cconf, sb, dpthl, &istreedata)))
 		return -1;
 	
 	if(!(sb->burp1->fp=open_file(rpath, "wb")))
 	{
-		log_and_send("make file failed");
+		log_and_send(as, "make file failed");
 		if(rpath) free(rpath);
 		return -1;
 	}
@@ -86,7 +88,8 @@ static int filedata(char cmd)
 	  || cmd==CMD_EFS_FILE);
 }
 
-static int process_changed_file(struct sdirs *sdirs, struct conf *cconf,
+static int process_changed_file(struct async *as,
+	struct sdirs *sdirs, struct conf *cconf,
 	struct sbuf *cb, struct sbuf *p1b,
 	const char *adir)
 {
@@ -130,7 +133,7 @@ static int process_changed_file(struct sdirs *sdirs, struct conf *cconf,
 		return -1;
 	}
 	if(!(p1b->burp1->outfb=rs_filebuf_new(NULL, NULL, NULL,
-		async_get_fd(), ASYNC_BUF_LEN, -1, cconf->cntr)))
+		as->fd, ASYNC_BUF_LEN, -1, cconf->cntr)))
 	{
 		logp("could not rs_filebuf_new for in_outfb.\n");
 		return -1;
@@ -219,7 +222,8 @@ static int process_new_file(struct sdirs *sdirs, struct conf *cconf,
 }
 
 // return 1 to say that a file was processed
-static int maybe_process_file(struct sdirs *sdirs, struct conf *cconf,
+static int maybe_process_file(struct async *as,
+	struct sdirs *sdirs, struct conf *cconf,
 	struct sbuf *cb, struct sbuf *p1b, FILE *ucfp,
 	struct dpthl *dpthl)
 {
@@ -316,7 +320,7 @@ static int maybe_process_file(struct sdirs *sdirs, struct conf *cconf,
 		// Otherwise, do the delta stuff (if possible).
 		if(filedata(p1b->path.cmd))
 		{
-			if(process_changed_file(sdirs, cconf, cb, p1b,
+			if(process_changed_file(as, sdirs, cconf, cb, p1b,
 				sdirs->currentdata)) return -1;
 		}
 		else
@@ -348,29 +352,29 @@ static int maybe_process_file(struct sdirs *sdirs, struct conf *cconf,
 }
 
 // Return 1 if there is still stuff needing to be sent.
-static int do_stuff_to_send(struct sbuf *p1b, char **last_requested)
+static int do_stuff_to_send(struct async *as,
+	struct sbuf *p1b, char **last_requested)
 {
 	static struct iobuf wbuf;
 	if(p1b->flags & SBUFL_SEND_DATAPTH)
 	{
 		iobuf_copy(&wbuf, &p1b->burp1->datapth);
-		if(async_append_all_to_write_buffer(&wbuf)) return 1;
+		if(async_append_all_to_write_buffer(as, &wbuf)) return 1;
 		p1b->flags &= ~SBUFL_SEND_DATAPTH;
 	}
 	if(p1b->flags & SBUFL_SEND_STAT)
 	{
 		iobuf_copy(&wbuf, &p1b->attr);
-		if(async_append_all_to_write_buffer(&wbuf)) return 1;
+		if(async_append_all_to_write_buffer(as, &wbuf)) return 1;
 		p1b->flags &= ~SBUFL_SEND_STAT;
 	}
 	if(p1b->flags & SBUFL_SEND_PATH)
 	{
 		iobuf_copy(&wbuf, &p1b->path);
-		if(async_append_all_to_write_buffer(&wbuf)) return 1;
+		if(async_append_all_to_write_buffer(as, &wbuf)) return 1;
 		p1b->flags &= ~SBUFL_SEND_PATH;
 		if(*last_requested) free(*last_requested);
 		*last_requested=strdup(p1b->path.buf);
-		//if(async_rw(NULL, NULL)) return -1;
 	}
 	if(p1b->burp1->sigjob && !(p1b->flags & SBUFL_SEND_ENDOFSIG))
 	{
@@ -378,7 +382,6 @@ static int do_stuff_to_send(struct sbuf *p1b, char **last_requested)
 
 		sigresult=rs_async(p1b->burp1->sigjob, &(p1b->burp1->rsbuf),
 			p1b->burp1->infb, p1b->burp1->outfb);
-//logp("after rs_async: %d %c %s\n", sigresult, p1b->cmd, p1b->path);
 
 		if(sigresult==RS_DONE)
 		{
@@ -398,7 +401,7 @@ static int do_stuff_to_send(struct sbuf *p1b, char **last_requested)
 	if(p1b->flags & SBUFL_SEND_ENDOFSIG)
 	{
 		iobuf_from_str(&wbuf, CMD_END_FILE, (char *)"endfile");
-		if(async_append_all_to_write_buffer(&wbuf)) return 1;
+		if(async_append_all_to_write_buffer(as, &wbuf)) return 1;
 		p1b->flags &= ~SBUFL_SEND_ENDOFSIG;
 	}
 	return 0;
@@ -439,7 +442,8 @@ static int finish_delta(struct sdirs *sdirs, struct sbuf *rb)
 }
 
 // returns 1 for finished ok.
-static int do_stuff_to_receive(struct sdirs *sdirs, struct conf *cconf,
+static int do_stuff_to_receive(struct async *as,
+	struct sdirs *sdirs, struct conf *cconf,
 	struct sbuf *rb, FILE *p2fp, struct dpthl *dpthl, char **last_requested)
 {
 	static struct iobuf *rbuf=NULL;
@@ -448,7 +452,7 @@ static int do_stuff_to_receive(struct sdirs *sdirs, struct conf *cconf,
 
 	iobuf_free_content(rbuf);
 	// This also attempts to write anything in the write buffer.
-	if(async_rw(rbuf, NULL))
+	if(async_rw(as, rbuf, NULL))
 	{
 		logp("error in async_rw\n");
 		return -1;
@@ -475,7 +479,8 @@ static int do_stuff_to_receive(struct sdirs *sdirs, struct conf *cconf,
 				  && (app=fwrite(rbuf->buf, 1, rbuf->len, rb->burp1->fp))<=0))
 				{
 					logp("error when appending: %d\n", app);
-					async_write_str(CMD_ERROR, "write failed");
+					async_write_str(as,
+						CMD_ERROR, "write failed");
 					goto error;
 				}
 			}
@@ -564,8 +569,8 @@ static int do_stuff_to_receive(struct sdirs *sdirs, struct conf *cconf,
 			else
 			{
 				// Receiving a whole new file.
-				if(start_to_receive_new_file(sdirs, cconf, rb,
-					dpthl))
+				if(start_to_receive_new_file(as,
+					sdirs, cconf, rb, dpthl))
 				{
 					logp("error in start_to_receive_new_file\n");
 					goto error;
@@ -601,7 +606,8 @@ error:
 	return -1;
 }
 
-int backup_phase2_server(struct sdirs *sdirs, struct conf *cconf,
+int backup_phase2_server(struct async *as,
+	struct sdirs *sdirs, struct conf *cconf,
 	gzFile *cmanfp, struct dpthl *dpthl, int resume)
 {
 	int ars=0;
@@ -657,16 +663,16 @@ int backup_phase2_server(struct sdirs *sdirs, struct conf *cconf,
 		if(write_status(STATUS_BACKUP,
 			rb->path.buf?rb->path.buf:p1b->path.buf, cconf))
 				goto error;
-		if((last_requested || !p1zp || writebuflen)
-		  && (ars=do_stuff_to_receive(sdirs, cconf, rb, p2fp, dpthl,
-			&last_requested)))
+		if((last_requested || !p1zp || as->writebuflen)
+		  && (ars=do_stuff_to_receive(as, sdirs,
+			cconf, rb, p2fp, dpthl, &last_requested)))
 		{
 			if(ars<0) goto error;
 			// 1 means ok.
 			break;
 		}
 
-		if((sts=do_stuff_to_send(p1b, &last_requested))<0)
+		if((sts=do_stuff_to_send(as, p1b, &last_requested))<0)
 			goto error;
 
 		if(!sts && p1zp)
@@ -679,7 +685,7 @@ int backup_phase2_server(struct sdirs *sdirs, struct conf *cconf,
 			// ars==1 means it ended ok.
 			gzclose_fp(&p1zp);
 			//logp("ended OK - write phase2end");
-			if(async_write_str(CMD_GEN, "backupphase2end"))
+			if(async_write_str(as, CMD_GEN, "backupphase2end"))
 				goto error;
 		   }
 
@@ -700,7 +706,7 @@ int backup_phase2_server(struct sdirs *sdirs, struct conf *cconf,
 			// manifest.
 			if(cb->path.buf)
 			{
-				if((ars=maybe_process_file(sdirs, cconf,
+				if((ars=maybe_process_file(as, sdirs, cconf,
 					cb, p1b, ucfp, dpthl)))
 				{
 					if(ars<0) goto error;
@@ -726,7 +732,7 @@ int backup_phase2_server(struct sdirs *sdirs, struct conf *cconf,
 					break;
 				}
 		//logp("against: %s\n", cb.path);
-				if((ars=maybe_process_file(sdirs, cconf,
+				if((ars=maybe_process_file(as, sdirs, cconf,
 					cb, p1b, ucfp, dpthl)))
 				{
 					if(ars<0) goto error;

@@ -17,7 +17,7 @@ static const char *server_supports_autoupgrade(const char *feat)
 	return server_supports(feat, ":autoupgrade:");
 }
 
-int extra_comms(struct conf *conf,
+int extra_comms(struct async **as, struct conf *conf,
 	enum action *action, char **incexc, long *name_max)
 {
 	int ret=-1;
@@ -27,22 +27,21 @@ int extra_comms(struct conf *conf,
 
 	if(!(rbuf=iobuf_alloc())) goto end;
 
-	if(async_write_str(CMD_GEN, "extra_comms_begin"))
+	if(async_write_str(*as, CMD_GEN, "extra_comms_begin"))
 	{
 		logp("Problem requesting extra_comms_begin\n");
 		goto end;
 	}
 	// Servers greater than 1.3.0 will list the extra_comms
 	// features they support.
-	if(async_read(rbuf))
+	if(async_read(*as, rbuf))
 	{
 		logp("Problem reading response to extra_comms_begin\n");
 		goto end;
 	}
 	feat=rbuf->buf;
 	if(rbuf->cmd!=CMD_GEN
-	  || strncmp(feat,
-		"extra_comms_begin ok", strlen("extra_comms_begin ok")))
+	  || strncmp_w(feat, "extra_comms_begin ok"))
 	{
 		iobuf_log_unexpected(rbuf, __FUNCTION__);
 		goto end;
@@ -53,7 +52,7 @@ int extra_comms(struct conf *conf,
 	if(server_supports_autoupgrade(rbuf->buf)
 	  && conf->autoupgrade_dir
 	  && conf->autoupgrade_os
-	  && autoupgrade_client(conf))
+	  && autoupgrade_client(as, conf))
 		goto end;
 
 	// :srestore: means that the server wants to do a restore.
@@ -62,7 +61,7 @@ int extra_comms(struct conf *conf,
 		if(conf->server_can_restore)
 		{
 			logp("Server is initiating a restore\n");
-			if(incexc_recv_client_restore(incexc, conf))
+			if(incexc_recv_client_restore(*as, incexc, conf))
 				goto end;
 			if(*incexc)
 			{
@@ -76,7 +75,7 @@ int extra_comms(struct conf *conf,
 		{
 			logp("Server wants to initiate a restore\n");
 			logp("Client configuration says no\n");
-			if(async_write_str(CMD_GEN, "srestore not ok"))
+			if(async_write_str(*as, CMD_GEN, "srestore not ok"))
 				goto end;
 		}
 	}
@@ -93,8 +92,8 @@ int extra_comms(struct conf *conf,
 			logp("Server does not support switching client.\n");
 			goto end;
 		}
-		if(async_write_str(CMD_GEN, str)
-		  || async_read_expect(CMD_GEN, "orig_client ok"))
+		if(async_write_str(*as, CMD_GEN, str)
+		  || async_read_expect(*as, CMD_GEN, "orig_client ok"))
 		{
 			logp("Problem requesting %s\n", str);
 			goto end;
@@ -113,7 +112,7 @@ printf("HERE: %s\n", feat);
 		if(!*incexc && server_supports(feat, ":sincexc:"))
 		{
 			logp("Server is setting includes/excludes.\n");
-			if(incexc_recv_client(incexc, conf))
+			if(incexc_recv_client(*as, incexc, conf))
 				goto end;
 			if(*incexc && parse_incexcs_buf(conf,
 				*incexc)) goto end;
@@ -122,7 +121,7 @@ printf("HERE: %s\n", feat);
 
 	if(server_supports(feat, ":counters:"))
 	{
-		if(async_write_str(CMD_GEN, "countersok"))
+		if(async_write_str(*as, CMD_GEN, "countersok"))
 			goto end;
 		conf->send_client_cntr=1;
 	}
@@ -153,7 +152,7 @@ printf("HERE: %s\n", feat);
 			char msg[128]="";
 			snprintf(msg, sizeof(msg),
 				"uname=%s", clientos);
-			if(async_write_str(CMD_GEN, msg))
+			if(async_write_str(*as, CMD_GEN, msg))
 				goto end;
 		}
 	}
@@ -169,7 +168,7 @@ printf("HERE: %s\n", feat);
 		}
 		// Send choice to server.
 		snprintf(msg, sizeof(msg), "protocol=%d", conf->protocol);
-		if(async_write_str(CMD_GEN, msg))
+		if(async_write_str(*as, CMD_GEN, msg))
 			goto end;
 		logp("Using protocol=%d\n", conf->protocol);
 	}
@@ -196,8 +195,8 @@ printf("HERE: %s\n", feat);
 		conf->protocol=PROTO_BURP2;
 	}
 
-	if(async_write_str(CMD_GEN, "extra_comms_end")
-	  || async_read_expect(CMD_GEN, "extra_comms_end ok"))
+	if(async_write_str(*as, CMD_GEN, "extra_comms_end")
+	  || async_read_expect(*as, CMD_GEN, "extra_comms_end ok"))
 	{
 		logp("Problem requesting extra_comms_end\n");
 		goto end;

@@ -245,7 +245,8 @@ static int open_next_fpath(struct manio *manio)
 }
 
 // Return -1 for error, 0 for stuff read OK, 1 for end of files.
-int manio_sbuf_fill(struct manio *manio, struct sbuf *sb, struct blk *blk,
+int manio_sbuf_fill(struct manio *manio, struct async *as,
+	struct sbuf *sb, struct blk *blk,
 	struct dpth *dpth, struct conf *conf)
 {
 	int ars;
@@ -262,7 +263,7 @@ int manio_sbuf_fill(struct manio *manio, struct sbuf *sb, struct blk *blk,
 		{
 			manio->first_entry=0;
 		}
-		if((ars=sbuf_fill_from_gzfile(sb, manio->zp, blk,
+		if((ars=sbuf_fill_from_gzfile(sb, as, manio->zp, blk,
 			dpth?dpth->base_path:NULL, conf))<0) goto error;
 		else if(!ars)
 			return 0; // Got something.
@@ -425,7 +426,7 @@ int manio_init_write_dindex(struct manio *manio, const char *dir)
 }
 
 // Return -1 on error, 0 on OK, 1 for srcmanio finished.
-int manio_copy_entry(struct sbuf **csb, struct sbuf *sb,
+int manio_copy_entry(struct async *as, struct sbuf **csb, struct sbuf *sb,
 	struct blk **blk, struct manio *srcmanio,
 	struct manio *dstmanio, struct conf *conf)
 {
@@ -443,7 +444,7 @@ int manio_copy_entry(struct sbuf **csb, struct sbuf *sb,
 
 	while(1)
 	{
-		if((ars=manio_sbuf_fill(srcmanio, *csb,
+		if((ars=manio_sbuf_fill(srcmanio, as, *csb,
 			*blk, NULL, conf))<0) goto error;
 		else if(ars>0)
 		{
@@ -472,10 +473,11 @@ error:
 	return -1;
 }
 
-int manio_forward_through_sigs(struct sbuf **csb, struct blk **blk,
+int manio_forward_through_sigs(struct async *as,
+	struct sbuf **csb, struct blk **blk,
 	struct manio *manio, struct conf *conf)
 {
 	// Call manio_copy_entry with nothing to write to, so
 	// that we forward through the sigs in manio.
-	return manio_copy_entry(csb, NULL, blk, manio, NULL, conf);
+	return manio_copy_entry(as, csb, NULL, blk, manio, NULL, conf);
 }

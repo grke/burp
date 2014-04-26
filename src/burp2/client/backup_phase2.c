@@ -301,7 +301,7 @@ static void get_wbuf_from_scan(struct iobuf *wbuf, struct slist *flist)
 	}
 }
 
-int backup_phase2_client(struct conf *conf, int resume)
+int backup_phase2_client(struct async *as, struct conf *conf, int resume)
 {
 	int ret=-1;
 	int sigs_end=0;
@@ -327,15 +327,15 @@ int backup_phase2_client(struct conf *conf, int resume)
 	if(!resume)
 	{
 		// Only do this bit if the server did not tell us to resume.
-		if(async_write_str(CMD_GEN, "backupphase2")
-		  || async_read_expect(CMD_GEN, "ok"))
+		if(async_write_str(as, CMD_GEN, "backupphase2")
+		  || async_read_expect(as, CMD_GEN, "ok"))
 			goto end;
 	}
 	else if(conf->send_client_cntr)
 	{
 		// On resume, the server might update the client with the
 		// counters.
-		if(cntr_recv(conf))
+		if(cntr_recv(as, conf))
 			goto end;
         }
 
@@ -352,7 +352,7 @@ int backup_phase2_client(struct conf *conf, int resume)
 			}
 		}
 
-		if(async_rw(rbuf, wbuf))
+		if(async_rw(as, rbuf, wbuf))
 		{
 			logp("error in async_rw\n");
 			goto end;
@@ -390,7 +390,7 @@ int backup_phase2_client(struct conf *conf, int resume)
 		}
 	}
 
-	if(async_write_str(CMD_GEN, "backup_end"))
+	if(async_write_str(as, CMD_GEN, "backup_end"))
 		goto end;
 
 	ret=0;

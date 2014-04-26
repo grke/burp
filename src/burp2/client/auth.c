@@ -1,19 +1,20 @@
 #include "include.h"
 
-int authorise_client(struct conf *conf, char **server_version)
+int authorise_client(struct async *as,
+	struct conf *conf, char **server_version)
 {
 	int ret=-1;
 	char hello[256]="";
 	struct iobuf *rbuf=NULL;
 
 	snprintf(hello, sizeof(hello), "hello:%s", VERSION);
-	if(async_write_str(CMD_GEN, hello))
+	if(async_write_str(as, CMD_GEN, hello))
 	{
 		logp("problem with auth\n");
 		goto end;
 	}
 
-	if(!(rbuf=iobuf_async_read())
+	if(!(rbuf=iobuf_async_read(as))
 	  || rbuf->cmd!=CMD_GEN
 	  || strncmp_w(rbuf->buf, "whoareyou"))
 	{
@@ -38,10 +39,10 @@ int authorise_client(struct conf *conf, char **server_version)
 		iobuf_free_content(rbuf);
 	}
 
-	if(async_write_str(CMD_GEN, conf->cname)
-	  || async_read_expect(CMD_GEN, "okpassword")
-	  || async_write_str(CMD_GEN, conf->password)
-	  || async_read(rbuf))
+	if(async_write_str(as, CMD_GEN, conf->cname)
+	  || async_read_expect(as, CMD_GEN, "okpassword")
+	  || async_write_str(as, CMD_GEN, conf->password)
+	  || async_read(as, rbuf))
 	{
 		logp("problem with auth\n");
 		goto end;
@@ -53,7 +54,7 @@ int authorise_client(struct conf *conf, char **server_version)
 		logp("WARNING: %s\n", rbuf->buf);
 		cntr_add(conf->cntr, rbuf->cmd, 0);
 		iobuf_free_content(rbuf);
-		if(async_read(rbuf))
+		if(async_read(as, rbuf))
 		{
 			logp("problem with auth\n");
 			goto end;

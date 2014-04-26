@@ -1,7 +1,7 @@
 #include "include.h"
 
-int do_delete_server(struct sdirs *sdirs, struct conf *conf,
-	const char *backup)
+int do_delete_server(struct async *as,
+	struct sdirs *sdirs, struct conf *conf, const char *backup)
 {
 	int a=0;
 	int i=0;
@@ -12,7 +12,7 @@ int do_delete_server(struct sdirs *sdirs, struct conf *conf,
 
 	logp("in do_delete\n");
 
-	if(get_current_backups(sdirs, &arr, &a, 1)
+	if(get_current_backups(as, sdirs, &arr, &a, 1)
 	  || write_status(STATUS_DELETING, NULL, conf))
 		goto end;
 
@@ -29,13 +29,13 @@ int do_delete_server(struct sdirs *sdirs, struct conf *conf,
 				if(arr[i].deletable)
 				{
 					found=1;
-					if(async_write_str(CMD_GEN, "ok")
+					if(async_write_str(as, CMD_GEN, "ok")
 					  || delete_backup(sdirs, conf,
 						arr, a, i)) goto end;
 				}
 				else
 				{
-					async_write_str(CMD_ERROR,
+					async_write_str(as, CMD_ERROR,
 						"backup not deletable");
 					goto end;
 				}
@@ -46,7 +46,7 @@ int do_delete_server(struct sdirs *sdirs, struct conf *conf,
 
 	if(backup && *backup && !found)
 	{
-		async_write_str(CMD_ERROR, "backup not found");
+		async_write_str(as, CMD_ERROR, "backup not found");
 		goto end;
 	}
 

@@ -108,7 +108,8 @@ static int vss_opts_changed(struct sdirs *sdirs, struct conf *cconf,
 	return ret;
 }
 
-int do_backup_server_burp1(struct sdirs *sdirs, struct conf *cconf,
+int do_backup_server_burp1(struct async **as,
+	struct sdirs *sdirs, struct conf *cconf,
 	const char *incexc, int resume)
 {
 	int ret=0;
@@ -125,9 +126,9 @@ int do_backup_server_burp1(struct sdirs *sdirs, struct conf *cconf,
 
 	logp("in do_backup_server\n");
 
-	if(init_dpthl(&dpthl, sdirs, cconf))
+	if(init_dpthl(&dpthl, *as, sdirs, cconf))
 	{
-		log_and_send("could not init_dpthl\n");
+		log_and_send(*as, "could not init_dpthl\n");
 		goto error;
 	}
 
@@ -140,20 +141,20 @@ int do_backup_server_burp1(struct sdirs *sdirs, struct conf *cconf,
 		real[len]='\0';
 		if(!(realworking=prepend_s(sdirs->client, real)))
 		{
-			log_and_send_oom(__FUNCTION__);
+			log_and_send_oom(*as, __FUNCTION__);
 			goto error;
 		}
-		if(open_log(realworking, cconf)) goto error;
+		if(open_log(*as, realworking, cconf)) goto error;
 	}
 	else
 	{
 		// Not resuming - need to set everything up fresh.
 
-		if(get_new_timestamp(sdirs, cconf, tstmp, sizeof(tstmp)))
+		if(get_new_timestamp(*as, sdirs, cconf, tstmp, sizeof(tstmp)))
 			goto error;
 		if(!(realworking=prepend_s(sdirs->client, tstmp)))
 		{
-			log_and_send_oom(__FUNCTION__);
+			log_and_send_oom(*as, __FUNCTION__);
 			goto error;
 		}
 		// Add the working symlink before creating the directory.
@@ -166,7 +167,7 @@ int do_backup_server_burp1(struct sdirs *sdirs, struct conf *cconf,
 			snprintf(msg, sizeof(msg),
 			  "could not point working symlink to: %s",
 			  realworking);
-			log_and_send(msg);
+			log_and_send(*as, msg);
 			goto error;
 		}
 		else if(mkdir(realworking, 0777))
@@ -174,11 +175,11 @@ int do_backup_server_burp1(struct sdirs *sdirs, struct conf *cconf,
 			snprintf(msg, sizeof(msg),
 				"could not mkdir for next backup: %s",
 				sdirs->working);
-			log_and_send(msg);
+			log_and_send(*as, msg);
 			unlink(sdirs->working);
 			goto error;
 		}
-		else if(open_log(realworking, cconf))
+		else if(open_log(*as, realworking, cconf))
 		{
 			goto error;
 		}
@@ -186,24 +187,24 @@ int do_backup_server_burp1(struct sdirs *sdirs, struct conf *cconf,
 		{
 			snprintf(msg, sizeof(msg),
 			  "could not mkdir for datadir: %s", sdirs->datadirtmp);
-			log_and_send(msg);
+			log_and_send(*as, msg);
 			goto error;
 		}
 		else if(write_timestamp(sdirs->timestamp, tstmp))
 		{
 			snprintf(msg, sizeof(msg),
 			  "unable to write timestamp %s", sdirs->timestamp);
-			log_and_send(msg);
+			log_and_send(*as, msg);
 			goto error;
 		}
 		else if(incexc && *incexc && write_incexc(realworking, incexc))
 		{
 			snprintf(msg, sizeof(msg), "unable to write incexc");
-			log_and_send(msg);
+			log_and_send(*as, msg);
 			goto error;
 		}
 
-		if(backup_phase1_server(sdirs, cconf))
+		if(backup_phase1_server(*as, sdirs, cconf))
 		{
 			logp("error in phase 1\n");
 			goto error;
@@ -232,7 +233,7 @@ int do_backup_server_burp1(struct sdirs *sdirs, struct conf *cconf,
 
 	//if(cmanfp) logp("Current manifest: %s\n", sdirs->cmanifest);
 
-	if(backup_phase2_server(sdirs, cconf, &cmanfp, &dpthl, resume))
+	if(backup_phase2_server(*as, sdirs, cconf, &cmanfp, &dpthl, resume))
 	{
 		logp("error in backup phase 2\n");
 		goto error;
@@ -255,12 +256,12 @@ int do_backup_server_burp1(struct sdirs *sdirs, struct conf *cconf,
 		goto error;
 	}
 
-	async_write_str(CMD_GEN, "okbackupend");
+	async_write_str(*as, CMD_GEN, "okbackupend");
 	logp("Backup ending - disconnect from client.\n");
 
 	// Close the connection with the client, the rest of the job
 	// we can do by ourselves.
-	async_free();
+	async_free(as);
 
 	// Move the symlink to indicate that we are now in the end
 	// phase. 
@@ -271,7 +272,7 @@ int do_backup_server_burp1(struct sdirs *sdirs, struct conf *cconf,
 	// finish_backup will open logfp again
 	ret=backup_phase4_server(sdirs, cconf);
 	if(!ret && cconf->keep>0)
-		ret=remove_old_backups(sdirs, cconf);
+		ret=remove_old_backups(*as, sdirs, cconf);
 
 	goto end;
 error:
@@ -297,7 +298,8 @@ static int maybe_rebuild_manifest(struct sdirs *sdirs, struct conf *cconf,
 		1 /* recovery mode */, compress);
 }
 
-int check_for_rubble_burp1(struct sdirs *sdirs, struct conf *cconf,
+int check_for_rubble_burp1(struct async *as,
+	struct sdirs *sdirs, struct conf *cconf,
 	const char *incexc, int *resume)
 {
 	int ret=0;
@@ -317,7 +319,7 @@ int check_for_rubble_burp1(struct sdirs *sdirs, struct conf *cconf,
 		logp("Found finishing symlink - attempting to complete prior backup!\n");
 		ret=backup_phase4_server(sdirs, cconf);
 		if(!ret) logp("Prior backup completed OK.\n");
-		else log_and_send("Problem with prior backup. Please check the client log on the server.");
+		else log_and_send(as, "Problem with prior backup. Please check the client log on the server.");
 		goto end;
 	}
 
@@ -328,7 +330,7 @@ int check_for_rubble_burp1(struct sdirs *sdirs, struct conf *cconf,
 	}
 	if(!S_ISLNK(statp.st_mode))
 	{
-		log_and_send("Working directory is not a symlink.\n");
+		log_and_send(as, "Working directory is not a symlink.\n");
 		ret=-1;
 		goto end;
 	}
@@ -338,7 +340,7 @@ int check_for_rubble_burp1(struct sdirs *sdirs, struct conf *cconf,
 	if((len=readlink(sdirs->working, realwork, sizeof(realwork)-1))<0)
 	{
 		snprintf(msg, sizeof(msg), "Could not readlink on old working directory: %s\n", strerror(errno));
-		log_and_send(msg);
+		log_and_send(as, msg);
 		ret=-1;
 		goto end;
 	}
@@ -388,7 +390,8 @@ int check_for_rubble_burp1(struct sdirs *sdirs, struct conf *cconf,
 		logp("deleting old working directory\n");
 		if(recursive_delete(fullrealwork, NULL, 1 /* delete files */))
 		{
-			log_and_send("Old working directory is in the way.\n");
+			log_and_send(as,
+				"Old working directory is in the way.\n");
 			ret=-1;
 			goto end;
 		}
@@ -401,7 +404,7 @@ int check_for_rubble_burp1(struct sdirs *sdirs, struct conf *cconf,
 		{
 			// This client is not the original client, resuming	
 			// might cause all sorts of trouble.
-			log_and_send("Found interrupted backup - not resuming because the connected client is not the original");
+			log_and_send(as, "Found interrupted backup - not resuming because the connected client is not the original");
 			ret=-1;
 			goto end;
 		}
@@ -448,13 +451,13 @@ int check_for_rubble_burp1(struct sdirs *sdirs, struct conf *cconf,
 			ret=-1;
 			goto end;
 		}
-		ret=check_for_rubble_burp1(sdirs, cconf, incexc, resume);
+		ret=check_for_rubble_burp1(as, sdirs, cconf, incexc, resume);
 		goto end;
 	}
 
 	snprintf(msg, sizeof(msg),
 		"Unknown working_dir_recovery_method: %s\n", wdrm);
-	log_and_send(msg);
+	log_and_send(as, msg);
 	ret=-1;
 
 end:

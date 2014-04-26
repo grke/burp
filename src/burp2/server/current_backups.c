@@ -148,7 +148,8 @@ static int get_link(const char *dir, const char *lnk, char real[], size_t r)
 	return 0;
 }
 
-int get_current_backups_str(const char *dir, struct bu **arr, int *a, int log)
+int get_current_backups_str(struct async *as,
+	const char *dir, struct bu **arr, int *a, int log)
 {
 	int i=0;
 	int j=0;
@@ -167,7 +168,7 @@ int get_current_backups_str(const char *dir, struct bu **arr, int *a, int log)
 			return -1;
 	if(!(d=opendir(dir)))
 	{
-		if(log) log_and_send("could not open backup directory");
+		if(log) log_and_send(as, "could not open backup directory");
 		return -1;
 	}
 	while((dp=readdir(d)))
@@ -217,7 +218,7 @@ int get_current_backups_str(const char *dir, struct bu **arr, int *a, int log)
 		  || !((*arr)[i].data=prepend_s(fullpath, "data"))
 		  || !((*arr)[i].delta=prepend_s(fullpath, "deltas.reverse")))
 		{
-			if(log) log_and_send_oom(__FUNCTION__);
+			if(log) log_and_send_oom(as, __FUNCTION__);
 			free(basename);
 			free(timestampstr);
 			free(fullpath);
@@ -265,13 +266,14 @@ int get_current_backups_str(const char *dir, struct bu **arr, int *a, int log)
 	return ret;
 }
 
-int get_current_backups(struct sdirs *sdirs, struct bu **arr, int *a, int log)
+int get_current_backups(struct async *as,
+	struct sdirs *sdirs, struct bu **arr, int *a, int log)
 {
-	return get_current_backups_str(sdirs->client, arr, a, log);
+	return get_current_backups_str(as, sdirs->client, arr, a, log);
 }
 
-int get_new_timestamp(struct sdirs *sdirs, struct conf *cconf,
-	char *buf, size_t s)
+int get_new_timestamp(struct async *as,
+	struct sdirs *sdirs, struct conf *cconf, char *buf, size_t s)
 {
 	int a=0;
 	time_t t=0;
@@ -287,7 +289,7 @@ int get_new_timestamp(struct sdirs *sdirs, struct conf *cconf,
 
 	// get_current_backups orders the array with the highest index number 
 	// last
-	if(get_current_backups(sdirs, &arr, &a, 1)) return -1;
+	if(get_current_backups(as, sdirs, &arr, &a, 1)) return -1;
 	if(a) index=arr[a-1].index;
 
 	free_current_backups(&arr, a);
@@ -454,7 +456,8 @@ int delete_backup(struct sdirs *sdirs, struct conf *conf,
 	return 0;
 }
 
-int do_remove_old_backups(struct sdirs *sdirs, struct conf *cconf)
+int do_remove_old_backups(struct async *as,
+	struct sdirs *sdirs, struct conf *cconf)
 {
 	int a=0;
 	int b=0;
@@ -464,7 +467,7 @@ int do_remove_old_backups(struct sdirs *sdirs, struct conf *cconf)
 	struct bu *arr=NULL;
 	struct strlist *keep=NULL;
 
-	if(get_current_backups(sdirs, &arr, &a, 1)) return -1;
+	if(get_current_backups(as, sdirs, &arr, &a, 1)) return -1;
 
 	// For each of the 'keep' values, generate ranges in which to keep
 	// one backup.
@@ -561,7 +564,8 @@ int do_remove_old_backups(struct sdirs *sdirs, struct conf *cconf)
 	return deleted;
 }
 
-int remove_old_backups(struct sdirs *sdirs, struct conf *cconf)
+int remove_old_backups(struct async *as,
+	struct sdirs *sdirs, struct conf *cconf)
 {
 	int deleted=0;
 	// Deleting a backup might mean that more become available to get rid
@@ -569,7 +573,7 @@ int remove_old_backups(struct sdirs *sdirs, struct conf *cconf)
 	// Keep trying to delete until we cannot delete any more.
 	while(1)
 	{
-		if((deleted=do_remove_old_backups(sdirs, cconf))<0)
+		if((deleted=do_remove_old_backups(as, sdirs, cconf))<0)
 			return -1;
 		else if(!deleted)
 			break;

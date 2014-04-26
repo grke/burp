@@ -110,11 +110,11 @@ static int list_manifest(struct async *as,
 		}
 		if(show)
 		{
-			if(async_write(as, &sb->attr)
-			  || async_write(as, &sb->path))
+			if(as->write(as, &sb->attr)
+			  || as->write(as, &sb->path))
 				goto error;
 			if(sbuf_is_link(sb)
-			  && async_write(as, &sb->link))
+			  && as->write(as, &sb->link))
 				goto error;
 		}
 
@@ -137,7 +137,7 @@ static int send_backup_name_to_client(struct async *as, struct bu *arr)
 	//snprintf(msg, sizeof(msg), "%s%s",
 	//	arr->timestamp, arr->deletable?" (deletable)":"");
 	snprintf(msg, sizeof(msg), "%s", arr->timestamp);
-	return async_write_str(as, CMD_TIMESTAMP, msg);
+	return as->write_str(as, CMD_TIMESTAMP, msg);
 }
 
 int do_list_server(struct async *as, struct sdirs *sdirs, struct conf *conf,
@@ -166,7 +166,7 @@ int do_list_server(struct async *as, struct sdirs *sdirs, struct conf *conf,
 		if(listregex && backup && *backup=='a')
 		{
 			found=1;
-			if(async_write_str(as, CMD_TIMESTAMP, arr[i].timestamp)
+			if(as->write_str(as, CMD_TIMESTAMP, arr[i].timestamp)
 			  || list_manifest(as, arr[i].path,
 				regex, browsedir, conf)) goto end;
 		}
@@ -194,7 +194,7 @@ int do_list_server(struct async *as, struct sdirs *sdirs, struct conf *conf,
 
 	if(backup && *backup && !found)
 	{
-		async_write_str(as, CMD_ERROR, "backup not found");
+		as->write_str(as, CMD_ERROR, "backup not found");
 		goto end;
 	}
 	ret=0;

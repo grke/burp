@@ -328,8 +328,8 @@ int backup_phase2_client(struct async *as, struct conf *conf, int resume)
 	if(!resume)
 	{
 		// Only do this bit if the server did not tell us to resume.
-		if(async_write_str(as, CMD_GEN, "backupphase2")
-		  || async_read_expect(as, CMD_GEN, "ok"))
+		if(as->write_str(as, CMD_GEN, "backupphase2")
+		  || as->read_expect(as, CMD_GEN, "ok"))
 			goto end;
 	}
 	else if(conf->send_client_cntr)
@@ -353,7 +353,7 @@ int backup_phase2_client(struct async *as, struct conf *conf, int resume)
 			}
 		}
 
-		if(async_rw(as, rbuf, wbuf))
+		if(as->rw(as, rbuf, wbuf))
 		{
 			logp("error in async_rw\n");
 			goto end;
@@ -391,7 +391,7 @@ int backup_phase2_client(struct async *as, struct conf *conf, int resume)
 		}
 	}
 
-	if(async_write_str(as, CMD_GEN, "backup_end"))
+	if(as->write_str(as, CMD_GEN, "backup_end"))
 		goto end;
 
 	ret=0;

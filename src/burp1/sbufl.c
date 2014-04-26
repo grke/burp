@@ -88,7 +88,7 @@ static int read_stat(struct async *as, FILE *fp,
 		}
 		else
 		{
-			if(async_read(as, rbuf))
+			if(as->read(as, rbuf))
 			{
 				break;
 			}
@@ -137,13 +137,13 @@ static int do_sbufl_fill_from_net(struct sbuf *sb, struct async *as,
 	if(!rbuf && !(rbuf=iobuf_alloc())) return -1;
 	iobuf_free_content(rbuf);
 	if((ars=read_stat(as, NULL, NULL, sb, cntr))
-	  || (ars=async_read(as, rbuf))) return ars;
+	  || (ars=as->read(as, rbuf))) return ars;
 	iobuf_copy(&sb->path, rbuf);
 	rbuf->buf=NULL;
 	if(sbuf_is_link(sb))
 	{
 		iobuf_free_content(rbuf);
-		if((ars=async_read(as, rbuf))) return ars;
+		if((ars=as->read(as, rbuf))) return ars;
 		iobuf_copy(&sb->link, rbuf);
 		rbuf->buf=NULL;
 		if(!cmd_is_link(rbuf->cmd))

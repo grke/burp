@@ -138,7 +138,7 @@ static int send_file(struct async *as, struct sbuf *sb,
 	if(open_file_for_sendl(as, NULL, &fp, best, sb->winattr, &datalen,
 		1 /* no O_NOATIME */, cconf)) return -1;
 	//logp("sending: %s\n", best);
-	if(async_write(as, &sb->path))
+	if(as->write(as, &sb->path))
 		ret=-1;
 	else if(patches)
 	{
@@ -286,7 +286,7 @@ static int verify_file(struct async *as, struct sbuf *sb,
 	*bytes+=cbytes;
 
 	// Just send the file name to the client, so that it can show cntr.
-	if(async_write(as, &sb->path)) return -1;
+	if(as->write(as, &sb->path)) return -1;
 	return 0;
 }
 
@@ -436,8 +436,8 @@ static int restore_sbufl(struct async *as, struct sbuf *sb, struct bu *arr,
 	//printf("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path.buf);
 	if(write_status(status, sb->path.buf, cconf)) return -1;
 
-	if((sb->burp1->datapth.buf && async_write(as, &(sb->burp1->datapth)))
-	  || async_write(as, &sb->attr))
+	if((sb->burp1->datapth.buf && as->write(as, &(sb->burp1->datapth)))
+	  || as->write(as, &sb->attr))
 		return -1;
 	else if(sb->path.cmd==CMD_FILE
 	  || sb->path.cmd==CMD_ENC_FILE
@@ -454,12 +454,12 @@ static int restore_sbufl(struct async *as, struct sbuf *sb, struct bu *arr,
 	}
 	else
 	{
-		if(async_write(as, &sb->path))
+		if(as->write(as, &sb->path))
 			return -1;
 		// If it is a link, send what
 		// it points to.
 		else if(sbuf_is_link(sb)
-		  && async_write(as, &sb->link)) return -1;
+		  && as->write(as, &sb->link)) return -1;
 		cntr_add(cconf->cntr, sb->path.cmd, 0);
 	}
 	return 0;
@@ -470,7 +470,7 @@ static int do_restore_end(struct async *as, enum action act, struct conf *conf)
 	int ret=-1;
 	struct iobuf *rbuf=NULL;
 
-	if(async_write_str(as, CMD_GEN, "restoreend"))
+	if(as->write_str(as, CMD_GEN, "restoreend"))
 		return -1;
 
 	if(!(rbuf=iobuf_alloc())) return -1;
@@ -478,7 +478,7 @@ static int do_restore_end(struct async *as, enum action act, struct conf *conf)
 	while(1)
 	{
 		iobuf_free_content(rbuf);
-		if(async_read(as, rbuf)) goto end;
+		if(as->read(as, rbuf)) goto end;
 		else if(rbuf->cmd==CMD_GEN
 		  && !strcmp(rbuf->buf, "restoreend ok"))
 		{
@@ -654,7 +654,7 @@ static int actual_restore(struct async *as,
 	{
 		int ars=0;
 		iobuf_free_content(&rbuf);
-		if(async_read_quick(as, &rbuf))
+		if(as->read_quick(as, &rbuf))
 		{
 			logp("read quick error\n");
 			goto end;
@@ -857,7 +857,7 @@ int do_restore_server_burp1(struct async *as,
 	if(!found)
 	{
 		logp("backup not found\n");
-		async_write_str(as, CMD_ERROR, "backup not found");
+		as->write_str(as, CMD_ERROR, "backup not found");
 		ret=-1;
 	}
 	if(tmppath1)

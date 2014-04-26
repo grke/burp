@@ -13,10 +13,10 @@ static int usual_stuff(struct async *as,
 	struct conf *conf, const char *path, const char *link,
 	struct sbuf *sb, char cmd)
 {
-	if(async_write_str(as, CMD_ATTRIBS, sb->attr.buf)
-	  || async_write_str(as, cmd, path)
+	if(as->write_str(as, CMD_ATTRIBS, sb->attr.buf)
+	  || as->write_str(as, cmd, path)
 	  || ((cmd==CMD_HARD_LINK || cmd==CMD_SOFT_LINK)
-		&& async_write_str(as, cmd, link)))
+		&& as->write_str(as, cmd, link)))
 			return -1;
 	cntr_add_phase1(conf->cntr, cmd, 1);
 	return 0;

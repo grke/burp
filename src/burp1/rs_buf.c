@@ -182,7 +182,7 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 		static struct iobuf *rbuf=NULL;
 		if(!rbuf && !(rbuf=iobuf_alloc())) return RS_IO_ERROR;
 
-		if(async_read(fb->as, rbuf)) return RS_IO_ERROR;
+		if(fb->as->read(fb->as, rbuf)) return RS_IO_ERROR;
 		if(rbuf->cmd==CMD_APPEND)
 		{
 			//logp("got '%c' in fd infilebuf: %d\n",
@@ -373,7 +373,7 @@ rs_result rs_outfilebuf_drain(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 			wbuf->cmd=CMD_APPEND;
 			wbuf->buf=fb->buf;
 			wbuf->len=wlen;
-			if(async_append_all_to_write_buffer(fb->as, wbuf))
+			if(fb->as->append_all_to_write_buffer(fb->as, wbuf))
 			{
 				// stop the rsync stuff from reading more.
 				//		buf->next_out = fb->buf;

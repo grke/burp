@@ -11,7 +11,7 @@ static int restore_interrupt(struct async *as,
 
 	cntr_add(cntr, CMD_WARNING, 1);
 	logp("WARNING: %s\n", msg);
-	if(async_write_str(as, CMD_WARNING, msg)) goto end;
+	if(as->write_str(as, CMD_WARNING, msg)) goto end;
 
 	// If it is file data, get the server
 	// to interrupt the flow and move on.
@@ -28,14 +28,14 @@ static int restore_interrupt(struct async *as,
 	if(!rbuf && !(rbuf=iobuf_alloc()))
 		goto end;
 
-	if(async_write_str(as, CMD_INTERRUPT, sb->burp1->datapth.buf))
+	if(as->write_str(as, CMD_INTERRUPT, sb->burp1->datapth.buf))
 		goto end;
 
 	// Read to the end file marker.
 	while(1)
 	{
 		iobuf_free_content(rbuf);
-		if(async_read(as, rbuf))
+		if(as->read(as, rbuf))
 			goto end;
 		if(!ret && rbuf->len)
 		{
@@ -611,8 +611,8 @@ int do_restore_client_burp1(struct async *as,
 
 	snprintf(msg, sizeof(msg), "%s %s:%s", act_str(act),
 		conf->backup?conf->backup:"", conf->regex?conf->regex:"");
-	if(async_write_str(as, CMD_GEN, msg)
-	  || async_read_expect(as, CMD_GEN, "ok"))
+	if(as->write_str(as, CMD_GEN, msg)
+	  || as->read_expect(as, CMD_GEN, "ok"))
 		return -1;
 	logp("doing %s confirmed\n", act_str(act));
 
@@ -639,7 +639,7 @@ int do_restore_client_burp1(struct async *as,
 			{
 				// ars==1 means it ended ok.
 				//logp("got %s end\n", act_str(act));
-				if(async_write_str(as,
+				if(as->write_str(as,
 					CMD_GEN, "restoreend ok")) goto end;
 			}
 			break;

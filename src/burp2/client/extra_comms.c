@@ -27,14 +27,14 @@ int extra_comms(struct async **as, struct conf *conf,
 
 	if(!(rbuf=iobuf_alloc())) goto end;
 
-	if(async_write_str(*as, CMD_GEN, "extra_comms_begin"))
+	if((*as)->write_str(*as, CMD_GEN, "extra_comms_begin"))
 	{
 		logp("Problem requesting extra_comms_begin\n");
 		goto end;
 	}
 	// Servers greater than 1.3.0 will list the extra_comms
 	// features they support.
-	if(async_read(*as, rbuf))
+	if((*as)->read(*as, rbuf))
 	{
 		logp("Problem reading response to extra_comms_begin\n");
 		goto end;
@@ -75,7 +75,7 @@ int extra_comms(struct async **as, struct conf *conf,
 		{
 			logp("Server wants to initiate a restore\n");
 			logp("Client configuration says no\n");
-			if(async_write_str(*as, CMD_GEN, "srestore not ok"))
+			if((*as)->write_str(*as, CMD_GEN, "srestore not ok"))
 				goto end;
 		}
 	}
@@ -92,8 +92,8 @@ int extra_comms(struct async **as, struct conf *conf,
 			logp("Server does not support switching client.\n");
 			goto end;
 		}
-		if(async_write_str(*as, CMD_GEN, str)
-		  || async_read_expect(*as, CMD_GEN, "orig_client ok"))
+		if((*as)->write_str(*as, CMD_GEN, str)
+		  || (*as)->read_expect(*as, CMD_GEN, "orig_client ok"))
 		{
 			logp("Problem requesting %s\n", str);
 			goto end;
@@ -121,7 +121,7 @@ printf("HERE: %s\n", feat);
 
 	if(server_supports(feat, ":counters:"))
 	{
-		if(async_write_str(*as, CMD_GEN, "countersok"))
+		if((*as)->write_str(*as, CMD_GEN, "countersok"))
 			goto end;
 		conf->send_client_cntr=1;
 	}
@@ -152,7 +152,7 @@ printf("HERE: %s\n", feat);
 			char msg[128]="";
 			snprintf(msg, sizeof(msg),
 				"uname=%s", clientos);
-			if(async_write_str(*as, CMD_GEN, msg))
+			if((*as)->write_str(*as, CMD_GEN, msg))
 				goto end;
 		}
 	}
@@ -168,7 +168,7 @@ printf("HERE: %s\n", feat);
 		}
 		// Send choice to server.
 		snprintf(msg, sizeof(msg), "protocol=%d", conf->protocol);
-		if(async_write_str(*as, CMD_GEN, msg))
+		if((*as)->write_str(*as, CMD_GEN, msg))
 			goto end;
 		logp("Using protocol=%d\n", conf->protocol);
 	}
@@ -195,8 +195,8 @@ printf("HERE: %s\n", feat);
 		conf->protocol=PROTO_BURP2;
 	}
 
-	if(async_write_str(*as, CMD_GEN, "extra_comms_end")
-	  || async_read_expect(*as, CMD_GEN, "extra_comms_end ok"))
+	if((*as)->write_str(*as, CMD_GEN, "extra_comms_end")
+	  || (*as)->read_expect(*as, CMD_GEN, "extra_comms_end ok"))
 	{
 		logp("Problem requesting extra_comms_end\n");
 		goto end;

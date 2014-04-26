@@ -7,7 +7,7 @@ static int send_incexc_str(struct async *as, const char *pre, const char *str)
 	if(!str) return 0;
 	if(!(tosend=prepend(pre, str, strlen(str), " = ")))
 		rc=-1;
-	if(!rc && async_write_str(as, CMD_GEN, tosend))
+	if(!rc && as->write_str(as, CMD_GEN, tosend))
 	{
 		logp("Error in async_write_str when sending incexc\n");
 		rc=-1;
@@ -93,8 +93,8 @@ static int do_sends_restore(struct async *as, struct conf *conf)
 static int do_request_response(struct async *as,
 	const char *reqstr, const char *repstr)
 {
-	return (async_write_str(as, CMD_GEN, reqstr)
-	  || async_read_expect(as, CMD_GEN, repstr));
+	return (as->write_str(as, CMD_GEN, reqstr)
+	  || as->read_expect(as, CMD_GEN, repstr));
 }
 
 int incexc_send_client(struct async *as, struct conf *conf)

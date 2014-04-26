@@ -61,10 +61,10 @@ int autoupgrade_client(struct async **as, struct conf *conf)
 	// Let the server know we are ready.
 	snprintf(write_str, sizeof(write_str),
 		"autoupgrade:%s", conf->autoupgrade_os);
-	if(async_write_str(*as, CMD_GEN, write_str))
+	if((*as)->write_str(*as, CMD_GEN, write_str))
 		goto end;
 
-	if(!(a=async_simple_loop(*as,
+	if(!(a=(*as)->simple_loop(*as,
 		conf, NULL, __FUNCTION__, autoupgrade_func)))
 	{
 		ret=0; // No autoupgrade.

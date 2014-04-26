@@ -91,7 +91,7 @@ static int send_features(struct async *as, struct conf *cconf)
 
 	//printf("feat: %s\n", feat);
 
-	if(async_write_str(as, CMD_GEN, feat))
+	if(as->write_str(as, CMD_GEN, feat))
 	{
 		logp("problem in extra_comms\n");
 		goto end;
@@ -124,7 +124,7 @@ static int extra_comms_read(struct async **as,
 	while(1)
 	{
 		iobuf_free_content(rbuf);
-		if(async_read(*as, rbuf)) goto end;
+		if((*as)->read(*as, rbuf)) goto end;
 
 		if(rbuf->cmd!=CMD_GEN)
 		{
@@ -134,7 +134,7 @@ static int extra_comms_read(struct async **as,
 	
 		if(!strcmp(rbuf->buf, "extra_comms_end"))
 		{
-			if(async_write_str(*as, CMD_GEN, "extra_comms_end ok"))
+			if((*as)->write_str(*as, CMD_GEN, "extra_comms_end ok"))
 				goto end;
 			break;
 		}
@@ -268,7 +268,7 @@ static int extra_comms_read(struct async **as,
 					cconf->restore_path)) goto end;
 			}
 			logp("Switched to client %s\n", cconf->cname);
-			if(async_write_str(*as, CMD_GEN, "orig_client ok"))
+			if((*as)->write_str(*as, CMD_GEN, "orig_client ok"))
 				goto end;
 		}
 		else if(!strncmp_w(rbuf->buf, "restore_spool="))
@@ -346,7 +346,7 @@ int extra_comms(struct async **as,
 	// this section for them.
 	if(vers.cli<vers.min) return 0;
 
-	if(async_read_expect(*as, CMD_GEN, "extra_comms_begin"))
+	if((*as)->read_expect(*as, CMD_GEN, "extra_comms_begin"))
 	{
 		logp("problem reading in extra_comms\n");
 		goto error;
@@ -357,7 +357,7 @@ int extra_comms(struct async **as,
 	if(vers.cli==vers.feat_list)
 	{
 		// 1.3.0 did not support the feature list.
-		if(async_write_str(*as, CMD_GEN, "extra_comms_begin ok"))
+		if((*as)->write_str(*as, CMD_GEN, "extra_comms_begin ok"))
 		{
 			logp("problem writing in extra_comms\n");
 			goto error;

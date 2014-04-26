@@ -1,6 +1,7 @@
 #include "include.h"
 
-static int restore_interrupt(struct sbuf *sb, const char *msg, struct conf *conf)
+static int restore_interrupt(struct async *as,
+	struct sbuf *sb, const char *msg, struct conf *conf)
 {
 	return 0;
 /* FIX THIS
@@ -12,7 +13,7 @@ static int restore_interrupt(struct sbuf *sb, const char *msg, struct conf *conf
 
 	cntr_add(conf->cntr, CMD_WARNING, 1);
 	logp("WARNING: %s\n", msg);
-	if(async_write_str(as, CMD_WARNING, msg)) return -1;
+	if(as->write_str(as, CMD_WARNING, msg)) return -1;
 
 	// If it is file data, get the server
 	// to interrupt the flow and move on.
@@ -21,7 +22,7 @@ static int restore_interrupt(struct sbuf *sb, const char *msg, struct conf *conf
 	   && sb->cmd!=CMD_EFS_FILE)
 		return 0;
 
-	if(async_write_str(as, CMD_INTERRUPT, sb->path))
+	if(as->write_str(as, CMD_INTERRUPT, sb->path))
 	{
 		ret=-1;
 		quit++;
@@ -129,7 +130,7 @@ static int open_for_restore(struct async *as,
 		char msg[256]="";
 		snprintf(msg, sizeof(msg), "Could not open for writing %s: %s",
 			path, be.bstrerror(errno));
-		if(restore_interrupt(sb, msg, conf))
+		if(restore_interrupt(as, sb, msg, conf))
 			return -1;
 	}
 	// Add attributes to bfd so that they can be set when it is closed.
@@ -163,7 +164,7 @@ static int start_restore_file(struct async *as,
 		char msg[256]="";
 		// failed - do a warning
 		snprintf(msg, sizeof(msg), "build path failed: %s", fname);
-		if(restore_interrupt(sb, msg, conf))
+		if(restore_interrupt(as, sb, msg, conf))
 			ret=-1;
 		ret=0; // Try to carry on with other files.
 		goto end;
@@ -202,7 +203,7 @@ static int restore_special(struct async *as, struct sbuf *sb,
 		char msg[256]="";
 		// failed - do a warning
 		snprintf(msg, sizeof(msg), "build path failed: %s", fname);
-		if(restore_interrupt(sb, msg, conf))
+		if(restore_interrupt(as, sb, msg, conf))
 			ret=-1;
 		goto end;
 	}
@@ -274,7 +275,7 @@ static int restore_dir(struct async *as,
 			// failed - do a warning
 			snprintf(msg, sizeof(msg),
 				"build path failed: %s", dname);
-			if(restore_interrupt(sb, msg, conf))
+			if(restore_interrupt(as, sb, msg, conf))
 				ret=-1;
 			goto end;
 		}
@@ -286,7 +287,7 @@ static int restore_dir(struct async *as,
 				snprintf(msg, sizeof(msg), "mkdir error: %s",
 					strerror(errno));
 				// failed - do a warning
-				if(restore_interrupt(sb, msg, conf))
+				if(restore_interrupt(as, sb, msg, conf))
 					ret=-1;
 				goto end;
 			}
@@ -317,15 +318,16 @@ static int restore_link(struct async *as, struct sbuf *sb,
 			// failed - do a warning
 			snprintf(msg, sizeof(msg), "build path failed: %s",
 				fname);
-			if(restore_interrupt(sb, msg, conf))
+			if(restore_interrupt(as, sb, msg, conf))
 				ret=-1;
 			goto end;
 		}
 		else if(make_link(as, fname, sb->link.buf, sb->link.cmd, conf))
 		{
 			// failed - do a warning
-			if(restore_interrupt(sb, "could not create link", conf))
-				ret=-1;
+			if(restore_interrupt(as, sb,
+				"could not create link", conf))
+					ret=-1;
 			goto end;
 		}
 		else if(!ret)
@@ -449,7 +451,7 @@ static int strip_path_components(struct async *as,
 			char msg[256]="";
 			snprintf(msg, sizeof(msg),
 			  "Stripped too many components: %s", sb->path.buf);
-			if(restore_interrupt(sb, msg, conf))
+			if(restore_interrupt(as, sb, msg, conf))
 				return -1;
 			return 0;
 		}
@@ -460,7 +462,7 @@ static int strip_path_components(struct async *as,
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
 			"Stripped too many components: %s", sb->path.buf);
-		if(restore_interrupt(sb, msg, conf))
+		if(restore_interrupt(as, sb, msg, conf))
 			return -1;
 		return 0;
 	}
@@ -529,7 +531,7 @@ static int write_data(struct async *as, BFILE *bfd, struct blk *blk)
 		if((w=bwrite(bfd, blk->data, blk->length))<=0)
 		{
 			logp("error when appending %d: %d\n", blk->length, w);
-			async_write_str(as, CMD_ERROR, "write failed");
+			as->write_str(as, CMD_ERROR, "write failed");
 			return -1;
 		}
 	}
@@ -550,7 +552,7 @@ static enum asl_ret restore_style_func(struct async *as, struct iobuf *rbuf,
 		return ASL_END_ERROR;
 	}
 	snprintf(msg, sizeof(msg), "%s_ok", rbuf->buf);
-	if(async_write_str(as, CMD_GEN, msg))
+	if(as->write_str(as, CMD_GEN, msg))
 		return ASL_END_ERROR;
 	restore_style=rbuf->buf;
 	rbuf->buf=NULL;
@@ -559,7 +561,7 @@ static enum asl_ret restore_style_func(struct async *as, struct iobuf *rbuf,
 
 static char *get_restore_style(struct async *as, struct conf *conf)
 {
-	if(async_simple_loop(as, conf, NULL, __func__,
+	if(as->simple_loop(as, conf, NULL, __func__,
 		restore_style_func)) return NULL;
 	return restore_style;
 }
@@ -580,7 +582,7 @@ static enum asl_ret restore_spool_func(struct async *as, struct iobuf *rbuf,
 	}
 	else if(!strcmp(rbuf->buf, "datfilesend"))
 	{
-		if(async_write_str(as, CMD_GEN, "datfilesend_ok"))
+		if(as->write_str(as, CMD_GEN, "datfilesend_ok"))
 			return ASL_END_ERROR;
 		return ASL_END_OK;
 	}
@@ -595,7 +597,7 @@ printf("in restore_spool\n");
 	if(!(*datpath=prepend_s(conf->restore_spool, "incoming-data")))
 		return -1;
 
-	return async_simple_loop(as, conf, datpath,
+	return as->simple_loop(as, conf, datpath,
 		__func__, restore_spool_func);
 }
 
@@ -617,8 +619,8 @@ int do_restore_client(struct async *as,
 
 	snprintf(msg, sizeof(msg), "%s %s:%s", act_str(act),
 		conf->backup?conf->backup:"", conf->regex?conf->regex:"");
-	if(async_write_str(as, CMD_GEN, msg)
-	  || async_read_expect(as, CMD_GEN, "ok"))
+	if(as->write_str(as, CMD_GEN, msg)
+	  || as->read_expect(as, CMD_GEN, "ok"))
 		goto end;
 	logp("doing %s confirmed\n", act_str(act));
 
@@ -655,7 +657,7 @@ int do_restore_client(struct async *as,
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
 			//logp("got %s end\n", act_str(act));
-			if(async_write_str(as, CMD_GEN, "ok_restore_end"))
+			if(as->write_str(as, CMD_GEN, "ok_restore_end"))
 				goto end;
 			break;
 		}
@@ -714,7 +716,7 @@ int do_restore_client(struct async *as,
 					// Something exists at that path.
 					snprintf(msg, sizeof(msg),
 						"Path exists: %s", fullpath);
-					if(restore_interrupt(sb, msg, conf))
+					if(restore_interrupt(as, sb, msg, conf))
 						goto end;
 					else
 						continue;

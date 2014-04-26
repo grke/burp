@@ -71,7 +71,7 @@ static int load_signature_and_send_delta(struct async *as,
 			break;
 		}
 		// FIX ME: get it to read stuff (errors, for example) here too.
-		if(async_rw(as, NULL, NULL)) return -1;
+		if(as->rw(as, NULL, NULL)) return -1;
 	}
 
 	if(r!=RS_DONE)
@@ -121,7 +121,7 @@ static int forget_file(struct async *as, struct sbuf *sb, struct conf *conf)
 	// Tell the server to forget about this
 	// file, otherwise it might get stuck
 	// on a select waiting for it to arrive.
-	if(async_write_str(as, CMD_INTERRUPT, sb->path.buf))
+	if(as->write_str(as, CMD_INTERRUPT, sb->path.buf))
 		return 0;
 
 	if(sb->path.cmd==CMD_FILE && sb->burp1->datapth.buf)
@@ -250,9 +250,9 @@ static int deal_with_data(struct async *as,
 	{
 		unsigned long long sentbytes=0;
 		// Need to do sig/delta stuff.
-		if(async_write(as, &(sb->burp1->datapth))
-		  || async_write(as, &sb->attr)
-		  || async_write(as, &sb->path)
+		if(as->write(as, &(sb->burp1->datapth))
+		  || as->write(as, &sb->attr)
+		  || as->write(as, &sb->path)
 		  || load_signature_and_send_delta(as, bfd, fp,
 			&bytes, &sentbytes, conf, *datalen))
 		{
@@ -272,8 +272,8 @@ static int deal_with_data(struct async *as,
 		//logp("need to send whole file: %s\n", sb.path);
 		// send the whole file.
 
-		if((async_write(as, &sb->attr)
-		  || async_write(as, &sb->path))
+		if((as->write(as, &sb->attr)
+		  || as->write(as, &sb->path))
 		  || send_whole_file_w(as, sb, NULL, 0, &bytes,
 			conf->encryption_password, conf, sb->compression,
 			bfd, fp, extrameta, elen, *datalen))
@@ -367,8 +367,8 @@ static int do_backup_phase2_client(struct async *as,
 	if(!resume)
 	{
 		// Only do this bit if the server did not tell us to resume.
-		if(async_write_str(as, CMD_GEN, "backupphase2")
-		  || async_read_expect(as, CMD_GEN, "ok"))
+		if(as->write_str(as, CMD_GEN, "backupphase2")
+		  || as->read_expect(as, CMD_GEN, "ok"))
 			goto end;
 	}
 	else if(conf->send_client_cntr)
@@ -382,12 +382,12 @@ static int do_backup_phase2_client(struct async *as,
 	while(1)
 	{
 		iobuf_free_content(rbuf);
-		if(async_read(as, rbuf)) goto end;
+		if(as->read(as, rbuf)) goto end;
 		else if(!rbuf->buf) continue;
 
 		if(rbuf->cmd==CMD_GEN && !strcmp(rbuf->buf, "backupphase2end"))
 		{
-			if(async_write_str(as, CMD_GEN, "okbackupphase2end"))
+			if(as->write_str(as, CMD_GEN, "okbackupphase2end"))
 				goto end;
 			ret=0;
 			break;

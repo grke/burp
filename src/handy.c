@@ -16,7 +16,7 @@ int do_quick_read(struct async *as, const char *datapth, struct conf *conf)
 	int r=0;
 	static struct iobuf rbuf;
 	iobuf_init(&rbuf);
-	if(async_read_quick(as, &rbuf)) return -1;
+	if(as->read_quick(as, &rbuf)) return -1;
 
 	if(rbuf.buf)
 	{
@@ -74,7 +74,7 @@ static char *get_endfile_str(unsigned long long bytes)
 
 static int write_endfile(struct async *as, unsigned long long bytes)
 {
-	return async_write_str(as, CMD_END_FILE, get_endfile_str(bytes));
+	return as->write_str(as, CMD_END_FILE, get_endfile_str(bytes));
 }
 
 int open_file_for_send(BFILE *bfd, struct async *as, const char *fname,
@@ -166,7 +166,7 @@ int send_whole_file_gz(struct async *as,
 			wbuf.cmd=CMD_APPEND;
 			wbuf.buf=(char *)out;
 			wbuf.len=have;
-			if(async_write(as, &wbuf))
+			if(as->write(as, &wbuf))
 			{
 				ret=-1;
 				break;

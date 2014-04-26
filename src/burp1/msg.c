@@ -15,7 +15,7 @@ static int do_write(struct async *as,
 				"", 0, (size_t *)sent)))
 		{
 			logp("error when appending metadata\n");
-			async_write_str(as, CMD_ERROR,
+			as->write_str(as, CMD_ERROR,
 				"error when appending metadata");
 			return -1;
 		}
@@ -26,14 +26,14 @@ static int do_write(struct async *as,
 		if((ret=bwrite(bfd, out, outlen))<=0)
 		{
 			logp("error when appending %d: %d\n", outlen, ret);
-			async_write_str(as, CMD_ERROR, "write failed");
+			as->write_str(as, CMD_ERROR, "write failed");
 			return -1;
 		}
 #else
 		if((fp && (ret=fwrite(out, 1, outlen, fp))<=0))
 		{
 			logp("error when appending %d: %d\n", outlen, ret);
-			async_write_str(as, CMD_ERROR, "write failed");
+			as->write_str(as, CMD_ERROR, "write failed");
 			return -1;
 		}
 #endif
@@ -114,7 +114,7 @@ static DWORD WINAPI read_efs(PBYTE pbData, PVOID pvCallbackContext, PULONG ulLen
 
 	while(1)
 	{
-		if(async_read(mybuf->as, rbuf))
+		if(mybuf->as->read(mybuf->as, rbuf))
 			return ERROR_FUNCTION_FAILED;
 		(*(mybuf->rcvd))+=rbuf->len;
 
@@ -218,7 +218,7 @@ int transfer_gzfile_in(struct async *as,
 	while(!quit)
 	{
 		iobuf_free_content(rbuf);
-		if(async_read(as, rbuf))
+		if(as->read(as, rbuf))
 		{
 			if(enc_ctx)
 			{
@@ -237,7 +237,7 @@ int transfer_gzfile_in(struct async *as,
 				if(!fp && !bfd && !metadata)
 				{
 					logp("given append, but no file or metadata to write to\n");
-					async_write_str(as, CMD_ERROR,
+					as->write_str(as, CMD_ERROR,
 					  "append with no file or metadata");
 					quit++; ret=-1;
 				}

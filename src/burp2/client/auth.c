@@ -8,7 +8,7 @@ int authorise_client(struct async *as,
 	struct iobuf *rbuf=NULL;
 
 	snprintf(hello, sizeof(hello), "hello:%s", VERSION);
-	if(async_write_str(as, CMD_GEN, hello))
+	if(as->write_str(as, CMD_GEN, hello))
 	{
 		logp("problem with auth\n");
 		goto end;
@@ -39,10 +39,10 @@ int authorise_client(struct async *as,
 		iobuf_free_content(rbuf);
 	}
 
-	if(async_write_str(as, CMD_GEN, conf->cname)
-	  || async_read_expect(as, CMD_GEN, "okpassword")
-	  || async_write_str(as, CMD_GEN, conf->password)
-	  || async_read(as, rbuf))
+	if(as->write_str(as, CMD_GEN, conf->cname)
+	  || as->read_expect(as, CMD_GEN, "okpassword")
+	  || as->write_str(as, CMD_GEN, conf->password)
+	  || as->read(as, rbuf))
 	{
 		logp("problem with auth\n");
 		goto end;
@@ -54,7 +54,7 @@ int authorise_client(struct async *as,
 		logp("WARNING: %s\n", rbuf->buf);
 		cntr_add(conf->cntr, rbuf->cmd, 0);
 		iobuf_free_content(rbuf);
-		if(async_read(as, rbuf))
+		if(as->read(as, rbuf))
 		{
 			logp("problem with auth\n");
 			goto end;

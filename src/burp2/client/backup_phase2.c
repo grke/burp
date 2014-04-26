@@ -135,11 +135,12 @@ end:
 	return ret;
 }
 
-static int add_to_blks_list(struct conf *conf, struct slist *slist, struct blist *blist, struct win *win)
+static int add_to_blks_list(struct async *as, struct conf *conf,
+	struct slist *slist, struct blist *blist, struct win *win)
 {
 	struct sbuf *sb=slist->last_requested;
 	if(!sb) return 0;
-	if(blks_generate(conf, sb, blist, win)) return -1;
+	if(blks_generate(as, conf, sb, blist, win)) return -1;
 
 	// If it closed the file, move to the next one.
 	if(sb->burp2->bfd.mode==BF_CLOSED) slist->last_requested=sb->next;
@@ -368,7 +369,7 @@ int backup_phase2_client(struct async *as, struct conf *conf, int resume)
 		   || blist->tail->index - blist->head->index<BLKS_MAX_IN_MEM)
 		)
 		{
-			if(add_to_blks_list(conf, slist, blist, win))
+			if(add_to_blks_list(as, conf, slist, blist, win))
 				goto end;
 		}
 

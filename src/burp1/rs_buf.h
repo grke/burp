@@ -46,22 +46,36 @@ struct rs_filebuf
 	int do_known_byte_count;
 	struct cntr *cntr;
 	MD5_CTX md5;
+	struct async *as;
 };
 
-rs_filebuf_t *rs_filebuf_new(BFILE *bfd, FILE *fp, gzFile zp, int fd, size_t buf_len, size_t data_len, struct cntr *cntr);
+// FIX THIS: Now that struct async is getting passed, probably do not need
+// fd as well,
+rs_filebuf_t *rs_filebuf_new(struct async *as,
+	BFILE *bfd, FILE *fp, gzFile zp,
+	int fd, size_t buf_len, size_t data_len, struct cntr *cntr);
 void rs_filebuf_free(rs_filebuf_t *fb);
 rs_result rs_infilebuf_fill(rs_job_t *, rs_buffers_t *buf, void *fb);
 rs_result rs_outfilebuf_drain(rs_job_t *, rs_buffers_t *, void *fb);
-rs_result do_rs_run(rs_job_t *job, BFILE *bfd, FILE *in_file, FILE *out_file, gzFile in_zfile, gzFile out_zfile, int infd, int outfd, struct cntr *cntr);
+rs_result do_rs_run(struct async *as,
+	rs_job_t *job, BFILE *bfd, FILE *in_file, FILE *out_file,
+	gzFile in_zfile, gzFile out_zfile, int infd, int outfd,
+	struct cntr *cntr);
 
 rs_result rs_async(rs_job_t *job,
 	rs_buffers_t *rsbuf, rs_filebuf_t *infb, rs_filebuf_t *outfb);
 
-
-
-rs_result rs_patch_gzfile(FILE *basis_file, FILE *delta_file, gzFile delta_zfile, FILE *new_file, gzFile new_zfile, rs_stats_t *stats, struct cntr *cntr);
-rs_result rs_sig_gzfile(FILE *old_file, gzFile old_zfile, FILE *sig_file, size_t new_block_len, size_t strong_len, rs_stats_t *stats, struct cntr *cntr);
-rs_result rs_delta_gzfile(rs_signature_t *sig, FILE *new_file, gzFile new_zfile, FILE *delta_file, gzFile delta_zfile, rs_stats_t *stats, struct cntr *cntr);
-
+rs_result rs_patch_gzfile(struct async *as,
+	FILE *basis_file, FILE *delta_file,
+	gzFile delta_zfile, FILE *new_file, gzFile new_zfile,
+	rs_stats_t *stats, struct cntr *cntr);
+rs_result rs_sig_gzfile(struct async *as,
+	FILE *old_file, gzFile old_zfile, FILE *sig_file,
+	size_t new_block_len, size_t strong_len, rs_stats_t *stats,
+	struct cntr *cntr);
+rs_result rs_delta_gzfile(struct async *as,
+	rs_signature_t *sig, FILE *new_file,
+	gzFile new_zfile, FILE *delta_file, gzFile delta_zfile,
+	rs_stats_t *stats, struct cntr *cntr);
 
 #endif

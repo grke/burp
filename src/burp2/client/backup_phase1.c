@@ -171,7 +171,7 @@ int backup_phase1_client(struct async *as,
 	if(!(ff=find_files_init())) goto end;
 	server_name_max=name_max;
 	for(l=conf->startdir; l; l=l->next) if(l->flag)
-		if(find_files_begin(ff, conf, l->path)) goto end;
+		if(find_files_begin(as, ff, conf, l->path)) goto end;
 	ret=0;
 end:
 	cntr_print_end_phase1(conf->cntr);

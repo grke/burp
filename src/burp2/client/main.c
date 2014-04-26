@@ -270,7 +270,7 @@ static enum cliret restore_wrapper(struct async *as, enum action action,
 		// functions to be a single pointer.
 		if(conf->protocol==PROTO_BURP1)
 		{
-			if(do_restore_client_burp1(conf,
+			if(do_restore_client_burp1(as, conf,
 				action, vss_restore)) ret=CLIENT_ERROR;
 		}
 		else

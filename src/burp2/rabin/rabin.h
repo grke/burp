@@ -4,6 +4,7 @@
 #include "include.h"
 
 extern int blks_generate_init(struct conf *conf);
-extern int blks_generate(struct conf *conf, struct sbuf *sb, struct blist *blist, struct win *win);
+extern int blks_generate(struct async *as, struct conf *conf,
+	struct sbuf *sb, struct blist *blist, struct win *win);
 
 #endif

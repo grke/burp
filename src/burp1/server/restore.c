@@ -3,7 +3,8 @@
 #include <librsync.h>
 
 // Also used by backup_phase4_server.c
-int do_patch(const char *dst, const char *del, const char *upd, bool gzupd, int compression, struct conf *cconf)
+int do_patch(struct async *as, const char *dst, const char *del,
+	const char *upd, bool gzupd, int compression, struct conf *cconf)
 {
 	FILE *dstp=NULL;
 	FILE *delfp=NULL;
@@ -46,7 +47,8 @@ int do_patch(const char *dst, const char *del, const char *upd, bool gzupd, int 
 		return -1;
 	}
 	
-	result=rs_patch_gzfile(dstp, delfp, delzp, updfp, updp, NULL, cconf->cntr);
+	result=rs_patch_gzfile(as,
+		dstp, delfp, delzp, updfp, updp, NULL, cconf->cntr);
 
 	fclose(dstp);
 	gzclose_fp(&delzp);
@@ -133,7 +135,7 @@ static int send_file(struct async *as, struct sbuf *sb,
 	int ret=0;
 	size_t datalen=0;
 	FILE *fp=NULL;
-	if(open_file_for_sendl(NULL, &fp, best, sb->winattr, &datalen,
+	if(open_file_for_sendl(as, NULL, &fp, best, sb->winattr, &datalen,
 		1 /* no O_NOATIME */, cconf)) return -1;
 	//logp("sending: %s\n", best);
 	if(async_write(as, &sb->path))
@@ -142,7 +144,7 @@ static int send_file(struct async *as, struct sbuf *sb,
 	{
 		// If we did some patches, the resulting file
 		// is not gzipped. Gzip it during the send. 
-		ret=send_whole_file_gzl(best, sb->burp1->datapth.buf,
+		ret=send_whole_file_gzl(as, best, sb->burp1->datapth.buf,
 			1, bytes, NULL,
 			cconf, 9, NULL, fp, NULL, 0, -1);
 	}
@@ -157,7 +159,7 @@ static int send_file(struct async *as, struct sbuf *sb,
 		  || sb->path.cmd==CMD_ENC_VSS_T
 		  || sb->path.cmd==CMD_EFS_FILE)
 		{
-			ret=send_whole_filel(sb->path.cmd, best,
+			ret=send_whole_filel(as, sb->path.cmd, best,
 				sb->burp1->datapth.buf, 1, bytes,
 				cconf, NULL, fp, NULL, 0, -1);
 		}
@@ -167,15 +169,15 @@ static int send_file(struct async *as, struct sbuf *sb,
 		else if(!dpthl_is_compressed(sb->compression,
 			sb->burp1->datapth.buf))
 		{
-			ret=send_whole_file_gzl(best, sb->burp1->datapth.buf,
-				1, bytes,
+			ret=send_whole_file_gzl(as,
+				best, sb->burp1->datapth.buf, 1, bytes,
 				NULL, cconf, 9, NULL, fp, NULL, 0, -1);
 		}
 		else
 		{
 			// If we did not do some patches, the resulting
 			// file might already be gzipped. Send it as it is.
-			ret=send_whole_filel(sb->path.cmd, best,
+			ret=send_whole_filel(as, sb->path.cmd, best,
 				sb->burp1->datapth.buf, 1, bytes,
 				cconf, NULL, fp, NULL, 0, -1);
 		}
@@ -359,7 +361,7 @@ static int restore_file(struct async *as, struct bu *arr, int a, int i,
 					else tmp=tmppath1;
 				}
 
-				if(do_patch(best, dpath, tmp,
+				if(do_patch(as, best, dpath, tmp,
 				  0 /* do not gzip the result */,
 				  sb->compression /* from the manifest */,
 				  cconf))
@@ -594,7 +596,7 @@ static int setup_cntr(struct async *as, const char *manifest,
 	}
 	while(1)
 	{
-		if((ars=sbufl_fill(NULL, zp, sb, cconf->cntr)))
+		if((ars=sbufl_fill(sb, as, NULL, zp, cconf->cntr)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means end ok
@@ -681,7 +683,7 @@ static int actual_restore(struct async *as,
 			}
 		}
 
-		if((ars=sbufl_fill(NULL, zp, sb, cconf->cntr)))
+		if((ars=sbufl_fill(sb, as, NULL, zp, cconf->cntr)))
 		{
 			if(ars<0) goto end;
 			break;

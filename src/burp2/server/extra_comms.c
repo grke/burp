@@ -151,7 +151,7 @@ static int extra_comms_read(struct async **as,
 			// Load the restore config, then send it.
 			*srestore=1;
 			if(parse_incexcs_path(cconf, cconf->restore_path)
-			  || incexc_send_server_restore(cconf))
+			  || incexc_send_server_restore(*as, cconf))
 				goto end;
 			// Do not unlink it here - wait until
 			// the client says that it wants to do the
@@ -174,7 +174,7 @@ static int extra_comms_read(struct async **as,
 		{
 			// Client can accept incexc conf from the
 			// server.
-			if(incexc_send_server(cconf)) goto end;
+			if(incexc_send_server(*as, cconf)) goto end;
 		}
 		else if(!strcmp(rbuf->buf, "incexc"))
 		{

@@ -19,7 +19,7 @@ static int make_rev_sig(const char *dst, const char *sig, const char *endfile, i
 
 	if((!dstzp && !dstfp)
 	  || !(sigp=open_file(sig, "wb"))
-	  || rs_sig_gzfile(dstfp, dstzp, sigp,
+	  || rs_sig_gzfile(NULL, dstfp, dstzp, sigp,
 		get_librsync_block_len(endfile),
 		RS_DEFAULT_STRONG_LEN, NULL, conf->cntr)!=RS_DONE)
 			goto end;
@@ -67,7 +67,7 @@ static int make_rev_delta(const char *src, const char *sig, const char *del, int
 		delfp=open_file(del, "wb");
 	if(!delzp && !delfp) goto end;
 
-	if(rs_delta_gzfile(sumset, srcfp, srczp,
+	if(rs_delta_gzfile(NULL, sumset, srcfp, srczp,
 		delfp, delzp, NULL, cconf->cntr)!=RS_DONE)
 			goto end;
 	ret=0;
@@ -256,7 +256,7 @@ static int jiggle(struct sbuf *sb, const char *currentdata, const char *datadirt
 			goto end;
 		}
 
-		if((lrs=do_patch(infpath, deltafpath, newpath,
+		if((lrs=do_patch(NULL, infpath, deltafpath, newpath,
 			cconf->compression,
 			sb->compression /* from the manifest */, cconf)))
 		{
@@ -446,14 +446,14 @@ static int maybe_delete_files_from_manifest(const char *manifest, const char *de
 	while(omzp || dfp)
 	{
 		if(dfp && !db->path.buf
-		  && (ars=sbufl_fill(dfp, NULL, db, cconf->cntr)))
+		  && (ars=sbufl_fill(db, NULL, dfp, NULL, cconf->cntr)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
 			close_fp(&dfp);
 		}
 		if(omzp && !mb->path.buf
-		  && (ars=sbufl_fill(NULL, omzp, mb, cconf->cntr)))
+		  && (ars=sbufl_fill(mb, NULL, NULL, omzp, cconf->cntr)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
@@ -570,7 +570,7 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct conf *cconf,
 
 	mkdir(datadir, 0777);
 
-	while(!(ars=sbufl_fill(NULL, zp, sb, cconf->cntr)))
+	while(!(ars=sbufl_fill(sb, NULL, NULL, zp, cconf->cntr)))
 	{
 		if(sb->burp1->datapth.buf)
 		{

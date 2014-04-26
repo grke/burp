@@ -24,7 +24,7 @@ int backup_phase1_server(struct async *as,
 	{
 		sbuf_free_content(sb);
 		if(conf->protocol==PROTO_BURP1)
-			ars=sbufl_fill(NULL, NULL, sb, conf->cntr);
+			ars=sbufl_fill(sb, as, NULL, NULL, conf->cntr);
 		else
 			ars=sbuf_fill(sb, as, NULL, NULL, NULL, conf);
 

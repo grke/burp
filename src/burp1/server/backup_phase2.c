@@ -125,14 +125,14 @@ static int process_changed_file(struct async *as,
 		return -1;
 	}
 	//logp("sig begin: %s\n", p1b->burp1->datapth.buf);
-	if(!(p1b->burp1->infb=rs_filebuf_new(NULL,
+	if(!(p1b->burp1->infb=rs_filebuf_new(as, NULL,
 		p1b->burp1->sigfp, p1b->burp1->sigzp,
 		-1, blocklen, -1, cconf->cntr)))
 	{
 		logp("could not rs_filebuf_new for infb.\n");
 		return -1;
 	}
-	if(!(p1b->burp1->outfb=rs_filebuf_new(NULL, NULL, NULL,
+	if(!(p1b->burp1->outfb=rs_filebuf_new(as, NULL, NULL, NULL,
 		as->fd, ASYNC_BUF_LEN, -1, cconf->cntr)))
 	{
 		logp("could not rs_filebuf_new for in_outfb.\n");
@@ -679,7 +679,7 @@ int backup_phase2_server(struct async *as,
 		{
 		   sbuf_free_content(p1b);
 
-		   if((ars=sbufl_fill_phase1(NULL, p1zp, p1b, cconf->cntr)))
+		   if((ars=sbufl_fill_phase1(p1b, NULL, p1zp, cconf->cntr)))
 		   {
 			if(ars<0) goto error;
 			// ars==1 means it ended ok.
@@ -719,8 +719,8 @@ int backup_phase2_server(struct async *as,
 			while(*cmanfp)
 			{
 				sbuf_free_content(cb);
-				if((ars=sbufl_fill(NULL,
-					*cmanfp, cb, cconf->cntr)))
+				if((ars=sbufl_fill(cb, as, NULL,
+					*cmanfp, cconf->cntr)))
 				{
 					// ars==1 means it ended ok.
 					if(ars<0) goto error;

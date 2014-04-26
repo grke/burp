@@ -11,7 +11,7 @@ static int read_phase1(gzFile zp, struct conf *conf)
 	while(1)
 	{
 		sbuf_free_content(p1b);
-		if((ars=sbufl_fill_phase1(NULL, zp, p1b, conf->cntr)))
+		if((ars=sbufl_fill_phase1(p1b, NULL, zp, conf->cntr)))
 		{
 			// ars==1 means it ended ok.
 			if(ars<0)
@@ -61,9 +61,9 @@ static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
 		sbuf_free_content(sb);
 
 		if(isphase1)
-			ars=sbufl_fill_phase1(fp, zp, sb, cconf->cntr);
+			ars=sbufl_fill_phase1(sb, fp, zp, cconf->cntr);
 		else
-			ars=sbufl_fill(fp, zp, sb, cconf->cntr);
+			ars=sbufl_fill(sb, NULL, fp, zp, cconf->cntr);
 
 		// Make sure we end up with the highest datapth we can possibly
 		// find - set_dpthl_from_string() will only set it if it is

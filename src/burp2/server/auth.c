@@ -91,7 +91,7 @@ int authorise_server(struct async *as, struct conf *conf, struct conf *cconf)
 	char whoareyou[256]="";
 	struct iobuf rbuf;
 	iobuf_init(&rbuf);
-	if(async_read(as, &rbuf))
+	if(as->read(as, &rbuf))
 	{
 		logp("unable to read initial message\n");
 		return -1;
@@ -129,8 +129,8 @@ int authorise_server(struct async *as, struct conf *conf, struct conf *cconf)
 			"whoareyou:%s", VERSION);
 	}
 
-	async_write_str(as, CMD_GEN, whoareyou);
-	if(async_read(as, &rbuf))
+	as->write_str(as, CMD_GEN, whoareyou);
+	if(as->read(as, &rbuf))
 	{
 		logp("unable to get client name\n");
 		return -1;
@@ -138,8 +138,8 @@ int authorise_server(struct async *as, struct conf *conf, struct conf *cconf)
 	cconf->cname=rbuf.buf;
 	iobuf_init(&rbuf);
 
-	async_write_str(as, CMD_GEN, "okpassword");
-	if(async_read(as, &rbuf))
+	as->write_str(as, CMD_GEN, "okpassword");
+	if(as->read(as, &rbuf))
 	{
 		logp("unable to get password for client %s\n", cconf->cname);
 		iobuf_free_content(&rbuf);
@@ -160,6 +160,6 @@ int authorise_server(struct async *as, struct conf *conf, struct conf *cconf)
 		cconf->password_check?"":" (no password needed)");
 	if(password) free(password);
 
-	async_write_str(as, CMD_GEN, "ok");
+	as->write_str(as, CMD_GEN, "ok");
 	return 0;
 }

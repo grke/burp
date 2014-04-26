@@ -34,7 +34,7 @@ int backup_phase1_server(struct async *as,
 			//ars==1 means it ended ok.
 			// Last thing the client sends is 'backupphase2', and
 			// it wants an 'ok' reply.
-			if(async_write_str(as, CMD_GEN, "ok")
+			if(as->write_str(as, CMD_GEN, "ok")
 			  || send_msg_zp(p1zp, CMD_GEN,
 				"phase1end", strlen("phase1end")))
 					goto end;

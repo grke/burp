@@ -11,7 +11,7 @@ static int get_lock_sdirs(struct async *as, struct sdirs *sdirs)
 	// Make sure the lock directory exists.
 	if(mkpath(&sdirs->lock->path, sdirs->lockdir))
 	{
-		async_write_str(as, CMD_ERROR, "problem with lock directory");
+		as->write_str(as, CMD_ERROR, "problem with lock directory");
 		goto error;
 	}
 
@@ -21,14 +21,14 @@ static int get_lock_sdirs(struct async *as, struct sdirs *sdirs)
 		case GET_LOCK_GOT: break;
 		case GET_LOCK_NOT_GOT:
 			logp("Another instance of client is already running.\n");
-			async_write_str(as, CMD_ERROR,
+			as->write_str(as, CMD_ERROR,
 				"another instance is already running");
 			goto error;
 		case GET_LOCK_ERROR:
 		default:
 			logp("Problem with lock file on server: %s\n",
 				sdirs->lock->path);
-			async_write_str(as, CMD_ERROR,
+			as->write_str(as, CMD_ERROR,
 				"problem with lock file on server");
 			goto error;
 	}
@@ -40,7 +40,7 @@ static int get_lock_sdirs(struct async *as, struct sdirs *sdirs)
 		snprintf(msg, sizeof(msg),
 			"Finalising previous backup of client. "
 			"Please try again later.");
-		async_write_str(as, CMD_ERROR, msg);
+		as->write_str(as, CMD_ERROR, msg);
 		goto finalising;
 	}
 
@@ -115,11 +115,11 @@ static int run_backup(struct async **as,
 		// This client is not the original client, so a
 		// backup might cause all sorts of trouble.
 		logp("Not allowing backup of %s\n", cconf->cname);
-		return async_write_str(*as, CMD_GEN, "Backup is not allowed");
+		return (*as)->write_str(*as, CMD_GEN, "Backup is not allowed");
 	}
 
 	// Set quality of service bits on backups.
-	async_set_bulk_packets(*as);
+	(*as)->set_bulk_packets(*as);
 
 	if(!strncmp_w(rbuf->buf, "backupphase1timed"))
 	{
@@ -157,7 +157,7 @@ static int run_backup(struct async **as,
 			if(!checkonly)
 				logp("Not running backup of %s\n",
 					cconf->cname);
-			return async_write_str(*as,
+			return (*as)->write_str(*as,
 				CMD_GEN, "timer conditions not met");
 		}
 		if(checkonly)
@@ -167,7 +167,7 @@ static int run_backup(struct async **as,
 			// up.
 			logp("Client asked for a timer check only,\n");
 			logp("so a backup is not happening right now.\n");
-			return async_write_str(*as,
+			return (*as)->write_str(*as,
 				CMD_GEN, "timer conditions met");
 		}
 		logp("Running backup of %s\n", cconf->cname);
@@ -175,13 +175,13 @@ static int run_backup(struct async **as,
 	else if(!cconf->client_can_force_backup)
 	{
 		logp("Not allowing forced backup of %s\n", cconf->cname);
-		return async_write_str(*as,
+		return (*as)->write_str(*as,
 			CMD_GEN, "Forced backup is not allowed");
 	}
 
 	snprintf(okstr, sizeof(okstr), "%s:%d",
 		resume?"resume":"ok", cconf->compression);
-	if(async_write_str(*as, CMD_GEN, okstr)) return -1;
+	if((*as)->write_str(*as, CMD_GEN, okstr)) return -1;
 	if(cconf->protocol==PROTO_BURP1)
 		ret=do_backup_server_burp1(as, sdirs, cconf, incexc, resume);
 	else
@@ -226,14 +226,14 @@ static int run_restore(struct async *as,
 		else if(!r)
 		{
 			logp("Not allowing restore of %s\n", cconf->cname);
-			return async_write_str(as, CMD_GEN,
+			return as->write_str(as, CMD_GEN,
 				"Client restore is not allowed");
 		}
 	}
 	if(act==ACTION_VERIFY && !cconf->client_can_verify)
 	{
 		logp("Not allowing verify of %s\n", cconf->cname);
-		return async_write_str(as, CMD_GEN,
+		return as->write_str(as, CMD_GEN,
 			"Client verify is not allowed");
 	}
 
@@ -243,7 +243,7 @@ static int run_restore(struct async *as,
 		restoreregex++;
 	}
 	if(conf_val_reset(restoreregex, &(cconf->regex))
-	  || async_write_str(as, CMD_GEN, "ok"))
+	  || as->write_str(as, CMD_GEN, "ok"))
 		return -1;
 	if(cconf->protocol==PROTO_BURP1)
 		ret=do_restore_server_burp1(as, sdirs, act,
@@ -270,7 +270,7 @@ static int run_delete(struct async *as,
 	if(!cconf->client_can_delete)
 	{
 		logp("Not allowing delete of %s\n", cconf->cname);
-		async_write_str(as, CMD_GEN, "Client delete is not allowed");
+		as->write_str(as, CMD_GEN, "Client delete is not allowed");
 		return -1;
 	}
 	backupno=rbuf->buf+strlen("delete ");
@@ -287,7 +287,7 @@ static int run_list(struct async *as,
 	if(!cconf->client_can_list)
 	{
 		logp("Not allowing list of %s\n", cconf->cname);
-		async_write_str(as, CMD_GEN, "Client list is not allowed");
+		as->write_str(as, CMD_GEN, "Client list is not allowed");
 		return -1;
 	}
 
@@ -314,7 +314,7 @@ static int run_list(struct async *as,
 		  browsedir[strlen(browsedir)-1]='\0';
 		backupno=rbuf->buf+strlen("listb ");
 	}
-	if(async_write_str(as, CMD_GEN, "ok")) return -1;
+	if(as->write_str(as, CMD_GEN, "ok")) return -1;
 
 	return do_list_server(as,
 		sdirs, cconf, backupno, listregex, browsedir);
@@ -323,7 +323,7 @@ static int run_list(struct async *as,
 static int unknown_command(struct async *as, struct iobuf *rbuf)
 {
 	iobuf_log_unexpected(rbuf, __FUNCTION__);
-	async_write_str(as, CMD_ERROR, "unknown command");
+	as->write_str(as, CMD_ERROR, "unknown command");
 	return -1;
 }
 

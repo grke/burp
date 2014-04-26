@@ -131,3 +131,35 @@ void log_restore_settings(struct conf *cconf, int srestore)
 	for(l=cconf->incexcdir; l; l=l->next)
 		if(l->flag) logp("include = %s\n", l->path);
 }
+
+int logw(struct async *as, struct conf *conf, const char *fmt, ...)
+{
+	int r=0;
+	char buf[512]="";
+	va_list ap;
+	va_start(ap, fmt);
+	vsnprintf(buf, sizeof(buf), fmt, ap);
+	if(as && as->doing_estimate) printf("\nWARNING: %s\n", buf);
+	else
+	{
+		if(as) r=as->write_str(as, CMD_WARNING, buf);
+		logp("WARNING: %s\n", buf);
+	}
+	va_end(ap);
+	cntr_add(conf->cntr, CMD_WARNING, 1);
+	return r;
+}
+
+void log_and_send(struct async *as, const char *msg)
+{
+	logp("%s\n", msg);
+	if(as && as->fd>0) as->write_str(as, CMD_ERROR, msg);
+}
+
+void log_and_send_oom(struct async *as, const char *function)
+{
+	char m[256]="";
+        snprintf(m, sizeof(m), "out of memory in %s()\n", __func__);
+        logp("%s", m);
+        if(as && as->fd>0) as->write_str(as, CMD_ERROR, m);
+}

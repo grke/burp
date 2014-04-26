@@ -422,7 +422,7 @@ int sbuf_fill(struct sbuf *sb, struct async *as, gzFile zp,
 		}
 		else
 		{
-			if(async_read(as, rbuf))
+			if(as->read(as, rbuf))
 			{
 				logp("error in async_read\n");
 				break;

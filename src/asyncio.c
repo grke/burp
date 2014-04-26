@@ -192,7 +192,8 @@ static int do_write_ssl(struct async *as)
 	return 0;
 }
 
-static int append_to_write_buffer(struct async *as, const char *buf, size_t len)
+static int append_to_write_buffer(struct async *as,
+	const char *buf, size_t len)
 {
 	memcpy(as->writebuf+as->writebuflen, buf, len);
 	as->writebuflen+=len;
@@ -200,7 +201,8 @@ static int append_to_write_buffer(struct async *as, const char *buf, size_t len)
 	return 0;
 }
 
-int async_append_all_to_write_buffer(struct async *as, struct iobuf *wbuf)
+static int async_append_all_to_write_buffer(struct async *as,
+	struct iobuf *wbuf)
 {
 	size_t sblen=0;
 	char sbuf[10]="";
@@ -216,24 +218,7 @@ int async_append_all_to_write_buffer(struct async *as, struct iobuf *wbuf)
 	return 0;
 }
 
-int async_init(struct async *as,
-	int afd, SSL *assl, struct conf *conf, int estimate)
-{
-	as->fd=afd;
-	as->ssl=assl;
-	as->max_network_timeout=conf->network_timeout;
-	as->network_timeout=as->max_network_timeout;
-	as->ratelimit=conf->ratelimit;
-	as->rlsleeptime=10000;
-	if((as->doing_estimate=estimate)) return 0;
-
-	if(async_alloc_buf(&as->readbuf, &as->readbuflen)
-	  || async_alloc_buf(&as->writebuf, &as->writebuflen))
-		return -1;
-	return 0;
-}
-
-int async_set_bulk_packets(struct async *as)
+static int async_set_bulk_packets(struct async *as)
 {
 #if defined(IP_TOS) && defined(IPTOS_THROUGHPUT)
 	int opt=IPTOS_THROUGHPUT;
@@ -282,17 +267,13 @@ signal(SIGPIPE, SIG_IGN);
 	*as=NULL;
 }
 
-// For debug purposes.
-static int setsec=1;
-static int setusec=0;
-
-void settimers(int sec, int usec)
+static void async_settimers(struct async *as, int sec, int usec)
 {
-	setsec=sec;
-	setusec=usec;
+	as->setsec=sec;
+	as->setusec=usec;
 }
 
-int async_rw(struct async *as, struct iobuf *rbuf, struct iobuf *wbuf)
+static int async_rw(struct async *as, struct iobuf *rbuf, struct iobuf *wbuf)
 {
         int mfd=-1;
         fd_set fsr;
@@ -341,8 +322,8 @@ int async_rw(struct async *as, struct iobuf *rbuf, struct iobuf *wbuf)
                 add_fd_to_sets(as->fd,
 			doread?&fsr:NULL, dowrite?&fsw:NULL, &fse, &mfd);
 
-                tval.tv_sec=setsec;
-                tval.tv_usec=setusec;
+                tval.tv_sec=as->setsec;
+                tval.tv_usec=as->setusec;
 
                 if(select(mfd+1,
 			doread?&fsr:NULL, dowrite?&fsw:NULL, &fse, &tval)<0)
@@ -360,7 +341,7 @@ int async_rw(struct async *as, struct iobuf *rbuf, struct iobuf *wbuf)
 		  && (!dowrite || !FD_ISSET(as->fd, &fsw)))
 		{
 			// Be careful to avoid 'read quick' mode.
-			if((setsec || setusec)
+			if((as->setsec || as->setusec)
 			  && as->max_network_timeout>0
 			  && as->network_timeout--<=0)
 			{
@@ -418,30 +399,31 @@ static int async_rw_ensure_write(struct async *as,
 	return 0;
 }
 
-int async_read_quick(struct async *as, struct iobuf *rbuf)
+static int async_read_quick(struct async *as, struct iobuf *rbuf)
 {
 	int r;
-	int savesec=setsec;
-	int saveusec=setusec;
-	setsec=0;
-	setusec=0;
-	r=async_rw(as, rbuf, NULL);
-	setsec=savesec;
-	setusec=saveusec;
+	int savesec=as->setsec;
+	int saveusec=as->setusec;
+	as->setsec=0;
+	as->setusec=0;
+	r=as->rw(as, rbuf, NULL);
+	as->setsec=savesec;
+	as->setusec=saveusec;
 	return r;
 }
 
-int async_read(struct async *as, struct iobuf *rbuf)
+static int async_read(struct async *as, struct iobuf *rbuf)
 {
 	return async_rw_ensure_read(as, rbuf, NULL);
 }
 
-int async_write(struct async *as, struct iobuf *wbuf)
+static int async_write(struct async *as, struct iobuf *wbuf)
 {
 	return async_rw_ensure_write(as, NULL, wbuf);
 }
 
-int async_write_strn(struct async *as, char wcmd, const char *wsrc, size_t len)
+static int async_write_strn(struct async *as,
+	char wcmd, const char *wsrc, size_t len)
 {
 	struct iobuf wbuf;
 	wbuf.cmd=wcmd;
@@ -450,12 +432,12 @@ int async_write_strn(struct async *as, char wcmd, const char *wsrc, size_t len)
 	return async_write(as, &wbuf);
 }
 
-int async_write_str(struct async *as, char wcmd, const char *wsrc)
+static int async_write_str(struct async *as, char wcmd, const char *wsrc)
 {
 	return async_write_strn(as, wcmd, wsrc, strlen(wsrc));
 }
 
-int async_read_expect(struct async *as, char cmd, const char *expect)
+static int async_read_expect(struct async *as, char cmd, const char *expect)
 {
 	int ret=0;
 	struct iobuf rbuf;
@@ -471,7 +453,7 @@ int async_read_expect(struct async *as, char cmd, const char *expect)
 	return ret;
 }
 
-int async_simple_loop(struct async *as,
+static int async_simple_loop(struct async *as,
 	struct conf *conf, void *param, const char *caller,
   enum asl_ret callback(struct async *as,
 	struct iobuf *rbuf, struct conf *conf, void *param))
@@ -514,35 +496,36 @@ int async_simple_loop(struct async *as,
 	return -1; // Not reached.
 }
 
-void log_and_send(struct async *as, const char *msg)
+int async_init(struct async *as,
+	int afd, SSL *assl, struct conf *conf, int estimate)
 {
-	logp("%s\n", msg);
-	if(as && as->fd>0) async_write_str(as, CMD_ERROR, msg);
-}
+	as->fd=afd;
+	as->ssl=assl;
+	as->max_network_timeout=conf->network_timeout;
+	as->network_timeout=as->max_network_timeout;
+	as->ratelimit=conf->ratelimit;
+	as->rlsleeptime=10000;
 
-void log_and_send_oom(struct async *as, const char *function)
-{
-	char m[256]="";
-	snprintf(m, sizeof(m), "out of memory in %s()\n", __func__);
-	logp("%s", m);
-	if(as && as->fd>0) async_write_str(as, CMD_ERROR, m);
-}
+	as->rw=async_rw;
+	as->read=async_read;
+	as->write=async_write;
+	as->read_quick=async_read_quick;
 
-// should be in src/log.c
-int logw(struct async *as, struct conf *conf, const char *fmt, ...)
-{
-	int r=0;
-	char buf[512]="";
-	va_list ap;
-	va_start(ap, fmt);
-	vsnprintf(buf, sizeof(buf), fmt, ap);
-	if(as->doing_estimate) printf("\nWARNING: %s\n", buf);
-	else
-	{
-		r=async_write_str(as, CMD_WARNING, buf);
-		logp("WARNING: %s\n", buf);
-	}
-	va_end(ap);
-	cntr_add(conf->cntr, CMD_WARNING, 1);
-	return r;
+	as->setsec=1;
+	as->setusec=0;
+
+	as->write_strn=async_write_strn;
+	as->write_str=async_write_str;
+	as->read_expect=async_read_expect;
+	as->append_all_to_write_buffer=async_append_all_to_write_buffer;
+	as->set_bulk_packets=async_set_bulk_packets;
+	as->simple_loop=async_simple_loop;
+	as->settimers=async_settimers;
+
+	if((as->doing_estimate=estimate)) return 0;
+
+	if(async_alloc_buf(&as->readbuf, &as->readbuflen)
+	  || async_alloc_buf(&as->writebuf, &as->writebuflen))
+		return -1;
+	return 0;
 }

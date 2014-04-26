@@ -18,7 +18,7 @@ static enum asl_ret incexc_recv_func(struct async *as, struct iobuf *rbuf,
 	char **incexc=(char **)param;
 	if(!strcmp(rbuf->buf, endreqstrf))
 	{
-		if(async_write_str(as, CMD_GEN, endrepstrf))
+		if(as->write_str(as, CMD_GEN, endrepstrf))
 			return ASL_END_ERROR;
 		return ASL_END_OK;
 	}
@@ -33,11 +33,11 @@ static int incexc_recv(struct async *as, char **incexc,
 	const char *endreqstr, const char *endrepstr, struct conf *conf)
 {
 	if(*incexc) { free(*incexc); *incexc=NULL; }
-	if(async_write_str(as, CMD_GEN, repstr)) return -1;
+	if(as->write_str(as, CMD_GEN, repstr)) return -1;
 
 	endreqstrf=endreqstr;
 	endrepstrf=endrepstr;
-	if(async_simple_loop(as, conf, incexc, __FUNCTION__, incexc_recv_func))
+	if(as->simple_loop(as, conf, incexc, __FUNCTION__, incexc_recv_func))
 		return -1;
 
 	// Need to put another new line at the end.

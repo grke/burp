@@ -605,7 +605,7 @@ int backup_phase2_server(struct async *as,
 			}
 		}
 
-		if(async_rw(as, rbuf, wbuf))
+		if(as->rw(as, rbuf, wbuf))
 		{
 			logp("error in async_rw in %s()\n", __FUNCTION__);
 			goto end;

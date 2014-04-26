@@ -29,13 +29,13 @@ int do_delete_server(struct async *as,
 				if(arr[i].deletable)
 				{
 					found=1;
-					if(async_write_str(as, CMD_GEN, "ok")
+					if(as->write_str(as, CMD_GEN, "ok")
 					  || delete_backup(sdirs, conf,
 						arr, a, i)) goto end;
 				}
 				else
 				{
-					async_write_str(as, CMD_ERROR,
+					as->write_str(as, CMD_ERROR,
 						"backup not deletable");
 					goto end;
 				}
@@ -46,7 +46,7 @@ int do_delete_server(struct async *as,
 
 	if(backup && *backup && !found)
 	{
-		async_write_str(as, CMD_ERROR, "backup not found");
+		as->write_str(as, CMD_ERROR, "backup not found");
 		goto end;
 	}
 

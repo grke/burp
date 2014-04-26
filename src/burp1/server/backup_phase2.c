@@ -359,19 +359,19 @@ static int do_stuff_to_send(struct async *as,
 	if(p1b->flags & SBUFL_SEND_DATAPTH)
 	{
 		iobuf_copy(&wbuf, &p1b->burp1->datapth);
-		if(async_append_all_to_write_buffer(as, &wbuf)) return 1;
+		if(as->append_all_to_write_buffer(as, &wbuf)) return 1;
 		p1b->flags &= ~SBUFL_SEND_DATAPTH;
 	}
 	if(p1b->flags & SBUFL_SEND_STAT)
 	{
 		iobuf_copy(&wbuf, &p1b->attr);
-		if(async_append_all_to_write_buffer(as, &wbuf)) return 1;
+		if(as->append_all_to_write_buffer(as, &wbuf)) return 1;
 		p1b->flags &= ~SBUFL_SEND_STAT;
 	}
 	if(p1b->flags & SBUFL_SEND_PATH)
 	{
 		iobuf_copy(&wbuf, &p1b->path);
-		if(async_append_all_to_write_buffer(as, &wbuf)) return 1;
+		if(as->append_all_to_write_buffer(as, &wbuf)) return 1;
 		p1b->flags &= ~SBUFL_SEND_PATH;
 		if(*last_requested) free(*last_requested);
 		*last_requested=strdup(p1b->path.buf);
@@ -401,7 +401,7 @@ static int do_stuff_to_send(struct async *as,
 	if(p1b->flags & SBUFL_SEND_ENDOFSIG)
 	{
 		iobuf_from_str(&wbuf, CMD_END_FILE, (char *)"endfile");
-		if(async_append_all_to_write_buffer(as, &wbuf)) return 1;
+		if(as->append_all_to_write_buffer(as, &wbuf)) return 1;
 		p1b->flags &= ~SBUFL_SEND_ENDOFSIG;
 	}
 	return 0;
@@ -452,7 +452,7 @@ static int do_stuff_to_receive(struct async *as,
 
 	iobuf_free_content(rbuf);
 	// This also attempts to write anything in the write buffer.
-	if(async_rw(as, rbuf, NULL))
+	if(as->rw(as, rbuf, NULL))
 	{
 		logp("error in async_rw\n");
 		return -1;
@@ -479,7 +479,7 @@ static int do_stuff_to_receive(struct async *as,
 				  && (app=fwrite(rbuf->buf, 1, rbuf->len, rb->burp1->fp))<=0))
 				{
 					logp("error when appending: %d\n", app);
-					async_write_str(as,
+					as->write_str(as,
 						CMD_ERROR, "write failed");
 					goto error;
 				}
@@ -685,7 +685,7 @@ int backup_phase2_server(struct async *as,
 			// ars==1 means it ended ok.
 			gzclose_fp(&p1zp);
 			//logp("ended OK - write phase2end");
-			if(async_write_str(as, CMD_GEN, "backupphase2end"))
+			if(as->write_str(as, CMD_GEN, "backupphase2end"))
 				goto error;
 		   }
 

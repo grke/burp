@@ -963,5 +963,5 @@ static enum asl_ret cntr_recv_func(struct async *as, struct iobuf *rbuf,
 
 int cntr_recv(struct async *as, struct conf *conf)
 {
-	return async_simple_loop(as, conf, NULL, __FUNCTION__, cntr_recv_func);
+	return as->simple_loop(as, conf, NULL, __FUNCTION__, cntr_recv_func);
 }

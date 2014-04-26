@@ -281,7 +281,7 @@ static int sign_client_cert(struct async *as,
 	// Tell the client that we will do it, and send the server name at the
 	// same time.
 	snprintf(msg, sizeof(msg), "csr ok:%s", conf->ca_server_name);
-	if(async_write_str(as, CMD_GEN, msg))
+	if(as->write_str(as, CMD_GEN, msg))
 	{
 		// Do not goto end, as it will delete things;
 		return -1;
@@ -350,7 +350,7 @@ static enum asl_ret csr_server_func(struct async *as,
 		{
 			logp("But server is not configured to sign client certificate requests.\n");
 			logp("See option 'ca_conf'.\n");
-			async_write_str(as, CMD_ERROR, "server not configured to sign client certificates");
+			as->write_str(as, CMD_ERROR, "server not configured to sign client certificates");
 			return ASL_END_ERROR;
 		}
 		if(sign_client_cert(as, *client, conf))
@@ -362,7 +362,7 @@ static enum asl_ret csr_server_func(struct async *as,
 		// Client does not want to sign a certificate.
 		// No problem, just carry on.
 		logp("Client %s does not want a certificate signed\n", *client);
-		if(async_write_str(as, CMD_GEN, "nocsr ok"))
+		if(as->write_str(as, CMD_GEN, "nocsr ok"))
 			return ASL_END_ERROR;
 		return ASL_END_OK;
 	}
@@ -387,7 +387,7 @@ int ca_server_maybe_sign_client_cert(struct async *as,
 	// Clients before 1.3.2 did not know how to send cert signing requests.
 	if(cli_ver<min_ver) return 0;
 
-	if(async_simple_loop(as, conf, &cconf->cname, __FUNCTION__,
+	if(as->simple_loop(as, conf, &cconf->cname, __FUNCTION__,
 		csr_server_func)) return -1;
 	return csr_done;
 }

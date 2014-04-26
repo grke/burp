@@ -27,9 +27,9 @@ static enum cliret maybe_check_timer(struct async *as,
 	struct iobuf rbuf;
 	iobuf_init(&rbuf);
 
-        if(async_write_str(as, CMD_GEN, phase1str)) goto error;
+        if(as->write_str(as, CMD_GEN, phase1str)) goto error;
 
-        if(async_read(as, &rbuf)) goto error;
+        if(as->read(as, &rbuf)) goto error;
 
         if(rbuf.cmd!=CMD_GEN)
         {
@@ -319,7 +319,7 @@ static enum cliret do_client(struct conf *conf,
 	enum action act=action;
 	struct async *as=NULL;
 
-//	settimers(0, 100);
+//	as->settimers(0, 100);
 
 	logp("begin client\n");
 
@@ -338,7 +338,7 @@ static enum cliret do_client(struct conf *conf,
 	if(act==ACTION_BACKUP
 	  || act==ACTION_BACKUP_TIMED
 	  || act==ACTION_TIMER_CHECK)
-		async_set_bulk_packets(as);
+		as->set_bulk_packets(as);
 
 	if(act!=ACTION_ESTIMATE)
 	{

@@ -32,14 +32,14 @@ static int do_write(struct async *as, BFILE *bfd, FILE *fp,
 	if((ret=bwrite(bfd, out, outlen))<=0)
 	{
 		logp("error when appending %d: %d\n", outlen, ret);
-		async_write_str(as, CMD_ERROR, "write failed");
+		as->write_str(as, CMD_ERROR, "write failed");
 		return -1;
 	}
 #else
 	if((fp && (ret=fwrite(out, 1, outlen, fp))<=0))
 	{
 		logp("error when appending %d: %d\n", outlen, ret);
-		async_write_str(as, CMD_ERROR, "write failed");
+		as->write_str(as, CMD_ERROR, "write failed");
 		return -1;
 	}
 #endif
@@ -106,7 +106,7 @@ int transfer_gzfile_in(struct async *as, const char *path, BFILE *bfd,
 	while(!quit)
 	{
 		iobuf_free_content(rbuf);
-		if(async_read(as, rbuf)) goto end_inflate;
+		if(as->read(as, rbuf)) goto end_inflate;
 		(*rcvd)+=rbuf->len;
 
 		//logp("transfer in: %c:%s\n", rbuf->cmd, rbuf->buf);
@@ -116,7 +116,7 @@ int transfer_gzfile_in(struct async *as, const char *path, BFILE *bfd,
 				if(!fp && !bfd)
 				{
 					logp("given append, but no file to write to\n");
-					async_write_str(as, CMD_ERROR,
+					as->write_str(as, CMD_ERROR,
 						"append with no file");
 					goto end_inflate;
 				}

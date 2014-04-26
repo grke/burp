@@ -140,8 +140,8 @@ int ca_client_setup(struct async *as, struct conf *conf)
 	// key.
 	  || !lstat(conf->ssl_key, &statp))
 	{
-		if(async_write_str(as, CMD_GEN, "nocsr")
-		  || async_read_expect(as, CMD_GEN, "nocsr ok"))
+		if(as->write_str(as, CMD_GEN, "nocsr")
+		  || as->read_expect(as, CMD_GEN, "nocsr ok"))
 		{
 			logp("problem reading from server nocsr\n");
 			goto end;
@@ -152,8 +152,8 @@ int ca_client_setup(struct async *as, struct conf *conf)
 	}
 
 	// Tell the server we want to do a signing request.
-	if(async_write_str(as, CMD_GEN, "csr")
-	  || async_simple_loop(as, conf, NULL, __func__, csr_client_func))
+	if(as->write_str(as, CMD_GEN, "csr")
+	  || as->simple_loop(as, conf, NULL, __func__, csr_client_func))
 		goto end;
 
 	logp("Server will sign a certificate request\n");

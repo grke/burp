@@ -256,7 +256,7 @@ int do_backup_server_burp1(struct async **as,
 		goto error;
 	}
 
-	async_write_str(*as, CMD_GEN, "okbackupend");
+	(*as)->write_str(*as, CMD_GEN, "okbackupend");
 	logp("Backup ending - disconnect from client.\n");
 
 	// Close the connection with the client, the rest of the job

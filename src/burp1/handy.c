@@ -12,7 +12,7 @@ static int do_encryption(struct async *as, EVP_CIPHER_CTX *ctx,
 	}
 	if(*outlen>0)
 	{
-		if(async_write_strn(as, CMD_APPEND,
+		if(as->write_strn(as, CMD_APPEND,
 			(char *)outbuf, (size_t)*outlen)) return -1;
 		if(!MD5_Update(md5, outbuf, *outlen))
 		{
@@ -139,7 +139,7 @@ char *get_endfile_str(unsigned long long bytes, unsigned char *checksum)
 int write_endfile(struct async *as,
 	unsigned long long bytes, unsigned char *checksum)
 {
-	return async_write_str(as,
+	return as->write_str(as,
 		CMD_END_FILE, get_endfile_str(bytes, checksum));
 }
 
@@ -306,7 +306,7 @@ int send_whole_file_gzl(struct async *as,
 			}
 			else
 			{
-				if(async_write_strn(as, CMD_APPEND,
+				if(as->write_strn(as, CMD_APPEND,
 					(char *)out, (size_t)have))
 				{
 					ret=-1;
@@ -357,7 +357,7 @@ int send_whole_file_gzl(struct async *as,
 			}
 			else if(eoutlen>0)
 			{
-			  if(async_write_strn(as, CMD_APPEND,
+			  if(as->write_strn(as, CMD_APPEND,
 				(char *)eoutbuf, (size_t)eoutlen))
 					ret=-1;
 			  else if(!MD5_Update(&md5, eoutbuf, eoutlen))
@@ -414,7 +414,7 @@ static DWORD WINAPI write_efs(PBYTE pbData,
 		logp("MD5_Update() failed\n");
 		return ERROR_FUNCTION_FAILED;
 	}
-	if(async_write_strn(mybuf->as,
+	if(mybuf->as->write_strn(mybuf->as,
 		CMD_APPEND, (const char *)pbData, ulLength))
 	{
 		return ERROR_FUNCTION_FAILED;
@@ -467,7 +467,7 @@ int send_whole_filel(struct async *as,
 				logp("MD5_Update() failed\n");
 				ret=-1;
 			}
-			if(async_write_strn(as, CMD_APPEND, metadata, s))
+			if(as->write_strn(as, CMD_APPEND, metadata, s))
 			{
 				ret=-1;
 			}
@@ -527,7 +527,7 @@ int send_whole_filel(struct async *as,
 				ret=-1;
 				break;
 			}
-			if(async_write_strn(as, CMD_APPEND, buf, s))
+			if(as->write_strn(as, CMD_APPEND, buf, s))
 			{
 				ret=-1;
 				break;
@@ -562,7 +562,7 @@ int send_whole_filel(struct async *as,
 				ret=-1;
 				break;
 			}
-			if(async_write_strn(as, CMD_APPEND, buf, s))
+			if(as->write_strn(as, CMD_APPEND, buf, s))
 			{
 				ret=-1;
 				break;

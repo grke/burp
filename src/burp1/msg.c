@@ -101,6 +101,7 @@ struct winbuf
 	unsigned long long *rcvd;
 	unsigned long long *sent;
 	struct cntr *cntr;
+	struct async *as;
 };
 
 static DWORD WINAPI read_efs(PBYTE pbData, PVOID pvCallbackContext, PULONG ulLength)
@@ -113,7 +114,7 @@ static DWORD WINAPI read_efs(PBYTE pbData, PVOID pvCallbackContext, PULONG ulLen
 
 	while(1)
 	{
-		if(async_read(rbuf))
+		if(async_read(mybuf->as, rbuf))
 			return ERROR_FUNCTION_FAILED;
 		(*(mybuf->rcvd))+=rbuf->len;
 
@@ -143,7 +144,8 @@ static DWORD WINAPI read_efs(PBYTE pbData, PVOID pvCallbackContext, PULONG ulLen
 	return ERROR_FUNCTION_FAILED;
 }
 
-static int transfer_efs_in(BFILE *bfd, unsigned long long *rcvd,
+static int transfer_efs_in(struct async *as,
+	BFILE *bfd, unsigned long long *rcvd,
 	unsigned long long *sent, struct cntr *cntr)
 {
 	int ret=0;
@@ -151,6 +153,7 @@ static int transfer_efs_in(BFILE *bfd, unsigned long long *rcvd,
 	mybuf.rcvd=rcvd;
 	mybuf.sent=sent;
 	mybuf.cntr=cntr;
+	mybuf.as=as;
 	if((ret=WriteEncryptedFileRaw((PFE_IMPORT_FUNC)read_efs,
 		&mybuf, bfd->pvContext)))
 			logp("WriteEncryptedFileRaw returned %d\n", ret);
@@ -183,7 +186,7 @@ int transfer_gzfile_in(struct async *as,
 
 #ifdef HAVE_WIN32
 	if(sb && sb->path.cmd==CMD_EFS_FILE)
-		return transfer_efs_in(bfd, rcvd, sent, cntr);
+		return transfer_efs_in(as, bfd, rcvd, sent, cntr);
 #endif
 
 	//if(!MD5_Init(&md5))

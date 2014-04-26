@@ -96,15 +96,16 @@ int open_file_for_sendl(struct async *as,
 			{
 				// Close the open bfd so that it can be
 				// used again
-				close_file_for_sendl(bfd, NULL);
+				close_file_for_sendl(bfd, NULL, as);
 			}
 		}
 		binit(bfd, winattr, conf);
 		*datalen=0;
-		if(bopen(bfd, fname, O_RDONLY|O_BINARY|atime?0:O_NOATIME, 0)<=0)
+		if(bopen(bfd, as,
+			fname, O_RDONLY|O_BINARY|atime?0:O_NOATIME, 0)<=0)
 		{
 			berrno be;
-			logw(conf, "Could not open %s: %s\n",
+			logw(as, conf, "Could not open %s: %s\n",
 				fname, be.bstrerror(errno));
 			return -1;
 		}
@@ -113,11 +114,11 @@ int open_file_for_sendl(struct async *as,
 	return 0;
 }
 
-int close_file_for_sendl(BFILE *bfd, FILE **fp)
+int close_file_for_sendl(BFILE *bfd, FILE **fp, struct async *as)
 {
 	if(fp) return close_fp(fp);
 #ifdef HAVE_WIN32
-	if(bfd) return bclose(bfd);
+	if(bfd) return bclose(bfd, as);
 #endif
 	return -1;
 }
@@ -400,6 +401,7 @@ struct winbuf
 	const char *datapth;
 	struct conf *conf;
 	unsigned long long *bytes;
+	struct async *as;
 };
 
 static DWORD WINAPI write_efs(PBYTE pbData,
@@ -412,14 +414,15 @@ static DWORD WINAPI write_efs(PBYTE pbData,
 		logp("MD5_Update() failed\n");
 		return ERROR_FUNCTION_FAILED;
 	}
-	if(async_write_strn(CMD_APPEND, (const char *)pbData, ulLength))
+	if(async_write_strn(mybuf->as,
+		CMD_APPEND, (const char *)pbData, ulLength))
 	{
 		return ERROR_FUNCTION_FAILED;
 	}
 	if(mybuf->quick_read)
 	{
 		int qr;
-		if((qr=do_quick_read(mybuf->datapth, mybuf->conf))<0)
+		if((qr=do_quick_read(mybuf->as, mybuf->datapth, mybuf->conf))<0)
 			return ERROR_FUNCTION_FAILED;
 		if(qr) // client wants to interrupt
 			return ERROR_FUNCTION_FAILED;
@@ -486,6 +489,7 @@ int send_whole_filel(struct async *as,
 			mybuf.datapth=datapth;
 			mybuf.conf=conf;
 			mybuf.bytes=bytes;
+			mybuf.as=as;
 			// The EFS read function, ReadEncryptedFileRaw(),
 			// works in an annoying way. You have to give it a
 			// function that it calls repeatedly every time the
@@ -523,7 +527,7 @@ int send_whole_filel(struct async *as,
 				ret=-1;
 				break;
 			}
-			if(async_write_strn(CMD_APPEND, buf, s))
+			if(async_write_strn(as, CMD_APPEND, buf, s))
 			{
 				ret=-1;
 				break;
@@ -531,7 +535,7 @@ int send_whole_filel(struct async *as,
 			if(quick_read)
 			{
 				int qr;
-				if((qr=do_quick_read(datapth, conf))<0)
+				if((qr=do_quick_read(as, datapth, conf))<0)
 				{
 					ret=-1;
 					break;

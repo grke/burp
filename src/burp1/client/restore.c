@@ -57,12 +57,13 @@ end:
 	return ret;
 }
 
-static int make_link(const char *fname, const char *lnk, char cmd, const char *restoreprefix, struct conf *conf)
+static int make_link(struct async *as, const char *fname, const char *lnk,
+	char cmd, const char *restoreprefix, struct conf *conf)
 {
 	int ret=-1;
 
 #ifdef HAVE_WIN32
-	logw(conf, "windows seems not to support hardlinks or symlinks\n");
+	logw(as, conf, "windows seems not to support hardlinks or symlinks\n");
 #else
 	unlink(fname);
 	if(cmd==CMD_HARD_LINK)
@@ -110,7 +111,7 @@ static int open_for_restore(struct async *as, BFILE *bfd, FILE **fp,
 		}
 		else
 		{
-			if(bclose(bfd))
+			if(bclose(bfd, as))
 			{
 				logp("error closing %s in %s()\n",
 					path, __FUNCTION__);
@@ -123,7 +124,7 @@ static int open_for_restore(struct async *as, BFILE *bfd, FILE **fp,
 		set_win32_backup(bfd);
 	else
 		bfd->use_backup_api=0;
-	if(bopen(bfd, path, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,
+	if(bopen(bfd, as, path, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,
 		S_IRUSR | S_IWUSR)<=0)
 	{
 		berrno be;
@@ -267,7 +268,7 @@ static int restore_special(struct async *as, struct sbuf *sb,
 	int ret=0;
 	char *rpath=NULL;
 #ifdef HAVE_WIN32
-	logw(conf, "Cannot restore special files to Windows: %s\n", fname);
+	logw(as, conf, "Cannot restore special files to Windows: %s\n", fname);
 	goto end;
 #else
 	struct stat statp=sb->statp;
@@ -403,7 +404,7 @@ static int restore_link(struct async *as, struct sbuf *sb, const char *fname,
 				ret=-1;
 			goto end;
 		}
-		else if(make_link(fname, sb->link.buf, sb->link.cmd,
+		else if(make_link(as, fname, sb->link.buf, sb->link.cmd,
 			restoreprefix, conf))
 		{
 			// failed - do a warning
@@ -786,7 +787,7 @@ end:
 
 #ifdef HAVE_WIN32
 	// It is possible for a bfd to still be open.
-	bclose(&bfd);
+	bclose(&bfd, as);
 #endif
 
 	cntr_print_end(conf->cntr);

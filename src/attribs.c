@@ -264,7 +264,7 @@ int attribs_set(struct async *as, const char *path,
 
 #ifdef HAVE_WIN32
 	win32_chmod(path, statp->st_mode, winattr);
-	set_file_times(path, &ut, statp, conf);
+	set_file_times(as, path, &ut, statp, conf);
 	return 0;
 #endif
 

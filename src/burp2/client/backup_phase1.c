@@ -46,7 +46,7 @@ static int do_to_server(struct async *as,
 
 #ifdef HAVE_WIN32
 	if(conf->split_vss && !conf->strip_vss
-	  && maybe_send_extrameta(ff->fname, cmd, sb, conf, metasymbol))
+	  && maybe_send_extrameta(as, ff->fname, cmd, sb, conf, metasymbol))
 		return -1;
 #endif
 
@@ -59,8 +59,9 @@ static int do_to_server(struct async *as,
 	if(conf->split_vss && !conf->strip_vss
 	// FIX THIS: May have to check that it is not a directory here.
 	  && !S_ISDIR(sb->statp.st_mode) // does this work?
-	  && maybe_send_extrameta(ff->fname, cmd, sb, conf, vss_trail_symbol))
-		return -1;
+	  && maybe_send_extrameta(as,
+		ff->fname, cmd, sb, conf, vss_trail_symbol))
+			return -1;
 	return 0;
 #else
 	return maybe_send_extrameta(as, ff->fname, cmd, sb, conf, metasymbol);
@@ -103,7 +104,7 @@ int send_file(struct async *as, FF_PKT *ff, bool top_level, struct conf *conf)
 		if(ff->type==FT_REG
 		  || ff->type==FT_DIR)
 			return to_server(as, conf, ff, sb, CMD_EFS_FILE);
-		return logw(conf, "EFS type %d not yet supported: %s",
+		return logw(as, conf, "EFS type %d not yet supported: %s",
 			ff->type, ff->fname);
 	}
 #endif

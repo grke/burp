@@ -61,14 +61,6 @@ static int parse_readbuf(struct async *as, struct iobuf *rbuf)
 	return 0;
 }
 
-struct async *async_alloc(void)
-{
-	struct async *as;
-	if(!(as=(struct async *)calloc(1, sizeof(struct async))))
-		log_out_of_memory(__func__);
-	return as;
-}
-
 static int async_alloc_buf(char **buf, size_t *buflen)
 {
 	if(!*buf && !(*buf=(char *)malloc(bufmaxsize)))
@@ -77,6 +69,30 @@ static int async_alloc_buf(char **buf, size_t *buflen)
 		return -1;
 	}
 	truncate_buf(buf, buflen);
+	return 0;
+}
+
+static int do_read(struct async *as)
+{
+	ssize_t r;
+	r=read(as->fd, as->readbuf+as->readbuflen, bufmaxsize-as->readbuflen);
+	if(r<0)
+	{
+		if(errno==EAGAIN || errno==EINTR)
+			return 0;
+		logp("read problem in %s\n", __func__);
+		truncate_buf(&as->readbuf, &as->readbuflen);
+		return -1;
+	}
+	else if(!r)
+	{
+		// End of data.
+		logp("end of data in %s\n", __func__);
+		truncate_buf(&as->readbuf, &as->readbuflen);
+		return -1;
+	}
+	as->readbuflen+=r;
+	as->readbuf[as->readbuflen]='\0';
 	return 0;
 }
 
@@ -91,13 +107,11 @@ static int do_read_ssl(struct async *as)
 	switch(SSL_get_error(as->ssl, r))
 	{
 	  case SSL_ERROR_NONE:
-		//logp("read: %d\n", r);
 		as->readbuflen+=r;
 		as->readbuf[as->readbuflen]='\0';
 		break;
 	  case SSL_ERROR_ZERO_RETURN:
-		/* end of data */
-		//logp("zero return!\n");
+		// End of data.
 		SSL_shutdown(as->ssl);
 		truncate_buf(&as->readbuf, &as->readbuflen);
 		return -1;
@@ -113,7 +127,7 @@ static int do_read_ssl(struct async *as)
 			errno, strerror(errno));
 		// Fall through to read problem
 	  default:
-		logp("SSL read problem\n");
+		logp("SSL read problem in %s\n", __func__);
 		truncate_buf(&as->readbuf, &as->readbuflen);
 		return -1;
 	}
@@ -158,6 +172,31 @@ static int check_ratelimit(struct async *as)
 	return 0;
 }
 
+static int do_write(struct async *as)
+{
+	ssize_t w;
+	if(as->ratelimit && check_ratelimit(as)) return 0;
+
+	w=write(as->fd, as->writebuf, as->writebuflen);
+	if(w<0)
+	{
+		if(errno==EAGAIN || errno==EINTR)
+			return 0;
+		logp("Got error in %s, errno=%d (%s)\n", __func__,
+			errno, strerror(errno));
+		return -1;
+	}
+	else if(!w)
+	{
+		logp("Wrote nothing in %s\n", __func__);
+		return -1;
+	}
+	if(as->ratelimit) as->rlbytes+=w;
+	memmove(as->writebuf, as->writebuf+w, as->writebuflen-w);
+	as->writebuflen-=w;
+	return 0;
+}
+
 static int do_write_ssl(struct async *as)
 {
 	ssize_t w;
@@ -181,7 +220,7 @@ static int do_write_ssl(struct async *as)
 	  case SSL_ERROR_SYSCALL:
 		if(errno==EAGAIN || errno==EINTR)
 			break;
-		logp("Got SSL_ERROR_SYSCALL in write, errno=%d (%s)\n",
+		logp("Got SSL_ERROR_SYSCALL in %s, errno=%d (%s)\n", __func__,
 			errno, strerror(errno));
 		// Fall through to write problem
 	  default:
@@ -301,11 +340,7 @@ static int async_rw(struct async *as, struct iobuf *rbuf, struct iobuf *wbuf)
 
 	if(doread)
 	{
-		if(parse_readbuf(as, rbuf))
-		{
-			logp("error in parse_readbuf\n");
-			return -1;
-		}
+		if(parse_readbuf(as, rbuf)) return -1;
 		if(rbuf->buf) return 0;
 
 		if(as->read_blocked_on_write) doread=0;
@@ -361,41 +396,44 @@ static int async_rw(struct async *as, struct iobuf *rbuf, struct iobuf *wbuf)
 
                 if(doread && FD_ISSET(as->fd, &fsr)) // able to read
                 {
-			int r;
-			as->read_blocked_on_write=0;
-			if(do_read_ssl(as)) return -1;
-			if((r=parse_readbuf(as, rbuf)))
-				logp("error in second parse_readbuf\n");
-			return r;
+			if(as->ssl)
+			{
+				as->read_blocked_on_write=0;
+				if(do_read_ssl(as)) return -1;
+			}
+			else
+			{
+				if(do_read(as)) return -1;
+			}
+			return parse_readbuf(as, rbuf);
                 }
 
                 if(dowrite && FD_ISSET(as->fd, &fsw)) // able to write
 		{
-			int r=0;
-			as->write_blocked_on_read=0;
-
-			if((r=do_write_ssl(as)))
-				logp("error in do_write\n");
-			return r;
+			if(as->ssl)
+			{
+				as->write_blocked_on_read=0;
+				return do_write_ssl(as);
+			}
+			else
+				return do_write(as);
 		}
         }
 
         return 0;
 }
 
-static int async_rw_ensure_read(struct async *as,
-	struct iobuf *rbuf, struct iobuf *wbuf)
+static int async_read(struct async *as, struct iobuf *rbuf)
 {
 	if(as->doing_estimate) return 0;
-	while(!rbuf->buf) if(async_rw(as, rbuf, wbuf)) return -1;
+	while(!rbuf->buf) if(async_rw(as, rbuf, NULL)) return -1;
 	return 0;
 }
 
-static int async_rw_ensure_write(struct async *as,
-	struct iobuf *rbuf, struct iobuf *wbuf)
+static int async_write(struct async *as, struct iobuf *wbuf)
 {
 	if(as->doing_estimate) return 0;
-	while(wbuf->len) if(async_rw(as, rbuf, wbuf)) return -1;
+	while(wbuf->len) if(async_rw(as, NULL, wbuf)) return -1;
 	return 0;
 }
 
@@ -410,16 +448,6 @@ static int async_read_quick(struct async *as, struct iobuf *rbuf)
 	as->setsec=savesec;
 	as->setusec=saveusec;
 	return r;
-}
-
-static int async_read(struct async *as, struct iobuf *rbuf)
-{
-	return async_rw_ensure_read(as, rbuf, NULL);
-}
-
-static int async_write(struct async *as, struct iobuf *wbuf)
-{
-	return async_rw_ensure_write(as, NULL, wbuf);
 }
 
 static int async_write_strn(struct async *as,
@@ -496,7 +524,7 @@ static int async_simple_loop(struct async *as,
 	return -1; // Not reached.
 }
 
-int async_init(struct async *as,
+static int async_init(struct async *as,
 	int afd, SSL *assl, struct conf *conf, int estimate)
 {
 	as->fd=afd;
@@ -528,4 +556,14 @@ int async_init(struct async *as,
 	  || async_alloc_buf(&as->writebuf, &as->writebuflen))
 		return -1;
 	return 0;
+}
+
+struct async *async_alloc(void)
+{
+	struct async *as;
+	if(!(as=(struct async *)calloc(1, sizeof(struct async))))
+		log_out_of_memory(__func__);
+	else
+		as->init=async_init;
+	return as;
 }

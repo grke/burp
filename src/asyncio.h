@@ -48,6 +48,7 @@ struct async
 	int setusec;
 
 	// Let us try using function pointers.
+	int (*init)(struct async *, int, SSL *, struct conf *, int);
 	// This one can return without completing the read or write, so check
 	// rbuf->buf and/or wbuf->len.
 	int (*rw)(struct async *, struct iobuf *, struct iobuf *);
@@ -66,8 +67,6 @@ struct async
 };
 
 extern struct async *async_alloc(void);
-extern int async_init(struct async *as,
-	int afd, SSL *assl, struct conf *conf, int estimate);
 extern void async_free(struct async **as);
 
 #endif

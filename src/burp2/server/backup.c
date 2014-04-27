@@ -84,17 +84,54 @@ static int clean_rubble(struct async *as, struct sdirs *sdirs)
 	return 0;
 }
 
-int do_backup_server(struct async **as, struct sdirs *sdirs, struct conf *cconf,
-	const char *incexc, int resume)
+static struct async *setup_champ_chooser(struct sdirs *sdirs, struct conf *conf)
+{
+	int champsock=-1;
+	char *champname=NULL;
+	struct async *chas=NULL;
+
+	// Connect to champ chooser now.
+	// This may start up a new champ chooser. On a machine with multiple
+	// cores, it may be faster to do now, way before it is actually needed
+	// in phase2.
+	if((champsock=connect_to_champ_chooser(sdirs, conf))<0)
+	{
+		logp("could not connect to champ chooser");
+		goto error;
+	}
+
+	if(!(chas=async_alloc())
+	  || chas->init(chas, champsock, NULL /* no SSL */, conf, 0))
+		goto error;
+
+	if(!(champname=prepend("cname",
+		conf->cname, strlen(conf->cname), ":")))
+			goto error;
+
+	if(chas->write_str(chas, CMD_GEN, champname)
+	  || chas->read_expect(chas, CMD_GEN, "cname ok"))
+		goto error;
+
+	free(champname);
+	return chas;
+error:
+	free(champname);
+	async_free(&chas);
+	close_fd(&champsock);
+	return NULL;
+}
+
+int do_backup_server(struct async **as, struct sdirs *sdirs,
+	struct conf *cconf, const char *incexc, int resume)
 {
 	int ret=0;
-	int champsock=-1;
 	char msg[256]="";
 	// Real path to the working directory
 	char *realworking=NULL;
 	// Real path to the manifest directory
 	char *manifest_dir=NULL;
 	char tstmp[64]="";
+	struct async *chas=NULL;
 
 	logp("in do_backup_server\n");
 
@@ -148,15 +185,9 @@ int do_backup_server(struct async **as, struct sdirs *sdirs, struct conf *cconf,
 		goto error;
 	}
 
-	// Connect to champ chooser now.
-	// This may start up a new champ chooser. On a machine with multiple
-	// cores, it may be faster to do now, way before it is actually needed
-	// in phase2.
-	if((champsock=connect_to_champ_chooser(sdirs, cconf))<0)
+	if(!(chas=setup_champ_chooser(sdirs, cconf)))
 	{
-		snprintf(msg, sizeof(msg),
-			"could not connect to champ chooser");
-		log_and_send(*as, msg);
+		log_and_send(*as, "problem connecting to champ chooser");
 		goto error;
 	}
 
@@ -166,8 +197,7 @@ int do_backup_server(struct async **as, struct sdirs *sdirs, struct conf *cconf,
 		goto error;
 	}
 
-	if(backup_phase2_server(*as, sdirs, manifest_dir,
-		champsock, resume, cconf))
+	if(backup_phase2_server(*as, sdirs, manifest_dir, chas, resume, cconf))
 	{
 		logp("error in phase2\n");
 		goto error;
@@ -209,6 +239,6 @@ end:
 	set_logfp(NULL, cconf);
 	if(manifest_dir) free(manifest_dir);
 	if(realworking) free(realworking);
-	close_fd(&champsock);
+	async_free(&chas);
 	return ret;
 }

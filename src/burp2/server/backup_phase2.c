@@ -190,7 +190,7 @@ static void dump_blks(const char *msg, struct blk *b)
 }
 */
 
-static int add_to_sig_list(int champsock,
+static int add_to_sig_list(struct async *chas,
 	struct slist *slist, struct blist *blist,
 	struct iobuf *rbuf, struct dpth *dpth,
 	uint64_t *wrap_up, struct conf *conf)
@@ -206,10 +206,11 @@ static int add_to_sig_list(int champsock,
         if(!sb->burp2->bstart) sb->burp2->bstart=blk;
         if(!sb->burp2->bsighead) sb->burp2->bsighead=blk;
 
-write(champsock, rbuf->buf, rbuf->len);
-
 	// FIX THIS: Should not just load into strings.
 	if(split_sig(rbuf->buf, rbuf->len, blk->weak, blk->strong)) return -1;
+
+	printf("Writing!\n");
+	if(chas->write(chas, rbuf)) return -1;
 
 	if(deduplicate_maybe(blk, dpth, conf, wrap_up)<0) return -1;
 
@@ -219,7 +220,7 @@ write(champsock, rbuf->buf, rbuf->len);
 static int deal_with_read(struct iobuf *rbuf,
 	struct slist *slist, struct blist *blist, struct conf *conf,
 	int *sigs_end, int *backup_end, struct dpth *dpth, uint64_t *wrap_up,
-	int champsock)
+	struct async *chas)
 {
 	int ret=0;
 	static struct sbuf *inew=NULL;
@@ -247,7 +248,7 @@ static int deal_with_read(struct iobuf *rbuf,
 			if(set_up_for_sig_info(slist, blist, inew)) goto error;
 			return 0;
 		case CMD_SIG:
-			if(add_to_sig_list(champsock, slist, blist,
+			if(add_to_sig_list(chas, slist, blist,
 				rbuf, dpth, wrap_up, conf))
 					goto error;
 			goto end;
@@ -540,7 +541,7 @@ end:
 
 int backup_phase2_server(struct async *as,
 	struct sdirs *sdirs, const char *manifest_dir,
-	int champsock, int resume, struct conf *conf)
+	struct async *chas, int resume, struct conf *conf)
 {
 	int ret=-1;
 	int sigs_end=0;
@@ -612,7 +613,7 @@ int backup_phase2_server(struct async *as,
 		}
 
 		if(rbuf->buf && deal_with_read(rbuf, slist, blist, conf,
-			&sigs_end, &backup_end, dpth, &wrap_up, champsock))
+			&sigs_end, &backup_end, dpth, &wrap_up, chas))
 				goto end;
 
 		if(write_to_changed_file(chmanio,

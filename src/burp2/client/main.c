@@ -331,7 +331,7 @@ static enum cliret do_client(struct conf *conf,
 		goto error;
 
 	if(!(as=async_alloc())
-	  || async_init(as, rfd, ssl, conf, act==ACTION_ESTIMATE))
+	  || as->init(as, rfd, ssl, conf, act==ACTION_ESTIMATE))
 		goto error;
 
 	// Set quality of service bits on backup packets.

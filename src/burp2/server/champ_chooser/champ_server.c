@@ -228,8 +228,7 @@ static int do_write(struct clifd *c)
 	return 0;
 }
 
-static int champ_loop(int s, struct clifd **clifds,
-	int *started, struct conf *conf)
+static int champ_rw(int s, struct clifd **clifds, int *started, int doread)
 {
 	int mfd=-1;
 	fd_set fsr;
@@ -243,24 +242,27 @@ static int champ_loop(int s, struct clifd **clifds,
 
 	for(c=*clifds; c; c=c->next)
 	{
-		if(parse_readbuf(c, c->rbuf)) return -1;
-		if(c->rbuf->buf) return 0;
+		if(doread)
+		{
+			if(parse_readbuf(c, c->rbuf)) return -1;
+			if(c->rbuf->buf) return 0;
+		}
 		if(c->writebuflen) dowrite=1;
 	}
 
-	FD_ZERO(&fsr);
-	FD_ZERO(&fsw);
+	if(doread) FD_ZERO(&fsr);
+	if(dowrite) FD_ZERO(&fsw);
 	FD_ZERO(&fse);
 
 	tval.tv_sec=1;
 	tval.tv_usec=0;
 
-	add_fd_to_sets(s, &fsr, NULL, &fse, &mfd);
+	if(doread && s>=0) add_fd_to_sets(s, &fsr, NULL, &fse, &mfd);
 	for(c=*clifds; c; c=c->next)
-		add_fd_to_sets(c->fd, &fsr,
+		add_fd_to_sets(c->fd, doread?&fsr:NULL,
 			c->writebuflen?&fsw:NULL, &fse, &mfd);
 
-	if(select(mfd+1, &fsr, dowrite?&fsw:NULL, &fse, &tval)<0)
+	if(select(mfd+1, doread?&fsr:NULL, dowrite?&fsw:NULL, &fse, &tval)<0)
 	{
 		if(errno!=EAGAIN && errno!=EINTR)
 		{
@@ -281,7 +283,7 @@ static int champ_loop(int s, struct clifd **clifds,
 			clifd_free(c);
 			break;
 		}
-		if(FD_ISSET(c->fd, &fsr))
+		if(doread && FD_ISSET(c->fd, &fsr))
 		{
 			if(do_read(c))
 			{
@@ -303,18 +305,20 @@ static int champ_loop(int s, struct clifd **clifds,
 		}
 	}
 
+	if(s<0) return 0;
+
 	if(FD_ISSET(s, &fse))
 	{
 		logp("main champ chooser server socket had an exception\n");
 		goto error;
 	}
 
-	if(FD_ISSET(s, &fsr))
+	if(doread && FD_ISSET(s, &fsr))
 	{
 		// Incoming client.
 		if(champ_chooser_incoming_client(s, clifds))
 			goto error;
-		*started=1;
+		if(started) *started=1;
 	}
 
 	return 0;
@@ -322,7 +326,24 @@ error:
 	return -1;
 }
 
-static int deal_with_client_rbuf(struct clifd *c)
+static int ensure_write(struct clifd **clifds,
+	struct clifd *c, struct iobuf *wbuf)
+{
+	while(1)
+	{
+		append_all_to_write_buffer(c, wbuf);
+		if(!wbuf->len) return 0;
+
+		// Was unable to empty wbuf. Attempt to write.
+		if(champ_rw(-1 /* unused main fd */,
+			clifds, NULL, 0 /* doread */))
+				return -1;
+	}
+	// Never reached.
+	return -1;
+}
+
+static int deal_with_client_rbuf(struct clifd **clifds, struct clifd *c)
 {
 	if(c->rbuf->cmd==CMD_GEN)
 	{
@@ -338,7 +359,10 @@ static int deal_with_client_rbuf(struct clifd *c)
 			logp("%d has name: %s\n", c->fd, c->cname);
 			iobuf_set(&wbuf, CMD_GEN,
 				(char *)"cname ok", strlen("cname ok"));
-			if(append_all_to_write_buffer(c, &wbuf))
+
+			// FIX THIS: this will fail without a log message.
+			// Need to do something like async_write().
+			if(ensure_write(clifds, c, &wbuf))
 				return -1;
 		}
 		else
@@ -349,7 +373,8 @@ static int deal_with_client_rbuf(struct clifd *c)
 	}
 	else
 	{
-		printf("Got read from %d: %s\n", c->fd, c->rbuf->buf);
+		static int x=0;
+		printf("%d: Got read from %d: %s\n", x++, c->fd, c->rbuf->buf);
 	}
 	iobuf_free_content(c->rbuf);
 	return 0;
@@ -411,7 +436,7 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf *conf)
 	if(champ_chooser_init(sdirs->data, conf))
 		goto end;
 
-	while(!champ_loop(s, &clifds, &started, conf))
+	while(!champ_rw(s, &clifds, &started, 1 /* doread */))
 	{
 		for(c=clifds; c; c=c->next)
 		{
@@ -419,7 +444,7 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf *conf)
 			{
 				if(parse_readbuf(c, c->rbuf)) goto end;
 				if(!c->rbuf->buf) break;
-				if(deal_with_client_rbuf(c)) goto end;
+				if(deal_with_client_rbuf(&clifds, c)) goto end;
 			}
 		}
 		if(started && !clifds)

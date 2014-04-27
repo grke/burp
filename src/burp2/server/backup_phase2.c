@@ -212,7 +212,7 @@ static int add_to_sig_list(struct async *chas,
 	printf("Writing!\n");
 	if(chas->write(chas, rbuf)) return -1;
 
-	if(deduplicate_maybe(blk, dpth, conf, wrap_up)<0) return -1;
+	//if(deduplicate_maybe(blk, dpth, conf, wrap_up)<0) return -1;
 
 	return 0;
 }
@@ -327,9 +327,9 @@ static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, struct bl
 
 	if(sb->burp2->bsighead->got==INCOMING)
 	{
-		if(sigs_end
-		  && deduplicate(sb->burp2->bsighead, dpth, conf, wrap_up))
-			return -1;
+//		if(sigs_end
+//		  && deduplicate(sb->burp2->bsighead, dpth, conf, wrap_up))
+//			return -1;
 		return 0;
 	}
 

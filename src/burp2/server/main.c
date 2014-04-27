@@ -177,7 +177,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *conffile, int
 		goto end;
 	}
 	if(!(as=async_alloc())
-	  || async_init(as, *cfd, ssl, conf, 0))
+	  || as->init(as, *cfd, ssl, conf, 0))
 		goto end;
 	if(authorise_server(as, conf, cconf)
 	  || !cconf->cname || !*(cconf->cname))

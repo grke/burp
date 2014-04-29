@@ -980,6 +980,19 @@ INCLUDES / EXCLUDES
 	      based on the 'include' options. If you want no drives  to
 	      have snapshots taken of them, you can specify '0'.
 
+       atime=[0|1]
+	      This allows you to control whether the client uses O_NOA‐
+	      TIME when opening files and directories. The  default  is
+	      0,  which  enables  O_NOATIME. This means that the client
+	      can read	files  and  directories  without  updating  the
+	      access  times.  However, this is only possible if you are
+	      running as root, or are the owner of the file  or  direc‐
+	      tory.  If  this  is  not	the case (perhaps you only have
+	      group or world access to the files), you will get  errors
+	      until  you  set  atime=1.  With atime=1, the access times
+	      will be updated on the files  and  directories  that  get
+	      backed up.
+
 
 SERVER CLIENTCONFDIR FILE
        For  the  server  to know about clients that can contact it, you

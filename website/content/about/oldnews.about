@@ -9,6 +9,238 @@
 <TD></TD>
 <TD ALIGN="LEFT">
 
+<P>
+<FONT COLOR="#99CCFF">2013-10-02:
+<BR>
+Many thanks to the following donors for financially supporting burp during
+September:
+<pre>
+  *  &pound;43.00 Sebastien C.
+</pre>
+</FONT>
+</p>
+
+<P>
+<FONT COLOR="#99CCFF">2013-10-02: burp-1.4.4 and burp-1.3.38 are released.
+<br>
+1.4.4 is for new features. 1.3.38 is the candidate for a stable version, to
+which only bug fixes will be added.
+<pre>
+Changes in burp-1.4.4
+  * Bug fix for include_glob xmalloc success check on Windows.
+  * Fix long list and status monitor output when a directory argument is given.
+  * Fix restore problem with backups containing both compressed and
+    uncompressed files.
+  * Bug fix for an interrupted backup causing a resume when a restore_client
+    connects.
+  * Bug fix for defaulting 'resume partial' to off.
+
+Changes in burp-1.3.38:
+  * Fix long list and status monitor output when a directory argument is given.
+  * Fix restore problem with backups containing both compressed and
+    uncompressed files.
+  * Bug fix for an interrupted backup causing a resume when a restore_client
+    connects.
+  * Bug fix for defaulting 'resume partial' to off.
+</pre>
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">2013-09-02:
+<BR>
+Many thanks to the following donors for financially supporting burp during
+August:
+<pre>
+  *  &pound;43.00 Sebastien C.
+</pre>
+</FONT>
+</p>
+
+<P>
+<FONT COLOR="#99CCFF">2013-09-02: burp-1.4.2 is released.
+<br>
+<pre>
+Changes in burp-1.4.2:
+  * Add a machine-readable statistics file to each backup directory.
+</pre>
+</FONT>
+</P>
+
+
+<P>
+<FONT COLOR="#99CCFF">2013-07-29:
+<BR>
+Many thanks to the following donors for financially supporting burp during
+July:
+<pre>
+  *  &pound;10.00 Jean L.
+</pre>
+</FONT>
+</p>
+
+<P>
+<FONT COLOR="#99CCFF">2013-07-29: burp-1.4.0 and burp-1.3.36 are released.
+<br>
+1.4.0 is for new features. 1.3.36 is the candidate for a stable version, to
+which only bug fixes will be added.
+<pre>
+Changes in burp-1.4.0
+  * Add Abbas Khan's RHEL spec files and related things.
+  * Add Benjamin Sans's include_glob feature.
+
+Changes in burp-1.3.36:
+  * Fix truncation of timestamps in the live status monitor.
+  * Default the 'resume partial' feature to being off, and add an option to
+    turn it on.
+  * Upgraded Windows cross tools to:
+        + binutils-2.23.1
+        + gcc-4.7.3
+        + gmp-5.1.2
+        + mingw-w64-v2.0.8
+        + mpc-1.0.1
+        + mpfr-3.1.2
+  * Upgraded Windows depkgs to:
+        + openssl-1.0.1e
+        + zlib-1.2.8
+        + pcre-8.33
+</pre>
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">2013-06-29:
+<BR>
+Many thanks to the following donors for financially supporting burp during
+June:
+<pre>
+  *  &pound;25.00 Louwris W.
+  *  &pound;20.00 Morgan S.
+</pre>
+</FONT>
+</p>
+
+
+<P>
+<FONT COLOR="#99CCFF">2013-06-29: burp-1.3.34 is released.
+<pre>
+Changes in burp-1.3.34:
+  * Contributions from Avi Rozen:
+        + Major autoconf cleanup.
+        + Initial support for cross-building android targets.
+  * On the server, indicate where logging is occurring.
+  * Fix bedup segfault when using -m with no argument.
+</pre>
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">2013-05-31:
+<BR>
+Many thanks to the following donors for financially supporting burp during
+May:
+<pre>
+  *  &pound;30.00 Sebastian A.
+</pre>
+</FONT>
+</p>
+
+<P>
+<FONT COLOR="#99CCFF">2013-05-31: burp-1.3.32 is released.
+<pre>
+Changes in burp-1.3.32:
+  * Fix status monitor segfault.
+  * Run timed backups with lower thread priority on Windows.
+  * Add 'vss_drives' option, which gives the ability to specify which Windows
+    drives get a VSS snapshot.
+</pre>
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">2013-05-02:
+<BR>
+Many thanks to the following donors for financially supporting burp during
+April:
+<pre>
+  *  &pound;25.00 Eduardo R.
+</pre>
+Donations by bitcoin are now being accepted at: 1PFtePS2YE5i5dTX17ozJPHrjKu2UqBLmi
+</FONT>
+</p>
+
+<P>
+<FONT COLOR="#99CCFF">2013-03-30: burp-1.3.30 is released.
+<pre>
+Changes in burp-1.3.30:
+  * Add a warning when run on Windows without admin privileges.
+  * Perform fewer lstat()s on systems that support d_type (ie most Linux
+    systems), in order to speed up certain operations.
+  * Allow _FORTIFY_SOURCE to work.
+  * Fix problem with burp_ca.bat and repeated field names in burp.conf.
+  * Put registry keys back in the Windows installer.
+  * Fix for SIGHUP reload causing the server to go into non-forking mode.
+  * Indicate the backups that are deletable.
+  * Add a client option for deleting deletable backups.
+  * Add a 'client_can_delete' option on the server.
+  * Fix for using the wrong lock directory when 'directory' is overridden for
+    a client.
+</pre>
+</FONT>
+</P>
+
+
+<P>
+<FONT COLOR="#99CCFF">2013-03-30:
+<BR>
+Many thanks to the following donors for financially supporting burp during
+March:
+<pre>
+  *  &pound;30.00 Haim G.
+  *   &pound;0.01 Romain M.
+</pre>
+</FONT>
+</p>
+
+<P>
+<FONT COLOR="#99CCFF">2013-03-30: burp-1.3.28 is released.
+<pre>
+Changes in burp-1.3.28:
+  * Add the ability to resume partially transferred files.
+  * Make sure 'timer conditions not met' message appears on the client.
+  * Bug fix for turning off compression before resuming a backup.
+</pre>
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#99CCFF">2013-03-05:
+<BR>
+Many thanks to the following donors for financially supporting burp during
+February:
+<pre>
+  *  &pound;25.00 Christian B.
+  *  &pound;20.00 Yeongjin C.
+</pre>
+</FONT>
+</p>
+
+<P>
+<FONT COLOR="#99CCFF">2013-03-05: burp-1.3.26 is released.
+<pre>
+Changes in burp-1.3.26:
+  * When a read_blockdev option matches a symlink, backup the destination as
+    a raw block device.
+  * Avi Rozen's valgrind cleanup. Includes a fix for a bug in restore_client.c
+    where overwrite_ok checked the wrong stat struct when considering a FIFO.
+  * Add '-v' option to bedup (output the names of duplicate files).
+  * Add '-d' option to bedup (delete duplicates instead of hardlinking - not
+    for use on burp storage directories).
+</pre>
+</FONT>
+</P>
+
+
 
 <P>
 <FONT COLOR="#99CCFF">2013-01-29:

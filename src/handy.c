@@ -318,7 +318,7 @@ int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, struct stat *st
 	if(fp)
 	{
 		static int fd;
-		if((fd=open(fname, O_RDONLY|atime?0:O_NOATIME))<0
+		if((fd=open(fname, O_RDONLY|(atime?0:O_NOATIME)))<0
 		  || !(*fp=fdopen(fd, "rb")))
 		{
 			logw(cntr,
@@ -346,8 +346,7 @@ int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, struct stat *st
 		}
 		binit(bfd, statp, winattr);
 		*datalen=0;
-		if(bopen(bfd, fname,
-			O_RDONLY | O_BINARY | atime?0:O_NOATIME, 0,
+		if(bopen(bfd, fname, O_RDONLY|O_BINARY|(atime?0:O_NOATIME), 0,
 			(winattr & FILE_ATTRIBUTE_DIRECTORY))<=0)
 		{
 			berrno be;

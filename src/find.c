@@ -752,7 +752,7 @@ static int found_directory(FF_PKT *ff_pkt, struct config *conf,
 	errno = 0;
 #ifdef O_DIRECTORY
 	int dfd=-1;
-	if((dfd=open(fname, O_RDONLY|O_DIRECTORY|conf->atime?0:O_NOATIME))<0
+	if((dfd=open(fname, O_RDONLY|O_DIRECTORY|(conf->atime?0:O_NOATIME)))<0
 	  || !(directory=fdopendir(dfd)))
 #else
 	if(!(directory=opendir(fname)))

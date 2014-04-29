@@ -252,7 +252,15 @@ if(ff->winattr & FILE_ATTRIBUTE_VIRTUAL) printf("virtual\n");
       logw(p1cntr, _("Err: Attempt to backup archive. Not saved. %s"), ff->fname);
       break;
    case FT_NOOPEN:
-      logw(p1cntr, _("Err: Could not open directory %s: %s"), ff->fname, strerror(errno));
+      *msg='\0';
+      if(!conf->atime)
+      {
+	uid_t uid=geteuid();
+	if(uid && uid!=ff->statp.st_uid)
+		snprintf(msg, sizeof(msg),
+			" (suggest looking at the atime option)");
+      }
+      logw(p1cntr, _("Err: Could not open directory %s: %s%s"), ff->fname, strerror(errno), msg);
       break;
    default:
       logw(p1cntr, _("Err: Unknown file ff->type %d: %s"), ff->type, ff->fname);

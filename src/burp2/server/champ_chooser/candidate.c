@@ -108,8 +108,9 @@ struct candidate *candidates_choose_champ(struct incoming *in,
 	//struct timespec tstart={0,0}, tend={0,0};
 	//clock_gettime(CLOCK_MONOTONIC, &tstart);
 
-//printf("incoming size: %d\n", in->size);
+printf("incoming size: %d\n", in->size);
 	scores_reset(scores);
+printf("after scores reset\n");
 
 	for(i=0; i<in->size; i++)
 	{

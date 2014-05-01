@@ -10,6 +10,9 @@ int champ_chooser_init(const char *datadir, struct conf *conf)
 	struct stat statp;
 	struct candidate *candidate=NULL;
 
+	// FIX THIS: scores is a global variable.
+	if(!(scores=scores_alloc())) goto end;
+
 	if(!(sb=sbuf_alloc(conf))
 	  || !(sparse_path=prepend_s(datadir, "sparse"))
 	  || (!lstat(sparse_path, &statp)
@@ -67,9 +70,9 @@ static char *get_fq_path(const char *path)
 	return fq_path;
 }
 
-static int already_got_block(struct blk *blk, struct dpth *dpth)
+static int already_got_block(struct clifd *clifd, struct blk *blk)
 {
-	static char *path;
+	//static char *path;
 	static struct hash_weak *hash_weak;
 
 	// If already got, need to overwrite the references.
@@ -84,7 +87,7 @@ static int already_got_block(struct blk *blk, struct dpth *dpth)
 //printf("FOUND: %s %s\n", blk->weak, blk->strong);
 //printf("F");
 			blk->got=GOT;
-			in->got++;
+			clifd->in->got++;
 			return 0;
 		}
 		else
@@ -98,40 +101,42 @@ static int already_got_block(struct blk *blk, struct dpth *dpth)
 //printf(".");
 
 	// Set up the details of where the block will be saved.
+/* This is going to be the job of the server child.
 	if(!(path=dpth_mk(dpth))) return -1;
 	snprintf(blk->save_path, sizeof(blk->save_path), "%s", path);
 	if(dpth_incr_sig(dpth)) return -1;
+*/
 
 	return 0;
 }
 
 #define CHAMPS_MAX 10
 
-int deduplicate(struct blk *blks, struct dpth *dpth, struct conf *conf, uint64_t *wrap_up)
+int deduplicate(struct clifd *clifd, struct conf *conf)
 {
 	struct blk *blk;
+	struct incoming *in=clifd->in;
 	struct candidate *champ;
 	struct candidate *champ_last=NULL;
-	static int consecutive_got=0;
 	static int count=0;
 	static int blk_count=0;
 
-//printf("in deduplicate()\n");
+printf("in deduplicate()\n");
 
 	incoming_found_reset(in);
 	count=0;
 	while((champ=candidates_choose_champ(in, champ_last)))
 	{
-//		printf("Got champ: %s %d\n", champ->path, *(champ->score));
+		printf("Got champ: %s %d\n", champ->path, *(champ->score));
 		if(hash_load(champ->path, conf)) return -1;
 		if(++count==CHAMPS_MAX) break;
 		champ_last=champ;
 	}
 
 	blk_count=0;
-	for(blk=blks; blk; blk=blk->next)
+	for(blk=clifd->blist->head; blk; blk=blk->next)
 	{
-//printf("try: %d\n", blk->index);
+printf("try: %d\n", blk->index);
 		blk_count++;
 
 		// FIX THIS - represents zero length block.
@@ -145,9 +150,9 @@ int deduplicate(struct blk *blks, struct dpth *dpth, struct conf *conf, uint64_t
 
 		// If already got, this function will set blk->save_path
 		// to be the location of the already got block.
-		if(already_got_block(blk, dpth)) return -1;
+		if(already_got_block(clifd, blk)) return -1;
 
-//printf("after agb: %lu %d\n", blk->index, blk->got);
+printf("after agb: %lu %d\n", blk->index, blk->got);
 
 		// If there are a number of consecutive blocks that we have
 		// already got, help the client out and tell it to forget them,
@@ -155,14 +160,14 @@ int deduplicate(struct blk *blks, struct dpth *dpth, struct conf *conf, uint64_t
 		// in memory.
 		if(blk->got==GOT)
 		{
-			if(consecutive_got++>BLKS_CONSECUTIVE_NOTIFY)
+			if(clifd->consecutive_got++>BLKS_CONSECUTIVE_NOTIFY)
 			{
-				*wrap_up=blk->index;
-				consecutive_got=0;
+				clifd->wrap_up=blk->index;
+				clifd->consecutive_got=0;
 			}
 		}
 		else
-			consecutive_got=0;
+			clifd->consecutive_got=0;
 	}
 
 	logp("%d %s found %d/%d incoming %s\n", count,
@@ -174,30 +179,6 @@ int deduplicate(struct blk *blks, struct dpth *dpth, struct conf *conf, uint64_t
 	in->size=0;
 	// Destroy the deduplication hash table.
 	hash_delete_all();
-
-	return 0;
-}
-
-int deduplicate_maybe(struct blk *blk, struct dpth *dpth,
-	struct conf *conf, uint64_t *wrap_up)
-{
-	static int count=0;
-	static struct blk *blks=NULL;
-
-	if(!blks && !(blks=blk)) return -1;
-	if(!in && !(in=incoming_alloc())) return -1;
-
-	blk->fingerprint=strtoull(blk->weak, 0, 16);
-	if(is_hook(blk->weak))
-	{
-		if(incoming_grow_maybe(in)) return -1;
-		in->weak[in->size-1]=blk->fingerprint;
-	}
-	if(++count<MANIFEST_SIG_MAX) return 0;
-	count=0;
-
-	if(deduplicate(blks, dpth, conf, wrap_up)<0) return -1;
-	blks=NULL;
 
 	return 0;
 }

@@ -209,7 +209,7 @@ static int add_to_sig_list(struct async *chas,
 	// FIX THIS: Should not just load into strings.
 	if(split_sig(rbuf->buf, rbuf->len, blk->weak, blk->strong)) return -1;
 
-	printf("Writing!\n");
+	//printf("Writing!\n");
 	if(chas->write(chas, rbuf)) return -1;
 
 	//if(deduplicate_maybe(blk, dpth, conf, wrap_up)<0) return -1;

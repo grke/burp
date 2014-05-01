@@ -2,8 +2,6 @@
 
 #include "include.h"
 
-struct incoming *in=NULL;
-
 struct incoming *incoming_alloc(void)
 {
 	struct incoming *in;

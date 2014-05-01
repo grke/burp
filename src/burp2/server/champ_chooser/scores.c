@@ -42,6 +42,13 @@ int scores_grow(struct scores *scores, size_t count)
 
 void scores_reset(struct scores *scores)
 {
-	if(!scores->scores || !scores->size) return;
+printf("sr a\n");
+	if(!scores->scores || !scores->size)
+	{
+printf("sr r\n");
+		return;
+	}
+printf("sr b\n");
 	memset(scores->scores, 0, sizeof(scores->scores[0])*scores->size);
+printf("sr c\n");
 }

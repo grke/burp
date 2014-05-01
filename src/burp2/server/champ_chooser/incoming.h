@@ -12,8 +12,6 @@ struct incoming
 	uint16_t got;
 };
 
-extern struct incoming *in;
-
 extern struct incoming *incoming_alloc(void);
 extern int incoming_grow_maybe(struct incoming *in);
 extern void incoming_found_reset(struct incoming *in);

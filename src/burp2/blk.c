@@ -109,11 +109,10 @@ void blist_free(struct blist *blist)
 
 void blk_add_to_list(struct blk *blk, struct blist *blist)
 {
-	static int bindex=1;
 //printf("blk_add_to_list: %d\n", bindex);
-	blk->index=bindex++;
 	if(blist->tail)
 	{
+		blk->index=blist->tail->index+1;
 		// Add to the end of the list.
 		blist->tail->next=blk;
 		blist->tail=blk;
@@ -124,6 +123,7 @@ void blk_add_to_list(struct blk *blk, struct blist *blist)
 	}
 	else
 	{
+		blk->index=1;
 		// Start the list.
 		blist->head=blk;
 		blist->tail=blk;

@@ -1334,6 +1334,7 @@ static int set_global_arglist(struct strlist **dst, struct strlist *src)
 /* Remember to update the list in the man page when you change these.*/
 int conf_set_client_global(struct conf *c, struct conf *cc)
 {
+	cc->forking=c->forking;
 	cc->protocol=c->protocol;
 	cc->log_to_syslog=c->log_to_syslog;
 	cc->log_to_stdout=c->log_to_stdout;

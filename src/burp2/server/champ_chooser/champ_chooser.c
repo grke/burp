@@ -173,7 +173,7 @@ printf("after agb: %lu %d\n", blk->index, blk->got);
 	logp("%d %s found %d/%d incoming %s\n", count,
 		count==1?"champ":"champs", in->got, blk_count,
 		blk_count==1?"block":"blocks");
-	cntr_add_same_val(conf->cntr, CMD_DATA, in->got);
+	//cntr_add_same_val(conf->cntr, CMD_DATA, in->got);
 
 	// Start the incoming array again.
 	in->size=0;

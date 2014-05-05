@@ -155,6 +155,10 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *conffile, int
 	conf_init(cconf);
 	if(conf_load(conffile, conf, 1)) goto end;
 
+	// Hack to keep forking turned off it was specified as off on the
+	// command line.
+	if(!forking) conf->forking=0;
+
 	if(!(sbio=BIO_new_socket(*cfd, BIO_NOCLOSE))
 	  || !(ssl=SSL_new(ctx)))
 	{

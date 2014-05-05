@@ -6,6 +6,13 @@ static int champ_chooser_fork(struct sdirs *sdirs, struct conf *conf)
 {
 	pid_t childpid=-1;
 
+	if(!conf->forking)
+	{
+		logp("Not forking a champ chooser process.\n");
+		// They need to manually run a separate process.
+		return 0;
+	}
+
 	switch((childpid=fork()))
 	{
 		case -1:
@@ -27,6 +34,7 @@ static int champ_chooser_fork(struct sdirs *sdirs, struct conf *conf)
 			logp("forked champ chooser pid %d\n", childpid);
 			return 0;
 	}
+	return -1; // Not reached.
 }
 
 int connect_to_champ_chooser(struct sdirs *sdirs, struct conf *conf)
@@ -44,7 +52,7 @@ int connect_to_champ_chooser(struct sdirs *sdirs, struct conf *conf)
 		if(champ_chooser_fork(sdirs, conf)) return -1;
 	}
 
-	// Champ chooser will either be running now, or about to run.
+	// Champ chooser should either be running now, or about to run.
 
 	if((s=socket(AF_UNIX, SOCK_STREAM, 0))<0)
 	{
@@ -76,8 +84,8 @@ int connect_to_champ_chooser(struct sdirs *sdirs, struct conf *conf)
 		while(sleeptimeleft>0) sleeptimeleft=sleep(sleeptimeleft);
 	}
 
-	logp("Could not connect to champ chooser via %s after %d attempts.",
-		sdirs->champsock, tries);
+	logp("Could not connect to champ chooser via %s after %d attempts.\n",
+		sdirs->champsock, tries_max);
 
 	return -1;
 }

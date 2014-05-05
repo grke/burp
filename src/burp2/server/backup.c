@@ -36,7 +36,7 @@ int open_log(struct async *as, const char *realworking, struct conf *cconf)
 	{
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
-				"could not open log file: %s", logpath);
+			"could not open log file: %s", logpath);
 		log_and_send(as, msg);
 		free(logpath);
 		return -1;
@@ -96,7 +96,7 @@ static struct async *setup_champ_chooser(struct sdirs *sdirs, struct conf *conf)
 	// in phase2.
 	if((champsock=connect_to_champ_chooser(sdirs, conf))<0)
 	{
-		logp("could not connect to champ chooser");
+		logp("could not connect to champ chooser\n");
 		goto error;
 	}
 

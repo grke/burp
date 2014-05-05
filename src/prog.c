@@ -2,6 +2,7 @@
 #include "burp2/client/main.h"
 #include "burp2/server/status_client.h"
 #include "burp2/server/main.h"
+#include "burp2/server/champ_chooser/champ_server.h"
 
 static char *get_conf_path(void)
 {
@@ -34,22 +35,25 @@ static void usage_server(void)
 	printf("\nServer usage: %s [options]\n", progname());
 	printf("\n");
 	printf(" Options:\n");
+	printf("  -a c          Run as a stand-alone champion chooser.\n");
 	printf("  -a s          Run the status monitor.\n");
 	printf("  -a S          Screen dump of the status monitor (for reporting).\n");
 	printf("  -c <path>     Path to conf file (default: %s).\n", get_conf_path());
-	printf("  -d <path>     a single client in the status monitor\n");
+	printf("  -d <path>     a single client in the status monitor.\n");
 	printf("  -F            Stay in the foreground.\n");
 	printf("  -g            Generate initial CA certificates and exit.\n");
 	printf("  -h|-?         Print this text and exit.\n");
-	printf("  -i            Print index of symbols and exit\n");
+	printf("  -i            Print index of symbols and exit.\n");
 	printf("  -l <path>     Path to log file.\n");
 	printf("  -n            Do not fork any children (implies '-F').\n");
 	printf("  -v            Print version and exit.\n");
+	printf("Options to use with '-a c':\n");
+	printf("  -C <client>   Run as if forked via a connection from this client.\n");
 	printf("Options to use with '-a S':\n");
-	printf("  -C <client>   Show a particular client\n");
-	printf("  -b <number>   Show listable files in a particular backup (requires -C)\n");
-	printf("  -z <file>     Dump a particular log file in a backup (requires -C and -b)\n");
-	printf("  -d <path>     Show a particular path in a backup (requires -C and -b)\n");
+	printf("  -C <client>   Show a particular client.\n");
+	printf("  -b <number>   Show listable files in a particular backup (requires -C).\n");
+	printf("  -z <file>     Dump a particular log file in a backup (requires -C and -b).\n");
+	printf("  -d <path>     Show a particular path in a backup (requires -C and -b).\n");
 	printf("\n");
 #endif
 }
@@ -68,12 +72,12 @@ static void usage_client(void)
 	printf("                  t: timed backup\n");
 	printf("                  T: check backup timer, but do not actually backup\n");
 	printf("                  v: verify\n");
-	printf("  -b <number>    Backup number (default: the most recent backup)\n");
+	printf("  -b <number>    Backup number (default: the most recent backup).\n");
 	printf("  -c <path>      Path to conf file (default: %s).\n", get_conf_path());
-	printf("  -d <directory> Directory to restore to, or directory to list\n");
+	printf("  -d <directory> Directory to restore to, or directory to list.\n");
 	printf("  -f             Allow overwrite during restore.\n");
 	printf("  -h|-?          Print this text and exit.\n");
-	printf("  -i             Print index of symbols and exit\n");
+	printf("  -i             Print index of symbols and exit.\n");
 	printf("  -l <path>      Path to log file.\n");
 	printf("  -r <regex>     Specify a regular expression.\n");
 	printf("  -s <number>    Number of leading path components to strip during restore.\n");
@@ -205,6 +209,8 @@ int main (int argc, char *argv[])
 				// likely to be used accidently.
 				else if(!strncmp(optarg, "Delete", 1))
 					act=ACTION_DELETE;
+				else if(!strncmp(optarg, "champchooser", 1))
+					act=ACTION_CHAMP_CHOOSER;
 				else
 				{
 					usage();
@@ -314,9 +320,11 @@ int main (int argc, char *argv[])
 	}
 
 	if(conf->mode==MODE_SERVER
-	  && (act==ACTION_STATUS || act==ACTION_STATUS_SNAPSHOT))
+	  && (act==ACTION_STATUS
+		|| act==ACTION_STATUS_SNAPSHOT
+		|| act==ACTION_CHAMP_CHOOSER))
 	{
-		// Server status mode needs to run without getting the lock.
+		// These server modes need to run without getting the lock.
 	}
 	else
 	{
@@ -358,6 +366,20 @@ int main (int argc, char *argv[])
 			// We are running on the server machine, being a client
 			// of the burp server, getting status information.
 			ret=status_client_ncurses(conf, act, sclient);
+		}
+		else if(act==ACTION_CHAMP_CHOOSER)
+		{
+			// We are running on the server machine, wanting to
+			// be a standalone champion chooser process.
+			if(!sclient || !*sclient)
+			{
+				logp("No client name specified for standalone champion chooser process.\n");
+				logp("Try using the '-C' option.\n");
+				ret=1;
+			}
+			else
+				ret=champ_chooser_server_standalone(conf,
+					sclient);
 		}
 		else
 			ret=server(conf, conffile, lock, generate_ca_only);

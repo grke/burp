@@ -14,7 +14,8 @@ enum action
         ACTION_STATUS_SNAPSHOT,
         ACTION_ESTIMATE,
         ACTION_DELETE,
-        ACTION_TIMER_CHECK
+        ACTION_TIMER_CHECK,
+        ACTION_CHAMP_CHOOSER
 };
 
 #endif

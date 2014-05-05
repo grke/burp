@@ -447,3 +447,27 @@ end:
 	lock_free(&lock);
 	return ret;
 }
+
+// The return code of this is the return code of the standalone process.
+int champ_chooser_server_standalone(struct conf *conf, const char *sclient)
+{
+	int ret=1;
+	struct sdirs *sdirs=NULL;
+	struct conf *cconf=NULL;
+
+	if(!(cconf=conf_alloc()))
+		goto end;
+	conf_init(cconf);
+	// We need to be given a client name and load the relevant server side
+	// clientconfdir file, because various settings may be overridden
+	// there.
+	if(!(cconf->cname=strdup(sclient))
+	  || conf_load_client(conf, cconf)
+	  || !(sdirs=sdirs_alloc())
+	  || sdirs_init(sdirs, cconf)
+	  || champ_chooser_server(sdirs, cconf))
+		goto end;
+	ret=0;
+end:
+	return ret;
+}

@@ -373,7 +373,8 @@ rs_result rs_outfilebuf_drain(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 			wbuf->cmd=CMD_APPEND;
 			wbuf->buf=fb->buf;
 			wbuf->len=wlen;
-			if(fb->as->append_all_to_write_buffer(fb->as, wbuf))
+			if(fb->as->asfd->append_all_to_write_buffer(
+				fb->as->asfd, wbuf))
 			{
 				// stop the rsync stuff from reading more.
 				//		buf->next_out = fb->buf;

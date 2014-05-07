@@ -338,7 +338,7 @@ static enum cliret do_client(struct conf *conf,
 	if(act==ACTION_BACKUP
 	  || act==ACTION_BACKUP_TIMED
 	  || act==ACTION_TIMER_CHECK)
-		as->set_bulk_packets(as);
+		as->asfd->set_bulk_packets(as->asfd);
 
 	if(act!=ACTION_ESTIMATE)
 	{

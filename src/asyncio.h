@@ -38,6 +38,11 @@ struct asfd
 	char *writebuf;
 	size_t writebuflen;
 	int write_blocked_on_read;
+
+	// Function pointers.
+	int (*init)(struct asfd *, int, SSL *, struct conf *);
+	int (*append_all_to_write_buffer)(struct asfd *, struct iobuf *);
+	int (*set_bulk_packets)(struct asfd *);
 };
 
 struct async
@@ -52,7 +57,6 @@ struct async
 	int setusec;
 
 	// Let us try using function pointers.
-	// FIX THIS: a lot of these need to go on struct asfd.
 	int (*init)(struct async *, int, SSL *, struct conf *, int);
 	// This one can return without completing the read or write, so check
 	// rbuf->buf and/or wbuf->len.
@@ -63,8 +67,6 @@ struct async
 	int (*write_strn)(struct async *, char, const char *, size_t);
 	int (*write_str)(struct async *, char, const char *);
 	int (*read_expect)(struct async *, char, const char *);
-	int (*append_all_to_write_buffer)(struct async *, struct iobuf *);
-	int (*set_bulk_packets)(struct async *);
 	int (*simple_loop)(struct async *, struct conf *, void *,
 		const char *, enum asl_ret callback(struct async *,
 			  struct iobuf *, struct conf *, void *));

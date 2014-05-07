@@ -353,26 +353,29 @@ static int maybe_process_file(struct async *as,
 }
 
 // Return 1 if there is still stuff needing to be sent.
-static int do_stuff_to_send(struct async *as,
+static int do_stuff_to_send(struct asfd *asfd,
 	struct sbuf *p1b, char **last_requested)
 {
 	static struct iobuf wbuf;
 	if(p1b->flags & SBUFL_SEND_DATAPTH)
 	{
 		iobuf_copy(&wbuf, &p1b->burp1->datapth);
-		if(as->append_all_to_write_buffer(as, &wbuf)) return 1;
+		if(asfd->append_all_to_write_buffer(asfd, &wbuf))
+			return 1;
 		p1b->flags &= ~SBUFL_SEND_DATAPTH;
 	}
 	if(p1b->flags & SBUFL_SEND_STAT)
 	{
 		iobuf_copy(&wbuf, &p1b->attr);
-		if(as->append_all_to_write_buffer(as, &wbuf)) return 1;
+		if(asfd->append_all_to_write_buffer(asfd, &wbuf))
+			return 1;
 		p1b->flags &= ~SBUFL_SEND_STAT;
 	}
 	if(p1b->flags & SBUFL_SEND_PATH)
 	{
 		iobuf_copy(&wbuf, &p1b->path);
-		if(as->append_all_to_write_buffer(as, &wbuf)) return 1;
+		if(asfd->append_all_to_write_buffer(asfd, &wbuf))
+			return 1;
 		p1b->flags &= ~SBUFL_SEND_PATH;
 		if(*last_requested) free(*last_requested);
 		*last_requested=strdup(p1b->path.buf);
@@ -402,7 +405,7 @@ static int do_stuff_to_send(struct async *as,
 	if(p1b->flags & SBUFL_SEND_ENDOFSIG)
 	{
 		iobuf_from_str(&wbuf, CMD_END_FILE, (char *)"endfile");
-		if(as->append_all_to_write_buffer(as, &wbuf)) return 1;
+		if(asfd->append_all_to_write_buffer(asfd, &wbuf)) return 1;
 		p1b->flags &= ~SBUFL_SEND_ENDOFSIG;
 	}
 	return 0;
@@ -673,7 +676,7 @@ int backup_phase2_server(struct async *as,
 			break;
 		}
 
-		if((sts=do_stuff_to_send(as, p1b, &last_requested))<0)
+		if((sts=do_stuff_to_send(as->asfd, p1b, &last_requested))<0)
 			goto error;
 
 		if(!sts && p1zp)

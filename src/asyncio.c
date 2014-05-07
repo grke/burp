@@ -15,44 +15,45 @@ static void truncate_buf(char **buf, size_t *buflen)
 	*buflen=0;
 }
 
-static int parse_readbuf(struct async *as, struct iobuf *rbuf)
+static int parse_readbuf(struct asfd *asfd, struct iobuf *rbuf)
 {
 	unsigned int s=0;
 	char cmdtmp='\0';
 
-	if(as->readbuflen>=5)
+	if(asfd->readbuflen>=5)
 	{
-		if((sscanf(as->readbuf, "%c%04X", &cmdtmp, &s))!=2)
+		if((sscanf(asfd->readbuf, "%c%04X", &cmdtmp, &s))!=2)
 		{
 			logp("sscanf of '%s' failed in %s\n",
-				as->readbuf, __func__);
-			truncate_buf(&as->readbuf, &as->readbuflen);
+				asfd->readbuf, __func__);
+			truncate_buf(&asfd->readbuf, &asfd->readbuflen);
 			return -1;
 		}
 	}
-	if(as->readbuflen>=s+5)
+	if(asfd->readbuflen>=s+5)
 	{
 		rbuf->cmd=cmdtmp;
 		if(!(rbuf->buf=(char *)malloc(s+1)))
 		{
 			log_out_of_memory(__func__);
-			truncate_buf(&as->readbuf, &as->readbuflen);
+			truncate_buf(&asfd->readbuf, &asfd->readbuflen);
 			return -1;
 		}
-		if(!(memcpy(rbuf->buf, as->readbuf+5, s)))
+		if(!(memcpy(rbuf->buf, asfd->readbuf+5, s)))
 		{
 			logp("memcpy failed in %s\n", __func__);
-			truncate_buf(&as->readbuf, &as->readbuflen);
+			truncate_buf(&asfd->readbuf, &asfd->readbuflen);
 			return -1;
 		}
 		rbuf->buf[s]='\0';
-		if(!(memmove(as->readbuf, as->readbuf+s+5, as->readbuflen-s-5)))
+		if(!(memmove(asfd->readbuf,
+			asfd->readbuf+s+5, asfd->readbuflen-s-5)))
 		{
 			logp("memmove failed in %s\n", __func__);
-			truncate_buf(&as->readbuf, &as->readbuflen);
+			truncate_buf(&asfd->readbuf, &asfd->readbuflen);
 			return -1;
 		}
-		as->readbuflen-=s+5;
+		asfd->readbuflen-=s+5;
 		rbuf->len=s;
 	}
 	return 0;
@@ -69,53 +70,54 @@ static int async_alloc_buf(char **buf, size_t *buflen)
 	return 0;
 }
 
-static int do_read(struct async *as)
+static int do_read(struct asfd *asfd)
 {
 	ssize_t r;
-	r=read(as->fd, as->readbuf+as->readbuflen, bufmaxsize-as->readbuflen);
+	r=read(asfd->fd,
+		asfd->readbuf+asfd->readbuflen, bufmaxsize-asfd->readbuflen);
 	if(r<0)
 	{
 		if(errno==EAGAIN || errno==EINTR)
 			return 0;
 		logp("read problem in %s\n", __func__);
-		truncate_buf(&as->readbuf, &as->readbuflen);
+		truncate_buf(&asfd->readbuf, &asfd->readbuflen);
 		return -1;
 	}
 	else if(!r)
 	{
 		// End of data.
 		logp("end of data in %s\n", __func__);
-		truncate_buf(&as->readbuf, &as->readbuflen);
+		truncate_buf(&asfd->readbuf, &asfd->readbuflen);
 		return -1;
 	}
-	as->readbuflen+=r;
-	as->readbuf[as->readbuflen]='\0';
+	asfd->readbuflen+=r;
+	asfd->readbuf[asfd->readbuflen]='\0';
 	return 0;
 }
 
-static int do_read_ssl(struct async *as)
+static int do_read_ssl(struct asfd *asfd)
 {
 	ssize_t r;
 
 	ERR_clear_error();
-	r=SSL_read(as->ssl,
-		as->readbuf+as->readbuflen, bufmaxsize-as->readbuflen);
+	r=SSL_read(asfd->ssl,
+		asfd->readbuf+asfd->readbuflen, bufmaxsize-asfd->readbuflen);
 
-	switch(SSL_get_error(as->ssl, r))
+	switch(SSL_get_error(asfd->ssl, r))
 	{
 	  case SSL_ERROR_NONE:
-		as->readbuflen+=r;
-		as->readbuf[as->readbuflen]='\0';
+		asfd->readbuflen+=r;
+		asfd->readbuf[asfd->readbuflen]='\0';
 		break;
 	  case SSL_ERROR_ZERO_RETURN:
 		// End of data.
-		SSL_shutdown(as->ssl);
-		truncate_buf(&as->readbuf, &as->readbuflen);
+		SSL_shutdown(asfd->ssl);
+		truncate_buf(&asfd->readbuf, &asfd->readbuflen);
 		return -1;
 	  case SSL_ERROR_WANT_READ:
 		break;
 	  case SSL_ERROR_WANT_WRITE:
-		as->read_blocked_on_write=1;
+		asfd->read_blocked_on_write=1;
 		break;
 	  case SSL_ERROR_SYSCALL:
 		if(errno==EAGAIN || errno==EINTR)
@@ -125,56 +127,56 @@ static int do_read_ssl(struct async *as)
 		// Fall through to read problem
 	  default:
 		logp("SSL read problem in %s\n", __func__);
-		truncate_buf(&as->readbuf, &as->readbuflen);
+		truncate_buf(&asfd->readbuf, &asfd->readbuflen);
 		return -1;
 	}
 	return 0;
 }
 
 // Return 0 for OK to write, non-zero for not OK to write.
-static int check_ratelimit(struct async *as)
+static int check_ratelimit(struct asfd *asfd)
 {
 	float f;
 	time_t now;
 	time_t diff;
-	if(!as->rlstart) as->rlstart=time(NULL);
+	if(!asfd->rlstart) asfd->rlstart=time(NULL);
 	now=time(NULL);
-	if((diff=now-as->rlstart)<0)
+	if((diff=now-asfd->rlstart)<0)
 	{
 		// It is possible that the clock changed. Reset ourselves.
-		now=as->rlstart;
-		as->rlbytes=0;
+		now=asfd->rlstart;
+		asfd->rlbytes=0;
 		logp("Looks like the clock went back in time since starting. "
 			"Resetting ratelimit\n");
 		return 0;
 	}
 	if(!diff) return 0; // Need to get started somehow.
-	f=(as->rlbytes)/diff; // Bytes per second.
+	f=(asfd->rlbytes)/diff; // Bytes per second.
 
-	if(f>=as->ratelimit)
+	if(f>=asfd->ratelimit)
 	{
 #ifdef HAVE_WIN32
 		// Windows Sleep is milliseconds, usleep is microseconds.
 		// Do some conversion.
-		Sleep(as->rlsleeptime/1000);
+		Sleep(asfd->rlsleeptime/1000);
 #else
-		usleep(as->rlsleeptime);
+		usleep(asfd->rlsleeptime);
 #endif
 		// If sleeping, increase the sleep time.
-		if((as->rlsleeptime*=2)>=500000) as->rlsleeptime=500000;
+		if((asfd->rlsleeptime*=2)>=500000) asfd->rlsleeptime=500000;
 		return 1;
 	}
 	// If not sleeping, decrease the sleep time.
-	if((as->rlsleeptime/=2)<=9999) as->rlsleeptime=10000;
+	if((asfd->rlsleeptime/=2)<=9999) asfd->rlsleeptime=10000;
 	return 0;
 }
 
-static int do_write(struct async *as)
+static int do_write(struct asfd *asfd)
 {
 	ssize_t w;
-	if(as->ratelimit && check_ratelimit(as)) return 0;
+	if(asfd->ratelimit && check_ratelimit(asfd)) return 0;
 
-	w=write(as->fd, as->writebuf, as->writebuflen);
+	w=write(asfd->fd, asfd->writebuf, asfd->writebuflen);
 	if(w<0)
 	{
 		if(errno==EAGAIN || errno==EINTR)
@@ -188,31 +190,31 @@ static int do_write(struct async *as)
 		logp("Wrote nothing in %s\n", __func__);
 		return -1;
 	}
-	if(as->ratelimit) as->rlbytes+=w;
-	memmove(as->writebuf, as->writebuf+w, as->writebuflen-w);
-	as->writebuflen-=w;
+	if(asfd->ratelimit) asfd->rlbytes+=w;
+	memmove(asfd->writebuf, asfd->writebuf+w, asfd->writebuflen-w);
+	asfd->writebuflen-=w;
 	return 0;
 }
 
-static int do_write_ssl(struct async *as)
+static int do_write_ssl(struct asfd *asfd)
 {
 	ssize_t w;
 
-	if(as->ratelimit && check_ratelimit(as)) return 0;
+	if(asfd->ratelimit && check_ratelimit(asfd)) return 0;
 	ERR_clear_error();
-	w=SSL_write(as->ssl, as->writebuf, as->writebuflen);
+	w=SSL_write(asfd->ssl, asfd->writebuf, asfd->writebuflen);
 
-	switch(SSL_get_error(as->ssl, w))
+	switch(SSL_get_error(asfd->ssl, w))
 	{
 	  case SSL_ERROR_NONE:
-		if(as->ratelimit) as->rlbytes+=w;
-		memmove(as->writebuf, as->writebuf+w, as->writebuflen-w);
-		as->writebuflen-=w;
+		if(asfd->ratelimit) asfd->rlbytes+=w;
+		memmove(asfd->writebuf, asfd->writebuf+w, asfd->writebuflen-w);
+		asfd->writebuflen-=w;
 		break;
 	  case SSL_ERROR_WANT_WRITE:
 		break;
 	  case SSL_ERROR_WANT_READ:
-		as->write_blocked_on_read=1;
+		asfd->write_blocked_on_read=1;
 		break;
 	  case SSL_ERROR_SYSCALL:
 		if(errno==EAGAIN || errno==EINTR)
@@ -228,12 +230,12 @@ static int do_write_ssl(struct async *as)
 	return 0;
 }
 
-static int append_to_write_buffer(struct async *as,
+static int append_to_write_buffer(struct asfd *asfd,
 	const char *buf, size_t len)
 {
-	memcpy(as->writebuf+as->writebuflen, buf, len);
-	as->writebuflen+=len;
-	as->writebuf[as->writebuflen]='\0';
+	memcpy(asfd->writebuf+asfd->writebuflen, buf, len);
+	asfd->writebuflen+=len;
+	asfd->writebuf[asfd->writebuflen]='\0';
 	return 0;
 }
 
@@ -242,14 +244,14 @@ static int async_append_all_to_write_buffer(struct async *as,
 {
 	size_t sblen=0;
 	char sbuf[10]="";
-	if(as->writebuflen+6+(wbuf->len) >= bufmaxsize-1)
+	if(as->asfd->writebuflen+6+(wbuf->len) >= bufmaxsize-1)
 		return 1;
 
 	snprintf(sbuf, sizeof(sbuf), "%c%04X",
 		wbuf->cmd, (unsigned int)wbuf->len);
 	sblen=strlen(sbuf);
-	append_to_write_buffer(as, sbuf, sblen);
-	append_to_write_buffer(as, wbuf->buf, wbuf->len);
+	append_to_write_buffer(as->asfd, sbuf, sblen);
+	append_to_write_buffer(as->asfd, wbuf->buf, wbuf->len);
 	wbuf->len=0;
 	return 0;
 }
@@ -258,8 +260,9 @@ static int async_set_bulk_packets(struct async *as)
 {
 #if defined(IP_TOS) && defined(IPTOS_THROUGHPUT)
 	int opt=IPTOS_THROUGHPUT;
-	if(as->fd<0) return -1;
-	if(setsockopt(as->fd, IPPROTO_IP, IP_TOS, (char *)&opt, sizeof(opt))<0)
+	if(as->asfd->fd<0) return -1;
+	if(setsockopt(as->asfd->fd,
+		IPPROTO_IP, IP_TOS, (char *)&opt, sizeof(opt))<0)
 	{
 		logp("Error: setsockopt IPTOS_THROUGHPUT: %s\n",
 			strerror(errno));
@@ -274,8 +277,8 @@ void async_free(struct async **as)
 	int fd;
 	SSL *ssl;
 	if(!*as) return;
-	fd=(*as)->fd;
-	ssl=(*as)->ssl;
+	fd=(*as)->asfd->fd;
+	ssl=(*as)->asfd->ssl;
 	if(ssl && fd>=0)
 	{
 		int r;
@@ -294,11 +297,12 @@ signal(SIGPIPE, SIG_IGN);
 	if(ssl)
 	{
 		SSL_free(ssl);
-		(*as)->ssl=NULL;
+		(*as)->asfd->ssl=NULL;
 	}
-	close_fd(&((*as)->fd));
-	if((*as)->readbuf) free((*as)->readbuf);
-	if((*as)->writebuf) free((*as)->writebuf);
+	close_fd(&((*as)->asfd->fd));
+	if((*as)->asfd->readbuf) free((*as)->asfd->readbuf);
+	if((*as)->asfd->writebuf) free((*as)->asfd->writebuf);
+	free((*as)->asfd);
 	free(*as);
 	*as=NULL;
 }
@@ -321,9 +325,9 @@ static int async_rw(struct async *as, struct iobuf *rbuf, struct iobuf *wbuf)
 
 	if(as->doing_estimate) return 0;
 
-	if(as->fd<0)
+	if(as->asfd->fd<0)
 	{
-		logp("fd not ready in %s: %d\n", __func__, as->fd);
+		logp("fd not ready in %s: %d\n", __func__, as->asfd->fd);
 		return -1;
 	}
 
@@ -332,15 +336,15 @@ static int async_rw(struct async *as, struct iobuf *rbuf, struct iobuf *wbuf)
 	if(wbuf && wbuf->len)
 		async_append_all_to_write_buffer(as, wbuf);
 
-	if(as->writebuflen && !as->write_blocked_on_read)
+	if(as->asfd->writebuflen && !as->asfd->write_blocked_on_read)
 		dowrite++; // The write buffer is not yet empty.
 
 	if(doread)
 	{
-		if(parse_readbuf(as, rbuf)) return -1;
+		if(parse_readbuf(as->asfd, rbuf)) return -1;
 		if(rbuf->buf) return 0;
 
-		if(as->read_blocked_on_write) doread=0;
+		if(as->asfd->read_blocked_on_write) doread=0;
 	}
 
         if(doread || dowrite)
@@ -351,7 +355,7 @@ static int async_rw(struct async *as, struct iobuf *rbuf, struct iobuf *wbuf)
                 if(dowrite) FD_ZERO(&fsw);
                 FD_ZERO(&fse);
 
-                add_fd_to_sets(as->fd,
+                add_fd_to_sets(as->asfd->fd,
 			doread?&fsr:NULL, dowrite?&fsw:NULL, &fse, &mfd);
 
                 tval.tv_sec=as->setsec;
@@ -368,52 +372,52 @@ static int async_rw(struct async *as, struct iobuf *rbuf, struct iobuf *wbuf)
                         }
                 }
 
-		if(!FD_ISSET(as->fd, &fse)
-		  && (!doread || !FD_ISSET(as->fd, &fsr))
-		  && (!dowrite || !FD_ISSET(as->fd, &fsw)))
+		if(!FD_ISSET(as->asfd->fd, &fse)
+		  && (!doread || !FD_ISSET(as->asfd->fd, &fsr))
+		  && (!dowrite || !FD_ISSET(as->asfd->fd, &fsw)))
 		{
 			// Be careful to avoid 'read quick' mode.
 			if((as->setsec || as->setusec)
-			  && as->max_network_timeout>0
-			  && as->network_timeout--<=0)
+			  && as->asfd->max_network_timeout>0
+			  && as->asfd->network_timeout--<=0)
 			{
 				logp("No activity on network for %d seconds.\n",
-					as->max_network_timeout);
+					as->asfd->max_network_timeout);
 				return -1;
 			}
 			return 0;
 		}
-		as->network_timeout=as->max_network_timeout;
+		as->asfd->network_timeout=as->asfd->max_network_timeout;
 
-                if(FD_ISSET(as->fd, &fse))
+                if(FD_ISSET(as->asfd->fd, &fse))
                 {
                         logp("error on socket\n");
                         return -1;
                 }
 
-                if(doread && FD_ISSET(as->fd, &fsr)) // able to read
+                if(doread && FD_ISSET(as->asfd->fd, &fsr)) // able to read
                 {
-			if(as->ssl)
+			if(as->asfd->ssl)
 			{
-				as->read_blocked_on_write=0;
-				if(do_read_ssl(as)) return -1;
+				as->asfd->read_blocked_on_write=0;
+				if(do_read_ssl(as->asfd)) return -1;
 			}
 			else
 			{
-				if(do_read(as)) return -1;
+				if(do_read(as->asfd)) return -1;
 			}
-			return parse_readbuf(as, rbuf);
+			return parse_readbuf(as->asfd, rbuf);
                 }
 
-                if(dowrite && FD_ISSET(as->fd, &fsw)) // able to write
+                if(dowrite && FD_ISSET(as->asfd->fd, &fsw)) // able to write
 		{
-			if(as->ssl)
+			if(as->asfd->ssl)
 			{
-				as->write_blocked_on_read=0;
-				return do_write_ssl(as);
+				as->asfd->write_blocked_on_read=0;
+				return do_write_ssl(as->asfd);
 			}
 			else
-				return do_write(as);
+				return do_write(as->asfd);
 		}
         }
 
@@ -521,23 +525,44 @@ static int async_simple_loop(struct async *as,
 	return -1; // Not reached.
 }
 
+static struct asfd *asfd_alloc(void)
+{
+	struct asfd *asfd;
+	if(!(asfd=(struct asfd *)calloc(1, sizeof(struct asfd))))
+		log_out_of_memory(__func__);
+	return asfd;
+}
+
+static int asfd_init(struct asfd *asfd, int afd, SSL *assl, struct conf *conf)
+{
+	asfd->fd=afd;
+	asfd->ssl=assl;
+	asfd->max_network_timeout=conf->network_timeout;
+	asfd->network_timeout=asfd->max_network_timeout;
+	asfd->ratelimit=conf->ratelimit;
+	asfd->rlsleeptime=10000;
+
+	if(async_alloc_buf(&asfd->readbuf, &asfd->readbuflen)
+	  || async_alloc_buf(&asfd->writebuf, &asfd->writebuflen))
+		return -1;
+	return 0;
+}
+
 static int async_init(struct async *as,
 	int afd, SSL *assl, struct conf *conf, int estimate)
 {
-	as->fd=afd;
-	as->ssl=assl;
-	as->max_network_timeout=conf->network_timeout;
-	as->network_timeout=as->max_network_timeout;
-	as->ratelimit=conf->ratelimit;
-	as->rlsleeptime=10000;
+	if(!(as->asfd=asfd_alloc())) return -1;
+
+	if(asfd_init(as->asfd, afd, assl, conf)) return -1;
+
+	as->setsec=1;
+	as->setusec=0;
+	as->doing_estimate=estimate;
 
 	as->rw=async_rw;
 	as->read=async_read;
 	as->write=async_write;
 	as->read_quick=async_read_quick;
-
-	as->setsec=1;
-	as->setusec=0;
 
 	as->write_strn=async_write_strn;
 	as->write_str=async_write_str;
@@ -547,11 +572,6 @@ static int async_init(struct async *as,
 	as->simple_loop=async_simple_loop;
 	as->settimers=async_settimers;
 
-	if((as->doing_estimate=estimate)) return 0;
-
-	if(async_alloc_buf(&as->readbuf, &as->readbuflen)
-	  || async_alloc_buf(&as->writebuf, &as->writebuflen))
-		return -1;
 	return 0;
 }
 

@@ -8,7 +8,7 @@ static int load_signature(struct async *as,
 
 	job = rs_loadsig_begin(sumset);
 	if((r=do_rs_run(as, job,
-		NULL, NULL, NULL, NULL, NULL, as->fd, -1, conf->cntr)))
+		NULL, NULL, NULL, NULL, NULL, as->asfd->fd, -1, conf->cntr)))
 	{
 		rs_free_sumset(*sumset);
 		return r;
@@ -44,7 +44,7 @@ static int load_signature_and_send_delta(struct async *as,
 	if(!(infb=rs_filebuf_new(as, bfd,
 		in, NULL, -1, ASYNC_BUF_LEN, datalen, conf->cntr))
 	  || !(outfb=rs_filebuf_new(as, NULL, NULL,
-		NULL, as->fd, ASYNC_BUF_LEN, -1, conf->cntr)))
+		NULL, as->asfd->fd, ASYNC_BUF_LEN, -1, conf->cntr)))
 	{
 		logp("could not rs_filebuf_new for delta\n");
 		if(infb) rs_filebuf_free(infb);

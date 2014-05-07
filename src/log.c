@@ -153,7 +153,8 @@ int logw(struct async *as, struct conf *conf, const char *fmt, ...)
 void log_and_send(struct async *as, const char *msg)
 {
 	logp("%s\n", msg);
-	if(as && as->fd>0) as->write_str(as, CMD_ERROR, msg);
+	if(as && as->asfd && as->asfd->fd>0)
+		as->write_str(as, CMD_ERROR, msg);
 }
 
 void log_and_send_oom(struct async *as, const char *function)
@@ -161,5 +162,6 @@ void log_and_send_oom(struct async *as, const char *function)
 	char m[256]="";
         snprintf(m, sizeof(m), "out of memory in %s()\n", __func__);
         logp("%s", m);
-        if(as && as->fd>0) as->write_str(as, CMD_ERROR, m);
+        if(as && as->asfd && as->asfd->fd>0)
+		as->write_str(as, CMD_ERROR, m);
 }

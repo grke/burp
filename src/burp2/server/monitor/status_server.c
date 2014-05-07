@@ -921,7 +921,7 @@ end:
 }
 
 /* Incoming status request */
-int status_server(int *cfd, struct conf *conf)
+int status_server(int *cfd, int status_rfd, struct conf *conf)
 {
 	int l;
 	int ret=-1;

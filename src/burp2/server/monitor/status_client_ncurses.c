@@ -17,6 +17,8 @@ static enum action actg=ACTION_STATUS;
 static FILE *dbfp=NULL;
 #endif
 
+int status_wfd=-1; // For the child to send information to the parent.
+
 /*
 static void print_line(const char *string, int row, int col)
 {
@@ -918,3 +920,52 @@ end:
 #endif
 	return ret;
 }
+
+#ifndef HAVE_WIN32
+
+int write_status(char phase, const char *path, struct conf *conf)
+{
+	char *w=NULL;
+	time_t now=0;
+	time_t diff=0;
+	size_t l=0;
+	size_t wl=0;
+	static time_t lasttime=0;
+return 0;
+
+	if(status_wfd<0) goto error;
+
+	// Only update every 2 seconds.
+	now=time(NULL);
+	diff=now-lasttime;
+	if(diff<2)
+	{
+		// Might as well do this in case they fiddled their
+		// clock back in time.
+		if(diff<0) lasttime=now;
+		return 0;
+	}
+	lasttime=now;
+
+	// if(!(l=cntr_to_str(conf->cntr, &phase, path))) goto error;
+
+	w=conf->cntr->status;
+	while(l>=0)
+	{
+		if((wl=write(status_wfd, w, l))<0)
+		{
+			logp("error writing status down pipe to server: %s\n",
+				strerror(errno));
+			goto error;
+		}
+		l-=wl;
+	}
+
+	return 0;
+error:
+	close_fd(&status_wfd);
+	return -1;
+}
+
+#endif
+

@@ -1,4 +1,5 @@
 #include "include.h"
+#include "monitor/status_client.h"
 
 int check_browsedir(const char *browsedir, char **path,
 	size_t bdlen, char **last_bd_match)

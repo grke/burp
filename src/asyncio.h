@@ -8,11 +8,6 @@
 #include "cmd.h"
 #include "ssl.h"
 
-// FIX THIS: Should get rid of these and give the status server/client their
-// own struct async thing.
-extern int status_wfd; // for the child to send information to the parent.
-extern int status_rfd; // for the child to read information from the parent.
-
 // Return values for simple_loop().
 enum asl_ret
 {

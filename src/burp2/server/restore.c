@@ -1,5 +1,6 @@
 #include "include.h"
 #include "champ_chooser/hash.h"
+#include "monitor/status_client.h"
 
 static int restore_sbuf(struct async *as, struct sbuf *sb, enum action act,
 	char status, struct conf *conf, int *need_data)

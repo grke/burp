@@ -1581,6 +1581,7 @@ AC_OUTPUT([autoconf/Make.common \
 	   src/burp2/client/Makefile \
 	   src/burp2/server/Makefile \
 	   src/burp2/server/champ_chooser/Makefile \
+	   src/burp2/server/monitor/Makefile \
 	   src/burp2/Makefile \
 	   $PFILES ],  
      [ ]

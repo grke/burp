@@ -22,7 +22,5 @@
 #include "restore.h"
 #include "run_action.h"
 #include "sdirs.h"
-#include "status_client.h"
-#include "status_server.h"
 
 #endif

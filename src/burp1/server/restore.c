@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../burp2/server/monitor/status_client.h"
 
 #include <librsync.h>
 

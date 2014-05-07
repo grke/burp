@@ -1,4 +1,5 @@
 #include "include.h"
+#include "monitor/status_client.h"
 
 int do_delete_server(struct async *as,
 	struct sdirs *sdirs, struct conf *conf, const char *backup)

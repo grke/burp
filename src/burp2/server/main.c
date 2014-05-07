@@ -1,4 +1,6 @@
 #include "include.h"
+#include "monitor/status_client.h"
+#include "monitor/status_server.h"
 
 #include <netdb.h>
 
@@ -240,7 +242,8 @@ end:
 	return ret;
 }
 
-static int run_status_server(int *rfd, int *cfd, const char *conffile)
+static int run_status_server(int *rfd, int *cfd,
+		int status_rfd, const char *conffile)
 {
 	int ret=-1;
 	struct conf *conf=NULL;
@@ -253,7 +256,7 @@ static int run_status_server(int *rfd, int *cfd, const char *conffile)
 	conf_init(conf);
 	if(conf_load(conffile, conf, 1)) goto end;
 
-	ret=status_server(cfd, conf);
+	ret=status_server(cfd, status_rfd, conf);
 
 	close_fd(cfd);
 end:
@@ -326,15 +329,16 @@ static int process_incoming_client(int rfd, struct conf *conf, SSL_CTX *ctx, con
 
 			set_blocking(pipe_rfd[1]);
 			status_wfd=pipe_rfd[1];
-			status_rfd=pipe_wfd[0];
 
 			if(is_status_server)
-			  ret=run_status_server(&rfd, &cfd, conffile);
+			  ret=run_status_server(&rfd, &cfd, pipe_wfd[0],
+				conffile);
 			else
 			  ret=run_child(&rfd, &cfd, ctx,
 				conffile, conf->forking);
-			close_fd(&status_wfd);
-			close_fd(&status_rfd);
+
+			close(pipe_rfd[1]);
+			close(pipe_wfd[0]);
 			exit(ret);
 		}
 		default:
@@ -359,7 +363,7 @@ static int process_incoming_client(int rfd, struct conf *conf, SSL_CTX *ctx, con
 	else
 	{
 		if(is_status_server)
-			return run_status_server(&rfd, &cfd, conffile);
+			return run_status_server(&rfd, &cfd, -1, conffile);
 		else
 			return run_child(&rfd, &cfd, ctx, conffile,
 				conf->forking);

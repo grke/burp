@@ -9,9 +9,6 @@
 
 static size_t bufmaxsize=(ASYNC_BUF_LEN*2)+32;
 
-int status_wfd=-1; // for the child to send information to the parent.
-int status_rfd=-1; // for the child to read information from the parent.
-
 static void truncate_buf(char **buf, size_t *buflen)
 {
 	(*buf)[0]='\0';

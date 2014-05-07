@@ -239,29 +239,29 @@ static int append_to_write_buffer(struct asfd *asfd,
 	return 0;
 }
 
-static int async_append_all_to_write_buffer(struct async *as,
+static int asfd_append_all_to_write_buffer(struct asfd *asfd,
 	struct iobuf *wbuf)
 {
 	size_t sblen=0;
 	char sbuf[10]="";
-	if(as->asfd->writebuflen+6+(wbuf->len) >= bufmaxsize-1)
+	if(asfd->writebuflen+6+(wbuf->len) >= bufmaxsize-1)
 		return 1;
 
 	snprintf(sbuf, sizeof(sbuf), "%c%04X",
 		wbuf->cmd, (unsigned int)wbuf->len);
 	sblen=strlen(sbuf);
-	append_to_write_buffer(as->asfd, sbuf, sblen);
-	append_to_write_buffer(as->asfd, wbuf->buf, wbuf->len);
+	append_to_write_buffer(asfd, sbuf, sblen);
+	append_to_write_buffer(asfd, wbuf->buf, wbuf->len);
 	wbuf->len=0;
 	return 0;
 }
 
-static int async_set_bulk_packets(struct async *as)
+static int asfd_set_bulk_packets(struct asfd *asfd)
 {
 #if defined(IP_TOS) && defined(IPTOS_THROUGHPUT)
 	int opt=IPTOS_THROUGHPUT;
-	if(as->asfd->fd<0) return -1;
-	if(setsockopt(as->asfd->fd,
+	if(asfd->fd<0) return -1;
+	if(setsockopt(asfd->fd,
 		IPPROTO_IP, IP_TOS, (char *)&opt, sizeof(opt))<0)
 	{
 		logp("Error: setsockopt IPTOS_THROUGHPUT: %s\n",
@@ -334,7 +334,7 @@ static int async_rw(struct async *as, struct iobuf *rbuf, struct iobuf *wbuf)
 	if(rbuf) doread++;
 
 	if(wbuf && wbuf->len)
-		async_append_all_to_write_buffer(as, wbuf);
+		asfd_append_all_to_write_buffer(as->asfd, wbuf);
 
 	if(as->asfd->writebuflen && !as->asfd->write_blocked_on_read)
 		dowrite++; // The write buffer is not yet empty.
@@ -525,14 +525,6 @@ static int async_simple_loop(struct async *as,
 	return -1; // Not reached.
 }
 
-static struct asfd *asfd_alloc(void)
-{
-	struct asfd *asfd;
-	if(!(asfd=(struct asfd *)calloc(1, sizeof(struct asfd))))
-		log_out_of_memory(__func__);
-	return asfd;
-}
-
 static int asfd_init(struct asfd *asfd, int afd, SSL *assl, struct conf *conf)
 {
 	asfd->fd=afd;
@@ -542,10 +534,23 @@ static int asfd_init(struct asfd *asfd, int afd, SSL *assl, struct conf *conf)
 	asfd->ratelimit=conf->ratelimit;
 	asfd->rlsleeptime=10000;
 
+	asfd->append_all_to_write_buffer=asfd_append_all_to_write_buffer;
+	asfd->set_bulk_packets=asfd_set_bulk_packets;
+
 	if(async_alloc_buf(&asfd->readbuf, &asfd->readbuflen)
 	  || async_alloc_buf(&asfd->writebuf, &asfd->writebuflen))
 		return -1;
 	return 0;
+}
+
+static struct asfd *asfd_alloc(void)
+{
+	struct asfd *asfd;
+	if(!(asfd=(struct asfd *)calloc(1, sizeof(struct asfd))))
+		log_out_of_memory(__func__);
+	else
+		asfd->init=asfd_init;
+	return asfd;
 }
 
 static int async_init(struct async *as,
@@ -553,7 +558,7 @@ static int async_init(struct async *as,
 {
 	if(!(as->asfd=asfd_alloc())) return -1;
 
-	if(asfd_init(as->asfd, afd, assl, conf)) return -1;
+	if(as->asfd->init(as->asfd, afd, assl, conf)) return -1;
 
 	as->setsec=1;
 	as->setusec=0;
@@ -567,8 +572,6 @@ static int async_init(struct async *as,
 	as->write_strn=async_write_strn;
 	as->write_str=async_write_str;
 	as->read_expect=async_read_expect;
-	as->append_all_to_write_buffer=async_append_all_to_write_buffer;
-	as->set_bulk_packets=async_set_bulk_packets;
 	as->simple_loop=async_simple_loop;
 	as->settimers=async_settimers;
 

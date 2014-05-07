@@ -119,7 +119,7 @@ static int run_backup(struct async **as,
 	}
 
 	// Set quality of service bits on backups.
-	(*as)->set_bulk_packets(*as);
+	(*as)->asfd->set_bulk_packets((*as)->asfd);
 
 	if(!strncmp_w(rbuf->buf, "backupphase1timed"))
 	{

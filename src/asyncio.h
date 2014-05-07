@@ -17,32 +17,42 @@ enum asl_ret
 	ASL_END_OK_RETURN_1=2
 };
 
-struct async
+struct asfd
 {
 	int fd;
 	SSL *ssl;
+
 	int network_timeout;
 	int max_network_timeout;
-	int doing_estimate;
-
-	char *readbuf;
-	size_t readbuflen;
-	int read_blocked_on_write;
-
-	// Maybe turn these into iobufs.
-	char *writebuf;
-	size_t writebuflen;
-	int write_blocked_on_read;
 
 	float ratelimit;
 	time_t rlstart;
 	int rlsleeptime;
 	unsigned long long rlbytes;
 
+	// Maybe turn these into iobufs.
+	char *readbuf;
+	size_t readbuflen;
+	int read_blocked_on_write;
+
+	char *writebuf;
+	size_t writebuflen;
+	int write_blocked_on_read;
+};
+
+struct async
+{
+	// FIX THIS: Make asfd into a list, so that multiple fds can be
+	// written/read.
+	struct asfd *asfd;
+
+	int doing_estimate;
+
 	int setsec;
 	int setusec;
 
 	// Let us try using function pointers.
+	// FIX THIS: a lot of these need to go on struct asfd.
 	int (*init)(struct async *, int, SSL *, struct conf *, int);
 	// This one can return without completing the read or write, so check
 	// rbuf->buf and/or wbuf->len.

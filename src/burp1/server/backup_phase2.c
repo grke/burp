@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../burp2/server/monitor/status_client.h"
 
 static int treedata(struct sbuf *sb)
 {
@@ -133,7 +134,7 @@ static int process_changed_file(struct async *as,
 		return -1;
 	}
 	if(!(p1b->burp1->outfb=rs_filebuf_new(as, NULL, NULL, NULL,
-		as->fd, ASYNC_BUF_LEN, -1, cconf->cntr)))
+		as->asfd->fd, ASYNC_BUF_LEN, -1, cconf->cntr)))
 	{
 		logp("could not rs_filebuf_new for in_outfb.\n");
 		return -1;
@@ -663,7 +664,7 @@ int backup_phase2_server(struct async *as,
 		if(write_status(STATUS_BACKUP,
 			rb->path.buf?rb->path.buf:p1b->path.buf, cconf))
 				goto error;
-		if((last_requested || !p1zp || as->writebuflen)
+		if((last_requested || !p1zp || as->asfd->writebuflen)
 		  && (ars=do_stuff_to_receive(as, sdirs,
 			cconf, rb, p2fp, dpthl, &last_requested)))
 		{

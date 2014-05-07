@@ -221,9 +221,9 @@ static enum cliret initial_comms(struct async **as,
 		}
 	}
 
-	set_non_blocking((*as)->fd);
+	set_non_blocking((*as)->asfd->fd);
 
-	if(ssl_check_cert((*as)->ssl, conf))
+	if(ssl_check_cert((*as)->asfd->ssl, conf))
 	{
 		logp("check cert failed\n");
 		goto error;

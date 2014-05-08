@@ -58,5 +58,9 @@ extern int do_quick_read(struct async *as,
 	const char *datapth, struct conf *conf);
 
 extern int strncmp_w(const char *s1, const char *s2);
+extern char *strdup_w(const char *s, const char *func);
+extern void *realloc_w(void *ptr, size_t size, const char *func);
+extern void *malloc_w(size_t size, const char *func);
+extern void *calloc_w(size_t nmem, size_t size, const char *func);
 
 #endif

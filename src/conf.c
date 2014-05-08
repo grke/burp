@@ -3,10 +3,7 @@
 
 struct conf *conf_alloc(void)
 {
-	struct conf *conf;
-	if(!(conf=(struct conf *)calloc(1, sizeof(struct conf))))
-		log_out_of_memory(__FUNCTION__);
-	return conf;
+	return (struct conf *)calloc_w(1, sizeof(struct conf), __func__);
 }
 
 /* Init only stuff related to includes/excludes.
@@ -192,11 +189,7 @@ static int gcv(const char *f, const char *v, const char *want, char **dest)
 {
 	if(strcmp(f, want)) return 0;
 	if(*dest) free(*dest);
-	if(!(*dest=strdup(v)))
-	{
-		logp("could not strdup %s value: %s\n", f, v);
-		return -1;
-	}
+	if(!(*dest=strdup_w(v, __func__))) return -1;
 	return 0;
 }
 
@@ -404,11 +397,7 @@ int conf_val_reset(const char *src, char **dest)
 {
 	if(!src) return 0;
 	if(dest && *dest) free(*dest);
-	if(!(*dest=strdup(src)))
-	{
-		log_out_of_memory(__FUNCTION__);
-		return -1;
-	}
+	if(!(*dest=strdup_w(src, __func__))) return -1;
 	return 0;
 }
 
@@ -759,11 +748,7 @@ static int parse_conf_line(struct conf *c, const char *conf_path,
 		char *np=NULL;
 		char *extrafile=NULL;
 
-		if(!(extrafile=strdup(buf+2)))
-		{
-			log_out_of_memory(__FUNCTION__);
-			return -1;
-		}
+		if(!(extrafile=strdup_w(buf+2, __func__))) return -1;
 
 		if((np=strrchr(extrafile, '\n'))) *np='\0';
 		if(!*extrafile)
@@ -784,16 +769,15 @@ static int parse_conf_line(struct conf *c, const char *conf_path,
 			char *cp=NULL;
 			char *copy=NULL;
 			char *tmp=NULL;
-			if(!(copy=strdup(conf_path)))
+			if(!(copy=strdup_w(conf_path, __func__)))
 			{
-				log_out_of_memory(__FUNCTION__);
 				free(extrafile);
 				return -1;
 			}
 			if((cp=strrchr(copy, '/'))) *cp='\0';
 			if(!(tmp=prepend_s(copy, extrafile)))
 			{
-				log_out_of_memory(__FUNCTION__);
+				log_out_of_memory(__func__);
 				free(extrafile);
 				free(copy);
 			}
@@ -831,9 +815,10 @@ static int server_conf_checks(struct conf *c, const char *path, int *r)
 		conf_problem(path, "directory unset", r);
 	if(!c->dedup_group)
 		conf_problem(path, "dedup_group unset", r);
-	if(!c->timestamp_format
-	  && !(c->timestamp_format=strdup("%Y-%m-%d %H:%M:%S")))
+	if(!c->timestamp_format)
 		conf_problem(path, "timestamp_format unset", r);
+	else if(!(c->timestamp_format=strdup_w("%Y-%m-%d %H:%M:%S", __func__)))
+		return -1;
 	if(!c->clientconfdir)
 		conf_problem(path, "clientconfdir unset", r);
 	if(!c->recovery_method
@@ -940,11 +925,8 @@ static int client_conf_checks(struct conf *c, const char *path, int *r)
 		if(c->server)
 		{
 			logp("falling back to '%s'\n", c->server);
-			if(!(c->ssl_peer_cn=strdup(c->server)))
-			{
-				log_out_of_memory(__FUNCTION__);
+			if(!(c->ssl_peer_cn=strdup_w(c->server, __func__)))
 				return -1;
-			}
 		}
 	}
 	if(!c->lockfile)
@@ -1176,7 +1158,9 @@ static int conf_finalise(const char *conf_path, struct conf *c, uint8_t loadall)
 
 	// Let the caller check the 'keep' value.
 
-	if(!c->ssl_key_password) c->ssl_key_password=strdup("");
+	if(!c->ssl_key_password
+	  && !(c->ssl_key_password=strdup_w("", __func__)))
+		r--;
 
 	switch(c->mode)
 	{
@@ -1229,11 +1213,8 @@ int conf_load(const char *conf_path, struct conf *c, uint8_t loadall)
 	if(loadall)
 	{
 		if(c->conffile) free(c->conffile);
-		if(!(c->conffile=strdup(conf_path)))
-		{
-			log_out_of_memory(__FUNCTION__);
+		if(!(c->conffile=strdup_w(conf_path, __func__)))
 			return -1;
-		}
 	}
 
 	if(load_conf_lines(conf_path, c))
@@ -1252,11 +1233,7 @@ int parse_incexcs_buf(struct conf *c, const char *incexc)
 
 	if(!incexc) return 0;
 	
-	if(!(copy=strdup(incexc)))
-	{
-		log_out_of_memory(__FUNCTION__);
-		return -1;
-	}
+	if(!(copy=strdup_w(incexc, __func__))) return -1;
 	free_incexcs(c);
 	if(!(tok=strtok(copy, "\n")))
 	{
@@ -1284,11 +1261,8 @@ int log_incexcs_buf(const char *incexc)
 	char *tok=NULL;
 	char *copy=NULL;
 	if(!incexc || !*incexc) return 0;
-	if(!(copy=strdup(incexc)))
-	{
-		log_out_of_memory(__FUNCTION__);
+	if(!(copy=strdup_w(incexc, __func__)))
 		return -1;
-	}
 	if(!(tok=strtok(copy, "\n")))
 	{
 		logp("unable to parse server incexc\n");
@@ -1312,11 +1286,8 @@ int parse_incexcs_path(struct conf *c, const char *path)
 
 static int set_global_str(char **dst, const char *src)
 {
-	if(src && !(*dst=strdup(src)))
-	{
-		log_out_of_memory(__FUNCTION__);
+	if(src && !(*dst=strdup_w(src, __func__)))
 		return -1;
-	}
 	return 0;
 }
 

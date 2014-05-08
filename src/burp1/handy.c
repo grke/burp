@@ -30,7 +30,7 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password)
 
 	if(!(ctx=(EVP_CIPHER_CTX *)malloc(sizeof(EVP_CIPHER_CTX))))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		goto error;
 	}
         memset(ctx, 0, sizeof(EVP_CIPHER_CTX));

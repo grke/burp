@@ -31,7 +31,7 @@ int authorise_client(struct async *as,
 			{
 				if(!(*server_version=strdup(cp)))
 				{
-					log_out_of_memory(__FUNCTION__);
+					log_out_of_memory(__func__);
 					goto end;
 				}
 			}
@@ -67,7 +67,7 @@ int authorise_client(struct async *as,
 	}
 	else
 	{
-		iobuf_log_unexpected(rbuf, __FUNCTION__);
+		iobuf_log_unexpected(rbuf, __func__);
 		goto end;
 	}
 

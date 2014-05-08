@@ -196,7 +196,7 @@ BOOL VSSClientGeneric::Initialize(DWORD dwContext, BOOL bDuringRestore)
 {
 	if(!(p_CreateVssBackupComponents && p_VssFreeSnapshotProperties))
 	{
-		fprintf(stderr, "%s error\n", __FUNCTION__);
+		fprintf(stderr, "%s error\n", __func__);
 		return system_error();
 	}
 
@@ -208,7 +208,7 @@ BOOL VSSClientGeneric::Initialize(DWORD dwContext, BOOL bDuringRestore)
 		if(FAILED(hr))
 		{
 			fprintf(stderr, "%s: CoInitialize returned 0x%08X\n",
-				__FUNCTION__, (unsigned int)hr);
+				__func__, (unsigned int)hr);
 			return set_errno();
 		}
 		m_bCoInitializeCalled=true;
@@ -235,7 +235,7 @@ BOOL VSSClientGeneric::Initialize(DWORD dwContext, BOOL bDuringRestore)
 		{
 			fprintf(stderr,
 			  "%s: CoInitializeSecurity returned 0x%08X\n",
-			  __FUNCTION__, (unsigned int)hr);
+			  __func__, (unsigned int)hr);
 			return set_errno();
 		}
 		m_bCoInitializeSecurityCalled=true;
@@ -255,7 +255,7 @@ BOOL VSSClientGeneric::Initialize(DWORD dwContext, BOOL bDuringRestore)
 		berrno be;
 		fprintf(stderr,
 		  "%s: CreateVssBackupComponents returned 0x%08X. ERR=%s\n",
-			__FUNCTION__, (unsigned int)hr,
+			__func__, (unsigned int)hr,
 			be.bstrerror(b_errno_win32));
 		return set_errno();
 	}
@@ -266,7 +266,7 @@ BOOL VSSClientGeneric::Initialize(DWORD dwContext, BOOL bDuringRestore)
 		hr=((IVssBackupComponents*)m_pVssObject)->SetContext(dwContext);
 		if(FAILED(hr))
 		{
-			fprintf(stderr, "%s: IVssBackupComponents->SetContext returned 0x%08X\n", __FUNCTION__, (unsigned int)hr);
+			fprintf(stderr, "%s: IVssBackupComponents->SetContext returned 0x%08X\n", __func__, (unsigned int)hr);
 			return set_errno();
 		}
 	}
@@ -278,7 +278,7 @@ BOOL VSSClientGeneric::Initialize(DWORD dwContext, BOOL bDuringRestore)
 		hr=((IVssBackupComponents*)m_pVssObject)->InitializeForBackup();
 		if(FAILED(hr))
 		{
-			fprintf(stderr, "%s: IVssBackupComponents->InitializeForBackup returned 0x%08X\n", __FUNCTION__, (unsigned int)hr);
+			fprintf(stderr, "%s: IVssBackupComponents->InitializeForBackup returned 0x%08X\n", __func__, (unsigned int)hr);
 			return set_errno();
 		}
 
@@ -287,7 +287,7 @@ BOOL VSSClientGeneric::Initialize(DWORD dwContext, BOOL bDuringRestore)
 			true, VSS_BT_FULL, false);
 		if(FAILED(hr))
 		{
-			fprintf(stderr, "%s: IVssBackupComponents->SetBackupState returned 0x%08X\n", __FUNCTION__, (unsigned int)hr);
+			fprintf(stderr, "%s: IVssBackupComponents->SetBackupState returned 0x%08X\n", __func__, (unsigned int)hr);
 			return set_errno();
 		}
 
@@ -297,7 +297,7 @@ BOOL VSSClientGeneric::Initialize(DWORD dwContext, BOOL bDuringRestore)
 			m_pVssObject)->GatherWriterMetadata(&pAsync1.p);
 		if(FAILED(hr))
 		{
-			fprintf(stderr, "%s: IVssBackupComponents->GatherWriterMetadata returned 0x%08X\n", __FUNCTION__, (unsigned int)hr);
+			fprintf(stderr, "%s: IVssBackupComponents->GatherWriterMetadata returned 0x%08X\n", __func__, (unsigned int)hr);
 			return set_errno();
 		}
 		WaitAndCheckForAsyncOperation(pAsync1.p);

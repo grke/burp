@@ -127,7 +127,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			break;
 	}
 
-	iobuf_log_unexpected(rbuf, __FUNCTION__);
+	iobuf_log_unexpected(rbuf, __func__);
 error:
 	ret=-1;
 end:

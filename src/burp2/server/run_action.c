@@ -322,7 +322,7 @@ static int run_list(struct async *as,
 
 static int unknown_command(struct async *as, struct iobuf *rbuf)
 {
-	iobuf_log_unexpected(rbuf, __FUNCTION__);
+	iobuf_log_unexpected(rbuf, __func__);
 	as->write_str(as, CMD_ERROR, "unknown command");
 	return -1;
 }

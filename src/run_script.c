@@ -13,7 +13,7 @@ static int log_script_output(struct async *as, FILE **fp, struct conf *conf,
 			// logc does not print a prefix
 			if(do_logp) logp("%s", buf);
 			else logc("%s", buf);
-			if(logbuf && astrcat(logbuf, buf)) return -1;
+			if(logbuf && astrcat(logbuf, buf, __func__)) return -1;
 			if(do_logw) logw(as, conf, "%s", buf);
 		}
 		if(feof(*fp))

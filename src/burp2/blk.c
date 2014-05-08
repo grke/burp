@@ -17,7 +17,7 @@ struct blk *blk_alloc(void)
 //printf("alloc: %p\n", blk);
 		return blk;
 	}
-	log_out_of_memory(__FUNCTION__);
+	log_out_of_memory(__func__);
 	return NULL;
 }
 
@@ -30,7 +30,7 @@ struct blk *blk_alloc_with_data(uint32_t max_data_length)
 		data_count++;
 		return blk;
 	}
-	log_out_of_memory(__FUNCTION__);
+	log_out_of_memory(__func__);
 	blk_free(blk);
 	return NULL;
 }
@@ -87,7 +87,7 @@ struct blist *blist_alloc(void)
 {
 	struct blist *blist;
 	if(!(blist=(struct blist *)calloc(1, sizeof(struct blist))))
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 	return blist;
 }
 

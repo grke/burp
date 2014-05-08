@@ -145,18 +145,18 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 		if(buf->avail_in > fb->buf_len)
 		{
 			logp("buf->avail_in > fb->buf_len (%d > %d) in %s\n",
-				buf->avail_in, fb->buf_len, __FUNCTION__);
+				buf->avail_in, fb->buf_len, __func__);
 			return RS_IO_ERROR;
 		}
 		if(buf->next_in < fb->buf)
 		{
-			logp("buf->next_in < fb->buf in %s\n", __FUNCTION__);
+			logp("buf->next_in < fb->buf in %s\n", __func__);
 			return RS_IO_ERROR;
 		}
 		if(buf->next_in > fb->buf + fb->buf_len)
 		{
 			logp("buf->next_in > fb->buf + fb->buf_len in %s\n",
-				__FUNCTION__);
+				__func__);
 			return RS_IO_ERROR;
 		}
 	}
@@ -165,7 +165,7 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 		if(buf->avail_in)
 		{
 			logp("buf->avail_in is %d in %s\n",
-				buf->avail_in, __FUNCTION__);
+				buf->avail_in, __func__);
 			return RS_IO_ERROR;
 		}
 	}
@@ -207,7 +207,7 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 		}
 		else
 		{
-			iobuf_log_unexpected(rbuf, __FUNCTION__);
+			iobuf_log_unexpected(rbuf, __func__);
 			iobuf_free_content(rbuf);
 			return RS_IO_ERROR;
 		}
@@ -335,7 +335,7 @@ rs_result rs_outfilebuf_drain(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 		if(buf->avail_out)
 		{
 			logp("buf->avail_out is %d in %s\n",
-				buf->avail_out, __FUNCTION__);
+				buf->avail_out, __func__);
 			return RS_IO_ERROR;
 		}
 		buf->next_out = fb->buf;
@@ -346,19 +346,19 @@ rs_result rs_outfilebuf_drain(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 	if(buf->avail_out > fb->buf_len)
 	{
 		logp("buf->avail_out > fb->buf_len (%d > %d) in %s\n",
-			buf->avail_out, fb->buf_len, __FUNCTION__);
+			buf->avail_out, fb->buf_len, __func__);
 		return RS_IO_ERROR;
 	}
 	if(buf->next_out < fb->buf)
 	{
 		logp("buf->next_out < fb->buf (%p < %p) in %s\n",
-			buf->next_out, fb->buf, __FUNCTION__);
+			buf->next_out, fb->buf, __func__);
 		return RS_IO_ERROR;
 	}
 	if(buf->next_out > fb->buf + fb->buf_len)
 	{
 		logp("buf->next_out > fb->buf + fb->buf_len in %s\n",
-			__FUNCTION__);
+			__func__);
 		return RS_IO_ERROR;
 	}
 

@@ -13,7 +13,7 @@ struct manio *manio_alloc(void)
 {
 	struct manio *m=NULL;
 	if(!(m=(struct manio *)calloc(1, sizeof(struct manio))))
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 	return m;
 }
 
@@ -89,7 +89,7 @@ static int sort_and_write_hooks(struct manio *manio)
 	if(gzclose_fp(&zp))
 	{
 		logp("Error closing %s in %s: %s\n",
-			path, __FUNCTION__, strerror(errno));
+			path, __func__, strerror(errno));
 		goto end;
 	}
 	manio->hook_count=0;
@@ -130,7 +130,7 @@ static int sort_and_write_dindex(struct manio *manio)
 	if(gzclose_fp(&zp))
 	{
 		logp("Error closing %s in %s: %s\n",
-			path, __FUNCTION__, strerror(errno));
+			path, __func__, strerror(errno));
 		goto end;
 	}
 	manio->dindex_count=0;
@@ -168,7 +168,7 @@ static int manio_set_mode(struct manio *manio, const char *mode)
 	if(manio->mode) free(manio->mode);
 	if(!(manio->mode=strdup(mode)))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return -1;
 	}
 	manio->fcount=0;
@@ -195,7 +195,7 @@ static int manio_init(struct manio *manio, const char *directory, const char *mo
 	if(manio_free_contents(manio)) return -1;
 	if(!(manio->directory=strdup(directory)))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return -1;
 	}
 	if(manio_set_mode(manio, mode)) return -1;
@@ -389,14 +389,14 @@ int manio_init_write_hooks(struct manio *manio,
 	  || !(manio->hook_sort=
 		(char **)calloc(MANIFEST_SIG_MAX, sizeof(char*))))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return -1;
 	}
 	for(i=0; i<MANIFEST_SIG_MAX; i++)
 	{
 		if(!(manio->hook_sort[i]=(char *)calloc(1, WEAK_STR_LEN)))
 		{
-			log_out_of_memory(__FUNCTION__);
+			log_out_of_memory(__func__);
 			return -1;
 		}
 	}
@@ -410,7 +410,7 @@ int manio_init_write_dindex(struct manio *manio, const char *dir)
 	  || !(manio->dindex_sort=
 		(char **)calloc(MANIFEST_SIG_MAX, sizeof(char*))))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return -1;
 	}
 	for(i=0; i<MANIFEST_SIG_MAX; i++)
@@ -418,7 +418,7 @@ int manio_init_write_dindex(struct manio *manio, const char *dir)
 		if(!(manio->dindex_sort[i]=
 			(char *)calloc(1, SAVE_PATH_STR_LEN)))
 		{
-			log_out_of_memory(__FUNCTION__);
+			log_out_of_memory(__func__);
 			return -1;
 		}
 	}
@@ -438,7 +438,7 @@ int manio_copy_entry(struct async *as, struct sbuf **csb, struct sbuf *sb,
 
 	if(!(copy=strdup((*csb)->path.buf)))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		goto error;
 	}
 

@@ -37,7 +37,7 @@ static int incexc_recv(struct async *as, char **incexc,
 
 	endreqstrf=endreqstr;
 	endrepstrf=endrepstr;
-	if(as->simple_loop(as, conf, incexc, __FUNCTION__, incexc_recv_func))
+	if(as->simple_loop(as, conf, incexc, __func__, incexc_recv_func))
 		return -1;
 
 	// Need to put another new line at the end.

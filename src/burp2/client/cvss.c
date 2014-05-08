@@ -245,7 +245,7 @@ int get_vss(BFILE *bfd, const char *path, struct stat *statp, char **vssdata, si
 
 		if(!(tmp=(char *)realloc(tmp, (*vlen)+bsidsize)))
 		{
-			log_out_of_memory(__FUNCTION__);
+			log_out_of_memory(__func__);
 			goto error;
 		}
 		memcpy(tmp+(*vlen), &sid, bsidsize);
@@ -265,7 +265,7 @@ int get_vss(BFILE *bfd, const char *path, struct stat *statp, char **vssdata, si
 		if(!(tmp=(char *)realloc(tmp, (*vlen)+s)))
 		{
 			goto error;
-			log_out_of_memory(__FUNCTION__);
+			log_out_of_memory(__func__);
 			return -1;
 		}
 		if(ensure_read(bfd, tmp+(*vlen), s, 1))
@@ -277,7 +277,7 @@ int get_vss(BFILE *bfd, const char *path, struct stat *statp, char **vssdata, si
 	}
 	if(!(*vssdata=(char *)realloc(*vssdata, (*vlen)+9)))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		goto error;
 	}
 	snprintf(*vssdata, 9, "%c%08X", META_VSS, (unsigned int)*vlen);

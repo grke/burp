@@ -4,7 +4,7 @@ struct lock *lock_alloc(void)
 {
 	struct lock *lock=NULL;
 	if(!(lock=(struct lock *)calloc(1, sizeof(struct lock))))
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 	return lock;
 }
 
@@ -13,7 +13,7 @@ int lock_init(struct lock *lock, const char *path)
 	if(lock->path) free(lock->path);
 	if(!(lock->path=strdup(path)))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return -1;
 	}
 	return 0;
@@ -89,7 +89,7 @@ void lock_get(struct lock *lock)
         // Try to make sure the lock directory exists.
         if(!(copy=strdup(lock->path)))
 	{
-                log_out_of_memory(__FUNCTION__);
+                log_out_of_memory(__func__);
 		lock->status=GET_LOCK_ERROR;
 		return;
 	}

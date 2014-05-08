@@ -264,7 +264,7 @@ int bopen(BFILE *bfd, struct async *as,
 	{
 		if(!(bfd->path=strdup(fname)))
 		{
-			log_out_of_memory(__FUNCTION__);
+			log_out_of_memory(__func__);
 			return -1;
 		}
 	}
@@ -458,7 +458,7 @@ int bopen(BFILE *bfd,
 		bfd->mode=BF_READ;
 	if(!(bfd->path=strdup(fname)))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return -1;
 	}
 	return 0;

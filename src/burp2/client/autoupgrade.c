@@ -18,7 +18,7 @@ static enum asl_ret autoupgrade_func(struct async *as, struct iobuf *rbuf,
 		return ASL_END_OK;
 	if(strcmp(rbuf->buf, "autoupgrade ok"))
 	{
-		iobuf_log_unexpected(rbuf, __FUNCTION__);
+		iobuf_log_unexpected(rbuf, __func__);
 		return ASL_END_ERROR;
 	}
 	return ASL_END_OK_RETURN_1;
@@ -49,7 +49,7 @@ int autoupgrade_client(struct async **as, struct conf *conf)
 	}
 	if(!(copy=strdup(conf->autoupgrade_dir)))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		goto end;
 	}
 	// strip trailing slash
@@ -65,7 +65,7 @@ int autoupgrade_client(struct async **as, struct conf *conf)
 		goto end;
 
 	if(!(a=(*as)->simple_loop(*as,
-		conf, NULL, __FUNCTION__, autoupgrade_func)))
+		conf, NULL, __func__, autoupgrade_func)))
 	{
 		ret=0; // No autoupgrade.
 		goto end;

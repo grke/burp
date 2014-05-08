@@ -94,7 +94,7 @@ static char *json_escape(const char *str)
 	estr=(char *)malloc(2*n*sizeof(char));
 	if(!estr)
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return NULL;
 	}
 	for(i=0, j=0; i<n; i++, j++)
@@ -301,7 +301,7 @@ int do_list_client(struct async *as,
 		}
 		else if(sb->attr.cmd!=CMD_ATTRIBS)
 		{
-			iobuf_log_unexpected(&sb->attr, __FUNCTION__);
+			iobuf_log_unexpected(&sb->attr, __func__);
 			goto end;
 		}
 

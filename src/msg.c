@@ -134,7 +134,7 @@ int transfer_gzfile_in(struct async *as, const char *path, BFILE *bfd,
 				cntr_add(cntr, rbuf->cmd, 0);
 				break;
 			default:
-				iobuf_log_unexpected(rbuf, __FUNCTION__);
+				iobuf_log_unexpected(rbuf, __func__);
 				goto end_inflate;
 		}
 	}

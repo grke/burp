@@ -17,7 +17,7 @@ int attribs_encode(struct sbuf *sb)
 		sb->attr.cmd=CMD_ATTRIBS; // should not be needed
 		if(!(sb->attr.buf=(char *)malloc(128)))
 		{
-			log_out_of_memory(__FUNCTION__);
+			log_out_of_memory(__func__);
 			return -1;
 		}
 	}

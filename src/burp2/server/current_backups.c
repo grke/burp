@@ -140,7 +140,7 @@ static int get_link(const char *dir, const char *lnk, char real[], size_t r)
 	char *tmp=NULL;
 	if(!(tmp=prepend_s(dir, lnk)))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return -1;
 	}
 	if((len=readlink(tmp, real, r-1))<0) len=0;
@@ -219,7 +219,7 @@ int get_current_backups_str(struct async *as,
 		  || !((*arr)[i].data=prepend_s(fullpath, "data"))
 		  || !((*arr)[i].delta=prepend_s(fullpath, "deltas.reverse")))
 		{
-			if(log) log_and_send_oom(as, __FUNCTION__);
+			if(log) log_and_send_oom(as, __func__);
 			free(basename);
 			free(timestampstr);
 			free(fullpath);

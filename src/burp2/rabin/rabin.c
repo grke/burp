@@ -11,7 +11,7 @@ int blks_generate_init(struct conf *conf)
 {
 	if(!(gbuf=(char *)malloc(conf->rconf.blk_max)))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return -1;
 	}
 	gbuf_end=gbuf;

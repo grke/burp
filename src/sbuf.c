@@ -8,7 +8,7 @@ struct sbuf *sbuf_alloc(struct conf *conf)
 	struct sbuf *sb;
 	if(!(sb=(struct sbuf *)calloc(1, sizeof(struct sbuf))))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return NULL;
 	}
 	sb->path.cmd=CMD_ERROR;
@@ -18,7 +18,7 @@ struct sbuf *sbuf_alloc(struct conf *conf)
 	{
 		if(!(sb->burp1=(struct burp1 *)calloc(1, sizeof(struct burp1))))
 		{
-			log_out_of_memory(__FUNCTION__);
+			log_out_of_memory(__func__);
 			return NULL;
 		}
 	}
@@ -26,7 +26,7 @@ struct sbuf *sbuf_alloc(struct conf *conf)
 	{
 		if(!(sb->burp2=(struct burp2 *)calloc(1, sizeof(struct burp2))))
 		{
-			log_out_of_memory(__FUNCTION__);
+			log_out_of_memory(__func__);
 			return NULL;
 		}
 	}
@@ -82,7 +82,7 @@ struct slist *slist_alloc(void)
 {
 	struct slist *slist;
 	if(!(slist=(struct slist *)calloc(1, sizeof(struct slist))))
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 	return slist;
 }
 
@@ -236,18 +236,18 @@ static int read_next_data(FILE *fp, struct rblk *rblk, int ind, int r)
 	if(fread(buf, 1, 5, fp)!=5) return 1;
 	if((sscanf(buf, "%c%04X", &cmd, &len))!=2)
 	{
-		logp("sscanf failed in %s: %s\n", __FUNCTION__, buf);
+		logp("sscanf failed in %s: %s\n", __func__, buf);
 		return -1;
 	}
 	if(cmd!=CMD_DATA)
 	{
-		logp("unknown cmd in %s: %c\n", __FUNCTION__, cmd);
+		logp("unknown cmd in %s: %c\n", __func__, cmd);
 		return -1;
 	}
 	if(!(rblk[ind].readbuf[r].buf=
 		(char *)realloc(rblk[ind].readbuf[r].buf, len)))
 	{
-		logp("Out of memory in %s\n", __FUNCTION__);
+		logp("Out of memory in %s\n", __func__);
 		return -1;
 	}
 	if((bytes=fread(rblk[ind].readbuf[r].buf, 1, len, fp))!=len)
@@ -268,7 +268,7 @@ static int load_rblk(struct rblk *rblks, int ind, const char *datpath)
 	if(rblks[ind].datpath) free(rblks[ind].datpath);
 	if(!(rblks[ind].datpath=strdup(datpath)))
 	{
-		logp("Out of memory in %s\n", __FUNCTION__);
+		logp("Out of memory in %s\n", __func__);
 		return -1;
 	}
 	printf("swap %d to: %s\n", ind, datpath);
@@ -351,7 +351,7 @@ static int retrieve_blk_data(char *datpath, struct blk *blk)
 	if(!rblks
 	  && !(rblks=(struct rblk *)calloc(RBLK_MAX, sizeof(struct rblk))))
 	{
-		logp("Out of memory in %s\n", __FUNCTION__);
+		logp("Out of memory in %s\n", __func__);
 		return -1;
 	}
 
@@ -384,7 +384,7 @@ int sbuf_fill(struct sbuf *sb, struct async *as, gzFile zp,
 
 	if(!rbuf && !(rbuf=iobuf_alloc()))
 	{
-		log_and_send_oom(as, __FUNCTION__);
+		log_and_send_oom(as, __func__);
 		goto end;
 	}
 	while(1)
@@ -410,7 +410,7 @@ int sbuf_fill(struct sbuf *sb, struct async *as, gzFile zp,
 			rbuf->len=(size_t)s;
 			if(!(rbuf->buf=(char *)malloc(rbuf->len+2)))
 			{
-				log_and_send_oom(as, __FUNCTION__);
+				log_and_send_oom(as, __func__);
 				break;
 			}
 			if(gzread(zp, rbuf->buf, rbuf->len+1)!=(int)rbuf->len+1)
@@ -549,7 +549,7 @@ int sbuf_fill(struct sbuf *sb, struct async *as, gzFile zp,
 				else
 				{
 					iobuf_log_unexpected(rbuf,
-						__FUNCTION__);
+						__func__);
 					goto end;
 				}
 				break;
@@ -567,7 +567,7 @@ int sbuf_fill(struct sbuf *sb, struct async *as, gzFile zp,
 			case CMD_END_FILE:
 				if(conf->protocol==PROTO_BURP1) continue;
 			default:
-				iobuf_log_unexpected(rbuf, __FUNCTION__);
+				iobuf_log_unexpected(rbuf, __func__);
 				goto end;
 		}
 	}

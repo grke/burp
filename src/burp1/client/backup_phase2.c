@@ -338,7 +338,7 @@ static int parse_rbuf(struct async *as, struct iobuf *rbuf, struct sbuf *sb,
 	}
 	else
 	{
-		iobuf_log_unexpected(rbuf, __FUNCTION__);
+		iobuf_log_unexpected(rbuf, __func__);
 		return -1;
 	}
 	return 0;

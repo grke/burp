@@ -28,13 +28,13 @@ static struct strlist *strlist_alloc(char *path, long flag)
 	struct strlist *slnew=NULL;
 	if(!path)
 	{
-		logp("%s called with NULL path!\n", __FUNCTION__);
+		logp("%s called with NULL path!\n", __func__);
 		return NULL;
 	}
 	if(!(slnew=(struct strlist *)calloc(1, sizeof(struct strlist)))
 	  || !(slnew->path=strdup(path)))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return NULL;
 	}
 	slnew->flag=flag;

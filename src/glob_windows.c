@@ -118,9 +118,9 @@ static int process_entry(struct strlist *ig, struct conf *conf)
 	if(len1>1)
 	{
 		char *tmppath=NULL;
-		if(astrcat(&tmppath, splitstr1[0])
+		if(astrcat(&tmppath, splitstr1[0], __func__)
 		  || !(sav=strdup_w(tmppath, __func__))
-		  || astrcat(&tmppath, "*"))
+		  || astrcat(&tmppath, "*", __func__))
 			goto end;
 		hFind=FindFirstFileA(tmppath, &ffd);
 		free(tmppath);
@@ -159,8 +159,9 @@ static int process_entry(struct strlist *ig, struct conf *conf)
 				{
 					if(!(tmppath=xstrsub(ig->path, 0,
 						strlen(ig->path)-1))
-					  || astrcat(&tmppath, ffd.cFileName))
-						goto end;
+					  || astrcat(&tmppath,
+						ffd.cFileName, __func__))
+							goto end;
 				}
 				else
 					if(!(tmppath=strdup_w(ig->path,
@@ -168,9 +169,9 @@ static int process_entry(struct strlist *ig, struct conf *conf)
 			}
 			else
 			{
-				if(astrcat(&tmppath, sav)
-				  || astrcat(&tmppath, ffd.cFileName)
-				  || astrcat(&tmppath, splitstr1[1]))
+				if(astrcat(&tmppath, sav, __func__)
+				  || astrcat(&tmppath, ffd.cFileName, __func__)
+				  || astrcat(&tmppath, splitstr1[1], __func__))
 					goto end;
 			}
 			strlist_add_sorted(&conf->incexcdir,

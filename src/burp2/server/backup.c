@@ -29,7 +29,7 @@ int open_log(struct async *as, const char *realworking, struct conf *cconf)
 
 	if(!(logpath=prepend_s(realworking, "log")))
 	{
-		log_and_send_oom(as, __FUNCTION__);
+		log_and_send_oom(as, __func__);
 		return -1;
 	}
 	if(set_logfp(logpath, cconf))
@@ -70,7 +70,7 @@ static int clean_rubble(struct async *as, struct sdirs *sdirs)
 	lnk[len]='\0';
 	if(!(real=prepend_s(sdirs->client, lnk)))
 	{
-		log_and_send_oom(as, __FUNCTION__);
+		log_and_send_oom(as, __func__);
 		return -1;
 	}
 	if(recursive_delete(real, "", 1))
@@ -140,7 +140,7 @@ int do_backup_server(struct async **as, struct sdirs *sdirs,
 	if(!(realworking=prepend_s(sdirs->client, tstmp))
 	 || !(manifest_dir=prepend_s(realworking, "manifest")))
 	{
-		log_and_send_oom(*as, __FUNCTION__);
+		log_and_send_oom(*as, __func__);
 		goto error;
 	}
 

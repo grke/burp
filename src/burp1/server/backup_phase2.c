@@ -30,7 +30,7 @@ static char *set_new_datapth(struct async *as,
 		// the directory structure on the original client.
 		if(!(tmp=prepend_s("t", sb->path.buf)))
 		{
-			log_and_send_oom(as, __FUNCTION__);
+			log_and_send_oom(as, __func__);
 			return NULL;
 		}
 	}
@@ -39,7 +39,7 @@ static char *set_new_datapth(struct async *as,
 		mk_dpthl(dpthl, cconf, sb->path.cmd);
 		if(!(tmp=strdup(dpthl->path))) // file data path
 		{
-			log_and_send_oom(as, __FUNCTION__);
+			log_and_send_oom(as, __func__);
 			return NULL;
 		}
 	}
@@ -104,7 +104,7 @@ static int process_changed_file(struct async *as,
 
 	if(!(curpath=prepend_s(adir, p1b->burp1->datapth.buf)))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return -1;
 	}
 	if(dpthl_is_compressed(cb->compression, curpath))
@@ -542,7 +542,7 @@ static int do_stuff_to_receive(struct async *as,
 			}
 			else
 			{
-				iobuf_log_unexpected(rbuf, __FUNCTION__);
+				iobuf_log_unexpected(rbuf, __func__);
 				goto error;
 			}
 		}
@@ -599,7 +599,7 @@ static int do_stuff_to_receive(struct async *as,
 		}
 		else
 		{
-			iobuf_log_unexpected(rbuf, __FUNCTION__);
+			iobuf_log_unexpected(rbuf, __func__);
 			goto error;
 		}
 	}

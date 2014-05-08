@@ -374,10 +374,7 @@ static int restore_dir(struct async *as, struct sbuf *sb,
 				goto end;
 			}
 		}
-		else
-		{
-			attribs_set(as, rpath, &(sb->statp), sb->winattr, conf);
-		}
+		attribs_set(as, rpath, &(sb->statp), sb->winattr, conf);
 		if(!ret) cntr_add(conf->cntr, sb->path.cmd, 1);
 	}
 	else cntr_add(conf->cntr, sb->path.cmd, 1);

@@ -22,7 +22,7 @@ static char *get_ca_dir(struct conf *conf)
 		{
 			if(!(gca_dir=strdup(value)))
 			{
-				log_out_of_memory(__FUNCTION__);
+				log_out_of_memory(__func__);
 				fclose(fp);
 				return NULL;
 			}
@@ -368,7 +368,7 @@ static enum asl_ret csr_server_func(struct async *as,
 	}
 	else
 	{
-		iobuf_log_unexpected(rbuf, __FUNCTION__);
+		iobuf_log_unexpected(rbuf, __func__);
 		return ASL_END_ERROR;
 	}
 }
@@ -387,7 +387,7 @@ int ca_server_maybe_sign_client_cert(struct async *as,
 	// Clients before 1.3.2 did not know how to send cert signing requests.
 	if(cli_ver<min_ver) return 0;
 
-	if(as->simple_loop(as, conf, &cconf->cname, __FUNCTION__,
+	if(as->simple_loop(as, conf, &cconf->cname, __func__,
 		csr_server_func)) return -1;
 	return csr_done;
 }

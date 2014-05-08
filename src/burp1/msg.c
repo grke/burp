@@ -136,7 +136,7 @@ static DWORD WINAPI read_efs(PBYTE pbData, PVOID pvCallbackContext, PULONG ulLen
 				iobuf_free_content(rbuf);
 				continue;
 			default:
-				iobuf_log_unexpected(rbuf, __FUNCTION__);
+				iobuf_log_unexpected(rbuf, __func__);
 				iobuf_free_content(rbuf);
 				break;
 		}
@@ -347,7 +347,7 @@ int transfer_gzfile_in(struct async *as,
 				cntr_add(cntr, rbuf->cmd, 0);
 				break;
 			default:
-				iobuf_log_unexpected(rbuf, __FUNCTION__);
+				iobuf_log_unexpected(rbuf, __func__);
 				quit++;
 				ret=-1;
 				break;

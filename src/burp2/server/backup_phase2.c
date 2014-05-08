@@ -83,7 +83,7 @@ static int entry_changed(struct async *as, struct sbuf *sb,
 		}
 		if(!csb->path.buf)
 		{
-			logp("Should have a path at this point, but do not, in %s\n", __FUNCTION__);
+			logp("Should have a path at this point, but do not, in %s\n", __func__);
 			return -1;
 		}
 		// Got an entry.
@@ -272,7 +272,7 @@ static int deal_with_read(struct iobuf *rbuf,
 			break;
 	}
 
-	iobuf_log_unexpected(rbuf, __FUNCTION__);
+	iobuf_log_unexpected(rbuf, __func__);
 error:
 	ret=-1;
 	sbuf_free(inew); inew=NULL;
@@ -608,7 +608,7 @@ int backup_phase2_server(struct async *as,
 
 		if(as->rw(as, rbuf, wbuf))
 		{
-			logp("error in async_rw in %s()\n", __FUNCTION__);
+			logp("error in async_rw in %s()\n", __func__);
 			goto end;
 		}
 

@@ -56,7 +56,7 @@ static enum asl_ret restore_end_func(struct async *as, struct iobuf *rbuf,
 		//logp("got ok_restore_end\n");
 		return ASL_END_OK;
 	}
-	iobuf_log_unexpected(rbuf, __FUNCTION__);
+	iobuf_log_unexpected(rbuf, __func__);
 	return ASL_END_ERROR;
 }
 
@@ -64,7 +64,7 @@ static int do_restore_end(struct async *as, struct conf *conf)
 {
 	if(as->write_str(as, CMD_GEN, "restore_end")) return -1;
 	return as->simple_loop(as,
-		conf, NULL, __FUNCTION__, restore_end_func);
+		conf, NULL, __func__, restore_end_func);
 }
 
 static int restore_ent(struct async *as,
@@ -171,7 +171,7 @@ static int cntr_load(const char *manifest, regex_t *regex, struct conf *conf)
 	}
 	if(!(sb=sbuf_init()))
 	{
-		log_and_send_oom(__FUNCTION__);
+		log_and_send_oom(__func__);
 		goto end;
 	}
 	else
@@ -264,7 +264,7 @@ static int maybe_copy_data_files_across(struct async *as,
 		if((ars=manio_sbuf_fill(manio, as, sb, blk, NULL, conf))<0)
 		{
 			logp("Error from manio_sbuf_fill() in %s\n",
-				__FUNCTION__);
+				__func__);
 			goto end; // Error;
 		}
 		else if(ars>0)
@@ -365,7 +365,7 @@ static int maybe_copy_data_files_across(struct async *as,
 		if((ars=manio_sbuf_fill(manio, as, sb, blk, NULL, conf))<0)
 		{
 			logp("Error from manio_sbuf_fill() in %s\n",
-				__FUNCTION__);
+				__func__);
 			goto end; // Error;
 		}
 		else if(ars>0)
@@ -471,7 +471,7 @@ static int restore_stream(struct async *as,
 		if((ars=manio_sbuf_fill(manio, as, sb, blk, dpth, conf))<0)
 		{
 			logp("Error from manio_sbuf_fill() in %s\n",
-				__FUNCTION__);
+				__func__);
 			goto end; // Error;
 		}
 		else if(ars>0)
@@ -616,7 +616,7 @@ static int restore_manifest(struct async *as, struct bu *bu, regex_t *regex,
 		&& !(logpathz=prepend_s(bu->path, "verifylog.gz")))
 	 || !(manifest=prepend_s(bu->path, "manifest")))
 	{
-		log_and_send_oom(as, __FUNCTION__);
+		log_and_send_oom(as, __func__);
 		goto end;
 	}
 	else if(set_logfp(logpath, conf))

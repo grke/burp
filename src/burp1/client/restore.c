@@ -45,7 +45,7 @@ static int restore_interrupt(struct async *as,
 				break;
 			else
 			{
-				iobuf_log_unexpected(rbuf, __FUNCTION__);
+				iobuf_log_unexpected(rbuf, __func__);
 				goto end;
 			}
 		}
@@ -71,7 +71,7 @@ static int make_link(struct async *as, const char *fname, const char *lnk,
 		char *flnk=NULL;
 		if(!(flnk=prepend_s(restoreprefix, lnk)))
 		{
-			log_out_of_memory(__FUNCTION__);
+			log_out_of_memory(__func__);
 			return -1;
 		}
 		//printf("%s -> %s\n", fname, flnk);
@@ -114,7 +114,7 @@ static int open_for_restore(struct async *as, BFILE *bfd, FILE **fp,
 			if(bclose(bfd, as))
 			{
 				logp("error closing %s in %s()\n",
-					path, __FUNCTION__);
+					path, __func__);
 				return -1;
 			}
 		}
@@ -535,7 +535,7 @@ static int strip_path_components(struct async *as,
 	}
 	if(!(tmp=strdup(cp)))
 	{
-		log_and_send_oom(as, __FUNCTION__);
+		log_and_send_oom(as, __func__);
 		return -1;
 	}
 	free(*path);
@@ -674,7 +674,7 @@ int do_restore_client_burp1(struct async *as,
 				if(!(fullpath=prepend_s(conf->restoreprefix,
 					sb->path.buf)))
 				{
-					log_and_send_oom(as, __FUNCTION__);
+					log_and_send_oom(as, __func__);
 					goto end;
 				}
 				if(act==ACTION_RESTORE)

@@ -68,7 +68,7 @@ int chld_setup(int oldmax_children, int max_children, int oldmax_status_children
 	if(!(chlds=(struct chld *)
 		realloc(chlds, sizeof(struct chld)*(total_max_children+1))))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return -1;
 	}
 	if((p=total_oldmax_children-1)<0) p=0;
@@ -201,7 +201,7 @@ int chld_fd_isset_normal(struct conf *conf, fd_set *fsr, fd_set *fse)
 					buf[l]='\0';
 					if(!(chlds[c].data=strdup(buf)))
 					{
-						log_out_of_memory(__FUNCTION__);
+						log_out_of_memory(__func__);
 						return -1;
 					}
 					if(chlds[c].name) continue;

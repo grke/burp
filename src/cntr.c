@@ -15,7 +15,7 @@ struct cntr *cntr_alloc(void)
 {
 	struct cntr *cntr=NULL;
 	if(!(cntr=(struct cntr *)calloc(1, sizeof(struct cntr))))
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 	return cntr;
 }
 
@@ -36,7 +36,7 @@ int add_cntr_ent(struct cntr *cntr, int versions,
 	cntr->cmd_order[cntr->colen++]=cmd;
 	return 0;
 error:
-	log_out_of_memory(__FUNCTION__);
+	log_out_of_memory(__func__);
 	cntr_ent_free(cenew);
 	return -1;
 }
@@ -88,7 +88,7 @@ int cntr_init(struct cntr *cntr, const char *cname)
 {
 	if(!cname)
 	{
-		logp("%s called with no client name\n", __FUNCTION__);
+		logp("%s called with no client name\n", __func__);
 		return -1;
 	}
 	cntr->start=time(NULL);
@@ -145,7 +145,7 @@ int cntr_init(struct cntr *cntr, const char *cname)
 	if(!(cntr->status=(char *)calloc(1, cntr->status_max_len))
 	  || !(cntr->cname=strdup(cname)))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return -1;
 	}
 
@@ -880,7 +880,7 @@ static int extract_cntrs(struct cntr *cntr, int cntr_version, const char *tok,
 					strtoull(tok, NULL, 10); }
 		else if(t==x++) { p1cntr->start=atol(tok); }
 		else if(t==x++) { if(path && !(*path=strdup(tok)))
-		  { log_out_of_memory(__FUNCTION__); return -1; } }
+		  { log_out_of_memory(__func__); return -1; } }
 	}
 	return 0;
 }
@@ -896,7 +896,7 @@ int str_to_cntr(const char *str, char **client, char *status, char *phase,
 
 	if(!(copy=strdup(str)))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return -1;
 	}
 
@@ -906,7 +906,7 @@ int str_to_cntr(const char *str, char **client, char *status, char *phase,
 		char *cntr_version_tmp=NULL;
 		if(client && !(*client=strdup(tok)))
 		{
-			log_out_of_memory(__FUNCTION__);
+			log_out_of_memory(__func__);
 			return -1;
 		}
 		if(!(cntr_version_tmp=strtok(NULL, "\t\n")))
@@ -963,5 +963,5 @@ static enum asl_ret cntr_recv_func(struct async *as, struct iobuf *rbuf,
 
 int cntr_recv(struct async *as, struct conf *conf)
 {
-	return as->simple_loop(as, conf, NULL, __FUNCTION__, cntr_recv_func);
+	return as->simple_loop(as, conf, NULL, __func__, cntr_recv_func);
 }

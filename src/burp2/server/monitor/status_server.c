@@ -40,7 +40,7 @@ static int cstat_add_initial_details(struct cstat *c, const char *name, const ch
 	if(!(c->conffile=prepend_s(clientconfdir, name))
 	  || !(c->name=strdup(name)))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return -1;
 	}
 	c->conf_mtime=0;
@@ -85,13 +85,13 @@ static int cstat_add(struct cstat ***clist, int *clen,
 	if(!(ctmp=(struct cstat **)realloc(*clist,
 		((*clen)+1)*sizeof(struct cstat *))))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return -1;
 	}
 	*clist=ctmp;
 	if(!(cnew=(struct cstat *)malloc(sizeof(struct cstat))))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return -1;
 	}
 	if(cstat_add_initial_details(cnew, name, clientconfdir))
@@ -140,7 +140,7 @@ static int set_cstat_from_conf(struct cstat *c, struct conf *conf, struct conf *
 	  || !(c->lockfile=prepend_s(lockbasedir, "lockfile")))
 	{
 		if(lockbasedir) free(lockbasedir);
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return -1;
 	}
 	c->basedir_mtime=0;
@@ -326,7 +326,7 @@ static int reload_from_client_confs(struct conf *conf,
 		conf_free_content(cconf);
 		if(!(cconf->cname=strdup((*clist)[q]->name)))
 		{
-			log_out_of_memory(__FUNCTION__);
+			log_out_of_memory(__func__);
 			goto error;
 		}
 		if(conf_set_client_global(conf, cconf)
@@ -508,7 +508,7 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, con
 				len+=(a*32)+1;
 				if(!(curback=(char *)malloc(len)))
 				{
-					log_out_of_memory(__FUNCTION__);
+					log_out_of_memory(__func__);
 					return -1;
 				}
 				snprintf(curback, len, "%s\t%c\t%c",
@@ -594,7 +594,7 @@ static int parse_parent_data_entry(char *tok, struct cstat **clist, int clen)
 			// Need to add the newline back on the end.
 			if(!(clist[q]->running_detail=(char *)malloc(x+2)))
 			{
-				log_out_of_memory(__FUNCTION__);
+				log_out_of_memory(__func__);
 				return -1;
 			}
 			snprintf(clist[q]->running_detail, x+2, "%s\n",
@@ -613,7 +613,7 @@ static int parse_parent_data(const char *data, struct cstat **clist, int clen)
 
 	if(!(copyall=strdup(data)))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		goto end;
 	}
 
@@ -845,7 +845,7 @@ static int parse_rbuf(const char *rbuf, int cfd, struct cstat **clist, int clen)
 		if(file) free(file);
 		if(!(file=strdup("manifest.gz")))
 		{
-			log_out_of_memory(__FUNCTION__);
+			log_out_of_memory(__func__);
 			goto error;
 		}
 		// Strip trailing slashes.

@@ -20,7 +20,7 @@ static int hooks_alloc(struct hooks **hnew, char **path, char **fingerprints)
 
 	if(!(*hnew=(struct hooks *)malloc(sizeof(struct hooks))))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return -1;
 	}
 	
@@ -66,13 +66,13 @@ static int get_next_set_of_hooks(struct hooks **hnew, struct sbuf *sb,
 		}
 		else if(sb->path.cmd==CMD_FINGERPRINT)
 		{
-			if(astrcat(fingerprints, sb->path.buf))
+			if(astrcat(fingerprints, sb->path.buf, __func__))
 				break;
 			sbuf_free_content(sb);
 		}
 		else
 		{
-			iobuf_log_unexpected(&sb->path, __FUNCTION__);
+			iobuf_log_unexpected(&sb->path, __func__);
 			break;
 		}
 	}
@@ -247,7 +247,7 @@ static int merge_sparse_indexes(const char *srca, const char *srcb,
 
 	if(gzclose_fp(&dzp))
 	{
-		logp("Error closing %s in %s\n", tmpfile, __FUNCTION__);
+		logp("Error closing %s in %s\n", tmpfile, __func__);
 		goto end;
 	}
 

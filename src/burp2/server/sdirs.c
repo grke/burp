@@ -4,7 +4,7 @@ struct sdirs *sdirs_alloc(void)
 {
 	struct sdirs *sdirs=NULL;
 	if(!(sdirs=(struct sdirs *)calloc(1, sizeof(struct sdirs))))
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 	return sdirs;
 }
 
@@ -61,7 +61,7 @@ static int do_v2_dirs(struct sdirs *sdirs, struct conf *conf)
 {
 	if(!conf->dedup_group)
 	{
-		logp("conf->dedup_group unset in %s\n", __FUNCTION__);
+		logp("conf->dedup_group unset in %s\n", __func__);
 		return -1;
 	}
 	if(!(sdirs->dedup=prepend_s(sdirs->base, conf->dedup_group))
@@ -87,7 +87,7 @@ extern int sdirs_init(struct sdirs *sdirs, struct conf *conf)
 {
 	if(!conf->directory)
 	{
-		logp("conf->directory unset in %s\n", __FUNCTION__);
+		logp("conf->directory unset in %s\n", __func__);
 		goto error;
 	}
 

@@ -54,7 +54,7 @@ int check_browsedir(const char *browsedir, char **path,
 	return 1;
 error:
 	if(copy) free(copy);
-	log_out_of_memory(__FUNCTION__);
+	log_out_of_memory(__func__);
 	return -1;
 }
 
@@ -76,7 +76,7 @@ static int list_manifest(struct async *as,
 	  || manio_init_read(manio, manifest_dir)
 	  || !(sb=sbuf_alloc(conf)))
 	{
-		log_and_send_oom(as, __FUNCTION__);
+		log_and_send_oom(as, __func__);
 		goto error;
 	}
 	manio_set_protocol(manio, conf->protocol);

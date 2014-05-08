@@ -35,7 +35,7 @@ int do_quick_read(struct async *as, const char *datapth, struct conf *conf)
 		}
 		else
 		{
-			iobuf_log_unexpected(&rbuf, __FUNCTION__);
+			iobuf_log_unexpected(&rbuf, __func__);
 			r=-1;
 		}
 		iobuf_free_content(&rbuf);
@@ -307,24 +307,6 @@ void reuseaddr(int fd)
 				strerror(errno));
 }
 
-int astrcat(char **buf, const char *append)
-{
-	int l=0;
-	char *copy=NULL;
-	if(append) l+=strlen(append);
-	if(*buf) l+=strlen(*buf);
-	l++;
-	if((*buf && !(copy=strdup(*buf)))
-	  || !(*buf=(char *)realloc(*buf, l)))
-	{
-		logp("out of memory in %s.\n", __func__);
-		return -1;
-	}
-	snprintf(*buf, l, "%s%s", copy?copy:"", append?append:"");
-	if(copy) free(copy);
-	return 0;
-}
-
 void setup_signal(int sig, void handler(int sig))
 {
 	struct sigaction sa;
@@ -376,7 +358,7 @@ int chuser_and_or_chgrp(struct conf *conf)
 	// Any OS uname pointer may get overwritten, so save name, uid, and gid
 	if(!(username=strdup(user)))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return -1;
 	}
 	uid=passw->pw_uid;
@@ -491,7 +473,7 @@ long version_to_long(const char *version)
 	if(!version || !*version) return 0;
 	if(!(copy=strdup(version)))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return -1;
 	}
 	if(!(tok1=strtok(copy, "."))
@@ -650,3 +632,20 @@ void *calloc_w(size_t nmem, size_t size, const char *func)
 	return ret;
 }
 
+int astrcat(char **buf, const char *append, const char *func)
+{
+	int l=0;
+	char *copy=NULL;
+	if(append) l+=strlen(append);
+	if(*buf) l+=strlen(*buf);
+	l++;
+	if((*buf && !(copy=strdup(*buf)))
+	  || !(*buf=(char *)realloc(*buf, l)))
+	{
+		log_oom_w(__func__, func);
+		return -1;
+	}
+	snprintf(*buf, l, "%s%s", copy?copy:"", append?append:"");
+	if(copy) free(copy);
+	return 0;
+}

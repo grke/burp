@@ -46,7 +46,7 @@ FF_PKT *find_files_init(void)
 	  || !(linkhash=(f_link **)
 		calloc(1, LINK_HASHTABLE_SIZE*sizeof(f_link *))))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return NULL;
 	}
 
@@ -407,7 +407,7 @@ static int get_files_in_directory(DIR *directory, struct dirent ***nl, int *coun
 		if(!(entry=(struct dirent *)malloc(
 			sizeof(struct dirent)+name_max+100)))
 		{
-			log_out_of_memory(__FUNCTION__);
+			log_out_of_memory(__func__);
 			return -1;
 		}
 		status=readdir_r(directory, entry, &result);
@@ -436,7 +436,7 @@ static int get_files_in_directory(DIR *directory, struct dirent ***nl, int *coun
 				realloc (*nl, allocated*sizeof(**nl))))
 			{
 				free(entry);
-				log_out_of_memory(__FUNCTION__);
+				log_out_of_memory(__func__);
 				return -1;
 			}
 			*nl=ntmp;
@@ -471,7 +471,7 @@ static int process_files_in_directory(struct async *as, struct dirent **nl,
 			*link_len=len+strlen(p)+1;
 			if(!(*link=(char *)realloc(*link, (*link_len)+1)))
 			{
-				log_out_of_memory(__FUNCTION__);
+				log_out_of_memory(__func__);
 				return -1;
 			}
 		}
@@ -549,7 +549,7 @@ static int found_directory(struct async *as, FF_PKT *ff_pkt, struct conf *conf,
 	link_len=len+200;
 	if(!(link=(char *)malloc(link_len+2)))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return -1;
 	}
 	snprintf(link, link_len, "%s", fname);
@@ -755,7 +755,7 @@ static int find_files(struct async *as, FF_PKT *ff_pkt, struct conf *conf,
 		if(!(lp=(struct f_link *)malloc(sizeof(struct f_link)))
 		  || !(lp->name=strdup(fname)))
 		{
-			log_out_of_memory(__FUNCTION__);
+			log_out_of_memory(__func__);
 			return -1;
 		}
 		lp->ino=ff_pkt->statp.st_ino;

@@ -122,7 +122,7 @@ static int read_stat(struct async *as, FILE *fp,
 		}
 		else
 		{
-			iobuf_log_unexpected(rbuf, __FUNCTION__);
+			iobuf_log_unexpected(rbuf, __func__);
 			break;
 		}
 	}
@@ -148,7 +148,7 @@ static int do_sbufl_fill_from_net(struct sbuf *sb, struct async *as,
 		rbuf->buf=NULL;
 		if(!cmd_is_link(rbuf->cmd))
 		{
-			iobuf_log_unexpected(rbuf, __FUNCTION__);
+			iobuf_log_unexpected(rbuf, __func__);
 			return -1;
 		}
 	}
@@ -170,7 +170,7 @@ static int do_sbufl_fill_from_file(struct sbuf *sb, FILE *fp, gzFile zp,
 		iobuf_copy(&sb->link, &rbuf);
 		if(!cmd_is_link(rbuf.cmd))
 		{
-			iobuf_log_unexpected(&rbuf, __FUNCTION__);
+			iobuf_log_unexpected(&rbuf, __func__);
 			return -1;
 		}
 	}
@@ -188,7 +188,7 @@ static int do_sbufl_fill_from_file(struct sbuf *sb, FILE *fp, gzFile zp,
 		iobuf_copy(&(sb->burp1->endfile), &rbuf);
 		if(rbuf.cmd!=CMD_END_FILE)
 		{
-			iobuf_log_unexpected(&rbuf, __FUNCTION__);
+			iobuf_log_unexpected(&rbuf, __func__);
 			return -1;
 		}
 	}
@@ -285,7 +285,7 @@ int add_to_sbufl_arr(struct sbuf ***sblist, struct sbuf *sb, int *count)
         if(!(sbtmp=(struct sbuf **)realloc(*sblist,
                 ((*count)+1)*sizeof(struct sbuf *))))
         {
-                log_out_of_memory(__FUNCTION__);
+                log_out_of_memory(__func__);
                 return -1;
         }
         *sblist=sbtmp;
@@ -317,7 +317,7 @@ int del_from_sbufl_arr(struct sbuf ***sblist, int *count)
         if(*count && !(sbtmp=(struct sbuf **)realloc(*sblist,
                 (*count)*sizeof(struct sbuf *))))
         {
-                log_out_of_memory(__FUNCTION__);
+                log_out_of_memory(__func__);
                 return -1;
         }
         *sblist=sbtmp;

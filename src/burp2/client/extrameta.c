@@ -98,7 +98,7 @@ int set_extrameta(struct async *as,
 		l-=9;
 		if(!(m=(char *)malloc(s+1)))
 		{
-			log_out_of_memory(__FUNCTION__);
+			log_out_of_memory(__func__);
 			return -1;
 		}
 		memcpy(m, metadata, s);

@@ -33,7 +33,7 @@ static enum cliret maybe_check_timer(struct async *as,
 
         if(rbuf.cmd!=CMD_GEN)
         {
-		iobuf_log_unexpected(&rbuf, __FUNCTION__);
+		iobuf_log_unexpected(&rbuf, __func__);
 		goto error;
         }
         if(!strcmp(rbuf.buf, "timer conditions not met"))
@@ -59,7 +59,7 @@ static enum cliret maybe_check_timer(struct async *as,
 	}
 	else
 	{
-		iobuf_log_unexpected(&rbuf, __FUNCTION__);
+		iobuf_log_unexpected(&rbuf, __func__);
 		iobuf_free_content(&rbuf);
 		goto error;
 	}

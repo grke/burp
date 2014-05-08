@@ -53,7 +53,7 @@ static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
 		// entry, we need to remember the position of it.
 		if(target && fp && seekback && (pos=ftello(fp))<0)
 		{
-			logp("Could not ftello in %s(): %s\n", __FUNCTION__,
+			logp("Could not ftello in %s(): %s\n", __func__,
 				strerror(errno));
 			goto error;
 		}
@@ -85,7 +85,7 @@ static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
 				if(result->buf)
 				{
 					logp("Error after %s in %s()\n",
-						result->buf, __FUNCTION__);
+						result->buf, __func__);
 				}
 				goto error;
 			}
@@ -100,7 +100,7 @@ static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
 			if(fp && seekback && fseeko(fp, pos, SEEK_SET))
 			{
 				logp("Could not fseeko in %s(): %s\n",
-					__FUNCTION__, strerror(errno));
+					__func__, strerror(errno));
 				goto error;
 			}
 			return 0;

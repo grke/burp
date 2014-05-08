@@ -52,8 +52,6 @@ extern int split_sig(const char *buf, unsigned int s, char *weak, char *strong);
 extern int split_sig_with_save_path(const char *buf, unsigned int s,
 	char *weak, char *strong, char *save_path);
 
-extern int astrcat(char **buf, const char *append);
-
 extern int do_quick_read(struct async *as,
 	const char *datapth, struct conf *conf);
 
@@ -62,5 +60,6 @@ extern char *strdup_w(const char *s, const char *func);
 extern void *realloc_w(void *ptr, size_t size, const char *func);
 extern void *malloc_w(size_t size, const char *func);
 extern void *calloc_w(size_t nmem, size_t size, const char *func);
+extern int astrcat(char **buf, const char *append, const char *func);
 
 #endif

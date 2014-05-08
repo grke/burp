@@ -141,7 +141,7 @@ int do_backup_server_burp1(struct async **as,
 		real[len]='\0';
 		if(!(realworking=prepend_s(sdirs->client, real)))
 		{
-			log_and_send_oom(*as, __FUNCTION__);
+			log_and_send_oom(*as, __func__);
 			goto error;
 		}
 		if(open_log(*as, realworking, cconf)) goto error;
@@ -154,7 +154,7 @@ int do_backup_server_burp1(struct async **as,
 			goto error;
 		if(!(realworking=prepend_s(sdirs->client, tstmp)))
 		{
-			log_and_send_oom(*as, __FUNCTION__);
+			log_and_send_oom(*as, __func__);
 			goto error;
 		}
 		// Add the working symlink before creating the directory.

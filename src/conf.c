@@ -1041,7 +1041,7 @@ static int finalise_start_dirs(struct conf *c)
 static int finalise_glob(struct conf *c)
 {
 #ifdef HAVE_WIN32
-	windows_glob(c);
+	if(windows_glob(c)) return -1;
 #else
 	int i;
 	glob_t globbuf;

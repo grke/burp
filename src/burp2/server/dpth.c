@@ -60,7 +60,7 @@ static struct dpth_lock *dpth_lock_alloc(const char *save_path)
         struct dpth_lock *dpth_lock;
         if(!(dpth_lock=(struct dpth_lock *)calloc(1, sizeof(struct dpth_lock))))
 	{
-        	log_out_of_memory(__FUNCTION__);
+        	log_out_of_memory(__func__);
 		return NULL;
 	}
 	snprintf(dpth_lock->save_path, sizeof(dpth_lock->save_path),
@@ -169,7 +169,7 @@ struct dpth *dpth_alloc(const char *base_path)
         if((dpth=(struct dpth *)calloc(1, sizeof(struct dpth)))
 	  && (dpth->base_path=strdup(base_path)))
 		return dpth;
-	log_out_of_memory(__FUNCTION__);
+	log_out_of_memory(__func__);
 	dpth_free(dpth);
 	return NULL;
 }

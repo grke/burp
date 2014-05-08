@@ -43,7 +43,7 @@ int extra_comms(struct async **as, struct conf *conf,
 	if(rbuf->cmd!=CMD_GEN
 	  || strncmp_w(feat, "extra_comms_begin ok"))
 	{
-		iobuf_log_unexpected(rbuf, __FUNCTION__);
+		iobuf_log_unexpected(rbuf, __func__);
 		goto end;
 	}
 

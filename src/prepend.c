@@ -1,7 +1,8 @@
 #include "include.h"
 
 /* This may be given binary data, of which we need to already know the length */
-char *prepend_len(const char *prep, size_t plen, const char *fname, size_t flen, const char *sep, size_t slen, size_t *newlen)
+char *prepend_len(const char *prep, size_t plen, const char *fname,
+	size_t flen, const char *sep, size_t slen, size_t *newlen)
 {
 	size_t l=0;
 	char *rpath=NULL;
@@ -13,7 +14,7 @@ char *prepend_len(const char *prep, size_t plen, const char *fname, size_t flen,
 
 	if(!(rpath=(char *)malloc(l)))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return NULL;
 	}
 	if(plen) memcpy(rpath,           prep,  plen);
@@ -38,7 +39,7 @@ char *prepend_slash(const char *prep, const char *fname, size_t len)
 	{
 		char *ret=NULL;
 		if(!(ret=strdup(fname)))
-			log_out_of_memory(__FUNCTION__);
+			log_out_of_memory(__func__);
 		return ret;
 	}
 	// Try to avoid getting a double slash in the path.

@@ -5,7 +5,7 @@ struct iobuf *iobuf_alloc(void)
 	struct iobuf *iobuf;
 	if(!(iobuf=(struct iobuf *)calloc(1, sizeof(struct iobuf))))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return NULL;
 	}
 	iobuf_init(iobuf);

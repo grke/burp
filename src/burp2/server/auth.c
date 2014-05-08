@@ -33,7 +33,7 @@ static int check_client_and_password(struct conf *conf, const char *password, st
 			logp("Falling back to using '%s'\n", cconf->cname);
 			if(!(cconf->ssl_peer_cn=strdup(cconf->cname)))
 			{
-				log_out_of_memory(__FUNCTION__);
+				log_out_of_memory(__func__);
 				return -1;
 			}
 		}
@@ -98,7 +98,7 @@ int authorise_server(struct async *as, struct conf *conf, struct conf *cconf)
 	}
 	if(rbuf.cmd!=CMD_GEN || strncmp_w(rbuf.buf, "hello"))
 	{
-		iobuf_log_unexpected(&rbuf, __FUNCTION__);
+		iobuf_log_unexpected(&rbuf, __func__);
 		iobuf_free_content(&rbuf);
 		return -1;
 	}

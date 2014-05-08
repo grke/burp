@@ -31,7 +31,7 @@ end:
 	close_fp(&dstfp);
 	if(close_fp(&sigp))
 	{
-		logp("error closing %s in %s\n", sig, __FUNCTION__);
+		logp("error closing %s in %s\n", sig, __func__);
 		return -1;
 	}
 	return ret;
@@ -79,12 +79,12 @@ end:
 	close_fp(&sigp);
 	if(gzclose_fp(&delzp))
 	{
-		logp("error closing zp %s in %s\n", del, __FUNCTION__);
+		logp("error closing zp %s in %s\n", del, __func__);
 		ret=-1;
 	}
 	if(close_fp(&delfp))
 	{
-		logp("error closing fp %s in %s\n", del, __FUNCTION__);
+		logp("error closing fp %s in %s\n", del, __func__);
 		ret=-1;
 	}
 	return ret;
@@ -97,7 +97,7 @@ static int gen_rev_delta(const char *sigpath, const char *deltadir, const char *
 	char *delpath=NULL;
 	if(!(delpath=prepend_s(deltadir, path)))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		goto end;
 	}
 	//logp("Generating reverse delta...\n");
@@ -160,7 +160,7 @@ static int inflate_oldfile(const char *opath, const char *infpath,
 end:
 	close_fp(&source);
 	if(close_fp(&dest))
-		logp("error closing %s in %s\n", infpath, __FUNCTION__);
+		logp("error closing %s in %s\n", infpath, __func__);
 	return ret;
 }
 
@@ -201,7 +201,7 @@ static int jiggle(struct sbuf *sb, const char *currentdata, const char *datadirt
 	  || !(finpath=prepend_s(datadir, datapth))
 	  || !(deltafpath=prepend_s(deltafdir, datapth)))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		goto end;
 	}
 	else if(!lstat(finpath, &statp) && S_ISREG(statp.st_mode))
@@ -244,7 +244,7 @@ static int jiggle(struct sbuf *sb, const char *currentdata, const char *datadirt
 		// all over the place, and gzseeks are slow.
 	  	if(!(infpath=prepend_s(deltafdir, "inflate")))
 		{
-			log_out_of_memory(__FUNCTION__);
+			log_out_of_memory(__func__);
 			goto end;
 		}
 
@@ -565,7 +565,7 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct conf *cconf,
 	  || !(sigpath=prepend_s(currentdup, "sig.tmp"))
 	  || !(sb=sbuf_alloc(cconf)))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		goto end;
 	}
 

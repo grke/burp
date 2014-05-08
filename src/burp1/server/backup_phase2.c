@@ -378,7 +378,8 @@ static int do_stuff_to_send(struct asfd *asfd,
 			return 1;
 		p1b->flags &= ~SBUFL_SEND_PATH;
 		if(*last_requested) free(*last_requested);
-		*last_requested=strdup(p1b->path.buf);
+		if(!(*last_requested=strdup_w(p1b->path.buf, __func__)))
+			return -1;
 	}
 	if(p1b->burp1->sigjob && !(p1b->flags & SBUFL_SEND_ENDOFSIG))
 	{

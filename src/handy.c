@@ -616,3 +616,37 @@ int strncmp_w(const char *s1, const char *s2)
 {
 	return strncmp(s1, s2, strlen(s2));
 }
+
+static void log_oom_w(const char *func, const char *orig_func)
+{
+	logp("out of memory in %s, called from %s\n", __func__, func);
+}
+
+char *strdup_w(const char *s, const char *func)
+{
+	char *ret;
+	if(!(ret=strdup(s))) log_oom_w(__func__, func);
+	return ret;
+}
+
+void *realloc_w(void *ptr, size_t size, const char *func)
+{
+	void *ret;
+	if(!(ret=realloc(ptr, size))) log_oom_w(__func__, func);
+	return ret;
+}
+
+void *malloc_w(size_t size, const char *func)
+{
+	void *ret;
+	if(!(ret=malloc(size))) log_oom_w(__func__, func);
+	return ret;
+}
+
+void *calloc_w(size_t nmem, size_t size, const char *func)
+{
+	void *ret;
+	if(!(ret=calloc(nmem, size))) log_oom_w(__func__, func);
+	return ret;
+}
+

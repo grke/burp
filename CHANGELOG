@@ -1,3 +1,5 @@
+  * Bug fix for restoring permissions on empty directories.
+
 2014-04-29 Changes in burp-1.4.14:
   * Add an 'atime' option, which allows the user to choose whether to use
     O_NOATIME or not.

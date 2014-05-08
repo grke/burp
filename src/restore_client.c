@@ -413,11 +413,8 @@ static int restore_dir(struct sbuf *sb, const char *dname, enum action act, stru
 				goto end;
 			}
 		}
-		else
-		{
-			set_attributes(rpath,
-				sb->cmd, &(sb->statp), sb->winattr, cntr);
-		}
+		set_attributes(rpath,
+			sb->cmd, &(sb->statp), sb->winattr, cntr);
 		if(!ret) do_filecounter(cntr, sb->cmd, 1);
 	}
 	else do_filecounter(cntr, sb->cmd, 1);

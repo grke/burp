@@ -950,7 +950,7 @@ int cntr_send(struct cntr *cntr)
 }
 #endif
 
-static enum asl_ret cntr_recv_func(struct async *as, struct iobuf *rbuf,
+static enum asl_ret cntr_recv_func(struct asfd *asfd, struct iobuf *rbuf,
 	struct conf *conf, void *param)
 {
 /*
@@ -961,7 +961,7 @@ static enum asl_ret cntr_recv_func(struct async *as, struct iobuf *rbuf,
 	return ASL_END_OK;
 }
 
-int cntr_recv(struct async *as, struct conf *conf)
+int cntr_recv(struct asfd *asfd, struct conf *conf)
 {
-	return as->simple_loop(as, conf, NULL, __func__, cntr_recv_func);
+	return asfd->simple_loop(asfd, conf, NULL, __func__, cntr_recv_func);
 }

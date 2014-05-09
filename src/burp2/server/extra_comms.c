@@ -118,13 +118,15 @@ static int extra_comms_read(struct async **as,
 	char **incexc, struct conf *conf, struct conf *cconf)
 {
 	int ret=-1;
-	struct iobuf *rbuf=NULL;
-	if(!(rbuf=iobuf_alloc())) goto end;
+	struct asfd *asfd;
+	struct iobuf *rbuf;
+	asfd=(*as)->asfd;
+	rbuf=asfd->rbuf;
 
 	while(1)
 	{
 		iobuf_free_content(rbuf);
-		if((*as)->read(*as, rbuf)) goto end;
+		if(asfd->read(asfd)) goto end;
 
 		if(rbuf->cmd!=CMD_GEN)
 		{
@@ -313,7 +315,7 @@ static int extra_comms_read(struct async **as,
 
 	ret=0;
 end:
-	iobuf_free(rbuf);
+	iobuf_free_content(rbuf);
 	return ret;
 }
 

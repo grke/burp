@@ -1,6 +1,8 @@
 #ifndef _FSOPS_H
 #define _FSOPS_H
 
+#include <zlib.h>
+
 extern void close_fd(int *fd);
 extern int close_fp(FILE **fp);
 extern int gzclose_fp(gzFile *fp);

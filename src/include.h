@@ -2,6 +2,7 @@
 #define _SRC_INCLUDES_H
 
 #include "action.h"
+#include "asfd.h"
 #include "asyncio.h"
 #include "attribs.h"
 #include "base64.h"

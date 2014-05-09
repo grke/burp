@@ -88,6 +88,6 @@ extern int cntr_send(struct cntr *cntr);
 extern int str_to_cntr(const char *str, char **client, char *status,
 	char *phase, char **path, struct cntr *p1cntr, struct cntr *cntr,
 	struct strlist **backups);
-extern int cntr_recv(struct async *as, struct conf *conf);
+extern int cntr_recv(struct asfd *asfd, struct conf *conf);
 
 #endif

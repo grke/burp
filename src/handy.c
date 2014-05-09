@@ -14,31 +14,31 @@
 int do_quick_read(struct async *as, const char *datapth, struct conf *conf)
 {
 	int r=0;
-	static struct iobuf rbuf;
-	iobuf_init(&rbuf);
-	if(as->read_quick(as, &rbuf)) return -1;
+	struct iobuf *rbuf;
+	if(as->read_quick(as)) return -1;
+	rbuf=as->asfd->rbuf;
 
-	if(rbuf.buf)
+	if(rbuf->buf)
 	{
-		if(rbuf.cmd==CMD_WARNING)
+		if(rbuf->cmd==CMD_WARNING)
 		{
-			logp("WARNING: %s\n", rbuf.buf);
-			cntr_add(conf->cntr, rbuf.cmd, 0);
+			logp("WARNING: %s\n", rbuf->buf);
+			cntr_add(conf->cntr, rbuf->cmd, 0);
 		}
-		else if(rbuf.cmd==CMD_INTERRUPT)
+		else if(rbuf->cmd==CMD_INTERRUPT)
 		{
 			// Client wants to interrupt - double check that
 			// it is still talking about the file that we are
 			// sending.
-			if(datapth && !strcmp(rbuf.buf, datapth))
+			if(datapth && !strcmp(rbuf->buf, datapth))
 				r=1;
 		}
 		else
 		{
-			iobuf_log_unexpected(&rbuf, __func__);
+			iobuf_log_unexpected(rbuf, __func__);
 			r=-1;
 		}
-		iobuf_free_content(&rbuf);
+		iobuf_free_content(rbuf);
 	}
 	return r;
 }

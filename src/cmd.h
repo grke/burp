@@ -1,6 +1,8 @@
 #ifndef _CMD_H
 #define _CMD_H
 
+#include <unistd.h>
+
 /* These things appear at the beginning of each line of communication on the
    network, and in the manifest. */
 

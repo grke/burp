@@ -11,12 +11,12 @@
 
 // return -1 for error, 0 for OK, 1 if the client wants to interrupt the
 // transfer.
-int do_quick_read(struct async *as, const char *datapth, struct conf *conf)
+int do_quick_read(struct asfd *asfd, const char *datapth, struct conf *conf)
 {
 	int r=0;
 	struct iobuf *rbuf;
-	if(as->read_quick(as)) return -1;
-	rbuf=as->asfd->rbuf;
+	if(asfd->as->read_quick(asfd->as)) return -1;
+	rbuf=asfd->rbuf;
 
 	if(rbuf->buf)
 	{
@@ -72,31 +72,31 @@ static char *get_endfile_str(unsigned long long bytes)
 	return endmsg;
 }
 
-static int write_endfile(struct async *as, unsigned long long bytes)
+static int write_endfile(struct asfd *asfd, unsigned long long bytes)
 {
-	return as->write_str(as, CMD_END_FILE, get_endfile_str(bytes));
+	return asfd->write_str(asfd, CMD_END_FILE, get_endfile_str(bytes));
 }
 
-int open_file_for_send(BFILE *bfd, struct async *as, const char *fname,
+int open_file_for_send(BFILE *bfd, struct asfd *asfd, const char *fname,
 	int64_t winattr, int atime, struct conf *conf)
 {
 	binit(bfd, winattr, conf);
-	if(bopen(bfd, as, fname, O_RDONLY|O_BINARY|atime?0:O_NOATIME, 0))
+	if(bopen(bfd, asfd, fname, O_RDONLY|O_BINARY|atime?0:O_NOATIME, 0))
 	{
 		berrno be;
-		logw(as, conf, "Could not open %s: %s\n",
+		logw(asfd, conf, "Could not open %s: %s\n",
 			fname, be.bstrerror(errno));
 		return -1;
 	}
 	return 0;
 }
 
-int close_file_for_send(BFILE *bfd, struct async *as)
+int close_file_for_send(BFILE *bfd, struct asfd *asfd)
 {
-	return bclose(bfd, as);
+	return bclose(bfd, asfd);
 }
 
-int send_whole_file_gz(struct async *as,
+int send_whole_file_gz(struct asfd *asfd,
 	const char *fname, const char *datapth, int quick_read,
 	unsigned long long *bytes, struct conf *conf,
 	int compression, FILE *fp)
@@ -166,7 +166,7 @@ int send_whole_file_gz(struct async *as,
 			wbuf.cmd=CMD_APPEND;
 			wbuf.buf=(char *)out;
 			wbuf.len=have;
-			if(as->write(as, &wbuf))
+			if(asfd->write(asfd, &wbuf))
 			{
 				ret=-1;
 				break;
@@ -174,7 +174,7 @@ int send_whole_file_gz(struct async *as,
 			if(quick_read && datapth)
 			{
 				int qr;
-				if((qr=do_quick_read(as, datapth, conf))<0)
+				if((qr=do_quick_read(asfd, datapth, conf))<0)
 				{
 					ret=-1;
 					break;
@@ -213,7 +213,7 @@ cleanup:
 
 	if(!ret)
 	{
-		return write_endfile(as, *bytes);
+		return write_endfile(asfd, *bytes);
 	}
 //logp("end of send\n");
 	return ret;
@@ -492,7 +492,7 @@ long version_to_long(const char *version)
 
 /* These receive_a_file() and send_file() functions are for use by extra_comms
    and the CA stuff, rather than backups/restores. */
-int receive_a_file(struct async *as, const char *path, struct conf *conf)
+int receive_a_file(struct asfd *asfd, const char *path, struct conf *conf)
 {
 	int c=0;
 	int ret=0;
@@ -508,7 +508,7 @@ int receive_a_file(struct async *as, const char *path, struct conf *conf)
 	binit(&bfd, 0, conf);
 	bfd.use_backup_api=0;
 	//set_win32_backup(&bfd);
-	if(bopen(&bfd, as, path,
+	if(bopen(&bfd, asfd, path,
 		O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,
 		S_IRUSR | S_IWUSR))
 	{
@@ -527,11 +527,11 @@ int receive_a_file(struct async *as, const char *path, struct conf *conf)
 #endif
 
 #ifdef HAVE_WIN32
-	ret=transfer_gzfile_in(as, path, &bfd, NULL,
+	ret=transfer_gzfile_in(asfd, path, &bfd, NULL,
 		&rcvdbytes, &sentbytes, conf->cntr);
-	c=bclose(&bfd, as);
+	c=bclose(&bfd, asfd);
 #else
-	ret=transfer_gzfile_in(as, path, NULL, fp,
+	ret=transfer_gzfile_in(asfd, path, NULL, fp,
 		&rcvdbytes, &sentbytes, conf->cntr);
 	c=close_fp(&fp);
 #endif
@@ -548,13 +548,13 @@ end:
 /* Windows will use this function, when sending a certificate signing request.
    It is not using the Windows API stuff because it needs to arrive on the
    server side without any junk in it. */
-int send_a_file(struct async *as, const char *path, struct conf *conf)
+int send_a_file(struct asfd *asfd, const char *path, struct conf *conf)
 {
 	int ret=0;
 	FILE *fp=NULL;
 	unsigned long long bytes=0;
 	if(!(fp=open_file(path, "rb"))
-	  || send_whole_file_gz(as, path, "datapth", 0, &bytes,
+	  || send_whole_file_gz(asfd, path, "datapth", 0, &bytes,
 		conf, 9, // compression
 		fp))
 	{

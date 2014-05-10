@@ -144,6 +144,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *conffile, int
 	struct conf *cconf=NULL;
 	struct cntr *cntr=NULL;
 	struct async *as=NULL;
+	struct asfd *asfd=NULL;
 
 	if(!(conf=conf_alloc())
 	  || !(cconf=conf_alloc()))
@@ -183,14 +184,18 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *conffile, int
 		goto end;
 	}
 	if(!(as=async_alloc())
-	  || as->init(as, *cfd, ssl, conf, 0))
+	  || !(asfd=asfd_alloc())
+	  || as->init(as, 0)
+	  || asfd->init(asfd, as, *cfd, ssl, conf))
 		goto end;
-	if(authorise_server(as, conf, cconf)
+	as->add_asfd(as, asfd);
+
+	if(authorise_server(asfd, conf, cconf)
 	  || !cconf->cname || !*(cconf->cname))
 	{
 		// Add an annoying delay in case they are tempted to
 		// try repeatedly.
-		log_and_send(as, "unable to authorise on server");
+		log_and_send(asfd, "unable to authorise on server");
 		sleep(1);
 		goto end;
 	}
@@ -204,7 +209,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *conffile, int
 
 	/* At this point, the client might want to get a new certificate
 	   signed. Clients on 1.3.2 or newer can do this. */
-	if((ca_ret=ca_server_maybe_sign_client_cert(as, conf, cconf))<0)
+	if((ca_ret=ca_server_maybe_sign_client_cert(asfd, conf, cconf))<0)
 	{
 		logp("Error signing client certificate request for %s\n",
 			cconf->cname);
@@ -225,16 +230,17 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *conffile, int
 	/* Now it is time to check the certificate. */ 
 	if(ssl_check_cert(ssl, cconf))
 	{
-		log_and_send(as, "check cert failed on server");
+		log_and_send(asfd, "check cert failed on server");
 		goto end;
 	}
 
 	set_non_blocking(*cfd);
 
-	ret=child(&as, conf, cconf);
+	ret=child(as, conf, cconf);
 end:
 	*cfd=-1;
-	async_free(&as); // this closes cfd for us.
+	async_free(&as);
+	asfd_free(asfd); // this closes cfd for us.
 	logp("exit child\n");
 	if(cntr) cntr_free(&cntr);
 	if(conf) conf_free(conf);

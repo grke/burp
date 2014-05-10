@@ -135,12 +135,12 @@ end:
 	return ret;
 }
 
-static int add_to_blks_list(struct async *as, struct conf *conf,
+static int add_to_blks_list(struct asfd *asfd, struct conf *conf,
 	struct slist *slist, struct blist *blist, struct win *win)
 {
 	struct sbuf *sb=slist->last_requested;
 	if(!sb) return 0;
-	if(blks_generate(as, conf, sb, blist, win)) return -1;
+	if(blks_generate(asfd, conf, sb, blist, win)) return -1;
 
 	// If it closed the file, move to the next one.
 	if(sb->burp2->bfd.mode==BF_CLOSED) slist->last_requested=sb->next;
@@ -302,7 +302,7 @@ static void get_wbuf_from_scan(struct iobuf *wbuf, struct slist *flist)
 	}
 }
 
-int backup_phase2_client(struct async *as, struct conf *conf, int resume)
+int backup_phase2_client(struct asfd *asfd, struct conf *conf, int resume)
 {
 	int ret=-1;
 	int sigs_end=0;
@@ -320,23 +320,23 @@ int backup_phase2_client(struct async *as, struct conf *conf, int resume)
 	if(!(slist=slist_alloc())
 	  || !(blist=blist_alloc())
 	  || !(wbuf=iobuf_alloc())
-	  || !(rbuf=iobuf_alloc())
 	  || blks_generate_init(conf)
 	  || !(win=win_alloc(&conf->rconf)))
 		goto end;
+	rbuf=asfd->rbuf;
 
 	if(!resume)
 	{
 		// Only do this bit if the server did not tell us to resume.
-		if(as->write_str(as, CMD_GEN, "backupphase2")
-		  || as->read_expect(as, CMD_GEN, "ok"))
+		if(asfd->write_str(asfd, CMD_GEN, "backupphase2")
+		  || asfd->read_expect(asfd, CMD_GEN, "ok"))
 			goto end;
 	}
 	else if(conf->send_client_cntr)
 	{
 		// On resume, the server might update the client with the
 		// counters.
-		if(cntr_recv(as, conf))
+		if(cntr_recv(asfd, conf))
 			goto end;
         }
 
@@ -353,7 +353,7 @@ int backup_phase2_client(struct async *as, struct conf *conf, int resume)
 			}
 		}
 
-		if(as->rw(as, rbuf, wbuf))
+		if(asfd->as->rw(asfd->as, wbuf))
 		{
 			logp("error in async_rw\n");
 			goto end;
@@ -369,7 +369,7 @@ int backup_phase2_client(struct async *as, struct conf *conf, int resume)
 		   || blist->tail->index - blist->head->index<BLKS_MAX_IN_MEM)
 		)
 		{
-			if(add_to_blks_list(as, conf, slist, blist, win))
+			if(add_to_blks_list(asfd, conf, slist, blist, win))
 				goto end;
 		}
 
@@ -391,7 +391,7 @@ int backup_phase2_client(struct async *as, struct conf *conf, int resume)
 		}
 	}
 
-	if(as->write_str(as, CMD_GEN, "backup_end"))
+	if(asfd->write_str(asfd, CMD_GEN, "backup_end"))
 		goto end;
 
 	ret=0;
@@ -401,7 +401,6 @@ blk_print_alloc_stats();
 	win_free(win);
 	slist_free(slist);
 	blist_free(blist);
-	iobuf_free(rbuf);
 	// Write buffer did not allocate 'buf'.
 	wbuf->buf=NULL;
 	iobuf_free(wbuf);

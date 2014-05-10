@@ -1,7 +1,7 @@
 #include "include.h"
 
 // Return -1 on error or success, 0 to continue normally.
-int autoupgrade_server(struct async **as,
+int autoupgrade_server(struct asfd *asfd,
 	long ser_ver, long cli_ver, const char *os, struct conf *conf)
 {
 	int ret=-1;
@@ -18,7 +18,7 @@ int autoupgrade_server(struct async **as,
 	{
 		// Autoupgrades not turned on on the server.
 		ret=0;
-		(*as)->write_str(*as, CMD_GEN, "do not autoupgrade");
+		asfd->write_str(asfd, CMD_GEN, "do not autoupgrade");
 		goto end;
 	}
 
@@ -27,7 +27,7 @@ int autoupgrade_server(struct async **as,
 		// No need to upgrade - client is same version as server,
 		// or newer.
 		ret=0;
-		(*as)->write_str(*as, CMD_GEN, "do not autoupgrade");
+		asfd->write_str(asfd, CMD_GEN, "do not autoupgrade");
 		goto end;
 	}
 
@@ -37,7 +37,7 @@ int autoupgrade_server(struct async **as,
 	  || !(script_path_specific=prepend_s(path, "script"))
 	  || !(package_path=prepend_s(path, "package")))
 	{
-		(*as)->write_str(*as, CMD_GEN, "do not autoupgrade");
+		asfd->write_str(asfd, CMD_GEN, "do not autoupgrade");
 		goto end;
 	}
 
@@ -52,7 +52,7 @@ int autoupgrade_server(struct async **as,
 		logp("or:\n");
 		logp("%s\n", script_path_specific);
 		ret=0; // this is probably OK
-		(*as)->write_str(*as, CMD_GEN, "do not autoupgrade");
+		asfd->write_str(asfd, CMD_GEN, "do not autoupgrade");
 		goto end;
 	}
 	if(stat(package_path, &statp))
@@ -60,32 +60,32 @@ int autoupgrade_server(struct async **as,
 		logp("Want to autoupgrade client, but no file available at:\n");
 		logp("%s\n", package_path);
 		ret=0; // this is probably OK
-		(*as)->write_str(*as, CMD_GEN, "do not autoupgrade");
+		asfd->write_str(asfd, CMD_GEN, "do not autoupgrade");
 		goto end;
 	}
 
 	if(!S_ISREG(stats.st_mode))
 	{
 		logp("%s is not a regular file\n", script_path);
-		(*as)->write_str(*as, CMD_GEN, "do not autoupgrade");
+		asfd->write_str(asfd, CMD_GEN, "do not autoupgrade");
 		goto end;
 	}
 	if(!S_ISREG(statp.st_mode))
 	{
 		logp("%s is not a regular file\n", package_path);
-		(*as)->write_str(*as, CMD_GEN, "do not autoupgrade");
+		asfd->write_str(asfd, CMD_GEN, "do not autoupgrade");
 		goto end;
 	}
 
-	if((*as)->write_str(*as, CMD_GEN, "autoupgrade ok"))
+	if(asfd->write_str(asfd, CMD_GEN, "autoupgrade ok"))
 		goto end;
 
-	if(send_a_file(*as, script_path, conf))
+	if(send_a_file(asfd, script_path, conf))
 	{
 		logp("Problem sending %s\n", script_path);
 		goto end;
 	}
-	if(send_a_file(*as, package_path, conf))
+	if(send_a_file(asfd, package_path, conf))
 	{
 		logp("Problem sending %s\n", package_path);
 		goto end;
@@ -93,7 +93,7 @@ int autoupgrade_server(struct async **as,
 	ret=0;
 	/* Clients currently exit after forking, so exit ourselves. */
 	logp("Expecting client to upgrade - now exiting\n");
-	async_free(as);
+	asfd_free(asfd);
 	exit(0);
 end:
 	if(path) free(path);

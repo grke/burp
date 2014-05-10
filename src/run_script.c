@@ -2,7 +2,7 @@
 
 #ifndef HAVE_WIN32
 
-static int log_script_output(struct async *as, FILE **fp, struct conf *conf,
+static int log_script_output(struct asfd *asfd, FILE **fp, struct conf *conf,
 	int do_logp, int do_logw, char **logbuf)
 {
 	char buf[256]="";
@@ -14,7 +14,7 @@ static int log_script_output(struct async *as, FILE **fp, struct conf *conf,
 			if(do_logp) logp("%s", buf);
 			else logc("%s", buf);
 			if(logbuf && astrcat(logbuf, buf, __func__)) return -1;
-			if(do_logw) logw(as, conf, "%s", buf);
+			if(do_logw) logw(asfd, conf, "%s", buf);
 		}
 		if(feof(*fp))
 		{
@@ -36,7 +36,7 @@ static void run_script_sigchld_handler(int sig)
 	waitpid(-1, &run_script_status, 0);
 }
 
-static int run_script_select(struct async *as, FILE **sout, FILE **serr,
+static int run_script_select(struct asfd *asfd, FILE **sout, FILE **serr,
 	struct conf *conf, int do_logp, int do_logw, char **logbuf)
 {
 	int mfd=-1;
@@ -68,12 +68,12 @@ static int run_script_select(struct async *as, FILE **sout, FILE **serr,
 		}
 		if(FD_ISSET(soutfd, &fsr))
 		{
-			if(log_script_output(as, sout, NULL,
+			if(log_script_output(asfd, sout, NULL,
 				do_logp, do_logw, logbuf)) return -1;
 		}
 		if(FD_ISSET(serrfd, &fsr))
 		{
-			if(log_script_output(as, serr, conf,
+			if(log_script_output(asfd, serr, conf,
 				do_logp, do_logw, logbuf)) return -1;
 		}
 
@@ -92,7 +92,7 @@ static int run_script_select(struct async *as, FILE **sout, FILE **serr,
 
 #endif
 
-int run_script_to_buf(struct async *as,
+int run_script_to_buf(struct asfd *asfd,
 	const char **args, struct strlist *userargs, struct conf *conf,
 	int do_wait, int do_logp, int do_logw, char **logbuf)
 {
@@ -132,7 +132,7 @@ int run_script_to_buf(struct async *as,
 	// My windows forkchild currently just executes, then returns.
 	return 0;
 #else
-	s=run_script_select(as, &sout, &serr, conf, do_logp, do_logw, logbuf);
+	s=run_script_select(asfd, &sout, &serr, conf, do_logp, do_logw, logbuf);
 
 	// Set SIGCHLD back to default.
 	setup_signal(SIGCHLD, SIG_DFL);
@@ -143,7 +143,7 @@ int run_script_to_buf(struct async *as,
 	{
 		int ret=WEXITSTATUS(run_script_status);
 		logp("%s returned: %d\n", cmd[0], ret);
-		if(conf && ret) logw(as, conf, "%s returned: %d\n",
+		if(conf && ret) logw(asfd, conf, "%s returned: %d\n",
 			cmd[0], ret);
 		return ret;
 	}
@@ -151,13 +151,13 @@ int run_script_to_buf(struct async *as,
 	{
 		logp("%s terminated on signal %d\n",
 			cmd[0], WTERMSIG(run_script_status));
-		if(conf) logw(as, conf, "%s terminated on signal %d\n",
+		if(conf) logw(asfd, conf, "%s terminated on signal %d\n",
 			cmd[0], WTERMSIG(run_script_status));
 	}
 	else
 	{
 		logp("Strange return when trying to run %s\n", cmd[0]);
-		if(conf) logw(as, conf,
+		if(conf) logw(asfd, conf,
 			"Strange return when trying to run %s\n",
 			cmd[0]);
 	}
@@ -165,9 +165,9 @@ int run_script_to_buf(struct async *as,
 #endif
 }
 
-int run_script(struct async *as, const char **args, struct strlist *userargs,
+int run_script(struct asfd *asfd, const char **args, struct strlist *userargs,
 	struct conf *conf, int do_wait, int do_logp, int do_logw)
 {
-	return run_script_to_buf(as, args, userargs, conf, do_wait,
+	return run_script_to_buf(asfd, args, userargs, conf, do_wait,
 		do_logp, do_logw, NULL /* do not save output to buffer */);
 }

@@ -1,6 +1,6 @@
 #include "include.h"
 
-static int do_encryption(struct async *as, EVP_CIPHER_CTX *ctx,
+static int do_encryption(struct asfd *asfd, EVP_CIPHER_CTX *ctx,
 	unsigned char *inbuf, int inlen, unsigned char *outbuf, int *outlen,
 	MD5_CTX *md5)
 {
@@ -12,7 +12,7 @@ static int do_encryption(struct async *as, EVP_CIPHER_CTX *ctx,
 	}
 	if(*outlen>0)
 	{
-		if(as->write_strn(as, CMD_APPEND,
+		if(asfd->write_strn(asfd, CMD_APPEND,
 			(char *)outbuf, (size_t)*outlen)) return -1;
 		if(!MD5_Update(md5, outbuf, *outlen))
 		{
@@ -66,7 +66,7 @@ struct bsid {
 };
 #endif
 
-int open_file_for_sendl(struct async *as,
+int open_file_for_sendl(struct asfd *asfd,
 	BFILE *bfd, FILE **fp, const char *fname,
 	int64_t winattr, size_t *datalen, int atime, struct conf *conf)
 {
@@ -76,7 +76,7 @@ int open_file_for_sendl(struct async *as,
 		if((fd=open(fname, O_RDONLY|atime?0:O_NOATIME))<0
 		  || !(*fp=fdopen(fd, "rb")))
 		{
-			logw(as, conf, "Could not open %s: %s\n",
+			logw(asfd, conf, "Could not open %s: %s\n",
 				fname, strerror(errno));
 			return -1;
 		}
@@ -96,16 +96,16 @@ int open_file_for_sendl(struct async *as,
 			{
 				// Close the open bfd so that it can be
 				// used again
-				close_file_for_sendl(bfd, NULL, as);
+				close_file_for_sendl(bfd, NULL, asfd);
 			}
 		}
 		binit(bfd, winattr, conf);
 		*datalen=0;
-		if(bopen(bfd, as,
+		if(bopen(bfd, asfd,
 			fname, O_RDONLY|O_BINARY|atime?0:O_NOATIME, 0)<=0)
 		{
 			berrno be;
-			logw(as, conf, "Could not open %s: %s\n",
+			logw(asfd, conf, "Could not open %s: %s\n",
 				fname, be.bstrerror(errno));
 			return -1;
 		}
@@ -114,11 +114,11 @@ int open_file_for_sendl(struct async *as,
 	return 0;
 }
 
-int close_file_for_sendl(BFILE *bfd, FILE **fp, struct async *as)
+int close_file_for_sendl(BFILE *bfd, FILE **fp, struct asfd *asfd)
 {
 	if(fp) return close_fp(fp);
 #ifdef HAVE_WIN32
-	if(bfd) return bclose(bfd, as);
+	if(bfd) return bclose(bfd, asfd);
 #endif
 	return -1;
 }
@@ -136,10 +136,10 @@ char *get_endfile_str(unsigned long long bytes, unsigned char *checksum)
 	return endmsg;
 }
 
-int write_endfile(struct async *as,
+int write_endfile(struct asfd *asfd,
 	unsigned long long bytes, unsigned char *checksum)
 {
-	return as->write_str(as,
+	return asfd->write_str(asfd,
 		CMD_END_FILE, get_endfile_str(bytes, checksum));
 }
 
@@ -152,7 +152,7 @@ int write_endfile(struct async *as,
    Encryption off and compression off uses send_whole_file().
    Perhaps a separate function is needed for encryption on compression off.
 */
-int send_whole_file_gzl(struct async *as,
+int send_whole_file_gzl(struct asfd *asfd,
 	const char *fname, const char *datapth, int quick_read,
 	unsigned long long *bytes, const char *encpassword, struct conf *conf,
 	int compression, BFILE *bfd, FILE *fp, const char *extrameta,
@@ -297,7 +297,7 @@ int send_whole_file_gzl(struct async *as,
 
 			if(enc_ctx)
 			{
-				if(do_encryption(as, enc_ctx, out, have,
+				if(do_encryption(asfd, enc_ctx, out, have,
 					eoutbuf, &eoutlen, &md5))
 				{
 					ret=-1;
@@ -306,7 +306,7 @@ int send_whole_file_gzl(struct async *as,
 			}
 			else
 			{
-				if(as->write_strn(as, CMD_APPEND,
+				if(asfd->write_strn(asfd, CMD_APPEND,
 					(char *)out, (size_t)have))
 				{
 					ret=-1;
@@ -316,7 +316,7 @@ int send_whole_file_gzl(struct async *as,
 			if(quick_read && datapth)
 			{
 				int qr;
-				if((qr=do_quick_read(as, datapth, conf))<0)
+				if((qr=do_quick_read(asfd, datapth, conf))<0)
 				{
 					ret=-1;
 					break;
@@ -357,7 +357,7 @@ int send_whole_file_gzl(struct async *as,
 			}
 			else if(eoutlen>0)
 			{
-			  if(as->write_strn(as, CMD_APPEND,
+			  if(asfd->write_strn(asfd, CMD_APPEND,
 				(char *)eoutbuf, (size_t)eoutlen))
 					ret=-1;
 			  else if(!MD5_Update(&md5, eoutbuf, eoutlen))
@@ -387,7 +387,7 @@ cleanup:
 			return -1;
 		}
 
-		return write_endfile(as, *bytes, checksum);
+		return write_endfile(asfd, *bytes, checksum);
 	}
 //logp("end of send\n");
 	return ret;
@@ -401,7 +401,7 @@ struct winbuf
 	const char *datapth;
 	struct conf *conf;
 	unsigned long long *bytes;
-	struct async *as;
+	struct asfd *asfd;
 };
 
 static DWORD WINAPI write_efs(PBYTE pbData,
@@ -414,7 +414,7 @@ static DWORD WINAPI write_efs(PBYTE pbData,
 		logp("MD5_Update() failed\n");
 		return ERROR_FUNCTION_FAILED;
 	}
-	if(mybuf->as->write_strn(mybuf->as,
+	if(mybuf->asfd->write_strn(mybuf->asfd,
 		CMD_APPEND, (const char *)pbData, ulLength))
 	{
 		return ERROR_FUNCTION_FAILED;
@@ -422,7 +422,8 @@ static DWORD WINAPI write_efs(PBYTE pbData,
 	if(mybuf->quick_read)
 	{
 		int qr;
-		if((qr=do_quick_read(mybuf->as, mybuf->datapth, mybuf->conf))<0)
+		if((qr=do_quick_read(mybuf->asfd,
+				mybuf->datapth, mybuf->conf))<0)
 			return ERROR_FUNCTION_FAILED;
 		if(qr) // client wants to interrupt
 			return ERROR_FUNCTION_FAILED;
@@ -431,7 +432,7 @@ static DWORD WINAPI write_efs(PBYTE pbData,
 }
 #endif
 
-int send_whole_filel(struct async *as,
+int send_whole_filel(struct asfd *asfd,
 	char cmd, const char *fname, const char *datapth,
 	int quick_read, unsigned long long *bytes, struct conf *conf,
 	BFILE *bfd, FILE *fp, const char *extrameta,
@@ -467,7 +468,7 @@ int send_whole_filel(struct async *as,
 				logp("MD5_Update() failed\n");
 				ret=-1;
 			}
-			if(as->write_strn(as, CMD_APPEND, metadata, s))
+			if(asfd->write_strn(asfd, CMD_APPEND, metadata, s))
 			{
 				ret=-1;
 			}
@@ -489,7 +490,7 @@ int send_whole_filel(struct async *as,
 			mybuf.datapth=datapth;
 			mybuf.conf=conf;
 			mybuf.bytes=bytes;
-			mybuf.as=as;
+			mybuf.asfd=asfd;
 			// The EFS read function, ReadEncryptedFileRaw(),
 			// works in an annoying way. You have to give it a
 			// function that it calls repeatedly every time the
@@ -527,7 +528,7 @@ int send_whole_filel(struct async *as,
 				ret=-1;
 				break;
 			}
-			if(as->write_strn(as, CMD_APPEND, buf, s))
+			if(asfd->write_strn(asfd, CMD_APPEND, buf, s))
 			{
 				ret=-1;
 				break;
@@ -535,7 +536,7 @@ int send_whole_filel(struct async *as,
 			if(quick_read)
 			{
 				int qr;
-				if((qr=do_quick_read(as, datapth, conf))<0)
+				if((qr=do_quick_read(asfd, datapth, conf))<0)
 				{
 					ret=-1;
 					break;
@@ -562,7 +563,7 @@ int send_whole_filel(struct async *as,
 				ret=-1;
 				break;
 			}
-			if(as->write_strn(as, CMD_APPEND, buf, s))
+			if(asfd->write_strn(asfd, CMD_APPEND, buf, s))
 			{
 				ret=-1;
 				break;
@@ -570,7 +571,7 @@ int send_whole_filel(struct async *as,
 			if(quick_read)
 			{
 				int qr;
-				if((qr=do_quick_read(as, datapth, conf))<0)
+				if((qr=do_quick_read(asfd, datapth, conf))<0)
 				{
 					ret=-1;
 					break;
@@ -592,7 +593,7 @@ int send_whole_filel(struct async *as,
 			logp("MD5_Final() failed\n");
 			return -1;
 		}
-		return write_endfile(as, *bytes, checksum);
+		return write_endfile(asfd, *bytes, checksum);
 	}
 	return ret;
 }

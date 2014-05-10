@@ -69,7 +69,7 @@ static int check_client_and_password(struct conf *conf, const char *password, st
 	return 0;
 }
 
-void version_warn(struct async *as, struct conf *conf, struct conf *cconf)
+void version_warn(struct asfd *asfd, struct conf *conf, struct conf *cconf)
 {
 	if(!cconf->peer_version || strcmp(cconf->peer_version, VERSION))
 	{
@@ -79,40 +79,38 @@ void version_warn(struct async *as, struct conf *conf, struct conf *cconf)
 			snprintf(msg, sizeof(msg), "Client '%s' has an unknown version. Please upgrade.", cconf->cname?cconf->cname:"unknown");
 		else
 			snprintf(msg, sizeof(msg), "Client '%s' version '%s' does not match server version '%s'. An upgrade is recommended.", cconf->cname?cconf->cname:"unknown", cconf->peer_version, VERSION);
-		if(conf) logw(as, conf, "%s", msg);
+		if(conf) logw(asfd, conf, "%s", msg);
 		logp("WARNING: %s\n", msg);
 	}
 }
 
-int authorise_server(struct async *as, struct conf *conf, struct conf *cconf)
+int authorise_server(struct asfd *asfd, struct conf *conf, struct conf *cconf)
 {
 	char *cp=NULL;
 	char *password=NULL;
 	char whoareyou[256]="";
-	struct iobuf rbuf;
-	iobuf_init(&rbuf);
-	if(as->read(as, &rbuf))
+	struct iobuf *rbuf=asfd->rbuf;
+	if(asfd->read(asfd))
 	{
 		logp("unable to read initial message\n");
 		return -1;
 	}
-	if(rbuf.cmd!=CMD_GEN || strncmp_w(rbuf.buf, "hello"))
+	if(rbuf->cmd!=CMD_GEN || strncmp_w(rbuf->buf, "hello"))
 	{
-		iobuf_log_unexpected(&rbuf, __func__);
-		iobuf_free_content(&rbuf);
+		iobuf_log_unexpected(rbuf, __func__);
+		iobuf_free_content(rbuf);
 		return -1;
 	}
 	// String may look like...
 	// "hello"
 	// "hello:(version)"
 	// (version) is a version number
-	if((cp=strchr(rbuf.buf, ':')))
+	if((cp=strchr(rbuf->buf, ':')))
 	{
 		cp++;
 		if(cp) cconf->peer_version=strdup(cp);
 	}
-	iobuf_free_content(&rbuf);
-	iobuf_init(&rbuf);
+	iobuf_free_content(rbuf);
 
 	snprintf(whoareyou, sizeof(whoareyou), "whoareyou");
 	if(cconf->peer_version)
@@ -129,24 +127,24 @@ int authorise_server(struct async *as, struct conf *conf, struct conf *cconf)
 			"whoareyou:%s", VERSION);
 	}
 
-	as->write_str(as, CMD_GEN, whoareyou);
-	if(as->read(as, &rbuf))
+	asfd->write_str(asfd, CMD_GEN, whoareyou);
+	if(asfd->read(asfd))
 	{
 		logp("unable to get client name\n");
 		return -1;
 	}
-	cconf->cname=rbuf.buf;
-	iobuf_init(&rbuf);
+	cconf->cname=rbuf->buf;
+	iobuf_init(rbuf);
 
-	as->write_str(as, CMD_GEN, "okpassword");
-	if(as->read(as, &rbuf))
+	asfd->write_str(asfd, CMD_GEN, "okpassword");
+	if(asfd->read(asfd))
 	{
 		logp("unable to get password for client %s\n", cconf->cname);
-		iobuf_free_content(&rbuf);
+		iobuf_free_content(rbuf);
 		return -1;
 	}
-	password=rbuf.buf;
-	iobuf_init(&rbuf);
+	password=rbuf->buf;
+	iobuf_init(rbuf);
 
 	if(check_client_and_password(conf, password, cconf))
 	{
@@ -154,12 +152,12 @@ int authorise_server(struct async *as, struct conf *conf, struct conf *cconf)
 		return -1;
 	}
 
-	if(cconf->version_warn) version_warn(as, conf, cconf);
+	if(cconf->version_warn) version_warn(asfd, conf, cconf);
 
 	logp("auth ok for: %s%s\n", cconf->cname,
 		cconf->password_check?"":" (no password needed)");
 	if(password) free(password);
 
-	as->write_str(as, CMD_GEN, "ok");
+	asfd->write_str(asfd, CMD_GEN, "ok");
 	return 0;
 }

@@ -65,12 +65,10 @@ static int read_fp(FILE *fp, gzFile zp, struct iobuf *rbuf)
 	return asr;
 }
 
-static int read_stat(struct async *as, FILE *fp,
+static int read_stat(struct asfd *asfd, FILE *fp,
 	gzFile zp, struct sbuf *sb, struct cntr *cntr)
 {
-	static struct iobuf *rbuf=NULL;
-
-	if(!rbuf && !(rbuf=iobuf_alloc())) return -1;
+	struct iobuf *rbuf=asfd->rbuf;
 
 	while(1)
 	{
@@ -88,7 +86,7 @@ static int read_stat(struct async *as, FILE *fp,
 		}
 		else
 		{
-			if(as->read(as, rbuf))
+			if(asfd->read(asfd))
 			{
 				break;
 			}
@@ -118,6 +116,7 @@ static int read_stat(struct async *as, FILE *fp,
 		  || (rbuf->cmd==CMD_GEN && !strcmp(rbuf->buf, "backupphase2"))
 		  || (rbuf->cmd==CMD_GEN && !strcmp(rbuf->buf, "estimateend")))
 		{
+			iobuf_free_content(rbuf);
 			return 1;
 		}
 		else
@@ -126,24 +125,24 @@ static int read_stat(struct async *as, FILE *fp,
 			break;
 		}
 	}
+	iobuf_free_content(rbuf);
 	return -1;
 }
 
-static int do_sbufl_fill_from_net(struct sbuf *sb, struct async *as,
+static int do_sbufl_fill_from_net(struct sbuf *sb, struct asfd *asfd,
 	struct cntr *cntr)
 {
 	int ars;
 	static struct iobuf *rbuf=NULL;
-	if(!rbuf && !(rbuf=iobuf_alloc())) return -1;
+	rbuf=asfd->rbuf;
 	iobuf_free_content(rbuf);
-	if((ars=read_stat(as, NULL, NULL, sb, cntr))
-	  || (ars=as->read(as, rbuf))) return ars;
+	if((ars=read_stat(asfd, NULL, NULL, sb, cntr))
+	  || (ars=asfd->read(asfd))) return ars;
 	iobuf_copy(&sb->path, rbuf);
 	rbuf->buf=NULL;
 	if(sbuf_is_link(sb))
 	{
-		iobuf_free_content(rbuf);
-		if((ars=as->read(as, rbuf))) return ars;
+		if((ars=asfd->read(asfd))) return ars;
 		iobuf_copy(&sb->link, rbuf);
 		rbuf->buf=NULL;
 		if(!cmd_is_link(rbuf->cmd))
@@ -195,11 +194,11 @@ static int do_sbufl_fill_from_file(struct sbuf *sb, FILE *fp, gzFile zp,
 	return 0;
 }
 
-int sbufl_fill(struct sbuf *sb, struct async *as,
+int sbufl_fill(struct sbuf *sb, struct asfd *asfd,
 	FILE *fp, gzFile zp, struct cntr *cntr)
 {
 	if(fp || zp) return do_sbufl_fill_from_file(sb, fp, zp, 0, cntr);
-	return do_sbufl_fill_from_net(sb, as, cntr);
+	return do_sbufl_fill_from_net(sb, asfd, cntr);
 }
 
 int sbufl_fill_phase1(struct sbuf *sb, FILE *fp, gzFile zp, struct cntr *cntr)

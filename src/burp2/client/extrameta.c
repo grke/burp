@@ -28,7 +28,7 @@ int has_extrameta(const char *path, char cmd)
         return 0;
 }
 
-int get_extrameta(struct async *as,
+int get_extrameta(struct asfd *asfd,
 #ifdef HAVE_WIN32
 	BFILE *bfd,
 #endif
@@ -51,7 +51,7 @@ int get_extrameta(struct async *as,
     defined(HAVE_OPENBSD_OS) || \
     defined(HAVE_NETBSD_OS)
 #ifdef HAVE_ACL
-	if(get_acl(as, path, statp, extrameta, elen, conf)) return -1;
+	if(get_acl(asfd, path, statp, extrameta, elen, conf)) return -1;
 #endif
 #endif
 #if defined(HAVE_LINUX_OS) || \
@@ -59,13 +59,13 @@ int get_extrameta(struct async *as,
     defined(HAVE_OPENBSD_OS) || \
     defined(HAVE_NETBSD_OS)
 #ifdef HAVE_XATTR
-	if(get_xattr(as, path, statp, extrameta, elen, conf)) return -1;
+	if(get_xattr(asfd, path, statp, extrameta, elen, conf)) return -1;
 #endif
 #endif
         return 0;
 }
 
-int set_extrameta(struct async *as,
+int set_extrameta(struct asfd *asfd,
 #ifdef HAVE_WIN32
 	BFILE *bfd,
 #endif
@@ -89,7 +89,7 @@ int set_extrameta(struct async *as,
 		char *m=NULL;
 		if((sscanf(metadata, "%c%08X", &cmdtmp, &s))!=2)
 		{
-			logw(as, conf,
+			logw(asfd, conf,
 				"sscanf of metadata failed for %s: %s\n",
 				path, metadata);
 			return -1;
@@ -120,11 +120,11 @@ int set_extrameta(struct async *as,
     defined(HAVE_NETBSD_OS)
 #ifdef HAVE_ACL
 			case META_ACCESS_ACL:
-				if(set_acl(as, path, statp, m, s, cmdtmp, conf))
+				if(set_acl(asfd, path, statp, m, s, cmdtmp, conf))
 					errors++;
 				break;
 			case META_DEFAULT_ACL:
-				if(set_acl(as, path, statp, m, s, cmdtmp, conf))
+				if(set_acl(asfd, path, statp, m, s, cmdtmp, conf))
 					errors++;
 				break;
 #endif
@@ -132,7 +132,7 @@ int set_extrameta(struct async *as,
 #if defined(HAVE_LINUX_OS)
 #ifdef HAVE_XATTR
 			case META_XATTR:
-				if(set_xattr(as,
+				if(set_xattr(asfd,
 					path, statp, m, s, cmdtmp, conf))
 						errors++;
 				break;
@@ -143,7 +143,7 @@ int set_extrameta(struct async *as,
     defined(HAVE_NETBSD_OS)
 #ifdef HAVE_XATTR
 			case META_XATTR_BSD:
-				if(set_xattr(as,
+				if(set_xattr(asfd,
 					path, statp, m, s, cmdtmp, conf))
 						errors++;
 				break;
@@ -151,7 +151,7 @@ int set_extrameta(struct async *as,
 #endif
 			default:
 				logp("unknown metadata: %c\n", cmdtmp);
-				logw(as, conf,
+				logw(asfd, conf,
 					"unknown metadata: %c\n", cmdtmp);
 				errors++;
 				break;

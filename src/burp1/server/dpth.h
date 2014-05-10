@@ -10,7 +10,7 @@ struct dpthl
 	int looped;
 };
 
-extern int init_dpthl(struct dpthl *dpthl, struct async *as,
+extern int init_dpthl(struct dpthl *dpthl, struct asfd *asfd,
 	struct sdirs *sdirs, struct conf *cconf);
 extern int incr_dpthl(struct dpthl *dpthl, struct conf *cconf);
 extern int set_dpthl_from_string(struct dpthl *dpthl,

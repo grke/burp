@@ -1,6 +1,6 @@
 #include "include.h"
 
-static int restore_interrupt(struct async *as,
+static int restore_interrupt(struct asfd *asfd,
 	struct sbuf *sb, const char *msg, struct conf *conf)
 {
 	return 0;
@@ -13,7 +13,7 @@ static int restore_interrupt(struct async *as,
 
 	cntr_add(conf->cntr, CMD_WARNING, 1);
 	logp("WARNING: %s\n", msg);
-	if(as->write_str(as, CMD_WARNING, msg)) return -1;
+	if(asfd->write_str(asfd, CMD_WARNING, msg)) return -1;
 
 	// If it is file data, get the server
 	// to interrupt the flow and move on.
@@ -22,7 +22,7 @@ static int restore_interrupt(struct async *as,
 	   && sb->cmd!=CMD_EFS_FILE)
 		return 0;
 
-	if(as->write_str(as, CMD_INTERRUPT, sb->path))
+	if(asfd->write_str(asfd, CMD_INTERRUPT, sb->path))
 	{
 		ret=-1;
 		quit++;
@@ -59,13 +59,13 @@ static int restore_interrupt(struct async *as,
 */
 }
 
-static int make_link(struct async *as,
+static int make_link(struct asfd *asfd,
 	const char *fname, const char *lnk, char cmd, struct conf *conf)
 {
 	int ret=-1;
 
 #ifdef HAVE_WIN32
-	logw(as, conf, "windows seems not to support hardlinks or symlinks\n");
+	logw(asfd, conf, "windows seems not to support hardlinks or symlinks\n");
 #else
 	unlink(fname);
 	if(cmd==CMD_HARD_LINK)
@@ -99,7 +99,7 @@ static int make_link(struct async *as,
 	return ret;
 }
 
-static int open_for_restore(struct async *as,
+static int open_for_restore(struct asfd *asfd,
 	BFILE *bfd,
 	const char *path,
 	struct sbuf *sb,
@@ -107,7 +107,7 @@ static int open_for_restore(struct async *as,
 	struct conf *conf)
 {
 	static int flags;
-	bclose(bfd, as);
+	bclose(bfd, asfd);
 	binit(bfd, sb->winattr, conf);
 #ifdef HAVE_WIN32
 	if(vss_restore)
@@ -124,13 +124,13 @@ static int open_for_restore(struct async *as,
 	else
 		flags=O_WRONLY|O_BINARY|O_CREAT|O_TRUNC;
 
-	if(bopen(bfd, as, path, flags, S_IRUSR | S_IWUSR)<=0)
+	if(bopen(bfd, asfd, path, flags, S_IRUSR | S_IWUSR)<=0)
 	{
 		berrno be;
 		char msg[256]="";
 		snprintf(msg, sizeof(msg), "Could not open for writing %s: %s",
 			path, be.bstrerror(errno));
-		if(restore_interrupt(as, sb, msg, conf))
+		if(restore_interrupt(asfd, sb, msg, conf))
 			return -1;
 	}
 	// Add attributes to bfd so that they can be set when it is closed.
@@ -139,7 +139,7 @@ static int open_for_restore(struct async *as,
 	return 0;
 }
 
-static int start_restore_file(struct async *as,
+static int start_restore_file(struct asfd *asfd,
 	BFILE *bfd,
 	struct sbuf *sb,
 	const char *fname,
@@ -164,13 +164,13 @@ static int start_restore_file(struct async *as,
 		char msg[256]="";
 		// failed - do a warning
 		snprintf(msg, sizeof(msg), "build path failed: %s", fname);
-		if(restore_interrupt(as, sb, msg, conf))
+		if(restore_interrupt(asfd, sb, msg, conf))
 			ret=-1;
 		ret=0; // Try to carry on with other files.
 		goto end;
 	}
 
-	if(open_for_restore(as, bfd, rpath, sb, vss_restore, conf))
+	if(open_for_restore(asfd, bfd, rpath, sb, vss_restore, conf))
 		goto end;
 
 	cntr_add(conf->cntr, sb->path.cmd, 1);
@@ -181,13 +181,13 @@ end:
 	return ret;
 }
 
-static int restore_special(struct async *as, struct sbuf *sb,
+static int restore_special(struct asfd *asfd, struct sbuf *sb,
 	const char *fname, enum action act, struct conf *conf)
 {
 	int ret=0;
 	char *rpath=NULL;
 #ifdef HAVE_WIN32
-	logw(as, conf, "Cannot restore special files to Windows: %s\n", fname);
+	logw(asfd, conf, "Cannot restore special files to Windows: %s\n", fname);
 	goto end;
 #else
 	struct stat statp=sb->statp;
@@ -203,7 +203,7 @@ static int restore_special(struct async *as, struct sbuf *sb,
 		char msg[256]="";
 		// failed - do a warning
 		snprintf(msg, sizeof(msg), "build path failed: %s", fname);
-		if(restore_interrupt(as, sb, msg, conf))
+		if(restore_interrupt(asfd, sb, msg, conf))
 			ret=-1;
 		goto end;
 	}
@@ -214,11 +214,11 @@ static int restore_special(struct async *as, struct sbuf *sb,
 			char msg[256]="";
 			snprintf(msg, sizeof(msg),
 				"Cannot make fifo: %s\n", strerror(errno));
-			logw(as, conf, "%s", msg);
+			logw(asfd, conf, "%s", msg);
 		}
 		else
 		{
-			attribs_set(as, rpath, &statp, sb->winattr, conf);
+			attribs_set(asfd, rpath, &statp, sb->winattr, conf);
 			cntr_add(conf->cntr, CMD_SPECIAL, 1);
 		}
 //	}
@@ -248,11 +248,11 @@ static int restore_special(struct async *as, struct sbuf *sb,
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
 			"Cannot make node: %s\n", strerror(errno));
-		logw(as, conf, "%s", msg);
+		logw(asfd, conf, "%s", msg);
             }
 	    else
 	    {
-		attribs_set(as, rpath, &statp, sb->winattr, conf);
+		attribs_set(asfd, rpath, &statp, sb->winattr, conf);
 		cntr_add(conf->cntr, CMD_SPECIAL, 1);
 	    }
          }
@@ -262,7 +262,7 @@ end:
 	return ret;
 }
 
-static int restore_dir(struct async *as,
+static int restore_dir(struct asfd *asfd,
 	struct sbuf *sb, const char *dname, enum action act, struct conf *conf)
 {
 	int ret=0;
@@ -275,7 +275,7 @@ static int restore_dir(struct async *as,
 			// failed - do a warning
 			snprintf(msg, sizeof(msg),
 				"build path failed: %s", dname);
-			if(restore_interrupt(as, sb, msg, conf))
+			if(restore_interrupt(asfd, sb, msg, conf))
 				ret=-1;
 			goto end;
 		}
@@ -287,12 +287,12 @@ static int restore_dir(struct async *as,
 				snprintf(msg, sizeof(msg), "mkdir error: %s",
 					strerror(errno));
 				// failed - do a warning
-				if(restore_interrupt(as, sb, msg, conf))
+				if(restore_interrupt(asfd, sb, msg, conf))
 					ret=-1;
 				goto end;
 			}
 		}
-		attribs_set(as, rpath, &(sb->statp), sb->winattr, conf);
+		attribs_set(asfd, rpath, &(sb->statp), sb->winattr, conf);
 		if(!ret) cntr_add(conf->cntr, sb->path.cmd, 1);
 	}
 	else cntr_add(conf->cntr, sb->path.cmd, 1);
@@ -301,7 +301,7 @@ end:
 	return ret;
 }
 
-static int restore_link(struct async *as, struct sbuf *sb,
+static int restore_link(struct asfd *asfd, struct sbuf *sb,
 	const char *fname, enum action act, struct conf *conf)
 {
 	int ret=0;
@@ -315,21 +315,21 @@ static int restore_link(struct async *as, struct sbuf *sb,
 			// failed - do a warning
 			snprintf(msg, sizeof(msg), "build path failed: %s",
 				fname);
-			if(restore_interrupt(as, sb, msg, conf))
+			if(restore_interrupt(asfd, sb, msg, conf))
 				ret=-1;
 			goto end;
 		}
-		else if(make_link(as, fname, sb->link.buf, sb->link.cmd, conf))
+		else if(make_link(asfd, fname, sb->link.buf, sb->link.cmd, conf))
 		{
 			// failed - do a warning
-			if(restore_interrupt(as, sb,
+			if(restore_interrupt(asfd, sb,
 				"could not create link", conf))
 					ret=-1;
 			goto end;
 		}
 		else if(!ret)
 		{
-			attribs_set(as, fname, &(sb->statp), sb->winattr, conf);
+			attribs_set(asfd, fname, &(sb->statp), sb->winattr, conf);
 			cntr_add(conf->cntr, sb->path.cmd, 1);
 		}
 		if(rpath) free(rpath);
@@ -362,7 +362,7 @@ static int restore_metadata(
 		size_t metalen=0;
 		char *metadata=NULL;
 		if(S_ISDIR(sb->statp.st_mode)
-		  && restore_dir(as, sb, fname, act, NULL))
+		  && restore_dir(asfd, sb, fname, act, NULL))
 			return -1;
 
 		// Read in the metadata...
@@ -433,7 +433,7 @@ static const char *act_str(enum action act)
 }
 
 // Return 1 for ok, -1 for error, 0 for too many components stripped.
-static int strip_path_components(struct async *as,
+static int strip_path_components(struct asfd *asfd,
 	struct sbuf *sb, struct conf *conf)
 {
 	int s=0;
@@ -448,7 +448,7 @@ static int strip_path_components(struct async *as,
 			char msg[256]="";
 			snprintf(msg, sizeof(msg),
 			  "Stripped too many components: %s", sb->path.buf);
-			if(restore_interrupt(as, sb, msg, conf))
+			if(restore_interrupt(asfd, sb, msg, conf))
 				return -1;
 			return 0;
 		}
@@ -459,13 +459,13 @@ static int strip_path_components(struct async *as,
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
 			"Stripped too many components: %s", sb->path.buf);
-		if(restore_interrupt(as, sb, msg, conf))
+		if(restore_interrupt(asfd, sb, msg, conf))
 			return -1;
 		return 0;
 	}
 	if(!(tmp=strdup(cp)))
 	{
-		log_and_send_oom(as, __func__);
+		log_and_send_oom(asfd, __func__);
 		return -1;
 	}
 	free(sb->path.buf);
@@ -517,7 +517,7 @@ static int overwrite_ok(struct sbuf *sb,
 	return 1;
 }
 
-static int write_data(struct async *as, BFILE *bfd, struct blk *blk)
+static int write_data(struct asfd *asfd, BFILE *bfd, struct blk *blk)
 {
 	if(bfd->mode==BF_CLOSED)
 		logp("Got data without an open file\n");
@@ -528,7 +528,7 @@ static int write_data(struct async *as, BFILE *bfd, struct blk *blk)
 		if((w=bwrite(bfd, blk->data, blk->length))<=0)
 		{
 			logp("error when appending %d: %d\n", blk->length, w);
-			as->write_str(as, CMD_ERROR, "write failed");
+			asfd->write_str(asfd, CMD_ERROR, "write failed");
 			return -1;
 		}
 	}
@@ -537,7 +537,7 @@ static int write_data(struct async *as, BFILE *bfd, struct blk *blk)
 
 static char *restore_style=NULL;
 
-static enum asl_ret restore_style_func(struct async *as, struct iobuf *rbuf,
+static enum asl_ret restore_style_func(struct asfd *asfd, struct iobuf *rbuf,
 	struct conf *conf, void *param)
 {
 	char msg[32]="";
@@ -549,21 +549,21 @@ static enum asl_ret restore_style_func(struct async *as, struct iobuf *rbuf,
 		return ASL_END_ERROR;
 	}
 	snprintf(msg, sizeof(msg), "%s_ok", rbuf->buf);
-	if(as->write_str(as, CMD_GEN, msg))
+	if(asfd->write_str(asfd, CMD_GEN, msg))
 		return ASL_END_ERROR;
 	restore_style=rbuf->buf;
 	rbuf->buf=NULL;
 	return ASL_END_OK;
 }
 
-static char *get_restore_style(struct async *as, struct conf *conf)
+static char *get_restore_style(struct asfd *asfd, struct conf *conf)
 {
-	if(as->simple_loop(as, conf, NULL, __func__,
+	if(asfd->simple_loop(asfd, conf, NULL, __func__,
 		restore_style_func)) return NULL;
 	return restore_style;
 }
 
-static enum asl_ret restore_spool_func(struct async *as, struct iobuf *rbuf,
+static enum asl_ret restore_spool_func(struct asfd *asfd, struct iobuf *rbuf,
 	struct conf *conf, void *param)
 {
 	static char **datpath;
@@ -573,20 +573,20 @@ static enum asl_ret restore_spool_func(struct async *as, struct iobuf *rbuf,
 		char *fpath=NULL;
 		if(!(fpath=prepend_s(*datpath, rbuf->buf+4))
 		  || build_path_w(fpath)
-		  || receive_a_file(as, fpath, conf))
+		  || receive_a_file(asfd, fpath, conf))
 			return ASL_END_ERROR;
 		iobuf_free_content(rbuf);
 	}
 	else if(!strcmp(rbuf->buf, "datfilesend"))
 	{
-		if(as->write_str(as, CMD_GEN, "datfilesend_ok"))
+		if(asfd->write_str(asfd, CMD_GEN, "datfilesend_ok"))
 			return ASL_END_ERROR;
 		return ASL_END_OK;
 	}
 	return ASL_CONTINUE;
 }
 
-static int restore_spool(struct async *as, struct conf *conf, char **datpath)
+static int restore_spool(struct asfd *asfd, struct conf *conf, char **datpath)
 {
 printf("in restore_spool\n");
 	logp("Spooling restore to: %s\n", conf->restore_spool);
@@ -594,11 +594,11 @@ printf("in restore_spool\n");
 	if(!(*datpath=prepend_s(conf->restore_spool, "incoming-data")))
 		return -1;
 
-	return as->simple_loop(as, conf, datpath,
+	return asfd->simple_loop(asfd, conf, datpath,
 		__func__, restore_spool_func);
 }
 
-int do_restore_client(struct async *as,
+int do_restore_client(struct asfd *asfd,
 	struct conf *conf, enum action act, int vss_restore)
 {
 	int ars=0;
@@ -616,12 +616,12 @@ int do_restore_client(struct async *as,
 
 	snprintf(msg, sizeof(msg), "%s %s:%s", act_str(act),
 		conf->backup?conf->backup:"", conf->regex?conf->regex:"");
-	if(as->write_str(as, CMD_GEN, msg)
-	  || as->read_expect(as, CMD_GEN, "ok"))
+	if(asfd->write_str(asfd, CMD_GEN, msg)
+	  || asfd->read_expect(asfd, CMD_GEN, "ok"))
 		goto end;
 	logp("doing %s confirmed\n", act_str(act));
 
-	if(!(style=get_restore_style(as, conf)))
+	if(!(style=get_restore_style(asfd, conf)))
 		goto end;
 //	if(conf->send_client_cntr && cntr_recv(conf))
 //		goto end;
@@ -632,7 +632,7 @@ int do_restore_client(struct async *as,
 
 	if(!strcmp(style, "restore_spool"))
 	{
-		if(restore_spool(as, conf, &datpath))
+		if(restore_spool(asfd, conf, &datpath))
 			goto end;
 	}
 	else
@@ -643,18 +643,18 @@ int do_restore_client(struct async *as,
 	if(!(sb=sbuf_alloc(conf))
 	  || !(blk=blk_alloc()))
 	{
-		log_and_send_oom(as, __func__);
+		log_and_send_oom(asfd, __func__);
 		goto end;
 	}
 
 	while(1)
 	{
-		if((ars=sbuf_fill(sb, as, NULL, blk, datpath, conf)))
+		if((ars=sbuf_fill(sb, asfd, NULL, blk, datpath, conf)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
 			//logp("got %s end\n", act_str(act));
-			if(as->write_str(as, CMD_GEN, "ok_restore_end"))
+			if(asfd->write_str(asfd, CMD_GEN, "ok_restore_end"))
 				goto end;
 			break;
 		}
@@ -662,7 +662,7 @@ int do_restore_client(struct async *as,
 		if(blk->data)
 		{
 			int wret;
-			wret=write_data(as, &bfd, blk);
+			wret=write_data(asfd, &bfd, blk);
 			if(!datpath) free(blk->data);
 			blk->data=NULL;
 			if(wret) goto end;
@@ -683,7 +683,7 @@ int do_restore_client(struct async *as,
 				if(conf->strip)
 				{
 					int s;
-					s=strip_path_components(as, sb, conf);
+					s=strip_path_components(asfd, sb, conf);
 					if(s<0) goto end;
 					if(s==0)
 					{
@@ -697,7 +697,7 @@ int do_restore_client(struct async *as,
 				if(!(fullpath=prepend_s(conf->restoreprefix,
 					sb->path.buf)))
 				{
-					log_and_send_oom(as, __func__);
+					log_and_send_oom(asfd, __func__);
 					goto end;
 				}
 				if(act==ACTION_RESTORE)
@@ -713,7 +713,7 @@ int do_restore_client(struct async *as,
 					// Something exists at that path.
 					snprintf(msg, sizeof(msg),
 						"Path exists: %s", fullpath);
-					if(restore_interrupt(as, sb, msg, conf))
+					if(restore_interrupt(asfd, sb, msg, conf))
 						goto end;
 					else
 						continue;
@@ -727,7 +727,7 @@ int do_restore_client(struct async *as,
 		switch(sb->path.cmd)
 		{
 			case CMD_DIRECTORY:
-                                if(restore_dir(as, sb, fullpath, act, conf))
+                                if(restore_dir(asfd, sb, fullpath, act, conf))
 					goto end;
 				break;
 			case CMD_FILE:
@@ -735,7 +735,7 @@ int do_restore_client(struct async *as,
 				// encrypted version so that encrypted and not
 				// encrypted files can be restored at the
 				// same time.
-				if(start_restore_file(as,
+				if(start_restore_file(asfd,
 					&bfd, sb, fullpath, act,
 					NULL, NULL, NULL,
 					vss_restore, conf))
@@ -746,7 +746,7 @@ int do_restore_client(struct async *as,
 				continue;
 /* FIX THIS: Encryption currently not working.
 			case CMD_ENC_FILE:
-				if(start_restore_file(as,
+				if(start_restore_file(asfd,
 					&bfd, sb, fullpath, act,
 					conf->encryption_password,
 					NULL, NULL, vss_restore, conf))
@@ -758,11 +758,11 @@ int do_restore_client(struct async *as,
 */
 			case CMD_SOFT_LINK:
 			case CMD_HARD_LINK:
-				if(restore_link(as, sb, fullpath, act, conf))
+				if(restore_link(asfd, sb, fullpath, act, conf))
 					goto end;
 				break;
 			case CMD_SPECIAL:
-				if(restore_special(as, sb, fullpath, act, conf))
+				if(restore_special(asfd, sb, fullpath, act, conf))
 					goto end;
 				break;
 /* FIX THIS: Metadata and EFS not supported yet.
@@ -780,7 +780,7 @@ int do_restore_client(struct async *as,
 						goto end;
 				break;
 			case CMD_EFS_FILE:
-				if(start_restore_file(as,
+				if(start_restore_file(asfd,
 					&bfd, sb,
 					fullpath, act,
 					NULL,
@@ -801,7 +801,7 @@ int do_restore_client(struct async *as,
 	ret=0;
 end:
 	// It is possible for a fd to still be open.
-	bclose(&bfd, as);
+	bclose(&bfd, asfd);
 
 	cntr_print_end(conf->cntr);
 	cntr_print(conf->cntr, act);

@@ -17,24 +17,22 @@ static const char *server_supports_autoupgrade(const char *feat)
 	return server_supports(feat, ":autoupgrade:");
 }
 
-int extra_comms(struct async **as, struct conf *conf,
+int extra_comms(struct asfd *asfd, struct conf *conf,
 	enum action *action, char **incexc, long *name_max)
 {
 	int ret=-1;
 	char *feat=NULL;
 	const char *cp=NULL;
-	struct iobuf *rbuf=NULL;
+	struct iobuf *rbuf=asfd->rbuf;
 
-	if(!(rbuf=iobuf_alloc())) goto end;
-
-	if((*as)->write_str(*as, CMD_GEN, "extra_comms_begin"))
+	if(asfd->write_str(asfd, CMD_GEN, "extra_comms_begin"))
 	{
 		logp("Problem requesting extra_comms_begin\n");
 		goto end;
 	}
 	// Servers greater than 1.3.0 will list the extra_comms
 	// features they support.
-	if((*as)->read(*as, rbuf))
+	if(asfd->read(asfd))
 	{
 		logp("Problem reading response to extra_comms_begin\n");
 		goto end;
@@ -52,7 +50,7 @@ int extra_comms(struct async **as, struct conf *conf,
 	if(server_supports_autoupgrade(rbuf->buf)
 	  && conf->autoupgrade_dir
 	  && conf->autoupgrade_os
-	  && autoupgrade_client(as, conf))
+	  && autoupgrade_client(asfd, conf))
 		goto end;
 
 	// :srestore: means that the server wants to do a restore.
@@ -61,7 +59,7 @@ int extra_comms(struct async **as, struct conf *conf,
 		if(conf->server_can_restore)
 		{
 			logp("Server is initiating a restore\n");
-			if(incexc_recv_client_restore(*as, incexc, conf))
+			if(incexc_recv_client_restore(asfd, incexc, conf))
 				goto end;
 			if(*incexc)
 			{
@@ -75,7 +73,7 @@ int extra_comms(struct async **as, struct conf *conf,
 		{
 			logp("Server wants to initiate a restore\n");
 			logp("Client configuration says no\n");
-			if((*as)->write_str(*as, CMD_GEN, "srestore not ok"))
+			if(asfd->write_str(asfd, CMD_GEN, "srestore not ok"))
 				goto end;
 		}
 	}
@@ -92,8 +90,8 @@ int extra_comms(struct async **as, struct conf *conf,
 			logp("Server does not support switching client.\n");
 			goto end;
 		}
-		if((*as)->write_str(*as, CMD_GEN, str)
-		  || (*as)->read_expect(*as, CMD_GEN, "orig_client ok"))
+		if(asfd->write_str(asfd, CMD_GEN, str)
+		  || asfd->read_expect(asfd, CMD_GEN, "orig_client ok"))
 		{
 			logp("Problem requesting %s\n", str);
 			goto end;
@@ -112,7 +110,7 @@ printf("HERE: %s\n", feat);
 		if(!*incexc && server_supports(feat, ":sincexc:"))
 		{
 			logp("Server is setting includes/excludes.\n");
-			if(incexc_recv_client(*as, incexc, conf))
+			if(incexc_recv_client(asfd, incexc, conf))
 				goto end;
 			if(*incexc && parse_incexcs_buf(conf,
 				*incexc)) goto end;
@@ -121,7 +119,7 @@ printf("HERE: %s\n", feat);
 
 	if(server_supports(feat, ":counters:"))
 	{
-		if((*as)->write_str(*as, CMD_GEN, "countersok"))
+		if(asfd->write_str(asfd, CMD_GEN, "countersok"))
 			goto end;
 		conf->send_client_cntr=1;
 	}
@@ -130,7 +128,7 @@ printf("HERE: %s\n", feat);
 	// incexc conf so that it better knows what to do on
 	// resume.
 	if(server_supports(feat, ":incexc:")
-	  && incexc_send_client(*as, conf))
+	  && incexc_send_client(asfd, conf))
 		goto end;
 
 	if(server_supports(feat, ":uname:"))
@@ -152,7 +150,7 @@ printf("HERE: %s\n", feat);
 			char msg[128]="";
 			snprintf(msg, sizeof(msg),
 				"uname=%s", clientos);
-			if((*as)->write_str(*as, CMD_GEN, msg))
+			if(asfd->write_str(asfd, CMD_GEN, msg))
 				goto end;
 		}
 	}
@@ -168,7 +166,7 @@ printf("HERE: %s\n", feat);
 		}
 		// Send choice to server.
 		snprintf(msg, sizeof(msg), "protocol=%d", conf->protocol);
-		if((*as)->write_str(*as, CMD_GEN, msg))
+		if(asfd->write_str(asfd, CMD_GEN, msg))
 			goto end;
 		logp("Using protocol=%d\n", conf->protocol);
 	}
@@ -195,8 +193,8 @@ printf("HERE: %s\n", feat);
 		conf->protocol=PROTO_BURP2;
 	}
 
-	if((*as)->write_str(*as, CMD_GEN, "extra_comms_end")
-	  || (*as)->read_expect(*as, CMD_GEN, "extra_comms_end ok"))
+	if(asfd->write_str(asfd, CMD_GEN, "extra_comms_end")
+	  || asfd->read_expect(asfd, CMD_GEN, "extra_comms_end ok"))
 	{
 		logp("Problem requesting extra_comms_end\n");
 		goto end;
@@ -204,6 +202,5 @@ printf("HERE: %s\n", feat);
 
 	ret=0;
 end:
-	iobuf_free(rbuf);
 	return ret;
 }

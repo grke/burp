@@ -4,14 +4,14 @@
 // FIX THIS: Somewhat haphazard.
 /* Return 0 for everything OK. -1 for error, or 1 to mean that a backup is
    currently finalising. */
-static int get_lock_sdirs(struct async *as, struct sdirs *sdirs)
+static int get_lock_sdirs(struct asfd *asfd, struct sdirs *sdirs)
 {
 	struct stat statp;
 
 	// Make sure the lock directory exists.
 	if(mkpath(&sdirs->lock->path, sdirs->lockdir))
 	{
-		as->write_str(as, CMD_ERROR, "problem with lock directory");
+		asfd->write_str(asfd, CMD_ERROR, "problem with lock directory");
 		goto error;
 	}
 
@@ -21,14 +21,14 @@ static int get_lock_sdirs(struct async *as, struct sdirs *sdirs)
 		case GET_LOCK_GOT: break;
 		case GET_LOCK_NOT_GOT:
 			logp("Another instance of client is already running.\n");
-			as->write_str(as, CMD_ERROR,
+			asfd->write_str(asfd, CMD_ERROR,
 				"another instance is already running");
 			goto error;
 		case GET_LOCK_ERROR:
 		default:
 			logp("Problem with lock file on server: %s\n",
 				sdirs->lock->path);
-			as->write_str(as, CMD_ERROR,
+			asfd->write_str(asfd, CMD_ERROR,
 				"problem with lock file on server");
 			goto error;
 	}
@@ -40,7 +40,7 @@ static int get_lock_sdirs(struct async *as, struct sdirs *sdirs)
 		snprintf(msg, sizeof(msg),
 			"Finalising previous backup of client. "
 			"Please try again later.");
-		as->write_str(as, CMD_ERROR, msg);
+		asfd->write_str(asfd, CMD_ERROR, msg);
 		goto finalising;
 	}
 
@@ -66,7 +66,7 @@ static int client_can_restore(struct conf *cconf)
 }
 
 // Used by burp1 stuff.
-void maybe_do_notification(struct async *as, int status, const char *clientdir,
+void maybe_do_notification(struct asfd *asfd, int status, const char *clientdir,
 	const char *storagedir, const char *filename,
 	const char *brv, struct conf *cconf)
 {
@@ -84,7 +84,7 @@ void maybe_do_notification(struct async *as, int status, const char *clientdir,
 		args[0]=cconf->n_failure_script;
 		args[a++]="0";
 		args[a++]=NULL;
-		run_script(as, args, cconf->n_failure_arg, cconf, 1, 1, 1);
+		run_script(asfd, args, cconf->n_failure_arg, cconf, 1, 1, 1);
 	}
 	else if((cconf->n_success_warnings_only
 		&& cntr->ent[CMD_WARNING]->count > 0)
@@ -99,27 +99,28 @@ void maybe_do_notification(struct async *as, int status, const char *clientdir,
 		args[0]=cconf->n_success_script;
 		args[a++]=warnings;
 		args[a++]=NULL;
-		run_script(as, args, cconf->n_success_arg, cconf, 1, 1, 1);
+		run_script(asfd, args, cconf->n_success_arg, cconf, 1, 1, 1);
 	}
 }
 
-static int run_backup(struct async **as,
+static int run_backup(struct async *as,
 	struct sdirs *sdirs, struct conf *cconf,
 	struct iobuf *rbuf, const char *incexc, int *timer_ret, int resume)
 {
 	int ret=-1;
 	char okstr[32]="";
+	struct asfd *asfd=as->asfd;
 
 	if(cconf->restore_client)
 	{
 		// This client is not the original client, so a
 		// backup might cause all sorts of trouble.
 		logp("Not allowing backup of %s\n", cconf->cname);
-		return (*as)->write_str(*as, CMD_GEN, "Backup is not allowed");
+		return asfd->write_str(asfd, CMD_GEN, "Backup is not allowed");
 	}
 
 	// Set quality of service bits on backups.
-	(*as)->asfd->set_bulk_packets((*as)->asfd);
+	asfd->set_bulk_packets(asfd);
 
 	if(!strncmp_w(rbuf->buf, "backupphase1timed"))
 	{
@@ -135,7 +136,7 @@ static int run_backup(struct async **as,
 		args[a++]="reserved1";
 		args[a++]="reserved2";
 		args[a++]=NULL;
-		if((*timer_ret=run_script(*as, args,
+		if((*timer_ret=run_script(asfd, args,
 		  cconf->timer_arg,
 		  cconf,
 		  1 /* wait */, 1 /* use logp */,
@@ -147,7 +148,7 @@ static int run_backup(struct async **as,
 		{
 			logp("Error running timer script for %s\n",
 				cconf->cname);
-			maybe_do_notification(*as, ret, "",
+			maybe_do_notification(asfd, ret, "",
 				"error running timer script",
 				"", "backup", cconf);
 			return *timer_ret;
@@ -157,7 +158,7 @@ static int run_backup(struct async **as,
 			if(!checkonly)
 				logp("Not running backup of %s\n",
 					cconf->cname);
-			return (*as)->write_str(*as,
+			return asfd->write_str(asfd,
 				CMD_GEN, "timer conditions not met");
 		}
 		if(checkonly)
@@ -167,7 +168,7 @@ static int run_backup(struct async **as,
 			// up.
 			logp("Client asked for a timer check only,\n");
 			logp("so a backup is not happening right now.\n");
-			return (*as)->write_str(*as,
+			return asfd->write_str(asfd,
 				CMD_GEN, "timer conditions met");
 		}
 		logp("Running backup of %s\n", cconf->cname);
@@ -175,24 +176,24 @@ static int run_backup(struct async **as,
 	else if(!cconf->client_can_force_backup)
 	{
 		logp("Not allowing forced backup of %s\n", cconf->cname);
-		return (*as)->write_str(*as,
+		return asfd->write_str(asfd,
 			CMD_GEN, "Forced backup is not allowed");
 	}
 
 	snprintf(okstr, sizeof(okstr), "%s:%d",
 		resume?"resume":"ok", cconf->compression);
-	if((*as)->write_str(*as, CMD_GEN, okstr)) return -1;
+	if(asfd->write_str(asfd, CMD_GEN, okstr)) return -1;
 	if(cconf->protocol==PROTO_BURP1)
 		ret=do_backup_server_burp1(as, sdirs, cconf, incexc, resume);
 	else
 		ret=do_backup_server(as, sdirs, cconf, incexc, resume);
-	maybe_do_notification(*as, ret, sdirs->client, sdirs->current,
+	maybe_do_notification(asfd, ret, sdirs->client, sdirs->current,
 		"log", "backup", cconf);
 
 	return ret;
 }
 
-static int run_restore(struct async *as,
+static int run_restore(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf *cconf,
 	struct iobuf *rbuf, int srestore)
 {
@@ -226,14 +227,14 @@ static int run_restore(struct async *as,
 		else if(!r)
 		{
 			logp("Not allowing restore of %s\n", cconf->cname);
-			return as->write_str(as, CMD_GEN,
+			return asfd->write_str(asfd, CMD_GEN,
 				"Client restore is not allowed");
 		}
 	}
 	if(act==ACTION_VERIFY && !cconf->client_can_verify)
 	{
 		logp("Not allowing verify of %s\n", cconf->cname);
-		return as->write_str(as, CMD_GEN,
+		return asfd->write_str(asfd, CMD_GEN,
 			"Client verify is not allowed");
 	}
 
@@ -243,17 +244,17 @@ static int run_restore(struct async *as,
 		restoreregex++;
 	}
 	if(conf_val_reset(restoreregex, &(cconf->regex))
-	  || as->write_str(as, CMD_GEN, "ok"))
+	  || asfd->write_str(asfd, CMD_GEN, "ok"))
 		return -1;
 	if(cconf->protocol==PROTO_BURP1)
-		ret=do_restore_server_burp1(as, sdirs, act,
+		ret=do_restore_server_burp1(asfd, sdirs, act,
 			srestore, &dir_for_notify, cconf);
 	else
-		ret=do_restore_server(as, sdirs, act,
+		ret=do_restore_server(asfd, sdirs, act,
 			srestore, &dir_for_notify, cconf);
 	if(dir_for_notify)
 	{
-		maybe_do_notification(as, ret,
+		maybe_do_notification(asfd, ret,
 			sdirs->client, dir_for_notify,
 			act==ACTION_RESTORE?"restorelog":"verifylog",
 			act==ACTION_RESTORE?"restore":"verify",
@@ -263,21 +264,21 @@ static int run_restore(struct async *as,
 	return ret;
 }
 
-static int run_delete(struct async *as,
+static int run_delete(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf *cconf, struct iobuf *rbuf)
 {
 	char *backupno=NULL;
 	if(!cconf->client_can_delete)
 	{
 		logp("Not allowing delete of %s\n", cconf->cname);
-		as->write_str(as, CMD_GEN, "Client delete is not allowed");
+		asfd->write_str(asfd, CMD_GEN, "Client delete is not allowed");
 		return -1;
 	}
 	backupno=rbuf->buf+strlen("delete ");
-	return do_delete_server(as, sdirs, cconf, backupno);
+	return do_delete_server(asfd, sdirs, cconf, backupno);
 }
 
-static int run_list(struct async *as,
+static int run_list(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf *cconf, struct iobuf *rbuf)
 {
 	char *backupno=NULL;
@@ -287,7 +288,7 @@ static int run_list(struct async *as,
 	if(!cconf->client_can_list)
 	{
 		logp("Not allowing list of %s\n", cconf->cname);
-		as->write_str(as, CMD_GEN, "Client list is not allowed");
+		asfd->write_str(asfd, CMD_GEN, "Client list is not allowed");
 		return -1;
 	}
 
@@ -314,20 +315,20 @@ static int run_list(struct async *as,
 		  browsedir[strlen(browsedir)-1]='\0';
 		backupno=rbuf->buf+strlen("listb ");
 	}
-	if(as->write_str(as, CMD_GEN, "ok")) return -1;
+	if(asfd->write_str(asfd, CMD_GEN, "ok")) return -1;
 
-	return do_list_server(as,
+	return do_list_server(asfd,
 		sdirs, cconf, backupno, listregex, browsedir);
 }
 
-static int unknown_command(struct async *as, struct iobuf *rbuf)
+static int unknown_command(struct asfd *asfd, struct iobuf *rbuf)
 {
 	iobuf_log_unexpected(rbuf, __func__);
-	as->write_str(as, CMD_ERROR, "unknown command");
+	asfd->write_str(asfd, CMD_ERROR, "unknown command");
 	return -1;
 }
 
-int run_action_server(struct async **as,
+int run_action_server(struct async *as,
 	struct conf *cconf, struct sdirs *sdirs,
 	struct iobuf *rbuf, const char *incexc, int srestore, int *timer_ret)
 {
@@ -340,26 +341,26 @@ int run_action_server(struct async **as,
 	{
 		snprintf(msg, sizeof(msg),
 			"could not mkpath %s", sdirs->current);
-		log_and_send(*as, msg);
+		log_and_send(as->asfd, msg);
 		return -1;
 	}
 
 	if(rbuf->cmd!=CMD_GEN)
-		return unknown_command(*as, rbuf);
-	if((ret=get_lock_sdirs(*as, sdirs)))
+		return unknown_command(as->asfd, rbuf);
+	if((ret=get_lock_sdirs(as->asfd, sdirs)))
 	{
 		// -1 on error or 1 if the backup is still finalising.
 		// FIX THIS: rbuf->buf is not just 'backup' or 'list', etc.
-		if(ret<0) maybe_do_notification(*as, ret,
+		if(ret<0) maybe_do_notification(as->asfd, ret,
 			"", "error in get_lock_sdirs()",
 			"", rbuf->buf, cconf);
 		return ret;
 	}
 
-	if(check_for_rubble_burp1(*as, sdirs, cconf, incexc, &resume))
+	if(check_for_rubble_burp1(as->asfd, sdirs, cconf, incexc, &resume))
 	{
 		// FIX THIS: rbuf->buf is not just 'backup' or 'list', etc.
-		maybe_do_notification(*as, ret,
+		maybe_do_notification(as->asfd, ret,
 			"", "error in check_for_rubble()",
 			"", rbuf->buf, cconf);
 		return -1;
@@ -371,14 +372,14 @@ int run_action_server(struct async **as,
 
 	if(!strncmp_w(rbuf->buf, "restore ")
 	  || !strncmp_w(rbuf->buf, "verify "))
-		return run_restore(*as, sdirs, cconf, rbuf, srestore);
+		return run_restore(as->asfd, sdirs, cconf, rbuf, srestore);
 
 	if(!strncmp_w(rbuf->buf, "delete "))
-		return run_delete(*as, sdirs, cconf, rbuf);
+		return run_delete(as->asfd, sdirs, cconf, rbuf);
 
 	if(!strncmp_w(rbuf->buf, "list ")
 	  || !strncmp_w(rbuf->buf, "listb "))
-		return run_list(*as, sdirs, cconf, rbuf);
+		return run_list(as->asfd, sdirs, cconf, rbuf);
 
-	return unknown_command(*as, rbuf);
+	return unknown_command(as->asfd, rbuf);
 }

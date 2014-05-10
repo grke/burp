@@ -8,7 +8,7 @@ static int data_needed(struct sbuf *sb)
 }
 
 // Return -1 for error, 0 for entry not changed, 1 for entry changed (or new).
-static int found_in_current_manifest(struct async *as,
+static int found_in_current_manifest(struct asfd *asfd,
 	struct sbuf *csb, struct sbuf *sb,
 	struct manio *cmanio, struct manio *unmanio,
 	struct blk **blk, struct conf *conf)
@@ -18,7 +18,7 @@ static int found_in_current_manifest(struct async *as,
 	// (for example, EFS changing to normal file, or back again).
 	if(csb->path.cmd!=sb->path.cmd)
 	{
-		if(manio_forward_through_sigs(as, &csb, blk, cmanio, conf)<0)
+		if(manio_forward_through_sigs(asfd, &csb, blk, cmanio, conf)<0)
 			return -1;
 		return 1;
 	}
@@ -29,7 +29,7 @@ static int found_in_current_manifest(struct async *as,
 	  && csb->statp.st_ctime==sb->statp.st_ctime)
 	{
 		// Got an unchanged file.
-		if(manio_copy_entry(as, &csb, sb,
+		if(manio_copy_entry(asfd, &csb, sb,
 			blk, cmanio, unmanio, conf)<0) return -1;
 		return 0;
 	}
@@ -41,19 +41,19 @@ static int found_in_current_manifest(struct async *as,
 		// changed. We already have the attributes, but may need to
 		// get extra meta data.
 		// FIX THIS
-		if(manio_copy_entry(as, &csb, sb,
+		if(manio_copy_entry(asfd, &csb, sb,
 			blk, cmanio, unmanio, conf)<0) return -1;
 		return 0;
 	}
 
 	// File data changed.
-	if(manio_forward_through_sigs(as, &csb, blk, cmanio, conf)<0)
+	if(manio_forward_through_sigs(asfd, &csb, blk, cmanio, conf)<0)
 		return -1;
 	return 1;
 }
 
 // Return -1 for error, 0 for entry not changed, 1 for entry changed (or new).
-static int entry_changed(struct async *as, struct sbuf *sb,
+static int entry_changed(struct asfd *asfd, struct sbuf *sb,
 	struct manio *cmanio, struct manio *unmanio, struct conf *conf)
 {
 	static int finished=0;
@@ -72,7 +72,7 @@ static int entry_changed(struct async *as, struct sbuf *sb,
 	{
 		// Need to read another.
 		if(!blk && !(blk=blk_alloc())) return -1;
-		switch(manio_sbuf_fill(cmanio, as, csb, blk, NULL, conf))
+		switch(manio_sbuf_fill(cmanio, asfd, csb, blk, NULL, conf))
 		{
 			case 1: // Reached the end.
 				sbuf_free(csb); csb=NULL;
@@ -93,13 +93,13 @@ static int entry_changed(struct async *as, struct sbuf *sb,
 	{
 		switch(sbuf_pathcmp(csb, sb))
 		{
-			case 0: return found_in_current_manifest(as, csb, sb,
+			case 0: return found_in_current_manifest(asfd, csb, sb,
 					cmanio, unmanio, &blk, conf);
 			case 1: return 1;
 			case -1:
 				// Behind - need to read more data from the old
 				// manifest.
-				switch(manio_sbuf_fill(cmanio, as,
+				switch(manio_sbuf_fill(cmanio, asfd,
 					csb, blk, NULL, conf))
 				{
 					case -1: return -1;
@@ -190,7 +190,7 @@ static void dump_blks(const char *msg, struct blk *b)
 }
 */
 
-static int add_to_sig_list(struct async *chas,
+static int add_to_sig_list(struct asfd *chfd,
 	struct slist *slist, struct blist *blist,
 	struct iobuf *rbuf, struct dpth *dpth,
 	uint64_t *wrap_up, struct conf *conf)
@@ -210,7 +210,7 @@ static int add_to_sig_list(struct async *chas,
 	if(split_sig(rbuf->buf, rbuf->len, blk->weak, blk->strong)) return -1;
 
 	//printf("Writing!\n");
-	if(chas->write(chas, rbuf)) return -1;
+	if(chfd->write(chfd, rbuf)) return -1;
 
 	//if(deduplicate_maybe(blk, dpth, conf, wrap_up)<0) return -1;
 
@@ -220,7 +220,7 @@ static int add_to_sig_list(struct async *chas,
 static int deal_with_read(struct iobuf *rbuf,
 	struct slist *slist, struct blist *blist, struct conf *conf,
 	int *sigs_end, int *backup_end, struct dpth *dpth, uint64_t *wrap_up,
-	struct async *chas)
+	struct asfd *chfd)
 {
 	int ret=0;
 	static struct sbuf *inew=NULL;
@@ -248,7 +248,7 @@ static int deal_with_read(struct iobuf *rbuf,
 			if(set_up_for_sig_info(slist, blist, inew)) goto error;
 			return 0;
 		case CMD_SIG:
-			if(add_to_sig_list(chas, slist, blist,
+			if(add_to_sig_list(chfd, slist, blist,
 				rbuf, dpth, wrap_up, conf))
 					goto error;
 			goto end;
@@ -497,7 +497,7 @@ static void dump_slist(struct slist *slist, const char *msg)
 }
 */
 
-static int maybe_add_from_scan(struct async *as,
+static int maybe_add_from_scan(struct asfd *asfd,
 	struct manio *p1manio, struct manio *cmanio,
 	struct manio *unmanio, struct slist *slist, struct conf *conf)
 {
@@ -519,10 +519,10 @@ static int maybe_add_from_scan(struct async *as,
 		if(!(snew=sbuf_alloc(conf))) goto end;
 
 		if((ars=manio_sbuf_fill(p1manio,
-			as, snew, NULL, NULL, conf))<0) goto end;
+			asfd, snew, NULL, NULL, conf))<0) goto end;
 		else if(ars>0) return 0; // Finished.
 
-		if(!(ec=entry_changed(as, snew, cmanio, unmanio, conf)))
+		if(!(ec=entry_changed(asfd, snew, cmanio, unmanio, conf)))
 		{
 			// No change, no need to add to slist.
 			continue;
@@ -541,7 +541,7 @@ end:
 
 int backup_phase2_server(struct async *as,
 	struct sdirs *sdirs, const char *manifest_dir,
-	struct async *chas, int resume, struct conf *conf)
+	struct asfd *chfd, int resume, struct conf *conf)
 {
 	int ret=-1;
 	int sigs_end=0;
@@ -575,17 +575,18 @@ int backup_phase2_server(struct async *as,
 	  || !(slist=slist_alloc())
 	  || !(blist=blist_alloc())
 	  || !(wbuf=iobuf_alloc())
-	  || !(rbuf=iobuf_alloc())
 	  || !(dpth=dpth_alloc(sdirs->data))
 	  || dpth_init(dpth))
 		goto end;
+
+	rbuf=as->asfd->rbuf;
 
 	// The phase1 manifest looks the same as a burp1 one.
 	manio_set_protocol(p1manio, PROTO_BURP1);
 
 	while(!backup_end)
 	{
-		if(maybe_add_from_scan(as,
+		if(maybe_add_from_scan(as->asfd,
 			p1manio, cmanio, unmanio, slist, conf))
 				goto end;
 
@@ -606,14 +607,14 @@ int backup_phase2_server(struct async *as,
 			}
 		}
 
-		if(as->rw(as, rbuf, wbuf))
+		if(as->rw(as, wbuf))
 		{
 			logp("error in async_rw in %s()\n", __func__);
 			goto end;
 		}
 
 		if(rbuf->buf && deal_with_read(rbuf, slist, blist, conf,
-			&sigs_end, &backup_end, dpth, &wrap_up, chas))
+			&sigs_end, &backup_end, dpth, &wrap_up, chfd))
 				goto end;
 
 		if(write_to_changed_file(chmanio,

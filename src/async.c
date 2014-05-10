@@ -3,7 +3,6 @@
 void async_free(struct async **as)
 {
 	if(!*as) return;
-	asfd_free((*as)->asfd);
 	free(*as);
 	*as=NULL;
 }
@@ -125,13 +124,6 @@ static int async_rw(struct async *as, struct iobuf *wbuf)
         return 0;
 }
 
-static int async_write(struct async *as, struct iobuf *wbuf)
-{
-	if(as->doing_estimate) return 0;
-	while(wbuf->len) if(async_rw(as, wbuf)) return -1;
-	return 0;
-}
-
 static int async_read_quick(struct async *as)
 {
 	int r;
@@ -145,39 +137,30 @@ static int async_read_quick(struct async *as)
 	return r;
 }
 
-static int async_write_strn(struct async *as,
-	char wcmd, const char *wsrc, size_t len)
+static void async_add_asfd(struct async *as, struct asfd *asfd)
 {
-	struct iobuf wbuf;
-	wbuf.cmd=wcmd;
-	wbuf.buf=(char *)wsrc;
-	wbuf.len=len;
-	return async_write(as, &wbuf);
+	struct asfd *x;
+	if(!as->asfd)
+	{
+		as->asfd=asfd;
+		return ;
+	}
+	// Add to the end;
+	for(x=as->asfd; x->next; x=x->next) { }
+	x->next=asfd;
 }
 
-static int async_write_str(struct async *as, char wcmd, const char *wsrc)
+static int async_init(struct async *as, int estimate)
 {
-	return async_write_strn(as, wcmd, wsrc, strlen(wsrc));
-}
-
-static int async_init(struct async *as,
-	int afd, SSL *assl, struct conf *conf, int estimate)
-{
-	if(!(as->asfd=asfd_alloc())) return -1;
-
-	if(as->asfd->init(as->asfd, as, afd, assl, conf)) return -1;
-
 	as->setsec=1;
 	as->setusec=0;
 	as->doing_estimate=estimate;
 
 	as->rw=async_rw;
-	as->write=async_write;
 	as->read_quick=async_read_quick;
 
-	as->write_strn=async_write_strn;
-	as->write_str=async_write_str;
 	as->settimers=async_settimers;
+	as->add_asfd=async_add_asfd;
 
 	return 0;
 }

@@ -245,7 +245,7 @@ static void list_item(int json, enum action act, struct sbuf *sb)
 	}
 }
 
-int do_list_client(struct async *as,
+int do_list_client(struct asfd *asfd,
 	struct conf *conf, enum action act, int json)
 {
 	int ret=-1;
@@ -253,6 +253,7 @@ int do_list_client(struct async *as,
 	char *dpth=NULL;
 	struct sbuf *sb=NULL;
 	int json_started=0;
+	struct iobuf *rbuf=asfd->rbuf;
 //logp("in do_list\n");
 
 	if(conf->browsedir)
@@ -261,8 +262,8 @@ int do_list_client(struct async *as,
 	else
 	  snprintf(msg, sizeof(msg), "list %s:%s",
 		conf->backup?conf->backup:"", conf->regex?conf->regex:"");
-	if(as->write_str(as, CMD_GEN, msg)
-	  || as->read_expect(as, CMD_GEN, "ok"))
+	if(asfd->write_str(asfd, CMD_GEN, msg)
+	  || asfd->read_expect(asfd, CMD_GEN, "ok"))
 		goto end;
 
 	if(!(sb=sbuf_alloc(conf))) goto end;
@@ -282,14 +283,15 @@ int do_list_client(struct async *as,
 	{
 		sbuf_free_content(sb);
 
-		if(as->read(as, &sb->attr)) break;
-		if(sb->attr.cmd==CMD_TIMESTAMP)
+		iobuf_free_content(rbuf);
+		if(asfd->read(asfd)) break;
+		if(rbuf->cmd==CMD_TIMESTAMP)
 		{
 			// A backup timestamp, just print it.
-			if(json) json_backup(sb->attr.buf, conf);
+			if(json) json_backup(rbuf->buf, conf);
 			else
 			{
-				printf("Backup: %s\n", sb->attr.buf);
+				printf("Backup: %s\n", rbuf->buf);
 				if(conf->browsedir)
 					printf("Listing directory: %s\n",
 					       conf->browsedir);
@@ -299,20 +301,25 @@ int do_list_client(struct async *as,
 			}
 			continue;
 		}
-		else if(sb->attr.cmd!=CMD_ATTRIBS)
+		else if(rbuf->cmd!=CMD_ATTRIBS)
 		{
-			iobuf_log_unexpected(&sb->attr, __func__);
+			iobuf_log_unexpected(rbuf, __func__);
 			goto end;
 		}
+		iobuf_copy(&sb->attr, rbuf);
+		iobuf_init(rbuf);
 
 		attribs_decode(sb);
 
-		if(as->read(as, &sb->path))
+		if(asfd->read(asfd))
 		{
 			logp("got stat without an object\n");
 			goto end;
 		}
-		else if(sb->path.cmd==CMD_DIRECTORY
+		iobuf_copy(&sb->path, rbuf);
+		iobuf_init(rbuf);
+
+		if(sb->path.cmd==CMD_DIRECTORY
 			|| sb->path.cmd==CMD_FILE
 			|| sb->path.cmd==CMD_ENC_FILE
 			|| sb->path.cmd==CMD_EFS_FILE
@@ -322,15 +329,16 @@ int do_list_client(struct async *as,
 		}
 		else if(cmd_is_link(sb->path.cmd)) // symlink or hardlink
 		{
-			if(as->read(as, &sb->link)
-			  || sb->link.cmd!=sb->path.cmd)
+			if(asfd->read(asfd)
+			  || rbuf->cmd!=sb->path.cmd)
 			{
 				logp("could not get link %c:%s\n",
 					sb->path.cmd, sb->path.buf);
 				goto end;
 			}
-			else
-				list_item(json, act, sb);
+			iobuf_copy(&sb->link, rbuf);
+			iobuf_init(rbuf);
+			list_item(json, act, sb);
 		}
 		else
 		{

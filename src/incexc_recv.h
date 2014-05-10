@@ -1,11 +1,11 @@
 #ifndef _INCEXC_RECV_H
 #define _INCEXC_RECV_H
 
-extern int incexc_recv_client(struct async *as,
+extern int incexc_recv_client(struct asfd *asfd,
 	char **incexc, struct conf *conf);
-extern int incexc_recv_server(struct async *as,
+extern int incexc_recv_server(struct asfd *asfd,
 	char **incexc, struct conf *conf);
-extern int incexc_recv_client_restore(struct async *as,
+extern int incexc_recv_client_restore(struct asfd *asfd,
 	char **incexc, struct conf *conf);
 
 #endif

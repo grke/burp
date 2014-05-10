@@ -28,7 +28,8 @@ vpath %.cpp $(MAINDIR)/src $(BUILDDIR)/libwin32
 
 CLIENT_OBJS = \
 	$(OBJDIR)/alist.o \
-	$(OBJDIR)/asyncio.o \
+	$(OBJDIR)/asfd.o \
+	$(OBJDIR)/async.o \
 	$(OBJDIR)/attribs.o \
 	$(OBJDIR)/base64.o \
 	$(OBJDIR)/berrno.o \

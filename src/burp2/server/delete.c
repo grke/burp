@@ -1,7 +1,7 @@
 #include "include.h"
 #include "monitor/status_client.h"
 
-int do_delete_server(struct async *as,
+int do_delete_server(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf *conf, const char *backup)
 {
 	int a=0;
@@ -13,7 +13,7 @@ int do_delete_server(struct async *as,
 
 	logp("in do_delete\n");
 
-	if(get_current_backups(as, sdirs, &arr, &a, 1)
+	if(get_current_backups(asfd, sdirs, &arr, &a, 1)
 	  || write_status(STATUS_DELETING, NULL, conf))
 		goto end;
 
@@ -30,13 +30,13 @@ int do_delete_server(struct async *as,
 				if(arr[i].deletable)
 				{
 					found=1;
-					if(as->write_str(as, CMD_GEN, "ok")
+					if(asfd->write_str(asfd, CMD_GEN, "ok")
 					  || delete_backup(sdirs, conf,
 						arr, a, i)) goto end;
 				}
 				else
 				{
-					as->write_str(as, CMD_ERROR,
+					asfd->write_str(asfd, CMD_ERROR,
 						"backup not deletable");
 					goto end;
 				}
@@ -47,7 +47,7 @@ int do_delete_server(struct async *as,
 
 	if(backup && *backup && !found)
 	{
-		as->write_str(as, CMD_ERROR, "backup not found");
+		asfd->write_str(asfd, CMD_ERROR, "backup not found");
 		goto end;
 	}
 

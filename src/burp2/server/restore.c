@@ -48,15 +48,15 @@ static int restore_sbuf(struct asfd *asfd, struct sbuf *sb, enum action act,
 	}
 }
 
-static enum asl_ret restore_end_func(struct asfd *asfd, struct iobuf *rbuf,
+static enum asl_ret restore_end_func(struct asfd *asfd,
         struct conf *conf, void *param)
 {
-	if(!strcmp(rbuf->buf, "ok_restore_end"))
+	if(!strcmp(asfd->rbuf->buf, "ok_restore_end"))
 	{
 		//logp("got ok_restore_end\n");
 		return ASL_END_OK;
 	}
-	iobuf_log_unexpected(rbuf, __func__);
+	iobuf_log_unexpected(asfd->rbuf, __func__);
 	return ASL_END_ERROR;
 }
 

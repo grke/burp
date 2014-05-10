@@ -240,7 +240,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *conffile, int
 end:
 	*cfd=-1;
 	async_free(&as);
-	asfd_free(asfd); // this closes cfd for us.
+	asfd_free(&asfd); // this closes cfd for us.
 	logp("exit child\n");
 	if(cntr) cntr_free(&cntr);
 	if(conf) conf_free(conf);

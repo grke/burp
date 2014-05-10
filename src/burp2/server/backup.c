@@ -118,7 +118,7 @@ static struct asfd *setup_champ_chooser(struct async *as,
 	return chfd;
 error:
 	free(champname);
-	asfd_free(chfd);
+	asfd_free(&chfd);
 	close_fd(&champsock);
 	return NULL;
 }
@@ -208,7 +208,7 @@ int do_backup_server(struct async *as, struct sdirs *sdirs,
 
 	// Close the connection with the client, the rest of the job
 	// we can do by ourselves.
-	asfd_free(asfd);
+	asfd_free(&asfd);
 
 	if(backup_phase3_server(sdirs, manifest_dir, cconf))
 	{
@@ -242,6 +242,6 @@ end:
 	set_logfp(NULL, cconf);
 	if(manifest_dir) free(manifest_dir);
 	if(realworking) free(realworking);
-	asfd_free(chfd);
+	asfd_free(&chfd);
 	return ret;
 }

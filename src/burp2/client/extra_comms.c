@@ -17,13 +17,16 @@ static const char *server_supports_autoupgrade(const char *feat)
 	return server_supports(feat, ":autoupgrade:");
 }
 
-int extra_comms(struct asfd *asfd, struct conf *conf,
+int extra_comms(struct async *as, struct conf *conf,
 	enum action *action, char **incexc, long *name_max)
 {
 	int ret=-1;
 	char *feat=NULL;
 	const char *cp=NULL;
-	struct iobuf *rbuf=asfd->rbuf;
+	struct asfd *asfd;
+	struct iobuf *rbuf;
+	asfd=as->asfd;
+	rbuf=asfd->rbuf;
 
 	if(asfd->write_str(asfd, CMD_GEN, "extra_comms_begin"))
 	{
@@ -44,13 +47,14 @@ int extra_comms(struct asfd *asfd, struct conf *conf,
 		iobuf_log_unexpected(rbuf, __func__);
 		goto end;
 	}
+	iobuf_init(rbuf);
 
 	// Can add extra bits here. The first extra bit is the
 	// autoupgrade stuff.
-	if(server_supports_autoupgrade(rbuf->buf)
+	if(server_supports_autoupgrade(feat)
 	  && conf->autoupgrade_dir
 	  && conf->autoupgrade_os
-	  && autoupgrade_client(asfd, conf))
+	  && autoupgrade_client(as, conf))
 		goto end;
 
 	// :srestore: means that the server wants to do a restore.

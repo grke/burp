@@ -29,7 +29,9 @@ static int asfd_parse_readbuf(struct asfd *asfd)
 
 	if(asfd->rbuf->buf)
 	{
+		return 0;
 		logp("%s called with non-empty buffer\n", __func__);
+		printf("%c:%s\n", asfd->rbuf->cmd, asfd->rbuf->buf);
 		return -1;
 	}
 
@@ -68,6 +70,7 @@ static int asfd_parse_readbuf(struct asfd *asfd)
 		}
 		asfd->readbuflen-=s+5;
 		asfd->rbuf->len=s;
+printf("got: %c:%s\n", asfd->rbuf->cmd, asfd->rbuf->buf);
 	}
 	return 0;
 }
@@ -255,6 +258,7 @@ static int asfd_append_all_to_write_buffer(struct asfd *asfd,
 	sblen=strlen(sbuf);
 	append_to_write_buffer(asfd, sbuf, sblen);
 	append_to_write_buffer(asfd, wbuf->buf, wbuf->len);
+printf("append: %c:%s\n", wbuf->cmd, wbuf->buf);
 	wbuf->len=0;
 	return 0;
 }
@@ -321,43 +325,48 @@ static int asfd_write_str(struct asfd *asfd, char wcmd, const char *wsrc)
 
 static int asfd_simple_loop(struct asfd *asfd,
         struct conf *conf, void *param, const char *caller,
-  enum asl_ret callback(struct asfd *asfd,
-        struct iobuf *rbuf, struct conf *conf, void *param))
+  enum asl_ret callback(struct asfd *asfd, struct conf *conf, void *param))
 {
 	struct iobuf *rbuf=asfd->rbuf;
-        while(1)
-        {
-                iobuf_free_content(rbuf);
-                if(asfd->read(asfd)) return -1;
-                if(rbuf->cmd!=CMD_GEN)
-                {
-                        if(rbuf->cmd==CMD_WARNING)
-                        {
-                                logp("WARNING: %s\n", rbuf->buf);
-                                cntr_add(conf->cntr, rbuf->cmd, 0);
-                        }
-                        else if(rbuf->cmd==CMD_INTERRUPT)
-                        {
-                                // Ignore - client wanted to interrupt a file.
-                        }
-                        else
-                        {
-                                logp("unexpected command in %s(), called from %s(): %c:%s\n", __func__, caller, rbuf->cmd, rbuf->buf);
-                                return -1;
-                        }
-                        continue;
-                }
-                switch(callback(asfd, rbuf, conf, param))
-                {
-                        case ASL_CONTINUE: break;
-                        case ASL_END_OK: return 0;
-                        case ASL_END_OK_RETURN_1: return 1;
-                        case ASL_END_ERROR:
-                        default:
-                                return -1;
-                }
-        }
-        return -1; // Not reached.
+	while(1)
+	{
+		iobuf_free_content(rbuf);
+		if(asfd->read(asfd)) goto error;
+		if(rbuf->cmd!=CMD_GEN)
+		{
+			if(rbuf->cmd==CMD_WARNING)
+			{
+				logp("WARNING: %s\n", rbuf->buf);
+				cntr_add(conf->cntr, rbuf->cmd, 0);
+			}
+			else if(rbuf->cmd==CMD_INTERRUPT)
+			{
+				// Ignore - client wanted to interrupt a file.
+			}
+			else
+			{
+				logp("unexpected command in %s(), called from %s(): %c:%s\n", __func__, caller, rbuf->cmd, rbuf->buf);
+				goto error;
+			}
+			continue;
+		}
+		switch(callback(asfd, conf, param))
+		{
+			case ASL_CONTINUE: break;
+			case ASL_END_OK:
+				iobuf_free_content(rbuf);
+				return 0;
+			case ASL_END_OK_RETURN_1:
+				iobuf_free_content(rbuf);
+				return 1;
+			case ASL_END_ERROR:
+			default:
+				goto error;
+		}
+	}
+error:
+	iobuf_free_content(rbuf);
+	return -1;
 }
 
 
@@ -428,12 +437,13 @@ static void asfd_close(struct asfd *asfd)
 	close_fd(&asfd->fd);
 }
 
-void asfd_free(struct asfd *asfd)
+void asfd_free(struct asfd **asfd)
 {
-	if(!asfd) return;
-	asfd_close(asfd);
-	if(asfd->rbuf) iobuf_free(asfd->rbuf);
-	if(asfd->readbuf) free(asfd->readbuf);
-	if(asfd->writebuf) free(asfd->writebuf);
-	free(asfd);
+	if(!asfd || !*asfd) return;
+	asfd_close(*asfd);
+	if((*asfd)->rbuf) iobuf_free((*asfd)->rbuf);
+	if((*asfd)->readbuf) free((*asfd)->readbuf);
+	if((*asfd)->writebuf) free((*asfd)->writebuf);
+	free(*asfd);
+	*asfd=NULL;
 }

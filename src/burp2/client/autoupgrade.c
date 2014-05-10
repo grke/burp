@@ -11,20 +11,20 @@ static int receive_file(struct asfd *asfd, const char *autoupgrade_dir,
 	return ret;
 }
 
-static enum asl_ret autoupgrade_func(struct asfd *asfd, struct iobuf *rbuf,
+static enum asl_ret autoupgrade_func(struct asfd *asfd,
 	struct conf *conf, void *param)
 {
-	if(!strcmp(rbuf->buf, "do not autoupgrade"))
+	if(!strcmp(asfd->rbuf->buf, "do not autoupgrade"))
 		return ASL_END_OK;
-	if(strcmp(rbuf->buf, "autoupgrade ok"))
+	if(strcmp(asfd->rbuf->buf, "autoupgrade ok"))
 	{
-		iobuf_log_unexpected(rbuf, __func__);
+		iobuf_log_unexpected(asfd->rbuf, __func__);
 		return ASL_END_ERROR;
 	}
 	return ASL_END_OK_RETURN_1;
 }
 
-int autoupgrade_client(struct asfd *asfd, struct conf *conf)
+int autoupgrade_client(struct async *as, struct conf *conf)
 {
 	int a=0;
 	int ret=-1;
@@ -36,6 +36,8 @@ int autoupgrade_client(struct asfd *asfd, struct conf *conf)
 	char write_str[256]="";
 	const char *args[2];
 	struct iobuf *rbuf=NULL;
+	struct asfd *asfd;
+	asfd=as->asfd;
 
 	if(!conf->autoupgrade_dir)
 	{
@@ -112,7 +114,7 @@ int autoupgrade_client(struct asfd *asfd, struct conf *conf)
 	printf("\n");
 	logp("The server tried to upgrade your client.\n");
 	logp("You will need to try your command again.\n");
-	asfd_free(asfd);
+	asfd_free(&as->asfd);
 
 	exit(0);
 end:

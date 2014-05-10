@@ -2,7 +2,7 @@
 #include "../burp1/server/run_action.h"
 
 static int run_server_script(struct asfd *asfd,
-	const char *pre_or_post, struct iobuf *rbuf,
+	const char *pre_or_post,
 	const char *script, struct strlist *script_arg,
 	uint8_t notify, struct conf *cconf, int backup_ret, int timer_ret)
 {
@@ -10,6 +10,7 @@ static int run_server_script(struct asfd *asfd,
 	int ret=0;
 	char *logbuf=NULL;
 	const char *args[12];
+	struct iobuf *rbuf=asfd->rbuf;
 
 	args[a++]=script;
 	args[a++]=pre_or_post;
@@ -58,12 +59,11 @@ int child(struct async *as, struct conf *conf, struct conf *cconf)
 	int timer_ret=0;
 	char *incexc=NULL;
 	struct sdirs *sdirs=NULL;
-	struct iobuf *rbuf=as->asfd->rbuf;
 
 	/* Has to be before the chuser/chgrp stuff to allow clients to switch
 	   to different clients when both clients have different user/group
 	   settings. */
-	if(extra_comms(as->asfd, &incexc, &srestore, conf, cconf))
+	if(extra_comms(as, &incexc, &srestore, conf, cconf))
 	{
 		log_and_send(as->asfd, "running extra comms failed on server");
 		goto end;
@@ -96,18 +96,18 @@ int child(struct async *as, struct conf *conf, struct conf *cconf)
 	// FIX THIS: Make the script components part of a struct, and just
 	// pass in the correct struct. Same below.
 	if(cconf->s_script_pre)
-		ret=run_server_script(as->asfd, "pre", rbuf,
+		ret=run_server_script(as->asfd, "pre",
 			cconf->s_script_pre,
 			cconf->s_script_pre_arg,
 			cconf->s_script_pre_notify,
 			cconf, ret, timer_ret);
 
 	if(!ret)
-		ret=run_action_server(as, cconf, sdirs, rbuf,
+		ret=run_action_server(as, cconf, sdirs,
 			incexc, srestore, &timer_ret);
 
 	if((!ret || cconf->s_script_post_run_on_fail) && cconf->s_script_post)
-		ret=run_server_script(as->asfd, "post", rbuf,
+		ret=run_server_script(as->asfd, "post",
 			cconf->s_script_post,
 			cconf->s_script_post_arg,
 			cconf->s_script_post_notify,
@@ -116,6 +116,5 @@ int child(struct async *as, struct conf *conf, struct conf *cconf)
 end:
 	if(sdirs) lock_release(sdirs->lock);
         sdirs_free(sdirs);
-	iobuf_free(rbuf);
 	return ret;
 }

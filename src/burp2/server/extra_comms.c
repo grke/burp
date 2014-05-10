@@ -113,12 +113,14 @@ struct vers
 	long burp2;
 };
 
-static int extra_comms_read(struct asfd *asfd,
+static int extra_comms_read(struct async *as,
 	struct vers *vers, int *srestore,
 	char **incexc, struct conf *conf, struct conf *cconf)
 {
 	int ret=-1;
+	struct asfd *asfd;
 	struct iobuf *rbuf;
+	asfd=as->asfd;
 	rbuf=asfd->rbuf;
 
 	while(1)
@@ -142,7 +144,7 @@ static int extra_comms_read(struct asfd *asfd,
 		{
 			char *os=NULL;
 			os=rbuf->buf+strlen("autoupgrade:");
-			if(os && *os && autoupgrade_server(asfd, vers->ser,
+			if(os && *os && autoupgrade_server(as, vers->ser,
 				vers->cli, os, conf)) goto end;
 		}
 		else if(!strcmp(rbuf->buf, "srestore ok"))
@@ -328,10 +330,12 @@ static int vers_init(struct vers *vers, struct conf *cconf)
 	  || (vers->burp2=version_to_long("2.0.0"))<0);
 }
 
-int extra_comms(struct asfd *asfd,
+int extra_comms(struct async *as,
 	char **incexc, int *srestore, struct conf *conf, struct conf *cconf)
 {
 	struct vers vers;
+	struct asfd *asfd;
+	asfd=as->asfd;
 	//char *restorepath=NULL;
 
 	if(vers_init(&vers, cconf)) goto error;
@@ -368,7 +372,7 @@ int extra_comms(struct asfd *asfd,
 		if(send_features(asfd, cconf)) goto error;
 	}
 
-	if(extra_comms_read(asfd, &vers, srestore, incexc, conf, cconf))
+	if(extra_comms_read(as, &vers, srestore, incexc, conf, cconf))
 		goto error;
 
 	// This needs to come after extra_comms_read, as the client might

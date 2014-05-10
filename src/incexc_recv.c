@@ -12,18 +12,19 @@ static int add_to_incexc(char **incexc, const char *src, size_t len, const char 
 	return 0;
 }
 
-static enum asl_ret incexc_recv_func(struct asfd *asfd, struct iobuf *rbuf,
+static enum asl_ret incexc_recv_func(struct asfd *asfd,
         struct conf *conf, void *param)
 {
 	char **incexc=(char **)param;
-	if(!strcmp(rbuf->buf, endreqstrf))
+	if(!strcmp(asfd->rbuf->buf, endreqstrf))
 	{
 		if(asfd->write_str(asfd, CMD_GEN, endrepstrf))
 			return ASL_END_ERROR;
 		return ASL_END_OK;
 	}
-	if(add_to_incexc(incexc, rbuf->buf, rbuf->len, *incexc?"\n":""))
-		return ASL_END_ERROR;
+	if(add_to_incexc(incexc,
+		asfd->rbuf->buf, asfd->rbuf->len, *incexc?"\n":""))
+			return ASL_END_ERROR;
 	return ASL_CONTINUE;
 }
 

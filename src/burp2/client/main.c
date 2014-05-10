@@ -192,12 +192,14 @@ static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx, struct conf *conf)
 	return 0;
 }
 
-static enum cliret initial_comms(struct asfd *asfd,
+static enum cliret initial_comms(struct async *as,
 	enum action *action, char **incexc, long *name_max, 
 	struct conf *conf)
 {
+	struct asfd *asfd;
 	char *server_version=NULL;
 	enum cliret ret=CLIENT_OK;
+	asfd=as->asfd;
 
 	if(authorise_client(asfd, conf, &server_version))
 		goto error;
@@ -232,7 +234,7 @@ static enum cliret initial_comms(struct asfd *asfd,
 		goto error;
 	}
 
-	if(extra_comms(asfd, conf, action, incexc, name_max))
+	if(extra_comms(as, conf, action, incexc, name_max))
 	{
 		logp("extra comms failed\n");
 		goto error;
@@ -351,7 +353,7 @@ static enum cliret do_client(struct conf *conf,
 
 	if(act!=ACTION_ESTIMATE)
 	{
-		if((ret=initial_comms(asfd, &act, &incexc, &name_max, conf)))
+		if((ret=initial_comms(as, &act, &incexc, &name_max, conf)))
 			goto end;
 	}
 
@@ -394,7 +396,7 @@ error:
 end:
 	close_fd(&rfd);
 	async_free(&as);
-	asfd_free(asfd);
+	asfd_free(&asfd);
 	if(ctx) ssl_destroy_ctx(ctx);
 	if(incexc) free(incexc);
 	conf->cntr=NULL;

@@ -262,7 +262,7 @@ int do_backup_server_burp1(struct async *as,
 
 	// Close the connection with the client, the rest of the job
 	// we can do by ourselves.
-	asfd_free(asfd);
+	asfd_free(&as->asfd);
 
 	// Move the symlink to indicate that we are now in the end
 	// phase. 

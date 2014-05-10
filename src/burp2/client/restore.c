@@ -537,22 +537,22 @@ static int write_data(struct asfd *asfd, BFILE *bfd, struct blk *blk)
 
 static char *restore_style=NULL;
 
-static enum asl_ret restore_style_func(struct asfd *asfd, struct iobuf *rbuf,
+static enum asl_ret restore_style_func(struct asfd *asfd,
 	struct conf *conf, void *param)
 {
 	char msg[32]="";
 	restore_style=NULL;
-	if(strcmp(rbuf->buf, "restore_stream")
-	   && strcmp(rbuf->buf, "restore_spool"))
+	if(strcmp(asfd->rbuf->buf, "restore_stream")
+	   && strcmp(asfd->rbuf->buf, "restore_spool"))
 	{
-		iobuf_log_unexpected(rbuf, __func__);
+		iobuf_log_unexpected(asfd->rbuf, __func__);
 		return ASL_END_ERROR;
 	}
-	snprintf(msg, sizeof(msg), "%s_ok", rbuf->buf);
+	snprintf(msg, sizeof(msg), "%s_ok", asfd->rbuf->buf);
 	if(asfd->write_str(asfd, CMD_GEN, msg))
 		return ASL_END_ERROR;
-	restore_style=rbuf->buf;
-	rbuf->buf=NULL;
+	restore_style=asfd->rbuf->buf;
+	iobuf_init(asfd->rbuf);
 	return ASL_END_OK;
 }
 
@@ -563,11 +563,13 @@ static char *get_restore_style(struct asfd *asfd, struct conf *conf)
 	return restore_style;
 }
 
-static enum asl_ret restore_spool_func(struct asfd *asfd, struct iobuf *rbuf,
+static enum asl_ret restore_spool_func(struct asfd *asfd,
 	struct conf *conf, void *param)
 {
 	static char **datpath;
+	static struct iobuf *rbuf;
 	datpath=(char **)param;
+	rbuf=asfd->rbuf;
 	if(!strncmp_w(rbuf->buf, "dat="))
 	{
 		char *fpath=NULL;

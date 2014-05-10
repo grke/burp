@@ -102,17 +102,17 @@ end:
 	return ret;
 }
 
-static enum asl_ret csr_client_func(struct asfd *asfd, struct iobuf *rbuf,
+static enum asl_ret csr_client_func(struct asfd *asfd,
         struct conf *conf, void *param)
 {
-	if(strncmp_w(rbuf->buf, "csr ok:"))
+	if(strncmp_w(asfd->rbuf->buf, "csr ok:"))
 	{
-		iobuf_log_unexpected(rbuf, __func__);
+		iobuf_log_unexpected(asfd->rbuf, __func__);
 		return ASL_END_ERROR;
 	}
 	// The server appends its name after 'csr ok:'
 	if(conf->ssl_peer_cn) free(conf->ssl_peer_cn);
-	if(!(conf->ssl_peer_cn=strdup(rbuf->buf+strlen("csr ok:"))))
+	if(!(conf->ssl_peer_cn=strdup(asfd->rbuf->buf+strlen("csr ok:"))))
 	{
 		log_out_of_memory(__func__);
 		return ASL_END_ERROR;

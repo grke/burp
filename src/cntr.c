@@ -950,11 +950,11 @@ int cntr_send(struct cntr *cntr)
 }
 #endif
 
-static enum asl_ret cntr_recv_func(struct asfd *asfd, struct iobuf *rbuf,
+static enum asl_ret cntr_recv_func(struct asfd *asfd,
 	struct conf *conf, void *param)
 {
 /*
-	if(str_to_cntr(rbuf->buf, NULL, NULL, NULL, NULL,
+	if(str_to_cntr(asfd->rbuf->buf, NULL, NULL, NULL, NULL,
 		conf->p1cntr, conf->cntr, NULL))
 			return ASL_END_ERROR;
 */

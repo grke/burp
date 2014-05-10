@@ -330,11 +330,12 @@ static int unknown_command(struct asfd *asfd, struct iobuf *rbuf)
 
 int run_action_server(struct async *as,
 	struct conf *cconf, struct sdirs *sdirs,
-	struct iobuf *rbuf, const char *incexc, int srestore, int *timer_ret)
+	const char *incexc, int srestore, int *timer_ret)
 {
 	int ret;
 	int resume=0;
 	char msg[256]="";
+	struct iobuf *rbuf=as->asfd->rbuf;
 
 	// Make sure some directories exist.
 	if(mkpath(&sdirs->current, sdirs->dedup))

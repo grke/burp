@@ -338,10 +338,12 @@ end:
 }
 
 static enum asl_ret csr_server_func(struct asfd *asfd,
-	struct iobuf *rbuf, struct conf *conf, void *param)
+	struct conf *conf, void *param)
 {
 	static const char **client;
+	static struct iobuf *rbuf;
 	client=(const char **)param;
+	rbuf=asfd->rbuf;
 	if(!strcmp(rbuf->buf, "csr"))
 	{
 		// Client wants to sign a certificate.

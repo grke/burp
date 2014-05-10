@@ -1,14 +1,14 @@
 #include "include.h"
 
-static int load_signature(struct async *as,
+static int load_signature(struct asfd *asfd,
 	rs_signature_t **sumset, struct conf *conf)
 {
 	rs_result r;
 	rs_job_t *job;
 
 	job = rs_loadsig_begin(sumset);
-	if((r=do_rs_run(as, job,
-		NULL, NULL, NULL, NULL, NULL, as->asfd->fd, -1, conf->cntr)))
+	if((r=do_rs_run(asfd, job,
+		NULL, NULL, NULL, NULL, NULL, asfd->fd, -1, conf->cntr)))
 	{
 		rs_free_sumset(*sumset);
 		return r;
@@ -18,7 +18,7 @@ static int load_signature(struct async *as,
 	return r;
 }
 
-static int load_signature_and_send_delta(struct async *as,
+static int load_signature_and_send_delta(struct asfd *asfd,
 	BFILE *bfd, FILE *in,
 	unsigned long long *bytes, unsigned long long *sentbytes,
 	struct conf *conf, size_t datalen)
@@ -32,7 +32,7 @@ static int load_signature_and_send_delta(struct async *as,
 	rs_buffers_t rsbuf;
 	memset(&rsbuf, 0, sizeof(rsbuf));
 
-	if(load_signature(as, &sumset, conf)) return -1;
+	if(load_signature(asfd, &sumset, conf)) return -1;
 
 	if(!(job=rs_delta_begin(sumset)))
 	{
@@ -41,10 +41,10 @@ static int load_signature_and_send_delta(struct async *as,
 		return RS_IO_ERROR;
 	}
 
-	if(!(infb=rs_filebuf_new(as, bfd,
+	if(!(infb=rs_filebuf_new(asfd, bfd,
 		in, NULL, -1, ASYNC_BUF_LEN, datalen, conf->cntr))
-	  || !(outfb=rs_filebuf_new(as, NULL, NULL,
-		NULL, as->asfd->fd, ASYNC_BUF_LEN, -1, conf->cntr)))
+	  || !(outfb=rs_filebuf_new(asfd, NULL, NULL,
+		NULL, asfd->fd, ASYNC_BUF_LEN, -1, conf->cntr)))
 	{
 		logp("could not rs_filebuf_new for delta\n");
 		if(infb) rs_filebuf_free(infb);
@@ -71,7 +71,7 @@ static int load_signature_and_send_delta(struct async *as,
 			break;
 		}
 		// FIX ME: get it to read stuff (errors, for example) here too.
-		if(as->rw(as, NULL, NULL)) return -1;
+		if(asfd->as->rw(asfd->as, NULL)) return -1;
 	}
 
 	if(r!=RS_DONE)
@@ -92,36 +92,36 @@ static int load_signature_and_send_delta(struct async *as,
 	rs_job_free(job);
 	rs_free_sumset(sumset);
 
-	if(r==RS_DONE && write_endfile(as, *bytes, checksum))
+	if(r==RS_DONE && write_endfile(asfd, *bytes, checksum))
 		return -1;
 
 	return r;
 }
 
-static int send_whole_file_w(struct async *as,
+static int send_whole_file_w(struct asfd *asfd,
 	struct sbuf *sb, const char *datapth,
 	int quick_read, unsigned long long *bytes, const char *encpassword,
 	struct conf *conf, int compression, BFILE *bfd, FILE *fp,
 	const char *extrameta, size_t elen, size_t datalen)
 {
 	if((compression || encpassword) && sb->path.cmd!=CMD_EFS_FILE)
-		return send_whole_file_gzl(as,
+		return send_whole_file_gzl(asfd,
 		  sb->path.buf, datapth, quick_read, bytes, 
 		  encpassword, conf, compression, bfd, fp, extrameta, elen,
 		  datalen);
 	else
-		return send_whole_filel(as,
+		return send_whole_filel(asfd,
 		  sb->path.cmd, sb->path.buf, datapth, quick_read, bytes, 
 		  conf, bfd, fp, extrameta, elen,
 		  datalen);
 }
 
-static int forget_file(struct async *as, struct sbuf *sb, struct conf *conf)
+static int forget_file(struct asfd *asfd, struct sbuf *sb, struct conf *conf)
 {
 	// Tell the server to forget about this
 	// file, otherwise it might get stuck
 	// on a select waiting for it to arrive.
-	if(as->write_str(as, CMD_INTERRUPT, sb->path.buf))
+	if(asfd->write_str(asfd, CMD_INTERRUPT, sb->path.buf))
 		return 0;
 
 	if(sb->path.cmd==CMD_FILE && sb->burp1->datapth.buf)
@@ -129,13 +129,13 @@ static int forget_file(struct async *as, struct sbuf *sb, struct conf *conf)
 		rs_signature_t *sumset=NULL;
 		// The server will be sending us a signature.
 		// Munch it up then carry on.
-		if(load_signature(as, &sumset, conf)) return -1;
+		if(load_signature(asfd, &sumset, conf)) return -1;
 		else rs_free_sumset(sumset);
 	}
 	return 0;
 }
 
-static int size_checks(struct async *as,
+static int size_checks(struct asfd *asfd,
 	struct iobuf *rbuf, struct sbuf *sb, struct conf *conf)
 {
 	if(rbuf->cmd!=CMD_FILE
@@ -145,19 +145,19 @@ static int size_checks(struct async *as,
 	if(conf->min_file_size
 	  && sb->statp.st_size<(boffset_t)conf->min_file_size)
 	{
-		logw(as, conf, "File size decreased below min_file_size after initial scan: %c:%s", rbuf->cmd, sb->path.buf);
+		logw(asfd, conf, "File size decreased below min_file_size after initial scan: %c:%s", rbuf->cmd, sb->path.buf);
 		return -1;
 	}
 	if(conf->max_file_size
 	  && sb->statp.st_size>(boffset_t)conf->max_file_size)
 	{
-		logw(as, conf, "File size increased above max_file_size after initial scan: %c:%s", rbuf->cmd, sb->path.buf);
+		logw(asfd, conf, "File size increased above max_file_size after initial scan: %c:%s", rbuf->cmd, sb->path.buf);
 		return -1;
 	}
 	return 0;
 }
 
-static int deal_with_data(struct async *as,
+static int deal_with_data(struct asfd *asfd,
 	struct iobuf *rbuf, struct sbuf *sb,
 	BFILE *bfd, size_t *datalen, struct conf *conf)
 {
@@ -179,19 +179,19 @@ static int deal_with_data(struct async *as,
 	if(lstat(sb->path.buf, &sb->statp))
 #endif
 	{
-		logw(as, conf, "Path has vanished: %s", sb->path.buf);
-		if(forget_file(as, sb, conf)) goto error;
+		logw(asfd, conf, "Path has vanished: %s", sb->path.buf);
+		if(forget_file(asfd, sb, conf)) goto error;
 		goto end;
 	}
 
-	if(size_checks(as, rbuf, sb, conf)) forget++;
+	if(size_checks(asfd, rbuf, sb, conf)) forget++;
 
 	if(!forget)
 	{
 		sb->compression=in_exclude_comp(conf->excom,
 			sb->path.buf, conf->compression);
 		if(attribs_encode(sb)) goto error;
-		else if(open_file_for_sendl(as,
+		else if(open_file_for_sendl(asfd,
 #ifdef HAVE_WIN32
 			bfd, NULL,
 #else
@@ -203,7 +203,7 @@ static int deal_with_data(struct async *as,
 
 	if(forget)
 	{
-		if(forget_file(as, sb, conf)) goto error;
+		if(forget_file(asfd, sb, conf)) goto error;
 		goto end;
 	}
 
@@ -216,14 +216,14 @@ static int deal_with_data(struct async *as,
 #endif
 	  )
 	{
-		if(get_extrameta(as,
+		if(get_extrameta(asfd,
 #ifdef HAVE_WIN32
 			bfd,
 #endif
 			sb->path.buf, &sb->statp, &extrameta, &elen,
 			sb->winattr, conf, datalen))
 		{
-			logw(as, conf, "Meta data error for %s", sb->path.buf);
+			logw(asfd, conf, "Meta data error for %s", sb->path.buf);
 			goto end;
 		}
 		if(extrameta)
@@ -239,7 +239,7 @@ static int deal_with_data(struct async *as,
 		}
 		else
 		{
-			logw(as, conf,
+			logw(asfd, conf,
 				"No meta data after all: %s", sb->path.buf);
 			goto end;
 		}
@@ -250,10 +250,10 @@ static int deal_with_data(struct async *as,
 	{
 		unsigned long long sentbytes=0;
 		// Need to do sig/delta stuff.
-		if(as->write(as, &(sb->burp1->datapth))
-		  || as->write(as, &sb->attr)
-		  || as->write(as, &sb->path)
-		  || load_signature_and_send_delta(as, bfd, fp,
+		if(asfd->write(asfd, &(sb->burp1->datapth))
+		  || asfd->write(asfd, &sb->attr)
+		  || asfd->write(asfd, &sb->path)
+		  || load_signature_and_send_delta(asfd, bfd, fp,
 			&bytes, &sentbytes, conf, *datalen))
 		{
 			logp("error in sig/delta for %s (%s)\n",
@@ -272,9 +272,9 @@ static int deal_with_data(struct async *as,
 		//logp("need to send whole file: %s\n", sb.path);
 		// send the whole file.
 
-		if((as->write(as, &sb->attr)
-		  || as->write(as, &sb->path))
-		  || send_whole_file_w(as, sb, NULL, 0, &bytes,
+		if((asfd->write(asfd, &sb->attr)
+		  || asfd->write(asfd, &sb->path))
+		  || send_whole_file_w(asfd, sb, NULL, 0, &bytes,
 			conf->encryption_password, conf, sb->compression,
 			bfd, fp, extrameta, elen, *datalen))
 				goto end;
@@ -296,14 +296,14 @@ error:
 	// different file path, or when this function
 	// exits.
 #else
-	close_file_for_sendl(NULL, &fp, as);
+	close_file_for_sendl(NULL, &fp, asfd);
 #endif
 	sbuf_free_content(sb);
 	if(extrameta) free(extrameta);
 	return ret;
 }
 
-static int parse_rbuf(struct async *as, struct iobuf *rbuf, struct sbuf *sb,
+static int parse_rbuf(struct asfd *asfd, struct iobuf *rbuf, struct sbuf *sb,
 	BFILE *bfd, size_t *datalen, struct conf *conf)
 {
 	//logp("now: %c:%s\n", rbuf->cmd, rbuf->buf);
@@ -329,7 +329,7 @@ static int parse_rbuf(struct async *as, struct iobuf *rbuf, struct sbuf *sb,
 	  || rbuf->cmd==CMD_ENC_VSS_T
 	  || rbuf->cmd==CMD_EFS_FILE)
 	{
-		if(deal_with_data(as, rbuf, sb, bfd, datalen, conf))
+		if(deal_with_data(asfd, rbuf, sb, bfd, datalen, conf))
 			return -1;
 	}
 	else if(rbuf->cmd==CMD_WARNING)
@@ -344,7 +344,7 @@ static int parse_rbuf(struct async *as, struct iobuf *rbuf, struct sbuf *sb,
 	return 0;
 }
 
-static int do_backup_phase2_client(struct async *as,
+static int do_backup_phase2_client(struct asfd *asfd,
 	struct conf *conf, int resume)
 {
 	int ret=-1;
@@ -360,21 +360,21 @@ static int do_backup_phase2_client(struct async *as,
 #endif
 
 	struct sbuf *sb=NULL;
-	struct iobuf *rbuf=NULL;
+	struct iobuf *rbuf=asfd->rbuf;
 
 	if(!(sb=sbuf_alloc(conf))) goto end;
 
 	if(!resume)
 	{
 		// Only do this bit if the server did not tell us to resume.
-		if(as->write_str(as, CMD_GEN, "backupphase2")
-		  || as->read_expect(as, CMD_GEN, "ok"))
+		if(asfd->write_str(asfd, CMD_GEN, "backupphase2")
+		  || asfd->read_expect(asfd, CMD_GEN, "ok"))
 			goto end;
 	}
 	else if(conf->send_client_cntr)
 	{
 		// On resume, the server might update the client with cntr.
-		if(cntr_recv(as, conf)) goto end;
+		if(cntr_recv(asfd, conf)) goto end;
 	}
 
 	if(!(rbuf=iobuf_alloc())) goto end;
@@ -382,38 +382,38 @@ static int do_backup_phase2_client(struct async *as,
 	while(1)
 	{
 		iobuf_free_content(rbuf);
-		if(as->read(as, rbuf)) goto end;
+		if(asfd->read(asfd)) goto end;
 		else if(!rbuf->buf) continue;
 
 		if(rbuf->cmd==CMD_GEN && !strcmp(rbuf->buf, "backupphase2end"))
 		{
-			if(as->write_str(as, CMD_GEN, "okbackupphase2end"))
+			if(asfd->write_str(asfd, CMD_GEN, "okbackupphase2end"))
 				goto end;
 			ret=0;
 			break;
 		}
 
-		if(parse_rbuf(as, rbuf, sb, &bfd, &datalen, conf))
+		if(parse_rbuf(asfd, rbuf, sb, &bfd, &datalen, conf))
 			goto end;
 	}
 
 end:
 #ifdef HAVE_WIN32
 	// It is possible for a bfd to still be open.
-	close_file_for_sendl(&bfd, NULL, as);
+	close_file_for_sendl(&bfd, NULL, asfd);
 #endif
-	iobuf_free(rbuf);
+	iobuf_free_content(rbuf);
 	sbuf_free(sb);
 	return ret;
 }
 
-int backup_phase2_client_burp1(struct async *as, struct conf *conf, int resume)
+int backup_phase2_client_burp1(struct asfd *asfd, struct conf *conf, int resume)
 {
 	int ret=0;
 
 	logp("Phase 2 begin (send backup data)\n");
 
-	ret=do_backup_phase2_client(as, conf, resume);
+	ret=do_backup_phase2_client(asfd, conf, resume);
 
 	cntr_print_end(conf->cntr);
 	cntr_print(conf->cntr, ACTION_BACKUP);

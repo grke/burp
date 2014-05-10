@@ -2,17 +2,17 @@
 #include "champ_chooser/hash.h"
 #include "monitor/status_client.h"
 
-static int restore_sbuf(struct async *as, struct sbuf *sb, enum action act,
+static int restore_sbuf(struct asfd *asfd, struct sbuf *sb, enum action act,
 	char status, struct conf *conf, int *need_data)
 {
 	//logp("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path.buf);
 	if(write_status(status, sb->path.buf, conf)) return -1;
 
-	if(as->write(as, &sb->attr)
-	  || as->write(as, &sb->path))
+	if(asfd->write(asfd, &sb->attr)
+	  || asfd->write(asfd, &sb->path))
 		return -1;
 	if(sbuf_is_link(sb)
-	  && as->write(as, &sb->link))
+	  && asfd->write(asfd, &sb->link))
 		return -1;
 
 	if(sb->burp2->bstart)
@@ -25,7 +25,7 @@ static int restore_sbuf(struct async *as, struct sbuf *sb, enum action act,
 		{
 			struct iobuf wbuf;
 			iobuf_set(&wbuf, CMD_DATA, b->data, b->length);
-			if(as->write(as, &wbuf)) return -1;
+			if(asfd->write(asfd, &wbuf)) return -1;
 			n=b->next;
 			blk_free(b);
 			b=n;
@@ -48,7 +48,7 @@ static int restore_sbuf(struct async *as, struct sbuf *sb, enum action act,
 	}
 }
 
-static enum asl_ret restore_end_func(struct async *as, struct iobuf *rbuf,
+static enum asl_ret restore_end_func(struct asfd *asfd, struct iobuf *rbuf,
         struct conf *conf, void *param)
 {
 	if(!strcmp(rbuf->buf, "ok_restore_end"))
@@ -60,14 +60,14 @@ static enum asl_ret restore_end_func(struct async *as, struct iobuf *rbuf,
 	return ASL_END_ERROR;
 }
 
-static int do_restore_end(struct async *as, struct conf *conf)
+static int do_restore_end(struct asfd *asfd, struct conf *conf)
 {
-	if(as->write_str(as, CMD_GEN, "restore_end")) return -1;
-	return as->simple_loop(as,
+	if(asfd->write_str(asfd, CMD_GEN, "restore_end")) return -1;
+	return asfd->simple_loop(asfd,
 		conf, NULL, __func__, restore_end_func);
 }
 
-static int restore_ent(struct async *as,
+static int restore_ent(struct asfd *asfd,
 	struct sbuf **sb,
 	struct slist *slist,
 	enum action act,
@@ -99,7 +99,7 @@ static int restore_ent(struct async *as,
 //printf("do dir: %s\n", xb->path.buf);
 			// Can now restore because nothing else is
 			// fiddling in a subdirectory.
-			if(restore_sbuf(as, xb, act, status,
+			if(restore_sbuf(asfd, xb, act, status,
 				conf, need_data)) goto end;
 			slist->head=xb->next;
 			sbuf_free(xb);
@@ -128,7 +128,7 @@ static int restore_ent(struct async *as,
 	else
 	{
 		*last_ent_was_dir=0;
-		if(restore_sbuf(as, *sb, act, status, conf, need_data))
+		if(restore_sbuf(asfd, *sb, act, status, conf, need_data))
 			goto end;
 	}
 	ret=0;
@@ -207,7 +207,7 @@ end:
 */
 }
 
-static int restore_remaining_dirs(struct async *as,
+static int restore_remaining_dirs(struct asfd *asfd,
 	struct slist *slist, enum action act,
 	char status, struct conf *conf, int *need_data)
 {
@@ -216,7 +216,7 @@ static int restore_remaining_dirs(struct async *as,
 	for(sb=slist->head; sb; sb=sb->next)
 	{
 //printf("remaining dir: %s\n", sb->path.buf);
-		if(restore_sbuf(as, sb, act, status, conf, need_data))
+		if(restore_sbuf(asfd, sb, act, status, conf, need_data))
 			return -1;
 	}
 	return 0;
@@ -226,7 +226,7 @@ static int restore_remaining_dirs(struct async *as,
    efficient to just copy the data files across and unpack them on the other
    side. If it thinks it is, it will then do it.
    Return -1 on error, 1 if it copied the data across, 0 if it did not. */
-static int maybe_copy_data_files_across(struct async *as,
+static int maybe_copy_data_files_across(struct asfd *asfd,
 	const char *manifest,
 	const char *datadir, int srestore, regex_t *regex, struct conf *conf,
 	struct slist *slist,
@@ -261,7 +261,7 @@ static int maybe_copy_data_files_across(struct async *as,
 
 	while(1)
 	{
-		if((ars=manio_sbuf_fill(manio, as, sb, blk, NULL, conf))<0)
+		if((ars=manio_sbuf_fill(manio, asfd, sb, blk, NULL, conf))<0)
 		{
 			logp("Error from manio_sbuf_fill() in %s\n",
 				__func__);
@@ -326,8 +326,8 @@ static int maybe_copy_data_files_across(struct async *as,
 
 	printf("Client is using restore_spool: %s\n", conf->restore_spool);
 
-	if(as->write_str(as, CMD_GEN, "restore_spool")
-	  || as->read_expect(as, CMD_GEN, "restore_spool_ok"))
+	if(asfd->write_str(asfd, CMD_GEN, "restore_spool")
+	  || asfd->read_expect(asfd, CMD_GEN, "restore_spool_ok"))
 		goto end;
 
 	// Send each of the data files that we found to the client.
@@ -341,10 +341,10 @@ static int maybe_copy_data_files_across(struct async *as,
 		path[9]='/';
 		snprintf(msg, sizeof(msg), "dat=%s", path);
 		printf("got: %s\n", msg);
-		if(as->write_str(as, CMD_GEN, msg)) goto end;
+		if(asfd->write_str(asfd, CMD_GEN, msg)) goto end;
 		if(!(fdatpath=prepend_s(datadir, path)))
 			goto end;
-		if(send_a_file(as, fdatpath, conf))
+		if(send_a_file(asfd, fdatpath, conf))
 		{
 			free(fdatpath);
 			goto end;
@@ -352,8 +352,8 @@ static int maybe_copy_data_files_across(struct async *as,
 		free(fdatpath);
 	}
 
-	if(as->write_str(as, CMD_GEN, "datfilesend")
-	  || as->read_expect(as, CMD_GEN, "datfilesend_ok"))
+	if(asfd->write_str(asfd, CMD_GEN, "datfilesend")
+	  || asfd->read_expect(asfd, CMD_GEN, "datfilesend_ok"))
 		goto end;
 
 	// Send the manifest to the client.
@@ -362,7 +362,7 @@ static int maybe_copy_data_files_across(struct async *as,
 	*blk->save_path='\0';
 	while(1)
 	{
-		if((ars=manio_sbuf_fill(manio, as, sb, blk, NULL, conf))<0)
+		if((ars=manio_sbuf_fill(manio, asfd, sb, blk, NULL, conf))<0)
 		{
 			logp("Error from manio_sbuf_fill() in %s\n",
 				__func__);
@@ -373,11 +373,11 @@ static int maybe_copy_data_files_across(struct async *as,
 
 		if(*blk->save_path)
 		{
-			//if(async_write(as, CMD_DATA, blk->data, blk->length))
+			//if(async_write(asfd, CMD_DATA, blk->data, blk->length))
 			//	return -1;
 			snprintf(sig, sizeof(sig), "%s%s%s",
 				blk->weak, blk->strong, blk->save_path);
-			if(as->write_str(as, CMD_SIG, sig))
+			if(asfd->write_str(asfd, CMD_SIG, sig))
 				goto end;
 			*blk->save_path='\0';
 			continue;
@@ -388,7 +388,7 @@ static int maybe_copy_data_files_across(struct async *as,
 		if((!srestore || check_srestore(conf, sb->path.buf))
 		  && check_regex(regex, sb->path.buf))
 		{
-			if(restore_ent(as, &sb, slist, act, status, conf,
+			if(restore_ent(asfd, &sb, slist, act, status, conf,
 				&need_data, &last_ent_was_dir))
 					goto end;
 		}
@@ -405,7 +405,7 @@ end:
 	return ret;
 }
 
-static int restore_stream(struct async *as,
+static int restore_stream(struct asfd *asfd,
 	const char *datadir, struct slist *slist,
 	struct bu *bu, const char *manifest, regex_t *regex,
 	int srestore, struct conf *conf, enum action act, char status)
@@ -420,8 +420,8 @@ static int restore_stream(struct async *as,
 	struct manio *manio=NULL;
 	struct iobuf wbuf;
 
-	if(as->write_str(as, CMD_GEN, "restore_stream")
-	  || as->read_expect(as, CMD_GEN, "restore_stream_ok"))
+	if(asfd->write_str(asfd, CMD_GEN, "restore_stream")
+	  || asfd->read_expect(asfd, CMD_GEN, "restore_stream_ok"))
 		goto end;
 
 	if(!(manio=manio_alloc())
@@ -468,7 +468,7 @@ static int restore_stream(struct async *as,
 		}
 */
 
-		if((ars=manio_sbuf_fill(manio, as, sb, blk, dpth, conf))<0)
+		if((ars=manio_sbuf_fill(manio, asfd, sb, blk, dpth, conf))<0)
 		{
 			logp("Error from manio_sbuf_fill() in %s\n",
 				__func__);
@@ -483,7 +483,7 @@ static int restore_stream(struct async *as,
 			{
 				iobuf_set(&wbuf,
 					CMD_DATA, blk->data, blk->length);
-				if(as->write(as, &wbuf)) return -1;
+				if(asfd->write(asfd, &wbuf)) return -1;
 			}
 			else if(last_ent_was_dir)
 			{
@@ -513,7 +513,7 @@ static int restore_stream(struct async *as,
 				snprintf(msg, sizeof(msg),
 				  "Unexpected signature in manifest: %s%s%s",
 					blk->weak, blk->strong, blk->save_path);
-				logw(as, conf, msg);
+				logw(asfd, conf, msg);
 			}
 			blk->data=NULL;
 			continue;
@@ -524,7 +524,7 @@ static int restore_stream(struct async *as,
 		if((!srestore || check_srestore(conf, sb->path.buf))
 		  && check_regex(regex, sb->path.buf))
 		{
-			if(restore_ent(as, &sb, slist, act, status, conf,
+			if(restore_ent(asfd, &sb, slist, act, status, conf,
 				&need_data, &last_ent_was_dir))
 					goto end;
 		}
@@ -541,7 +541,7 @@ end:
 	return ret;
 }
 
-static int do_restore_manifest(struct async *as, const char *datadir,
+static int do_restore_manifest(struct asfd *asfd, const char *datadir,
 	struct bu *bu, const char *manifest, regex_t *regex,
 	int srestore, struct conf *conf, enum action act, char status)
 {
@@ -559,13 +559,13 @@ static int do_restore_manifest(struct async *as, const char *datadir,
 	if(!(slist=slist_alloc()))
 		goto end;
 
-	if(!(ars=maybe_copy_data_files_across(as, manifest, datadir,
+	if(!(ars=maybe_copy_data_files_across(asfd, manifest, datadir,
 		srestore, regex, conf,
 		slist, act, status)))
 	{
 		// Instead of copying all the blocks across, do it as a stream,
 		// in the style of burp-1.x.x.
-		if(restore_stream(as, datadir, slist,
+		if(restore_stream(asfd, datadir, slist,
 			bu, manifest, regex,
 			srestore, conf, act, status)) 
 				goto end;
@@ -574,10 +574,10 @@ static int do_restore_manifest(struct async *as, const char *datadir,
 
 	// Restore has nearly completed OK.
 
-	if(restore_remaining_dirs(as, slist, act, status, conf, &need_data))
+	if(restore_remaining_dirs(asfd, slist, act, status, conf, &need_data))
 		goto end;
 
-	ret=do_restore_end(as, conf);
+	ret=do_restore_end(asfd, conf);
 
 	cntr_print_end(conf->cntr);
 	cntr_print(conf->cntr, act);
@@ -590,7 +590,7 @@ end:
 
 // a = length of struct bu array
 // i = position to restore from
-static int restore_manifest(struct async *as, struct bu *bu, regex_t *regex,
+static int restore_manifest(struct asfd *asfd, struct bu *bu, regex_t *regex,
 	int srestore, enum action act, struct sdirs *sdirs,
 	char **dir_for_notify, struct conf *conf)
 {
@@ -616,7 +616,7 @@ static int restore_manifest(struct async *as, struct bu *bu, regex_t *regex,
 		&& !(logpathz=prepend_s(bu->path, "verifylog.gz")))
 	 || !(manifest=prepend_s(bu->path, "manifest")))
 	{
-		log_and_send_oom(as, __func__);
+		log_and_send_oom(asfd, __func__);
 		goto end;
 	}
 	else if(set_logfp(logpath, conf))
@@ -624,7 +624,7 @@ static int restore_manifest(struct async *as, struct bu *bu, regex_t *regex,
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
 			"could not open log file: %s", logpath);
-		log_and_send(as, msg);
+		log_and_send(asfd, msg);
 		goto end;
 	}
 
@@ -639,7 +639,7 @@ static int restore_manifest(struct async *as, struct bu *bu, regex_t *regex,
 //	  && cntr_send(conf))
 //		goto end;
 
-	if(do_restore_manifest(as, sdirs->data, bu, manifest, regex,
+	if(do_restore_manifest(asfd, sdirs->data, bu, manifest, regex,
 		srestore, conf, act, status)) goto end;
 
 	ret=0;
@@ -655,7 +655,7 @@ end:
 	return ret;
 }
 
-int do_restore_server(struct async *as, struct sdirs *sdirs,
+int do_restore_server(struct asfd *asfd, struct sdirs *sdirs,
 	enum action act, int srestore,
 	char **dir_for_notify, struct conf *conf)
 {
@@ -671,7 +671,7 @@ int do_restore_server(struct async *as, struct sdirs *sdirs,
 
 	if(compile_regex(&regex, conf->regex)) return -1;
 
-	if(get_current_backups(as, sdirs, &arr, &a, 1))
+	if(get_current_backups(asfd, sdirs, &arr, &a, 1))
 	{
 		if(regex) { regfree(regex); free(regex); }
 		return -1;
@@ -680,7 +680,7 @@ int do_restore_server(struct async *as, struct sdirs *sdirs,
 	if(!(index=strtoul(conf->backup, NULL, 10)) && a>0)
 	{
 		// No backup specified, do the most recent.
-		ret=restore_manifest(as, &arr[a-1], regex, srestore, act,
+		ret=restore_manifest(asfd, &arr[a-1], regex, srestore, act,
 			sdirs, dir_for_notify, conf);
 		found=1;
 	}
@@ -692,7 +692,7 @@ int do_restore_server(struct async *as, struct sdirs *sdirs,
 		{
 			found=1;
 			//logp("got: %s\n", arr[i].path);
-			ret|=restore_manifest(as, &arr[i], regex,
+			ret|=restore_manifest(asfd, &arr[i], regex,
 				srestore, act, sdirs,
 				dir_for_notify, conf);
 			break;
@@ -704,7 +704,7 @@ int do_restore_server(struct async *as, struct sdirs *sdirs,
 	if(!found)
 	{
 		logp("backup not found\n");
-		as->write_str(as, CMD_ERROR, "backup not found");
+		asfd->write_str(asfd, CMD_ERROR, "backup not found");
 		ret=-1;
 	}
 	if(regex)

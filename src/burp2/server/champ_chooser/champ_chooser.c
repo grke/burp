@@ -136,7 +136,7 @@ printf("in deduplicate()\n");
 	blk_count=0;
 	for(blk=clifd->blist->head; blk; blk=blk->next)
 	{
-printf("try: %d\n", blk->index);
+printf("try: %lu\n", blk->index);
 		blk_count++;
 
 		// FIX THIS - represents zero length block.

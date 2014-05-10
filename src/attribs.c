@@ -224,7 +224,7 @@ void attribs_decode(struct sbuf *sb)
 	}
 }
 
-static int set_file_times(struct async *as,
+static int set_file_times(struct asfd *asfd,
 	const char *path, struct utimbuf *ut,
 	struct stat *statp, struct conf *conf)
 {
@@ -240,7 +240,7 @@ static int set_file_times(struct async *as,
 	if(e<0)
 	{
 		berrno be;
-		logw(as, conf, "Unable to set file times %s: ERR=%s",
+		logw(asfd, conf, "Unable to set file times %s: ERR=%s",
 			path, be.bstrerror());
 		return -1;
 	}
@@ -254,7 +254,7 @@ uint64_t decode_file_no(struct sbuf *sb)
 	return (uint64_t)val;
 }
 
-int attribs_set(struct async *as, const char *path,
+int attribs_set(struct asfd *asfd, const char *path,
 	struct stat *statp, uint64_t winattr, struct conf *conf)
 {
 	struct utimbuf ut;
@@ -264,7 +264,7 @@ int attribs_set(struct async *as, const char *path,
 
 #ifdef HAVE_WIN32
 	win32_chmod(path, statp->st_mode, winattr);
-	set_file_times(as, path, &ut, statp, conf);
+	set_file_times(asfd, path, &ut, statp, conf);
 	return 0;
 #endif
 
@@ -283,7 +283,7 @@ int attribs_set(struct async *as, const char *path,
 		if(lchown(path, statp->st_uid, statp->st_gid)<0)
 		{
 			berrno be;
-			logw(as, conf, "Unable to set file owner %s: ERR=%s",
+			logw(asfd, conf, "Unable to set file owner %s: ERR=%s",
 				path, be.bstrerror());
 			return -1;
 		}
@@ -293,19 +293,19 @@ int attribs_set(struct async *as, const char *path,
 		if(chown(path, statp->st_uid, statp->st_gid)<0)
 		{
 			berrno be;
-			logw(as, conf, "Unable to set file owner %s: ERR=%s",
+			logw(asfd, conf, "Unable to set file owner %s: ERR=%s",
 				path, be.bstrerror());
 			return -1;
 		}
 		if(chmod(path, statp->st_mode) < 0)
 		{
 			berrno be;
-			logw(as, conf, "Unable to set file modes %s: ERR=%s",
+			logw(asfd, conf, "Unable to set file modes %s: ERR=%s",
 				path, be.bstrerror());
 			return -1;
 		}
 
-		if(set_file_times(as, path, &ut, statp, conf))
+		if(set_file_times(asfd, path, &ut, statp, conf))
 			return -1;
 #ifdef HAVE_CHFLAGS
 		/*

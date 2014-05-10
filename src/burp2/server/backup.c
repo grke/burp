@@ -23,13 +23,13 @@ end:
 }
 
 // Used by the burp1 stuff.
-int open_log(struct async *as, const char *realworking, struct conf *cconf)
+int open_log(struct asfd *asfd, const char *realworking, struct conf *cconf)
 {
 	char *logpath=NULL;
 
 	if(!(logpath=prepend_s(realworking, "log")))
 	{
-		log_and_send_oom(as, __func__);
+		log_and_send_oom(asfd, __func__);
 		return -1;
 	}
 	if(set_logfp(logpath, cconf))
@@ -37,7 +37,7 @@ int open_log(struct async *as, const char *realworking, struct conf *cconf)
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
 			"could not open log file: %s", logpath);
-		log_and_send(as, msg);
+		log_and_send(asfd, msg);
 		free(logpath);
 		return -1;
 	}
@@ -49,13 +49,13 @@ int open_log(struct async *as, const char *realworking, struct conf *cconf)
 	// The client will already have been sent a message with logw.
 	// This time, prevent it sending a logw to the client by specifying
 	// NULL for cntr.
-	if(cconf->version_warn) version_warn(as, NULL, cconf);
+	if(cconf->version_warn) version_warn(asfd, NULL, cconf);
 
 	return 0;
 }
 
 // Clean mess left over from a previously interrupted backup.
-static int clean_rubble(struct async *as, struct sdirs *sdirs)
+static int clean_rubble(struct asfd *asfd, struct sdirs *sdirs)
 {
 	int len=0;
 	char *real=NULL;
@@ -70,25 +70,26 @@ static int clean_rubble(struct async *as, struct sdirs *sdirs)
 	lnk[len]='\0';
 	if(!(real=prepend_s(sdirs->client, lnk)))
 	{
-		log_and_send_oom(as, __func__);
+		log_and_send_oom(asfd, __func__);
 		return -1;
 	}
 	if(recursive_delete(real, "", 1))
 	{
 		char msg[256]="";
 		snprintf(msg, sizeof(msg), "Could not remove interrupted directory: %s", real);
-		log_and_send(as, msg);
+		log_and_send(asfd, msg);
 		return -1;
 	}
 	unlink(sdirs->working);
 	return 0;
 }
 
-static struct async *setup_champ_chooser(struct sdirs *sdirs, struct conf *conf)
+static struct asfd *setup_champ_chooser(struct async *as,
+	struct sdirs *sdirs, struct conf *conf)
 {
 	int champsock=-1;
 	char *champname=NULL;
-	struct async *chas=NULL;
+	struct asfd *chfd=NULL;
 
 	// Connect to champ chooser now.
 	// This may start up a new champ chooser. On a machine with multiple
@@ -100,28 +101,29 @@ static struct async *setup_champ_chooser(struct sdirs *sdirs, struct conf *conf)
 		goto error;
 	}
 
-	if(!(chas=async_alloc())
-	  || chas->init(chas, champsock, NULL /* no SSL */, conf, 0))
+	if(!(chfd=asfd_alloc())
+	  || chfd->init(chfd, as, champsock, NULL /* no SSL */, conf))
 		goto error;
+	as->add_asfd(as, chfd);
 
 	if(!(champname=prepend("cname",
 		conf->cname, strlen(conf->cname), ":")))
 			goto error;
 
-	if(chas->write_str(chas, CMD_GEN, champname)
-	  || chas->read_expect(chas, CMD_GEN, "cname ok"))
+	if(chfd->write_str(chfd, CMD_GEN, champname)
+	  || chfd->read_expect(chfd, CMD_GEN, "cname ok"))
 		goto error;
 
 	free(champname);
-	return chas;
+	return chfd;
 error:
 	free(champname);
-	async_free(&chas);
+	asfd_free(chfd);
 	close_fd(&champsock);
 	return NULL;
 }
 
-int do_backup_server(struct async **as, struct sdirs *sdirs,
+int do_backup_server(struct async *as, struct sdirs *sdirs,
 	struct conf *cconf, const char *incexc, int resume)
 {
 	int ret=0;
@@ -131,20 +133,21 @@ int do_backup_server(struct async **as, struct sdirs *sdirs,
 	// Real path to the manifest directory
 	char *manifest_dir=NULL;
 	char tstmp[64]="";
-	struct async *chas=NULL;
+	struct asfd *chfd=NULL;
+	struct asfd *asfd=as->asfd;
 
 	logp("in do_backup_server\n");
 
-	if(get_new_timestamp(*as, sdirs, cconf, tstmp, sizeof(tstmp)))
+	if(get_new_timestamp(asfd, sdirs, cconf, tstmp, sizeof(tstmp)))
 		goto error;
 	if(!(realworking=prepend_s(sdirs->client, tstmp))
 	 || !(manifest_dir=prepend_s(realworking, "manifest")))
 	{
-		log_and_send_oom(*as, __func__);
+		log_and_send_oom(asfd, __func__);
 		goto error;
 	}
 
-	if(clean_rubble(*as, sdirs)) goto error;
+	if(clean_rubble(asfd, sdirs)) goto error;
 
 	// Add the working symlink before creating the directory.
 	// This is because bedup checks the working symlink before
@@ -156,18 +159,18 @@ int do_backup_server(struct async **as, struct sdirs *sdirs,
 		snprintf(msg, sizeof(msg),
 		  "could not point working symlink to: %s",
 		  realworking);
-		log_and_send(*as, msg);
+		log_and_send(asfd, msg);
 		goto error;
 	}
 	else if(mkdir(realworking, 0777))
 	{
 		snprintf(msg, sizeof(msg),
 		  "could not mkdir for next backup: %s", sdirs->working);
-		log_and_send(*as, msg);
+		log_and_send(asfd, msg);
 		unlink(sdirs->working);
 		goto error;
 	}
-	else if(open_log(*as, realworking, cconf))
+	else if(open_log(asfd, realworking, cconf))
 	{
 		goto error;
 	}
@@ -175,29 +178,29 @@ int do_backup_server(struct async **as, struct sdirs *sdirs,
 	{
 		snprintf(msg, sizeof(msg),
 		  "unable to write timestamp %s", sdirs->timestamp);
-		log_and_send(*as, msg);
+		log_and_send(asfd, msg);
 		goto error;
 	}
 	else if(incexc && *incexc && write_incexc(realworking, incexc))
 	{
 		snprintf(msg, sizeof(msg), "unable to write incexc");
-		log_and_send(*as, msg);
+		log_and_send(asfd, msg);
 		goto error;
 	}
 
-	if(!(chas=setup_champ_chooser(sdirs, cconf)))
+	if(!(chfd=setup_champ_chooser(as, sdirs, cconf)))
 	{
-		log_and_send(*as, "problem connecting to champ chooser");
+		log_and_send(asfd, "problem connecting to champ chooser");
 		goto error;
 	}
 
-	if(backup_phase1_server(*as, sdirs, cconf))
+	if(backup_phase1_server(asfd, sdirs, cconf))
 	{
 		logp("error in phase1\n");
 		goto error;
 	}
 
-	if(backup_phase2_server(*as, sdirs, manifest_dir, chas, resume, cconf))
+	if(backup_phase2_server(as, sdirs, manifest_dir, chfd, resume, cconf))
 	{
 		logp("error in phase2\n");
 		goto error;
@@ -205,7 +208,7 @@ int do_backup_server(struct async **as, struct sdirs *sdirs,
 
 	// Close the connection with the client, the rest of the job
 	// we can do by ourselves.
-	async_free(as);
+	asfd_free(asfd);
 
 	if(backup_phase3_server(sdirs, manifest_dir, cconf))
 	{
@@ -239,6 +242,6 @@ end:
 	set_logfp(NULL, cconf);
 	if(manifest_dir) free(manifest_dir);
 	if(realworking) free(realworking);
-	async_free(&chas);
+	asfd_free(chfd);
 	return ret;
 }

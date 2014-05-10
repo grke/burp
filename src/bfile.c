@@ -109,7 +109,7 @@ static int bfile_error(BFILE *bfd)
 }
 
 // Return 0 for success, non zero for error.
-int bopen(BFILE *bfd, struct async *as,
+int bopen(BFILE *bfd, struct asfd *asfd,
 	const char *fname, int flags, mode_t mode)
 {
 	DWORD dwaccess;
@@ -274,11 +274,11 @@ int bopen(BFILE *bfd, struct async *as,
 	return bfd->mode==BF_CLOSED;
 }
 
-static int bclose_encrypted(BFILE *bfd, struct async *as)
+static int bclose_encrypted(BFILE *bfd, struct asfd *asfd)
 {
 	CloseEncryptedFileRaw(bfd->pvContext);
 	if(bfd->mode==BF_WRITE)
-		attribs_set(as,
+		attribs_set(asfd,
 			bfd->path, &bfd->statp, bfd->winattr, bfd->conf);
 	bfd->pvContext=NULL;
 	bfd->mode=BF_CLOSED;
@@ -291,7 +291,7 @@ static int bclose_encrypted(BFILE *bfd, struct async *as)
 }
 
 // Return 0 on success, -1 on error.
-int bclose(BFILE *bfd, struct async *as)
+int bclose(BFILE *bfd, struct asfd *asfd)
 {
 	int ret=-1;
 
@@ -300,7 +300,7 @@ int bclose(BFILE *bfd, struct async *as)
 	if(bfd->mode==BF_CLOSED) return 0;
 
 	if(bfd->winattr & FILE_ATTRIBUTE_ENCRYPTED)
-		return bclose_encrypted(bfd, as);
+		return bclose_encrypted(bfd, asfd);
 
 	/*
 	 * We need to tell the API to release the buffer it
@@ -346,7 +346,7 @@ int bclose(BFILE *bfd, struct async *as)
 	}
 
 	if(bfd->mode==BF_WRITE)
-		attribs_set(as,
+		attribs_set(asfd,
 			bfd->path, &bfd->statp, bfd->winattr, bfd->conf);
 	bfd->lpContext=NULL;
 	bfd->mode=BF_CLOSED;
@@ -419,14 +419,14 @@ ssize_t bwrite(BFILE *bfd, void *buf, size_t count)
 
 #else
 
-int bclose(BFILE *bfd, struct async *as)
+int bclose(BFILE *bfd, struct asfd *asfd)
 {
 	if(!bfd || bfd->mode==BF_CLOSED) return 0;
 
 	if(!close(bfd->fd))
 	{
 		if(bfd->mode==BF_WRITE)
-			attribs_set(as, bfd->path,
+			attribs_set(asfd, bfd->path,
 				&bfd->statp, bfd->winattr, bfd->conf);
 		bfd->mode=BF_CLOSED;
 		bfd->fd=-1;
@@ -446,9 +446,9 @@ int bclose(BFILE *bfd, struct async *as)
 }
 
 int bopen(BFILE *bfd,
-	struct async *as, const char *fname, int flags, mode_t mode)
+	struct asfd *asfd, const char *fname, int flags, mode_t mode)
 {
-	if(bfd->mode!=BF_CLOSED && bclose(bfd, as))
+	if(bfd->mode!=BF_CLOSED && bclose(bfd, asfd))
 		return -1;
 	if(!(bfd->fd=open(fname, flags, mode))<0)
 		return -1;

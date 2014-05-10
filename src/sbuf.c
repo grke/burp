@@ -177,7 +177,7 @@ int sbuf_pathcmp(struct sbuf *a, struct sbuf *b)
 }
 
 
-int sbuf_open_file(struct sbuf *sb, struct async *as, struct conf *conf)
+int sbuf_open_file(struct sbuf *sb, struct asfd *asfd, struct conf *conf)
 {
 #ifdef HAVE_WIN32
 	if(win32_lstat(sb->path.buf, &sb->statp, &sb->winattr))
@@ -186,7 +186,7 @@ int sbuf_open_file(struct sbuf *sb, struct async *as, struct conf *conf)
 #endif
 	{
 		// This file is no longer available.
-		logw(as, conf, "%s has vanished\n", sb->path.buf);
+		logw(asfd, conf, "%s has vanished\n", sb->path.buf);
 		return -1;
 	}
 	sb->compression=conf->compression;
@@ -194,18 +194,18 @@ int sbuf_open_file(struct sbuf *sb, struct async *as, struct conf *conf)
 	//sb->burp2->encryption=conf->burp2->encryption_password?1:0;
 	if(attribs_encode(sb)) return -1;
 
-	if(open_file_for_send(&sb->burp2->bfd, as,
+	if(open_file_for_send(&sb->burp2->bfd, asfd,
 		sb->path.buf, sb->winattr, conf->atime, conf))
 	{
-		logw(as, conf, "Could not open %s\n", sb->path.buf);
+		logw(asfd, conf, "Could not open %s\n", sb->path.buf);
 		return -1;
 	}
 	return 0;
 }
 
-void sbuf_close_file(struct sbuf *sb, struct async *as)
+void sbuf_close_file(struct sbuf *sb, struct asfd *asfd)
 {
-	close_file_for_send(&sb->burp2->bfd, as);
+	close_file_for_send(&sb->burp2->bfd, asfd);
 //printf("closed: %s\n", sb->path);
 }
 
@@ -374,19 +374,15 @@ static int retrieve_blk_data(char *datpath, struct blk *blk)
         return 0;
 }
 
-int sbuf_fill(struct sbuf *sb, struct async *as, gzFile zp,
+int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 	struct blk *blk, char *datpath, struct conf *conf)
 {
 	static char lead[5]="";
-	static iobuf *rbuf=NULL;
+	static iobuf *rbuf;
 	static unsigned int s;
 	int ret=-1;
 
-	if(!rbuf && !(rbuf=iobuf_alloc()))
-	{
-		log_and_send_oom(as, __func__);
-		goto end;
-	}
+	rbuf=asfd->rbuf;
 	while(1)
 	{
 		iobuf_free_content(rbuf);
@@ -397,12 +393,12 @@ int sbuf_fill(struct sbuf *sb, struct async *as, gzFile zp,
 			if((got=gzread(zp, lead, sizeof(lead)))!=5)
 			{
 				if(!got) return 1; // Finished OK.
-				log_and_send(as, "short read in manifest");
+				log_and_send(asfd, "short read in manifest");
 				break;
 			}
 			if((sscanf(lead, "%c%04X", &rbuf->cmd, &s))!=2)
 			{
-				log_and_send(as,
+				log_and_send(asfd,
 					"sscanf failed reading manifest");
 				logp("%s\n", lead);
 				break;
@@ -410,19 +406,19 @@ int sbuf_fill(struct sbuf *sb, struct async *as, gzFile zp,
 			rbuf->len=(size_t)s;
 			if(!(rbuf->buf=(char *)malloc(rbuf->len+2)))
 			{
-				log_and_send_oom(as, __func__);
+				log_and_send_oom(asfd, __func__);
 				break;
 			}
 			if(gzread(zp, rbuf->buf, rbuf->len+1)!=(int)rbuf->len+1)
 			{
-				log_and_send(as, "short read in manifest");
+				log_and_send(asfd, "short read in manifest");
 				break;
 			}
 			rbuf->buf[rbuf->len]='\0';
 		}
 		else
 		{
-			if(as->read(as, rbuf))
+			if(asfd->read(asfd))
 			{
 				logp("error in async_read\n");
 				break;
@@ -472,7 +468,7 @@ int sbuf_fill(struct sbuf *sb, struct async *as, gzFile zp,
 			case CMD_ENC_VSS_T:
 				if(!sb->attr.buf)
 				{
-					log_and_send(as,
+					log_and_send(asfd,
 						"read cmd with no attribs");
 					break;
 				}
@@ -487,7 +483,7 @@ int sbuf_fill(struct sbuf *sb, struct async *as, gzFile zp,
 					}
 					else
 					{
-						log_and_send(as, "got non-link after link in manifest");
+						log_and_send(asfd, "got non-link after link in manifest");
 						break;
 					}
 				}
@@ -576,14 +572,14 @@ end:
 	return ret;
 }
 
-int sbuf_fill_from_gzfile(struct sbuf *sb, struct async *as,
+int sbuf_fill_from_gzfile(struct sbuf *sb, struct asfd *asfd,
 	gzFile zp, struct blk *blk, char *datpath, struct conf *conf)
 {
-	return sbuf_fill(sb, as, zp, blk, datpath, conf);
+	return sbuf_fill(sb, asfd, zp, blk, datpath, conf);
 }
 
-int sbuf_fill_from_net(struct sbuf *sb, struct async *as,
+int sbuf_fill_from_net(struct sbuf *sb, struct asfd *asfd,
 	struct blk *blk, struct conf *conf)
 {
-	return sbuf_fill(sb, as, NULL, blk, NULL, conf);
+	return sbuf_fill(sb, asfd, NULL, blk, NULL, conf);
 }

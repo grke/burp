@@ -63,14 +63,14 @@ static int blk_read(struct rconf *rconf, struct win *win, struct sbuf *sb, struc
 	return 0;
 }
 
-int blks_generate(struct async *as, struct conf *conf,
+int blks_generate(struct asfd *asfd, struct conf *conf,
 	struct sbuf *sb, struct blist *blist, struct win *win)
 {
 	static ssize_t bytes;
 
 	if(sb->burp2->bfd.mode==BF_CLOSED)
 	{
-		if(sbuf_open_file(sb, as, conf)) return -1;
+		if(sbuf_open_file(sb, asfd, conf)) return -1;
 		first=1;
 	}
 
@@ -128,6 +128,6 @@ int blks_generate(struct async *as, struct conf *conf,
 		blk=NULL;
 	}
 	if(blist->tail) sb->burp2->bend=blist->tail;
-	sbuf_close_file(sb, as);
+	sbuf_close_file(sb, asfd);
 	return 0;
 }

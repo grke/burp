@@ -36,6 +36,8 @@ struct asfd
 	size_t writebuflen;
 	int write_blocked_on_read;
 
+	struct asfd *next;
+
 	// Function pointers.
 	int (*init)(struct asfd *, struct async *, int, SSL *, struct conf *);
 	int (*parse_readbuf)(struct asfd *);
@@ -50,6 +52,9 @@ struct asfd
 	int (*simple_loop)(struct asfd *, struct conf *, void *,
 		const char *, enum asl_ret callback(struct asfd *,
 			struct iobuf *, struct conf *, void *));
+	int (*write)(struct asfd *, struct iobuf *);
+	int (*write_str)(struct asfd *, char, const char *);
+	int (*write_strn)(struct asfd *, char, const char *, size_t);
 };
 
 extern struct asfd *asfd_alloc(void);

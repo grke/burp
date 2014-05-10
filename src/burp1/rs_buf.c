@@ -76,7 +76,7 @@ rs_alloc(size_t size, char const *name)
     return p;
 }
 
-rs_filebuf_t *rs_filebuf_new(struct async *as,
+rs_filebuf_t *rs_filebuf_new(struct asfd *asfd,
 	BFILE *bfd, FILE *fp, gzFile zp, int fd,
 	size_t buf_len, size_t data_len, struct cntr *cntr)
 {
@@ -106,7 +106,7 @@ rs_filebuf_t *rs_filebuf_new(struct async *as,
 		rs_filebuf_free(pf);
 		return NULL;
 	}
-	pf->as=as;
+	pf->asfd=asfd;
 
 	return pf;
 }
@@ -180,9 +180,9 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 	if(fd>=0)
 	{
 		static struct iobuf *rbuf=NULL;
-		if(!rbuf && !(rbuf=iobuf_alloc())) return RS_IO_ERROR;
+		rbuf=fb->asfd->rbuf;
 
-		if(fb->as->read(fb->as, rbuf)) return RS_IO_ERROR;
+		if(fb->asfd->read(fb->asfd)) return RS_IO_ERROR;
 		if(rbuf->cmd==CMD_APPEND)
 		{
 			//logp("got '%c' in fd infilebuf: %d\n",
@@ -373,8 +373,8 @@ rs_result rs_outfilebuf_drain(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 			wbuf->cmd=CMD_APPEND;
 			wbuf->buf=fb->buf;
 			wbuf->len=wlen;
-			if(fb->as->asfd->append_all_to_write_buffer(
-				fb->as->asfd, wbuf))
+			if(fb->asfd->append_all_to_write_buffer(
+				fb->asfd, wbuf))
 			{
 				// stop the rsync stuff from reading more.
 				//		buf->next_out = fb->buf;
@@ -404,7 +404,7 @@ rs_result rs_outfilebuf_drain(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 	return RS_DONE;
 }
 
-rs_result do_rs_run(struct async *as,
+rs_result do_rs_run(struct asfd *asfd,
 	rs_job_t *job, BFILE *bfd,
 	FILE *in_file, FILE *out_file,
 	gzFile in_zfile, gzFile out_zfile, int infd, int outfd, struct cntr *cntr)
@@ -426,11 +426,11 @@ rs_result do_rs_run(struct async *as,
 	}
 
 	if((bfd || in_file || in_zfile || infd>=0)
-	 && !(in_fb=rs_filebuf_new(as, bfd,
+	 && !(in_fb=rs_filebuf_new(asfd, bfd,
 		in_file, in_zfile, infd, ASYNC_BUF_LEN, -1, cntr)))
 			return RS_MEM_ERROR;
 	if((out_file || out_zfile || outfd>=0)
-	 && !(out_fb=rs_filebuf_new(as, NULL,
+	 && !(out_fb=rs_filebuf_new(asfd, NULL,
 		out_file, out_zfile, outfd, ASYNC_BUF_LEN, -1, cntr)))
 	{
 		if(in_fb) rs_filebuf_free(in_fb);
@@ -484,7 +484,7 @@ rs_result rs_async(rs_job_t *job, rs_buffers_t *rsbuf,
 		outfb ? rs_outfilebuf_drain : NULL, outfb);
 }
 
-static rs_result rs_whole_gzrun(struct async *as,
+static rs_result rs_whole_gzrun(struct asfd *asfd,
 	rs_job_t *job, FILE *in_file, gzFile in_zfile,
 	FILE *out_file, gzFile out_zfile, struct cntr *cntr)
 {
@@ -494,11 +494,11 @@ static rs_result rs_whole_gzrun(struct async *as,
 	rs_filebuf_t *out_fb=NULL;
 
 	if(in_file || in_zfile)
-		in_fb=rs_filebuf_new(as, NULL,
+		in_fb=rs_filebuf_new(asfd, NULL,
 			in_file, in_zfile, -1, ASYNC_BUF_LEN, -1, cntr);
 
 	if(out_file || out_zfile)
-	out_fb=rs_filebuf_new(as, NULL,
+	out_fb=rs_filebuf_new(asfd, NULL,
 		out_file, out_zfile, -1, ASYNC_BUF_LEN, -1, cntr);
 	result=rs_job_drive(job, &buf,
 		in_fb ? rs_infilebuf_fill : NULL, in_fb,
@@ -510,7 +510,7 @@ static rs_result rs_whole_gzrun(struct async *as,
 	return result;
 }
 
-rs_result rs_patch_gzfile(struct async *as, FILE *basis_file, FILE *delta_file,
+rs_result rs_patch_gzfile(struct asfd *asfd, FILE *basis_file, FILE *delta_file,
 	gzFile delta_zfile, FILE *new_file, gzFile new_zfile,
 	rs_stats_t *stats, struct cntr *cntr)
 {
@@ -518,14 +518,14 @@ rs_result rs_patch_gzfile(struct async *as, FILE *basis_file, FILE *delta_file,
 	rs_result r;
 
 	job=rs_patch_begin(rs_file_copy_cb, basis_file);
-	r=rs_whole_gzrun(as, job,
+	r=rs_whole_gzrun(asfd, job,
 		delta_file, delta_zfile, new_file, new_zfile, cntr);
 	rs_job_free(job);
 
 	return r;
 }
 
-rs_result rs_sig_gzfile(struct async *as,
+rs_result rs_sig_gzfile(struct asfd *asfd,
 	FILE *old_file, gzFile old_zfile, FILE *sig_file,
 	size_t new_block_len, size_t strong_len,
 	rs_stats_t *stats, struct cntr *cntr)
@@ -534,13 +534,13 @@ rs_result rs_sig_gzfile(struct async *as,
 	rs_result r;
 
 	job=rs_sig_begin(new_block_len, strong_len);
-	r=rs_whole_gzrun(as, job, old_file, old_zfile, sig_file, NULL, cntr);
+	r=rs_whole_gzrun(asfd, job, old_file, old_zfile, sig_file, NULL, cntr);
 	rs_job_free(job);
 
 	return r;
 }
 
-rs_result rs_delta_gzfile(struct async *as,
+rs_result rs_delta_gzfile(struct asfd *asfd,
 	rs_signature_t *sig, FILE *new_file,
 	gzFile new_zfile, FILE *delta_file, gzFile delta_zfile,
 	rs_stats_t *stats, struct cntr *cntr)
@@ -549,7 +549,7 @@ rs_result rs_delta_gzfile(struct async *as,
 	rs_result r;
 
 	job=rs_delta_begin(sig);
-	r=rs_whole_gzrun(as, job,
+	r=rs_whole_gzrun(asfd, job,
 		new_file, new_zfile, delta_file, delta_zfile, cntr);
 	rs_job_free(job);
 

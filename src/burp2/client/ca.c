@@ -1,6 +1,6 @@
 #include "include.h"
 
-static int generate_key_and_csr(struct async *as,
+static int generate_key_and_csr(struct asfd *asfd,
 	struct conf *conf, const char *csr_path)
 {
 	int a=0;
@@ -20,7 +20,7 @@ static int generate_key_and_csr(struct async *as,
 	args[a++]="--name";
 	args[a++]=conf->cname;
 	args[a++]=NULL;
-	if(run_script(as, args, NULL, conf, 1 /* wait */,
+	if(run_script(asfd, args, NULL, conf, 1 /* wait */,
 		0, 0 /* do not use logp - stupid openssl prints lots of dots
 		        one at a time with no way to turn it off */))
 	{
@@ -102,7 +102,7 @@ end:
 	return ret;
 }
 
-static enum asl_ret csr_client_func(struct async *as, struct iobuf *rbuf,
+static enum asl_ret csr_client_func(struct asfd *asfd, struct iobuf *rbuf,
         struct conf *conf, void *param)
 {
 	if(strncmp_w(rbuf->buf, "csr ok:"))
@@ -122,7 +122,7 @@ static enum asl_ret csr_client_func(struct async *as, struct iobuf *rbuf,
 
 /* Return 1 for everything OK, signed and returned, -1 for error, 0 for
    nothing done. */
-int ca_client_setup(struct async *as, struct conf *conf)
+int ca_client_setup(struct asfd *asfd, struct conf *conf)
 {
 	int ret=-1;
 	struct stat statp;
@@ -140,8 +140,8 @@ int ca_client_setup(struct async *as, struct conf *conf)
 	// key.
 	  || !lstat(conf->ssl_key, &statp))
 	{
-		if(as->write_str(as, CMD_GEN, "nocsr")
-		  || as->read_expect(as, CMD_GEN, "nocsr ok"))
+		if(asfd->write_str(asfd, CMD_GEN, "nocsr")
+		  || asfd->read_expect(asfd, CMD_GEN, "nocsr ok"))
 		{
 			logp("problem reading from server nocsr\n");
 			goto end;
@@ -152,8 +152,8 @@ int ca_client_setup(struct async *as, struct conf *conf)
 	}
 
 	// Tell the server we want to do a signing request.
-	if(as->write_str(as, CMD_GEN, "csr")
-	  || as->simple_loop(as, conf, NULL, __func__, csr_client_func))
+	if(asfd->write_str(asfd, CMD_GEN, "csr")
+	  || asfd->simple_loop(asfd, conf, NULL, __func__, csr_client_func))
 		goto end;
 
 	logp("Server will sign a certificate request\n");
@@ -162,10 +162,10 @@ int ca_client_setup(struct async *as, struct conf *conf)
 	// request.
 	snprintf(csr_path, sizeof(csr_path), "%s/%s.csr",
 		conf->ca_csr_dir, conf->cname);
-	if(generate_key_and_csr(as, conf, csr_path)) goto end_cleanup;
+	if(generate_key_and_csr(asfd, conf, csr_path)) goto end_cleanup;
 
 	// Then copy the csr to the server.
-	if(send_a_file(as, csr_path, conf)) goto end_cleanup;
+	if(send_a_file(asfd, csr_path, conf)) goto end_cleanup;
 
 	snprintf(ssl_cert_tmp, sizeof(ssl_cert_tmp), "%s.%d",
 		conf->ssl_cert, getpid());
@@ -173,10 +173,10 @@ int ca_client_setup(struct async *as, struct conf *conf)
 		conf->ssl_cert_ca, getpid());
 
 	// The server will then sign it, and give it back.
-	if(receive_a_file(as, ssl_cert_tmp, conf)) goto end_cleanup;
+	if(receive_a_file(asfd, ssl_cert_tmp, conf)) goto end_cleanup;
 
 	// The server will also send the CA certificate.
-	if(receive_a_file(as, ssl_cert_ca_tmp, conf)) goto end_cleanup;
+	if(receive_a_file(asfd, ssl_cert_ca_tmp, conf)) goto end_cleanup;
 
 	if(do_rename(ssl_cert_tmp, conf->ssl_cert)
 	  || do_rename(ssl_cert_ca_tmp, conf->ssl_cert_ca))

@@ -1,17 +1,17 @@
 #include "include.h"
 
-static int receive_file(struct async *as, const char *autoupgrade_dir,
+static int receive_file(struct asfd *asfd, const char *autoupgrade_dir,
 	const char *file, struct conf *conf)
 {
 	int ret=0;
 	char *incoming=NULL;
 	if(!(incoming=prepend_s(autoupgrade_dir, file))) return -1;
-	ret=receive_a_file(as, incoming, conf);
+	ret=receive_a_file(asfd, incoming, conf);
 	if(incoming) free(incoming);
 	return ret;
 }
 
-static enum asl_ret autoupgrade_func(struct async *as, struct iobuf *rbuf,
+static enum asl_ret autoupgrade_func(struct asfd *asfd, struct iobuf *rbuf,
 	struct conf *conf, void *param)
 {
 	if(!strcmp(rbuf->buf, "do not autoupgrade"))
@@ -24,7 +24,7 @@ static enum asl_ret autoupgrade_func(struct async *as, struct iobuf *rbuf,
 	return ASL_END_OK_RETURN_1;
 }
 
-int autoupgrade_client(struct async **as, struct conf *conf)
+int autoupgrade_client(struct asfd *asfd, struct conf *conf)
 {
 	int a=0;
 	int ret=-1;
@@ -61,10 +61,10 @@ int autoupgrade_client(struct async **as, struct conf *conf)
 	// Let the server know we are ready.
 	snprintf(write_str, sizeof(write_str),
 		"autoupgrade:%s", conf->autoupgrade_os);
-	if((*as)->write_str(*as, CMD_GEN, write_str))
+	if(asfd->write_str(asfd, CMD_GEN, write_str))
 		goto end;
 
-	if(!(a=(*as)->simple_loop(*as,
+	if(!(a=asfd->simple_loop(asfd,
 		conf, NULL, __func__, autoupgrade_func)))
 	{
 		ret=0; // No autoupgrade.
@@ -81,13 +81,13 @@ int autoupgrade_client(struct async **as, struct conf *conf)
 	snprintf(package_name, sizeof(package_name), "package");
 #endif
 
-	if(receive_file(*as, conf->autoupgrade_dir, script_name, conf))
+	if(receive_file(asfd, conf->autoupgrade_dir, script_name, conf))
 	{
 		logp("Problem receiving %s/%s\n",
 			conf->autoupgrade_dir, script_name);
 		goto end;
 	}
-	if(receive_file(*as, conf->autoupgrade_dir, package_name, conf))
+	if(receive_file(asfd, conf->autoupgrade_dir, package_name, conf))
 	{
 		logp("Problem receiving %s/%s\n",
 			conf->autoupgrade_dir, package_name);
@@ -103,7 +103,7 @@ int autoupgrade_client(struct async **as, struct conf *conf)
 	a=0;
 	args[a++]=script_path;
 	args[a++]=NULL;
-	ret=run_script(*as, args, NULL, conf,
+	ret=run_script(asfd, args, NULL, conf,
 		0 /* do not wait */, 1 /* use logp */, 1 /* use logw */);
 	/* To get round Windows problems to do with installing over files
 	   that the current process is running from, I am forking the child,
@@ -112,7 +112,7 @@ int autoupgrade_client(struct async **as, struct conf *conf)
 	printf("\n");
 	logp("The server tried to upgrade your client.\n");
 	logp("You will need to try your command again.\n");
-	async_free(as);
+	asfd_free(asfd);
 
 	exit(0);
 end:

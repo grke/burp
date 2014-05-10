@@ -237,7 +237,7 @@ end:
 static int csr_done=0;
 
 // Return 0 for everything OK, signed and returned, -1 for error.
-static int sign_client_cert(struct async *as,
+static int sign_client_cert(struct asfd *asfd,
 	const char *client, struct conf *conf)
 {
 	int a=0;
@@ -255,7 +255,7 @@ static int sign_client_cert(struct async *as,
 	{
 		char msg[512]="";
 		snprintf(msg, sizeof(msg), "Will not accept a client certificate request with the same name as the CA (%s)!", conf->ca_name);
-		log_and_send(as, msg);
+		log_and_send(asfd, msg);
 		// Do not goto end, as it will delete things;
 		return -1;
 	}
@@ -264,7 +264,7 @@ static int sign_client_cert(struct async *as,
 	{
 		char msg[512]="";
 		snprintf(msg, sizeof(msg), "Will not accept a client certificate request for '%s' - %s already exists!", client, crtpath);
-		log_and_send(as, msg);
+		log_and_send(asfd, msg);
 		// Do not goto end, as it will delete things;
 		return -1;
 	}
@@ -273,7 +273,7 @@ static int sign_client_cert(struct async *as,
 	{
 		char msg[512]="";
 		snprintf(msg, sizeof(msg), "Will not accept a client certificate request for '%s' - %s already exists!", client, csrpath);
-		log_and_send(as, msg);
+		log_and_send(asfd, msg);
 		// Do not goto end, as it will delete things;
 		return -1;
 	}
@@ -281,7 +281,7 @@ static int sign_client_cert(struct async *as,
 	// Tell the client that we will do it, and send the server name at the
 	// same time.
 	snprintf(msg, sizeof(msg), "csr ok:%s", conf->ca_server_name);
-	if(as->write_str(as, CMD_GEN, msg))
+	if(asfd->write_str(asfd, CMD_GEN, msg))
 	{
 		// Do not goto end, as it will delete things;
 		return -1;
@@ -291,7 +291,7 @@ static int sign_client_cert(struct async *as,
 	   to end and delete any new files. */
 
 	// Get the CSR from the client.
-	if(receive_a_file(as, csrpath, conf)) goto end;
+	if(receive_a_file(asfd, csrpath, conf)) goto end;
 
 	// Now, sign it.
 	logp("Signing certificate signing request from %s\n", client);
@@ -309,7 +309,7 @@ static int sign_client_cert(struct async *as,
 	args[a++]="--config";
 	args[a++]=conf->ca_conf;
 	args[a++]=NULL;
-	if(run_script(as, args, NULL, conf, 1 /* wait */,
+	if(run_script(asfd, args, NULL, conf, 1 /* wait */,
 		0, 0 /* do not use logp - stupid openssl prints lots of dots
 		        one at a time with no way to turn it off */))
 	{
@@ -319,11 +319,11 @@ static int sign_client_cert(struct async *as,
 
 	// Now, we should have a signed certificate.
 	// Need to send it back to the client.
-	if(send_a_file(as, crtpath, conf))
+	if(send_a_file(asfd, crtpath, conf))
 		goto end;
 
 	// Also need to send the CA public certificate back to the client.
-	if(send_a_file(as, conf->ssl_cert_ca, conf))
+	if(send_a_file(asfd, conf->ssl_cert_ca, conf))
 		goto end;
 
 	ret=0;
@@ -337,7 +337,7 @@ end:
 	return ret;
 }
 
-static enum asl_ret csr_server_func(struct async *as,
+static enum asl_ret csr_server_func(struct asfd *asfd,
 	struct iobuf *rbuf, struct conf *conf, void *param)
 {
 	static const char **client;
@@ -350,10 +350,11 @@ static enum asl_ret csr_server_func(struct async *as,
 		{
 			logp("But server is not configured to sign client certificate requests.\n");
 			logp("See option 'ca_conf'.\n");
-			as->write_str(as, CMD_ERROR, "server not configured to sign client certificates");
+			asfd->write_str(asfd, CMD_ERROR,
+			  "server not configured to sign client certificates");
 			return ASL_END_ERROR;
 		}
-		if(sign_client_cert(as, *client, conf))
+		if(sign_client_cert(asfd, *client, conf))
 			return ASL_END_ERROR;
 		return ASL_END_OK;
 	}
@@ -362,7 +363,7 @@ static enum asl_ret csr_server_func(struct async *as,
 		// Client does not want to sign a certificate.
 		// No problem, just carry on.
 		logp("Client %s does not want a certificate signed\n", *client);
-		if(as->write_str(as, CMD_GEN, "nocsr ok"))
+		if(asfd->write_str(asfd, CMD_GEN, "nocsr ok"))
 			return ASL_END_ERROR;
 		return ASL_END_OK;
 	}
@@ -375,7 +376,7 @@ static enum asl_ret csr_server_func(struct async *as,
 
 /* Return 1 for everything OK, signed and returned, -1 for error, 0 for
    nothing done. */
-int ca_server_maybe_sign_client_cert(struct async *as,
+int ca_server_maybe_sign_client_cert(struct asfd *asfd,
 	struct conf *conf, struct conf *cconf)
 {
 	long min_ver=0;
@@ -387,7 +388,7 @@ int ca_server_maybe_sign_client_cert(struct async *as,
 	// Clients before 1.3.2 did not know how to send cert signing requests.
 	if(cli_ver<min_ver) return 0;
 
-	if(as->simple_loop(as, conf, &cconf->cname, __func__,
+	if(asfd->simple_loop(asfd, conf, &cconf->cname, __func__,
 		csr_server_func)) return -1;
 	return csr_done;
 }

@@ -14,10 +14,10 @@
        __typeof__ (b) _b = (b); \
      _a < _b ? _a : _b; })
 
-extern int open_file_for_send(BFILE *bfd, struct async *as, const char *fname,
+extern int open_file_for_send(BFILE *bfd, struct asfd *asfd, const char *fname,
 	int64_t winattr, int atime, struct conf *conf);
-extern int close_file_for_send(BFILE *bfd, struct async *as);
-extern int send_whole_file_gz(struct async *as,
+extern int close_file_for_send(BFILE *bfd, struct asfd *asfd);
+extern int send_whole_file_gz(struct asfd *asfd,
 	const char *fname, const char *datapth,
 	int quick_read, unsigned long long *bytes, const char *encpassword,
 	struct conf *conf, int compression, BFILE *bfd, FILE *fp,
@@ -43,16 +43,16 @@ extern long version_to_long(const char *version);
 
 /* These receive_a_file() and send_file() functions are for use by extra_comms
    and the CA stuff, rather than backups/restores. */
-extern int receive_a_file(struct async *as,
+extern int receive_a_file(struct asfd *asfd,
 	const char *path, struct conf *conf);
-extern int send_a_file(struct async *as,
+extern int send_a_file(struct asfd *asfd,
 	const char *path, struct conf *conf);
 
 extern int split_sig(const char *buf, unsigned int s, char *weak, char *strong);
 extern int split_sig_with_save_path(const char *buf, unsigned int s,
 	char *weak, char *strong, char *save_path);
 
-extern int do_quick_read(struct async *as,
+extern int do_quick_read(struct asfd *asfd,
 	const char *datapth, struct conf *conf);
 
 extern int strncmp_w(const char *s1, const char *s2);

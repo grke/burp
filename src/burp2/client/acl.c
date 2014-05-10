@@ -88,7 +88,7 @@ int has_acl(const char *path, char cmd)
 	return 0;
 }
 
-static int get_acl_string(struct async *as, acl_t acl, char **acltext,
+static int get_acl_string(struct asfd *asfd, acl_t acl, char **acltext,
 	size_t *alen, const char *path, char type, struct conf *conf)
 {
 	char pre[10]="";
@@ -99,7 +99,7 @@ static int get_acl_string(struct async *as, acl_t acl, char **acltext,
 
 	if(!(tmp=acl_to_text(acl, NULL)))
 	{
-		logw(as, conf, "could not get ACL text of '%s'\n", path);
+		logw(asfd, conf, "could not get ACL text of '%s'\n", path);
 		return 0; // carry on
 	}
 
@@ -107,7 +107,7 @@ static int get_acl_string(struct async *as, acl_t acl, char **acltext,
 
 	if(tlen>maxlen)
 	{
-		logw(as, conf, "ACL of '%s' too long: %d\n", path, tlen);
+		logw(asfd, conf, "ACL of '%s' too long: %d\n", path, tlen);
 		if(tmp) acl_free(tmp);
 		return 0; // carry on
 	}
@@ -129,14 +129,14 @@ static int get_acl_string(struct async *as, acl_t acl, char **acltext,
 	return 0;
 }
 
-int get_acl(struct async *as, const char *path, struct stat *statp,
+int get_acl(struct asfd *asfd, const char *path, struct stat *statp,
 	char **acltext, size_t *alen, struct conf *conf)
 {
 	acl_t acl=NULL;
 
 	if((acl=acl_contains_something(path, ACL_TYPE_ACCESS)))
 	{
-		if(get_acl_string(as, acl,
+		if(get_acl_string(asfd, acl,
 			acltext, alen, path, META_ACCESS_ACL, conf))
 		{
 			acl_free(acl);
@@ -149,7 +149,7 @@ int get_acl(struct async *as, const char *path, struct stat *statp,
 	{
 		if((acl=acl_contains_something(path, ACL_TYPE_DEFAULT)))
 		{
-			if(get_acl_string(as, acl,
+			if(get_acl_string(asfd, acl,
 				acltext, alen, path, META_DEFAULT_ACL, conf))
 			{
 				acl_free(acl);
@@ -161,7 +161,7 @@ int get_acl(struct async *as, const char *path, struct stat *statp,
 	return 0;
 }
 
-static int do_set_acl(struct async *as, const char *path,
+static int do_set_acl(struct asfd *asfd, const char *path,
 	struct stat *statp, const char *acltext, size_t alen,
 	int acltype, struct conf *conf)
 {
@@ -170,7 +170,7 @@ static int do_set_acl(struct async *as, const char *path,
 	{
 		logp("acl_from_text error on %s (%s): %s\n",
 			path, acltext, strerror(errno));
-		logw(as, conf, "acl_from_text error on %s (%s): %s\n",
+		logw(asfd, conf, "acl_from_text error on %s (%s): %s\n",
 			path, acltext, strerror(errno));
 		return -1;
 	}
@@ -179,7 +179,7 @@ static int do_set_acl(struct async *as, const char *path,
 	if(acl_valid(acl))
 	{
 		logp("acl_valid error on %s: %s", path, strerror(errno));
-		logw(as, conf,
+		logw(asfd, conf,
 			"acl_valid error on %s: %s", path, strerror(errno));
 		acl_free(acl);
 		return -1;
@@ -188,7 +188,7 @@ static int do_set_acl(struct async *as, const char *path,
 	if(acl_set_file(path, acltype, acl))
 	{
 		logp("acl set error on %s: %s", path, strerror(errno));
-		logw(as,
+		logw(asfd,
 			conf, "acl set error on %s: %s", path, strerror(errno));
 		acl_free(acl);
 		return -1;
@@ -197,20 +197,20 @@ static int do_set_acl(struct async *as, const char *path,
 	return 0; 
 }
 
-int set_acl(struct async *as, const char *path, struct stat *statp,
+int set_acl(struct asfd *asfd, const char *path, struct stat *statp,
 	const char *acltext, size_t alen, char cmd, struct conf *conf)
 {
 	switch(cmd)
 	{
 		case META_ACCESS_ACL:
-			return do_set_acl(as, path,
+			return do_set_acl(asfd, path,
 				statp, acltext, alen, ACL_TYPE_ACCESS, conf);
 		case META_DEFAULT_ACL:
-			return do_set_acl(as, path,
+			return do_set_acl(asfd, path,
 				statp, acltext, alen, ACL_TYPE_DEFAULT, conf);
 		default:
 			logp("unknown acl type: %c\n", cmd);
-			logw(as, conf, "unknown acl type: %c\n", cmd);
+			logw(asfd, conf, "unknown acl type: %c\n", cmd);
 			break;
 	}
 	return -1;

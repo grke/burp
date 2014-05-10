@@ -1,6 +1,6 @@
 #include "include.h"
 
-static int do_write(struct async *as,
+static int do_write(struct asfd *asfd,
 	BFILE *bfd, FILE *fp, unsigned char *out, size_t outlen,
 	char **metadata, unsigned long long *sent)
 {
@@ -15,7 +15,7 @@ static int do_write(struct async *as,
 				"", 0, (size_t *)sent)))
 		{
 			logp("error when appending metadata\n");
-			as->write_str(as, CMD_ERROR,
+			asfd->write_str(asfd, CMD_ERROR,
 				"error when appending metadata");
 			return -1;
 		}
@@ -26,14 +26,14 @@ static int do_write(struct async *as,
 		if((ret=bwrite(bfd, out, outlen))<=0)
 		{
 			logp("error when appending %d: %d\n", outlen, ret);
-			as->write_str(as, CMD_ERROR, "write failed");
+			asfd->write_str(asfd, CMD_ERROR, "write failed");
 			return -1;
 		}
 #else
 		if((fp && (ret=fwrite(out, 1, outlen, fp))<=0))
 		{
 			logp("error when appending %d: %d\n", outlen, ret);
-			as->write_str(as, CMD_ERROR, "write failed");
+			asfd->write_str(asfd, CMD_ERROR, "write failed");
 			return -1;
 		}
 #endif
@@ -42,7 +42,7 @@ static int do_write(struct async *as,
 	return 0;
 }
 
-static int do_inflate(struct async *as,
+static int do_inflate(struct asfd *asfd,
 	z_stream *zstrm, BFILE *bfd, FILE *fp,
 	unsigned char *out, unsigned char *buftouse, size_t lentouse,
 	char **metadata, const char *encpassword, int enccompressed,
@@ -54,7 +54,7 @@ static int do_inflate(struct async *as,
 	// Do not want to inflate encrypted data that was not compressed.
 	// Just write it straight out.
 	if(encpassword && !enccompressed)
-		return do_write(as,
+		return do_write(asfd,
 			bfd, fp, buftouse, lentouse, metadata, sent);
 
 	zstrm->avail_in=lentouse;
@@ -78,7 +78,7 @@ static int do_inflate(struct async *as,
 		have=ZCHUNK-zstrm->avail_out;
 		if(!have) continue;
 
-		if(do_write(as, bfd, fp, out, have, metadata, sent))
+		if(do_write(asfd, bfd, fp, out, have, metadata, sent))
 			return -1;
 /*
 		if(md5)
@@ -101,20 +101,18 @@ struct winbuf
 	unsigned long long *rcvd;
 	unsigned long long *sent;
 	struct cntr *cntr;
-	struct async *as;
+	struct asfd *asfd;
 };
 
 static DWORD WINAPI read_efs(PBYTE pbData, PVOID pvCallbackContext, PULONG ulLength)
 {
-	struct iobuf *rbuf=NULL;
+	struct iobuf *rbuf;
 	struct winbuf *mybuf=(struct winbuf *)pvCallbackContext;
-
-	if(!(rbuf && !(rbuf=iobuf_alloc())))
-		return ERROR_FUNCTION_FAILED;
+	rbuf=mybuf->asfd->rbuf;
 
 	while(1)
 	{
-		if(mybuf->as->read(mybuf->as, rbuf))
+		if(mybuf->asfd->read(mybuf->asfd))
 			return ERROR_FUNCTION_FAILED;
 		(*(mybuf->rcvd))+=rbuf->len;
 
@@ -144,7 +142,7 @@ static DWORD WINAPI read_efs(PBYTE pbData, PVOID pvCallbackContext, PULONG ulLen
 	return ERROR_FUNCTION_FAILED;
 }
 
-static int transfer_efs_in(struct async *as,
+static int transfer_efs_in(struct asfd *asfd,
 	BFILE *bfd, unsigned long long *rcvd,
 	unsigned long long *sent, struct cntr *cntr)
 {
@@ -153,7 +151,7 @@ static int transfer_efs_in(struct async *as,
 	mybuf.rcvd=rcvd;
 	mybuf.sent=sent;
 	mybuf.cntr=cntr;
-	mybuf.as=as;
+	mybuf.asfd=asfd;
 	if((ret=WriteEncryptedFileRaw((PFE_IMPORT_FUNC)read_efs,
 		&mybuf, bfd->pvContext)))
 			logp("WriteEncryptedFileRaw returned %d\n", ret);
@@ -162,7 +160,7 @@ static int transfer_efs_in(struct async *as,
 
 #endif
 
-int transfer_gzfile_in(struct async *as,
+int transfer_gzfile_inl(struct asfd *asfd,
 	struct sbuf *sb, const char *path, BFILE *bfd,
 	FILE *fp, unsigned long long *rcvd, unsigned long long *sent,
 	const char *encpassword, int enccompressed,
@@ -174,7 +172,7 @@ int transfer_gzfile_in(struct async *as,
 	int doutlen=0;
 	//unsigned char doutbuf[1000+EVP_MAX_BLOCK_LENGTH];
 	unsigned char doutbuf[ZCHUNK-EVP_MAX_BLOCK_LENGTH];
-	static struct iobuf *rbuf=NULL;
+	struct iobuf *rbuf=asfd->rbuf;
 
 	z_stream zstrm;
 
@@ -186,7 +184,7 @@ int transfer_gzfile_in(struct async *as,
 
 #ifdef HAVE_WIN32
 	if(sb && sb->path.cmd==CMD_EFS_FILE)
-		return transfer_efs_in(as, bfd, rcvd, sent, cntr);
+		return transfer_efs_in(asfd, bfd, rcvd, sent, cntr);
 #endif
 
 	//if(!MD5_Init(&md5))
@@ -213,12 +211,10 @@ int transfer_gzfile_in(struct async *as,
 		return -1;
 	}
 
-	if(!(rbuf=iobuf_alloc())) return -1;
-
 	while(!quit)
 	{
 		iobuf_free_content(rbuf);
-		if(as->read(as, rbuf))
+		if(asfd->read(asfd))
 		{
 			if(enc_ctx)
 			{
@@ -237,7 +233,7 @@ int transfer_gzfile_in(struct async *as,
 				if(!fp && !bfd && !metadata)
 				{
 					logp("given append, but no file or metadata to write to\n");
-					as->write_str(as, CMD_ERROR,
+					asfd->write_str(asfd, CMD_ERROR,
 					  "append with no file or metadata");
 					quit++; ret=-1;
 				}
@@ -288,7 +284,7 @@ int transfer_gzfile_in(struct async *as,
 					}
 					//logp("want to write: %d\n", zstrm.avail_in);
 
-					if(do_inflate(as, &zstrm, bfd, fp, out,
+					if(do_inflate(asfd, &zstrm, bfd, fp, out,
 						buftouse, lentouse, metadata,
 						encpassword,
 						enccompressed,
@@ -309,7 +305,7 @@ int transfer_gzfile_in(struct async *as,
 						ret=-1; quit++;
 						break;
 					}
-					if(doutlen && do_inflate(as,
+					if(doutlen && do_inflate(asfd,
 					  &zstrm, bfd,
 					  fp, out, doutbuf, (size_t)doutlen,
 					  metadata, encpassword,
@@ -331,7 +327,7 @@ int transfer_gzfile_in(struct async *as,
 						newsum=get_checksum_str(checksum);
 						// log if the checksum differed
 						if(strcmp(newsum, oldsum))
-							logw(as, cntr, "md5sum for '%s' did not match! (%s!=%s)\n", path, newsum, oldsum);
+							logw(asfd, cntr, "md5sum for '%s' did not match! (%s!=%s)\n", path, newsum, oldsum);
 					}
 				}
 				else
@@ -360,6 +356,7 @@ int transfer_gzfile_in(struct async *as,
 		free(enc_ctx);
 	}
 
+	iobuf_free_content(rbuf);
 	if(ret) logp("transfer file returning: %d\n", ret);
 	return ret;
 }

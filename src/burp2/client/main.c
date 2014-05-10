@@ -19,39 +19,39 @@ enum cliret
 	CLIENT_RECONNECT=4
 };
 
-static enum cliret maybe_check_timer(struct async *as,
+static enum cliret maybe_check_timer(struct asfd *asfd,
 	enum action action, const char *phase1str,
 	struct conf *conf, int *resume)
 {
 	int complen=0;
-	struct iobuf rbuf;
-	iobuf_init(&rbuf);
+	struct iobuf *rbuf=asfd->rbuf;
 
-        if(as->write_str(as, CMD_GEN, phase1str)) goto error;
+        if(asfd->write_str(asfd, CMD_GEN, phase1str)) goto error;
 
-        if(as->read(as, &rbuf)) goto error;
+        if(asfd->read(asfd)) goto error;
 
-        if(rbuf.cmd!=CMD_GEN)
+        if(rbuf->cmd!=CMD_GEN)
         {
-		iobuf_log_unexpected(&rbuf, __func__);
+		iobuf_free_content(rbuf);
+		iobuf_log_unexpected(rbuf, __func__);
 		goto error;
         }
-        if(!strcmp(rbuf.buf, "timer conditions not met"))
+        if(!strcmp(rbuf->buf, "timer conditions not met"))
         {
-		iobuf_free_content(&rbuf);
+		iobuf_free_content(rbuf);
                 logp("Timer conditions on the server were not met\n");
 		goto timer_not_met;
         }
-        else if(!strcmp(rbuf.buf, "timer conditions met"))
+        else if(!strcmp(rbuf->buf, "timer conditions met"))
         {
-		iobuf_free_content(&rbuf);
+		iobuf_free_content(rbuf);
                 logp("Timer conditions on the server were met\n");
 		if(action==ACTION_TIMER_CHECK) goto end;
         }
 
-	if(!strncmp_w(rbuf.buf, "ok"))
+	if(!strncmp_w(rbuf->buf, "ok"))
 		complen=3;
-	else if(!strncmp_w(rbuf.buf, "resume"))
+	else if(!strncmp_w(rbuf->buf, "resume"))
 	{
 		complen=7;
 		*resume=1;
@@ -59,14 +59,15 @@ static enum cliret maybe_check_timer(struct async *as,
 	}
 	else
 	{
-		iobuf_log_unexpected(&rbuf, __func__);
-		iobuf_free_content(&rbuf);
+		iobuf_log_unexpected(rbuf, __func__);
+		iobuf_free_content(rbuf);
 		goto error;
 	}
         // The server now tells us the compression level in the OK response.
-        if(strlen(rbuf.buf)>3) conf->compression=atoi(rbuf.buf+complen);
+        if(strlen(rbuf->buf)>3) conf->compression=atoi(rbuf->buf+complen);
         logp("Compression level: %d\n", conf->compression);
 
+	iobuf_free_content(rbuf);
 end:
 	return CLIENT_OK;
 error:
@@ -75,7 +76,7 @@ timer_not_met:
 	return CLIENT_SERVER_TIMER_NOT_MET;
 }
 
-static enum cliret backup_wrapper(struct async *as,
+static enum cliret backup_wrapper(struct asfd *asfd,
 	enum action action, const char *phase1str,
 	const char *incexc, int resume, long name_max, struct conf *conf)
 {
@@ -94,7 +95,7 @@ static enum cliret backup_wrapper(struct async *as,
 		goto error;
 	}
 
-	switch(maybe_check_timer(as, action, phase1str, conf, &resume))
+	switch(maybe_check_timer(asfd, action, phase1str, conf, &resume))
 	{
 		case CLIENT_OK:
 			if(action==ACTION_TIMER_CHECK) goto end;
@@ -116,11 +117,12 @@ static enum cliret backup_wrapper(struct async *as,
 		args[a++]="reserved4";
 		args[a++]="reserved5";
 		args[a++]=NULL;
-		if(run_script(as, args, conf->b_script_pre_arg, conf, 1, 1, 1))
-			 ret=CLIENT_ERROR;
+		if(run_script(asfd,
+			args, conf->b_script_pre_arg, conf, 1, 1, 1))
+				 ret=CLIENT_ERROR;
 	}
 
-	if(ret==CLIENT_OK && do_backup_client(as,
+	if(ret==CLIENT_OK && do_backup_client(asfd,
 		conf, action, name_max, resume)) ret=CLIENT_ERROR;
 
 	if((ret==CLIENT_OK || conf->b_script_post_run_on_fail)
@@ -137,7 +139,8 @@ static enum cliret backup_wrapper(struct async *as,
 		args[a++]="reserved4";
 		args[a++]="reserved5";
 		args[a++]=NULL;
-		if(run_script(as, args, conf->b_script_post_arg, conf, 1, 1, 1))
+		if(run_script(asfd,
+			args, conf->b_script_post_arg, conf, 1, 1, 1))
 			ret=CLIENT_ERROR;
 	}
 
@@ -189,14 +192,14 @@ static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx, struct conf *conf)
 	return 0;
 }
 
-static enum cliret initial_comms(struct async **as,
+static enum cliret initial_comms(struct asfd *asfd,
 	enum action *action, char **incexc, long *name_max, 
 	struct conf *conf)
 {
 	char *server_version=NULL;
 	enum cliret ret=CLIENT_OK;
 
-	if(authorise_client(*as, conf, &server_version))
+	if(authorise_client(asfd, conf, &server_version))
 		goto error;
 
 	if(server_version)
@@ -206,7 +209,7 @@ static enum cliret initial_comms(struct async **as,
 		// Servers before 1.3.2 did not tell us their versions.
 		// 1.3.2 and above can do the automatic CA stuff that
 		// follows.
-		if((ca_ret=ca_client_setup(*as, conf))<0)
+		if((ca_ret=ca_client_setup(asfd, conf))<0)
 		{
 			// Error
 			logp("Error with certificate signing request\n");
@@ -221,15 +224,15 @@ static enum cliret initial_comms(struct async **as,
 		}
 	}
 
-	set_non_blocking((*as)->asfd->fd);
+	set_non_blocking(asfd->fd);
 
-	if(ssl_check_cert((*as)->asfd->ssl, conf))
+	if(ssl_check_cert(asfd->ssl, conf))
 	{
 		logp("check cert failed\n");
 		goto error;
 	}
 
-	if(extra_comms(as, conf, action, incexc, name_max))
+	if(extra_comms(asfd, conf, action, incexc, name_max))
 	{
 		logp("extra comms failed\n");
 		goto error;
@@ -245,7 +248,7 @@ end:
 	return ret;
 }
 
-static enum cliret restore_wrapper(struct async *as, enum action action,
+static enum cliret restore_wrapper(struct asfd *asfd, enum action action,
 	int vss_restore, struct conf *conf)
 {
 	enum cliret ret=CLIENT_OK;
@@ -261,8 +264,9 @@ static enum cliret restore_wrapper(struct async *as, enum action action,
 		args[a++]="reserved4";
 		args[a++]="reserved5";
 		args[a++]=NULL;
-		if(run_script(as, args, conf->r_script_pre_arg, conf, 1, 1, 1))
-			ret=CLIENT_ERROR;
+		if(run_script(asfd, args,
+			conf->r_script_pre_arg, conf, 1, 1, 1))
+				ret=CLIENT_ERROR;
 	}
 	if(ret==CLIENT_OK)
 	{
@@ -270,12 +274,12 @@ static enum cliret restore_wrapper(struct async *as, enum action action,
 		// functions to be a single pointer.
 		if(conf->protocol==PROTO_BURP1)
 		{
-			if(do_restore_client_burp1(as, conf,
+			if(do_restore_client_burp1(asfd, conf,
 				action, vss_restore)) ret=CLIENT_ERROR;
 		}
 		else
 		{
-			if(do_restore_client(as, conf,
+			if(do_restore_client(asfd, conf,
 				action, vss_restore)) ret=CLIENT_ERROR;
 		}
 	}
@@ -293,8 +297,9 @@ static enum cliret restore_wrapper(struct async *as, enum action action,
 		args[a++]="reserved4";
 		args[a++]="reserved5";
 		args[a++]=NULL;
-		if(run_script(as, args, conf->r_script_post_arg, conf, 1, 1, 1))
-			ret=CLIENT_ERROR;
+		if(run_script(asfd, args,
+			conf->r_script_post_arg, conf, 1, 1, 1))
+				ret=CLIENT_ERROR;
 	}
 
 	// Return non-zero if there were warnings,
@@ -318,6 +323,7 @@ static enum cliret do_client(struct conf *conf,
 	long name_max=0;
 	enum action act=action;
 	struct async *as=NULL;
+	struct asfd *asfd=NULL;
 
 //	as->settimers(0, 100);
 
@@ -331,8 +337,11 @@ static enum cliret do_client(struct conf *conf,
 		goto error;
 
 	if(!(as=async_alloc())
-	  || as->init(as, rfd, ssl, conf, act==ACTION_ESTIMATE))
-		goto error;
+	  || !(asfd=asfd_alloc())
+	  || as->init(as, act==ACTION_ESTIMATE)
+	  || asfd->init(asfd, as, rfd, ssl, conf))
+		goto end;
+	as->add_asfd(as, asfd);
 
 	// Set quality of service bits on backup packets.
 	if(act==ACTION_BACKUP
@@ -342,7 +351,7 @@ static enum cliret do_client(struct conf *conf,
 
 	if(act!=ACTION_ESTIMATE)
 	{
-		if((ret=initial_comms(&as, &act, &incexc, &name_max, conf)))
+		if((ret=initial_comms(asfd, &act, &incexc, &name_max, conf)))
 			goto end;
 	}
 
@@ -350,32 +359,32 @@ static enum cliret do_client(struct conf *conf,
 	switch(act)
 	{
 		case ACTION_BACKUP:
-			ret=backup_wrapper(as, act, "backupphase1",
+			ret=backup_wrapper(asfd, act, "backupphase1",
 			  incexc, resume, name_max, conf);
 			break;
 		case ACTION_BACKUP_TIMED:
-			ret=backup_wrapper(as, act, "backupphase1timed",
+			ret=backup_wrapper(asfd, act, "backupphase1timed",
 			  incexc, resume, name_max, conf);
 			break;
 		case ACTION_TIMER_CHECK:
-			ret=backup_wrapper(as, act, "backupphase1timedcheck",
+			ret=backup_wrapper(asfd, act, "backupphase1timedcheck",
 			  incexc, resume, name_max, conf);
 			break;
 		case ACTION_RESTORE:
 		case ACTION_VERIFY:
-			ret=restore_wrapper(as, act, vss_restore, conf);
+			ret=restore_wrapper(asfd, act, vss_restore, conf);
 			break;
 		case ACTION_ESTIMATE:
-			if(do_backup_client(as, conf, act, name_max, 0))
+			if(do_backup_client(asfd, conf, act, name_max, 0))
 				goto error;
 			break;
 		case ACTION_DELETE:
-			if(do_delete_client(as, conf)) goto error;
+			if(do_delete_client(asfd, conf)) goto error;
 			break;
 		case ACTION_LIST:
 		case ACTION_LONG_LIST:
 		default:
-			if(do_list_client(as, conf, act, json)) goto error;
+			if(do_list_client(asfd, conf, act, json)) goto error;
 			break;
 	}
 
@@ -385,6 +394,7 @@ error:
 end:
 	close_fd(&rfd);
 	async_free(&as);
+	asfd_free(asfd);
 	if(ctx) ssl_destroy_ctx(ctx);
 	if(incexc) free(incexc);
 	conf->cntr=NULL;

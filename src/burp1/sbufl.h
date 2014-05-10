@@ -14,7 +14,7 @@
 #define SBUFL_UNUSED_B		0x40
 #define SBUFL_UNUSED_C		0x80
 
-extern int sbufl_fill(struct sbuf *sb, struct async *as, FILE *fp,
+extern int sbufl_fill(struct sbuf *sb, struct asfd *asfd, FILE *fp,
 	gzFile zp, struct cntr *cntr);
 extern int sbufl_fill_phase1(struct sbuf *sb, FILE *fp,
 	gzFile zp, struct cntr *cntr);

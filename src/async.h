@@ -6,8 +6,6 @@
 
 struct async
 {
-	// FIX THIS: Make asfd into a list, so that multiple fds can be
-	// written/read.
 	struct asfd *asfd;
 
 	int doing_estimate;
@@ -16,14 +14,13 @@ struct async
 	int setusec;
 
 	// Let us try using function pointers.
-	int (*init)(struct async *, int, SSL *, struct conf *, int);
+	int (*init)(struct async *, int);
 	// This one can return without completing the read or write, so check
 	// rbuf->buf and/or wbuf->len.
 	int (*rw)(struct async *, struct iobuf *);
 	int (*write)(struct async *, struct iobuf *);
 	int (*read_quick)(struct async *);
-	int (*write_strn)(struct async *, char, const char *, size_t);
-	int (*write_str)(struct async *, char, const char *);
+	void (*add_asfd)(struct async *, struct asfd *);
 	void (*settimers)(struct async *, int, int); // For debug purposes.
 };
 

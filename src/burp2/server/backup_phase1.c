@@ -3,7 +3,7 @@
 
 #include "../burp1/sbufl.h"
 
-int backup_phase1_server(struct async *as,
+int backup_phase1_server(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf *conf)
 {
 	int ars=0;
@@ -25,9 +25,9 @@ int backup_phase1_server(struct async *as,
 	{
 		sbuf_free_content(sb);
 		if(conf->protocol==PROTO_BURP1)
-			ars=sbufl_fill(sb, as, NULL, NULL, conf->cntr);
+			ars=sbufl_fill(sb, asfd, NULL, NULL, conf->cntr);
 		else
-			ars=sbuf_fill(sb, as, NULL, NULL, NULL, conf);
+			ars=sbuf_fill(sb, asfd, NULL, NULL, NULL, conf);
 
 		if(ars)
 		{
@@ -35,7 +35,7 @@ int backup_phase1_server(struct async *as,
 			//ars==1 means it ended ok.
 			// Last thing the client sends is 'backupphase2', and
 			// it wants an 'ok' reply.
-			if(as->write_str(as, CMD_GEN, "ok")
+			if(asfd->write_str(asfd, CMD_GEN, "ok")
 			  || send_msg_zp(p1zp, CMD_GEN,
 				"phase1end", strlen("phase1end")))
 					goto end;

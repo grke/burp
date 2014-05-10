@@ -21,7 +21,7 @@ dummy:
 #
 SRCS = \
 		asfd.c \
-		asyncio.c \
+		async.c \
 		attribs.c \
 		base64.c \
 		berrno.c \

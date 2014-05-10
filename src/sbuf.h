@@ -88,8 +88,9 @@ extern void sbuf_free(struct sbuf *sb);
 extern struct slist *slist_alloc(void);
 extern void slist_free(struct slist *slist);
 
-extern int sbuf_open_file(struct sbuf *sb, struct async *as, struct conf *conf);
-extern void sbuf_close_file(struct sbuf *sb, struct async *as);
+extern int sbuf_open_file(struct sbuf *sb,
+	struct asfd *asfd, struct conf *conf);
+extern void sbuf_close_file(struct sbuf *sb, struct asfd *asfd);
 extern ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize);
 
 extern int cmd_is_link(char cmd);
@@ -101,12 +102,12 @@ extern int sbuf_pathcmp(struct sbuf *a, struct sbuf *b);
 
 extern void sbuf_print_alloc_stats(void);
 
-extern int sbuf_fill(struct sbuf *sb, struct async *as,
+extern int sbuf_fill(struct sbuf *sb, struct asfd *asfd,
 	gzFile zp, struct blk *blk,
 	char *datpath, struct conf *conf);
-extern int sbuf_fill_from_gzfile(struct sbuf *sb, struct async *as,
+extern int sbuf_fill_from_gzfile(struct sbuf *sb, struct asfd *asfd,
 	gzFile zp, struct blk *blk, char *datpath, struct conf *conf);
-extern int sbuf_fill_from_net(struct sbuf *sb, struct async *as,
+extern int sbuf_fill_from_net(struct sbuf *sb, struct asfd *asfd,
 	struct blk *blk, struct conf *conf);
 
 #endif

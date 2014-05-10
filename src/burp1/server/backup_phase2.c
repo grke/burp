@@ -16,7 +16,7 @@ static int treedata(struct sbuf *sb)
 	return 0;
 }
 
-static char *set_new_datapth(struct async *as,
+static char *set_new_datapth(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf *cconf,
 	struct sbuf *sb, struct dpthl *dpthl, int *istreedata)
 {
@@ -30,7 +30,7 @@ static char *set_new_datapth(struct async *as,
 		// the directory structure on the original client.
 		if(!(tmp=prepend_s("t", sb->path.buf)))
 		{
-			log_and_send_oom(as, __func__);
+			log_and_send_oom(asfd, __func__);
 			return NULL;
 		}
 	}
@@ -39,7 +39,7 @@ static char *set_new_datapth(struct async *as,
 		mk_dpthl(dpthl, cconf, sb->path.cmd);
 		if(!(tmp=strdup(dpthl->path))) // file data path
 		{
-			log_and_send_oom(as, __func__);
+			log_and_send_oom(asfd, __func__);
 			return NULL;
 		}
 	}
@@ -47,13 +47,13 @@ static char *set_new_datapth(struct async *as,
 	if(build_path(sdirs->datadirtmp,
 		sb->burp1->datapth.buf, &rpath, sdirs->datadirtmp))
 	{
-		log_and_send(as, "build path failed");
+		log_and_send(asfd, "build path failed");
 		return NULL;
 	}
 	return rpath;
 }
 
-static int start_to_receive_new_file(struct async *as,
+static int start_to_receive_new_file(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf *cconf,
 	struct sbuf *sb, struct dpthl *dpthl)
 {
@@ -62,12 +62,12 @@ static int start_to_receive_new_file(struct async *as,
 
 //logp("start to receive: %s\n", sb->path);
 
-	if(!(rpath=set_new_datapth(as, sdirs, cconf, sb, dpthl, &istreedata)))
+	if(!(rpath=set_new_datapth(asfd, sdirs, cconf, sb, dpthl, &istreedata)))
 		return -1;
 	
 	if(!(sb->burp1->fp=open_file(rpath, "wb")))
 	{
-		log_and_send(as, "make file failed");
+		log_and_send(asfd, "make file failed");
 		if(rpath) free(rpath);
 		return -1;
 	}
@@ -89,7 +89,7 @@ static int filedata(char cmd)
 	  || cmd==CMD_EFS_FILE);
 }
 
-static int process_changed_file(struct async *as,
+static int process_changed_file(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf *cconf,
 	struct sbuf *cb, struct sbuf *p1b,
 	const char *adir)
@@ -126,15 +126,15 @@ static int process_changed_file(struct async *as,
 		return -1;
 	}
 	//logp("sig begin: %s\n", p1b->burp1->datapth.buf);
-	if(!(p1b->burp1->infb=rs_filebuf_new(as, NULL,
+	if(!(p1b->burp1->infb=rs_filebuf_new(asfd, NULL,
 		p1b->burp1->sigfp, p1b->burp1->sigzp,
 		-1, blocklen, -1, cconf->cntr)))
 	{
 		logp("could not rs_filebuf_new for infb.\n");
 		return -1;
 	}
-	if(!(p1b->burp1->outfb=rs_filebuf_new(as, NULL, NULL, NULL,
-		as->asfd->fd, ASYNC_BUF_LEN, -1, cconf->cntr)))
+	if(!(p1b->burp1->outfb=rs_filebuf_new(asfd, NULL, NULL, NULL,
+		asfd->fd, ASYNC_BUF_LEN, -1, cconf->cntr)))
 	{
 		logp("could not rs_filebuf_new for in_outfb.\n");
 		return -1;
@@ -223,7 +223,7 @@ static int process_new_file(struct sdirs *sdirs, struct conf *cconf,
 }
 
 // return 1 to say that a file was processed
-static int maybe_process_file(struct async *as,
+static int maybe_process_file(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf *cconf,
 	struct sbuf *cb, struct sbuf *p1b, FILE *ucfp,
 	struct dpthl *dpthl)
@@ -321,7 +321,7 @@ static int maybe_process_file(struct async *as,
 		// Otherwise, do the delta stuff (if possible).
 		if(filedata(p1b->path.cmd))
 		{
-			if(process_changed_file(as, sdirs, cconf, cb, p1b,
+			if(process_changed_file(asfd, sdirs, cconf, cb, p1b,
 				sdirs->currentdata)) return -1;
 		}
 		else
@@ -447,17 +447,15 @@ static int finish_delta(struct sdirs *sdirs, struct sbuf *rb)
 }
 
 // returns 1 for finished ok.
-static int do_stuff_to_receive(struct async *as,
+static int do_stuff_to_receive(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf *cconf,
 	struct sbuf *rb, FILE *p2fp, struct dpthl *dpthl, char **last_requested)
 {
-	static struct iobuf *rbuf=NULL;
-
-	if(!rbuf && !(rbuf=iobuf_alloc())) goto error;
+	struct iobuf *rbuf=asfd->rbuf;
 
 	iobuf_free_content(rbuf);
 	// This also attempts to write anything in the write buffer.
-	if(as->rw(as, rbuf, NULL))
+	if(asfd->as->rw(asfd->as, NULL))
 	{
 		logp("error in async_rw\n");
 		return -1;
@@ -479,12 +477,14 @@ static int do_stuff_to_receive(struct async *as,
 				//logp("rbuf->len: %d\n", rbuf->len);
 				cntr_add_recvbytes(cconf->cntr, rbuf->len);
 				if((rb->burp1->zp
-				  && (app=gzwrite(rb->burp1->zp, rbuf->buf, rbuf->len))<=0)
+				  && (app=gzwrite(rb->burp1->zp,
+					rbuf->buf, rbuf->len))<=0)
 				|| (rb->burp1->fp
-				  && (app=fwrite(rbuf->buf, 1, rbuf->len, rb->burp1->fp))<=0))
+				  && (app=fwrite(rbuf->buf, 1,
+					rbuf->len, rb->burp1->fp))<=0))
 				{
 					logp("error when appending: %d\n", app);
-					as->write_str(as,
+					asfd->write_str(asfd,
 						CMD_ERROR, "write failed");
 					goto error;
 				}
@@ -574,7 +574,7 @@ static int do_stuff_to_receive(struct async *as,
 			else
 			{
 				// Receiving a whole new file.
-				if(start_to_receive_new_file(as,
+				if(start_to_receive_new_file(asfd,
 					sdirs, cconf, rb, dpthl))
 				{
 					logp("error in start_to_receive_new_file\n");
@@ -611,7 +611,7 @@ error:
 	return -1;
 }
 
-int backup_phase2_server(struct async *as,
+int backup_phase2_server(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf *cconf,
 	gzFile *cmanfp, struct dpthl *dpthl, int resume)
 {
@@ -668,8 +668,8 @@ int backup_phase2_server(struct async *as,
 		if(write_status(STATUS_BACKUP,
 			rb->path.buf?rb->path.buf:p1b->path.buf, cconf))
 				goto error;
-		if((last_requested || !p1zp || as->asfd->writebuflen)
-		  && (ars=do_stuff_to_receive(as, sdirs,
+		if((last_requested || !p1zp || asfd->writebuflen)
+		  && (ars=do_stuff_to_receive(asfd, sdirs,
 			cconf, rb, p2fp, dpthl, &last_requested)))
 		{
 			if(ars<0) goto error;
@@ -677,7 +677,7 @@ int backup_phase2_server(struct async *as,
 			break;
 		}
 
-		if((sts=do_stuff_to_send(as->asfd, p1b, &last_requested))<0)
+		if((sts=do_stuff_to_send(asfd, p1b, &last_requested))<0)
 			goto error;
 
 		if(!sts && p1zp)
@@ -690,7 +690,7 @@ int backup_phase2_server(struct async *as,
 			// ars==1 means it ended ok.
 			gzclose_fp(&p1zp);
 			//logp("ended OK - write phase2end");
-			if(as->write_str(as, CMD_GEN, "backupphase2end"))
+			if(asfd->write_str(asfd, CMD_GEN, "backupphase2end"))
 				goto error;
 		   }
 
@@ -711,7 +711,7 @@ int backup_phase2_server(struct async *as,
 			// manifest.
 			if(cb->path.buf)
 			{
-				if((ars=maybe_process_file(as, sdirs, cconf,
+				if((ars=maybe_process_file(asfd, sdirs, cconf,
 					cb, p1b, ucfp, dpthl)))
 				{
 					if(ars<0) goto error;
@@ -724,7 +724,7 @@ int backup_phase2_server(struct async *as,
 			while(*cmanfp)
 			{
 				sbuf_free_content(cb);
-				if((ars=sbufl_fill(cb, as, NULL,
+				if((ars=sbufl_fill(cb, asfd, NULL,
 					*cmanfp, cconf->cntr)))
 				{
 					// ars==1 means it ended ok.
@@ -737,7 +737,7 @@ int backup_phase2_server(struct async *as,
 					break;
 				}
 		//logp("against: %s\n", cb.path);
-				if((ars=maybe_process_file(as, sdirs, cconf,
+				if((ars=maybe_process_file(asfd, sdirs, cconf,
 					cb, p1b, ucfp, dpthl)))
 				{
 					if(ars<0) goto error;

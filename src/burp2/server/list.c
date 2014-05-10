@@ -58,7 +58,7 @@ error:
 	return -1;
 }
 
-static int list_manifest(struct async *as,
+static int list_manifest(struct asfd *asfd,
 	const char *fullpath, regex_t *regex,
 	const char *browsedir, struct conf *conf)
 {
@@ -76,7 +76,7 @@ static int list_manifest(struct async *as,
 	  || manio_init_read(manio, manifest_dir)
 	  || !(sb=sbuf_alloc(conf)))
 	{
-		log_and_send_oom(as, __func__);
+		log_and_send_oom(asfd, __func__);
 		goto error;
 	}
 	manio_set_protocol(manio, conf->protocol);
@@ -87,7 +87,7 @@ static int list_manifest(struct async *as,
 	{
 		int show=0;
 
-		if((ars=manio_sbuf_fill(manio, as, sb, NULL, NULL, conf))<0)
+		if((ars=manio_sbuf_fill(manio, asfd, sb, NULL, NULL, conf))<0)
 			goto error;
 		else if(ars>0)
 			goto end; // Finished OK.
@@ -111,11 +111,11 @@ static int list_manifest(struct async *as,
 		}
 		if(show)
 		{
-			if(as->write(as, &sb->attr)
-			  || as->write(as, &sb->path))
+			if(asfd->write(asfd, &sb->attr)
+			  || asfd->write(asfd, &sb->path))
 				goto error;
 			if(sbuf_is_link(sb)
-			  && as->write(as, &sb->link))
+			  && asfd->write(asfd, &sb->link))
 				goto error;
 		}
 
@@ -132,16 +132,16 @@ end:
 	return ret;
 }
 
-static int send_backup_name_to_client(struct async *as, struct bu *arr)
+static int send_backup_name_to_client(struct asfd *asfd, struct bu *arr)
 {
 	char msg[64]="";
 	//snprintf(msg, sizeof(msg), "%s%s",
 	//	arr->timestamp, arr->deletable?" (deletable)":"");
 	snprintf(msg, sizeof(msg), "%s", arr->timestamp);
-	return as->write_str(as, CMD_TIMESTAMP, msg);
+	return asfd->write_str(asfd, CMD_TIMESTAMP, msg);
 }
 
-int do_list_server(struct async *as, struct sdirs *sdirs, struct conf *conf,
+int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct conf *conf,
 	const char *backup, const char *listregex, const char *browsedir)
 {
 	int a=0;
@@ -155,7 +155,7 @@ int do_list_server(struct async *as, struct sdirs *sdirs, struct conf *conf,
 	printf("in do_list_server\n");
 
 	if(compile_regex(&regex, listregex)
-	  || get_current_backups(as, sdirs, &arr, &a, 1)
+	  || get_current_backups(asfd, sdirs, &arr, &a, 1)
 	  || write_status(STATUS_LISTING, NULL, conf))
 		goto end;
 
@@ -167,8 +167,9 @@ int do_list_server(struct async *as, struct sdirs *sdirs, struct conf *conf,
 		if(listregex && backup && *backup=='a')
 		{
 			found=1;
-			if(as->write_str(as, CMD_TIMESTAMP, arr[i].timestamp)
-			  || list_manifest(as, arr[i].path,
+			if(asfd->write_str(asfd,
+				CMD_TIMESTAMP, arr[i].timestamp)
+			  || list_manifest(asfd, arr[i].path,
 				regex, browsedir, conf)) goto end;
 		}
 		// Search or list a particular backup.
@@ -179,8 +180,8 @@ int do_list_server(struct async *as, struct sdirs *sdirs, struct conf *conf,
 				|| arr[i].index==index))
 			{
 				found=1;
-				if(send_backup_name_to_client(as, &(arr[i]))
-				  || list_manifest(as, arr[i].path, regex,
+				if(send_backup_name_to_client(asfd, &(arr[i]))
+				  || list_manifest(asfd, arr[i].path, regex,
 					browsedir, conf)) goto end;
 			}
 		}
@@ -188,14 +189,14 @@ int do_list_server(struct async *as, struct sdirs *sdirs, struct conf *conf,
 		else
 		{
 			found=1;
-			if(send_backup_name_to_client(as, &(arr[i])))
+			if(send_backup_name_to_client(asfd, &(arr[i])))
 				goto end;
 		}
 	}
 
 	if(backup && *backup && !found)
 	{
-		as->write_str(as, CMD_ERROR, "backup not found");
+		asfd->write_str(asfd, CMD_ERROR, "backup not found");
 		goto end;
 	}
 	ret=0;

@@ -12,13 +12,13 @@ static int add_to_incexc(char **incexc, const char *src, size_t len, const char 
 	return 0;
 }
 
-static enum asl_ret incexc_recv_func(struct async *as, struct iobuf *rbuf,
+static enum asl_ret incexc_recv_func(struct asfd *asfd, struct iobuf *rbuf,
         struct conf *conf, void *param)
 {
 	char **incexc=(char **)param;
 	if(!strcmp(rbuf->buf, endreqstrf))
 	{
-		if(as->write_str(as, CMD_GEN, endrepstrf))
+		if(asfd->write_str(asfd, CMD_GEN, endrepstrf))
 			return ASL_END_ERROR;
 		return ASL_END_OK;
 	}
@@ -28,44 +28,44 @@ static enum asl_ret incexc_recv_func(struct async *as, struct iobuf *rbuf,
 }
 
 
-static int incexc_recv(struct async *as, char **incexc,
+static int incexc_recv(struct asfd *asfd, char **incexc,
 	const char *reqstr, const char *repstr,
 	const char *endreqstr, const char *endrepstr, struct conf *conf)
 {
 	if(*incexc) { free(*incexc); *incexc=NULL; }
-	if(as->write_str(as, CMD_GEN, repstr)) return -1;
+	if(asfd->write_str(asfd, CMD_GEN, repstr)) return -1;
 
 	endreqstrf=endreqstr;
 	endrepstrf=endrepstr;
-	if(as->simple_loop(as, conf, incexc, __func__, incexc_recv_func))
+	if(asfd->simple_loop(asfd, conf, incexc, __func__, incexc_recv_func))
 		return -1;
 
 	// Need to put another new line at the end.
 	return add_to_incexc(incexc, "\n", 1, "");
 }
 
-int incexc_recv_client(struct async *as,
+int incexc_recv_client(struct asfd *asfd,
 	char **incexc, struct conf *conf)
 {
-	return incexc_recv(as, incexc,
+	return incexc_recv(asfd, incexc,
 		"sincexc", "sincexc ok",
 		"sincexc end", "sincexc end ok",
 		conf);
 }
 
-int incexc_recv_client_restore(struct async *as,
+int incexc_recv_client_restore(struct asfd *asfd,
 	char **incexc, struct conf *conf)
 {
-	return incexc_recv(as, incexc,
+	return incexc_recv(asfd, incexc,
 		"srestore", "srestore ok",
 		"srestore end", "srestore end ok",
 		conf);
 }
 
-int incexc_recv_server(struct async *as,
+int incexc_recv_server(struct asfd *asfd,
 	char **incexc, struct conf *conf)
 {
-	return incexc_recv(as, incexc,
+	return incexc_recv(asfd, incexc,
 		"incexc", "incexc ok",
 		"incexc end", "incexc end ok",
 		conf);

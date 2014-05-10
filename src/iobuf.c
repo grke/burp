@@ -37,17 +37,6 @@ void iobuf_free(struct iobuf *iobuf)
 	if(iobuf) free(iobuf);
 }
 
-struct iobuf *iobuf_async_read(struct async *as)
-{
-	struct iobuf *iobuf;
-	if(!(iobuf=iobuf_alloc()) || as->read(as, iobuf))
-	{
-		iobuf_free(iobuf);
-		return NULL;
-	}
-	return iobuf;
-}
-
 void iobuf_log_unexpected(struct iobuf *iobuf, const char *func)
 {
 	logp("unexpected command in %s(): %c:%s\n",

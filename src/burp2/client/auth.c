@@ -73,5 +73,6 @@ int authorise_client(struct asfd *asfd,
 
 	ret=0;
 end:
+	iobuf_free_content(rbuf);
 	return ret;
 }

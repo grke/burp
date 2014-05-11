@@ -472,9 +472,7 @@ static int do_restore_end(struct asfd *asfd, enum action act, struct conf *conf)
 	struct iobuf *rbuf=asfd->rbuf;
 
 	if(asfd->write_str(asfd, CMD_GEN, "restoreend"))
-		return -1;
-
-	if(!(rbuf=iobuf_alloc())) return -1;
+		goto end;
 
 	while(1)
 	{

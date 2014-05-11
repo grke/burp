@@ -377,8 +377,6 @@ static int do_backup_phase2_client(struct asfd *asfd,
 		if(cntr_recv(asfd, conf)) goto end;
 	}
 
-	if(!(rbuf=iobuf_alloc())) goto end;
-
 	while(1)
 	{
 		iobuf_free_content(rbuf);

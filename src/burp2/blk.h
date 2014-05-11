@@ -47,6 +47,23 @@ struct blk
 	struct blk *next;
 };
 
+/*
+FIX THIS: The above takes 136 bytes. The below takes 64.
+struct blk
+{
+        char *data;
+        uint8_t got;
+        uint8_t requested;
+        uint32_t length;
+        uint64_t fingerprint;
+        unsigned char md5sum[MD5_DIGEST_LENGTH];
+        unsigned char save_path[8]; // eg "0000/0000/0000/0000"
+        uint64_t index;
+        struct blk *next;
+};
+*/
+
+
 extern struct blk *blk_alloc(void);
 extern struct blk *blk_alloc_with_data(uint32_t max_data_length);
 extern void        blk_free(struct blk *blk);

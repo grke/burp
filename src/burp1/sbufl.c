@@ -65,11 +65,9 @@ static int read_fp(FILE *fp, gzFile zp, struct iobuf *rbuf)
 	return asr;
 }
 
-static int read_stat(struct asfd *asfd, FILE *fp,
+static int read_stat(struct asfd *asfd, struct iobuf *rbuf, FILE *fp,
 	gzFile zp, struct sbuf *sb, struct cntr *cntr)
 {
-	struct iobuf *rbuf=asfd->rbuf;
-
 	while(1)
 	{
 		iobuf_free_content(rbuf);
@@ -136,7 +134,7 @@ static int do_sbufl_fill_from_net(struct sbuf *sb, struct asfd *asfd,
 	static struct iobuf *rbuf=NULL;
 	rbuf=asfd->rbuf;
 	iobuf_free_content(rbuf);
-	if((ars=read_stat(asfd, NULL, NULL, sb, cntr))
+	if((ars=read_stat(asfd, rbuf, NULL, NULL, sb, cntr))
 	  || (ars=asfd->read(asfd))) return ars;
 	iobuf_copy(&sb->path, rbuf);
 	rbuf->buf=NULL;
@@ -160,7 +158,9 @@ static int do_sbufl_fill_from_file(struct sbuf *sb, FILE *fp, gzFile zp,
 	int ars;
 	struct iobuf rbuf;
 	//free_sbufl(sb);
-	if((ars=read_stat(NULL /* no async */, fp, zp, sb, cntr))) return ars;
+	iobuf_init(&rbuf);
+	if((ars=read_stat(NULL /* no async */,
+		&rbuf, fp, zp, sb, cntr))) return ars;
 	if((ars=read_fp(fp, zp, &rbuf))) return ars;
 	iobuf_copy(&sb->path, &rbuf);
 	if(sbuf_is_link(sb))

@@ -449,6 +449,80 @@ static int finish_delta(struct sdirs *sdirs, struct sbuf *rb)
 	return ret;
 }
 
+static int deal_with_receive_end_file(struct asfd *asfd, struct sdirs *sdirs,
+	struct sbuf *rb, FILE *p2fp, struct conf *cconf, char **last_requested)
+{
+	static char *cp=NULL;
+	static struct iobuf *rbuf;
+	rbuf=asfd->rbuf;
+	// Finished the file.
+	// Write it to the phase2 file, and free the buffers.
+
+	if(close_fp(&(rb->burp1->fp)))
+	{
+		logp("error closing delta for %s in receive\n", rb->path);
+		goto error;
+	}
+	if(gzclose_fp(&(rb->burp1->zp)))
+	{
+		logp("error gzclosing delta for %s in receive\n", rb->path);
+		goto error;
+	}
+	iobuf_copy(&rb->burp1->endfile, rbuf);
+	rbuf->buf=NULL;
+	if(rb->flags & SBUFL_RECV_DELTA && finish_delta(sdirs, rb))
+		goto error;
+
+	if(sbufl_to_manifest(rb, p2fp, NULL))
+		goto error;
+
+	if(rb->flags & SBUFL_RECV_DELTA)
+		cntr_add_changed(cconf->cntr, rb->path.cmd);
+	else
+		cntr_add(cconf->cntr, rb->path.cmd, 0);
+
+	if(*last_requested && !strcmp(rb->path.buf, *last_requested))
+	{
+		free(*last_requested);
+		*last_requested=NULL;
+	}
+
+	cp=strchr(rb->burp1->endfile.buf, ':');
+	if(rb->burp1->endfile.buf)
+		cntr_add_bytes(cconf->cntr,
+			strtoull(rb->burp1->endfile.buf, NULL, 10));
+	if(cp)
+	{
+		// checksum stuff goes here
+	}
+
+	sbuf_free_content(rb);
+	return 0;
+error:
+	sbuf_free_content(rb);
+	return -1;
+}
+
+static int deal_with_receive_append(struct asfd *asfd, struct sbuf *rb,
+	struct conf *cconf)
+{
+	int app=0;
+	static struct iobuf *rbuf;
+	rbuf=asfd->rbuf;
+	//logp("rbuf->len: %d\n", rbuf->len);
+
+	cntr_add_recvbytes(cconf->cntr, rbuf->len);
+	if(rb->burp1->zp)
+		app=gzwrite(rb->burp1->zp, rbuf->buf, rbuf->len);
+	else if(rb->burp1->fp)
+		app=fwrite(rbuf->buf, 1, rbuf->len, rb->burp1->fp);
+
+	if(app>0) return 0;
+	logp("error when appending: %d\n", app);
+	asfd->write_str(asfd, CMD_ERROR, "write failed");
+	return -1;
+}
+
 // returns 1 for finished ok.
 static int do_stuff_to_receive(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf *cconf,
@@ -464,147 +538,87 @@ static int do_stuff_to_receive(struct asfd *asfd,
 		return -1;
 	}
 
-	if(rbuf->buf)
+	if(!rbuf->buf) return 0;
+
+	if(rbuf->cmd==CMD_WARNING)
 	{
-		if(rbuf->cmd==CMD_WARNING)
+		logp("WARNING: %s\n", rbuf->buf);
+		cntr_add(cconf->cntr, rbuf->cmd, 0);
+	}
+	else if(rb->burp1->fp || rb->burp1->zp)
+	{
+		// Currently writing a file (or meta data)
+		if(rbuf->cmd==CMD_APPEND)
 		{
-			logp("WARNING: %s\n", rbuf->buf);
-			cntr_add(cconf->cntr, rbuf->cmd, 0);
-		}
-		else if(rb->burp1->fp || rb->burp1->zp)
-		{
-			// Currently writing a file (or meta data)
-			if(rbuf->cmd==CMD_APPEND)
-			{
-				int app;
-				//logp("rbuf->len: %d\n", rbuf->len);
-				cntr_add_recvbytes(cconf->cntr, rbuf->len);
-				if((rb->burp1->zp
-				  && (app=gzwrite(rb->burp1->zp,
-					rbuf->buf, rbuf->len))<=0)
-				|| (rb->burp1->fp
-				  && (app=fwrite(rbuf->buf, 1,
-					rbuf->len, rb->burp1->fp))<=0))
-				{
-					logp("error when appending: %d\n", app);
-					asfd->write_str(asfd,
-						CMD_ERROR, "write failed");
-					goto error;
-				}
-			}
-			else if(rbuf->cmd==CMD_END_FILE)
-			{
-				static char *cp=NULL;
-				// Finished the file.
-				// Write it to the phase2 file, and free the
-				// buffers.
-
-				if(close_fp(&(rb->burp1->fp)))
-				{
-					logp("error closing delta for %s in receive\n", rb->path);
-					goto error;
-				}
-				if(gzclose_fp(&(rb->burp1->zp)))
-				{
-					logp("error gzclosing delta for %s in receive\n", rb->path);
-					goto error;
-				}
-				iobuf_copy(&rb->burp1->endfile, rbuf);
-				rbuf->buf=NULL;
-				if(rb->flags & SBUFL_RECV_DELTA
-				  && finish_delta(sdirs, rb))
-					goto error;
-
-				if(sbufl_to_manifest(rb, p2fp, NULL))
-					goto error;
-
-				if(rb->flags & SBUFL_RECV_DELTA)
-					cntr_add_changed(
-						cconf->cntr, rb->path.cmd);
-				else
-					cntr_add(
-						cconf->cntr, rb->path.cmd, 0);
-				if(*last_requested
-				    && !strcmp(rb->path.buf, *last_requested))
-				{
-					free(*last_requested);
-					*last_requested=NULL;
-				}
-
-				cp=strchr(rb->burp1->endfile.buf, ':');
-				if(rb->burp1->endfile.buf)
-				 cntr_add_bytes(cconf->cntr,
-				  strtoull(rb->burp1->endfile.buf,
-				  NULL, 10));
-				if(cp)
-				{
-						// checksum stuff goes here
-				}
-
-				sbuf_free_content(rb);
-			}
-			else
-			{
-				iobuf_log_unexpected(rbuf, __func__);
+			if(deal_with_receive_append(asfd, rb, cconf))
 				goto error;
-			}
 		}
-		// Otherwise, expecting to be told of a file to save.
-		else if(rbuf->cmd==CMD_DATAPTH)
+		else if(rbuf->cmd==CMD_END_FILE)
 		{
-			iobuf_copy(&rb->burp1->datapth, rbuf);
-			rbuf->buf=NULL;
-		}
-		else if(rbuf->cmd==CMD_ATTRIBS)
-		{
-			iobuf_copy(&rb->attr, rbuf);
-			rbuf->buf=NULL;
-		}
-		else if(filedata(rbuf->cmd))
-		{
-			iobuf_copy(&rb->path, rbuf);
-			rbuf->buf=NULL;
-
-			if(rb->burp1->datapth.buf)
-			{
-				// Receiving a delta.
-				if(start_to_receive_delta(sdirs, cconf, rb))
-				{
-					logp("error in start_to_receive_delta\n");
-					goto error;
-				}
-			}
-			else
-			{
-				// Receiving a whole new file.
-				if(start_to_receive_new_file(asfd,
-					sdirs, cconf, rb, dpthl))
-				{
-					logp("error in start_to_receive_new_file\n");
-					goto error;
-				}
-			}
-		}
-		else if(rbuf->cmd==CMD_GEN
-		  && !strcmp(rbuf->buf, "okbackupphase2end"))
-			goto end_phase2;
-		else if(rbuf->cmd==CMD_INTERRUPT)
-		{
-			// Interrupt - forget about the last requested file
-			// if it matches. Otherwise, we can get stuck on the
-			// select in the async stuff, waiting for something
-			// that will never arrive.
-			if(*last_requested && !strcmp(rbuf->buf, *last_requested))
-			{
-				free(*last_requested);
-				*last_requested=NULL;
-			}
+			if(deal_with_receive_end_file(asfd, sdirs, rb, p2fp,
+				cconf, last_requested)) goto error;
 		}
 		else
 		{
 			iobuf_log_unexpected(rbuf, __func__);
 			goto error;
 		}
+	}
+	// Otherwise, expecting to be told of a file to save.
+	else if(rbuf->cmd==CMD_DATAPTH)
+	{
+		iobuf_copy(&rb->burp1->datapth, rbuf);
+		rbuf->buf=NULL;
+	}
+	else if(rbuf->cmd==CMD_ATTRIBS)
+	{
+		iobuf_copy(&rb->attr, rbuf);
+		rbuf->buf=NULL;
+	}
+	else if(filedata(rbuf->cmd))
+	{
+		iobuf_copy(&rb->path, rbuf);
+		rbuf->buf=NULL;
+
+		if(rb->burp1->datapth.buf)
+		{
+			// Receiving a delta.
+			if(start_to_receive_delta(sdirs, cconf, rb))
+			{
+				logp("error in start_to_receive_delta\n");
+				goto error;
+			}
+		}
+		else
+		{
+			// Receiving a whole new file.
+			if(start_to_receive_new_file(asfd,
+				sdirs, cconf, rb, dpthl))
+			{
+				logp("error in start_to_receive_new_file\n");
+				goto error;
+			}
+		}
+	}
+	else if(rbuf->cmd==CMD_GEN
+	  && !strcmp(rbuf->buf, "okbackupphase2end"))
+		goto end_phase2;
+	else if(rbuf->cmd==CMD_INTERRUPT)
+	{
+		// Interrupt - forget about the last requested file
+		// if it matches. Otherwise, we can get stuck on the
+		// select in the async stuff, waiting for something
+		// that will never arrive.
+		if(*last_requested && !strcmp(rbuf->buf, *last_requested))
+		{
+			free(*last_requested);
+			*last_requested=NULL;
+		}
+	}
+	else
+	{
+		iobuf_log_unexpected(rbuf, __func__);
+		goto error;
 	}
 
 	return 0;

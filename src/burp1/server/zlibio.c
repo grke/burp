@@ -1,67 +1,49 @@
-#include <assert.h>
-#include <zlib.h>
-
 #include "include.h"
 
-/*
-   This function is taken from the zlib example code,
-   zpipe.c: example of proper use of zlib's inflate() and deflate()
-   Not copyrighted -- provided to the public domain
-   Version 1.4  11 December 2005  Mark Adler */
-
-int zlib_inflate(FILE *source, FILE *dest)
+int zlib_inflate(struct asfd *asfd, const char *source,
+	const char *dest, struct conf *conf)
 {
-    int ret;
-    unsigned have;
-    z_stream strm;
-    unsigned char in[ZCHUNK];
-    unsigned char out[ZCHUNK];
+	int ret=-1;
+	size_t b=0;
+	FILE *fp=NULL;
+	gzFile zp=NULL;
+	unsigned char in[ZCHUNK];
 
-    /* allocate inflate state */
-    strm.zalloc = Z_NULL;
-    strm.zfree = Z_NULL;
-    strm.opaque = Z_NULL;
-    strm.avail_in = 0;
-    strm.next_in = Z_NULL;
-    ret = inflateInit2(&strm, (15+16));
-    if (ret != Z_OK)
-        return ret;
-
-    /* decompress until deflate stream ends or end of file */
-    do {
-        strm.avail_in = fread(in, 1, ZCHUNK, source);
-        if (ferror(source)) {
-            (void)inflateEnd(&strm);
-            return Z_ERRNO;
-        }
-        if (strm.avail_in == 0)
-            break;
-        strm.next_in = in;
-
-        /* run inflate() on input until output buffer not full */
-        do {
-            strm.avail_out = ZCHUNK;
-            strm.next_out = out;
-            ret = inflate(&strm, Z_NO_FLUSH);
-            assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
-            switch (ret) {
-            case Z_NEED_DICT:
-                ret = Z_DATA_ERROR;     /* and fall through */
-            case Z_DATA_ERROR:
-            case Z_MEM_ERROR:
-                (void)inflateEnd(&strm);
-                return ret;
-            }
-            have = ZCHUNK - strm.avail_out;
-            if (fwrite(out, 1, have, dest) != have || ferror(dest)) {
-                (void)inflateEnd(&strm);
-                return Z_ERRNO;
-            }
-        } while (strm.avail_out == 0);
-
-        /* done when inflate() says it's done */
-    } while (ret != Z_STREAM_END);
-    /* clean up and return */
-    (void)inflateEnd(&strm);
-    return ret == Z_STREAM_END ? Z_OK : Z_DATA_ERROR;
+	if(!(zp=gzopen_file(source, "rb")))
+	{
+		logw(asfd, conf, "could not open %s in %s\n", source, __func__);
+		goto end;
+	}
+	if(!(fp=open_file(dest, "wb")))
+	{
+		logw(asfd, conf, "could not open %s in %s: %s\n",
+			dest, __func__, strerror(errno));
+		goto end;
+	}
+	while((b=gzread(zp, in, ZCHUNK))>0)
+	{
+		if(fwrite(in, 1, b, fp)!=b)
+		{
+			logw(asfd, conf, "error when writing to %s\n", dest);
+			goto end;
+		}
+	}
+	if(!gzeof(zp))
+	{
+		logw(asfd, conf,
+			"error while gzreading %s in %s\n", source, __func__);
+		goto end;
+	}
+	if(close_fp(&fp))
+	{
+		logw(asfd, conf,
+			"error when closing %s in %s: %s\n",
+				dest, __func__, strerror(errno));
+		goto end;
+	}
+	ret=0;
+end:
+	gzclose_fp(&zp);
+	close_fp(&fp);
+	return ret;
 }

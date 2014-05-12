@@ -135,30 +135,28 @@ static int forget_file(struct asfd *asfd, struct sbuf *sb, struct conf *conf)
 	return 0;
 }
 
-static int size_checks(struct asfd *asfd,
-	struct iobuf *rbuf, struct sbuf *sb, struct conf *conf)
+static int size_checks(struct asfd *asfd, struct sbuf *sb, struct conf *conf)
 {
-	if(rbuf->cmd!=CMD_FILE
-	  && rbuf->cmd!=CMD_ENC_FILE
-	  && rbuf->cmd!=CMD_EFS_FILE)
+	if(sb->path.cmd!=CMD_FILE
+	  && sb->path.cmd!=CMD_ENC_FILE
+	  && sb->path.cmd!=CMD_EFS_FILE)
 		return 0;
 	if(conf->min_file_size
 	  && sb->statp.st_size<(boffset_t)conf->min_file_size)
 	{
-		logw(asfd, conf, "File size decreased below min_file_size after initial scan: %c:%s", rbuf->cmd, sb->path.buf);
+		logw(asfd, conf, "File size decreased below min_file_size after initial scan: %c:%s", sb->path.cmd, sb->path.buf);
 		return -1;
 	}
 	if(conf->max_file_size
 	  && sb->statp.st_size>(boffset_t)conf->max_file_size)
 	{
-		logw(asfd, conf, "File size increased above max_file_size after initial scan: %c:%s", rbuf->cmd, sb->path.buf);
+		logw(asfd, conf, "File size increased above max_file_size after initial scan: %c:%s", sb->path.cmd, sb->path.buf);
 		return -1;
 	}
 	return 0;
 }
 
-static int deal_with_data(struct asfd *asfd,
-	struct iobuf *rbuf, struct sbuf *sb,
+static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 	BFILE *bfd, size_t *datalen, struct conf *conf)
 {
 	int ret=-1;
@@ -170,8 +168,8 @@ static int deal_with_data(struct asfd *asfd,
 
 	sb->compression=conf->compression;
 
-	iobuf_copy(&sb->path, rbuf);
-	rbuf->buf=NULL;
+	iobuf_copy(&sb->path, asfd->rbuf);
+	iobuf_init(asfd->rbuf);
 
 #ifdef HAVE_WIN32
 	if(win32_lstat(sb->path.buf, &sb->statp, &sb->winattr))
@@ -184,7 +182,7 @@ static int deal_with_data(struct asfd *asfd,
 		goto end;
 	}
 
-	if(size_checks(asfd, rbuf, sb, conf)) forget++;
+	if(size_checks(asfd, sb, conf)) forget++;
 
 	if(!forget)
 	{
@@ -207,10 +205,10 @@ static int deal_with_data(struct asfd *asfd,
 		goto end;
 	}
 
-	if(rbuf->cmd==CMD_METADATA
-	  || rbuf->cmd==CMD_ENC_METADATA
-	  || rbuf->cmd==CMD_VSS
-	  || rbuf->cmd==CMD_ENC_VSS
+	if(sb->path.cmd==CMD_METADATA
+	  || sb->path.cmd==CMD_ENC_METADATA
+	  || sb->path.cmd==CMD_VSS
+	  || sb->path.cmd==CMD_ENC_VSS
 #ifdef HAVE_WIN32
 	  || conf->strip_vss
 #endif
@@ -245,7 +243,7 @@ static int deal_with_data(struct asfd *asfd,
 		}
 	}
 
-	if(rbuf->cmd==CMD_FILE
+	if(sb->path.cmd==CMD_FILE
 	  && sb->burp1->datapth.buf)
 	{
 		unsigned long long sentbytes=0;
@@ -280,7 +278,7 @@ static int deal_with_data(struct asfd *asfd,
 				goto end;
 		else
 		{
-			cntr_add(conf->cntr, rbuf->cmd, 1);
+			cntr_add(conf->cntr, sb->path.cmd, 1);
 			cntr_add_bytes(conf->cntr, bytes);
 			cntr_add_sentbytes(conf->cntr, bytes);
 		}
@@ -303,9 +301,11 @@ error:
 	return ret;
 }
 
-static int parse_rbuf(struct asfd *asfd, struct iobuf *rbuf, struct sbuf *sb,
+static int parse_rbuf(struct asfd *asfd, struct sbuf *sb,
 	BFILE *bfd, size_t *datalen, struct conf *conf)
 {
+	static struct iobuf *rbuf;
+	rbuf=asfd->rbuf;
 	//logp("now: %c:%s\n", rbuf->cmd, rbuf->buf);
 	if(rbuf->cmd==CMD_DATAPTH)
 	{
@@ -329,7 +329,7 @@ static int parse_rbuf(struct asfd *asfd, struct iobuf *rbuf, struct sbuf *sb,
 	  || rbuf->cmd==CMD_ENC_VSS_T
 	  || rbuf->cmd==CMD_EFS_FILE)
 	{
-		if(deal_with_data(asfd, rbuf, sb, bfd, datalen, conf))
+		if(deal_with_data(asfd, sb, bfd, datalen, conf))
 			return -1;
 	}
 	else if(rbuf->cmd==CMD_WARNING)
@@ -391,7 +391,7 @@ static int do_backup_phase2_client(struct asfd *asfd,
 			break;
 		}
 
-		if(parse_rbuf(asfd, rbuf, sb, &bfd, &datalen, conf))
+		if(parse_rbuf(asfd, sb, &bfd, &datalen, conf))
 			goto end;
 	}
 

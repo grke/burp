@@ -133,34 +133,27 @@ end:
 }
 
 static int inflate_oldfile(const char *opath, const char *infpath,
-	struct stat *statp)
+	struct stat *statp, struct conf *conf)
 {
-	int zret;
-	int ret=-1;
-	FILE *dest=NULL;
-	FILE *source=NULL;
-
-	if(!(dest=open_file(infpath, "wb"))) goto end;
+	int ret=0;
 
 	if(!statp->st_size)
 	{
+		FILE *dest;
 		// Empty file - cannot inflate.
 		// just close the destination and we have duplicated a
 		// zero length file.
+		if(!(dest=open_file(infpath, "wb"))) goto end;
 		logp("asked to inflate zero length file: %s\n", opath);
-		return 0;
+		if(close_fp(&dest))
+			logp("error closing %s in %s\n", infpath, __func__);
 	}
-	if(!(source=open_file(opath, "rb"))) goto end;
-	if((zret=zlib_inflate(source, dest))!=Z_OK)
+	else if(zlib_inflate(NULL, opath, infpath, conf))
 	{
-		logp("zlib_inflate returned: %d\n", zret);
-		goto end;
+		logp("zlib_inflate returned error\n");
+		ret=-1;
 	}
-	ret=0;
 end:
-	close_fp(&source);
-	if(close_fp(&dest))
-		logp("error closing %s in %s\n", infpath, __func__);
 	return ret;
 }
 
@@ -177,7 +170,7 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath,
 	}
 
 	if(dpthl_is_compressed(compression, opath))
-		return inflate_oldfile(opath, infpath, &statp);
+		return inflate_oldfile(opath, infpath, &statp, cconf);
 
 	// If it was not a compressed file, just hard link it.
 	// It is possible that infpath already exists, if the server

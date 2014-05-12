@@ -68,7 +68,8 @@ int do_patch(struct asfd *asfd, const char *dst, const char *del,
 	return result;
 }
 
-static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, struct conf *cconf, int compression)
+static int inflate_or_link_oldfile(struct asfd *asfd, const char *oldpath,
+	const char *infpath, struct conf *cconf, int compression)
 {
 	int ret=0;
 	struct stat statp;
@@ -81,43 +82,26 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath, str
 
 	if(dpthl_is_compressed(compression, oldpath))
 	{
-		FILE *source=NULL;
-		FILE *dest=NULL;
-
 		//logp("inflating...\n");
-
-		if(!(dest=open_file(infpath, "wb")))
-		{
-			close_fp(&dest);
-			return -1;
-		}
 
 		if(!statp.st_size)
 		{
+			FILE *dest;
 			// Empty file - cannot inflate.
-			// just close the destination and we have duplicated a
-			// zero length file.
+			// Just open and close the destination and we have
+			// duplicated a zero length file.
 			logp("asked to inflate zero length file: %s\n", oldpath);
+			if(!(dest=open_file(infpath, "wb")))
+			{
+				close_fp(&dest);
+				return -1;
+			}
 			close_fp(&dest);
 			return 0;
 		}
 
-		if(!(source=open_file(oldpath, "rb")))
-		{
-			close_fp(&dest);
-			return -1;
-		}
-
-		if((ret=zlib_inflate(source, dest))!=Z_OK)
+		if((ret=zlib_inflate(asfd, oldpath, infpath, cconf)))
 			logp("zlib_inflate returned: %d\n", ret);
-
-		close_fp(&source);
-		if(close_fp(&dest))
-		{
-			logp("error closing %s in inflate_or_link_oldfile\n",
-				dest);
-			return -1;
-		}
 	}
 	else
 	{
@@ -349,7 +333,8 @@ static int restore_file(struct asfd *asfd, struct bu *arr, int a, int i,
 				if(!patches)
 				{
 					// Need to gunzip the first one.
-					if(inflate_or_link_oldfile(best, tmp,
+					if(inflate_or_link_oldfile(asfd,
+						best, tmp,
 						cconf, sb->compression))
 					{
 						logp("error when inflating %s\n", best);

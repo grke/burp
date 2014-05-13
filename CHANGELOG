@@ -1,4 +1,5 @@
   * Bug fix for restoring permissions on empty directories.
+  * Compile for systems that have no O_NOATIME and fdopendir() - ie, Mac OS X.
 
 2014-04-29 Changes in burp-1.4.14:
   * Add an 'atime' option, which allows the user to choose whether to use

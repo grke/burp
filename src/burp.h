@@ -49,11 +49,6 @@
 #include <errno.h>
 #include <fcntl.h>
 
-/* O_NOATIME is defined at fcntl.h when supported */
-#ifndef O_NOATIME
-#define O_NOATIME 0
-#endif
-
 #if defined(_MSC_VER)
 extern "C" {
 #include "getopt.h"

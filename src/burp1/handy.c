@@ -73,8 +73,12 @@ int open_file_for_sendl(struct asfd *asfd,
 	if(fp)
 	{
 		static int fd;
+#ifdef O_NOATIME
 		if((fd=open(fname, O_RDONLY|atime?0:O_NOATIME))<0
 		  || !(*fp=fdopen(fd, "rb")))
+#else
+		if(!(*fp=fopen(fname, "rb")))
+#endif
 		{
 			logw(asfd, conf, "Could not open %s: %s\n",
 				fname, strerror(errno));
@@ -101,8 +105,8 @@ int open_file_for_sendl(struct asfd *asfd,
 		}
 		binit(bfd, winattr, conf);
 		*datalen=0;
-		if(bopen(bfd, asfd,
-			fname, O_RDONLY|O_BINARY|atime?0:O_NOATIME, 0)<=0)
+		// Windows has no O_NOATIME.
+		if(bopen(bfd, asfd, fname, O_RDONLY|O_BINARY, 0)<=0)
 		{
 			berrno be;
 			logw(asfd, conf, "Could not open %s: %s\n",

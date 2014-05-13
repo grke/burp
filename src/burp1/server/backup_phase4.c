@@ -621,7 +621,7 @@ int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf)
 	char *fullrealcurrent=NULL;
 	char *logpath=NULL;
 	char *hlinkedpath=NULL;
-	int len=0;
+	ssize_t len=0;
 	char realcurrent[256]="";
 
 	unsigned long bno=0;

@@ -135,7 +135,7 @@ int do_backup_server_burp1(struct async *as,
 
 	if(resume)
 	{
-		size_t len=0;
+		ssize_t len=0;
 		char real[256]="";
 		if((len=readlink(sdirs->working, real, sizeof(real)-1))<0)
 			len=0;
@@ -304,7 +304,7 @@ int check_for_rubble_burp1(struct asfd *asfd,
 	const char *incexc, int *resume)
 {
 	int ret=0;
-	size_t len=0;
+	ssize_t len=0;
 	char msg[256]="";
 	char realwork[256]="";
 	struct stat statp;

@@ -318,7 +318,7 @@ static int found_regular_file(struct asfd *asfd,
 static int found_soft_link(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
 	char *fname, bool top_level)
 {
-	int size;
+	ssize_t size;
 	char *buffer=(char *)alloca(path_max+name_max+102);
 
 	if((size=readlink(fname, buffer, path_max+name_max+101))<0)

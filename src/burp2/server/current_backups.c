@@ -136,7 +136,7 @@ void free_current_backups(struct bu **arr, int a)
 
 static int get_link(const char *dir, const char *lnk, char real[], size_t r)
 {
-	int len=0;
+	ssize_t len=0;
 	char *tmp=NULL;
 	if(!(tmp=prepend_s(dir, lnk)))
 	{

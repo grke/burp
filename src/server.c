@@ -396,7 +396,7 @@ static int do_backup_server(const char *basedir, const char *current, const char
 
 	if(resume)
 	{
-		size_t len=0;
+		int len=0;
 		char real[256]="";
 		if((len=readlink(working, real, sizeof(real)-1))<0)
 			len=0;
@@ -609,7 +609,7 @@ end:
 static int check_for_rubble(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *manifest, const char *client, struct cntr *p1cntr, struct cntr *cntr, int *resume, const char *incexc)
 {
 	int ret=0;
-	size_t len=0;
+	int len=0;
 	char msg[256]="";
 	char realwork[256]="";
 	struct stat statp;

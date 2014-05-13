@@ -46,34 +46,9 @@
 #define fseek fseeko
 #endif
 
-/*
- * Allocate and zero-fill an instance of TYPE.
- */
-#define rs_alloc_struct(type)                           \
-        ((type *) rs_alloc_struct0(sizeof(type), #type))
-
-void *
-rs_alloc_struct0(size_t size, char const *name)
+void *rs_alloc(size_t size)
 {
-    void           *p;
-
-    if (!(p = malloc(size))) {
-        logp("couldn't allocate instance of %s", name);
-    }
-    else memset(p, 0, size);
-    return p;
-}
-
-void *
-rs_alloc(size_t size, char const *name)
-{
-    void           *p;
-
-    if (!(p = malloc(size))) {
-        logp("couldn't allocate instance of %s", name);
-    }
-
-    return p;
+	return calloc_w(1, size, __func__);
 }
 
 rs_filebuf_t *rs_filebuf_new(struct asfd *asfd,
@@ -81,9 +56,10 @@ rs_filebuf_t *rs_filebuf_new(struct asfd *asfd,
 	size_t buf_len, size_t data_len, struct cntr *cntr)
 {
 	rs_filebuf_t *pf=NULL;
-	if(!(pf=rs_alloc_struct(rs_filebuf_t))) return NULL;
+	if(!(pf=(struct rs_filebuf *)calloc_w(1,
+		sizeof(struct rs_filebuf), __func__))) return NULL;
 
-	if(!(pf->buf=(char *)rs_alloc(buf_len, "file buffer")))
+	if(!(pf->buf=(char *)calloc_w(1, buf_len, __func__)))
 	{
 		free(pf);
 		return NULL;

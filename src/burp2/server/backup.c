@@ -57,7 +57,7 @@ int open_log(struct asfd *asfd, const char *realworking, struct conf *cconf)
 // Clean mess left over from a previously interrupted backup.
 static int clean_rubble(struct asfd *asfd, struct sdirs *sdirs)
 {
-	int len=0;
+	ssize_t len=0;
 	char *real=NULL;
 	char lnk[32]="";
 	if((len=readlink(sdirs->working, lnk, sizeof(lnk)-1))<0)

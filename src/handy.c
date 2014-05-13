@@ -318,8 +318,12 @@ int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, struct stat *st
 	if(fp)
 	{
 		static int fd;
+#ifdef O_NOATIME
 		if((fd=open(fname, O_RDONLY|(atime?0:O_NOATIME)))<0
 		  || !(*fp=fdopen(fd, "rb")))
+#else
+		if(!(*fp=fopen(fname, "rb")))
+#endif
 		{
 			logw(cntr,
 				"Could not open %s: %s\n", fname, strerror(errno));
@@ -346,7 +350,8 @@ int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, struct stat *st
 		}
 		binit(bfd, statp, winattr);
 		*datalen=0;
-		if(bopen(bfd, fname, O_RDONLY|O_BINARY|(atime?0:O_NOATIME), 0,
+// Windows/mingw has no O_NOATIME.
+		if(bopen(bfd, fname, O_RDONLY|O_BINARY, 0,
 			(winattr & FILE_ATTRIBUTE_DIRECTORY))<=0)
 		{
 			berrno be;

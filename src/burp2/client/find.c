@@ -616,15 +616,17 @@ static int found_directory(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
 	*   all the files in it.
 	*/
 	errno = 0;
-#ifdef O_DIRECTORY
+#if defined(O_DIRECTORY) && defined(O_NOATIME)
 	int dfd=-1;
 	if((dfd=open(fname, O_RDONLY|O_DIRECTORY|conf->atime?0:O_NOATIME))<0
 	  || !(directory=fdopendir(dfd)))
 #else
+// Mac OS X appears to have no O_NOATIME and no fdopendir(), so it should
+// end up using opendir() here.
 	if(!(directory=opendir(fname)))
 #endif
 	{
-#ifdef O_DIRECTORY
+#if defined(O_DIRECTORY) && defined(O_NOATIME)
 		if(dfd>=0) close(dfd);
 #endif
 		ff_pkt->type=FT_NOOPEN;

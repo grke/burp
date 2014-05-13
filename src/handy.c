@@ -81,7 +81,11 @@ int open_file_for_send(BFILE *bfd, struct asfd *asfd, const char *fname,
 	int64_t winattr, int atime, struct conf *conf)
 {
 	binit(bfd, winattr, conf);
-	if(bopen(bfd, asfd, fname, O_RDONLY|O_BINARY|atime?0:O_NOATIME, 0))
+	if(bopen(bfd, asfd, fname, O_RDONLY|O_BINARY
+#ifdef O_NOATIME
+		|atime?0:O_NOATIME
+#endif
+		, 0))
 	{
 		berrno be;
 		logw(asfd, conf, "Could not open %s: %s\n",

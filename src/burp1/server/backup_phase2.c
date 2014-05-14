@@ -359,7 +359,6 @@ static int do_stuff_to_send(struct asfd *asfd,
 	static struct iobuf wbuf;
 	if(p1b->flags & SBUFL_SEND_DATAPTH)
 	{
-printf("do datapth\n");
 		iobuf_copy(&wbuf, &p1b->burp1->datapth);
 		if(asfd->append_all_to_write_buffer(asfd, &wbuf))
 			return 1;
@@ -367,7 +366,6 @@ printf("do datapth\n");
 	}
 	if(p1b->flags & SBUFL_SEND_STAT)
 	{
-printf("do stat\n");
 		iobuf_copy(&wbuf, &p1b->attr);
 		if(asfd->append_all_to_write_buffer(asfd, &wbuf))
 			return 1;
@@ -375,7 +373,6 @@ printf("do stat\n");
 	}
 	if(p1b->flags & SBUFL_SEND_PATH)
 	{
-printf("do path\n");
 		iobuf_copy(&wbuf, &p1b->path);
 		if(asfd->append_all_to_write_buffer(asfd, &wbuf))
 			return 1;

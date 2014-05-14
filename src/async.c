@@ -42,7 +42,7 @@ static int async_rw(struct async *as, struct iobuf *wbuf)
 	if(doread)
 	{
 		if(as->asfd->parse_readbuf(as->asfd)) return -1;
-		if(as->asfd->rbuf->buf) return 0;
+		if(as->asfd->rbuf->buf && !as->asfd->writebuflen) return 0;
 
 		if(as->asfd->read_blocked_on_write) doread=0;
 	}

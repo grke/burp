@@ -70,7 +70,7 @@ static int asfd_parse_readbuf(struct asfd *asfd)
 		}
 		asfd->readbuflen-=s+5;
 		asfd->rbuf->len=s;
-printf("got: %c:%s\n", asfd->rbuf->cmd, asfd->rbuf->buf);
+//printf("got: %c:%s\n", asfd->rbuf->cmd, asfd->rbuf->buf);
 	}
 	return 0;
 }
@@ -258,7 +258,7 @@ static int asfd_append_all_to_write_buffer(struct asfd *asfd,
 	sblen=strlen(sbuf);
 	append_to_write_buffer(asfd, sbuf, sblen);
 	append_to_write_buffer(asfd, wbuf->buf, wbuf->len);
-printf("append: %c:%s\n", wbuf->cmd, wbuf->buf);
+//printf("append: %c:%s\n", wbuf->cmd, wbuf->buf);
 	wbuf->len=0;
 	return 0;
 }

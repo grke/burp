@@ -3,6 +3,7 @@
   * Bug fix - some readlink() returns were getting assigned to an unsigned
     variable, not a signed variable.
   * Removed references to old '-l' logfile option.
+  * Added Jarkko Kniivilä's FreeBSD init script.
 
 2014-04-29 Changes in burp-1.4.14:
   * Add an 'atime' option, which allows the user to choose whether to use

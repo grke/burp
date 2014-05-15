@@ -353,7 +353,9 @@ int backup_phase2_client(struct asfd *asfd, struct conf *conf, int resume)
 			}
 		}
 
-		if(asfd->as->rw(asfd->as, wbuf))
+		if(wbuf->len)
+			asfd->append_all_to_write_buffer(asfd, wbuf);
+		if(asfd->as->rw(asfd->as))
 		{
 			logp("error in async_rw\n");
 			goto end;

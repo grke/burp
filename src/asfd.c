@@ -282,7 +282,7 @@ static int asfd_read(struct asfd *asfd)
 {
 	if(asfd->as->doing_estimate) return 0;
 	while(!asfd->rbuf->buf)
-		if(asfd->as->rw(asfd->as, NULL)) return -1;
+		if(asfd->as->rw(asfd->as)) return -1;
 	return 0;
 }
 
@@ -303,7 +303,11 @@ static int asfd_read_expect(struct asfd *asfd, char cmd, const char *expect)
 static int asfd_write(struct asfd *asfd, struct iobuf *wbuf)
 {
 	if(asfd->as->doing_estimate) return 0;
-	while(wbuf->len) if(asfd->as->rw(asfd->as, wbuf)) return -1;
+	while(wbuf->len)
+	{
+		asfd->append_all_to_write_buffer(asfd, wbuf);
+		if(asfd->as->rw(asfd->as)) return -1;
+	}
 	return 0;
 }
 

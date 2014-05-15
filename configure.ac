@@ -1510,7 +1510,7 @@ CFLAGS=${CFLAGS--O}
 
 if test x$have_gcc = xyes ; then
    CPPFLAGS="$CPPFLAGS -fno-strict-aliasing -fno-exceptions -fno-rtti -Wall"
-   CFLAGS="$CFLAGS -fno-strict-aliasing -fno-exceptions -fno-rtti -Wall"
+   #CFLAGS="$CFLAGS -fno-strict-aliasing -fno-exceptions -fno-rtti -Wall"
 fi
 LDFLAGS=${LDFLAGS--O}
 DB_LIBS="${SQL_LFLAGS}"

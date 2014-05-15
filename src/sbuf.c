@@ -6,29 +6,20 @@ static int free_count=0;
 struct sbuf *sbuf_alloc(struct conf *conf)
 {
 	struct sbuf *sb;
-	if(!(sb=(struct sbuf *)calloc(1, sizeof(struct sbuf))))
-	{
-		log_out_of_memory(__func__);
+	if(!(sb=(struct sbuf *)calloc_w(1, sizeof(struct sbuf), __func__)))
 		return NULL;
-	}
 	sb->path.cmd=CMD_ERROR;
 	sb->attr.cmd=CMD_ATTRIBS;
 	sb->compression=-1;
 	if(conf->protocol==PROTO_BURP1)
 	{
-		if(!(sb->burp1=(struct burp1 *)calloc(1, sizeof(struct burp1))))
-		{
-			log_out_of_memory(__func__);
-			return NULL;
-		}
+		if(!(sb->burp1=(struct burp1 *)calloc_w(1,
+			sizeof(struct burp1), __func__))) return NULL;
 	}
 	else
 	{
-		if(!(sb->burp2=(struct burp2 *)calloc(1, sizeof(struct burp2))))
-		{
-			log_out_of_memory(__func__);
-			return NULL;
-		}
+		if(!(sb->burp2=(struct burp2 *)calloc_w(1,
+			sizeof(struct burp2), __func__))) return NULL;
 	}
 alloc_count++;
 	return sb;
@@ -80,10 +71,7 @@ free_count++;
 
 struct slist *slist_alloc(void)
 {
-	struct slist *slist;
-	if(!(slist=(struct slist *)calloc(1, sizeof(struct slist))))
-		log_out_of_memory(__func__);
-	return slist;
+	return (struct slist *)calloc_w(1, sizeof(struct slist), __func__);
 }
 
 void slist_free(struct slist *slist)
@@ -245,11 +233,8 @@ static int read_next_data(FILE *fp, struct rblk *rblk, int ind, int r)
 		return -1;
 	}
 	if(!(rblk[ind].readbuf[r].buf=
-		(char *)realloc(rblk[ind].readbuf[r].buf, len)))
-	{
-		logp("Out of memory in %s\n", __func__);
+		(char *)realloc_w(rblk[ind].readbuf[r].buf, len, __func__)))
 		return -1;
-	}
 	if((bytes=fread(rblk[ind].readbuf[r].buf, 1, len, fp))!=len)
 	{
 		logp("Short read: %d wanted: %d\n", (int)bytes, (int)len);
@@ -349,11 +334,9 @@ static int retrieve_blk_data(char *datpath, struct blk *blk)
 //printf("y: %s\n", fulldatpath);
 
 	if(!rblks
-	  && !(rblks=(struct rblk *)calloc(RBLK_MAX, sizeof(struct rblk))))
-	{
-		logp("Out of memory in %s\n", __func__);
-		return -1;
-	}
+	  && !(rblks=(struct rblk *)
+		calloc_w(RBLK_MAX, sizeof(struct rblk), __func__)))
+			return -1;
 
 	if(!(rblk=get_rblk(rblks, fulldatpath)))
 	{

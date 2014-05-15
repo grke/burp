@@ -13,30 +13,26 @@ static void cntr_ent_free(struct cntr_ent *cntr_ent)
 
 struct cntr *cntr_alloc(void)
 {
-	struct cntr *cntr=NULL;
-	if(!(cntr=(struct cntr *)calloc(1, sizeof(struct cntr))))
-		log_out_of_memory(__func__);
-	return cntr;
+	return (struct cntr *)calloc_w(1, sizeof(struct cntr), __func__);
 }
 
 int add_cntr_ent(struct cntr *cntr, int versions,
 	char cmd, const char *field, const char *label)
 {
 	struct cntr_ent *cenew=NULL;
-	if(!cntr->ent
+	if((!cntr->ent
 	  && !(cntr->ent=(struct cntr_ent **)
-		calloc(1, CNTR_ENT_SIZE*sizeof(struct cntr_ent **))))
-			goto error;
-	if(!(cenew=(struct cntr_ent *)calloc(1, sizeof(struct cntr_ent)))
-	  || !(cenew->field=strdup(field))
-	  || !(cenew->label=strdup(label)))
+	    calloc_w(1, CNTR_ENT_SIZE*sizeof(struct cntr_ent **), __func__)))
+	  || !(cenew=(struct cntr_ent *)
+	    calloc_w(1, sizeof(struct cntr_ent), __func__))
+	  || !(cenew->field=strdup_w(field, __func__))
+	  || !(cenew->label=strdup_w(label, __func__)))
 		goto error;
 	cenew->versions=versions;
 	cntr->ent[(uint8_t)cmd]=cenew;
 	cntr->cmd_order[cntr->colen++]=cmd;
 	return 0;
 error:
-	log_out_of_memory(__func__);
 	cntr_ent_free(cenew);
 	return -1;
 }
@@ -142,12 +138,9 @@ int cntr_init(struct cntr *cntr, const char *cname)
 		return -1;
 
 	cntr->status_max_len=calc_max_status_len(cntr, cname);
-	if(!(cntr->status=(char *)calloc(1, cntr->status_max_len))
-	  || !(cntr->cname=strdup(cname)))
-	{
-		log_out_of_memory(__func__);
+	if(!(cntr->status=(char *)calloc_w(1, cntr->status_max_len, __func__))
+	  || !(cntr->cname=strdup_w(cname, __func__)))
 		return -1;
-	}
 
 	return 0;
 }

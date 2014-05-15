@@ -215,7 +215,8 @@ int get_current_backups_str(struct asfd *asfd,
 
 		if(!lstat(hlinkedpath, &statp)) hardlinked++;
 
-		if(!(*arr=(struct bu *)realloc(*arr,(i+1)*sizeof(struct bu)))
+		if(!(*arr=(struct bu *)
+			realloc_w(*arr,(i+1)*sizeof(struct bu), __func__))
 		  || !((*arr)[i].data=prepend_s(fullpath, "data"))
 		  || !((*arr)[i].delta=prepend_s(fullpath, "deltas.reverse")))
 		{

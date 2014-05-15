@@ -84,15 +84,11 @@ static int champ_chooser_incoming_client(int s, struct clifd **clifds)
 	struct sockaddr_un remote;
 
 // FIX THIS: Put this alloc/init stuff in clifd.c.
-	if(!(newfd=(struct clifd *)calloc(1, sizeof(struct clifd)))
-	  || !(newfd->cname=strdup("(unknown)"))
+	if(!(newfd=(struct clifd *)calloc_w(1, sizeof(struct clifd), __func__))
+	  || !(newfd->cname=strdup_w("(unknown)", __func__))
 	  || !(newfd->blist=blist_alloc())
-	  || !(newfd->in=incoming_alloc()))
-	{
-		log_out_of_memory(__func__);
-		goto error;
-	}
-	if(clifd_alloc_buf(&newfd->readbuf, &newfd->readbuflen, bufmaxsize)
+	  || !(newfd->in=incoming_alloc())
+	  || clifd_alloc_buf(&newfd->readbuf, &newfd->readbuflen, bufmaxsize)
 	  || clifd_alloc_buf(&newfd->writebuf, &newfd->writebuflen, bufmaxsize)
 	  || !(newfd->rbuf=iobuf_alloc())
 	  || !(newfd->wbuf=iobuf_alloc()))

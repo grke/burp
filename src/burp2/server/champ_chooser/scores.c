@@ -6,11 +6,7 @@ struct scores *scores=NULL;
 
 struct scores *scores_alloc(void)
 {
-	struct scores *scores;
-	if((scores=(struct scores *)calloc(1, sizeof(struct scores))))
-		return scores;
-	log_out_of_memory(__func__);
-	return NULL;
+	return (struct scores *)calloc_w(1, sizeof(struct scores), __func__);
 }
 
 /*
@@ -33,22 +29,17 @@ int scores_grow(struct scores *scores, size_t count)
 	if(!count) return 0;
 	//printf("grow scores to %lu\n", max_score_index*count);
 	scores->size=count;
-	if((scores->scores=(uint16_t *)realloc(scores->scores,
-		sizeof(uint16_t)*scores->size)))
-			return 0;
-	log_out_of_memory(__func__);
-	return -1;
+	if(!(scores->scores=(uint16_t *)realloc_w(scores->scores,
+		sizeof(uint16_t)*scores->size, __func__)))
+			return -1;
+	return 0;
 }
 
 void scores_reset(struct scores *scores)
 {
-printf("sr a\n");
 	if(!scores->scores || !scores->size)
 	{
-printf("sr r\n");
 		return;
 	}
-printf("sr b\n");
 	memset(scores->scores, 0, sizeof(scores->scores[0])*scores->size);
-printf("sr c\n");
 }

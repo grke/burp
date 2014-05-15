@@ -48,9 +48,8 @@ static int asfd_parse_readbuf(struct asfd *asfd)
 	if(asfd->readbuflen>=s+5)
 	{
 		asfd->rbuf->cmd=cmdtmp;
-		if(!(asfd->rbuf->buf=(char *)malloc(s+1)))
+		if(!(asfd->rbuf->buf=(char *)malloc_w(s+1, __func__)))
 		{
-			log_out_of_memory(__func__);
 			truncate_readbuf(asfd);
 			return -1;
 		}

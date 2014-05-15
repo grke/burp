@@ -3,10 +3,9 @@
 struct win *win_alloc(struct rconf *rconf)
 {
 	struct win *win=NULL;
-	if((win=(struct win *)calloc(1, sizeof(struct win)))
-	  && (win->data=(char *)calloc(1, sizeof(char)*rconf->win)))
+	if((win=(struct win *)calloc_w(1, sizeof(struct win), __func__))
+	  && (win->data=(char *)calloc_w(1, sizeof(char)*rconf->win, __func__)))
 		return win;
-	log_out_of_memory(__func__);
 	win_free(win);
 	return NULL;
 }

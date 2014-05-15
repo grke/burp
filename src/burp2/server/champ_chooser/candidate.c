@@ -7,10 +7,8 @@ size_t candidates_len=0;
 
 struct candidate *candidate_alloc(void)
 {
-	struct candidate *candidate;
-	if(!(candidate=(struct candidate *)calloc(1, sizeof(struct candidate))))
-		log_out_of_memory(__func__);
-	return candidate;
+	return (struct candidate *)
+		calloc_w(1, sizeof(struct candidate), __func__);
 }
 
 void candidates_set_score_pointers(struct candidate **candidates,
@@ -27,12 +25,9 @@ struct candidate *candidates_add_new(void)
 
 	if(!(candidate=candidate_alloc())) return NULL;
 
-	if(!(candidates=(struct candidate **)realloc(candidates,
-		(candidates_len+1)*sizeof(struct candidate *))))
-	{
-		log_out_of_memory(__func__);
+	if(!(candidates=(struct candidate **)realloc_w(candidates,
+		(candidates_len+1)*sizeof(struct candidate *), __func__)))
 		return NULL;
-	}
 	candidates[candidates_len++]=candidate;
 	return candidate;
 }

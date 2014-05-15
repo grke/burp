@@ -2,10 +2,7 @@
 
 struct sdirs *sdirs_alloc(void)
 {
-	struct sdirs *sdirs=NULL;
-	if(!(sdirs=(struct sdirs *)calloc(1, sizeof(struct sdirs))))
-		log_out_of_memory(__func__);
-	return sdirs;
+	return (struct sdirs *)calloc_w(1, sizeof(struct sdirs), __func__);
 }
 
 static int do_lock_dirs(struct sdirs *sdirs, struct conf *conf)

@@ -281,12 +281,9 @@ int sbufl_to_manifest_phase1(struct sbuf *sb, FILE *mp, gzFile zp)
 int add_to_sbufl_arr(struct sbuf ***sblist, struct sbuf *sb, int *count)
 {
         struct sbuf **sbtmp=NULL;
-        if(!(sbtmp=(struct sbuf **)realloc(*sblist,
-                ((*count)+1)*sizeof(struct sbuf *))))
-        {
-                log_out_of_memory(__func__);
-                return -1;
-        }
+        if(!(sbtmp=(struct sbuf **)realloc_w(*sblist,
+                ((*count)+1)*sizeof(struct sbuf *), __func__)))
+         	       return -1;
         *sblist=sbtmp;
 
         (*sblist)[(*count)++]=sb;
@@ -313,12 +310,9 @@ int del_from_sbufl_arr(struct sbuf ***sblist, int *count)
 	(*count)--;
 	if((*sblist)[*count])
 		{ sbuf_free((*sblist)[*count]); (*sblist)[*count]=NULL; }
-        if(*count && !(sbtmp=(struct sbuf **)realloc(*sblist,
-                (*count)*sizeof(struct sbuf *))))
-        {
-                log_out_of_memory(__func__);
-                return -1;
-        }
+        if(*count && !(sbtmp=(struct sbuf **)realloc_w(*sblist,
+                (*count)*sizeof(struct sbuf *), __func__)))
+         	       return -1;
         *sblist=sbtmp;
 
         //{int b=0; for(b=0; b<*count; b++)

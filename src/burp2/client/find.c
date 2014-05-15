@@ -42,13 +42,10 @@ FF_PKT *find_files_init(void)
 {
 	FF_PKT *ff;
 
-	if(!(ff=(FF_PKT *)calloc(1, sizeof(FF_PKT)))
+	if(!(ff=(FF_PKT *)calloc_w(1, sizeof(FF_PKT), __func__))
 	  || !(linkhash=(f_link **)
-		calloc(1, LINK_HASHTABLE_SIZE*sizeof(f_link *))))
-	{
-		log_out_of_memory(__func__);
-		return NULL;
-	}
+		calloc_w(1, LINK_HASHTABLE_SIZE*sizeof(f_link *), __func__)))
+			return NULL;
 
 	// Get system path and filename maximum lengths.
 	init_max(&path_max, _PC_PATH_MAX);
@@ -433,10 +430,9 @@ static int get_files_in_directory(DIR *directory, struct dirent ***nl, int *coun
 			else allocated*=2;
 
 			if(!(ntmp=(struct dirent **)
-				realloc (*nl, allocated*sizeof(**nl))))
+			  realloc_w(*nl, allocated*sizeof(**nl), __func__)))
 			{
 				free(entry);
-				log_out_of_memory(__func__);
 				return -1;
 			}
 			*nl=ntmp;
@@ -469,11 +465,9 @@ static int process_files_in_directory(struct asfd *asfd, struct dirent **nl,
 		if(strlen(p)+len>=*link_len)
 		{
 			*link_len=len+strlen(p)+1;
-			if(!(*link=(char *)realloc(*link, (*link_len)+1)))
-			{
-				log_out_of_memory(__func__);
+			if(!(*link=(char *)
+			  realloc_w(*link, (*link_len)+1, __func__)))
 				return -1;
-			}
 		}
 		q=(*link)+len;
 		for(i=0; i<strlen(nl[m]->d_name); i++)

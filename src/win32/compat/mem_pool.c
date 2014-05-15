@@ -116,12 +116,9 @@ static char *sm_realloc_pool_memory(char *obuf, int32_t size)
 
 	ASSERT(obuf);
 	cp-=HEAD_SIZE;
-	buf=realloc(cp, size+HEAD_SIZE);
-	if(!buf)
-	{
-		fprintf(stderr, _("Out of memory requesting %d bytes\n"), size);
+	// FIX THIS: should not just exit.
+	if(!(buf=realloc_w(cp, size+HEAD_SIZE, __func__)))
 		exit(1);
-	}
 	((struct abufhead *)buf)->ablen=size;
 	pool=((struct abufhead *)buf)->pool;
 	if(size>pool_ctl[pool].max_allocated)

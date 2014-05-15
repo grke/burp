@@ -11,13 +11,12 @@ static int data_free_count=0;
 struct blk *blk_alloc(void)
 {
 	struct blk *blk=NULL;
-	if((blk=(struct blk *)calloc(1, sizeof(struct blk))))
+	if((blk=(struct blk *)calloc_w(1, sizeof(struct blk), __func__)))
 	{
 		alloc_count++;
 //printf("alloc: %p\n", blk);
 		return blk;
 	}
-	log_out_of_memory(__func__);
 	return NULL;
 }
 
@@ -25,12 +24,12 @@ struct blk *blk_alloc_with_data(uint32_t max_data_length)
 {
 	struct blk *blk=NULL;
 	if(!(blk=blk_alloc())) return NULL;
-	if((blk->data=(char *)calloc(1, sizeof(char)*max_data_length)))
+	if((blk->data=(char *)
+		calloc_w(1, sizeof(char)*max_data_length, __func__)))
 	{
 		data_count++;
 		return blk;
 	}
-	log_out_of_memory(__func__);
 	blk_free(blk);
 	return NULL;
 }
@@ -85,10 +84,7 @@ int blk_md5_update(struct blk *blk)
 
 struct blist *blist_alloc(void)
 {
-	struct blist *blist;
-	if(!(blist=(struct blist *)calloc(1, sizeof(struct blist))))
-		log_out_of_memory(__func__);
-	return blist;
+	return (struct blist *)calloc_w(1, sizeof(struct blist), __func__);
 }
 
 void blist_free(struct blist *blist)

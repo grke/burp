@@ -2,20 +2,14 @@
 
 struct lock *lock_alloc(void)
 {
-	struct lock *lock=NULL;
-	if(!(lock=(struct lock *)calloc(1, sizeof(struct lock))))
-		log_out_of_memory(__func__);
-	return lock;
+	return (struct lock *)calloc_w(1, sizeof(struct lock), __func__);
 }
 
 int lock_init(struct lock *lock, const char *path)
 {
 	if(lock->path) free(lock->path);
-	if(!(lock->path=strdup(path)))
-	{
-		log_out_of_memory(__func__);
+	if(!(lock->path=strdup_w(path, __func__)))
 		return -1;
-	}
 	return 0;
 }
 

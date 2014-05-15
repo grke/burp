@@ -65,12 +65,9 @@ int chld_setup(int oldmax_children, int max_children, int oldmax_status_children
 	int total_max_children=max_children+max_status_children;
 	int total_oldmax_children=oldmax_children+oldmax_status_children;
 	// Get rid of defunct children.
-	if(!(chlds=(struct chld *)
-		realloc(chlds, sizeof(struct chld)*(total_max_children+1))))
-	{
-		log_out_of_memory(__func__);
-		return -1;
-	}
+	if(!(chlds=(struct chld *)realloc_w(chlds,
+		sizeof(struct chld)*(total_max_children+1), __func__)))
+			return -1;
 	if((p=total_oldmax_children-1)<0) p=0;
 	for(; p<total_max_children+1; p++)
 	{

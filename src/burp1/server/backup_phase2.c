@@ -529,7 +529,7 @@ static int do_stuff_to_receive(struct asfd *asfd,
 
 	iobuf_free_content(rbuf);
 	// This also attempts to write anything in the write buffer.
-	if(asfd->as->rw(asfd->as, NULL))
+	if(asfd->as->rw(asfd->as))
 	{
 		logp("error in async_rw\n");
 		return -1;

@@ -71,7 +71,7 @@ static int load_signature_and_send_delta(struct asfd *asfd,
 			break;
 		}
 		// FIX ME: get it to read stuff (errors, for example) here too.
-		if(asfd->as->rw(asfd->as, NULL)) return -1;
+		if(asfd->as->rw(asfd->as)) return -1;
 	}
 
 	if(r!=RS_DONE)

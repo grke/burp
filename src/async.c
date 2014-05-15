@@ -13,7 +13,7 @@ static void async_settimers(struct async *as, int sec, int usec)
 	as->setusec=usec;
 }
 
-static int async_rw(struct async *as, struct iobuf *wbuf)
+static int async_rw(struct async *as)
 {
         int mfd=-1;
         fd_set fsr;
@@ -25,16 +25,7 @@ static int async_rw(struct async *as, struct iobuf *wbuf)
 
 	if(as->doing_estimate) return 0;
 
-	if(as->asfd->fd<0)
-	{
-		logp("fd not ready in %s: %d\n", __func__, as->asfd->fd);
-		return -1;
-	}
-
 	if(as->asfd->rbuf) doread++;
-
-	if(wbuf && wbuf->len)
-		as->asfd->append_all_to_write_buffer(as->asfd, wbuf);
 
 	if(as->asfd->writebuflen && !as->asfd->write_blocked_on_read)
 		dowrite++; // The write buffer is not yet empty.
@@ -131,7 +122,7 @@ static int async_read_quick(struct async *as)
 	int saveusec=as->setusec;
 	as->setsec=0;
 	as->setusec=0;
-	r=as->rw(as, NULL);
+	r=as->rw(as);
 	as->setsec=savesec;
 	as->setusec=saveusec;
 	return r;

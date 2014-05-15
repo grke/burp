@@ -17,8 +17,7 @@ struct async
 	int (*init)(struct async *, int);
 	// This one can return without completing the read or write, so check
 	// rbuf->buf and/or wbuf->len.
-	int (*rw)(struct async *, struct iobuf *);
-	int (*write)(struct async *, struct iobuf *);
+	int (*rw)(struct async *);
 	int (*read_quick)(struct async *);
 	void (*add_asfd)(struct async *, struct asfd *);
 	void (*settimers)(struct async *, int, int); // For debug purposes.

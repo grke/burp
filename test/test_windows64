@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 myscript=$(basename $0)
 if [ ! -f "$myscript" ] ; then

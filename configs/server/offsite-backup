@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # --------------------------------------------------------------
 # WARNING: This script is not quite working properly for me.

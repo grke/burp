@@ -4,11 +4,8 @@
 
 struct incoming *incoming_alloc(void)
 {
-	struct incoming *in;
-	if((in=(struct incoming *)calloc(1, sizeof(struct incoming))))
-		return in;
-	log_out_of_memory(__func__);
-	return NULL;
+	return (struct incoming *)calloc_w(1,
+		sizeof(struct incoming), __func__);
 }
 
 int incoming_grow_maybe(struct incoming *in)
@@ -18,11 +15,10 @@ int incoming_grow_maybe(struct incoming *in)
 	in->allocated+=32;
 //printf("grow incoming to %d\n", in->allocated);
 	if((in->weak=(uint64_t *)
-		realloc(in->weak, in->allocated*sizeof(uint64_t)))
+		realloc_w(in->weak, in->allocated*sizeof(uint64_t), __func__))
 	  && (in->found=(uint8_t *)
-		realloc(in->found, in->allocated*sizeof(uint8_t))))
+		realloc_w(in->found, in->allocated*sizeof(uint8_t), __func__)))
 			return 0;
-	log_out_of_memory(__func__);
 	return -1;
 }
 

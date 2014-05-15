@@ -44,7 +44,6 @@ static void usage_server(void)
 	printf("  -g            Generate initial CA certificates and exit.\n");
 	printf("  -h|-?         Print this text and exit.\n");
 	printf("  -i            Print index of symbols and exit.\n");
-	printf("  -l <path>     Path to log file.\n");
 	printf("  -n            Do not fork any children (implies '-F').\n");
 	printf("  -v            Print version and exit.\n");
 	printf("Options to use with '-a c':\n");
@@ -78,7 +77,6 @@ static void usage_client(void)
 	printf("  -f             Allow overwrite during restore.\n");
 	printf("  -h|-?          Print this text and exit.\n");
 	printf("  -i             Print index of symbols and exit.\n");
-	printf("  -l <path>      Path to log file.\n");
 	printf("  -r <regex>     Specify a regular expression.\n");
 	printf("  -s <number>    Number of leading path components to strip during restore.\n");
 	printf("  -j             Format long list as JSON.\n");
@@ -148,6 +146,42 @@ static void usage(void)
 	usage_client();
 }
 
+static int parse_action(enum action *act, const char *optarg)
+{
+	if(!strncmp(optarg, "backup", 1))
+		*act=ACTION_BACKUP;
+	else if(!strncmp(optarg, "timedbackup", 1))
+		*act=ACTION_BACKUP_TIMED;
+	else if(!strncmp(optarg, "Timercheck", 1))
+		*act=ACTION_TIMER_CHECK;
+	else if(!strncmp(optarg, "restore", 1))
+		*act=ACTION_RESTORE;
+	else if(!strncmp(optarg, "verify", 1))
+		*act=ACTION_VERIFY;
+	else if(!strncmp(optarg, "list", 1))
+		*act=ACTION_LIST;
+	else if(!strncmp(optarg, "List", 1))
+		*act=ACTION_LONG_LIST;
+	else if(!strncmp(optarg, "status", 1))
+		*act=ACTION_STATUS;
+	else if(!strncmp(optarg, "Status", 1))
+		*act=ACTION_STATUS_SNAPSHOT;
+	else if(!strncmp(optarg, "estimate", 1))
+		*act=ACTION_ESTIMATE;
+	// Start 'Delete' with a capital letter so that it is less likely to be
+	// used accidently.
+	else if(!strncmp(optarg, "Delete", 1))
+		*act=ACTION_DELETE;
+	else if(!strncmp(optarg, "champchooser", 1))
+		*act=ACTION_CHAMP_CHOOSER;
+	else
+	{
+		usage();
+		return -1;
+	}
+	return 0;
+}
+
 #if defined(HAVE_WIN32)
 #define main BurpMain
 #endif
@@ -185,37 +219,7 @@ int main (int argc, char *argv[])
 		switch(option)
 		{
 			case 'a':
-				if(!strncmp(optarg, "backup", 1))
-					act=ACTION_BACKUP;
-				else if(!strncmp(optarg, "timedbackup", 1))
-					act=ACTION_BACKUP_TIMED;
-				else if(!strncmp(optarg, "Timercheck", 1))
-       					act=ACTION_TIMER_CHECK;
-				else if(!strncmp(optarg, "restore", 1))
-					act=ACTION_RESTORE;
-				else if(!strncmp(optarg, "verify", 1))
-					act=ACTION_VERIFY;
-				else if(!strncmp(optarg, "list", 1))
-					act=ACTION_LIST;
-				else if(!strncmp(optarg, "List", 1))
-					act=ACTION_LONG_LIST;
-				else if(!strncmp(optarg, "status", 1))
-					act=ACTION_STATUS;
-				else if(!strncmp(optarg, "Status", 1))
-					act=ACTION_STATUS_SNAPSHOT;
-				else if(!strncmp(optarg, "estimate", 1))
-					act=ACTION_ESTIMATE;
-				// Start 'Delete' with a capital letter so that it is less
-				// likely to be used accidently.
-				else if(!strncmp(optarg, "Delete", 1))
-					act=ACTION_DELETE;
-				else if(!strncmp(optarg, "champchooser", 1))
-					act=ACTION_CHAMP_CHOOSER;
-				else
-				{
-					usage();
-					goto end;
-				}
+				if(parse_action(&act, optarg)) goto end;
 				break;
 			case 'b':
 				backup=optarg;

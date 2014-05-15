@@ -603,6 +603,25 @@ int strncmp_w(const char *s1, const char *s2)
 	return strncmp(s1, s2, strlen(s2));
 }
 
+#include <execinfo.h>
+static void print_trace (void)
+{
+	void *array[10];
+	size_t size;
+	char **strings;
+	size_t i;
+
+	size = backtrace (array, 10);
+	strings = backtrace_symbols (array, size);
+
+	printf("Obtained %zd stack frames.\n", size);
+
+	for(i = 0; i < size; i++)
+		printf ("%s\n", strings[i]);
+
+	free (strings);
+}
+
 static void log_oom_w(const char *func, const char *orig_func)
 {
 	logp("out of memory in %s, called from %s\n", __func__, func);
@@ -618,6 +637,8 @@ char *strdup_w(const char *s, const char *func)
 void *realloc_w(void *ptr, size_t size, const char *func)
 {
 	void *ret;
+print_trace();
+exit(1);
 	if(!(ret=realloc(ptr, size))) log_oom_w(__func__, func);
 	return ret;
 }

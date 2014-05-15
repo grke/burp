@@ -31,12 +31,10 @@ static struct strlist *strlist_alloc(char *path, long flag)
 		logp("%s called with NULL path!\n", __func__);
 		return NULL;
 	}
-	if(!(slnew=(struct strlist *)calloc(1, sizeof(struct strlist)))
-	  || !(slnew->path=strdup(path)))
-	{
-		log_out_of_memory(__func__);
+	if(!(slnew=(struct strlist *)
+		calloc_w(1, sizeof(struct strlist), __func__))
+	  || !(slnew->path=strdup_w(path, __func__)))
 		return NULL;
-	}
 	slnew->flag=flag;
 	return slnew;
 }

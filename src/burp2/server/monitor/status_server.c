@@ -38,11 +38,8 @@ int cstat_sort(const void *a, const void *b)
 static int cstat_add_initial_details(struct cstat *c, const char *name, const char *clientconfdir)
 {
 	if(!(c->conffile=prepend_s(clientconfdir, name))
-	  || !(c->name=strdup(name)))
-	{
-		log_out_of_memory(__func__);
+	  || !(c->name=strdup_w(name, __func__)))
 		return -1;
-	}
 	c->conf_mtime=0;
 	c->summary=NULL;
 	c->running_detail=NULL;
@@ -82,12 +79,9 @@ static int cstat_add(struct cstat ***clist, int *clen,
 	}
 	// Otherwise, increase the size of the array.
 
-	if(!(ctmp=(struct cstat **)realloc(*clist,
-		((*clen)+1)*sizeof(struct cstat *))))
-	{
-		log_out_of_memory(__func__);
-		return -1;
-	}
+	if(!(ctmp=(struct cstat **)realloc_w(*clist,
+		((*clen)+1)*sizeof(struct cstat *), __func__)))
+			return -1;
 	*clist=ctmp;
 	if(!(cnew=(struct cstat *)malloc(sizeof(struct cstat))))
 	{
@@ -1018,7 +1012,9 @@ int status_server(int *cfd, int status_rfd, struct conf *conf)
 				size_t r=0;
 				buf[l]='\0';
 				if(rbuf) r=strlen(buf);
-				rbuf=(char *)realloc(rbuf, r+l+1);
+				if(!(rbuf=(char *)
+					realloc_w(rbuf, r+l+1, __func__)))
+						goto end;
 				if(!r) *rbuf='\0';
 				strcat(rbuf+r, buf);
 				total+=l;

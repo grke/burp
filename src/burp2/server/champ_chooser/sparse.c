@@ -5,11 +5,9 @@ static struct sparse *sparse_table=NULL;
 static struct sparse *sparse_add(uint64_t weak)
 {
         struct sparse *sparse;
-        if(!(sparse=(struct sparse *)calloc(1, sizeof(struct sparse))))
-        {
-                log_out_of_memory(__func__);
-                return NULL;
-        }
+        if(!(sparse=(struct sparse *)
+		calloc_w(1, sizeof(struct sparse), __func__)))
+			return NULL;
         sparse->weak=weak;
 	HASH_ADD_INT(sparse_table, weak, sparse);
         return sparse;
@@ -45,12 +43,9 @@ int sparse_add_candidate(const char *weakstr, struct candidate *candidate)
 	if(!sparse && !(sparse=sparse_add(weak)))
 		return -1;
 	if(!(sparse->candidates=(struct candidate **)
-		realloc(sparse->candidates,
-			(sparse->size+1)*sizeof(struct candidate *))))
-	{
-                log_out_of_memory(__func__);
-		return -1;
-	}
+		realloc_w(sparse->candidates,
+			(sparse->size+1)*sizeof(struct candidate *), __func__)))
+				return -1;
 	sparse->candidates[sparse->size++]=candidate;
 	
 	return 0;

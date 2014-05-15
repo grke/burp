@@ -11,10 +11,7 @@
 
 struct manio *manio_alloc(void)
 {
-	struct manio *m=NULL;
-	if(!(m=(struct manio *)calloc(1, sizeof(struct manio))))
-		log_out_of_memory(__func__);
-	return m;
+	return (struct manio *)calloc_w(1, sizeof(struct manio), __func__);
 }
 
 static int manio_free_contents(struct manio *manio)
@@ -166,11 +163,8 @@ static int manio_set_mode(struct manio *manio, const char *mode)
 {
 	if(manio_close(manio)) return -1;
 	if(manio->mode) free(manio->mode);
-	if(!(manio->mode=strdup(mode)))
-	{
-		log_out_of_memory(__func__);
+	if(!(manio->mode=strdup_w(mode, __func__)))
 		return -1;
-	}
 	manio->fcount=0;
 	return 0;
 }
@@ -193,11 +187,8 @@ void manio_set_protocol(struct manio *manio, enum protocol protocol)
 static int manio_init(struct manio *manio, const char *directory, const char *mode)
 {
 	if(manio_free_contents(manio)) return -1;
-	if(!(manio->directory=strdup(directory)))
-	{
-		log_out_of_memory(__func__);
+	if(!(manio->directory=strdup_w(directory, __func__)))
 		return -1;
-	}
 	if(manio_set_mode(manio, mode)) return -1;
 	manio_set_protocol(manio, PROTO_BURP2);
 	return 0;
@@ -384,22 +375,15 @@ int manio_init_write_hooks(struct manio *manio,
 	const char *base_dir, const char *dir)
 {
 	int i=0;
-	if(!(manio->base_dir=strdup(base_dir))
-	  || !(manio->hook_dir=strdup(dir))
+	if(!(manio->base_dir=strdup_w(base_dir, __func__))
+	  || !(manio->hook_dir=strdup_w(dir, __func__))
 	  || !(manio->hook_sort=
-		(char **)calloc(MANIFEST_SIG_MAX, sizeof(char*))))
-	{
-		log_out_of_memory(__func__);
-		return -1;
-	}
-	for(i=0; i<MANIFEST_SIG_MAX; i++)
-	{
-		if(!(manio->hook_sort[i]=(char *)calloc(1, WEAK_STR_LEN)))
-		{
-			log_out_of_memory(__func__);
+		(char **)calloc_w(MANIFEST_SIG_MAX, sizeof(char*), __func__)))
 			return -1;
-		}
-	}
+	for(i=0; i<MANIFEST_SIG_MAX; i++)
+		if(!(manio->hook_sort[i]=
+			(char *)calloc_w(1, WEAK_STR_LEN, __func__)))
+				return -1;
 	return 0;
 }
 
@@ -408,20 +392,12 @@ int manio_init_write_dindex(struct manio *manio, const char *dir)
 	int i=0;
 	if(!(manio->dindex_dir=strdup(dir))
 	  || !(manio->dindex_sort=
-		(char **)calloc(MANIFEST_SIG_MAX, sizeof(char*))))
-	{
-		log_out_of_memory(__func__);
-		return -1;
-	}
-	for(i=0; i<MANIFEST_SIG_MAX; i++)
-	{
-		if(!(manio->dindex_sort[i]=
-			(char *)calloc(1, SAVE_PATH_STR_LEN)))
-		{
-			log_out_of_memory(__func__);
+		(char **)calloc_w(MANIFEST_SIG_MAX, sizeof(char*), __func__)))
 			return -1;
-		}
-	}
+	for(i=0; i<MANIFEST_SIG_MAX; i++)
+		if(!(manio->dindex_sort[i]=
+			(char *)calloc_w(1, SAVE_PATH_STR_LEN, __func__)))
+				return -1;
 	return 0;
 }
 

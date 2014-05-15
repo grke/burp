@@ -849,7 +849,8 @@ int status_client_ncurses(struct conf *conf, enum action act, const char *sclien
 				size_t r=0;
 				buf[l]='\0';
 				if(rbuf) r=strlen(rbuf);
-				rbuf=(char *)realloc(rbuf, r+l+1);
+				if(!(rbuf=(char *)realloc_w(rbuf,
+					r+l+1, __func__))) break;
 				if(!r) *rbuf='\0';
 				strcat(rbuf+r, buf);
 			}

@@ -243,11 +243,8 @@ int get_vss(BFILE *bfd, const char *path, struct stat *statp, char **vssdata, si
 	{
 		int64_t s=0;
 
-		if(!(tmp=(char *)realloc(tmp, (*vlen)+bsidsize)))
-		{
-			log_out_of_memory(__func__);
+		if(!(tmp=(char *)realloc_w(tmp, (*vlen)+bsidsize, __func__)))
 			goto error;
-		}
 		memcpy(tmp+(*vlen), &sid, bsidsize);
 		(*vlen)+=bsidsize;
 
@@ -262,24 +259,16 @@ int get_vss(BFILE *bfd, const char *path, struct stat *statp, char **vssdata, si
 
 		// Otherwise, need to read in the rest of the VSS header.
 		s=(sid.Size)+(sid.dwStreamNameSize);
-		if(!(tmp=(char *)realloc(tmp, (*vlen)+s)))
-		{
-			goto error;
-			log_out_of_memory(__func__);
-			return -1;
-		}
-		if(ensure_read(bfd, tmp+(*vlen), s, 1))
+		if(!(tmp=(char *)realloc_w(tmp, (*vlen)+s, __func__))
+		  || ensure_read(bfd, tmp+(*vlen), s, 1))
 		{
 			goto error;
 			return -1;
 		}
 		(*vlen)+=s;
 	}
-	if(!(*vssdata=(char *)realloc(*vssdata, (*vlen)+9)))
-	{
-		log_out_of_memory(__func__);
+	if(!(*vssdata=(char *)realloc_w(*vssdata, (*vlen)+9, __func__)))
 		goto error;
-	}
 	snprintf(*vssdata, 9, "%c%08X", META_VSS, (unsigned int)*vlen);
 	memcpy((*vssdata)+9, tmp, *vlen);
 	(*vlen)+=9;

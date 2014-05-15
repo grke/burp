@@ -58,11 +58,9 @@ static char *dpth_mk_seco(struct dpth *dpth)
 static struct dpth_lock *dpth_lock_alloc(const char *save_path)
 {
         struct dpth_lock *dpth_lock;
-        if(!(dpth_lock=(struct dpth_lock *)calloc(1, sizeof(struct dpth_lock))))
-	{
-        	log_out_of_memory(__func__);
-		return NULL;
-	}
+        if(!(dpth_lock=(struct dpth_lock *)
+		calloc_w(1, sizeof(struct dpth_lock), __func__)))
+			return NULL;
 	snprintf(dpth_lock->save_path, sizeof(dpth_lock->save_path),
 		"%s", save_path);
         return dpth_lock;
@@ -166,10 +164,9 @@ static int get_next_entry(const char *path, int *max, struct dpth *dpth)
 struct dpth *dpth_alloc(const char *base_path)
 {
         struct dpth *dpth=NULL;
-        if((dpth=(struct dpth *)calloc(1, sizeof(struct dpth)))
-	  && (dpth->base_path=strdup(base_path)))
+        if((dpth=(struct dpth *)calloc_w(1, sizeof(struct dpth), __func__))
+	  && (dpth->base_path=strdup_w(base_path, __func__)))
 		return dpth;
-	log_out_of_memory(__func__);
 	dpth_free(dpth);
 	return NULL;
 }

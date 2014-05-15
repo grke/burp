@@ -44,7 +44,6 @@ static void usage_server(void)
 	printf("  -g            Generate initial CA certificates and exit.\n");
 	printf("  -h|-?         Print this text and exit.\n");
 	printf("  -i            Print index of symbols and exit\n");
-	printf("  -l <path>     Path to log file.\n");
 	printf("  -n            Do not fork any children (implies '-F').\n");
 	printf("  -v            Print version and exit.\n");
 	printf("Options to use with '-a S':\n");
@@ -77,7 +76,6 @@ static void usage_client(void)
 	printf("  -f             Allow overwrite during restore.\n");
 	printf("  -h|-?          Print this text and exit.\n");
 	printf("  -i             Print index of symbols and exit\n");
-	printf("  -l <path>      Path to log file.\n");
 	printf("  -r <regex>     Specify a regular expression.\n");
 	printf("  -s <number>    Number of leading path components to strip during restore.\n");
 	printf("  -j             Format long list as JSON.\n");

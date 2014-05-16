@@ -4,6 +4,7 @@
     variable, not a signed variable.
   * Removed references to old '-l' logfile option.
   * Added Jarkko Kniivilä's FreeBSD init script.
+  * Added Jarkko Kniivilä's tweaks to make scripts run more easily on FreeBSD.
 
 2014-04-29 Changes in burp-1.4.14:
   * Add an 'atime' option, which allows the user to choose whether to use

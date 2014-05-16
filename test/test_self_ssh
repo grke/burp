@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Test a burp client on the same machine as the server, but interact with the
 # client over ssh.

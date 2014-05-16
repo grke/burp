@@ -247,12 +247,27 @@ static int get_full_cksum(struct file *f, FILE **fp)
 	return 0;
 }
 
+static int check_for_rename_race_condition(const char *oldpath,
+	const char *newpath)
+{
+	struct stat statp;
+	if(!lstat(newpath, &statp)) return 0;
+	logp("Furthermore, '%s' no longer exists\n", newpath);
+	logp("You probably need to increase the number of hardlinks\n");
+	logp("that your file system can support.\n");
+	logp("You should then replace '%s' with '%s' by hand.\n",
+		newpath, oldpath);
+	return 1;
+}
+
 static int do_rename(const char *oldpath, const char *newpath)
 {
 	if(rename(oldpath, newpath))
 	{
 		logp("Could not rename '%s' to '%s': %s\n",
 			oldpath, newpath, strerror(errno));
+		if(check_for_rename_race_condition(oldpath, newpath))
+			return -2;
 		return -1;
 	}
 	return 0;
@@ -261,26 +276,25 @@ static int do_rename(const char *oldpath, const char *newpath)
 /* Make it atomic by linking to a temporary file, then moving it into place. */
 static int do_hardlink(struct file *o, struct file *n, const char *ext)
 {
+	int ret=-1;
 	char *tmppath=NULL;
 	if(!(tmppath=prepend(o->path, ext, "")))
 	{
 		log_out_of_memory(__FUNCTION__);
-		return -1;
+		goto end;
 	}
 	if(link(n->path, tmppath))
 	{
 		logp("Could not hardlink %s to %s: %s\n", tmppath, n->path,
 			strerror(errno));
-		free(tmppath);
-		return -1;
+		goto end;
 	}
-	if(do_rename(tmppath, o->path))
-	{
-		free(tmppath);
-		return -1;
-	}
-	free(tmppath);
-	return 0;
+	if((ret=do_rename(tmppath, o->path)))
+		goto end;
+	ret=0;
+end:
+	if(tmppath) free(tmppath);
+	return ret;
 }
 
 static void reset_old_file(struct file *oldfile, struct file *newfile, struct stat *info)
@@ -380,22 +394,32 @@ static int check_files(struct mystruct *find, struct file *newfile, struct stat 
 		// Now hardlink it.
 		if(makelinks)
 		{
-			if(!do_hardlink(newfile, f, ext))
+			switch(do_hardlink(newfile, f, ext))
 			{
-				f->nlink++;
-				// Only count bytes as saved if we removed the
-				// last link.
-				if(newfile->nlink==1)
-					savedbytes+=info->st_size;
-			}
-			else
-			{
-				// On error, replace the memory of the old file
-				// with the one that we just found. It might
-				// work better when someone later tries to
-				// link to the new one instead of the old one.
-				reset_old_file(f, newfile, info);
-				count--;
+				case 0:
+					f->nlink++;
+					// Only count bytes as saved if we
+					// removed the last link.
+					if(newfile->nlink==1)
+						savedbytes+=info->st_size;
+					break;
+				case -1:
+					// On error, replace the memory of the
+					// old file with the one that we just
+					// found. It might work better when
+					// someone later tries to link to the
+					// new one instead of the old one.
+					reset_old_file(f, newfile, info);
+					count--;
+					break;
+				default:
+					// Abandon all hope.
+					// This could happen if renaming the
+					// hardlink failed in such a way that
+					// the target file was unlinked without
+					// being replaced - ie, if the max
+					// number of hardlinks is being hit.
+					return -1;
 			}
 		}
 		else if(deletedups)

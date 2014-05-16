@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 myscript=$(basename $0)
 if [ ! -f "$myscript" ] ; then
@@ -104,7 +104,7 @@ clientburpdir="/cygdrive/c/Program Files/Burp"
 
 rm -f windowsscript
 cat >> windowsscript << EOF
-#!/bin/bash
+#!/usr/bin/env bash
 rm -rf "/cygdrive/c/Program Files/Burp" || exit 1
 ./$installer /S || exit 1
 tar -xjf build.tar.bz2 -C "$clientburpdir" || exit 1

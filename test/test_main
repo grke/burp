@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 myscript=$(basename $0)
 if [ ! -f "$myscript" ] ; then
@@ -379,7 +379,7 @@ cdir "$target"
 start_script()
 {
 	cat > "$1" << EOF
-#!/bin/bash
+#!/usr/bin/env bash
 
 fail()
 {

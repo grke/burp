@@ -292,6 +292,7 @@ static int merge_into_global_sparse(const char *sparse, const char *global,
 	if(merge_sparse_indexes(sparse, globalsrc, tmpfile, conf))
 		goto end;
 
+	// FIX THIS: nasty race condition needs to be recoverable.
 	if(do_rename(tmpfile, global)) goto end;
 
 	ret=0;
@@ -369,6 +370,8 @@ static int sparse_generation(struct manio *newmanio, uint64_t fcount,
 	  || !(global_sparse=prepend_s(datadir, "sparse")))
 		goto end;
 
+	// FIX THIS: nasty race condition here needs to be automatically
+	// recoverable.
 	if(do_rename(dst, sparse)) goto end;
 
 	if(merge_into_global_sparse(sparse, global_sparse, conf)) goto end;

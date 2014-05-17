@@ -36,6 +36,14 @@ int deleteme_move(const char *basedir, const char *fullpath, const char *path,
 	struct stat statp;
 	char suffix[16]="";
 
+	if(lstat(fullpath, &statp) && errno==ENOENT)
+	{
+		// The path to move aside does not exist.
+		// Treat this as OK.
+		ret=0;
+		goto end;
+	}
+
 	if(!(deleteme=deleteme_get_path(basedir, cconf))
 	  || !(tmp=prepend_s(deleteme, path))
 	  || mkpath(&tmp, deleteme)
@@ -54,6 +62,8 @@ int deleteme_move(const char *basedir, const char *fullpath, const char *path,
 		if(attempts>=10) break; // Give up.
 	}
 
+	// Possible race condition is of no consequence, as the destination
+	// will need to be deleted at some point anyway.
 	ret=do_rename(fullpath, dest);
 
 end:

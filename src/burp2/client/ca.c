@@ -83,6 +83,10 @@ static int rewrite_client_conf(struct conf *conf)
 		logp("error closing %s in %s\n", tmp, __func__);
 		goto end;
 	}
+	// Nasty race conditions going on here. However, the new config
+	// file will get left behind, so at worse you will have to move
+	// the new file into the correct place by hand. Or delete everything
+	// and start again.
 #ifdef HAVE_WIN32
 	// Need to delete the destination, or Windows gets upset.
 	unlink(conf->conffile);
@@ -178,6 +182,8 @@ int ca_client_setup(struct asfd *asfd, struct conf *conf)
 	// The server will also send the CA certificate.
 	if(receive_a_file(asfd, ssl_cert_ca_tmp, conf)) goto end_cleanup;
 
+	// Possible race condition - the rename can delete the destination
+	// and then fail. Worse case, the user has to rename them by hand.
 	if(do_rename(ssl_cert_tmp, conf->ssl_cert)
 	  || do_rename(ssl_cert_ca_tmp, conf->ssl_cert_ca))
 		goto end_cleanup;
@@ -185,7 +191,6 @@ int ca_client_setup(struct asfd *asfd, struct conf *conf)
 	// Need to rewrite our configuration file to contain the server
 	// name (ssl_peer_cn)
 	if(rewrite_client_conf(conf)) goto end_cleanup;
-printf("x\n");
 
 	// My goodness, everything seems to have gone OK. Stand back!
 	ret=1;

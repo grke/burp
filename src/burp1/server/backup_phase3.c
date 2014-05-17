@@ -100,6 +100,8 @@ int backup_phase3_server(struct sdirs *sdirs, struct conf *cconf,
 		goto end;
 	}
 
+	// Rename race condition is of no consequence here, as the
+	// manifest will just get recreated automatically.
 	if(do_rename(manifesttmp, sdirs->manifest))
 		goto end;
 	else

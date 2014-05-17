@@ -266,6 +266,7 @@ int do_backup_server_burp1(struct async *as,
 
 	// Move the symlink to indicate that we are now in the end
 	// phase. 
+	// The rename() race condition is automatically recoverable here.
 	if(do_rename(sdirs->working, sdirs->finishing))
 		goto error;
 
@@ -447,6 +448,8 @@ int check_for_rubble_burp1(struct asfd *asfd,
 
 		// Now just rename the working link to be a finishing link,
 		// then run this function again.
+		// The rename() race condition is automatically recoverable
+		// here.
 		if(do_rename(sdirs->working, sdirs->finishing))
 		{
 			ret=-1;

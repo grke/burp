@@ -219,6 +219,8 @@ int do_backup_server(struct async *as, struct sdirs *sdirs,
 	cntr_stats_to_file(cconf->cntr, sdirs->working, ACTION_BACKUP);
 
 	// Move the symlink to indicate that we are now finished.
+	// FIX THIS: check whether the race condition here means that the
+	// backup is not automatically recoverable.
 	if(do_rename(sdirs->working, sdirs->current)) goto error;
 
 	cntr_print(cconf->cntr, ACTION_BACKUP);

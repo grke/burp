@@ -341,7 +341,7 @@ static enum cliret do_client(struct conf *conf,
 	if(!(as=async_alloc())
 	  || !(asfd=asfd_alloc())
 	  || as->init(as, act==ACTION_ESTIMATE)
-	  || asfd->init(asfd, as, rfd, ssl, conf))
+	  || asfd->init(asfd, "main socket", as, rfd, ssl, conf))
 		goto end;
 	as->add_asfd(as, asfd);
 

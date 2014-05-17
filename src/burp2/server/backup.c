@@ -102,8 +102,9 @@ static struct asfd *setup_champ_chooser(struct async *as,
 	}
 
 	if(!(chfd=asfd_alloc())
-	  || chfd->init(chfd, as, champsock, NULL /* no SSL */, conf))
-		goto error;
+	  || chfd->init(chfd, "champ chooser socket",
+		as, champsock, NULL /* no SSL */, conf))
+			goto error;
 	as->add_asfd(as, chfd);
 
 	if(!(champname=prepend("cname",

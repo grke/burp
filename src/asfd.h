@@ -17,6 +17,7 @@ struct asfd
 	int fd;
 	SSL *ssl;
 	struct async *as;
+	char *desc;
 
 	int network_timeout;
 	int max_network_timeout;
@@ -28,10 +29,12 @@ struct asfd
 
 	struct iobuf *rbuf;
 
+	int doread;
 	char *readbuf;
 	size_t readbuflen;
 	int read_blocked_on_write;
 
+	int dowrite;
 	char *writebuf;
 	size_t writebuflen;
 	int write_blocked_on_read;
@@ -39,7 +42,8 @@ struct asfd
 	struct asfd *next;
 
 	// Function pointers.
-	int (*init)(struct asfd *, struct async *, int, SSL *, struct conf *);
+	int (*init)(struct asfd *, const char *,
+		struct async *, int, SSL *, struct conf *);
 	int (*parse_readbuf)(struct asfd *);
 	int (*append_all_to_write_buffer)(struct asfd *, struct iobuf *);
 	int (*set_bulk_packets)(struct asfd *);

@@ -186,7 +186,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *conffile, int
 	if(!(as=async_alloc())
 	  || !(asfd=asfd_alloc())
 	  || as->init(as, 0)
-	  || asfd->init(asfd, as, *cfd, ssl, conf))
+	  || asfd->init(asfd, "main socket", as, *cfd, ssl, conf))
 		goto end;
 	as->add_asfd(as, asfd);
 

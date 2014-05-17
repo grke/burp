@@ -439,6 +439,8 @@ static int finish_delta(struct sdirs *sdirs, struct sbuf *rb)
 	if(!(deltmp=prepend_s("deltas.forward", rb->burp1->datapth.buf))
 	  || !(delpath=prepend_s(sdirs->working, deltmp))
 	  || mkpath(&delpath, sdirs->working)
+	// Rename race condition is of no consequence here, as delpath will
+	// just get recreated.
 	  || do_rename(sdirs->deltmppath, delpath))
 		ret=-1;
 	if(delpath) free(delpath);

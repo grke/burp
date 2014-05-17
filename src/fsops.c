@@ -160,6 +160,8 @@ int build_path(const char *datadir, const char *fname, char **rpath, const char 
 
 int do_rename(const char *oldpath, const char *newpath)
 {
+	// Be careful, this is not actually atomic. Everything that uses this
+	// needs to deal with the consequences.
 	if(rename(oldpath, newpath))
 	{
 		logp("could not rename '%s' to '%s': %s\n",

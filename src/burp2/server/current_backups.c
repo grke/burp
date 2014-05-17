@@ -359,6 +359,8 @@ int compress_file(const char *src, const char *dst, struct conf *cconf)
 	// Need to compress the log.
 	logp("Compressing %s to %s...\n", src, dst);
 	if(compress(src, dsttmp, cconf)
+	// Possible rename race condition is of little consequence here.
+	// You will still have the uncompressed log file.
 	  || do_rename(dsttmp, dst))
 	{
 		unlink(dsttmp);
@@ -433,6 +435,10 @@ int delete_backup(struct sdirs *sdirs, struct conf *conf,
 				free(current);
 				return -1;
 			}
+			// FIX THIS: Race condition: The current link can
+			// be deleted and then the rename fail, leaving no
+			// current symlink.
+			// The administrator will have to recover it manually.
 			if(do_rename(tmp, current))
 			{
 				logp("delete failed\n");

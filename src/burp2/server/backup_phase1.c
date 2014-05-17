@@ -60,6 +60,9 @@ int backup_phase1_server(struct asfd *asfd,
 		logp("error closing %s in backup_phase1_server\n", phase1tmp);
 		goto end;
 	}
+	// Possible rename race condition is of no consequence here, because
+	// the working directory will always get deleted if phase1 is not
+	// complete.
 	if(do_rename(phase1tmp, sdirs->phase1data))
 		goto end;
 

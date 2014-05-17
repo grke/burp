@@ -19,98 +19,103 @@ static int async_rw(struct async *as)
         fd_set fsr;
         fd_set fsw;
         fd_set fse;
-	int doread=0;
-	int dowrite=0;
+	int dosomething=0;
         struct timeval tval;
+	struct asfd *asfd;
 
 	if(as->doing_estimate) return 0;
 
-	if(as->asfd->rbuf) doread++;
+	FD_ZERO(&fsr);
+	FD_ZERO(&fsw);
+	FD_ZERO(&fse);
 
-	if(as->asfd->writebuflen && !as->asfd->write_blocked_on_read)
-		dowrite++; // The write buffer is not yet empty.
+	tval.tv_sec=as->setsec;
+	tval.tv_usec=as->setusec;
 
-	if(doread)
+	for(asfd=as->asfd; asfd; asfd=asfd->next)
 	{
-		if(as->asfd->parse_readbuf(as->asfd)) return -1;
-		if(as->asfd->rbuf->buf && !as->asfd->writebuflen) return 0;
+		asfd->doread=1;
+		asfd->dowrite=0;
 
-		if(as->asfd->read_blocked_on_write) doread=0;
+		if(asfd->parse_readbuf(asfd)) return -1;
+
+		if(asfd->rbuf->buf || asfd->read_blocked_on_write)
+			asfd->doread=0;
+
+		if(asfd->writebuflen && !asfd->write_blocked_on_read)
+			asfd->dowrite++; // The write buffer is not yet empty.
+
+		if(!asfd->doread && !asfd->dowrite) continue;
+
+                add_fd_to_sets(asfd->fd, asfd->doread?&fsr:NULL,
+			asfd->dowrite?&fsw:NULL, &fse, &mfd);
+
+		dosomething++;
+	}
+	if(!dosomething) return 0;
+
+	if(select(mfd+1, &fsr, &fsw, &fse, &tval)<0)
+	{
+		if(errno!=EAGAIN && errno!=EINTR)
+		{
+			logp("select error in %s: %s\n", __func__,
+				strerror(errno));
+			return -1;
+		}
 	}
 
-        if(doread || dowrite)
-        {
-                mfd=-1;
-
-                if(doread) FD_ZERO(&fsr);
-                if(dowrite) FD_ZERO(&fsw);
-                FD_ZERO(&fse);
-
-                add_fd_to_sets(as->asfd->fd,
-			doread?&fsr:NULL, dowrite?&fsw:NULL, &fse, &mfd);
-
-                tval.tv_sec=as->setsec;
-                tval.tv_usec=as->setusec;
-
-                if(select(mfd+1,
-			doread?&fsr:NULL, dowrite?&fsw:NULL, &fse, &tval)<0)
-                {
-                        if(errno!=EAGAIN && errno!=EINTR)
-                        {
-                                logp("select error in %s: %s\n", __func__,
-					strerror(errno));
-                                return -1;
-                        }
-                }
-
-		if(!FD_ISSET(as->asfd->fd, &fse)
-		  && (!doread || !FD_ISSET(as->asfd->fd, &fsr))
-		  && (!dowrite || !FD_ISSET(as->asfd->fd, &fsw)))
+	for(asfd=as->asfd; asfd; asfd=asfd->next)
+	{
+		if(!FD_ISSET(asfd->fd, &fse)
+		  && (!asfd->doread || !FD_ISSET(asfd->fd, &fsr))
+		  && (!asfd->dowrite || !FD_ISSET(asfd->fd, &fsw)))
 		{
 			// Be careful to avoid 'read quick' mode.
 			if((as->setsec || as->setusec)
-			  && as->asfd->max_network_timeout>0
-			  && as->asfd->network_timeout--<=0)
+			  && asfd->max_network_timeout>0
+			  && asfd->network_timeout--<=0)
 			{
-				logp("No activity on network for %d seconds.\n",
-					as->asfd->max_network_timeout);
+				logp("No activity on %s for %d seconds.\n",
+					asfd->desc, asfd->max_network_timeout);
 				return -1;
 			}
-			return 0;
+			continue;
 		}
-		as->asfd->network_timeout=as->asfd->max_network_timeout;
+		asfd->network_timeout=asfd->max_network_timeout;
 
-                if(FD_ISSET(as->asfd->fd, &fse))
-                {
-                        logp("error on socket\n");
-                        return -1;
-                }
-
-                if(doread && FD_ISSET(as->asfd->fd, &fsr)) // able to read
-                {
-			if(as->asfd->ssl)
-			{
-				as->asfd->read_blocked_on_write=0;
-				if(as->asfd->do_read_ssl(as->asfd)) return -1;
-			}
-			else
-			{
-				if(as->asfd->do_read(as->asfd)) return -1;
-			}
-			return as->asfd->parse_readbuf(as->asfd);
-                }
-
-                if(dowrite && FD_ISSET(as->asfd->fd, &fsw)) // able to write
+		if(FD_ISSET(asfd->fd, &fse))
 		{
-			if(as->asfd->ssl)
+			logp("error on %s\n", asfd->desc);
+			return -1;
+		}
+
+		if(asfd->doread && FD_ISSET(asfd->fd, &fsr)) // Able to read.
+		{
+			if(asfd->ssl)
 			{
-				as->asfd->write_blocked_on_read=0;
-				return as->asfd->do_write_ssl(as->asfd);
+				asfd->read_blocked_on_write=0;
+				if(asfd->do_read_ssl(asfd)) return -1;
 			}
 			else
-				return as->asfd->do_write(as->asfd);
+			{
+				if(asfd->do_read(asfd)) return -1;
+			}
+			if(asfd->parse_readbuf(asfd)) return -1;
 		}
-        }
+
+		if(asfd->dowrite && FD_ISSET(asfd->fd, &fsw)) // Able to write.
+		{
+			if(asfd->ssl)
+			{
+				asfd->write_blocked_on_read=0;
+				if(asfd->do_write_ssl(asfd)) return -1;
+			}
+			else
+			{
+				if(asfd->do_write(asfd)) return -1;
+			}
+		}
+	}
 
         return 0;
 }

@@ -472,6 +472,8 @@ int compress_file(const char *src, const char *dst, struct config *cconf)
 	// Need to compress the log.
 	logp("Compressing %s to %s...\n", src, dst);
 	if(compress(src, dsttmp, cconf)
+	// Possible rename race condition is of little consequence here.
+	// You will still have the uncompressed log file.
 	  || do_rename(dsttmp, dst))
 	{
 		unlink(dsttmp);
@@ -543,6 +545,10 @@ int delete_backup(const char *basedir, struct bu *arr, int a, int b, const char 
 				free(current);
 				return -1;
 			}
+			// Race condition: The current link can
+			// be deleted and then the rename fail, leaving no
+			// current symlink.
+			// The administrator will have to recover it manually.
 			if(do_rename(tmp, current))
 			{
 				logp("delete failed\n");
@@ -786,6 +792,14 @@ int deleteme_move(const char *basedir, const char *fullpath, const char *path,
 	struct stat statp;
 	char suffix[16]="";
 
+	if(lstat(fullpath, &statp) && errno==ENOENT)
+	{
+		// The path to move aside does not exist.
+		// Treat this as OK.
+		ret=0;
+		goto end;
+	}
+
 	if(!(deleteme=deleteme_get_path(basedir, cconf))
 	  || !(tmp=prepend_s(deleteme, path, strlen(path)))
 	  || mkpath(&tmp, deleteme)
@@ -804,6 +818,8 @@ int deleteme_move(const char *basedir, const char *fullpath, const char *path,
 		if(attempts>=10) break; // Give up.
 	}
 
+	// Possible race condition is of no consequence, as the destination
+	// will need to be deleted at some point anyway.
 	ret=do_rename(fullpath, dest);
 
 end:

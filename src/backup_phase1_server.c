@@ -70,6 +70,9 @@ int backup_phase1_server(const char *phase1data, const char *client, struct cntr
 		logp("error closing %s in backup_phase1_server\n", phase1tmp);
 		ret=-1;
 	}
+	// Possible rename race condition is of no consequence here, because
+	// the working directory will always get deleted if phase1 is not
+	// complete.
 	if(!ret && do_rename(phase1tmp, phase1data))
 		ret=-1;
 	free(phase1tmp);

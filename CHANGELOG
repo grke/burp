@@ -7,6 +7,8 @@
   * Added Jarkko Kniivilä's tweaks to make scripts run more easily on FreeBSD.
   * In bedup, detect if a rename failed after unlinking the target file,
     print a warning and stop processing.
+  * Fix a case where an interrupted backup may not have been automatically
+    recoverable.
 
 2014-04-29 Changes in burp-1.4.14:
   * Add an 'atime' option, which allows the user to choose whether to use

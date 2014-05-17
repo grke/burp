@@ -297,6 +297,9 @@ static int resume_partial_changed_file(struct sbuf *cb, struct sbuf *p1b, const 
 					  || !(dzp=gzopen_file(zdeltmp, "wb"))
 					  || copy_gzpath_to_gzFile(partial,
 						dzp)
+// The rename() race condition could delete partial here, which would mean that
+// the backup would need to start this file again. This is OK, because it is
+// recovers automatically.
 					  || do_rename(zdeltmp, partial))
 					{
 						ret=-1;
@@ -599,6 +602,9 @@ static int resume_partial_new_file(struct sbuf *p1b, struct cntr *cntr, const ch
 				0 /* no slash */))
 			  || !(dzp=gzopen_file(zdeltmp, "wb"))
 			  || copy_gzpath_to_gzFile(partial, dzp)
+// The rename() race condition could delete partial here, which would mean that
+// the backup would need to start this file again. This is OK, because it is
+// recovers automatically.
 			  || do_rename(zdeltmp, partial))
 			{
 				ret=-1;
@@ -687,6 +693,9 @@ static int resume_partial_new_file(struct sbuf *p1b, struct cntr *cntr, const ch
 		}
 		else
 		{
+// The rename() race condition could delete partial here, which would mean that
+// the backup would need to start this file again. This is OK, because it is
+// recovers automatically.
 			if(do_rename(rpath, partial))
 			{
 				ret=-1;
@@ -1007,6 +1016,8 @@ static int finish_delta(struct sbuf *rb, const char *working, const char *deltmp
 		rb->datapth, strlen(rb->datapth)))
 	  || !(delpath=prepend_s(working, deltmp, strlen(deltmp)))
 	  || mkpath(&delpath, working)
+	// Rename race condition is of no consequence here, as delpath will
+	// just get recreated.
 	  || do_rename(deltmppath, delpath))
 		ret=-1;
 	if(delpath) free(delpath);

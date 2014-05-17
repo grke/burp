@@ -402,6 +402,8 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 		// jiggle is required.
 
 		// Use the fresh new file.
+		// Rename race condition is of no consequence, because finpath
+		// will just get recreated automatically.
 		if(do_rename(newpath, finpath))
 		{
 			ret=-1;
@@ -437,6 +439,10 @@ static int jiggle(const char *datapth, const char *currentdata, const char *data
 		// This needs to happen after checking
 		// for the forward delta, because the
 		// patching stuff writes to newpath.
+
+		// Rename race condition is of no consequence, because finpath
+		// will just get recreated automatically.
+
 		//logp("Using newly received file\n");
 		if(do_rename(newpath, finpath))
 		{
@@ -516,7 +522,7 @@ static int do_hardlinked_archive(struct config *cconf, unsigned long bno)
 	return !ret;
 }
 
-static int maybe_delete_files_from_manifest(const char *manifest, const char *deletionsfile, struct config *cconf, struct cntr *cntr)
+static int maybe_delete_files_from_manifest(const char *manifesttmp, const char *manifest, const char *deletionsfile, struct config *cconf, struct cntr *cntr)
 {
 	int ars=0;
 	int ret=0;
@@ -526,7 +532,6 @@ static int maybe_delete_files_from_manifest(const char *manifest, const char *de
 	struct sbuf mb;
 	gzFile nmzp=NULL;
 	gzFile omzp=NULL;
-	char *manifesttmp=NULL;
 	struct stat statp;
 
 	if(lstat(deletionsfile, &statp))
@@ -535,12 +540,6 @@ static int maybe_delete_files_from_manifest(const char *manifest, const char *de
 		return 0;
 	}
 	logp("Performing deletions on manifest\n");
-
-	if(!(manifesttmp=get_tmp_filename(manifest)))
-	{
-		ret=-1;
-		goto end;
-	}
 
         if(!(dfp=open_file(deletionsfile, "rb"))
 	  || !(omzp=gzopen_file(manifest, "rb"))
@@ -615,17 +614,13 @@ end:
 	if(!ret)
 	{
 		unlink(deletionsfile);
+		// The rename race condition is not a problem here, as long
+		// as manifesttmp is the same path as that generated in the
+		// atomic data jiggle.
 		if(do_rename(manifesttmp, manifest))
-		{
-			free(manifesttmp);
 			return -1;
-		}
 	}
-	if(manifesttmp)
-	{
-		unlink(manifesttmp);
-		free(manifesttmp);
-	}
+	if(manifesttmp) unlink(manifesttmp);
 	return ret;
 }
 
@@ -744,9 +739,10 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 		// Manifest does not exist - maybe the server was killed before
 		// it could be renamed.
 		logp("%s did not exist - trying %s\n", manifest, tmpman);
+		// Rename race condition is of no consequence, because manifest
+		// already does not exist.
 		do_rename(tmpman, manifest);
 	}
-	free(tmpman);
 	if(!(zp=gzopen_file(manifest, "rb")))
 	{
 		ret=-1;
@@ -803,7 +799,7 @@ static int atomic_data_jiggle(const char *finishing, const char *working, const 
 	}
 	gzclose_fp(&zp);
 
-	if(maybe_delete_files_from_manifest(manifest, deletionsfile,
+	if(maybe_delete_files_from_manifest(tmpman, manifest, deletionsfile,
 		cconf, cntr)) ret=-1;
 
 	// Remove the temporary data directory, we have probably removed
@@ -819,6 +815,7 @@ end:
 	if(deltafdir) free(deltafdir);
 	if(sigpath) free(sigpath);
 	if(datapth) free(datapth);
+	if(tmpman) free(tmpman);
 	return ret;
 }
 
@@ -900,6 +897,8 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 			logp("Duplicating current backup.\n");
 			if(recursive_hardlink(current, currentduptmp, client,
 				p1cntr, cntr, cconf)
+			// The rename race condition is of no consequence here
+			// because currentdup does not exist.
 			  || do_rename(currentduptmp, currentdup))
 			{
 				ret=-1;
@@ -1013,6 +1012,8 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 	if(previous_backup)
 	{
 		if(deleteme_move(basedir, fullrealcurrent, realcurrent, cconf)
+		// I have tested that potential race conditions on the
+		// rename() are automatically recoverable here.
 		  || do_rename(currentdup, fullrealcurrent))
 		{
 			ret=-1;
@@ -1030,7 +1031,13 @@ int backup_phase4_server(const char *basedir, const char *working, const char *c
 		client, finishing, ACTION_BACKUP);
 
 	// Rename the finishing symlink so that it becomes the current symlink
-	do_rename(finishing, current);
+	// I have tested that potential race conditions on the
+	// rename() are automatically recoverable here.
+	if(do_rename(finishing, current))
+	{
+		ret=-1;
+		goto endfunc;
+	}
 
 	print_filecounters(p1cntr, cntr, ACTION_BACKUP);
 	logp("Backup completed.\n");

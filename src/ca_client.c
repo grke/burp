@@ -93,6 +93,11 @@ static int rewrite_client_conf(struct config *conf)
 		ret=-1;
 		goto end;
 	}
+
+	// Nasty race conditions going on here. However, the new config
+	// file will get left behind, so at worse you will have to move
+	// the new file into the correct place by hand. Or delete everything
+	// and start again.
 #ifdef HAVE_WIN32
 	// Need to delete the destination, or Windows gets upset.
 	unlink(conf->configfile);
@@ -189,6 +194,8 @@ int ca_client_setup(struct config *conf, struct cntr *p1cntr)
 	// The server will also send the CA certificate.
 	if(receive_a_file(ssl_cert_ca_tmp, p1cntr)) goto end;
 
+	// Possible race condition - the rename can delete the destination
+	// and then fail. Worse case, the user has to rename them by hand.
 	if(do_rename(ssl_cert_tmp, conf->ssl_cert)
 	  || do_rename(ssl_cert_ca_tmp, conf->ssl_cert_ca))
 		goto end;

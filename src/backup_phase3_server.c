@@ -127,6 +127,8 @@ int backup_phase3_server(const char *phase2data, const char *unchangeddata, cons
 
 	if(!ret)
 	{
+		// Rename race condition is of no consequence here, as the
+		// manifest will just get recreated automatically.
 		if(do_rename(manifesttmp, manifest))
 			ret=-1;
 		else

@@ -531,6 +531,8 @@ static int do_backup_server(const char *basedir, const char *current, const char
 
 	// Move the symlink to indicate that we are now in the end
 	// phase. 
+	// I have tested that potential race conditions on the
+	// rename() are automatically recoverable here.
 	if(do_rename(working, finishing))
 		goto error;
 	else
@@ -761,6 +763,8 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 
 		// Now just rename the working link to be a finishing link,
 		// then run this function again.
+		// I have tested that potentially race conditions on the
+		// rename() are automatically recoverable here.
 		if(do_rename(working, finishing))
 		{
 			ret=-1;

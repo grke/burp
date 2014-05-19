@@ -13,7 +13,7 @@ static void async_settimers(struct async *as, int sec, int usec)
 	as->setusec=usec;
 }
 
-static int async_rw(struct async *as)
+static int async_io(struct async *as, int doread)
 {
         int mfd=-1;
         fd_set fsr;
@@ -34,13 +34,15 @@ static int async_rw(struct async *as)
 
 	for(asfd=as->asfd; asfd; asfd=asfd->next)
 	{
-		asfd->doread=1;
+		asfd->doread=doread;
 		asfd->dowrite=0;
 
-		if(asfd->parse_readbuf(asfd)) return -1;
-
-		if(asfd->rbuf->buf || asfd->read_blocked_on_write)
-			asfd->doread=0;
+		if(doread)
+		{
+			if(asfd->parse_readbuf(asfd)) return -1;
+			if(asfd->rbuf->buf || asfd->read_blocked_on_write)
+				asfd->doread=0;
+		}
 
 		if(asfd->writebuflen && !asfd->write_blocked_on_read)
 			asfd->dowrite++; // The write buffer is not yet empty.
@@ -120,6 +122,16 @@ static int async_rw(struct async *as)
         return 0;
 }
 
+static int async_read_write(struct async *as)
+{
+	return async_io(as, 1 /* Read too. */);
+}
+
+static int async_write(struct async *as)
+{
+	return async_io(as, 0 /* No read. */);
+}
+
 static int async_read_quick(struct async *as)
 {
 	int r;
@@ -127,7 +139,7 @@ static int async_read_quick(struct async *as)
 	int saveusec=as->setusec;
 	as->setsec=0;
 	as->setusec=0;
-	r=as->rw(as);
+	r=as->read_write(as); // Maybe make an as->read(as) function some time.
 	as->setsec=savesec;
 	as->setusec=saveusec;
 	return r;
@@ -152,7 +164,8 @@ static int async_init(struct async *as, int estimate)
 	as->setusec=0;
 	as->doing_estimate=estimate;
 
-	as->rw=async_rw;
+	as->read_write=async_read_write;
+	as->write=async_write;
 	as->read_quick=async_read_quick;
 
 	as->settimers=async_settimers;

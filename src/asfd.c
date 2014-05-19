@@ -71,7 +71,7 @@ static int asfd_parse_readbuf(struct asfd *asfd)
 		}
 		asfd->readbuflen-=s+5;
 		asfd->rbuf->len=s;
-//printf("got: %c:%s\n", asfd->rbuf->cmd, asfd->rbuf->buf);
+//printf("got %d: %c:%s\n", asfd->rbuf->len, asfd->rbuf->cmd, asfd->rbuf->buf);
 	}
 	return 0;
 }
@@ -214,6 +214,9 @@ static int asfd_do_write_ssl(struct asfd *asfd)
 	switch(SSL_get_error(asfd->ssl, w))
 	{
 		case SSL_ERROR_NONE:
+//char buf[100000]="";
+//snprintf(buf, w+1, "%s", asfd->writebuf);
+//printf("wrote %d: %s\n", w, buf);
 			if(asfd->ratelimit) asfd->rlbytes+=w;
 			memmove(asfd->writebuf,
 				asfd->writebuf+w, asfd->writebuflen-w);
@@ -231,7 +234,7 @@ static int asfd_do_write_ssl(struct asfd *asfd)
 				__func__, errno, strerror(errno), asfd->desc);
 			// Fall through to write problem
 		default:
-			berr_exit("SSL write problem for %s", asfd->desc);
+			berr_exit("SSL write problem for %s\n", asfd->desc);
 			logp("write returned: %d for %s\n", w, asfd->desc);
 			return -1;
 	}
@@ -260,7 +263,7 @@ static int asfd_append_all_to_write_buffer(struct asfd *asfd,
 	sblen=strlen(sbuf);
 	append_to_write_buffer(asfd, sbuf, sblen);
 	append_to_write_buffer(asfd, wbuf->buf, wbuf->len);
-//printf("append: %c:%s\n", wbuf->cmd, wbuf->buf);
+//printf("append %d: %c:%s\n", wbuf->len, wbuf->cmd, wbuf->buf);
 	wbuf->len=0;
 	return 0;
 }
@@ -285,7 +288,7 @@ static int asfd_read(struct asfd *asfd)
 {
 	if(asfd->as->doing_estimate) return 0;
 	while(!asfd->rbuf->buf)
-		if(asfd->as->rw(asfd->as)) return -1;
+		if(asfd->as->read_write(asfd->as)) return -1;
 	return 0;
 }
 
@@ -310,7 +313,7 @@ static int asfd_write(struct asfd *asfd, struct iobuf *wbuf)
 	while(wbuf->len)
 	{
 		asfd->append_all_to_write_buffer(asfd, wbuf);
-		if(asfd->as->rw(asfd->as)) return -1;
+		if(asfd->as->write(asfd->as)) return -1;
 	}
 	return 0;
 }
@@ -419,7 +422,7 @@ struct asfd *asfd_alloc(void)
 	return asfd;
 }
 
-static void asfd_close(struct asfd *asfd)
+void asfd_close(struct asfd *asfd)
 {
 	if(!asfd) return;
 	if(asfd->ssl && asfd->fd>=0)

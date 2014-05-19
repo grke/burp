@@ -71,7 +71,7 @@ static int load_signature_and_send_delta(struct asfd *asfd,
 			break;
 		}
 		// FIX ME: get it to read stuff (errors, for example) here too.
-		if(asfd->as->rw(asfd->as)) return -1;
+		if(asfd->as->write(asfd->as)) return -1;
 	}
 
 	if(r!=RS_DONE)
@@ -306,7 +306,7 @@ static int parse_rbuf(struct asfd *asfd, struct sbuf *sb,
 {
 	static struct iobuf *rbuf;
 	rbuf=asfd->rbuf;
-	//logp("now: %c:%s\n", rbuf->cmd, rbuf->buf);
+	//printf("now %d: %c:%s\n", rbuf->len, rbuf->cmd, rbuf->buf);
 	if(rbuf->cmd==CMD_DATAPTH)
 	{
 		iobuf_copy(&(sb->burp1->datapth), rbuf);

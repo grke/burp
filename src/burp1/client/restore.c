@@ -1,60 +1,6 @@
 #include "include.h"
 #include "../../burp2/client/restore.h"
 
-static int restore_interrupt(struct asfd *asfd,
-	struct sbuf *sb, const char *msg, struct conf *conf)
-{
-	int ret=0;
-	struct cntr *cntr=conf->cntr;
-	struct iobuf *rbuf=asfd->rbuf;
-
-	if(!cntr) return 0;
-
-	cntr_add(cntr, CMD_WARNING, 1);
-	logp("WARNING: %s\n", msg);
-	if(asfd->write_str(asfd, CMD_WARNING, msg)) goto end;
-
-	// If it is file data, get the server
-	// to interrupt the flow and move on.
-	if((sb->path.cmd!=CMD_FILE
-	   && sb->path.cmd!=CMD_ENC_FILE
-	   && sb->path.cmd!=CMD_EFS_FILE
-	   && sb->path.cmd!=CMD_VSS
-	   && sb->path.cmd!=CMD_ENC_VSS
-	   && sb->path.cmd!=CMD_VSS_T
-	   && sb->path.cmd!=CMD_ENC_VSS_T)
-	 || !(sb->burp1->datapth.buf))
-		return 0;
-
-	if(asfd->write_str(asfd, CMD_INTERRUPT, sb->burp1->datapth.buf))
-		goto end;
-
-	// Read to the end file marker.
-	while(1)
-	{
-		iobuf_free_content(rbuf);
-		if(asfd->read(asfd))
-			goto end;
-		if(!ret && rbuf->len)
-		{
-			if(rbuf->cmd==CMD_APPEND)
-				continue;
-			else if(rbuf->cmd==CMD_END_FILE)
-				break;
-			else
-			{
-				iobuf_log_unexpected(rbuf, __func__);
-				goto end;
-			}
-		}
-	}
-
-	ret=0;
-end:
-	iobuf_free_content(rbuf);
-	return ret;
-}
-
 static int open_for_restore(struct asfd *asfd, BFILE *bfd, FILE **fp,
 	const char *path, struct sbuf *sb, int vss_restore, struct conf *conf)
 {
@@ -270,14 +216,6 @@ static int restore_metadata(struct asfd *asfd, BFILE *bfd, struct sbuf *sb,
 	return 0;
 }
 
-static const char *act_str(enum action act)
-{
-	static const char *ret=NULL;
-	if(act==ACTION_RESTORE) ret="restore";
-	else ret="verify";
-	return ret;
-}
-
 int do_restore_client_burp1(struct asfd *asfd,
 	struct conf *conf, enum action act, int vss_restore)
 {
@@ -289,6 +227,8 @@ int do_restore_client_burp1(struct asfd *asfd,
 // written immediately afterwards. The server is transferring them in two
 // chunks. So, leave bfd open after a Windows metadata transfer.
 	BFILE bfd;
+	char *fullpath=NULL;
+
 #ifdef HAVE_WIN32
 	binit(&bfd, 0, conf);
 #endif
@@ -302,11 +242,8 @@ int do_restore_client_burp1(struct asfd *asfd,
 		return -1;
 	logp("doing %s confirmed\n", act_str(act));
 
-	if(conf->send_client_cntr)
-	{
-// FIX THIS
-//		if(cntr_recv(conf)) goto end;
-	}
+//	if(conf->send_client_cntr && cntr_recv(conf))
+//		goto end;
 
 #if defined(HAVE_WIN32)
 	if(act==ACTION_RESTORE) win32_enable_backup_privileges();
@@ -315,8 +252,6 @@ int do_restore_client_burp1(struct asfd *asfd,
 	if(!(sb=sbuf_alloc(conf))) goto end;
 	while(1)
 	{
-		char *fullpath=NULL;
-
 		sbuf_free_content(sb);
 		if((ars=sbufl_fill(sb, asfd, NULL, NULL, conf->cntr)))
 		{
@@ -359,6 +294,7 @@ int do_restore_client_burp1(struct asfd *asfd,
 					}
 					// It is OK, sb->path is now stripped.
 				}
+				if(fullpath) free(fullpath);
 				if(!(fullpath=prepend_s(conf->restoreprefix,
 					sb->path.buf)))
 				{
@@ -381,10 +317,7 @@ int do_restore_client_burp1(struct asfd *asfd,
 					if(restore_interrupt(asfd, sb, msg, conf))
 						goto end;
 					else
-					{
-						if(fullpath) free(fullpath);
 						continue;
-					}
 				  }
 				}
 				break;	
@@ -465,8 +398,6 @@ int do_restore_client_burp1(struct asfd *asfd,
 				goto end;
 				break;
 		}
-
-		if(fullpath) free(fullpath);
 	}
 
 	ret=0;
@@ -483,6 +414,8 @@ end:
 
 	if(!ret) logp("%s finished\n", act_str(act));
 	else logp("ret: %d\n", ret);
+
+	if(fullpath) free(fullpath);
 
 	return ret;
 }

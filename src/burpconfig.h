@@ -58,7 +58,7 @@
 #endif
 
 #if defined(HAVE_WIN32)
-typedef int64_t boffset_t;
+typedef uint64_t boffset_t;
 #else
 typedef off_t boffset_t;
 #endif

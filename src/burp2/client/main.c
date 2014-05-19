@@ -272,18 +272,8 @@ static enum cliret restore_wrapper(struct asfd *asfd, enum action action,
 	}
 	if(ret==CLIENT_OK)
 	{
-		// FIX THIS: Really need to abstract these
-		// functions to be a single pointer.
-		if(conf->protocol==PROTO_BURP1)
-		{
-			if(do_restore_client_burp1(asfd, conf,
-				action, vss_restore)) ret=CLIENT_ERROR;
-		}
-		else
-		{
-			if(do_restore_client(asfd, conf,
-				action, vss_restore)) ret=CLIENT_ERROR;
-		}
+		if(do_restore_client(asfd, conf,
+			action, vss_restore)) ret=CLIENT_ERROR;
 	}
 	if((ret==CLIENT_OK || conf->r_script_post_run_on_fail)
 	  && conf->r_script_post)

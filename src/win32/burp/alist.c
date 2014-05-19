@@ -3,22 +3,20 @@
 
 /* Private grow list function. Used to insure that at least one more "slot" is
    available. */
-// FIX THIS: malloc/realloc can fail and the program will continue and maybe
-// segfault.
+// FIX THIS: stupid bacula stuff - malloc/realloc can fail and the program
+// will continue and maybe segfault.
 void alist::grow_list()
 {
 	if(!items)
 	{
 		if(!num_grow) num_grow=1;
-		items=(void **)
-			malloc_w(num_grow*sizeof(void *), __func__);
+		items=(void **)malloc(num_grow*sizeof(void *));
 		max_items=num_grow;
 	}
 	else if(num_items==max_items)
 	{
 		max_items+=num_grow;
-		items=(void **)
-			realloc_w(items, max_items*sizeof(void *), __func__);
+		items=(void **)realloc(items, max_items*sizeof(void *));
 	}
 }
 

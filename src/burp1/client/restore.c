@@ -170,252 +170,118 @@ static int restore_metadata(struct asfd *asfd, BFILE *bfd, struct sbuf *sb,
 	const char *fname, enum action act, const char *encpassword,
 	int vss_restore, struct conf *conf)
 {
+	size_t metalen=0;
+	char *metadata=NULL;
 	// If it is directory metadata, try to make sure the directory
 	// exists. Pass in NULL as the cntr, so no counting is done.
 	// The actual directory entry will be coming after the metadata,
 	// annoyingly. This is because of the way that the server is queuing
 	// up directories to send after file data, so that the stat info on
 	// them gets set correctly.
-	if(act==ACTION_RESTORE)
+	if(act==ACTION_VERIFY)
 	{
-		size_t metalen=0;
-		char *metadata=NULL;
-		if(S_ISDIR(sb->statp.st_mode)
-		  && restore_dir(asfd, sb, fname, act, NULL))
-			return -1;
-
-		// Read in the metadata...
-		if(restore_file_or_get_meta(asfd, bfd, sb,
-			fname, act, encpassword,
-			&metadata, &metalen, vss_restore, conf))
-				return -1;
-		if(metadata)
-		{
-			
-			if(set_extrameta(asfd,
-#ifdef HAVE_WIN32
-				bfd,
-#endif
-				fname, sb->path.cmd,
-				&(sb->statp), metadata, metalen, conf))
-			{
-				free(metadata);
-				// carry on if we could not do it
-				return 0;
-			}
-			free(metadata);
-#ifndef HAVE_WIN32
-			// set attributes again, since we just diddled with
-			// the file
-			attribs_set(asfd, fname, &(sb->statp), sb->winattr, conf);
-#endif
-			cntr_add(conf->cntr, sb->path.cmd, 1);
-		}
+		cntr_add(conf->cntr, sb->path.cmd, 1);
+		return 0;
 	}
-	else cntr_add(conf->cntr, sb->path.cmd, 1);
+
+	if(S_ISDIR(sb->statp.st_mode)
+	  && restore_dir(asfd, sb, fname, act, NULL))
+		return -1;
+
+	// Read in the metadata...
+	if(restore_file_or_get_meta(asfd, bfd, sb, fname, act, encpassword,
+		&metadata, &metalen, vss_restore, conf))
+			return -1;
+	if(metadata)
+	{
+		
+		if(set_extrameta(asfd,
+#ifdef HAVE_WIN32
+			bfd,
+#endif
+			fname, sb->path.cmd,
+			&(sb->statp), metadata, metalen, conf))
+		{
+			free(metadata);
+			// carry on if we could not do it
+			return 0;
+		}
+		free(metadata);
+#ifndef HAVE_WIN32
+		// Set attributes again, since we just diddled with the file.
+		attribs_set(asfd, fname, &(sb->statp), sb->winattr, conf);
+#endif
+		cntr_add(conf->cntr, sb->path.cmd, 1);
+	}
 	return 0;
 }
 
-int do_restore_client_burp1(struct asfd *asfd,
-	struct conf *conf, enum action act, int vss_restore)
+int restore_switch_burp1(struct asfd *asfd, struct sbuf *sb,
+	const char *fullpath, enum action act,
+	BFILE *bfd, int vss_restore, struct conf *conf)
 {
-	int ars=0;
-	int ret=-1;
-	char msg[512]="";
-	struct sbuf *sb=NULL;
-// Windows needs to have the VSS data written first, and the actual data
-// written immediately afterwards. The server is transferring them in two
-// chunks. So, leave bfd open after a Windows metadata transfer.
-	BFILE bfd;
-	char *fullpath=NULL;
-
-#ifdef HAVE_WIN32
-	binit(&bfd, 0, conf);
-#endif
-
-	logp("doing %s\n", act_str(act));
-
-	snprintf(msg, sizeof(msg), "%s %s:%s", act_str(act),
-		conf->backup?conf->backup:"", conf->regex?conf->regex:"");
-	if(asfd->write_str(asfd, CMD_GEN, msg)
-	  || asfd->read_expect(asfd, CMD_GEN, "ok"))
-		return -1;
-	logp("doing %s confirmed\n", act_str(act));
-
-//	if(conf->send_client_cntr && cntr_recv(conf))
-//		goto end;
-
-#if defined(HAVE_WIN32)
-	if(act==ACTION_RESTORE) win32_enable_backup_privileges();
-#endif
-
-	if(!(sb=sbuf_alloc(conf))) goto end;
-	while(1)
+	switch(sb->path.cmd)
 	{
-		sbuf_free_content(sb);
-		if((ars=sbufl_fill(sb, asfd, NULL, NULL, conf->cntr)))
-		{
-			if(ars<0) goto end;
-			else
+		case CMD_WARNING:
+			cntr_add(conf->cntr, sb->path.cmd, 1);
+			printf("\n");
+			logp("%s", sb->path);
+			break;
+		case CMD_FILE:
+		case CMD_VSS_T:
+			// Have it a separate statement to the
+			// encrypted version so that encrypted and not
+			// encrypted files can be restored at the
+			// same time.
+			if(restore_file_or_get_meta(asfd, bfd, sb,
+				fullpath, act,
+				NULL, NULL, NULL,
+				vss_restore, conf))
 			{
-				// ars==1 means it ended ok.
-				//logp("got %s end\n", act_str(act));
-				if(asfd->write_str(asfd,
-					CMD_GEN, "restoreend ok")) goto end;
+				logp("restore_file error\n");
+				goto error;
 			}
 			break;
-		}
-
-		switch(sb->path.cmd)
-		{
-			case CMD_DIRECTORY:
-			case CMD_FILE:
-			case CMD_ENC_FILE:
-			case CMD_SOFT_LINK:
-			case CMD_HARD_LINK:
-			case CMD_SPECIAL:
-			case CMD_METADATA:
-			case CMD_ENC_METADATA:
-			case CMD_VSS:
-			case CMD_ENC_VSS:
-			case CMD_VSS_T:
-			case CMD_ENC_VSS_T:
-			case CMD_EFS_FILE:
-				if(conf->strip)
-				{
-					int s;
-					s=strip_path_components(asfd, sb, conf);
-					if(s<0) goto end; // error
-					else if(s==0)
-					{
-						// Too many components stripped
-						// - carry on.
-						continue;
-					}
-					// It is OK, sb->path is now stripped.
-				}
-				if(fullpath) free(fullpath);
-				if(!(fullpath=prepend_s(conf->restoreprefix,
-					sb->path.buf)))
-				{
-					log_and_send_oom(asfd, __func__);
-					goto end;
-				}
-				if(act==ACTION_RESTORE)
-				{
-				  strip_invalid_characters(&fullpath);
-				  if(!overwrite_ok(sb, conf,
-#ifdef HAVE_WIN32
-					&bfd,
-#endif
-					fullpath))
-				  {
-					char msg[512]="";
-					// Something exists at that path.
-					snprintf(msg, sizeof(msg),
-						"Path exists: %s", fullpath);
-					if(restore_interrupt(asfd, sb, msg, conf))
-						goto end;
-					else
-						continue;
-				  }
-				}
-				break;	
-			default:
-				break;
-		}
-
-		switch(sb->path.cmd)
-		{
-			case CMD_WARNING:
-				cntr_add(conf->cntr, sb->path.cmd, 1);
-				printf("\n");
-				logp("%s", sb->path);
-				break;
-			case CMD_DIRECTORY:
-                                if(restore_dir(asfd, sb, fullpath, act, conf))
-					goto end;
-				break;
-			case CMD_FILE:
-			case CMD_VSS_T:
-				// Have it a separate statement to the
-				// encrypted version so that encrypted and not
-				// encrypted files can be restored at the
-				// same time.
-				if(restore_file_or_get_meta(asfd, &bfd, sb,
-					fullpath, act,
-					NULL, NULL, NULL,
-					vss_restore, conf))
-				{
-					logp("restore_file error\n");
-					goto end;
-				}
-				break;
-			case CMD_ENC_FILE:
-			case CMD_ENC_VSS_T:
-				if(restore_file_or_get_meta(asfd, &bfd, sb,
-					fullpath, act,
-					conf->encryption_password,
-					NULL, NULL, vss_restore, conf))
-				{
-					logp("restore_file error\n");
-					goto end;
-				}
-				break;
-			case CMD_SOFT_LINK:
-			case CMD_HARD_LINK:
-				if(restore_link(asfd, sb, fullpath, act, conf))
-					goto end;
-				break;
-			case CMD_SPECIAL:
-				if(restore_special(asfd, sb, fullpath, act, conf))
-					goto end;
-				break;
-			case CMD_METADATA:
-			case CMD_VSS:
-				if(restore_metadata(asfd, &bfd, sb, fullpath,
-					act, NULL, vss_restore, conf))
-						goto end;
-				break;
-			case CMD_ENC_METADATA:
-			case CMD_ENC_VSS:
-				if(restore_metadata(asfd, &bfd, sb, fullpath,
-					act, conf->encryption_password,
-					vss_restore, conf))
-						goto end;
-				break;
-			case CMD_EFS_FILE:
-				if(restore_file_or_get_meta(asfd, &bfd, sb,
-					fullpath, act,
-					NULL, NULL, NULL, vss_restore, conf))
-				{
-					logp("restore_file error\n");
-					goto end;
-				}
-				break;
-			default:
-				logp("unknown cmd: %c\n", sb->path.cmd);
-				goto end;
-				break;
-		}
+		case CMD_ENC_FILE:
+		case CMD_ENC_VSS_T:
+			if(restore_file_or_get_meta(asfd, bfd, sb,
+				fullpath, act,
+				conf->encryption_password,
+				NULL, NULL, vss_restore, conf))
+			{
+				logp("restore_file error\n");
+				goto error;
+			}
+			break;
+		case CMD_METADATA:
+		case CMD_VSS:
+			if(restore_metadata(asfd, bfd, sb, fullpath,
+				act, NULL, vss_restore, conf))
+					goto error;
+			break;
+		case CMD_ENC_METADATA:
+		case CMD_ENC_VSS:
+			if(restore_metadata(asfd, bfd, sb, fullpath,
+				act, conf->encryption_password,
+				vss_restore, conf))
+					goto error;
+			break;
+		case CMD_EFS_FILE:
+			if(restore_file_or_get_meta(asfd, bfd, sb,
+				fullpath, act,
+				NULL, NULL, NULL, vss_restore, conf))
+			{
+				logp("restore_file error\n");
+				goto error;
+			}
+			break;
+		default:
+			// Other cases (dir/links/etc) are handled in the
+			// calling function.
+			logp("unknown cmd: %c\n", sb->path.cmd);
+			goto error;
 	}
-
-	ret=0;
-end:
-	sbuf_free(sb);
-
-#ifdef HAVE_WIN32
-	// It is possible for a bfd to still be open.
-	bclose(&bfd, asfd);
-#endif
-
-	cntr_print_end(conf->cntr);
-	cntr_print(conf->cntr, act);
-
-	if(!ret) logp("%s finished\n", act_str(act));
-	else logp("ret: %d\n", ret);
-
-	if(fullpath) free(fullpath);
-
-	return ret;
+	return 0;
+error:
+	return -1;
 }

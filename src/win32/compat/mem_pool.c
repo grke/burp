@@ -117,7 +117,7 @@ static char *sm_realloc_pool_memory(char *obuf, int32_t size)
 	ASSERT(obuf);
 	cp-=HEAD_SIZE;
 	// FIX THIS: should not just exit.
-	if(!(buf=realloc_w(cp, size+HEAD_SIZE, __func__)))
+	if(!(buf=realloc(cp, size+HEAD_SIZE)))
 		exit(1);
 	((struct abufhead *)buf)->ablen=size;
 	pool=((struct abufhead *)buf)->pool;

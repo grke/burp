@@ -119,7 +119,8 @@ static void sigchld_handler(int sig)
 	sigchld=1;
 }
 
-int setup_signals(int oldmax_children, int max_children, int oldmax_status_children, int max_status_children)
+int setup_signals(int oldmax_children, int max_children,
+	int oldmax_status_children, int max_status_children)
 {
 	// Ignore SIGPIPE - we are careful with read and write return values.
 	signal(SIGPIPE, SIG_IGN);
@@ -134,7 +135,8 @@ int setup_signals(int oldmax_children, int max_children, int oldmax_status_child
 	return 0;
 }
 
-static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *conffile, int forking)
+static int run_child(int *rfd, int *cfd, SSL_CTX *ctx,
+	const char *conffile, int forking)
 {
 	int ret=-1;
 	int ca_ret=0;

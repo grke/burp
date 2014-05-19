@@ -609,9 +609,9 @@ int backup_phase2_server(struct async *as,
 
 		if(wbuf->len)
 			as->asfd->append_all_to_write_buffer(as->asfd, wbuf);
-		if(as->rw(as))
+		if(as->read_write(as))
 		{
-			logp("error in async_rw in %s()\n", __func__);
+			logp("error in %s\n", __func__);
 			goto end;
 		}
 

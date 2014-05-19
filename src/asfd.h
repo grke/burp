@@ -62,6 +62,7 @@ struct asfd
 };
 
 extern struct asfd *asfd_alloc(void);
+extern void asfd_close(struct asfd *asfd); // Maybe should be in the struct.
 extern void asfd_free(struct asfd **asfd);
 
 #endif

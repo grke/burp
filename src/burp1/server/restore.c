@@ -278,10 +278,16 @@ static int verify_file(struct asfd *asfd, struct sbuf *sb,
 // a = length of struct bu array
 // i = position to restore from
 static int restore_file(struct asfd *asfd, struct bu *arr, int a, int i,
-	struct sbuf *sb, const char *tmppath1, const char *tmppath2,
-	int act, struct conf *cconf)
+	struct sbuf *sb, int act, struct sdirs *sdirs, struct conf *cconf)
 {
 	int x=0;
+	static char *tmppath1=NULL;
+	static char *tmppath2=NULL;
+
+	if((!tmppath1 && !(tmppath1=prepend_s(sdirs->client, "tmp1")))
+	  || (!tmppath2 && !(tmppath2=prepend_s(sdirs->client, "tmp2"))))
+		return -1;
+
 	// Go up the array until we find the file in the data directory.
 	for(x=i; x<a; x++)
 	{
@@ -416,8 +422,8 @@ static int restore_file(struct asfd *asfd, struct bu *arr, int a, int i,
 }
 
 static int restore_sbufl(struct asfd *asfd, struct sbuf *sb, struct bu *arr,
-	int a, int i, const char *tmppath1, const char *tmppath2,
-	enum action act, char status, struct conf *cconf)
+	int a, int i, enum action act, struct sdirs *sdirs,
+	 char status, struct conf *cconf)
 {
 	//printf("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path.buf);
 	if(write_status(status, sb->path.buf, cconf)) return -1;
@@ -435,8 +441,7 @@ static int restore_sbufl(struct asfd *asfd, struct sbuf *sb, struct bu *arr,
 	  || sb->path.cmd==CMD_ENC_VSS_T
 	  || sb->path.cmd==CMD_EFS_FILE)
 	{
-		return restore_file(asfd, arr, a, i, sb,
-		  tmppath1, tmppath2, act, cconf);
+		return restore_file(asfd, arr, a, i, sb, act, sdirs, cconf);
 	}
 	else
 	{
@@ -492,8 +497,7 @@ end:
 
 static int restore_ent(struct asfd *asfd, struct sbuf **sb,
 	struct sbuf ***sblist, int *scount, struct bu *arr, int a, int i,
-	const char *tmppath1, const char *tmppath2, enum action act,
-	char status, struct conf *cconf)
+	enum action act, struct sdirs *sdirs, char status, struct conf *cconf)
 {
 	int s=0;
 	int ret=-1;
@@ -512,8 +516,8 @@ static int restore_ent(struct asfd *asfd, struct sbuf **sb,
 		{
 			// Can now restore sblist[s] because nothing else is
 			// fiddling in a subdirectory.
-			if(restore_sbufl(asfd, (*sblist)[s], arr, a, i, tmppath1,
-				tmppath2, act, status, cconf))
+			if(restore_sbufl(asfd, (*sblist)[s], arr, a, i,
+				act, sdirs, status, cconf))
 					goto end;
 			else if(del_from_sbufl_arr(sblist, scount))
 				goto end;
@@ -532,9 +536,8 @@ static int restore_ent(struct asfd *asfd, struct sbuf **sb,
 		if(!(*sb=sbuf_alloc(cconf)))
 			goto end;
 	}
-	else if(restore_sbufl(asfd, *sb, arr, a, i,
-		tmppath1, tmppath2, act, status, cconf))
-			goto end;
+	else if(restore_sbufl(asfd, *sb, arr, a, i, act, sdirs, status, cconf))
+		goto end;
 	ret=0;
 end:
 	return ret;
@@ -565,7 +568,6 @@ static int check_srestore(struct conf *cconf, const char *path)
 
 static int setup_cntr(struct asfd *asfd, const char *manifest,
 	regex_t *regex, int srestore,
-	const char *tmppath1, const char *tmppath2,
 	enum action act, char status, struct conf *cconf)
 {
 	int ars=0;
@@ -612,8 +614,7 @@ end:
 static int actual_restore(struct asfd *asfd,
 	struct bu *arr, int a, int i,
 	const char *manifest, regex_t *regex, int srestore,
-	const char *tmppath1, const char *tmppath2,
-	enum action act, char status,
+	enum action act, struct sdirs *sdirs, char status,
 	struct conf *cconf)
 {
 	int s=0;
@@ -677,8 +678,7 @@ static int actual_restore(struct asfd *asfd,
 			    || check_srestore(cconf, sb->path.buf))
 			  && check_regex(regex, sb->path.buf)
 			  && restore_ent(asfd, &sb, &sblist, &scount,
-				arr, a, i, tmppath1, tmppath2,
-				act, status, cconf))
+				arr, a, i, act, sdirs, status, cconf))
 					goto end;
 		}
 		sbuf_free_content(sb);
@@ -687,7 +687,7 @@ static int actual_restore(struct asfd *asfd,
 	if(!ret) for(s=scount-1; s>=0; s--)
 	{
 		if(restore_sbufl(asfd, sblist[s], arr, a, i,
-			tmppath1, tmppath2, act, status, cconf))
+			act, sdirs, status, cconf))
 				goto end;
 	}
 
@@ -709,8 +709,7 @@ end:
 // i = position to restore from
 static int restore_manifest(struct asfd *asfd,
 	struct bu *arr, int a, int i,
-	const char *tmppath1, const char *tmppath2,
-	regex_t *regex, int srestore, enum action act,
+	regex_t *regex, int srestore, enum action act, struct sdirs *sdirs,
 	char **dir_for_notify, struct conf *cconf)
 {
 	int ret=-1;
@@ -754,7 +753,6 @@ static int restore_manifest(struct asfd *asfd,
 	// This is the equivalent of a phase1 scan during backup.
 
 	if(setup_cntr(asfd, manifest, regex, srestore,
-		tmppath1, tmppath2,
 		act, status, cconf))
 			goto end;
 
@@ -763,8 +761,7 @@ static int restore_manifest(struct asfd *asfd,
 
 	// Now, do the actual restore.
 	if(actual_restore(asfd, arr, a, i, manifest,
-		regex, srestore, tmppath1, tmppath2,
-		act, status, cconf))
+		regex, srestore, act, sdirs, status, cconf))
 			goto end;
 
 	ret=0;
@@ -785,29 +782,17 @@ int do_restore_server_burp1(struct asfd *asfd,
 	int a=0;
 	int i=0;
 	int ret=0;
-	int found=0;
+	uint8_t found=0;
 	struct bu *arr=NULL;
 	unsigned long index=0;
-	char *tmppath1=NULL;
-	char *tmppath2=NULL;
 	regex_t *regex=NULL;
 
 	logp("in do_restore\n");
 
 	if(compile_regex(&regex, cconf->regex)) return -1;
 
-	if(!(tmppath1=prepend_s(sdirs->client, "tmp1"))
-	  || !(tmppath2=prepend_s(sdirs->client, "tmp2")))
-	{
-		if(tmppath1) free(tmppath1);
-		if(regex) { regfree(regex); free(regex); }
-		return -1;
-	}
-
 	if(get_current_backups(asfd, sdirs, &arr, &a, 1))
 	{
-		if(tmppath1) free(tmppath1);
-		if(tmppath2) free(tmppath2);
 		if(regex) { regfree(regex); free(regex); }
 		return -1;
 	}
@@ -816,8 +801,7 @@ int do_restore_server_burp1(struct asfd *asfd,
 	{
 		// No backup specified, do the most recent.
 		ret=restore_manifest(asfd, arr, a, a-1,
-			tmppath1, tmppath2, regex, srestore, act,
-			dir_for_notify, cconf);
+			regex, srestore, act, sdirs, dir_for_notify, cconf);
 		found=1;
 	}
 
@@ -829,9 +813,8 @@ int do_restore_server_burp1(struct asfd *asfd,
 			found=1;
 			//logp("got: %s\n", arr[i].path);
 			ret|=restore_manifest(asfd, arr, a, i,
-				tmppath1, tmppath2, regex,
-				srestore, act, dir_for_notify,
-				cconf);
+				regex, srestore, act, sdirs,
+				dir_for_notify, cconf);
 			break;
 		}
 	}
@@ -843,16 +826,6 @@ int do_restore_server_burp1(struct asfd *asfd,
 		logp("backup not found\n");
 		asfd->write_str(asfd, CMD_ERROR, "backup not found");
 		ret=-1;
-	}
-	if(tmppath1)
-	{
-		unlink(tmppath1);
-		free(tmppath1);
-	}
-	if(tmppath2)
-	{
-		unlink(tmppath2);
-		free(tmppath2);
 	}
 	if(regex)
 	{

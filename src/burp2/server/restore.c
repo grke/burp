@@ -596,7 +596,6 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu, regex_t *regex,
 {
 	int ret=-1;
 	char *manifest=NULL;
-//	FILE *logfp=NULL;
 	char *logpath=NULL;
 	char *logpathz=NULL;
 	// For sending status information up to the server.
@@ -605,8 +604,7 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu, regex_t *regex,
 	if(act==ACTION_RESTORE) status=STATUS_RESTORING;
 	else if(act==ACTION_VERIFY) status=STATUS_VERIFYING;
 
-	if(
-	    (act==ACTION_RESTORE
+	if((act==ACTION_RESTORE
 		&& !(logpath=prepend_s(bu->path, "restorelog")))
 	 || (act==ACTION_RESTORE
 		&& !(logpathz=prepend_s(bu->path, "restorelog.gz")))
@@ -635,9 +633,8 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu, regex_t *regex,
 	// First, do a pass through the manifest to set up the counters.
 	if(cntr_load(manifest, regex, conf)) goto end;
 
-//	if(conf->send_client_cntr
-//	  && cntr_send(conf))
-//		goto end;
+	if(conf->send_client_cntr && cntr_send(conf->cntr))
+		goto end;
 
 	if(do_restore_manifest(asfd, sdirs->data, bu, manifest, regex,
 		srestore, conf, act, status)) goto end;
@@ -680,8 +677,8 @@ int do_restore_server(struct asfd *asfd, struct sdirs *sdirs,
 	if(!(index=strtoul(conf->backup, NULL, 10)) && a>0)
 	{
 		// No backup specified, do the most recent.
-		ret=restore_manifest(asfd, &arr[a-1], regex, srestore, act,
-			sdirs, dir_for_notify, conf);
+		ret=restore_manifest(asfd, &arr[a-1],
+			regex, srestore, act, sdirs, dir_for_notify, conf);
 		found=1;
 	}
 
@@ -692,8 +689,8 @@ int do_restore_server(struct asfd *asfd, struct sdirs *sdirs,
 		{
 			found=1;
 			//logp("got: %s\n", arr[i].path);
-			ret|=restore_manifest(asfd, &arr[i], regex,
-				srestore, act, sdirs,
+			ret|=restore_manifest(asfd, &arr[i],
+				regex, srestore, act, sdirs,
 				dir_for_notify, conf);
 			break;
 		}

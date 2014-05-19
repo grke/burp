@@ -181,7 +181,7 @@ end:
 	return ret;
 }
 
-static int restore_special(struct asfd *asfd, struct sbuf *sb,
+int restore_special(struct asfd *asfd, struct sbuf *sb,
 	const char *fname, enum action act, struct conf *conf)
 {
 	int ret=0;
@@ -262,7 +262,7 @@ end:
 	return ret;
 }
 
-static int restore_dir(struct asfd *asfd,
+int restore_dir(struct asfd *asfd,
 	struct sbuf *sb, const char *dname, enum action act, struct conf *conf)
 {
 	int ret=0;
@@ -301,7 +301,7 @@ end:
 	return ret;
 }
 
-static int restore_link(struct asfd *asfd, struct sbuf *sb,
+int restore_link(struct asfd *asfd, struct sbuf *sb,
 	const char *fname, enum action act, struct conf *conf)
 {
 	int ret=0;
@@ -319,7 +319,8 @@ static int restore_link(struct asfd *asfd, struct sbuf *sb,
 				ret=-1;
 			goto end;
 		}
-		else if(make_link(asfd, fname, sb->link.buf, sb->link.cmd, conf))
+		else if(make_link(asfd,
+			fname, sb->link.buf, sb->link.cmd, conf))
 		{
 			// failed - do a warning
 			if(restore_interrupt(asfd, sb,
@@ -329,7 +330,8 @@ static int restore_link(struct asfd *asfd, struct sbuf *sb,
 		}
 		else if(!ret)
 		{
-			attribs_set(asfd, fname, &(sb->statp), sb->winattr, conf);
+			attribs_set(asfd, fname,
+				&(sb->statp), sb->winattr, conf);
 			cntr_add(conf->cntr, sb->path.cmd, 1);
 		}
 		if(rpath) free(rpath);
@@ -401,7 +403,7 @@ static int restore_metadata(
 }
 */
 
-static void strip_invalid_characters(char **path)
+void strip_invalid_characters(char **path)
 {
 #ifdef HAVE_WIN32
       char *ch = *path;
@@ -433,7 +435,7 @@ static const char *act_str(enum action act)
 }
 
 // Return 1 for ok, -1 for error, 0 for too many components stripped.
-static int strip_path_components(struct asfd *asfd,
+int strip_path_components(struct asfd *asfd,
 	struct sbuf *sb, struct conf *conf)
 {
 	int s=0;
@@ -473,7 +475,7 @@ static int strip_path_components(struct asfd *asfd,
 	return 1;
 }
 
-static int overwrite_ok(struct sbuf *sb,
+int overwrite_ok(struct sbuf *sb,
 	struct conf *conf,
 #ifdef HAVE_WIN32
 	BFILE *bfd,
@@ -487,18 +489,25 @@ static int overwrite_ok(struct sbuf *sb,
 	if(conf->overwrite) return 1;
 #else
 	// User specified overwrite is OK,
-	if(conf->overwrite) return 1;
+	// UNLESS we are trying to overwrite the file with trailing VSS data.
+	if(conf->overwrite)
+		return (sb->path.cmd!=CMD_VSS_T
+			&& sb->path.cmd!=CMD_ENC_VSS_T);
 #endif
 
 	if(!S_ISDIR(sb->statp.st_mode)
 	  && sb->path.cmd!=CMD_METADATA
-	  && sb->path.cmd!=CMD_ENC_METADATA)
+	  && sb->path.cmd!=CMD_ENC_METADATA
+	  && sb->path.cmd!=CMD_VSS
+	  && sb->path.cmd!=CMD_ENC_VSS)
 	{
 #ifdef HAVE_WIN32
 		// If Windows previously got some VSS data, it needs to append
 		// the file data to the already open bfd.
+		// And trailing VSS data.
 		if(bfd->mode!=BF_CLOSED
 		  && (sb->path.cmd==CMD_FILE || sb->path.cmd==CMD_ENC_FILE)
+		      || sb->path.cmd==CMD_VSS_T || sb->path.cmd==CMD_ENC_VSS_T)
 		  && bfd->path && !strcmp(bfd->path, fullpath))
 		{
 			return 1;

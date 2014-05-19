@@ -21,6 +21,8 @@ extern int overwrite_ok(struct sbuf *sb,
         BFILE *bfd,
 #endif
         const char *fullpath);
-
+extern int restore_interrupt(struct asfd *asfd,
+	struct sbuf *sb, const char *msg, struct conf *conf);
+extern const char *act_str(enum action act);
 
 #endif

@@ -1,62 +1,61 @@
 #include "include.h"
 
-static int restore_interrupt(struct asfd *asfd,
+// FIX THIS: test whether this works with burp2
+int restore_interrupt(struct asfd *asfd,
 	struct sbuf *sb, const char *msg, struct conf *conf)
 {
-	return 0;
-/* FIX THIS
 	int ret=0;
-	int quit=0;
-	char *buf=NULL;
+	struct cntr *cntr=conf->cntr;
+	struct iobuf *rbuf=asfd->rbuf;
 
-	if(!conf->cntr) return 0;
+	if(!cntr) return 0;
 
-	cntr_add(conf->cntr, CMD_WARNING, 1);
+	cntr_add(cntr, CMD_WARNING, 1);
 	logp("WARNING: %s\n", msg);
-	if(asfd->write_str(asfd, CMD_WARNING, msg)) return -1;
+	if(asfd->write_str(asfd, CMD_WARNING, msg)) goto end;
 
 	// If it is file data, get the server
 	// to interrupt the flow and move on.
-	if(sb->cmd!=CMD_FILE
-	   && sb->cmd!=CMD_ENC_FILE
-	   && sb->cmd!=CMD_EFS_FILE)
+	if(sb->path.cmd!=CMD_FILE
+	  && sb->path.cmd!=CMD_ENC_FILE
+	  && sb->path.cmd!=CMD_EFS_FILE
+	  && sb->path.cmd!=CMD_VSS
+	  && sb->path.cmd!=CMD_ENC_VSS
+	  && sb->path.cmd!=CMD_VSS_T
+	  && sb->path.cmd!=CMD_ENC_VSS_T)
+		return 0;
+	if(sb->burp1 && !(sb->burp1->datapth.buf))
+		return 0;
+	if(sb->burp2 && !(sb->path.buf))
 		return 0;
 
-	if(asfd->write_str(asfd, CMD_INTERRUPT, sb->path))
-	{
-		ret=-1;
-		quit++;
-	}
+	if(asfd->write_str(asfd, CMD_INTERRUPT, sb->burp1->datapth.buf))
+		goto end;
+
 	// Read to the end file marker.
-	while(!quit)
+	while(1)
 	{
-		size_t len=0;
-		char cmd='\0';
-		if(async_read(&cmd, &buf, &len))
+		iobuf_free_content(rbuf);
+		if(asfd->read(asfd))
+			goto end;
+		if(!ret && rbuf->len)
 		{
-			ret=-1; quit++;
+			if(rbuf->cmd==CMD_APPEND)
+				continue;
+			else if(rbuf->cmd==CMD_END_FILE)
+				break;
+			else
+			{
+				iobuf_log_unexpected(rbuf, __func__);
+				goto end;
+			}
 		}
-		if(!ret && len)
-		{
-		  if(cmd==CMD_APPEND)
-		  {
-			continue;
-		  }
-		  else if(cmd==CMD_END_FILE)
-		  {
-			break;
-		  }
-		  else
-		  {
-			logp("unexpected cmd from server while flushing: %c:%s\n", cmd, buf);
-			ret=-1; quit++;
-		  }
-		}
-		if(buf) { free(buf); buf=NULL; }
 	}
-	if(buf) free(buf);
+
+	ret=0;
+end:
+	iobuf_free_content(rbuf);
 	return ret;
-*/
 }
 
 static int make_link(struct asfd *asfd,
@@ -426,7 +425,7 @@ void strip_invalid_characters(char **path)
 #endif
 }
 
-static const char *act_str(enum action act)
+const char *act_str(enum action act)
 {
 	static const char *ret=NULL;
 	if(act==ACTION_RESTORE) ret="restore";
@@ -544,6 +543,9 @@ static int write_data(struct asfd *asfd, BFILE *bfd, struct blk *blk)
 	return 0;
 }
 
+#define RESTORE_STREAM	"restore_stream"
+#define RESTORE_SPOOL	"restore_spool"
+
 static char *restore_style=NULL;
 
 static enum asl_ret restore_style_func(struct asfd *asfd,
@@ -551,8 +553,8 @@ static enum asl_ret restore_style_func(struct asfd *asfd,
 {
 	char msg[32]="";
 	restore_style=NULL;
-	if(strcmp(asfd->rbuf->buf, "restore_stream")
-	   && strcmp(asfd->rbuf->buf, "restore_spool"))
+	if(strcmp(asfd->rbuf->buf, RESTORE_STREAM)
+	   && strcmp(asfd->rbuf->buf, RESTORE_SPOOL))
 	{
 		iobuf_log_unexpected(asfd->rbuf, __func__);
 		return ASL_END_ERROR;
@@ -567,6 +569,8 @@ static enum asl_ret restore_style_func(struct asfd *asfd,
 
 static char *get_restore_style(struct asfd *asfd, struct conf *conf)
 {
+	if(conf->protocol=PROTO_BURP1)
+		return strdup_w(RESTORE_STREAM, __func__);
 	if(asfd->simple_loop(asfd, conf, NULL, __func__,
 		restore_style_func)) return NULL;
 	return restore_style;
@@ -618,10 +622,11 @@ int do_restore_client(struct asfd *asfd,
 	struct sbuf *sb=NULL;
 	struct blk *blk=NULL;
 	BFILE bfd;
-	binit(&bfd, 0, conf);
 	char *fullpath=NULL;
 	char *style=NULL;
 	char *datpath=NULL;
+
+	binit(&bfd, 0, conf);
 
 	logp("doing %s\n", act_str(act));
 
@@ -632,24 +637,22 @@ int do_restore_client(struct asfd *asfd,
 		goto end;
 	logp("doing %s confirmed\n", act_str(act));
 
-	if(!(style=get_restore_style(asfd, conf)))
-		goto end;
-//	if(conf->send_client_cntr && cntr_recv(conf))
-//		goto end;
-
 #if defined(HAVE_WIN32)
 	if(act==ACTION_RESTORE) win32_enable_backup_privileges();
 #endif
 
-	if(!strcmp(style, "restore_spool"))
+	if(!(style=get_restore_style(asfd, conf)))
+		goto end;
+	if(!strcmp(style, RESTORE_SPOOL))
 	{
 		if(restore_spool(asfd, conf, &datpath))
 			goto end;
 	}
 	else
-	{
 		logp("Streaming restore direct\n");
-	}
+
+//	if(conf->send_client_cntr && cntr_recv(conf))
+//		goto end;
 
 	if(!(sb=sbuf_alloc(conf))
 	  || !(blk=blk_alloc()))
@@ -827,6 +830,7 @@ end:
 		recursive_delete(datpath, NULL, 1);
 		free(datpath);
 	}
+	if(fullpath) free(fullpath);
 
 	return ret;
 }

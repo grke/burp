@@ -1,7 +1,8 @@
 #ifndef _RESTORE_CLIENT_BURP1_H
 #define _RESTORE_CLIENT_BURP1_H
 
-int do_restore_client_burp1(struct asfd *asfd,
-	struct conf *conf, enum action act, int vss_restore);
+int restore_switch_burp1(struct asfd *asfd, struct sbuf *sb,
+	const char *fullpath, enum action act,
+	BFILE *bfd, int vss_restore, struct conf *conf);
 
 #endif

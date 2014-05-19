@@ -72,8 +72,8 @@ int open_file_for_sendl(struct asfd *asfd,
 {
 	if(fp)
 	{
-		static int fd;
 #ifdef O_NOATIME
+		static int fd;
 		if((fd=open(fname, O_RDONLY|atime?0:O_NOATIME))<0
 		  || !(*fp=fdopen(fd, "rb")))
 #else

@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../burp1/client/restore.h"
 
 // FIX THIS: test whether this works with burp2
 int restore_interrupt(struct asfd *asfd,
@@ -180,7 +181,7 @@ end:
 	return ret;
 }
 
-int restore_special(struct asfd *asfd, struct sbuf *sb,
+static int restore_special(struct asfd *asfd, struct sbuf *sb,
 	const char *fname, enum action act, struct conf *conf)
 {
 	int ret=0;
@@ -300,7 +301,7 @@ end:
 	return ret;
 }
 
-int restore_link(struct asfd *asfd, struct sbuf *sb,
+static int restore_link(struct asfd *asfd, struct sbuf *sb,
 	const char *fname, enum action act, struct conf *conf)
 {
 	int ret=0;
@@ -402,7 +403,7 @@ static int restore_metadata(
 }
 */
 
-void strip_invalid_characters(char **path)
+static void strip_invalid_characters(char **path)
 {
 #ifdef HAVE_WIN32
       char *ch = *path;
@@ -425,7 +426,7 @@ void strip_invalid_characters(char **path)
 #endif
 }
 
-const char *act_str(enum action act)
+static const char *act_str(enum action act)
 {
 	static const char *ret=NULL;
 	if(act==ACTION_RESTORE) ret="restore";
@@ -434,7 +435,7 @@ const char *act_str(enum action act)
 }
 
 // Return 1 for ok, -1 for error, 0 for too many components stripped.
-int strip_path_components(struct asfd *asfd,
+static int strip_path_components(struct asfd *asfd,
 	struct sbuf *sb, struct conf *conf)
 {
 	int s=0;
@@ -474,7 +475,7 @@ int strip_path_components(struct asfd *asfd,
 	return 1;
 }
 
-int overwrite_ok(struct sbuf *sb,
+static int overwrite_ok(struct sbuf *sb,
 	struct conf *conf,
 #ifdef HAVE_WIN32
 	BFILE *bfd,
@@ -505,7 +506,7 @@ int overwrite_ok(struct sbuf *sb,
 		// the file data to the already open bfd.
 		// And trailing VSS data.
 		if(bfd->mode!=BF_CLOSED
-		  && (sb->path.cmd==CMD_FILE || sb->path.cmd==CMD_ENC_FILE)
+		  && (sb->path.cmd==CMD_FILE || sb->path.cmd==CMD_ENC_FILE
 		      || sb->path.cmd==CMD_VSS_T || sb->path.cmd==CMD_ENC_VSS_T)
 		  && bfd->path && !strcmp(bfd->path, fullpath))
 		{
@@ -569,7 +570,7 @@ static enum asl_ret restore_style_func(struct asfd *asfd,
 
 static char *get_restore_style(struct asfd *asfd, struct conf *conf)
 {
-	if(conf->protocol=PROTO_BURP1)
+	if(conf->protocol==PROTO_BURP1)
 		return strdup_w(RESTORE_STREAM, __func__);
 	if(asfd->simple_loop(asfd, conf, NULL, __func__,
 		restore_style_func)) return NULL;
@@ -611,6 +612,73 @@ printf("in restore_spool\n");
 
 	return asfd->simple_loop(asfd, conf, datpath,
 		__func__, restore_spool_func);
+}
+
+static int restore_switch_burp2(struct asfd *asfd, struct sbuf *sb,
+	const char *fullpath, enum action act,
+	BFILE *bfd, int vss_restore, struct conf *conf)
+{
+	switch(sb->path.cmd)
+	{
+		case CMD_FILE:
+			// Have it a separate statement to the
+			// encrypted version so that encrypted and not
+			// encrypted files can be restored at the
+			// same time.
+			if(start_restore_file(asfd,
+				bfd, sb, fullpath, act,
+				NULL, NULL, NULL,
+				vss_restore, conf))
+			{
+				logp("restore_file error\n");
+				goto error;
+			}
+			break;
+/* FIX THIS: Encryption currently not working in burp2
+		case CMD_ENC_FILE:
+			if(start_restore_file(asfd,
+				bfd, sb, fullpath, act,
+				conf->encryption_password,
+				NULL, NULL, vss_restore, conf))
+			{
+				logp("restore_file error\n");
+				goto error;
+			}
+			break;
+*/
+/* FIX THIS: Metadata and EFS not supported yet.
+		case CMD_METADATA:
+			if(restore_metadata(
+				bfd, sb, fullpath, act,
+				NULL, vss_restore, conf))
+					goto error;
+			break;
+		case CMD_ENC_METADATA:
+			if(restore_metadata(
+				bfd, sb, fullpath, act,
+				conf->encryption_password,
+				vss_restore, conf))
+					goto error;
+			break;
+		case CMD_EFS_FILE:
+			if(start_restore_file(asfd,
+				bfd, sb,
+				fullpath, act,
+				NULL,
+				NULL, NULL, vss_restore, conf))
+			{
+				logp("restore_file error\n");
+				goto error;
+			}
+			break;
+*/
+		default:
+			logp("unknown cmd: %c\n", sb->path.cmd);
+			goto error;
+	}
+	return 0;
+error:
+	return -1;
 }
 
 int do_restore_client(struct asfd *asfd,
@@ -655,7 +723,7 @@ int do_restore_client(struct asfd *asfd,
 //		goto end;
 
 	if(!(sb=sbuf_alloc(conf))
-	  || !(blk=blk_alloc()))
+	  || (conf->protocol==PROTO_BURP2 && !(blk=blk_alloc())))
 	{
 		log_and_send_oom(asfd, __func__);
 		goto end;
@@ -663,7 +731,14 @@ int do_restore_client(struct asfd *asfd,
 
 	while(1)
 	{
-		if((ars=sbuf_fill(sb, asfd, NULL, blk, datpath, conf)))
+		sbuf_free_content(sb);
+
+		if(conf->protocol==PROTO_BURP2)
+			ars=sbuf_fill(sb, asfd, NULL, blk, datpath, conf);
+		else
+			ars=sbufl_fill(sb, asfd, NULL, NULL, conf->cntr);
+
+		if(ars)
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
@@ -673,7 +748,7 @@ int do_restore_client(struct asfd *asfd,
 			break;
 		}
 
-		if(blk->data)
+		if(conf->protocol==PROTO_BURP2 && blk->data)
 		{
 			int wret;
 			wret=write_data(asfd, &bfd, blk);
@@ -693,6 +768,10 @@ int do_restore_client(struct asfd *asfd,
 			case CMD_SPECIAL:
 			case CMD_METADATA:
 			case CMD_ENC_METADATA:
+			case CMD_VSS:
+			case CMD_ENC_VSS:
+			case CMD_VSS_T:
+			case CMD_ENC_VSS_T:
 			case CMD_EFS_FILE:
 				if(conf->strip)
 				{
@@ -727,8 +806,9 @@ int do_restore_client(struct asfd *asfd,
 					// Something exists at that path.
 					snprintf(msg, sizeof(msg),
 						"Path exists: %s", fullpath);
-					if(restore_interrupt(asfd, sb, msg, conf))
-						goto end;
+					if(restore_interrupt(asfd,
+						sb, msg, conf))
+							goto end;
 					else
 						continue;
 				  }
@@ -740,76 +820,34 @@ int do_restore_client(struct asfd *asfd,
 
 		switch(sb->path.cmd)
 		{
+			// These are the same in both burp1 and burp2.
 			case CMD_DIRECTORY:
-                                if(restore_dir(asfd, sb, fullpath, act, conf))
-					goto end;
-				break;
-			case CMD_FILE:
-				// Have it a separate statement to the
-				// encrypted version so that encrypted and not
-				// encrypted files can be restored at the
-				// same time.
-				if(start_restore_file(asfd,
-					&bfd, sb, fullpath, act,
-					NULL, NULL, NULL,
-					vss_restore, conf))
-				{
-					logp("restore_file error\n");
-					goto end;
-				}
+				if(restore_dir(asfd, sb,
+					fullpath, act, conf)) goto end;
 				continue;
-/* FIX THIS: Encryption currently not working.
-			case CMD_ENC_FILE:
-				if(start_restore_file(asfd,
-					&bfd, sb, fullpath, act,
-					conf->encryption_password,
-					NULL, NULL, vss_restore, conf))
-				{
-					logp("restore_file error\n");
-					goto end;
-				}
-				break;
-*/
 			case CMD_SOFT_LINK:
 			case CMD_HARD_LINK:
-				if(restore_link(asfd, sb, fullpath, act, conf))
-					goto end;
-				break;
+				if(restore_link(asfd, sb,
+					fullpath, act, conf)) goto end;
+				continue;
 			case CMD_SPECIAL:
-				if(restore_special(asfd, sb, fullpath, act, conf))
-					goto end;
-				break;
-/* FIX THIS: Metadata and EFS not supported yet.
-			case CMD_METADATA:
-				if(restore_metadata(
-					&bfd, sb, fullpath, act,
-					NULL, vss_restore, conf))
-						goto end;
-				break;
-			case CMD_ENC_METADATA:
-				if(restore_metadata(
-					&bfd, sb, fullpath, act,
-					conf->encryption_password,
-					vss_restore, conf))
-						goto end;
-				break;
-			case CMD_EFS_FILE:
-				if(start_restore_file(asfd,
-					&bfd, sb,
-					fullpath, act,
-					NULL,
-					NULL, NULL, vss_restore, conf))
-				{
-					logp("restore_file error\n");
-					goto end;
-				}
-				break;
-*/
-			default:
-				logp("unknown cmd: %c\n", sb->path.cmd);
-				goto end;
+				if(restore_special(asfd, sb,
+					fullpath, act, conf)) goto end;
+				continue;
 		}
-		sbuf_free_content(sb);
+
+		if(conf->protocol==PROTO_BURP2)
+		{
+			if(restore_switch_burp2(asfd, sb, fullpath, act,
+				&bfd, vss_restore, conf))
+					goto end;
+		}
+		else
+		{
+			if(restore_switch_burp1(asfd, sb, fullpath, act,
+				&bfd, vss_restore, conf))
+					goto end;
+		}
 	}
 
 	ret=0;
@@ -831,6 +869,7 @@ end:
 		free(datpath);
 	}
 	if(fullpath) free(fullpath);
+	//sbuf_free(sb);
 
 	return ret;
 }

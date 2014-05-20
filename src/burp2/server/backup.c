@@ -246,6 +246,7 @@ end:
 	set_logfp(NULL, cconf);
 	if(manifest_dir) free(manifest_dir);
 	if(realworking) free(realworking);
+	as->asfd_remove(as, chfd);
 	asfd_free(&chfd);
 	return ret;
 }

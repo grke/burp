@@ -661,7 +661,7 @@ end:
 	logp("End backup\n");
 	slist_free(slist);
 	blist_free(blist);
-	iobuf_free(rbuf);
+	iobuf_free_content(rbuf);
 	// Write buffer did not allocate 'buf'. 
 	if(wbuf) wbuf->buf=NULL;
 	iobuf_free(wbuf);

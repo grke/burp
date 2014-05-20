@@ -119,6 +119,7 @@ static struct asfd *setup_champ_chooser(struct async *as,
 	return chfd;
 error:
 	free(champname);
+	as->asfd_remove(as, chfd);
 	asfd_free(&chfd);
 	close_fd(&champsock);
 	return NULL;

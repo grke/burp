@@ -187,6 +187,7 @@ static void async_asfd_add(struct async *as, struct asfd *asfd)
 static void async_asfd_remove(struct async *as, struct asfd *asfd)
 {
 	struct asfd *l;
+	if(!asfd) return;
 	if(as->asfd==asfd)
 	{
 		as->asfd=as->asfd->next;

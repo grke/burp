@@ -212,7 +212,7 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf *conf)
 				goto end;
 		}
 				
-		if(started && as->asfd->next)
+		if(started && !as->asfd->next)
 		{
 			logp("All clients disconnected.\n");
 			ret=0;

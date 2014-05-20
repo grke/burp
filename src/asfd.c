@@ -31,7 +31,7 @@ static int asfd_parse_readbuf(struct asfd *asfd)
 	{
 		return 0;
 		logp("%s called with non-empty buffer\n", __func__);
-		printf("%c:%s\n", asfd->rbuf->cmd, asfd->rbuf->buf);
+//		printf("%c:%s\n", asfd->rbuf->cmd, asfd->rbuf->buf);
 		return -1;
 	}
 
@@ -452,10 +452,14 @@ void asfd_free(struct asfd **asfd)
 {
 	if(!asfd || !*asfd) return;
 	asfd_close(*asfd);
-	if((*asfd)->rbuf) iobuf_free((*asfd)->rbuf);
-	if((*asfd)->readbuf) free((*asfd)->readbuf);
-	if((*asfd)->writebuf) free((*asfd)->writebuf);
-	if((*asfd)->desc) free((*asfd)->desc);
+	if((*asfd)->rbuf)
+		{ iobuf_free((*asfd)->rbuf); (*asfd)->rbuf=NULL; }
+	if((*asfd)->readbuf)
+		{ free((*asfd)->readbuf); (*asfd)->readbuf=NULL; }
+	if((*asfd)->writebuf)
+		{ free((*asfd)->writebuf); (*asfd)->writebuf=NULL; }
+	if((*asfd)->desc)
+		{ free((*asfd)->desc); (*asfd)->desc=NULL; }
 	// FIX THIS: free incoming?
 	free(*asfd);
 	*asfd=NULL;

@@ -333,7 +333,7 @@ static enum cliret do_client(struct conf *conf,
 	  || as->init(as, act==ACTION_ESTIMATE)
 	  || asfd->init(asfd, "main socket", as, rfd, ssl, conf))
 		goto end;
-	as->add_asfd(as, asfd);
+	as->asfd_add(as, asfd);
 
 	// Set quality of service bits on backup packets.
 	if(act==ACTION_BACKUP

@@ -202,7 +202,7 @@ int do_backup_server(struct async *as, struct sdirs *sdirs,
 		goto error;
 	}
 
-	if(backup_phase2_server(as, sdirs, manifest_dir, chfd, resume, cconf))
+	if(backup_phase2_server(as, sdirs, manifest_dir, resume, cconf))
 	{
 		logp("error in phase2\n");
 		goto error;

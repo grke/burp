@@ -2,7 +2,6 @@
 #define _BACKUP_PHASE2_SERVER_H
 
 extern int backup_phase2_server(struct async *as, struct sdirs *sdirs,
-	const char *manifest_dir, struct asfd *chfd,
-	int resume, struct conf *conf);
+	const char *manifest_dir, int resume, struct conf *conf);
 
 #endif

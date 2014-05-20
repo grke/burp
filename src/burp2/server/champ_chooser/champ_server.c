@@ -181,7 +181,8 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf *conf)
 				// a new client to the list.
 				for(asfd=as->asfd->next; asfd; asfd=asfd->next)
 				{
-					if(deal_with_client_rbuf(asfd, conf))
+					if(asfd->rbuf->buf
+					  && deal_with_client_rbuf(asfd, conf))
 						goto end;
 				}
 				if(as->asfd->new_client)

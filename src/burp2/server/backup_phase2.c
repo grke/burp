@@ -539,9 +539,8 @@ end:
 	return ret;
 }
 
-int backup_phase2_server(struct async *as,
-	struct sdirs *sdirs, const char *manifest_dir,
-	struct asfd *chfd, int resume, struct conf *conf)
+int backup_phase2_server(struct async *as, struct sdirs *sdirs,
+	const char *manifest_dir, int resume, struct conf *conf)
 {
 	int ret=-1;
 	int sigs_end=0;
@@ -550,7 +549,6 @@ int backup_phase2_server(struct async *as,
 	int blk_requests_end=0;
 	struct slist *slist=NULL;
 	struct blist *blist=NULL;
-	struct iobuf *rbuf=NULL;
 	struct iobuf *wbuf=NULL;
 	struct dpth *dpth=NULL;
 	struct manio *cmanio=NULL;	// current manifest
@@ -560,6 +558,10 @@ int backup_phase2_server(struct async *as,
 	// This is used to tell the client that a number of consecutive blocks
 	// have been found and can be freed.
 	uint64_t wrap_up=0;
+	// Main fd is first in the list.
+	struct asfd *asfd=as->asfd;
+	// Champ chooser fd is second in the list.
+	struct asfd *chfd=asfd->next;
 
 	logp("Phase 2 begin (recv backup data)\n");
 
@@ -579,14 +581,12 @@ int backup_phase2_server(struct async *as,
 	  || dpth_init(dpth))
 		goto end;
 
-	rbuf=as->asfd->rbuf;
-
 	// The phase1 manifest looks the same as a burp1 one.
 	manio_set_protocol(p1manio, PROTO_BURP1);
 
 	while(!backup_end)
 	{
-		if(maybe_add_from_scan(as->asfd,
+		if(maybe_add_from_scan(asfd,
 			p1manio, cmanio, unmanio, slist, conf))
 				goto end;
 
@@ -608,16 +608,21 @@ int backup_phase2_server(struct async *as,
 		}
 
 		if(wbuf->len)
-			as->asfd->append_all_to_write_buffer(as->asfd, wbuf);
+			asfd->append_all_to_write_buffer(asfd, wbuf);
 		if(as->read_write(as))
 		{
 			logp("error in %s\n", __func__);
 			goto end;
 		}
 
-		if(rbuf->buf && deal_with_read(rbuf, slist, blist, conf,
+		if(asfd->rbuf->buf && deal_with_read(asfd->rbuf,
+			slist, blist, conf,
 			&sigs_end, &backup_end, dpth, &wrap_up, chfd))
 				goto end;
+		if(chfd->rbuf->buf)
+		{
+			// Deal with champ chooser read here.
+		}
 
 		if(write_to_changed_file(chmanio,
 			slist, blist, dpth, backup_end, conf))
@@ -661,7 +666,8 @@ end:
 	logp("End backup\n");
 	slist_free(slist);
 	blist_free(blist);
-	iobuf_free_content(rbuf);
+	iobuf_free_content(asfd->rbuf);
+	iobuf_free_content(chfd->rbuf);
 	// Write buffer did not allocate 'buf'. 
 	if(wbuf) wbuf->buf=NULL;
 	iobuf_free(wbuf);

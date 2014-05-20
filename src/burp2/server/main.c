@@ -190,7 +190,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx,
 	  || as->init(as, 0)
 	  || asfd->init(asfd, "main socket", as, *cfd, ssl, conf))
 		goto end;
-	as->add_asfd(as, asfd);
+	as->asfd_add(as, asfd);
 
 	if(authorise_server(asfd, conf, cconf)
 	  || !cconf->cname || !*(cconf->cname))
@@ -242,7 +242,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx,
 end:
 	*cfd=-1;
 	async_free(&as);
-	asfd_free(&asfd); // this closes cfd for us.
+	asfd_free(&asfd); // This closes cfd for us.
 	logp("exit child\n");
 	if(cntr) cntr_free(&cntr);
 	if(conf) conf_free(conf);

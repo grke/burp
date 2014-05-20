@@ -334,7 +334,7 @@ static int asfd_write_str(struct asfd *asfd, char wcmd, const char *wsrc)
 }
 
 static int asfd_simple_loop(struct asfd *asfd,
-        struct conf *conf, void *param, const char *caller,
+	struct conf *conf, void *param, const char *caller,
   enum asl_ret callback(struct asfd *asfd, struct conf *conf, void *param))
 {
 	struct iobuf *rbuf=asfd->rbuf;
@@ -456,6 +456,7 @@ void asfd_free(struct asfd **asfd)
 	if((*asfd)->readbuf) free((*asfd)->readbuf);
 	if((*asfd)->writebuf) free((*asfd)->writebuf);
 	if((*asfd)->desc) free((*asfd)->desc);
+	// FIX THIS: free incoming?
 	free(*asfd);
 	*asfd=NULL;
 }

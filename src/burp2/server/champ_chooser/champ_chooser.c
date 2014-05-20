@@ -70,7 +70,7 @@ static char *get_fq_path(const char *path)
 	return fq_path;
 }
 
-static int already_got_block(struct clifd *clifd, struct blk *blk)
+static int already_got_block(struct asfd *asfd, struct blk *blk)
 {
 	//static char *path;
 	static struct hash_weak *hash_weak;
@@ -87,7 +87,7 @@ static int already_got_block(struct clifd *clifd, struct blk *blk)
 //printf("FOUND: %s %s\n", blk->weak, blk->strong);
 //printf("F");
 			blk->got=GOT;
-			clifd->in->got++;
+			asfd->in->got++;
 			return 0;
 		}
 		else
@@ -112,10 +112,10 @@ static int already_got_block(struct clifd *clifd, struct blk *blk)
 
 #define CHAMPS_MAX 10
 
-int deduplicate(struct clifd *clifd, struct conf *conf)
+int deduplicate(struct asfd *asfd, struct conf *conf)
 {
 	struct blk *blk;
-	struct incoming *in=clifd->in;
+	struct incoming *in=asfd->in;
 	struct candidate *champ;
 	struct candidate *champ_last=NULL;
 	static int count=0;
@@ -134,7 +134,7 @@ printf("in deduplicate()\n");
 	}
 
 	blk_count=0;
-	for(blk=clifd->blist->head; blk; blk=blk->next)
+	for(blk=asfd->blist->head; blk; blk=blk->next)
 	{
 printf("try: %lu\n", blk->index);
 		blk_count++;
@@ -150,7 +150,7 @@ printf("try: %lu\n", blk->index);
 
 		// If already got, this function will set blk->save_path
 		// to be the location of the already got block.
-		if(already_got_block(clifd, blk)) return -1;
+		if(already_got_block(asfd, blk)) return -1;
 
 printf("after agb: %lu %d\n", blk->index, blk->got);
 
@@ -160,14 +160,14 @@ printf("after agb: %lu %d\n", blk->index, blk->got);
 		// in memory.
 		if(blk->got==GOT)
 		{
-			if(clifd->consecutive_got++>BLKS_CONSECUTIVE_NOTIFY)
+			if(asfd->consecutive_got++>BLKS_CONSECUTIVE_NOTIFY)
 			{
-				clifd->wrap_up=blk->index;
-				clifd->consecutive_got=0;
+				asfd->wrap_up=blk->index;
+				asfd->consecutive_got=0;
 			}
 		}
 		else
-			clifd->consecutive_got=0;
+			asfd->consecutive_got=0;
 	}
 
 	logp("%d %s found %d/%d incoming %s\n", count,

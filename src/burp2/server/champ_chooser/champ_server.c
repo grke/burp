@@ -2,358 +2,109 @@
 
 #include <sys/un.h>
 
-// FIX THIS (somehow): duplicating a lot of stuff from async.c.
-// The trouble is that async.c only deals with a single fd to read/write.
-// This stuff has multiple fds, including one that is listening for new
-// connections.
-static size_t bufmaxsize=(ASYNC_BUF_LEN*2)+32;
-
-static int parse_readbuf(struct clifd *c, struct iobuf *rbuf)
-{
-	unsigned int s=0;
-	char cmdtmp='\0';
-
-	if(c->readbuflen>=5)
-	{
-		if((sscanf(c->readbuf, "%c%04X", &cmdtmp, &s))!=2)
-		{
-			logp("sscanf of '%s' failed in %s\n",
-				c->readbuf, __func__);
-			clifd_truncate_buf(&c->readbuf, &c->readbuflen);
-			return -1;
-		}
-	}
-	if(c->readbuflen>=s+5)
-	{
-		rbuf->cmd=cmdtmp;
-		if(!(rbuf->buf=(char *)malloc(s+1)))
-		{
-			log_out_of_memory(__func__);
-			clifd_truncate_buf(&c->readbuf, &c->readbuflen);
-			return -1;
-		}
-		if(!(memcpy(rbuf->buf, c->readbuf+5, s)))
-		{
-			logp("memcpy failed in %s\n", __func__);
-			clifd_truncate_buf(&c->readbuf, &c->readbuflen);
-			return -1;
-		}
-		rbuf->buf[s]='\0';
-		if(!(memmove(c->readbuf, c->readbuf+s+5, c->readbuflen-s-5)))
-		{
-			logp("memmove failed in %s\n", __func__);
-			clifd_truncate_buf(&c->readbuf, &c->readbuflen);
-			return -1;
-		}
-		c->readbuflen-=s+5;
-		rbuf->len=s;
-	}
-	return 0;
-}
-
-static int append_to_write_buffer(struct clifd *c,
-	const char *buf, size_t len)
-{
-	memcpy(c->writebuf+c->writebuflen, buf, len);
-	c->writebuflen+=len;
-	c->writebuf[c->writebuflen]='\0';
-	return 0;
-}
-
-static int append_all_to_write_buffer(struct clifd *c,
-	struct iobuf *wbuf)
-{
-	size_t sblen=0;
-	char sbuf[10]="";
-	if(c->writebuflen+6+(wbuf->len) >= bufmaxsize-1)
-		return 1;
-
-	snprintf(sbuf, sizeof(sbuf), "%c%04X",
-		wbuf->cmd, (unsigned int)wbuf->len);
-	sblen=strlen(sbuf);
-	append_to_write_buffer(c, sbuf, sblen);
-	append_to_write_buffer(c, wbuf->buf, wbuf->len);
-	wbuf->len=0;
-	return 0;
-}
-
-static int champ_chooser_incoming_client(int s, struct clifd **clifds)
+// FIX THIS: test error conditions.
+static int champ_chooser_new_client(struct async *as, struct conf *conf)
 {
 	socklen_t t;
-	struct clifd *newfd=NULL;
+	int fd=-1;
+	struct asfd *newfd=NULL;
 	struct sockaddr_un remote;
 
-// FIX THIS: Put this alloc/init stuff in clifd.c.
-	if(!(newfd=(struct clifd *)calloc_w(1, sizeof(struct clifd), __func__))
-	  || !(newfd->cname=strdup_w("(unknown)", __func__))
-	  || !(newfd->blist=blist_alloc())
-	  || !(newfd->in=incoming_alloc())
-	  || clifd_alloc_buf(&newfd->readbuf, &newfd->readbuflen, bufmaxsize)
-	  || clifd_alloc_buf(&newfd->writebuf, &newfd->writebuflen, bufmaxsize)
-	  || !(newfd->rbuf=iobuf_alloc())
-	  || !(newfd->wbuf=iobuf_alloc()))
-		goto error;
-
 	t=sizeof(remote);
-	if((newfd->fd=accept(s, (struct sockaddr *)&remote, &t))<0)
+	if((fd=accept(as->asfd->fd, (struct sockaddr *)&remote, &t))<0)
 	{
-		logp("accept error in %s: %s\n",
-			__func__, strerror(errno));
+		logp("accept error in %s: %s\n", __func__, strerror(errno));
 		goto error;
 	}
-	set_non_blocking(newfd->fd);
-	newfd->next=*clifds;
-	*clifds=newfd;
+	set_non_blocking(fd);
+
+	if(!(newfd=asfd_alloc())
+	  || newfd->init(newfd, "(unknown)", as, fd, NULL, conf))
+		goto error;
+	as->asfd_add(as, newfd);
 
 	logp("Connected to fd %d\n", newfd->fd);
 
 	return 0;
 error:
-	clifd_free(newfd);
+	asfd_free(&newfd);
 	return -1;
 }
 
-static int do_read(struct clifd *c)
-{
-	ssize_t r;
-	r=read(c->fd, c->readbuf+c->readbuflen, bufmaxsize-c->readbuflen);
-	if(r<0)
-	{
-		if(errno==EAGAIN || errno==EINTR)
-			return 0;
-		logp("read problem in %s\n", __func__);
-		clifd_truncate_buf(&c->readbuf, &c->readbuflen);
-		return -1;
-	}
-	else if(!r)
-	{
-		// End of data.
-		logp("end of data in %s\n", __func__);
-		clifd_truncate_buf(&c->readbuf, &c->readbuflen);
-		return -1;
-	}
-	c->readbuflen+=r;
-	c->readbuf[c->readbuflen]='\0';
-	return 0;
-}
-
-static int do_write(struct clifd *c)
-{
-	ssize_t w;
-	//if(c->ratelimit && check_ratelimit(c)) return 0;
-
-	w=write(c->fd, c->writebuf, c->writebuflen);
-	if(w<0)
-	{
-		if(errno==EAGAIN || errno==EINTR)
-			return 0;
-		logp("Got error in %s, errno=%d (%s)\n", __func__,
-			errno, strerror(errno));
-		return -1;
-	}
-	else if(!w)
-	{
-		logp("Wrote nothing in %s\n", __func__);
-		return -1;
-	}
-	//if(c->ratelimit) c->rlbytes+=w;
-	memmove(c->writebuf, c->writebuf+w, c->writebuflen-w);
-	c->writebuflen-=w;
-	return 0;
-}
-
-static int champ_rw(int s, struct clifd **clifds, int *started, int doread)
-{
-	int mfd=-1;
-	fd_set fsr;
-	fd_set fsw;
-	fd_set fse;
-	struct clifd *c;
-	struct timeval tval;
-	//char buf[256]="";
-	//size_t sz;
-	int dowrite=0;
-
-	for(c=*clifds; c; c=c->next)
-	{
-		if(doread)
-		{
-			if(parse_readbuf(c, c->rbuf)) return -1;
-			if(c->rbuf->buf) return 0;
-		}
-		if(c->writebuflen) dowrite=1;
-	}
-
-	if(doread) FD_ZERO(&fsr);
-	if(dowrite) FD_ZERO(&fsw);
-	FD_ZERO(&fse);
-
-	tval.tv_sec=1;
-	tval.tv_usec=0;
-
-	if(doread && s>=0) add_fd_to_sets(s, &fsr, NULL, &fse, &mfd);
-	for(c=*clifds; c; c=c->next)
-		add_fd_to_sets(c->fd, doread?&fsr:NULL,
-			c->writebuflen?&fsw:NULL, &fse, &mfd);
-
-	if(select(mfd+1, doread?&fsr:NULL, dowrite?&fsw:NULL, &fse, &tval)<0)
-	{
-		if(errno!=EAGAIN && errno!=EINTR)
-		{
-			logp("select error in normal part of %s: %s\n",
-				__func__, strerror(errno));
-			goto error;
-		}
-	}
-
-	// Check clifds first, as adding an incoming client below will add
-	// another clifd to the list.
-	for(c=*clifds; c; c=c->next)
-	{
-		if(FD_ISSET(c->fd, &fse))
-		{
-			clifd_remove(clifds, c);
-			logp("%d had an exception\n", c->fd);
-			clifd_free(c);
-			break;
-		}
-		if(doread && FD_ISSET(c->fd, &fsr))
-		{
-			if(do_read(c))
-			{
-				clifd_remove(clifds, c);
-				logp("%d has disconnected after do_read\n",
-					c->fd);
-				clifd_free(c);
-			}
-		}
-		if(c->writebuflen && FD_ISSET(c->fd, &fsw))
-		{
-			if(do_write(c))
-			{
-				clifd_remove(clifds, c);
-				logp("%d has disconnected after do_write\n",
-					c->fd);
-				clifd_free(c);
-			}
-		}
-	}
-
-	if(s<0) return 0;
-
-	if(FD_ISSET(s, &fse))
-	{
-		logp("main champ chooser server socket had an exception\n");
-		goto error;
-	}
-
-	if(doread && FD_ISSET(s, &fsr))
-	{
-		// Incoming client.
-		if(champ_chooser_incoming_client(s, clifds))
-			goto error;
-		if(started) *started=1;
-	}
-
-	return 0;
-error:
-	return -1;
-}
-
-static int ensure_write(struct clifd **clifds,
-	struct clifd *c, struct iobuf *wbuf)
-{
-	while(1)
-	{
-		append_all_to_write_buffer(c, wbuf);
-		if(!wbuf->len) return 0;
-
-		// Was unable to empty wbuf. Attempt to write.
-		if(champ_rw(-1 /* unused main fd */,
-			clifds, NULL, 0 /* doread */))
-				return -1;
-	}
-	// Never reached.
-	return -1;
-}
-
-static int deduplicate_maybe(struct clifd *clifd,
+static int deduplicate_maybe(struct asfd *asfd,
 	struct blk *blk, struct conf *conf)
 {
-	if(!clifd->in && !(clifd->in=incoming_alloc())) return -1;
+	if(!asfd->in && !(asfd->in=incoming_alloc())) return -1;
 
 	blk->fingerprint=strtoull(blk->weak, 0, 16);
 	if(is_hook(blk->weak))
 	{
-		if(incoming_grow_maybe(clifd->in)) return -1;
-		clifd->in->weak[clifd->in->size-1]=blk->fingerprint;
+		if(incoming_grow_maybe(asfd->in)) return -1;
+		asfd->in->weak[asfd->in->size-1]=blk->fingerprint;
 	}
-	if(++(clifd->blkcnt)<MANIFEST_SIG_MAX) return 0;
-	clifd->blkcnt=0;
+	if(++(asfd->blkcnt)<MANIFEST_SIG_MAX) return 0;
+	asfd->blkcnt=0;
 
-	if(deduplicate(clifd, conf)<0) return -1;
+	if(deduplicate(asfd, conf)<0) return -1;
 
 	return 0;
 }
 
-static int deal_with_rbuf_sig(struct clifd *clifd,
+static int deal_with_rbuf_sig(struct asfd *asfd,
 	struct conf *conf)
 {
 	struct blk *blk;
 	if(!(blk=blk_alloc())) return -1;
 
-	blk_add_to_list(blk, clifd->blist);
+	blk_add_to_list(blk, asfd->blist);
 
 	// FIX THIS: Should not just load into strings.
-	if(split_sig(clifd->rbuf->buf,
-		clifd->rbuf->len, blk->weak, blk->strong)) return -1;
+	if(split_sig(asfd->rbuf->buf,
+		asfd->rbuf->len, blk->weak, blk->strong)) return -1;
 
 	printf("Got weak/strong from %d: %lu - %s %s\n",
-		clifd->fd, blk->index, blk->weak, blk->strong);
+		asfd->fd, blk->index, blk->weak, blk->strong);
 
-	return deduplicate_maybe(clifd, blk, conf);
+	return deduplicate_maybe(asfd, blk, conf);
 }
 
-static int deal_with_client_rbuf(struct clifd **clifds, struct clifd *c,
-	struct conf *conf)
+static int deal_with_client_rbuf(struct asfd *asfd, struct conf *conf)
 {
-	if(c->rbuf->cmd==CMD_GEN)
+	if(asfd->rbuf->cmd==CMD_GEN)
 	{
-		if(!strncmp_w(c->rbuf->buf, "cname:"))
+		if(!strncmp_w(asfd->rbuf->buf, "cname:"))
 		{
 			struct iobuf wbuf;
-			if(c->cname) free(c->cname);
-			if(!(c->cname=strdup(c->rbuf->buf+strlen("cname:"))))
-			{
-				log_out_of_memory(__func__);
-				goto error;
-			}
-			logp("%d has name: %s\n", c->fd, c->cname);
+			if(asfd->desc) free(asfd->desc);
+			if(!(asfd->desc=strdup_w(asfd->rbuf->buf
+				+strlen("cname:"), __func__)))
+					goto error;
+			logp("%d has name: %s\n", asfd->fd, asfd->desc);
 			iobuf_set(&wbuf, CMD_GEN,
 				(char *)"cname ok", strlen("cname ok"));
 
-			if(ensure_write(clifds, c, &wbuf))
+			if(asfd->write(asfd, &wbuf))
 				goto error;
 		}
 		else
 		{
-			iobuf_log_unexpected(c->rbuf, __func__);
+			iobuf_log_unexpected(asfd->rbuf, __func__);
 			goto error;
 		}
 	}
-	else if(c->rbuf->cmd==CMD_SIG)
+	else if(asfd->rbuf->cmd==CMD_SIG)
 	{
-		if(deal_with_rbuf_sig(c, conf)) goto error;
+		if(deal_with_rbuf_sig(asfd, conf)) goto error;
 	}
 	else
 	{
-		iobuf_log_unexpected(c->rbuf, __func__);
+		iobuf_log_unexpected(asfd->rbuf, __func__);
 		goto error;
 	}
-	iobuf_free_content(c->rbuf);
+	iobuf_free_content(asfd->rbuf);
 	return 0;
 error:
-	iobuf_free_content(c->rbuf);
+	iobuf_free_content(asfd->rbuf);
 	return -1;
 }
 
@@ -362,10 +113,10 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf *conf)
 	int s;
 	int ret=-1;
 	int len;
-	struct clifd *c=NULL;
-	struct clifd *clifds=NULL;
+	struct asfd *asfd=NULL;
 	struct sockaddr_un local;
 	struct lock *lock=NULL;
+	struct async *as=NULL;
 	int started=0;
 
 	if(!(lock=lock_alloc_and_init(sdirs->champlock)))
@@ -409,23 +160,58 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf *conf)
 	}
 	set_non_blocking(s);
 
+	if(!(as=async_alloc())
+	  || !(asfd=asfd_alloc())
+	  || as->init(as, 0)
+	  || asfd->init(asfd, "champ chooser main socket", as, s, NULL, conf))
+		goto end;
+	as->asfd_add(as, asfd);
+
 	// Load the sparse indexes for this dedup group.
 	if(champ_chooser_init(sdirs->data, conf))
 		goto end;
 
-	while(!champ_rw(s, &clifds, &started, 1 /* doread */))
+	while(1)
 	{
-		for(c=clifds; c; c=c->next)
+		switch(as->read_write(as))
 		{
-			while(1)
-			{
-				if(parse_readbuf(c, c->rbuf)) goto end;
-				if(!c->rbuf->buf) break;
-				if(deal_with_client_rbuf(&clifds,
-					c, conf)) goto end;
-			}
+			case 0:
+				// Check the main socket last, as it might add
+				// a new client to the list.
+				for(asfd=as->asfd->next; asfd; asfd=asfd->next)
+				{
+					if(deal_with_client_rbuf(asfd, conf))
+						goto end;
+				}
+				if(as->asfd->new_client)
+				{
+					// Incoming client.
+					as->asfd->new_client=0;
+					if(champ_chooser_new_client(as, conf))
+						goto end;
+					started=1;
+				}
+				break;
+			default:
+				// Maybe one of the fds had a problem.
+				// Find and remove it and carry on if possible.
+				for(asfd=as->asfd->next; asfd; asfd=asfd->next)
+				{
+					if(asfd->want_to_remove)
+					{
+						as->asfd_remove(as, asfd);
+						logp("%d disconnected: %s\n",
+							asfd->fd, asfd->desc);
+						asfd_free(&asfd);
+						continue;
+					}
+				}
+				// If we got here, there was no fd to remove.
+				// It is a fatal error.
+				goto end;
 		}
-		if(started && !clifds)
+				
+		if(started && as->asfd->next)
 		{
 			logp("All clients disconnected.\n");
 			ret=0;
@@ -436,9 +222,11 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf *conf)
 end:
 	logp("champ chooser exiting: %d\n", ret);
 	set_logfp(NULL, conf);
+	async_free(&as);
+	asfd_free(&asfd); // This closes s for us.
 	close_fd(&s);
 	unlink(sdirs->champsock);
-// FIX THIS: free clisocks.
+// FIX THIS: free asfds.
 	lock_release(lock);
 	lock_free(&lock);
 	return ret;

@@ -24,7 +24,6 @@ SRCS = \
 	champ_chooser.o \
 	champ_client.o \
 	champ_server.o \
-	clifd.o \
 	hash.o \
 	incoming.o \
 	scores.o \

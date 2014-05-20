@@ -41,6 +41,17 @@ struct asfd
 
 	struct asfd *next;
 
+	// Stuff for the champ chooser server.
+	struct incoming *in;
+	struct blist *blist;
+	int blkcnt;
+	uint64_t wrap_up;
+	uint64_t consecutive_got;
+	uint8_t want_to_remove;
+	// For the champ chooser server main socket.
+	uint8_t listening_for_new_clients;
+	uint8_t new_client;
+
 	// Function pointers.
 	int (*init)(struct asfd *, const char *,
 		struct async *, int, SSL *, struct conf *);

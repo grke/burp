@@ -22,7 +22,8 @@ struct async
 	int (*write)(struct async *);
 
 	int (*read_quick)(struct async *);
-	void (*add_asfd)(struct async *, struct asfd *);
+	void (*asfd_add)(struct async *, struct asfd *);
+	void (*asfd_remove)(struct async *, struct asfd *);
 	void (*settimers)(struct async *, int, int); // For debug purposes.
 };
 

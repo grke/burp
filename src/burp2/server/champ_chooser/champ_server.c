@@ -166,6 +166,7 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf *conf)
 	  || asfd->init(asfd, "champ chooser main socket", as, s, NULL, conf))
 		goto end;
 	as->asfd_add(as, asfd);
+	asfd->listening_for_new_clients=1;
 
 	// Load the sparse indexes for this dedup group.
 	if(champ_chooser_init(sdirs->data, conf))

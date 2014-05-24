@@ -13,6 +13,7 @@
 #include "backup_phase4.h"
 #include "current_backups.h"
 #include "dpth.h"
+#include "fdirs.h"
 #include "restore.h"
 #include "resume.h"
 #include "run_action.h"

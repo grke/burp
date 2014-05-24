@@ -5,7 +5,58 @@
 #include <librsync.h>
 #include <dirent.h>
 
-static int make_rev_sig(const char *dst, const char *sig, const char *endfile, int compression, struct conf *conf)
+// Also used by restore.c.
+// FIX THIS: This stuff is very similar to make_rev_delta, can maybe share
+// some code.
+int do_patch(struct asfd *asfd, const char *dst, const char *del,
+	const char *upd, bool gzupd, int compression, struct conf *cconf)
+{
+	FILE *dstp=NULL;
+	FILE *delfp=NULL;
+	gzFile delzp=NULL;
+	gzFile updp=NULL;
+	FILE *updfp=NULL;
+	rs_result result=RS_IO_ERROR;
+
+	//logp("patching...\n");
+
+	if(!(dstp=open_file(dst, "rb"))) goto end;
+
+	if(dpthl_is_compressed(compression, del))
+		delzp=gzopen_file(del, "rb");
+	else
+		delfp=open_file(del, "rb");
+
+	if(!delzp && !delfp) goto end;
+
+	if(gzupd)
+		updp=gzopen(upd, comp_level(cconf));
+	else
+		updfp=fopen(upd, "wb");
+
+	if(!updp && !updfp) goto end;
+
+	result=rs_patch_gzfile(asfd,
+		dstp, delfp, delzp, updfp, updp, NULL, cconf->cntr);
+end:
+	close_fp(&dstp);
+	gzclose_fp(&delzp);
+	close_fp(&delfp);
+	if(close_fp(&updfp))
+	{
+		logp("error closing %s in %s\n", upd, __func__);
+		result=RS_IO_ERROR;
+	}
+	if(gzclose_fp(&updp))
+	{
+		logp("error gzclosing %s in %s\n", upd, __func__);
+		result=RS_IO_ERROR;
+	}
+	return result;
+}
+
+static int make_rev_sig(const char *dst, const char *sig, const char *endfile,
+	int compression, struct conf *conf)
 {
 	int ret=-1;
 	FILE *dstfp=NULL;
@@ -37,7 +88,8 @@ end:
 	return ret;
 }
 
-static int make_rev_delta(const char *src, const char *sig, const char *del, int compression, struct conf *cconf)
+static int make_rev_delta(const char *src, const char *sig, const char *del,
+	int compression, struct conf *cconf)
 {
 	int ret=-1;
 	FILE *srcfp=NULL;
@@ -48,7 +100,8 @@ static int make_rev_delta(const char *src, const char *sig, const char *del, int
 	rs_signature_t *sumset=NULL;
 
 //logp("make rev delta: %s %s %s\n", src, sig, del);
-	if(!(sigp=open_file(sig, "rb"))) return -1;
+	if(!(sigp=open_file(sig, "rb"))) goto end;
+
 	if(rs_loadsig_file(sigp, &sumset, NULL)!=RS_DONE
 	  || rs_build_hash_table(sumset)!=RS_DONE)
 		goto end;
@@ -90,8 +143,9 @@ end:
 	return ret;
 }
 
-
-static int gen_rev_delta(const char *sigpath, const char *deltadir, const char *oldpath, const char *finpath, const char *path, struct sbuf *sb, struct conf *cconf)
+static int gen_rev_delta(const char *sigpath, const char *deltadir,
+	const char *oldpath, const char *finpath, const char *path,
+	struct sbuf *sb, struct conf *cconf)
 {
 	int ret=-1;
 	char *delpath=NULL;
@@ -179,7 +233,19 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath,
 		1 /* allow overwrite of infpath */);
 }
 
-static int jiggle(struct sbuf *sb, const char *currentdata, const char *datadirtmp, const char *datadir, const char *deltabdir, const char *deltafdir, const char *sigpath, const char *deletionsfile, FILE **delfp, int hardlinked, struct conf *cconf)
+// FIX THIS: Should sanitise these crazy args. Using something like sdirs,
+// or adding the paths to sdirs would probably do it.
+static int jiggle(struct sbuf *sb,
+	const char *currentdupdata,
+	const char *datadirtmp,
+	const char *datadir,
+	const char *deltabdir,
+	const char *deltafdir,
+	const char *sigpath,
+	const char *deletionsfile,
+	FILE **delfp,
+	int hardlinked,
+	struct conf *cconf)
 {
 	int ret=-1;
 	struct stat statp;
@@ -189,7 +255,7 @@ static int jiggle(struct sbuf *sb, const char *currentdata, const char *datadirt
 	char *deltafpath=NULL;
 	const char *datapth=sb->burp1->datapth.buf;
 
-	if(!(oldpath=prepend_s(currentdata, datapth))
+	if(!(oldpath=prepend_s(currentdupdata, datapth))
 	  || !(newpath=prepend_s(datadirtmp, datapth))
 	  || !(finpath=prepend_s(datadir, datapth))
 	  || !(deltafpath=prepend_s(deltafdir, datapth)))
@@ -416,7 +482,8 @@ static int do_hardlinked_archive(struct conf *cconf, unsigned long bno)
 	return !ret;
 }
 
-static int maybe_delete_files_from_manifest(const char *manifesttmp, const char *manifest, const char *deletionsfile, struct conf *cconf)
+static int maybe_delete_files_from_manifest(const char *manifesttmp,
+	const char *manifest, const char *deletionsfile, struct conf *cconf)
 {
 	int ars=0;
 	int ret=-1;
@@ -518,11 +585,17 @@ end:
 
 /* Need to make all the stuff that this does atomic so that existing backups
    never get broken, even if somebody turns the power off on the server. */ 
-static int atomic_data_jiggle(struct sdirs *sdirs, struct conf *cconf,
-	const char *manifest, const char *currentdup, const char *currentdata,
-	const char *datadir, const char *datadirtmp,
+// FIX THIS: crazy args.
+static int atomic_data_jiggle(struct sdirs *sdirs,
+	struct conf *cconf,
+	const char *manifest,
+	const char *currentdup,
+	const char *currentdupdata,
+	const char *datadir,
+	const char *datadirtmp,
 	const char *deletionsfile,
-	int hardlinked, unsigned long bno)
+	int hardlinked,
+	unsigned long bno)
 {
 	int ars=0;
 	int ret=-1;
@@ -572,7 +645,7 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct conf *cconf,
 			if(write_status(STATUS_SHUFFLING,
 				sb->burp1->datapth.buf, cconf)) goto end;
 
-			if((ret=jiggle(sb, currentdata, datadirtmp,
+			if((ret=jiggle(sb, currentdupdata, datadirtmp,
 				datadir, deltabdir, deltafdir,
 				sigpath, deletionsfile, &delfp,
 				hardlinked, cconf)))

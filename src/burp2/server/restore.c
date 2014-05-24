@@ -1,6 +1,7 @@
 #include "include.h"
 #include "champ_chooser/hash.h"
 #include "monitor/status_client.h"
+#include "../../burp1/server/restore.h"
 
 static int restore_sbuf(struct asfd *asfd, struct sbuf *sb, enum action act,
 	char status, struct conf *conf, int *need_data)
@@ -689,9 +690,19 @@ int do_restore_server(struct asfd *asfd, struct sdirs *sdirs,
 		{
 			found=1;
 			//logp("got: %s\n", arr[i].path);
-			ret|=restore_manifest(asfd, &arr[i],
-				regex, srestore, act, sdirs,
-				dir_for_notify, conf);
+			if(conf->protocol==PROTO_BURP1)
+				ret|=restore_manifest_burp1(asfd,
+					// Burp 1 needs to travel up and down
+					// the array.
+					arr, a, i,
+					regex, srestore, act, sdirs,
+					dir_for_notify, conf);
+
+			else
+				ret|=restore_manifest(asfd,
+					&arr[i],
+					regex, srestore, act, sdirs,
+					dir_for_notify, conf);
 			break;
 		}
 	}

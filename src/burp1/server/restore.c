@@ -3,71 +3,6 @@
 
 #include <librsync.h>
 
-// Also used by backup_phase4_server.c
-int do_patch(struct asfd *asfd, const char *dst, const char *del,
-	const char *upd, bool gzupd, int compression, struct conf *cconf)
-{
-	FILE *dstp=NULL;
-	FILE *delfp=NULL;
-	gzFile delzp=NULL;
-	gzFile updp=NULL;
-	FILE *updfp=NULL;
-	rs_result result;
-
-	//logp("patching...\n");
-
-	if(!(dstp=fopen(dst, "rb")))
-	{
-		logp("could not open %s for reading\n", dst);
-		return -1;
-	}
-
-	if(dpthl_is_compressed(compression, del))
-		delzp=gzopen(del, "rb");
-	else
-		delfp=fopen(del, "rb");
-
-	if(!delzp && !delfp)
-	{
-		logp("could not open %s for reading\n", del);
-		close_fp(&dstp);
-		return -1;
-	}
-
-	if(gzupd)
-		updp=gzopen(upd, comp_level(cconf));
-	else
-		updfp=fopen(upd, "wb");
-
-	if(!updp && !updfp)
-	{
-		logp("could not open %s for writing\n", upd);
-		close_fp(&dstp);
-		gzclose_fp(&delzp);
-		close_fp(&delfp);
-		return -1;
-	}
-	
-	result=rs_patch_gzfile(asfd,
-		dstp, delfp, delzp, updfp, updp, NULL, cconf->cntr);
-
-	fclose(dstp);
-	gzclose_fp(&delzp);
-	close_fp(&delfp);
-	if(close_fp(&updfp))
-	{
-		logp("error closing %s after rs_patch_gzfile\n", upd);
-		result=RS_IO_ERROR;
-	}
-	if(gzclose_fp(&updp))
-	{
-		logp("error gzclosing %s after rs_patch_gzfile\n", upd);
-		result=RS_IO_ERROR;
-	}
-
-	return result;
-}
-
 static int inflate_or_link_oldfile(struct asfd *asfd, const char *oldpath,
 	const char *infpath, struct conf *cconf, int compression)
 {
@@ -559,10 +494,8 @@ static int check_srestore(struct conf *cconf, const char *path)
 {
 	struct strlist *l;
 	for(l=cconf->incexcdir; l; l=l->next)
-	{
-		//printf(" %d %s %s\n",	l->flag, l->path, path);
-		if(srestore_matches(l, path)) return 1;
-	}
+		if(srestore_matches(l, path))
+			return 1;
 	return 0;
 }
 
@@ -707,7 +640,7 @@ end:
 
 // a = length of struct bu array
 // i = position to restore from
-static int restore_manifest(struct asfd *asfd,
+int restore_manifest_burp1(struct asfd *asfd,
 	struct bu *arr, int a, int i,
 	regex_t *regex, int srestore, enum action act, struct sdirs *sdirs,
 	char **dir_for_notify, struct conf *cconf)
@@ -772,65 +705,5 @@ end:
 	if(datadir) free(datadir);
 	if(logpath) free(logpath);
 	if(logpathz) free(logpathz);
-	return ret;
-}
-
-int do_restore_server_burp1(struct asfd *asfd,
-	struct sdirs *sdirs, enum action act,
-	int srestore, char **dir_for_notify, struct conf *cconf)
-{
-	int a=0;
-	int i=0;
-	int ret=0;
-	uint8_t found=0;
-	struct bu *arr=NULL;
-	unsigned long index=0;
-	regex_t *regex=NULL;
-
-	logp("in do_restore\n");
-
-	if(compile_regex(&regex, cconf->regex)) return -1;
-
-	if(get_current_backups(asfd, sdirs, &arr, &a, 1))
-	{
-		if(regex) { regfree(regex); free(regex); }
-		return -1;
-	}
-
-	if(!(index=strtoul(cconf->backup, NULL, 10)) && a>0)
-	{
-		// No backup specified, do the most recent.
-		ret=restore_manifest(asfd, arr, a, a-1,
-			regex, srestore, act, sdirs, dir_for_notify, cconf);
-		found=1;
-	}
-
-	if(!found) for(i=0; i<a; i++)
-	{
-		if(!strcmp(arr[i].timestamp, cconf->backup)
-			|| arr[i].index==index)
-		{
-			found=1;
-			//logp("got: %s\n", arr[i].path);
-			ret|=restore_manifest(asfd, arr, a, i,
-				regex, srestore, act, sdirs,
-				dir_for_notify, cconf);
-			break;
-		}
-	}
-
-	free_current_backups(&arr, a);
-
-	if(!found)
-	{
-		logp("backup not found\n");
-		asfd->write_str(asfd, CMD_ERROR, "backup not found");
-		ret=-1;
-	}
-	if(regex)
-	{
-		regfree(regex);
-		free(regex);
-	}
 	return ret;
 }

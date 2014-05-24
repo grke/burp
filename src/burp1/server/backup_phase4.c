@@ -215,37 +215,26 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath,
 	int compression, struct conf *cconf)
 {
 	struct stat statp;
-	const char *opath=oldpath;
 
-	if(lstat(opath, &statp))
+	if(lstat(oldpath, &statp))
 	{
-		logp("could not lstat %s\n", opath);
+		logp("could not lstat %s\n", oldpath);
 		return -1;
 	}
 
-	if(dpthl_is_compressed(compression, opath))
-		return inflate_oldfile(opath, infpath, &statp, cconf);
+	if(dpthl_is_compressed(compression, oldpath))
+		return inflate_oldfile(oldpath, infpath, &statp, cconf);
 
 	// If it was not a compressed file, just hard link it.
 	// It is possible that infpath already exists, if the server
 	// was interrupted on a previous run just after this point.
-	return do_link(opath, infpath, &statp, cconf,
+	return do_link(oldpath, infpath, &statp, cconf,
 		1 /* allow overwrite of infpath */);
 }
 
-// FIX THIS: Should sanitise these crazy args. Using something like sdirs,
-// or adding the paths to sdirs would probably do it.
-static int jiggle(struct sbuf *sb,
-	const char *currentdupdata,
-	const char *datadirtmp,
-	const char *datadir,
-	const char *deltabdir,
-	const char *deltafdir,
-	const char *sigpath,
-	const char *deletionsfile,
-	FILE **delfp,
-	int hardlinked,
-	struct conf *cconf)
+static int jiggle(struct fdirs *fdirs, struct sbuf *sb,
+	int hardlinked, const char *deltabdir, const char *deltafdir,
+	const char *sigpath, FILE **delfp, struct conf *cconf)
 {
 	int ret=-1;
 	struct stat statp;
@@ -255,9 +244,9 @@ static int jiggle(struct sbuf *sb,
 	char *deltafpath=NULL;
 	const char *datapth=sb->burp1->datapth.buf;
 
-	if(!(oldpath=prepend_s(currentdupdata, datapth))
-	  || !(newpath=prepend_s(datadirtmp, datapth))
-	  || !(finpath=prepend_s(datadir, datapth))
+	if(!(oldpath=prepend_s(fdirs->currentdupdata, datapth))
+	  || !(newpath=prepend_s(fdirs->datadirtmp, datapth))
+	  || !(finpath=prepend_s(fdirs->datadir, datapth))
 	  || !(deltafpath=prepend_s(deltafdir, datapth)))
 	{
 		log_out_of_memory(__func__);
@@ -281,12 +270,12 @@ static int jiggle(struct sbuf *sb,
 			donemsg++;
 		}
 	}
-	else if(mkpath(&finpath, datadir))
+	else if(mkpath(&finpath, fdirs->datadir))
 	{
 		logp("could not create path for: %s\n", finpath);
 		goto end;
 	}
-	else if(mkpath(&newpath, datadirtmp))
+	else if(mkpath(&newpath, fdirs->datadirtmp))
 	{
 		logp("could not create path for: %s\n", newpath);
 		goto end;
@@ -333,7 +322,8 @@ static int jiggle(struct sbuf *sb,
 
 			// First, note that we want to remove this entry from
 			// the manifest.
-			if(!*delfp && !(*delfp=open_file(deletionsfile, "ab")))
+			if(!*delfp
+			  && !(*delfp=open_file(fdirs->deletionsfile, "ab")))
 			{
 				// Could not mark this file as deleted. Fatal.
 				goto end;
@@ -483,7 +473,7 @@ static int do_hardlinked_archive(struct conf *cconf, unsigned long bno)
 }
 
 static int maybe_delete_files_from_manifest(const char *manifesttmp,
-	const char *manifest, const char *deletionsfile, struct conf *cconf)
+	struct fdirs *fdirs, struct conf *cconf)
 {
 	int ars=0;
 	int ret=-1;
@@ -495,15 +485,15 @@ static int maybe_delete_files_from_manifest(const char *manifesttmp,
 	struct sbuf *mb=NULL;
 	struct stat statp;
 
-	if(lstat(deletionsfile, &statp)) // No deletions, no problem.
+	if(lstat(fdirs->deletionsfile, &statp)) // No deletions, no problem.
 		return 0;
 	logp("Performing deletions on manifest\n");
 
-	if(!(manifesttmp=get_tmp_filename(manifest)))
+	if(!(manifesttmp=get_tmp_filename(fdirs->manifest)))
 		goto end;
 
-        if(!(dfp=open_file(deletionsfile, "rb"))
-	  || !(omzp=gzopen_file(manifest, "rb"))
+        if(!(dfp=open_file(fdirs->deletionsfile, "rb"))
+	  || !(omzp=gzopen_file(fdirs->manifest, "rb"))
 	  || !(nmzp=gzopen_file(manifesttmp, comp_level(cconf)))
 	  || !(db=sbuf_alloc(cconf))
 	  || !(mb=sbuf_alloc(cconf)))
@@ -572,11 +562,11 @@ end:
 	sbuf_free(mb);
 	if(!ret)
 	{
-		unlink(deletionsfile);
+		unlink(fdirs->deletionsfile);
 		// The rename race condition is not a problem here, as long
 		// as manifesttmp is the same path as that generated in the
 		// atomic data jiggle.
-		if(do_rename(manifesttmp, manifest))
+		if(do_rename(manifesttmp, fdirs->manifest))
 			return -1;
 	}
 	if(manifesttmp) unlink(manifesttmp);
@@ -585,17 +575,8 @@ end:
 
 /* Need to make all the stuff that this does atomic so that existing backups
    never get broken, even if somebody turns the power off on the server. */ 
-// FIX THIS: crazy args.
-static int atomic_data_jiggle(struct sdirs *sdirs,
-	struct conf *cconf,
-	const char *manifest,
-	const char *currentdup,
-	const char *currentdupdata,
-	const char *datadir,
-	const char *datadirtmp,
-	const char *deletionsfile,
-	int hardlinked,
-	unsigned long bno)
+static int atomic_data_jiggle(struct sdirs *sdirs, struct fdirs *fdirs,
+	int hardlinked, struct conf *cconf, unsigned long bno)
 {
 	int ars=0;
 	int ret=-1;
@@ -613,30 +594,30 @@ static int atomic_data_jiggle(struct sdirs *sdirs,
 
 	logp("Doing the atomic data jiggle...\n");
 
-	if(!(tmpman=get_tmp_filename(manifest)))
+	if(!(tmpman=get_tmp_filename(fdirs->manifest)))
 		goto end;
-	if(lstat(manifest, &statp))
+	if(lstat(fdirs->manifest, &statp))
 	{
 		// Manifest does not exist - maybe the server was killed before
 		// it could be renamed.
-		logp("%s did not exist - trying %s\n", manifest, tmpman);
+		logp("%s did not exist - trying %s\n", fdirs->manifest, tmpman);
 		// Rename race condition is of no consequence, because manifest
 		// already does not exist.
-		do_rename(tmpman, manifest);
+		do_rename(tmpman, fdirs->manifest);
 	}
-	if(!(zp=gzopen_file(manifest, "rb")))
+	if(!(zp=gzopen_file(fdirs->manifest, "rb")))
 		goto end;
 
-	if(!(deltabdir=prepend_s(currentdup, "deltas.reverse"))
+	if(!(deltabdir=prepend_s(fdirs->currentdup, "deltas.reverse"))
 	  || !(deltafdir=prepend_s(sdirs->finishing, "deltas.forward"))
-	  || !(sigpath=prepend_s(currentdup, "sig.tmp"))
+	  || !(sigpath=prepend_s(fdirs->currentdup, "sig.tmp"))
 	  || !(sb=sbuf_alloc(cconf)))
 	{
 		log_out_of_memory(__func__);
 		goto end;
 	}
 
-	mkdir(datadir, 0777);
+	mkdir(fdirs->datadir, 0777);
 
 	while(!(ars=sbufl_fill(sb, NULL, NULL, zp, cconf->cntr)))
 	{
@@ -645,11 +626,9 @@ static int atomic_data_jiggle(struct sdirs *sdirs,
 			if(write_status(STATUS_SHUFFLING,
 				sb->burp1->datapth.buf, cconf)) goto end;
 
-			if((ret=jiggle(sb, currentdupdata, datadirtmp,
-				datadir, deltabdir, deltafdir,
-				sigpath, deletionsfile, &delfp,
-				hardlinked, cconf)))
-					goto end;
+			if((ret=jiggle(fdirs, sb, hardlinked,
+				deltabdir, deltafdir,
+				sigpath, &delfp, cconf))) goto end;
 		}
 		sbuf_free_content(sb);
 	}
@@ -657,12 +636,13 @@ static int atomic_data_jiggle(struct sdirs *sdirs,
 
 	if(close_fp(&delfp))
 	{
-		logp("error closing %s in atomic_data_jiggle\n", deletionsfile);
+		logp("error closing %s in atomic_data_jiggle\n",
+			fdirs->deletionsfile);
 		goto end;
 	}
 
-	if(maybe_delete_files_from_manifest(tmpman,
-		manifest, deletionsfile, cconf)) goto end;
+	if(maybe_delete_files_from_manifest(tmpman, fdirs, cconf))
+		goto end;
 
 	// Remove the temporary data directory, we have probably removed
 	// useful files from it.
@@ -685,44 +665,24 @@ int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf)
 {
 	int ret=-1;
 	struct stat statp;
-	char *manifest=NULL;
-	char *deletionsfile=NULL;
-	char *datadir=NULL;
-	char *datadirtmp=NULL;
-	char *currentdup=NULL;
-	char *currentduptmp=NULL;
-	char *currentdupdata=NULL;
-	char *timestamp=NULL;
-	char *fullrealcurrent=NULL;
-	char *logpath=NULL;
-	char *hlinkedpath=NULL;
 	ssize_t len=0;
 	char realcurrent[256]="";
-
 	unsigned long bno=0;
 	int hardlinked=0;
 	char tstmp[64]="";
 	int newdup=0;
 	int previous_backup=0;
+	struct fdirs *fdirs=NULL;
 
 	if((len=readlink(sdirs->current, realcurrent, sizeof(realcurrent)-1))<0)
 		len=0;
 	realcurrent[len]='\0';
 
-	if(!(datadir=prepend_s(sdirs->finishing, "data"))
-	  || !(datadirtmp=prepend_s(sdirs->finishing, "data.tmp"))
-	  || !(manifest=prepend_s(sdirs->finishing, "manifest.gz"))
-	  || !(deletionsfile=prepend_s(sdirs->finishing, "deletions"))
-	  || !(currentdup=prepend_s(sdirs->finishing, "currentdup"))
-	  || !(currentduptmp=prepend_s(sdirs->finishing, "currentdup.tmp"))
-	  || !(currentdupdata=prepend_s(currentdup, "data"))
-	  || !(timestamp=prepend_s(sdirs->finishing, "timestamp"))
-	  || !(fullrealcurrent=prepend_s(sdirs->client, realcurrent))
-	  || !(logpath=prepend_s(sdirs->finishing, "log"))
-	  || !(hlinkedpath=prepend_s(currentdup, "hardlinked")))
+	if(!(fdirs=fdirs_alloc())
+	  || fdirs_init(fdirs, sdirs, realcurrent))
 		goto end;
 
-	if(set_logfp(logpath, cconf))
+	if(set_logfp(fdirs->logpath, cconf))
 		goto end;
 
 	logp("Begin phase4 (shuffle files)\n");
@@ -734,33 +694,35 @@ int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf)
 	{
 		previous_backup++;
 
-		if(lstat(currentdup, &statp))
+		if(lstat(fdirs->currentdup, &statp))
 		{
 			// Have not duplicated the current backup yet.
-			if(!lstat(currentduptmp, &statp))
+			if(!lstat(fdirs->currentduptmp, &statp))
 			{
-				logp("Removing previous currentduptmp directory: %s\n", currentduptmp);
-				if(recursive_delete(currentduptmp,
+				logp("Removing previous directory: %s\n",
+					fdirs->currentduptmp);
+				if(recursive_delete(fdirs->currentduptmp,
 					NULL, 1 /* del files */))
 				{
 					logp("Could not delete %s\n",
-						currentduptmp);
+						fdirs->currentduptmp);
 					goto end;
 				}
 			}
 			logp("Duplicating current backup.\n");
 			if(recursive_hardlink(sdirs->current,
-				currentduptmp, cconf)
+				fdirs->currentduptmp, cconf)
 			// The rename race condition is of no consequence here
 			// because currentdup does not exist.
-			  || do_rename(currentduptmp, currentdup))
+			  || do_rename(fdirs->currentduptmp, fdirs->currentdup))
 				goto end;
 			newdup++;
 		}
 
-		if(read_timestamp(timestamp, tstmp, sizeof(tstmp)))
+		if(read_timestamp(fdirs->timestamp, tstmp, sizeof(tstmp)))
 		{
-			logp("could not read timestamp file: %s\n", timestamp);
+			logp("could not read timestamp file: %s\n",
+				fdirs->timestamp);
 			goto end;
 		}
 		// Get the backup number.
@@ -780,7 +742,7 @@ int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf)
 			// Otherwise it is possible that things can be messed
 			// up by somebody swapping between hardlinked and
 			// not hardlinked at the same time as a resume happens.
-			if(lstat(hlinkedpath, &statp))
+			if(lstat(fdirs->hlinkedpath, &statp))
 			{
 				logp("previous attempt started not hardlinked\n");
 				hardlinked=0;
@@ -797,7 +759,7 @@ int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf)
 			// Create a file to indicate that the previous backup
 			// does not have others depending on it.
 			FILE *hfp=NULL;
-			if(!(hfp=open_file(hlinkedpath, "wb")))
+			if(!(hfp=open_file(fdirs->hlinkedpath, "wb")))
 				goto end;
 			// Stick the next backup timestamp in it. It might
 			// be useful one day when wondering when the next
@@ -815,13 +777,11 @@ int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf)
 		{
 			logp(" not doing hardlinked archive\n");
 			logp(" will generate reverse deltas\n");
-			unlink(hlinkedpath);
+			unlink(fdirs->hlinkedpath);
 		}
 	}
 
-	if(atomic_data_jiggle(sdirs, cconf, manifest, currentdup,
-		currentdupdata, datadir, datadirtmp, deletionsfile,
-		hardlinked, bno))
+	if(atomic_data_jiggle(sdirs, fdirs, hardlinked, cconf, bno))
 	{
 		logp("could not finish up backup.\n");
 		goto end;
@@ -832,7 +792,7 @@ int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf)
 
 	// Remove the temporary data directory, we have now removed
 	// everything useful from it.
-	recursive_delete(datadirtmp, NULL, 1 /* del files */);
+	recursive_delete(fdirs->datadirtmp, NULL, 1 /* del files */);
 
 	// Clean up the currentdata directory - this is now the 'old'
 	// currentdata directory. Any files that were deleted from
@@ -841,16 +801,16 @@ int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf)
 	// This will have the effect of getting rid of unnecessary
 	// directories.
 	sync(); // try to help CIFS
-	recursive_delete(currentdupdata, NULL, 0 /* do not del files */);
+	recursive_delete(fdirs->currentdupdata, NULL, 0 /* do not del files */);
 
 	// Rename the old current to something that we know to delete.
 	if(previous_backup)
 	{
 		if(deleteme_move(sdirs->client,
-			fullrealcurrent, realcurrent, cconf)
+			fdirs->fullrealcurrent, realcurrent, cconf)
 		// I have tested that potential race conditions on the
 		// rename() are automatically recoverable here.
-		  || do_rename(currentdup, fullrealcurrent))
+		  || do_rename(fdirs->currentdup, fdirs->fullrealcurrent))
 			goto end;
 	}
 
@@ -874,17 +834,6 @@ int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf)
 
 	ret=0;
 end:
-	if(datadir) free(datadir);
-	if(datadirtmp) free(datadirtmp);
-	if(manifest) free(manifest);
-	if(deletionsfile) free(deletionsfile);
-	if(currentdup) free(currentdup);
-	if(currentduptmp) free(currentduptmp);
-	if(currentdupdata) free(currentdupdata);
-	if(timestamp) free(timestamp);
-	if(fullrealcurrent) free(fullrealcurrent);
-	if(logpath) free(logpath);
-	if(hlinkedpath) free(hlinkedpath);
-
+	fdirs_free(fdirs);
 	return ret;
 }

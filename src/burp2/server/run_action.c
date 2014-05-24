@@ -246,12 +246,8 @@ static int run_restore(struct asfd *asfd,
 	if(conf_val_reset(restoreregex, &(cconf->regex))
 	  || asfd->write_str(asfd, CMD_GEN, "ok"))
 		return -1;
-	if(cconf->protocol==PROTO_BURP1)
-		ret=do_restore_server_burp1(asfd, sdirs, act,
-			srestore, &dir_for_notify, cconf);
-	else
-		ret=do_restore_server(asfd, sdirs, act,
-			srestore, &dir_for_notify, cconf);
+	ret=do_restore_server(asfd, sdirs, act,
+		srestore, &dir_for_notify, cconf);
 	if(dir_for_notify)
 	{
 		maybe_do_notification(asfd, ret,

@@ -10,7 +10,6 @@ struct bu
 	char *timestamp;
 	char *forward_timestamp;
 	unsigned long index;
-	unsigned long forward_index;
 	int hardlinked;
 	int deletable;
 	// transposed index - will set the oldest backup to 1.

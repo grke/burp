@@ -107,14 +107,8 @@ uninstall:
 # `semi'-automatic since dependencies are generated at distribution time.
 
 depend:
-	@$(MV) Makefile Makefile.bak
-	@$(SED) "/^# DO NOT DELETE:/,$$ d" Makefile.bak > Makefile
-	@$(ECHO) "# DO NOT DELETE: nice dependency list follows" >> Makefile
 	@$(CXX) -S -M $(CPPFLAGS) $(XINC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
-	@if test -f Makefile ; then \
-	    $(RMF) Makefile.bak; \
-	else \
-	   $(MV) Makefile.bak Makefile; \
+	@if ! test -f Makefile ; then \
 	   echo " ===== Something went wrong in make depend ====="; \
 	fi
 

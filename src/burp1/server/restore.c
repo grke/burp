@@ -1,5 +1,6 @@
 #include "include.h"
 #include "../../burp2/server/monitor/status_client.h"
+#include "../../burp2/server/restore.h"
 
 #include <librsync.h>
 
@@ -476,27 +477,6 @@ static int restore_ent(struct asfd *asfd, struct sbuf **sb,
 	ret=0;
 end:
 	return ret;
-}
-
-static int srestore_matches(struct strlist *s, const char *path)
-{
-	int r=0;
-	if(!s->flag) return 0; // Do not know how to do excludes yet.
-	if((r=strncmp_w(path, s->path))) return 0; // no match
-	if(!r) return 1; // exact match
-	if(*(path+strlen(s->path)+1)=='/')
-		return 1; // matched directory contents
-	return 0; // no match
-}
-
-/* Used when restore is initiated from the server. */
-static int check_srestore(struct conf *cconf, const char *path)
-{
-	struct strlist *l;
-	for(l=cconf->incexcdir; l; l=l->next)
-		if(srestore_matches(l, path))
-			return 1;
-	return 0;
 }
 
 static int setup_cntr(struct asfd *asfd, const char *manifest,

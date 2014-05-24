@@ -137,7 +137,7 @@ end:
 	return ret;
 }
 
-static int srestore_matches(struct strlist *s, const char *path)
+int srestore_matches(struct strlist *s, const char *path)
 {
 	int r=0;
 	if(!s->flag) return 0; // Do not know how to do excludes yet.
@@ -149,7 +149,7 @@ static int srestore_matches(struct strlist *s, const char *path)
 }
 
 // Used when restore is initiated from the server.
-static int check_srestore(struct conf *conf, const char *path)
+int check_srestore(struct conf *conf, const char *path)
 {
 	struct strlist *l;
 	for(l=conf->incexcdir; l; l=l->next)
@@ -589,9 +589,8 @@ end:
 	return ret;
 }
 
-// a = length of struct bu array
-// i = position to restore from
-static int restore_manifest(struct asfd *asfd, struct bu *bu, regex_t *regex,
+static int restore_manifest_burp2(struct asfd *asfd,
+	struct bu *bu, regex_t *regex,
 	int srestore, enum action act, struct sdirs *sdirs,
 	char **dir_for_notify, struct conf *conf)
 {
@@ -653,6 +652,23 @@ end:
 	return ret;
 }
 
+static int restore_manifest(struct asfd *asfd,
+	struct bu **arr, int a, int i, regex_t *regex,
+	int srestore, enum action act, struct sdirs *sdirs,
+	char **dir_for_notify, struct conf *conf)
+{
+	if(conf->protocol==PROTO_BURP1)
+		return restore_manifest_burp1(asfd,
+			// Burp 1 needs to travel up and down
+			// the array.
+			*arr, a, i, regex, srestore, act, sdirs,
+			dir_for_notify, conf);
+	else
+		return restore_manifest_burp2(asfd,
+			arr[i], regex, srestore, act, sdirs,
+			dir_for_notify, conf);
+}
+
 int do_restore_server(struct asfd *asfd, struct sdirs *sdirs,
 	enum action act, int srestore,
 	char **dir_for_notify, struct conf *conf)
@@ -677,10 +693,10 @@ int do_restore_server(struct asfd *asfd, struct sdirs *sdirs,
 
 	if(!(index=strtoul(conf->backup, NULL, 10)) && a>0)
 	{
-		// No backup specified, do the most recent.
-		ret=restore_manifest(asfd, &arr[a-1],
-			regex, srestore, act, sdirs, dir_for_notify, conf);
 		found=1;
+		// No backup specified, do the most recent.
+		ret=restore_manifest(asfd, &arr, a-1, i, regex, srestore,
+			act, sdirs, dir_for_notify, conf);
 	}
 
 	if(!found) for(i=0; i<a; i++)
@@ -690,19 +706,8 @@ int do_restore_server(struct asfd *asfd, struct sdirs *sdirs,
 		{
 			found=1;
 			//logp("got: %s\n", arr[i].path);
-			if(conf->protocol==PROTO_BURP1)
-				ret|=restore_manifest_burp1(asfd,
-					// Burp 1 needs to travel up and down
-					// the array.
-					arr, a, i,
-					regex, srestore, act, sdirs,
-					dir_for_notify, conf);
-
-			else
-				ret|=restore_manifest(asfd,
-					&arr[i],
-					regex, srestore, act, sdirs,
-					dir_for_notify, conf);
+			ret|=restore_manifest(asfd, &arr, a, i, regex,
+				srestore, act, sdirs, dir_for_notify, conf);
 			break;
 		}
 	}

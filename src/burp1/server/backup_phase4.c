@@ -332,7 +332,7 @@ static int jiggle(struct fdirs *fdirs, struct sbuf *sb,
 				goto end;
 			if(fflush(*delfp))
 			{
-				logp("error fflushing deletions file in jiggle: %s\n", strerror(errno));
+				logp("error fflushing deletions file in %s: %s\n", __func__, strerror(errno));
 				goto end;
 			}
 	
@@ -353,40 +353,30 @@ static int jiggle(struct fdirs *fdirs, struct sbuf *sb,
 					goto end;
 		}
 
-		// Power interruptions should be
-		// recoverable. If it happens before
-		// this point, the data jiggle for
-		// this file has to be done again.
-		// Once finpath is in place, no more
-		// jiggle is required.
+		// Power interruptions should be recoverable. If it happens
+		// before this point, the data jiggle for this file has to be
+		// done again.
+		// Once finpath is in place, no more jiggle is required.
 
 		// Use the fresh new file.
 		// Rename race condition is of no consequence, because finpath
 		// will just get recreated automatically.
 		if(do_rename(newpath, finpath))
 			goto end;
-		else
-		{
-			// Remove the forward delta, as it is
-			// no longer needed. There is a
-			// reverse diff and the finished
-			// finished file is in place.
-			//logp("Deleting delta.forward...\n");
-			unlink(deltafpath);
 
-			// Remove the old file. If a power
-			// cut happens just before this,
-			// the old file will hang around
-			// forever.
-			// TODO: Put in something to
-			// detect this.
-			// ie, both a reverse delta and the
-			// old file exist.
-			if(!hardlinked)
-			{
-				//logp("Deleting oldpath...\n");
-				unlink(oldpath);
-			}
+		// Remove the forward delta, as it is no longer needed. There
+		// is a reverse diff and the finished finished file is in place.
+		//logp("Deleting delta.forward...\n");
+		unlink(deltafpath);
+
+		// Remove the old file. If a power cut happens just before
+		// this, the old file will hang around forever.
+		// FIX THIS: maybe put in something to detect this.
+		// ie, both a reverse delta and the old file exist.
+		if(!hardlinked)
+		{
+			//logp("Deleting oldpath...\n");
+			unlink(oldpath);
 		}
 	}
 	else if(!lstat(newpath, &statp) && S_ISREG(statp.st_mode))

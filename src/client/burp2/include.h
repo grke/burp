@@ -4,7 +4,6 @@
 #include "../include.h"
 
 #include "backup_phase2.h"
-#include "delete.h"
 #include "restore.h"
 
 #endif

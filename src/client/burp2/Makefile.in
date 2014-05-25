@@ -21,7 +21,6 @@ dummy:
 #
 SRCS = \
 	backup_phase2.c \
-	delete.c \
 	restore.c \
 
 OBJS = $(SRCS:.c=.o)

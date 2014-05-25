@@ -1,0 +1,115 @@
+@MCOMMON@
+
+srcdir =	.
+VPATH = 	.
+.PATH:		.
+
+# one up
+basedir = ..
+# top dir
+topdir = ../..
+# this dir relative to top dir
+thisdir = src/client
+
+DEBUG=@DEBUG@
+
+GETTEXT_LIBS = @LIBINTL@
+
+first_rule: all
+dummy:
+
+#
+SRCS = \
+	acl.c \
+	auth.c \
+	autoupgrade.c \
+	backup.c \
+	backup_phase1.c \
+	ca.c \
+	cvss.c \
+	extra_comms.c \
+	extrameta.c \
+	find.c \
+	list.c \
+	main.c \
+	xattr.c \
+
+OBJS = $(SRCS:.c=.o)
+LOBJS = $(SRCS:.c=.lo)
+
+# these are the objects that are changed by the .configure process
+EXTRAOBJS = @OBJLIST@
+
+FDLIBS = @FDLIBS@		  # extra libs for File daemon
+
+# extra items for linking on Win32
+WIN32OBJS = win32/winmain.o win32/winlib.a win32/winres.res
+win32 = $(WIN32OBJS) -luser32 -lgdi32
+
+WIN32LIBS = $(@WIN32@)
+
+.SUFFIXES:	.c .o .lo
+.PHONY:
+.DONTCARE:
+
+# inference rules
+.c.o:
+#	@echo "Compiling $<"
+	$(ECHO_CMD)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+.c.lo:
+#	@echo "Compiling $<"
+	$(ECHO_CMD)$(LIBTOOL_COMPILE) $(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+#-------------------------------------------------------------------------
+all: Makefile client.a
+	@echo "==== Make of client.a is good ===="
+	@echo " "
+
+client.a: $(OBJS)
+	@echo "Making $@ ..."
+	$(AR) rc  $@ $(OBJS)
+	$(RANLIB) $@
+
+Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
+	cd $(topdir) \
+	  && CONFIG_FILES=$(thisdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
+
+libtool-clean:
+	@$(RMF) -r .libs _libs *.la *.lo
+
+clean:	libtool-clean
+	@$(RMF) a.out *.o *.bak *~ *.intpro *.extpro *.a Makefile
+
+realclean: clean
+	@$(RMF) x
+
+distclean: realclean
+	if test $(srcdir) = .; then $(MAKE) realclean; fi
+	(cd $(srcdir); $(RMF) Makefile)
+	@if test -f win32/Makefile -a "${GMAKE}" != "none"; then \
+	   (cd win32; $(GMAKE) distclean); \
+	fi
+
+devclean: realclean
+	if test $(srcdir) = .; then $(MAKE) realclean; fi
+	(cd $(srcdir); $(RMF) Makefile)
+	@if test -f win32/Makefile -a "${GMAKE}" != "none"; then \
+	   (cd win32; $(GMAKE) devclean); \
+	fi
+
+install: all
+
+uninstall:
+
+# Semi-automatic generation of dependencies:
+# Use gcc -MM because X11 `makedepend' doesn't work on all systems
+# and it also includes system headers.
+# `semi'-automatic since dependencies are generated at distribution time.
+
+depend:
+	@$(CXX) -S -M $(CPPFLAGS) $(XINC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
+	@if ! test -f Makefile ; then \
+	   echo " ===== Something went wrong in make depend ====="; \
+	fi
+
+# -----------------------------------------------------------------------
+# DO NOT DELETE: nice dependency list follows

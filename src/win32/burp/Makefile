@@ -34,32 +34,32 @@ CLIENT_OBJS = \
 	$(OBJDIR)/base64.o \
 	$(OBJDIR)/berrno.o \
 	$(OBJDIR)/bfile.o \
-	$(OBJDIR)/burp1/client/backup_phase2.o \
-	$(OBJDIR)/burp1/client/restore.o \
 	$(OBJDIR)/burp1/handy.o \
 	$(OBJDIR)/burp1/msg.o \
 	$(OBJDIR)/burp1/rs_buf.o \
 	$(OBJDIR)/burp1/sbufl.o \
 	$(OBJDIR)/burp2/blk.o \
-	$(OBJDIR)/burp2/client/acl.o \
-	$(OBJDIR)/burp2/client/auth.o \
-	$(OBJDIR)/burp2/client/autoupgrade.o \
-	$(OBJDIR)/burp2/client/backup.o \
-	$(OBJDIR)/burp2/client/backup_phase1.o \
-	$(OBJDIR)/burp2/client/backup_phase2.o \
-	$(OBJDIR)/burp2/client/ca.o \
-	$(OBJDIR)/burp2/client/cvss.o \
-	$(OBJDIR)/burp2/client/delete.o \
-	$(OBJDIR)/burp2/client/extra_comms.o \
-	$(OBJDIR)/burp2/client/extrameta.o \
-	$(OBJDIR)/burp2/client/find.o \
-	$(OBJDIR)/burp2/client/list.o \
-	$(OBJDIR)/burp2/client/main.o \
-	$(OBJDIR)/burp2/client/restore.o \
-	$(OBJDIR)/burp2/client/xattr.o \
 	$(OBJDIR)/burp2/rabin/rabin.o \
 	$(OBJDIR)/burp2/rabin/rconf.o \
 	$(OBJDIR)/burp2/rabin/win.o \
+	$(OBJDIR)/client/acl.o \
+	$(OBJDIR)/client/auth.o \
+	$(OBJDIR)/client/autoupgrade.o \
+	$(OBJDIR)/client/backup.o \
+	$(OBJDIR)/client/backup_phase1.o \
+	$(OBJDIR)/client/burp1/backup_phase2.o \
+	$(OBJDIR)/client/burp1/restore.o \
+	$(OBJDIR)/client/burp2/backup_phase2.o \
+	$(OBJDIR)/client/ca.o \
+	$(OBJDIR)/client/cvss.o \
+	$(OBJDIR)/client/burp2/delete.o \
+	$(OBJDIR)/client/extra_comms.o \
+	$(OBJDIR)/client/extrameta.o \
+	$(OBJDIR)/client/find.o \
+	$(OBJDIR)/client/list.o \
+	$(OBJDIR)/client/main.o \
+	$(OBJDIR)/client/burp2/restore.o \
+	$(OBJDIR)/client/xattr.o \
 	$(OBJDIR)/cmd.o \
 	$(OBJDIR)/cntr.o \
 	$(OBJDIR)/conf.o \

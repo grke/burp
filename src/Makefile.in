@@ -48,17 +48,23 @@ SRCS = \
 		strlist.c
 
 OBJS = $(SRCS:.c=.o)
+# FIX THIS: Should not need to add extra .o objects here.
 SUBDIROBJS = \
-		burp2/server/server_burp2.a \
-		burp2/server/champ_chooser/champ_chooser.a \
-		burp2/server/monitor/monitor.a \
-		burp2/client/client_burp2.a \
+		burp1/handy.o \
+		burp1/msg.o \
+		server/burp1/restore.o \
+		server/burp1/run_action.o \
+		server/server.a \
+		client/client.a \
+		client/burp2/client_burp2.a \
 		burp2/rabin/rabin.a \
-		burp1/client/client_burp1.a \
-		burp1/server/server_burp1.a \
 		burp1/burp1.a \
-		burp2/burp2.a
-
+		client/burp1/client_burp1.a \
+		burp2/burp2.a \
+		server/burp1/server_burp1.a \
+		server/burp2/server_burp2.a \
+		server/burp2/champ_chooser/champ_chooser.a \
+		server/monitor/server_monitor.a
 
 # these are the objects that are changed by the .configure process
 EXTRAOBJS = @OBJLIST@
@@ -157,7 +163,7 @@ install: all
 	rm -f $(DESTDIR)/sbin/burp ; \
 	rm -f $(DESTDIR)/usr/sbin/burp ; \
 	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) burp $(DESTDIR)$(sbindir)/burp 
-	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) burp1/server/vss_strip $(DESTDIR)$(sbindir)/vss_strip
+	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) server/burp1/vss_strip $(DESTDIR)$(sbindir)/vss_strip
 # Should do a static vss_strip too.
 	@if test -f static-burp; then \
 	   $(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) static-burp $(DESTDIR)$(sbindir)/static-burp; \

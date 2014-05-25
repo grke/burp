@@ -1,8 +1,8 @@
 #include "include.h"
-#include "burp2/client/main.h"
-#include "burp2/server/main.h"
-#include "burp2/server/champ_chooser/champ_server.h"
-#include "burp2/server/monitor/status_client.h"
+#include "client/main.h"
+#include "server/main.h"
+#include "server/burp2/champ_chooser/champ_server.h"
+#include "server/monitor/status_client.h"
 
 static char *get_conf_path(void)
 {

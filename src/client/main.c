@@ -1,6 +1,5 @@
 #include "include.h"
 
-#include "burp2/delete.h"
 #include "burp2/restore.h"
 
 #ifndef HAVE_WIN32

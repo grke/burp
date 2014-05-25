@@ -27,6 +27,7 @@ SRCS = \
 	backup_phase1.c \
 	ca.c \
 	cvss.c \
+	delete.c \
 	extra_comms.c \
 	extrameta.c \
 	find.c \

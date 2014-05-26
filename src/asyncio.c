@@ -253,7 +253,15 @@ int async_init(int afd, SSL *assl, struct config *conf, int estimate)
 
 int set_bulk_packets(void)
 {
-#if defined(IP_TOS) && defined(IPTOS_THROUGHPUT)
+#ifdef IP_TOS
+#ifndef IPTOS_THROUGHPUT
+// Windows/mingw64 does not define this, but it is just a bit in the packet
+// header. Set it ourselves. According to what I have read on forums, the
+// Windows machine may have some system wide policy that resets the bits.
+// At least the burp code will be doing the right thing by setting it, even
+// if Windows decides to remove it.
+#define IPTOS_THROUGHPUT 0x08
+#endif
 	int opt=IPTOS_THROUGHPUT;
 	if(fd<0) return -1;
 	if(setsockopt(fd, IPPROTO_IP, IP_TOS, (char *) &opt, sizeof(opt))<0)

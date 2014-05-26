@@ -33,6 +33,7 @@ SRCS = \
 	find.c \
 	list.c \
 	main.c \
+	restore.c \
 	xattr.c \
 
 OBJS = $(SRCS:.c=.o)

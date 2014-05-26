@@ -16,6 +16,7 @@
 #include "find.h"
 #include "list.h"
 #include "main.h"
+#include "restore.h"
 #include "xattr.h"
 
 #endif

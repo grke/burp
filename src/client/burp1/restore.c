@@ -1,5 +1,4 @@
 #include "include.h"
-#include "../burp2/restore.h"
 
 static int open_for_restore(struct asfd *asfd, BFILE *bfd, FILE **fp,
 	const char *path, struct sbuf *sb, int vss_restore, struct conf *conf)

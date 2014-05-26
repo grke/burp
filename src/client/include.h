@@ -14,6 +14,7 @@
 #include "extra_comms.h"
 #include "extrameta.h"
 #include "find.h"
+#include "glob_windows.h"
 #include "list.h"
 #include "main.h"
 #include "restore.h"

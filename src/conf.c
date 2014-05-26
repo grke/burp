@@ -1,5 +1,5 @@
 #include "include.h"
-#include "glob_windows.h"
+#include "client/glob_windows.h"
 
 struct conf *conf_alloc(void)
 {
@@ -1040,7 +1040,7 @@ static int finalise_start_dirs(struct conf *c)
 static int finalise_glob(struct conf *c)
 {
 #ifdef HAVE_WIN32
-	if(windows_glob(c)) return -1;
+	if(glob_windows(c)) return -1;
 #else
 	int i;
 	glob_t globbuf;

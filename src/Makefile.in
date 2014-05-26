@@ -31,7 +31,6 @@ SRCS = \
 		conf.c \
 		forkchild.c \
 		fsops.c \
-		glob_windows.c \
 		handy.c \
 		incexc_recv.c \
 		incexc_send.c \

@@ -1,63 +1,5 @@
 #include "include.h"
 
-// FIX THIS: test whether this works with burp2
-int restore_interrupt(struct asfd *asfd,
-	struct sbuf *sb, const char *msg, struct conf *conf)
-{
-	int ret=0;
-	struct cntr *cntr=conf->cntr;
-	struct iobuf *rbuf=asfd->rbuf;
-
-	if(!cntr) return 0;
-
-	cntr_add(cntr, CMD_WARNING, 1);
-	logp("WARNING: %s\n", msg);
-	if(asfd->write_str(asfd, CMD_WARNING, msg)) goto end;
-
-	// If it is file data, get the server
-	// to interrupt the flow and move on.
-	if(sb->path.cmd!=CMD_FILE
-	  && sb->path.cmd!=CMD_ENC_FILE
-	  && sb->path.cmd!=CMD_EFS_FILE
-	  && sb->path.cmd!=CMD_VSS
-	  && sb->path.cmd!=CMD_ENC_VSS
-	  && sb->path.cmd!=CMD_VSS_T
-	  && sb->path.cmd!=CMD_ENC_VSS_T)
-		return 0;
-	if(sb->burp1 && !(sb->burp1->datapth.buf))
-		return 0;
-	if(sb->burp2 && !(sb->path.buf))
-		return 0;
-
-	if(asfd->write_str(asfd, CMD_INTERRUPT, sb->burp1->datapth.buf))
-		goto end;
-
-	// Read to the end file marker.
-	while(1)
-	{
-		iobuf_free_content(rbuf);
-		if(asfd->read(asfd))
-			goto end;
-		if(!ret && rbuf->len)
-		{
-			if(rbuf->cmd==CMD_APPEND)
-				continue;
-			else if(rbuf->cmd==CMD_END_FILE)
-				break;
-			else
-			{
-				iobuf_log_unexpected(rbuf, __func__);
-				goto end;
-			}
-		}
-	}
-
-	ret=0;
-end:
-	iobuf_free_content(rbuf);
-	return ret;
-}
-
 static int open_for_restore(struct asfd *asfd,
 	BFILE *bfd,
 	const char *path,
@@ -135,45 +77,6 @@ static int start_restore_file(struct asfd *asfd,
 	cntr_add(conf->cntr, sb->path.cmd, 1);
 
 	ret=0;
-end:
-	if(rpath) free(rpath);
-	return ret;
-}
-
-int restore_dir(struct asfd *asfd,
-	struct sbuf *sb, const char *dname, enum action act, struct conf *conf)
-{
-	int ret=0;
-	char *rpath=NULL;
-	if(act==ACTION_RESTORE)
-	{
-		if(build_path(dname, "", &rpath, NULL))
-		{
-			char msg[256]="";
-			// failed - do a warning
-			snprintf(msg, sizeof(msg),
-				"build path failed: %s", dname);
-			if(restore_interrupt(asfd, sb, msg, conf))
-				ret=-1;
-			goto end;
-		}
-		else if(!is_dir_lstat(rpath))
-		{
-			if(mkdir(rpath, 0777))
-			{
-				char msg[256]="";
-				snprintf(msg, sizeof(msg), "mkdir error: %s",
-					strerror(errno));
-				// failed - do a warning
-				if(restore_interrupt(asfd, sb, msg, conf))
-					ret=-1;
-				goto end;
-			}
-		}
-		attribs_set(asfd, rpath, &(sb->statp), sb->winattr, conf);
-		if(!ret) cntr_add(conf->cntr, sb->path.cmd, 1);
-	}
-	else cntr_add(conf->cntr, sb->path.cmd, 1);
 end:
 	if(rpath) free(rpath);
 	return ret;

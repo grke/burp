@@ -50,15 +50,16 @@ CLIENT_OBJS = \
 	$(OBJDIR)/client/burp1/backup_phase2.o \
 	$(OBJDIR)/client/burp1/restore.o \
 	$(OBJDIR)/client/burp2/backup_phase2.o \
+	$(OBJDIR)/client/burp2/restore.o \
 	$(OBJDIR)/client/ca.o \
 	$(OBJDIR)/client/cvss.o \
-	$(OBJDIR)/client/burp2/delete.o \
+	$(OBJDIR)/client/delete.o \
 	$(OBJDIR)/client/extra_comms.o \
 	$(OBJDIR)/client/extrameta.o \
 	$(OBJDIR)/client/find.o \
 	$(OBJDIR)/client/list.o \
 	$(OBJDIR)/client/main.o \
-	$(OBJDIR)/client/burp2/restore.o \
+	$(OBJDIR)/client/restore.o \
 	$(OBJDIR)/client/xattr.o \
 	$(OBJDIR)/cmd.o \
 	$(OBJDIR)/cntr.o \

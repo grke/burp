@@ -317,8 +317,8 @@ int open_file_for_send(BFILE *bfd, FILE **fp, const char *fname, struct stat *st
 {
 	if(fp)
 	{
-		static int fd;
 #ifdef O_NOATIME
+		static int fd;
 		if((fd=open(fname, O_RDONLY|(atime?0:O_NOATIME)))<0
 		  || !(*fp=fdopen(fd, "rb")))
 #else

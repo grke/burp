@@ -9,6 +9,8 @@
     print a warning and stop processing.
   * Fix a case where an interrupted backup may not have been automatically
     recoverable.
+  * Set IPTOS_THROUGHPUT bit on Windows, so that burp is doing the right thing
+    even if Windows decides to remove it.
 
 2014-04-29 Changes in burp-1.4.14:
   * Add an 'atime' option, which allows the user to choose whether to use

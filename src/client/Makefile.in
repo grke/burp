@@ -31,6 +31,7 @@ SRCS = \
 	extra_comms.c \
 	extrameta.c \
 	find.c \
+	glob_windows.c \
 	list.c \
 	main.c \
 	restore.c \

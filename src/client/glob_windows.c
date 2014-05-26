@@ -192,7 +192,7 @@ end:
 	return ret;
 }
 
-int windows_glob(struct conf *conf)
+int glob_windows(struct conf *conf)
 {
 	struct strlist *ig;
 

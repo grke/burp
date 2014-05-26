@@ -57,6 +57,7 @@ CLIENT_OBJS = \
 	$(OBJDIR)/client/extra_comms.o \
 	$(OBJDIR)/client/extrameta.o \
 	$(OBJDIR)/client/find.o \
+	$(OBJDIR)/client/glob_windows.o \
 	$(OBJDIR)/client/list.o \
 	$(OBJDIR)/client/main.o \
 	$(OBJDIR)/client/restore.o \
@@ -66,7 +67,6 @@ CLIENT_OBJS = \
 	$(OBJDIR)/conf.o \
 	$(OBJDIR)/forkchild.o \
 	$(OBJDIR)/fsops.o \
-	$(OBJDIR)/glob_windows.o \
 	$(OBJDIR)/handy.o \
 	$(OBJDIR)/incexc_recv.o \
 	$(OBJDIR)/incexc_send.o \

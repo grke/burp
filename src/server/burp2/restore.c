@@ -681,7 +681,7 @@ int do_restore_server(struct asfd *asfd, struct sdirs *sdirs,
 	int ret=0;
 	uint8_t found=0;
 	struct bu *arr=NULL;
-	unsigned long index=0;
+	unsigned long bno=0;
 	regex_t *regex=NULL;
 
 	logp("in do_restore\n");
@@ -694,7 +694,7 @@ int do_restore_server(struct asfd *asfd, struct sdirs *sdirs,
 		return -1;
 	}
 
-	if(!(index=strtoul(conf->backup, NULL, 10)) && a>0)
+	if(!(bno=strtoul(conf->backup, NULL, 10)) && a>0)
 	{
 		found=1;
 		// No backup specified, do the most recent.
@@ -705,7 +705,7 @@ int do_restore_server(struct asfd *asfd, struct sdirs *sdirs,
 	if(!found) for(i=0; i<a; i++)
 	{
 		if(!strcmp(arr[i].timestamp, conf->backup)
-			|| arr[i].index==index)
+		  || arr[i].bno==bno)
 		{
 			found=1;
 			//logp("got: %s\n", arr[i].path);

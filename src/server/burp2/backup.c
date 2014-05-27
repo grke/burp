@@ -237,7 +237,7 @@ int do_backup_server_burp2(struct async *as, struct sdirs *sdirs,
 
 	if(cconf->keep>0)
 	{
-		//ret=remove_old_backups(sdirs, cconf);
+		//ret=delete_old_backups(sdirs, cconf);
 		// FIX THIS: Need to figure out which data files can be
 		// deleted.
 	}

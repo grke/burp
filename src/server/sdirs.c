@@ -12,14 +12,14 @@ static int do_lock_dirs(struct sdirs *sdirs, struct conf *conf)
 	char *lockfile=NULL;
 	if(conf->client_lockdir)
 	{
-		if(!(sdirs->lockdir=strdup(conf->client_lockdir))
+		if(!(sdirs->lockdir=strdup_w(conf->client_lockdir, __func__))
 		  || !(lockbase=prepend_s(sdirs->lockdir, conf->cname)))
 			goto end;
 	}
 	else
 	{
-		if(!(sdirs->lockdir=strdup(sdirs->client))
-		  || !(lockbase=strdup(sdirs->client)))
+		if(!(sdirs->lockdir=strdup_w(sdirs->client, __func__))
+		  || !(lockbase=strdup_w(sdirs->client, __func__)))
 			goto end;
 	}
 	if(!(lockfile=prepend_s(lockbase, "lockfile"))
@@ -27,8 +27,8 @@ static int do_lock_dirs(struct sdirs *sdirs, struct conf *conf)
 		goto end;
 	ret=0;
 end:
-	if(lockbase) free(lockbase);
-	if(lockfile) free(lockfile);
+	free_w(&lockbase);
+	free_w(&lockfile);
 	return ret;
 }
 
@@ -88,7 +88,7 @@ extern int sdirs_init(struct sdirs *sdirs, struct conf *conf)
 		goto error;
 	}
 
-	if(!(sdirs->base=strdup(conf->directory)))
+	if(!(sdirs->base=strdup_w(conf->directory, __func__)))
 		goto error;
 
 	if(conf->protocol==PROTO_BURP1)
@@ -112,37 +112,37 @@ void sdirs_free(struct sdirs *sdirs)
 {
 	if(!sdirs) return;
 
-        if(sdirs->base) free(sdirs->base);
-        if(sdirs->dedup) free(sdirs->dedup);
-        if(sdirs->champlock) free(sdirs->champlock);
-        if(sdirs->champsock) free(sdirs->champsock);
-        if(sdirs->champlog) free(sdirs->champlog);
-        if(sdirs->data) free(sdirs->data);
-        if(sdirs->clients) free(sdirs->clients);
-        if(sdirs->client) free(sdirs->client);
+	free_w(&sdirs->base);
+        free_w(&sdirs->base);
+        free_w(&sdirs->dedup);
+        free_w(&sdirs->champlock);
+        free_w(&sdirs->champsock);
+        free_w(&sdirs->champlog);
+        free_w(&sdirs->data);
+        free_w(&sdirs->clients);
+        free_w(&sdirs->client);
 
-        if(sdirs->working) free(sdirs->working);
-        if(sdirs->finishing) free(sdirs->finishing);
-        if(sdirs->current) free(sdirs->current);
+        free_w(&sdirs->working);
+        free_w(&sdirs->finishing);
+        free_w(&sdirs->current);
 
-        if(sdirs->timestamp) free(sdirs->timestamp);
-        if(sdirs->changed) free(sdirs->changed);
-        if(sdirs->unchanged) free(sdirs->unchanged);
-        if(sdirs->cmanifest) free(sdirs->cmanifest);
-	if(sdirs->phase1data) free(sdirs->phase1data);
+        free_w(&sdirs->timestamp);
+        free_w(&sdirs->changed);
+        free_w(&sdirs->unchanged);
+        free_w(&sdirs->cmanifest);
+	free_w(&sdirs->phase1data);
 
-	if(sdirs->lockdir) free(sdirs->lockdir);
+	free_w(&sdirs->lockdir);
 	lock_free(&sdirs->lock);
 
 	// Legacy directories
-	if(sdirs->currentdata) free(sdirs->currentdata);
-	if(sdirs->manifest) free(sdirs->manifest);
-	if(sdirs->datadirtmp) free(sdirs->datadirtmp);
-	if(sdirs->phase2data) free(sdirs->phase2data);
-	if(sdirs->unchangeddata) free(sdirs->unchangeddata);
-	if(sdirs->cincexc) free(sdirs->cincexc);
-	if(sdirs->deltmppath) free(sdirs->deltmppath);
+	free_w(&sdirs->currentdata);
+	free_w(&sdirs->manifest);
+	free_w(&sdirs->datadirtmp);
+	free_w(&sdirs->phase2data);
+	free_w(&sdirs->unchangeddata);
+	free_w(&sdirs->cincexc);
+	free_w(&sdirs->deltmppath);
 
-	free(sdirs);
-	sdirs=NULL;
+	free_v((void **)&sdirs);
 }

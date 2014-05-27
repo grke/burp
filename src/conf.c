@@ -54,10 +54,10 @@ static void free_incexcs(struct conf *c)
 	strlists_free(&c->incglob); // include (glob)
 	strlists_free(&c->fifos);
 	strlists_free(&c->blockdevs);
-	if(c->backup) free(c->backup);
-	if(c->restoreprefix) free(c->restoreprefix);
-	if(c->regex) free(c->regex);
-	if(c->vss_drives) free(c->vss_drives);
+	free_w(&c->backup);
+	free_w(&c->restoreprefix);
+	free_w(&c->regex);
+	free_w(&c->vss_drives);
 	init_incexcs(c);
 }
 
@@ -97,80 +97,80 @@ void conf_init(struct conf *c)
 void conf_free_content(struct conf *c)
 {
 	if(!c) return;
-	if(c->port) free(c->port);
-	if(c->conffile) free(c->conffile);
-	if(c->clientconfdir) free(c->clientconfdir);
-	if(c->cname) free(c->cname);
-	if(c->peer_version) free(c->peer_version);
-	if(c->directory) free(c->directory);
-	if(c->timestamp_format) free(c->timestamp_format);
-	if(c->ca_conf) free(c->ca_conf);
-	if(c->ca_name) free(c->ca_name);
-	if(c->ca_server_name) free(c->ca_server_name);
-	if(c->ca_burp_ca) free(c->ca_burp_ca);
-	if(c->ca_csr_dir) free(c->ca_csr_dir);
-	if(c->lockfile) free(c->lockfile);
-	if(c->password) free(c->password);
-	if(c->passwd) free(c->passwd);
-	if(c->server) free(c->server);
- 	if(c->recovery_method) free(c->recovery_method);
- 	if(c->ssl_cert_ca) free(c->ssl_cert_ca);
-        if(c->ssl_cert) free(c->ssl_cert);
-        if(c->ssl_key) free(c->ssl_key);
-        if(c->ssl_key_password) free(c->ssl_key_password);
-        if(c->ssl_ciphers) free(c->ssl_ciphers);
-        if(c->ssl_dhfile) free(c->ssl_dhfile);
-        if(c->ssl_peer_cn) free(c->ssl_peer_cn);
-        if(c->user) free(c->user);
-        if(c->group) free(c->group);
-        if(c->encryption_password) free(c->encryption_password);
-	if(c->client_lockdir) free(c->client_lockdir);
-	if(c->autoupgrade_dir) free(c->autoupgrade_dir);
-	if(c->autoupgrade_os) free(c->autoupgrade_os);
-	if(c->manual_delete) free(c->manual_delete);
+	free_w(&c->port);
+	free_w(&c->conffile);
+	free_w(&c->clientconfdir);
+	free_w(&c->cname);
+	free_w(&c->peer_version);
+	free_w(&c->directory);
+	free_w(&c->timestamp_format);
+	free_w(&c->ca_conf);
+	free_w(&c->ca_name);
+	free_w(&c->ca_server_name);
+	free_w(&c->ca_burp_ca);
+	free_w(&c->ca_csr_dir);
+	free_w(&c->lockfile);
+	free_w(&c->password);
+	free_w(&c->passwd);
+	free_w(&c->server);
+ 	free_w(&c->recovery_method);
+ 	free_w(&c->ssl_cert_ca);
+	free_w(&c->ssl_cert);
+	free_w(&c->ssl_key);
+	free_w(&c->ssl_key_password);
+	free_w(&c->ssl_ciphers);
+	free_w(&c->ssl_dhfile);
+	free_w(&c->ssl_peer_cn);
+	free_w(&c->user);
+	free_w(&c->group);
+	free_w(&c->encryption_password);
+	free_w(&c->client_lockdir);
+	free_w(&c->autoupgrade_dir);
+	free_w(&c->autoupgrade_os);
+	free_w(&c->manual_delete);
 
-	if(c->timer_script) free(c->timer_script);
+	free_w(&c->timer_script);
 	strlists_free(&c->timer_arg);
 
-	if(c->n_success_script) free(c->n_success_script);
+	free_w(&c->n_success_script);
 	strlists_free(&c->n_success_arg);
 
-	if(c->n_failure_script) free(c->n_failure_script);
+	free_w(&c->n_failure_script);
 	strlists_free(&c->n_failure_arg);
 
 	strlists_free(&c->rclients);
 
-	if(c->b_script_pre) free(c->b_script_pre);
+	free_w(&c->b_script_pre);
 	strlists_free(&c->b_script_pre_arg);
-	if(c->b_script_post) free(c->b_script_post);
+	free_w(&c->b_script_post);
 	strlists_free(&c->b_script_post_arg);
-	if(c->r_script_pre) free(c->r_script_pre);
+	free_w(&c->r_script_pre);
 	strlists_free(&c->r_script_pre_arg);
-	if(c->r_script_post) free(c->r_script_post);
+	free_w(&c->r_script_post);
 	strlists_free(&c->r_script_post_arg);
 
-	if(c->s_script_pre) free(c->s_script_pre);
+	free_w(&c->s_script_pre);
 	strlists_free(&c->s_script_pre_arg);
-	if(c->s_script_post) free(c->s_script_post);
+	free_w(&c->s_script_post);
 	strlists_free(&c->s_script_post_arg);
 
-	if(c->b_script) free(c->b_script);
-	if(c->r_script) free(c->r_script);
+	free_w(&c->b_script);
+	free_w(&c->r_script);
 	strlists_free(&c->b_script_arg);
 	strlists_free(&c->r_script_arg);
 
-	if(c->s_script) free(c->s_script);
+	free_w(&c->s_script);
 	strlists_free(&c->s_script_arg);
 
 	strlists_free(&c->keep);
 
-	if(c->dedup_group) free(c->dedup_group);
-	if(c->browsefile) free(c->browsefile);
-	if(c->browsedir) free(c->browsedir);
-	if(c->restore_spool) free(c->restore_spool);
-	if(c->restore_client) free(c->restore_client);
-	if(c->restore_path) free(c->restore_path);
-	if(c->orig_client) free(c->orig_client);
+	free_w(&c->dedup_group);
+	free_w(&c->browsefile);
+	free_w(&c->browsedir);
+	free_w(&c->restore_spool);
+	free_w(&c->restore_client);
+	free_w(&c->restore_path);
+	free_w(&c->orig_client);
 
 	free_incexcs(c);
 
@@ -188,7 +188,7 @@ void conf_free(struct conf *c)
 static int gcv(const char *f, const char *v, const char *want, char **dest)
 {
 	if(strcmp(f, want)) return 0;
-	if(*dest) free(*dest);
+	free_w(dest);
 	if(!(*dest=strdup_w(v, __func__))) return -1;
 	return 0;
 }
@@ -396,7 +396,7 @@ static int get_file_size(const char *v, ssize_t *dest, const char *conf_path, in
 int conf_val_reset(const char *src, char **dest)
 {
 	if(!src) return 0;
-	if(dest && *dest) free(*dest);
+	free_w(dest);
 	if(!(*dest=strdup_w(src, __func__))) return -1;
 	return 0;
 }
@@ -407,8 +407,7 @@ static int pre_post_override(char **override, char **pre, char **post)
 	if(conf_val_reset(*override, pre)
 	  || conf_val_reset(*override, post))
 		return -1;
-	free(*override);
-	*override=NULL;
+	free_w(override);
 	return 0;
 }
 
@@ -466,20 +465,20 @@ static struct fstype fstypes[]={
 
 int main(int argc, char *argv[])
 {
-        int i=0;
-        struct statfs buf;
-        if(argc<1)
-        {
-                printf("not enough args\n");
-                return -1;
-        }
-        if(statfs(argv[1], &buf))
-        {
-                printf("error\n");
-                return -1;
-        }
-        printf("0x%08X\n", buf.f_type);
-        return 0;
+	int i=0;
+	struct statfs buf;
+	if(argc<1)
+	{
+		printf("not enough args\n");
+		return -1;
+	}
+	if(statfs(argv[1], &buf))
+	{
+		printf("error\n");
+		return -1;
+	}
+	printf("0x%08X\n", buf.f_type);
+	return 0;
 }
 */
 
@@ -753,7 +752,7 @@ static int parse_conf_line(struct conf *c, const char *conf_path,
 		if((np=strrchr(extrafile, '\n'))) *np='\0';
 		if(!*extrafile)
 		{
-			free(extrafile);
+			free_w(&extrafile);
 			return -1;
 		}
 
@@ -771,27 +770,27 @@ static int parse_conf_line(struct conf *c, const char *conf_path,
 			char *tmp=NULL;
 			if(!(copy=strdup_w(conf_path, __func__)))
 			{
-				free(extrafile);
+				free_w(&extrafile);
 				return -1;
 			}
 			if((cp=strrchr(copy, '/'))) *cp='\0';
 			if(!(tmp=prepend_s(copy, extrafile)))
 			{
 				log_out_of_memory(__func__);
-				free(extrafile);
-				free(copy);
+				free_w(&extrafile);
+				free_w(&copy);
 			}
-			free(extrafile);
-			free(copy);
+			free_w(&extrafile);
+			free_w(&copy);
 			extrafile=tmp;
 		}
 
 		if(load_conf_lines(extrafile, c))
 		{
-			free(extrafile);
+			free_w(&extrafile);
 			return -1;
 		}
-		free(extrafile);
+		free_w(&extrafile);
 		return 0;
 	}
 
@@ -1211,7 +1210,7 @@ int conf_load(const char *conf_path, struct conf *c, uint8_t loadall)
 	//logp("in conf_load\n");
 	if(loadall)
 	{
-		if(c->conffile) free(c->conffile);
+		free_w(&c->conffile);
 		if(!(c->conffile=strdup_w(conf_path, __func__)))
 			return -1;
 	}
@@ -1237,7 +1236,7 @@ int parse_incexcs_buf(struct conf *c, const char *incexc)
 	if(!(tok=strtok(copy, "\n")))
 	{
 		logp("unable to parse server incexc\n");
-		free(copy);
+		free_w(&copy);
 		return -1;
 	}
 	do
@@ -1249,7 +1248,7 @@ int parse_incexcs_buf(struct conf *c, const char *incexc)
 			break;
 		}
 	} while((tok=strtok(NULL, "\n")));
-	free(copy);
+	free_w(&copy);
 
 	if(ret) return ret;
 	return conf_finalise("server override", c, 0);
@@ -1265,14 +1264,14 @@ int log_incexcs_buf(const char *incexc)
 	if(!(tok=strtok(copy, "\n")))
 	{
 		logp("unable to parse server incexc\n");
-		free(copy);
+		free_w(&copy);
 		return -1;
 	}
 	do
 	{
 		logp("%s\n", tok);
 	} while((tok=strtok(NULL, "\n")));
-	free(copy);
+	free_w(&copy);
 	return 0;
 }
 
@@ -1398,7 +1397,7 @@ int conf_load_client(struct conf *c, struct conf *cc)
 	if(looks_like_tmp_or_hidden_file(cc->cname))
 	{
 		logp("client name '%s' is invalid\n", cc->cname);
-		free(cpath);
+		free_w(&cpath);
 		return -1;
 	}
 	// Some client settings can be globally set in the server conf and
@@ -1406,9 +1405,9 @@ int conf_load_client(struct conf *c, struct conf *cc)
 	if(conf_set_client_global(c, cc)
 	  || conf_load(cpath, cc, 0))
 	{
-		free(cpath);
+		free_w(&cpath);
 		return -1;
 	}
-	free(cpath);
+	free_w(&cpath);
 	return 0;
 }

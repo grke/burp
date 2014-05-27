@@ -149,7 +149,7 @@ int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct conf *conf,
 	int ret=-1;
 	uint8_t found=0;
 	struct bu *arr=NULL;
-	unsigned long index=0;
+	unsigned long bno=0;
 	regex_t *regex=NULL;
 
 	printf("in do_list_server\n");
@@ -159,7 +159,7 @@ int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct conf *conf,
 	  || write_status(STATUS_LISTING, NULL, conf))
 		goto end;
 
-	if(backup && *backup) index=strtoul(backup, NULL, 10);
+	if(backup && *backup) bno=strtoul(backup, NULL, 10);
 
 	for(i=0; i<a; i++)
 	{
@@ -177,7 +177,7 @@ int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct conf *conf,
 		{
 			if(!found
 			  && (!strcmp(arr[i].timestamp, backup)
-				|| arr[i].index==index))
+				|| arr[i].bno==bno))
 			{
 				found=1;
 				if(send_backup_name_to_client(asfd, &(arr[i]))

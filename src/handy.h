@@ -60,6 +60,9 @@ extern char *strdup_w(const char *s, const char *func);
 extern void *realloc_w(void *ptr, size_t size, const char *func);
 extern void *malloc_w(size_t size, const char *func);
 extern void *calloc_w(size_t nmem, size_t size, const char *func);
+extern void free_w(char **ptr);
+extern void free_v(void **ptr);
+
 extern int astrcat(char **buf, const char *append, const char *func);
 
 #endif

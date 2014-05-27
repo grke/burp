@@ -3,6 +3,7 @@
 #include <dirent.h>
 
 // FIX THIS: should probably use struct sdirs.
+// And should maybe use a linked list instead of a stupid array.
 struct cstat
 {
 	char *name;
@@ -99,15 +100,15 @@ static int cstat_add(struct cstat ***clist, int *clen,
 
 static void cstat_blank(struct cstat *c)
 {
-	if(c->name) { free(c->name); c->name=NULL; }
-	if(c->conffile) { free(c->conffile); c->conffile=NULL; }
-	if(c->summary) { free(c->summary); c->summary=NULL; }
-	if(c->running_detail) { free(c->running_detail); c->running_detail=NULL; }
-	if(c->basedir) { free(c->basedir); c->basedir=NULL; }
-	if(c->working) { free(c->working); c->working=NULL; }
-	if(c->current) { free(c->current); c->current=NULL; }
-	if(c->timestamp) { free(c->timestamp); c->timestamp=NULL; }
-	if(c->lockfile) { free(c->lockfile); c->lockfile=NULL; }
+	free_w(&c->name);
+	free_w(&c->conffile);
+	free_w(&c->summary);
+	free_w(&c->running_detail);
+	free_w(&c->basedir);
+	free_w(&c->working);
+	free_w(&c->current);
+	free_w(&c->timestamp);
+	free_w(&c->lockfile);
 	c->conf_mtime=0;
 	c->basedir_mtime=0;
 	c->lockfile_mtime=0;
@@ -121,10 +122,10 @@ static int set_cstat_from_conf(struct cstat *c, struct conf *conf, struct conf *
 	if(!(client_lockdir=conf->client_lockdir))
 		client_lockdir=cconf->directory;
 
-	if(c->basedir) { free(c->basedir); c->basedir=NULL; }
-	if(c->working) { free(c->working); c->working=NULL; }
-	if(c->current) { free(c->current); c->current=NULL; }
-	if(c->timestamp) { free(c->timestamp); c->timestamp=NULL; }
+	free_w(&c->basedir);
+	free_w(&c->working);
+	free_w(&c->current);
+	free_w(&c->timestamp);
 
 	if(!(c->basedir=prepend_s(cconf->directory, c->name))
 	  || !(c->working=prepend_s(c->basedir, "working"))
@@ -133,13 +134,13 @@ static int set_cstat_from_conf(struct cstat *c, struct conf *conf, struct conf *
 	  || !(lockbasedir=prepend_s(client_lockdir, c->name))
 	  || !(c->lockfile=prepend_s(lockbasedir, "lockfile")))
 	{
-		if(lockbasedir) free(lockbasedir);
+		free_w(&lockbasedir);
 		log_out_of_memory(__func__);
 		return -1;
 	}
 	c->basedir_mtime=0;
 	c->lockfile_mtime=0;
-	if(lockbasedir) free(lockbasedir);
+	free_w(&lockbasedir);
 	return 0;
 }
 
@@ -194,11 +195,7 @@ static int set_summary(struct cstat *c)
 			//	statp.st_ctime);
 		}
 		// It is not running, so free the running_detail.
-		if(c->running_detail)
-		{
-			free(c->running_detail);
-			c->running_detail=NULL;
-		}
+		free_w(&c->running_detail);
 	}
 	else
 	{
@@ -213,11 +210,7 @@ static int set_summary(struct cstat *c)
 				c->name, CNTR_VER_4, c->status,
 				get_last_backup_time(c->timestamp));
 			// It is not running, so free the running_detail.
-			if(c->running_detail)
-			{
-				free(c->running_detail);
-				c->running_detail=NULL;
-			}
+			free_w(&c->running_detail);
 		}
 		else
 		{
@@ -227,10 +220,10 @@ static int set_summary(struct cstat *c)
 				c->name, CNTR_VER_4, c->status,
 				get_last_backup_time(c->timestamp));
 		}
-		if(prog) free(prog);
+		free_w(&prog);
 	}
 
-	if(c->summary) free(c->summary);
+	free_w(&c->summary);
 	c->summary=strdup(wbuf);
 
 	return 0;
@@ -272,8 +265,8 @@ static int get_client_names(struct conf *conf,
 				conf->clientconfdir)) goto error;
 		}
 	}
-	for(m=0; m<n; m++) if(dir[m]) free(dir[m]);
-	if(dir) free(dir);
+	for(m=0; m<n; m++) free_v((void **)&dir[m]);
+	free_v((void **)&dir);
 
 	if(newclient) qsort(*clist, *clen, sizeof(struct cstat *), cstat_sort);
 
@@ -484,6 +477,10 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, con
 			// Gather a list of successful backups to talk about.
         		int a=0;
         		struct bu *arr=NULL;
+
+			// FIX THIS: If this stuff used sdirs, there would
+			// be no need for a separate get_current_backups_str
+			// function.
 			if(get_current_backups_str(NULL /* FIX THIS - status
 				stuff should use a separate struct async */,
 				clist[q]->basedir, &arr, &a, 0))
@@ -513,7 +510,7 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, con
 					char tmp[32]="";
 					t=timestamp_to_long(arr[i].timestamp);
 					snprintf(tmp, sizeof(tmp), "\t%lu %d %li",
-						arr[i].index, arr[i].deletable, (long)t);
+						arr[i].bno, arr[i].deletable, (long)t);
 					strcat(curback, tmp);
 				}
 				if(!a) strcat(curback, "\t0");
@@ -522,7 +519,7 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, con
 
 				// Overwrite the summary with it.
 				// It will get updated again
-				if(clist[q]->summary) free(clist[q]->summary);
+				free_w(&(clist[q]->summary));
 				clist[q]->summary=curback;
 				tosend=clist[q]->summary;
 			}
@@ -580,8 +577,7 @@ static int parse_parent_data_entry(char *tok, struct cstat **clist, int clen)
 			int x=0;
 			*tp='\t'; // put the tab back.
 			x=strlen(tok);
-			if(clist[q]->running_detail)
-			free(clist[q]->running_detail);
+			free_w(&(clist[q]->running_detail));
 			clist[q]->running_detail=NULL;
 			//clist[q]->running_detail=strdup(tok);
 
@@ -623,7 +619,7 @@ static int parse_parent_data(const char *data, struct cstat **clist, int clen)
 
 	ret=0;
 end:
-	if(copyall) free(copyall);
+	free_w(&copyall);
 	return ret;
 }
 
@@ -651,7 +647,7 @@ static int list_backup_file_name(int cfd, const char *dir, const char *file)
 	snprintf(msg, sizeof(msg), "%s\n", file);
 	ret=send_data_to_client(cfd, msg, strlen(msg));
 end:
-	if(path) free(path);
+	free_w(&path);
 	return ret;
 }
 
@@ -734,7 +730,7 @@ static int list_backup_file_contents(int cfd, const char *dir, const char *file,
 	ret=0;
 end:
 	gzclose_fp(&zp);
-	if(path) free(path);
+	free_w(&path);
 	return ret;
 }
 
@@ -752,7 +748,7 @@ static int list_backup_dir(int cfd, struct cstat *cli, unsigned long bno)
 	if(a>0)
 	{
 		int i=0;
-		for(i=0; i<a; i++) if(arr[i].index==bno) break;
+		for(i=0; i<a; i++) if(arr[i].bno==bno) break;
 		if(i<a)
 		{
 			if(send_data_to_client(cfd, "-list begin-\n",
@@ -787,7 +783,7 @@ static int list_backup_file(int cfd, struct cstat *cli, unsigned long bno, const
 	if(a>0)
 	{
 		int i=0;
-		for(i=0; i<a; i++) if(arr[i].index==bno) break;
+		for(i=0; i<a; i++) if(arr[i].bno==bno) break;
 		if(i<a)
 		{
 			printf("found: %s\n", arr[i].path);
@@ -814,7 +810,7 @@ static char *get_str(const char **buf, const char *pre, int last)
 	*buf+=len+strlen(copy)+1;
 	ret=strdup(copy);
 end:
-	if(copy) free(copy);
+	free_w(&copy);
 	return ret;
 }
 
@@ -836,12 +832,9 @@ static int parse_rbuf(const char *rbuf, int cfd, struct cstat **clist, int clen)
 	browse=get_str(&cp, "p:", 1);
 	if(browse)
 	{
-		if(file) free(file);
-		if(!(file=strdup("manifest.gz")))
-		{
-			log_out_of_memory(__func__);
+		free_w(&file);
+		if(!(file=strdup_w("manifest.gz", __func__)))
 			goto error;
-		}
 		// Strip trailing slashes.
 		if(strlen(browse)>1 && browse[strlen(browse)-1]=='/')
 			browse[strlen(browse)-1]='\0';
@@ -907,10 +900,10 @@ static int parse_rbuf(const char *rbuf, int cfd, struct cstat **clist, int clen)
 error:
 	ret=-1;
 end:
-	if(client) free(client);
-	if(backup) free(backup);
-	if(file) free(file);
-	if(browse) free(browse);
+	free_w(&client);
+	free_w(&backup);
+	free_w(&file);
+	free_w(&browse);
 	return ret;
 }
 
@@ -1022,11 +1015,7 @@ int status_server(int *cfd, int status_rfd, struct conf *conf)
 			if(!total)
 			{
 				// client went away?
-				if(rbuf)
-				{
-					free(rbuf);
-					rbuf=NULL;
-				}
+				free_w(&rbuf);
 				break;
 			}
 			// If we did not get a full read, do
@@ -1040,12 +1029,10 @@ int status_server(int *cfd, int status_rfd, struct conf *conf)
 
 				if(parse_rbuf(rbuf, *cfd, clist, clen))
 				{
-					free(rbuf);
-					rbuf=NULL;
+					free_w(&rbuf);
 					goto end;
 				}
-				free(rbuf);
-				rbuf=NULL;
+				free_w(&rbuf);
 				if(send_data_to_client(*cfd, "\n", 1))
 					goto end;
 			}

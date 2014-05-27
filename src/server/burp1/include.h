@@ -8,6 +8,7 @@
 #include "../run_action.h"
 #include "../sdirs.h"
 
+#include "backup.h"
 #include "backup_phase2.h"
 #include "backup_phase3.h"
 #include "backup_phase4.h"
@@ -16,7 +17,7 @@
 #include "fdirs.h"
 #include "restore.h"
 #include "resume.h"
-#include "run_action.h"
+#include "rubble.h"
 #include "zlibio.h"
 
 #endif

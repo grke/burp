@@ -1,5 +1,4 @@
 #include "include.h"
-#include "burp1/run_action.h"
 
 static int run_server_script(struct asfd *asfd,
 	const char *pre_or_post,

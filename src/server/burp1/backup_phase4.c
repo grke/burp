@@ -709,7 +709,7 @@ int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf)
 			newdup++;
 		}
 
-		if(read_timestamp(fdirs->timestamp, tstmp, sizeof(tstmp)))
+		if(timestamp_read(fdirs->timestamp, tstmp, sizeof(tstmp)))
 		{
 			logp("could not read timestamp file: %s\n",
 				fdirs->timestamp);

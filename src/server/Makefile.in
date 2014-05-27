@@ -23,6 +23,7 @@ SRCS = \
 	auth.c \
 	autoupgrade.c \
 	backup_phase1.c \
+	compress.c \
 	current_backups.c \
 	ca.c \
 	child.c \
@@ -33,7 +34,8 @@ SRCS = \
 	main.c \
 	manio.c \
 	run_action.c \
-	sdirs.c
+	sdirs.c \
+	timestamp.c \
 
 OBJS = $(SRCS:.c=.o)
 LOBJS = $(SRCS:.c=.lo)

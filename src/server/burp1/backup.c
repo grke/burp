@@ -133,7 +133,7 @@ int do_backup_server_burp1(struct async *as,
 	{
 		// Not resuming - need to set everything up fresh.
 
-		if(get_new_timestamp(asfd, sdirs, cconf, tstmp, sizeof(tstmp)))
+		if(timestamp_get_new(asfd, sdirs, cconf, tstmp, sizeof(tstmp)))
 			goto error;
 		if(!(realworking=prepend_s(sdirs->client, tstmp)))
 		{
@@ -173,7 +173,7 @@ int do_backup_server_burp1(struct async *as,
 			log_and_send(asfd, msg);
 			goto error;
 		}
-		else if(write_timestamp(sdirs->timestamp, tstmp))
+		else if(timestamp_write(sdirs->timestamp, tstmp))
 		{
 			snprintf(msg, sizeof(msg),
 			  "unable to write timestamp %s", sdirs->timestamp);

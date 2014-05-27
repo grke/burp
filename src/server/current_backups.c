@@ -4,26 +4,6 @@
 #include <netdb.h>
 #include <dirent.h>
 
-int read_timestamp(const char *path, char buf[], size_t len)
-{
-	FILE *fp=NULL;
-	char *cp=NULL;
-	char *fgetret=NULL;
-
-	//if(!(fp=open_file(path, "rb")))
-	// avoid alarming message
-	if(!(fp=fopen(path, "rb")))
-	{
-		*buf=0;
-		return -1;
-	}
-	fgetret=fgets(buf, len, fp);
-	fclose(fp);
-	if(!fgetret) return -1;
-	if((cp=strrchr(buf, '\n'))) *cp='\0';
-	return 0;
-}
-
 static int bu_cmp(const void *va, const void *vb)
 {
 	const struct bu *a=(struct bu *)va;
@@ -85,7 +65,7 @@ int get_current_backups_str(struct asfd *asfd,
 	// so they can be excluded.
 	if(get_link(dir, "working", realwork, sizeof(realwork))
 	  || get_link(dir, "finishing", realfinishing, sizeof(realfinishing)))
-			return -1;
+		return -1;
 	if(!(d=opendir(dir)))
 	{
 		if(log) log_and_send(asfd, "could not open backup directory");
@@ -121,7 +101,7 @@ int get_current_backups_str(struct asfd *asfd,
 		}
 		if((!lstat(fullpath, &statp) && !S_ISDIR(statp.st_mode))
 		  || lstat(timestamp, &statp) || !S_ISREG(statp.st_mode)
-		  || read_timestamp(timestamp, buf, sizeof(buf))
+		  || timestamp_read(timestamp, buf, sizeof(buf))
 		  || !(timestampstr=strdup(buf)))
 		{
 			free(basename);
@@ -191,120 +171,6 @@ int get_current_backups(struct asfd *asfd,
 	struct sdirs *sdirs, struct bu **arr, int *a, int log)
 {
 	return get_current_backups_str(asfd, sdirs->client, arr, a, log);
-}
-
-int get_new_timestamp(struct asfd *asfd,
-	struct sdirs *sdirs, struct conf *cconf, char *buf, size_t s)
-{
-	int a=0;
-	time_t t=0;
-	const struct tm *ctm=NULL;
-	unsigned long index=0;
-	char tmpbuf[32]="";
-	struct bu *arr=NULL;
-
-	// Want to prefix the timestamp with an index that increases by
-	// one each time. This makes it far more obvious which backup depends
-	// on which - even if the system clock moved around. Take that,
-	// bacula!
-
-	// get_current_backups orders the array with the highest index number 
-	// last
-	if(get_current_backups(asfd, sdirs, &arr, &a, 1)) return -1;
-	if(a) index=arr[a-1].index;
-
-	free_current_backups(&arr, a);
-
-	time(&t);
-	ctm=localtime(&t);
-        // Windows does not like the %T strftime format option - you get
-        // complaints under gdb.
-	strftime(tmpbuf, sizeof(tmpbuf), cconf->timestamp_format, ctm);
-	snprintf(buf, s, "%07lu %s", ++index, tmpbuf);
-
-	return 0;
-}
-
-int write_timestamp(const char *timestamp, const char *tstmp)
-{
-	FILE *fp=NULL;
-	if(!(fp=open_file(timestamp, "wb"))) return -1;
-	fprintf(fp, "%s\n", tstmp);
-	fclose(fp);
-	return 0;
-}
-
-static int compress(const char *src, const char *dst, struct conf *cconf)
-{
-	int res;
-	int got;
-	FILE *mp=NULL;
-	gzFile zp=NULL;
-	char buf[ZCHUNK];
-
-	if(!(mp=open_file(src, "rb"))
-	  || !(zp=gzopen_file(dst, comp_level(cconf))))
-	{
-		close_fp(&mp);
-		gzclose_fp(&zp);
-		return -1;
-	}
-	while((got=fread(buf, 1, sizeof(buf), mp))>0)
-	{
-		res=gzwrite(zp, buf, got);
-		if(res!=got)
-		{
-			logp("compressing manifest - read %d but wrote %d\n",
-				got, res);
-			close_fp(&mp);
-			gzclose_fp(&zp);
-			return -1;
-		}
-	}
-	close_fp(&mp);
-	return gzclose_fp(&zp); // this can give an error when out of space
-}
-
-int compress_file(const char *src, const char *dst, struct conf *cconf)
-{
-	char *dsttmp=NULL;
-	pid_t pid=getpid();
-	char p[12]="";
-	snprintf(p, sizeof(p), "%d", (int)pid);
-
-	if(!(dsttmp=prepend(dst, p, strlen(p), 0 /* no slash */)))
-		return -1;
-	
-	// Need to compress the log.
-	logp("Compressing %s to %s...\n", src, dst);
-	if(compress(src, dsttmp, cconf)
-	// Possible rename race condition is of little consequence here.
-	// You will still have the uncompressed log file.
-	  || do_rename(dsttmp, dst))
-	{
-		unlink(dsttmp);
-		free(dsttmp);
-		return -1;
-	}
-	// succeeded - get rid of the uncompressed version
-	unlink(src);
-	free(dsttmp);
-	return 0;
-}
-
-int compress_filename(const char *d, const char *file, const char *zfile, struct conf *cconf)
-{
-	char *fullfile=NULL;
-	char *fullzfile=NULL;
-	if(!(fullfile=prepend_s(d, file))
-	  || !(fullzfile=prepend_s(d, zfile))
-	  || compress_file(fullfile, fullzfile, cconf))
-	{
-		if(fullfile) free(fullfile);
-		if(fullzfile) free(fullzfile);
-		return -1;
-	}
-	return 0;
 }
 
 int delete_backup(struct sdirs *sdirs, struct conf *conf,

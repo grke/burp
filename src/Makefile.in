@@ -52,7 +52,7 @@ SUBDIROBJS = \
 		burp1/handy.o \
 		burp1/msg.o \
 		server/burp1/restore.o \
-		server/burp1/run_action.o \
+		server/backup_phase1.o \
 		server/server.a \
 		client/client.a \
 		client/burp2/client_burp2.a \

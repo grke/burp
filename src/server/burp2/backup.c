@@ -1,8 +1,8 @@
 #include "include.h"
 #include "champ_chooser/include.h"
-#include "../../server/auth.h"
-#include "../../server/backup_phase1.h"
-#include "../../server/current_backups.h"
+#include "../auth.h"
+#include "../backup_phase1.h"
+#include "../current_backups.h"
 
 static int write_incexc(const char *realworking, const char *incexc)
 {
@@ -25,7 +25,7 @@ end:
 	return ret;
 }
 
-// Used by the burp1 stuff.
+// Also used by the burp1 stuff.
 int open_log(struct asfd *asfd, const char *realworking, struct conf *cconf)
 {
 	char *logpath=NULL;

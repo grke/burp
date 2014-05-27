@@ -2,7 +2,6 @@
 #include "monitor/status_client.h"
 
 #include <netdb.h>
-#include <math.h>
 #include <dirent.h>
 
 int recursive_hardlink(const char *src, const char *dst, struct conf *conf)

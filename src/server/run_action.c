@@ -1,5 +1,6 @@
 #include "include.h"
 #include "burp1/backup.h"
+#include "burp1/rubble.h"
 #include "burp2/backup.h"
 #include "burp2/restore.h"
 
@@ -356,6 +357,8 @@ int run_action_server(struct async *as,
 		return ret;
 	}
 
+	// FIX THIS: burp2 needs to do something at this point too.
+	// Running the burp1 stuff is the wrong thing to do.
 	if(check_for_rubble_burp1(as->asfd, sdirs, cconf, incexc, &resume))
 	{
 		// FIX THIS: rbuf->buf is not just 'backup' or 'list', etc.

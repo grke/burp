@@ -9,6 +9,7 @@
 #include "ca.h"
 #include "child.h"
 #include "chlds.h"
+#include "compress.h"
 #include "current_backups.h"
 #include "delete.h"
 #include "extra_comms.h"
@@ -17,5 +18,6 @@
 #include "manio.h"
 #include "run_action.h"
 #include "sdirs.h"
+#include "timestamp.h"
 
 #endif

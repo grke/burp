@@ -143,7 +143,7 @@ int do_backup_server_burp2(struct async *as, struct sdirs *sdirs,
 
 	logp("in do_backup_server\n");
 
-	if(get_new_timestamp(asfd, sdirs, cconf, tstmp, sizeof(tstmp)))
+	if(timestamp_get_new(asfd, sdirs, cconf, tstmp, sizeof(tstmp)))
 		goto error;
 	if(!(realworking=prepend_s(sdirs->client, tstmp))
 	 || !(manifest_dir=prepend_s(realworking, "manifest")))
@@ -179,7 +179,7 @@ int do_backup_server_burp2(struct async *as, struct sdirs *sdirs,
 	{
 		goto error;
 	}
-	else if(write_timestamp(sdirs->timestamp, tstmp))
+	else if(timestamp_write(sdirs->timestamp, tstmp))
 	{
 		snprintf(msg, sizeof(msg),
 		  "unable to write timestamp %s", sdirs->timestamp);

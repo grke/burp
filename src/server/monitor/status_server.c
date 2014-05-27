@@ -161,7 +161,7 @@ static char *get_last_backup_time(const char *timestamp)
 	static char ret[64]="";
 	char wbuf[64]="";
 	snprintf(ret, sizeof(ret), "0");
-	if(read_timestamp(timestamp, wbuf, sizeof(wbuf))) return ret;
+	if(timestamp_read(timestamp, wbuf, sizeof(wbuf))) return ret;
 
 	snprintf(ret, sizeof(ret), "%lu 0 %li", atol(wbuf),
 		(long)timestamp_to_long(wbuf));

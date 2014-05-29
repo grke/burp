@@ -20,7 +20,9 @@ dummy:
 
 #
 SRCS = \
-	blk.c
+	blist.c \
+	blk.c \
+	slist.c \
 
 OBJS = $(SRCS:.c=.o)
 LOBJS = $(SRCS:.c=.lo)

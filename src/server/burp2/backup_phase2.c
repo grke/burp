@@ -1,6 +1,8 @@
 #include "include.h"
 #include "champ_chooser/include.h"
 #include "../../server/manio.h"
+#include "../../burp2/blist.h"
+#include "../../burp2/slist.h"
 
 static int data_needed(struct sbuf *sb)
 {
@@ -198,20 +200,21 @@ static int add_to_sig_list(struct asfd *chfd,
 {
 	// Goes on slist->add_sigs_here
 	struct blk *blk;
-        struct sbuf *sb;
+	struct burp2 *burp2;
 
 	if(!(blk=blk_alloc())) return -1;
-	blk_add_to_list(blk, blist);
+	blist_add_blk(blist, blk);
 
-	sb=slist->add_sigs_here;
-        if(!sb->burp2->bstart) sb->burp2->bstart=blk;
-        if(!sb->burp2->bsighead) sb->burp2->bsighead=blk;
+	burp2=slist->add_sigs_here->burp2;
+        if(!burp2->bstart) burp2->bstart=blk;
+        if(!burp2->bsighead) burp2->bsighead=blk;
 
 	// FIX THIS: Should not just load into strings.
 	if(split_sig(rbuf->buf, rbuf->len, blk->weak, blk->strong)) return -1;
 
 	//printf("Writing!\n");
-	if(chfd->write(chfd, rbuf)) return -1;
+	//if(chfd->write(chfd, rbuf)) return -1;
+	if(chfd->append_all_to_write_buffer(chfd, rbuf)) printf("too much\n");
 
 	//if(deduplicate_maybe(blk, dpth, conf, wrap_up)<0) return -1;
 
@@ -532,7 +535,7 @@ static int maybe_add_from_scan(struct asfd *asfd,
 
 		if(data_needed(snew)) snew->flags|=SBUF_NEED_DATA;
 
-		sbuf_add_to_list(snew, slist);
+		slist_add_sbuf(slist, snew);
 	}
 	return 0;
 end:

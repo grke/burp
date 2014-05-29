@@ -85,3 +85,26 @@ void cmd_print_all(void)
 	}
 	printf("\n");
 }
+
+int cmd_is_filedata(char cmd)
+{
+	return     cmd==CMD_FILE
+		|| cmd==CMD_ENC_FILE
+		|| cmd==CMD_METADATA
+		|| cmd==CMD_ENC_METADATA
+		|| cmd==CMD_VSS
+		|| cmd==CMD_ENC_VSS
+		|| cmd==CMD_VSS_T
+		|| cmd==CMD_ENC_VSS_T
+		|| cmd==CMD_EFS_FILE;
+}
+
+int cmd_is_link(char cmd)
+{
+	return cmd==CMD_SOFT_LINK || cmd==CMD_HARD_LINK;
+}
+
+int cmd_is_endfile(char cmd)
+{
+	return cmd==CMD_END_FILE;
+}

@@ -23,7 +23,8 @@ SRCS = \
 	handy.c \
 	msg.c \
 	rs_buf.c \
-	sbufl.c
+	sbuf_burp1.c \
+	sbufl.c \
 
 OBJS = $(SRCS:.c=.o)
 LOBJS = $(SRCS:.c=.lo)

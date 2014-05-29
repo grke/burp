@@ -76,19 +76,6 @@ static int start_to_receive_new_file(struct asfd *asfd,
 	return 0; 
 }
 
-static int filedata(char cmd)
-{
-	return (cmd==CMD_FILE
-	  || cmd==CMD_ENC_FILE
-	  || cmd==CMD_METADATA
-	  || cmd==CMD_ENC_METADATA
-	  || cmd==CMD_VSS
-	  || cmd==CMD_ENC_VSS
-	  || cmd==CMD_VSS_T
-	  || cmd==CMD_ENC_VSS_T
-	  || cmd==CMD_EFS_FILE);
-}
-
 static int process_changed_file(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf *cconf,
 	struct sbuf *cb, struct sbuf *p1b,
@@ -181,7 +168,7 @@ static int process_new(struct sdirs *sdirs, struct conf *cconf,
 	struct sbuf *p1b, FILE *ucfp, struct dpthl *dpthl)
 {
 	if(!p1b->path.buf) return 0;
-	if(filedata(p1b->path.cmd))
+	if(cmd_is_filedata(p1b->path.cmd))
 	{
 		//logp("need to process new file: %s\n", p1b->path);
 		// Flag the things that need to be sent (to the client)
@@ -319,7 +306,7 @@ static int maybe_process_file(struct asfd *asfd,
 				dpthl);
 
 		// Otherwise, do the delta stuff (if possible).
-		if(filedata(p1b->path.cmd))
+		if(cmd_is_filedata(p1b->path.cmd))
 		{
 			if(process_changed_file(asfd, sdirs, cconf, cb, p1b,
 				sdirs->currentdata)) return -1;
@@ -574,7 +561,7 @@ static int do_stuff_to_receive(struct asfd *asfd,
 		iobuf_copy(&rb->attr, rbuf);
 		rbuf->buf=NULL;
 	}
-	else if(filedata(rbuf->cmd))
+	else if(cmd_is_filedata(rbuf->cmd))
 	{
 		iobuf_copy(&rb->path, rbuf);
 		rbuf->buf=NULL;

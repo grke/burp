@@ -24,4 +24,7 @@ extern int iobuf_send_msg_zp(struct iobuf *iobuf, gzFile zp);
 
 extern int iobuf_pathcmp(struct iobuf *a, struct iobuf *b);
 
+extern int iobuf_is_filedata(struct iobuf *iobuf);
+extern int iobuf_is_link(struct iobuf *iobuf);
+
 #endif

@@ -87,3 +87,13 @@ int iobuf_pathcmp(struct iobuf *a, struct iobuf *b)
 		else return 0;
 	}
 }
+
+int iobuf_is_filedata(struct iobuf *iobuf)
+{
+	return cmd_is_filedata(iobuf->cmd);
+}
+
+int iobuf_is_link(struct iobuf *iobuf)
+{
+	return cmd_is_link(iobuf->cmd);
+}

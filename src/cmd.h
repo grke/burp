@@ -81,5 +81,8 @@
 
 extern void cmd_to_text(char cmd, char *buf, size_t len);
 extern void cmd_print_all(void);
+extern int cmd_is_filedata(char cmd);
+extern int cmd_is_link(char cmd);
+extern int cmd_is_endfile(char cmd);
 
 #endif

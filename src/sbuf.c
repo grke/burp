@@ -25,27 +25,6 @@ alloc_count++;
 	return sb;
 }
 
-static void burp1_free_content(struct burp1 *burp1)
-{
-	memset(&(burp1->rsbuf), 0, sizeof(burp1->rsbuf));
-	if(burp1->sigjob) { rs_job_free(burp1->sigjob); burp1->sigjob=NULL; }
-	if(burp1->infb) { rs_filebuf_free(burp1->infb); burp1->infb=NULL; }
-	if(burp1->outfb) { rs_filebuf_free(burp1->outfb); burp1->outfb=NULL; }
-	close_fp(&burp1->sigfp); burp1->sigfp=NULL;
-	gzclose_fp(&burp1->sigzp); burp1->sigzp=NULL;
-	close_fp(&burp1->fp); burp1->fp=NULL;
-	gzclose_fp(&burp1->zp); burp1->zp=NULL;
-	iobuf_free_content(&burp1->datapth);
-	iobuf_free_content(&burp1->endfile);
-	burp1->datapth.cmd=CMD_DATAPTH;
-	burp1->endfile.cmd=CMD_END_FILE;
-}
-
-static void burp2_free_content(struct burp2 *burp2)
-{
-	return;
-}
-
 void sbuf_free_content(struct sbuf *sb)
 {
 	iobuf_free_content(&sb->path);
@@ -55,8 +34,8 @@ void sbuf_free_content(struct sbuf *sb)
 	sb->compression=-1;
 	sb->winattr=0;
 	sb->flags=0;
-	if(sb->burp1) burp1_free_content(sb->burp1);
-	if(sb->burp2) burp2_free_content(sb->burp2);
+	if(sb->burp1) sbuf_burp1_free_content(sb->burp1);
+	if(sb->burp2) sbuf_burp2_free_content(sb->burp2);
 }
 
 void sbuf_free(struct sbuf *sb)
@@ -69,19 +48,14 @@ void sbuf_free(struct sbuf *sb)
 free_count++;
 }
 
-int cmd_is_link(char cmd)
-{
-	return (cmd==CMD_SOFT_LINK || cmd==CMD_HARD_LINK);
-}
-
 int sbuf_is_link(struct sbuf *sb)
 {
-	return cmd_is_link(sb->path.cmd);
+	return iobuf_is_link(&sb->path);
 }
 
-int sbuf_is_endfile(struct sbuf *sb)
+int sbuf_is_filedata(struct sbuf *sb)
 {
-	return sb->path.cmd==CMD_END_FILE;
+	return iobuf_is_filedata(&sb->path);
 }
 
 int sbuf_to_manifest(struct sbuf *sb, gzFile zp)

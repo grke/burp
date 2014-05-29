@@ -18,7 +18,6 @@ static int read_fp_msg(FILE *fp, gzFile zp, char **buf, size_t len)
 		if((zp && (r=gzread(zp, b, len))<=0)
 		  || (fp && (r=fread(b, 1, len, fp))<=0))
 		{
-			//logp("read returned: %d\n", r);
 			if(*buf) free(*buf);
 			*buf=NULL;
 			if(r==0)
@@ -32,7 +31,6 @@ static int read_fp_msg(FILE *fp, gzFile zp, char **buf, size_t len)
 		len-=r;
 	}
 	*b='\0';
-	//logp("read_msg: %s\n", *buf);
 	return 0;
 }
 
@@ -63,6 +61,13 @@ static int read_fp(FILE *fp, gzFile zp, struct iobuf *rbuf)
 			rbuf->buf[rbuf->len]='\0'; // remove new line.
 
 	return asr;
+}
+
+static int unexpected(struct iobuf *rbuf, const char *func)
+{
+	iobuf_log_unexpected(rbuf, func);
+	iobuf_free_content(rbuf);
+	return -1;
 }
 
 static int read_stat(struct asfd *asfd, struct iobuf *rbuf, FILE *fp,
@@ -118,10 +123,7 @@ static int read_stat(struct asfd *asfd, struct iobuf *rbuf, FILE *fp,
 			return 1;
 		}
 		else
-		{
-			iobuf_log_unexpected(rbuf, __func__);
-			break;
-		}
+			return unexpected(rbuf, __func__);
 	}
 	iobuf_free_content(rbuf);
 	return -1;
@@ -144,10 +146,7 @@ static int do_sbufl_fill_from_net(struct sbuf *sb, struct asfd *asfd,
 		iobuf_copy(&sb->link, rbuf);
 		rbuf->buf=NULL;
 		if(!cmd_is_link(rbuf->cmd))
-		{
-			iobuf_log_unexpected(rbuf, __func__);
-			return -1;
-		}
+			return unexpected(rbuf, __func__);
 	}
 	return 0;
 }
@@ -168,28 +167,14 @@ static int do_sbufl_fill_from_file(struct sbuf *sb, FILE *fp, gzFile zp,
 		if((ars=read_fp(fp, zp, &rbuf))) return ars;
 		iobuf_copy(&sb->link, &rbuf);
 		if(!cmd_is_link(rbuf.cmd))
-		{
-			iobuf_log_unexpected(&rbuf, __func__);
-			return -1;
-		}
+			return unexpected(&rbuf, __func__);
 	}
-	else if(!phase1 && (sb->path.cmd==CMD_FILE
-			|| sb->path.cmd==CMD_ENC_FILE
-			|| sb->path.cmd==CMD_METADATA
-			|| sb->path.cmd==CMD_ENC_METADATA
-			|| sb->path.cmd==CMD_VSS
-			|| sb->path.cmd==CMD_ENC_VSS
-			|| sb->path.cmd==CMD_VSS_T
-			|| sb->path.cmd==CMD_ENC_VSS_T
-			|| sb->path.cmd==CMD_EFS_FILE))
+	else if(!phase1 && sbuf_is_filedata(sb))
 	{
 		if((ars=read_fp(fp, zp, &rbuf))) return ars;
 		iobuf_copy(&(sb->burp1->endfile), &rbuf);
-		if(rbuf.cmd!=CMD_END_FILE)
-		{
-			iobuf_log_unexpected(&rbuf, __func__);
-			return -1;
-		}
+		if(!cmd_is_endfile(rbuf.cmd))
+			return unexpected(&rbuf, __func__);
 	}
 	return 0;
 }
@@ -218,19 +203,11 @@ static int sbufl_to_fp(struct sbuf *sb, FILE *mp, int write_endfile)
 	if(sb->link.buf
 	  && iobuf_send_msg_fp(&sb->link, mp))
 		return -1;
-	if(write_endfile && (sb->path.cmd==CMD_FILE
-	  || sb->path.cmd==CMD_ENC_FILE
-	  || sb->path.cmd==CMD_METADATA
-	  || sb->path.cmd==CMD_ENC_METADATA
-	  || sb->path.cmd==CMD_VSS
-	  || sb->path.cmd==CMD_ENC_VSS
-	  || sb->path.cmd==CMD_VSS_T
-	  || sb->path.cmd==CMD_ENC_VSS_T
-	  || sb->path.cmd==CMD_EFS_FILE))
-	{
-		if(sb->burp1
-		  && iobuf_send_msg_fp(&sb->burp1->endfile, mp)) return -1;
-	}
+	if(write_endfile
+	  && sbuf_is_filedata(sb)
+	  && sb->burp1
+	  && iobuf_send_msg_fp(&sb->burp1->endfile, mp))
+		return -1;
 	return 0;
 }
 
@@ -246,19 +223,11 @@ static int sbufl_to_zp(struct sbuf *sb, gzFile zp, int write_endfile)
 	if(sb->link.buf
 	  && iobuf_send_msg_zp(&sb->link, zp))
 		return -1;
-	if(write_endfile && (sb->path.cmd==CMD_FILE
-	  || sb->path.cmd==CMD_ENC_FILE
-	  || sb->path.cmd==CMD_METADATA
-	  || sb->path.cmd==CMD_ENC_METADATA
-	  || sb->path.cmd==CMD_VSS
-	  || sb->path.cmd==CMD_ENC_VSS
-	  || sb->path.cmd==CMD_VSS_T
-	  || sb->path.cmd==CMD_ENC_VSS_T
-	  || sb->path.cmd==CMD_EFS_FILE))
-	{
-		if(sb->burp1
-		 && iobuf_send_msg_zp(&sb->burp1->endfile, zp)) return -1;
-	}
+	if(write_endfile
+	  && sbuf_is_filedata(sb)
+	  && sb->burp1
+	  && iobuf_send_msg_zp(&sb->burp1->endfile, zp))
+		return -1;
 	return 0;
 }
 
@@ -294,13 +263,10 @@ int add_to_sbufl_arr(struct sbuf ***sblist, struct sbuf *sb, int *count)
 void free_sbufls(struct sbuf **sb, int count)
 {
 	int s=0;
-	if(sb)
-	{
-		for(s=0; s<count; s++)
-			if(sb[s]) { sbuf_free(sb[s]); sb[s]=NULL; }
-		free(sb);
-		sb=NULL;
-	}
+	if(!sb) return;
+	for(s=0; s<count; s++)
+		if(sb[s]) { sbuf_free(sb[s]); sb[s]=NULL; }
+	free_v((void **)&sb);
 }
 
 int del_from_sbufl_arr(struct sbuf ***sblist, int *count)
@@ -314,9 +280,6 @@ int del_from_sbufl_arr(struct sbuf ***sblist, int *count)
                 (*count)*sizeof(struct sbuf *), __func__)))
          	       return -1;
         *sblist=sbtmp;
-
-        //{int b=0; for(b=0; b<*count; b++)
-        //      printf("now: %d %s\n", b, (*sblist)[b]->path); }
 
 	return 0;
 }

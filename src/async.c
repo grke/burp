@@ -78,6 +78,7 @@ static int async_io(struct async *as, int doread)
 
 	for(asfd=as->asfd; asfd; asfd=asfd->next)
 	{
+/* FIX THIS!!!
 		if(!FD_ISSET(asfd->fd, &fse)
 		  && (!asfd->doread || !FD_ISSET(asfd->fd, &fsr))
 		  && (!asfd->dowrite || !FD_ISSET(asfd->fd, &fsw)))
@@ -94,6 +95,7 @@ static int async_io(struct async *as, int doread)
 			continue;
 		}
 		asfd->network_timeout=asfd->max_network_timeout;
+*/
 
 		if(FD_ISSET(asfd->fd, &fse))
 		{

@@ -63,27 +63,11 @@ struct blk
 };
 */
 
-
 extern struct blk *blk_alloc(void);
 extern struct blk *blk_alloc_with_data(uint32_t max_data_length);
-extern void        blk_free(struct blk *blk);
-extern int         blk_md5_update(struct blk *blk);
-extern char *      blk_get_md5sum_str(unsigned char *checksum);
-
-struct blist
-{
-	struct blk *head;
-	struct blk *tail;
-// On the client, keep track of last blk requested by the server.
-	struct blk *last_requested;
-// On the client, keep track of last data sent by the client.
-	struct blk *last_sent;
-};
-
-extern struct blist *blist_alloc(void);
-extern void blist_free(struct blist *blist);
-extern void blk_add_to_list(struct blk *blk, struct blist *blist);
-
+extern void blk_free(struct blk *blk);
+extern int blk_md5_update(struct blk *blk);
+extern char *blk_get_md5sum_str(unsigned char *checksum);
 extern void blk_print_alloc_stats(void);
 
 #endif

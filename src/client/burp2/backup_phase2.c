@@ -37,7 +37,7 @@ static int add_to_file_requests(struct slist *slist, struct iobuf *rbuf,
 	rbuf->buf=NULL;
 	// Give it a number to simplify tracking.
 	sb->burp2->index=file_no++;
-	sbuf_add_to_list(sb, slist);
+	slist_add_sbuf(slist, sb);
 
 	return 0;
 }

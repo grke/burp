@@ -1,5 +1,5 @@
-#ifndef SBUF_H
-#define SBUF_H
+#ifndef _SBUF_H
+#define _SBUF_H
 
 #include <sys/stat.h>
 #include <zlib.h>
@@ -71,22 +71,9 @@ struct sbuf
 	struct sbuf *next;
 };
 
-struct slist
-{
-	struct sbuf *head;
-	struct sbuf *tail;
-	struct sbuf *last_requested; // last file requested
-	struct sbuf *add_sigs_here; // server only
-	struct sbuf *blks_to_request; // server only
-	struct sbuf *blks_to_send; // client only
-};
-
 extern struct sbuf *sbuf_alloc(struct conf *conf);
 extern void sbuf_free_content(struct sbuf *sb);
 extern void sbuf_free(struct sbuf *sb);
-
-extern struct slist *slist_alloc(void);
-extern void slist_free(struct slist *slist);
 
 extern int sbuf_open_file(struct sbuf *sb,
 	struct asfd *asfd, struct conf *conf);
@@ -96,7 +83,6 @@ extern ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize);
 extern int cmd_is_link(char cmd);
 extern int sbuf_is_link(struct sbuf *sb);
 extern int sbuf_to_manifest(struct sbuf *sb, gzFile zp);
-extern void sbuf_add_to_list(struct sbuf *sb, struct slist *slist);
 
 extern int sbuf_pathcmp(struct sbuf *a, struct sbuf *b);
 

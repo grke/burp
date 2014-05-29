@@ -53,7 +53,7 @@ static int blk_read(struct rconf *rconf, struct win *win, struct sbuf *sb, struc
 			{
 				sb->burp2->bsighead=blk;
 			}
-			blk_add_to_list(blk, blist);
+			blist_add_blk(blist, blk);
 			blk=NULL;
 
 			gcp++;
@@ -106,7 +106,7 @@ int blks_generate(struct asfd *asfd, struct conf *conf,
 		// can skip over it.
 		if(!(sb->burp2->bstart=blk_alloc())) return -1;
 		sb->burp2->bsighead=blk;
-		blk_add_to_list(blk, blist);
+		blist_add_blk(blist, blk);
 		blk=NULL;
 	}
 	else if(blk)
@@ -122,7 +122,7 @@ int blks_generate(struct asfd *asfd, struct conf *conf,
 			{
 				sb->burp2->bsighead=blk;
 			}
-			blk_add_to_list(blk, blist);
+			blist_add_blk(blist, blk);
 		}
 		else blk_free(blk);
 		blk=NULL;

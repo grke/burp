@@ -3,6 +3,8 @@
 
 #include "../include.h"
 
+#include "blist.h"
 #include "blk.h"
+#include "slist.h"
 
 #endif

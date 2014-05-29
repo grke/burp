@@ -7,6 +7,8 @@
 #include <netinet/ip.h>
 #endif
 
+#include "burp2/blist.h"
+
 static size_t bufmaxsize=(ASYNC_BUF_LEN*2)+32;
 
 static void truncate_readbuf(struct asfd *asfd)

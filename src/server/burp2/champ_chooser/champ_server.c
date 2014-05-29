@@ -57,7 +57,7 @@ static int deal_with_rbuf_sig(struct asfd *asfd,
 	struct blk *blk;
 	if(!(blk=blk_alloc())) return -1;
 
-	blk_add_to_list(blk, asfd->blist);
+	blist_add_blk(asfd->blist, blk);
 
 	// FIX THIS: Should not just load into strings.
 	if(split_sig(asfd->rbuf->buf,

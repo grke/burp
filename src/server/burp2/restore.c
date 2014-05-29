@@ -1,5 +1,6 @@
 #include "include.h"
 #include "champ_chooser/hash.h"
+#include "../../burp2/slist.h"
 #include "../../server/monitor/status_client.h"
 #include "../../server/burp1/restore.h"
 #include "../../server/current_backups.h"

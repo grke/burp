@@ -3,6 +3,8 @@
 
 #include "../include.h"
 
+#include "../../../burp2/blist.h"
+
 #include "candidate.h"
 #include "champ_chooser.h"
 #include "champ_client.h"

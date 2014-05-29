@@ -460,15 +460,12 @@ void asfd_free(struct asfd **asfd)
 {
 	if(!asfd || !*asfd) return;
 	asfd_close(*asfd);
-	if((*asfd)->rbuf)
-		{ iobuf_free((*asfd)->rbuf); (*asfd)->rbuf=NULL; }
-	if((*asfd)->readbuf)
-		{ free((*asfd)->readbuf); (*asfd)->readbuf=NULL; }
-	if((*asfd)->writebuf)
-		{ free((*asfd)->writebuf); (*asfd)->writebuf=NULL; }
-	if((*asfd)->desc)
-		{ free((*asfd)->desc); (*asfd)->desc=NULL; }
+	if((*asfd)->rbuf) { iobuf_free((*asfd)->rbuf); (*asfd)->rbuf=NULL; }
+	free_w(&((*asfd)->readbuf));
+	free_w(&((*asfd)->writebuf));
+	free_w(&((*asfd)->desc));
 	// FIX THIS: free incoming?
+	if((*asfd)->blist) { blist_free((*asfd)->blist); (*asfd)->blist=NULL; }
 	free(*asfd);
 	*asfd=NULL;
 }

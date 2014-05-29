@@ -19,7 +19,8 @@ static int champ_chooser_new_client(struct async *as, struct conf *conf)
 	set_non_blocking(fd);
 
 	if(!(newfd=asfd_alloc())
-	  || newfd->init(newfd, "(unknown)", as, fd, NULL, conf))
+	  || newfd->init(newfd, "(unknown)", as, fd, NULL, conf)
+	  || !(newfd->blist=blist_alloc()))
 		goto error;
 	as->asfd_add(as, newfd);
 
@@ -147,6 +148,7 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf *conf)
 	local.sun_family=AF_UNIX;
 	strcpy(local.sun_path, sdirs->champsock);
 	len=strlen(local.sun_path)+sizeof(local.sun_family);
+	unlink(sdirs->champsock);
 	if(bind(s, (struct sockaddr *)&local, len)<0)
 	{
 		logp("bind error in %s: %s\n", __func__, strerror(errno));

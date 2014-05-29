@@ -26,15 +26,15 @@ int fdirs_init(struct fdirs *fdirs,
 void fdirs_free(struct fdirs *fdirs)
 {
 	if(!fdirs) return;
-	if(fdirs->datadir) free(fdirs->datadir);
-	if(fdirs->datadirtmp) free(fdirs->datadirtmp);
-	if(fdirs->manifest) free(fdirs->manifest);
-	if(fdirs->deletionsfile) free(fdirs->deletionsfile);
-	if(fdirs->currentdup) free(fdirs->currentdup);
-	if(fdirs->currentduptmp) free(fdirs->currentduptmp);
-	if(fdirs->currentdupdata) free(fdirs->currentdupdata);
-	if(fdirs->timestamp) free(fdirs->timestamp);
-	if(fdirs->fullrealcurrent) free(fdirs->fullrealcurrent);
-	if(fdirs->logpath) free(fdirs->logpath);
-	if(fdirs->hlinkedpath) free(fdirs->hlinkedpath);
+	free_w(&fdirs->datadir);
+	free_w(&fdirs->datadirtmp);
+	free_w(&fdirs->manifest);
+	free_w(&fdirs->deletionsfile);
+	free_w(&fdirs->currentdup);
+	free_w(&fdirs->currentduptmp);
+	free_w(&fdirs->currentdupdata);
+	free_w(&fdirs->timestamp);
+	free_w(&fdirs->fullrealcurrent);
+	free_w(&fdirs->logpath);
+	free_w(&fdirs->hlinkedpath);
 }

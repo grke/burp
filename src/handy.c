@@ -636,17 +636,16 @@ void *calloc_w(size_t nmem, size_t size, const char *func)
 	return ret;
 }
 
-void free_w(char **ptr)
-{
-	if(!ptr || !*ptr) return;
-	free(*ptr);
-	*ptr=NULL;
-}
 void free_v(void **ptr)
 {
 	if(!ptr || !*ptr) return;
 	free(*ptr);
 	*ptr=NULL;
+}
+
+void free_w(char **str)
+{
+	free_v((void **)str);
 }
 
 int astrcat(char **buf, const char *append, const char *func)

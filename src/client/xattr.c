@@ -19,11 +19,8 @@ static char *get_next_str(struct asfd *asfd, char **data, size_t *l,
 	}
 	*data+=8;
 	*l-=8;
-	if(!(ret=(char *)malloc((*s)+1)))
-	{
-		log_out_of_memory(__func__);
+	if(!(ret=(char *)malloc_w((*s)+1, __func__)))
 		return NULL;
-	}
 	memcpy(ret, *data, *s);
 	ret[*s]='\0';
 

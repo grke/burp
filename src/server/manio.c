@@ -20,18 +20,18 @@ static int manio_free_contents(struct manio *manio)
 	int ret=0;
 	if(!manio) return ret;
 	if(manio_close(manio)) ret=-1;
-	if(manio->base_dir) free(manio->base_dir);
-	if(manio->directory) free(manio->directory);
-	if(manio->fpath) free(manio->fpath);
-	if(manio->lpath) free(manio->lpath);
-	if(manio->mode) free(manio->mode);
-	if(manio->hook_dir) free(manio->hook_dir);
+	free_w(&manio->base_dir);
+	free_w(&manio->directory);
+	free_w(&manio->fpath);
+	free_w(&manio->lpath);
+	free_w(&manio->mode);
+	free_w(&manio->hook_dir);
 	if(manio->hook_sort)
 	{
 		int i;
 		for(i=0; i<MANIFEST_SIG_MAX; i++)
-			if(manio->hook_sort[i]) free(manio->hook_sort[i]);
-		free(manio->hook_sort);
+			free_w(&(manio->hook_sort[i]));
+		free_v((void **)&manio->hook_sort);
 	}
 	memset(manio, 0, sizeof(struct manio));
 	return ret;
@@ -45,7 +45,7 @@ static int write_hook_header(struct manio *manio, gzFile zp, const char *comp)
 	while(cp && *cp=='/') cp++;
 	if(!(tmp=prepend_s(cp, comp))) return -1;
 	gzprintf(zp, "%c%04X%s\n", CMD_MANIFEST, strlen(tmp), tmp);
-	free(tmp);
+	free_w(&tmp);
 	return 0;
 }
 
@@ -94,7 +94,7 @@ static int sort_and_write_hooks(struct manio *manio)
 	ret=0;
 end:
 	gzclose_fp(&zp);
-	if(path) free(path);
+	free_w(&path);
 	return ret;
 }
 
@@ -135,7 +135,7 @@ static int sort_and_write_dindex(struct manio *manio)
 	ret=0;
 end:
 	gzclose_fp(&zp);
-	if(path) free(path);
+	free_w(&path);
 	return ret;
 }
 
@@ -163,7 +163,7 @@ int manio_free(struct manio *manio)
 static int manio_set_mode(struct manio *manio, const char *mode)
 {
 	if(manio_close(manio)) return -1;
-	if(manio->mode) free(manio->mode);
+	free_w(&manio->mode);
 	if(!(manio->mode=strdup_w(mode, __func__)))
 		return -1;
 	manio->fcount=0;
@@ -222,7 +222,7 @@ static int open_next_fpath(struct manio *manio)
 {
 	static struct stat statp;
 
-	if(manio->lpath) free(manio->lpath);
+	free_w(&manio->lpath);
 	manio->lpath=manio->fpath;
 	if(!(manio->fpath=get_next_fpath(manio))) return -1;
 
@@ -428,7 +428,7 @@ int manio_copy_entry(struct asfd *asfd, struct sbuf **csb, struct sbuf *sb,
 			// Finished.
 			sbuf_free(*csb); *csb=NULL;
 			blk_free(*blk); *blk=NULL;
-			free(copy);
+			free_w(&copy);
 			return 1;
 		}
 
@@ -436,7 +436,7 @@ int manio_copy_entry(struct asfd *asfd, struct sbuf **csb, struct sbuf *sb,
 		if(strcmp((*csb)->path.buf, copy))
 		{
 			// Found the next entry.
-			free(copy);
+			free_w(&copy);
 			return 0;
 		}
 		// Should have the next signature.
@@ -446,7 +446,7 @@ int manio_copy_entry(struct asfd *asfd, struct sbuf **csb, struct sbuf *sb,
 	}
 
 error:
-	if(copy) free(copy);
+	free_w(&copy);
 	return -1;
 }
 

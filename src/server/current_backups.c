@@ -60,19 +60,19 @@ static int maybe_add_ent(struct asfd *asfd,
 	 || !(fullpath=prepend_s(dir, basename))
 	 || !(timestamp=prepend_s(fullpath, "timestamp"))
 	 || !(hlinkedpath=prepend_s(fullpath, "hardlinked")))
-		goto end;
+		goto error;
 
 	if((!lstat(fullpath, &statp) && !S_ISDIR(statp.st_mode))
 	  || lstat(timestamp, &statp) || !S_ISREG(statp.st_mode)
 	  || timestamp_read(timestamp, buf, sizeof(buf)))
 	{
 		ret=0;
-		goto end;
+		goto error;
 	}
 	free_w(&timestamp);
 
 	if(!(timestampstr=strdup_w(buf, __func__)))
-		goto end;
+		goto error;
 
 	if(!lstat(hlinkedpath, &statp)) hardlinked++;
 
@@ -82,7 +82,7 @@ static int maybe_add_ent(struct asfd *asfd,
 	  || !((*arr)[*a].delta=prepend_s(fullpath, "deltas.reverse")))
 	{
 		if(log) log_and_send_oom(asfd, __func__);
-		goto end;
+		goto error;
 	}
 	(*arr)[*a].path=fullpath;
 	(*arr)[*a].basename=basename;
@@ -95,7 +95,7 @@ static int maybe_add_ent(struct asfd *asfd,
 	(*a)++;
 
 	return 0;
-end:
+error:
 	free_w(&basename);
 	free_w(&fullpath);
 	free_w(&timestamp);
@@ -147,17 +147,13 @@ int get_current_backups_str(struct asfd *asfd,
 		(*arr)[0].deletable=1;
 	}
 
+	// Backups that come after hardlinked backups are deletable.
 	for(i=0; i<(*a)-1; i++)
-	{
-		// Backups that come after hardlinked backups are deletable.
 		if((*arr)[i].hardlinked) (*arr)[i+1].deletable=1;
-	}
 
+	// Transpose bnos so that the oldest bno is set to 1.
 	if(tr) for(i=0; i<*a; i++)
-	{
-		// Transpose bnos so that the oldest bno is set to 1.
 		(*arr)[i].trbno=tr-(*arr)[i].bno+1;
-	}
 
 	ret=0;
 end:

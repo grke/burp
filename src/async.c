@@ -65,6 +65,14 @@ static int async_io(struct async *as, int doread)
 		dosomething++;
 	}
 	if(!dosomething) return 0;
+/*
+	for(asfd=as->asfd; asfd; asfd=asfd->next)
+	{
+		printf("%d %d %d: %s\n",
+			asfd->doread, asfd->dowrite,
+			asfd->readbuflen, asfd->desc);
+	}
+*/
 
 	if(select(mfd+1, &fsr, &fsw, &fse, &tval)<0)
 	{

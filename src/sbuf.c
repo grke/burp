@@ -38,13 +38,13 @@ void sbuf_free_content(struct sbuf *sb)
 	if(sb->burp2) sbuf_burp2_free_content(sb->burp2);
 }
 
-void sbuf_free(struct sbuf *sb)
+void sbuf_free(struct sbuf **sb)
 {
-	if(!sb) return;
-	sbuf_free_content(sb);
-	if(sb->burp1) { free(sb->burp1); sb->burp1=NULL; }
-	if(sb->burp2) { free(sb->burp2); sb->burp2=NULL; }
-	free(sb);
+	if(!sb || !*sb) return;
+	sbuf_free_content(*sb);
+	free_v((void **)&((*sb)->burp1));
+	free_v((void **)&((*sb)->burp2));
+	free_v((void **)sb);
 free_count++;
 }
 

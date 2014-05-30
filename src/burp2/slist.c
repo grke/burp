@@ -15,7 +15,7 @@ void slist_free(struct slist *slist)
 	{
 		sb=shead;
 		shead=shead->next;
-		sbuf_free(sb);
+		sbuf_free(&sb);
 	}
 	free(slist);
 }

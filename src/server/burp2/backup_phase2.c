@@ -78,8 +78,8 @@ static int entry_changed(struct asfd *asfd, struct sbuf *sb,
 		switch(manio_sbuf_fill(cmanio, asfd, csb, blk, NULL, conf))
 		{
 			case 1: // Reached the end.
-				sbuf_free(csb); csb=NULL;
-				blk_free(blk); blk=NULL;
+				sbuf_free(&csb);
+				blk_free(&blk);
 				finished=1;
 				return 1;
 			case -1: return -1;
@@ -109,8 +109,8 @@ static int entry_changed(struct asfd *asfd, struct sbuf *sb,
 					case 1:
 					{
 						// Reached the end.
-						sbuf_free(csb); csb=NULL;
-						blk_free(blk); blk=NULL;
+						sbuf_free(&csb);
+						blk_free(&blk);
 						return 1;
 					}
 				}
@@ -193,8 +193,7 @@ static void dump_blks(const char *msg, struct blk *b)
 }
 */
 
-static int add_to_sig_list(struct asfd *chfd,
-	struct slist *slist, struct blist *blist,
+static int add_to_sig_list(struct slist *slist, struct blist *blist,
 	struct iobuf *rbuf, struct dpth *dpth,
 	uint64_t *wrap_up, struct conf *conf)
 {
@@ -212,19 +211,16 @@ static int add_to_sig_list(struct asfd *chfd,
 	// FIX THIS: Should not just load into strings.
 	if(split_sig(rbuf->buf, rbuf->len, blk->weak, blk->strong)) return -1;
 
-	//printf("Writing!\n");
-	//if(chfd->write(chfd, rbuf)) return -1;
-	if(chfd->append_all_to_write_buffer(chfd, rbuf)) printf("too much\n");
-
-	//if(deduplicate_maybe(blk, dpth, conf, wrap_up)<0) return -1;
+	// Need to send sigs to champ chooser, therefore need to point
+	// to the oldest unsent one if nothing is pointed to yet.
+	if(!blist->blk_for_champ_chooser) blist->blk_for_champ_chooser=blk;
 
 	return 0;
 }
 
 static int deal_with_read(struct iobuf *rbuf,
 	struct slist *slist, struct blist *blist, struct conf *conf,
-	int *sigs_end, int *backup_end, struct dpth *dpth, uint64_t *wrap_up,
-	struct asfd *chfd)
+	int *sigs_end, int *backup_end, struct dpth *dpth, uint64_t *wrap_up)
 {
 	int ret=0;
 	static struct sbuf *inew=NULL;
@@ -252,7 +248,7 @@ static int deal_with_read(struct iobuf *rbuf,
 			if(set_up_for_sig_info(slist, blist, inew)) goto error;
 			return 0;
 		case CMD_SIG:
-			if(add_to_sig_list(chfd, slist, blist,
+			if(add_to_sig_list(slist, blist,
 				rbuf, dpth, wrap_up, conf))
 					goto error;
 			goto end;
@@ -279,7 +275,7 @@ static int deal_with_read(struct iobuf *rbuf,
 	iobuf_log_unexpected(rbuf, __func__);
 error:
 	ret=-1;
-	sbuf_free(inew); inew=NULL;
+	sbuf_free(&inew);
 end:
 	if(rbuf->buf) { free(rbuf->buf); rbuf->buf=NULL; }
 	return ret;
@@ -392,7 +388,9 @@ static void sanity_before_sbuf_free(struct slist *slist, struct sbuf *sb)
 	if(slist->blks_to_request==sb) slist->blks_to_request=sb->next;
 }
 
-static int write_to_changed_file(struct manio *chmanio, struct slist *slist, struct blist *blist, struct dpth *dpth, int backup_end, struct conf *conf)
+static int write_to_changed_file(struct manio *chmanio,
+	struct slist *slist, struct blist *blist,
+	struct dpth *dpth, int backup_end, struct conf *conf)
 {
 	struct sbuf *sb;
 	if(!slist) return 0;
@@ -449,7 +447,7 @@ static int write_to_changed_file(struct manio *chmanio, struct slist *slist, str
 					if(!(blist->head=sb->burp2->bstart))
 						blist->tail=NULL;
 					sanity_before_sbuf_free(slist, sb);
-					sbuf_free(sb);
+					sbuf_free(&sb);
 					hack=1;
 					break;
 				}
@@ -457,7 +455,7 @@ static int write_to_changed_file(struct manio *chmanio, struct slist *slist, str
 				if(sb->burp2->bsighead==sb->burp2->bstart)
 					sb->burp2->bsighead=blk->next;
 				sb->burp2->bstart=blk->next;
-				blk_free(blk);
+				blk_free(&blk);
 			}
 			if(hack) continue;
 			if(!(blist->head=sb->burp2->bstart))
@@ -473,7 +471,7 @@ static int write_to_changed_file(struct manio *chmanio, struct slist *slist, str
 			slist->head=sb->next;
 
 			sanity_before_sbuf_free(slist, sb);
-			sbuf_free(sb);
+			sbuf_free(&sb);
 		}
 	}
 	return 0;
@@ -539,8 +537,32 @@ static int maybe_add_from_scan(struct asfd *asfd,
 	}
 	return 0;
 end:
-	sbuf_free(snew);
+	sbuf_free(&snew);
 	return ret;
+}
+
+static int append_for_champ_chooser(struct asfd *chfd, struct blist *blist)
+{
+	static struct iobuf *wbuf=NULL;
+	if(!wbuf)
+	{
+		if(!(wbuf=iobuf_alloc())
+		  || !(wbuf->buf=(char *)malloc_w(128, __func__)))
+			return -1;
+		wbuf->cmd=CMD_SIG;
+	}
+	while(blist->blk_for_champ_chooser)
+	{
+		// FIX THIS: This should not need to be done quite like this.
+		wbuf->len=snprintf(wbuf->buf, 128, "%s%s",
+			blist->blk_for_champ_chooser->weak,
+			blist->blk_for_champ_chooser->strong);
+		if(chfd->append_all_to_write_buffer(chfd, wbuf))
+			return 0; // Try again later.
+		blist->blk_for_champ_chooser=blist->blk_for_champ_chooser->next;
+	}
+	//if(deduplicate_maybe(blk, dpth, conf, wrap_up)<0) return -1;
+	return 0;
 }
 
 int backup_phase2_server(struct async *as, struct sdirs *sdirs,
@@ -613,6 +635,9 @@ int backup_phase2_server(struct async *as, struct sdirs *sdirs,
 
 		if(wbuf->len)
 			asfd->append_all_to_write_buffer(asfd, wbuf);
+
+		append_for_champ_chooser(chfd, blist);
+
 		if(as->read_write(as))
 		{
 			logp("error in %s\n", __func__);
@@ -621,7 +646,7 @@ int backup_phase2_server(struct async *as, struct sdirs *sdirs,
 
 		if(asfd->rbuf->buf && deal_with_read(asfd->rbuf,
 			slist, blist, conf,
-			&sigs_end, &backup_end, dpth, &wrap_up, chfd))
+			&sigs_end, &backup_end, dpth, &wrap_up))
 				goto end;
 		if(chfd->rbuf->buf)
 		{
@@ -676,10 +701,10 @@ end:
 	if(wbuf) wbuf->buf=NULL;
 	iobuf_free(wbuf);
 	dpth_release_all(dpth);
-	dpth_free(dpth);
-	manio_free(cmanio);
-	manio_free(p1manio);
-	manio_free(chmanio);
-	manio_free(unmanio);
+	dpth_free(&dpth);
+	manio_free(&cmanio);
+	manio_free(&p1manio);
+	manio_free(&chmanio);
+	manio_free(&unmanio);
 	return ret;
 }

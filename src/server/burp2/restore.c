@@ -32,7 +32,7 @@ static int restore_sbuf(struct asfd *asfd, struct sbuf *sb, enum action act,
 			iobuf_set(&wbuf, CMD_DATA, b->data, b->length);
 			if(asfd->write(asfd, &wbuf)) return -1;
 			n=b->next;
-			blk_free(b);
+			blk_free(&b);
 			b=n;
 		}
 		sb->burp2->bstart=sb->burp2->bend=NULL;
@@ -107,7 +107,7 @@ static int restore_ent(struct asfd *asfd,
 			if(restore_sbuf(asfd, xb, act, status,
 				conf, need_data)) goto end;
 			slist->head=xb->next;
-			sbuf_free(xb);
+			sbuf_free(&xb);
 		}
 	}
 
@@ -206,7 +206,7 @@ static int cntr_load(const char *manifest, regex_t *regex, struct conf *conf)
 	}
 	ret=0;
 end:
-	sbuf_free(sb);
+	sbuf_free(&sb);
 	gzclose_fp(&zp);
 	return ret;
 */
@@ -403,9 +403,9 @@ static int maybe_copy_data_files_across(struct asfd *asfd,
 
 	ret=1;
 end:
-	blk_free(blk);
-	sbuf_free(sb);
-	manio_free(manio);
+	blk_free(&blk);
+	sbuf_free(&sb);
+	manio_free(&manio);
 	hash_delete_all();
 	return ret;
 }
@@ -539,10 +539,10 @@ static int restore_stream(struct asfd *asfd,
 
 	ret=0;
 end:
-	blk_free(blk);
-	sbuf_free(sb);
-	manio_free(manio);
-	dpth_free(dpth);
+	blk_free(&blk);
+	sbuf_free(&sb);
+	manio_free(&manio);
+	dpth_free(&dpth);
 	return ret;
 }
 

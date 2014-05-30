@@ -114,6 +114,6 @@ int child(struct async *as, struct conf *conf, struct conf *cconf)
 
 end:
 	if(sdirs) lock_release(sdirs->lock);
-        sdirs_free(sdirs);
+        sdirs_free(&sdirs);
 	return ret;
 }

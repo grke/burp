@@ -258,6 +258,6 @@ int champ_chooser_server_standalone(struct conf *conf, const char *sclient)
 	ret=0;
 end:
 	conf_free(cconf);
-	sdirs_free(sdirs);
+	sdirs_free(&sdirs);
 	return ret;
 }

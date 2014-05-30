@@ -862,7 +862,7 @@ end:
 	if(!ret) logp("%s finished\n", act_str(act));
 	else logp("ret: %d\n", ret);
 
-	sbuf_free(sb);
+	sbuf_free(&sb);
 	if(style) free(style);
 	if(datpath)
 	{
@@ -870,7 +870,6 @@ end:
 		free(datpath);
 	}
 	if(fullpath) free(fullpath);
-	//sbuf_free(sb);
 
 	return ret;
 }

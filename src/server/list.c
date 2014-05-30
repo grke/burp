@@ -125,10 +125,10 @@ static int list_manifest(struct asfd *asfd,
 error:
 	ret=-1;
 end:
-	sbuf_free(sb);
-	if(manifest_dir) free(manifest_dir);
-	manio_free(manio);
-	if(last_bd_match) free(last_bd_match);
+	sbuf_free(&sb);
+	free_w(&manifest_dir);
+	manio_free(&manio);
+	free_w(&last_bd_match);
 	return ret;
 }
 

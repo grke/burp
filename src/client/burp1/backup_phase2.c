@@ -401,7 +401,7 @@ end:
 	close_file_for_sendl(&bfd, NULL, asfd);
 #endif
 	iobuf_free_content(rbuf);
-	sbuf_free(sb);
+	sbuf_free(&sb);
 	return ret;
 }
 

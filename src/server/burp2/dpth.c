@@ -167,7 +167,7 @@ struct dpth *dpth_alloc(const char *base_path)
         if((dpth=(struct dpth *)calloc_w(1, sizeof(struct dpth), __func__))
 	  && (dpth->base_path=strdup_w(base_path, __func__)))
 		return dpth;
-	dpth_free(dpth);
+	dpth_free(&dpth);
 	return NULL;
 }
 
@@ -218,12 +218,11 @@ end:
 	return ret;
 }
 
-void dpth_free(struct dpth *dpth)
+void dpth_free(struct dpth **dpth)
 {
-	if(!dpth) return;
-	if(dpth->base_path) free(dpth->base_path);
-	free(dpth);
-	dpth=NULL;
+	if(!dpth || !*dpth) return;
+	free_w(&((*dpth)->base_path));
+	free_v((void **)dpth);
 }
 
 static int fprint_tag(FILE *fp, char cmd, unsigned int s)

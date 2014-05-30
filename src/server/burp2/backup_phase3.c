@@ -258,8 +258,8 @@ end:
 	gzclose_fp(&azp);
 	gzclose_fp(&bzp);
 	gzclose_fp(&dzp);
-	sbuf_free(asb);
-	sbuf_free(bsb);
+	sbuf_free(&asb);
+	sbuf_free(&bsb);
 	hooks_free(&anew);
 	hooks_free(&bnew);
 	if(afingerprints) free(afingerprints);
@@ -511,7 +511,7 @@ int backup_phase3_server(struct sdirs *sdirs,
 	fcount=newmanio->fcount;
 
 	// Flush to disk and set up for reading.
-	if(manio_free(newmanio)
+	if(manio_free(&newmanio)
 	  || !(newmanio=manio_alloc())
 	  || manio_init_read(newmanio, manifest_dir))
 		goto end;
@@ -526,13 +526,13 @@ int backup_phase3_server(struct sdirs *sdirs,
 
 	logp("End phase3\n");
 end:
-	manio_free(newmanio);
-	manio_free(chmanio);
-	manio_free(unmanio);
-	sbuf_free(csb);
-	sbuf_free(usb);
-	blk_free(blk);
-	if(hooksdir) free(hooksdir);
-	if(dindexdir) free(dindexdir);
+	manio_free(&newmanio);
+	manio_free(&chmanio);
+	manio_free(&unmanio);
+	sbuf_free(&csb);
+	sbuf_free(&usb);
+	blk_free(&blk);
+	free_w(&hooksdir);
+	free_w(&dindexdir);
 	return ret;
 }

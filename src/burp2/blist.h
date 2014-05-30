@@ -5,6 +5,8 @@ struct blist
 {
 	struct blk *head;
 	struct blk *tail;
+// On the server, keep track of the next blk to send to the champ chooser.
+	struct blk *blk_for_champ_chooser;
 // On the client, keep track of last blk requested by the server.
 	struct blk *last_requested;
 // On the client, keep track of last data sent by the client.

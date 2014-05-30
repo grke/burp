@@ -355,7 +355,7 @@ end:
 	iobuf_free_content(&sb->link);
 	iobuf_free_content(&sb->attr);
 	if(dpth) free(dpth);
-	if(sb) sbuf_free(sb);
+	sbuf_free(&sb);
 	if(!ret) logp("List finished ok\n");
 	return ret;
 }

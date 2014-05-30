@@ -48,7 +48,7 @@ struct blk
 };
 
 /*
-FIX THIS: The above takes 136 bytes. The below takes 64.
+FIX THIS: The above takes 136 bytes. The below takes 64. Significant.
 struct blk
 {
         char *data;
@@ -65,7 +65,7 @@ struct blk
 
 extern struct blk *blk_alloc(void);
 extern struct blk *blk_alloc_with_data(uint32_t max_data_length);
-extern void blk_free(struct blk *blk);
+extern void blk_free(struct blk **blk);
 extern int blk_md5_update(struct blk *blk);
 extern char *blk_get_md5sum_str(unsigned char *checksum);
 extern void blk_print_alloc_stats(void);

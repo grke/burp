@@ -16,7 +16,7 @@ static int read_phase1(gzFile zp, struct conf *conf)
 			// ars==1 means it ended ok.
 			if(ars<0)
 			{
-				sbuf_free(p1b);
+				sbuf_free(&p1b);
 				return -1;
 			}
 			return 0;
@@ -31,7 +31,7 @@ static int read_phase1(gzFile zp, struct conf *conf)
 			cntr_add_val(conf->cntr, CMD_BYTES_ESTIMATED,
 				(unsigned long long)p1b->statp.st_size, 0);
 	}
-	sbuf_free(p1b);
+	sbuf_free(&p1b);
 	// not reached
 	return 0;
 }

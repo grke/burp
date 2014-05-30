@@ -420,11 +420,10 @@ static int jiggle(struct fdirs *fdirs, struct sbuf *sb,
 
 	ret=0;
 end:
-	if(oldpath) free(oldpath);
-	if(newpath) free(newpath);
-	if(finpath) free(finpath);
-	if(deltafpath) free(deltafpath);
-
+	free_w(&oldpath);
+	free_w(&newpath);
+	free_w(&finpath);
+	free_w(&deltafpath);
 	return ret;
 }
 
@@ -548,8 +547,8 @@ end:
 	
 	close_fp(&dfp);
 	gzclose_fp(&omzp);
-	sbuf_free(db);
-	sbuf_free(mb);
+	sbuf_free(&db);
+	sbuf_free(&mb);
 	if(!ret)
 	{
 		unlink(fdirs->deletionsfile);
@@ -640,14 +639,14 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct fdirs *fdirs,
 	recursive_delete(deltafdir, NULL, 0 /* do not del files */);
 
 end:
-	if(zp) gzclose_fp(&zp);
-	if(delfp) close_fp(&delfp);
-	if(deltabdir) free(deltabdir);
-	if(deltafdir) free(deltafdir);
-	if(sigpath) free(sigpath);
-	if(datapth) free(datapth);
-	if(sb) sbuf_free(sb);
-	if(tmpman) free(tmpman);
+	gzclose_fp(&zp);
+	close_fp(&delfp);
+	sbuf_free(&sb);
+	free_w(&deltabdir);
+	free_w(&deltafdir);
+	free_w(&sigpath);
+	free_w(&datapth);
+	free_w(&tmpman);
 	return ret;
 }
 

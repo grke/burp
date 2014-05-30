@@ -519,7 +519,7 @@ static int setup_cntr(struct asfd *asfd, const char *manifest,
 	}
 	ret=0;
 end:
-	sbuf_free(sb);
+	sbuf_free(&sb);
 	gzclose_fp(&zp);
 	return ret;
 }
@@ -613,7 +613,7 @@ static int actual_restore(struct asfd *asfd,
 end:
 	iobuf_free_content(rbuf);
 	gzclose_fp(&zp);
-	sbuf_free(sb);
+	sbuf_free(&sb);
 	free_sbufls(sblist, scount);
 	return ret;
 }

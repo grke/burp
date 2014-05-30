@@ -770,9 +770,9 @@ end:
 		ret=-1;
 	}
 	free(deltmppath);
-	sbuf_free(cb);
-	sbuf_free(p1b);
-	sbuf_free(rb);
+	sbuf_free(&cb);
+	sbuf_free(&p1b);
+	sbuf_free(&rb);
 	gzclose_fp(&p1zp);
 	if(!ret) unlink(sdirs->phase1data);
 

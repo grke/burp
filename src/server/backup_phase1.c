@@ -73,6 +73,6 @@ int backup_phase1_server(struct asfd *asfd,
 end:
 	free(phase1tmp);
 	gzclose_fp(&p1zp);
-	sbuf_free(sb);
+	sbuf_free(&sb);
 	return ret;
 }

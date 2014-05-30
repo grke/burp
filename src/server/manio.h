@@ -30,7 +30,7 @@ struct manio
 };
 
 extern struct manio *manio_alloc(void);
-extern int manio_free(struct manio *manio);
+extern int manio_free(struct manio **manio);
 extern int manio_close(struct manio *manio);
 extern int manio_init_read(struct manio *manio, const char *directory);
 extern int manio_init_write(struct manio *manio, const char *directory);

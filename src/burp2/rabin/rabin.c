@@ -124,7 +124,7 @@ int blks_generate(struct asfd *asfd, struct conf *conf,
 			}
 			blist_add_blk(blist, blk);
 		}
-		else blk_free(blk);
+		else blk_free(&blk);
 		blk=NULL;
 	}
 	if(blist->tail) sb->burp2->bend=blist->tail;

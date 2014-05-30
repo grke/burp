@@ -151,12 +151,12 @@ int manio_close(struct manio *manio)
 	return gzclose_fp(&(manio->zp));
 }
 
-int manio_free(struct manio *manio)
+int manio_free(struct manio **manio)
 {
 	int ret=0;
-	if(!manio) return ret;
-	if(manio_free_contents(manio)) ret=-1;
-	free(manio);
+	if(!manio || !*manio) return ret;
+	if(manio_free_contents(*manio)) ret=-1;
+	free_v((void **)manio);
 	return ret;
 }
 
@@ -426,8 +426,8 @@ int manio_copy_entry(struct asfd *asfd, struct sbuf **csb, struct sbuf *sb,
 		else if(ars>0)
 		{
 			// Finished.
-			sbuf_free(*csb); *csb=NULL;
-			blk_free(*blk); *blk=NULL;
+			sbuf_free(csb);
+			blk_free(blk);
 			free_w(&copy);
 			return 1;
 		}

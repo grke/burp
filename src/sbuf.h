@@ -41,7 +41,7 @@ struct sbuf
 
 extern struct sbuf *sbuf_alloc(struct conf *conf);
 extern void sbuf_free_content(struct sbuf *sb);
-extern void sbuf_free(struct sbuf *sb);
+extern void sbuf_free(struct sbuf **sb);
 
 extern int sbuf_open_file(struct sbuf *sb,
 	struct asfd *asfd, struct conf *conf);

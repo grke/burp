@@ -104,14 +104,11 @@ extern int sdirs_init(struct sdirs *sdirs, struct conf *conf)
 
 	return 0;
 error:
-	sdirs_free(sdirs);
 	return -1;
 }
 
-void sdirs_free(struct sdirs *sdirs)
+void sdirs_free_content(struct sdirs *sdirs)
 {
-	if(!sdirs) return;
-
 	free_w(&sdirs->base);
         free_w(&sdirs->base);
         free_w(&sdirs->dedup);
@@ -143,6 +140,12 @@ void sdirs_free(struct sdirs *sdirs)
 	free_w(&sdirs->unchangeddata);
 	free_w(&sdirs->cincexc);
 	free_w(&sdirs->deltmppath);
+}
 
-	free_v((void **)&sdirs);
+void sdirs_free(struct sdirs **sdirs)
+{
+	if(!sdirs || !*sdirs) return;
+	sdirs_free_content(*sdirs);
+
+	free_v((void **)sdirs);
 }

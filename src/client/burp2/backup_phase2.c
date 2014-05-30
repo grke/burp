@@ -163,10 +163,10 @@ static void free_stuff(struct slist *slist, struct blist *blist)
 			sb->burp2->bend=NULL;
 			if(!(slist->head=slist->head->next))
 				slist->tail=NULL;
-			sbuf_free(sb);
+			sbuf_free(&sb);
 		}
 		blk=blk->next;
-		blk_free(blist->head);
+		blk_free(&blist->head);
 		blist->head=blk;
 	}
 }
@@ -288,7 +288,7 @@ static void get_wbuf_from_scan(struct iobuf *wbuf, struct slist *flist)
 	else
 	{
 		flist->head=flist->head->next;
-		sbuf_free(sb);
+		sbuf_free(&sb);
 		if(flist->head)
 		{
 			// Go ahead and get the next one from the list.

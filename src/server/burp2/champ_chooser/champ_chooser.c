@@ -52,7 +52,7 @@ int champ_chooser_init(const char *datadir, struct conf *conf)
 	ret=0;
 end:
 	gzclose_fp(&zp);
-	sbuf_free(sb);
+	sbuf_free(&sb);
 	if(sparse_path) free(sparse_path);
 	return ret;
 }

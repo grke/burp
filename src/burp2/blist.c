@@ -16,7 +16,7 @@ void blist_free(struct blist *blist)
 	{
 		b=head;
 		head=head->next;
-		blk_free(b);
+		blk_free(&b);
 	}
 	free(blist);
 }
@@ -42,6 +42,7 @@ void blist_add_blk(struct blist *blist, struct blk *blk)
 	blist->tail=blk;
 	// Pointers to the head that can move along the list
 	// at a different rate.
+	blist->blk_for_champ_chooser=NULL;
 	blist->last_requested=blk;
 	blist->last_sent=blk;
 }

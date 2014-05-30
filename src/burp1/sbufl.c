@@ -264,8 +264,7 @@ void free_sbufls(struct sbuf **sb, int count)
 {
 	int s=0;
 	if(!sb) return;
-	for(s=0; s<count; s++)
-		if(sb[s]) { sbuf_free(sb[s]); sb[s]=NULL; }
+	for(s=0; s<count; s++) sbuf_free(&(sb[s]));
 	free_v((void **)&sb);
 }
 
@@ -274,8 +273,7 @@ int del_from_sbufl_arr(struct sbuf ***sblist, int *count)
         struct sbuf **sbtmp=NULL;
 
 	(*count)--;
-	if((*sblist)[*count])
-		{ sbuf_free((*sblist)[*count]); (*sblist)[*count]=NULL; }
+	if((*sblist)[*count]) sbuf_free(&((*sblist)[*count]));
         if(*count && !(sbtmp=(struct sbuf **)realloc_w(*sblist,
                 (*count)*sizeof(struct sbuf *), __func__)))
          	       return -1;

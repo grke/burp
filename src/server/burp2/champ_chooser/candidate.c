@@ -83,8 +83,8 @@ int candidate_add_fresh(const char *path, struct conf *conf)
 	ret=0;
 end:
 	gzclose_fp(&zp);
-	sbuf_free(sb);
-	blk_free(blk);
+	sbuf_free(&sb);
+	blk_free(&blk);
 	return ret;
 }
 

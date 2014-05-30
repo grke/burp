@@ -117,8 +117,8 @@ end:
 	gzclose_fp(&mzp);
 	close_fp(&p2fp);
 	close_fp(&mp);
-	sbuf_free(ucb);
-	sbuf_free(p2b);
-	free(manifesttmp);
+	sbuf_free(&ucb);
+	sbuf_free(&p2b);
+	free_w(&manifesttmp);
 	return ret;
 }

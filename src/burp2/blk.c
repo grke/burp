@@ -30,20 +30,20 @@ struct blk *blk_alloc_with_data(uint32_t max_data_length)
 		data_count++;
 		return blk;
 	}
-	blk_free(blk);
+	blk_free(&blk);
 	return NULL;
 }
 
-void blk_free(struct blk *blk)
+void blk_free(struct blk **blk)
 {
-	if(!blk) return;
+	if(!blk || !*blk) return;
 //printf("free: %p %d\n", blk, blk->got); fflush(stdout);
-	if(blk->data)
+	if((*blk)->data)
 	{
 		data_free_count++;
-		free(blk->data);
+		free((*blk)->data);
 	}
-	free(blk);
+	free_v((void **)blk);
 free_count++;
 }
 

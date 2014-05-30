@@ -65,6 +65,7 @@ static int deal_with_rbuf_sig(struct asfd *asfd,
 
 	printf("Got weak/strong from %d: %lu - %s %s\n",
 		asfd->fd, blk->index, blk->weak, blk->strong);
+return 0;
 
 	return deduplicate_maybe(asfd, blk, conf);
 }
@@ -183,9 +184,15 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf *conf)
 				// a new client to the list.
 				for(asfd=as->asfd->next; asfd; asfd=asfd->next)
 				{
-					if(asfd->rbuf->buf
-					  && deal_with_client_rbuf(asfd, conf))
-						goto end;
+					while(asfd->rbuf->buf)
+					{
+						if(deal_with_client_rbuf(asfd,
+							conf)) goto end;
+						// Get as much out of the
+						// readbuf as possible.
+						if(asfd->parse_readbuf(asfd))
+							goto end;
+					}
 				}
 				if(as->asfd->new_client)
 				{
@@ -201,14 +208,11 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf *conf)
 				// Find and remove it and carry on if possible.
 				for(asfd=as->asfd->next; asfd; asfd=asfd->next)
 				{
-					if(asfd->want_to_remove)
-					{
-						as->asfd_remove(as, asfd);
-						logp("%d disconnected: %s\n",
-							asfd->fd, asfd->desc);
-						asfd_free(&asfd);
-						continue;
-					}
+					if(!asfd->want_to_remove) continue;
+					as->asfd_remove(as, asfd);
+					logp("%d disconnected: %s\n",
+						asfd->fd, asfd->desc);
+					asfd_free(&asfd);
 				}
 				// If we got here, there was no fd to remove.
 				// It is a fatal error.

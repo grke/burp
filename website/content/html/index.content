@@ -39,7 +39,7 @@ The main author of Burp is Graham Keeling.
 </FONT>
 </P>
 
-<h5><font color="#99CCFF">Stable candidate: 1.4.14</font></h5>
+<h5><font color="#99CCFF">Stable candidate: 1.4.16</font></h5>
 <h3><font color="#99CCFF">Current stable version: 1.3.48</font></h3>
 <h4><font color="#99CCFF">Old stable: 1.3.10</font></h4>
 
@@ -107,6 +107,43 @@ with future releases of Burp 2.
 <TR>
 <TD></TD>
 <TD ALIGN="LEFT">
+
+<P>
+<FONT COLOR="#99CCFF">2014-05-31:
+<BR>
+Many thanks to the following donors for financially supporting burp during
+May:
+<BR>
+<pre>
+Donations for 2014-04:
+  * &pound;20.00 Benjamin S.
+  *  &euro;0.45 Flattr
+</pre>
+</FONT>
+</p>
+
+<P>
+<FONT COLOR="#99CCFF">2014-05-31: burp-1.4.16 is released.
+<br>
+<pre>
+Changes in burp-1.4.16:
+  * Bug fix for restoring permissions on empty directories.
+  * Compile for systems that have no O_NOATIME and fdopendir() - ie, Mac OS X.
+  * Bug fix - some readlink() returns were getting assigned to an unsigned
+    variable, not a signed variable.
+  * Removed references to old '-l' logfile option.
+  * Added Jarkko Kniivilä's FreeBSD init script.
+  * Added Jarkko Kniivilä's tweaks to make scripts run more easily on FreeBSD.
+  * In bedup, detect if a rename failed after unlinking the target file,
+    print a warning and stop processing.
+  * Fix a case where an interrupted backup may not have been automatically
+    recoverable.
+  * Set IPTOS_THROUGHPUT bit on Windows, so that burp is doing the right thing
+    even if Windows decides to remove it.
+
+</pre>
+</FONT>
+</P>
 
 <P>
 <FONT COLOR="#99CCFF">2014-04-29:

@@ -2,7 +2,7 @@
 #include "champ_chooser/include.h"
 #include "../auth.h"
 #include "../backup_phase1.h"
-#include "../current_backups.h"
+#include "../bu.h"
 
 static int write_incexc(const char *realworking, const char *incexc)
 {

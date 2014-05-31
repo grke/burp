@@ -15,7 +15,7 @@ struct manio *manio_alloc(void)
 	return (struct manio *)calloc_w(1, sizeof(struct manio), __func__);
 }
 
-static int manio_free_contents(struct manio *manio)
+static int manio_free_content(struct manio *manio)
 {
 	int ret=0;
 	if(!manio) return ret;
@@ -155,7 +155,7 @@ int manio_free(struct manio **manio)
 {
 	int ret=0;
 	if(!manio || !*manio) return ret;
-	if(manio_free_contents(*manio)) ret=-1;
+	if(manio_free_content(*manio)) ret=-1;
 	free_v((void **)manio);
 	return ret;
 }
@@ -187,7 +187,7 @@ void manio_set_protocol(struct manio *manio, enum protocol protocol)
 
 static int manio_init(struct manio *manio, const char *directory, const char *mode)
 {
-	if(manio_free_contents(manio)) return -1;
+	if(manio_free_content(manio)) return -1;
 	if(!(manio->directory=strdup_w(directory, __func__)))
 		return -1;
 	if(manio_set_mode(manio, mode)) return -1;

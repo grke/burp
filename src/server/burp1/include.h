@@ -3,8 +3,8 @@
 
 #include "../include.h"
 
+#include "../bu.h"
 #include "../burp2/backup.h"
-#include "../current_backups.h"
 #include "../run_action.h"
 #include "../sdirs.h"
 

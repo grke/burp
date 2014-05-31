@@ -479,9 +479,8 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, con
         		struct bu *arr=NULL;
 
 			// FIX THIS: If this stuff used sdirs, there would
-			// be no need for a separate get_current_backups_str
-			// function.
-			if(get_current_backups_str(NULL /* FIX THIS - status
+			// be no need for a separate bu_get_str function.
+			if(bu_get_str(NULL /* FIX THIS - status
 				stuff should use a separate struct async */,
 				clist[q]->basedir, &arr, &a, 0))
 			{
@@ -515,7 +514,7 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, con
 				}
 				if(!a) strcat(curback, "\t0");
 				strcat(curback, "\n");
-        			free_current_backups(&arr, a);
+        			bu_free(&arr, a);
 
 				// Overwrite the summary with it.
 				// It will get updated again
@@ -739,7 +738,7 @@ static int list_backup_dir(int cfd, struct cstat *cli, unsigned long bno)
         int a=0;
 	int ret=-1;
         struct bu *arr=NULL;
-	if(get_current_backups_str(NULL /* should use a separate struct async*/,
+	if(bu_get_str(NULL /* should use a separate struct async*/,
 		cli->basedir, &arr, &a, 0))
 	{
 		//logp("error when looking up current backups\n");
@@ -765,7 +764,7 @@ static int list_backup_dir(int cfd, struct cstat *cli, unsigned long bno)
 	}
 	ret=0;
 end:
-	if(a>0) free_current_backups(&arr, a);
+	if(a>0) bu_free(&arr, a);
 	return ret;
 }
 
@@ -773,8 +772,7 @@ static int list_backup_file(int cfd, struct cstat *cli, unsigned long bno, const
 {
         int a=0;
         struct bu *arr=NULL;
-	if(get_current_backups_str(
-		NULL /* should use a separate struct async */,
+	if(bu_get_str(NULL /* should use a separate struct async */,
 		cli->basedir, &arr, &a, 0))
 	{
 		//logp("error when looking up current backups\n");
@@ -790,7 +788,7 @@ static int list_backup_file(int cfd, struct cstat *cli, unsigned long bno, const
 			list_backup_file_contents(cfd, arr[i].path,
 				file, browse);
 		}
-		free_current_backups(&arr, a);
+		bu_free(&arr, a);
 	}
 	return 0;
 }

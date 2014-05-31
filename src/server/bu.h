@@ -1,5 +1,7 @@
-#ifndef _CURRENT_BACKUPS_H
-#define _CURRENT_BACKUPS_H
+#ifndef _BU_H
+#define _BU_H
+
+// Current backups.
 
 // FIX THIS: Turn this into a double-linked list and get rid of the stupid
 // array.
@@ -21,12 +23,15 @@ struct bu
 
 	// The position of this item in the array.
 	unsigned long index;
+
+	struct bu *next;
+	struct bu *prev;
 };
 
-extern void free_current_backups(struct bu **arr, int a);
-extern int get_current_backups(struct asfd *asfd, struct sdirs *sdirs,
+extern void bu_free(struct bu **arr, int a);
+extern int bu_get(struct asfd *asfd, struct sdirs *sdirs,
 	struct bu **arr, int *a, int log);
-extern int get_current_backups_str(struct asfd *asfd, const char *dir,
+extern int bu_get_str(struct asfd *asfd, const char *dir,
 	struct bu **arr, int *a, int log);
 
 #endif

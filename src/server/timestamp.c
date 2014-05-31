@@ -46,10 +46,10 @@ int timestamp_get_new(struct asfd *asfd,
 
 	// get_current_backups orders the array with the highest index number 
 	// last
-	if(get_current_backups(asfd, sdirs, &arr, &a, 1)) return -1;
+	if(bu_get(asfd, sdirs, &arr, &a, 1)) return -1;
 	if(a) index=arr[a-1].bno;
 
-	free_current_backups(&arr, a);
+	bu_free(&arr, a);
 
 	time(&t);
 	ctm=localtime(&t);

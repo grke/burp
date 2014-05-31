@@ -155,7 +155,7 @@ int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct conf *conf,
 	printf("in do_list_server\n");
 
 	if(compile_regex(&regex, listregex)
-	  || get_current_backups(asfd, sdirs, &arr, &a, 1)
+	  || bu_get(asfd, sdirs, &arr, &a, 1)
 	  || write_status(STATUS_LISTING, NULL, conf))
 		goto end;
 
@@ -202,6 +202,6 @@ int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct conf *conf,
 	ret=0;
 end:
 	if(regex) { regfree(regex); free(regex); }
-	free_current_backups(&arr, a);
+	bu_free(&arr, a);
 	return ret;
 }

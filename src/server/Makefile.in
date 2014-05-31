@@ -22,9 +22,9 @@ dummy:
 SRCS = \
 	auth.c \
 	autoupgrade.c \
+	bu.c \
 	backup_phase1.c \
 	compress.c \
-	current_backups.c \
 	ca.c \
 	child.c \
 	chlds.c \

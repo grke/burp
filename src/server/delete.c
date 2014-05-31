@@ -134,7 +134,7 @@ static int do_delete_backups(struct asfd *asfd,
 	struct bu *arr=NULL;
 	struct strlist *keep=NULL;
 
-	if(get_current_backups(asfd, sdirs, &arr, &a, 1)) goto end;
+	if(bu_get(asfd, sdirs, &arr, &a, 1)) goto end;
 
 	// For each of the 'keep' values, generate ranges in which to keep
 	// one backup.
@@ -163,7 +163,7 @@ static int do_delete_backups(struct asfd *asfd,
 
 	ret=deleted;
 end:
-	free_current_backups(&arr, a);
+	bu_free(&arr, a);
 	return ret;
 }
 
@@ -195,7 +195,7 @@ int do_delete_server(struct asfd *asfd,
 
 	logp("in do_delete\n");
 
-	if(get_current_backups(asfd, sdirs, &arr, &a, 1)
+	if(bu_get(asfd, sdirs, &arr, &a, 1)
 	  || write_status(STATUS_DELETING, NULL, conf))
 		goto end;
 
@@ -235,6 +235,6 @@ int do_delete_server(struct asfd *asfd,
 
 	ret=0;
 end:
-	free_current_backups(&arr, a);
+	bu_free(&arr, a);
 	return ret;
 }

@@ -1,10 +1,10 @@
 #include "include.h"
 #include "champ_chooser/hash.h"
 #include "../../burp2/slist.h"
-#include "../../server/monitor/status_client.h"
+#include "../../server/bu.h"
 #include "../../server/burp1/restore.h"
-#include "../../server/current_backups.h"
 #include "../../server/manio.h"
+#include "../../server/monitor/status_client.h"
 #include "../../server/sdirs.h"
 
 static int restore_sbuf(struct asfd *asfd, struct sbuf *sb, enum action act,
@@ -689,7 +689,7 @@ int do_restore_server(struct asfd *asfd, struct sdirs *sdirs,
 
 	if(compile_regex(&regex, conf->regex)) return -1;
 
-	if(get_current_backups(asfd, sdirs, &arr, &a, 1))
+	if(bu_get(asfd, sdirs, &arr, &a, 1))
 	{
 		if(regex) { regfree(regex); free(regex); }
 		return -1;
@@ -716,7 +716,7 @@ int do_restore_server(struct asfd *asfd, struct sdirs *sdirs,
 		}
 	}
 
-	free_current_backups(&arr, a);
+	bu_free(&arr, a);
 
 	if(!found)
 	{

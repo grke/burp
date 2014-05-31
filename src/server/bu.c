@@ -13,7 +13,7 @@ static int bu_cmp(const void *va, const void *vb)
 	return 0;
 }
 
-void free_current_backups(struct bu **arr, int a)
+void bu_free(struct bu **arr, int a)
 {
 	int b=0;
 	for(b=0; b<a; b++)
@@ -104,7 +104,7 @@ error:
 	return ret;
 }
 
-int get_current_backups_str(struct asfd *asfd,
+int bu_get_str(struct asfd *asfd,
 	const char *dir, struct bu **arr, int *a, int log)
 {
 	int i=0;
@@ -161,8 +161,8 @@ end:
 	return ret;
 }
 
-int get_current_backups(struct asfd *asfd,
+int bu_get(struct asfd *asfd,
 	struct sdirs *sdirs, struct bu **arr, int *a, int log)
 {
-	return get_current_backups_str(asfd, sdirs->client, arr, a, log);
+	return bu_get_str(asfd, sdirs->client, arr, a, log);
 }

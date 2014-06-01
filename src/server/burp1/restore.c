@@ -213,10 +213,10 @@ static int verify_file(struct asfd *asfd, struct sbuf *sb,
 
 // a = length of struct bu array
 // i = position to restore from
-static int restore_file(struct asfd *asfd, struct bu *arr, int a, int i,
+static int restore_file(struct asfd *asfd, struct bu *bu,
 	struct sbuf *sb, int act, struct sdirs *sdirs, struct conf *cconf)
 {
-	int x=0;
+	struct bu *b;
 	static char *tmppath1=NULL;
 	static char *tmppath2=NULL;
 
@@ -225,11 +225,11 @@ static int restore_file(struct asfd *asfd, struct bu *arr, int a, int i,
 		return -1;
 
 	// Go up the array until we find the file in the data directory.
-	for(x=i; x<a; x++)
+	for(b=bu; b; b=b->next)
 	{
 		char *path=NULL;
 		struct stat statp;
-		if(!(path=prepend_s(arr[x].data, sb->burp1->datapth.buf)))
+		if(!(path=prepend_s(b->data, sb->burp1->datapth.buf)))
 		{
 			log_and_send_oom(asfd, __func__);
 			return -1;
@@ -252,12 +252,12 @@ static int restore_file(struct asfd *asfd, struct bu *arr, int a, int i,
 
 			best=path;
 			tmp=tmppath1;
-			// Now go down the array, applying any deltas.
-			for(x-=1; x>=i; x--)
+			// Now go down the list, applying any deltas.
+			for(b=b->prev; b && b->next!=bu; b=b->prev)
 			{
 				char *dpath=NULL;
 
-				if(!(dpath=prepend_s(arr[x].delta,
+				if(!(dpath=prepend_s(b->delta,
 					sb->burp1->datapth.buf)))
 				{
 					log_and_send_oom(asfd, __func__);
@@ -357,9 +357,9 @@ static int restore_file(struct asfd *asfd, struct bu *arr, int a, int i,
 	return 0;
 }
 
-static int restore_sbufl(struct asfd *asfd, struct sbuf *sb, struct bu *arr,
-	int a, int i, enum action act, struct sdirs *sdirs,
-	 char status, struct conf *cconf)
+static int restore_sbufl(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
+	enum action act, struct sdirs *sdirs,
+	char status, struct conf *cconf)
 {
 	//printf("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path.buf);
 	if(write_status(status, sb->path.buf, cconf)) return -1;
@@ -377,7 +377,7 @@ static int restore_sbufl(struct asfd *asfd, struct sbuf *sb, struct bu *arr,
 	  || sb->path.cmd==CMD_ENC_VSS_T
 	  || sb->path.cmd==CMD_EFS_FILE)
 	{
-		return restore_file(asfd, arr, a, i, sb, act, sdirs, cconf);
+		return restore_file(asfd, bu, sb, act, sdirs, cconf);
 	}
 	else
 	{
@@ -432,7 +432,7 @@ end:
 }
 
 static int restore_ent(struct asfd *asfd, struct sbuf **sb,
-	struct sbuf ***sblist, int *scount, struct bu *arr, int a, int i,
+	struct sbuf ***sblist, int *scount, struct bu *bu,
 	enum action act, struct sdirs *sdirs, char status, struct conf *cconf)
 {
 	int s=0;
@@ -452,7 +452,7 @@ static int restore_ent(struct asfd *asfd, struct sbuf **sb,
 		{
 			// Can now restore sblist[s] because nothing else is
 			// fiddling in a subdirectory.
-			if(restore_sbufl(asfd, (*sblist)[s], arr, a, i,
+			if(restore_sbufl(asfd, (*sblist)[s], bu,
 				act, sdirs, status, cconf))
 					goto end;
 			else if(del_from_sbufl_arr(sblist, scount))
@@ -472,60 +472,14 @@ static int restore_ent(struct asfd *asfd, struct sbuf **sb,
 		if(!(*sb=sbuf_alloc(cconf)))
 			goto end;
 	}
-	else if(restore_sbufl(asfd, *sb, arr, a, i, act, sdirs, status, cconf))
+	else if(restore_sbufl(asfd, *sb, bu, act, sdirs, status, cconf))
 		goto end;
 	ret=0;
 end:
 	return ret;
 }
 
-static int setup_cntr(struct asfd *asfd, const char *manifest,
-	regex_t *regex, int srestore,
-	enum action act, char status, struct conf *cconf)
-{
-	int ars=0;
-	int ret=-1;
-	gzFile zp;
-	struct sbuf *sb=NULL;
-	if(!(sb=sbuf_alloc(cconf))) goto end;
-	if(!(zp=gzopen_file(manifest, "rb")))
-	{
-		log_and_send(asfd, "could not open manifest");
-		goto end;
-	}
-	while(1)
-	{
-		if((ars=sbufl_fill(sb, asfd, NULL, zp, cconf->cntr)))
-		{
-			if(ars<0) goto end;
-			// ars==1 means end ok
-			break;
-		}
-		else
-		{
-			if((!srestore || check_srestore(cconf, sb->path.buf))
-			  && check_regex(regex, sb->path.buf))
-			{
-				cntr_add_phase1(cconf->cntr,
-					sb->path.cmd, 0);
-				if(sb->burp1->endfile.buf)
-					cntr_add_val(cconf->cntr,
-						CMD_BYTES_ESTIMATED,
-				    		strtoull(sb->burp1->endfile.buf,
-							NULL, 10), 0);
-			}
-		}
-		sbuf_free_content(sb);
-	}
-	ret=0;
-end:
-	sbuf_free(&sb);
-	gzclose_fp(&zp);
-	return ret;
-}
-
-static int actual_restore(struct asfd *asfd,
-	struct bu *arr, int a, int i,
+int restore_burp1(struct asfd *asfd, struct bu *bu,
 	const char *manifest, regex_t *regex, int srestore,
 	enum action act, struct sdirs *sdirs, char status,
 	struct conf *cconf)
@@ -591,7 +545,7 @@ static int actual_restore(struct asfd *asfd,
 			    || check_srestore(cconf, sb->path.buf))
 			  && check_regex(regex, sb->path.buf)
 			  && restore_ent(asfd, &sb, &sblist, &scount,
-				arr, a, i, act, sdirs, status, cconf))
+				bu, act, sdirs, status, cconf))
 					goto end;
 		}
 		sbuf_free_content(sb);
@@ -599,7 +553,7 @@ static int actual_restore(struct asfd *asfd,
 	// Restore any directories that are left in the list.
 	if(!ret) for(s=scount-1; s>=0; s--)
 	{
-		if(restore_sbufl(asfd, sblist[s], arr, a, i,
+		if(restore_sbufl(asfd, sblist[s], bu,
 			act, sdirs, status, cconf))
 				goto end;
 	}
@@ -608,82 +562,12 @@ static int actual_restore(struct asfd *asfd,
 
 	cntr_print(cconf->cntr, act);
 
-	cntr_stats_to_file(cconf->cntr, arr[i].path, act);
+	cntr_stats_to_file(cconf->cntr, bu->path, act);
 
 end:
 	iobuf_free_content(rbuf);
 	gzclose_fp(&zp);
 	sbuf_free(&sb);
 	free_sbufls(sblist, scount);
-	return ret;
-}
-
-// a = length of struct bu array
-// i = position to restore from
-int restore_manifest_burp1(struct asfd *asfd,
-	struct bu *arr, int a, int i,
-	regex_t *regex, int srestore, enum action act, struct sdirs *sdirs,
-	char **dir_for_notify, struct conf *cconf)
-{
-	int ret=-1;
-	char *manifest=NULL;
-	char *datadir=NULL;
-	char *logpath=NULL;
-	char *logpathz=NULL;
-	// For sending status information up to the server.
-	char status=STATUS_RESTORING;
-
-	if(act==ACTION_RESTORE) status=STATUS_RESTORING;
-	else if(act==ACTION_VERIFY) status=STATUS_VERIFYING;
-
-	if((act==ACTION_RESTORE
-		&& !(logpath=prepend_s(arr[i].path, "restorelog")))
-	 || (act==ACTION_RESTORE
-		&& !(logpathz=prepend_s(arr[i].path, "restorelog.gz")))
-	 || (act==ACTION_VERIFY
-		&& !(logpath=prepend_s(arr[i].path, "verifylog")))
-	 || (act==ACTION_VERIFY
-		&& !(logpathz=prepend_s(arr[i].path, "verifylog.gz")))
-	 || !(manifest=prepend_s(arr[i].path, "manifest.gz")))
-	{
-		log_and_send_oom(asfd, __func__);
-		goto end;
-	}
-	else if(set_logfp(logpath, cconf))
-	{
-		char msg[256]="";
-		snprintf(msg, sizeof(msg),
-			"could not open log file: %s", logpath);
-		log_and_send(asfd, msg);
-		goto end;
-	}
-
-	*dir_for_notify=strdup(arr[i].path);
-
-	log_restore_settings(cconf, srestore);
-
-	// First, do a pass through the manifest to set up cntr.
-	// This is the equivalent of a phase1 scan during backup.
-
-	if(setup_cntr(asfd, manifest, regex, srestore,
-		act, status, cconf))
-			goto end;
-
-	if(cconf->send_client_cntr && cntr_send(cconf->cntr))
-		goto end;
-
-	// Now, do the actual restore.
-	if(actual_restore(asfd, arr, a, i, manifest,
-		regex, srestore, act, sdirs, status, cconf))
-			goto end;
-
-	ret=0;
-end:
-	set_logfp(NULL, cconf);
-	compress_file(logpath, logpathz, cconf);
-	if(manifest) free(manifest);
-	if(datadir) free(datadir);
-	if(logpath) free(logpath);
-	if(logpathz) free(logpathz);
 	return ret;
 }

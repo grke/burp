@@ -16,6 +16,7 @@
 #include "list.h"
 #include "main.h"
 #include "manio.h"
+#include "restore.h"
 #include "run_action.h"
 #include "sdirs.h"
 #include "timestamp.h"

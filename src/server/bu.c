@@ -4,27 +4,53 @@
 #include <netdb.h>
 #include <dirent.h>
 
-static int bu_cmp(const void *va, const void *vb)
+static struct bu *bu_alloc(void)
 {
-	const struct bu *a=(struct bu *)va;
-	const struct bu *b=(struct bu *)vb;
-	if(     a->bno > b->bno) return 1;
-	else if(a->bno < b->bno) return -1;
-	return 0;
+	return (struct bu *)calloc_w(1, sizeof(struct bu), __func__);
 }
 
-void bu_free(struct bu **arr, int a)
+static int bu_init(struct asfd *asfd,
+	struct bu *bu, char *fullpath, char *basename,
+	char *timestampstr, int hardlinked, int log)
 {
-	int b=0;
-	for(b=0; b<a; b++)
+	if(!(bu->data=prepend_s(fullpath, "data"))
+	  || !(bu->delta=prepend_s(fullpath, "deltas.reverse")))
 	{
-		free_w(&((*arr)[b].path));
-		free_w(&((*arr)[b].basename));
-		free_w(&((*arr)[b].data));
-		free_w(&((*arr)[b].delta));
-		free_w(&((*arr)[b].timestamp));
+		if(log) log_and_send_oom(asfd, __func__);
+		goto error;
 	}
-	free_v((void **)arr);
+	bu->path=fullpath;
+	bu->basename=basename;
+	bu->timestamp=timestampstr;
+	bu->hardlinked=hardlinked;
+	bu->bno=strtoul(timestampstr, NULL, 10);
+	return 0;
+error:
+	free_w(&bu->data);
+	free_w(&bu->delta);
+	return -1;
+}
+
+static void bu_free(struct bu **bu)
+{
+	if(!bu || !*bu) return;
+	free_w(&((*bu)->path));
+	free_w(&((*bu)->basename));
+	free_w(&((*bu)->data));
+	free_w(&((*bu)->delta));
+	free_w(&((*bu)->timestamp));
+	*bu=NULL;
+}
+
+void bu_list_free(struct bu **bu_list)
+{
+	struct bu *bu;
+	struct bu *next;
+	for(bu=*bu_list; bu; bu=next)
+	{
+		next=bu->next;
+		bu_free(&bu);
+	}
 }
 
 static int get_link(const char *dir, const char *lnk, char real[], size_t r)
@@ -44,7 +70,7 @@ static int get_link(const char *dir, const char *lnk, char real[], size_t r)
 
 static int maybe_add_ent(struct asfd *asfd,
 	const char *dir, const char *d_name,
-	struct bu **arr, int *a, int log)
+	struct bu **bu_list, int log)
 {
 	int ret=-1;
 	char buf[32]="";
@@ -55,6 +81,7 @@ static int maybe_add_ent(struct asfd *asfd,
 	char *timestampstr=NULL;
 	char *hlinkedpath=NULL;
 	char *basename=NULL;
+	struct bu *bu=NULL;
 
 	if(!(basename=prepend("", d_name, strlen(d_name), ""))
 	 || !(fullpath=prepend_s(dir, basename))
@@ -66,7 +93,7 @@ static int maybe_add_ent(struct asfd *asfd,
 	  || lstat(timestamp, &statp) || !S_ISREG(statp.st_mode)
 	  || timestamp_read(timestamp, buf, sizeof(buf)))
 	{
-		ret=0;
+		ret=0; // For resilience.
 		goto error;
 	}
 	free_w(&timestamp);
@@ -76,23 +103,13 @@ static int maybe_add_ent(struct asfd *asfd,
 
 	if(!lstat(hlinkedpath, &statp)) hardlinked++;
 
-	if(!(*arr=(struct bu *)
-		realloc_w(*arr,((*a)+1)*sizeof(struct bu), __func__))
-	  || !((*arr)[*a].data=prepend_s(fullpath, "data"))
-	  || !((*arr)[*a].delta=prepend_s(fullpath, "deltas.reverse")))
-	{
-		if(log) log_and_send_oom(asfd, __func__);
-		goto error;
-	}
-	(*arr)[*a].path=fullpath;
-	(*arr)[*a].basename=basename;
-	(*arr)[*a].timestamp=timestampstr;
-	(*arr)[*a].hardlinked=hardlinked;
-	(*arr)[*a].deletable=0;
-	(*arr)[*a].bno=strtoul(timestampstr, NULL, 10);
-	(*arr)[*a].trbno=0;
-	(*arr)[*a].index=*a;
-	(*a)++;
+	if(!(bu=bu_alloc())
+	  || bu_init(asfd, bu,
+		fullpath, basename, timestampstr, hardlinked, log))
+			goto error;
+
+	if(*bu_list) bu->next=*bu_list;
+	*bu_list=bu;
 
 	return 0;
 error:
@@ -104,65 +121,104 @@ error:
 	return ret;
 }
 
-int bu_get_str(struct asfd *asfd,
-	const char *dir, struct bu **arr, int *a, int log)
+static void setup_indices(struct bu *bu_list)
+{
+	int i;
+	int tr=0;
+	struct bu *bu=NULL;
+	struct bu *last=NULL;
+
+	i=1;
+	for(bu=bu_list; bu; bu=bu->next)
+	{
+		// Enumerate the position of each entry.
+		bu->index=i++;
+
+		// Backups that come after hardlinked backups are deletable.
+		if(bu->hardlinked && bu->next) bu->next->deletable=1;
+
+		// Also set up reverse linkage.
+		bu->prev=last;
+		last=bu;
+	}
+
+	if(last)
+	{
+		// The oldest backup is deletable.
+		last->deletable=1;
+
+		if((tr=last->bno))
+		{
+			// Transpose bnos so that the oldest bno is set to 1.
+			for(bu=bu_list; bu; bu=bu->next)
+				bu->trbno=tr-bu->bno+1;
+		}
+	}
+}
+
+static int rev_alphasort(const struct dirent **a, const struct dirent **b)
+{
+	static int s;
+	if((s=strcmp((*a)->d_name, (*b)->d_name))>0)
+		return -1;
+	if(s<0)
+		return 1;
+	return 0;
+}
+
+int bu_list_get_str(struct asfd *asfd,
+	const char *dir, struct bu **bu_list, int log)
 {
 	int i=0;
-	int tr=0;
+	int n=0;
 	int ret=-1;
-	DIR *d=NULL;
 	char realwork[32]="";
 	char realfinishing[32]="";
-	struct dirent *dp=NULL;
+	struct dirent **dp=NULL;
 
 	// Find out what certain directories really are, if they exist,
 	// so they can be excluded.
 	if(get_link(dir, "working", realwork, sizeof(realwork))
 	  || get_link(dir, "finishing", realfinishing, sizeof(realfinishing)))
 		goto end;
-	if(!(d=opendir(dir)))
+
+	if((n=scandir(dir, &dp, NULL, rev_alphasort))<0)
 	{
-		if(log) log_and_send(asfd, "could not open backup directory");
+		if(log)
+		{
+			char msg[256]="";
+			snprintf(msg, sizeof(msg), "scandir failed in %s: %s\n",
+				__func__, strerror(errno));
+			log_and_send(asfd, msg);
+		}
 		goto end;
 	}
-	*a=0;
-	while((dp=readdir(d)))
+	for(i=0; i<n; i++)
 	{
-		if(!dp->d_ino
-		  || !strcmp(dp->d_name, ".")
-		  || !strcmp(dp->d_name, "..")
-		  || !strcmp(dp->d_name, realwork)
-		  || !strcmp(dp->d_name, realfinishing))
+		if(!dp[i]->d_ino
+		  || !strcmp(dp[i]->d_name, ".")
+		  || !strcmp(dp[i]->d_name, "..")
+		  || !strcmp(dp[i]->d_name, realwork)
+		  || !strcmp(dp[i]->d_name, realfinishing))
 			continue;
-		 if(maybe_add_ent(asfd, dir, dp->d_name, arr, a, log))
+		if(maybe_add_ent(asfd, dir, dp[i]->d_name, bu_list, log))
 			goto end;
 	}
 
-	if(*arr) qsort(*arr, *a, sizeof(struct bu), bu_cmp);
-
-	if(*a>=1)
-	{
-		tr=(*arr)[(*a)-1].bno;
-		// The oldest backup is deletable.
-		(*arr)[0].deletable=1;
-	}
-
-	// Backups that come after hardlinked backups are deletable.
-	for(i=0; i<(*a)-1; i++)
-		if((*arr)[i].hardlinked) (*arr)[i+1].deletable=1;
-
-	// Transpose bnos so that the oldest bno is set to 1.
-	if(tr) for(i=0; i<*a; i++)
-		(*arr)[i].trbno=tr-(*arr)[i].bno+1;
+	setup_indices(*bu_list);
 
 	ret=0;
 end:
-	if(d) closedir(d);
+	if(dp)
+	{
+		for(i=0; i<n; i++) free(dp[i]);
+		free(dp);
+	}
 	return ret;
 }
 
-int bu_get(struct asfd *asfd,
-	struct sdirs *sdirs, struct bu **arr, int *a, int log)
+int bu_list_get(struct asfd *asfd,
+	struct sdirs *sdirs, struct bu **bu_list, int log)
 {
-	return bu_get_str(asfd, sdirs->client, arr, a, log);
+	return bu_list_get_str(asfd, sdirs->client, bu_list, log);
 }

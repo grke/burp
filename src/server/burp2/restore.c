@@ -141,77 +141,6 @@ end:
 	return ret;
 }
 
-int srestore_matches(struct strlist *s, const char *path)
-{
-	int r=0;
-	if(!s->flag) return 0; // Do not know how to do excludes yet.
-	if((r=strncmp_w(path, s->path))) return 0; // no match
-	if(!r) return 1; // exact match
-	if(*(path+strlen(s->path)+1)=='/')
-		return 1; // matched directory contents
-	return 0; // no match
-}
-
-// Used when restore is initiated from the server.
-int check_srestore(struct conf *conf, const char *path)
-{
-	struct strlist *l;
-	for(l=conf->incexcdir; l; l=l->next)
-		if(srestore_matches(l, path))
-			return 1;
-	return 0;
-}
-
-static int cntr_load(const char *manifest, regex_t *regex, struct conf *conf)
-{
-	return 0;
-/*
-	int ret=-1;
-	gzFile zp=NULL;
-	struct sbuf *sb;
-	if(!(zp=gzopen_file(manifest, "rb")))
-	{
-		log_and_send("could not open manifest");
-		goto end;
-	}
-	if(!(sb=sbuf_init()))
-	{
-		log_and_send_oom(__func__);
-		goto end;
-	}
-	else
-	{
-		int ars=0;
-		while(1)
-		{
-			if((ars=sbuf_fill(NULL, zp, &sb, cntr)))
-			{
-				if(ars<0) goto end;
-				// ars==1 means end ok
-				break;
-			}
-			else
-			{
-				if((!srestore
-				    || check_srestore(conf, sb.path))
-				  && check_regex(regex, sb.path))
-				{
-					cntr_add(p1cntr, sb.cmd, 0);
-					if(sb.endfile)
-					  cntr_add_bytes(p1cntr,
-                 			    strtoull(sb.endfile, NULL, 10));
-				}
-			}
-		}
-	}
-	ret=0;
-end:
-	sbuf_free(&sb);
-	gzclose_fp(&zp);
-	return ret;
-*/
-}
-
 static int restore_remaining_dirs(struct asfd *asfd,
 	struct slist *slist, enum action act,
 	char status, struct conf *conf, int *need_data)
@@ -546,9 +475,9 @@ end:
 	return ret;
 }
 
-static int do_restore_manifest(struct asfd *asfd, const char *datadir,
-	struct bu *bu, const char *manifest, regex_t *regex,
-	int srestore, struct conf *conf, enum action act, char status)
+int restore_burp2(struct asfd *asfd, struct bu *bu, const char *manifest,
+	regex_t *regex, int srestore, enum action act, struct sdirs *sdirs,
+	char status, struct conf *conf)
 {
 	//int s=0;
 	//size_t len=0;
@@ -564,13 +493,13 @@ static int do_restore_manifest(struct asfd *asfd, const char *datadir,
 	if(!(slist=slist_alloc()))
 		goto end;
 
-	if(!(ars=maybe_copy_data_files_across(asfd, manifest, datadir,
+	if(!(ars=maybe_copy_data_files_across(asfd, manifest, sdirs->data,
 		srestore, regex, conf,
 		slist, act, status)))
 	{
 		// Instead of copying all the blocks across, do it as a stream,
 		// in the style of burp-1.x.x.
-		if(restore_stream(asfd, datadir, slist,
+		if(restore_stream(asfd, sdirs->data, slist,
 			bu, manifest, regex,
 			srestore, conf, act, status)) 
 				goto end;
@@ -590,144 +519,5 @@ static int do_restore_manifest(struct asfd *asfd, const char *datadir,
 	ret=0;
 end:
 	slist_free(slist);
-	return ret;
-}
-
-static int restore_manifest_burp2(struct asfd *asfd,
-	struct bu *bu, regex_t *regex,
-	int srestore, enum action act, struct sdirs *sdirs,
-	char **dir_for_notify, struct conf *conf)
-{
-	int ret=-1;
-	char *manifest=NULL;
-	char *logpath=NULL;
-	char *logpathz=NULL;
-	// For sending status information up to the server.
-	char status=STATUS_RESTORING;
-
-	if(act==ACTION_RESTORE) status=STATUS_RESTORING;
-	else if(act==ACTION_VERIFY) status=STATUS_VERIFYING;
-
-	if((act==ACTION_RESTORE
-		&& !(logpath=prepend_s(bu->path, "restorelog")))
-	 || (act==ACTION_RESTORE
-		&& !(logpathz=prepend_s(bu->path, "restorelog.gz")))
-	 || (act==ACTION_VERIFY
-		&& !(logpath=prepend_s(bu->path, "verifylog")))
-	 || (act==ACTION_VERIFY
-		&& !(logpathz=prepend_s(bu->path, "verifylog.gz")))
-	 || !(manifest=prepend_s(bu->path, "manifest")))
-	{
-		log_and_send_oom(asfd, __func__);
-		goto end;
-	}
-	else if(set_logfp(logpath, conf))
-	{
-		char msg[256]="";
-		snprintf(msg, sizeof(msg),
-			"could not open log file: %s", logpath);
-		log_and_send(asfd, msg);
-		goto end;
-	}
-
-	*dir_for_notify=strdup(bu->path);
-
-	log_restore_settings(conf, srestore);
-
-	// First, do a pass through the manifest to set up the counters.
-	if(cntr_load(manifest, regex, conf)) goto end;
-
-	if(conf->send_client_cntr && cntr_send(conf->cntr))
-		goto end;
-
-	if(do_restore_manifest(asfd, sdirs->data, bu, manifest, regex,
-		srestore, conf, act, status)) goto end;
-
-	ret=0;
-end:
-	if(!ret)
-	{
-		set_logfp(NULL, conf);
-		compress_file(logpath, logpathz, conf);
-	}
-	if(manifest) free(manifest);
-	if(logpath) free(logpath);
-	if(logpathz) free(logpathz);
-	return ret;
-}
-
-static int restore_manifest(struct asfd *asfd,
-	struct bu **arr, int a, int i, regex_t *regex,
-	int srestore, enum action act, struct sdirs *sdirs,
-	char **dir_for_notify, struct conf *conf)
-{
-	if(conf->protocol==PROTO_BURP1)
-		return restore_manifest_burp1(asfd,
-			// Burp 1 needs to travel up and down
-			// the array.
-			*arr, a, i, regex, srestore, act, sdirs,
-			dir_for_notify, conf);
-	else
-		return restore_manifest_burp2(asfd,
-			arr[i], regex, srestore, act, sdirs,
-			dir_for_notify, conf);
-}
-
-int do_restore_server(struct asfd *asfd, struct sdirs *sdirs,
-	enum action act, int srestore,
-	char **dir_for_notify, struct conf *conf)
-{
-	int a=0;
-	int i=0;
-	int ret=0;
-	uint8_t found=0;
-	struct bu *arr=NULL;
-	unsigned long bno=0;
-	regex_t *regex=NULL;
-
-	logp("in do_restore\n");
-
-	if(compile_regex(&regex, conf->regex)) return -1;
-
-	if(bu_get(asfd, sdirs, &arr, &a, 1))
-	{
-		if(regex) { regfree(regex); free(regex); }
-		return -1;
-	}
-
-	if(!(bno=strtoul(conf->backup, NULL, 10)) && a>0)
-	{
-		found=1;
-		// No backup specified, do the most recent.
-		ret=restore_manifest(asfd, &arr, a-1, i, regex, srestore,
-			act, sdirs, dir_for_notify, conf);
-	}
-
-	if(!found) for(i=0; i<a; i++)
-	{
-		if(!strcmp(arr[i].timestamp, conf->backup)
-		  || arr[i].bno==bno)
-		{
-			found=1;
-			//logp("got: %s\n", arr[i].path);
-			ret|=restore_manifest(asfd, &arr, a, i, regex,
-				srestore, act, sdirs, dir_for_notify, conf);
-			break;
-		}
-	}
-
-	bu_free(&arr, a);
-
-	if(!found)
-	{
-		logp("backup not found\n");
-		asfd->write_str(asfd, CMD_ERROR, "backup not found");
-		ret=-1;
-	}
-	if(regex)
-	{
-		regfree(regex);
-		free(regex);
-	}
 	return ret;
 }

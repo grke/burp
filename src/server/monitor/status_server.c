@@ -476,22 +476,23 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, con
 			// Client not running, but asked for detail.
 			// Gather a list of successful backups to talk about.
         		int a=0;
-        		struct bu *arr=NULL;
+        		struct bu *bu_list=NULL;
 
 			// FIX THIS: If this stuff used sdirs, there would
-			// be no need for a separate bu_get_str function.
-			if(bu_get_str(NULL /* FIX THIS - status
+			// be no need for a separate bu_list_get_str function.
+			if(bu_list_get_str(NULL /* FIX THIS - status
 				stuff should use a separate struct async */,
-				clist[q]->basedir, &arr, &a, 0))
+				clist[q]->basedir, &bu_list, 0))
 			{
 				//logp("error when looking up current backups\n");
 				tosend=clist[q]->summary;
 			}
-			else if(a>0)
+			else if(bu_list)
 			{
-				int i=0;
 				int len=0;
 				time_t t=0;
+				struct bu *bu;
+
 				// make more than enough room for the message
 				len+=strlen(clist[q]->name)+1;
 				len+=(a*2)+1;
@@ -504,17 +505,22 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, con
 				snprintf(curback, len, "%s\t%c\t%c",
 					clist[q]->name, CNTR_VER_4,
 					clist[q]->status);
-				for(i=a-1; i>=0; i--)
+
+				// Find the end of the list and work backwards.
+				for(bu=bu_list; bu && bu->next; bu=bu->next) {}
+				for(; bu; bu=bu->prev)
 				{
 					char tmp[32]="";
-					t=timestamp_to_long(arr[i].timestamp);
-					snprintf(tmp, sizeof(tmp), "\t%lu %d %li",
-						arr[i].bno, arr[i].deletable, (long)t);
+					t=timestamp_to_long(bu->timestamp);
+					snprintf(tmp, sizeof(tmp),
+						"\t%lu %d %li",
+						bu->bno,
+						bu->deletable, (long)t);
 					strcat(curback, tmp);
 				}
 				if(!a) strcat(curback, "\t0");
 				strcat(curback, "\n");
-        			bu_free(&arr, a);
+        			bu_list_free(&bu_list);
 
 				// Overwrite the summary with it.
 				// It will get updated again
@@ -735,62 +741,53 @@ end:
 
 static int list_backup_dir(int cfd, struct cstat *cli, unsigned long bno)
 {
-        int a=0;
-	int ret=-1;
-        struct bu *arr=NULL;
-	if(bu_get_str(NULL /* should use a separate struct async*/,
-		cli->basedir, &arr, &a, 0))
-	{
-		//logp("error when looking up current backups\n");
-		goto end;
-	}
-	if(a>0)
-	{
-		int i=0;
-		for(i=0; i<a; i++) if(arr[i].bno==bno) break;
-		if(i<a)
-		{
-			if(send_data_to_client(cfd, "-list begin-\n",
-				strlen("-list begin-\n")))
-					goto end;
-			list_backup_file_name(cfd,arr[i].path, "manifest.gz");
-			list_backup_file_name(cfd,arr[i].path, "log.gz");
-			list_backup_file_name(cfd,arr[i].path, "restorelog.gz");
-			list_backup_file_name(cfd,arr[i].path, "verifylog.gz");
-			if(send_data_to_client(cfd, "-list end-\n",
-				strlen("-list end-\n")))
-					goto end;
-		}
-	}
-	ret=0;
+	int ret=0;
+	struct bu *bu;
+        struct bu *bu_list=NULL;
+	if(bu_list_get_str(NULL /* should use a separate struct async*/,
+		cli->basedir, &bu_list, 0))
+			goto error;
+
+	if(!bu_list) goto end;
+	for(bu=bu_list; bu; bu=bu->next) if(bu->bno==bno) break;
+	if(!bu) goto end;
+
+	if(send_data_to_client(cfd, "-list begin-\n", strlen("-list begin-\n")))
+		goto error;
+	list_backup_file_name(cfd, bu->path, "manifest.gz");
+	list_backup_file_name(cfd, bu->path, "log.gz");
+	list_backup_file_name(cfd, bu->path, "restorelog.gz");
+	list_backup_file_name(cfd, bu->path, "verifylog.gz");
+	if(send_data_to_client(cfd, "-list end-\n", strlen("-list end-\n")))
+		goto error;
+	goto end;
+error:
+	ret=-1;
 end:
-	if(a>0) bu_free(&arr, a);
+	bu_list_free(&bu_list);
 	return ret;
 }
 
 static int list_backup_file(int cfd, struct cstat *cli, unsigned long bno, const char *file, const char *browse)
 {
-        int a=0;
-        struct bu *arr=NULL;
-	if(bu_get_str(NULL /* should use a separate struct async */,
-		cli->basedir, &arr, &a, 0))
-	{
-		//logp("error when looking up current backups\n");
-		return -1;
-	}
-	if(a>0)
-	{
-		int i=0;
-		for(i=0; i<a; i++) if(arr[i].bno==bno) break;
-		if(i<a)
-		{
-			printf("found: %s\n", arr[i].path);
-			list_backup_file_contents(cfd, arr[i].path,
-				file, browse);
-		}
-		bu_free(&arr, a);
-	}
-	return 0;
+	int ret=0;
+        struct bu *bu=NULL;
+        struct bu *bu_list=NULL;
+	if(bu_list_get_str(NULL /* should use a separate struct async */,
+		cli->basedir, &bu_list, 0))
+			goto error;
+
+	if(!bu_list) goto end;
+	for(bu=bu_list; bu; bu=bu->next) if(bu->bno==bno) break;
+	if(!bu) goto end;
+	printf("found: %s\n", bu->path);
+	list_backup_file_contents(cfd, bu->path, file, browse);
+	goto end;
+error:
+	ret=-1;
+end:
+	bu_list_free(&bu_list);
+	return ret;
 }
 
 static char *get_str(const char **buf, const char *pre, int last)

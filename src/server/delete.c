@@ -1,20 +1,19 @@
 #include "include.h"
 #include "monitor/status_client.h"
 
-int delete_backup(struct sdirs *sdirs, struct conf *conf,
-	struct bu *arr, int a, int b)
+int delete_backup(struct sdirs *sdirs, struct conf *conf, struct bu *bu)
 {
 	char *deleteme=NULL;
 
-	logp("deleting %s backup %lu\n", conf->cname, arr[b].bno);
+	logp("deleting %s backup %lu\n", conf->cname, bu->bno);
 
-	if(b==a-1)
+	if(!bu->next)
 	{
 		char *current=NULL;
 		// This is the current backup. Special measures are needed.
 		if(!(current=prepend_s(sdirs->client, "current")))
 			return -1;
-		if(!b)
+		if(!bu->prev)
 		{
 			// After the deletion, there will be no backups left.
 			// Just remove the symlink.
@@ -37,7 +36,7 @@ int delete_backup(struct sdirs *sdirs, struct conf *conf,
 				free(current);
 				return -1;
 			}
-			target=arr[b-1].basename;
+			target=bu->prev->basename;
 			unlink(tmp);
 			if(symlink(target, tmp))
 			{
@@ -65,10 +64,10 @@ int delete_backup(struct sdirs *sdirs, struct conf *conf,
 	}
 
 	if(!(deleteme=prepend_s(sdirs->client, "deleteme"))
-	  || do_rename(arr[b].path, deleteme)
+	  || do_rename(bu->path, deleteme)
 	  || recursive_delete(deleteme, NULL, 1))
 	{
-		logp("Error when trying to delete %s\n", arr[b].path);
+		logp("Error when trying to delete %s\n", bu->path);
 		free(deleteme);
 		return -1;
 	}
@@ -78,10 +77,10 @@ int delete_backup(struct sdirs *sdirs, struct conf *conf,
 }
 
 static int range_loop(struct sdirs *sdirs, struct conf *cconf,
-	struct strlist *keep, unsigned long rmin, struct bu *arr, int a,
-	int *deleted)
+	struct strlist *keep, unsigned long rmin, struct bu *bu_list,
+	struct bu *last, int *deleted)
 {
-	int b=0;
+	struct bu *bu=NULL;
 	unsigned long r=0;
 	unsigned long rmax=0;
 
@@ -94,28 +93,26 @@ static int range_loop(struct sdirs *sdirs, struct conf *cconf,
 		unsigned long s=r-rmin;
 
 		// Count the backups in the range.
-		for(b=0; b<a; b++)
-		  if(s<arr[b].trbno && arr[b].trbno<=r)
+		for(bu=bu_list; bu; bu=bu->next)
+		  if(s<bu->trbno && bu->trbno<=r)
 			count++;
 
 		// Want to leave one entry in each range.
-		if(count>1)
-		{
-			// Try to delete from the most recent in each
-			// so that hardlinked backups get taken out
-			// last.
+		if(count<=1) continue;
 
-			for(b=a-1; b>=0; b--)
+		// Try to delete from the most recent in each
+		// so that hardlinked backups get taken out
+		// last.
+
+		for(bu=last; bu; bu=bu->prev)
+		{
+			if(s<bu->trbno
+			  && bu->trbno<=r
+			  && bu->deletable)
 			{
-				if(s<arr[b].trbno
-				  && arr[b].trbno<=r
-				  && arr[b].deletable)
-				{
-					if(delete_backup(sdirs, cconf,
-						arr, a, b)) return -1;
-					(*deleted)++;
-					if(--count<=1) break;
-				}
+				if(delete_backup(sdirs, cconf, bu)) return -1;
+				(*deleted)++;
+				if(--count<=1) break;
 			}
 		}
 	}
@@ -126,15 +123,18 @@ static int range_loop(struct sdirs *sdirs, struct conf *cconf,
 static int do_delete_backups(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf *cconf)
 {
-	int a=0;
-	int b=0;
 	int ret=-1;
 	int deleted=0;
 	unsigned long m=1;
-	struct bu *arr=NULL;
+	struct bu *bu=NULL;
+	struct bu *last=NULL;
+	struct bu *bu_list=NULL;
 	struct strlist *keep=NULL;
 
-	if(bu_get(asfd, sdirs, &arr, &a, 1)) goto end;
+	if(bu_list_get(asfd, sdirs, &bu_list, 1)) goto end;
+
+	// Find the last entry in the list.
+	for(bu=bu_list; bu; bu=bu->next) last=bu;
 
 	// For each of the 'keep' values, generate ranges in which to keep
 	// one backup.
@@ -144,26 +144,24 @@ static int do_delete_backups(struct asfd *asfd,
 		rmin=m * keep->flag;
 
 		if(keep->next && range_loop(sdirs, cconf,
-			keep, rmin, arr, a, &deleted))
+			keep, rmin, bu_list, last, &deleted))
 				goto end;
 		m=rmin;
         }
 
 	// Remove the very oldest backups.
-	for(b=0; b<a; b++)
+	for(bu=bu_list; bu; bu=bu->next) if(bu->trbno>m) break;
+
+	for(; bu; bu=bu->prev)
 	{
-		if(arr[b].trbno>m) break;
-	}
-	for(; b>=0 && b<a; b--)
-	{
-		if(delete_backup(sdirs, cconf, arr, a, b))
+		if(delete_backup(sdirs, cconf, bu))
 			goto end;
 		deleted++;
 	}
 
 	ret=deleted;
 end:
-	bu_free(&arr, a);
+	bu_list_free(&bu_list);
 	return ret;
 }
 
@@ -186,44 +184,41 @@ int delete_backups(struct asfd *asfd, struct sdirs *sdirs, struct conf *cconf)
 int do_delete_server(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf *conf, const char *backup)
 {
-	int a=0;
-	int i=0;
 	int ret=-1;
 	int found=0;
-	struct bu *arr=NULL;
 	unsigned long bno=0;
+	struct bu *bu=NULL;
+	struct bu *bu_list=NULL;
 
 	logp("in do_delete\n");
 
-	if(bu_get(asfd, sdirs, &arr, &a, 1)
+	if(bu_list_get(asfd, sdirs, &bu_list, 1)
 	  || write_status(STATUS_DELETING, NULL, conf))
 		goto end;
 
 	if(backup && *backup) bno=strtoul(backup, NULL, 10);
 
-	for(i=0; i<a; i++)
+	for(bu=bu_list; bu; bu=bu->next)
 	{
-		if(backup && *backup)
+		if(!backup || !*backup) continue;
+		if(!found
+		  && (!strcmp(bu->timestamp, backup)
+			|| bu->bno==bno))
 		{
-			if(!found
-			  && (!strcmp(arr[i].timestamp, backup)
-				|| arr[i].bno==bno))
+			if(bu->deletable)
 			{
-				if(arr[i].deletable)
-				{
-					found=1;
-					if(asfd->write_str(asfd, CMD_GEN, "ok")
-					  || delete_backup(sdirs, conf,
-						arr, a, i)) goto end;
-				}
-				else
-				{
-					asfd->write_str(asfd, CMD_ERROR,
-						"backup not deletable");
+				found=1;
+				if(asfd->write_str(asfd, CMD_GEN, "ok")
+				  || delete_backup(sdirs, conf, bu))
 					goto end;
-				}
-				break;
 			}
+			else
+			{
+				asfd->write_str(asfd, CMD_ERROR,
+					"backup not deletable");
+				goto end;
+			}
+			break;
 		}
 	}
 
@@ -235,6 +230,6 @@ int do_delete_server(struct asfd *asfd,
 
 	ret=0;
 end:
-	bu_free(&arr, a);
+	bu_list_free(&bu_list);
 	return ret;
 }

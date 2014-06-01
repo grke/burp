@@ -3,8 +3,6 @@
 
 // Current backups.
 
-// FIX THIS: Turn this into a double-linked list and get rid of the stupid
-// array.
 struct bu
 {
 	char *path;
@@ -28,10 +26,10 @@ struct bu
 	struct bu *prev;
 };
 
-extern void bu_free(struct bu **arr, int a);
-extern int bu_get(struct asfd *asfd, struct sdirs *sdirs,
-	struct bu **arr, int *a, int log);
-extern int bu_get_str(struct asfd *asfd, const char *dir,
-	struct bu **arr, int *a, int log);
+extern void bu_list_free(struct bu **bu_list);
+extern int bu_list_get(struct asfd *asfd, struct sdirs *sdirs,
+	struct bu **bu_list, int log);
+extern int bu_list_get_str(struct asfd *asfd, const char *dir,
+	struct bu **bu_list, int log);
 
 #endif

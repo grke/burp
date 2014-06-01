@@ -444,8 +444,7 @@ static int get_files_in_directory(DIR *directory, struct dirent ***nl, int *coun
 	return 0;
 }
 
-/* prototype, because process_files_in_directory() recurses using find_files()
- */
+// Prototype because process_files_in_directory() recurses using find_files().
 static int find_files(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
 	char *fname, dev_t parent_device, bool top_level);
 

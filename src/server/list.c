@@ -132,56 +132,54 @@ end:
 	return ret;
 }
 
-static int send_backup_name_to_client(struct asfd *asfd, struct bu *arr)
+static int send_backup_name_to_client(struct asfd *asfd, struct bu *bu)
 {
 	char msg[64]="";
 	//snprintf(msg, sizeof(msg), "%s%s",
-	//	arr->timestamp, arr->deletable?" (deletable)":"");
-	snprintf(msg, sizeof(msg), "%s", arr->timestamp);
+	//	bu->timestamp, bu->deletable?" (deletable)":"");
+	snprintf(msg, sizeof(msg), "%s", bu->timestamp);
 	return asfd->write_str(asfd, CMD_TIMESTAMP, msg);
 }
 
 int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct conf *conf,
 	const char *backup, const char *listregex, const char *browsedir)
 {
-	int a=0;
-	int i=0;
 	int ret=-1;
 	uint8_t found=0;
-	struct bu *arr=NULL;
 	unsigned long bno=0;
 	regex_t *regex=NULL;
+	struct bu *bu=NULL;
+	struct bu *bu_list=NULL;
 
 	printf("in do_list_server\n");
 
 	if(compile_regex(&regex, listregex)
-	  || bu_get(asfd, sdirs, &arr, &a, 1)
+	  || bu_list_get(asfd, sdirs, &bu_list, 1)
 	  || write_status(STATUS_LISTING, NULL, conf))
 		goto end;
 
 	if(backup && *backup) bno=strtoul(backup, NULL, 10);
 
-	for(i=0; i<a; i++)
+	for(bu=bu_list; bu; bu=bu->next)
 	{
 		// Search all backups for things matching the regex.
 		if(listregex && backup && *backup=='a')
 		{
 			found=1;
-			if(asfd->write_str(asfd,
-				CMD_TIMESTAMP, arr[i].timestamp)
-			  || list_manifest(asfd, arr[i].path,
+			if(asfd->write_str(asfd, CMD_TIMESTAMP, bu->timestamp)
+			  || list_manifest(asfd, bu->path,
 				regex, browsedir, conf)) goto end;
 		}
 		// Search or list a particular backup.
 		else if(backup && *backup)
 		{
 			if(!found
-			  && (!strcmp(arr[i].timestamp, backup)
-				|| arr[i].bno==bno))
+			  && (!strcmp(bu->timestamp, backup)
+				|| bu->bno==bno))
 			{
 				found=1;
-				if(send_backup_name_to_client(asfd, &(arr[i]))
-				  || list_manifest(asfd, arr[i].path, regex,
+				if(send_backup_name_to_client(asfd, bu)
+				  || list_manifest(asfd, bu->path, regex,
 					browsedir, conf)) goto end;
 			}
 		}
@@ -189,7 +187,7 @@ int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct conf *conf,
 		else
 		{
 			found=1;
-			if(send_backup_name_to_client(asfd, &(arr[i])))
+			if(send_backup_name_to_client(asfd, bu))
 				goto end;
 		}
 	}
@@ -202,6 +200,6 @@ int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct conf *conf,
 	ret=0;
 end:
 	if(regex) { regfree(regex); free(regex); }
-	bu_free(&arr, a);
+	bu_list_free(&bu);
 	return ret;
 }

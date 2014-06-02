@@ -14,7 +14,7 @@ static void xfree_list(char **list, int size)
 		int i;
 		for (i=0; i<size; i++) if(list[i]) free(list[i]);
 	}
-	free(list);
+	free_w(list);
 }
 
 static char **xstrsplit(const char *src, const char *token, size_t *size)
@@ -58,7 +58,7 @@ static char **xstrsplit(const char *src, const char *token, size_t *size)
 	ret[*size+1]=NULL;
 
 end:
-	if(init) free(init);
+	free_w(&init);
 	return ret;
 }
 
@@ -123,7 +123,7 @@ static int process_entry(struct strlist *ig, struct conf *conf)
 		  || astrcat(&tmppath, "*", __func__))
 			goto end;
 		hFind=FindFirstFileA(tmppath, &ffd);
-		free(tmppath);
+		free_w(&tmppath);
 	}
 	else
 		hFind=FindFirstFileA(ig->path, &ffd);
@@ -176,7 +176,7 @@ static int process_entry(struct strlist *ig, struct conf *conf)
 			}
 			strlist_add_sorted(&conf->incexcdir,
 				tmppath, 1);
-			free(tmppath);
+			free_w(&tmppath);
 		}
 	}
 	while(FindNextFileA(hFind, &ffd)!=0);
@@ -186,7 +186,7 @@ static int process_entry(struct strlist *ig, struct conf *conf)
 end:
 	if(splitstr1)
 	{
-		if(sav) free(sav);
+		free_w(&sav);
 		xfree_list(splitstr1, len1);
 	}
 	return ret;

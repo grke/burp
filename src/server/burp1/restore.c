@@ -367,15 +367,8 @@ static int restore_sbufl(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 	if((sb->burp1->datapth.buf && asfd->write(asfd, &(sb->burp1->datapth)))
 	  || asfd->write(asfd, &sb->attr))
 		return -1;
-	else if(sb->path.cmd==CMD_FILE
-	  || sb->path.cmd==CMD_ENC_FILE
-	  || sb->path.cmd==CMD_METADATA
-	  || sb->path.cmd==CMD_ENC_METADATA
-	  || sb->path.cmd==CMD_VSS
-	  || sb->path.cmd==CMD_ENC_VSS
-	  || sb->path.cmd==CMD_VSS_T
-	  || sb->path.cmd==CMD_ENC_VSS_T
-	  || sb->path.cmd==CMD_EFS_FILE)
+
+	else if(sbuf_is_filedata(sb))
 	{
 		return restore_file(asfd, bu, sb, act, sdirs, cconf);
 	}

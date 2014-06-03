@@ -58,7 +58,7 @@ int get_xattr(struct asfd *asfd, const char *path, struct stat *statp,
 
 	if((len=llistxattr(path, NULL, 0))<=0)
 	{
-		logw(asfd, conf, "could not llistxattr of '%s': %d\n", path, len);
+		logw(asfd, conf, "could not llistxattr '%s': %d\n", path, len);
 		return 0; // carry on
 	}
 	if(!(xattrlist=(char *)malloc(len+1)))
@@ -70,7 +70,7 @@ int get_xattr(struct asfd *asfd, const char *path, struct stat *statp,
 	if((len=llistxattr(path, xattrlist, len))<=0)
 	{
 		logw(asfd, conf, "could not llistxattr '%s': %d\n", path, len);
-		free(xattrlist);
+		free_w(&xattrlist);
 		return 0; // carry on
 	}
 	xattrlist[len]='\0';
@@ -95,7 +95,7 @@ int get_xattr(struct asfd *asfd, const char *path, struct stat *statp,
 		{
                 	logw(asfd, conf, "xattr element of '%s' too long: %d\n",
 				path, zlen);
-			if(toappend) { free(toappend); toappend=NULL; }
+			free_w(&toappend);
 			break;
 		}
 
@@ -124,15 +124,15 @@ int get_xattr(struct asfd *asfd, const char *path, struct stat *statp,
 		if(!(val=(char *)malloc(vlen+1)))
 		{
 			log_out_of_memory(__func__);
-			free(xattrlist);
-			if(toappend) free(toappend);
+			free_w(&xattrlist);
+			free_w(&toappend);
 			return -1;
 		}
 		if((vlen=lgetxattr(path, z, val, vlen))<=0)
 		{
 			logw(asfd, conf, "could not lgetxattr %s for %s: %d\n",
 				path, z, vlen);
-			free(val);
+			free_w(&val);
 			continue;
 		}
 		val[vlen]='\0';
@@ -141,8 +141,8 @@ int get_xattr(struct asfd *asfd, const char *path, struct stat *statp,
 		{
                 	logw(asfd, conf, "xattr value of '%s' too long: %d\n",
 				path, vlen);
-			if(toappend) { free(toappend); toappend=NULL; }
-			free(val);
+			free_w(&toappend);
+			free_w(&val);
 			break;
 		}
 
@@ -158,20 +158,20 @@ int get_xattr(struct asfd *asfd, const char *path, struct stat *statp,
 			val, vlen, "", 0, &totallen)))
 		{
 			log_out_of_memory(__func__);
-			free(val);
-			free(xattrlist);
+			free_w(&val);
+			free_w(&xattrlist);
 			return -1;
 		}
-		free(val);
+		free_w(&val);
 
 		if(totallen>maxlen)
 		{
                 	logw(asfd, conf,
 				"xattr length of '%s' grew too long: %d\n",
 				path, totallen);
-			free(val);
-			free(toappend);
-			free(xattrlist);
+			free_w(&val);
+			free_w(&toappend);
+			free_w(&xattrlist);
 			return 0; // carry on
 		}
 	}
@@ -187,13 +187,13 @@ int get_xattr(struct asfd *asfd, const char *path, struct stat *statp,
 			toappend, totallen, "", 0, xlen)))
 		{
 			log_out_of_memory(__func__);
-			free(toappend);
-			free(xattrlist);
+			free_w(&toappend);
+			free_w(&xattrlist);
 			return -1;
 		}
-		free(toappend);
+		free_w(&toappend);
 	}
-	free(xattrlist);
+	free_w(&xattrlist);
 	return 0;
 }
 
@@ -202,38 +202,36 @@ static int do_set_xattr(struct asfd *asfd,
 	const char *xattrtext, size_t xlen, struct conf *conf)
 {
 	size_t l=0;
+	int ret=-1;
 	char *data=NULL;
+	char *name=NULL;
+	char *value=NULL;
 
 	data=(char *)xattrtext;
 	l=xlen;
 	while(l>0)
 	{
 		ssize_t s=0;
-		char *name=NULL;
-		char *value=NULL;
+		free_w(&name);
+		free_w(&value);
 
-		if(!(name=get_next_str(asfd, &data, &l, conf, &s, path)))
-			return -1;
-		if(!(value=get_next_str(asfd, &data, &l, conf, &s, path)))
-		{
-			free(name);
-			return -1;
-		}
+		if(!(name=get_next_str(asfd, &data, &l, conf, &s, path))
+		  || !(value=get_next_str(asfd, &data, &l, conf, &s, path)))
+			goto end;
 
 		if(lsetxattr(path, name, value, strlen(value), 0))
 		{
 			logw(asfd, conf, "lsetxattr error on %s: %s\n",
 				path, strerror(errno));
-			free(name);
-			free(value);
-			return -1;
+			goto end;
 		}
-
-		free(name);
-		free(value);
 	}
 
-	return 0;
+	ret=0;
+end:
+	free_w(&name);
+	free_w(&value);
+	return ret;
 }
 
 int set_xattr(struct asfd *asfd, const char *path, struct stat *statp,
@@ -279,7 +277,8 @@ int has_xattr(const char *path, char cmd)
 }
 
 #define BSD_BUF_SIZE	1024
-int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xlen, struct conf *conf)
+int get_xattr(const char *path, struct stat *statp,
+	char **xattrtext, size_t *xlen, struct conf *conf)
 {
 	int i=0;
 	size_t maxlen=0xFFFFFFFF/2;
@@ -509,13 +508,13 @@ static int do_set_xattr_bsd(struct asfd *asfd,
 			goto end;
 		}
 
-		free(nspace); nspace=NULL;
-		free(value); value=NULL;
+		free_w(&nspace);
+		free_w(&value);
 	}
 	ret=0;
 end:
-	if(value) free(value);
-	if(nspace) free(nspace);
+	free_w(&nspace);
+	free_w(&value);
 	return ret;
 }
 

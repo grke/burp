@@ -12,11 +12,8 @@ char *prepend_len(const char *prep, size_t plen, const char *fname,
 	l+=slen;
 	l+=1;
 
-	if(!(rpath=(char *)malloc(l)))
-	{
-		log_out_of_memory(__func__);
+	if(!(rpath=(char *)malloc_w(l, __func__)))
 		return NULL;
-	}
 	if(plen) memcpy(rpath,           prep,  plen);
 	if(slen) memcpy(rpath+plen,      sep,   slen);
 	if(flen) memcpy(rpath+plen+slen, fname, flen);

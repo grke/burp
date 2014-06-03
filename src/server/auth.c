@@ -86,6 +86,7 @@ void version_warn(struct asfd *asfd, struct conf *conf, struct conf *cconf)
 
 int authorise_server(struct asfd *asfd, struct conf *conf, struct conf *cconf)
 {
+	int ret=-1;
 	char *cp=NULL;
 	char *password=NULL;
 	char whoareyou[256]="";
@@ -93,13 +94,12 @@ int authorise_server(struct asfd *asfd, struct conf *conf, struct conf *cconf)
 	if(asfd->read(asfd))
 	{
 		logp("unable to read initial message\n");
-		return -1;
+		goto end;
 	}
 	if(rbuf->cmd!=CMD_GEN || strncmp_w(rbuf->buf, "hello"))
 	{
 		iobuf_log_unexpected(rbuf, __func__);
-		iobuf_free_content(rbuf);
-		return -1;
+		goto end;
 	}
 	// String may look like...
 	// "hello"
@@ -108,7 +108,8 @@ int authorise_server(struct asfd *asfd, struct conf *conf, struct conf *cconf)
 	if((cp=strchr(rbuf->buf, ':')))
 	{
 		cp++;
-		if(cp) cconf->peer_version=strdup(cp);
+		if(cp && !(cconf->peer_version=strdup_w(cp, __func__)))
+			goto end;
 	}
 	iobuf_free_content(rbuf);
 
@@ -131,7 +132,7 @@ int authorise_server(struct asfd *asfd, struct conf *conf, struct conf *cconf)
 	if(asfd->read(asfd))
 	{
 		logp("unable to get client name\n");
-		return -1;
+		goto end;
 	}
 	cconf->cname=rbuf->buf;
 	iobuf_init(rbuf);
@@ -140,24 +141,24 @@ int authorise_server(struct asfd *asfd, struct conf *conf, struct conf *cconf)
 	if(asfd->read(asfd))
 	{
 		logp("unable to get password for client %s\n", cconf->cname);
-		iobuf_free_content(rbuf);
-		return -1;
+		goto end;
 	}
 	password=rbuf->buf;
 	iobuf_init(rbuf);
 
 	if(check_client_and_password(conf, password, cconf))
-	{
-		free(password); password=NULL;
-		return -1;
-	}
+		goto end;
 
 	if(cconf->version_warn) version_warn(asfd, conf, cconf);
 
 	logp("auth ok for: %s%s\n", cconf->cname,
 		cconf->password_check?"":" (no password needed)");
-	if(password) free(password);
 
 	asfd->write_str(asfd, CMD_GEN, "ok");
-	return 0;
+
+	ret=0;
+end:
+	iobuf_free_content(rbuf);
+	free_w(&password);
+	return ret;
 }

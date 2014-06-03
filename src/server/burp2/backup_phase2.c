@@ -194,8 +194,7 @@ static void dump_blks(const char *msg, struct blk *b)
 */
 
 static int add_to_sig_list(struct slist *slist, struct blist *blist,
-	struct iobuf *rbuf, struct dpth *dpth,
-	uint64_t *wrap_up, struct conf *conf)
+	struct iobuf *rbuf, struct dpth *dpth, struct conf *conf)
 {
 	// Goes on slist->add_sigs_here
 	struct blk *blk;
@@ -220,7 +219,7 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist,
 
 static int deal_with_read(struct iobuf *rbuf,
 	struct slist *slist, struct blist *blist, struct conf *conf,
-	int *sigs_end, int *backup_end, struct dpth *dpth, uint64_t *wrap_up)
+	int *sigs_end, int *backup_end, struct dpth *dpth)
 {
 	int ret=0;
 	static struct sbuf *inew=NULL;
@@ -240,7 +239,7 @@ static int deal_with_read(struct iobuf *rbuf,
 			// New set of stuff incoming. Clean up.
 			if(inew->attr.buf) free(inew->attr.buf);
 			iobuf_copy(&inew->attr, rbuf);
-			inew->burp2->index=decode_file_no(inew);
+			inew->burp2->index=decode_file_no(&inew->attr);
 			rbuf->buf=NULL;
 
 			// Need to go through slist to find the matching
@@ -249,7 +248,7 @@ static int deal_with_read(struct iobuf *rbuf,
 			return 0;
 		case CMD_SIG:
 			if(add_to_sig_list(slist, blist,
-				rbuf, dpth, wrap_up, conf))
+				rbuf, dpth, conf))
 					goto error;
 			goto end;
 
@@ -289,7 +288,7 @@ static int encode_req(struct blk *blk, char *req)
 	return 0;
 }
 
-static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, struct blist *blist, int sigs_end, int *blk_requests_end, struct dpth *dpth, struct conf *conf, uint64_t *wrap_up)
+static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, struct blist *blist, int sigs_end, int *blk_requests_end, struct dpth *dpth, struct conf *conf)
 {
 	static char req[32]="";
 	struct sbuf *sb=slist->blks_to_request;
@@ -482,6 +481,7 @@ static void get_wbuf_from_wrap_up(struct iobuf *wbuf, uint64_t *wrap_up)
 	static char *p;
 	static char tmp[32];
 	if(!*wrap_up) return;
+printf("get_wbuf_from_wrap_up: %d\n", *wrap_up);
 	p=tmp;
 	p+=to_base64(*wrap_up, tmp);
 	*p='\0';
@@ -622,9 +622,8 @@ int backup_phase2_server(struct async *as, struct sdirs *sdirs,
 			if(!wbuf->len)
 			{
 				if(get_wbuf_from_sigs(wbuf, slist, blist,
-					sigs_end, &blk_requests_end, dpth,
-						conf, &wrap_up))
-							goto end;
+				  sigs_end, &blk_requests_end, dpth, conf))
+					goto end;
 				if(!wbuf->len)
 				{
 					get_wbuf_from_files(wbuf, slist,
@@ -645,12 +644,26 @@ int backup_phase2_server(struct async *as, struct sdirs *sdirs,
 		}
 
 		if(asfd->rbuf->buf && deal_with_read(asfd->rbuf,
-			slist, blist, conf,
-			&sigs_end, &backup_end, dpth, &wrap_up))
+			slist, blist, conf, &sigs_end, &backup_end, dpth))
 				goto end;
 		if(chfd->rbuf->buf)
 		{
 			// Deal with champ chooser read here.
+			printf("read from cc: %s\n", chfd->rbuf->buf);
+			switch(chfd->rbuf->cmd)
+			{
+				case CMD_WRAP_UP:
+				{
+					wrap_up=decode_file_no(chfd->rbuf);
+					printf("wrap up: %d\n", wrap_up);
+					break;
+				}
+				default:
+					iobuf_log_unexpected(chfd->rbuf,
+						__func__);
+					goto end;
+			}
+			iobuf_free_content(chfd->rbuf);
 		}
 
 		if(write_to_changed_file(chmanio,

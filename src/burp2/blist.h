@@ -11,6 +11,7 @@ struct blist
 	struct blk *last_requested;
 // On the client, keep track of last data sent by the client.
 	struct blk *last_sent;
+	uint64_t last_index;
 };
 
 extern struct blist *blist_alloc(void);

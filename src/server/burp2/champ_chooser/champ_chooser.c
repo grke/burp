@@ -118,8 +118,8 @@ int deduplicate(struct asfd *asfd, struct conf *conf)
 	struct incoming *in=asfd->in;
 	struct candidate *champ;
 	struct candidate *champ_last=NULL;
-	static int count=0;
-	static int blk_count=0;
+	int count=0;
+	int blk_count=0;
 
 printf("in deduplicate()\n");
 
@@ -136,7 +136,7 @@ printf("in deduplicate()\n");
 	blk_count=0;
 	for(blk=asfd->blist->head; blk; blk=blk->next)
 	{
-printf("try: %lu\n", blk->index);
+//printf("try: %lu\n", blk->index);
 		blk_count++;
 
 		// FIX THIS - represents zero length block.
@@ -152,24 +152,12 @@ printf("try: %lu\n", blk->index);
 		// to be the location of the already got block.
 		if(already_got_block(asfd, blk)) return -1;
 
-printf("after agb: %lu %d\n", blk->index, blk->got);
-
-		// If there are a number of consecutive blocks that we have
-		// already got, help the client out and tell it to forget them,
-		// because there is a limit to the number that it will keep
-		// in memory.
-		if(blk->got==GOT)
-		{
-			if(asfd->consecutive_got++>BLKS_CONSECUTIVE_NOTIFY)
-			{
-				asfd->wrap_up=blk->index;
-				asfd->consecutive_got=0;
-			}
-		}
-		else
-			asfd->consecutive_got=0;
+//printf("after agb: %lu %d\n", blk->index, blk->got);
 	}
 
+	printf("%d %s found %d/%d incoming %s\n", count,
+		count==1?"champ":"champs", in->got, blk_count,
+		blk_count==1?"block":"blocks");
 	logp("%d %s found %d/%d incoming %s\n", count,
 		count==1?"champ":"champs", in->got, blk_count,
 		blk_count==1?"block":"blocks");

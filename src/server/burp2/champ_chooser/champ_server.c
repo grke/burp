@@ -32,6 +32,41 @@ error:
 	return -1;
 }
 
+static int results_to_fd(struct asfd *asfd)
+{
+	char *p;
+	struct blk *b;
+	struct blk *l;
+	static struct iobuf *wbuf=NULL;
+        static char tmp[32];
+
+	if(!wbuf && !(wbuf=iobuf_alloc())) return -1;
+
+	// Need to start writing the results down the fd.
+	b=asfd->blist->head;
+	while(b)
+	{
+		if(b->got==GOT)
+		{
+			// Need to write to fd.
+		}
+		l=b->next;
+		blk_free(&b);
+		b=l;
+	}
+	asfd->blist->head=NULL;
+	asfd->blist->tail=NULL;
+
+	p=tmp;
+	p+=to_base64(asfd->blist->last_index, tmp);
+	*p='\0';
+	iobuf_from_str(wbuf, CMD_WRAP_UP, tmp);
+printf("sending\n");
+	if(asfd->write(asfd, wbuf))
+		return -1;
+	return 0;
+}
+
 static int deduplicate_maybe(struct asfd *asfd,
 	struct blk *blk, struct conf *conf)
 {
@@ -48,6 +83,8 @@ static int deduplicate_maybe(struct asfd *asfd,
 
 	if(deduplicate(asfd, conf)<0) return -1;
 
+	if(results_to_fd(asfd)) return -1;
+
 	return 0;
 }
 
@@ -63,9 +100,8 @@ static int deal_with_rbuf_sig(struct asfd *asfd,
 	if(split_sig(asfd->rbuf->buf,
 		asfd->rbuf->len, blk->weak, blk->strong)) return -1;
 
-	printf("Got weak/strong from %d: %lu - %s %s\n",
-		asfd->fd, blk->index, blk->weak, blk->strong);
-return 0;
+	//printf("Got weak/strong from %d: %lu - %s %s\n",
+	//	asfd->fd, blk->index, blk->weak, blk->strong);
 
 	return deduplicate_maybe(asfd, blk, conf);
 }
@@ -121,7 +157,8 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf *conf)
 	struct async *as=NULL;
 	int started=0;
 
-	if(!(lock=lock_alloc_and_init(sdirs->champlock)))
+	if(!(lock=lock_alloc_and_init(sdirs->champlock))
+	  || build_path_w(sdirs->champlock))
 		goto end;
 	lock_get(lock);
 	switch(lock->status)
@@ -206,13 +243,20 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf *conf)
 			default:
 				// Maybe one of the fds had a problem.
 				// Find and remove it and carry on if possible.
-				for(asfd=as->asfd->next; asfd; asfd=asfd->next)
+				for(asfd=as->asfd->next; asfd; )
 				{
-					if(!asfd->want_to_remove) continue;
+					struct asfd *a;
+					if(!asfd->want_to_remove)
+					{
+						asfd=asfd->next;
+						continue;
+					}
 					as->asfd_remove(as, asfd);
 					logp("%d disconnected: %s\n",
 						asfd->fd, asfd->desc);
+					a=asfd->next;
 					asfd_free(&asfd);
+					asfd=a;
 				}
 				// If we got here, there was no fd to remove.
 				// It is a fatal error.

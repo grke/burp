@@ -244,10 +244,10 @@ static int set_file_times(struct asfd *asfd,
 	return 0;
 }
 
-uint64_t decode_file_no(struct sbuf *sb)
+uint64_t decode_file_no(struct iobuf *iobuf)
 {
 	int64_t val;
-	from_base64(&val, sb->attr.buf);
+	from_base64(&val, iobuf->buf);
 	return (uint64_t)val;
 }
 

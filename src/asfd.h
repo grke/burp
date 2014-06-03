@@ -46,7 +46,6 @@ struct asfd
 	struct blist *blist;
 	int blkcnt;
 	uint64_t wrap_up;
-	uint64_t consecutive_got;
 	uint8_t want_to_remove;
 	// For the champ chooser server main socket.
 	uint8_t listening_for_new_clients;

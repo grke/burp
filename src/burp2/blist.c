@@ -23,9 +23,10 @@ void blist_free(struct blist *blist)
 
 void blist_add_blk(struct blist *blist, struct blk *blk)
 {
+	blk->index=++(blist->last_index);
+
 	if(blist->tail)
 	{
-		blk->index=blist->tail->index+1;
 		// Add to the end of the list.
 		blist->tail->next=blk;
 		blist->tail=blk;
@@ -36,7 +37,6 @@ void blist_add_blk(struct blist *blist, struct blk *blk)
 		return;
 	}
 
-	blk->index=1;
 	// Start the list.
 	blist->head=blk;
 	blist->tail=blk;

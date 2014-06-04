@@ -33,7 +33,9 @@ all_subdirs = ${bin_subdirs} manpages
 DIST =	INSTALL README.configure configure Makefile Makefile.in ChangeLog
 
 DIST_CFG = autoconf/aclocal.m4 autoconf/configure.in \
-	autoconf/config.h.in  autoconf/acconfig.h  autoconf/Make.common.in \
+	autoconf/config.h.in  autoconf/acconfig.h \
+	autoconf/Make.common.in \
+	autoconf/Make.common2.in \
 	autoconf/install-sh autoconf/mkinstalldirs
 
 doc_files = VERIFYING technotes ChangeLog README ReleaseNotes LICENSE \
@@ -144,7 +146,8 @@ clean:
 	@cd src/win32 && ${MAKE} $@
 	@$(RMF) *~ 1 2 3 core core.* config.guess console.log console.sum
 	@$(RMF) config.log config.out config.status libtool
-	@$(RMF) -r autoconf/autom4te.cache autoconf/Make.common
+	@$(RMF) -r autoconf/autom4te.cache
+	@$(RMF) -r autoconf/Make.common autoconf/Make.common2
 	@$(RMF) burp-cross-tools
 	@$(RMF) burp-depkgs
 	@$(RMF) Makefile

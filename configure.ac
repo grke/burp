@@ -1555,6 +1555,8 @@ AC_SUBST(DISTVER)
 dnl common parts of the Makefile
 MCOMMON=./autoconf/Make.common
 AC_SUBST_FILE(MCOMMON)
+MCOMMON2=./autoconf/Make.common2
+AC_SUBST_FILE(MCOMMON2)
 
 dnl Insanity check
 if test "x${subsysdir}" = "x${sbindir}" ; then
@@ -1571,6 +1573,7 @@ if test "x${subsysdir}" = "x${sbindir}" ; then
 fi 
 
 AC_OUTPUT([autoconf/Make.common \
+	   autoconf/Make.common2 \
 	   Makefile \
 	   manpages/Makefile \
 	   src/Makefile \

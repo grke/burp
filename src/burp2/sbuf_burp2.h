@@ -18,6 +18,7 @@ struct burp2
 	struct blk *bsighead;
 };
 
+extern struct burp2 *sbuf_burp2_alloc(void);
 extern void sbuf_burp2_free_content(struct burp2 *burp2);
 
 #endif

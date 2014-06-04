@@ -140,8 +140,7 @@ static int get_highest_entry(const char *path, int *max, struct dpth *dpth)
 	while((dp=readdir(d)))
 	{
 		if(dp->d_ino==0
-		  || !strcmp(dp->d_name, ".")
-		  || !strcmp(dp->d_name, ".."))
+		  || strlen(dp->d_name)!=4)
 			continue;
 		ent=strtol(dp->d_name, NULL, 16);
 		if(ent>*max) *max=ent;

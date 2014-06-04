@@ -46,7 +46,7 @@ static int results_to_fd(struct asfd *asfd)
 	b=asfd->blist->head;
 	while(b)
 	{
-		if(b->got==GOT)
+		if(b->got==BLK_GOT)
 		{
 			// Need to write to fd.
 		}
@@ -81,15 +81,14 @@ static int deduplicate_maybe(struct asfd *asfd,
 	if(++(asfd->blkcnt)<MANIFEST_SIG_MAX) return 0;
 	asfd->blkcnt=0;
 
-	if(deduplicate(asfd, conf)<0) return -1;
-
-	if(results_to_fd(asfd)) return -1;
+	if(deduplicate(asfd, conf)<0
+	  || results_to_fd(asfd))
+		return -1;
 
 	return 0;
 }
 
-static int deal_with_rbuf_sig(struct asfd *asfd,
-	struct conf *conf)
+static int deal_with_rbuf_sig(struct asfd *asfd, struct conf *conf)
 {
 	struct blk *blk;
 	if(!(blk=blk_alloc())) return -1;
@@ -124,6 +123,13 @@ static int deal_with_client_rbuf(struct asfd *asfd, struct conf *conf)
 			if(asfd->write(asfd, &wbuf))
 				goto error;
 		}
+		else if(!strncmp_w(asfd->rbuf->buf, "sigs_end"))
+		{
+			printf("Was told no more sigs\n");
+			if(deduplicate(asfd, conf)<0
+			  || results_to_fd(asfd))
+				goto error;
+		}
 		else
 		{
 			iobuf_log_unexpected(asfd->rbuf, __func__);
@@ -132,7 +138,8 @@ static int deal_with_client_rbuf(struct asfd *asfd, struct conf *conf)
 	}
 	else if(asfd->rbuf->cmd==CMD_SIG)
 	{
-		if(deal_with_rbuf_sig(asfd, conf)) goto error;
+		if(deal_with_rbuf_sig(asfd, conf))
+			goto error;
 	}
 	else
 	{

@@ -43,6 +43,7 @@ void blist_add_blk(struct blist *blist, struct blk *blk)
 	// Pointers to the head that can move along the list
 	// at a different rate.
 	blist->blk_for_champ_chooser=NULL;
+	blist->blk_from_champ_chooser=blk;
 	blist->last_requested=blk;
 	blist->last_sent=blk;
 }

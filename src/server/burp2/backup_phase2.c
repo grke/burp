@@ -130,7 +130,7 @@ static int add_data_to_store(struct conf *conf,
 	// FIX THIS: Going up the list here, and then later
 	// when writing to the manifest is not efficient.
 	for(blk=blist->head;
-		blk && (!blk->requested || blk->got==GOT); blk=blk->next)
+		blk && (!blk->requested || blk->got==BLK_GOT); blk=blk->next)
 	{
 		logp("try: %d %d\n", blk->index, blk->got);
 	}
@@ -148,7 +148,7 @@ static int add_data_to_store(struct conf *conf,
 	cntr_add(conf->cntr, CMD_DATA, 0);
 	cntr_add_recvbytes(conf->cntr, blk->length);
 
-	blk->got=GOT;
+	blk->got=BLK_GOT;
 	blk=blk->next;
 
 	return 0;
@@ -324,7 +324,7 @@ static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, struct bl
 		return 0;
 	}
 
-	if(sb->burp2->bsighead->got==INCOMING)
+	if(sb->burp2->bsighead->got==BLK_INCOMING)
 	{
 //		if(sigs_end
 //		  && deduplicate(sb->burp2->bsighead, dpth, conf, wrap_up))
@@ -332,7 +332,7 @@ static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, struct bl
 		return 0;
 	}
 
-	if(sb->burp2->bsighead->got==NOT_GOT)
+	if(sb->burp2->bsighead->got==BLK_NOT_GOT)
 	{
 		encode_req(sb->burp2->bsighead, req);
 		iobuf_from_str(wbuf, CMD_DATA_REQ, req);
@@ -409,7 +409,7 @@ static int write_to_changed_file(struct manio *chmanio,
 			}
 
 			while((blk=sb->burp2->bstart)
-				&& blk->got==GOT
+				&& blk->got==BLK_GOT
 				&& (blk->next || backup_end))
 			{
 				if(*(blk->save_path))
@@ -424,9 +424,12 @@ static int write_to_changed_file(struct manio *chmanio,
 						// now.
 						//printf("START USING: %s\n",
 						//	chmanio->fpath);
-						if(candidate_add_fresh(
-							chmanio->fpath,
-							conf)) return -1;
+						// FIX THIS:
+						// needs to be done in
+						// champ_server.
+						//if(candidate_add_fresh(
+					//		chmanio->fpath,
+				//			conf)) return -1;
 					}
 				}
 /*
@@ -541,8 +544,10 @@ end:
 	return ret;
 }
 
-static int append_for_champ_chooser(struct asfd *chfd, struct blist *blist)
+static int append_for_champ_chooser(struct asfd *chfd,
+	struct blist *blist, int sigs_end)
 {
+	static int finished_sending=0;
 	static struct iobuf *wbuf=NULL;
 	if(!wbuf)
 	{
@@ -561,8 +566,80 @@ static int append_for_champ_chooser(struct asfd *chfd, struct blist *blist)
 			return 0; // Try again later.
 		blist->blk_for_champ_chooser=blist->blk_for_champ_chooser->next;
 	}
-	//if(deduplicate_maybe(blk, dpth, conf, wrap_up)<0) return -1;
+	if(sigs_end && !finished_sending && !blist->blk_for_champ_chooser)
+	{
+		wbuf->cmd=CMD_GEN;
+		wbuf->len=snprintf(wbuf->buf, 128, "%s", "sigs_end");
+		if(chfd->append_all_to_write_buffer(chfd, wbuf))
+			return 0; // Try again later.
+		finished_sending++;
+	}
 	return 0;
+}
+
+static int mark_up_to_index(struct blist *blist,
+	uint64_t index, struct dpth *dpth)
+{
+	struct blk *blk;
+	const char *path;
+	// Mark everything that was not got up to the given index.
+	for(blk=blist->blk_from_champ_chooser;
+	  blk && blk->index!=index; blk=blk->next)
+	{
+		if(blk->got!=BLK_INCOMING) continue;
+		blk->got=BLK_NOT_GOT;
+
+        	// Need to get the data for this blk from the client.
+		// Set up the details of where it will be saved.
+		if(!(path=dpth_mk(dpth))) return -1;
+		snprintf(blk->save_path, sizeof(blk->save_path), "%s", path);
+		if(dpth_incr_sig(dpth)) return -1;
+	}
+	if(!blk)
+	{
+		logp("Could not find index from champ chooser: %lu\n", index);
+		return -1;
+	}
+	blist->blk_from_champ_chooser=blk;
+	return 0;
+}
+
+static int deal_with_read_from_chfd(struct asfd *chfd,
+	struct blist *blist, uint64_t *wrap_up, struct dpth *dpth)
+{
+	int ret=-1;
+	uint64_t file_no;
+
+	// Deal with champ chooser read here.
+	printf("read from cc: %s\n", chfd->rbuf->buf);
+	switch(chfd->rbuf->cmd)
+	{
+		case CMD_SIG:
+			// Get these for blks that the champ chooser has found.
+			file_no=decode_file_no(chfd->rbuf);
+			if(mark_up_to_index(blist, file_no, dpth)) goto end;
+			// FIX THIS:
+			// blist->blk_from_champ_chooser needs to have the
+			// save path set.
+			blist->blk_from_champ_chooser->got=BLK_GOT;
+			// blist->blk_from_champ_chooser->save_path=???;
+			break;
+		case CMD_WRAP_UP:
+			//*wrap_up=decode_file_no(chfd->rbuf);
+			file_no=decode_file_no(chfd->rbuf);
+			printf("mark up to: %d\n", file_no);
+			if(mark_up_to_index(blist, file_no, dpth)) goto end;
+			printf("after mark_up: %d\n",
+				blist->blk_from_champ_chooser->index);
+			break;
+		default:
+			iobuf_log_unexpected(chfd->rbuf, __func__);
+			goto end;
+	}
+	ret=0;
+end:
+	iobuf_free_content(chfd->rbuf);
+	return ret;
 }
 
 int backup_phase2_server(struct async *as, struct sdirs *sdirs,
@@ -635,7 +712,7 @@ int backup_phase2_server(struct async *as, struct sdirs *sdirs,
 		if(wbuf->len)
 			asfd->append_all_to_write_buffer(asfd, wbuf);
 
-		append_for_champ_chooser(chfd, blist);
+		append_for_champ_chooser(chfd, blist, sigs_end);
 
 		if(as->read_write(as))
 		{
@@ -646,25 +723,9 @@ int backup_phase2_server(struct async *as, struct sdirs *sdirs,
 		if(asfd->rbuf->buf && deal_with_read(asfd->rbuf,
 			slist, blist, conf, &sigs_end, &backup_end, dpth))
 				goto end;
-		if(chfd->rbuf->buf)
-		{
-			// Deal with champ chooser read here.
-			printf("read from cc: %s\n", chfd->rbuf->buf);
-			switch(chfd->rbuf->cmd)
-			{
-				case CMD_WRAP_UP:
-				{
-					wrap_up=decode_file_no(chfd->rbuf);
-					printf("wrap up: %d\n", wrap_up);
-					break;
-				}
-				default:
-					iobuf_log_unexpected(chfd->rbuf,
-						__func__);
-					goto end;
-			}
-			iobuf_free_content(chfd->rbuf);
-		}
+		if(chfd->rbuf->buf && deal_with_read_from_chfd(chfd,
+			blist, &wrap_up, dpth))
+				goto end;
 
 		if(write_to_changed_file(chmanio,
 			slist, blist, dpth, backup_end, conf))

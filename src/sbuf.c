@@ -13,13 +13,11 @@ struct sbuf *sbuf_alloc(struct conf *conf)
 	sb->compression=-1;
 	if(conf->protocol==PROTO_BURP1)
 	{
-		if(!(sb->burp1=(struct burp1 *)calloc_w(1,
-			sizeof(struct burp1), __func__))) return NULL;
+		if(!(sb->burp1=sbuf_burp1_alloc())) return NULL;
 	}
 	else
 	{
-		if(!(sb->burp2=(struct burp2 *)calloc_w(1,
-			sizeof(struct burp2), __func__))) return NULL;
+		if(!(sb->burp2=sbuf_burp2_alloc())) return NULL;
 	}
 alloc_count++;
 	return sb;
@@ -34,8 +32,8 @@ void sbuf_free_content(struct sbuf *sb)
 	sb->compression=-1;
 	sb->winattr=0;
 	sb->flags=0;
-	if(sb->burp1) sbuf_burp1_free_content(sb->burp1);
-	if(sb->burp2) sbuf_burp2_free_content(sb->burp2);
+	sbuf_burp1_free_content(sb->burp1);
+	sbuf_burp2_free_content(sb->burp2);
 }
 
 void sbuf_free(struct sbuf **sb)
@@ -60,26 +58,26 @@ int sbuf_is_filedata(struct sbuf *sb)
 
 int sbuf_to_manifest(struct sbuf *sb, gzFile zp)
 {
-	if(sb->path.buf)
+	if(!sb->path.buf) return 0;
+
+	// Hackity hack: Strip the file index from the beginning of
+	// the attribs so that manifests where nothing changed are
+	// identical to each other. Better would be to preserve the
+	// index.
+	char *cp;
+	if(!(cp=strchr(sb->attr.buf, ' ')))
 	{
-		// Hackity hack: Strip the file index from the beginning of
-		// the attribs so that manifests where nothing changed are
-		// identical to each other. Better would be to preserve the
-		// index.
-		char *cp;
-		if(!(cp=strchr(sb->attr.buf, ' ')))
-		{
-			logp("Strange attributes: %s\n", sb->attr.buf);
-			return -1;
-		}
-		if(send_msg_zp(zp, CMD_ATTRIBS,
-			cp, sb->attr.len-(cp-sb->attr.buf))
-		  || send_msg_zp(zp, sb->path.cmd, sb->path.buf, sb->path.len))
-			return -1;
-		if(sb->link.buf
-		  && send_msg_zp(zp, sb->link.cmd, sb->link.buf, sb->link.len))
-			return -1;
+		logp("Strange attributes: %s\n", sb->attr.buf);
+		return -1;
 	}
+	if(send_msg_zp(zp, CMD_ATTRIBS,
+		cp, sb->attr.len-(cp-sb->attr.buf))
+	  || send_msg_zp(zp, sb->path.cmd, sb->path.buf, sb->path.len))
+		return -1;
+	if(sb->link.buf
+	  && send_msg_zp(zp, sb->link.cmd, sb->link.buf, sb->link.len))
+		return -1;
+
 	return 0;
 }
 

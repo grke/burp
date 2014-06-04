@@ -1,7 +1,13 @@
 #include "include.h"
 
+struct burp1 *sbuf_burp1_alloc(void)
+{
+	return (struct burp1 *)calloc_w(1, sizeof(struct burp1), __func__);
+}
+
 void sbuf_burp1_free_content(struct burp1 *burp1)
 {
+	if(!burp1) return;
 	memset(&(burp1->rsbuf), 0, sizeof(burp1->rsbuf));
 	if(burp1->sigjob) { rs_job_free(burp1->sigjob); burp1->sigjob=NULL; }
 	if(burp1->infb) { rs_filebuf_free(burp1->infb); burp1->infb=NULL; }

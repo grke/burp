@@ -15,11 +15,11 @@
 #define MANIFEST_SIG_MIN 0x0e0c
 #define MANIFEST_SIG_MAX 0x1000
 
-enum got
+enum blk_got
 {
-	INCOMING=0,
-	NOT_GOT,
-	GOT
+	BLK_INCOMING=0,
+	BLK_NOT_GOT,
+	BLK_GOT
 };
 
 typedef struct blk blk_t;
@@ -38,7 +38,7 @@ struct blk
 	char save_path[19+1]; // eg "0000/0000/0000/0000"
 
 	int requested;
-	enum got got;
+	enum blk_got got;
 	uint64_t index;
 	struct blk *next;
 };

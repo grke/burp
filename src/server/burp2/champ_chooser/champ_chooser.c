@@ -86,7 +86,7 @@ static int already_got_block(struct asfd *asfd, struct blk *blk)
 				"%s", get_fq_path(hash_strong->path));
 //printf("FOUND: %s %s\n", blk->weak, blk->strong);
 //printf("F");
-			blk->got=GOT;
+			blk->got=BLK_GOT;
 			asfd->in->got++;
 			return 0;
 		}
@@ -97,16 +97,8 @@ static int already_got_block(struct asfd *asfd, struct blk *blk)
 		}
 	}
 
-	blk->got=NOT_GOT;
+	blk->got=BLK_NOT_GOT;
 //printf(".");
-
-	// Set up the details of where the block will be saved.
-/* This is going to be the job of the server child.
-	if(!(path=dpth_mk(dpth))) return -1;
-	snprintf(blk->save_path, sizeof(blk->save_path), "%s", path);
-	if(dpth_incr_sig(dpth)) return -1;
-*/
-
 	return 0;
 }
 
@@ -143,7 +135,7 @@ printf("in deduplicate()\n");
 		if(!blk->fingerprint // All zeroes.
 		  && !strcmp(blk->strong, "D41D8CD98F00B204E9800998ECF8427E"))
 		{
-			blk->got=GOT;
+			blk->got=BLK_GOT;
 			in->got++;
 			continue;
 		}

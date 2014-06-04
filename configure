@@ -809,7 +809,8 @@ PACKAGE_TARNAME
 PACKAGE_NAME
 PATH_SEPARATOR
 SHELL'
-ac_subst_files='MCOMMON'
+ac_subst_files='MCOMMON
+MCOMMON2'
 ac_user_opts='
 enable_option_checking
 enable_static
@@ -24465,6 +24466,8 @@ _ACEOF
 
 MCOMMON=./autoconf/Make.common
 
+MCOMMON2=./autoconf/Make.common2
+
 
 if test "x${subsysdir}" = "x${sbindir}" ; then
    echo " "
@@ -24479,7 +24482,7 @@ if test "x${subsysdir}" = "x${sbindir}" ; then
    exit 1
 fi
 
-ac_config_files="$ac_config_files autoconf/Make.common Makefile manpages/Makefile src/Makefile src/burp1/Makefile src/burp2/rabin/Makefile src/burp2/Makefile src/client/Makefile src/client/burp1/Makefile src/client/burp2/Makefile src/server/Makefile src/server/burp1/Makefile src/server/burp2/Makefile src/server/burp2/champ_chooser/Makefile src/server/monitor/Makefile $PFILES"
+ac_config_files="$ac_config_files autoconf/Make.common autoconf/Make.common2 Makefile manpages/Makefile src/Makefile src/burp1/Makefile src/burp2/rabin/Makefile src/burp2/Makefile src/client/Makefile src/client/burp1/Makefile src/client/burp2/Makefile src/server/Makefile src/server/burp1/Makefile src/server/burp2/Makefile src/server/burp2/champ_chooser/Makefile src/server/monitor/Makefile $PFILES"
 
 ac_config_commands="$ac_config_commands default"
 
@@ -25589,6 +25592,7 @@ do
     "libtool") CONFIG_COMMANDS="$CONFIG_COMMANDS libtool" ;;
     "po-directories") CONFIG_COMMANDS="$CONFIG_COMMANDS po-directories" ;;
     "autoconf/Make.common") CONFIG_FILES="$CONFIG_FILES autoconf/Make.common" ;;
+    "autoconf/Make.common2") CONFIG_FILES="$CONFIG_FILES autoconf/Make.common2" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "manpages/Makefile") CONFIG_FILES="$CONFIG_FILES manpages/Makefile" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;

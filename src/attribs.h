@@ -9,5 +9,7 @@ extern int attribs_set(struct asfd *asfd, const char *path, struct stat *statp,
 	uint64_t winattr, struct conf *conf);
 
 extern uint64_t decode_file_no(struct iobuf *iobuf);
+extern uint64_t decode_file_no_and_save_path(struct iobuf *iobuf,
+	char **save_path);
 
 #endif

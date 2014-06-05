@@ -78,7 +78,7 @@ int candidate_add_fresh(const char *path, struct conf *conf)
 	if(scores_grow(scores, candidates_len)) goto end;
 	candidates_set_score_pointers(candidates, candidates_len, scores);
 	scores_reset(scores);
-	//printf("HERE: %d candidates\n", (int)candidates_len);
+	printf("HERE: %d candidates\n", (int)candidates_len);
 
 	ret=0;
 end:

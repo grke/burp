@@ -38,7 +38,7 @@ static int results_to_fd(struct asfd *asfd)
 	struct blk *b;
 	struct blk *l;
 	static struct iobuf *wbuf=NULL;
-        static char tmp[32];
+        static char tmp[128];
 
 	if(!wbuf && !(wbuf=iobuf_alloc())) return -1;
 
@@ -49,6 +49,17 @@ static int results_to_fd(struct asfd *asfd)
 		if(b->got==BLK_GOT)
 		{
 			// Need to write to fd.
+			p=tmp;
+			p+=to_base64(b->index, tmp);
+			*p=' ';
+			p++;
+			snprintf(p, 64, "%s", b->save_path);
+			iobuf_from_str(wbuf, CMD_SIG, tmp);
+			if(asfd->write(asfd, wbuf))
+			{
+				asfd->blist->head=b;
+				return -1;
+			}
 		}
 		l=b->next;
 		blk_free(&b);
@@ -139,6 +150,13 @@ static int deal_with_client_rbuf(struct asfd *asfd, struct conf *conf)
 	else if(asfd->rbuf->cmd==CMD_SIG)
 	{
 		if(deal_with_rbuf_sig(asfd, conf))
+			goto error;
+	}
+	else if(asfd->rbuf->cmd==CMD_MANIFEST)
+	{
+		// Client has completed a manifest file. Want to start using
+		// it as a dedup candidate now.
+		if(candidate_add_fresh(asfd->rbuf->buf, conf))
 			goto error;
 	}
 	else

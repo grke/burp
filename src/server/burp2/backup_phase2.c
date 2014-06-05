@@ -387,12 +387,14 @@ static void sanity_before_sbuf_free(struct slist *slist, struct sbuf *sb)
 	if(slist->blks_to_request==sb) slist->blks_to_request=sb->next;
 }
 
-static int write_to_changed_file(struct manio *chmanio,
+static int write_to_changed_file(struct asfd *chfd, struct manio *chmanio,
 	struct slist *slist, struct blist *blist,
 	struct dpth *dpth, int backup_end, struct conf *conf)
 {
 	struct sbuf *sb;
+	static struct iobuf *wbuf=NULL;
 	if(!slist) return 0;
+        if(!wbuf && !(wbuf=iobuf_alloc())) return -1;
 
 	while((sb=slist->head))
 	{
@@ -422,14 +424,12 @@ static int write_to_changed_file(struct manio *chmanio,
 						// file. Want to start using
 						// it as a dedup candidate
 						// now.
-						//printf("START USING: %s\n",
-						//	chmanio->fpath);
-						// FIX THIS:
-						// needs to be done in
-						// champ_server.
-						//if(candidate_add_fresh(
-					//		chmanio->fpath,
-				//			conf)) return -1;
+						iobuf_from_str(wbuf,
+							CMD_MANIFEST,
+							chmanio->fpath);
+						printf("send manifest path\n");
+						if(chfd->write(chfd, wbuf))
+                					return -1;
 					}
 				}
 /*
@@ -457,6 +457,10 @@ static int write_to_changed_file(struct manio *chmanio,
 				if(sb->burp2->bsighead==sb->burp2->bstart)
 					sb->burp2->bsighead=blk->next;
 				sb->burp2->bstart=blk->next;
+				if(blk==blist->blk_from_champ_chooser)
+					blist->blk_from_champ_chooser=blk->next;
+
+				printf("freeing blk %d\n", blk->index);
 				blk_free(&blk);
 			}
 			if(hack) continue;
@@ -582,7 +586,9 @@ static int mark_up_to_index(struct blist *blist,
 {
 	struct blk *blk;
 	const char *path;
-	// Mark everything that was not got up to the given index.
+printf("in mark up\n");
+if(blist && blist->blk_from_champ_chooser) printf("YES: %p %d\n", blist->blk_from_champ_chooser, blist->blk_from_champ_chooser->index);
+	// Mark everything that was not got, up to the given index.
 	for(blk=blist->blk_from_champ_chooser;
 	  blk && blk->index!=index; blk=blk->next)
 	{
@@ -609,6 +615,7 @@ static int deal_with_read_from_chfd(struct asfd *chfd,
 {
 	int ret=-1;
 	uint64_t file_no;
+	char *save_path;
 
 	// Deal with champ chooser read here.
 	printf("read from cc: %s\n", chfd->rbuf->buf);
@@ -616,13 +623,19 @@ static int deal_with_read_from_chfd(struct asfd *chfd,
 	{
 		case CMD_SIG:
 			// Get these for blks that the champ chooser has found.
-			file_no=decode_file_no(chfd->rbuf);
+			file_no=decode_file_no_and_save_path(chfd->rbuf,
+				&save_path);
+			printf("got save_path: %d %s\n", file_no, save_path);
 			if(mark_up_to_index(blist, file_no, dpth)) goto end;
 			// FIX THIS:
 			// blist->blk_from_champ_chooser needs to have the
 			// save path set.
 			blist->blk_from_champ_chooser->got=BLK_GOT;
-			// blist->blk_from_champ_chooser->save_path=???;
+			snprintf(blist->blk_from_champ_chooser->save_path,
+			  sizeof(blist->blk_from_champ_chooser->save_path),
+				"%s", save_path);
+			printf("after cmd_sig: %d\n",
+				blist->blk_from_champ_chooser->index);
 			break;
 		case CMD_WRAP_UP:
 			//*wrap_up=decode_file_no(chfd->rbuf);
@@ -727,7 +740,7 @@ int backup_phase2_server(struct async *as, struct sdirs *sdirs,
 			blist, &wrap_up, dpth))
 				goto end;
 
-		if(write_to_changed_file(chmanio,
+		if(write_to_changed_file(chfd, chmanio,
 			slist, blist, dpth, backup_end, conf))
 				goto end;
 	}
@@ -739,7 +752,7 @@ int backup_phase2_server(struct async *as, struct sdirs *sdirs,
 	if(slist->head && slist->head->next)
 	{
 		slist->head=slist->head->next;
-		if(write_to_changed_file(chmanio,
+		if(write_to_changed_file(chfd, chmanio,
 			slist, blist, dpth, backup_end, conf))
 				goto end;
 	}

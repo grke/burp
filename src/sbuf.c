@@ -284,12 +284,20 @@ static int retrieve_blk_data(char *datpath, struct blk *blk)
 int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 	struct blk *blk, char *datpath, struct conf *conf)
 {
-	static char lead[5]="";
-	static iobuf *rbuf;
 	static unsigned int s;
+	static char lead[5]="";
+	static struct iobuf *rbuf;
+	static struct iobuf *localrbuf=NULL;
 	int ret=-1;
 
-	rbuf=asfd->rbuf;
+	if(asfd) rbuf=asfd->rbuf;
+	else
+	{
+		// If not given asfd, use our own iobuf.
+		if(!localrbuf && !(localrbuf=iobuf_alloc()))
+			goto end;
+		rbuf=localrbuf;
+	}
 	while(1)
 	{
 		iobuf_free_content(rbuf);
@@ -311,7 +319,7 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 				break;
 			}
 			rbuf->len=(size_t)s;
-			if(!(rbuf->buf=(char *)malloc(rbuf->len+2)))
+			if(!(rbuf->buf=(char *)malloc_w(rbuf->len+2, __func__)))
 			{
 				log_and_send_oom(asfd, __func__);
 				break;

@@ -251,6 +251,15 @@ uint64_t decode_file_no(struct iobuf *iobuf)
 	return (uint64_t)val;
 }
 
+uint64_t decode_file_no_and_save_path(struct iobuf *iobuf, char **save_path)
+{
+	int64_t val;
+	char *p=iobuf->buf;
+	p+=from_base64(&val, iobuf->buf);
+	*save_path=p+1;
+	return (uint64_t)val;
+}
+
 int attribs_set(struct asfd *asfd, const char *path,
 	struct stat *statp, uint64_t winattr, struct conf *conf)
 {

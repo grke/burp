@@ -276,13 +276,15 @@ end:
 static int process_incoming_client(int rfd, struct conf *conf, SSL_CTX *ctx, const char *conffile, int is_status_server)
 {
 	int cfd=-1;
+	pid_t childpid;
+	int pipe_rfd[2];
+	int pipe_wfd[2];
 	socklen_t client_length=0;
 	struct sockaddr_in client_name;
 
 	client_length=sizeof(client_name);
 	if((cfd=accept(rfd,
-		(struct sockaddr *) &client_name,
-		&client_length))==-1)
+		(struct sockaddr *) &client_name, &client_length))==-1)
 	{
 		// Look out, accept will get interrupted by SIGCHLDs.
 		if(errno==EINTR) return 0;
@@ -292,29 +294,32 @@ static int process_incoming_client(int rfd, struct conf *conf, SSL_CTX *ctx, con
 	reuseaddr(cfd);
 	chld_check_for_exiting();
 
-	if(conf->forking)
+	if(!conf->forking)
 	{
-	  pid_t childpid;
-	  int pipe_rfd[2];
-	  int pipe_wfd[2];
+		if(is_status_server)
+			return run_status_server(&rfd, &cfd, -1, conffile);
+		else
+			return run_child(&rfd, &cfd, ctx, conffile,
+				conf->forking);
+	}
 
-	  if(chld_add_incoming(conf, is_status_server))
-	  {
+	if(chld_add_incoming(conf, is_status_server))
+	{
 		logp("Closing new connection.\n");
 		close_fd(&cfd);
 		return 0;
-	  }
+	}
 
-	  if(pipe(pipe_rfd)<0
-	    || pipe(pipe_wfd)<0)
-	  {
+	if(pipe(pipe_rfd)<0 || pipe(pipe_wfd)<0)
+	{
 		logp("pipe failed: %s", strerror(errno));
 		close_fd(&cfd);
 		return -1;
-	  }
-	  /* fork off our new process to handle this request */
-	  switch((childpid=fork()))
-	  {
+	}
+
+	/* fork off our new process to handle this request */
+	switch((childpid=fork()))
+	{
 		case -1:
 			logp("fork failed: %s\n", strerror(errno));
 			return -1;
@@ -339,11 +344,11 @@ static int process_incoming_client(int rfd, struct conf *conf, SSL_CTX *ctx, con
 			status_wfd=pipe_rfd[1];
 
 			if(is_status_server)
-			  ret=run_status_server(&rfd, &cfd, pipe_wfd[0],
-				conffile);
+				ret=run_status_server(&rfd, &cfd, pipe_wfd[0],
+						conffile);
 			else
-			  ret=run_child(&rfd, &cfd, ctx,
-				conffile, conf->forking);
+				ret=run_child(&rfd, &cfd, ctx,
+						conffile, conf->forking);
 
 			close(pipe_rfd[1]);
 			close(pipe_wfd[0]);
@@ -357,7 +362,7 @@ static int process_incoming_client(int rfd, struct conf *conf, SSL_CTX *ctx, con
 			// keep a note of the child pid.
 			if(is_status_server)
 				logp("forked status server child pid %d\n",
-					childpid);
+						childpid);
 			else
 				logp("forked child pid %d\n", childpid);
 
@@ -366,15 +371,6 @@ static int process_incoming_client(int rfd, struct conf *conf, SSL_CTX *ctx, con
 
 			close_fd(&cfd);
 			return 0;
-	  }
-	}
-	else
-	{
-		if(is_status_server)
-			return run_status_server(&rfd, &cfd, -1, conffile);
-		else
-			return run_child(&rfd, &cfd, ctx, conffile,
-				conf->forking);
 	}
 }
 

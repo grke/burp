@@ -213,7 +213,8 @@ int do_backup_server_burp2(struct async *as, struct sdirs *sdirs,
 
 	// Close the connection with the client, the rest of the job
 	// we can do by ourselves.
-	asfd_free(&asfd);
+	as->asfd_remove(as, asfd);
+	asfd_close(asfd);
 
 	if(backup_phase3_server(sdirs, manifest_dir, cconf))
 	{

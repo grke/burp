@@ -135,7 +135,7 @@ printf("in deduplicate()\n");
 		if(!blk->fingerprint // All zeroes.
 		  && !strcmp(blk->strong, "D41D8CD98F00B204E9800998ECF8427E"))
 		{
-printf("got: %s %s\n", blk->weak, blk->strong);
+//printf("got: %s %s\n", blk->weak, blk->strong);
 			blk->got=BLK_GOT;
 			in->got++;
 			continue;

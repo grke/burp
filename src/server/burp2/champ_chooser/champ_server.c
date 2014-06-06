@@ -136,7 +136,7 @@ static int deal_with_client_rbuf(struct asfd *asfd, struct conf *conf)
 		}
 		else if(!strncmp_w(asfd->rbuf->buf, "sigs_end"))
 		{
-			printf("Was told no more sigs\n");
+			//printf("Was told no more sigs\n");
 			if(deduplicate(asfd, conf)<0
 			  || results_to_fd(asfd))
 				goto error;

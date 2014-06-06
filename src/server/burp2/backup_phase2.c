@@ -460,7 +460,7 @@ static int write_to_changed_file(struct asfd *chfd, struct manio *chmanio,
 				if(blk==blist->blk_from_champ_chooser)
 					blist->blk_from_champ_chooser=blk->next;
 
-				printf("freeing blk %d\n", blk->index);
+				//printf("freeing blk %d\n", blk->index);
 				blk_free(&blk);
 			}
 			if(hack) continue;
@@ -488,7 +488,7 @@ static void get_wbuf_from_wrap_up(struct iobuf *wbuf, uint64_t *wrap_up)
 	static char *p;
 	static char tmp[32];
 	if(!*wrap_up) return;
-printf("get_wbuf_from_wrap_up: %d\n", *wrap_up);
+//printf("get_wbuf_from_wrap_up: %d\n", *wrap_up);
 	p=tmp;
 	p+=to_base64(*wrap_up, tmp);
 	*p='\0';
@@ -586,8 +586,8 @@ static int mark_up_to_index(struct blist *blist,
 {
 	struct blk *blk;
 	const char *path;
-printf("in mark up\n");
-if(blist && blist->blk_from_champ_chooser) printf("YES: %p %d\n", blist->blk_from_champ_chooser, blist->blk_from_champ_chooser->index);
+//printf("in mark up\n");
+//if(blist && blist->blk_from_champ_chooser) printf("YES: %p %d\n", blist->blk_from_champ_chooser, blist->blk_from_champ_chooser->index);
 	// Mark everything that was not got, up to the given index.
 	for(blk=blist->blk_from_champ_chooser;
 	  blk && blk->index!=index; blk=blk->next)
@@ -618,14 +618,14 @@ static int deal_with_read_from_chfd(struct asfd *chfd,
 	char *save_path;
 
 	// Deal with champ chooser read here.
-	printf("read from cc: %s\n", chfd->rbuf->buf);
+	//printf("read from cc: %s\n", chfd->rbuf->buf);
 	switch(chfd->rbuf->cmd)
 	{
 		case CMD_SIG:
 			// Get these for blks that the champ chooser has found.
 			file_no=decode_file_no_and_save_path(chfd->rbuf,
 				&save_path);
-			printf("got save_path: %d %s\n", file_no, save_path);
+			//printf("got save_path: %d %s\n", file_no, save_path);
 			if(mark_up_to_index(blist, file_no, dpth)) goto end;
 			// FIX THIS:
 			// blist->blk_from_champ_chooser needs to have the
@@ -634,16 +634,16 @@ static int deal_with_read_from_chfd(struct asfd *chfd,
 			snprintf(blist->blk_from_champ_chooser->save_path,
 			  sizeof(blist->blk_from_champ_chooser->save_path),
 				"%s", save_path);
-			printf("after cmd_sig: %d\n",
-				blist->blk_from_champ_chooser->index);
+			//printf("after cmd_sig: %d\n",
+			//	blist->blk_from_champ_chooser->index);
 			break;
 		case CMD_WRAP_UP:
 			//*wrap_up=decode_file_no(chfd->rbuf);
 			file_no=decode_file_no(chfd->rbuf);
-			printf("mark up to: %d\n", file_no);
+			//printf("mark up to: %d\n", file_no);
 			if(mark_up_to_index(blist, file_no, dpth)) goto end;
-			printf("after mark_up: %d\n",
-				blist->blk_from_champ_chooser->index);
+			//printf("after mark_up: %d\n",
+			//	blist->blk_from_champ_chooser->index);
 			break;
 		default:
 			iobuf_log_unexpected(chfd->rbuf, __func__);
@@ -733,12 +733,23 @@ int backup_phase2_server(struct async *as, struct sdirs *sdirs,
 			goto end;
 		}
 
-		if(asfd->rbuf->buf && deal_with_read(asfd->rbuf,
-			slist, blist, conf, &sigs_end, &backup_end, dpth))
-				goto end;
-		if(chfd->rbuf->buf && deal_with_read_from_chfd(chfd,
-			blist, &wrap_up, dpth))
-				goto end;
+		while(asfd->rbuf->buf)
+		{
+			if(deal_with_read(asfd->rbuf, slist, blist,
+				conf, &sigs_end, &backup_end, dpth))
+					goto end;
+			// Get as much out of the
+			// readbuf as possible.
+			if(asfd->parse_readbuf(asfd)) goto end;
+		}
+		while(chfd->rbuf->buf)
+		{
+			if(deal_with_read_from_chfd(chfd,
+				blist, &wrap_up, dpth)) goto end;
+			// Get as much out of the
+			// readbuf as possible.
+			if(chfd->parse_readbuf(chfd)) goto end;
+		}
 
 		if(write_to_changed_file(chfd, chmanio,
 			slist, blist, dpth, backup_end, conf))

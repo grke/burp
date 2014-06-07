@@ -1,14 +1,5 @@
-<TABLE>
-<TR><TD WIDTH="10%"></TD>
-<TD WIDTH="60%">
-</TD><TD WIDTH="10%"></TD></TR>
-
-
-<TR>
-<TD></TD>
-<TD ALIGN="LEFT">
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 I started writing Burp when I had become frustrated with the complexity and
 drawbacks of <a href="http://bacula.org">Bacula</a>. I am in no way trying to
 denigrate the work of its authors - after all, it is also free software that
@@ -53,9 +44,3 @@ hard to use programs like rsync or rdiff-backup on Windows computers.
 
 </FONT>
 </P>
-
-</TD>
-</TR>
-
-</TR>
-</TABLE>

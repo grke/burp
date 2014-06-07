@@ -1,16 +1,5 @@
-<TABLE>
-<TR><TD WIDTH="10%"></TD>
-<TD WIDTH="60%">
-</TD><TD WIDTH="10%"></TD></TR>
-
-
-<TR>
-<TD></TD>
-<TD ALIGN="LEFT">
-
-
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 The following is the Burp LICENCE file.
 
 <pre>
@@ -865,9 +854,3 @@ http://www.gnu.org/licenses/.
 </P>
 
 <HR>
-
-</TD>
-</TR>
-
-</TR>
-</TABLE>

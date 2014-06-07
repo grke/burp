@@ -1,8 +1,8 @@
-Certificate Authority (CA) and certificate how-to
--------------------------------------------------
+SSL - Certificate Authority and certificates
+--------------------------------------------
 
 As of burp-1.3.2, the process of generating SSL certificates has been
-automated.
+automated with the use of burp_ca.
 
 Effectively, the automation means that you can set up a new client on the
 server (in /etc/burp/clientconfdir/<client>), and the first client to connect
@@ -11,6 +11,9 @@ and given back. If a different, second client, happens to connect with the
 same client name and password, it will be rejected because it doesn't have
 a matching certificate.
 
+
+Server
+------
 
 Server CA options:
 ca_conf = /etc/burp/CA.cnf
@@ -46,7 +49,9 @@ and certificates.
 
 This concludes the CA setup on the server.
 
------
+
+Client
+------
 
 Client CA options:
 ca_burp_ca=/usr/sbin/burp_ca

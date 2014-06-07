@@ -1,19 +1,10 @@
 #!/usr/bin/env bash
 
-howto=content/html/howto.content
-
 print_top()
 {
-	echo "<TABLE>
-<TR><TD WIDTH="10%"></TD>
-<TD WIDTH="60%">
-</TD><TD WIDTH="10%"></TD></TR>
-
-<TR>
-<TD></TD>
-<TD ALIGN="LEFT">
+	echo "
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 <pre>" >> "$1" 
 }
 
@@ -22,24 +13,55 @@ print_bottom()
 	echo "</pre>
 </FONT>
 </P>
-
-</TD>
-</TR>
-
-</TR>
-</TABLE>" >> "$1" 
+" >> "$1" 
 }
 
-rm "$howto"
-print_top "$howto"
-cat ../README >> "$howto"
-echo >> "$howto" 
-echo >> "$howto" 
-echo "For the benefit of the website, the man page now follows." >> "$howto"
-echo >> "$howto" 
-echo >> "$howto" 
-man ../manpages/burp.8 | col -b >> $howto
-print_bottom "$howto"
+start_page()
+{
+	rm -f "$1"
+	print_top "$1"
+}
+
+end_page()
+{
+	echo >> "$1" 
+	echo >> "$1" 
+	print_bottom "$1"
+}
+
+generic_page()
+{
+	start_page "$1"
+	cat "$2" >> "$1"
+	end_page "$1"
+}
+
+mkdir -p content/docs
+
+manpage=content/docs/manpage.content
+start_page "$manpage"
+man ../manpages/burp.8 | col -b >> "$manpage"
+end_page "$manpage"
+
+quickstart=content/docs/quickstart.content
+debugging=content/docs/debugging.content
+securitymodels=content/docs/security-models.content
+autoupgrade=content/docs/autoupgrade.content
+burp_ca=content/docs/burp_ca.content
+serverbasics=content/docs/server-basics.content
+baremetal=content/docs/baremetal-windows.content
+donations=content/html/donations.content
+licence=content/html/licence.content
+
+generic_page "$quickstart" "../README"
+generic_page "$debugging" "../docs/debug.txt"
+generic_page "$securitymodels" "../docs/security-models.txt"
+generic_page "$autoupgrade" "../docs/autoupgrade.txt"
+generic_page "$burp_ca" "../docs/burp_ca.txt"
+generic_page "$serverbasics" "../docs/server-basics.txt"
+generic_page "$baremetal" "../docs/baremetal-windows7and8.txt"
+generic_page "$donations" "../DONATIONS"
+generic_page "$licence" "../LICENSE"
 
 mkdir -p html/txt
 cp -v ../docs/*.txt html/txt
@@ -81,13 +103,11 @@ go_for_it()
 				cat $i >> $h
 			elif [ "$name" = "$file" ] ; then
 				if [ -n "$human" ] ; then
-					echo "<TD ALIGN=CENTER><IMG BORDER=0 SRC=\"/images/"$name"sel.jpg\" ALT=\"$human\"></TD>" >> $h
+					echo "<TR><TD ALIGN=RIGHT WIDTH=10% id=\"mainlink\"><b>$human</b></TD></TR>" >> $h
 				fi
 				globhuman=$header
-			elif [ "$name" = "wiki" ] ; then
-				echo "<TD ALIGN=CENTER><A HREF=\"/wiki/index.php\"><IMG BORDER=0 SRC=\"/images/$name.jpg\" ALT=\"$human\"></A></TD>" >> $h
 			else
-				echo "<TD ALIGN=CENTER><A HREF=\"/$name.html\"><IMG BORDER=0 SRC=\"/images/$name.jpg\" ALT=\"$human\"></A></TD>" >> $h
+				echo "<TR><TD ALIGN=RIGHT WIDTH=10%><A HREF=\"/$name.html\" id=\"mainlink\">$human</A></TD></TR>" >> $h
 			fi
 		else
 			echo "$line" >> $h

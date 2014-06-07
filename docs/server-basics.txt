@@ -1,0 +1,16 @@
+Server basics
+-------------
+
+The burp server is designed so that nearly all options can be changed without
+requiring a reload or a restart.
+
+It manages this by forking a child for each client that connects, and then
+having the child process re-read the main server config file, before reading
+the client-specific config file.
+
+In a normal setup, the server config file will be /etc/burp/burp-server.conf,
+and the client-specific config files will be in the /etc/burp/clientconfdir
+directory.
+
+Many global options set in the burp-server.conf can be overridden per-client
+via the /etc/burp/clientconfdir files.

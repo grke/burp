@@ -1,5 +1,5 @@
-How to set up autoupgrades
---------------------------
+Autoupgrade
+-----------
 
 Clients need to be on version 1.3.0 or newer to have the ability to
 autoupgrade. Also, the server needs to be newer than 1.3.0.

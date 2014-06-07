@@ -34,7 +34,7 @@ static int asfd_parse_readbuf(struct asfd *asfd)
 		return 0;
 		logp("%s called with non-empty buffer\n", __func__);
 //		printf("%c:%s\n", asfd->rbuf->cmd, asfd->rbuf->buf);
-		return -1;
+		goto error;
 	}
 
 	if(asfd->readbuflen>=5)
@@ -43,24 +43,19 @@ static int asfd_parse_readbuf(struct asfd *asfd)
 		{
 			logp("sscanf of '%s' failed in %s for %s\n",
 				asfd->readbuf, __func__, asfd->desc);
-			truncate_readbuf(asfd);
-			return -1;
+			goto error;
 		}
 	}
 	if(asfd->readbuflen>=s+5)
 	{
 		asfd->rbuf->cmd=cmdtmp;
 		if(!(asfd->rbuf->buf=(char *)malloc_w(s+1, __func__)))
-		{
-			truncate_readbuf(asfd);
-			return -1;
-		}
+			goto error;
 		if(!(memcpy(asfd->rbuf->buf, asfd->readbuf+5, s)))
 		{
 			logp("memcpy failed in %s for %s\n",
 				__func__, asfd->desc);
-			truncate_readbuf(asfd);
-			return -1;
+			goto error;
 		}
 		asfd->rbuf->buf[s]='\0';
 		if(!(memmove(asfd->readbuf,
@@ -68,14 +63,16 @@ static int asfd_parse_readbuf(struct asfd *asfd)
 		{
 			logp("memmove failed in %s for %s\n",
 				__func__, asfd->desc);
-			truncate_readbuf(asfd);
-			return -1;
+			goto error;
 		}
 		asfd->readbuflen-=s+5;
 		asfd->rbuf->len=s;
 //printf("got %d: %c:%s\n", asfd->rbuf->len, asfd->rbuf->cmd, asfd->rbuf->buf);
 	}
 	return 0;
+error:
+	truncate_readbuf(asfd);
+	return -1;
 }
 
 static int asfd_do_read(struct asfd *asfd)
@@ -88,19 +85,20 @@ static int asfd_do_read(struct asfd *asfd)
 		if(errno==EAGAIN || errno==EINTR)
 			return 0;
 		logp("read problem in %s for %s\n", __func__, asfd->desc);
-		truncate_readbuf(asfd);
-		return -1;
+		goto error;
 	}
 	else if(!r)
 	{
 		// End of data.
 		logp("end of data in %s for %s\n", __func__, asfd->desc);
-		truncate_readbuf(asfd);
-		return -1;
+		goto error;
 	}
 	asfd->readbuflen+=r;
 	asfd->readbuf[asfd->readbuflen]='\0';
 	return 0;
+error:
+	truncate_readbuf(asfd);
+	return -1;
 }
 
 static int asfd_do_read_ssl(struct asfd *asfd)
@@ -119,9 +117,9 @@ static int asfd_do_read_ssl(struct asfd *asfd)
 			break;
 		case SSL_ERROR_ZERO_RETURN:
 			// End of data.
+			logp("Peer closed SSL session for %s\n", asfd->desc);
 			SSL_shutdown(asfd->ssl);
-			truncate_readbuf(asfd);
-			return -1;
+			goto error;
 		case SSL_ERROR_WANT_READ:
 			break;
 		case SSL_ERROR_WANT_WRITE:
@@ -136,10 +134,12 @@ static int asfd_do_read_ssl(struct asfd *asfd)
 		default:
 			logp("SSL read problem in %s for %s\n",
 				__func__, asfd->desc);
-			truncate_readbuf(asfd);
-			return -1;
+			goto error;
 	}
 	return 0;
+error:
+	truncate_readbuf(asfd);
+	return -1;
 }
 
 // Return 0 for OK to write, non-zero for not OK to write.
@@ -216,9 +216,13 @@ static int asfd_do_write_ssl(struct asfd *asfd)
 	switch(SSL_get_error(asfd->ssl, w))
 	{
 		case SSL_ERROR_NONE:
-//char buf[100000]="";
-//snprintf(buf, w+1, "%s", asfd->writebuf);
-//printf("wrote %d: %s\n", w, buf);
+/*
+{
+char buf[100000]="";
+snprintf(buf, w+1, "%s", asfd->writebuf);
+printf("wrote %d: %s\n", w, buf);
+}
+*/
 			if(asfd->ratelimit) asfd->rlbytes+=w;
 			memmove(asfd->writebuf,
 				asfd->writebuf+w, asfd->writebuflen-w);
@@ -236,7 +240,7 @@ static int asfd_do_write_ssl(struct asfd *asfd)
 				__func__, errno, strerror(errno), asfd->desc);
 			// Fall through to write problem
 		default:
-			berr_exit("SSL write problem for %s\n", asfd->desc);
+			logp("SSL write problem for %s\n", asfd->desc);
 			logp("write returned: %d for %s\n", w, asfd->desc);
 			return -1;
 	}

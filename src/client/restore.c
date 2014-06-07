@@ -2,7 +2,7 @@
 #include "burp1/restore.h"
 #include "burp2/restore.h"
 
-// FIX THIS: test whether this works with burp2
+// FIX THIS: it only works with burp1.
 int restore_interrupt(struct asfd *asfd,
 	struct sbuf *sb, const char *msg, struct conf *conf)
 {
@@ -10,6 +10,7 @@ int restore_interrupt(struct asfd *asfd,
 	struct cntr *cntr=conf->cntr;
 	struct iobuf *rbuf=asfd->rbuf;
 
+	if(conf->protocol!=PROTO_BURP1) return 0;
 	if(!cntr) return 0;
 
 	cntr_add(cntr, CMD_WARNING, 1);

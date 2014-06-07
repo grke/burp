@@ -3,7 +3,7 @@
 static BIO *bio_err=0;
 static const char *pass=NULL;
 
-SSL_CTX *berr_exit(const char *fmt, ...)
+static SSL_CTX *ssl_err(const char *fmt, ...)
 {
 	char buf[512]="";
 	va_list ap;
@@ -21,7 +21,7 @@ int ssl_load_dh_params(SSL_CTX *ctx, struct conf *conf)
 
 	if(!(bio=BIO_new_file(conf->ssl_dhfile, "r")))
 	{
-		berr_exit("Couldn't open ssl_dhfile: %s\n", conf->ssl_dhfile);
+		ssl_err("Couldn't open ssl_dhfile: %s\n", conf->ssl_dhfile);
 		return -1;
 	}
 
@@ -29,7 +29,7 @@ int ssl_load_dh_params(SSL_CTX *ctx, struct conf *conf)
 	BIO_free(bio);
 	if(SSL_CTX_set_tmp_dh(ctx, ret)<0)
 	{
-		berr_exit("Couldn't set DH parameters");
+		ssl_err("Couldn't set DH parameters");
 		return -1;
 	}
 	return 0;
@@ -65,7 +65,7 @@ static int ssl_load_keys_and_certs(SSL_CTX *ctx, struct conf *conf)
 	if(conf->ssl_cert && !lstat(conf->ssl_cert, &statp)
 	  && !SSL_CTX_use_certificate_chain_file(ctx, conf->ssl_cert))
 	{
-		berr_exit("Can't read ssl_cert: %s\n", conf->ssl_cert);
+		ssl_err("Can't read ssl_cert: %s\n", conf->ssl_cert);
 		return -1;
 	}
 
@@ -81,7 +81,7 @@ static int ssl_load_keys_and_certs(SSL_CTX *ctx, struct conf *conf)
 	if(ssl_key && !lstat(ssl_key, &statp)
 	  && !SSL_CTX_use_PrivateKey_file(ctx,ssl_key,SSL_FILETYPE_PEM))
 	{
-		berr_exit("Can't read ssl_key file: %s\n", ssl_key);
+		ssl_err("Can't read ssl_key file: %s\n", ssl_key);
 		return -1;
 	}
 
@@ -89,7 +89,7 @@ static int ssl_load_keys_and_certs(SSL_CTX *ctx, struct conf *conf)
 	if(conf->ssl_cert_ca && !lstat(conf->ssl_cert_ca, &statp)
 	  && !SSL_CTX_load_verify_locations(ctx, conf->ssl_cert_ca, 0))
 	{
-		berr_exit("Can't read ssl_cert_ca file: %s\n",
+		ssl_err("Can't read ssl_cert_ca file: %s\n",
 			conf->ssl_cert_ca);
 		return -1;
 	}
@@ -242,7 +242,7 @@ int ssl_check_cert(SSL *ssl, struct conf *conf)
 	}
 	if(SSL_get_verify_result(ssl)!=X509_V_OK)
 	{
-		berr_exit("Certificate doesn't verify.\n");
+		ssl_err("Certificate doesn't verify.\n");
 		return -1;
 	}
 

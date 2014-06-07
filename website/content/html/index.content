@@ -12,7 +12,8 @@ up Windows computers.
 <FONT COLOR="#000000">
 It is open source free software (where 'free' means both that you do not have
 to pay for it, and that you have freedom to do what you want with it) released
-under the AGPLv3 licence. See the FAQ for more information.
+under the AGPLv3 licence. See the <a href="/licence.html">LICENCE</a> for
+more information.
 </FONT>
 </P>
 
@@ -21,7 +22,6 @@ under the AGPLv3 licence. See the FAQ for more information.
 Finally, as with the vast majority of open software, Burp comes with
 absolutely no warranty. You are responsible for testing it and ensuring that
 it works for you.
-Please see the FAQ page for more information on this.
 </FONT>
 </P>
 
@@ -32,7 +32,7 @@ The main author of Burp is Graham Keeling.
 </P>
 
 <hr>
-<table border="0"><tr><td align="center">
+<table border="0"><tr><td align="center" width="100%">
 <script type="text/javascript"><!--
 google_ad_client = "ca-pub-0612005306689013";
 /* Test ads */

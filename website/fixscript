@@ -52,6 +52,7 @@ serverbasics=content/docs/server-basics.content
 baremetal=content/docs/baremetal-windows.content
 donations=content/html/donations.content
 licence=content/html/licence.content
+shuffling=content/docs/shuffling.content
 
 generic_page "$quickstart" "../README"
 generic_page "$debugging" "../docs/debug.txt"
@@ -62,6 +63,7 @@ generic_page "$serverbasics" "../docs/server-basics.txt"
 generic_page "$baremetal" "../docs/baremetal-windows7and8.txt"
 generic_page "$donations" "../DONATIONS"
 generic_page "$licence" "../LICENSE"
+generic_page "$shuffling" "../docs/shuffling.txt"
 
 mkdir -p html/txt
 cp -v ../docs/*.txt html/txt

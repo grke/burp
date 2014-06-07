@@ -40,6 +40,8 @@ static int results_to_fd(struct asfd *asfd)
 	static struct iobuf *wbuf=NULL;
         static char tmp[128];
 
+	if(!asfd->blist->last_index) return 0;
+
 	if(!wbuf && !(wbuf=iobuf_alloc())) return -1;
 
 	// Need to start writing the results down the fd.

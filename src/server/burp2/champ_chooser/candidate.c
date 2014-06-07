@@ -15,6 +15,7 @@ void candidates_set_score_pointers(struct candidate **candidates,
 	size_t clen, struct scores *scores)
 {
 	size_t a;
+printf("set score pointers\n");
 	for(a=0; a<candidates_len; a++)
 		candidates[a]->score=&(scores->scores[a]);
 }

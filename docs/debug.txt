@@ -1,5 +1,8 @@
-If you have a problem with burp crashing, then I would like to be able
-to fix it.
+Debugging a crash
+-----------------
+
+In the unlikely event that you have a problem with burp crashing, I would like
+to be able to fix it.
 This is easier if the crash is reproducible. That is, if you can run the
 client on the command line and watch it crash on demand.
 

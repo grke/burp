@@ -1,4 +1,5 @@
-QUICK START
+Quick start
+-----------
 
 The following assumes that you are not installing the burp server via a
 distribution's package management system.
@@ -24,7 +25,8 @@ machines.
 The server is now ready for clients to connect to it. 
 
 
-UNIX CLIENT
+Unix client
+-----------
 
 If you are going to run the client on the same machine on which you installed
 the server, the client will already be installed because the client is built
@@ -49,7 +51,9 @@ MAILTO=
 Whether or not an instance of the client results in an actual backup depends
 upon the timer settings in the server config files.
 
-WINDOWS CLIENT
+
+Windows client
+--------------
 
 Pick the 32-bit or 64-bit Burp installer as appropriate - visit
 http://burp.grke.org/ to find one of them.
@@ -78,6 +82,14 @@ burp.exe -a b
 If you are running Windows 7, you might need to start the command prompt with
 "Run as Administrator".
 
+
+Mac client
+----------
+
+The installation on a Mac is performed via Homebrew. I do not have a Mac, so
+I cannot provide instructions on this. However, once burp is actually
+installed, you should be able to run it as a server or a client in much the
+same way as you would with Linux.
 
 
 For more help, see the man page - type 'man burp'.

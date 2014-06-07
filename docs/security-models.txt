@@ -1,12 +1,18 @@
-Some notes on security models
------------------------------
+Security models
+---------------
 
 (Note that communications between burp clients and servers always use SSL, so
 that the network connections are encrypted. The SSL certificates give you some
 assurance that you are speaking to the correct peer. The following is mostly
 talking about the data that ends up written on disks.)
 
-a) You are a client, and you don't trust the server.
+Burp is designed with two different security models in mind.
+
+Untrustworthy server
+--------------------
+
+You are a client, and you don't trust the server.
+
    * You must encrypt your data, using the client-side data encryption option,
      which is 'encryption_password=[password]'. If you lose the password, you
      will not be able to get your data back. Note that path names are not
@@ -18,10 +24,14 @@ a) You are a client, and you don't trust the server.
    * You must set 'server_can_restore=0' in the client burp.conf to prevent
      server initiated restores.
 
-b) You are a site administrator. You have a burp server and several clients.
-   If you don't trust your users, you have the ability to turn off various
-   client abilities by editing the server configuration:
-	  - client_can_force_backup=0
-	  - client_can_list=0
-	  - client_can_restore=0
-	  - client_can_verify=0
+Untrustworthy users
+-------------------
+
+You are a site administrator with a burp server and several clients, you don't
+trust your users. You have the ability to turn off various client abilities by
+editing the server configuration: 
+
+   * client_can_force_backup=0
+   * client_can_list=0
+   * client_can_restore=0
+   * client_can_verify=0

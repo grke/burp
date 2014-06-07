@@ -1,50 +1,40 @@
-<TABLE>
-<TR><TD WIDTH="10%"></TD>
-<TD WIDTH="60%">
-</TD><TD WIDTH="10%"></TD></TR>
-
-
-<TR>
-<TD></TD>
-<TD ALIGN="LEFT">
-
-
 <HR>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 Q. Why?
 </FONT>
 </P>
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 A. Please go to the <a href="why.html">WHY</a> page.
 </FONT>
 </P>
 <HR>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 Q. What operating systems do I need to be running?
 </FONT>
 </P>
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 The burp server (where the backups are stored) needs to run on a Linux-style
 operating system. Personally, I use Debian.
-The burp client (from which backups are taken) can run on Linux or Windows.
+The burp client (from which backups are taken) can run on Linux, Windows, or
+Mac.
 </FONT>
 </P>
 
 <HR>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 Q. What are the main features? What works?
 </FONT>
 </P>
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 A. At the time of writing, the following features work:
 <ul>
 <li>Server mode runs on Unix-based systems.
@@ -74,28 +64,27 @@ A. At the time of writing, the following features work:
 <li>Automatic client upgrade.
 </ul>
 </FONT>
-</P>
 <HR>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 Q. What is on the roadmap? What doesn't work?
 </FONT>
 </P>
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 A. For the list of things to do, please see <a href="https://github.com/grke/burp/issues">https://github.com/grke/burp/issues</a>.
 </FONT>
 </P>
 <HR>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 Q. What are the main dependencies?
 </FONT>
 </P>
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 A. They are:
 <ul>
 <li>librsync
@@ -108,12 +97,12 @@ A. They are:
 <HR>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 Q. Do I need to install cygwin on Windows?
 </FONT>
 </P>
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 A. No.
 </FONT>
 </P>
@@ -121,12 +110,12 @@ A. No.
 <HR>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 Q. How do I build the Windows client?
 </FONT>
 </P>
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 A. This is slightly complicated. You might want to go to the DOWNLOAD page and
 get a prebuilt binary. If you really want to build it yourself, follow the
 instructions in the README file in the src/win32 directory of the burp source.
@@ -136,25 +125,25 @@ instructions in the README file in the src/win32 directory of the burp source.
 <HR>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 Q. How do I build a static Linux binary?
 </FONT>
 </P>
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 A. Use the --enable-static and --disable-libtool configure script options.
 </FONT>
 </P>
 
 <HR>
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 Q. What licence does Burp use?
 </FONT>
 </P>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 A. It is open source free software (where 'free' means both that you do not have
 to pay for it, and that you have freedom to do what you want with it) released
 under the AGPLv3 licence. Refer to the Burp
@@ -165,13 +154,13 @@ under the AGPLv3 licence. Refer to the Burp
 <HR>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 Q. How can I do a "bare metal" restore?
 </FONT>
 </P>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 A. There are instructions for <A HREF="http://burp.grke.org/wiki/index.php/Bare_metal_restore_for_Windows">Windows 7 and 8</A>.
 <BR>
 If anybody wants to contribute instructions for any other operating system,
@@ -181,13 +170,13 @@ please feel free.
 
 <HR>
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 Q. I get errors like "/0000/0000/1ACA.gz: File too large" in my log.
 </FONT>
 </P>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 A. This is burp trying to open a backed up file on the burp server.
 Older versions of zlib can have problems opening large files. Try upgrading
 zlib to at least version 1.2.5.
@@ -196,13 +185,13 @@ zlib to at least version 1.2.5.
 
 <HR>
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 Q. Are you going to do data deduplication on the server side?
 </FONT>
 </P>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 A. Yes, new in version 1.2.4.
 Note, that there are file systems (like btrfs, zfs and btrfs) coming along that
 will do data deduplication automatically, and probably better than burp.
@@ -211,13 +200,13 @@ will do data deduplication automatically, and probably better than burp.
 
 <HR>
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 Q. What is the best file system to use on the server?
 </FONT>
 </P>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 A. So far, I have done all my testing on ext3, and it works for me. The main
 concern is not to run out of file system inodes. You can configure the number
 of inodes when you create the ext3 file system, but you cannot change the
@@ -244,13 +233,13 @@ than reiserfs over the last 10 years!)
 
 <HR>
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 Q. I specified LDFLAGS="-L /opt/somepath" to build burp, but when I run it, it uses the system libraries instead of the libraries I installed in /opt/somepath!
 </FONT>
 </P>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 A. Try this: LDFLAGS="-L /opt/somepath -R /opt/somepath"
 </FONT>
 </P>
@@ -258,7 +247,7 @@ A. Try this: LDFLAGS="-L /opt/somepath -R /opt/somepath"
 <HR>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 Q. On Windows, the client exits with a message like:
 "Could not open 'C:/Documents and Settings/Administrator/NTUSER.DAT': The file is in use by another process."
 Why?
@@ -266,7 +255,7 @@ Why?
 </P>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 A. On newer versions of Windows, things called 'junction points' have been added.
 In the example given, 'include = C:/Documents and Settings' was set in the
 client burp.conf, but 'C:/Documents and Settings' is a junction point and the
@@ -281,13 +270,13 @@ Use the real path instead.
 <HR>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 Q. My backup fails with the message 'error in async_rw'. Why?
 </FONT>
 </P>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 A. This normally means that the other side of the connection went away.
 For example, it happens to me when I close my laptop lid, or when my laptop
 goes into hibernate mode, or when I pull the network cable out.
@@ -301,13 +290,13 @@ so), as it may give you more information to work with.
 <HR>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 Q. How can I automatically upgrade burp clients?
 </FONT>
 </P>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 A. There are instructions <A HREF="/txt/autoupgrade.txt">here</A>.
 </FONT>
 </P>
@@ -315,14 +304,14 @@ A. There are instructions <A HREF="/txt/autoupgrade.txt">here</A>.
 <HR>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 Q. How does the automatic certificate authority and client certificate signing
 work?
 </FONT>
 </P>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 A. There is documentation <A HREF="/txt/burp_ca.txt">here</A>.
 </FONT>
 </P>
@@ -330,13 +319,13 @@ A. There is documentation <A HREF="/txt/burp_ca.txt">here</A>.
 <HR>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 Q. Can you use librsync to do rsync feature X?
 </FONT>
 </P>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 A. No, rsync has nothing to do with librsync other than them both using the
 same algorithm. Put another way, rsync does not use librsync. 
 </FONT>
@@ -345,13 +334,13 @@ same algorithm. Put another way, rsync does not use librsync.
 <HR>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 Q. What is the purpose of the shuffle operation at the end of the backup?
 </FONT>
 </P>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 A. Once all the files and bits of files have been transferred to the server,
 it needs to assemble them into the final backup.<BR>
 By default, this includes hardlinking files that haven't changed since the
@@ -365,13 +354,13 @@ previous backup.
 <HR>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 Q. Is there a way to speed up this process?
 </FONT>
 </P>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 A. Yes, you can stop it from generating the reverse deltas and deleting the
 original files by setting hardlinked_archive=1, which means that a complete
 copy of every version of each file will be kept. This also has the benefit of
@@ -392,15 +381,16 @@ individual clients in the server clientconfdir files.
 <HR>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 Q. I have more questions about shuffling, librsync=[0|1] and
 hardlinked_archive=[0|1].
 </FONT>
 </P>
 
 <P>
-<FONT COLOR="#99CCFF">
-A. Perhaps the man page, or <A HREF="/txt/shuffling.txt">this file</A> can help
+<FONT COLOR="#000000">
+A. Perhaps the <A HREF="docs/manpage.html">man page</A>,
+or <A HREF="/txt/shuffling.txt">this file</A> can help
 you.
 </FONT>
 </P>
@@ -408,54 +398,54 @@ you.
 <HR>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 Q. My Windows client is crashing, help!
 </FONT>
 </P>
 
 <P>
-<FONT COLOR="#99CCFF">
-A. In order to debug it, please follow the instructions <A HREF="/txt/debug.txt">here</A>.
+<FONT COLOR="#000000">
+A. In order to debug it, please follow the instructions <A HREF="/docs/debugging.html">here</A>.
 </FONT>
 </P>
 
 <HR>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 Q. What command line options are available to the Windows installer?
 </FONT>
 </P>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 <table>
-<tr><td VALIGN="top" WIDTH="50%"><FONT COLOR="#99CCFF">/S</td>
-	<td VALIGN="top"><FONT COLOR="#99CCFF">Silent install</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#99CCFF">/server=[address]</FONT></td>
-	<td VALIGN="top"><FONT COLOR="#99CCFF">Set the address of the burp server</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#99CCFF">/port=[port]</FONT></td>
-	<td VALIGN="top"><FONT COLOR="#99CCFF">Set the port of the burp server</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#99CCFF">/cname=[name]</FONT></td>
-	<td VALIGN="top"><FONT COLOR="#99CCFF">Set the client name</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#99CCFF">/password=[password]</FONT></td>
-	<td VALIGN="top"><FONT COLOR="#99CCFF">Set the client password</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#99CCFF">/autoupgrade=[0|1]</FONT></td>
-	<td VALIGN="top"><FONT COLOR="#99CCFF">Set whether autoupgrades are allowed</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#99CCFF">/server_can_restore=[0|1]</FONT></td>
-	<td VALIGN="top"><FONT COLOR="#99CCFF">Set whether the server can initiate restores or not.</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#99CCFF">/encryption_password=[password]</FONT></td>
-	<td VALIGN="top"><FONT COLOR="#99CCFF">Set an encryption password.</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#99CCFF">/poll=[minutes]</FONT></td>
-	<td VALIGN="top"><FONT COLOR="#99CCFF">Set the poll interval</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#99CCFF">/overwrite</FONT></td>
-	<td VALIGN="top"><FONT COLOR="#99CCFF">Allow existing client configuration to be overwritten</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#99CCFF">/skippages</FONT></td>
-	<td VALIGN="top"><FONT COLOR="#99CCFF">Skip installer configuration pages but keep the initial splash screen and final confirmation</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#99CCFF">/minutetext=[text]</FONT></td>
-	<td VALIGN="top"><FONT COLOR="#99CCFF">When setting up the Windows scheduler, the Windows 'schtasks' command stupidly needs different text given to it depending on the language of the system. The default is 'MINUTE'. If your Windows is for example, Polish, this option lets you set it to the Polish version of 'MINUTE'.</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#99CCFF">/encryption_password=[password]</FONT></td>
-	<td VALIGN="top"><FONT COLOR="#99CCFF">Set the encryption password.</FONT></td></tr>
+<tr><td VALIGN="top" WIDTH="50%"><FONT COLOR="#000000">/S</td>
+	<td VALIGN="top"><FONT COLOR="#000000">Silent install</FONT></td></tr>
+<tr><td VALIGN="top"><FONT COLOR="#000000">/server=[address]</FONT></td>
+	<td VALIGN="top"><FONT COLOR="#000000">Set the address of the burp server</FONT></td></tr>
+<tr><td VALIGN="top"><FONT COLOR="#000000">/port=[port]</FONT></td>
+	<td VALIGN="top"><FONT COLOR="#000000">Set the port of the burp server</FONT></td></tr>
+<tr><td VALIGN="top"><FONT COLOR="#000000">/cname=[name]</FONT></td>
+	<td VALIGN="top"><FONT COLOR="#000000">Set the client name</FONT></td></tr>
+<tr><td VALIGN="top"><FONT COLOR="#000000">/password=[password]</FONT></td>
+	<td VALIGN="top"><FONT COLOR="#000000">Set the client password</FONT></td></tr>
+<tr><td VALIGN="top"><FONT COLOR="#000000">/autoupgrade=[0|1]</FONT></td>
+	<td VALIGN="top"><FONT COLOR="#000000">Set whether autoupgrades are allowed</FONT></td></tr>
+<tr><td VALIGN="top"><FONT COLOR="#000000">/server_can_restore=[0|1]</FONT></td>
+	<td VALIGN="top"><FONT COLOR="#000000">Set whether the server can initiate restores or not.</FONT></td></tr>
+<tr><td VALIGN="top"><FONT COLOR="#000000">/encryption_password=[password]</FONT></td>
+	<td VALIGN="top"><FONT COLOR="#000000">Set an encryption password.</FONT></td></tr>
+<tr><td VALIGN="top"><FONT COLOR="#000000">/poll=[minutes]</FONT></td>
+	<td VALIGN="top"><FONT COLOR="#000000">Set the poll interval</FONT></td></tr>
+<tr><td VALIGN="top"><FONT COLOR="#000000">/overwrite</FONT></td>
+	<td VALIGN="top"><FONT COLOR="#000000">Allow existing client configuration to be overwritten</FONT></td></tr>
+<tr><td VALIGN="top"><FONT COLOR="#000000">/skippages</FONT></td>
+	<td VALIGN="top"><FONT COLOR="#000000">Skip installer configuration pages but keep the initial splash screen and final confirmation</FONT></td></tr>
+<tr><td VALIGN="top"><FONT COLOR="#000000">/minutetext=[text]</FONT></td>
+	<td VALIGN="top"><FONT COLOR="#000000">When setting up the Windows scheduler, the Windows 'schtasks' command stupidly needs different text given to it depending on the language of the system. The default is 'MINUTE'. If your Windows is for example, Polish, this option lets you set it to the Polish version of 'MINUTE'.</FONT></td></tr>
+<tr><td VALIGN="top"><FONT COLOR="#000000">/encryption_password=[password]</FONT></td>
+	<td VALIGN="top"><FONT COLOR="#000000">Set the encryption password.</FONT></td></tr>
 </table>
 </FONT>
 </P>
@@ -463,21 +453,15 @@ Q. What command line options are available to the Windows installer?
 <HR>
 
 <P>
-<FONT COLOR="#99CCFF">
+<FONT COLOR="#000000">
 Q. What should I do if I don't trust my burp server administrator?<BR>
 Q. What should I do if I don't trust my burp users?<BR>
 </FONT>
 </P>
 
 <P>
-<FONT COLOR="#99CCFF">
-A. There are some notes on security models <A HREF="/txt/security-models.txt">here</A>.
+<FONT COLOR="#000000">
+A. There are some notes on security models <A HREF="/docs/security-models.html">here</A>.
 </FONT>
 </P>
 <HR>
-
-</TD>
-</TR>
-
-</TR>
-</TABLE>

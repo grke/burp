@@ -1,52 +1,36 @@
+<p>
+Latest versions:
+<ul>
+<li>2.0.4: Experimental
+<li>1.4.16: Stable candidate
+<li>1.3.48: Stable
+<li>1.3.10: Old stable
+</ul>
+</p>
 
 
-<TABLE>
-
-
-<TR>
-<TD></TD>
-<TD ALIGN="CENTER" WIDTH="100%">
 <P>
-<FONT COLOR="#99CCFF">
-For the latest downloads, please visit the
+For the latest source and Windows client installers, please visit the
 <a href="http://sourceforge.net/projects/burp">burp sourceforge page</a>.
-</FONT>
 </P>
 <p>
-<FONT COLOR="#99CCFF">
-Old versions and source for the windows build tools are currently hosted
+Old versions and source for the Windows build tools are currently hosted
 <a href="downloads">here</a>.
-</FONT>
 </p>
 <P>
-<FONT COLOR="#99CCFF">
-Or, if you are very keen, there is a git repository:
+Packages are available in most of the popular Linux distributions, including
+Debian, Ubuntu and OpenSUSE.
+</P>
+
+<p>
+Some kind people have even come up with a
+<a href="http://brewformulas.org/Burp">brew formula</a>
+for Macs.
+</p>
+
+<P>
+Finally, burp is developed using git. Here is the repository:
 <pre>
 git clone git://github.com/grke/burp.git (read-only)
 </pre>
-</FONT>
 </P>
-<P>
-<FONT COLOR="#99CCFF">
-Packages are also available in:
-<pre>
-Debian
-Ubuntu
-OpenSUSE
-</pre>
-</FONT>
-</P>
-
-
-</TD>
-</TR>
-
-</TR>
-</TABLE>
-
-<BR>
-<BR>
-<BR>
-<BR>
-<BR>
-<BR>

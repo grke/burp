@@ -9,6 +9,9 @@
 <li><A HREF="docs/burp_ca.html">SSL - Certificate Authority and certificates</A>
 	- How burp_ca automatically creates a certificate authority and signs
 	certificates.
+<li><A HREF="docs/shuffling.html">Shuffling, hardlinked_archive, librsync</A> -
+	An explanation about what happens on the server when the client has
+	disconnected after a backup.
 <li><A HREF="docs/manpage.html">Man page</A> -
 	The man page describes all of the available options and more. This is
 	where you can find the most detailed information about burp.

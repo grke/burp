@@ -1,0 +1,122 @@
+Shuffling, hardlinked_archive, librsync
+---------------------------------------
+
+The following was originally posted on the mailing list, but possibly helpful
+to people with more questions about the shuffling pase, librsync=[0|1], and
+hardlinked_archive=[0|1].
+
+You can set both those options globally in the server burp.conf, or for
+individual clients in the server clientconfdir files.
+
+On Thu, May 10, 2012 at 07:29:09PM +0200, Davide Bozzelli wrote:
+> Just a simple question: what is the purpose of the shuffle operation at the
+> end of backup ?
+
+On Thu, May 10, 2012 at 9:54 PM, Graham Keeling wrote:
+> Once all the files and bits of files have been transferred to the server,
+> it needs to assemble them into the final backup.
+> By default, this includes hardlinking files that haven't changed since the
+> immediately previous backup into place, patching the ones that have changed
+> with the new deltas, generating reverse deltas to be able to recreate the
+> previous files that change, and deleting the files that changed from the
+> previous backup.
+
+On Thu, May 10, 2012 at 07:29:09PM +0200, Davide Bozzelli wrote:
+> I see that a lot of time is taken by it (even much more that the time taken
+> for transfer file).
+>
+> Is there a way to speedup this process ?
+
+On Thu, May 10, 2012 at 9:54 PM, Graham Keeling wrote:
+> Yes, you can stop it from generating the reverse deltas and deleting the
+> original files by setting hardlinked_archive=1, which means that a complete
+> copy of every version of each file will be kept. This also has the benefit
+> of speeding up restores for older backups, because no reverse deltas need
+> to be applied, but it has the disadvantage of taking up more disk space.
+
+On Tue, May 15, 2012 at 09:20:50PM +0200, Davide Bozzelli wrote:
+> Does it means that on every backup run ALL the files need to be trasferred
+> ? or onlu the changed ones ?
+
+On Tue, May 15, 2012 at 10:35:10PM +0100, Graham Keeling wrote:
+> Only the changed ones.
+
+
+
+On Wed, May 16, 2012 at 11:12:50AM +1200, Jason Haar wrote:
+> Just to clarify this for myself and others, can you confirm burp works
+> like this
+>
+> client -> I have one file that is different -> server
+> server -> server copies old version (from last backup) into temp dir
+> client -> sends whole file using rsync tricks [compression, deltas] ->
+> server pointing at temp dir
+>
+> server then compares this temp file against last backup version, creates
+> delta, deletes temp file, creates hardlink to old version and documents
+> that file == last backup + delta. This is the "shuffling" phase. Does
+> that sum it up?
+
+No.
+In the source, there is a file called 'backup_phases.txt' that explains it:
+------
+backup_phase1_client: Scan the client filesystem and send stats to the server.
+backup_phase1_server: Receive the stats from the client.
+
+backup_phase2_server: Request and receive changes from the client and create
+        an unchanged list and a changed list.
+backup_phase2_client: Send the changes that the server requests. The work of
+        the client is now finished.
+
+backup_phase3_server: Generate the new manifest list for the backup out of
+        the unchanged list and the changed list.
+
+backup_phase4_server: Finish off the backup by jiggling the received data
+        around and putting everything in the correct place. Need to
+        generate reverse deltas in order to save space for the previous backup
+        (unless hardlinked_archive is turned on).
+------
+(phase4 is the shuffling bit)
+
+> One last question about "hardlinked_archive=1". This means for each
+> backup, if the file hasn't changed since the last backup, burp hardlinks
+> the old file to the new?
+
+Yes, and it doesn't generate reverse deltas for the files that changed and it
+doesn't delete the original files.
+
+> If "hardlinked_archive=0", then burp... does what?
+
+It generates reverse deltas for the files that changed and it deletes the
+original files.
+
+> The documentation says that "hardlinked_archive=1" uses more
+> diskspace - but I can't understand how. Surely "hardlinked_archive=0"
+> would mean burp is keeping a zero-sized delta plus metadata referring to
+> the original backup - that must take up about as much diskspace as a
+> hardlink?
+
+No, for at least three reasons:
+
+a) If a file didn't change and 'hardlinked_archive = 0', burp will just delete
+the original and keep the new version, and not keep a delta at all (zero-sized
+deltas actually have a few bytes in them).
+
+b) A complete file plus a reverse delta takes up less space than two complete
+files. Imagine you have a 1MB file, back it up, then add a byte to it, then
+back it up again. With 'hardlinked_archive = 1', the server stores both
+complete versions of the files. With 'hardlinked_archive = 0', the server
+stores the most recent version, plus a reverse delta (which contains a small
+block that has the effect of removing a byte from the recent version)
+so that it can re-generate the older version if it has to.
+
+c) Your filesystem doesn't have unlimited inodes. A hardlink uses an inode.
+
+
+You can also set librsync=0, which turns off librsync so that, if a file has
+changed, the whole file is transferred from the client. This means that
+deltas don't have to be applied to the previously backed up files. So, if the
+speed of your network beats the speed of being able to apply deltas, you might
+want to set librsync=0.
+
+See the man page for more information on these options.

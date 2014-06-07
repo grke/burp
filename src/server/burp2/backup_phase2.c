@@ -581,26 +581,31 @@ static int append_for_champ_chooser(struct asfd *chfd,
 	return 0;
 }
 
+static int mark_not_got(struct blk *blk, struct dpth *dpth)
+{
+	const char *path;
+
+	if(blk->got!=BLK_INCOMING) return 0;
+	blk->got=BLK_NOT_GOT;
+
+	// Need to get the data for this blk from the client.
+	// Set up the details of where it will be saved.
+	if(!(path=dpth_mk(dpth))) return -1;
+	snprintf(blk->save_path, sizeof(blk->save_path), "%s", path);
+	if(dpth_incr_sig(dpth)) return -1;
+	return 0;
+}
+
 static int mark_up_to_index(struct blist *blist,
 	uint64_t index, struct dpth *dpth)
 {
 	struct blk *blk;
-	const char *path;
-//printf("in mark up\n");
-//if(blist && blist->blk_from_champ_chooser) printf("YES: %p %d\n", blist->blk_from_champ_chooser, blist->blk_from_champ_chooser->index);
+
 	// Mark everything that was not got, up to the given index.
 	for(blk=blist->blk_from_champ_chooser;
 	  blk && blk->index!=index; blk=blk->next)
-	{
-		if(blk->got!=BLK_INCOMING) continue;
-		blk->got=BLK_NOT_GOT;
-
-        	// Need to get the data for this blk from the client.
-		// Set up the details of where it will be saved.
-		if(!(path=dpth_mk(dpth))) return -1;
-		snprintf(blk->save_path, sizeof(blk->save_path), "%s", path);
-		if(dpth_incr_sig(dpth)) return -1;
-	}
+		if(mark_not_got(blk, dpth))
+			return -1;
 	if(!blk)
 	{
 		logp("Could not find index from champ chooser: %lu\n", index);
@@ -608,6 +613,12 @@ static int mark_up_to_index(struct blist *blist,
 	}
 	blist->blk_from_champ_chooser=blk;
 	return 0;
+}
+
+static void mark_got(struct blk *blk, const char *save_path)
+{
+	blk->got=BLK_GOT;
+	snprintf(blk->save_path, sizeof(blk->save_path), "%s", save_path);
 }
 
 static int deal_with_read_from_chfd(struct asfd *chfd,
@@ -627,13 +638,7 @@ static int deal_with_read_from_chfd(struct asfd *chfd,
 				&save_path);
 			//printf("got save_path: %d %s\n", file_no, save_path);
 			if(mark_up_to_index(blist, file_no, dpth)) goto end;
-			// FIX THIS:
-			// blist->blk_from_champ_chooser needs to have the
-			// save path set.
-			blist->blk_from_champ_chooser->got=BLK_GOT;
-			snprintf(blist->blk_from_champ_chooser->save_path,
-			  sizeof(blist->blk_from_champ_chooser->save_path),
-				"%s", save_path);
+			mark_got(blist->blk_from_champ_chooser, save_path);
 			//printf("after cmd_sig: %d\n",
 			//	blist->blk_from_champ_chooser->index);
 			break;
@@ -642,6 +647,8 @@ static int deal_with_read_from_chfd(struct asfd *chfd,
 			file_no=decode_file_no(chfd->rbuf);
 			//printf("mark up to: %d\n", file_no);
 			if(mark_up_to_index(blist, file_no, dpth)) goto end;
+			mark_not_got(blist->blk_from_champ_chooser, dpth);
+
 			//printf("after mark_up: %d\n",
 			//	blist->blk_from_champ_chooser->index);
 			break;

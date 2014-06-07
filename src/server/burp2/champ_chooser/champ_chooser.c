@@ -49,6 +49,12 @@ int champ_chooser_init(const char *datadir, struct conf *conf)
 		sbuf_free_content(sb);
 	}
 
+	// FIX THIS: this stuff is also done in add_fresh.
+	if(scores_grow(scores, candidates_len)) goto end;
+	candidates_set_score_pointers(candidates, candidates_len, scores);
+	scores_reset(scores);
+	logp("init: %d candidates\n", (int)candidates_len);
+
 	ret=0;
 end:
 	gzclose_fp(&zp);
@@ -114,6 +120,8 @@ int deduplicate(struct asfd *asfd, struct conf *conf)
 	int blk_count=0;
 
 printf("in deduplicate()\n");
+
+	if(!in) return 0;
 
 	incoming_found_reset(in);
 	count=0;

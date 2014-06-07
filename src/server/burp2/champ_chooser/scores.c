@@ -27,7 +27,7 @@ printf("%p\n", scores);
 int scores_grow(struct scores *scores, size_t count)
 {
 	if(!count) return 0;
-	//printf("grow scores to %lu\n", max_score_index*count);
+	printf("grow scores to %lu\n", count);
 	scores->size=count;
 	if(!(scores->scores=(uint16_t *)realloc_w(scores->scores,
 		sizeof(uint16_t)*scores->size, __func__)))

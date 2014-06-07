@@ -364,13 +364,18 @@ int run_action_server(struct async *as,
 
 	// FIX THIS: burp2 needs to do something at this point too.
 	// Running the burp1 stuff is the wrong thing to do.
-	if(check_for_rubble_burp1(as->asfd, sdirs, cconf, incexc, &resume))
+	if(cconf->protocol==PROTO_BURP1)
 	{
-		// FIX THIS: rbuf->buf is not just 'backup' or 'list', etc.
-		maybe_do_notification(as->asfd, ret,
-			"", "error in check_for_rubble()",
-			"", rbuf->buf, cconf);
-		return -1;
+		if(check_for_rubble_burp1(as->asfd,
+			sdirs, cconf, incexc, &resume))
+		{
+			// FIX THIS: rbuf->buf is not just 'backup' or 'list',
+			// etc.
+			maybe_do_notification(as->asfd, ret,
+				"", "error in check_for_rubble()",
+				"", rbuf->buf, cconf);
+			return -1;
+		}
 	}
 
 	if(!strncmp_w(rbuf->buf, "backup"))

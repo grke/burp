@@ -202,64 +202,69 @@ static int run_restore(struct asfd *asfd,
 {
 	int ret=-1;
 	char *cp=NULL;
+	char *copy=NULL;
 	enum action act;
 	char *backupnostr=NULL;
 	char *restoreregex=NULL;
 	char *dir_for_notify=NULL;
 
-	// Hmm. inefficient.
-	if(!strncmp_w(rbuf->buf, "restore "))
+	if(!(copy=strdup_w(rbuf->buf, __func__)))
+		goto end;
+
+	iobuf_free_content(rbuf);
+
+	if(!strncmp_w(copy, "restore ")) act=ACTION_RESTORE;
+	else act=ACTION_VERIFY;
+
+	if(!(backupnostr=strchr(copy, ' ')))
 	{
-		backupnostr=rbuf->buf+strlen("restore ");
-		act=ACTION_RESTORE;
-	}
-	else
-	{
-		backupnostr=rbuf->buf+strlen("verify ");
-		act=ACTION_VERIFY;
+		logp("Could not parse %s in %s\n", copy, __func__);
+		goto end;
 	}
 	if(conf_val_reset(backupnostr, &(cconf->backup)))
-		return -1;
+		goto end;
 	if((cp=strchr(cconf->backup, ':'))) *cp='\0';
 
 	if(act==ACTION_RESTORE)
 	{
 		int r;
 		if((r=client_can_restore(cconf))<0)
-			return -1;
+			goto end;
 		else if(!r)
 		{
 			logp("Not allowing restore of %s\n", cconf->cname);
-			return asfd->write_str(asfd, CMD_GEN,
-				"Client restore is not allowed");
+			if(!asfd->write_str(asfd, CMD_GEN,
+				"Client restore is not allowed")) ret=0;
+			goto end;
 		}
 	}
 	if(act==ACTION_VERIFY && !cconf->client_can_verify)
 	{
 		logp("Not allowing verify of %s\n", cconf->cname);
-		return asfd->write_str(asfd, CMD_GEN,
-			"Client verify is not allowed");
+		if(!asfd->write_str(asfd, CMD_GEN,
+			"Client verify is not allowed")) ret=0;
+		goto end;
 	}
 
-	if((restoreregex=strchr(rbuf->buf, ':')))
+	if((restoreregex=strchr(copy, ':')))
 	{
 		*restoreregex='\0';
 		restoreregex++;
 	}
 	if(conf_val_reset(restoreregex, &(cconf->regex))
 	  || asfd->write_str(asfd, CMD_GEN, "ok"))
-		return -1;
+		goto end;
 	ret=do_restore_server(asfd, sdirs, act,
 		srestore, &dir_for_notify, cconf);
 	if(dir_for_notify)
-	{
 		maybe_do_notification(asfd, ret,
 			sdirs->client, dir_for_notify,
 			act==ACTION_RESTORE?"restorelog":"verifylog",
 			act==ACTION_RESTORE?"restore":"verify",
 			cconf);
-		free(dir_for_notify);
-	}
+end:
+	free_w(&copy);
+	free_w(&dir_for_notify);
 	return ret;
 }
 

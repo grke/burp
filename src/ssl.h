@@ -7,7 +7,6 @@
 extern SSL_CTX *ssl_initialise_ctx(struct conf *conf);
 extern void ssl_destroy_ctx(SSL_CTX *ctx);
 extern int ssl_load_dh_params(SSL_CTX *ctx, struct conf *conf);
-extern SSL_CTX *berr_exit(const char *fmt, ...);
 extern void ssl_load_globals(void);
 extern int ssl_check_cert(SSL *ssl, struct conf *conf);
 

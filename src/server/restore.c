@@ -31,6 +31,10 @@ static int setup_cntr(struct asfd *asfd, const char *manifest,
 	int ret=-1;
 	gzFile zp;
 	struct sbuf *sb=NULL;
+
+// FIX THIS: this is only trying to work for burp1.
+	if(cconf->protocol!=PROTO_BURP1) return 0;
+
 	if(!(sb=sbuf_alloc(cconf))) goto end;
 	if(!(zp=gzopen_file(manifest, "rb")))
 	{
@@ -48,7 +52,7 @@ static int setup_cntr(struct asfd *asfd, const char *manifest,
 		else
 		{
 			if((!srestore || check_srestore(cconf, sb->path.buf))
-					&& check_regex(regex, sb->path.buf))
+			  && check_regex(regex, sb->path.buf))
 			{
 				cntr_add_phase1(cconf->cntr, sb->path.cmd, 0);
 				if(sb->burp1->endfile.buf)
@@ -89,12 +93,14 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 		&& !(logpath=prepend_s(bu->path, "verifylog")))
 	  || (act==ACTION_VERIFY
 		&& !(logpathz=prepend_s(bu->path, "verifylog.gz")))
-	  || !(manifest=prepend_s(bu->path, "manifest.gz")))
+	  || !(manifest=prepend_s(bu->path,
+		cconf->protocol==PROTO_BURP1?"manifest.gz":"manifest")))
 	{
 		log_and_send_oom(asfd, __func__);
 		goto end;
 	}
-	else if(set_logfp(logpath, cconf))
+
+	if(set_logfp(logpath, cconf))
 	{
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),

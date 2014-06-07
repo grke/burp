@@ -138,39 +138,6 @@ A. Use the --enable-static and --disable-libtool configure script options.
 <HR>
 <P>
 <FONT COLOR="#000000">
-Q. What licence does Burp use?
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#000000">
-A. It is open source free software (where 'free' means both that you do not have
-to pay for it, and that you have freedom to do what you want with it) released
-under the AGPLv3 licence. Refer to the Burp
-<a href="/faq/licence.html">LICENCE</a> file for more details.
-</FONT>
-</P>
-
-<HR>
-
-<P>
-<FONT COLOR="#000000">
-Q. How can I do a "bare metal" restore?
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#000000">
-A. There are instructions for <A HREF="http://burp.grke.org/wiki/index.php/Bare_metal_restore_for_Windows">Windows 7 and 8</A>.
-<BR>
-If anybody wants to contribute instructions for any other operating system,
-please feel free.
-</FONT>
-</P>
-
-<HR>
-<P>
-<FONT COLOR="#000000">
 Q. I get errors like "/0000/0000/1ACA.gz: File too large" in my log.
 </FONT>
 </P>
@@ -192,13 +159,28 @@ Q. Are you going to do data deduplication on the server side?
 
 <P>
 <FONT COLOR="#000000">
-A. Yes, new in version 1.2.4.
+A. Yes, new in version 1.2.4, using 'bedup'.
 Note, that there are file systems (like btrfs, zfs and btrfs) coming along that
-will do data deduplication automatically, and probably better than burp.
+will do data deduplication automatically, and probably better than bedup.
 </FONT>
 </P>
 
 <HR>
+<P>
+<FONT COLOR="#000000">
+Q. Are you going to do inline data deduplication?
+</FONT>
+</P>
+
+<P>
+<FONT COLOR="#000000">
+A. Yes, in burp 2.
+</FONT>
+</P>
+
+<HR>
+
+
 <P>
 <FONT COLOR="#000000">
 Q. What is the best file system to use on the server?
@@ -291,35 +273,6 @@ so), as it may give you more information to work with.
 
 <P>
 <FONT COLOR="#000000">
-Q. How can I automatically upgrade burp clients?
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#000000">
-A. There are instructions <A HREF="/txt/autoupgrade.txt">here</A>.
-</FONT>
-</P>
-
-<HR>
-
-<P>
-<FONT COLOR="#000000">
-Q. How does the automatic certificate authority and client certificate signing
-work?
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#000000">
-A. There is documentation <A HREF="/txt/burp_ca.txt">here</A>.
-</FONT>
-</P>
-
-<HR>
-
-<P>
-<FONT COLOR="#000000">
 Q. Can you use librsync to do rsync feature X?
 </FONT>
 </P>
@@ -399,20 +352,6 @@ you.
 
 <P>
 <FONT COLOR="#000000">
-Q. My Windows client is crashing, help!
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#000000">
-A. In order to debug it, please follow the instructions <A HREF="/docs/debugging.html">here</A>.
-</FONT>
-</P>
-
-<HR>
-
-<P>
-<FONT COLOR="#000000">
 Q. What command line options are available to the Windows installer?
 </FONT>
 </P>
@@ -450,18 +389,4 @@ Q. What command line options are available to the Windows installer?
 </FONT>
 </P>
 
-<HR>
-
-<P>
-<FONT COLOR="#000000">
-Q. What should I do if I don't trust my burp server administrator?<BR>
-Q. What should I do if I don't trust my burp users?<BR>
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#000000">
-A. There are some notes on security models <A HREF="/docs/security-models.html">here</A>.
-</FONT>
-</P>
 <HR>

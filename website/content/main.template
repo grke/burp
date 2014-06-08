@@ -35,18 +35,19 @@ BURP - BackUp and Restore Program
        <TR>
         <TD WIDTH="12%" VALIGN="top">
          <p>
-          <TABLE BORDER=0 WIDTH="10%" CELLSPACING=0 CELLPADDING=0>
+          <TABLE BORDER=0 WIDTH="10%" CELLSPACING=2 CELLPADDING=2>
 @index@ABOUT@about
+@why@WHY@why
 @features@FEATURES@features
 @changelog@CHANGELOG@changelog
 @news@NEWS@news
-@why@WHY@why
 @faq@FAQ@faq
 @docs@DOCS@docs
 @burpui@BURP-UI@burpui
 @burp2@BURP2@burp2
 @download@DOWNLOAD@download
 @licence@LICENCE@licence
+@contributors@CONTRIBUTORS@contributors
 @donations@DONATIONS@donations
 @sponsors@SPONSORS@sponsors
 @contact@CONTACT@contact
@@ -73,24 +74,17 @@ BURP - BackUp and Restore Program
          <form action="https://www.paypal.com/cgi-bin/webscr" method="post">
           <input type="hidden" name="cmd" value="_s-xclick">
           <input type="hidden" name="hosted_button_id" value="XC8N3XB7T6UFQ">
-          <input type="image" src="http://burp.grke.org/images/paypal.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online.">
+          <input type="image" src="/images/btn_donate_SM.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online.">
           <img alt="" border="0" src="https://www.paypal.com/en_GB/i/scr/pixel.gif" width="1" height="1">
          </form>
-         <br>
          <script id='fbrv8cz'>(function(i){var f,s=document.getElementById(i);f=document.createElement('iframe');f.src='//api.flattr.com/button/view/?uid=grke.net&button=compact&url='+encodeURIComponent(document.URL);f.title='Flattr';f.height=20;f.width=110;f.style.borderWidth=0;s.parentNode.insertBefore(f,s);})('fbrv8cz');</script>
+         <a href="bitcoin:1PFtePS2YE5i5dTX17ozJPHrjKu2UqBLmi?label=burp%20donation"><img src="/images/bitcoin-button.png" alt="Donate with Bitcoin" title="Donate with Bitcoin" border="0" /></a>
         </td>
         <td align="centre" width="50%">
          <p>
-          <font color="#000000">
 Burp is open and free software. I work on it in my spare time.
 If you would like this work to continue, please consider making a small
 donation.
-          </font>
-          <br>
-          <br>
-          <font color="#000000">
-           bitcoin:1PFtePS2YE5i5dTX17ozJPHrjKu2UqBLmi
-          </font>
          </p>
         </td>
         <td width="10%">
@@ -115,6 +109,8 @@ donation.
    <td align="right">
     <font color="#000000">
      Last updated: June 2014
+     <BR>
+     By Graham Keeling
      <BR>
      <a href="http://6sync.com">Hosted by 6sync</a>
     </font>

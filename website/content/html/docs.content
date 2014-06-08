@@ -6,6 +6,8 @@
 	A brief outline of how the server reads its configuration.
 <li><A HREF="docs/security-models.html">Security models</A> -
 	Who do you trust?
+<li><A HREF="docs/windows-installer.html">Windows installer</A> -
+	A brief overview of the Windows installer and its options.
 <li><A HREF="docs/burp_ca.html">SSL - Certificate Authority and certificates</A>
 	- How burp_ca automatically creates a certificate authority and signs
 	certificates.

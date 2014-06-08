@@ -38,6 +38,7 @@ BURP - BackUp and Restore Program
           <TABLE BORDER=0 WIDTH="10%" CELLSPACING=0 CELLPADDING=0>
 @index@ABOUT@about
 @features@FEATURES@features
+@changelog@CHANGELOG@changelog
 @news@NEWS@news
 @why@WHY@why
 @faq@FAQ@faq

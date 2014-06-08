@@ -53,6 +53,7 @@ baremetal=content/docs/baremetal-windows.content
 donations=content/html/donations.content
 licence=content/html/licence.content
 shuffling=content/docs/shuffling.content
+changelog=content/html/changelog.content
 
 generic_page "$quickstart" "../README"
 generic_page "$debugging" "../docs/debug.txt"
@@ -64,6 +65,7 @@ generic_page "$baremetal" "../docs/baremetal-windows7and8.txt"
 generic_page "$donations" "../DONATIONS"
 generic_page "$licence" "../LICENSE"
 generic_page "$shuffling" "../docs/shuffling.txt"
+generic_page "$changelog" "../CHANGELOG"
 
 mkdir -p html/txt
 cp -v ../docs/*.txt html/txt

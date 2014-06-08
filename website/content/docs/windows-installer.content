@@ -3,8 +3,17 @@
 </p>
 
 <p>
-Once you have obtained a Windows client installer (choosing the 32bit or the
-64bit version as appropriate), you can run it by double clicking on it.
+You probably want to go to the <a href="download.html">DOWNLOAD</a> page and
+get a prebuilt burp Windows installer (choosing the 32 or the 64 bit version
+as appropriate).
+</p>
+<p>
+Alternatively, you may wish to build your own version. In that case, you
+can follow the instructions in src/win32/README in the burp source.
+</p>
+
+<p>
+Once you have obtained an installer, you can run it by double clicking on it.
 </p>
 
 <p>
@@ -113,3 +122,4 @@ following are the command line options are available.
                                  Polish version of 'MINUTE'.
 /encryption_password=[password]  Set the encryption password.
 </pre>
+

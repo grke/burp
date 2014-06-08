@@ -49,21 +49,6 @@ A. No.
 
 <P>
 <FONT COLOR="#000000">
-Q. How do I build the Windows client?
-</FONT>
-</P>
-<P>
-<FONT COLOR="#000000">
-A. This is slightly complicated. You might want to go to the DOWNLOAD page and
-get a prebuilt binary. If you really want to build it yourself, follow the
-instructions in the README file in the src/win32 directory of the burp source.
-</FONT>
-</P>
-
-<HR>
-
-<P>
-<FONT COLOR="#000000">
 Q. How do I build a static Linux binary?
 </FONT>
 </P>
@@ -223,44 +208,5 @@ same algorithm. Put another way, rsync does not use librsync.
 </P>
 
 <HR>
-
-<P>
-<FONT COLOR="#000000">
-Q. What command line options are available to the Windows installer?
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#000000">
-<table>
-<tr><td VALIGN="top" WIDTH="50%"><FONT COLOR="#000000">/S</td>
-	<td VALIGN="top"><FONT COLOR="#000000">Silent install</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#000000">/server=[address]</FONT></td>
-	<td VALIGN="top"><FONT COLOR="#000000">Set the address of the burp server</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#000000">/port=[port]</FONT></td>
-	<td VALIGN="top"><FONT COLOR="#000000">Set the port of the burp server</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#000000">/cname=[name]</FONT></td>
-	<td VALIGN="top"><FONT COLOR="#000000">Set the client name</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#000000">/password=[password]</FONT></td>
-	<td VALIGN="top"><FONT COLOR="#000000">Set the client password</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#000000">/autoupgrade=[0|1]</FONT></td>
-	<td VALIGN="top"><FONT COLOR="#000000">Set whether autoupgrades are allowed</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#000000">/server_can_restore=[0|1]</FONT></td>
-	<td VALIGN="top"><FONT COLOR="#000000">Set whether the server can initiate restores or not.</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#000000">/encryption_password=[password]</FONT></td>
-	<td VALIGN="top"><FONT COLOR="#000000">Set an encryption password.</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#000000">/poll=[minutes]</FONT></td>
-	<td VALIGN="top"><FONT COLOR="#000000">Set the poll interval</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#000000">/overwrite</FONT></td>
-	<td VALIGN="top"><FONT COLOR="#000000">Allow existing client configuration to be overwritten</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#000000">/skippages</FONT></td>
-	<td VALIGN="top"><FONT COLOR="#000000">Skip installer configuration pages but keep the initial splash screen and final confirmation</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#000000">/minutetext=[text]</FONT></td>
-	<td VALIGN="top"><FONT COLOR="#000000">When setting up the Windows scheduler, the Windows 'schtasks' command stupidly needs different text given to it depending on the language of the system. The default is 'MINUTE'. If your Windows is for example, Polish, this option lets you set it to the Polish version of 'MINUTE'.</FONT></td></tr>
-<tr><td VALIGN="top"><FONT COLOR="#000000">/encryption_password=[password]</FONT></td>
-	<td VALIGN="top"><FONT COLOR="#000000">Set the encryption password.</FONT></td></tr>
-</table>
-</FONT>
-</P>
 
 <HR>

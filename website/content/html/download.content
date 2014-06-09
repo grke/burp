@@ -23,9 +23,8 @@ Debian, Ubuntu and OpenSUSE.
 </P>
 
 <p>
-Some kind people have even come up with a
-<a href="http://brewformulas.org/Burp">brew formula</a>
-for Macs.
+For Mac users, burp is available in Homebrew. See the
+<a href="docs/quickstart.html">quick start</a> page for more information.
 </p>
 
 <P>

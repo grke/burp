@@ -86,10 +86,20 @@ If you are running Windows 7, you might need to start the command prompt with
 Mac client
 ----------
 
-The installation on a Mac is performed via Homebrew. I do not have a Mac, so
-I cannot provide instructions on this. However, once burp is actually
-installed, you should be able to run it as a server or a client in much the
-same way as you would with Linux.
+The installation on a Mac is performed via Homebrew (http://brew.sh).
+After installing Homebrew, with an admin account you just have to open a
+Terminal and type the command:
+"brew install burp"
+Burp will be installed in the subdirectories of /usr/local (see Homebrew
+website for details on the subdirectories).
+
+You'll then have to edit the client configuration file:
+/usr/local/etc/burp/burp.conf
+
+At the minimum, you'll have to change the line:
+include = /home
+to something like:
+include = /Users
 
 
 For more help, see the man page - type 'man burp'.

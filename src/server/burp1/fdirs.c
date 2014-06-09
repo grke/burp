@@ -18,7 +18,8 @@ int fdirs_init(struct fdirs *fdirs,
 	 && (fdirs->timestamp=prepend_s(sdirs->finishing, "timestamp"))
 	 && (fdirs->fullrealcurrent=prepend_s(sdirs->client, realcurrent))
 	 && (fdirs->logpath=prepend_s(sdirs->finishing, "log"))
-	 && (fdirs->hlinkedpath=prepend_s(fdirs->currentdup, "hardlinked")))
+	 && (fdirs->hlinked=prepend_s(sdirs->finishing, "hardlinked"))
+	 && (fdirs->hlinkedcurrent=prepend_s(sdirs->current, "hardlinked")))
 		return 0;
 	return -1;
 }
@@ -36,5 +37,6 @@ void fdirs_free(struct fdirs *fdirs)
 	free_w(&fdirs->timestamp);
 	free_w(&fdirs->fullrealcurrent);
 	free_w(&fdirs->logpath);
-	free_w(&fdirs->hlinkedpath);
+	free_w(&fdirs->hlinked);
+	free_w(&fdirs->hlinkedcurrent);
 }

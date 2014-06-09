@@ -133,7 +133,7 @@ static int extra_comms_read(struct async *as,
 			iobuf_log_unexpected(rbuf, __func__);
 			goto end;
 		}
-	
+
 		if(!strcmp(rbuf->buf, "extra_comms_end"))
 		{
 			if(asfd->write_str(asfd, CMD_GEN, "extra_comms_end ok"))

@@ -232,8 +232,8 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath,
 		1 /* allow overwrite of infpath */);
 }
 
-static int jiggle(struct fdirs *fdirs, struct sbuf *sb,
-	int hardlinked, const char *deltabdir, const char *deltafdir,
+static int jiggle(struct sdirs *sdirs, struct fdirs *fdirs, struct sbuf *sb,
+	int hardlinked_current, const char *deltabdir, const char *deltafdir,
 	const char *sigpath, FILE **delfp, struct conf *cconf)
 {
 	int ret=-1;
@@ -244,15 +244,17 @@ static int jiggle(struct fdirs *fdirs, struct sbuf *sb,
 	char *deltafpath=NULL;
 	const char *datapth=sb->burp1->datapth.buf;
 
-	if(!(oldpath=prepend_s(fdirs->currentdupdata, datapth))
+	// If the previous backup was a hardlinked_archive, there will not be
+	// a currentdup directory - just directly use the file in the previous
+	// backup.
+	if(!(oldpath=prepend_s(hardlinked_current?
+		sdirs->currentdata:fdirs->currentdupdata, datapth))
 	  || !(newpath=prepend_s(fdirs->datadirtmp, datapth))
 	  || !(finpath=prepend_s(fdirs->datadir, datapth))
 	  || !(deltafpath=prepend_s(deltafdir, datapth)))
-	{
-		log_out_of_memory(__func__);
 		goto end;
-	}
-	else if(!lstat(finpath, &statp) && S_ISREG(statp.st_mode))
+
+	if(!lstat(finpath, &statp) && S_ISREG(statp.st_mode))
 	{
 		// Looks like an interrupted jiggle
 		// did this file already.
@@ -346,7 +348,7 @@ static int jiggle(struct fdirs *fdirs, struct sbuf *sb,
 
 		// Need to generate a reverse diff, unless we are keeping a
 		// hardlinked archive.
-		if(!hardlinked)
+		if(!hardlinked_current)
 		{
 			if(gen_rev_delta(sigpath, deltabdir,
 				oldpath, newpath, datapth, sb, cconf))
@@ -373,7 +375,7 @@ static int jiggle(struct fdirs *fdirs, struct sbuf *sb,
 		// this, the old file will hang around forever.
 		// FIX THIS: maybe put in something to detect this.
 		// ie, both a reverse delta and the old file exist.
-		if(!hardlinked)
+		if(!hardlinked_current)
 		{
 			//logp("Deleting oldpath...\n");
 			unlink(oldpath);
@@ -405,7 +407,7 @@ static int jiggle(struct fdirs *fdirs, struct sbuf *sb,
 		{
 			// If we are not keeping a hardlinked
 			// archive, delete the old link.
-			if(!hardlinked)
+			if(!hardlinked_current)
 			{
 				//logp("Unlinking old file: %s\n", oldpath);
 				unlink(oldpath);
@@ -432,18 +434,18 @@ end:
    based on the first 'keep' value. This is so that we have more choice
    of backups to delete than just the oldest.
 */
-static int do_hardlinked_archive(struct conf *cconf, unsigned long bno)
+static int need_hardlinked_archive(struct conf *cconf, unsigned long bno)
 {
 	int kp=0;
 	int ret=0;
 	if(cconf->hardlinked_archive)
 	{
-		logp("need to hardlink archive\n");
+		logp("New backup is a hardlinked_archive\n");
 		return 1;
 	}
 	if(!cconf->keep || !cconf->keep->next)
 	{
-		logp("do not need to hardlink archive\n");
+		logp("New backup is not a hardlinked_archive\n");
 		return 0;
 	}
 
@@ -451,12 +453,12 @@ static int do_hardlinked_archive(struct conf *cconf, unsigned long bno)
 	// periodically hardlink, based on the first 'keep' value.
 	kp=cconf->keep->flag;
 
-	logp("first keep value: %d, backup: %lu (%lu-2=%lu)\n",
-			kp, bno, bno, bno-2);
+	logp("First keep value: %d, backup: %lu (%lu-1=%lu)\n",
+			kp, bno, bno, bno-1);
 
-	ret=(bno-2)%kp;
-	logp("%sneed to hardlink archive (%lu%%%d=%d)\n",
-		ret?"do not ":"", bno-2, kp, ret);
+	ret=(bno-1)%kp;
+	logp("New backup is %sa hardlinked_archive (%lu%%%d=%d)\n",
+		ret?"not ":"", bno-1, kp, ret);
 
 	return !ret;
 }
@@ -565,7 +567,7 @@ end:
 /* Need to make all the stuff that this does atomic so that existing backups
    never get broken, even if somebody turns the power off on the server. */ 
 static int atomic_data_jiggle(struct sdirs *sdirs, struct fdirs *fdirs,
-	int hardlinked, struct conf *cconf, unsigned long bno)
+	int hardlinked_current, struct conf *cconf, unsigned long bno)
 {
 	int ars=0;
 	int ret=-1;
@@ -615,7 +617,7 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct fdirs *fdirs,
 			if(write_status(STATUS_SHUFFLING,
 				sb->burp1->datapth.buf, cconf)) goto end;
 
-			if((ret=jiggle(fdirs, sb, hardlinked,
+			if((ret=jiggle(sdirs, fdirs, sb, hardlinked_current,
 				deltabdir, deltafdir,
 				sigpath, &delfp, cconf))) goto end;
 		}
@@ -657,9 +659,8 @@ int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf)
 	ssize_t len=0;
 	char realcurrent[256]="";
 	unsigned long bno=0;
-	int hardlinked=0;
+	int hardlinked_current=0;
 	char tstmp[64]="";
-	int newdup=0;
 	int previous_backup=0;
 	struct fdirs *fdirs=NULL;
 
@@ -679,11 +680,26 @@ int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf)
 	if(write_status(STATUS_SHUFFLING, NULL, cconf))
 		goto end;
 
-	if(!lstat(sdirs->current, &statp)) // Had a previous backup
+	if(!lstat(sdirs->current, &statp)) // Had a previous backup.
 	{
 		previous_backup++;
 
-		if(lstat(fdirs->currentdup, &statp))
+		if(lstat(fdirs->hlinkedcurrent, &statp))
+		{
+			hardlinked_current=0;
+			logp("Previous backup is not a hardlinked_archive\n");
+			logp(" will generate reverse deltas\n");
+		}
+		else
+		{
+			hardlinked_current=1;
+			logp("Previous backup is a hardlinked_archive\n");
+			logp(" will not generate reverse deltas\n");
+		}
+
+		// If current was not a hardlinked_archive, need to duplicate
+		// it.
+		if(!hardlinked_current && lstat(fdirs->currentdup, &statp))
 		{
 			// Have not duplicated the current backup yet.
 			if(!lstat(fdirs->currentduptmp, &statp))
@@ -705,72 +721,41 @@ int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf)
 			// because currentdup does not exist.
 			  || do_rename(fdirs->currentduptmp, fdirs->currentdup))
 				goto end;
-			newdup++;
-		}
-
-		if(timestamp_read(fdirs->timestamp, tstmp, sizeof(tstmp)))
-		{
-			logp("could not read timestamp file: %s\n",
-				fdirs->timestamp);
-			goto end;
-		}
-		// Get the backup number.
-		bno=strtoul(tstmp, NULL, 10);
-
-		if(newdup)
-		{
-			// When we have just created currentdup, determine
-			// hardlinked archive from the conf and the backup
-			// number...
-			hardlinked=do_hardlinked_archive(cconf, bno);
-		}
-		else
-		{
-			// ...if recovering, find out what currentdup started
-			// out as.
-			// Otherwise it is possible that things can be messed
-			// up by somebody swapping between hardlinked and
-			// not hardlinked at the same time as a resume happens.
-			if(lstat(fdirs->hlinkedpath, &statp))
-			{
-				logp("previous attempt started not hardlinked\n");
-				hardlinked=0;
-			}
-			else
-			{
-				logp("previous attempt started hardlinked\n");
-				hardlinked=1;
-			}
-		}
-
-		if(hardlinked)
-		{
-			// Create a file to indicate that the previous backup
-			// does not have others depending on it.
-			FILE *hfp=NULL;
-			if(!(hfp=open_file(fdirs->hlinkedpath, "wb")))
-				goto end;
-			// Stick the next backup timestamp in it. It might
-			// be useful one day when wondering when the next
-			// backup, now deleted, was made.
-			fprintf(hfp, "%s\n", tstmp);
-			if(close_fp(&hfp))
-			{
-				logp("error closing hardlinked indication\n");
-				goto end;
-			}
-			logp(" doing hardlinked archive\n");
-			logp(" will not generate reverse deltas\n");
-		}
-		else
-		{
-			logp(" not doing hardlinked archive\n");
-			logp(" will generate reverse deltas\n");
-			unlink(fdirs->hlinkedpath);
 		}
 	}
 
-	if(atomic_data_jiggle(sdirs, fdirs, hardlinked, cconf, bno))
+	if(timestamp_read(fdirs->timestamp, tstmp, sizeof(tstmp)))
+	{
+		logp("could not read timestamp file: %s\n",
+			fdirs->timestamp);
+		goto end;
+	}
+	// Get the backup number.
+	bno=strtoul(tstmp, NULL, 10);
+
+	// Determine whether the new backup should be a hardlinked
+	// archive or not, from the conf and the backup number...
+	if(need_hardlinked_archive(cconf, bno))
+	{
+		// Create a file to indicate that the previous backup
+		// does not have others depending on it.
+		FILE *hfp=NULL;
+		if(!(hfp=open_file(fdirs->hlinked, "wb"))) goto end;
+
+		// Stick the next backup timestamp in it. It might
+		// be useful one day when wondering when the next
+		// backup, now deleted, was made.
+		fprintf(hfp, "%s\n", tstmp);
+		if(close_fp(&hfp))
+		{
+			logp("error closing hardlinked indication\n");
+			goto end;
+		}
+	}
+	else
+		unlink(fdirs->hlinked);
+
+	if(atomic_data_jiggle(sdirs, fdirs, hardlinked_current, cconf, bno))
 	{
 		logp("could not finish up backup.\n");
 		goto end;
@@ -793,7 +778,7 @@ int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf)
 	recursive_delete(fdirs->currentdupdata, NULL, 0 /* do not del files */);
 
 	// Rename the old current to something that we know to delete.
-	if(previous_backup)
+	if(previous_backup && !hardlinked_current)
 	{
 		if(deleteme_move(sdirs->client,
 			fdirs->fullrealcurrent, realcurrent, cconf)

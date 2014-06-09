@@ -26,7 +26,7 @@ struct sdirs
 	char *lockdir;
 	struct lock *lock;
 
-	// Legacy directories.
+	// Burp1 directories.
 	char *currentdata;
 	char *manifest;
 	char *datadirtmp;

@@ -3,6 +3,7 @@
 #include "burp1/rubble.h"
 #include "burp2/backup.h"
 #include "burp2/restore.h"
+#include "burp2/rubble.h"
 
 // FIX THIS: Somewhat haphazard.
 /* Return 0 for everything OK. -1 for error, or 1 to mean that a backup is
@@ -68,8 +69,8 @@ static int client_can_restore(struct conf *cconf)
 	return cconf->client_can_restore;
 }
 
-// Used by burp1 stuff.
-void maybe_do_notification(struct asfd *asfd, int status, const char *clientdir,
+static void maybe_do_notification(struct asfd *asfd,
+	int status, const char *clientdir,
 	const char *storagedir, const char *filename,
 	const char *brv, struct conf *cconf)
 {
@@ -332,6 +333,27 @@ static int unknown_command(struct asfd *asfd, struct iobuf *rbuf)
 	return -1;
 }
 
+static const char *buf_to_notify_str(const char *buf)
+{
+	if(!strncmp_w(buf, "backup")) return "backup";
+	else if(!strncmp_w(buf, "restore")) return "restore";
+	else if(!strncmp_w(buf, "verify")) return "verify";
+	else if(!strncmp_w(buf, "delete")) return "delete";
+	else if(!strncmp_w(buf, "list")) return "list";
+	else return "unknown";
+}
+
+static int check_for_rubble(struct asfd *asfd, struct sdirs *sdirs,
+	struct conf *cconf, const char *incexc, int *resume)
+{
+	if(cconf->protocol==PROTO_BURP1)
+		return check_for_rubble_burp1(asfd,
+			sdirs, cconf, incexc, resume);
+	else
+		return check_for_rubble_burp2(asfd,
+			sdirs, cconf, incexc, resume);
+}
+
 int run_action_server(struct async *as,
 	struct conf *cconf, struct sdirs *sdirs,
 	const char *incexc, int srestore, int *timer_ret)
@@ -355,27 +377,18 @@ int run_action_server(struct async *as,
 	if((ret=get_lock_sdirs(as->asfd, sdirs)))
 	{
 		// -1 on error or 1 if the backup is still finalising.
-		// FIX THIS: rbuf->buf is not just 'backup' or 'list', etc.
 		if(ret<0) maybe_do_notification(as->asfd, ret,
 			"", "error in get_lock_sdirs()",
-			"", rbuf->buf, cconf);
+			"", buf_to_notify_str(rbuf->buf), cconf);
 		return ret;
 	}
 
-	// FIX THIS: burp2 needs to do something at this point too.
-	// Running the burp1 stuff is the wrong thing to do.
-	if(cconf->protocol==PROTO_BURP1)
+	if(check_for_rubble(as->asfd, sdirs, cconf, incexc, &resume))
 	{
-		if(check_for_rubble_burp1(as->asfd,
-			sdirs, cconf, incexc, &resume))
-		{
-			// FIX THIS: rbuf->buf is not just 'backup' or 'list',
-			// etc.
-			maybe_do_notification(as->asfd, ret,
-				"", "error in check_for_rubble()",
-				"", rbuf->buf, cconf);
-			return -1;
-		}
+		maybe_do_notification(as->asfd, ret,
+			"", "error in check_for_rubble()",
+			"", buf_to_notify_str(rbuf->buf), cconf);
+		return -1;
 	}
 
 	if(!strncmp_w(rbuf->buf, "backup"))

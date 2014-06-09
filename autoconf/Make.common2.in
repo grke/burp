@@ -39,7 +39,7 @@ libtool-clean:
 	@$(RMF) -r .libs _libs *.la *.lo
 
 clean:  libtool-clean
-	@$(RMF) a.out *.o *.bak *~ *.intpro *.extpro *.a Makefile
+	@$(RMF) a.out *.o *.bak *~ *.intpro *.extpro *.a Makefile vss_strip
 
 realclean: clean
 	@$(RMF) x

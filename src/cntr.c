@@ -16,7 +16,7 @@ struct cntr *cntr_alloc(void)
 	return (struct cntr *)calloc_w(1, sizeof(struct cntr), __func__);
 }
 
-int add_cntr_ent(struct cntr *cntr, int versions,
+static int add_cntr_ent(struct cntr *cntr, int versions,
 	char cmd, const char *field, const char *label)
 {
 	struct cntr_ent *cenew=NULL;

@@ -441,7 +441,8 @@ error:
 	return -1;
 }
 
-static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, const char *sel_client)
+static int send_summaries_to_client(int cfd,
+	struct cstat **clist, int clen, const char *sel_client)
 {
 	int q=0;
 
@@ -475,7 +476,6 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, con
 		{
 			// Client not running, but asked for detail.
 			// Gather a list of successful backups to talk about.
-        		int a=0;
         		struct bu *bu_list=NULL;
 
 			// FIX THIS: If this stuff used sdirs, there would
@@ -489,25 +489,26 @@ static int send_summaries_to_client(int cfd, struct cstat **clist, int clen, con
 			}
 			else if(bu_list)
 			{
+        			int a=1;
 				int len=0;
 				time_t t=0;
 				struct bu *bu;
+
+				// Find the end of the list.
+				for(bu=bu_list; bu && bu->next; bu=bu->next)
+					a++;
 
 				// make more than enough room for the message
 				len+=strlen(clist[q]->name)+1;
 				len+=(a*2)+1;
 				len+=(a*32)+1;
-				if(!(curback=(char *)malloc(len)))
-				{
-					log_out_of_memory(__func__);
+				if(!(curback=(char *)malloc_w(len, __func__)))
 					return -1;
-				}
 				snprintf(curback, len, "%s\t%c\t%c",
 					clist[q]->name, CNTR_VER_4,
 					clist[q]->status);
 
-				// Find the end of the list and work backwards.
-				for(bu=bu_list; bu && bu->next; bu=bu->next) {}
+				// Work backwards.
 				for(; bu; bu=bu->prev)
 				{
 					char tmp[32]="";

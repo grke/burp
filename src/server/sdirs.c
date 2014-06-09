@@ -54,7 +54,7 @@ static int do_burp1_dirs(struct sdirs *sdirs, struct conf *conf)
 	return 0;
 }
 
-static int do_v2_dirs(struct sdirs *sdirs, struct conf *conf)
+static int do_burp2_dirs(struct sdirs *sdirs, struct conf *conf)
 {
 	if(!conf->dedup_group)
 	{
@@ -97,7 +97,7 @@ extern int sdirs_init(struct sdirs *sdirs, struct conf *conf)
 	}
 	else
 	{
-		if(do_v2_dirs(sdirs, conf)) goto error;
+		if(do_burp2_dirs(sdirs, conf)) goto error;
 	}
 
 	if(do_lock_dirs(sdirs, conf)) goto error;

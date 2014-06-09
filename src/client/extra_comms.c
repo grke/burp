@@ -47,6 +47,7 @@ int extra_comms(struct async *as, struct conf *conf,
 		iobuf_log_unexpected(rbuf, __func__);
 		goto end;
 	}
+	logp("%s\n", feat);
 	iobuf_init(rbuf);
 
 	// Can add extra bits here. The first extra bit is the
@@ -102,8 +103,6 @@ int extra_comms(struct async *as, struct conf *conf,
 		}
 		logp("Switched to client %s\n", conf->orig_client);
 	}
-
-printf("HERE: %s\n", feat);
 
 	// :sincexc: is for the server giving the client the
 	// incexc config.

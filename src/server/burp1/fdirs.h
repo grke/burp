@@ -13,7 +13,8 @@ struct fdirs // Finishing directories.
 	char *timestamp;
 	char *fullrealcurrent;
 	char *logpath;
-	char *hlinkedpath;
+	char *hlinked;
+	char *hlinkedcurrent;
 };
 
 extern void fdirs_free(struct fdirs *fdirs);

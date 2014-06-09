@@ -146,7 +146,7 @@ clean:
 	@cd src/win32 && ${MAKE} $@
 	@$(RMF) *~ 1 2 3 core core.* config.guess console.log console.sum
 	@$(RMF) config.log config.out config.status libtool
-	@$(RMF) -r autoconf/autom4te.cache
+	@$(RMF) -r autoconf/autom4te.cache autom4te.cache
 	@$(RMF) -r autoconf/Make.common autoconf/Make.common2
 	@$(RMF) burp-cross-tools
 	@$(RMF) burp-depkgs

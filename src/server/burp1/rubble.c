@@ -87,7 +87,9 @@ int check_for_rubble_burp1(struct asfd *asfd,
 	// Check what to do.
 	if((len=readlink(sdirs->working, realwork, sizeof(realwork)-1))<0)
 	{
-		snprintf(msg, sizeof(msg), "Could not readlink on old working directory: %s\n", strerror(errno));
+		snprintf(msg, sizeof(msg),
+			"Could not readlink on old working directory: %s\n",
+			strerror(errno));
 		log_and_send(asfd, msg);
 		ret=-1;
 		goto end;

@@ -11,7 +11,7 @@ client="$1" ; shift
 basedir="$1" ; shift
 storagedir="$1" ; shift
 file="$1" ; shift
-brv="$1" ; shift # one of backup/restore/verify
+brv="$1" ; shift # one of backup/restore/verify/delete/list/unknown
 warnings="$1" ; shift
 
 # Arguments given by the user in the conf files come next.

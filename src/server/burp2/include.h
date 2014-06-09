@@ -8,5 +8,6 @@
 #include "backup_phase3.h"
 #include "dpth.h"
 #include "restore.h"
+#include "rubble.h"
 
 #endif

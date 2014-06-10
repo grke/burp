@@ -91,7 +91,7 @@ static int load_signature_and_send_delta(BFILE *bfd, FILE *in, unsigned long lon
 			break;
 		}
 		// FIX ME: get it to read stuff (errors, for example) here too.
-		if(async_rw(NULL, NULL, '\0', '\0', NULL, &wlen))
+		if(async_rw(NULL, NULL, NULL, '\0', NULL, &wlen))
 			return -1;
 	}
 

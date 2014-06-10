@@ -1645,7 +1645,7 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 			break;
 		}
 
-		if(buf); free(buf); buf=NULL;
+		if(buf) free(buf); buf=NULL;
 	}
 
 	if(buf) free(buf);

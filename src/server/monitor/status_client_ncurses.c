@@ -930,7 +930,7 @@ int write_status(char phase, const char *path, struct conf *conf)
 	time_t now=0;
 	time_t diff=0;
 	size_t l=0;
-	size_t wl=0;
+	ssize_t wl=0;
 	static time_t lasttime=0;
 return 0;
 

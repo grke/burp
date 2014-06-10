@@ -131,12 +131,6 @@ int send_whole_file_gz(struct asfd *asfd,
 		strm.avail_in=fread(in, 1, ZCHUNK, fp);
 		if(!compression && !strm.avail_in) break;
 
-		if(strm.avail_in<0)
-		{
-			logp("Error in read: %d\n", strm.avail_in);
-			ret=-1;
-			break;
-		}
 		*bytes+=strm.avail_in;
 
 		if(strm.avail_in) flush=Z_NO_FLUSH;

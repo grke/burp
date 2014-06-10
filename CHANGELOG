@@ -1,3 +1,5 @@
+  * Fix some Mac compilation warnings.
+
 2014-05-31 Changes in burp-1.4.16:
   * Bug fix for restoring permissions on empty directories.
   * Compile for systems that have no O_NOATIME and fdopendir() - ie, Mac OS X.

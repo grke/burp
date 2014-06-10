@@ -3,7 +3,7 @@
 
 extern int do_patch(struct asfd *asfd,
 	const char *dst, const char *del, const char *upd,
-	bool gzupd, int compression, struct conf *cconf);
+	int gzupd, int compression, struct conf *cconf);
 
 extern int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf);
 

@@ -9,6 +9,15 @@
 #include <ws2tcpip.h>
 #endif
 
+int IsPathSeparator(int ch)
+{
+	return
+#ifdef HAVE_WIN32
+	ch == '\\' ||
+#endif
+	ch == '/';
+}
+
 // return -1 for error, 0 for OK, 1 if the client wants to interrupt the
 // transfer.
 int do_quick_read(struct asfd *asfd, const char *datapth, struct conf *conf)
@@ -77,7 +86,7 @@ static int write_endfile(struct asfd *asfd, unsigned long long bytes)
 	return asfd->write_str(asfd, CMD_END_FILE, get_endfile_str(bytes));
 }
 
-int open_file_for_send(BFILE *bfd, struct asfd *asfd, const char *fname,
+int open_file_for_send(struct BFILE *bfd, struct asfd *asfd, const char *fname,
 	int64_t winattr, int atime, struct conf *conf)
 {
 	binit(bfd, winattr, conf);
@@ -87,15 +96,16 @@ int open_file_for_send(BFILE *bfd, struct asfd *asfd, const char *fname,
 #endif
 		, 0))
 	{
-		berrno be;
+		struct berrno be;
+		berrno_init(&be);
 		logw(asfd, conf, "Could not open %s: %s\n",
-			fname, be.bstrerror(errno));
+			fname, berrno_bstrerror(&be, errno));
 		return -1;
 	}
 	return 0;
 }
 
-int close_file_for_send(BFILE *bfd, struct asfd *asfd)
+int close_file_for_send(struct BFILE *bfd, struct asfd *asfd)
 {
 	return bclose(bfd, asfd);
 }
@@ -495,7 +505,7 @@ int receive_a_file(struct asfd *asfd, const char *path, struct conf *conf)
 	int c=0;
 	int ret=0;
 #ifdef HAVE_WIN32
-	BFILE bfd;
+	struct BFILE bfd;
 #else
 	FILE *fp=NULL;
 #endif
@@ -510,9 +520,10 @@ int receive_a_file(struct asfd *asfd, const char *path, struct conf *conf)
 		O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,
 		S_IRUSR | S_IWUSR))
 	{
-		berrno be;
+		struct berrno be;
+		berrno_init(&be);
 		logp("Could not open for writing %s: %s\n",
-			path, be.bstrerror(errno));
+			path, berrno_bstrerror(&be, errno));
 		ret=-1;
 		goto end;
 	}

@@ -30,14 +30,14 @@ static int maybe_send_extrameta(struct asfd *asfd, const char *path, char cmd,
 }
 
 static int ft_err(struct asfd *asfd,
-	struct conf *conf, FF_PKT *ff, const char *msg)
+	struct conf *conf, struct FF_PKT *ff, const char *msg)
 {
 	return logw(asfd, conf, _("Err: %s %s: %s"), msg,
 		ff->fname, strerror(errno));
 }
 
 static int do_to_server(struct asfd *asfd,
-	struct conf *conf, FF_PKT *ff, struct sbuf *sb,
+	struct conf *conf, struct FF_PKT *ff, struct sbuf *sb,
 	char cmd, int compression) 
 {
 	sb->compression=compression;
@@ -68,13 +68,14 @@ static int do_to_server(struct asfd *asfd,
 #endif
 }
 
-static int to_server(struct asfd *asfd, struct conf *conf, FF_PKT *ff,
+static int to_server(struct asfd *asfd, struct conf *conf, struct FF_PKT *ff,
 	struct sbuf *sb, char cmd)
 {
 	return do_to_server(asfd, conf, ff, sb, cmd, conf->compression);
 }
 
-int send_file(struct asfd *asfd, FF_PKT *ff, bool top_level, struct conf *conf)
+int send_file(struct asfd *asfd,
+	struct FF_PKT *ff, int top_level, struct conf *conf)
 {
 	static struct sbuf *sb=NULL;
 
@@ -147,7 +148,7 @@ int backup_phase1_client(struct asfd *asfd,
 	struct conf *conf, long name_max, int estimate)
 {
 	int ret=-1;
-	FF_PKT *ff=NULL;
+	struct FF_PKT *ff=NULL;
 	struct strlist *l=NULL;
 
 	// First, tell the server about everything that needs to be backed up.

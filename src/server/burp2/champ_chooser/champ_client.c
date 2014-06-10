@@ -20,6 +20,7 @@ static int champ_chooser_fork(struct sdirs *sdirs, struct conf *conf)
 				__func__, strerror(errno));
 			return -1;
 		case 0:
+		{
 			// Child.
 			int cret;
 			set_logfp(NULL, conf);
@@ -29,6 +30,7 @@ static int champ_chooser_fork(struct sdirs *sdirs, struct conf *conf)
 				default: cret=1;
 			}
 			exit(cret);
+		}
 		default:
 			// Parent.
 			logp("forked champ chooser pid %d\n", childpid);

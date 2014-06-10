@@ -38,7 +38,7 @@ static int acl_is_trivial(acl_t acl)
 		 * If we fail to get the tagtype we call the acl non-trivial.
 		 */
 		if (acl_get_tag_type(ace, &tag) < 0)
-			return true;
+			return 1;
 		/*
 		 * Anything other the ACL_USER_OBJ, ACL_GROUP_OBJ
 		 * or ACL_OTHER breaks the spell.

@@ -14,14 +14,12 @@
        __typeof__ (b) _b = (b); \
      _a < _b ? _a : _b; })
 
-extern int open_file_for_send(BFILE *bfd, struct asfd *asfd, const char *fname,
+extern int IsPathSeparator(int ch);
+
+extern int open_file_for_send(struct BFILE *bfd,
+	struct asfd *asfd, const char *fname,
 	int64_t winattr, int atime, struct conf *conf);
-extern int close_file_for_send(BFILE *bfd, struct asfd *asfd);
-extern int send_whole_file_gz(struct asfd *asfd,
-	const char *fname, const char *datapth,
-	int quick_read, unsigned long long *bytes, const char *encpassword,
-	struct conf *conf, int compression, BFILE *bfd, FILE *fp,
-	const char *extrameta, size_t elen, size_t datalen);
+extern int close_file_for_send(struct BFILE *bfd, struct asfd *asfd);
 extern int set_non_blocking(int fd);
 extern int set_blocking(int fd);
 extern char *get_tmp_filename(const char *basis);

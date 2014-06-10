@@ -2,6 +2,7 @@
 #define _FSOPS_H
 
 #include <zlib.h>
+#include <dirent.h>
 
 extern void close_fd(int *fd);
 extern int close_fp(FILE **fp);

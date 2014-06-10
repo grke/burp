@@ -8,6 +8,8 @@
 #include "../run_action.h"
 #include "../sdirs.h"
 
+struct dpthl;
+
 #include "backup.h"
 #include "backup_phase2.h"
 #include "backup_phase3.h"

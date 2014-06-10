@@ -19,7 +19,7 @@ static int load_signature(struct asfd *asfd,
 }
 
 static int load_signature_and_send_delta(struct asfd *asfd,
-	BFILE *bfd, FILE *in,
+	struct BFILE *bfd, FILE *in,
 	unsigned long long *bytes, unsigned long long *sentbytes,
 	struct conf *conf, size_t datalen)
 {
@@ -92,7 +92,7 @@ static int load_signature_and_send_delta(struct asfd *asfd,
 	rs_job_free(job);
 	rs_free_sumset(sumset);
 
-	if(r==RS_DONE && write_endfile(asfd, *bytes, checksum))
+	if(r==RS_DONE && write_endfile_burp1(asfd, *bytes, checksum))
 		return -1;
 
 	return r;
@@ -101,7 +101,7 @@ static int load_signature_and_send_delta(struct asfd *asfd,
 static int send_whole_file_w(struct asfd *asfd,
 	struct sbuf *sb, const char *datapth,
 	int quick_read, unsigned long long *bytes, const char *encpassword,
-	struct conf *conf, int compression, BFILE *bfd, FILE *fp,
+	struct conf *conf, int compression, struct BFILE *bfd, FILE *fp,
 	const char *extrameta, size_t elen, size_t datalen)
 {
 	if((compression || encpassword) && sb->path.cmd!=CMD_EFS_FILE)
@@ -157,7 +157,7 @@ static int size_checks(struct asfd *asfd, struct sbuf *sb, struct conf *conf)
 }
 
 static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
-	BFILE *bfd, size_t *datalen, struct conf *conf)
+	struct BFILE *bfd, size_t *datalen, struct conf *conf)
 {
 	int ret=-1;
 	int forget=0;
@@ -302,7 +302,7 @@ error:
 }
 
 static int parse_rbuf(struct asfd *asfd, struct sbuf *sb,
-	BFILE *bfd, size_t *datalen, struct conf *conf)
+	struct BFILE *bfd, size_t *datalen, struct conf *conf)
 {
 	static struct iobuf *rbuf;
 	rbuf=asfd->rbuf;
@@ -351,7 +351,7 @@ static int do_backup_phase2_client(struct asfd *asfd,
 	// For efficiency, open Windows files for the VSS data, and do not
 	// close them until another time around the loop, when the actual
 	// data is read.
-	BFILE bfd;
+	struct BFILE bfd;
 	// Windows VSS headers tell us how much file
 	// data to expect.
 	size_t datalen=0;

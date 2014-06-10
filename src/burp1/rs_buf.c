@@ -52,7 +52,7 @@ void *rs_alloc(size_t size)
 }
 
 rs_filebuf_t *rs_filebuf_new(struct asfd *asfd,
-	BFILE *bfd, FILE *fp, gzFile zp, int fd,
+	struct BFILE *bfd, FILE *fp, gzFile zp, int fd,
 	size_t buf_len, size_t data_len, struct cntr *cntr)
 {
 	rs_filebuf_t *pf=NULL;
@@ -381,7 +381,7 @@ rs_result rs_outfilebuf_drain(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 }
 
 rs_result do_rs_run(struct asfd *asfd,
-	rs_job_t *job, BFILE *bfd,
+	rs_job_t *job, struct BFILE *bfd,
 	FILE *in_file, FILE *out_file,
 	gzFile in_zfile, gzFile out_zfile, int infd, int outfd, struct cntr *cntr)
 {

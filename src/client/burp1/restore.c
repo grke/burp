@@ -1,6 +1,6 @@
 #include "include.h"
 
-static int open_for_restore(struct asfd *asfd, BFILE *bfd, FILE **fp,
+static int open_for_restore(struct asfd *asfd, struct BFILE *bfd, FILE **fp,
 	const char *path, struct sbuf *sb, int vss_restore, struct conf *conf)
 {
 #ifdef HAVE_WIN32
@@ -32,9 +32,10 @@ static int open_for_restore(struct asfd *asfd, BFILE *bfd, FILE **fp,
 	{
 		berrno be;
 		char msg[256]="";
+		berrno_init(&be);
 		snprintf(msg, sizeof(msg),
 			"Could not open for writing %s: %s",
-				path, be.bstrerror(errno));
+				path, berrno_bstrerror(&be, errno));
 		if(restore_interrupt(asfd, sb, msg, conf))
 			return -1;
 	}
@@ -55,7 +56,7 @@ static int open_for_restore(struct asfd *asfd, BFILE *bfd, FILE **fp,
 	return 0;
 }
 
-static int restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
+static int restore_file_or_get_meta(struct asfd *asfd, struct BFILE *bfd,
 	struct sbuf *sb, const char *fname, enum action act,
 	const char *encpassword, char **metadata, size_t *metalen,
 	int vss_restore, struct conf *conf)
@@ -165,9 +166,9 @@ end:
 	return ret;
 }
 
-static int restore_metadata(struct asfd *asfd, BFILE *bfd, struct sbuf *sb,
-	const char *fname, enum action act, const char *encpassword,
-	int vss_restore, struct conf *conf)
+static int restore_metadata(struct asfd *asfd, struct BFILE *bfd,
+	struct sbuf *sb, const char *fname, enum action act,
+	const char *encpassword, int vss_restore, struct conf *conf)
 {
 	size_t metalen=0;
 	char *metadata=NULL;
@@ -217,7 +218,7 @@ static int restore_metadata(struct asfd *asfd, BFILE *bfd, struct sbuf *sb,
 
 int restore_switch_burp1(struct asfd *asfd, struct sbuf *sb,
 	const char *fullpath, enum action act,
-	BFILE *bfd, int vss_restore, struct conf *conf)
+	struct BFILE *bfd, int vss_restore, struct conf *conf)
 {
 	switch(sb->path.cmd)
 	{

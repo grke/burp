@@ -3,6 +3,9 @@
 
 #include "../include.h"
 
+struct dpth;
+struct sdirs;
+
 #include "auth.h"
 #include "autoupgrade.h"
 #include "backup_phase1.h"

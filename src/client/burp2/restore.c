@@ -1,7 +1,7 @@
 #include "include.h"
 
 static int open_for_restore(struct asfd *asfd,
-	BFILE *bfd,
+	struct BFILE *bfd,
 	const char *path,
 	struct sbuf *sb,
 	int vss_restore,
@@ -27,10 +27,11 @@ static int open_for_restore(struct asfd *asfd,
 
 	if(bopen(bfd, asfd, path, flags, S_IRUSR | S_IWUSR)<=0)
 	{
-		berrno be;
+		struct berrno be;
 		char msg[256]="";
+		berrno_init(&be);
 		snprintf(msg, sizeof(msg), "Could not open for writing %s: %s",
-			path, be.bstrerror(errno));
+			path, berrno_bstrerror(&be, errno));
 		if(restore_interrupt(asfd, sb, msg, conf))
 			return -1;
 	}
@@ -41,7 +42,7 @@ static int open_for_restore(struct asfd *asfd,
 }
 
 static int start_restore_file(struct asfd *asfd,
-	BFILE *bfd,
+	struct BFILE *bfd,
 	struct sbuf *sb,
 	const char *fname,
 	enum action act,
@@ -85,7 +86,7 @@ end:
 /*
 static int restore_metadata(
 #ifdef HAVE_WIN32
-	BFILE *bfd,
+	struct BFILE *bfd,
 #endif
 	struct sbuf *sb,
 	const char *fname,
@@ -146,7 +147,7 @@ static int restore_metadata(
 
 int restore_switch_burp2(struct asfd *asfd, struct sbuf *sb,
 	const char *fullpath, enum action act,
-	BFILE *bfd, int vss_restore, struct conf *conf)
+	struct BFILE *bfd, int vss_restore, struct conf *conf)
 {
 	switch(sb->path.cmd)
 	{

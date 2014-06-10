@@ -1,6 +1,6 @@
 #include "include.h"
 
-static int compress(const char *src, const char *dst, struct conf *cconf)
+static int do_compress(const char *src, const char *dst, struct conf *cconf)
 {
 	int res;
 	int got;
@@ -43,7 +43,7 @@ int compress_file(const char *src, const char *dst, struct conf *cconf)
 	
 	// Need to compress the log.
 	logp("Compressing %s to %s...\n", src, dst);
-	if(compress(src, dsttmp, cconf)
+	if(do_compress(src, dsttmp, cconf)
 	// Possible rename race condition is of little consequence here.
 	// You will still have the uncompressed log file.
 	  || do_rename(dsttmp, dst))

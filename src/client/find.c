@@ -38,13 +38,13 @@ static void init_max(int32_t *max, int32_t default_max)
 }
 
 // Initialize the find files "global" variables
-FF_PKT *find_files_init(void)
+struct FF_PKT *find_files_init(void)
 {
-	FF_PKT *ff;
+	struct FF_PKT *ff;
 
-	if(!(ff=(FF_PKT *)calloc_w(1, sizeof(FF_PKT), __func__))
-	  || !(linkhash=(f_link **)
-		calloc_w(1, LINK_HASHTABLE_SIZE*sizeof(f_link *), __func__)))
+	if(!(ff=(struct FF_PKT *)calloc_w(1, sizeof(struct FF_PKT), __func__))
+	  || !(linkhash=(struct f_link **)calloc_w(1,
+		LINK_HASHTABLE_SIZE*sizeof(struct f_link *), __func__)))
 			return NULL;
 
 	// Get system path and filename maximum lengths.
@@ -54,10 +54,10 @@ FF_PKT *find_files_init(void)
 	return ff;
 }
 
-static inline int LINKHASH(const struct stat &info)
+static inline int LINKHASH(struct stat *info)
 {
-	int hash=info.st_dev;
-	unsigned long long i=info.st_ino;
+	int hash=info->st_dev;
+	unsigned long long i=info->st_ino;
 	hash ^= i;
 	i >>= 16;
 	hash ^= i;
@@ -99,7 +99,7 @@ static int free_linkhash(void)
 	return count;
 }
 
-void find_files_free(FF_PKT *ff)
+void find_files_free(struct FF_PKT *ff)
 {
 	free_linkhash();
 	free(ff);
@@ -232,7 +232,7 @@ static int file_is_included_no_incext(struct conf *conf, const char *fname)
 	return ret;
 }
 
-int file_is_included(struct conf *conf, const char *fname, bool top_level)
+int file_is_included(struct conf *conf, const char *fname, int top_level)
 {
 	// Always save the top level directory.
 	// This will help in the simulation of browsing backups because it
@@ -294,8 +294,8 @@ static int nobackup_directory(struct strlist *nobackup, const char *path)
 }
 
 static int found_regular_file(struct asfd *asfd,
-	FF_PKT *ff_pkt, struct conf *conf,
-	char *fname, bool top_level)
+	struct FF_PKT *ff_pkt, struct conf *conf,
+	char *fname, int top_level)
 {
 	boffset_t sizeleft;
 
@@ -312,8 +312,9 @@ static int found_regular_file(struct asfd *asfd,
 	return send_file(asfd, ff_pkt, top_level, conf);
 }
 
-static int found_soft_link(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
-	char *fname, bool top_level)
+static int found_soft_link(struct asfd *asfd,
+	struct FF_PKT *ff_pkt, struct conf *conf,
+	char *fname, int top_level)
 {
 	ssize_t size;
 	char *buffer=(char *)alloca(path_max+name_max+102);
@@ -355,7 +356,7 @@ static int fstype_excluded(struct asfd *asfd,
 }
 
 #if defined(HAVE_WIN32)
-static void windows_reparse_point_fiddling(FF_PKT *ff_pkt)
+static void windows_reparse_point_fiddling(struct FF_PKT *ff_pkt)
 {
 	/*
 	* We have set st_rdev to 1 if it is a reparse point, otherwise 0,
@@ -445,12 +446,12 @@ static int get_files_in_directory(DIR *directory, struct dirent ***nl, int *coun
 }
 
 // Prototype because process_files_in_directory() recurses using find_files().
-static int find_files(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
-	char *fname, dev_t parent_device, bool top_level);
+static int find_files(struct asfd *asfd, struct FF_PKT *ff_pkt,
+	struct conf *conf, char *fname, dev_t parent_device, int top_level);
 
 static int process_files_in_directory(struct asfd *asfd, struct dirent **nl,
 	int count, int *rtn_stat, char **link, size_t len, size_t *link_len,
-	struct conf *conf, FF_PKT *ff_pkt, dev_t our_device)
+	struct conf *conf, struct FF_PKT *ff_pkt, dev_t our_device)
 {
 	int m=0;
 	for(m=0; m<count; m++)
@@ -477,7 +478,7 @@ static int process_files_in_directory(struct asfd *asfd, struct dirent **nl,
 		if(file_is_included_no_incext(conf, *link))
 		{
 			*rtn_stat=find_files(asfd, ff_pkt,
-				conf, *link, our_device, false);
+				conf, *link, our_device, 0);
 		}
 		else
 		{
@@ -492,7 +493,7 @@ static int process_files_in_directory(struct asfd *asfd, struct dirent **nl,
 					struct strlist *y;
 					if((*rtn_stat=find_files(asfd, ff_pkt,
 						conf, x->path,
-						our_device, false)))
+						our_device, 0)))
 							break;
 					// Now need to skip subdirectories of
 					// the thing that we just stuck in
@@ -510,8 +511,9 @@ static int process_files_in_directory(struct asfd *asfd, struct dirent **nl,
 	return 0;
 }
 
-static int found_directory(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
-	char *fname, dev_t parent_device, bool top_level)
+static int found_directory(struct asfd *asfd,
+	struct FF_PKT *ff_pkt, struct conf *conf,
+	char *fname, dev_t parent_device, int top_level)
 {
 	int rtn_stat;
 	DIR *directory;
@@ -520,11 +522,11 @@ static int found_directory(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
 	size_t len;
 	int nbret=0;
 	int count=0;
-	bool recurse;
+	int recurse;
 	dev_t our_device;
 	struct dirent **nl=NULL;
 
-	recurse=true;
+	recurse=1;
 	our_device=ff_pkt->statp.st_dev;
 
 	/*
@@ -591,7 +593,7 @@ static int found_directory(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
 		if(!fs_change_is_allowed(conf, ff_pkt->fname))
 		{
 			ff_pkt->type=FT_NOFSCHG;
-			recurse=false;
+			recurse=0;
 		}
 	}
 	/* If not recursing, just backup dir and return */
@@ -659,8 +661,8 @@ static int found_directory(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
 	return rtn_stat;
 }
 
-static int found_other(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
-	char *fname, bool top_level)
+static int found_other(struct asfd *asfd, struct FF_PKT *ff_pkt,
+	struct conf *conf, char *fname, int top_level)
 {
 #ifdef HAVE_FREEBSD_OS
 	/*
@@ -700,8 +702,9 @@ static int found_other(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
  * top_level is 1 when not recursing or 0 when
  *  descending into a directory.
  */
-static int find_files(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
-	char *fname, dev_t parent_device, bool top_level)
+static int find_files(struct asfd *asfd,
+	struct FF_PKT *ff_pkt, struct conf *conf,
+	char *fname, dev_t parent_device, int top_level)
 {
 	ff_pkt->fname=fname;
 	ff_pkt->link=fname;
@@ -730,7 +733,7 @@ static int find_files(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
 		|| S_ISSOCK(ff_pkt->statp.st_mode)))
 	{
 		struct f_link *lp;
-		const int linkhash_ind=LINKHASH(ff_pkt->statp);
+		const int linkhash_ind=LINKHASH(&ff_pkt->statp);
 
 		/* Search link list of hard linked files */
 		for(lp=linkhash[linkhash_ind]; lp; lp=lp->next)
@@ -791,7 +794,7 @@ static int find_files(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
 }
 
 int find_files_begin(struct asfd *asfd,
-	FF_PKT *ff_pkt, struct conf *conf, char *fname)
+	struct FF_PKT *ff_pkt, struct conf *conf, char *fname)
 {
 	return find_files(asfd, ff_pkt,
 		conf, fname, (dev_t)-1, 1 /* top_level */);

@@ -3,6 +3,8 @@
 
 #include "../include.h"
 
+struct win;
+
 #include "rabin.h"
 #include "rconf.h"
 #include "win.h"

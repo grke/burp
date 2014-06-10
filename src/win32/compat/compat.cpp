@@ -4,6 +4,12 @@
 #include "mem_pool.h"
 #include "berrno.h"
 
+
+static inline int IsPathSeparator(int ch)
+{
+	return ch == '\\';
+}
+
 #define MAX_PATHLENGTH  1024
 
 /* UTF-8 to UCS2 path conversion is expensive,

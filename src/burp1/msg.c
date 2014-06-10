@@ -1,7 +1,7 @@
 #include "include.h"
 
 static int do_write(struct asfd *asfd,
-	BFILE *bfd, FILE *fp, unsigned char *out, size_t outlen,
+	struct BFILE *bfd, FILE *fp, unsigned char *out, size_t outlen,
 	char **metadata, unsigned long long *sent)
 {
 	int ret=0;
@@ -43,7 +43,7 @@ static int do_write(struct asfd *asfd,
 }
 
 static int do_inflate(struct asfd *asfd,
-	z_stream *zstrm, BFILE *bfd, FILE *fp,
+	z_stream *zstrm, struct BFILE *bfd, FILE *fp,
 	unsigned char *out, unsigned char *buftouse, size_t lentouse,
 	char **metadata, const char *encpassword, int enccompressed,
 	unsigned long long *sent)
@@ -143,7 +143,7 @@ static DWORD WINAPI read_efs(PBYTE pbData, PVOID pvCallbackContext, PULONG ulLen
 }
 
 static int transfer_efs_in(struct asfd *asfd,
-	BFILE *bfd, unsigned long long *rcvd,
+	struct BFILE *bfd, unsigned long long *rcvd,
 	unsigned long long *sent, struct cntr *cntr)
 {
 	int ret=0;
@@ -161,7 +161,7 @@ static int transfer_efs_in(struct asfd *asfd,
 #endif
 
 int transfer_gzfile_inl(struct asfd *asfd,
-	struct sbuf *sb, const char *path, BFILE *bfd,
+	struct sbuf *sb, const char *path, struct BFILE *bfd,
 	FILE *fp, unsigned long long *rcvd, unsigned long long *sent,
 	const char *encpassword, int enccompressed,
 	struct cntr *cntr, char **metadata)

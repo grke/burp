@@ -30,15 +30,15 @@ struct BFILE
 #endif
 };
 
-void binit(BFILE *bfd, int64_t winattr, struct conf *conf);
-int bopen(BFILE *bfd, struct asfd *asfd,
+void binit(struct BFILE *bfd, int64_t winattr, struct conf *conf);
+int bopen(struct BFILE *bfd, struct asfd *asfd,
 	const char *fname, int flags, mode_t mode);
-int bclose(BFILE *bfd, struct asfd *asfd);
-ssize_t bread(BFILE *bfd, void *buf, size_t count);
-ssize_t bwrite(BFILE *bfd, void *buf, size_t count);
+int bclose(struct BFILE *bfd, struct asfd *asfd);
+ssize_t bread(struct BFILE *bfd, void *buf, size_t count);
+ssize_t bwrite(struct BFILE *bfd, void *buf, size_t count);
 
 #ifdef HAVE_WIN32
-bool set_win32_backup(BFILE *bfd);
+bool set_win32_backup(struct BFILE *bfd);
 bool have_win32_api();
 #endif
 

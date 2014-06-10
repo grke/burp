@@ -102,7 +102,7 @@ static int make_link(struct asfd *asfd,
 }
 
 static int open_for_restore(struct asfd *asfd,
-	BFILE *bfd,
+	struct BFILE *bfd,
 	const char *path,
 	struct sbuf *sb,
 	int vss_restore,
@@ -128,10 +128,11 @@ static int open_for_restore(struct asfd *asfd,
 
 	if(bopen(bfd, asfd, path, flags, S_IRUSR | S_IWUSR)<=0)
 	{
-		berrno be;
+		struct berrno be;
 		char msg[256]="";
+		berrno_init(&be);
 		snprintf(msg, sizeof(msg), "Could not open for writing %s: %s",
-			path, be.bstrerror(errno));
+			path, berrno_bstrerror(&be, errno));
 		if(restore_interrupt(asfd, sb, msg, conf))
 			return -1;
 	}
@@ -142,7 +143,7 @@ static int open_for_restore(struct asfd *asfd,
 }
 
 static int start_restore_file(struct asfd *asfd,
-	BFILE *bfd,
+	struct BFILE *bfd,
 	struct sbuf *sb,
 	const char *fname,
 	enum action act,
@@ -346,7 +347,7 @@ end:
 /*
 static int restore_metadata(
 #ifdef HAVE_WIN32
-	BFILE *bfd,
+	struct BFILE *bfd,
 #endif
 	struct sbuf *sb,
 	const char *fname,
@@ -480,7 +481,7 @@ static int strip_path_components(struct asfd *asfd,
 static int overwrite_ok(struct sbuf *sb,
 	struct conf *conf,
 #ifdef HAVE_WIN32
-	BFILE *bfd,
+	struct BFILE *bfd,
 #endif
 	const char *fullpath)
 {
@@ -528,7 +529,7 @@ static int overwrite_ok(struct sbuf *sb,
 	return 1;
 }
 
-static int write_data(struct asfd *asfd, BFILE *bfd, struct blk *blk)
+static int write_data(struct asfd *asfd, struct BFILE *bfd, struct blk *blk)
 {
 	if(bfd->mode==BF_CLOSED)
 		logp("Got data without an open file\n");
@@ -618,7 +619,7 @@ printf("in restore_spool\n");
 
 static int restore_switch_burp2(struct asfd *asfd, struct sbuf *sb,
 	const char *fullpath, enum action act,
-	BFILE *bfd, int vss_restore, struct conf *conf)
+	struct BFILE *bfd, int vss_restore, struct conf *conf)
 {
 	switch(sb->path.cmd)
 	{
@@ -691,7 +692,7 @@ int do_restore_client(struct asfd *asfd,
 	char msg[512]="";
 	struct sbuf *sb=NULL;
 	struct blk *blk=NULL;
-	BFILE bfd;
+	struct BFILE bfd;
 	char *fullpath=NULL;
 	char *style=NULL;
 	char *datpath=NULL;

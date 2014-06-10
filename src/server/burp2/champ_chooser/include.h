@@ -5,6 +5,8 @@
 
 #include "../../../burp2/blist.h"
 
+struct scores;
+
 #include "candidate.h"
 #include "champ_chooser.h"
 #include "champ_client.h"

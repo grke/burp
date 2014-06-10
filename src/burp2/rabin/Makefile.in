@@ -45,10 +45,10 @@ WIN32LIBS = $(@WIN32@)
 # inference rules
 .c.o:
 #	@echo "Compiling $<"
-	$(ECHO_CMD)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+	$(ECHO_CMD)$(CC) $(DEFS) $(DEBUG) -c $(WCFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 .c.lo:
 #	@echo "Compiling $<"
-	$(ECHO_CMD)$(LIBTOOL_COMPILE) $(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+	$(ECHO_CMD)$(LIBTOOL_COMPILE) $(CC) $(DEFS) $(DEBUG) -c $(WCFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 #-------------------------------------------------------------------------
 all: Makefile rabin.a
 	@echo "==== Make of rabin.a is good ===="

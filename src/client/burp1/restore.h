@@ -3,6 +3,6 @@
 
 int restore_switch_burp1(struct asfd *asfd, struct sbuf *sb,
 	const char *fullpath, enum action act,
-	BFILE *bfd, int vss_restore, struct conf *conf);
+	struct BFILE *bfd, int vss_restore, struct conf *conf);
 
 #endif

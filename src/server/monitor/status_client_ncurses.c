@@ -645,7 +645,7 @@ static void sighandler(int sig)
         exit(1);
 }
 
-static void setup_signals(void)
+static void setup_signals_for_status_client(void)
 {
 	signal(SIGABRT, &sighandler);
 	signal(SIGTERM, &sighandler);
@@ -682,7 +682,7 @@ int status_client_ncurses(struct conf *conf, enum action act, const char *sclien
 	}
 #endif
 
-	setup_signals();
+	setup_signals_for_status_client();
 
 	/* NULL == ::1 or 127.0.0.1 */
 	if((fd=init_client_socket(NULL, conf->status_port))<0)

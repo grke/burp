@@ -94,21 +94,7 @@ int attribs_encode(struct sbuf *sb)
 	return 0;
 }
 
-// Do casting according to unknown type to keep compiler happy.
-#ifdef HAVE_TYPEOF
-	#define plug(st, val) st = (typeof st)val
-#else
-	#if !HAVE_GCC & HAVE_SUN_OS
-		// Sun compiler does not handle templates correctly.
-		#define plug(st, val) st = val
-	#elif __sgi
-		#define plug(st, val) st = val
-	#else
-		// Use templates to do the casting.
-		template <class T> void plug(T &st, uint64_t val)
-		{ st = static_cast<T>(val); }
-	#endif
-#endif
+#define plug(st, val) st = val
 
 // Decode a stat packet from base64 characters.
 void attribs_decode(struct sbuf *sb)
@@ -135,6 +121,7 @@ void attribs_decode(struct sbuf *sb)
 		sb->burp2->encryption=val;
 		p++;
 	}
+
 	p += from_base64(&val, p);
 	plug(statp->st_dev, val);
 	p++;
@@ -236,9 +223,10 @@ static int set_file_times(struct asfd *asfd,
 #endif
 	if(e<0)
 	{
-		berrno be;
+		struct berrno be;
+		berrno_init(&be);
 		logw(asfd, conf, "Unable to set file times %s: ERR=%s",
-			path, be.bstrerror());
+			path, berrno_bstrerror(&be, errno));
 		return -1;
 	}
 	return 0;
@@ -288,9 +276,10 @@ int attribs_set(struct asfd *asfd, const char *path,
 		// Change owner of link, not of real file.
 		if(lchown(path, statp->st_uid, statp->st_gid)<0)
 		{
-			berrno be;
+			struct berrno be;
+			berrno_init(&be);
 			logw(asfd, conf, "Unable to set file owner %s: ERR=%s",
-				path, be.bstrerror());
+				path, berrno_bstrerror(&be, errno));
 			return -1;
 		}
 	}
@@ -298,16 +287,18 @@ int attribs_set(struct asfd *asfd, const char *path,
 	{
 		if(chown(path, statp->st_uid, statp->st_gid)<0)
 		{
-			berrno be;
+			struct berrno be;
+			berrno_init(&be);
 			logw(asfd, conf, "Unable to set file owner %s: ERR=%s",
-				path, be.bstrerror());
+				path, berrno_bstrerror(&be, errno));
 			return -1;
 		}
 		if(chmod(path, statp->st_mode) < 0)
 		{
-			berrno be;
+			struct berrno be;
+			berrno_init(&be);
 			logw(asfd, conf, "Unable to set file modes %s: ERR=%s",
-				path, be.bstrerror());
+				path, berrno_bstrerror(&be, errno));
 			return -1;
 		}
 
@@ -323,9 +314,10 @@ int attribs_set(struct asfd *asfd, const char *path,
 		 */
 		if(chflags(path, statp->st_flags)<0)
 		{
-			berrno be;
+			struct berrno be;
+			berrno_init(&be);
 			logw(conf, "Unable to set file flags %s: ERR=%s",
-				path, be.bstrerror());
+				path, berrno_bstrerror(&be, errno));
 			return -1;
 		}
 #endif

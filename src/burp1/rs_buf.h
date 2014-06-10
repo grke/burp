@@ -35,7 +35,7 @@ extern size_t strong_len;
 typedef struct rs_filebuf rs_filebuf_t;
 struct rs_filebuf
 {
-        BFILE *bfd;
+        struct BFILE *bfd;
 	FILE *fp;
         gzFile zp;
 	int fd;
@@ -52,13 +52,13 @@ struct rs_filebuf
 // FIX THIS: Now that struct asfd is getting passed, probably do not need
 // fd as well,
 rs_filebuf_t *rs_filebuf_new(struct asfd *asfd,
-	BFILE *bfd, FILE *fp, gzFile zp,
+	struct BFILE *bfd, FILE *fp, gzFile zp,
 	int fd, size_t buf_len, size_t data_len, struct cntr *cntr);
 void rs_filebuf_free(rs_filebuf_t *fb);
 rs_result rs_infilebuf_fill(rs_job_t *, rs_buffers_t *buf, void *fb);
 rs_result rs_outfilebuf_drain(rs_job_t *, rs_buffers_t *, void *fb);
 rs_result do_rs_run(struct asfd *asfd,
-	rs_job_t *job, BFILE *bfd, FILE *in_file, FILE *out_file,
+	rs_job_t *job, struct BFILE *bfd, FILE *in_file, FILE *out_file,
 	gzFile in_zfile, gzFile out_zfile, int infd, int outfd,
 	struct cntr *cntr);
 

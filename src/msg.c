@@ -24,7 +24,7 @@ int send_msg_zp(gzFile zp, char cmd, const char *buf, size_t s)
 	return 0;
 }
 
-static int do_write(struct asfd *asfd, BFILE *bfd, FILE *fp,
+static int do_write(struct asfd *asfd, struct BFILE *bfd, FILE *fp,
 	unsigned char *out, size_t outlen, unsigned long long *sent)
 {
 	int ret=0;
@@ -47,8 +47,8 @@ static int do_write(struct asfd *asfd, BFILE *bfd, FILE *fp,
 	return 0;
 }
 
-static int do_inflate(struct asfd *asfd, z_stream *zstrm, BFILE *bfd, FILE *fp,
-	unsigned char *out, unsigned long long *sent)
+static int do_inflate(struct asfd *asfd, z_stream *zstrm, struct BFILE *bfd,
+	FILE *fp, unsigned char *out, unsigned long long *sent)
 {
 	int zret=Z_OK;
 	unsigned have=0;
@@ -80,7 +80,7 @@ static int do_inflate(struct asfd *asfd, z_stream *zstrm, BFILE *bfd, FILE *fp,
 	return 0;
 }
 
-int transfer_gzfile_in(struct asfd *asfd, const char *path, BFILE *bfd,
+int transfer_gzfile_in(struct asfd *asfd, const char *path, struct BFILE *bfd,
 	FILE *fp, unsigned long long *rcvd, unsigned long long *sent,
 	struct cntr *cntr)
 {

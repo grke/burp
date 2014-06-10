@@ -83,7 +83,7 @@ WIN32LIBS = $(@WIN32@)
 # inference rules
 .c.o:
 #	@echo "Compiling $<"
-	$(ECHO_CMD)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+	$(ECHO_CMD)$(CC) $(DEFS) $(DEBUG) -c $(WCFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 #-------------------------------------------------------------------------
 all: Makefile @WIN32@ burp @STATIC@
 	@echo "==== Make of burp is good ===="

@@ -94,7 +94,7 @@ static void usage_client(void)
 #endif
 }
 
-int reload(struct conf *conf, const char *conffile, bool firsttime,
+int reload(struct conf *conf, const char *conffile, int firsttime,
 	int oldmax_children, int oldmax_status_children, int json)
 {
 	if(!firsttime) logp("Reloading config\n");

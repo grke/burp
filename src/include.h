@@ -1,6 +1,11 @@
 #ifndef _SRC_INCLUDES_H
 #define _SRC_INCLUDES_H
 
+struct asfd;
+struct conf;
+struct sbuf;
+struct strlist;
+
 #include "action.h"
 #include "asfd.h"
 #include "async.h"

@@ -55,12 +55,12 @@ struct FF_PKT
 	int type;		/* FT_ type from above */
 };
 
-extern FF_PKT *find_files_init(void);
-extern void find_files_free(FF_PKT *ff);
+extern struct FF_PKT *find_files_init(void);
+extern void find_files_free(struct FF_PKT *ff);
 extern int find_files_begin(struct asfd *asfd,
-	FF_PKT *ff_pkt, struct conf *conf, char *fname);
+	struct FF_PKT *ff_pkt, struct conf *conf, char *fname);
 extern int file_is_included(struct conf *conf, const char *fname,
-	bool top_level);
+	int top_level);
 extern int in_include_regex(struct strlist *incre, const char *fname);
 extern int in_exclude_regex(struct strlist *excre, const char *fname);
 // Returns the level of compression.

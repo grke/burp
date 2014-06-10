@@ -629,7 +629,7 @@ end:
 	return ret;
 }
 
-static cstat *get_cstat_by_client_name(struct cstat **clist, int clen, const char *client)
+static struct cstat *get_cstat_by_client_name(struct cstat **clist, int clen, const char *client)
 {
 	int c=0;
 	for(c=0; c<clen; c++)

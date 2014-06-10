@@ -70,7 +70,7 @@ struct bsid {
 #endif
 
 int open_file_for_sendl(struct asfd *asfd,
-	BFILE *bfd, FILE **fp, const char *fname,
+	struct BFILE *bfd, FILE **fp, const char *fname,
 	int64_t winattr, size_t *datalen, int atime, struct conf *conf)
 {
 	if(fp)
@@ -112,8 +112,9 @@ int open_file_for_sendl(struct asfd *asfd,
 		if(bopen(bfd, asfd, fname, O_RDONLY|O_BINARY, 0)<=0)
 		{
 			berrno be;
+			berrno_init(&be);
 			logw(asfd, conf, "Could not open %s: %s\n",
-				fname, be.bstrerror(errno));
+				fname, berrno_bstrerror(&be, errno));
 			return -1;
 		}
 	}
@@ -121,7 +122,7 @@ int open_file_for_sendl(struct asfd *asfd,
 	return 0;
 }
 
-int close_file_for_sendl(BFILE *bfd, FILE **fp, struct asfd *asfd)
+int close_file_for_sendl(struct BFILE *bfd, FILE **fp, struct asfd *asfd)
 {
 	if(fp) return close_fp(fp);
 #ifdef HAVE_WIN32
@@ -143,7 +144,7 @@ char *get_endfile_str(unsigned long long bytes, unsigned char *checksum)
 	return endmsg;
 }
 
-int write_endfile(struct asfd *asfd,
+int write_endfile_burp1(struct asfd *asfd,
 	unsigned long long bytes, unsigned char *checksum)
 {
 	return asfd->write_str(asfd,
@@ -162,7 +163,7 @@ int write_endfile(struct asfd *asfd,
 int send_whole_file_gzl(struct asfd *asfd,
 	const char *fname, const char *datapth, int quick_read,
 	unsigned long long *bytes, const char *encpassword, struct conf *conf,
-	int compression, BFILE *bfd, FILE *fp, const char *extrameta,
+	int compression, struct BFILE *bfd, FILE *fp, const char *extrameta,
 	size_t elen, size_t datalen)
 {
 	int ret=0;
@@ -388,7 +389,7 @@ cleanup:
 			return -1;
 		}
 
-		return write_endfile(asfd, *bytes, checksum);
+		return write_endfile_burp1(asfd, *bytes, checksum);
 	}
 //logp("end of send\n");
 	return ret;
@@ -436,7 +437,7 @@ static DWORD WINAPI write_efs(PBYTE pbData,
 int send_whole_filel(struct asfd *asfd,
 	char cmd, const char *fname, const char *datapth,
 	int quick_read, unsigned long long *bytes, struct conf *conf,
-	BFILE *bfd, FILE *fp, const char *extrameta,
+	struct BFILE *bfd, FILE *fp, const char *extrameta,
 	size_t elen, size_t datalen)
 {
 	int ret=0;
@@ -594,7 +595,7 @@ int send_whole_filel(struct asfd *asfd,
 			logp("MD5_Final() failed\n");
 			return -1;
 		}
-		return write_endfile(asfd, *bytes, checksum);
+		return write_endfile_burp1(asfd, *bytes, checksum);
 	}
 	return ret;
 }

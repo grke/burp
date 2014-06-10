@@ -480,7 +480,6 @@ static int run_server(struct conf *conf, const char *conffile, int *rfd,
 	while(!hupreload)
 	{
 		int mfd=-1;
-		berrno be;
 		fd_set fsr;
 		fd_set fsw;
 		fd_set fse;

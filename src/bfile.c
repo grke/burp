@@ -14,7 +14,7 @@ extern "C" HANDLE get_osfhandle(int fd);
  *   Returns 1 if function worked
  *   Returns 0 if failed (i.e. do not have Backup API on this machine)
  */
-bool set_win32_backup(BFILE *bfd)
+bool set_win32_backup(struct BFILE *bfd)
 {
 	/* We enable if possible here */
 	bfd->use_backup_api=have_win32_api();
@@ -34,7 +34,8 @@ bool have_win32_api()
 //#define OVERWRITE_HIDDEN	4
 
 // Return 0 for success, non zero for error.
-static int bopen_encrypted(BFILE *bfd, const char *fname, int flags, mode_t mode)
+static int bopen_encrypted(struct BFILE *bfd,
+	const char *fname, int flags, mode_t mode)
 {
 	ULONG ulFlags=0;
 	char *win32_fname=NULL;
@@ -97,7 +98,7 @@ end:
 	return bfd->mode==BF_CLOSED;
 }
 
-static int bfile_error(BFILE *bfd)
+static int bfile_error(struct BFILE *bfd)
 {
 	if(bfd)
 	{
@@ -109,7 +110,7 @@ static int bfile_error(BFILE *bfd)
 }
 
 // Return 0 for success, non zero for error.
-int bopen(BFILE *bfd, struct asfd *asfd,
+int bopen(struct BFILE *bfd, struct asfd *asfd,
 	const char *fname, int flags, mode_t mode)
 {
 	DWORD dwaccess;
@@ -274,7 +275,7 @@ int bopen(BFILE *bfd, struct asfd *asfd,
 	return bfd->mode==BF_CLOSED;
 }
 
-static int bclose_encrypted(BFILE *bfd, struct asfd *asfd)
+static int bclose_encrypted(struct BFILE *bfd, struct asfd *asfd)
 {
 	CloseEncryptedFileRaw(bfd->pvContext);
 	if(bfd->mode==BF_WRITE)
@@ -291,7 +292,7 @@ static int bclose_encrypted(BFILE *bfd, struct asfd *asfd)
 }
 
 // Return 0 on success, -1 on error.
-int bclose(BFILE *bfd, struct asfd *asfd)
+int bclose(struct BFILE *bfd, struct asfd *asfd)
 {
 	int ret=-1;
 
@@ -362,7 +363,7 @@ end:
 }
 
 // Returns: bytes read on success, or 0 on EOF, -1 on error.
-ssize_t bread(BFILE *bfd, void *buf, size_t count)
+ssize_t bread(struct BFILE *bfd, void *buf, size_t count)
 {
 	bfd->rw_bytes=0;
 
@@ -390,7 +391,7 @@ ssize_t bread(BFILE *bfd, void *buf, size_t count)
 	return (ssize_t)bfd->rw_bytes;
 }
 
-ssize_t bwrite(BFILE *bfd, void *buf, size_t count)
+ssize_t bwrite(struct BFILE *bfd, void *buf, size_t count)
 {
 	bfd->rw_bytes = 0;
 
@@ -419,7 +420,7 @@ ssize_t bwrite(BFILE *bfd, void *buf, size_t count)
 
 #else
 
-int bclose(BFILE *bfd, struct asfd *asfd)
+int bclose(struct BFILE *bfd, struct asfd *asfd)
 {
 	if(!bfd || bfd->mode==BF_CLOSED) return 0;
 
@@ -445,7 +446,7 @@ int bclose(BFILE *bfd, struct asfd *asfd)
 	return -1;
 }
 
-int bopen(BFILE *bfd,
+int bopen(struct BFILE *bfd,
 	struct asfd *asfd, const char *fname, int flags, mode_t mode)
 {
 	if(bfd->mode!=BF_CLOSED && bclose(bfd, asfd))
@@ -464,21 +465,21 @@ int bopen(BFILE *bfd,
 	return 0;
 }
 
-ssize_t bread(BFILE *bfd, void *buf, size_t count)
+ssize_t bread(struct BFILE *bfd, void *buf, size_t count)
 {
 	return read(bfd->fd, buf, count);
 }
 
-ssize_t bwrite(BFILE *bfd, void *buf, size_t count)
+ssize_t bwrite(struct BFILE *bfd, void *buf, size_t count)
 {
 	return write(bfd->fd, buf, count);
 }
 
 #endif
 
-void binit(BFILE *bfd, int64_t winattr, struct conf *conf)
+void binit(struct BFILE *bfd, int64_t winattr, struct conf *conf)
 {
-	memset(bfd, 0, sizeof(BFILE));
+	memset(bfd, 0, sizeof(struct BFILE));
 	bfd->mode=BF_CLOSED;
 	bfd->winattr=winattr;
 	bfd->conf=conf;

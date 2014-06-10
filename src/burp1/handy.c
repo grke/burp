@@ -26,7 +26,10 @@ static int do_encryption(struct asfd *asfd, EVP_CIPHER_CTX *ctx,
 EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password)
 {
 	EVP_CIPHER_CTX *ctx=NULL;
-	const char *enc_iv="[lkd.$G£"; // never change this.
+	// Declare enc_iv with individual characters so that the weird last
+	// character can be specified as a hex number in order to prevent
+	// compilation warnings on Macs.
+	unsigned char enc_iv[]={'[', 'l', 'k', 'd', '.', '$', 'G', 0xa3, '\0'};
 
 	if(!(ctx=(EVP_CIPHER_CTX *)malloc(sizeof(EVP_CIPHER_CTX))))
 	{
@@ -46,7 +49,7 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password)
 
 	if(!EVP_CipherInit_ex(ctx, NULL, NULL,
 		(unsigned char *)encryption_password,
-		(unsigned char *)enc_iv, encrypt))
+		enc_iv, encrypt))
 	{
 		logp("Second EVP_CipherInit_ex failed\n");
 		goto error;
@@ -248,12 +251,6 @@ int send_whole_file_gzl(struct asfd *asfd,
 		}
 		if(!compression && !strm.avail_in) break;
 
-		if(strm.avail_in<0)
-		{
-			logp("Error in read: %d\n", strm.avail_in);
-			ret=-1;
-			break;
-		}
 		*bytes+=strm.avail_in;
 
 		// The checksum needs to be later if encryption is being used.

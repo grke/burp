@@ -1,0 +1,384 @@
+<h3 align="center">Improved Open Source Backup:
+<br>Incorporating inline deduplication and sparse indexing solutions</h3>
+<h4 align="center">G. P. E. Keeling</h4>
+
+<a href="19appe.html">&lt; Prev</a>
+<a href="00contents.html">Contents</a>
+<a href="21appg.html">Next &gt;</a>
+
+
+<h4>Appendix F - Open source competition</h4>
+
+<p>
+Before any design, coding, or testing was done, I researched the open source
+network backup solutions available. The following are the results of that
+initial research.
+</p>
+
+<p>
+<b>burp-1.3.36 (Keeling, 2011):</b>
+<br>
+Has a simple client/server architecture.
+<br>
+Uses librsync in order to save network traffic and to save on the amount of
+space that is used by each backup. It also uses VSS (Volume Shadow Copy
+Service) to make snapshots when backing up Windows computers.
+Operates at a file-level granularity.
+<br>
+Version 1.3.36 was the latest version at the time of writing.
+</p>
+
+<p>
+Advantages:
+<li>Backup clients can be centrally managed on a Unix-based server.
+<li>Good cross platform support for clients.
+	Supports Unix-based systems, including Macs.
+	Supports the native Windows Backup API with VSS snapshots. This ensures
+	a consistent file system image and also ensures that all files are
+	available to be read. Backup solutions that do not use the API
+	will not be able to open files that other applications already have
+	open.
+<li>Backs up file differences via delta differencing with librsync.
+<li>Supports files, directories, symlinks, hardlinks, fifos, nodes, permissions
+   and timestamps.
+<li>Supports Linux and FreeBSD acls and xattrs.
+<li>Supports Windows permissions, file attributes, and so on, via VSS.
+<li>Supports Windows EFS files.
+<li>Storage and network compression using zlib.
+<li>Ability to continue interrupted backups.
+<li>Network communications encrypted with SSL.
+<li>Automatic SSL certificate authority and client certificate signing.
+<li>Client side file encryption - (note: this turns off delta differencing).
+<li>Scheduling.
+<li>Email backup success/failure notifications.
+<li>Pre/post backup/restore client scripts.
+<li>Storage data deduplication.
+<li>Automatic client upgrade. 
+<li>Due to the design of the server, most configuration changes do not need a
+   server restart in order to become effective.
+<li>Simple retention periods (e.g, keep 1 backup per day for 7 days, 1 backup
+   per week for 4 weeks, 1 backup per 4 weeks for a year). 
+<li>MD5 Verification of saved data.
+</ul>
+</p>
+
+<p>
+Disadvantages:
+<li>Since each file is stored as a separate file system entry on the server,
+   Backups containing many files can end up using a lot of file system inodes.
+   This has consequences on the amount of time it takes to complete subsequent
+   backups, because many system calls are required, for example, to hard link
+   unchanged files into place in the latest backup. Or to delete old backups,
+   because each inode has to be unlinked.
+<li>As previously described, there are limitations of the librsync mechanism
+   related to large files that change.
+<li>Identical files across multiple clients will be stored multiple times.
+   This can be dealt with by post-event file deduplication, but this is not
+   optimal and with large numbers of files, takes a significant amount of time.
+<li>Identical blocks will be stored multiple times across all files and all
+   clients.
+<li>If configured to use reverse librsync deltas to save storage space, restore
+   times for large files can become long, because each delta has to be applied
+   and the large file regenerated for each change in the sequence.
+</ul>
+</p>
+
+
+<p>
+<b>amanda (da Silva et al, 1991):</b>
+<br>
+Server contacts each client to perform a backup at a scheduled
+time. Has a native Windows client. On Unix-like systems, it uses native tools
+to make the backup, like tar.
+</p>
+
+<p>
+Advantages over burp-1.3.36:
+<li>Has a long history, and therefore should be expected to be stable.
+<li>No hard link farm.
+</ul>
+</p>
+
+<p>
+Disadvantages over burp-1.3.36:
+<li>Like bacula, it is clearly focused on tape storage and pretends that
+    a file on the disk is actually a tape, which leads to inefficiencies
+    that don't need to exist when your medium has random access.
+<li>Hard to configure.
+</ul>
+</p>
+
+<p>
+<b>backshift (Stromberg, 2010):</b>
+<br>
+Uses variable-length blocks to perform inline deduplication.
+Stores the chunks on disk in a directory structure named after the checksums
+it creates. It appears to use the file system as its full chunk index.
+<br>
+Appears to be designed with local backups in mind, rather than networked.
+</p>
+
+<p>
+Advantages over burp-1.3.36:
+<li>Inline deduplication.
+</ul>
+</p>
+
+<p>
+Disadvantages over burp-1.3.36:
+<li>No Windows API support. Open files cannot be backed up.
+<li>No central management, or scheduling.
+<li>Poor network support. Cannot run over the network with ssh. Instead, it
+   needs to mount a network share (smbfs, sshfs, etc) and read the data from
+   that. Suspect that all the data is transferred every time.
+   <br>
+   On investigation, http://stromberg.dnsalias.org/~strombrg/backshift/documentation/for-all/backing-up.html, says "writing to a remote filesystem is faster
+   than reading from one - if you have the choice", so pushing probably means
+   that not all the data is transferred every time. I will push when I test it.
+<li>Running on Windows requires installation of cygwin and python, or for the
+   Windows filesystem to be mounted on the server via a network filesystem,
+   which means that the backup has to be pulled.
+<li>Will suffer from disk deduplication bottleneck issues due to the full
+   index created on the disk.
+</ul>
+</p>
+
+<p>
+<b>backuppc (Barratt, 2001):</b>
+<br>
+Uses no client side software, instead backs up clients using
+network shares and tar or rsync on the server.
+<br>
+Has a 'pool based' deduplication mechanism to
+deduplicate across multiple clients. This apparently operates at a file level
+granularity, not block level, and is therefore not suitable for backups of
+disk images. The 'pool' appears to operate as a hard link farm.
+</p>
+
+<p>
+Advantages over burp-1.3.36:
+<li>Claims to be 'enterprise grade'.
+</ul>
+</p>
+
+<p>
+Disadvantages over burp-1.3.36:
+<li>No Windows API support. Open files cannot be backed up.
+</ul>
+</p>
+
+
+<p>
+<b>bacula (Sibbald, 2010)</b>:
+<br>
+The original burp was based on bacula-5.0.3, so it contains many of
+the best features of bacula, whilst solving many of its problems.
+<br>
+Instead of being of a client/server architecture, bacula has four main
+components - the director, the file daemon, the storage daemon, and the
+catalog.
+</p>
+
+<p>
+Advantages over burp-1.3.36:
+<li>Since bacula tries to emulate a tape drive when it saves to disk, it stores
+   the data in a tar-like format containing the data for many files. This means
+   that there are no issues with management of large hard link or mirror farms.
+   However, it does have other issues related to the way it tries to view these
+   storage files as tapes.
+<li>Claims to be 'enterprise grade'.
+</ul>
+</p>
+
+<p>
+Disadvantages over burp-1.3.36:
+<li>Complexity to configure - each of the main components has their own set of
+   configuration files, for example.
+<li>Although it avoids problems with hard link farms, it still works badly with
+   disk storage - Bacula's mentality is very highly geared
+   towards tape usage and therefore it works poorly with disks.
+<li>Stores the catalog separately to the backups - This causes a massive
+   maintenance headache. For example, you now have to think about backups of
+   your catalog. Additionally, changes to your configuration files might not
+   take effect because some of the previous configuration gets written to the
+   catalog, and then it is not easy to make the changes take effect.
+   Furthermore, you end up needing to be a mysql or postgres database expert.
+<li>Backs up the whole file even if only a few bytes in it have changed.
+<li>Relies far too heavily on clock accuracy - Bacula goes very badly wrong if
+   your computer's clock somehow gets skewed. In fact, it relies so heavily on
+   the clock and timestamps that it does not actually track which backup
+   another was based on.
+<li>Laptop backups are difficult to schedule.
+<li>Cannot resume an interrupted backup.
+<li>Retention configuration - my experience taught me that it is just
+   impossible to configure a sensible retention policy for bacula. The
+   reasons why are too long to go into here, but my post to the bacula email
+   user list on the subject can be found at:
+   http://adsm.org//lists/html/Bacula-users/2011-01/msg00308.html
+<li>No Windows EFS support - EFS files are silently ignored.
+<li>Has a commercial edition, into which most new features go.
+</ul>
+</p>
+
+<p>
+<b>bup (Pennarun, 2010):</b>
+<br>
+Uses the versioning control system 'git' as its backend.
+Reads data directly on standard input, splits it into chunks using
+a rolling checksum, and packs it directly into git packfiles. Before writing
+a chunk, it first deduplicates using previously written packfiles. Can be
+run securely over the network with ssh.
+</p>
+
+<p>
+Advantages over burp-1.3.36:
+<li>Inline deduplication.
+<li>Efficient at backing up large files, such as huge disk images.
+<li>No need to apply deltas when restoring old versions of files, as each chunk
+   is retrieved directly from storage when needed.
+</ul>
+</p>
+   
+<p>
+Disadvantages over burp-1.3.36:
+<li>Immature meta data support.
+<li>No Windows API support. Open files cannot be backed up.
+<li>Running on Windows requires installation of cygwin.
+<li>Cannot prune away old backups.
+<li>No central management, or scheduling.
+<li>Performing a backup stores some data on the client.
+</ul>
+</p>
+
+
+
+
+
+<p>
+<b>obnam (Wirzenius, 2007):</b>
+<br>
+Uses ssh to transfer data. Seems to be able to do inline deduplication.
+</p>
+
+<p>
+Advantages over burp-1.3.36:
+<li>Inline deduplication.
+</ul>
+</p>
+
+<p>
+Disadvantages over burp-1.3.36:
+<li>No Windows API support. Open files cannot be backed up.
+<li>Running on Windows requires installation of cygwin.
+<li>No central management.
+</ul>
+</p>
+
+
+<p>
+<b>rdiff-backup (Escoto et al, 2001):</b>
+<br>
+Backs up one directory to another, possibly over a network.
+<br>
+Like burp, it uses librsync. It creates a mirror, and reverse
+diffs are created so that previous versions of files can be restored.
+</p>
+<br>
+<p>
+Disadvantages over burp-1.3.36:
+<li>No Windows API support. Open files cannot be backed up.
+<li>Running on Windows requires installation of cygwin.
+<li>No central management, or scheduling.
+</ul>
+</p>
+
+
+
+<p>
+<b>rsync (Tridgell et al, 1996) --link-dest wrappers:</b>
+<br>
+The rsync --link-dest functionality is used as the back end of various backup
+scripts, such as rsnapshot.
+<br>
+A set of files is backed up as a mirror. In subsequent backups, files
+that have not changed are hard linked to the entries in the previous backup in
+order to save disk space. Or, in other words, you have a hard link farm.
+</p>
+
+<p>
+Disadvantages over burp-1.3.36:
+<li>No Windows API support. Open files cannot be backed up.
+<li>Running on Windows requires installation of cygwin.
+<li>No central management, or scheduling.
+</ul>
+</p>
+
+<p>
+<b>tar over ssh (GNU, 1999):</b>
+<br>
+The name 'tar' is derived from 'tape archive'. is a utility that combines
+files and meta data into a single
+stream. Running it over ssh ('ssecure shell') means that the stream can be sent
+across
+the network securely. I am including this as a backup option because it gives
+me some sort of scientific control. Each backup that this method makes will
+be self contained, not relying on any other backup, so the network utilisation
+and storage will be consistent for each run.
+</p>
+
+<p>
+Advantages over burp-1.3.6:
+<li>These tools are ubiquitous over Unix-like operating systems.
+</ul>
+</p>
+
+<p>
+Disadvantages over burp-1.3.6:
+<li>No Windows API support. Open files cannot be backed up.
+<li>Windows does not come with open source programs like tar, or ssh. A
+   linux-like environment needs to be installed with cygwin in which to run
+   them.
+<li>No central management, or scheduling.
+<li>All the data is transferred each time.
+<li>Massive redundancy of stored data. Will take up a lot of disk space.
+    <i>Note: After performing the tests, I discovered that tar has the ability
+    to do incremental backups, and amanda uses this capability. Therefore,
+    amanda's backup results can be seen as analagous to the results of tar's
+    incremental backups had I run tests on tar in that mode.</i>
+</ul>
+</p>
+
+<p>
+<b>urbackup (Raiber, 2011):</b>
+<br>
+Client/server backup system. File and image backups are made while
+the system is running without interrupting current processes. Also
+continuously watches directories that you want backed up, in order to quickly
+find differences to previous backups. Has a native Windows client.
+</p>
+
+<p>
+Advantages over burp-1.3.36:
+<li>Image backups of Windows (but not Unix-style systems)
+<li>Has an interesting method of broadcasting on the LAN in order to find
+clients to back up.
+</ul>
+</p>
+
+<p>
+Disadvantages over burp-1.3.36:
+<li>Windows or posix ACLs, alternate data streams or permissions are not backed
+   up during a file backup.
+<li>Poor linux support - the online manual states "the client software
+    currently runs only on Windows while the server software runs on both Linux
+    and Windows". However, at the time of writing, I did find source for a
+    Linux client.
+<li>Has an underdeveloped command line interface. It is impossible to restore
+    from the command line, or to trigger a backup. Files can only be restored
+    one at a time from its web interface. Consequently, I am not able to test
+    this software properly.
+</ul>
+</p>
+<a href="19appe.html">&lt; Prev</a>
+<a href="00contents.html">Contents</a>
+<a href="21appg.html">Next &gt;</a>

@@ -1,0 +1,86 @@
+<h3 align="center">Improved Open Source Backup:
+<br>Incorporating inline deduplication and sparse indexing solutions</h3>
+<h4 align="center">G. P. E. Keeling</h4>
+
+<a href="21appg.html">&lt; Prev</a>
+<a href="00contents.html">Contents</a>
+
+
+<h4>Appendix H - Items to be completed before releasing the new software</h4>
+
+<p>
+This is a raw list from my notes of the the things that need to be done before
+an initial release of the newly developed software. I expect these items to
+take roughly two months to complete.
+As this is a raw list,
+much of it relates to obscure parts of the software, and is provided for
+interest only.
+</p>
+
+<pre>
+* Merge in burp1 code and make it possible to switch between burp1 and
+  burp2 modes. This will help transition, and enables support to continue
+  for situations where burp1 is suitable where burp2 may not be.
+
+* Reduce the number of blocks that the client holds in memory at a
+  time.  Make sure this doesn't affect speed. Start by halving the
+  number.
+
+* Get a lock before writing to a data file.
+
+* Get a lock before regenerating a sparse index.
+
+* Review how the sparse indexes are generated. Probably too many of them
+  are made at the moment.
+
+* Sorting the hooks at the end of a backup probably uses too much memory.
+
+* Separate phase1/phase2 again.
+
+* Fix counters (needs phase1/2)
+
+* Make recovery from partially complete backups work (needs phase1/2).
+  Hooks need to be generated from already transferred manifests. Need
+  to forward through already written 'changed/unchanged' manifest.
+
+* Make include/exclude/include work again (needs phase1/2 to make it
+  easy).  By this, I mean including something inside a directory that is
+  excluded.
+
+* Don't store fingerprints and md5sums as strings.
+
+* Make verify work.
+
+* Make CMD_INTERRUPT work (on restore, maybe others too).
+
+* Make it possible to delete unused data files.
+
+* Make the status monitor work.
+
+* Make the status monitor use sdirs.
+
+* Add data compression.
+
+* Add data encryption.
+
+* Make acl/xattrs work as far as burp1 does.
+
+* Make Windows EFS work.
+
+* Make Windows 'image' backups work.
+
+* Make asyncio use iobuf for everything instead of just being a wrapper
+  around the old stuff.
+
+* Make src/client/list.c use sbuf.
+
+* champ_chooser: figure out a way of giving preference to newer
+  candidates.
+
+* Fix conf/cntr init problem.
+
+* Check notifications work (warnings are turned off because of conf/cntr
+  init problem.
+</pre>
+<a href="21appg.html">&lt; Prev</a>
+<a href="00contents.html">Contents</a>

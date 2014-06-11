@@ -1,0 +1,360 @@
+<h3 align="center">Improved Open Source Backup:
+<br>Incorporating inline deduplication and sparse indexing solutions</h3>
+<h4 align="center">G. P. E. Keeling</h4>
+
+<a href="02ack.html">&lt; Prev</a>
+<a href="00contents.html">Contents</a>
+<a href="04method.html">Next &gt;</a>
+
+<h4>1. Introduction</h4>
+
+<p>
+This chapter begins by defining the problem domain.
+It goes on to formulate the research questions within the problem domain, and
+then finishes by outlining the aims and objectives of the project.
+</p>
+<p>
+The paper then proceeds systematically through the following chapters,
+describing the methodology utilised, the design and development of the new
+software, a test plan and results, a second round of development and testing,
+and finally the conclusions and evaluation.
+</p>
+
+<b>1.1. The problem domain</b>
+<p>
+A typical scenario is a small to medium sized business
+(though the solution should not rule out enterprise users) where an
+administrator needs to back up from and restore to a mix of heterogenous
+machines.  They want to back up to cheap disk based storage, rather than using
+expensive tape machines. They may want to back up to a remote location over a
+slow link.
+</p>
+
+<p>
+I am the designer and author of an open source cross-platform network backup
+program. It is called 'burp' (Keeling, 2011), and aims to provide a solution
+to this problem. The experience of developing and supporting this software
+enables me to produce a list of what I consider to be the most important
+features necessary for such a solution:
+</p>
+<ul>
+<li>Backs up Unix/Linux and Windows computers.
+<li>Backs up and restore files, directories, symlinks, hardlinks, fifos, nodes,
+	permissions, timestamps, xattrs, acls and other meta data.
+<li>Can do 'image' backups and restores.
+<li>Can restore individual files.
+<li>Space used on the server should be kept to a minimum.
+<li>Time taken to back up should be kept to a minimum.
+<li>Time taken to restore is less important, but should be reasonable.
+<li>Network usage should be kept to a minimum.
+<li>Network communications must be secure.
+<li>Scheduling of backup times.
+<li>Success and failure notifications via email can be configured.
+<li>Multiple retention periods can be configured.
+<li>An interrupted backup can be resumed.
+</ul>
+</p>
+
+<p>
+The original burp supports most of this already. But there are flaws, or
+weaknesses.
+<br>
+'<a href="15appa.html">Appendix A - How the original burp works</a>' describes how the original burp works in more detail. For the
+purposes of this introduction, the important points are that:
+<br>
+a) It has a client/server design, where the backups are stored on the central
+   server.
+<br>
+b) It uses librsync (Pool, 2004) in order to save network traffic and
+   on the amount of space that is used by each backup.
+<br>
+c) It can do deduplication 'after the fact', once all the data has been
+   transferred, and then only at the granularity of whole files.
+</p>
+
+
+
+
+
+<h4>1.2. How the rsync algorithm works</h4>
+
+<p>
+This is a very brief summary of how the rsync algorithm works. For the full
+details, please see the original paper (Tridgell et al, 1996).
+</p>
+
+<p>
+The rsync algorithm provides a mechanism for updating a file on one machine
+(the original file) to be identical to a file on another machine (the new file).
+The original file is split into fixed sized chunks. A pair of checksums is
+generated for each chunk. One, the 'weak' checksum, is very fast to calculate.
+The other, the 'strong' checksum takes longer to calculate, but two chunks
+of different content are highly unlikely to generate the same value.
+These checksums are sent to the other machine. The other machine now generates
+a 'delta' to be applied to the original file in order to make it match the
+new file. It does this by reading the new file byte-by-byte, generating the
+weak checksum as it goes. If it finds a chunk whose weak checksum matches
+one of the signatures that it received, it also generates a strong checksum
+for that chunk. If that also matches, the original file is thought to contain
+an indentical chunk.
+<br>
+By this means, a delta is generated that contains all the data not in the
+original file, and details on how to apply them in order to reconstruct the
+new file.
+</p>
+
+<p>
+This algorithm was made, by the authors of the paper, into an open source
+program named rsync. It became
+very popular and has evolved over time. Its main purpose is to efficiently
+produce mirrors of the contents of file systems.
+<br>
+It is also used as the back end of various backup systems, such as rsnapshot
+(Rosenquist et al, 2003).
+</p>
+
+
+<h4>1.3. librsync</h4>
+
+<p>
+The librsync library was intended to provide a simple way for other programs to
+include the rsync algorithm. It is important to note that the original rsync
+project does not use librsync.
+</p>
+<p>
+However, various backup programs, such as burp and rdiff-backup
+(Escoto et al, 2001), do use it.
+</p>
+<p>
+Since the start of the original burp project, I have noticed that backing up
+large files can take a very long time when librsync is involved. So, I decided
+that this could be a good avenue of investigation with which to start this
+computer science project.
+</p>
+
+
+
+
+
+<h4>1.4. The problems with librsync</h4>
+
+<p>
+The original rsync continues to be maintained at the time of writing, whereas
+librsync has not been updated since 2004.
+<br>
+This means that improvements to rsync have not made it into librsync.
+</p>
+
+<p>
+My initial investigation into the large file librsync problem involved timing
+the application of deltas to files, using both rsync and librsync, and
+comparing the results.
+</p>
+
+<p>
+I was surprised when I discovered that librsync is actually faster than rsync
+for reasonably large files of a few gigabytes. On further investigation, I
+found that this
+was because librsync uses MD4 (Rivest, 1990) for its strong checksums, whereas
+rsync "now uses MD5 checksums instead of MD4" (<i>rsync-3.0.0-NEWS</i>, 2008).
+MD5 (Rivest, 1992) is stronger cryptographically, at the cost of a little speed.
+</p>
+<p>
+</p>
+
+<p>
+Upon searching, I did not find a documented reason for rsync to have made this
+change. But this does show that the original rsync is continuing to evolve
+whilst librsync is not.
+</p>
+
+<p>
+Increasing the size of the test files enabled me to find the
+point where the librsync speed slowed down dramatically, whilst the rsync
+speed did not.
+</p>
+
+<p>
+I tracked the problem down to the relevant place in the librsync code.
+It turns out that, once a weak checksum has been looked up in the in-memory
+hash table, there is an attached list of strong checksums to search. This
+final search is done linearly.
+</p>
+
+<p>
+After I made this discovery, I discovered that somebody else had found the
+same thing and had come up with a patch for it.
+</p>
+<pre>
+"When files being rsynced are hundreds of Gbytes size collisions in hash
+table kill librsync.
+So linear collision resolution has been replaced with log n collision
+resolution based on binary search.
+Size of hash table is 65536 buckets. So when files size is
+(block_size * 65536 * t) then linear collision resolution is t / (log t)
+slower than binary search resolution. If block size is 2048 bytes then for
+1TB speed up is 630 times. for 100GB - 80 times." (Denisov, 2012)
+</pre>
+<p>
+At this point, I tried the patch and ran the tests again and found that it
+did help.
+</p>
+
+<p>
+However, I then recalled that a lot depended on the fixed block size that you
+gave librsync. When writing the original burp, I assumed that the block size
+should vary depending on the size of the file.
+<br>
+But now, investigating the original rsync, I found that this is not what rsync
+itself does. It does a similar calculation, but then limits it to a maximum
+value.
+</p>
+
+<p>
+So, by this point, I was being faced with reimplementing complicated logic from
+rsync into burp and rewriting chunks of librsync. I was effectively considering
+writing my own version of librsync within burp. And even if I did that, there
+would still be limitations due to hash table size limits and the design of
+the original burp still would not allow inline deduplication of data.
+</p>
+
+
+<h4>1.5. Variable length chunks</h4>
+
+<p>
+I continued with my academic research. I soon found information about variable
+length content chunking, as opposed to librsync's fixed length blocks.
+<br>
+The blocks are stored on the server, and the file to be backed up on the client
+side is read through and split into variable length chunks. This is the
+opposite way round to rsync splitting the server file, not the client, into
+fixed chunks.
+</p>
+
+<pre>
+"In backup applications, single files are backup images that are made up
+of large numbers of component files. These files are rarely entirely
+identical even when they are successive backups of the same file system.
+A single addition, deletion, or change of any component file can easily
+shift the remaining image content. Even if no other file has changed, the
+shift would cause each fixed sized segment to be different than it was
+last time, containing some bytes from one neighbor and giving up some
+bytes to its other neighbor. The approach of partitioning the data into
+variable length segments based on content allows a segment to grow or
+shrink as needed so the remaining segments can be identical to previously
+stored segments.
+Even for storing individual files, variable length segments have an
+advantage. Many files are very similar to, but not identical to other
+versions of the same file.  Variable length segments can accommodate
+these differences and maximize the number of identical segments."
+(Zhu, B. et al, 2008)
+</pre>
+
+<p>
+This same paper talks about methods for improving the speed of hash table index
+look ups in order to avoid disk bottlenecks when there is not enough RAM to
+hold it in memory.
+</p>
+
+
+<h4>1.6. Sparse indexing</h4>
+
+<p>
+This led me to another paper that proposes a different approach, named
+'sparse indexing'.
+<br>
+Put simply, the client reads the variable length chunks from its files to
+back up and
+groups them into 'segments'. Instead of sending the checksums of all the blocks
+to the server, it chooses a few 'hook' checksums and sends those first
+instead.
+<br>
+The server has already stored data from previous backups,
+including 'manifests', which
+consist of instructions on how to rebuild files from the blocks. These
+manifests also have 'hooks' chosen from them (these are the sparse indexes).
+The server will use the incoming 'hooks' to match against the sparse indexes
+in order to choose which manifest's blocks to deduplicate against.
+So, only a few manifests are chosen at a time,
+since loading from disk is costly. These manifests are called 'champions'.
+<br>
+Since not all the blocks are loaded into memory, the deduplication is
+not perfect. But, due to locality of data, the results will still remain good,
+as the experimental results of the paper show.
+<br>
+
+<pre>
+"To solve the chunk-lookup disk bottleneck problem, we rely on chunk
+locality: the tendency for chunks in backup data streams to reoccur
+together. That is, if the last time we encountered chunk A, it was
+surrounded by chunks B, C, and D, then the next time we encounter A
+(even in a different backup) it is likely that we will also encounter
+B, C, or D nearby. This differs from traditional notions of locality
+because occurrences of A may be separated by very long intervals
+(e.g., terabytes). A derived property we take advantage of is that if
+two pieces of backup streams share any chunks, they are likely to share
+many chunks." (Lillibridge, M. et al, 2009)
+</pre>
+
+<h4>1.7. Putting it all together</h4>
+
+<p>
+It occurred to me that the sparse indexing paper makes no mention of the kind
+of efficiency savings that programs like bacula (Sibbald, 2000) or burp make
+when they are asked to back up a file on which the modification time has not
+changed since the previous backup.
+<br>
+It also occurred to me that I have not yet heard of an open source backup
+program that brings all of these techniques together, along with existing
+beneficial features (such as the usage of the Windows backup API,
+notifications, scheduling and so on). Such a program would surely be useful
+to many people around the world.
+<br>
+Some additional research was performed at this point to see if I was correct
+in this. I was unable to find any such software already in existence.
+</p>
+
+<h4>1.8. The research questions</h4>
+<p>
+At this point, having given an outline of the concepts involved, I can state
+the research questions:
+<li>Can incorporating inline deduplication techniques improve open source
+backup offerings and produce an empirically superior product?
+<li>Is sparse indexing an effective solution to the disk deduplication
+bottleneck?
+</p>
+
+
+<h4>1.9. Aims and objectives</h4>
+
+<p>
+I can also now state
+that the main aim of the project is to improve upon the existing 'burp'
+software
+to produce the basis of a new open source cross platform network backup
+software that is demonstrably superior to others in the same field.
+<br>
+To achieve this, I have produced a list of project objectives. They are
+divided into 'core' and 'advanced' categories, as was required for the
+Extended Project Proposal.
+<li> <i>Core:</i>
+Complete a search and review of popular existing open source network backup
+solutions, explaining the areas in which current backup offerings are flawed.
+<li> <i>Core:</i>
+Complete a literature search and review of relevant algorithms and techniques
+that will be needed to implement a new software engine.
+<li> <i>Core:</i>
+Design and develop the new software.
+<li> <i>Advanced:</i>
+By conducting suitable tests and analysis, prove that the new software is
+superior to other offerings.
+<li> <i>Advanced:</i>
+Demonstrate that sparse indexing is an effective solution to the disk
+deduplication bottleneck.
+<li> <i>Core:</i>
+Complete the final project report.
+</p>
+
+<a href="02ack.html">&lt; Prev</a>
+<a href="00contents.html">Contents</a>
+<a href="04method.html">Next &gt;</a>

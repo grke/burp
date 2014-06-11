@@ -1,0 +1,365 @@
+<h3 align="center">Improved Open Source Backup:
+<br>Incorporating inline deduplication and sparse indexing solutions</h3>
+<h4 align="center">G. P. E. Keeling</h4>
+<a href="06iteration1.html">&lt; Prev</a>
+<a href="00contents.html">Contents</a>
+<a href="08results1.html">Next &gt;</a>
+
+
+
+<h4>5. Comparative testing</h4>
+
+<p>
+Once the first iteration was basically working, I designed a procedure with
+which to test the various backup solutions.
+</p>
+
+<p>
+The testing was done using a Linux server and client, because this greatly
+simplifies setup and the measurement of resource utilisation. The machines
+were connected to each other using a 100Mb/s switch.
+</p>
+
+<p>
+<hr>
+<b>Server</b>
+<table border="0" width="100%">
+<tr><td width="10%">CPU:</td>
+	<td>Intel(R) Core(TM)2 Duo CPU     E8400  @ 3.00GHz (double core)</td></tr>
+<tr><td>RAM</td>
+	<td>4GB:</td></tr>
+<tr><td>OS</td>
+	<td>Linux version 3.2.0-3-amd64 (Debian 3.2.21-3)</td></tr>
+<tr><td>Disk 1:</td>
+	<td>ATA      WDC WD400BB-00JH 05.0 PQ (40GB - for the OS)</td></tr>
+<tr><td>Disk 2:</td>
+	<td>ATA      ST3400620A       3.AA PQ (400GB - for the storage)</td></tr>
+</table>
+<hr>
+
+<b>Client</b>
+<table border="0" width="100%">
+<tr><td width="10%">CPU:</td>
+	<td>Intel(R) Atom(TM) CPU D510   @ 1.66GHz (quad core)</td></tr>
+<tr><td>RAM:</td>
+	<td>4GB</td></tr>
+<tr><td>OS:</td>
+	<td>Linux version 3.2.0-4-amd64 (Debian 3.2.46-1+deb7u1)</td></tr>
+<tr><td>Disk 1:</td>
+	<td>ATA      SAMSUNG HD501LJ  CR10 PQ: 0 ANSI: 5 (500GB)</td></tr>
+</table>
+<hr>
+</p>
+
+<p>
+There were two test sequences for each backup software. In both cases, files
+were initially copied into a directory on the client computer for the purposes
+of being backed up.
+<br>
+a) Many small files - I downloaded 59 different linux kernel source packages
+   from http://kernel.org/ and unpacked them.<br>
+   This resulted in 1535717 files and directories, and 20GB (20001048kb) of
+   data, which is an average of about 13kb per file.
+
+<br>
+b) One large file - I used a 22GB VirtualBox VDI image file of a Windows 7
+   machine. I took one copy of this, started and stopped the Windows 7 virtual
+   machine then took another copy of the file, which was now changed.
+</p>
+<p>
+Each sequence had the following steps, each of which is targetting potential
+weaknesses of backup software. For example, updating the timestamp of a large
+file could cause the whole file to be copied across the network even though
+none of the data has changed.
+<ol>
+<li>Perform a backup.
+<li>Perform a backup without changing anything.
+<li>Perform a backup after changing some of the data.<br>
+   For the small files, I randomly scrambled the files in one of the kernel
+   directories.<br>
+   For the large file, I used the rebooted VDI image.
+<li>Perform a backup after updating the timestamp on some of the files.<br>
+   For the small files, I updated all of the timestamps in one of the kernel
+   directories without changing the data.<br>
+   For the large file, I updated its timestamp without changing its data.
+<li>Perform a backup after renaming some of the files.<br>
+   For the small files, I created a new directory and moved half of the kernel
+   sources into it.
+<li>Perform a backup after deleting some of the files.<br>
+   For the small files, I deleted half of them.<br>
+   For the large file, I truncated it to 11GB.
+<li>Restore all the files from each of the six backups.<br>
+</ol>
+</p>
+
+<p>
+These measurements were taken for each backup or restore:
+<ul>
+<li>The time taken.
+<li>The cumulative disk space used after each backupe
+<li>The cumulative number of file system nodes used by the backup.
+<li>Bytes sent over the network from the server.
+<li>Bytes sent over the network from the client.
+<li>Maximum memory usage on the server.
+<li>Maximum memory usage on the client.
+</ul>
+</p>
+
+<p>
+I would also have liked to measure the CPU utilisation, but I was not able
+to find a satisfactory practical way to do this for each piece of
+software.
+</p>
+
+<p>
+To get the time taken and the memory usage statistics, I used the
+GNU 'time' program.
+To get the disk space statistics, I used the 'du' command.
+To get the number of file system nodes, I used the 'find' command, piped to
+'wc'.
+To get the network statistics, I was able to use the linux
+firewall, 'iptables', to count the bytes going to and from particular TCP
+ports.
+</p>
+<p>
+Immediately before each test, I would reset the firewall counters and flush
+the disk cache on both server and client.
+</p>
+
+<p>
+Since each test sequence might take a lot of time,
+scripts were written to automate the testing process so that they could be run
+without intervention. The scripts had to be customised for each backup
+software under test. These scripts are included with the software as part of
+the submitted materials for this project.
+</p>
+
+<p>
+I ensured that each software was configured with the same features for each
+test; there would be no compression on the network or in the storage,
+and there would be encryption on the network but not in the storage.
+For those software that had no native network support, this meant running the
+software over secure shell (ssh).
+<br>
+During the initial testing, I discovered that burp's network library was
+automatically compressing on the network, leading to incorrect results. I made
+a one line patch to the versions of burp under test in order to turn off
+the network compression. This will become a configurable option in future
+versions. I redid the initial testing of both versions of burp for this reason.
+</p>
+
+<p>
+These are the candidate software to be initially tested. For more verbose
+information on each of these, see the <a href="14biblio.html">Bibliography</a>
+and <a href="20appf.html">Appendix F</a>.
+<br>
+burp-1.3.36 was the latest version of the original burp at the time the testing
+was started.
+<br>
+burp-2.0.0 is the first iteration of the new software.
+</p>
+
+<font size="1">
+<table width="100%" border=1>
+<tr><td align="left" width="30%"><b>Software</b></td>
+	<td align="left" width="5%"><b>Good cross platform support</b></td>
+	<td align="left" width="0%"><b>Native network support</b></td>
+	<td align="left" width="5%"><b>Good attribute support</b></td>
+	<td align="left" width="5%"><b>Good imaging support</b></td>
+	<td align="left" width="20%"><b>Notifications and scheduling</b></td>
+	<td align="left" width="20%"><b>Retention periods</b></td>
+	<td align="left" width="5%"><b>Resume on interrupt</b></td>
+	<td align="left" width="5%"><b>Hard link farm</b></td>
+	<td align="left" width="5%"><b>Inline deduplication</b></td>
+</tr>
+<tr><td align="left">amanda 3.3.1</td>
+    <td>No</td>
+    <td>No</td>
+    <td>Yes</td>
+    <td>No</td>
+    <td>Yes *</td>
+    <td>Yes</td>
+    <td>No</td>
+    <td>No</td>
+    <td>No</td>
+</tr>
+<tr><td align="left">backshift 1.20</td>
+    <td>No</td>
+    <td>No</td>
+    <td>Yes</td>
+    <td>No</td>
+    <td>No *</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>No</td>
+    <td>Yes</td>
+</tr>
+<tr><td align="left">backuppc 3.2.1</td>
+    <td>No</td>
+    <td>No</td>
+    <td>Yes</td>
+    <td>No</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>No</td>
+</tr>
+<tr><td align="left">bacula 5.2.13</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>No</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>No</td>
+    <td>No</td>
+    <td>No</td>
+</tr>
+<tr><td align="left">bup-0.25</td>
+    <td>No</td>
+    <td>No</td>
+    <td>No</td>
+    <td>Yes</td>
+    <td>No *</td>
+    <td>No</td>
+    <td>Yes</td>
+    <td>No</td>
+    <td>Yes</td>
+</tr>
+<tr><td align="left">obnam 1.1</td>
+    <td>No</td>
+    <td>No</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>No *</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>No</td>
+    <td>Yes</td>
+</tr>
+<tr><td align="left">rdiff-backup 1.2.8</td>
+    <td>No</td>
+    <td>No</td>
+    <td>Yes</td>
+    <td>No</td>
+    <td>No *</td>
+    <td>No *</td>
+    <td>No</td>
+    <td>Yes</td>
+    <td>No</td>
+</tr>
+<tr><td align="left">rsync 3.0.9 --link-dest</td>
+    <td>No</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>No</td>
+    <td>No *</td>
+    <td>No *</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>No</td>
+</tr>
+<tr><td align="left">tar 1.26</td>
+    <td>No</td>
+    <td>No</td>
+    <td>Yes</td>
+    <td>No</td>
+    <td>No *</td>
+    <td>No *</td>
+    <td>No</td>
+    <td>No</td>
+    <td>No</td>
+</tr>
+<tr><td align="left">urbackup-1.2.4</td>
+    <td>No</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>No</td>
+    <td>Yes</td>
+<tr><td align="left">burp 1.3.36</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>No</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>No</td>
+</tr>
+<tr><td align="left">burp 2.0.0/1</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>Yes</td>
+    <td>No</td>
+    <td>Yes</td>
+    <td>No</td>
+    <td>Yes</td>
+</tr>
+</tr>
+
+</table>
+</font>
+
+<font size="2">
+* Possible with management via external tools, such as cron.
+</font>
+<p>
+'Good cross platform support' means that the software is able to back up and
+restore a set of files on Unix/Linux/Mac/Windows computers, and is able to use
+the Windows backup API.
+<br>
+'Good imaging support' means that the software is able to perform image backups
+and restores efficiently.
+<br>
+'Hard link farm' means that the software saves its data in individual files,
+one for each file that is backed up, and may hard link unchanged versions
+together. This can be beneficial on small backup systems, and you can copy
+the files for restore using standard file system tools. However, with large
+backup sets, they become unwieldy due to file system overhead.
+</p>
+
+<br>
+<b>5.1. Conclusions from feature comparison</b>
+<br>
+
+<p>
+When comparing the feature lists prior to doing any testing, it seems that the
+original burp is already one of the best choices in the field, and some
+of its deficiencies are addressed by the newly developed software.
+</p>
+<p>
+For example, the only other software with good cross platform support is
+bacula. None of the solutions offering inline deduplication except the newly
+developed software manage to have good cross platform support.
+<br>
+I expected urbackup (Raiber, 2011) to be a good contender, but it turns out that
+it doesn't work well on Linux, as described in the next section.
+</p>
+
+<p>
+Many of the technically interesting offerings, such as bup-0.25
+(Pennarun, 2010), lack features that help with
+simplifying administration of a central server. A few of them, for example
+backshift (Stromberg, 2012) and obnam (Wirzenius, 2007), are not really
+network based solutions and require remote filesystems
+to be externally mounted so that they appear to the software as local
+filesystems. These suffer appropriately in the testing that follows.
+</p>
+
+<p>
+You may have noticed that the newly developed software has lost the ability
+to delete old backups. This will be addressed in a future iteration beyond
+the scope of this project, but the planned concept is explained in a
+following chapter about further iterations.
+</p>
+<a href="06iteration1.html">&lt; Prev</a>
+<a href="00contents.html">Contents</a>
+<a href="08results1.html">Next &gt;</a>

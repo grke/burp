@@ -25,5 +25,9 @@
 <li><A HREF="docs/debugging.html">Debugging a crash</A> -
 	In the highly unusual event of burp crashing, this page will help you
 	to help me fix it.
+<li><A HREF="burp2/00contents.html">Improved Open Source Backup</A> -
+	My Masters degree final project report. This project produced burp2
+	and the report contains the results of testing a variety of open source
+	backup software.
 <ul>
 </p>

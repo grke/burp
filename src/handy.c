@@ -88,8 +88,9 @@ int open_file_for_send(BFILE *bfd, struct asfd *asfd, const char *fname,
 		, 0))
 	{
 		berrno be;
+		berrno_init(&be);
 		logw(asfd, conf, "Could not open %s: %s\n",
-			fname, be.bstrerror(errno));
+			fname, berrno_bstrerror(&be, errno));
 		return -1;
 	}
 	return 0;
@@ -511,8 +512,9 @@ int receive_a_file(struct asfd *asfd, const char *path, struct conf *conf)
 		S_IRUSR | S_IWUSR))
 	{
 		berrno be;
+		berrno_init(&be);
 		logp("Could not open for writing %s: %s\n",
-			path, be.bstrerror(errno));
+			path, berrno_bstrerror(&be, errno));
 		ret=-1;
 		goto end;
 	}

@@ -11,8 +11,9 @@ option in the man page and example config files.
 <BR>
 Burp 2 code is capable of doing variable length chunking for inline
 deduplication, with sparse indexing on the server side. For more details
-on the ideas and development, you may read the
-<a href="/images/burp2-report.pdf">report</a> that I wrote for my degree.
+on the ideas and development, you may read the report
+that I wrote for my degree in <a href="/images/burp2-report.pdf">PDF</a> or
+<a href="/burp2/00contents.html">online HTML</a> format.
 </FONT>
 </P>
 

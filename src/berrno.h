@@ -22,34 +22,13 @@
  * If bit 29 in m_berrno is not set, then it is a Unix errno.
  *
  */
-class berrno
+struct berrno
 {
 	char m_buf[256];
 	int m_berrno;
-	void format_win32_message();
-public:
-	berrno();
-	~berrno();
-	const char *bstrerror();
-	const char *bstrerror(int errnum);
 };
 
-// Constructor
-inline berrno::berrno()
-{
-	m_berrno = errno;
-	*m_buf = 0;
-	errno = m_berrno;
-}
-
-inline berrno::~berrno()
-{
-}
-
-inline const char *berrno::bstrerror(int errnum)
-{
-	m_berrno = errnum;
-	return berrno::bstrerror();
-}
+extern void berrno_init(struct berrno *b);
+extern const char *berrno_bstrerror(struct berrno *b, int errnum);
 
 #endif

@@ -237,8 +237,9 @@ static int set_file_times(struct asfd *asfd,
 	if(e<0)
 	{
 		berrno be;
+		berrno_init(&be);
 		logw(asfd, conf, "Unable to set file times %s: ERR=%s",
-			path, be.bstrerror());
+			path, berrno_bstrerror(&be, errno));
 		return -1;
 	}
 	return 0;
@@ -289,8 +290,9 @@ int attribs_set(struct asfd *asfd, const char *path,
 		if(lchown(path, statp->st_uid, statp->st_gid)<0)
 		{
 			berrno be;
+			berrno_init(&be);
 			logw(asfd, conf, "Unable to set file owner %s: ERR=%s",
-				path, be.bstrerror());
+				path, berrno_bstrerror(&be, errno));
 			return -1;
 		}
 	}
@@ -299,15 +301,17 @@ int attribs_set(struct asfd *asfd, const char *path,
 		if(chown(path, statp->st_uid, statp->st_gid)<0)
 		{
 			berrno be;
+			berrno_init(&be);
 			logw(asfd, conf, "Unable to set file owner %s: ERR=%s",
-				path, be.bstrerror());
+				path, berrno_bstrerror(&be, errno));
 			return -1;
 		}
 		if(chmod(path, statp->st_mode) < 0)
 		{
 			berrno be;
+			berrno_init(&be);
 			logw(asfd, conf, "Unable to set file modes %s: ERR=%s",
-				path, be.bstrerror());
+				path, berrno_bstrerror(&be, errno));
 			return -1;
 		}
 
@@ -324,8 +328,9 @@ int attribs_set(struct asfd *asfd, const char *path,
 		if(chflags(path, statp->st_flags)<0)
 		{
 			berrno be;
+			berrno_init(&be);
 			logw(conf, "Unable to set file flags %s: ERR=%s",
-				path, be.bstrerror());
+				path, berrno_bstrerror(&be, errno));
 			return -1;
 		}
 #endif

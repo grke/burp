@@ -100,9 +100,10 @@ int win32_start_vss(struct conf *conf)
 	else
 	{
 		berrno be;
+		berrno_init(&be);
 		logp("VSS was not initialized properly.\n");
 		logp("VSS support is disabled. ERR=%s\n",
-			be.bstrerror(b_errno_win32));
+			berrno_bstrerror(&be, b_errno_win32));
 		errors++;
 	}
 

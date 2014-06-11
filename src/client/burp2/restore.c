@@ -28,9 +28,10 @@ static int open_for_restore(struct asfd *asfd,
 	if(bopen(bfd, asfd, path, flags, S_IRUSR | S_IWUSR)<=0)
 	{
 		berrno be;
+		berrno_init(&be);
 		char msg[256]="";
 		snprintf(msg, sizeof(msg), "Could not open for writing %s: %s",
-			path, be.bstrerror(errno));
+			path, berrno_bstrerror(&be, errno));
 		if(restore_interrupt(asfd, sb, msg, conf))
 			return -1;
 	}

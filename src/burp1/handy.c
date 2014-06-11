@@ -112,8 +112,9 @@ int open_file_for_sendl(struct asfd *asfd,
 		if(bopen(bfd, asfd, fname, O_RDONLY|O_BINARY, 0)<=0)
 		{
 			berrno be;
+			berrno_init(&be);
 			logw(asfd, conf, "Could not open %s: %s\n",
-				fname, be.bstrerror(errno));
+				fname, berrno_bstrerror(&be, errno));
 			return -1;
 		}
 	}

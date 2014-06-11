@@ -253,10 +253,11 @@ BOOL VSSClientGeneric::Initialize(DWORD dwContext, BOOL bDuringRestore)
 	if(FAILED(hr))
 	{
 		berrno be;
+		berrno_init(&be);
 		fprintf(stderr,
 		  "%s: CreateVssBackupComponents returned 0x%08X. ERR=%s\n",
 			__func__, (unsigned int)hr,
-			be.bstrerror(b_errno_win32));
+			berrno_bstrerror(&be, b_errno_win32));
 		return set_errno();
 	}
 

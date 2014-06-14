@@ -68,12 +68,7 @@ int connect_to_champ_chooser(struct sdirs *sdirs, struct conf *conf)
 	while(tries++<tries_max)
 	{
 		int sleeptimeleft=3;
-		if(connect(s, (struct sockaddr *)&remote, len)<0)
-		{
-			logp("connect error in %s: %d %s\n",
-				__func__, errno, strerror(errno));
-		}
-		else
+		if(!connect(s, (struct sockaddr *)&remote, len))
 		{
 			logp("Connected to champ chooser.\n");
 			return s;
@@ -84,8 +79,10 @@ int connect_to_champ_chooser(struct sdirs *sdirs, struct conf *conf)
 		while(sleeptimeleft>0) sleeptimeleft=sleep(sleeptimeleft);
 	}
 
-	logp("Could not connect to champ chooser via %s after %d attempts.\n",
-		sdirs->champsock, tries_max);
+	// Only log any error after all attempts failed, to make the logs
+	// less worrying (most of the time, the first attempt will fail).
+	logp("Could not connect to champ chooser on %s after %d attempts: %s\n",
+		sdirs->champsock, tries_max, strerror(errno));
 
 	return -1;
 }

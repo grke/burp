@@ -54,8 +54,8 @@ int autoupgrade_client(struct async *as, struct conf *conf)
 		log_out_of_memory(__func__);
 		goto end;
 	}
-	// strip trailing slash
-	if(copy[strlen(copy)-1]=='/') copy[strlen(copy)-1]='\0';
+
+	strip_trailing_slashes(&copy);
 	if((cp=strchr(copy, '/'))) *cp='\0';
 	if(mkpath(&(conf->autoupgrade_dir), copy))
 		goto end;

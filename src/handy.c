@@ -661,3 +661,18 @@ int astrcat(char **buf, const char *append, const char *func)
 	if(copy) free(copy);
 	return 0;
 }
+
+// Strip any trailing slashes (unless it is '/').
+void strip_trailing_slashes(char **str)
+{
+	size_t l;
+	while(1)
+	{
+		if(!str || !*str
+		  || !strcmp(*str, "/")
+		  || !(l=strlen(*str))
+		  || (*str)[l-1]!='/')
+			return;
+		(*str)[l-1]='\0';
+	}
+}

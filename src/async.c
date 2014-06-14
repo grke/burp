@@ -68,9 +68,10 @@ static int async_io(struct async *as, int doread)
 /*
 	for(asfd=as->asfd; asfd; asfd=asfd->next)
 	{
-		printf("%d %d %d: %s\n",
+		printf("%d %d %d %d: %s\n",
 			asfd->doread, asfd->dowrite,
-			asfd->readbuflen, asfd->desc);
+			asfd->readbuflen, asfd->writebuflen,
+			asfd->desc);
 	}
 */
 

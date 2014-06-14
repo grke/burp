@@ -45,8 +45,7 @@ static int results_to_fd(struct asfd *asfd)
 	if(!wbuf && !(wbuf=iobuf_alloc())) return -1;
 
 	// Need to start writing the results down the fd.
-	b=asfd->blist->head;
-	while(b)
+	for(b=asfd->blist->head; b && b!=asfd->blist->blk_to_dedup; b=l)
 	{
 		if(b->got==BLK_GOT)
 		{
@@ -57,26 +56,36 @@ static int results_to_fd(struct asfd *asfd)
 			p++;
 			snprintf(p, 64, "%s", b->save_path);
 			iobuf_from_str(wbuf, CMD_SIG, tmp);
-			if(asfd->write(asfd, wbuf))
+
+			if(asfd->append_all_to_write_buffer(asfd, wbuf))
 			{
 				asfd->blist->head=b;
-				return -1;
+				return 0; // Try again later.
+			}
+		}
+		else
+		{
+			// If the last in the sequence is BLK_NOT_GOT,
+			// Send a 'wrap_up' message.
+			if(!b->next || b->next==asfd->blist->blk_to_dedup)
+			{
+				p=tmp;
+				p+=to_base64(b->index, tmp);
+				*p='\0';
+				iobuf_from_str(wbuf, CMD_WRAP_UP, tmp);
+				if(asfd->append_all_to_write_buffer(asfd, wbuf))
+				{
+					asfd->blist->head=b;
+					return 0; // Try again later.
+				}
 			}
 		}
 		l=b->next;
 		blk_free(&b);
-		b=l;
 	}
-	asfd->blist->head=NULL;
-	asfd->blist->tail=NULL;
 
-	p=tmp;
-	p+=to_base64(asfd->blist->last_index, tmp);
-	*p='\0';
-	iobuf_from_str(wbuf, CMD_WRAP_UP, tmp);
-printf("sending\n");
-	if(asfd->write(asfd, wbuf))
-		return -1;
+	asfd->blist->head=b;
+	if(!b) asfd->blist->tail=NULL;
 	return 0;
 }
 
@@ -94,8 +103,7 @@ static int deduplicate_maybe(struct asfd *asfd,
 	if(++(asfd->blkcnt)<MANIFEST_SIG_MAX) return 0;
 	asfd->blkcnt=0;
 
-	if(deduplicate(asfd, conf)<0
-	  || results_to_fd(asfd))
+	if(deduplicate(asfd, conf)<0)
 		return -1;
 
 	return 0;
@@ -107,6 +115,7 @@ static int deal_with_rbuf_sig(struct asfd *asfd, struct conf *conf)
 	if(!(blk=blk_alloc())) return -1;
 
 	blist_add_blk(asfd->blist, blk);
+	if(!asfd->blist->blk_to_dedup) asfd->blist->blk_to_dedup=blk;
 
 	// FIX THIS: Should not just load into strings.
 	if(split_sig(asfd->rbuf->buf,
@@ -139,8 +148,7 @@ static int deal_with_client_rbuf(struct asfd *asfd, struct conf *conf)
 		else if(!strncmp_w(asfd->rbuf->buf, "sigs_end"))
 		{
 			//printf("Was told no more sigs\n");
-			if(deduplicate(asfd, conf)<0
-			  || results_to_fd(asfd))
+			if(deduplicate(asfd, conf)<0)
 				goto error;
 		}
 		else
@@ -241,6 +249,13 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf *conf)
 
 	while(1)
 	{
+		for(asfd=as->asfd->next; asfd; asfd=asfd->next)
+		{
+			if(!asfd->blist->head
+			  || asfd->blist->head->got==BLK_INCOMING) continue;
+			if(results_to_fd(asfd)) goto end;
+		}
+
 		switch(as->read_write(as))
 		{
 			case 0:
@@ -268,6 +283,7 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf *conf)
 				}
 				break;
 			default:
+				int removed=0;
 				// Maybe one of the fds had a problem.
 				// Find and remove it and carry on if possible.
 				for(asfd=as->asfd->next; asfd; )
@@ -284,7 +300,9 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf *conf)
 					a=asfd->next;
 					asfd_free(&asfd);
 					asfd=a;
+					removed++;
 				}
+				if(removed) break;
 				// If we got here, there was no fd to remove.
 				// It is a fatal error.
 				goto end;

@@ -387,7 +387,20 @@ static void sanity_before_sbuf_free(struct slist *slist, struct sbuf *sb)
 	if(slist->blks_to_request==sb) slist->blks_to_request=sb->next;
 }
 
-static int write_to_changed_file(struct asfd *chfd, struct manio *chmanio,
+// FIX THIS: this function is now named strangely.
+static void get_wbuf_from_wrap_up(struct iobuf *wbuf, uint64_t wrap_up)
+{
+	static char *p;
+	static char tmp[32];
+printf("get_wbuf_from_wrap_up: %d\n", wrap_up);
+	p=tmp;
+	p+=to_base64(wrap_up, tmp);
+	*p='\0';
+	iobuf_from_str(wbuf, CMD_WRAP_UP, tmp);
+}
+
+static int write_to_changed_file(struct asfd *asfd,
+	struct asfd *chfd, struct manio *chmanio,
 	struct slist *slist, struct blist *blist,
 	struct dpth *dpth, int backup_end, struct conf *conf)
 {
@@ -430,6 +443,19 @@ static int write_to_changed_file(struct asfd *chfd, struct manio *chmanio,
 						printf("send manifest path\n");
 						if(chfd->write(chfd, wbuf))
                 					return -1;
+
+						if(!blk->requested)
+						{
+						  // Also let the client know,
+						  // so that it can free memory
+						  // if there was a long
+						  // consecutive number of
+						  // unrequested blocks.
+						  get_wbuf_from_wrap_up(wbuf,
+							blk->index);
+						  if(asfd->write(asfd, wbuf))
+                					return -1;
+						}
 					}
 				}
 /*
@@ -481,19 +507,6 @@ static int write_to_changed_file(struct asfd *chfd, struct manio *chmanio,
 		}
 	}
 	return 0;
-}
-
-static void get_wbuf_from_wrap_up(struct iobuf *wbuf, uint64_t *wrap_up)
-{
-	static char *p;
-	static char tmp[32];
-	if(!*wrap_up) return;
-//printf("get_wbuf_from_wrap_up: %d\n", *wrap_up);
-	p=tmp;
-	p+=to_base64(*wrap_up, tmp);
-	*p='\0';
-	iobuf_from_str(wbuf, CMD_WRAP_UP, tmp);
-	*wrap_up=0;
 }
 
 /*
@@ -611,6 +624,8 @@ static int mark_up_to_index(struct blist *blist,
 		logp("Could not find index from champ chooser: %lu\n", index);
 		return -1;
 	}
+//logp("Found index from champ chooser: %lu\n", index);
+//printf("index from cc: %d\n", index);
 	blist->blk_from_champ_chooser=blk;
 	return 0;
 }
@@ -621,7 +636,7 @@ static void mark_got(struct blk *blk, const char *save_path)
 	snprintf(blk->save_path, sizeof(blk->save_path), "%s", save_path);
 }
 
-static int deal_with_read_from_chfd(struct asfd *chfd,
+static int deal_with_read_from_chfd(struct asfd *asfd, struct asfd *chfd,
 	struct blist *blist, uint64_t *wrap_up, struct dpth *dpth)
 {
 	int ret=-1;
@@ -636,16 +651,15 @@ static int deal_with_read_from_chfd(struct asfd *chfd,
 			// Get these for blks that the champ chooser has found.
 			file_no=decode_file_no_and_save_path(chfd->rbuf,
 				&save_path);
-			//printf("got save_path: %d %s\n", file_no, save_path);
+		//	printf("got save_path: %d %s\n", file_no, save_path);
 			if(mark_up_to_index(blist, file_no, dpth)) goto end;
 			mark_got(blist->blk_from_champ_chooser, save_path);
-			//printf("after cmd_sig: %d\n",
-			//	blist->blk_from_champ_chooser->index);
+//			printf("after mark_got: %d\n",
+//				blist->blk_from_champ_chooser->index);
 			break;
 		case CMD_WRAP_UP:
-			//*wrap_up=decode_file_no(chfd->rbuf);
 			file_no=decode_file_no(chfd->rbuf);
-			//printf("mark up to: %d\n", file_no);
+	//		printf("mark up to: %d\n", file_no);
 			if(mark_up_to_index(blist, file_no, dpth)) goto end;
 			mark_not_got(blist->blk_from_champ_chooser, dpth);
 
@@ -688,8 +702,8 @@ int backup_phase2_server(struct async *as, struct sdirs *sdirs,
 
 	logp("Phase 2 begin (recv backup data)\n");
 
-	if(champ_chooser_init(sdirs->data, conf)
-	  || !(cmanio=manio_alloc())
+	//if(champ_chooser_init(sdirs->data, conf)
+	if(!(cmanio=manio_alloc())
 	  || !(p1manio=manio_alloc())
 	  || !(chmanio=manio_alloc())
 	  || !(unmanio=manio_alloc())
@@ -715,17 +729,13 @@ int backup_phase2_server(struct async *as, struct sdirs *sdirs,
 
 		if(!wbuf->len)
 		{
-			get_wbuf_from_wrap_up(wbuf, &wrap_up);
+			if(get_wbuf_from_sigs(wbuf, slist, blist,
+			  sigs_end, &blk_requests_end, dpth, conf))
+				goto end;
 			if(!wbuf->len)
 			{
-				if(get_wbuf_from_sigs(wbuf, slist, blist,
-				  sigs_end, &blk_requests_end, dpth, conf))
-					goto end;
-				if(!wbuf->len)
-				{
-					get_wbuf_from_files(wbuf, slist,
-						p1manio, &requests_end);
-				}
+				get_wbuf_from_files(wbuf, slist,
+					p1manio, &requests_end);
 			}
 		}
 
@@ -751,14 +761,14 @@ int backup_phase2_server(struct async *as, struct sdirs *sdirs,
 		}
 		while(chfd->rbuf->buf)
 		{
-			if(deal_with_read_from_chfd(chfd,
+			if(deal_with_read_from_chfd(asfd, chfd,
 				blist, &wrap_up, dpth)) goto end;
 			// Get as much out of the
 			// readbuf as possible.
 			if(chfd->parse_readbuf(chfd)) goto end;
 		}
 
-		if(write_to_changed_file(chfd, chmanio,
+		if(write_to_changed_file(asfd, chfd, chmanio,
 			slist, blist, dpth, backup_end, conf))
 				goto end;
 	}
@@ -770,7 +780,7 @@ int backup_phase2_server(struct async *as, struct sdirs *sdirs,
 	if(slist->head && slist->head->next)
 	{
 		slist->head=slist->head->next;
-		if(write_to_changed_file(chfd, chmanio,
+		if(write_to_changed_file(asfd, chfd, chmanio,
 			slist, blist, dpth, backup_end, conf))
 				goto end;
 	}

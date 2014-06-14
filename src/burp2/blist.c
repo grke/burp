@@ -46,4 +46,5 @@ void blist_add_blk(struct blist *blist, struct blk *blk)
 	blist->blk_from_champ_chooser=blk;
 	blist->last_requested=blk;
 	blist->last_sent=blk;
+	blist->blk_to_dedup=blk;
 }

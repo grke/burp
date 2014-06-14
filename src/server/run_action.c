@@ -109,11 +109,12 @@ static void maybe_do_notification(struct asfd *asfd,
 
 static int run_backup(struct async *as,
 	struct sdirs *sdirs, struct conf *cconf,
-	struct iobuf *rbuf, const char *incexc, int *timer_ret, int resume)
+	const char *incexc, int *timer_ret, int resume)
 {
 	int ret=-1;
 	char okstr[32]="";
 	struct asfd *asfd=as->asfd;
+	struct iobuf *rbuf=asfd->rbuf;
 
 	if(cconf->restore_client)
 	{
@@ -198,8 +199,7 @@ static int run_backup(struct async *as,
 }
 
 static int run_restore(struct asfd *asfd,
-	struct sdirs *sdirs, struct conf *cconf,
-	struct iobuf *rbuf, int srestore)
+	struct sdirs *sdirs, struct conf *cconf, int srestore)
 {
 	int ret=-1;
 	char *cp=NULL;
@@ -208,6 +208,7 @@ static int run_restore(struct asfd *asfd,
 	char *backupnostr=NULL;
 	char *restoreregex=NULL;
 	char *dir_for_notify=NULL;
+	struct iobuf *rbuf=asfd->rbuf;
 
 	if(!(copy=strdup_w(rbuf->buf, __func__)))
 		goto end;
@@ -270,9 +271,10 @@ end:
 }
 
 static int run_delete(struct asfd *asfd,
-	struct sdirs *sdirs, struct conf *cconf, struct iobuf *rbuf)
+	struct sdirs *sdirs, struct conf *cconf)
 {
 	char *backupno=NULL;
+	struct iobuf *rbuf=asfd->rbuf;
 	if(!cconf->client_can_delete)
 	{
 		logp("Not allowing delete of %s\n", cconf->cname);
@@ -283,12 +285,12 @@ static int run_delete(struct asfd *asfd,
 	return do_delete_server(asfd, sdirs, cconf, backupno);
 }
 
-static int run_list(struct asfd *asfd,
-	struct sdirs *sdirs, struct conf *cconf, struct iobuf *rbuf)
+static int run_list(struct asfd *asfd, struct sdirs *sdirs, struct conf *cconf)
 {
 	char *backupno=NULL;
 	char *browsedir=NULL;
 	char *listregex=NULL;
+	struct iobuf *rbuf=asfd->rbuf;
 
 	if(!cconf->client_can_list)
 	{
@@ -322,15 +324,16 @@ static int run_list(struct asfd *asfd,
 		sdirs, cconf, backupno, listregex, browsedir);
 }
 
-static int unknown_command(struct asfd *asfd, struct iobuf *rbuf)
+static int unknown_command(struct asfd *asfd)
 {
-	iobuf_log_unexpected(rbuf, __func__);
+	iobuf_log_unexpected(asfd->rbuf, __func__);
 	asfd->write_str(asfd, CMD_ERROR, "unknown command");
 	return -1;
 }
 
-static const char *buf_to_notify_str(const char *buf)
+static const char *buf_to_notify_str(struct iobuf *rbuf)
 {
+	const char *buf=rbuf->buf;
 	if(!strncmp_w(buf, "backup")) return "backup";
 	else if(!strncmp_w(buf, "restore")) return "restore";
 	else if(!strncmp_w(buf, "verify")) return "verify";
@@ -368,14 +371,14 @@ int run_action_server(struct async *as,
 		return -1;
 	}
 
-	if(rbuf->cmd!=CMD_GEN)
-		return unknown_command(as->asfd, rbuf);
+	if(rbuf->cmd!=CMD_GEN) return unknown_command(as->asfd);
+
 	if((ret=get_lock_sdirs(as->asfd, sdirs)))
 	{
 		// -1 on error or 1 if the backup is still finalising.
 		if(ret<0) maybe_do_notification(as->asfd, ret,
 			"", "error in get_lock_sdirs()",
-			"", buf_to_notify_str(rbuf->buf), cconf);
+			"", buf_to_notify_str(rbuf), cconf);
 		return ret;
 	}
 
@@ -383,24 +386,23 @@ int run_action_server(struct async *as,
 	{
 		maybe_do_notification(as->asfd, ret,
 			"", "error in check_for_rubble()",
-			"", buf_to_notify_str(rbuf->buf), cconf);
+			"", buf_to_notify_str(rbuf), cconf);
 		return -1;
 	}
 
 	if(!strncmp_w(rbuf->buf, "backup"))
-		return run_backup(as, sdirs, cconf,
-			rbuf, incexc, timer_ret, resume);
+		return run_backup(as, sdirs, cconf, incexc, timer_ret, resume);
 
 	if(!strncmp_w(rbuf->buf, "restore ")
 	  || !strncmp_w(rbuf->buf, "verify "))
-		return run_restore(as->asfd, sdirs, cconf, rbuf, srestore);
+		return run_restore(as->asfd, sdirs, cconf, srestore);
 
 	if(!strncmp_w(rbuf->buf, "delete "))
-		return run_delete(as->asfd, sdirs, cconf, rbuf);
+		return run_delete(as->asfd, sdirs, cconf);
 
 	if(!strncmp_w(rbuf->buf, "list ")
 	  || !strncmp_w(rbuf->buf, "listb "))
-		return run_list(as->asfd, sdirs, cconf, rbuf);
+		return run_list(as->asfd, sdirs, cconf);
 
-	return unknown_command(as->asfd, rbuf);
+	return unknown_command(as->asfd);
 }

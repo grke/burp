@@ -160,7 +160,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx,
 	conf_init(cconf);
 	if(conf_load(conffile, conf, 1)) goto end;
 
-	// Hack to keep forking turned off it was specified as off on the
+	// Hack to keep forking turned off if it was specified as off on the
 	// command line.
 	if(!forking) conf->forking=0;
 

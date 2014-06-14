@@ -1476,3 +1476,19 @@ end:
 	close_file_for_send(NULL, &fp);
 	return ret;
 }
+
+// Strip any trailing slashes (unless it is '/').
+void strip_trailing_slashes(char **str)
+{
+	size_t l;
+	while(1)
+	{
+		if(!str || !*str
+		  || !strcmp(*str, "/")
+		  || !(l=strlen(*str))
+		  || (*str)[l-1]!='/')
+			 return;
+		(*str)[l-1]='\0';
+	}
+}
+

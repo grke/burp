@@ -338,6 +338,9 @@ int main (int argc, char *argv[])
 	  || replace_conf_str(browsefile, &(conf.browsefile))
 	  || replace_conf_str(browsedir, &(conf.browsedir)))
 		return -1;
+	strip_trailing_slashes(&(conf.restoreprefix));
+	strip_trailing_slashes(&(conf.browsedir));
+
 	if(conf.mode==MODE_SERVER)
 	{
 #ifdef HAVE_WIN32

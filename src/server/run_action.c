@@ -313,11 +313,7 @@ static int run_list(struct asfd *asfd,
 			*browsedir='\0';
 			browsedir++;
 		}
-		// strip any trailing slashes
-		// (unless it is '/').
-		if(strcmp(browsedir, "/")
-		 && browsedir[strlen(browsedir)-1]=='/')
-		  browsedir[strlen(browsedir)-1]='\0';
+		strip_trailing_slashes(&browsedir);
 		backupno=rbuf->buf+strlen("listb ");
 	}
 	if(asfd->write_str(asfd, CMD_GEN, "ok")) return -1;

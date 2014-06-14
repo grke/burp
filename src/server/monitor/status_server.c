@@ -831,9 +831,7 @@ static int parse_rbuf(const char *rbuf, int cfd, struct cstat **clist, int clen)
 		free_w(&file);
 		if(!(file=strdup_w("manifest.gz", __func__)))
 			goto error;
-		// Strip trailing slashes.
-		if(strlen(browse)>1 && browse[strlen(browse)-1]=='/')
-			browse[strlen(browse)-1]='\0';
+		strip_trailing_slashes(&browse);
 	}
 
 	if(client)

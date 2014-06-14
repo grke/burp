@@ -48,6 +48,8 @@ static int add_to_data_requests(struct blist *blist, struct iobuf *rbuf)
 	struct blk *blk;
 	index=decode_req(rbuf->buf);
 
+//printf("last_requested: %d\n", blist->last_requested->index);
+
 	// Find the matching entry.
 	for(blk=blist->last_requested; blk; blk=blk->next)
 		if(index==blk->index) break;
@@ -83,6 +85,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			int64_t wrap_up;
 			struct blk *blk;
 			from_base64(&wrap_up, rbuf->buf);
+printf("got wrap_up: %d\n", wrap_up);
 			for(blk=blist->head; blk; blk=blk->next)
 			{
 				if(blk->index==(uint64_t)wrap_up)
@@ -100,7 +103,9 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 				logp("Could not find wrap up index: %016lX\n",
 #endif
 					wrap_up);
-				goto error;
+				logp("Could not find wrap up index: %d\n",
+					wrap_up);
+//				goto error;
 			}
 			goto end;
 		}

@@ -37,11 +37,15 @@ CLIENT_OBJS = \
 	$(OBJDIR)/burp1/handy.o \
 	$(OBJDIR)/burp1/msg.o \
 	$(OBJDIR)/burp1/rs_buf.o \
+	$(OBJDIR)/burp1/sbuf_burp1.o \
 	$(OBJDIR)/burp1/sbufl.o \
+	$(OBJDIR)/burp2/blist.o \
 	$(OBJDIR)/burp2/blk.o \
 	$(OBJDIR)/burp2/rabin/rabin.o \
 	$(OBJDIR)/burp2/rabin/rconf.o \
 	$(OBJDIR)/burp2/rabin/win.o \
+	$(OBJDIR)/burp2/sbuf_burp2.o \
+	$(OBJDIR)/burp2/slist.o \
 	$(OBJDIR)/client/acl.o \
 	$(OBJDIR)/client/auth.o \
 	$(OBJDIR)/client/autoupgrade.o \

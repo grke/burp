@@ -13,6 +13,8 @@ struct blist
 	struct blk *last_requested;
 // On the client, keep track of last data sent by the client.
 	struct blk *last_sent;
+// On the champ chooser, keep track of where to deduplicate from next.
+	struct blk *blk_to_dedup;
 	uint64_t last_index;
 };
 

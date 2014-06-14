@@ -134,7 +134,7 @@ printf("in deduplicate()\n");
 	}
 
 	blk_count=0;
-	for(blk=asfd->blist->head; blk; blk=blk->next)
+	for(blk=asfd->blist->blk_to_dedup; blk; blk=blk->next)
 	{
 //printf("try: %lu\n", blk->index);
 		blk_count++;
@@ -168,6 +168,8 @@ printf("in deduplicate()\n");
 	in->size=0;
 	// Destroy the deduplication hash table.
 	hash_delete_all();
+
+	asfd->blist->blk_to_dedup=NULL;
 
 	return 0;
 }

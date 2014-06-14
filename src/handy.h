@@ -61,4 +61,6 @@ extern long version_to_long(const char *version);
 extern int receive_a_file(const char *path, struct cntr *p1cntr);
 extern int send_a_file(const char *path, struct cntr *p1cntr);
 
+extern void strip_trailing_slashes(char **str);
+
 #endif

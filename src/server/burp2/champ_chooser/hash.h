@@ -7,7 +7,7 @@ typedef struct hash_strong hash_strong_t;
 
 struct hash_strong
 {
-	char strong[32+1];
+	unsigned char md5sum[MD5_DIGEST_LENGTH];
 	hash_strong_t *next;
 	char *path;
 };
@@ -23,10 +23,10 @@ extern struct hash_weak *hash_table;
 
 extern struct hash_weak *hash_weak_find(uint64_t weak);
 extern struct hash_strong *hash_strong_find(struct hash_weak *hash_weak,
-	const char *strong);
+	unsigned char *md5sum);
 extern struct hash_weak *hash_weak_add(uint64_t weakint);
 extern struct hash_strong *hash_strong_add(struct hash_weak *hash_weak,
-	const char *strong, const char *path);
+	unsigned char *md5sum, const char *path);
 
 extern void hash_delete_all(void);
 extern int hash_load(const char *champ, struct conf *conf);

@@ -328,7 +328,8 @@ static char *sig_to_msg(struct blk *blk, int save_path)
 {
 	static char msg[128];
 	snprintf(msg, sizeof(msg), "%s%s%s",
-		blk->weak, blk->strong, save_path?blk->save_path:"");
+		blk->weak, get_checksum_str(blk->md5sum),
+		save_path?blk->save_path:"");
 	return msg;
 }
 

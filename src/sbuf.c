@@ -422,7 +422,7 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 				// Just fill in the sig details.
 				if(split_sig_with_save_path(rbuf->buf,
 					rbuf->len,
-					blk->weak, blk->strong,
+					blk->weak, blk->md5sum,
 					blk->save_path))
 						goto end;
 				iobuf_free_content(rbuf);

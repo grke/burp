@@ -86,7 +86,7 @@ static int already_got_block(struct asfd *asfd, struct blk *blk)
 	{
 		static struct hash_strong *hash_strong;
 		if((hash_strong=hash_strong_find(
-			hash_weak, blk->strong)))
+			hash_weak, blk->md5sum)))
 		{
 			snprintf(blk->save_path, sizeof(blk->save_path),
 				"%s", get_fq_path(hash_strong->path));
@@ -139,9 +139,9 @@ printf("in deduplicate()\n");
 //printf("try: %lu\n", blk->index);
 		blk_count++;
 
-		// FIX THIS - represents zero length block.
 		if(!blk->fingerprint // All zeroes.
-		  && !strcmp(blk->strong, "D41D8CD98F00B204E9800998ECF8427E"))
+		  && !memcmp(blk->md5sum,
+			md5sum_of_empty_string, MD5_DIGEST_LENGTH))
 		{
 //printf("got: %s %s\n", blk->weak, blk->strong);
 			blk->got=BLK_GOT;

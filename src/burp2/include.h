@@ -5,6 +5,7 @@
 
 #include "blist.h"
 #include "blk.h"
+#include "hexmap.h"
 #include "sbuf_burp2.h"
 #include "slist.h"
 

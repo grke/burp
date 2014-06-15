@@ -567,7 +567,8 @@ end:
 	return ret;
 }
 
-int split_sig(const char *buf, unsigned int s, char *weak, char *strong)
+int split_sig(const char *buf, unsigned int s,
+	char *weak, unsigned char *md5sum)
 {
 	if(s!=48)
 	{
@@ -575,11 +576,12 @@ int split_sig(const char *buf, unsigned int s, char *weak, char *strong)
 		return -1;
 	}
 	memcpy(weak, buf, 16);
-	memcpy(strong, buf+16, 32);
+	md5str_to_bytes(buf+16, md5sum);
 	return 0;
 }
 
-int split_sig_with_save_path(const char *buf, unsigned int s, char *weak, char *strong, char *save_path)
+int split_sig_with_save_path(const char *buf, unsigned int s,
+	char *weak, unsigned char *md5sum, char *save_path)
 {
 	if(s!=67)
 	{
@@ -589,7 +591,7 @@ int split_sig_with_save_path(const char *buf, unsigned int s, char *weak, char *
 		return -1;
 	}
 	memcpy(weak, buf, 16);
-	memcpy(strong, buf+16, 32);
+	md5str_to_bytes(buf+16, md5sum);
 	memcpy(save_path, buf+48, 19);
 	return 0;
 }

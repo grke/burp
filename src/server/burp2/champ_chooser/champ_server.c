@@ -119,7 +119,7 @@ static int deal_with_rbuf_sig(struct asfd *asfd, struct conf *conf)
 
 	// FIX THIS: Should not just load into strings.
 	if(split_sig(asfd->rbuf->buf,
-		asfd->rbuf->len, blk->weak, blk->strong)) return -1;
+		asfd->rbuf->len, blk->weak, blk->md5sum)) return -1;
 
 	//printf("Got weak/strong from %d: %lu - %s %s\n",
 	//	asfd->fd, blk->index, blk->weak, blk->strong);

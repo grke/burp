@@ -364,6 +364,8 @@ int main (int argc, char *argv[])
 	strip_trailing_slashes(&conf->restoreprefix);
 	strip_trailing_slashes(&conf->browsedir);
 
+	hexmap_init();
+
 	if(conf->mode==MODE_SERVER)
 	{
 #ifdef HAVE_WIN32

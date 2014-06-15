@@ -10,11 +10,11 @@ struct hash_weak *hash_weak_find(uint64_t weak)
 }
 
 struct hash_strong *hash_strong_find(struct hash_weak *hash_weak,
-	const char *strong)
+	unsigned char *md5sum)
 {
 	struct hash_strong *s;
 	for(s=hash_weak->strong; s; s=s->next)
-		if(!strcmp(s->strong, strong)) return s;
+		if(!memcmp(s->md5sum, md5sum, MD5_DIGEST_LENGTH)) return s;
 	return NULL;
 }
 
@@ -34,7 +34,7 @@ struct hash_weak *hash_weak_add(uint64_t weakint)
 }
 
 struct hash_strong *hash_strong_add(struct hash_weak *hash_weak,
-	const char *strong, const char *path)
+	unsigned char *md5sum, const char *path)
 {
 	struct hash_strong *newstrong;
 	if(!(newstrong=(struct hash_strong *)
@@ -44,7 +44,7 @@ struct hash_strong *hash_strong_add(struct hash_weak *hash_weak,
 		log_out_of_memory(__func__);
 		return NULL;
 	}
-	snprintf(newstrong->strong, sizeof(newstrong->strong), "%s", strong);
+	memcpy(newstrong->md5sum, md5sum, MD5_DIGEST_LENGTH);
 	newstrong->next=hash_weak->strong;
 	return newstrong;
 }
@@ -80,10 +80,10 @@ static int process_sig(char cmd, const char *buf, unsigned int s)
 	static uint64_t weakint;
 	static struct hash_weak *hash_weak;
 	static char weak[16+1];
-	static char strong[32+1];
+	static unsigned char md5sum[MD5_DIGEST_LENGTH];
 	static char save_path[128+1];
 
-	if(split_sig_with_save_path(buf, s, weak, strong, save_path))
+	if(split_sig_with_save_path(buf, s, weak, md5sum, save_path))
 		return -1;
 
 	weakint=strtoull(weak, 0, 16);
@@ -93,10 +93,10 @@ static int process_sig(char cmd, const char *buf, unsigned int s)
 	// Add to hash table.
 	if(!hash_weak && !(hash_weak=hash_weak_add(weakint)))
 		return -1;
-	if(!hash_strong_find(hash_weak, strong))
+	if(!hash_strong_find(hash_weak, md5sum))
 	{
 		if(!(hash_weak->strong=hash_strong_add(hash_weak,
-			strong, save_path))) return -1;
+			md5sum, save_path))) return -1;
 	}
 
 	return 0;

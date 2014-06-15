@@ -15,6 +15,7 @@ thisdir = src/burp2
 SRCS = \
 	blist.c \
 	blk.c \
+	hexmap.c \
 	sbuf_burp2.c \
 	slist.c \
 

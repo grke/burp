@@ -227,9 +227,9 @@ static void iobuf_from_blk_data(struct iobuf *wbuf, struct blk *blk)
 #endif
 		blk->fingerprint);
 	// MD5sum is 32 characters long.
-	snprintf(blk->strong, sizeof(blk->strong),
-		"%s", blk_get_md5sum_str(blk->md5sum));
-	snprintf(buf, sizeof(buf), "%s%s", blk->weak, blk->strong);
+	// FIX THIS: need to send this stuff unconverted.
+	snprintf(buf, sizeof(buf), "%s%s",
+		blk->weak, get_checksum_str(blk->md5sum));
 	iobuf_from_str(wbuf, CMD_SIG, buf);
 }
 

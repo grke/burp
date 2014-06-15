@@ -77,21 +77,18 @@ void hash_delete_all(void)
 
 static int process_sig(char cmd, const char *buf, unsigned int s)
 {
-	static uint64_t weakint;
+	static uint64_t fingerprint;
 	static struct hash_weak *hash_weak;
-	static char weak[16+1];
 	static unsigned char md5sum[MD5_DIGEST_LENGTH];
 	static char save_path[128+1];
 
-	if(split_sig_with_save_path(buf, s, weak, md5sum, save_path))
+	if(split_sig_with_save_path(buf, s, &fingerprint, md5sum, save_path))
 		return -1;
 
-	weakint=strtoull(weak, 0, 16);
-
-	hash_weak=hash_weak_find(weakint);
+	hash_weak=hash_weak_find(fingerprint);
 
 	// Add to hash table.
-	if(!hash_weak && !(hash_weak=hash_weak_add(weakint)))
+	if(!hash_weak && !(hash_weak=hash_weak_add(fingerprint)))
 		return -1;
 	if(!hash_strong_find(hash_weak, md5sum))
 	{

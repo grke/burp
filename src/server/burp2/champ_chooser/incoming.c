@@ -14,8 +14,9 @@ int incoming_grow_maybe(struct incoming *in)
 	// Make the incoming array bigger.
 	in->allocated+=32;
 //printf("grow incoming to %d\n", in->allocated);
-	if((in->weak=(uint64_t *)
-		realloc_w(in->weak, in->allocated*sizeof(uint64_t), __func__))
+	if((in->fingerprints=(uint64_t *)
+		realloc_w(in->fingerprints,
+			in->allocated*sizeof(uint64_t), __func__))
 	  && (in->found=(uint8_t *)
 		realloc_w(in->found, in->allocated*sizeof(uint8_t), __func__)))
 			return 0;

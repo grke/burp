@@ -4,7 +4,7 @@
 
 struct incoming
 {
-	uint64_t *weak;
+	uint64_t *fingerprints;
 	uint8_t *found;
 	uint16_t size;
 	uint16_t allocated;

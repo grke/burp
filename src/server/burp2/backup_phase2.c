@@ -207,8 +207,8 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist,
         if(!burp2->bstart) burp2->bstart=blk;
         if(!burp2->bsighead) burp2->bsighead=blk;
 
-	// FIX THIS: Should not just load into strings.
-	if(split_sig(rbuf->buf, rbuf->len, blk->weak, blk->md5sum)) return -1;
+	if(split_sig(rbuf->buf, rbuf->len,
+		&blk->fingerprint, blk->md5sum)) return -1;
 
 	// Need to send sigs to champ chooser, therefore need to point
 	// to the oldest unsent one if nothing is pointed to yet.
@@ -578,8 +578,13 @@ static int append_for_champ_chooser(struct asfd *chfd,
 		// FIX THIS: This should not need to be done quite like this.
 		// Make weak/strong into uint64 and unsigned char array, then
 		// send them unconverted.
-		wbuf->len=snprintf(wbuf->buf, 128, "%s%s",
-			blist->blk_for_champ_chooser->weak,
+		wbuf->len=snprintf(wbuf->buf, 128,
+#ifdef HAVE_WIN32
+			"%016I64X%s",
+#else
+			"%016lX%s",
+#endif
+			blist->blk_for_champ_chooser->fingerprint,
 			get_checksum_str(blist->blk_for_champ_chooser->md5sum));
 
 		if(chfd->append_all_to_write_buffer(chfd, wbuf))

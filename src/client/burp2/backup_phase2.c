@@ -218,18 +218,14 @@ static void iobuf_from_blk_data(struct iobuf *wbuf, struct blk *blk)
 // Check return of this - maybe should be done elsewhere.
 	blk_md5_update(blk);
 
-	// Fingerprint is 4 bytes.
-	snprintf(blk->weak, sizeof(blk->weak),
-#ifdef HAVE_WIN32
-		"%016I64X",
-#else
-		"%016lX",
-#endif
-		blk->fingerprint);
-	// MD5sum is 32 characters long.
 	// FIX THIS: need to send this stuff unconverted.
-	snprintf(buf, sizeof(buf), "%s%s",
-		blk->weak, get_checksum_str(blk->md5sum));
+	snprintf(buf, sizeof(buf),
+#ifdef HAVE_WIN32
+		"%016I64X%s",
+#else
+		"%016lX%s",
+#endif
+		blk->fingerprint, get_checksum_str(blk->md5sum));
 	iobuf_from_str(wbuf, CMD_SIG, buf);
 }
 

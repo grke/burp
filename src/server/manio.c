@@ -327,8 +327,14 @@ static int write_sig_msg(struct manio *manio, const char *msg)
 static char *sig_to_msg(struct blk *blk, int save_path)
 {
 	static char msg[128];
-	snprintf(msg, sizeof(msg), "%s%s%s",
-		blk->weak, get_checksum_str(blk->md5sum),
+	snprintf(msg, sizeof(msg),
+#ifdef HAVE_WIN32
+		"%016I64X%s%s",
+#else
+		"%016lX%s%s",
+#endif
+		blk->fingerprint,
+		get_checksum_str(blk->md5sum),
 		save_path?blk->save_path:"");
 	return msg;
 }
@@ -340,11 +346,16 @@ int manio_write_sig(struct manio *manio, struct blk *blk)
 
 int manio_write_sig_and_path(struct manio *manio, struct blk *blk)
 {
-	if(manio->hook_sort && is_hook(blk->weak))
+	if(manio->hook_sort && is_hook(blk->fingerprint))
 	{
 		// Add to list of hooks for this manifest chunk.
 		snprintf(manio->hook_sort[manio->hook_count++], WEAK_STR_LEN,
-			"%s", blk->weak);
+#ifdef HAVE_WIN32
+			"%016I64X",
+#else
+			"%016lX",
+#endif
+			blk->fingerprint);
 	}
 	if(manio->dindex_sort)
 	{

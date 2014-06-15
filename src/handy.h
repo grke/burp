@@ -49,9 +49,9 @@ extern int send_a_file(struct asfd *asfd,
 	const char *path, struct conf *conf);
 
 extern int split_sig(const char *buf, unsigned int s,
-	char *weak, unsigned char *md5sum);
+	uint64_t *fingerprint, unsigned char *md5sum);
 extern int split_sig_with_save_path(const char *buf, unsigned int s,
-	char *weak, unsigned char *md5sum, char *save_path);
+	uint64_t *fingerprint, unsigned char *md5sum, char *save_path);
 
 extern int do_quick_read(struct asfd *asfd,
 	const char *datapth, struct conf *conf);

@@ -67,13 +67,12 @@ int candidate_add_fresh(const char *path, struct conf *conf)
 			// Reached the end.
 			break;
 		}
-		if(!*(blk->weak)) continue;
-		if(is_hook(blk->weak))
+		if(is_hook(blk->fingerprint))
 		{
-			if(sparse_add_candidate(blk->weak, candidate))
+			if(sparse_add_candidate(&blk->fingerprint, candidate))
 				goto end;
 		}
-		*blk->weak='\0';
+		blk->fingerprint=0;
 	}
 
 	if(scores_grow(scores, candidates_len)) goto end;
@@ -112,7 +111,7 @@ printf("after scores reset\n");
 	{
 		if(in->found[i]) continue;
 
-		if(!(sparse=sparse_find(in->weak[i])))
+		if(!(sparse=sparse_find(&in->fingerprints[i])))
 			continue;
 		for(s=0; s<sparse->size; s++)
 		{

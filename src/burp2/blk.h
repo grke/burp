@@ -28,16 +28,15 @@ typedef struct blk blk_t;
 struct blk
 {
 	char *data;
+	enum blk_got got;
+	uint8_t requested;
 	uint32_t length;
 	uint64_t fingerprint;
 	unsigned char md5sum[MD5_DIGEST_LENGTH];
 
 	// FIX THIS: Only for ease of use while developing.
-	char weak[16+1];
 	char save_path[19+1]; // eg "0000/0000/0000/0000"
 
-	int requested;
-	enum blk_got got;
 	uint64_t index;
 	struct blk *next;
 };

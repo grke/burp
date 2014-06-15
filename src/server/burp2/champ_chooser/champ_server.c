@@ -94,11 +94,10 @@ static int deduplicate_maybe(struct asfd *asfd,
 {
 	if(!asfd->in && !(asfd->in=incoming_alloc())) return -1;
 
-	blk->fingerprint=strtoull(blk->weak, 0, 16);
-	if(is_hook(blk->weak))
+	if(is_hook(blk->fingerprint))
 	{
 		if(incoming_grow_maybe(asfd->in)) return -1;
-		asfd->in->weak[asfd->in->size-1]=blk->fingerprint;
+		asfd->in->fingerprints[asfd->in->size-1]=blk->fingerprint;
 	}
 	if(++(asfd->blkcnt)<MANIFEST_SIG_MAX) return 0;
 	asfd->blkcnt=0;
@@ -119,7 +118,7 @@ static int deal_with_rbuf_sig(struct asfd *asfd, struct conf *conf)
 
 	// FIX THIS: Should not just load into strings.
 	if(split_sig(asfd->rbuf->buf,
-		asfd->rbuf->len, blk->weak, blk->md5sum)) return -1;
+		asfd->rbuf->len, &blk->fingerprint, blk->md5sum)) return -1;
 
 	//printf("Got weak/strong from %d: %lu - %s %s\n",
 	//	asfd->fd, blk->index, blk->weak, blk->strong);

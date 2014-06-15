@@ -4,6 +4,6 @@
 extern int champ_chooser_init(const char *sparse, struct conf *conf);
 
 extern int deduplicate(struct asfd *asfd, struct conf *conf);
-extern int is_hook(const char *str);
+extern int is_hook(uint64_t fingerprint);
 
 #endif

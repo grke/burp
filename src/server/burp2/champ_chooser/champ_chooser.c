@@ -9,6 +9,7 @@ int champ_chooser_init(const char *datadir, struct conf *conf)
 	char *sparse_path=NULL;
 	struct stat statp;
 	struct candidate *candidate=NULL;
+	uint64_t fingerprint;
 
 	// FIX THIS: scores is a global variable.
 	if(!(scores=scores_alloc())) goto end;
@@ -38,7 +39,11 @@ int champ_chooser_init(const char *datadir, struct conf *conf)
 		}
 		else if(sb->path.cmd==CMD_FINGERPRINT)
 		{
-			if(sparse_add_candidate(sb->path.buf, candidate))
+			// FIX THIS.
+			char tmp[17];
+			snprintf(tmp, sizeof(tmp), "%s", sb->path.buf);
+			fingerprint=strtoull(tmp, 0, 16);
+			if(sparse_add_candidate(&fingerprint, candidate))
 				goto end;
 		}
 		else
@@ -63,10 +68,11 @@ end:
 	return ret;
 }
 
-int is_hook(const char *str)
+#define HOOK_BYTE	0xF000000000000000
+
+int is_hook(uint64_t fingerprint)
 {
-	// FIX THIS: should work on bits, not just the character.
-	return *str=='F';
+	return (fingerprint&HOOK_BYTE);
 }
 
 static char *get_fq_path(const char *path)

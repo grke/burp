@@ -2,34 +2,30 @@
 
 static struct sparse *sparse_table=NULL;
 
-static struct sparse *sparse_add(uint64_t weak)
+static struct sparse *sparse_add(uint64_t fingerprint)
 {
         struct sparse *sparse;
         if(!(sparse=(struct sparse *)
 		calloc_w(1, sizeof(struct sparse), __func__)))
 			return NULL;
-        sparse->weak=weak;
-	HASH_ADD_INT(sparse_table, weak, sparse);
+        sparse->fingerprint=fingerprint;
+	HASH_ADD_INT(sparse_table, fingerprint, sparse);
         return sparse;
 }
 
-struct sparse *sparse_find(uint64_t weak)
+struct sparse *sparse_find(uint64_t *fingerprint)
 {
 	struct sparse *sparse=NULL;
-	HASH_FIND_INT(sparse_table, &weak, sparse);
+	HASH_FIND_INT(sparse_table, fingerprint, sparse);
 	return sparse;
 }
 
-int sparse_add_candidate(const char *weakstr, struct candidate *candidate)
+int sparse_add_candidate(uint64_t *fingerprint, struct candidate *candidate)
 {
 	static size_t s;
-	static uint64_t weak;
 	static struct sparse *sparse;
 
-	// Convert to uint64_t.
-	weak=strtoull(weakstr, 0, 16);
-
-	if((sparse=sparse_find(weak)))
+	if((sparse=sparse_find(fingerprint)))
 	{
 		// Do not add it to the list if it has already been added.
 		for(s=0; s<sparse->size; s++)
@@ -40,7 +36,7 @@ int sparse_add_candidate(const char *weakstr, struct candidate *candidate)
 			}
 	}
 
-	if(!sparse && !(sparse=sparse_add(weak)))
+	if(!sparse && !(sparse=sparse_add(*fingerprint)))
 		return -1;
 	if(!(sparse->candidates=(struct candidate **)
 		realloc_w(sparse->candidates,

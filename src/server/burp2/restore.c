@@ -310,8 +310,14 @@ static int maybe_copy_data_files_across(struct asfd *asfd,
 			//if(async_write(asfd, CMD_DATA, blk->data, blk->length))
 			//	return -1;
 			// FIX THIS: Need to send this stuff unconverted.
-			snprintf(sig, sizeof(sig), "%s%s%s",
-				blk->weak, get_checksum_str(blk->md5sum),
+			snprintf(sig, sizeof(sig),
+#ifdef HAVE_WIN32
+				"%016I64X%s%s",
+#else
+				"%016lX%s%s",
+#endif
+				blk->fingerprint,
+				get_checksum_str(blk->md5sum),
 				blk->save_path);
 			if(asfd->write_str(asfd, CMD_SIG, sig))
 				goto end;
@@ -447,8 +453,13 @@ static int restore_stream(struct asfd *asfd,
 			{
 				char msg[256]="";
 				snprintf(msg, sizeof(msg),
-				  "Unexpected signature in manifest: %s%s%s",
-					blk->weak,
+				  "Unexpected signature in manifest: "
+#ifdef HAVE_WIN32
+				  "%016I64X%s%s",
+#else
+				  "%016lX%s%s",
+#endif
+					blk->fingerprint,
 					get_checksum_str(blk->md5sum),
 					blk->save_path);
 				logw(asfd, conf, msg);

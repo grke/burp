@@ -317,7 +317,7 @@ static int maybe_copy_data_files_across(struct asfd *asfd,
 				"%016lX%s%s",
 #endif
 				blk->fingerprint,
-				get_checksum_str(blk->md5sum),
+				bytes_to_md5str(blk->md5sum),
 				blk->save_path);
 			if(asfd->write_str(asfd, CMD_SIG, sig))
 				goto end;
@@ -460,7 +460,7 @@ static int restore_stream(struct asfd *asfd,
 				  "%016lX%s%s",
 #endif
 					blk->fingerprint,
-					get_checksum_str(blk->md5sum),
+					bytes_to_md5str(blk->md5sum),
 					blk->save_path);
 				logw(asfd, conf, msg);
 			}

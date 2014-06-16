@@ -16,6 +16,7 @@
 #include "forkchild.h"
 #include "fsops.h"
 #include "handy.h"
+#include "hexmap.h"
 #include "incexc_recv.h"
 #include "incexc_send.h"
 #include "include.h"

@@ -224,7 +224,7 @@ static void iobuf_from_blk_data(struct iobuf *wbuf, struct blk *blk)
 #else
 		"%016lX%s",
 #endif
-		blk->fingerprint, get_checksum_str(blk->md5sum));
+		blk->fingerprint, bytes_to_md5str(blk->md5sum));
 	iobuf_from_str(wbuf, CMD_SIG, buf);
 }
 

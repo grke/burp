@@ -193,7 +193,7 @@ static int verify_file(struct asfd *asfd, struct sbuf *sb,
 		logp("MD5_Final() failed\n");
 		return -1;
 	}
-	newsum=get_checksum_str(checksum);
+	newsum=bytes_to_md5str(checksum);
 
 	if(strcmp(newsum, cp))
 	{

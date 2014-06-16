@@ -25,7 +25,6 @@ extern int send_whole_file_gz(struct asfd *asfd,
 extern int set_non_blocking(int fd);
 extern int set_blocking(int fd);
 extern char *get_tmp_filename(const char *basis);
-extern char *get_checksum_str(uint8_t *checksum);
 extern void add_fd_to_sets(int fd,
 	fd_set *read_set, fd_set *write_set, fd_set *err_set, int *max_fd);
 extern int init_client_socket(const char *host, const char *port);

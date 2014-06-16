@@ -382,7 +382,7 @@ cleanup:
 
 	if(!ret)
 	{
-		uint8_t checksum[MD5_DIGEST_LENGTH+1];
+		uint8_t checksum[MD5_DIGEST_LENGTH];
 		if(!MD5_Final(checksum, &md5))
 		{
 			logp("MD5_Final() failed\n");
@@ -589,7 +589,7 @@ int send_whole_filel(struct asfd *asfd,
 	}
 	if(!ret)
 	{
-		uint8_t checksum[MD5_DIGEST_LENGTH+1];
+		uint8_t checksum[MD5_DIGEST_LENGTH];
 		if(!MD5_Final(checksum, &md5))
 		{
 			logp("MD5_Final() failed\n");

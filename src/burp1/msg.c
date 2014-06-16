@@ -180,7 +180,7 @@ int transfer_gzfile_inl(struct asfd *asfd,
 
 	// Checksum stuff
 	//MD5_CTX md5;
-	//uint8_t checksum[MD5_DIGEST_LENGTH+1];
+	//uint8_t checksum[MD5_DIGEST_LENGTH];
 
 #ifdef HAVE_WIN32
 	if(sb && sb->path.cmd==CMD_EFS_FILE)

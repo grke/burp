@@ -116,7 +116,7 @@ static int verify_file(struct asfd *asfd, struct sbuf *sb,
 	const char *cp=NULL;
 	const char *newsum=NULL;
 	uint8_t in[ZCHUNK];
-	uint8_t checksum[MD5_DIGEST_LENGTH+1];
+	uint8_t checksum[MD5_DIGEST_LENGTH];
 	unsigned long long cbytes=0;
 	if(!(cp=strrchr(sb->burp1->endfile.buf, ':')))
 	{

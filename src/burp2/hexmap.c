@@ -30,7 +30,7 @@ void md5str_to_bytes(const char *md5str, uint8_t *bytes)
 	static uint8_t bpos;
 	static uint8_t spos;
 
-	for(bpos=0, spos=0; spos<MD5_DIGEST_LENGTH; spos+=2, bpos++)
+	for(bpos=0, spos=0; bpos<MD5_DIGEST_LENGTH; bpos++, spos+=2)
 		bytes[bpos] = hexmap1[(uint8_t)md5str[spos]]
 			| hexmap2[(uint8_t)md5str[spos+1]];
 }

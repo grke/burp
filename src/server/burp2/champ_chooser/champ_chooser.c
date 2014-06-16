@@ -39,10 +39,7 @@ int champ_chooser_init(const char *datadir, struct conf *conf)
 		}
 		else if(sb->path.cmd==CMD_FINGERPRINT)
 		{
-			// FIX THIS.
-			char tmp[17];
-			snprintf(tmp, sizeof(tmp), "%s", sb->path.buf);
-			fingerprint=strtoull(tmp, 0, 16);
+			fingerprint=strtoull(sb->path.buf, 0, 16);
 			if(sparse_add_candidate(&fingerprint, candidate))
 				goto end;
 		}
@@ -68,11 +65,11 @@ end:
 	return ret;
 }
 
-#define HOOK_BYTE	0xF000000000000000
+#define HOOK_MASK	0xF000000000000000
 
 int is_hook(uint64_t fingerprint)
 {
-	return (fingerprint&HOOK_BYTE);
+	return (fingerprint&HOOK_MASK)==HOOK_MASK;
 }
 
 static char *get_fq_path(const char *path)

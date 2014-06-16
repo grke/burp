@@ -5,12 +5,12 @@
 static uint8_t hexmap1[HEXMAP_SIZE];
 static uint8_t hexmap2[HEXMAP_SIZE];
 
-unsigned char md5sum_of_empty_string[MD5_DIGEST_LENGTH];
+uint8_t md5sum_of_empty_string[MD5_DIGEST_LENGTH];
 
 static void do_hexmap_init(uint8_t *hexmap, uint8_t shift)
 {
-	unsigned char i;
-	unsigned char h;
+	uint8_t i;
+	uint8_t h;
 	memset(hexmap, 0, HEXMAP_SIZE);
 	for(i='0', h=0x00; i<='9'; i++, h++) hexmap[i]=h<<shift;
 	for(i='a', h=0x0A; i<='f'; i++, h++) hexmap[i]=h<<shift;

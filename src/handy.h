@@ -25,7 +25,7 @@ extern int send_whole_file_gz(struct asfd *asfd,
 extern int set_non_blocking(int fd);
 extern int set_blocking(int fd);
 extern char *get_tmp_filename(const char *basis);
-extern char *get_checksum_str(unsigned char *checksum);
+extern char *get_checksum_str(uint8_t *checksum);
 extern void add_fd_to_sets(int fd,
 	fd_set *read_set, fd_set *write_set, fd_set *err_set, int *max_fd);
 extern int init_client_socket(const char *host, const char *port);
@@ -49,9 +49,9 @@ extern int send_a_file(struct asfd *asfd,
 	const char *path, struct conf *conf);
 
 extern int split_sig(const char *buf, unsigned int s,
-	uint64_t *fingerprint, unsigned char *md5sum);
+	uint64_t *fingerprint, uint8_t *md5sum);
 extern int split_sig_with_save_path(const char *buf, unsigned int s,
-	uint64_t *fingerprint, unsigned char *md5sum, char *save_path);
+	uint64_t *fingerprint, uint8_t *md5sum, char *save_path);
 
 extern int do_quick_read(struct asfd *asfd,
 	const char *datapth, struct conf *conf);

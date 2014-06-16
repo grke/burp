@@ -169,7 +169,7 @@ static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx, struct conf *conf)
 	}
 
 	SSL_CTX_set_session_id_context(*ctx,
-		(const unsigned char *)&s_server_session_id_context,
+		(const uint8_t *)&s_server_session_id_context,
 		sizeof(s_server_session_id_context));
 
 	if((*rfd=init_client_socket(conf->server, conf->port))<0)

@@ -10,7 +10,7 @@ struct hash_weak *hash_weak_find(uint64_t weak)
 }
 
 struct hash_strong *hash_strong_find(struct hash_weak *hash_weak,
-	unsigned char *md5sum)
+	uint8_t *md5sum)
 {
 	struct hash_strong *s;
 	for(s=hash_weak->strong; s; s=s->next)
@@ -34,7 +34,7 @@ struct hash_weak *hash_weak_add(uint64_t weakint)
 }
 
 struct hash_strong *hash_strong_add(struct hash_weak *hash_weak,
-	unsigned char *md5sum, const char *path)
+	uint8_t *md5sum, const char *path)
 {
 	struct hash_strong *newstrong;
 	if(!(newstrong=(struct hash_strong *)
@@ -79,7 +79,7 @@ static int process_sig(char cmd, const char *buf, unsigned int s)
 {
 	static uint64_t fingerprint;
 	static struct hash_weak *hash_weak;
-	static unsigned char md5sum[MD5_DIGEST_LENGTH];
+	static uint8_t md5sum[MD5_DIGEST_LENGTH];
 	static char save_path[128+1];
 
 	if(split_sig_with_save_path(buf, s, &fingerprint, md5sum, save_path))

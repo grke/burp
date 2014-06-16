@@ -25,7 +25,7 @@ int send_msg_zp(gzFile zp, char cmd, const char *buf, size_t s)
 }
 
 static int do_write(struct asfd *asfd, BFILE *bfd, FILE *fp,
-	unsigned char *out, size_t outlen, unsigned long long *sent)
+	uint8_t *out, size_t outlen, unsigned long long *sent)
 {
 	int ret=0;
 #ifdef HAVE_WIN32
@@ -48,14 +48,14 @@ static int do_write(struct asfd *asfd, BFILE *bfd, FILE *fp,
 }
 
 static int do_inflate(struct asfd *asfd, z_stream *zstrm, BFILE *bfd, FILE *fp,
-	unsigned char *out, unsigned long long *sent)
+	uint8_t *out, unsigned long long *sent)
 {
 	int zret=Z_OK;
 	unsigned have=0;
 	struct iobuf *rbuf=asfd->rbuf;
 
 	zstrm->avail_in=rbuf->len;
-	zstrm->next_in=(unsigned char *)rbuf->buf;
+	zstrm->next_in=(uint8_t *)rbuf->buf;
 
 	do
 	{
@@ -86,7 +86,7 @@ int transfer_gzfile_in(struct asfd *asfd, const char *path, BFILE *bfd,
 {
 	int quit=0;
 	int ret=-1;
-	unsigned char out[ZCHUNK];
+	uint8_t out[ZCHUNK];
 	struct iobuf *rbuf=asfd->rbuf;
 	z_stream zstrm;
 

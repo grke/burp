@@ -7,7 +7,7 @@ int zlib_inflate(struct asfd *asfd, const char *source,
 	size_t b=0;
 	FILE *fp=NULL;
 	gzFile zp=NULL;
-	unsigned char in[ZCHUNK];
+	uint8_t in[ZCHUNK];
 
 	if(!(zp=gzopen_file(source, "rb")))
 	{

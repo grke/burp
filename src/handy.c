@@ -43,7 +43,7 @@ int do_quick_read(struct asfd *asfd, const char *datapth, struct conf *conf)
 	return r;
 }
 
-char *get_checksum_str(unsigned char *checksum)
+char *get_checksum_str(uint8_t *checksum)
 {
 	static char str[64]="";
 	snprintf(str, sizeof(str),
@@ -112,8 +112,8 @@ int send_whole_file_gz(struct asfd *asfd,
 	unsigned have;
 	z_stream strm;
 	int flush=Z_NO_FLUSH;
-	unsigned char in[ZCHUNK];
-	unsigned char out[ZCHUNK];
+	uint8_t in[ZCHUNK];
+	uint8_t out[ZCHUNK];
 
 	struct iobuf wbuf;
 
@@ -568,7 +568,7 @@ end:
 }
 
 static void get_fingerprint_and_md5sum(const char *buf,
-	uint64_t *fingerprint, unsigned char *md5sum)
+	uint64_t *fingerprint, uint8_t *md5sum)
 {
 	// FIX THIS.
 	char tmp[17]="";
@@ -579,7 +579,7 @@ static void get_fingerprint_and_md5sum(const char *buf,
 	
 
 int split_sig(const char *buf, unsigned int s,
-	uint64_t *fingerprint, unsigned char *md5sum)
+	uint64_t *fingerprint, uint8_t *md5sum)
 {
 	if(s!=48)
 	{
@@ -591,7 +591,7 @@ int split_sig(const char *buf, unsigned int s,
 }
 
 int split_sig_with_save_path(const char *buf, unsigned int s,
-	uint64_t *fingerprint, unsigned char *md5sum, char *save_path)
+	uint64_t *fingerprint, uint8_t *md5sum, char *save_path)
 {
 	if(s!=67)
 	{

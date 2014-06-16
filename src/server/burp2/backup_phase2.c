@@ -392,7 +392,7 @@ static void get_wbuf_from_wrap_up(struct iobuf *wbuf, uint64_t wrap_up)
 {
 	static char *p;
 	static char tmp[32];
-printf("get_wbuf_from_wrap_up: %d\n", wrap_up);
+//printf("get_wbuf_from_wrap_up: %d\n", wrap_up);
 	p=tmp;
 	p+=to_base64(wrap_up, tmp);
 	*p='\0';
@@ -576,7 +576,7 @@ static int append_for_champ_chooser(struct asfd *chfd,
 	while(blist->blk_for_champ_chooser)
 	{
 		// FIX THIS: This should not need to be done quite like this.
-		// Make weak/strong into uint64 and unsigned char array, then
+		// Make weak/strong into uint64 and uint8_t array, then
 		// send them unconverted.
 		wbuf->len=snprintf(wbuf->buf, 128,
 #ifdef HAVE_WIN32

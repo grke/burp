@@ -29,8 +29,8 @@ extern int send_whole_filel(struct asfd *asfd,
 
 extern EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password);
 
-extern char *get_endfile_str(unsigned long long bytes, unsigned char *checksum);
+extern char *get_endfile_str(unsigned long long bytes, uint8_t *checksum);
 extern int write_endfile(struct asfd *asfd,
-	unsigned long long bytes, unsigned char *checksum);
+	unsigned long long bytes, uint8_t *checksum);
 
 #endif

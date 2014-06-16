@@ -53,7 +53,7 @@ void blk_print_alloc_stats(void)
 //	printf("data_count: %d, data_free_count: %d\n", data_count, data_free_count);
 }
 
-char *blk_get_md5sum_str(unsigned char *checksum)
+char *blk_get_md5sum_str(uint8_t *checksum)
 {
 	static char str[33]="";
 	snprintf(str, sizeof(str),

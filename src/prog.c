@@ -364,6 +364,7 @@ int main (int argc, char *argv[])
 	strip_trailing_slashes(&conf->restoreprefix);
 	strip_trailing_slashes(&conf->browsedir);
 
+	base64_init();
 	hexmap_init();
 
 	if(conf->mode==MODE_SERVER)

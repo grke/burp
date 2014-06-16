@@ -9,7 +9,6 @@ static uint8_t const base64_digits[64]=
 	'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/'
 };
 
-static int base64_inited=0;
 static uint8_t base64_map[128];
 
 /* Initialize the Base 64 conversion routines */
@@ -19,7 +18,6 @@ void base64_init(void)
 	memset(base64_map, 0, sizeof(base64_map));
 	for(i=0; i<64; i++)
 		base64_map[(uint8_t)base64_digits[i]]=i;
-	base64_inited=1;
 }
 
 /*
@@ -75,8 +73,6 @@ int from_base64(int64_t *value, const char *where)
 	uint64_t val=0;
 	int i;
 	int neg;
-
-	if(!base64_inited) base64_init();
 
 	/* Check if it is negative */
 	i=neg=0;

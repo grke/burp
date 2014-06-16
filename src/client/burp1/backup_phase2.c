@@ -26,7 +26,7 @@ static int load_signature_and_send_delta(struct asfd *asfd,
 	rs_job_t *job;
 	rs_result r;
 	rs_signature_t *sumset=NULL;
-	unsigned char checksum[MD5_DIGEST_LENGTH+1];
+	uint8_t checksum[MD5_DIGEST_LENGTH+1];
 	rs_filebuf_t *infb=NULL;
 	rs_filebuf_t *outfb=NULL;
 	rs_buffers_t rsbuf;

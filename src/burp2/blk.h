@@ -28,11 +28,11 @@ typedef struct blk blk_t;
 struct blk
 {
 	char *data;
-	enum blk_got got;
+	uint8_t got;
 	uint8_t requested;
 	uint32_t length;
 	uint64_t fingerprint;
-	unsigned char md5sum[MD5_DIGEST_LENGTH];
+	uint8_t md5sum[MD5_DIGEST_LENGTH];
 
 	// FIX THIS: Only for ease of use while developing.
 	char save_path[19+1]; // eg "0000/0000/0000/0000"
@@ -50,8 +50,8 @@ struct blk
         uint8_t requested;
         uint32_t length;
         uint64_t fingerprint;
-        unsigned char md5sum[MD5_DIGEST_LENGTH];
-        unsigned char save_path[8]; // eg "0000/0000/0000/0000"
+        uint8_t md5sum[MD5_DIGEST_LENGTH];
+        uint8_t save_path[8]; // eg "0000/0000/0000/0000"
         uint64_t index;
         struct blk *next;
 };
@@ -61,7 +61,7 @@ extern struct blk *blk_alloc(void);
 extern struct blk *blk_alloc_with_data(uint32_t max_data_length);
 extern void blk_free(struct blk **blk);
 extern int blk_md5_update(struct blk *blk);
-extern char *blk_get_md5sum_str(unsigned char *checksum);
+extern char *blk_get_md5sum_str(uint8_t *checksum);
 extern void blk_print_alloc_stats(void);
 
 #endif

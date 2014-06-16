@@ -151,7 +151,7 @@ static int setenv_x509(X509_NAME *x509, const char *type)
 	ASN1_STRING *val;
 	X509_NAME_ENTRY *ent;
 	const char *objbuf;
-	unsigned char *buf;
+	uint8_t *buf;
 	char *name_expand;
 	size_t name_expand_size;
 
@@ -164,7 +164,7 @@ static int setenv_x509(X509_NAME *x509, const char *type)
 		  || (fn_nid=OBJ_obj2nid(fn))==NID_undef
 		  || !(objbuf=OBJ_nid2sn(fn_nid)))
 			continue;
-		buf=(unsigned char *)1; /* bug in OpenSSL 0.9.6b ASN1_STRING_to_UTF8 requires this workaround */
+		buf=(uint8_t *)1; /* bug in OpenSSL 0.9.6b ASN1_STRING_to_UTF8 requires this workaround */
 		if(ASN1_STRING_to_UTF8(&buf, val)<=0) continue;
 		name_expand_size = 64 + strlen (objbuf);
 		if(!(name_expand=(char *)malloc(name_expand_size)))

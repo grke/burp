@@ -1,7 +1,7 @@
 #include "include.h"
 
 static int do_write(struct asfd *asfd,
-	BFILE *bfd, FILE *fp, unsigned char *out, size_t outlen,
+	BFILE *bfd, FILE *fp, uint8_t *out, size_t outlen,
 	char **metadata, unsigned long long *sent)
 {
 	int ret=0;
@@ -44,7 +44,7 @@ static int do_write(struct asfd *asfd,
 
 static int do_inflate(struct asfd *asfd,
 	z_stream *zstrm, BFILE *bfd, FILE *fp,
-	unsigned char *out, unsigned char *buftouse, size_t lentouse,
+	uint8_t *out, uint8_t *buftouse, size_t lentouse,
 	char **metadata, const char *encpassword, int enccompressed,
 	unsigned long long *sent)
 {
@@ -168,10 +168,10 @@ int transfer_gzfile_inl(struct asfd *asfd,
 {
 	int quit=0;
 	int ret=-1;
-	unsigned char out[ZCHUNK];
+	uint8_t out[ZCHUNK];
 	int doutlen=0;
-	//unsigned char doutbuf[1000+EVP_MAX_BLOCK_LENGTH];
-	unsigned char doutbuf[ZCHUNK-EVP_MAX_BLOCK_LENGTH];
+	//uint8_t doutbuf[1000+EVP_MAX_BLOCK_LENGTH];
+	uint8_t doutbuf[ZCHUNK-EVP_MAX_BLOCK_LENGTH];
 	struct iobuf *rbuf=asfd->rbuf;
 
 	z_stream zstrm;
@@ -180,7 +180,7 @@ int transfer_gzfile_inl(struct asfd *asfd,
 
 	// Checksum stuff
 	//MD5_CTX md5;
-	//unsigned char checksum[MD5_DIGEST_LENGTH+1];
+	//uint8_t checksum[MD5_DIGEST_LENGTH+1];
 
 #ifdef HAVE_WIN32
 	if(sb && sb->path.cmd==CMD_EFS_FILE)
@@ -240,7 +240,7 @@ int transfer_gzfile_inl(struct asfd *asfd,
 				else
 				{
 					size_t lentouse;
-					unsigned char *buftouse=NULL;
+					uint8_t *buftouse=NULL;
 /*
 					if(!MD5_Update(&md5, rbuf->buf, rbuf->len))
 					{
@@ -266,7 +266,7 @@ int transfer_gzfile_inl(struct asfd *asfd,
 */
 					  if(!EVP_CipherUpdate(enc_ctx,
 						doutbuf, &doutlen,
-						(unsigned char *)rbuf->buf,
+						(uint8_t *)rbuf->buf,
 						rbuf->len))
 					  {
 						logp("Decryption error\n");
@@ -280,7 +280,7 @@ int transfer_gzfile_inl(struct asfd *asfd,
 					else
 					{
 					  lentouse=rbuf->len;
-					  buftouse=(unsigned char *)rbuf->buf;
+					  buftouse=(uint8_t *)rbuf->buf;
 					}
 					//logp("want to write: %d\n", zstrm.avail_in);
 

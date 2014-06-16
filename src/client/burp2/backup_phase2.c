@@ -85,7 +85,6 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			int64_t wrap_up;
 			struct blk *blk;
 			from_base64(&wrap_up, rbuf->buf);
-printf("got wrap_up: %d\n", wrap_up);
 			for(blk=blist->head; blk; blk=blk->next)
 			{
 				if(blk->index==(uint64_t)wrap_up)

@@ -41,6 +41,7 @@ CLIENT_OBJS = \
 	$(OBJDIR)/burp1/sbufl.o \
 	$(OBJDIR)/burp2/blist.o \
 	$(OBJDIR)/burp2/blk.o \
+	$(OBJDIR)/burp2/hexmap.o \
 	$(OBJDIR)/burp2/rabin/rabin.o \
 	$(OBJDIR)/burp2/rabin/rconf.o \
 	$(OBJDIR)/burp2/rabin/win.o \

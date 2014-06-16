@@ -1,7 +1,7 @@
 #include "include.h"
 
 static int do_encryption(struct asfd *asfd, EVP_CIPHER_CTX *ctx,
-	unsigned char *inbuf, int inlen, unsigned char *outbuf, int *outlen,
+	uint8_t *inbuf, int inlen, uint8_t *outbuf, int *outlen,
 	MD5_CTX *md5)
 {
 	if(!inlen) return 0;
@@ -29,7 +29,7 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password)
 	// Declare enc_iv with individual characters so that the weird last
 	// character can be specified as a hex number in order to prevent
 	// compilation warnings on Macs.
-	unsigned char enc_iv[]={'[', 'l', 'k', 'd', '.', '$', 'G', 0xa3, '\0'};
+	uint8_t enc_iv[]={'[', 'l', 'k', 'd', '.', '$', 'G', 0xa3, '\0'};
 
 	if(!(ctx=(EVP_CIPHER_CTX *)malloc(sizeof(EVP_CIPHER_CTX))))
 	{
@@ -48,7 +48,7 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password)
 	// We finished modifying parameters so now we can set key and IV
 
 	if(!EVP_CipherInit_ex(ctx, NULL, NULL,
-		(unsigned char *)encryption_password,
+		(uint8_t *)encryption_password,
 		enc_iv, encrypt))
 	{
 		logp("Second EVP_CipherInit_ex failed\n");
@@ -131,7 +131,7 @@ int close_file_for_sendl(BFILE *bfd, FILE **fp, struct asfd *asfd)
 	return -1;
 }
 
-char *get_endfile_str(unsigned long long bytes, unsigned char *checksum)
+char *get_endfile_str(unsigned long long bytes, uint8_t *checksum)
 {
 	static char endmsg[128]="";
 	snprintf(endmsg, sizeof(endmsg),
@@ -145,7 +145,7 @@ char *get_endfile_str(unsigned long long bytes, unsigned char *checksum)
 }
 
 int write_endfile(struct asfd *asfd,
-	unsigned long long bytes, unsigned char *checksum)
+	unsigned long long bytes, uint8_t *checksum)
 {
 	return asfd->write_str(asfd,
 		CMD_END_FILE, get_endfile_str(bytes, checksum));
@@ -175,11 +175,11 @@ int send_whole_file_gzl(struct asfd *asfd,
 	int have;
 	z_stream strm;
 	int flush=Z_NO_FLUSH;
-	unsigned char in[ZCHUNK];
-	unsigned char out[ZCHUNK];
+	uint8_t in[ZCHUNK];
+	uint8_t out[ZCHUNK];
 
 	int eoutlen;
-	unsigned char eoutbuf[ZCHUNK+EVP_MAX_BLOCK_LENGTH];
+	uint8_t eoutbuf[ZCHUNK+EVP_MAX_BLOCK_LENGTH];
 
 	EVP_CIPHER_CTX *enc_ctx=NULL;
 #ifdef HAVE_WIN32
@@ -382,7 +382,7 @@ cleanup:
 
 	if(!ret)
 	{
-		unsigned char checksum[MD5_DIGEST_LENGTH+1];
+		uint8_t checksum[MD5_DIGEST_LENGTH+1];
 		if(!MD5_Final(checksum, &md5))
 		{
 			logp("MD5_Final() failed\n");
@@ -589,7 +589,7 @@ int send_whole_filel(struct asfd *asfd,
 	}
 	if(!ret)
 	{
-		unsigned char checksum[MD5_DIGEST_LENGTH+1];
+		uint8_t checksum[MD5_DIGEST_LENGTH+1];
 		if(!MD5_Final(checksum, &md5))
 		{
 			logp("MD5_Final() failed\n");

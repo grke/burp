@@ -43,22 +43,6 @@ int do_quick_read(struct asfd *asfd, const char *datapth, struct conf *conf)
 	return r;
 }
 
-char *get_checksum_str(uint8_t *checksum)
-{
-	static char str[64]="";
-	snprintf(str, sizeof(str),
-	  "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
-		checksum[0], checksum[1],
-		checksum[2], checksum[3],
-		checksum[4], checksum[5],
-		checksum[6], checksum[7],
-		checksum[8], checksum[9],
-		checksum[10], checksum[11],
-		checksum[12], checksum[13],
-		checksum[14], checksum[15]);
-	return str;
-}
-
 static char *get_endfile_str(unsigned long long bytes)
 {
 	static char endmsg[128]="";

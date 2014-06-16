@@ -324,7 +324,7 @@ int transfer_gzfile_inl(struct asfd *asfd,
 					if((oldsum=strchr(buf, ':')))
 					{
 						oldsum++;
-						newsum=get_checksum_str(checksum);
+						newsum=bytes_to_md5str(checksum);
 						// log if the checksum differed
 						if(strcmp(newsum, oldsum))
 							logw(asfd, cntr, "md5sum for '%s' did not match! (%s!=%s)\n", path, newsum, oldsum);

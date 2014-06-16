@@ -334,7 +334,7 @@ static char *sig_to_msg(struct blk *blk, int save_path)
 		"%016lX%s%s",
 #endif
 		blk->fingerprint,
-		get_checksum_str(blk->md5sum),
+		bytes_to_md5str(blk->md5sum),
 		save_path?blk->save_path:"");
 	return msg;
 }

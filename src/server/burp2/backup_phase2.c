@@ -585,7 +585,7 @@ static int append_for_champ_chooser(struct asfd *chfd,
 			"%016lX%s",
 #endif
 			blist->blk_for_champ_chooser->fingerprint,
-			get_checksum_str(blist->blk_for_champ_chooser->md5sum));
+			bytes_to_md5str(blist->blk_for_champ_chooser->md5sum));
 
 		if(chfd->append_all_to_write_buffer(chfd, wbuf))
 			return 0; // Try again later.

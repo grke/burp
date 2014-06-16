@@ -140,7 +140,7 @@ char *get_endfile_str(unsigned long long bytes, uint8_t *checksum)
 #else
 		"%llu:%s",
 #endif
-		bytes, get_checksum_str(checksum));
+		bytes, bytes_to_md5str(checksum));
 	return endmsg;
 }
 

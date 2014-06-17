@@ -567,7 +567,7 @@ int split_sig(const char *buf, unsigned int s,
 {
 	if(s!=48)
 	{
-		fprintf(stderr, "Signature wrong length: %u\n", s);
+		logp("Signature wrong length: %u\n", s);
 		return -1;
 	}
 	get_fingerprint_and_md5sum(buf, fingerprint, md5sum);
@@ -579,9 +579,8 @@ int split_sig_with_save_path(const char *buf, unsigned int s,
 {
 	if(s!=67)
 	{
-		fprintf(stderr, "Signature with save_path wrong length: %u\n",
-			s);
-		fprintf(stderr, "%s\n", buf);
+		logp("Signature with save_path wrong length: %u\n", s);
+		logp("%s\n", buf);
 		return -1;
 	}
 	get_fingerprint_and_md5sum(buf, fingerprint, md5sum);

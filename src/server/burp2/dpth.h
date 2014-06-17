@@ -17,12 +17,12 @@ struct dpth_lock
 struct dpth
 {
 	char *base_path;
-	int prim;
-	int seco;
-	int tert;
-	int sig;
+	uint16_t prim;
+	uint16_t seco;
+	uint16_t tert;
+	uint16_t sig;
 	// Whether we need to lock another data file.
-	int need_data_lock;
+	uint8_t need_data_lock;
 	// Currently open data file. Only one is open at a time, while many
 	// may be locked.
 	FILE *fp;

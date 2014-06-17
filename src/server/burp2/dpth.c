@@ -3,6 +3,14 @@
 #include <dirent.h>
 
 #define MAX_STORAGE_SUBDIRS	30000
+#define MAX_FILES_PER_DIR	0xFFFF
+
+static int incr(uint16_t *component, uint16_t max)
+{
+	if((*component)++<MAX_FILES_PER_DIR) return 1;
+	*component=0;
+	return 0;
+}
 
 // Three levels with 65535 entries each gives
 // 65535^3 = 281,462,092,005,375 data entries
@@ -10,14 +18,13 @@
 // Hmm, but ext3 only allows 32000 subdirs, although that many files are OK.
 static int dpth_incr(struct dpth *dpth)
 {
-	if(dpth->tert++<0xFFFF) return 0;
-	dpth->tert=0;
-	if(dpth->seco++<MAX_STORAGE_SUBDIRS) return 0;
-	dpth->seco=0;
-	if(dpth->prim++<MAX_STORAGE_SUBDIRS) return 0;
-	dpth->prim=0;
-	logp("Could not find any free data file entries out of the 15000*%d*%d available!\n", MAX_STORAGE_SUBDIRS, MAX_STORAGE_SUBDIRS);
-	logp("Recommend moving the client storage directory aside and starting again.\n");
+	if(incr(&dpth->tert, MAX_FILES_PER_DIR)
+	  || incr(&dpth->seco, MAX_STORAGE_SUBDIRS)
+	  || incr(&dpth->prim, MAX_STORAGE_SUBDIRS))
+		return 0;
+	logp("No free data file entries out of the %d*%d*%d available!\n",
+		MAX_FILES_PER_DIR, MAX_STORAGE_SUBDIRS, MAX_STORAGE_SUBDIRS);
+	logp("Maybe move the storage directory aside and start again.\n");
 	return -1;
 }
 
@@ -284,11 +291,10 @@ static FILE *open_data_file_for_write(struct dpth *dpth, struct blk *blk)
 	// Remember that the save_path on the lock list is shorter than the
 	// full save_path on the blk.
 	if(!head
-	  || strncmp(head->save_path, blk->save_path, sizeof(head->save_path)-1))
+	  || strncmp(head->save_path,
+		blk->save_path, sizeof(head->save_path)-1))
 	{
 		logp("lock and block save_path mismatch: %s %s\n",
-			head?head->save_path:"(null)", blk->save_path);
-		printf("lock and block save_path mismatch: %s %s\n",
 			head?head->save_path:"(null)", blk->save_path);
 		goto end;
 	}

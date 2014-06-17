@@ -25,14 +25,19 @@ void hexmap_init(void)
 		md5sum_of_empty_string);
 }
 
-void md5str_to_bytes(const char *md5str, uint8_t *bytes)
+static void str_to_bytes(const char *str, uint8_t *bytes, size_t len)
 {
 	static uint8_t bpos;
 	static uint8_t spos;
 
-	for(bpos=0, spos=0; bpos<MD5_DIGEST_LENGTH; bpos++, spos+=2)
-		bytes[bpos] = hexmap1[(uint8_t)md5str[spos]]
-			| hexmap2[(uint8_t)md5str[spos+1]];
+	for(bpos=0, spos=0; bpos<len; bpos++, spos+=2)
+		bytes[bpos] = hexmap1[(uint8_t)str[spos]]
+			| hexmap2[(uint8_t)str[spos+1]];
+}
+
+void md5str_to_bytes(const char *md5str, uint8_t *bytes)
+{
+	str_to_bytes(md5str, bytes, MD5_DIGEST_LENGTH);
 }
 
 char *bytes_to_md5str(uint8_t *bytes)
@@ -47,3 +52,15 @@ char *bytes_to_md5str(uint8_t *bytes)
         return str;
 }
 
+void savepathstr_to_bytes(const char *savepathstr, uint8_t *bytes)
+{
+	str_to_bytes(savepathstr, bytes, 8);
+}
+
+char *bytes_to_savepathstr(uint8_t *bytes)
+{
+        static char str[20]="";
+        snprintf(str, sizeof(str), "%04X/%04X/%04X/%04X",
+                bytes[0], bytes[2], bytes[4], bytes[6]);
+        return str;
+}

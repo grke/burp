@@ -399,100 +399,98 @@ static void get_wbuf_from_wrap_up(struct iobuf *wbuf, uint64_t wrap_up)
 	iobuf_from_str(wbuf, CMD_WRAP_UP, tmp);
 }
 
+static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
+        struct asfd *chfd, struct manio *chmanio,
+        struct slist *slist, struct blist *blist,
+        struct dpth *dpth, int backup_end, struct conf *conf)
+{
+	int hack=0;
+	struct blk *blk;
+	static struct iobuf *wbuf=NULL;
+
+	if(!(sb->flags & SBUF_HEADER_WRITTEN_TO_MANIFEST))
+	{
+		if(manio_write_sbuf(chmanio, sb)) goto error;
+		sb->flags |= SBUF_HEADER_WRITTEN_TO_MANIFEST;
+	}
+
+        if(!wbuf && !(wbuf=iobuf_alloc())) return -1;
+
+	while((blk=sb->burp2->bstart)
+		&& blk->got==BLK_GOT
+		&& (blk->next || backup_end))
+	{
+		if(*(blk->save_path))
+		{
+			if(manio_write_sig_and_path(chmanio, blk)) goto error;
+			if(chmanio->sig_count==0)
+			{
+				// Have finished a manifest file. Want to start
+				// using it as a dedup candidate now.
+				iobuf_from_str(wbuf, CMD_MANIFEST,
+					chmanio->fpath);
+				printf("send manifest path\n");
+				if(chfd->write(chfd, wbuf)) goto error;
+
+				if(!blk->requested)
+				{
+					// Also let the client know, so that it
+					// can free memory if there was a long
+					// consecutive number of unrequested
+					// blocks.
+					get_wbuf_from_wrap_up(wbuf, blk->index);
+					if(asfd->write(asfd, wbuf)) goto error;
+				}
+			}
+		}
+
+		if(blk==sb->burp2->bend)
+		{
+			slist->head=sb->next;
+			if(!(blist->head=sb->burp2->bstart)) blist->tail=NULL;
+			sanity_before_sbuf_free(slist, sb);
+			sbuf_free(&sb);
+			hack=1;
+			break;
+		}
+
+		if(sb->burp2->bsighead==sb->burp2->bstart)
+			sb->burp2->bsighead=blk->next;
+		sb->burp2->bstart=blk->next;
+		if(blk==blist->blk_from_champ_chooser)
+			blist->blk_from_champ_chooser=blk->next;
+
+		//printf("freeing blk %d\n", blk->index);
+		blk_free(&blk);
+	}
+
+	if(hack) return 1;
+	if(!(blist->head=sb->burp2->bstart)) blist->tail=NULL;
+	return 0;
+error:
+	return -1;
+}
+
 static int write_to_changed_file(struct asfd *asfd,
 	struct asfd *chfd, struct manio *chmanio,
 	struct slist *slist, struct blist *blist,
 	struct dpth *dpth, int backup_end, struct conf *conf)
 {
 	struct sbuf *sb;
-	static struct iobuf *wbuf=NULL;
 	if(!slist) return 0;
-        if(!wbuf && !(wbuf=iobuf_alloc())) return -1;
 
 	while((sb=slist->head))
 	{
 		if(sb->flags & SBUF_NEED_DATA)
 		{
-			int hack=0;
-			// Need data...
-			struct blk *blk;
-
-			if(!(sb->flags & SBUF_HEADER_WRITTEN_TO_MANIFEST))
+			switch(sbuf_needs_data(sb, asfd, chfd, chmanio, slist,
+				blist, dpth, backup_end, conf))
 			{
-				if(manio_write_sbuf(chmanio, sb)) return -1;
-				sb->flags |= SBUF_HEADER_WRITTEN_TO_MANIFEST;
+				case 0: return 0;
+				case 1: continue;
+				default: return -1;
 			}
 
-			while((blk=sb->burp2->bstart)
-				&& blk->got==BLK_GOT
-				&& (blk->next || backup_end))
-			{
-				if(*(blk->save_path))
-				{
-					if(manio_write_sig_and_path(chmanio,
-						blk)) return -1;
-					if(chmanio->sig_count==0)
-					{
-						// Have finished a manifest
-						// file. Want to start using
-						// it as a dedup candidate
-						// now.
-						iobuf_from_str(wbuf,
-							CMD_MANIFEST,
-							chmanio->fpath);
-						printf("send manifest path\n");
-						if(chfd->write(chfd, wbuf))
-                					return -1;
-
-						if(!blk->requested)
-						{
-						  // Also let the client know,
-						  // so that it can free memory
-						  // if there was a long
-						  // consecutive number of
-						  // unrequested blocks.
-						  get_wbuf_from_wrap_up(wbuf,
-							blk->index);
-						  if(asfd->write(asfd, wbuf))
-                					return -1;
-						}
-					}
-				}
-/*
-				else
-				{
-					// This gets hit if there is a zero
-					// length file.
-					printf("!!!!!!!!!!!!! no data; %s\n",
-						sb->path);
-					exit(1);
-				}
-*/
-
-				if(blk==sb->burp2->bend)
-				{
-					slist->head=sb->next;
-					if(!(blist->head=sb->burp2->bstart))
-						blist->tail=NULL;
-					sanity_before_sbuf_free(slist, sb);
-					sbuf_free(&sb);
-					hack=1;
-					break;
-				}
-
-				if(sb->burp2->bsighead==sb->burp2->bstart)
-					sb->burp2->bsighead=blk->next;
-				sb->burp2->bstart=blk->next;
-				if(blk==blist->blk_from_champ_chooser)
-					blist->blk_from_champ_chooser=blk->next;
-
-				//printf("freeing blk %d\n", blk->index);
-				blk_free(&blk);
-			}
-			if(hack) continue;
-			if(!(blist->head=sb->burp2->bstart))
-				blist->tail=NULL;
-			break;
 		}
 		else
 		{

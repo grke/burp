@@ -419,7 +419,8 @@ static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
 		&& blk->got==BLK_GOT
 		&& (blk->next || backup_end))
 	{
-		if(*(blk->save_path))
+		if(blk->got_save_path
+		  && memcmp(blk->md5sum, md5sum_of_empty_string, MD5_DIGEST_LENGTH))
 		{
 			if(manio_write_sig_and_path(chmanio, blk)) goto error;
 			if(chmanio->sig_count==0)
@@ -608,6 +609,7 @@ static int mark_not_got(struct blk *blk, struct dpth *dpth)
 	// Set up the details of where it will be saved.
 	if(!(path=dpth_mk(dpth))) return -1;
 	snprintf(blk->save_path, sizeof(blk->save_path), "%s", path);
+	blk->got_save_path=1;
 	if(dpth_incr_sig(dpth)) return -1;
 	return 0;
 }
@@ -637,6 +639,7 @@ static void mark_got(struct blk *blk, const char *save_path)
 {
 	blk->got=BLK_GOT;
 	snprintf(blk->save_path, sizeof(blk->save_path), "%s", save_path);
+	blk->got_save_path=1;
 }
 
 static int deal_with_read_from_chfd(struct asfd *asfd, struct asfd *chfd,

@@ -425,6 +425,7 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 					&blk->fingerprint, blk->md5sum,
 					blk->save_path))
 						goto end;
+				blk->got_save_path=1;
 				iobuf_free_content(rbuf);
 				if(datpath)
 				{

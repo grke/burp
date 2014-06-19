@@ -404,7 +404,6 @@ static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
         struct slist *slist, struct blist *blist,
         struct dpth *dpth, int backup_end, struct conf *conf)
 {
-	int hack=0;
 	struct blk *blk;
 	static struct iobuf *wbuf=NULL;
 
@@ -450,8 +449,7 @@ static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
 			if(!(blist->head=sb->burp2->bstart)) blist->tail=NULL;
 			sanity_before_sbuf_free(slist, sb);
 			sbuf_free(&sb);
-			hack=1;
-			break;
+			return 1;
 		}
 
 		if(sb->burp2->bsighead==sb->burp2->bstart)
@@ -464,7 +462,6 @@ static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
 		blk_free(&blk);
 	}
 
-	if(hack) return 1;
 	if(!(blist->head=sb->burp2->bstart)) blist->tail=NULL;
 	return 0;
 error:

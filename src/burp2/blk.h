@@ -30,6 +30,8 @@ struct blk
 	char *data;
 	uint8_t got;
 	uint8_t requested;
+	uint8_t got_save_path;
+	uint8_t pad;
 	uint32_t length;
 	uint64_t fingerprint;
 	uint8_t md5sum[MD5_DIGEST_LENGTH];

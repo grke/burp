@@ -608,7 +608,7 @@ static int mark_not_got(struct blk *blk, struct dpth *dpth)
 	// Need to get the data for this blk from the client.
 	// Set up the details of where it will be saved.
 	if(!(path=dpth_mk(dpth))) return -1;
-	snprintf(blk->save_path, sizeof(blk->save_path), "%s", path);
+	savepathstr_to_bytes(path, blk->savepath);
 	blk->got_save_path=1;
 	if(dpth_incr_sig(dpth)) return -1;
 	return 0;
@@ -638,7 +638,7 @@ static int mark_up_to_index(struct blist *blist,
 static void mark_got(struct blk *blk, const char *save_path)
 {
 	blk->got=BLK_GOT;
-	snprintf(blk->save_path, sizeof(blk->save_path), "%s", save_path);
+	savepathstr_to_bytes(save_path, blk->savepath);
 	blk->got_save_path=1;
 }
 

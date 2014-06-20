@@ -72,13 +72,6 @@ int is_hook(uint64_t fingerprint)
 	return (fingerprint&HOOK_MASK)==HOOK_MASK;
 }
 
-static char *get_fq_path(const char *path)
-{
-	static char fq_path[24];
-	snprintf(fq_path, sizeof(fq_path), "%s\n", path);
-	return fq_path;
-}
-
 static int already_got_block(struct asfd *asfd, struct blk *blk)
 {
 	//static char *path;
@@ -91,8 +84,8 @@ static int already_got_block(struct asfd *asfd, struct blk *blk)
 		if((hash_strong=hash_strong_find(
 			hash_weak, blk->md5sum)))
 		{
-			snprintf(blk->save_path, sizeof(blk->save_path),
-				"%s", get_fq_path(hash_strong->path));
+			memcpy(blk->savepath,
+				hash_strong->savepath, SAVE_PATH_LEN);
 //printf("FOUND: %s %s\n", blk->weak, blk->strong);
 //printf("F");
 			blk->got=BLK_GOT;

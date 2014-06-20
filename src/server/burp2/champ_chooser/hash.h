@@ -9,7 +9,7 @@ struct hash_strong
 {
 	uint8_t md5sum[MD5_DIGEST_LENGTH];
 	hash_strong_t *next;
-	char *path;
+	uint8_t savepath[SAVE_PATH_LEN];
 };
 
 struct hash_weak
@@ -26,7 +26,7 @@ extern struct hash_strong *hash_strong_find(struct hash_weak *hash_weak,
 	uint8_t *md5sum);
 extern struct hash_weak *hash_weak_add(uint64_t weakint);
 extern struct hash_strong *hash_strong_add(struct hash_weak *hash_weak,
-	uint8_t *md5sum, const char *path);
+	uint8_t *md5sum, uint8_t savepath);
 
 extern void hash_delete_all(void);
 extern int hash_load(const char *champ, struct conf *conf);

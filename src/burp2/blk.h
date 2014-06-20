@@ -7,13 +7,15 @@
 #define BLKS_MAX_IN_MEM		20000
 
 // 4096 signatures per data file.
-#define DATA_FILE_SIG_MAX 0x1000
+#define DATA_FILE_SIG_MAX	0x1000
 
 // Range from 3596 to 4096 signatures for each manifest component.
 // This will allow the decision of where to split them to be dynamic in order
 // to reduce the number of candidate manifests a little bit.
-#define MANIFEST_SIG_MIN 0x0e0c
-#define MANIFEST_SIG_MAX 0x1000
+#define MANIFEST_SIG_MIN	0x0e0c
+#define MANIFEST_SIG_MAX	0x1000
+
+#define SAVE_PATH_LEN		8
 
 enum blk_got
 {
@@ -35,29 +37,10 @@ struct blk
 	uint32_t length;
 	uint64_t fingerprint;
 	uint8_t md5sum[MD5_DIGEST_LENGTH];
-
-	// FIX THIS: Only for ease of use while developing.
-	char save_path[19+1]; // eg "0000/0000/0000/0000"
-
+	uint8_t savepath[SAVE_PATH_LEN];
 	uint64_t index;
 	struct blk *next;
 };
-
-/*
-FIX THIS: The above takes 136 bytes. The below takes 64. Significant.
-struct blk
-{
-        char *data;
-        uint8_t got;
-        uint8_t requested;
-        uint32_t length;
-        uint64_t fingerprint;
-        uint8_t md5sum[MD5_DIGEST_LENGTH];
-        uint8_t save_path[8]; // eg "0000/0000/0000/0000"
-        uint64_t index;
-        struct blk *next;
-};
-*/
 
 extern struct blk *blk_alloc(void);
 extern struct blk *blk_alloc_with_data(uint32_t max_data_length);

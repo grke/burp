@@ -86,7 +86,7 @@ static int restore_ent(struct asfd *asfd,
 
 	if(!(*sb)->path.buf)
 	{
-		printf("Got NULL path!\n");
+		logp("Got NULL path!\n");
 		return -1;
 	}
 	//printf("want to restore: %s\n", (*sb)->path);
@@ -173,7 +173,6 @@ static int maybe_copy_data_files_across(struct asfd *asfd,
 	struct manio *manio=NULL;
 	uint64_t blkcount=0;
 	uint64_t datcount=0;
-	uint64_t weakint;
 	struct hash_weak *tmpw;
 	struct hash_weak *hash_weak;
 	uint64_t estimate_blks;
@@ -203,7 +202,7 @@ static int maybe_copy_data_files_across(struct asfd *asfd,
 		}
 		else if(ars>0)
 			break; // Finished OK.
-		if(!*blk->save_path)
+		if(!blk->got_save_path)
 		{
 			sbuf_free_content(sb);
 			continue;
@@ -213,18 +212,10 @@ static int maybe_copy_data_files_across(struct asfd *asfd,
 		  && check_regex(regex, sb->path.buf))
 		{
 			blkcount++;
-			// Truncate the save_path so that we are left with the
-			// file that the block is saved in.
-			blk->save_path[14]='\0';
-			// Replace slashes so that we can use the path as an
-			// index to a hash table.
-			blk->save_path[4]='0';
-			blk->save_path[9]='0';
-		//	printf("here: %s\n", blk->save_path);
-			weakint=strtoull(blk->save_path, 0, 16);
-			if(!hash_weak_find(weakint))
+			if(!hash_weak_find((uint64_t)blk->savepath))
 			{
-				if(!hash_weak_add(weakint)) goto end;
+				if(!hash_weak_add((uint64_t)blk->savepath))
+					goto end;
 				datcount++;
 			}
 		}
@@ -293,7 +284,7 @@ static int maybe_copy_data_files_across(struct asfd *asfd,
 	// Send the manifest to the client.
 	if(manio_init_read(manio, manifest))
 		goto end;
-	*blk->save_path='\0';
+	blk->got_save_path=0;
 	while(1)
 	{
 		if((ars=manio_sbuf_fill(manio, asfd, sb, blk, NULL, conf))<0)
@@ -305,7 +296,7 @@ static int maybe_copy_data_files_across(struct asfd *asfd,
 		else if(ars>0)
 			break; // Finished OK.
 
-		if(*blk->save_path)
+		if(blk->got_save_path)
 		{
 			//if(async_write(asfd, CMD_DATA, blk->data, blk->length))
 			//	return -1;
@@ -318,10 +309,10 @@ static int maybe_copy_data_files_across(struct asfd *asfd,
 #endif
 				blk->fingerprint,
 				bytes_to_md5str(blk->md5sum),
-				blk->save_path);
+				bytes_to_savepathstr_with_sig(blk->savepath));
 			if(asfd->write_str(asfd, CMD_SIG, sig))
 				goto end;
-			*blk->save_path='\0';
+			blk->got_save_path=0;
 			continue;
 		}
 
@@ -412,8 +403,7 @@ static int restore_stream(struct asfd *asfd,
 
 		if((ars=manio_sbuf_fill(manio, asfd, sb, blk, dpth, conf))<0)
 		{
-			logp("Error from manio_sbuf_fill() in %s\n",
-				__func__);
+			logp("Error from manio_sbuf_fill() in %s\n", __func__);
 			goto end; // Error;
 		}
 		else if(ars>0)
@@ -461,7 +451,8 @@ static int restore_stream(struct asfd *asfd,
 #endif
 					blk->fingerprint,
 					bytes_to_md5str(blk->md5sum),
-					blk->save_path);
+					bytes_to_savepathstr_with_sig(
+						blk->savepath));
 				logw(asfd, conf, msg);
 			}
 			blk->data=NULL;

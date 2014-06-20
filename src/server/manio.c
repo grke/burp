@@ -7,8 +7,7 @@
 
 #define WEAK_LEN		16
 #define WEAK_STR_LEN		WEAK_LEN+1
-#define SAVE_PATH_LEN		14
-#define SAVE_PATH_STR_LEN	SAVE_PATH_LEN+1
+#define MSAVE_PATH_LEN		14
 
 struct manio *manio_alloc(void)
 {
@@ -335,7 +334,7 @@ static char *sig_to_msg(struct blk *blk, int save_path)
 #endif
 		blk->fingerprint,
 		bytes_to_md5str(blk->md5sum),
-		save_path?blk->save_path:"");
+		save_path?bytes_to_savepathstr_with_sig(blk->savepath):"");
 	return msg;
 }
 
@@ -359,14 +358,15 @@ int manio_write_sig_and_path(struct manio *manio, struct blk *blk)
 	}
 	if(manio->dindex_sort)
 	{
+		char *savepathstr=bytes_to_savepathstr(blk->savepath);
 		// Ignore obvious duplicates.
 		if(!manio->hook_count
 		  || strncmp(manio->dindex_sort[manio->hook_count-1],
-			blk->save_path, SAVE_PATH_LEN))
+			savepathstr, MSAVE_PATH_LEN))
 		{
 			// Add to list of dindexes for this manifest chunk.
 			snprintf(manio->dindex_sort[manio->dindex_count++],
-				SAVE_PATH_STR_LEN, "%s", blk->save_path);
+				MSAVE_PATH_LEN, "%s", savepathstr);
 		}
 	}
 	return write_sig_msg(manio, sig_to_msg(blk, 1 /* save_path */));
@@ -409,7 +409,7 @@ int manio_init_write_dindex(struct manio *manio, const char *dir)
 			return -1;
 	for(i=0; i<MANIFEST_SIG_MAX; i++)
 		if(!(manio->dindex_sort[i]=
-			(char *)calloc_w(1, SAVE_PATH_STR_LEN, __func__)))
+			(char *)calloc_w(1, MSAVE_PATH_LEN+1, __func__)))
 				return -1;
 	return 0;
 }

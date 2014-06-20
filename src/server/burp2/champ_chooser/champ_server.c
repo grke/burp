@@ -54,7 +54,8 @@ static int results_to_fd(struct asfd *asfd)
 			p+=to_base64(b->index, tmp);
 			*p=' ';
 			p++;
-			snprintf(p, 64, "%s", b->save_path);
+			snprintf(p, 64, "%s",
+				bytes_to_savepathstr_with_sig(b->savepath));
 			iobuf_from_str(wbuf, CMD_SIG, tmp);
 
 			if(asfd->append_all_to_write_buffer(asfd, wbuf))

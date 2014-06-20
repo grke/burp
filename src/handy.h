@@ -50,7 +50,7 @@ extern int send_a_file(struct asfd *asfd,
 extern int split_sig(const char *buf, unsigned int s,
 	uint64_t *fingerprint, uint8_t *md5sum);
 extern int split_sig_with_save_path(const char *buf, unsigned int s,
-	uint64_t *fingerprint, uint8_t *md5sum, char *save_path);
+	uint64_t *fingerprint, uint8_t *md5sum, uint8_t *savepath);
 
 extern int do_quick_read(struct asfd *asfd,
 	const char *datapth, struct conf *conf);

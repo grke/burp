@@ -10,5 +10,6 @@ extern char *bytes_to_md5str(uint8_t *bytes);
 
 extern void savepathstr_to_bytes(const char *savepathstr, uint8_t *bytes);
 extern char *bytes_to_savepathstr(uint8_t *bytes);
+extern char *bytes_to_savepathstr_with_sig(uint8_t *bytes);
 
 #endif

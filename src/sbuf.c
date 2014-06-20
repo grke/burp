@@ -244,7 +244,7 @@ static int retrieve_blk_data(char *datpath, struct blk *blk)
 	struct rblk *rblk;
 
 	snprintf(fulldatpath, sizeof(fulldatpath),
-		"%s/%s", datpath, blk->save_path);
+		"%s/%s", datpath, bytes_to_savepathstr_with_sig(blk->savepath));
 
 //printf("x: %s\n", fulldatpath);
 	if(!(cp=strrchr(fulldatpath, '/')))
@@ -423,7 +423,7 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 				if(split_sig_with_save_path(rbuf->buf,
 					rbuf->len,
 					&blk->fingerprint, blk->md5sum,
-					blk->save_path))
+					blk->savepath))
 						goto end;
 				blk->got_save_path=1;
 				iobuf_free_content(rbuf);

@@ -575,7 +575,7 @@ int split_sig(const char *buf, unsigned int s,
 }
 
 int split_sig_with_save_path(const char *buf, unsigned int s,
-	uint64_t *fingerprint, uint8_t *md5sum, char *save_path)
+	uint64_t *fingerprint, uint8_t *md5sum, uint8_t *savepath)
 {
 	if(s!=67)
 	{
@@ -584,7 +584,7 @@ int split_sig_with_save_path(const char *buf, unsigned int s,
 		return -1;
 	}
 	get_fingerprint_and_md5sum(buf, fingerprint, md5sum);
-	memcpy(save_path, buf+48, 19);
+	savepathstr_to_bytes(buf+48, savepath);
 	return 0;
 }
 

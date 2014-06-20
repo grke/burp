@@ -1,6 +1,7 @@
 #include "include.h"
 
 #define HEXMAP_SIZE	256
+#define SAVE_PATH_LEN	8
 
 static uint8_t hexmap1[HEXMAP_SIZE];
 static uint8_t hexmap2[HEXMAP_SIZE];
@@ -30,9 +31,17 @@ static void str_to_bytes(const char *str, uint8_t *bytes, size_t len)
 	static uint8_t bpos;
 	static uint8_t spos;
 
-	for(bpos=0, spos=0; bpos<len; bpos++, spos+=2)
-		bytes[bpos] = hexmap1[(uint8_t)str[spos]]
+	for(bpos=0, spos=0; bpos<len && str[spos]; )
+	{
+		if(str[spos]=='/')
+		{
+			spos++;
+			continue;
+		}
+		bytes[bpos++] = hexmap1[(uint8_t)str[spos]]
 			| hexmap2[(uint8_t)str[spos+1]];
+		spos+=2;
+	}
 }
 
 void md5str_to_bytes(const char *md5str, uint8_t *bytes)
@@ -54,13 +63,23 @@ char *bytes_to_md5str(uint8_t *bytes)
 
 void savepathstr_to_bytes(const char *savepathstr, uint8_t *bytes)
 {
-	str_to_bytes(savepathstr, bytes, 8);
+	str_to_bytes(savepathstr, bytes, SAVE_PATH_LEN);
 }
 
 char *bytes_to_savepathstr(uint8_t *bytes)
 {
         static char str[20]="";
-        snprintf(str, sizeof(str), "%04X/%04X/%04X/%04X",
-                bytes[0], bytes[2], bytes[4], bytes[6]);
+        snprintf(str, sizeof(str), "%02X%02X/%02X%02X/%02X%02X",
+                bytes[0], bytes[1], bytes[2], bytes[3],
+                bytes[4], bytes[5]);
+        return str;
+}
+
+char *bytes_to_savepathstr_with_sig(uint8_t *bytes)
+{
+        static char str[20]="";
+        snprintf(str, sizeof(str), "%02X%02X/%02X%02X/%02X%02X/%02X%02X",
+                bytes[0], bytes[1], bytes[2], bytes[3],
+                bytes[4], bytes[5], bytes[6], bytes[7]);
         return str;
 }

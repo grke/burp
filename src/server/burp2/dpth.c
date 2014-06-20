@@ -283,8 +283,11 @@ static FILE *open_data_file_for_write(struct dpth *dpth, struct blk *blk)
 {
 	FILE *fp=NULL;
 	char *path=NULL;
+	char *savepathstr=NULL;
 	struct dpth_lock *head=dpth->head;
 //printf("moving for: %s\n", blk->save_path);
+
+	savepathstr=bytes_to_savepathstr(blk->savepath);
 
 	// Sanity check. They should be coming through from the client
 	// in the same order in which we locked them.
@@ -292,14 +295,15 @@ static FILE *open_data_file_for_write(struct dpth *dpth, struct blk *blk)
 	// full save_path on the blk.
 	if(!head
 	  || strncmp(head->save_path,
-		blk->save_path, sizeof(head->save_path)-1))
+		//FIX THIS
+		savepathstr, sizeof(head->save_path)-1))
 	{
 		logp("lock and block save_path mismatch: %s %s\n",
-			head?head->save_path:"(null)", blk->save_path);
+			head?head->save_path:"(null)", savepathstr);
 		goto end;
 	}
 
-	if(!(path=prepend_slash(dpth->base_path, blk->save_path, 14)))
+	if(!(path=prepend_slash(dpth->base_path, savepathstr, 14)))
 		goto end;
 	fp=file_open_w(path, "wb");
 end:
@@ -315,7 +319,8 @@ int dpth_fwrite(struct dpth *dpth, struct iobuf *iobuf, struct blk *blk)
 	// full save_path on the blk.
 	if(dpth->fp
 	  && strncmp(dpth->head->save_path,
-		blk->save_path, sizeof(dpth->head->save_path)-1)
+		bytes_to_savepathstr(blk->savepath),
+		sizeof(dpth->head->save_path)-1)
 	  && release_and_move_to_next_in_list(dpth))
 		return -1;
 

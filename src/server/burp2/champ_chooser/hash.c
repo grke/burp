@@ -34,16 +34,13 @@ struct hash_weak *hash_weak_add(uint64_t weakint)
 }
 
 struct hash_strong *hash_strong_add(struct hash_weak *hash_weak,
-	uint8_t *md5sum, const char *path)
+	uint8_t *md5sum, uint8_t *savepath)
 {
 	struct hash_strong *newstrong;
 	if(!(newstrong=(struct hash_strong *)
-		malloc(sizeof(struct hash_strong)))
-	  || !(newstrong->path=strdup(path)))
-	{
-		log_out_of_memory(__func__);
-		return NULL;
-	}
+		malloc_w(sizeof(struct hash_strong), __func__)))
+			return NULL;
+	memcpy(newstrong->savepath, savepath, SAVE_PATH_LEN);
 	memcpy(newstrong->md5sum, md5sum, MD5_DIGEST_LENGTH);
 	newstrong->next=hash_weak->strong;
 	return newstrong;
@@ -57,7 +54,6 @@ static void hash_strongs_free(struct hash_strong *shead)
 	{
 		s=shead;
 		shead=shead->next;
-		free(s->path);
 		free(s);
 	}
 }
@@ -80,9 +76,9 @@ static int process_sig(char cmd, const char *buf, unsigned int s)
 	static uint64_t fingerprint;
 	static struct hash_weak *hash_weak;
 	static uint8_t md5sum[MD5_DIGEST_LENGTH];
-	static char save_path[128+1];
+	static uint8_t savepath[SAVE_PATH_LEN];
 
-	if(split_sig_with_save_path(buf, s, &fingerprint, md5sum, save_path))
+	if(split_sig_with_save_path(buf, s, &fingerprint, md5sum, savepath))
 		return -1;
 
 	hash_weak=hash_weak_find(fingerprint);
@@ -93,7 +89,7 @@ static int process_sig(char cmd, const char *buf, unsigned int s)
 	if(!hash_strong_find(hash_weak, md5sum))
 	{
 		if(!(hash_weak->strong=hash_strong_add(hash_weak,
-			md5sum, save_path))) return -1;
+			md5sum, savepath))) return -1;
 	}
 
 	return 0;
@@ -105,6 +101,7 @@ int hash_load(const char *champ, struct conf *conf)
 	char cmd='\0';
 	char *path=NULL;
 	size_t bytes;
+// FIX THIS.
 	char buf[1048576];
 	unsigned int s;
 	gzFile zp=NULL;

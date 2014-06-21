@@ -38,7 +38,7 @@ static int results_to_fd(struct asfd *asfd)
 	struct blk *b;
 	struct blk *l;
 	static struct iobuf *wbuf=NULL;
-        static char tmp[128];
+	static char tmp[128];
 
 	if(!asfd->blist->last_index) return 0;
 
@@ -117,8 +117,8 @@ static int deal_with_rbuf_sig(struct asfd *asfd, struct conf *conf)
 	blist_add_blk(asfd->blist, blk);
 	if(!asfd->blist->blk_to_dedup) asfd->blist->blk_to_dedup=blk;
 
-	// FIX THIS: Should not just load into strings.
-	if(split_sig(asfd->rbuf->buf,
+	// FIX THIS: Consider endian-ness.
+	if(split_sig_int(asfd->rbuf->buf,
 		asfd->rbuf->len, &blk->fingerprint, blk->md5sum)) return -1;
 
 	//printf("Got weak/strong from %d: %lu - %s %s\n",

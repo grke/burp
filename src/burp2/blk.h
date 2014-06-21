@@ -15,6 +15,9 @@
 #define MANIFEST_SIG_MIN	0x0e0c
 #define MANIFEST_SIG_MAX	0x1000
 
+#define FINGERPRINT_LEN		8
+//#define MD5_DIGEST_LENGTH	16 // This is set in <openssl/md5.h>.
+#define CHECKSUM_LEN		FINGERPRINT_LEN+MD5_DIGEST_LENGTH
 #define SAVE_PATH_LEN		8
 
 enum blk_got
@@ -26,20 +29,20 @@ enum blk_got
 
 typedef struct blk blk_t;
 
-// The fingerprinted block.
+// The fingerprinted block. 64 bytes.
 struct blk
 {
-	char *data;
-	uint8_t got;
-	uint8_t requested;
-	uint8_t got_save_path;
-	uint8_t pad;
-	uint32_t length;
-	uint64_t fingerprint;
-	uint8_t md5sum[MD5_DIGEST_LENGTH];
-	uint8_t savepath[SAVE_PATH_LEN];
-	uint64_t index;
-	struct blk *next;
+	char *data;				// 8
+	uint8_t got;				// 1
+	uint8_t requested;			// 1
+	uint8_t got_save_path;			// 1
+	uint8_t pad;				// 1
+	uint32_t length;			// 4
+	uint64_t fingerprint;			// 8
+	uint8_t md5sum[MD5_DIGEST_LENGTH];	// 16
+	uint8_t savepath[SAVE_PATH_LEN];	// 8
+	uint64_t index;				// 8
+	struct blk *next;			// 8
 };
 
 extern struct blk *blk_alloc(void);

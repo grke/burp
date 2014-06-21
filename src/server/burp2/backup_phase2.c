@@ -565,23 +565,20 @@ static int append_for_champ_chooser(struct asfd *chfd,
 	if(!wbuf)
 	{
 		if(!(wbuf=iobuf_alloc())
-		  || !(wbuf->buf=(char *)malloc_w(128, __func__)))
+		  || !(wbuf->buf=(char *)malloc_w(CHECKSUM_LEN, __func__)))
 			return -1;
 		wbuf->cmd=CMD_SIG;
 	}
 	while(blist->blk_for_champ_chooser)
 	{
-		// FIX THIS: This should not need to be done quite like this.
-		// Make weak/strong into uint64 and uint8_t array, then
-		// send them unconverted.
-		wbuf->len=snprintf(wbuf->buf, 128,
-#ifdef HAVE_WIN32
-			"%016I64X%s",
-#else
-			"%016lX%s",
-#endif
-			blist->blk_for_champ_chooser->fingerprint,
-			bytes_to_md5str(blist->blk_for_champ_chooser->md5sum));
+		// FIX THIS: Maybe convert depending on endian-ness.
+		memcpy(wbuf->buf, 
+			&blist->blk_for_champ_chooser->fingerprint,
+			FINGERPRINT_LEN);
+		memcpy(wbuf->buf+FINGERPRINT_LEN,
+			blist->blk_for_champ_chooser->md5sum,
+			MD5_DIGEST_LENGTH);
+		wbuf->len=CHECKSUM_LEN;
 
 		if(chfd->append_all_to_write_buffer(chfd, wbuf))
 			return 0; // Try again later.
@@ -642,6 +639,32 @@ static void mark_got(struct blk *blk, const char *save_path)
 	blk->got_save_path=1;
 }
 
+static int extract_fileno(struct iobuf *rbuf, uint64_t *fileno)
+{
+	// FIX THIS: Consider endian-ness.
+	if(rbuf->len!=FILENO_LEN)
+	{
+		logp("Tried to extract file number from buffer with wrong length: %u!=%u in %s\n", rbuf->len, FILENO_LEN, __func__);
+		return -1;
+	}
+	memcpy(fileno, rbuf->buf, FILENO_LEN);
+	return 0;
+}
+
+static int extract_fileno_and_save_path(struct iobuf *rbuf,
+	uint64_t *fileno, uint8_t *save_path)
+{
+	// FIX THIS: Consider endian-ness.
+	if(rbuf->len!=FILENO_LEN+SAVE_PATH_LEN)
+	{
+		logp("Tried to extract file number from buffer with wrong length: %u!=%u in %s\n", rbuf->len, FILENO_LEN+SAVE_PATH_LEN, __func__);
+		return -1;
+	}
+	memcpy(fileno, rbuf->buf, FILENO_LEN);
+	memcpy(save_path, rbuf->buf+FILENO_LEN, SAVE_PATH_LEN);
+	return 0;
+}
+
 static int deal_with_read_from_chfd(struct asfd *asfd, struct asfd *chfd,
 	struct blist *blist, uint64_t *wrap_up, struct dpth *dpth)
 {
@@ -655,6 +678,9 @@ static int deal_with_read_from_chfd(struct asfd *asfd, struct asfd *chfd,
 	{
 		case CMD_SIG:
 			// Get these for blks that the champ chooser has found.
+			//if(extract_fileno_and_save_path(chfd->rbuf, &file_no,
+			//	blist->blk_from_champ_chooser->savepath))
+			//		goto end;
 			file_no=decode_file_no_and_save_path(chfd->rbuf,
 				&save_path);
 		//	printf("got save_path: %d %s\n", file_no, save_path);
@@ -665,6 +691,7 @@ static int deal_with_read_from_chfd(struct asfd *asfd, struct asfd *chfd,
 			break;
 		case CMD_WRAP_UP:
 			file_no=decode_file_no(chfd->rbuf);
+			//if(extract_fileno(chfd->rbuf, &file_no)) goto end;
 	//		printf("mark up to: %d\n", file_no);
 			if(mark_up_to_index(blist, file_no, dpth)) goto end;
 			mark_not_got(blist->blk_from_champ_chooser, dpth);

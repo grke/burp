@@ -588,6 +588,19 @@ int split_sig_with_save_path(const char *buf, unsigned int s,
 	return 0;
 }
 
+int split_sig_int(const char *buf, unsigned int s,
+	uint64_t *fingerprint, uint8_t *md5sum)
+{
+	if(s!=CHECKSUM_LEN)
+	{
+		logp("Signature wrong length: %u!=%u\n", s, CHECKSUM_LEN);
+		return -1;
+	}
+	memcpy(fingerprint, buf, FINGERPRINT_LEN);
+	memcpy(md5sum, buf+FINGERPRINT_LEN, MD5_DIGEST_LENGTH);
+	return 0;
+}
+
 int strncmp_w(const char *s1, const char *s2)
 {
 	return strncmp(s1, s2, strlen(s2));

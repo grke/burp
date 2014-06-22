@@ -1,6 +1,7 @@
 #include "include.h"
 #include "client/main.h"
 #include "server/main.h"
+#include "server/burp1/bedup.h"
 #include "server/burp2/champ_chooser/champ_server.h"
 #include "server/monitor/status_client.h"
 
@@ -213,6 +214,10 @@ int main (int argc, char *argv[])
 	int json=0;
 
 	init_log(argv[0]);
+#ifndef HAVE_WIN32
+	if(!strcmp(prog, "bedup"))
+		return run_bedup(argc, argv);
+#endif
 
 	while((option=getopt(argc, argv, "a:b:c:C:d:ghfFil:nr:s:vxjz:?"))!=-1)
 	{

@@ -1,6 +1,8 @@
 #ifndef _LOG_ROUTINES
 #define _LOG_ROUTINES
 
+extern const char *prog;
+
 extern void init_log(char *progname);
 extern void logp(const char *fmt, ...);
 extern void logc(const char *fmt, ...);

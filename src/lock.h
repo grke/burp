@@ -8,11 +8,14 @@ enum lockstat
 	GET_LOCK_GOT
 };
 
+typedef struct lock lock_t;
+
 struct lock
 {
 	int fd;
 	enum lockstat status;
 	char *path;
+	lock_t *next;
 };
 
 extern struct lock *lock_alloc(void);
@@ -26,6 +29,9 @@ extern void lock_get(struct lock *lock);
 
 extern int lock_test(const char *path);
 extern int lock_release(struct lock *lock);
+
+extern void lock_add_to_list(struct lock **locklist, struct lock *lock);
+extern void locks_release_and_free(struct lock **locklist);
 
 // Nothing to do with locks.
 extern int looks_like_tmp_or_hidden_file(const char *filename);

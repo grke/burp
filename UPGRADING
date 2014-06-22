@@ -1,5 +1,11 @@
 Things to watch out for when upgrading.
 
+2.0.7
+-----
+The bedup program is now contained within the burp binary. 'make install' will
+create a 'bedup' symlink to the burp binary. Executing 'bedup' will then work
+as before.
+
 2.0.6
 -----
 Warning about hardlinked_archive in burp1 style backups:

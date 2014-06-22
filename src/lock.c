@@ -142,6 +142,26 @@ int lock_release(struct lock *lock)
 	return ret;
 }
 
+void lock_add_to_list(struct lock **locklist, struct lock *lock)
+{
+	if(*locklist) lock->next=*locklist;
+	*locklist=lock;
+}
+
+void locks_release_and_free(struct lock **locklist)
+{
+	struct lock *l;
+	struct lock *head=*locklist;
+	while(head)
+	{
+		l=head;
+		head=head->next;
+		lock_release(l);
+		lock_free(&l);
+	}
+	*locklist=NULL;
+}
+
 // FIX THIS:
 // In this source file so that both bedup and status_server can see it.
 int looks_like_tmp_or_hidden_file(const char *filename)

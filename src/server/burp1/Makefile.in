@@ -17,6 +17,7 @@ SRCS = \
 	backup_phase2.c \
 	backup_phase3.c \
 	backup_phase4.c \
+	bedup.c \
 	deleteme.c \
 	dpth.c \
 	fdirs.c \

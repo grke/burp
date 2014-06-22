@@ -1,6 +1,6 @@
 #include "include.h"
 
-static const char *prog="unknown";
+const char *prog="unknown";
 
 static FILE *logfp=NULL;
 // Start with all logging on, so that something is said when initial startup

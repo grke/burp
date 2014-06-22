@@ -632,13 +632,6 @@ static int mark_up_to_index(struct blist *blist,
 	return 0;
 }
 
-static void mark_got(struct blk *blk, const char *save_path)
-{
-	blk->got=BLK_GOT;
-	savepathstr_to_bytes(save_path, blk->savepath);
-	blk->got_save_path=1;
-}
-
 static int extract_fileno(struct iobuf *rbuf, uint64_t *fileno)
 {
 	// FIX THIS: Consider endian-ness.
@@ -651,17 +644,22 @@ static int extract_fileno(struct iobuf *rbuf, uint64_t *fileno)
 	return 0;
 }
 
-static int extract_fileno_and_save_path(struct iobuf *rbuf,
-	uint64_t *fileno, uint8_t *save_path)
+static int deal_with_sig_from_chfd(struct iobuf *rbuf, struct blist *blist,
+	struct dpth *dpth)
 {
+	uint64_t fileno;
 	// FIX THIS: Consider endian-ness.
 	if(rbuf->len!=FILENO_LEN+SAVE_PATH_LEN)
 	{
 		logp("Tried to extract file number from buffer with wrong length: %u!=%u in %s\n", rbuf->len, FILENO_LEN+SAVE_PATH_LEN, __func__);
 		return -1;
 	}
-	memcpy(fileno, rbuf->buf, FILENO_LEN);
-	memcpy(save_path, rbuf->buf+FILENO_LEN, SAVE_PATH_LEN);
+	memcpy(&fileno, rbuf->buf, FILENO_LEN);
+	if(mark_up_to_index(blist, fileno, dpth)) return -1;
+	memcpy(blist->blk_from_champ_chooser->savepath,
+		rbuf->buf+FILENO_LEN, SAVE_PATH_LEN);
+	blist->blk_from_champ_chooser->got=BLK_GOT;
+	blist->blk_from_champ_chooser->got_save_path=1;
 	return 0;
 }
 
@@ -670,7 +668,6 @@ static int deal_with_read_from_chfd(struct asfd *asfd, struct asfd *chfd,
 {
 	int ret=-1;
 	uint64_t file_no;
-	char *save_path;
 
 	// Deal with champ chooser read here.
 	//printf("read from cc: %s\n", chfd->rbuf->buf);
@@ -678,16 +675,8 @@ static int deal_with_read_from_chfd(struct asfd *asfd, struct asfd *chfd,
 	{
 		case CMD_SIG:
 			// Get these for blks that the champ chooser has found.
-			//if(extract_fileno_and_save_path(chfd->rbuf, &file_no,
-			//	blist->blk_from_champ_chooser->savepath))
-			//		goto end;
-			file_no=decode_file_no_and_save_path(chfd->rbuf,
-				&save_path);
-		//	printf("got save_path: %d %s\n", file_no, save_path);
-			if(mark_up_to_index(blist, file_no, dpth)) goto end;
-			mark_got(blist->blk_from_champ_chooser, save_path);
-//			printf("after mark_got: %d\n",
-//				blist->blk_from_champ_chooser->index);
+			if(deal_with_sig_from_chfd(chfd->rbuf, blist, dpth))
+				goto end;
 			break;
 		case CMD_WRAP_UP:
 			file_no=decode_file_no(chfd->rbuf);

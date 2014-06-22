@@ -42,7 +42,13 @@ static int results_to_fd(struct asfd *asfd)
 
 	if(!asfd->blist->last_index) return 0;
 
-	if(!wbuf && !(wbuf=iobuf_alloc())) return -1;
+	if(!wbuf)
+	{
+		if(!(wbuf=iobuf_alloc())
+		  || !(wbuf->buf=(char *)
+			malloc_w(FILENO_LEN+SAVE_PATH_LEN, __func__)))
+				return -1;
+	}
 
 	// Need to start writing the results down the fd.
 	for(b=asfd->blist->head; b && b!=asfd->blist->blk_to_dedup; b=l)
@@ -50,13 +56,10 @@ static int results_to_fd(struct asfd *asfd)
 		if(b->got==BLK_GOT)
 		{
 			// Need to write to fd.
-			p=tmp;
-			p+=to_base64(b->index, tmp);
-			*p=' ';
-			p++;
-			snprintf(p, 64, "%s",
-				bytes_to_savepathstr_with_sig(b->savepath));
-			iobuf_from_str(wbuf, CMD_SIG, tmp);
+			memcpy(wbuf->buf, &b->index, FILENO_LEN);
+			memcpy(wbuf->buf+FILENO_LEN, b->savepath, SAVE_PATH_LEN);
+			wbuf->len=FILENO_LEN+SAVE_PATH_LEN;
+			wbuf->cmd=CMD_SIG;
 
 			if(asfd->append_all_to_write_buffer(asfd, wbuf))
 			{
@@ -66,6 +69,9 @@ static int results_to_fd(struct asfd *asfd)
 		}
 		else
 		{
+			static struct iobuf *wbuf2=NULL;
+			if(!wbuf2 && !(wbuf2=iobuf_alloc()))
+				return -1;
 			// If the last in the sequence is BLK_NOT_GOT,
 			// Send a 'wrap_up' message.
 			if(!b->next || b->next==asfd->blist->blk_to_dedup)
@@ -73,8 +79,8 @@ static int results_to_fd(struct asfd *asfd)
 				p=tmp;
 				p+=to_base64(b->index, tmp);
 				*p='\0';
-				iobuf_from_str(wbuf, CMD_WRAP_UP, tmp);
-				if(asfd->append_all_to_write_buffer(asfd, wbuf))
+				iobuf_from_str(wbuf2, CMD_WRAP_UP, tmp);
+				if(asfd->append_all_to_write_buffer(asfd, wbuf2))
 				{
 					asfd->blist->head=b;
 					return 0; // Try again later.

@@ -69,18 +69,14 @@ static int results_to_fd(struct asfd *asfd)
 		}
 		else
 		{
-			static struct iobuf *wbuf2=NULL;
-			if(!wbuf2 && !(wbuf2=iobuf_alloc()))
-				return -1;
 			// If the last in the sequence is BLK_NOT_GOT,
 			// Send a 'wrap_up' message.
 			if(!b->next || b->next==asfd->blist->blk_to_dedup)
 			{
-				p=tmp;
-				p+=to_base64(b->index, tmp);
-				*p='\0';
-				iobuf_from_str(wbuf2, CMD_WRAP_UP, tmp);
-				if(asfd->append_all_to_write_buffer(asfd, wbuf2))
+				memcpy(wbuf->buf, &b->index, FILENO_LEN);
+				wbuf->len=FILENO_LEN;
+				wbuf->cmd=CMD_WRAP_UP;
+				if(asfd->append_all_to_write_buffer(asfd, wbuf))
 				{
 					asfd->blist->head=b;
 					return 0; // Try again later.

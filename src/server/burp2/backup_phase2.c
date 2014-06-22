@@ -605,6 +605,8 @@ static int mark_not_got(struct blk *blk, struct dpth *dpth)
 	// Need to get the data for this blk from the client.
 	// Set up the details of where it will be saved.
 	if(!(path=dpth_mk(dpth))) return -1;
+
+	// FIX THIS: make dpth give us the path in a uint8 array.
 	savepathstr_to_bytes(path, blk->savepath);
 	blk->got_save_path=1;
 	if(dpth_incr_sig(dpth)) return -1;
@@ -632,18 +634,6 @@ static int mark_up_to_index(struct blist *blist,
 	return 0;
 }
 
-static int extract_fileno(struct iobuf *rbuf, uint64_t *fileno)
-{
-	// FIX THIS: Consider endian-ness.
-	if(rbuf->len!=FILENO_LEN)
-	{
-		logp("Tried to extract file number from buffer with wrong length: %u!=%u in %s\n", rbuf->len, FILENO_LEN, __func__);
-		return -1;
-	}
-	memcpy(fileno, rbuf->buf, FILENO_LEN);
-	return 0;
-}
-
 static int deal_with_sig_from_chfd(struct iobuf *rbuf, struct blist *blist,
 	struct dpth *dpth)
 {
@@ -663,11 +653,27 @@ static int deal_with_sig_from_chfd(struct iobuf *rbuf, struct blist *blist,
 	return 0;
 }
 
+static int deal_with_wrap_up_from_chfd(struct iobuf *rbuf, struct blist *blist,
+	struct dpth *dpth)
+{
+	uint64_t fileno;
+	// FIX THIS: Consider endian-ness.
+	if(rbuf->len!=FILENO_LEN)
+	{
+		logp("Tried to extract file number from buffer with wrong length: %u!=%u in %s\n", rbuf->len, FILENO_LEN, __func__);
+		return -1;
+	}
+	memcpy(&fileno, rbuf->buf, FILENO_LEN);
+	if(mark_up_to_index(blist, fileno, dpth)) return -1;
+	mark_not_got(blist->blk_from_champ_chooser, dpth);
+
+	return 0;
+}
+
 static int deal_with_read_from_chfd(struct asfd *asfd, struct asfd *chfd,
 	struct blist *blist, uint64_t *wrap_up, struct dpth *dpth)
 {
 	int ret=-1;
-	uint64_t file_no;
 
 	// Deal with champ chooser read here.
 	//printf("read from cc: %s\n", chfd->rbuf->buf);
@@ -679,14 +685,8 @@ static int deal_with_read_from_chfd(struct asfd *asfd, struct asfd *chfd,
 				goto end;
 			break;
 		case CMD_WRAP_UP:
-			file_no=decode_file_no(chfd->rbuf);
-			//if(extract_fileno(chfd->rbuf, &file_no)) goto end;
-	//		printf("mark up to: %d\n", file_no);
-			if(mark_up_to_index(blist, file_no, dpth)) goto end;
-			mark_not_got(blist->blk_from_champ_chooser, dpth);
-
-			//printf("after mark_up: %d\n",
-			//	blist->blk_from_champ_chooser->index);
+			if(deal_with_wrap_up_from_chfd(chfd->rbuf, blist, dpth))
+				goto end;
 			break;
 		default:
 			iobuf_log_unexpected(chfd->rbuf, __func__);

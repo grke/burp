@@ -33,15 +33,15 @@ struct hash_weak *hash_weak_add(uint64_t weakint)
 	return newweak;
 }
 
-struct hash_strong *hash_strong_add(struct hash_weak *hash_weak,
-	uint8_t *md5sum, uint8_t *savepath)
+static struct hash_strong *hash_strong_add(struct hash_weak *hash_weak,
+	struct blk *blk)
 {
 	struct hash_strong *newstrong;
 	if(!(newstrong=(struct hash_strong *)
 		malloc_w(sizeof(struct hash_strong), __func__)))
 			return NULL;
-	memcpy(newstrong->savepath, savepath, SAVE_PATH_LEN);
-	memcpy(newstrong->md5sum, md5sum, MD5_DIGEST_LENGTH);
+	memcpy(newstrong->savepath, blk->savepath, SAVE_PATH_LEN);
+	memcpy(newstrong->md5sum, blk->md5sum, MD5_DIGEST_LENGTH);
 	newstrong->next=hash_weak->strong;
 	return newstrong;
 }
@@ -73,23 +73,23 @@ void hash_delete_all(void)
 
 static int process_sig(char cmd, const char *buf, unsigned int s)
 {
-	static uint64_t fingerprint;
 	static struct hash_weak *hash_weak;
-	static uint8_t md5sum[MD5_DIGEST_LENGTH];
-	static uint8_t savepath[SAVE_PATH_LEN];
+	static struct blk *blk=NULL;
 
-	if(split_sig_from_manifest(buf, s, &fingerprint, md5sum, savepath))
+	if(!blk && !(blk=blk_alloc())) return -1;
+
+	if(split_sig_from_manifest(buf, s, blk))
 		return -1;
 
-	hash_weak=hash_weak_find(fingerprint);
+	hash_weak=hash_weak_find(blk->fingerprint);
 
 	// Add to hash table.
-	if(!hash_weak && !(hash_weak=hash_weak_add(fingerprint)))
+	if(!hash_weak && !(hash_weak=hash_weak_add(blk->fingerprint)))
 		return -1;
-	if(!hash_strong_find(hash_weak, md5sum))
+	if(!hash_strong_find(hash_weak, blk->md5sum))
 	{
-		if(!(hash_weak->strong=hash_strong_add(hash_weak,
-			md5sum, savepath))) return -1;
+		if(!(hash_weak->strong=hash_strong_add(hash_weak, blk)))
+			return -1;
 	}
 
 	return 0;
@@ -101,15 +101,22 @@ int hash_load(const char *champ, struct conf *conf)
 	char cmd='\0';
 	char *path=NULL;
 	size_t bytes;
-// FIX THIS.
-	char buf[1048576];
 	unsigned int s;
 	gzFile zp=NULL;
+	static char *buf=NULL;
+	static unsigned int buf_alloc=0;
 
 	if(!(path=prepend_s(conf->directory, champ))
 	  || !(zp=gzopen_file(path, "rb")))
 		goto end;
 //printf("hash load %s\n", path);
+
+	if(!buf_alloc)
+	{
+		buf_alloc=8;
+		if(!(buf=(char *)malloc_w(buf_alloc, __func__)))
+			goto end;
+	}
 
 	while((bytes=gzread(zp, buf, 5)))
 	{
@@ -124,10 +131,17 @@ int hash_load(const char *champ, struct conf *conf)
 			logp("sscanf failed in %s: %s\n", __func__, buf);
 			goto end;
 		}
+		if(s+1>buf_alloc)
+		{
+			buf_alloc=s+1;
+			if(!(buf=(char *)realloc_w(buf, buf_alloc, __func__)))
+				goto end;
+		}
 
 		if((bytes=gzread(zp, buf, s+1))!=s+1)
 		{
-			logp("Short read: %d wanted: %d\n", (int)bytes, (int)s);
+			logp("Short read: %d wanted: %d\n",
+				(int)bytes, (int)(s+1));
 			goto end;
 		}
 

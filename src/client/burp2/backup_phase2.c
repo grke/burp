@@ -213,19 +213,14 @@ static void get_wbuf_from_data(struct conf *conf,
 
 static void iobuf_from_blk_data(struct iobuf *wbuf, struct blk *blk)
 {
-	static char buf[49];
-// Check return of this - maybe should be done elsewhere.
+	static char buf[CHECKSUM_LEN];
+// FIX THIS: Check return of this - maybe should be done elsewhere.
 	blk_md5_update(blk);
 
-	// FIX THIS: need to send this stuff unconverted.
-	snprintf(buf, sizeof(buf),
-#ifdef HAVE_WIN32
-		"%016I64X%s",
-#else
-		"%016lX%s",
-#endif
-		blk->fingerprint, bytes_to_md5str(blk->md5sum));
-	iobuf_from_str(wbuf, CMD_SIG, buf);
+	// FIX THIS: consider endian-ness.
+	memcpy(buf, &blk->fingerprint, FINGERPRINT_LEN);
+	memcpy(buf+FINGERPRINT_LEN, blk->md5sum, MD5_DIGEST_LENGTH);
+	iobuf_set(wbuf, CMD_SIG, buf, CHECKSUM_LEN);
 }
 
 static void get_wbuf_from_blks(struct iobuf *wbuf,

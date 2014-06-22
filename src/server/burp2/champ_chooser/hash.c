@@ -78,7 +78,7 @@ static int process_sig(char cmd, const char *buf, unsigned int s)
 	static uint8_t md5sum[MD5_DIGEST_LENGTH];
 	static uint8_t savepath[SAVE_PATH_LEN];
 
-	if(split_sig_with_save_path(buf, s, &fingerprint, md5sum, savepath))
+	if(split_sig_from_manifest(buf, s, &fingerprint, md5sum, savepath))
 		return -1;
 
 	hash_weak=hash_weak_find(fingerprint);

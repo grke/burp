@@ -587,7 +587,7 @@ static int append_for_champ_chooser(struct asfd *chfd,
 	if(sigs_end && !finished_sending && !blist->blk_for_champ_chooser)
 	{
 		wbuf->cmd=CMD_GEN;
-		wbuf->len=snprintf(wbuf->buf, 128, "%s", "sigs_end");
+		wbuf->len=snprintf(wbuf->buf, CHECKSUM_LEN, "%s", "sigs_end");
 		if(chfd->append_all_to_write_buffer(chfd, wbuf))
 			return 0; // Try again later.
 		finished_sending++;

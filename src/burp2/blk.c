@@ -53,22 +53,6 @@ void blk_print_alloc_stats(void)
 //	printf("data_count: %d, data_free_count: %d\n", data_count, data_free_count);
 }
 
-char *blk_get_md5sum_str(uint8_t *checksum)
-{
-	static char str[33]="";
-	snprintf(str, sizeof(str),
-	  "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
-		checksum[0], checksum[1],
-		checksum[2], checksum[3],
-		checksum[4], checksum[5],
-		checksum[6], checksum[7],
-		checksum[8], checksum[9],
-		checksum[10], checksum[11],
-		checksum[12], checksum[13],
-		checksum[14], checksum[15]);
-	return str;
-}
-
 int blk_md5_update(struct blk *blk)
 {
 	MD5_CTX md5;

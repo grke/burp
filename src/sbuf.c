@@ -420,7 +420,7 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 				//printf("got sig: %s\n", rbuf->buf);
 
 				// Just fill in the sig details.
-				if(split_sig_with_save_path(rbuf->buf,
+				if(split_sig_from_manifest(rbuf->buf,
 					rbuf->len,
 					&blk->fingerprint, blk->md5sum,
 					blk->savepath))

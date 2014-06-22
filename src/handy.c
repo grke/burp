@@ -560,21 +560,21 @@ static void get_fingerprint_and_md5sum(const char *buf,
 	*fingerprint=strtoull(tmp, 0, 16);
 	md5str_to_bytes(buf+16, md5sum);
 }
-	
 
 int split_sig(const char *buf, unsigned int s,
 	uint64_t *fingerprint, uint8_t *md5sum)
 {
-	if(s!=48)
+	if(s!=CHECKSUM_LEN)
 	{
-		logp("Signature wrong length: %u\n", s);
+		logp("Signature wrong length: %u!=%u\n", s, CHECKSUM_LEN);
 		return -1;
 	}
-	get_fingerprint_and_md5sum(buf, fingerprint, md5sum);
+	memcpy(fingerprint, buf, FINGERPRINT_LEN);
+	memcpy(md5sum, buf+FINGERPRINT_LEN, MD5_DIGEST_LENGTH);
 	return 0;
 }
-
-int split_sig_with_save_path(const char *buf, unsigned int s,
+	
+int split_sig_from_manifest(const char *buf, unsigned int s,
 	uint64_t *fingerprint, uint8_t *md5sum, uint8_t *savepath)
 {
 	if(s!=67)
@@ -585,19 +585,6 @@ int split_sig_with_save_path(const char *buf, unsigned int s,
 	}
 	get_fingerprint_and_md5sum(buf, fingerprint, md5sum);
 	savepathstr_to_bytes(buf+48, savepath);
-	return 0;
-}
-
-int split_sig_int(const char *buf, unsigned int s,
-	uint64_t *fingerprint, uint8_t *md5sum)
-{
-	if(s!=CHECKSUM_LEN)
-	{
-		logp("Signature wrong length: %u!=%u\n", s, CHECKSUM_LEN);
-		return -1;
-	}
-	memcpy(fingerprint, buf, FINGERPRINT_LEN);
-	memcpy(md5sum, buf+FINGERPRINT_LEN, MD5_DIGEST_LENGTH);
 	return 0;
 }
 

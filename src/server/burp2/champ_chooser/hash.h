@@ -25,8 +25,6 @@ extern struct hash_weak *hash_weak_find(uint64_t weak);
 extern struct hash_strong *hash_strong_find(struct hash_weak *hash_weak,
 	uint8_t *md5sum);
 extern struct hash_weak *hash_weak_add(uint64_t weakint);
-extern struct hash_strong *hash_strong_add(struct hash_weak *hash_weak,
-	uint8_t *md5sum, uint8_t savepath);
 
 extern void hash_delete_all(void);
 extern int hash_load(const char *champ, struct conf *conf);

@@ -421,10 +421,7 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 
 				// Just fill in the sig details.
 				if(split_sig_from_manifest(rbuf->buf,
-					rbuf->len,
-					&blk->fingerprint, blk->md5sum,
-					blk->savepath))
-						goto end;
+					rbuf->len, blk)) goto end;
 				blk->got_save_path=1;
 				iobuf_free_content(rbuf);
 				if(datpath)

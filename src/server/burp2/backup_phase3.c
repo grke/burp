@@ -20,11 +20,8 @@ static int hooks_alloc(struct hooks **hnew, char **path, char **fingerprints)
 {
 	if(!*path || !*fingerprints) return 0;
 
-	if(!(*hnew=(struct hooks *)malloc(sizeof(struct hooks))))
-	{
-		log_out_of_memory(__func__);
+	if(!(*hnew=(struct hooks *)malloc_w(sizeof(struct hooks), __func__)))
 		return -1;
-	}
 	
 	(*hnew)->path=*path;
 	(*hnew)->fingerprints=*fingerprints;

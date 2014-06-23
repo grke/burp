@@ -71,15 +71,9 @@ void hash_delete_all(void)
 	}
 }
 
-static int process_sig(struct iobuf *rbuf)
+static int process_sig(struct blk *blk)
 {
 	static struct hash_weak *hash_weak;
-	static struct blk *blk=NULL;
-
-	if(!blk && !(blk=blk_alloc())) return -1;
-
-	if(split_sig_from_manifest(rbuf, blk))
-		return -1;
 
 	hash_weak=hash_weak_find(blk->fingerprint);
 
@@ -98,61 +92,32 @@ static int process_sig(struct iobuf *rbuf)
 int hash_load(const char *champ, struct conf *conf)
 {
 	int ret=-1;
-	char *path=NULL;
-	size_t bytes;
 	gzFile zp=NULL;
-	static struct iobuf *rbuf=NULL;
-	static unsigned int buf_alloc=0;
+	char *path=NULL;
+	struct sbuf *sb=NULL;
+	static struct blk *blk=NULL;
 
 	if(!(path=prepend_s(conf->directory, champ))
 	  || !(zp=gzopen_file(path, "rb")))
 		goto end;
 
-	if(!rbuf && !(rbuf=iobuf_alloc()))
-		goto end;
+	if(!sb && !(sb=sbuf_alloc(conf))) goto end;
+	if(!blk && !(blk=blk_alloc())) goto end;
 
-	if(!buf_alloc)
+	while(1)
 	{
-		buf_alloc=8;
-		if(!(rbuf->buf=(char *)malloc_w(buf_alloc, __func__)))
-			goto end;
+		sbuf_free_content(sb);
+		switch(sbuf_fill(sb, NULL, zp, blk, NULL, conf))
+		{
+			case 1: ret=0;
+				goto end;
+			case -1:
+				goto end;
+		}
+		if(!blk->got_save_path) continue;
+		if(process_sig(blk)) goto end;
+		blk->got_save_path=0;
 	}
-
-	while((bytes=gzread(zp, rbuf->buf, 5)))
-	{
-		if(bytes!=5)
-		{
-			logp("Short read: %d wanted: %d\n", (int)bytes, 5);
-			goto end;
-		}
-		rbuf->buf[6]=0;
-		if((sscanf(rbuf->buf, "%c%04lX", &rbuf->cmd, &rbuf->len))!=2)
-		{
-			logp("sscanf failed in %s: %s\n", __func__, rbuf->buf);
-			goto end;
-		}
-		if(rbuf->len+1>buf_alloc)
-		{
-			buf_alloc=rbuf->len+1;
-			if(!(rbuf->buf=(char *)realloc_w(rbuf->buf,
-				buf_alloc, __func__))) goto end;
-		}
-
-		if((bytes=gzread(zp, rbuf->buf, rbuf->len+1))!=rbuf->len+1)
-		{
-			logp("Short read: %d wanted: %d\n",
-				(int)bytes, (int)(rbuf->len+1));
-			goto end;
-		}
-
-		if(rbuf->cmd==CMD_SIG)
-		{
-			rbuf->buf[rbuf->len]=0;
-			if(process_sig(rbuf)) goto end;
-		}
-	}
-
-	ret=0;
 end:
 	if(path) free(path);
 	gzclose_fp(&zp);

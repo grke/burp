@@ -551,39 +551,38 @@ end:
 	return ret;
 }
 
-static void get_fingerprint_and_md5sum(const char *buf, struct blk *blk)
+static void get_fingerprint_and_md5sum(struct iobuf *iobuf, struct blk *blk)
 {
 	// FIX THIS.
 	char tmp[17]="";
-	snprintf(tmp, sizeof(tmp), "%s", buf);
+	snprintf(tmp, sizeof(tmp), "%s", iobuf->buf);
 	blk->fingerprint=strtoull(tmp, 0, 16);
-	md5str_to_bytes(buf+16, blk->md5sum);
+	md5str_to_bytes(iobuf->buf+16, blk->md5sum);
 }
 
-int split_sig(const char *buf,
-	unsigned int s, struct blk *blk)
+int split_sig(struct iobuf *iobuf, struct blk *blk)
 {
-	if(s!=CHECKSUM_LEN)
+	if(iobuf->len!=CHECKSUM_LEN)
 	{
-		logp("Signature wrong length: %u!=%u\n", s, CHECKSUM_LEN);
+		logp("Signature wrong length: %u!=%u\n",
+			iobuf->len, CHECKSUM_LEN);
 		return -1;
 	}
-	memcpy(&blk->fingerprint, buf, FINGERPRINT_LEN);
-	memcpy(blk->md5sum, buf+FINGERPRINT_LEN, MD5_DIGEST_LENGTH);
+	memcpy(&blk->fingerprint, iobuf->buf, FINGERPRINT_LEN);
+	memcpy(blk->md5sum, iobuf->buf+FINGERPRINT_LEN, MD5_DIGEST_LENGTH);
 	return 0;
 }
 	
-int split_sig_from_manifest(const char *buf,
-	unsigned int s, struct blk *blk)
+int split_sig_from_manifest(struct iobuf *iobuf, struct blk *blk)
 {
-	if(s!=67)
+	if(iobuf->len!=67)
 	{
-		logp("Signature with save_path wrong length: %u\n", s);
-		logp("%s\n", buf);
+		logp("Signature with save_path wrong length: %u\n", iobuf->len);
+		logp("%s\n", iobuf->buf);
 		return -1;
 	}
-	get_fingerprint_and_md5sum(buf, blk);
-	savepathstr_to_bytes(buf+48, blk->savepath);
+	get_fingerprint_and_md5sum(iobuf, blk);
+	savepathstr_to_bytes(iobuf->buf+48, blk->savepath);
 	return 0;
 }
 

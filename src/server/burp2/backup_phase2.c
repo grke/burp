@@ -207,7 +207,7 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist,
         if(!burp2->bstart) burp2->bstart=blk;
         if(!burp2->bsighead) burp2->bsighead=blk;
 
-	if(split_sig(rbuf->buf, rbuf->len, blk)) return -1;
+	if(split_sig(rbuf, blk)) return -1;
 
 	// Need to send sigs to champ chooser, therefore need to point
 	// to the oldest unsent one if nothing is pointed to yet.

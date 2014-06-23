@@ -447,7 +447,7 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 				cntr_add(conf->cntr, CMD_WARNING, 1);
 				break;
 			case CMD_GEN:
-				if(!strcmp(rbuf->buf, "restore_end")
+				if(!strcmp(rbuf->buf, "restoreend")
 				  || !strcmp(rbuf->buf, "phase1end")
 				  || !strcmp(rbuf->buf, "backupphase2"))
 				{

@@ -746,7 +746,7 @@ int do_restore_client(struct asfd *asfd,
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
 			//logp("got %s end\n", act_str(act));
-			if(asfd->write_str(asfd, CMD_GEN, "ok_restore_end"))
+			if(asfd->write_str(asfd, CMD_GEN, "restoreend_ok"))
 				goto end;
 			break;
 		}

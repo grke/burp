@@ -385,45 +385,6 @@ static int restore_sbufl(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 	return 0;
 }
 
-static int do_restore_end(struct asfd *asfd, enum action act, struct conf *conf)
-{
-	int ret=-1;
-	struct iobuf *rbuf=asfd->rbuf;
-
-	if(asfd->write_str(asfd, CMD_GEN, "restoreend"))
-		goto end;
-
-	while(1)
-	{
-		iobuf_free_content(rbuf);
-		if(asfd->read(asfd)) goto end;
-		else if(rbuf->cmd==CMD_GEN
-		  && !strcmp(rbuf->buf, "restoreend ok"))
-		{
-			logp("got restoreend ok\n");
-			break;
-		}
-		else if(rbuf->cmd==CMD_WARNING)
-		{
-			logp("WARNING: %s\n", rbuf->buf);
-			cntr_add(conf->cntr, rbuf->cmd, 0);
-		}
-		else if(rbuf->cmd==CMD_INTERRUPT)
-		{
-			// ignore - client wanted to interrupt a file
-		}
-		else
-		{
-			iobuf_log_unexpected(rbuf, __func__);
-			goto end;
-		}
-	}
-	ret=0;
-end:
-	iobuf_free_content(rbuf);
-	return ret;
-}
-
 static int restore_ent(struct asfd *asfd, struct sbuf **sb,
 	struct sbuf ***sblist, int *scount, struct bu *bu,
 	enum action act, struct sdirs *sdirs, char status, struct conf *cconf)
@@ -551,7 +512,7 @@ int restore_burp1(struct asfd *asfd, struct bu *bu,
 				goto end;
 	}
 
-	ret=do_restore_end(asfd, act, cconf);
+	ret=restore_end(asfd, cconf);
 
 	cntr_print(cconf->cntr, act);
 

@@ -53,25 +53,6 @@ static int restore_sbuf(struct asfd *asfd, struct sbuf *sb, enum action act,
 	}
 }
 
-static enum asl_ret restore_end_func(struct asfd *asfd,
-        struct conf *conf, void *param)
-{
-	if(!strcmp(asfd->rbuf->buf, "ok_restore_end"))
-	{
-		//logp("got ok_restore_end\n");
-		return ASL_END_OK;
-	}
-	iobuf_log_unexpected(asfd->rbuf, __func__);
-	return ASL_END_ERROR;
-}
-
-static int do_restore_end(struct asfd *asfd, struct conf *conf)
-{
-	if(asfd->write_str(asfd, CMD_GEN, "restore_end")) return -1;
-	return asfd->simple_loop(asfd,
-		conf, NULL, __func__, restore_end_func);
-}
-
 static int restore_ent(struct asfd *asfd,
 	struct sbuf **sb,
 	struct slist *slist,
@@ -517,7 +498,7 @@ int restore_burp2(struct asfd *asfd, struct bu *bu, const char *manifest,
 	if(restore_remaining_dirs(asfd, slist, act, status, conf, &need_data))
 		goto end;
 
-	ret=do_restore_end(asfd, conf);
+	ret=restore_end(asfd, conf);
 
 	cntr_print_end(conf->cntr);
 	cntr_print(conf->cntr, act);

@@ -1,8 +1,8 @@
 #include "include.h"
 
+// FIX THIS: this stuff is very similar to candidate_add_fresh().
 int champ_chooser_init(const char *datadir, struct conf *conf)
 {
-	int ars;
 	int ret=-1;
 	gzFile zp=NULL;
 	struct sbuf *sb=NULL;
@@ -12,53 +12,47 @@ int champ_chooser_init(const char *datadir, struct conf *conf)
 	uint64_t fingerprint;
 
 	// FIX THIS: scores is a global variable.
-	if(!(scores=scores_alloc())) goto end;
+	if(!(scores=scores_alloc())) goto error;
 
 	if(!(sb=sbuf_alloc(conf))
 	  || !(sparse_path=prepend_s(datadir, "sparse"))
 	  || (!lstat(sparse_path, &statp)
 		&& !(zp=gzopen_file(sparse_path, "rb"))))
-			goto end;
+			goto error;
 	while(zp)
 	{
-		// FIX THIS: second argument should be struct async for
-		// the server child.
-		if((ars=sbuf_fill_from_gzfile(sb, NULL,
-			zp, NULL, NULL, conf))<0)
-				goto end;
-		else if(ars>0)
+		switch(sbuf_fill_from_gzfile(sb, NULL, zp, NULL, NULL, conf))
 		{
-			// Reached the end.
-			break;
+			case 1: goto end;
+			case -1: goto error;
 		}
-		if(sb->path.cmd==CMD_MANIFEST)
+		switch(sb->path.cmd)
 		{
-			if(!(candidate=candidates_add_new())) goto end;
-			candidate->path=sb->path.buf;
-			sb->path.buf=NULL;
-		}
-		else if(sb->path.cmd==CMD_FINGERPRINT)
-		{
-			fingerprint=strtoull(sb->path.buf, 0, 16);
-			if(sparse_add_candidate(&fingerprint, candidate))
-				goto end;
-		}
-		else
-		{
-			iobuf_log_unexpected(&sb->path, __func__);
-			goto end;
+			case CMD_MANIFEST:
+				if(!(candidate=candidates_add_new()))
+					goto error;
+				candidate->path=sb->path.buf;
+				sb->path.buf=NULL;
+				break;
+			case CMD_FINGERPRINT:
+				fingerprint=strtoull(sb->path.buf, 0, 16);
+				if(sparse_add_candidate(&fingerprint,
+					candidate)) goto error;
+				break;
+			default:
+				iobuf_log_unexpected(&sb->path, __func__);
+				goto error;
 		}
 		sbuf_free_content(sb);
 	}
 
-	// FIX THIS: this stuff is also done in add_fresh.
+end:
 	if(scores_grow(scores, candidates_len)) goto end;
 	candidates_set_score_pointers(candidates, candidates_len, scores);
 	scores_reset(scores);
 	logp("init: %d candidates\n", (int)candidates_len);
-
 	ret=0;
-end:
+error:
 	gzclose_fp(&zp);
 	sbuf_free(&sb);
 	if(sparse_path) free(sparse_path);

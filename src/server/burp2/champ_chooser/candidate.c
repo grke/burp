@@ -34,6 +34,7 @@ struct candidate *candidates_add_new(void)
 }
 
 // When a backup is ongoing, use this to add newly complete candidates.
+// FIX THIS: this stuff is very similar to champ_chooser_init().
 int candidate_add_fresh(const char *path, struct conf *conf)
 {
 	int ars;
@@ -41,17 +42,14 @@ int candidate_add_fresh(const char *path, struct conf *conf)
 	gzFile zp=NULL;
 	const char *cp=NULL;
 	struct sbuf *sb=NULL;
-	struct candidate *candidate=NULL;
 	struct blk *blk=NULL;
+	struct candidate *candidate=NULL;
 
-	if(!(candidate=candidates_add_new())) goto end;
+	if(!(candidate=candidates_add_new())) goto error;
 	cp=path+strlen(conf->directory);
 	while(cp && *cp=='/') cp++;
-	if(!(candidate->path=strdup(cp)))
-	{
-		log_out_of_memory(__func__);
-		goto end;
-	}
+	if(!(candidate->path=strdup_w(cp, __func__)))
+		goto error;
 
 	if(!(sb=sbuf_alloc(conf))
 	  || !(blk=blk_alloc())
@@ -59,29 +57,27 @@ int candidate_add_fresh(const char *path, struct conf *conf)
 		goto end;
 	while(zp)
 	{
-		if((ars=sbuf_fill_from_gzfile(sb, NULL /* struct async */,
-			zp, blk, NULL, conf))<0)
-				goto end;
-		else if(ars>0)
+		switch(sbuf_fill_from_gzfile(sb, NULL /* struct async */,
+			zp, blk, NULL, conf))
 		{
-			// Reached the end.
-			break;
+			case 1: goto end;
+			case -1: goto error;
 		}
 		if(is_hook(blk->fingerprint))
 		{
 			if(sparse_add_candidate(&blk->fingerprint, candidate))
-				goto end;
+				goto error;
 		}
 		blk->fingerprint=0;
 	}
 
-	if(scores_grow(scores, candidates_len)) goto end;
+end:
+	if(scores_grow(scores, candidates_len)) goto error;
 	candidates_set_score_pointers(candidates, candidates_len, scores);
 	scores_reset(scores);
 	printf("HERE: %d candidates\n", (int)candidates_len);
-
 	ret=0;
-end:
+error:
 	gzclose_fp(&zp);
 	sbuf_free(&sb);
 	blk_free(&blk);

@@ -2,6 +2,23 @@
 #include "burp1/restore.h"
 #include "burp2/restore.h"
 
+static enum asl_ret restore_end_func(struct asfd *asfd,
+	struct conf *conf, void *param)
+{
+	if(!strcmp(asfd->rbuf->buf, "restoreend_ok"))
+		return ASL_END_OK;
+	iobuf_log_unexpected(asfd->rbuf, __func__);
+	return ASL_END_ERROR;
+}
+
+int restore_end(struct asfd *asfd, struct conf *conf)
+{
+	if(asfd->write_str(asfd, CMD_GEN, "restoreend")) return -1;
+	return asfd->simple_loop(asfd,
+		conf, NULL, __func__, restore_end_func);
+}
+
+
 static int srestore_matches(struct strlist *s, const char *path)
 {
 	int r=0;

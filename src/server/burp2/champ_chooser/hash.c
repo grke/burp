@@ -71,14 +71,14 @@ void hash_delete_all(void)
 	}
 }
 
-static int process_sig(char cmd, const char *buf, unsigned int s)
+static int process_sig(struct iobuf *rbuf)
 {
 	static struct hash_weak *hash_weak;
 	static struct blk *blk=NULL;
 
 	if(!blk && !(blk=blk_alloc())) return -1;
 
-	if(split_sig_from_manifest(buf, s, blk))
+	if(split_sig_from_manifest(rbuf, blk))
 		return -1;
 
 	hash_weak=hash_weak_find(blk->fingerprint);
@@ -98,58 +98,57 @@ static int process_sig(char cmd, const char *buf, unsigned int s)
 int hash_load(const char *champ, struct conf *conf)
 {
 	int ret=-1;
-	char cmd='\0';
 	char *path=NULL;
 	size_t bytes;
-	unsigned int s;
 	gzFile zp=NULL;
-	static char *buf=NULL;
+	static struct iobuf *rbuf=NULL;
 	static unsigned int buf_alloc=0;
 
 	if(!(path=prepend_s(conf->directory, champ))
 	  || !(zp=gzopen_file(path, "rb")))
 		goto end;
-//printf("hash load %s\n", path);
+
+	if(!rbuf && !(rbuf=iobuf_alloc()))
+		goto end;
 
 	if(!buf_alloc)
 	{
 		buf_alloc=8;
-		if(!(buf=(char *)malloc_w(buf_alloc, __func__)))
+		if(!(rbuf->buf=(char *)malloc_w(buf_alloc, __func__)))
 			goto end;
 	}
 
-	while((bytes=gzread(zp, buf, 5)))
+	while((bytes=gzread(zp, rbuf->buf, 5)))
 	{
 		if(bytes!=5)
 		{
 			logp("Short read: %d wanted: %d\n", (int)bytes, 5);
 			goto end;
 		}
-		buf[6]=0;
-		if((sscanf(buf, "%c%04X", &cmd, &s))!=2)
+		rbuf->buf[6]=0;
+		if((sscanf(rbuf->buf, "%c%04lX", &rbuf->cmd, &rbuf->len))!=2)
 		{
-			logp("sscanf failed in %s: %s\n", __func__, buf);
+			logp("sscanf failed in %s: %s\n", __func__, rbuf->buf);
 			goto end;
 		}
-		if(s+1>buf_alloc)
+		if(rbuf->len+1>buf_alloc)
 		{
-			buf_alloc=s+1;
-			if(!(buf=(char *)realloc_w(buf, buf_alloc, __func__)))
-				goto end;
+			buf_alloc=rbuf->len+1;
+			if(!(rbuf->buf=(char *)realloc_w(rbuf->buf,
+				buf_alloc, __func__))) goto end;
 		}
 
-		if((bytes=gzread(zp, buf, s+1))!=s+1)
+		if((bytes=gzread(zp, rbuf->buf, rbuf->len+1))!=rbuf->len+1)
 		{
 			logp("Short read: %d wanted: %d\n",
-				(int)bytes, (int)(s+1));
+				(int)bytes, (int)(rbuf->len+1));
 			goto end;
 		}
 
-		if(cmd==CMD_SIG)
+		if(rbuf->cmd==CMD_SIG)
 		{
-			buf[s]=0;
-			if(process_sig(cmd, buf, s))
-				goto end;
+			rbuf->buf[rbuf->len]=0;
+			if(process_sig(rbuf)) goto end;
 		}
 	}
 

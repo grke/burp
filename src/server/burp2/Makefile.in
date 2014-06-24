@@ -17,6 +17,7 @@ SRCS = \
 	backup_phase2.o \
 	backup_phase3.o \
 	dpth.o \
+	rblk.o \
 	restore.o \
 	rubble.o
 

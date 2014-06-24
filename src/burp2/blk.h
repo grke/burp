@@ -50,5 +50,6 @@ extern struct blk *blk_alloc_with_data(uint32_t max_data_length);
 extern void blk_free(struct blk **blk);
 extern int blk_md5_update(struct blk *blk);
 extern void blk_print_alloc_stats(void);
+extern int blk_is_zero_length(struct blk *blk);
 
 #endif

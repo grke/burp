@@ -551,12 +551,17 @@ end:
 	return ret;
 }
 
-static void get_fingerprint_and_md5sum(struct iobuf *iobuf, struct blk *blk)
+static void get_fingerprint_from_str(const char *str, struct blk *blk)
 {
 	// FIX THIS.
 	char tmp[17]="";
-	snprintf(tmp, sizeof(tmp), "%s", iobuf->buf);
+	snprintf(tmp, sizeof(tmp), "%s", str);
 	blk->fingerprint=strtoull(tmp, 0, 16);
+}
+
+static void get_fingerprint_and_md5sum(struct iobuf *iobuf, struct blk *blk)
+{
+	get_fingerprint_from_str(iobuf->buf, blk);
 	md5str_to_bytes(iobuf->buf+16, blk->md5sum);
 }
 
@@ -583,6 +588,18 @@ int split_sig_from_manifest(struct iobuf *iobuf, struct blk *blk)
 	}
 	get_fingerprint_and_md5sum(iobuf, blk);
 	savepathstr_to_bytes(iobuf->buf+48, blk->savepath);
+	return 0;
+}
+
+int get_fingerprint(struct iobuf *iobuf, struct blk *blk)
+{
+	if(iobuf->len!=16)
+	{
+		logp("Fingerprint wrong length: %u!=%u\n",
+			iobuf->len, FINGERPRINT_LEN);
+		return -1;
+	}
+	get_fingerprint_from_str(iobuf->buf, blk);
 	return 0;
 }
 

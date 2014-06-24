@@ -419,7 +419,7 @@ static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
 		&& (blk->next || backup_end))
 	{
 		if(blk->got_save_path
-		  && memcmp(blk->md5sum, md5sum_of_empty_string, MD5_DIGEST_LENGTH))
+		  && !blk_is_zero_length(blk))
 		{
 			if(manio_write_sig_and_path(chmanio, blk)) goto error;
 			if(chmanio->sig_count==0)

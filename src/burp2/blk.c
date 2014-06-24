@@ -65,3 +65,9 @@ int blk_md5_update(struct blk *blk)
 	}
 	return 0;
 }
+
+int blk_is_zero_length(struct blk *blk)
+{
+	return !blk->fingerprint // All zeroes.
+	  && !memcmp(blk->md5sum, md5sum_of_empty_string, MD5_DIGEST_LENGTH);
+}

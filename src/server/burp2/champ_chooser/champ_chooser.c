@@ -91,9 +91,7 @@ printf("in deduplicate()\n");
 //printf("try: %lu\n", blk->index);
 		blk_count++;
 
-		if(!blk->fingerprint // All zeroes.
-		  && !memcmp(blk->md5sum,
-			md5sum_of_empty_string, MD5_DIGEST_LENGTH))
+		if(blk_is_zero_length(blk))
 		{
 //printf("got: %s %s\n", blk->weak, blk->strong);
 			blk->got=BLK_GOT;

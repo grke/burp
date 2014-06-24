@@ -462,8 +462,11 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 					goto end;
 				}
 				break;
-			case CMD_MANIFEST:
 			case CMD_FINGERPRINT:
+				if(blk && get_fingerprint(rbuf, blk))
+					goto end;
+				// Fall through.
+			case CMD_MANIFEST:
 				iobuf_copy(&sb->path, rbuf);
 				rbuf->buf=NULL;
 				return 0;

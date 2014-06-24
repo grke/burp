@@ -33,32 +33,23 @@ struct candidate *candidates_add_new(void)
 	return candidate;
 }
 
-// When a backup is ongoing, use this to add newly complete candidates.
-// FIX THIS: this stuff is very similar to champ_chooser_init().
-int candidate_add_fresh(const char *path, struct conf *conf)
+// This deals with reading in the sparse index, as well as actual candidate
+// manifests.
+int candidate_load(struct candidate *candidate,
+	const char *path, struct conf *conf)
 {
-	int ars;
 	int ret=-1;
 	gzFile zp=NULL;
-	const char *cp=NULL;
 	struct sbuf *sb=NULL;
 	struct blk *blk=NULL;
-	struct candidate *candidate=NULL;
-
-	if(!(candidate=candidates_add_new())) goto error;
-	cp=path+strlen(conf->directory);
-	while(cp && *cp=='/') cp++;
-	if(!(candidate->path=strdup_w(cp, __func__)))
-		goto error;
 
 	if(!(sb=sbuf_alloc(conf))
 	  || !(blk=blk_alloc())
 	  || !(zp=gzopen_file(path, "rb")))
-		goto end;
+		goto error;
 	while(zp)
 	{
-		switch(sbuf_fill_from_gzfile(sb, NULL /* struct async */,
-			zp, blk, NULL, conf))
+		switch(sbuf_fill_from_gzfile(sb, NULL, zp, blk, NULL, conf))
 		{
 			case 1: goto end;
 			case -1: goto error;
@@ -68,20 +59,41 @@ int candidate_add_fresh(const char *path, struct conf *conf)
 			if(sparse_add_candidate(&blk->fingerprint, candidate))
 				goto error;
 		}
+		else if(sb->path.cmd==CMD_MANIFEST)
+		{
+			if(!(candidate=candidates_add_new())) goto error;
+			candidate->path=sb->path.buf;
+			sb->path.buf=NULL;
+		}
+		sbuf_free_content(sb);
 		blk->fingerprint=0;
 	}
 
 end:
-	if(scores_grow(scores, candidates_len)) goto error;
+	if(scores_grow(scores, candidates_len)) goto end;
 	candidates_set_score_pointers(candidates, candidates_len, scores);
 	scores_reset(scores);
-	printf("HERE: %d candidates\n", (int)candidates_len);
+	logp("Now have %d candidates\n", (int)candidates_len);
 	ret=0;
 error:
 	gzclose_fp(&zp);
 	sbuf_free(&sb);
 	blk_free(&blk);
 	return ret;
+}
+
+// When a backup is ongoing, use this to add newly complete candidates.
+int candidate_add_fresh(const char *path, struct conf *conf)
+{
+	const char *cp=NULL;
+	struct candidate *candidate=NULL;
+
+	if(!(candidate=candidates_add_new())) return -1;
+	cp=path+strlen(conf->directory);
+	while(cp && *cp=='/') cp++;
+	if(!(candidate->path=strdup_w(cp, __func__))) return -1;
+
+	return candidate_load(candidate, path, conf);
 }
 
 struct candidate *candidates_choose_champ(struct incoming *in,

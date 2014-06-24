@@ -1,60 +1,22 @@
 #include "include.h"
 
-// FIX THIS: this stuff is very similar to candidate_add_fresh().
 int champ_chooser_init(const char *datadir, struct conf *conf)
 {
 	int ret=-1;
-	gzFile zp=NULL;
-	struct sbuf *sb=NULL;
-	char *sparse_path=NULL;
 	struct stat statp;
-	struct candidate *candidate=NULL;
-	uint64_t fingerprint;
+	char *sparse_path=NULL;
 
 	// FIX THIS: scores is a global variable.
-	if(!(scores=scores_alloc())) goto error;
+	if(!scores && !(scores=scores_alloc())) goto end;
 
-	if(!(sb=sbuf_alloc(conf))
-	  || !(sparse_path=prepend_s(datadir, "sparse"))
-	  || (!lstat(sparse_path, &statp)
-		&& !(zp=gzopen_file(sparse_path, "rb"))))
-			goto error;
-	while(zp)
+	if(!(sparse_path=prepend_s(datadir, "sparse"))) goto end;
+	if(lstat(sparse_path, &statp))
 	{
-		switch(sbuf_fill_from_gzfile(sb, NULL, zp, NULL, NULL, conf))
-		{
-			case 1: goto end;
-			case -1: goto error;
-		}
-		switch(sb->path.cmd)
-		{
-			case CMD_MANIFEST:
-				if(!(candidate=candidates_add_new()))
-					goto error;
-				candidate->path=sb->path.buf;
-				sb->path.buf=NULL;
-				break;
-			case CMD_FINGERPRINT:
-				fingerprint=strtoull(sb->path.buf, 0, 16);
-				if(sparse_add_candidate(&fingerprint,
-					candidate)) goto error;
-				break;
-			default:
-				iobuf_log_unexpected(&sb->path, __func__);
-				goto error;
-		}
-		sbuf_free_content(sb);
+		ret=0;
+		goto end;
 	}
-
+	ret=candidate_load(NULL, sparse_path, conf);
 end:
-	if(scores_grow(scores, candidates_len)) goto end;
-	candidates_set_score_pointers(candidates, candidates_len, scores);
-	scores_reset(scores);
-	logp("init: %d candidates\n", (int)candidates_len);
-	ret=0;
-error:
-	gzclose_fp(&zp);
-	sbuf_free(&sb);
 	if(sparse_path) free(sparse_path);
 	return ret;
 }

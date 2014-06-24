@@ -49,6 +49,7 @@ extern int send_a_file(struct asfd *asfd,
 
 extern int split_sig(struct iobuf *iobuf, struct blk *blk);
 extern int split_sig_from_manifest(struct iobuf *iobuf, struct blk *blk);
+extern int get_fingerprint(struct iobuf *iobuf, struct blk *blk);
 
 extern int do_quick_read(struct asfd *asfd,
 	const char *datapth, struct conf *conf);

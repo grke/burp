@@ -315,6 +315,7 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 			ret=-1;
 			goto end;
 		}
+		set_peer_env_vars(rfd);
 
 		if(!(ssl=SSL_new(ctx))
 		  || !(sbio=BIO_new_socket(rfd, BIO_NOCLOSE)))

@@ -1,6 +1,7 @@
   * Fix some Mac compilation warnings.
   * Fix a bug where specifying an alternative restore directory with a trailing
     slash would not work.
+  * Set REMOTE_ADDR and REMOTE_PORT environment variables.
 
 2014-05-31 Changes in burp-1.4.16:
   * Bug fix for restoring permissions on empty directories.

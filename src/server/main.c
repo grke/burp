@@ -154,6 +154,8 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx,
 
 	if(forking) close_fd(rfd);
 
+	set_peer_env_vars(*cfd);
+
 	// Reload global config, in case things have changed. This means that
 	// the server does not need to be restarted for most conf changes.
 	conf_init(conf);

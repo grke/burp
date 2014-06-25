@@ -174,6 +174,7 @@ static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx, struct conf *conf)
 
 	if((*rfd=init_client_socket(conf->server, conf->port))<0)
 		return -1;
+	set_peer_env_vars(*rfd);
 
 	if(!(*ssl=SSL_new(*ctx))
 	  || !(sbio=BIO_new_socket(*rfd, BIO_NOCLOSE)))

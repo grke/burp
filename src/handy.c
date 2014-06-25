@@ -232,6 +232,57 @@ void add_fd_to_sets(int fd, fd_set *read_set, fd_set *write_set, fd_set *err_set
 	if(fd > *max_fd) *max_fd = fd;
 }
 
+int set_peer_env_vars(int cfd)
+{
+	int port=0;
+	socklen_t len;
+	struct sockaddr_in *s4;
+	struct sockaddr_in6 *s6;
+	struct sockaddr_storage addr;
+	char portstr[16]="";
+	char addrstr[INET6_ADDRSTRLEN]="";
+
+	len=sizeof(addr);
+	if(getpeername(cfd, (struct sockaddr*)&addr, &len))
+	{
+		logp("getpeername error: %s\n", strerror(errno));
+		return -1;
+	}
+
+	switch(addr.ss_family)
+	{
+		case AF_INET:
+			s4=(struct sockaddr_in *)&addr;
+			inet_ntop(AF_INET,
+				&s4->sin_addr, addrstr, sizeof(addrstr));
+			port=ntohs(s4->sin_port);
+			break;
+		case AF_INET6:
+			s6=(struct sockaddr_in6 *)&addr;
+			inet_ntop(AF_INET6,
+				&s6->sin6_addr, addrstr, sizeof(addrstr));
+			port=ntohs(s6->sin6_port);
+			break;
+		default:
+			logp("unknown addr.ss_family: %d\n", addr.ss_family);
+			return -1;
+	}
+
+	if(setenv("REMOTE_ADDR",  addrstr, 1))
+	{
+		logp("setenv REMOTE_ADDR to %s failed: %s\n",
+				addrstr, strerror(errno));
+		return -1;
+	}
+	snprintf(portstr, sizeof(portstr), "%d", port);
+	if(setenv("REMOTE_PORT",  portstr, 1))
+	{
+		logp("setenv REMOTE_PORT failed: %s\n", strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
 int init_client_socket(const char *host, const char *port)
 {
 	int rfd=-1;

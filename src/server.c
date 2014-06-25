@@ -1942,6 +1942,8 @@ static int process_incoming_client(int rfd, struct config *conf, SSL_CTX *ctx, c
 		return -1;
 	}
 	reuseaddr(cfd);
+	set_peer_env_vars(cfd);
+
 	check_for_exiting_children();
 
 	if(conf->forking)

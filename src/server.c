@@ -1678,6 +1678,8 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 
 	if(forking) close_fd(rfd);
 
+	set_peer_env_vars(*cfd);
+
 	// Reload global config, in case things have changed. This means that
 	// the server does not need to be restarted for most config changes.
 	init_config(&conf);
@@ -1942,7 +1944,6 @@ static int process_incoming_client(int rfd, struct config *conf, SSL_CTX *ctx, c
 		return -1;
 	}
 	reuseaddr(cfd);
-	set_peer_env_vars(cfd);
 
 	check_for_exiting_children();
 

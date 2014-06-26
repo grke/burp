@@ -234,6 +234,8 @@ void add_fd_to_sets(int fd, fd_set *read_set, fd_set *write_set, fd_set *err_set
 
 int set_peer_env_vars(int cfd)
 {
+// ARGH. Does not build on Windows.
+#ifndef HAVE_WIN32
 	int port=0;
 	socklen_t len;
 	struct sockaddr_in *s4;
@@ -280,6 +282,7 @@ int set_peer_env_vars(int cfd)
 		logp("setenv REMOTE_PORT failed: %s\n", strerror(errno));
 		return -1;
 	}
+#endif
 	return 0;
 }
 

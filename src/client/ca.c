@@ -134,14 +134,13 @@ int ca_client_setup(struct asfd *asfd, struct conf *conf)
 	char ssl_cert_tmp[512]="";
 	char ssl_cert_ca_tmp[512]="";
 
-	// Do not continue if we have none of the following things set.
+	// Do not continue if we have one of the following things not set.
 	if(  !conf->ca_burp_ca
 	  || !conf->ca_csr_dir
 	  || !conf->ssl_cert_ca
 	  || !conf->ssl_cert
 	  || !conf->ssl_key
-	// Do not try to get a new certificate if we already have a
-	// key.
+	// Do not try to get a new certificate if we already have a key.
 	  || !lstat(conf->ssl_key, &statp))
 	{
 		if(asfd->write_str(asfd, CMD_GEN, "nocsr")

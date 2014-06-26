@@ -1494,6 +1494,8 @@ void strip_trailing_slashes(char **str)
 
 int set_peer_env_vars(int cfd)
 {
+// ARGH. Does not work on Windows.
+#ifndef HAVE_WIN32
 	int port=0;
 	socklen_t len;
 	struct sockaddr_in *s4;
@@ -1540,5 +1542,6 @@ int set_peer_env_vars(int cfd)
 		logp("setenv REMOTE_PORT failed: %s\n", strerror(errno));
 		return -1;
 	}
+#endif
 	return 0;
 }

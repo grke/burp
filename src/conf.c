@@ -905,12 +905,132 @@ static int server_conf_checks(struct conf *c, const char *path, int *r)
 	return 0;
 }
 
+#ifdef HAVE_WIN32
+#undef X509_NAME
+#include <openssl/x509.h>
+#endif
+
+static char *extract_cn(X509_NAME *subj)
+{
+	int nid;
+	int index;
+	ASN1_STRING *d;
+	X509_NAME_ENTRY *e;
+	unsigned char *str;
+
+	nid=OBJ_txt2nid("CN");
+	if((index=X509_NAME_get_index_by_NID(subj, nid, -1))<0
+	  || !(e=X509_NAME_get_entry(subj, index))
+	  || !(d=X509_NAME_ENTRY_get_data(e))
+	  || !(str=ASN1_STRING_data(d)))
+		return NULL;
+	return strdup_w((char *)str, __func__);
+}
+
+static int get_cname_from_ssl_cert(struct conf *c)
+{
+	int ret=-1;
+	FILE *fp=NULL;
+	X509 *cert=NULL;
+	X509_NAME *subj=NULL;
+	char *path=c->ssl_cert;
+
+	if(!path || !(fp=open_file(path, "rb"))) return 0;
+
+	if(!(cert=PEM_read_X509(fp, NULL, NULL, NULL)))
+	{
+		logp("unable to parse %s in: %s\n", path, __func__);
+		goto end;
+	}
+	if(!(subj=X509_get_subject_name(cert)))
+	{
+		logp("unable to get subject from %s in: %s\n", path, __func__);
+		goto end;
+	}
+
+	if(!(c->cname=extract_cn(subj)))
+	{
+		logp("could not get CN from %s\n", path);
+		goto end;
+	}
+	logp("cname from cert: %s\n", c->cname);
+
+	ret=0;
+end:
+	if(cert) X509_free(cert);
+	if(fp) fclose(fp);
+	return ret;
+}
+
+#ifdef HAVE_WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#endif
+
+static int get_fqdn(struct conf *c)
+{
+	int ret=-1;
+	int gai_result;
+	struct addrinfo hints;
+	struct addrinfo *info;
+	char hostname[1024]="";
+	hostname[1023] = '\0';
+	if(gethostname(hostname, 1023))
+	{
+		logp("gethostname() failed: %s\n", strerror(errno));
+		goto end;
+	}
+
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family=AF_UNSPEC;
+	hints.ai_socktype=SOCK_STREAM;
+	hints.ai_flags=AI_CANONNAME;
+
+	if((gai_result=getaddrinfo(hostname, "http", &hints, &info)))
+	{
+		logp("getaddrinfo in %s: %s\n", __func__,
+			gai_strerror(gai_result));
+		goto end;
+	}
+
+	//for(p=info; p; p=p->ai_next)
+	// Just use the first one.
+	if(!info)
+	{
+		logp("Got no hostname in %s\n", __func__);
+		goto end;
+	}
+
+	if(!(c->cname=strdup_w(info->ai_canonname, __func__)))
+		goto end;
+	logp("cname from hostname: %s\n", c->cname);
+
+	ret=0;
+end:
+	freeaddrinfo(info);
+	return ret;
+}
+
 static int client_conf_checks(struct conf *c, const char *path, int *r)
 {
 	if(!c->cname)
-		conf_problem(path, "client name unset", r);
+	{
+		if(get_cname_from_ssl_cert(c)) return -1;
+		// There was no error. This is probably a new install.
+		// Try getting the fqdn and using that.
+		if(!c->cname)
+		{
+			if(get_fqdn(c)) return -1;
+			if(!c->cname)
+				conf_problem(path, "client name unset", r);
+		}
+	}
 	if(!c->password)
-		conf_problem(path, "password unset", r);
+	{
+		logp("password not set, falling back to \"password\"\n");
+		if(!(c->password=strdup_w("password", __func__)))
+			return -1;
+	}
 	if(!c->server)
 		conf_problem(path, "server unset", r);
 	if(!c->ssl_cert)

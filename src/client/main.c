@@ -194,8 +194,7 @@ static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx, struct conf *conf)
 }
 
 static enum cliret initial_comms(struct async *as,
-	enum action *action, char **incexc, long *name_max, 
-	struct conf *conf)
+	enum action *action, char **incexc, long *name_max, struct conf *conf)
 {
 	struct asfd *asfd;
 	char *server_version=NULL;
@@ -207,23 +206,23 @@ static enum cliret initial_comms(struct async *as,
 
 	if(server_version)
 	{
-		int ca_ret=0;
 		logp("Server version: %s\n", server_version);
 		// Servers before 1.3.2 did not tell us their versions.
 		// 1.3.2 and above can do the automatic CA stuff that
 		// follows.
-		if((ca_ret=ca_client_setup(asfd, conf))<0)
+		switch(ca_client_setup(asfd, conf))
 		{
-			// Error
-			logp("Error with certificate signing request\n");
-			goto error;
-		}
-		else if(ca_ret>0)
-		{
-			// Certificate signed successfully.
-			// Everything is OK, but we will reconnect now, in
-			// order to use the new keys/certificates.
-			goto reconnect;
+			case 0:
+				break; // All OK.
+			case 1:
+				// Certificate signed successfully.
+				// Everything is OK, but we will reconnect now,
+				// in order to use the new keys/certificates.
+				goto reconnect;
+			default:
+				logp("Error with cert signing request\n");
+				goto error;
+				
 		}
 	}
 

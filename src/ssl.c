@@ -1,4 +1,5 @@
 #include "include.h"
+#include "openssl/ssl.h"
 
 static BIO *bio_err=0;
 static const char *pass=NULL;
@@ -35,7 +36,6 @@ int ssl_load_dh_params(SSL_CTX *ctx, struct conf *conf)
 	return 0;
 }
 
-/*The password code is not thread safe*/
 static int password_cb(char *buf, int num, int rwflag, void *userdata)
 {
 	if(num<(int)strlen(pass)+1) return 0;
@@ -47,11 +47,11 @@ void ssl_load_globals(void)
 {
 	if(!bio_err)
 	{
-		/* Global system initialization*/
+		// Global system initialization.
 		SSL_library_init();
 		SSL_load_error_strings();
 
-		/* An error write context */
+		// An error write context.
 		bio_err=BIO_new_fp(stderr, BIO_NOCLOSE);
 	}
 }
@@ -61,7 +61,7 @@ static int ssl_load_keys_and_certs(SSL_CTX *ctx, struct conf *conf)
 	char *ssl_key=NULL;
 	struct stat statp;
 
-	/* Load our keys and certificates if the path exists. */
+	// Load our keys and certificates if the path exists.
 	if(conf->ssl_cert && !lstat(conf->ssl_cert, &statp)
 	  && !SSL_CTX_use_certificate_chain_file(ctx, conf->ssl_cert))
 	{
@@ -77,7 +77,7 @@ static int ssl_load_keys_and_certs(SSL_CTX *ctx, struct conf *conf)
 	else
 		ssl_key=conf->ssl_cert;
 
-	/* Load the key file, if the path exists */
+	// Load the key file, if the path exists.
 	if(ssl_key && !lstat(ssl_key, &statp)
 	  && !SSL_CTX_use_PrivateKey_file(ctx,ssl_key,SSL_FILETYPE_PEM))
 	{
@@ -85,7 +85,7 @@ static int ssl_load_keys_and_certs(SSL_CTX *ctx, struct conf *conf)
 		return -1;
 	}
 
-	/* Load the CAs we trust, if the path exists. */
+	// Load the CAs we trust, if the path exists.
 	if(conf->ssl_cert_ca && !lstat(conf->ssl_cert_ca, &statp)
 	  && !SSL_CTX_load_verify_locations(ctx, conf->ssl_cert_ca, 0))
 	{
@@ -102,7 +102,7 @@ SSL_CTX *ssl_initialise_ctx(struct conf *conf)
 	SSL_CTX *ctx=NULL;
 	SSL_METHOD *meth=NULL;
 
-	/* Create our context*/
+	// Create our context.
 	meth=(SSL_METHOD *)SSLv23_method();
 	ctx=(SSL_CTX *)SSL_CTX_new(meth);
 
@@ -142,7 +142,7 @@ static void sanitise(char *buf)
 	}
 }
 
-/* This function taken from openvpn-2.2.1 and tidied up a bit. */
+// This function taken from openvpn-2.2.1 and tidied up a bit.
 static int setenv_x509(X509_NAME *x509, const char *type)
 {
 	int i, n;
@@ -155,8 +155,8 @@ static int setenv_x509(X509_NAME *x509, const char *type)
 	char *name_expand;
 	size_t name_expand_size;
 
-	n = X509_NAME_entry_count (x509);
-	for (i = 0; i < n; ++i)
+	n=X509_NAME_entry_count (x509);
+	for(i=0; i<n; ++i)
 	{
 		if(!(ent=X509_NAME_get_entry (x509, i))
 		  || !(fn=X509_NAME_ENTRY_get_object(ent))
@@ -166,12 +166,9 @@ static int setenv_x509(X509_NAME *x509, const char *type)
 			continue;
 		buf=(uint8_t *)1; /* bug in OpenSSL 0.9.6b ASN1_STRING_to_UTF8 requires this workaround */
 		if(ASN1_STRING_to_UTF8(&buf, val)<=0) continue;
-		name_expand_size = 64 + strlen (objbuf);
-		if(!(name_expand=(char *)malloc(name_expand_size)))
-		{
-			log_out_of_memory(__func__);
+		name_expand_size=64+strlen(objbuf);
+		if(!(name_expand=(char *)malloc_w(name_expand_size, __func__)))
 			return -1;
-		}
 		snprintf(name_expand, name_expand_size,
 			"X509_%s_%s", type, objbuf);
 		sanitise(name_expand);

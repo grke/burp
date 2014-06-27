@@ -62,7 +62,7 @@ static void usage_client(void)
 	printf(" Options:\n");
 	printf("  -a <action>    The action can be one of the following.\n");
 	printf("                  b: backup\n");
-	printf("                  D: delete\n");
+	printf("                  delete: delete\n");
 	printf("                  e: estimate\n");
 	printf("                  l: list (this is the default when an action is not given)\n");
 	printf("                  L: long list\n");
@@ -202,9 +202,10 @@ int main (int argc, char *argv[])
 					act=ACTION_STATUS_SNAPSHOT;
 				else if(!strncmp(optarg, "estimate", 1))
 					act=ACTION_ESTIMATE;
-				// Start 'Delete' with a capital letter so that it is less
-				// likely to be used accidently.
-				else if(!strncmp(optarg, "Delete", 1))
+				// Make the user spell out 'delete' so that it
+				// is likely to be used accidently.
+				else if(!strncmp(optarg,
+				  "delete", strlen("delete")))
 					act=ACTION_DELETE;
 				else
 				{

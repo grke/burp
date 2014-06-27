@@ -8,7 +8,11 @@
 int do_delete_client(struct config *conf)
 {
 	char msg[128]="";
-	snprintf(msg, sizeof(msg), "delete %s", conf->backup?conf->backup:"");
+	// Old clients will send 'delete'. Changed so that burp2 servers can
+	// detect the difference and refuse to delete if they see 'delete'.
+	// This is to avoid potential confusion with the future diff/long diff
+	// options.
+	snprintf(msg, sizeof(msg), "Delete %s", conf->backup?conf->backup:"");
 	if(async_write_str(CMD_GEN, msg)
 	  || async_read_expect(CMD_GEN, "ok"))
 		return -1;

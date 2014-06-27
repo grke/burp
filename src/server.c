@@ -1192,7 +1192,18 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			}
 		}
 	}
-	else if(cmd==CMD_GEN && !strncmp(buf, "delete ", strlen("delete ")))
+	// Used to be 'delete'. Client has changed to 'Delete' in order to
+	// avoid confusion over the future burp2 'diff/long diff' options.
+	else if(cmd==CMD_GEN
+	  && !strncmp(buf, "delete ", strlen("delete ")))
+	{
+		logp("Not allowing old style delete syntax from %s\n", client);
+		async_write_str(CMD_GEN,
+			"Not allowing old style delete syntax");
+		goto end;
+	}
+	else if(cmd==CMD_GEN
+	  && !strncmp(buf, "Delete ", strlen("Delete ")))
 	{
 		int resume=0; // ignored
 		if(get_lock_and_clean(basedir, lockbasedir, lockfile,

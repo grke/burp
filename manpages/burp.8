@@ -54,7 +54,7 @@ Show a particular path in a backup (requires \-C and \-b).
 
 .SH CLIENT OPTIONS
 .TP
-\fB\-a\fR \fB[b|t|r|l|L|v|D|e|T]\fR
+\fB\-a\fR \fB[b|t|r|l|L|v|delete|e|T]\fR
 Short for 'action'. The arguments mean backup, timed backup, restore, list, long list, verify, delete, estimate, or timer check respectively.
 .TP
 \fB\-b\fR \fB[number|a]\fR
@@ -129,7 +129,7 @@ Verifies the most recent backup.
 \fBburp \-a v \-b 1 \-r myregex\fR
 Verifies everything in backup number 1 that matches the regular expression 'myregex'.
 .TP
-\fBburp \-a D \-b 1\fR
+\fBburp \-a delete \-b 1\fR
 Deletes backup number 1. Note that burp will not delete backup directories that other backup directories depend upon.
 .TP
 \fBburp \-a t\fR

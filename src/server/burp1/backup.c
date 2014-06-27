@@ -38,58 +38,6 @@ end:
 	return ret;
 }
 
-static int vss_opts_changed(struct sdirs *sdirs, struct conf *cconf,
-	const char *incexc)
-{
-	int ret=0;
-	struct conf oldconf;
-	struct conf newconf;
-	conf_init(&oldconf);
-	conf_init(&newconf);
-
-	// Figure out the old config, which is in the incexc file left
-	// in the current backup directory on the server.
-	if(parse_incexcs_path(&oldconf, sdirs->cincexc))
-	{
-		// Assume that the file did not exist, and therefore
-		// the old split_vss setting is 0.
-		oldconf.split_vss=0;
-		oldconf.strip_vss=0;
-	}
-
-	// Figure out the new config, which is either in the incexc file from
-	// the client, or in the cconf on the server.
-	if(incexc)
-	{
-		if(parse_incexcs_buf(&newconf, incexc))
-		{
-			// Should probably not got here.
-			newconf.split_vss=0;
-			newconf.strip_vss=0;
-		}
-	}
-	else
-	{
-		newconf.split_vss=cconf->split_vss;
-		newconf.strip_vss=cconf->strip_vss;
-	}
-
-	if(newconf.split_vss!=oldconf.split_vss)
-	{
-		logp("split_vss=%d (changed since last backup)\n",
-			newconf.split_vss);
-		ret=1;
-	}
-	if(newconf.strip_vss!=oldconf.strip_vss)
-	{
-		logp("strip_vss=%d (changed since last backup)\n",
-			newconf.strip_vss);
-		ret=1;
-	}
-	if(ret) logp("All files will be treated as new\n");
-	return ret;
-}
-
 int do_backup_server_burp1(struct async *as, struct sdirs *sdirs,
 	struct conf *cconf, const char *incexc, int resume)
 {
@@ -101,18 +49,7 @@ int do_backup_server_burp1(struct async *as, struct sdirs *sdirs,
 	char tstmp[64]="";
 	struct asfd *asfd=as->asfd;
 
-	struct dpthl dpthl;
-
-	gzFile cmanfp=NULL;
-	struct stat statp;
-
 	logp("in do_backup_server\n");
-
-	if(init_dpthl(&dpthl, asfd, sdirs, cconf))
-	{
-		log_and_send(asfd, "could not init_dpthl\n");
-		goto error;
-	}
 
 	if(resume)
 	{
@@ -193,29 +130,7 @@ int do_backup_server_burp1(struct async *as, struct sdirs *sdirs,
 		}
 	}
 
-	// Open the previous (current) manifest.
-	// If the split_vss setting changed between the previous backup
-	// and the new backup, do not open the previous manifest.
-	// This will have the effect of making the client back up everything
-	// fresh. Need to do this, otherwise toggling split_vss on and off
-	// will result in backups that do not work.
-	if(!lstat(sdirs->cmanifest, &statp)
-	  && !vss_opts_changed(sdirs, cconf, incexc))
-	{
-		if(!(cmanfp=gzopen_file(sdirs->cmanifest, "rb")))
-		{
-			if(!lstat(sdirs->cmanifest, &statp))
-			{
-				logp("could not open old manifest %s\n",
-					sdirs->cmanifest);
-				goto error;
-			}
-		}
-	}
-
-	//if(cmanfp) logp("Current manifest: %s\n", sdirs->cmanifest);
-
-	if(backup_phase2_server(asfd, sdirs, cconf, &cmanfp, &dpthl, resume))
+	if(backup_phase2_server(asfd, sdirs, incexc, resume, cconf))
 	{
 		logp("error in backup phase 2\n");
 		goto error;
@@ -260,7 +175,6 @@ int do_backup_server_burp1(struct async *as, struct sdirs *sdirs,
 error:
 	ret=-1;
 end:
-	gzclose_fp(&cmanfp);
 	gzclose_fp(&mzp);
 	set_logfp(NULL, cconf); // does an fclose on logfp.
 	return ret;

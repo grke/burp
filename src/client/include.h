@@ -11,6 +11,7 @@
 #include "ca.h"
 #include "cvss.h"
 #include "delete.h"
+#include "diff.h"
 #include "extra_comms.h"
 #include "extrameta.h"
 #include "find.h"

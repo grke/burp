@@ -12,6 +12,7 @@
 #include "chlds.h"
 #include "compress.h"
 #include "delete.h"
+#include "diff.h"
 #include "extra_comms.h"
 #include "list.h"
 #include "main.h"

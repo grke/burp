@@ -324,6 +324,25 @@ static int run_list(struct asfd *asfd, struct sdirs *sdirs, struct conf *cconf)
 		sdirs, cconf, backupno, listregex, browsedir);
 }
 
+static int run_diff(struct asfd *asfd, struct sdirs *sdirs, struct conf *cconf)
+{
+	char *backupno=NULL;
+	struct iobuf *rbuf=asfd->rbuf;
+
+	if(!cconf->client_can_diff)
+	{
+		logp("Not allowing list of %s\n", cconf->cname);
+		asfd->write_str(asfd, CMD_GEN, "Client list is not allowed");
+		return -1;
+	}
+
+	if(!strncmp_w(rbuf->buf, "diff "))
+		backupno=rbuf->buf+strlen("diff ");
+	if(asfd->write_str(asfd, CMD_GEN, "ok")) return -1;
+
+	return do_diff_server(asfd, sdirs, cconf, backupno);
+}
+
 static int unknown_command(struct asfd *asfd)
 {
 	iobuf_log_unexpected(asfd->rbuf, __func__);
@@ -397,12 +416,26 @@ int run_action_server(struct async *as,
 	  || !strncmp_w(rbuf->buf, "verify "))
 		return run_restore(as->asfd, sdirs, cconf, srestore);
 
-	if(!strncmp_w(rbuf->buf, "delete "))
-		return run_delete(as->asfd, sdirs, cconf);
-
 	if(!strncmp_w(rbuf->buf, "list ")
 	  || !strncmp_w(rbuf->buf, "listb "))
 		return run_list(as->asfd, sdirs, cconf);
+
+	if(!strncmp_w(rbuf->buf, "diff "))
+		return run_diff(as->asfd, sdirs, cconf);
+
+	if(!strncmp_w(rbuf->buf, "Delete "))
+		return run_delete(as->asfd, sdirs, cconf);
+
+	// Old clients will send 'delete', possibly accidentally due to the
+	// user trying to use the new diff/long diff options.
+	// Stop them from working, just to be safe.
+	if(!strncmp_w(rbuf->buf, "delete "))
+	{
+		logp("old style delete from %s denied\n", cconf->cname);
+		as->asfd->write_str(as->asfd, CMD_ERROR,
+			"old style delete is not supported on this server");
+		return -1;
+	}
 
 	return unknown_command(as->asfd);
 }

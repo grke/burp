@@ -84,6 +84,7 @@ void conf_init(struct conf *c)
 	c->max_hardlinks=10000;
 
 	c->client_can_delete=1;
+	c->client_can_diff=1;
 	c->client_can_force_backup=1;
 	c->client_can_list=1;
 	c->client_can_restore=1;
@@ -543,6 +544,7 @@ static int load_conf_ints(struct conf *c,
 	gcv_uint8(f, v, "daemon", &(c->daemon));
 	gcv_uint8(f, v, "directory_tree", &(c->directory_tree));
 	gcv_uint8(f, v, "client_can_delete", &(c->client_can_delete));
+	gcv_uint8(f, v, "client_can_diff", &(c->client_can_diff));
 	gcv_uint8(f, v, "client_can_force_backup",
 					&(c->client_can_force_backup));
 	gcv_uint8(f, v, "client_can_list", &(c->client_can_list));
@@ -1431,6 +1433,7 @@ int conf_set_client_global(struct conf *c, struct conf *cc)
 	cc->password_check=c->password_check;
 	cc->manual_delete=c->manual_delete;
 	cc->client_can_delete=c->client_can_delete;
+	cc->client_can_diff=c->client_can_diff;
 	cc->client_can_force_backup=c->client_can_force_backup;
 	cc->client_can_list=c->client_can_list;
 	cc->client_can_restore=c->client_can_restore;

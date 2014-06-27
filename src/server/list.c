@@ -37,7 +37,7 @@ int check_browsedir(const char *browsedir, char **path,
 		else if(strlen(copy)>2 && copy[1]==':' && copy[2]=='/')
 			copy[2]='\0';
 	}
-	if(*last_bd_match)
+	if(last_bd_match && *last_bd_match)
 	{
 		if(!strcmp(*last_bd_match, copy))
 		{

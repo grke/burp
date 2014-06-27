@@ -107,6 +107,7 @@ struct conf
 	uint8_t overwrite;
 	int strip;
 	char *backup;
+	char *backup2; // For diffs.
 	char *restoreprefix;
 	char *regex;
 	char *restore_spool;
@@ -178,7 +179,9 @@ struct conf
 
 	char *dedup_group;
 
+	// FIX THIS: maybe make these into flags.
 	uint8_t client_can_delete;
+	uint8_t client_can_diff;
 	uint8_t client_can_force_backup;
 	uint8_t client_can_list;
 	uint8_t client_can_restore;

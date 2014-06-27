@@ -329,7 +329,7 @@ end:
 }
 
 // The return code of this is the return code of the standalone process.
-int champ_chooser_server_standalone(struct conf *conf, const char *sclient)
+int champ_chooser_server_standalone(const char *sclient, struct conf *conf)
 {
 	int ret=1;
 	struct sdirs *sdirs=NULL;

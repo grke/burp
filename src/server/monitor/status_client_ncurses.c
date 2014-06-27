@@ -653,7 +653,8 @@ static void setup_signals(void)
 	signal(SIGPIPE, &sighandler);
 }
 
-int status_client_ncurses(struct conf *conf, enum action act, const char *sclient)
+int status_client_ncurses(enum action act, const char *sclient,
+	struct conf *conf)
 {
 	int fd=0;
 	int sel=0;

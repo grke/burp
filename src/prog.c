@@ -65,6 +65,7 @@ static void usage_client(void)
 	printf(" Options:\n");
 	printf("  -a <action>    The action can be one of the following.\n");
 	printf("                  b: backup\n");
+	printf("                  d: diff\n");
 	printf("                  e: estimate\n");
 	printf("                  l: list (this is the default when an action is not given)\n");
 	printf("                  L: long list\n");
@@ -104,7 +105,6 @@ int reload(struct conf *conf, const char *conffile, bool firsttime,
 
 	if(conf_load(conffile, conf, 1)) return 1;
 
-	/* change umask */
 	umask(conf->umask);
 
         // Try to make JSON output clean.
@@ -129,15 +129,10 @@ int reload(struct conf *conf, const char *conffile, bool firsttime,
 
 static int replace_conf_str(const char *newval, char **dest)
 {
-	if(newval)
-	{
-		if(*dest) free(*dest);
-		if(!(*dest=strdup(newval)))
-		{
-			log_out_of_memory(__func__);
-			return -1;
-		}
-	}
+	if(!newval) return 0;
+	free_w(dest);
+	if(!(*dest=strdup_w(newval, __func__)))
+		return -1;
 	return 0;
 }
 
@@ -162,19 +157,23 @@ static int parse_action(enum action *act, const char *optarg)
 	else if(!strncmp(optarg, "list", 1))
 		*act=ACTION_LIST;
 	else if(!strncmp(optarg, "List", 1))
-		*act=ACTION_LONG_LIST;
+		*act=ACTION_LIST_LONG;
 	else if(!strncmp(optarg, "status", 1))
 		*act=ACTION_STATUS;
 	else if(!strncmp(optarg, "Status", 1))
 		*act=ACTION_STATUS_SNAPSHOT;
 	else if(!strncmp(optarg, "estimate", 1))
 		*act=ACTION_ESTIMATE;
-	// Start 'Delete' with a capital letter so that it is less likely to be
+	// Make them spell 'delete' out fully so that it is less likely to be
 	// used accidently.
-	else if(!strncmp(optarg, "Delete", 1))
+	else if(!strncmp_w(optarg, "delete"))
 		*act=ACTION_DELETE;
 	else if(!strncmp(optarg, "champchooser", 1))
 		*act=ACTION_CHAMP_CHOOSER;
+	else if(!strncmp(optarg, "diff", 1))
+		*act=ACTION_DIFF;
+	else if(!strncmp(optarg, "Diff", 1))
+		*act=ACTION_DIFF_LONG;
 	else
 	{
 		usage();
@@ -182,6 +181,37 @@ static int parse_action(enum action *act, const char *optarg)
 	}
 	return 0;
 }
+
+static int run_champ_chooser(const char *sclient, struct conf *conf)
+{
+	if(sclient && *sclient)
+		return champ_chooser_server_standalone(sclient, conf);
+	logp("No client name given for standalone champion chooser process.\n");
+	logp("Try using the '-C' option.\n");
+	return 1;
+}
+
+#ifndef HAVE_WIN32
+static int server_modes(enum action act, const char *sclient,
+	const char *conffile, struct lock *lock, int generate_ca_only,
+	struct conf *conf)
+{
+	switch(act)
+	{
+		case ACTION_STATUS:
+		case ACTION_STATUS_SNAPSHOT:
+			// We are running on the server machine, being a client
+			// of the burp server, getting status information.
+			return status_client_ncurses(act, sclient, conf);
+		case ACTION_CHAMP_CHOOSER:
+			// We are running on the server machine, wanting to
+			// be a standalone champion chooser process.
+			return run_champ_chooser(sclient, conf);
+		default:
+			return server(conf, conffile, lock, generate_ca_only);
+	}
+}
+#endif
 
 #if defined(HAVE_WIN32)
 #define main BurpMain
@@ -198,6 +228,7 @@ int main (int argc, char *argv[])
 	int forceoverwrite=0;
 	enum action act=ACTION_LIST;
 	const char *backup=NULL;
+	const char *backup2=NULL;
 	const char *restoreprefix=NULL;
 	const char *regex=NULL;
 	const char *browsefile=NULL;
@@ -227,7 +258,10 @@ int main (int argc, char *argv[])
 				if(parse_action(&act, optarg)) goto end;
 				break;
 			case 'b':
-				backup=optarg;
+				// The diff command may have two backups
+				// specified.
+				if(!backup2 && backup) backup2=optarg;
+				if(!backup) backup=optarg;
 				break;
 			case 'c':
 				conffile=optarg;
@@ -304,29 +338,35 @@ int main (int argc, char *argv[])
 	  0 /* no oldmax_status_children setting */,
 	  json)) goto end;
 
-	if((act==ACTION_RESTORE || act==ACTION_VERIFY) && !backup)
+	if(!backup) switch(act)
 	{
-		logp("No backup specified. Using the most recent.\n");
-		backup="0";
+		case ACTION_DELETE:
+			logp("No backup specified for deletion.\n");
+			goto end;
+		case ACTION_RESTORE:
+		case ACTION_VERIFY:
+		case ACTION_DIFF:
+		case ACTION_DIFF_LONG:
+			logp("No backup specified. Using the most recent.\n");
+			backup="0";
+		default:
+			break;
+	}
+	if(!backup2) switch(act)
+	{
+		case ACTION_DIFF:
+		case ACTION_DIFF_LONG:
+			logp("No second backup specified. Using file system scan.\n");
+			backup2="n"; // For 'next'.
+		default:
+			break;
 	}
 
-	if(act==ACTION_DELETE && !backup)
-	{
-		logp("No backup specified for deletion.\n");
+	if(conf->mode==MODE_CLIENT
+	  && orig_client
+	  && *orig_client
+	  && !(conf->orig_client=strdup_w(orig_client, __func__)))
 		goto end;
-	}
-
-	if(conf->mode==MODE_CLIENT)
-	{
-		if(orig_client && *orig_client)
-		{
-			if(!(conf->orig_client=strdup(orig_client)))
-			{
-				log_out_of_memory(__func__);
-				goto end;
-			}
-		}
-	}
 
 	if(conf->mode==MODE_SERVER
 	  && (act==ACTION_STATUS
@@ -360,6 +400,7 @@ int main (int argc, char *argv[])
 	conf->forking=forking;
 	conf->daemon=daemon;
 	if(replace_conf_str(backup, &conf->backup)
+	  || replace_conf_str(backup2, &conf->backup2)
 	  || replace_conf_str(restoreprefix, &conf->restoreprefix)
 	  || replace_conf_str(regex, &conf->regex)
 	  || replace_conf_str(browsefile, &conf->browsefile)
@@ -377,28 +418,8 @@ int main (int argc, char *argv[])
 #ifdef HAVE_WIN32
 		logp("Sorry, server mode is not implemented for Windows.\n");
 #else
-		if(act==ACTION_STATUS || act==ACTION_STATUS_SNAPSHOT)
-		{
-			// We are running on the server machine, being a client
-			// of the burp server, getting status information.
-			ret=status_client_ncurses(conf, act, sclient);
-		}
-		else if(act==ACTION_CHAMP_CHOOSER)
-		{
-			// We are running on the server machine, wanting to
-			// be a standalone champion chooser process.
-			if(!sclient || !*sclient)
-			{
-				logp("No client name specified for standalone champion chooser process.\n");
-				logp("Try using the '-C' option.\n");
-				ret=1;
-			}
-			else
-				ret=champ_chooser_server_standalone(conf,
-					sclient);
-		}
-		else
-			ret=server(conf, conffile, lock, generate_ca_only);
+		ret=server_modes(act,
+			sclient, conffile, lock, generate_ca_only, conf);
 #endif
 	}
 	else

@@ -6,7 +6,7 @@ extern int status_wfd; // For the child to send information to the parent.
 
 extern int write_status(char phase, const char *path, struct conf *conf);
 
-extern int status_client_ncurses(struct conf *conf, enum action act,
-	const char *sclient);
+extern int status_client_ncurses(enum action act,
+	const char *sclient, struct conf *conf);
 
 #endif

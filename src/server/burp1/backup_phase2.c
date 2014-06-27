@@ -209,78 +209,37 @@ static int process_new_file(struct sdirs *sdirs, struct conf *cconf,
 	return 1;
 }
 
-// return 1 to say that a file was processed
-static int maybe_process_file(struct asfd *asfd,
-	struct sdirs *sdirs, struct conf *cconf,
-	struct sbuf *cb, struct sbuf *p1b, FILE *ucfp,
-	struct dpthl *dpthl)
+static int maybe_do_delta_stuff(struct asfd *asfd,
+	struct sdirs *sdirs, struct sbuf *cb, struct sbuf *p1b, FILE *ucfp,
+	struct dpthl *dpthl, struct conf *cconf)
 {
-	int pcmp;
-	if(!(pcmp=sbuf_pathcmp(cb, p1b)))
+	int oldcompressed=0;
+
+	// If the file type changed, I think it is time to back it up again
+	// (for example, EFS changing to normal file, or back again).
+	if(cb->path.cmd!=p1b->path.cmd)
+		return process_new_file(sdirs, cconf, cb, p1b, ucfp,
+			dpthl);
+
+	// mtime is the actual file data.
+	// ctime is the attributes or meta data.
+	if(cb->statp.st_mtime==p1b->statp.st_mtime
+	  && cb->statp.st_ctime==p1b->statp.st_ctime)
 	{
-		int oldcompressed=0;
+		// got an unchanged file
+		//logp("got unchanged file: %s %c %c\n", cb->path, cb->cmd, p1b->cmd);
+		return process_unchanged_file(cb, ucfp, cconf);
+	}
 
-		// If the file type changed, I think it is time to back it
-		// up again (for example, EFS changing to normal file, or
-		// back again).
-		if(cb->path.cmd!=p1b->path.cmd)
-			return process_new_file(sdirs, cconf, cb, p1b, ucfp,
-				dpthl);
-
-		// mtime is the actual file data.
-		// ctime is the attributes or meta data.
-		if(cb->statp.st_mtime==p1b->statp.st_mtime
-		  && cb->statp.st_ctime==p1b->statp.st_ctime)
-		{
-			// got an unchanged file
-			//logp("got unchanged file: %s %c %c\n", cb->path, cb->cmd, p1b->cmd);
-			return process_unchanged_file(cb, ucfp, cconf);
-		}
-
-		if(cb->statp.st_mtime==p1b->statp.st_mtime
-		  && cb->statp.st_ctime!=p1b->statp.st_ctime)
-		{
-			// File data stayed the same, but attributes or meta
-			// data changed. We already have the attributes, but
-			// may need to get extra meta data.
-			if(cb->path.cmd==CMD_ENC_METADATA
-			  || p1b->path.cmd==CMD_ENC_METADATA
-			// TODO: make unencrypted metadata use the librsync
-			  || cb->path.cmd==CMD_METADATA
-			  || p1b->path.cmd==CMD_METADATA
-			  || cb->path.cmd==CMD_VSS
-			  || p1b->path.cmd==CMD_VSS
-			  || cb->path.cmd==CMD_ENC_VSS
-			  || p1b->path.cmd==CMD_ENC_VSS
-			  || cb->path.cmd==CMD_VSS_T
-			  || p1b->path.cmd==CMD_VSS_T
-			  || cb->path.cmd==CMD_ENC_VSS_T
-			  || p1b->path.cmd==CMD_ENC_VSS_T
-			  || cb->path.cmd==CMD_EFS_FILE
-			  || p1b->path.cmd==CMD_EFS_FILE)
-				return process_new_file(sdirs, cconf, cb,
-					p1b, ucfp, dpthl);
-			// On Windows, we have to back up the whole file if
-			// ctime changed, otherwise things like permission
-			// changes do not get noticed. So, in that case, fall
-			// through to the changed stuff below.
-			// Non-Windows clients finish here.
-			else if(!cconf->client_is_windows)
-				return process_unchanged_file(cb, ucfp, cconf);
-		}
-
-		// Got a changed file.
-		//logp("got changed file: %s\n", p1b->path);
-
-		// If either old or new is encrypted, or librsync is off,
-		// we need to get a new file.
-		if(!cconf->librsync
-		  || cb->path.cmd==CMD_ENC_FILE
-		  || p1b->path.cmd==CMD_ENC_FILE
-		  || cb->path.cmd==CMD_ENC_METADATA
+	if(cb->statp.st_mtime==p1b->statp.st_mtime
+	  && cb->statp.st_ctime!=p1b->statp.st_ctime)
+	{
+		// File data stayed the same, but attributes or meta data
+		// changed. We already have the attributes, but may need to get
+		// extra meta data.
+		// FIX THIS horrible mess.
+		if(cb->path.cmd==CMD_ENC_METADATA
 		  || p1b->path.cmd==CMD_ENC_METADATA
-		  || cb->path.cmd==CMD_EFS_FILE
-		  || p1b->path.cmd==CMD_EFS_FILE
 		// TODO: make unencrypted metadata use the librsync
 		  || cb->path.cmd==CMD_METADATA
 		  || p1b->path.cmd==CMD_METADATA
@@ -291,52 +250,97 @@ static int maybe_process_file(struct asfd *asfd,
 		  || cb->path.cmd==CMD_VSS_T
 		  || p1b->path.cmd==CMD_VSS_T
 		  || cb->path.cmd==CMD_ENC_VSS_T
-		  || p1b->path.cmd==CMD_ENC_VSS_T)
-			return process_new_file(sdirs, cconf, cb, p1b, ucfp,
-				dpthl);
-
-		// Get new files if they have switched between compression on
-		// or off.
-		if(cb->burp1->datapth.buf
-		  && dpthl_is_compressed(cb->compression, cb->burp1->datapth.buf))
-			oldcompressed=1;
-		if( ( oldcompressed && !cconf->compression)
-		 || (!oldcompressed &&  cconf->compression))
-			return process_new_file(sdirs, cconf, cb, p1b, ucfp,
-				dpthl);
-
-		// Otherwise, do the delta stuff (if possible).
-		if(cmd_is_filedata(p1b->path.cmd))
-		{
-			if(process_changed_file(asfd, sdirs, cconf, cb, p1b,
-				sdirs->currentdata)) return -1;
-		}
-		else
-		{
-			if(changed_non_file(p1b, ucfp, p1b->path.cmd, cconf))
-				return -1;
-		}
-		sbuf_free_content(cb);
-		return 1;
+		  || p1b->path.cmd==CMD_ENC_VSS_T
+		  || cb->path.cmd==CMD_EFS_FILE
+		  || p1b->path.cmd==CMD_EFS_FILE)
+			return process_new_file(sdirs, cconf, cb,
+				p1b, ucfp, dpthl);
+		// On Windows, we have to back up the whole file if ctime
+		// changed, otherwise things like permission changes do not get
+		// noticed. So, in that case, fall through to the changed stuff
+		// below.
+		// Non-Windows clients finish here.
+		else if(!cconf->client_is_windows)
+			return process_unchanged_file(cb, ucfp, cconf);
 	}
-	else if(pcmp>0)
+
+	// Got a changed file.
+	//logp("got changed file: %s\n", p1b->path);
+
+	// If either old or new is encrypted, or librsync is off, we need to
+	// get a new file.
+	// FIX THIS horrible mess.
+	if(!cconf->librsync
+	  || cb->path.cmd==CMD_ENC_FILE
+	  || p1b->path.cmd==CMD_ENC_FILE
+	  || cb->path.cmd==CMD_ENC_METADATA
+	  || p1b->path.cmd==CMD_ENC_METADATA
+	  || cb->path.cmd==CMD_EFS_FILE
+	  || p1b->path.cmd==CMD_EFS_FILE
+	// TODO: make unencrypted metadata use the librsync
+	  || cb->path.cmd==CMD_METADATA
+	  || p1b->path.cmd==CMD_METADATA
+	  || cb->path.cmd==CMD_VSS
+	  || p1b->path.cmd==CMD_VSS
+	  || cb->path.cmd==CMD_ENC_VSS
+	  || p1b->path.cmd==CMD_ENC_VSS
+	  || cb->path.cmd==CMD_VSS_T
+	  || p1b->path.cmd==CMD_VSS_T
+	  || cb->path.cmd==CMD_ENC_VSS_T
+	  || p1b->path.cmd==CMD_ENC_VSS_T)
+		return process_new_file(sdirs, cconf, cb, p1b, ucfp,
+			dpthl);
+
+	// Get new files if they have switched between compression on or off.
+	if(cb->burp1->datapth.buf
+	  && dpthl_is_compressed(cb->compression, cb->burp1->datapth.buf))
+		oldcompressed=1;
+	if( ( oldcompressed && !cconf->compression)
+	 || (!oldcompressed &&  cconf->compression))
+		return process_new_file(sdirs, cconf, cb, p1b, ucfp,
+			dpthl);
+
+	// Otherwise, do the delta stuff (if possible).
+	if(cmd_is_filedata(p1b->path.cmd))
 	{
-		//logp("ahead: %s\n", p1b->path);
-		// ahead - need to get the whole file
-		if(process_new(sdirs, cconf, p1b, ucfp, dpthl)) return -1;
-		// do not free
-		return 1;
+		if(process_changed_file(asfd, sdirs, cconf, cb, p1b,
+			sdirs->currentdata)) return -1;
 	}
 	else
 	{
-		//logp("behind: %s\n", p1b->path);
-		// behind - need to read more from the old
-		// manifest
-		// Count a deleted file - it was in the old manifest but not
-		// the new.
-		cntr_add_deleted(cconf->cntr, cb->path.cmd);
+		if(changed_non_file(p1b, ucfp, p1b->path.cmd, cconf))
+			return -1;
 	}
-	return 0;
+	sbuf_free_content(cb);
+	return 1;
+}
+
+// return 1 to say that a file was processed
+static int maybe_process_file(struct asfd *asfd,
+	struct sdirs *sdirs, struct sbuf *cb, struct sbuf *p1b, FILE *ucfp,
+	struct dpthl *dpthl, struct conf *cconf)
+{
+	switch(sbuf_pathcmp(cb, p1b))
+	{
+		case 0:
+			return maybe_do_delta_stuff(asfd, sdirs, cb, p1b,
+				ucfp, dpthl, cconf);
+		case 1:
+			//logp("ahead: %s\n", p1b->path);
+			// ahead - need to get the whole file
+			if(process_new(sdirs, cconf, p1b, ucfp, dpthl))
+				return -1;
+			// Do not free.
+			return 1;
+		case -1:
+		default:
+			//logp("behind: %s\n", p1b->path);
+			// Behind - need to read more from the old manifest.
+			// Count a deleted file - it was in the old manifest
+			// but not the new.
+			cntr_add_deleted(cconf->cntr, cb->path.cmd);
+			return 0;
+	}
 }
 
 // Return 1 if there is still stuff needing to be sent.
@@ -509,6 +513,33 @@ static int deal_with_receive_append(struct asfd *asfd, struct sbuf *rb,
 	return -1;
 }
 
+static int deal_with_filedata(struct asfd *asfd,
+	struct sdirs *sdirs, struct sbuf *rb,
+	struct iobuf *rbuf, struct dpthl *dpthl, struct conf *cconf)
+{
+	iobuf_copy(&rb->path, rbuf);
+	rbuf->buf=NULL;
+
+	if(rb->burp1->datapth.buf)
+	{
+		// Receiving a delta.
+		if(start_to_receive_delta(sdirs, cconf, rb))
+		{
+			logp("error in start_to_receive_delta\n");
+			return -1;
+		}
+		return 0;
+	}
+
+	// Receiving a whole new file.
+	if(start_to_receive_new_file(asfd, sdirs, cconf, rb, dpthl))
+	{
+		logp("error in start_to_receive_new_file\n");
+		return -1;
+	}
+	return 0;
+}
+
 // returns 1 for finished ok.
 static int do_stuff_to_receive(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf *cconf,
@@ -530,110 +561,168 @@ static int do_stuff_to_receive(struct asfd *asfd,
 	{
 		logp("WARNING: %s\n", rbuf->buf);
 		cntr_add(cconf->cntr, rbuf->cmd, 0);
+		return 0;
 	}
-	else if(rb->burp1->fp || rb->burp1->zp)
+
+	if(rb->burp1->fp || rb->burp1->zp)
 	{
 		// Currently writing a file (or meta data)
-		if(rbuf->cmd==CMD_APPEND)
+		switch(rbuf->cmd)
 		{
-			if(deal_with_receive_append(asfd, rb, cconf))
+			case CMD_APPEND:
+				if(deal_with_receive_append(asfd, rb, cconf))
+					goto error;
+				return 0;
+			case CMD_END_FILE:
+				if(deal_with_receive_end_file(asfd, sdirs, rb,
+					p2fp, cconf, last_requested))
+						goto error;
+				return 0;
+			default:
+				iobuf_log_unexpected(rbuf, __func__);
 				goto error;
 		}
-		else if(rbuf->cmd==CMD_END_FILE)
-		{
-			if(deal_with_receive_end_file(asfd, sdirs, rb, p2fp,
-				cconf, last_requested)) goto error;
-		}
-		else
-		{
+	}
+
+	// Otherwise, expecting to be told of a file to save.
+	switch(rbuf->cmd)
+	{
+		case CMD_DATAPTH:
+			iobuf_copy(&rb->burp1->datapth, rbuf);
+			rbuf->buf=NULL;
+			return 0;
+		case CMD_ATTRIBS:
+			iobuf_copy(&rb->attr, rbuf);
+			rbuf->buf=NULL;
+			return 0;
+		case CMD_GEN:
+			if(!strcmp(rbuf->buf, "okbackupphase2end"))
+				goto end_phase2;
 			iobuf_log_unexpected(rbuf, __func__);
 			goto error;
-		}
+		case CMD_INTERRUPT:
+			// Interrupt - forget about the last requested
+			// file if it matches. Otherwise, we can get
+			// stuck on the select in the async stuff,
+			// waiting for something that will never arrive.
+			if(*last_requested
+			  && !strcmp(rbuf->buf, *last_requested))
+				free_w(last_requested);
+			return 0;
 	}
-	// Otherwise, expecting to be told of a file to save.
-	else if(rbuf->cmd==CMD_DATAPTH)
+	if(cmd_is_filedata(rbuf->cmd))
 	{
-		iobuf_copy(&rb->burp1->datapth, rbuf);
-		rbuf->buf=NULL;
+		if(deal_with_filedata(asfd, sdirs, rb, rbuf, dpthl, cconf))
+			goto error;
+		return 0;
 	}
-	else if(rbuf->cmd==CMD_ATTRIBS)
-	{
-		iobuf_copy(&rb->attr, rbuf);
-		rbuf->buf=NULL;
-	}
-	else if(cmd_is_filedata(rbuf->cmd))
-	{
-		iobuf_copy(&rb->path, rbuf);
-		rbuf->buf=NULL;
+	iobuf_log_unexpected(rbuf, __func__);
 
-		if(rb->burp1->datapth.buf)
-		{
-			// Receiving a delta.
-			if(start_to_receive_delta(sdirs, cconf, rb))
-			{
-				logp("error in start_to_receive_delta\n");
-				goto error;
-			}
-		}
-		else
-		{
-			// Receiving a whole new file.
-			if(start_to_receive_new_file(asfd,
-				sdirs, cconf, rb, dpthl))
-			{
-				logp("error in start_to_receive_new_file\n");
-				goto error;
-			}
-		}
-	}
-	else if(rbuf->cmd==CMD_GEN
-	  && !strcmp(rbuf->buf, "okbackupphase2end"))
-		goto end_phase2;
-	else if(rbuf->cmd==CMD_INTERRUPT)
+error:
+	return -1;
+end_phase2:
+	return 1;
+}
+
+static int vss_opts_changed(struct sdirs *sdirs, struct conf *cconf,
+	const char *incexc)
+{
+	int ret=0;
+	struct conf oldconf;
+	struct conf newconf;
+	conf_init(&oldconf);
+	conf_init(&newconf);
+
+	// Figure out the old config, which is in the incexc file left
+	// in the current backup directory on the server.
+	if(parse_incexcs_path(&oldconf, sdirs->cincexc))
 	{
-		// Interrupt - forget about the last requested file
-		// if it matches. Otherwise, we can get stuck on the
-		// select in the async stuff, waiting for something
-		// that will never arrive.
-		if(*last_requested && !strcmp(rbuf->buf, *last_requested))
+		// Assume that the file did not exist, and therefore
+		// the old split_vss setting is 0.
+		oldconf.split_vss=0;
+		oldconf.strip_vss=0;
+	}
+
+	// Figure out the new config, which is either in the incexc file from
+	// the client, or in the cconf on the server.
+	if(incexc)
+	{
+		if(parse_incexcs_buf(&newconf, incexc))
 		{
-			free(*last_requested);
-			*last_requested=NULL;
+			// Should probably not got here.
+			newconf.split_vss=0;
+			newconf.strip_vss=0;
 		}
 	}
 	else
 	{
-		iobuf_log_unexpected(rbuf, __func__);
-		goto error;
+		newconf.split_vss=cconf->split_vss;
+		newconf.strip_vss=cconf->strip_vss;
 	}
 
-	return 0;
-end_phase2:
-	return 1;
-error:
-	return -1;
+	if(newconf.split_vss!=oldconf.split_vss)
+	{
+		logp("split_vss=%d (changed since last backup)\n",
+			newconf.split_vss);
+		ret=1;
+	}
+	if(newconf.strip_vss!=oldconf.strip_vss)
+	{
+		logp("strip_vss=%d (changed since last backup)\n",
+			newconf.strip_vss);
+		ret=1;
+	}
+	if(ret) logp("All files will be treated as new\n");
+	return ret;
 }
 
-int backup_phase2_server(struct asfd *asfd,
-	struct sdirs *sdirs, struct conf *cconf,
-	gzFile *cmanfp, struct dpthl *dpthl, int resume)
+// Open the previous (current) manifest.
+// If the split_vss setting changed between the previous backup and the new
+// backup, do not open the previous manifest. This will have the effect of
+// making the client back up everything fresh. Need to do this, otherwise
+// toggling split_vss on and off will result in backups that do not work.
+static int open_previous_manifest(gzFile *cmanfp,
+	struct sdirs *sdirs, const char *incexc, struct conf *cconf)
 {
-	int ars=0;
+	struct stat statp;
+	if(!lstat(sdirs->cmanifest, &statp)
+	  && !vss_opts_changed(sdirs, cconf, incexc)
+	  && !(*cmanfp=gzopen_file(sdirs->cmanifest, "rb")))
+	{
+		logp("could not open old manifest %s\n", sdirs->cmanifest);
+		return -1;
+	}
+	return 0;
+}
+
+int backup_phase2_server(struct asfd *asfd, struct sdirs *sdirs,
+	const char *incexc, int resume, struct conf *cconf)
+{
 	int ret=0;
 	gzFile p1zp=NULL;
+	struct dpthl dpthl;
 	char *deltmppath=NULL;
 	char *last_requested=NULL;
 	// Where to write phase2data.
 	// Data is not getting written to a compressed file.
 	// This is important for recovery if the power goes.
 	FILE *p2fp=NULL;
-	// unchanged data
-	FILE *ucfp=NULL;
-
+	FILE *ucfp=NULL; // unchanged data
+	gzFile cmanfp=NULL; // previous (current) manifest.
 	struct sbuf *cb=NULL; // file list in current manifest
 	struct sbuf *p1b=NULL; // file list from client
-
 	struct sbuf *rb=NULL; // receiving file from client
+
+	logp("Begin phase2 (receive file data)\n");
+
+	if(init_dpthl(&dpthl, asfd, sdirs, cconf))
+	{
+		logp("could not init_dpthl\n");
+		goto error;
+	}
+
+	if(open_previous_manifest(&cmanfp, sdirs, incexc, cconf))
+		goto error;
 
 	if(!(cb=sbuf_alloc(cconf))
 	  || !(p1b=sbuf_alloc(cconf))
@@ -643,8 +732,8 @@ int backup_phase2_server(struct asfd *asfd,
 	if(!(p1zp=gzopen_file(sdirs->phase1data, "rb")))
 		goto error;
 
-	// Open in read+write mode, so that they can be read through if
-	// we need to resume.
+	// Open in read+write mode, so that they can be read through if we need
+	// to resume.
 	// First, open them in a+ mode, so that they will be created if they
 	// do not exist.
 	if(!(ucfp=open_file(sdirs->unchangeddata, "a+b"))
@@ -656,14 +745,11 @@ int backup_phase2_server(struct asfd *asfd,
 	  || !(p2fp=open_file(sdirs->phase2data, "r+b")))
 		goto error;
 
-	if(resume && do_resume(p1zp, p2fp, ucfp, dpthl, cconf))
+	if(resume && do_resume(p1zp, p2fp, ucfp, &dpthl, cconf))
 		goto error;
-
-	logp("Begin phase2 (receive file data)\n");
 
 	while(1)
 	{
-		int sts=0;
 		//printf("in loop, %s %s %c\n",
 		//	*cmanfp?"got cmanfp":"no cmanfp",
 		//	rb->path.buf?:"no rb->path",
@@ -671,88 +757,80 @@ int backup_phase2_server(struct asfd *asfd,
 		if(write_status(STATUS_BACKUP,
 			rb->path.buf?rb->path.buf:p1b->path.buf, cconf))
 				goto error;
-		if((last_requested || !p1zp || asfd->writebuflen)
-		  && (ars=do_stuff_to_receive(asfd, sdirs,
-			cconf, rb, p2fp, dpthl, &last_requested)))
+		if(last_requested || !p1zp || asfd->writebuflen)
 		{
-			if(ars<0) goto error;
-			// 1 means ok.
+			switch(do_stuff_to_receive(asfd, sdirs,
+				cconf, rb, p2fp, &dpthl, &last_requested))
+			{
+				case 0: break;
+				case 1: goto end; // Finished ok.
+				case -1: goto error;
+			}
+		}
+
+		switch(do_stuff_to_send(asfd, p1b, &last_requested))
+		{
+			case 0: break;
+			case 1: continue;
+			case -1: goto error;
+		}
+
+		if(!p1zp) continue;
+
+		sbuf_free_content(p1b);
+
+		switch(sbufl_fill_phase1(p1b, NULL, p1zp, cconf->cntr))
+		{
+			case 0: break;
+			case 1: gzclose_fp(&p1zp);
+				if(asfd->write_str(asfd,
+					CMD_GEN, "backupphase2end")) goto error;
+				break;
+			case -1: goto error;
+		}
+
+		if(!cmanfp)
+		{
+			// No old manifest, need to ask for a new file.
+			if(process_new(sdirs, cconf, p1b, ucfp, &dpthl))
+				goto error;
+			continue;
+		}
+
+		// Have an old manifest, look for it there.
+
+		// Might already have it, or be ahead in the old
+		// manifest.
+		if(cb->path.buf) switch(maybe_process_file(asfd,
+			sdirs, cb, p1b, ucfp, &dpthl, cconf))
+		{
+			case 0: break;
+			case 1: continue;
+			case -1: goto error;
+		}
+
+		while(cmanfp)
+		{
+			sbuf_free_content(cb);
+			switch(sbufl_fill(cb, asfd, NULL, cmanfp, cconf->cntr))
+			{
+				case 0: break;
+				case 1: gzclose_fp(&cmanfp);
+					if(process_new(sdirs, cconf, p1b,
+						ucfp, &dpthl)) goto error;
+					continue;
+				case -1: goto error;
+			}
+			switch(maybe_process_file(asfd, sdirs,
+				cb, p1b, ucfp, &dpthl, cconf))
+			{
+				case 0: continue;
+				case 1: break;
+				case -1: goto error;
+			}
 			break;
 		}
-
-		if((sts=do_stuff_to_send(asfd, p1b, &last_requested))<0)
-			goto error;
-
-		if(!sts && p1zp)
-		{
-		   sbuf_free_content(p1b);
-
-		   if((ars=sbufl_fill_phase1(p1b, NULL, p1zp, cconf->cntr)))
-		   {
-			if(ars<0) goto error;
-			// ars==1 means it ended ok.
-			gzclose_fp(&p1zp);
-			//logp("ended OK - write phase2end");
-			if(asfd->write_str(asfd, CMD_GEN, "backupphase2end"))
-				goto error;
-		   }
-
-		   //logp("check: %s\n", p1b.path);
-
-		   if(!*cmanfp)
-		   {
-			// No old manifest, need to ask for a new file.
-			//logp("no cmanfp\n");
-			if(process_new(sdirs, cconf, p1b, ucfp, dpthl))
-				goto error;
-		   }
-		   else
-		   {
-			// Have an old manifest, look for it there.
-
-			// Might already have it, or be ahead in the old
-			// manifest.
-			if(cb->path.buf)
-			{
-				if((ars=maybe_process_file(asfd, sdirs, cconf,
-					cb, p1b, ucfp, dpthl)))
-				{
-					if(ars<0) goto error;
-					// Do not free it - need to send stuff.
-					continue;
-				}
-				//free_sbufl(&p1b);
-			}
-
-			while(*cmanfp)
-			{
-				sbuf_free_content(cb);
-				if((ars=sbufl_fill(cb, asfd, NULL,
-					*cmanfp, cconf->cntr)))
-				{
-					// ars==1 means it ended ok.
-					if(ars<0) goto error;
-					gzclose_fp(cmanfp);
-		//logp("ran out of current manifest\n");
-					if(process_new(sdirs, cconf,
-						p1b, ucfp, dpthl))
-							goto error;
-					break;
-				}
-		//logp("against: %s\n", cb.path);
-				if((ars=maybe_process_file(asfd, sdirs, cconf,
-					cb, p1b, ucfp, dpthl)))
-				{
-					if(ars<0) goto error;
-					// Do not free it - need to send stuff.
-					break;
-				}
-			}
-		   }
-		}
 	}
-
-	goto end;
 
 error:
 	ret=-1;
@@ -774,6 +852,7 @@ end:
 	sbuf_free(&p1b);
 	sbuf_free(&rb);
 	gzclose_fp(&p1zp);
+	gzclose_fp(&cmanfp);
 	if(!ret) unlink(sdirs->phase1data);
 
 	logp("End phase2 (receive file data)\n");

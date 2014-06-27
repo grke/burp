@@ -57,36 +57,6 @@ int open_log(struct asfd *asfd, const char *realworking, struct conf *cconf)
 	return 0;
 }
 
-// Clean mess left over from a previously interrupted backup.
-static int clean_rubble(struct asfd *asfd, struct sdirs *sdirs)
-{
-	ssize_t len=0;
-	char *real=NULL;
-	char lnk[32]="";
-	if((len=readlink(sdirs->working, lnk, sizeof(lnk)-1))<0)
-		return 0;
-	else if(!len)
-	{
-		unlink(sdirs->working);
-		return 0;
-	}
-	lnk[len]='\0';
-	if(!(real=prepend_s(sdirs->client, lnk)))
-	{
-		log_and_send_oom(asfd, __func__);
-		return -1;
-	}
-	if(recursive_delete(real, "", 1))
-	{
-		char msg[256]="";
-		snprintf(msg, sizeof(msg), "Could not remove interrupted directory: %s", real);
-		log_and_send(asfd, msg);
-		return -1;
-	}
-	unlink(sdirs->working);
-	return 0;
-}
-
 static struct asfd *setup_champ_chooser(struct async *as,
 	struct sdirs *sdirs, struct conf *conf)
 {
@@ -151,8 +121,6 @@ int do_backup_server_burp2(struct async *as, struct sdirs *sdirs,
 		log_and_send_oom(asfd, __func__);
 		goto error;
 	}
-
-	if(clean_rubble(asfd, sdirs)) goto error;
 
 	// Add the working symlink before creating the directory.
 	// This is because bedup checks the working symlink before

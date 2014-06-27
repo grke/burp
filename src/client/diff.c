@@ -44,7 +44,7 @@ static char *encode_time(uint64_t utime, char *buf)
 	return buf+n;
 }
 
-void ls_to_buf(char *lsbuf, struct sbuf *sb)
+static void diff_to_buf(char *lsbuf, struct sbuf *sb)
 {
 	int n;
 	char *p;
@@ -71,10 +71,10 @@ void ls_to_buf(char *lsbuf, struct sbuf *sb)
 	*p=0;
 }
 
-static void ls_long_output(struct sbuf *sb)
+static void diff_long_output(struct sbuf *sb)
 {
 	static char lsbuf[2048];
-	ls_to_buf(lsbuf, sb);
+	diff_to_buf(lsbuf, sb);
 	printf("%s", lsbuf);
 	if(sb->link.buf) printf(" -> %s", sb->link.buf);
 	printf("\n");
@@ -153,7 +153,7 @@ static void open_tag(int level, const char *tag)
 	}
 }
 
-static void ls_long_output_json(struct sbuf *sb)
+static void diff_long_output_json(struct sbuf *sb)
 {
 	static char buf[2048];
 	char *esc_fname=NULL;
@@ -220,32 +220,32 @@ static void json_backup(char *statbuf, struct conf *conf)
 	}
 }
 
-static void ls_short_output(struct sbuf *sb)
+static void diff_short_output(struct sbuf *sb)
 {
 	printf("%s\n", sb->path.buf);
 }
 
-static void ls_short_output_json(struct sbuf *sb)
+static void diff_short_output_json(struct sbuf *sb)
 {
 	open_tag(4, NULL);
 	printf("     \"%s\"", sb->path.buf);
 }
 
-static void list_item(int json, enum action act, struct sbuf *sb)
+static void diff_item(int json, enum action act, struct sbuf *sb)
 {
 	if(act==ACTION_LIST_LONG)
 	{
-		if(json) ls_long_output_json(sb);
-		else ls_long_output(sb);
+		if(json) diff_long_output_json(sb);
+		else diff_long_output(sb);
 	}
 	else
 	{
-		if(json) ls_short_output_json(sb);
-		else ls_short_output(sb);
+		if(json) diff_short_output_json(sb);
+		else diff_short_output(sb);
 	}
 }
 
-int do_list_client(struct asfd *asfd,
+int do_diff_client(struct asfd *asfd,
 	enum action act, int json, struct conf *conf)
 {
 	int ret=-1;
@@ -254,14 +254,9 @@ int do_list_client(struct asfd *asfd,
 	struct sbuf *sb=NULL;
 	int json_started=0;
 	struct iobuf *rbuf=asfd->rbuf;
-//logp("in do_list\n");
+//logp("in do_diff\n");
 
-	if(conf->browsedir)
-	  snprintf(msg, sizeof(msg), "listb %s:%s",
-		conf->backup?conf->backup:"", conf->browsedir);
-	else
-	  snprintf(msg, sizeof(msg), "list %s:%s",
-		conf->backup?conf->backup:"", conf->regex?conf->regex:"");
+	snprintf(msg, sizeof(msg), "diff %s", conf->backup?conf->backup:"");
 	if(asfd->write_str(asfd, CMD_GEN, msg)
 	  || asfd->read_expect(asfd, CMD_GEN, "ok"))
 		goto end;
@@ -325,7 +320,7 @@ int do_list_client(struct asfd *asfd,
 			|| sb->path.cmd==CMD_EFS_FILE
 			|| sb->path.cmd==CMD_SPECIAL)
 		{
-			list_item(json, act, sb);
+			diff_item(json, act, sb);
 		}
 		else if(cmd_is_link(sb->path.cmd)) // symlink or hardlink
 		{
@@ -338,11 +333,11 @@ int do_list_client(struct asfd *asfd,
 			}
 			iobuf_copy(&sb->link, rbuf);
 			iobuf_init(rbuf);
-			list_item(json, act, sb);
+			diff_item(json, act, sb);
 		}
 		else
 		{
-			fprintf(stderr, "unlistable %c:%s\n",
+			fprintf(stderr, "undiffable %c:%s\n",
 				sb->path.cmd, sb->path.buf?sb->path.buf:"");
 		}
 	}

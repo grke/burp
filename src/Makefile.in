@@ -52,6 +52,7 @@ OBJS = $(SRCS:.c=.o)
 SUBDIROBJS = \
 		burp1/handy.o \
 		burp1/msg.o \
+		burp2/slist.o \
 		server/burp1/restore.o \
 		server/backup_phase1.o \
 		server/server.a \

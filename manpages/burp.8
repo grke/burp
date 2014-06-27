@@ -62,8 +62,8 @@ Show a particular path in a backup (requires \-C and \-b).
 
 .SH CLIENT OPTIONS
 .TP
-\fB\-a\fR \fB[b|t|r|l|L|v|D|e|T]\fR
-Short for 'action'. The arguments mean backup, timed backup, restore, list, long list, verify, delete, estimate, or timer check respectively.
+\fB\-a\fR \fB[b|t|r|l|L|v|delete|e|T|d|D]\fR
+Short for 'action'. The arguments mean backup, timed backup, restore, list, long list, verify, delete, estimate, timer check, diff, or long diff, respectively.
 .TP
 \fB\-b\fR \fB[number|a]\fR
 Short for 'backup number'. The argument is a number, or 'a' to select all
@@ -137,7 +137,7 @@ Verifies the most recent backup.
 \fBburp \-a v \-b 1 \-r myregex\fR
 Verifies everything in backup number 1 that matches the regular expression 'myregex'.
 .TP
-\fBburp \-a D \-b 1\fR
+\fBburp \-a delete \-b 1\fR
 Deletes backup number 1. Note that burp will not delete backup directories that other backup directories depend upon.
 .TP
 \fBburp \-a t\fR
@@ -148,6 +148,18 @@ Long list the top level directory of backup 1.
 .TP
 \fBburp \-a L \-b 1 \-d '/home/graham'\fR
 Long list the /home/graham directory of backup 1. These '\-d' versions of the list function provide the ability to 'browse' backups.
+.TP
+\fBburp \-a d\fR
+Report the differences between the current backup and the backup that will be made next.
+.TP
+\fBburp \-a D\fR
+A more verbose report of the differences between the current backup and the backup that will be made next.
+.TP
+\fBburp \-a d \-b 1 \-b 2\fR
+Report the differences between backups 1 and 2 (use \-a D for more verbosity).
+.TP
+\fBburp \-a d \-b 2 \-b n\fR
+Report the differences between backup 1 and the backup that will be made next (use \-a D for more verbosity).
 .TP
 \fBburp \-C altclient \-a L\fR
 Long list the top level directory of backup 1 on client 'altclient'.
@@ -255,7 +267,11 @@ on the server. Options are...
 \fBresume:\fR Simply continue the previous backup from the point at which it left off. NOTE: If the client has changed its include/exclude configuration since the backup was interrupted, the recovery method will automatically switch to 'use'.
 .TP
 \fBclient_can_delete=[0|1]\fR
-Turn this off to prevent clients from deleting backups with the '\-a D' option. The default is that clients can delete backups.
+Turn this off to prevent clients from deleting backups with the '\-a delete' option. The default is that clients can delete backups.
+.TP
+\fBclient_can_diff=[0|1]\fR
+Turn this off to prevent clients from diffing backups with the '\-a d' option. The default is that clients can diff backups.
+.TP
 .TP
 \fBclient_can_force_backup=[0|1]\fR
 Turn this off to prevent clients from forcing backups with the '\-a b' option. Timed backups will still work. The default is that clients can force backups.

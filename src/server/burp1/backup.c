@@ -90,9 +90,8 @@ static int vss_opts_changed(struct sdirs *sdirs, struct conf *cconf,
 	return ret;
 }
 
-int do_backup_server_burp1(struct async *as,
-	struct sdirs *sdirs, struct conf *cconf,
-	const char *incexc, int resume)
+int do_backup_server_burp1(struct async *as, struct sdirs *sdirs,
+	struct conf *cconf, const char *incexc, int resume)
 {
 	int ret=0;
 	char msg[256]="";

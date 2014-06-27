@@ -21,6 +21,7 @@ SRCS = \
 	ca.c \
 	cvss.c \
 	delete.c \
+	diff.c \
 	extra_comms.c \
 	extrameta.c \
 	find.c \

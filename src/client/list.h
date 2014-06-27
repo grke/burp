@@ -3,6 +3,6 @@
 
 extern void ls_output(char *buf, const char *fname, struct stat *statp);
 extern int do_list_client(struct asfd *asfd,
-	struct conf *conf, enum action act, int json);
+	enum action act, int json, struct conf *conf);
 
 #endif

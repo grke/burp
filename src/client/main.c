@@ -78,8 +78,9 @@ timer_not_met:
 
 static enum cliret backup_wrapper(struct asfd *asfd,
 	enum action action, const char *phase1str,
-	const char *incexc, int resume, long name_max, struct conf *conf)
+	const char *incexc, long name_max, struct conf *conf)
 {
+	int resume=0;
 	enum cliret ret=CLIENT_OK;
 
 	// Set bulk packets quality of service flags on backup.
@@ -132,8 +133,7 @@ static enum cliret backup_wrapper(struct asfd *asfd,
 		const char *args[12];
 		args[a++]=conf->b_script_post;
 		args[a++]="post";
-		// Tell post script whether the restore
-		// failed.
+		// Tell post script whether the restore failed.
 		args[a++]=ret?"1":"0";
 		args[a++]="reserved3";
 		args[a++]="reserved4";
@@ -307,7 +307,6 @@ static enum cliret do_client(struct conf *conf,
 {
 	enum cliret ret=CLIENT_OK;
 	int rfd=-1;
-	int resume=0;
 	SSL *ssl=NULL;
 	SSL_CTX *ctx=NULL;
 	struct cntr *cntr=NULL;
@@ -352,15 +351,15 @@ static enum cliret do_client(struct conf *conf,
 	{
 		case ACTION_BACKUP:
 			ret=backup_wrapper(asfd, act, "backupphase1",
-			  incexc, resume, name_max, conf);
+			  incexc, name_max, conf);
 			break;
 		case ACTION_BACKUP_TIMED:
 			ret=backup_wrapper(asfd, act, "backupphase1timed",
-			  incexc, resume, name_max, conf);
+			  incexc, name_max, conf);
 			break;
 		case ACTION_TIMER_CHECK:
 			ret=backup_wrapper(asfd, act, "backupphase1timedcheck",
-			  incexc, resume, name_max, conf);
+			  incexc, name_max, conf);
 			break;
 		case ACTION_RESTORE:
 		case ACTION_VERIFY:
@@ -373,10 +372,22 @@ static enum cliret do_client(struct conf *conf,
 		case ACTION_DELETE:
 			if(do_delete_client(asfd, conf)) goto error;
 			break;
+		case ACTION_DIFF:
+		case ACTION_DIFF_LONG:
+			if(!strcmp(conf->backup2, "n"))
+				// Do a phase1 scan and diff that.
+				ret=backup_wrapper(asfd, act,
+					"backupphase1diff",
+					incexc, name_max, conf);
+			else
+				// Diff two backups that already exist.
+				if(do_diff_client(asfd, act, json, conf))
+					goto error;
+			break;
 		case ACTION_LIST:
-		case ACTION_LONG_LIST:
+		case ACTION_LIST_LONG:
 		default:
-			if(do_list_client(asfd, conf, act, json)) goto error;
+			if(do_list_client(asfd, act, json, conf)) goto error;
 			break;
 	}
 

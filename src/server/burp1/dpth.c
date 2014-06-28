@@ -5,11 +5,11 @@
 
 void mk_dpthl(struct dpthl *dpthl, struct conf *cconf, char cmd)
 {
-	// file data
+	// File data.
 	snprintf(dpthl->path, sizeof(dpthl->path), "%04X/%04X/%04X%s",
-	  dpthl->prim, dpthl->seco, dpthl->tert,
-	  /* Because of the way EFS works, it cannot be compressed. */
-	  (cconf->compression && cmd!=CMD_EFS_FILE)?".gz":"");
+		dpthl->prim, dpthl->seco, dpthl->tert,
+		// Because of the way EFS works, it cannot be compressed.
+		(cconf->compression && cmd!=CMD_EFS_FILE)?".gz":"");
 }
 
 static void mk_dpthl_prim(struct dpthl *dpthl)
@@ -36,7 +36,7 @@ static int get_highest_entry(const char *path)
 		if(dp->d_ino==0
 		  || !strcmp(dp->d_name, ".")
 		  || !strcmp(dp->d_name, ".."))
-		continue;
+			continue;
 		ent=strtol(dp->d_name, NULL, 16);
 		if(ent>max) max=ent;
 	}
@@ -44,59 +44,54 @@ static int get_highest_entry(const char *path)
 	return max;
 }
 
-int init_dpthl(struct dpthl *dpthl, struct asfd *asfd,
-	struct sdirs *sdirs, struct conf *cconf)
+// -1 for error.
+// 1 if the directory did not exist yet.
+// 0 to continue processing the components.
+static int get_next_comp(const char *currentdata, const char *path, int *comp)
 {
 	char *tmp=NULL;
-	//logp("in init_dpthl\n");
-	dpthl->looped=0;
+	if(path) tmp=prepend_s(currentdata, path);
+	else tmp=strdup_w(currentdata, __func__);
+	if(!tmp) return -1;
+	if((*comp=get_highest_entry(tmp))<0)
+	{
+		// Could not open directory. Set zero.
+		*comp=0;
+		free_w(&tmp);
+		return 1;
+	}
+	free_w(&tmp);
+	return 0;
+}
+
+int init_dpthl(struct dpthl *dpthl, struct sdirs *sdirs, struct conf *cconf)
+{
+	int ret=0;
 	dpthl->prim=0;
 	dpthl->seco=0;
 	dpthl->tert=0;
 
-	if((dpthl->prim=get_highest_entry(sdirs->currentdata))<0)
-	{
-		// Could not open directory. Set all zeros.
-		dpthl->prim=0;
-//		mk_dpthl(dpthl, cconf);
-		return 0;
-	}
+	if((ret=get_next_comp(sdirs->currentdata, dpthl->path, &dpthl->prim)))
+		goto end;
+
 	mk_dpthl_prim(dpthl);
-	if(!(tmp=prepend_s(sdirs->currentdata, dpthl->path)))
-	{
-		log_and_send_oom(asfd, __func__);
-		return -1;
-	}
-	if((dpthl->seco=get_highest_entry(tmp))<0)
-	{
-		// Could not open directory. Set zero.
-		dpthl->seco=0;
-//		mk_dpthl(dpthl, cconf);
-		free(tmp);
-		return 0;
-	}
-	free(tmp);
+	if((ret=get_next_comp(sdirs->currentdata, dpthl->path, &dpthl->seco)))
+		goto end;
+
 	mk_dpthl_seco(dpthl);
-	if(!(tmp=prepend_s(sdirs->currentdata, dpthl->path)))
-	{
-		log_and_send_oom(asfd, __func__);
-		return -1;
-	}
-	if((dpthl->tert=get_highest_entry(tmp))<0)
-	{
-		// Could not open directory. Set zero.
-		dpthl->tert=0;
-//		mk_dpthl(dpthl, cconf);
-		free(tmp);
-		return 0;
-	}
+	if((ret=get_next_comp(sdirs->currentdata, dpthl->path, &dpthl->tert)))
+		goto end;
+
 	// At this point, we have the latest data file. Increment to get the
 	// next free one.
-	if(incr_dpthl(dpthl, cconf)) return -1;
+	ret=incr_dpthl(dpthl, cconf);
 
-	//logp("init_dpthl: %d/%d/%d\n", dpthl->prim, dpthl->seco, dpthl->tert);
-	//logp("init_dpthl: %s\n", dpthl->path);
-	return 0;
+end:
+	switch(ret)
+	{
+		case -1: return -1;
+		default: return 0;
+	}
 }
 
 // Three levels with 65535 entries each gives
@@ -105,34 +100,23 @@ int init_dpthl(struct dpthl *dpthl, struct asfd *asfd,
 // Hmm, but ext3 only allows 32000 subdirs, although that many files are OK.
 int incr_dpthl(struct dpthl *dpthl, struct conf *cconf)
 {
-	if(dpthl->tert++>=0xFFFF)
-	{
-		dpthl->tert=0;
-		if(dpthl->seco++>=cconf->max_storage_subdirs)
-		{
-			dpthl->seco=0;
-			if(dpthl->prim++>=cconf->max_storage_subdirs)
-			{
-				dpthl->prim=0;
-				// Start again from zero, so make sure that
-				// the initial open of a data file is in an
-				// incrementing loop with O_CREAT|O_EXCL.
-				if(++(dpthl->looped)>1)
-				{
-					logp("Could not find any free data file entries out of the 15000*%d*%d available!\n", cconf->max_storage_subdirs, cconf->max_storage_subdirs);
-					logp("Recommend moving the client storage directory aside and starting again.\n");
-					return -1;
-				}
-			}
-		}
-	}
-	//printf("before incr_dpthl: %s %04X/%04X/%04X\n", dpthl->path, dpthl->prim, dpthl->seco, dpthl->tert);
-//	mk_dpthl(dpthl, cconf);
-	//printf("after incr_dpthl: %s\n", dpthl->path);
-	return 0;
+	if(dpthl->tert++<0xFFFF) return 0;
+	dpthl->tert=0;
+
+	if(dpthl->seco++<cconf->max_storage_subdirs) return 0;
+	dpthl->seco=0;
+
+	if(dpthl->prim++<cconf->max_storage_subdirs) return 0;
+	dpthl->prim=0;
+
+	logp("No free data file entries out of the 15000*%d*%d available!\n",
+		cconf->max_storage_subdirs, cconf->max_storage_subdirs);
+	logp("Recommend moving the client storage directory aside and starting again.\n");
+	return -1;
 }
 
-int set_dpthl_from_string(struct dpthl *dpthl, const char *datapath, struct conf *cconf)
+int set_dpthl_from_string(struct dpthl *dpthl,
+	const char *datapath, struct conf *cconf)
 {
 	unsigned int a=0;
 	unsigned int b=0;
@@ -145,7 +129,7 @@ int set_dpthl_from_string(struct dpthl *dpthl, const char *datapath, struct conf
 	if((sscanf(datapath, "%04X/%04X/%04X", &a, &b, &c))!=3)
 		return -1;
 
-	/* only set it if it is a higher one */
+	// Only set it if it is a higher one.
 	if(dpthl->prim > (int)a
 	  || dpthl->seco > (int)b
 	  || dpthl->tert > (int)c) return 0;
@@ -153,6 +137,5 @@ int set_dpthl_from_string(struct dpthl *dpthl, const char *datapath, struct conf
 	dpthl->prim=a;
 	dpthl->seco=b;
 	dpthl->tert=c;
-//	mk_dpthl(dpthl, cconf);
 	return 0;
 }

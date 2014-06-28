@@ -39,7 +39,7 @@ int deleteme_move(const char *basedir, const char *fullpath, const char *path,
 	{
 		if(lstat(dest, &statp)) break;
 		snprintf(suffix, sizeof(suffix), ".%d", ++attempts);
-		if(dest) free(dest);
+		free_w(&dest);
 		if(!(dest=prepend(tmp, suffix, strlen(suffix), "")))
 			goto end;
 		if(attempts>=10) break; // Give up.
@@ -50,8 +50,8 @@ int deleteme_move(const char *basedir, const char *fullpath, const char *path,
 	ret=do_rename(fullpath, dest);
 
 end:
-	if(dest) free(dest);
-	if(tmp) free(tmp);
+	free_w(&dest);
+	free_w(&tmp);
 	return ret;
 }
 

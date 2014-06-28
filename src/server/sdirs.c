@@ -32,6 +32,67 @@ end:
 	return ret;
 }
 
+static int free_prepend_s(char **dst, const char *a, const char *b)
+{
+	free_w(dst);
+	return !(*dst=prepend_s(a, b));
+}
+
+int sdirs_get_real_manifest(struct sdirs *sdirs, struct conf *conf)
+{
+	return free_prepend_s(&sdirs->rmanifest,
+		sdirs->rworking,
+		conf->protocol==PROTO_BURP1?"manifest.gz":"manifest");
+}
+
+int sdirs_get_real_working_from_symlink(struct sdirs *sdirs, struct conf *conf)
+{
+	ssize_t len=0;
+	char real[256]="";
+	if((len=readlink(sdirs->working, real, sizeof(real)-1))<0)
+	{
+		logp("Could not readlink %s: %s\n",
+			sdirs->working, strerror(errno));
+		return -1;
+	}
+	real[len]='\0';
+	return free_prepend_s(&sdirs->rworking, sdirs->client, real);
+}
+
+int sdirs_create_real_working(struct sdirs *sdirs, struct conf *conf)
+{
+	char tstmp[64]="";
+
+	if(timestamp_get_new(sdirs, tstmp, sizeof(tstmp), conf)
+	  || free_prepend_s(&sdirs->rworking, sdirs->client, tstmp))
+		return -1;
+
+	// Add the working symlink before creating the directory.
+	// This is because bedup checks the working symlink before
+	// going into a directory. If the directory got created first,
+	// bedup might go into it in the moment before the symlink
+	// gets added.
+	if(symlink(tstmp, sdirs->working)) // relative link to the real work dir
+	{
+		logp("could not point working symlink to: %s\n",
+			sdirs->rworking);
+		return -1;
+	}
+	if(mkdir(sdirs->rworking, 0777))
+	{
+		logp("could not mkdir for next backup: %s\n", sdirs->rworking);
+		unlink(sdirs->working);
+		return -1;
+	}
+	if(timestamp_write(sdirs->timestamp, tstmp))
+	{
+		logp("unable to write timestamp %s\n", sdirs->timestamp);
+		return -1;
+	}
+
+	return 0;
+}
+
 // Maybe should be in a burp1 directory.
 static int do_burp1_dirs(struct sdirs *sdirs, struct conf *conf)
 {
@@ -42,8 +103,6 @@ static int do_burp1_dirs(struct sdirs *sdirs, struct conf *conf)
 	  || !(sdirs->currentdata=prepend_s(sdirs->current, "data"))
 	  || !(sdirs->timestamp=prepend_s(sdirs->working, "timestamp"))
 	  || !(sdirs->manifest=prepend_s(sdirs->working, "manifest.gz"))
-// Set this later.
-//	  || !(sdirs->rmanifest=prepend_s(sdirs->working, "manifest.gz"))
 	  || !(sdirs->datadirtmp=prepend_s(sdirs->working, "data.tmp"))
 	  || !(sdirs->phase1data=prepend_s(sdirs->working, "phase1.gz"))
 	  || !(sdirs->phase2data=prepend_s(sdirs->working, "phase2"))
@@ -53,6 +112,7 @@ static int do_burp1_dirs(struct sdirs *sdirs, struct conf *conf)
 	  || !(sdirs->cincexc=prepend_s(sdirs->current, "incexc"))
 	  || !(sdirs->deltmppath=prepend_s(sdirs->working, "deltmppath")))
 		return -1;
+	// sdirs->rworking gets set later.
 	return 0;
 }
 
@@ -75,13 +135,13 @@ static int do_burp2_dirs(struct sdirs *sdirs, struct conf *conf)
 	  || !(sdirs->current=prepend_s(sdirs->client, "current"))
 	  || !(sdirs->timestamp=prepend_s(sdirs->working, "timestamp"))
 	  || !(sdirs->manifest=prepend_s(sdirs->working, "manifest"))
-// Set this later.
-//	  || !(sdirs->rmanifest=prepend_s(sdirs->working, "manifest"))
 	  || !(sdirs->changed=prepend_s(sdirs->working, "changed"))
 	  || !(sdirs->unchanged=prepend_s(sdirs->working, "unchanged"))
 	  || !(sdirs->cmanifest=prepend_s(sdirs->current, "manifest"))
 	  || !(sdirs->phase1data=prepend_s(sdirs->working, "phase1.gz")))
 		return -1;
+	// sdirs->rworking gets set later.
+	// sdirs->rmanifest gets set later.
 	return 0;
 }
 
@@ -125,6 +185,7 @@ void sdirs_free_content(struct sdirs *sdirs)
         free_w(&sdirs->client);
 
         free_w(&sdirs->working);
+        free_w(&sdirs->rworking);
         free_w(&sdirs->finishing);
         free_w(&sdirs->current);
 

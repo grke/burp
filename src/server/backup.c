@@ -7,26 +7,17 @@
 #include "burp2/backup_phase3.h"
 #include "burp2/champ_chooser/champ_client.h"
 
-static int open_log(struct asfd *asfd,
-	const char *realworking, struct conf *cconf)
+static int open_log(struct asfd *asfd, struct sdirs *sdirs, struct conf *cconf)
 {
+	int ret=-1;
 	char *logpath=NULL;
 
-	if(!(logpath=prepend_s(realworking, "log")))
-	{
-		log_and_send_oom(asfd, __func__);
-		return -1;
-	}
+	if(!(logpath=prepend_s(sdirs->rworking, "log"))) goto end;
 	if(set_logfp(logpath, cconf))
 	{
-		char msg[256]="";
-		snprintf(msg, sizeof(msg),
-			"could not open log file: %s", logpath);
-		log_and_send(asfd, msg);
-		free(logpath);
-		return -1;
+		logp("could not open log file: %s\n", logpath);
+		goto end;
 	}
-	free(logpath);
 
 	logp("Client version: %s\n", cconf->peer_version?:"");
 	logp("Protocol: %d\n", cconf->protocol);
@@ -36,7 +27,10 @@ static int open_log(struct asfd *asfd,
 	// NULL for cntr.
 	if(cconf->version_warn) version_warn(asfd, NULL, cconf);
 
-	return 0;
+	ret=0;
+end:
+	free_w(&logpath);
+	return ret;
 }
 
 static int write_incexc(const char *realworking, const char *incexc)
@@ -44,6 +38,7 @@ static int write_incexc(const char *realworking, const char *incexc)
 	int ret=-1;
 	FILE *fp=NULL;
 	char *path=NULL;
+	if(!incexc || !*incexc) return 0;
 	if(!(path=prepend_s(realworking, "incexc"))
 	  || !(fp=open_file(path, "wb")))
 		goto end;
@@ -55,7 +50,7 @@ end:
 		logp("error writing to %s in write_incexc\n", path);
 		ret=-1;
 	}
-	if(path) free(path);
+	free_w(&path);
 	return ret;
 }
 
@@ -111,10 +106,6 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 	struct conf *cconf, const char *incexc, int resume)
 {
 	int ret=0;
-	char msg[256]="";
-	// Real path to the working directory
-	char *realworking=NULL;
-	char tstmp[64]="";
 	struct asfd *chfd=NULL;
 	struct asfd *asfd=as->asfd;
 
@@ -122,84 +113,28 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 
 	if(resume)
 	{
-		// FIX THIS - should probably go in sdirs.c.
-		ssize_t len=0;
-		char real[256]="";
-		if((len=readlink(sdirs->working, real, sizeof(real)-1))<0)
-			len=0;
-		real[len]='\0';
-		if(!(realworking=prepend_s(sdirs->client, real)))
-		{
-			log_and_send_oom(asfd, __func__);
+		if(sdirs_get_real_working_from_symlink(sdirs, cconf)
+		  || open_log(asfd, sdirs, cconf))
 			goto error;
-		}
-		if(open_log(asfd, realworking, cconf)) goto error;
 	}
 	else
 	{
 		// Not resuming - need to set everything up fresh.
+		if(sdirs_create_real_working(sdirs, cconf)
+		  || sdirs_get_real_manifest(sdirs, cconf)
+		  || open_log(asfd, sdirs, cconf))
+			goto error;
 
-		if(timestamp_get_new(asfd, sdirs, cconf, tstmp, sizeof(tstmp)))
-			goto error;
-		if(!(realworking=prepend_s(sdirs->client, tstmp)))
+		if(write_incexc(sdirs->rworking, incexc))
 		{
-			log_and_send_oom(asfd, __func__);
-			goto error;
-		}
-
-		// FIX THIS: put in sdirs.
-		free_w(&sdirs->rmanifest);
-		if(!(sdirs->rmanifest=prepend_s(realworking, "manifest")))
-		{
-			log_and_send_oom(asfd, __func__);
-			goto error;
-		}
-
-		// Add the working symlink before creating the directory.
-		// This is because bedup checks the working symlink before
-		// going into a directory. If the directory got created first,
-		// bedup might go into it in the moment before the symlink
-		// gets added.
-		if(symlink(tstmp, sdirs->working)) // relative link to the real work dir
-		{
-			snprintf(msg, sizeof(msg),
-			  "could not point working symlink to: %s",
-			  realworking);
-			log_and_send(asfd, msg);
-			goto error;
-		}
-		if(mkdir(realworking, 0777))
-		{
-			snprintf(msg, sizeof(msg),
-				"could not mkdir for next backup: %s",
-				sdirs->working);
-			log_and_send(asfd, msg);
-			unlink(sdirs->working);
-			goto error;
-		}
-		if(open_log(asfd, realworking, cconf))
-		{
-			goto error;
-		}
-		if(timestamp_write(sdirs->timestamp, tstmp))
-		{
-			snprintf(msg, sizeof(msg),
-			  "unable to write timestamp %s", sdirs->timestamp);
-			log_and_send(asfd, msg);
-			goto error;
-		}
-		if(incexc && *incexc && write_incexc(realworking, incexc))
-		{
-			snprintf(msg, sizeof(msg), "unable to write incexc");
-			log_and_send(asfd, msg);
+			logp("unable to write incexc\n");
 			goto error;
 		}
 
 		if(cconf->protocol==PROTO_BURP2
 		  && !(chfd=champ_chooser_connect(as, sdirs, cconf)))
 		{
-			log_and_send(asfd,
-				"problem connecting to champ chooser");
+			logp("problem connecting to champ chooser\n");
 			goto error;
 		}
 
@@ -261,14 +196,13 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 
         logp("Backup completed.\n");
 	set_logfp(NULL, cconf);
-        compress_filename(sdirs->working, "log", "log.gz", cconf);
+        compress_filename(sdirs->rworking, "log", "log.gz", cconf);
 
 	goto end;
 error:
 	ret=-1;
 end:
 	set_logfp(NULL, cconf);
-	free_w(&realworking);
         if(chfd) as->asfd_remove(as, chfd);
         asfd_free(&chfd);
 

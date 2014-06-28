@@ -3,7 +3,7 @@
 
 extern int timestamp_read(const char *path, char buf[], size_t len);
 extern int timestamp_write(const char *path, const char *tstmp);
-extern int timestamp_get_new(struct asfd *asfd,
-	struct sdirs *sdirs, struct conf *cconf, char *buf, size_t s);
+extern int timestamp_get_new(struct sdirs *sdirs,
+	char *buf, size_t s, struct conf *cconf);
 
 #endif

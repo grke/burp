@@ -13,9 +13,10 @@ struct sdirs
 	char *clients;
 	char *client;
 
-	char *working;
-	char *finishing;
-	char *current;
+	char *working; // Symlink.
+	char *rworking; // Real.
+	char *finishing; // Symlink.
+	char *current; // Symlink
 
 	char *timestamp;
 	char *changed;
@@ -40,5 +41,10 @@ struct sdirs
 extern struct sdirs *sdirs_alloc(void);
 extern int sdirs_init(struct sdirs *sdirs, struct conf *conf);
 extern void sdirs_free(struct sdirs **sdirs);
+
+extern int sdirs_get_real_manifest(struct sdirs *sdirs, struct conf *conf);
+extern int sdirs_create_real_working(struct sdirs *sdirs, struct conf *conf);
+extern int sdirs_get_real_working_from_symlink(struct sdirs *sdirs,
+	struct conf *conf);
 
 #endif

@@ -29,8 +29,8 @@ int timestamp_write(const char *path, const char *tstmp)
 	return 0;
 }
 
-int timestamp_get_new(struct asfd *asfd,
-	struct sdirs *sdirs, struct conf *cconf, char *buf, size_t s)
+int timestamp_get_new(struct sdirs *sdirs,
+	char *buf, size_t s, struct conf *cconf)
 {
 	time_t t=0;
 	char tmpbuf[32]="";

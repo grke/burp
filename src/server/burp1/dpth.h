@@ -7,10 +7,9 @@ struct dpthl
 	int seco;
 	int tert;
 	char path[32];
-	int looped;
 };
 
-extern int init_dpthl(struct dpthl *dpthl, struct asfd *asfd,
+extern int init_dpthl(struct dpthl *dpthl,
 	struct sdirs *sdirs, struct conf *cconf);
 extern int incr_dpthl(struct dpthl *dpthl, struct conf *cconf);
 extern int set_dpthl_from_string(struct dpthl *dpthl,

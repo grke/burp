@@ -45,12 +45,11 @@ static int maybe_rebuild_manifest(struct sdirs *sdirs, int compress,
 	return 0;
 }
 
-static int rubble_delete(struct asfd *asfd,
-	struct sdirs *sdirs, const char *fullrealwork)
+static int rubble_delete(struct asfd *asfd, struct sdirs *sdirs)
 {
 	// Try to remove it and start again.
 	logp("deleting old working directory\n");
-	if(recursive_delete(fullrealwork, NULL, 1 /* delete files */))
+	if(recursive_delete(sdirs->rworking, NULL, 1 /* delete files */))
 	{
 		log_and_send(asfd, "Old working directory is in the way.\n");
 		return -1;
@@ -83,8 +82,7 @@ static int rubble_use(struct asfd *asfd, struct sdirs *sdirs,
 }
 
 static int rubble_resume(struct asfd *asfd, struct sdirs *sdirs,
-	const char *incexc, int *resume,
-	const char *fullrealwork, struct conf *cconf)
+	const char *incexc, int *resume, struct conf *cconf)
 {
 	if(cconf->restore_client)
 	{
@@ -98,7 +96,7 @@ static int rubble_resume(struct asfd *asfd, struct sdirs *sdirs,
 
 	// Check that the current incexc configuration is the same
 	// as before.
-	switch(incexc_matches(fullrealwork, incexc))
+	switch(incexc_matches(sdirs->rworking, incexc))
 	{
 		case 1:
 			// Attempt to resume on the next backup.
@@ -116,29 +114,19 @@ static int rubble_resume(struct asfd *asfd, struct sdirs *sdirs,
 }
 
 static int get_fullrealwork(struct asfd *asfd,
-	struct sdirs *sdirs, char **fullrealwork)
+	struct sdirs *sdirs, struct conf *conf)
 {
-	ssize_t len=0;
-	char msg[256]="";
 	struct stat statp;
-	char realwork[256]="";
-	if((len=readlink(sdirs->working, realwork, sizeof(realwork)-1))<0)
-	{
-		snprintf(msg, sizeof(msg),
-			"Could not readlink on old working directory: %s\n",
-			strerror(errno));
-		log_and_send(asfd, msg);
-		return -1;
-	}
-	realwork[len]='\0';
-	if(!(*fullrealwork=prepend_s(sdirs->client, realwork)))
+
+	if(sdirs_get_real_working_from_symlink(sdirs, conf))
 		return -1;
 
-	if(lstat(*fullrealwork, &statp))
+	if(lstat(sdirs->rworking, &statp))
 	{
-		logp("removing dangling working symlink -> %s\n", realwork);
+		logp("removing dangling working symlink %s -> %s\n",
+			sdirs->working, sdirs->rworking);
 		unlink(sdirs->working);
-		free_w(fullrealwork);
+		free_w(&sdirs->rworking);
 	}
 	return 0;
 }
@@ -151,7 +139,6 @@ int check_for_rubble_burp1(struct asfd *asfd,
 	char msg[256]="";
 	struct stat statp;
 	char *logpath=NULL;
-	char *fullrealwork=NULL;
 	char *phase1datatmp=NULL;
 	const char *wdrm=cconf->recovery_method;
 
@@ -179,16 +166,16 @@ int check_for_rubble_burp1(struct asfd *asfd,
 
 	// The working directory has not finished being populated.
 	// Check what to do.
-	if(get_fullrealwork(asfd, sdirs, &fullrealwork)) goto error;
-	if(!fullrealwork) goto end;
+	if(get_fullrealwork(asfd, sdirs, cconf)) goto error;
+	if(!sdirs->rworking) goto end;
 
 	// We have found an old working directory - open the log inside
 	// for appending.
-	if(!(logpath=prepend_s(fullrealwork, "log"))
+	if(!(logpath=prepend_s(sdirs->rworking, "log"))
 	  || set_logfp(logpath, cconf))
 		goto error;
 
-	logp("found old working directory: %s\n", fullrealwork);
+	logp("found old working directory: %s\n", sdirs->rworking);
 	logp("working_dir_recovery_method: %s\n", wdrm);
 
 	if(!(phase1datatmp=get_tmp_filename(sdirs->phase1data)))
@@ -202,7 +189,7 @@ int check_for_rubble_burp1(struct asfd *asfd,
 
 	if(!strcmp(wdrm, "delete"))
 	{
-		if(rubble_delete(asfd, sdirs, fullrealwork))
+		if(rubble_delete(asfd, sdirs))
 			goto error;
 	}
 	else if(!strcmp(wdrm, "use"))
@@ -212,8 +199,7 @@ int check_for_rubble_burp1(struct asfd *asfd,
 	}
 	else if(!strcmp(wdrm, "resume"))
 	{
-		if(rubble_resume(asfd,
-		  sdirs, incexc, resume, fullrealwork, cconf))
+		if(rubble_resume(asfd, sdirs, incexc, resume, cconf))
 			goto error;
 	}
 	else
@@ -227,7 +213,6 @@ int check_for_rubble_burp1(struct asfd *asfd,
 end:
 	ret=0;
 error:
-	free_w(&fullrealwork);
 	free_w(&logpath);
 	free_w(&phase1datatmp);
 	set_logfp(NULL, cconf); // fclose the logfp

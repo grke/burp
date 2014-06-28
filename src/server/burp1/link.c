@@ -16,10 +16,10 @@ int recursive_hardlink(const char *src, const char *dst, struct conf *conf)
 	if(mkpath(&tmp, dst))
 	{
 		logp("could not mkpath for %s\n", tmp);
-		free(tmp);
+		free_w(&tmp);
 		return -1;
 	}
-	free(tmp);
+	free_w(&tmp);
 
 	if((n=scandir(src, &dir, 0, 0))<0)
 	{
@@ -34,11 +34,11 @@ int recursive_hardlink(const char *src, const char *dst, struct conf *conf)
 		  || !strcmp(dir[n]->d_name, ".")
 		  || !strcmp(dir[n]->d_name, ".."))
 			{ free(dir[n]); continue; }
-		if(fullpatha) free(fullpatha);
-		if(fullpathb) free(fullpathb);
-		fullpatha=prepend_s(src, dir[n]->d_name);
-		fullpathb=prepend_s(dst, dir[n]->d_name);
-		if(!fullpatha || !fullpathb) break;
+		free_w(&fullpatha);
+		free_w(&fullpathb);
+		if(!(fullpatha=prepend_s(src, dir[n]->d_name))
+		  || !(fullpathb=prepend_s(dst, dir[n]->d_name)))
+			break;
 
 #ifdef _DIRENT_HAVE_D_TYPE
 // Faster evaluation on most systems.
@@ -77,8 +77,8 @@ int recursive_hardlink(const char *src, const char *dst, struct conf *conf)
 	}
 	free(dir);
 
-	if(fullpatha) free(fullpatha);
-	if(fullpathb) free(fullpathb);
+	free_w(&fullpatha);
+	free_w(&fullpathb);
 
 	return ret;
 }
@@ -86,7 +86,7 @@ int recursive_hardlink(const char *src, const char *dst, struct conf *conf)
 #define DUP_CHUNK	4096
 static int duplicate_file(const char *oldpath, const char *newpath)
 {
-	int ret=0;
+	int ret=-1;
 	size_t s=0;
 	size_t t=0;
 	FILE *op=NULL;
@@ -94,10 +94,7 @@ static int duplicate_file(const char *oldpath, const char *newpath)
 	char buf[DUP_CHUNK]="";
 	if(!(op=open_file(oldpath, "rb"))
 	  || !(np=open_file(newpath, "wb")))
-	{
-		ret=-1;
-		goto finish;
-	}
+		goto end;
 
 	while((s=fread(buf, 1, DUP_CHUNK, op))>0)
 	{
@@ -105,14 +102,14 @@ static int duplicate_file(const char *oldpath, const char *newpath)
 		if(t!=s)
 		{
 			logp("could not write all bytes: %d!=%d\n", s, t);
-			ret=-1;
-			goto finish;
+			goto end;
 		}
 	}
 
-finish:
-	if(np) fclose(np);
-	if(op) fclose(op);
+	ret=0;
+end:
+	close_fp(&np);
+	close_fp(&op);
 	if(ret) logp("could not duplicate %s to %s\n", oldpath, newpath);
 	return ret;
 }

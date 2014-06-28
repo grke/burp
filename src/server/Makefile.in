@@ -16,6 +16,7 @@ SRCS = \
 	auth.c \
 	autoupgrade.c \
 	bu.c \
+	backup.c \
 	backup_phase1.c \
 	compress.c \
 	ca.c \

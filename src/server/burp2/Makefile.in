@@ -13,7 +13,6 @@ thisdir = src/server/burp2
 
 #
 SRCS = \
-	backup.o \
 	backup_phase2.o \
 	backup_phase3.o \
 	dpth.o \

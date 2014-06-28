@@ -204,23 +204,21 @@ cleanup:
 
 int set_non_blocking(int fd)
 {
-    int flags;
-    if((flags = fcntl(fd, F_GETFL, 0))<0) flags = 0;
-    return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+	int flags;
+	if((flags = fcntl(fd, F_GETFL, 0))<0) flags = 0;
+	return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }
      
 int set_blocking(int fd)
 {
-    int flags;
-    if((flags = fcntl(fd, F_GETFL, 0))<0) flags = 0;
-    return fcntl(fd, F_SETFL, flags | ~O_NONBLOCK);
+	int flags;
+	if((flags = fcntl(fd, F_GETFL, 0))<0) flags = 0;
+	return fcntl(fd, F_SETFL, flags | ~O_NONBLOCK);
 }
 
 char *get_tmp_filename(const char *basis)
 {
-	char *ret=NULL;
-	ret=prepend(basis, ".tmp", strlen(".tmp"), 0 /* no slash */);
-	return ret;
+	return prepend(basis, ".tmp", strlen(".tmp"), 0 /* no slash */);
 }
 
 void add_fd_to_sets(int fd, fd_set *read_set, fd_set *write_set, fd_set *err_set, int *max_fd)

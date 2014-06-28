@@ -37,7 +37,7 @@ static int champ_chooser_fork(struct sdirs *sdirs, struct conf *conf)
 	return -1; // Not reached.
 }
 
-int connect_to_champ_chooser(struct sdirs *sdirs, struct conf *conf)
+static int connect_to_champ_chooser(struct sdirs *sdirs, struct conf *conf)
 {
 	int len;
 	int s=-1;
@@ -85,4 +85,45 @@ int connect_to_champ_chooser(struct sdirs *sdirs, struct conf *conf)
 		sdirs->champsock, tries_max, strerror(errno));
 
 	return -1;
+}
+
+struct asfd *champ_chooser_connect(struct async *as,
+	struct sdirs *sdirs, struct conf *conf)
+{
+	int champsock=-1;
+	char *champname=NULL;
+	struct asfd *chfd=NULL;
+
+	// Connect to champ chooser now.
+	// This may start up a new champ chooser. On a machine with multiple
+	// cores, it may be faster to do now, way before it is actually needed
+	// in phase2.
+	if((champsock=connect_to_champ_chooser(sdirs, conf))<0)
+	{
+		logp("could not connect to champ chooser\n");
+		goto error;
+	}
+
+	if(!(chfd=asfd_alloc())
+	  || chfd->init(chfd, "champ chooser socket",
+		as, champsock, NULL /* no SSL */, conf))
+			goto error;
+	as->asfd_add(as, chfd);
+
+	if(!(champname=prepend("cname",
+		conf->cname, strlen(conf->cname), ":")))
+			goto error;
+
+	if(chfd->write_str(chfd, CMD_GEN, champname)
+	  || chfd->read_expect(chfd, CMD_GEN, "cname ok"))
+		goto error;
+
+	free(champname);
+	return chfd;
+error:
+	free(champname);
+	as->asfd_remove(as, chfd);
+	asfd_free(&chfd);
+	close_fd(&champsock);
+	return NULL;
 }

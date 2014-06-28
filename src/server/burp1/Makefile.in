@@ -13,11 +13,11 @@ thisdir = src/server/burp1
 
 #
 SRCS = \
-	backup.c \
 	backup_phase2.c \
 	backup_phase3.c \
 	backup_phase4.c \
 	bedup.c \
+	blocklen.c \
 	deleteme.c \
 	dpth.c \
 	fdirs.c \

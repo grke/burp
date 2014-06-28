@@ -1,7 +1,5 @@
 #include "include.h"
-#include "burp1/backup.h"
 #include "burp1/rubble.h"
-#include "burp2/backup.h"
 #include "burp2/restore.h"
 #include "burp2/rubble.h"
 
@@ -105,97 +103,6 @@ static void maybe_do_notification(struct asfd *asfd,
 		args[a++]=NULL;
 		run_script(asfd, args, cconf->n_success_arg, cconf, 1, 1, 1);
 	}
-}
-
-static int run_backup(struct async *as,
-	struct sdirs *sdirs, struct conf *cconf,
-	const char *incexc, int *timer_ret, int resume)
-{
-	int ret=-1;
-	char okstr[32]="";
-	struct asfd *asfd=as->asfd;
-	struct iobuf *rbuf=asfd->rbuf;
-
-	if(cconf->restore_client)
-	{
-		// This client is not the original client, so a
-		// backup might cause all sorts of trouble.
-		logp("Not allowing backup of %s\n", cconf->cname);
-		return asfd->write_str(asfd, CMD_GEN, "Backup is not allowed");
-	}
-
-	// Set quality of service bits on backups.
-	asfd->set_bulk_packets(asfd);
-
-	if(!strncmp_w(rbuf->buf, "backupphase1timed"))
-	{
-		int a=0;
-		const char *args[12];
-		int checkonly=!strncmp_w(rbuf->buf, "backupphase1timedcheck");
-		if(checkonly) logp("Client asked for a timer check only.\n");
-
-		args[a++]=cconf->timer_script;
-		args[a++]=cconf->cname;
-		args[a++]=sdirs->current;
-		args[a++]=sdirs->client;
-		args[a++]="reserved1";
-		args[a++]="reserved2";
-		args[a++]=NULL;
-		if((*timer_ret=run_script(asfd, args,
-		  cconf->timer_arg,
-		  cconf,
-		  1 /* wait */, 1 /* use logp */,
-		  0 /* no logw so that run_script does not
-		       write warnings down the socket, otherwise
-		       the client will never print the 'timer
-		       conditions not met' message below. */
-		))<0)
-		{
-			logp("Error running timer script for %s\n",
-				cconf->cname);
-			maybe_do_notification(asfd, ret, "",
-				"error running timer script",
-				"", "backup", cconf);
-			return *timer_ret;
-		}
-		if(*timer_ret)
-		{
-			if(!checkonly)
-				logp("Not running backup of %s\n",
-					cconf->cname);
-			return asfd->write_str(asfd,
-				CMD_GEN, "timer conditions not met");
-		}
-		if(checkonly)
-		{
-			// Client was only checking the timer
-			// and does not actually want to back
-			// up.
-			logp("Client asked for a timer check only,\n");
-			logp("so a backup is not happening right now.\n");
-			return asfd->write_str(asfd,
-				CMD_GEN, "timer conditions met");
-		}
-		logp("Running backup of %s\n", cconf->cname);
-	}
-	else if(!cconf->client_can_force_backup)
-	{
-		logp("Not allowing forced backup of %s\n", cconf->cname);
-		return asfd->write_str(asfd,
-			CMD_GEN, "Forced backup is not allowed");
-	}
-
-	snprintf(okstr, sizeof(okstr), "%s:%d",
-		resume?"resume":"ok", cconf->compression);
-	if(asfd->write_str(asfd, CMD_GEN, okstr)) return -1;
-	if(cconf->protocol==PROTO_BURP1)
-		ret=do_backup_server_burp1(as, sdirs, cconf, incexc, resume);
-	else
-		ret=do_backup_server_burp2(as, sdirs, cconf, incexc, resume);
-	maybe_do_notification(asfd, ret, sdirs->client, sdirs->current,
-		"log", "backup", cconf);
-
-	return ret;
 }
 
 static int run_restore(struct asfd *asfd,
@@ -362,19 +269,18 @@ static const char *buf_to_notify_str(struct iobuf *rbuf)
 }
 
 static int check_for_rubble(struct asfd *asfd, struct sdirs *sdirs,
-	struct conf *cconf, const char *incexc, int *resume)
+	const char *incexc, int *resume, struct conf *cconf)
 {
 	if(cconf->protocol==PROTO_BURP1)
 		return check_for_rubble_burp1(asfd,
-			sdirs, cconf, incexc, resume);
+			sdirs, incexc, resume, cconf);
 	else
 		return check_for_rubble_burp2(asfd,
-			sdirs, cconf, incexc, resume);
+			sdirs, incexc, resume, cconf);
 }
 
-int run_action_server(struct async *as,
-	struct conf *cconf, struct sdirs *sdirs,
-	const char *incexc, int srestore, int *timer_ret)
+int run_action_server(struct async *as, struct sdirs *sdirs,
+	const char *incexc, int srestore, int *timer_ret, struct conf *cconf)
 {
 	int ret;
 	int resume=0;
@@ -401,7 +307,7 @@ int run_action_server(struct async *as,
 		return ret;
 	}
 
-	if(check_for_rubble(as->asfd, sdirs, cconf, incexc, &resume))
+	if(check_for_rubble(as->asfd, sdirs, incexc, &resume, cconf))
 	{
 		maybe_do_notification(as->asfd, ret,
 			"", "error in check_for_rubble()",
@@ -410,7 +316,17 @@ int run_action_server(struct async *as,
 	}
 
 	if(!strncmp_w(rbuf->buf, "backup"))
-		return run_backup(as, sdirs, cconf, incexc, timer_ret, resume);
+	{
+		ret=run_backup(as, sdirs, cconf, incexc, timer_ret, resume);
+		if(*timer_ret<0)
+			maybe_do_notification(as->asfd, ret, "",
+				"error running timer script",
+				"", "backup", cconf);
+		else
+			maybe_do_notification(as->asfd, ret, sdirs->client,
+				sdirs->current, "log", "backup", cconf);
+		return ret;
+	}
 
 	if(!strncmp_w(rbuf->buf, "restore ")
 	  || !strncmp_w(rbuf->buf, "verify "))

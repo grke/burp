@@ -3,7 +3,7 @@
 
 #include "../burp1/sbufl.h"
 
-int backup_phase1_server(struct asfd *asfd,
+int backup_phase1_server_all(struct async *as,
 	struct sdirs *sdirs, struct conf *conf)
 {
 	int ars=0;
@@ -11,6 +11,7 @@ int backup_phase1_server(struct asfd *asfd,
 	struct sbuf *sb=NULL;
 	gzFile p1zp=NULL;
 	char *phase1tmp=NULL;
+	struct asfd *asfd=as->asfd;
 
 	logp("Begin phase1 (file system scan)\n");
 

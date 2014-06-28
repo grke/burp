@@ -304,7 +304,7 @@ end:
 }
 
 static int sparse_generation(struct manio *newmanio, uint64_t fcount,
-	const char *datadir, const char *manifest_dir, struct conf *conf)
+	struct sdirs *sdirs, struct conf *conf)
 {
 	int ret=-1;
 	uint64_t i=0;
@@ -321,9 +321,9 @@ static int sparse_generation(struct manio *newmanio, uint64_t fcount,
 	char compb[32]="";
 	char compd[32]="";
 
-	if(!(hooksdir=prepend_s(manifest_dir, "hooks"))
-	  || !(h1dir=prepend_s(manifest_dir, "h1"))
-	  || !(h2dir=prepend_s(manifest_dir, "h2")))
+	if(!(hooksdir=prepend_s(sdirs->rmanifest, "hooks"))
+	  || !(h1dir=prepend_s(sdirs->rmanifest, "h1"))
+	  || !(h2dir=prepend_s(sdirs->rmanifest, "h2")))
 		goto end;
 
 	while(1)
@@ -365,8 +365,8 @@ static int sparse_generation(struct manio *newmanio, uint64_t fcount,
 		if((fcount=i/2)<2) break;
 	}
 
-	if(!(sparse=prepend_s(manifest_dir, "sparse"))
-	  || !(global_sparse=prepend_s(datadir, "sparse")))
+	if(!(sparse=prepend_s(sdirs->rmanifest, "sparse"))
+	  || !(global_sparse=prepend_s(sdirs->data, "sparse")))
 		goto end;
 
 	// FIX THIS: nasty race condition here needs to be automatically
@@ -391,8 +391,7 @@ end:
 // This is basically backup_phase3_server() from burp1. It used to merge the
 // unchanged and changed data into a single file. Now it splits the manifests
 // into several files.
-int backup_phase3_server(struct sdirs *sdirs,
-	const char *manifest_dir, struct conf *conf)
+int backup_phase3_server_burp2(struct sdirs *sdirs, struct conf *conf)
 {
 	int ret=1;
 	int pcmp=0;
@@ -413,9 +412,9 @@ int backup_phase3_server(struct sdirs *sdirs,
 	if(!(newmanio=manio_alloc())
 	  || !(chmanio=manio_alloc())
 	  || !(unmanio=manio_alloc())
-	  || !(hooksdir=prepend_s(manifest_dir, "hooks"))
-	  || !(dindexdir=prepend_s(manifest_dir, "dindex"))
-	  || manio_init_write(newmanio, manifest_dir)
+	  || !(hooksdir=prepend_s(sdirs->rmanifest, "hooks"))
+	  || !(dindexdir=prepend_s(sdirs->rmanifest, "dindex"))
+	  || manio_init_write(newmanio, sdirs->rmanifest)
 	  || manio_init_write_hooks(newmanio, conf->directory, hooksdir)
 	  || manio_init_write_dindex(newmanio, dindexdir)
 	  || manio_init_read(chmanio, sdirs->changed)
@@ -510,10 +509,10 @@ int backup_phase3_server(struct sdirs *sdirs,
 	// Flush to disk and set up for reading.
 	if(manio_free(&newmanio)
 	  || !(newmanio=manio_alloc())
-	  || manio_init_read(newmanio, manifest_dir))
+	  || manio_init_read(newmanio, sdirs->rmanifest))
 		goto end;
 
-	if(sparse_generation(newmanio, fcount, sdirs->data, manifest_dir, conf))
+	if(sparse_generation(newmanio, fcount, sdirs, conf))
 		goto end;
 
 	recursive_delete(chmanio->directory, NULL, 1);

@@ -1,8 +1,7 @@
 #include "include.h"
 
-int check_for_rubble_burp2(struct asfd *asfd,
-	struct sdirs *sdirs, struct conf *cconf,
-	const char *incexc, int *resume)
+int check_for_rubble_burp2(struct asfd *asfd, struct sdirs *sdirs,
+	const char *incexc, int *resume, struct conf *cconf)
 {
 	// FIX THIS - currently just deletes the interrupted backup.
 	ssize_t len=0;

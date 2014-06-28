@@ -27,9 +27,7 @@ struct bu
 };
 
 extern void bu_list_free(struct bu **bu_list);
-extern int bu_list_get(struct asfd *asfd, struct sdirs *sdirs,
-	struct bu **bu_list, int log);
-extern int bu_list_get_str(struct asfd *asfd, const char *dir,
-	struct bu **bu_list, int log);
+extern int bu_list_get(struct sdirs *sdirs, struct bu **bu_list, int log);
+extern int bu_list_get_str(const char *dir, struct bu **bu_list, int log);
 
 #endif

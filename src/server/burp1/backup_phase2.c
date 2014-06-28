@@ -695,7 +695,7 @@ static int open_previous_manifest(gzFile *cmanfp,
 	return 0;
 }
 
-int backup_phase2_server(struct asfd *asfd, struct sdirs *sdirs,
+int backup_phase2_server_burp1(struct async *as, struct sdirs *sdirs,
 	const char *incexc, int resume, struct conf *cconf)
 {
 	int ret=0;
@@ -712,6 +712,7 @@ int backup_phase2_server(struct asfd *asfd, struct sdirs *sdirs,
 	struct sbuf *cb=NULL; // file list in current manifest
 	struct sbuf *p1b=NULL; // file list from client
 	struct sbuf *rb=NULL; // receiving file from client
+	struct asfd *asfd=as->asfd;
 
 	logp("Begin phase2 (receive file data)\n");
 

@@ -652,7 +652,7 @@ end:
 	return ret;
 }
 
-int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf)
+int backup_phase4_server_burp1(struct sdirs *sdirs, struct conf *cconf)
 {
 	int ret=-1;
 	struct stat statp;
@@ -793,18 +793,7 @@ int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf)
 
 	cntr_stats_to_file(cconf->cntr, sdirs->finishing, ACTION_BACKUP);
 
-	// Rename the finishing symlink so that it becomes the current symlink
-	// I have tested that potential race conditions on the
-	// rename() are automatically recoverable here.
-	if(do_rename(sdirs->finishing, sdirs->current))
-		goto end;
-
-	cntr_print(cconf->cntr, ACTION_BACKUP);
-	logp("Backup completed.\n");
 	logp("End phase4 (shuffle files)\n");
-	set_logfp(NULL, cconf); // will close logfp.
-
-	compress_filename(sdirs->current, "log", "log.gz", cconf);
 
 	ret=0;
 end:

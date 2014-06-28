@@ -480,9 +480,7 @@ static int send_summaries_to_client(int cfd,
 
 			// FIX THIS: If this stuff used sdirs, there would
 			// be no need for a separate bu_list_get_str function.
-			if(bu_list_get_str(NULL /* FIX THIS - status
-				stuff should use a separate struct async */,
-				clist[q]->basedir, &bu_list, 0))
+			if(bu_list_get_str(clist[q]->basedir, &bu_list, 0))
 			{
 				//logp("error when looking up current backups\n");
 				tosend=clist[q]->summary;
@@ -745,9 +743,8 @@ static int list_backup_dir(int cfd, struct cstat *cli, unsigned long bno)
 	int ret=0;
 	struct bu *bu;
         struct bu *bu_list=NULL;
-	if(bu_list_get_str(NULL /* should use a separate struct async*/,
-		cli->basedir, &bu_list, 0))
-			goto error;
+	if(bu_list_get_str(cli->basedir, &bu_list, 0))
+		goto error;
 
 	if(!bu_list) goto end;
 	for(bu=bu_list; bu; bu=bu->next) if(bu->bno==bno) break;
@@ -774,9 +771,8 @@ static int list_backup_file(int cfd, struct cstat *cli, unsigned long bno, const
 	int ret=0;
         struct bu *bu=NULL;
         struct bu *bu_list=NULL;
-	if(bu_list_get_str(NULL /* should use a separate struct async */,
-		cli->basedir, &bu_list, 0))
-			goto error;
+	if(bu_list_get_str(cli->basedir, &bu_list, 0))
+		goto error;
 
 	if(!bu_list) goto end;
 	for(bu=bu_list; bu; bu=bu->next) if(bu->bno==bno) break;

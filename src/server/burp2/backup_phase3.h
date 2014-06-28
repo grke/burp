@@ -1,7 +1,6 @@
-#ifndef _BACKUP_PHASE3_SERVER_H
-#define _BACKUP_PHASE3_SERVER_H
+#ifndef _BACKUP_PHASE3_SERVER_BURP2_H
+#define _BACKUP_PHASE3_SERVER_BURP2_H
 
-extern int backup_phase3_server(struct sdirs *sdirs,
-	const char *manifest_dir, struct conf *conf);
+extern int backup_phase3_server_burp2(struct sdirs *sdirs, struct conf *conf);
 
 #endif

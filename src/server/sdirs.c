@@ -42,6 +42,8 @@ static int do_burp1_dirs(struct sdirs *sdirs, struct conf *conf)
 	  || !(sdirs->currentdata=prepend_s(sdirs->current, "data"))
 	  || !(sdirs->timestamp=prepend_s(sdirs->working, "timestamp"))
 	  || !(sdirs->manifest=prepend_s(sdirs->working, "manifest.gz"))
+// Set this later.
+//	  || !(sdirs->rmanifest=prepend_s(sdirs->working, "manifest.gz"))
 	  || !(sdirs->datadirtmp=prepend_s(sdirs->working, "data.tmp"))
 	  || !(sdirs->phase1data=prepend_s(sdirs->working, "phase1.gz"))
 	  || !(sdirs->phase2data=prepend_s(sdirs->working, "phase2"))
@@ -72,6 +74,9 @@ static int do_burp2_dirs(struct sdirs *sdirs, struct conf *conf)
 	  || !(sdirs->finishing=prepend_s(sdirs->client, "finishing"))
 	  || !(sdirs->current=prepend_s(sdirs->client, "current"))
 	  || !(sdirs->timestamp=prepend_s(sdirs->working, "timestamp"))
+	  || !(sdirs->manifest=prepend_s(sdirs->working, "manifest"))
+// Set this later.
+//	  || !(sdirs->rmanifest=prepend_s(sdirs->working, "manifest"))
 	  || !(sdirs->changed=prepend_s(sdirs->working, "changed"))
 	  || !(sdirs->unchanged=prepend_s(sdirs->working, "unchanged"))
 	  || !(sdirs->cmanifest=prepend_s(sdirs->current, "manifest"))
@@ -126,6 +131,8 @@ void sdirs_free_content(struct sdirs *sdirs)
         free_w(&sdirs->timestamp);
         free_w(&sdirs->changed);
         free_w(&sdirs->unchanged);
+	free_w(&sdirs->manifest);
+	free_w(&sdirs->rmanifest);
         free_w(&sdirs->cmanifest);
 	free_w(&sdirs->phase1data);
 
@@ -134,7 +141,6 @@ void sdirs_free_content(struct sdirs *sdirs)
 
 	// Legacy directories
 	free_w(&sdirs->currentdata);
-	free_w(&sdirs->manifest);
 	free_w(&sdirs->datadirtmp);
 	free_w(&sdirs->phase2data);
 	free_w(&sdirs->unchangeddata);

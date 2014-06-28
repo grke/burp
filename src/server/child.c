@@ -102,8 +102,8 @@ int child(struct async *as, struct conf *conf, struct conf *cconf)
 			cconf, ret, timer_ret);
 
 	if(!ret)
-		ret=run_action_server(as, cconf, sdirs,
-			incexc, srestore, &timer_ret);
+		ret=run_action_server(as, sdirs,
+			incexc, srestore, &timer_ret, cconf);
 
 	if((!ret || cconf->s_script_post_run_on_fail) && cconf->s_script_post)
 		ret=run_server_script(as->asfd, "post",

@@ -2,8 +2,8 @@
 #include "../../server/monitor/status_client.h"
 
 // Combine the phase1 and phase2 files into a new manifest.
-int backup_phase3_server(struct sdirs *sdirs, struct conf *cconf,
-	int recovery, int compress)
+int backup_phase3_server_burp1(struct sdirs *sdirs,
+	int recovery, int compress, struct conf *cconf)
 {
 	int ars=0;
 	int ret=-1;

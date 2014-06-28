@@ -1,7 +1,7 @@
-#ifndef _BURP1_BACKUP_PHASE2_SERVER_H
-#define _BURP1_BACKUP_PHASE2_SERVER_H
+#ifndef _BACKUP_PHASE2_SERVER_BURP1_H
+#define _BACKUP_PHASE2_SERVER_BURP1_H
 
-extern int backup_phase2_server(struct asfd *asfd, struct sdirs *sdirs,
+extern int backup_phase2_server_burp1(struct async *as, struct sdirs *sdirs,
 	const char *incexc, int resume, struct conf *cconf);
 
 #endif

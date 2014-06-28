@@ -45,7 +45,7 @@ int timestamp_get_new(struct asfd *asfd,
 	// bacula!
 
 	// This function orders the array with the highest index number last.
-	if(bu_list_get(asfd, sdirs, &bu_list, 1)) return -1;
+	if(bu_list_get(sdirs, &bu_list, 1)) return -1;
 	for(bu=bu_list; bu; bu=bu->next) if(!bu->next) index=bu->bno;
 
 	bu_list_free(&bu_list);

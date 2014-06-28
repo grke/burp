@@ -120,8 +120,7 @@ static int range_loop(struct sdirs *sdirs, struct conf *cconf,
 	return 0;
 }
 
-static int do_delete_backups(struct asfd *asfd,
-	struct sdirs *sdirs, struct conf *cconf)
+static int do_delete_backups(struct sdirs *sdirs, struct conf *cconf)
 {
 	int ret=-1;
 	int deleted=0;
@@ -131,7 +130,7 @@ static int do_delete_backups(struct asfd *asfd,
 	struct bu *bu_list=NULL;
 	struct strlist *keep=NULL;
 
-	if(bu_list_get(asfd, sdirs, &bu_list, 1)) goto end;
+	if(bu_list_get(sdirs, &bu_list, 1)) goto end;
 
 	// Find the last entry in the list.
 	for(bu=bu_list; bu; bu=bu->next) last=bu;
@@ -165,20 +164,17 @@ end:
 	return ret;
 }
 
-int delete_backups(struct asfd *asfd, struct sdirs *sdirs, struct conf *cconf)
+int delete_backups(struct sdirs *sdirs, struct conf *cconf)
 {
-	int deleted=0;
-	// Deleting a backup might mean that more become available to get rid
-	// of.
+	// Deleting a backup might mean that more become available to delete.
 	// Keep trying to delete until we cannot delete any more.
-	while(1)
+	while(1) switch(do_delete_backups(sdirs, cconf))
 	{
-		if((deleted=do_delete_backups(asfd, sdirs, cconf))<0)
-			return -1;
-		else if(!deleted)
-			break;
+		case 0: return 0;
+		case -1: return -1;
+		default: continue;
 	}
-	return 0;
+	return -1; // Not reached.
 }
 
 int do_delete_server(struct asfd *asfd,
@@ -192,7 +188,7 @@ int do_delete_server(struct asfd *asfd,
 
 	logp("in do_delete\n");
 
-	if(bu_list_get(asfd, sdirs, &bu_list, 1)
+	if(bu_list_get(sdirs, &bu_list, 1)
 	  || write_status(STATUS_DELETING, NULL, conf))
 		goto end;
 

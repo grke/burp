@@ -132,7 +132,7 @@ static int add_data_to_store(struct conf *conf,
 	for(blk=blist->head;
 		blk && (!blk->requested || blk->got==BLK_GOT); blk=blk->next)
 	{
-		logp("try: %d %d\n", blk->index, blk->got);
+	//	logp("try: %d %d\n", blk->index, blk->got);
 	}
 	if(!blk)
 	{
@@ -697,8 +697,8 @@ end:
 	return ret;
 }
 
-int backup_phase2_server(struct async *as, struct sdirs *sdirs,
-	const char *manifest_dir, int resume, struct conf *conf)
+int backup_phase2_server_burp2(struct async *as, struct sdirs *sdirs,
+	int resume, struct conf *conf)
 {
 	int ret=-1;
 	int sigs_end=0;

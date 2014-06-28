@@ -9,14 +9,13 @@ static struct bu *bu_alloc(void)
 	return (struct bu *)calloc_w(1, sizeof(struct bu), __func__);
 }
 
-static int bu_init(struct asfd *asfd,
-	struct bu *bu, char *fullpath, char *basename,
+static int bu_init(struct bu *bu, char *fullpath, char *basename,
 	char *timestampstr, int hardlinked, int log)
 {
 	if(!(bu->data=prepend_s(fullpath, "data"))
 	  || !(bu->delta=prepend_s(fullpath, "deltas.reverse")))
 	{
-		if(log) log_and_send_oom(asfd, __func__);
+		if(log) log_out_of_memory(__func__);
 		goto error;
 	}
 	bu->path=fullpath;
@@ -68,8 +67,7 @@ static int get_link(const char *dir, const char *lnk, char real[], size_t r)
 	return 0;
 }
 
-static int maybe_add_ent(struct asfd *asfd,
-	const char *dir, const char *d_name,
+static int maybe_add_ent(const char *dir, const char *d_name,
 	struct bu **bu_list, int log)
 {
 	int ret=-1;
@@ -104,9 +102,8 @@ static int maybe_add_ent(struct asfd *asfd,
 	if(!lstat(hlinkedpath, &statp)) hardlinked++;
 
 	if(!(bu=bu_alloc())
-	  || bu_init(asfd, bu,
-		fullpath, basename, timestampstr, hardlinked, log))
-			goto error;
+	  || bu_init(bu, fullpath, basename, timestampstr, hardlinked, log))
+		goto error;
 
 	if(*bu_list) bu->next=*bu_list;
 	*bu_list=bu;
@@ -166,8 +163,7 @@ static int rev_alphasort(const struct dirent **a, const struct dirent **b)
 	return 0;
 }
 
-int bu_list_get_str(struct asfd *asfd,
-	const char *dir, struct bu **bu_list, int log)
+int bu_list_get_str(const char *dir, struct bu **bu_list, int log)
 {
 	int i=0;
 	int n=0;
@@ -184,13 +180,8 @@ int bu_list_get_str(struct asfd *asfd,
 
 	if((n=scandir(dir, &dp, NULL, rev_alphasort))<0)
 	{
-		if(log)
-		{
-			char msg[256]="";
-			snprintf(msg, sizeof(msg), "scandir failed in %s: %s\n",
-				__func__, strerror(errno));
-			log_and_send(asfd, msg);
-		}
+		if(log) logp("scandir failed in %s: %s\n",
+			__func__, strerror(errno));
 		goto end;
 	}
 	for(i=0; i<n; i++)
@@ -201,7 +192,7 @@ int bu_list_get_str(struct asfd *asfd,
 		  || !strcmp(dp[i]->d_name, realwork)
 		  || !strcmp(dp[i]->d_name, realfinishing))
 			continue;
-		if(maybe_add_ent(asfd, dir, dp[i]->d_name, bu_list, log))
+		if(maybe_add_ent(dir, dp[i]->d_name, bu_list, log))
 			goto end;
 	}
 
@@ -217,8 +208,7 @@ end:
 	return ret;
 }
 
-int bu_list_get(struct asfd *asfd,
-	struct sdirs *sdirs, struct bu **bu_list, int log)
+int bu_list_get(struct sdirs *sdirs, struct bu **bu_list, int log)
 {
-	return bu_list_get_str(asfd, sdirs->client, bu_list, log);
+	return bu_list_get_str(sdirs->client, bu_list, log);
 }

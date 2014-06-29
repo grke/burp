@@ -139,10 +139,11 @@ static void setup_indices(struct bu *bu_list)
 		last=bu;
 	}
 
+	// The oldest backup is deletable.
+	if(bu_list) bu_list->deletable=1;
+
 	if(last)
 	{
-		// The oldest backup is deletable.
-		last->deletable=1;
 
 		if((tr=last->bno))
 		{

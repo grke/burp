@@ -132,12 +132,15 @@ end:
 	return ret;
 }
 
-static int send_backup_name_to_client(struct asfd *asfd, struct bu *bu)
+static int send_backup_name_to_client(struct asfd *asfd,
+	struct bu *bu, struct conf *conf)
 {
 	char msg[64]="";
-	//snprintf(msg, sizeof(msg), "%s%s",
-	//	bu->timestamp, bu->deletable?" (deletable)":"");
-	snprintf(msg, sizeof(msg), "%s", bu->timestamp);
+	snprintf(msg, sizeof(msg), "%s%s",
+		bu->timestamp,
+		// Burp2 backups are all deletable, so do not mention it.
+		conf->protocol==PROTO_BURP1
+		&& bu->deletable?" (deletable)":"");
 	return asfd->write_str(asfd, CMD_TIMESTAMP, msg);
 }
 
@@ -178,7 +181,7 @@ int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct conf *conf,
 				|| bu->bno==bno))
 			{
 				found=1;
-				if(send_backup_name_to_client(asfd, bu)
+				if(send_backup_name_to_client(asfd, bu, conf)
 				  || list_manifest(asfd, bu->path, regex,
 					browsedir, conf)) goto end;
 			}
@@ -187,7 +190,7 @@ int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct conf *conf,
 		else
 		{
 			found=1;
-			if(send_backup_name_to_client(asfd, bu))
+			if(send_backup_name_to_client(asfd, bu, conf))
 				goto end;
 		}
 	}

@@ -428,7 +428,6 @@ static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
 				// using it as a dedup candidate now.
 				iobuf_from_str(wbuf, CMD_MANIFEST,
 					chmanio->fpath);
-				printf("send manifest path\n");
 				if(chfd->write(chfd, wbuf)) goto error;
 
 				if(!blk->requested)

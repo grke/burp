@@ -68,10 +68,9 @@ static int async_io(struct async *as, int doread)
 /*
 	for(asfd=as->asfd; asfd; asfd=asfd->next)
 	{
-		printf("%d %d %d %d: %s\n",
+		printf("%s: %d %d %d %d\n", asfd->desc,
 			asfd->doread, asfd->dowrite,
-			asfd->readbuflen, asfd->writebuflen,
-			asfd->desc);
+			asfd->readbuflen, asfd->writebuflen);
 	}
 */
 
@@ -97,7 +96,7 @@ static int async_io(struct async *as, int doread)
 			  && asfd->max_network_timeout>0
 			  && asfd->network_timeout--<=0)
 			{
-				logp("No activity on %s for %d seconds.\n",
+				logp("%s: no activity for %d seconds.\n",
 					asfd->desc, asfd->max_network_timeout);
 				return asfd_problem(asfd);
 			}
@@ -108,7 +107,7 @@ static int async_io(struct async *as, int doread)
 
 		if(FD_ISSET(asfd->fd, &fse))
 		{
-			logp("%s had an exception\n", asfd->desc);
+			logp("%s: had an exception\n", asfd->desc);
 			return asfd_problem(asfd);
 		}
 

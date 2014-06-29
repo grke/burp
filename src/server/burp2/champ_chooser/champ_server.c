@@ -133,11 +133,11 @@ static int deal_with_client_rbuf(struct asfd *asfd, struct conf *conf)
 		if(!strncmp_w(asfd->rbuf->buf, "cname:"))
 		{
 			struct iobuf wbuf;
-			if(asfd->desc) free(asfd->desc);
+			free_w(&asfd->desc);
 			if(!(asfd->desc=strdup_w(asfd->rbuf->buf
 				+strlen("cname:"), __func__)))
 					goto error;
-			logp("%d has name: %s\n", asfd->fd, asfd->desc);
+			logp("%s: fd %d\n", asfd->desc, asfd->fd);
 			iobuf_set(&wbuf, CMD_GEN,
 				(char *)"cname ok", strlen("cname ok"));
 
@@ -294,8 +294,8 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf *conf)
 						continue;
 					}
 					as->asfd_remove(as, asfd);
-					logp("%d disconnected: %s\n",
-						asfd->fd, asfd->desc);
+					logp("%s: disconnected fd %d\n",
+						asfd->desc, asfd->fd);
 					a=asfd->next;
 					asfd_free(&asfd);
 					asfd=a;

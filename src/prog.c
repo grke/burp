@@ -79,6 +79,7 @@ static void usage_client(void)
 	printf("  -f             Allow overwrite during restore.\n");
 	printf("  -h|-?          Print this text and exit.\n");
 	printf("  -i             Print index of symbols and exit.\n");
+	printf("  -q <max secs>  Randomised delay of starting a timed backup.\n");
 	printf("  -r <regex>     Specify a regular expression.\n");
 	printf("  -s <number>    Number of leading path components to strip during restore.\n");
 	printf("  -j             Format long list as JSON.\n");
@@ -213,6 +214,22 @@ static int server_modes(enum action act, const char *sclient,
 }
 #endif
 
+static void random_delay(int randomise)
+{
+	int delay;
+#ifdef HAVE_WIN32
+	srand(GetTickCount());
+#else
+	struct timespec ts;
+	clock_gettime(CLOCK_REALTIME, &ts);
+	srand(ts.tv_nsec);
+#endif
+	delay=rand()%randomise;
+	logp("Sleeping %d seconds\n", delay);
+	sleep(delay);
+}
+
+
 #if defined(HAVE_WIN32)
 #define main BurpMain
 #endif
@@ -223,6 +240,7 @@ int main (int argc, char *argv[])
 	int daemon=1;
 	int forking=1;
 	int strip=0;
+	int randomise=0;
 	struct lock *lock=NULL;
 	struct conf *conf=NULL;
 	int forceoverwrite=0;
@@ -250,7 +268,7 @@ int main (int argc, char *argv[])
 		return run_bedup(argc, argv);
 #endif
 
-	while((option=getopt(argc, argv, "a:b:c:C:d:ghfFil:nr:s:vxjz:?"))!=-1)
+	while((option=getopt(argc, argv, "a:b:c:C:d:fFghil:nq:r:s:vxjz:?"))!=-1)
 	{
 		switch(option)
 		{
@@ -296,6 +314,9 @@ int main (int argc, char *argv[])
 				break;
 			case 'n':
 				forking=0;
+				break;
+			case 'q':
+				randomise=atoi(optarg);
 				break;
 			case 'r':
 				regex=optarg;
@@ -367,6 +388,14 @@ int main (int argc, char *argv[])
 	  && *orig_client
 	  && !(conf->orig_client=strdup_w(orig_client, __func__)))
 		goto end;
+
+	// The random delay needs to happen before the lock is got, otherwise
+	// you would never be able to use burp by hand.
+	if(randomise) conf->randomise=randomise;
+	if(conf->mode==MODE_CLIENT
+	  && (ACTION_BACKUP_TIMED || ACTION_TIMER_CHECK)
+	  && conf->randomise)
+		random_delay(conf->randomise);
 
 	if(conf->mode==MODE_SERVER
 	  && (act==ACTION_STATUS

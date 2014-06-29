@@ -1,8 +1,6 @@
 #ifndef _SERVER_MAIN_H
 #define _SERVER_MAIN_H
 
-extern int init_listen_socket(const char *port, int alladdr);
-
 extern int server(struct conf *conf, const char *conffile,
 	struct lock *lock, int generate_ca_only);
 

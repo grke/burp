@@ -98,6 +98,7 @@ void conf_init(struct conf *c)
 void conf_free_content(struct conf *c)
 {
 	if(!c) return;
+	free_w(&c->address);
 	free_w(&c->port);
 	free_w(&c->conffile);
 	free_w(&c->clientconfdir);
@@ -561,7 +562,9 @@ static int load_conf_strings(struct conf *c,
 	const char *v  // value
 	)
 {
-	if(  gcv(f, v, "port", &(c->port))
+	if(  gcv(f, v, "address", &(c->address))
+	  || gcv(f, v, "port", &(c->port))
+	  || gcv(f, v, "status_address", &(c->status_address))
 	  || gcv(f, v, "status_port", &(c->status_port))
 	  || gcv(f, v, "ssl_cert_ca", &(c->ssl_cert_ca))
 	  || gcv(f, v, "ssl_cert", &(c->ssl_cert))
@@ -810,8 +813,21 @@ static void conf_problem(const char *conf_path, const char *msg, int *r)
 	(*r)--;
 }
 
+#ifdef HAVE_IPV6
+// These should work for IPv4 connections too.
+#define DEFAULT_ADDRESS_MAIN	"::"
+#define DEFAULT_ADDRESS_STATUS	"::1"
+#else
+// Fall back to IPv4 address if IPv6 is not compiled in.
+#define DEFAULT_ADDRESS_MAIN	"0.0.0.0"
+#define DEFAULT_ADDRESS_STATUS	"127.0.0.1"
+#endif
+
 static int server_conf_checks(struct conf *c, const char *path, int *r)
 {
+	if(!c->address
+	  && !(c->address=strdup_w(DEFAULT_ADDRESS_MAIN, __func__)))
+			return -1;
 	if(!c->directory)
 		conf_problem(path, "directory unset", r);
 	if(!c->dedup_group)
@@ -835,6 +851,9 @@ static int server_conf_checks(struct conf *c, const char *path, int *r)
 	if(c->encryption_password)
 		conf_problem(path,
 		  "encryption_password should not be set on the server!", r);
+	if(!c->status_address
+	  && !(c->status_address=strdup_w(DEFAULT_ADDRESS_STATUS, __func__)))
+			return -1;
 	if(!c->status_port) // carry on if not set.
 		logp("%s: status_port unset", path);
 	if(!c->max_children)

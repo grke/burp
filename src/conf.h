@@ -22,8 +22,6 @@ enum protocol
 struct conf
 {
 	char *conffile;
-	char *port;
-	char *status_port;
 	enum burp_mode mode;
 	char *lockfile;
 	uint8_t log_to_syslog;
@@ -50,6 +48,10 @@ struct conf
 	enum protocol protocol;
 
 // Server options.
+	char *address;
+	char *port;
+	char *status_address;
+	char *status_port;
 	char *directory;
 	char *timestamp_format;
 	char *clientconfdir;

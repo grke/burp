@@ -1,78 +1,78 @@
 #include "include.h"
 #include "monitor/status_client.h"
 
-int delete_backup(struct sdirs *sdirs, struct conf *conf, struct bu *bu)
+static int do_rename_w(const char *a, const char *b)
 {
-	char *deleteme=NULL;
-
-	logp("deleting %s backup %lu\n", conf->cname, bu->bno);
-
-	if(!bu->next)
+	if(do_rename(a, b))
 	{
-		char *current=NULL;
-		// This is the current backup. Special measures are needed.
-		if(!(current=prepend_s(sdirs->client, "current")))
-			return -1;
-		if(!bu->prev)
-		{
-			// After the deletion, there will be no backups left.
-			// Just remove the symlink.
-			if(unlink(current))
-			{
-				logp("unlink %s: %s\n",
-					current, strerror(errno));
-				free(current);
-				return -1;
-			}
-		}
-		else
-		{
-			// Need to point the symlink at the previous backup.
-			char *tmp=NULL;
-			const char *target=NULL;
-			
-			if(!(tmp=prepend(current, ".tmp", strlen(".tmp"), "")))
-			{
-				free(current);
-				return -1;
-			}
-			target=bu->prev->basename;
-			unlink(tmp);
-			if(symlink(target, tmp))
-			{
-				logp("could not symlink '%s' to '%s': %s\n",
-					tmp, target, strerror(errno));
-				logp("delete failed\n");
-				free(tmp);
-				free(current);
-				return -1;
-			}
-			// FIX THIS: Race condition: The current link can
-			// be deleted and then the rename fail, leaving no
-			// current symlink.
-			// The administrator will have to recover it manually.
-			if(do_rename(tmp, current))
-			{
-				logp("delete failed\n");
-				free(tmp);
-				free(current);
-				return -1;
-			}
-			free(tmp);
-		}
-		free(current);
-	}
-
-	if(!(deleteme=prepend_s(sdirs->client, "deleteme"))
-	  || do_rename(bu->path, deleteme)
-	  || recursive_delete(deleteme, NULL, 1))
-	{
-		logp("Error when trying to delete %s\n", bu->path);
-		free(deleteme);
+		logp("Error when trying to rename for delete %s\n", a);
 		return -1;
 	}
-	free(deleteme);
+	return 0;
+}
 
+static int recursive_delete_w(struct sdirs *sdirs, struct bu *bu)
+{
+	if(recursive_delete(sdirs->deleteme, NULL, 1))
+	{
+		logp("Error when trying to delete %s\n", bu->path);
+		return -1;
+	}
+	return 0;
+}
+
+// The failure conditions here are dealt with by the rubble cleaning code.
+int delete_backup(struct sdirs *sdirs, struct conf *conf, struct bu *bu)
+{
+	logp("deleting %s backup %lu\n", conf->cname, bu->bno);
+
+	if(!bu->next && !bu->prev)
+	{
+		// The current, and only, backup.
+		if(do_rename_w(bu->path, sdirs->deleteme)) return -1;
+		// If interrupted here, there will be a dangling 'current'
+		// symlink.
+		if(unlink(sdirs->current))
+		{
+			logp("unlink %s: %s\n",
+				sdirs->current, strerror(errno));
+			return -1;
+		}
+		return recursive_delete_w(sdirs, bu);
+	}
+	if(!bu->next && bu->prev)
+	{
+		// The current backup. There are other backups left.
+		// Need to point the symlink at the previous backup.
+		const char *target=NULL;
+		
+		target=bu->prev->basename;
+		unlink(sdirs->currenttmp);
+		if(symlink(target, sdirs->currenttmp))
+		{
+			logp("could not symlink '%s' to '%s': %s\n",
+				sdirs->currenttmp, target, strerror(errno));
+			return -1;
+		}
+		// If interrupted here, there is a currenttmp and a current
+		// symlink, and they both point to valid directories.
+		if(do_rename_w(bu->path, sdirs->deleteme))
+			return -1;
+		// If interrupted here, there is a currenttmp and a current
+		// symlink, and the current link is dangling.
+		if(do_rename_w(sdirs->currenttmp, sdirs->current))
+			return -1;
+		// If interrupted here, moving the symlink could have failed
+		// after current was deleted but before currenttmp was renamed.
+		if(recursive_delete_w(sdirs, bu))
+			return -1;
+		return 0;
+	}
+
+	// It is not the current backup.
+	if(do_rename_w(bu->path, sdirs->deleteme)
+	  || recursive_delete_w(sdirs, bu))
+		return -1;
 	return 0;
 }
 

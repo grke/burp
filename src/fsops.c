@@ -300,3 +300,14 @@ int recursive_delete(const char *d, const char *file, uint8_t delfiles)
 	get_max(&name_max, _PC_NAME_MAX);
 	return do_recursive_delete(d, file, delfiles, name_max);
 }
+
+int unlink_w(const char *path, const char *func)
+{
+	if(unlink(path))
+	{
+		logp("unlink(%s) called from %s(): %s\n",
+			path, func, strerror(errno));
+		return -1;
+	}
+	return 0;
+}

@@ -99,7 +99,9 @@ static int do_burp1_dirs(struct sdirs *sdirs, struct conf *conf)
 	if(!(sdirs->client=prepend_s(sdirs->base, conf->cname))
 	  || !(sdirs->working=prepend_s(sdirs->client, "working"))
 	  || !(sdirs->finishing=prepend_s(sdirs->client, "finishing"))
+	  || !(sdirs->deleteme=prepend_s(sdirs->client, "deleteme"))
 	  || !(sdirs->current=prepend_s(sdirs->client, "current"))
+	  || !(sdirs->currenttmp=prepend_s(sdirs->client, "current.tmp"))
 	  || !(sdirs->currentdata=prepend_s(sdirs->current, "data"))
 	  || !(sdirs->timestamp=prepend_s(sdirs->working, "timestamp"))
 	  || !(sdirs->manifest=prepend_s(sdirs->working, "manifest.gz"))
@@ -133,6 +135,8 @@ static int do_burp2_dirs(struct sdirs *sdirs, struct conf *conf)
 	  || !(sdirs->working=prepend_s(sdirs->client, "working"))
 	  || !(sdirs->finishing=prepend_s(sdirs->client, "finishing"))
 	  || !(sdirs->current=prepend_s(sdirs->client, "current"))
+	  || !(sdirs->deleteme=prepend_s(sdirs->client, "deleteme"))
+	  || !(sdirs->currenttmp=prepend_s(sdirs->client, "current.tmp"))
 	  || !(sdirs->timestamp=prepend_s(sdirs->working, "timestamp"))
 	  || !(sdirs->manifest=prepend_s(sdirs->working, "manifest"))
 	  || !(sdirs->changed=prepend_s(sdirs->working, "changed"))
@@ -188,6 +192,8 @@ void sdirs_free_content(struct sdirs *sdirs)
         free_w(&sdirs->rworking);
         free_w(&sdirs->finishing);
         free_w(&sdirs->current);
+        free_w(&sdirs->currenttmp);
+        free_w(&sdirs->deleteme);
 
         free_w(&sdirs->timestamp);
         free_w(&sdirs->changed);

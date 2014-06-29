@@ -45,7 +45,7 @@ static int maybe_rebuild_manifest(struct sdirs *sdirs, int compress,
 	return 0;
 }
 
-static int rubble_delete(struct asfd *asfd, struct sdirs *sdirs)
+static int working_delete(struct asfd *asfd, struct sdirs *sdirs)
 {
 	// Try to remove it and start again.
 	logp("deleting old working directory\n");
@@ -59,7 +59,7 @@ static int rubble_delete(struct asfd *asfd, struct sdirs *sdirs)
 	return 0;
 }
 
-static int rubble_use(struct asfd *asfd, struct sdirs *sdirs,
+static int working_use(struct asfd *asfd, struct sdirs *sdirs,
 	const char *incexc, int *resume, struct conf *cconf)
 {
 	// Use it as it is.
@@ -81,7 +81,7 @@ static int rubble_use(struct asfd *asfd, struct sdirs *sdirs,
 	return check_for_rubble_burp1(asfd, sdirs, incexc, resume, cconf);
 }
 
-static int rubble_resume(struct asfd *asfd, struct sdirs *sdirs,
+static int working_resume(struct asfd *asfd, struct sdirs *sdirs,
 	const char *incexc, int *resume, struct conf *cconf)
 {
 	if(cconf->restore_client)
@@ -106,7 +106,7 @@ static int rubble_resume(struct asfd *asfd, struct sdirs *sdirs,
 		case 0:
 			logp("Includes/excludes changed since last backup.\n");
 			logp("Will treat last backup as finished.\n");
-			return rubble_use(asfd, sdirs, incexc, resume, cconf);
+			return working_use(asfd, sdirs, incexc, resume, cconf);
 		case -1:
 		default:
 			return -1;
@@ -131,38 +131,29 @@ static int get_fullrealwork(struct asfd *asfd,
 	return 0;
 }
 
-int check_for_rubble_burp1(struct asfd *asfd,
+static int recover_finishing(struct asfd *asfd,
+	struct sdirs *sdirs, struct conf *cconf)
+{
+	logp("Found finishing symlink - attempting to complete prior backup!\n");
+	if(backup_phase4_server_burp1(sdirs, cconf))
+	{
+		log_and_send(asfd, "Problem with prior backup. Please check the client log on the server.");
+		return -1;
+	}
+	logp("Prior backup completed OK.\n");
+	return 0;
+}
+
+static int recover_working(struct asfd *asfd,
 	struct sdirs *sdirs, const char *incexc,
 	int *resume, struct conf *cconf)
 {
 	int ret=-1;
 	char msg[256]="";
-	struct stat statp;
 	char *logpath=NULL;
+	struct stat statp;
 	char *phase1datatmp=NULL;
 	const char *wdrm=cconf->recovery_method;
-
-	// If there is a 'finishing' symlink, we need to
-	// run the finish_backup stuff.
-	if(!lstat(sdirs->finishing, &statp))
-	{
-		logp("Found finishing symlink - attempting to complete prior backup!\n");
-		if(backup_phase4_server_burp1(sdirs, cconf))
-		{
-			log_and_send(asfd, "Problem with prior backup. Please check the client log on the server.");
-			goto error;
-		}
-		logp("Prior backup completed OK.\n");
-		goto end;
-	}
-
-	if(lstat(sdirs->working, &statp)) // No working directory - good.
-		goto end;
-	if(!S_ISLNK(statp.st_mode))
-	{
-		log_and_send(asfd, "Working directory is not a symlink.\n");
-		goto error;
-	}
 
 	// The working directory has not finished being populated.
 	// Check what to do.
@@ -189,17 +180,17 @@ int check_for_rubble_burp1(struct asfd *asfd,
 
 	if(!strcmp(wdrm, "delete"))
 	{
-		if(rubble_delete(asfd, sdirs))
+		if(working_delete(asfd, sdirs))
 			goto error;
 	}
 	else if(!strcmp(wdrm, "use"))
 	{
-		if(rubble_use(asfd, sdirs, incexc, resume, cconf))
+		if(working_use(asfd, sdirs, incexc, resume, cconf))
 			goto error;
 	}
 	else if(!strcmp(wdrm, "resume"))
 	{
-		if(rubble_resume(asfd, sdirs, incexc, resume, cconf))
+		if(working_resume(asfd, sdirs, incexc, resume, cconf))
 			goto error;
 	}
 	else
@@ -217,4 +208,84 @@ error:
 	free_w(&phase1datatmp);
 	set_logfp(NULL, cconf); // fclose the logfp
 	return ret;
+}
+
+static int recover_currenttmp(struct sdirs *sdirs)
+{
+	struct stat statp;
+	logp("Found currenttmp symlink\n");
+	if(stat(sdirs->currenttmp, &statp))
+	{
+		logp("But currenttmp is not pointing at something valid.\n");
+		logp("Deleting it.\n");
+		return unlink_w(sdirs->currenttmp, __func__);
+	}
+
+	if(!lstat(sdirs->current, &statp))
+	{
+		if(S_ISLNK(statp.st_mode))
+		{
+			logp("But current symlink already exists!\n");
+			if(!stat(sdirs->current, &statp))
+			{
+				logp("And current symlink points at something valid.\n");
+				logp("Deleting currenttmp.\n");
+				return unlink_w(sdirs->currenttmp, __func__);
+				
+			}
+			else
+			{
+				logp("But current symlink is not pointing at something valid.\n");
+				logp("Replacing current with currenttmp.\n");
+				return do_rename(sdirs->currenttmp,
+					sdirs->current);
+			}
+		}
+		else
+		{
+			logp("But current already exists and is not a symlink!\n");
+			logp("Giving up.\n");
+			return -1;
+		}
+	}
+	else
+	{
+		logp("Renaming currenttmp to current\n");
+		return do_rename(sdirs->currenttmp, sdirs->current);
+	}
+	return 0;
+}
+
+int check_for_rubble_burp1(struct asfd *asfd,
+	struct sdirs *sdirs, const char *incexc,
+	int *resume, struct conf *cconf)
+{
+	struct stat statp;
+
+	if(!lstat(sdirs->finishing, &statp))
+	{
+		if(S_ISLNK(statp.st_mode))
+			return recover_finishing(asfd, sdirs, cconf);
+		log_and_send(asfd, "Finishing directory is not a symlink.\n");
+		return -1;
+	}
+
+	if(!lstat(sdirs->working, &statp))
+	{
+		if(S_ISLNK(statp.st_mode))
+			return recover_working(asfd,
+				sdirs, incexc, resume, cconf);
+		log_and_send(asfd, "Working directory is not a symlink.\n");
+		return -1;
+	}
+
+	if(!lstat(sdirs->currenttmp, &statp))
+	{
+		if(S_ISLNK(statp.st_mode))
+			return recover_currenttmp(sdirs);
+		log_and_send(asfd, "Currenttmp directory is not a symlink.\n");
+		return -1;
+	}
+
+	return 0;
 }

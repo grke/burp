@@ -17,6 +17,8 @@ struct sdirs
 	char *rworking; // Real.
 	char *finishing; // Symlink.
 	char *current; // Symlink
+	char *currenttmp; // Temporary symlink
+	char *deleteme;
 
 	char *timestamp;
 	char *changed;

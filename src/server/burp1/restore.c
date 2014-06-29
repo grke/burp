@@ -217,6 +217,7 @@ static int restore_file(struct asfd *asfd, struct bu *bu,
 	struct sbuf *sb, int act, struct sdirs *sdirs, struct conf *cconf)
 {
 	struct bu *b;
+	struct bu *hlwarn=NULL;
 	static char *tmppath1=NULL;
 	static char *tmppath2=NULL;
 
@@ -249,6 +250,8 @@ static int restore_file(struct asfd *asfd, struct bu *bu,
 			const char *tmp=NULL;
 			const char *best=NULL;
 			unsigned long long bytes=0;
+
+			if(b!=bu && bu->hardlinked) hlwarn=b;
 
 			best=path;
 			tmp=tmppath1;
@@ -346,6 +349,13 @@ static int restore_file(struct asfd *asfd, struct bu *bu,
 				}
 			}
 			cntr_add_sentbytes(cconf->cntr, bytes);
+
+			// This warning must be done after everything else,
+			// Because the client does not expect another cmd after
+			// the warning.
+			if(hlwarn) logw(asfd, cconf,
+				"restore found %s in %s\n",
+					sb->path.buf, hlwarn->basename);
 			free(path);
 			return 0;
 		}

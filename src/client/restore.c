@@ -684,10 +684,18 @@ error:
 	return -1;
 }
 
+static int sbuf_fill_w(struct sbuf *sb, struct asfd *asfd,
+	struct blk *blk, const char *datpath, struct conf *conf)
+{
+	if(conf->protocol==PROTO_BURP2)
+		return sbuf_fill(sb, asfd, NULL, blk, datpath, conf);
+	else
+		return sbufl_fill(sb, asfd, NULL, NULL, conf->cntr);
+}
+
 int do_restore_client(struct asfd *asfd,
 	struct conf *conf, enum action act, int vss_restore)
 {
-	int ars=0;
 	int ret=-1;
 	char msg[512]="";
 	struct sbuf *sb=NULL;
@@ -699,13 +707,12 @@ int do_restore_client(struct asfd *asfd,
 
 	binit(&bfd, 0, conf);
 
-	logp("doing %s\n", act_str(act));
-
 	snprintf(msg, sizeof(msg), "%s %s:%s", act_str(act),
 		conf->backup?conf->backup:"", conf->regex?conf->regex:"");
+	logp("doing %s\n", msg);
 	if(asfd->write_str(asfd, CMD_GEN, msg)
 	  || asfd->read_expect(asfd, CMD_GEN, "ok"))
-		goto end;
+		goto error;
 	logp("doing %s confirmed\n", act_str(act));
 
 #if defined(HAVE_WIN32)
@@ -713,42 +720,37 @@ int do_restore_client(struct asfd *asfd,
 #endif
 
 	if(!(style=get_restore_style(asfd, conf)))
-		goto end;
+		goto error;
 	if(!strcmp(style, RESTORE_SPOOL))
 	{
 		if(restore_spool(asfd, conf, &datpath))
-			goto end;
+			goto error;
 	}
 	else
 		logp("Streaming restore direct\n");
 
 //	if(conf->send_client_cntr && cntr_recv(conf))
-//		goto end;
+//		goto error;
 
 	if(!(sb=sbuf_alloc(conf))
 	  || (conf->protocol==PROTO_BURP2 && !(blk=blk_alloc())))
 	{
 		log_and_send_oom(asfd, __func__);
-		goto end;
+		goto error;
 	}
 
 	while(1)
 	{
 		sbuf_free_content(sb);
 
-		if(conf->protocol==PROTO_BURP2)
-			ars=sbuf_fill(sb, asfd, NULL, blk, datpath, conf);
-		else
-			ars=sbufl_fill(sb, asfd, NULL, NULL, conf->cntr);
-
-		if(ars)
+		switch(sbuf_fill_w(sb, asfd, blk, datpath, conf))
 		{
-			if(ars<0) goto end;
-			// ars==1 means it ended ok.
-			//logp("got %s end\n", act_str(act));
-			if(asfd->write_str(asfd, CMD_GEN, "restoreend_ok"))
-				goto end;
-			break;
+			case 0: break;
+			case 1: if(asfd->write_str(asfd, CMD_GEN,
+				"restoreend_ok")) goto error;
+				goto end; // It was OK.
+			default:
+			case -1: goto error;
 		}
 
 		if(conf->protocol==PROTO_BURP2 && blk->data)
@@ -757,7 +759,7 @@ int do_restore_client(struct asfd *asfd,
 			wret=write_data(asfd, &bfd, blk);
 			if(!datpath) free(blk->data);
 			blk->data=NULL;
-			if(wret) goto end;
+			if(wret) goto error;
 			continue;
 		}
 
@@ -780,7 +782,7 @@ int do_restore_client(struct asfd *asfd,
 				{
 					int s;
 					s=strip_path_components(asfd, sb, conf);
-					if(s<0) goto end;
+					if(s<0) goto error;
 					if(s==0)
 					{
 						// Too many components stripped
@@ -794,7 +796,7 @@ int do_restore_client(struct asfd *asfd,
 					sb->path.buf)))
 				{
 					log_and_send_oom(asfd, __func__);
-					goto end;
+					goto error;
 				}
 				if(act==ACTION_RESTORE)
 				{
@@ -811,12 +813,17 @@ int do_restore_client(struct asfd *asfd,
 						"Path exists: %s", fullpath);
 					if(restore_interrupt(asfd,
 						sb, msg, conf))
-							goto end;
+							goto error;
 					else
 						continue;
 				  }
 				}
-				break;	
+				break;
+			case CMD_WARNING:
+				cntr_add(conf->cntr, sb->path.cmd, 1);
+				printf("\n");
+				logp("%s", sb->path.buf);
+				continue;
 			default:
 				break;
 		}
@@ -826,16 +833,16 @@ int do_restore_client(struct asfd *asfd,
 			// These are the same in both burp1 and burp2.
 			case CMD_DIRECTORY:
 				if(restore_dir(asfd, sb,
-					fullpath, act, conf)) goto end;
+					fullpath, act, conf)) goto error;
 				continue;
 			case CMD_SOFT_LINK:
 			case CMD_HARD_LINK:
 				if(restore_link(asfd, sb,
-					fullpath, act, conf)) goto end;
+					fullpath, act, conf)) goto error;
 				continue;
 			case CMD_SPECIAL:
 				if(restore_special(asfd, sb,
-					fullpath, act, conf)) goto end;
+					fullpath, act, conf)) goto error;
 				continue;
 		}
 
@@ -843,18 +850,19 @@ int do_restore_client(struct asfd *asfd,
 		{
 			if(restore_switch_burp2(asfd, sb, fullpath, act,
 				&bfd, vss_restore, conf))
-					goto end;
+					goto error;
 		}
 		else
 		{
 			if(restore_switch_burp1(asfd, sb, fullpath, act,
 				&bfd, vss_restore, conf))
-					goto end;
+					goto error;
 		}
 	}
 
-	ret=0;
 end:
+	ret=0;
+error:
 	// It is possible for a fd to still be open.
 	bclose(&bfd, asfd);
 

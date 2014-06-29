@@ -222,11 +222,6 @@ int restore_switch_burp1(struct asfd *asfd, struct sbuf *sb,
 {
 	switch(sb->path.cmd)
 	{
-		case CMD_WARNING:
-			cntr_add(conf->cntr, sb->path.cmd, 1);
-			printf("\n");
-			logp("%s", sb->path);
-			break;
 		case CMD_FILE:
 		case CMD_VSS_T:
 			// Have it a separate statement to the

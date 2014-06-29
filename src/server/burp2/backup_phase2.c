@@ -573,6 +573,7 @@ static int append_for_champ_chooser(struct asfd *chfd,
 		// it can go faster than we can send paths to completed
 		// manifests to it. This means that deduplication efficiency
 		// is reduced (although speed may be faster).
+		// So limit the sending.
 		if(blist->blk_for_champ_chooser->index
 		  - blist->head->index > MANIFEST_SIG_MAX)
 			return 0;

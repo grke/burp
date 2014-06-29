@@ -128,7 +128,7 @@ ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize)
 }
 
 int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
-	struct blk *blk, char *datpath, struct conf *conf)
+	struct blk *blk, const char *datpath, struct conf *conf)
 {
 	static unsigned int s;
 	static char lead[5]="";
@@ -337,7 +337,7 @@ end:
 }
 
 int sbuf_fill_from_gzfile(struct sbuf *sb, struct asfd *asfd,
-	gzFile zp, struct blk *blk, char *datpath, struct conf *conf)
+	gzFile zp, struct blk *blk, const char *datpath, struct conf *conf)
 {
 	return sbuf_fill(sb, asfd, zp, blk, datpath, conf);
 }

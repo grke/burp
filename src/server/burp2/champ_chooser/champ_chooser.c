@@ -104,7 +104,8 @@ int deduplicate(struct asfd *asfd, struct conf *conf)
 //printf("after agb: %lu %d\n", blk->index, blk->got);
 	}
 
-	logp("%s: %04d - %04d/%04d\n", asfd->desc, count, in->got, blk_count);
+	logp("%s: %04d/%04d - %04d/%04d\n",
+		asfd->desc, count, candidates_len, in->got, blk_count);
 	//cntr_add_same_val(conf->cntr, CMD_DATA, in->got);
 
 	// Start the incoming array again.

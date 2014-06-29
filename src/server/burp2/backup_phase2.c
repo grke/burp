@@ -569,6 +569,14 @@ static int append_for_champ_chooser(struct asfd *chfd,
 	}
 	while(blist->blk_for_champ_chooser)
 	{
+		// If we send too many blocks to the champ chooser at once,
+		// it can go faster than we can send paths to completed
+		// manifests to it. This means that deduplication efficiency
+		// is reduced (although speed may be faster).
+		if(blist->blk_for_champ_chooser->index
+		  - blist->head->index > MANIFEST_SIG_MAX)
+			return 0;
+
 		// FIX THIS: Maybe convert depending on endian-ness.
 		memcpy(wbuf->buf, 
 			&blist->blk_for_champ_chooser->fingerprint,

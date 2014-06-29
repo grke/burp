@@ -86,6 +86,9 @@ overwrite existing files.
 \fB\-i\fR \fB\fR
 Print an index table of symbols that humans may see burp produce, and exit.
 .TP
+\fB\-q\fR \fB[max secs]\fR
+When running a timed backup, sleep for a random number of seconds (between 0 and the number given) before contacting the server. Alternatively, this can be specified by the 'randomise' configuration file option.
+.TP
 \fB\-r\fR \fB[regex]\fR
 Short for 'regular expression'. The argument is a regular expression with
 which to match backup files. Use it for lists and restores.
@@ -439,6 +442,9 @@ Log to stdout. Defaults to on.
 .TP
 \fBprogress_counter=[0|1]\fR
 Print progress counters on stdout. Defaults to on.
+.TP
+\fBrandomise=[max secs]\fR
+When running a timed backup, sleep for a random number of seconds (between 0 and the number given) before contacting the server. Alternatively, this can be specified by the '-q' command line option.
 .TP
 \fBuser=[username]\fR
 Run as a particular user (not supported on Windows).

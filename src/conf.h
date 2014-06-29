@@ -81,6 +81,7 @@ struct conf
 	char *autoupgrade_os;
 	char *autoupgrade_dir; // also a server option
 	char *ca_csr_dir;
+	int randomise;
 
   // This block of client stuff is all to do with what files to backup.
 	struct strlist *startdir;

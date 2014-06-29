@@ -541,6 +541,7 @@ static int load_conf_ints(struct conf *c,
 	gcv_uint8(f, v, "strip_vss", &(c->strip_vss));
 	gcv_uint8(f, v, "atime", &(c->atime));
 	gcv_int(f, v, "strip", &(c->strip));
+	gcv_int(f, v, "randomise", &(c->randomise));
 	gcv_uint8(f, v, "fork", &(c->forking));
 	gcv_uint8(f, v, "daemon", &(c->daemon));
 	gcv_uint8(f, v, "directory_tree", &(c->directory_tree));

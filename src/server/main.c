@@ -4,7 +4,8 @@
 
 #include <netdb.h>
 
-static int sfd=-1; // status fd for the main server
+// FIX THIS: Should be able to configure multiple addresses and ports.
+#define LISTEN_SOCKETS	32
 
 static int hupreload=0;
 static int hupreload_logged=0;
@@ -26,92 +27,102 @@ static void usr2handler(int sig)
 	gentleshutdown_logged=0;
 }
 
-int init_listen_socket(const char *port, int alladdr)
+static void init_fds(int *fds)
 {
-	int rfd;
+	for(int i=0; i<LISTEN_SOCKETS; i++) fds[i]=-1;
+}
+
+static void close_fds(int *fds)
+{
+	for(int i=0; i<LISTEN_SOCKETS; i++) close_fd(&(fds[i]));
+}
+
+static int init_listen_socket(const char *address, const char *port,
+	int alladdr, int *fds)
+{
+	int i;
 	int gai_ret;
-#ifdef HAVE_IPV6
-	int no = 0;
-	int sockopt_ret = 0;
-#endif
 	struct addrinfo hints;
-	struct addrinfo *result=NULL;
 	struct addrinfo *rp=NULL;
+	struct addrinfo *info=NULL;
+
+	close_fds(fds);
 
 	memset(&hints, 0, sizeof(struct addrinfo));
-#ifdef HAVE_IPV6
-	hints.ai_family = AF_INET6;
-#else
-	hints.ai_family = AF_INET;
-#endif /* HAVE_IPV6 */
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = alladdr ? AI_PASSIVE : 0;
-	hints.ai_protocol = IPPROTO_TCP;
-	hints.ai_canonname = NULL;
-	hints.ai_addr = NULL;
-	hints.ai_next = NULL;
+	hints.ai_family=AF_UNSPEC;
+	hints.ai_socktype=SOCK_STREAM;
+	hints.ai_protocol=IPPROTO_TCP;
+	hints.ai_flags=AI_NUMERICHOST;
+	//if(alladdr) hints.ai_flags|=AI_PASSIVE;
 
-	if((gai_ret=getaddrinfo(NULL, port, &hints, &result)))
+	if((gai_ret=getaddrinfo(address, port, &hints, &info)))
 	{
 		logp("unable to getaddrinfo on port %s: %s\n",
 			port, gai_strerror(gai_ret));
 		return -1;
 	}
 
-	for(rp=result; rp; rp=rp->ai_next)
+	i=0;
+	for(rp=info; rp && i<LISTEN_SOCKETS; rp=rp->ai_next)
 	{
-		rfd=socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-		if(rfd<0)
+		fds[i]=socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+		if(fds[i]<0)
 		{
 			logp("unable to create socket on port %s: %s\n",
 				port, strerror(errno));
 			continue;
 		}
-		if(!bind(rfd, rp->ai_addr, rp->ai_addrlen)) break;
-		logp("unable to bind socket on port %s: %s\n",
-			port, strerror(errno));
-		close(rfd);
-		rfd=-1;
-	}
-	if(!rp || rfd<0)
-	{
-		logp("unable to bind listening socket on port %s\n", port);
-		return -1;
-	}
+		if(bind(fds[i], rp->ai_addr, rp->ai_addrlen))
+		{
+			logp("unable to bind socket on port %s: %s\n",
+				port, strerror(errno));
+			close(fds[i]);
+			fds[i]=-1;
+			continue;
+		}
 
 #ifdef HAVE_IPV6
-	if (rp->ai_family == AF_INET6) {
-		sockopt_ret = setsockopt(rfd, IPPROTO_IPV6, IPV6_V6ONLY, &no, sizeof(no));
-	}
-
-	if(!sockopt_ret)
-	{
-		logp("unable to change socket option to "
-			"listen on both IPv4 and IPv6\n");
-		return -1;
-	}
+		if(rp->ai_family==AF_INET6)
+		{
+			// Attempt to say that it should not listen on IPv6
+			// only.
+			int optval=0;
+			setsockopt(fds[i], IPPROTO_IPV6, IPV6_V6ONLY,
+				&optval, sizeof(optval));
+		}
 #endif
 
-	freeaddrinfo(result);
-
-	reuseaddr(rfd);
-
-	// Say that we are happy to accept connections.
-	if(listen(rfd, 5)<0)
-	{
-		close_fd(&rfd);
-		logp("could not listen on main socket %d\n", port);
-		return -1;
-	}
+		// Say that we are happy to accept connections.
+		if(listen(fds[i], 5)<0)
+		{
+			close_fd(&(fds[i]));
+			logp("could not listen on main socket %d\n", port);
+			return -1;
+		}
 
 #ifdef HAVE_WIN32
-	{
-		u_long ioctlArg=0;
-		ioctlsocket(rfd, FIONBIO, &ioctlArg);
-	}
+		{
+			u_long ioctlArg=0;
+			ioctlsocket(fds[i], FIONBIO, &ioctlArg);
+		}
 #endif
+		reuseaddr(fds[i]);
+		i++;
+	}
 
-	return rfd;
+	freeaddrinfo(info);
+
+	if(!i)
+	{
+		logp("could not listen on address: %s\n", address);
+#ifdef HAVE_IPV6
+		if(strchr(address, ':'))
+			logp("maybe check whether your OS has IPv6 enabled.\n");
+#endif
+		return -1;
+	}
+
+	return 0;
 }
 
 static void sigchld_handler(int sig)
@@ -445,9 +456,76 @@ static int relock(struct lock *lock)
 	return -1;
 }
 
-static int run_server(struct conf *conf, const char *conffile, int *rfd,
-	const char *oldport, const char *oldstatusport)
+static int process_fds(int *fds, fd_set *fse, fd_set *fsr,
+	const char *conffile, SSL_CTX *ctx, struct conf *conf)
 {
+	for(int i=0; i<LISTEN_SOCKETS && fds[i]!=-1; i++)
+	{
+		if(FD_ISSET(fds[i], fse))
+		{
+			// Happens when a client exits.
+			//logp("error on listening socket.\n");
+			if(!conf->forking) { gentleshutdown++; return 1; }
+			continue;
+		}
+
+		if(FD_ISSET(fds[i], fsr))
+		{
+			// A normal client is incoming.
+			if(process_incoming_client(fds[i], conf, ctx,
+				conffile, 0 /* not a status client */))
+					return -1;
+			if(!conf->forking) { gentleshutdown++; return 1; }
+		}
+	}
+	return 0;
+}
+
+// FIX THIS: should probably put this stuff in a separate file and get the
+// conf stuff to use it too.
+struct oldnet
+{
+	char *address;
+	char *status_address;
+	char *port;
+	char *status_port;
+};
+
+static int oldnet_init(struct oldnet *oldnet, struct conf *conf)
+{
+	if(!(oldnet->port=strdup_w(conf->port, __func__))) return -1;
+	if(conf->status_port
+	  && !(oldnet->status_port=strdup_w(conf->status_port, __func__)))
+		return -1;
+	if(conf->address
+	  && !(oldnet->address=strdup_w(conf->address, __func__)))
+		return -1;
+	if(conf->status_address
+	  && !(oldnet->status_address=strdup_w(conf->status_address, __func__)))
+		return -1;
+	return 0;
+}
+
+static void oldnet_free_contents(struct oldnet *oldnet)
+{
+	free_w(&oldnet->address);
+	free_w(&oldnet->status_address);
+	free_w(&oldnet->port);
+	free_w(&oldnet->status_port);
+}
+
+static int ports_changed(const char *old, const char *latest)
+{
+	if((!old && latest)
+	  || (old && latest && strcmp(old, latest)))
+		return 1;
+	return 0;
+}
+
+static int run_server(struct conf *conf, const char *conffile,
+	int *rfds, int *sfds, struct oldnet *oldnet)
+{
+	int i=0;
 	int ret=0;
 	SSL_CTX *ctx=NULL;
 	int found_normal_child=0;
@@ -463,20 +541,17 @@ static int run_server(struct conf *conf, const char *conffile, int *rfd,
 		return 1;
 	}
 
-	if(!oldport
-	  || strcmp(oldport, conf->port))
+	if(ports_changed(oldnet->address, conf->address)
+	  || ports_changed(oldnet->port, conf->port))
 	{
-		close_fd(rfd);
-		if((*rfd=init_listen_socket(conf->port, 1))<0)
-			return 1;
+		if(init_listen_socket(conf->address,
+			conf->port, 1, rfds)) return 1;
 	}
-	if(conf->status_port
-	  && (!oldstatusport
-		|| strcmp(oldstatusport, conf->status_port)))
+	if(ports_changed(oldnet->status_address, conf->status_address)
+	  || ports_changed(oldnet->status_port, conf->status_port))
 	{
-		close_fd(&sfd);
-		if((sfd=init_listen_socket(conf->status_port, 0))<0)
-			return 1;
+		if(init_listen_socket(conf->status_address,
+			conf->status_port, 0, sfds)) return 1;
 	}
 
 	while(!hupreload)
@@ -499,15 +574,16 @@ static int run_server(struct conf *conf, const char *conffile, int *rfd,
 		tval.tv_sec=1;
 		tval.tv_usec=0;
 
-		add_fd_to_sets(*rfd, &fsr, NULL, &fse, &mfd);
-		if(sfd>=0) add_fd_to_sets(sfd, &fsr, NULL, &fse, &mfd);
+		for(i=0; i<LISTEN_SOCKETS && rfds[i]!=-1; i++)
+			add_fd_to_sets(rfds[i], &fsr, NULL, &fse, &mfd);
+		for(i=0; i<LISTEN_SOCKETS && sfds[i]!=-1; i++)
+			add_fd_to_sets(sfds[i], &fsr, NULL, &fse, &mfd);
 
 		// Add read fds of normal children.
 		found_normal_child=chld_add_fd_to_normal_sets(conf,
 			&fsr, &fse, &mfd);
 
-		// Leave if we had a SIGUSR1 and there are no children
-		// running.
+		// Leave if we had a SIGUSR1 and there are no children running.
 		if(gentleshutdown)
 		{
 			if(!gentleshutdown_logged)
@@ -534,46 +610,9 @@ static int run_server(struct conf *conf, const char *conffile, int *rfd,
 			}
 		}
 
-		if(FD_ISSET(*rfd, &fse))
-		{
-			// Happens when a client exits.
-			//logp("error on listening socket.\n");
-			if(!conf->forking) { gentleshutdown++; break; }
-			continue;
-		}
-
-		if((sfd>=0 && FD_ISSET(sfd, &fse)))
-		{
-			// Happens when a client exits.
-			//logp("error on status socket.\n");
-			if(!conf->forking) { gentleshutdown++; break; }
-			continue;
-		}
-
-		if(FD_ISSET(*rfd, &fsr))
-		{
-			// A normal client is incoming.
-			if(process_incoming_client(*rfd, conf, ctx,
-				conffile, 0 /* not a status client */))
-			{
-				ret=1;
-				break;
-			}
-			if(!conf->forking) { gentleshutdown++; break; }
-		}
-
-		if(sfd>=0 && FD_ISSET(sfd, &fsr))
-		{
-			// A status client is incoming.
-			//printf("status client?\n");
-			if(process_incoming_client(sfd, conf, ctx,
-				conffile, 1 /* a status client */))
-			{
-				ret=1;
-				break;
-			}
-			if(!conf->forking) { gentleshutdown++; break; }
-		}
+		if((ret=process_fds(rfds, &fse, &fsr, conffile, ctx, conf))
+		  || (ret=process_fds(sfds, &fse, &fsr, conffile, ctx, conf)))
+			break;
 
 		if(chld_fd_isset_normal(conf, &fsr, &fse))
 		{
@@ -629,14 +668,19 @@ int server(struct conf *conf, const char *conffile,
 	struct lock *lock, int generate_ca_only)
 {
 	int ret=0;
-	int rfd=-1; // normal client port
+	int rfds[LISTEN_SOCKETS]; // Sockets for clients to connect to.
+	int sfds[LISTEN_SOCKETS]; // Status server sockets.
+	struct oldnet oldnet;
+
+	//return champ_test(conf);
+
 	// Only close and reopen listening sockets if the ports changed.
 	// Otherwise you get an "unable to bind listening socket on port X"
 	// error, and the server stops.
-	char *oldport=NULL;
-	char *oldstatusport=NULL;
+	memset(&oldnet, 0, sizeof(oldnet));
 
-	//return champ_test(conf);
+	init_fds(rfds);
+	init_fds(sfds);
 
 	if(ca_server_setup(conf)) return 1;
 	if(generate_ca_only)
@@ -654,16 +698,17 @@ int server(struct conf *conf, const char *conffile,
 
 	while(!ret && !gentleshutdown)
 	{
-		ret=run_server(conf, conffile,
-			&rfd, oldport, oldstatusport);
-		if(ret) break;
+		if((ret=run_server(conf, conffile, rfds, sfds, &oldnet)))
+			break;
+
 		if(hupreload && !gentleshutdown)
 		{
-			if(oldport) free(oldport);
-			if(oldstatusport) free(oldstatusport);
-			oldport=strdup(conf->port);
-			oldstatusport=conf->status_port?
-				strdup(conf->status_port):NULL;
+			oldnet_free_contents(&oldnet);
+			if(oldnet_init(&oldnet, conf))
+			{
+				ret=1;
+				break;
+			}
 			if(reload(conf, conffile,
 				0, // Not first time.
 				conf->max_children,
@@ -673,10 +718,10 @@ int server(struct conf *conf, const char *conffile,
 		}
 		hupreload=0;
 	}
-	close_fd(&rfd);
-	close_fd(&sfd);
-	if(oldport) free(oldport);
-	if(oldstatusport) free(oldstatusport);
+
+	close_fds(rfds);
+	close_fds(sfds);
+	oldnet_free_contents(&oldnet);
 
 	// The signal handler stuff sets up chlds. Need to free them.
 	chlds_free();

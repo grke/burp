@@ -669,7 +669,8 @@ static int deal_with_wrap_up_from_chfd(struct iobuf *rbuf, struct blist *blist,
 }
 
 static int deal_with_read_from_chfd(struct asfd *asfd, struct asfd *chfd,
-	struct blist *blist, uint64_t *wrap_up, struct dpth *dpth)
+	struct blist *blist, uint64_t *wrap_up, struct dpth *dpth,
+	struct conf *conf)
 {
 	int ret=-1;
 
@@ -681,6 +682,7 @@ static int deal_with_read_from_chfd(struct asfd *asfd, struct asfd *chfd,
 			// Get these for blks that the champ chooser has found.
 			if(deal_with_sig_from_chfd(chfd->rbuf, blist, dpth))
 				goto end;
+			cntr_add_same(conf->cntr, CMD_DATA);
 			break;
 		case CMD_WRAP_UP:
 			if(deal_with_wrap_up_from_chfd(chfd->rbuf, blist, dpth))
@@ -782,7 +784,7 @@ int backup_phase2_server_burp2(struct async *as, struct sdirs *sdirs,
 		while(chfd->rbuf->buf)
 		{
 			if(deal_with_read_from_chfd(asfd, chfd,
-				blist, &wrap_up, dpth)) goto end;
+				blist, &wrap_up, dpth, conf)) goto end;
 			// Get as much out of the
 			// readbuf as possible.
 			if(chfd->parse_readbuf(chfd)) goto end;

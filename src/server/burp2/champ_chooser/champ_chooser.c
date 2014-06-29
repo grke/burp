@@ -71,15 +71,13 @@ int deduplicate(struct asfd *asfd, struct conf *conf)
 	int count=0;
 	int blk_count=0;
 
-printf("in deduplicate()\n");
-
 	if(!in) return 0;
 
 	incoming_found_reset(in);
 	count=0;
 	while((champ=candidates_choose_champ(in, champ_last)))
 	{
-		printf("Got champ: %s %d\n", champ->path, *(champ->score));
+//		printf("Got champ: %s %d\n", champ->path, *(champ->score));
 		if(hash_load(champ->path, conf)) return -1;
 		if(++count==CHAMPS_MAX) break;
 		champ_last=champ;
@@ -106,12 +104,7 @@ printf("in deduplicate()\n");
 //printf("after agb: %lu %d\n", blk->index, blk->got);
 	}
 
-	printf("%d %s found %d/%d incoming %s\n", count,
-		count==1?"champ":"champs", in->got, blk_count,
-		blk_count==1?"block":"blocks");
-	logp("%d %s found %d/%d incoming %s\n", count,
-		count==1?"champ":"champs", in->got, blk_count,
-		blk_count==1?"block":"blocks");
+	logp("%s: %04d - %04d/%04d\n", asfd->desc, count, in->got, blk_count);
 	//cntr_add_same_val(conf->cntr, CMD_DATA, in->got);
 
 	// Start the incoming array again.

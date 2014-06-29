@@ -41,8 +41,8 @@ static int asfd_parse_readbuf(struct asfd *asfd)
 	{
 		if((sscanf(asfd->readbuf, "%c%04X", &cmdtmp, &s))!=2)
 		{
-			logp("sscanf of '%s' failed in %s for %s\n",
-				asfd->readbuf, __func__, asfd->desc);
+			logp("%s: sscanf of '%s' failed in %s\n",
+				asfd->desc, asfd->readbuf, __func__);
 			goto error;
 		}
 	}
@@ -53,16 +53,16 @@ static int asfd_parse_readbuf(struct asfd *asfd)
 			goto error;
 		if(!(memcpy(asfd->rbuf->buf, asfd->readbuf+5, s)))
 		{
-			logp("memcpy failed in %s for %s\n",
-				__func__, asfd->desc);
+			logp("%s: memcpy failed in %s\n",
+				asfd->desc, __func__);
 			goto error;
 		}
 		asfd->rbuf->buf[s]='\0';
 		if(!(memmove(asfd->readbuf,
 			asfd->readbuf+s+5, asfd->readbuflen-s-5)))
 		{
-			logp("memmove failed in %s for %s\n",
-				__func__, asfd->desc);
+			logp("%s: memmove failed in %s\n",
+				asfd->desc, __func__);
 			goto error;
 		}
 		asfd->readbuflen-=s+5;
@@ -84,13 +84,13 @@ static int asfd_do_read(struct asfd *asfd)
 	{
 		if(errno==EAGAIN || errno==EINTR)
 			return 0;
-		logp("read problem in %s for %s\n", __func__, asfd->desc);
+		logp("%s: read problem\n", asfd->desc);
 		goto error;
 	}
 	else if(!r)
 	{
 		// End of data.
-		logp("end of data in %s for %s\n", __func__, asfd->desc);
+		logp("%s: end of data\n", asfd->desc);
 		goto error;
 	}
 	asfd->readbuflen+=r;
@@ -117,7 +117,7 @@ static int asfd_do_read_ssl(struct asfd *asfd)
 			break;
 		case SSL_ERROR_ZERO_RETURN:
 			// End of data.
-			logp("Peer closed SSL session for %s\n", asfd->desc);
+			logp("%s: Peer closed SSL session\n", asfd->desc);
 			SSL_shutdown(asfd->ssl);
 			goto error;
 		case SSL_ERROR_WANT_READ:
@@ -128,12 +128,12 @@ static int asfd_do_read_ssl(struct asfd *asfd)
 		case SSL_ERROR_SYSCALL:
 			if(errno==EAGAIN || errno==EINTR)
 				break;
-			logp("Got SSL_ERROR_SYSCALL in read, (%d=%s) for %s\n",
-				errno, strerror(errno), asfd->desc);
+			logp("%s: Got SSL_ERROR_SYSCALL in read, (%d=%s)\n",
+				asfd->desc, errno, strerror(errno));
 			// Fall through to read problem
 		default:
-			logp("SSL read problem in %s for %s\n",
-				__func__, asfd->desc);
+			logp("%s: SSL read problem in %s\n",
+				asfd->desc, __func__);
 			goto error;
 	}
 	return 0;
@@ -190,13 +190,13 @@ static int asfd_do_write(struct asfd *asfd)
 	{
 		if(errno==EAGAIN || errno==EINTR)
 			return 0;
-		logp("Got error in %s, (%d=%s) for %s\n", __func__,
-			errno, strerror(errno), asfd->desc);
+		logp("%s: Got error in %s, (%d=%s)\n", __func__,
+			asfd->desc, errno, strerror(errno));
 		return -1;
 	}
 	else if(!w)
 	{
-		logp("Wrote nothing in %s for %s\n", __func__, asfd->desc);
+		logp("%s: Wrote nothing in %s\n", asfd->desc, __func__);
 		return -1;
 	}
 	if(asfd->ratelimit) asfd->rlbytes+=w;
@@ -236,12 +236,12 @@ printf("wrote %d: %s\n", w, buf);
 		case SSL_ERROR_SYSCALL:
 			if(errno==EAGAIN || errno==EINTR)
 				break;
-			logp("Got SSL_ERROR_SYSCALL in %s, (%d=%s) for %s\n",
-				__func__, errno, strerror(errno), asfd->desc);
+			logp("%s: Got SSL_ERROR_SYSCALL in %s, (%d=%s)\n",
+				asfd->desc, __func__, errno, strerror(errno));
 			// Fall through to write problem
 		default:
-			logp("SSL write problem for %s\n", asfd->desc);
-			logp("write returned: %d for %s\n", w, asfd->desc);
+			logp("%s: SSL write problem\n", asfd->desc);
+			logp("%s: write returned: %d\n", asfd->desc, w);
 			return -1;
 	}
 	return 0;
@@ -290,8 +290,8 @@ static int asfd_set_bulk_packets(struct asfd *asfd)
 	if(setsockopt(asfd->fd,
 		IPPROTO_IP, IP_TOS, (char *)&opt, sizeof(opt))<0)
 	{
-		logp("Error: setsockopt IPTOS_THROUGHPUT: %s for %s\n",
-			strerror(errno), asfd->desc);
+		logp("%s: error: setsockopt IPTOS_THROUGHPUT: %s\n",
+			asfd->desc, strerror(errno));
 		return -1;
 	}
 #endif
@@ -312,9 +312,9 @@ static int asfd_read_expect(struct asfd *asfd, char cmd, const char *expect)
 	if(asfd->read(asfd)) return -1;
 	if(asfd->rbuf->cmd!=cmd || strcmp(asfd->rbuf->buf, expect))
 	{
-		logp("expected '%c:%s', got '%c:%s' for %s\n",
-			cmd, expect,
-			asfd->rbuf->cmd, asfd->rbuf->buf, asfd->desc);
+		logp("%s: expected '%c:%s', got '%c:%s'\n",
+			asfd->desc, cmd, expect,
+			asfd->rbuf->cmd, asfd->rbuf->buf);
 		ret=-1;
 	}
 	iobuf_free_content(asfd->rbuf);
@@ -369,7 +369,7 @@ static int asfd_simple_loop(struct asfd *asfd,
 			}
 			else
 			{
-				logp("unexpected command in %s(), called from %s(): %c:%s for %s\n", __func__, caller, rbuf->cmd, rbuf->buf, asfd->desc);
+				logp("%s: unexpected command in %s(), called from %s(): %c:%s\n", asfd->desc, __func__, caller, rbuf->cmd, rbuf->buf);
 				goto error;
 			}
 			continue;

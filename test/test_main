@@ -636,10 +636,10 @@ run_tests()
 	all_tests
 }
 
-# Run in burp2 mode.
-run_tests 2
 # Run in burp1 mode.
 run_tests 1
+# Run in burp2 mode.
+run_tests 2
 
 echo
 echo "All tests succeeded"

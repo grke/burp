@@ -15,7 +15,6 @@ void candidates_set_score_pointers(struct candidate **candidates,
 	size_t clen, struct scores *scores)
 {
 	size_t a;
-printf("set score pointers\n");
 	for(a=0; a<candidates_len; a++)
 		candidates[a]->score=&(scores->scores[a]);
 }
@@ -73,7 +72,7 @@ end:
 	if(scores_grow(scores, candidates_len)) goto end;
 	candidates_set_score_pointers(candidates, candidates_len, scores);
 	scores_reset(scores);
-	logp("Now have %d candidates\n", (int)candidates_len);
+	//logp("Now have %d candidates\n", (int)candidates_len);
 	ret=0;
 error:
 	gzclose_fp(&zp);
@@ -111,9 +110,7 @@ struct candidate *candidates_choose_champ(struct incoming *in,
 	//struct timespec tstart={0,0}, tend={0,0};
 	//clock_gettime(CLOCK_MONOTONIC, &tstart);
 
-printf("incoming size: %d\n", in->size);
 	scores_reset(scores);
-printf("after scores reset\n");
 
 	for(i=0; i<in->size; i++)
 	{

@@ -58,9 +58,9 @@ extern void sbuf_print_alloc_stats(void);
 
 extern int sbuf_fill(struct sbuf *sb, struct asfd *asfd,
 	gzFile zp, struct blk *blk,
-	char *datpath, struct conf *conf);
+	const char *datpath, struct conf *conf);
 extern int sbuf_fill_from_gzfile(struct sbuf *sb, struct asfd *asfd,
-	gzFile zp, struct blk *blk, char *datpath, struct conf *conf);
+	gzFile zp, struct blk *blk, const char *datpath, struct conf *conf);
 extern int sbuf_fill_from_net(struct sbuf *sb, struct asfd *asfd,
 	struct blk *blk, struct conf *conf);
 

@@ -1,7 +1,33 @@
 #include "include.h"
 #include "../../server/monitor/status_client.h"
 
-static int treedata(struct sbuf *sb)
+static size_t treepathlen=0;
+
+static int path_too_long(struct iobuf *path, struct conf *cconf)
+{
+	static const char *cp;
+	if(treepathlen+path->len+1>fs_full_path_max)
+	{
+		// FIX THIS:
+		// Cannot warn down the asfd to the client, because it can
+		// arrive after the client has disconnected, which causes
+		// an error on the server side.
+		// Would need to change the way that "backupphase2end" works
+		// to be able to fix it.
+		if(cconf->path_length_warn) logw(NULL, cconf, "Path too long for tree - will save in data structure instead: %s\n", path->buf);
+		return 1;
+	}
+	if((cp=strrchr(path->buf, '/'))) cp++;
+	else cp=path->buf;
+	if(strlen(cp)>fs_name_max)
+	{
+		if(cconf->path_length_warn) logw(NULL, cconf, "Name too long for tree - will save in data structure instead: %s\n", path->buf);
+		return 1;
+	}
+	return 0;
+}
+
+static int treedata(struct sbuf *sb, struct conf *cconf)
 {
 	// Windows is sending directory data as if it is file data - this
 	// cannot be saved in a tree structure.
@@ -9,26 +35,27 @@ static int treedata(struct sbuf *sb)
 	attribs_decode(sb);
 	if(S_ISDIR(sb->statp.st_mode)) return 0;
 
-	if(sb->path.cmd==CMD_FILE
-	  || sb->path.cmd==CMD_ENC_FILE
-	  || sb->path.cmd==CMD_EFS_FILE)
-		return 1;
-	return 0;
+	if(sb->path.cmd!=CMD_FILE
+	  && sb->path.cmd!=CMD_ENC_FILE
+	  && sb->path.cmd!=CMD_EFS_FILE)
+		return 0;
+
+	return !path_too_long(&sb->path, cconf);
 }
 
 static char *set_new_datapth(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf *cconf,
 	struct sbuf *sb, struct dpthl *dpthl, int *istreedata)
 {
-	static char *tmp=NULL;
+	char *tmp=NULL;
 	char *rpath=NULL;
-	if(cconf->directory_tree) *istreedata=treedata(sb);
+	if(cconf->directory_tree) *istreedata=treedata(sb, cconf);
 
 	if(*istreedata)
 	{
 		// We want to place this file in a directory structure like
 		// the directory structure on the original client.
-		if(!(tmp=prepend_s("t", sb->path.buf)))
+		if(!(tmp=prepend_s(TREE_DIR, sb->path.buf)))
 		{
 			log_and_send_oom(asfd, __func__);
 			return NULL;
@@ -37,11 +64,8 @@ static char *set_new_datapth(struct asfd *asfd,
 	else
 	{
 		mk_dpthl(dpthl, cconf, sb->path.cmd);
-		if(!(tmp=strdup(dpthl->path))) // file data path
-		{
-			log_and_send_oom(asfd, __func__);
+		if(!(tmp=strdup_w(dpthl->path, __func__))) // File data path.
 			return NULL;
-		}
 	}
 	iobuf_from_str(&sb->burp1->datapth, CMD_DATAPTH, tmp);
 	if(build_path(sdirs->datadirtmp,
@@ -724,6 +748,15 @@ int backup_phase2_server_burp1(struct async *as, struct sdirs *sdirs,
 
 	if(open_previous_manifest(&cmanfp, sdirs, incexc, cconf))
 		goto error;
+
+	if(cconf->directory_tree)
+	{
+		// Need to make sure we do not try to create a path that is
+		// too long.
+		if(build_path_w(sdirs->treepath)) goto error;
+		treepathlen=strlen(sdirs->treepath);
+		init_fs_max(sdirs->treepath);
+	}
 
 	if(!(cb=sbuf_alloc(cconf))
 	  || !(p1b=sbuf_alloc(cconf))

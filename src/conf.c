@@ -79,7 +79,7 @@ void conf_init(struct conf *c)
 	c->compression=9;
 	c->ssl_compression=5;
 	c->version_warn=1;
-	c->resume_partial=0;
+	c->path_length_warn=1;
 	c->umask=0022;
 	c->max_hardlinks=10000;
 
@@ -515,7 +515,7 @@ static int load_conf_ints(struct conf *c,
 	gcv_int(f, v, "max_hardlinks", &(c->max_hardlinks));
 	gcv_uint8(f, v, "librsync", &(c->librsync));
 	gcv_uint8(f, v, "version_warn", &(c->version_warn));
-	gcv_uint8(f, v, "resume_partial", &(c->resume_partial));
+	gcv_uint8(f, v, "path_length_warn", &(c->path_length_warn));
 	gcv_uint8(f, v, "cross_all_filesystems", &(c->cross_all_filesystems));
 	gcv_uint8(f, v, "read_all_fifos", &(c->read_all_fifos));
 	gcv_uint8(f, v, "read_all_blockdevs", &(c->read_all_blockdevs));
@@ -1462,7 +1462,7 @@ int conf_set_client_global(struct conf *c, struct conf *cc)
 	cc->librsync=c->librsync;
 	cc->compression=c->compression;
 	cc->version_warn=c->version_warn;
-	cc->resume_partial=c->resume_partial;
+	cc->path_length_warn=c->path_length_warn;
 	cc->n_success_warnings_only=c->n_success_warnings_only;
 	cc->n_success_changes_only=c->n_success_changes_only;
 	cc->s_script_post_run_on_fail=c->s_script_post_run_on_fail;

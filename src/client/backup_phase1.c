@@ -7,8 +7,6 @@ static char dirsymbol=CMD_DIRECTORY;
 static char vss_trail_symbol=CMD_VSS_T;
 #endif
 
-static long server_name_max;
-
 static int usual_stuff(struct asfd *asfd,
 	struct conf *conf, const char *path, const char *link,
 	struct sbuf *sb, char cmd)
@@ -82,22 +80,6 @@ int send_file(struct asfd *asfd, FF_PKT *ff, bool top_level, struct conf *conf)
 
 	if(!file_is_included(conf, ff->fname, top_level)) return 0;
 
-	if(server_name_max)
-	{
-		if(top_level)
-		{
-			char *cp=NULL;
-			// Need to figure out the length of the filename
-			// component.
-			if((cp=strrchr(ff->fname, '/'))) ff->flen=strlen(cp+1);
-			else ff->flen=strlen(ff->fname);	
-		}
-		if(ff->flen>server_name_max)
-			return logw(asfd, conf,
-				"File name too long (%lu > %lu): %s",
-				ff->flen, server_name_max, ff->fname);
-	}
-
 #ifdef HAVE_WIN32
 	if(ff->winattr & FILE_ATTRIBUTE_ENCRYPTED)
 	{
@@ -143,8 +125,7 @@ int send_file(struct asfd *asfd, FF_PKT *ff, bool top_level, struct conf *conf)
 	}
 }
 
-int backup_phase1_client(struct asfd *asfd,
-	struct conf *conf, long name_max, int estimate)
+int backup_phase1_client(struct asfd *asfd, struct conf *conf, int estimate)
 {
 	int ret=-1;
 	FF_PKT *ff=NULL;
@@ -170,7 +151,6 @@ int backup_phase1_client(struct asfd *asfd,
 #endif
 
 	if(!(ff=find_files_init())) goto end;
-	server_name_max=name_max;
 	for(l=conf->startdir; l; l=l->next) if(l->flag)
 		if(find_files_begin(asfd, ff, conf, l->path)) goto end;
 	ret=0;

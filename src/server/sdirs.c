@@ -56,7 +56,11 @@ int sdirs_get_real_working_from_symlink(struct sdirs *sdirs, struct conf *conf)
 		return -1;
 	}
 	real[len]='\0';
-	return free_prepend_s(&sdirs->rworking, sdirs->client, real);
+	if(free_prepend_s(&sdirs->rworking, sdirs->client, real)
+	  || free_prepend_s(&sdirs->treepath,
+		sdirs->rworking, DATA_DIR "/" TREE_DIR))
+			return -1;
+	return 0;
 }
 
 int sdirs_create_real_working(struct sdirs *sdirs, struct conf *conf)
@@ -64,8 +68,10 @@ int sdirs_create_real_working(struct sdirs *sdirs, struct conf *conf)
 	char tstmp[64]="";
 
 	if(timestamp_get_new(sdirs, tstmp, sizeof(tstmp), conf)
-	  || free_prepend_s(&sdirs->rworking, sdirs->client, tstmp))
-		return -1;
+	  || free_prepend_s(&sdirs->rworking, sdirs->client, tstmp)
+	  || free_prepend_s(&sdirs->treepath,
+		sdirs->rworking, DATA_DIR "/" TREE_DIR))
+			return -1;
 
 	// Add the working symlink before creating the directory.
 	// This is because bedup checks the working symlink before
@@ -109,12 +115,12 @@ static int do_burp1_dirs(struct sdirs *sdirs, struct conf *conf)
 	  || !(sdirs->phase1data=prepend_s(sdirs->working, "phase1.gz"))
 	  || !(sdirs->phase2data=prepend_s(sdirs->working, "phase2"))
 	  || !(sdirs->unchangeddata=prepend_s(sdirs->working, "unchanged"))
-	  || !(sdirs->unchangeddata=prepend_s(sdirs->working, "unchanged"))
 	  || !(sdirs->cmanifest=prepend_s(sdirs->current, "manifest.gz"))
 	  || !(sdirs->cincexc=prepend_s(sdirs->current, "incexc"))
 	  || !(sdirs->deltmppath=prepend_s(sdirs->working, "deltmppath")))
 		return -1;
 	// sdirs->rworking gets set later.
+	// sdirs->treepath gets set later.
 	return 0;
 }
 
@@ -126,7 +132,7 @@ static int do_burp2_dirs(struct sdirs *sdirs, struct conf *conf)
 		return -1;
 	}
 	if(!(sdirs->dedup=prepend_s(sdirs->base, conf->dedup_group))
-	  || !(sdirs->data=prepend_s(sdirs->dedup, "data"))
+	  || !(sdirs->data=prepend_s(sdirs->dedup, DATA_DIR))
 	  || !(sdirs->champlock=prepend_s(sdirs->data, "cc.lock"))
 	  || !(sdirs->champsock=prepend_s(sdirs->data, "cc.sock"))
 	  || !(sdirs->champlog=prepend_s(sdirs->data, "cc.log"))
@@ -206,13 +212,14 @@ void sdirs_free_content(struct sdirs *sdirs)
 	free_w(&sdirs->lockdir);
 	lock_free(&sdirs->lock);
 
-	// Legacy directories
+	// Burp1 directories.
 	free_w(&sdirs->currentdata);
 	free_w(&sdirs->datadirtmp);
 	free_w(&sdirs->phase2data);
 	free_w(&sdirs->unchangeddata);
 	free_w(&sdirs->cincexc);
 	free_w(&sdirs->deltmppath);
+	free_w(&sdirs->treepath);
 }
 
 void sdirs_free(struct sdirs **sdirs)

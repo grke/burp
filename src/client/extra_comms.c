@@ -18,11 +18,10 @@ static const char *server_supports_autoupgrade(const char *feat)
 }
 
 int extra_comms(struct async *as, struct conf *conf,
-	enum action *action, char **incexc, long *name_max)
+	enum action *action, char **incexc)
 {
 	int ret=-1;
 	char *feat=NULL;
-	const char *cp=NULL;
 	struct asfd *asfd;
 	struct iobuf *rbuf;
 	asfd=as->asfd;
@@ -82,9 +81,6 @@ int extra_comms(struct async *as, struct conf *conf,
 				goto end;
 		}
 	}
-
-	if((cp=server_supports(feat, ":name_max=")))
-		*name_max=strtol(cp+strlen(":name_max="), NULL, 10);
 
 	if(conf->orig_client)
 	{

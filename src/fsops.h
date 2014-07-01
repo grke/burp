@@ -3,6 +3,10 @@
 
 #include <zlib.h>
 
+extern uint32_t fs_name_max;
+extern uint32_t fs_path_max;
+extern uint32_t fs_full_path_max;
+
 extern void close_fd(int *fd);
 extern int close_fp(FILE **fp);
 extern int gzclose_fp(gzFile *fp);
@@ -17,5 +21,7 @@ extern int build_path_w(const char *path);
 extern int recursive_delete(const char *d, const char *file, uint8_t delfiles);
 
 extern int unlink_w(const char *path, const char *func);
+
+extern void init_fs_max(const char *path);
 
 #endif

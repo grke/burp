@@ -20,7 +20,10 @@ int fdirs_init(struct fdirs *fdirs,
 	 && (fdirs->logpath=prepend_s(sdirs->finishing, "log"))
 	 && (fdirs->hlinked=prepend_s(sdirs->finishing, "hardlinked"))
 	 && (fdirs->hlinkedcurrent=prepend_s(sdirs->current, "hardlinked")))
+	{
+printf("set to: %s\n", fdirs->fullrealcurrent);
 		return 0;
+	}
 	return -1;
 }
 

@@ -2,6 +2,10 @@
 
 #include <dirent.h>
 
+uint32_t fs_name_max=0;
+uint32_t fs_path_max=0;
+uint32_t fs_full_path_max=0;
+
 void close_fd(int *fd)
 {
 	if(*fd<0) return;
@@ -310,4 +314,19 @@ int unlink_w(const char *path, const char *func)
 		return -1;
 	}
 	return 0;
+}
+
+static void init_max(const char *path,
+	uint32_t *max, int what, uint32_t default_max)
+{
+	*max=pathconf(path?path:".", what);
+	if(*max<default_max) *max=default_max;
+}
+
+void init_fs_max(const char *path)
+{
+	// Get system path and filename maximum lengths.
+	init_max(path, &fs_path_max, _PC_PATH_MAX, 1024);
+	init_max(path, &fs_name_max, _PC_NAME_MAX, 255);
+	fs_full_path_max=fs_path_max+fs_name_max;
 }

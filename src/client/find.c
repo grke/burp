@@ -4,9 +4,6 @@
 #include <sys/statfs.h>
 #endif
 
-int32_t name_max;	/* filename max length */
-int32_t path_max;	/* path name max length */
-
 /*
  * Structure for keeping track of hard linked files, we
  *   keep an entry for each hardlinked file that we save,
@@ -17,9 +14,9 @@ int32_t path_max;	/* path name max length */
 struct f_link
 {
 	struct f_link *next;
-	dev_t dev;		/* device */
-	ino_t ino;		/* inode with device is unique */
-	char *name;		/* The name */
+	dev_t dev;
+	ino_t ino;		// Inode with device is unique.
+	char *name;
 };
 
 // List of all hard linked files found.
@@ -28,14 +25,6 @@ static struct f_link **linkhash=NULL;
 #define LINK_HASHTABLE_BITS 16
 #define LINK_HASHTABLE_SIZE (1<<LINK_HASHTABLE_BITS)
 #define LINK_HASHTABLE_MASK (LINK_HASHTABLE_SIZE-1)
-
-static void init_max(int32_t *max, int32_t default_max)
-{
-	*max=pathconf(".", default_max);
-	if(*max<1024) *max=1024;
-	// Add for EOS.
-	(*max)++;
-}
 
 // Initialize the find files "global" variables
 FF_PKT *find_files_init(void)
@@ -48,8 +37,9 @@ FF_PKT *find_files_init(void)
 			return NULL;
 
 	// Get system path and filename maximum lengths.
-	init_max(&path_max, _PC_PATH_MAX);
-	init_max(&name_max, _PC_NAME_MAX);
+	// FIX THIS: maybe this should be done every time a file system is
+	// crossed?
+	init_fs_max(NULL);
 
 	return ff;
 }
@@ -316,9 +306,9 @@ static int found_soft_link(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
 	char *fname, bool top_level)
 {
 	ssize_t size;
-	char *buffer=(char *)alloca(path_max+name_max+102);
+	char *buffer=(char *)alloca(fs_full_path_max+102);
 
-	if((size=readlink(fname, buffer, path_max+name_max+101))<0)
+	if((size=readlink(fname, buffer, fs_full_path_max+101))<0)
 	{
 		/* Could not follow link */
 		ff_pkt->type=FT_NOFOLLOW;
@@ -402,7 +392,7 @@ static int get_files_in_directory(DIR *directory, struct dirent ***nl, int *coun
 	{
 		char *p;
 		if(!(entry=(struct dirent *)malloc(
-			sizeof(struct dirent)+name_max+100)))
+			sizeof(struct dirent)+fs_name_max+100)))
 		{
 			log_out_of_memory(__func__);
 			return -1;
@@ -415,7 +405,7 @@ static int get_files_in_directory(DIR *directory, struct dirent ***nl, int *coun
 		}
 
 		p=entry->d_name;
-		ASSERT(name_max+1 > (int)sizeof(struct dirent)+strlen(p));
+		ASSERT(fs_name_max+1 > (int)sizeof(struct dirent)+strlen(p));
 
 		/* Skip `.', `..', and excluded file names.  */
 		if(!p || !strcmp(p, ".") || !strcmp(p, ".."))

@@ -34,7 +34,7 @@ static void unset_low_priority(void)
 
 // Return 0 for OK, -1 for error, 1 for timer conditions not met.
 int do_backup_client(struct asfd *asfd, struct conf *conf, enum action action,
-	long name_max, int resume)
+	int resume)
 {
 	int ret=0;
 
@@ -54,8 +54,7 @@ int do_backup_client(struct asfd *asfd, struct conf *conf, enum action action,
 	// Scan the file system and send the results to the server.
 	// Skip phase1 if the server wanted to resume.
 	if(!resume)
-		ret=backup_phase1_client(asfd, conf, name_max,
-			action==ACTION_ESTIMATE);
+		ret=backup_phase1_client(asfd, conf, action==ACTION_ESTIMATE);
 
 	if(!ret) switch(action)
 	{

@@ -164,7 +164,7 @@ struct conf
 
 	uint8_t compression;
 	uint8_t version_warn;
-	uint8_t resume_partial;
+	uint8_t path_length_warn;
 
 	char *timer_script;
 	struct strlist *timer_arg;

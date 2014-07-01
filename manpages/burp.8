@@ -247,6 +247,9 @@ Choose the level of zlib compression for files stored in backups. Setting 0 or z
 \fBversion_warn=[0|1]\fR
 When this is on, which is the default, a warning will be issued when the client version does not match the server version. This option can be overridden by the client configuration files in clientconfdir on the server.
 .TP
+\fBpath_length_warn=[0|1]\fR
+When this is on, which is the default, a warning will be issued when the client sends a path that is too long to replicate in the storage area tree structure. The file will still be saved in a numbered file outside of the tree structure, regardless of the setting of this option. This option can be overridden by the client configuration files in clientconfdir on the server.
+.TP
 \fBclient_lockdir=[path]\fR
 Path to the directory in which to keep per-client lock files. By default, this is set to the path given by the 'directory' option.
 .TP
@@ -621,6 +624,7 @@ Additionally, the following options can be overridden here for each client:
 \fBworking_dir_recovery_method\fR
 \fBlibrsync\fR
 \fBversion_warn\fR
+\fBpath_length_warn\fR
 \fBsyslog\fR
 \fBclient_can_delete\fR
 \fBclient_can_force_backup\fR

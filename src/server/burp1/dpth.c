@@ -50,8 +50,10 @@ static int get_highest_entry(const char *path)
 static int get_next_comp(const char *currentdata, const char *path, int *comp)
 {
 	char *tmp=NULL;
-	if(path) tmp=prepend_s(currentdata, path);
-	else tmp=strdup_w(currentdata, __func__);
+	if(path)
+		tmp=prepend_s(currentdata, path);
+	else
+		tmp=strdup_w(currentdata, __func__);
 	if(!tmp) return -1;
 	if((*comp=get_highest_entry(tmp))<0)
 	{
@@ -70,6 +72,7 @@ int init_dpthl(struct dpthl *dpthl, struct sdirs *sdirs, struct conf *cconf)
 	dpthl->prim=0;
 	dpthl->seco=0;
 	dpthl->tert=0;
+	*(dpthl->path)='\0';
 
 	if((ret=get_next_comp(sdirs->currentdata, dpthl->path, &dpthl->prim)))
 		goto end;

@@ -1,6 +1,9 @@
 #ifndef __SDIRS_H
 #define __SDIRS_H
 
+#define TREE_DIR	"t"
+#define DATA_DIR	"data"
+
 // Server directories.
 struct sdirs
 {
@@ -38,6 +41,7 @@ struct sdirs
 	char *unchangeddata;
 	char *cincexc;
 	char *deltmppath;
+	char *treepath;
 };
 
 extern struct sdirs *sdirs_alloc(void);

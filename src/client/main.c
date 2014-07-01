@@ -78,7 +78,7 @@ timer_not_met:
 
 static enum cliret backup_wrapper(struct asfd *asfd,
 	enum action action, const char *phase1str,
-	const char *incexc, long name_max, struct conf *conf)
+	const char *incexc, struct conf *conf)
 {
 	int resume=0;
 	enum cliret ret=CLIENT_OK;
@@ -124,7 +124,7 @@ static enum cliret backup_wrapper(struct asfd *asfd,
 	}
 
 	if(ret==CLIENT_OK && do_backup_client(asfd,
-		conf, action, name_max, resume)) ret=CLIENT_ERROR;
+		conf, action, resume)) ret=CLIENT_ERROR;
 
 	if((ret==CLIENT_OK || conf->b_script_post_run_on_fail)
 	  && conf->b_script_post)
@@ -194,7 +194,7 @@ static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx, struct conf *conf)
 }
 
 static enum cliret initial_comms(struct async *as,
-	enum action *action, char **incexc, long *name_max, struct conf *conf)
+	enum action *action, char **incexc, struct conf *conf)
 {
 	struct asfd *asfd;
 	char *server_version=NULL;
@@ -234,7 +234,7 @@ static enum cliret initial_comms(struct async *as,
 		goto error;
 	}
 
-	if(extra_comms(as, conf, action, incexc, name_max))
+	if(extra_comms(as, conf, action, incexc))
 	{
 		logp("extra comms failed\n");
 		goto error;
@@ -311,7 +311,6 @@ static enum cliret do_client(struct conf *conf,
 	SSL_CTX *ctx=NULL;
 	struct cntr *cntr=NULL;
 	char *incexc=NULL;
-	long name_max=0;
 	enum action act=action;
 	struct async *as=NULL;
 	struct asfd *asfd=NULL;
@@ -342,7 +341,7 @@ static enum cliret do_client(struct conf *conf,
 
 	if(act!=ACTION_ESTIMATE)
 	{
-		if((ret=initial_comms(as, &act, &incexc, &name_max, conf)))
+		if((ret=initial_comms(as, &act, &incexc, conf)))
 			goto end;
 	}
 
@@ -351,22 +350,22 @@ static enum cliret do_client(struct conf *conf,
 	{
 		case ACTION_BACKUP:
 			ret=backup_wrapper(asfd, act, "backupphase1",
-			  incexc, name_max, conf);
+			  incexc, conf);
 			break;
 		case ACTION_BACKUP_TIMED:
 			ret=backup_wrapper(asfd, act, "backupphase1timed",
-			  incexc, name_max, conf);
+			  incexc, conf);
 			break;
 		case ACTION_TIMER_CHECK:
 			ret=backup_wrapper(asfd, act, "backupphase1timedcheck",
-			  incexc, name_max, conf);
+			  incexc, conf);
 			break;
 		case ACTION_RESTORE:
 		case ACTION_VERIFY:
 			ret=restore_wrapper(asfd, act, vss_restore, conf);
 			break;
 		case ACTION_ESTIMATE:
-			if(do_backup_client(asfd, conf, act, name_max, 0))
+			if(do_backup_client(asfd, conf, act, 0))
 				goto error;
 			break;
 		case ACTION_DELETE:
@@ -377,8 +376,7 @@ static enum cliret do_client(struct conf *conf,
 			if(!strcmp(conf->backup2, "n"))
 				// Do a phase1 scan and diff that.
 				ret=backup_wrapper(asfd, act,
-					"backupphase1diff",
-					incexc, name_max, conf);
+					"backupphase1diff", incexc, conf);
 			else
 				// Diff two backups that already exist.
 				if(do_diff_client(asfd, act, json, conf))

@@ -2,6 +2,6 @@
 #define _BACKUP_CLIENT_H
 
 extern int do_backup_client(struct asfd *asfd,
-	struct conf *conf, enum action act, long name_max, int resume);
+	struct conf *conf, enum action act, int resume);
 
 #endif

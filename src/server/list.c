@@ -1,6 +1,40 @@
 #include "include.h"
 #include "monitor/status_client.h"
 
+// Want to make sure that we are listening for reads too - this will let us
+// exit promptly if the client was killed.
+// FIX THIS: Maybe some of this should go in async.c/asfd.c.
+static int read_and_write(struct asfd *asfd)
+{
+	if(asfd->as->read_write(asfd->as)) return -1;
+	if(!asfd->rbuf->buf) return 0;
+	iobuf_log_unexpected(asfd->rbuf, __func__);
+	return -1;
+}
+
+static int flush_asio(struct asfd *asfd)
+{
+	while(asfd->writebuflen>0)
+		if(read_and_write(asfd)) return -1;
+	return 0;
+}
+
+static int write_wrapper(struct asfd *asfd, struct iobuf *wbuf)
+{
+	while(asfd->append_all_to_write_buffer(asfd, wbuf))
+		if(read_and_write(asfd)) return -1;
+	return 0;
+}
+
+static int write_wrapper_str(struct asfd *asfd, char wcmd, const char *wsrc)
+{
+	static struct iobuf wbuf;
+	wbuf.cmd=wcmd;
+	wbuf.buf=(char *)wsrc;
+	wbuf.len=strlen(wsrc);
+	return write_wrapper(asfd, &wbuf);
+}
+
 int check_browsedir(const char *browsedir, char **path,
 	size_t bdlen, char **last_bd_match)
 {
@@ -111,11 +145,11 @@ static int list_manifest(struct asfd *asfd,
 		}
 		if(show)
 		{
-			if(asfd->write(asfd, &sb->attr)
-			  || asfd->write(asfd, &sb->path))
+			if(write_wrapper(asfd, &sb->attr)
+			  || write_wrapper(asfd, &sb->path))
 				goto error;
 			if(sbuf_is_link(sb)
-			  && asfd->write(asfd, &sb->link))
+			  && write_wrapper(asfd, &sb->link))
 				goto error;
 		}
 
@@ -141,7 +175,7 @@ static int send_backup_name_to_client(struct asfd *asfd,
 		// Burp2 backups are all deletable, so do not mention it.
 		conf->protocol==PROTO_BURP1
 		&& bu->deletable?" (deletable)":"");
-	return asfd->write_str(asfd, CMD_TIMESTAMP, msg);
+	return write_wrapper_str(asfd, CMD_TIMESTAMP, msg);
 }
 
 int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct conf *conf,
@@ -169,7 +203,8 @@ int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct conf *conf,
 		if(listregex && backup && *backup=='a')
 		{
 			found=1;
-			if(asfd->write_str(asfd, CMD_TIMESTAMP, bu->timestamp)
+			if(write_wrapper_str(asfd,
+				CMD_TIMESTAMP, bu->timestamp)
 			  || list_manifest(asfd, bu->path,
 				regex, browsedir, conf)) goto end;
 		}
@@ -197,9 +232,12 @@ int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct conf *conf,
 
 	if(backup && *backup && !found)
 	{
-		asfd->write_str(asfd, CMD_ERROR, "backup not found");
+		write_wrapper_str(asfd, CMD_ERROR, "backup not found");
 		goto end;
 	}
+
+	if(flush_asio(asfd)) goto end;
+	
 	ret=0;
 end:
 	if(regex) { regfree(regex); free(regex); }

@@ -5,6 +5,8 @@
   * Force the user spell out '-a delete', to avoid confusion with the future
     'diff/long diff' options. Prevent old clients from deleting, to prevent
     potential accidents.
+  * Fix a problem where interrupting the client during a list could leave the
+    server child process hanging indefinitely.
 
 2014-05-31 Changes in burp-1.4.16:
   * Bug fix for restoring permissions on empty directories.

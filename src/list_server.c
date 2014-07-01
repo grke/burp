@@ -13,6 +13,25 @@
 #include "list_server.h"
 #include "current_backups_server.h"
 
+static int write_wrapper(char wcmd, const char *wsrc, size_t wlen)
+{
+	static char rcmd='\0';
+	static char *rdst=NULL;
+	static size_t rlen=0;
+	if(async_rw_ensure_write(&rcmd, &rdst, &rlen, wcmd, wsrc, wlen))
+		goto error;
+	if(rdst)
+	{
+		logp("unexpected message from client: %c:%s\n", rcmd, rdst);
+		goto error;
+	}
+	return 0;
+error:
+	if(rdst) free(rdst);
+	rdst=NULL;
+	return -1;
+}
+
 int check_browsedir(const char *browsedir, char **path, size_t bdlen, char **last_bd_match)
 {
 	char *cp=NULL;
@@ -142,11 +161,11 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 		}
 		if(show)
 		{
-			if(async_write(CMD_STAT, mb.statbuf, mb.slen)
-			  || async_write(mb.cmd, mb.path, mb.plen))
+			if(write_wrapper(CMD_STAT, mb.statbuf, mb.slen)
+			  || write_wrapper(mb.cmd, mb.path, mb.plen))
 			{ quit++; ret=-1; }
 			else if(sbuf_is_link(&mb)
-			  && async_write(mb.cmd, mb.linkto, mb.llen))
+			  && write_wrapper(mb.cmd, mb.linkto, mb.llen))
 			{ quit++; ret=-1; }
 		}
 	}
@@ -161,7 +180,7 @@ static int send_backup_name_to_client(struct bu *arr)
 	char msg[64]="";
 	snprintf(msg, sizeof(msg), "%s%s",
 		arr->timestamp, arr->deletable?" (deletable)":"");
-	return async_write(CMD_TIMESTAMP, msg, strlen(msg));
+	return write_wrapper(CMD_TIMESTAMP, msg, strlen(msg));
 }
 
 int do_list_server(const char *basedir, const char *backup, const char *listregex, const char *browsedir, const char *client, struct cntr *p1cntr, struct cntr *cntr)
@@ -194,7 +213,7 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 		if(listregex && backup && *backup=='a')
 		{
 			found=TRUE;
-			if(async_write(CMD_TIMESTAMP,
+			if(write_wrapper(CMD_TIMESTAMP,
 				arr[i].timestamp, strlen(arr[i].timestamp)))
 			{
 				ret=-1;
@@ -235,7 +254,8 @@ int do_list_server(const char *basedir, const char *backup, const char *listrege
 
 	if(backup && *backup && !found)
 	{
-		async_write_str(CMD_ERROR, "backup not found");
+		write_wrapper(CMD_ERROR,
+			"backup not found", strlen("backup not found"));
 		ret=-1;
 	}
 	if(regex) { regfree(regex); free(regex); }

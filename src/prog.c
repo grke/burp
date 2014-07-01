@@ -393,7 +393,7 @@ int main (int argc, char *argv[])
 	// you would never be able to use burp by hand.
 	if(randomise) conf->randomise=randomise;
 	if(conf->mode==MODE_CLIENT
-	  && (ACTION_BACKUP_TIMED || ACTION_TIMER_CHECK)
+	  && (act==ACTION_BACKUP_TIMED || act==ACTION_TIMER_CHECK)
 	  && conf->randomise)
 		random_delay(conf->randomise);
 

@@ -385,7 +385,6 @@ static int do_backup_phase2_client(struct asfd *asfd,
 
 		if(rbuf->cmd==CMD_GEN && !strcmp(rbuf->buf, "backupphase2end"))
 		{
-printf("got end!!!!!\n");
 			if(asfd->write_str(asfd, CMD_GEN, "okbackupphase2end"))
 				goto end;
 			ret=0;

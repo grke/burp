@@ -181,7 +181,7 @@ static int set_summary(struct cstat *c)
 		if(lstat(c->working, &statp))
 		{
 			c->status=STATUS_IDLE;
-			snprintf(wbuf, sizeof(wbuf), "%s\t%c\t%c\t%s\n",
+			snprintf(wbuf, sizeof(wbuf), "%s\t%x\t%c\t%s\n",
 				c->name, CNTR_VER_4, c->status,
 				get_last_backup_time(c->timestamp));
 		}
@@ -189,7 +189,7 @@ static int set_summary(struct cstat *c)
 		{
 			// client process crashed
 			c->status=STATUS_CLIENT_CRASHED;
-			snprintf(wbuf, sizeof(wbuf), "%s\t%c\t%c\t%s\n",
+			snprintf(wbuf, sizeof(wbuf), "%s\t%x\t%c\t%s\n",
 				c->name, CNTR_VER_4, c->status,
 				get_last_backup_time(c->timestamp));
 			//	statp.st_ctime);
@@ -206,7 +206,7 @@ static int set_summary(struct cstat *c)
 			//if(!lstat(c->working, &statp)) t=statp.st_ctime;
 			// server process crashed
 			c->status=STATUS_SERVER_CRASHED;
-			snprintf(wbuf, sizeof(wbuf), "%s\t%c\t%c\t%s\n",
+			snprintf(wbuf, sizeof(wbuf), "%s\t%x\t%c\t%s\n",
 				c->name, CNTR_VER_4, c->status,
 				get_last_backup_time(c->timestamp));
 			// It is not running, so free the running_detail.
@@ -216,7 +216,7 @@ static int set_summary(struct cstat *c)
 		{
 			// running normally
 			c->status=STATUS_RUNNING;
-			snprintf(wbuf, sizeof(wbuf), "%s\t%c\t%c\t%s\n",
+			snprintf(wbuf, sizeof(wbuf), "%s\t%x\t%c\t%s\n",
 				c->name, CNTR_VER_4, c->status,
 				get_last_backup_time(c->timestamp));
 		}
@@ -502,7 +502,7 @@ static int send_summaries_to_client(int cfd,
 				len+=(a*32)+1;
 				if(!(curback=(char *)malloc_w(len, __func__)))
 					return -1;
-				snprintf(curback, len, "%s\t%c\t%c",
+				snprintf(curback, len, "%s\t%x\t%c",
 					clist[q]->name, CNTR_VER_4,
 					clist[q]->status);
 

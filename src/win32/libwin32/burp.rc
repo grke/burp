@@ -68,7 +68,7 @@ BEGIN
             VALUE "FileVersion", VERSION "\0"
             VALUE "InternalName", "Burp\0"
             VALUE "LegalCopyright", "Copyright Free Software Foundation Europe e.V., 1999-2009\0"
-            VALUE "LegalTrademarks", "Licensed under GNU GPL 2.0\0"
+            VALUE "LegalTrademarks", "Licensed under GNU AGPLv3\0"
             VALUE "OriginalFilename", "burp.exe\0"
             VALUE "PrivateBuild", "\0"
             VALUE "ProductName", "Burp - Win32 Version\0"

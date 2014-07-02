@@ -1,3 +1,42 @@
+/*
+   Bacula® - The Network Backup Solution
+
+   Copyright (C) 2001-2010 Free Software Foundation Europe e.V.
+
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version three of the GNU Affero General Public
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU Affero General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of Kern Sibbald.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
+/*
+ * File types as returned by find_files()
+ *
+ *     Kern Sibbald MMI
+ */
+/*
+ * This file contains fragments from bacula-5.0.3:src/findlib/find.h, hence
+ * retaining the copyright notice above. At some point, the fragments will be
+ * removed because the burp sbuf code will take over completely.
+ *     Graham Keeling, 2014
+ */
+
 #ifndef _FIND_H
 #define _FIND_H
 

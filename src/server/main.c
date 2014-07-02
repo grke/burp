@@ -457,7 +457,8 @@ static int relock(struct lock *lock)
 }
 
 static int process_fds(int *fds, fd_set *fse, fd_set *fsr,
-	const char *conffile, SSL_CTX *ctx, struct conf *conf)
+	const char *conffile, SSL_CTX *ctx,
+	int is_status_client, struct conf *conf)
 {
 	for(int i=0; i<LISTEN_SOCKETS && fds[i]!=-1; i++)
 	{
@@ -473,7 +474,7 @@ static int process_fds(int *fds, fd_set *fse, fd_set *fsr,
 		{
 			// A normal client is incoming.
 			if(process_incoming_client(fds[i], conf, ctx,
-				conffile, 0 /* not a status client */))
+				conffile, is_status_client))
 					return -1;
 			if(!conf->forking) { gentleshutdown++; return 1; }
 		}
@@ -610,9 +611,11 @@ static int run_server(struct conf *conf, const char *conffile,
 			}
 		}
 
-		if((ret=process_fds(rfds, &fse, &fsr, conffile, ctx, conf))
-		  || (ret=process_fds(sfds, &fse, &fsr, conffile, ctx, conf)))
-			break;
+		if((ret=process_fds(rfds, &fse, &fsr,
+			conffile, ctx, 0 /* not a status client */, conf))
+		  || (ret=process_fds(sfds, &fse, &fsr,
+			conffile, ctx, 1 /* is a status client */, conf)))
+				break;
 
 		if(chld_fd_isset_normal(conf, &fsr, &fse))
 		{

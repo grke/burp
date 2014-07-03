@@ -727,6 +727,7 @@ int astrcat(char **buf, const char *append, const char *func)
 void strip_trailing_slashes(char **str)
 {
 	size_t l;
+	// FIX THIS: pretty crappy.
 	while(1)
 	{
 		if(!str || !*str

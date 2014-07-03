@@ -29,5 +29,6 @@ struct async
 
 extern struct async *async_alloc(void);
 extern void async_free(struct async **as);
+extern void async_asfd_free_all(struct async **as);
 
 #endif

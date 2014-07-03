@@ -3,8 +3,7 @@
 void async_free(struct async **as)
 {
 	if(!*as) return;
-	free(*as);
-	*as=NULL;
+	free_v((void **)as);
 }
 
 static void async_settimers(struct async *as, int sec, int usec)
@@ -210,6 +209,19 @@ static void async_asfd_remove(struct async *as, struct asfd *asfd)
 		break;
 	}
 	return;
+}
+
+void async_asfd_free_all(struct async **as)
+{
+	struct asfd *a=NULL;
+	struct asfd *asfd=NULL;
+	if(!as || !*as) return;
+	for(asfd=(*as)->asfd; asfd; asfd=a)
+	{
+		a=asfd->next;
+		asfd_free(&asfd);
+	}
+	async_free(as);
 }
 
 static int async_init(struct async *as, int estimate)

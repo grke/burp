@@ -19,7 +19,7 @@ static int champ_chooser_new_client(struct async *as, struct conf *conf)
 	set_non_blocking(fd);
 
 	if(!(newfd=asfd_alloc())
-	  || newfd->init(newfd, "(unknown)", as, fd, NULL, conf)
+	  || newfd->init(newfd, "(unknown)", as, fd, NULL, 0, conf)
 	  || !(newfd->blist=blist_alloc()))
 		goto error;
 	as->asfd_add(as, newfd);
@@ -237,8 +237,9 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf *conf)
 	if(!(as=async_alloc())
 	  || !(asfd=asfd_alloc())
 	  || as->init(as, 0)
-	  || asfd->init(asfd, "champ chooser main socket", as, s, NULL, conf))
-		goto end;
+	  || asfd->init(asfd,
+		"champ chooser main socket", as, s, NULL, 0, conf))
+			goto end;
 	as->asfd_add(as, asfd);
 	asfd->listening_for_new_clients=1;
 

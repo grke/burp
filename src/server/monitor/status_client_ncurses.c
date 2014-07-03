@@ -12,14 +12,13 @@ static enum action actg=ACTION_STATUS;
 #define LEFT_SPACE	3
 #define TOP_SPACE	2
 
-//#define DBFP	1
+#define DBFP	1
 #ifdef DBFP
 static FILE *dbfp=NULL;
 #endif
 
 int status_wfd=-1; // For the child to send information to the parent.
 
-/*
 static void print_line(const char *string, int row, int col)
 {
 	int k=0;
@@ -39,9 +38,7 @@ static void print_line(const char *string, int row, int col)
 		{ printf("%c", *cp); k++; }
 	printf("\n");
 }
-*/
 
-/*
 static char *running_status_to_text(char s)
 {
 	static char ret[16]="";
@@ -69,12 +66,10 @@ static char *running_status_to_text(char s)
 	}
 	return ret;
 }
-*/
 
 // Returns 1 if it printed a line, 0 otherwise.
 static int summary(const char *cntrclient, char status, char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr, struct strlist *backups, int count, int row, int col)
 {
-/*
 	char msg[1024]="";
 
 	if(status==STATUS_IDLE)
@@ -103,17 +98,17 @@ static int summary(const char *cntrclient, char status, char phase, const char *
 		char f[64]="";
 		char b[64]="";
 		const char *s="";
-	  	unsigned long long p=0;
-		unsigned long long t=0;
+//	  	unsigned long long p=0;
+//		unsigned long long t=0;
 
 		s=running_status_to_text(phase);
-		t=cntr->total+cntr->total_same+cntr->total_changed;
-		if(p1cntr->total) p=(t*100)/p1cntr->total;
-		snprintf(f, sizeof(f), "%llu/%llu %llu%%",
-			t, p1cntr->total, p);
-		if(cntr->byte)
-			snprintf(b, sizeof(b), "%s",
-				bytes_to_human(cntr->byte));
+//		t=cntr->total+cntr->total_same+cntr->total_changed;
+//		if(p1cntr->total) p=(t*100)/p1cntr->total;
+//		snprintf(f, sizeof(f), "%llu/%llu %llu%%",
+//			t, p1cntr->total, p);
+//		if(cntr->byte)
+//			snprintf(b, sizeof(b), "%s",
+//				bytes_to_human(cntr->byte));
 		snprintf(msg, sizeof(msg), "%-14.14s %-14s %s%s",
 			cntrclient, s, f, b);
 	}
@@ -122,10 +117,9 @@ static int summary(const char *cntrclient, char status, char phase, const char *
 		print_line(msg, count, col);
 		return 1;
 	}
-*/
 	return 0;
 }
-/*
+
 static void show_all_backups(struct strlist *backups, int *x, int col)
 {
 	char msg[256]="";
@@ -148,10 +142,8 @@ static void show_all_backups(struct strlist *backups, int *x, int col)
 		last=l;
 	}
 }
-*/
 
 /* for the counters */
-/*
 static void to_msg(char msg[], size_t s, const char *fmt, ...)
 {
 	va_list ap;
@@ -159,7 +151,6 @@ static void to_msg(char msg[], size_t s, const char *fmt, ...)
 	vsnprintf(msg, s, fmt, ap);
 	va_end(ap);
 }
-*/
 
 /*
 static void print_detail(char phase,
@@ -209,7 +200,6 @@ static void print_detail(char phase,
 }
 */
 
-/*
 static void table_header(char phase, int *x, int col)
 {
 	char msg[256]="";
@@ -226,7 +216,6 @@ static void table_header(char phase, int *x, int col)
 	}
 	print_line(msg, (*x)++, col);
 }
-*/
 
 /*
 static void print_detail2(const char *field, unsigned long long value1, const char *value2, int *x, int col)
@@ -236,8 +225,7 @@ static void print_detail2(const char *field, unsigned long long value1, const ch
 	snprintf(msg, sizeof(msg), "%s: %llu%s", field, value1, value2);
 	print_line(msg, (*x)++, col);
 }
-*/
-/*
+
 static void print_detail3(const char *field, const char *value, int *x, int col)
 {
 	char msg[256]="";
@@ -249,10 +237,9 @@ static void print_detail3(const char *field, const char *value, int *x, int col)
 
 static void detail(const char *cntrclient, char status, char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr, struct strlist *backups, int row, int col)
 {
-/*
 	int x=0;
 	char msg[1024]="";
-	const char *tmp=NULL;
+	//const char *tmp=NULL;
 	if(cntrclient)
 	{
 		snprintf(msg, sizeof(msg), "Client: %s", cntrclient);
@@ -293,6 +280,7 @@ static void detail(const char *cntrclient, char status, char phase, const char *
 	}
 	print_line("", x++, col);
 	table_header(phase, &x, col);
+/*
 	print_detail(phase, "Files",
 				cntr->file,
 				cntr->file_changed,
@@ -485,7 +473,6 @@ static int parse_rbuf(const char *rbuf, struct conf *conf, int row, int col, int
 		char *cntrclient=NULL;
 		*cp='\0';
 
-/*
 		if(str_to_cntr(dp, &cntrclient, &status, &phase, &path,
 			p1cntr, cntr, &backups))
 		{
@@ -494,7 +481,6 @@ static int parse_rbuf(const char *rbuf, struct conf *conf, int row, int col, int
 			if(cntrclient) free(cntrclient);
 			return -1;
 		}
-*/
 
 		if(!cntrclient) continue;
 
@@ -844,7 +830,7 @@ int status_client_ncurses(enum action act, const char *sclient,
 
 		if(FD_ISSET(fd, &fsr))
 		{
-			// ready to read.
+			// Ready to read.
 			if((l=read(fd, buf, sizeof(buf)-1))>0)
 			{
 				size_t r=0;

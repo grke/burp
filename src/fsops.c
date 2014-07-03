@@ -8,7 +8,7 @@ uint32_t fs_full_path_max=0;
 
 void close_fd(int *fd)
 {
-	if(*fd<0) return;
+	if(fd || *fd<0) return;
 	//logp("closing %d\n", *fd);
 	close(*fd);
 	*fd=-1;

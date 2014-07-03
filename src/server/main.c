@@ -201,7 +201,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx,
 	if(!(as=async_alloc())
 	  || !(asfd=asfd_alloc())
 	  || as->init(as, 0)
-	  || asfd->init(asfd, "main socket", as, *cfd, ssl, conf))
+	  || asfd->init(asfd, "main socket", as, *cfd, ssl, 0, conf))
 		goto end;
 	as->asfd_add(as, asfd);
 
@@ -264,7 +264,7 @@ end:
 }
 
 static int run_status_server(int *rfd, int *cfd,
-		int status_rfd, const char *conffile)
+		int *status_rfd, const char *conffile)
 {
 	int ret=-1;
 	struct conf *conf=NULL;
@@ -286,7 +286,8 @@ end:
 	return ret;
 }
 
-static int process_incoming_client(int rfd, struct conf *conf, SSL_CTX *ctx, const char *conffile, int is_status_server)
+static int process_incoming_client(int *rfd, SSL_CTX *ctx,
+	const char *conffile, int is_status_server, struct conf *conf)
 {
 	int cfd=-1;
 	pid_t childpid;
@@ -296,12 +297,12 @@ static int process_incoming_client(int rfd, struct conf *conf, SSL_CTX *ctx, con
 	struct sockaddr_in client_name;
 
 	client_length=sizeof(client_name);
-	if((cfd=accept(rfd,
+	if((cfd=accept(*rfd,
 		(struct sockaddr *) &client_name, &client_length))==-1)
 	{
 		// Look out, accept will get interrupted by SIGCHLDs.
 		if(errno==EINTR) return 0;
-		logp("accept failed on %d: %s\n", rfd, strerror(errno));
+		logp("accept failed on %d: %s\n", *rfd, strerror(errno));
 		return -1;
 	}
 	reuseaddr(cfd);
@@ -310,9 +311,9 @@ static int process_incoming_client(int rfd, struct conf *conf, SSL_CTX *ctx, con
 	if(!conf->forking)
 	{
 		if(is_status_server)
-			return run_status_server(&rfd, &cfd, -1, conffile);
+			return run_status_server(rfd, &cfd, NULL, conffile);
 		else
-			return run_child(&rfd, &cfd, ctx, conffile,
+			return run_child(rfd, &cfd, ctx, conffile,
 				conf->forking);
 	}
 
@@ -357,14 +358,16 @@ static int process_incoming_client(int rfd, struct conf *conf, SSL_CTX *ctx, con
 			status_wfd=pipe_rfd[1];
 
 			if(is_status_server)
-				ret=run_status_server(&rfd, &cfd, pipe_wfd[0],
+				ret=run_status_server(rfd, &cfd, &(pipe_wfd[0]),
 						conffile);
 			else
-				ret=run_child(&rfd, &cfd, ctx,
+				ret=run_child(rfd, &cfd, ctx,
 						conffile, conf->forking);
 
 			close(pipe_rfd[1]);
 			close(pipe_wfd[0]);
+			close_fd(&cfd);
+			close_fd(rfd);
 			exit(ret);
 		}
 		default:
@@ -383,6 +386,7 @@ static int process_incoming_client(int rfd, struct conf *conf, SSL_CTX *ctx, con
 				pipe_rfd[0], pipe_wfd[1], is_status_server);
 
 			close_fd(&cfd);
+			close_fd(rfd);
 			return 0;
 	}
 }
@@ -473,8 +477,8 @@ static int process_fds(int *fds, fd_set *fse, fd_set *fsr,
 		if(FD_ISSET(fds[i], fsr))
 		{
 			// A normal client is incoming.
-			if(process_incoming_client(fds[i], conf, ctx,
-				conffile, is_status_client))
+			if(process_incoming_client(&(fds[i]), ctx,
+				conffile, is_status_client, conf))
 					return -1;
 			if(!conf->forking) { gentleshutdown++; return 1; }
 		}

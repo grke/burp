@@ -24,51 +24,89 @@ static int asfd_alloc_buf(char **buf)
 	return 0;
 }
 
-static int asfd_parse_readbuf(struct asfd *asfd)
+static int extract_buf(struct asfd *asfd,
+	unsigned int len, unsigned int offset)
 {
-	unsigned int s=0;
-	char cmdtmp='\0';
-
-	if(asfd->rbuf->buf)
+	if(!(asfd->rbuf->buf=(char *)malloc_w(len+1, __func__)))
+		return -1;
+	if(!(memcpy(asfd->rbuf->buf, asfd->readbuf+offset, len)))
 	{
-		return 0;
-		logp("%s called with non-empty buffer\n", __func__);
-//		printf("%c:%s\n", asfd->rbuf->cmd, asfd->rbuf->buf);
-		goto error;
+		logp("%s: memcpy failed in %s\n", asfd->desc, __func__);
+		return -1;
 	}
-
-	if(asfd->readbuflen>=5)
+	asfd->rbuf->buf[len]='\0';
+	if(!(memmove(asfd->readbuf,
+		asfd->readbuf+len+offset, asfd->readbuflen-len-offset)))
 	{
-		if((sscanf(asfd->readbuf, "%c%04X", &cmdtmp, &s))!=2)
-		{
-			logp("%s: sscanf of '%s' failed in %s\n",
-				asfd->desc, asfd->readbuf, __func__);
-			goto error;
-		}
+		logp("%s: memmove failed in %s\n", asfd->desc, __func__);
+		return -1;
+	}
+	asfd->readbuflen-=len+offset;
+	asfd->rbuf->len=len;
+	return 0;
+}
+
+static int parse_line_buffered_stream(struct asfd *asfd)
+{
+	static char *cp=NULL;
+	static char *dp=NULL;
+	static size_t len=0;
+	if(!cp)
+	{
+		// Only start from the beginning if we previously got something
+		// to extract.
+		cp=asfd->readbuf;
+		len=0;
+	}
+	for(; len<asfd->readbuflen; cp++, len++)
+	{
+		if(*cp!='\n') continue;
+		len++;
+		if(extract_buf(asfd, len, 0)) return -1;
+		// Strip trailing white space, like '\r\n'.
+		dp=asfd->rbuf->buf;
+		for(cp=&(dp[len-1]); cp>=dp && isspace(*cp); cp--, len--)
+			*cp='\0';
+		asfd->rbuf->len=len;
+		break;
+	}
+	cp=NULL;
+	return 0;
+}
+
+static int parse_standard_burp_stream(struct asfd *asfd)
+{
+	char cmdtmp='\0';
+	unsigned int s=0;
+	if(asfd->readbuflen<5) return 0;
+	if((sscanf(asfd->readbuf, "%c%04X", &cmdtmp, &s))!=2)
+	{
+		logp("%s: sscanf of '%s' failed in %s\n",
+			asfd->desc, asfd->readbuf, __func__);
+		return -1;
 	}
 	if(asfd->readbuflen>=s+5)
 	{
 		asfd->rbuf->cmd=cmdtmp;
-		if(!(asfd->rbuf->buf=(char *)malloc_w(s+1, __func__)))
-			goto error;
-		if(!(memcpy(asfd->rbuf->buf, asfd->readbuf+5, s)))
-		{
-			logp("%s: memcpy failed in %s\n",
-				asfd->desc, __func__);
-			goto error;
-		}
-		asfd->rbuf->buf[s]='\0';
-		if(!(memmove(asfd->readbuf,
-			asfd->readbuf+s+5, asfd->readbuflen-s-5)))
-		{
-			logp("%s: memmove failed in %s\n",
-				asfd->desc, __func__);
-			goto error;
-		}
-		asfd->readbuflen-=s+5;
-		asfd->rbuf->len=s;
-//printf("got %d: %c:%s\n", asfd->rbuf->len, asfd->rbuf->cmd, asfd->rbuf->buf);
+		if(extract_buf(asfd, s, 5))
+			return -1;
 	}
+	return 0;
+}
+
+static int asfd_parse_readbuf(struct asfd *asfd)
+{
+	if(asfd->rbuf->buf) return 0;
+
+	if(asfd->linebuf)
+	{
+		if(parse_line_buffered_stream(asfd)) goto error;
+	}
+	else
+	{
+		if(parse_standard_burp_stream(asfd)) goto error;
+	}
+//printf("got %d: %c:%s\n", asfd->rbuf->len, asfd->rbuf->cmd, asfd->rbuf->buf);
 	return 0;
 error:
 	truncate_readbuf(asfd);
@@ -395,11 +433,12 @@ error:
 
 
 static int asfd_init(struct asfd *asfd, const char *desc,
-	struct async *as, int afd, SSL *assl, struct conf *conf)
+	struct async *as, int afd, SSL *assl, int linebuf, struct conf *conf)
 {
 	asfd->as=as;
 	asfd->fd=afd;
 	asfd->ssl=assl;
+	asfd->linebuf=linebuf;
 	asfd->max_network_timeout=conf->network_timeout;
 	asfd->network_timeout=asfd->max_network_timeout;
 	asfd->ratelimit=conf->ratelimit;

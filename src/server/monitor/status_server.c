@@ -1,38 +1,33 @@
 #include "include.h"
 
 static int send_summaries_to_client(struct asfd *srfd,
-	struct cstat **clist, int clen, const char *sel_client)
+	struct cstat *clist, const char *sel_client)
 {
-	int q=0;
 	int ret=-1;
+	struct cstat *c;
 
 	if(json_start(srfd)) return -1;
 
-	for(q=0; q<clen; q++)
+	for(c=clist; c; c=c->next)
 	{
-		// Currently, if you delete a conf file, the entry does not
-		// get removed from our list - they get blanked out instead.
-		if(!clist[q]->name) continue;
-
-                if(!clist[q]->status
-		  && cstat_set_status(clist[q]))
+                if(!c->status && cstat_set_status(c))
 			goto end;
 
-                if(clist[q]->running_detail && *(clist[q]->running_detail))
+                if(c->running_detail)
 		{
 			// Broken for now.
-			//tosend=clist[q]->running_detail;
+			//tosend=c->running_detail;
 		}
-		else if(sel_client && !strcmp(sel_client, clist[q]->name)
-		  && (clist[q]->status==STATUS_IDLE
-			|| clist[q]->status==STATUS_CLIENT_CRASHED
-			|| clist[q]->status==STATUS_SERVER_CRASHED))
+		else if(sel_client && !strcmp(sel_client, c->name)
+		  && (c->status==STATUS_IDLE
+			|| c->status==STATUS_CLIENT_CRASHED
+			|| c->status==STATUS_SERVER_CRASHED))
 		{
 			// Client not running, but asked for detail.
 			// Gather a list of successful backups to talk about.
-			if(cstat_set_backup_list(clist[q])) goto end;
+			if(cstat_set_backup_list(c)) goto end;
 		}
-		if(json_send_backup_list(srfd, clist[q]))
+		if(json_send_backup_list(srfd, clist, c))
 			goto end;
 	}
 
@@ -64,10 +59,10 @@ static int send_detail_to_client(struct asfd *srfd, struct cstat **clist, int cl
 */
 
 
-static int parse_parent_data_entry(char *tok, struct cstat **clist, int clen)
+static int parse_parent_data_entry(char *tok, struct cstat *clist)
 {
-	int q=0;
 	char *tp=NULL;
+	struct cstat *c;
 	//logp("status server got: %s", tok);
 
 	// Find the array entry for this client,
@@ -76,33 +71,27 @@ static int parse_parent_data_entry(char *tok, struct cstat **clist, int clen)
 	// the fields are tab separated.
 	if(!(tp=strchr(tok, '\t'))) return 0;
 	*tp='\0';
-	for(q=0; q<clen; q++)
+	for(c=clist; c; c=c->next)
 	{
-		if(clist[q]->name
-		  && !strcmp(clist[q]->name, tok))
+		if(!strcmp(c->name, tok))
 		{
 			int x=0;
 			*tp='\t'; // put the tab back.
 			x=strlen(tok);
-			free_w(&(clist[q]->running_detail));
-			clist[q]->running_detail=NULL;
+			free_w(&c->running_detail);
 			//clist[q]->running_detail=strdup(tok);
 
 			// Need to add the newline back on the end.
-			if(!(clist[q]->running_detail=(char *)malloc(x+2)))
-			{
-				log_out_of_memory(__func__);
+			if(!(c->running_detail=(char *)malloc_w(x+2, __func__)))
 				return -1;
-			}
-			snprintf(clist[q]->running_detail, x+2, "%s\n",
-				tok);
+			snprintf(c->running_detail, x+2, "%s\n", tok);
 			
 		}
 	}
 	return 0;
 }
 
-static int parse_parent_data(struct asfd *asfd, struct cstat **clist, int clen)
+static int parse_parent_data(struct asfd *asfd, struct cstat *clist)
 {
 	int ret=-1;
 	char *tok=NULL;
@@ -115,9 +104,9 @@ printf("got parent data: '%s'\n", asfd->rbuf->buf);
 	if((tok=strtok(copyall, "\n")))
 	{
 printf("got tok: %s\n", tok);
-		if(parse_parent_data_entry(tok, clist, clen)) goto end;
+		if(parse_parent_data_entry(tok, clist)) goto end;
 		while((tok=strtok(NULL, "\n")))
-			if(parse_parent_data_entry(tok, clist, clen))
+			if(parse_parent_data_entry(tok, clist))
 				goto end;
 	}
 
@@ -125,17 +114,6 @@ printf("got tok: %s\n", tok);
 end:
 	free_w(&copyall);
 	return ret;
-}
-
-static cstat *get_cstat_by_client_name(struct cstat **clist, int clen, const char *client)
-{
-	int c=0;
-	for(c=0; c<clen; c++)
-	{
-		if(clist[c]->name && !strcmp(clist[c]->name, client))
-			return clist[c];
-	}
-	return NULL;
 }
 
 /* FIX THIS
@@ -315,7 +293,7 @@ end:
 	return ret;
 }
 
-static int parse_client_data(struct asfd *srfd, struct cstat **clist, int clen)
+static int parse_client_data(struct asfd *srfd, struct cstat *clist)
 {
 	int ret=0;
 	const char *cp=NULL;
@@ -342,7 +320,7 @@ printf("got client data: '%s'\n", srfd->rbuf->buf);
 
 	if(client)
 	{
-		if(!(cli=get_cstat_by_client_name(clist, clen, client)))
+		if(!(cli=cstat_get_by_name(clist, client)))
 			goto end;
 	}
 	if(backup)
@@ -385,14 +363,14 @@ printf("got client data: '%s'\n", srfd->rbuf->buf);
 		else
 		{
 			//printf("detail request: %s\n", rbuf);
-			if(send_summaries_to_client(srfd, clist, clen, client))
+			if(send_summaries_to_client(srfd, clist, client))
 				goto error;
 		}
 	}
 	else
 	{
 		//printf("summaries request\n");
-		if(send_summaries_to_client(srfd, clist, clen, NULL))
+		if(send_summaries_to_client(srfd, clist, NULL))
 			goto error;
 	}
 
@@ -407,25 +385,24 @@ end:
 	return ret;
 }
 
-static int parse_data(struct asfd *asfd, struct cstat **clist, int clen)
+static int parse_data(struct asfd *asfd, struct cstat *clist)
 {
 	// Hacky to switch on whether it is using line buffering or not.
-	if(asfd->linebuf) return parse_client_data(asfd, clist, clen);
-	return parse_parent_data(asfd, clist, clen);
+	if(asfd->linebuf) return parse_client_data(asfd, clist);
+	return parse_parent_data(asfd, clist);
 }
 
 static int main_loop(struct async *as, struct conf *conf)
 {
-	int clen=0;
-	struct cstat **clist=NULL;
 	int gotdata=0;
 	struct asfd *asfd;
+	struct cstat *clist=NULL;
 	while(1)
 	{
 		// Take the opportunity to get data from the disk if nothing
 		// was read from the fds.
 		if(gotdata) gotdata=0;
-		else if(cstat_load_data_from_disk(&clist, &clen, conf))
+		else if(cstat_load_data_from_disk(&clist, conf))
 			goto error;
 		if(as->read_write(as))
 		{
@@ -436,12 +413,13 @@ static int main_loop(struct async *as, struct conf *conf)
 			while(asfd->rbuf->buf)
 		{
 			gotdata=1;
-			if(parse_data(asfd, clist, clen)
+			if(parse_data(asfd, clist)
 			  || asfd->parse_readbuf(asfd))
 				goto error;
 			iobuf_free_content(asfd->rbuf);
 		}
 	}
+// FIX THIS: should free clist;
 	return 0;
 error:
 	return -1;

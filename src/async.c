@@ -206,9 +206,8 @@ static void async_asfd_remove(struct async *as, struct asfd *asfd)
 	{
 		if(l->next!=asfd) continue;
 		l->next=asfd->next;
-		break;
+		return;
 	}
-	return;
 }
 
 void async_asfd_free_all(struct async **as)

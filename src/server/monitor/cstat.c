@@ -16,54 +16,9 @@ static int cstat_init(struct cstat *cstat,
 	return 0;
 }
 
-int cstat_sort(const void *a, const void *b)
+static void cstat_free_content(struct cstat *c)
 {
-	struct cstat **x=(struct cstat **)a;
-	struct cstat **y=(struct cstat **)b;
-	if(!x || !y) return 0;
-	if(!*x && !*y) return 0;
-	if(!*x) return -1;
-	if(!*y) return 1;
-	if(!(*x)->name) return -1;
-	if(!(*y)->name) return 1;
-	return strcmp((*x)->name, (*y)->name);
-}
-
-static int cstat_add(struct cstat ***clist, int *clen,
-	const char *name, const char *clientconfdir)
-{
-	int q=0;
-	struct cstat *cnew=NULL;
-	struct cstat **ctmp=NULL;
-	if(!name)
-	{
-		logp("cstat_add called with NULL name!\n");
-		return -1;
-	}
-
-	// If there is a blank array entry, use that.
-	for(q=0; q<*clen; q++)
-		if(!(*clist)[q]->name)
-			return cstat_init((*clist)[q], name, clientconfdir);
-
-	// Otherwise, increase the size of the array.
-
-	if(!(ctmp=(struct cstat **)realloc_w(*clist,
-		((*clen)+1)*sizeof(struct cstat *), __func__)))
-			return -1;
-	*clist=ctmp;
-	if(!(cnew=cstat_alloc())
-	  || cstat_init(cnew, name, clientconfdir))
-		return -1;
-	(*clist)[(*clen)++]=cnew;
-
-	//for(b=0; b<*count; b++)
-	//      printf("now: %d %s\n", b, (*clist)[b]->name);
-	return 0;
-}
-
-static void cstat_blank(struct cstat *c)
-{
+	if(!c) return;
 	free_w(&c->name);
 	free_w(&c->conffile);
 	free_w(&c->running_detail);
@@ -72,10 +27,39 @@ static void cstat_blank(struct cstat *c)
 	free_w(&c->current);
 	free_w(&c->timestamp);
 	free_w(&c->lockfile);
-	c->conf_mtime=0;
-	c->basedir_mtime=0;
-	c->lockfile_mtime=0;
 }
+
+static void cstat_free(struct cstat **c)
+{
+	if(!c || !*c) return;
+	cstat_free_content(*c);
+	free_v((void **)c);
+}
+
+static int cstat_add_to_list(struct cstat **clist, struct cstat *cnew)
+{
+	struct cstat *c=NULL;
+	struct cstat *clast=NULL;
+
+	for(c=*clist; c; c=c->next)
+	{
+		if(strcmp(cnew->name, c->name)<0) break;
+		clast=c;
+	}
+	if(clast)
+	{
+		cnew->next=clast->next;
+		clast->next=cnew;
+	}
+	else
+	{
+		*clist=cnew;
+		cnew->next=c;
+	}
+
+	return 0;
+}
+
 
 static int set_cstat_from_conf(struct cstat *c, struct conf *conf, struct conf *cconf)
 {
@@ -107,21 +91,20 @@ static int set_cstat_from_conf(struct cstat *c, struct conf *conf, struct conf *
 	return 0;
 }
 
-static int get_client_names(struct conf *conf,
-	struct cstat ***clist, int *clen)
+static int get_client_names(struct cstat **clist, struct conf *conf)
 {
-	int q=0;
 	int m=0;
 	int n=-1;
-	int newclient=0;
-
+	int ret=-1;
+	struct cstat *c;
+	struct cstat *cnew;
 	struct dirent **dir=NULL;
 
 	if((n=scandir(conf->clientconfdir, &dir, 0, 0))<0)
 	{
 		logp("could not scandir clientconfdir: %s\n",
 			conf->clientconfdir, strerror(errno));
-		goto error;
+		goto end;
 	}
         for(m=0; m<n; m++)
 	{
@@ -129,79 +112,88 @@ static int get_client_names(struct conf *conf,
 		// looks_like...() also avoids '.' and '..'.
 		  || looks_like_tmp_or_hidden_file(dir[m]->d_name))
 			continue;
-		for(q=0; q<*clen; q++)
+		for(c=*clist; c; c=c->next)
 		{
-			if(!(*clist)[q]->name) continue;
-			if(!strcmp(dir[m]->d_name, (*clist)[q]->name))
+			if(!c->name) continue;
+			if(!strcmp(dir[m]->d_name, c->name))
 				break;
 		}
-		if(q==*clen)
-		{
-			// We do not have this client yet. Add it.
-			newclient++;
-			if(cstat_add(clist, clen, dir[m]->d_name,
-				conf->clientconfdir)) goto error;
-		}
+		if(c) continue;
+
+		// We do not have this client yet. Add it.
+		if(!(cnew=cstat_alloc())
+		  || cstat_init(cnew, dir[m]->d_name, conf->clientconfdir)
+		  || cstat_add_to_list(clist, cnew))
+			goto end;
 	}
+
+	ret=0;
+end:
 	for(m=0; m<n; m++) free_v((void **)&dir[m]);
 	free_v((void **)&dir);
-
-	if(newclient) qsort(*clist, *clen, sizeof(struct cstat *), cstat_sort);
-
-	return 0;
-error:
-	return -1;
+	return ret;
 }
 
-static int reload_from_client_confs(struct conf *conf,
-	struct cstat ***clist, int *clen)
+static void cstat_remove(struct cstat **clist, struct cstat **cstat)
 {
-	int q;
+	struct cstat *c;
+	if(!cstat || !*cstat) return;
+	if(*clist==*cstat)
+	{
+		*clist=(*cstat)->next;
+		cstat_free(cstat);
+		*cstat=*clist;
+		return;
+	}
+	for(c=*clist; c; c=c->next)
+	{
+		if(c->next!=*cstat) continue;
+		c->next=(*cstat)->next;
+		cstat_free(cstat);
+		*cstat=*clist;
+		return;
+	}
+}
+
+static int reload_from_client_confs(struct cstat **clist, struct conf *conf)
+{
+	struct cstat *c;
 	static struct conf *cconf=NULL;
 
 	if(!cconf && !(cconf=conf_alloc())) goto error;
 
-	for(q=0; q<*clen; q++)
+	for(c=*clist; c; c=c->next)
 	{
 		// Look at the client conf files to see if they have changed,
 		// and reload bits and pieces if they have.
 		struct stat statp;
 
-		if(!(*clist)[q]->conffile) continue;
+		if(!c->conffile) continue;
 
-		if(stat((*clist)[q]->conffile, &statp))
+		if(stat(c->conffile, &statp)
+		  || !S_ISREG(statp.st_mode))
 		{
-			// TODO: Need to remove the client from the list.
-			cstat_blank((*clist)[q]);
+			cstat_remove(clist, &c);
 			continue;
 		}
-		// Allow directories to exist in the conf dir.
-		if(!S_ISREG(statp.st_mode))
-		{
-			cstat_blank((*clist)[q]);
-			continue;
-		}
-		if(statp.st_mtime==(*clist)[q]->conf_mtime)
+		if(statp.st_mtime==c->conf_mtime)
 		{
 			// conf file has not changed - no need to do anything.
 			continue;
 		}
-		(*clist)[q]->conf_mtime=statp.st_mtime;
+		c->conf_mtime=statp.st_mtime;
 
 		conf_free_content(cconf);
-		if(!(cconf->cname=strdup((*clist)[q]->name)))
-		{
-			log_out_of_memory(__func__);
+		if(!(cconf->cname=strdup_w(c->name, __func__)))
 			goto error;
-		}
 		if(conf_set_client_global(conf, cconf)
-		  || conf_load((*clist)[q]->conffile, cconf, 0))
+		  || conf_load(c->conffile, cconf, 0))
 		{
-			cstat_blank((*clist)[q]);
+			cstat_remove(clist, &c);
 			continue;
 		}
 
-		if(set_cstat_from_conf((*clist)[q], conf, cconf))
+		if(set_cstat_from_conf(c, conf, cconf))
 			goto error;
 	}
 	return 0;
@@ -257,52 +249,50 @@ int cstat_set_status(struct cstat *cstat)
 	return 0;
 }
 
-static int reload_from_basedir(struct conf *conf,
-	struct cstat ***clist, int *clen)
+static int reload_from_basedir(struct cstat **clist, struct conf *conf)
 {
-	int q;
-	for(q=0; q<*clen; q++)
+	struct cstat *c;
+	for(c=*clist; c; c=c->next)
 	{
-		// Pretty much the same routine for the basedir,
-		// except also reload if we have running_detail.
+		// Pretty much the same routine for the basedir, except also
+		// reload if we have running_detail.
 		time_t ltime=0;
 		struct stat statp;
 		struct stat lstatp;
-		if(!(*clist)[q]->basedir) continue;
-		if(stat((*clist)[q]->basedir, &statp))
+		if(!c->basedir) continue;
+		if(stat(c->basedir, &statp))
 		{
 			// no basedir
-			if(!(*clist)[q]->status
-			  && cstat_set_status((*clist)[q]))
+			if(!c->status
+			  && cstat_set_status(c))
 				goto error;
 			continue;
 		}
-		if(!lstat((*clist)[q]->lockfile, &lstatp))
+		if(!lstat(c->lockfile, &lstatp))
 			ltime=lstatp.st_mtime;
-		if(statp.st_mtime==(*clist)[q]->basedir_mtime
-		  && ltime==(*clist)[q]->lockfile_mtime
-		  && (*clist)[q]->status!=STATUS_SERVER_CRASHED
-		  && !((*clist)[q]->running_detail))
+		if(statp.st_mtime==c->basedir_mtime
+		  && ltime==c->lockfile_mtime
+		  && c->status!=STATUS_SERVER_CRASHED
+		  && !c->running_detail)
 		{
 			// basedir has not changed - no need to do anything.
 			continue;
 		}
-		(*clist)[q]->basedir_mtime=statp.st_mtime;
-		(*clist)[q]->lockfile_mtime=ltime;
+		c->basedir_mtime=statp.st_mtime;
+		c->lockfile_mtime=ltime;
 
-		if(cstat_set_status((*clist)[q])) goto error;
+		if(cstat_set_status(c)) goto error;
 	}
 	return 0;
 error:
 	return -1;
 }
 
-int cstat_load_data_from_disk(struct cstat ***clist,
-	int *clen, struct conf *conf)
+int cstat_load_data_from_disk(struct cstat **clist, struct conf *conf)
 {
-	return get_client_names(conf, clist, clen)
-	  || reload_from_client_confs(conf, clist, clen)
-	  || reload_from_basedir(conf, clist, clen);
+	return get_client_names(clist, conf)
+	  || reload_from_client_confs(clist, conf)
+	  || reload_from_basedir(clist, conf);
 }
 
 int cstat_set_backup_list(struct cstat *cstat)
@@ -326,4 +316,11 @@ int cstat_set_backup_list(struct cstat *cstat)
 
 	cstat->bu=bu;
 	return 0;
+}
+
+struct cstat *cstat_get_by_name(struct cstat *clist, const char *name)
+{
+	struct cstat *c;
+        for(c=clist; c; c=c->next) if(!strcmp(c->name, name)) return c;
+        return NULL;
 }

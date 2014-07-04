@@ -397,9 +397,9 @@ static int load_data_from_disk(struct cstat ***clist,
 	  || reload_from_basedir(conf, clist, clen);
 }
 
-static int send_data_to_client(struct asfd *srfd, const char *data, size_t len)
+static int send_data_to_client(struct asfd *asfd, const char *data, size_t len)
 {
-printf("%s\n", data);
+	if(asfd->write_strn(asfd, CMD_GEN, data, len)) return -1;
 	return 0;
 }
 
@@ -577,6 +577,7 @@ static int parse_parent_data(struct asfd *asfd, struct cstat **clist, int clen)
 	int ret=-1;
 	char *tok=NULL;
 	char *copyall=NULL;
+printf("got parent data: '%s'\n", asfd->rbuf->buf);
 
 	if(!(copyall=strdup_w(asfd->rbuf->buf, __func__)))
 		goto end;
@@ -786,6 +787,7 @@ static int parse_client_data(struct asfd *srfd, struct cstat **clist, int clen)
 	char *browse=NULL;
 	unsigned long bno=0;
 	struct cstat *cli=NULL;
+printf("got client data: '%s'\n", srfd->rbuf->buf);
 
 	cp=srfd->rbuf->buf;
 	client=get_str(&cp, "c:", 0);
@@ -867,16 +869,19 @@ end:
 	return ret;
 }
 
+static int parse_data(struct asfd *asfd, struct cstat **clist, int clen)
+{
+	// Hacky to switch on whether it is using line buffering or not.
+	if(asfd->linebuf) return parse_client_data(asfd, clist, clen);
+	return parse_parent_data(asfd, clist, clen);
+}
+
 static int main_loop(struct async *as, struct conf *conf)
 {
-	//int l;
-	//char *rbuf=NULL;
-	//char buf[512]="";
 	int clen=0;
 	struct cstat **clist=NULL;
 	int gotdata=0;
-	struct asfd *clfd=as->asfd; // client socket
-	struct asfd *prfd=clfd->next; // parent socket
+	struct asfd *asfd;
 	while(1)
 	{
 		// Take the opportunity to get data from the disk if nothing
@@ -889,23 +894,14 @@ static int main_loop(struct async *as, struct conf *conf)
 			logp("Exiting main status server loop\n");
 			break;
 		}
-		while(prfd->rbuf->buf)
+		for(asfd=as->asfd; asfd; asfd=asfd->next)
+			while(asfd->rbuf->buf)
 		{
 			gotdata=1;
-printf("got parent data: '%s'\n", prfd->rbuf->buf);
-			if(parse_parent_data(prfd, clist, clen)) goto error;
-			iobuf_free_content(prfd->rbuf);
-			// Get as much out of the readbuf as possible.
-			if(prfd->parse_readbuf(prfd)) goto error;
-		}
-		while(clfd->rbuf->buf)
-		{
-			gotdata=1;
-printf("got client data: '%s'\n", clfd->rbuf->buf);
-			if(parse_client_data(clfd, clist, clen)) goto error;
-			iobuf_free_content(clfd->rbuf);
-			// Get as much out of the readbuf as possible.
-			if(clfd->parse_readbuf(clfd)) goto error;
+			if(parse_data(asfd, clist, clen)
+			  || asfd->parse_readbuf(asfd))
+				goto error;
+			iobuf_free_content(asfd->rbuf);
 		}
 	}
 	return 0;

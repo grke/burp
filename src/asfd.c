@@ -297,15 +297,23 @@ static int append_to_write_buffer(struct asfd *asfd,
 static int asfd_append_all_to_write_buffer(struct asfd *asfd,
 	struct iobuf *wbuf)
 {
-	size_t sblen=0;
-	char sbuf[10]="";
-	if(asfd->writebuflen+6+(wbuf->len) >= bufmaxsize-1)
-		return 1;
+	if(asfd->linebuf)
+	{
+		if(asfd->writebuflen+wbuf->len >= bufmaxsize-1)
+			return 1;
+	}
+	else
+	{
+		size_t sblen=0;
+		char sbuf[10]="";
+		if(asfd->writebuflen+6+(wbuf->len) >= bufmaxsize-1)
+			return 1;
 
-	snprintf(sbuf, sizeof(sbuf), "%c%04X",
-		wbuf->cmd, (unsigned int)wbuf->len);
-	sblen=strlen(sbuf);
-	append_to_write_buffer(asfd, sbuf, sblen);
+		snprintf(sbuf, sizeof(sbuf), "%c%04X",
+			wbuf->cmd, (unsigned int)wbuf->len);
+		sblen=strlen(sbuf);
+		append_to_write_buffer(asfd, sbuf, sblen);
+	}
 	append_to_write_buffer(asfd, wbuf->buf, wbuf->len);
 //printf("append %d: %c:%s\n", wbuf->len, wbuf->cmd, wbuf->buf);
 	wbuf->len=0;

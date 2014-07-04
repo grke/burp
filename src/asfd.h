@@ -12,6 +12,7 @@ enum asl_ret
 	ASL_END_OK_RETURN_1=2
 };
 
+// Async file descriptor. Can add these to a struct async.
 struct asfd
 {
 	int fd;

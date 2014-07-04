@@ -22,12 +22,14 @@ struct cstat
 	char *lockfile;
 	time_t lockfile_mtime;
 	struct bu *bu; // backup list
+
+	struct cstat *next;
 };
 
-extern int cstat_load_data_from_disk(struct cstat ***clist,
-	int *clen, struct conf *conf);
+extern int cstat_load_data_from_disk(struct cstat **clist, struct conf *conf);
 extern int cstat_set_status(struct cstat *cstat);
 extern int cstat_set_backup_list(struct cstat *cstat);
 extern const char *cstat_status_to_str(struct cstat *cstat);
+extern struct cstat *cstat_get_by_name(struct cstat *clist, const char *name);
 
 #endif

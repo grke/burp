@@ -72,13 +72,12 @@ static int json_send_backup(struct asfd *asfd, struct bu *bu)
 	return json_str_to_client(asfd, wbuf);
 }
 
-static int json_send_client_start(struct asfd *asfd, struct cstat *cstat)
+static int json_send_client_start(struct asfd *asfd,
+	struct cstat *clist, struct cstat *cstat)
 {
 	static char wbuf[CLI_TEMPLATE_MAX];
 	snprintf(wbuf, CLI_TEMPLATE_MAX, client_start,
-		// FIX THIS - cstat should be a linked list so we can set
-		// commas properly.
-		"",
+		clist==cstat?"":",\n",
 		cstat->name,
 		cstat_status_to_str(cstat));
 	return json_str_to_client(asfd, wbuf);
@@ -89,11 +88,12 @@ static int json_send_client_end(struct asfd *asfd)
 	return json_str_to_client(asfd, client_end);
 }
 
-int json_send_backup_list(struct asfd *asfd, struct cstat *cstat)
+int json_send_backup_list(struct asfd *asfd,
+	struct cstat *clist, struct cstat *cstat)
 {
 	int ret=-1;
 	struct bu *bu;
-	if(json_send_client_start(asfd, cstat)) return -1;
+	if(json_send_client_start(asfd, clist, cstat)) return -1;
 	for(bu=cstat->bu; bu; bu=bu->prev)
 	{
 		if(json_send_backup(asfd, bu))

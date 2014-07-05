@@ -1,3 +1,14 @@
+2014-07-06 Changes in burp-1.4.18:
+  * Fix some Mac compilation warnings.
+  * Fix a bug where specifying an alternative restore directory with a trailing
+    slash would not work.
+  * Set REMOTE_ADDR and REMOTE_PORT environment variables.
+  * Force the user spell out '-a delete', to avoid confusion with the future
+    'diff/long diff' options. Prevent old clients from deleting, to prevent
+    potential accidents.
+  * Fix a problem where interrupting the client during a list could leave the
+    server child process hanging indefinitely.
+
 2014-05-31 Changes in burp-1.4.16:
   * Bug fix for restoring permissions on empty directories.
   * Compile for systems that have no O_NOATIME and fdopendir() - ie, Mac OS X.

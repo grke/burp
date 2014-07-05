@@ -612,7 +612,7 @@ The file name must match the name in the 'cname' field on the client.
 .TP
 \fBssl_peer_cn=[string]\fR must match the common name in the SSL certificate that the client gives when it connects. If ssl_peer_cn is not set, the client name will be used instead (the clientconfdir file name).
 .TP
-The file needs to contain a line like \fBpassword=[password]\fR that matches the same field on the client, or \fBpasswd=[encrypted password]\fR \- where the plain text password on the client will be tested against an encrypted password of the kind you might find in /etc/passwd.
+The file needs to contain a line like \fBpassword=[password]\fR that matches the same field on the client, or \fBpasswd=[hash]\fR \- where the plain text password on the client will be tested against a hash of the kind you might find in /etc/passwd.
 .TP
 Additionally, the following options can be overridden here for each client:
 \fBprotocol\fR

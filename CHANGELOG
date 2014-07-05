@@ -1,3 +1,4 @@
+2014-07-06 Changes in burp-1.4.18:
   * Fix some Mac compilation warnings.
   * Fix a bug where specifying an alternative restore directory with a trailing
     slash would not work.

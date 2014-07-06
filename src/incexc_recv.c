@@ -33,7 +33,7 @@ static int incexc_recv(struct asfd *asfd, char **incexc,
 	const char *reqstr, const char *repstr,
 	const char *endreqstr, const char *endrepstr, struct conf *conf)
 {
-	if(*incexc) { free(*incexc); *incexc=NULL; }
+	free_w(incexc);
 	if(asfd->write_str(asfd, CMD_GEN, repstr)) return -1;
 
 	endreqstrf=endreqstr;

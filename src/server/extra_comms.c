@@ -144,6 +144,7 @@ static int extra_comms_read(struct async *as,
 		{
 			char *os=NULL;
 			os=rbuf->buf+strlen("autoupgrade:");
+			iobuf_free_content(rbuf);
 			if(os && *os && autoupgrade_server(as, vers->ser,
 				vers->cli, os, conf)) goto end;
 		}
@@ -176,6 +177,7 @@ static int extra_comms_read(struct async *as,
 		{
 			// Client can accept incexc conf from the
 			// server.
+			iobuf_free_content(rbuf);
 			if(incexc_send_server(asfd, cconf)) goto end;
 		}
 		else if(!strcmp(rbuf->buf, "incexc"))
@@ -183,6 +185,7 @@ static int extra_comms_read(struct async *as,
 			// Client is telling server its incexc
 			// configuration so that it can better decide
 			// what to do on resume.
+			iobuf_free_content(rbuf);
 			if(incexc_recv_server(asfd, incexc, conf)) goto end;
 			if(*incexc)
 			{

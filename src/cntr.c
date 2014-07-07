@@ -16,21 +16,21 @@ struct cntr *cntr_alloc(void)
 	return (struct cntr *)calloc_w(1, sizeof(struct cntr), __func__);
 }
 
-static int add_cntr_ent(struct cntr *cntr, int versions,
+static int add_cntr_ent(struct cntr *cntr, int flags,
 	char cmd, const char *field, const char *label)
 {
 	struct cntr_ent *cenew=NULL;
-	if((!cntr->ent
-	  && !(cntr->ent=(struct cntr_ent **)
-	    calloc_w(1, CNTR_ENT_SIZE*sizeof(struct cntr_ent **), __func__)))
-	  || !(cenew=(struct cntr_ent *)
+	if(!(cenew=(struct cntr_ent *)
 	    calloc_w(1, sizeof(struct cntr_ent), __func__))
 	  || !(cenew->field=strdup_w(field, __func__))
 	  || !(cenew->label=strdup_w(label, __func__)))
 		goto error;
-	cenew->versions=versions;
+	cenew->flags=flags;
+
+	if(cntr->list) cenew->next=cntr->list;
+	cntr->list=cenew;
+
 	cntr->ent[(uint8_t)cmd]=cenew;
-	cntr->cmd_order[cntr->colen++]=cmd;
 	return 0;
 error:
 	cntr_ent_free(cenew);
@@ -39,11 +39,10 @@ error:
 
 static size_t calc_max_status_len(struct cntr *cntr, const char *cname)
 {
-	int x=0;
 	size_t slen=0;
 	char limax[64];
 	char ullmax[64];
-	struct cntr_ent *ent=NULL;
+	struct cntr_ent *e=NULL;
 
 	// See cntr_to_str().
 	// First section - name/version/status/phase
@@ -58,9 +57,9 @@ static size_t calc_max_status_len(struct cntr *cntr, const char *cname)
 			" %llu\n",
 #endif
 				ULLONG_MAX);
-	for(x=0; x<cntr->colen; x++)
+	for(e=cntr->list; e; e=e->next)
 	{
-		if(ent->versions & CNTR_SINGLE_FIELD)
+		if(e->flags & CNTR_SINGLE_FIELD)
 			// %llu\t
 			slen+=strlen(ullmax)+1;
 		else
@@ -89,51 +88,53 @@ int cntr_init(struct cntr *cntr, const char *cname)
 	}
 	cntr->start=time(NULL);
 
+	// Add in reverse order, so that iterating over from the beginning
+	// comes out in the right order.
 	if(
-	     add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_TABULATE,
-		CMD_FILE, "files", "Files")
-	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_TABULATE,
-		CMD_ENC_FILE, "files_encrypted", "Files (encrypted)")
-	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_TABULATE,
-		CMD_METADATA, "meta_data", "Meta data")
-	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_TABULATE,
-		CMD_ENC_METADATA, "meta_data_encrypted", "Meta data (enc)")
-	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_TABULATE,
-		CMD_DIRECTORY, "directories", "Directories")
-	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_TABULATE,
-		CMD_HARD_LINK, "soft_links", "Hard links")
-	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_TABULATE,
-		CMD_SOFT_LINK, "hard_links", "Soft links")
-	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_TABULATE,
-		CMD_SPECIAL, "special_files", "Special files")
-	  || add_cntr_ent(cntr, CNTR_VER_2_4|CNTR_TABULATE,
-		CMD_VSS, "vss_headers", "VSS headers")
-	  || add_cntr_ent(cntr, CNTR_VER_2_4|CNTR_TABULATE,
-		CMD_ENC_VSS, "vss_headers_encrypted", "VSS headers (enc)")
-	  || add_cntr_ent(cntr, CNTR_VER_2_4|CNTR_TABULATE,
-		CMD_VSS_T, "vss_footers", "VSS footers")
-	  || add_cntr_ent(cntr, CNTR_VER_2_4|CNTR_TABULATE,
-		CMD_ENC_VSS_T, "vss_footers_encrypted", "VSS footers (enc)")
-	  || add_cntr_ent(cntr, CNTR_VER_4|CNTR_TABULATE,
-		CMD_EFS_FILE, "efs_files", "EFS files")
-	  || add_cntr_ent(cntr, CNTR_VER_4|CNTR_TABULATE,
-		CMD_DATA, "blocks", "Blocks")
-	  || add_cntr_ent(cntr, CNTR_VER_4|CNTR_TABULATE,
-		CMD_ERROR, "errors", "Errors")
-	  || add_cntr_ent(cntr, CNTR_VER_ALL,
-		CMD_TOTAL, "total", "Total")
-	  || add_cntr_ent(cntr, CNTR_VER_2_4|CNTR_TABULATE,
-		CMD_GRAND_TOTAL, "grand_total", "Grand total")
-	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_SINGLE_FIELD,
-		CMD_WARNING, "warnings", "Warnings")
-	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_SINGLE_FIELD,
-		CMD_BYTES_ESTIMATED, "bytes_estimated", "Bytes nstimated")
-	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_SINGLE_FIELD,
-		CMD_BYTES, "bytes", "Bytes")
-	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_SINGLE_FIELD,
-		CMD_BYTES_RECV, "bytes_received", "Bytes received")
-	  || add_cntr_ent(cntr, CNTR_VER_ALL|CNTR_SINGLE_FIELD,
+	     add_cntr_ent(cntr, CNTR_SINGLE_FIELD,
 		CMD_BYTES_SENT, "bytes_sent", "Bytes sent")
+	  || add_cntr_ent(cntr, CNTR_SINGLE_FIELD,
+		CMD_BYTES_RECV, "bytes_received", "Bytes received")
+	  || add_cntr_ent(cntr, CNTR_SINGLE_FIELD,
+		CMD_BYTES, "bytes", "Bytes")
+	  || add_cntr_ent(cntr, CNTR_SINGLE_FIELD,
+		CMD_BYTES_ESTIMATED, "bytes_estimated", "Bytes estimated")
+	  || add_cntr_ent(cntr, CNTR_SINGLE_FIELD,
+		CMD_WARNING, "warnings", "Warnings")
+	  || add_cntr_ent(cntr, CNTR_TABULATE,
+		CMD_GRAND_TOTAL, "grand_total", "Grand total")
+	  || add_cntr_ent(cntr, 0,
+		CMD_TOTAL, "total", "Total")
+	  || add_cntr_ent(cntr, CNTR_TABULATE,
+		CMD_ERROR, "errors", "Errors")
+	  || add_cntr_ent(cntr, CNTR_TABULATE,
+		CMD_DATA, "blocks", "Blocks")
+	  || add_cntr_ent(cntr, CNTR_TABULATE,
+		CMD_EFS_FILE, "efs_files", "EFS files")
+	  || add_cntr_ent(cntr, CNTR_TABULATE,
+		CMD_ENC_VSS_T, "vss_footers_encrypted", "VSS footers (enc)")
+	  || add_cntr_ent(cntr, CNTR_TABULATE,
+		CMD_VSS_T, "vss_footers", "VSS footers")
+	  || add_cntr_ent(cntr, CNTR_TABULATE,
+		CMD_ENC_VSS, "vss_headers_encrypted", "VSS headers (enc)")
+	  || add_cntr_ent(cntr, CNTR_TABULATE,
+		CMD_VSS, "vss_headers", "VSS headers")
+	  || add_cntr_ent(cntr, CNTR_TABULATE,
+		CMD_SPECIAL, "special_files", "Special files")
+	  || add_cntr_ent(cntr, CNTR_TABULATE,
+		CMD_SOFT_LINK, "hard_links", "Soft links")
+	  || add_cntr_ent(cntr, CNTR_TABULATE,
+		CMD_HARD_LINK, "soft_links", "Hard links")
+	  || add_cntr_ent(cntr, CNTR_TABULATE,
+		CMD_DIRECTORY, "directories", "Directories")
+	  || add_cntr_ent(cntr, CNTR_TABULATE,
+		CMD_ENC_METADATA, "meta_data_encrypted", "Meta data (enc)")
+	  || add_cntr_ent(cntr, CNTR_TABULATE,
+		CMD_METADATA, "meta_data", "Meta data")
+	  || add_cntr_ent(cntr, CNTR_TABULATE,
+		CMD_ENC_FILE, "files_encrypted", "Files (encrypted)")
+	  || add_cntr_ent(cntr, CNTR_TABULATE,
+		CMD_FILE, "files", "Files")
 	)
 		return -1;
 
@@ -147,15 +148,15 @@ int cntr_init(struct cntr *cntr, const char *cname)
 
 void cntr_free(struct cntr **cntr)
 {
-	int c;
+	struct cntr_ent *e;
+	struct cntr_ent *l=NULL;
 	if(!cntr || !*cntr) return;
-	if((*cntr)->ent)
+	for(e=(*cntr)->list; e; e=l)
 	{
-		for(c=0; c<(*cntr)->colen; c++)
-			cntr_ent_free(
-				(*cntr)->ent[(uint8_t)(*cntr)->cmd_order[c]]);
-		free((*cntr)->ent);
+		l=e->next;
+		cntr_ent_free(e);
 	}
+	(*cntr)->list=NULL;
 	if((*cntr)->status) free((*cntr)->status);
 	free(*cntr);
 	*cntr=NULL;
@@ -382,7 +383,7 @@ static void quint_print(struct cntr_ent *ent, enum action act)
 	d=ent->deleted;
 	e=ent->phase1;
 
-	if(!(ent->versions & CNTR_TABULATE)) return;
+	if(!(ent->flags & CNTR_TABULATE)) return;
 
 	if(!e && !a && !b && !c) return;
 	logc("% 18s ", ent->label);
@@ -472,7 +473,7 @@ static void bottom_part(struct cntr *c, enum action act)
 
 void cntr_print(struct cntr *cntr, enum action act)
 {
-	int x=0;
+	struct cntr_ent *e;
 	time_t now=time(NULL);
 
 	border();
@@ -498,8 +499,8 @@ void cntr_print(struct cntr *cntr, enum action act)
 	}
 	table_border(act);
 
-	for(x=0; x<cntr->colen; x++)
-		quint_print(cntr->ent[(uint8_t)cntr->cmd_order[x]], act);
+	for(e=cntr->list; e; e=e->next)
+		quint_print(e, act);
 
 	table_border(act);
 	bottom_part(cntr, act);
@@ -568,12 +569,12 @@ static void bottom_part_to_file(struct cntr *cntr, FILE *fp, enum action act)
 int cntr_stats_to_file(struct cntr *cntr,
 	const char *directory, enum action act)
 {
-	int x=0;
 	int ret=-1;
 	FILE *fp;
 	char *path;
 	time_t now;
 	const char *fname=NULL;
+	struct cntr_ent *e;
 
 	if(act==ACTION_BACKUP
 	  ||  act==ACTION_BACKUP_TIMED)
@@ -595,9 +596,8 @@ int cntr_stats_to_file(struct cntr *cntr,
 	fprintf(fp, "time_start:%lu\n", cntr->start);
 	fprintf(fp, "time_end:%lu\n", now);
 	fprintf(fp, "time_taken:%lu\n", now-cntr->start);
-	for(x=0; x<cntr->colen; x++)
-		quint_print_to_file(fp,
-			cntr->ent[(uint8_t)cntr->cmd_order[x]], act);
+	for(e=cntr->list; e; e=e->next)
+		quint_print_to_file(fp, e, act);
 
 	bottom_part_to_file(cntr, fp, act);
 
@@ -635,25 +635,23 @@ void cntr_print_end_phase1(struct cntr *cntr)
 // Return string length.
 size_t cntr_to_str(struct cntr *cntr, char phase, const char *path)
 {
-	int x=0;
 	static char tmp[CNTR_PATH_BUF_LEN+3]="";
-	struct cntr_ent *ent=NULL;
+	struct cntr_ent *e=NULL;
 	char *str=cntr->status;
 
 	snprintf(str, cntr->status_max_len-1, "%s\t%c\t%c\t%c\t",
-		cntr->cname, CNTR_VER_4, STATUS_RUNNING, phase);
+		cntr->cname, '?', STATUS_RUNNING, phase);
 
-	for(x=0; x<cntr->colen; x++)
+	for(e=cntr->list; e; e=e->next)
 	{
-		if(!(ent=cntr->ent[(uint8_t)cntr->cmd_order[x]])) continue;
-		if(ent->versions & CNTR_SINGLE_FIELD)
+		if(e->flags & CNTR_SINGLE_FIELD)
 			snprintf(tmp,
-				sizeof(tmp), "%llu\t", ent->count);
+				sizeof(tmp), "%llu\t", e->count);
 		else
 			snprintf(tmp,
 				sizeof(tmp), "%llu/%llu/%llu/%llu/%llu\t",
-				ent->count, ent->same,
-				ent->changed, ent->deleted, ent->phase1);
+				e->count, e->same,
+				e->changed, e->deleted, e->phase1);
 		strcat(str, tmp);
 	}
 

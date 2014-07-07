@@ -1,42 +1,36 @@
 #ifndef _COUNTER_H
 #define _COUNTER_H
 
-#define CNTR_VER_1		0x00000001
-#define CNTR_VER_2		0x00000002
-#define CNTR_VER_4		0x00000004
-#define CNTR_TABULATE		0x40000000
-#define CNTR_SINGLE_FIELD	0x80000000
-#define CNTR_VER_2_4		CNTR_VER_2|CNTR_VER_4
-#define CNTR_VER_ALL		CNTR_VER_1|CNTR_VER_2_4
+#define CNTR_TABULATE		0x00000001
+#define CNTR_SINGLE_FIELD	0x00000002
 
 #include "burp.h"
 
 #define CNTR_ENT_SIZE	256
+
+typedef struct cntr_ent cntr_ent_t;
 
 struct cntr_ent
 {
 	char cmd;
 	char *field;
 	char *label;
+	uint8_t flags;
 	unsigned long long count;
 	unsigned long long changed;
 	unsigned long long same;
 	unsigned long long deleted;
 	unsigned long long phase1;
-	// Flags indicating the format that each entry is available for.
-	int versions;
+	cntr_ent_t *next;
 };
 
 struct cntr
 {
-	// Due to burp history, I want to be able to specify an order in
-	// which to go through the counters. For example, old clients may
-	// expect to receive them in a particular order.
-	int colen;
-	char cmd_order[CNTR_ENT_SIZE];
-	// I also want to be able to index each entry by a cmd, for fast
+	// Want to be able to order the entries for output.
+	struct cntr_ent *list;
+	// Also want to be able to index each entry by a cmd, for fast
 	// lookup when incrementing a counter.
-	struct cntr_ent **ent;
+	struct cntr_ent *ent[CNTR_ENT_SIZE];
 
 	// These should have their own individual cmd entries.
 	unsigned long long warning;

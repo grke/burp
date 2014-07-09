@@ -57,20 +57,17 @@ static int rewrite_client_conf(struct conf *conf)
 		char *field=NULL;
 		char *value=NULL;
 
-		if(!(copy=strdup(buf)))
-		{
-			log_out_of_memory(__func__);
+		if(!(copy=strdup_w(buf, __func__)))
 			goto end;
-		}
 		if(conf_get_pair(buf, &field, &value)
 		  || !field || !value
 		  || strcmp(field, "ssl_peer_cn"))
 		{
 			fprintf(dp, "%s", copy);
-			free(copy);
+			free_w(&copy);
 			continue;
 		}
-		free(copy);
+		free_w(&copy);
 #ifdef HAVE_WIN32
 		fprintf(dp, "ssl_peer_cn = %s\r\n", conf->ssl_peer_cn);
 #else
@@ -102,7 +99,7 @@ end:
 		logp("Rewrite failed\n");
 		unlink(tmp);
 	}
-	if(tmp) free(tmp);
+	free_w(&tmp);
 	return ret;
 }
 
@@ -115,12 +112,10 @@ static enum asl_ret csr_client_func(struct asfd *asfd,
 		return ASL_END_ERROR;
 	}
 	// The server appends its name after 'csr ok:'
-	if(conf->ssl_peer_cn) free(conf->ssl_peer_cn);
-	if(!(conf->ssl_peer_cn=strdup(asfd->rbuf->buf+strlen("csr ok:"))))
-	{
-		log_out_of_memory(__func__);
-		return ASL_END_ERROR;
-	}
+	free_w(&conf->ssl_peer_cn);
+	if(!(conf->ssl_peer_cn
+		=strdup_w(asfd->rbuf->buf+strlen("csr ok:"), __func__)))
+			return ASL_END_ERROR;
 	return ASL_END_OK;
 }
 

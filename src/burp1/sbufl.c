@@ -6,11 +6,8 @@ static int read_fp_msg(FILE *fp, gzFile zp, char **buf, size_t len)
 	ssize_t r=0;
 
 	/* Now we know how long the data is, so read it. */
-	if(!(*buf=(char *)malloc(len+1)))
-	{
-		logp("could not malloc %d\n", len+1);
+	if(!(*buf=(char *)malloc_w(len+1, __func__)))
 		return -1;
-	}
 
 	b=*buf;
 	while(len>0)

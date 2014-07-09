@@ -79,7 +79,7 @@ static int parse_parent_data_entry(char *tok, struct cstat *clist)
 			*tp='\t'; // put the tab back.
 			x=strlen(tok);
 			free_w(&c->running_detail);
-			//clist[q]->running_detail=strdup(tok);
+			//clist[q]->running_detail=strdup_w(tok, __func__);
 
 			// Need to add the newline back on the end.
 			if(!(c->running_detail=(char *)malloc_w(x+2, __func__)))
@@ -283,11 +283,11 @@ static char *get_str(const char **buf, const char *pre, int last)
 	if(!buf || !*buf) goto end;
 	len=strlen(pre);
 	if(strncmp(*buf, pre, len)
-	  || !(copy=strdup((*buf)+len)))
+	  || !(copy=strdup_w((*buf)+len, __func__)))
 		goto end;
 	if(!last && (cp=strchr(copy, ':'))) *cp='\0';
 	*buf+=len+strlen(copy)+1;
-	ret=strdup(copy);
+	ret=strdup_w(copy, __func__);
 end:
 	free_w(&copy);
 	return ret;

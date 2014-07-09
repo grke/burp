@@ -31,11 +31,9 @@ static int check_client_and_password(struct conf *conf, const char *password, st
 		if(cconf->cname)
 		{
 			logp("Falling back to using '%s'\n", cconf->cname);
-			if(!(cconf->ssl_peer_cn=strdup(cconf->cname)))
-			{
-				log_out_of_memory(__func__);
-				return -1;
-			}
+			if(!(cconf->ssl_peer_cn
+				=strdup_w(cconf->cname, __func__)))
+					return -1;
 		}
 	}
 

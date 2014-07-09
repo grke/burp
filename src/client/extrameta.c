@@ -96,11 +96,8 @@ int set_extrameta(struct asfd *asfd,
 		}
 		metadata+=9;
 		l-=9;
-		if(!(m=(char *)malloc(s+1)))
-		{
-			log_out_of_memory(__func__);
+		if(!(m=(char *)malloc_w(s+1, __func__)))
 			return -1;
-		}
 		memcpy(m, metadata, s);
 		m[s]='\0';
 

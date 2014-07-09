@@ -27,14 +27,8 @@ int authorise_client(struct asfd *asfd,
 		if((cp=strchr(rbuf->buf, ':')))
 		{
 			cp++;
-			if(cp)
-			{
-				if(!(*server_version=strdup(cp)))
-				{
-					log_out_of_memory(__func__);
-					goto end;
-				}
-			}
+			if(cp && !(*server_version=strdup_w(cp, __func__)))
+				goto end;
 		}
 		iobuf_free_content(rbuf);
 	}

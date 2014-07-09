@@ -52,11 +52,8 @@ struct mystruct *find_key(off_t st_size)
 static int add_file(struct mystruct *s, struct file *f)
 {
 	struct file *newfile;
-	if(!(newfile=(struct file *)malloc(sizeof(struct file))))
-	{
-		log_out_of_memory(__func__);
+	if(!(newfile=(struct file *)malloc_w(sizeof(struct file), __func__)))
 		return -1;
-	}
 	memcpy(newfile, f, sizeof(struct file));
 	newfile->next=s->files;
 	s->files=newfile;
@@ -67,11 +64,8 @@ static int add_key(off_t st_size, struct file *f)
 {
 	struct mystruct *s;
 
-	if(!(s=(struct mystruct *)malloc(sizeof(struct mystruct))))
-	{
-		log_out_of_memory(__FUNCTION__);
+	if(!(s=(struct mystruct *)malloc_w(sizeof(struct mystruct), __func__)))
 		return -1;
-	}
 	s->st_size = st_size;
 	s->files=NULL;
 	if(add_file(s, f)) return -1;
@@ -86,11 +80,8 @@ static char *prepend(const char *oldpath, const char *newpath, const char *sep)
 	len+=strlen(oldpath);
 	len+=strlen(newpath);
 	len+=2;
-	if(!(path=(char *)malloc(len)))
-	{
-		log_out_of_memory(__FUNCTION__);
+	if(!(path=(char *)malloc_w(len, __func__)))
 		return NULL;
-	}
 	snprintf(path, len, "%s%s%s", oldpath, *oldpath?sep:"", newpath);
 	return path;
 }
@@ -235,7 +226,7 @@ static int do_hardlink(struct file *o, struct file *n, const char *ext)
 	char *tmppath=NULL;
 	if(!(tmppath=prepend(o->path, ext, "")))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		goto end;
 	}
 	if(link(n->path, tmppath))
@@ -421,7 +412,7 @@ static int get_link(const char *basedir, const char *lnk, char real[], size_t r)
 	char *tmp=NULL;
 	if(!(tmp=prepend(basedir, lnk, "/")))
 	{
-		log_out_of_memory(__FUNCTION__);
+		log_out_of_memory(__func__);
 		return -1;
 	}
 	if((len=readlink(tmp, real, r-1))<0) len=0;
@@ -881,7 +872,7 @@ int run_bedup(int argc, char *argv[])
 				{
 					if(strlist_add(&grouplist, tok, 1))
 					{
-						log_out_of_memory(__FUNCTION__);
+						log_out_of_memory(__func__);
 						return -1;
 					}
 				} while((tok=strtok(NULL, ",\n")));

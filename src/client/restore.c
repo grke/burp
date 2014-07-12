@@ -468,11 +468,8 @@ static int strip_path_components(struct asfd *asfd,
 			return -1;
 		return 0;
 	}
-	if(!(tmp=strdup(cp)))
-	{
-		log_and_send_oom(asfd, __func__);
+	if(!(tmp=strdup_w(cp, __func__)))
 		return -1;
-	}
 	free(sb->path.buf);
 	sb->path.buf=tmp;
 	return 1;

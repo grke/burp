@@ -61,12 +61,8 @@ int get_xattr(struct asfd *asfd, const char *path, struct stat *statp,
 		logw(asfd, conf, "could not llistxattr '%s': %d\n", path, len);
 		return 0; // carry on
 	}
-	if(!(xattrlist=(char *)malloc(len+1)))
-	{
-		log_out_of_memory(__func__);
+	if(!(xattrlist=(char *)calloc_w(1, len+1, __func__)))
 		return -1;
-	}
-	memset(xattrlist, 0, len+1);
 	if((len=llistxattr(path, xattrlist, len))<=0)
 	{
 		logw(asfd, conf, "could not llistxattr '%s': %d\n", path, len);
@@ -121,9 +117,8 @@ int get_xattr(struct asfd *asfd, const char *path, struct stat *statp,
 				path, z, vlen);
 			continue;
 		}
-		if(!(val=(char *)malloc(vlen+1)))
+		if(!(val=(char *)malloc_w(vlen+1, __func__)))
 		{
-			log_out_of_memory(__func__);
 			free_w(&xattrlist);
 			free_w(&toappend);
 			return -1;
@@ -307,12 +302,8 @@ int get_xattr(const char *path, struct stat *statp,
 			// ACLs were set.
 			have_acl++;
 		}
-		if(!(xattrlist=(char *)malloc(len+1)))
-		{
-			log_out_of_memory(__func__);
+		if(!(xattrlist=(char *)calloc_w(1, len+1, __func__)))
 			return -1;
-		}
-		memset(xattrlist, 0, len+1);
 		if((len=extattr_list_link(path, namespaces[i], xattrlist, len))<=0)
 		{
 			logw(conf, "could not extattr_list_link '%s': %d\n",
@@ -374,9 +365,8 @@ int get_xattr(const char *path, struct stat *statp,
 				logw(conf, "could not extattr_list_link on %s for %s: %d\n", path, namespaces[i], vlen);
 				continue;
 			}
-			if(!(val=(char *)malloc(vlen+1)))
+			if(!(val=(char *)malloc_w(vlen+1, __func__)))
 			{
-				log_out_of_memory(__func__);
 				free(xattrlist);
 				if(toappend) free(toappend);
 				return -1;

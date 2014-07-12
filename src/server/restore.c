@@ -126,7 +126,7 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 		goto end;
 	}
 
-	*dir_for_notify=strdup(bu->path);
+	*dir_for_notify=strdup_w(bu->path, __func__);
 
 	log_restore_settings(cconf, srestore);
 

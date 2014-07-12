@@ -230,9 +230,8 @@ static int do_recursive_delete(const char *d, const char *file, uint8_t delfiles
 	}
 
 	if(!(entry=(struct dirent *)
-		malloc(sizeof(struct dirent)+name_max+100)))
+		malloc_w(sizeof(struct dirent)+name_max+100, __func__)))
 	{
-		log_out_of_memory(__func__);
 		free(directory);
 		return RECDEL_ERROR;
 	}

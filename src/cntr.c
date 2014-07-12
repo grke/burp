@@ -673,7 +673,7 @@ static int extract_ul(const char *value, unsigned long long *a, unsigned long lo
 	char *ds=NULL;
 	char *es=NULL;
 	char *copy=NULL;
-	if(!value || !(copy=strdup(value))) return -1;
+	if(!value || !(copy=strdup_w(value, __func__))) return -1;
 
 	// Do not want to use strtok, just in case I end up running more
 	// than one at a time.
@@ -870,7 +870,7 @@ static int extract_cntrs(struct cntr *cntr, int cntr_version, const char *tok,
 		else if(t==x++) { cntr->sentbyte=
 					strtoull(tok, NULL, 10); }
 		else if(t==x++) { p1cntr->start=atol(tok); }
-		else if(t==x++) { if(path && !(*path=strdup(tok)))
+		else if(t==x++) { if(path && !(*path=strdup_w(tok, __func__)))
 		  { log_out_of_memory(__func__); return -1; } }
 	}
 	return 0;
@@ -885,21 +885,15 @@ int str_to_cntr(const char *str, char **client, char *status, char *phase,
 	char *tok=NULL;
 	char *copy=NULL;
 
-	if(!(copy=strdup(str)))
-	{
-		log_out_of_memory(__func__);
+	if(!(copy=strdup_w(str, __func__)))
 		return -1;
-	}
 
 	if((tok=strtok(copy, "\t\n")))
 	{
 		int cntr_version=0;
 		char *cntr_version_tmp=NULL;
-		if(client && !(*client=strdup(tok)))
-		{
-			log_out_of_memory(__func__);
+		if(client && !(*client=strdup_w(tok, __func__)))
 			return -1;
-		}
 		if(!(cntr_version_tmp=strtok(NULL, "\t\n")))
 		{
 			free(copy);

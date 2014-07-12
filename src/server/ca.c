@@ -10,7 +10,7 @@ static char *get_ca_dir(struct conf *conf)
 {
 	FILE *fp=NULL;
 	char buf[4096]="";
-	if(!(fp=open_file(conf->ca_conf, "r"))) return NULL;
+	if(!(fp=open_file(conf->ca_conf, "r"))) goto end;
 	while(fgets(buf, sizeof(buf), fp))
 	{
 		char *field=NULL;
@@ -20,16 +20,13 @@ static char *get_ca_dir(struct conf *conf)
 
 		if(!strcasecmp(field, "CA_DIR"))
 		{
-			if(!(gca_dir=strdup(value)))
-			{
-				log_out_of_memory(__func__);
-				fclose(fp);
-				return NULL;
-			}
+			if(!(gca_dir=strdup_w(value, __func__)))
+				goto end;
 			break;
 		}
 	}
-	fclose(fp);
+end:
+	close_fp(&fp);
 	return gca_dir;
 }
 

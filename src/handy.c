@@ -391,11 +391,8 @@ int chuser_and_or_chgrp(struct conf *conf)
 		user=passw->pw_name;
 	}
 	// Any OS uname pointer may get overwritten, so save name, uid, and gid
-	if(!(username=strdup(user)))
-	{
-		log_out_of_memory(__func__);
+	if(!(username=strdup_w(user, __func__)))
 		return -1;
-	}
 	uid=passw->pw_uid;
 	gid=passw->pw_gid;
 	if(group)
@@ -506,11 +503,8 @@ long version_to_long(const char *version)
 	char *tok2=NULL;
 	char *tok3=NULL;
 	if(!version || !*version) return 0;
-	if(!(copy=strdup(version)))
-	{
-		log_out_of_memory(__func__);
+	if(!(copy=strdup_w(version, __func__)))
 		return -1;
-	}
 	if(!(tok1=strtok(copy, "."))
 	  || !(tok2=strtok(NULL, "."))
 	  || !(tok3=strtok(NULL, ".")))
@@ -712,8 +706,8 @@ int astrcat(char **buf, const char *append, const char *func)
 	if(append) l+=strlen(append);
 	if(*buf) l+=strlen(*buf);
 	l++;
-	if((*buf && !(copy=strdup(*buf)))
-	  || !(*buf=(char *)realloc(*buf, l)))
+	if((*buf && !(copy=strdup_w(*buf, __func__)))
+	  || !(*buf=(char *)realloc_w(*buf, l, __func__)))
 	{
 		log_oom_w(__func__, func);
 		return -1;

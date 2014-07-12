@@ -49,11 +49,8 @@ int autoupgrade_client(struct async *as, struct conf *conf)
 		logp("autoupgrade_os not set!\n");
 		goto end;
 	}
-	if(!(copy=strdup(conf->autoupgrade_dir)))
-	{
-		log_out_of_memory(__func__);
+	if(!(copy=strdup_w(conf->autoupgrade_dir, __func__)))
 		goto end;
-	}
 
 	strip_trailing_slashes(&copy);
 	if((cp=strchr(copy, '/'))) *cp='\0';

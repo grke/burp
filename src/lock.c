@@ -81,9 +81,8 @@ void lock_get(struct lock *lock)
         char *copy=NULL;
 
         // Try to make sure the lock directory exists.
-        if(!(copy=strdup(lock->path)))
+        if(!(copy=strdup_w(lock->path, __func__)))
 	{
-                log_out_of_memory(__func__);
 		lock->status=GET_LOCK_ERROR;
 		return;
 	}

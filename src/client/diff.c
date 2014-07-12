@@ -91,12 +91,8 @@ static char *json_escape(const char *str)
 	if(!str) return NULL;
 
 	n=strlen(str);
-	estr=(char *)malloc(2*n*sizeof(char));
-	if(!estr)
-	{
-		log_out_of_memory(__func__);
+	if(!(estr=(char *)malloc_w(2*n*sizeof(char), __func__)))
 		return NULL;
-	}
 	for(i=0, j=0; i<n; i++, j++)
 	{
 		int k=sizeof(echars);

@@ -453,11 +453,8 @@ static int parse_rbuf(const char *rbuf, struct conf *conf, int row, int col, int
 	char *dp=NULL;
 	char *copy=NULL;
 
-	if(!(copy=strdup(rbuf)))
-	{
-		log_out_of_memory(__func__);
+	if(!(copy=strdup_w(rbuf, __func__)))
 		return -1;
-	}
 
 	dp=copy;
 	*count=0;
@@ -493,7 +490,7 @@ static int parse_rbuf(const char *rbuf, struct conf *conf, int row, int col, int
 				    || strcmp(cntrclient, *client)))
 				{
 					if(*client) free(*client);
-					*client=strdup(cntrclient);
+					*client=strdup_w(cntrclient, __func__);
 				}
 				if(!sclient
 				  || (cntrclient
@@ -711,7 +708,7 @@ int status_client_ncurses(enum action act, const char *sclient,
 
 		if(sclient && !client)
 		{
-			client=strdup(sclient);
+			client=strdup_w(sclient, __func__);
 			details=1;
 		}
 

@@ -31,12 +31,9 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password)
 	// compilation warnings on Macs.
 	uint8_t enc_iv[]={'[', 'l', 'k', 'd', '.', '$', 'G', 0xa3, '\0'};
 
-	if(!(ctx=(EVP_CIPHER_CTX *)malloc(sizeof(EVP_CIPHER_CTX))))
-	{
-		log_out_of_memory(__func__);
-		goto error;
-	}
-        memset(ctx, 0, sizeof(EVP_CIPHER_CTX));
+	if(!(ctx=(EVP_CIPHER_CTX *)
+		calloc_w(1, sizeof(EVP_CIPHER_CTX), __func__)))
+
 	// Don't set key or IV because we will modify the parameters.
 	EVP_CIPHER_CTX_init(ctx);
 	if(!(EVP_CipherInit_ex(ctx, EVP_bf_cbc(), NULL, NULL, NULL, encrypt)))

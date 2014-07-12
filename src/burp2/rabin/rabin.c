@@ -9,11 +9,8 @@ static int first=0;
 
 int blks_generate_init(struct conf *conf)
 {
-	if(!(gbuf=(char *)malloc(conf->rconf.blk_max)))
-	{
-		log_out_of_memory(__func__);
+	if(!(gbuf=(char *)malloc_w(conf->rconf.blk_max, __func__)))
 		return -1;
-	}
 	gbuf_end=gbuf;
 	gcp=gbuf;
 	return 0;

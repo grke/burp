@@ -123,22 +123,21 @@ static int free_linkhash(void)
 			lp=lp->next;
 			if(lc)
 			{
-				if(lc->name) free(lc->name);
-				free(lc);
+				free_w(&lc->name);
+				free_v((void **)&lc);
 				count++;
 			}
 		}
 		linkhash[i]=NULL;
 	}
-	free(linkhash);
-	linkhash=NULL;
+	free_v((void **)&linkhash);
 	return count;
 }
 
 void find_files_free(FF_PKT *ff)
 {
 	free_linkhash();
-	free(ff);
+	free_v((void **)&ff);
 }
 
 static int myalphasort(const struct dirent **a, const struct dirent **b)
@@ -321,10 +320,10 @@ static int nobackup_directory(struct strlist *nobackup, const char *path)
 			return -1;
 		if(!lstat(fullpath, &statp))
 		{
-			free(fullpath);
+			free_w(&fullpath);
 			return 1;
 		}
-		free(fullpath);
+		free_w(&fullpath);
 	}
 	return 0;
 }
@@ -437,16 +436,13 @@ static int get_files_in_directory(DIR *directory, struct dirent ***nl, int *coun
 	while(1)
 	{
 		char *p;
-		if(!(entry=(struct dirent *)malloc(
-			sizeof(struct dirent)+fs_name_max+100)))
-		{
-			log_out_of_memory(__func__);
-			return -1;
-		}
+		if(!(entry=(struct dirent *)malloc_w(
+			sizeof(struct dirent)+fs_name_max+100, __func__)))
+				return -1;
 		status=readdir_r(directory, entry, &result);
 		if(status || !result)
 		{
-			free(entry);
+			free_v((void **)&entry);
 			break;
 		}
 
@@ -456,7 +452,7 @@ static int get_files_in_directory(DIR *directory, struct dirent ***nl, int *coun
 		/* Skip `.', `..', and excluded file names.  */
 		if(!p || !strcmp(p, ".") || !strcmp(p, ".."))
 		{
-			free(entry);
+			free_v((void **)&entry);
 			continue;
 		}
 
@@ -468,7 +464,7 @@ static int get_files_in_directory(DIR *directory, struct dirent ***nl, int *coun
 			if(!(ntmp=(struct dirent **)
 			  realloc_w(*nl, allocated*sizeof(**nl), __func__)))
 			{
-				free(entry);
+				free_v((void **)&entry);
 				return -1;
 			}
 			*nl=ntmp;
@@ -540,7 +536,7 @@ static int process_files_in_directory(struct asfd *asfd, struct dirent **nl,
 				}
 			}
 		}
-		free(nl[m]);
+		free_v((void **)&(nl[m]));
 		if(*rtn_stat) break;
 	}
 	return 0;
@@ -576,11 +572,8 @@ static int found_directory(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
 	/* Build a canonical directory name with a trailing slash in link var */
 	len=strlen(fname);
 	link_len=len+200;
-	if(!(link=(char *)malloc(link_len+2)))
-	{
-		log_out_of_memory(__func__);
+	if(!(link=(char *)malloc_w(link_len+2, __func__)))
 		return -1;
-	}
 	snprintf(link, link_len, "%s", fname);
 
 	/* Strip all trailing slashes */
@@ -599,8 +592,8 @@ static int found_directory(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
 	rtn_stat=send_file(asfd, ff_pkt, top_level, conf);
 	if(rtn_stat || ff_pkt->type==FT_REPARSE || ff_pkt->type==FT_JUNCTION)
 	{
-		 /* ignore or error status */
-		free(link);
+		/* ignore or error status */
+		free_w(&link);
 		return rtn_stat;
 	}
 
@@ -621,7 +614,7 @@ static int found_directory(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
 	{
 		if(fstype_excluded(asfd, conf, ff_pkt->fname))
 		{
-			free(link);
+			free_w(&link);
 			return send_file(asfd, ff_pkt, top_level, conf);
 		}
 		if(!fs_change_is_allowed(conf, ff_pkt->fname))
@@ -633,7 +626,7 @@ static int found_directory(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
 	/* If not recursing, just backup dir and return */
 	if(!recurse)
 	{
-		free(link);
+		free_w(&link);
 		return send_file(asfd, ff_pkt, top_level, conf);
 	}
 
@@ -660,7 +653,7 @@ static int found_directory(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
 #endif
 		ff_pkt->type=FT_NOOPEN;
 		rtn_stat=send_file(asfd, ff_pkt, top_level, conf);
-		free(link);
+		free_w(&link);
 		return rtn_stat;
 	}
 
@@ -672,7 +665,7 @@ static int found_directory(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
 	if(get_files_in_directory(directory, &nl, &count))
 	{
 		closedir(directory);
-		free(link);
+		free_w(&link);
 		return -1;
 	}
 	closedir(directory);
@@ -684,12 +677,12 @@ static int found_directory(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
 			&rtn_stat, &link, len, &link_len, conf,
 			ff_pkt, our_device))
 		{
-			free(link);
-			if(nl) free(nl);
+			free_w(&link);
+			free(nl);
 			return -1;
 		}
 	}
-	free(link);
+	free_w(&link);
 	if(nl) free(nl);
 
 	return rtn_stat;
@@ -783,12 +776,10 @@ static int find_files(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
 		}
 
 		// File not previously dumped. Chain it into our list.
-		if(!(lp=(struct f_link *)malloc(sizeof(struct f_link)))
-		  || !(lp->name=strdup(fname)))
-		{
-			log_out_of_memory(__func__);
+		if(!(lp=(struct f_link *)
+			malloc_w(sizeof(struct f_link), __func__))
+		  || !(lp->name=strdup_w(fname, __func__)))
 			return -1;
-		}
 		lp->ino=ff_pkt->statp.st_ino;
 		lp->dev=ff_pkt->statp.st_dev;
 		lp->next=linkhash[linkhash_ind];

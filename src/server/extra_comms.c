@@ -5,11 +5,8 @@ static int append_to_feat(char **feat, const char *str)
 	char *tmp=NULL;
 	if(!*feat)
 	{
-		if(!(*feat=strdup(str)))
-		{
-			log_out_of_memory(__func__);
+		if(!(*feat=strdup_w(str, __func__)))
 			return -1;
-		}
 		return 0;
 	}
 	if(!(tmp=prepend(*feat, str, strlen(str), "")))
@@ -215,12 +212,9 @@ static int extra_comms_read(struct async *as,
 			struct conf *sconf=NULL;
 
 			if(!(sconf=conf_alloc())) goto end;
-			if(!(sconf->cname=strdup(
-				rbuf->buf+strlen("orig_client="))))
-			{
-				log_out_of_memory(__func__);
-				goto end;
-			}
+			if(!(sconf->cname=strdup_w(
+				rbuf->buf+strlen("orig_client="), __func__)))
+					goto end;
 			logp("Client wants to switch to client: %s\n",
 				sconf->cname);
 			if(conf_load_client(conf, sconf))
@@ -258,11 +252,9 @@ static int extra_comms_read(struct async *as,
 			free(sconf);
 			sconf=NULL;
 			cconf->restore_client=cconf->cname;
-			if(!(cconf->orig_client=strdup(cconf->cname)))
-			{
-				log_and_send_oom(asfd, __func__);
-				goto end;
-			}
+			if(!(cconf->orig_client
+				=strdup_w(cconf->cname, __func__)))
+					goto end;
 
 			// If this started out as a server-initiated
 			// restore, need to load the restore file
@@ -281,11 +273,8 @@ static int extra_comms_read(struct async *as,
 			// Client supports temporary spool directory
 			// for restores.
 			if(!(cconf->restore_spool=
-			  strdup(rbuf->buf+strlen("restore_spool="))))
-			{
-				log_and_send_oom(asfd, __func__);
-				goto end;
-			}
+			  strdup_w(rbuf->buf+strlen("restore_spool="),
+				__func__))) goto end;
 		}
 		else if(!strncmp_w(rbuf->buf, "protocol="))
 		{

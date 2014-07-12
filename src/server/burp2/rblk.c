@@ -48,12 +48,9 @@ static int load_rblk(struct rblk *rblks, int ind, const char *datpath)
 {
 	int r;
 	FILE *dfp;
-	if(rblks[ind].datpath) free(rblks[ind].datpath);
-	if(!(rblks[ind].datpath=strdup(datpath)))
-	{
-		logp("Out of memory in %s\n", __func__);
+	free_w(&rblks[ind].datpath);
+	if(!(rblks[ind].datpath=strdup_w(datpath, __func__)))
 		return -1;
-	}
 	printf("swap %d to: %s\n", ind, datpath);
 
 	if(!(dfp=open_file(datpath, "rb"))) return -1;

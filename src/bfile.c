@@ -262,11 +262,8 @@ int bopen(BFILE *bfd, struct asfd *asfd,
 	}
 	else
 	{
-		if(!(bfd->path=strdup(fname)))
-		{
-			log_out_of_memory(__func__);
+		if(!(bfd->path=strdup_w(fname, __func__)))
 			return -1;
-		}
 	}
 	bfd->lpContext=NULL;
 	if(win32_fname_wchar) free(win32_fname_wchar);
@@ -456,11 +453,8 @@ int bopen(BFILE *bfd,
 		bfd->mode=BF_WRITE;
 	else
 		bfd->mode=BF_READ;
-	if(!(bfd->path=strdup(fname)))
-	{
-		log_out_of_memory(__func__);
+	if(!(bfd->path=strdup_w(fname, __func__)))
 		return -1;
-	}
 	return 0;
 }
 

@@ -206,7 +206,7 @@ int manio_init_write(struct manio *manio, const char *directory)
 
 static char *get_next_fpath_burp1(struct manio *manio)
 {
-	return strdup(manio->directory);
+	return strdup_w(manio->directory, __func__);
 }
 
 static char *get_next_fpath(struct manio *manio)
@@ -403,7 +403,7 @@ int manio_init_write_hooks(struct manio *manio,
 int manio_init_write_dindex(struct manio *manio, const char *dir)
 {
 	int i=0;
-	if(!(manio->dindex_dir=strdup(dir))
+	if(!(manio->dindex_dir=strdup_w(dir, __func__))
 	  || !(manio->dindex_sort=
 		(char **)calloc_w(MANIFEST_SIG_MAX, sizeof(char*), __func__)))
 			return -1;
@@ -425,11 +425,8 @@ int manio_copy_entry(struct asfd *asfd, struct sbuf **csb, struct sbuf *sb,
 	// Use the most recent stat for the new manifest.
 	if(dstmanio && manio_write_sbuf(dstmanio, sb)) goto error;
 
-	if(!(copy=strdup((*csb)->path.buf)))
-	{
-		log_out_of_memory(__func__);
+	if(!(copy=strdup_w((*csb)->path.buf, __func__)))
 		goto error;
-	}
 
 	while(1)
 	{

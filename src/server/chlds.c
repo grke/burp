@@ -196,18 +196,17 @@ int chld_fd_isset_normal(struct conf *conf, fd_set *fsr, fd_set *fse)
 				{
 					char *cp=NULL;
 					buf[l]='\0';
-					if(!(chlds[c].data=strdup(buf)))
-					{
-						log_out_of_memory(__func__);
-						return -1;
-					}
+					if(!(chlds[c].data
+						=strdup_w(buf, __func__)))
+							return -1;
 					if(chlds[c].name) continue;
 
 					// Try to get a name for the child.
 					if((cp=strchr(buf,'\t')))
 					{
 						*cp='\0';
-						chlds[c].name=strdup(buf);
+						chlds[c].name=strdup_w(buf,
+							__func__);
 					}
 				}
 			}

@@ -342,7 +342,7 @@ int champ_chooser_server_standalone(const char *sclient, struct conf *conf)
 	// We need to be given a client name and load the relevant server side
 	// clientconfdir file, because various settings may be overridden
 	// there.
-	if(!(cconf->cname=strdup(sclient))
+	if(!(cconf->cname=strdup_w(sclient, __func__))
 	  || conf_load_client(conf, cconf)
 	  || !(sdirs=sdirs_alloc())
 	  || sdirs_init(sdirs, cconf)

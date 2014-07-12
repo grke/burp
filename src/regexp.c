@@ -12,7 +12,7 @@ int compile_regex(regex_t **regex, const char *str)
 {
 	if(str && *str)
 	{
-		if(!(*regex=(regex_t *)malloc(sizeof(regex_t)))
+		if(!(*regex=(regex_t *)malloc_w(sizeof(regex_t), __func__))
 		  || regcomp(*regex, str, REG_EXTENDED
 #ifdef HAVE_WIN32
 // Give Windows another helping hand and make the regular expressions

@@ -21,11 +21,9 @@ struct hash_strong *hash_strong_find(struct hash_weak *hash_weak,
 struct hash_weak *hash_weak_add(uint64_t weakint)
 {
 	struct hash_weak *newweak;
-	if(!(newweak=(struct hash_weak *)malloc(sizeof(struct hash_weak))))
-	{
-		log_out_of_memory(__func__);
-		return NULL;
-	}
+	if(!(newweak=(struct hash_weak *)
+		malloc_w(sizeof(struct hash_weak), __func__)))
+			return NULL;
 	newweak->weak=weakint;
 //logp("addweak: %016lX\n", weakint);
 	newweak->strong=NULL;

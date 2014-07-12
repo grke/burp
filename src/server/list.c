@@ -51,20 +51,20 @@ int check_browsedir(const char *browsedir, char **path,
 	{
 		if(!strcmp(browsedir, "/"))
 		{
-			if(!(copy=strdup((*path)+bdlen)))
+			if(!(copy=strdup_w((*path)+bdlen, __func__)))
 				goto error;
 			if((cp=strchr(copy+1, '/'))) *cp='\0';
 		}
 		else
 		{
-			if(!(copy=strdup((*path)+bdlen+1)))
+			if(!(copy=strdup_w((*path)+bdlen+1, __func__)))
 				goto error;
 			if((cp=strchr(copy, '/'))) *cp='\0';
 		}
 	}
 	else
 	{
-		if(!(copy=strdup((*path)+bdlen)))
+		if(!(copy=strdup_w((*path)+bdlen, __func__)))
 			goto error;
 		if(*copy=='/') *(copy+1)='\0';
 		// Messing around for Windows.
@@ -83,7 +83,7 @@ int check_browsedir(const char *browsedir, char **path,
 	}
 	free(*path);
 	*path=copy;
-	if(!(*last_bd_match=strdup(copy)))
+	if(!(*last_bd_match=strdup_w(copy, __func__)))
 		goto error;
 	return 1;
 error:

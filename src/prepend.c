@@ -33,12 +33,7 @@ char *prepend(const char *prep, const char *fname, size_t len, const char *sep)
 char *prepend_slash(const char *prep, const char *fname, size_t len)
 {
 	if(!prep || !*prep)
-	{
-		char *ret=NULL;
-		if(!(ret=strdup(fname)))
-			log_out_of_memory(__func__);
-		return ret;
-	}
+		return strdup_w(fname, __func__);
 	// Try to avoid getting a double slash in the path.
 	if(fname && fname[0]=='/')
 	{

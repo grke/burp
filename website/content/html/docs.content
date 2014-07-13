@@ -22,6 +22,8 @@
 	there is an automatic upgrade mechanism.
 <li><A HREF="docs/baremetal-windows.html">Bare metal restore for Windows 7 and 8</A> -
 	Restoring Windows from nothing.
+<li><A HREF="docs/baremetal-windows-hirens.html">Bare metal restore for Windows 7 (using Hiren's Boot CD)</A> -
+	Alternative method of restoring Windows from nothing.
 <li><A HREF="docs/debugging.html">Debugging a crash</A> -
 	In the highly unusual event of burp crashing, this page will help you
 	to help me fix it.

@@ -1,0 +1,210 @@
+Bare metal restore for Windows 7, using Hiren's Boot CD
+-------------------------------------------------------
+
+Authors
+-------
+
+    Scott Brown: Original author.
+
+    Graham Keeling: Edits.
+
+
+Prerequisites
+-------------
+
+You will need a Windows 7 installation disk, and Hiren's Boot CD.
+Hiren's Boot CD is available here: http://www.hirensbootcd.org/download/
+At the time of writing, version 15.2 was used.
+You could use any type of Windows PE envronment though.
+
+
+Prepare hard drive
+------------------
+
+Insert the Hiren's Boot CD into the client machine to be restored and boot
+from it.  When the menu appears select:
+
+"Mini Windows Xp"
+
+Wait for it to boot.
+
+Assuming your are replacing your hard drive you need to prepare it first.
+Right click on the "My Computer" icon on the desktop and select
+"Disk Management".
+Your new drive should be listed in the window.
+Format and partition it as you want it to be set up.
+You may need to reboot to fully initialise the disk - it will tell you if you
+need to do so.
+Once it is initialised, go back into "Disk Management", right click the
+partition and mark it as 'active'.
+
+DO NOT FORGET TO MARK IT AS ACTIVE - YOUR OS WILL NOT BE RECOGNISED LATER
+OTHERWISE!!!
+
+
+Prepare Burp
+------------
+
+With the new drive prepared download and install Burp using the "restore"
+account you should have created on the server, if you dont have one, connect
+to your server and edit the /etc/burp/burp-server.conf file.
+(TIP - you can use putty to connect to your server - it is available inside
+"HBCD Menu", under "Programs" -> "Network". To get on the network in the
+first place, you may need to run the "Network Setup" icon on the desktop.)
+
+Look for the part in burp-server.conf that says:
+
+restore_client = <something> 
+
+Change it to this and save it:
+
+restore_client = restore
+
+"restore" is now the name of your restore client.
+
+Now we want to add the restore user to the clients list (this is also how you
+add a new client), again on the server:
+
+cd /etc/burp/clientconfdir
+
+Copy 'testclient' to make a new 'restore' client:
+
+cp testclient restore
+
+Edit 'restore' using your favourite text editor (vi or nano, etc).
+
+Change the password to what you want it to be for the restore account and
+save the file.
+
+Back on the "Mini Windows Xp" machine, download a burp Windows installer (for
+example, by starting a web browser and downloading the installer from the
+internet), and run through the screens. Enter the server address, 'restore' for
+the client name, and the password that you chose. You may need to enter your
+encryption password if you use one for your backups.
+
+Note - it seems that "Mini Windows Xp" requires the 32 bit version of burp.
+
+Restoring
+---------
+Open a command prompt and type the following
+
+B: 
+Note - Not C: - B: is the temporary drive used by "Mini Windows Xp")
+
+cd Program Files\burp\bin
+
+	NOTE - Going forward - IF and only if you execute burp and it complains
+	about certificates, you can go on the server in the /etc/burp/CA
+	directory and run the following command (with root privilidges):
+
+	rm restore.*
+
+	Then edit index.txt using a text editor to remove the whole "restore"
+	line. For example, delete this line, then save and retry:
+	V       XXXXXXXXXXXXXXX           04      unknown /CN=restore
+	
+Optional step - you may view all available backups for the client you want to
+restore by typing:
+
+burp -a l -C <client name>
+
+Optional step - you may verify your backup to make sure its checksums are
+correct:
+
+burp -a v -C <client name>
+
+NOTE - you may specify a specific backup to restore or verify using the
+-b <number> option. For example, this will verify the third backup:
+
+burp -a v -C <client name> -b 3
+
+To restore, once you are happy you have the correct and valid backup, run:
+
+burp -a r -C <client name> (with an optional '-b <number>' parameter)
+
+Should you get a message about an unexpected command from the server and the
+backup fails pretty much immediately, make sure your hard drive is visible in
+windows explorer and you can browse to it. You did partition and format it
+didn't you...?
+
+The restore will take some time, usually hours, to complete. Depending on your
+network connection to the server and the size of the restore, it's best to
+leave this running overnight.
+There are a few ways to monitor the progress of the restore:
+*) On the server, you can watch in burp's live status monitor:
+burp -c /etc/burp/burp-server.conf -a s
+*) If you open up Windows Explorer from the "Mini Windows Xp" desktop you can
+watch as directories and files are created.
+
+Note from Graham - When restoring using burp-1.4.18, there were warnings about
+setting file times on junction points like 'C:/Documents and Settings'. The
+restore ended with an error on 'C:/' and timed out - but since this was the
+last entry to be attempted anyway, it turned out OK. I will try to investigate
+these bugs for future releases.
+
+
+Making the system bootable
+--------------------------
+
+Now that you have restored all your files we need to repair the hard disk boot
+sector to get windows to load. If you're still in "Mini Windows Xp" shut it
+down.
+
+Find a copy of the Windows 7 install CD and put that in your drive and boot
+into that, being careful not to miss the press any key to boot from CD or DVD
+prompt.
+
+NOTE - The process for Windows 8 may be similar but i do not have the ability
+to test this.
+
+When it boots to the install windows screen click next.
+
+On the next screen near the bottom there will be an option to "Repair your
+computer" - click that.
+
+Windows will then scan for windows installations and a popup will appear saying
+it found problems and give you the option to "Repair and Restart" - click that
+and when it restarts boot back into the recovery disk once more. Again being
+careful not to miss the press any key to boot from CD or DVD prompt.
+
+NOTE - If the popup does not appear to say it has found problems and there is
+no OS listed - double check you marked the disk as ACTIVE in the first step
+above by booting back into "Mini Windows Xp".
+
+Once again when it boots to the install windows screen, click next.
+
+On the next screen near the bottom once again select the option to "Repair your
+computer".
+
+This time it should show your OS in the window and no popup will appear, make
+sure it is highlighted and "Use recovery tools that can help fix problems...."
+radio button is selected.
+
+Click "Next".
+
+When the recovery options window appears select "Startup Repair" and let it do
+it's thing.
+Click "Finish".
+The computer will reboot.
+
+NOTE: YOU MAY HAVE TO REPEAT THIS LAST STEP WHERE YOU USE STARTUP REPAIR
+SEVERAL TIMES - ~2 to 3 times on average - do not worry if it does not boot
+after the first or even second repair, just load the repair disk and do exactly
+the same thing again.
+
+I believe it only repairs the first issue it finds each time rather than every
+issue.
+
+You should now be able to boot into your restored OS. 
+
+One final note - I had difficulties trying to get a restored client backup to
+boot on a Virtual Machine, even though the same backup worked when restored to
+the client. If testing Burp its best to test on the same hardware with a spare
+disk.
+
+Note from Graham - I tested using VirtualBox, and it worked fine for me.
+The Hiren's boot CD is 32 bit and I was trying to restore a 64 bit machine.
+So, in "Mini Windows Xp", I downloaded the 32 bit burp client, and when I
+needed to make the system bootable, I used a 64 bit Windows 7 install disk. It
+would not boot the install disk until I turned 'Enable I/O APIC' on in the
+VirtualBox settings.

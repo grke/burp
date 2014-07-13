@@ -6,22 +6,17 @@ static int log_script_output(struct asfd *asfd, FILE **fp, struct conf *conf,
 	int do_logp, int do_logw, char **logbuf)
 {
 	char buf[256]="";
-	if(fp && *fp)
-	{
-		if(fgets(buf, sizeof(buf), *fp))
-		{
-			// logc does not print a prefix
-			if(do_logp) logp("%s", buf);
-			else logc("%s", buf);
-			if(logbuf && astrcat(logbuf, buf, __func__)) return -1;
-			if(do_logw) logw(asfd, conf, "%s", buf);
-		}
-		if(feof(*fp))
-		{
-			fclose(*fp);
-			*fp=NULL;
-		}
-	}
+	if(!fp || !*fp
+	  || !fgets(buf, sizeof(buf), *fp))
+		return 0;
+
+	// logc does not print a prefix
+	if(do_logp) logp("%s", buf);
+	else logc("%s", buf); 
+	if(logbuf && astrcat(logbuf, buf, __func__)) return -1;
+	if(do_logw) logw(asfd, conf, "%s", buf);
+
+	if(feof(*fp)) close_fp(fp);
 	return 0;
 }
 

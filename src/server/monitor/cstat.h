@@ -4,7 +4,6 @@
 #include "include.h"
 
 // FIX THIS: should probably use struct sdirs.
-// And should maybe use a linked list instead of a stupid array.
 struct cstat
 {
 	char *name;

@@ -329,8 +329,9 @@ static enum cliret do_client(struct conf *conf,
 	if(!(as=async_alloc())
 	  || !(asfd=asfd_alloc())
 	  || as->init(as, act==ACTION_ESTIMATE)
-	  || asfd->init(asfd, "main socket", as, rfd, ssl, 0, conf))
-		goto end;
+	  || asfd->init(asfd, "main socket", as, rfd, ssl,
+		ASFD_STREAM_STANDARD, conf))
+			goto end;
 	as->asfd_add(as, asfd);
 
 	// Set quality of service bits on backup packets.

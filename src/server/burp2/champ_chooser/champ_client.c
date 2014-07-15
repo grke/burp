@@ -106,7 +106,7 @@ struct asfd *champ_chooser_connect(struct async *as,
 
 	if(!(chfd=asfd_alloc())
 	  || chfd->init(chfd, "champ chooser socket",
-		as, champsock, NULL /* no SSL */, 0, conf))
+		as, champsock, NULL /* no SSL */, ASFD_STREAM_STANDARD, conf))
 			goto error;
 	as->asfd_add(as, chfd);
 

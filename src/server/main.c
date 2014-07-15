@@ -201,8 +201,9 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx,
 	if(!(as=async_alloc())
 	  || !(asfd=asfd_alloc())
 	  || as->init(as, 0)
-	  || asfd->init(asfd, "main socket", as, *cfd, ssl, 0, conf))
-		goto end;
+	  || asfd->init(asfd, "main socket", as, *cfd, ssl,
+		ASFD_STREAM_STANDARD, conf))
+			goto end;
 	as->asfd_add(as, asfd);
 
 	if(authorise_server(asfd, conf, cconf)

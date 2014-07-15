@@ -12,6 +12,13 @@ enum asl_ret
 	ASL_END_OK_RETURN_1=2
 };
 
+enum asfd_streamtype
+{
+	ASFD_STREAM_STANDARD=0,
+	ASFD_STREAM_LINEBUF,
+	ASFD_STREAM_CHARBUF,
+};
+
 // Async file descriptor. Can add these to a struct async.
 struct asfd
 {
@@ -19,7 +26,7 @@ struct asfd
 	SSL *ssl;
 	struct async *as;
 	char *desc;
-	int linebuf;
+	enum asfd_streamtype streamtype;
 
 	int network_timeout;
 	int max_network_timeout;
@@ -55,7 +62,8 @@ struct asfd
 
 	// Function pointers.
 	int (*init)(struct asfd *, const char *,
-		struct async *, int, SSL *, int, struct conf *);
+		struct async *, int, SSL *,
+		enum asfd_streamtype, struct conf *);
 	int (*parse_readbuf)(struct asfd *);
 	int (*append_all_to_write_buffer)(struct asfd *, struct iobuf *);
 	int (*set_bulk_packets)(struct asfd *);

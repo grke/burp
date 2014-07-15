@@ -46,6 +46,13 @@ static int extract_buf(struct asfd *asfd,
 	return 0;
 }
 
+static int parse_char_buffered_stream(struct asfd *asfd)
+{
+	if(extract_buf(asfd, 1, 0)) return -1;
+	asfd->rbuf->len=1;
+	return 0;
+}
+
 static int parse_line_buffered_stream(struct asfd *asfd)
 {
 	static char *cp=NULL;
@@ -98,13 +105,23 @@ static int asfd_parse_readbuf(struct asfd *asfd)
 {
 	if(asfd->rbuf->buf) return 0;
 
-	if(asfd->linebuf)
+	// FIX THIS: should probably set up a function pointer on asfd, then
+	// remove this switch.
+	switch(asfd->streamtype)
 	{
-		if(parse_line_buffered_stream(asfd)) goto error;
-	}
-	else
-	{
-		if(parse_standard_burp_stream(asfd)) goto error;
+		case ASFD_STREAM_STANDARD:
+			if(parse_standard_burp_stream(asfd)) goto error;
+			break;
+		case ASFD_STREAM_LINEBUF:
+			if(parse_line_buffered_stream(asfd)) goto error;
+			break;
+		case ASFD_STREAM_CHARBUF:
+			if(parse_char_buffered_stream(asfd)) goto error;
+			break;
+		default:
+			logp("%s: unknown asfd stream type in %s: %d\n",
+				asfd->desc, __func__, asfd->streamtype);
+			goto error;
 	}
 //printf("got %d: %c:%s\n", asfd->rbuf->len, asfd->rbuf->cmd, asfd->rbuf->buf);
 	return 0;
@@ -294,25 +311,34 @@ static int append_to_write_buffer(struct asfd *asfd,
 	return 0;
 }
 
+// FIX THIS: May now return -1, check everywhere that uses this.
 static int asfd_append_all_to_write_buffer(struct asfd *asfd,
 	struct iobuf *wbuf)
 {
-	if(asfd->linebuf)
+	switch(asfd->streamtype)
 	{
-		if(asfd->writebuflen+wbuf->len >= bufmaxsize-1)
-			return 1;
-	}
-	else
-	{
-		size_t sblen=0;
-		char sbuf[10]="";
-		if(asfd->writebuflen+6+(wbuf->len) >= bufmaxsize-1)
-			return 1;
+		case ASFD_STREAM_STANDARD:
+		{
+			size_t sblen=0;
+			char sbuf[10]="";
+			if(asfd->writebuflen+6+(wbuf->len) >= bufmaxsize-1)
+				return 1;
 
-		snprintf(sbuf, sizeof(sbuf), "%c%04X",
-			wbuf->cmd, (unsigned int)wbuf->len);
-		sblen=strlen(sbuf);
-		append_to_write_buffer(asfd, sbuf, sblen);
+			snprintf(sbuf, sizeof(sbuf), "%c%04X",
+				wbuf->cmd, (unsigned int)wbuf->len);
+			sblen=strlen(sbuf);
+			append_to_write_buffer(asfd, sbuf, sblen);
+			break;
+		}
+		case ASFD_STREAM_LINEBUF:
+			if(asfd->writebuflen+wbuf->len >= bufmaxsize-1)
+				return 1;
+			break;
+		case ASFD_STREAM_CHARBUF:
+		default:
+			logp("%s: unknown asfd stream type in %s: %d\n",
+				asfd->desc, __func__, asfd->streamtype);
+			return -1;
 	}
 	append_to_write_buffer(asfd, wbuf->buf, wbuf->len);
 //printf("append %d: %c:%s\n", wbuf->len, wbuf->cmd, wbuf->buf);
@@ -441,12 +467,13 @@ error:
 
 
 static int asfd_init(struct asfd *asfd, const char *desc,
-	struct async *as, int afd, SSL *assl, int linebuf, struct conf *conf)
+	struct async *as, int afd, SSL *assl,
+	enum asfd_streamtype streamtype, struct conf *conf)
 {
 	asfd->as=as;
 	asfd->fd=afd;
 	asfd->ssl=assl;
-	asfd->linebuf=linebuf;
+	asfd->streamtype=streamtype;
 	asfd->max_network_timeout=conf->network_timeout;
 	asfd->network_timeout=asfd->max_network_timeout;
 	asfd->ratelimit=conf->ratelimit;

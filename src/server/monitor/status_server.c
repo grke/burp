@@ -388,7 +388,8 @@ end:
 static int parse_data(struct asfd *asfd, struct cstat *clist)
 {
 	// Hacky to switch on whether it is using line buffering or not.
-	if(asfd->linebuf) return parse_client_data(asfd, clist);
+	if(asfd->streamtype==ASFD_STREAM_LINEBUF)
+		return parse_client_data(asfd, clist);
 	return parse_parent_data(asfd, clist);
 }
 
@@ -426,13 +427,13 @@ error:
 }
 
 static int setup_asfd(struct async *as, const char *desc, int *fd,
-	int linebuf, struct conf *conf)
+	enum asfd_streamtype asfd_streamtype, struct conf *conf)
 {
 	struct asfd *asfd=NULL;
 	if(!fd || *fd<0) return 0;
 	set_non_blocking(*fd);
 	if(!(asfd=asfd_alloc())
-	  || asfd->init(asfd, desc, as, *fd, NULL, linebuf, conf))
+	  || asfd->init(asfd, desc, as, *fd, NULL, asfd_streamtype, conf))
 		goto error;
 	*fd=-1;
 	as->asfd_add(as, asfd);
@@ -455,9 +456,9 @@ int status_server(int *cfd, int *status_rfd, struct conf *conf)
 	if(!(as=async_alloc())
 	  || as->init(as, 0)
 	  || setup_asfd(as, "status client socket",
-		cfd, 1 /* linebuf */, conf)
+		cfd, ASFD_STREAM_LINEBUF, conf)
 	  || setup_asfd(as, "status server parent socket",
-		status_rfd, 0 /* standard */, conf))
+		status_rfd, ASFD_STREAM_STANDARD, conf))
 			goto end;
 
 	ret=main_loop(as, conf);

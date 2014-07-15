@@ -146,7 +146,7 @@ int setup_signals(int oldmax_children, int max_children,
 	return 0;
 }
 
-static int run_child(int *rfd, int *cfd, SSL_CTX *ctx,
+static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, int status_wfd,
 	const char *conffile, int forking)
 {
 	int ret=-1;
@@ -252,7 +252,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx,
 
 	set_non_blocking(*cfd);
 
-	ret=child(as, conf, cconf);
+	ret=child(as, status_wfd, conf, cconf);
 end:
 	*cfd=-1;
 	async_free(&as);
@@ -314,7 +314,7 @@ static int process_incoming_client(int *rfd, SSL_CTX *ctx,
 		if(is_status_server)
 			return run_status_server(rfd, &cfd, NULL, conffile);
 		else
-			return run_child(rfd, &cfd, ctx, conffile,
+			return run_child(rfd, &cfd, ctx, -1, conffile,
 				conf->forking);
 	}
 
@@ -356,13 +356,12 @@ static int process_incoming_client(int *rfd, SSL_CTX *ctx,
 			conf_free_content(conf);
 
 			set_blocking(pipe_rfd[1]);
-			status_wfd=pipe_rfd[1];
 
 			if(is_status_server)
 				ret=run_status_server(rfd, &cfd, &(pipe_wfd[0]),
 						conffile);
 			else
-				ret=run_child(rfd, &cfd, ctx,
+				ret=run_child(rfd, &cfd, ctx, pipe_rfd[1],
 						conffile, conf->forking);
 
 			close(pipe_rfd[1]);

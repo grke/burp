@@ -16,9 +16,7 @@ static enum action actg=ACTION_STATUS;
 #ifdef DBFP
 static FILE *dbfp=NULL;
 #endif
-
-int status_wfd=-1; // For the child to send information to the parent.
-
+/*
 static void print_line(const char *string, int row, int col)
 {
 	int k=0;
@@ -38,7 +36,8 @@ static void print_line(const char *string, int row, int col)
 		{ printf("%c", *cp); k++; }
 	printf("\n");
 }
-
+*/
+/*
 static char *running_status_to_text(char s)
 {
 	static char ret[16]="";
@@ -66,8 +65,10 @@ static char *running_status_to_text(char s)
 	}
 	return ret;
 }
+*/
 
 // Returns 1 if it printed a line, 0 otherwise.
+/*
 static int summary(const char *cntrclient, char status, char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr, struct strlist *backups, int count, int row, int col)
 {
 	char msg[1024]="";
@@ -119,7 +120,8 @@ static int summary(const char *cntrclient, char status, char phase, const char *
 	}
 	return 0;
 }
-
+*/
+/*
 static void show_all_backups(struct strlist *backups, int *x, int col)
 {
 	char msg[256]="";
@@ -142,8 +144,10 @@ static void show_all_backups(struct strlist *backups, int *x, int col)
 		last=l;
 	}
 }
+*/
 
 /* for the counters */
+/*
 static void to_msg(char msg[], size_t s, const char *fmt, ...)
 {
 	va_list ap;
@@ -151,6 +155,7 @@ static void to_msg(char msg[], size_t s, const char *fmt, ...)
 	vsnprintf(msg, s, fmt, ap);
 	va_end(ap);
 }
+*/
 
 /*
 static void print_detail(char phase,
@@ -199,7 +204,7 @@ static void print_detail(char phase,
 	}
 }
 */
-
+/*
 static void table_header(char phase, int *x, int col)
 {
 	char msg[256]="";
@@ -216,6 +221,7 @@ static void table_header(char phase, int *x, int col)
 	}
 	print_line(msg, (*x)++, col);
 }
+*/
 
 /*
 static void print_detail2(const char *field, unsigned long long value1, const char *value2, int *x, int col)
@@ -234,7 +240,7 @@ static void print_detail3(const char *field, const char *value, int *x, int col)
 	print_line(msg, (*x)++, col);
 }
 */
-
+/*
 static void detail(const char *cntrclient, char status, char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr, struct strlist *backups, int row, int col)
 {
 	int x=0;
@@ -280,7 +286,7 @@ static void detail(const char *cntrclient, char status, char phase, const char *
 	}
 	print_line("", x++, col);
 	table_header(phase, &x, col);
-/*
+
 	print_detail(phase, "Files",
 				cntr->file,
 				cntr->file_changed,
@@ -419,9 +425,10 @@ static void detail(const char *cntrclient, char status, char phase, const char *
 		printf("\n%s\n", path);
 #endif
 	}
-*/
 }
+*/
 
+/*
 static void blank_screen(int row, int col)
 {
 	int c=0;
@@ -446,7 +453,9 @@ static void blank_screen(int row, int col)
 	for(c=0; c<(int)(col-strlen(" burp status")-l-1); c++) printf(" ");
 	printf("%s\n\n", date);
 }
+*/
 
+/*
 static int parse_rbuf(const char *rbuf, struct conf *conf, int row, int col, int sel, char **client, int *count, int details, const char *sclient, struct cntr *p1cntr, struct cntr *cntr)
 {
 	char *cp=NULL;
@@ -516,7 +525,9 @@ static int parse_rbuf(const char *rbuf, struct conf *conf, int row, int col, int
 	if(copy) free(copy);
 	return 0;
 }
+*/
 
+/*
 static int need_status(void)
 {
 	static time_t lasttime=0;
@@ -535,7 +546,8 @@ static int need_status(void)
 	lasttime=now;
 	return 1;
 }
-
+*/
+/*
 static void print_star(int sel)
 {
 #ifdef HAVE_NCURSES_H
@@ -546,8 +558,10 @@ static void print_star(int sel)
 	}
 #endif
 }
+*/
 
 // Return 1 if it was shown, -1 on error, 0 otherwise.
+/*
 static int show_rbuf(const char *rbuf, struct conf *conf, int sel, char **client, int *count, int details, const char *sclient, struct cntr *p1cntr, struct cntr *cntr)
 {
 	int rbuflen=0;
@@ -578,7 +592,9 @@ static int show_rbuf(const char *rbuf, struct conf *conf, int sel, char **client
 	}
 	return 0;
 }
+*/
 
+/*
 static int request_status(int fd, const char *client, struct conf *conf)
 {
 	int l;
@@ -616,6 +632,7 @@ fprintf(dbfp, "request: %s\n", buf); fflush(dbfp);
 	if(write(fd, buf, l)<0) return -1;
 	return 0;
 }
+*/
 
 static void sighandler(int sig)
 {
@@ -636,27 +653,151 @@ static void setup_signals(void)
 	signal(SIGPIPE, &sighandler);
 }
 
+// FIX THIS: Identical function in status_server.c and probably elsewhere.
+static int setup_asfd(struct async *as, const char *desc, int *fd,
+	enum asfd_streamtype asfd_streamtype, struct conf *conf)
+{
+	struct asfd *asfd=NULL;
+	if(!fd || *fd<0) return 0;
+	set_non_blocking(*fd);
+	if(!(asfd=asfd_alloc())
+	  || asfd->init(asfd, desc, as, *fd, NULL, asfd_streamtype, conf))
+		goto error;
+	*fd=-1;
+	as->asfd_add(as, asfd);
+	return 0;
+error:
+	asfd_free(&asfd);
+	return -1;
+}
+
+#ifdef HAVE_NCURSES_H
+static int parse_stdin_data(struct asfd *asfd, struct cstat *clist, int *sel, int *details, int count, int *enterpressed)
+{
+	switch(asfd->rbuf->buf[0])
+	{
+		case 'q':
+		case 'Q':
+			return 1;
+// ARGH. KEY_UP etc, are actually 2 bytes each, so I will have to rethink this.
+		case KEY_UP:
+		case 'k':
+		case 'K':
+			if(*details) break;
+			(*sel)--;
+			break;
+		case KEY_DOWN:
+		case 'j':
+		case 'J':
+			if(*details) break;
+			(*sel)++;
+			break;
+		case KEY_ENTER:
+		case '\n':
+		case ' ':
+			if(*details) *details=0;
+			else (*details)++;
+			enterpressed++;
+			break;
+		case KEY_LEFT:
+		case 'h':
+		case 'H':
+			*details=0;
+			break;
+		case KEY_RIGHT:
+		case 'l':
+		case 'L':
+			(*details)++;
+			break;
+		case KEY_NPAGE:
+		{
+			int row=0;
+			int col=0;
+			getmaxyx(stdscr, row, col);
+			(*sel)+=row-TOP_SPACE;
+			break;
+		}
+		case KEY_PPAGE:
+		{
+			int row=0;
+			int col=0;
+			getmaxyx(stdscr, row, col);
+			(*sel)-=row-TOP_SPACE;
+			break;
+		}
+	}
+
+	if(*sel>=count) *sel=count-1;
+	if(*sel<0) *sel=0;
+
+	return 0;
+}
+#endif
+
+static int parse_socket_data(struct asfd *asfd, struct cstat *clist)
+{
+	return 0;
+}
+
+static int parse_data(struct asfd *asfd, struct cstat *clist,
+	int *sel, int *details, int count, int *enterpressed)
+{
+	// Hacky to switch on whether it is using char buffering or not.
+#ifdef HAVE_NCURSES_H
+	if(actg==ACTION_STATUS && asfd->streamtype==ASFD_STREAM_CHARBUF)
+		return parse_stdin_data(asfd, clist,
+			sel, details, count, enterpressed);
+#endif
+	return parse_socket_data(asfd, clist);
+}
+
+static int main_loop(struct async *as, const char *sclient, struct conf *conf)
+{
+	char *client=NULL;
+	int details=0;
+	int count=0;
+	struct asfd *asfd=NULL;
+	struct cstat *clist=NULL;
+	int sel=0;
+	int enterpressed=0;
+
+	if(sclient && !client)
+	{
+		client=strdup_w(sclient, __func__);
+		details=1;
+	}
+
+	while(1)
+	{
+		if(as->read_write(as))
+		{
+			logp("Exiting main loop\n");
+			break;
+		}
+		for(asfd=as->asfd; asfd; asfd=asfd->next)
+			while(asfd->rbuf->buf)
+		{
+			if(parse_data(asfd, clist,
+				&sel, &details, count, &enterpressed)
+			  || asfd->parse_readbuf(asfd))
+				goto error;
+			iobuf_free_content(asfd->rbuf);
+		}
+	}
+
+	return 0;
+error:
+	return -1;
+}
+
 int status_client_ncurses(enum action act, const char *sclient,
 	struct conf *conf)
 {
 	int fd=0;
-	int sel=0;
         int ret=-1;
-	char *rbuf=NULL;
-	char buf[512]="";
-	int count=0;
-	int details=0;
-	char *last_rbuf=NULL;
-	int srbr=0;
-	char *client=NULL;
-	int enterpressed=0;
-	int reqdone=0;
-	// FIX THIS: alloc/dealloc.
-	struct cntr p1cntr;
-	struct cntr cntr;
+	struct async *as=NULL;
 
 #ifdef HAVE_NCURSES_H
-	int stdinfd=fileno(stdin);
 	actg=act; // So that the sighandler can call endwin().
 #else
 	if(act==ACTION_STATUS)
@@ -672,6 +813,21 @@ int status_client_ncurses(enum action act, const char *sclient,
 	if((fd=init_client_socket(NULL, conf->status_port))<0)
 		return -1;
 	set_non_blocking(fd);
+
+	if(!(as=async_alloc())
+	  || as->init(as, 0)
+	  || setup_asfd(as, "status socket",
+		&fd, ASFD_STREAM_LINEBUF, conf))
+			goto end;
+#ifdef HAVE_NCURSES_H
+	if(actg==ACTION_STATUS)
+	{
+		int stdinfd=fileno(stdin);
+		if(setup_asfd(as, "stdin",
+			&stdinfd, ASFD_STREAM_CHARBUF, conf))
+				goto end;
+	}
+#endif
 
 #ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS)
@@ -693,264 +849,18 @@ int status_client_ncurses(enum action act, const char *sclient,
 	dbfp=fopen("/tmp/dbfp", "w");
 #endif
 
-	while(1)
-	{
-		int l;
-		int mfd=-1;
-		fd_set fsr;
-		fd_set fse;
-		struct timeval tval;
+	if(main_loop(as, sclient, conf)) goto end;
 
-		// Failsafe to prevent the snapshot ever getting permanently
-		// stuck.
-		//if(act==ACTION_STATUS_SNAPSHOT && loop++>10000)
-		//	break;
-
-		if(sclient && !client)
-		{
-			client=strdup_w(sclient, __func__);
-			details=1;
-		}
-
-		if((enterpressed || need_status()) && !reqdone)
-		{
-			char *req=NULL;
-			if(details && client) req=client;
-			if(request_status(fd, req, conf))
-				goto end;
-			enterpressed=0;
-			if(act==ACTION_STATUS_SNAPSHOT)
-				reqdone++;
-		}
-
-		FD_ZERO(&fsr);
-		FD_ZERO(&fse);
-
-		tval.tv_sec=1;
-		tval.tv_usec=0;
-
-		add_fd_to_sets(fd, &fsr, NULL, &fse, &mfd);
-#ifdef HAVE_NCURSES_H
-		if(actg==ACTION_STATUS)
-			add_fd_to_sets(stdinfd, &fsr, NULL, &fse, &mfd);
-#endif
-
-		if(select(mfd+1, &fsr, NULL, &fse, &tval)<0)
-		{
-			if(errno!=EAGAIN && errno!=EINTR)
-			{
-				logp("select error: %s\n",
-					strerror(errno));
-				goto end;
-			}
-			continue;
-		}
-
-		if(FD_ISSET(fd, &fse)) goto end;
-
-#ifdef HAVE_NCURSES_H
-		if(actg==ACTION_STATUS)
-		{
-			if(FD_ISSET(stdinfd, &fse)) goto end;
-			if(FD_ISSET(stdinfd, &fsr))
-			{
-				switch(getch())
-				{
-					case 'q':
-					case 'Q':
-						goto end_ok;
-					case KEY_UP:
-					case 'k':
-					case 'K':
-						if(details) break;
-						sel--;
-						break;
-					case KEY_DOWN:
-					case 'j':
-					case 'J':
-						if(details) break;
-						sel++;
-						break;
-					case KEY_ENTER:
-					case '\n':
-					case ' ':
-						if(details) details=0;
-						else details++;
-						enterpressed++;
-						break;
-					case KEY_LEFT:
-					case 'h':
-					case 'H':
-						details=0;
-						break;
-					case KEY_RIGHT:
-					case 'l':
-					case 'L':
-						details++;
-						break;
-					case KEY_NPAGE:
-					{
-						int row=0, col=0;
-						getmaxyx(stdscr, row, col);
-						sel+=row-TOP_SPACE;
-						break;
-					}
-					case KEY_PPAGE:
-					{
-						int row=0, col=0;
-						getmaxyx(stdscr, row, col);
-						sel-=row-TOP_SPACE;
-						break;
-					}
-				}
-
-				if(sel>=count) sel=count-1;
-				if(sel<0) sel=0;
-
-				// Attempt to print stuff to the screen right
-				// now, to give the impression of key strokes
-				// being responsive.
-				if(!details && !sclient)
-				{
-					if((srbr=show_rbuf(last_rbuf,
-						conf, sel, &client,
-						&count, details, sclient,
-						&p1cntr, &cntr))<0)
-							goto end;
-					if(!details) print_star(sel);
-					
-					refresh();
-				}
-			}
-		}
-#endif
-
-		if(FD_ISSET(fd, &fsr))
-		{
-			// Ready to read.
-			if((l=read(fd, buf, sizeof(buf)-1))>0)
-			{
-				size_t r=0;
-				buf[l]='\0';
-				if(rbuf) r=strlen(rbuf);
-				if(!(rbuf=(char *)realloc_w(rbuf,
-					r+l+1, __func__))) break;
-				if(!r) *rbuf='\0';
-				strcat(rbuf+r, buf);
-			}
-			else
-				break;
-
-			if(act==ACTION_STATUS_SNAPSHOT)
-			{
-				if(rbuf)
-				{
-					if(!strcmp(rbuf, "\n"))
-					{
-						// This happens when there are
-						// no backup clients.
-						break;
-					}
-					if(strstr(rbuf, "\n-list end-\n"))
-					{
-						printf("%s", rbuf);
-						break;
-					}
-				}
-				continue;
-			}
-		}
-
-		if((srbr=show_rbuf(rbuf, conf,
-			sel, &client, &count, details, sclient,
-			&p1cntr, &cntr))<0)
-				goto end;
-		else if(srbr)
-		{
-			// Remember it, so that we can present the detailed
-			// screen without delay, above.
-			if(last_rbuf) free(last_rbuf);
-			last_rbuf=rbuf;
-			rbuf=NULL;
-		}
-
-		if(sclient) details++;
-
-		usleep(20000);
-#ifdef HAVE_NCURSES_H
-		if(actg==ACTION_STATUS)
-		{
-			flushinp();
-			continue;
-		}
-#endif
-		if(count)
-		{
-			printf("\n");
-			break;
-		}
-	}
-
-end_ok:
 	ret=0;
 end:
 #ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS) endwin();
 #endif
 	close_fd(&fd);
-	if(last_rbuf) free(last_rbuf);
-	if(rbuf) free(rbuf);
 #ifdef DBFP
 	if(dbfp) fclose(dbfp);
 #endif
+	async_asfd_free_all(&as);
+	close_fd(&fd);
 	return ret;
 }
-
-#ifndef HAVE_WIN32
-
-int write_status(char phase, const char *path, struct conf *conf)
-{
-	char *w=NULL;
-	time_t now=0;
-	time_t diff=0;
-	size_t l=0;
-	ssize_t wl=0;
-	static time_t lasttime=0;
-return 0;
-
-	if(status_wfd<0) goto error;
-
-	// Only update every 2 seconds.
-	now=time(NULL);
-	diff=now-lasttime;
-	if(diff<2)
-	{
-		// Might as well do this in case they fiddled their
-		// clock back in time.
-		if(diff<0) lasttime=now;
-		return 0;
-	}
-	lasttime=now;
-
-	// if(!(l=cntr_to_str(conf->cntr, &phase, path))) goto error;
-
-	w=conf->cntr->status;
-	while(l>=0)
-	{
-		if((wl=write(status_wfd, w, l))<0)
-		{
-			logp("error writing status down pipe to server: %s\n",
-				strerror(errno));
-			goto error;
-		}
-		l-=wl;
-	}
-
-	return 0;
-error:
-	close_fd(&status_wfd);
-	return -1;
-}
-
-#endif
-

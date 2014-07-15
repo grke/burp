@@ -1,5 +1,52 @@
 #include "include.h"
 
+static int status_fd=-1; // For the child to send information to the parent.
+
+int write_status(char phase, const char *path, struct conf *conf)
+{
+	char *w=NULL;
+	time_t now=0;
+	time_t diff=0;
+	size_t l=0;
+	ssize_t wl=0;
+	static time_t lasttime=0;
+// FIX THIS.
+return 0;
+
+	if(status_fd<0) goto error;
+
+	// Only update every 2 seconds.
+	now=time(NULL);
+	diff=now-lasttime;
+	if(diff<2)
+	{
+		// Might as well do this in case they fiddled their
+		// clock back in time.
+		if(diff<0) lasttime=now;
+		return 0;
+	}
+	lasttime=now;
+
+	// if(!(l=cntr_to_str(conf->cntr, &phase, path))) goto error;
+
+	w=conf->cntr->status;
+	while(l>=0)
+	{
+		if((wl=write(status_fd, w, l))<0)
+		{
+			logp("error writing status down pipe to server: %s\n",
+				strerror(errno));
+			goto error;
+		}
+		l-=wl;
+	}
+
+	return 0;
+error:
+	close_fd(&status_fd);
+	return -1;
+}
+
 static int run_server_script(struct asfd *asfd,
 	const char *pre_or_post,
 	const char *script, struct strlist *script_arg,
@@ -51,13 +98,16 @@ end:
 	return ret;
 }
 
-int child(struct async *as, struct conf *conf, struct conf *cconf)
+int child(struct async *as, int status_wfd,
+	struct conf *conf, struct conf *cconf)
 {
 	int ret=-1;
 	int srestore=0;
 	int timer_ret=0;
 	char *incexc=NULL;
 	struct sdirs *sdirs=NULL;
+
+	status_fd=status_wfd;
 
 	/* Has to be before the chuser/chgrp stuff to allow clients to switch
 	   to different clients when both clients have different user/group

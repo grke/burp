@@ -53,10 +53,10 @@ static int extract_buf(struct asfd *asfd,
 #ifdef HAVE_NCURSES_H
 static int parse_readbuf_ncurses(struct asfd *asfd)
 {
+	if(!asfd->readbuflen) return 0;
 	// This is reading ints, and will be cast back to an int when it comes
 	// to be processed later.
 	if(extract_buf(asfd, asfd->readbuflen, 0)) return -1;
-	asfd->rbuf->len=asfd->readbuflen;
 	return 0;
 }
 #endif
@@ -127,6 +127,7 @@ static int asfd_do_read_ncurses(struct asfd *asfd)
 {
 	static int i;
 	i=getch();
+printf("getch: %d\n", i);
 	asfd->readbuflen=sizeof(int);
 	memcpy(asfd->readbuf, &i, asfd->readbuflen);
 	return 0;
@@ -591,5 +592,5 @@ void asfd_free(struct asfd **asfd)
 	free_w(&((*asfd)->desc));
 	// FIX THIS: free incoming?
 	blist_free(&((*asfd)->blist));
-	free_v((void **)*asfd);
+	free_v((void **)asfd);
 }

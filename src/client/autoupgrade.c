@@ -117,6 +117,6 @@ int autoupgrade_client(struct async *as, struct conf *conf)
 end:
 	if(copy) free(copy);
 	if(script_path) free(script_path);
-	iobuf_free(rbuf);
+	iobuf_free(&rbuf);
 	return ret;
 }

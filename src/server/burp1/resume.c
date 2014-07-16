@@ -213,10 +213,10 @@ int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp,
 error:
 	ret=-1;
 end:
-	iobuf_free(p1b);
-	iobuf_free(p2b);
-	iobuf_free(p2btmp);
-	iobuf_free(ucb);
+	iobuf_free(&p1b);
+	iobuf_free(&p2b);
+	iobuf_free(&p2btmp);
+	iobuf_free(&ucb);
 	logp("End phase1 (read previous file system scan)\n");
 	return ret;
 }

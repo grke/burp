@@ -845,7 +845,7 @@ end:
 	iobuf_free_content(chfd->rbuf);
 	// Write buffer did not allocate 'buf'. 
 	if(wbuf) wbuf->buf=NULL;
-	iobuf_free(wbuf);
+	iobuf_free(&wbuf);
 	dpth_release_all(dpth);
 	dpth_free(&dpth);
 	manio_free(&cmanio);

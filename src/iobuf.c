@@ -28,10 +28,11 @@ void iobuf_free_content(struct iobuf *iobuf)
 	iobuf_init(iobuf);
 }
 
-void iobuf_free(struct iobuf *iobuf)
+void iobuf_free(struct iobuf **iobuf)
 {
-	iobuf_free_content(iobuf);
-	if(iobuf) free(iobuf);
+	if(!iobuf || *iobuf) return;
+	iobuf_free_content(*iobuf);
+	free_v((void **)iobuf);
 }
 
 void iobuf_log_unexpected(struct iobuf *iobuf, const char *func)

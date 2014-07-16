@@ -5,12 +5,12 @@ struct blist *blist_alloc(void)
 	return (struct blist *)calloc_w(1, sizeof(struct blist), __func__);
 }
 
-void blist_free(struct blist *blist)
+void blist_free(struct blist **blist)
 {
 	struct blk *b;
 	struct blk *head;
-	if(!blist) return;
-	b=blist->head;
+	if(!blist || !*blist) return;
+	b=(*blist)->head;
 	head=b;
 	while(head)
 	{
@@ -18,7 +18,7 @@ void blist_free(struct blist *blist)
 		head=head->next;
 		blk_free(&b);
 	}
-	free(blist);
+	free_v((void **)blist);
 }
 
 void blist_add_blk(struct blist *blist, struct blk *blk)

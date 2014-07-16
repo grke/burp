@@ -505,6 +505,6 @@ int restore_burp2(struct asfd *asfd, struct bu *bu, const char *manifest,
 
 	ret=0;
 end:
-	slist_free(slist);
+	slist_free(&slist);
 	return ret;
 }

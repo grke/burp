@@ -396,8 +396,8 @@ end:
 blk_print_alloc_stats();
 //sbuf_print_alloc_stats();
 	win_free(win);
-	slist_free(slist);
-	blist_free(blist);
+	slist_free(&slist);
+	blist_free(&blist);
 	// Write buffer did not allocate 'buf'.
 	wbuf->buf=NULL;
 	iobuf_free(&wbuf);

@@ -12,7 +12,7 @@ struct slist
 };
 
 extern struct slist *slist_alloc(void);
-extern void slist_free(struct slist *slist);
+extern void slist_free(struct slist **slist);
 extern void slist_add_sbuf(struct slist *slist, struct sbuf *sb);
 
 #endif

@@ -74,8 +74,7 @@ const char *progname(void)
 
 int set_logfp(const char *path, struct conf *conf)
 {
-	if(logfp) fclose(logfp);
-	logfp=NULL;
+	close_fp(&logfp);
 	if(path)
 	{
 		logp("Logging to %s\n", path);
@@ -99,6 +98,12 @@ int set_logfp(const char *path, struct conf *conf)
 		syslog_opened++;
 	}
 	return 0;
+}
+
+void set_logfp_direct(FILE *fp)
+{
+	close_fp(&logfp);
+	logfp=fp;
 }
 
 FILE *get_logfp(void)

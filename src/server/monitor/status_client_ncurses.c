@@ -854,6 +854,9 @@ int status_client_ncurses(enum action act, const char *sclient,
 #ifdef DBFP
 	dbfp=fopen("/tmp/dbfp", "w");
 #endif
+	// FIX THIS: Maybe think of a way to buffer error messages and print
+	// them all after the monitor has exited.
+	set_logfp_direct(stderr);
 
 	ret=main_loop(as, sclient, conf);
 end:

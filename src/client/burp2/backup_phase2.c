@@ -400,7 +400,7 @@ blk_print_alloc_stats();
 	blist_free(blist);
 	// Write buffer did not allocate 'buf'.
 	wbuf->buf=NULL;
-	iobuf_free(wbuf);
+	iobuf_free(&wbuf);
 
 	cntr_print_end(conf->cntr);
 	cntr_print(conf->cntr, ACTION_BACKUP);

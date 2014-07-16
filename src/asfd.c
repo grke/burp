@@ -585,7 +585,7 @@ void asfd_free(struct asfd **asfd)
 {
 	if(!asfd || !*asfd) return;
 	asfd_close(*asfd);
-	if((*asfd)->rbuf) { iobuf_free((*asfd)->rbuf); (*asfd)->rbuf=NULL; }
+	iobuf_free(&((*asfd)->rbuf));
 	free_w(&((*asfd)->readbuf));
 	free_w(&((*asfd)->writebuf));
 	free_w(&((*asfd)->desc));

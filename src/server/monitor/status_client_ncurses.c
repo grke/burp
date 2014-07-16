@@ -674,12 +674,19 @@ error:
 #ifdef HAVE_NCURSES_H
 static int parse_stdin_data(struct asfd *asfd, struct cstat *clist, int *sel, int *details, int count, int *enterpressed)
 {
-	switch(asfd->rbuf->buf[0])
+	static int ch;
+	if(asfd->rbuf->len!=sizeof(ch))
+	{
+		logp("Unexpected input length in %s: %d\n",
+			__func__, asfd->rbuf->len);
+		return -1;
+	}
+	memcpy(&ch, asfd->rbuf->buf, sizeof(ch));
+	switch(ch)
 	{
 		case 'q':
 		case 'Q':
 			return 1;
-// ARGH. KEY_UP etc, are actually 2 bytes each, so I will have to rethink this.
 		case KEY_UP:
 		case 'k':
 		case 'K':
@@ -744,7 +751,7 @@ static int parse_data(struct asfd *asfd, struct cstat *clist,
 {
 	// Hacky to switch on whether it is using char buffering or not.
 #ifdef HAVE_NCURSES_H
-	if(actg==ACTION_STATUS && asfd->streamtype==ASFD_STREAM_CHARBUF)
+	if(actg==ACTION_STATUS && asfd->streamtype==ASFD_STREAM_NCURSES_STDIN)
 		return parse_stdin_data(asfd, clist,
 			sel, details, count, enterpressed);
 #endif
@@ -809,7 +816,7 @@ int status_client_ncurses(enum action act, const char *sclient,
 
 	setup_signals();
 
-	/* NULL == ::1 or 127.0.0.1 */
+	// NULL == ::1 or 127.0.0.1.
 	if((fd=init_client_socket(NULL, conf->status_port))<0)
 		return -1;
 	set_non_blocking(fd);
@@ -824,14 +831,8 @@ int status_client_ncurses(enum action act, const char *sclient,
 	{
 		int stdinfd=fileno(stdin);
 		if(setup_asfd(as, "stdin",
-			&stdinfd, ASFD_STREAM_CHARBUF, conf))
+			&stdinfd, ASFD_STREAM_NCURSES_STDIN, conf))
 				goto end;
-	}
-#endif
-
-#ifdef HAVE_NCURSES_H
-	if(actg==ACTION_STATUS)
-	{
 		initscr();
 		start_color();
 		init_pair(1, COLOR_WHITE, COLOR_BLACK);
@@ -849,9 +850,7 @@ int status_client_ncurses(enum action act, const char *sclient,
 	dbfp=fopen("/tmp/dbfp", "w");
 #endif
 
-	if(main_loop(as, sclient, conf)) goto end;
-
-	ret=0;
+	ret=main_loop(as, sclient, conf);
 end:
 #ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS) endwin();

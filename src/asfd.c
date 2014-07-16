@@ -1,10 +1,14 @@
 #include "include.h"
 
-/* For IPTOS / IPTOS_THROUGHPUT */
+// For IPTOS / IPTOS_THROUGHPUT.
 #ifdef HAVE_WIN32
 #include <ws2tcpip.h>
 #else
 #include <netinet/ip.h>
+#endif
+
+#ifdef HAVE_NCURSES_H
+#include "ncurses.h"
 #endif
 
 #include "burp2/blist.h"
@@ -46,14 +50,18 @@ static int extract_buf(struct asfd *asfd,
 	return 0;
 }
 
-static int parse_char_buffered_stream(struct asfd *asfd)
+#ifdef HAVE_NCURSES_H
+static int parse_readbuf_ncurses(struct asfd *asfd)
 {
-	if(extract_buf(asfd, 1, 0)) return -1;
-	asfd->rbuf->len=1;
+	// This is reading ints, and will be cast back to an int when it comes
+	// to be processed later.
+	if(extract_buf(asfd, asfd->readbuflen, 0)) return -1;
+	asfd->rbuf->len=asfd->readbuflen;
 	return 0;
 }
+#endif
 
-static int parse_line_buffered_stream(struct asfd *asfd)
+static int parse_readbuf_line_buf(struct asfd *asfd)
 {
 	static char *cp=NULL;
 	static char *dp=NULL;
@@ -81,7 +89,7 @@ static int parse_line_buffered_stream(struct asfd *asfd)
 	return 0;
 }
 
-static int parse_standard_burp_stream(struct asfd *asfd)
+static int parse_readbuf_standard(struct asfd *asfd)
 {
 	char cmdtmp='\0';
 	unsigned int s=0;
@@ -105,30 +113,31 @@ static int asfd_parse_readbuf(struct asfd *asfd)
 {
 	if(asfd->rbuf->buf) return 0;
 
-	// FIX THIS: should probably set up a function pointer on asfd, then
-	// remove this switch.
-	switch(asfd->streamtype)
+	if(asfd->parse_readbuf_specific(asfd))
 	{
-		case ASFD_STREAM_STANDARD:
-			if(parse_standard_burp_stream(asfd)) goto error;
-			break;
-		case ASFD_STREAM_LINEBUF:
-			if(parse_line_buffered_stream(asfd)) goto error;
-			break;
-		case ASFD_STREAM_CHARBUF:
-			if(parse_char_buffered_stream(asfd)) goto error;
-			break;
-		default:
-			logp("%s: unknown asfd stream type in %s: %d\n",
-				asfd->desc, __func__, asfd->streamtype);
-			goto error;
+		truncate_readbuf(asfd);
+		return -1;
 	}
-//printf("got %d: %c:%s\n", asfd->rbuf->len, asfd->rbuf->cmd, asfd->rbuf->buf);
+
 	return 0;
-error:
-	truncate_readbuf(asfd);
+}
+
+#ifdef HAVE_NCURSES_H
+static int asfd_do_read_ncurses(struct asfd *asfd)
+{
+	static int i;
+	i=getch();
+	asfd->readbuflen=sizeof(int);
+	memcpy(asfd->readbuf, &i, asfd->readbuflen);
+	return 0;
+}
+
+static int asfd_do_write_ncurses(struct asfd *asfd)
+{
+	logp("This function should not have been called: %s\n", __func__);
 	return -1;
 }
+#endif
 
 static int asfd_do_read(struct asfd *asfd)
 {
@@ -159,6 +168,8 @@ error:
 static int asfd_do_read_ssl(struct asfd *asfd)
 {
 	ssize_t r;
+
+	asfd->read_blocked_on_write=0;
 
 	ERR_clear_error();
 	r=SSL_read(asfd->ssl,
@@ -264,6 +275,8 @@ static int asfd_do_write_ssl(struct asfd *asfd)
 {
 	ssize_t w;
 
+	asfd->write_blocked_on_read=0;
+
 	if(asfd->ratelimit && check_ratelimit(asfd)) return 0;
 	ERR_clear_error();
 	w=SSL_write(asfd->ssl, asfd->writebuf, asfd->writebuflen);
@@ -334,7 +347,7 @@ static int asfd_append_all_to_write_buffer(struct asfd *asfd,
 			if(asfd->writebuflen+wbuf->len >= bufmaxsize-1)
 				return 1;
 			break;
-		case ASFD_STREAM_CHARBUF:
+		case ASFD_STREAM_NCURSES_STDIN:
 		default:
 			logp("%s: unknown asfd stream type in %s: %d\n",
 				asfd->desc, __func__, asfd->streamtype);
@@ -482,16 +495,48 @@ static int asfd_init(struct asfd *asfd, const char *desc,
 	asfd->parse_readbuf=asfd_parse_readbuf;
 	asfd->append_all_to_write_buffer=asfd_append_all_to_write_buffer;
 	asfd->set_bulk_packets=asfd_set_bulk_packets;
-	asfd->do_read=asfd_do_read;
-	asfd->do_read_ssl=asfd_do_read_ssl;
-	asfd->do_write=asfd_do_write;
-	asfd->do_write_ssl=asfd_do_write_ssl;
+	if(asfd->ssl)
+	{
+		asfd->do_read=asfd_do_read_ssl;
+		asfd->do_write=asfd_do_write_ssl;
+	}
+	else
+	{
+		asfd->do_read=asfd_do_read;
+		asfd->do_write=asfd_do_write;
+#ifdef HAVE_NCURSES_H
+		if(asfd->streamtype==ASFD_STREAM_NCURSES_STDIN)
+		{
+			asfd->do_read=asfd_do_read_ncurses;
+			asfd->do_write=asfd_do_write_ncurses;
+		}
+#endif
+	}
 	asfd->read=asfd_read;
 	asfd->read_expect=asfd_read_expect;
 	asfd->simple_loop=asfd_simple_loop;
 	asfd->write=asfd_write;
 	asfd->write_str=asfd_write_str;
 	asfd->write_strn=asfd_write_strn;
+
+	switch(asfd->streamtype)
+	{
+		case ASFD_STREAM_STANDARD:
+			asfd->parse_readbuf_specific=parse_readbuf_standard;
+			break;
+		case ASFD_STREAM_LINEBUF:
+			asfd->parse_readbuf_specific=parse_readbuf_line_buf;
+			break;
+#ifdef HAVE_NCURSES_H
+		case ASFD_STREAM_NCURSES_STDIN:
+			asfd->parse_readbuf_specific=parse_readbuf_ncurses;
+			break;
+#endif
+		default:
+			logp("%s: unknown asfd stream type in %s: %d\n",
+				desc, __func__, asfd->streamtype);
+			return -1;
+	}
 
 	if(!(asfd->rbuf=iobuf_alloc())
 	  || asfd_alloc_buf(&asfd->readbuf)

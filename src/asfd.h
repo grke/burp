@@ -16,7 +16,7 @@ enum asfd_streamtype
 {
 	ASFD_STREAM_STANDARD=0,
 	ASFD_STREAM_LINEBUF,
-	ASFD_STREAM_CHARBUF,
+	ASFD_STREAM_NCURSES_STDIN
 };
 
 // Async file descriptor. Can add these to a struct async.
@@ -65,12 +65,11 @@ struct asfd
 		struct async *, int, SSL *,
 		enum asfd_streamtype, struct conf *);
 	int (*parse_readbuf)(struct asfd *);
+	int (*parse_readbuf_specific)(struct asfd *);
 	int (*append_all_to_write_buffer)(struct asfd *, struct iobuf *);
 	int (*set_bulk_packets)(struct asfd *);
 	int (*do_read)(struct asfd *);
-	int (*do_read_ssl)(struct asfd *);
 	int (*do_write)(struct asfd *);
-	int (*do_write_ssl)(struct asfd *);
 	int (*read)(struct asfd *);
 	int (*read_expect)(struct asfd *, char, const char *);
 	int (*simple_loop)(struct asfd *, struct conf *, void *,

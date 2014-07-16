@@ -802,6 +802,28 @@ error:
 	return -1;
 }
 
+#ifdef HAVE_NCURSES_H
+static int init_pair_w(int x)
+{
+	return init_pair(x, COLOR_WHITE, COLOR_BLACK);
+}
+
+static void ncurses_init(void)
+{
+	initscr();
+	start_color();
+	init_pair_w(1);
+	init_pair_w(2);
+	init_pair_w(3);
+	raw();
+	keypad(stdscr, TRUE);
+	noecho();
+	curs_set(0);
+	halfdelay(3);
+	//nodelay(stdscr, TRUE);
+}
+#endif
+
 int status_client_ncurses(enum action act, const char *sclient,
 	struct conf *conf)
 {
@@ -838,17 +860,7 @@ int status_client_ncurses(enum action act, const char *sclient,
 		if(setup_asfd(as, "stdin",
 			&stdinfd, ASFD_STREAM_NCURSES_STDIN, conf))
 				goto end;
-		initscr();
-		start_color();
-		init_pair(1, COLOR_WHITE, COLOR_BLACK);
-		init_pair(2, COLOR_WHITE, COLOR_BLACK);
-		init_pair(3, COLOR_WHITE, COLOR_BLACK);
-		raw();
-		keypad(stdscr, TRUE);
-		noecho();
-		curs_set(0);
-		halfdelay(3);
-		//nodelay(stdscr, TRUE);
+		ncurses_init();
 	}
 #endif
 #ifdef DBFP

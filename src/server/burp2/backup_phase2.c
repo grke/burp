@@ -839,8 +839,8 @@ int backup_phase2_server_burp2(struct async *as, struct sdirs *sdirs,
 	ret=0;
 end:
 	logp("End backup\n");
-	slist_free(slist);
-	blist_free(blist);
+	slist_free(&slist);
+	blist_free(&blist);
 	iobuf_free_content(asfd->rbuf);
 	iobuf_free_content(chfd->rbuf);
 	// Write buffer did not allocate 'buf'. 

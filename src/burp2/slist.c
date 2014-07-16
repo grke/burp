@@ -5,19 +5,19 @@ struct slist *slist_alloc(void)
 	return (struct slist *)calloc_w(1, sizeof(struct slist), __func__);
 }
 
-void slist_free(struct slist *slist)
+void slist_free(struct slist **slist)
 {
 	struct sbuf *sb;
 	struct sbuf *shead;
-	if(!slist) return;
-	shead=slist->head;
+	if(!slist || !*slist) return;
+	shead=(*slist)->head;
 	while(shead)
 	{
 		sb=shead;
 		shead=shead->next;
 		sbuf_free(&sb);
 	}
-	free(slist);
+	free_v((void **)slist);
 }
 
 void slist_add_sbuf(struct slist *slist, struct sbuf *sb)

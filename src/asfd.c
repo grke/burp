@@ -590,7 +590,6 @@ void asfd_free(struct asfd **asfd)
 	free_w(&((*asfd)->writebuf));
 	free_w(&((*asfd)->desc));
 	// FIX THIS: free incoming?
-	if((*asfd)->blist) { blist_free((*asfd)->blist); (*asfd)->blist=NULL; }
-	free(*asfd);
-	*asfd=NULL;
+	blist_free(&((*asfd)->blist));
+	free_v((void **)*asfd);
 }

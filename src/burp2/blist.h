@@ -19,7 +19,7 @@ struct blist
 };
 
 extern struct blist *blist_alloc(void);
-extern void blist_free(struct blist *blist);
+extern void blist_free(struct blist **blist);
 extern void blist_add_blk(struct blist *blist, struct blk *blk);
 
 #endif

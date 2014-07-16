@@ -123,16 +123,9 @@ static int async_io(struct async *as, int doread)
 				// main processes.
 				asfd->new_client++;
 			}
-			else if(asfd->ssl)
+			else if(asfd->do_read(asfd))
 			{
-				asfd->read_blocked_on_write=0;
-				if(asfd->do_read_ssl(asfd))
-					return asfd_problem(asfd);
-			}
-			else
-			{
-				if(asfd->do_read(asfd))
-					return asfd_problem(asfd);
+				return asfd_problem(asfd);
 			}
 			if(asfd->parse_readbuf(asfd))
 				return asfd_problem(asfd);
@@ -140,17 +133,8 @@ static int async_io(struct async *as, int doread)
 
 		if(asfd->dowrite && FD_ISSET(asfd->fd, &fsw)) // Able to write.
 		{
-			if(asfd->ssl)
-			{
-				asfd->write_blocked_on_read=0;
-				if(asfd->do_write_ssl(asfd))
-					return asfd_problem(asfd);
-			}
-			else
-			{
-				if(asfd->do_write(asfd))
-					return asfd_problem(asfd);
-			}
+			if(asfd->do_write(asfd))
+				return asfd_problem(asfd);
 		}
 	}
 

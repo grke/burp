@@ -690,18 +690,21 @@ static int parse_stdin_data(struct asfd *asfd, struct cstat *clist, int *sel, in
 		case KEY_UP:
 		case 'k':
 		case 'K':
+			fprintf(dbfp, "UP\n");
 			if(*details) break;
 			(*sel)--;
 			break;
 		case KEY_DOWN:
 		case 'j':
 		case 'J':
+			fprintf(dbfp, "DOWN\n");
 			if(*details) break;
 			(*sel)++;
 			break;
 		case KEY_ENTER:
 		case '\n':
 		case ' ':
+			fprintf(dbfp, "ENTER\n");
 			if(*details) *details=0;
 			else (*details)++;
 			enterpressed++;
@@ -709,11 +712,13 @@ static int parse_stdin_data(struct asfd *asfd, struct cstat *clist, int *sel, in
 		case KEY_LEFT:
 		case 'h':
 		case 'H':
+			fprintf(dbfp, "LEFT\n");
 			*details=0;
 			break;
 		case KEY_RIGHT:
 		case 'l':
 		case 'L':
+			fprintf(dbfp, "RIGHT\n");
 			(*details)++;
 			break;
 		case KEY_NPAGE:
@@ -855,7 +860,6 @@ end:
 #ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS) endwin();
 #endif
-	close_fd(&fd);
 #ifdef DBFP
 	if(dbfp) fclose(dbfp);
 #endif

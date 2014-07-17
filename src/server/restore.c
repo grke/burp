@@ -97,7 +97,7 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 	char *logpath=NULL;
 	char *logpathz=NULL;
 	// For sending status information up to the server.
-	char status=STATUS_RESTORING;
+	enum cstat_status status=STATUS_RESTORING;
 
 	if(act==ACTION_RESTORE) status=STATUS_RESTORING;
 	else if(act==ACTION_VERIFY) status=STATUS_VERIFYING;

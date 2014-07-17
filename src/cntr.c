@@ -631,6 +631,7 @@ void cntr_print_end_phase1(struct cntr *cntr)
 	}
 }
 
+/*
 #ifndef HAVE_WIN32
 // Return string length.
 size_t cntr_to_str(struct cntr *cntr, char phase, const char *path)
@@ -663,6 +664,7 @@ size_t cntr_to_str(struct cntr *cntr, char phase, const char *path)
 	return strlen(str);
 }
 #endif
+*/
 
 /*
 static int extract_ul(const char *value, unsigned long long *a, unsigned long long *b, unsigned long long *c, unsigned long long *d, unsigned long long *e)

@@ -3,7 +3,7 @@
 
 int restore_burp2(struct asfd *asfd, struct bu *bu,
 	const char *manifest, regex_t *regex, int srestore,
-	enum action act, struct sdirs *sdirs, char status,
+	enum action act, struct sdirs *sdirs, enum cstat_status status,
 	struct conf *conf);
 
 #endif

@@ -369,7 +369,7 @@ static int restore_file(struct asfd *asfd, struct bu *bu,
 
 static int restore_sbufl(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 	enum action act, struct sdirs *sdirs,
-	char status, struct conf *cconf)
+	enum cstat_status status, struct conf *cconf)
 {
 	//printf("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path.buf);
 	if(write_status(status, sb->path.buf, cconf)) return -1;
@@ -397,7 +397,8 @@ static int restore_sbufl(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 
 static int restore_ent(struct asfd *asfd, struct sbuf **sb,
 	struct sbuf ***sblist, int *scount, struct bu *bu,
-	enum action act, struct sdirs *sdirs, char status, struct conf *cconf)
+	enum action act, struct sdirs *sdirs,
+	enum cstat_status status, struct conf *cconf)
 {
 	int s=0;
 	int ret=-1;
@@ -445,7 +446,7 @@ end:
 
 int restore_burp1(struct asfd *asfd, struct bu *bu,
 	const char *manifest, regex_t *regex, int srestore,
-	enum action act, struct sdirs *sdirs, char status,
+	enum action act, struct sdirs *sdirs, enum cstat_status status,
 	struct conf *cconf)
 {
 	int s=0;

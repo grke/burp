@@ -49,20 +49,6 @@
 
 /* These things are for the status server/client */
 
-#define	STATUS_IDLE		'i'
-#define	STATUS_RUNNING		'r'
-#define	STATUS_CLIENT_CRASHED	'c'
-#define	STATUS_SERVER_CRASHED	'C'
-
-#define	STATUS_SCANNING		'1'
-#define	STATUS_BACKUP		'2'
-#define	STATUS_MERGING		'3'
-#define	STATUS_SHUFFLING	'4'
-#define	STATUS_LISTING		'7'
-#define	STATUS_RESTORING	'8'
-#define	STATUS_VERIFYING	'9'
-#define	STATUS_DELETING		'0'
-
 #define CMD_TOTAL		'Y'
 #define CMD_GRAND_TOTAL		'Z'
 

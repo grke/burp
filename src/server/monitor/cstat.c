@@ -2,15 +2,15 @@
 
 #include <dirent.h>
 
-static struct cstat *cstat_alloc(void)
+struct cstat *cstat_alloc(void)
 {
 	return (struct cstat *)calloc_w(1, sizeof(struct cstat), __func__);
 }
 
-static int cstat_init(struct cstat *cstat,
+int cstat_init(struct cstat *cstat,
 	const char *name, const char *clientconfdir)
 {
-	if(!(cstat->conffile=prepend_s(clientconfdir, name))
+	if((clientconfdir && !(cstat->conffile=prepend_s(clientconfdir, name)))
 	  || !(cstat->name=strdup_w(name, __func__)))
 		return -1;
 	return 0;
@@ -30,14 +30,14 @@ static void cstat_free_content(struct cstat *c)
 	free_w(&c->lockfile);
 }
 
-static void cstat_free(struct cstat **c)
+void cstat_free(struct cstat **cstat)
 {
-	if(!c || !*c) return;
-	cstat_free_content(*c);
-	free_v((void **)c);
+	if(!cstat || !*cstat) return;
+	cstat_free_content(*cstat);
+	free_v((void **)cstat);
 }
 
-static int cstat_add_to_list(struct cstat **clist, struct cstat *cnew)
+int cstat_add_to_list(struct cstat **clist, struct cstat *cnew)
 {
 	struct cstat *c=NULL;
 	struct cstat *clast=NULL;
@@ -62,7 +62,8 @@ static int cstat_add_to_list(struct cstat **clist, struct cstat *cnew)
 }
 
 
-static int set_cstat_from_conf(struct cstat *c, struct conf *conf, struct conf *cconf)
+static int set_cstat_from_conf(struct cstat *c,
+	struct conf *conf, struct conf *cconf)
 {
 	char *lockbasedir=NULL;
 	char *client_lockdir=NULL;
@@ -208,17 +209,40 @@ const char *cstat_status_to_str(struct cstat *cstat)
 {
 	switch(cstat->status)
 	{
-		case STATUS_IDLE:
-			return "idle";
-		case STATUS_CLIENT_CRASHED:
-			return "client crashed";
-		case STATUS_SERVER_CRASHED:
-			return "server crashed";
-		case STATUS_RUNNING:
-			return "running";
-		default:
-			return "unknown";
+		case STATUS_IDLE: return STATUS_STR_IDLE;
+		case STATUS_CLIENT_CRASHED: return STATUS_STR_CLIENT_CRASHED;
+		case STATUS_SERVER_CRASHED: return STATUS_STR_SERVER_CRASHED;
+		case STATUS_RUNNING: return STATUS_STR_RUNNING;
+		case STATUS_SCANNING: return STATUS_STR_SCANNING;
+		case STATUS_BACKUP: return STATUS_STR_BACKUP;
+		case STATUS_MERGING: return STATUS_STR_MERGING;
+		case STATUS_SHUFFLING: return STATUS_STR_SHUFFLING;
+		case STATUS_LISTING: return STATUS_STR_LISTING;
+		case STATUS_RESTORING: return STATUS_STR_RESTORING;
+		case STATUS_VERIFYING: return STATUS_STR_VERIFYING;
+		case STATUS_DELETING: return STATUS_STR_DELETING;
+		default: return "unknown";
 	}
+}
+
+enum cstat_status cstat_str_to_status(const char *str)
+{
+	if(!strcmp(str, STATUS_STR_IDLE)) return STATUS_IDLE;
+	else if(!strcmp(str, STATUS_STR_RUNNING)) return STATUS_RUNNING;
+	else if(!strcmp(str, STATUS_STR_CLIENT_CRASHED))
+		return STATUS_CLIENT_CRASHED;
+	else if(!strcmp(str, STATUS_STR_SERVER_CRASHED))
+		return STATUS_CLIENT_CRASHED;
+	else if(!strcmp(str, STATUS_STR_RUNNING)) return STATUS_RUNNING;
+	else if(!strcmp(str, STATUS_STR_SCANNING)) return STATUS_SCANNING;
+	else if(!strcmp(str, STATUS_STR_BACKUP)) return STATUS_BACKUP;
+	else if(!strcmp(str, STATUS_STR_MERGING)) return STATUS_MERGING;
+	else if(!strcmp(str, STATUS_STR_SHUFFLING)) return STATUS_SHUFFLING;
+	else if(!strcmp(str, STATUS_STR_LISTING)) return STATUS_LISTING;
+	else if(!strcmp(str, STATUS_STR_RESTORING)) return STATUS_RESTORING;
+	else if(!strcmp(str, STATUS_STR_VERIFYING)) return STATUS_VERIFYING;
+	else if(!strcmp(str, STATUS_STR_DELETING)) return STATUS_DELETING;
+	return STATUS_UNSET;
 }
 
 int cstat_set_status(struct cstat *cstat)

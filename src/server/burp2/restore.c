@@ -8,7 +8,7 @@
 #include "../../server/sdirs.h"
 
 static int restore_sbuf(struct asfd *asfd, struct sbuf *sb, enum action act,
-	char status, struct conf *conf, int *need_data)
+	enum cstat_status status, struct conf *conf, int *need_data)
 {
 	//logp("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path.buf);
 	if(write_status(status, sb->path.buf, conf)) return -1;
@@ -57,7 +57,7 @@ static int restore_ent(struct asfd *asfd,
 	struct sbuf **sb,
 	struct slist *slist,
 	enum action act,
-	char status,
+	enum cstat_status status,
 	struct conf *conf,
 	int *need_data,
 	int *last_ent_was_dir)
@@ -124,7 +124,7 @@ end:
 
 static int restore_remaining_dirs(struct asfd *asfd,
 	struct slist *slist, enum action act,
-	char status, struct conf *conf, int *need_data)
+	enum cstat_status status, struct conf *conf, int *need_data)
 {
 	struct sbuf *sb;
 	// Restore any directories that are left in the list.
@@ -145,7 +145,7 @@ static int maybe_copy_data_files_across(struct asfd *asfd,
 	const char *manifest,
 	const char *datadir, int srestore, regex_t *regex, struct conf *conf,
 	struct slist *slist,
-	enum action act, char status)
+	enum action act, enum cstat_status status)
 {
 	int ars;
 	int ret=-1;
@@ -322,7 +322,8 @@ end:
 static int restore_stream(struct asfd *asfd,
 	const char *datadir, struct slist *slist,
 	struct bu *bu, const char *manifest, regex_t *regex,
-	int srestore, struct conf *conf, enum action act, char status)
+	int srestore, struct conf *conf, enum action act,
+	enum cstat_status status)
 {
 	int ars;
 	int ret=-1;
@@ -464,7 +465,7 @@ end:
 
 int restore_burp2(struct asfd *asfd, struct bu *bu, const char *manifest,
 	regex_t *regex, int srestore, enum action act, struct sdirs *sdirs,
-	char status, struct conf *conf)
+	enum cstat_status status, struct conf *conf)
 {
 	//int s=0;
 	//size_t len=0;

@@ -2,7 +2,7 @@
 
 static int status_fd=-1; // For the child to send information to the parent.
 
-int write_status(char phase, const char *path, struct conf *conf)
+int write_status(enum cstat_status status, const char *path, struct conf *conf)
 {
 	char *w=NULL;
 	time_t now=0;

@@ -37,35 +37,6 @@ static void print_line(const char *string, int row, int col)
 	printf("\n");
 }
 */
-/*
-static char *running_status_to_text(char s)
-{
-	static char ret[16]="";
-	switch(s)
-	{
-		case STATUS_SCANNING:
-			snprintf(ret, sizeof(ret), "scanning"); break;
-		case STATUS_BACKUP:
-			snprintf(ret, sizeof(ret), "backup"); break;
-		case STATUS_MERGING:
-			snprintf(ret, sizeof(ret), "merging"); break;
-		case STATUS_SHUFFLING:
-			snprintf(ret, sizeof(ret), "shuffling"); break;
-		case STATUS_LISTING:
-			snprintf(ret, sizeof(ret), "listing"); break;
-		case STATUS_RESTORING:
-			snprintf(ret, sizeof(ret), "restoring"); break;
-		case STATUS_VERIFYING:
-			snprintf(ret, sizeof(ret), "verifying"); break;
-		case STATUS_DELETING:
-			snprintf(ret, sizeof(ret), "deleting"); break;
-		default:
-			*ret='\0';
-			break;
-	}
-	return ret;
-}
-*/
 
 // Returns 1 if it printed a line, 0 otherwise.
 /*
@@ -102,7 +73,7 @@ static int summary(const char *cntrclient, char status, char phase, const char *
 //	  	unsigned long long p=0;
 //		unsigned long long t=0;
 
-		s=running_status_to_text(phase);
+		s=cstat_to_str(phase);
 //		t=cntr->total+cntr->total_same+cntr->total_changed;
 //		if(p1cntr->total) p=(t*100)/p1cntr->total;
 //		snprintf(f, sizeof(f), "%llu/%llu %llu%%",
@@ -278,7 +249,7 @@ static void detail(const char *cntrclient, char status, char phase, const char *
 				char msg[64]="";
 				snprintf(msg, sizeof(msg),
 					"Status: running (%s)",
-					running_status_to_text(phase));
+					cstat_to_str(phase));
 				print_line(msg, x++, col);
 			}
 			break;
@@ -661,7 +632,8 @@ error:
 }
 
 #ifdef HAVE_NCURSES_H
-static int parse_stdin_data(struct asfd *asfd, struct cstat *clist, int *sel, int *details, int count, int *enterpressed)
+static int parse_stdin_data(struct asfd *asfd, struct cstat **clist,
+	int *sel, int *details, int count, int *enterpressed)
 {
 	static int ch;
 	if(asfd->rbuf->len!=sizeof(ch))
@@ -738,13 +710,65 @@ static int parse_stdin_data(struct asfd *asfd, struct cstat *clist, int *sel, in
 }
 #endif
 
-static int parse_socket_data(struct asfd *asfd, struct cstat *clist)
+#define NAME_LINE	"   \"name\": \""
+#define STATUS_LINE	"   \"status\": \""
+
+static void strip_trailing_quote(char *buf)
 {
-	fprintf(dbfp, "parse_socket_data: %s\n", asfd->rbuf->buf);
+	char *cp;
+	if((cp=strrchr(buf, '"'))) *cp='\0';
+}
+
+static int parse_socket_data(struct asfd *asfd, struct cstat **clist)
+{
+	char *buf;
+	static struct cstat *cnew=NULL;
+	buf=asfd->rbuf->buf;
+	if(!strncmp_w(buf, NAME_LINE))
+	{
+		strip_trailing_quote(buf);
+		if(cnew)
+		{
+			logp("Got unexpected name line: %s\n", buf);
+			return -1;
+		}
+		if(!(cnew=cstat_alloc())
+		  || cstat_init(cnew, buf+strlen(NAME_LINE), NULL))
+			return -1;
+	}
+	else if(!strncmp_w(buf, STATUS_LINE))
+	{
+		strip_trailing_quote(buf);
+		if(!cnew)
+		{
+			logp("Got unexpected status line: %s\n", buf);
+			return -1;
+		}
+		cnew->status=cstat_str_to_status(buf+strlen(STATUS_LINE));
+	}
+
+	if(cnew && cnew->status!=STATUS_UNSET)
+	{
+		struct cstat *c;
+// FIX THIS - should not have allocated cnew if name is already in the list.
+		for(c=*clist; c; c=c->next)
+		{
+			if(!strcmp(c->name, cnew->name))
+			{
+fprintf(dbfp, "got %s already\n", c->name);
+				cstat_free(&cnew);
+				return 0;
+			}
+		}
+		fprintf(dbfp, "name: %s\n", cnew->name);
+		fprintf(dbfp, "status: %d\n", cnew->status);
+		if(cstat_add_to_list(clist, cnew)) return -1;
+		cnew=NULL;
+	}
 	return 0;
 }
 
-static int parse_data(struct asfd *asfd, struct cstat *clist,
+static int parse_data(struct asfd *asfd, struct cstat **clist,
 	int *sel, int *details, int count, int *enterpressed)
 {
 	// Hacky to switch on whether it is using char buffering or not.
@@ -784,7 +808,7 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 		for(asfd=as->asfd; asfd; asfd=asfd->next)
 			while(asfd->rbuf->buf)
 		{
-			if(parse_data(asfd, clist,
+			if(parse_data(asfd, &clist,
 				&sel, &details, count, &enterpressed))
 					goto error;
 			iobuf_free_content(asfd->rbuf);

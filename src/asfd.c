@@ -127,7 +127,6 @@ static int asfd_do_read_ncurses(struct asfd *asfd)
 {
 	static int i;
 	i=getch();
-printf("getch: %d\n", i);
 	asfd->readbuflen=sizeof(int);
 	memcpy(asfd->readbuf, &i, asfd->readbuflen);
 	return 0;

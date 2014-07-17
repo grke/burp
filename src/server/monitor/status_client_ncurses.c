@@ -527,7 +527,6 @@ static int parse_rbuf(const char *rbuf, struct conf *conf, int row, int col, int
 }
 */
 
-/*
 static int need_status(void)
 {
 	static time_t lasttime=0;
@@ -546,7 +545,7 @@ static int need_status(void)
 	lasttime=now;
 	return 1;
 }
-*/
+
 /*
 static void print_star(int sel)
 {
@@ -594,45 +593,35 @@ static int show_rbuf(const char *rbuf, struct conf *conf, int sel, char **client
 }
 */
 
-/*
-static int request_status(int fd, const char *client, struct conf *conf)
+static int request_status(struct asfd *asfd,
+	const char *client, struct conf *conf)
 {
-	int l;
 	char buf[256]="";
 	if(client)
 	{
 		if(conf->backup)
 		{
 			if(conf->browsedir)
-			{
 				snprintf(buf, sizeof(buf), "c:%s:b:%s:p:%s\n",
 					client, conf->backup, conf->browsedir);
-			}
 			else if(conf->browsefile)
-			{
 				snprintf(buf, sizeof(buf), "c:%s:b:%s:f:%s\n",
 					client, conf->backup, conf->browsefile);
-			}
 			else
-			{
 				snprintf(buf, sizeof(buf), "c:%s:b:%s\n",
 					client, conf->backup);
-			}
 		}
 		else
-		{
 			snprintf(buf, sizeof(buf), "c:%s\n", client);
-		}
 	}
-	else snprintf(buf, sizeof(buf), "\n");
+	else
+		snprintf(buf, sizeof(buf), "\n");
 #ifdef DBFP
-fprintf(dbfp, "request: %s\n", buf); fflush(dbfp);
+fprintf(dbfp, "request: %s\n", buf);
 #endif
-	l=strlen(buf);
-	if(write(fd, buf, l)<0) return -1;
+	if(asfd->write_str(asfd, CMD_GEN /* ignored */, buf)) return -1;
 	return 0;
 }
-*/
 
 static void sighandler(int sig)
 {
@@ -737,6 +726,9 @@ static int parse_stdin_data(struct asfd *asfd, struct cstat *clist, int *sel, in
 			(*sel)-=row-TOP_SPACE;
 			break;
 		}
+		case -1:
+			logp("Error on stdin\n");
+			return -1;
 	}
 
 	if(*sel>=count) *sel=count-1;
@@ -748,6 +740,7 @@ static int parse_stdin_data(struct asfd *asfd, struct cstat *clist, int *sel, in
 
 static int parse_socket_data(struct asfd *asfd, struct cstat *clist)
 {
+	fprintf(dbfp, "parse_socket_data: %s\n", asfd->rbuf->buf);
 	return 0;
 }
 
@@ -772,6 +765,8 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 	struct cstat *clist=NULL;
 	int sel=0;
 	int enterpressed=0;
+	struct asfd *sfd=as->asfd; // Server asfd.
+	int reqdone=0;
 
 	if(sclient && !client)
 	{
@@ -790,10 +785,21 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 			while(asfd->rbuf->buf)
 		{
 			if(parse_data(asfd, clist,
-				&sel, &details, count, &enterpressed)
-			  || asfd->parse_readbuf(asfd))
-				goto error;
+				&sel, &details, count, &enterpressed))
+					goto error;
 			iobuf_free_content(asfd->rbuf);
+			if(asfd->parse_readbuf(asfd))
+				goto error;
+		}
+
+		if((enterpressed || need_status()) && !reqdone)
+		{
+			char *req=NULL;
+			if(details && client) req=client;
+			if(request_status(sfd, req, conf)) return -1;
+			enterpressed=0;
+			if(actg==ACTION_STATUS_SNAPSHOT)
+				reqdone=1;
 		}
 	}
 

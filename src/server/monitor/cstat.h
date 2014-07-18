@@ -52,6 +52,7 @@ struct cstat
 	char *timestamp;
 	char *lockfile;
 	time_t lockfile_mtime;
+	char *last_backup_timestamp; // FIX THIS: to time_t.
 	struct bu *bu; // backup list
 
 	struct cstat *next;

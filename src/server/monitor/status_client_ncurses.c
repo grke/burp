@@ -719,50 +719,50 @@ static void strip_trailing_quote(char *buf)
 	if((cp=strrchr(buf, '"'))) *cp='\0';
 }
 
+// Client records will be coming through in alphabetical order.
+// FIX THIS: If a client is deleted on the server, it is not deleted from
+// clist.
 static int parse_socket_data(struct asfd *asfd, struct cstat **clist)
 {
 	char *buf;
 	static struct cstat *cnew=NULL;
+	static struct cstat *current=NULL;
 	buf=asfd->rbuf->buf;
 	if(!strncmp_w(buf, NAME_LINE))
 	{
+		char *name;
 		strip_trailing_quote(buf);
+		name=buf+strlen(NAME_LINE);
 		if(cnew)
 		{
-			logp("Got unexpected name line: %s\n", buf);
+			logp("Got unexpected name line: %s\n", name);
 			return -1;
 		}
-		if(!(cnew=cstat_alloc())
-		  || cstat_init(cnew, buf+strlen(NAME_LINE), NULL))
-			return -1;
+		if(!(current=cstat_get_by_name(*clist, name)))
+		{
+			if(!(cnew=cstat_alloc())
+			  || cstat_init(cnew, name, NULL))
+				return -1;
+			current=cnew;
+		}
 	}
 	else if(!strncmp_w(buf, STATUS_LINE))
 	{
 		strip_trailing_quote(buf);
-		if(!cnew)
+		if(!current)
 		{
 			logp("Got unexpected status line: %s\n", buf);
 			return -1;
 		}
-		cnew->status=cstat_str_to_status(buf+strlen(STATUS_LINE));
+		current->status=cstat_str_to_status(buf+strlen(STATUS_LINE));
 	}
 
 	if(cnew && cnew->status!=STATUS_UNSET)
 	{
-		struct cstat *c;
-// FIX THIS - should not have allocated cnew if name is already in the list.
-		for(c=*clist; c; c=c->next)
-		{
-			if(!strcmp(c->name, cnew->name))
-			{
-fprintf(dbfp, "got %s already\n", c->name);
-				cstat_free(&cnew);
-				return 0;
-			}
-		}
 		fprintf(dbfp, "name: %s\n", cnew->name);
 		fprintf(dbfp, "status: %d\n", cnew->status);
 		if(cstat_add_to_list(clist, cnew)) return -1;
+		current=NULL;
 		cnew=NULL;
 	}
 	return 0;

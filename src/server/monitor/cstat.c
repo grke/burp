@@ -27,6 +27,7 @@ static void cstat_free_content(struct cstat *c)
 	free_w(&c->working);
 	free_w(&c->current);
 	free_w(&c->timestamp);
+	free_w(&c->last_backup_timestamp);
 	free_w(&c->lockfile);
 }
 
@@ -61,7 +62,6 @@ int cstat_add_to_list(struct cstat **clist, struct cstat *cnew)
 	return 0;
 }
 
-
 static int set_cstat_from_conf(struct cstat *c,
 	struct conf *conf, struct conf *cconf)
 {
@@ -75,6 +75,7 @@ static int set_cstat_from_conf(struct cstat *c,
 	free_w(&c->working);
 	free_w(&c->current);
 	free_w(&c->timestamp);
+	free_w(&c->last_backup_timestamp);
 
 	if(!(c->basedir=prepend_s(cconf->directory, c->name))
 	  || !(c->working=prepend_s(c->basedir, "working"))
@@ -245,6 +246,14 @@ enum cstat_status cstat_str_to_status(const char *str)
 	return STATUS_UNSET;
 }
 
+static char *get_last_backup_time(struct cstat *cstat)
+{
+	char buf[64]="";
+	if(timestamp_read(cstat->timestamp, buf, sizeof(buf)))
+		snprintf(buf, sizeof(buf), "0");
+	return strdup_w(buf, __func__);
+}
+
 int cstat_set_status(struct cstat *cstat)
 {
 	struct stat statp;
@@ -270,6 +279,9 @@ int cstat_set_status(struct cstat *cstat)
 		else
 			cstat->status=STATUS_RUNNING;
 	}
+	free_w(&cstat->last_backup_timestamp);
+	if(!(cstat->last_backup_timestamp=get_last_backup_time(cstat)))
+		return -1;
 
 	return 0;
 }

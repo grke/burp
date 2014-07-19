@@ -11,7 +11,8 @@ int cstat_init(struct cstat *cstat,
 	const char *name, const char *clientconfdir)
 {
 	if((clientconfdir && !(cstat->conffile=prepend_s(clientconfdir, name)))
-	  || !(cstat->name=strdup_w(name, __func__)))
+	  || !(cstat->name=strdup_w(name, __func__))
+	  || !(cstat->sdirs=sdirs_alloc()))
 		return -1;
 	return 0;
 }
@@ -20,15 +21,13 @@ static void cstat_free_content(struct cstat *c)
 {
 	if(!c) return;
 	bu_list_free(&c->bu);
+	bu_list_free(&c->bu_current);
 	free_w(&c->name);
 	free_w(&c->conffile);
 	free_w(&c->running_detail);
-	free_w(&c->basedir);
-	free_w(&c->working);
-	free_w(&c->current);
-	free_w(&c->timestamp);
-	free_w(&c->last_backup_timestamp);
-	free_w(&c->lockfile);
+	sdirs_free_content(c->sdirs);
+	c->clientdir_mtime=0;
+	c->lockfile_mtime=0;
 }
 
 void cstat_free(struct cstat **cstat)
@@ -62,35 +61,10 @@ int cstat_add_to_list(struct cstat **clist, struct cstat *cnew)
 	return 0;
 }
 
-static int set_cstat_from_conf(struct cstat *c,
-	struct conf *conf, struct conf *cconf)
+static int set_cstat_from_conf(struct cstat *c, struct conf *cconf)
 {
-	char *lockbasedir=NULL;
-	char *client_lockdir=NULL;
-
-	if(!(client_lockdir=conf->client_lockdir))
-		client_lockdir=cconf->directory;
-
-	free_w(&c->basedir);
-	free_w(&c->working);
-	free_w(&c->current);
-	free_w(&c->timestamp);
-	free_w(&c->last_backup_timestamp);
-
-	if(!(c->basedir=prepend_s(cconf->directory, c->name))
-	  || !(c->working=prepend_s(c->basedir, "working"))
-	  || !(c->current=prepend_s(c->basedir, "current"))
-	  || !(c->timestamp=prepend_s(c->current, "timestamp"))
-	  || !(lockbasedir=prepend_s(client_lockdir, c->name))
-	  || !(c->lockfile=prepend_s(lockbasedir, "lockfile")))
-	{
-		free_w(&lockbasedir);
-		log_out_of_memory(__func__);
-		return -1;
-	}
-	c->basedir_mtime=0;
-	c->lockfile_mtime=0;
-	free_w(&lockbasedir);
+	sdirs_free_content(c->sdirs);
+	if(sdirs_init(c->sdirs, cconf)) return -1;
 	return 0;
 }
 
@@ -196,7 +170,7 @@ static int reload_from_client_confs(struct cstat **clist, struct conf *conf)
 			continue;
 		}
 
-		if(set_cstat_from_conf(c, conf, cconf))
+		if(set_cstat_from_conf(c, cconf))
 			goto error;
 	}
 	return 0;
@@ -246,22 +220,14 @@ enum cstat_status cstat_str_to_status(const char *str)
 	return STATUS_UNSET;
 }
 
-static char *get_last_backup_time(struct cstat *cstat)
-{
-	char buf[64]="";
-	if(timestamp_read(cstat->timestamp, buf, sizeof(buf)))
-		snprintf(buf, sizeof(buf), "0");
-	return strdup_w(buf, __func__);
-}
-
 int cstat_set_status(struct cstat *cstat)
 {
 	struct stat statp;
 //logp("in set summary for %s\n", cstat->name);
 
-	if(lstat(cstat->lockfile, &statp))
+	if(lstat(cstat->sdirs->lock->path, &statp))
 	{
-		if(lstat(cstat->working, &statp))
+		if(lstat(cstat->sdirs->working, &statp))
 			cstat->status=STATUS_IDLE;
 		else
 			cstat->status=STATUS_CLIENT_CRASHED;
@@ -270,7 +236,7 @@ int cstat_set_status(struct cstat *cstat)
 	}
 	else
 	{
-		if(!lock_test(cstat->lockfile)) // could have got lock
+		if(!lock_test(cstat->sdirs->lock->path)) // Could have got lock.
 		{
 			cstat->status=STATUS_SERVER_CRASHED;
 			// It is not running, so free the running_detail.
@@ -279,46 +245,44 @@ int cstat_set_status(struct cstat *cstat)
 		else
 			cstat->status=STATUS_RUNNING;
 	}
-	free_w(&cstat->last_backup_timestamp);
-	if(!(cstat->last_backup_timestamp=get_last_backup_time(cstat)))
-		return -1;
 
 	return 0;
 }
 
-static int reload_from_basedir(struct cstat **clist, struct conf *conf)
+static int reload_from_clientdir(struct cstat **clist, struct conf *conf)
 {
 	struct cstat *c;
 	for(c=*clist; c; c=c->next)
 	{
-		// Pretty much the same routine for the basedir, except also
-		// reload if we have running_detail.
 		time_t ltime=0;
 		struct stat statp;
 		struct stat lstatp;
-		if(!c->basedir) continue;
-		if(stat(c->basedir, &statp))
+		if(!c->sdirs->client) continue;
+		if(stat(c->sdirs->client, &statp))
 		{
-			// no basedir
+			// No clientdir.
 			if(!c->status
 			  && cstat_set_status(c))
 				goto error;
 			continue;
 		}
-		if(!lstat(c->lockfile, &lstatp))
+		if(!lstat(c->sdirs->lock->path, &lstatp))
 			ltime=lstatp.st_mtime;
-		if(statp.st_mtime==c->basedir_mtime
+		if(statp.st_mtime==c->clientdir_mtime
 		  && ltime==c->lockfile_mtime
 		  && c->status!=STATUS_SERVER_CRASHED
 		  && !c->running_detail)
 		{
-			// basedir has not changed - no need to do anything.
+			// clientdir has not changed - no need to do anything.
 			continue;
 		}
-		c->basedir_mtime=statp.st_mtime;
+		c->clientdir_mtime=statp.st_mtime;
 		c->lockfile_mtime=ltime;
-
 		if(cstat_set_status(c)) goto error;
+
+		bu_list_free(&c->bu_current);
+		if(bu_current_get(c->sdirs, &c->bu_current))
+			goto error;
 	}
 	return 0;
 error:
@@ -329,7 +293,7 @@ int cstat_load_data_from_disk(struct cstat **clist, struct conf *conf)
 {
 	return get_client_names(clist, conf)
 	  || reload_from_client_confs(clist, conf)
-	  || reload_from_basedir(clist, conf);
+	  || reload_from_clientdir(clist, conf);
 }
 
 int cstat_set_backup_list(struct cstat *cstat)
@@ -339,9 +303,7 @@ int cstat_set_backup_list(struct cstat *cstat)
 	// Free any previous list.
 	bu_list_free(&cstat->bu);
 
-	// FIX THIS: If this stuff used sdirs, there would be no need for a
-	// separate bu_list_get_str function.
-	if(bu_list_get_str(cstat->basedir, &bu, 0))
+	if(bu_list_get(cstat->sdirs, &bu))
 	{
 		//logp("error when looking up current backups\n");
 		return 0;

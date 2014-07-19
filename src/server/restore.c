@@ -178,7 +178,7 @@ int do_restore_server(struct asfd *asfd, struct sdirs *sdirs,
 
 	if(compile_regex(&regex, conf->regex)) return -1;
 
-	if(bu_list_get(sdirs, &bu_list, 1))
+	if(bu_list_get(sdirs, &bu_list))
 	{
 		if(regex) { regfree(regex); free(regex); }
 		return -1;

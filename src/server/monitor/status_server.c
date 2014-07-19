@@ -253,12 +253,13 @@ end:
 */
 }
 
-static int list_backup_file(struct asfd *srfd, struct cstat *cli, unsigned long bno, const char *file, const char *browse)
+static int list_backup_file(struct asfd *srfd, struct cstat *cstat,
+	unsigned long bno, const char *file, const char *browse)
 {
 	int ret=0;
         struct bu *bu=NULL;
         struct bu *bu_list=NULL;
-	if(bu_list_get_str(cli->basedir, &bu_list, 0))
+	if(bu_list_get(cstat->sdirs, &bu_list))
 		goto error;
 
 	if(!bu_list) goto end;
@@ -302,7 +303,7 @@ static int parse_client_data(struct asfd *srfd, struct cstat *clist)
 	char *file=NULL;
 	char *browse=NULL;
 	unsigned long bno=0;
-	struct cstat *cli=NULL;
+	struct cstat *cstat=NULL;
 printf("got client data: '%s'\n", srfd->rbuf->buf);
 
 	cp=srfd->rbuf->buf;
@@ -320,7 +321,7 @@ printf("got client data: '%s'\n", srfd->rbuf->buf);
 
 	if(client)
 	{
-		if(!(cli=cstat_get_by_name(clist, client)))
+		if(!(cstat=cstat_get_by_name(clist, client)))
 			goto end;
 	}
 	if(backup)
@@ -350,14 +351,14 @@ printf("got client data: '%s'\n", srfd->rbuf->buf);
 			  printf("list file %s of backup %lu of client '%s'\n",
 			    file, bno, client);
 			  if(browse) printf("browse '%s'\n", browse);
-				list_backup_file(srfd, cli, bno, file, browse);
+				list_backup_file(srfd, cstat, bno, file, browse);
 			}
 			else
 			{
 				printf("list backup %lu of client '%s'\n",
 					bno, client);
-				printf("basedir: %s\n", cli->basedir);
-				list_backup_dir(srfd, cli, bno);
+				printf("basedir: %s\n", cstat->sdirs->client);
+				list_backup_dir(srfd, cstat, bno);
 			}
 		}
 		else
@@ -454,17 +455,23 @@ int status_server(int *cfd, int *status_rfd, struct conf *conf)
 	// therefore what status to write back to cfd.
 
 	if(!(as=async_alloc())
-	  || as->init(as, 0)
-	  || setup_asfd(as, "status client socket",
-		cfd, ASFD_STREAM_LINEBUF, conf)
-	  || setup_asfd(as, "status server parent socket",
+	  || as->init(as, 0))
+		goto end;
+	if(setup_asfd(as, "status client socket",
+		cfd, ASFD_STREAM_LINEBUF, conf))
+	{
+		close_fd(cfd);
+		goto end;
+	}
+	if(setup_asfd(as, "status server parent socket",
 		status_rfd, ASFD_STREAM_STANDARD, conf))
-			goto end;
+	{
+		close_fd(status_rfd);
+		goto end;
+	}
 
 	ret=main_loop(as, conf);
 end:
 	async_asfd_free_all(&as);
-	close_fd(cfd);
-	close_fd(status_rfd);
 	return ret;
 }

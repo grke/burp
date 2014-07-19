@@ -42,7 +42,8 @@ static const char *client_start=
 		"  {\n"
 		"   \"name\": \"%s\",\n"
 		"   \"status\": \"%s\",\n"
-		"   \"last_backup\": \"%li\",\n"
+		"   \"number\": \"%lu\",\n"
+		"   \"timestamp\": \"%li\",\n"
 		"   \"backups\":\n"
 		"   [\n";
 static const char *client_end=
@@ -76,12 +77,14 @@ static int json_send_backup(struct asfd *asfd, struct bu *bu)
 static int json_send_client_start(struct asfd *asfd,
 	struct cstat *clist, struct cstat *cstat)
 {
+	struct bu *bu_current=cstat->bu_current;
 	static char wbuf[CLI_TEMPLATE_MAX];
 	snprintf(wbuf, CLI_TEMPLATE_MAX, client_start,
 		clist==cstat?"":",\n",
 		cstat->name,
 		cstat_status_to_str(cstat),
-		timestamp_to_long(cstat->last_backup_timestamp));
+		bu_current?bu_current->bno:0,
+		bu_current?(long)timestamp_to_long(bu_current->timestamp):0);
 	return json_str_to_client(asfd, wbuf);
 }
 

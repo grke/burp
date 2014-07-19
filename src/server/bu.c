@@ -10,14 +10,11 @@ static struct bu *bu_alloc(void)
 }
 
 static int bu_init(struct bu *bu, char *fullpath, char *basename,
-	char *timestampstr, int hardlinked, int log)
+	char *timestampstr, int hardlinked)
 {
 	if(!(bu->data=prepend_s(fullpath, "data"))
 	  || !(bu->delta=prepend_s(fullpath, "deltas.reverse")))
-	{
-		if(log) log_out_of_memory(__func__);
 		goto error;
-	}
 	bu->path=fullpath;
 	bu->basename=basename;
 	bu->timestamp=timestampstr;
@@ -57,10 +54,7 @@ static int get_link(const char *dir, const char *lnk, char real[], size_t r)
 	ssize_t len=0;
 	char *tmp=NULL;
 	if(!(tmp=prepend_s(dir, lnk)))
-	{
-		log_out_of_memory(__func__);
 		return -1;
-	}
 	if((len=readlink(tmp, real, r-1))<0) len=0;
 	real[len]='\0';
 	free(tmp);
@@ -68,7 +62,7 @@ static int get_link(const char *dir, const char *lnk, char real[], size_t r)
 }
 
 static int maybe_add_ent(const char *dir, const char *d_name,
-	struct bu **bu_list, int log)
+	struct bu **bu_list)
 {
 	int ret=-1;
 	char buf[32]="";
@@ -102,7 +96,7 @@ static int maybe_add_ent(const char *dir, const char *d_name,
 	if(!lstat(hlinkedpath, &statp)) hardlinked++;
 
 	if(!(bu=bu_alloc())
-	  || bu_init(bu, fullpath, basename, timestampstr, hardlinked, log))
+	  || bu_init(bu, fullpath, basename, timestampstr, hardlinked))
 		goto error;
 
 	if(*bu_list) bu->next=*bu_list;
@@ -164,7 +158,7 @@ static int rev_alphasort(const struct dirent **a, const struct dirent **b)
 	return 0;
 }
 
-int bu_list_get_str(const char *dir, struct bu **bu_list, int log)
+int bu_list_get(struct sdirs *sdirs, struct bu **bu_list)
 {
 	int i=0;
 	int n=0;
@@ -172,6 +166,7 @@ int bu_list_get_str(const char *dir, struct bu **bu_list, int log)
 	char realwork[32]="";
 	char realfinishing[32]="";
 	struct dirent **dp=NULL;
+	const char *dir=sdirs->client;
 
 	// Find out what certain directories really are, if they exist,
 	// so they can be excluded.
@@ -181,8 +176,7 @@ int bu_list_get_str(const char *dir, struct bu **bu_list, int log)
 
 	if((n=scandir(dir, &dp, NULL, rev_alphasort))<0)
 	{
-		if(log) logp("scandir failed in %s: %s\n",
-			__func__, strerror(errno));
+		logp("scandir failed in %s: %s\n", __func__, strerror(errno));
 		goto end;
 	}
 	for(i=0; i<n; i++)
@@ -193,7 +187,7 @@ int bu_list_get_str(const char *dir, struct bu **bu_list, int log)
 		  || !strcmp(dp[i]->d_name, realwork)
 		  || !strcmp(dp[i]->d_name, realfinishing))
 			continue;
-		if(maybe_add_ent(dir, dp[i]->d_name, bu_list, log))
+		if(maybe_add_ent(dir, dp[i]->d_name, bu_list))
 			goto end;
 	}
 
@@ -209,7 +203,11 @@ end:
 	return ret;
 }
 
-int bu_list_get(struct sdirs *sdirs, struct bu **bu_list, int log)
+int bu_current_get(struct sdirs *sdirs, struct bu **bu_list)
 {
-	return bu_list_get_str(sdirs->client, bu_list, log);
+	char real[32]="";
+	// FIX THIS: should not need to specify "current".
+	if(get_link(sdirs->client, "current", real, sizeof(real)))
+		return -1;
+	return maybe_add_ent(sdirs->client, real, bu_list);
 }

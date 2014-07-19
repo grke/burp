@@ -184,7 +184,6 @@ error:
 
 void sdirs_free_content(struct sdirs *sdirs)
 {
-	free_w(&sdirs->base);
         free_w(&sdirs->base);
         free_w(&sdirs->dedup);
         free_w(&sdirs->champlock);

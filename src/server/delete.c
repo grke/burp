@@ -130,7 +130,7 @@ static int do_delete_backups(struct sdirs *sdirs, struct conf *cconf)
 	struct bu *bu_list=NULL;
 	struct strlist *keep=NULL;
 
-	if(bu_list_get(sdirs, &bu_list, 1)) goto end;
+	if(bu_list_get(sdirs, &bu_list)) goto end;
 
 	// Find the last entry in the list.
 	for(bu=bu_list; bu; bu=bu->next) last=bu;
@@ -188,7 +188,7 @@ int do_delete_server(struct asfd *asfd,
 
 	logp("in do_delete\n");
 
-	if(bu_list_get(sdirs, &bu_list, 1)
+	if(bu_list_get(sdirs, &bu_list)
 	  || write_status(STATUS_DELETING, NULL, conf))
 		goto end;
 

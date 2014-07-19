@@ -45,15 +45,12 @@ struct cstat
 	enum cstat_status status;
 
 	// When the mtime of conffile changes, the following get reloaded
-	char *basedir;
-	time_t basedir_mtime;
-	char *working;
-	char *current;
-	char *timestamp;
-	char *lockfile;
+	struct sdirs *sdirs;
+	time_t clientdir_mtime;
 	time_t lockfile_mtime;
-	char *last_backup_timestamp; // FIX THIS: to time_t.
-	struct bu *bu; // backup list
+
+	struct bu *bu; // Backup list.
+	struct bu *bu_current; // Current backup.
 
 	struct cstat *next;
 };

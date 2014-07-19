@@ -46,6 +46,7 @@ struct sdirs
 
 extern struct sdirs *sdirs_alloc(void);
 extern int sdirs_init(struct sdirs *sdirs, struct conf *conf);
+extern void sdirs_free_content(struct sdirs *sdirs);
 extern void sdirs_free(struct sdirs **sdirs);
 
 extern int sdirs_get_real_manifest(struct sdirs *sdirs, struct conf *conf);

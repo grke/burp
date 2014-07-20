@@ -28,7 +28,7 @@ while [ "$#" -gt 0 ] ; do
 				&& w="($warnings warnings)"
 			h="$1"
 			h="${h//%c/$client}"
-			h="${h//%w/$w}"
+			h="${h//%w/$warnings}"
 			h="${h//%b/$brv}"
 			;;
 		*) h="$1"

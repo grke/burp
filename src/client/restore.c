@@ -126,7 +126,7 @@ static int open_for_restore(struct asfd *asfd,
 	else
 		flags=O_WRONLY|O_BINARY|O_CREAT|O_TRUNC;
 
-	if(bopen(bfd, asfd, path, flags, S_IRUSR | S_IWUSR)<=0)
+	if(bopen(bfd, asfd, path, flags, S_IRUSR | S_IWUSR))
 	{
 		berrno be;
 		berrno_init(&be);

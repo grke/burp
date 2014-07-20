@@ -28,7 +28,7 @@ static int open_for_restore(struct asfd *asfd, BFILE *bfd, FILE **fp,
 	else
 		bfd->use_backup_api=0;
 	if(bopen(bfd, asfd, path, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,
-		S_IRUSR | S_IWUSR)<=0)
+		S_IRUSR | S_IWUSR))
 	{
 		berrno be;
 		berrno_init(&be);

@@ -106,7 +106,7 @@ int open_file_for_sendl(struct asfd *asfd,
 		binit(bfd, winattr, conf);
 		*datalen=0;
 		// Windows has no O_NOATIME.
-		if(bopen(bfd, asfd, fname, O_RDONLY|O_BINARY, 0)<=0)
+		if(bopen(bfd, asfd, fname, O_RDONLY|O_BINARY, 0))
 		{
 			berrno be;
 			berrno_init(&be);

@@ -3,6 +3,7 @@
 static int open_for_restore(struct asfd *asfd, BFILE *bfd, FILE **fp,
 	const char *path, struct sbuf *sb, int vss_restore, struct conf *conf)
 {
+	static int flags;
 #ifdef HAVE_WIN32
 	if(bfd->mode!=BF_CLOSED)
 	{
@@ -27,8 +28,16 @@ static int open_for_restore(struct asfd *asfd, BFILE *bfd, FILE **fp,
 		set_win32_backup(bfd);
 	else
 		bfd->use_backup_api=0;
-	if(bopen(bfd, asfd, path, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,
-		S_IRUSR | S_IWUSR))
+	if(S_ISDIR(sb->statp.st_mode))
+	{
+		// Windows directories are treated as having file data.
+		flags=O_WRONLY|O_BINARY;
+		mkdir(path, 0777);
+	}
+	else
+		flags=O_WRONLY|O_BINARY|O_CREAT|O_TRUNC;
+
+	if(bopen(bfd, asfd, path, flags, S_IRUSR | S_IWUSR))
 	{
 		berrno be;
 		berrno_init(&be);

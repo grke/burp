@@ -788,7 +788,7 @@ int do_restore_client(struct asfd *asfd,
 					}
 					// It is OK, sb.path is now stripped.
 				}
-				if(fullpath) free(fullpath);
+				free_w(&fullpath);
 				if(!(fullpath=prepend_s(conf->restoreprefix,
 					sb->path.buf)))
 				{
@@ -870,13 +870,13 @@ error:
 	else logp("ret: %d\n", ret);
 
 	sbuf_free(&sb);
-	if(style) free(style);
+	free_w(&style);
 	if(datpath)
 	{
 		recursive_delete(datpath, NULL, 1);
 		free(datpath);
 	}
-	if(fullpath) free(fullpath);
+	free_w(&fullpath);
 
 	return ret;
 }

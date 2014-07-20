@@ -344,68 +344,6 @@ end:
 	return ret;
 }
 
-/*
-static int restore_metadata(
-#ifdef HAVE_WIN32
-	BFILE *bfd,
-#endif
-	struct sbuf *sb,
-	const char *fname,
-	enum action act,
-	const char *encpassword,
-	int vss_restore,
-	struct conf *conf)
-{
-	// If it is directory metadata, try to make sure the directory
-	// exists. Pass in NULL as the cntr, so no counting is done.
-	// The actual directory entry will be coming after the metadata,
-	// annoyingly. This is because of the way that the server is queuing
-	// up directories to send after file data, so that the stat info on
-	// them gets set correctly.
-	if(act==ACTION_RESTORE)
-	{
-		size_t metalen=0;
-		char *metadata=NULL;
-		if(S_ISDIR(sb->statp.st_mode)
-		  && restore_dir(asfd, sb, fname, act, NULL))
-			return -1;
-
-		// Read in the metadata...
-		if(restore_file_or_get_meta(
-#ifdef HAVE_WIN32
-			bfd,
-#endif
-			sb, fname, act, encpassword,
-			&metadata, &metalen, vss_restore, conf))
-				return -1;
-		if(metadata)
-		{
-			
-			if(set_extrameta(
-#ifdef HAVE_WIN32
-				bfd,
-#endif
-				fname, sb->path.cmd,
-				&(sb->statp), metadata, metalen, conf))
-			{
-				free(metadata);
-				// carry on if we could not do it
-				return 0;
-			}
-			free(metadata);
-#ifndef HAVE_WIN32
-			// set attributes again, since we just diddled with
-			// the file
-			attribs_set(fname, &(sb->statp), sb->winattr, conf);
-#endif
-			cntr_add(conf->cntr, sb->path.cmd, 1);
-		}
-	}
-	else cntr_add(conf->cntr, sb->cmd, 1);
-	return 0;
-}
-*/
-
 static void strip_invalid_characters(char **path)
 {
 #ifdef HAVE_WIN32
@@ -536,7 +474,8 @@ static int write_data(struct asfd *asfd, BFILE *bfd, struct blk *blk)
 //printf("writing: %d\n", blk->length);
 		if((w=bwrite(bfd, blk->data, blk->length))<=0)
 		{
-			logp("error when appending %d: %d\n", blk->length, w);
+			logp("%s(): error when appending %d: %d\n",
+				__func__, blk->length, w);
 			asfd->write_str(asfd, CMD_ERROR, "write failed");
 			return -1;
 		}
@@ -612,73 +551,6 @@ printf("in restore_spool\n");
 
 	return asfd->simple_loop(asfd, conf, datpath,
 		__func__, restore_spool_func);
-}
-
-static int restore_switch_burp2(struct asfd *asfd, struct sbuf *sb,
-	const char *fullpath, enum action act,
-	BFILE *bfd, int vss_restore, struct conf *conf)
-{
-	switch(sb->path.cmd)
-	{
-		case CMD_FILE:
-			// Have it a separate statement to the
-			// encrypted version so that encrypted and not
-			// encrypted files can be restored at the
-			// same time.
-			if(start_restore_file(asfd,
-				bfd, sb, fullpath, act,
-				NULL, NULL, NULL,
-				vss_restore, conf))
-			{
-				logp("restore_file error\n");
-				goto error;
-			}
-			break;
-/* FIX THIS: Encryption currently not working in burp2
-		case CMD_ENC_FILE:
-			if(start_restore_file(asfd,
-				bfd, sb, fullpath, act,
-				conf->encryption_password,
-				NULL, NULL, vss_restore, conf))
-			{
-				logp("restore_file error\n");
-				goto error;
-			}
-			break;
-*/
-/* FIX THIS: Metadata and EFS not supported yet.
-		case CMD_METADATA:
-			if(restore_metadata(
-				bfd, sb, fullpath, act,
-				NULL, vss_restore, conf))
-					goto error;
-			break;
-		case CMD_ENC_METADATA:
-			if(restore_metadata(
-				bfd, sb, fullpath, act,
-				conf->encryption_password,
-				vss_restore, conf))
-					goto error;
-			break;
-		case CMD_EFS_FILE:
-			if(start_restore_file(asfd,
-				bfd, sb,
-				fullpath, act,
-				NULL,
-				NULL, NULL, vss_restore, conf))
-			{
-				logp("restore_file error\n");
-				goto error;
-			}
-			break;
-*/
-		default:
-			logp("unknown cmd: %c\n", sb->path.cmd);
-			goto error;
-	}
-	return 0;
-error:
-	return -1;
 }
 
 static int sbuf_fill_w(struct sbuf *sb, struct asfd *asfd,

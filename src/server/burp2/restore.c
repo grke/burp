@@ -70,7 +70,7 @@ static int restore_ent(struct asfd *asfd,
 		logp("Got NULL path!\n");
 		return -1;
 	}
-	//printf("want to restore: %s\n", (*sb)->path);
+	//printf("want to restore: %s\n", (*sb)->path.buf);
 
 	// Check if we have any directories waiting to be restored.
 	while((xb=slist->head))
@@ -101,7 +101,6 @@ static int restore_ent(struct asfd *asfd,
 	// that goes with directories.
 	if(S_ISDIR((*sb)->statp.st_mode))
 	{
-//printf("add to head: %s\n", (*sb)->path.buf);
 		// Add to the head of the list instead of the tail.
 		(*sb)->next=slist->head;
 		slist->head=*sb;
@@ -419,7 +418,7 @@ static int restore_stream(struct asfd *asfd,
 					xb->burp2->bend->next=nblk;
 					xb->burp2->bend=nblk;
 				}
-				continue;
+				//continue;
 			}
 			else
 			{

@@ -3,8 +3,8 @@
 static int open_for_restore(struct asfd *asfd, BFILE *bfd, FILE **fp,
 	const char *path, struct sbuf *sb, int vss_restore, struct conf *conf)
 {
-	static int flags;
 #ifdef HAVE_WIN32
+	static int flags;
 	if(bfd->mode!=BF_CLOSED)
 	{
 		if(bfd->path && !strcmp(bfd->path, path))

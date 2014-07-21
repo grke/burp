@@ -24,11 +24,9 @@ while [ "$#" -gt 0 ] ; do
 	case "$1" in
 		Subject:*)
 			w=""
-			[ -n "$warnings" -a "$warnings" != "0" ] \
-				&& w="($warnings warnings)"
 			h="$1"
 			h="${h//%c/$client}"
-			h="${h//%w/$w}"
+			h="${h//%w/$warnings}"
 			h="${h//%b/$brv}"
 			;;
 		*) h="$1"

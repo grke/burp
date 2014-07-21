@@ -101,15 +101,32 @@ static int make_link(struct asfd *asfd,
 	return ret;
 }
 
-static int open_for_restore(struct asfd *asfd,
-	BFILE *bfd,
-	const char *path,
-	struct sbuf *sb,
-	int vss_restore,
-	struct conf *conf)
+int open_for_restore(struct asfd *asfd, BFILE *bfd, const char *path,
+	struct sbuf *sb, int vss_restore, struct conf *conf)
 {
 	static int flags;
-	bclose(bfd, asfd);
+        if(bfd->mode!=BF_CLOSED)
+        {
+#ifdef HAVE_WIN32
+		if(bfd->path && !strcmp(bfd->path, path))
+		{
+			// Already open after restoring the VSS data.
+			// Time now for the actual file data.
+			return 0;
+		}
+		else
+		{
+#endif
+			if(bclose(bfd, asfd))
+			{
+				logp("error closing %s in %s()\n",
+					path, __func__);
+				return -1;
+			}
+#ifdef HAVE_WIN32
+		}
+#endif
+	}
 	binit(bfd, sb->winattr, conf);
 #ifdef HAVE_WIN32
 	if(vss_restore)

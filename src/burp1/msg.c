@@ -1,7 +1,7 @@
 #include "include.h"
 
 static int do_write(struct asfd *asfd,
-	BFILE *bfd, FILE *fp, uint8_t *out, size_t outlen,
+	BFILE *bfd, uint8_t *out, size_t outlen,
 	char **metadata, unsigned long long *sent)
 {
 	int ret=0;
@@ -22,28 +22,19 @@ static int do_write(struct asfd *asfd,
 	}
 	else
 	{
-#ifdef HAVE_WIN32
 		if((ret=bwrite(bfd, out, outlen))<=0)
 		{
 			logp("error when appending %d: %d\n", outlen, ret);
 			asfd->write_str(asfd, CMD_ERROR, "write failed");
 			return -1;
 		}
-#else
-		if((fp && (ret=fwrite(out, 1, outlen, fp))<=0))
-		{
-			logp("error when appending %d: %d\n", outlen, ret);
-			asfd->write_str(asfd, CMD_ERROR, "write failed");
-			return -1;
-		}
-#endif
 		*sent+=outlen;
 	}
 	return 0;
 }
 
 static int do_inflate(struct asfd *asfd,
-	z_stream *zstrm, BFILE *bfd, FILE *fp,
+	z_stream *zstrm, BFILE *bfd,
 	uint8_t *out, uint8_t *buftouse, size_t lentouse,
 	char **metadata, const char *encpassword, int enccompressed,
 	unsigned long long *sent)
@@ -54,8 +45,7 @@ static int do_inflate(struct asfd *asfd,
 	// Do not want to inflate encrypted data that was not compressed.
 	// Just write it straight out.
 	if(encpassword && !enccompressed)
-		return do_write(asfd,
-			bfd, fp, buftouse, lentouse, metadata, sent);
+		return do_write(asfd, bfd, buftouse, lentouse, metadata, sent);
 
 	zstrm->avail_in=lentouse;
 	zstrm->next_in=buftouse;
@@ -78,7 +68,7 @@ static int do_inflate(struct asfd *asfd,
 		have=ZCHUNK-zstrm->avail_out;
 		if(!have) continue;
 
-		if(do_write(asfd, bfd, fp, out, have, metadata, sent))
+		if(do_write(asfd, bfd, out, have, metadata, sent))
 			return -1;
 /*
 		if(md5)
@@ -162,7 +152,7 @@ static int transfer_efs_in(struct asfd *asfd,
 
 int transfer_gzfile_inl(struct asfd *asfd,
 	struct sbuf *sb, const char *path, BFILE *bfd,
-	FILE *fp, unsigned long long *rcvd, unsigned long long *sent,
+	unsigned long long *rcvd, unsigned long long *sent,
 	const char *encpassword, int enccompressed,
 	struct cntr *cntr, char **metadata)
 {
@@ -230,7 +220,7 @@ int transfer_gzfile_inl(struct asfd *asfd,
 		switch(rbuf->cmd)
 		{
 			case CMD_APPEND: // append
-				if(!fp && !bfd && !metadata)
+				if(!bfd && !metadata)
 				{
 					logp("given append, but no file or metadata to write to\n");
 					asfd->write_str(asfd, CMD_ERROR,
@@ -284,7 +274,7 @@ int transfer_gzfile_inl(struct asfd *asfd,
 					}
 					//logp("want to write: %d\n", zstrm.avail_in);
 
-					if(do_inflate(asfd, &zstrm, bfd, fp, out,
+					if(do_inflate(asfd, &zstrm, bfd, out,
 						buftouse, lentouse, metadata,
 						encpassword,
 						enccompressed,
@@ -307,7 +297,7 @@ int transfer_gzfile_inl(struct asfd *asfd,
 					}
 					if(doutlen && do_inflate(asfd,
 					  &zstrm, bfd,
-					  fp, out, doutbuf, (size_t)doutlen,
+					  out, doutbuf, (size_t)doutlen,
 					  metadata, encpassword,
 					  enccompressed, sent))
 					{

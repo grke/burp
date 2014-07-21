@@ -1,70 +1,5 @@
 #include "include.h"
 
-static int open_for_restore(struct asfd *asfd, BFILE *bfd, FILE **fp,
-	const char *path, struct sbuf *sb, int vss_restore, struct conf *conf)
-{
-#ifdef HAVE_WIN32
-	static int flags;
-	if(bfd->mode!=BF_CLOSED)
-	{
-		if(bfd->path && !strcmp(bfd->path, path))
-		{
-			// Already open after restoring the VSS data.
-			// Time now for the actual file data.
-			return 0;
-		}
-		else
-		{
-			if(bclose(bfd, asfd))
-			{
-				logp("error closing %s in %s()\n",
-					path, __func__);
-				return -1;
-			}
-		}
-	}
-	binit(bfd, sb->winattr, conf);
-	if(vss_restore)
-		set_win32_backup(bfd);
-	else
-		bfd->use_backup_api=0;
-	if(S_ISDIR(sb->statp.st_mode))
-	{
-		// Windows directories are treated as having file data.
-		flags=O_WRONLY|O_BINARY;
-		mkdir(path, 0777);
-	}
-	else
-		flags=O_WRONLY|O_BINARY|O_CREAT|O_TRUNC;
-
-	if(bopen(bfd, asfd, path, flags, S_IRUSR | S_IWUSR))
-	{
-		berrno be;
-		berrno_init(&be);
-		char msg[256]="";
-		snprintf(msg, sizeof(msg),
-			"Could not open for writing %s: %s",
-				path, berrno_bstrerror(&be, errno));
-		if(restore_interrupt(asfd, sb, msg, conf))
-			return -1;
-	}
-#else
-	if(!(*fp=open_file(path, "wb")))
-	{
-		char msg[256]="";
-		snprintf(msg, sizeof(msg),
-			"Could not open for writing %s: %s",
-				path, strerror(errno));
-		if(restore_interrupt(asfd, sb, msg, conf))
-			return -1;
-	}
-#endif
-	// Add attributes to bfd so that they can be set when it is closed.
-	bfd->winattr=sb->winattr;
-	memcpy(&bfd->statp, &sb->statp, sizeof(struct stat));
-	return 0;
-}
-
 static int restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 	struct sbuf *sb, const char *fname, enum action act,
 	const char *encpassword, char **metadata, size_t *metalen,
@@ -72,7 +7,6 @@ static int restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 {
 	int ret=0;
 	char *rpath=NULL;
-	FILE *fp=NULL;
 
 	if(act==ACTION_VERIFY)
 	{
@@ -96,8 +30,7 @@ static int restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 	if(!metadata)
 	{
 #endif
-		if(open_for_restore(asfd, bfd, &fp,
-			rpath, sb, vss_restore, conf))
+		if(open_for_restore(asfd, bfd, rpath, sb, vss_restore, conf))
 		{
 			ret=-1;
 			goto end;
@@ -127,7 +60,7 @@ static int restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 
 		if(metadata)
 		{
-			ret=transfer_gzfile_inl(asfd, sb, fname, NULL, NULL,
+			ret=transfer_gzfile_inl(asfd, sb, fname, NULL,
 				&rcvdbytes, &sentbytes,
 				encpassword, enccompressed,
 				conf->cntr, metadata);
@@ -138,23 +71,16 @@ static int restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 		}
 		else
 		{
-			int c=0;
-#ifdef HAVE_WIN32
-			ret=transfer_gzfile_inl(asfd, sb, fname, bfd, NULL,
+			ret=transfer_gzfile_inl(asfd, sb, fname, bfd,
 				&rcvdbytes, &sentbytes,
 				encpassword, enccompressed, conf->cntr, NULL);
-			//c=bclose(bfd);
-#else
-			ret=transfer_gzfile_inl(asfd, sb, fname, NULL, fp,
-				&rcvdbytes, &sentbytes,
-				encpassword, enccompressed, conf->cntr, NULL);
-			c=close_fp(&fp);
-#endif
-			if(c)
+#ifndef HAVE_WIN32
+			if(bclose(bfd, asfd))
 			{
 				logp("error closing %s in restore_file_or_get_meta\n", fname);
 				ret=-1;
 			}
+#endif
 			if(!ret) attribs_set(asfd, rpath,
 				&(sb->statp), sb->winattr, conf);
 		}

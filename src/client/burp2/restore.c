@@ -1,46 +1,5 @@
 #include "include.h"
 
-static int open_for_restore(struct asfd *asfd,
-	BFILE *bfd,
-	const char *path,
-	struct sbuf *sb,
-	int vss_restore,
-	struct conf *conf)
-{
-	static int flags;
-	bclose(bfd, asfd);
-	binit(bfd, sb->winattr, conf);
-#ifdef HAVE_WIN32
-	if(vss_restore)
-		set_win32_backup(bfd);
-	else
-		bfd->use_backup_api=0;
-#endif
-	if(S_ISDIR(sb->statp.st_mode))
-	{
-		// Windows directories are treated as having file data.
-		flags=O_WRONLY|O_BINARY;
-		mkdir(path, 0777);
-	}
-	else
-		flags=O_WRONLY|O_BINARY|O_CREAT|O_TRUNC;
-
-	if(bopen(bfd, asfd, path, flags, S_IRUSR | S_IWUSR))
-	{
-		berrno be;
-		berrno_init(&be);
-		char msg[256]="";
-		snprintf(msg, sizeof(msg), "Could not open for writing %s: %s",
-			path, berrno_bstrerror(&be, errno));
-		if(restore_interrupt(asfd, sb, msg, conf))
-			return -1;
-	}
-	// Add attributes to bfd so that they can be set when it is closed.
-	bfd->winattr=sb->winattr;
-	memcpy(&bfd->statp, &sb->statp, sizeof(struct stat));
-	return 0;
-}
-
 static int start_restore_file(struct asfd *asfd,
 	BFILE *bfd,
 	struct sbuf *sb,

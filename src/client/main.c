@@ -19,61 +19,67 @@ enum cliret
 	CLIENT_RECONNECT=4
 };
 
-static enum cliret maybe_check_timer(struct asfd *asfd,
-	enum action action, const char *phase1str,
-	struct conf *conf, int *resume)
+struct tchk
+{
+	int resume;
+	enum cliret ret;
+};
+
+static enum asl_ret maybe_check_timer_func(struct asfd *asfd,
+        struct conf *conf, void *param)
 {
 	int complen=0;
-	struct iobuf *rbuf=asfd->rbuf;
+	struct tchk *tchk=(struct tchk *)param;
 
-        if(asfd->write_str(asfd, CMD_GEN, phase1str)) goto error;
-
-        if(asfd->read(asfd)) goto error;
-
-        if(rbuf->cmd!=CMD_GEN)
-        {
-		iobuf_free_content(rbuf);
-		iobuf_log_unexpected(rbuf, __func__);
-		goto error;
-        }
-        if(!strcmp(rbuf->buf, "timer conditions not met"))
-        {
-		iobuf_free_content(rbuf);
+	if(!strcmp(asfd->rbuf->buf, "timer conditions not met"))
+	{
                 logp("Timer conditions on the server were not met\n");
-		goto timer_not_met;
-        }
-        else if(!strcmp(rbuf->buf, "timer conditions met"))
+		tchk->ret=CLIENT_SERVER_TIMER_NOT_MET;
+		return ASL_END_OK;
+	}
+        else if(!strcmp(asfd->rbuf->buf, "timer conditions met"))
         {
-		iobuf_free_content(rbuf);
+		// Only happens on 'timer check only'.
                 logp("Timer conditions on the server were met\n");
-		if(action==ACTION_TIMER_CHECK) goto end;
+		tchk->ret=CLIENT_OK;
+		return ASL_END_OK;
         }
 
-	if(!strncmp_w(rbuf->buf, "ok"))
+	if(!strncmp_w(asfd->rbuf->buf, "ok"))
 		complen=3;
-	else if(!strncmp_w(rbuf->buf, "resume"))
+	else if(!strncmp_w(asfd->rbuf->buf, "resume"))
 	{
 		complen=7;
-		*resume=1;
+		tchk->resume=1;
 		logp("server wants to resume previous backup.\n");
 	}
 	else
 	{
-		iobuf_log_unexpected(rbuf, __func__);
-		iobuf_free_content(rbuf);
-		goto error;
+		iobuf_log_unexpected(asfd->rbuf, __func__);
+		return ASL_END_ERROR;
 	}
-        // The server now tells us the compression level in the OK response.
-        if(strlen(rbuf->buf)>3) conf->compression=atoi(rbuf->buf+complen);
-        logp("Compression level: %d\n", conf->compression);
 
-	iobuf_free_content(rbuf);
-end:
-	return CLIENT_OK;
-error:
-	return CLIENT_ERROR;
-timer_not_met:
-	return CLIENT_SERVER_TIMER_NOT_MET;
+	// The server now tells us the compression level in the OK response.
+	if(strlen(asfd->rbuf->buf)>3)
+		conf->compression=atoi(asfd->rbuf->buf+complen);
+	logp("Compression level: %d\n", conf->compression);
+
+	return ASL_END_OK;
+}
+
+static enum cliret maybe_check_timer(struct asfd *asfd,
+	enum action action, const char *phase1str,
+	struct conf *conf, int *resume)
+{
+	struct tchk tchk;
+	memset(&tchk, 0, sizeof(tchk));
+        if(asfd->write_str(asfd, CMD_GEN, phase1str))
+		return CLIENT_ERROR;
+
+	if(asfd->simple_loop(asfd, conf, &tchk,
+		__func__, maybe_check_timer_func)) return CLIENT_ERROR;
+	*resume=tchk.resume;
+	return tchk.ret;
 }
 
 static enum cliret backup_wrapper(struct asfd *asfd,

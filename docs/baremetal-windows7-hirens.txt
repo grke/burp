@@ -4,13 +4,13 @@ Bare metal restore for Windows 7, using Hiren's Boot CD
 Authors
 -------
 
-    Scott Brown: Original author.
+ Scott Brown: Original author.
 
-    Graham Keeling: Edits.
+ Graham Keeling: Edits.
 
-    Moe: Extra bootrec/bootsect steps and tests on additional Windows variants.
+ Herve Moser: Extra bootrec/bootsect boot repair steps.
 
-Moe reports that this procedure successfully restored Win7en, Win7fr, Win8.1,
+Herve reports that this procedure successfully restored Win7en, Win7fr, Win8.1,
 and Win Server 2012. The Windows 7 install CD was used to fix the booting for
 8.1 and 2012 as both their respective medias weren't able to do the job.
 
@@ -211,7 +211,7 @@ needed to make the system bootable, I used a 64 bit Windows 7 install disk. It
 would not boot the install disk until I turned 'Enable I/O APIC' on in the
 VirtualBox settings.
 
-Note from Moe - he reports that, when installing to a blank physical hard
+Note from Herve - he reports that, when installing to a blank physical hard
 drive, or a new VMWare vmdk, the following two commands are necessary after
 three times through the Windows 7 install disk repair and reboot procedure:
 bootrec /fixmbr

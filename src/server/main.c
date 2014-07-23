@@ -386,7 +386,6 @@ static int process_incoming_client(int *rfd, SSL_CTX *ctx,
 				pipe_rfd[0], pipe_wfd[1], is_status_server);
 
 			close_fd(&cfd);
-			close_fd(rfd);
 			return 0;
 	}
 }

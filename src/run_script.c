@@ -137,21 +137,22 @@ int run_script_to_buf(struct asfd *asfd,
 	{
 		int ret=WEXITSTATUS(run_script_status);
 		logp("%s returned: %d\n", cmd[0], ret);
-		if(conf && ret) logw(asfd, conf, "%s returned: %d\n",
-			cmd[0], ret);
+		if(do_logw && conf && ret)
+			logw(asfd, conf, "%s returned: %d\n", cmd[0], ret);
 		return ret;
 	}
 	else if(WIFSIGNALED(run_script_status))
 	{
 		logp("%s terminated on signal %d\n",
 			cmd[0], WTERMSIG(run_script_status));
-		if(conf) logw(asfd, conf, "%s terminated on signal %d\n",
-			cmd[0], WTERMSIG(run_script_status));
+		if(do_logw && conf)
+			logw(asfd, conf, "%s terminated on signal %d\n",
+				cmd[0], WTERMSIG(run_script_status));
 	}
 	else
 	{
 		logp("Strange return when trying to run %s\n", cmd[0]);
-		if(conf) logw(asfd, conf,
+		if(do_logw && conf) logw(asfd, conf,
 			"Strange return when trying to run %s\n",
 			cmd[0]);
 	}

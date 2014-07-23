@@ -256,11 +256,9 @@ int run_backup(struct async *as, struct sdirs *sdirs, struct conf *cconf,
 		if((*timer_ret=run_script(asfd, args,
 		  cconf->timer_arg,
 		  cconf,
-		  1 /* wait */, 1 /* use logp */,
-		  0 /* no logw so that run_script does not
-		       write warnings down the socket, otherwise
-		       the client will never print the 'timer
-		       conditions not met' message below. */
+		  1 /* wait */,
+		  1 /* use logp */,
+		  0 /* no logw */
 		))<0)
 		{
 			logp("Error running timer script for %s\n",

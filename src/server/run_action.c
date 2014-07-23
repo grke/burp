@@ -322,7 +322,7 @@ int run_action_server(struct async *as, struct sdirs *sdirs,
 			maybe_do_notification(as->asfd, ret, "",
 				"error running timer script",
 				"", "backup", cconf);
-		else
+		else if(!*timer_ret)
 			maybe_do_notification(as->asfd, ret, sdirs->client,
 				sdirs->current, "log", "backup", cconf);
 		return ret;

@@ -8,6 +8,12 @@ Authors
 
     Graham Keeling: Edits.
 
+    Moe: Extra bootrec/bootsect steps and tests on additional Windows variants.
+
+Moe reports that this procedure successfully restored Win7en, Win7fr, Win8.1,
+and Win Server 2012. The Windows 7 install CD was used to fix the booting for
+8.1 and 2012 as both their respective medias weren't able to do the job.
+
 
 Prerequisites
 -------------
@@ -197,10 +203,6 @@ issue.
 
 You should now be able to boot into your restored OS. 
 
-One final note - I had difficulties trying to get a restored client backup to
-boot on a Virtual Machine, even though the same backup worked when restored to
-the client. If testing Burp its best to test on the same hardware with a spare
-disk.
 
 Note from Graham - I tested using VirtualBox, and it worked fine for me.
 The Hiren's boot CD is 32 bit and I was trying to restore a 64 bit machine.
@@ -208,3 +210,15 @@ So, in "Mini Windows Xp", I downloaded the 32 bit burp client, and when I
 needed to make the system bootable, I used a 64 bit Windows 7 install disk. It
 would not boot the install disk until I turned 'Enable I/O APIC' on in the
 VirtualBox settings.
+
+Note from Moe - he reports that, when installing to a blank physical hard
+drive, or a new VMWare vmdk, the following two commands are necessary after
+three times through the Windows 7 install disk repair and reboot procedure:
+bootrec /fixmbr
+bootsect /nt60 all
+Then exit, reboot normally and the OS boots like a charm.
+
+Scott confirmed that this also helped him to boot on VMWare, but then he got
+a blue screen of death later in the boot sequence - suspect that this is
+probably due to massive hardware differences on the VM when the backup was
+made on a real hardware. The restore worked fine on the original hardware.

@@ -65,6 +65,7 @@ static void usage_client(void)
 	printf(" Options:\n");
 	printf("  -a <action>    The action can be one of the following.\n");
 	printf("                  b: backup\n");
+	printf("                  delete: delete\n");
 	printf("                  d: diff\n");
 	printf("                  e: estimate\n");
 	printf("                  l: list (this is the default when an action is not given)\n");

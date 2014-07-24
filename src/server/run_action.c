@@ -234,6 +234,8 @@ static int run_list(struct asfd *asfd, struct sdirs *sdirs, struct conf *cconf)
 	}
 	if(asfd->write_str(asfd, CMD_GEN, "ok")) goto end;
 
+	iobuf_free_content(asfd->rbuf);
+
 	ret=do_list_server(asfd,
 		sdirs, cconf, backupno, listregex, browsedir);
 end:
@@ -262,6 +264,8 @@ static int run_diff(struct asfd *asfd, struct sdirs *sdirs, struct conf *cconf)
 			goto end;
 	}
 	if(asfd->write_str(asfd, CMD_GEN, "ok")) goto end;
+
+	iobuf_free_content(asfd->rbuf);
 
 	ret=do_diff_server(asfd, sdirs, cconf, backupno);
 end:

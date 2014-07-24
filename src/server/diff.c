@@ -68,7 +68,9 @@ int do_diff_server(struct asfd *asfd, struct sdirs *sdirs, struct conf *conf,
 	struct bu *bu=NULL;
 	struct bu *bu_list=NULL;
 
-	printf("in do_list_server\n");
+	printf("in do_diff_server\n");
+
+	iobuf_free_content(asfd->rbuf);
 
 	if(bu_list_get(sdirs, &bu_list)
 	  || write_status(STATUS_LISTING, NULL, conf))

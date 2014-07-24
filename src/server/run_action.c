@@ -194,6 +194,8 @@ static int run_delete(struct asfd *asfd,
 
 static int run_list(struct asfd *asfd, struct sdirs *sdirs, struct conf *cconf)
 {
+	int ret=-1;
+	char *cp=NULL;
 	char *backupno=NULL;
 	char *browsedir=NULL;
 	char *listregex=NULL;
@@ -203,51 +205,67 @@ static int run_list(struct asfd *asfd, struct sdirs *sdirs, struct conf *cconf)
 	{
 		logp("Not allowing list of %s\n", cconf->cname);
 		asfd->write_str(asfd, CMD_GEN, "Client list is not allowed");
-		return -1;
+		goto end;
 	}
 
 	if(!strncmp_w(rbuf->buf, "list "))
 	{
-		if((listregex=strrchr(rbuf->buf, ':')))
+		if((cp=strrchr(rbuf->buf, ':')))
 		{
-			*listregex='\0';
-			listregex++;
+			*cp='\0';
+			if(!(listregex=strdup_w(cp+1, __func__)))
+				goto end;
 		}
-		backupno=rbuf->buf+strlen("list ");
+		if(!(backupno=strdup_w(rbuf->buf+strlen("list "), __func__)))
+			goto end;
+		
 	}
 	else if(!strncmp_w(rbuf->buf, "listb "))
 	{
-		if((browsedir=strchr(rbuf->buf, ':')))
+		if((cp=strchr(rbuf->buf, ':')))
 		{
-			*browsedir='\0';
-			browsedir++;
+			*cp='\0';
+			if(!(browsedir=strdup_w(cp+1, __func__)))
+				goto end;
 		}
 		strip_trailing_slashes(&browsedir);
-		backupno=rbuf->buf+strlen("listb ");
+		if(!(backupno=strdup_w(rbuf->buf+strlen("listb "), __func__)))
+			goto end;
 	}
-	if(asfd->write_str(asfd, CMD_GEN, "ok")) return -1;
+	if(asfd->write_str(asfd, CMD_GEN, "ok")) goto end;
 
-	return do_list_server(asfd,
+	ret=do_list_server(asfd,
 		sdirs, cconf, backupno, listregex, browsedir);
+end:
+	free_w(&backupno);
+	free_w(&browsedir);
+	free_w(&listregex);
+	return ret;
 }
 
 static int run_diff(struct asfd *asfd, struct sdirs *sdirs, struct conf *cconf)
 {
+	int ret=-1;
 	char *backupno=NULL;
 	struct iobuf *rbuf=asfd->rbuf;
 
 	if(!cconf->client_can_diff)
 	{
-		logp("Not allowing list of %s\n", cconf->cname);
-		asfd->write_str(asfd, CMD_GEN, "Client list is not allowed");
-		return -1;
+		logp("Not allowing diff of %s\n", cconf->cname);
+		asfd->write_str(asfd, CMD_GEN, "Client diff is not allowed");
+		goto end;
 	}
 
 	if(!strncmp_w(rbuf->buf, "diff "))
-		backupno=rbuf->buf+strlen("diff ");
-	if(asfd->write_str(asfd, CMD_GEN, "ok")) return -1;
+	{
+		if((backupno=strdup_w(rbuf->buf+strlen("diff "), __func__)))
+			goto end;
+	}
+	if(asfd->write_str(asfd, CMD_GEN, "ok")) goto end;
 
-	return do_diff_server(asfd, sdirs, cconf, backupno);
+	ret=do_diff_server(asfd, sdirs, cconf, backupno);
+end:
+	return ret;
 }
 
 static int unknown_command(struct asfd *asfd)

@@ -220,8 +220,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 #ifdef HAVE_WIN32
 			bfd,
 #endif
-			sb->path.buf, &sb->statp, &extrameta, &elen,
-			sb->winattr, conf, datalen))
+			sb, &extrameta, &elen, conf, datalen))
 		{
 			logw(asfd, conf, "Meta data error for %s", sb->path.buf);
 			goto end;

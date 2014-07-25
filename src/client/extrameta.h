@@ -13,11 +13,9 @@ extern int get_extrameta(struct asfd *asfd,
 #ifdef HAVE_WIN32
 	BFILE *bfd,
 #endif
-	const char *path,
-	struct stat *statp,
+	struct sbuf *sb,
 	char **extrameta,
 	size_t *elen,
-	int64_t winattr,
 	struct conf *conf,
 	size_t *datalen);
 
@@ -26,8 +24,7 @@ extern int set_extrameta(struct asfd *asfd,
 	BFILE *bfd,
 #endif
 	const char *path,
-	char cmd,
-	struct stat *statp,
+	struct sbuf *sb,
 	const char *extrameta,
 	size_t metalen,
 	struct conf *conf);

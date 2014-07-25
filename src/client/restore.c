@@ -159,48 +159,6 @@ int open_for_restore(struct asfd *asfd, BFILE *bfd, const char *path,
 	return 0;
 }
 
-static int start_restore_file(struct asfd *asfd,
-	BFILE *bfd,
-	struct sbuf *sb,
-	const char *fname,
-	enum action act,
-	const char *encpassword,
-	char **metadata,
-	size_t *metalen,
-	int vss_restore,
-	struct conf *conf)
-{
-	int ret=-1;
-	char *rpath=NULL;
-
-	if(act==ACTION_VERIFY)
-	{
-		cntr_add(conf->cntr, sb->path.cmd, 1);
-		return 0;
-	}
-
-	if(build_path(fname, "", &rpath, NULL))
-	{
-		char msg[256]="";
-		// failed - do a warning
-		snprintf(msg, sizeof(msg), "build path failed: %s", fname);
-		if(restore_interrupt(asfd, sb, msg, conf))
-			ret=-1;
-		ret=0; // Try to carry on with other files.
-		goto end;
-	}
-
-	if(open_for_restore(asfd, bfd, rpath, sb, vss_restore, conf))
-		goto end;
-
-	cntr_add(conf->cntr, sb->path.cmd, 1);
-
-	ret=0;
-end:
-	if(rpath) free(rpath);
-	return ret;
-}
-
 static int restore_special(struct asfd *asfd, struct sbuf *sb,
 	const char *fname, enum action act, struct conf *conf)
 {

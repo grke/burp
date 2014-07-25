@@ -84,7 +84,7 @@ static int start_to_receive_new_file(struct asfd *asfd,
 	char *rpath=NULL;
 	int istreedata=0;
 
-//logp("start to receive: %s\n", sb->path);
+//logp("start to receive: %s\n", sb->path.buf);
 
 	if(!(rpath=set_new_datapth(asfd, sdirs, cconf, sb, dpthl, &istreedata)))
 		return -1;

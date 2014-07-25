@@ -184,12 +184,14 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 
 	if(size_checks(asfd, sb, conf)) forget++;
 
-	if(!forget)
+	sb->compression=in_exclude_comp(conf->excom,
+		sb->path.buf, conf->compression);
+	if(attribs_encode(sb)) goto error;
+
+	if(sb->path.cmd!=CMD_METADATA
+	  && sb->path.cmd!=CMD_ENC_METADATA)
 	{
-		sb->compression=in_exclude_comp(conf->excom,
-			sb->path.buf, conf->compression);
-		if(attribs_encode(sb)) goto error;
-		else if(open_file_for_sendl(asfd,
+		if(open_file_for_sendl(asfd,
 #ifdef HAVE_WIN32
 			bfd, NULL,
 #else

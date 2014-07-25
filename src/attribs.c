@@ -149,7 +149,7 @@ void attribs_decode(struct sbuf *sb)
 	static int64_t val;
 	static struct stat *statp;
 
-	p=sb->attr.buf;
+	if(!(p=sb->attr.buf)) return;
 	statp=&sb->statp;
 
 	if(sb->burp2)

@@ -235,7 +235,8 @@ static int ensure_read(BFILE *bfd, char *buf, size_t s, int print_err)
 	return 0;
 }
 
-int get_vss(BFILE *bfd, const char *path, struct stat *statp, char **vssdata, size_t *vlen, int64_t winattr, struct conf *conf, size_t *datalen)
+int get_vss(BFILE *bfd, struct sbuf *sb, char **vssdata, size_t *vlen,
+	struct conf *conf, size_t *datalen)
 {
 	bsid sid;
 	char *tmp=NULL;

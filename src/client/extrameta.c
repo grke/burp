@@ -1,6 +1,6 @@
 #include "include.h"
 
-int has_extrameta(const char *path, char cmd)
+int has_extrameta(const char *path, char cmd, struct conf *conf)
 {
 #if defined(WIN32_VSS)
 	return 1;
@@ -9,6 +9,9 @@ int has_extrameta(const char *path, char cmd)
     defined(HAVE_FREEBSD_OS) || \
     defined(HAVE_OPENBSD_OS) || \
     defined(HAVE_NETBSD_OS)
+
+	// FIX THIS: extra meta not supported in burp2.
+	if(conf->protocol==PROTO_BURP2) return 0;
 
 #ifdef HAVE_ACL
 	if(has_acl(path, cmd)) return 1;

@@ -7,7 +7,7 @@
 #define META_XATTR_BSD		'B'
 #define META_VSS		'V'
 
-extern int has_extrameta(const char *path, char cmd);
+extern int has_extrameta(const char *path, char cmd, struct conf *conf);
 
 extern int get_extrameta(struct asfd *asfd,
 #ifdef HAVE_WIN32

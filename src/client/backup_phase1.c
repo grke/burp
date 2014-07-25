@@ -57,7 +57,7 @@ static int usual_stuff(struct asfd *asfd,
 static int maybe_send_extrameta(struct asfd *asfd, const char *path, char cmd,
 	struct sbuf *sb, struct conf *conf, int symbol)
 {
-	if(!has_extrameta(path, cmd)) return 0;
+	if(!has_extrameta(path, cmd, conf)) return 0;
 	return usual_stuff(asfd, conf, path, NULL, sb, symbol);
 }
 

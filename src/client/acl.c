@@ -108,10 +108,11 @@ end:
 	return ret;
 }
 
-int get_acl(struct asfd *asfd, const char *path, struct stat *statp,
+int get_acl(struct asfd *asfd, struct sbuf *sb,
 	char **acltext, size_t *alen, struct conf *conf)
 {
 	acl_t acl=NULL;
+	const char *path=sb->path.buf;
 
 	if((acl=acl_contains_something(path, ACL_TYPE_ACCESS)))
 	{
@@ -124,7 +125,7 @@ int get_acl(struct asfd *asfd, const char *path, struct stat *statp,
 		acl_free(acl);
 	}
 
-	if(S_ISDIR(statp->st_mode))
+	if(S_ISDIR(sb->statp.st_mode))
 	{
 		if((acl=acl_contains_something(path, ACL_TYPE_DEFAULT)))
 		{
@@ -141,7 +142,7 @@ int get_acl(struct asfd *asfd, const char *path, struct stat *statp,
 }
 
 static int do_set_acl(struct asfd *asfd, const char *path,
-	struct stat *statp, const char *acltext, size_t alen,
+	const char *acltext, size_t alen,
 	int acltype, struct conf *conf)
 {
 	acl_t acl;
@@ -177,20 +178,21 @@ end:
 	return ret; 
 }
 
-int set_acl(struct asfd *asfd, const char *path, struct stat *statp,
-	const char *acltext, size_t alen, char cmd, struct conf *conf)
+int set_acl(struct asfd *asfd, const char *path, struct sbuf *sb,
+	const char *acltext, size_t alen, char metacmd, struct conf *conf)
 {
-	switch(cmd)
+	switch(metacmd)
 	{
 		case META_ACCESS_ACL:
 			return do_set_acl(asfd, path,
-				statp, acltext, alen, ACL_TYPE_ACCESS, conf);
+				acltext, alen, ACL_TYPE_ACCESS, conf);
 		case META_DEFAULT_ACL:
 			return do_set_acl(asfd, path,
-				statp, acltext, alen, ACL_TYPE_DEFAULT, conf);
+				acltext, alen, ACL_TYPE_DEFAULT, conf);
 		default:
-			logp("unknown acl type: %c\n", cmd);
-			logw(asfd, conf, "unknown acl type: %c\n", cmd);
+			logp("unknown acl type: %c\n", metacmd);
+			logw(asfd, conf,
+				"unknown acl type: %c\n", metacmd);
 			break;
 	}
 	return -1;

@@ -29,17 +29,14 @@ int get_extrameta(struct asfd *asfd,
 #ifdef HAVE_WIN32
 	BFILE *bfd,
 #endif
-	const char *path,
-	struct stat *statp,
+	struct sbuf *sb,
 	char **extrameta,
 	size_t *elen,
-	int64_t winattr,
 	struct conf *conf,
 	size_t *datalen)
 {
 #if defined (WIN32_VSS)
-	if(get_vss(bfd, path, statp, extrameta, elen, winattr, conf,
-		datalen)) return -1;
+	if(get_vss(bfd, sb, extrameta, elen, conf, datalen)) return -1;
 #endif
 	// Important to do xattr directly after acl, because xattr is excluding
 	// some entries if acls were set.
@@ -48,7 +45,7 @@ int get_extrameta(struct asfd *asfd,
     defined(HAVE_OPENBSD_OS) || \
     defined(HAVE_NETBSD_OS)
 #ifdef HAVE_ACL
-	if(get_acl(asfd, path, statp, extrameta, elen, conf)) return -1;
+	if(get_acl(asfd, sb, extrameta, elen, conf)) return -1;
 #endif
 #endif
 #if defined(HAVE_LINUX_OS) || \
@@ -56,7 +53,7 @@ int get_extrameta(struct asfd *asfd,
     defined(HAVE_OPENBSD_OS) || \
     defined(HAVE_NETBSD_OS)
 #ifdef HAVE_XATTR
-	if(get_xattr(asfd, path, statp, extrameta, elen, conf)) return -1;
+	if(get_xattr(asfd, sb, extrameta, elen, conf)) return -1;
 #endif
 #endif
         return 0;
@@ -67,8 +64,7 @@ int set_extrameta(struct asfd *asfd,
 	BFILE *bfd,
 #endif
 	const char *path,
-	char cmd,
-	struct stat *statp,
+	struct sbuf *sb,
 	const char *extrameta,
 	size_t metalen,
 	struct conf *conf)
@@ -114,11 +110,11 @@ int set_extrameta(struct asfd *asfd,
     defined(HAVE_NETBSD_OS)
 #ifdef HAVE_ACL
 			case META_ACCESS_ACL:
-				if(set_acl(asfd, path, statp, m, s, cmdtmp, conf))
+				if(set_acl(asfd, path, sb, m, s, cmdtmp, conf))
 					errors++;
 				break;
 			case META_DEFAULT_ACL:
-				if(set_acl(asfd, path, statp, m, s, cmdtmp, conf))
+				if(set_acl(asfd, path, sb, m, s, cmdtmp, conf))
 					errors++;
 				break;
 #endif
@@ -127,7 +123,7 @@ int set_extrameta(struct asfd *asfd,
 #ifdef HAVE_XATTR
 			case META_XATTR:
 				if(set_xattr(asfd,
-					path, statp, m, s, cmdtmp, conf))
+					path, sb, m, s, cmdtmp, conf))
 						errors++;
 				break;
 #endif

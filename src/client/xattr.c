@@ -45,7 +45,7 @@ int has_xattr(const char *path, char cmd)
 	return 0;
 }
 
-int get_xattr(struct asfd *asfd, const char *path, struct stat *statp,
+int get_xattr(struct asfd *asfd, struct sbuf *sb,
 	char **xattrtext, size_t *xlen, struct conf *conf)
 {
 	char *z=NULL;
@@ -55,6 +55,7 @@ int get_xattr(struct asfd *asfd, const char *path, struct stat *statp,
 	char *xattrlist=NULL;
 	size_t totallen=0;
 	size_t maxlen=0xFFFFFFFF/2;
+	const char *path=sb->path.buf;
 
 	if((len=llistxattr(path, NULL, 0))<=0)
 	{
@@ -193,7 +194,7 @@ int get_xattr(struct asfd *asfd, const char *path, struct stat *statp,
 }
 
 static int do_set_xattr(struct asfd *asfd,
-	const char *path, struct stat *statp,
+	const char *path, struct sbuf *sb,
 	const char *xattrtext, size_t xlen, struct conf *conf)
 {
 	size_t l=0;
@@ -229,17 +230,17 @@ end:
 	return ret;
 }
 
-int set_xattr(struct asfd *asfd, const char *path, struct stat *statp,
-	const char *xattrtext, size_t xlen, char cmd, struct conf *conf)
+int set_xattr(struct asfd *asfd, const char *path, struct sbuf *sb,
+	const char *xattrtext, size_t xlen, char metacmd, struct conf *conf)
 {
-	switch(cmd)
+	switch(metacmd)
 	{
 		case META_XATTR:
 			return do_set_xattr(asfd,
-				path, statp, xattrtext, xlen, conf);
+				path, sb, xattrtext, xlen, conf);
 		default:
-			logp("unknown xattr type: %c\n", cmd);
-			logw(asfd, conf, "unknown xattr type: %c\n", cmd);
+			logp("unknown xattr type: %c\n", metacmd);
+			logw(asfd, conf, "unknown xattr type: %c\n", metacmd);
 			break;
 	}
 	return -1;
@@ -272,7 +273,7 @@ int has_xattr(const char *path, char cmd)
 }
 
 #define BSD_BUF_SIZE	1024
-int get_xattr(const char *path, struct stat *statp,
+int get_xattr(const char *path, struct sbuf *sb,
 	char **xattrtext, size_t *xlen, struct conf *conf)
 {
 	int i=0;
@@ -447,7 +448,7 @@ int get_xattr(const char *path, struct stat *statp,
 }
 
 static int do_set_xattr_bsd(struct asfd *asfd,
-	const char *path, struct stat *statp,
+	const char *path, struct sbuf *sb,
 	const char *xattrtext, size_t xlen, struct conf *conf)
 {
 	int ret=-1;
@@ -509,13 +510,13 @@ end:
 }
 
 int set_xattr(struct asfd *asfd, const char *path,
-	struct stat *statp, const char *xattrtext,
-	size_t xlen, char cmd, struct conf *conf)
+	struct sbuf *sb, const char *xattrtext,
+	size_t xlen, char metacmd, struct conf *conf)
 {
-	switch(cmd)
+	switch(metacmd)
 	{
 		case META_XATTR_BSD:
-			return do_set_xattr_bsd(path, statp,
+			return do_set_xattr_bsd(path, sb,
 				xattrtext, xlen, conf);
 		default:
 			logp("unknown xattr type: %c\n", cmd);

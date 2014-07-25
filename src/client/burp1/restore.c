@@ -77,7 +77,8 @@ static int restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 #ifndef HAVE_WIN32
 			if(bclose(bfd, asfd))
 			{
-				logp("error closing %s in restore_file_or_get_meta\n", fname);
+				logp("error closing %s in %s\n",
+					fname, __func__);
 				ret=-1;
 			}
 #endif
@@ -88,8 +89,7 @@ static int restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 		{
 			char msg[256]="";
 			snprintf(msg, sizeof(msg),
-				"Could not transfer file in: %s",
-					rpath);
+				"Could not transfer file in: %s", rpath);
 			if(restore_interrupt(asfd, sb, msg, conf))
 				ret=-1;
 			goto end;
@@ -134,8 +134,7 @@ static int restore_metadata(struct asfd *asfd, BFILE *bfd, struct sbuf *sb,
 #ifdef HAVE_WIN32
 			bfd,
 #endif
-			fname, sb->path.cmd,
-			&(sb->statp), metadata, metalen, conf))
+			fname, sb, metadata, metalen, conf))
 		{
 			free(metadata);
 			// carry on if we could not do it

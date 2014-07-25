@@ -7,10 +7,10 @@
     defined(HAVE_OPENBSD_OS) || \
     defined(HAVE_NETBSD_OS)
 extern int has_acl(const char *path, char cmd);
-extern int get_acl(struct asfd *asfd, const char *path, struct stat *statp,
+extern int get_acl(struct asfd *asfd, struct sbuf *sb,
 	char **acltext, size_t *alen, struct conf *conf);
-extern int set_acl(struct asfd *asfd, const char *path, struct stat *statp,
-	const char *acltext, size_t alen, char cmd, struct conf *conf);
+extern int set_acl(struct asfd *asfd, const char *path, struct sbuf *sb,
+	const char *acltext, size_t alen, char metacmd, struct conf *conf);
 #endif
 #endif
 

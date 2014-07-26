@@ -281,15 +281,16 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 					forget++;
 				}
 
+				compression=in_exclude_comp(conf->excom,
+					conf->excmcount, sb.path,
+					conf->compression);
+				encode_stat(attribs,
+					&statbuf, winattr, compression);
+
 				if(!forget
 				  && cmd!=CMD_METADATA
 				  && cmd!=CMD_ENC_METADATA)
 				{
-					compression=in_exclude_comp(conf->excom,
-					  conf->excmcount, sb.path,
-					  conf->compression);
-					encode_stat(attribs,
-					  &statbuf, winattr, compression);
 					if(open_file_for_send(
 #ifdef HAVE_WIN32
 						&bfd, NULL,

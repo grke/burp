@@ -1,3 +1,17 @@
+2014-07-26 Changes in burp-2.0.8:
+  * There are many changes since the last burp-2 release, including:
+    - Ability to configure the server listening addresses at run time.
+    - Run the champion chooser as a separate process.
+    - Option to remove the need for a client password and cname - use certs
+      exclusively.
+    - Warn if files are restored from outside a hardlinked_archive.
+    - Fix unnecessary duplication and deletion with hardlinked_archive=1.
+    - Fix backups failing with too long server side paths.
+    - Add option to configure SSL compression.
+
+2014-07-26 Changes in burp-1.4.20:
+  * Fix for backing up fifos with xattrs.
+
 2014-07-06 Changes in burp-1.4.18:
   * Fix some Mac compilation warnings.
   * Fix a bug where specifying an alternative restore directory with a trailing

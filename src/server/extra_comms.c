@@ -43,7 +43,9 @@ static int send_features(struct asfd *asfd, struct conf *cconf)
 	  || append_to_feat(&feat, "incexc:")
 		/* clients can give the server an alternative client
 		   to restore from */
-	  || append_to_feat(&feat, "orig_client:"))
+	  || append_to_feat(&feat, "orig_client:")
+		/* clients can tell the server what kind of system they are. */
+          || append_to_feat(&feat, "uname:"))
 		goto end;
 
 	/* Clients can receive restore initiated from the server. */
@@ -203,6 +205,13 @@ static int extra_comms_read(struct async *as,
 			// resume/verify/restore.
 			logp("Client supports being sent counters.\n");
 			cconf->send_client_cntr=1;
+		}
+		else if(!strncmp(buf, "uname=", strlen("uname="))
+		  && strlen(buf)>strlen("uname="))
+		{
+			char *uname=buf+strlen("uname=");
+			if(!strncasecmp("Windows", uname, strlen("Windows")))
+				cconf->client_is_windows=1;
 		}
 		else if(!strncmp_w(rbuf->buf, "orig_client=")
 		  && strlen(rbuf->buf)>strlen("orig_client="))

@@ -8,6 +8,11 @@
     - Fix unnecessary duplication and deletion with hardlinked_archive=1.
     - Fix backups failing with too long server side paths.
     - Add option to configure SSL compression.
+    - Burp protocol 1 support looks good.
+    - Many code improvements and bug fixes.
+  * This release was focused on making the burp protocol 1 support good.
+    Be sure to read the UPGRADING file. Protocol 2 is still work in progress,
+    so do not expect protocol 2 backups to work with future releases.
 
 2014-07-26 Changes in burp-1.4.20:
   * Fix for backing up fifos with xattrs.

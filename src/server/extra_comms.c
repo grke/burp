@@ -206,10 +206,10 @@ static int extra_comms_read(struct async *as,
 			logp("Client supports being sent counters.\n");
 			cconf->send_client_cntr=1;
 		}
-		else if(!strncmp(buf, "uname=", strlen("uname="))
-		  && strlen(buf)>strlen("uname="))
+		else if(!strncmp_w(rbuf->buf, "uname=")
+		  && strlen(rbuf->buf)>strlen("uname="))
 		{
-			char *uname=buf+strlen("uname=");
+			char *uname=rbuf->buf+strlen("uname=");
 			if(!strncasecmp("Windows", uname, strlen("Windows")))
 				cconf->client_is_windows=1;
 		}

@@ -21,7 +21,7 @@ static int open_log(struct asfd *asfd, struct sdirs *sdirs, struct conf *cconf)
 
 	logp("Client version: %s\n", cconf->peer_version?:"");
 	logp("Protocol: %d\n", cconf->protocol);
-	if(cconf->client_is_windws)
+	if(cconf->client_is_windows)
 		logp("Client is Windows\n");
 
 	// Make sure a warning appears in the backup log.

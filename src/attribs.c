@@ -95,8 +95,10 @@ void encode_stat(char *buf, struct stat *statp, int64_t winattr, int compression
 /* Decode a stat packet from base64 characters */
 void decode_stat(const char *buf, struct stat *statp, int64_t *winattr, int *compression)
 {
-   const char *p = buf;
+   const char *p;
    int64_t val;
+
+   if(!(p=buf)) return;
 
    p += from_base64(&val, p);
    plug(statp->st_dev, val);

@@ -1,5 +1,0 @@
-# Run the burp client every 20 minutes with the 'timed' option.
-# Sleep a random number of seconds from 0 to 1200 (20 minutes) before
-# contacting the server.
-# The burp server will decide whether it is yet time to do a backup or not.
-0,20,40 * * * *	root	/usr/sbin/burp -a t -q 1200 >>/var/log/burp-client 2>&1

@@ -1,8 +1,0 @@
-TO BUILD:
-
-- Download the source packages from "Source0" macros defined in the all three spec files with respective names and version numbers
-  and place them in SOURCES directory.
-- Run rpmbuild against each RPM:
-  rpmbuild -v -ba SPECS/<filename.spec>
-
-

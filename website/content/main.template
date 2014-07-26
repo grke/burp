@@ -1,0 +1,124 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+<STYLE type="text/css">
+<!--
+#mainlink { text-decoration:none;
+color:#000000;
+background-color:white;}
+P { text-align:justify;}
+-->
+</STYLE>
+<TITLE>
+BURP - BackUp and Restore Program
+</TITLE>
+</HEAD>
+<BODY BACKGROUND="/images/background.jpg" BGCOLOR="white">
+
+<TABLE WIDTH="100%" BORDER=0>
+ <TR>
+  <TD WIDTH="10%"></TD>
+  <TD ALIGN="CENTER" WIDTH="80%">
+   <TABLE BORDER=1 BGCOLOR="white">
+    <TR>
+     <TD ALIGN="CENTER" WIDTH="100%">
+      <BR>
+      <A HREF="/">
+       <IMG BORDER=0 SRC="/images/logo.jpg" ALT="BURP - BackUp and Restore Program">
+      </A>
+
+<!-- @header -->
+
+      <TABLE BORDER=0>
+       <TR>
+        <TD WIDTH="12%" VALIGN="top">
+         <p>
+          <TABLE BORDER=0 WIDTH="10%" CELLSPACING=2 CELLPADDING=2>
+@index@ABOUT@about
+@why@WHY@why
+@features@FEATURES@features
+@changelog@CHANGELOG@changelog
+@news@NEWS@news
+@faq@FAQ@faq
+@docs@DOCS@docs
+@burpui@BURP-UI@burpui
+@burp2@BURP2@burp2
+@download@DOWNLOAD@download
+@licence@LICENCE@licence
+@contributors@CONTRIBUTORS@contributors
+@donations@DONATIONS@donations
+@sponsors@SPONSORS@sponsors
+@contact@CONTACT@contact
+          </TABLE>
+         </p>
+        </TD>
+        <TD WIDTH="60%">
+         <table>
+          <tr>
+           <td align="left">
+@content
+           </td>
+          </tr>
+         </table>
+        </TD>
+        <TD WIDTH="8%"></TD>
+       </TR>
+      </TABLE>
+
+      <table width="100%">
+       <tr>
+        <td width="10%"></td>
+        <td align="center" width="30%">
+         <form action="https://www.paypal.com/cgi-bin/webscr" method="post">
+          <input type="hidden" name="cmd" value="_s-xclick">
+          <input type="hidden" name="hosted_button_id" value="XC8N3XB7T6UFQ">
+          <input type="image" src="/images/btn_donate_SM.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online.">
+          <img alt="" border="0" src="https://www.paypal.com/en_GB/i/scr/pixel.gif" width="1" height="1">
+         </form>
+         <script id='fbrv8cz'>(function(i){var f,s=document.getElementById(i);f=document.createElement('iframe');f.src='//api.flattr.com/button/view/?uid=grke.net&button=compact&url='+encodeURIComponent(document.URL);f.title='Flattr';f.height=20;f.width=110;f.style.borderWidth=0;s.parentNode.insertBefore(f,s);})('fbrv8cz');</script>
+         <a href="bitcoin:1PFtePS2YE5i5dTX17ozJPHrjKu2UqBLmi?label=burp%20donation"><img src="/images/bitcoin-button.png" alt="Donate with Bitcoin" title="Donate with Bitcoin" border="0" /></a>
+        </td>
+        <td align="centre" width="50%">
+         <p>
+Burp is open and free software. I work on it in my spare time.
+If you would like this work to continue, please consider making a small
+donation.
+         </p>
+        </td>
+        <td width="10%">
+        </td>
+       </tr>
+      </table>
+
+      <BR>
+     </TD>
+    </TR>
+   </TABLE>
+  <TD WIDTH="10%"></TD>
+ </TR>
+
+ <table width="100%">
+  <tr>
+   <td align="left">
+    <font color="#000000">
+     Burp, don't suck.
+    </font>
+   </td>
+   <td align="right">
+    <font color="#000000">
+     Last updated: August 2014
+     <BR>
+     By Graham Keeling
+     <BR>
+     <a href="http://6sync.com">Hosted by 6sync</a>
+    </font>
+   </td>
+  </tr>
+ </table>
+
+</TABLE>
+
+</BODY>
+</HTML>

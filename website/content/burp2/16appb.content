@@ -1,0 +1,259 @@
+<h3 align="center">Improved Open Source Backup:
+<br>Incorporating inline deduplication and sparse indexing solutions</h3>
+<h4 align="center">G. P. E. Keeling</h4>
+
+<a href="15appa.html">&lt; Prev</a>
+<a href="00contents.html">Contents</a>
+<a href="17appc.html">Next &gt;</a>
+
+<h4>Appendix B - Design of the proof of concept programs</h4>
+
+<p>
+In order to ensure a solidly functional rabin algorithm and disk storage
+format before embarking on the complex asymetric network i/o that will be
+required for the first iteration of the software, I designed and implemented
+some proof of concept programs.
+</p>
+
+<p>
+The idea was to have programs that could use simple i/o so that data streams
+could simply be piped between them, or written to or read from files.
+</p>
+
+<p>
+So, there are four programs: 'client', 'server', 'tneilc' and 'revres', and
+they operate in pairs.
+</p>
+
+<pre>
+files on disk      backup stream   backup stream           manifest file
+----------&gt; client -------&gt;        ----------&gt; server ---&gt; signature files
+                                                           data files
+
+files on disk      restore stream  restore stream          manifest file
+&lt;---------- tneilc &lt;-------        &lt;---------- revres &lt;--- signature files
+                                                           data files
+</pre>
+
+<p>
+'client': Given a list of files, it reads them from the disk, splits them into
+variable length chunks, generates signatures, and outputs a backup stream
+(either to a file, or on standard output). There are options available for
+tweaking the rabin fingerprinting parameters.
+</p>
+<pre>
+Usage: client [options] &lt;input file&gt; ...
+
+ -o output file
+ -w sliding window size (between 17 and 63)
+ -a average block size
+ -m minimum block size
+ -x maximum block size
+</pre>
+
+<p>
+'server': Reads a backup stream on standard input or from a file, and converts
+the file names, signatures and data to a storage format on disk. The storage
+format consists of three parts:
+<br>
+a) Data files, containing actual chunks of data.
+<br>
+b) Signature files, containing the signatures for the data files.
+<br>
+c) A manifest, containing the paths of the original files, and a list of the
+   signatures that represent the data making up the original file.
+<br>
+The server will read any existing signatures on disk into memory at the start
+of execution.
+<br>
+If the server has seen a chunk in the backup stream already, it will not save
+it twice. It will instead save the signature reference to the manifest and
+discard the duplicate data.
+</p>
+
+<pre>
+Usage: server [options] &lt;input file&gt; ...
+
+ -d &lt;directory&gt; directory for output
+</pre>
+
+<p>
+'revres': The reverse of 'server'. It reads a manifest file and
+converts the data it references into a restore stream, which can be output
+to a file, or to standard output.
+</p>
+
+<pre>
+Usage: revres [options] &lt;input file&gt; ...
+
+ -d base directory
+ -o output file
+</pre>
+
+<p>
+'tneilc': The reverse of 'client'. It reads a restore stream, and converts it
+back into the files that were originally backed up.
+</p>
+
+<pre>
+Usage: tneilc [options] &lt;input file&gt; ...
+
+ -d &lt;directory&gt; directory for output
+</pre>
+
+<p>
+Examples of the expected usage of these programs:
+</p>
+
+<pre>
+To back up two files, named 'a' and 'b':
+client README | server -d /tmp/storage
+To restore them:
+revres -d /tmp/storage/ /tmp/storage/man/0 | tneilc -d /tmp/restore
+</pre>
+</p>
+
+
+<h4>B.1. Backup stream</h4>
+
+<p>
+In the original burp, each peace of information sent over the wire starts
+with a single byte that indicates the type of information. The next four
+bytes after that are a hexidecimal number representing the length of 
+the rest of the line. This means that I can have a maximum of 65535 bytes
+in a line. I have found that this schema works well, and will continue to
+use it for this project.
+<br>
+For the proof of concept program, I will use:
+<br>
+'f' to mean 'file name'.
+<br>
+'s' to mean 'signature'.
+<br>
+'a' to mean 'data' (I reserve 'd' to mean 'directory' later on).
+<br>
+So, when backing up a small file called 'testfile', the backup stream might
+look something like the following. For ease of reading, I have split it onto
+separate lines.
+</p>
+
+<pre>
+f0008testfile
+s00300000006E18F503EA810FFB91AF5E8C4874BA3F8CE6DF96A9
+a0014This is my testfile.
+</pre>
+
+<p>
+The signature is made up of the rabin fingerprint (16 characters) and the
+md5sum (32 characters) of the data in the file ('This is my testfile').
+<br>
+There may be many signature/data pairs per file backed up.
+</p>
+
+
+<h4>B.2. Restore stream</h4>
+
+<p>
+This is the same as the backup stream, except that there are no 's'
+(signature) lines required.
+</p>
+
+<h4>B.3. Storage format</h4>
+
+<p>
+There are three parts to the storage format.
+<br>
+The manifest (instructions on how to recreate a set of files), the signatures,
+and the actual data.
+</p>
+
+<p>
+In the prototype, there will be three top level diretories in the storage:
+'man', 'dat' and 'sig'.
+<br>
+Each backup will have a single manifest. The first manifest will be '0', and
+subsequent ones will increment that name by one each time.
+The 'dat' and 'sig' directories will each contain a path and file named like
+this, where each component of the path and name is a hexidecimal number:
+<br>
+'0000/0000/0000'
+<br>
+The signature file references the data file with the same path and name.
+<br>
+When enough data is written to this file (the number of chunks to be determined
+via some experimentation), it is closed and a new one is
+opened with an incremented file name:
+<br>
+'0000/0000/0001'
+</p>
+
+<p>
+When the file part gets to 'FFFF', a new subdirectory '0000/0001' will be
+created, and the file within it will start from '0000' again.
+<br>
+Since popular file systems, like ext3, only support 32000 subdirectories,
+The subdirectory increments will be limited to a maximum of 30000.
+</p>
+
+<p>
+So, there can be 30000*30000*65535=58981500000000 data files, which should
+be enough! Most file systems will run out of inodes before the number of
+storage data files run out.
+</p>
+
+<p>
+The contents of the manifest file will look like the following, where the
+format of each line is following the same outline as described for the backup
+stream:
+</p>
+
+<pre>
+f0009testfile2
+s00130000/0000/0000/0000
+s00130000/0000/0000/0001
+s00130000/0000/0000/0000
+s00130000/0000/0000/0001
+s00130000/0000/0000/0002
+f0009testfile3
+s00130000/0000/0000/0000
+</pre>
+
+<p>
+The signature lines reference locations in the data and signature files, the
+first three components being the file itself, and the last being the index
+of the signature/data.
+</p>
+
+<p>
+The signature files will look like this:
+<pre>
+s0030F45FE5EFF25857E918C552AEFA3CFD39A8ECB1F4E8D09196
+s0030A423F6E2AF45C796EA35BD8C9ABC4D328133349EB80DC52A
+s00301C9472B37A8DDC2106A9EBC217CF44AAC33A4AB50641A3A5
+s0030933AEF79A6ED384202DA19419BC5F72908596D9D2E8B7C8F
+s0030C1BEF23979ADDAADACDD8BEDF8BA67A91090777FEBD69266
+</pre>
+And so on, for however many signatures there are in the signature/data file.
+</p>
+
+<p>
+These signatures are loaded by the server before it reads the backup stream
+for the client, and uses them for deduplication.
+<p>
+
+<p>
+The data files will contain the chunks for each of the signatures, each
+preceeded by 'a&lt;four characters of hex&gt;'.
+<br>
+Note that the server does not have to read the signatures in order to retrieve
+the data for a restore, because the references in the manifest also point
+directly to the correct location in the data files.
+<br>
+Also, this format allows for client compression and encryption of chunks on
+the client side at some future date. This will not be done for this project,
+but I am ensuring that the decisions that I make now do not preclude that.
+</p>
+
+<a href="15appa.html">&lt; Prev</a>
+<a href="00contents.html">Contents</a>
+<a href="17appc.html">Next &gt;</a>

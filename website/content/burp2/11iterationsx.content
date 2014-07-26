@@ -1,0 +1,126 @@
+<h3 align="center">Improved Open Source Backup:
+<br>Incorporating inline deduplication and sparse indexing solutions</h3>
+<h4 align="center">G. P. E. Keeling</h4>
+<a href="10results2.html">&lt; Prev</a>
+<a href="00contents.html">Contents</a>
+<a href="12conclusion.html">Next &gt;</a>
+
+
+
+<h4>9. Further iterations</h4>
+
+<p>
+Since completing and testing the second iteration, the software has been
+further improved in various ways through further development.
+</p>
+
+<p>
+An attempt has been made to improve the restore time and restore network
+utilisation.
+<br>
+The idea was to make a list of all the data files containing the required
+chunks on the server side, then send them to the client, which would store
+them in a 'spooling' area. The server would then send the sequence of chunks
+to be read from the data files to reconstruct the original files. In this
+way, the reconstruction of the original files moves from the server side to
+the client side, and blocks are only transferred once, albeit with potentially
+unneeded ones.
+</p>
+<p>
+It is possible that, in some situations, this is less efficient. For example,
+when a small file containing a single chunk is required by the user. So,
+I implemented a simple mechanism that first estimates the data that needs to
+be sent by both restore methods. If the 'spooling' method needs to send less
+than some percentage (I arbitrarily chose 90%) of the total data of the
+'streaming' method, the 'spooling' method is chosen.
+</p>
+<p>
+However, the burden is then on the client to then reconstruct the original
+files from the data files. And, assuming the client has one disk, it will
+probably try to doing many reads and writes simultaneously.
+On my test setup, this meant that the client disk write speed was slower
+and hence the restores became slower. Regardless, the network utilisation was
+massively improved, benefiting from the deduplication of the chunks
+being transferred. It was using around a third of the network bandwidth that
+the other solutions used - around 12GB less.
+</p>
+
+<b>9.1. Additional work required prior to release</b>
+
+<p>
+Before the software is properly released to the public, I have a list of items
+that I would like to address. These are reproduced in
+<a href="22apph.html">Appendix H</a>.
+There are
+some important items to do with locking write access to data files, for
+example, so that multiple clients backing up simultaneously do not interfere
+with each other.
+</p>
+
+<p>
+A design element that I believe I got wrong in the completed iterations was
+to do the client file system scan in parallel with the backing up of data.
+Firstly, this makes the backup code more complicated. Secondly, it means that
+the original burp's progress counter system no longer works. When the file
+system scan is done as a separate stage at the start, you know how much data is
+left to back up and can provide time estimates. Thirdly, both client and
+server have to keep the scan data in memory, which affects the memory
+statistics. If the software reverted to the original burp's file system scan,
+the memory usage for the scan would be minimal.
+</p>
+
+<p>
+Although I am very pleased with the new software, I am aware that there are
+existing burp users who may prefer the original. For example, those that
+run the server on a 'plug computer' containing minimal resources such as memory,
+or those that like the ability to copy files direct from storage (as opposed
+to using the client software).
+<br>
+Since there is a lot of shared code between the old and new versions, I plan
+to implement a mode where you can choose to run it and get the old behaviour.
+This would also help existing users to transition. You may have clients using
+the old behaviour, and slowly add new style clients, for example.
+<br>
+Implementing this requires merging the unique parts of the original burp into
+the new code.
+</p>
+
+<p>
+The last one of these items that I would like to note is the ability to
+delete data files and backup directories that are no longer required. This
+is often problematic for software that does deduplication, because it is hard
+to know if all the saved blocks in a data file are no longer referenced.
+For example, the disk space that bup-0.25 uses only ever grows.
+</p>
+<p>
+My idea for this is to maintain summary files in a similar way to that in
+which the sparse indexes are maintained.
+</p>
+<p>
+Whenever a new backup is done for a client, a summary file would be generated
+that lists the data files that the backup used. Then another summary file is
+updated that encompasses all of the client's individual backup summaries.
+One of these second summaries is kept for each client.
+<br>
+When a client backup directory is deleted according to the retention periods
+set, a new summary file for that client is generated from the individual
+backup summaries.
+<br>
+On comparing the new and old summary file, if it is found that a data file is
+no longer referenced, the other top level client summaries are checked. If
+the reference is not found, then the data file can be deleted and disk space
+is recovered.
+<br>
+Since the sparse index maintenance code is already doing a very similar job,
+these summary files can be produced at the same time with the same code.
+Therefore, I believe the overhead for this will be minimal.
+</p>
+
+<p>
+I estimate that the work given in <a href="22apph.html">Appendix H</a>
+to take around two months to
+complete.
+</p>
+<a href="10results2.html">&lt; Prev</a>
+<a href="00contents.html">Contents</a>
+<a href="12conclusion.html">Next &gt;</a>

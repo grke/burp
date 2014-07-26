@@ -1,0 +1,46 @@
+<P>
+<FONT COLOR="#000000">
+I started writing Burp when I had become frustrated with the complexity and
+drawbacks of <a href="http://bacula.org">Bacula</a>. I am in no way trying to
+denigrate the work of its authors - after all, it is also free software that
+the authors have very kindly provided. It also saved a lot of my wife's
+data when her laptop harddrive crashed one day (thank you, Bacula!).
+But here is a list of Bacula disadvantages I perceive that I hope to avoid with
+Burp.
+
+<ul>
+<li>Complexity to configure - Bacula is just too complicated. It has four
+separate main components, each with their own configuration files.
+<li>Complexity to code/debug - Kern Sibbald, the main author of Bacula admits
+that there is a distinct lack of community contribution to the code. I believe
+that this is partly due to the difficulty in understanding its complexity.
+They also have the need to continue to support, or provide continuity with
+the way things have gone before, which makes for slow development.
+<li>Works badly with disk storage - Bacula's mentality is very highly geared
+towards tape usage and therefore it works poorly with disks.
+<li>Stores the catalog separately to the backups - This causes a massive
+maintenance headache. For example, you now have to think about backups of your
+catalog. Additionally, changes to your configuration files might not take
+effect because some of the previous configuration gets written to the catalog,
+and then it is not easy to make the changes take effect. Furthermore, you
+end up needing to be a mysql or postgres database expert.
+<li>Does not do delta differencing - Bacula backs up the whole file even if
+only a few bytes in it have changed.
+<li>Relies far too heavily on clock accuracy - Bacula goes very badly wrong
+if your computer's clock somehow gets skewed. In fact, it relies so heavily
+on the clock and timestamps that it does not actually track which backup
+another was based on.
+<li>Laptop backups are difficult to schedule.
+<li>Cannot resume an interrupted backup.
+<li>Retention configuration - it is just impossible to configure a sensible
+retention policy.
+<A href="http://www.adsm.org/lists/html/Bacula-users/2011-01/msg00308.html">Here is my explanation why</a>, sent to the bacula-users mailing list.
+<li>No Windows EFS support - EFS files are silently ignored.
+</ul>
+
+The main advantage that Bacula has over other open source offerings is that
+it supports Windows Volume Shadow Copy Service (VSS). This means that it is
+hard to use programs like rsync or rdiff-backup on Windows computers.
+
+</FONT>
+</P>

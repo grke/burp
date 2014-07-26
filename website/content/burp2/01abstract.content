@@ -1,0 +1,46 @@
+<h3 align="center">Improved Open Source Backup:
+<br>Incorporating inline deduplication and sparse indexing solutions</h3>
+<h4 align="center">G. P. E. Keeling</h4>
+<a href="00contents.html">Contents</a>
+<a href="02ack.html">Next &gt;</a>
+
+<h4>Abstract</h4>
+<p>
+This paper investigates
+whether incorporating inline deduplication techniques can improve open source
+backup offerings, and whether 'sparse indexing' is an effective solution to the
+disk deduplication bottleneck.
+</p>
+
+<p>
+Problems with an existing open source cross-platform network backup solution
+were identified,
+along with how it compares to other open source backup solutions,
+and a literature search and review of relevant algorithms and techniques was
+performed.
+</p>
+<p>
+A new backup engine was designed and implemented, using
+Agile methodology and ideas garnered from the research.
+</p>
+<p>
+A test procedure was produced and executed, and the results empirically show
+that the new software is either superior or comparable to its 'competition'
+in terms of speed, storage space, storage nodes, and network utilisation.
+</p>
+<p>
+These improvements came at the cost of increased memory utilisation, which was
+then partially mitigated by implementing 'sparse indexing'.
+</p>
+<p>
+There are some suggestions for further improvement and extra work to be done
+before an initial release.
+</p>
+
+<p>
+The paper ends with some conclusions and an evaluation of the project as a
+whole.
+</p>
+
+<a href="00contents.html">Contents</a>
+<a href="02ack.html">Next &gt;</a>

@@ -84,7 +84,7 @@ int open_file_for_sendl(struct asfd *asfd,
 #endif
 			// Close the open bfd so that it can be
 			// used again
-			close_file_for_sendl(bfd, asfd);
+			close_file_for_send(bfd, asfd);
 #ifdef HAVE_WIN32
 		}
 #endif
@@ -104,11 +104,6 @@ int open_file_for_sendl(struct asfd *asfd,
 		return -1;
 	}
 	return 0;
-}
-
-int close_file_for_sendl(BFILE *bfd, struct asfd *asfd)
-{
-	return bclose(bfd, asfd);
 }
 
 char *get_endfile_str(unsigned long long bytes, uint8_t *checksum)

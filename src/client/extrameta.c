@@ -29,9 +29,7 @@ int has_extrameta(const char *path, char cmd, struct conf *conf)
 }
 
 int get_extrameta(struct asfd *asfd,
-#ifdef HAVE_WIN32
 	BFILE *bfd,
-#endif
 	struct sbuf *sb,
 	char **extrameta,
 	size_t *elen,
@@ -63,9 +61,7 @@ int get_extrameta(struct asfd *asfd,
 }
 
 int set_extrameta(struct asfd *asfd,
-#ifdef HAVE_WIN32
 	BFILE *bfd,
-#endif
 	const char *path,
 	struct sbuf *sb,
 	const char *extrameta,

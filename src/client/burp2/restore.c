@@ -69,21 +69,12 @@ static int restore_metadata(
 			return -1;
 
 		// Read in the metadata...
-		if(restore_file_or_get_meta(
-#ifdef HAVE_WIN32
-			bfd,
-#endif
-			sb, fname, act, encpassword,
+		if(restore_file_or_get_meta(bfd, sb, fname, act, encpassword,
 			&metadata, &metalen, vss_restore, conf))
 				return -1;
 		if(metadata)
 		{
-			
-			if(set_extrameta(
-#ifdef HAVE_WIN32
-				bfd,
-#endif
-				fname, sb->path.cmd,
+			if(set_extrameta(bfd, fname, sb->path.cmd,
 				&(sb->statp), metadata, metalen, conf))
 			{
 				free(metadata);

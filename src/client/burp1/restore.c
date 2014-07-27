@@ -130,10 +130,7 @@ static int restore_metadata(struct asfd *asfd, BFILE *bfd, struct sbuf *sb,
 	if(metadata)
 	{
 		
-		if(set_extrameta(asfd,
-#ifdef HAVE_WIN32
-			bfd,
-#endif
+		if(set_extrameta(asfd, bfd,
 			fname, sb, metadata, metalen, conf))
 		{
 			free(metadata);

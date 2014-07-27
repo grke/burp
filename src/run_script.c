@@ -62,7 +62,7 @@ static int run_script_select(struct asfd *asfd, FILE **sout, FILE **serr,
 		}
 		if(FD_ISSET(soutfd, &fsr))
 		{
-			if(log_script_output(asfd, sout, NULL,
+			if(log_script_output(asfd, sout, conf,
 				do_logp, do_logw, logbuf)) return -1;
 		}
 		if(FD_ISSET(serrfd, &fsr))

@@ -188,7 +188,6 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 			return RS_IO_ERROR;
 		}
 	}
-#ifdef HAVE_WIN32
 	else if(fb->bfd)
 	{
 		if(fb->do_known_byte_count)
@@ -228,7 +227,6 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 			return RS_IO_ERROR;
 		}
 	}
-#endif
 	else if(fp)
 	{
 		len = fread(fb->buf, 1, fb->buf_len, fp);

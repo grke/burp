@@ -104,7 +104,7 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 				cconf, &bfd, NULL, 0, -1);
 		}
 	}
-	close_file_for_sendl(&bfd, asfd);
+	close_file_for_send(&bfd, asfd);
 	return ret;
 }
 

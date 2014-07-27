@@ -445,6 +445,7 @@ int bclose(BFILE *bfd, struct asfd *asfd)
 int bopen(BFILE *bfd,
 	struct asfd *asfd, const char *fname, int flags, mode_t mode)
 {
+	if(!bfd) return 0;
 	if(bfd->mode!=BF_CLOSED && bclose(bfd, asfd))
 		return -1;
 	if(!(bfd->fd=open(fname, flags, mode))<0)

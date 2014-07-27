@@ -67,65 +67,48 @@ struct bsid {
 #endif
 
 int open_file_for_sendl(struct asfd *asfd,
-	BFILE *bfd, FILE **fp, const char *fname,
+	BFILE *bfd, const char *fname,
 	int64_t winattr, size_t *datalen, int atime, struct conf *conf)
 {
-	if(fp)
+	if(bfd->mode!=BF_CLOSED)
 	{
-#ifdef O_NOATIME
-		static int fd;
-		if((fd=open(fname, O_RDONLY|atime?0:O_NOATIME))<0
-		  || !(*fp=fdopen(fd, "rb")))
-#else
-		if(!(*fp=fopen(fname, "rb")))
-#endif
-		{
-			logw(asfd, conf, "Could not open %s: %s\n",
-				fname, strerror(errno));
-			return -1;
-		}
-	}
 #ifdef HAVE_WIN32
-	else
-	{
-		if(bfd->mode!=BF_CLOSED)
+		if(bfd->path && !strcmp(bfd->path, fname))
 		{
-			if(bfd->path && !strcmp(bfd->path, fname))
-			{
-				// Already open after reading the VSS data.
-				// Time now for the actual file data.
-				return 0;
-			}
-			else
-			{
-				// Close the open bfd so that it can be
-				// used again
-				close_file_for_sendl(bfd, NULL, asfd);
-			}
+			// Already open after reading the VSS data.
+			// Time now for the actual file data.
+			return 0;
 		}
-		binit(bfd, winattr, conf);
-		*datalen=0;
-		// Windows has no O_NOATIME.
-		if(bopen(bfd, asfd, fname, O_RDONLY|O_BINARY, 0))
+		else
 		{
-			berrno be;
-			berrno_init(&be);
-			logw(asfd, conf, "Could not open %s: %s\n",
-				fname, berrno_bstrerror(&be, errno));
-			return -1;
-		}
-	}
 #endif
+			// Close the open bfd so that it can be
+			// used again
+			close_file_for_sendl(bfd, asfd);
+#ifdef HAVE_WIN32
+		}
+#endif
+	}
+	binit(bfd, winattr, conf);
+	*datalen=0;
+	if(bopen(bfd, asfd, fname, O_RDONLY|O_BINARY
+#ifdef O_NOATIME
+		|atime?0:O_NOATIME
+#endif
+	, 0))
+	{
+		berrno be;
+		berrno_init(&be);
+		logw(asfd, conf, "Could not open %s: %s\n",
+			fname, berrno_bstrerror(&be, errno));
+		return -1;
+	}
 	return 0;
 }
 
-int close_file_for_sendl(BFILE *bfd, FILE **fp, struct asfd *asfd)
+int close_file_for_sendl(BFILE *bfd, struct asfd *asfd)
 {
-	if(fp) return close_fp(fp);
-#ifdef HAVE_WIN32
-	if(bfd) return bclose(bfd, asfd);
-#endif
-	return -1;
+	return bclose(bfd, asfd);
 }
 
 char *get_endfile_str(unsigned long long bytes, uint8_t *checksum)
@@ -160,7 +143,7 @@ int write_endfile(struct asfd *asfd,
 int send_whole_file_gzl(struct asfd *asfd,
 	const char *fname, const char *datapth, int quick_read,
 	unsigned long long *bytes, const char *encpassword, struct conf *conf,
-	int compression, BFILE *bfd, FILE *fp, const char *extrameta,
+	int compression, BFILE *bfd, const char *extrameta,
 	size_t elen, size_t datalen)
 {
 	int ret=0;
@@ -225,27 +208,21 @@ int send_whole_file_gzl(struct asfd *asfd,
 		}
 		else
 		{
-			if(fp) strm.avail_in=fread(in, 1, ZCHUNK, fp);
+			// Windows VSS headers give us how much data to
+			// expect to read.
 #ifdef HAVE_WIN32
-			else
+			if(do_known_byte_count)
 			{
-			  // Windows VSS headers give us how much data to
-			  // expect to read.
-			  if(do_known_byte_count)
-			  {
-				  if(datalen<=0) strm.avail_in=0;
-				  else strm.avail_in=
-					 (uint32_t)bread(bfd, in,
+				if(datalen<=0) strm.avail_in=0;
+				else strm.avail_in=
+					(uint32_t)bread(bfd, in,
 						min((size_t)ZCHUNK, datalen));
-				  datalen-=strm.avail_in;
-			  }
-			  else
-			  {
-				  strm.avail_in=
-					 (uint32_t)bread(bfd, in, ZCHUNK);
-			  }
+				datalen-=strm.avail_in;
 			}
+			else
 #endif
+				strm.avail_in=
+					(uint32_t)bread(bfd, in, ZCHUNK);
 		}
 		if(!compression && !strm.avail_in) break;
 
@@ -434,7 +411,7 @@ static DWORD WINAPI write_efs(PBYTE pbData,
 int send_whole_filel(struct asfd *asfd,
 	char cmd, const char *fname, const char *datapth,
 	int quick_read, unsigned long long *bytes, struct conf *conf,
-	BFILE *bfd, FILE *fp, const char *extrameta,
+	BFILE *bfd, const char *extrameta,
 	size_t elen, size_t datalen)
 {
 	int ret=0;
@@ -501,13 +478,17 @@ int send_whole_filel(struct asfd *asfd,
 			ReadEncryptedFileRaw((PFE_EXPORT_FUNC)write_efs,
 				&mybuf, bfd->pvContext);
 		}
+#endif
 
 		if(!ret && cmd!=CMD_EFS_FILE)
 		{
+#ifdef HAVE_WIN32
 		  int do_known_byte_count=0;
 		  if(datalen>0) do_known_byte_count=1;
+#endif
 		  while(1)
 		  {
+#ifdef HAVE_WIN32
 			if(do_known_byte_count)
 			{
 				s=(uint32_t)bread(bfd,
@@ -516,8 +497,11 @@ int send_whole_filel(struct asfd *asfd,
 			}
 			else
 			{
+#endif
 				s=(uint32_t)bread(bfd, buf, 4096);
+#ifdef HAVE_WIN32
 			}
+#endif
 			if(s<=0) break;
 
 			*bytes+=s;
@@ -546,43 +530,13 @@ int send_whole_filel(struct asfd *asfd,
 					break;
 				}
 			}
+#ifdef HAVE_WIN32
 			// Windows VSS headers tell us how many bytes to
 			// expect.
 			if(do_known_byte_count && datalen<=0) break;
+#endif
 		  }
 		}
-#else
-	//printf("send_whole_file: %s\n", fname);
-		if(!ret) while((s=fread(buf, 1, 4096, fp))>0)
-		{
-			*bytes+=s;
-			if(!MD5_Update(&md5, buf, s))
-			{
-				logp("MD5_Update() failed\n");
-				ret=-1;
-				break;
-			}
-			if(asfd->write_strn(asfd, CMD_APPEND, buf, s))
-			{
-				ret=-1;
-				break;
-			}
-			if(quick_read)
-			{
-				int qr;
-				if((qr=do_quick_read(asfd, datapth, conf))<0)
-				{
-					ret=-1;
-					break;
-				}
-				if(qr)
-				{
-					// client wants to interrupt
-					break;
-				}
-			}
-		}
-#endif
 	}
 	if(!ret)
 	{

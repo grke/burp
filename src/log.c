@@ -151,7 +151,7 @@ int logw(struct asfd *asfd, struct conf *conf, const char *fmt, ...)
 		logp("WARNING: %s\n", buf);
 	}
 	va_end(ap);
-	cntr_add(conf->cntr, CMD_WARNING, 1);
+	if(conf) cntr_add(conf->cntr, CMD_WARNING, 1);
 	return r;
 }
 

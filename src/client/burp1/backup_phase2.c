@@ -19,8 +19,7 @@ static int load_signature(struct asfd *asfd,
 }
 
 static int load_signature_and_send_delta(struct asfd *asfd,
-	BFILE *bfd, FILE *in,
-	unsigned long long *bytes, unsigned long long *sentbytes,
+	BFILE *bfd, unsigned long long *bytes, unsigned long long *sentbytes,
 	struct conf *conf, size_t datalen)
 {
 	rs_job_t *job;
@@ -42,7 +41,7 @@ static int load_signature_and_send_delta(struct asfd *asfd,
 	}
 
 	if(!(infb=rs_filebuf_new(asfd, bfd,
-		in, NULL, -1, ASYNC_BUF_LEN, datalen, conf->cntr))
+		NULL, NULL, -1, ASYNC_BUF_LEN, datalen, conf->cntr))
 	  || !(outfb=rs_filebuf_new(asfd, NULL, NULL,
 		NULL, asfd->fd, ASYNC_BUF_LEN, -1, conf->cntr)))
 	{
@@ -101,19 +100,18 @@ static int load_signature_and_send_delta(struct asfd *asfd,
 static int send_whole_file_w(struct asfd *asfd,
 	struct sbuf *sb, const char *datapth,
 	int quick_read, unsigned long long *bytes, const char *encpassword,
-	struct conf *conf, int compression, BFILE *bfd, FILE *fp,
+	struct conf *conf, int compression, BFILE *bfd,
 	const char *extrameta, size_t elen, size_t datalen)
 {
 	if((compression || encpassword) && sb->path.cmd!=CMD_EFS_FILE)
 		return send_whole_file_gzl(asfd,
 		  sb->path.buf, datapth, quick_read, bytes, 
-		  encpassword, conf, compression, bfd, fp, extrameta, elen,
+		  encpassword, conf, compression, bfd, extrameta, elen,
 		  datalen);
 	else
 		return send_whole_filel(asfd,
 		  sb->path.cmd, sb->path.buf, datapth, quick_read, bytes, 
-		  conf, bfd, fp, extrameta, elen,
-		  datalen);
+		  conf, bfd, extrameta, elen, datalen);
 }
 
 static int forget_file(struct asfd *asfd, struct sbuf *sb, struct conf *conf)
@@ -161,7 +159,6 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 {
 	int ret=-1;
 	int forget=0;
-	FILE *fp=NULL;
 	size_t elen=0;
 	char *extrameta=NULL;
 	unsigned long long bytes=0;
@@ -191,12 +188,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 	if(sb->path.cmd!=CMD_METADATA
 	  && sb->path.cmd!=CMD_ENC_METADATA)
 	{
-		if(open_file_for_sendl(asfd,
-#ifdef HAVE_WIN32
-			bfd, NULL,
-#else
-			NULL, &fp,
-#endif
+		if(open_file_for_sendl(asfd, bfd,
 			sb->path.buf, sb->winattr, datalen, conf->atime, conf))
 				forget++;
 	}
@@ -216,10 +208,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 #endif
 	  )
 	{
-		if(get_extrameta(asfd,
-#ifdef HAVE_WIN32
-			bfd,
-#endif
+		if(get_extrameta(asfd, bfd,
 			sb, &extrameta, &elen, conf, datalen))
 		{
 			logw(asfd, conf, "Meta data error for %s", sb->path.buf);
@@ -252,7 +241,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 		if(asfd->write(asfd, &(sb->burp1->datapth))
 		  || asfd->write(asfd, &sb->attr)
 		  || asfd->write(asfd, &sb->path)
-		  || load_signature_and_send_delta(asfd, bfd, fp,
+		  || load_signature_and_send_delta(asfd, bfd,
 			&bytes, &sentbytes, conf, *datalen))
 		{
 			logp("error in sig/delta for %s (%s)\n",
@@ -275,7 +264,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 		  || asfd->write(asfd, &sb->path))
 		  || send_whole_file_w(asfd, sb, NULL, 0, &bytes,
 			conf->encryption_password, conf, sb->compression,
-			bfd, fp, extrameta, elen, *datalen))
+			bfd, extrameta, elen, *datalen))
 				goto end;
 		else
 		{
@@ -295,7 +284,7 @@ error:
 	// different file path, or when this function
 	// exits.
 #else
-	close_file_for_sendl(NULL, &fp, asfd);
+	close_file_for_sendl(bfd, asfd);
 #endif
 	sbuf_free_content(sb);
 	if(extrameta) free(extrameta);
@@ -356,9 +345,7 @@ static int do_backup_phase2_client(struct asfd *asfd,
 	// Windows VSS headers tell us how much file
 	// data to expect.
 	size_t datalen=0;
-#ifdef HAVE_WIN32
 	binit(&bfd, 0, conf);
-#endif
 
 	struct sbuf *sb=NULL;
 	struct iobuf *rbuf=asfd->rbuf;
@@ -399,7 +386,7 @@ static int do_backup_phase2_client(struct asfd *asfd,
 end:
 #ifdef HAVE_WIN32
 	// It is possible for a bfd to still be open.
-	close_file_for_sendl(&bfd, NULL, asfd);
+	close_file_for_sendl(&bfd, asfd);
 #endif
 	iobuf_free_content(rbuf);
 	sbuf_free(&sb);

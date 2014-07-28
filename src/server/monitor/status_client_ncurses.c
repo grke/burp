@@ -16,7 +16,7 @@ static enum action actg=ACTION_STATUS;
 #ifdef DBFP
 static FILE *dbfp=NULL;
 #endif
-/*
+
 static void print_line(const char *string, int row, int col)
 {
 	int k=0;
@@ -36,7 +36,6 @@ static void print_line(const char *string, int row, int col)
 		{ printf("%c", *cp); k++; }
 	printf("\n");
 }
-*/
 
 // Returns 1 if it printed a line, 0 otherwise.
 /*
@@ -399,7 +398,6 @@ static void detail(const char *cntrclient, char status, char phase, const char *
 }
 */
 
-/*
 static void blank_screen(int row, int col)
 {
 	int c=0;
@@ -424,7 +422,6 @@ static void blank_screen(int row, int col)
 	for(c=0; c<(int)(col-strlen(" burp status")-l-1); c++) printf(" ");
 	printf("%s\n\n", date);
 }
-*/
 
 /*
 static int parse_rbuf(const char *rbuf, struct conf *conf, int row, int col, int sel, char **client, int *count, int details, const char *sclient, struct cntr *p1cntr, struct cntr *cntr)
@@ -517,19 +514,6 @@ static int need_status(void)
 	return 1;
 }
 
-/*
-static void print_star(int sel)
-{
-#ifdef HAVE_NCURSES_H
-	if(actg==ACTION_STATUS)
-	{
-		mvprintw(sel+TOP_SPACE, 1, "*");
-		return;
-	}
-#endif
-}
-*/
-
 // Return 1 if it was shown, -1 on error, 0 otherwise.
 /*
 static int show_rbuf(const char *rbuf, struct conf *conf, int sel, char **client, int *count, int details, const char *sclient, struct cntr *p1cntr, struct cntr *cntr)
@@ -563,6 +547,26 @@ static int show_rbuf(const char *rbuf, struct conf *conf, int sel, char **client
 	return 0;
 }
 */
+
+static int update_screen(struct cstat *clist, struct cstat *sel)
+{
+	int x=0;
+	int row=24;
+	int col=80;
+	struct cstat *c;
+#ifdef HAVE_NCURSES_H
+	if(actg==ACTION_STATUS) getmaxyx(stdscr, row, col);
+#endif
+	// First, blank the whole screen.
+	blank_screen(row, col);
+	for(c=clist; c; c=c->next)
+	{
+		print_line(c->name, x++, col);
+		if(sel==c) mvprintw(x+TOP_SPACE-1, 1, "*");
+	}
+	
+	return 0;
+}
 
 static int request_status(struct asfd *asfd,
 	const char *client, struct conf *conf)
@@ -632,10 +636,11 @@ error:
 }
 
 #ifdef HAVE_NCURSES_H
-static int parse_stdin_data(struct asfd *asfd, struct cstat **clist,
-	int *sel, int *details, int count, int *enterpressed)
+static int parse_stdin_data(struct asfd *asfd, struct cstat *clist,
+	struct cstat **sel, int *details, int count, int *enterpressed)
 {
 	static int ch;
+	struct cstat *c;
 	if(asfd->rbuf->len!=sizeof(ch))
 	{
 		logp("Unexpected input length in %s: %d\n",
@@ -651,21 +656,23 @@ static int parse_stdin_data(struct asfd *asfd, struct cstat **clist,
 		case KEY_UP:
 		case 'k':
 		case 'K':
-			fprintf(dbfp, "UP\n");
 			if(*details) break;
-			(*sel)--;
+			if(*sel==clist) break;
+			for(c=clist; c; c=c->next) if(*sel==c->next)
+			{
+				*sel=c;
+				break;
+			}
 			break;
 		case KEY_DOWN:
 		case 'j':
 		case 'J':
-			fprintf(dbfp, "DOWN\n");
 			if(*details) break;
-			(*sel)++;
+			if((*sel)->next) *sel=(*sel)->next;
 			break;
 		case KEY_ENTER:
 		case '\n':
 		case ' ':
-			fprintf(dbfp, "ENTER\n");
 			if(*details) *details=0;
 			else (*details)++;
 			enterpressed++;
@@ -673,15 +680,14 @@ static int parse_stdin_data(struct asfd *asfd, struct cstat **clist,
 		case KEY_LEFT:
 		case 'h':
 		case 'H':
-			fprintf(dbfp, "LEFT\n");
 			*details=0;
 			break;
 		case KEY_RIGHT:
 		case 'l':
 		case 'L':
-			fprintf(dbfp, "RIGHT\n");
 			(*details)++;
 			break;
+/*
 		case KEY_NPAGE:
 		{
 			int row=0;
@@ -698,13 +704,11 @@ static int parse_stdin_data(struct asfd *asfd, struct cstat **clist,
 			(*sel)-=row-TOP_SPACE;
 			break;
 		}
+*/
 		case -1:
 			logp("Error on stdin\n");
 			return -1;
 	}
-
-	if(*sel>=count) *sel=count-1;
-	if(*sel<0) *sel=0;
 
 	return 0;
 }
@@ -769,12 +773,12 @@ static int parse_socket_data(struct asfd *asfd, struct cstat **clist)
 }
 
 static int parse_data(struct asfd *asfd, struct cstat **clist,
-	int *sel, int *details, int count, int *enterpressed)
+	struct cstat **sel, int *details, int count, int *enterpressed)
 {
 	// Hacky to switch on whether it is using char buffering or not.
 #ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS && asfd->streamtype==ASFD_STREAM_NCURSES_STDIN)
-		return parse_stdin_data(asfd, clist,
+		return parse_stdin_data(asfd, *clist,
 			sel, details, count, enterpressed);
 #endif
 	return parse_socket_data(asfd, clist);
@@ -787,7 +791,7 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 	int count=0;
 	struct asfd *asfd=NULL;
 	struct cstat *clist=NULL;
-	int sel=0;
+	struct cstat *sel=NULL;
 	int enterpressed=0;
 	struct asfd *sfd=as->asfd; // Server asfd.
 	int reqdone=0;
@@ -805,6 +809,7 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 			logp("Exiting main loop\n");
 			break;
 		}
+
 		for(asfd=as->asfd; asfd; asfd=asfd->next)
 			while(asfd->rbuf->buf)
 		{
@@ -825,6 +830,11 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 			if(actg==ACTION_STATUS_SNAPSHOT)
 				reqdone=1;
 		}
+
+		if(!sel) sel=clist;
+//if(sel) fprintf(dbfp, "sel: %s\n", sel->name);
+		if(update_screen(clist, sel)) return -1;
+		refresh();
 	}
 
 	return 0;

@@ -12,15 +12,30 @@
 #                    Author Patrick Koppen <software@koppen.de>
 ### END INIT INFO
 
-
 # PATH should only include /usr/* if it runs after the mountnfs.sh script
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC=burp             # Introduce a short description here
 NAME=burp             # Introduce the short server's name here
 DAEMON=/usr/sbin/burp # Introduce the server's location here
-DAEMON_ARGS=""             # Arguments to run the daemon with
-PIDFILE=/var/run/burp.server.pid
+DAEMON_ARGS=""        # Arguments to run the daemon with
 SCRIPTNAME=/etc/init.d/$NAME
+CONFIGFILE="/etc/burp/burp-server.conf"
+
+# Function to read CONFIGFILE
+get_conf_val()
+{
+	while IFS='=' read field value ; do
+        	field="$(echo $field)" ; [ "$field" != "$1" ] && continue
+        	echo $value ; break
+	done < $CONFIGFILE
+}
+
+# Read CONFIGFILE to search user, group and pidfile variable for launching
+# burp in good condition.
+BURP_USER=$(get_conf_val user)
+BURP_GROUP=$(get_conf_val group)
+PIDFILE=$(get_conf_val pidfile)
+[ -n "$PIDFILE" ] || PIDFILE=/var/run/burp.server.pid
 
 # Exit if the package is not installed
 [ -x $DAEMON ] || exit 0
@@ -69,7 +84,7 @@ do_stop()
 	#   1 if daemon was already stopped
 	#   2 if daemon could not be stopped
 	#   other if a failure occurred
-	start-stop-daemon --stop --quiet --retry=USR2/5/TERM/5/KILL/5 --pidfile $PIDFILE --name $NAME
+	start-stop-daemon --stop --quiet --retry=TERM/30/KILL/5 --pidfile $PIDFILE --name $NAME
 	RETVAL="$?"
 	[ "$RETVAL" = 2 ] && return 2
 	# Wait for children to finish too if this is a daemon that forks
@@ -102,6 +117,8 @@ do_reload() {
 case "$1" in
   start)
     [ "$VERBOSE" != no ] && log_daemon_msg "Starting $DESC "
+    [ -n "$BURP_USER" ] && touch $PIDFILE && chown $BURP_USER $PIDFILE
+    [ -n "$BURP_GROUP" ] && touch $PIDFILE && chgrp $BURP_GROUP $PIDFILE
     do_start
     case "$?" in
 		0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;

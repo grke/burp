@@ -57,6 +57,7 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 	BFILE bfd;
 	size_t datalen=0;
 
+	binit(&bfd, 0, cconf);
 	if(open_file_for_sendl(asfd, &bfd, best, sb->winattr, &datalen,
 		1 /* no O_NOATIME */, cconf)) return -1;
 	//logp("sending: %s\n", best);

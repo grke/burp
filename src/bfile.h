@@ -17,29 +17,30 @@ struct BFILE
 	char *path;
 	struct conf *conf;
 #ifdef HAVE_WIN32
-	bool use_backup_api; /* set if using BackupRead/Write */
+	uint8_t use_backup_api; /* set if using BackupRead/Write */
 	HANDLE fh;           /* Win32 file handle */
 	LPVOID lpContext;    /* BackupRead/Write context */
 	DWORD rw_bytes;      /* Bytes read or written */
 	DWORD lerror;        /* Last error code */
 	PVOID pvContext;     /* also for the encrypted functions */
-	bool reparse_point;  /* set if reparse point */ 
 	int berrno;          /* errno */
 #else
 	int fd;
 #endif
 };
 
-void binit(BFILE *bfd, int64_t winattr, struct conf *conf);
-int bopen(BFILE *bfd, struct asfd *asfd,
+extern BFILE *bfile_alloc(void);
+extern void bfile_free(BFILE **bfd);
+extern void bfile_init(BFILE *bfd, int64_t winattr, struct conf *conf);
+extern int bfile_open(BFILE *bfd, struct asfd *asfd,
 	const char *fname, int flags, mode_t mode);
-int bclose(BFILE *bfd, struct asfd *asfd);
-ssize_t bread(BFILE *bfd, void *buf, size_t count);
-ssize_t bwrite(BFILE *bfd, void *buf, size_t count);
+extern int bfile_close(BFILE *bfd, struct asfd *asfd);
+extern ssize_t bfile_read(BFILE *bfd, void *buf, size_t count);
+extern ssize_t bfile_write(BFILE *bfd, void *buf, size_t count);
 
 #ifdef HAVE_WIN32
-bool set_win32_backup(BFILE *bfd);
-bool have_win32_api();
+extern void bfile_set_win32_api(BFILE *bfd, int on);
+extern int have_win32_api(void);
 #endif
 
 #endif

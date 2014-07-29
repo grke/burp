@@ -75,7 +75,7 @@ static int restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 				&rcvdbytes, &sentbytes,
 				encpassword, enccompressed, conf->cntr, NULL);
 #ifndef HAVE_WIN32
-			if(bclose(bfd, asfd))
+			if(bfile_close(bfd, asfd))
 			{
 				logp("error closing %s in %s\n",
 					fname, __func__);

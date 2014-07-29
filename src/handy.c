@@ -64,8 +64,8 @@ static int write_endfile(struct asfd *asfd, unsigned long long bytes)
 int open_file_for_send(BFILE *bfd, struct asfd *asfd, const char *fname,
 	int64_t winattr, int atime, struct conf *conf)
 {
-	binit(bfd, winattr, conf);
-	if(bopen(bfd, asfd, fname, O_RDONLY|O_BINARY
+	bfile_init(bfd, winattr, conf);
+	if(bfile_open(bfd, asfd, fname, O_RDONLY|O_BINARY
 #ifdef O_NOATIME
 		|atime?0:O_NOATIME
 #endif
@@ -82,7 +82,7 @@ int open_file_for_send(BFILE *bfd, struct asfd *asfd, const char *fname,
 
 int close_file_for_send(BFILE *bfd, struct asfd *asfd)
 {
-	return bclose(bfd, asfd);
+	return bfile_close(bfd, asfd);
 }
 
 int send_whole_file_gz(struct asfd *asfd,
@@ -523,21 +523,17 @@ long version_to_long(const char *version)
    and the CA stuff, rather than backups/restores. */
 int receive_a_file(struct asfd *asfd, const char *path, struct conf *conf)
 {
-	int c=0;
-	int ret=0;
-#ifdef HAVE_WIN32
-	BFILE bfd;
-#else
-	FILE *fp=NULL;
-#endif
+	int ret=-1;
+	BFILE *bfd=NULL;
 	unsigned long long rcvdbytes=0;
 	unsigned long long sentbytes=0;
 
+	if(!(bfd=bfile_alloc())) goto end;
+	bfile_init(bfd, 0, conf);
 #ifdef HAVE_WIN32
-	binit(&bfd, 0, conf);
-	bfd.use_backup_api=0;
-	//set_win32_backup(&bfd);
-	if(bopen(&bfd, asfd, path,
+	bfile_set_win32_api(bfd, 0);
+#endif
+	if(bfile_open(bfd, asfd, path,
 		O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,
 		S_IRUSR | S_IWUSR))
 	{
@@ -545,33 +541,19 @@ int receive_a_file(struct asfd *asfd, const char *path, struct conf *conf)
 		berrno_init(&be);
 		logp("Could not open for writing %s: %s\n",
 			path, berrno_bstrerror(&be, errno));
-		ret=-1;
 		goto end;
 	}
-#else
-	if(!(fp=open_file(path, "wb")))
-	{
-		ret=-1;
-		goto end;
-	}
-#endif
 
-#ifdef HAVE_WIN32
-	ret=transfer_gzfile_in(asfd, path, &bfd, NULL,
+	ret=transfer_gzfile_in(asfd, path, bfd,
 		&rcvdbytes, &sentbytes, conf->cntr);
-	c=bclose(&bfd, asfd);
-#else
-	ret=transfer_gzfile_in(asfd, path, NULL, fp,
-		&rcvdbytes, &sentbytes, conf->cntr);
-	c=close_fp(&fp);
-#endif
-end:
-	if(c)
+	if(bfile_close(bfd, asfd))
 	{
 		logp("error closing %s in receive_a_file\n", path);
-		ret=-1;
+		goto end;
 	}
-	if(!ret) logp("Received: %s\n", path);
+	logp("Received: %s\n", path);
+	ret=0;
+end:
 	return ret;
 }
 

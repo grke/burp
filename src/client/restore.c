@@ -117,7 +117,7 @@ int open_for_restore(struct asfd *asfd, BFILE *bfd, const char *path,
 		else
 		{
 #endif
-			if(bclose(bfd, asfd))
+			if(bfile_close(bfd, asfd))
 			{
 				logp("error closing %s in %s()\n",
 					path, __func__);
@@ -127,12 +127,9 @@ int open_for_restore(struct asfd *asfd, BFILE *bfd, const char *path,
 		}
 #endif
 	}
-	binit(bfd, sb->winattr, conf);
+	bfile_init(bfd, sb->winattr, conf);
 #ifdef HAVE_WIN32
-	if(vss_restore)
-		set_win32_backup(bfd);
-	else
-		bfd->use_backup_api=0;
+	bfile_set_win32_api(bfd, vss_restore);
 #endif
 	if(S_ISDIR(sb->statp.st_mode))
 	{
@@ -143,7 +140,7 @@ int open_for_restore(struct asfd *asfd, BFILE *bfd, const char *path,
 	else
 		flags=O_WRONLY|O_BINARY|O_CREAT|O_TRUNC;
 
-	if(bopen(bfd, asfd, path, flags, S_IRUSR | S_IWUSR))
+	if(bfile_open(bfd, asfd, path, flags, S_IRUSR | S_IWUSR))
 	{
 		berrno be;
 		berrno_init(&be);
@@ -447,7 +444,7 @@ static int write_data(struct asfd *asfd, BFILE *bfd, struct blk *blk)
 	{
 		int w;
 //printf("writing: %d\n", blk->length);
-		if((w=bwrite(bfd, blk->data, blk->length))<=0)
+		if((w=bfile_write(bfd, blk->data, blk->length))<=0)
 		{
 			logp("%s(): error when appending %d: %d\n",
 				__func__, blk->length, w);
@@ -544,12 +541,14 @@ int do_restore_client(struct asfd *asfd,
 	char msg[512]="";
 	struct sbuf *sb=NULL;
 	struct blk *blk=NULL;
-	BFILE bfd;
+	BFILE *bfd=NULL;
 	char *fullpath=NULL;
 	char *style=NULL;
 	char *datpath=NULL;
 
-	binit(&bfd, 0, conf);
+	if(!(bfd=bfile_alloc())) goto end;
+
+	bfile_init(bfd, 0, conf);
 
 	snprintf(msg, sizeof(msg), "%s %s:%s", act_str(act),
 		conf->backup?conf->backup:"", conf->regex?conf->regex:"");
@@ -600,7 +599,7 @@ int do_restore_client(struct asfd *asfd,
 		if(conf->protocol==PROTO_BURP2 && blk->data)
 		{
 			int wret;
-			wret=write_data(asfd, &bfd, blk);
+			wret=write_data(asfd, bfd, blk);
 			if(!datpath) free(blk->data);
 			blk->data=NULL;
 			if(wret) goto error;
@@ -647,7 +646,7 @@ int do_restore_client(struct asfd *asfd,
 				  strip_invalid_characters(&fullpath);
 				  if(!overwrite_ok(sb, conf,
 #ifdef HAVE_WIN32
-					&bfd,
+					bfd,
 #endif
 					fullpath))
 				  {
@@ -693,13 +692,13 @@ int do_restore_client(struct asfd *asfd,
 		if(conf->protocol==PROTO_BURP2)
 		{
 			if(restore_switch_burp2(asfd, sb, fullpath, act,
-				&bfd, vss_restore, conf))
+				bfd, vss_restore, conf))
 					goto error;
 		}
 		else
 		{
 			if(restore_switch_burp1(asfd, sb, fullpath, act,
-				&bfd, vss_restore, conf))
+				bfd, vss_restore, conf))
 					goto error;
 		}
 	}
@@ -708,7 +707,8 @@ end:
 	ret=0;
 error:
 	// It is possible for a fd to still be open.
-	bclose(&bfd, asfd);
+	bfile_close(bfd, asfd);
+	bfile_free(&bfd);
 
 	cntr_print_end(conf->cntr);
 	cntr_print(conf->cntr, act);

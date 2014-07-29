@@ -4,24 +4,43 @@
 #include <sys/paths.h>
 #endif
 
+BFILE *bfile_alloc(void)
+{
+	return (BFILE *)calloc_w(1, sizeof(BFILE), __func__);
+}
+
+void bfile_init(BFILE *bfd, int64_t winattr, struct conf *conf)
+{
+	memset(bfd, 0, sizeof(BFILE));
+	bfd->mode=BF_CLOSED;
+	bfd->winattr=winattr;
+	bfd->conf=conf;
+#ifdef HAVE_WIN32
+	bfile_set_win32_api(bfd, 1);
+#else
+	bfd->fd=-1;
+#endif
+}
+
+void bfile_free(BFILE **bfd)
+{
+	free_v((void **)bfd);
+}
+
 #ifdef HAVE_WIN32
 
 char *unix_name_to_win32(char *name);
 extern "C" HANDLE get_osfhandle(int fd);
 
-/*
- * Enables using the Backup API (win32_data).
- *   Returns 1 if function worked
- *   Returns 0 if failed (i.e. do not have Backup API on this machine)
- */
-bool set_win32_backup(BFILE *bfd)
+void bfile_set_win32_api(BFILE *bfd, int on)
 {
-	/* We enable if possible here */
-	bfd->use_backup_api=have_win32_api();
-	return bfd->use_backup_api;
+	if(have_win32_api() && on)
+		bfd->use_backup_api=1;
+	else
+		bfd->use_backup_api=0;
 }
 
-bool have_win32_api()
+int have_win32_api(void)
 {
 	return p_BackupRead && p_BackupWrite;
 }
@@ -34,7 +53,8 @@ bool have_win32_api()
 //#define OVERWRITE_HIDDEN	4
 
 // Return 0 for success, non zero for error.
-static int bopen_encrypted(BFILE *bfd, const char *fname, int flags, mode_t mode)
+static int bfile_open_encrypted(BFILE *bfd,
+	const char *fname, int flags, mode_t mode)
 {
 	ULONG ulFlags=0;
 	char *win32_fname=NULL;
@@ -109,7 +129,7 @@ static int bfile_error(BFILE *bfd)
 }
 
 // Return 0 for success, non zero for error.
-int bopen(BFILE *bfd, struct asfd *asfd,
+int bfile_open(BFILE *bfd, struct asfd *asfd,
 	const char *fname, int flags, mode_t mode)
 {
 	DWORD dwaccess;
@@ -119,7 +139,7 @@ int bopen(BFILE *bfd, struct asfd *asfd,
 	char *win32_fname_wchar=NULL;
 
 	if(bfd->winattr & FILE_ATTRIBUTE_ENCRYPTED)
-		return bopen_encrypted(bfd, fname, flags, mode);
+		return bfile_open_encrypted(bfd, fname, flags, mode);
 
 	if(!(p_CreateFileA || p_CreateFileW)) return -1;
 
@@ -271,7 +291,7 @@ int bopen(BFILE *bfd, struct asfd *asfd,
 	return bfd->mode==BF_CLOSED;
 }
 
-static int bclose_encrypted(BFILE *bfd, struct asfd *asfd)
+static int bfile_close_encrypted(BFILE *bfd, struct asfd *asfd)
 {
 	CloseEncryptedFileRaw(bfd->pvContext);
 	if(bfd->mode==BF_WRITE)
@@ -288,7 +308,7 @@ static int bclose_encrypted(BFILE *bfd, struct asfd *asfd)
 }
 
 // Return 0 on success, -1 on error.
-int bclose(BFILE *bfd, struct asfd *asfd)
+int bfile_close(BFILE *bfd, struct asfd *asfd)
 {
 	int ret=-1;
 
@@ -297,7 +317,7 @@ int bclose(BFILE *bfd, struct asfd *asfd)
 	if(bfd->mode==BF_CLOSED) return 0;
 
 	if(bfd->winattr & FILE_ATTRIBUTE_ENCRYPTED)
-		return bclose_encrypted(bfd, asfd);
+		return bfile_close_encrypted(bfd, asfd);
 
 	/*
 	 * We need to tell the API to release the buffer it
@@ -359,7 +379,7 @@ end:
 }
 
 // Returns: bytes read on success, or 0 on EOF, -1 on error.
-ssize_t bread(BFILE *bfd, void *buf, size_t count)
+ssize_t bfile_read(BFILE *bfd, void *buf, size_t count)
 {
 	bfd->rw_bytes=0;
 
@@ -387,7 +407,7 @@ ssize_t bread(BFILE *bfd, void *buf, size_t count)
 	return (ssize_t)bfd->rw_bytes;
 }
 
-ssize_t bwrite(BFILE *bfd, void *buf, size_t count)
+ssize_t bfile_write(BFILE *bfd, void *buf, size_t count)
 {
 	bfd->rw_bytes = 0;
 
@@ -416,7 +436,7 @@ ssize_t bwrite(BFILE *bfd, void *buf, size_t count)
 
 #else
 
-int bclose(BFILE *bfd, struct asfd *asfd)
+int bfile_close(BFILE *bfd, struct asfd *asfd)
 {
 	if(!bfd || bfd->mode==BF_CLOSED) return 0;
 
@@ -434,11 +454,11 @@ int bclose(BFILE *bfd, struct asfd *asfd)
 	return -1;
 }
 
-int bopen(BFILE *bfd,
+int bfile_open(BFILE *bfd,
 	struct asfd *asfd, const char *fname, int flags, mode_t mode)
 {
 	if(!bfd) return 0;
-	if(bfd->mode!=BF_CLOSED && bclose(bfd, asfd))
+	if(bfd->mode!=BF_CLOSED && bfile_close(bfd, asfd))
 		return -1;
 	if(!(bfd->fd=open(fname, flags, mode))<0)
 		return -1;
@@ -451,27 +471,14 @@ int bopen(BFILE *bfd,
 	return 0;
 }
 
-ssize_t bread(BFILE *bfd, void *buf, size_t count)
+ssize_t bfile_read(BFILE *bfd, void *buf, size_t count)
 {
 	return read(bfd->fd, buf, count);
 }
 
-ssize_t bwrite(BFILE *bfd, void *buf, size_t count)
+ssize_t bfile_write(BFILE *bfd, void *buf, size_t count)
 {
 	return write(bfd->fd, buf, count);
 }
 
 #endif
-
-void binit(BFILE *bfd, int64_t winattr, struct conf *conf)
-{
-	memset(bfd, 0, sizeof(BFILE));
-	bfd->mode=BF_CLOSED;
-	bfd->winattr=winattr;
-	bfd->conf=conf;
-#ifdef HAVE_WIN32
-	bfd->use_backup_api=have_win32_api();
-#else
-	bfd->fd=-1;
-#endif
-}

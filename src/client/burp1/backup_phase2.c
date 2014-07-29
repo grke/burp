@@ -341,16 +341,17 @@ static int do_backup_phase2_client(struct asfd *asfd,
 	// For efficiency, open Windows files for the VSS data, and do not
 	// close them until another time around the loop, when the actual
 	// data is read.
-	BFILE bfd;
+	BFILE *bfd=NULL;
 	// Windows VSS headers tell us how much file
 	// data to expect.
 	size_t datalen=0;
-	binit(&bfd, 0, conf);
-
 	struct sbuf *sb=NULL;
 	struct iobuf *rbuf=asfd->rbuf;
 
-	if(!(sb=sbuf_alloc(conf))) goto end;
+	if(!(bfd=bfile_alloc())
+	  || !(sb=sbuf_alloc(conf)))
+		goto end;
+	bfile_init(bfd, 0, conf);
 
 	if(!resume)
 	{
@@ -379,15 +380,14 @@ static int do_backup_phase2_client(struct asfd *asfd,
 			break;
 		}
 
-		if(parse_rbuf(asfd, sb, &bfd, &datalen, conf))
+		if(parse_rbuf(asfd, sb, bfd, &datalen, conf))
 			goto end;
 	}
 
 end:
-#ifdef HAVE_WIN32
 	// It is possible for a bfd to still be open.
-	close_file_for_send(&bfd, asfd);
-#endif
+	close_file_for_send(bfd, asfd);
+	bfile_free(&bfd);
 	iobuf_free_content(rbuf);
 	sbuf_free(&sb);
 	return ret;

@@ -124,7 +124,7 @@ void sbuf_close_file(struct sbuf *sb, struct asfd *asfd)
 
 ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize)
 {
-	return (ssize_t)bread(&sb->burp2->bfd, buf, bufsize);
+	return (ssize_t)bfile_read(&sb->burp2->bfd, buf, bufsize);
 }
 
 int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,

@@ -24,30 +24,22 @@ int send_msg_zp(gzFile zp, char cmd, const char *buf, size_t s)
 	return 0;
 }
 
-static int do_write(struct asfd *asfd, BFILE *bfd, FILE *fp,
+static int do_write(struct asfd *asfd, BFILE *bfd,
 	uint8_t *out, size_t outlen, unsigned long long *sent)
 {
 	int ret=0;
-#ifdef HAVE_WIN32
-	if((ret=bwrite(bfd, out, outlen))<=0)
+	if((ret=bfile_write(bfd, out, outlen))<=0)
 	{
-		logp("error when appending %d: %d\n", outlen, ret);
+		logp("%s: error when appending %d: %d\n",
+			__func__, outlen, ret);
 		asfd->write_str(asfd, CMD_ERROR, "write failed");
 		return -1;
 	}
-#else
-	if((fp && (ret=fwrite(out, 1, outlen, fp))<=0))
-	{
-		logp("error when appending %d: %d\n", outlen, ret);
-		asfd->write_str(asfd, CMD_ERROR, "write failed");
-		return -1;
-	}
-#endif
 	*sent+=outlen;
 	return 0;
 }
 
-static int do_inflate(struct asfd *asfd, z_stream *zstrm, BFILE *bfd, FILE *fp,
+static int do_inflate(struct asfd *asfd, z_stream *zstrm, BFILE *bfd,
 	uint8_t *out, unsigned long long *sent)
 {
 	int zret=Z_OK;
@@ -74,15 +66,14 @@ static int do_inflate(struct asfd *asfd, z_stream *zstrm, BFILE *bfd, FILE *fp,
 		have=ZCHUNK-zstrm->avail_out;
 		if(!have) continue;
 
-		if(do_write(asfd, bfd, fp, out, have, sent))
+		if(do_write(asfd, bfd, out, have, sent))
 			return -1;
 	} while(!zstrm->avail_out);
 	return 0;
 }
 
 int transfer_gzfile_in(struct asfd *asfd, const char *path, BFILE *bfd,
-	FILE *fp, unsigned long long *rcvd, unsigned long long *sent,
-	struct cntr *cntr)
+	unsigned long long *rcvd, unsigned long long *sent, struct cntr *cntr)
 {
 	int quit=0;
 	int ret=-1;
@@ -112,7 +103,7 @@ int transfer_gzfile_in(struct asfd *asfd, const char *path, BFILE *bfd,
 		switch(rbuf->cmd)
 		{
 			case CMD_APPEND: // append
-				if(!fp && !bfd)
+				if(!bfd)
 				{
 					logp("given append, but no file to write to\n");
 					asfd->write_str(asfd, CMD_ERROR,
@@ -122,7 +113,7 @@ int transfer_gzfile_in(struct asfd *asfd, const char *path, BFILE *bfd,
 				else
 				{
 					if(do_inflate(asfd, &zstrm,
-						bfd, fp, out, sent))
+						bfd, out, sent))
 							goto end_inflate;
 				}
 				break;

@@ -54,11 +54,13 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 	unsigned long long *bytes, struct conf *cconf)
 {
 	int ret=0;
-	BFILE bfd;
+	BFILE *bfd=NULL;
 	size_t datalen=0;
 
-	binit(&bfd, 0, cconf);
-	if(open_file_for_sendl(asfd, &bfd, best, sb->winattr, &datalen,
+	if(!(bfd=bfile_alloc())) return -1;
+
+	bfile_init(bfd, 0, cconf);
+	if(open_file_for_sendl(asfd, bfd, best, sb->winattr, &datalen,
 		1 /* no O_NOATIME */, cconf)) return -1;
 	//logp("sending: %s\n", best);
 	if(asfd->write(asfd, &sb->path))
@@ -69,7 +71,7 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 		// is not gzipped. Gzip it during the send. 
 		ret=send_whole_file_gzl(asfd, best, sb->burp1->datapth.buf,
 			1, bytes, NULL,
-			cconf, 9, &bfd, NULL, 0, -1);
+			cconf, 9, bfd, NULL, 0, -1);
 	}
 	else
 	{
@@ -84,7 +86,7 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 		{
 			ret=send_whole_filel(asfd, sb->path.cmd, best,
 				sb->burp1->datapth.buf, 1, bytes,
-				cconf, &bfd, NULL, 0, -1);
+				cconf, bfd, NULL, 0, -1);
 		}
 		// It might have been stored uncompressed. Gzip it during
 		// the send. If the client knew what kind of file it would be
@@ -94,7 +96,7 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 		{
 			ret=send_whole_file_gzl(asfd,
 				best, sb->burp1->datapth.buf, 1, bytes,
-				NULL, cconf, 9, &bfd, NULL, 0, -1);
+				NULL, cconf, 9, bfd, NULL, 0, -1);
 		}
 		else
 		{
@@ -102,10 +104,11 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 			// file might already be gzipped. Send it as it is.
 			ret=send_whole_filel(asfd, sb->path.cmd, best,
 				sb->burp1->datapth.buf, 1, bytes,
-				cconf, &bfd, NULL, 0, -1);
+				cconf, bfd, NULL, 0, -1);
 		}
 	}
-	close_file_for_send(&bfd, asfd);
+	close_file_for_send(bfd, asfd);
+	bfile_free(&bfd);
 	return ret;
 }
 

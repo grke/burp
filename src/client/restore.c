@@ -101,6 +101,7 @@ static int make_link(struct asfd *asfd,
 	return ret;
 }
 
+// FIX THIS: Maybe should be in bfile.c.
 int open_for_restore(struct asfd *asfd, BFILE *bfd, const char *path,
 	struct sbuf *sb, int vss_restore, struct conf *conf)
 {

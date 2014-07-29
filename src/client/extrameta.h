@@ -14,8 +14,7 @@ extern int get_extrameta(struct asfd *asfd,
 	struct sbuf *sb,
 	char **extrameta,
 	size_t *elen,
-	struct conf *conf,
-	size_t *datalen);
+	struct conf *conf);
 
 extern int set_extrameta(struct asfd *asfd,
 	BFILE *bfd,

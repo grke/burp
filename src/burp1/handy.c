@@ -66,46 +66,6 @@ struct bsid {
 };
 #endif
 
-int open_file_for_sendl(struct asfd *asfd,
-	BFILE *bfd, const char *fname,
-	int64_t winattr, size_t *datalen, int atime, struct conf *conf)
-{
-	if(bfd->mode!=BF_CLOSED)
-	{
-#ifdef HAVE_WIN32
-		if(bfd->path && !strcmp(bfd->path, fname))
-		{
-			// Already open after reading the VSS data.
-			// Time now for the actual file data.
-			return 0;
-		}
-		else
-		{
-#endif
-			// Close the open bfd so that it can be
-			// used again
-			close_file_for_send(bfd, asfd);
-#ifdef HAVE_WIN32
-		}
-#endif
-	}
-	bfile_init(bfd, winattr, conf);
-	*datalen=0;
-	if(bfile_open(bfd, asfd, fname, O_RDONLY|O_BINARY
-#ifdef O_NOATIME
-		|atime?0:O_NOATIME
-#endif
-	, 0))
-	{
-		berrno be;
-		berrno_init(&be);
-		logw(asfd, conf, "Could not open %s: %s\n",
-			fname, berrno_bstrerror(&be, errno));
-		return -1;
-	}
-	return 0;
-}
-
 char *get_endfile_str(unsigned long long bytes, uint8_t *checksum)
 {
 	static char endmsg[128]="";
@@ -139,7 +99,7 @@ int send_whole_file_gzl(struct asfd *asfd,
 	const char *fname, const char *datapth, int quick_read,
 	unsigned long long *bytes, const char *encpassword, struct conf *conf,
 	int compression, BFILE *bfd, const char *extrameta,
-	size_t elen, size_t datalen)
+	size_t elen)
 {
 	int ret=0;
 	int zret=0;
@@ -159,6 +119,7 @@ int send_whole_file_gzl(struct asfd *asfd,
 	EVP_CIPHER_CTX *enc_ctx=NULL;
 #ifdef HAVE_WIN32
 	int do_known_byte_count=0;
+	size_t datalen=bfd->datalen;
 	if(datalen>0) do_known_byte_count=1;
 #endif
 
@@ -406,8 +367,7 @@ static DWORD WINAPI write_efs(PBYTE pbData,
 int send_whole_filel(struct asfd *asfd,
 	char cmd, const char *fname, const char *datapth,
 	int quick_read, unsigned long long *bytes, struct conf *conf,
-	BFILE *bfd, const char *extrameta,
-	size_t elen, size_t datalen)
+	BFILE *bfd, const char *extrameta, size_t elen)
 {
 	int ret=0;
 	size_t s=0;
@@ -479,6 +439,7 @@ int send_whole_filel(struct asfd *asfd,
 		{
 #ifdef HAVE_WIN32
 		  int do_known_byte_count=0;
+		  size_t datalen=bfd->datalen;
 		  if(datalen>0) do_known_byte_count=1;
 #endif
 		  while(1)

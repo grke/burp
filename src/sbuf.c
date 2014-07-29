@@ -107,7 +107,7 @@ int sbuf_open_file(struct sbuf *sb, struct asfd *asfd, struct conf *conf)
 	//sb->burp2->encryption=conf->burp2->encryption_password?1:0;
 	if(attribs_encode(sb)) return -1;
 
-	if(open_file_for_send(&sb->burp2->bfd, asfd,
+	if(bfile_open_for_send(&sb->burp2->bfd, asfd,
 		sb->path.buf, sb->winattr, conf->atime, conf))
 	{
 		logw(asfd, conf, "Could not open %s\n", sb->path.buf);
@@ -118,7 +118,7 @@ int sbuf_open_file(struct sbuf *sb, struct asfd *asfd, struct conf *conf)
 
 void sbuf_close_file(struct sbuf *sb, struct asfd *asfd)
 {
-	close_file_for_send(&sb->burp2->bfd, asfd);
+	bfile_close(&sb->burp2->bfd, asfd);
 //printf("closed: %s\n", sb->path);
 }
 

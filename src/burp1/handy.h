@@ -9,21 +9,17 @@
        __typeof__ (b) _b = (b); \
      _a < _b ? _a : _b; })
 
-extern int open_file_for_sendl(struct asfd *asfd,
-	BFILE *bfd, const char *fname,
-	int64_t winattr, size_t *datalen, int atime, struct conf *conf);
-
 extern int send_whole_file_gzl(struct asfd *asfd,
 	const char *fname, const char *datapth,
 	int quick_read, unsigned long long *bytes, const char *encpassword,
 	struct conf *conf, int compression, BFILE *bfd,
-	const char *extrameta, size_t elen, size_t datalen);
+	const char *extrameta, size_t elen);
 
 extern int send_whole_filel(struct asfd *asfd,
 	char cmd, const char *fname, const char *datapth,
 	int quick_read, unsigned long long *bytes, struct conf *conf,
 	BFILE *bfd,
-	const char *extrameta, size_t elen, size_t datalen);
+	const char *extrameta, size_t elen);
 
 extern EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password);
 

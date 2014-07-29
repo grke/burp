@@ -33,11 +33,10 @@ int get_extrameta(struct asfd *asfd,
 	struct sbuf *sb,
 	char **extrameta,
 	size_t *elen,
-	struct conf *conf,
-	size_t *datalen)
+	struct conf *conf)
 {
 #if defined (WIN32_VSS)
-	if(get_vss(bfd, sb, extrameta, elen, conf, datalen)) return -1;
+	if(get_vss(bfd, sb, extrameta, elen, conf)) return -1;
 #endif
 	// Important to do xattr directly after acl, because xattr is excluding
 	// some entries if acls were set.

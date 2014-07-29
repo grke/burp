@@ -22,7 +22,7 @@ static int do_write(struct asfd *asfd,
 	}
 	else
 	{
-		if((ret=bfile_write(bfd, out, outlen))<=0)
+		if((ret=bfd->write(bfd, out, outlen))<=0)
 		{
 			logp("error when appending %d: %d\n", outlen, ret);
 			asfd->write_str(asfd, CMD_ERROR, "write failed");

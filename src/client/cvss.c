@@ -220,7 +220,7 @@ static int ensure_read(BFILE *bfd, char *buf, size_t s, int print_err)
 {
 	size_t got=0;
 	size_t offset=0;
-	while((got=bfile_read(bfd, buf+offset, s-offset))>0)
+	while((got=bfd->read(bfd, buf+offset, s-offset))>0)
 	{
 		offset+=got;
 		if(offset>=s) break;
@@ -289,7 +289,7 @@ error:
 static int ensure_write(BFILE *bfd, const char *buf, size_t got)
 {
 	size_t wrote=0;
-	while((wrote=bfile_write(bfd, (void *)buf, got))>0)
+	while((wrote=bfd->write(bfd, (void *)buf, got))>0)
 	{
 		got-=wrote;
 		if(got<=0) return 0;

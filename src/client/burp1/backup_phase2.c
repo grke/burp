@@ -187,7 +187,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 	if(sb->path.cmd!=CMD_METADATA
 	  && sb->path.cmd!=CMD_ENC_METADATA)
 	{
-		if(bfile_open_for_send(bfd, asfd,
+		if(bfd->open_for_send(bfd, asfd,
 			sb->path.buf, sb->winattr, conf->atime, conf))
 				forget++;
 	}
@@ -283,7 +283,7 @@ error:
 	// different file path, or when this function
 	// exits.
 #else
-	bfile_close(bfd, asfd);
+	bfd->close(bfd, asfd);
 #endif
 	sbuf_free_content(sb);
 	if(extrameta) free(extrameta);
@@ -382,7 +382,7 @@ static int do_backup_phase2_client(struct asfd *asfd,
 
 end:
 	// It is possible for a bfd to still be open.
-	bfile_close(bfd, asfd);
+	bfd->close(bfd, asfd);
 	bfile_free(&bfd);
 	iobuf_free_content(rbuf);
 	sbuf_free(&sb);

@@ -59,7 +59,7 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 	if(!bfd && !(bfd=bfile_alloc())) return -1;
 
 	bfile_init(bfd, 0, cconf);
-	if(bfile_open_for_send(bfd, asfd, best, sb->winattr,
+	if(bfd->open_for_send(bfd, asfd, best, sb->winattr,
 		1 /* no O_NOATIME */, cconf)) return -1;
 	//logp("sending: %s\n", best);
 	if(asfd->write(asfd, &sb->path))
@@ -105,7 +105,7 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 				cconf, bfd, NULL, 0);
 		}
 	}
-	bfile_close(bfd, asfd);
+	bfd->close(bfd, asfd);
 	return ret;
 }
 

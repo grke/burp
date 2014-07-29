@@ -28,7 +28,7 @@ static int do_write(struct asfd *asfd, BFILE *bfd,
 	uint8_t *out, size_t outlen, unsigned long long *sent)
 {
 	int ret=0;
-	if((ret=bfile_write(bfd, out, outlen))<=0)
+	if((ret=bfd->write(bfd, out, outlen))<=0)
 	{
 		logp("%s: error when appending %d: %d\n",
 			__func__, outlen, ret);

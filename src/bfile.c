@@ -4,24 +4,6 @@
 #include <sys/paths.h>
 #endif
 
-BFILE *bfile_alloc(void)
-{
-	return (BFILE *)calloc_w(1, sizeof(BFILE), __func__);
-}
-
-void bfile_init(BFILE *bfd, int64_t winattr, struct conf *conf)
-{
-	memset(bfd, 0, sizeof(BFILE));
-	bfd->mode=BF_CLOSED;
-	bfd->winattr=winattr;
-	bfd->conf=conf;
-#ifdef HAVE_WIN32
-	bfile_set_win32_api(bfd, 1);
-#else
-	bfd->fd=-1;
-#endif
-}
-
 void bfile_free(BFILE **bfd)
 {
 	free_v((void **)bfd);
@@ -32,7 +14,7 @@ void bfile_free(BFILE **bfd)
 char *unix_name_to_win32(char *name);
 extern "C" HANDLE get_osfhandle(int fd);
 
-void bfile_set_win32_api(BFILE *bfd, int on)
+static void bfile_set_win32_api(BFILE *bfd, int on)
 {
 	if(have_win32_api() && on)
 		bfd->use_backup_api=1;
@@ -129,7 +111,7 @@ static int bfile_error(BFILE *bfd)
 }
 
 // Return 0 for success, non zero for error.
-int bfile_open(BFILE *bfd, struct asfd *asfd,
+static int bfile_open(BFILE *bfd, struct asfd *asfd,
 	const char *fname, int flags, mode_t mode)
 {
 	DWORD dwaccess;
@@ -308,7 +290,7 @@ static int bfile_close_encrypted(BFILE *bfd, struct asfd *asfd)
 }
 
 // Return 0 on success, -1 on error.
-int bfile_close(BFILE *bfd, struct asfd *asfd)
+static int bfile_close(BFILE *bfd, struct asfd *asfd)
 {
 	int ret=-1;
 
@@ -379,7 +361,7 @@ end:
 }
 
 // Returns: bytes read on success, or 0 on EOF, -1 on error.
-ssize_t bfile_read(BFILE *bfd, void *buf, size_t count)
+static ssize_t bfile_read(BFILE *bfd, void *buf, size_t count)
 {
 	bfd->rw_bytes=0;
 
@@ -407,7 +389,7 @@ ssize_t bfile_read(BFILE *bfd, void *buf, size_t count)
 	return (ssize_t)bfd->rw_bytes;
 }
 
-ssize_t bfile_write(BFILE *bfd, void *buf, size_t count)
+static ssize_t bfile_write(BFILE *bfd, void *buf, size_t count)
 {
 	bfd->rw_bytes = 0;
 
@@ -436,7 +418,7 @@ ssize_t bfile_write(BFILE *bfd, void *buf, size_t count)
 
 #else
 
-int bfile_close(BFILE *bfd, struct asfd *asfd)
+static int bfile_close(BFILE *bfd, struct asfd *asfd)
 {
 	if(!bfd || bfd->mode==BF_CLOSED) return 0;
 
@@ -454,11 +436,11 @@ int bfile_close(BFILE *bfd, struct asfd *asfd)
 	return -1;
 }
 
-int bfile_open(BFILE *bfd,
+static int bfile_open(BFILE *bfd,
 	struct asfd *asfd, const char *fname, int flags, mode_t mode)
 {
 	if(!bfd) return 0;
-	if(bfd->mode!=BF_CLOSED && bfile_close(bfd, asfd))
+	if(bfd->mode!=BF_CLOSED && bfd->close(bfd, asfd))
 		return -1;
 	if(!(bfd->fd=open(fname, flags, mode))<0)
 		return -1;
@@ -471,20 +453,20 @@ int bfile_open(BFILE *bfd,
 	return 0;
 }
 
-ssize_t bfile_read(BFILE *bfd, void *buf, size_t count)
+static ssize_t bfile_read(BFILE *bfd, void *buf, size_t count)
 {
 	return read(bfd->fd, buf, count);
 }
 
-ssize_t bfile_write(BFILE *bfd, void *buf, size_t count)
+static ssize_t bfile_write(BFILE *bfd, void *buf, size_t count)
 {
 	return write(bfd->fd, buf, count);
 }
 
 #endif
 
-int bfile_open_for_send(BFILE *bfd, struct asfd *asfd, const char *fname,
-	int64_t winattr, int atime, struct conf *conf)
+static int bfile_open_for_send(BFILE *bfd, struct asfd *asfd,
+	const char *fname, int64_t winattr, int atime, struct conf *conf)
 {
 	if(conf->protocol==PROTO_BURP1 && bfd->mode!=BF_CLOSED)
 	{
@@ -500,7 +482,7 @@ int bfile_open_for_send(BFILE *bfd, struct asfd *asfd, const char *fname,
 #endif
 			// Close the open bfd so that it can be
 			// used again
-			bfile_close(bfd, asfd);
+			bfd->close(bfd, asfd);
 #ifdef HAVE_WIN32
 		}
 #endif
@@ -520,4 +502,33 @@ int bfile_open_for_send(BFILE *bfd, struct asfd *asfd, const char *fname,
 		return -1;
 	}
 	return 0;
+}
+
+void bfile_init(BFILE *bfd, int64_t winattr, struct conf *conf)
+{
+	memset(bfd, 0, sizeof(BFILE));
+	bfd->mode=BF_CLOSED;
+	bfd->winattr=winattr;
+	bfd->conf=conf;
+	if(!bfd->open)
+	{
+		bfd->open=bfile_open;
+		bfd->close=bfile_close;
+		bfd->read=bfile_read;
+		bfd->write=bfile_write;
+		bfd->open_for_send=bfile_open_for_send;
+#ifdef HAVE_WIN32
+		bfd->set_win32_api=bfile_set_win32_api;
+#endif
+	}
+#ifdef HAVE_WIN32
+	bfile_set_win32_api(bfd, 1);
+#else
+	bfd->fd=-1;
+#endif
+}
+
+BFILE *bfile_alloc(void)
+{
+	return (BFILE *)calloc_w(1, sizeof(BFILE), __func__);
 }

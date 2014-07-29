@@ -194,7 +194,7 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 		{
 			if(fb->data_len>0)
 			{
-				len=bfile_read(fb->bfd, fb->buf,
+				len=fb->bfd->read(fb->bfd, fb->buf,
 					min(fb->buf_len, fb->data_len));
 				fb->data_len-=len;
 			}
@@ -207,7 +207,7 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 			}
 		}
 		else
-			len=bfile_read(fb->bfd, fb->buf, fb->buf_len);
+			len=fb->bfd->read(fb->bfd, fb->buf, fb->buf_len);
 		if(len==0)
 		{
 			//logp("bread: eof\n");

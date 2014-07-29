@@ -171,14 +171,14 @@ int send_whole_file_gzl(struct asfd *asfd,
 			{
 				if(datalen<=0) strm.avail_in=0;
 				else strm.avail_in=
-					(uint32_t)bfile_read(bfd, in,
+					(uint32_t)bfd->read(bfd, in,
 						min((size_t)ZCHUNK, datalen));
 				datalen-=strm.avail_in;
 			}
 			else
 #endif
 				strm.avail_in=
-					(uint32_t)bfile_read(bfd, in, ZCHUNK);
+					(uint32_t)bfd->read(bfd, in, ZCHUNK);
 		}
 		if(!compression && !strm.avail_in) break;
 
@@ -447,14 +447,14 @@ int send_whole_filel(struct asfd *asfd,
 #ifdef HAVE_WIN32
 			if(do_known_byte_count)
 			{
-				s=(uint32_t)bfile_read(bfd,
+				s=(uint32_t)bfd->read(bfd,
 					buf, min((size_t)4096, datalen));
 				datalen-=s;
 			}
 			else
 			{
 #endif
-				s=(uint32_t)bfile_read(bfd, buf, 4096);
+				s=(uint32_t)bfd->read(bfd, buf, 4096);
 #ifdef HAVE_WIN32
 			}
 #endif

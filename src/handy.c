@@ -507,9 +507,9 @@ int receive_a_file(struct asfd *asfd, const char *path, struct conf *conf)
 	if(!(bfd=bfile_alloc())) goto end;
 	bfile_init(bfd, 0, conf);
 #ifdef HAVE_WIN32
-	bfile_set_win32_api(bfd, 0);
+	bfd->set_win32_api(bfd, 0);
 #endif
-	if(bfile_open(bfd, asfd, path,
+	if(bfd->open(bfd, asfd, path,
 		O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,
 		S_IRUSR | S_IWUSR))
 	{
@@ -522,7 +522,7 @@ int receive_a_file(struct asfd *asfd, const char *path, struct conf *conf)
 
 	ret=transfer_gzfile_in(asfd, path, bfd,
 		&rcvdbytes, &sentbytes, conf->cntr);
-	if(bfile_close(bfd, asfd))
+	if(bfd->close(bfd, asfd))
 	{
 		logp("error closing %s in receive_a_file\n", path);
 		goto end;

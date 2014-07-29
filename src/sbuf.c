@@ -92,6 +92,7 @@ int sbuf_pathcmp(struct sbuf *a, struct sbuf *b)
 
 int sbuf_open_file(struct sbuf *sb, struct asfd *asfd, struct conf *conf)
 {
+	BFILE *bfd=&sb->burp2->bfd;
 #ifdef HAVE_WIN32
 	if(win32_lstat(sb->path.buf, &sb->statp, &sb->winattr))
 #else
@@ -107,7 +108,7 @@ int sbuf_open_file(struct sbuf *sb, struct asfd *asfd, struct conf *conf)
 	//sb->burp2->encryption=conf->burp2->encryption_password?1:0;
 	if(attribs_encode(sb)) return -1;
 
-	if(bfile_open_for_send(&sb->burp2->bfd, asfd,
+	if(bfd->open_for_send(bfd, asfd,
 		sb->path.buf, sb->winattr, conf->atime, conf))
 	{
 		logw(asfd, conf, "Could not open %s\n", sb->path.buf);
@@ -118,13 +119,15 @@ int sbuf_open_file(struct sbuf *sb, struct asfd *asfd, struct conf *conf)
 
 void sbuf_close_file(struct sbuf *sb, struct asfd *asfd)
 {
-	bfile_close(&sb->burp2->bfd, asfd);
+	BFILE *bfd=&sb->burp2->bfd;
+	bfd->close(bfd, asfd);
 //printf("closed: %s\n", sb->path);
 }
 
 ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize)
 {
-	return (ssize_t)bfile_read(&sb->burp2->bfd, buf, bufsize);
+	BFILE *bfd=&sb->burp2->bfd;
+	return (ssize_t)bfd->read(bfd, buf, bufsize);
 }
 
 int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,

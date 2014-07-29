@@ -118,7 +118,7 @@ int open_for_restore(struct asfd *asfd, BFILE *bfd, const char *path,
 		else
 		{
 #endif
-			if(bfile_close(bfd, asfd))
+			if(bfd->close(bfd, asfd))
 			{
 				logp("error closing %s in %s()\n",
 					path, __func__);
@@ -130,7 +130,7 @@ int open_for_restore(struct asfd *asfd, BFILE *bfd, const char *path,
 	}
 	bfile_init(bfd, sb->winattr, conf);
 #ifdef HAVE_WIN32
-	bfile_set_win32_api(bfd, vss_restore);
+	bfd->set_win32_api(bfd, vss_restore);
 #endif
 	if(S_ISDIR(sb->statp.st_mode))
 	{
@@ -141,7 +141,7 @@ int open_for_restore(struct asfd *asfd, BFILE *bfd, const char *path,
 	else
 		flags=O_WRONLY|O_BINARY|O_CREAT|O_TRUNC;
 
-	if(bfile_open(bfd, asfd, path, flags, S_IRUSR | S_IWUSR))
+	if(bfd->open(bfd, asfd, path, flags, S_IRUSR | S_IWUSR))
 	{
 		berrno be;
 		berrno_init(&be);
@@ -445,7 +445,7 @@ static int write_data(struct asfd *asfd, BFILE *bfd, struct blk *blk)
 	{
 		int w;
 //printf("writing: %d\n", blk->length);
-		if((w=bfile_write(bfd, blk->data, blk->length))<=0)
+		if((w=bfd->write(bfd, blk->data, blk->length))<=0)
 		{
 			logp("%s(): error when appending %d: %d\n",
 				__func__, blk->length, w);
@@ -708,7 +708,7 @@ end:
 	ret=0;
 error:
 	// It is possible for a fd to still be open.
-	bfile_close(bfd, asfd);
+	bfd->close(bfd, asfd);
 	bfile_free(&bfd);
 
 	cntr_print_end(conf->cntr);

@@ -427,18 +427,10 @@ int bclose(BFILE *bfd, struct asfd *asfd)
 				&bfd->statp, bfd->winattr, bfd->conf);
 		bfd->mode=BF_CLOSED;
 		bfd->fd=-1;
-		if(bfd->path)
-		{
-			free(bfd->path);
-			bfd->path=NULL;
-		}
+		free_w(&bfd->path);
 		return 0;
 	}
-	if(bfd->path)
-	{
-		free(bfd->path);
-		bfd->path=NULL;
-	}
+	free_w(&bfd->path);
 	return -1;
 }
 

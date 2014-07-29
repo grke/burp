@@ -482,3 +482,42 @@ ssize_t bfile_write(BFILE *bfd, void *buf, size_t count)
 }
 
 #endif
+
+int bfile_open_for_send(BFILE *bfd, struct asfd *asfd, const char *fname,
+	int64_t winattr, int atime, struct conf *conf)
+{
+	if(conf->protocol==PROTO_BURP1 && bfd->mode!=BF_CLOSED)
+	{
+#ifdef HAVE_WIN32
+		if(bfd->path && !strcmp(bfd->path, fname))
+		{
+			// Already open after reading the VSS data.
+			// Time now for the actual file data.
+			return 0;
+		}
+		else
+		{
+#endif
+			// Close the open bfd so that it can be
+			// used again
+			bfile_close(bfd, asfd);
+#ifdef HAVE_WIN32
+		}
+#endif
+	}
+
+	bfile_init(bfd, winattr, conf);
+	if(bfile_open(bfd, asfd, fname, O_RDONLY|O_BINARY
+#ifdef O_NOATIME
+		|atime?0:O_NOATIME
+#endif
+		, 0))
+	{
+		berrno be;
+		berrno_init(&be);
+		logw(asfd, conf, "Could not open %s: %s\n",
+			fname, berrno_bstrerror(&be, errno));
+		return -1;
+	}
+	return 0;
+}

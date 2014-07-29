@@ -20,7 +20,7 @@ static int load_signature(struct asfd *asfd,
 
 static int load_signature_and_send_delta(struct asfd *asfd,
 	BFILE *bfd, unsigned long long *bytes, unsigned long long *sentbytes,
-	struct conf *conf, size_t datalen)
+	struct conf *conf)
 {
 	rs_job_t *job;
 	rs_result r;
@@ -41,7 +41,7 @@ static int load_signature_and_send_delta(struct asfd *asfd,
 	}
 
 	if(!(infb=rs_filebuf_new(asfd, bfd,
-		NULL, NULL, -1, ASYNC_BUF_LEN, datalen, conf->cntr))
+		NULL, NULL, -1, ASYNC_BUF_LEN, bfd->datalen, conf->cntr))
 	  || !(outfb=rs_filebuf_new(asfd, NULL, NULL,
 		NULL, asfd->fd, ASYNC_BUF_LEN, -1, conf->cntr)))
 	{
@@ -101,17 +101,16 @@ static int send_whole_file_w(struct asfd *asfd,
 	struct sbuf *sb, const char *datapth,
 	int quick_read, unsigned long long *bytes, const char *encpassword,
 	struct conf *conf, int compression, BFILE *bfd,
-	const char *extrameta, size_t elen, size_t datalen)
+	const char *extrameta, size_t elen)
 {
 	if((compression || encpassword) && sb->path.cmd!=CMD_EFS_FILE)
 		return send_whole_file_gzl(asfd,
 		  sb->path.buf, datapth, quick_read, bytes, 
-		  encpassword, conf, compression, bfd, extrameta, elen,
-		  datalen);
+		  encpassword, conf, compression, bfd, extrameta, elen);
 	else
 		return send_whole_filel(asfd,
 		  sb->path.cmd, sb->path.buf, datapth, quick_read, bytes, 
-		  conf, bfd, extrameta, elen, datalen);
+		  conf, bfd, extrameta, elen);
 }
 
 static int forget_file(struct asfd *asfd, struct sbuf *sb, struct conf *conf)
@@ -155,7 +154,7 @@ static int size_checks(struct asfd *asfd, struct sbuf *sb, struct conf *conf)
 }
 
 static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
-	BFILE *bfd, size_t *datalen, struct conf *conf)
+	BFILE *bfd, struct conf *conf)
 {
 	int ret=-1;
 	int forget=0;
@@ -188,8 +187,8 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 	if(sb->path.cmd!=CMD_METADATA
 	  && sb->path.cmd!=CMD_ENC_METADATA)
 	{
-		if(open_file_for_sendl(asfd, bfd,
-			sb->path.buf, sb->winattr, datalen, conf->atime, conf))
+		if(bfile_open_for_send(bfd, asfd,
+			sb->path.buf, sb->winattr, conf->atime, conf))
 				forget++;
 	}
 
@@ -209,7 +208,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 	  )
 	{
 		if(get_extrameta(asfd, bfd,
-			sb, &extrameta, &elen, conf, datalen))
+			sb, &extrameta, &elen, conf))
 		{
 			logw(asfd, conf, "Meta data error for %s", sb->path.buf);
 			goto end;
@@ -242,7 +241,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 		  || asfd->write(asfd, &sb->attr)
 		  || asfd->write(asfd, &sb->path)
 		  || load_signature_and_send_delta(asfd, bfd,
-			&bytes, &sentbytes, conf, *datalen))
+			&bytes, &sentbytes, conf))
 		{
 			logp("error in sig/delta for %s (%s)\n",
 				sb->path.buf, sb->burp1->datapth.buf);
@@ -264,7 +263,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 		  || asfd->write(asfd, &sb->path))
 		  || send_whole_file_w(asfd, sb, NULL, 0, &bytes,
 			conf->encryption_password, conf, sb->compression,
-			bfd, extrameta, elen, *datalen))
+			bfd, extrameta, elen))
 				goto end;
 		else
 		{
@@ -284,7 +283,7 @@ error:
 	// different file path, or when this function
 	// exits.
 #else
-	close_file_for_send(bfd, asfd);
+	bfile_close(bfd, asfd);
 #endif
 	sbuf_free_content(sb);
 	if(extrameta) free(extrameta);
@@ -292,7 +291,7 @@ error:
 }
 
 static int parse_rbuf(struct asfd *asfd, struct sbuf *sb,
-	BFILE *bfd, size_t *datalen, struct conf *conf)
+	BFILE *bfd, struct conf *conf)
 {
 	static struct iobuf *rbuf;
 	rbuf=asfd->rbuf;
@@ -319,7 +318,7 @@ static int parse_rbuf(struct asfd *asfd, struct sbuf *sb,
 	  || rbuf->cmd==CMD_ENC_VSS_T
 	  || rbuf->cmd==CMD_EFS_FILE)
 	{
-		if(deal_with_data(asfd, sb, bfd, datalen, conf))
+		if(deal_with_data(asfd, sb, bfd, conf))
 			return -1;
 	}
 	else if(rbuf->cmd==CMD_WARNING)
@@ -342,9 +341,6 @@ static int do_backup_phase2_client(struct asfd *asfd,
 	// close them until another time around the loop, when the actual
 	// data is read.
 	BFILE *bfd=NULL;
-	// Windows VSS headers tell us how much file
-	// data to expect.
-	size_t datalen=0;
 	struct sbuf *sb=NULL;
 	struct iobuf *rbuf=asfd->rbuf;
 
@@ -380,13 +376,13 @@ static int do_backup_phase2_client(struct asfd *asfd,
 			break;
 		}
 
-		if(parse_rbuf(asfd, sb, bfd, &datalen, conf))
+		if(parse_rbuf(asfd, sb, bfd, conf))
 			goto end;
 	}
 
 end:
 	// It is possible for a bfd to still be open.
-	close_file_for_send(bfd, asfd);
+	bfile_close(bfd, asfd);
 	bfile_free(&bfd);
 	iobuf_free_content(rbuf);
 	sbuf_free(&sb);

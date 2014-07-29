@@ -16,6 +16,9 @@ struct BFILE
 	struct stat statp;
 	char *path;
 	struct conf *conf;
+	// Windows VSS headers tell us how much file data to expect.
+	// Burp1 only for now.
+	size_t datalen;
 #ifdef HAVE_WIN32
 	uint8_t use_backup_api; /* set if using BackupRead/Write */
 	HANDLE fh;           /* Win32 file handle */
@@ -37,6 +40,8 @@ extern int bfile_open(BFILE *bfd, struct asfd *asfd,
 extern int bfile_close(BFILE *bfd, struct asfd *asfd);
 extern ssize_t bfile_read(BFILE *bfd, void *buf, size_t count);
 extern ssize_t bfile_write(BFILE *bfd, void *buf, size_t count);
+extern int bfile_open_for_send(BFILE *bfd, struct asfd *asfd,
+	const char *fname, int64_t winattr, int atime, struct conf *conf);
 
 #ifdef HAVE_WIN32
 extern void bfile_set_win32_api(BFILE *bfd, int on);

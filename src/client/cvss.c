@@ -236,7 +236,7 @@ static int ensure_read(BFILE *bfd, char *buf, size_t s, int print_err)
 }
 
 int get_vss(BFILE *bfd, struct sbuf *sb, char **vssdata, size_t *vlen,
-	struct conf *conf, size_t *datalen)
+	struct conf *conf)
 {
 	bsid sid;
 	char *tmp=NULL;
@@ -255,7 +255,7 @@ int get_vss(BFILE *bfd, struct sbuf *sb, char **vssdata, size_t *vlen,
 		{
 		//	logp("\n%s: %d + %d\n",
 		//		path, (int)sid.Size, (int)sid.dwStreamNameSize);
-			*datalen=sid.Size;
+			bfd->datalen=sid.Size;
 			break;
 		}
 

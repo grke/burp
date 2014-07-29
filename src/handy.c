@@ -61,30 +61,6 @@ static int write_endfile(struct asfd *asfd, unsigned long long bytes)
 	return asfd->write_str(asfd, CMD_END_FILE, get_endfile_str(bytes));
 }
 
-int open_file_for_send(BFILE *bfd, struct asfd *asfd, const char *fname,
-	int64_t winattr, int atime, struct conf *conf)
-{
-	bfile_init(bfd, winattr, conf);
-	if(bfile_open(bfd, asfd, fname, O_RDONLY|O_BINARY
-#ifdef O_NOATIME
-		|atime?0:O_NOATIME
-#endif
-		, 0))
-	{
-		berrno be;
-		berrno_init(&be);
-		logw(asfd, conf, "Could not open %s: %s\n",
-			fname, berrno_bstrerror(&be, errno));
-		return -1;
-	}
-	return 0;
-}
-
-int close_file_for_send(BFILE *bfd, struct asfd *asfd)
-{
-	return bfile_close(bfd, asfd);
-}
-
 int send_whole_file_gz(struct asfd *asfd,
 	const char *fname, const char *datapth, int quick_read,
 	unsigned long long *bytes, struct conf *conf,

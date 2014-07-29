@@ -5,7 +5,7 @@
 extern int win32_start_vss(struct conf *conf);
 extern int win32_stop_vss(void);
 extern int get_vss(BFILE *bfd, struct sbuf *sb,
-	char **vssdata, size_t *vlen, struct conf *conf, size_t *datalen);
+	char **vssdata, size_t *vlen, struct conf *conf);
 extern int set_vss(BFILE *bfd,
 	const char *vssdata, size_t vlen, struct conf *config);
 #endif // WIN32_VSS

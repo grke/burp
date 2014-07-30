@@ -50,6 +50,7 @@ extern void bfile_free(BFILE **bfd);
 // FIX THIS: should be possible to have this as a function pointer too.
 // Need to sort out the bfd in sbuf.
 extern void bfile_init(BFILE *bfd, int64_t winattr, struct conf *conf);
+extern void bfile_setup_funcs(BFILE *bfd);
 
 #ifdef HAVE_WIN32
 extern int have_win32_api(void);

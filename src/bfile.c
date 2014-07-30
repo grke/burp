@@ -504,23 +504,25 @@ static int bfile_open_for_send(BFILE *bfd, struct asfd *asfd,
 	return 0;
 }
 
+void bfile_setup_funcs(BFILE *bfd)
+{
+	bfd->open=bfile_open;
+	bfd->close=bfile_close;
+	bfd->read=bfile_read;
+	bfd->write=bfile_write;
+	bfd->open_for_send=bfile_open_for_send;
+#ifdef HAVE_WIN32
+	bfd->set_win32_api=bfile_set_win32_api;
+#endif
+}
+
 void bfile_init(BFILE *bfd, int64_t winattr, struct conf *conf)
 {
 	memset(bfd, 0, sizeof(BFILE));
 	bfd->mode=BF_CLOSED;
 	bfd->winattr=winattr;
 	bfd->conf=conf;
-	if(!bfd->open)
-	{
-		bfd->open=bfile_open;
-		bfd->close=bfile_close;
-		bfd->read=bfile_read;
-		bfd->write=bfile_write;
-		bfd->open_for_send=bfile_open_for_send;
-#ifdef HAVE_WIN32
-		bfd->set_win32_api=bfile_set_win32_api;
-#endif
-	}
+	if(!bfd->open) bfile_setup_funcs(bfd);
 #ifdef HAVE_WIN32
 	bfile_set_win32_api(bfd, 1);
 #else

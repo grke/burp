@@ -530,6 +530,8 @@ int receive_a_file(struct asfd *asfd, const char *path, struct conf *conf)
 	logp("Received: %s\n", path);
 	ret=0;
 end:
+	bfd->close(bfd, asfd);
+	bfile_free(&bfd);
 	return ret;
 }
 

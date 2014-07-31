@@ -116,7 +116,7 @@ end:
 static void cstat_remove(struct cstat **clist, struct cstat **cstat)
 {
 	struct cstat *c;
-	struct cstat *clast;
+	struct cstat *clast=NULL;
 	if(!cstat || !*cstat) return;
 	if(*clist==*cstat)
 	{

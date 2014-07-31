@@ -45,12 +45,14 @@ int cstat_add_to_list(struct cstat **clist, struct cstat *cnew)
 	for(c=*clist; c; c=c->next)
 	{
 		if(strcmp(cnew->name, c->name)<0) break;
+		c->prev=clast;
 		clast=c;
 	}
 	if(clast)
 	{
 		cnew->next=clast->next;
 		clast->next=cnew;
+		cnew->prev=clast;
 	}
 	else
 	{
@@ -114,6 +116,7 @@ end:
 static void cstat_remove(struct cstat **clist, struct cstat **cstat)
 {
 	struct cstat *c;
+	struct cstat *clast;
 	if(!cstat || !*cstat) return;
 	if(*clist==*cstat)
 	{
@@ -124,9 +127,18 @@ static void cstat_remove(struct cstat **clist, struct cstat **cstat)
 	}
 	for(c=*clist; c; c=c->next)
 	{
-		if(c->next!=*cstat) continue;
+		if(c->next!=*cstat)
+		{
+			clast=c;
+			continue;
+		}
 		c->next=(*cstat)->next;
+		c->prev=clast;
 		cstat_free(cstat);
+
+		// Set cstat to the beginning of the list, so that the
+		// loop we were called from will not break when it tries to
+		// go to cstat->next.
 		*cstat=*clist;
 		return;
 	}

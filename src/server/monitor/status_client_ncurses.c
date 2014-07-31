@@ -551,18 +551,33 @@ static int show_rbuf(const char *rbuf, struct conf *conf, int sel, char **client
 static int update_screen(struct cstat *clist, struct cstat *sel)
 {
 	int x=0;
-	int row=24;
-	int col=80;
 	struct cstat *c;
 #ifdef HAVE_NCURSES_H
-	if(actg==ACTION_STATUS) getmaxyx(stdscr, row, col);
-#endif
+	int row=24;
+	int col=80;
+	int selindex=0;
+	if(actg==ACTION_STATUS)
+	{
+		getmaxyx(stdscr, row, col);
+		for(c=clist; c; c=c->next)
+		{
+			selindex++;
+			if(sel==c) break;
+		}
+	}
+
 	// First, blank the whole screen.
 	blank_screen(row, col);
+#endif
 	for(c=clist; c; c=c->next)
 	{
+#ifdef HAVE_NCURSES_H
+		selindex--;
+		if(selindex>0) continue;
 		print_line(c->name, x++, col);
-		if(sel==c) mvprintw(x+TOP_SPACE-1, 1, "*");
+		if(actg==ACTION_STATUS && sel==c)
+			mvprintw(x+TOP_SPACE-1, 1, "*");
+#endif
 	}
 	
 	return 0;
@@ -640,7 +655,6 @@ static int parse_stdin_data(struct asfd *asfd, struct cstat *clist,
 	struct cstat **sel, int *details, int count, int *enterpressed)
 {
 	static int ch;
-	struct cstat *c;
 	if(asfd->rbuf->len!=sizeof(ch))
 	{
 		logp("Unexpected input length in %s: %d\n",
@@ -657,12 +671,7 @@ static int parse_stdin_data(struct asfd *asfd, struct cstat *clist,
 		case 'k':
 		case 'K':
 			if(*details) break;
-			if(*sel==clist) break;
-			for(c=clist; c; c=c->next) if(*sel==c->next)
-			{
-				*sel=c;
-				break;
-			}
+			if((*sel)->prev) *sel=(*sel)->prev;
 			break;
 		case KEY_DOWN:
 		case 'j':
@@ -687,24 +696,35 @@ static int parse_stdin_data(struct asfd *asfd, struct cstat *clist,
 		case 'L':
 			(*details)++;
 			break;
-/*
-		case KEY_NPAGE:
-		{
-			int row=0;
-			int col=0;
-			getmaxyx(stdscr, row, col);
-			(*sel)+=row-TOP_SPACE;
-			break;
-		}
 		case KEY_PPAGE:
 		{
 			int row=0;
 			int col=0;
+			struct cstat *c;
 			getmaxyx(stdscr, row, col);
-			(*sel)-=row-TOP_SPACE;
+			for(c=*sel; c; c=c->prev)
+			{
+				row--;
+				if(!row) break;
+			}
+			*sel=c;
 			break;
 		}
-*/
+		case KEY_NPAGE:
+		{
+			int row=0;
+			int col=0;
+			struct cstat *c;
+			getmaxyx(stdscr, row, col);
+			for(c=*sel; c; c=c->next)
+			{
+				row--;
+				if(!row) break;
+				if(!c->next) break;
+			}
+			*sel=c;
+			break;
+		}
 		case -1:
 			logp("Error on stdin\n");
 			return -1;

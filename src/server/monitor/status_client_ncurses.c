@@ -38,59 +38,56 @@ static void print_line(const char *string, int row, int col)
 }
 
 // Returns 1 if it printed a line, 0 otherwise.
-/*
-static int summary(const char *cntrclient, char status, char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr, struct strlist *backups, int count, int row, int col)
+//static int summary(char status, char phase, const char *path,
+//	struct cntr *p1cntr, struct cntr *cntr,
+//	struct strlist *backups, int count, int row, int col)
+static int summary(struct cstat *cstat, int row, int col, struct conf *conf)
 {
 	char msg[1024]="";
 
-	if(status==STATUS_IDLE)
+	switch(cstat->status)
 	{
-		snprintf(msg, sizeof(msg),
-			"%-14.14s %-14s%s%s", cntrclient, "idle",
-			backups?" last backup: ":"",
-			backups?backups->path:"");
-	}
-	if(status==STATUS_SERVER_CRASHED)
-	{
-		snprintf(msg, sizeof(msg),
-			"%-14.14s %-14s%s%s", cntrclient, "server crashed",
-			backups?" last backup: ":"",
-			backups?backups->path:"");
-	}
-	if(status==STATUS_CLIENT_CRASHED)
-	{
-		snprintf(msg, sizeof(msg),
-			"%-14.14s %-14s%s%s", cntrclient, "client crashed",
-			backups?" last backup: ":"",
-			backups?backups->path:"");
-	}
-	if(status==STATUS_RUNNING)
-	{
-		char f[64]="";
-		char b[64]="";
-		const char *s="";
-//	  	unsigned long long p=0;
-//		unsigned long long t=0;
+		case STATUS_RUNNING:
+/*
+		{
+			char f[64]="";
+			char b[64]="";
+			const char *s="";
+		  	unsigned long long p=0;
+			unsigned long long t=0;
 
-		s=cstat_to_str(phase);
-//		t=cntr->total+cntr->total_same+cntr->total_changed;
-//		if(p1cntr->total) p=(t*100)/p1cntr->total;
-//		snprintf(f, sizeof(f), "%llu/%llu %llu%%",
-//			t, p1cntr->total, p);
-//		if(cntr->byte)
-//			snprintf(b, sizeof(b), "%s",
-//				bytes_to_human(cntr->byte));
-		snprintf(msg, sizeof(msg), "%-14.14s %-14s %s%s",
-			cntrclient, s, f, b);
+			s=cstat_to_str(phase);
+			t=cntr->total+cntr->total_same+cntr->total_changed;
+			if(p1cntr->total) p=(t*100)/p1cntr->total;
+			snprintf(f, sizeof(f), "%llu/%llu %llu%%",
+				t, p1cntr->total, p);
+			if(cntr->byte)
+				snprintf(b, sizeof(b), "%s",
+					bytes_to_human(cntr->byte));
+			snprintf(msg, sizeof(msg), "%-14.14s %-14s %s%s",
+				c->status, s, f, b);
+		}
+*/
+		case STATUS_IDLE:
+		case STATUS_SERVER_CRASHED:
+		case STATUS_CLIENT_CRASHED:
+		default:
+			snprintf(msg, sizeof(msg), "%-14.14s %-14s%s%s",
+				cstat->name,
+				cstat_status_to_str(cstat),
+				" last backup: ",
+				cstat->bu_current->timestamp);
+				break;
+			break;
 	}
+
 	if(*msg)
 	{
-		print_line(msg, count, col);
+		print_line(msg, row, col);
 		return 1;
 	}
 	return 0;
 }
-*/
 /*
 static void show_all_backups(struct strlist *backups, int *x, int col)
 {
@@ -410,7 +407,8 @@ static void blank_screen(int row, int col)
 	if(actg==ACTION_STATUS)
 	{
 		char v[32]="";
-		clear();
+	// Try not actually blanking it - should stop screen flicker.
+	//	clear();
 		snprintf(v, sizeof(v), " burp monitor %s", VERSION);
 		mvprintw(0, 0, v);
 		mvprintw(0, col-l-1, date);
@@ -419,6 +417,7 @@ static void blank_screen(int row, int col)
 #endif
 
 	printf("\n burp status");
+
 	for(c=0; c<(int)(col-strlen(" burp status")-l-1); c++) printf(" ");
 	printf("%s\n\n", date);
 }
@@ -548,17 +547,23 @@ static int show_rbuf(const char *rbuf, struct conf *conf, int sel, char **client
 }
 */
 
-static int update_screen(struct cstat *clist, struct cstat *sel)
+static int update_screen(struct cstat *clist,
+	struct cstat *sel, struct conf *conf)
 {
 	int x=0;
 	struct cstat *c;
 #ifdef HAVE_NCURSES_H
+	int s=0;
 	int row=24;
 	int col=80;
 	int selindex=0;
+	static int winmin=0;
+	static int winmax=0;
+	static int selindex_last=0;
 	if(actg==ACTION_STATUS)
 	{
 		getmaxyx(stdscr, row, col);
+		//if(!winmax) winmax=row;
 		for(c=clist; c; c=c->next)
 		{
 			selindex++;
@@ -566,19 +571,58 @@ static int update_screen(struct cstat *clist, struct cstat *sel)
 		}
 	}
 
+	// Adjust sliding window appropriately.
+	if(selindex>selindex_last)
+	{
+		if(selindex>winmax-TOP_SPACE-1)
+		{
+			winmin+=selindex-selindex_last;
+			winmax+=selindex-selindex_last;
+		}
+	}
+	else if(selindex<selindex_last)
+	{
+		if(selindex<winmin)
+		{
+			winmin+=selindex-selindex_last;
+			winmax+=selindex-selindex_last;
+		}
+	}
+	if(winmin<=0)
+	{
+		winmin=0;
+		winmax=row;
+	}
+
 	// First, blank the whole screen.
 	blank_screen(row, col);
+/*
+	{
+		char msg[64];
+		snprintf(msg, sizeof(msg), "sel:%d si:%d min:%d max:%d\n",
+			selindex, selindex_last, winmin, winmax);
+		print_line(msg, -1, col);
+	}
+*/
 #endif
 	for(c=clist; c; c=c->next)
 	{
 #ifdef HAVE_NCURSES_H
-		selindex--;
-		if(selindex>0) continue;
-		print_line(c->name, x++, col);
+		s++;
+		if(s<winmin) continue;
+		if(s>winmax) break;
+
+		summary(c, x++, col, conf);
+
 		if(actg==ACTION_STATUS && sel==c)
 			mvprintw(x+TOP_SPACE-1, 1, "*");
 #endif
 	}
+	// Blank any remainder of the screen.
+	for(; x<row; x++)
+		print_line("", x, col);
+
+	selindex_last=selindex;
 	
 	return 0;
 }
@@ -655,6 +699,7 @@ static int parse_stdin_data(struct asfd *asfd, struct cstat *clist,
 	struct cstat **sel, int *details, int count, int *enterpressed)
 {
 	static int ch;
+	if(!clist) return 0;
 	if(asfd->rbuf->len!=sizeof(ch))
 	{
 		logp("Unexpected input length in %s: %d\n",
@@ -736,6 +781,7 @@ static int parse_stdin_data(struct asfd *asfd, struct cstat *clist,
 
 #define NAME_LINE	"   \"name\": \""
 #define STATUS_LINE	"   \"status\": \""
+#define TIMESTAMP_LINE	"   \"timestamp\": \""
 
 static void strip_trailing_quote(char *buf)
 {
@@ -780,8 +826,24 @@ static int parse_socket_data(struct asfd *asfd, struct cstat **clist)
 		}
 		current->status=cstat_str_to_status(buf+strlen(STATUS_LINE));
 	}
+	else if(!strncmp_w(buf, TIMESTAMP_LINE))
+	{
+		time_t t;
+		strip_trailing_quote(buf);
+		if(!current)
+		{
+			logp("Got unexpected timestamp line: %s\n", buf);
+			return -1;
+		}
+		bu_free(&current->bu_current);
+		if(!(current->bu_current=bu_alloc()))
+			return -1;
+		t=strtoul(buf+strlen(TIMESTAMP_LINE), NULL, 10);
+		if(!(current->bu_current->timestamp=strdup_w(
+			getdatestr(t), __func__))) return -1;
+	}
 
-	if(cnew && cnew->status!=STATUS_UNSET)
+	if(cnew && cnew->bu_current)
 	{
 		fprintf(dbfp, "name: %s\n", cnew->name);
 		fprintf(dbfp, "status: %d\n", cnew->status);
@@ -853,7 +915,7 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 
 		if(!sel) sel=clist;
 //if(sel) fprintf(dbfp, "sel: %s\n", sel->name);
-		if(update_screen(clist, sel)) return -1;
+		if(update_screen(clist, sel, conf)) return -1;
 		refresh();
 	}
 

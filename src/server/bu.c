@@ -4,12 +4,12 @@
 #include <netdb.h>
 #include <dirent.h>
 
-static struct bu *bu_alloc(void)
+struct bu *bu_alloc(void)
 {
 	return (struct bu *)calloc_w(1, sizeof(struct bu), __func__);
 }
 
-static int bu_init(struct bu *bu, char *fullpath, char *basename,
+int bu_init(struct bu *bu, char *fullpath, char *basename,
 	char *timestampstr, int hardlinked)
 {
 	if(!(bu->data=prepend_s(fullpath, "data"))
@@ -27,7 +27,7 @@ error:
 	return -1;
 }
 
-static void bu_free(struct bu **bu)
+void bu_free(struct bu **bu)
 {
 	if(!bu || !*bu) return;
 	free_w(&((*bu)->path));

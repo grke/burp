@@ -30,4 +30,10 @@ extern void bu_list_free(struct bu **bu_list);
 extern int bu_list_get(struct sdirs *sdirs, struct bu **bu_list);
 extern int bu_current_get(struct sdirs *sdirs, struct bu **bu_list);
 
+extern struct bu *bu_alloc(void);
+extern int bu_init(struct bu *bu, char *fullpath, char *basename,
+        char *timestampstr, int hardlinked);
+extern void bu_free(struct bu **bu);
+
+
 #endif

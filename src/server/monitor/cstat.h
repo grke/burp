@@ -4,8 +4,8 @@
 #include "include.h"
 
 #define STATUS_STR_IDLE			"idle"
-#define STATUS_STR_CLIENT_CRASHED	"client crashed"
-#define STATUS_STR_SERVER_CRASHED	"server crashed"
+#define STATUS_STR_CLIENT_CRASHED	"c crashed"
+#define STATUS_STR_SERVER_CRASHED	"s crashed"
 #define STATUS_STR_RUNNING		"running"
 #define STATUS_STR_SCANNING		"scanning"
 #define STATUS_STR_BACKUP		"backup"

@@ -44,6 +44,10 @@ static void print_line(const char *string, int row, int col)
 static int summary(struct cstat *cstat, int row, int col, struct conf *conf)
 {
 	char msg[1024]="";
+	char fmt[64]="";
+	int colwidth=18*((float)col/100);
+	snprintf(fmt, sizeof(fmt), "%%-%d.%ds %%-%ds %%s%%s",
+		colwidth, colwidth, colwidth);
 
 	switch(cstat->status)
 	{
@@ -64,7 +68,7 @@ static int summary(struct cstat *cstat, int row, int col, struct conf *conf)
 			if(cntr->byte)
 				snprintf(b, sizeof(b), "%s",
 					bytes_to_human(cntr->byte));
-			snprintf(msg, sizeof(msg), "%-14.14s %-14s %s%s",
+			snprintf(msg, sizeof(msg), fmt,
 				c->status, s, f, b);
 		}
 */
@@ -72,7 +76,7 @@ static int summary(struct cstat *cstat, int row, int col, struct conf *conf)
 		case STATUS_SERVER_CRASHED:
 		case STATUS_CLIENT_CRASHED:
 		default:
-			snprintf(msg, sizeof(msg), "%-14.14s %-14s%s%s",
+			snprintf(msg, sizeof(msg), fmt,
 				cstat->name,
 				cstat_status_to_str(cstat),
 				" last backup: ",
@@ -410,7 +414,8 @@ static void blank_screen(int row, int col)
 	// Try not actually blanking it - should stop screen flicker.
 	//	clear();
 		snprintf(v, sizeof(v), " burp monitor %s", VERSION);
-		mvprintw(0, 0, v);
+		print_line(v, 0-TOP_SPACE, col);
+	//	mvprintw(0, 0, v);
 		mvprintw(0, col-l-1, date);
 		return;
 	}
@@ -588,7 +593,7 @@ static int update_screen(struct cstat *clist,
 			winmax+=selindex-selindex_last;
 		}
 	}
-	if(winmin<=0)
+	if(winmin==winmax)
 	{
 		winmin=0;
 		winmax=row;
@@ -886,8 +891,25 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 
 	while(1)
 	{
+		if((enterpressed || need_status()) && !reqdone)
+		{
+			char *req=NULL;
+			if(details && client) req=client;
+			if(request_status(sfd, req, conf)) return -1;
+			enterpressed=0;
+			if(actg==ACTION_STATUS_SNAPSHOT)
+				reqdone=1;
+		}
+
 		if(as->read_write(as))
 		{
+			// FIX THIS - an exception is thrown when the console
+			// is resized.
+			if(sfd->want_to_remove)
+			{
+				sfd->want_to_remove=0;
+				continue;
+			}
 			logp("Exiting main loop\n");
 			break;
 		}
@@ -901,16 +923,6 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 			iobuf_free_content(asfd->rbuf);
 			if(asfd->parse_readbuf(asfd))
 				goto error;
-		}
-
-		if((enterpressed || need_status()) && !reqdone)
-		{
-			char *req=NULL;
-			if(details && client) req=client;
-			if(request_status(sfd, req, conf)) return -1;
-			enterpressed=0;
-			if(actg==ACTION_STATUS_SNAPSHOT)
-				reqdone=1;
 		}
 
 		if(!sel) sel=clist;
@@ -990,7 +1002,8 @@ int status_client_ncurses(enum action act, const char *sclient,
 #endif
 	// FIX THIS: Maybe think of a way to buffer error messages and print
 	// them all after the monitor has exited.
-	set_logfp_direct(stderr);
+	//set_logfp_direct(stderr);
+	set_logfp_direct(dbfp);
 
 	ret=main_loop(as, sclient, conf);
 end:

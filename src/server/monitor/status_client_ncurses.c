@@ -37,6 +37,14 @@ static void print_line(const char *string, int row, int col)
 	printf("\n");
 }
 
+static char *get_bu_str(struct bu *bu)
+{
+	static char ret[32];
+	if(!bu->bno) snprintf(ret, sizeof(ret), "%s", bu->timestamp);
+	else snprintf(ret, sizeof(ret), "%07lu %s", bu->bno, bu->timestamp);
+	return ret;
+}
+
 // Returns 1 if it printed a line, 0 otherwise.
 //static int summary(char status, char phase, const char *path,
 //	struct cntr *p1cntr, struct cntr *cntr,
@@ -45,9 +53,9 @@ static int summary(struct cstat *cstat, int row, int col, struct conf *conf)
 {
 	char msg[1024]="";
 	char fmt[64]="";
-	int colwidth=18*((float)col/100);
-	snprintf(fmt, sizeof(fmt), "%%-%d.%ds %%-%ds %%s%%s",
-		colwidth, colwidth, colwidth);
+	int colwidth=28*((float)col/100);
+	snprintf(fmt, sizeof(fmt), "%%-%d.%ds %%-9s %%s%%s",
+		colwidth, colwidth);
 
 	switch(cstat->status)
 	{
@@ -80,7 +88,7 @@ static int summary(struct cstat *cstat, int row, int col, struct conf *conf)
 				cstat->name,
 				cstat_status_to_str(cstat),
 				" last backup: ",
-				cstat->bu_current->timestamp);
+				get_bu_str(cstat->bu_current));
 				break;
 			break;
 	}
@@ -552,7 +560,42 @@ static int show_rbuf(const char *rbuf, struct conf *conf, int sel, char **client
 }
 */
 
-static int update_screen(struct cstat *clist,
+static int update_screen_details(struct cstat *clist,
+	struct cstat *sel, struct conf *conf)
+{
+	int x=0;
+	int row=24;
+	int col=80;
+	char msg[1024]="";
+
+	getmaxyx(stdscr, row, col);
+	blank_screen(row, col);
+	snprintf(msg, sizeof(msg), "Client: %s", sel->name);
+	print_line(msg, x++, col);
+	snprintf(msg, sizeof(msg), "Status: %s", cstat_status_to_str(sel));
+	print_line(msg, x++, col);
+
+	if(!sel->bu && sel->bu_current)
+	{
+		snprintf(msg, sizeof(msg), "Backup list: %s",
+			get_bu_str(sel->bu_current));
+		print_line(msg, x++, col);
+	}
+	else if(sel->bu)
+	{
+		snprintf(msg, sizeof(msg), "Backup list: %s",
+			get_bu_str(sel->bu));
+		print_line(msg, x++, col);
+	}
+
+	//show_all_backups(backups, &x, col);
+	// Blank any remainder of the screen.
+	for(; x<row; x++)
+		print_line("", x, col);
+	return 0;
+}
+
+static int update_screen_summary(struct cstat *clist,
 	struct cstat *sel, struct conf *conf)
 {
 	int x=0;
@@ -787,6 +830,7 @@ static int parse_stdin_data(struct asfd *asfd, struct cstat *clist,
 #define NAME_LINE	"   \"name\": \""
 #define STATUS_LINE	"   \"status\": \""
 #define TIMESTAMP_LINE	"   \"timestamp\": \""
+#define NUMBER_LINE	"   \"number\": \""
 
 static void strip_trailing_quote(char *buf)
 {
@@ -800,6 +844,7 @@ static void strip_trailing_quote(char *buf)
 static int parse_socket_data(struct asfd *asfd, struct cstat **clist)
 {
 	char *buf;
+	static unsigned long number=0;
 	static struct cstat *cnew=NULL;
 	static struct cstat *current=NULL;
 	buf=asfd->rbuf->buf;
@@ -831,6 +876,16 @@ static int parse_socket_data(struct asfd *asfd, struct cstat **clist)
 		}
 		current->status=cstat_str_to_status(buf+strlen(STATUS_LINE));
 	}
+	else if(!strncmp_w(buf, NUMBER_LINE))
+	{
+		strip_trailing_quote(buf);
+		if(!current)
+		{
+			logp("Got unexpected number line: %s\n", buf);
+			return -1;
+		}
+		number=strtoul(buf+strlen(NUMBER_LINE), NULL, 10);
+	}
 	else if(!strncmp_w(buf, TIMESTAMP_LINE))
 	{
 		time_t t;
@@ -846,6 +901,8 @@ static int parse_socket_data(struct asfd *asfd, struct cstat **clist)
 		t=strtoul(buf+strlen(TIMESTAMP_LINE), NULL, 10);
 		if(!(current->bu_current->timestamp=strdup_w(
 			getdatestr(t), __func__))) return -1;
+		current->bu_current->bno=number;
+		number=0;
 	}
 
 	if(cnew && cnew->bu_current)
@@ -927,7 +984,14 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 
 		if(!sel) sel=clist;
 //if(sel) fprintf(dbfp, "sel: %s\n", sel->name);
-		if(update_screen(clist, sel, conf)) return -1;
+		if(details)
+		{
+			if(update_screen_details(clist, sel, conf)) return -1;
+		}
+		else
+		{
+			if(update_screen_summary(clist, sel, conf)) return -1;
+		}
 		refresh();
 	}
 

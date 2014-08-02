@@ -1,55 +1,95 @@
+#include <yajl/yajl_gen.h>
+
 #include "include.h"
 
-static int json_strn_to_client(struct asfd *asfd, const char *data, size_t len)
+static yajl_gen yajl=NULL;
+
+static int write_all(yajl_gen yajl, struct asfd *asfd)
 {
-	return asfd->write_strn(asfd, CMD_GEN /* not used */, data, len);
+	int ret=-1;
+	size_t len;
+	const unsigned char *buf;
+	yajl_gen_get_buf(yajl, &buf, &len);
+	ret=asfd->write_strn(asfd, CMD_GEN /* not used */,
+		(const char *)buf, len);
+	yajl_gen_clear(yajl);
+	return ret;
 }
 
-static int json_str_to_client(struct asfd *asfd, const char *data)
+static int map_open_w(void)
 {
-	return json_strn_to_client(asfd, data, strlen(data));
+	return yajl_gen_map_open(yajl)!=yajl_gen_status_ok;
+}
+
+static int map_close_w(void)
+{
+	return yajl_gen_map_close(yajl)!=yajl_gen_status_ok;
+}
+
+static int array_open_w(void)
+{
+	return yajl_gen_array_open(yajl)!=yajl_gen_status_ok;
+}
+
+static int array_close_w(void)
+{
+	return yajl_gen_array_close(yajl)!=yajl_gen_status_ok;
+}
+
+static int gen_str_w(const char *str)
+{
+	return yajl_gen_string(yajl,
+		(const unsigned char *)str, strlen(str))!=yajl_gen_status_ok;
+}
+
+static int gen_int_w(long long num)
+{
+	return yajl_gen_integer(yajl, num)!=yajl_gen_status_ok;
+}
+
+static int gen_str_pair(const char *field, const char *value)
+{
+	if(gen_str_w(field)
+	  || gen_str_w(value))
+		return -1;
+	return 0;
+}
+
+static int gen_int_pair(const char *field, long long value)
+{
+	if(gen_str_w(field)
+	  || gen_int_w(value))
+		return -1;
+	return 0;
 }
 
 int json_start(struct asfd *asfd)
 {
-	return json_str_to_client(asfd,
-		"{\n"
-		" \"clients\":\n"
-		" [\n");
+	if(!yajl)
+	{
+		if(!(yajl=yajl_gen_alloc(NULL)))
+			return -1;
+		yajl_gen_config(yajl, yajl_gen_beautify, 1);
+	}
+	if(map_open_w()
+	  || gen_str_w("clients")
+	  || array_open_w())
+			return -1;
+	return 0;
 }
 
 int json_end(struct asfd *asfd)
 {
-	return json_str_to_client(asfd,
-		"\n"
-		" ]\n"
-		"}\n");
+	int ret=-1;
+	if(array_close_w()
+	  || map_close_w())
+		goto end;
+	ret=write_all(yajl, asfd);
+end:
+	yajl_gen_free(yajl);
+	yajl=NULL;
+	return ret;
 }
-
-#define B_TEMPLATE_MAX	128
-
-static const char *backup_template=
-		"%s"
-		"     {\n"
-		"      \"number\": %lu,\n"
-		"      \"deletable\": %d,\n"
-		"      \"timestamp\": %lu\n"
-		"     }";
-
-#define CLI_TEMPLATE_MAX	1024
-static const char *client_start=
-		"%s"
-		"  {\n"
-		"   \"name\": \"%s\",\n"
-		"   \"status\": \"%s\",\n"
-		"   \"number\": %lu,\n"
-		"   \"timestamp\": %lu,\n"
-		"   \"backups\":\n"
-		"   [\n";
-static const char *client_end=
-		"\n"
-		"   ]\n"
-		"  }";
 
 static long timestamp_to_long(const char *buf)
 {
@@ -66,31 +106,56 @@ static long timestamp_to_long(const char *buf)
 
 static int json_send_backup(struct asfd *asfd, struct bu *bu)
 {
-	static char wbuf[B_TEMPLATE_MAX];
-	snprintf(wbuf, B_TEMPLATE_MAX, backup_template,
-		bu->next?",\n":"",
-		bu->bno, bu->deletable,
-		(long)timestamp_to_long(bu->timestamp));
-	return json_str_to_client(asfd, wbuf);
+	long long bno=0;
+	long long deletable=0;
+	long long timestamp=0;
+	if(bu)
+	{
+		bno=(long long)bu->bno;
+		deletable=(long long)bu->deletable;
+		timestamp=(long long)timestamp_to_long(bu->timestamp);
+	}
+
+	if(map_open_w()
+	  || gen_int_pair("number", bno)
+	  || gen_int_pair("deletable", deletable)
+	  || gen_int_pair("timestamp", timestamp)
+	  || yajl_gen_map_close(yajl)!=yajl_gen_status_ok)
+		return -1;
+
+	return 0;
 }
 
 static int json_send_client_start(struct asfd *asfd,
 	struct cstat *clist, struct cstat *cstat)
 {
+	const char *status=cstat_status_to_str(cstat);
 	struct bu *bu_current=cstat->bu_current;
-	static char wbuf[CLI_TEMPLATE_MAX];
-	snprintf(wbuf, CLI_TEMPLATE_MAX, client_start,
-		clist==cstat?"":",\n",
-		cstat->name,
-		cstat_status_to_str(cstat),
-		bu_current?bu_current->bno:0,
-		bu_current?(long)timestamp_to_long(bu_current->timestamp):0);
-	return json_str_to_client(asfd, wbuf);
+	long long bno=0;
+	long long timestamp=0;
+	if(bu_current)
+	{
+		bno=(long long)bu_current->bno;
+		timestamp=(long long)timestamp_to_long(bu_current->timestamp);
+	}
+
+	if(map_open_w()
+	  || gen_str_pair("name", cstat->name)
+	  || gen_str_pair("status", status)
+	  || gen_int_pair("number", bno)
+	  || gen_int_pair("timestamp", timestamp)
+	  || gen_str_w("backups")
+	  || array_open_w())
+			return -1;
+	return 0;
 }
 
 static int json_send_client_end(struct asfd *asfd)
 {
-	return json_str_to_client(asfd, client_end);
+	if(array_close_w()
+	  || map_close_w())
+		return -1;
+	return 0;
 }
 
 int json_send_backup_list(struct asfd *asfd,

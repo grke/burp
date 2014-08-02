@@ -31,9 +31,9 @@ int json_end(struct asfd *asfd)
 static const char *backup_template=
 		"%s"
 		"     {\n"
-		"      \"number\": \"%lu\",\n"
-		"      \"deletable\": \"%d\",\n"
-		"      \"timestamp\": \"%li\"\n"
+		"      \"number\": %lu,\n"
+		"      \"deletable\": %d,\n"
+		"      \"timestamp\": %lu\n"
 		"     }";
 
 #define CLI_TEMPLATE_MAX	1024
@@ -42,8 +42,8 @@ static const char *client_start=
 		"  {\n"
 		"   \"name\": \"%s\",\n"
 		"   \"status\": \"%s\",\n"
-		"   \"number\": \"%lu\",\n"
-		"   \"timestamp\": \"%li\",\n"
+		"   \"number\": %lu,\n"
+		"   \"timestamp\": %lu,\n"
 		"   \"backups\":\n"
 		"   [\n";
 static const char *client_end=

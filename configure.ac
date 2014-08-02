@@ -1208,6 +1208,15 @@ if test x$NCURSES_LIBS = x-lncurses; then
 fi
 AC_SUBST(NCURSES_LIBS)
 
+AC_CHECK_HEADERS(yajl/yajl_parse.h)
+AC_CHECK_LIB(yajl, yajl_alloc, [YAJL_LIBS="-lyajl"])
+have_yajl=no
+if test x$YAJL_LIBS = x-lyajl; then
+   AC_DEFINE(HAVE_YAJL, 1, [Defined to 1 if libyajl was found])
+   have_yajl=yes
+fi
+AC_SUBST(YAJL_LIBS)
+
 dnl
 dnl Check if we have AFS on this system
 dnl
@@ -1643,12 +1652,13 @@ Configuration on `date`:
    Libraries:			${LIBS}
    Static:			${support_static}
  
-   ncurses:			${have_ncurses}
-   openssl:			${support_tls}
    zlib:			${have_zlib}
+   openssl:			${support_tls}
+   ipv6:			${have_ipv6}
    acl:				${have_acl}
    xattr:			${have_xattr}
-   ipv6:			${have_ipv6}
+   ncurses:			${have_ncurses}
+   yajl:			${have_yajl}
 
   " > config.out
 

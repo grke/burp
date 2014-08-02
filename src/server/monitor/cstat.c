@@ -135,11 +135,8 @@ static void cstat_remove(struct cstat **clist, struct cstat **cstat)
 		c->next=(*cstat)->next;
 		c->prev=clast;
 		cstat_free(cstat);
-
-		// Set cstat to the beginning of the list, so that the
-		// loop we were called from will not break when it tries to
-		// go to cstat->next.
 		*cstat=*clist;
+
 		return;
 	}
 }
@@ -151,39 +148,44 @@ static int reload_from_client_confs(struct cstat **clist, struct conf *conf)
 
 	if(!cconf && !(cconf=conf_alloc())) goto error;
 
-	for(c=*clist; c; c=c->next)
+	while(1)
 	{
-		// Look at the client conf files to see if they have changed,
-		// and reload bits and pieces if they have.
-		struct stat statp;
-
-		if(!c->conffile) continue;
-
-		if(stat(c->conffile, &statp)
-		  || !S_ISREG(statp.st_mode))
+		for(c=*clist; c; c=c->next)
 		{
-			cstat_remove(clist, &c);
-			continue;
-		}
-		if(statp.st_mtime==c->conf_mtime)
-		{
-			// conf file has not changed - no need to do anything.
-			continue;
-		}
-		c->conf_mtime=statp.st_mtime;
+			// Look at the client conf files to see if they have
+			// changed, and reload bits and pieces if they have.
+			struct stat statp;
 
-		conf_free_content(cconf);
-		if(!(cconf->cname=strdup_w(c->name, __func__)))
-			goto error;
-		if(conf_set_client_global(conf, cconf)
-		  || conf_load(c->conffile, cconf, 0))
-		{
-			cstat_remove(clist, &c);
-			continue;
-		}
+			if(!c->conffile) continue;
+			if(stat(c->conffile, &statp)
+			  || !S_ISREG(statp.st_mode))
+			{
+				cstat_remove(clist, &c);
+				break; // Go to the beginning of the list.
+			}
+			if(statp.st_mtime==c->conf_mtime)
+			{
+				// conf file has not changed - no need to do
+				// anything.
+				continue;
+			}
+			c->conf_mtime=statp.st_mtime;
 
-		if(set_cstat_from_conf(c, cconf))
-			goto error;
+			conf_free_content(cconf);
+			if(!(cconf->cname=strdup_w(c->name, __func__)))
+				goto error;
+			if(conf_set_client_global(conf, cconf)
+			  || conf_load(c->conffile, cconf, 0))
+			{
+				cstat_remove(clist, &c);
+				break; // Go to the beginning of the list.
+			}
+
+			if(set_cstat_from_conf(c, cconf))
+				goto error;
+		}
+		// Only stop if the end of the list was not reached.
+		if(!c) break;
 	}
 	return 0;
 error:
@@ -235,7 +237,6 @@ enum cstat_status cstat_str_to_status(const char *str)
 int cstat_set_status(struct cstat *cstat)
 {
 	struct stat statp;
-//logp("in set summary for %s\n", cstat->name);
 
 	if(lstat(cstat->sdirs->lock->path, &statp))
 	{

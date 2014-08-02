@@ -649,6 +649,7 @@ FDLIBS
 CAP_LIBS
 AFS_LIBS
 AFS_CFLAGS
+YAJL_LIBS
 NCURSES_LIBS
 RSYNC_LIBS
 CRYPT_LIBS
@@ -23685,6 +23686,67 @@ $as_echo "#define HAVE_NCURSES 1" >>confdefs.h
 fi
 
 
+for ac_header in yajl/yajl_parse.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "yajl/yajl_parse.h" "ac_cv_header_yajl_yajl_parse_h" "$ac_includes_default"
+if test "x$ac_cv_header_yajl_yajl_parse_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_YAJL_YAJL_PARSE_H 1
+_ACEOF
+
+fi
+
+done
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for yajl_alloc in -lyajl" >&5
+$as_echo_n "checking for yajl_alloc in -lyajl... " >&6; }
+if ${ac_cv_lib_yajl_yajl_alloc+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lyajl  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char yajl_alloc ();
+int
+main ()
+{
+return yajl_alloc ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_yajl_yajl_alloc=yes
+else
+  ac_cv_lib_yajl_yajl_alloc=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_yajl_yajl_alloc" >&5
+$as_echo "$ac_cv_lib_yajl_yajl_alloc" >&6; }
+if test "x$ac_cv_lib_yajl_yajl_alloc" = xyes; then :
+  YAJL_LIBS="-lyajl"
+fi
+
+have_yajl=no
+if test x$YAJL_LIBS = x-lyajl; then
+
+$as_echo "#define HAVE_YAJL 1" >>confdefs.h
+
+   have_yajl=yes
+fi
+
+
 AFS_CFLAGS=""
 AFS_LIBS=""
 support_afs=auto
@@ -27214,12 +27276,13 @@ Configuration on `date`:
    Libraries:			${LIBS}
    Static:			${support_static}
 
-   ncurses:			${have_ncurses}
-   openssl:			${support_tls}
    zlib:			${have_zlib}
+   openssl:			${support_tls}
+   ipv6:			${have_ipv6}
    acl:				${have_acl}
    xattr:			${have_xattr}
-   ipv6:			${have_ipv6}
+   ncurses:			${have_ncurses}
+   yajl:			${have_yajl}
 
   " > config.out
 

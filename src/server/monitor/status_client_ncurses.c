@@ -743,11 +743,10 @@ error:
 }
 
 #ifdef HAVE_NCURSES_H
-static int parse_stdin_data(struct asfd *asfd, struct cstat *clist,
+static int parse_stdin_data(struct asfd *asfd,
 	struct cstat **sel, int *details, int count, int *enterpressed)
 {
 	static int ch;
-	if(!clist) return 0;
 	if(asfd->rbuf->len!=sizeof(ch))
 	{
 		logp("Unexpected input length in %s: %d\n",
@@ -764,13 +763,13 @@ static int parse_stdin_data(struct asfd *asfd, struct cstat *clist,
 		case 'k':
 		case 'K':
 			if(*details) break;
-			if((*sel)->prev) *sel=(*sel)->prev;
+			if(*sel && (*sel)->prev) *sel=(*sel)->prev;
 			break;
 		case KEY_DOWN:
 		case 'j':
 		case 'J':
 			if(*details) break;
-			if((*sel)->next) *sel=(*sel)->next;
+			if(*sel && (*sel)->next) *sel=(*sel)->next;
 			break;
 		case KEY_ENTER:
 		case '\n':
@@ -794,6 +793,7 @@ static int parse_stdin_data(struct asfd *asfd, struct cstat *clist,
 			int row=0;
 			int col=0;
 			struct cstat *c;
+			if(!*sel) break;
 			getmaxyx(stdscr, row, col);
 			for(c=*sel; c; c=c->prev)
 			{
@@ -808,6 +808,7 @@ static int parse_stdin_data(struct asfd *asfd, struct cstat *clist,
 			int row=0;
 			int col=0;
 			struct cstat *c;
+			if(!*sel) break;
 			getmaxyx(stdscr, row, col);
 			for(c=*sel; c; c=c->next)
 			{
@@ -827,109 +828,21 @@ static int parse_stdin_data(struct asfd *asfd, struct cstat *clist,
 }
 #endif
 
-#define NAME_LINE	"   \"name\": \""
-#define STATUS_LINE	"   \"status\": \""
-#define TIMESTAMP_LINE	"   \"timestamp\": \""
-#define NUMBER_LINE	"   \"number\": \""
-
-static void strip_trailing_quote(char *buf)
-{
-	char *cp;
-	if((cp=strrchr(buf, '"'))) *cp='\0';
-}
-
-// Client records will be coming through in alphabetical order.
-// FIX THIS: If a client is deleted on the server, it is not deleted from
-// clist.
-static int parse_socket_data(struct asfd *asfd, struct cstat **clist)
-{
-	char *buf;
-	static unsigned long number=0;
-	static struct cstat *cnew=NULL;
-	static struct cstat *current=NULL;
-	buf=asfd->rbuf->buf;
-	if(!strncmp_w(buf, NAME_LINE))
-	{
-		char *name;
-		strip_trailing_quote(buf);
-		name=buf+strlen(NAME_LINE);
-		if(cnew)
-		{
-			logp("Got unexpected name line: %s\n", name);
-			return -1;
-		}
-		if(!(current=cstat_get_by_name(*clist, name)))
-		{
-			if(!(cnew=cstat_alloc())
-			  || cstat_init(cnew, name, NULL))
-				return -1;
-			current=cnew;
-		}
-	}
-	else if(!strncmp_w(buf, STATUS_LINE))
-	{
-		strip_trailing_quote(buf);
-		if(!current)
-		{
-			logp("Got unexpected status line: %s\n", buf);
-			return -1;
-		}
-		current->status=cstat_str_to_status(buf+strlen(STATUS_LINE));
-	}
-	else if(!strncmp_w(buf, NUMBER_LINE))
-	{
-		strip_trailing_quote(buf);
-		if(!current)
-		{
-			logp("Got unexpected number line: %s\n", buf);
-			return -1;
-		}
-		number=strtoul(buf+strlen(NUMBER_LINE), NULL, 10);
-	}
-	else if(!strncmp_w(buf, TIMESTAMP_LINE))
-	{
-		time_t t;
-		strip_trailing_quote(buf);
-		if(!current)
-		{
-			logp("Got unexpected timestamp line: %s\n", buf);
-			return -1;
-		}
-		bu_free(&current->bu_current);
-		if(!(current->bu_current=bu_alloc()))
-			return -1;
-		t=strtoul(buf+strlen(TIMESTAMP_LINE), NULL, 10);
-		if(!(current->bu_current->timestamp=strdup_w(
-			getdatestr(t), __func__))) return -1;
-		current->bu_current->bno=number;
-		number=0;
-	}
-
-	if(cnew && cnew->bu_current)
-	{
-		fprintf(dbfp, "name: %s\n", cnew->name);
-		fprintf(dbfp, "status: %d\n", cnew->status);
-		if(cstat_add_to_list(clist, cnew)) return -1;
-		current=NULL;
-		cnew=NULL;
-	}
-	return 0;
-}
-
 static int parse_data(struct asfd *asfd, struct cstat **clist,
 	struct cstat **sel, int *details, int count, int *enterpressed)
 {
 	// Hacky to switch on whether it is using char buffering or not.
 #ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS && asfd->streamtype==ASFD_STREAM_NCURSES_STDIN)
-		return parse_stdin_data(asfd, *clist,
+		return parse_stdin_data(asfd,
 			sel, details, count, enterpressed);
 #endif
-	return parse_socket_data(asfd, clist);
+	return json_input(asfd, clist);
 }
 
 static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 {
+	int ret=-1;
 	char *client=NULL;
 	int details=0;
 	int count=0;
@@ -952,7 +865,7 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 		{
 			char *req=NULL;
 			if(details && client) req=client;
-			if(request_status(sfd, req, conf)) return -1;
+			if(request_status(sfd, req, conf)) goto error;
 			enterpressed=0;
 			if(actg==ACTION_STATUS_SNAPSHOT)
 				reqdone=1;
@@ -995,9 +908,9 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 		refresh();
 	}
 
-	return 0;
+	ret=0;
 error:
-	return -1;
+	return ret;
 }
 
 #ifdef HAVE_NCURSES_H

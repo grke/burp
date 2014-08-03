@@ -84,23 +84,23 @@ class IXMLDOMDocument;
 
 #ifdef B_VSS_XP
 	#define VSSClientGeneric VSSClientXP
-	#include "inc/WinXP/vss.h"
-	#include "inc/WinXP/vswriter.h"
-	#include "inc/WinXP/vsbackup.h"
+	#include "inc/winxp/vss.h"
+	#include "inc/winxp/vswriter.h"
+	#include "inc/winxp/vsbackup.h"
 #endif
 
 #ifdef B_VSS_W2K3
 	#define VSSClientGeneric VSSClient2003
-	#include "inc/Win2003/vss.h"
-	#include "inc/Win2003/vswriter.h"
-	#include "inc/Win2003/vsbackup.h"
+	#include "inc/win2003/vss.h"
+	#include "inc/win2003/vswriter.h"
+	#include "inc/win2003/vsbackup.h"
 #endif
 
 #ifdef B_VSS_VISTA
 	#define VSSClientGeneric VSSClientVista
-	#include "inc/Win2003/vss.h"
-	#include "inc/Win2003/vswriter.h"
-	#include "inc/Win2003/vsbackup.h"
+	#include "inc/win2003/vss.h"
+	#include "inc/win2003/vswriter.h"
+	#include "inc/win2003/vsbackup.h"
 #endif
    
 // In VSSAPI.DLL.

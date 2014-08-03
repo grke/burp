@@ -44,6 +44,7 @@ LIBS_DLL = \
 	$(LIBS_CRYPTO) \
 	$(LIBS_ZLIB) \
 	$(LIBS_NETWORK) \
+	$(LIBS_YAJL) \
 	-lole32 \
 	-loleaut32 \
 	-luuid

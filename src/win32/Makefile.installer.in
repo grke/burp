@@ -30,6 +30,7 @@ DEPKGS_BINARIES := \
 	ssleay32.dll \
 	libpcre-1.dll \
 	libpcreposix-0.dll \
+	libyajl.dll \
 	openssl.exe
 
 MINGW_LIBS := \

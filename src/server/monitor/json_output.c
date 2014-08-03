@@ -1,10 +1,6 @@
-#include <yajl/yajl_gen.h>
-
 #include "include.h"
 
-static yajl_gen yajl=NULL;
-
-static int write_all(yajl_gen yajl, struct asfd *asfd)
+static int write_all(struct asfd *asfd)
 {
 	int ret=-1;
 	size_t len;
@@ -16,53 +12,6 @@ static int write_all(yajl_gen yajl, struct asfd *asfd)
 	return ret;
 }
 
-static int map_open_w(void)
-{
-	return yajl_gen_map_open(yajl)!=yajl_gen_status_ok;
-}
-
-static int map_close_w(void)
-{
-	return yajl_gen_map_close(yajl)!=yajl_gen_status_ok;
-}
-
-static int array_open_w(void)
-{
-	return yajl_gen_array_open(yajl)!=yajl_gen_status_ok;
-}
-
-static int array_close_w(void)
-{
-	return yajl_gen_array_close(yajl)!=yajl_gen_status_ok;
-}
-
-static int gen_str_w(const char *str)
-{
-	return yajl_gen_string(yajl,
-		(const unsigned char *)str, strlen(str))!=yajl_gen_status_ok;
-}
-
-static int gen_int_w(long long num)
-{
-	return yajl_gen_integer(yajl, num)!=yajl_gen_status_ok;
-}
-
-static int gen_str_pair(const char *field, const char *value)
-{
-	if(gen_str_w(field)
-	  || gen_str_w(value))
-		return -1;
-	return 0;
-}
-
-static int gen_int_pair(const char *field, long long value)
-{
-	if(gen_str_w(field)
-	  || gen_int_w(value))
-		return -1;
-	return 0;
-}
-
 int json_start(struct asfd *asfd)
 {
 	if(!yajl)
@@ -71,20 +20,20 @@ int json_start(struct asfd *asfd)
 			return -1;
 		yajl_gen_config(yajl, yajl_gen_beautify, 1);
 	}
-	if(map_open_w()
-	  || gen_str_w("clients")
-	  || array_open_w())
-			return -1;
+	if(yajl_map_open_w()
+	  || yajl_gen_str_w("clients")
+	  || yajl_array_open_w())
+		return -1;
 	return 0;
 }
 
 int json_end(struct asfd *asfd)
 {
 	int ret=-1;
-	if(array_close_w()
-	  || map_close_w())
+	if(yajl_array_close_w()
+	  || yajl_map_close_w())
 		goto end;
-	ret=write_all(yajl, asfd);
+	ret=write_all(asfd);
 end:
 	yajl_gen_free(yajl);
 	yajl=NULL;
@@ -116,10 +65,10 @@ static int json_send_backup(struct asfd *asfd, struct bu *bu)
 		timestamp=(long long)timestamp_to_long(bu->timestamp);
 	}
 
-	if(map_open_w()
-	  || gen_int_pair("number", bno)
-	  || gen_int_pair("deletable", deletable)
-	  || gen_int_pair("timestamp", timestamp)
+	if(yajl_map_open_w()
+	  || yajl_gen_int_pair_w("number", bno)
+	  || yajl_gen_int_pair_w("deletable", deletable)
+	  || yajl_gen_int_pair_w("timestamp", timestamp)
 	  || yajl_gen_map_close(yajl)!=yajl_gen_status_ok)
 		return -1;
 
@@ -139,21 +88,21 @@ static int json_send_client_start(struct asfd *asfd,
 		timestamp=(long long)timestamp_to_long(bu_current->timestamp);
 	}
 
-	if(map_open_w()
-	  || gen_str_pair("name", cstat->name)
-	  || gen_str_pair("status", status)
-	  || gen_int_pair("number", bno)
-	  || gen_int_pair("timestamp", timestamp)
-	  || gen_str_w("backups")
-	  || array_open_w())
+	if(yajl_map_open_w()
+	  || yajl_gen_str_pair_w("name", cstat->name)
+	  || yajl_gen_str_pair_w("status", status)
+	  || yajl_gen_int_pair_w("number", bno)
+	  || yajl_gen_int_pair_w("timestamp", timestamp)
+	  || yajl_gen_str_w("backups")
+	  || yajl_array_open_w())
 			return -1;
 	return 0;
 }
 
 static int json_send_client_end(struct asfd *asfd)
 {
-	if(array_close_w()
-	  || map_close_w())
+	if(yajl_array_close_w()
+	  || yajl_map_close_w())
 		return -1;
 	return 0;
 }

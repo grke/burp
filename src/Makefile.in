@@ -45,7 +45,8 @@ SRCS = \
 		run_script.c \
 		sbuf.c \
 		ssl.c \
-		strlist.c
+		strlist.c \
+		yajl_gen_w.c
 
 OBJS = $(SRCS:.c=.o)
 # FIX THIS: Should not need to add extra .o objects here.

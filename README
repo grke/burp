@@ -5,10 +5,11 @@ The following assumes that you are not installing the burp server via a
 distribution's package management system.
 
 You need to compile burp on a unix-based operating system first. Make sure that
-you have openssl, zlib, librsync and uthash libraries and development libraries
-installed. With debian or ubuntu, this command should install them for you:
+you have openssl, zlib, librsync, uthash and yajl libraries and development
+libraries installed. With debian or ubuntu, this command should install them
+for you:
 
-apt-get install librsync-dev libz-dev libssl-dev uthash-dev
+apt-get install librsync-dev libz-dev libssl-dev uthash-dev libyajl-dev
 
 Change to the burp source directory and run "./configure", then "make". All
 being well, burp will compile successfully. Then run "make install" as root to

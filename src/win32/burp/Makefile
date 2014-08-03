@@ -92,6 +92,7 @@ CLIENT_OBJS = \
 	$(OBJDIR)/vss_XP.o \
 	$(OBJDIR)/vss_W2K3.o \
 	$(OBJDIR)/vss_Vista.o \
+	$(OBJDIR)/yajl_gen_w.o \
 	$(OBJDIR)/burp.res
 
 ALL_OBJS = $(CLIENT_OBJS)
@@ -103,6 +104,7 @@ CLIENT_LIBS = \
 	$(LIBS_NETWORK) \
 	$(LIBS_RSYNC) \
 	$(LIBS_PCRE) \
+	$(LIBS_YAJL) \
 	-lole32 \
 	-loleaut32 \
 	-luuid \

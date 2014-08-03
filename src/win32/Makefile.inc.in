@@ -90,6 +90,9 @@ LIBS_RSYNC := \
 LIBS_PCRE := \
 	$(DEPKGS)/lib/libpcreposix.dll.a
 
+LIBS_YAJL := \
+	$(DEPKGS)/lib/libyajl.dll.a
+
 LIBS_BURP := \
 	$(LIBDIR)/libburp.a
 

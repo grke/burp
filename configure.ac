@@ -553,13 +553,13 @@ if test "$support_tls" = "no"; then
    OPENSSL_INC=""
 	echo "Please install openssl"
 	exit 1
-fi  
+fi
 if test "$support_crypto" = "no"; then
    OPENSSL_LIBS=""
    OPENSSL_INC=""
 	echo "Please install openssl"
 	exit 1
-fi  
+fi
 
 AC_SUBST(OPENSSL_LIBS)
 AC_SUBST(OPENSSL_INC)
@@ -1216,6 +1216,10 @@ if test x$YAJL_LIBS = x-lyajl; then
    have_yajl=yes
 fi
 AC_SUBST(YAJL_LIBS)
+if test "$have_yajl" = "no"; then
+	echo "Please install yajl"
+	exit 1
+fi
 
 dnl
 dnl Check if we have AFS on this system

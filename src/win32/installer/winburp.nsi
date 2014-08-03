@@ -258,6 +258,7 @@ Function InstallCommonFiles
     File "${SRC_DIR}\ssleay32.dll"
     File "${SRC_DIR}\libpcreposix-0.dll"
     File "${SRC_DIR}\libpcre-1.dll"
+    File "${SRC_DIR}\libyajl.dll"
     File "${SRC_DIR}\zlib1.dll"
     File "${SRC_DIR}\libgcc_s_sjlj-1.dll"
     File "${SRC_DIR}\burp.dll"

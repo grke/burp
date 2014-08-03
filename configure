@@ -23746,6 +23746,10 @@ $as_echo "#define HAVE_YAJL 1" >>confdefs.h
    have_yajl=yes
 fi
 
+if test "$have_yajl" = "no"; then
+	echo "Please install yajl"
+	exit 1
+fi
 
 AFS_CFLAGS=""
 AFS_LIBS=""

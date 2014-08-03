@@ -31,5 +31,6 @@
 #include "ssl.h"
 #include "strlist.h"
 #include "version.h"
+#include "yajl_gen_w.h"
 
 #endif

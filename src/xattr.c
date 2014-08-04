@@ -122,35 +122,39 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 			if(skip) continue;
 		}
 
-		if((vlen=lgetxattr(path, z, NULL, 0))<=0)
+		if((vlen=lgetxattr(path, z, NULL, 0))<0)
 		{
 			logw(cntr, "could not lgetxattr on %s for %s: %d\n",
 				path, z, vlen);
 			continue;
 		}
-		if(!(val=(char *)malloc(vlen+1)))
+		if(vlen)
 		{
-			log_out_of_memory(__FUNCTION__);
-			free(xattrlist);
-			if(toappend) free(toappend);
-			return -1;
-		}
-		if((vlen=lgetxattr(path, z, val, vlen))<=0)
-		{
-			logw(cntr, "could not lgetxattr %s for %s: %d\n",
-				path, z, vlen);
-			free(val);
-			continue;
-		}
-		val[vlen]='\0';
+			if(!(val=(char *)malloc(vlen+1)))
+			{
+				log_out_of_memory(__FUNCTION__);
+				free(xattrlist);
+				if(toappend) free(toappend);
+				return -1;
+			}
+			if((vlen=lgetxattr(path, z, val, vlen))<=0)
+			{
+				logw(cntr,
+					"could not lgetxattr %s for %s: %d\n",
+					path, z, vlen);
+				free(val);
+				continue;
+			}
+			val[vlen]='\0';
 
-		if(vlen>maxlen)
-		{
-                	logw(cntr, "xattr value of '%s' too long: %d\n",
-				path, vlen);
-			if(toappend) { free(toappend); toappend=NULL; }
-			free(val);
-			break;
+			if(vlen>maxlen)
+			{
+				logw(cntr, "xattr value of '%s' too long: %d\n",
+					path, vlen);
+				if(toappend) { free(toappend); toappend=NULL; }
+				free(val);
+				break;
+			}
 		}
 
 		snprintf(tmp1, sizeof(tmp1), "%08X", (unsigned int)zlen);
@@ -161,21 +165,21 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 			z, zlen, "", 0, &totallen))
 		  || !(toappend=prepend_len(toappend, totallen,
 			tmp2, 8, "", 0, &totallen))
-		  || !(toappend=prepend_len(toappend, totallen,
-			val, vlen, "", 0, &totallen)))
+		  || (vlen && !(toappend=prepend_len(toappend, totallen,
+			val, vlen, "", 0, &totallen))))
 		{
 			log_out_of_memory(__FUNCTION__);
-			free(val);
+			if(val) free(val);
 			free(xattrlist);
 			return -1;
 		}
-		free(val);
+		if(val) free(val);
 
 		if(totallen>maxlen)
 		{
                 	logw(cntr, "xattr length of '%s' grew too long: %d\n",
 				path, totallen);
-			free(val);
+			if(val) free(val);
 			free(toappend);
 			free(xattrlist);
 			return 0; // carry on
@@ -377,29 +381,32 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 				logw(cntr, "could not extattr_list_link on %s for %s: %d\n", path, namespaces[i], vlen);
 				continue;
 			}
-			if(!(val=(char *)malloc(vlen+1)))
+			if(vlen)
 			{
-				log_out_of_memory(__FUNCTION__);
-				free(xattrlist);
-				if(toappend) free(toappend);
-				return -1;
-			}
-			if((vlen=extattr_get_link(path, namespaces[i],
-				cattrname, val, vlen))<0)
-			{
-				logw(cntr, "could not extattr_list_link %s for %s: %d\n", path, namespaces[i], vlen);
-				free(val);
-				continue;
-			}
-			val[vlen]='\0';
+				if(!(val=(char *)malloc(vlen+1)))
+				{
+					log_out_of_memory(__FUNCTION__);
+					free(xattrlist);
+					if(toappend) free(toappend);
+					return -1;
+				}
+				if((vlen=extattr_get_link(path, namespaces[i],
+					cattrname, val, vlen))<0)
+				{
+					logw(cntr, "could not extattr_list_link %s for %s: %d\n", path, namespaces[i], vlen);
+					free(val);
+					continue;
+				}
+				val[vlen]='\0';
 
-			if(vlen>maxlen)
-			{
-				logw(cntr, "xattr value of '%s' too long: %d\n",
-					path, vlen);
-				if(toappend) { free(toappend); toappend=NULL; }
-				free(val);
-				break;
+				if(vlen>maxlen)
+				{
+					logw(cntr, "xattr value of '%s' too long: %d\n",
+						path, vlen);
+					if(toappend) { free(toappend); toappend=NULL; }
+					free(val);
+					break;
+				}
 			}
 
 			snprintf(tmp1, sizeof(tmp1), "%08X", (unsigned)zlen);
@@ -410,21 +417,21 @@ int get_xattr(const char *path, struct stat *statp, char **xattrtext, size_t *xl
 				ctuple, zlen, "", 0, &totallen))
 			  || !(toappend=prepend_len(toappend, totallen,
 				tmp2, 8, "", 0, &totallen))
-			  || !(toappend=prepend_len(toappend, totallen,
-				val, vlen, "", 0, &totallen)))
+			  || (vlen && !(toappend=prepend_len(toappend, totallen,
+				val, vlen, "", 0, &totallen))))
 			{
 				log_out_of_memory(__FUNCTION__);
-				free(val);
+				if(val) free(val);
 				free(xattrlist);
 				return -1;
 			}
-			free(val);
+			if(val) free(val);
 
 			if(totallen>maxlen)
 			{
 				logw(cntr, "xattr length of '%s' grew too long: %d\n",
 					path, totallen);
-				free(val);
+				if(val) free(val);
 				free(toappend);
 				free(xattrlist);
 				return 0; // carry on

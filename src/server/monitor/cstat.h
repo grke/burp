@@ -50,7 +50,6 @@ struct cstat
 	time_t lockfile_mtime;
 
 	struct bu *bu; // Backup list.
-	struct bu *bu_current; // Current backup.
 
 	struct cstat *prev;
 	struct cstat *next;

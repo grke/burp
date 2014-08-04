@@ -88,7 +88,7 @@ static int summary(struct cstat *cstat, int row, int col, struct conf *conf)
 				cstat->name,
 				cstat_status_to_str(cstat),
 				" last backup: ",
-				get_bu_str(cstat->bu_current));
+				get_bu_str(cstat->bu));
 				break;
 			break;
 	}
@@ -575,13 +575,7 @@ static int update_screen_details(struct cstat *clist,
 	snprintf(msg, sizeof(msg), "Status: %s", cstat_status_to_str(sel));
 	print_line(msg, x++, col);
 
-	if(!sel->bu && sel->bu_current)
-	{
-		snprintf(msg, sizeof(msg), "Backup list: %s",
-			get_bu_str(sel->bu_current));
-		print_line(msg, x++, col);
-	}
-	else if(sel->bu)
+	if(sel->bu)
 	{
 		snprintf(msg, sizeof(msg), "Backup list: %s",
 			get_bu_str(sel->bu));

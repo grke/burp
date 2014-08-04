@@ -79,20 +79,10 @@ static int json_send_client_start(struct asfd *asfd,
 	struct cstat *clist, struct cstat *cstat)
 {
 	const char *status=cstat_status_to_str(cstat);
-	struct bu *bu_current=cstat->bu_current;
-	long long bno=0;
-	long long timestamp=0;
-	if(bu_current)
-	{
-		bno=(long long)bu_current->bno;
-		timestamp=(long long)timestamp_to_long(bu_current->timestamp);
-	}
 
 	if(yajl_map_open_w()
 	  || yajl_gen_str_pair_w("name", cstat->name)
 	  || yajl_gen_str_pair_w("status", status)
-	  || yajl_gen_int_pair_w("number", bno)
-	  || yajl_gen_int_pair_w("timestamp", timestamp)
 	  || yajl_gen_str_w("backups")
 	  || yajl_array_open_w())
 			return -1;

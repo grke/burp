@@ -21,7 +21,6 @@ static void cstat_free_content(struct cstat *c)
 {
 	if(!c) return;
 	bu_list_free(&c->bu);
-	bu_list_free(&c->bu_current);
 	free_w(&c->name);
 	free_w(&c->conffile);
 	free_w(&c->running_detail);
@@ -293,8 +292,8 @@ static int reload_from_clientdir(struct cstat **clist, struct conf *conf)
 		c->lockfile_mtime=ltime;
 		if(cstat_set_status(c)) goto error;
 
-		bu_list_free(&c->bu_current);
-		if(bu_current_get(c->sdirs, &c->bu_current))
+		bu_list_free(&c->bu);
+		if(bu_current_get(c->sdirs, &c->bu))
 			goto error;
 	}
 	return 0;

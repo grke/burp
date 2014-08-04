@@ -22,13 +22,13 @@ static int input_integer(void *ctx, long long val)
 	{
 		time_t t;
 		if(!current) goto error;
-		bu_free(&current->bu_current);
-		if(!(current->bu_current=bu_alloc()))
+		bu_list_free(&current->bu);
+		if(!(current->bu=bu_alloc()))
 			return 0;
 		t=(unsigned long)val;
-		if(!(current->bu_current->timestamp=strdup_w(
+		if(!(current->bu->timestamp=strdup_w(
 			getdatestr(t), __func__))) return 0;
-		current->bu_current->bno=number;
+		current->bu->bno=number;
 		number=0;
 		return 1;
 	}
@@ -102,7 +102,7 @@ static int input_end_array(void *ctx)
 {
 	if(!strcmp(lastkey, "backups"))
 	{
-		if(cnew && cnew->bu_current)
+		if(cnew && cnew->bu)
 		{
 			if(cstat_add_to_list(cslist, cnew)) return -1;
 			current=NULL;

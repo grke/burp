@@ -47,6 +47,7 @@ void bu_list_free(struct bu **bu_list)
 		next=bu->next;
 		bu_free(&bu);
 	}
+	*bu_list=NULL;
 }
 
 static int get_link(const char *dir, const char *lnk, char real[], size_t r)

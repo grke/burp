@@ -5,32 +5,41 @@
 static int map_depth=0;
 
 static unsigned long number=0;
+static char *timestamp=NULL;
+static int deletable=0;
 static struct cstat *cnew=NULL;
 static struct cstat *current=NULL;
 static struct cstat **cslist=NULL;
 static char lastkey[32]="";
+static int in_backups=0;
+static struct bu *bu=NULL;
 
 static int input_integer(void *ctx, long long val)
 {
-	if(!strcmp(lastkey, "number"))
+	if(in_backups)
 	{
-		if(!current) goto error;
-		number=(unsigned long)val;
-		return 1;
-	}
-	else if(!strcmp(lastkey, "timestamp"))
-	{
-		time_t t;
-		if(!current) goto error;
-		bu_list_free(&current->bu);
-		if(!(current->bu=bu_alloc()))
-			return 0;
-		t=(unsigned long)val;
-		if(!(current->bu->timestamp=strdup_w(
-			getdatestr(t), __func__))) return 0;
-		current->bu->bno=number;
-		number=0;
-		return 1;
+		if(!strcmp(lastkey, "number"))
+		{
+			if(!current) goto error;
+			number=(unsigned long)val;
+			return 1;
+		}
+		else if(!strcmp(lastkey, "deletable"))
+		{
+			if(!current) goto error;
+			deletable=(int)val;
+			return 1;
+		}
+		else if(!strcmp(lastkey, "timestamp"))
+		{
+			time_t t;
+			if(!current) goto error;
+			t=(unsigned long)val;
+			free_w(&timestamp);
+			if(!(timestamp=strdup_w(getdatestr(t), __func__)))
+				return 0;
+			return 1;
+		}
 	}
 error:
 	logp("Unexpected integer: %s %llu\n", lastkey, val);
@@ -78,10 +87,35 @@ static int input_map_key(void *ctx, const unsigned char *val, size_t len)
         return 1;
 }
 
+static void add_to_list(void)
+{
+	struct bu *last;
+	if(!bu) return;
+	bu->bno=number;
+	bu->deletable=deletable;
+	bu->timestamp=timestamp;
+
+	// FIX THIS: Inefficient to find the end each time.
+	for(last=current->bu; last && last->next; last=last->next) { }
+	if(last) last->next=bu;
+	else current->bu=bu;
+	
+	number=0;
+	deletable=0;
+	timestamp=NULL;
+}
+
 static int input_start_map(void *ctx)
 {
         logp("startmap\n");
 	map_depth++;
+	if(in_backups)
+	{
+		add_to_list();
+		// FIX THIS: Inefficient to allocate a new bu every time.
+		// Should probably reuse the existing ones.
+		if(!(bu=bu_alloc())) return 0;
+	}
         return 1;
 }
 
@@ -95,19 +129,27 @@ static int input_end_map(void *ctx)
 static int input_start_array(void *ctx)
 {
         logp("start arr\n");
+	if(!strcmp(lastkey, "backups"))
+	{
+		in_backups=1;
+		bu_list_free(&current->bu);
+	}
         return 1;
 }
 
 static int input_end_array(void *ctx)
 {
-	if(!strcmp(lastkey, "backups"))
+	if(in_backups)
 	{
-		if(cnew && cnew->bu)
+		in_backups=0;
+		add_to_list();
+		if(cnew)
 		{
 			if(cstat_add_to_list(cslist, cnew)) return -1;
-			current=NULL;
 			cnew=NULL;
 		}
+		bu=NULL;
+		current=NULL;
 	}
         return 1;
 }

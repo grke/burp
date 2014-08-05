@@ -567,6 +567,7 @@ static int update_screen_details(struct cstat *clist,
 	int row=24;
 	int col=80;
 	char msg[1024]="";
+	struct bu *bu;
 
 	getmaxyx(stdscr, row, col);
 	blank_screen(row, col);
@@ -580,6 +581,12 @@ static int update_screen_details(struct cstat *clist,
 		snprintf(msg, sizeof(msg), "Backup list: %s",
 			get_bu_str(sel->bu));
 		print_line(msg, x++, col);
+		for(bu=sel->bu->next; bu; bu=bu->next)
+		{
+			snprintf(msg, sizeof(msg), "             %s",
+				get_bu_str(bu));
+			print_line(msg, x++, col);
+		}
 	}
 
 	//show_all_backups(backups, &x, col);
@@ -858,7 +865,11 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 		if((enterpressed || need_status()) && !reqdone)
 		{
 			char *req=NULL;
-			if(details && client) req=client;
+			if(details)
+			{
+				if(client) req=client;
+				else if(sel) req=sel->name;
+			}
 			if(request_status(sfd, req, conf)) goto error;
 			enterpressed=0;
 			if(actg==ACTION_STATUS_SNAPSHOT)

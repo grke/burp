@@ -100,30 +100,6 @@ static int summary(struct cstat *cstat, int row, int col, struct conf *conf)
 	}
 	return 0;
 }
-/*
-static void show_all_backups(struct strlist *backups, int *x, int col)
-{
-	char msg[256]="";
-	struct strlist *l=NULL;
-	struct strlist *last=NULL;
-	for(l=backups; l; l=l->next)
-	{
-		if(!last)
-		{
-			snprintf(msg, sizeof(msg), "Backup list: %s",
-				l->path);
-			print_line(msg, (*x)++, col);
-		}
-		else
-		{
-			snprintf(msg, sizeof(msg), "             %s",
-				l->path);
-			print_line(msg, (*x)++, col);
-		}
-		last=l;
-	}
-}
-*/
 
 /* for the counters */
 /*
@@ -561,13 +537,14 @@ static int show_rbuf(const char *rbuf, struct conf *conf, int sel, char **client
 */
 
 static int update_screen_details(struct cstat *clist,
-	struct cstat *sel, struct conf *conf)
+	struct cstat *sel, unsigned long selbno, struct conf *conf)
 {
 	int x=0;
 	int row=24;
 	int col=80;
 	char msg[1024]="";
 	struct bu *bu;
+	int star_printed=0;
 
 	getmaxyx(stdscr, row, col);
 	blank_screen(row, col);
@@ -578,15 +555,20 @@ static int update_screen_details(struct cstat *clist,
 
 	if(sel->bu)
 	{
-		snprintf(msg, sizeof(msg), "Backup list: %s",
-			get_bu_str(sel->bu));
-		print_line(msg, x++, col);
-		for(bu=sel->bu->next; bu; bu=bu->next)
+		if(!selbno) selbno=sel->bu->bno;
+		for(bu=sel->bu; bu; bu=bu->next)
 		{
-			snprintf(msg, sizeof(msg), "             %s",
+			snprintf(msg, sizeof(msg), "%s %s",
+				bu==sel->bu?"Backup list:":"            ",
 				get_bu_str(bu));
 			print_line(msg, x++, col);
+			if(actg==ACTION_STATUS && selbno==bu->bno)
+			{
+				mvprintw(x+TOP_SPACE-1, 1, "*");
+				star_printed=1;
+			}
 		}
+		if(!star_printed) selbno=sel->bu->bno;
 	}
 
 	//show_all_backups(backups, &x, col);
@@ -745,7 +727,8 @@ error:
 
 #ifdef HAVE_NCURSES_H
 static int parse_stdin_data(struct asfd *asfd,
-	struct cstat **sel, int *details, int count, int *enterpressed)
+	struct cstat **sel, unsigned long *selbno,
+	int *details, int count, int *enterpressed)
 {
 	static int ch;
 	if(asfd->rbuf->len!=sizeof(ch))
@@ -830,13 +813,14 @@ static int parse_stdin_data(struct asfd *asfd,
 #endif
 
 static int parse_data(struct asfd *asfd, struct cstat **clist,
-	struct cstat **sel, int *details, int count, int *enterpressed)
+	struct cstat **sel, unsigned long *selbno,
+	int *details, int count, int *enterpressed)
 {
 	// Hacky to switch on whether it is using char buffering or not.
 #ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS && asfd->streamtype==ASFD_STREAM_NCURSES_STDIN)
 		return parse_stdin_data(asfd,
-			sel, details, count, enterpressed);
+			sel, selbno, details, count, enterpressed);
 #endif
 	return json_input(asfd, clist);
 }
@@ -850,6 +834,7 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 	struct asfd *asfd=NULL;
 	struct cstat *clist=NULL;
 	struct cstat *sel=NULL;
+	unsigned long selbno=0;
 	int enterpressed=0;
 	struct asfd *sfd=as->asfd; // Server asfd.
 	int reqdone=0;
@@ -893,7 +878,7 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 			while(asfd->rbuf->buf)
 		{
 			if(parse_data(asfd, &clist,
-				&sel, &details, count, &enterpressed))
+				&sel, &selbno, &details, count, &enterpressed))
 					goto error;
 			iobuf_free_content(asfd->rbuf);
 			if(asfd->parse_readbuf(asfd))
@@ -904,11 +889,13 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 //if(sel) fprintf(dbfp, "sel: %s\n", sel->name);
 		if(details)
 		{
-			if(update_screen_details(clist, sel, conf)) return -1;
+			if(update_screen_details(clist, sel, selbno, conf))
+				return -1;
 		}
 		else
 		{
-			if(update_screen_summary(clist, sel, conf)) return -1;
+			if(update_screen_summary(clist, sel, conf))
+				return -1;
 		}
 		refresh();
 	}

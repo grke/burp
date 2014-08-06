@@ -12,7 +12,6 @@ static struct cstat *current=NULL;
 static struct cstat **cslist=NULL;
 static char lastkey[32]="";
 static int in_backups=0;
-static struct bu *bu=NULL;
 
 static int input_integer(void *ctx, long long val)
 {
@@ -87,10 +86,12 @@ static int input_map_key(void *ctx, const unsigned char *val, size_t len)
         return 1;
 }
 
-static void add_to_list(void)
+static int add_to_list(void)
 {
+	struct bu *bu;
 	struct bu *last;
-	if(!bu) return;
+	if(!number) return 0;
+	if(!(bu=bu_alloc())) return -1;
 	bu->bno=number;
 	bu->deletable=deletable;
 	bu->timestamp=timestamp;
@@ -103,6 +104,7 @@ static void add_to_list(void)
 	number=0;
 	deletable=0;
 	timestamp=NULL;
+	return 0;
 }
 
 static int input_start_map(void *ctx)
@@ -111,10 +113,7 @@ static int input_start_map(void *ctx)
 	map_depth++;
 	if(in_backups)
 	{
-		add_to_list();
-		// FIX THIS: Inefficient to allocate a new bu every time.
-		// Should probably reuse the existing ones.
-		if(!(bu=bu_alloc())) return 0;
+		if(add_to_list()) return 0;
 	}
         return 1;
 }
@@ -142,13 +141,12 @@ static int input_end_array(void *ctx)
 	if(in_backups)
 	{
 		in_backups=0;
-		add_to_list();
+		if(add_to_list()) return 0;
 		if(cnew)
 		{
 			if(cstat_add_to_list(cslist, cnew)) return -1;
 			cnew=NULL;
 		}
-		bu=NULL;
 		current=NULL;
 	}
         return 1;

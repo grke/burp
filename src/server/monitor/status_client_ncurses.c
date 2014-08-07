@@ -40,7 +40,8 @@ static void print_line(const char *string, int row, int col)
 static char *get_bu_str(struct bu *bu)
 {
 	static char ret[32];
-	if(!bu->bno) snprintf(ret, sizeof(ret), "%s", bu->timestamp);
+	if(!bu) snprintf(ret, sizeof(ret), "never");
+	else if(!bu->bno) snprintf(ret, sizeof(ret), "%s", bu->timestamp);
 	else snprintf(ret, sizeof(ret), "%07lu %s", bu->bno, bu->timestamp);
 	return ret;
 }

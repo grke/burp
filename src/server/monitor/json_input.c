@@ -81,10 +81,12 @@ end:
 
 static int input_map_key(void *ctx, const unsigned char *val, size_t len)
 {
-        snprintf(lastkey, len+1, "%s", val);
-        logp("mapkey: %s\n", lastkey);
-        return 1;
+	snprintf(lastkey, len+1, "%s", val);
+//	logp("mapkey: %s\n", lastkey);
+	return 1;
 }
+
+static struct bu *bu_list=NULL;
 
 static int add_to_list(void)
 {
@@ -97,9 +99,9 @@ static int add_to_list(void)
 	bu->timestamp=timestamp;
 
 	// FIX THIS: Inefficient to find the end each time.
-	for(last=current->bu; last && last->next; last=last->next) { }
+	for(last=bu_list; last && last->next; last=last->next) { }
 	if(last) last->next=bu;
-	else current->bu=bu;
+	else bu_list=bu;
 	
 	number=0;
 	deletable=0;
@@ -109,31 +111,96 @@ static int add_to_list(void)
 
 static int input_start_map(void *ctx)
 {
-        logp("startmap\n");
+	//logp("startmap\n");
 	map_depth++;
 	if(in_backups)
 	{
 		if(add_to_list()) return 0;
 	}
-        return 1;
+	return 1;
 }
 
 static int input_end_map(void *ctx)
 {
-        logp("endmap\n");
+	//logp("endmap\n");
 	map_depth--;
-        return 1;
+	return 1;
 }
 
 static int input_start_array(void *ctx)
 {
-        logp("start arr\n");
+	//logp("start arr\n");
 	if(!strcmp(lastkey, "backups"))
 	{
 		in_backups=1;
-		bu_list_free(&current->bu);
 	}
-        return 1;
+	return 1;
+}
+
+static void merge_bu_lists(void)
+{
+	struct bu *n;
+	struct bu *o;
+	struct bu *lastn=NULL;
+	struct bu *lasto=NULL;
+
+	for(o=current->bu; o; )
+	{
+		int found_in_new=0;
+		lastn=NULL;
+		for(n=bu_list; n; n=n->next)
+		{
+			if(o->bno==n->bno)
+			{
+				// Found o in new list.
+				// Copy the fields from new to old.
+				found_in_new=1;
+				o->deletable=n->deletable;
+				free_w(&o->timestamp);
+				o->timestamp=n->timestamp;
+				n->timestamp=NULL;
+
+				// Remove it from new list.
+				if(lastn) lastn->next=n->next;
+				else bu_list=n->next;
+				bu_free(&n);
+				n=lastn;
+				break;
+			}
+			lastn=n;
+		}
+		if(!found_in_new)
+		{
+			// Could not find o in new list.
+			// Remove it from old list.
+			if(lasto) lasto->next=o->next;
+			else current->bu=o->next;
+			bu_free(&o);
+			o=lasto;
+		}
+		lasto=o;
+		if(o) o=o->next;
+	}
+
+	// Now, new list only has entries missing from old list.
+	n=bu_list;
+	lastn=NULL;
+	while(n)
+	{
+		o=current->bu;
+		lasto=NULL;
+		while(o && n->bno < o->bno)
+		{
+			lasto=o;
+			o=o->next;
+		}
+		// Found the place to insert it.
+		if(lasto) lasto->next=n;
+		else current->bu=n;
+		lastn=n->next;
+		n->next=o;
+		n=lastn;
+	}
 }
 
 static int input_end_array(void *ctx)
@@ -142,6 +209,12 @@ static int input_end_array(void *ctx)
 	{
 		in_backups=0;
 		if(add_to_list()) return 0;
+		// Now may have two lists. Want to keep the old one is intact
+		// as possible, so that we can keep a pointer to its entries
+		// in the ncurses stuff.
+		// Merge the new list into the old.
+		merge_bu_lists();
+		bu_list=NULL;
 		if(cnew)
 		{
 			if(cstat_add_to_list(cslist, cnew)) return -1;

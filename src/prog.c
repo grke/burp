@@ -405,6 +405,14 @@ int main (int argc, char *argv[])
 	{
 		// These server modes need to run without getting the lock.
 	}
+	else if(conf->mode==MODE_CLIENT
+	  && (act==ACTION_LIST
+		|| act==ACTION_LIST_LONG
+		|| act==ACTION_DIFF
+		|| act==ACTION_DIFF_LONG))
+	{
+		// These client modes need to run without getting the lock.
+	}
 	else
 	{
 		if(!(lock=lock_alloc_and_init(conf->lockfile)))

@@ -141,7 +141,12 @@ static int recover_finishing(struct asfd *asfd,
 		return -1;
 	}
 	logp("Prior backup completed OK.\n");
-	return 0;
+
+	// Move the symlink to indicate that we are now in the end
+	// phase.
+	// FIX THIS: Check whether the rename race condition is recoverable
+	// here.
+	return do_rename(sdirs->finishing, sdirs->current);
 }
 
 static int recover_working(struct asfd *asfd,

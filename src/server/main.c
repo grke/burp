@@ -13,6 +13,15 @@ static int gentleshutdown=0;
 static int gentleshutdown_logged=0;
 static int sigchld=0;
 
+// These will also be used as the exit codes of the program and are therefore
+// unsigned integers.
+// Remember to update the man page if you update these.
+enum serret
+{
+	SERVER_OK=0,
+	SERVER_ERROR=1
+};
+
 static void huphandler(int sig)
 {
 	hupreload=1;
@@ -530,32 +539,32 @@ static int run_server(struct conf *conf, const char *conffile,
 	int *rfds, int *sfds, struct oldnet *oldnet)
 {
 	int i=0;
-	int ret=0;
+	int ret=-1;
 	SSL_CTX *ctx=NULL;
 	int found_normal_child=0;
 
 	if(!(ctx=ssl_initialise_ctx(conf)))
 	{
 		logp("error initialising ssl ctx\n");
-		return 1;
+		goto end;
 	}
 	if((ssl_load_dh_params(ctx, conf)))
 	{
 		logp("error loading dh params\n");
-		return 1;
+		goto end;
 	}
 
 	if(ports_changed(oldnet->address, conf->address)
 	  || ports_changed(oldnet->port, conf->port))
 	{
 		if(init_listen_socket(conf->address,
-			conf->port, 1, rfds)) return 1;
+			conf->port, 1, rfds)) goto end;
 	}
 	if(ports_changed(oldnet->status_address, conf->status_address)
 	  || ports_changed(oldnet->status_port, conf->status_port))
 	{
 		if(init_listen_socket(conf->status_address,
-			conf->status_port, 0, sfds)) return 1;
+			conf->status_port, 0, sfds)) goto end;
 	}
 
 	while(!hupreload)
@@ -609,22 +618,18 @@ static int run_server(struct conf *conf, const char *conffile,
 			{
 				logp("select error in normal part of %s: %s\n",
 					__func__, strerror(errno));
-				ret=1;
-				break;
+				goto end;
 			}
 		}
 
-		if((ret=process_fds(rfds, &fse, &fsr,
-			conffile, ctx, 0 /* not a status client */, conf))
-		  || (ret=process_fds(sfds, &fse, &fsr,
-			conffile, ctx, 1 /* is a status client */, conf)))
-				break;
+		if(process_fds(rfds, &fse, &fsr,
+			conffile, ctx, 0 /* not a status client */, conf)
+		  || process_fds(sfds, &fse, &fsr,
+			conffile, ctx, 1 /* is a status client */, conf))
+				goto end;
 
 		if(chld_fd_isset_normal(conf, &fsr, &fse))
-		{
-			ret=1;
-			break;
-		}
+			goto end;
 
 		// Have a separate select for writing to status server children
 
@@ -651,29 +656,26 @@ static int run_server(struct conf *conf, const char *conffile,
 			{
 				logp("select error in status part of %s: %s\n",
 					__func__, strerror(errno));
-				ret=1;
-				break;
+				goto end;
 			}
 		}
 
 		if(chld_fd_isset_status(conf, &fsw, &fse))
-		{
-			ret=1;
-			break;
-		}
+			goto end;
 	}
 
 	if(hupreload) logp("got SIGHUP reload signal\n");
 
-	ssl_destroy_ctx(ctx);
-
+	ret=0;
+end:
+	if(ctx) ssl_destroy_ctx(ctx);
 	return ret;
 }
 
 int server(struct conf *conf, const char *conffile,
 	struct lock *lock, int generate_ca_only)
 {
-	int ret=0;
+	enum serret ret=SERVER_ERROR;
 	int rfds[LISTEN_SOCKETS]; // Sockets for clients to connect to.
 	int sfds[LISTEN_SOCKETS]; // Status server sockets.
 	struct oldnet oldnet;
@@ -688,43 +690,43 @@ int server(struct conf *conf, const char *conffile,
 	init_fds(rfds);
 	init_fds(sfds);
 
-	if(ca_server_setup(conf)) return 1;
+	if(ca_server_setup(conf)) goto error;
 	if(generate_ca_only)
 	{
 		logp("The '-g' command line option was given. Exiting now.\n");
-		return 0;
+		goto end;
 	}
 
 	if(conf->forking && conf->daemon)
 	{
-		if(daemonise() || relock(lock)) return 1;
+		if(daemonise() || relock(lock)) goto error;
 	}
 
 	ssl_load_globals();
 
-	while(!ret && !gentleshutdown)
+	while(!gentleshutdown)
 	{
-		if((ret=run_server(conf, conffile, rfds, sfds, &oldnet)))
-			break;
+		if(run_server(conf, conffile, rfds, sfds, &oldnet))
+			goto error;
 
 		if(hupreload && !gentleshutdown)
 		{
 			oldnet_free_contents(&oldnet);
 			if(oldnet_init(&oldnet, conf))
-			{
-				ret=1;
-				break;
-			}
+				goto error;
 			if(reload(conf, conffile,
 				0, // Not first time.
 				conf->max_children,
 				conf->max_status_children,
 				0)) // Not JSON output.
-					ret=1;
+					goto error;
 		}
 		hupreload=0;
 	}
 
+end:
+	ret=SERVER_OK;
+error:
 	close_fds(rfds);
 	close_fds(sfds);
 	oldnet_free_contents(&oldnet);

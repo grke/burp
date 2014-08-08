@@ -569,7 +569,6 @@ end:
 static int atomic_data_jiggle(struct sdirs *sdirs, struct fdirs *fdirs,
 	int hardlinked_current, struct conf *cconf, unsigned long bno)
 {
-	int ars=0;
 	int ret=-1;
 	char *datapth=NULL;
 	char *tmpman=NULL;
@@ -586,7 +585,7 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct fdirs *fdirs,
 	logp("Doing the atomic data jiggle...\n");
 
 	if(!(tmpman=get_tmp_filename(fdirs->manifest)))
-		goto end;
+		goto error;
 	if(lstat(fdirs->manifest, &statp))
 	{
 		// Manifest does not exist - maybe the server was killed before
@@ -597,7 +596,7 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct fdirs *fdirs,
 		do_rename(tmpman, fdirs->manifest);
 	}
 	if(!(zp=gzopen_file(fdirs->manifest, "rb")))
-		goto end;
+		goto error;
 
 	if(!(deltabdir=prepend_s(fdirs->currentdup, "deltas.reverse"))
 	  || !(deltafdir=prepend_s(sdirs->finishing, "deltas.forward"))
@@ -605,42 +604,49 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct fdirs *fdirs,
 	  || !(sb=sbuf_alloc(cconf)))
 	{
 		log_out_of_memory(__func__);
-		goto end;
+		goto error;
 	}
 
 	mkdir(fdirs->datadir, 0777);
 
-	while(!(ars=sbufl_fill(sb, NULL, NULL, zp, cconf->cntr)))
+	while(1)
 	{
+		switch(sbufl_fill(sb, NULL, NULL, zp, cconf->cntr))
+		{
+			case 0: break;
+			case 1: goto end;
+			default: goto error;
+		}
 		if(sb->burp1->datapth.buf)
 		{
 			if(write_status(STATUS_SHUFFLING,
-				sb->burp1->datapth.buf, cconf)) goto end;
-
-			if((ret=jiggle(sdirs, fdirs, sb, hardlinked_current,
+				sb->burp1->datapth.buf, cconf)
+			  || jiggle(sdirs, fdirs, sb, hardlinked_current,
 				deltabdir, deltafdir,
-				sigpath, &delfp, cconf))) goto end;
+				sigpath, &delfp, cconf))
+					goto error;
 		}
 		sbuf_free_content(sb);
 	}
-	if(ars<0) goto end;
 
+end:
 	if(close_fp(&delfp))
 	{
 		logp("error closing %s in atomic_data_jiggle\n",
 			fdirs->deletionsfile);
-		goto end;
+		goto error;
 	}
 
 	if(maybe_delete_files_from_manifest(tmpman, fdirs, cconf))
-		goto end;
+		goto error;
 
 	// Remove the temporary data directory, we have probably removed
 	// useful files from it.
 	sync(); // try to help CIFS
 	recursive_delete(deltafdir, NULL, 0 /* do not del files */);
 
-end:
+	ret=0;
+error:
 	gzclose_fp(&zp);
 	close_fp(&delfp);
 	sbuf_free(&sb);

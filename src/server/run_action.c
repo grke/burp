@@ -320,10 +320,18 @@ int run_action_server(struct async *as, struct sdirs *sdirs,
 
 	if(rbuf->cmd!=CMD_GEN) return unknown_command(as->asfd);
 
-	if((ret=get_lock_sdirs(as->asfd, sdirs)))
+	// List and diff should work even while backups are running.
+	if(!strncmp_w(rbuf->buf, "list ")
+	  || !strncmp_w(rbuf->buf, "listb "))
+		return run_list(as->asfd, sdirs, cconf);
+
+	if(!strncmp_w(rbuf->buf, "diff "))
+		return run_diff(as->asfd, sdirs, cconf);
+
+	// -1 on error or 1 if the backup is still finalising.
+	if((ret=get_lock_sdirs(as->asfd, sdirs))<0)
 	{
-		// -1 on error or 1 if the backup is still finalising.
-		if(ret<0) maybe_do_notification(as->asfd, ret,
+		maybe_do_notification(as->asfd, ret,
 			"", "error in get_lock_sdirs()",
 			"", buf_to_notify_str(rbuf), cconf);
 		return ret;
@@ -336,6 +344,8 @@ int run_action_server(struct async *as, struct sdirs *sdirs,
 			"", buf_to_notify_str(rbuf), cconf);
 		return -1;
 	}
+	// Exit if we finalised the backup.
+	if(ret) return ret;
 
 	if(!strncmp_w(rbuf->buf, "backup"))
 	{
@@ -353,13 +363,6 @@ int run_action_server(struct async *as, struct sdirs *sdirs,
 	if(!strncmp_w(rbuf->buf, "restore ")
 	  || !strncmp_w(rbuf->buf, "verify "))
 		return run_restore(as->asfd, sdirs, cconf, srestore);
-
-	if(!strncmp_w(rbuf->buf, "list ")
-	  || !strncmp_w(rbuf->buf, "listb "))
-		return run_list(as->asfd, sdirs, cconf);
-
-	if(!strncmp_w(rbuf->buf, "diff "))
-		return run_diff(as->asfd, sdirs, cconf);
 
 	if(!strncmp_w(rbuf->buf, "Delete "))
 		return run_delete(as->asfd, sdirs, cconf);

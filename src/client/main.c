@@ -8,15 +8,17 @@
 
 // These will also be used as the exit codes of the program and are therefore
 // unsigned integers.
+// Remember to update the man page if you update these.
 enum cliret
 {
 	CLIENT_OK=0,
 	CLIENT_ERROR=1,
 	CLIENT_RESTORE_WARNINGS=2,
 	CLIENT_SERVER_TIMER_NOT_MET=3,
+	CLIENT_COULD_NOT_CONNECT=4,
 	// This one happens after a successful certificate signing request so
 	// that it connects again straight away with the new key/certificate.
-	CLIENT_RECONNECT=4
+	CLIENT_RECONNECT=100
 };
 
 struct tchk
@@ -330,7 +332,7 @@ static enum cliret do_client(struct conf *conf,
 
 	if(act!=ACTION_ESTIMATE
 	  && ssl_setup(&rfd, &ssl, &ctx, conf))
-		goto error;
+		goto could_not_connect;
 
 	if(!(as=async_alloc())
 	  || !(asfd=asfd_alloc())
@@ -398,7 +400,9 @@ static enum cliret do_client(struct conf *conf,
 
 	goto end;
 error:
-	ret=CLIENT_ERROR;
+	ret=CLIENT_ERROR; goto end;
+could_not_connect:
+	ret=CLIENT_COULD_NOT_CONNECT;
 end:
 	close_fd(&rfd);
 	async_free(&as);

@@ -1181,8 +1181,8 @@ AC_SUBST(CRYPT_LIBS)
 
 AC_CHECK_HEADERS(uthash.h, [have_uthash=yes], [have_uthash=no])
 if test $have_uthash = no  ; then
-	echo "No uthash library. Will use own uthash/uthash.h"
-	cp ${srcdir}/uthash/uthash.h ${srcdir}/src
+        echo "Please install uthash"
+	exit 1
 fi
 
 AC_CHECK_HEADERS(librsync.h)

@@ -1,6 +1,0 @@
-Some distributions (debian, ubuntu) include a uthash-dev package.
-I believe that some don't (redhat, suse).
-The configure script will detect if there is a uthash.h already installed
-(it will probably be in /usr/include).
-If there is, the installed one will be used. If there isn't, the uthash.h
-included in the burp source will be used.

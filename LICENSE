@@ -13,7 +13,6 @@ Some of src/base64.c
 Some of src/client/find.c.
 A fragment of src/berrno.c.
 Some Makefiles and configure scripts.
-The uthash.h header file is copyright (c) 2005-2010, Troy D. Hanson,
 The new Burp code is Copyright Graham Keeling.
 The license for the new Burp code continues to be AGPLv3.
 

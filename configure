@@ -23555,8 +23555,8 @@ fi
 done
 
 if test $have_uthash = no  ; then
-	echo "No uthash library. Will use own uthash/uthash.h"
-	cp ${srcdir}/uthash/uthash.h ${srcdir}/src
+        echo "Please install uthash"
+	exit 1
 fi
 
 for ac_header in librsync.h

@@ -538,7 +538,7 @@ static int show_rbuf(const char *rbuf, struct conf *conf, int sel, char **client
 */
 
 static int update_screen_details(struct cstat *clist,
-	struct cstat *sel, unsigned long selbno, struct conf *conf)
+	struct cstat *sel, struct bu **selbu, struct conf *conf)
 {
 	int x=0;
 	int row=24;
@@ -556,20 +556,20 @@ static int update_screen_details(struct cstat *clist,
 
 	if(sel->bu)
 	{
-		if(!selbno) selbno=sel->bu->bno;
+		if(!*selbu) *selbu=sel->bu;
 		for(bu=sel->bu; bu; bu=bu->next)
 		{
 			snprintf(msg, sizeof(msg), "%s %s",
 				bu==sel->bu?"Backup list:":"            ",
 				get_bu_str(bu));
 			print_line(msg, x++, col);
-			if(actg==ACTION_STATUS && selbno==bu->bno)
+			if(actg==ACTION_STATUS && *selbu==bu)
 			{
 				mvprintw(x+TOP_SPACE-1, 1, "*");
 				star_printed=1;
 			}
 		}
-		if(!star_printed) selbno=sel->bu->bno;
+		if(!star_printed) *selbu=sel->bu;
 	}
 
 	//show_all_backups(backups, &x, col);
@@ -728,7 +728,7 @@ error:
 
 #ifdef HAVE_NCURSES_H
 static int parse_stdin_data(struct asfd *asfd,
-	struct cstat **sel, unsigned long *selbno,
+	struct cstat **sel, struct bu **selbu,
 	int *details, int count, int *enterpressed)
 {
 	static int ch;
@@ -747,14 +747,30 @@ static int parse_stdin_data(struct asfd *asfd,
 		case KEY_UP:
 		case 'k':
 		case 'K':
-			if(*details) break;
-			if(*sel && (*sel)->prev) *sel=(*sel)->prev;
+			if(*details)
+			{
+				if(*selbu && (*selbu)->prev)
+					*selbu=(*selbu)->prev;
+			}
+			else
+			{
+				if(*sel && (*sel)->prev)
+					*sel=(*sel)->prev;
+			}
 			break;
 		case KEY_DOWN:
 		case 'j':
 		case 'J':
-			if(*details) break;
-			if(*sel && (*sel)->next) *sel=(*sel)->next;
+			if(*details)
+			{
+				if(*selbu && (*selbu)->next)
+					*selbu=(*selbu)->next;
+			}
+			else
+			{
+				if(*sel && (*sel)->next)
+					*sel=(*sel)->next;
+			}
 			break;
 		case KEY_ENTER:
 		case '\n':
@@ -814,16 +830,16 @@ static int parse_stdin_data(struct asfd *asfd,
 #endif
 
 static int parse_data(struct asfd *asfd, struct cstat **clist,
-	struct cstat **sel, unsigned long *selbno,
+	struct cstat **sel, struct bu **selbu,
 	int *details, int count, int *enterpressed)
 {
 	// Hacky to switch on whether it is using char buffering or not.
 #ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS && asfd->streamtype==ASFD_STREAM_NCURSES_STDIN)
 		return parse_stdin_data(asfd,
-			sel, selbno, details, count, enterpressed);
+			sel, selbu, details, count, enterpressed);
 #endif
-	return json_input(asfd, clist);
+	return json_input(asfd, clist, selbu);
 }
 
 static int main_loop(struct async *as, const char *sclient, struct conf *conf)
@@ -835,7 +851,7 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 	struct asfd *asfd=NULL;
 	struct cstat *clist=NULL;
 	struct cstat *sel=NULL;
-	unsigned long selbno=0;
+	struct bu *selbu=NULL;
 	int enterpressed=0;
 	struct asfd *sfd=as->asfd; // Server asfd.
 	int reqdone=0;
@@ -879,7 +895,7 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 			while(asfd->rbuf->buf)
 		{
 			if(parse_data(asfd, &clist,
-				&sel, &selbno, &details, count, &enterpressed))
+				&sel, &selbu, &details, count, &enterpressed))
 					goto error;
 			iobuf_free_content(asfd->rbuf);
 			if(asfd->parse_readbuf(asfd))
@@ -890,7 +906,7 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 //if(sel) fprintf(dbfp, "sel: %s\n", sel->name);
 		if(details)
 		{
-			if(update_screen_details(clist, sel, selbno, conf))
+			if(update_screen_details(clist, sel, &selbu, conf))
 				return -1;
 		}
 		else

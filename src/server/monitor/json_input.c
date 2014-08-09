@@ -12,6 +12,7 @@ static struct cstat *current=NULL;
 static struct cstat **cslist=NULL;
 static char lastkey[32]="";
 static int in_backups=0;
+static struct bu **sselbu=NULL;
 
 static int input_integer(void *ctx, long long val)
 {
@@ -100,8 +101,16 @@ static int add_to_list(void)
 
 	// FIX THIS: Inefficient to find the end each time.
 	for(last=bu_list; last && last->next; last=last->next) { }
-	if(last) last->next=bu;
-	else bu_list=bu;
+	if(last)
+	{
+		last->next=bu;
+		bu->prev=last;
+	}
+	else
+	{
+		bu_list=bu;
+		if(bu_list) bu_list->prev=NULL;
+	}
 	
 	number=0;
 	deletable=0;
@@ -161,8 +170,16 @@ static void merge_bu_lists(void)
 				n->timestamp=NULL;
 
 				// Remove it from new list.
-				if(lastn) lastn->next=n->next;
-				else bu_list=n->next;
+				if(lastn)
+				{
+					lastn->next=n->next;
+					if(n->next) n->next->prev=lastn;
+				}
+				else
+				{
+					bu_list=n->next;
+					if(bu_list) bu_list->prev=NULL;
+				}
 				bu_free(&n);
 				n=lastn;
 				break;
@@ -173,8 +190,19 @@ static void merge_bu_lists(void)
 		{
 			// Could not find o in new list.
 			// Remove it from old list.
-			if(lasto) lasto->next=o->next;
-			else current->bu=o->next;
+			if(lasto)
+			{
+				lasto->next=o->next;
+				if(o->next) o->next->prev=lasto;
+			}
+			else
+			{
+				current->bu=o->next;
+				if(current->bu) current->bu->prev=NULL;
+			}
+			// Need to reset if the one that was removed was
+			// selected in ncurses.
+			if(o==*sselbu) *sselbu=NULL;
 			bu_free(&o);
 			o=lasto;
 		}
@@ -195,8 +223,16 @@ static void merge_bu_lists(void)
 			o=o->next;
 		}
 		// Found the place to insert it.
-		if(lasto) lasto->next=n;
-		else current->bu=n;
+		if(lasto)
+		{
+			lasto->next=n;
+			n->prev=lasto;
+		}
+		else
+		{
+			current->bu=n;
+			if(current->bu) current->bu->prev=NULL;
+		}
 		lastn=n->next;
 		n->next=o;
 		n=lastn;
@@ -251,10 +287,11 @@ static void do_yajl_error(yajl_handle yajl, struct asfd *asfd)
 // Client records will be coming through in alphabetical order.
 // FIX THIS: If a client is deleted on the server, it is not deleted from
 // clist.
-int json_input(struct asfd *asfd, struct cstat **clist)
+int json_input(struct asfd *asfd, struct cstat **clist, struct bu **selbu)
 {
         static yajl_handle yajl=NULL;
 	cslist=clist;
+	sselbu=selbu;
 
 	if(!yajl)
 	{

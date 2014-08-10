@@ -503,119 +503,52 @@ static int need_status(void)
 	return 1;
 }
 
-static int update_screen_details(struct cstat *sel,
-	struct bu **selbu, struct conf *conf)
+static int update_screen(struct cstat *clist, struct cstat *sel,
+	struct bu **selbu, int details, struct conf *conf)
 {
 	int x=0;
 	int row=24;
 	int col=80;
 	char msg[1024]="";
-	struct bu *c;
+	struct bu *b;
+	struct cstat *c;
 	int s=0;
 	int selindex=0;
 	static int winmin=0;
 	static int winmax=0;
 	static int selindex_last=0;
+	int star_printed=0;
 
 	if(actg==ACTION_STATUS)
 	{
 		getmaxyx(stdscr, row, col);
 		//if(!winmax) winmax=row;
-		for(c=sel->bu; c; c=c->next)
+		if(details) for(b=sel->bu; b; b=b->next)
 		{
 			selindex++;
-			if(*selbu==c) break;
+			if(*selbu==b) break;
 		}
-	}
-
-	// Adjust sliding window appropriately.
-	if(selindex>selindex_last)
-	{
-		if(selindex>winmax-TOP_SPACE-1-2)
-		{
-			winmin+=selindex-selindex_last;
-			winmax+=selindex-selindex_last;
-		}
-	}
-	else if(selindex<selindex_last)
-	{
-		if(selindex<winmin)
-		{
-			winmin+=selindex-selindex_last;
-			winmax+=selindex-selindex_last;
-		}
-	}
-	if(winmin==winmax)
-	{
-		winmin=0;
-		winmax=row;
-	}
-
-
-	// First, blank the whole screen.
-	blank_screen(row, col);
-	{
-		char msg[64];
-		snprintf(msg, sizeof(msg), "sel:%d si:%d min:%d max:%d\n",
-			selindex, selindex_last, winmin, winmax);
-		print_line(msg, -1, col);
-	}
-
-	snprintf(msg, sizeof(msg), "Client: %s", sel->name);
-	print_line(msg, x++, col);
-	snprintf(msg, sizeof(msg), "Status: %s", cstat_status_to_str(sel));
-	print_line(msg, x++, col);
-
-	for(c=sel->bu; c; c=c->next)
-	{
-		s++;
-		if(s<winmin) continue;
-		if(s>winmax) break;
-
-		snprintf(msg, sizeof(msg), "%s %s",
-			c==sel->bu?"Backup list:":"            ",
-			get_bu_str(c));
-		print_line(msg, x++, col);
-		if(actg==ACTION_STATUS && *selbu==c)
-			mvprintw(x+TOP_SPACE-1, 1, "*");
-	}
-
-	// Blank any remainder of the screen.
-	for(; x<row; x++)
-		print_line("", x, col);
-
-	selindex_last=selindex;
-	return 0;
-}
-
-static int update_screen_summary(struct cstat *clist,
-	struct cstat *sel, struct conf *conf)
-{
-	int x=0;
-	struct cstat *c;
-#ifdef HAVE_NCURSES_H
-	int s=0;
-	int row=24;
-	int col=80;
-	int selindex=0;
-	static int winmin=0;
-	static int winmax=0;
-	static int selindex_last=0;
-	if(actg==ACTION_STATUS)
-	{
-		getmaxyx(stdscr, row, col);
-		//if(!winmax) winmax=row;
-		for(c=clist; c; c=c->next)
+		else for(c=clist; c; c=c->next)
 		{
 			selindex++;
 			if(sel==c) break;
 		}
 	}
 
+	if(details)
+	{
+		snprintf(msg, sizeof(msg),
+			"Client: %s", sel->name);
+		print_line(msg, x++, col);
+		snprintf(msg, sizeof(msg),
+			"Status: %s", cstat_status_to_str(sel));
+		print_line(msg, x++, col);
+	}
+
 	// Adjust sliding window appropriately.
 	if(selindex>selindex_last)
 	{
-		if(selindex>winmax-TOP_SPACE-1)
+		if(selindex>winmax-TOP_SPACE-1-x)
 		{
 			winmin+=selindex-selindex_last;
 			winmax+=selindex-selindex_last;
@@ -634,6 +567,7 @@ static int update_screen_summary(struct cstat *clist,
 		winmin=0;
 		winmax=row;
 	}
+
 
 	// First, blank the whole screen.
 	blank_screen(row, col);
@@ -645,10 +579,26 @@ static int update_screen_summary(struct cstat *clist,
 		print_line(msg, -1, col);
 	}
 */
-#endif
-	for(c=clist; c; c=c->next)
+
+	if(details) for(b=sel->bu; b; b=b->next)
 	{
-#ifdef HAVE_NCURSES_H
+		s++;
+		if(s<winmin) continue;
+		if(s>winmax) break;
+
+		snprintf(msg, sizeof(msg), "%s %s%s",
+			b==sel->bu?"Backup list:":"            ",
+			get_bu_str(b),
+			b==sel->bu?" (current)":"");
+		print_line(msg, x++, col);
+		if(actg==ACTION_STATUS && *selbu==b)
+		{
+			mvprintw(x+TOP_SPACE-1, 1, "*");
+			star_printed=1;
+		}
+	}
+	else for(c=clist; c; c=c->next)
+	{
 		s++;
 		if(s<winmin) continue;
 		if(s>winmax) break;
@@ -656,15 +606,19 @@ static int update_screen_summary(struct cstat *clist,
 		summary(c, x++, col, conf);
 
 		if(actg==ACTION_STATUS && sel==c)
+		{
 			mvprintw(x+TOP_SPACE-1, 1, "*");
-#endif
+			star_printed=1;
+		}
 	}
+
+	if(details && !star_printed) *selbu=sel->bu;
+
 	// Blank any remainder of the screen.
 	for(; x<row; x++)
 		print_line("", x, col);
 
 	selindex_last=selindex;
-	
 	return 0;
 }
 
@@ -802,31 +756,60 @@ static int parse_stdin_data(struct asfd *asfd,
 		{
 			int row=0;
 			int col=0;
-			struct cstat *c;
-			if(!*sel) break;
 			getmaxyx(stdscr, row, col);
-			for(c=*sel; c; c=c->prev)
+			if(*details)
 			{
-				row--;
-				if(!row) break;
+				struct bu *b;
+				if(!*selbu) break;
+				for(b=*selbu; b; b=b->prev)
+				{
+					row--;
+					if(!row) break;
+				}
+				*selbu=b;
 			}
-			*sel=c;
+			else
+			{
+				struct cstat *c;
+				if(!*sel) break;
+				for(c=*sel; c; c=c->prev)
+				{
+					row--;
+					if(!row) break;
+				}
+				*sel=c;
+			}
 			break;
 		}
 		case KEY_NPAGE:
 		{
 			int row=0;
 			int col=0;
-			struct cstat *c;
-			if(!*sel) break;
 			getmaxyx(stdscr, row, col);
-			for(c=*sel; c; c=c->next)
+			if(*details)
 			{
-				row--;
-				if(!row) break;
-				if(!c->next) break;
+				struct bu *b;
+				if(!*selbu) break;
+				for(b=*selbu; b; b=b->prev)
+				{
+					row--;
+					if(!row) break;
+					if(!b->next) break;
+				}
+				*selbu=b;
 			}
-			*sel=c;
+			else
+			{
+				struct cstat *c;
+				if(!*sel) break;
+				for(c=*sel; c; c=c->next)
+				{
+					row--;
+					if(!row) break;
+					if(!c->next) break;
+				}
+				*sel=c;
+			}
 			break;
 		}
 		case -1:
@@ -913,17 +896,9 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 
 		if(!sel) sel=clist;
 //if(sel) fprintf(dbfp, "sel: %s\n", sel->name);
-		if(details)
-		{
-			if(!selbu) selbu=sel->bu;
-			if(update_screen_details(sel, &selbu, conf))
-				return -1;
-		}
-		else
-		{
-			if(update_screen_summary(clist, sel, conf))
-				return -1;
-		}
+		if(!selbu && sel) selbu=sel->bu;
+		if(update_screen(clist, sel, &selbu, details, conf))
+			return -1;
 		refresh();
 	}
 

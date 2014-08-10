@@ -184,8 +184,9 @@ int bu_list_get(struct sdirs *sdirs, struct bu **bu_list)
 	{
 		if(!dp[i]->d_ino
 		  || !strcmp(dp[i]->d_name, ".")
-		  || !strcmp(dp[i]->d_name, "..")
-		  || !strcmp(dp[i]->d_name, realwork)
+		  || !strcmp(dp[i]->d_name, ".."))
+			continue;
+		if(!strcmp(dp[i]->d_name, realwork)
 		  || !strcmp(dp[i]->d_name, realfinishing))
 			continue;
 		if(maybe_add_ent(dir, dp[i]->d_name, bu_list))

@@ -567,6 +567,11 @@ static int update_screen(struct cstat *clist, struct cstat *sel,
 		winmin=0;
 		winmax=row;
 	}
+	else if(winmin<0)
+	{
+		winmin=0;
+		winmax=row;
+	}
 
 
 	// First, blank the whole screen.
@@ -574,8 +579,10 @@ static int update_screen(struct cstat *clist, struct cstat *sel,
 /*
 	{
 		char msg[64];
-		snprintf(msg, sizeof(msg), "sel:%d si:%d min:%d max:%d\n",
-			selindex, selindex_last, winmin, winmax);
+		snprintf(msg, sizeof(msg), "sel:%d si:%d min:%d max:%d %s\n",
+			selindex, selindex_last, winmin, winmax,
+			(selbu && *selbu && (*selbu)->prev)?
+				(*selbu)->prev->timestamp:"");
 		print_line(msg, -1, col);
 	}
 */
@@ -790,7 +797,7 @@ static int parse_stdin_data(struct asfd *asfd,
 			{
 				struct bu *b;
 				if(!*selbu) break;
-				for(b=*selbu; b; b=b->prev)
+				for(b=*selbu; b; b=b->next)
 				{
 					row--;
 					if(!row) break;

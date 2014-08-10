@@ -13,15 +13,7 @@ static int send_summaries_to_client(struct asfd *srfd,
                 if(!c->status && cstat_set_status(c))
 			goto end;
 
-                if(c->running_detail)
-		{
-			// Broken for now.
-			//tosend=c->running_detail;
-		}
-		else if(sel_client && !strcmp(sel_client, c->name)
-		  && (c->status==STATUS_IDLE
-			|| c->status==STATUS_CLIENT_CRASHED
-			|| c->status==STATUS_SERVER_CRASHED))
+		if(sel_client && !strcmp(sel_client, c->name))
 		{
 			// Client not running, but asked for detail.
 			// Gather a list of successful backups to talk about.

@@ -109,7 +109,7 @@ static int add_to_list(void)
 	else
 	{
 		bu_list=bu;
-		if(bu_list) bu_list->prev=NULL;
+		bu_list->prev=NULL;
 	}
 	
 	number=0;
@@ -230,8 +230,9 @@ static void merge_bu_lists(void)
 		}
 		else
 		{
+			if(current->bu) current->bu->prev=n;
 			current->bu=n;
-			if(current->bu) current->bu->prev=NULL;
+			current->bu->prev=NULL;
 		}
 		lastn=n->next;
 		n->next=o;

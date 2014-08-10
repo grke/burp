@@ -503,79 +503,88 @@ static int need_status(void)
 	return 1;
 }
 
-// Return 1 if it was shown, -1 on error, 0 otherwise.
-/*
-static int show_rbuf(const char *rbuf, struct conf *conf, int sel, char **client, int *count, int details, const char *sclient, struct cntr *p1cntr, struct cntr *cntr)
-{
-	int rbuflen=0;
-	if(!rbuf) return 0;
-	rbuflen=strlen(rbuf);
-#ifdef DBFP
-	if(dbfp) { fprintf(dbfp, "%s\n", rbuf);  fflush(dbfp); }
-#endif
-
-	if(rbuflen>2
-		&& rbuf[rbuflen-1]=='\n'
-		&& rbuf[rbuflen-2]=='\n')
-	{
-		int row=24;
-		int col=80;
-#ifdef HAVE_NCURSES_H
-		if(actg==ACTION_STATUS) getmaxyx(stdscr, row, col);
-#endif
-		if(parse_rbuf(rbuf, conf, row, col,
-			sel, client, count, details, sclient, p1cntr, cntr))
-				return -1;
-		if(sel>=*count) sel=(*count)-1;
-		if(!details) print_star(sel);
-#ifdef HAVE_NCURSES_H
-		if(actg==ACTION_STATUS) refresh();
-#endif
-		return 1;
-	}
-	return 0;
-}
-*/
-
-static int update_screen_details(struct cstat *clist,
-	struct cstat *sel, struct bu **selbu, struct conf *conf)
+static int update_screen_details(struct cstat *sel,
+	struct bu **selbu, struct conf *conf)
 {
 	int x=0;
 	int row=24;
 	int col=80;
 	char msg[1024]="";
-	struct bu *bu;
-	int star_printed=0;
+	struct bu *c;
+	int s=0;
+	int selindex=0;
+	static int winmin=0;
+	static int winmax=0;
+	static int selindex_last=0;
 
-	getmaxyx(stdscr, row, col);
+	if(actg==ACTION_STATUS)
+	{
+		getmaxyx(stdscr, row, col);
+		//if(!winmax) winmax=row;
+		for(c=sel->bu; c; c=c->next)
+		{
+			selindex++;
+			if(*selbu==c) break;
+		}
+	}
+
+	// Adjust sliding window appropriately.
+	if(selindex>selindex_last)
+	{
+		if(selindex>winmax-TOP_SPACE-1-2)
+		{
+			winmin+=selindex-selindex_last;
+			winmax+=selindex-selindex_last;
+		}
+	}
+	else if(selindex<selindex_last)
+	{
+		if(selindex<winmin)
+		{
+			winmin+=selindex-selindex_last;
+			winmax+=selindex-selindex_last;
+		}
+	}
+	if(winmin==winmax)
+	{
+		winmin=0;
+		winmax=row;
+	}
+
+
+	// First, blank the whole screen.
 	blank_screen(row, col);
+	{
+		char msg[64];
+		snprintf(msg, sizeof(msg), "sel:%d si:%d min:%d max:%d\n",
+			selindex, selindex_last, winmin, winmax);
+		print_line(msg, -1, col);
+	}
+
 	snprintf(msg, sizeof(msg), "Client: %s", sel->name);
 	print_line(msg, x++, col);
 	snprintf(msg, sizeof(msg), "Status: %s", cstat_status_to_str(sel));
 	print_line(msg, x++, col);
 
-	if(sel->bu)
+	for(c=sel->bu; c; c=c->next)
 	{
-		if(!*selbu) *selbu=sel->bu;
-		for(bu=sel->bu; bu; bu=bu->next)
-		{
-			snprintf(msg, sizeof(msg), "%s %s",
-				bu==sel->bu?"Backup list:":"            ",
-				get_bu_str(bu));
-			print_line(msg, x++, col);
-			if(actg==ACTION_STATUS && *selbu==bu)
-			{
-				mvprintw(x+TOP_SPACE-1, 1, "*");
-				star_printed=1;
-			}
-		}
-		if(!star_printed) *selbu=sel->bu;
+		s++;
+		if(s<winmin) continue;
+		if(s>winmax) break;
+
+		snprintf(msg, sizeof(msg), "%s %s",
+			c==sel->bu?"Backup list:":"            ",
+			get_bu_str(c));
+		print_line(msg, x++, col);
+		if(actg==ACTION_STATUS && *selbu==c)
+			mvprintw(x+TOP_SPACE-1, 1, "*");
 	}
 
-	//show_all_backups(backups, &x, col);
 	// Blank any remainder of the screen.
 	for(; x<row; x++)
 		print_line("", x, col);
+
+	selindex_last=selindex;
 	return 0;
 }
 
@@ -906,7 +915,8 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 //if(sel) fprintf(dbfp, "sel: %s\n", sel->name);
 		if(details)
 		{
-			if(update_screen_details(clist, sel, &selbu, conf))
+			if(!selbu) selbu=sel->bu;
+			if(update_screen_details(sel, &selbu, conf))
 				return -1;
 		}
 		else

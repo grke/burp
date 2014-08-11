@@ -518,7 +518,7 @@ int restore_burp1(struct asfd *asfd, struct bu *bu,
 		sbuf_free_content(sb);
 	}
 	// Restore any directories that are left in the list.
-	if(!ret) for(s=scount-1; s>=0; s--)
+	for(s=scount-1; s>=0; s--)
 	{
 		if(restore_sbufl(asfd, sblist[s], bu,
 			act, sdirs, status, cconf))

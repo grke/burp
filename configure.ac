@@ -1208,19 +1208,6 @@ if test x$NCURSES_LIBS = x-lncurses; then
 fi
 AC_SUBST(NCURSES_LIBS)
 
-AC_CHECK_HEADERS(yajl/yajl_parse.h)
-AC_CHECK_LIB(yajl, yajl_alloc, [YAJL_LIBS="-lyajl"])
-have_yajl=no
-if test x$YAJL_LIBS = x-lyajl; then
-   AC_DEFINE(HAVE_YAJL, 1, [Defined to 1 if libyajl was found])
-   have_yajl=yes
-fi
-AC_SUBST(YAJL_LIBS)
-if test "$have_yajl" = "no"; then
-	echo "Please install yajl"
-	exit 1
-fi
-
 dnl
 dnl Check if we have AFS on this system
 dnl
@@ -1601,6 +1588,7 @@ AC_OUTPUT([autoconf/Make.common \
 	   src/server/burp2/Makefile \
 	   src/server/burp2/champ_chooser/Makefile \
 	   src/server/monitor/Makefile \
+	   src/yajl/Makefile \
 	   $PFILES ],  
      [ ]
 )
@@ -1662,7 +1650,6 @@ Configuration on `date`:
    acl:				${have_acl}
    xattr:			${have_xattr}
    ncurses:			${have_ncurses}
-   yajl:			${have_yajl}
 
   " > config.out
 

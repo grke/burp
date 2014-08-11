@@ -26,6 +26,7 @@ bin_subdirs = \
 		src/server/burp2 \
 		src/server/burp2/champ_chooser \
 		src/server/monitor \
+		src/yajl \
 		src
 
 all_subdirs = ${bin_subdirs} manpages

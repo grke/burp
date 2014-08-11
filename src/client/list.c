@@ -1,5 +1,3 @@
-#include <yajl/yajl_gen.h>
-
 #include "include.h"
 
 static int items_open=0;

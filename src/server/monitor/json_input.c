@@ -1,6 +1,9 @@
-#include <yajl/yajl_parse.h>
-
 #include "include.h"
+#ifdef HAVE_WIN32
+#include <yajl/yajl_parse.h>
+#else
+#include "../../yajl/api/yajl_parse.h"
+#endif
 
 static int map_depth=0;
 

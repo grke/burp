@@ -1,0 +1,38 @@
+@MCOMMON@
+
+srcdir =        .
+VPATH =         .
+.PATH:          .
+
+# one up
+basedir = ..
+# top dir
+topdir = ../..
+# this dir relative to top dir
+thisdir = src/yajl
+
+#
+SRCS = \
+	yajl.c \
+	yajl_alloc.c \
+	yajl_buf.c \
+	yajl_encode.c \
+	yajl_gen.c \
+	yajl_lex.c \
+	yajl_parser.c \
+	yajl_tree.c \
+	yajl_version.c \
+
+OBJS = $(SRCS:.c=.o)
+
+all: Makefile yajl.a
+	@echo "==== Make of yajl.a is good ===="
+	@echo " "
+
+yajl.a: $(OBJS)
+	@echo "Making $@ ..."
+	$(AR) rc  $@ $(OBJS)
+	$(RANLIB) $@
+
+@MCOMMON2@
+

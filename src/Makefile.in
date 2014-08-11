@@ -66,7 +66,8 @@ SUBDIROBJS = \
 		server/burp1/server_burp1.a \
 		server/burp2/server_burp2.a \
 		server/burp2/champ_chooser/champ_chooser.a \
-		server/monitor/server_monitor.a
+		server/monitor/server_monitor.a \
+		yajl/yajl.a
 
 # these are the objects that are changed by the .configure process
 EXTRAOBJS = @OBJLIST@
@@ -121,12 +122,12 @@ burp:  Makefile $(OBJS) $(SUBDIROBJS) @WIN32@
 	@echo "Linking $@ ..."
 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -o $@ \
 	$(SUBDIROBJS) $(OBJS) $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
-	  $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS) $(RSYNC_LIBS) $(YAJL_LIBS) -lrt
+	  $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS) $(RSYNC_LIBS) -lrt
 
 static-burp: Makefile $(OBJS) $(SUBDIROBJS) @WIN32@
 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -o $@ \
 	$(SUBDIROBJS) $(OBJS) $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
-	   $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS) $(RSYNC_LIBS) $(YAJL_LIBS)
+	   $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS) $(RSYNC_LIBS)
 
 Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
 	cd $(topdir) \

@@ -13,6 +13,7 @@ Some of src/base64.c
 Some of src/client/find.c.
 A fragment of src/berrno.c.
 Some Makefiles and configure scripts.
+The contents of src/yajl is copyright (c) 2007-2014, Lloyd Hilaiel.
 The new Burp code is Copyright Graham Keeling.
 The license for the new Burp code continues to be AGPLv3.
 

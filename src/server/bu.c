@@ -9,8 +9,8 @@ struct bu *bu_alloc(void)
 	return (struct bu *)calloc_w(1, sizeof(struct bu), __func__);
 }
 
-int bu_init(struct bu *bu, char *fullpath, char *basename,
-	char *timestampstr, int hardlinked)
+static int bu_init(struct bu *bu, char *fullpath, char *basename,
+	char *timestampstr, uint8_t flags)
 {
 	if(!(bu->data=prepend_s(fullpath, "data"))
 	  || !(bu->delta=prepend_s(fullpath, "deltas.reverse")))
@@ -18,7 +18,7 @@ int bu_init(struct bu *bu, char *fullpath, char *basename,
 	bu->path=fullpath;
 	bu->basename=basename;
 	bu->timestamp=timestampstr;
-	bu->hardlinked=hardlinked;
+	bu->flags=flags;
 	bu->bno=strtoul(timestampstr, NULL, 10);
 	return 0;
 error:
@@ -63,11 +63,10 @@ static int get_link(const char *dir, const char *lnk, char real[], size_t r)
 }
 
 static int maybe_add_ent(const char *dir, const char *d_name,
-	struct bu **bu_list)
+	struct bu **bu_list, uint8_t flags)
 {
 	int ret=-1;
 	char buf[32]="";
-	int hardlinked=0;
 	struct stat statp;
 	char *fullpath=NULL;
 	char *timestamp=NULL;
@@ -94,10 +93,10 @@ static int maybe_add_ent(const char *dir, const char *d_name,
 	if(!(timestampstr=strdup_w(buf, __func__)))
 		goto error;
 
-	if(!lstat(hlinkedpath, &statp)) hardlinked++;
+	if(!lstat(hlinkedpath, &statp)) flags|=BU_HARDLINKED;
 
 	if(!(bu=bu_alloc())
-	  || bu_init(bu, fullpath, basename, timestampstr, hardlinked))
+	  || bu_init(bu, fullpath, basename, timestampstr, flags))
 		goto error;
 
 	if(*bu_list) bu->next=*bu_list;
@@ -127,7 +126,8 @@ static void setup_indices(struct bu *bu_list)
 		bu->index=i++;
 
 		// Backups that come after hardlinked backups are deletable.
-		if(bu->hardlinked && bu->next) bu->next->deletable=1;
+		if((bu->flags & BU_HARDLINKED) && bu->next)
+			bu->next->flags|=BU_DELETABLE;
 
 		// Also set up reverse linkage.
 		bu->prev=last;
@@ -135,7 +135,7 @@ static void setup_indices(struct bu *bu_list)
 	}
 
 	// The oldest backup is deletable.
-	if(bu_list) bu_list->deletable=1;
+	if(bu_list) bu_list->flags|=BU_DELETABLE;
 
 	if(last)
 	{
@@ -159,20 +159,22 @@ static int rev_alphasort(const struct dirent **a, const struct dirent **b)
 	return 0;
 }
 
-int bu_list_get(struct sdirs *sdirs, struct bu **bu_list)
+static int do_bu_list_get(struct sdirs *sdirs,
+	struct bu **bu_list, int include_working)
 {
 	int i=0;
 	int n=0;
 	int ret=-1;
 	char realwork[32]="";
 	char realfinishing[32]="";
+	char realcurrent[32]="";
 	struct dirent **dp=NULL;
 	const char *dir=sdirs->client;
+	uint8_t flags=0;
 
-	// Find out what certain directories really are, if they exist,
-	// so they can be excluded.
 	if(get_link(dir, "working", realwork, sizeof(realwork))
-	  || get_link(dir, "finishing", realfinishing, sizeof(realfinishing)))
+	  || get_link(dir, "finishing", realfinishing, sizeof(realfinishing))
+	  || get_link(dir, "current", realcurrent, sizeof(realcurrent)))
 		goto end;
 
 	if((n=scandir(dir, &dp, NULL, rev_alphasort))<0)
@@ -186,10 +188,22 @@ int bu_list_get(struct sdirs *sdirs, struct bu **bu_list)
 		  || !strcmp(dp[i]->d_name, ".")
 		  || !strcmp(dp[i]->d_name, ".."))
 			continue;
-		if(!strcmp(dp[i]->d_name, realwork)
-		  || !strcmp(dp[i]->d_name, realfinishing))
-			continue;
-		if(maybe_add_ent(dir, dp[i]->d_name, bu_list))
+		flags=0;
+		if(!strcmp(dp[i]->d_name, realcurrent))
+		{
+			flags|=BU_CURRENT;
+		}
+		else if(!strcmp(dp[i]->d_name, realwork))
+		{
+			if(!include_working) continue;
+			flags|=BU_WORKING;
+		}
+		else if(!strcmp(dp[i]->d_name, realfinishing))
+		{
+			if(!include_working) continue;
+			flags|=BU_FINISHING;
+		}
+		if(maybe_add_ent(dir, dp[i]->d_name, bu_list, flags))
 			goto end;
 	}
 
@@ -205,11 +219,21 @@ end:
 	return ret;
 }
 
+int bu_list_get(struct sdirs *sdirs, struct bu **bu_list)
+{
+	return do_bu_list_get(sdirs, bu_list, 0);
+}
+
+int bu_list_get_with_working(struct sdirs *sdirs, struct bu **bu_list)
+{
+	return do_bu_list_get(sdirs, bu_list, 1);
+}
+
 int bu_current_get(struct sdirs *sdirs, struct bu **bu_list)
 {
 	char real[32]="";
 	// FIX THIS: should not need to specify "current".
 	if(get_link(sdirs->client, "current", real, sizeof(real)))
 		return -1;
-	return maybe_add_ent(sdirs->client, real, bu_list);
+	return maybe_add_ent(sdirs->client, real, bu_list, BU_CURRENT);
 }

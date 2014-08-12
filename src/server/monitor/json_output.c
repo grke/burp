@@ -53,21 +53,28 @@ static long timestamp_to_long(const char *buf)
 	return (long)mktime(&tm);
 }
 
+static int flag_wrap(struct bu *bu, uint8_t flag, const char *field)
+{
+	if(!bu || !(bu->flags & flag)) return 0;
+	return yajl_gen_int_pair_w(field, (long long)1);
+}
+
 static int json_send_backup(struct asfd *asfd, struct bu *bu)
 {
 	long long bno=0;
-	long long deletable=0;
 	long long timestamp=0;
 	if(bu)
 	{
 		bno=(long long)bu->bno;
-		deletable=(long long)bu->deletable;
 		timestamp=(long long)timestamp_to_long(bu->timestamp);
 	}
 
 	if(yajl_map_open_w()
 	  || yajl_gen_int_pair_w("number", bno)
-	  || yajl_gen_int_pair_w("deletable", deletable)
+	  || flag_wrap(bu, BU_CURRENT, "current")
+	  || flag_wrap(bu, BU_WORKING, "working")
+	  || flag_wrap(bu, BU_FINISHING, "working")
+	  || flag_wrap(bu, BU_DELETABLE, "deletable")
 	  || yajl_gen_int_pair_w("timestamp", timestamp)
 	  || yajl_gen_map_close(yajl)!=yajl_gen_status_ok)
 		return -1;

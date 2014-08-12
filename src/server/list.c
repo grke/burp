@@ -174,7 +174,7 @@ static int send_backup_name_to_client(struct asfd *asfd,
 		bu->timestamp,
 		// Burp2 backups are all deletable, so do not mention it.
 		conf->protocol==PROTO_BURP1
-		&& bu->deletable?" (deletable)":"");
+		&& (bu->flags & BU_DELETABLE)?" (deletable)":"");
 	return write_wrapper_str(asfd, CMD_TIMESTAMP, msg);
 }
 

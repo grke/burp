@@ -464,7 +464,7 @@ static int finish_delta(struct sdirs *sdirs, struct sbuf *rb)
 }
 
 static int deal_with_receive_end_file(struct asfd *asfd, struct sdirs *sdirs,
-	struct sbuf *rb, FILE *p2fp, struct conf *cconf, char **last_requested)
+	struct sbuf *rb, FILE *chfp, struct conf *cconf, char **last_requested)
 {
 	static char *cp=NULL;
 	static struct iobuf *rbuf;
@@ -487,7 +487,7 @@ static int deal_with_receive_end_file(struct asfd *asfd, struct sdirs *sdirs,
 	if(rb->flags & SBUFL_RECV_DELTA && finish_delta(sdirs, rb))
 		goto error;
 
-	if(sbufl_to_manifest(rb, p2fp, NULL))
+	if(sbufl_to_manifest(rb, chfp, NULL))
 		goto error;
 
 	if(rb->flags & SBUFL_RECV_DELTA)
@@ -567,7 +567,7 @@ static int deal_with_filedata(struct asfd *asfd,
 // returns 1 for finished ok.
 static int do_stuff_to_receive(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf *cconf,
-	struct sbuf *rb, FILE *p2fp, struct dpthl *dpthl, char **last_requested)
+	struct sbuf *rb, FILE *chfp, struct dpthl *dpthl, char **last_requested)
 {
 	struct iobuf *rbuf=asfd->rbuf;
 
@@ -599,7 +599,7 @@ static int do_stuff_to_receive(struct asfd *asfd,
 				return 0;
 			case CMD_END_FILE:
 				if(deal_with_receive_end_file(asfd, sdirs, rb,
-					p2fp, cconf, last_requested))
+					chfp, cconf, last_requested))
 						goto error;
 				return 0;
 			default:
@@ -727,10 +727,10 @@ int backup_phase2_server_burp1(struct async *as, struct sdirs *sdirs,
 	struct dpthl dpthl;
 	char *deltmppath=NULL;
 	char *last_requested=NULL;
-	// Where to write phase2data.
+	// Where to write changed data.
 	// Data is not getting written to a compressed file.
 	// This is important for recovery if the power goes.
-	FILE *p2fp=NULL;
+	FILE *chfp=NULL;
 	FILE *ucfp=NULL; // unchanged data
 	gzFile cmanfp=NULL; // previous (current) manifest.
 	struct sbuf *cb=NULL; // file list in current manifest
@@ -770,16 +770,16 @@ int backup_phase2_server_burp1(struct async *as, struct sdirs *sdirs,
 	// to resume.
 	// First, open them in a+ mode, so that they will be created if they
 	// do not exist.
-	if(!(ucfp=open_file(sdirs->unchangeddata, "a+b"))
-	  || !(p2fp=open_file(sdirs->phase2data, "a+b")))
+	if(!(ucfp=open_file(sdirs->unchanged, "a+b"))
+	  || !(chfp=open_file(sdirs->changed, "a+b")))
 		goto error;
 	close_fp(&ucfp);
-	close_fp(&p2fp);
-	if(!(ucfp=open_file(sdirs->unchangeddata, "r+b"))
-	  || !(p2fp=open_file(sdirs->phase2data, "r+b")))
+	close_fp(&chfp);
+	if(!(ucfp=open_file(sdirs->unchanged, "r+b"))
+	  || !(chfp=open_file(sdirs->changed, "r+b")))
 		goto error;
 
-	if(resume && do_resume(p1zp, p2fp, ucfp, &dpthl, cconf))
+	if(resume && do_resume(p1zp, chfp, ucfp, &dpthl, cconf))
 		goto error;
 
 	while(1)
@@ -794,7 +794,7 @@ int backup_phase2_server_burp1(struct async *as, struct sdirs *sdirs,
 		if(last_requested || !p1zp || asfd->writebuflen)
 		{
 			switch(do_stuff_to_receive(asfd, sdirs,
-				cconf, rb, p2fp, &dpthl, &last_requested))
+				cconf, rb, chfp, &dpthl, &last_requested))
 			{
 				case 0: break;
 				case 1: goto end; // Finished ok.
@@ -869,16 +869,14 @@ int backup_phase2_server_burp1(struct async *as, struct sdirs *sdirs,
 error:
 	ret=-1;
 end:
-	if(close_fp(&p2fp))
+	if(close_fp(&chfp))
 	{
-		logp("error closing %s in backup_phase2_server\n",
-			sdirs->phase2data);
+		logp("error closing %s in %s\n", sdirs->changed, __func__);
 		ret=-1;
 	}
 	if(close_fp(&ucfp))
 	{
-		logp("error closing %s in backup_phase2_server\n",
-			sdirs->unchangeddata);
+		logp("error closing %s in %s\n", sdirs->unchanged, __func__);
 		ret=-1;
 	}
 	free(deltmppath);

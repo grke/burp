@@ -37,8 +37,6 @@ struct sdirs
 	// Burp1 directories.
 	char *currentdata;
 	char *datadirtmp;
-	char *phase2data;
-	char *unchangeddata;
 	char *cincexc;
 	char *deltmppath;
 	char *treepath;

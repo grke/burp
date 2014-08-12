@@ -40,8 +40,8 @@ static int maybe_rebuild_manifest(struct sdirs *sdirs, int compress,
 		return backup_phase3_server_burp1(sdirs,
 			1 /* recovery mode */, compress, cconf);
 
-	unlink(sdirs->phase2data);
-	unlink(sdirs->unchangeddata);
+	unlink(sdirs->changed);
+	unlink(sdirs->unchanged);
 	return 0;
 }
 

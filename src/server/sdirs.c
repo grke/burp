@@ -99,22 +99,29 @@ int sdirs_create_real_working(struct sdirs *sdirs, struct conf *conf)
 	return 0;
 }
 
-// Maybe should be in a burp1 directory.
-static int do_burp1_dirs(struct sdirs *sdirs, struct conf *conf)
+static int do_common_dirs(struct sdirs *sdirs, struct conf *conf)
 {
-	if(!(sdirs->client=prepend_s(sdirs->base, conf->cname))
-	  || !(sdirs->working=prepend_s(sdirs->client, "working"))
+	if(!(sdirs->working=prepend_s(sdirs->client, "working"))
 	  || !(sdirs->finishing=prepend_s(sdirs->client, "finishing"))
 	  || !(sdirs->deleteme=prepend_s(sdirs->client, "deleteme"))
 	  || !(sdirs->current=prepend_s(sdirs->client, "current"))
 	  || !(sdirs->currenttmp=prepend_s(sdirs->client, "current.tmp"))
-	  || !(sdirs->currentdata=prepend_s(sdirs->current, "data"))
 	  || !(sdirs->timestamp=prepend_s(sdirs->working, "timestamp"))
+	  || !(sdirs->phase1data=prepend_s(sdirs->working, "phase1.gz"))
+	  || !(sdirs->changed=prepend_s(sdirs->working, "changed"))
+	  || !(sdirs->unchanged=prepend_s(sdirs->working, "unchanged")))
+		return -1;
+	return 0;
+}
+
+// Maybe should be in a burp1 directory.
+static int do_burp1_dirs(struct sdirs *sdirs, struct conf *conf)
+{
+	if(!(sdirs->client=prepend_s(sdirs->base, conf->cname))
+	  || do_common_dirs(sdirs, conf)
+	  || !(sdirs->currentdata=prepend_s(sdirs->current, DATA_DIR))
 	  || !(sdirs->manifest=prepend_s(sdirs->working, "manifest.gz"))
 	  || !(sdirs->datadirtmp=prepend_s(sdirs->working, "data.tmp"))
-	  || !(sdirs->phase1data=prepend_s(sdirs->working, "phase1.gz"))
-	  || !(sdirs->phase2data=prepend_s(sdirs->working, "phase2"))
-	  || !(sdirs->unchangeddata=prepend_s(sdirs->working, "unchanged"))
 	  || !(sdirs->cmanifest=prepend_s(sdirs->current, "manifest.gz"))
 	  || !(sdirs->cincexc=prepend_s(sdirs->current, "incexc"))
 	  || !(sdirs->deltmppath=prepend_s(sdirs->working, "deltmppath")))
@@ -132,23 +139,15 @@ static int do_burp2_dirs(struct sdirs *sdirs, struct conf *conf)
 		return -1;
 	}
 	if(!(sdirs->dedup=prepend_s(sdirs->base, conf->dedup_group))
+	  || !(sdirs->clients=prepend_s(sdirs->dedup, "clients"))
+	  || !(sdirs->client=prepend_s(sdirs->clients, conf->cname))
+	  || do_common_dirs(sdirs, conf)
 	  || !(sdirs->data=prepend_s(sdirs->dedup, DATA_DIR))
 	  || !(sdirs->champlock=prepend_s(sdirs->data, "cc.lock"))
 	  || !(sdirs->champsock=prepend_s(sdirs->data, "cc.sock"))
 	  || !(sdirs->champlog=prepend_s(sdirs->data, "cc.log"))
-	  || !(sdirs->clients=prepend_s(sdirs->dedup, "clients"))
-	  || !(sdirs->client=prepend_s(sdirs->clients, conf->cname))
-	  || !(sdirs->working=prepend_s(sdirs->client, "working"))
-	  || !(sdirs->finishing=prepend_s(sdirs->client, "finishing"))
-	  || !(sdirs->current=prepend_s(sdirs->client, "current"))
-	  || !(sdirs->deleteme=prepend_s(sdirs->client, "deleteme"))
-	  || !(sdirs->currenttmp=prepend_s(sdirs->client, "current.tmp"))
-	  || !(sdirs->timestamp=prepend_s(sdirs->working, "timestamp"))
 	  || !(sdirs->manifest=prepend_s(sdirs->working, "manifest"))
-	  || !(sdirs->changed=prepend_s(sdirs->working, "changed"))
-	  || !(sdirs->unchanged=prepend_s(sdirs->working, "unchanged"))
-	  || !(sdirs->cmanifest=prepend_s(sdirs->current, "manifest"))
-	  || !(sdirs->phase1data=prepend_s(sdirs->working, "phase1.gz")))
+	  || !(sdirs->cmanifest=prepend_s(sdirs->current, "manifest")))
 		return -1;
 	// sdirs->rworking gets set later.
 	// sdirs->rmanifest gets set later.
@@ -214,8 +213,6 @@ void sdirs_free_content(struct sdirs *sdirs)
 	// Burp1 directories.
 	free_w(&sdirs->currentdata);
 	free_w(&sdirs->datadirtmp);
-	free_w(&sdirs->phase2data);
-	free_w(&sdirs->unchangeddata);
 	free_w(&sdirs->cincexc);
 	free_w(&sdirs->deltmppath);
 	free_w(&sdirs->treepath);

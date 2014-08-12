@@ -253,7 +253,7 @@ static int restore_file(struct asfd *asfd, struct bu *bu,
 			const char *best=NULL;
 			unsigned long long bytes=0;
 
-			if(b!=bu && bu->hardlinked) hlwarn=b;
+			if(b!=bu && (bu->flags & BU_HARDLINKED)) hlwarn=b;
 
 			best=path;
 			tmp=tmppath1;

@@ -1,7 +1,13 @@
 #ifndef _BU_H
 #define _BU_H
 
-// Current backups.
+#define BU_HARDLINKED	0x01
+#define BU_DELETABLE	0x02
+#define BU_WORKING	0x04
+#define BU_FINISHING	0x10
+#define BU_CURRENT	0x20
+
+// Representing backup directories for a client.
 
 struct bu
 {
@@ -11,8 +17,7 @@ struct bu
 	char *delta;
 	char *timestamp;
 	char *forward_timestamp;
-	int hardlinked;
-	int deletable;
+	uint8_t flags;
 
 	// The number of the backup.
 	unsigned long bno;
@@ -28,12 +33,10 @@ struct bu
 
 extern void bu_list_free(struct bu **bu_list);
 extern int bu_list_get(struct sdirs *sdirs, struct bu **bu_list);
+extern int bu_list_get_with_working(struct sdirs *sdirs, struct bu **bu_list);
 extern int bu_current_get(struct sdirs *sdirs, struct bu **bu_list);
 
 extern struct bu *bu_alloc(void);
-extern int bu_init(struct bu *bu, char *fullpath, char *basename,
-        char *timestampstr, int hardlinked);
 extern void bu_free(struct bu **bu);
-
 
 #endif

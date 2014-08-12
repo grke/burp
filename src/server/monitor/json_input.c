@@ -9,7 +9,7 @@ static int map_depth=0;
 
 static unsigned long number=0;
 static char *timestamp=NULL;
-static int deletable=0;
+static uint8_t flags=0;
 static struct cstat *cnew=NULL;
 static struct cstat *current=NULL;
 static struct cstat **cslist=NULL;
@@ -27,10 +27,29 @@ static int input_integer(void *ctx, long long val)
 			number=(unsigned long)val;
 			return 1;
 		}
+		// FIX THIS: Repeated code.
 		else if(!strcmp(lastkey, "deletable"))
 		{
 			if(!current) goto error;
-			deletable=(int)val;
+			if((int)val) flags|=BU_DELETABLE;
+			return 1;
+		}
+		else if(!strcmp(lastkey, "current")) // confusing
+		{
+			if(!current) goto error;
+			if((int)val) flags|=BU_CURRENT;
+			return 1;
+		}
+		else if(!strcmp(lastkey, "working"))
+		{
+			if(!current) goto error;
+			if((int)val) flags|=BU_WORKING;
+			return 1;
+		}
+		else if(!strcmp(lastkey, "finishing"))
+		{
+			if(!current) goto error;
+			if((int)val) flags|=BU_FINISHING;
 			return 1;
 		}
 		else if(!strcmp(lastkey, "timestamp"))
@@ -99,7 +118,7 @@ static int add_to_list(void)
 	if(!number) return 0;
 	if(!(bu=bu_alloc())) return -1;
 	bu->bno=number;
-	bu->deletable=deletable;
+	bu->flags=flags;
 	bu->timestamp=timestamp;
 
 	// FIX THIS: Inefficient to find the end each time.
@@ -116,7 +135,7 @@ static int add_to_list(void)
 	}
 	
 	number=0;
-	deletable=0;
+	flags=0;
 	timestamp=NULL;
 	return 0;
 }
@@ -167,7 +186,7 @@ static void merge_bu_lists(void)
 				// Found o in new list.
 				// Copy the fields from new to old.
 				found_in_new=1;
-				o->deletable=n->deletable;
+				o->flags=n->flags;
 				free_w(&o->timestamp);
 				o->timestamp=n->timestamp;
 				n->timestamp=NULL;

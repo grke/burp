@@ -518,6 +518,7 @@ static int update_screen(struct cstat *clist, struct cstat *sel,
 	static int winmax=0;
 	static int selindex_last=0;
 	int star_printed=0;
+	char *extradesc=NULL;
 
 	if(actg==ACTION_STATUS)
 	{
@@ -593,10 +594,15 @@ static int update_screen(struct cstat *clist, struct cstat *sel,
 		if(s<winmin) continue;
 		if(s>winmax) break;
 
+		if(b->flags & BU_CURRENT) extradesc=" (current)";
+		else if(b->flags & BU_WORKING) extradesc=" (working)";
+		else if(b->flags & BU_FINISHING) extradesc=" (finishing)";
+		else extradesc="";
+
 		snprintf(msg, sizeof(msg), "%s %s%s",
 			b==sel->bu?"Backup list:":"            ",
 			get_bu_str(b),
-			b==sel->bu?" (current)":"");
+			extradesc);
 		print_line(msg, x++, col);
 		if(actg==ACTION_STATUS && *selbu==b)
 		{

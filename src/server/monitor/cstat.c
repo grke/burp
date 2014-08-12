@@ -315,7 +315,7 @@ int cstat_set_backup_list(struct cstat *cstat)
 	// Free any previous list.
 	bu_list_free(&cstat->bu);
 
-	if(bu_list_get(cstat->sdirs, &bu))
+	if(bu_list_get_with_working(cstat->sdirs, &bu))
 	{
 		//logp("error when looking up current backups\n");
 		return 0;

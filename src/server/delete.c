@@ -108,7 +108,7 @@ static int range_loop(struct sdirs *sdirs, struct conf *cconf,
 		{
 			if(s<bu->trbno
 			  && bu->trbno<=r
-			  && bu->deletable)
+			  && (bu->flags & BU_DELETABLE))
 			{
 				if(delete_backup(sdirs, cconf, bu)) return -1;
 				(*deleted)++;
@@ -201,7 +201,7 @@ int do_delete_server(struct asfd *asfd,
 		  && (!strcmp(bu->timestamp, backup)
 			|| bu->bno==bno))
 		{
-			if(bu->deletable)
+			if(bu->flags & BU_DELETABLE)
 			{
 				found=1;
 				if(asfd->write_str(asfd, CMD_GEN, "ok")

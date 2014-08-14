@@ -60,7 +60,7 @@ int extra_comms(struct async *as, struct conf *conf,
 	// :srestore: means that the server wants to do a restore.
 	if(server_supports(feat, ":srestore:"))
 	{
-		if(conf->server_can_restore)
+		if(conf->server_can & SERVER_CAN_RESTORE)
 		{
 			logp("Server is initiating a restore\n");
 			if(incexc_recv_client_restore(asfd, incexc, conf))

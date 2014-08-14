@@ -285,7 +285,7 @@ int run_backup(struct async *as, struct sdirs *sdirs, struct conf *cconf,
 		}
 		logp("Running backup of %s\n", cconf->cname);
 	}
-	else if(!cconf->client_can_force_backup)
+	else if(!(cconf->client_can & CLIENT_CAN_FORCE_BACKUP))
 	{
 		logp("Not allowing forced backup of %s\n", cconf->cname);
 		return asfd->write_str(asfd,

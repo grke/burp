@@ -296,11 +296,14 @@ end:
 		yajl=NULL;
 	}
 
-	iobuf_free_content(&sb->path);
-	iobuf_free_content(&sb->link);
-	iobuf_free_content(&sb->attr);
+	if(sb)
+	{
+		iobuf_free_content(&sb->path);
+		iobuf_free_content(&sb->link);
+		iobuf_free_content(&sb->attr);
+		sbuf_free(&sb);
+	}
 	if(dpth) free(dpth);
-	sbuf_free(&sb);
 	if(!ret) logp("List finished ok\n");
 	return ret;
 }

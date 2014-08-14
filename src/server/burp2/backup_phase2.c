@@ -586,16 +586,26 @@ static int append_for_champ_chooser(struct asfd *chfd,
 			MD5_DIGEST_LENGTH);
 		wbuf->len=CHECKSUM_LEN;
 
-		if(chfd->append_all_to_write_buffer(chfd, wbuf))
-			return 0; // Try again later.
+		switch(chfd->append_all_to_write_buffer(chfd, wbuf))
+		{
+			case APPEND_OK: break;
+			case APPEND_BLOCKED:
+				return 0; // Try again later.
+			default: return -1;
+		}
 		blist->blk_for_champ_chooser=blist->blk_for_champ_chooser->next;
 	}
 	if(sigs_end && !finished_sending && !blist->blk_for_champ_chooser)
 	{
 		wbuf->cmd=CMD_GEN;
 		wbuf->len=snprintf(wbuf->buf, CHECKSUM_LEN, "%s", "sigs_end");
-		if(chfd->append_all_to_write_buffer(chfd, wbuf))
-			return 0; // Try again later.
+		switch(chfd->append_all_to_write_buffer(chfd, wbuf))
+		{
+			case APPEND_OK: break;
+			case APPEND_BLOCKED:
+				return 0; // Try again later.
+			default: return -1;
+		}
 		finished_sending++;
 	}
 	return 0;
@@ -769,8 +779,9 @@ int backup_phase2_server_burp2(struct async *as, struct sdirs *sdirs,
 			}
 		}
 
-		if(wbuf->len)
-			asfd->append_all_to_write_buffer(asfd, wbuf);
+		if(wbuf->len
+		  && asfd->append_all_to_write_buffer(asfd, wbuf)==APPEND_ERROR)
+			goto end;
 
 		append_for_champ_chooser(chfd, blist, sigs_end);
 

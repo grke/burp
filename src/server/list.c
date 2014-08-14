@@ -21,8 +21,16 @@ static int flush_asio(struct asfd *asfd)
 
 static int write_wrapper(struct asfd *asfd, struct iobuf *wbuf)
 {
-	while(asfd->append_all_to_write_buffer(asfd, wbuf))
+	while(1)
+	{
+		switch(asfd->append_all_to_write_buffer(asfd, wbuf))
+		{
+			case APPEND_OK: return 0;
+			case APPEND_BLOCKED: break;
+			default: return -1;
+		}
 		if(read_and_write(asfd)) return -1;
+	}
 	return 0;
 }
 

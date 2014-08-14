@@ -368,6 +368,7 @@ static int maybe_process_file(struct asfd *asfd,
 }
 
 // Return 1 if there is still stuff needing to be sent.
+// FIX THIS: lots of repeated code.
 static int do_stuff_to_send(struct asfd *asfd,
 	struct sbuf *p1b, char **last_requested)
 {
@@ -375,22 +376,34 @@ static int do_stuff_to_send(struct asfd *asfd,
 	if(p1b->flags & SBUFL_SEND_DATAPTH)
 	{
 		iobuf_copy(&wbuf, &p1b->burp1->datapth);
-		if(asfd->append_all_to_write_buffer(asfd, &wbuf))
-			return 1;
+		switch(asfd->append_all_to_write_buffer(asfd, &wbuf))
+		{
+			case APPEND_OK: break;
+			case APPEND_BLOCKED: return 1;
+			default: return -1;
+		}
 		p1b->flags &= ~SBUFL_SEND_DATAPTH;
 	}
 	if(p1b->flags & SBUFL_SEND_STAT)
 	{
 		iobuf_copy(&wbuf, &p1b->attr);
-		if(asfd->append_all_to_write_buffer(asfd, &wbuf))
-			return 1;
+		switch(asfd->append_all_to_write_buffer(asfd, &wbuf))
+		{
+			case APPEND_OK: break;
+			case APPEND_BLOCKED: return 1;
+			default: return -1;
+		}
 		p1b->flags &= ~SBUFL_SEND_STAT;
 	}
 	if(p1b->flags & SBUFL_SEND_PATH)
 	{
 		iobuf_copy(&wbuf, &p1b->path);
-		if(asfd->append_all_to_write_buffer(asfd, &wbuf))
-			return 1;
+		switch(asfd->append_all_to_write_buffer(asfd, &wbuf))
+		{
+			case APPEND_OK: break;
+			case APPEND_BLOCKED: return 1;
+			default: return -1;
+		}
 		p1b->flags &= ~SBUFL_SEND_PATH;
 		if(*last_requested) free(*last_requested);
 		if(!(*last_requested=strdup_w(p1b->path.buf, __func__)))
@@ -400,28 +413,31 @@ static int do_stuff_to_send(struct asfd *asfd,
 	{
 		rs_result sigresult;
 
-		sigresult=rs_async(p1b->burp1->sigjob, &(p1b->burp1->rsbuf),
-			p1b->burp1->infb, p1b->burp1->outfb);
-
-		if(sigresult==RS_DONE)
+		switch((sigresult=rs_async(p1b->burp1->sigjob,
+			&(p1b->burp1->rsbuf),
+			p1b->burp1->infb, p1b->burp1->outfb)))
 		{
-			p1b->flags |= SBUFL_SEND_ENDOFSIG;
-		}
-		else if(sigresult==RS_BLOCKED || sigresult==RS_RUNNING)
-		{
-			// keep going round the loop.
-			return 1;
-		}
-		else
-		{
-			logp("error in rs_async: %d\n", sigresult);
-			return -1;
+			case RS_DONE:
+				p1b->flags |= SBUFL_SEND_ENDOFSIG;
+				break;
+			case RS_BLOCKED:
+			case RS_RUNNING:
+				// keep going round the loop.
+				return 1;
+			default:
+				logp("error in rs_async: %d\n", sigresult);
+				return -1;
 		}
 	}
 	if(p1b->flags & SBUFL_SEND_ENDOFSIG)
 	{
 		iobuf_from_str(&wbuf, CMD_END_FILE, (char *)"endfile");
-		if(asfd->append_all_to_write_buffer(asfd, &wbuf)) return 1;
+		switch(asfd->append_all_to_write_buffer(asfd, &wbuf))
+		{
+			case APPEND_OK: break;
+			case APPEND_BLOCKED: return 1;
+			default: return -1;
+		}
 		p1b->flags &= ~SBUFL_SEND_ENDOFSIG;
 	}
 	return 0;

@@ -351,8 +351,9 @@ int backup_phase2_client_burp2(struct asfd *asfd, struct conf *conf, int resume)
 
 		if(wbuf->len)
 		{
-			if(asfd->append_all_to_write_buffer(asfd, wbuf)<0)
-				goto end;
+			if(asfd->append_all_to_write_buffer(asfd, wbuf)
+				==APPEND_ERROR)
+					goto end;
 		}
 		if(asfd->as->read_write(asfd->as))
 		{

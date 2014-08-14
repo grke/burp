@@ -341,14 +341,13 @@ rs_result rs_outfilebuf_drain(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 			wbuf->cmd=CMD_APPEND;
 			wbuf->buf=fb->buf;
 			wbuf->len=wlen;
-			if(fb->asfd->append_all_to_write_buffer(
+			switch(fb->asfd->append_all_to_write_buffer(
 				fb->asfd, wbuf))
 			{
-				// stop the rsync stuff from reading more.
-				//		buf->next_out = fb->buf;
-				//		buf->avail_out = 0;
-				//		logp("out return BLOCKED\n");
-				return RS_BLOCKED;
+				case APPEND_OK: break;
+				case APPEND_BLOCKED: return RS_BLOCKED;
+				case APPEND_ERROR:
+				default: return RS_IO_ERROR;
 			}
 			fb->bytes+=w;
 		}

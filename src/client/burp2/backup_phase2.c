@@ -211,19 +211,19 @@ static void get_wbuf_from_data(struct conf *conf,
 	free_stuff(slist, blist);
 }
 
-static void iobuf_from_blk_data(struct iobuf *wbuf, struct blk *blk)
+static int iobuf_from_blk_data(struct iobuf *wbuf, struct blk *blk)
 {
 	static char buf[CHECKSUM_LEN];
-// FIX THIS: Check return of this - maybe should be done elsewhere.
-	blk_md5_update(blk);
+	if(blk_md5_update(blk)) return -1;
 
 	// FIX THIS: consider endian-ness.
 	memcpy(buf, &blk->fingerprint, FINGERPRINT_LEN);
 	memcpy(buf+FINGERPRINT_LEN, blk->md5sum, MD5_DIGEST_LENGTH);
 	iobuf_set(wbuf, CMD_SIG, buf, CHECKSUM_LEN);
+	return 0;
 }
 
-static void get_wbuf_from_blks(struct iobuf *wbuf,
+static int get_wbuf_from_blks(struct iobuf *wbuf,
 	struct slist *slist, int requests_end, int *sigs_end)
 {
 	struct sbuf *sb=slist->blks_to_send;
@@ -235,19 +235,19 @@ static void get_wbuf_from_blks(struct iobuf *wbuf,
 			iobuf_from_str(wbuf, CMD_GEN, (char *)"sigs_end");
 			*sigs_end=1;
 		}
-		return;
+		return 0;
 	}
-	if(!sb->burp2->bsighead) return;
+	if(!sb->burp2->bsighead) return 0;
 
 	if(!(sb->flags & SBUF_SENT_STAT))
 	{
 		iobuf_copy(wbuf, &sb->attr);
 		wbuf->cmd=CMD_ATTRIBS_SIGS; // hack
 		sb->flags |= SBUF_SENT_STAT;
-		return;
+		return 0;
 	}
 
-	iobuf_from_blk_data(wbuf, sb->burp2->bsighead);
+	if(iobuf_from_blk_data(wbuf, sb->burp2->bsighead)) return -1;
 
 	// Move on.
 	if(sb->burp2->bsighead==sb->burp2->bend)
@@ -259,6 +259,7 @@ static void get_wbuf_from_blks(struct iobuf *wbuf,
 	{
 		sb->burp2->bsighead=sb->burp2->bsighead->next;
 	}
+	return 0;
 }
 
 static void get_wbuf_from_scan(struct iobuf *wbuf, struct slist *flist)
@@ -343,13 +344,16 @@ int backup_phase2_client_burp2(struct asfd *asfd, struct conf *conf, int resume)
 				blk_requests_end);
 			if(!wbuf->len)
 			{
-				get_wbuf_from_blks(wbuf, slist,
-					requests_end, &sigs_end);
+				if(get_wbuf_from_blks(wbuf, slist,
+					requests_end, &sigs_end)) goto end;
 			}
 		}
 
 		if(wbuf->len)
-			asfd->append_all_to_write_buffer(asfd, wbuf);
+		{
+			if(asfd->append_all_to_write_buffer(asfd, wbuf)<0)
+				goto end;
+		}
 		if(asfd->as->read_write(asfd->as))
 		{
 			logp("error in %s\n", __func__);

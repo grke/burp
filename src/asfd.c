@@ -410,7 +410,8 @@ static int asfd_write(struct asfd *asfd, struct iobuf *wbuf)
 	if(asfd->as->doing_estimate) return 0;
 	while(wbuf->len)
 	{
-		asfd->append_all_to_write_buffer(asfd, wbuf);
+		if(asfd->append_all_to_write_buffer(asfd, wbuf)<0)
+			return -1;
 		if(asfd->as->write(asfd->as)) return -1;
 	}
 	return 0;

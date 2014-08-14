@@ -19,6 +19,13 @@ enum asfd_streamtype
 	ASFD_STREAM_NCURSES_STDIN
 };
 
+enum append_ret
+{
+	APPEND_ERROR=-1,
+	APPEND_OK=0,
+	APPEND_BLOCKED=1
+};
+
 // Async file descriptor. Can add these to a struct async.
 struct asfd
 {
@@ -66,7 +73,8 @@ struct asfd
 		enum asfd_streamtype, struct conf *);
 	int (*parse_readbuf)(struct asfd *);
 	int (*parse_readbuf_specific)(struct asfd *);
-	int (*append_all_to_write_buffer)(struct asfd *, struct iobuf *);
+	enum append_ret
+		(*append_all_to_write_buffer)(struct asfd *, struct iobuf *);
 	int (*set_bulk_packets)(struct asfd *);
 	int (*do_read)(struct asfd *);
 	int (*do_write)(struct asfd *);

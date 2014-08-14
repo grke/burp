@@ -60,10 +60,13 @@ static int results_to_fd(struct asfd *asfd)
 			wbuf->len=FILENO_LEN+SAVE_PATH_LEN;
 			wbuf->cmd=CMD_SIG;
 
-			if(asfd->append_all_to_write_buffer(asfd, wbuf))
+			switch(asfd->append_all_to_write_buffer(asfd, wbuf))
 			{
-				asfd->blist->head=b;
-				return 0; // Try again later.
+				case APPEND_OK: break;
+				case APPEND_BLOCKED:
+					asfd->blist->head=b;
+					return 0; // Try again later.
+				default: return -1;
 			}
 		}
 		else
@@ -75,10 +78,14 @@ static int results_to_fd(struct asfd *asfd)
 				memcpy(wbuf->buf, &b->index, FILENO_LEN);
 				wbuf->len=FILENO_LEN;
 				wbuf->cmd=CMD_WRAP_UP;
-				if(asfd->append_all_to_write_buffer(asfd, wbuf))
+				switch(asfd->append_all_to_write_buffer(asfd,
+					wbuf))
 				{
-					asfd->blist->head=b;
-					return 0; // Try again later.
+					case APPEND_OK: break;
+					case APPEND_BLOCKED:
+						asfd->blist->head=b;
+						return 0; // Try again later.
+					default: return -1;
 				}
 			}
 		}

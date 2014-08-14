@@ -324,7 +324,7 @@ static int append_to_write_buffer(struct asfd *asfd,
 	return 0;
 }
 
-static int asfd_append_all_to_write_buffer(struct asfd *asfd,
+static enum append_ret asfd_append_all_to_write_buffer(struct asfd *asfd,
 	struct iobuf *wbuf)
 {
 	switch(asfd->streamtype)
@@ -334,7 +334,7 @@ static int asfd_append_all_to_write_buffer(struct asfd *asfd,
 			size_t sblen=0;
 			char sbuf[10]="";
 			if(asfd->writebuflen+6+(wbuf->len) >= bufmaxsize-1)
-				return 1;
+				return APPEND_BLOCKED;
 
 			snprintf(sbuf, sizeof(sbuf), "%c%04X",
 				wbuf->cmd, (unsigned int)wbuf->len);
@@ -344,18 +344,18 @@ static int asfd_append_all_to_write_buffer(struct asfd *asfd,
 		}
 		case ASFD_STREAM_LINEBUF:
 			if(asfd->writebuflen+wbuf->len >= bufmaxsize-1)
-				return 1;
+				return APPEND_BLOCKED;
 			break;
 		case ASFD_STREAM_NCURSES_STDIN:
 		default:
 			logp("%s: unknown asfd stream type in %s: %d\n",
 				asfd->desc, __func__, asfd->streamtype);
-			return -1;
+			return APPEND_ERROR;
 	}
 	append_to_write_buffer(asfd, wbuf->buf, wbuf->len);
 //printf("append %d: %c:%s\n", wbuf->len, wbuf->cmd, wbuf->buf);
 	wbuf->len=0;
-	return 0;
+	return APPEND_OK;
 }
 
 static int asfd_set_bulk_packets(struct asfd *asfd)
@@ -410,7 +410,7 @@ static int asfd_write(struct asfd *asfd, struct iobuf *wbuf)
 	if(asfd->as->doing_estimate) return 0;
 	while(wbuf->len)
 	{
-		if(asfd->append_all_to_write_buffer(asfd, wbuf)<0)
+		if(asfd->append_all_to_write_buffer(asfd, wbuf)==APPEND_ERROR)
 			return -1;
 		if(asfd->as->write(asfd->as)) return -1;
 	}

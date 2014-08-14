@@ -83,14 +83,14 @@ void conf_init(struct conf *c)
 	c->umask=0022;
 	c->max_hardlinks=10000;
 
-	c->client_can_delete=1;
-	c->client_can_diff=1;
-	c->client_can_force_backup=1;
-	c->client_can_list=1;
-	c->client_can_restore=1;
-	c->client_can_verify=1;
+	c->client_can|=CLIENT_CAN_DELETE;
+	c->client_can|=CLIENT_CAN_DIFF;
+	c->client_can|=CLIENT_CAN_FORCE_BACKUP;
+	c->client_can|=CLIENT_CAN_LIST;
+	c->client_can|=CLIENT_CAN_RESTORE;
+	c->client_can|=CLIENT_CAN_VERIFY;
 
-	c->server_can_restore=1;
+	c->server_can|=SERVER_CAN_RESTORE;
 
 	rconf_init(&c->rconf);
 }
@@ -206,6 +206,17 @@ static void gcv_uint8(const char *f, const char *v,
 	const char *want, uint8_t *dest)
 {
 	if(!strcmp(f, want)) *dest=(uint8_t)atoi(v);
+}
+
+static void gcv_bit(const char *f, const char *v,
+	const char *want, uint8_t *dest, uint8_t bit)
+{
+	if(strcmp(f, want)) return;
+	// Clear the bit.
+	(*dest)&=~bit;
+	if(!(uint8_t)atoi(v)) return;
+	// Set the bit.
+	(*dest)|=bit;
 }
 
 // Get field and value pair.
@@ -545,15 +556,22 @@ static int load_conf_ints(struct conf *c,
 	gcv_uint8(f, v, "fork", &(c->forking));
 	gcv_uint8(f, v, "daemon", &(c->daemon));
 	gcv_uint8(f, v, "directory_tree", &(c->directory_tree));
-	gcv_uint8(f, v, "client_can_delete", &(c->client_can_delete));
-	gcv_uint8(f, v, "client_can_diff", &(c->client_can_diff));
-	gcv_uint8(f, v, "client_can_force_backup",
-					&(c->client_can_force_backup));
-	gcv_uint8(f, v, "client_can_list", &(c->client_can_list));
-	gcv_uint8(f, v, "client_can_restore", &(c->client_can_restore));
-	gcv_uint8(f, v, "client_can_verify", &(c->client_can_verify));
-	gcv_uint8(f, v, "server_can_restore", &(c->server_can_restore));
 	gcv_uint8(f, v, "password_check", &(c->password_check));
+
+	gcv_bit(f, v, "client_can_delete",
+		&(c->client_can), CLIENT_CAN_DELETE);
+	gcv_bit(f, v, "client_can_diff",
+		&(c->client_can), CLIENT_CAN_DIFF);
+	gcv_bit(f, v, "client_can_force_backup",
+		&(c->client_can), CLIENT_CAN_FORCE_BACKUP);
+	gcv_bit(f, v, "client_can_list",
+		&(c->client_can), CLIENT_CAN_LIST);
+	gcv_bit(f, v, "client_can_restore",
+		&(c->client_can), CLIENT_CAN_RESTORE);
+	gcv_bit(f, v, "client_can_verify",
+		&(c->client_can), CLIENT_CAN_VERIFY);
+	gcv_bit(f, v, "server_can_restore",
+		&(c->server_can), SERVER_CAN_RESTORE);
 
 	return 0;
 }
@@ -1452,12 +1470,8 @@ int conf_set_client_global(struct conf *c, struct conf *cc)
 	cc->progress_counter=c->progress_counter;
 	cc->password_check=c->password_check;
 	cc->manual_delete=c->manual_delete;
-	cc->client_can_delete=c->client_can_delete;
-	cc->client_can_diff=c->client_can_diff;
-	cc->client_can_force_backup=c->client_can_force_backup;
-	cc->client_can_list=c->client_can_list;
-	cc->client_can_restore=c->client_can_restore;
-	cc->client_can_verify=c->client_can_verify;
+	cc->client_can=c->client_can;
+	cc->server_can=c->server_can;
 	cc->hardlinked_archive=c->hardlinked_archive;
 	cc->librsync=c->librsync;
 	cc->compression=c->compression;

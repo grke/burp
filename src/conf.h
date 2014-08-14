@@ -5,6 +5,16 @@
 #include "strlist.h"
 #include "burp2/rabin/rconf.h"
 
+#define CLIENT_CAN_DELETE		0x01
+#define CLIENT_CAN_DIFF			0x02
+#define CLIENT_CAN_FORCE_BACKUP		0x04
+#define CLIENT_CAN_LIST			0x08
+#define CLIENT_CAN_RESTORE		0x10
+#define CLIENT_CAN_VERIFY		0x20
+
+#define SERVER_CAN_RESTORE		0x01
+
+
 enum burp_mode
 {
 	MODE_UNSET=0,
@@ -182,15 +192,8 @@ struct conf
 
 	char *dedup_group;
 
-	// FIX THIS: maybe make these into flags.
-	uint8_t client_can_delete;
-	uint8_t client_can_diff;
-	uint8_t client_can_force_backup;
-	uint8_t client_can_list;
-	uint8_t client_can_restore;
-	uint8_t client_can_verify;
-
-	uint8_t server_can_restore;
+	uint8_t client_can; // Things the client is allowed to do.
+	uint8_t server_can; // Things the server is allowed to do.
 
 // Set to 1 on both client and server when the server is able to send counters
 // on resume/verify/restore.

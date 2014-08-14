@@ -264,7 +264,7 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 		// FIX THIS horrible mess.
 		if(cb->path.cmd==CMD_ENC_METADATA
 		  || p1b->path.cmd==CMD_ENC_METADATA
-		// TODO: make unencrypted metadata use the librsync
+		// FIX THIS: make unencrypted metadata use the librsync
 		  || cb->path.cmd==CMD_METADATA
 		  || p1b->path.cmd==CMD_METADATA
 		  || cb->path.cmd==CMD_VSS
@@ -301,7 +301,7 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 	  || p1b->path.cmd==CMD_ENC_METADATA
 	  || cb->path.cmd==CMD_EFS_FILE
 	  || p1b->path.cmd==CMD_EFS_FILE
-	// TODO: make unencrypted metadata use the librsync
+	// FIX THIS: make unencrypted metadata use the librsync
 	  || cb->path.cmd==CMD_METADATA
 	  || p1b->path.cmd==CMD_METADATA
 	  || cb->path.cmd==CMD_VSS

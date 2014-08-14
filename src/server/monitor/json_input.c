@@ -17,51 +17,40 @@ static char lastkey[32]="";
 static int in_backups=0;
 static struct bu **sselbu=NULL;
 
+static int ii_wrap(long long val, const char *key, uint8_t bit)
+{
+	if(!strcmp(lastkey, key))
+	{
+		if((int)val) flags|=bit;
+		return 1;
+	}
+	return 0;
+}
+
 static int input_integer(void *ctx, long long val)
 {
 	if(in_backups)
 	{
+		if(!current) goto error;
 		if(!strcmp(lastkey, "number"))
 		{
-			if(!current) goto error;
 			number=(unsigned long)val;
-			return 1;
-		}
-		// FIX THIS: Repeated code.
-		else if(!strcmp(lastkey, "deletable"))
-		{
-			if(!current) goto error;
-			if((int)val) flags|=BU_DELETABLE;
-			return 1;
-		}
-		else if(!strcmp(lastkey, "current")) // confusing
-		{
-			if(!current) goto error;
-			if((int)val) flags|=BU_CURRENT;
-			return 1;
-		}
-		else if(!strcmp(lastkey, "working"))
-		{
-			if(!current) goto error;
-			if((int)val) flags|=BU_WORKING;
-			return 1;
-		}
-		else if(!strcmp(lastkey, "finishing"))
-		{
-			if(!current) goto error;
-			if((int)val) flags|=BU_FINISHING;
 			return 1;
 		}
 		else if(!strcmp(lastkey, "timestamp"))
 		{
 			time_t t;
-			if(!current) goto error;
 			t=(unsigned long)val;
 			free_w(&timestamp);
 			if(!(timestamp=strdup_w(getdatestr(t), __func__)))
 				return 0;
 			return 1;
 		}
+		else if(ii_wrap(val, "deletable", BU_DELETABLE)
+		  || ii_wrap(val, "current", BU_CURRENT)
+		  || ii_wrap(val, "working", BU_WORKING)
+		  || ii_wrap(val, "finishing", BU_FINISHING))
+			return 1;
 	}
 error:
 	logp("Unexpected integer: %s %llu\n", lastkey, val);

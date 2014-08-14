@@ -246,8 +246,8 @@ int conf_get_pair(char buf[], char **f, char **v)
 	// strip white space at the end of the line
 	for(cp+=strlen(cp)-1; *cp && isspace(*cp); cp--) { *cp='\0'; }
 	// remove quotes from around the value.
-	// TODO: Make this more sophisticated - it should understand escapes,
-	// for example.
+	// FIX THIS: Make this more sophisticated - it should understand
+	// escapes, for example.
 	cp=*v;
 	end=cp+strlen(cp)-1;
 	if((*cp=='\'' && *end=='\'')

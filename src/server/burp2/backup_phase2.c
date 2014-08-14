@@ -386,14 +386,13 @@ static void sanity_before_sbuf_free(struct slist *slist, struct sbuf *sb)
 	if(slist->blks_to_request==sb) slist->blks_to_request=sb->next;
 }
 
-// FIX THIS: this function is now named strangely.
-static void get_wbuf_from_wrap_up(struct iobuf *wbuf, uint64_t wrap_up)
+static void get_wbuf_from_index(struct iobuf *wbuf, uint64_t index)
 {
 	static char *p;
 	static char tmp[32];
-//printf("get_wbuf_from_wrap_up: %d\n", wrap_up);
+//printf("%s: %d\n", __func__, index);
 	p=tmp;
-	p+=to_base64(wrap_up, tmp);
+	p+=to_base64(index, tmp);
 	*p='\0';
 	iobuf_from_str(wbuf, CMD_WRAP_UP, tmp);
 }
@@ -436,7 +435,7 @@ static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
 					// can free memory if there was a long
 					// consecutive number of unrequested
 					// blocks.
-					get_wbuf_from_wrap_up(wbuf, blk->index);
+					get_wbuf_from_index(wbuf, blk->index);
 					if(asfd->write(asfd, wbuf)) goto error;
 				}
 			}

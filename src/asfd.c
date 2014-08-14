@@ -324,7 +324,6 @@ static int append_to_write_buffer(struct asfd *asfd,
 	return 0;
 }
 
-// FIX THIS: May now return -1, check everywhere that uses this.
 static int asfd_append_all_to_write_buffer(struct asfd *asfd,
 	struct iobuf *wbuf)
 {

@@ -431,7 +431,6 @@ static int get_files_in_directory(DIR *directory, struct dirent ***nl, int *coun
 
 	/* Graham says: this here is doing a funky kind of scandir/alphasort
 	   that can also run on Windows.
-	   TODO: split into a scandir function
 	*/
 	while(1)
 	{

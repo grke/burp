@@ -40,6 +40,10 @@ mkdir -p content/docs
 
 manpage=content/docs/manpage.content
 start_page "$manpage"
+echo 'NOTE: The following is the latest version of the man page.
+Some features may be different in the version of burp that you are using.
+
+' >> "$manpage"
 man ../manpages/burp.8 | col -b >> "$manpage"
 end_page "$manpage"
 

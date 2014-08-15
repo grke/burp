@@ -32,7 +32,7 @@ end_page()
 generic_page()
 {
 	start_page "$1"
-	cat "$2" >> "$1"
+	cat "$2" | sed -e 's/</\&lt;/g' -e 's/>/\&gt;/g' >> "$1"
 	end_page "$1"
 }
 
@@ -44,7 +44,7 @@ echo 'NOTE: The following is the latest version of the man page.
 Some features may be different in the version of burp that you are using.
 
 ' >> "$manpage"
-man ../manpages/burp.8 | col -b >> "$manpage"
+man ../manpages/burp.8 | col -b | sed -e 's/</\&lt;/g' -e 's/>/\&gt;/g' >> "$manpage"
 end_page "$manpage"
 
 quickstart=content/docs/quickstart.content

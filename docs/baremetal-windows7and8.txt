@@ -132,12 +132,15 @@ exclude_regex = "[A-Z]:/Users/[^/]+/AppData/Local/Temp"
 exclude_regex = "[A-Z]:/Documents and Settings/[^/]+/Cookies"
 exclude_regex = "[A-Z]:/Documents and Settings/[^/]+/Recent"
 exclude_regex = "[A-Z]:/Documents and Settings/[^/]+/Local Settings/Temp"
-exclude_regex = "[A-Z]:/iobw.tst" # iometer test file
+# iometer test file
+exclude_regex = "[A-Z]:/iobw.tst"
 
 # system stuff that is not important in a restored system
 exclude_regex = "[A-Z]:/RECYCLER"
-exclude_regex = "[A-Z]:/pagefile.sys" # swap file (Windows XP, 7, 8)
-exclude_regex = "[A-Z]:/swapfile.sys" # swap file?? (Windows 8)
+# swap file (Windows XP, 7, 8)
+exclude_regex = "[A-Z]:/pagefile.sys"
+# swap file?? (Windows 8)
+exclude_regex = "[A-Z]:/swapfile.sys"
 
 # note that we are backing up C:/System Volume Information"
 

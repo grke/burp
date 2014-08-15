@@ -81,6 +81,7 @@ struct conf
 	char *ca_burp_ca;
 	uint8_t password_check;
 	char *manual_delete;
+	char *monitor_logfile; // An ncurses client option, from command line.
 
 // Client options.
 	char *cname; // set on the server when client connects

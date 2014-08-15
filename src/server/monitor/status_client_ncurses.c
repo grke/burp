@@ -12,10 +12,7 @@ static enum action actg=ACTION_STATUS;
 #define LEFT_SPACE	3
 #define TOP_SPACE	2
 
-#define DBFP	1
-#ifdef DBFP
-static FILE *dbfp=NULL;
-#endif
+static FILE *lfp=NULL;
 
 static void print_line(const char *string, int row, int col)
 {
@@ -47,9 +44,6 @@ static char *get_bu_str(struct bu *bu)
 }
 
 // Returns 1 if it printed a line, 0 otherwise.
-//static int summary(char status, char phase, const char *path,
-//	struct cntr *p1cntr, struct cntr *cntr,
-//	struct strlist *backups, int count, int row, int col)
 static int summary(struct cstat *cstat, int row, int col, struct conf *conf)
 {
 	char msg[1024]="";
@@ -57,6 +51,11 @@ static int summary(struct cstat *cstat, int row, int col, struct conf *conf)
 	int colwidth=28*((float)col/100);
 	snprintf(fmt, sizeof(fmt), "%%-%d.%ds %%-9s %%s%%s",
 		colwidth, colwidth);
+	struct bu *cbu=NULL;
+
+	// Find the current backup.
+	for(cbu=cstat->bu; cbu; cbu=cbu->next)
+		if(cbu->flags & BU_CURRENT) break;
 
 	switch(cstat->status)
 	{
@@ -89,7 +88,7 @@ static int summary(struct cstat *cstat, int row, int col, struct conf *conf)
 				cstat->name,
 				cstat_status_to_str(cstat),
 				" last backup: ",
-				get_bu_str(cstat->bu));
+				get_bu_str(cbu));
 				break;
 			break;
 	}
@@ -384,7 +383,7 @@ static void detail(const char *cntrclient, char status, char phase, const char *
 }
 */
 
-static void blank_screen(int row, int col)
+static void screen_header(int row, int col)
 {
 	int c=0;
 	int l=0;
@@ -396,11 +395,8 @@ static void blank_screen(int row, int col)
 	if(actg==ACTION_STATUS)
 	{
 		char v[32]="";
-	// Try not actually blanking it - should stop screen flicker.
-	//	clear();
 		snprintf(v, sizeof(v), " burp monitor %s", VERSION);
 		print_line(v, 0-TOP_SPACE, col);
-	//	mvprintw(0, 0, v);
 		mvprintw(0, col-l-1, date);
 		return;
 	}
@@ -411,78 +407,6 @@ static void blank_screen(int row, int col)
 	for(c=0; c<(int)(col-strlen(" burp status")-l-1); c++) printf(" ");
 	printf("%s\n\n", date);
 }
-
-/*
-static int parse_rbuf(const char *rbuf, struct conf *conf, int row, int col, int sel, char **client, int *count, int details, const char *sclient, struct cntr *p1cntr, struct cntr *cntr)
-{
-	char *cp=NULL;
-	char *dp=NULL;
-	char *copy=NULL;
-
-	if(!(copy=strdup_w(rbuf, __func__)))
-		return -1;
-
-	dp=copy;
-	*count=0;
-
-	// First, blank the whole screen.
-	blank_screen(row, col);
-	while((cp=strchr(dp, '\n')))
-	{
-		char status='\0';
-		char phase='\0';
-		char *path=NULL;
-		struct strlist *backups=NULL;
-		char *cntrclient=NULL;
-		*cp='\0';
-
-		if(str_to_cntr(dp, &cntrclient, &status, &phase, &path,
-			p1cntr, cntr, &backups))
-		{
-			free(copy);
-			if(path) free(path);
-			if(cntrclient) free(cntrclient);
-			return -1;
-		}
-
-		if(!cntrclient) continue;
-
-		if(details)
-		{
-			if(*count==sel || sclient)
-			{
-				if(cntrclient
-				  && (!*client
-				    || strcmp(cntrclient, *client)))
-				{
-					if(*client) free(*client);
-					*client=strdup_w(cntrclient, __func__);
-				}
-				if(!sclient
-				  || (cntrclient
-				    && !strcmp(cntrclient, sclient)))
-					detail(cntrclient, status, phase,
-						path, p1cntr, cntr,
-						backups, 0, col);
-			}
-		}
-		else
-		{
-			summary(cntrclient, status, phase,
-				path, p1cntr, cntr, backups,
-				*count, row, col);
-		}
-		(*count)++;
-
-		dp=cp+1;
-		if(path) free(path);
-		if(cntrclient) free(cntrclient);
-		strlists_free(&backups);
-	}
-	if(copy) free(copy);
-	return 0;
-}
-*/
 
 static int need_status(void)
 {
@@ -518,7 +442,7 @@ static int update_screen(struct cstat *clist, struct cstat *sel,
 	static int winmax=0;
 	static int selindex_last=0;
 	int star_printed=0;
-	char *extradesc=NULL;
+	const char *extradesc=NULL;
 
 	if(actg==ACTION_STATUS)
 	{
@@ -574,9 +498,7 @@ static int update_screen(struct cstat *clist, struct cstat *sel,
 		winmax=row;
 	}
 
-
-	// First, blank the whole screen.
-	blank_screen(row, col);
+	screen_header(row, col);
 /*
 	{
 		char msg[64];
@@ -658,9 +580,7 @@ static int request_status(struct asfd *asfd,
 	}
 	else
 		snprintf(buf, sizeof(buf), "\n");
-#ifdef DBFP
-fprintf(dbfp, "request: %s\n", buf);
-#endif
+if(lfp) logp("request: %s\n", buf);
 	if(asfd->write_str(asfd, CMD_GEN /* ignored */, buf)) return -1;
 	return 0;
 }
@@ -908,7 +828,7 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 		}
 
 		if(!sel) sel=clist;
-//if(sel) fprintf(dbfp, "sel: %s\n", sel->name);
+//if(sel) logp("sel: %s\n", sel->name);
 		if(!selbu && sel) selbu=sel->bu;
 		if(update_screen(clist, sel, &selbu, details, conf))
 			return -1;
@@ -981,22 +901,17 @@ int status_client_ncurses(enum action act, const char *sclient,
 		ncurses_init();
 	}
 #endif
-#ifdef DBFP
-	dbfp=fopen("/tmp/dbfp", "w");
-#endif
-	// FIX THIS: Maybe think of a way to buffer error messages and print
-	// them all after the monitor has exited.
-	//set_logfp_direct(stderr);
-	set_logfp_direct(dbfp);
+	if(conf->monitor_logfile
+	  && !(lfp=open_file(conf->monitor_logfile, "wb")))
+		goto end;
+	set_logfp_direct(lfp);
 
 	ret=main_loop(as, sclient, conf);
 end:
 #ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS) endwin();
 #endif
-#ifdef DBFP
-	if(dbfp) fclose(dbfp);
-#endif
+	close_fp(&lfp);
 	async_asfd_free_all(&as);
 	close_fd(&fd);
 	return ret;

@@ -45,6 +45,7 @@ static void usage_server(void)
 	printf("  -g            Generate initial CA certificates and exit.\n");
 	printf("  -h|-?         Print this text and exit.\n");
 	printf("  -i            Print index of symbols and exit.\n");
+	printf("  -l <path>     Log file for the status monitor.\n");
 	printf("  -n            Do not fork any children (implies '-F').\n");
 	printf("  -v            Print version and exit.\n");
 	printf("Options to use with '-a c':\n");
@@ -254,6 +255,7 @@ int main (int argc, char *argv[])
 	const char *browsedir=NULL;
 	const char *conffile=get_conf_path();
 	const char *orig_client=NULL;
+	const char *logfile=NULL;
 	// The orig_client is the original client that the normal client
 	// would like to restore from.
 #ifndef HAVE_WIN32
@@ -311,7 +313,7 @@ int main (int argc, char *argv[])
 				ret=0;
 				goto end;
 			case 'l':
-				logp("-l <logfile> option obsoleted\n");
+				logfile=optarg;
 				break;
 			case 'n':
 				forking=0;
@@ -384,6 +386,12 @@ int main (int argc, char *argv[])
 			break;
 	}
 
+	// The logfile option is only used for the status client stuff.
+	if(logfile
+	  && (act!=ACTION_STATUS
+		&& act!=ACTION_STATUS_SNAPSHOT))
+			logp("-l <logfile> option obsoleted\n");
+
 	if(conf->mode==MODE_CLIENT
 	  && orig_client
 	  && *orig_client
@@ -442,7 +450,8 @@ int main (int argc, char *argv[])
 	  || replace_conf_str(restoreprefix, &conf->restoreprefix)
 	  || replace_conf_str(regex, &conf->regex)
 	  || replace_conf_str(browsefile, &conf->browsefile)
-	  || replace_conf_str(browsedir, &conf->browsedir))
+	  || replace_conf_str(browsedir, &conf->browsedir)
+	  || replace_conf_str(logfile, &conf->monitor_logfile))
 		goto end;
 
 	strip_trailing_slashes(&conf->restoreprefix);

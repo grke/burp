@@ -35,7 +35,6 @@ enum cstat_status
 	STATUS_DELETING
 };
 
-// FIX THIS: should probably use struct sdirs.
 struct cstat
 {
 	char *name;

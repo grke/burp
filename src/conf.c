@@ -130,6 +130,7 @@ void conf_free_content(struct conf *c)
 	free_w(&c->autoupgrade_dir);
 	free_w(&c->autoupgrade_os);
 	free_w(&c->manual_delete);
+	free_w(&c->monitor_logfile);
 
 	free_w(&c->timer_script);
 	strlists_free(&c->timer_arg);

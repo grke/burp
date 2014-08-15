@@ -1,7 +1,6 @@
 #include "include.h"
 
-static int send_summaries_to_client(struct asfd *srfd,
-	struct cstat *clist, const char *sel_client)
+static int send_summaries_to_client(struct asfd *srfd, struct cstat *clist)
 {
 	int ret=-1;
 	struct cstat *c;
@@ -12,13 +11,6 @@ static int send_summaries_to_client(struct asfd *srfd,
 	{
                 if(!c->status && cstat_set_status(c))
 			goto end;
-
-		if(sel_client && !strcmp(sel_client, c->name))
-		{
-			// Client not running, but asked for detail.
-			// Gather a list of successful backups to talk about.
-			if(cstat_set_backup_list(c)) goto end;
-		}
 		if(json_send_backup_list(srfd, clist, c))
 			goto end;
 	}
@@ -108,25 +100,6 @@ end:
 	return ret;
 }
 
-/* FIX THIS
-static int list_backup_file_name(struct asfd *srfd, const char *dir, const char *file)
-{
-	int ret=0;
-	char *path=NULL;
-	char msg[256]="";
-	struct stat statp;
-	if(!(path=prepend_s(dir, file)))
-		return -1;
-	if(lstat(path, &statp) || !S_ISREG(statp.st_mode))
-		goto end; // Will return 0;
-	snprintf(msg, sizeof(msg), "%s\n", file);
-	ret=send_data_to_client(srfd, msg, strlen(msg));
-end:
-	free_w(&path);
-	return ret;
-}
-*/
-
 /*
 static int browse_manifest(struct asfd *srfd, gzFile zp, const char *browse)
 {
@@ -214,35 +187,37 @@ end:
 */
 }
 
-static int list_backup_dir(struct asfd *srfd, struct cstat *cli, unsigned long bno)
+static void have_backup_file_name(uint16_t *flags,
+	struct bu *bu, const char *file, uint16_t flag)
 {
-	return 0;
-/* FIX THIS
-	int ret=0;
+	struct stat statp;
+	static char path[256]="";
+	snprintf(path, sizeof(path), "%s/%s", bu->path, file);
+	if(lstat(path, &statp) || !S_ISREG(statp.st_mode))
+		return;
+	(*flags)|=flag;
+}
+
+static int list_backup_dir(struct asfd *srfd,
+	struct cstat *cli, unsigned long bno)
+{
 	struct bu *bu;
-        struct bu *bu_list=NULL;
-	if(bu_list_get_str(cli->basedir, &bu_list, 0))
-		goto error;
+	uint16_t flags=0;
 
-	if(!bu_list) goto end;
-	for(bu=bu_list; bu; bu=bu->next) if(bu->bno==bno) break;
-	if(!bu) goto end;
+	for(bu=cli->bu; bu; bu=bu->prev)
+		if(bu->bno==bno) break;
+	if(!bu) return 0;
 
-	if(send_data_to_client(srfd, "-list begin-\n", strlen("-list begin-\n")))
-		goto error;
-	list_backup_file_name(srfd, bu->path, "manifest.gz");
-	list_backup_file_name(srfd, bu->path, "log.gz");
-	list_backup_file_name(srfd, bu->path, "restorelog.gz");
-	list_backup_file_name(srfd, bu->path, "verifylog.gz");
-	if(send_data_to_client(srfd, "-list end-\n", strlen("-list end-\n")))
-		goto error;
-	goto end;
-error:
-	ret=-1;
-end:
-	bu_list_free(&bu_list);
-	return ret;
-*/
+	have_backup_file_name(&flags, bu, "manifest", LOG_MANIFEST);
+	have_backup_file_name(&flags, bu, "manifest.gz", LOG_MANIFEST_GZ);
+	have_backup_file_name(&flags, bu, "log", LOG_BACKUP);
+	have_backup_file_name(&flags, bu, "log.gz", LOG_BACKUP_GZ);
+	have_backup_file_name(&flags, bu, "restorelog", LOG_RESTORE);
+	have_backup_file_name(&flags, bu, "restorelog.gz", LOG_RESTORE_GZ);
+	have_backup_file_name(&flags, bu, "verifylog", LOG_VERIFY);
+	have_backup_file_name(&flags, bu, "verifylog.gz", LOG_VERIFY_GZ);
+
+	return json_send_backup_dir_files(srfd, bu, flags);
 }
 
 static int list_backup_file(struct asfd *srfd, struct cstat *cstat,
@@ -315,6 +290,8 @@ printf("got client data: '%s'\n", srfd->rbuf->buf);
 	{
 		if(!(cstat=cstat_get_by_name(clist, client)))
 			goto end;
+
+		if(cstat_set_backup_list(cstat)) goto end;
 	}
 	if(backup)
 	{
@@ -349,21 +326,20 @@ printf("got client data: '%s'\n", srfd->rbuf->buf);
 			{
 				printf("list backup %lu of client '%s'\n",
 					bno, client);
-				printf("basedir: %s\n", cstat->sdirs->client);
 				list_backup_dir(srfd, cstat, bno);
 			}
 		}
 		else
 		{
 			//printf("detail request: %s\n", rbuf);
-			if(send_summaries_to_client(srfd, clist, client))
+			if(send_summaries_to_client(srfd, clist))
 				goto error;
 		}
 	}
 	else
 	{
 		//printf("summaries request\n");
-		if(send_summaries_to_client(srfd, clist, NULL))
+		if(send_summaries_to_client(srfd, clist))
 			goto error;
 	}
 

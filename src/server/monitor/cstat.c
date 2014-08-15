@@ -292,6 +292,8 @@ static int reload_from_clientdir(struct cstat **clist, struct conf *conf)
 		c->lockfile_mtime=ltime;
 		if(cstat_set_status(c)) goto error;
 
+
+printf("reload from clientdir\n");
 		bu_list_free(&c->bu);
 		if(bu_current_get(c->sdirs, &c->bu))
 			goto error;

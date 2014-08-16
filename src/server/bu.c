@@ -68,8 +68,7 @@ static void have_backup_file_name(struct bu *bu,
 	struct stat statp;
 	static char path[256]="";
 	snprintf(path, sizeof(path), "%s/%s", bu->path, file);
-	if(lstat(path, &statp) || !S_ISREG(statp.st_mode))
-		return;
+	if(lstat(path, &statp)) return;
 	bu->flags|=bit;
 }
 

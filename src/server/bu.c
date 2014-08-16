@@ -10,7 +10,7 @@ struct bu *bu_alloc(void)
 }
 
 static int bu_init(struct bu *bu, char *fullpath, char *basename,
-	char *timestampstr, uint8_t flags)
+	char *timestampstr, uint16_t flags)
 {
 	if(!(bu->data=prepend_s(fullpath, "data"))
 	  || !(bu->delta=prepend_s(fullpath, "deltas.reverse")))
@@ -62,8 +62,28 @@ static int get_link(const char *dir, const char *lnk, char real[], size_t r)
 	return 0;
 }
 
+static void have_backup_file_name(struct bu *bu,
+        const char *file, uint32_t bit)
+{
+	struct stat statp;
+	static char path[256]="";
+	snprintf(path, sizeof(path), "%s/%s", bu->path, file);
+	if(lstat(path, &statp) || !S_ISREG(statp.st_mode))
+		return;
+	bu->flags|=bit;
+}
+
+static void have_backup_file_name_w(struct bu *bu,
+	const char *file, uint32_t bit)
+{
+	char compressed[32];
+	snprintf(compressed, sizeof(compressed), "%s.gz", file);
+	have_backup_file_name(bu, file, bit);
+	have_backup_file_name(bu, compressed, bit);
+}
+
 static int maybe_add_ent(const char *dir, const char *d_name,
-	struct bu **bu_list, uint8_t flags)
+	struct bu **bu_list, uint16_t flags, int include_working)
 {
 	int ret=-1;
 	char buf[32]="";
@@ -101,6 +121,13 @@ static int maybe_add_ent(const char *dir, const char *d_name,
 
 	if(*bu_list) bu->next=*bu_list;
 	*bu_list=bu;
+	if(include_working)
+	{
+		have_backup_file_name_w(bu, "manifest", BU_MANIFEST);
+		have_backup_file_name_w(bu, "log", BU_LOG_BACKUP);
+		have_backup_file_name_w(bu, "restorelog", BU_LOG_RESTORE);
+		have_backup_file_name_w(bu, "verifylog", BU_LOG_VERIFY);
+	}
 
 	return 0;
 error:
@@ -170,7 +197,7 @@ static int do_bu_list_get(struct sdirs *sdirs,
 	char realcurrent[32]="";
 	struct dirent **dp=NULL;
 	const char *dir=sdirs->client;
-	uint8_t flags=0;
+	uint16_t flags=0;
 
 	if(get_link(dir, "working", realwork, sizeof(realwork))
 	  || get_link(dir, "finishing", realfinishing, sizeof(realfinishing))
@@ -203,8 +230,8 @@ static int do_bu_list_get(struct sdirs *sdirs,
 			if(!include_working) continue;
 			flags|=BU_FINISHING;
 		}
-		if(maybe_add_ent(dir, dp[i]->d_name, bu_list, flags))
-			goto end;
+		if(maybe_add_ent(dir, dp[i]->d_name, bu_list, flags,
+			include_working)) goto end;
 	}
 
 	setup_indices(*bu_list);
@@ -235,5 +262,5 @@ int bu_current_get(struct sdirs *sdirs, struct bu **bu_list)
 	// FIX THIS: should not need to specify "current".
 	if(get_link(sdirs->client, "current", real, sizeof(real)))
 		return -1;
-	return maybe_add_ent(sdirs->client, real, bu_list, BU_CURRENT);
+	return maybe_add_ent(sdirs->client, real, bu_list, BU_CURRENT, 0);
 }

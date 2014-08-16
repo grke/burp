@@ -17,7 +17,7 @@ static char lastkey[32]="";
 static int in_backups=0;
 static struct bu **sselbu=NULL;
 
-static int ii_wrap(long long val, const char *key, uint8_t bit)
+static int ii_wrap(long long val, const char *key, uint16_t bit)
 {
 	if(!strcmp(lastkey, key))
 	{
@@ -46,10 +46,15 @@ static int input_integer(void *ctx, long long val)
 				return 0;
 			return 1;
 		}
-		else if(ii_wrap(val, "deletable", BU_DELETABLE)
-		  || ii_wrap(val, "current", BU_CURRENT)
+		else if(ii_wrap(val, "hardlinked", BU_HARDLINKED)
+		  || ii_wrap(val, "deletable", BU_DELETABLE)
 		  || ii_wrap(val, "working", BU_WORKING)
-		  || ii_wrap(val, "finishing", BU_FINISHING))
+		  || ii_wrap(val, "finishing", BU_FINISHING)
+		  || ii_wrap(val, "current", BU_CURRENT)
+		  || ii_wrap(val, "manifest", BU_MANIFEST)
+		  || ii_wrap(val, "backup", BU_LOG_BACKUP)
+		  || ii_wrap(val, "restore", BU_LOG_RESTORE)
+		  || ii_wrap(val, "verify", BU_LOG_VERIFY))
 			return 1;
 	}
 error:

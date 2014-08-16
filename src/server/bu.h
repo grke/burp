@@ -1,11 +1,16 @@
 #ifndef _BU_H
 #define _BU_H
 
-#define BU_HARDLINKED	0x01
-#define BU_DELETABLE	0x02
-#define BU_WORKING	0x04
-#define BU_FINISHING	0x10
-#define BU_CURRENT	0x20
+#define BU_HARDLINKED	0x0001
+#define BU_DELETABLE	0x0002
+#define BU_WORKING	0x0004
+#define BU_FINISHING	0x0008
+#define BU_CURRENT	0x0010
+// These are only set on a separate request.
+#define BU_MANIFEST	0x0020
+#define BU_LOG_BACKUP	0x0040
+#define BU_LOG_RESTORE	0x0080
+#define BU_LOG_VERIFY	0x0100
 
 // Representing backup directories for a client.
 
@@ -17,7 +22,7 @@ struct bu
 	char *delta;
 	char *timestamp;
 	char *forward_timestamp;
-	uint8_t flags;
+	uint16_t flags;
 
 	// The number of the backup.
 	unsigned long bno;

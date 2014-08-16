@@ -187,39 +187,6 @@ end:
 */
 }
 
-static void have_backup_file_name(uint16_t *flags,
-	struct bu *bu, const char *file, uint16_t flag)
-{
-	struct stat statp;
-	static char path[256]="";
-	snprintf(path, sizeof(path), "%s/%s", bu->path, file);
-	if(lstat(path, &statp) || !S_ISREG(statp.st_mode))
-		return;
-	(*flags)|=flag;
-}
-
-static int list_backup_dir(struct asfd *srfd,
-	struct cstat *cli, unsigned long bno)
-{
-	struct bu *bu;
-	uint16_t flags=0;
-
-	for(bu=cli->bu; bu; bu=bu->prev)
-		if(bu->bno==bno) break;
-	if(!bu) return 0;
-
-	have_backup_file_name(&flags, bu, "manifest", LOG_MANIFEST);
-	have_backup_file_name(&flags, bu, "manifest.gz", LOG_MANIFEST_GZ);
-	have_backup_file_name(&flags, bu, "log", LOG_BACKUP);
-	have_backup_file_name(&flags, bu, "log.gz", LOG_BACKUP_GZ);
-	have_backup_file_name(&flags, bu, "restorelog", LOG_RESTORE);
-	have_backup_file_name(&flags, bu, "restorelog.gz", LOG_RESTORE_GZ);
-	have_backup_file_name(&flags, bu, "verifylog", LOG_VERIFY);
-	have_backup_file_name(&flags, bu, "verifylog.gz", LOG_VERIFY_GZ);
-
-	return json_send_backup_dir_files(srfd, bu, flags);
-}
-
 static int list_backup_file(struct asfd *srfd, struct cstat *cstat,
 	unsigned long bno, const char *file, const char *browse)
 {
@@ -311,34 +278,15 @@ printf("got client data: '%s'\n", srfd->rbuf->buf);
 	printf("backup: %s\n", backup?:"");
 	printf("file: %s\n", file?:"");
 */
-	if(client)
+	if(client && bno && (file || browse))
 	{
-		if(bno)
-		{
-			if(file || browse)
-			{
-			  printf("list file %s of backup %lu of client '%s'\n",
-			    file, bno, client);
-			  if(browse) printf("browse '%s'\n", browse);
-				list_backup_file(srfd, cstat, bno, file, browse);
-			}
-			else
-			{
-				printf("list backup %lu of client '%s'\n",
-					bno, client);
-				list_backup_dir(srfd, cstat, bno);
-			}
-		}
-		else
-		{
-			//printf("detail request: %s\n", rbuf);
-			if(send_summaries_to_client(srfd, clist))
-				goto error;
-		}
+		printf("list file %s of backup %lu of client '%s'\n",
+			file, bno, client);
+		if(browse) printf("browse '%s'\n", browse);
+			list_backup_file(srfd, cstat, bno, file, browse);
 	}
 	else
 	{
-		//printf("summaries request\n");
 		if(send_summaries_to_client(srfd, clist))
 			goto error;
 	}

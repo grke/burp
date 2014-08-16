@@ -53,7 +53,7 @@ static long timestamp_to_long(const char *buf)
 	return (long)mktime(&tm);
 }
 
-static int flag_wrap(struct bu *bu, uint8_t flag, const char *field)
+static int flag_wrap(struct bu *bu, uint16_t flag, const char *field)
 {
 	if(!bu || !(bu->flags & flag)) return 0;
 	return yajl_gen_int_pair_w(field, (long long)1);
@@ -71,12 +71,26 @@ static int json_send_backup(struct asfd *asfd, struct bu *bu)
 
 	if(yajl_map_open_w()
 	  || yajl_gen_int_pair_w("number", bno)
-	  || flag_wrap(bu, BU_CURRENT, "current")
-	  || flag_wrap(bu, BU_WORKING, "working")
-	  || flag_wrap(bu, BU_FINISHING, "working")
-	  || flag_wrap(bu, BU_DELETABLE, "deletable")
 	  || yajl_gen_int_pair_w("timestamp", timestamp)
-	  || yajl_gen_map_close(yajl)!=yajl_gen_status_ok)
+	  || flag_wrap(bu, BU_HARDLINKED, "hardlinked")
+	  || flag_wrap(bu, BU_DELETABLE, "deletable")
+	  || flag_wrap(bu, BU_WORKING, "working")
+	  || flag_wrap(bu, BU_FINISHING, "finishing")
+	  || flag_wrap(bu, BU_CURRENT, "current"))
+		return -1;
+	if(bu->flags
+	  & (BU_MANIFEST|BU_LOG_BACKUP|BU_LOG_RESTORE|BU_LOG_VERIFY))
+	{
+		if(yajl_gen_str_w("logs")
+		  || yajl_map_open_w()
+		  || flag_wrap(bu, BU_MANIFEST, "manifest")
+		  || flag_wrap(bu, BU_LOG_BACKUP, "backup")
+		  || flag_wrap(bu, BU_LOG_RESTORE, "restore")
+		  || flag_wrap(bu, BU_LOG_VERIFY, "verify")
+		  || yajl_map_close_w())
+			return -1;
+	}
+	if(yajl_gen_map_close(yajl)!=yajl_gen_status_ok)
 		return -1;
 
 	return 0;
@@ -118,44 +132,5 @@ int json_send_backup_list(struct asfd *asfd,
 	ret=0;
 end:
 	if(json_send_client_end(asfd)) ret=-1;
-	return ret;
-}
-
-static int backup_dir_file(uint16_t flags, uint16_t bit, const char *file)
-{
-	if((flags & bit)
-	  && yajl_gen_int_pair_w(file, (long long)1))
-		return -1;
-	return 0;
-}
-
-int json_send_backup_dir_files(struct asfd *asfd,
-	struct bu *bu, uint16_t flags)
-{
-	int ret=-1;
-	if(!yajl)
-	{
-		if(!(yajl=yajl_gen_alloc(NULL)))
-			goto end;
-		yajl_gen_config(yajl, yajl_gen_beautify, 1);
-	}
-	if(yajl_map_open_w()
-	  || backup_dir_file(flags, LOG_MANIFEST, "manifest")
-	  || backup_dir_file(flags, LOG_MANIFEST_GZ, "manifest.gz")
-	  || backup_dir_file(flags, LOG_BACKUP, "log")
-	  || backup_dir_file(flags, LOG_BACKUP_GZ, "log.gz")
-	  || backup_dir_file(flags, LOG_RESTORE, "restore")
-	  || backup_dir_file(flags, LOG_RESTORE_GZ, "restore.gz")
-	  || backup_dir_file(flags, LOG_VERIFY, "verify")
-	  || backup_dir_file(flags, LOG_VERIFY_GZ, "verify.gz")
-	  || yajl_map_close_w())
-		goto end;
-	ret=write_all(asfd);
-end:
-	if(yajl)
-	{
-		yajl_gen_free(yajl);
-		yajl=NULL;
-	}
 	return ret;
 }

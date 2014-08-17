@@ -9,7 +9,7 @@ static int map_depth=0;
 
 static unsigned long number=0;
 static char *timestamp=NULL;
-static uint8_t flags=0;
+static uint16_t flags=0;
 static struct cstat *cnew=NULL;
 static struct cstat *current=NULL;
 static struct cstat **cslist=NULL;
@@ -21,7 +21,7 @@ static int ii_wrap(long long val, const char *key, uint16_t bit)
 {
 	if(!strcmp(lastkey, key))
 	{
-		if((int)val) flags|=bit;
+		if(val) flags|=bit;
 		return 1;
 	}
 	return 0;
@@ -136,19 +136,19 @@ static int add_to_list(void)
 
 static int input_start_map(void *ctx)
 {
-	//logp("startmap\n");
 	map_depth++;
-	if(in_backups)
-	{
-		if(add_to_list()) return 0;
-	}
+	//logp("startmap: %d\n", map_depth);
 	return 1;
 }
 
 static int input_end_map(void *ctx)
 {
-	//logp("endmap\n");
 	map_depth--;
+	//logp("endmap: %d\n", map_depth);
+	if(in_backups)
+	{
+		if(add_to_list()) return 0;
+	}
 	return 1;
 }
 

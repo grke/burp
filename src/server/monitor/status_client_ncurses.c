@@ -434,8 +434,22 @@ static int need_status(void)
 	return 1;
 }
 
+static void print_logs_list_line(struct bu *selbu, uint16_t bit,
+	const char *title, int *x, int col, uint16_t *selop)
+{
+	char msg[64]="";
+	if(!(selbu->flags & bit)) return;
+	snprintf(msg, sizeof(msg), "%s%s",
+		*x==3?"Options: ":"         ", title);
+	print_line(msg, (*x)++, col);
+
+	if(!*selop) *selop=bit;
+	if(*selop==bit) mvprintw(*x+TOP_SPACE-1, 1, "*");
+}
+
 static int update_screen(struct cstat *clist, struct cstat *sel,
-	struct bu **selbu, enum details details, struct conf *conf)
+	struct bu **selbu, uint16_t *selop,
+	enum details details, struct conf *conf)
 {
 	int x=0;
 	int row=24;
@@ -590,14 +604,14 @@ static int update_screen(struct cstat *clist, struct cstat *sel,
 			if(!star_printed) *selbu=sel->bu;
 			break;
 		case DETAILS_BACKUP_LOGS:
-			if((*selbu)->flags & BU_MANIFEST)
-				print_line("  Manifest", x++, col);
-			if((*selbu)->flags & BU_LOG_BACKUP)
-				print_line("  Backup log", x++, col);
-			if((*selbu)->flags & BU_LOG_RESTORE)
-				print_line("  Restore log", x++, col);
-			if((*selbu)->flags & BU_LOG_VERIFY)
-				print_line("  Verify log", x++, col);
+			print_logs_list_line(*selbu, BU_MANIFEST,
+				"Browse", &x, col, selop);
+			print_logs_list_line(*selbu, BU_LOG_BACKUP,
+				"View backup log", &x, col, selop);
+			print_logs_list_line(*selbu, BU_LOG_RESTORE,
+				"View restore log", &x, col, selop);
+			print_logs_list_line(*selbu, BU_LOG_VERIFY,
+				"View verify log", &x, col, selop);
 			break;
 	}
 
@@ -676,7 +690,7 @@ error:
 
 #ifdef HAVE_NCURSES_H
 static int parse_stdin_data(struct asfd *asfd,
-	struct cstat **sel, struct bu **selbu,
+	struct cstat **sel, struct bu **selbu, uint16_t *selop,
 	enum details *details, int count)
 {
 	static int ch;
@@ -706,7 +720,20 @@ static int parse_stdin_data(struct asfd *asfd,
 						*selbu=(*selbu)->prev;
 					break;
 				case DETAILS_BACKUP_LOGS:
+				{
+					int i=0;
+					uint16_t sh=*selop;
+					for(i=0; sh>BU_MANIFEST && i<16; i++)
+					{
+						sh=sh>>1;
+						if(sh & (*selbu)->flags)
+						{
+							*selop=sh;
+							break;
+						}
+					}
 					break;
+				}
 			}
 			break;
 		case KEY_DOWN:
@@ -723,7 +750,20 @@ static int parse_stdin_data(struct asfd *asfd,
 						*selbu=(*selbu)->next;
 					break;
 				case DETAILS_BACKUP_LOGS:
+				{
+					int i=0;
+					uint16_t sh=*selop;
+					for(i=0; sh && i<16; i++)
+					{
+						sh=sh<<1;
+						if(sh & (*selbu)->flags)
+						{
+							*selop=sh;
+							break;
+						}
+					}
 					break;
+				}
 			}
 			break;
 		case KEY_LEFT:
@@ -756,6 +796,7 @@ static int parse_stdin_data(struct asfd *asfd,
 					(*details)=DETAILS_BACKUP_LOGS;
 					break;
 				case DETAILS_BACKUP_LOGS:
+					if(lfp) logp("Option selected: 0x%04X\n", *selop);
 					break;
 			}
 			break;
@@ -843,13 +884,14 @@ static int parse_stdin_data(struct asfd *asfd,
 #endif
 
 static int parse_data(struct asfd *asfd, struct cstat **clist,
-	struct cstat **sel, struct bu **selbu,
+	struct cstat **sel, struct bu **selbu, uint16_t *selop,
 	enum details *details, int count)
 {
 	// Hacky to switch on whether it is using char buffering or not.
 #ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS && asfd->streamtype==ASFD_STREAM_NCURSES_STDIN)
-		return parse_stdin_data(asfd, sel, selbu, details, count);
+		return parse_stdin_data(asfd,
+			sel, selbu, selop, details, count);
 #endif
 	return json_input(asfd, clist, selbu);
 }
@@ -866,6 +908,7 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 	struct bu *selbu=NULL;
 	struct asfd *sfd=as->asfd; // Server asfd.
 	int reqdone=0;
+	uint16_t selop=0;
 
 	if(sclient && !client)
 	{
@@ -905,7 +948,7 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 			while(asfd->rbuf->buf)
 		{
 			if(parse_data(asfd, &clist,
-				&sel, &selbu, &details, count))
+				&sel, &selbu, &selop, &details, count))
 					goto error;
 			iobuf_free_content(asfd->rbuf);
 			if(asfd->parse_readbuf(asfd))
@@ -915,7 +958,7 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 		if(!sel) sel=clist;
 //if(sel) logp("sel: %s\n", sel->name);
 		if(!selbu && sel) selbu=sel->bu;
-		if(update_screen(clist, sel, &selbu, details, conf))
+		if(update_screen(clist, sel, &selbu, &selop, details, conf))
 			return -1;
 		refresh();
 	}

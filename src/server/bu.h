@@ -7,6 +7,7 @@
 #define BU_FINISHING	0x0008
 #define BU_CURRENT	0x0010
 // These are only set on a separate request.
+// Careful with the bit shifting in ncurses client with the UP/DOWN keys.
 #define BU_MANIFEST	0x0020
 #define BU_LOG_BACKUP	0x0040
 #define BU_LOG_RESTORE	0x0080

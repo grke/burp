@@ -134,3 +134,40 @@ end:
 	if(json_send_client_end(asfd)) ret=-1;
 	return ret;
 }
+
+int json_send_zp(struct asfd *asfd, gzFile zp,
+	struct cstat *cstat, unsigned long bno, const char *logfile)
+{
+	int ret=-1;
+	size_t l=0;
+	char buf[12]="";
+	char *contents=NULL;
+	if(!yajl)
+	{
+		if(!(yajl=yajl_gen_alloc(NULL)))
+			return -1;
+		yajl_gen_config(yajl, yajl_gen_beautify, 1);
+	}
+	if(yajl_map_open_w()
+	  || yajl_gen_str_pair_w("client", cstat->name)
+	  || yajl_gen_int_pair_w("backup", (long long)bno)
+	  || yajl_gen_str_pair_w("log", logfile))
+		goto end;
+	while((l=gzread(zp, buf, sizeof(buf)))>0)
+	{
+		buf[l]='\0';
+		if(astrcat(&contents, buf, __func__)) goto end;
+	}
+	if(yajl_gen_str_pair_w("contents", contents?contents:"")
+	  || yajl_map_close_w())
+		goto end;
+	ret=write_all(asfd);
+end:
+	if(yajl)
+	{
+		yajl_gen_free(yajl);
+		yajl=NULL;
+	}
+	free_w(&contents);
+	return ret;
+}

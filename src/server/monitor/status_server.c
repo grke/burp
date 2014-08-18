@@ -152,43 +152,39 @@ static int browse_manifest(struct asfd *srfd, gzFile zp, const char *browse)
 */
 
 static int list_backup_file_contents(struct asfd *srfd,
-	const char *dir, const char *file, const char *browse)
+	const char *dir, struct cstat *cstat,
+	unsigned long bno, const char *logfile)
 {
-	return 0;
-/* FIX THIS
 	int ret=-1;
-	size_t l=0;
 	gzFile zp=NULL;
 	char *path=NULL;
-	char buf[256]="";
-	if(!(path=prepend_s(dir, file))
-	  || !(zp=gzopen_file(path, "rb")))
-		goto end;
 
-	if(send_data_to_client(srfd, "-list begin-\n", strlen("-list begin-\n")))
-		goto end;
+	char logfilereal[32]="";
+	if(!strcmp(logfile, "backup"))
+		snprintf(logfilereal, sizeof(logfilereal), "log");
+	else if(!strcmp(logfile, "restore"))
+		snprintf(logfilereal, sizeof(logfilereal), "restorelog");
+	else if(!strcmp(logfile, "verify"))
+		snprintf(logfilereal, sizeof(logfilereal), "verifylog");
 
-	if(!strcmp(file, "manifest.gz"))
-	{
-		if(browse_manifest(srfd, zp, browse?:"")) goto end;
-	}
-	else
-	{
-		while((l=gzread(zp, buf, sizeof(buf)))>0)
-			if(send_data_to_client(srfd, buf, l)) goto end;
-	}
-	if(send_data_to_client(srfd, "-list end-\n", strlen("-list end-\n")))
+	if(!(path=prepend_s(dir, logfilereal)))
 		goto end;
-	ret=0;
+	if(!(zp=gzopen_file(path, "rb")))
+	{
+		if(astrcat(&path, ".gz", __func__)
+		  || !(zp=gzopen_file(path, "rb")))
+			goto end;
+	}
+
+	ret=json_send_zp(srfd, zp, cstat, bno, logfile);
 end:
 	gzclose_fp(&zp);
 	free_w(&path);
 	return ret;
-*/
 }
 
 static int list_backup_file(struct asfd *srfd, struct cstat *cstat,
-	unsigned long bno, const char *file, const char *browse)
+	unsigned long bno, const char *logfile)
 {
 	int ret=0;
         struct bu *bu=NULL;
@@ -199,8 +195,7 @@ static int list_backup_file(struct asfd *srfd, struct cstat *cstat,
 	if(!bu_list) goto end;
 	for(bu=bu_list; bu; bu=bu->next) if(bu->bno==bno) break;
 	if(!bu) goto end;
-	printf("found: %s\n", bu->path);
-	list_backup_file_contents(srfd, bu->path, file, browse);
+	list_backup_file_contents(srfd, bu->path, cstat, bno, logfile);
 	goto end;
 error:
 	ret=-1;
@@ -231,11 +226,11 @@ end:
 static int parse_client_data(struct asfd *srfd, struct cstat *clist)
 {
 	int ret=0;
-	const char *cp=NULL;
 	char *client=NULL;
 	char *backup=NULL;
-	char *file=NULL;
+	char *logfile=NULL;
 	char *browse=NULL;
+	const char *cp=NULL;
 	unsigned long bno=0;
 	struct cstat *cstat=NULL;
 printf("got client data: '%s'\n", srfd->rbuf->buf);
@@ -243,12 +238,12 @@ printf("got client data: '%s'\n", srfd->rbuf->buf);
 	cp=srfd->rbuf->buf;
 	client=get_str(&cp, "c:", 0);
 	backup=get_str(&cp, "b:", 0);
-	file  =get_str(&cp, "f:", 0);
+	logfile=get_str(&cp, "l:", 0);
 	browse=get_str(&cp, "p:", 1);
 	if(browse)
 	{
-		free_w(&file);
-		if(!(file=strdup_w("manifest.gz", __func__)))
+		free_w(&logfile);
+		if(!(logfile=strdup_w("manifest.gz", __func__)))
 			goto error;
 		strip_trailing_slashes(&browse);
 	}
@@ -265,25 +260,27 @@ printf("got client data: '%s'\n", srfd->rbuf->buf);
 		if(!(bno=strtoul(backup, NULL, 10)))
 			goto end;
 	}
-	if(file)
+	if(logfile)
 	{
-		if(strcmp(file, "manifest.gz")
-		  && strcmp(file, "log.gz")
-		  && strcmp(file, "restorelog.gz")
-		  && strcmp(file, "verifylog.gz"))
+		if(strcmp(logfile, "manifest")
+		  && strcmp(logfile, "backup")
+		  && strcmp(logfile, "restore")
+		  && strcmp(logfile, "verify"))
 			goto end;
 	}
 /*
 	printf("client: %s\n", client?:"");
 	printf("backup: %s\n", backup?:"");
-	printf("file: %s\n", file?:"");
+	printf("logfile: %s\n", logfile?:"");
 */
-	if(client && bno && (file || browse))
+	if(client && bno)
 	{
-		printf("list file %s of backup %lu of client '%s'\n",
-			file, bno, client);
-		if(browse) printf("browse '%s'\n", browse);
-			list_backup_file(srfd, cstat, bno, file, browse);
+		if(logfile)
+		{
+		//printf("list file %s of backup %lu of client '%s'\n",
+		//	logfile, bno, client);
+			list_backup_file(srfd, cstat, bno, logfile);
+		}
 	}
 	else
 	{
@@ -297,7 +294,7 @@ error:
 end:
 	free_w(&client);
 	free_w(&backup);
-	free_w(&file);
+	free_w(&logfile);
 	free_w(&browse);
 	return ret;
 }

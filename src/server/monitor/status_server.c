@@ -186,19 +186,16 @@ end:
 static int list_backup_file(struct asfd *srfd, struct cstat *cstat,
 	unsigned long bno, const char *logfile)
 {
-	int ret=0;
+	int ret=-1;
         struct bu *bu=NULL;
         struct bu *bu_list=NULL;
 	if(bu_list_get(cstat->sdirs, &bu_list))
-		goto error;
+		goto end;
 
 	if(!bu_list) goto end;
 	for(bu=bu_list; bu; bu=bu->next) if(bu->bno==bno) break;
 	if(!bu) goto end;
-	list_backup_file_contents(srfd, bu->path, cstat, bno, logfile);
-	goto end;
-error:
-	ret=-1;
+	ret=list_backup_file_contents(srfd, bu->path, cstat, bno, logfile);
 end:
 	bu_list_free(&bu_list);
 	return ret;
@@ -279,6 +276,8 @@ printf("got client data: '%s'\n", srfd->rbuf->buf);
 		{
 		//printf("list file %s of backup %lu of client '%s'\n",
 		//	logfile, bno, client);
+			// Do not exit on error here. The user might have just
+			// given bad input.
 			list_backup_file(srfd, cstat, bno, logfile);
 		}
 	}

@@ -120,9 +120,9 @@ static int maybe_add_ent(const char *dir, const char *d_name,
 
 	if(*bu_list) bu->next=*bu_list;
 	*bu_list=bu;
+	have_backup_file_name_w(bu, "manifest", BU_MANIFEST);
 	if(include_working)
 	{
-		have_backup_file_name_w(bu, "manifest", BU_MANIFEST);
 		have_backup_file_name_w(bu, "log", BU_LOG_BACKUP);
 		have_backup_file_name_w(bu, "restorelog", BU_LOG_RESTORE);
 		have_backup_file_name_w(bu, "verifylog", BU_LOG_VERIFY);

@@ -53,10 +53,15 @@ static long timestamp_to_long(const char *buf)
 	return (long)mktime(&tm);
 }
 
-static int flag_wrap(struct bu *bu, uint16_t flag, const char *field)
+static int flag_matches(struct bu *bu, uint16_t flag)
 {
-	if(!bu || !(bu->flags & flag)) return 0;
-	return yajl_gen_int_pair_w(field, (long long)1);
+	return (bu && (bu->flags & flag));
+}
+
+static int flag_wrap_str(struct bu *bu, uint16_t flag, const char *field)
+{
+	if(!flag_matches(bu, flag)) return 0;
+	return yajl_gen_str_w(field);
 }
 
 static int json_send_backup(struct asfd *asfd, struct bu *bu)
@@ -72,22 +77,25 @@ static int json_send_backup(struct asfd *asfd, struct bu *bu)
 	if(yajl_map_open_w()
 	  || yajl_gen_int_pair_w("number", bno)
 	  || yajl_gen_int_pair_w("timestamp", timestamp)
-	  || flag_wrap(bu, BU_HARDLINKED, "hardlinked")
-	  || flag_wrap(bu, BU_DELETABLE, "deletable")
-	  || flag_wrap(bu, BU_WORKING, "working")
-	  || flag_wrap(bu, BU_FINISHING, "finishing")
-	  || flag_wrap(bu, BU_CURRENT, "current"))
+	  || yajl_gen_str_w("flags")
+	  || yajl_array_open_w()
+	  || flag_wrap_str(bu, BU_HARDLINKED, "hardlinked")
+	  || flag_wrap_str(bu, BU_DELETABLE, "deletable")
+	  || flag_wrap_str(bu, BU_WORKING, "working")
+	  || flag_wrap_str(bu, BU_FINISHING, "finishing")
+	  || flag_wrap_str(bu, BU_CURRENT, "current")
+	  || flag_wrap_str(bu, BU_MANIFEST, "manifest")
+	  || yajl_array_close_w())
 		return -1;
 	if(bu->flags
-	  & (BU_MANIFEST|BU_LOG_BACKUP|BU_LOG_RESTORE|BU_LOG_VERIFY))
+	  & (BU_LOG_BACKUP|BU_LOG_RESTORE|BU_LOG_VERIFY))
 	{
 		if(yajl_gen_str_w("logs")
-		  || yajl_map_open_w()
-		  || flag_wrap(bu, BU_MANIFEST, "manifest")
-		  || flag_wrap(bu, BU_LOG_BACKUP, "backup")
-		  || flag_wrap(bu, BU_LOG_RESTORE, "restore")
-		  || flag_wrap(bu, BU_LOG_VERIFY, "verify")
-		  || yajl_map_close_w())
+		  || yajl_array_open_w()
+		  || flag_wrap_str(bu, BU_LOG_BACKUP, "backup")
+		  || flag_wrap_str(bu, BU_LOG_RESTORE, "restore")
+		  || flag_wrap_str(bu, BU_LOG_VERIFY, "verify")
+		  || yajl_array_close_w())
 			return -1;
 	}
 	if(yajl_gen_map_close(yajl)!=yajl_gen_status_ok)
@@ -139,9 +147,8 @@ int json_send_zp(struct asfd *asfd, gzFile zp,
 	struct cstat *cstat, unsigned long bno, const char *logfile)
 {
 	int ret=-1;
-	size_t l=0;
-	char buf[12]="";
-	char *contents=NULL;
+	char *cp=NULL;
+	char buf[1024]="";
 	if(!yajl)
 	{
 		if(!(yajl=yajl_gen_alloc(NULL)))
@@ -151,14 +158,17 @@ int json_send_zp(struct asfd *asfd, gzFile zp,
 	if(yajl_map_open_w()
 	  || yajl_gen_str_pair_w("client", cstat->name)
 	  || yajl_gen_int_pair_w("backup", (long long)bno)
-	  || yajl_gen_str_pair_w("log", logfile))
+	  || yajl_gen_str_pair_w("log", logfile)
+	  || yajl_gen_str_w("contents")
+	  || yajl_array_open_w())
 		goto end;
-	while((l=gzread(zp, buf, sizeof(buf)))>0)
+	while(gzgets(zp, buf, sizeof(buf)))
 	{
-		buf[l]='\0';
-		if(astrcat(&contents, buf, __func__)) goto end;
+		if((cp=strrchr(buf, '\n'))) *cp='\0';
+		if(yajl_gen_str_w(buf))
+			goto end;
 	}
-	if(yajl_gen_str_pair_w("contents", contents?contents:"")
+	if(yajl_array_close_w()
 	  || yajl_map_close_w())
 		goto end;
 	ret=write_all(asfd);
@@ -168,6 +178,5 @@ end:
 		yajl_gen_free(yajl);
 		yajl=NULL;
 	}
-	free_w(&contents);
 	return ret;
 }

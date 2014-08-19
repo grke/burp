@@ -15,13 +15,14 @@ static struct cstat *current=NULL;
 static struct cstat **cslist=NULL;
 static char lastkey[32]="";
 static int in_backups=0;
+static int in_flags=0;
 static struct bu **sselbu=NULL;
 
-static int ii_wrap(long long val, const char *key, uint16_t bit)
+static int is_wrap(const char *val, const char *key, uint16_t bit)
 {
-	if(!strcmp(lastkey, key))
+	if(!strcmp(val, key))
 	{
-		if(val) flags|=bit;
+		flags|=bit;
 		return 1;
 	}
 	return 0;
@@ -29,7 +30,7 @@ static int ii_wrap(long long val, const char *key, uint16_t bit)
 
 static int input_integer(void *ctx, long long val)
 {
-	if(in_backups)
+	if(in_backups && !in_flags)
 	{
 		if(!current) goto error;
 		if(!strcmp(lastkey, "number"))
@@ -46,16 +47,6 @@ static int input_integer(void *ctx, long long val)
 				return 0;
 			return 1;
 		}
-		else if(ii_wrap(val, "hardlinked", BU_HARDLINKED)
-		  || ii_wrap(val, "deletable", BU_DELETABLE)
-		  || ii_wrap(val, "working", BU_WORKING)
-		  || ii_wrap(val, "finishing", BU_FINISHING)
-		  || ii_wrap(val, "current", BU_CURRENT)
-		  || ii_wrap(val, "manifest", BU_MANIFEST)
-		  || ii_wrap(val, "backup", BU_LOG_BACKUP)
-		  || ii_wrap(val, "restore", BU_LOG_RESTORE)
-		  || ii_wrap(val, "verify", BU_LOG_VERIFY))
-			return 1;
 	}
 error:
 	logp("Unexpected integer: %s %llu\n", lastkey, val);
@@ -85,6 +76,22 @@ static int input_string(void *ctx, const unsigned char *val, size_t len)
 	{
 		if(!current) goto error;
 		current->status=cstat_str_to_status(str);
+		goto end;
+	}
+	else if(!strcmp(lastkey, "flags")
+	  || !strcmp(lastkey, "logs"))
+	{
+		if(!current) goto error;
+		if(is_wrap(str, "hardlinked", BU_HARDLINKED)
+		  || is_wrap(str, "deletable", BU_DELETABLE)
+		  || is_wrap(str, "working", BU_WORKING)
+		  || is_wrap(str, "finishing", BU_FINISHING)
+		  || is_wrap(str, "current", BU_CURRENT)
+		  || is_wrap(str, "manifest", BU_MANIFEST)
+		  || is_wrap(str, "backup", BU_LOG_BACKUP)
+		  || is_wrap(str, "restore", BU_LOG_RESTORE)
+		  || is_wrap(str, "verify", BU_LOG_VERIFY))
+			return 1;
 		goto end;
 	}
 error:
@@ -145,7 +152,7 @@ static int input_end_map(void *ctx)
 {
 	map_depth--;
 	//logp("endmap: %d\n", map_depth);
-	if(in_backups)
+	if(in_backups && !in_flags)
 	{
 		if(add_to_list()) return 0;
 	}
@@ -158,6 +165,11 @@ static int input_start_array(void *ctx)
 	if(!strcmp(lastkey, "backups"))
 	{
 		in_backups=1;
+	}
+	else if(!strcmp(lastkey, "logs")
+	  || !strcmp(lastkey, "flags"))
+	{
+		in_flags=1;
 	}
 	return 1;
 }
@@ -258,7 +270,7 @@ static void merge_bu_lists(void)
 
 static int input_end_array(void *ctx)
 {
-	if(in_backups)
+	if(in_backups && !in_flags)
 	{
 		in_backups=0;
 		if(add_to_list()) return 0;
@@ -274,6 +286,10 @@ static int input_end_array(void *ctx)
 			cnew=NULL;
 		}
 		current=NULL;
+	}
+	else if(in_flags)
+	{
+		in_flags=0;
 	}
         return 1;
 }

@@ -102,8 +102,6 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 				logp("Could not find wrap up index: %016lX\n",
 #endif
 					wrap_up);
-				logp("Could not find wrap up index: %d\n",
-					wrap_up);
 //				goto error;
 			}
 			goto end;

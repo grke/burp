@@ -64,15 +64,14 @@ static int flag_wrap_str(struct bu *bu, uint16_t flag, const char *field)
 	return yajl_gen_str_w(field);
 }
 
-static int json_send_backup(struct asfd *asfd, struct bu *bu)
+static int json_send_backup(struct asfd *asfd, struct bu *bu,
+	int print_flags)
 {
 	long long bno=0;
 	long long timestamp=0;
-	if(bu)
-	{
-		bno=(long long)bu->bno;
-		timestamp=(long long)timestamp_to_long(bu->timestamp);
-	}
+	if(!bu) return 0;
+	bno=(long long)bu->bno;
+	timestamp=(long long)timestamp_to_long(bu->timestamp);
 
 	if(yajl_map_open_w()
 	  || yajl_gen_int_pair_w("number", bno)
@@ -87,8 +86,8 @@ static int json_send_backup(struct asfd *asfd, struct bu *bu)
 	  || flag_wrap_str(bu, BU_MANIFEST, "manifest")
 	  || yajl_array_close_w())
 		return -1;
-	if(bu->flags
-	  & (BU_LOG_BACKUP|BU_LOG_RESTORE|BU_LOG_VERIFY))
+	if(print_flags
+	  && (bu->flags & (BU_LOG_BACKUP|BU_LOG_RESTORE|BU_LOG_VERIFY)))
 	{
 		if(yajl_gen_str_w("logs")
 		  || yajl_array_open_w()
@@ -104,8 +103,7 @@ static int json_send_backup(struct asfd *asfd, struct bu *bu)
 	return 0;
 }
 
-static int json_send_client_start(struct asfd *asfd,
-	struct cstat *clist, struct cstat *cstat)
+static int json_send_client_start(struct asfd *asfd, struct cstat *cstat)
 {
 	const char *status=cstat_status_to_str(cstat);
 
@@ -126,15 +124,25 @@ static int json_send_client_end(struct asfd *asfd)
 	return 0;
 }
 
-int json_send_backup_list(struct asfd *asfd,
-	struct cstat *clist, struct cstat *cstat)
+int json_send_client_backup(struct asfd *asfd,
+	struct cstat *cstat, struct bu *bu)
+{
+	int ret=-1;
+	if(json_send_client_start(asfd, cstat)) return -1;
+	ret=json_send_backup(asfd, bu, 1 /* print flags */);
+end:
+	if(json_send_client_end(asfd)) ret=-1;
+	return ret;
+}
+
+int json_send_client_backup_list(struct asfd *asfd, struct cstat *cstat)
 {
 	int ret=-1;
 	struct bu *bu;
-	if(json_send_client_start(asfd, clist, cstat)) return -1;
+	if(json_send_client_start(asfd, cstat)) return -1;
 	for(bu=cstat->bu; bu; bu=bu->prev)
 	{
-		if(json_send_backup(asfd, bu))
+		if(json_send_backup(asfd, bu, 1 /* print flags */))
 			goto end;
 	}
 	ret=0;

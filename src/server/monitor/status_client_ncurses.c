@@ -969,18 +969,11 @@ error:
 }
 
 #ifdef HAVE_NCURSES_H
-static int init_pair_w(int x)
-{
-	return init_pair(x, COLOR_WHITE, COLOR_BLACK);
-}
-
 static void ncurses_init(void)
 {
 	initscr();
 	start_color();
-	init_pair_w(1);
-	init_pair_w(2);
-	init_pair_w(3);
+	use_default_colors();
 	raw();
 	keypad(stdscr, TRUE);
 	noecho();

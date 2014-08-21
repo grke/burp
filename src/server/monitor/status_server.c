@@ -131,56 +131,6 @@ static int browse_manifest(struct asfd *srfd, gzFile zp, const char *browse)
 }
 */
 
-static int list_backup_file_contents(struct asfd *srfd,
-	const char *dir, struct cstat *cstat,
-	unsigned long bno, const char *logfile)
-{
-	int ret=-1;
-	gzFile zp=NULL;
-	char *path=NULL;
-
-	char logfilereal[32]="";
-	if(!strcmp(logfile, "backup"))
-		snprintf(logfilereal, sizeof(logfilereal), "log");
-	else if(!strcmp(logfile, "restore"))
-		snprintf(logfilereal, sizeof(logfilereal), "restorelog");
-	else if(!strcmp(logfile, "verify"))
-		snprintf(logfilereal, sizeof(logfilereal), "verifylog");
-
-	if(!(path=prepend_s(dir, logfilereal)))
-		goto end;
-	if(!(zp=gzopen_file(path, "rb")))
-	{
-		if(astrcat(&path, ".gz", __func__)
-		  || !(zp=gzopen_file(path, "rb")))
-			goto end;
-	}
-
-	ret=json_send_zp(srfd, zp, cstat, bno, logfile);
-end:
-	gzclose_fp(&zp);
-	free_w(&path);
-	return ret;
-}
-
-static int list_backup_file(struct asfd *srfd, struct cstat *cstat,
-	unsigned long bno, const char *logfile)
-{
-	int ret=-1;
-        struct bu *bu=NULL;
-        struct bu *bu_list=NULL;
-	if(bu_list_get(cstat->sdirs, &bu_list))
-		goto end;
-
-	if(!bu_list) goto end;
-	for(bu=bu_list; bu; bu=bu->next) if(bu->bno==bno) break;
-	if(!bu) goto end;
-	ret=list_backup_file_contents(srfd, bu->path, cstat, bno, logfile);
-end:
-	bu_list_free(&bu_list);
-	return ret;
-}
-
 static char *get_str(const char **buf, const char *pre, int last)
 {
 	size_t len=0;
@@ -208,8 +158,8 @@ static int parse_client_data(struct asfd *srfd, struct cstat *clist)
 	char *logfile=NULL;
 	char *browse=NULL;
 	const char *cp=NULL;
-	unsigned long bno=0;
 	struct cstat *cstat=NULL;
+        struct bu *bu=NULL;
 printf("got client data: '%s'\n", srfd->rbuf->buf);
 
 	cp=srfd->rbuf->buf;
@@ -232,10 +182,15 @@ printf("got client data: '%s'\n", srfd->rbuf->buf);
 
 		if(cstat_set_backup_list(cstat)) goto end;
 	}
-	if(backup)
+	if(cstat && backup)
 	{
+		unsigned long bno=0;
 		if(!(bno=strtoul(backup, NULL, 10)))
 			goto end;
+		for(bu=cstat->bu; bu; bu=bu->prev)
+			if(bu->bno==bno) break;
+
+		if(!bu) goto end;
 	}
 	if(logfile)
 	{
@@ -245,38 +200,24 @@ printf("got client data: '%s'\n", srfd->rbuf->buf);
 		  && strcmp(logfile, "verify"))
 			goto end;
 	}
-/*
+
 	printf("client: %s\n", client?:"");
 	printf("backup: %s\n", backup?:"");
 	printf("logfile: %s\n", logfile?:"");
-*/
-	if(client && bno)
-	{
-		if(logfile)
-		{
-		//printf("list file %s of backup %lu of client '%s'\n",
-		//	logfile, bno, client);
-			// Do not exit on error here. The user might have just
-			// given bad input.
-			list_backup_file(srfd, cstat, bno, logfile);
-		}
-	}
-	else
-	{
-		if(cstat)
-		{
-			if(!cstat->status && cstat_set_status(cstat))
-				return -1;
-		}
-		else for(cstat=clist; cstat; cstat=cstat->next)
-		{
-			if(!cstat->status && cstat_set_status(cstat))
-				return -1;
-		}
 
-		if(json_send(srfd, clist, cstat))
-			goto error;
+	if(cstat)
+	{
+		if(!cstat->status && cstat_set_status(cstat))
+			return -1;
 	}
+	else for(cstat=clist; cstat; cstat=cstat->next)
+	{
+		if(!cstat->status && cstat_set_status(cstat))
+			return -1;
+	}
+
+	if(json_send(srfd, clist, cstat, bu, logfile))
+		goto error;
 
 	goto end;
 error:

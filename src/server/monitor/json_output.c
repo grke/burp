@@ -64,13 +64,45 @@ static int flag_wrap_str(struct bu *bu, uint16_t flag, const char *field)
 	return yajl_gen_str_w(field);
 }
 
-static int flag_wrap_str_zp(struct bu *bu, uint16_t flag, const char *field,
-	gzFile zp, const char *logfile)
+static gzFile open_backup_log(struct bu *bu, const char *logfile)
 {
-	if(!flag_matches(bu, flag)) return 0;
-	if(yajl_gen_str_w(field)) return -1;
-	if(yajl_array_open_w()) return -1;
-	if(zp && logfile && !strcmp(logfile, field))
+	gzFile zp=NULL;
+	char *path=NULL;
+
+	char logfilereal[32]="";
+	if(!strcmp(logfile, "backup"))
+		snprintf(logfilereal, sizeof(logfilereal), "log");
+	else if(!strcmp(logfile, "restore"))
+		snprintf(logfilereal, sizeof(logfilereal), "restorelog");
+	else if(!strcmp(logfile, "verify"))
+		snprintf(logfilereal, sizeof(logfilereal), "verifylog");
+
+	if(!(path=prepend_s(bu->path, logfilereal)))
+		goto end;
+	if(!(zp=gzopen_file(path, "rb")))
+	{
+		if(astrcat(&path, ".gz", __func__)
+		  || !(zp=gzopen_file(path, "rb")))
+			goto end;
+	}
+end:
+	free_w(&path);
+	return zp;
+
+}
+
+static int flag_wrap_str_zp(struct bu *bu, uint16_t flag, const char *field,
+	const char *logfile)
+{
+	int ret=-1;
+	gzFile zp=NULL;
+	if(!flag_matches(bu, flag)
+	  || !logfile || strcmp(logfile, field))
+		return 0;
+	if(!(zp=open_backup_log(bu, logfile))) goto end;
+	if(yajl_gen_str_w(field)) goto end;
+	if(yajl_array_open_w()) goto end;
+	if(zp)
 	{
 		char *cp=NULL;
 		char buf[1024]="";
@@ -78,15 +110,18 @@ static int flag_wrap_str_zp(struct bu *bu, uint16_t flag, const char *field,
 		{
 			if((cp=strrchr(buf, '\n'))) *cp='\0';
 			if(yajl_gen_str_w(buf))
-				return -1;
+				goto end;
 		}
 	}
-	if(yajl_array_close_w()) return -1;
-	return 0;
+	if(yajl_array_close_w()) goto end;
+	ret=0;
+end:
+	gzclose_fp(&zp);
+	return ret;
 }
 
 static int json_send_backup(struct asfd *asfd, struct bu *bu,
-	int print_flags, gzFile zp, const char *logfile)
+	int print_flags, const char *logfile)
 {
 	long long bno=0;
 	long long timestamp=0;
@@ -112,10 +147,24 @@ static int json_send_backup(struct asfd *asfd, struct bu *bu,
 	{
 		if(yajl_gen_str_w("logs")
 		  || yajl_map_open_w()
-		  || flag_wrap_str_zp(bu, BU_LOG_BACKUP, "backup", zp, logfile)
-		  || flag_wrap_str_zp(bu, BU_LOG_RESTORE, "restore", zp, logfile)
-		  || flag_wrap_str_zp(bu, BU_LOG_VERIFY, "verify", zp, logfile)
-		  || yajl_map_close_w())
+		  || yajl_gen_str_w("list")
+	  	  || yajl_array_open_w()
+		  || flag_wrap_str(bu, BU_LOG_BACKUP, "backup")
+		  || flag_wrap_str(bu, BU_LOG_RESTORE, "restore")
+		  || flag_wrap_str(bu, BU_LOG_VERIFY, "verify")
+	  	  || yajl_array_close_w())
+			return -1;
+		if(logfile)
+		{
+			if(flag_wrap_str_zp(bu,
+				BU_LOG_BACKUP, "backup", logfile)
+			  || flag_wrap_str_zp(bu,
+				BU_LOG_RESTORE, "restore", logfile)
+			  || flag_wrap_str_zp(bu,
+				BU_LOG_VERIFY, "verify", logfile))
+					return -1;
+		}
+		if(yajl_map_close_w())
 			return -1;
 	}
 	if(yajl_gen_map_close(yajl)!=yajl_gen_status_ok)
@@ -146,11 +195,11 @@ static int json_send_client_end(struct asfd *asfd)
 }
 
 static int json_send_client_backup(struct asfd *asfd,
-	struct cstat *cstat, struct bu *bu, gzFile zp, const char *logfile)
+	struct cstat *cstat, struct bu *bu, const char *logfile)
 {
 	int ret=-1;
 	if(json_send_client_start(asfd, cstat)) return -1;
-	ret=json_send_backup(asfd, bu, 1 /* print flags */, zp, logfile);
+	ret=json_send_backup(asfd, bu, 1 /* print flags */, logfile);
 	if(json_send_client_end(asfd)) ret=-1;
 	return ret;
 }
@@ -162,7 +211,7 @@ static int json_send_client_backup_list(struct asfd *asfd, struct cstat *cstat)
 	if(json_send_client_start(asfd, cstat)) return -1;
 	for(bu=cstat->bu; bu; bu=bu->prev)
 	{
-		if(json_send_backup(asfd, bu, 1 /* print flags */, NULL, NULL))
+		if(json_send_backup(asfd, bu, 1 /* print flags */, NULL))
 			goto end;
 	}
 	ret=0;
@@ -171,38 +220,26 @@ end:
 	return ret;
 }
 
-int json_send_zp(struct asfd *asfd, gzFile zp,
-	struct cstat *cstat, unsigned long bno, const char *logfile)
-{
-	int ret=-1;
-	struct bu *bu=NULL;
-
-	if(json_start(asfd)) goto end;
-
-	if(bno) for(bu=cstat->bu; bu; bu=bu->prev) if(bu->bno==bno) break;
-
-	if(json_send_client_backup(asfd, cstat, bu, zp, logfile)) goto end;
-
-	ret=0;
-end:
-	if(json_end(asfd)) return -1;
-	return ret;
-}
-
-int json_send(struct asfd *asfd, struct cstat *clist, struct cstat *cstat)
+int json_send(struct asfd *asfd, struct cstat *clist, struct cstat *cstat,
+	struct bu *bu, const char *logfile)
 {
 	int ret=-1;
 	struct cstat *c;
 
 	if(json_start(asfd)) goto end;
 
-	if(cstat)
+	if(cstat && bu)
+	{
+		if(json_send_client_backup(asfd, cstat, bu, logfile))
+			return -1;
+	}
+	else if(cstat)
 	{
 		if(json_send_client_backup_list(asfd, cstat)) goto end;
 	}
 	else for(c=clist; c; c=c->next)
 	{
-		if(json_send_client_backup(asfd, c, c->bu, NULL, NULL))
+		if(json_send_client_backup(asfd, c, c->bu, NULL))
 			return -1;
 	}
 

@@ -1,32 +1,5 @@
 #include "include.h"
 
-static int send_summaries_to_client(struct asfd *srfd,
-	struct cstat *clist, struct cstat *cstat)
-{
-	int ret=-1;
-	struct cstat *c;
-
-	if(json_start(srfd)) goto end;
-
-	if(cstat)
-	{
-		if(!cstat->status && cstat_set_status(cstat))
-			return -1;
-		if(json_send_client_backup_list(srfd, cstat)) goto end;
-	}
-	else for(c=clist; c; c=c->next)
-	{
-		if(!c->status && cstat_set_status(c))
-			return -1;
-		if(json_send_client_backup(srfd, c, c->bu))
-			return -1;
-	}
-
-	ret=0;
-end:
-	if(json_end(srfd)) return -1;
-	return ret;
-}
 /*
 static int send_detail_to_client(struct asfd *srfd, struct cstat **clist, int clen, const char *name)
 {
@@ -290,7 +263,18 @@ printf("got client data: '%s'\n", srfd->rbuf->buf);
 	}
 	else
 	{
-		if(send_summaries_to_client(srfd, clist, cstat))
+		if(cstat)
+		{
+			if(!cstat->status && cstat_set_status(cstat))
+				return -1;
+		}
+		else for(cstat=clist; cstat; cstat=cstat->next)
+		{
+			if(!cstat->status && cstat_set_status(cstat))
+				return -1;
+		}
+
+		if(json_send(srfd, clist, cstat))
 			goto error;
 	}
 

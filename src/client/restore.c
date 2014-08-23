@@ -102,7 +102,7 @@ static int make_link(struct asfd *asfd,
 }
 
 // FIX THIS: Maybe should be in bfile.c.
-int open_for_restore(struct asfd *asfd, BFILE *bfd, const char *path,
+enum ofr_e open_for_restore(struct asfd *asfd, BFILE *bfd, const char *path,
 	struct sbuf *sb, int vss_restore, struct conf *conf)
 {
 	static int flags;
@@ -113,7 +113,7 @@ int open_for_restore(struct asfd *asfd, BFILE *bfd, const char *path,
 		{
 			// Already open after restoring the VSS data.
 			// Time now for the actual file data.
-			return 0;
+			return OFR_OK;
 		}
 		else
 		{
@@ -122,7 +122,7 @@ int open_for_restore(struct asfd *asfd, BFILE *bfd, const char *path,
 			{
 				logp("error closing %s in %s()\n",
 					path, __func__);
-				return -1;
+				return OFR_ERROR;
 			}
 #ifdef HAVE_WIN32
 		}
@@ -149,12 +149,13 @@ int open_for_restore(struct asfd *asfd, BFILE *bfd, const char *path,
 		snprintf(msg, sizeof(msg), "Could not open for writing %s: %s",
 			path, berrno_bstrerror(&be, errno));
 		if(restore_interrupt(asfd, sb, msg, conf))
-			return -1;
+			return OFR_ERROR;
+		return OFR_CONTINUE;
 	}
 	// Add attributes to bfd so that they can be set when it is closed.
 	bfd->winattr=sb->winattr;
 	memcpy(&bfd->statp, &sb->statp, sizeof(struct stat));
-	return 0;
+	return OFR_OK;
 }
 
 static int restore_special(struct asfd *asfd, struct sbuf *sb,

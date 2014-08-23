@@ -30,10 +30,12 @@ static int restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 	if(!metadata)
 	{
 #endif
-		if(open_for_restore(asfd, bfd, rpath, sb, vss_restore, conf))
+		switch(open_for_restore(asfd,
+			bfd, rpath, sb, vss_restore, conf))
 		{
-			ret=-1;
-			goto end;
+			case OFR_OK: break;
+			case OFR_CONTINUE: goto end;
+			default: ret=-1; goto end;
 		}
 #ifndef HAVE_WIN32
 	}

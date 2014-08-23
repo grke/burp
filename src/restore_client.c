@@ -228,7 +228,12 @@ static int restore_file_or_get_meta(BFILE *bfd, struct sbuf *sb, const char *fna
 			ret=-1;
 			goto end;
 		}
-#ifndef HAVE_WIN32
+		// It is possible for open_for_restore to return 0 without
+		// having actually opened the file. Make this nicer in burp-2.
+#ifdef HAVE_WIN32
+		if(bfd->mode!=BF_WRITE) goto end;
+#else
+		if(!fp) goto end;
 	}
 #endif
 

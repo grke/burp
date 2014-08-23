@@ -16,6 +16,7 @@ static struct cstat **cslist=NULL;
 static char lastkey[32]="";
 static int in_backups=0;
 static int in_flags=0;
+static int in_logslist=0;
 static struct bu **sselbu=NULL;
 
 static int is_wrap(const char *val, const char *key, uint16_t bit)
@@ -30,7 +31,7 @@ static int is_wrap(const char *val, const char *key, uint16_t bit)
 
 static int input_integer(void *ctx, long long val)
 {
-	if(in_backups && !in_flags)
+	if(in_backups && !in_flags && !in_logslist)
 	{
 		if(!current) goto error;
 		if(!strcmp(lastkey, "number"))
@@ -78,8 +79,7 @@ static int input_string(void *ctx, const unsigned char *val, size_t len)
 		current->status=cstat_str_to_status(str);
 		goto end;
 	}
-	else if(!strcmp(lastkey, "flags")
-	  || !strcmp(lastkey, "logs"))
+	else if(!strcmp(lastkey, "flags"))
 	{
 		if(!current) goto error;
 		if(is_wrap(str, "hardlinked", BU_HARDLINKED)
@@ -87,12 +87,19 @@ static int input_string(void *ctx, const unsigned char *val, size_t len)
 		  || is_wrap(str, "working", BU_WORKING)
 		  || is_wrap(str, "finishing", BU_FINISHING)
 		  || is_wrap(str, "current", BU_CURRENT)
-		  || is_wrap(str, "manifest", BU_MANIFEST)
-		  || is_wrap(str, "backup", BU_LOG_BACKUP)
+		  || is_wrap(str, "manifest", BU_MANIFEST))
+			return 1;
+		goto end;
+	}
+	else if(!strcmp(lastkey, "list"))
+	{
+		if(is_wrap(str, "backup", BU_LOG_BACKUP)
 		  || is_wrap(str, "restore", BU_LOG_RESTORE)
 		  || is_wrap(str, "verify", BU_LOG_VERIFY))
 			return 1;
-		goto end;
+	}
+	else if(!strcmp(lastkey, "logs"))
+	{
 	}
 error:
 	logp("Unexpected string: %s %s\n", lastkey, str);
@@ -152,7 +159,7 @@ static int input_end_map(void *ctx)
 {
 	map_depth--;
 	//logp("endmap: %d\n", map_depth);
-	if(in_backups && !in_flags)
+	if(in_backups && !in_flags && !in_logslist)
 	{
 		if(add_to_list()) return 0;
 	}
@@ -166,10 +173,13 @@ static int input_start_array(void *ctx)
 	{
 		in_backups=1;
 	}
-	else if(!strcmp(lastkey, "logs")
-	  || !strcmp(lastkey, "flags"))
+	else if(!strcmp(lastkey, "flags"))
 	{
 		in_flags=1;
+	}
+	else if(!strcmp(lastkey, "list"))
+	{
+		in_logslist=1;
 	}
 	return 1;
 }
@@ -270,7 +280,7 @@ static void merge_bu_lists(void)
 
 static int input_end_array(void *ctx)
 {
-	if(in_backups && !in_flags)
+	if(in_backups && !in_flags && !in_logslist)
 	{
 		in_backups=0;
 		if(add_to_list()) return 0;
@@ -290,6 +300,10 @@ static int input_end_array(void *ctx)
 	else if(in_flags)
 	{
 		in_flags=0;
+	}
+	else if(in_logslist)
+	{
+		in_logslist=0;
 	}
         return 1;
 }

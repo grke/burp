@@ -16,7 +16,8 @@ enum details
 {
 	DETAILS_CLIENT_LIST=0,
 	DETAILS_BACKUP_LIST,
-	DETAILS_BACKUP_LOGS
+	DETAILS_BACKUP_LOGS,
+	DETAILS_VIEW_LOG
 };
 
 static FILE *lfp=NULL;
@@ -487,6 +488,8 @@ static int update_screen(struct cstat *clist, struct cstat *sel,
 				break;
 			case DETAILS_BACKUP_LOGS:
 				break;
+			case DETAILS_VIEW_LOG:
+				break;
 		}
 	}
 
@@ -495,6 +498,7 @@ static int update_screen(struct cstat *clist, struct cstat *sel,
 		case DETAILS_CLIENT_LIST:
 			break;
 		case DETAILS_BACKUP_LIST:
+			// FIX THIS: repeated code.
 			snprintf(msg, sizeof(msg),
 				"Client: %s", sel->name);
 			print_line(msg, x++, col);
@@ -503,7 +507,6 @@ static int update_screen(struct cstat *clist, struct cstat *sel,
 			print_line(msg, x++, col);
 			break;
 		case DETAILS_BACKUP_LOGS:
-			// FIX THIS: repeated code.
 			snprintf(msg, sizeof(msg),
 				"Client: %s", sel->name);
 			print_line(msg, x++, col);
@@ -512,6 +515,19 @@ static int update_screen(struct cstat *clist, struct cstat *sel,
 			print_line(msg, x++, col);
 			snprintf(msg, sizeof(msg),
 				"Backup: %s", get_bu_str(*selbu));
+			print_line(msg, x++, col);
+			break;
+		case DETAILS_VIEW_LOG:
+			snprintf(msg, sizeof(msg),
+				"Client: %s", sel->name);
+			print_line(msg, x++, col);
+			snprintf(msg, sizeof(msg),
+				"Status: %s", cstat_status_to_str(sel));
+			print_line(msg, x++, col);
+			snprintf(msg, sizeof(msg),
+				"Backup: %s", get_bu_str(*selbu));
+			snprintf(msg, sizeof(msg),
+				"Log: 0x%04X", *selop);
 			print_line(msg, x++, col);
 			break;
 	}
@@ -613,6 +629,8 @@ static int update_screen(struct cstat *clist, struct cstat *sel,
 			print_logs_list_line(*selbu, BU_LOG_VERIFY,
 				"View verify log", &x, col, selop);
 			break;
+		case DETAILS_VIEW_LOG:
+			break;
 	}
 
 	// Blank any remainder of the screen.
@@ -623,29 +641,48 @@ static int update_screen(struct cstat *clist, struct cstat *sel,
 	return 0;
 }
 
-static int request_status(struct asfd *asfd,
-	const char *client, struct conf *conf)
+static int request_status(struct asfd *asfd, enum details details,
+	const char *client, struct bu *selbu,
+	uint16_t selop, struct conf *conf)
 {
 	char buf[256]="";
-	if(client)
+	switch(details)
 	{
-		if(conf->backup)
-		{
-			if(conf->browsedir)
-				snprintf(buf, sizeof(buf), "c:%s:b:%s:p:%s\n",
-					client, conf->backup, conf->browsedir);
-			else if(conf->browsefile)
-				snprintf(buf, sizeof(buf), "c:%s:b:%s:f:%s\n",
-					client, conf->backup, conf->browsefile);
-			else
-				snprintf(buf, sizeof(buf), "c:%s:b:%s\n",
-					client, conf->backup);
-		}
-		else
+		case DETAILS_CLIENT_LIST:
+			snprintf(buf, sizeof(buf), "\n");
+			break;
+		case DETAILS_BACKUP_LIST:
 			snprintf(buf, sizeof(buf), "c:%s\n", client);
+			break;
+		case DETAILS_BACKUP_LOGS:
+			snprintf(buf, sizeof(buf), "c:%s:b:%lu\n",
+				client, selbu->bno);
+			break;
+		case DETAILS_VIEW_LOG:
+		{
+			const char *lname="backup";
+			if(selop & BU_LOG_BACKUP)
+				lname="backup";
+			else if(selop & BU_LOG_RESTORE)
+				lname="restore";
+			else if(selop & BU_LOG_VERIFY)
+				lname="verify";
+			else if(selop & BU_MANIFEST)
+				lname="manifest";
+			
+			snprintf(buf, sizeof(buf), "c:%s:b:%lu:l:%s\n",
+				client, selbu->bno, lname);
+			break;
+		}
 	}
-	else
-		snprintf(buf, sizeof(buf), "\n");
+/*
+	if(conf->browsedir)
+		snprintf(buf, sizeof(buf), "c:%s:b:%s:p:%s\n",
+			client, conf->backup, conf->browsedir);
+	else if(conf->browsefile)
+		snprintf(buf, sizeof(buf), "c:%s:b:%s:f:%s\n",
+			client, conf->backup, conf->browsefile);
+*/
 if(lfp) logp("request: %s\n", buf);
 	if(asfd->write_str(asfd, CMD_GEN /* ignored */, buf)) return -1;
 	return 0;
@@ -734,6 +771,8 @@ static int parse_stdin_data(struct asfd *asfd,
 					}
 					break;
 				}
+				case DETAILS_VIEW_LOG:
+					break;
 			}
 			break;
 		case KEY_DOWN:
@@ -764,6 +803,8 @@ static int parse_stdin_data(struct asfd *asfd,
 					}
 					break;
 				}
+				case DETAILS_VIEW_LOG:
+					break;
 			}
 			break;
 		case KEY_LEFT:
@@ -778,6 +819,9 @@ static int parse_stdin_data(struct asfd *asfd,
 					break;
 				case DETAILS_BACKUP_LOGS:
 					(*details)=DETAILS_BACKUP_LIST;
+					break;
+				case DETAILS_VIEW_LOG:
+					(*details)=DETAILS_BACKUP_LOGS;
 					break;
 			}
 			break;
@@ -797,6 +841,9 @@ static int parse_stdin_data(struct asfd *asfd,
 					break;
 				case DETAILS_BACKUP_LOGS:
 					if(lfp) logp("Option selected: 0x%04X\n", *selop);
+					(*details)=DETAILS_VIEW_LOG;
+					break;
+				case DETAILS_VIEW_LOG:
 					break;
 			}
 			break;
@@ -832,6 +879,8 @@ static int parse_stdin_data(struct asfd *asfd,
 					break;
 				}
 				case DETAILS_BACKUP_LOGS:
+					break;
+				case DETAILS_VIEW_LOG:
 					break;
 			}
 			break;
@@ -870,6 +919,8 @@ static int parse_stdin_data(struct asfd *asfd,
 					break;
 				}
 				case DETAILS_BACKUP_LOGS:
+					break;
+				case DETAILS_VIEW_LOG:
 					break;
 			}
 			break;
@@ -926,7 +977,8 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 				if(client) req=client;
 				else if(sel) req=sel->name;
 			}
-			if(request_status(sfd, req, conf)) goto error;
+			if(request_status(sfd, details,
+				req, selbu, selop, conf)) goto error;
 			if(actg==ACTION_STATUS_SNAPSHOT)
 				reqdone=1;
 		}

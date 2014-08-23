@@ -1,4 +1,5 @@
   * Fix for xattrs with zero length values.
+  * Fix for restore bug when a file cannot be opened.
 
 2014-07-26 Changes in burp-1.4.20:
   * Fix for backing up fifos with xattrs.

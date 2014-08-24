@@ -49,9 +49,9 @@ class IXMLDOMDocument;
 // #pragma message("compile VSS for Windows XP")   
    #define VSSClientGeneric VSSClientXP
    
-   #include "inc/WinXP/vss.h"
-   #include "inc/WinXP/vswriter.h"
-   #include "inc/WinXP/vsbackup.h"
+   #include "inc/winxp/vss.h"
+   #include "inc/winxp/vswriter.h"
+   #include "inc/winxp/vsbackup.h"
 
 #endif
 
@@ -59,18 +59,18 @@ class IXMLDOMDocument;
 // #pragma message("compile VSS for Windows 2003")
    #define VSSClientGeneric VSSClient2003
    
-   #include "inc/Win2003/vss.h"
-   #include "inc/Win2003/vswriter.h"
-   #include "inc/Win2003/vsbackup.h"
+   #include "inc/win2003/vss.h"
+   #include "inc/win2003/vswriter.h"
+   #include "inc/win2003/vsbackup.h"
 #endif
 
 #ifdef B_VSS_VISTA
 // #pragma message("compile VSS for Vista")
    #define VSSClientGeneric VSSClientVista
 
-   #include "inc/Win2003/vss.h"
-   #include "inc/Win2003/vswriter.h"
-   #include "inc/Win2003/vsbackup.h"
+   #include "inc/win2003/vss.h"
+   #include "inc/win2003/vswriter.h"
+   #include "inc/win2003/vsbackup.h"
 #endif
    
 /* In VSSAPI.DLL */

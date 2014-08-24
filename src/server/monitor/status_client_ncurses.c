@@ -936,7 +936,7 @@ static int parse_stdin_data(struct asfd *asfd,
 
 static int parse_data(struct asfd *asfd, struct cstat **clist,
 	struct cstat **sel, struct bu **selbu, uint16_t *selop,
-	enum details *details, int count)
+	enum details *details, struct lline **llines, int count)
 {
 	// Hacky to switch on whether it is using char buffering or not.
 #ifdef HAVE_NCURSES_H
@@ -944,7 +944,7 @@ static int parse_data(struct asfd *asfd, struct cstat **clist,
 		return parse_stdin_data(asfd,
 			sel, selbu, selop, details, count);
 #endif
-	return json_input(asfd, clist, selbu);
+	return json_input(asfd, clist, selbu, llines);
 }
 
 static int main_loop(struct async *as, const char *sclient, struct conf *conf)
@@ -960,6 +960,7 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 	struct asfd *sfd=as->asfd; // Server asfd.
 	int reqdone=0;
 	uint16_t selop=0;
+	struct lline *llines=NULL;
 
 	if(sclient && !client)
 	{
@@ -1000,8 +1001,8 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 			while(asfd->rbuf->buf)
 		{
 			if(parse_data(asfd, &clist,
-				&sel, &selbu, &selop, &details, count))
-					goto error;
+				&sel, &selbu, &selop, &details, &llines,
+					count)) goto error;
 			iobuf_free_content(asfd->rbuf);
 			if(asfd->parse_readbuf(asfd))
 				goto error;
@@ -1017,6 +1018,7 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 
 	ret=0;
 error:
+	// FIX THIS: should probably be freeing a bunch of stuff here.
 	return ret;
 }
 

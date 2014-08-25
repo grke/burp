@@ -16,7 +16,11 @@ static struct cstat **cslist=NULL;
 static char lastkey[32]="";
 static int in_backups=0;
 static int in_flags=0;
+static int in_logslist=0;
+static int in_log_content=0;
 static struct bu **sselbu=NULL;
+static struct lline *ll_list=NULL;
+static struct lline **sllines=NULL;
 
 static int is_wrap(const char *val, const char *key, uint16_t bit)
 {
@@ -30,7 +34,7 @@ static int is_wrap(const char *val, const char *key, uint16_t bit)
 
 static int input_integer(void *ctx, long long val)
 {
-	if(in_backups && !in_flags)
+	if(in_backups && !in_flags && !in_logslist)
 	{
 		if(!current) goto error;
 		if(!strcmp(lastkey, "number"))
@@ -78,8 +82,7 @@ static int input_string(void *ctx, const unsigned char *val, size_t len)
 		current->status=cstat_str_to_status(str);
 		goto end;
 	}
-	else if(!strcmp(lastkey, "flags")
-	  || !strcmp(lastkey, "logs"))
+	else if(!strcmp(lastkey, "flags"))
 	{
 		if(!current) goto error;
 		if(is_wrap(str, "hardlinked", BU_HARDLINKED)
@@ -87,11 +90,27 @@ static int input_string(void *ctx, const unsigned char *val, size_t len)
 		  || is_wrap(str, "working", BU_WORKING)
 		  || is_wrap(str, "finishing", BU_FINISHING)
 		  || is_wrap(str, "current", BU_CURRENT)
-		  || is_wrap(str, "manifest", BU_MANIFEST)
-		  || is_wrap(str, "backup", BU_LOG_BACKUP)
+		  || is_wrap(str, "manifest", BU_MANIFEST))
+			goto end;
+	}
+	else if(!strcmp(lastkey, "list"))
+	{
+		if(is_wrap(str, "backup", BU_LOG_BACKUP)
 		  || is_wrap(str, "restore", BU_LOG_RESTORE)
 		  || is_wrap(str, "verify", BU_LOG_VERIFY))
-			return 1;
+			goto end;
+	}
+	else if(!strcmp(lastkey, "logs"))
+	{
+		goto end;
+	}
+	else if(!strcmp(lastkey, "backup")
+	  || !strcmp(lastkey, "restore")
+	  || !strcmp(lastkey, "verify"))
+	{
+		// Log file contents.
+		if(lline_add(&ll_list, str))
+			goto error;
 		goto end;
 	}
 error:
@@ -112,7 +131,7 @@ static int input_map_key(void *ctx, const unsigned char *val, size_t len)
 
 static struct bu *bu_list=NULL;
 
-static int add_to_list(void)
+static int add_to_bu_list(void)
 {
 	struct bu *bu;
 	struct bu *last;
@@ -152,9 +171,9 @@ static int input_end_map(void *ctx)
 {
 	map_depth--;
 	//logp("endmap: %d\n", map_depth);
-	if(in_backups && !in_flags)
+	if(in_backups && !in_flags && !in_logslist)
 	{
-		if(add_to_list()) return 0;
+		if(add_to_bu_list()) return 0;
 	}
 	return 1;
 }
@@ -166,10 +185,19 @@ static int input_start_array(void *ctx)
 	{
 		in_backups=1;
 	}
-	else if(!strcmp(lastkey, "logs")
-	  || !strcmp(lastkey, "flags"))
+	else if(!strcmp(lastkey, "flags"))
 	{
 		in_flags=1;
+	}
+	else if(!strcmp(lastkey, "list"))
+	{
+		in_logslist=1;
+	}
+	else if(!strcmp(lastkey, "backup")
+	  || !strcmp(lastkey, "restore")
+	  || !strcmp(lastkey, "verify"))
+	{
+		in_log_content=1;
 	}
 	return 1;
 }
@@ -270,10 +298,10 @@ static void merge_bu_lists(void)
 
 static int input_end_array(void *ctx)
 {
-	if(in_backups && !in_flags)
+	if(in_backups && !in_flags && !in_logslist)
 	{
 		in_backups=0;
-		if(add_to_list()) return 0;
+		if(add_to_bu_list()) return 0;
 		// Now may have two lists. Want to keep the old one is intact
 		// as possible, so that we can keep a pointer to its entries
 		// in the ncurses stuff.
@@ -290,6 +318,17 @@ static int input_end_array(void *ctx)
 	else if(in_flags)
 	{
 		in_flags=0;
+	}
+	else if(in_logslist)
+	{
+		in_logslist=0;
+	}
+	else if(in_log_content)
+	{
+		in_log_content=0;
+		llines_free(sllines);
+		*sllines=ll_list;
+		ll_list=NULL;
 	}
         return 1;
 }
@@ -320,11 +359,13 @@ static void do_yajl_error(yajl_handle yajl, struct asfd *asfd)
 // Client records will be coming through in alphabetical order.
 // FIX THIS: If a client is deleted on the server, it is not deleted from
 // clist.
-int json_input(struct asfd *asfd, struct cstat **clist, struct bu **selbu)
+int json_input(struct asfd *asfd, struct cstat **clist, struct bu **selbu,
+	struct lline **llines)
 {
         static yajl_handle yajl=NULL;
 	cslist=clist;
 	sselbu=selbu;
+	sllines=llines;
 
 	if(!yajl)
 	{

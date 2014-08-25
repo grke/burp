@@ -6,6 +6,7 @@
 #include "cstat.h"
 #include "json_input.h"
 #include "json_output.h"
+#include "lline.h"
 #include "status_client.h"
 #include "status_server.h"
 

@@ -17,27 +17,31 @@ static int start_restore_file(struct asfd *asfd,
 	if(act==ACTION_VERIFY)
 	{
 		cntr_add(conf->cntr, sb->path.cmd, 1);
-		return 0;
+		goto end;
 	}
 
 	if(build_path(fname, "", &rpath, NULL))
 	{
 		char msg[256]="";
-		// failed - do a warning
+		// Failed - do a warning.
 		snprintf(msg, sizeof(msg), "build path failed: %s", fname);
 		if(restore_interrupt(asfd, sb, msg, conf))
-			ret=-1;
-		ret=0; // Try to carry on with other files.
-		goto end;
+			goto error;
+		goto end; // Try to carry on with other files.
 	}
 
-	if(open_for_restore(asfd, bfd, rpath, sb, vss_restore, conf))
-		goto end;
+	switch(open_for_restore(asfd, bfd, rpath, sb, vss_restore, conf))
+	{
+		case OFR_OK: break;
+		case OFR_CONTINUE: goto end;
+		default: goto error;
+	}
 
 	cntr_add(conf->cntr, sb->path.cmd, 1);
 
-	ret=0;
 end:
+	ret=0;
+error:
 	if(rpath) free(rpath);
 	return ret;
 }

@@ -39,13 +39,26 @@ Right click on the "My Computer" icon on the desktop and select
 "Disk Management".
 Your new drive should be listed in the window.
 Format and partition it as you want it to be set up.
+
 You may need to reboot to fully initialise the disk - it will tell you if you
 need to do so.
 Once it is initialised, go back into "Disk Management", right click the
 partition and mark it as 'active'.
 
-DO NOT FORGET TO MARK IT AS ACTIVE - YOUR OS WILL NOT BE RECOGNISED LATER
-OTHERWISE!!!
+DO NOT FORGET TO MARK YOUR FIRST PARTITION AS ACTIVE - YOUR OS WILL NOT BE
+RECOGNISED LATER OTHERWISE... UNLESS YOU HAVE A SYSTEM RESERVED PARTITION:
+
+
+System Reserved Partition
+-------------------------
+
+If you also backed up your System Reserved Partition you will want to restore
+this too. Create a 400MB Partition at the start of the disk (I've not
+seen one larger than ~250MB but if you don’t know what size your System
+Partition was, 400MB should safely cover it) then mark it as ACTIVE.
+
+IF YOU HAVE A SYSTEM RESERVED PARTITION THIS WILL BE THE PARTITION THAT NEEDS
+TO BE SET AS ACTIVE - NOT YOUR C DRIVE!!!
 
 
 Prepare Burp
@@ -60,7 +73,7 @@ first place, you may need to run the "Network Setup" icon on the desktop.)
 
 Look for the part in burp-server.conf that says:
 
-restore_client = <something> 
+restore_client = <something>
 
 Change it to this and save it:
 
@@ -94,7 +107,7 @@ Restoring
 ---------
 Open a command prompt and type the following
 
-B: 
+B:
 Note - Not C: - B: is the temporary drive used by "Mini Windows Xp")
 
 cd Program Files\burp\bin
@@ -124,9 +137,43 @@ NOTE - you may specify a specific backup to restore or verify using the
 
 burp -a v -C <client name> -b 3
 
-To restore, once you are happy you have the correct and valid backup, run:
+To restore the *LATEST* backup TO THE SAME DRIVE LETTERS YOU BACKED UP FROM,
+once you are happy you have the correct and a valid backup; run:
 
-burp -a r -C <client name> (with an optional '-b <number>' parameter)
+burp -a r -C <client name>
+(Use the optional '-b <number>' parameter to specify a specific backup)
+
+
+Restoring to a different drive letter
+-------------------------------------
+
+To restore the latest backup to a different drive letter from which you backed
+up from, run:
+
+burp -a r -C <client name> -r ^<original drive>: -d <destination drive>: -s 1
+
+For example:
+
+burp -a r -C <client name> -r ^A: -d  F: -s 1
+(Use the optional '-b <number>' parameter to specify a specific backup)
+
+In this example, A: drive is the original drive letter in the backup and F: is
+the drive you wish to restore these files too.
+
+This is useful when using Hiren’s as it wouldn’t let me assign a newly created
+System Reserved Partition for restore a drive letter of A: which was the
+original location of the files.
+
+You can also do the following:-
+
+burp -a r -C <client name> -r ^C: -d C: -s 1
+
+To restore only the contents from the latest backup of C: back to C: as an
+example. The ^ is required.
+
+
+Be patient
+----------
 
 Should you get a message about an unexpected command from the server and the
 backup fails pretty much immediately, make sure your hard drive is visible in
@@ -201,7 +248,7 @@ the same thing again.
 I believe it only repairs the first issue it finds each time rather than every
 issue.
 
-You should now be able to boot into your restored OS. 
+You should now be able to boot into your restored OS.
 
 
 Note from Graham - I tested using VirtualBox, and it worked fine for me.

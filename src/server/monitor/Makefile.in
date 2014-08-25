@@ -14,6 +14,7 @@ thisdir = src/server/monitor
 #
 SRCS = \
 	cstat.o \
+	lline.o \
 	json_input.o \
 	json_output.o \
 	status_client_ncurses.o \

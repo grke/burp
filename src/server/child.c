@@ -105,7 +105,6 @@ int child(struct async *as, int status_wfd,
 	int srestore=0;
 	int timer_ret=0;
 	char *incexc=NULL;
-	struct sdirs *sdirs=NULL;
 
 	status_fd=status_wfd;
 
@@ -134,10 +133,6 @@ int child(struct async *as, int status_wfd,
 		}
 	}
 
-	if(!(sdirs=sdirs_alloc())
-	  || sdirs_init(sdirs, cconf))
-		goto end;
-
 	if(as->asfd->read(as->asfd)) goto end;
 
 	ret=0;
@@ -152,8 +147,7 @@ int child(struct async *as, int status_wfd,
 			cconf, ret, timer_ret);
 
 	if(!ret)
-		ret=run_action_server(as, sdirs,
-			incexc, srestore, &timer_ret, cconf);
+		ret=run_action_server(as, incexc, srestore, &timer_ret, cconf);
 
 	if((!ret || cconf->s_script_post_run_on_fail) && cconf->s_script_post)
 		ret=run_server_script(as->asfd, "post",
@@ -163,7 +157,5 @@ int child(struct async *as, int status_wfd,
 			cconf, ret, timer_ret);
 
 end:
-	if(sdirs) lock_release(sdirs->lock);
-        sdirs_free(&sdirs);
 	return ret;
 }

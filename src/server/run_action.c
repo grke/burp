@@ -301,7 +301,7 @@ static int check_for_rubble(struct asfd *asfd, struct sdirs *sdirs,
 			sdirs, incexc, resume, cconf);
 }
 
-int run_action_server(struct async *as, struct sdirs *sdirs,
+int run_action_server_do(struct async *as, struct sdirs *sdirs,
 	const char *incexc, int srestore, int *timer_ret, struct conf *cconf)
 {
 	int ret;
@@ -379,4 +379,18 @@ int run_action_server(struct async *as, struct sdirs *sdirs,
 	}
 
 	return unknown_command(as->asfd);
+}
+
+int run_action_server(struct async *as,
+	const char *incexc, int srestore, int *timer_ret, struct conf *cconf)
+{
+	int ret=-1;
+        struct sdirs *sdirs=NULL;
+        if((sdirs=sdirs_alloc())
+          && !sdirs_init(sdirs, cconf))
+		ret=run_action_server_do(as,
+			sdirs, incexc, srestore, timer_ret, cconf);
+        if(sdirs) lock_release(sdirs->lock);
+        sdirs_free(&sdirs);
+	return ret;
 }

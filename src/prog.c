@@ -37,8 +37,6 @@ static void usage_server(void)
 	printf("\n");
 	printf(" Options:\n");
 	printf("  -a c          Run as a stand-alone champion chooser.\n");
-	printf("  -a s          Run the status monitor.\n");
-	printf("  -a S          Screen dump of the status monitor (for reporting).\n");
 	printf("  -c <path>     Path to conf file (default: %s).\n", get_conf_path());
 	printf("  -d <path>     a single client in the status monitor.\n");
 	printf("  -F            Stay in the foreground.\n");
@@ -50,11 +48,6 @@ static void usage_server(void)
 	printf("  -v            Print version and exit.\n");
 	printf("Options to use with '-a c':\n");
 	printf("  -C <client>   Run as if forked via a connection from this client.\n");
-	printf("Options to use with '-a S':\n");
-	printf("  -C <client>   Show a particular client.\n");
-	printf("  -b <number>   Show listable files in a particular backup (requires -C).\n");
-	printf("  -z <file>     Dump a particular log file in a backup (requires -C and -b).\n");
-	printf("  -d <path>     Show a particular path in a backup (requires -C and -b).\n");
 	printf("\n");
 #endif
 }
@@ -71,7 +64,12 @@ static void usage_client(void)
 	printf("                  e: estimate\n");
 	printf("                  l: list (this is the default when an action is not given)\n");
 	printf("                  L: long list\n");
+	printf("                  m: monitor interface\n");
 	printf("                  r: restore\n");
+#ifndef HAVE_WIN32
+	printf("                  s: status monitor (ncurses)\n");
+	printf("                  S: status monitor snapshot\n");
+#endif
 	printf("                  t: timed backup\n");
 	printf("                  T: check backup timer, but do not actually backup\n");
 	printf("                  v: verify\n");
@@ -88,6 +86,11 @@ static void usage_client(void)
 	printf("  -v             Print version and exit.\n");
 #ifndef HAVE_WIN32
 	printf("  -x             Do not use the Windows VSS API when restoring.\n");
+	printf("Options to use with '-a S':\n");
+	printf("  -C <client>   Show a particular client.\n");
+	printf("  -b <number>   Show listable files in a particular backup (requires -C).\n");
+	printf("  -z <file>     Dump a particular log file in a backup (requires -C and -b).\n");
+	printf("  -d <path>     Show a particular path in a backup (requires -C and -b).\n");
 #endif
 	printf("\n");
 #ifndef HAVE_WIN32
@@ -177,6 +180,8 @@ static int parse_action(enum action *act, const char *optarg)
 		*act=ACTION_DIFF;
 	else if(!strncmp(optarg, "Diff", 1))
 		*act=ACTION_DIFF_LONG;
+	else if(!strncmp(optarg, "monitor", 1))
+		*act=ACTION_MONITOR;
 	else
 	{
 		usage();
@@ -201,11 +206,6 @@ static int server_modes(enum action act, const char *sclient,
 {
 	switch(act)
 	{
-		case ACTION_STATUS:
-		case ACTION_STATUS_SNAPSHOT:
-			// We are running on the server machine, being a client
-			// of the burp server, getting status information.
-			return status_client_ncurses(act, sclient, conf);
 		case ACTION_CHAMP_CHOOSER:
 			// We are running on the server machine, wanting to
 			// be a standalone champion chooser process.
@@ -407,9 +407,7 @@ int main (int argc, char *argv[])
 		random_delay(conf->randomise);
 
 	if(conf->mode==MODE_SERVER
-	  && (act==ACTION_STATUS
-		|| act==ACTION_STATUS_SNAPSHOT
-		|| act==ACTION_CHAMP_CHOOSER))
+	  && act==ACTION_CHAMP_CHOOSER)
 	{
 		// These server modes need to run without getting the lock.
 	}
@@ -417,7 +415,10 @@ int main (int argc, char *argv[])
 	  && (act==ACTION_LIST
 		|| act==ACTION_LIST_LONG
 		|| act==ACTION_DIFF
-		|| act==ACTION_DIFF_LONG))
+		|| act==ACTION_DIFF_LONG
+		|| act==ACTION_STATUS
+		|| act==ACTION_STATUS_SNAPSHOT
+		|| act==ACTION_MONITOR))
 	{
 		// These client modes need to run without getting the lock.
 	}

@@ -18,6 +18,7 @@
 #include "glob_windows.h"
 #include "list.h"
 #include "main.h"
+#include "monitor.h"
 #include "restore.h"
 #include "xattr.h"
 

@@ -938,7 +938,6 @@ static int parse_data(struct asfd *asfd, struct cstat **clist,
 	struct cstat **sel, struct bu **selbu, uint16_t *selop,
 	enum details *details, struct lline **llines, int count)
 {
-	// Hacky to switch on whether it is using char buffering or not.
 #ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS && asfd->streamtype==ASFD_STREAM_NCURSES_STDIN)
 		return parse_stdin_data(asfd,

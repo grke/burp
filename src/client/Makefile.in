@@ -28,6 +28,7 @@ SRCS = \
 	glob_windows.c \
 	list.c \
 	main.c \
+	monitor.c \
 	restore.c \
 	xattr.c \
 

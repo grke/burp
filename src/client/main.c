@@ -326,6 +326,7 @@ static enum cliret do_client(struct conf *conf,
 //	as->settimers(0, 100);
 
 	logp("begin client\n");
+	logp("action %d\n", action);
 
 	if(!(cntr=cntr_alloc()) || cntr_init(cntr, conf->cname)) goto error;
 	conf->cntr=cntr;
@@ -390,6 +391,14 @@ static enum cliret do_client(struct conf *conf,
 				// Diff two backups that already exist.
 				if(do_diff_client(asfd, act, json, conf))
 					goto error;
+			break;
+		case ACTION_MONITOR:
+			if(do_monitor_client(asfd, conf)) goto error;
+			break;
+		case ACTION_STATUS:
+		case ACTION_STATUS_SNAPSHOT:
+			logp("Client status mode not implemented... yet.\n");
+			//if(status_client_ncurses(act, sclient, conf)) goto error;
 			break;
 		case ACTION_LIST:
 		case ACTION_LIST_LONG:

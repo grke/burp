@@ -165,7 +165,8 @@ timer_not_met:
 
 static int s_server_session_id_context=1;
 
-static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx, struct conf *conf)
+static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx,
+	enum action action, struct conf *conf)
 {
 	BIO *sbio=NULL;
 	char buf[256]="";
@@ -180,8 +181,9 @@ static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx, struct conf *conf)
 		(const uint8_t *)&s_server_session_id_context,
 		sizeof(s_server_session_id_context));
 
-	if((*rfd=init_client_socket(conf->server, conf->port))<0)
-		return -1;
+	if((*rfd=init_client_socket(conf->server,
+		action==ACTION_MONITOR?conf->status_port:conf->port))<0)
+			return -1;
 	set_peer_env_vars(*rfd);
 
 	if(!(*ssl=SSL_new(*ctx))
@@ -332,7 +334,7 @@ static enum cliret do_client(struct conf *conf,
 	conf->cntr=cntr;
 
 	if(act!=ACTION_ESTIMATE
-	  && ssl_setup(&rfd, &ssl, &ctx, conf))
+	  && ssl_setup(&rfd, &ssl, &ctx, action, conf))
 		goto could_not_connect;
 
 	if(!(as=async_alloc())

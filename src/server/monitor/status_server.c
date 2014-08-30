@@ -230,19 +230,18 @@ end:
 	return ret;
 }
 
-static int parse_data(struct asfd *asfd, struct cstat *clist)
+static int parse_data(struct asfd *asfd, struct cstat *clist, struct asfd *cfd)
 {
-	// Hacky to switch on whether it is using line buffering or not.
-	if(asfd->streamtype==ASFD_STREAM_LINEBUF)
-		return parse_client_data(asfd, clist);
+	if(asfd==cfd) return parse_client_data(asfd, clist);
 	return parse_parent_data(asfd, clist);
 }
 
-static int main_loop(struct async *as, struct conf *conf)
+int status_server(struct async *as, struct conf *conf)
 {
 	int gotdata=0;
 	struct asfd *asfd;
 	struct cstat *clist=NULL;
+	struct asfd *cfd=as->asfd; // Client.
 	while(1)
 	{
 		// Take the opportunity to get data from the disk if nothing
@@ -259,7 +258,7 @@ static int main_loop(struct async *as, struct conf *conf)
 			while(asfd->rbuf->buf)
 		{
 			gotdata=1;
-			if(parse_data(asfd, clist)
+			if(parse_data(asfd, clist, cfd)
 			  || asfd->parse_readbuf(asfd))
 				goto error;
 			iobuf_free_content(asfd->rbuf);
@@ -269,53 +268,4 @@ static int main_loop(struct async *as, struct conf *conf)
 	return 0;
 error:
 	return -1;
-}
-
-static int setup_asfd(struct async *as, const char *desc, int *fd,
-	enum asfd_streamtype asfd_streamtype, struct conf *conf)
-{
-	struct asfd *asfd=NULL;
-	if(!fd || *fd<0) return 0;
-	set_non_blocking(*fd);
-	if(!(asfd=asfd_alloc())
-	  || asfd->init(asfd, desc, as, *fd, NULL, asfd_streamtype, conf))
-		goto error;
-	*fd=-1;
-	as->asfd_add(as, asfd);
-	return 0;
-error:
-	asfd_free(&asfd);
-	return -1;
-}
-
-// Incoming status request.
-int status_server(int *cfd, int *status_rfd, struct conf *conf)
-{
-	int ret=-1;
-	struct async *as=NULL;
-
-	// Need to get status information from status_rfd.
-	// Need to read from cfd to find out what the client wants, and
-	// therefore what status to write back to cfd.
-
-	if(!(as=async_alloc())
-	  || as->init(as, 0))
-		goto end;
-	if(setup_asfd(as, "status client socket",
-		cfd, ASFD_STREAM_LINEBUF, conf))
-	{
-		close_fd(cfd);
-		goto end;
-	}
-	if(setup_asfd(as, "status server parent socket",
-		status_rfd, ASFD_STREAM_STANDARD, conf))
-	{
-		close_fd(status_rfd);
-		goto end;
-	}
-
-	ret=main_loop(as, conf);
-end:
-	async_asfd_free_all(&as);
-	return ret;
 }

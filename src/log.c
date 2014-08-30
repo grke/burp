@@ -9,6 +9,7 @@ static int do_syslog=1;
 static int do_stdout=1;
 static int do_progress_counter=1;
 static int syslog_opened=0;
+static int json=0;
 
 void init_log(char *progname)
 {
@@ -44,8 +45,19 @@ void logp(const char *fmt, ...)
 		if(do_syslog)
 			syslog(LOG_INFO, "%s", buf);
 		if(do_stdout)
-			fprintf(stdout, "%s: %s[%d] %s",
-				gettm(), prog, pid, buf);
+		{
+			if(json)
+			{
+				char *cp=NULL;
+				if((cp=strrchr(buf, '\n'))) *cp='\0';
+				// To help programs parsing the monitor output,
+				// log things with simple JSON.
+				fprintf(stdout, "{ logline: \"%s\" }\n", buf);
+			}
+			else
+				fprintf(stdout, "%s: %s[%d] %s",
+					gettm(), prog, pid, buf);
+		}
 	}
 	va_end(ap);
 }
@@ -169,4 +181,9 @@ void log_and_send_oom(struct asfd *asfd, const char *function)
         logp("%s", m);
         if(asfd && asfd->fd>0)
 		asfd->write_str(asfd, CMD_ERROR, m);
+}
+
+void log_set_json(int value)
+{
+	json=value;
 }

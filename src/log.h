@@ -15,5 +15,6 @@ extern void log_restore_settings(struct conf *cconf, int srestore);
 extern int logw(struct asfd *asfd, struct conf *conf, const char *fmt, ...);
 extern void log_and_send(struct asfd *asfd, const char *msg);
 extern void log_and_send_oom(struct asfd *asfd, const char *function);
+extern void log_set_json(int value);
 
 #endif

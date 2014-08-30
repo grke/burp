@@ -263,6 +263,8 @@ int main (int argc, char *argv[])
 	int generate_ca_only=0;
 #endif
 	int vss_restore=1;
+	// FIX THIS: Since the client can now connect to the status port,
+	// this json option is no longer needed.
 	int json=0;
 
 	init_log(argv[0]);
@@ -351,6 +353,12 @@ int main (int argc, char *argv[])
 	{
 		usage();
 		goto end;
+	}
+
+	if(act==ACTION_MONITOR)
+	{
+		// Try to output everything in JSON.
+		log_set_json(1);
 	}
 
 	if(!(conf=conf_alloc()))

@@ -1,6 +1,6 @@
 #ifndef STATUS_SERVER_H
 #define STATUS_SERVER_H
 
-extern int status_server(int *cfd, int *status_rfd, struct conf *conf);
+extern int status_server(struct async *as, struct conf *conf);
 
 #endif

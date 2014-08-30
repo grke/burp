@@ -155,8 +155,25 @@ int setup_signals(int oldmax_children, int max_children,
 	return 0;
 }
 
-static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, int status_wfd,
-	const char *conffile, int forking)
+static int setup_asfd(struct async *as, const char *desc, int *fd,
+	SSL *ssl, enum asfd_streamtype asfd_streamtype, struct conf *conf)
+{
+	struct asfd *asfd=NULL;
+	if(!fd || *fd<0) return 0;
+	set_non_blocking(*fd);
+	if(!(asfd=asfd_alloc())
+	  || asfd->init(asfd, desc, as, *fd, ssl, asfd_streamtype, conf))
+		goto error;
+	*fd=-1;
+	as->asfd_add(as, asfd);
+	return 0;
+error:
+	asfd_free(&asfd);
+	return -1;
+}
+
+static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, int is_status_server,
+	int status_wfd, int *status_rfd, const char *conffile, int forking)
 {
 	int ret=-1;
 	int ca_ret=0;
@@ -166,7 +183,6 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, int status_wfd,
 	struct conf *cconf=NULL;
 	struct cntr *cntr=NULL;
 	struct async *as=NULL;
-	struct asfd *asfd=NULL;
 
 	if(!(conf=conf_alloc())
 	  || !(cconf=conf_alloc()))
@@ -208,19 +224,17 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, int status_wfd,
 		goto end;
 	}
 	if(!(as=async_alloc())
-	  || !(asfd=asfd_alloc())
 	  || as->init(as, 0)
-	  || asfd->init(asfd, "main socket", as, *cfd, ssl,
-		ASFD_STREAM_STANDARD, conf))
+	  || setup_asfd(as, "main socket",
+		cfd, ssl, ASFD_STREAM_STANDARD, conf))
 			goto end;
-	as->asfd_add(as, asfd);
 
-	if(authorise_server(asfd, conf, cconf)
+	if(authorise_server(as->asfd, conf, cconf)
 	  || !cconf->cname || !*(cconf->cname))
 	{
 		// Add an annoying delay in case they are tempted to
 		// try repeatedly.
-		log_and_send(asfd, "unable to authorise on server");
+		log_and_send(as->asfd, "unable to authorise on server");
 		sleep(1);
 		goto end;
 	}
@@ -234,7 +248,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, int status_wfd,
 
 	/* At this point, the client might want to get a new certificate
 	   signed. Clients on 1.3.2 or newer can do this. */
-	if((ca_ret=ca_server_maybe_sign_client_cert(asfd, conf, cconf))<0)
+	if((ca_ret=ca_server_maybe_sign_client_cert(as->asfd, conf, cconf))<0)
 	{
 		logp("Error signing client certificate request for %s\n",
 			cconf->cname);
@@ -255,44 +269,22 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, int status_wfd,
 	/* Now it is time to check the certificate. */ 
 	if(ssl_check_cert(ssl, cconf))
 	{
-		log_and_send(asfd, "check cert failed on server");
+		log_and_send(as->asfd, "check cert failed on server");
 		goto end;
 	}
 
-	set_non_blocking(*cfd);
+	if(is_status_server && setup_asfd(as, "status server parent socket",
+		status_rfd, ssl, ASFD_STREAM_STANDARD, cconf))
+			goto end;
 
-	ret=child(as, status_wfd, conf, cconf);
+	ret=child(as, is_status_server, status_wfd, conf, cconf);
 end:
 	*cfd=-1;
-	async_free(&as);
-	asfd_free(&asfd); // This closes cfd for us.
+	async_asfd_free_all(&as); // This closes cfd for us.
 	logp("exit child\n");
 	if(cntr) cntr_free(&cntr);
 	if(conf) conf_free(conf);
 	if(cconf) conf_free(cconf);
-	return ret;
-}
-
-static int run_status_server(int *rfd, int *cfd,
-		int *status_rfd, const char *conffile)
-{
-	int ret=-1;
-	struct conf *conf=NULL;
-
-	close_fd(rfd);
-
-	// Reload global config, in case things have changed. This means that
-	// the server does not need to be restarted for most conf changes.
-	if(!(conf=conf_alloc())) goto end;
-	conf_init(conf);
-	if(conf_load(conffile, conf, 1)) goto end;
-
-	ret=status_server(cfd, status_rfd, conf);
-
-	close_fd(cfd);
-end:
-	logp("exit status server\n");
-	conf_free(conf);
 	return ret;
 }
 
@@ -319,13 +311,8 @@ static int process_incoming_client(int *rfd, SSL_CTX *ctx,
 	chld_check_for_exiting();
 
 	if(!conf->forking)
-	{
-		if(is_status_server)
-			return run_status_server(rfd, &cfd, NULL, conffile);
-		else
-			return run_child(rfd, &cfd, ctx, -1, conffile,
-				conf->forking);
-	}
+		return run_child(rfd, &cfd, ctx, is_status_server,
+			-1, NULL, conffile, conf->forking);
 
 	if(chld_add_incoming(conf, is_status_server))
 	{
@@ -366,12 +353,9 @@ static int process_incoming_client(int *rfd, SSL_CTX *ctx,
 
 			set_blocking(pipe_rfd[1]);
 
-			if(is_status_server)
-				ret=run_status_server(rfd, &cfd, &(pipe_wfd[0]),
-						conffile);
-			else
-				ret=run_child(rfd, &cfd, ctx, pipe_rfd[1],
-						conffile, conf->forking);
+			ret=run_child(rfd, &cfd, ctx, is_status_server,
+				pipe_rfd[1], &(pipe_wfd[0]),
+				conffile, conf->forking);
 
 			close(pipe_rfd[1]);
 			close(pipe_wfd[0]);

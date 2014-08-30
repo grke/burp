@@ -98,15 +98,17 @@ end:
 	return ret;
 }
 
-int child(struct async *as, int status_wfd,
-	struct conf *conf, struct conf *cconf)
+int child(struct async *as, int is_status_server,
+	int status_wfd, struct conf *conf, struct conf *cconf)
 {
 	int ret=-1;
 	int srestore=0;
 	int timer_ret=0;
 	char *incexc=NULL;
 
-	status_fd=status_wfd;
+	// If we are not a status server, we are a normal child - set up the
+	// parent socket to write status to.
+	if(!is_status_server) status_fd=status_wfd;
 
 	/* Has to be before the chuser/chgrp stuff to allow clients to switch
 	   to different clients when both clients have different user/group
@@ -134,6 +136,12 @@ int child(struct async *as, int status_wfd,
 	}
 
 	if(as->asfd->read(as->asfd)) goto end;
+
+	if(is_status_server)
+	{
+		ret=status_server(as, cconf);
+		goto end;
+	}
 
 	ret=0;
 

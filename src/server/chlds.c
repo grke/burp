@@ -59,7 +59,8 @@ void chld_check_for_exiting(void)
 	}
 }
 
-int chld_setup(int oldmax_children, int max_children, int oldmax_status_children, int max_status_children)
+int chld_setup(int oldmax_children, int max_children,
+	int oldmax_status_children, int max_status_children)
 {
 	int p=0;
 	int total_max_children=max_children+max_status_children;

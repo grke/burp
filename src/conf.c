@@ -1074,6 +1074,8 @@ static int client_conf_checks(struct conf *c, const char *path, int *r)
 	}
 	if(!c->server)
 		conf_problem(path, "server unset", r);
+	if(!c->status_port) // carry on if not set.
+		logp("%s: status_port unset\n", path);
 	if(!c->ssl_cert)
 		conf_problem(path, "ssl_cert unset", r);
 	if(!c->ssl_cert_ca)
@@ -1485,6 +1487,9 @@ int conf_set_client_global(struct conf *c, struct conf *cc)
 	cc->s_script_post_notify=c->s_script_post_notify;
 	cc->s_script_notify=c->s_script_notify;
 	cc->directory_tree=c->directory_tree;
+	// clientconfdir needed to make the status monitor stuff work.
+	if(set_global_str(&(cc->clientconfdir), c->clientconfdir))
+		return -1;
 	if(set_global_str(&(cc->directory), c->directory))
 		return -1;
 	if(set_global_str(&(cc->timestamp_format), c->timestamp_format))

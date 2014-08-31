@@ -1,3 +1,8 @@
+2014-08-31 Changes in burp-1.4.22:
+  * Fix for xattrs with zero length values.
+  * Fix for restore bug when a file cannot be opened.
+  * Tweak to compile with burp-2 cross-tools/depkgs.
+
 2014-07-26 Changes in burp-2.0.8:
   * There are many changes since the last burp-2 release, including:
     - Ability to configure the server listening addresses at run time.

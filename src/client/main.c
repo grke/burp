@@ -1,6 +1,8 @@
 #include "include.h"
 
 #include "burp2/restore.h"
+// FIX THIS: status stuff that the client uses should be in the client dirs.
+#include "../server/monitor/status_client.h"
 
 #ifndef HAVE_WIN32
 #include <sys/utsname.h>
@@ -400,7 +402,8 @@ static enum cliret do_client(struct conf *conf,
 		case ACTION_STATUS:
 		case ACTION_STATUS_SNAPSHOT:
 			logp("Client status mode not implemented... yet.\n");
-			//if(status_client_ncurses(act, sclient, conf)) goto error;
+			if(status_client_ncurses(act, conf))
+				goto error;
 			break;
 		case ACTION_LIST:
 		case ACTION_LIST_LONG:

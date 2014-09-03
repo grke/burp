@@ -190,17 +190,17 @@ static int parse_action(enum action *act, const char *optarg)
 	return 0;
 }
 
-static int run_champ_chooser(const char *sclient, struct conf *conf)
+static int run_champ_chooser(struct conf *conf)
 {
-	if(sclient && *sclient)
-		return champ_chooser_server_standalone(sclient, conf);
+	if(conf->orig_client && *(conf->orig_client))
+		return champ_chooser_server_standalone(conf);
 	logp("No client name given for standalone champion chooser process.\n");
 	logp("Try using the '-C' option.\n");
 	return 1;
 }
 
 #ifndef HAVE_WIN32
-static int server_modes(enum action act, const char *sclient,
+static int server_modes(enum action act,
 	const char *conffile, struct lock *lock, int generate_ca_only,
 	struct conf *conf)
 {
@@ -209,7 +209,7 @@ static int server_modes(enum action act, const char *sclient,
 		case ACTION_CHAMP_CHOOSER:
 			// We are running on the server machine, wanting to
 			// be a standalone champion chooser process.
-			return run_champ_chooser(sclient, conf);
+			return run_champ_chooser(conf);
 		default:
 			return server(conf, conffile, lock, generate_ca_only);
 	}
@@ -259,7 +259,6 @@ int main (int argc, char *argv[])
 	// The orig_client is the original client that the normal client
 	// would like to restore from.
 #ifndef HAVE_WIN32
-	const char *sclient=NULL; // Status monitor client to view.
 	int generate_ca_only=0;
 #endif
 	int vss_restore=1;
@@ -291,9 +290,6 @@ int main (int argc, char *argv[])
 				break;
 			case 'C':
 				orig_client=optarg;
-#ifndef HAVE_WIN32
-				sclient=optarg;
-#endif
 				break;
 			case 'd':
 				restoreprefix=optarg; // for restores
@@ -475,7 +471,7 @@ int main (int argc, char *argv[])
 		logp("Sorry, server mode is not implemented for Windows.\n");
 #else
 		ret=server_modes(act,
-			sclient, conffile, lock, generate_ca_only, conf);
+			conffile, lock, generate_ca_only, conf);
 #endif
 	}
 	else

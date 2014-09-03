@@ -946,7 +946,7 @@ static int parse_data(struct asfd *asfd, struct cstat **clist,
 	return json_input(asfd, clist, selbu, llines);
 }
 
-static int main_loop(struct async *as, const char *sclient, struct conf *conf)
+static int main_loop(struct async *as, struct conf *conf)
 {
 	int ret=-1;
 	char *client=NULL;
@@ -961,9 +961,9 @@ static int main_loop(struct async *as, const char *sclient, struct conf *conf)
 	uint16_t selop=0;
 	struct lline *llines=NULL;
 
-	if(sclient && !client)
+	if(conf->orig_client && !client)
 	{
-		client=strdup_w(sclient, __func__);
+		client=strdup_w(conf->orig_client, __func__);
 		details=DETAILS_BACKUP_LIST;
 	}
 
@@ -1036,8 +1036,7 @@ static void ncurses_init(void)
 }
 #endif
 
-int status_client_ncurses(enum action act, const char *sclient,
-	struct conf *conf)
+int status_client_ncurses(enum action act, struct conf *conf)
 {
 	int fd=0;
         int ret=-1;
@@ -1054,6 +1053,9 @@ int status_client_ncurses(enum action act, const char *sclient,
 #endif
 
 	setup_signals();
+
+	// FIX THIS: Need to fork a child burp client process and read/write
+	// from/to its stdout/stdin, instead of connecting to a socket.
 
 	// NULL == ::1 or 127.0.0.1.
 	if((fd=init_client_socket(NULL, conf->status_port))<0)
@@ -1080,7 +1082,7 @@ int status_client_ncurses(enum action act, const char *sclient,
 		goto end;
 	set_logfp_direct(lfp);
 
-	ret=main_loop(as, sclient, conf);
+	ret=main_loop(as, conf);
 end:
 #ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS) endwin();

@@ -13,7 +13,8 @@
 #define BU_LOG_RESTORE	0x0080
 #define BU_LOG_VERIFY	0x0100
 
-// Representing backup directories for a client.
+// Representing backup directories on the server for a client.
+// Needed on the client side too, as the status monitor stuff uses it.
 
 struct bu
 {
@@ -37,11 +38,9 @@ struct bu
 	struct bu *prev;
 };
 
+extern int bu_init(struct bu *bu, char *fullpath, char *basename,
+	char *timestampstr, uint16_t flags);
 extern void bu_list_free(struct bu **bu_list);
-extern int bu_list_get(struct sdirs *sdirs, struct bu **bu_list);
-extern int bu_list_get_with_working(struct sdirs *sdirs, struct bu **bu_list);
-extern int bu_current_get(struct sdirs *sdirs, struct bu **bu_list);
-
 extern struct bu *bu_alloc(void);
 extern void bu_free(struct bu **bu);
 

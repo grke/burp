@@ -295,7 +295,7 @@ static int reload_from_clientdir(struct cstat **clist, struct conf *conf)
 
 printf("reload from clientdir\n");
 		bu_list_free(&c->bu);
-		if(bu_current_get(c->sdirs, &c->bu))
+		if(bu_get_current(c->sdirs, &c->bu))
 			goto error;
 	}
 	return 0;
@@ -317,7 +317,7 @@ int cstat_set_backup_list(struct cstat *cstat)
 	// Free any previous list.
 	bu_list_free(&cstat->bu);
 
-	if(bu_list_get_with_working(cstat->sdirs, &bu))
+	if(bu_get_list_with_working(cstat->sdirs, &bu))
 	{
 		//logp("error when looking up current backups\n");
 		return 0;

@@ -7,7 +7,7 @@
 #include "autoupgrade.h"
 #include "backup.h"
 #include "backup_phase1.h"
-#include "bu.h"
+#include "bu_get.h"
 #include "ca.h"
 #include "child.h"
 #include "chlds.h"

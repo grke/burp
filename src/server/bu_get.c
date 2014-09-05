@@ -4,52 +4,6 @@
 #include <netdb.h>
 #include <dirent.h>
 
-struct bu *bu_alloc(void)
-{
-	return (struct bu *)calloc_w(1, sizeof(struct bu), __func__);
-}
-
-static int bu_init(struct bu *bu, char *fullpath, char *basename,
-	char *timestampstr, uint16_t flags)
-{
-	if(!(bu->data=prepend_s(fullpath, "data"))
-	  || !(bu->delta=prepend_s(fullpath, "deltas.reverse")))
-		goto error;
-	bu->path=fullpath;
-	bu->basename=basename;
-	bu->timestamp=timestampstr;
-	bu->flags=flags;
-	bu->bno=strtoul(timestampstr, NULL, 10);
-	return 0;
-error:
-	free_w(&bu->data);
-	free_w(&bu->delta);
-	return -1;
-}
-
-void bu_free(struct bu **bu)
-{
-	if(!bu || !*bu) return;
-	free_w(&((*bu)->path));
-	free_w(&((*bu)->basename));
-	free_w(&((*bu)->data));
-	free_w(&((*bu)->delta));
-	free_w(&((*bu)->timestamp));
-	*bu=NULL;
-}
-
-void bu_list_free(struct bu **bu_list)
-{
-	struct bu *bu;
-	struct bu *next;
-	for(bu=*bu_list; bu; bu=next)
-	{
-		next=bu->next;
-		bu_free(&bu);
-	}
-	*bu_list=NULL;
-}
-
 static int get_link(const char *dir, const char *lnk, char real[], size_t r)
 {
 	ssize_t len=0;
@@ -185,7 +139,7 @@ static int rev_alphasort(const struct dirent **a, const struct dirent **b)
 	return 0;
 }
 
-static int do_bu_list_get(struct sdirs *sdirs,
+static int do_bu_get_list(struct sdirs *sdirs,
 	struct bu **bu_list, int include_working)
 {
 	int i=0;
@@ -245,17 +199,17 @@ end:
 	return ret;
 }
 
-int bu_list_get(struct sdirs *sdirs, struct bu **bu_list)
+int bu_get_list(struct sdirs *sdirs, struct bu **bu_list)
 {
-	return do_bu_list_get(sdirs, bu_list, 0);
+	return do_bu_get_list(sdirs, bu_list, 0);
 }
 
-int bu_list_get_with_working(struct sdirs *sdirs, struct bu **bu_list)
+int bu_get_list_with_working(struct sdirs *sdirs, struct bu **bu_list)
 {
-	return do_bu_list_get(sdirs, bu_list, 1);
+	return do_bu_get_list(sdirs, bu_list, 1);
 }
 
-int bu_current_get(struct sdirs *sdirs, struct bu **bu_list)
+int bu_get_current(struct sdirs *sdirs, struct bu **bu_list)
 {
 	char real[32]="";
 	// FIX THIS: should not need to specify "current".

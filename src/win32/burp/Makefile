@@ -34,6 +34,7 @@ CLIENT_OBJS = \
 	$(OBJDIR)/base64.o \
 	$(OBJDIR)/berrno.o \
 	$(OBJDIR)/bfile.o \
+	$(OBJDIR)/bu.o \
 	$(OBJDIR)/burp1/handy.o \
 	$(OBJDIR)/burp1/msg.o \
 	$(OBJDIR)/burp1/rs_buf.o \

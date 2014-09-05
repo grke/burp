@@ -70,7 +70,7 @@ int do_diff_server(struct asfd *asfd, struct sdirs *sdirs, struct conf *conf,
 
 	printf("in do_diff_server\n");
 
-	if(bu_list_get(sdirs, &bu_list)
+	if(bu_get_list(sdirs, &bu_list)
 	  || write_status(STATUS_LISTING, NULL, conf))
 		goto end;
 

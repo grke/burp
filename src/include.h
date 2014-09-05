@@ -8,6 +8,7 @@
 #include "base64.h"
 #include "berrno.h"
 #include "bfile.h"
+#include "bu.h"
 #include "burp.h"
 #include "burpconfig.h"
 #include "cmd.h"

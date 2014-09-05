@@ -1,11 +1,11 @@
 #include "include.h"
 #include "champ_chooser/hash.h"
 #include "../../burp2/slist.h"
-#include "../../server/bu.h"
+//#include "../../bu.h"
 #include "../../server/burp1/restore.h"
-#include "../../server/manio.h"
-#include "../../server/monitor/status_client.h"
-#include "../../server/sdirs.h"
+#include "../manio.h"
+#include "../monitor/status_client.h"
+#include "../sdirs.h"
 
 static int restore_sbuf(struct asfd *asfd, struct sbuf *sb, enum action act,
 	enum cstat_status status, struct conf *conf, int *need_data)

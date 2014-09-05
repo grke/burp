@@ -15,7 +15,7 @@ thisdir = src/server
 SRCS = \
 	auth.c \
 	autoupgrade.c \
-	bu.c \
+	bu_get.c \
 	backup.c \
 	backup_phase1.c \
 	compress.c \

@@ -14,6 +14,7 @@
 #include "cmd.h"
 #include "cntr.h"
 #include "conf.h"
+#include "cstat.h"
 #include "forkchild.h"
 #include "fsops.h"
 #include "handy.h"

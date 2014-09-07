@@ -30,6 +30,7 @@ SRCS = \
 		cmd.c \
 		cntr.c \
 		conf.c \
+		cstat.c \
 		forkchild.c \
 		fsops.c \
 		handy.c \

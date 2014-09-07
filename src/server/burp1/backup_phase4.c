@@ -1,5 +1,4 @@
 #include "include.h"
-#include "../../server/monitor/status_client.h"
 
 #include <netdb.h>
 #include <librsync.h>

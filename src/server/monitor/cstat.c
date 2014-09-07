@@ -2,10 +2,11 @@
 
 #include <dirent.h>
 
-static int set_cstat_from_conf(struct cstat *c, struct conf *cconf)
+static int set_cstat_from_conf(struct cstat *cstat, struct conf *cconf)
 {
-	sdirs_free_content((struct sdirs *)c->sdirs);
-	if(sdirs_init((struct sdirs *)c->sdirs, cconf)) return -1;
+	sdirs_free((struct sdirs **)&cstat->sdirs);
+	if(!(cstat->sdirs=sdirs_alloc())
+	  || sdirs_init((struct sdirs *)cstat->sdirs, cconf)) return -1;
 	return 0;
 }
 
@@ -52,6 +53,12 @@ end:
 	return ret;
 }
 
+static void cstat_free_w(struct cstat **cstat)
+{
+	sdirs_free((struct sdirs **)(*cstat)->sdirs);
+	cstat_free(cstat);
+}
+
 static void cstat_remove(struct cstat **clist, struct cstat **cstat)
 {
 	struct cstat *c;
@@ -60,7 +67,7 @@ static void cstat_remove(struct cstat **clist, struct cstat **cstat)
 	if(*clist==*cstat)
 	{
 		*clist=(*cstat)->next;
-		cstat_free(cstat);
+		cstat_free_w(cstat);
 		*cstat=*clist;
 		return;
 	}
@@ -73,7 +80,7 @@ static void cstat_remove(struct cstat **clist, struct cstat **cstat)
 		}
 		c->next=(*cstat)->next;
 		c->prev=clast;
-		cstat_free(cstat);
+		cstat_free_w(cstat);
 		*cstat=*clist;
 
 		return;

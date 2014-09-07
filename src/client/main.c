@@ -1,8 +1,8 @@
 #include "include.h"
 
+#include "monitor/status_client_ncurses.h"
+
 #include "burp2/restore.h"
-// FIX THIS: status stuff that the client uses should be in the client dirs.
-#include "../server/monitor/status_client.h"
 
 #ifndef HAVE_WIN32
 #include <sys/utsname.h>

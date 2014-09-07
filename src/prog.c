@@ -3,7 +3,6 @@
 #include "server/main.h"
 #include "server/burp1/bedup.h"
 #include "server/burp2/champ_chooser/champ_server.h"
-#include "server/monitor/status_client.h"
 
 static char *get_conf_path(void)
 {

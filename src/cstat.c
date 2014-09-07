@@ -9,8 +9,7 @@ int cstat_init(struct cstat *cstat,
 	const char *name, const char *clientconfdir)
 {
 	if((clientconfdir && !(cstat->conffile=prepend_s(clientconfdir, name)))
-	  || !(cstat->name=strdup_w(name, __func__))
-	  || !(cstat->sdirs=sdirs_alloc()))
+	  || !(cstat->name=strdup_w(name, __func__)))
 		return -1;
 	return 0;
 }
@@ -22,7 +21,7 @@ static void cstat_free_content(struct cstat *c)
 	free_w(&c->name);
 	free_w(&c->conffile);
 	free_w(&c->running_detail);
-	sdirs_free_content((struct sdirs *)c->sdirs);
+	if(c->sdirs) logp("%s() called without freeing sdirs\n");
 	c->clientdir_mtime=0;
 	c->lockfile_mtime=0;
 }

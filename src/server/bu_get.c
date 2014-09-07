@@ -1,5 +1,4 @@
 #include "include.h"
-#include "monitor/status_client.h"
 
 #include <netdb.h>
 #include <dirent.h>

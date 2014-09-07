@@ -1,5 +1,4 @@
 #include "include.h"
-#include "monitor/status_client.h"
 
 // Want to make sure that we are listening for reads too - this will let us
 // exit promptly if the client was killed.

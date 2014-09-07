@@ -1,5 +1,4 @@
 #include "include.h"
-#include "../../server/monitor/status_client.h"
 
 // Combine the phase1 and phase2 files into a new manifest.
 int backup_phase3_server_burp1(struct sdirs *sdirs,

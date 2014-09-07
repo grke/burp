@@ -9,21 +9,21 @@ basedir = ..
 # top dir
 topdir = ../../..
 # this dir relative to top dir
-thisdir = src/server/monitor
+thisdir = src/client/monitor
 
 #
 SRCS = \
-	cstat.o \
-	json_output.o \
-	status_server.o \
+	lline.o \
+	json_input.o \
+	status_client_ncurses.o \
 
 OBJS = $(SRCS:.c=.o)
 
-all: Makefile server_monitor.a
-	@echo "==== Make of server_monitor.a is good ===="
+all: Makefile client_monitor.a
+	@echo "==== Make of client_monitor.a is good ===="
 	@echo " "
 
-server_monitor.a: $(OBJS)
+client_monitor.a: $(OBJS)
 	@echo "Making $@ ..."
 	$(AR) rc  $@ $(OBJS)
 	$(RANLIB) $@

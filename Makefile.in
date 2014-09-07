@@ -21,6 +21,7 @@ bin_subdirs = \
 		src/client \
 		src/client/burp1 \
 		src/client/burp2 \
+		src/client/monitor \
 		src/server \
 		src/server/burp1 \
 		src/server/burp2 \

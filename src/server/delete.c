@@ -1,5 +1,4 @@
 #include "include.h"
-#include "monitor/status_client.h"
 
 static int do_rename_w(const char *a, const char *b)
 {

@@ -1583,6 +1583,7 @@ AC_OUTPUT([autoconf/Make.common \
 	   src/client/Makefile \
 	   src/client/burp1/Makefile \
 	   src/client/burp2/Makefile \
+	   src/client/monitor/Makefile \
 	   src/server/Makefile \
 	   src/server/burp1/Makefile \
 	   src/server/burp2/Makefile \

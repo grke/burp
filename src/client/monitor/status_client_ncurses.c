@@ -649,7 +649,7 @@ static int request_status(struct asfd *asfd, enum details details,
 	switch(details)
 	{
 		case DETAILS_CLIENT_LIST:
-			snprintf(buf, sizeof(buf), "\n");
+			snprintf(buf, sizeof(buf), "c\n");
 			break;
 		case DETAILS_BACKUP_LIST:
 			snprintf(buf, sizeof(buf), "c:%s\n", client);
@@ -1036,10 +1036,28 @@ static void ncurses_init(void)
 }
 #endif
 
+static pid_t fork_monitor(int *csin, int *csout, struct conf *conf)
+{
+	int a=0;
+	char *args[12];
+
+	// FIX THIS: get all args from configuration.
+	args[a++]=(char *)"/usr/sbin/burp";
+	args[a++]=(char *)"-c";
+	args[a++]=conf->conffile;
+	args[a++]=(char *)"-a";
+	args[a++]=(char *)"m";
+	args[a++]=NULL;
+
+	return forkchild_fd(csin, csout, NULL, args[0], args);
+}
+
 int status_client_ncurses(enum action act, struct conf *conf)
 {
-	int fd=0;
+	int csin=-1;
+	int csout=-1;
         int ret=-1;
+	pid_t childpid=-1;
 	struct async *as=NULL;
 
 #ifdef HAVE_NCURSES_H
@@ -1048,24 +1066,26 @@ int status_client_ncurses(enum action act, struct conf *conf)
 	if(act==ACTION_STATUS)
 	{
 		printf("To use the live status monitor, you need to recompile with ncurses support.\n");
-		return -1;
+		goto end;
 	}
 #endif
 
 	setup_signals();
 
-	// FIX THIS: Need to fork a child burp client process and read/write
-	// from/to its stdout/stdin, instead of connecting to a socket.
-
-	// NULL == ::1 or 127.0.0.1.
-	if((fd=init_client_socket(NULL, conf->status_port))<0)
-		return -1;
-	set_non_blocking(fd);
+	// Fork a burp child process that will contact the server over SSL.
+	// We will read and write from and to its stdout and stdin.
+	if((childpid=fork_monitor(&csin, &csout, conf))<0)
+		goto end;
+printf("childpid: %d\n", childpid);
+	set_non_blocking(csin);
+	set_non_blocking(csout);
 
 	if(!(as=async_alloc())
 	  || as->init(as, 0)
-	  || setup_asfd(as, "status socket",
-		&fd, ASFD_STREAM_LINEBUF, conf))
+	  || setup_asfd(as, "monitor stdin", // Write to this.
+		&csin, ASFD_STREAM_LINEBUF, conf)
+	  || setup_asfd(as, "monitor stdout", // Read from this.
+		&csout, ASFD_STREAM_LINEBUF, conf))
 			goto end;
 #ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS)
@@ -1089,6 +1109,7 @@ end:
 #endif
 	close_fp(&lfp);
 	async_asfd_free_all(&as);
-	close_fd(&fd);
+	close_fd(&csin);
+	close_fd(&csout);
 	return ret;
 }

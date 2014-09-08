@@ -71,6 +71,7 @@ int do_monitor_client(struct asfd *asfd, struct conf *conf)
 	struct async *as=asfd->as;
 	int stdinfd=fileno(stdin);
 logp("in monitor\n");
+	setbuf(stdout, NULL);
 	if(setup_asfd(as, "stdin", &stdinfd, ASFD_STREAM_LINEBUF, conf))
 		goto end;
 	ret=main_loop(as, conf);

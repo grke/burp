@@ -52,7 +52,7 @@ void logp(const char *fmt, ...)
 				if((cp=strrchr(buf, '\n'))) *cp='\0';
 				// To help programs parsing the monitor output,
 				// log things with simple JSON.
-				fprintf(stdout, "{ logline: \"%s\" }\n", buf);
+				fprintf(stdout, "{ \"logline\": \"%s\" }\n", buf);
 			}
 			else
 				fprintf(stdout, "%s: %s[%d] %s",

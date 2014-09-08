@@ -3,6 +3,8 @@
 
 extern pid_t forkchild(FILE **sin, FILE **sout, FILE **serr,
 	const char *path, char * const argv[]);
+extern pid_t forkchild_fd(int *sin, int *sout, int *serr,
+        const char *path, char * const argv[]);
 extern pid_t forkchild_no_wait(FILE **sin, FILE **sout, FILE **serr,
 	const char *path, char * const argv[]);
 

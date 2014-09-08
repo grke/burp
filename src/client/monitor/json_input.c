@@ -104,6 +104,10 @@ static int input_string(void *ctx, const unsigned char *val, size_t len)
 	{
 		goto end;
 	}
+	else if(!strcmp(lastkey, "logline"))
+	{
+		goto end;
+	}
 	else if(!strcmp(lastkey, "backup")
 	  || !strcmp(lastkey, "restore")
 	  || !strcmp(lastkey, "verify"))

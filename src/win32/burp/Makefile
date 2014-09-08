@@ -66,6 +66,7 @@ CLIENT_OBJS = \
 	$(OBJDIR)/client/glob_windows.o \
 	$(OBJDIR)/client/list.o \
 	$(OBJDIR)/client/main.o \
+	$(OBJDIR)/client/monitor.o \
 	$(OBJDIR)/client/restore.o \
 	$(OBJDIR)/client/xattr.o \
 	$(OBJDIR)/cmd.o \

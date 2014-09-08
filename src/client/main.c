@@ -332,6 +332,19 @@ static enum cliret do_client(struct conf *conf,
 	logp("begin client\n");
 	logp("action %d\n", action);
 
+	// Status monitor forks a child process instead of connecting to
+	// the server directly.
+	if(action==ACTION_STATUS
+	  || action==ACTION_STATUS_SNAPSHOT)
+	{
+#ifdef HAVE_WIN32
+		logp("Status mode not implemented on Windows.\n");
+		goto error;
+#endif
+		if(status_client_ncurses(act, conf)) ret=CLIENT_ERROR;
+		goto end;
+	}
+
 	if(!(cntr=cntr_alloc()) || cntr_init(cntr, conf->cname)) goto error;
 	conf->cntr=cntr;
 
@@ -398,12 +411,6 @@ static enum cliret do_client(struct conf *conf,
 			break;
 		case ACTION_MONITOR:
 			if(do_monitor_client(asfd, conf)) goto error;
-			break;
-		case ACTION_STATUS:
-		case ACTION_STATUS_SNAPSHOT:
-			logp("Client status mode not implemented... yet.\n");
-			if(status_client_ncurses(act, conf))
-				goto error;
 			break;
 		case ACTION_LIST:
 		case ACTION_LIST_LONG:

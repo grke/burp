@@ -13,6 +13,7 @@ thisdir = src/server/monitor
 
 #
 SRCS = \
+	browse.o \
 	cstat.o \
 	json_output.o \
 	status_server.o \

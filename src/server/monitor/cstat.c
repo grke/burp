@@ -4,6 +4,7 @@
 
 static int set_cstat_from_conf(struct cstat *cstat, struct conf *cconf)
 {
+	cstat->protocol=cconf->protocol;
 	sdirs_free((struct sdirs **)&cstat->sdirs);
 	if(!(cstat->sdirs=sdirs_alloc())
 	  || sdirs_init((struct sdirs *)cstat->sdirs, cconf)) return -1;

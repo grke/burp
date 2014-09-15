@@ -51,6 +51,7 @@ struct cstat
 	time_t lockfile_mtime;
 
 	struct bu *bu; // Backup list.
+	enum protocol protocol;
 
 	struct cstat *prev;
 	struct cstat *next;

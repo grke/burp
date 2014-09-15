@@ -221,7 +221,7 @@ end:
 }
 
 int json_send(struct asfd *asfd, struct cstat *clist, struct cstat *cstat,
-	struct bu *bu, const char *logfile)
+	struct bu *bu, const char *logfile, const char *browse)
 {
 	int ret=-1;
 	struct cstat *c;
@@ -230,8 +230,13 @@ int json_send(struct asfd *asfd, struct cstat *clist, struct cstat *cstat,
 
 	if(cstat && bu)
 	{
+		if(browse)
+		{
+			if(browse_manifest(asfd, cstat, bu, browse))
+				goto end;
+		}
 		if(json_send_client_backup(asfd, cstat, bu, logfile))
-			return -1;
+			goto end;
 	}
 	else if(cstat)
 	{
@@ -240,7 +245,7 @@ int json_send(struct asfd *asfd, struct cstat *clist, struct cstat *cstat,
 	else for(c=clist; c; c=c->next)
 	{
 		if(json_send_client_backup(asfd, c, c->bu, NULL))
-			return -1;
+			goto end;
 	}
 
 	ret=0;

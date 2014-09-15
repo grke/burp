@@ -40,6 +40,7 @@ struct sbuf
 };
 
 extern struct sbuf *sbuf_alloc(struct conf *conf);
+extern struct sbuf *sbuf_alloc_protocol(enum protocol protocol);
 extern void sbuf_free_content(struct sbuf *sb);
 extern void sbuf_free(struct sbuf **sb);
 

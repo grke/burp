@@ -4,7 +4,7 @@
 static int alloc_count=0;
 static int free_count=0;
 
-struct sbuf *sbuf_alloc(struct conf *conf)
+struct sbuf *sbuf_alloc_protocol(enum protocol protocol)
 {
 	struct sbuf *sb;
 	if(!(sb=(struct sbuf *)calloc_w(1, sizeof(struct sbuf), __func__)))
@@ -12,7 +12,7 @@ struct sbuf *sbuf_alloc(struct conf *conf)
 	sb->path.cmd=CMD_ERROR;
 	sb->attr.cmd=CMD_ATTRIBS;
 	sb->compression=-1;
-	if(conf->protocol==PROTO_BURP1)
+	if(protocol==PROTO_BURP1)
 	{
 		if(!(sb->burp1=sbuf_burp1_alloc())) return NULL;
 	}
@@ -22,6 +22,11 @@ struct sbuf *sbuf_alloc(struct conf *conf)
 	}
 alloc_count++;
 	return sb;
+}
+
+struct sbuf *sbuf_alloc(struct conf *conf)
+{
+	return sbuf_alloc_protocol(conf->protocol);
 }
 
 void sbuf_free_content(struct sbuf *sb)
@@ -295,7 +300,7 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 				return 0;
 			case CMD_WARNING:
 				logp("WARNING: %s\n", rbuf->buf);
-				cntr_add(conf->cntr, CMD_WARNING, 1);
+				if(conf) cntr_add(conf->cntr, CMD_WARNING, 1);
 				break;
 			case CMD_GEN:
 				if(!strcmp(rbuf->buf, "restoreend")
@@ -328,7 +333,7 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 			// in burp-1, but not burp-2.
 			case CMD_DATAPTH:
 			case CMD_END_FILE:
-				if(conf->protocol==PROTO_BURP1) continue;
+				if(sb->burp1) continue;
 			default:
 				iobuf_log_unexpected(rbuf, __func__);
 				goto end;

@@ -80,56 +80,77 @@ end:
 	return ret;
 }
 
-/*
-static int browse_manifest(struct asfd *srfd, gzFile zp, const char *browse)
+static int browse_manifest(struct asfd *srfd, gzFile zp,
+	struct manio *manio, struct sbuf *sb, const char *browse)
 {
 	int ret=0;
 	int ars=0;
-	char ls[1024]="";
-	struct sbuf sb;
-	struct cntr cntr;
+	//char ls[1024]="";
+	//struct cntr cntr;
 	size_t blen=0;
-	init_sbuf(&sb);
+	char *last_bd_match=NULL;
 	if(browse) blen=strlen(browse);
 	while(1)
 	{
 		int r;
-		free_sbuf(&sb);
-		if((ars=sbuf_fill(NULL, zp, &sb, &cntr)))
+		sbuf_free_content(sb);
+		if((ars=manio_sbuf_fill(manio, NULL, sb, NULL, NULL, NULL)))
 		{
 			if(ars<0) ret=-1;
 			// ars==1 means it ended ok.
 			break;
 		}
 
-		if(sb.cmd!=CMD_DIRECTORY
-		  && sb.cmd!=CMD_FILE
-		  && sb.cmd!=CMD_ENC_FILE
-		  && sb.cmd!=CMD_EFS_FILE
-		  && sb.cmd!=CMD_SPECIAL
-		  && !cmd_is_link(sb.cmd))
+		if(sb->path.cmd!=CMD_DIRECTORY
+		  && sb->path.cmd!=CMD_FILE
+		  && sb->path.cmd!=CMD_ENC_FILE
+		  && sb->path.cmd!=CMD_EFS_FILE
+		  && sb->path.cmd!=CMD_SPECIAL
+		  && !cmd_is_link(sb->path.cmd))
 			continue;
 
-		if((r=check_browsedir(browse, &sb.path, blen))<0)
-		{
-			ret=-1;
-			break;
-		}
+		if((r=check_browsedir(browse, &(sb->path.buf),
+			blen, &last_bd_match))<0)
+				return -1;
 		if(!r) continue;
 
+/*
+		printf("%s\n", sb->path.buf);
 		ls_output(ls, sb.path, &(sb.statp));
 
 		if(send_data_to_client(srfd, ls, strlen(ls))
 		  || send_data_to_client(srfd, "\n", 1))
-		{
-			ret=-1;
-			break;
-		}
+			return -1;
+*/
 	}
-	free_sbuf(&sb);
+	free_w(&last_bd_match);
 	return ret;
 }
-*/
+
+static int browse_manifest_w(struct asfd *srfd, struct cstat *cstat,
+	struct bu *bu, const char *browse)
+{
+	int ret=-1;
+	gzFile zp=NULL;
+	char *manifest=NULL;
+	struct sbuf *sb=NULL;
+	struct manio *manio=NULL;
+
+	if(!(manifest=prepend_s(bu->path,
+		cstat->protocol==PROTO_BURP1?"manifest.gz":"manifest"))
+	  || !(manio=manio_alloc())
+	  || manio_init_read(manio, manifest)
+	  || !(sb=sbuf_alloc_protocol(cstat->protocol)))
+		goto end;
+	manio_set_protocol(manio, cstat->protocol);
+	ret=browse_manifest(srfd, zp, manio, sb, browse);
+end:
+	gzclose_fp(&zp);
+	free_w(&manifest);
+	manio_free(&manio);
+	sbuf_free(&sb);
+	return ret;
+}
 
 static char *get_str(const char **buf, const char *pre, int last)
 {
@@ -170,7 +191,7 @@ printf("got client data: '%s'\n", srfd->rbuf->buf);
 	if(browse)
 	{
 		free_w(&logfile);
-		if(!(logfile=strdup_w("manifest.gz", __func__)))
+		if(!(logfile=strdup_w("manifest", __func__)))
 			goto error;
 		strip_trailing_slashes(&browse);
 	}
@@ -205,15 +226,22 @@ printf("got client data: '%s'\n", srfd->rbuf->buf);
 	printf("backup: %s\n", backup?:"");
 	printf("logfile: %s\n", logfile?:"");
 
+	if(browse)
+	{
+		if(browse_manifest_w(srfd, cstat, bu, browse))
+			goto error;
+		goto end;
+	}
+
 	if(cstat)
 	{
 		if(!cstat->status && cstat_set_status(cstat))
-			return -1;
+			goto error;
 	}
 	else for(cstat=clist; cstat; cstat=cstat->next)
 	{
 		if(!cstat->status && cstat_set_status(cstat))
-			return -1;
+			goto error;
 	}
 
 	if(json_send(srfd, clist, cstat, bu, logfile))

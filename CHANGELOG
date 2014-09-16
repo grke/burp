@@ -1,3 +1,7 @@
+  * Make vss_strip.c include the configure output, so that vss_strip gets the
+    large file options.
+
+2014-08-31 Changes in burp-1.4.22:
   * Fix for xattrs with zero length values.
   * Fix for restore bug when a file cannot be opened.
   * Tweak to compile with burp-2 cross-tools/depkgs.

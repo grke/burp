@@ -1,8 +1,4 @@
-#include <stdio.h>
-#include <libgen.h>
-#include <errno.h>
-#include <string.h>
-#include <getopt.h>
+#include "burp.h"
 
 static const char *prog=NULL;
 

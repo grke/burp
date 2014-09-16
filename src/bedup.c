@@ -1,24 +1,14 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <dirent.h>
-#include <errno.h>
-#include <libgen.h>
-#include <unistd.h>
-#include <stdarg.h>
-#include <signal.h>
-#include <prepend.h>
-
-#include <uthash.h>
-#include <openssl/md5.h>
-
-#include "config.h"
+#include "burp.h"
 #include "version.h"
 #include "log.h"
 #include "conf.h"
 #include "lock.h"
 #include "strlist.h"
+#include "prepend.h"
+
+#include <dirent.h>
+#include <uthash.h>
+#include <openssl/md5.h>
 
 #define LOCKFILE_NAME		"lockfile"
 #define BEDUP_LOCKFILE_NAME	"lockfile.bedup"

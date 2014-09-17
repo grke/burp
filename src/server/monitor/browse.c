@@ -3,7 +3,7 @@
 static int do_browse_manifest(struct asfd *srfd, gzFile zp,
 	struct manio *manio, struct sbuf *sb, const char *browse)
 {
-	int ret=0;
+	int ret=-1;
 	int ars=0;
 	//char ls[1024]="";
 	//struct cntr cntr;
@@ -16,7 +16,7 @@ static int do_browse_manifest(struct asfd *srfd, gzFile zp,
 		sbuf_free_content(sb);
 		if((ars=manio_sbuf_fill(manio, NULL, sb, NULL, NULL, NULL)))
 		{
-			if(ars<0) ret=-1;
+			if(ars<0) goto end;
 			// ars==1 means it ended ok.
 			break;
 		}
@@ -31,18 +31,30 @@ static int do_browse_manifest(struct asfd *srfd, gzFile zp,
 
 		if((r=check_browsedir(browse, &(sb->path.buf),
 		  blen, &last_bd_match))<0)
-			return -1;
+			goto end;
 		if(!r) continue;
 
-		   printf("%s\n", sb->path.buf);
-		/*
-		   ls_output(ls, sb.path, &(sb.statp));
-
-		   if(send_data_to_client(srfd, ls, strlen(ls))
-		   || send_data_to_client(srfd, "\n", 1))
-		   return -1;
-		 */
+		if(yajl_map_open_w()
+		  || yajl_gen_str_pair_w("name", sb->path.buf)
+		  || yajl_gen_int_pair_w("dev", sb->statp.st_dev)
+		  || yajl_gen_int_pair_w("ino", sb->statp.st_ino)
+		  || yajl_gen_int_pair_w("mode", sb->statp.st_mode)
+		  || yajl_gen_int_pair_w("nlink", sb->statp.st_nlink)
+		  || yajl_gen_int_pair_w("uid", sb->statp.st_uid)
+		  || yajl_gen_int_pair_w("gid", sb->statp.st_gid)
+		  || yajl_gen_int_pair_w("rdev", sb->statp.st_rdev)
+		  || yajl_gen_int_pair_w("size", sb->statp.st_size)
+		  || yajl_gen_int_pair_w("blksize", sb->statp.st_blksize)
+		  || yajl_gen_int_pair_w("blocks", sb->statp.st_blocks)
+		  || yajl_gen_int_pair_w("atime", sb->statp.st_atime)
+		  || yajl_gen_int_pair_w("ctime", sb->statp.st_ctime)
+		  || yajl_gen_int_pair_w("mtime", sb->statp.st_mtime)
+		  || yajl_map_close_w())
+			goto end;
 	}
+
+	ret=0;
+end:
 	free_w(&last_bd_match);
 	return ret;
 }

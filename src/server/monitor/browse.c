@@ -34,23 +34,7 @@ static int do_browse_manifest(struct asfd *srfd, gzFile zp,
 			goto end;
 		if(!r) continue;
 
-		if(yajl_map_open_w()
-		  || yajl_gen_str_pair_w("name", sb->path.buf)
-		  || yajl_gen_int_pair_w("dev", sb->statp.st_dev)
-		  || yajl_gen_int_pair_w("ino", sb->statp.st_ino)
-		  || yajl_gen_int_pair_w("mode", sb->statp.st_mode)
-		  || yajl_gen_int_pair_w("nlink", sb->statp.st_nlink)
-		  || yajl_gen_int_pair_w("uid", sb->statp.st_uid)
-		  || yajl_gen_int_pair_w("gid", sb->statp.st_gid)
-		  || yajl_gen_int_pair_w("rdev", sb->statp.st_rdev)
-		  || yajl_gen_int_pair_w("size", sb->statp.st_size)
-		  || yajl_gen_int_pair_w("blksize", sb->statp.st_blksize)
-		  || yajl_gen_int_pair_w("blocks", sb->statp.st_blocks)
-		  || yajl_gen_int_pair_w("atime", sb->statp.st_atime)
-		  || yajl_gen_int_pair_w("ctime", sb->statp.st_ctime)
-		  || yajl_gen_int_pair_w("mtime", sb->statp.st_mtime)
-		  || yajl_map_close_w())
-			goto end;
+		if(json_from_sbuf(sb)) goto end;
 	}
 
 	ret=0;

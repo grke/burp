@@ -1,28 +1,5 @@
 #include "include.h"
 
-/*
-static int send_detail_to_client(struct asfd *srfd, struct cstat **clist, int clen, const char *name)
-{
-	int q=0;
-	for(q=0; q<clen; q++)
-	{
-		if(clist[q]->name && !strcmp(clist[q]->name, name))
-		{
-			char *tosend=NULL;
-			if(clist[q]->running_detail)
-				tosend=clist[q]->running_detail;
-			else
-				tosend=clist[q]->summary;
-			if(send_data_to_client(srfd, tosend, strlen(tosend)))
-				return -1;
-			break;
-		}
-	}
-	return 0;
-}
-*/
-
-
 static int parse_parent_data_entry(char *tok, struct cstat *clist)
 {
 	char *tp=NULL;
@@ -124,7 +101,7 @@ printf("got client data: '%s'\n", srfd->rbuf->buf);
 		strip_trailing_slashes(&browse);
 	}
 
-	if(client)
+	if(client && *client)
 	{
 		if(!(cstat=cstat_get_by_name(clist, client)))
 			goto end;

@@ -42,6 +42,9 @@ struct cstat
 	time_t conf_mtime;
 	char *running_detail; // set from the parent process
 	enum cstat_status status;
+	// From the perspective of the server child, whether the connected
+	// client is allowed to view this client.
+	uint8_t permitted;
 
 	// When the mtime of conffile changes, the following get reloaded
 	// sdirs declared as void so that cstat can be declared for both

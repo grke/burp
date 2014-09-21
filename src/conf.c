@@ -558,6 +558,7 @@ static int load_conf_ints(struct conf *c,
 	gcv_uint8(f, v, "daemon", &(c->daemon));
 	gcv_uint8(f, v, "directory_tree", &(c->directory_tree));
 	gcv_uint8(f, v, "password_check", &(c->password_check));
+	gcv_uint8(f, v, "monitor_browse_cache", &(c->monitor_browse_cache));
 
 	gcv_bit(f, v, "client_can_delete",
 		&(c->client_can), CLIENT_CAN_DELETE);
@@ -1487,6 +1488,7 @@ int conf_set_client_global(struct conf *c, struct conf *cc)
 	cc->s_script_post_notify=c->s_script_post_notify;
 	cc->s_script_notify=c->s_script_notify;
 	cc->directory_tree=c->directory_tree;
+	cc->monitor_browse_cache=c->monitor_browse_cache;
 	// clientconfdir needed to make the status monitor stuff work.
 	if(set_global_str(&(cc->clientconfdir), c->clientconfdir))
 		return -1;

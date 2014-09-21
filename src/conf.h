@@ -82,6 +82,7 @@ struct conf
 	uint8_t password_check;
 	char *manual_delete;
 	char *monitor_logfile; // An ncurses client option, from command line.
+	uint8_t monitor_browse_cache;
 
 // Client options.
 	char *cname; // set on the server when client connects

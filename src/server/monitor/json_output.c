@@ -259,7 +259,7 @@ int json_send(struct asfd *asfd, struct cstat *clist, struct cstat *cstat,
 	{
 		if(!c->permitted) continue;
 		if(json_send_client_backup(asfd, c, c->bu,
-			NULL, NULL, NULL, NULL))
+			NULL, NULL, NULL))
 				goto end;
 	}
 

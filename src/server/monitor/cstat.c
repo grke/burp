@@ -2,17 +2,31 @@
 
 #include <dirent.h>
 
+static int permitted(struct cstat *cstat,
+	struct conf *parentconf, struct conf *cconf)
+{
+	struct strlist *rclient;
+
+	// Allow clients to look at themselves.
+	if(!strcmp(cstat->name, parentconf->cname)) return 1;
+
+	// Do not allow clients using the restore_client option to see more
+	// than the client that it is pretending to be.
+	if(parentconf->restore_client) return 0;
+
+	// If we are listed in this restore_client list.
+	for(rclient=cconf->rclients; rclient; rclient=rclient->next)
+		if(!strcmp(parentconf->cname, rclient->path))
+			return 1;
+	return 0;
+}
+
 static int set_cstat_from_conf(struct cstat *cstat,
 	struct conf *parentconf, struct conf *cconf)
 {
 	// Make sure the permitted flag is set appropriately.
-	cstat->permitted=0;
-	if(strcmp(cstat->name, parentconf->cname)
-	  && !(cconf->restore_client
-		&& !strcmp(cstat->name, cconf->restore_client)))
-			return 0;
+	cstat->permitted=permitted(cstat, parentconf, cconf);
 
-	cstat->permitted=1;
 	cstat->protocol=cconf->protocol;
 	sdirs_free((struct sdirs **)&cstat->sdirs);
 	if(!(cstat->sdirs=sdirs_alloc())

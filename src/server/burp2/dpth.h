@@ -6,7 +6,6 @@
 
 // Wrapper around the lock stuff, so that we can have a list of them and
 // also keep the save_path without the leading directories.
-typedef struct dpth_lock dpth_lock_t;
 struct dpth_lock
 {
 	char save_path[15];

@@ -76,7 +76,8 @@ end:
 	return ret;
 }
 
-static int parse_client_data(struct asfd *srfd, struct cstat *clist)
+static int parse_client_data(struct asfd *srfd,
+	struct cstat *clist, struct conf *conf)
 {
 	int ret=0;
 	char *client=NULL;
@@ -142,7 +143,7 @@ printf("got client data: '%s'\n", srfd->rbuf->buf);
 			goto error;
 	}
 
-	if(json_send(srfd, clist, cstat, bu, logfile, browse))
+	if(json_send(srfd, clist, cstat, bu, logfile, browse, conf))
 		goto error;
 
 	goto end;
@@ -156,9 +157,10 @@ end:
 	return ret;
 }
 
-static int parse_data(struct asfd *asfd, struct cstat *clist, struct asfd *cfd)
+static int parse_data(struct asfd *asfd, struct cstat *clist,
+	struct asfd *cfd, struct conf *conf)
 {
-	if(asfd==cfd) return parse_client_data(asfd, clist);
+	if(asfd==cfd) return parse_client_data(asfd, clist, conf);
 	return parse_parent_data(asfd, clist);
 }
 
@@ -184,7 +186,7 @@ int status_server(struct async *as, struct conf *conf)
 			while(asfd->rbuf->buf)
 		{
 			gotdata=1;
-			if(parse_data(asfd, clist, cfd)
+			if(parse_data(asfd, clist, cfd, conf)
 			  || asfd->parse_readbuf(asfd))
 				goto error;
 			iobuf_free_content(asfd->rbuf);

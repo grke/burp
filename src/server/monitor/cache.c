@@ -1,3 +1,5 @@
+#include "include.h"
+
 typedef struct ent ent_t;
 
 struct ent
@@ -11,7 +13,7 @@ struct ent
 static void ent_free(struct ent **ent)
 {
 	if(!ent || !*ent) return;
-	if((*ent)->name)) free((*ent)->name);
+	if((*ent)->name) free((*ent)->name);
 	free_v((void **)ent);
 }
 
@@ -20,7 +22,7 @@ static struct ent *ent_alloc(const char *name)
 	struct ent *ent;
 	if(!(ent=(struct ent *)calloc_w(1, sizeof(struct ent), __func__))
 	  || !(ent->name=strdup(name)))
-		goto end;
+		goto error;
 	return ent;
 error:
 	ent_free(&ent);
@@ -29,17 +31,35 @@ error:
 
 static struct ent *root=NULL;
 
-static int do_cache_load(struct asfd *srfd, gzFile zp,
-	struct manio *manio, struct sbuf *sb)
+/*
+        if(!(ctmp=(struct cstat **)realloc(*clist,
+                ((*clen)+1)*sizeof(struct cstat *))))
+        {
+                log_out_of_memory(__FUNCTION__);
+                return -1;
+        }
+        *clist=ctmp;
+        if(!(cnew=(struct cstat *)malloc(sizeof(struct cstat))))
+        {
+                log_out_of_memory(__FUNCTION__);
+                return -1;
+        }
+*/
+
+int cache_load(struct asfd *srfd, struct manio *manio, struct sbuf *sb)
 {
 	int ret=-1;
 	int ars=0;
-	struct ent *current;
-	if(!(root=ent_alloc(""))) goto end;
-	current=root;
+	struct ent *cur_ent;
+	char *cur_path=NULL;
+printf("cache load not fully implemented yet\n");
+return 0;
+	if(!(cur_path=strdup_w("", __func__))
+	  || !(root=ent_alloc(cur_path)))
+		goto end;
+	cur_ent=root;
 	while(1)
 	{
-		int r;
 		sbuf_free_content(sb);
 		if((ars=manio_sbuf_fill(manio, NULL, sb, NULL, NULL, NULL)))
 		{
@@ -61,30 +81,18 @@ static int do_cache_load(struct asfd *srfd, gzFile zp,
 
 	ret=0;
 end:
+	free_w(&cur_path);
 	return ret;
 }
 
-int cache_load(struct asfd *srfd, struct cstat *cstat, struct bu *bu)
+// Will probably need to change this to be the correct cache loaded.
+int cache_loaded(void)
 {
-	int ret=-1;
-	gzFile zp=NULL;
-	char *manifest=NULL;
-	struct sbuf *sb=NULL;
-	struct manio *manio=NULL;
-
-	if(!(manifest=prepend_s(bu->path,
-		cstat->protocol==PROTO_BURP1?"manifest.gz":"manifest"))
-	  || !(manio=manio_alloc())
-	  || manio_init_read(manio, manifest)
-	  || !(sb=sbuf_alloc_protocol(cstat->protocol)))
-		goto end;
-	manio_set_protocol(manio, cstat->protocol);
-	ret=do_cache_load(srfd, zp, manio, sb);
-end:
-	gzclose_fp(&zp);
-	free_w(&manifest);
-	manio_free(&manio);
-	sbuf_free(&sb);
-	return ret;
+	if(root) return 1;
+	return 0;
 }
 
+int cache_lookup(const char *browse)
+{
+	return 0;
+}

@@ -1,6 +1,6 @@
 #include "include.h"
 
-static int do_browse_manifest(struct asfd *srfd, gzFile zp,
+static int do_browse_manifest(struct asfd *srfd,
 	struct manio *manio, struct sbuf *sb, const char *browse)
 {
 	int ret=-1;
@@ -43,11 +43,10 @@ end:
 	return ret;
 }
 
-int browse_manifest(struct asfd *srfd, struct cstat *cstat,
-	struct bu *bu, const char *browse)
+static int browse_manifest_start(struct asfd *srfd, struct cstat *cstat,
+	struct bu *bu, const char *browse, struct conf *conf)
 {
 	int ret=-1;
-	gzFile zp=NULL;
 	char *manifest=NULL;
 	struct sbuf *sb=NULL;
 	struct manio *manio=NULL;
@@ -59,11 +58,22 @@ int browse_manifest(struct asfd *srfd, struct cstat *cstat,
 	  || !(sb=sbuf_alloc_protocol(cstat->protocol)))
 		goto end;
 	manio_set_protocol(manio, cstat->protocol);
-	ret=do_browse_manifest(srfd, zp, manio, sb, browse);
+	if(conf->monitor_browse_cache)
+		ret=cache_load(srfd, manio, sb);
+	else
+		ret=do_browse_manifest(srfd, manio, sb, browse);
 end:
-	gzclose_fp(&zp);
 	free_w(&manifest);
 	manio_free(&manio);
 	sbuf_free(&sb);
 	return ret;
+}
+
+int browse_manifest(struct asfd *srfd, struct cstat *cstat,
+	struct bu *bu, const char *browse, struct conf *conf)
+{
+	if(conf->monitor_browse_cache
+	  && cache_loaded())
+		return cache_lookup(browse);
+	return browse_manifest_start(srfd, cstat, bu, browse, conf);
 }

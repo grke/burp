@@ -4,6 +4,7 @@
 #include "../include.h"
 
 #include "browse.h"
+#include "cache.h"
 #include "cstat.h"
 #include "json_output.h"
 #include "status_server.h"

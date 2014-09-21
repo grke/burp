@@ -2,8 +2,17 @@
 
 #include <dirent.h>
 
-static int set_cstat_from_conf(struct cstat *cstat, struct conf *cconf)
+static int set_cstat_from_conf(struct cstat *cstat,
+	struct conf *parentconf, struct conf *cconf)
 {
+	// Make sure the permitted flag is set appropriately.
+	cstat->permitted=0;
+	if(strcmp(cstat->name, parentconf->cname)
+	  && !(cconf->restore_client
+		&& !strcmp(cstat->name, cconf->restore_client)))
+			return 0;
+
+	cstat->permitted=1;
 	cstat->protocol=cconf->protocol;
 	sdirs_free((struct sdirs **)&cstat->sdirs);
 	if(!(cstat->sdirs=sdirs_alloc())
@@ -91,17 +100,30 @@ static void cstat_remove(struct cstat **clist, struct cstat **cstat)
 static int reload_from_client_confs(struct cstat **clist, struct conf *conf)
 {
 	struct cstat *c;
+	struct stat statp;
 	static struct conf *cconf=NULL;
+	static time_t global_mtime=0;
+	time_t global_mtime_new=0;
 
 	if(!cconf && !(cconf=conf_alloc())) goto error;
 
+	if(stat(conf->conffile, &statp)
+	  || !S_ISREG(statp.st_mode))
+	{
+		logp("Could not stat main conf file %s: %s\n",
+			conf->conffile, strerror(errno));
+		goto error;
+	}
+	global_mtime_new=statp.st_mtime;
+
+	// FIX THIS: If '. included' conf files have changed, this code will
+	// not detect them. I guess that conf.c should make a list of them.
 	while(1)
 	{
 		for(c=*clist; c; c=c->next)
 		{
 			// Look at the client conf files to see if they have
 			// changed, and reload bits and pieces if they have.
-			struct stat statp;
 
 			if(!c->conffile) continue;
 			if(stat(c->conffile, &statp)
@@ -110,10 +132,11 @@ static int reload_from_client_confs(struct cstat **clist, struct conf *conf)
 				cstat_remove(clist, &c);
 				break; // Go to the beginning of the list.
 			}
-			if(statp.st_mtime==c->conf_mtime)
+			if(statp.st_mtime==c->conf_mtime
+			  && global_mtime_new==global_mtime)
 			{
-				// conf file has not changed - no need to do
-				// anything.
+				// The conf files have not changed - no need to
+				// do anything.
 				continue;
 			}
 			c->conf_mtime=statp.st_mtime;
@@ -128,12 +151,15 @@ static int reload_from_client_confs(struct cstat **clist, struct conf *conf)
 				break; // Go to the beginning of the list.
 			}
 
-			if(set_cstat_from_conf(c, cconf))
+			if(set_cstat_from_conf(c, conf, cconf))
 				goto error;
+printf("%s: %d\n", c->name, c->permitted);
 		}
 		// Only stop if the end of the list was not reached.
 		if(!c) break;
 	}
+	if(global_mtime!=global_mtime_new)
+		global_mtime=global_mtime_new;
 	return 0;
 error:
 	conf_free(cconf);
@@ -145,6 +171,7 @@ int cstat_set_status(struct cstat *cstat)
 {
 	struct stat statp;
 	struct sdirs *sdirs=(struct sdirs *)cstat->sdirs;
+	if(!cstat->permitted) return 0;
 
 	if(lstat(sdirs->lock->path, &statp))
 	{
@@ -178,7 +205,11 @@ static int reload_from_clientdir(struct cstat **clist, struct conf *conf)
 		time_t ltime=0;
 		struct stat statp;
 		struct stat lstatp;
-		struct sdirs *sdirs=(struct sdirs *)c->sdirs;
+		struct sdirs *sdirs;
+
+		if(!c->permitted) continue;
+
+		sdirs=(struct sdirs *)c->sdirs;
 		if(!sdirs->client) continue;
 		if(stat(sdirs->client, &statp))
 		{
@@ -202,7 +233,6 @@ static int reload_from_clientdir(struct cstat **clist, struct conf *conf)
 		c->lockfile_mtime=ltime;
 		if(cstat_set_status(c)) goto error;
 
-
 printf("reload from clientdir\n");
 		bu_list_free(&c->bu);
 		if(bu_get_current(sdirs, &c->bu))
@@ -223,6 +253,8 @@ int cstat_load_data_from_disk(struct cstat **clist, struct conf *conf)
 int cstat_set_backup_list(struct cstat *cstat)
 {
 	struct bu *bu=NULL;
+
+	if(!cstat->permitted) return 0;
 
 	// Free any previous list.
 	bu_list_free(&cstat->bu);

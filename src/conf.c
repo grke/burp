@@ -1488,6 +1488,8 @@ int conf_set_client_global(struct conf *c, struct conf *cc)
 	cc->s_script_notify=c->s_script_notify;
 	cc->directory_tree=c->directory_tree;
 	// clientconfdir needed to make the status monitor stuff work.
+	if(set_global_str(&(cc->conffile), c->conffile))
+		return -1;
 	if(set_global_str(&(cc->clientconfdir), c->clientconfdir))
 		return -1;
 	if(set_global_str(&(cc->directory), c->directory))

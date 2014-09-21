@@ -649,7 +649,7 @@ static int request_status(struct asfd *asfd, enum details details,
 	switch(details)
 	{
 		case DETAILS_CLIENT_LIST:
-			snprintf(buf, sizeof(buf), "c\n");
+			snprintf(buf, sizeof(buf), "c:\n");
 			break;
 		case DETAILS_BACKUP_LIST:
 			snprintf(buf, sizeof(buf), "c:%s\n", client);

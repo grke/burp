@@ -1,20 +1,42 @@
+typedef struct ent ent_t;
+
 struct ent
 {
 	char *name;
 	struct stat statp;
-};
-
-struct dirnode
-{
 	int count;
 	struct ent **ents;
 };
+
+static void ent_free(struct ent **ent)
+{
+	if(!ent || !*ent) return;
+	if((*ent)->name)) free((*ent)->name);
+	free_v((void **)ent);
+}
+
+static struct ent *ent_alloc(const char *name)
+{
+	struct ent *ent;
+	if(!(ent=(struct ent *)calloc_w(1, sizeof(struct ent), __func__))
+	  || !(ent->name=strdup(name)))
+		goto end;
+	return ent;
+error:
+	ent_free(&ent);
+	return NULL;
+}
+
+static struct ent *root=NULL;
 
 static int do_cache_load(struct asfd *srfd, gzFile zp,
 	struct manio *manio, struct sbuf *sb)
 {
 	int ret=-1;
 	int ars=0;
+	struct ent *current;
+	if(!(root=ent_alloc(""))) goto end;
+	current=root;
 	while(1)
 	{
 		int r;

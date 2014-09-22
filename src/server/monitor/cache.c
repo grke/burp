@@ -5,8 +5,8 @@ typedef struct ent ent_t;
 struct ent
 {
 	char *name;
-	struct stat statp;
 	int count;
+	struct stat statp;
 	struct ent **ents;
 };
 
@@ -31,30 +31,54 @@ error:
 
 static struct ent *root=NULL;
 
-/*
-        if(!(ctmp=(struct cstat **)realloc(*clist,
-                ((*clen)+1)*sizeof(struct cstat *))))
+static int ent_add_to_list(struct ent *ent,
+	struct sbuf *sb, const char *ent_name)
+{
+	struct ent *enew=NULL;
+        if(!(ent->ents=(struct ent **)realloc_w(ent->ents,
+                (ent->count+1)*sizeof(struct ent *), __func__))
+          || !(enew=ent_alloc(ent_name)))
         {
-                log_out_of_memory(__FUNCTION__);
+                log_out_of_memory(__func__);
                 return -1;
         }
-        *clist=ctmp;
-        if(!(cnew=(struct cstat *)malloc(sizeof(struct cstat))))
-        {
-                log_out_of_memory(__FUNCTION__);
-                return -1;
-        }
-*/
+	memcpy(&enew->statp, &sb->statp, sizeof(struct stat));
+	ent->ents[ent->count]=enew;
+	ent->count++;
+printf("got: %s\n", ent_name);
+printf("count: %d\n", ent->count);
+printf("and: %s\n", enew->name);
+printf("and: %s\n", ent->ents[0]->name);
+	return 0;
+}
+
+static void cache_dump(struct ent *e, int *depth)
+{
+	int count;
+	for(count=0; count<*depth; count++)
+		printf(" ");
+	printf("'%s'\n", e->name);
+	for(count=0; count<e->count; count++)
+	{
+		(*depth)++;
+		cache_dump(e->ents[count], depth);
+		(*depth)--;
+	}
+}
 
 int cache_load(struct asfd *srfd, struct manio *manio, struct sbuf *sb)
 {
 	int ret=-1;
 	int ars=0;
 	struct ent *cur_dir;
+	char *tmp=NULL;
 	char *cur_path=NULL;
 	char *dir_path;
 	char *ent_name;
 	size_t l;
+	int depth=0;
+
+printf("in cache load\n");
 
 	if(!(cur_path=strdup_w("", __func__))
 	  || !(root=ent_alloc(cur_path)))
@@ -80,6 +104,20 @@ int cache_load(struct asfd *srfd, struct manio *manio, struct sbuf *sb)
 		  && !cmd_is_link(sb->path.cmd))
 			continue;
 
+		if(!strcmp(sb->path.buf, "/"))
+		{
+			memcpy(&cur_dir->statp,
+				&sb->statp, sizeof(struct stat));
+/*
+			free_w(&cur_path);
+			if(!(cur_path=strdup_w("/", __func__)))
+				goto end;
+			l=1;
+*/
+			continue;
+		}
+printf("try '%s'\n", sb->path.buf);
+
 		// Start to load into memory here.
 		if((ent_name=strrchr(sb->path.buf, '/')))
 		{
@@ -93,10 +131,15 @@ int cache_load(struct asfd *srfd, struct manio *manio, struct sbuf *sb)
 			dir_path=(char *)"";
 		}
 
+printf("('%s' '%s' '%s')\n", cur_path, dir_path, ent_name);
+
 		if(!strcmp(cur_path, dir_path))
 		{
 			// It is within the same directory.
 			// Add it to the list and keep going.
+printf("add to list a\n");
+			if(ent_add_to_list(cur_dir, sb, ent_name))
+				goto end;
 		}
 		else if(!strncmp(cur_path, dir_path, l)
 		  && *(dir_path+l+1)=='/')
@@ -106,7 +149,6 @@ int cache_load(struct asfd *srfd, struct manio *manio, struct sbuf *sb)
 			  && !strcmp(cur_dir->ents[cur_dir->count-1]->name,
 				dir_path+l+1))
 			{
-				char *tmp;
 				// It is inside the previous directory that we
 				// added.
 
@@ -122,20 +164,29 @@ int cache_load(struct asfd *srfd, struct manio *manio, struct sbuf *sb)
 					goto end;
 				free_w(&cur_path);
 				cur_path=tmp;
+				tmp=NULL;
+				l=strlen(cur_path);
 
 				// Now add the new entry.
+				if(ent_add_to_list(cur_dir, sb, ent_name))
+					goto end;
+printf("add to list b\n");
 			}
 		}
 		else
 		{
+printf("within parent\n");
 			// It is within a parent directory.
 			// Probably want to run a 'cache_find' function here,
 			// or keep a stack to go back up.
 		}
+printf("\n");
 	}
 
 	ret=0;
+	cache_dump(root, &depth);
 end:
+	free_w(&tmp);
 	free_w(&cur_path);
 	return ret;
 }

@@ -610,6 +610,12 @@ Do not back up the given block device itself, but open it for reading and back u
 \fBread_all_blockdevs=[0|1]\fR
 Open all block devices for reading and back up the contents as if they were regular files.
 .TP
+\fBsplit_vss=[0|1]\fR
+When backing up Windows computers with burp protocol 1, this option allows you to save the VSS header data separate from the file data. The default is off, which means that the VSS header data is saved prepended to the file data.
+.TP
+\fBstrip_vss=[0|1]\fR
+When backing up Windows computers with burp protocol 1, this option allows you to prevent the VSS header data being backed up. The default is off. To restore a backup that has no VSS information on Windows, you need to give the client the '\-x' command line option.
+.TP
 \fBvss_drives=[list of drive letters]\fR
 When backing up Windows computers, this option allows you to specify which drives have VSS snapshots taken of them. If you omit this option, burp will automatically decide based on the 'include' options. If you want no drives to have snapshots taken of them, you can specify '0'.
 .TP

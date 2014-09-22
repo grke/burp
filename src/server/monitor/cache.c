@@ -50,14 +50,18 @@ int cache_load(struct asfd *srfd, struct manio *manio, struct sbuf *sb)
 {
 	int ret=-1;
 	int ars=0;
-	struct ent *cur_ent;
+	struct ent *cur_dir;
 	char *cur_path=NULL;
-printf("cache load not fully implemented yet\n");
-return 0;
+	char *dir_path;
+	char *ent_name;
+	size_t l;
+
 	if(!(cur_path=strdup_w("", __func__))
 	  || !(root=ent_alloc(cur_path)))
 		goto end;
-	cur_ent=root;
+	cur_dir=root;
+	l=strlen(cur_path);
+
 	while(1)
 	{
 		sbuf_free_content(sb);
@@ -76,7 +80,58 @@ return 0;
 		  && !cmd_is_link(sb->path.cmd))
 			continue;
 
-		// Load into memory here.
+		// Start to load into memory here.
+		if((ent_name=strrchr(sb->path.buf, '/')))
+		{
+			*ent_name='\0';
+			ent_name++;
+			dir_path=sb->path.buf;
+		}
+		else
+		{
+			ent_name=sb->path.buf;
+			dir_path=(char *)"";
+		}
+
+		if(!strcmp(cur_path, dir_path))
+		{
+			// It is within the same directory.
+			// Add it to the list and keep going.
+		}
+		else if(!strncmp(cur_path, dir_path, l)
+		  && *(dir_path+l+1)=='/')
+		{
+			// It is within a sub directory.
+			if(cur_dir->count > 0
+			  && !strcmp(cur_dir->ents[cur_dir->count-1]->name,
+				dir_path+l+1))
+			{
+				char *tmp;
+				// It is inside the previous directory that we
+				// added.
+
+				// FIX THIS: Check for jumps of more than one
+				// sub directory. For example:
+				// /home/graham
+				// /home/graham/abc/123/xyz
+
+				// Need to set up cur_path and cur_dir
+				// appropriately.
+				cur_dir=cur_dir->ents[cur_dir->count-1];
+				if(!(tmp=prepend_s(cur_path, cur_dir->name)))
+					goto end;
+				free_w(&cur_path);
+				cur_path=tmp;
+
+				// Now add the new entry.
+			}
+		}
+		else
+		{
+			// It is within a parent directory.
+			// Probably want to run a 'cache_find' function here,
+			// or keep a stack to go back up.
+		}
 	}
 
 	ret=0;

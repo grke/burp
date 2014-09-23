@@ -386,7 +386,7 @@ static void quint_print(struct cntr_ent *ent, enum action act)
 	if(!(ent->flags & CNTR_TABULATE)) return;
 
 	if(!e && !a && !b && !c) return;
-	logc("% 18s ", ent->label);
+	logc("% 18s:", ent->label);
 	if(act==ACTION_BACKUP
 	  || act==ACTION_BACKUP_TIMED)
 	{

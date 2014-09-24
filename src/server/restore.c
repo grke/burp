@@ -34,6 +34,10 @@ static int srestore_matches(struct strlist *s, const char *path)
 int check_srestore(struct conf *conf, const char *path)
 {
 	struct strlist *l;
+
+	// If no includes specified, restore everything.
+	if(!conf->incexcdir) return 1;
+
 	for(l=conf->incexcdir; l; l=l->next)
 		if(srestore_matches(l, path))
 			return 1;

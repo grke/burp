@@ -149,6 +149,7 @@ static int extra_comms_read(struct async *as,
 		}
 		else if(!strcmp(rbuf->buf, "srestore ok"))
 		{
+			iobuf_free_content(rbuf);
 			// Client can accept the restore.
 			// Load the restore config, then send it.
 			*srestore=1;

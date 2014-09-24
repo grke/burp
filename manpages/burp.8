@@ -672,7 +672,7 @@ Only restore files matching the regular expression. Equivalent to '\-r' when ini
 \fBinclude=[path]\fR
 Restore directories and files that match the path. If it is a directory, the contents of the directory will be restored. You can have multiple 'include' lines. There is no equivalent when initiating a restore from the client.
 .TP
-As a minimum, the 'restore' file needs to contain a 'backup' option, and one 'regex' or 'include' line.
+As a minimum, the 'restore' file needs to contain a 'backup' option, and one 'include' line.
 
 .SH SIGNALS
 Sending signal 1 (HUP) to the main server process will cause it to reload. For the vast majority of configuration changes, a reload is unnecessary as the server will pick up changes "on-the-fly". Sending signal 12 (USR2) to the main server process will cause it to wait until there are no longer any child processes, and then exit. The intention is to help with upgrades without interrupting current backups. if you are running upstart, a new burp server process will start up when the old one exits.

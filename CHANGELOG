@@ -1,7 +1,6 @@
   * Make vss_strip.c include the configure output, so that vss_strip gets the
     large file options.
-  * Fix the burp man page so that it correctly describes the minimum
-    requirement for a server initiated restore.
+  * Make the server initiated restore not require an 'include' line.
 
 2014-08-31 Changes in burp-1.4.22:
   * Fix for xattrs with zero length values.

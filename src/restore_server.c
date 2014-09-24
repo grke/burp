@@ -574,6 +574,10 @@ static int srestore_matches(struct strlist *s, const char *path)
 static int check_srestore(struct config *cconf, const char *path)
 {
 	int i=0;
+
+	// Restore everything if no includes were specifed.
+	if(!cconf->iecount) return 1;
+
 	for(i=0; i<cconf->iecount; i++)
 	{
 		//printf(" %d %s %s\n",

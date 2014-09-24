@@ -374,13 +374,19 @@ static int restore_sbufl(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 {
 	//printf("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path.buf);
 	if(write_status(status, sb->path.buf, cconf)) return -1;
-
+	
 	if((sb->burp1->datapth.buf && asfd->write(asfd, &(sb->burp1->datapth)))
 	  || asfd->write(asfd, &sb->attr))
 		return -1;
-
 	else if(sbuf_is_filedata(sb))
 	{
+		if(!sb->burp1->datapth.buf)
+		{
+			logw(asfd, cconf,
+				"Got filedata entry with no datapth: %c:%s\n",
+					sb->path.cmd, sb->path.buf);
+			return 0;
+		}
 		return restore_file(asfd, bu, sb, act, sdirs, cconf);
 	}
 	else

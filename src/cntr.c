@@ -595,6 +595,7 @@ int cntr_stats_to_file(struct cntr *cntr,
 	fprintf(fp, "client:%s\n", cntr->cname);
 	fprintf(fp, "client_version:%s\n",
 		conf->peer_version?conf->peer_version:"");
+	fprintf(fp, "server_version:%s\n", VERSION);
 	fprintf(fp, "client_is_windows:%d\n", conf->client_is_windows);
 	fprintf(fp, "time_start:%lu\n", cntr->start);
 	fprintf(fp, "time_end:%lu\n", now);

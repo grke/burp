@@ -781,20 +781,13 @@ int backup_phase2_server_burp1(struct async *as, struct sdirs *sdirs,
 	if(!(p1zp=gzopen_file(sdirs->phase1data, "rb")))
 		goto error;
 
-	// Open in read+write mode, so that they can be read through if we need
-	// to resume.
-	// First, open them in a+ mode, so that they will be created if they
-	// do not exist.
-	if(!(ucfp=open_file(sdirs->unchanged, "a+b"))
-	  || !(chfp=open_file(sdirs->changed, "a+b")))
-		goto error;
-	close_fp(&ucfp);
-	close_fp(&chfp);
-	if(!(ucfp=open_file(sdirs->unchanged, "r+b"))
-	  || !(chfp=open_file(sdirs->changed, "r+b")))
+	if(resume && do_resume(p1zp, sdirs, &dpthl, cconf))
 		goto error;
 
-	if(resume && do_resume(p1zp, chfp, ucfp, &dpthl, cconf))
+	// Unchanged and changed should now be truncated correctly, we just
+	// have to open them for appending.
+	if(!(ucfp=open_file(sdirs->unchanged, "a+b"))
+	  || !(chfp=open_file(sdirs->changed, "a+b")))
 		goto error;
 
 	while(1)

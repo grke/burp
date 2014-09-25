@@ -567,7 +567,7 @@ static void bottom_part_to_file(struct cntr *cntr, FILE *fp, enum action act)
 }
 
 int cntr_stats_to_file(struct cntr *cntr,
-	const char *directory, enum action act)
+	const char *directory, enum action act, struct conf *conf)
 {
 	int ret=-1;
 	FILE *fp;
@@ -593,6 +593,9 @@ int cntr_stats_to_file(struct cntr *cntr,
 		goto end;
 
 	fprintf(fp, "client:%s\n", cntr->cname);
+	fprintf(fp, "client_version:%s\n",
+		conf->peer_version?conf->peer_version:"");
+	fprintf(fp, "client_is_windows:%d\n", conf->client_is_windows);
 	fprintf(fp, "time_start:%lu\n", cntr->start);
 	fprintf(fp, "time_end:%lu\n", now);
 	fprintf(fp, "time_taken:%lu\n", now-cntr->start);

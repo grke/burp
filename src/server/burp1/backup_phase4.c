@@ -796,7 +796,8 @@ int backup_phase4_server_burp1(struct sdirs *sdirs, struct conf *cconf)
 	if(deleteme_maybe_delete(cconf, sdirs->client))
 		goto end;
 
-	cntr_stats_to_file(cconf->cntr, sdirs->finishing, ACTION_BACKUP);
+	cntr_stats_to_file(cconf->cntr,
+		sdirs->finishing, ACTION_BACKUP, cconf);
 
 	logp("End phase4 (shuffle files)\n");
 

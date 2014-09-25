@@ -1227,24 +1227,15 @@ int backup_phase2_server(gzFile *cmanfp, const char *phase1data, const char *pha
 	if(!(p1zp=gzopen_file(phase1data, "rb")))
 		goto error;
 
-	// Open in read+write mode, so that they can be read through if
-	// we need to resume.
-	// First, open them in a+ mode, so that they will be created if they
-	// do not exist.
-	if(!(ucfp=open_file(unchangeddata, "a+b")))
-		goto error;
-	if(!(p2fp=open_file(phase2data, "a+b")))
-		goto error;
-	close_fp(&ucfp);
-	close_fp(&p2fp);
+	if(resume && do_resume(p1zp, phase2data, unchangeddata,
+		dpth, cconf, client, p1cntr, cntr))
+			goto error;
 
-	if(!(ucfp=open_file(unchangeddata, "r+b")))
+	// Unchanged and phase2 should now be truncated correctly, we just have
+	// to open them for appending.
+	if(!(p2fp=open_file(phase2data, "a+b"))
+	  || !(ucfp=open_file(unchangeddata, "a+b")))
 		goto error;
-	if(!(p2fp=open_file(phase2data, "r+b")))
-		goto error;
-
-	if(resume && do_resume(p1zp, p2fp, ucfp, dpth, cconf, client,
-		p1cntr, cntr)) goto error;
 
 	logp("Begin phase2 (receive file data)\n");
 

@@ -211,7 +211,9 @@ static int forward_sbuf(FILE *fp, gzFile zp, struct sbuf *b, struct sbuf *target
 	return 0;
 }
 
-int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp, struct dpth *dpth, struct config *cconf, const char *client, struct cntr *p1cntr, struct cntr *cntr)
+static int do_resume_work(gzFile p1zp, FILE *p2fp, FILE *ucfp,
+	struct dpth *dpth, struct config *cconf, const char *client,
+	struct cntr *p1cntr, struct cntr *cntr)
 {
 	int ret=0;
 	struct sbuf p1b;
@@ -285,5 +287,57 @@ end:
 	free_sbuf(&p2btmp);
 	free_sbuf(&ucb);
 	logp("End phase1 (read previous file system scan)\n");
+	return ret;
+}
+
+static int do_truncate(const char *path, FILE **fp)
+{
+	off_t pos;
+	if((pos=ftello(*fp))<0)
+	{
+		logp("Could not ftello on %s: %s\n", path, strerror(errno));
+		return -1;
+	}
+	if(truncate(path, pos))
+	{
+		logp("Could not truncate %s: %s\n", path, strerror(errno));
+		return -1;
+	}
+	close_fp(fp);
+	return 0;
+}
+
+int do_resume(gzFile p1zp, const char *phase2data, const char *unchangeddata,
+	struct dpth *dpth, struct config *cconf, const char *client,
+	struct cntr *p1cntr, struct cntr *cntr)
+{
+	int ret=-1;
+	FILE *p2fp=NULL;
+	FILE *ucfp=NULL;
+
+        // First, open them in a+ mode, so that they will be created if they
+        // do not exist.
+        if(!(p2fp=open_file(phase2data, "a+b"))
+          || !(ucfp=open_file(unchangeddata, "a+b")))
+                goto end;
+        close_fp(&p2fp);
+        close_fp(&ucfp);
+
+	// Open for reading.
+        if(!(p2fp=open_file(phase2data, "rb"))
+          || !(ucfp=open_file(unchangeddata, "rb")))
+                goto end;
+
+	if(do_resume_work(p1zp, p2fp, ucfp,
+		dpth, cconf, client, p1cntr, cntr)) goto end;
+
+	// Truncate to the appropriate places.
+	if(do_truncate(phase2data, &p2fp)
+	  || do_truncate(unchangeddata, &ucfp))
+		goto end;
+	ret=0;
+end:
+        close_fp(&p2fp);
+        close_fp(&ucfp);
 	return ret;
 }

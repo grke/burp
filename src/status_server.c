@@ -796,6 +796,9 @@ static int list_backup_dir(int cfd, struct cstat *cli, unsigned long bno)
 			list_backup_file_name(cfd,arr[i].path, "log.gz");
 			list_backup_file_name(cfd,arr[i].path, "restorelog.gz");
 			list_backup_file_name(cfd,arr[i].path, "verifylog.gz");
+			list_backup_file_name(cfd,arr[i].path, "backup_stats");
+			list_backup_file_name(cfd,arr[i].path, "restore_stats");
+			list_backup_file_name(cfd,arr[i].path, "verify_stats");
 			if(send_data_to_client(cfd, "-list end-\n",
 				strlen("-list end-\n")))
 			{
@@ -895,7 +898,10 @@ static int parse_rbuf(const char *rbuf, int cfd, struct cstat **clist, int clen)
 		if(strcmp(file, "manifest.gz")
 		  && strcmp(file, "log.gz")
 		  && strcmp(file, "restorelog.gz")
-		  && strcmp(file, "verifylog.gz"))
+		  && strcmp(file, "verifylog.gz")
+		  && strcmp(file, "backup_stats")
+		  && strcmp(file, "verify_stats")
+		  && strcmp(file, "restore_stats"))
 			goto end;
 	}
 /*

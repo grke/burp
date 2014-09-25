@@ -145,7 +145,7 @@ static int forward_zp(gzFile zp, struct iobuf *result, struct iobuf *target,
 		do_cntr, same, dpthl, cconf);
 }
 
-int do_resume(gzFile p1zp, FILE *p2fp, FILE *ucfp,
+static int do_resume_work(gzFile p1zp, FILE *p2fp, FILE *ucfp,
 	struct dpthl *dpthl, struct conf *cconf)
 {
 	int ret=0;
@@ -220,3 +220,54 @@ end:
 	logp("End phase1 (read previous file system scan)\n");
 	return ret;
 }
+
+static int do_truncate(const char *path, FILE **fp)
+{
+	off_t pos;
+	if((pos=ftello(*fp))<0)
+	{
+		logp("Could not ftello on %s: %s\n", path, strerror(errno));
+		return -1;
+	}
+	if(truncate(path, pos))
+	{
+		logp("Could not truncate %s: %s\n", path, strerror(errno));
+		return -1;
+	}
+	close_fp(fp);
+	return 0;
+}
+
+int do_resume(gzFile p1zp, struct sdirs *sdirs,
+	struct dpthl *dpthl, struct conf *cconf)
+{
+	int ret=-1;
+	FILE *cfp=NULL;
+	FILE *ucfp=NULL;
+
+	// First, open them in a+ mode, so that they will be created if they
+	// do not exist.
+	if(!(cfp=open_file(sdirs->changed, "a+b"))
+	  || !(ucfp=open_file(sdirs->unchanged, "a+b")))
+		goto end;
+	close_fp(&cfp);
+	close_fp(&ucfp);
+
+	// Open for reading.
+	if(!(cfp=open_file(sdirs->changed, "rb"))
+	  || !(ucfp=open_file(sdirs->unchanged, "rb")))
+		goto end;
+
+	if(do_resume_work(p1zp, cfp, ucfp, dpthl, cconf)) goto end;
+
+	// Truncate to the appropriate places.
+	if(do_truncate(sdirs->changed, &cfp)
+	  || do_truncate(sdirs->unchanged, &ucfp))
+		goto end;
+	ret=0;
+end:
+	close_fp(&cfp);
+	close_fp(&ucfp);
+	return ret;
+}
+

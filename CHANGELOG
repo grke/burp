@@ -1,6 +1,9 @@
   * Make vss_strip.c include the configure output, so that vss_strip gets the
     large file options.
   * Make the server initiated restore not require an 'include' line.
+  * Add the ability to list backup_stats/restore_stats/verify_stats via the
+    status port.
+  * Add 'client_is_windows=0|1' to the stats files.
 
 2014-08-31 Changes in burp-1.4.22:
   * Fix for xattrs with zero length values.

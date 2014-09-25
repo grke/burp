@@ -622,6 +622,7 @@ int print_stats_to_file(struct cntr *p1c, struct cntr *c, struct config *conf, c
 		return -1;
 	}
 	fprintf(fp, "client:%s\n", client);
+	fprintf(fp, "client_is_windows:%d\n", conf->client_is_windows);
 	fprintf(fp, "time_start:%lu\n", p1c->start);
 	fprintf(fp, "time_end:%lu\n", now);
 	fprintf(fp, "time_taken:%lu\n", now-p1c->start);

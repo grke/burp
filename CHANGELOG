@@ -1,6 +1,8 @@
   * Make vss_strip.c include the configure output, so that vss_strip gets the
     large file options.
   * Make the server initiated restore not require an 'include' line.
+  * Bug fix for resume bug not correctly truncating the phase2/unchanged
+    manifests.
 
 2014-08-31 Changes in burp-1.4.22:
   * Fix for xattrs with zero length values.

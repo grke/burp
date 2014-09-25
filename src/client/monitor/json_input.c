@@ -97,7 +97,10 @@ static int input_string(void *ctx, const unsigned char *val, size_t len)
 	{
 		if(is_wrap(str, "backup", BU_LOG_BACKUP)
 		  || is_wrap(str, "restore", BU_LOG_RESTORE)
-		  || is_wrap(str, "verify", BU_LOG_VERIFY))
+		  || is_wrap(str, "verify", BU_LOG_VERIFY)
+		  || is_wrap(str, "backup_stats", BU_STATS_BACKUP)
+		  || is_wrap(str, "restore_stats", BU_STATS_RESTORE)
+		  || is_wrap(str, "verify_stats", BU_STATS_VERIFY))
 			goto end;
 	}
 	else if(!strcmp(lastkey, "logs"))

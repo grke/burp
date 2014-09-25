@@ -9,9 +9,12 @@
 #define BU_MANIFEST	0x0020
 // These are only set on a separate request.
 // Careful with the bit shifting in ncurses client with the UP/DOWN keys.
-#define BU_LOG_BACKUP	0x0040
-#define BU_LOG_RESTORE	0x0080
-#define BU_LOG_VERIFY	0x0100
+#define BU_LOG_BACKUP		0x0040
+#define BU_LOG_RESTORE		0x0080
+#define BU_LOG_VERIFY		0x0100
+#define BU_STATS_BACKUP		0x0200
+#define BU_STATS_RESTORE	0x0400
+#define BU_STATS_VERIFY		0x0800
 
 // Representing backup directories on the server for a client.
 // Needed on the client side too, as the status monitor stuff uses it.

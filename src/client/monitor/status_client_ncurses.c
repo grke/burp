@@ -628,6 +628,12 @@ static int update_screen(struct cstat *clist, struct cstat *sel,
 				"View restore log", &x, col, selop);
 			print_logs_list_line(*selbu, BU_LOG_VERIFY,
 				"View verify log", &x, col, selop);
+			print_logs_list_line(*selbu, BU_STATS_BACKUP,
+				"View backup stats", &x, col, selop);
+			print_logs_list_line(*selbu, BU_STATS_RESTORE,
+				"View restore stats", &x, col, selop);
+			print_logs_list_line(*selbu, BU_STATS_VERIFY,
+				"View verify stats", &x, col, selop);
 			break;
 		case DETAILS_VIEW_LOG:
 			break;

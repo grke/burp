@@ -76,6 +76,12 @@ static gzFile open_backup_log(struct bu *bu, const char *logfile)
 		snprintf(logfilereal, sizeof(logfilereal), "restorelog");
 	else if(!strcmp(logfile, "verify"))
 		snprintf(logfilereal, sizeof(logfilereal), "verifylog");
+	else if(!strcmp(logfile, "backup_stats"))
+		snprintf(logfilereal, sizeof(logfilereal), "backup_stats");
+	else if(!strcmp(logfile, "restore_stats"))
+		snprintf(logfilereal, sizeof(logfilereal), "restore_stats");
+	else if(!strcmp(logfile, "verify_stats"))
+		snprintf(logfilereal, sizeof(logfilereal), "verify_stats");
 
 	if(!(path=prepend_s(bu->path, logfilereal)))
 		goto end;
@@ -145,7 +151,8 @@ static int json_send_backup(struct asfd *asfd, struct cstat *cstat,
 	  || yajl_array_close_w())
 		return -1;
 	if(print_flags
-	  && (bu->flags & (BU_LOG_BACKUP|BU_LOG_RESTORE|BU_LOG_VERIFY)))
+	  && (bu->flags & (BU_LOG_BACKUP|BU_LOG_RESTORE|BU_LOG_VERIFY
+		|BU_STATS_BACKUP|BU_STATS_RESTORE|BU_STATS_VERIFY)))
 	{
 		if(yajl_gen_str_w("logs")
 		  || yajl_map_open_w()
@@ -154,6 +161,9 @@ static int json_send_backup(struct asfd *asfd, struct cstat *cstat,
 		  || flag_wrap_str(bu, BU_LOG_BACKUP, "backup")
 		  || flag_wrap_str(bu, BU_LOG_RESTORE, "restore")
 		  || flag_wrap_str(bu, BU_LOG_VERIFY, "verify")
+		  || flag_wrap_str(bu, BU_STATS_BACKUP, "backup_stats")
+		  || flag_wrap_str(bu, BU_STATS_RESTORE, "restore_stats")
+		  || flag_wrap_str(bu, BU_STATS_VERIFY, "verify_stats")
 	  	  || yajl_array_close_w())
 			return -1;
 		if(logfile)
@@ -163,7 +173,13 @@ static int json_send_backup(struct asfd *asfd, struct cstat *cstat,
 			  || flag_wrap_str_zp(bu,
 				BU_LOG_RESTORE, "restore", logfile)
 			  || flag_wrap_str_zp(bu,
-				BU_LOG_VERIFY, "verify", logfile))
+				BU_LOG_VERIFY, "verify", logfile)
+			  || flag_wrap_str_zp(bu,
+				BU_STATS_BACKUP, "backup_stats", logfile)
+			  || flag_wrap_str_zp(bu,
+				BU_STATS_RESTORE, "restore_stats", logfile)
+			  || flag_wrap_str_zp(bu,
+				BU_STATS_VERIFY, "verify_stats", logfile))
 					return -1;
 		}
 		if(yajl_map_close_w())

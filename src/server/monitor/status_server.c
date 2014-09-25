@@ -124,7 +124,10 @@ printf("got client data: '%s'\n", srfd->rbuf->buf);
 		if(strcmp(logfile, "manifest")
 		  && strcmp(logfile, "backup")
 		  && strcmp(logfile, "restore")
-		  && strcmp(logfile, "verify"))
+		  && strcmp(logfile, "verify")
+		  && strcmp(logfile, "backup_stats")
+		  && strcmp(logfile, "restore_stats")
+		  && strcmp(logfile, "verify_stats"))
 			goto end;
 	}
 

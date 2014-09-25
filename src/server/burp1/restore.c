@@ -534,7 +534,7 @@ int restore_burp1(struct asfd *asfd, struct bu *bu,
 
 	cntr_print(cconf->cntr, act);
 
-	cntr_stats_to_file(cconf->cntr, bu->path, act);
+	cntr_stats_to_file(cconf->cntr, bu->path, act, cconf);
 
 end:
 	iobuf_free_content(rbuf);

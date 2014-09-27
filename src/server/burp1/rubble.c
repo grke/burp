@@ -105,8 +105,8 @@ static int working_resume(struct asfd *asfd, struct sdirs *sdirs,
 			return 0;
 		case 0:
 			logp("Includes/excludes changed since last backup.\n");
-			logp("Will treat last backup as finished.\n");
-			return working_use(asfd, sdirs, incexc, resume, cconf);
+			logp("Will delete instead of resuming.\n");
+			return working_delete(asfd, sdirs);
 		case -1:
 		default:
 			return -1;

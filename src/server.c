@@ -882,6 +882,7 @@ static char *get_restorepath(struct config *cconf, const char *client)
 static int client_can_restore(struct config *cconf, const char *client)
 {
 	struct stat statp;
+
 	// If there is a restore file on the server, it is always OK.
 	if(cconf->restore_path
 	  && !lstat(cconf->restore_path, &statp))
@@ -890,7 +891,35 @@ static int client_can_restore(struct config *cconf, const char *client)
 		unlink(cconf->restore_path);
 		return 1;
 	}
+
+	// If we are a restore_client, it is always OK.
+	if(cconf->restore_client) return 1;
+
 	return cconf->client_can_restore;
+}
+
+static int client_can_verify(struct config *cconf)
+{
+	// If we are a restore_client, it is always OK.
+	if(cconf->restore_client) return 1;
+
+	return cconf->client_can_verify;
+}
+
+static int client_can_delete(struct config *cconf)
+{
+	// If we are a restore_client, it is always OK.
+	if(cconf->restore_client) return 1;
+
+	return cconf->client_can_delete;
+}
+
+static int client_can_list(struct config *cconf)
+{
+	// If we are a restore_client, it is always OK.
+	if(cconf->restore_client) return 1;
+
+	return cconf->client_can_list;
 }
 
 static void maybe_do_notification(int status, const char *client, const char *basedir, const char *storagedir, const char *filename, const char *brv, struct config *cconf, struct cntr *p1cntr, struct cntr *cntr)
@@ -1162,7 +1191,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 					goto end;
 				}
 			}
-			if(act==ACTION_VERIFY && !cconf->client_can_verify)
+			if(act==ACTION_VERIFY && !client_can_verify(cconf))
 			{
 				logp("Not allowing verify of %s\n", client);
 				async_write_str(CMD_GEN,
@@ -1215,7 +1244,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 		else
 		{
 			char *backupno=NULL;
-			if(!cconf->client_can_delete)
+			if(!client_can_delete(cconf))
 			{
 				logp("Not allowing delete of %s\n", client);
 				async_write_str(CMD_GEN,
@@ -1244,7 +1273,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 			char *browsedir=NULL;
 			char *listregex=NULL;
 
-			if(!cconf->client_can_list)
+			if(!client_can_list(conf))
 			{
 				logp("Not allowing list of %s\n", client);
 				async_write_str(CMD_GEN,

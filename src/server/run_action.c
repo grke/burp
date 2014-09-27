@@ -53,9 +53,20 @@ error:
 	return -1;
 }
 
+static int client_can_generic(struct conf *cconf, uint8_t flag)
+{
+	// Always allow restore_clients, unless we are talking about forcing
+	// a backup.
+	if(cconf->restore_client && flag!=CLIENT_CAN_FORCE_BACKUP)
+		return 1;
+
+	return cconf->client_can & flag;
+}
+
 static int client_can_restore(struct conf *cconf)
 {
 	struct stat statp;
+
 	// If there is a restore file on the server, it is always OK.
 	if(cconf->restore_path
 	  && !lstat(cconf->restore_path, &statp))
@@ -64,7 +75,8 @@ static int client_can_restore(struct conf *cconf)
 		unlink(cconf->restore_path);
 		return 1;
 	}
-	return (cconf->client_can & CLIENT_CAN_RESTORE);
+
+	return client_can_generic(cconf, CLIENT_CAN_RESTORE);
 }
 
 static void maybe_do_notification(struct asfd *asfd,
@@ -147,7 +159,8 @@ static int run_restore(struct asfd *asfd,
 			goto end;
 		}
 	}
-	if(act==ACTION_VERIFY && !(cconf->client_can & CLIENT_CAN_VERIFY))
+	if(act==ACTION_VERIFY
+	  && !(client_can_generic(cconf, CLIENT_CAN_VERIFY)))
 	{
 		logp("Not allowing verify of %s\n", cconf->cname);
 		if(!asfd->write_str(asfd, CMD_GEN,
@@ -182,7 +195,7 @@ static int run_delete(struct asfd *asfd,
 {
 	char *backupno=NULL;
 	struct iobuf *rbuf=asfd->rbuf;
-	if(!(cconf->client_can & CLIENT_CAN_DELETE))
+	if(!client_can_generic(cconf, CLIENT_CAN_DELETE))
 	{
 		logp("Not allowing delete of %s\n", cconf->cname);
 		asfd->write_str(asfd, CMD_GEN, "Client delete is not allowed");
@@ -201,7 +214,7 @@ static int run_list(struct asfd *asfd, struct sdirs *sdirs, struct conf *cconf)
 	char *listregex=NULL;
 	struct iobuf *rbuf=asfd->rbuf;
 
-	if(!(cconf->client_can & CLIENT_CAN_LIST))
+	if(!client_can_generic(cconf, CLIENT_CAN_LIST))
 	{
 		logp("Not allowing list of %s\n", cconf->cname);
 		asfd->write_str(asfd, CMD_GEN, "Client list is not allowed");
@@ -251,7 +264,7 @@ static int run_diff(struct asfd *asfd, struct sdirs *sdirs, struct conf *cconf)
 	char *backupno=NULL;
 	struct iobuf *rbuf=asfd->rbuf;
 
-	if(!(cconf->client_can & CLIENT_CAN_DIFF))
+	if(!client_can_generic(cconf, CLIENT_CAN_DIFF))
 	{
 		logp("Not allowing diff of %s\n", cconf->cname);
 		asfd->write_str(asfd, CMD_GEN, "Client diff is not allowed");

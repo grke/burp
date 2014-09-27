@@ -253,22 +253,22 @@ on the server. Options are...
 Turn this on to enable 'resume partial' code. Requires 'working_dir_recovery_method=resume'. When resuming an interrupted transfer of a single file, it attempts to use previously transferred blocks of that file in order to be more efficient. However, situations have been reported where the file on the server side just gets bigger forever, so this feature now defaults to being turned off.
 .TP
 \fBclient_can_delete=[0|1]\fR
-Turn this off to prevent clients from deleting backups with the '\-a D' option. The default is that clients can delete backups.
+Turn this off to prevent clients from deleting backups with the '\-a D' option. The default is that clients can delete backups. Restore clients can override this setting.
 .TP
 \fBclient_can_force_backup=[0|1]\fR
 Turn this off to prevent clients from forcing backups with the '\-a b' option. Timed backups will still work. The default is that clients can force backups.
 .TP
 \fBclient_can_list=[0|1]\fR
-Turn this off to prevent clients from listing backups with the '\-a l' option. The default is that clients can list backups.
+Turn this off to prevent clients from listing backups with the '\-a l' option. The default is that clients can list backups. Restore clients can override this setting.
 .TP
 \fBclient_can_restore=[0|1]\fR
-Turn this off to prevent clients from initiating restores with the '\-a r' option. The default is that clients can initiate restores.
+Turn this off to prevent clients from initiating restores with the '\-a r' option. The default is that clients can initiate restores. Restore clients can override this setting.
 .TP
 \fBclient_can_verify=[0|1]\fR
-Turn this off to prevent clients from initiating a verify job with the '\-a v' option. The default is that clients can initiate a verify job.
+Turn this off to prevent clients from initiating a verify job with the '\-a v' option. The default is that clients can initiate a verify job. Restore clients can override this setting.
 .TP
 \fBrestore_client=[client]\fR
-A client that is permitted to list and restore files belonging to any other client. You may specify multiple restore_clients. If this is too permissive, you may set a restore_client for individual original clients in the individual clientconfdir files. Note that restoring a backup from a Windows computer onto a Linux computer will currently leave the VSS headers in place at the beginning of each file. This will be addressed in a future version of burp.
+A client that is permitted to list, verify, restore and delete files belonging to any other client. You may specify multiple restore_clients. If this is too permissive, you may set a restore_client for individual original clients in the individual clientconfdir files. Note that restoring a backup from a Windows computer onto a Linux computer will currently leave the VSS headers in place at the beginning of each file. This will be addressed in a future version of burp.
 .TP
 \fBssl_cert_ca=[path]\fR
 The path to the SSL CA certificate. This file will probably be the same on both the server and the client. The file should contain just the certificate in PEM format. For more information on this, and the other ssl_* options, please see docs/burp_ca.txt.

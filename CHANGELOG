@@ -1,3 +1,15 @@
+2014-09-28 Changes in burp-1.4.24:
+  * Make vss_strip.c include the configure output, so that vss_strip gets the
+    large file options.
+  * Make the server initiated restore not require an 'include' line.
+  * Add the ability to list backup_stats/restore_stats/verify_stats via the
+    status port.
+  * Add 'client_is_windows=0|1' to the stats files.
+  * Bug fix for resume bug not correctly truncating the phase2/unchanged
+    manifests.
+  * Make restore_clients override client_can_restore/list/verify/delete
+    settings.
+
 2014-08-31 Changes in burp-1.4.22:
   * Fix for xattrs with zero length values.
   * Fix for restore bug when a file cannot be opened.

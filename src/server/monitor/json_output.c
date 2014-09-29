@@ -3,11 +3,23 @@
 static int write_all(struct asfd *asfd)
 {
 	int ret=-1;
-	size_t len;
+	size_t w=0;
+	size_t len=0;
 	const unsigned char *buf;
+
 	yajl_gen_get_buf(yajl, &buf, &len);
-	ret=asfd->write_strn(asfd, CMD_GEN /* not used */,
-		(const char *)buf, len);
+	while(len)
+	{
+		w=len;
+	//	if(w>ASYNC_BUF_LEN) w=ASYNC_BUF_LEN;
+		if(w>1024) w=1024;
+		if((ret=asfd->write_strn(asfd, CMD_GEN /* not used */,
+			(const char *)buf, w)))
+				break;
+
+		buf+=w;
+		len-=w;
+	}
 	yajl_gen_clear(yajl);
 	return ret;
 }
@@ -30,10 +42,13 @@ static int json_start(struct asfd *asfd)
 static int json_end(struct asfd *asfd)
 {
 	int ret=-1;
+printf("in json_end\n");
 	if(yajl_array_close_w()
 	  || yajl_map_close_w())
 		goto end;
+printf("in json_end a\n");
 	ret=write_all(asfd);
+printf("in json_end b\n");
 end:
 	yajl_gen_free(yajl);
 	yajl=NULL;
@@ -285,22 +300,22 @@ end:
 	return ret;
 }
 
-int json_from_sbuf(struct sbuf *sb)
+int json_from_statp(const char *path, struct stat *statp)
 {
 	return yajl_map_open_w()
-	  || yajl_gen_str_pair_w("name", sb->path.buf)
-	  || yajl_gen_int_pair_w("dev", sb->statp.st_dev)
-	  || yajl_gen_int_pair_w("ino", sb->statp.st_ino)
-	  || yajl_gen_int_pair_w("mode", sb->statp.st_mode)
-	  || yajl_gen_int_pair_w("nlink", sb->statp.st_nlink)
-	  || yajl_gen_int_pair_w("uid", sb->statp.st_uid)
-	  || yajl_gen_int_pair_w("gid", sb->statp.st_gid)
-	  || yajl_gen_int_pair_w("rdev", sb->statp.st_rdev)
-	  || yajl_gen_int_pair_w("size", sb->statp.st_size)
-	  || yajl_gen_int_pair_w("blksize", sb->statp.st_blksize)
-	  || yajl_gen_int_pair_w("blocks", sb->statp.st_blocks)
-	  || yajl_gen_int_pair_w("atime", sb->statp.st_atime)
-	  || yajl_gen_int_pair_w("ctime", sb->statp.st_ctime)
-	  || yajl_gen_int_pair_w("mtime", sb->statp.st_mtime)
+	  || yajl_gen_str_pair_w("name", path)
+	  || yajl_gen_int_pair_w("dev", statp->st_dev)
+	  || yajl_gen_int_pair_w("ino", statp->st_ino)
+	  || yajl_gen_int_pair_w("mode", statp->st_mode)
+	  || yajl_gen_int_pair_w("nlink", statp->st_nlink)
+	  || yajl_gen_int_pair_w("uid", statp->st_uid)
+	  || yajl_gen_int_pair_w("gid", statp->st_gid)
+	  || yajl_gen_int_pair_w("rdev", statp->st_rdev)
+	  || yajl_gen_int_pair_w("size", statp->st_size)
+	  || yajl_gen_int_pair_w("blksize", statp->st_blksize)
+	  || yajl_gen_int_pair_w("blocks", statp->st_blocks)
+	  || yajl_gen_int_pair_w("atime", statp->st_atime)
+	  || yajl_gen_int_pair_w("ctime", statp->st_ctime)
+	  || yajl_gen_int_pair_w("mtime", statp->st_mtime)
 	  || yajl_map_close_w();
 }

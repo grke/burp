@@ -21,7 +21,7 @@ static struct ent *ent_alloc(const char *name)
 {
 	struct ent *ent;
 	if(!(ent=(struct ent *)calloc_w(1, sizeof(struct ent), __func__))
-	  || !(ent->name=strdup(name)))
+	  || !(ent->name=strdup_w(name, __func__)))
 		goto error;
 	return ent;
 error:
@@ -45,10 +45,6 @@ static int ent_add_to_list(struct ent *ent,
 	memcpy(&enew->statp, &sb->statp, sizeof(struct stat));
 	ent->ents[ent->count]=enew;
 	ent->count++;
-printf("got: %s\n", ent_name);
-printf("count: %d\n", ent->count);
-printf("and: %s\n", enew->name);
-printf("and: %s\n", ent->ents[0]->name);
 	return 0;
 }
 
@@ -70,21 +66,14 @@ int cache_load(struct asfd *srfd, struct manio *manio, struct sbuf *sb)
 {
 	int ret=-1;
 	int ars=0;
-	struct ent *cur_dir;
-	char *tmp=NULL;
-	char *cur_path=NULL;
-	char *dir_path;
-	char *ent_name;
-	size_t l;
 	int depth=0;
+	char *tok=NULL;
+	struct ent *point=NULL;
+	struct ent *p=NULL;
 
 printf("in cache load\n");
 
-	if(!(cur_path=strdup_w("", __func__))
-	  || !(root=ent_alloc(cur_path)))
-		goto end;
-	cur_dir=root;
-	l=strlen(cur_path);
+	if(!(root=ent_alloc(""))) goto end;
 
 	while(1)
 	{
@@ -104,90 +93,46 @@ printf("in cache load\n");
 		  && !cmd_is_link(sb->path.cmd))
 			continue;
 
-		if(!strcmp(sb->path.buf, "/"))
+		// Some messing around so that we can list '/'.
+		if(!*(root->name) && !strncmp(sb->path.buf, "/", 1))
 		{
-			memcpy(&cur_dir->statp,
-				&sb->statp, sizeof(struct stat));
-/*
-			free_w(&cur_path);
-			if(!(cur_path=strdup_w("/", __func__)))
-				goto end;
-			l=1;
-*/
-			continue;
-		}
-printf("try '%s'\n", sb->path.buf);
-
-		// Start to load into memory here.
-		if((ent_name=strrchr(sb->path.buf, '/')))
-		{
-			*ent_name='\0';
-			ent_name++;
-			dir_path=sb->path.buf;
-		}
-		else
-		{
-			ent_name=sb->path.buf;
-			dir_path=(char *)"";
-		}
-
-printf("('%s' '%s' '%s')\n", cur_path, dir_path, ent_name);
-
-		if(!strcmp(cur_path, dir_path))
-		{
-			// It is within the same directory.
-			// Add it to the list and keep going.
-printf("add to list a\n");
-			if(ent_add_to_list(cur_dir, sb, ent_name))
+			memcpy(&root->statp, &sb->statp, sizeof(struct stat));
+			free_w(&root->name);
+			if(!(root->name=strdup_w("/", __func__)))
 				goto end;
 		}
-		else if(!strncmp(cur_path, dir_path, l)
-		  && *(dir_path+l+1)=='/')
+
+		point=root;
+		if((tok=strtok(sb->path.buf, "/"))) do
 		{
-			// It is within a sub directory.
-			if(cur_dir->count > 0
-			  && !strcmp(cur_dir->ents[cur_dir->count-1]->name,
-				dir_path+l+1))
+			if(point->count>0)
 			{
-				// It is inside the previous directory that we
-				// added.
-
-				// FIX THIS: Check for jumps of more than one
-				// sub directory. For example:
-				// /home/graham
-				// /home/graham/abc/123/xyz
-
-				// Need to set up cur_path and cur_dir
-				// appropriately.
-				cur_dir=cur_dir->ents[cur_dir->count-1];
-				if(!(tmp=prepend_s(cur_path, cur_dir->name)))
-					goto end;
-				free_w(&cur_path);
-				cur_path=tmp;
-				tmp=NULL;
-				l=strlen(cur_path);
-
-				// Now add the new entry.
-				if(ent_add_to_list(cur_dir, sb, ent_name))
-					goto end;
-printf("add to list b\n");
+				p=point->ents[point->count-1];
+				if(!strcmp(tok, p->name))
+				{
+					point=p;
+					continue;
+				}
 			}
-		}
-		else
-		{
-printf("within parent\n");
-			// It is within a parent directory.
-			// Probably want to run a 'cache_find' function here,
-			// or keep a stack to go back up.
-		}
-printf("\n");
+
+			if(sb->path.buf+sb->path.len!=tok+strlen(tok))
+			{
+				// There is an entry in a directory where the
+				// directory itself was not backed up.
+				// We will make a fake entry for the directory,
+				// and use the same stat data.
+				// Make sure that we set the directory flag.
+				sb->statp.st_mode&=S_IFDIR;
+			}
+			if(ent_add_to_list(point, sb, tok)) goto end;
+			point=point->ents[point->count-1];
+		} while((tok=strtok(NULL, "/")));
 	}
 
 	ret=0;
+printf("cache dump\n");
 	cache_dump(root, &depth);
 end:
-	free_w(&tmp);
-	free_w(&cur_path);
 	return ret;
 }
 
@@ -198,7 +143,50 @@ int cache_loaded(void)
 	return 0;
 }
 
+static int result_single(struct ent *ent)
+{
+	printf("result: %s\n", ent->name);
+	return json_from_statp(ent->name, &ent->statp);
+}
+
+static int result_list(struct ent *ent)
+{
+	int i=0;
+	printf("in results\n");
+	for(i=0; i<ent->count; i++)
+		result_single(ent->ents[i]);
+	return 0;
+}
+
 int cache_lookup(const char *browse)
 {
-	return 0;
+	int i=0;
+	int ret=-1;
+	char *tok=NULL;
+	char *copy=NULL;
+	struct ent *point=root;
+
+	if(!browse || !*browse)
+	{
+		ret=result_single(point);
+		goto end;
+	}
+
+	if(!(copy=strdup_w(browse, __func__)))
+		goto end;
+	if((tok=strtok(copy, "/"))) do
+	{
+		// FIX THIS: Should do a binary search here.
+		for(i=0; i<point->count; i++)
+		{
+			if(strcmp(tok, point->ents[i]->name)) continue;
+			point=point->ents[i];
+			break;
+		}
+	} while((tok=strtok(NULL, "/")));
+
+	ret=result_list(point);
+end:
+	free_w(&copy);
+	return ret;
 }

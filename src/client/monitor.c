@@ -11,8 +11,11 @@ static int parse_data(struct asfd *sfd, struct asfd *asfd)
 			CMD_GEN, asfd->rbuf->buf, asfd->rbuf->len);
 	}
 	else
+	{
 		// Print stuff from server direct to stdout.
-		printf("%s", asfd->rbuf->buf);
+		fprintf(stdout, "%s", asfd->rbuf->buf);
+		fflush(stdout);
+	}
 	iobuf_free_content(asfd->rbuf);
 	return ret;
 }

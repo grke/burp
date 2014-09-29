@@ -34,7 +34,7 @@ static int do_browse_manifest(struct asfd *srfd,
 			goto end;
 		if(!r) continue;
 
-		if(json_from_sbuf(sb)) goto end;
+		if(json_from_statp(sb->path.buf, &sb->statp)) goto end;
 	}
 
 	ret=0;
@@ -72,8 +72,12 @@ end:
 int browse_manifest(struct asfd *srfd, struct cstat *cstat,
 	struct bu *bu, const char *browse, struct conf *conf)
 {
-	if(conf->monitor_browse_cache
-	  && cache_loaded())
+	if(conf->monitor_browse_cache)
+	{
+		if(!cache_loaded()
+		  && browse_manifest_start(srfd, cstat, bu, browse, conf))
+			return -1;
 		return cache_lookup(browse);
+	}
 	return browse_manifest_start(srfd, cstat, bu, browse, conf);
 }

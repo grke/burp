@@ -59,7 +59,7 @@ static int browse_manifest_start(struct asfd *srfd, struct cstat *cstat,
 		goto end;
 	manio_set_protocol(manio, cstat->protocol);
 	if(conf->monitor_browse_cache)
-		ret=cache_load(srfd, manio, sb);
+		ret=cache_load(srfd, manio, sb, cstat, bu);
 	else
 		ret=do_browse_manifest(srfd, manio, sb, browse);
 end:
@@ -74,7 +74,7 @@ int browse_manifest(struct asfd *srfd, struct cstat *cstat,
 {
 	if(conf->monitor_browse_cache)
 	{
-		if(!cache_loaded()
+		if(!cache_loaded(cstat, bu)
 		  && browse_manifest_start(srfd, cstat, bu, browse, conf))
 			return -1;
 		return cache_lookup(browse);

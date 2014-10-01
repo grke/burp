@@ -1,30 +1,21 @@
 #include "include.h"
 
-static int parse_data(struct asfd *sfd, struct asfd *asfd)
+static int copy_input_to_output(struct asfd *in, struct asfd *out)
 {
-	int ret=0;
-	// Hacky to switch on whether it is using char buffering or not.
-	if(asfd->streamtype==ASFD_STREAM_LINEBUF)
-	{
-		// Write stdin input to server.
-                ret=sfd->write_strn(sfd,
-			CMD_GEN, asfd->rbuf->buf, asfd->rbuf->len);
-	}
-	else
-	{
-		// Print stuff from server direct to stdout.
-		fprintf(stdout, "%s", asfd->rbuf->buf);
-		fflush(stdout);
-	}
-	iobuf_free_content(asfd->rbuf);
-	return ret;
+	return out->write_strn(out, CMD_GEN, in->rbuf->buf, in->rbuf->len);
 }
-
 
 static int main_loop(struct async *as, struct conf *conf)
 {
-	struct asfd *asfd=NULL;
-	struct asfd *sfd=as->asfd; // Server fd.
+	struct asfd *asfd;
+	struct asfd *sfd; // Server fd.
+	struct asfd *sin;
+	struct asfd *sout;
+
+	sfd=as->asfd;
+	sin=sfd->next;
+	sout=sin->next;
+
 	while(1)
 	{
 		if(as->read_write(as))
@@ -36,7 +27,16 @@ static int main_loop(struct async *as, struct conf *conf)
 		for(asfd=as->asfd; asfd; asfd=asfd->next)
 			while(asfd->rbuf->buf)
 		{
-			if(parse_data(sfd, asfd)) goto error;
+			if(asfd==sfd)
+			{
+				if(copy_input_to_output(sfd, sout))
+					goto error;
+			}
+			else if(asfd==sin)
+			{
+				if(copy_input_to_output(sin, sfd))
+					goto error;
+			}
 			iobuf_free_content(asfd->rbuf);
 			if(asfd->parse_readbuf(asfd))
 				goto error;
@@ -73,9 +73,13 @@ int do_monitor_client(struct asfd *asfd, struct conf *conf)
 	int ret=-1;
 	struct async *as=asfd->as;
 	int stdinfd=fileno(stdin);
+	int stdoutfd=fileno(stdout);
 logp("in monitor\n");
-	setbuf(stdout, NULL);
-	if(setup_asfd(as, "stdin", &stdinfd, ASFD_STREAM_LINEBUF, conf))
+	// I tried to just printf to stdout, but the strings to print would be
+	// so long that I would start to get printf errors.
+	// Using the asfd stuff works well though.
+	if(setup_asfd(as, "stdin", &stdinfd, ASFD_STREAM_LINEBUF, conf)
+	  || setup_asfd(as, "stdout", &stdoutfd, ASFD_STREAM_LINEBUF, conf))
 		goto end;
 	ret=main_loop(as, conf);
 end:

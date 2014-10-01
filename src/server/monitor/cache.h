@@ -3,8 +3,9 @@
 
 #include "include.h"
 
-extern int cache_loaded(void);
-extern int cache_load(struct asfd *srfd, struct manio *manio, struct sbuf *sb);
+extern int cache_loaded(struct cstat *cstat, struct bu *bu);
+extern int cache_load(struct asfd *srfd, struct manio *manio, struct sbuf *sb,
+	struct cstat *cstat, struct bu *bu);
 extern int cache_lookup(const char *browse);
 
 #endif

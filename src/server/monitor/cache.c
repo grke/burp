@@ -14,6 +14,7 @@ static void ent_free(struct ent **ent)
 {
 	if(!ent || !*ent) return;
 	if((*ent)->name) free((*ent)->name);
+	if((*ent)->ents) free((*ent)->ents);
 	free_v((void **)ent);
 }
 
@@ -29,7 +30,13 @@ error:
 	return NULL;
 }
 
+// FIX THIS:
+// For extra kicks, could make the config option allow multiple caches -
+// eg, 'monitor_browse_cache=5', then rotate out the oldest one.
+
 static struct ent *root=NULL;
+static char *cached_client=NULL;
+static unsigned long cached_bno=0;
 
 static int ent_add_to_list(struct ent *ent,
 	struct sbuf *sb, const char *ent_name)
@@ -48,6 +55,21 @@ static int ent_add_to_list(struct ent *ent,
 	return 0;
 }
 
+static void ents_free(struct ent *ent)
+{
+	int i=0;
+	for(i=0; i<ent->count; i++)
+		ents_free(ent->ents[i]);
+	ent_free(&ent);
+}
+
+static void cache_free(void)
+{
+	if(!root) return;
+	ents_free(root);
+}
+
+/*
 static void cache_dump(struct ent *e, int *depth)
 {
 	int count;
@@ -61,17 +83,20 @@ static void cache_dump(struct ent *e, int *depth)
 		(*depth)--;
 	}
 }
+*/
 
-int cache_load(struct asfd *srfd, struct manio *manio, struct sbuf *sb)
+int cache_load(struct asfd *srfd, struct manio *manio, struct sbuf *sb,
+	struct cstat *cstat, struct bu *bu)
 {
 	int ret=-1;
 	int ars=0;
-	int depth=0;
+//	int depth=0;
 	char *tok=NULL;
 	struct ent *point=NULL;
 	struct ent *p=NULL;
 
-printf("in cache load\n");
+//printf("in cache load\n");
+	cache_free();
 
 	if(!(root=ent_alloc(""))) goto end;
 
@@ -129,30 +154,34 @@ printf("in cache load\n");
 		} while((tok=strtok(NULL, "/")));
 	}
 
+	if(!(cached_client=strdup_w(cstat->name, __func__)))
+		goto end;
+	cached_bno=bu->bno;
 	ret=0;
-printf("cache dump\n");
-	cache_dump(root, &depth);
+//	cache_dump(root, &depth);
 end:
 	return ret;
 }
 
-// Will probably need to change this to be the correct cache loaded.
-int cache_loaded(void)
+int cache_loaded(struct cstat *cstat, struct bu *bu)
 {
-	if(root) return 1;
+	if(cached_client
+	  && !strcmp(cstat->name, cached_client)
+	  && cached_bno==bu->bno)
+		return 1;
 	return 0;
 }
 
 static int result_single(struct ent *ent)
 {
-	printf("result: %s\n", ent->name);
+//	printf("result: %s\n", ent->name);
 	return json_from_statp(ent->name, &ent->statp);
 }
 
 static int result_list(struct ent *ent)
 {
 	int i=0;
-	printf("in results\n");
+//	printf("in results\n");
 	for(i=0; i<ent->count; i++)
 		result_single(ent->ents[i]);
 	return 0;
@@ -168,7 +197,10 @@ int cache_lookup(const char *browse)
 
 	if(!browse || !*browse)
 	{
-		ret=result_single(point);
+		// The difference between the top level for Windows and the
+		// top level for non-Windows.
+		if(*(point->name)) ret=result_single(point);
+		else ret=result_list(point);
 		goto end;
 	}
 
@@ -176,7 +208,8 @@ int cache_lookup(const char *browse)
 		goto end;
 	if((tok=strtok(copy, "/"))) do
 	{
-		// FIX THIS: Should do a binary search here.
+		// FIX THIS: Should do a binary search here, for monster speed
+		// increases when there are lots of files in a directory.
 		for(i=0; i<point->count; i++)
 		{
 			if(strcmp(tok, point->ents[i]->name)) continue;

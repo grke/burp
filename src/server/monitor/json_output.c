@@ -11,12 +11,10 @@ static int write_all(struct asfd *asfd)
 	while(len)
 	{
 		w=len;
-	//	if(w>ASYNC_BUF_LEN) w=ASYNC_BUF_LEN;
-		if(w>1024) w=1024;
+		if(w>ASYNC_BUF_LEN) w=ASYNC_BUF_LEN;
 		if((ret=asfd->write_strn(asfd, CMD_GEN /* not used */,
 			(const char *)buf, w)))
 				break;
-
 		buf+=w;
 		len-=w;
 	}
@@ -42,13 +40,10 @@ static int json_start(struct asfd *asfd)
 static int json_end(struct asfd *asfd)
 {
 	int ret=-1;
-printf("in json_end\n");
 	if(yajl_array_close_w()
 	  || yajl_map_close_w())
 		goto end;
-printf("in json_end a\n");
 	ret=write_all(asfd);
-printf("in json_end b\n");
 end:
 	yajl_gen_free(yajl);
 	yajl=NULL;

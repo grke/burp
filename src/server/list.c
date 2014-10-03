@@ -42,43 +42,40 @@ static int write_wrapper_str(struct asfd *asfd, char wcmd, const char *wsrc)
 	return write_wrapper(asfd, &wbuf);
 }
 
-int check_browsedir(const char *browsedir, char **path,
-	size_t bdlen, char **last_bd_match)
+int check_browsedir(const char *browsedir,
+	struct sbuf *mb, size_t bdlen, char **last_bd_match)
 {
-	char *cp=NULL;
+	char *cp=mb->path.buf;
 	char *copy=NULL;
-	if(strncmp(browsedir, *path, bdlen))
-		return 0;
-	if((*path)[bdlen+1]=='\0' || (bdlen>1 && (*path)[bdlen]!='/'))
-		return 0;
+	if(bdlen>0)
+	{
+		if(strncmp(browsedir, cp, bdlen))
+			return 0;
+		cp+=bdlen;
+		if(browsedir[bdlen-1]!='/')
+		{
+			if(*cp!='/') return 0;
+			cp++;
+		}
+	}
+	if(*cp=='\0') return 0;
+	if(!(copy=strdup_w(cp, __func__))) goto err;
+	if((cp=strchr(copy, '/')))
+	{
+		if(bdlen==0) cp++;
+		*cp='\0';
 
-	/* Lots of messing around related to whether browsedir was '', '/', or
-   	   something else. */
-	if(*browsedir)
-	{
-		if(!strcmp(browsedir, "/"))
+		if(!S_ISDIR(mb->statp.st_mode))
 		{
-			if(!(copy=strdup_w((*path)+bdlen, __func__)))
-				goto error;
-			if((cp=strchr(copy+1, '/'))) *cp='\0';
-		}
-		else
-		{
-			if(!(copy=strdup_w((*path)+bdlen+1, __func__)))
-				goto error;
-			if((cp=strchr(copy, '/'))) *cp='\0';
+			// We are faking a directory entry.
+			// Make sure the directory bit is set.
+			mb->statp.st_mode &= ~(S_IFMT);
+			mb->statp.st_mode |= S_IFDIR;
+			attribs_encode(mb);
 		}
 	}
-	else
-	{
-		if(!(copy=strdup_w((*path)+bdlen, __func__)))
-			goto error;
-		if(*copy=='/') *(copy+1)='\0';
-		// Messing around for Windows.
-		else if(strlen(copy)>2 && copy[1]==':' && copy[2]=='/')
-			copy[2]='\0';
-	}
-	if(last_bd_match && *last_bd_match)
+
+	if(*last_bd_match)
 	{
 		if(!strcmp(*last_bd_match, copy))
 		{
@@ -88,12 +85,12 @@ int check_browsedir(const char *browsedir, char **path,
 		}
 		free(*last_bd_match);
 	}
-	free(*path);
-	*path=copy;
+	free(mb->path.buf);
+	mb->path.buf=copy;
 	if(!(*last_bd_match=strdup_w(copy, __func__)))
-		goto error;
+		goto err;
 	return 1;
-error:
+err:
 	if(copy) free(copy);
 	log_out_of_memory(__func__);
 	return -1;
@@ -140,7 +137,7 @@ static int list_manifest(struct asfd *asfd,
 		{
 			int r;
 			if((r=check_browsedir(browsedir,
-				&sb->path.buf, bdlen, &last_bd_match))<0)
+				sb, bdlen, &last_bd_match))<0)
 					goto error;
 			if(!r) continue;
 			show++;

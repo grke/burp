@@ -29,8 +29,7 @@ static int do_browse_manifest(struct asfd *srfd,
 		  && !cmd_is_link(sb->path.cmd))
 			continue;
 
-		if((r=check_browsedir(browse, &(sb->path.buf),
-		  blen, &last_bd_match))<0)
+		if((r=check_browsedir(browse, sb, blen, &last_bd_match))<0)
 			goto end;
 		if(!r) continue;
 

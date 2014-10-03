@@ -77,6 +77,9 @@ int check_browsedir(const char *browsedir,
 		}
 	}
 
+	// Strip off possible trailing slash.
+	if((cp=strrchr(copy, '/')) && cp>copy) *cp='\0';
+
 	if(*last_bd_match)
 	{
 		if(!strcmp(*last_bd_match, copy))

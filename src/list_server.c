@@ -45,39 +45,31 @@ static int write_wrapper_str(char wcmd, const char *wsrc)
 
 int check_browsedir(const char *browsedir, char **path, size_t bdlen, char **last_bd_match)
 {
-	char *cp=NULL;
+	char *cp=*path;
 	char *copy=NULL;
-	if(strncmp(browsedir, *path, bdlen))
+	if (bdlen>0)
+	{
+		if (strncmp(browsedir, cp, bdlen))
+			return 0;
+		cp+=bdlen;
+		if (browsedir[bdlen-1]!='/')
+		{
+			if (*cp!='/')
+				return 0;
+			cp++;
+		}
+	}
+	if (*cp=='\0')
 		return 0;
-	if((*path)[bdlen+1]=='\0' || (bdlen>1 && (*path)[bdlen]!='/'))
-		return 0;
+	if (!(copy=strdup(cp)))
+		goto err;
+	if ((cp=strchr(copy, '/')))
+	{
+		if (bdlen==0)
+			cp++;
+		*cp='\0';
+	}
 
-	/* Lots of messing around related to whether browsedir was '', '/', or
-   	   something else. */
-	if(*browsedir)
-	{
-		if(!strcmp(browsedir, "/"))
-		{
-			if(!(copy=strdup((*path)+bdlen)))
-				goto err;
-			if((cp=strchr(copy+1, '/'))) *cp='\0';
-		}
-		else
-		{
-			if(!(copy=strdup((*path)+bdlen+1)))
-				goto err;
-			if((cp=strchr(copy, '/'))) *cp='\0';
-		}
-	}
-	else
-	{
-		if(!(copy=strdup((*path)+bdlen)))
-			goto err;
-		if(*copy=='/') *(copy+1)='\0';
-		// Messing around for Windows.
-		else if(strlen(copy)>2 && copy[1]==':' && copy[2]=='/')
-			copy[2]='\0';
-	}
 	if(*last_bd_match)
 	{
 		if(!strcmp(*last_bd_match, copy))

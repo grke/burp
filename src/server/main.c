@@ -335,9 +335,20 @@ static int process_incoming_client(int *rfd, SSL_CTX *ctx,
 			return -1;
 		case 0:
 		{
+			int p;
 			int ret;
 			// child
 			struct sigaction sa;
+
+			// Close unnecessary file descriptors.
+			// Go up to FD_SETSIZE and hope for the best.
+			for(p=3; p<(int)FD_SETSIZE; p++)
+			{
+				if(p!=pipe_rfd[1]
+				  && p!=pipe_wfd[0]
+				  && p!=cfd)
+					close(p);
+			}
 
 			// Set SIGCHLD back to default, so that I
 			// can get sensible returns from waitpid.

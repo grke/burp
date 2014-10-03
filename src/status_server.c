@@ -702,8 +702,7 @@ static int browse_manifest(int cfd, gzFile zp, const char *browse)
 		  && !cmd_is_link(sb.cmd))
 			continue;
 
-		if((r=check_browsedir(browse,
-			&sb.path, blen, &last_bd_match))<0)
+		if((r=check_browsedir(browse, &sb, blen, &last_bd_match))<0)
 		{
 			ret=-1;
 			break;

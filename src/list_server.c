@@ -43,31 +43,38 @@ static int write_wrapper_str(char wcmd, const char *wsrc)
 	return write_wrapper(wcmd, wsrc, &wlen);
 }
 
-int check_browsedir(const char *browsedir, char **path, size_t bdlen, char **last_bd_match)
+int check_browsedir(const char *browsedir,
+	struct sbuf *mb, size_t bdlen, char **last_bd_match)
 {
-	char *cp=*path;
+	char *cp=mb->path;
 	char *copy=NULL;
-	if (bdlen>0)
+	if(bdlen>0)
 	{
-		if (strncmp(browsedir, cp, bdlen))
+		if(strncmp(browsedir, cp, bdlen))
 			return 0;
 		cp+=bdlen;
-		if (browsedir[bdlen-1]!='/')
+		if(browsedir[bdlen-1]!='/')
 		{
-			if (*cp!='/')
-				return 0;
+			if(*cp!='/') return 0;
 			cp++;
 		}
 	}
-	if (*cp=='\0')
-		return 0;
-	if (!(copy=strdup(cp)))
-		goto err;
-	if ((cp=strchr(copy, '/')))
+	if(*cp=='\0') return 0;
+	if(!(copy=strdup(cp))) goto err;
+	if((cp=strchr(copy, '/')))
 	{
-		if (bdlen==0)
-			cp++;
+		if(bdlen==0) cp++;
 		*cp='\0';
+
+		if(!S_ISDIR(mb->statp.st_mode))
+		{
+			// We are faking a directory entry.
+			// Make sure the directory bit is set.
+			mb->statp.st_mode &= ~(S_IFMT);
+			mb->statp.st_mode |= S_IFDIR;
+			encode_stat(mb->statbuf,
+				&mb->statp, mb->winattr, mb->compression);
+		}
 	}
 
 	if(*last_bd_match)
@@ -80,8 +87,8 @@ int check_browsedir(const char *browsedir, char **path, size_t bdlen, char **las
 		}
 		free(*last_bd_match);
 	}
-	free(*path);
-	*path=copy;
+	free(mb->path);
+	mb->path=copy;
 	if(!(*last_bd_match=strdup(copy)))
 		goto err;
 	return 1;
@@ -101,6 +108,7 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 	char *manifest=NULL;
 	char *last_bd_match=NULL;
 	size_t bdlen=0;
+	int isdir=0;
 
 	init_sbuf(&mb);
 
@@ -149,7 +157,7 @@ static int list_manifest(const char *fullpath, regex_t *regex, const char *brows
 		{
 			int r;
 			if((r=check_browsedir(browsedir,
-				&(mb.path), bdlen, &last_bd_match))<0)
+				&mb, bdlen, &last_bd_match))<0)
 			{
 				quit++;
 				ret=-1;

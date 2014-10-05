@@ -181,7 +181,7 @@ Function .onInit
   StrCpy $ConfigServerAddress		"10.0.0.1"
   StrCpy $ConfigServerPort              "4971"
   StrCpy $ConfigClientName              "clientname"
-  StrCpy $ConfigPassword                "password"
+  StrCpy $ConfigPassword                "abcdefgh"
   StrCpy $ConfigPoll                    "20"
   StrCpy $ConfigAutoupgrade		"0"
   ; The commands that you have to give the Windows scheduler change depending
@@ -311,6 +311,7 @@ overwrite:
   FileWrite $R1 "mode = client$\r$\n"
   FileWrite $R1 "server = $ConfigServerAddress$\r$\n"
   FileWrite $R1 "port = $ConfigServerPort$\r$\n"
+  FileWrite $R1 "status_port = 4972$\r$\n"
   FileWrite $R1 "cname = $ConfigClientName$\r$\n"
   FileWrite $R1 "password = $ConfigPassword$\r$\n"
   ${If} ${FileExists} "C:/Users"
@@ -322,6 +323,11 @@ overwrite:
       FileWrite $R1 "include = C:/$\r$\n"
     ${EndIf}
   ${EndIf}
+  FileWrite $R1 "exclude_regex = ^[A-Z]:/recycler$$$\r$\n"
+  FileWrite $R1 "exclude_regex = ^[A-Z]:/\$$recycle\.bin$$$\r$\n"
+  FileWrite $R1 "exclude_regex = ^[A-Z]:/pagefile\.sys$$$\r$\n"
+  FileWrite $R1 "exclude_regex = ^[A-Z]:/swapfile\.sys$$$\r$\n"
+  FileWrite $R1 "exclude_regex = ^[A-Z]:/hiberfil\.sys$$$\r$\n"
   FileWrite $R1 "stdout = 1$\r$\n"
   FileWrite $R1 "progress_counter = 1$\r$\n"
   FileWrite $R1 "nobackup = .nobackup$\r$\n"

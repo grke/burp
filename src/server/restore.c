@@ -188,7 +188,10 @@ int do_restore_server(struct asfd *asfd, struct sdirs *sdirs,
 		return -1;
 	}
 
-	if(!(bno=strtoul(conf->backup, NULL, 10)) && bu_list)
+	if((!conf->backup
+	 || !*(conf->backup)
+	 || !(bno=strtoul(conf->backup, NULL, 10)))
+		&& bu_list)
 	{
 		found=1;
 		// No backup specified, do the most recent.

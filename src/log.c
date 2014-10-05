@@ -135,7 +135,7 @@ void log_restore_settings(struct conf *cconf, int srestore)
 	logp("Restore settings:\n");
 	if(cconf->orig_client)
 		logp("orig_client = %s\n", cconf->orig_client);
-	logp("backup = %s\n", cconf->backup);
+	if(cconf->backup) logp("backup = %s\n", cconf->backup);
 	if(srestore)
 	{
 		// This are unknown unless doing a server initiated restore.

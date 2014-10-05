@@ -1,5 +1,7 @@
 #include "include.h"
 
+#define DEFAULT_TIMESTAMP_FORMAT	"%Y-%m-%d %H:%M:%S"
+
 int timestamp_read(const char *path, char buf[], size_t len)
 {
 	FILE *fp=NULL;
@@ -29,11 +31,20 @@ int timestamp_write(const char *path, const char *tstmp)
 	return 0;
 }
 
+static void write_to_buf(char *buf, size_t s,
+	unsigned long index, const char *format, const struct tm *ctm)
+{
+	char tmpbuf[32]="";
+	const char *fmt=DEFAULT_TIMESTAMP_FORMAT;
+	if(format) fmt=format;
+	strftime(tmpbuf, sizeof(tmpbuf), fmt, ctm);
+	snprintf(buf, s, "%07lu %s", index, tmpbuf);
+}
+
 int timestamp_get_new(struct sdirs *sdirs,
-	char *buf, size_t s, struct conf *cconf)
+	char *buf, size_t s, char *bufforfile, size_t bs, struct conf *cconf)
 {
 	time_t t=0;
-	char tmpbuf[32]="";
 	unsigned long index=0;
 	struct bu *bu=NULL;
 	struct bu *bu_list=NULL;
@@ -54,8 +65,10 @@ int timestamp_get_new(struct sdirs *sdirs,
 	ctm=localtime(&t);
         // Windows does not like the %T strftime format option - you get
         // complaints under gdb.
-	strftime(tmpbuf, sizeof(tmpbuf), cconf->timestamp_format, ctm);
-	snprintf(buf, s, "%07lu %s", ++index, tmpbuf);
+	index++;
+
+	write_to_buf(buf, s, index, NULL, ctm);
+	write_to_buf(bufforfile, bs, index, cconf->timestamp_format, ctm);
 
 	return 0;
 }

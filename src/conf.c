@@ -853,9 +853,6 @@ static int server_conf_checks(struct conf *c, const char *path, int *r)
 		conf_problem(path, "directory unset", r);
 	if(!c->dedup_group)
 		conf_problem(path, "dedup_group unset", r);
-	else if(!c->timestamp_format
-	  && !(c->timestamp_format=strdup_w("%Y-%m-%d %H:%M:%S", __func__)))
-		return -1;
 	if(!c->clientconfdir)
 		conf_problem(path, "clientconfdir unset", r);
 	if(!c->recovery_method

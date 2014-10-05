@@ -66,9 +66,11 @@ int sdirs_get_real_working_from_symlink(struct sdirs *sdirs, struct conf *conf)
 int sdirs_create_real_working(struct sdirs *sdirs, struct conf *conf)
 {
 	char tstmp[64]="";
+	char fname[64]="";
 
-	if(timestamp_get_new(sdirs, tstmp, sizeof(tstmp), conf)
-	  || free_prepend_s(&sdirs->rworking, sdirs->client, tstmp)
+	if(timestamp_get_new(sdirs,
+		tstmp, sizeof(tstmp), fname, sizeof(fname), conf)
+	  || free_prepend_s(&sdirs->rworking, sdirs->client, fname)
 	  || free_prepend_s(&sdirs->treepath,
 		sdirs->rworking, DATA_DIR "/" TREE_DIR))
 			return -1;
@@ -78,7 +80,7 @@ int sdirs_create_real_working(struct sdirs *sdirs, struct conf *conf)
 	// going into a directory. If the directory got created first,
 	// bedup might go into it in the moment before the symlink
 	// gets added.
-	if(symlink(tstmp, sdirs->working)) // relative link to the real work dir
+	if(symlink(fname, sdirs->working)) // relative link to the real work dir
 	{
 		logp("could not point working symlink to: %s\n",
 			sdirs->rworking);
@@ -92,7 +94,8 @@ int sdirs_create_real_working(struct sdirs *sdirs, struct conf *conf)
 	}
 	if(timestamp_write(sdirs->timestamp, tstmp))
 	{
-		logp("unable to write timestamp %s\n", sdirs->timestamp);
+		logp("unable to write timestamp %s to %s\n",
+			tstmp, sdirs->timestamp);
 		return -1;
 	}
 

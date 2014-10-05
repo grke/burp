@@ -14,7 +14,6 @@
 
 #define SERVER_CAN_RESTORE		0x01
 
-
 enum burp_mode
 {
 	MODE_UNSET=0,

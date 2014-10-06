@@ -12,14 +12,6 @@ static enum action actg=ACTION_STATUS;
 #define LEFT_SPACE	3
 #define TOP_SPACE	2
 
-enum details
-{
-	DETAILS_CLIENT_LIST=0,
-	DETAILS_BACKUP_LIST,
-	DETAILS_BACKUP_LOGS,
-	DETAILS_VIEW_LOG
-};
-
 static FILE *lfp=NULL;
 
 static void print_line(const char *string, int row, int col)
@@ -435,22 +427,20 @@ static int need_status(void)
 	return 1;
 }
 
-static void print_logs_list_line(struct bu *selbu, uint16_t bit,
-	const char *title, int *x, int col, uint16_t *selop)
+static void print_logs_list_line(struct sel *sel, uint16_t bit,
+	const char *title, int *x, int col)
 {
 	char msg[64]="";
-	if(!(selbu->flags & bit)) return;
+	if(!(sel->bu->flags & bit)) return;
 	snprintf(msg, sizeof(msg), "%s%s",
 		*x==3?"Options: ":"         ", title);
 	print_line(msg, (*x)++, col);
 
-	if(!*selop) *selop=bit;
-	if(*selop==bit) mvprintw(*x+TOP_SPACE-1, 1, "*");
+	if(!sel->op) sel->op=bit;
+	if(sel->op==bit) mvprintw(*x+TOP_SPACE-1, 1, "*");
 }
 
-static int update_screen(struct cstat *clist, struct cstat *sel,
-	struct bu **selbu, uint16_t *selop,
-	enum details details, struct conf *conf)
+static int update_screen(struct sel *sel, struct conf *conf)
 {
 	int x=0;
 	int row=24;
@@ -470,20 +460,20 @@ static int update_screen(struct cstat *clist, struct cstat *sel,
 	{
 		getmaxyx(stdscr, row, col);
 		//if(!winmax) winmax=row;
-		switch(details)
+		switch(sel->details)
 		{
 			case DETAILS_CLIENT_LIST:
-				for(c=clist; c; c=c->next)
+				for(c=sel->clist; c; c=c->next)
 				{
 					selindex++;
-					if(sel==c) break;
+					if(sel->cstat==c) break;
 				}
 				break;
 			case DETAILS_BACKUP_LIST:
-				for(b=sel->bu; b; b=b->next)
+				for(b=sel->cstat->bu; b; b=b->next)
 				{
 					selindex++;
-					if(*selbu==b) break;
+					if(sel->bu==b) break;
 				}
 				break;
 			case DETAILS_BACKUP_LOGS:
@@ -493,41 +483,41 @@ static int update_screen(struct cstat *clist, struct cstat *sel,
 		}
 	}
 
-	switch(details)
+	switch(sel->details)
 	{
 		case DETAILS_CLIENT_LIST:
 			break;
 		case DETAILS_BACKUP_LIST:
 			// FIX THIS: repeated code.
 			snprintf(msg, sizeof(msg),
-				"Client: %s", sel->name);
+				"Client: %s", sel->cstat->name);
 			print_line(msg, x++, col);
 			snprintf(msg, sizeof(msg),
-				"Status: %s", cstat_status_to_str(sel));
+				"Status: %s", cstat_status_to_str(sel->cstat));
 			print_line(msg, x++, col);
 			break;
 		case DETAILS_BACKUP_LOGS:
 			snprintf(msg, sizeof(msg),
-				"Client: %s", sel->name);
+				"Client: %s", sel->cstat->name);
 			print_line(msg, x++, col);
 			snprintf(msg, sizeof(msg),
-				"Status: %s", cstat_status_to_str(sel));
+				"Status: %s", cstat_status_to_str(sel->cstat));
 			print_line(msg, x++, col);
 			snprintf(msg, sizeof(msg),
-				"Backup: %s", get_bu_str(*selbu));
+				"Backup: %s", get_bu_str(sel->bu));
 			print_line(msg, x++, col);
 			break;
 		case DETAILS_VIEW_LOG:
 			snprintf(msg, sizeof(msg),
-				"Client: %s", sel->name);
+				"Client: %s", sel->cstat->name);
 			print_line(msg, x++, col);
 			snprintf(msg, sizeof(msg),
-				"Status: %s", cstat_status_to_str(sel));
+				"Status: %s", cstat_status_to_str(sel->cstat));
 			print_line(msg, x++, col);
 			snprintf(msg, sizeof(msg),
-				"Backup: %s", get_bu_str(*selbu));
+				"Backup: %s", get_bu_str(sel->bu));
 			snprintf(msg, sizeof(msg),
-				"Log: 0x%04X", *selop);
+				"Log: 0x%04X", sel->op);
 			print_line(msg, x++, col);
 			break;
 	}
@@ -572,10 +562,10 @@ static int update_screen(struct cstat *clist, struct cstat *sel,
 	}
 */
 
-	switch(details)
+	switch(sel->details)
 	{
 		case DETAILS_CLIENT_LIST:
-			for(c=clist; c; c=c->next)
+			for(c=sel->clist; c; c=c->next)
 			{
 				s++;
 				if(s<winmin) continue;
@@ -583,7 +573,7 @@ static int update_screen(struct cstat *clist, struct cstat *sel,
 
 				summary(c, x++, col, conf);
 
-				if(actg==ACTION_STATUS && sel==c)
+				if(actg==ACTION_STATUS && sel->cstat==c)
 				{
 					mvprintw(x+TOP_SPACE-1, 1, "*");
 					star_printed=1;
@@ -591,7 +581,7 @@ static int update_screen(struct cstat *clist, struct cstat *sel,
 			}
 			break;
 		case DETAILS_BACKUP_LIST:
-			for(b=sel->bu; b; b=b->next)
+			for(b=sel->cstat->bu; b; b=b->next)
 			{
 				s++;
 				if(s<winmin) continue;
@@ -606,34 +596,34 @@ static int update_screen(struct cstat *clist, struct cstat *sel,
 				else extradesc="";
 
 				snprintf(msg, sizeof(msg), "%s %s%s",
-					b==sel->bu?"Backup list:":
+					b==sel->cstat->bu?"Backup list:":
 						   "            ",
 					get_bu_str(b),
 					extradesc);
 				print_line(msg, x++, col);
-				if(actg==ACTION_STATUS && *selbu==b)
+				if(actg==ACTION_STATUS && sel->bu==b)
 				{
 					mvprintw(x+TOP_SPACE-1, 1, "*");
 					star_printed=1;
 				}
 			}
-			if(!star_printed) *selbu=sel->bu;
+			if(!star_printed) sel->bu=sel->cstat->bu;
 			break;
 		case DETAILS_BACKUP_LOGS:
-			print_logs_list_line(*selbu, BU_MANIFEST,
-				"Browse", &x, col, selop);
-			print_logs_list_line(*selbu, BU_LOG_BACKUP,
-				"View backup log", &x, col, selop);
-			print_logs_list_line(*selbu, BU_LOG_RESTORE,
-				"View restore log", &x, col, selop);
-			print_logs_list_line(*selbu, BU_LOG_VERIFY,
-				"View verify log", &x, col, selop);
-			print_logs_list_line(*selbu, BU_STATS_BACKUP,
-				"View backup stats", &x, col, selop);
-			print_logs_list_line(*selbu, BU_STATS_RESTORE,
-				"View restore stats", &x, col, selop);
-			print_logs_list_line(*selbu, BU_STATS_VERIFY,
-				"View verify stats", &x, col, selop);
+			print_logs_list_line(sel, BU_MANIFEST,
+				"Browse", &x, col);
+			print_logs_list_line(sel, BU_LOG_BACKUP,
+				"View backup log", &x, col);
+			print_logs_list_line(sel, BU_LOG_RESTORE,
+				"View restore log", &x, col);
+			print_logs_list_line(sel, BU_LOG_VERIFY,
+				"View verify log", &x, col);
+			print_logs_list_line(sel, BU_STATS_BACKUP,
+				"View backup stats", &x, col);
+			print_logs_list_line(sel, BU_STATS_RESTORE,
+				"View restore stats", &x, col);
+			print_logs_list_line(sel, BU_STATS_VERIFY,
+				"View verify stats", &x, col);
 			break;
 		case DETAILS_VIEW_LOG:
 			break;
@@ -647,12 +637,11 @@ static int update_screen(struct cstat *clist, struct cstat *sel,
 	return 0;
 }
 
-static int request_status(struct asfd *asfd, enum details details,
-	const char *client, struct bu *selbu,
-	uint16_t selop, struct conf *conf)
+static int request_status(struct asfd *asfd,
+	const char *client, struct sel *sel, struct conf *conf)
 {
 	char buf[256]="";
-	switch(details)
+	switch(sel->details)
 	{
 		case DETAILS_CLIENT_LIST:
 			snprintf(buf, sizeof(buf), "c:\n");
@@ -662,22 +651,22 @@ static int request_status(struct asfd *asfd, enum details details,
 			break;
 		case DETAILS_BACKUP_LOGS:
 			snprintf(buf, sizeof(buf), "c:%s:b:%lu\n",
-				client, selbu->bno);
+				client, sel->bu->bno);
 			break;
 		case DETAILS_VIEW_LOG:
 		{
 			const char *lname="backup";
-			if(selop & BU_LOG_BACKUP)
+			if(sel->op & BU_LOG_BACKUP)
 				lname="backup";
-			else if(selop & BU_LOG_RESTORE)
+			else if(sel->op & BU_LOG_RESTORE)
 				lname="restore";
-			else if(selop & BU_LOG_VERIFY)
+			else if(sel->op & BU_LOG_VERIFY)
 				lname="verify";
-			else if(selop & BU_MANIFEST)
+			else if(sel->op & BU_MANIFEST)
 				lname="manifest";
 			
 			snprintf(buf, sizeof(buf), "c:%s:b:%lu:l:%s\n",
-				client, selbu->bno, lname);
+				client, sel->bu->bno, lname);
 			break;
 		}
 	}
@@ -732,9 +721,7 @@ error:
 }
 
 #ifdef HAVE_NCURSES_H
-static int parse_stdin_data(struct asfd *asfd,
-	struct cstat **sel, struct bu **selbu, uint16_t *selop,
-	enum details *details, int count)
+static int parse_stdin_data(struct asfd *asfd, struct sel *sel, int count)
 {
 	static int ch;
 	if(asfd->rbuf->len!=sizeof(ch))
@@ -752,26 +739,26 @@ static int parse_stdin_data(struct asfd *asfd,
 		case KEY_UP:
 		case 'k':
 		case 'K':
-			switch(*details)
+			switch(sel->details)
 			{
 				case DETAILS_CLIENT_LIST:
-					if(*sel && (*sel)->prev)
-						*sel=(*sel)->prev;
+					if(sel->cstat && sel->cstat->prev)
+						sel->cstat=sel->cstat->prev;
 					break;
 				case DETAILS_BACKUP_LIST:
-					if(*selbu && (*selbu)->prev)
-						*selbu=(*selbu)->prev;
+					if(sel->bu && sel->bu->prev)
+						sel->bu=sel->bu->prev;
 					break;
 				case DETAILS_BACKUP_LOGS:
 				{
 					int i=0;
-					uint16_t sh=*selop;
+					uint16_t sh=sel->op;
 					for(i=0; sh>BU_MANIFEST && i<16; i++)
 					{
 						sh=sh>>1;
-						if(sh & (*selbu)->flags)
+						if(sh & sel->bu->flags)
 						{
-							*selop=sh;
+							sel->op=sh;
 							break;
 						}
 					}
@@ -784,26 +771,26 @@ static int parse_stdin_data(struct asfd *asfd,
 		case KEY_DOWN:
 		case 'j':
 		case 'J':
-			switch(*details)
+			switch(sel->details)
 			{
 				case DETAILS_CLIENT_LIST:
-					if(*sel && (*sel)->next)
-						*sel=(*sel)->next;
+					if(sel->cstat && sel->cstat->next)
+						sel->cstat=sel->cstat->next;
 					break;
 				case DETAILS_BACKUP_LIST:
-					if(*selbu && (*selbu)->next)
-						*selbu=(*selbu)->next;
+					if(sel->bu && sel->bu->next)
+						sel->bu=sel->bu->next;
 					break;
 				case DETAILS_BACKUP_LOGS:
 				{
 					int i=0;
-					uint16_t sh=*selop;
+					uint16_t sh=sel->op;
 					for(i=0; sh && i<16; i++)
 					{
 						sh=sh<<1;
-						if(sh & (*selbu)->flags)
+						if(sh & sel->bu->flags)
 						{
-							*selop=sh;
+							sel->op=sh;
 							break;
 						}
 					}
@@ -816,18 +803,18 @@ static int parse_stdin_data(struct asfd *asfd,
 		case KEY_LEFT:
 		case 'h':
 		case 'H':
-			switch(*details)
+			switch(sel->details)
 			{
 				case DETAILS_CLIENT_LIST:
 					break;
 				case DETAILS_BACKUP_LIST:
-					(*details)=DETAILS_CLIENT_LIST;
+					sel->details=DETAILS_CLIENT_LIST;
 					break;
 				case DETAILS_BACKUP_LOGS:
-					(*details)=DETAILS_BACKUP_LIST;
+					sel->details=DETAILS_BACKUP_LIST;
 					break;
 				case DETAILS_VIEW_LOG:
-					(*details)=DETAILS_BACKUP_LOGS;
+					sel->details=DETAILS_BACKUP_LOGS;
 					break;
 			}
 			break;
@@ -837,17 +824,17 @@ static int parse_stdin_data(struct asfd *asfd,
 		case KEY_ENTER:
 		case '\n':
 		case ' ':
-			switch(*details)
+			switch(sel->details)
 			{
 				case DETAILS_CLIENT_LIST:
-					(*details)=DETAILS_BACKUP_LIST;
+					sel->details=DETAILS_BACKUP_LIST;
 					break;
 				case DETAILS_BACKUP_LIST:
-					(*details)=DETAILS_BACKUP_LOGS;
+					sel->details=DETAILS_BACKUP_LOGS;
 					break;
 				case DETAILS_BACKUP_LOGS:
-					if(lfp) logp("Option selected: 0x%04X\n", *selop);
-					(*details)=DETAILS_VIEW_LOG;
+					if(lfp) logp("Option selected: 0x%04X\n", sel->op);
+					sel->details=DETAILS_VIEW_LOG;
 					break;
 				case DETAILS_VIEW_LOG:
 					break;
@@ -858,30 +845,30 @@ static int parse_stdin_data(struct asfd *asfd,
 			int row=0;
 			int col=0;
 			getmaxyx(stdscr, row, col);
-			switch(*details)
+			switch(sel->details)
 			{
 				case DETAILS_CLIENT_LIST:
 				{
 					struct cstat *c;
-					if(!*sel) break;
-					for(c=*sel; c; c=c->prev)
+					if(!sel->cstat) break;
+					for(c=sel->cstat; c; c=c->prev)
 					{
 						row--;
 						if(!row) break;
 					}
-					*sel=c;
+					sel->cstat=c;
 					break;
 				}
 				case DETAILS_BACKUP_LIST:
 				{
 					struct bu *b;
-					if(!*selbu) break;
-					for(b=*selbu; b; b=b->prev)
+					if(!sel->bu) break;
+					for(b=sel->bu; b; b=b->prev)
 					{
 						row--;
 						if(!row) break;
 					}
-					*selbu=b;
+					sel->bu=b;
 					break;
 				}
 				case DETAILS_BACKUP_LOGS:
@@ -896,32 +883,30 @@ static int parse_stdin_data(struct asfd *asfd,
 			int row=0;
 			int col=0;
 			getmaxyx(stdscr, row, col);
-			switch(*details)
+			switch(sel->details)
 			{
 				case DETAILS_CLIENT_LIST:
 				{
 					struct cstat *c;
-					if(!*sel) break;
-					for(c=*sel; c; c=c->next)
+					for(c=sel->cstat; c; c=c->next)
 					{
 						row--;
 						if(!row) break;
 						if(!c->next) break;
 					}
-					*sel=c;
+					sel->cstat=c;
 					break;
 				}
 				case DETAILS_BACKUP_LIST:
 				{
 					struct bu *b;
-					if(!*selbu) break;
-					for(b=*selbu; b; b=b->next)
+					for(b=sel->bu; b; b=b->next)
 					{
 						row--;
 						if(!row) break;
 						if(!b->next) break;
 					}
-					*selbu=b;
+					sel->bu=b;
 					break;
 				}
 				case DETAILS_BACKUP_LOGS:
@@ -940,37 +925,33 @@ static int parse_stdin_data(struct asfd *asfd,
 }
 #endif
 
-static int parse_data(struct asfd *asfd, struct cstat **clist,
-	struct cstat **sel, struct bu **selbu, uint16_t *selop,
-	enum details *details, struct lline **llines, int count)
+static int parse_data(struct asfd *asfd, struct sel *sel, int count)
 {
 #ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS && asfd->streamtype==ASFD_STREAM_NCURSES_STDIN)
-		return parse_stdin_data(asfd,
-			sel, selbu, selop, details, count);
+		return parse_stdin_data(asfd, sel, count);
 #endif
-	return json_input(asfd, clist, selbu, llines);
+	return json_input(asfd, sel);
 }
 
 static int main_loop(struct async *as, struct conf *conf)
 {
 	int ret=-1;
 	char *client=NULL;
-	enum details details=DETAILS_CLIENT_LIST;
 	int count=0;
 	struct asfd *asfd=NULL;
-	struct cstat *clist=NULL;
-	struct cstat *sel=NULL;
-	struct bu *selbu=NULL;
 	struct asfd *sfd=as->asfd; // Server asfd.
 	int reqdone=0;
-	uint16_t selop=0;
-	struct lline *llines=NULL;
+	struct sel *sel=NULL;
+
+	if(!(sel=(struct sel *)calloc_w(1, sizeof(struct sel), __func__)))
+		goto error;
+	sel->details=DETAILS_CLIENT_LIST;
 
 	if(conf->orig_client && !client)
 	{
 		client=strdup_w(conf->orig_client, __func__);
-		details=DETAILS_BACKUP_LIST;
+		sel->details=DETAILS_BACKUP_LIST;
 	}
 
 	while(1)
@@ -978,13 +959,13 @@ static int main_loop(struct async *as, struct conf *conf)
 		if(need_status() && !reqdone)
 		{
 			char *req=NULL;
-			if(details>DETAILS_CLIENT_LIST)
+			if(sel->details>DETAILS_CLIENT_LIST)
 			{
 				if(client) req=client;
-				else if(sel) req=sel->name;
+				else if(sel->cstat) req=sel->cstat->name;
 			}
-			if(request_status(sfd, details,
-				req, selbu, selop, conf)) goto error;
+			if(request_status(sfd,
+				req, sel, conf)) goto error;
 			if(actg==ACTION_STATUS_SNAPSHOT)
 				reqdone=1;
 		}
@@ -993,11 +974,13 @@ static int main_loop(struct async *as, struct conf *conf)
 		{
 			// FIX THIS - an exception is thrown when the console
 			// is resized.
+/*
 			if(sfd->want_to_remove)
 			{
 				sfd->want_to_remove=0;
 				continue;
 			}
+*/
 			logp("Exiting main loop\n");
 			break;
 		}
@@ -1005,25 +988,23 @@ static int main_loop(struct async *as, struct conf *conf)
 		for(asfd=as->asfd; asfd; asfd=asfd->next)
 			while(asfd->rbuf->buf)
 		{
-			if(parse_data(asfd, &clist,
-				&sel, &selbu, &selop, &details, &llines,
-					count)) goto error;
+			if(parse_data(asfd, sel, count))
+				goto error;
 			iobuf_free_content(asfd->rbuf);
 			if(asfd->parse_readbuf(asfd))
 				goto error;
 		}
 
-		if(!sel) sel=clist;
-//if(sel) logp("sel: %s\n", sel->name);
-		if(!selbu && sel) selbu=sel->bu;
-		if(update_screen(clist, sel, &selbu, &selop, details, conf))
-			return -1;
+		if(!sel->cstat) sel->cstat=sel->clist;
+		if(!sel->bu && sel->cstat) sel->bu=sel->cstat->bu;
+		if(update_screen(sel, conf)) return -1;
 		refresh();
 	}
 
 	ret=0;
 error:
 	// FIX THIS: should probably be freeing a bunch of stuff here.
+	free_v((void **)&sel);
 	return ret;
 }
 

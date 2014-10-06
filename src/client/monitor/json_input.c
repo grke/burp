@@ -370,7 +370,7 @@ int json_input(struct asfd *asfd, struct sel *sel)
 {
         static yajl_handle yajl=NULL;
 	cslist=&sel->clist;
-	sselbu=&sel->bu;
+	sselbu=&sel->backup;
 	sllines=&sel->llines;
 
 	if(!yajl)

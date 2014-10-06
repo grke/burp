@@ -431,22 +431,22 @@ static void print_logs_list_line(struct sel *sel, uint16_t bit,
 	const char *title, int *x, int col)
 {
 	char msg[64]="";
-	if(!(sel->bu->flags & bit)) return;
+	if(!sel->backup || !(sel->backup->flags & bit)) return;
 	snprintf(msg, sizeof(msg), "%s%s",
 		*x==3?"Options: ":"         ", title);
 	print_line(msg, (*x)++, col);
 
-	if(!sel->op) sel->op=bit;
-	if(sel->op==bit) mvprintw(*x+TOP_SPACE-1, 1, "*");
+	if(!sel->logop) sel->logop=bit;
+	if(sel->logop==bit) mvprintw(*x+TOP_SPACE-1, 1, "*");
 }
 
 static void client_and_status(struct sel *sel, int *x, int col)
 {
 	char msg[1024];
-	snprintf(msg, sizeof(msg), "Client: %s", sel->cstat->name);
+	snprintf(msg, sizeof(msg), "Client: %s", sel->client->name);
 	print_line(msg, (*x)++, col);
 	snprintf(msg, sizeof(msg),
-		"Status: %s", cstat_status_to_str(sel->cstat));
+		"Status: %s", cstat_status_to_str(sel->client));
 	print_line(msg, (*x)++, col);
 }
 
@@ -454,7 +454,7 @@ static void client_and_status_and_backup(struct sel *sel, int *x, int col)
 {
 	char msg[1024];
 	client_and_status(sel, x, col);
-	snprintf(msg, sizeof(msg), "Backup: %s", get_bu_str(sel->bu));
+	snprintf(msg, sizeof(msg), "Backup: %s", get_bu_str(sel->backup));
 	print_line(msg, (*x)++, col);
 }
 
@@ -463,7 +463,7 @@ static void client_and_status_and_backup_and_log(struct sel *sel,
 {
 	char msg[1024];
 	client_and_status_and_backup(sel, x, col);
-	snprintf(msg, sizeof(msg), "Log: 0x%04X", sel->op);
+	snprintf(msg, sizeof(msg), "Log: 0x%04X", sel->logop);
 	print_line(msg, (*x)++, col);
 }
 
@@ -474,7 +474,7 @@ static int selindex_from_cstat(struct sel *sel)
 	for(c=sel->clist; c; c=c->next)
 	{
 		selindex++;
-		if(sel->cstat==c) break;
+		if(sel->client==c) break;
 	}
 	return selindex;
 }
@@ -483,10 +483,10 @@ static int selindex_from_bu(struct sel *sel)
 {
 	int selindex=0;
 	struct bu *b;
-	for(b=sel->cstat->bu; b; b=b->next)
+	for(b=sel->client->bu; b; b=b->next)
 	{
 		selindex++;
-		if(sel->bu==b) break;
+		if(sel->backup==b) break;
 	}
 	return selindex;
 }
@@ -523,13 +523,13 @@ static void update_screen_clients(struct sel *sel, int *x, int col,
 
 		summary(c, (*x)++, col, conf);
 
-		if(actg==ACTION_STATUS && sel->cstat==c)
+		if(actg==ACTION_STATUS && sel->client==c)
 		{
 			mvprintw((*x)+TOP_SPACE-1, 1, "*");
 			star_printed=1;
 		}
 	}
-	if(!star_printed) sel->cstat=sel->clist;
+	if(!star_printed) sel->client=sel->clist;
 }
 
 static void update_screen_backups(struct sel *sel, int *x, int col,
@@ -540,7 +540,7 @@ static void update_screen_backups(struct sel *sel, int *x, int col,
 	char msg[1024]="";
 	int star_printed=0;
 	const char *extradesc=NULL;
-	for(b=sel->cstat->bu; b; b=b->next)
+	for(b=sel->client->bu; b; b=b->next)
 	{
 		s++;
 		if(s<winmin) continue;
@@ -555,18 +555,18 @@ static void update_screen_backups(struct sel *sel, int *x, int col,
 		else extradesc="";
 
 		snprintf(msg, sizeof(msg), "%s %s%s",
-				b==sel->cstat->bu?"Backup list:":
+				b==sel->client->bu?"Backup list:":
 				"            ",
 				get_bu_str(b),
 				extradesc);
 		print_line(msg, (*x)++, col);
-		if(actg==ACTION_STATUS && sel->bu==b)
+		if(actg==ACTION_STATUS && sel->backup==b)
 		{
 			mvprintw((*x)+TOP_SPACE-1, 1, "*");
 			star_printed=1;
 		}
 	}
-	if(!star_printed) sel->bu=sel->cstat->bu;
+	if(!star_printed) sel->backup=sel->client->bu;
 }
 
 static int update_screen(struct sel *sel, struct conf *conf)
@@ -691,23 +691,25 @@ static int request_status(struct asfd *asfd,
 			snprintf(buf, sizeof(buf), "c:%s\n", client);
 			break;
 		case PAGE_BACKUP_LOGS:
-			snprintf(buf, sizeof(buf), "c:%s:b:%lu\n",
-				client, sel->bu->bno);
+			if(sel->backup)
+				snprintf(buf, sizeof(buf), "c:%s:b:%lu\n",
+					client, sel->backup->bno);
 			break;
 		case PAGE_VIEW_LOG:
 		{
 			const char *lname="backup";
-			if(sel->op & BU_LOG_BACKUP)
+			if(sel->logop & BU_LOG_BACKUP)
 				lname="backup";
-			else if(sel->op & BU_LOG_RESTORE)
+			else if(sel->logop & BU_LOG_RESTORE)
 				lname="restore";
-			else if(sel->op & BU_LOG_VERIFY)
+			else if(sel->logop & BU_LOG_VERIFY)
 				lname="verify";
-			else if(sel->op & BU_MANIFEST)
+			else if(sel->logop & BU_MANIFEST)
 				lname="manifest";
-			
-			snprintf(buf, sizeof(buf), "c:%s:b:%lu:l:%s\n",
-				client, sel->bu->bno, lname);
+
+			if(sel->backup)
+				snprintf(buf, sizeof(buf), "c:%s:b:%lu:l:%s\n",
+					client, sel->backup->bno, lname);
 			break;
 		}
 	}
@@ -719,8 +721,11 @@ static int request_status(struct asfd *asfd,
 		snprintf(buf, sizeof(buf), "c:%s:b:%s:f:%s\n",
 			client, conf->backup, conf->browsefile);
 */
-if(lfp) logp("request: %s\n", buf);
-	if(asfd->write_str(asfd, CMD_GEN /* ignored */, buf)) return -1;
+	if(*buf)
+	{
+		if(lfp) logp("request: %s\n", buf);
+		if(asfd->write_str(asfd, CMD_GEN /* ignored */, buf)) return -1;
+	}
 	return 0;
 }
 
@@ -790,7 +795,7 @@ static void right(struct sel *sel)
 			sel->page=PAGE_BACKUP_LOGS;
 			break;
 		case PAGE_BACKUP_LOGS:
-			if(lfp) logp("Option selected: 0x%04X\n", sel->op);
+			if(lfp) logp("Option selected: 0x%04X\n", sel->logop);
 			sel->page=PAGE_VIEW_LOG;
 			break;
 		case PAGE_VIEW_LOG:
@@ -800,34 +805,34 @@ static void right(struct sel *sel)
 
 static void up_client(struct sel *sel)
 {
-	if(sel->cstat && sel->cstat->prev) sel->cstat=sel->cstat->prev;
+	if(sel->client && sel->client->prev) sel->client=sel->client->prev;
 }
 
 static void down_client(struct sel *sel)
 {
-	if(sel->cstat && sel->cstat->next) sel->cstat=sel->cstat->next;
+	if(sel->client && sel->client->next) sel->client=sel->client->next;
 }
 
 static void up_backup(struct sel *sel)
 {
-	if(sel->bu && sel->bu->prev) sel->bu=sel->bu->prev;
+	if(sel->backup && sel->backup->prev) sel->backup=sel->backup->prev;
 }
 
 static void down_backup(struct sel *sel)
 {
-	if(sel->bu && sel->bu->next) sel->bu=sel->bu->next;
+	if(sel->backup && sel->backup->next) sel->backup=sel->backup->next;
 }
 
 static void up_logs(struct sel *sel)
 {
 	int i=0;
-	uint16_t sh=sel->op;
+	uint16_t sh=sel->logop;
 	for(i=0; sh>BU_MANIFEST && i<16; i++)
 	{
 		sh=sh>>1;
-		if(sh & sel->bu->flags)
+		if(sh & sel->backup->flags)
 		{
-			sel->op=sh;
+			sel->logop=sh;
 			break;
 		}
 	}
@@ -836,13 +841,13 @@ static void up_logs(struct sel *sel)
 static void down_logs(struct sel *sel)
 {
 	int i=0;
-	uint16_t sh=sel->op;
+	uint16_t sh=sel->logop;
 	for(i=0; sh && i<16; i++)
 	{
 		sh=sh<<1;
-		if(sh & sel->bu->flags)
+		if(sh & sel->backup->flags)
 		{
-			sel->op=sh;
+			sel->logop=sh;
 			break;
 		}
 	}
@@ -887,49 +892,47 @@ static void down(struct sel *sel)
 static void page_up_client(struct sel *sel, int row)
 {
 	struct cstat *c;
-	if(!sel->cstat) return;
-	for(c=sel->cstat; c; c=c->prev)
+	for(c=sel->client; c; c=c->prev)
 	{
 		row--;
 		if(!row) break;
 	}
-	sel->cstat=c;
+	sel->client=c;
 }
 
 static void page_down_client(struct sel *sel, int row)
 {
 	struct cstat *c;
-	for(c=sel->cstat; c; c=c->next)
+	for(c=sel->client; c; c=c->next)
 	{
 		row--;
 		if(!row) break;
 		if(!c->next) break;
 	}
-	sel->cstat=c;
+	sel->client=c;
 }
 
 static void page_up_backup(struct sel *sel, int row)
 {
 	struct bu *b;
-	if(!sel->bu) return;
-	for(b=sel->bu; b; b=b->prev)
+	for(b=sel->backup; b; b=b->prev)
 	{
 		row--;
 		if(!row) break;
 	}
-	sel->bu=b;
+	sel->backup=b;
 }
 
 static void page_down_backup(struct sel *sel, int row)
 {
 	struct bu *b;
-	for(b=sel->bu; b; b=b->next)
+	for(b=sel->backup; b; b=b->next)
 	{
 		row--;
 		if(!row) break;
 		if(!b->next) break;
 	}
-	sel->bu=b;
+	sel->backup=b;
 }
 
 static void page_up(struct sel *sel)
@@ -1063,7 +1066,7 @@ static int main_loop(struct async *as, struct conf *conf)
 			if(sel->page>PAGE_CLIENT_LIST)
 			{
 				if(client) req=client;
-				else if(sel->cstat) req=sel->cstat->name;
+				else if(sel->client) req=sel->client->name;
 			}
 			if(request_status(sfd,
 				req, sel, conf)) goto error;
@@ -1096,8 +1099,8 @@ static int main_loop(struct async *as, struct conf *conf)
 				goto error;
 		}
 
-		if(!sel->cstat) sel->cstat=sel->clist;
-		if(!sel->bu && sel->cstat) sel->bu=sel->cstat->bu;
+		if(!sel->client) sel->client=sel->clist;
+		if(!sel->backup && sel->client) sel->backup=sel->client->bu;
 		if(update_screen(sel, conf)) return -1;
 		refresh();
 	}

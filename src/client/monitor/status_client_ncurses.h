@@ -12,9 +12,9 @@ enum page
 struct sel
 {
 	struct cstat *clist;
-	struct cstat *cstat;
-	struct bu *bu;
-	uint16_t op;
+	struct cstat *client;
+	struct bu *backup;
+	uint16_t logop;
 	struct lline *llines;
 	enum page page;
 };

@@ -440,85 +440,176 @@ static void print_logs_list_line(struct sel *sel, uint16_t bit,
 	if(sel->op==bit) mvprintw(*x+TOP_SPACE-1, 1, "*");
 }
 
+static void client_and_status(struct sel *sel, int *x, int col)
+{
+	char msg[1024];
+	snprintf(msg, sizeof(msg), "Client: %s", sel->cstat->name);
+	print_line(msg, (*x)++, col);
+	snprintf(msg, sizeof(msg),
+		"Status: %s", cstat_status_to_str(sel->cstat));
+	print_line(msg, (*x)++, col);
+}
+
+static void client_and_status_and_backup(struct sel *sel, int *x, int col)
+{
+	char msg[1024];
+	client_and_status(sel, x, col);
+	snprintf(msg, sizeof(msg), "Backup: %s", get_bu_str(sel->bu));
+	print_line(msg, (*x)++, col);
+}
+
+static void client_and_status_and_backup_and_log(struct sel *sel,
+	int *x, int col)
+{
+	char msg[1024];
+	client_and_status_and_backup(sel, x, col);
+	snprintf(msg, sizeof(msg), "Log: 0x%04X", sel->op);
+	print_line(msg, (*x)++, col);
+}
+
+static int selindex_from_cstat(struct sel *sel)
+{
+	int selindex=0;
+	struct cstat *c;
+	for(c=sel->clist; c; c=c->next)
+	{
+		selindex++;
+		if(sel->cstat==c) break;
+	}
+	return selindex;
+}
+
+static int selindex_from_bu(struct sel *sel)
+{
+	int selindex=0;
+	struct bu *b;
+	for(b=sel->cstat->bu; b; b=b->next)
+	{
+		selindex++;
+		if(sel->bu==b) break;
+	}
+	return selindex;
+}
+
+static void print_logs_list(struct sel *sel, int *x, int col)
+{
+	print_logs_list_line(sel, BU_MANIFEST,
+		"Browse", x, col);
+	print_logs_list_line(sel, BU_LOG_BACKUP,
+		"View backup log", x, col);
+	print_logs_list_line(sel, BU_LOG_RESTORE,
+		"View restore log", x, col);
+	print_logs_list_line(sel, BU_LOG_VERIFY,
+		"View verify log", x, col);
+	print_logs_list_line(sel, BU_STATS_BACKUP,
+		"View backup stats", x, col);
+	print_logs_list_line(sel, BU_STATS_RESTORE,
+		"View restore stats", x, col);
+	print_logs_list_line(sel, BU_STATS_VERIFY,
+		"View verify stats", x, col);
+}
+
+static void update_screen_clients(struct sel *sel, int *x, int col,
+	int winmin, int winmax, struct conf *conf)
+{
+	int s=0;
+	struct cstat *c;
+	int star_printed=0;
+	for(c=sel->clist; c; c=c->next)
+	{
+		s++;
+		if(s<winmin) continue;
+		if(s>winmax) break;
+
+		summary(c, (*x)++, col, conf);
+
+		if(actg==ACTION_STATUS && sel->cstat==c)
+		{
+			mvprintw((*x)+TOP_SPACE-1, 1, "*");
+			star_printed=1;
+		}
+	}
+	if(!star_printed) sel->cstat=sel->clist;
+}
+
+static void update_screen_backups(struct sel *sel, int *x, int col,
+	int winmin, int winmax)
+{
+	int s=0;
+	struct bu *b;
+	char msg[1024]="";
+	int star_printed=0;
+	const char *extradesc=NULL;
+	for(b=sel->cstat->bu; b; b=b->next)
+	{
+		s++;
+		if(s<winmin) continue;
+		if(s>winmax) break;
+
+		if(b->flags & BU_CURRENT)
+			extradesc=" (current)";
+		else if(b->flags & BU_WORKING)
+			extradesc=" (working)";
+		else if(b->flags & BU_FINISHING)
+			extradesc=" (finishing)";
+		else extradesc="";
+
+		snprintf(msg, sizeof(msg), "%s %s%s",
+				b==sel->cstat->bu?"Backup list:":
+				"            ",
+				get_bu_str(b),
+				extradesc);
+		print_line(msg, (*x)++, col);
+		if(actg==ACTION_STATUS && sel->bu==b)
+		{
+			mvprintw((*x)+TOP_SPACE-1, 1, "*");
+			star_printed=1;
+		}
+	}
+	if(!star_printed) sel->bu=sel->cstat->bu;
+}
+
 static int update_screen(struct sel *sel, struct conf *conf)
 {
 	int x=0;
 	int row=24;
 	int col=80;
-	char msg[1024]="";
-	struct bu *b;
-	struct cstat *c;
-	int s=0;
 	int selindex=0;
 	static int winmin=0;
 	static int winmax=0;
 	static int selindex_last=0;
-	int star_printed=0;
-	const char *extradesc=NULL;
 
 	if(actg==ACTION_STATUS)
 	{
 		getmaxyx(stdscr, row, col);
 		//if(!winmax) winmax=row;
-		switch(sel->details)
+		switch(sel->page)
 		{
-			case DETAILS_CLIENT_LIST:
-				for(c=sel->clist; c; c=c->next)
-				{
-					selindex++;
-					if(sel->cstat==c) break;
-				}
+			case PAGE_CLIENT_LIST:
+				selindex=selindex_from_cstat(sel);
 				break;
-			case DETAILS_BACKUP_LIST:
-				for(b=sel->cstat->bu; b; b=b->next)
-				{
-					selindex++;
-					if(sel->bu==b) break;
-				}
+			case PAGE_BACKUP_LIST:
+				selindex=selindex_from_bu(sel);
 				break;
-			case DETAILS_BACKUP_LOGS:
+			case PAGE_BACKUP_LOGS:
 				break;
-			case DETAILS_VIEW_LOG:
+			case PAGE_VIEW_LOG:
 				break;
 		}
 	}
 
-	switch(sel->details)
+	switch(sel->page)
 	{
-		case DETAILS_CLIENT_LIST:
+		case PAGE_CLIENT_LIST:
 			break;
-		case DETAILS_BACKUP_LIST:
-			// FIX THIS: repeated code.
-			snprintf(msg, sizeof(msg),
-				"Client: %s", sel->cstat->name);
-			print_line(msg, x++, col);
-			snprintf(msg, sizeof(msg),
-				"Status: %s", cstat_status_to_str(sel->cstat));
-			print_line(msg, x++, col);
+		case PAGE_BACKUP_LIST:
+			client_and_status(sel, &x, col);
 			break;
-		case DETAILS_BACKUP_LOGS:
-			snprintf(msg, sizeof(msg),
-				"Client: %s", sel->cstat->name);
-			print_line(msg, x++, col);
-			snprintf(msg, sizeof(msg),
-				"Status: %s", cstat_status_to_str(sel->cstat));
-			print_line(msg, x++, col);
-			snprintf(msg, sizeof(msg),
-				"Backup: %s", get_bu_str(sel->bu));
-			print_line(msg, x++, col);
+		case PAGE_BACKUP_LOGS:
+			client_and_status_and_backup(sel, &x, col);
 			break;
-		case DETAILS_VIEW_LOG:
-			snprintf(msg, sizeof(msg),
-				"Client: %s", sel->cstat->name);
-			print_line(msg, x++, col);
-			snprintf(msg, sizeof(msg),
-				"Status: %s", cstat_status_to_str(sel->cstat));
-			print_line(msg, x++, col);
-			snprintf(msg, sizeof(msg),
-				"Backup: %s", get_bu_str(sel->bu));
-			snprintf(msg, sizeof(msg),
-				"Log: 0x%04X", sel->op);
-			print_line(msg, x++, col);
+		case PAGE_VIEW_LOG:
+			client_and_status_and_backup_and_log(sel, &x, col);
 			break;
 	}
 
@@ -562,70 +653,20 @@ static int update_screen(struct sel *sel, struct conf *conf)
 	}
 */
 
-	switch(sel->details)
+	switch(sel->page)
 	{
-		case DETAILS_CLIENT_LIST:
-			for(c=sel->clist; c; c=c->next)
-			{
-				s++;
-				if(s<winmin) continue;
-				if(s>winmax) break;
-
-				summary(c, x++, col, conf);
-
-				if(actg==ACTION_STATUS && sel->cstat==c)
-				{
-					mvprintw(x+TOP_SPACE-1, 1, "*");
-					star_printed=1;
-				}
-			}
+		case PAGE_CLIENT_LIST:
+			update_screen_clients(sel, &x, col,
+				winmin, winmax, conf);
 			break;
-		case DETAILS_BACKUP_LIST:
-			for(b=sel->cstat->bu; b; b=b->next)
-			{
-				s++;
-				if(s<winmin) continue;
-				if(s>winmax) break;
-
-				if(b->flags & BU_CURRENT)
-					extradesc=" (current)";
-				else if(b->flags & BU_WORKING)
-					extradesc=" (working)";
-				else if(b->flags & BU_FINISHING)
-					extradesc=" (finishing)";
-				else extradesc="";
-
-				snprintf(msg, sizeof(msg), "%s %s%s",
-					b==sel->cstat->bu?"Backup list:":
-						   "            ",
-					get_bu_str(b),
-					extradesc);
-				print_line(msg, x++, col);
-				if(actg==ACTION_STATUS && sel->bu==b)
-				{
-					mvprintw(x+TOP_SPACE-1, 1, "*");
-					star_printed=1;
-				}
-			}
-			if(!star_printed) sel->bu=sel->cstat->bu;
+		case PAGE_BACKUP_LIST:
+			update_screen_backups(sel, &x, col,
+				winmin, winmax);
 			break;
-		case DETAILS_BACKUP_LOGS:
-			print_logs_list_line(sel, BU_MANIFEST,
-				"Browse", &x, col);
-			print_logs_list_line(sel, BU_LOG_BACKUP,
-				"View backup log", &x, col);
-			print_logs_list_line(sel, BU_LOG_RESTORE,
-				"View restore log", &x, col);
-			print_logs_list_line(sel, BU_LOG_VERIFY,
-				"View verify log", &x, col);
-			print_logs_list_line(sel, BU_STATS_BACKUP,
-				"View backup stats", &x, col);
-			print_logs_list_line(sel, BU_STATS_RESTORE,
-				"View restore stats", &x, col);
-			print_logs_list_line(sel, BU_STATS_VERIFY,
-				"View verify stats", &x, col);
+		case PAGE_BACKUP_LOGS:
+			print_logs_list(sel, &x, col);
 			break;
-		case DETAILS_VIEW_LOG:
+		case PAGE_VIEW_LOG:
 			break;
 	}
 
@@ -641,19 +682,19 @@ static int request_status(struct asfd *asfd,
 	const char *client, struct sel *sel, struct conf *conf)
 {
 	char buf[256]="";
-	switch(sel->details)
+	switch(sel->page)
 	{
-		case DETAILS_CLIENT_LIST:
+		case PAGE_CLIENT_LIST:
 			snprintf(buf, sizeof(buf), "c:\n");
 			break;
-		case DETAILS_BACKUP_LIST:
+		case PAGE_BACKUP_LIST:
 			snprintf(buf, sizeof(buf), "c:%s\n", client);
 			break;
-		case DETAILS_BACKUP_LOGS:
+		case PAGE_BACKUP_LOGS:
 			snprintf(buf, sizeof(buf), "c:%s:b:%lu\n",
 				client, sel->bu->bno);
 			break;
-		case DETAILS_VIEW_LOG:
+		case PAGE_VIEW_LOG:
 		{
 			const char *lname="backup";
 			if(sel->op & BU_LOG_BACKUP)
@@ -720,6 +761,217 @@ error:
 	return -1;
 }
 
+static void left(struct sel *sel)
+{
+	switch(sel->page)
+	{
+		case PAGE_CLIENT_LIST:
+			break;
+		case PAGE_BACKUP_LIST:
+			sel->page=PAGE_CLIENT_LIST;
+			break;
+		case PAGE_BACKUP_LOGS:
+			sel->page=PAGE_BACKUP_LIST;
+			break;
+		case PAGE_VIEW_LOG:
+			sel->page=PAGE_BACKUP_LOGS;
+			break;
+	}
+}
+
+static void right(struct sel *sel)
+{
+	switch(sel->page)
+	{
+		case PAGE_CLIENT_LIST:
+			sel->page=PAGE_BACKUP_LIST;
+			break;
+		case PAGE_BACKUP_LIST:
+			sel->page=PAGE_BACKUP_LOGS;
+			break;
+		case PAGE_BACKUP_LOGS:
+			if(lfp) logp("Option selected: 0x%04X\n", sel->op);
+			sel->page=PAGE_VIEW_LOG;
+			break;
+		case PAGE_VIEW_LOG:
+			break;
+	}
+}
+
+static void up_client(struct sel *sel)
+{
+	if(sel->cstat && sel->cstat->prev) sel->cstat=sel->cstat->prev;
+}
+
+static void down_client(struct sel *sel)
+{
+	if(sel->cstat && sel->cstat->next) sel->cstat=sel->cstat->next;
+}
+
+static void up_backup(struct sel *sel)
+{
+	if(sel->bu && sel->bu->prev) sel->bu=sel->bu->prev;
+}
+
+static void down_backup(struct sel *sel)
+{
+	if(sel->bu && sel->bu->next) sel->bu=sel->bu->next;
+}
+
+static void up_logs(struct sel *sel)
+{
+	int i=0;
+	uint16_t sh=sel->op;
+	for(i=0; sh>BU_MANIFEST && i<16; i++)
+	{
+		sh=sh>>1;
+		if(sh & sel->bu->flags)
+		{
+			sel->op=sh;
+			break;
+		}
+	}
+}
+
+static void down_logs(struct sel *sel)
+{
+	int i=0;
+	uint16_t sh=sel->op;
+	for(i=0; sh && i<16; i++)
+	{
+		sh=sh<<1;
+		if(sh & sel->bu->flags)
+		{
+			sel->op=sh;
+			break;
+		}
+	}
+}
+
+static void up(struct sel *sel)
+{
+	switch(sel->page)
+	{
+		case PAGE_CLIENT_LIST:
+			up_client(sel);
+			break;
+		case PAGE_BACKUP_LIST:
+			up_backup(sel);
+			break;
+		case PAGE_BACKUP_LOGS:
+			up_logs(sel);
+			break;
+		case PAGE_VIEW_LOG:
+			break;
+	}
+}
+
+static void down(struct sel *sel)
+{
+	switch(sel->page)
+	{
+		case PAGE_CLIENT_LIST:
+			down_client(sel);
+			break;
+		case PAGE_BACKUP_LIST:
+			down_backup(sel);
+			break;
+		case PAGE_BACKUP_LOGS:
+			down_logs(sel);
+			break;
+		case PAGE_VIEW_LOG:
+			break;
+	}
+}
+
+static void page_up_client(struct sel *sel, int row)
+{
+	struct cstat *c;
+	if(!sel->cstat) return;
+	for(c=sel->cstat; c; c=c->prev)
+	{
+		row--;
+		if(!row) break;
+	}
+	sel->cstat=c;
+}
+
+static void page_down_client(struct sel *sel, int row)
+{
+	struct cstat *c;
+	for(c=sel->cstat; c; c=c->next)
+	{
+		row--;
+		if(!row) break;
+		if(!c->next) break;
+	}
+	sel->cstat=c;
+}
+
+static void page_up_backup(struct sel *sel, int row)
+{
+	struct bu *b;
+	if(!sel->bu) return;
+	for(b=sel->bu; b; b=b->prev)
+	{
+		row--;
+		if(!row) break;
+	}
+	sel->bu=b;
+}
+
+static void page_down_backup(struct sel *sel, int row)
+{
+	struct bu *b;
+	for(b=sel->bu; b; b=b->next)
+	{
+		row--;
+		if(!row) break;
+		if(!b->next) break;
+	}
+	sel->bu=b;
+}
+
+static void page_up(struct sel *sel)
+{
+	int row=0;
+	int col=0;
+	getmaxyx(stdscr, row, col);
+	switch(sel->page)
+	{
+		case PAGE_CLIENT_LIST:
+			page_up_client(sel, row);
+			break;
+		case PAGE_BACKUP_LIST:
+			page_up_backup(sel, row);
+			break;
+		case PAGE_BACKUP_LOGS:
+			break;
+		case PAGE_VIEW_LOG:
+			break;
+	}
+}
+
+static void page_down(struct sel *sel)
+{
+	int row=0;
+	int col=0;
+	getmaxyx(stdscr, row, col);
+	switch(sel->page)
+	{
+		case PAGE_CLIENT_LIST:
+			page_down_client(sel, row);
+			break;
+		case PAGE_BACKUP_LIST:
+			page_down_backup(sel, row);
+			break;
+		case PAGE_BACKUP_LOGS:
+			break;
+		case PAGE_VIEW_LOG:
+			break;
+	}
+}
+
 #ifdef HAVE_NCURSES_H
 static int parse_stdin_data(struct asfd *asfd, struct sel *sel, int count)
 {
@@ -739,84 +991,17 @@ static int parse_stdin_data(struct asfd *asfd, struct sel *sel, int count)
 		case KEY_UP:
 		case 'k':
 		case 'K':
-			switch(sel->details)
-			{
-				case DETAILS_CLIENT_LIST:
-					if(sel->cstat && sel->cstat->prev)
-						sel->cstat=sel->cstat->prev;
-					break;
-				case DETAILS_BACKUP_LIST:
-					if(sel->bu && sel->bu->prev)
-						sel->bu=sel->bu->prev;
-					break;
-				case DETAILS_BACKUP_LOGS:
-				{
-					int i=0;
-					uint16_t sh=sel->op;
-					for(i=0; sh>BU_MANIFEST && i<16; i++)
-					{
-						sh=sh>>1;
-						if(sh & sel->bu->flags)
-						{
-							sel->op=sh;
-							break;
-						}
-					}
-					break;
-				}
-				case DETAILS_VIEW_LOG:
-					break;
-			}
+			up(sel);
 			break;
 		case KEY_DOWN:
 		case 'j':
 		case 'J':
-			switch(sel->details)
-			{
-				case DETAILS_CLIENT_LIST:
-					if(sel->cstat && sel->cstat->next)
-						sel->cstat=sel->cstat->next;
-					break;
-				case DETAILS_BACKUP_LIST:
-					if(sel->bu && sel->bu->next)
-						sel->bu=sel->bu->next;
-					break;
-				case DETAILS_BACKUP_LOGS:
-				{
-					int i=0;
-					uint16_t sh=sel->op;
-					for(i=0; sh && i<16; i++)
-					{
-						sh=sh<<1;
-						if(sh & sel->bu->flags)
-						{
-							sel->op=sh;
-							break;
-						}
-					}
-					break;
-				}
-				case DETAILS_VIEW_LOG:
-					break;
-			}
+			down(sel);
 			break;
 		case KEY_LEFT:
 		case 'h':
 		case 'H':
-			switch(sel->details)
-			{
-				case DETAILS_CLIENT_LIST:
-					break;
-				case DETAILS_BACKUP_LIST:
-					sel->details=DETAILS_CLIENT_LIST;
-					break;
-				case DETAILS_BACKUP_LOGS:
-					sel->details=DETAILS_BACKUP_LIST;
-					break;
-				case DETAILS_VIEW_LOG:
-					sel->details=DETAILS_BACKUP_LOGS;
-					break;
-			}
+			left(sel);
 			break;
 		case KEY_RIGHT:
 		case 'l':
@@ -824,98 +1009,14 @@ static int parse_stdin_data(struct asfd *asfd, struct sel *sel, int count)
 		case KEY_ENTER:
 		case '\n':
 		case ' ':
-			switch(sel->details)
-			{
-				case DETAILS_CLIENT_LIST:
-					sel->details=DETAILS_BACKUP_LIST;
-					break;
-				case DETAILS_BACKUP_LIST:
-					sel->details=DETAILS_BACKUP_LOGS;
-					break;
-				case DETAILS_BACKUP_LOGS:
-					if(lfp) logp("Option selected: 0x%04X\n", sel->op);
-					sel->details=DETAILS_VIEW_LOG;
-					break;
-				case DETAILS_VIEW_LOG:
-					break;
-			}
+			right(sel);
 			break;
 		case KEY_PPAGE:
-		{
-			int row=0;
-			int col=0;
-			getmaxyx(stdscr, row, col);
-			switch(sel->details)
-			{
-				case DETAILS_CLIENT_LIST:
-				{
-					struct cstat *c;
-					if(!sel->cstat) break;
-					for(c=sel->cstat; c; c=c->prev)
-					{
-						row--;
-						if(!row) break;
-					}
-					sel->cstat=c;
-					break;
-				}
-				case DETAILS_BACKUP_LIST:
-				{
-					struct bu *b;
-					if(!sel->bu) break;
-					for(b=sel->bu; b; b=b->prev)
-					{
-						row--;
-						if(!row) break;
-					}
-					sel->bu=b;
-					break;
-				}
-				case DETAILS_BACKUP_LOGS:
-					break;
-				case DETAILS_VIEW_LOG:
-					break;
-			}
+			page_up(sel);
 			break;
-		}
 		case KEY_NPAGE:
-		{
-			int row=0;
-			int col=0;
-			getmaxyx(stdscr, row, col);
-			switch(sel->details)
-			{
-				case DETAILS_CLIENT_LIST:
-				{
-					struct cstat *c;
-					for(c=sel->cstat; c; c=c->next)
-					{
-						row--;
-						if(!row) break;
-						if(!c->next) break;
-					}
-					sel->cstat=c;
-					break;
-				}
-				case DETAILS_BACKUP_LIST:
-				{
-					struct bu *b;
-					for(b=sel->bu; b; b=b->next)
-					{
-						row--;
-						if(!row) break;
-						if(!b->next) break;
-					}
-					sel->bu=b;
-					break;
-				}
-				case DETAILS_BACKUP_LOGS:
-					break;
-				case DETAILS_VIEW_LOG:
-					break;
-			}
+			page_down(sel);
 			break;
-		}
 		case -1:
 			logp("Error on stdin\n");
 			return -1;
@@ -946,12 +1047,12 @@ static int main_loop(struct async *as, struct conf *conf)
 
 	if(!(sel=(struct sel *)calloc_w(1, sizeof(struct sel), __func__)))
 		goto error;
-	sel->details=DETAILS_CLIENT_LIST;
+	sel->page=PAGE_CLIENT_LIST;
 
 	if(conf->orig_client && !client)
 	{
 		client=strdup_w(conf->orig_client, __func__);
-		sel->details=DETAILS_BACKUP_LIST;
+		sel->page=PAGE_BACKUP_LIST;
 	}
 
 	while(1)
@@ -959,7 +1060,7 @@ static int main_loop(struct async *as, struct conf *conf)
 		if(need_status() && !reqdone)
 		{
 			char *req=NULL;
-			if(sel->details>DETAILS_CLIENT_LIST)
+			if(sel->page>PAGE_CLIENT_LIST)
 			{
 				if(client) req=client;
 				else if(sel->cstat) req=sel->cstat->name;

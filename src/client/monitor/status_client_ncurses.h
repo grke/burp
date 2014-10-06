@@ -1,12 +1,12 @@
 #ifndef STATUS_CLIENT_NCURSES_H
 #define STATUS_CLIENT_NCURSES_H
 
-enum details
+enum page
 {
-	DETAILS_CLIENT_LIST=0,
-	DETAILS_BACKUP_LIST,
-	DETAILS_BACKUP_LOGS,
-	DETAILS_VIEW_LOG
+	PAGE_CLIENT_LIST=0,
+	PAGE_BACKUP_LIST,
+	PAGE_BACKUP_LOGS,
+	PAGE_VIEW_LOG
 };
 
 struct sel
@@ -16,7 +16,7 @@ struct sel
 	struct bu *bu;
 	uint16_t op;
 	struct lline *llines;
-	enum details details;
+	enum page page;
 };
 
 extern int status_client_ncurses(enum action act, struct conf *conf);

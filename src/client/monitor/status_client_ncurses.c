@@ -408,11 +408,13 @@ static void screen_header(int row, int col)
 	printf("%s\n\n", date);
 }
 
-static int need_status(void)
+static int need_status(struct sel *sel)
 {
 	static time_t lasttime=0;
 	time_t now=0;
 	time_t diff=0;
+
+	if(sel->page==PAGE_VIEW_LOG && sel->llines) return 0;
 
 	// Only ask for an update every second.
 	now=time(NULL);
@@ -487,6 +489,18 @@ static int selindex_from_bu(struct sel *sel)
 	{
 		selindex++;
 		if(sel->backup==b) break;
+	}
+	return selindex;
+}
+
+static int selindex_from_lline(struct sel *sel)
+{
+	int selindex=0;
+	struct lline *l;
+	for(l=sel->llines; l; l=l->next)
+	{
+		selindex++;
+		if(sel->lline==l) break;
 	}
 	return selindex;
 }
@@ -569,6 +583,28 @@ static void update_screen_backups(struct sel *sel, int *x, int col,
 	if(!star_printed) sel->backup=sel->client->bu;
 }
 
+static void update_screen_view_log(struct sel *sel, int *x, int col,
+	int winmin, int winmax)
+{
+	int s=0;
+	struct lline *l;
+	int star_printed=0;
+	for(l=sel->llines; l; l=l->next)
+	{
+		s++;
+		if(s<winmin) continue;
+		if(s>winmax) break;
+
+		print_line(l->line, (*x)++, col);
+		if(actg==ACTION_STATUS && sel->lline==l)
+		{
+			mvprintw((*x)+TOP_SPACE-1, 1, "*");
+			star_printed=1;
+		}
+	}
+	if(!star_printed) sel->lline=sel->llines;
+}
+
 static int update_screen(struct sel *sel, struct conf *conf)
 {
 	int x=0;
@@ -594,6 +630,7 @@ static int update_screen(struct sel *sel, struct conf *conf)
 			case PAGE_BACKUP_LOGS:
 				break;
 			case PAGE_VIEW_LOG:
+				selindex=selindex_from_lline(sel);
 				break;
 		}
 	}
@@ -667,6 +704,8 @@ static int update_screen(struct sel *sel, struct conf *conf)
 			print_logs_list(sel, &x, col);
 			break;
 		case PAGE_VIEW_LOG:
+			update_screen_view_log(sel, &x, col,
+				winmin, winmax);
 			break;
 	}
 
@@ -697,7 +736,7 @@ static int request_status(struct asfd *asfd,
 			break;
 		case PAGE_VIEW_LOG:
 		{
-			const char *lname="backup";
+			const char *lname=NULL;
 			if(sel->logop & BU_LOG_BACKUP)
 				lname="backup";
 			else if(sel->logop & BU_LOG_RESTORE)
@@ -706,8 +745,14 @@ static int request_status(struct asfd *asfd,
 				lname="verify";
 			else if(sel->logop & BU_MANIFEST)
 				lname="manifest";
+			else if(sel->logop & BU_STATS_BACKUP)
+				lname="backup_stats";
+			else if(sel->logop & BU_STATS_RESTORE)
+				lname="restore_stats";
+			else if(sel->logop & BU_STATS_VERIFY)
+				lname="verify_stats";
 
-			if(sel->backup)
+			if(sel->backup && lname)
 				snprintf(buf, sizeof(buf), "c:%s:b:%lu:l:%s\n",
 					client, sel->backup->bno, lname);
 			break;
@@ -780,6 +825,8 @@ static void left(struct sel *sel)
 			break;
 		case PAGE_VIEW_LOG:
 			sel->page=PAGE_BACKUP_LOGS;
+			llines_free(&sel->llines);
+			sel->lline=NULL;
 			break;
 	}
 }
@@ -853,6 +900,16 @@ static void down_logs(struct sel *sel)
 	}
 }
 
+static void up_view_log(struct sel *sel)
+{
+	if(sel->lline && sel->lline->prev) sel->lline=sel->lline->prev;
+}
+
+static void down_view_log(struct sel *sel)
+{
+	if(sel->lline && sel->lline->next) sel->lline=sel->lline->next;
+}
+
 static void up(struct sel *sel)
 {
 	switch(sel->page)
@@ -867,6 +924,7 @@ static void up(struct sel *sel)
 			up_logs(sel);
 			break;
 		case PAGE_VIEW_LOG:
+			up_view_log(sel);
 			break;
 	}
 }
@@ -885,6 +943,7 @@ static void down(struct sel *sel)
 			down_logs(sel);
 			break;
 		case PAGE_VIEW_LOG:
+			down_view_log(sel);
 			break;
 	}
 }
@@ -1060,7 +1119,7 @@ static int main_loop(struct async *as, struct conf *conf)
 
 	while(1)
 	{
-		if(need_status() && !reqdone)
+		if(need_status(sel) && !reqdone)
 		{
 			char *req=NULL;
 			if(sel->page>PAGE_CLIENT_LIST)

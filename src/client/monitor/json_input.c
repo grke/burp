@@ -366,13 +366,12 @@ static void do_yajl_error(yajl_handle yajl, struct asfd *asfd)
 // Client records will be coming through in alphabetical order.
 // FIX THIS: If a client is deleted on the server, it is not deleted from
 // clist.
-int json_input(struct asfd *asfd, struct cstat **clist, struct bu **selbu,
-	struct lline **llines)
+int json_input(struct asfd *asfd, struct sel *sel)
 {
         static yajl_handle yajl=NULL;
-	cslist=clist;
-	sselbu=selbu;
-	sllines=llines;
+	cslist=&sel->clist;
+	sselbu=&sel->bu;
+	sllines=&sel->llines;
 
 	if(!yajl)
 	{

@@ -113,7 +113,10 @@ static int input_string(void *ctx, const unsigned char *val, size_t len)
 	}
 	else if(!strcmp(lastkey, "backup")
 	  || !strcmp(lastkey, "restore")
-	  || !strcmp(lastkey, "verify"))
+	  || !strcmp(lastkey, "verify")
+	  || !strcmp(lastkey, "backup_stats")
+	  || !strcmp(lastkey, "restore_stats")
+	  || !strcmp(lastkey, "verify_stats"))
 	{
 		// Log file contents.
 		if(lline_add(&ll_list, str))
@@ -202,7 +205,10 @@ static int input_start_array(void *ctx)
 	}
 	else if(!strcmp(lastkey, "backup")
 	  || !strcmp(lastkey, "restore")
-	  || !strcmp(lastkey, "verify"))
+	  || !strcmp(lastkey, "verify")
+	  || !strcmp(lastkey, "backup_stats")
+	  || !strcmp(lastkey, "restore_stats")
+	  || !strcmp(lastkey, "verify_stats"))
 	{
 		in_log_content=1;
 	}

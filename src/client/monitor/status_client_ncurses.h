@@ -16,6 +16,7 @@ struct sel
 	struct bu *backup;
 	uint16_t logop;
 	struct lline *llines;
+	struct lline *lline;
 	enum page page;
 };
 

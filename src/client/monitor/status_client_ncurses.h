@@ -19,6 +19,7 @@ struct sel
 	struct lline *lline;
 	enum page page;
 	int offset;
+	uint8_t gotfirstresponse;
 };
 
 extern int status_client_ncurses(enum action act, struct conf *conf);

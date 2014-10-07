@@ -395,6 +395,7 @@ int json_input(struct asfd *asfd, struct sel *sel)
 	if(!map_depth)
 	{
 		// Got to the end of the JSON object.
+		if(!sel->gotfirstresponse) sel->gotfirstresponse=1;
 		if(yajl_complete_parse(yajl)!=yajl_status_ok)
 		{
 			do_yajl_error(yajl, asfd);

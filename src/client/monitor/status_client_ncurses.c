@@ -628,6 +628,8 @@ static int update_screen(struct sel *sel, struct conf *conf)
 	static int winmax=0;
 	static int selindex_last=0;
 
+	screen_header(row, col);
+
 	if(actg==ACTION_STATUS)
 	{
 		getmaxyx(stdscr, row, col);
@@ -690,8 +692,6 @@ static int update_screen(struct sel *sel, struct conf *conf)
 		winmin=0;
 		winmax=row;
 	}
-
-	screen_header(row, col);
 /*
 	{
 		char msg[64];
@@ -722,9 +722,12 @@ static int update_screen(struct sel *sel, struct conf *conf)
 			break;
 	}
 
-	// Blank any remainder of the screen.
-	for(; x<row; x++)
-		print_line("", x, col);
+	if(actg==ACTION_STATUS)
+	{
+		// Blank any remainder of the screen.
+		for(; x<row; x++)
+			print_line("", x, col);
+	}
 
 	selindex_last=selindex;
 	return 0;
@@ -1181,8 +1184,24 @@ static int main_loop(struct async *as, struct conf *conf)
 
 		if(!sel->client) sel->client=sel->clist;
 		if(!sel->backup && sel->client) sel->backup=sel->client->bu;
-		if(update_screen(sel, conf)) return -1;
+
+#ifdef HAVE_NCURSES_H
+		if(actg==ACTION_STATUS
+		  && update_screen(sel, conf))
+			goto error;
 		refresh();
+#endif
+
+		if(actg==ACTION_STATUS_SNAPSHOT
+		  && sel->gotfirstresponse)
+		{
+			if(update_screen(sel, conf))
+				goto error;
+			// FIX THIS - should probably set up stdout with an
+			// asfd.
+			printf("\n");
+			break;
+		}
 	}
 
 	ret=0;

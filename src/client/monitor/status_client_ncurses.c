@@ -429,13 +429,28 @@ static int need_status(struct sel *sel)
 	return 1;
 }
 
-static void print_logs_list_line(struct sel *sel, uint16_t bit,
-	const char *title, int *x, int col)
+static const char *logop_to_text(uint16_t logop)
+{
+	switch(logop)
+	{
+		case BU_MANIFEST:	return "Manifest";
+		case BU_LOG_BACKUP:	return "Backup log";
+		case BU_LOG_RESTORE:	return "Restore log";
+		case BU_LOG_VERIFY:	return "Verify log";
+		case BU_STATS_BACKUP:	return "Backup stats";
+		case BU_STATS_RESTORE:	return "Restore stats";
+		case BU_STATS_VERIFY:	return "Verify stats";
+		default: return "";
+	}
+}
+
+static void print_logs_list_line(struct sel *sel,
+	uint16_t bit, int *x, int col)
 {
 	char msg[64]="";
 	if(!sel->backup || !(sel->backup->flags & bit)) return;
 	snprintf(msg, sizeof(msg), "%s%s",
-		*x==3?"Options: ":"         ", title);
+		*x==3?"Browse: ":"        ", logop_to_text(bit));
 	print_line(msg, (*x)++, col);
 
 	if(!sel->logop) sel->logop=bit;
@@ -465,7 +480,7 @@ static void client_and_status_and_backup_and_log(struct sel *sel,
 {
 	char msg[1024];
 	client_and_status_and_backup(sel, x, col);
-	snprintf(msg, sizeof(msg), "Log: 0x%04X", sel->logop);
+	snprintf(msg, sizeof(msg), "Browse: %s", logop_to_text(sel->logop));
 	print_line(msg, (*x)++, col);
 }
 
@@ -507,20 +522,13 @@ static int selindex_from_lline(struct sel *sel)
 
 static void print_logs_list(struct sel *sel, int *x, int col)
 {
-	print_logs_list_line(sel, BU_MANIFEST,
-		"Browse", x, col);
-	print_logs_list_line(sel, BU_LOG_BACKUP,
-		"View backup log", x, col);
-	print_logs_list_line(sel, BU_LOG_RESTORE,
-		"View restore log", x, col);
-	print_logs_list_line(sel, BU_LOG_VERIFY,
-		"View verify log", x, col);
-	print_logs_list_line(sel, BU_STATS_BACKUP,
-		"View backup stats", x, col);
-	print_logs_list_line(sel, BU_STATS_RESTORE,
-		"View restore stats", x, col);
-	print_logs_list_line(sel, BU_STATS_VERIFY,
-		"View verify stats", x, col);
+	print_logs_list_line(sel, BU_MANIFEST, x, col);
+	print_logs_list_line(sel, BU_LOG_BACKUP, x, col);
+	print_logs_list_line(sel, BU_LOG_RESTORE, x, col);
+	print_logs_list_line(sel, BU_LOG_VERIFY, x, col);
+	print_logs_list_line(sel, BU_STATS_BACKUP, x, col);
+	print_logs_list_line(sel, BU_STATS_RESTORE, x, col);
+	print_logs_list_line(sel, BU_STATS_VERIFY, x, col);
 }
 
 static void update_screen_clients(struct sel *sel, int *x, int col,
@@ -587,7 +595,9 @@ static void update_screen_view_log(struct sel *sel, int *x, int col,
 	int winmin, int winmax)
 {
 	int s=0;
+	int o=0;
 	struct lline *l;
+	const char *cp=NULL;
 	int star_printed=0;
 	for(l=sel->llines; l; l=l->next)
 	{
@@ -595,7 +605,10 @@ static void update_screen_view_log(struct sel *sel, int *x, int col,
 		if(s<winmin) continue;
 		if(s>winmax) break;
 
-		print_line(l->line, (*x)++, col);
+		// Allow them to scroll log lines left and right.
+		for(cp=l->line, o=0; *cp && o<sel->offset; cp++, o++) { }
+		print_line(cp, (*x)++, col);
+
 		if(actg==ACTION_STATUS && sel->lline==l)
 		{
 			mvprintw((*x)+TOP_SPACE-1, 1, "*");
@@ -824,6 +837,12 @@ static void left(struct sel *sel)
 			sel->page=PAGE_BACKUP_LIST;
 			break;
 		case PAGE_VIEW_LOG:
+			if(sel->offset>0)
+			{
+				// Allow log lines to be scrolled left.
+				sel->offset--;
+				break;
+			}
 			sel->page=PAGE_BACKUP_LOGS;
 			llines_free(&sel->llines);
 			sel->lline=NULL;
@@ -846,6 +865,8 @@ static void right(struct sel *sel)
 			sel->page=PAGE_VIEW_LOG;
 			break;
 		case PAGE_VIEW_LOG:
+			// Allow log lines to be scrolled right.
+			sel->offset++;
 			break;
 	}
 }

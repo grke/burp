@@ -220,12 +220,59 @@ static void gcv_bit(const char *f, const char *v,
 	(*dest)|=bit;
 }
 
+// This will strip off everything after the last quote. So, configs like this
+// should work:
+// exclude_regex = "[A-Z]:/pagefile.sys" # swap file (Windows XP, 7, 8)
+// Return 1 for quotes removed, -1 for error, 0 for OK.
+static int remove_quotes(const char *f, char **v, char quote)
+{
+	char *dp=NULL;
+	char *sp=NULL;
+	char *copy=NULL;
+
+	// If it does not start with a quote, leave it alone.
+	if(**v!=quote) return 0;
+
+	if(!(copy=strdup_w(*v, __func__)))
+		return -1;
+
+	for(dp=*v, sp=copy+1; *sp; sp++)
+	{
+		if(*sp==quote)
+		{
+			// Found a matching quote. Stop here.
+			*dp='\0';
+			for(sp++; *sp && isspace(*sp); sp++) { }
+			// Do not complain about trailing comments.
+			if(*sp && *sp!='#')
+				logp("ignoring trailing characters after quote in config '%s = %s'\n", f, copy);
+			return 1;
+		}
+		else if(*sp=='\\')
+		{
+			sp++;
+			*dp=*sp;
+			dp++;
+			if(*sp!=quote
+			  && *sp!='\\')
+				logp("unknown escape sequence '\\%c' in config '%s = %s' - treating it as '%c'\n", *sp, f, copy, *sp);
+		}
+		else
+		{
+			*dp=*sp;
+			dp++;
+		}
+	}
+	logp("Did not find closing quote in config '%s = %s'\n", f, copy);
+	*dp='\0';
+	return 1;
+}
+
 // Get field and value pair.
 int conf_get_pair(char buf[], char **f, char **v)
 {
 	char *cp=NULL;
 	char *eq=NULL;
-	char *end=NULL;
 
 	// strip leading space
 	for(cp=buf; *cp && isspace(*cp); cp++) { }
@@ -239,23 +286,26 @@ int conf_get_pair(char buf[], char **f, char **v)
 	if(!(eq=strchr(*f, '='))) return -1;
 	*eq='\0';
 
-	// strip white space from before the equals sign
+	// Strip white space from before the equals sign.
 	for(cp=eq-1; *cp && isspace(*cp); cp--) *cp='\0';
-	// skip white space after the equals sign
+	// Skip white space after the equals sign.
 	for(cp=eq+1; *cp && isspace(*cp); cp++) { }
 	*v=cp;
-	// strip white space at the end of the line
+	// Strip white space at the end of the line.
 	for(cp+=strlen(cp)-1; *cp && isspace(*cp); cp--) { *cp='\0'; }
-	// remove quotes from around the value.
+
 	// FIX THIS: Make this more sophisticated - it should understand
 	// escapes, for example.
-	cp=*v;
-	end=cp+strlen(cp)-1;
-	if((*cp=='\'' && *end=='\'')
-	  || (*cp=='\"' && *end=='\"'))
+
+	switch(remove_quotes(*f, v, '\''))
 	{
-		*v=cp+1; 
-		*end='\0';
+		case -1: return -1;
+		case 1: break;
+		default:
+			// If single quotes were not removed, try to remove
+			// double quotes.
+			if(remove_quotes(*f, v, '\"')<0) return -1;
+			break;
 	}
 
 	if(!*f || !**f || !*v || !**v) return -1;

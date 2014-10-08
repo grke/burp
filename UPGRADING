@@ -1,5 +1,12 @@
 Things to watch out for when upgrading.
 
+2.0.9
+-----
+The configuration file parser now understands single quotes and double quotes
+properly. If you have single quotes or double quotes around your config value,
+the parser will now treat backslash as the escaping character. If you do not
+have quotes around your config value, the config value will be taken literally.
+
 2.0.7
 -----
 The bedup program is now contained within the burp binary. 'make install' will

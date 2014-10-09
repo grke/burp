@@ -2,6 +2,8 @@
   * Bug fix for made up directory names in check_browsedir() not having the
     directory bit set.
   * Close unnecessary file descriptors after forking children.
+  * Check for EAGAIN and EINTR when read on child status pipe fails in main
+    server process.
 
 2014-09-28 Changes in burp-1.4.24:
   * Make vss_strip.c include the configure output, so that vss_strip gets the

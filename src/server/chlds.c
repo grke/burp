@@ -211,7 +211,15 @@ int chld_fd_isset_normal(struct conf *conf, fd_set *fsr, fd_set *fse)
 					}
 				}
 			}
-			if(l<=0) close_fd(&(chlds[c].rfd));
+			else if(!l)
+			{
+				close_fd(&(chlds[c].rfd));
+			}
+			else if(errno!=EAGAIN && errno!=EINTR)
+			{
+				logp("Read error on pipe from child process %d, client: %s: %s\n", chlds[c].pid, chlds[c].name, strerror(errno));
+				close_fd(&(chlds[c].rfd));
+			}
 		}
 	}
 	return 0;

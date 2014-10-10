@@ -218,21 +218,20 @@ extern void conf_init(struct conf *c);
 extern void conf_free_content(struct conf *c);
 extern void conf_free(struct conf *c);
 
-extern int conf_load(const char *conf_path, struct conf *c,
-	uint8_t loadall);
-extern int conf_set_client_global(struct conf *c, struct conf *cc);
-
-extern int is_subdir(const char *dir, const char *sub);
-extern int pathcmp(const char *a, const char *b);
 extern int conf_get_pair(char buf[], char **field, char **value);
-extern int parse_incexcs_buf(struct conf *c, const char *incexc);
-extern int log_incexcs_buf(const char *incexc);
-extern int parse_incexcs_path(struct conf *c, const char *path);
-extern int conf_load_client(struct conf *c, struct conf *cc);
+extern int conf_parse_incexcs_buf(struct conf *c, const char *incexc);
+extern int conf_parse_incexcs_path(struct conf *c, const char *path);
 extern int conf_val_reset(const char *src, char **dest);
 
+extern int conf_load_clientconfdir(struct conf *globalc, struct conf *cc);
+extern int conf_load_global_only(const char *path, struct conf *globalc);
+
+// Random stuff that does not really belong here.
 #ifdef HAVE_WIN32
 extern void convert_backslashes(char **path);
 #endif
+extern int log_incexcs_buf(const char *incexc);
+extern int is_subdir(const char *dir, const char *sub);
+extern int pathcmp(const char *a, const char *b);
 
 #endif

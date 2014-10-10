@@ -19,11 +19,12 @@ static int check_passwd(const char *passwd, const char *plain_text)
 	return -1;
 }
 
-static int check_client_and_password(struct conf *conf, const char *password, struct conf *cconf)
+static int check_client_and_password(struct conf *globalc,
+	const char *password, struct conf *cconf)
 {
 	// Cannot load it until here, because we need to have the name of the
 	// client.
-	if(conf_load_client(conf, cconf)) return -1;
+	if(conf_load_clientconfdir(globalc, cconf)) return -1;
 
 	if(!cconf->ssl_peer_cn)
 	{
@@ -82,7 +83,8 @@ void version_warn(struct asfd *asfd, struct conf *conf, struct conf *cconf)
 	}
 }
 
-int authorise_server(struct asfd *asfd, struct conf *conf, struct conf *cconf)
+int authorise_server(struct asfd *asfd,
+	struct conf *globalc, struct conf *cconf)
 {
 	int ret=-1;
 	char *cp=NULL;
@@ -144,10 +146,10 @@ int authorise_server(struct asfd *asfd, struct conf *conf, struct conf *cconf)
 	password=rbuf->buf;
 	iobuf_init(rbuf);
 
-	if(check_client_and_password(conf, password, cconf))
+	if(check_client_and_password(globalc, password, cconf))
 		goto end;
 
-	if(cconf->version_warn) version_warn(asfd, conf, cconf);
+	if(cconf->version_warn) version_warn(asfd, globalc, cconf);
 
 	logp("auth ok for: %s%s\n", cconf->cname,
 		cconf->password_check?"":" (no password needed)");

@@ -114,7 +114,7 @@ struct vers
 
 static int extra_comms_read(struct async *as,
 	struct vers *vers, int *srestore,
-	char **incexc, struct conf *conf, struct conf *cconf)
+	char **incexc, struct conf *globalc, struct conf *cconf)
 {
 	int ret=-1;
 	struct asfd *asfd;
@@ -145,7 +145,7 @@ static int extra_comms_read(struct async *as,
 			os=rbuf->buf+strlen("autoupgrade:");
 			iobuf_free_content(rbuf);
 			if(os && *os && autoupgrade_server(as, vers->ser,
-				vers->cli, os, conf)) goto end;
+				vers->cli, os, globalc)) goto end;
 		}
 		else if(!strcmp(rbuf->buf, "srestore ok"))
 		{
@@ -153,7 +153,7 @@ static int extra_comms_read(struct async *as,
 			// Client can accept the restore.
 			// Load the restore config, then send it.
 			*srestore=1;
-			if(parse_incexcs_path(cconf, cconf->restore_path)
+			if(conf_parse_incexcs_path(cconf, cconf->restore_path)
 			  || incexc_send_server_restore(asfd, cconf))
 				goto end;
 			// Do not unlink it here - wait until
@@ -186,7 +186,7 @@ static int extra_comms_read(struct async *as,
 			// configuration so that it can better decide
 			// what to do on resume.
 			iobuf_free_content(rbuf);
-			if(incexc_recv_server(asfd, incexc, conf)) goto end;
+			if(incexc_recv_server(asfd, incexc, globalc)) goto end;
 			if(*incexc)
 			{
 				char *tmp=NULL;
@@ -227,7 +227,7 @@ static int extra_comms_read(struct async *as,
 					goto end;
 			logp("Client wants to switch to client: %s\n",
 				sconf->cname);
-			if(conf_load_client(conf, sconf))
+			if(conf_load_clientconfdir(globalc, sconf))
 			{
 				char msg[256]="";
 				snprintf(msg, sizeof(msg),
@@ -258,6 +258,7 @@ static int extra_comms_read(struct async *as,
 			sconf->restore_path=cconf->restore_path;
 			cconf->restore_path=NULL;
 			conf_free_content(cconf);
+			conf_init(cconf);
 			memcpy(cconf, sconf, sizeof(struct conf));
 			free(sconf);
 			sconf=NULL;
@@ -271,7 +272,7 @@ static int extra_comms_read(struct async *as,
 			// again.
 			if(*srestore)
 			{
-				if(parse_incexcs_path(cconf,
+				if(conf_parse_incexcs_path(cconf,
 					cconf->restore_path)) goto end;
 			}
 			logp("Switched to client %s\n", cconf->cname);
@@ -297,9 +298,9 @@ static int extra_comms_read(struct async *as,
 				goto end;
 			}
 			else if(!strcmp(rbuf->buf+strlen("protocol="), "1"))
-				cconf->protocol=conf->protocol=PROTO_BURP1;
+				cconf->protocol=globalc->protocol=PROTO_BURP1;
 			else if(!strcmp(rbuf->buf+strlen("protocol="), "2"))
-				cconf->protocol=conf->protocol=PROTO_BURP2;
+				cconf->protocol=globalc->protocol=PROTO_BURP2;
 			else
 			{
 				snprintf(msg, sizeof(msg), "Client is trying to use %s, which is unknown\n", rbuf->buf);

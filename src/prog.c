@@ -108,7 +108,7 @@ int reload(struct conf *conf, const char *conffile, bool firsttime,
 
 	conf_init(conf);
 
-	if(conf_load(conffile, conf, 1)) return 1;
+	if(conf_load_global_only(conffile, conf)) return 1;
 
 	umask(conf->umask);
 

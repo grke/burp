@@ -338,7 +338,7 @@ end:
 }
 
 // The return code of this is the return code of the standalone process.
-int champ_chooser_server_standalone(struct conf *conf)
+int champ_chooser_server_standalone(struct conf *globalc)
 {
 	int ret=1;
 	struct sdirs *sdirs=NULL;
@@ -350,8 +350,8 @@ int champ_chooser_server_standalone(struct conf *conf)
 	// We need to be given a client name and load the relevant server side
 	// clientconfdir file, because various settings may be overridden
 	// there.
-	if(!(cconf->cname=strdup_w(conf->orig_client, __func__))
-	  || conf_load_client(conf, cconf)
+	if(!(cconf->cname=strdup_w(globalc->orig_client, __func__))
+	  || conf_load_clientconfdir(globalc, cconf)
 	  || !(sdirs=sdirs_alloc())
 	  || sdirs_init(sdirs, cconf)
 	  || champ_chooser_server(sdirs, cconf))

@@ -674,7 +674,7 @@ static int vss_opts_changed(struct sdirs *sdirs, struct conf *cconf,
 
 	// Figure out the old config, which is in the incexc file left
 	// in the current backup directory on the server.
-	if(parse_incexcs_path(&oldconf, sdirs->cincexc))
+	if(conf_parse_incexcs_path(&oldconf, sdirs->cincexc))
 	{
 		// Assume that the file did not exist, and therefore
 		// the old split_vss setting is 0.
@@ -686,7 +686,7 @@ static int vss_opts_changed(struct sdirs *sdirs, struct conf *cconf,
 	// the client, or in the cconf on the server.
 	if(incexc)
 	{
-		if(parse_incexcs_buf(&newconf, incexc))
+		if(conf_parse_incexcs_buf(&newconf, incexc))
 		{
 			// Should probably not got here.
 			newconf.split_vss=0;

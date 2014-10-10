@@ -176,8 +176,6 @@ void conf_free_content(struct conf *c)
 	free_w(&c->orig_client);
 
 	free_incexcs(c);
-
-	conf_init(c);
 }
 
 void conf_free(struct conf *c)
@@ -474,23 +472,6 @@ static int pre_post_override(char **override, char **pre, char **post)
 	free_w(override);
 	return 0;
 }
-
-/*
-static int setup_script_arg_override(struct strlist *list, struct strlist **prelist, struct strlist **postlist)
-{
-	struct strlist *l;
-	if(!list) return 0;
-	strlists_free(prelist);
-	strlists_free(postlist);
-	for(l=list; l; l=l->next)
-	{
-		if(strlist_add(prelist, l->path, 0)
-		  || strlist_add(postlist, l->path, 0))
-			return -1;
-	}
-	return 0;
-}
-*/
 
 #ifdef HAVE_LINUX_OS
 struct fstype
@@ -807,8 +788,7 @@ static int load_conf_field_and_value(struct conf *c,
 	return 0;
 }
 
-/* Recursing, so need to define load_conf_lines ahead of parse_conf_line.
-*/
+// Recursing, so need to define load_conf_lines ahead of parse_conf_line.
 static int load_conf_lines(const char *conf_path, struct conf *c);
 
 static int parse_conf_line(struct conf *c, const char *conf_path,
@@ -1312,10 +1292,28 @@ static int finalise_fstypes(struct conf *c)
 	return 0;
 }
 
-static int conf_finalise(const char *conf_path, struct conf *c, uint8_t loadall)
+/*
+static int setup_script_arg_override(struct strlist **list, int count, struct strlist ***prelist, struct strlist ***postlist, int *precount, int *postcount)
 {
-	int r=0;
+	int i=0;
+	if(!list) return 0;
+	strlists_free(*prelist, *precount);
+	strlists_free(*postlist, *postcount);
+	*precount=0;
+	*postcount=0;
+	for(i=0; i<count; i++)
+	{
+		if(strlist_add(prelist, precount,
+			list[i]->path, 0)) return -1;
+		if(strlist_add(postlist, postcount,
+			list[i]->path, 0)) return -1;
+	}
+	return 0;
+}
+*/
 
+static int conf_finalise(const char *conf_path, struct conf *c)
+{
 	if(finalise_fstypes(c)) return -1;
 
 	strlist_compile_regexes(c->increg);
@@ -1339,27 +1337,25 @@ static int conf_finalise(const char *conf_path, struct conf *c, uint8_t loadall)
 		c->s_script_pre_notify=c->s_script_notify;
 		c->s_script_post_notify=c->s_script_notify;
 	}
-/*
-	if(!c->timer_arg) c->timer_arg=l->talist;
-	if(!c->n_success_arg) c->n_success_arg=l->nslist;
-	if(!c->n_failure_arg) c->n_failure_arg=l->nflist;
-	if(!c->server_script_arg) c->server_script_arg=l->sslist;
-	if(!c->rclients) c->rclients=l->rclist;
 
-	setup_script_arg_override(l->bslist, &l->bprelist, &l->bpostlist);
-	setup_script_arg_override(l->rslist, &l->rprelist, &l->rpostlist);
-	setup_script_arg_override(c->s_script_arg, &l->sprelist, &l->spostlist);
-
-	c->b_script_pre_arg=l->bprelist;
-	c->b_script_post_arg=l->bpostlist;
-	c->r_script_pre_arg=l->rprelist;
-	c->r_script_post_arg=l->rpostlist;
-
-	if(!l->got_spre_args) c->s_script_pre_arg=l->sprelist;
-	if(!l->got_spost_args) c->s_script_post_arg=l->spostlist;
+/* FIX THIS: Need to figure out what this was supposed to do, and make sure
+   burp-2 does it too.
+	setup_script_arg_override(l->bslist, conf->bscount,
+		&(l->bprelist), &(l->bpostlist),
+		&(conf->bprecount), &(conf->bpostcount));
+	setup_script_arg_override(l->rslist, conf->rscount,
+		&(l->rprelist), &(l->rpostlist),
+		&(conf->rprecount), &(conf->rpostcount));
+	setup_script_arg_override(conf->server_script_arg, conf->sscount,
+		&(l->sprelist), &(l->spostlist),
+		&(conf->sprecount), &(conf->spostcount));
 */
+	return 0;
+}
 
-	if(!loadall) return 0;
+static int conf_finalise_global_only(const char *conf_path, struct conf *c)
+{
+	int r=0;
 
 	if(!c->port) conf_problem(conf_path, "port unset", &r);
 
@@ -1390,7 +1386,6 @@ static int conf_finalise(const char *conf_path, struct conf *c, uint8_t loadall)
 	return r;
 }
 
-
 static int load_conf_lines(const char *conf_path, struct conf *c)
 {
 	int line=0;
@@ -1416,24 +1411,8 @@ err:
 	return -1;
 }
 
-int conf_load(const char *conf_path, struct conf *c, uint8_t loadall)
-{
-	//logp("in conf_load\n");
-	if(loadall)
-	{
-		free_w(&c->conffile);
-		if(!(c->conffile=strdup_w(conf_path, __func__)))
-			return -1;
-	}
-
-	if(load_conf_lines(conf_path, c))
-		return -1;
-
-	return conf_finalise(conf_path, c, loadall);
-}
-
 /* The client runs this when the server overrides the incexcs. */
-int parse_incexcs_buf(struct conf *c, const char *incexc)
+int conf_parse_incexcs_buf(struct conf *c, const char *incexc)
 {
 	int ret=0;
 	int line=0;
@@ -1462,7 +1441,7 @@ int parse_incexcs_buf(struct conf *c, const char *incexc)
 	free_w(&copy);
 
 	if(ret) return ret;
-	return conf_finalise("server override", c, 0);
+	return conf_finalise("server override", c);
 }
 
 int log_incexcs_buf(const char *incexc)
@@ -1487,10 +1466,13 @@ int log_incexcs_buf(const char *incexc)
 }
 
 /* The server runs this when parsing a restore file on the server. */
-int parse_incexcs_path(struct conf *c, const char *path)
+int conf_parse_incexcs_path(struct conf *c, const char *path)
 {
 	free_incexcs(c);
-	return conf_load(path, c, 0);
+	if(load_conf_lines(path, c)
+	  || conf_finalise(path, c))
+		return -1;
+	return 0;
 }
 
 static int set_global_str(char **dst, const char *src)
@@ -1511,82 +1493,99 @@ static int set_global_arglist(struct strlist **dst, struct strlist *src)
 	return 0;
 }
 
-/* Remember to update the list in the man page when you change these.*/
-int conf_set_client_global(struct conf *c, struct conf *cc)
+// Remember to update the list in the man page when you change these.
+static int conf_set_from_global(struct conf *globalc, struct conf *cc)
 {
-	cc->forking=c->forking;
-	cc->protocol=c->protocol;
-	cc->log_to_syslog=c->log_to_syslog;
-	cc->log_to_stdout=c->log_to_stdout;
-	cc->progress_counter=c->progress_counter;
-	cc->password_check=c->password_check;
-	cc->manual_delete=c->manual_delete;
-	cc->client_can=c->client_can;
-	cc->server_can=c->server_can;
-	cc->hardlinked_archive=c->hardlinked_archive;
-	cc->librsync=c->librsync;
-	cc->compression=c->compression;
-	cc->version_warn=c->version_warn;
-	cc->path_length_warn=c->path_length_warn;
-	cc->n_success_warnings_only=c->n_success_warnings_only;
-	cc->n_success_changes_only=c->n_success_changes_only;
-	cc->s_script_post_run_on_fail=c->s_script_post_run_on_fail;
-	cc->s_script_pre_notify=c->s_script_pre_notify;
-	cc->s_script_post_notify=c->s_script_post_notify;
-	cc->s_script_notify=c->s_script_notify;
-	cc->directory_tree=c->directory_tree;
-	cc->monitor_browse_cache=c->monitor_browse_cache;
+	cc->forking=globalc->forking;
+	cc->protocol=globalc->protocol;
+	cc->log_to_syslog=globalc->log_to_syslog;
+	cc->log_to_stdout=globalc->log_to_stdout;
+	cc->progress_counter=globalc->progress_counter;
+	cc->password_check=globalc->password_check;
+	cc->manual_delete=globalc->manual_delete;
+	cc->client_can=globalc->client_can;
+	cc->server_can=globalc->server_can;
+	cc->hardlinked_archive=globalc->hardlinked_archive;
+	cc->librsync=globalc->librsync;
+	cc->compression=globalc->compression;
+	cc->version_warn=globalc->version_warn;
+	cc->path_length_warn=globalc->path_length_warn;
+	cc->n_success_warnings_only=globalc->n_success_warnings_only;
+	cc->n_success_changes_only=globalc->n_success_changes_only;
+	cc->s_script_post_run_on_fail=globalc->s_script_post_run_on_fail;
+	cc->s_script_pre_notify=globalc->s_script_pre_notify;
+	cc->s_script_post_notify=globalc->s_script_post_notify;
+	cc->s_script_notify=globalc->s_script_notify;
+	cc->directory_tree=globalc->directory_tree;
+	cc->monitor_browse_cache=globalc->monitor_browse_cache;
 	// clientconfdir needed to make the status monitor stuff work.
-	if(set_global_str(&(cc->conffile), c->conffile))
+	if(set_global_str(&(cc->conffile), globalc->conffile))
 		return -1;
-	if(set_global_str(&(cc->clientconfdir), c->clientconfdir))
+	if(set_global_str(&(cc->clientconfdir), globalc->clientconfdir))
 		return -1;
-	if(set_global_str(&(cc->directory), c->directory))
+	if(set_global_str(&(cc->directory), globalc->directory))
 		return -1;
-	if(set_global_str(&(cc->timestamp_format), c->timestamp_format))
+	if(set_global_str(&(cc->timestamp_format), globalc->timestamp_format))
 		return -1;
 	if(set_global_str(&(cc->recovery_method),
-		c->recovery_method)) return -1;
-	if(set_global_str(&(cc->timer_script), c->timer_script))
+		globalc->recovery_method)) return -1;
+	if(set_global_str(&(cc->timer_script), globalc->timer_script))
 		return -1;
-	if(set_global_str(&(cc->user), c->user))
+	if(set_global_str(&(cc->user), globalc->user))
 		return -1;
-	if(set_global_str(&(cc->group), c->group))
+	if(set_global_str(&(cc->group), globalc->group))
 		return -1;
 	if(set_global_str(&(cc->n_success_script),
-		c->n_success_script)) return -1;
+		globalc->n_success_script)) return -1;
 	if(set_global_str(&(cc->n_failure_script),
-		c->n_failure_script)) return -1;
-	if(set_global_arglist(&(cc->timer_arg),
-		c->timer_arg)) return -1;
-	if(set_global_arglist(&(cc->n_success_arg),
-		c->n_success_arg)) return -1;
-	if(set_global_arglist(&(cc->n_failure_arg),
-		c->n_failure_arg)) return -1;
-	if(set_global_arglist(&(cc->keep),
-		c->keep)) return -1;
-	if(set_global_str(&(cc->dedup_group), c->dedup_group))
+		globalc->n_failure_script)) return -1;
+	if(set_global_str(&(cc->dedup_group), globalc->dedup_group))
 		return -1;
 	if(set_global_str(&(cc->s_script_pre),
-		c->s_script_pre)) return -1;
-	if(set_global_arglist(&(cc->s_script_pre_arg),
-		c->s_script_pre_arg)) return -1;
+		globalc->s_script_pre)) return -1;
 	if(set_global_str(&(cc->s_script_post),
-		c->s_script_post)) return -1;
-	if(set_global_arglist(&(cc->s_script_post_arg),
-		c->s_script_post_arg)) return -1;
+		globalc->s_script_post)) return -1;
 	if(set_global_str(&(cc->s_script),
-		c->s_script)) return -1;
-	if(set_global_arglist(&(cc->s_script_arg),
-		c->s_script_arg)) return -1;
+		globalc->s_script)) return -1;
+
 	if(set_global_arglist(&(cc->rclients),
-		c->rclients)) return -1;
+		globalc->rclients)) return -1;
 
 	// If ssl_peer_cn is not set, default it to the client name.
-	if(!c->ssl_peer_cn
+	if(!globalc->ssl_peer_cn
 	  && set_global_str(&(cc->ssl_peer_cn), cc->cname))
 		return -1;
 
+	return 0;
+}
+
+static int set_global_arglist_override(struct strlist **dst,
+	struct strlist *src)
+{
+	if(*dst) return 0; // Was overriden by the client.
+	// Otherwise, use the global list.
+	return set_global_arglist(dst, src);
+}
+
+// Remember to update the list in the man page when you change these.
+// Instead of adding onto the end of the list, these replace the list.
+static int conf_set_from_global_arg_list_overrides(struct conf *globalc,
+	struct conf *cc)
+{
+	if(set_global_arglist_override(&(cc->timer_arg),
+		globalc->timer_arg)) return -1;
+	if(set_global_arglist_override(&(cc->n_success_arg),
+		globalc->n_success_arg)) return -1;
+	if(set_global_arglist_override(&(cc->n_failure_arg),
+		globalc->n_failure_arg)) return -1;
+	if(set_global_arglist_override(&(cc->keep),
+		globalc->keep)) return -1;
+	if(set_global_arglist_override(&(cc->s_script_pre_arg),
+		globalc->s_script_pre_arg)) return -1;
+	if(set_global_arglist_override(&(cc->s_script_post_arg),
+		globalc->s_script_post_arg)) return -1;
+	if(set_global_arglist_override(&(cc->s_script_arg),
+		globalc->s_script_arg)) return -1;
 	return 0;
 }
 
@@ -1602,26 +1601,42 @@ static void conf_init_save_cname_and_version(struct conf *cc)
 	cc->peer_version=cversion;
 }
 
-int conf_load_client(struct conf *c, struct conf *cc)
+int conf_load_clientconfdir(struct conf *globalc, struct conf *cc)
 {
-	char *cpath=NULL;
+	int ret=-1;
+	char *path=NULL;
+
 	conf_init_save_cname_and_version(cc);
-	if(!(cpath=prepend_s(c->clientconfdir, cc->cname)))
-		return -1;
 	if(looks_like_tmp_or_hidden_file(cc->cname))
 	{
 		logp("client name '%s' is invalid\n", cc->cname);
-		free_w(&cpath);
-		return -1;
+		goto end;
 	}
+
+	if(!(path=prepend_s(globalc->clientconfdir, cc->cname)))
+		goto end;
+
 	// Some client settings can be globally set in the server conf and
 	// overridden in the client specific conf.
-	if(conf_set_client_global(c, cc)
-	  || conf_load(cpath, cc, 0))
-	{
-		free_w(&cpath);
+	if(conf_set_from_global(globalc, cc)
+	  || load_conf_lines(path, cc)
+	  || conf_set_from_global_arg_list_overrides(globalc, cc)
+	  || conf_finalise(path, cc))
+		goto end;
+
+	ret=0;
+end:
+	free_w(&path);
+	return ret;
+}
+
+int conf_load_global_only(const char *path, struct conf *globalc)
+{
+	free_w(&globalc->conffile);
+	if(!(globalc->conffile=strdup_w(path, __func__))
+	  || load_conf_lines(path, globalc)
+	  || conf_finalise(path, globalc)
+	  || conf_finalise_global_only(path, globalc))
 		return -1;
-	}
-	free_w(&cpath);
 	return 0;
 }

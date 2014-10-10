@@ -195,7 +195,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, int is_status_server,
 	// the server does not need to be restarted for most conf changes.
 	conf_init(conf);
 	conf_init(cconf);
-	if(conf_load(conffile, conf, 1)) goto end;
+	if(conf_load_global_only(conffile, conf)) goto end;
 
 	// Hack to keep forking turned off if it was specified as off on the
 	// command line.
@@ -360,6 +360,7 @@ static int process_incoming_client(int *rfd, SSL_CTX *ctx,
 			close(pipe_wfd[1]); // close write end
 
 			conf_free_content(conf);
+			conf_init(conf);
 
 			set_blocking(pipe_rfd[1]);
 

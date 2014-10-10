@@ -111,7 +111,7 @@ static void cstat_remove(struct cstat **clist, struct cstat **cstat)
 	}
 }
 
-static int reload_from_client_confs(struct cstat **clist, struct conf *conf)
+static int reload_from_client_confs(struct cstat **clist, struct conf *globalc)
 {
 	struct cstat *c;
 	struct stat statp;
@@ -121,11 +121,11 @@ static int reload_from_client_confs(struct cstat **clist, struct conf *conf)
 
 	if(!cconf && !(cconf=conf_alloc())) goto error;
 
-	if(stat(conf->conffile, &statp)
+	if(stat(globalc->conffile, &statp)
 	  || !S_ISREG(statp.st_mode))
 	{
 		logp("Could not stat main conf file %s: %s\n",
-			conf->conffile, strerror(errno));
+			globalc->conffile, strerror(errno));
 		goto error;
 	}
 	global_mtime_new=statp.st_mtime;
@@ -158,14 +158,13 @@ static int reload_from_client_confs(struct cstat **clist, struct conf *conf)
 			conf_free_content(cconf);
 			if(!(cconf->cname=strdup_w(c->name, __func__)))
 				goto error;
-			if(conf_set_client_global(conf, cconf)
-			  || conf_load(c->conffile, cconf, 0))
+			if(conf_load_clientconfdir(globalc, cconf))
 			{
 				cstat_remove(clist, &c);
 				break; // Go to the beginning of the list.
 			}
 
-			if(set_cstat_from_conf(c, conf, cconf))
+			if(set_cstat_from_conf(c, globalc, cconf))
 				goto error;
 printf("%s: %d\n", c->name, c->permitted);
 		}
@@ -257,11 +256,11 @@ error:
 	return -1;
 }
 
-int cstat_load_data_from_disk(struct cstat **clist, struct conf *conf)
+int cstat_load_data_from_disk(struct cstat **clist, struct conf *globalc)
 {
-	return get_client_names(clist, conf)
-	  || reload_from_client_confs(clist, conf)
-	  || reload_from_clientdir(clist, conf);
+	return get_client_names(clist, globalc)
+	  || reload_from_client_confs(clist, globalc)
+	  || reload_from_clientdir(clist, globalc);
 }
 
 int cstat_set_backup_list(struct cstat *cstat)

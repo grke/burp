@@ -563,7 +563,7 @@ static int process_dir(const char *oldpath, const char *newpath, const char *ext
 }
 
 static int in_group(const char *client,
-	struct strlist *grouplist, struct conf *conf)
+	struct strlist *grouplist, struct conf *globalc)
 {
 	struct strlist *g;
 	static struct conf *cconf=NULL;
@@ -577,7 +577,7 @@ static int in_group(const char *client,
 	if(!(cconf->cname=strdup_w(client, __func__)))
 		return -1;
 
-	if(conf_load_client(conf, cconf))
+	if(conf_load_clientconfdir(globalc, cconf))
 	{
 		logp("could not load config for client %s\n", client);
 		return 0;
@@ -612,7 +612,7 @@ static int is_regular_file(const char *clientconfdir, const char *file)
 	return S_ISREG(statp.st_mode);
 }
 
-static int iterate_over_clients(struct conf *conf,
+static int iterate_over_clients(struct conf *globalc,
 	struct strlist *grouplist, const char *ext, unsigned int maxlinks)
 {
 	int ret=0;
@@ -623,10 +623,10 @@ static int iterate_over_clients(struct conf *conf,
 	signal(SIGTERM, &sighandler);
 	signal(SIGINT, &sighandler);
 
-	if(!(dirp=opendir(conf->clientconfdir)))
+	if(!(dirp=opendir(globalc->clientconfdir)))
 	{
 		logp("Could not opendir '%s': %s\n",
-			conf->clientconfdir, strerror(errno));
+			globalc->clientconfdir, strerror(errno));
 		return 0;
 	}
 	while((dirinfo=readdir(dirp)))
@@ -639,13 +639,13 @@ static int iterate_over_clients(struct conf *conf,
 		if(dirinfo->d_ino==0
 		// looks_like...() also avoids '.' and '..'.
 		  || looks_like_tmp_or_hidden_file(dirinfo->d_name)
-		  || !is_regular_file(conf->clientconfdir, dirinfo->d_name))
+		  || !is_regular_file(globalc->clientconfdir, dirinfo->d_name))
 			continue;
 
 		if(grouplist)
 		{
 			int ig=0;
-			if((ig=in_group(dirinfo->d_name, grouplist, conf))<0)
+			if((ig=in_group(dirinfo->d_name, grouplist, globalc))<0)
 			{
 				ret=-1;
 				break;
@@ -653,8 +653,8 @@ static int iterate_over_clients(struct conf *conf,
 			if(!ig) continue;
 		}
 
-		if(!(client_lockdir=conf->client_lockdir))
-			client_lockdir=conf->directory;
+		if(!(client_lockdir=globalc->client_lockdir))
+			client_lockdir=globalc->directory;
 
 		if(!(lockfilebase=prepend(client_lockdir,
 			dirinfo->d_name, "/"))
@@ -685,7 +685,7 @@ static int iterate_over_clients(struct conf *conf,
 		// Remember that we got that lock.
 		lock_add_to_list(&locklist, lock);
 
-		if(process_dir(conf->directory, dirinfo->d_name,
+		if(process_dir(globalc->directory, dirinfo->d_name,
 			ext, maxlinks, 1 /* burp mode */, 0 /* level */))
 		{
 			ret=-1;
@@ -859,7 +859,7 @@ int run_bedup(int argc, char *argv[])
 	}
 	else
 	{
-		struct conf *conf=NULL;
+		struct conf *globalc=NULL;
 		struct strlist *grouplist=NULL;
 		struct lock *globallock=NULL;
 
@@ -885,17 +885,17 @@ int run_bedup(int argc, char *argv[])
 		}
 
 		// Read directories from config files, and get locks.
-		if(!(conf=conf_alloc())) return -1;
-		conf_init(conf);
-		if(conf_load(configfile, conf, 1)) return 1;
-		if(conf->mode!=MODE_SERVER)
+		if(!(globalc=conf_alloc())) return -1;
+		conf_init(globalc);
+		if(conf_load_global_only(configfile, globalc)) return 1;
+		if(globalc->mode!=MODE_SERVER)
 		{
 			logp("%s is not a server config file\n", configfile);
-			conf_free(conf);
+			conf_free(globalc);
 			return 1;
 		}
-		logp("Dedup clients from %s\n", conf->clientconfdir);
-		maxlinks=conf->max_hardlinks;
+		logp("Dedup clients from %s\n", globalc->clientconfdir);
+		maxlinks=globalc->max_hardlinks;
 		if(grouplist)
 		{
 			struct strlist *g=NULL;
@@ -910,7 +910,7 @@ int run_bedup(int argc, char *argv[])
 			// If you are doing individual groups, you are likely
 			// to want to do many different dedup jobs and a
 			// global lock would get in the way.
-			if(!(lockpath=prepend(conf->lockfile, ".bedup", ""))
+			if(!(lockpath=prepend(globalc->lockfile, ".bedup", ""))
 			  || !(globallock=lock_alloc_and_init(lockpath)))
 				return 1;
 			if(globallock->status!=GET_LOCK_GOT)
@@ -921,8 +921,8 @@ int run_bedup(int argc, char *argv[])
 			}
 			logp("Got %s\n", lockpath);
 		}
-		ret=iterate_over_clients(conf, grouplist, ext, maxlinks);
-		conf_free(conf);
+		ret=iterate_over_clients(globalc, grouplist, ext, maxlinks);
+		conf_free(globalc);
 
 		lock_release(globallock);
 		lock_free(&globallock);

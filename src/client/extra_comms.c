@@ -67,7 +67,7 @@ int extra_comms(struct async *as, struct conf *conf,
 				goto end;
 			if(*incexc)
 			{
-				if(parse_incexcs_buf(conf, *incexc))
+				if(conf_parse_incexcs_buf(conf, *incexc))
 					goto end;
 				*action=ACTION_RESTORE;
 				log_restore_settings(conf, 1);
@@ -111,7 +111,7 @@ int extra_comms(struct async *as, struct conf *conf,
 			logp("Server is setting includes/excludes.\n");
 			if(incexc_recv_client(asfd, incexc, conf))
 				goto end;
-			if(*incexc && parse_incexcs_buf(conf,
+			if(*incexc && conf_parse_incexcs_buf(conf,
 				*incexc)) goto end;
 		}
 	}

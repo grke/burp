@@ -273,7 +273,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, int is_status_server,
 	}
 
 	if(is_status_server && setup_asfd(as, "status server parent socket",
-		status_rfd, ssl, ASFD_STREAM_STANDARD, cconf))
+		status_rfd, NULL, ASFD_STREAM_STANDARD, cconf))
 			goto end;
 
 	ret=child(as, is_status_server, status_wfd, conf, cconf);

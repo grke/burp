@@ -12,18 +12,6 @@ The decision as to whether it is time to backup is made by the 'timer script',
 as described below.
 
 
-Forcing backups
----------------
-
-A client may attempt to force a backup at any time with 'burp -a b'.
-
-Some cases where attempting to force a backup will not work:
-*) The server is configured with 'client_can_force_backup=0'.
-*) The server is already dealing with a connection from the same client.
-*) The server is already dealing with a connection from a restore_client that
-   is using the same client.
-
-
 Timer script
 ------------
 
@@ -100,3 +88,15 @@ You may customise your timer script so that it makes the decision to back up
 based on whatever you like. An example is in the default timer script, where
 it will decide that it is time to back up based on the presence of a file
 called 'backup' within the client's storage directory.
+
+
+Forcing backups
+---------------
+
+A client may attempt to force a backup at any time with 'burp -a b'.
+
+Some cases where attempting to force a backup will not work:
+*) The server is configured with 'client_can_force_backup=0'.
+*) The server is already dealing with a connection from the same client.
+*) The server is already dealing with a connection from a restore_client that
+   is using the same client.

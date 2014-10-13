@@ -1,5 +1,3 @@
-WORK IN PROGRESS
-
 Timed backups
 -------------
 
@@ -66,8 +64,14 @@ the configuration file.
 Any number of timer_arg settings in a clientconfdir file will overrides all of
 the timer_arg settings in burp-server.conf.
 
+
+Interval
+--------
+
 The default timer_script treats the first timer_arg as the minimum interval
 since the last successful backup. The example above is setting 20 hours.
+If there was no previous successful backup, it is time to backup now (dependent
+upon the time band arguments below).
 The following are valid time unit specifiers for the interval:
 s (seconds)
 m (minutes)
@@ -75,6 +79,10 @@ h (hours)
 d (days)
 w (weeks)
 n (months)
+
+
+Time bands
+----------
 
 The default timer script treats every argument after the interval as a time
 band.

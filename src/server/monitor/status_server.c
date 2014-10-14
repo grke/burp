@@ -76,6 +76,17 @@ end:
 	return ret;
 }
 
+/*
+void dump_cbno(struct cstat *clist, const char *msg)
+{
+	if(!clist) return;
+	printf("dump %s: %s\n", msg, clist->name);
+	struct bu *b;
+	for(b=clist->bu; b; b=b->prev)
+		printf("   %d\n", b->bno);
+}
+*/
+
 static int parse_client_data(struct asfd *srfd,
 	struct cstat *clist, struct conf *conf)
 {
@@ -101,6 +112,8 @@ printf("got client data: '%s'\n", srfd->rbuf->buf);
 			goto error;
 		strip_trailing_slashes(&browse);
 	}
+
+//dump_cbno(clist, "pcd");
 
 	if(client && *client)
 	{
@@ -177,9 +190,11 @@ int status_server(struct async *as, struct conf *conf)
 	{
 		// Take the opportunity to get data from the disk if nothing
 		// was read from the fds.
+//dump_cbno(clist, "a");
 		if(gotdata) gotdata=0;
 		else if(cstat_load_data_from_disk(&clist, conf))
 			goto error;
+//dump_cbno(clist, "b");
 		if(as->read_write(as))
 		{
 			logp("Exiting main status server loop\n");

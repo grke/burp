@@ -49,13 +49,12 @@ static int summary(struct cstat *cstat, int row, int col, struct conf *conf)
 	char msg[1024]="";
 	char fmt[64]="";
 	int colwidth=28*((float)col/100);
-	snprintf(fmt, sizeof(fmt), "%%-%d.%ds %%-9s %%s%%s",
-		colwidth, colwidth);
 	struct bu *cbu=NULL;
+	snprintf(fmt, sizeof(fmt), "%%-%d.%ds %%9s %%s%%s",
+		colwidth, colwidth);
 
 	// Find the current backup.
-	for(cbu=cstat->bu; cbu; cbu=cbu->next)
-		if(cbu->flags & BU_CURRENT) break;
+	cbu=bu_find_current(cstat->bu);
 
 	switch(cstat->status)
 	{
@@ -89,7 +88,6 @@ static int summary(struct cstat *cstat, int row, int col, struct conf *conf)
 				cstat_status_to_str(cstat),
 				" last backup: ",
 				get_bu_str(cbu));
-				break;
 			break;
 	}
 
@@ -1277,6 +1275,7 @@ printf("childpid: %d\n", childpid);
 	  || setup_asfd(as, "monitor stdout", // Read from this.
 		&csout, ASFD_STREAM_LINEBUF, conf))
 			goto end;
+printf("ml: %s\n", conf->monitor_logfile);
 #ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS)
 	{

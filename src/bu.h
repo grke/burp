@@ -46,5 +46,6 @@ extern int bu_init(struct bu *bu, char *fullpath, char *basename,
 extern void bu_list_free(struct bu **bu_list);
 extern struct bu *bu_alloc(void);
 extern void bu_free(struct bu **bu);
+extern struct bu *bu_find_current(struct bu *bu);
 
 #endif

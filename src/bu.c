@@ -45,3 +45,12 @@ void bu_list_free(struct bu **bu_list)
 	}
 	*bu_list=NULL;
 }
+
+struct bu *bu_find_current(struct bu *bu)
+{
+	struct bu *cbu=NULL;
+        for(cbu=bu; cbu; cbu=cbu->prev)
+                if(cbu->flags & BU_CURRENT)
+                        break;
+	return cbu;
+}

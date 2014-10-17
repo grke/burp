@@ -64,5 +64,4 @@ extern int send_a_file(const char *path, struct cntr *p1cntr);
 extern void strip_trailing_slashes(char **str);
 extern int set_peer_env_vars(int cfd);
 
-
 #endif

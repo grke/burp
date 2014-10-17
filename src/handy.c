@@ -904,13 +904,19 @@ void reuseaddr(int fd)
 
 void write_status(const char *client, char phase, const char *path, struct cntr *p1cntr, struct cntr *cntr)
 {
+	static char *w=NULL;
+	static char *wbuf=NULL;
 	static time_t lasttime=0;
+
 	if(status_wfd>=0 && client)
 	{
-		char *w=NULL;
 		time_t now=0;
 		time_t diff=0;
-		static char wbuf[1024]="";
+		ssize_t wl=0;
+		fd_set fsw;
+		fd_set fse;
+		struct timeval tval;
+		int mfd=-1;
 
 		// Only update every 2 seconds.
 		now=time(NULL);
@@ -922,27 +928,80 @@ void write_status(const char *client, char phase, const char *path, struct cntr 
 			if(diff<0) lasttime=now;
 			return;
 		}
+		// Update the last time even if we did not get to write
+		// anything. Should slow load down a bit.
 		lasttime=now;
 
-		counters_to_str(wbuf, sizeof(wbuf),
-			client, phase, path, p1cntr, cntr);
-
-		w=wbuf;
-		while(*w)
+		if(!w)
 		{
-			ssize_t wl=0;
-			if((wl=write(status_wfd, w, strlen(w)))<0)
+			// Only get a new buffer if the previous one was not
+			// finished. This may then skip sending some messages
+			// to the parent, which is OK.
+			char tmp[1024]="";
+			counters_to_str(tmp, sizeof(tmp),
+				client, phase, path, p1cntr, cntr);
+			if(!(wbuf=strdup(tmp)))
 			{
-				logp("error writing status down pipe to server: %s\n", strerror(errno));
-				close_fd(&status_wfd);
-				break;
+				log_out_of_memory(__func__);
+				goto error;
 			}
-			w+=wl;
+			w=wbuf;
+		}
+
+		FD_ZERO(&fsw);
+		FD_ZERO(&fse);
+
+		// Very quick select, do not want to waste time.
+		tval.tv_sec=0;
+		tval.tv_usec=0;
+
+		add_fd_to_sets(status_wfd, NULL, &fsw, &fse, &mfd);
+
+		if(select(mfd+1, NULL, &fsw, &fse, &tval)<0)
+		{
+			if(errno!=EAGAIN && errno!=EINTR)
+			{
+				logp("select error in %s: %s\n", __func__,
+					strerror(errno));
+				goto error;
+			}
+		}
+
+		if(FD_ISSET(status_wfd, &fse))
+		{
+			logp("status write pipe had an exception\n");
+			goto error;
+		}
+
+		if(!FD_ISSET(status_wfd, &fsw))
+		{
+			// Not time to try a write yet.
+			return;
+		}
+
+		// Time to try a write.
+		if((wl=write(status_wfd, w, strlen(w)))<=0)
+		{
+			logp("error writing status down pipe to server: %s\n",
+				strerror(errno));
+			goto error;
+		}
+		w+=wl;
+		if(!*w)
+		{
+			// Got to the end of the buffer, reset it.
+			free(wbuf);
+			wbuf=NULL;
+			w=NULL;
 		}
 	}
+	return;
+error:
+	logp("closing status write pipe\n");
+	close_fd(&status_wfd);
 }
 
-static int astrcat(char **buf, const char *append)
+int astrcat(char **buf, const char *append)
 {
 	int l=0;
 	char *copy=NULL;

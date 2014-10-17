@@ -2073,17 +2073,28 @@ static int process_incoming_client(int rfd, struct config *conf, SSL_CTX *ctx, c
 
 			free_config(conf);
 
-			set_blocking(pipe_rfd[1]);
 			status_wfd=pipe_rfd[1];
 			status_rfd=pipe_wfd[0];
 
 			if(is_status_server)
-			  ret=run_status_server(&rfd, &cfd, configfile);
+			{
+				// Status server child reads from server.
+				// Status server child does no writing. 
+				close_fd(&status_wfd);
+				set_non_blocking(status_rfd);
+				ret=run_status_server(&rfd, &cfd, configfile);
+				close_fd(&status_rfd);
+			}
 			else
-			  ret=run_child(&rfd, &cfd, ctx,
-				configfile, conf->forking);
-			close_fd(&status_wfd);
-			close_fd(&status_rfd);
+			{
+				// Normal child writes to server.
+				// Normal child does no reading.
+				set_non_blocking(status_wfd);
+				close_fd(&status_rfd);
+				ret=run_child(&rfd, &cfd, ctx,
+					configfile, conf->forking);
+				close_fd(&status_wfd);
+			}
 			exit(ret);
 		}
 		default:

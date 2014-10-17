@@ -4,6 +4,9 @@
   * Close unnecessary file descriptors after forking children.
   * Check for EAGAIN and EINTR when read on child status pipe fails in main
     server process.
+  * Make status_wfd non-blocking and run a select() on it before the child
+    tries to write to it.
+  * Fix a possible segfault when reading from a status client.
 
 2014-09-28 Changes in burp-1.4.24:
   * Make vss_strip.c include the configure output, so that vss_strip gets the

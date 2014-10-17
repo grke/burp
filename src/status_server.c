@@ -968,13 +968,11 @@ int status_server(int *cfd, struct config *conf)
 {
 	int l;
 	int ret=0;
-	char *rbuf=NULL;
 	char buf[512]="";
 	int clen=0;
 	struct cstat **clist=NULL;
 
 	set_non_blocking(*cfd);
-	if(status_rfd>=0) set_non_blocking(status_rfd);
 
 	//logp("in status_server\n");
 	//logp("status_rfd: %d\n", status_rfd);
@@ -1060,46 +1058,28 @@ int status_server(int *cfd, struct config *conf)
 		if(FD_ISSET(*cfd, &fsr))
 		{
 			char *cp=NULL;
-			ssize_t total=0;
 			//logp("status server stuff to read from client\n");
-			while((l=read(*cfd, buf, sizeof(buf)))>0)
+			if((l=read(*cfd, buf, sizeof(buf)))<0)
 			{
-				size_t r=0;
-				buf[l]='\0';
-				if(rbuf) r=strlen(buf);
-				rbuf=(char *)realloc(rbuf, r+l+1);
-				if(!r) *rbuf='\0';
-				strcat(rbuf+r, buf);
-				total+=l;
-			}
-			if(!total)
-			{
-				// client went away?
-				if(rbuf)
-				{
-					free(rbuf);
-					rbuf=NULL;
-				}
+				logp("Error reading from status client: %s\n",
+					strerror(errno));
+				ret=-1;
 				break;
 			}
-			// If we did not get a full read, do
-			// not worry, just throw it away.
-			if(rbuf && (cp=strrchr(rbuf, '\n')))
+			else if(!l) break;
+			buf[l]='\0';
+			if((cp=strrchr(buf, '\n')))
 			{
 				*cp='\0';
 				// Also get rid of '\r'. I think telnet adds
 				// this.
-				if((cp=strrchr(rbuf, '\r'))) *cp='\0';
+				if((cp=strrchr(buf, '\r'))) *cp='\0';
 
-				if(parse_rbuf(rbuf, *cfd, clist, clen))
+				if(parse_rbuf(buf, *cfd, clist, clen))
 				{
 					ret=-1;
-					free(rbuf);
-					rbuf=NULL;
 					break;
 				}
-				free(rbuf);
-				rbuf=NULL;
 				if(send_data_to_client(*cfd, "\n", 1))
 					return -1;
 			}

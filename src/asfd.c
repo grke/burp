@@ -491,6 +491,7 @@ static int asfd_init(struct asfd *asfd, const char *desc,
 	asfd->network_timeout=asfd->max_network_timeout;
 	asfd->ratelimit=conf->ratelimit;
 	asfd->rlsleeptime=10000;
+	asfd->pid=-1;
 
 	asfd->parse_readbuf=asfd_parse_readbuf;
 	asfd->append_all_to_write_buffer=asfd_append_all_to_write_buffer;

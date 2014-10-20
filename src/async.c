@@ -112,7 +112,8 @@ static int async_io(struct async *as, int doread)
 
 		if(asfd->doread && FD_ISSET(asfd->fd, &fsr)) // Able to read.
 		{
-			if(asfd->listening_for_new_clients)
+			if(asfd->fdtype==ASFD_FD_SERVER_LISTEN_MAIN,
+			  || asfd->fdtype==ASFD_FD_SERVER_LISTEM_STATUS)
 			{
 				// Indicate to the caller that we have a new
 				// incoming client.

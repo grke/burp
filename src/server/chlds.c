@@ -15,16 +15,8 @@ static struct chld *chlds;
 static void chld_free(struct chld *chld)
 {
 	chld->pid=-1;
-	if(chld->data)
-	{
-		free(chld->data);
-		chld->data=NULL;
-	}
-	if(chld->name)
-	{
-		free(chld->name);
-		chld->name=NULL;
-	}
+	free_w(&chld->data);
+	free_w(&chld->name);
 	close_fd(&(chld->rfd));
 	close_fd(&(chld->wfd));
 }
@@ -184,11 +176,7 @@ int chld_fd_isset_normal(struct conf *conf, fd_set *fsr, fd_set *fse)
 			// A child is giving us some status
 			// information.
 			static char buf[1024]="";
-			if(chlds[c].data)
-			{
-				free(chlds[c].data);
-				chlds[c].data=NULL;
-			}
+			free_w(&(chlds[c].data));
 			if((l=read(chlds[c].rfd, buf, sizeof(buf)-2))>0)
 			{
 				// If we did not get a full read, do

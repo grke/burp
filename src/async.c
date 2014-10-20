@@ -112,24 +112,20 @@ static int async_io(struct async *as, int doread)
 
 		if(asfd->doread && FD_ISSET(asfd->fd, &fsr)) // Able to read.
 		{
-			if(asfd->fdtype==ASFD_FD_SERVER_LISTEN_MAIN,
-			  || asfd->fdtype==ASFD_FD_SERVER_LISTEM_STATUS)
+			switch(asfd->fdtype)
 			{
-				// Indicate to the caller that we have a new
-				// incoming client.
-				// For now, this is only for the champ chooser
-				// server.
-				// FIX THIS: Look into whether it is possible
-				// to do this for the client and server
-				// main processes.
-				asfd->new_client++;
+				case ASFD_FD_SERVER_LISTEN_MAIN:
+				case ASFD_FD_SERVER_LISTEN_STATUS:
+					// Indicate to the caller that we have
+					// a new incoming client.
+					asfd->new_client++;
+					break;
+				default:
+					if(asfd->do_read(asfd)
+					  || asfd->parse_readbuf(asfd))
+						return asfd_problem(asfd);
+					break;
 			}
-			else if(asfd->do_read(asfd))
-			{
-				return asfd_problem(asfd);
-			}
-			if(asfd->parse_readbuf(asfd))
-				return asfd_problem(asfd);
 		}
 
 		if(asfd->dowrite && FD_ISSET(asfd->fd, &fsw)) // Able to write.

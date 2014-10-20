@@ -196,7 +196,7 @@ error:
 	return -1;
 }
 
-static int run_child(int *cfd, SSL_CTX *ctx, int is_status_server,
+static int run_child(int *cfd, SSL_CTX *ctx,
 	int status_wfd, int *status_rfd, const char *conffile, int forking)
 {
 	int ret=-1;

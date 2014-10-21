@@ -222,7 +222,7 @@ static int setenv_x509_serialnumber(ASN1_INTEGER *i, const char *env)
 int ssl_check_cert(SSL *ssl, struct config *conf)
 {
 	X509 *peer;
-	char tmpbuf[256];
+	char tmpbuf[256]="";
 
 	if(!conf->ssl_peer_cn)
 	{
@@ -231,7 +231,7 @@ int ssl_check_cert(SSL *ssl, struct config *conf)
 	}
 	SSL_CIPHER_description(SSL_get_current_cipher(ssl),
 		tmpbuf, sizeof(tmpbuf));
-	logp("Peer uses %s", tmpbuf);
+	logp("SSL is using cipher: %s", tmpbuf);
 	if(!(peer=SSL_get_peer_certificate(ssl)))
 	{
 		logp("Could not get peer certificate.\n");

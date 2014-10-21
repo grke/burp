@@ -386,8 +386,6 @@ static int process_incoming_client(struct asfd *asfd, SSL_CTX *ctx,
 			conf_free_content(conf);
 			conf_init(conf);
 
-			set_blocking(pipe_rfd[1]);
-
 			close_fd(rfd);
 			ret=run_child(rfd, &cfd, ctx, is_status_server,
 				pipe_rfd[1], &(pipe_wfd[0]),
@@ -403,18 +401,28 @@ static int process_incoming_client(struct asfd *asfd, SSL_CTX *ctx,
 			// parent
 			close(pipe_rfd[1]); // close write end
 			close(pipe_wfd[0]); // close read end
-
-			// keep a note of the child pid.
-			if(is_status_server)
-				logp("forked status server child pid %d\n",
-						childpid);
-			else
-				logp("forked child pid %d\n", childpid);
-
-			chld_forked(childpid,
-				pipe_rfd[0], pipe_wfd[1], is_status_server);
-
 			close_fd(&cfd);
+
+			switch(asfd->fdtype)
+			{
+				case ASFD_FD_SERVER_LISTEN_MAIN:
+					logp("forked child pid %d\n",
+						childpid);
+					if(chld_forked(childpid, pipe_wfd[1]))
+						return -1;
+					break;
+				case ASFD_FD_SERVER_LISTEN_STATUS:
+					logp("forked status server child: %d\n",
+						childpid);
+					if(chld_forked(childpid, pipe_rfd[0]))
+						return -1;
+					break;
+				default:
+					logp("Strange fdtype after fork: %d\n",
+						asfd->fdtype);
+					return -1;
+			}
+
 			return 0;
 	}
 }

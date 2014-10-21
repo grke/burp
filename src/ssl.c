@@ -229,9 +229,9 @@ int ssl_check_cert(SSL *ssl, struct config *conf)
 		logp("ssl_peer_cn not set.\n");
 		return -1;
 	}
-	logp("Client uses %s %s\n",
-		SSL_CIPHER_get_version(SSL_get_current_cipher(ssl)),
-		SSL_get_cipher_name(ssl));
+	SSL_CIPHER_description(SSL_get_current_cipher(ssl),
+		tmpbuf, sizeof(tmpbuf));
+	logp("Peer uses %s", tmpbuf);
 	if(!(peer=SSL_get_peer_certificate(ssl)))
 	{
 		logp("Could not get peer certificate.\n");

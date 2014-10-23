@@ -11,6 +11,7 @@
   * Make the Windows client return codes other than 0.
   * Set openssl options SSL_OP_NO_SSLv2 and SSL_OP_NO_SSLv3, to avoid the
     poodle vulnerability.
+  * Slightly better logging when SSL fails in src/async:do_write().
 
 2014-09-28 Changes in burp-1.4.24:
   * Make vss_strip.c include the configure output, so that vss_strip gets the

@@ -167,6 +167,7 @@ error:
 
 static int asfd_do_read_ssl(struct asfd *asfd)
 {
+	int e;
 	ssize_t r;
 
 	asfd->read_blocked_on_write=0;
@@ -175,7 +176,7 @@ static int asfd_do_read_ssl(struct asfd *asfd)
 	r=SSL_read(asfd->ssl,
 		asfd->readbuf+asfd->readbuflen, bufmaxsize-asfd->readbuflen);
 
-	switch(SSL_get_error(asfd->ssl, r))
+	switch((e=SSL_get_error(asfd->ssl, r)))
 	{
 		case SSL_ERROR_NONE:
 			asfd->readbuflen+=r;
@@ -194,12 +195,13 @@ static int asfd_do_read_ssl(struct asfd *asfd)
 		case SSL_ERROR_SYSCALL:
 			if(errno==EAGAIN || errno==EINTR)
 				break;
-			logp("%s: Got SSL_ERROR_SYSCALL in read, (%d=%s)\n",
-				asfd->desc, errno, strerror(errno));
+			logp("%s: Got SSL_ERROR_SYSCALL in read\n",
+				asfd->desc);
 			// Fall through to read problem
 		default:
-			logp("%s: SSL read problem in %s\n",
-				asfd->desc, __func__);
+			logp("%s: SSL read problem in %s: %d - %d=%s\n",
+				asfd->desc, __func__,
+				e, errno, strerror(errno));
 			goto error;
 	}
 	return 0;

@@ -60,10 +60,12 @@ bool have_service_api;
 // Main Windows entry point.
 int main(int argc, char *argv[])
 {
+	int ret;
+
 	InitWinAPIWrapper();
 
 	// Start up Volume Shadow Copy.
-	if(VSSInit()) _exit(1);
+	if(VSSInit()) return 1;
 
 	// Startup networking
 	WSA_Init();
@@ -73,11 +75,11 @@ int main(int argc, char *argv[])
 		p_SetProcessShutdownParameters(0x100, 0);
 
 	// Call the Unix Burp daemon
-	BurpMain(argc, argv);
+	ret=BurpMain(argc, argv);
 
 	// Terminate our main message loop
 	PostQuitMessage(0);
 
 	WSACleanup();
-	_exit(0);
+	return ret;
 }

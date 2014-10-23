@@ -20,31 +20,25 @@ bool have_service_api;
  */
 int main(int argc, char *argv[])
 {
-   //int i=0;
+	int ret;
 
-   //for(i=0; i<argc; i++)
-   //{
-//	printf("argv[%d]: %s\n", i, argv[i]);
-//	fflush(stdout);
-//   }
+	OSDependentInit();
 
-   OSDependentInit();
+	/* Start up Volume Shadow Copy (only on FD) */
+	VSSInit();
 
-   /* Start up Volume Shadow Copy (only on FD) */
-   VSSInit();
+	/* Startup networking */
+	WSA_Init();
 
-   /* Startup networking */
-   WSA_Init();
+	/* Set this process to be the last application to be shut down. */
+	if (p_SetProcessShutdownParameters) {
+		p_SetProcessShutdownParameters(0x100, 0);
+	}
 
-   /* Set this process to be the last application to be shut down. */
-   if (p_SetProcessShutdownParameters) {
-      p_SetProcessShutdownParameters(0x100, 0);
-   }
+	/* Call the Unix Burp daemon */
+	ret=BurpMain(argc, argv);
+	PostQuitMessage(0);                /* terminate our main message loop */
 
-   /* Call the Unix Burp daemon */
-   BurpMain(argc, argv);
-   PostQuitMessage(0);                /* terminate our main message loop */
-
-   WSACleanup();
-   _exit(0);
+	WSACleanup();
+	return ret;
 }

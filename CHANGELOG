@@ -8,6 +8,7 @@
     tries to write to it.
   * Fix a possible segfault when reading from a status client.
   * Log a more accurate description of ssl_ciphers.
+  * Make the Windows client return codes other than 0.
 
 2014-09-28 Changes in burp-1.4.24:
   * Make vss_strip.c include the configure output, so that vss_strip gets the

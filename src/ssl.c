@@ -117,6 +117,8 @@ SSL_CTX *ssl_initialise_ctx(struct conf *conf)
 		SSL_CTX_set_options(ctx, SSL_OP_NO_COMPRESSION);
 	// Default is zlib5, which needs no option set.
 
+	SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2|SSL_OP_NO_SSLv3);
+
 	return ctx;
 }
 

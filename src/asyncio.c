@@ -177,6 +177,7 @@ static int check_ratelimit(unsigned long long *bytes)
 
 static int do_write(int *write_blocked_on_read)
 {
+	int e;
 	ssize_t w;
 	static unsigned long long bytes=0;
 
@@ -184,7 +185,7 @@ static int do_write(int *write_blocked_on_read)
 	ERR_clear_error();
 	w=SSL_write(ssl, writebuf, writebuflen);
 
-	switch(SSL_get_error(ssl, w))
+	switch((e=SSL_get_error(ssl, w)))
 	{
 	  case SSL_ERROR_NONE:
 		//logp("wrote: %d\n", w);
@@ -200,12 +201,12 @@ static int do_write(int *write_blocked_on_read)
 	  case SSL_ERROR_SYSCALL:
 		if(errno == EAGAIN || errno == EINTR)
 			break;
-		logp("Got SSL_ERROR_SYSCALL in write, errno=%d (%s)\n",
-			errno, strerror(errno));
+		logp("Got SSL_ERROR_SYSCALL in write\n");
 		// Fall through to write problem
 	  default:
 		berr_exit("SSL write problem");
-		logp("write returned: %d\n", w);
+		logp("SSL write problem: %d, errno=%d (%s)\n",
+			e, errno, strerror(errno));
 		return -1;
 	}
 	return 0;

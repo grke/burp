@@ -195,7 +195,7 @@ static int asfd_do_read_ssl(struct asfd *asfd)
 		case SSL_ERROR_SYSCALL:
 			if(errno==EAGAIN || errno==EINTR)
 				break;
-			logp("%s: Got SSL_ERROR_SYSCALL in read\n",
+			logp("%s: Got SSL_ERROR_SYSCALL\n",
 				asfd->desc);
 			// Fall through to read problem
 		default:
@@ -275,6 +275,7 @@ static int asfd_do_write(struct asfd *asfd)
 
 static int asfd_do_write_ssl(struct asfd *asfd)
 {
+	int e;
 	ssize_t w;
 
 	asfd->write_blocked_on_read=0;
@@ -283,7 +284,7 @@ static int asfd_do_write_ssl(struct asfd *asfd)
 	ERR_clear_error();
 	w=SSL_write(asfd->ssl, asfd->writebuf, asfd->writebuflen);
 
-	switch(SSL_get_error(asfd->ssl, w))
+	switch((e=SSL_get_error(asfd->ssl, w)))
 	{
 		case SSL_ERROR_NONE:
 /*
@@ -306,12 +307,13 @@ printf("wrote %d: %s\n", w, buf);
 		case SSL_ERROR_SYSCALL:
 			if(errno==EAGAIN || errno==EINTR)
 				break;
-			logp("%s: Got SSL_ERROR_SYSCALL in %s, (%d=%s)\n",
-				asfd->desc, __func__, errno, strerror(errno));
-			// Fall through to write problem
+			logp("%s: Got SSL_ERROR_SYSCALL\n",
+				asfd->desc);
+			// Fall through to read problem
 		default:
-			logp("%s: SSL write problem\n", asfd->desc);
-			logp("%s: write returned: %d\n", asfd->desc, w);
+			logp("%s: SSL write problem in %s: %d - %d=%s\n",
+				asfd->desc, __func__,
+				e, errno, strerror(errno));
 			return -1;
 	}
 	return 0;

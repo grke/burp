@@ -98,12 +98,13 @@ static int async_alloc_buf(char **buf, size_t *buflen, size_t bufmaxsize)
 
 static int do_read(int *read_blocked_on_write)
 {
+	int e;
 	ssize_t r;
 
 	ERR_clear_error();
 	r=SSL_read(ssl, readbuf+readbuflen, readbufmaxsize-readbuflen);
 
-	switch(SSL_get_error(ssl, r))
+	switch((e=SSL_get_error(ssl, r)))
 	{
 	  case SSL_ERROR_NONE:
 		//logp("read: %d\n", r);
@@ -124,11 +125,11 @@ static int do_read(int *read_blocked_on_write)
 	  case SSL_ERROR_SYSCALL:
 		if(errno == EAGAIN || errno == EINTR)
 			break;
-		logp("Got SSL_ERROR_SYSCALL in read, errno=%d (%s)\n",
-			errno, strerror(errno));
+		logp("Got SSL_ERROR_SYSCALL in read\n");
 		// Fall through to read problem
 	  default:
-		logp("SSL read problem\n");
+		logp("SSL read problem: %d, errno=%d (%s)\n",
+			e, errno, strerror(errno));
 		truncate_buf(&readbuf, &readbuflen);
 		return -1;
 	}

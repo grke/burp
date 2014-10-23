@@ -114,6 +114,8 @@ SSL_CTX *ssl_initialise_ctx(struct config *conf)
 		SSL_CTX_set_cipher_list(ctx, conf->ssl_ciphers);
 	}
 
+	SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2|SSL_OP_NO_SSLv3);
+
 	return ctx;
 }
 

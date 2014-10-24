@@ -606,25 +606,6 @@ static int process_dir(const char *oldpath, const char *newpath, const char *ext
 	return 0;
 }
 
-static int in_group(const char *client, strlist_t **grouplist, int gcount, struct config *conf)
-{
-	int i=0;
-	struct config cconf;
-
-	if(load_client_config(conf, &cconf, client))
-	{
-		logp("could not load config for client %s\n", client);
-		return 0;
-	}
-
-	if(!cconf.dedup_group) return 0;
-
-	for(i=0; i<gcount; i++)
-		if(!strcmp(grouplist[i]->path, cconf.dedup_group))
-			return 1;
-	return 0;
-}
-
 static void remove_locks(void)
 {
 	int i=0;
@@ -657,11 +638,21 @@ static int is_regular_file(const char *clientconfdir, const char *file)
 	return S_ISREG(statp.st_mode);
 }
 
+static int in_group(strlist_t **grouplist, int gcount, const char *dedup_group)
+{
+	int i=0;
+	for(i=0; i<gcount; i++)
+		if(!strcmp(grouplist[i]->path, dedup_group))
+			return 1;
+	return 0;
+}
+
 static int iterate_over_clients(struct config *conf, strlist_t **grouplist, int gcount, const char *ext, unsigned int maxlinks)
 {
 	int ret=0;
 	DIR *dirp=NULL;
 	struct dirent *dirinfo=NULL;
+        struct config cconf;
 
 	signal(SIGABRT, &sighandler);
 	signal(SIGTERM, &sighandler);
@@ -685,20 +676,18 @@ static int iterate_over_clients(struct config *conf, strlist_t **grouplist, int 
 		  || !is_regular_file(conf->clientconfdir, dirinfo->d_name))
 			continue;
 
-		if(gcount)
+		if(load_client_config(conf, &cconf, dirinfo->d_name))
 		{
-			int ig=0;
-			if((ig=in_group(
-				dirinfo->d_name, grouplist, gcount, conf))<0)
-			{
-				ret=-1;
-				break;
-			}
-			if(!ig) continue;
+			logp("could not load config for client %s\n",
+				dirinfo->d_name);
+			continue;
 		}
+		if(!cconf.dedup_group
+		  || !in_group(grouplist, gcount, cconf.dedup_group))
+			continue;
 
-		if(!(client_lockdir=conf->client_lockdir))
-			client_lockdir=conf->directory;
+		if(!(client_lockdir=cconf.client_lockdir))
+			client_lockdir=cconf.directory;
 
 		if(!(lockfilebase=prepend(client_lockdir,
 			dirinfo->d_name, "/"))
@@ -729,7 +718,7 @@ static int iterate_over_clients(struct config *conf, strlist_t **grouplist, int 
 
 		logp("Got %s\n", lockfile);
 
-		if(process_dir(conf->directory, dirinfo->d_name,
+		if(process_dir(cconf.directory, dirinfo->d_name,
 			ext, maxlinks, 1 /* burp mode */, 0 /* level */))
 		{
 			ret=-1;

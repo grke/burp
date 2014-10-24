@@ -562,35 +562,6 @@ static int process_dir(const char *oldpath, const char *newpath, const char *ext
 	return 0;
 }
 
-static int in_group(const char *client,
-	struct strlist *grouplist, struct conf *globalc)
-{
-	struct strlist *g;
-	static struct conf *cconf=NULL;
-
-	if(!cconf)
-	{
-		if(!(cconf=conf_alloc()))
-		conf_init(cconf);
-	}
-	if(cconf->cname) free(cconf->cname);
-	if(!(cconf->cname=strdup_w(client, __func__)))
-		return -1;
-
-	if(conf_load_clientconfdir(globalc, cconf))
-	{
-		logp("could not load config for client %s\n", client);
-		return 0;
-	}
-
-	if(!cconf->dedup_group) return 0;
-
-	for(g=grouplist; g; g=g->next)
-		if(!strcmp(g->path, cconf->dedup_group)) return 1;
-
-	return 0;
-}
-
 static void sighandler(int signum)
 {
 	locks_release_and_free(&locklist);
@@ -612,16 +583,30 @@ static int is_regular_file(const char *clientconfdir, const char *file)
 	return S_ISREG(statp.st_mode);
 }
 
+static int in_group(struct strlist *grouplist, const char *dedup_group)
+{
+	struct strlist *g;
+
+	for(g=grouplist; g; g=g->next)
+		if(!strcmp(g->path, dedup_group)) return 1;
+
+	return 0;
+}
+
 static int iterate_over_clients(struct conf *globalc,
 	struct strlist *grouplist, const char *ext, unsigned int maxlinks)
 {
 	int ret=0;
 	DIR *dirp=NULL;
+	struct conf *cconf=NULL;
 	struct dirent *dirinfo=NULL;
 
 	signal(SIGABRT, &sighandler);
 	signal(SIGTERM, &sighandler);
 	signal(SIGINT, &sighandler);
+
+	if(!(cconf=conf_alloc())) return -1;
+	conf_init(cconf);
 
 	if(!(dirp=opendir(globalc->clientconfdir)))
 	{
@@ -642,19 +627,29 @@ static int iterate_over_clients(struct conf *globalc,
 		  || !is_regular_file(globalc->clientconfdir, dirinfo->d_name))
 			continue;
 
-		if(grouplist)
+		conf_free_content(cconf);
+		conf_init(cconf);
+
+		free_w(&cconf->cname);
+		if(!(cconf->cname=strdup_w(dirinfo->d_name, __func__)))
+			return -1;
+
+		if(conf_load_clientconfdir(globalc, cconf))
 		{
-			int ig=0;
-			if((ig=in_group(dirinfo->d_name, grouplist, globalc))<0)
-			{
-				ret=-1;
-				break;
-			}
-			if(!ig) continue;
+			logp("could not load config for client %s\n",
+				dirinfo->d_name);
+			return 0;
 		}
 
-		if(!(client_lockdir=globalc->client_lockdir))
-			client_lockdir=globalc->directory;
+		if(grouplist)
+		{
+			if(!cconf->dedup_group
+			  || !in_group(grouplist, cconf->dedup_group))
+				continue;
+		}
+
+		if(!(client_lockdir=cconf->client_lockdir))
+			client_lockdir=cconf->directory;
 
 		if(!(lockfilebase=prepend(client_lockdir,
 			dirinfo->d_name, "/"))
@@ -668,11 +663,12 @@ static int iterate_over_clients(struct conf *globalc,
 		}
 		free(lockfilebase);
 
-		if(lock_alloc_and_init(lockfile))
+		if(!(lock=lock_alloc_and_init(lockfile)))
 		{
 			ret=-1;
 			break;
 		}
+		lock_get(lock);
 
 		if(lock->status!=GET_LOCK_GOT)
 		{
@@ -685,7 +681,7 @@ static int iterate_over_clients(struct conf *globalc,
 		// Remember that we got that lock.
 		lock_add_to_list(&locklist, lock);
 
-		if(process_dir(globalc->directory, dirinfo->d_name,
+		if(process_dir(cconf->directory, dirinfo->d_name,
 			ext, maxlinks, 1 /* burp mode */, 0 /* level */))
 		{
 			ret=-1;
@@ -697,6 +693,8 @@ static int iterate_over_clients(struct conf *globalc,
 	closedir(dirp);
 
 	locks_release_and_free(&locklist);
+
+	conf_free(cconf);
 
 	return ret;
 }
@@ -913,9 +911,11 @@ int run_bedup(int argc, char *argv[])
 			if(!(lockpath=prepend(globalc->lockfile, ".bedup", ""))
 			  || !(globallock=lock_alloc_and_init(lockpath)))
 				return 1;
+			lock_get(globallock);
 			if(globallock->status!=GET_LOCK_GOT)
 			{
-				logp("Could not get %s\n", globallock);
+				logp("Could not get lock %s (%d)\n", lockpath,
+					globallock->status);
 				free(lockpath);
 				return 1;
 			}

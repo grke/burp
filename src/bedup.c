@@ -682,9 +682,12 @@ static int iterate_over_clients(struct config *conf, strlist_t **grouplist, int 
 				dirinfo->d_name);
 			continue;
 		}
-		if(!cconf.dedup_group
-		  || !in_group(grouplist, gcount, cconf.dedup_group))
-			continue;
+		if(gcount)
+		{
+			if(!cconf.dedup_group
+			  || !in_group(grouplist, gcount, cconf.dedup_group))
+				continue;
+		}
 
 		if(!(client_lockdir=cconf.client_lockdir))
 			client_lockdir=cconf.directory;

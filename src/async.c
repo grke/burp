@@ -30,6 +30,7 @@ static int async_io(struct async *as, int doread)
 	int dosomething=0;
 	struct timeval tval;
 	struct asfd *asfd;
+	static int s=0;
 
 	if(as->doing_estimate) return 0;
 
@@ -73,14 +74,15 @@ static int async_io(struct async *as, int doread)
 	}
 */
 
-	if(select(mfd+1, &fsr, &fsw, &fse, &tval)<0)
+	errno=0;
+	s=select(mfd+1, &fsr, &fsw, &fse, &tval);
+	if(errno==EAGAIN || errno==EINTR) return 0;
+
+	if(s<0)
 	{
-		if(errno!=EAGAIN && errno!=EINTR)
-		{
-			logp("select error in %s: %s\n", __func__,
-				strerror(errno));
-			return -1;
-		}
+		logp("select error in %s: %s\n", __func__,
+			strerror(errno));
+		return -1;
 	}
 
 	for(asfd=as->asfd; asfd; asfd=asfd->next)
@@ -106,8 +108,16 @@ static int async_io(struct async *as, int doread)
 
 		if(FD_ISSET(asfd->fd, &fse))
 		{
-			logp("%s: had an exception\n", asfd->desc);
-			return asfd_problem(asfd);
+			switch(asfd->fdtype)
+			{
+				case ASFD_FD_SERVER_LISTEN_MAIN:
+				case ASFD_FD_SERVER_LISTEN_STATUS:
+					return -1;
+				default:
+					logp("%s: had an exception\n",
+						asfd->desc);
+					return asfd_problem(asfd);
+			}
 		}
 
 		if(asfd->doread && FD_ISSET(asfd->fd, &fsr)) // Able to read.

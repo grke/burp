@@ -1,3 +1,20 @@
+2014-10-28 Changes in burp-1.4.26:
+  * Bug fix for incorrect handling of '' in check_browsedir().
+  * Bug fix for made up directory names in check_browsedir() not having the
+    directory bit set.
+  * Close unnecessary file descriptors after forking children.
+  * Check for EAGAIN and EINTR when read on child status pipe fails in main
+    server process.
+  * Make status_wfd non-blocking and run a select() on it before the child
+    tries to write to it.
+  * Fix a possible segfault when reading from a status client.
+  * Log a more accurate description of ssl_ciphers.
+  * Make the Windows client return codes other than 0.
+  * Set openssl options SSL_OP_NO_SSLv2 and SSL_OP_NO_SSLv3, to avoid the
+    poodle vulnerability.
+  * Slightly better logging when SSL fails in src/async:do_write().
+  * Bug fix for bedup not obeying clientconfdir configs.
+
 2014-09-28 Changes in burp-1.4.24:
   * Make vss_strip.c include the configure output, so that vss_strip gets the
     large file options.

@@ -151,6 +151,12 @@ static void usage()
 	fprintf(stderr, " -h|-?       Print this message\n");
 }
 
+static void get_progname(const char *arg)
+{
+	if((prog=strrchr(arg, '/'))) prog++;
+	else prog=arg;
+}
+
 int main(int argc, char *argv[])
 {
 	int r=0;
@@ -160,7 +166,7 @@ int main(int argc, char *argv[])
 	const char *in=NULL;
 	const char *out=NULL;
 
-	prog=basename(argv[0]);
+	get_progname(argv[0]);
 
 	while((option=getopt(argc, argv, "i:ho:p?"))!=-1)
 	{

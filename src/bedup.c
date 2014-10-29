@@ -17,7 +17,7 @@
 
 static int makelinks=0;
 static int deletedups=0;
-static char *prog=NULL;
+static const char *prog=NULL;
 
 static unsigned long long savedbytes=0;
 static unsigned long long count=0;
@@ -817,8 +817,8 @@ int main(int argc, char *argv[])
 	char *groups=NULL;
 	char ext[16]="";
 	int givenconfigfile=0;
-	prog=basename(argv[0]);
-	init_log(prog);
+	init_log(argv[0]);
+	prog=progname();
 	const char *configfile=NULL;
 
 	configfile=get_config_path();

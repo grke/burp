@@ -1,3 +1,6 @@
+  * Help Mac compilation by removing calls to basename() in vss_strip.c and
+    bedup.c.
+
 2014-10-28 Changes in burp-1.4.26:
   * Bug fix for incorrect handling of '' in check_browsedir().
   * Bug fix for made up directory names in check_browsedir() not having the

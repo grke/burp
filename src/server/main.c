@@ -445,21 +445,27 @@ static int process_incoming_client(struct asfd *asfd, SSL_CTX *ctx,
 				case ASFD_FD_SERVER_LISTEN_MAIN:
 					logp("forked child: %d\n", childpid);
 	  				if(setup_asfd(asfd->as,
-						"pipe to child",
-						&pipe_wfd[1], NULL,
+						"pipe from child",
+						&pipe_rfd[0], NULL,
 						ASFD_STREAM_STANDARD,
 						ASFD_FD_SERVER_PIPE_READ,
 						childpid,
 						conf)) return -1;
+					// Do not need to write to normal
+					// children.
+					close(pipe_wfd[1]);
 					break;
 				case ASFD_FD_SERVER_LISTEN_STATUS:
 					logp("forked status server child: %d\n",
 						childpid);
+					// Do not need to read from status
+					// children.
+					close(pipe_rfd[0]);
 	  				if(setup_asfd(asfd->as,
-						"pipe from status child",
-						&pipe_rfd[0], NULL,
+						"pipe to status child",
+						&pipe_wfd[1], NULL,
 						ASFD_STREAM_STANDARD,
-						ASFD_FD_SERVER_PIPE_READ,
+						ASFD_FD_SERVER_PIPE_WRITE,
 						childpid,
 						conf)) return -1;
 					break;

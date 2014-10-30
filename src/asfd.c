@@ -148,7 +148,8 @@ static int asfd_do_read(struct asfd *asfd)
 	{
 		if(errno==EAGAIN || errno==EINTR)
 			return 0;
-		logp("%s: read problem\n", asfd->desc);
+		logp("%s: read problem on fd %d: %s\n",
+			asfd->desc, asfd->fd, strerror(errno));
 		goto error;
 	}
 	else if(!r)

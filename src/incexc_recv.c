@@ -74,6 +74,14 @@ int incexc_recv_client_restore(char **incexc, struct config *conf, struct cntr *
 		conf, p1cntr);
 }
 
+int incexc_recv_client_quota(char **incexc, struct config *conf, struct cntr *p1cntr)
+{
+	return incexc_recv(incexc,
+		"quota", "quota ok",
+		"quota end", "quota end ok",
+		conf, p1cntr);
+}
+
 int incexc_recv_server(char **incexc, struct config *conf, struct cntr *p1cntr)
 {
 	return incexc_recv(incexc,

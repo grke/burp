@@ -20,6 +20,7 @@
 #include "incexc_recv.h"
 #include "incexc_send.h"
 #include "ca_client.h"
+#include "quota.h"
 
 #include <sys/types.h>
 #ifndef HAVE_WIN32
@@ -122,7 +123,12 @@ static int do_backup_client(struct config *conf, long name_max, int resume, enum
 
 	// Now, the server will be telling us what data we need to send.
 	if(act!=ACTION_ESTIMATE && !ret)
+	{
+		// Skip check quota if the server wanted to resume.
+		if(!resume) check_quota(conf, p1cntr, 0);
+		// Run backup_phase2_client
 		ret=backup_phase2_client(conf, p1cntr, resume, cntr);
+	}
 
 	if(act==ACTION_ESTIMATE)
 		print_filecounters(p1cntr, cntr, ACTION_ESTIMATE);
@@ -285,6 +291,7 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 	struct cntr cntr;
 	struct cntr p1cntr;
 	char *incexc=NULL;
+	char *quota=NULL;
 	char *server_version=NULL;
 	const char *cp=NULL;
 	long name_max=0;
@@ -476,6 +483,8 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 
 		// :sincexc: is for the server giving the client the
 		// incexc config.
+		// :quota: is for the server giving the client the
+		// quota config.
 		if(act==ACTION_BACKUP
 		  || act==ACTION_BACKUP_TIMED
 		  || act==ACTION_TIMER_CHECK)
@@ -488,6 +497,21 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 					conf, &p1cntr))) goto end;
 				if(incexc && (ret=parse_incexcs_buf(conf,
 					incexc))) goto end;
+			}
+			
+			if(server_supports(feat, ":quota:"))
+			{
+			  logp("Server is setting quota.\n");
+			  if(quota) { free(quota); quota=NULL; }
+			  if((ret=incexc_recv_client_quota(&quota,
+					conf, &p1cntr))) goto end;
+			  if(quota && (ret=parse_quota_buf(conf,
+					quota))) goto end;
+			  else
+			  {
+			      logp("Hard quota: %Lu%s\n", conf->hard_quota, bytes_to_human(conf->hard_quota));
+			      logp("Soft quota: %Lu%s\n", conf->soft_quota, bytes_to_human(conf->soft_quota)); 
+			  }
 			}
 		}
 
@@ -620,6 +644,7 @@ end:
 	if(act!=ACTION_ESTIMATE) ssl_destroy_ctx(ctx);
 
 	if(incexc) free(incexc);
+	if(quota) free(quota);
 	if(server_version) free(server_version);
 
         //logp("end client\n");

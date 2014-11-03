@@ -26,6 +26,7 @@
 #include "incexc_recv.h"
 #include "incexc_send.h"
 #include "ca_server.h"
+#include "quota.h"
 
 #include <netdb.h>
 #include <librsync.h>
@@ -472,6 +473,9 @@ static int do_backup_server(const char *basedir, const char *current, const char
 			logp("error in phase 1\n");
 			goto error;
 		}
+		
+		if(check_quota(cconf, p1cntr, 1))
+			goto error;
 	}
 
 	// Open the previous (current) manifest.
@@ -1448,6 +1452,10 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 		  && append_to_feat(&feat, "sincexc:"))
 			return -1;
 
+		/* Clients can receive quota config from the server. */	
+		if(append_to_feat(&feat, "quota:"))
+			return -1;
+
 		/* Clients can be sent counters on resume/verify/restore. */
 		if(append_to_feat(&feat, "counters:"))
 			return -1;
@@ -1533,6 +1541,16 @@ static int extra_comms(char **client, const char *cversion, char **incexc, int *
 				// Client can accept incexc conf from the
 				// server.
 				if(incexc_send_server(cconf, p1cntr))
+				{
+					ret=-1;
+					break;
+				}
+			}
+			else if(!strcmp(buf, "quota ok"))
+			{
+				// Client can accept quota from the
+				// server.
+				if(incexc_send_server_quota(cconf, p1cntr))
 				{
 					ret=-1;
 					break;

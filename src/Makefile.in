@@ -58,6 +58,7 @@ SVRSRCS =	acl.c \
 		msg.c \
 		prepend.c \
 		prog.c \
+		quota.c \
 		regexp.c \
 		restore_client.c \
 		restore_server.c \

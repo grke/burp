@@ -57,6 +57,7 @@ FILED_OBJS = \
 	$(OBJDIR)/msg.o \
 	$(OBJDIR)/prepend.o \
 	$(OBJDIR)/prog.o \
+	$(OBJDIR)/quota.o \
 	$(OBJDIR)/regexp.o \
 	$(OBJDIR)/restore_client.o \
 	$(OBJDIR)/rs_buf.o \

@@ -40,6 +40,14 @@ static void init_incexcs(struct config *conf)
 	conf->regex=NULL;
 }
 
+/* Init only stuff related to quota.
+   This is so that the server can override them all on the client. */
+static void init_quota(struct config *conf)
+{
+	conf->hard_quota=0;
+	conf->soft_quota=0;
+}
+
 /* Free only stuff related to includes/excludes.
    This is so that the server can override them all on the client. */
 static void free_incexcs(struct config *conf)
@@ -62,6 +70,14 @@ static void free_incexcs(struct config *conf)
 	if(conf->regex) free(conf->regex);
 	if(conf->vss_drives) free(conf->vss_drives);
 	init_incexcs(conf);
+}
+
+/* Free only stuff related to quota.
+   This is so that the server can override them all on the client. */
+static void free_quota(struct config *conf)
+{
+	conf->hard_quota=0;
+	conf->soft_quota=0;
 }
 
 void init_config(struct config *conf)
@@ -203,6 +219,8 @@ void init_config(struct config *conf)
 	conf->orig_client=NULL;
 
 	init_incexcs(conf);
+	
+	init_quota(conf);
 }
 
 void free_config(struct config *conf)
@@ -283,6 +301,8 @@ void free_config(struct config *conf)
 	if(conf->orig_client) free(conf->orig_client);
 
 	free_incexcs(conf);
+	
+	free_quota(conf);
 
 	init_config(conf);
 }
@@ -959,6 +979,16 @@ static int load_config_field_and_value(struct config *conf, const char *field, c
 		if(get_file_size(value, &(conf->max_file_size),
 			config_path, line)) return -1;
 	}
+	else if(!strcmp(field, "hard_quota"))
+	{
+		if(get_file_size(value, &(conf->hard_quota),
+			config_path, line)) return -1;
+	}
+	else if(!strcmp(field, "soft_quota"))
+	{
+		if(get_file_size(value, &(conf->soft_quota),
+			config_path, line)) return -1;
+	}
 	else
 	{
 		if(load_config_ints(conf, field, value))
@@ -1518,6 +1548,43 @@ int parse_incexcs_buf(struct config *conf, const char *incexc)
 	return finalise_config("server override", conf, &l, FALSE);
 }
 
+/* The client runs this when the server overrides the quota. */
+int parse_quota_buf(struct config *conf, const char *quota)
+{
+	int ret=0;
+	int line=0;
+	char *tok=NULL;
+	char *copy=NULL;
+	struct llists l;
+	memset(&l, 0, sizeof(struct llists));
+	set_got_args(&l, conf);
+	if(!(copy=strdup(quota)))
+	{
+		log_out_of_memory(__FUNCTION__);
+		return -1;
+	}
+	free_quota(conf);
+	if(!(tok=strtok(copy, "\n")))
+	{
+		logp("unable to parse server quota\n");
+		free(copy);
+		return -1;
+	}
+	do
+	{
+		line++;
+		if(parse_config_line(conf, &l, "", tok, line))
+		{
+			ret=-1;
+			break;
+		}
+	} while((tok=strtok(NULL, "\n")));
+	free(copy);
+
+	if(ret) return ret;
+	return 0;
+}
+
 int log_incexcs_buf(const char *incexc)
 {
 	char *tok=NULL;
@@ -1594,6 +1661,8 @@ int set_client_global_config(struct config *conf, struct config *cconf, const ch
 	cconf->compression=conf->compression;
 	cconf->version_warn=conf->version_warn;
 	cconf->resume_partial=conf->resume_partial;
+	cconf->hard_quota=conf->hard_quota;
+	cconf->soft_quota=conf->soft_quota;
 	cconf->notify_success_warnings_only=conf->notify_success_warnings_only;
 	cconf->notify_success_changes_only=conf->notify_success_changes_only;
 	cconf->server_script_post_run_on_fail=conf->server_script_post_run_on_fail;

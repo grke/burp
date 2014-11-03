@@ -105,6 +105,14 @@ static int do_sends_restore(struct config *conf)
 	return 0;
 }
 
+static int do_sends_quota(struct config *conf)
+{
+	if(send_incexc_long("hard_quota", conf->hard_quota)
+	  || send_incexc_long("soft_quota", conf->soft_quota))
+		return -1;
+	return 0;
+}
+
 static int do_finish(const char *endreqstr, const char *endrepstr)
 {
 	int ret=-1;
@@ -191,6 +199,16 @@ int incexc_send_server_restore(struct config *conf, struct cntr *p1cntr)
 	   so go straight into doing the sends. */
 	if(do_sends_restore(conf)
 	  || do_finish("srestore end", "srestore end ok"))
+		return -1;
+	return 0;
+}
+
+int incexc_send_server_quota(struct config *conf, struct cntr *p1cntr)
+{
+	/* 'quota' and 'quota ok' have already been exchanged,
+	   so go straight into doing the sends. */
+	if(do_sends_quota(conf)
+	  || do_finish("quota end", "quota end ok"))
 		return -1;
 	return 0;
 }

@@ -30,6 +30,7 @@ static int async_io(struct async *as, int doread)
 	int dosomething=0;
 	struct timeval tval;
 	struct asfd *asfd;
+	static int s=0;
 
 	if(as->doing_estimate) return 0;
 
@@ -42,7 +43,11 @@ static int async_io(struct async *as, int doread)
 
 	for(asfd=as->asfd; asfd; asfd=asfd->next)
 	{
-		asfd->doread=doread;
+		if(asfd->fdtype==ASFD_FD_SERVER_PIPE_WRITE
+		 || asfd->fdtype==ASFD_FD_CHILD_PIPE_WRITE)
+			asfd->doread=0;
+		else
+			asfd->doread=doread;
 		asfd->dowrite=0;
 
 		if(doread)
@@ -73,14 +78,15 @@ static int async_io(struct async *as, int doread)
 	}
 */
 
-	if(select(mfd+1, &fsr, &fsw, &fse, &tval)<0)
+	errno=0;
+	s=select(mfd+1, &fsr, &fsw, &fse, &tval);
+	if(errno==EAGAIN || errno==EINTR) return 0;
+
+	if(s<0)
 	{
-		if(errno!=EAGAIN && errno!=EINTR)
-		{
-			logp("select error in %s: %s\n", __func__,
-				strerror(errno));
-			return -1;
-		}
+		logp("select error in %s: %s\n", __func__,
+			strerror(errno));
+		return -1;
 	}
 
 	for(asfd=as->asfd; asfd; asfd=asfd->next)
@@ -106,29 +112,34 @@ static int async_io(struct async *as, int doread)
 
 		if(FD_ISSET(asfd->fd, &fse))
 		{
-			logp("%s: had an exception\n", asfd->desc);
-			return asfd_problem(asfd);
+			switch(asfd->fdtype)
+			{
+				case ASFD_FD_SERVER_LISTEN_MAIN:
+				case ASFD_FD_SERVER_LISTEN_STATUS:
+					return -1;
+				default:
+					logp("%s: had an exception\n",
+						asfd->desc);
+					return asfd_problem(asfd);
+			}
 		}
 
 		if(asfd->doread && FD_ISSET(asfd->fd, &fsr)) // Able to read.
 		{
-			if(asfd->listening_for_new_clients)
+			switch(asfd->fdtype)
 			{
-				// Indicate to the caller that we have a new
-				// incoming client.
-				// For now, this is only for the champ chooser
-				// server.
-				// FIX THIS: Look into whether it is possible
-				// to do this for the client and server
-				// main processes.
-				asfd->new_client++;
+				case ASFD_FD_SERVER_LISTEN_MAIN:
+				case ASFD_FD_SERVER_LISTEN_STATUS:
+					// Indicate to the caller that we have
+					// a new incoming client.
+					asfd->new_client++;
+					break;
+				default:
+					if(asfd->do_read(asfd)
+					  || asfd->parse_readbuf(asfd))
+						return asfd_problem(asfd);
+					break;
 			}
-			else if(asfd->do_read(asfd))
-			{
-				return asfd_problem(asfd);
-			}
-			if(asfd->parse_readbuf(asfd))
-				return asfd_problem(asfd);
 		}
 
 		if(asfd->dowrite && FD_ISSET(asfd->fd, &fsw)) // Able to write.

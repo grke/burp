@@ -249,7 +249,7 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf *conf)
 		ASFD_STREAM_STANDARD, conf))
 			goto end;
 	as->asfd_add(as, asfd);
-	asfd->listening_for_new_clients=1;
+	asfd->fdtype=ASFD_FD_SERVER_LISTEN_MAIN;
 
 	// Load the sparse indexes for this dedup group.
 	if(champ_chooser_init(sdirs->data, conf))

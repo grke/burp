@@ -19,20 +19,24 @@ enum asfd_streamtype
 	ASFD_STREAM_NCURSES_STDIN
 };
 
+enum asfd_fdtype
+{
+	ASFD_FD_UNSET=0,
+	ASFD_FD_SERVER_LISTEN_MAIN,
+	ASFD_FD_SERVER_LISTEN_STATUS,
+	ASFD_FD_SERVER_PIPE_READ,
+	ASFD_FD_SERVER_PIPE_WRITE,
+	ASFD_FD_SERVER_CHILD_MAIN,
+	ASFD_FD_CHILD_MAIN,
+	ASFD_FD_CHILD_PIPE_READ,
+	ASFD_FD_CHILD_PIPE_WRITE,
+};
+
 enum append_ret
 {
 	APPEND_ERROR=-1,
 	APPEND_OK=0,
 	APPEND_BLOCKED=1
-};
-
-enum asfd_fdtype
-{
-	ASFD_FD_UNSET=0,
-	ASFD_FD_SERVER_NORMAL_LISTEN,
-	ASFD_FD_SERVER_STATUS_LISTEN,
-	ASFD_FD_SERVER_PIPE_WRITE,
-	ASFD_FD_SERVER_PIPE_READ,
 };
 
 // Async file descriptor. Can add these to a struct async.
@@ -73,13 +77,13 @@ struct asfd
 	uint64_t wrap_up;
 	uint8_t want_to_remove;
 
-	// Stuff for the main server process.
-	pid_t pid;
-	enum asfd_fdtype fdtype;
-
 	// For the champ chooser server main socket.
 	uint8_t listening_for_new_clients;
 	uint8_t new_client;
+
+	// For the main server process.
+	pid_t pid;
+	enum asfd_fdtype fdtype;
 
 	// Function pointers.
 	int (*init)(struct asfd *, const char *,

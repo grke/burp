@@ -146,6 +146,9 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 			logp("error in phase 1\n");
 			goto error;
 		}
+
+		if(check_quota(as, cconf))
+			goto error;
 	}
 
 	if(backup_phase2_server(as, sdirs, incexc, resume, cconf))

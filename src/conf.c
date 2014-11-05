@@ -779,6 +779,16 @@ static int load_conf_field_and_value(struct conf *c,
 		if(get_file_size(v, &(c->max_file_size),
 			conf_path, line)) return -1;
 	}
+	else if(!strcmp(f, "hard_quota"))
+	{
+		if(get_file_size(v, &(c->hard_quota),
+			conf_path, line)) return -1;
+	}
+	else if(!strcmp(f, "soft_quota"))
+	{
+		if(get_file_size(v, &(c->soft_quota),
+			conf_path, line)) return -1;
+	}
 	else
 	{
 		if(load_conf_ints(c, f, v)
@@ -1509,6 +1519,8 @@ static int conf_set_from_global(struct conf *globalc, struct conf *cc)
 	cc->librsync=globalc->librsync;
 	cc->compression=globalc->compression;
 	cc->version_warn=globalc->version_warn;
+	cc->hard_quota=globalc->hard_quota;
+	cc->soft_quota=globalc->soft_quota;
 	cc->path_length_warn=globalc->path_length_warn;
 	cc->n_success_warnings_only=globalc->n_success_warnings_only;
 	cc->n_success_changes_only=globalc->n_success_changes_only;

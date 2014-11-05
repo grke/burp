@@ -323,6 +323,7 @@ static int parse_rbuf(struct asfd *asfd, struct sbuf *sb,
 	}
 	else if(rbuf->cmd==CMD_WARNING)
 	{
+		logp("WARNING: %s\n", rbuf->cmd);
 		cntr_add(conf->cntr, rbuf->cmd, 0);
 	}
 	else

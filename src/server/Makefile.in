@@ -28,6 +28,7 @@ SRCS = \
 	list.c \
 	main.c \
 	manio.c \
+	quota.c \
 	restore.c \
 	run_action.c \
 	sdirs.c \

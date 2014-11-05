@@ -107,7 +107,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			goto end;
 		}
 		case CMD_WARNING:
-			logp("WARNING: %s\n", rbuf->cmd);
+			logp("WARNING: %s\n", rbuf->buf);
 			cntr_add(conf->cntr, rbuf->cmd, 0);
 			goto end;
 		case CMD_GEN:

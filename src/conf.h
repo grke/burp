@@ -151,6 +151,8 @@ struct config
 	int compression;
 	int version_warn;
 	int resume_partial;
+	unsigned long hard_quota;
+	unsigned long soft_quota;
 
 	char *timer_script;
 	struct strlist **timer_arg;

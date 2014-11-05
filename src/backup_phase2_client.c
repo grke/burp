@@ -425,6 +425,7 @@ static int do_backup_phase2_client(struct config *conf, int resume, struct cntr 
 			else if(cmd==CMD_WARNING)
 			{
 				do_filecounter(cntr, cmd, 0);
+				logp("WARNING: %s\n",buf);
 				free(buf);
 				buf=NULL;
 			}

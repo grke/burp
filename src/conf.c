@@ -201,6 +201,9 @@ void init_config(struct config *conf)
 	conf->restore_client=NULL;
 	conf->restore_path=NULL;
 	conf->orig_client=NULL;
+	
+	conf->hard_quota=0;
+	conf->soft_quota=0;
 
 	init_incexcs(conf);
 }
@@ -959,6 +962,16 @@ static int load_config_field_and_value(struct config *conf, const char *field, c
 		if(get_file_size(value, &(conf->max_file_size),
 			config_path, line)) return -1;
 	}
+	else if(!strcmp(field, "hard_quota"))
+	{
+		if(get_file_size(value, &(conf->hard_quota),
+			config_path, line)) return -1;
+	}
+	else if(!strcmp(field, "soft_quota"))
+	{
+		if(get_file_size(value, &(conf->soft_quota),
+			config_path, line)) return -1;
+	}
 	else
 	{
 		if(load_config_ints(conf, field, value))
@@ -1594,6 +1607,8 @@ int set_client_global_config(struct config *conf, struct config *cconf, const ch
 	cconf->compression=conf->compression;
 	cconf->version_warn=conf->version_warn;
 	cconf->resume_partial=conf->resume_partial;
+	cconf->hard_quota=conf->hard_quota;
+	cconf->soft_quota=conf->soft_quota;
 	cconf->notify_success_warnings_only=conf->notify_success_warnings_only;
 	cconf->notify_success_changes_only=conf->notify_success_changes_only;
 	cconf->server_script_post_run_on_fail=conf->server_script_post_run_on_fail;

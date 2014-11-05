@@ -45,6 +45,27 @@ static void close_fds(int *fds)
 	for(int i=0; i<LISTEN_SOCKETS; i++) close_fd(&(fds[i]));
 }
 
+// Remove any exiting child pids from our list.
+// FIX THIS.
+static void chld_check_for_exiting(struct async *mainas)
+{
+	pid_t p;
+	int status;
+	struct asfd *asfd;
+	if((p=waitpid(-1, &status, WNOHANG))<=0) return;
+
+	// Logging a message here appeared to occasionally lock burp up on a
+	// Ubuntu server that I used to use.
+	//logp("child pid %d exited\n", p);
+	for(asfd=mainas->asfd; asfd; asfd=asfd->next)
+	{
+		if(p!=asfd->pid) continue;
+		mainas->asfd_remove(mainas, asfd);
+		asfd_free(&asfd);
+		break;
+	}
+}
+
 static int init_listen_socket(const char *address, const char *port,
 	int alladdr, int *fds)
 {
@@ -144,9 +165,6 @@ int setup_signals(int oldmax_children, int max_children,
 	// Ignore SIGPIPE - we are careful with read and write return values.
 	signal(SIGPIPE, SIG_IGN);
 
-	chld_setup(oldmax_children, max_children,
-		oldmax_status_children, max_status_children);
-
 	setup_signal(SIGCHLD, sigchld_handler);
 	setup_signal(SIGHUP, huphandler);
 	setup_signal(SIGUSR2, usr2handler);
@@ -154,8 +172,9 @@ int setup_signals(int oldmax_children, int max_children,
 	return 0;
 }
 
-static int setup_asfd(struct async *as, const char *desc, int *fd,
-	SSL *ssl, enum asfd_streamtype asfd_streamtype, struct conf *conf)
+static int setup_asfd(struct async *as, const char *desc, int *fd, SSL *ssl,
+	enum asfd_streamtype asfd_streamtype, enum asfd_fdtype fdtype,
+	pid_t pid, struct conf *conf)
 {
 	struct asfd *asfd=NULL;
 	if(!fd || *fd<0) return 0;
@@ -163,6 +182,8 @@ static int setup_asfd(struct async *as, const char *desc, int *fd,
 	if(!(asfd=asfd_alloc())
 	  || asfd->init(asfd, desc, as, *fd, ssl, asfd_streamtype, conf))
 		goto error;
+	asfd->fdtype=fdtype;
+	asfd->pid=pid;
 	*fd=-1;
 	as->asfd_add(as, asfd);
 	return 0;
@@ -171,8 +192,8 @@ error:
 	return -1;
 }
 
-static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, int is_status_server,
-	int status_wfd, int *status_rfd, const char *conffile, int forking)
+static int run_child(int *cfd, SSL_CTX *ctx,
+	int status_wfd, int status_rfd, const char *conffile, int forking)
 {
 	int ret=-1;
 	int ca_ret=0;
@@ -186,8 +207,6 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, int is_status_server,
 	if(!(conf=conf_alloc())
 	  || !(cconf=conf_alloc()))
 		goto end;
-
-	if(forking) close_fd(rfd);
 
 	set_peer_env_vars(*cfd);
 
@@ -225,7 +244,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, int is_status_server,
 	if(!(as=async_alloc())
 	  || as->init(as, 0)
 	  || setup_asfd(as, "main socket",
-		cfd, ssl, ASFD_STREAM_STANDARD, conf))
+		cfd, ssl, ASFD_STREAM_STANDARD, ASFD_FD_CHILD_MAIN, -1, conf))
 			goto end;
 
 	if(authorise_server(as->asfd, conf, cconf)
@@ -272,11 +291,12 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, int is_status_server,
 		goto end;
 	}
 
-	if(is_status_server && setup_asfd(as, "status server parent socket",
-		status_rfd, NULL, ASFD_STREAM_STANDARD, cconf))
+	if(status_rfd>=0 && setup_asfd(as, "status server parent socket",
+		&status_rfd, NULL,
+		ASFD_STREAM_STANDARD, ASFD_FD_CHILD_PIPE_READ, -1, cconf))
 			goto end;
 
-	ret=child(as, is_status_server, status_wfd, conf, cconf);
+	ret=child(as, status_wfd, conf, cconf);
 end:
 	*cfd=-1;
 	async_asfd_free_all(&as); // This closes cfd for us.
@@ -287,8 +307,47 @@ end:
 	return ret;
 }
 
-static int process_incoming_client(int *rfd, SSL_CTX *ctx,
-	const char *conffile, int is_status_server, struct conf *conf)
+static int chld_check_counts(struct conf *conf, struct asfd *asfd)
+{
+	int c_count=0;
+	int sc_count=0;
+	struct asfd *a;
+
+	// Need to count status children separately from normal children.
+	for(a=asfd->as->asfd; a; a=a->next)
+	{
+		switch(a->fdtype)
+		{
+			case ASFD_FD_SERVER_PIPE_READ:
+				c_count++; break;
+			case ASFD_FD_SERVER_PIPE_WRITE:
+				sc_count++; break;
+			default:
+				break;
+		}
+	}
+
+	switch(asfd->fdtype)
+	{
+		case ASFD_FD_SERVER_LISTEN_MAIN:
+			if(c_count<conf->max_children) break;
+			logp("Too many child processes.\n");
+			return -1;
+		case ASFD_FD_SERVER_LISTEN_STATUS:
+			if(sc_count<conf->max_status_children) break;
+			logp("Too many status child processes.\n");
+			return -1;
+		default:
+			logp("Unexpected fdtype in %s: %d.\n",
+				__func__, asfd->fdtype);
+			return -1;
+	}
+
+	return 0;
+}
+
+static int process_incoming_client(struct asfd *asfd, SSL_CTX *ctx,
+	const char *conffile, struct conf *conf)
 {
 	int cfd=-1;
 	pid_t childpid;
@@ -296,24 +355,24 @@ static int process_incoming_client(int *rfd, SSL_CTX *ctx,
 	int pipe_wfd[2];
 	socklen_t client_length=0;
 	struct sockaddr_in client_name;
+	enum asfd_fdtype fdtype=asfd->fdtype;
 
 	client_length=sizeof(client_name);
-	if((cfd=accept(*rfd,
-		(struct sockaddr *) &client_name, &client_length))==-1)
+	if((cfd=accept(asfd->fd,
+		(struct sockaddr *)&client_name, &client_length))==-1)
 	{
 		// Look out, accept will get interrupted by SIGCHLDs.
 		if(errno==EINTR) return 0;
-		logp("accept failed on %d: %s\n", *rfd, strerror(errno));
+		logp("accept failed on %s (%d) in %s: %s\n", asfd->desc,
+			asfd->fd, __func__, strerror(errno));
 		return -1;
 	}
 	reuseaddr(cfd);
-	chld_check_for_exiting();
 
 	if(!conf->forking)
-		return run_child(rfd, &cfd, ctx, is_status_server,
-			-1, NULL, conffile, conf->forking);
+		return run_child(&cfd, ctx, -1, -1, conffile, conf->forking);
 
-	if(chld_add_incoming(conf, is_status_server))
+	if(chld_check_counts(conf, asfd))
 	{
 		logp("Closing new connection.\n");
 		close_fd(&cfd);
@@ -327,7 +386,6 @@ static int process_incoming_client(int *rfd, SSL_CTX *ctx,
 		return -1;
 	}
 
-	/* fork off our new process to handle this request */
 	switch((childpid=fork()))
 	{
 		case -1:
@@ -337,11 +395,15 @@ static int process_incoming_client(int *rfd, SSL_CTX *ctx,
 		{
 			int p;
 			int ret;
-			// child
+			// Child.
 			struct sigaction sa;
+
+			async_asfd_free_all(&asfd->as);
 
 			// Close unnecessary file descriptors.
 			// Go up to FD_SETSIZE and hope for the best.
+			// FIX THIS: Now that async_asfd_free_all() is doing
+			// everything, double check whether this is needed.
 			for(p=3; p<(int)FD_SETSIZE; p++)
 			{
 				if(p!=pipe_rfd[1]
@@ -362,34 +424,57 @@ static int process_incoming_client(int *rfd, SSL_CTX *ctx,
 			conf_free_content(conf);
 			conf_init(conf);
 
-			set_blocking(pipe_rfd[1]);
-
-			ret=run_child(rfd, &cfd, ctx, is_status_server,
-				pipe_rfd[1], &(pipe_wfd[0]),
-				conffile, conf->forking);
+			ret=run_child(&cfd, ctx,
+			  fdtype==ASFD_FD_SERVER_LISTEN_MAIN?pipe_rfd[1]:-1,
+			  fdtype==ASFD_FD_SERVER_LISTEN_STATUS?pipe_wfd[0]:-1,
+			  conffile, conf->forking);
 
 			close(pipe_rfd[1]);
 			close(pipe_wfd[0]);
 			close_fd(&cfd);
-			close_fd(rfd);
 			exit(ret);
 		}
 		default:
-			// parent
+			// Parent.
 			close(pipe_rfd[1]); // close write end
 			close(pipe_wfd[0]); // close read end
-
-			// keep a note of the child pid.
-			if(is_status_server)
-				logp("forked status server child pid %d\n",
-						childpid);
-			else
-				logp("forked child pid %d\n", childpid);
-
-			chld_forked(childpid,
-				pipe_rfd[0], pipe_wfd[1], is_status_server);
-
 			close_fd(&cfd);
+
+			switch(asfd->fdtype)
+			{
+				case ASFD_FD_SERVER_LISTEN_MAIN:
+					logp("forked child: %d\n", childpid);
+	  				if(setup_asfd(asfd->as,
+						"pipe from child",
+						&pipe_rfd[0], NULL,
+						ASFD_STREAM_STANDARD,
+						ASFD_FD_SERVER_PIPE_READ,
+						childpid,
+						conf)) return -1;
+					// Do not need to write to normal
+					// children.
+					close(pipe_wfd[1]);
+					break;
+				case ASFD_FD_SERVER_LISTEN_STATUS:
+					logp("forked status server child: %d\n",
+						childpid);
+					// Do not need to read from status
+					// children.
+					close(pipe_rfd[0]);
+	  				if(setup_asfd(asfd->as,
+						"pipe to status child",
+						&pipe_wfd[1], NULL,
+						ASFD_STREAM_STANDARD,
+						ASFD_FD_SERVER_PIPE_WRITE,
+						childpid,
+						conf)) return -1;
+					break;
+				default:
+					logp("Strange fdtype after fork: %d\n",
+						asfd->fdtype);
+					return -1;
+			}
+
 			return 0;
 	}
 }
@@ -463,32 +548,6 @@ static int relock(struct lock *lock)
 	return -1;
 }
 
-static int process_fds(int *fds, fd_set *fse, fd_set *fsr,
-	const char *conffile, SSL_CTX *ctx,
-	int is_status_client, struct conf *conf)
-{
-	for(int i=0; i<LISTEN_SOCKETS && fds[i]!=-1; i++)
-	{
-		if(FD_ISSET(fds[i], fse))
-		{
-			// Happens when a client exits.
-			//logp("error on listening socket.\n");
-			if(!conf->forking) { gentleshutdown++; return 1; }
-			continue;
-		}
-
-		if(FD_ISSET(fds[i], fsr))
-		{
-			// A normal client is incoming.
-			if(process_incoming_client(&(fds[i]), ctx,
-				conffile, is_status_client, conf))
-					return -1;
-			if(!conf->forking) { gentleshutdown++; return 1; }
-		}
-	}
-	return 0;
-}
-
 // FIX THIS: should probably put this stuff in a separate file and get the
 // conf stuff to use it too.
 struct oldnet
@@ -537,6 +596,8 @@ static int run_server(struct conf *conf, const char *conffile,
 	int ret=-1;
 	SSL_CTX *ctx=NULL;
 	int found_normal_child=0;
+	struct asfd *asfd=NULL;
+	struct async *mainas=NULL;
 
 	if(!(ctx=ssl_initialise_ctx(conf)))
 	{
@@ -562,34 +623,76 @@ static int run_server(struct conf *conf, const char *conffile,
 			conf->status_port, 0, sfds)) goto end;
 	}
 
+	if(!(mainas=async_alloc())
+	  || mainas->init(mainas, 0))
+		goto end;
+
+	for(i=0; i<LISTEN_SOCKETS && rfds[i]!=-1; i++)
+		if(setup_asfd(mainas,
+		  "main server socket", &rfds[i], NULL,
+		  ASFD_STREAM_STANDARD, ASFD_FD_SERVER_LISTEN_MAIN, -1, conf))
+			goto end;
+	for(i=0; i<LISTEN_SOCKETS && sfds[i]!=-1; i++)
+		if(setup_asfd(mainas,
+		  "main server status socket", &sfds[i], NULL,
+		  ASFD_STREAM_STANDARD, ASFD_FD_SERVER_LISTEN_STATUS, -1, conf))
+			goto end;
+
 	while(!hupreload)
 	{
-		int mfd=-1;
-		fd_set fsr;
-		fd_set fsw;
-		fd_set fse;
-		struct timeval tval;
+		switch(mainas->read_write(mainas))
+		{
+			case 0:
+				for(asfd=mainas->asfd; asfd; asfd=asfd->next)
+				{
+					if(asfd->new_client)
+					{
+						// Incoming client.
+						asfd->new_client=0;
+						if(process_incoming_client(asfd,
+							ctx, conffile, conf))
+								goto end;
+						if(!conf->forking)
+						{
+							gentleshutdown++;
+							ret=1;
+							goto end;
+						}
+						continue;
+					}
+				}
+				break;
+			default:
+				int removed=0;
+				// Maybe one of the fds had a problem.
+				// Find and remove it and carry on if possible.
+				for(asfd=mainas->asfd; asfd; )
+				{
+					struct asfd *a;
+					if(!asfd->want_to_remove)
+					{
+						asfd=asfd->next;
+						continue;
+					}
+					mainas->asfd_remove(mainas, asfd);
+					logp("%s: disconnected fd %d\n",
+						asfd->desc, asfd->fd);
+					a=asfd->next;
+					asfd_free(&asfd);
+					asfd=a;
+					removed++;
+				}
+				if(removed) break;
+				// If we got here, there was no fd to remove.
+				// It is a fatal error.
+				goto end;
+		}
 
 		if(sigchld)
 		{
-			chld_check_for_exiting();
+			chld_check_for_exiting(mainas);
 			sigchld=0;
 		}
-
-		FD_ZERO(&fsr);
-		FD_ZERO(&fse);
-
-		tval.tv_sec=1;
-		tval.tv_usec=0;
-
-		for(i=0; i<LISTEN_SOCKETS && rfds[i]!=-1; i++)
-			add_fd_to_sets(rfds[i], &fsr, NULL, &fse, &mfd);
-		for(i=0; i<LISTEN_SOCKETS && sfds[i]!=-1; i++)
-			add_fd_to_sets(sfds[i], &fsr, NULL, &fse, &mfd);
-
-		// Add read fds of normal children.
-		found_normal_child=chld_add_fd_to_normal_sets(conf,
-			&fsr, &fse, &mfd);
 
 		// Leave if we had a SIGUSR1 and there are no children running.
 		if(gentleshutdown)
@@ -600,69 +703,21 @@ static int run_server(struct conf *conf, const char *conffile,
 				logp("will shut down once children have exited\n");
 				gentleshutdown_logged++;
 			}
+// FIX THIS:
+// found_normal_child=chld_add_fd_to_normal_sets(conf, &fsr, &fse, &mfd);
 			else if(!found_normal_child)
 			{
 				logp("all children have exited - shutting down\n");
 				break;
 			}
 		}
-
-		if(select(mfd+1, &fsr, NULL, &fse, &tval)<0)
-		{
-			if(errno!=EAGAIN && errno!=EINTR)
-			{
-				logp("select error in normal part of %s: %s\n",
-					__func__, strerror(errno));
-				goto end;
-			}
-		}
-
-		if(process_fds(rfds, &fse, &fsr,
-			conffile, ctx, 0 /* not a status client */, conf)
-		  || process_fds(sfds, &fse, &fsr,
-			conffile, ctx, 1 /* is a status client */, conf))
-				goto end;
-
-		if(chld_fd_isset_normal(conf, &fsr, &fse))
-			goto end;
-
-		// Have a separate select for writing to status server children
-
-		mfd=-1;
-		FD_ZERO(&fsw);
-		FD_ZERO(&fse);
-		if(!chld_add_fd_to_status_sets(conf, &fsw, &fse, &mfd))
-		{
-			// Did not find any status server children.
-			// No need to do the select.
-			continue;
-		}
-
-		// Do not hang around - doing the status stuff is a lower
-		// priority thing than dealing with normal clients.
-		tval.tv_sec=0;
-		tval.tv_usec=500;
-
-		//printf("try status server\n");
-
-		if(select(mfd+1, NULL, &fsw, &fse, &tval)<0)
-		{
-			if(errno!=EAGAIN && errno!=EINTR)
-			{
-				logp("select error in status part of %s: %s\n",
-					__func__, strerror(errno));
-				goto end;
-			}
-		}
-
-		if(chld_fd_isset_status(conf, &fsw, &fse))
-			goto end;
 	}
 
 	if(hupreload) logp("got SIGHUP reload signal\n");
 
 	ret=0;
 end:
+	async_asfd_free_all(&mainas);
 	if(ctx) ssl_destroy_ctx(ctx);
 	return ret;
 }
@@ -725,9 +780,6 @@ error:
 	close_fds(rfds);
 	close_fds(sfds);
 	oldnet_free_contents(&oldnet);
-
-	// The signal handler stuff sets up chlds. Need to free them.
-	chlds_free();
 
 // FIX THIS: Have an enum for a return value, so that it is more obvious what
 // is happening, like client.c does.

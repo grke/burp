@@ -21,7 +21,6 @@ SRCS = \
 	compress.c \
 	ca.c \
 	child.c \
-	chlds.c \
 	delete.c \
 	diff.c \
 	extra_comms.c \

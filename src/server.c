@@ -26,7 +26,6 @@
 #include "incexc_recv.h"
 #include "incexc_send.h"
 #include "ca_server.h"
-#include "quota.h"
 
 #include <netdb.h>
 #include <librsync.h>
@@ -473,9 +472,6 @@ static int do_backup_server(const char *basedir, const char *current, const char
 			logp("error in phase 1\n");
 			goto error;
 		}
-		
-		if(check_quota(cconf, p1cntr))
-			goto error;
 	}
 
 	// Open the previous (current) manifest.

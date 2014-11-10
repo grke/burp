@@ -60,6 +60,10 @@ int backup_phase1_server_all(struct async *as,
 		logp("error closing %s in backup_phase1_server\n", phase1tmp);
 		goto end;
 	}
+
+	if(check_quota(as, conf))
+		goto end;
+
 	// Possible rename race condition is of no consequence here, because
 	// the working directory will always get deleted if phase1 is not
 	// complete.

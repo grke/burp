@@ -5,29 +5,28 @@
 #include "log.h"
 #include "quota.h"
 
-// Return O for OK, -1 if the estimated size is greater than hard_quota 
+static void quota_log_bytes(const char *msg,
+	struct cntr *p1cntr, unsigned long quota)
+{
+	async_write_str(CMD_WARNING, msg);
+	logp("bytes estimated: %Lu%s\n",
+		p1cntr->byte, bytes_to_human(p1cntr->byte));
+	logp("%s: %Lu%s\n", msg, quota, bytes_to_human(quota));
+}
+
+// Return O for OK, -1 if the estimated size is greater than hard_quota.
 int check_quota(struct config *conf, struct cntr *p1cntr)
 {
-	int ret=0;
-	// Print error if the estimated size is greater than hard_quota
-	if(conf->hard_quota != 0 && p1cntr->byte > conf->hard_quota)
+	if(conf->hard_quota && p1cntr->byte > conf->hard_quota)
 	{
-		logw(p1cntr, "Err: hard quota is reached");
-		logp("bytes estimated: %Lu%s\n", p1cntr->byte, bytes_to_human(p1cntr->byte));
-		logp("hard quota: %Lu%s\n", conf->hard_quota, bytes_to_human(conf->hard_quota));
-		ret=-1;
+		quota_log_bytes("hard quota exceeded",
+			p1cntr, conf->hard_quota);
+		return -1;
 	}
-	else
-	{
-		// Print warning if the estimated size is greater than soft_quota
-		if(conf->soft_quota != 0 && p1cntr->byte > conf->soft_quota)
-		{
-			logw(p1cntr, "soft quota is exceeded");
-			logp("bytes estimated: %Lu%s\n", p1cntr->byte, bytes_to_human(p1cntr->byte));
-			logp("soft quota: %Lu%s\n", conf->soft_quota, bytes_to_human(conf->soft_quota));
-		}  
-	}
+
+	if(conf->soft_quota && p1cntr->byte > conf->soft_quota)
+		quota_log_bytes("soft quota exceeded",
+			p1cntr, conf->soft_quota);
 	
-	
-	return ret;
+	return 0;
 }

@@ -1,19 +1,20 @@
 #include "include.h"
 
-static int status_fd=-1; // For the child to send information to the parent.
+static struct asfd *wasfd=NULL;
 
 int write_status(enum cstat_status status, const char *path, struct conf *conf)
 {
+// FIX THIS.
+return 0;
+/*
 	char *w=NULL;
 	time_t now=0;
 	time_t diff=0;
 	size_t l=0;
 	ssize_t wl=0;
 	static time_t lasttime=0;
-// FIX THIS.
-return 0;
 
-	if(status_fd<0) goto error;
+	if(!wasfd) goto error;
 
 	// Only update every 2 seconds.
 	now=time(NULL);
@@ -40,11 +41,12 @@ return 0;
 		}
 		l-=wl;
 	}
+*/
 
 	return 0;
-error:
-	close_fd(&status_fd);
-	return -1;
+//error:
+//	close_fd(&status_fd);
+//	return -1;
 }
 
 static int run_server_script(struct asfd *asfd,
@@ -109,7 +111,10 @@ int child(struct async *as,
 
 	// If we are not a status server, we are a normal child - set up the
 	// parent socket to write status to.
-	status_fd=status_wfd;
+	if(setup_asfd(as, "child status pipe", &status_wfd, NULL,
+		ASFD_STREAM_LINEBUF, ASFD_FD_CHILD_PIPE_WRITE, -1, cconf))
+			goto end;
+	wasfd=as->asfd->next;
 
 	/* Has to be before the chuser/chgrp stuff to allow clients to switch
 	   to different clients when both clients have different user/group

@@ -30,6 +30,9 @@ enum asfd_fdtype
 	ASFD_FD_CHILD_MAIN,
 	ASFD_FD_CHILD_PIPE_READ,
 	ASFD_FD_CHILD_PIPE_WRITE,
+	ASFD_FD_CLIENT_MONITOR_READ,
+	ASFD_FD_CLIENT_MONITOR_WRITE,
+	ASFD_FD_CLIENT_NCURSES_READ
 };
 
 enum append_ret
@@ -109,5 +112,9 @@ struct asfd
 extern struct asfd *asfd_alloc(void);
 extern void asfd_close(struct asfd *asfd); // Maybe should be in the struct.
 extern void asfd_free(struct asfd **asfd);
+
+extern int setup_asfd(struct async *as, const char *desc, int *fd, SSL *ssl,
+	enum asfd_streamtype asfd_streamtype, enum asfd_fdtype fdtype,
+	pid_t pid, struct conf *conf);
 
 #endif

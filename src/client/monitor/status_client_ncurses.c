@@ -807,24 +807,6 @@ static void setup_signals(void)
 	signal(SIGPIPE, &sighandler);
 }
 
-// FIX THIS: Identical function in status_server.c and probably elsewhere.
-static int setup_asfd(struct async *as, const char *desc, int *fd,
-	enum asfd_streamtype asfd_streamtype, struct conf *conf)
-{
-	struct asfd *asfd=NULL;
-	if(!fd || *fd<0) return 0;
-	set_non_blocking(*fd);
-	if(!(asfd=asfd_alloc())
-	  || asfd->init(asfd, desc, as, *fd, NULL, asfd_streamtype, conf))
-		goto error;
-	*fd=-1;
-	as->asfd_add(as, asfd);
-	return 0;
-error:
-	asfd_free(&asfd);
-	return -1;
-}
-
 static void left(struct sel *sel)
 {
 	switch(sel->page)
@@ -1270,18 +1252,19 @@ printf("childpid: %d\n", childpid);
 
 	if(!(as=async_alloc())
 	  || as->init(as, 0)
-	  || setup_asfd(as, "monitor stdin", // Write to this.
-		&csin, ASFD_STREAM_LINEBUF, conf)
-	  || setup_asfd(as, "monitor stdout", // Read from this.
-		&csout, ASFD_STREAM_LINEBUF, conf))
+	  || setup_asfd(as, "monitor stdin", &csin, NULL,
+		ASFD_STREAM_LINEBUF, ASFD_FD_CLIENT_MONITOR_WRITE, -1, conf)
+	  || setup_asfd(as, "monitor stdout", &csout, NULL,
+		ASFD_STREAM_LINEBUF, ASFD_FD_CLIENT_MONITOR_READ, -1, conf))
 			goto end;
 printf("ml: %s\n", conf->monitor_logfile);
 #ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS)
 	{
 		int stdinfd=fileno(stdin);
-		if(setup_asfd(as, "stdin",
-			&stdinfd, ASFD_STREAM_NCURSES_STDIN, conf))
+		if(setup_asfd(as, "stdin", &stdinfd, NULL,
+			ASFD_STREAM_NCURSES_STDIN, ASFD_FD_CLIENT_NCURSES_READ,
+			-1, conf))
 				goto end;
 		ncurses_init();
 	}

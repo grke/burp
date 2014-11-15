@@ -599,3 +599,23 @@ void asfd_free(struct asfd **asfd)
 	blist_free(&((*asfd)->blist));
 	free_v((void **)asfd);
 }
+
+int setup_asfd(struct async *as, const char *desc, int *fd, SSL *ssl,
+	enum asfd_streamtype asfd_streamtype, enum asfd_fdtype fdtype,
+	pid_t pid, struct conf *conf)
+{
+	struct asfd *asfd=NULL;
+	if(!fd || *fd<0) return 0;
+	set_non_blocking(*fd);
+	if(!(asfd=asfd_alloc())
+	  || asfd->init(asfd, desc, as, *fd, ssl, asfd_streamtype, conf))
+		goto error;
+	asfd->fdtype=fdtype;
+	asfd->pid=pid;
+	*fd=-1;
+	as->asfd_add(as, asfd);
+	return 0;
+error:
+	asfd_free(&asfd);
+	return -1;
+}

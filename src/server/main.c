@@ -172,26 +172,6 @@ int setup_signals(int oldmax_children, int max_children,
 	return 0;
 }
 
-static int setup_asfd(struct async *as, const char *desc, int *fd, SSL *ssl,
-	enum asfd_streamtype asfd_streamtype, enum asfd_fdtype fdtype,
-	pid_t pid, struct conf *conf)
-{
-	struct asfd *asfd=NULL;
-	if(!fd || *fd<0) return 0;
-	set_non_blocking(*fd);
-	if(!(asfd=asfd_alloc())
-	  || asfd->init(asfd, desc, as, *fd, ssl, asfd_streamtype, conf))
-		goto error;
-	asfd->fdtype=fdtype;
-	asfd->pid=pid;
-	*fd=-1;
-	as->asfd_add(as, asfd);
-	return 0;
-error:
-	asfd_free(&asfd);
-	return -1;
-}
-
 static int run_child(int *cfd, SSL_CTX *ctx,
 	int status_wfd, int status_rfd, const char *conffile, int forking)
 {

@@ -637,7 +637,7 @@ run_tests()
 }
 
 # Run in burp1 mode.
-run_tests 1
+#run_tests 1
 # Run in burp2 mode.
 run_tests 2
 

@@ -1252,9 +1252,9 @@ printf("childpid: %d\n", childpid);
 
 	if(!(as=async_alloc())
 	  || as->init(as, 0)
-	  || setup_asfd(as, "monitor stdin", &csin, NULL,
+	  || !setup_asfd(as, "monitor stdin", &csin, NULL,
 		ASFD_STREAM_LINEBUF, ASFD_FD_CLIENT_MONITOR_WRITE, -1, conf)
-	  || setup_asfd(as, "monitor stdout", &csout, NULL,
+	  || !setup_asfd(as, "monitor stdout", &csout, NULL,
 		ASFD_STREAM_LINEBUF, ASFD_FD_CLIENT_MONITOR_READ, -1, conf))
 			goto end;
 printf("ml: %s\n", conf->monitor_logfile);
@@ -1262,7 +1262,7 @@ printf("ml: %s\n", conf->monitor_logfile);
 	if(actg==ACTION_STATUS)
 	{
 		int stdinfd=fileno(stdin);
-		if(setup_asfd(as, "stdin", &stdinfd, NULL,
+		if(!setup_asfd(as, "stdin", &stdinfd, NULL,
 			ASFD_STREAM_NCURSES_STDIN, ASFD_FD_CLIENT_NCURSES_READ,
 			-1, conf))
 				goto end;

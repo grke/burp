@@ -111,10 +111,9 @@ int child(struct async *as,
 
 	// If we are not a status server, we are a normal child - set up the
 	// parent socket to write status to.
-	if(setup_asfd(as, "child status pipe", &status_wfd, NULL,
-		ASFD_STREAM_LINEBUF, ASFD_FD_CHILD_PIPE_WRITE, -1, cconf))
+	if(!(wasfd=setup_asfd(as, "child status pipe", &status_wfd, NULL,
+		ASFD_STREAM_LINEBUF, ASFD_FD_CHILD_PIPE_WRITE, -1, cconf)))
 			goto end;
-	wasfd=as->asfd->next;
 
 	/* Has to be before the chuser/chgrp stuff to allow clients to switch
 	   to different clients when both clients have different user/group

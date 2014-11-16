@@ -600,7 +600,7 @@ void asfd_free(struct asfd **asfd)
 	free_v((void **)asfd);
 }
 
-int setup_asfd(struct async *as, const char *desc, int *fd, SSL *ssl,
+struct asfd *setup_asfd(struct async *as, const char *desc, int *fd, SSL *ssl,
 	enum asfd_streamtype asfd_streamtype, enum asfd_fdtype fdtype,
 	pid_t pid, struct conf *conf)
 {
@@ -614,8 +614,8 @@ int setup_asfd(struct async *as, const char *desc, int *fd, SSL *ssl,
 	asfd->pid=pid;
 	*fd=-1;
 	as->asfd_add(as, asfd);
-	return 0;
+	return asfd;
 error:
 	asfd_free(&asfd);
-	return -1;
+	return NULL;
 }

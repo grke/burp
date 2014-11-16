@@ -716,6 +716,15 @@ end:
 	return ret;
 }
 
+static struct asfd *get_asfd_from_list_by_fdtype(struct async *as,
+	enum asfd_fdtype fdtype)
+{
+	struct asfd *a;
+	for(a=as->asfd; a; a=a->next)
+		if(a->fdtype==fdtype) return a;
+	return NULL;
+}
+
 int backup_phase2_server_burp2(struct async *as, struct sdirs *sdirs,
 	int resume, struct conf *conf)
 {
@@ -735,10 +744,9 @@ int backup_phase2_server_burp2(struct async *as, struct sdirs *sdirs,
 	// This is used to tell the client that a number of consecutive blocks
 	// have been found and can be freed.
 	uint64_t wrap_up=0;
-	// Main fd is first in the list.
 	struct asfd *asfd=as->asfd;
-	// Champ chooser fd is second in the list.
-	struct asfd *chfd=asfd->next;
+	struct asfd *chfd;
+	chfd=get_asfd_from_list_by_fdtype(as, ASFD_FD_SERVER_TO_CHAMP_CHOOSER);
 
 	logp("Phase 2 begin (recv backup data)\n");
 

@@ -223,7 +223,7 @@ static int run_child(int *cfd, SSL_CTX *ctx,
 	}
 	if(!(as=async_alloc())
 	  || as->init(as, 0)
-	  || setup_asfd(as, "main socket",
+	  || !setup_asfd(as, "main socket",
 		cfd, ssl, ASFD_STREAM_STANDARD, ASFD_FD_CHILD_MAIN, -1, conf))
 			goto end;
 
@@ -271,7 +271,7 @@ static int run_child(int *cfd, SSL_CTX *ctx,
 		goto end;
 	}
 
-	if(status_rfd>=0 && setup_asfd(as, "status server parent socket",
+	if(status_rfd>=0 && !setup_asfd(as, "status server parent socket",
 		&status_rfd, NULL,
 		ASFD_STREAM_STANDARD, ASFD_FD_CHILD_PIPE_READ, -1, cconf))
 			goto end;
@@ -424,7 +424,7 @@ static int process_incoming_client(struct asfd *asfd, SSL_CTX *ctx,
 			{
 				case ASFD_FD_SERVER_LISTEN_MAIN:
 					logp("forked child: %d\n", childpid);
-	  				if(setup_asfd(asfd->as,
+	  				if(!setup_asfd(asfd->as,
 						"pipe from child",
 						&pipe_rfd[0], NULL,
 						ASFD_STREAM_STANDARD,
@@ -441,7 +441,7 @@ static int process_incoming_client(struct asfd *asfd, SSL_CTX *ctx,
 					// Do not need to read from status
 					// children.
 					close(pipe_rfd[0]);
-	  				if(setup_asfd(asfd->as,
+	  				if(!setup_asfd(asfd->as,
 						"pipe to status child",
 						&pipe_wfd[1], NULL,
 						ASFD_STREAM_STANDARD,
@@ -608,12 +608,12 @@ static int run_server(struct conf *conf, const char *conffile,
 		goto end;
 
 	for(i=0; i<LISTEN_SOCKETS && rfds[i]!=-1; i++)
-		if(setup_asfd(mainas,
+		if(!setup_asfd(mainas,
 		  "main server socket", &rfds[i], NULL,
 		  ASFD_STREAM_STANDARD, ASFD_FD_SERVER_LISTEN_MAIN, -1, conf))
 			goto end;
 	for(i=0; i<LISTEN_SOCKETS && sfds[i]!=-1; i++)
-		if(setup_asfd(mainas,
+		if(!setup_asfd(mainas,
 		  "main server status socket", &sfds[i], NULL,
 		  ASFD_STREAM_STANDARD, ASFD_FD_SERVER_LISTEN_STATUS, -1, conf))
 			goto end;

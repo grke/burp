@@ -605,7 +605,11 @@ struct asfd *setup_asfd(struct async *as, const char *desc, int *fd, SSL *ssl,
 	pid_t pid, struct conf *conf)
 {
 	struct asfd *asfd=NULL;
-	if(!fd || *fd<0) return 0;
+	if(!fd || *fd<0)
+	{
+		logp("Given invalid descriptor in %s\n", __func__);
+		goto error;
+	}
 	set_non_blocking(*fd);
 	if(!(asfd=asfd_alloc())
 	  || asfd->init(asfd, desc, as, *fd, ssl, asfd_streamtype, conf))

@@ -111,7 +111,8 @@ int child(struct async *as,
 
 	// If we are not a status server, we are a normal child - set up the
 	// parent socket to write status to.
-	if(!(wasfd=setup_asfd(as, "child status pipe", &status_wfd, NULL,
+	if(status_wfd>0
+	  && !(wasfd=setup_asfd(as, "child status pipe", &status_wfd, NULL,
 		ASFD_STREAM_LINEBUF, ASFD_FD_CHILD_PIPE_WRITE, -1, cconf)))
 			goto end;
 

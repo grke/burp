@@ -404,8 +404,7 @@ static int process_incoming_client(struct asfd *asfd, SSL_CTX *ctx,
 			conf_free_content(conf);
 			conf_init(conf);
 
-			ret=run_child(&cfd, ctx,
-			  fdtype==ASFD_FD_SERVER_LISTEN_MAIN?pipe_rfd[1]:-1,
+			ret=run_child(&cfd, ctx, pipe_rfd[1],
 			  fdtype==ASFD_FD_SERVER_LISTEN_STATUS?pipe_wfd[0]:-1,
 			  conffile, conf->forking);
 

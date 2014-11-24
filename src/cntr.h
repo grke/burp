@@ -75,7 +75,7 @@ extern void cntr_add_changed_val(struct cntr *c,
 	char ch, unsigned long long val);
 
 #ifndef HAVE_WIN32
-extern size_t cntr_to_str(struct cntr *cntr, char phase, const char *path);
+extern size_t cntr_to_str(struct cntr *cntr, const char *path);
 extern int cntr_send(struct cntr *cntr);
 #endif
 

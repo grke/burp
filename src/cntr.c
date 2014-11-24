@@ -26,6 +26,7 @@ static int add_cntr_ent(struct cntr *cntr, int flags,
 	  || !(cenew->label=strdup_w(label, __func__)))
 		goto error;
 	cenew->flags=flags;
+	cenew->cmd=cmd;
 
 	if(cntr->list) cenew->next=cntr->list;
 	cntr->list=cenew;
@@ -60,11 +61,11 @@ static size_t calc_max_status_len(struct cntr *cntr, const char *cname)
 	for(e=cntr->list; e; e=e->next)
 	{
 		if(e->flags & CNTR_SINGLE_FIELD)
-			// %llu\t
-			slen+=strlen(ullmax)+1;
+			// %c%llu\t
+			slen+=strlen(ullmax)+2;
 		else
-			// %llu/%llu/%llu/%llu/%llu\t
-			slen+=(strlen(ullmax)*5)+5;
+			// %c%llu/%llu/%llu/%llu/%llu\t
+			slen+=(strlen(ullmax)*5)+6;
 	}
 
 	// Fourth section - start time.
@@ -74,7 +75,7 @@ static size_t calc_max_status_len(struct cntr *cntr, const char *cname)
 	// Fifth section - a path. Cannot know how long this might be. Guess.
 	slen+=CNTR_PATH_BUF_LEN+2; // %s\t\n
 
-	slen=1; // Terminating character.
+	slen+=1; // Terminating character.
 
 	return slen;
 }
@@ -635,27 +636,26 @@ void cntr_print_end_phase1(struct cntr *cntr)
 	}
 }
 
-/*
 #ifndef HAVE_WIN32
 // Return string length.
-size_t cntr_to_str(struct cntr *cntr, char phase, const char *path)
+size_t cntr_to_str(struct cntr *cntr, const char *path)
 {
 	static char tmp[CNTR_PATH_BUF_LEN+3]="";
 	struct cntr_ent *e=NULL;
 	char *str=cntr->status;
 
-	snprintf(str, cntr->status_max_len-1, "%s\t%c\t%c\t%c\t",
-		cntr->cname, '?', STATUS_RUNNING, phase);
+	snprintf(str, cntr->status_max_len-1, "%s\t%c\t%c\t%c\",
+		cntr->cname, '?', STATUS_RUNNING, '?' /* was phase */);
 
 	for(e=cntr->list; e; e=e->next)
 	{
 		if(e->flags & CNTR_SINGLE_FIELD)
 			snprintf(tmp,
-				sizeof(tmp), "%llu\t", e->count);
+				sizeof(tmp), "%c%llu\t", e->cmd, e->count);
 		else
 			snprintf(tmp,
-				sizeof(tmp), "%llu/%llu/%llu/%llu/%llu\t",
-				e->count, e->same,
+				sizeof(tmp), "%c%llu/%llu/%llu/%llu/%llu\t",
+				e->cmd, e->count, e->same,
 				e->changed, e->deleted, e->phase1);
 		strcat(str, tmp);
 	}
@@ -668,7 +668,6 @@ size_t cntr_to_str(struct cntr *cntr, char phase, const char *path)
 	return strlen(str);
 }
 #endif
-*/
 
 /*
 static int extract_ul(const char *value, unsigned long long *a, unsigned long long *b, unsigned long long *c, unsigned long long *d, unsigned long long *e)

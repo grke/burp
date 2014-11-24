@@ -4,17 +4,18 @@ static struct asfd *wasfd=NULL;
 
 int write_status(enum cstat_status status, const char *path, struct conf *conf)
 {
-// FIX THIS.
-return 0;
-/*
-	char *w=NULL;
+//	char *w=NULL;
 	time_t now=0;
 	time_t diff=0;
 	size_t l=0;
-	ssize_t wl=0;
+//	ssize_t wl=0;
 	static time_t lasttime=0;
 
-	if(!wasfd) goto error;
+	if(!wasfd)
+	{
+		logp("No parent pipe\n");
+	//	goto error;
+	}
 
 	// Only update every 2 seconds.
 	now=time(NULL);
@@ -28,7 +29,11 @@ return 0;
 	}
 	lasttime=now;
 
-	// if(!(l=cntr_to_str(conf->cntr, &phase, path))) goto error;
+	if(!(l=cntr_to_str(conf->cntr, path))) goto error;
+
+//printf("%s\n", conf->cntr->status);
+
+/*
 
 	w=conf->cntr->status;
 	while(l>=0)
@@ -44,9 +49,8 @@ return 0;
 */
 
 	return 0;
-//error:
-//	close_fd(&status_fd);
-//	return -1;
+error:
+	return -1;
 }
 
 static int run_server_script(struct asfd *asfd,

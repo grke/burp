@@ -576,6 +576,7 @@ static int run_server(struct conf *conf, const char *conffile,
 	SSL_CTX *ctx=NULL;
 	int found_normal_child=0;
 	struct asfd *asfd=NULL;
+	struct asfd *scfd=NULL;
 	struct async *mainas=NULL;
 
 	if(!(ctx=ssl_initialise_ctx(conf)))
@@ -665,6 +666,32 @@ static int run_server(struct conf *conf, const char *conffile,
 				// If we got here, there was no fd to remove.
 				// It is a fatal error.
 				goto end;
+		}
+
+		for(asfd=mainas->asfd; asfd; asfd=asfd->next)
+		{
+			if(asfd->fdtype!=ASFD_FD_SERVER_PIPE_READ
+			  || !asfd->rbuf->buf) continue;
+			// One of the child processes is giving us information.
+			// Try to append it to any of the status child pipes.
+			for(scfd=mainas->asfd; scfd; scfd=scfd->next)
+			{
+				if(scfd->fdtype!=ASFD_FD_SERVER_PIPE_WRITE)
+					continue;
+				switch(scfd->append_all_to_write_buffer(scfd,
+					asfd->rbuf))
+				{
+					case APPEND_OK:
+					case APPEND_BLOCKED:
+						break;
+					default:
+						goto end;
+				}
+			}
+			// Free the information, even if we did not manage
+			// to append it. That should be OK, more will be along
+			// soon.
+			iobuf_free_content(asfd->rbuf);
 		}
 
 		if(sigchld)

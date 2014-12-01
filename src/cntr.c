@@ -644,7 +644,7 @@ size_t cntr_to_str(struct cntr *cntr, const char *path)
 	struct cntr_ent *e=NULL;
 	char *str=cntr->status;
 
-	snprintf(str, cntr->status_max_len-1, "%s\t%c\t%c\t%c\",
+	snprintf(str, cntr->status_max_len-1, "%s\t%c\t%c\t%c\t",
 		cntr->cname, '?', STATUS_RUNNING, '?' /* was phase */);
 
 	for(e=cntr->list; e; e=e->next)

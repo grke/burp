@@ -269,6 +269,14 @@ static int asfd_do_write(struct asfd *asfd)
 		return -1;
 	}
 	if(asfd->ratelimit) asfd->rlbytes+=w;
+/*
+{
+char buf[100000]="";
+snprintf(buf, w+1, "%s", asfd->writebuf);
+printf("wrote %d: %s\n", w, buf);
+}
+*/
+
 	memmove(asfd->writebuf, asfd->writebuf+w, asfd->writebuflen-w);
 	asfd->writebuflen-=w;
 	return 0;

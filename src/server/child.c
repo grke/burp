@@ -4,17 +4,16 @@ static struct asfd *wasfd=NULL;
 
 int write_status(enum cstat_status status, const char *path, struct conf *conf)
 {
-//	char *w=NULL;
 	time_t now=0;
 	time_t diff=0;
-	size_t l=0;
-//	ssize_t wl=0;
 	static time_t lasttime=0;
+	static size_t l=0;
+	static struct iobuf *wbuf=NULL;
 
 	if(!wasfd)
 	{
 		logp("No parent pipe\n");
-	//	goto error;
+		goto error;
 	}
 
 	// Only update every 2 seconds.
@@ -29,27 +28,26 @@ int write_status(enum cstat_status status, const char *path, struct conf *conf)
 	}
 	lasttime=now;
 
-	if(!(l=cntr_to_str(conf->cntr, path))) goto error;
-
-//printf("%s\n", conf->cntr->status);
-
-/*
-
-	w=conf->cntr->status;
-	while(l>=0)
+	// Only get a new string if we did not manage to write the previous
+	// one.
+	if(!l)
 	{
-		if((wl=write(status_fd, w, l))<0)
-		{
-			logp("error writing status down pipe to server: %s\n",
-				strerror(errno));
-			goto error;
-		}
-		l-=wl;
+		if(!(l=cntr_to_str(conf->cntr, path))) goto error;
+		if(!wbuf && !(wbuf=iobuf_alloc())) goto error;
+		iobuf_set(wbuf, CMD_APPEND, conf->cntr->status, l);
 	}
-*/
 
-	return 0;
+	switch(wasfd->append_all_to_write_buffer(wasfd, wbuf))
+	{
+		case APPEND_OK:
+			l=0; // Fall through.
+		case APPEND_BLOCKED:
+			return 0;
+		default:
+			break;
+	}
 error:
+	iobuf_free(&wbuf);
 	return -1;
 }
 
@@ -117,7 +115,7 @@ int child(struct async *as,
 	// parent socket to write status to.
 	if(status_wfd>0
 	  && !(wasfd=setup_asfd(as, "child status pipe", &status_wfd, NULL,
-		ASFD_STREAM_LINEBUF, ASFD_FD_CHILD_PIPE_WRITE, -1, cconf)))
+		ASFD_STREAM_STANDARD, ASFD_FD_CHILD_PIPE_WRITE, -1, cconf)))
 			goto end;
 
 	/* Has to be before the chuser/chgrp stuff to allow clients to switch

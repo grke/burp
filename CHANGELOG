@@ -1,3 +1,4 @@
+2014-12-03 Changes in burp-1.4.28:
   * Help Mac compilation by removing calls to basename() in vss_strip.c and
     bedup.c.
   * Add soft/hard quota feature.

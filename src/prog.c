@@ -45,6 +45,7 @@ static void usage_server(void)
 	printf("  -h|-?         Print this text and exit.\n");
 	printf("  -i            Print index of symbols and exit\n");
 	printf("  -n            Do not fork any children (implies '-F').\n");
+	printf("  -t            Dry-run to test config file syntax.\n");
 	printf("  -v            Print version and exit.\n");
 	printf("Options to use with '-a S':\n");
 	printf("  -C <client>   Show a particular client\n");
@@ -79,6 +80,7 @@ static void usage_client(void)
 	printf("  -r <regex>     Specify a regular expression.\n");
 	printf("  -s <number>    Number of leading path components to strip during restore.\n");
 	printf("  -j             Format long list as JSON.\n");
+	printf("  -t             Dry-run to test config file syntax.\n");
 	printf("  -v             Print version and exit.\n");
 #ifndef HAVE_WIN32
 	printf("  -x             Do not use the Windows VSS API when restoring.\n");
@@ -174,10 +176,11 @@ int main (int argc, char *argv[])
 #endif
 	int vss_restore=1;
 	int json=0;
+	int test_conf=0;
 
 	init_log(argv[0]);
 
-	while((option=getopt(argc, argv, "a:b:c:C:d:ghfFil:nr:s:vxjz:?"))!=-1)
+	while((option=getopt(argc, argv, "a:b:c:C:d:ghfFil:nr:s:vxjtz:?"))!=-1)
 	{
 		switch(option)
 		{
@@ -264,6 +267,9 @@ int main (int argc, char *argv[])
 			case 'j':
 				json=1;
 				break;
+			case 't':
+				test_conf=1;
+				break;
 			case 'z':
 				browsefile=optarg;
 				break;
@@ -286,6 +292,9 @@ int main (int argc, char *argv[])
 	  0 /* no oldmax_children setting */,
 	  0 /* no oldmax_status_children setting */,
 	  json)) return 1;
+
+	/* Dry run to test config file syntax */
+	if (test_conf) return 0;
 
 	if((act==ACTION_RESTORE || act==ACTION_VERIFY) && !backup)
 	{

@@ -41,7 +41,6 @@ error:
 static size_t calc_max_status_len(struct cntr *cntr, const char *cname)
 {
 	size_t slen=0;
-	char limax[64];
 	char ullmax[64];
 	struct cntr_ent *e=NULL;
 
@@ -68,11 +67,7 @@ static size_t calc_max_status_len(struct cntr *cntr, const char *cname)
 			slen+=(strlen(ullmax)*5)+6;
 	}
 
-	// Fourth section - start time.
-	snprintf(limax, sizeof(limax), "%li", ULONG_MAX);
-	slen+=strlen(limax)+1; // %lit
-
-	// Fifth section - a path. Cannot know how long this might be. Guess.
+	// Fourth section - a path. Cannot know how long this might be. Guess.
 	slen+=CNTR_PATH_BUF_LEN+2; // %s\t\n
 
 	slen+=1; // Terminating character.
@@ -87,12 +82,13 @@ int cntr_init(struct cntr *cntr, const char *cname)
 		logp("%s called with no client name\n", __func__);
 		return -1;
 	}
-	cntr->start=time(NULL);
 
 	// Add in reverse order, so that iterating over from the beginning
 	// comes out in the right order.
 	if(
 	     add_cntr_ent(cntr, CNTR_SINGLE_FIELD,
+		CMD_TIMESTAMP, "time_start", "Start time")
+	  || add_cntr_ent(cntr, CNTR_SINGLE_FIELD,
 		CMD_BYTES_SENT, "bytes_sent", "Bytes sent")
 	  || add_cntr_ent(cntr, CNTR_SINGLE_FIELD,
 		CMD_BYTES_RECV, "bytes_received", "Bytes received")
@@ -138,6 +134,8 @@ int cntr_init(struct cntr *cntr, const char *cname)
 		CMD_FILE, "files", "Files")
 	)
 		return -1;
+
+	cntr->ent[(uint8_t)CMD_TIMESTAMP]->count=(unsigned long long)time(NULL);
 
 	cntr->status_max_len=calc_max_status_len(cntr, cname);
 	if(!(cntr->status=(char *)calloc_w(1, cntr->status_max_len, __func__))
@@ -476,11 +474,12 @@ void cntr_print(struct cntr *cntr, enum action act)
 {
 	struct cntr_ent *e;
 	time_t now=time(NULL);
+	time_t start=(time_t)cntr->ent[(uint8_t)CMD_TIMESTAMP]->count;
 
 	border();
-	logc("Start time: %s\n", getdatestr(cntr->start));
+	logc("Start time: %s\n", getdatestr(start));
 	logc("  End time: %s\n", getdatestr(now));
-	logc("Time taken: %s\n", time_taken(now-cntr->start));
+	logc("Time taken: %s\n", time_taken(now-start));
 	if(act==ACTION_BACKUP
 	  || act==ACTION_BACKUP_TIMED)
 	{
@@ -530,6 +529,7 @@ static void quint_print_to_file(FILE *fp, struct cntr_ent *ent, enum action act)
 	  || act==ACTION_BACKUP_TIMED)
 	{
 		fprintf(fp, "%s:%llu\n", field, a);
+		if(ent->flags & CNTR_SINGLE_FIELD) return;
 		fprintf(fp, "%s_changed:%llu\n", field, b);
 		fprintf(fp, "%s_same:%llu\n", field, c);
 		fprintf(fp, "%s_deleted:%llu\n", field, d);
@@ -576,6 +576,7 @@ int cntr_stats_to_file(struct cntr *cntr,
 	time_t now;
 	const char *fname=NULL;
 	struct cntr_ent *e;
+	time_t start=(time_t)cntr->ent[(uint8_t)CMD_TIMESTAMP]->count;
 
 	if(act==ACTION_BACKUP
 	  ||  act==ACTION_BACKUP_TIMED)
@@ -598,9 +599,8 @@ int cntr_stats_to_file(struct cntr *cntr,
 		conf->peer_version?conf->peer_version:"");
 	fprintf(fp, "server_version:%s\n", VERSION);
 	fprintf(fp, "client_is_windows:%d\n", conf->client_is_windows);
-	fprintf(fp, "time_start:%lu\n", cntr->start);
 	fprintf(fp, "time_end:%lu\n", now);
-	fprintf(fp, "time_taken:%lu\n", now-cntr->start);
+	fprintf(fp, "time_taken:%lu\n", now-start);
 	for(e=cntr->list; e; e=e->next)
 		quint_print_to_file(fp, e, act);
 
@@ -660,8 +660,6 @@ size_t cntr_to_str(struct cntr *cntr, const char *path)
 		strcat(str, tmp);
 	}
 
-	snprintf(tmp, sizeof(tmp), "%li\t", cntr->start);
-	strcat(str, tmp);
 	snprintf(tmp, sizeof(tmp), "%s\t\n", path?path:"");
 	strcat(str, tmp);
 

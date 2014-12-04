@@ -43,8 +43,6 @@ struct cntr
 	char *status;
 
 	char *cname;
-
-	time_t start;
 };
 
 extern struct cntr *cntr_alloc(void);

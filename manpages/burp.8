@@ -371,7 +371,7 @@ Set to 1 to send success notifications when there were new or changed files. If 
 The same as notify_success_script, but for backups that failed.
 .TP
 \fBnotify_failure_arg=[string]\fR
-The same as notify_failure_arg, but for backups that failed.
+The same as notify_success_arg, but for backups that failed.
 .TP
 \fBdedup_group=[string]\fR
 Enables you to group clients together for file deduplication purposes. For example, you might want to set 'dedup_group=xp' for each Windows XP client, and then run the bedup program on a cron job every other day with the option '\-g xp'.

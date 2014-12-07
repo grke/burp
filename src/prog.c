@@ -44,6 +44,7 @@ static void usage_server(void)
 	printf("  -i            Print index of symbols and exit.\n");
 	printf("  -l <path>     Log file for the status monitor.\n");
 	printf("  -n            Do not fork any children (implies '-F').\n");
+	printf("  -t            Dry-run to test config file syntax.\n");
 	printf("  -v            Print version and exit.\n");
 	printf("Options to use with '-a c':\n");
 	printf("  -C <client>   Run as if forked via a connection from this client.\n");
@@ -82,6 +83,7 @@ static void usage_client(void)
 	printf("  -r <regex>     Specify a regular expression.\n");
 	printf("  -s <number>    Number of leading path components to strip during restore.\n");
 	printf("  -j             Format long list as JSON.\n");
+	printf("  -t             Dry-run to test config file syntax.\n");
 	printf("  -v             Print version and exit.\n");
 #ifndef HAVE_WIN32
 	printf("  -x             Do not use the Windows VSS API when restoring.\n");
@@ -264,6 +266,7 @@ int main (int argc, char *argv[])
 	// FIX THIS: Since the client can now connect to the status port,
 	// this json option is no longer needed.
 	int json=0;
+	int test_conf=0;
 
 	init_log(argv[0]);
 #ifndef HAVE_WIN32
@@ -271,7 +274,7 @@ int main (int argc, char *argv[])
 		return run_bedup(argc, argv);
 #endif
 
-	while((option=getopt(argc, argv, "a:b:c:C:d:fFghil:nq:r:s:vxjz:?"))!=-1)
+	while((option=getopt(argc, argv, "a:b:c:C:d:fFghil:nq:r:s:tvxjz:?"))!=-1)
 	{
 		switch(option)
 		{
@@ -334,6 +337,9 @@ int main (int argc, char *argv[])
 			case 'j':
 				json=1;
 				break;
+			case 't':
+				test_conf=1;
+				break;
 			case 'z':
 				browsefile=optarg;
 				break;
@@ -364,6 +370,9 @@ int main (int argc, char *argv[])
 	  0 /* no oldmax_children setting */,
 	  0 /* no oldmax_status_children setting */,
 	  json)) goto end;
+
+	// Dry run to test config file syntax.
+	if(test_conf) return 0;
 
 	if(!backup) switch(act)
 	{

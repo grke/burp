@@ -39,8 +39,12 @@ struct cntr
 	unsigned long long sentbyte;
 
 	// Buffer to use for the forked child to write statuses to the parent.
-	size_t status_max_len;
-	char *status;
+	size_t str_max_len;
+	char *str;
+
+// FIX THIS: had dependency trouble using 'enum cstat_status' leave it as an
+// int for now.
+	int cstat_status;
 
 	char *cname;
 };

@@ -40,7 +40,7 @@ struct cstat
 	char *name;
 	char *conffile;
 	time_t conf_mtime;
-	char *running_detail; // set from the parent process
+	struct cntr *cntr; // Set from the parent process.
 	enum cstat_status status;
 	// From the perspective of the server child, whether the connected
 	// client is allowed to view this client.

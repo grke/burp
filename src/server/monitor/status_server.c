@@ -22,7 +22,8 @@ printf("got parent data: '%s'\n", asfd->rbuf->buf);
 		if(!strcmp(c->name, cname))
 		{
 			printf("parse for client %s\n", c->name);
-			//str_to_cntr(asfd->rbuf->buf);
+			if(str_to_cntr(asfd->rbuf->buf, c))
+				goto end;
 		}
 	}
 

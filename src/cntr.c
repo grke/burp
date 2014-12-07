@@ -742,10 +742,9 @@ static int add_to_backup_list(struct strlist **backups, const char *tok)
 }
 */
 
-/*
-static int extract_cntrs(struct cntr *cntr, int cntr_version, const char *tok,
-	char *status, char *phase, char **path, struct strlist **backups)
+static int extract_cntrs(struct cstat *cstat)
 {
+/*
 	int t=0;
 	while(1)
 	{
@@ -877,15 +876,13 @@ static int extract_cntrs(struct cntr *cntr, int cntr_version, const char *tok,
 		else if(t==x++) { if(path && !(*path=strdup_w(tok, __func__)))
 		  { log_out_of_memory(__func__); return -1; } }
 	}
+*/
 	return 0;
 }
-*/
 
-int str_to_cntr(const char *str, char **client, char *status, char *phase,
-	char **path, struct cntr *p1cntr, struct cntr *cntr,
-	struct strlist **backups)
+int str_to_cntr(const char *str, struct cstat *cstat)
 {
-/*
+	int ret=-1;
 	char *tok=NULL;
 	char *copy=NULL;
 
@@ -894,32 +891,36 @@ int str_to_cntr(const char *str, char **client, char *status, char *phase,
 
 	if((tok=strtok(copy, "\t\n")))
 	{
-		int cntr_version=0;
-		char *cntr_version_tmp=NULL;
-		if(client && !(*client=strdup_w(tok, __func__)))
-			return -1;
-		if(!(cntr_version_tmp=strtok(NULL, "\t\n")))
+		char *tmp=NULL;
+		// First token is the client name. Do not need that here.
+		// Second is the cntr version.
+		if(!(tmp=strtok(NULL, "\t\n")))
 		{
-			free(copy);
-			return 0;
+			logp("Parsing problem in %s: null version\n",
+				__func__);
+			goto end;
 		}
-		cntr_version=atoi(cntr_version_tmp);
-		// First token after the client name is the version of
-		// the cntr parser thing, which now has to be noted
-		// because cntrs might be passed to the client instead
-		// of just the server status monitor.
-		if(cntr_version & (CNTR_VER_ALL)
-		  && extract_cntrs(cntr, cntr_version, tok,
-			status, phase, path, backups))
+		if(atoi(tmp)!=CNTR_VERSION)
 		{
-			free(copy);
-			return -1;
+			ret=0;
+			goto end;
 		}
+		// Third is cstat_status.
+		if(!(tmp=strtok(NULL, "\t\n")))
+		{
+			logp("Parsing problem in %s: null cstat_status\n",
+				__func__);
+			goto end;
+		}
+		cstat->cntr->cstat_status=atoi(tmp);
+
+		if(extract_cntrs(cstat)) goto end;
 	}
 
-	free(copy);
-*/
-	return 0;
+	ret=0;
+end:
+	free_w(&copy);
+	return ret;
 }
 
 #ifndef HAVE_WIN32

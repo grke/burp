@@ -81,9 +81,7 @@ extern size_t cntr_to_str(struct cntr *cntr, const char *path);
 extern int cntr_send(struct cntr *cntr);
 #endif
 
-extern int str_to_cntr(const char *str, char **client, char *status,
-	char *phase, char **path, struct cntr *p1cntr, struct cntr *cntr,
-	struct strlist **backups);
+extern int str_to_cntr(const char *str, struct cstat *cstat);
 extern int cntr_recv(struct asfd *asfd, struct conf *conf);
 
 #endif

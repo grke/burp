@@ -1,59 +1,34 @@
 #include "include.h"
 
-static int parse_parent_data_entry(char *tok, struct cstat *clist)
-{
-	char *tp=NULL;
-	struct cstat *c;
-	//logp("status server got: %s", tok);
-
-	// Find the array entry for this client,
-	// and add the detail from the parent to it.
-	// The name of the client is at the start, and
-	// the fields are tab separated.
-	if(!(tp=strchr(tok, '\t'))) return 0;
-	*tp='\0';
-	for(c=clist; c; c=c->next)
-	{
-		if(!strcmp(c->name, tok))
-		{
-			int x=0;
-			*tp='\t'; // put the tab back.
-			x=strlen(tok);
-			free_w(&c->running_detail);
-			//clist[q]->running_detail=strdup_w(tok, __func__);
-
-			// Need to add the newline back on the end.
-			if(!(c->running_detail=(char *)malloc_w(x+2, __func__)))
-				return -1;
-			snprintf(c->running_detail, x+2, "%s\n", tok);
-			
-		}
-	}
-	return 0;
-}
-
 static int parse_parent_data(struct asfd *asfd, struct cstat *clist)
 {
 	int ret=-1;
-	char *tok=NULL;
-	char *copyall=NULL;
+	char *cp=NULL;
+	char *cname=NULL;
+	struct cstat *c=NULL;
 printf("got parent data: '%s'\n", asfd->rbuf->buf);
 
-	if(!(copyall=strdup_w(asfd->rbuf->buf, __func__)))
-		goto end;
+	// Extract the client name.
+	if(!(cp=strchr(asfd->rbuf->buf, '\t')))
+		return 0;
+	*cp='\0';
+	if(!(cname=strdup_w(asfd->rbuf->buf, __func__))) goto end;
+	*cp='\t';
 
-	if((tok=strtok(copyall, "\n")))
+	// Find the array entry for this client,
+	// and add the detail from the parent to it.
+	for(c=clist; c; c=c->next)
 	{
-printf("got tok: %s\n", tok);
-		if(parse_parent_data_entry(tok, clist)) goto end;
-		while((tok=strtok(NULL, "\n")))
-			if(parse_parent_data_entry(tok, clist))
-				goto end;
+		if(!strcmp(c->name, cname))
+		{
+			printf("parse for client %s\n", c->name);
+			//str_to_cntr(asfd->rbuf->buf);
+		}
 	}
 
 	ret=0;
 end:
-	free_w(&copyall);
+	free_w(&cname);
 	return ret;
 }
 

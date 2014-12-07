@@ -2,6 +2,7 @@
 
 #include <limits.h>
 
+#define CNTR_VERSION		3
 #define CNTR_PATH_BUF_LEN	256
 
 static void cntr_ent_free(struct cntr_ent *cntr_ent)
@@ -38,16 +39,16 @@ error:
 	return -1;
 }
 
-static size_t calc_max_status_len(struct cntr *cntr, const char *cname)
+static size_t calc_max_str_len(struct cntr *cntr, const char *cname)
 {
 	size_t slen=0;
 	char ullmax[64];
 	struct cntr_ent *e=NULL;
 
 	// See cntr_to_str().
-	// First section - name/version/status/phase
+	// First section - name/version/status
 	slen+=strlen(cname);
-	slen+=7;
+	slen+=16; // More than enough space.
 
 	// Second section.
 	snprintf(ullmax, sizeof(ullmax),
@@ -68,7 +69,7 @@ static size_t calc_max_status_len(struct cntr *cntr, const char *cname)
 	}
 
 	// Fourth section - a path. Cannot know how long this might be. Guess.
-	slen+=CNTR_PATH_BUF_LEN+2; // %s\t\n
+	slen+=CNTR_PATH_BUF_LEN+3; // %c%s\t\n
 
 	slen+=1; // Terminating character.
 
@@ -137,8 +138,8 @@ int cntr_init(struct cntr *cntr, const char *cname)
 
 	cntr->ent[(uint8_t)CMD_TIMESTAMP]->count=(unsigned long long)time(NULL);
 
-	cntr->status_max_len=calc_max_status_len(cntr, cname);
-	if(!(cntr->status=(char *)calloc_w(1, cntr->status_max_len, __func__))
+	cntr->str_max_len=calc_max_str_len(cntr, cname);
+	if(!(cntr->str=(char *)calloc_w(1, cntr->str_max_len, __func__))
 	  || !(cntr->cname=strdup_w(cname, __func__)))
 		return -1;
 
@@ -156,9 +157,8 @@ void cntr_free(struct cntr **cntr)
 		cntr_ent_free(e);
 	}
 	(*cntr)->list=NULL;
-	if((*cntr)->status) free((*cntr)->status);
-	free(*cntr);
-	*cntr=NULL;
+	free_w(&(*cntr)->str);
+	free_v((void **)cntr);
 }
 
 const char *bytes_to_human(unsigned long long counter)
@@ -642,10 +642,10 @@ size_t cntr_to_str(struct cntr *cntr, const char *path)
 {
 	static char tmp[CNTR_PATH_BUF_LEN+3]="";
 	struct cntr_ent *e=NULL;
-	char *str=cntr->status;
+	char *str=cntr->str;
 
-	snprintf(str, cntr->status_max_len-1, "%s\t%c\t%c\t%c\t",
-		cntr->cname, '?', STATUS_RUNNING, '?' /* was phase */);
+	snprintf(str, cntr->str_max_len-1, "%s\t%d\t%d\t",
+		cntr->cname, CNTR_VERSION, cntr->cstat_status);
 
 	for(e=cntr->list; e; e=e->next)
 	{
@@ -660,7 +660,8 @@ size_t cntr_to_str(struct cntr *cntr, const char *path)
 		strcat(str, tmp);
 	}
 
-	snprintf(tmp, sizeof(tmp), "%s\t\n", path?path:"");
+	// Abuse CMD_DATAPTH.
+	snprintf(tmp, sizeof(tmp), "%c%s\t\n", CMD_DATAPTH, path?path:"");
 	strcat(str, tmp);
 
 	return strlen(str);

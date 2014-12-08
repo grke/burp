@@ -1398,6 +1398,7 @@ static int conf_finalise_global_only(const char *conf_path, struct conf *c)
 
 static int load_conf_lines(const char *conf_path, struct conf *c)
 {
+	int ret=0;
 	int line=0;
 	FILE *fp=NULL;
 	char buf[4096]="";
@@ -1411,14 +1412,13 @@ static int load_conf_lines(const char *conf_path, struct conf *c)
 	{
 		line++;
 		if(parse_conf_line(c, conf_path, buf, line))
-			goto err;
+		{
+			conf_error(conf_path, line);
+			ret=-1;
+		}
 	}
 	if(fp) fclose(fp);
-	return 0;
-err:
-	conf_error(conf_path, line);
-	if(fp) fclose(fp);
-	return -1;
+	return ret;
 }
 
 /* The client runs this when the server overrides the incexcs. */

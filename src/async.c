@@ -18,6 +18,7 @@ static void async_settimers(struct async *as, int sec, int usec)
 static int asfd_problem(struct asfd *asfd)
 {
 	asfd->want_to_remove++;
+	asfd->as->last_time=asfd->as->now;
 	return -1;
 }
 
@@ -32,7 +33,10 @@ static int async_io(struct async *as, int doread)
 	struct asfd *asfd;
 	static int s=0;
 
-	if(as->doing_estimate) return 0;
+	as->now=time(NULL);
+	if(!as->last_time) as->last_time=as->now;
+
+	if(as->doing_estimate) goto end;
 
 	FD_ZERO(&fsr);
 	FD_ZERO(&fsw);
@@ -69,7 +73,7 @@ static int async_io(struct async *as, int doread)
 
 		dosomething++;
 	}
-	if(!dosomething) return 0;
+	if(!dosomething) goto end;
 /*
 	for(asfd=as->asfd; asfd; asfd=asfd->next)
 	{
@@ -81,42 +85,25 @@ static int async_io(struct async *as, int doread)
 
 	errno=0;
 	s=select(mfd+1, &fsr, &fsw, &fse, &tval);
-	if(errno==EAGAIN || errno==EINTR) return 0;
+	if(errno==EAGAIN || errno==EINTR) goto end;
 
 	if(s<0)
 	{
 		logp("select error in %s: %s\n", __func__,
 			strerror(errno));
+		as->last_time=as->now;
 		return -1;
 	}
 
 	for(asfd=as->asfd; asfd; asfd=asfd->next)
 	{
-/* FIX THIS!!!
-		if(!FD_ISSET(asfd->fd, &fse)
-		  && (!asfd->doread || !FD_ISSET(asfd->fd, &fsr))
-		  && (!asfd->dowrite || !FD_ISSET(asfd->fd, &fsw)))
-		{
-			// Be careful to avoid 'read quick' mode.
-			if((as->setsec || as->setusec)
-			  && asfd->max_network_timeout>0
-			  && asfd->network_timeout--<=0)
-			{
-				logp("%s: no activity for %d seconds.\n",
-					asfd->desc, asfd->max_network_timeout);
-				return asfd_problem(asfd);
-			}
-			continue;
-		}
-		asfd->network_timeout=asfd->max_network_timeout;
-*/
-
 		if(FD_ISSET(asfd->fd, &fse))
 		{
 			switch(asfd->fdtype)
 			{
 				case ASFD_FD_SERVER_LISTEN_MAIN:
 				case ASFD_FD_SERVER_LISTEN_STATUS:
+					as->last_time=as->now;
 					return -1;
 				default:
 					logp("%s: had an exception\n",
@@ -127,6 +114,7 @@ static int async_io(struct async *as, int doread)
 
 		if(asfd->doread && FD_ISSET(asfd->fd, &fsr)) // Able to read.
 		{
+			asfd->network_timeout=asfd->max_network_timeout;
 			switch(asfd->fdtype)
 			{
 				case ASFD_FD_SERVER_LISTEN_MAIN:
@@ -145,11 +133,29 @@ static int async_io(struct async *as, int doread)
 
 		if(asfd->dowrite && FD_ISSET(asfd->fd, &fsw)) // Able to write.
 		{
+			asfd->network_timeout=asfd->max_network_timeout;
 			if(asfd->do_write(asfd))
 				return asfd_problem(asfd);
 		}
+	
+		if((!asfd->doread || !FD_ISSET(asfd->fd, &fsr))
+		  && (!asfd->dowrite || !FD_ISSET(asfd->fd, &fsw)))
+		{
+			// Be careful to avoid 'read quick' mode.
+			if((as->setsec || as->setusec)
+			  && as->now-as->last_time>0
+			  && asfd->max_network_timeout>0
+			  && asfd->network_timeout--<=0)
+			{
+				logp("%s: no activity for %d seconds.\n",
+					asfd->desc, asfd->max_network_timeout);
+				return asfd_problem(asfd);
+			}
+		}
 	}
 
+end:
+	as->last_time=as->now;
 	return 0;
 }
 
@@ -223,6 +229,7 @@ static int async_init(struct async *as, int estimate)
 {
 	as->setsec=1;
 	as->setusec=0;
+	as->last_time=0;
 	as->doing_estimate=estimate;
 
 	as->read_write=async_read_write;

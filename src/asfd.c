@@ -215,14 +215,12 @@ error:
 static int check_ratelimit(struct asfd *asfd)
 {
 	float f;
-	time_t now;
 	time_t diff;
 	if(!asfd->rlstart) asfd->rlstart=time(NULL);
-	now=time(NULL);
-	if((diff=now-asfd->rlstart)<0)
+	if((diff=asfd->as->now-asfd->rlstart)<0)
 	{
 		// It is possible that the clock changed. Reset ourselves.
-		now=asfd->rlstart;
+		asfd->as->now=asfd->rlstart;
 		asfd->rlbytes=0;
 		logp("Looks like the clock went back in time since starting. "
 			"Resetting ratelimit\n");

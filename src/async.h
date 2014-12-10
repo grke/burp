@@ -13,6 +13,9 @@ struct async
 	int setsec;
 	int setusec;
 
+	time_t now;
+	time_t last_time;
+
 	// Let us try using function pointers.
 	int (*init)(struct async *, int);
 

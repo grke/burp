@@ -136,6 +136,28 @@ end:
 	return ret;
 }
 
+static int do_counters(struct cntr *cntr)
+{
+	struct cntr_ent *e;
+	if(yajl_gen_str_w("counters")
+	  || yajl_array_open_w()) return -1;
+	for(e=cntr->list; e; e=e->next)
+	{
+		if(yajl_map_open_w()) return -1;
+		if(yajl_gen_str_pair_w("name", e->field)) return -1;
+		if(yajl_gen_int_pair_w("count", e->count)) return -1;
+		if(yajl_gen_int_pair_w("changed", e->changed)) return -1;
+		if(yajl_gen_int_pair_w("same", e->same)) return -1;
+		if(yajl_gen_int_pair_w("deleted", e->deleted)) return -1;
+		if(yajl_gen_int_pair_w("phase1", e->phase1)) return -1;
+		if(yajl_map_close_w()) return -1;
+	}
+
+  	if(yajl_array_close_w())
+		return -1;
+	return 0;
+}
+
 static int json_send_backup(struct asfd *asfd, struct cstat *cstat,
 	struct bu *bu, int print_flags,
 	const char *logfile, const char *browse,
@@ -160,6 +182,10 @@ static int json_send_backup(struct asfd *asfd, struct cstat *cstat,
 	  || flag_wrap_str(bu, BU_MANIFEST, "manifest")
 	  || yajl_array_close_w())
 		return -1;
+	if(bu->flags & (BU_WORKING|BU_FINISHING))
+	{
+		if(do_counters(cstat->cntr)) return -1;
+	}
 	if(print_flags
 	  && (bu->flags & (BU_LOG_BACKUP|BU_LOG_RESTORE|BU_LOG_VERIFY
 		|BU_STATS_BACKUP|BU_STATS_RESTORE|BU_STATS_VERIFY)))

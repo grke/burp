@@ -81,7 +81,7 @@ extern size_t cntr_to_str(struct cntr *cntr, const char *path);
 extern int cntr_send(struct cntr *cntr);
 #endif
 
-extern int str_to_cntr(const char *str, struct cstat *cstat);
+extern int str_to_cntr(const char *str, struct cstat *cstat, char **path);
 extern int cntr_recv(struct asfd *asfd, struct conf *conf);
 
 #endif

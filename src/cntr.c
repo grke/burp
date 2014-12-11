@@ -668,8 +668,7 @@ size_t cntr_to_str(struct cntr *cntr, const char *path)
 }
 #endif
 
-/*
-static int extract_ul(const char *value, unsigned long long *a, unsigned long long *b, unsigned long long *c, unsigned long long *d, unsigned long long *e)
+static int extract_ul(const char *value, struct cntr_ent *ent)
 {
 	char *as=NULL;
 	char *bs=NULL;
@@ -685,21 +684,21 @@ static int extract_ul(const char *value, unsigned long long *a, unsigned long lo
 	if((bs=strchr(as, '/')))
 	{
 		*bs='\0';
-		*a=strtoull(as, NULL, 10);
+		ent->count=strtoull(as, NULL, 10);
 		if((cs=strchr(++bs, '/')))
 		{
 			*cs='\0';
-			*b=strtoull(bs, NULL, 10);
+			ent->changed=strtoull(bs, NULL, 10);
 			if((ds=strchr(++cs, '/')))
 			{
 				*ds='\0';
-				*c=strtoull(cs, NULL, 10);
+				ent->same=strtoull(cs, NULL, 10);
 				if((es=strchr(++ds, '/')))
 				{
-					*d=strtoull(ds, NULL, 10);
+					ent->deleted=strtoull(ds, NULL, 10);
 					*es='\0';
 					es++;
-					*e=strtoull(es, NULL, 10);
+					ent->phase1=strtoull(es, NULL, 10);
 				}
 			}
 		}
@@ -707,7 +706,6 @@ static int extract_ul(const char *value, unsigned long long *a, unsigned long lo
 	free(copy);
 	return 0;
 }
-*/
 
 /*
 static char *get_backup_str(const char *s, int *deletable)
@@ -742,145 +740,31 @@ static int add_to_backup_list(struct strlist **backups, const char *tok)
 }
 */
 
-static int extract_cntrs(struct cstat *cstat)
+static int extract_cntrs(struct cstat *cstat, char **path)
 {
-/*
-	int t=0;
-	while(1)
+	char *tok;
+	struct cntr *cntr=cstat->cntr;
+	while((tok=strtok(NULL, "\t\n")))
 	{
-		int x=1;
-		t++;
-		if(!(tok=strtok(NULL, "\t\n")))
-			break;
-		if     (t==x++) { if(status) *status=*tok; }
-		else if(t==x++)
+		switch(tok[0])
 		{
-			if(status && (*status==STATUS_IDLE
-			  || *status==STATUS_SERVER_CRASHED
-			  || *status==STATUS_CLIENT_CRASHED))
-			{
-				if(backups)
-				{
-					// Build a list of backups.
-					do
-					{
-						if(add_to_backup_list(backups,
-							tok)) return -1;
-					} while((tok=strtok(NULL, "\t\n")));
-				}
-			}
-			else
-			{
-				if(phase) *phase=*tok;
-			}
+			case CMD_DATAPTH:
+				free_w(path);
+				if(!(*path=strdup_w(tok+1, __func__)))
+					return -1;
+				break;
+			default:
+				if(cntr->ent[(uint8_t)tok[0]]
+				  && extract_ul(tok+1,
+					cntr->ent[(uint8_t)tok[0]]))
+						return -1;
+				break;
 		}
-		else if(t==x++) { extract_ul(tok,
-					&(cntr->total),
-					&(cntr->total_changed),
-					&(cntr->total_same),
-					&(cntr->total_deleted),
-					&(p1cntr->total)); }
-		else if(t==x++) { extract_ul(tok,
-					&(cntr->file),
-					&(cntr->file_changed),
-					&(cntr->file_same),
-					&(cntr->file_deleted),
-					&(p1cntr->file)); }
-		else if(t==x++) { extract_ul(tok,
-					&(cntr->enc),
-					&(cntr->enc_changed),
-					&(cntr->enc_same),
-					&(cntr->enc_deleted),
-					&(p1cntr->enc)); }
-		else if(t==x++) { extract_ul(tok,
-					&(cntr->meta),
-					&(cntr->meta_changed),
-					&(cntr->meta_same),
-					&(cntr->meta_deleted),
-					&(p1cntr->meta)); }
-		else if(t==x++) { extract_ul(tok,
-					&(cntr->encmeta),
-					&(cntr->encmeta_changed),
-					&(cntr->encmeta_same),
-					&(cntr->encmeta_deleted),
-					&(p1cntr->encmeta)); }
-		else if(t==x++) { extract_ul(tok,
-					&(cntr->dir),
-					&(cntr->dir_changed),
-					&(cntr->dir_same),
-					&(cntr->dir_deleted),
-					&(p1cntr->dir)); }
-		else if(t==x++) { extract_ul(tok,
-					&(cntr->slink),
-					&(cntr->slink_changed),
-					&(cntr->slink_same),
-					&(cntr->slink_deleted),
-					&(p1cntr->slink)); }
-		else if(t==x++) { extract_ul(tok,
-					&(cntr->hlink),
-					&(cntr->hlink_changed),
-					&(cntr->hlink_same),
-					&(cntr->hlink_deleted),
-					&(p1cntr->hlink)); }
-		else if(t==x++) { extract_ul(tok,
-					&(cntr->special),
-					&(cntr->special_changed),
-					&(cntr->special_same),
-					&(cntr->special_deleted),
-					&(p1cntr->special)); }
-		else if(cntr_version & (CNTR_VER_2_4)
-		  && t==x++) { extract_ul(tok,
-					&(cntr->vss),
-					&(cntr->vss_changed),
-					&(cntr->vss_same),
-					&(cntr->vss_deleted),
-					&(p1cntr->vss)); }
-		else if(cntr_version & (CNTR_VER_2_4)
-		  && t==x++) { extract_ul(tok,
-					&(cntr->encvss),
-					&(cntr->encvss_changed),
-					&(cntr->encvss_same),
-					&(cntr->encvss_deleted),
-					&(p1cntr->encvss)); }
-		else if(cntr_version & (CNTR_VER_2_4)
-		  && t==x++) { extract_ul(tok,
-					&(cntr->vss_t),
-					&(cntr->vss_t_changed),
-					&(cntr->vss_t_same),
-					&(cntr->vss_t_deleted),
-					&(p1cntr->vss_t)); }
-		else if(cntr_version & (CNTR_VER_2_4)
-		  && t==x++) { extract_ul(tok,
-					&(cntr->encvss_t),
-					&(cntr->encvss_t_changed),
-					&(cntr->encvss_t_same),
-					&(cntr->encvss_t_deleted),
-					&(p1cntr->encvss_t)); }
-		else if(t==x++) { extract_ul(tok,
-					&(cntr->gtotal),
-					&(cntr->gtotal_changed),
-					&(cntr->gtotal_same),
-					&(cntr->gtotal_deleted),
-					&(p1cntr->gtotal)); }
-		else if(t==x++) { cntr->warning=
-					strtoull(tok, NULL, 10); }
-		else if(t==x++) { p1cntr->byte=
-					strtoull(tok, NULL, 10); }
-		else if(t==x++) { cntr->byte=
-					strtoull(tok, NULL, 10); }
-		else if(t==x++) { cntr->recvbyte=
-					strtoull(tok, NULL, 10); }
-		else if(t==x++) { cntr->sentbyte=
-					strtoull(tok, NULL, 10); }
-		else if(t==x++) { p1cntr->start=atol(tok); }
-		else if(t==x++) { if(path && !(*path=strdup_w(tok, __func__)))
-		  { log_out_of_memory(__func__); return -1; } }
 	}
-*/
 	return 0;
 }
 
-int str_to_cntr(const char *str, struct cstat *cstat)
+int str_to_cntr(const char *str, struct cstat *cstat, char **path)
 {
 	int ret=-1;
 	char *tok=NULL;
@@ -914,7 +798,7 @@ int str_to_cntr(const char *str, struct cstat *cstat)
 		}
 		cstat->cntr->cstat_status=atoi(tmp);
 
-		if(extract_cntrs(cstat)) goto end;
+		if(extract_cntrs(cstat, path)) goto end;
 	}
 
 	ret=0;

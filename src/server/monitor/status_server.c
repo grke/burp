@@ -6,7 +6,8 @@ static int parse_parent_data(struct asfd *asfd, struct cstat *clist)
 	char *cp=NULL;
 	char *cname=NULL;
 	struct cstat *c=NULL;
-printf("got parent data: '%s'\n", asfd->rbuf->buf);
+	char *path=NULL;
+//printf("got parent data: '%s'\n", asfd->rbuf->buf);
 
 	// Extract the client name.
 	if(!(cp=strchr(asfd->rbuf->buf, '\t')))
@@ -21,15 +22,18 @@ printf("got parent data: '%s'\n", asfd->rbuf->buf);
 	{
 		if(!strcmp(c->name, cname))
 		{
-			printf("parse for client %s\n", c->name);
-			if(str_to_cntr(asfd->rbuf->buf, c))
+			//printf("parse for client %s\n", c->name);
+			if(str_to_cntr(asfd->rbuf->buf, c, &path))
 				goto end;
 		}
 	}
 
+// FIX THIS: Do something with path.
+
 	ret=0;
 end:
 	free_w(&cname);
+	free_w(&path);
 	return ret;
 }
 
@@ -74,7 +78,7 @@ static int parse_client_data(struct asfd *srfd,
 	const char *cp=NULL;
 	struct cstat *cstat=NULL;
         struct bu *bu=NULL;
-printf("got client data: '%s'\n", srfd->rbuf->buf);
+//printf("got client data: '%s'\n", srfd->rbuf->buf);
 
 	cp=srfd->rbuf->buf;
 	client=get_str(&cp, "c:", 0);

@@ -143,14 +143,33 @@ static int do_counters(struct cntr *cntr)
 	  || yajl_array_open_w()) return -1;
 	for(e=cntr->list; e; e=e->next)
 	{
-		if(yajl_map_open_w()) return -1;
-		if(yajl_gen_str_pair_w("name", e->field)) return -1;
-		if(yajl_gen_int_pair_w("count", e->count)) return -1;
-		if(yajl_gen_int_pair_w("changed", e->changed)) return -1;
-		if(yajl_gen_int_pair_w("same", e->same)) return -1;
-		if(yajl_gen_int_pair_w("deleted", e->deleted)) return -1;
-		if(yajl_gen_int_pair_w("phase1", e->phase1)) return -1;
-		if(yajl_map_close_w()) return -1;
+		if(e->flags & CNTR_SINGLE_FIELD)
+		{
+			if(!e->count) continue;
+			if(yajl_map_open_w()
+			  || yajl_gen_str_pair_w("name", e->field)
+			  || yajl_gen_int_pair_w("count", e->count)
+			  || yajl_map_close_w())
+				return -1;
+		}
+		else if(e->flags & CNTR_TABULATE)
+		{
+			if(!e->count
+			  && !e->changed
+			  && !e->same
+			  && !e->deleted
+			  && !e->phase1)
+				continue;
+			if(yajl_map_open_w()
+			  || yajl_gen_str_pair_w("name", e->field)
+			  || yajl_gen_int_pair_w("count", e->count)
+			  || yajl_gen_int_pair_w("changed", e->changed)
+			  || yajl_gen_int_pair_w("same", e->same)
+			  || yajl_gen_int_pair_w("deleted", e->deleted)
+			  || yajl_gen_int_pair_w("scanned", e->phase1)
+			  || yajl_map_close_w())
+				return -1;
+		}
 	}
 
   	if(yajl_array_close_w())

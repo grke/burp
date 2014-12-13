@@ -103,7 +103,7 @@ int cntr_init(struct cntr *cntr, const char *cname)
 		CMD_GRAND_TOTAL, "grand_total", "Grand total")
 	  || add_cntr_ent(cntr, 0,
 		CMD_TOTAL, "total", "Total")
-	  || add_cntr_ent(cntr, CNTR_TABULATE,
+	  || add_cntr_ent(cntr, CNTR_SINGLE_FIELD,
 		CMD_ERROR, "errors", "Errors")
 	  || add_cntr_ent(cntr, CNTR_TABULATE,
 		CMD_DATA, "blocks", "Blocks")

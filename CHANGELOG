@@ -1,3 +1,5 @@
+  * Replace c_rehash with a line of shell script, from Markus Heberling.
+
 2014-12-03 Changes in burp-1.4.28:
   * Help Mac compilation by removing calls to basename() in vss_strip.c and
     bedup.c.

@@ -186,7 +186,8 @@ if [ "$sign" = "yes" ]; then
     exit 0
   fi
   mv ${dir}/newcerts/${serial}.pem ${dir}/certs/${serial}.pem
-  c_rehash ${dir}/certs
+  #rehash the certificates
+  for file in ${dir}/certs/*.pem; do ln -s -f $file ${dir}/certs/`openssl x509 -hash -noout -in $file`.0; done
 fi
 
 #revoke

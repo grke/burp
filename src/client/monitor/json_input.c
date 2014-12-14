@@ -13,6 +13,7 @@ static uint16_t flags=0;
 static struct cstat *cnew=NULL;
 static struct cstat *current=NULL;
 static struct cstat **cslist=NULL;
+static struct cntr_ent *cntr_ent=NULL;
 static char lastkey[32]="";
 static int in_backups=0;
 static int in_flags=0;
@@ -37,6 +38,35 @@ static int input_integer(void *ctx, long long val)
 {
 	if(in_counters)
 	{
+		if(!strcmp(lastkey, "count"))
+		{
+			if(!cntr_ent) goto error;
+			cntr_ent->count=(unsigned long long)val;
+		}
+		else if(!strcmp(lastkey, "changed"))
+		{
+			if(!cntr_ent) goto error;
+			cntr_ent->changed=(unsigned long long)val;
+		}
+		else if(!strcmp(lastkey, "same"))
+		{
+			if(!cntr_ent) goto error;
+			cntr_ent->same=(unsigned long long)val;
+		}
+		else if(!strcmp(lastkey, "deleted"))
+		{
+			if(!cntr_ent) goto error;
+			cntr_ent->deleted=(unsigned long long)val;
+		}
+		else if(!strcmp(lastkey, "scanned"))
+		{
+			if(!cntr_ent) goto error;
+			cntr_ent->phase1=(unsigned long long)val;
+		}
+		else
+		{
+			goto error;
+		}
 		return 1;
 	}
 	else if(in_backups && !in_flags && !in_counters && !in_logslist)
@@ -58,7 +88,6 @@ static int input_integer(void *ctx, long long val)
 		}
 	}
 error:
-logp("in_counters: %d\n", in_counters);
 	logp("Unexpected integer: %s %llu\n", lastkey, val);
         return 0;
 }
@@ -70,9 +99,25 @@ static int input_string(void *ctx, const unsigned char *val, size_t len)
 		return 0;
 	snprintf(str, len+1, "%s", val);
 
-if(in_counters) return 1;
-
-	if(!strcmp(lastkey, "name"))
+	if(in_counters)
+	{
+		if(!strcmp(lastkey, "name"))
+		{
+			// Ignore 'name' in a counters object. We use 'type'
+			// instead.
+		}
+		else if(!strcmp(lastkey, "type"))
+		{
+			if(!current) goto error;
+			cntr_ent=current->cntr->ent[(uint8_t)*str];
+		}
+		else
+		{
+			goto error;
+		}
+		goto end;
+	}
+	else if(!strcmp(lastkey, "name"))
 	{
 		if(cnew) goto error;
 		if(!(current=cstat_get_by_name(*cslist, str)))
@@ -101,7 +146,7 @@ if(in_counters) return 1;
 		  || is_wrap(str, "manifest", BU_MANIFEST))
 			goto end;
 	}
-	else if(!strcmp(lastkey, "counters"))
+	else if(!strcmp(lastkey, "counters")) // Do we need this?
 	{
 		goto end;
 	}

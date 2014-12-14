@@ -138,6 +138,7 @@ end:
 
 static int do_counters(struct cntr *cntr)
 {
+	static char type[2];
 	struct cntr_ent *e;
 	if(yajl_gen_str_w("counters")
 	  || yajl_array_open_w()) return -1;
@@ -146,8 +147,10 @@ static int do_counters(struct cntr *cntr)
 		if(e->flags & CNTR_SINGLE_FIELD)
 		{
 			if(!e->count) continue;
+			snprintf(type, sizeof(type), "%c", e->cmd);
 			if(yajl_map_open_w()
 			  || yajl_gen_str_pair_w("name", e->field)
+			  || yajl_gen_str_pair_w("type", type)
 			  || yajl_gen_int_pair_w("count", e->count)
 			  || yajl_map_close_w())
 				return -1;
@@ -160,8 +163,10 @@ static int do_counters(struct cntr *cntr)
 			  && !e->deleted
 			  && !e->phase1)
 				continue;
+			snprintf(type, sizeof(type), "%c", e->cmd);
 			if(yajl_map_open_w()
 			  || yajl_gen_str_pair_w("name", e->field)
+			  || yajl_gen_str_pair_w("type", type)
 			  || yajl_gen_int_pair_w("count", e->count)
 			  || yajl_gen_int_pair_w("changed", e->changed)
 			  || yajl_gen_int_pair_w("same", e->same)

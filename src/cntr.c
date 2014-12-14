@@ -88,6 +88,8 @@ int cntr_init(struct cntr *cntr, const char *cname)
 	// comes out in the right order.
 	if(
 	     add_cntr_ent(cntr, CNTR_SINGLE_FIELD,
+		CMD_TIMESTAMP_END, "time_end", "End time")
+	  || add_cntr_ent(cntr, CNTR_SINGLE_FIELD,
 		CMD_TIMESTAMP, "time_start", "Start time")
 	  || add_cntr_ent(cntr, CNTR_SINGLE_FIELD,
 		CMD_BYTES_SENT, "bytes_sent", "Bytes sent")
@@ -475,6 +477,7 @@ void cntr_print(struct cntr *cntr, enum action act)
 	struct cntr_ent *e;
 	time_t now=time(NULL);
 	time_t start=(time_t)cntr->ent[(uint8_t)CMD_TIMESTAMP]->count;
+	cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count=(unsigned long long)now;
 
 	border();
 	logc("Start time: %s\n", getdatestr(start));
@@ -573,10 +576,11 @@ int cntr_stats_to_file(struct cntr *cntr,
 	int ret=-1;
 	FILE *fp;
 	char *path;
-	time_t now;
 	const char *fname=NULL;
 	struct cntr_ent *e;
 	time_t start=(time_t)cntr->ent[(uint8_t)CMD_TIMESTAMP]->count;
+	time_t now=time(NULL);
+	cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count=(unsigned long long)now;
 
 	if(act==ACTION_BACKUP
 	  ||  act==ACTION_BACKUP_TIMED)
@@ -588,8 +592,6 @@ int cntr_stats_to_file(struct cntr *cntr,
 	else
 		return 0;
 
-	now=time(NULL);
-
 	if(!(path=prepend_s(directory, fname))
 	  || !(fp=open_file(path, "wb")))
 		goto end;
@@ -599,7 +601,6 @@ int cntr_stats_to_file(struct cntr *cntr,
 		conf->peer_version?conf->peer_version:"");
 	fprintf(fp, "server_version:%s\n", VERSION);
 	fprintf(fp, "client_is_windows:%d\n", conf->client_is_windows);
-	fprintf(fp, "time_end:%lu\n", now);
 	fprintf(fp, "time_taken:%lu\n", now-start);
 	for(e=cntr->list; e; e=e->next)
 		quint_print_to_file(fp, e, act);
@@ -643,6 +644,8 @@ size_t cntr_to_str(struct cntr *cntr, const char *path)
 	static char tmp[CNTR_PATH_BUF_LEN+3]="";
 	struct cntr_ent *e=NULL;
 	char *str=cntr->str;
+
+	cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count=time(NULL);
 
 	snprintf(str, cntr->str_max_len-1, "%s\t%d\t%d\t",
 		cntr->cname, CNTR_VERSION, cntr->cstat_status);

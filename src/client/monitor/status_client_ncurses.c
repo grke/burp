@@ -459,6 +459,8 @@ static void client_and_status(struct sel *sel, int *x, int col)
 {
 	char msg[1024];
 	snprintf(msg, sizeof(msg), "Client: %s", sel->client->name);
+//		sel->client->cntr->ent[CMD_FILE]->phase1,
+//		sel->client->cntr->ent[CMD_FILE]->count);
 	print_line(msg, (*x)++, col);
 	snprintf(msg, sizeof(msg),
 		"Status: %s", cstat_status_to_str(sel->client));

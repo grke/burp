@@ -56,6 +56,7 @@
 #define CMD_BYTES		'O'
 #define CMD_BYTES_RECV		'P'
 #define CMD_BYTES_SENT		'Q'
+#define CMD_TIMESTAMP_END	'E'
 
 // Legacy stuff
 #define CMD_DATAPTH     't'     /* Path to data on the server */

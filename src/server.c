@@ -1744,9 +1744,7 @@ static int run_child(int *rfd, int *cfd, SSL_CTX *ctx, const char *configfile, i
 
 	if((ret=SSL_accept(ssl))<=0)
 	{
-		char buf[256]="";
-		ERR_error_string_n(ERR_get_error(), buf, sizeof(buf));
-		logp("SSL_accept: %s\n", buf);
+		logp_ssl_err("SSL_accept error\n");
 		ret=-1;
 		goto finish;
 	}

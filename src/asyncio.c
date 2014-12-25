@@ -128,7 +128,7 @@ static int do_read(int *read_blocked_on_write)
 		logp("Got SSL_ERROR_SYSCALL in read\n");
 		// Fall through to read problem
 	  default:
-		logp("SSL read problem: %d, errno=%d (%s)\n",
+		logp_ssl_err("SSL read problem: %d, errno=%d (%s)\n",
 			e, errno, strerror(errno));
 		truncate_buf(&readbuf, &readbuflen);
 		return -1;
@@ -204,8 +204,7 @@ static int do_write(int *write_blocked_on_read)
 		logp("Got SSL_ERROR_SYSCALL in write\n");
 		// Fall through to write problem
 	  default:
-		berr_exit("SSL write problem");
-		logp("SSL write problem: %d, errno=%d (%s)\n",
+		logp_ssl_err("SSL write problem: %d, errno=%d (%s)\n",
 			e, errno, strerror(errno));
 		return -1;
 	}

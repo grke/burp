@@ -39,34 +39,54 @@ void logp(const char *fmt, ...)
 	va_list ap;
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
-	pid=(int)getpid();
-	if(logfp) fprintf(logfp, "%s: %s[%d] %s", gettm(), prog, pid, buf);
-	else
-	{
-		if(do_syslog)
-			syslog(LOG_INFO, "%s", buf);
-		if(do_stdout)
-			fprintf(stdout, "%s: %s[%d] %s",
-				gettm(), prog, pid, buf);
-	}
 	va_end(ap);
+	pid=(int)getpid();
+	if(logfp)
+		fprintf(logfp, "%s: %s[%d] %s", gettm(), prog, pid, buf);
+	else if(do_syslog)
+		syslog(LOG_INFO, "%s", buf);
+	else if(do_stdout)
+		fprintf(stdout, "%s: %s[%d] %s",
+			gettm(), prog, pid, buf);
 }
 
-/* for the counters */
+// For the counters.
 void logc(const char *fmt, ...)
 {
 	char buf[512]="";
 	va_list ap;
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
-	if(logfp) fprintf(logfp, "%s", buf); // for the server side
-	else
-	{
-		if(do_progress_counter
-		  && do_stdout)
-			fprintf(stdout, "%s", buf);
-	}
 	va_end(ap);
+	if(logfp)
+		fprintf(logfp, "%s", buf); // for the server side
+	else if(do_progress_counter && do_stdout)
+		fprintf(stdout, "%s", buf);
+}
+
+void logp_ssl_err(const char *fmt, ...)
+{
+	char buf[512]="";
+	va_list ap;
+	va_start(ap, fmt);
+	vsnprintf(buf, sizeof(buf), fmt, ap);
+	va_end(ap);
+	logp("%s", buf);
+	if(logfp)
+		ERR_print_errors_fp(logfp);
+	else if(do_syslog)
+	{
+		// FIX THIS: How to send to syslog?
+		static BIO *bio_err=NULL;
+		if(!bio_err) bio_err=BIO_new_fp(stderr, BIO_NOCLOSE);
+		ERR_print_errors(bio_err);
+	}
+	else if(do_stdout)
+	{
+		static BIO *bio_err=NULL;
+		if(!bio_err) bio_err=BIO_new_fp(stdout, BIO_NOCLOSE);
+		ERR_print_errors(bio_err);
+	}
 }
 
 const char *progname(void)

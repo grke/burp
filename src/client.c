@@ -280,7 +280,6 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 	int resume=0;
 	SSL *ssl=NULL;
 	BIO *sbio=NULL;
-	char buf[256]="";
 	SSL_CTX *ctx=NULL;
 	struct cntr cntr;
 	struct cntr p1cntr;
@@ -320,16 +319,14 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 		if(!(ssl=SSL_new(ctx))
 		  || !(sbio=BIO_new_socket(rfd, BIO_NOCLOSE)))
 		{
-			ERR_error_string_n(ERR_get_error(), buf, sizeof(buf));
-			logp("Problem joining SSL to the socket: %s\n", buf);
+			logp_ssl_err("Problem joining SSL to the socket\n");
 			ret=-1;
 			goto end;
 		}
 		SSL_set_bio(ssl, sbio, sbio);
 		if(SSL_connect(ssl)<=0)
 		{
-			ERR_error_string_n(ERR_get_error(), buf, sizeof(buf));
-			logp("SSL connect error: %s\n", buf);
+			logp_ssl_err("SSL connect error\n");
 			ret=-1;
 			goto end;
 		}

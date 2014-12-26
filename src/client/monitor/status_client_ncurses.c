@@ -62,27 +62,26 @@ static int summary(struct cstat *cstat, int row, int col, struct conf *conf)
 		{
 			char f[64]="";
 			char b[64]="";
-			const char *s="";
 		  	unsigned long long p=0;
 			unsigned long long t=0;
 			struct cntr *cntr=cstat->cntr;
-			struct cntr_ent *ent_total=
-				cntr->ent[(uint8_t)CMD_TOTAL];
+			struct cntr_ent *ent_gtotal=
+				cntr->ent[(uint8_t)CMD_GRAND_TOTAL];
 
-			s=cstat_status_to_str(cstat);
-
-			t=ent_total->count+ent_total->same+ent_total->changed;
-			if(ent_total->phase1) p=(t*100)/ent_total->phase1;
+			t=ent_gtotal->count
+				+ent_gtotal->same
+				+ent_gtotal->changed;
+			if(ent_gtotal->phase1) p=(t*100)/ent_gtotal->phase1;
 			snprintf(f, sizeof(f), "%llu/%llu %llu%%",
-				t, ent_total->phase1, p);
+				t, ent_gtotal->phase1, p);
 			if(cntr->byte)
 				snprintf(b, sizeof(b), "%s",
 					bytes_to_human(cntr->byte));
-	// FIX THIS
-	//		snprintf(msg, sizeof(msg), fmt,
-	//			//cstat->status, s, f, b);
-	//			"xx", s, f, b);
-	//		break;
+			snprintf(msg, sizeof(msg), fmt,
+				cstat->name,
+				cstat_status_to_str(cstat),
+				f, b);
+			break;
 		}
 		case STATUS_IDLE:
 		case STATUS_SERVER_CRASHED:

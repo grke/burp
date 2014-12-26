@@ -288,13 +288,18 @@ static int json_send_client_end(struct asfd *asfd)
 }
 
 static int json_send_client_backup(struct asfd *asfd,
-	struct cstat *cstat, struct bu *bu, const char *logfile,
-	const char *browse, struct conf *conf)
+	struct cstat *cstat, struct bu *bu1, struct bu *bu2,
+	const char *logfile, const char *browse, struct conf *conf)
 {
 	int ret=-1;
 	if(json_send_client_start(asfd, cstat)) return -1;
-	ret=json_send_backup(asfd, cstat,
-		bu, 1 /* print flags */, logfile, browse, conf);
+	if((ret=json_send_backup(asfd, cstat,
+		bu1, 1 /* print flags */, logfile, browse, conf)))
+			goto end;
+	if((ret=json_send_backup(asfd, cstat,
+		bu2, 1 /* print flags */, logfile, browse, conf)))
+			goto end;
+end:
 	if(json_send_client_end(asfd)) ret=-1;
 	return ret;
 }
@@ -326,8 +331,8 @@ int json_send(struct asfd *asfd, struct cstat *clist, struct cstat *cstat,
 
 	if(cstat && bu)
 	{
-		if(json_send_client_backup(asfd, cstat, bu, logfile, browse,
-			conf)) goto end;
+		if(json_send_client_backup(asfd, cstat, bu, NULL,
+			logfile, browse, conf)) goto end;
 	}
 	else if(cstat)
 	{
@@ -336,7 +341,9 @@ int json_send(struct asfd *asfd, struct cstat *clist, struct cstat *cstat,
 	else for(c=clist; c; c=c->next)
 	{
 		if(!c->permitted) continue;
-		if(json_send_client_backup(asfd, c, bu_find_current(c->bu),
+		if(json_send_client_backup(asfd, c,
+			bu_find_current(c->bu),
+			bu_find_working_or_finishing(c->bu),
 			NULL, NULL, NULL))
 				goto end;
 	}

@@ -242,7 +242,10 @@ static int reload_from_clientdir(struct cstat **clist, struct conf *conf)
 
 printf("reload from clientdir\n");
 		bu_list_free(&c->bu);
-		if(bu_get_current(sdirs, &c->bu))
+// FIX THIS: should probably not load everything each time.
+//		if(bu_get_current(sdirs, &c->bu))
+//			goto error;
+		if(bu_get_list_with_working(sdirs, &c->bu))
 			goto error;
 	}
 	return 0;

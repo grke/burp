@@ -306,11 +306,12 @@ void cntr_add_phase1(struct cntr *c, char ch, int print)
 	static struct cntr_ent *total;
 	incr_phase1(c, ch);
 
-	if(!print) return;
 	total=c->ent[(uint8_t)CMD_GRAND_TOTAL];
-	if(!total->phase1) logc("\n");
+	++total->phase1;
+	if(!print) return;
+	if(total->phase1==1) logc("\n");
 	logc("%c", ch);
-	if(!((++total->phase1)%64))
+	if(!((total->phase1)%64))
 		print_end(total->phase1);
 	fflush(stdout);
 }

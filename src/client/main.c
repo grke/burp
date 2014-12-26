@@ -171,7 +171,6 @@ static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx,
 	enum action action, struct conf *conf)
 {
 	BIO *sbio=NULL;
-	char buf[256]="";
 	ssl_load_globals();
 	if(!(*ctx=ssl_initialise_ctx(conf)))
 	{
@@ -191,15 +190,13 @@ static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx,
 	if(!(*ssl=SSL_new(*ctx))
 	  || !(sbio=BIO_new_socket(*rfd, BIO_NOCLOSE)))
 	{
-		ERR_error_string_n(ERR_get_error(), buf, sizeof(buf));
-		logp("Problem joining SSL to the socket: %s\n", buf);
+		logp_ssl_err("Problem joining SSL to the socket\n");
 		return -1;
 	}
 	SSL_set_bio(*ssl, sbio, sbio);
 	if(SSL_connect(*ssl)<=0)
 	{
-		ERR_error_string_n(ERR_get_error(), buf, sizeof(buf));
-		logp("SSL connect error: %s\n", buf);
+		logp_ssl_err("SSL connect error\n");
 		return -1;
 	}
 	return 0;

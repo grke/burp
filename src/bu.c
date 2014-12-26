@@ -46,11 +46,29 @@ void bu_list_free(struct bu **bu_list)
 	*bu_list=NULL;
 }
 
-struct bu *bu_find_current(struct bu *bu)
+static struct bu *bu_find(struct bu *bu, uint16_t flag)
 {
 	struct bu *cbu=NULL;
-        for(cbu=bu; cbu; cbu=cbu->prev)
-                if(cbu->flags & BU_CURRENT)
-                        break;
+	if(!bu) return NULL;
+	if(bu->flags & flag) return bu;
+	// Search in both directions.
+	if(bu->next)
+		for(cbu=bu; cbu; cbu=cbu->next)
+			if(cbu->flags & flag) return cbu;
+	if(bu->prev)
+		for(cbu=bu; cbu; cbu=cbu->prev)
+			if(cbu->flags & flag) return cbu;
 	return cbu;
+}
+
+struct bu *bu_find_current(struct bu *bu)
+{
+	return bu_find(bu, BU_CURRENT);
+}
+
+struct bu *bu_find_working_or_finishing(struct bu *bu)
+{
+	struct bu *cbu=NULL;
+	if((cbu=bu_find(bu, BU_WORKING))) return cbu;
+	return bu_find(bu, BU_FINISHING);
 }

@@ -200,7 +200,8 @@ static int asfd_do_read_ssl(struct asfd *asfd)
 				asfd->desc);
 			// Fall through to read problem
 		default:
-			logp("%s: SSL read problem in %s: %d - %d=%s\n",
+			logp_ssl_err(
+				"%s: SSL read problem in %s: %d - %d=%s\n",
 				asfd->desc, __func__,
 				e, errno, strerror(errno));
 			goto error;
@@ -318,7 +319,8 @@ printf("wrote %d: %s\n", w, buf);
 				asfd->desc);
 			// Fall through to read problem
 		default:
-			logp("%s: SSL write problem in %s: %d - %d=%s\n",
+			logp_ssl_err(
+				"%s: SSL write problem in %s: %d - %d=%s\n",
 				asfd->desc, __func__,
 				e, errno, strerror(errno));
 			return -1;

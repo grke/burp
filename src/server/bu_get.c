@@ -82,6 +82,8 @@ static int maybe_add_ent(const char *dir, const char *d_name,
 		have_backup_file_name(bu, "backup_stats", BU_STATS_BACKUP);
 		have_backup_file_name(bu, "restore_stats", BU_STATS_RESTORE);
 		have_backup_file_name(bu, "verify_stats", BU_STATS_VERIFY);
+		// Hack to include option for live counters.
+		bu->flags|=BU_STATS_BACKUP;
 	}
 
 	return 0;

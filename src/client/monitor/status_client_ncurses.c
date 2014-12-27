@@ -14,6 +14,10 @@ static enum action actg=ACTION_STATUS;
 
 static FILE *lfp=NULL;
 
+// For switching between seeing 'last backup' and counter summary on the front
+// screen.
+static uint8_t toggle=0;
+
 static void print_line(const char *string, int row, int col)
 {
 	int k=0;
@@ -59,30 +63,33 @@ static int summary(struct cstat *cstat, int row, int col, struct conf *conf)
 	switch(cstat->status)
 	{
 		case STATUS_RUNNING:
-		{
-			char f[64]="";
-			char b[64]="";
-		  	unsigned long long p=0;
-			unsigned long long t=0;
-			struct cntr *cntr=cstat->cntr;
-			struct cntr_ent *ent_gtotal=
-				cntr->ent[(uint8_t)CMD_GRAND_TOTAL];
+			if(toggle)
+			{
+				char f[64]="";
+				char b[64]="";
+				unsigned long long p=0;
+				unsigned long long t=0;
+				struct cntr *cntr=cstat->cntr;
+				struct cntr_ent *ent_gtotal=
+					cntr->ent[(uint8_t)CMD_GRAND_TOTAL];
 
-			t=ent_gtotal->count
-				+ent_gtotal->same
-				+ent_gtotal->changed;
-			if(ent_gtotal->phase1) p=(t*100)/ent_gtotal->phase1;
-			snprintf(f, sizeof(f), "%llu/%llu %llu%%",
-				t, ent_gtotal->phase1, p);
-			if(cntr->byte)
-				snprintf(b, sizeof(b), "%s",
-					bytes_to_human(cntr->byte));
-			snprintf(msg, sizeof(msg), fmt,
-				cstat->name,
-				cstat_status_to_str(cstat),
-				f, b);
-			break;
-		}
+				t=ent_gtotal->count
+					+ent_gtotal->same
+					+ent_gtotal->changed;
+				if(ent_gtotal->phase1)
+					p=(t*100)/ent_gtotal->phase1;
+				snprintf(f, sizeof(f), " %llu/%llu %llu%%",
+					t, ent_gtotal->phase1, p);
+				if(cntr->byte)
+					snprintf(b, sizeof(b), "%s",
+						bytes_to_human(cntr->byte));
+				snprintf(msg, sizeof(msg), fmt,
+					cstat->name,
+					cstat_status_to_str(cstat),
+					f, b);
+				break;
+			}
+			// Else fall through.
 		case STATUS_IDLE:
 		case STATUS_SERVER_CRASHED:
 		case STATUS_CLIENT_CRASHED:
@@ -104,7 +111,6 @@ static int summary(struct cstat *cstat, int row, int col, struct conf *conf)
 }
 
 /* for the counters */
-/*
 static void to_msg(char msg[], size_t s, const char *fmt, ...)
 {
 	va_list ap;
@@ -112,22 +118,20 @@ static void to_msg(char msg[], size_t s, const char *fmt, ...)
 	vsnprintf(msg, s, fmt, ap);
 	va_end(ap);
 }
-*/
 
-/*
-static void print_detail(char phase,
-	const char *field,
+static void print_cntr_ent(const char *field,
 	unsigned long long a,
 	unsigned long long b,
 	unsigned long long c,
 	unsigned long long d,
 	unsigned long long e,
-	int *x, int col, int percent)
+	int *x, int col)
 {
 	char msg[256]="";
 	unsigned long long t=a+b+c;
 	if(!field || (!t && !d && !e)) return;
 
+/* FIX THIS.
 	if(phase==STATUS_RESTORING
 	  || phase==STATUS_VERIFYING)
 	{
@@ -137,11 +141,13 @@ static void print_detail(char phase,
 	}
 	else
 	{
+*/
 		to_msg(msg, sizeof(msg),
 			"% 15s % 9llu % 9llu % 9llu % 9llu % 9llu % 9llu",
 			field, a, b, c, d, t, e);
-	}
+//	}
 	print_line(msg, (*x)++, col);
+/* FIX THIS
 	if(percent && e)
 	{
 	  unsigned long long p;
@@ -156,15 +162,15 @@ static void print_detail(char phase,
 	  {
 	    to_msg(msg, sizeof(msg), "% 15s % 9s % 9s % 9s % 9s % 9llu%% % 9s",
 		"", "", "", "", "", p, "");
-	  }
 	  print_line(msg, (*x)++, col);
 	}
-}
 */
-/*
-static void table_header(char phase, int *x, int col)
+}
+
+static void table_header(int *x, int col)
 {
 	char msg[256]="";
+/* FIX THIS
 	if(phase==STATUS_RESTORING
 	  || phase==STATUS_VERIFYING)
 	{
@@ -173,12 +179,12 @@ static void table_header(char phase, int *x, int col)
 	}
 	else
 	{
+*/
 	  to_msg(msg, sizeof(msg), "% 15s % 9s % 9s % 9s % 9s % 9s % 9s",
 	    "", "New", "Changed", "Unchanged", "Deleted", "Total", "Scanned");
-	}
+//	}
 	print_line(msg, (*x)++, col);
 }
-*/
 
 /*
 static void print_detail2(const char *field, unsigned long long value1, const char *value2, int *x, int col)
@@ -202,45 +208,6 @@ static void detail(const char *cntrclient, char status, char phase, const char *
 {
 	int x=0;
 	char msg[1024]="";
-	//const char *tmp=NULL;
-	if(cntrclient)
-	{
-		snprintf(msg, sizeof(msg), "Client: %s", cntrclient);
-		print_line(msg, x++, col);
-	}
-	switch(status)
-	{
-		case STATUS_IDLE:
-		{
-			print_line("Status: idle", x++, col);
-			show_all_backups(backups, &x, col);
-			return;
-		}
-		case STATUS_SERVER_CRASHED:
-		{
-			print_line("Status: server crashed", x++, col);
-			show_all_backups(backups, &x, col);
-			return;
-		}
-		case STATUS_CLIENT_CRASHED:
-		{
-			print_line("Status: client crashed", x++, col);
-			show_all_backups(backups, &x, col);
-			return;
-		}
-		case STATUS_RUNNING:
-		{
-			if(phase)
-			{
-				char msg[64]="";
-				snprintf(msg, sizeof(msg),
-					"Status: running (%s)",
-					cstat_to_str(phase));
-				print_line(msg, x++, col);
-			}
-			break;
-		}
-	}
 	print_line("", x++, col);
 	table_header(phase, &x, col);
 
@@ -595,6 +562,58 @@ static void update_screen_backups(struct sel *sel, int *x, int col,
 	if(!star_printed) sel->backup=sel->client->bu;
 }
 
+static void update_screen_live_counter_table(struct cntr_ent *e,
+	int *x, int col)
+{
+	if(!(e->flags & CNTR_TABULATE)) return;
+	print_cntr_ent(e->label,
+		e->count,
+		e->changed,
+		e->same,
+		e->deleted,
+		e->phase1,
+		x, col);
+}
+
+static void update_screen_live_counter_single(struct cntr_ent *e,
+	int *x, int col)
+{
+	char msg[128]="";
+	if(!(e->flags & CNTR_SINGLE_FIELD)) return;
+	if(!e->count) return;
+	if(e->cmd==CMD_TIMESTAMP) return;
+	if(e->cmd==CMD_TIMESTAMP_END) return;
+	snprintf(msg, sizeof(msg), "%s: %llu", e->label, e->count);
+	print_line(msg, (*x)++, col);
+}
+
+static void update_screen_live_counters(struct cstat *client, int *x, int col)
+{
+	char msg[128]="";
+	struct cntr_ent *e;
+	struct cntr *cntr=client->cntr;
+	time_t start=(time_t)cntr->ent[(uint8_t)CMD_TIMESTAMP]->count;
+	time_t end=(time_t)cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count;
+	struct cntr_ent *gtotal=cntr->ent[(uint8_t)CMD_GRAND_TOTAL];
+
+	print_line("", (*x)++, col);
+	snprintf(msg, sizeof(msg), "Start time: %s", getdatestr(start));
+	print_line(msg, (*x)++, col);
+	snprintf(msg, sizeof(msg), "End time: %s", getdatestr(end));
+	print_line(msg, (*x)++, col);
+	snprintf(msg, sizeof(msg), "Time taken: %s", time_taken(end-start));
+	print_line(msg, (*x)++, col);
+	table_header(x, col);
+	for(e=client->cntr->list; e; e=e->next)
+		update_screen_live_counter_table(e, x, col);
+	for(e=client->cntr->list; e; e=e->next)
+		update_screen_live_counter_single(e, x, col);
+	print_line("", (*x)++, col);
+	snprintf(msg, sizeof(msg), "Percentage complete: %llu%%",
+	  ((gtotal->count+gtotal->same+gtotal->changed)*100)/gtotal->phase1);
+	print_line(msg, (*x)++, col);
+}
+
 static void update_screen_view_log(struct sel *sel, int *x, int col,
 	int winmin, int winmax)
 {
@@ -603,6 +622,12 @@ static void update_screen_view_log(struct sel *sel, int *x, int col,
 	struct lline *l;
 	const char *cp=NULL;
 	int star_printed=0;
+
+	if(sel->client
+	  && sel->backup
+	  && (sel->backup->flags & (BU_WORKING|BU_FINISHING)))
+		return update_screen_live_counters(sel->client, x, col);
+
 	for(l=sel->llines; l; l=l->next)
 	{
 		s++;
@@ -766,7 +791,23 @@ static int request_status(struct asfd *asfd,
 			else if(sel->logop & BU_MANIFEST)
 				lname="manifest";
 			else if(sel->logop & BU_STATS_BACKUP)
-				lname="backup_stats";
+			{
+			// Hack so that it does not request the logs for live
+			// counters.
+				if(!sel->backup) break;
+				if(sel->backup->flags
+				 & (BU_WORKING|BU_FINISHING))
+				{
+					// Make sure a request is sent, so that
+					// the counters update.
+					snprintf(buf, sizeof(buf),
+						"c:%s:b:%lu\n",
+						client, sel->backup->bno);
+					break;
+				}
+				else
+					lname="backup_stats";
+			}
 			else if(sel->logop & BU_STATS_RESTORE)
 				lname="restore_stats";
 			else if(sel->logop & BU_STATS_VERIFY)
@@ -1060,6 +1101,11 @@ static int parse_stdin_data(struct asfd *asfd, struct sel *sel, int count)
 		case 'q':
 		case 'Q':
 			return 1;
+		case 't':
+		case 'T':
+			if(toggle) toggle=0;
+			else toggle=1;
+			break;
 		case KEY_UP:
 		case 'k':
 		case 'K':

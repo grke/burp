@@ -60,9 +60,9 @@ static int summary(struct cstat *cstat, int row, int col, struct conf *conf)
 	// Find the current backup.
 	cbu=bu_find_current(cstat->bu);
 
-	switch(cstat->status)
+	switch(cstat->run_status)
 	{
-		case STATUS_RUNNING:
+		case RUN_STATUS_RUNNING:
 			if(toggle)
 			{
 				char f[64]="";
@@ -85,18 +85,18 @@ static int summary(struct cstat *cstat, int row, int col, struct conf *conf)
 						bytes_to_human(cntr->byte));
 				snprintf(msg, sizeof(msg), fmt,
 					cstat->name,
-					cstat_status_to_str(cstat),
+					run_status_to_str(cstat),
 					f, b);
 				break;
 			}
 			// Else fall through.
-		case STATUS_IDLE:
-		case STATUS_SERVER_CRASHED:
-		case STATUS_CLIENT_CRASHED:
+		case RUN_STATUS_IDLE:
+		case RUN_STATUS_SERVER_CRASHED:
+		case RUN_STATUS_CLIENT_CRASHED:
 		default:
 			snprintf(msg, sizeof(msg), fmt,
 				cstat->name,
-				cstat_status_to_str(cstat),
+				run_status_to_str(cstat),
 				" last backup: ",
 				get_bu_str(cbu));
 			break;
@@ -434,7 +434,7 @@ static void client_and_status(struct sel *sel, int *x, int col)
 //		sel->client->cntr->ent[CMD_FILE]->count);
 	print_line(msg, (*x)++, col);
 	snprintf(msg, sizeof(msg),
-		"Status: %s", cstat_status_to_str(sel->client));
+		"Status: %s", run_status_to_str(sel->client));
 	print_line(msg, (*x)++, col);
 }
 

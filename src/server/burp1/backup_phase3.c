@@ -50,13 +50,15 @@ int backup_phase3_server_burp1(struct sdirs *sdirs,
 
 		if(ucb->path.buf && !chb->path.buf)
 		{
-			if(write_status(STATUS_MERGING, ucb->path.buf, cconf)
+			if(write_status(CNTR_STATUS_MERGING,
+				ucb->path.buf, cconf)
 			  || sbufl_to_manifest(ucb, mp, mzp)) goto end;
 			sbuf_free_content(ucb);
 		}
 		else if(!ucb->path.buf && chb->path.buf)
 		{
-			if(write_status(STATUS_MERGING, chb->path.buf, cconf)
+			if(write_status(CNTR_STATUS_MERGING,
+				chb->path.buf, cconf)
 			  || sbufl_to_manifest(chb, mp, mzp)) goto end;
 			sbuf_free_content(chb);
 		}
@@ -67,20 +69,23 @@ int backup_phase3_server_burp1(struct sdirs *sdirs,
 		else if(!(pcmp=sbuf_pathcmp(ucb, chb)))
 		{
 			// They were the same - write one and free both.
-			if(write_status(STATUS_MERGING, chb->path.buf, cconf)
+			if(write_status(CNTR_STATUS_MERGING,
+				chb->path.buf, cconf)
 			  || sbufl_to_manifest(chb, mp, mzp)) goto end;
 			sbuf_free_content(ucb);
 			sbuf_free_content(chb);
 		}
 		else if(pcmp<0)
 		{
-			if(write_status(STATUS_MERGING, ucb->path.buf, cconf)
+			if(write_status(CNTR_STATUS_MERGING,
+				ucb->path.buf, cconf)
 			  || sbufl_to_manifest(ucb, mp, mzp)) goto end;
 			sbuf_free_content(ucb);
 		}
 		else
 		{
-			if(write_status(STATUS_MERGING, chb->path.buf, cconf)
+			if(write_status(CNTR_STATUS_MERGING,
+				chb->path.buf, cconf)
 			  || sbufl_to_manifest(chb, mp, mzp)) goto end;
 			sbuf_free_content(chb);
 		}

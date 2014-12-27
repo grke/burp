@@ -62,7 +62,7 @@ int recursive_hardlink(const char *src, const char *dst, struct conf *conf)
 		else
 		{
 			//logp("hardlinking %s to %s\n", fullpathb, fullpatha);
-			if(write_status(STATUS_SHUFFLING, fullpathb, conf)
+			if(write_status(CNTR_STATUS_SHUFFLING, fullpathb, conf)
 			  || do_link(fullpatha, fullpathb, &statp, conf,
 				0 /* do not overwrite target */))
 				break;

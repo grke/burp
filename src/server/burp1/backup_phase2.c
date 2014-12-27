@@ -796,7 +796,7 @@ int backup_phase2_server_burp1(struct async *as, struct sdirs *sdirs,
 		//	*cmanfp?"got cmanfp":"no cmanfp",
 		//	rb->path.buf?:"no rb->path",
 	 	//	rb->path.buf?'X':rb->path.cmd);
-		if(write_status(STATUS_BACKUP,
+		if(write_status(CNTR_STATUS_BACKUP,
 			rb->path.buf?rb->path.buf:p1b->path.buf, cconf))
 				goto error;
 		if(last_requested || !p1zp || asfd->writebuflen)

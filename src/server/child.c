@@ -2,7 +2,7 @@
 
 static struct asfd *wasfd=NULL;
 
-int write_status(enum cstat_status cstat_status,
+int write_status(enum cntr_status cntr_status,
 	const char *path, struct conf *conf)
 {
 	time_t now=0;
@@ -33,7 +33,7 @@ int write_status(enum cstat_status cstat_status,
 	// one.
 	if(!l)
 	{
-		conf->cntr->cstat_status=cstat_status;
+		conf->cntr->cntr_status=cntr_status;
 		if(!(l=cntr_to_str(conf->cntr, path))) goto error;
 		if(!wbuf && !(wbuf=iobuf_alloc())) goto error;
 		iobuf_set(wbuf, CMD_APPEND, conf->cntr->str, l);

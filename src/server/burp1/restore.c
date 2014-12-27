@@ -370,10 +370,10 @@ static int restore_file(struct asfd *asfd, struct bu *bu,
 
 static int restore_sbufl(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 	enum action act, struct sdirs *sdirs,
-	enum cstat_status status, struct conf *cconf)
+	enum cntr_status cntr_status, struct conf *cconf)
 {
 	//printf("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path.buf);
-	if(write_status(status, sb->path.buf, cconf)) return -1;
+	if(write_status(cntr_status, sb->path.buf, cconf)) return -1;
 	
 	if((sb->burp1->datapth.buf && asfd->write(asfd, &(sb->burp1->datapth)))
 	  || asfd->write(asfd, &sb->attr))
@@ -405,7 +405,7 @@ static int restore_sbufl(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 static int restore_ent(struct asfd *asfd, struct sbuf **sb,
 	struct sbuf ***sblist, int *scount, struct bu *bu,
 	enum action act, struct sdirs *sdirs,
-	enum cstat_status status, struct conf *cconf)
+	enum cntr_status cntr_status, struct conf *cconf)
 {
 	int s=0;
 	int ret=-1;
@@ -425,7 +425,7 @@ static int restore_ent(struct asfd *asfd, struct sbuf **sb,
 			// Can now restore sblist[s] because nothing else is
 			// fiddling in a subdirectory.
 			if(restore_sbufl(asfd, (*sblist)[s], bu,
-				act, sdirs, status, cconf))
+				act, sdirs, cntr_status, cconf))
 					goto end;
 			else if(del_from_sbufl_arr(sblist, scount))
 				goto end;
@@ -444,7 +444,7 @@ static int restore_ent(struct asfd *asfd, struct sbuf **sb,
 		if(!(*sb=sbuf_alloc(cconf)))
 			goto end;
 	}
-	else if(restore_sbufl(asfd, *sb, bu, act, sdirs, status, cconf))
+	else if(restore_sbufl(asfd, *sb, bu, act, sdirs, cntr_status, cconf))
 		goto end;
 	ret=0;
 end:
@@ -453,7 +453,7 @@ end:
 
 int restore_burp1(struct asfd *asfd, struct bu *bu,
 	const char *manifest, regex_t *regex, int srestore,
-	enum action act, struct sdirs *sdirs, enum cstat_status status,
+	enum action act, struct sdirs *sdirs, enum cntr_status cntr_status,
 	struct conf *cconf)
 {
 	int s=0;
@@ -517,7 +517,7 @@ int restore_burp1(struct asfd *asfd, struct bu *bu,
 			    || check_srestore(cconf, sb->path.buf))
 			  && check_regex(regex, sb->path.buf)
 			  && restore_ent(asfd, &sb, &sblist, &scount,
-				bu, act, sdirs, status, cconf))
+				bu, act, sdirs, cntr_status, cconf))
 					goto end;
 		}
 		sbuf_free_content(sb);
@@ -526,7 +526,7 @@ int restore_burp1(struct asfd *asfd, struct bu *bu,
 	for(s=scount-1; s>=0; s--)
 	{
 		if(restore_sbufl(asfd, sblist[s], bu,
-			act, sdirs, status, cconf))
+			act, sdirs, cntr_status, cconf))
 				goto end;
 	}
 

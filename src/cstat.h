@@ -3,36 +3,19 @@
 
 #include "include.h"
 
-#define STATUS_STR_IDLE			"idle"
-#define STATUS_STR_CLIENT_CRASHED	"c crashed"
-#define STATUS_STR_SERVER_CRASHED	"s crashed"
-#define STATUS_STR_RUNNING		"running"
-#define STATUS_STR_SCANNING		"scanning"
-#define STATUS_STR_BACKUP		"backup"
-#define STATUS_STR_MERGING		"merging"
-#define STATUS_STR_SHUFFLING		"shuffling"
-#define STATUS_STR_LISTING		"listing"
-#define STATUS_STR_RESTORING		"restoring"
-#define STATUS_STR_VERIFYING		"verifying"
-#define STATUS_STR_DELETING		"deleting"
+#define RUN_STATUS_STR_IDLE		"idle"
+#define RUN_STATUS_STR_CLIENT_CRASHED	"c crashed"
+#define RUN_STATUS_STR_SERVER_CRASHED	"s crashed"
+#define RUN_STATUS_STR_RUNNING		"running"
 
-enum cstat_status
+enum run_status
 {
-	STATUS_UNSET=0,
+	RUN_STATUS_UNSET=0,
 
-	STATUS_IDLE,
-	STATUS_RUNNING,
-	STATUS_CLIENT_CRASHED,
-	STATUS_SERVER_CRASHED,
-
-	STATUS_SCANNING,
-	STATUS_BACKUP,
-	STATUS_MERGING,
-	STATUS_SHUFFLING,
-	STATUS_LISTING,
-	STATUS_RESTORING,
-	STATUS_VERIFYING,
-	STATUS_DELETING
+	RUN_STATUS_IDLE,
+	RUN_STATUS_RUNNING,
+	RUN_STATUS_CLIENT_CRASHED,
+	RUN_STATUS_SERVER_CRASHED
 };
 
 struct cstat
@@ -41,7 +24,7 @@ struct cstat
 	char *conffile;
 	time_t conf_mtime;
 	struct cntr *cntr; // Set from the parent process.
-	enum cstat_status status;
+	enum run_status run_status;
 	// From the perspective of the server child, whether the connected
 	// client is allowed to view this client.
 	uint8_t permitted;
@@ -66,8 +49,8 @@ extern int cstat_init(struct cstat *cstat,
 extern void cstat_free(struct cstat **cstat);
 extern int cstat_add_to_list(struct cstat **clist, struct cstat *cnew);
 
-extern const char *cstat_status_to_str(struct cstat *cstat);
-extern cstat_status cstat_str_to_status(const char *str);
+extern const char *run_status_to_str(struct cstat *cstat);
+extern run_status run_str_to_status(const char *str);
 
 extern struct cstat *cstat_get_by_name(struct cstat *clist, const char *name);
 

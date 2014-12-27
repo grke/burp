@@ -129,10 +129,16 @@ static int input_string(void *ctx, const unsigned char *val, size_t len)
 		}
 		goto end;
 	}
-	else if(!strcmp(lastkey, "status"))
+	else if(!strcmp(lastkey, "run_status"))
 	{
 		if(!current) goto error;
-		current->status=cstat_str_to_status(str);
+		current->run_status=run_str_to_status(str);
+		goto end;
+	}
+	else if(!strcmp(lastkey, "phase"))
+	{
+		if(!current) goto error;
+		current->cntr->cntr_status=cntr_str_to_status(str);
 		goto end;
 	}
 	else if(!strcmp(lastkey, "flags"))

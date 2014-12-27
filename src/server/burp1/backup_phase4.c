@@ -618,7 +618,7 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct fdirs *fdirs,
 		}
 		if(sb->burp1->datapth.buf)
 		{
-			if(write_status(STATUS_SHUFFLING,
+			if(write_status(CNTR_STATUS_SHUFFLING,
 				sb->burp1->datapth.buf, cconf)
 			  || jiggle(sdirs, fdirs, sb, hardlinked_current,
 				deltabdir, deltafdir,
@@ -682,7 +682,7 @@ int backup_phase4_server_burp1(struct sdirs *sdirs, struct conf *cconf)
 
 	logp("Begin phase4 (shuffle files)\n");
 
-	if(write_status(STATUS_SHUFFLING, NULL, cconf))
+	if(write_status(CNTR_STATUS_SHUFFLING, NULL, cconf))
 		goto end;
 
 	if(!lstat(sdirs->current, &statp)) // Had a previous backup.
@@ -766,8 +766,9 @@ int backup_phase4_server_burp1(struct sdirs *sdirs, struct conf *cconf)
 		goto end;
 	}
 
-	if(write_status(STATUS_SHUFFLING, "deleting temporary files", cconf))
-		goto end;
+	if(write_status(CNTR_STATUS_SHUFFLING,
+		"deleting temporary files", cconf))
+			goto end;
 
 	// Remove the temporary data directory, we have now removed
 	// everything useful from it.

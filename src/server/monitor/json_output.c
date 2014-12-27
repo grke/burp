@@ -140,6 +140,7 @@ static int do_counters(struct cntr *cntr)
 {
 	static char type[2];
 	struct cntr_ent *e;
+
 	cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count
 		=(unsigned long long)time(NULL);
 	if(yajl_gen_str_w("counters")
@@ -268,12 +269,18 @@ static int json_send_backup(struct asfd *asfd, struct cstat *cstat,
 
 static int json_send_client_start(struct asfd *asfd, struct cstat *cstat)
 {
-	const char *status=cstat_status_to_str(cstat);
+	const char *run_status=run_status_to_str(cstat);
 
 	if(yajl_map_open_w()
 	  || yajl_gen_str_pair_w("name", cstat->name)
-	  || yajl_gen_str_pair_w("status", status)
-	  || yajl_gen_str_w("backups")
+	  || yajl_gen_str_pair_w("run_status", run_status))
+		return -1;
+	if(cstat->run_status==RUN_STATUS_RUNNING)
+	{
+		if(yajl_gen_str_pair_w("phase",
+			cntr_status_to_str(cstat->cntr))) return -1;
+	}
+	if(yajl_gen_str_w("backups")
 	  || yajl_array_open_w())
 		return -1;
 	return 0;

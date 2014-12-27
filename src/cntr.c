@@ -649,7 +649,7 @@ size_t cntr_to_str(struct cntr *cntr, const char *path)
 	cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count=time(NULL);
 
 	snprintf(str, cntr->str_max_len-1, "%s\t%d\t%d\t",
-		cntr->cname, CNTR_VERSION, cntr->cstat_status);
+		cntr->cname, CNTR_VERSION, cntr->cntr_status);
 
 	for(e=cntr->list; e; e=e->next)
 	{
@@ -800,7 +800,7 @@ int str_to_cntr(const char *str, struct cstat *cstat, char **path)
 				__func__);
 			goto end;
 		}
-		cstat->cntr->cstat_status=atoi(tmp);
+		cstat->cntr->cntr_status=(enum cntr_status)atoi(tmp);
 
 		if(extract_cntrs(cstat, path)) goto end;
 	}
@@ -842,4 +842,44 @@ static enum asl_ret cntr_recv_func(struct asfd *asfd,
 int cntr_recv(struct asfd *asfd, struct conf *conf)
 {
 	return asfd->simple_loop(asfd, conf, NULL, __func__, cntr_recv_func);
+}
+
+const char *cntr_status_to_str(struct cntr *cntr)
+{
+	switch(cntr->cntr_status)
+	{
+		case CNTR_STATUS_SCANNING: return CNTR_STATUS_STR_SCANNING;
+		case CNTR_STATUS_BACKUP: return CNTR_STATUS_STR_BACKUP;
+		case CNTR_STATUS_MERGING: return CNTR_STATUS_STR_MERGING;
+		case CNTR_STATUS_SHUFFLING: return CNTR_STATUS_STR_SHUFFLING;
+		case CNTR_STATUS_LISTING: return CNTR_STATUS_STR_LISTING;
+		case CNTR_STATUS_RESTORING: return CNTR_STATUS_STR_RESTORING;
+		case CNTR_STATUS_VERIFYING: return CNTR_STATUS_STR_VERIFYING;
+		case CNTR_STATUS_DELETING: return CNTR_STATUS_STR_DELETING;
+		case CNTR_STATUS_DIFFING: return CNTR_STATUS_STR_DIFFING;
+		default: return "unknown";
+	}
+}
+
+enum cntr_status cntr_str_to_status(const char *str)
+{
+	if(!strcmp(str, CNTR_STATUS_STR_SCANNING))
+		return CNTR_STATUS_SCANNING;
+	else if(!strcmp(str, CNTR_STATUS_STR_BACKUP))
+		return CNTR_STATUS_BACKUP;
+	else if(!strcmp(str, CNTR_STATUS_STR_MERGING))
+		return CNTR_STATUS_MERGING;
+	else if(!strcmp(str, CNTR_STATUS_STR_SHUFFLING))
+		return CNTR_STATUS_SHUFFLING;
+	else if(!strcmp(str, CNTR_STATUS_STR_LISTING))
+		return CNTR_STATUS_LISTING;
+	else if(!strcmp(str, CNTR_STATUS_STR_RESTORING))
+		return CNTR_STATUS_RESTORING;
+	else if(!strcmp(str, CNTR_STATUS_STR_VERIFYING))
+		return CNTR_STATUS_VERIFYING;
+	else if(!strcmp(str, CNTR_STATUS_STR_DELETING))
+		return CNTR_STATUS_DELETING;
+	else if(!strcmp(str, CNTR_STATUS_STR_DIFFING))
+		return CNTR_STATUS_DIFFING;
+	return CNTR_STATUS_UNSET;
 }

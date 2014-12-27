@@ -101,10 +101,10 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 	char *logpath=NULL;
 	char *logpathz=NULL;
 	// For sending status information up to the server.
-	enum cstat_status status=STATUS_RESTORING;
+	enum cntr_status cntr_status=CNTR_STATUS_RESTORING;
 
-	if(act==ACTION_RESTORE) status=STATUS_RESTORING;
-	else if(act==ACTION_VERIFY) status=STATUS_VERIFYING;
+	if(act==ACTION_RESTORE) cntr_status=CNTR_STATUS_RESTORING;
+	else if(act==ACTION_VERIFY) cntr_status=CNTR_STATUS_VERIFYING;
 
 	if((act==ACTION_RESTORE
 		&& !(logpath=prepend_s(bu->path, "restorelog")))
@@ -137,7 +137,7 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 	// First, do a pass through the manifest to set up cntr.
 	// This is the equivalent of a phase1 scan during backup.
 
-	if(setup_cntr(asfd, manifest, regex, srestore, act, status, cconf))
+	if(setup_cntr(asfd, manifest, regex, srestore, act, cntr_status, cconf))
 		goto end;
 
 	if(cconf->send_client_cntr && cntr_send(cconf->cntr))
@@ -147,13 +147,13 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 	if(cconf->protocol==PROTO_BURP1)
 	{
 		if(restore_burp1(asfd, bu, manifest,
-		  regex, srestore, act, sdirs, status, cconf))
+		  regex, srestore, act, sdirs, cntr_status, cconf))
 			goto end;
 	}
 	else
 	{
 		if(restore_burp2(asfd, bu, manifest,
-		  regex, srestore, act, sdirs, status, cconf))
+		  regex, srestore, act, sdirs, cntr_status, cconf))
 			goto end;
 	}
 

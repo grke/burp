@@ -188,7 +188,7 @@ int do_delete_server(struct asfd *asfd,
 	logp("in do_delete\n");
 
 	if(bu_get_list(sdirs, &bu_list)
-	  || write_status(STATUS_DELETING, NULL, conf))
+	  || write_status(CNTR_STATUS_DELETING, NULL, conf))
 		goto end;
 
 	if(backup && *backup) bno=strtoul(backup, NULL, 10);

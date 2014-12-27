@@ -130,12 +130,12 @@ static int parse_client_data(struct asfd *srfd,
 
 	if(cstat)
 	{
-		if(!cstat->status && cstat_set_status(cstat))
+		if(!cstat->run_status && cstat_set_run_status(cstat))
 			goto error;
 	}
 	else for(cstat=clist; cstat; cstat=cstat->next)
 	{
-		if(!cstat->status && cstat_set_status(cstat))
+		if(!cstat->run_status && cstat_set_run_status(cstat))
 			goto error;
 	}
 

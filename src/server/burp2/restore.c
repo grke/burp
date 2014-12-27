@@ -6,10 +6,10 @@
 #include "../sdirs.h"
 
 static int restore_sbuf(struct asfd *asfd, struct sbuf *sb, enum action act,
-	enum cstat_status status, struct conf *conf, int *need_data)
+	enum cntr_status cntr_status, struct conf *conf, int *need_data)
 {
 	//logp("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path.buf);
-	if(write_status(status, sb->path.buf, conf)) return -1;
+	if(write_status(cntr_status, sb->path.buf, conf)) return -1;
 
 	if(asfd->write(asfd, &sb->attr)
 	  || asfd->write(asfd, &sb->path))
@@ -55,7 +55,7 @@ static int restore_ent(struct asfd *asfd,
 	struct sbuf **sb,
 	struct slist *slist,
 	enum action act,
-	enum cstat_status status,
+	enum cntr_status cntr_status,
 	struct conf *conf,
 	int *need_data,
 	int *last_ent_was_dir)
@@ -83,7 +83,7 @@ static int restore_ent(struct asfd *asfd,
 //printf("do dir: %s\n", xb->path.buf);
 			// Can now restore because nothing else is
 			// fiddling in a subdirectory.
-			if(restore_sbuf(asfd, xb, act, status,
+			if(restore_sbuf(asfd, xb, act, cntr_status,
 				conf, need_data)) goto end;
 			slist->head=xb->next;
 			sbuf_free(&xb);
@@ -111,7 +111,7 @@ static int restore_ent(struct asfd *asfd,
 	else
 	{
 		*last_ent_was_dir=0;
-		if(restore_sbuf(asfd, *sb, act, status, conf, need_data))
+		if(restore_sbuf(asfd, *sb, act, cntr_status, conf, need_data))
 			goto end;
 	}
 	ret=0;
@@ -121,14 +121,14 @@ end:
 
 static int restore_remaining_dirs(struct asfd *asfd,
 	struct slist *slist, enum action act,
-	enum cstat_status status, struct conf *conf, int *need_data)
+	enum cntr_status cntr_status, struct conf *conf, int *need_data)
 {
 	struct sbuf *sb;
 	// Restore any directories that are left in the list.
 	for(sb=slist->head; sb; sb=sb->next)
 	{
 //printf("remaining dir: %s\n", sb->path.buf);
-		if(restore_sbuf(asfd, sb, act, status, conf, need_data))
+		if(restore_sbuf(asfd, sb, act, cntr_status, conf, need_data))
 			return -1;
 	}
 	return 0;
@@ -142,7 +142,7 @@ static int maybe_copy_data_files_across(struct asfd *asfd,
 	const char *manifest,
 	const char *datadir, int srestore, regex_t *regex, struct conf *conf,
 	struct slist *slist,
-	enum action act, enum cstat_status status)
+	enum action act, enum cntr_status cntr_status)
 {
 	int ars;
 	int ret=-1;
@@ -299,7 +299,8 @@ static int maybe_copy_data_files_across(struct asfd *asfd,
 		if((!srestore || check_srestore(conf, sb->path.buf))
 		  && check_regex(regex, sb->path.buf))
 		{
-			if(restore_ent(asfd, &sb, slist, act, status, conf,
+			if(restore_ent(asfd, &sb, slist, act,
+				cntr_status, conf,
 				&need_data, &last_ent_was_dir))
 					goto end;
 		}
@@ -320,7 +321,7 @@ static int restore_stream(struct asfd *asfd,
 	const char *datadir, struct slist *slist,
 	struct bu *bu, const char *manifest, regex_t *regex,
 	int srestore, struct conf *conf, enum action act,
-	enum cstat_status status)
+	enum cntr_status cntr_status)
 {
 	int ars;
 	int ret=-1;
@@ -443,7 +444,8 @@ static int restore_stream(struct asfd *asfd,
 		if((!srestore || check_srestore(conf, sb->path.buf))
 		  && check_regex(regex, sb->path.buf))
 		{
-			if(restore_ent(asfd, &sb, slist, act, status, conf,
+			if(restore_ent(asfd, &sb, slist, act,
+				cntr_status, conf,
 				&need_data, &last_ent_was_dir))
 					goto end;
 		}
@@ -462,7 +464,7 @@ end:
 
 int restore_burp2(struct asfd *asfd, struct bu *bu, const char *manifest,
 	regex_t *regex, int srestore, enum action act, struct sdirs *sdirs,
-	enum cstat_status status, struct conf *conf)
+	enum cntr_status cntr_status, struct conf *conf)
 {
 	//int s=0;
 	//size_t len=0;
@@ -480,21 +482,22 @@ int restore_burp2(struct asfd *asfd, struct bu *bu, const char *manifest,
 
 	if(!(ars=maybe_copy_data_files_across(asfd, manifest, sdirs->data,
 		srestore, regex, conf,
-		slist, act, status)))
+		slist, act, cntr_status)))
 	{
 		// Instead of copying all the blocks across, do it as a stream,
 		// in the style of burp-1.x.x.
 		if(restore_stream(asfd, sdirs->data, slist,
 			bu, manifest, regex,
-			srestore, conf, act, status)) 
+			srestore, conf, act, cntr_status)) 
 				goto end;
 	}
 	else if(ars<0) goto end; // Error.
 
 	// Restore has nearly completed OK.
 
-	if(restore_remaining_dirs(asfd, slist, act, status, conf, &need_data))
-		goto end;
+	if(restore_remaining_dirs(asfd,
+		slist, act, cntr_status, conf, &need_data))
+			goto end;
 
 	ret=restore_end(asfd, conf);
 

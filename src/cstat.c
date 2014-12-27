@@ -61,44 +61,32 @@ int cstat_add_to_list(struct cstat **clist, struct cstat *cnew)
 	return 0;
 }
 
-const char *cstat_status_to_str(struct cstat *cstat)
+const char *run_status_to_str(struct cstat *cstat)
 {
-	switch(cstat->status)
+	switch(cstat->run_status)
 	{
-		case STATUS_IDLE: return STATUS_STR_IDLE;
-		case STATUS_CLIENT_CRASHED: return STATUS_STR_CLIENT_CRASHED;
-		case STATUS_SERVER_CRASHED: return STATUS_STR_SERVER_CRASHED;
-		case STATUS_RUNNING: return STATUS_STR_RUNNING;
-		case STATUS_SCANNING: return STATUS_STR_SCANNING;
-		case STATUS_BACKUP: return STATUS_STR_BACKUP;
-		case STATUS_MERGING: return STATUS_STR_MERGING;
-		case STATUS_SHUFFLING: return STATUS_STR_SHUFFLING;
-		case STATUS_LISTING: return STATUS_STR_LISTING;
-		case STATUS_RESTORING: return STATUS_STR_RESTORING;
-		case STATUS_VERIFYING: return STATUS_STR_VERIFYING;
-		case STATUS_DELETING: return STATUS_STR_DELETING;
+		case RUN_STATUS_IDLE:
+			return RUN_STATUS_STR_IDLE;
+		case RUN_STATUS_CLIENT_CRASHED:
+			return RUN_STATUS_STR_CLIENT_CRASHED;
+		case RUN_STATUS_SERVER_CRASHED:
+			return RUN_STATUS_STR_SERVER_CRASHED;
+		case RUN_STATUS_RUNNING:
+			return RUN_STATUS_STR_RUNNING;
 		default: return "unknown";
 	}
 }
 
-enum cstat_status cstat_str_to_status(const char *str)
+enum run_status run_str_to_status(const char *str)
 {
-	if(!strcmp(str, STATUS_STR_IDLE)) return STATUS_IDLE;
-	else if(!strcmp(str, STATUS_STR_RUNNING)) return STATUS_RUNNING;
-	else if(!strcmp(str, STATUS_STR_CLIENT_CRASHED))
-		return STATUS_CLIENT_CRASHED;
-	else if(!strcmp(str, STATUS_STR_SERVER_CRASHED))
-		return STATUS_CLIENT_CRASHED;
-	else if(!strcmp(str, STATUS_STR_RUNNING)) return STATUS_RUNNING;
-	else if(!strcmp(str, STATUS_STR_SCANNING)) return STATUS_SCANNING;
-	else if(!strcmp(str, STATUS_STR_BACKUP)) return STATUS_BACKUP;
-	else if(!strcmp(str, STATUS_STR_MERGING)) return STATUS_MERGING;
-	else if(!strcmp(str, STATUS_STR_SHUFFLING)) return STATUS_SHUFFLING;
-	else if(!strcmp(str, STATUS_STR_LISTING)) return STATUS_LISTING;
-	else if(!strcmp(str, STATUS_STR_RESTORING)) return STATUS_RESTORING;
-	else if(!strcmp(str, STATUS_STR_VERIFYING)) return STATUS_VERIFYING;
-	else if(!strcmp(str, STATUS_STR_DELETING)) return STATUS_DELETING;
-	return STATUS_UNSET;
+	if(!strcmp(str, RUN_STATUS_STR_IDLE)) return RUN_STATUS_IDLE;
+	else if(!strcmp(str, RUN_STATUS_STR_RUNNING)) return RUN_STATUS_RUNNING;
+	else if(!strcmp(str, RUN_STATUS_STR_CLIENT_CRASHED))
+		return RUN_STATUS_CLIENT_CRASHED;
+	else if(!strcmp(str, RUN_STATUS_STR_SERVER_CRASHED))
+		return RUN_STATUS_CLIENT_CRASHED;
+	else if(!strcmp(str, RUN_STATUS_STR_RUNNING)) return RUN_STATUS_RUNNING;
+	return RUN_STATUS_UNSET;
 }
 
 struct cstat *cstat_get_by_name(struct cstat *clist, const char *name)

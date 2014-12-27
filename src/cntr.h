@@ -8,6 +8,32 @@
 
 #define CNTR_ENT_SIZE	256
 
+#define CNTR_STATUS_STR_SCANNING	"scanning"
+#define CNTR_STATUS_STR_BACKUP		"backup"
+#define CNTR_STATUS_STR_MERGING		"merging"
+#define CNTR_STATUS_STR_SHUFFLING	"shuffling"
+#define CNTR_STATUS_STR_LISTING		"listing"
+#define CNTR_STATUS_STR_RESTORING	"restoring"
+#define CNTR_STATUS_STR_VERIFYING	"verifying"
+#define CNTR_STATUS_STR_DELETING	"deleting"
+#define CNTR_STATUS_STR_DIFFING		"diffing"
+
+enum cntr_status
+{
+	CNTR_STATUS_UNSET=0,
+
+	CNTR_STATUS_SCANNING,
+	CNTR_STATUS_BACKUP,
+	CNTR_STATUS_MERGING,
+	CNTR_STATUS_SHUFFLING,
+
+	CNTR_STATUS_LISTING,
+	CNTR_STATUS_RESTORING,
+	CNTR_STATUS_VERIFYING,
+	CNTR_STATUS_DELETING,
+	CNTR_STATUS_DIFFING
+};
+
 typedef struct cntr_ent cntr_ent_t;
 
 struct cntr_ent
@@ -42,9 +68,7 @@ struct cntr
 	size_t str_max_len;
 	char *str;
 
-// FIX THIS: had dependency trouble using 'enum cstat_status' leave it as an
-// int for now.
-	int cstat_status;
+	enum cntr_status cntr_status;
 
 	char *cname;
 };
@@ -83,5 +107,8 @@ extern int cntr_send(struct cntr *cntr);
 
 extern int str_to_cntr(const char *str, struct cstat *cstat, char **path);
 extern int cntr_recv(struct asfd *asfd, struct conf *conf);
+
+extern const char *cntr_status_to_str(struct cntr *cntr);
+extern cntr_status cntr_str_to_status(const char *str);
 
 #endif

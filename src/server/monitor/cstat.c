@@ -180,7 +180,7 @@ error:
 	return -1;
 }
 
-int cstat_set_status(struct cstat *cstat)
+int cstat_set_run_status(struct cstat *cstat)
 {
 	struct stat statp;
 	struct sdirs *sdirs=(struct sdirs *)cstat->sdirs;
@@ -189,16 +189,16 @@ int cstat_set_status(struct cstat *cstat)
 	if(lstat(sdirs->lock->path, &statp))
 	{
 		if(lstat(sdirs->working, &statp))
-			cstat->status=STATUS_IDLE;
+			cstat->run_status=RUN_STATUS_IDLE;
 		else
-			cstat->status=STATUS_CLIENT_CRASHED;
+			cstat->run_status=RUN_STATUS_CLIENT_CRASHED;
 	}
 	else
 	{
 		if(!lock_test(sdirs->lock->path)) // Could have got lock.
-			cstat->status=STATUS_SERVER_CRASHED;
+			cstat->run_status=RUN_STATUS_SERVER_CRASHED;
 		else
-			cstat->status=STATUS_RUNNING;
+			cstat->run_status=RUN_STATUS_RUNNING;
 	}
 
 	return 0;
@@ -221,8 +221,8 @@ static int reload_from_clientdir(struct cstat **clist, struct conf *conf)
 		if(stat(sdirs->client, &statp))
 		{
 			// No clientdir.
-			if(!c->status
-			  && cstat_set_status(c))
+			if(!c->run_status
+			  && cstat_set_run_status(c))
 				goto error;
 			continue;
 		}
@@ -230,7 +230,7 @@ static int reload_from_clientdir(struct cstat **clist, struct conf *conf)
 			ltime=lstatp.st_mtime;
 		if(statp.st_mtime==c->clientdir_mtime
 		  && ltime==c->lockfile_mtime
-		  && c->status!=STATUS_SERVER_CRASHED)
+		  && c->run_status!=RUN_STATUS_SERVER_CRASHED)
 		  //&& !c->cntr)
 		{
 			// clientdir has not changed - no need to do anything.
@@ -238,7 +238,7 @@ static int reload_from_clientdir(struct cstat **clist, struct conf *conf)
 		}
 		c->clientdir_mtime=statp.st_mtime;
 		c->lockfile_mtime=ltime;
-		if(cstat_set_status(c)) goto error;
+		if(cstat_set_run_status(c)) goto error;
 
 printf("reload from clientdir\n");
 		bu_list_free(&c->bu);

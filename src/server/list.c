@@ -133,7 +133,7 @@ static int list_manifest(struct asfd *asfd,
 		else if(ars>0)
 			goto end; // Finished OK.
 
-		if(write_status(STATUS_LISTING, sb->path.buf, conf))
+		if(write_status(CNTR_STATUS_LISTING, sb->path.buf, conf))
 			goto error;
 
 		if(browsedir)
@@ -199,7 +199,7 @@ int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct conf *conf,
 
 	if(compile_regex(&regex, listregex)
 	  || bu_get_list(sdirs, &bu_list)
-	  || write_status(STATUS_LISTING, NULL, conf))
+	  || write_status(CNTR_STATUS_LISTING, NULL, conf))
 		goto end;
 
 	if(backup && *backup) bno=strtoul(backup, NULL, 10);

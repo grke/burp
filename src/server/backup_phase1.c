@@ -41,7 +41,7 @@ int backup_phase1_server_all(struct async *as,
 					goto end;
 			break;
 		}
-		if(write_status(STATUS_SCANNING, sb->path.buf, conf)
+		if(write_status(CNTR_STATUS_SCANNING, sb->path.buf, conf)
 		  || sbufl_to_manifest_phase1(sb, NULL, p1zp))
 			goto end;
 		cntr_add_phase1(conf->cntr, sb->path.cmd, 0);

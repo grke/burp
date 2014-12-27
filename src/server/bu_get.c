@@ -35,7 +35,7 @@ static void have_backup_file_name_w(struct bu *bu,
 }
 
 static int maybe_add_ent(const char *dir, const char *d_name,
-	struct bu **bu_list, uint16_t flags, int include_working)
+	struct bu **bu_list, uint16_t flags, struct cstat *include_working)
 {
 	int ret=-1;
 	char buf[32]="";
@@ -79,11 +79,33 @@ static int maybe_add_ent(const char *dir, const char *d_name,
 		have_backup_file_name_w(bu, "log", BU_LOG_BACKUP);
 		have_backup_file_name_w(bu, "restorelog", BU_LOG_RESTORE);
 		have_backup_file_name_w(bu, "verifylog", BU_LOG_VERIFY);
-		have_backup_file_name(bu, "backup_stats", BU_STATS_BACKUP);
-		have_backup_file_name(bu, "restore_stats", BU_STATS_RESTORE);
-		have_backup_file_name(bu, "verify_stats", BU_STATS_VERIFY);
 		// Hack to include option for live counters.
-		bu->flags|=BU_STATS_BACKUP;
+		if(include_working->run_status==RUN_STATUS_RUNNING)
+		{
+			switch(include_working->cntr->cntr_status)
+			{
+				case CNTR_STATUS_SCANNING:
+				case CNTR_STATUS_BACKUP:
+				case CNTR_STATUS_MERGING:
+				case CNTR_STATUS_SHUFFLING:
+					bu->flags|=BU_STATS_BACKUP;
+					break;
+				case CNTR_STATUS_VERIFYING:
+					bu->flags|=BU_STATS_VERIFY;
+					break;
+				case CNTR_STATUS_RESTORING:
+					bu->flags|=BU_STATS_VERIFY;
+					break;
+				default:
+					break;
+			}
+		}
+		if(!(bu->flags & BU_STATS_BACKUP))
+		  have_backup_file_name(bu, "backup_stats", BU_STATS_BACKUP);
+		if(!(bu->flags & BU_STATS_RESTORE))
+		  have_backup_file_name(bu, "restore_stats", BU_STATS_RESTORE);
+		if(!(bu->flags & BU_STATS_VERIFY))
+		  have_backup_file_name(bu, "verify_stats", BU_STATS_VERIFY);
 	}
 
 	return 0;
@@ -144,7 +166,7 @@ static int rev_alphasort(const struct dirent **a, const struct dirent **b)
 }
 
 static int do_bu_get_list(struct sdirs *sdirs,
-	struct bu **bu_list, int include_working)
+	struct bu **bu_list, struct cstat *include_working)
 {
 	int i=0;
 	int n=0;
@@ -205,12 +227,13 @@ end:
 
 int bu_get_list(struct sdirs *sdirs, struct bu **bu_list)
 {
-	return do_bu_get_list(sdirs, bu_list, 0);
+	return do_bu_get_list(sdirs, bu_list, NULL);
 }
 
-int bu_get_list_with_working(struct sdirs *sdirs, struct bu **bu_list)
+int bu_get_list_with_working(struct sdirs *sdirs, struct bu **bu_list,
+	struct cstat *cstat)
 {
-	return do_bu_get_list(sdirs, bu_list, 1);
+	return do_bu_get_list(sdirs, bu_list, cstat);
 }
 
 int bu_get_current(struct sdirs *sdirs, struct bu **bu_list)
@@ -219,5 +242,5 @@ int bu_get_current(struct sdirs *sdirs, struct bu **bu_list)
 	// FIX THIS: should not need to specify "current".
 	if(get_link(sdirs->client, "current", real, sizeof(real)))
 		return -1;
-	return maybe_add_ent(sdirs->client, real, bu_list, BU_CURRENT, 0);
+	return maybe_add_ent(sdirs->client, real, bu_list, BU_CURRENT, NULL);
 }

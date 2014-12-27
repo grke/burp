@@ -795,9 +795,13 @@ static int request_status(struct asfd *asfd,
 			{
 			// Hack so that it does not request the logs for live
 			// counters.
+			// FIX THIS: need to do something similar for
+			// restore/verify.
 				if(!sel->backup) break;
-				if(sel->backup->flags
-				 & (BU_WORKING|BU_FINISHING))
+				if(sel->client
+				  && sel->client->run_status==RUN_STATUS_RUNNING
+				  && sel->backup->flags
+					& (BU_WORKING|BU_FINISHING))
 				{
 					// Make sure a request is sent, so that
 					// the counters update.

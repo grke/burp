@@ -245,7 +245,7 @@ printf("reload from clientdir\n");
 // FIX THIS: should probably not load everything each time.
 //		if(bu_get_current(sdirs, &c->bu))
 //			goto error;
-		if(bu_get_list_with_working(sdirs, &c->bu))
+		if(bu_get_list_with_working(sdirs, &c->bu, c))
 			goto error;
 	}
 	return 0;
@@ -269,7 +269,7 @@ int cstat_set_backup_list(struct cstat *cstat)
 	// Free any previous list.
 	bu_list_free(&cstat->bu);
 
-	if(bu_get_list_with_working((struct sdirs *)cstat->sdirs, &bu))
+	if(bu_get_list_with_working((struct sdirs *)cstat->sdirs, &bu, cstat))
 	{
 		//logp("error when looking up current backups\n");
 		return 0;

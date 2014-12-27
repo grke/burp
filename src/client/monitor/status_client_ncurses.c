@@ -599,7 +599,7 @@ static void update_screen_live_counters(struct cstat *client, int *x, int col)
 	print_line("", (*x)++, col);
 	snprintf(msg, sizeof(msg), "Start time: %s", getdatestr(start));
 	print_line(msg, (*x)++, col);
-	snprintf(msg, sizeof(msg), "End time: %s", getdatestr(end));
+	snprintf(msg, sizeof(msg), "  End time: %s", getdatestr(end));
 	print_line(msg, (*x)++, col);
 	snprintf(msg, sizeof(msg), "Time taken: %s", time_taken(end-start));
 	print_line(msg, (*x)++, col);
@@ -625,7 +625,8 @@ static void update_screen_view_log(struct sel *sel, int *x, int col,
 
 	if(sel->client
 	  && sel->backup
-	  && (sel->backup->flags & (BU_WORKING|BU_FINISHING)))
+	  && (sel->backup->flags & (BU_WORKING|BU_FINISHING))
+	  && (sel->logop & BU_STATS_BACKUP))
 		return update_screen_live_counters(sel->client, x, col);
 
 	for(l=sel->llines; l; l=l->next)

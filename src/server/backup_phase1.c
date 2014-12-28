@@ -51,8 +51,10 @@ int backup_phase1_server_all(struct async *as,
 		  || sb->path.cmd==CMD_METADATA
 		  || sb->path.cmd==CMD_ENC_METADATA
 		  || sb->path.cmd==CMD_EFS_FILE)
+		{
 			cntr_add_val(conf->cntr, CMD_BYTES_ESTIMATED,
 				(unsigned long long)sb->statp.st_size, 0);
+		}
 	}
 
 	if(gzclose_fp(&p1zp))

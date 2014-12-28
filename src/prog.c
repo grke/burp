@@ -484,9 +484,7 @@ int main (int argc, char *argv[])
 	}
 	else
 	{
-		logp("before client\n");
 		ret=client(conf, act, vss_restore, json);
-		logp("after client\n");
 	}
 
 end:

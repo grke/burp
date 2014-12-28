@@ -423,7 +423,9 @@ static void print_logs_list_line(struct sel *sel,
 	print_line(msg, (*x)++, col);
 
 	if(!sel->logop) sel->logop=bit;
+#ifdef HAVE_NCURSES_H
 	if(sel->logop==bit) mvprintw(*x+TOP_SPACE-1, 1, "*");
+#endif
 }
 
 static void client_and_status(struct sel *sel, int *x, int col)
@@ -455,6 +457,7 @@ static void client_and_status_and_backup_and_log(struct sel *sel,
 	print_line(msg, (*x)++, col);
 }
 
+#ifdef HAVE_NCURSES_H
 static int selindex_from_cstat(struct sel *sel)
 {
 	int selindex=0;
@@ -490,6 +493,7 @@ static int selindex_from_lline(struct sel *sel)
 	}
 	return selindex;
 }
+#endif
 
 static void print_logs_list(struct sel *sel, int *x, int col)
 {
@@ -516,11 +520,13 @@ static void update_screen_clients(struct sel *sel, int *x, int col,
 
 		summary(c, (*x)++, col, conf);
 
+#ifdef HAVE_NCURSES_H
 		if(actg==ACTION_STATUS && sel->client==c)
 		{
 			mvprintw((*x)+TOP_SPACE-1, 1, "*");
 			star_printed=1;
 		}
+#endif
 	}
 	if(!star_printed) sel->client=sel->clist;
 }
@@ -553,11 +559,13 @@ static void update_screen_backups(struct sel *sel, int *x, int col,
 				get_bu_str(b),
 				extradesc);
 		print_line(msg, (*x)++, col);
+#ifdef HAVE_NCURSES_H
 		if(actg==ACTION_STATUS && sel->backup==b)
 		{
 			mvprintw((*x)+TOP_SPACE-1, 1, "*");
 			star_printed=1;
 		}
+#endif
 	}
 	if(!star_printed) sel->backup=sel->client->bu;
 }
@@ -654,11 +662,13 @@ static void update_screen_view_log(struct sel *sel, int *x, int col,
 		for(cp=l->line, o=0; *cp && o<sel->offset; cp++, o++) { }
 		print_line(cp, (*x)++, col);
 
+#ifdef HAVE_NCURSES_H
 		if(actg==ACTION_STATUS && sel->lline==l)
 		{
 			mvprintw((*x)+TOP_SPACE-1, 1, "*");
 			star_printed=1;
 		}
+#endif
 	}
 	if(!star_printed) sel->lline=sel->llines;
 }
@@ -668,13 +678,16 @@ static int update_screen(struct sel *sel, struct conf *conf)
 	int x=0;
 	int row=24;
 	int col=80;
+#ifdef HAVE_NCURSES_H
 	int selindex=0;
+	static int selindex_last=0;
+#endif
 	static int winmin=0;
 	static int winmax=0;
-	static int selindex_last=0;
 
 	screen_header(row, col);
 
+#ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS)
 	{
 		getmaxyx(stdscr, row, col);
@@ -694,6 +707,7 @@ static int update_screen(struct sel *sel, struct conf *conf)
 				break;
 		}
 	}
+#endif
 
 	switch(sel->page)
 	{
@@ -710,6 +724,7 @@ static int update_screen(struct sel *sel, struct conf *conf)
 			break;
 	}
 
+#ifdef HAVE_NCURSES_H
 	// Adjust sliding window appropriately.
 	if(selindex>selindex_last)
 	{
@@ -727,6 +742,7 @@ static int update_screen(struct sel *sel, struct conf *conf)
 			winmax+=selindex-selindex_last;
 		}
 	}
+#endif
 	if(winmin==winmax)
 	{
 		winmin=0;
@@ -767,6 +783,7 @@ static int update_screen(struct sel *sel, struct conf *conf)
 			break;
 	}
 
+#ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS)
 	{
 		// Blank any remainder of the screen.
@@ -775,6 +792,7 @@ static int update_screen(struct sel *sel, struct conf *conf)
 	}
 
 	selindex_last=selindex;
+#endif
 	return 0;
 }
 
@@ -874,6 +892,7 @@ static void setup_signals(void)
 	signal(SIGPIPE, &sighandler);
 }
 
+#ifdef HAVE_NCURSES_H
 static void left(struct sel *sel)
 {
 	switch(sel->page)
@@ -1105,7 +1124,6 @@ static void page_down(struct sel *sel)
 	}
 }
 
-#ifdef HAVE_NCURSES_H
 static int parse_stdin_data(struct asfd *asfd, struct sel *sel, int count)
 {
 	static int ch;
@@ -1173,7 +1191,7 @@ static int parse_data(struct asfd *asfd, struct sel *sel, int count)
 	return json_input(asfd, sel);
 }
 
-static int main_loop(struct async *as, struct conf *conf)
+static int main_loop(struct async *as, enum action act, struct conf *conf)
 {
 	int ret=-1;
 	char *client=NULL;
@@ -1205,7 +1223,7 @@ static int main_loop(struct async *as, struct conf *conf)
 			}
 			if(request_status(sfd,
 				req, sel, conf)) goto error;
-			if(actg==ACTION_STATUS_SNAPSHOT)
+			if(act==ACTION_STATUS_SNAPSHOT)
 				reqdone=1;
 		}
 
@@ -1221,14 +1239,18 @@ static int main_loop(struct async *as, struct conf *conf)
 			}
 */
 			logp("Exiting main loop\n");
-			break;
+			goto error;
 		}
 
 		for(asfd=as->asfd; asfd; asfd=asfd->next)
 			while(asfd->rbuf->buf)
 		{
-			if(parse_data(asfd, sel, count))
-				goto error;
+			switch(parse_data(asfd, sel, count))
+			{
+				case 0: break;
+				case 1: goto end;
+				default: goto error;
+			}
 			iobuf_free_content(asfd->rbuf);
 			if(asfd->parse_readbuf(asfd))
 				goto error;
@@ -1238,13 +1260,13 @@ static int main_loop(struct async *as, struct conf *conf)
 		if(!sel->backup && sel->client) sel->backup=sel->client->bu;
 
 #ifdef HAVE_NCURSES_H
-		if(actg==ACTION_STATUS
+		if(act==ACTION_STATUS
 		  && update_screen(sel, conf))
 			goto error;
 		refresh();
 #endif
 
-		if(actg==ACTION_STATUS_SNAPSHOT
+		if(act==ACTION_STATUS_SNAPSHOT
 		  && sel->gotfirstresponse)
 		{
 			if(update_screen(sel, conf))
@@ -1256,6 +1278,7 @@ static int main_loop(struct async *as, struct conf *conf)
 		}
 	}
 
+end:
 	ret=0;
 error:
 	// FIX THIS: should probably be freeing a bunch of stuff here.
@@ -1318,7 +1341,7 @@ int status_client_ncurses(enum action act, struct conf *conf)
 	// We will read and write from and to its stdout and stdin.
 	if((childpid=fork_monitor(&csin, &csout, conf))<0)
 		goto end;
-printf("childpid: %d\n", childpid);
+//printf("childpid: %d\n", childpid);
 	set_non_blocking(csin);
 	set_non_blocking(csout);
 
@@ -1329,7 +1352,7 @@ printf("childpid: %d\n", childpid);
 	  || !setup_asfd(as, "monitor stdout", &csout, NULL,
 		ASFD_STREAM_LINEBUF, ASFD_FD_CLIENT_MONITOR_READ, -1, conf))
 			goto end;
-printf("ml: %s\n", conf->monitor_logfile);
+//printf("ml: %s\n", conf->monitor_logfile);
 #ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS)
 	{
@@ -1346,11 +1369,12 @@ printf("ml: %s\n", conf->monitor_logfile);
 		goto end;
 	set_logfp_direct(lfp);
 
-	ret=main_loop(as, conf);
+	ret=main_loop(as, act, conf);
 end:
 #ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS) endwin();
 #endif
+	if(ret) logp("%s exiting with error: %d\n", __func__, ret);
 	close_fp(&lfp);
 	async_asfd_free_all(&as);
 	close_fd(&csin);

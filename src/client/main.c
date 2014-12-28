@@ -326,8 +326,8 @@ static enum cliret do_client(struct conf *conf,
 
 //	as->settimers(0, 100);
 
-	logp("begin client\n");
-	logp("action %d\n", action);
+//	logp("begin client\n");
+//	logp("action %d\n", action);
 
 	// Status monitor forks a child process instead of connecting to
 	// the server directly.

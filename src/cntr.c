@@ -1,5 +1,7 @@
 #include "include.h"
 
+#include "server/monitor/json_output.h"
+
 #include <limits.h>
 
 #define CNTR_VERSION		3
@@ -514,42 +516,15 @@ void cntr_print(struct cntr *cntr, enum action act)
 
 #ifndef HAVE_WIN32
 
-static void quint_print_to_file(FILE *fp, struct cntr_ent *ent, enum action act)
-{
-	unsigned long long a;
-	unsigned long long b;
-	unsigned long long c;
-	unsigned long long d;
-	unsigned long long e;
-	const char *field;
-	if(!ent) return;
-	a=ent->count;
-	b=ent->same;
-	c=ent->changed;
-	d=ent->deleted;
-	e=ent->phase1;
-	field=ent->field;
-	if(act==ACTION_BACKUP
-	  || act==ACTION_BACKUP_TIMED)
-	{
-		fprintf(fp, "%s:%llu\n", field, a);
-		if(ent->flags & CNTR_SINGLE_FIELD) return;
-		fprintf(fp, "%s_changed:%llu\n", field, b);
-		fprintf(fp, "%s_same:%llu\n", field, c);
-		fprintf(fp, "%s_deleted:%llu\n", field, d);
-	}
-	fprintf(fp, "%s_total:%llu\n", field, a+b+c);
-	fprintf(fp, "%s_scanned:%llu\n", field, e);
-}
-
 int cntr_stats_to_file(struct cntr *cntr,
 	const char *directory, enum action act, struct conf *conf)
 {
 	int ret=-1;
-	FILE *fp;
-	char *path;
+	int fd=-1;
+	char *path=NULL;
 	const char *fname=NULL;
-	struct cntr_ent *e;
+	struct async *as=NULL;
+	struct asfd *wfd=NULL;
 	cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count
 		=(unsigned long long)time(NULL);
 
@@ -563,24 +538,45 @@ int cntr_stats_to_file(struct cntr *cntr,
 	else
 		return 0;
 
-	if(!(path=prepend_s(directory, fname))
-	  || !(fp=open_file(path, "wb")))
+	if(!(path=prepend_s(directory, fname)))
+		goto end;
+	if((fd=open(path, O_WRONLY|O_CREAT, 0666))<0)
+	{
+		logp("Could not open %s for writing in %s: %s\n",
+			path, __func__, strerror(errno));
+		goto end;
+	}
+	// FIX THIS:
+	// Pretty heavy duty to set up all this async stuff just so that the
+	// json stuff can write to a simple file.
+	if(!(as=async_alloc())
+	  || as->init(as, 0)
+	  || !(wfd=asfd_alloc())
+	  || wfd->init(wfd, "stats file",
+		as, fd, NULL, ASFD_STREAM_LINEBUF, conf))
+			goto end;
+	as->asfd_add(as, wfd);
+	fd=-1;
+	if(json_cntr_to_file(wfd, cntr))
 		goto end;
 
 // FIX THIS: make this use the json output stuff.
 // Need to add the following few fields to the cntrs somehow.
+/*
 	fprintf(fp, "client_version:%s\n",
 		conf->peer_version?conf->peer_version:"");
 	fprintf(fp, "server_version:%s\n", VERSION);
 	fprintf(fp, "client_is_windows:%d\n", conf->client_is_windows);
 	for(e=cntr->list; e; e=e->next)
 		quint_print_to_file(fp, e, act);
+*/
 
-	if(close_fp(&fp)) goto end;
 	ret=0;
 end:
-	free(path);
-	close_fp(&fp);
+	close_fd(&fd);
+	free_w(&path);
+	async_free(&as);
+	asfd_free(&wfd);
 	return ret;
 }
 

@@ -29,8 +29,8 @@ struct cstat
 	// client is allowed to view this client.
 	uint8_t permitted;
 
-	// When the mtime of conffile changes, the following get reloaded
-	// sdirs declared as void so that cstat can be declared for both
+	// When the mtime of conffile changes, the following get reloaded.
+	// Declared sdirs as void so that cstat can be declared for both
 	// client and server. Server side will have to cast it.
 	void *sdirs;
 	time_t clientdir_mtime;

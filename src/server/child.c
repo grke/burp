@@ -11,11 +11,7 @@ int write_status(enum cntr_status cntr_status,
 	static size_t l=0;
 	static struct iobuf *wbuf=NULL;
 
-	if(!wasfd)
-	{
-		logp("No parent pipe\n");
-		goto error;
-	}
+	if(!wasfd) return 0;
 
 	// Only update every 2 seconds.
 	now=time(NULL);

@@ -30,18 +30,28 @@ static int json_start(struct asfd *asfd)
 			return -1;
 		yajl_gen_config(yajl, yajl_gen_beautify, 1);
 	}
-	if(yajl_map_open_w()
-	  || yajl_gen_str_w("clients")
+	if(yajl_map_open_w()) return -1;
+	return 0;
+}
+
+static int json_clients(void)
+{
+	if(yajl_gen_str_w("clients")
 	  || yajl_array_open_w())
 		return -1;
+	return 0;
+}
+
+static int json_clients_end(void)
+{
+	if(yajl_array_close_w()) return -1;
 	return 0;
 }
 
 static int json_end(struct asfd *asfd)
 {
 	int ret=-1;
-	if(yajl_array_close_w()
-	  || yajl_map_close_w())
+	if(yajl_map_close_w())
 		goto end;
 	ret=write_all(asfd);
 end:
@@ -334,7 +344,9 @@ int json_send(struct asfd *asfd, struct cstat *clist, struct cstat *cstat,
 	int ret=-1;
 	struct cstat *c;
 
-	if(json_start(asfd)) goto end;
+	if(json_start(asfd)
+	  || json_clients())
+		goto end;
 
 	if(cstat && bu)
 	{
@@ -355,6 +367,19 @@ int json_send(struct asfd *asfd, struct cstat *clist, struct cstat *cstat,
 				goto end;
 	}
 
+	ret=0;
+end:
+	if(json_clients_end()
+	  || json_end(asfd)) return -1;
+	return ret;
+}
+
+int json_cntr_to_file(struct asfd *asfd, struct cntr *cntr)
+{
+	int ret=-1;
+	if(json_start(asfd)
+	  || do_counters(cntr))
+		goto end;
 	ret=0;
 end:
 	if(json_end(asfd)) return -1;

@@ -579,11 +579,25 @@ static void update_screen_live_counter_single(struct cntr_ent *e,
 	int *x, int col)
 {
 	char msg[128]="";
+	const char *bytes_human="";
 	if(!(e->flags & CNTR_SINGLE_FIELD)) return;
 	if(!e->count) return;
-	if(e->cmd==CMD_TIMESTAMP) return;
-	if(e->cmd==CMD_TIMESTAMP_END) return;
-	snprintf(msg, sizeof(msg), "%s: %llu", e->label, e->count);
+	switch(e->cmd)
+	{
+		case CMD_TIMESTAMP:
+		case CMD_TIMESTAMP_END:
+			return;
+		case CMD_BYTES_ESTIMATED:
+		case CMD_BYTES:
+		case CMD_BYTES_RECV:
+		case CMD_BYTES_SENT:
+			bytes_human=bytes_to_human(e->count);
+			break;
+		default:
+			break;
+	}
+	snprintf(msg, sizeof(msg), "%19s: %12llu %s",
+		e->label, e->count, bytes_human);
 	print_line(msg, (*x)++, col);
 }
 
@@ -606,12 +620,13 @@ static void update_screen_live_counters(struct cstat *client, int *x, int col)
 	table_header(x, col);
 	for(e=client->cntr->list; e; e=e->next)
 		update_screen_live_counter_table(e, x, col);
-	for(e=client->cntr->list; e; e=e->next)
-		update_screen_live_counter_single(e, x, col);
 	print_line("", (*x)++, col);
-	snprintf(msg, sizeof(msg), "Percentage complete: %llu%%",
+	snprintf(msg, sizeof(msg), "%19s: %llu%%", "Percentage complete",
 	  ((gtotal->count+gtotal->same+gtotal->changed)*100)/gtotal->phase1);
 	print_line(msg, (*x)++, col);
+	print_line("", (*x)++, col);
+	for(e=client->cntr->list; e; e=e->next)
+		update_screen_live_counter_single(e, x, col);
 }
 
 static void update_screen_view_log(struct sel *sel, int *x, int col,

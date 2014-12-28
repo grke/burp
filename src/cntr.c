@@ -542,35 +542,6 @@ static void quint_print_to_file(FILE *fp, struct cntr_ent *ent, enum action act)
 	fprintf(fp, "%s_scanned:%llu\n", field, e);
 }
 
-static void bottom_part_to_file(struct cntr *cntr, FILE *fp, enum action act)
-{
-	struct cntr_ent **e=cntr->ent;
-	fprintf(fp, "warnings:%llu\n",
-		get_count(e, CMD_WARNING));
-	fprintf(fp, "bytes_estimated:%llu\n",
-		get_count(e, CMD_BYTES_ESTIMATED));
-
-	if(act==ACTION_BACKUP
-	  || act==ACTION_BACKUP_TIMED)
-		fprintf(fp, "bytes_in_backup:%llu\n", get_count(e, CMD_BYTES));
-
-	if(act==ACTION_RESTORE)
-		fprintf(fp, "bytes_attempted:%llu\n", get_count(e, CMD_BYTES));
-	if(act==ACTION_VERIFY)
-		fprintf(fp, "bytes_checked:%llu\n", get_count(e, CMD_BYTES));
-
-	if(act==ACTION_BACKUP
-	  || act==ACTION_BACKUP_TIMED)
-		fprintf(fp, "bytes_received:%llu\n",
-			get_count(e, CMD_BYTES_RECV));
-
-	if(act==ACTION_BACKUP
-	  || act==ACTION_BACKUP_TIMED
-	  || act==ACTION_RESTORE)
-		fprintf(fp, "bytes_sent:%llu\n", get_count(e, CMD_BYTES_SENT));
-
-}
-
 int cntr_stats_to_file(struct cntr *cntr,
 	const char *directory, enum action act, struct conf *conf)
 {
@@ -579,9 +550,8 @@ int cntr_stats_to_file(struct cntr *cntr,
 	char *path;
 	const char *fname=NULL;
 	struct cntr_ent *e;
-	time_t start=(time_t)cntr->ent[(uint8_t)CMD_TIMESTAMP]->count;
-	time_t now=time(NULL);
-	cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count=(unsigned long long)now;
+	cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count
+		=(unsigned long long)time(NULL);
 
 	if(act==ACTION_BACKUP
 	  ||  act==ACTION_BACKUP_TIMED)
@@ -597,16 +567,14 @@ int cntr_stats_to_file(struct cntr *cntr,
 	  || !(fp=open_file(path, "wb")))
 		goto end;
 
-	fprintf(fp, "client:%s\n", cntr->cname);
+// FIX THIS: make this use the json output stuff.
+// Need to add the following few fields to the cntrs somehow.
 	fprintf(fp, "client_version:%s\n",
 		conf->peer_version?conf->peer_version:"");
 	fprintf(fp, "server_version:%s\n", VERSION);
 	fprintf(fp, "client_is_windows:%d\n", conf->client_is_windows);
-	fprintf(fp, "time_taken:%lu\n", now-start);
 	for(e=cntr->list; e; e=e->next)
 		quint_print_to_file(fp, e, act);
-
-	bottom_part_to_file(cntr, fp, act);
 
 	if(close_fp(&fp)) goto end;
 	ret=0;
@@ -706,6 +674,11 @@ static int extract_ul(const char *value, struct cntr_ent *ent)
 				}
 			}
 		}
+	}
+	else
+	{
+		// Single field.
+		ent->count=strtoull(as, NULL, 10);
 	}
 	free(copy);
 	return 0;

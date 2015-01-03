@@ -1,4 +1,15 @@
-2014-01-03 Changes in burp-1.4.30:
+2015-01-03 Changes in burp-2.0.10:
+  * There are many changes since the last burp-2 release, including:
+    - Massive reworking of the status monitor system and ncurses client.
+    - Massive reworking of async i/o.
+    - Forward ports of all 1.4.x patches.
+  * The main focus was improving the status monitor system in order to better
+    support projects like burp-ui. There are still missing pieces to it, but
+    most of the basics are now there.
+    Be sure to read the UPGRADING file. Protocol 2 is still work in progress,
+    so do not expect protocol 2 backups to work with future releases.
+
+2015-01-03 Changes in burp-1.4.30:
   * Better SSL error logging.
   * Replace c_rehash with a line of shell script, from Markus Heberling.
   * Use lutimes to set times on symlinks.

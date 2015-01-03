@@ -199,6 +199,7 @@ static int set_file_times(const char *path, struct utimbuf *ut, struct cntr *cnt
 	return 0;
 }
 
+#ifdef HAVE_LUTIMES
 static int do_lutimes(const char *path, struct stat *statp)
 {
 	struct timeval t[2];
@@ -208,6 +209,7 @@ static int do_lutimes(const char *path, struct stat *statp)
 	t[1].tv_usec = 0;
 	return lutimes(path, t);
 }
+#endif
 
 bool set_attributes(const char *path, char cmd, struct stat *statp, int64_t winattr, struct cntr *cntr)
 {

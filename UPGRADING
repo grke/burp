@@ -1,5 +1,27 @@
 Things to watch out for when upgrading.
 
+2.0.10
+------
+The status monitor system and ncurses client are now working to some degree.
+You now need to use a burp client to connect to the status port via SSL.
+This also means that you may use the ncurses client on a machine that is not
+the burp server.
+You can use 'burp -a m' to get a raw connection (useful for debugging or to
+see the JSON), or 'burp -a s' to use the ncurses client.
+You will not be able to see details of any clients unless you are connecting
+from the client in question, or you are a restore_client (see the man page
+for this option).
+On upgrading from previous versions of burp, you will not have some of the
+necessary config values for connecting to the status port.
+Both server and client will need 'status_port = 4972'.
+The client will need 'server = <server address>'.
+The server address may need to be '::1' if you are connecting locally. You may
+use 'netstat -plant | grep burp' to determine the address that burp is
+listening on.
+There are still some pieces in the ncurses client that are not fully
+implemented.
+More details about all this will be in documentation to be written soon.
+
 2.0.9
 -----
 The configuration file parser now understands single quotes and double quotes

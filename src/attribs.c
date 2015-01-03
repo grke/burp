@@ -293,6 +293,16 @@ uint64_t decode_file_no_and_save_path(struct iobuf *iobuf, char **save_path)
 	return (uint64_t)val;
 }
 
+static int do_lutimes(const char *path, struct stat *statp)
+{
+	struct timeval t[2];
+	t[0].tv_sec = statp->st_atime;
+	t[0].tv_usec = 0;
+	t[1].tv_sec = statp->st_mtime;
+	t[1].tv_usec = 0;
+	return lutimes(path, t);
+}
+
 int attribs_set(struct asfd *asfd, const char *path,
 	struct stat *statp, uint64_t winattr, struct conf *conf)
 {
@@ -307,37 +317,32 @@ int attribs_set(struct asfd *asfd, const char *path,
 	return 0;
 #endif
 
-	/* ***FIXME**** optimize -- don't do if already correct */
-	/*
-	 * For link, change owner of link using lchown, but don't
-	 *   try to do a chmod as that will update the file behind it.
-	 */
+	if(lchown(path, statp->st_uid, statp->st_gid)<0)
+	{
+		berrno be;
+		berrno_init(&be);
+		logw(asfd, conf, "Unable to set file owner %s: ERR=%s",
+			path, berrno_bstrerror(&be, errno));
+		return -1;
+	}
 
 	/* Watch out, a metadata restore will have cmd set to CMD_METADATA or
 	   CMD_ENC_META, but that is OK at the moment because we are not doing
 	   meta stuff on links. */
 	if(S_ISLNK(statp->st_mode))
 	{
-		// Change owner of link, not of real file.
-		if(lchown(path, statp->st_uid, statp->st_gid)<0)
-		{
+#ifdef HAVE_LUTIMES
+		if(do_lutimes(path, statp)) {
 			berrno be;
 			berrno_init(&be);
-			logw(asfd, conf, "Unable to set file owner %s: ERR=%s",
+			logw(asfd, conf, "Unable to set lutimes %s: ERR=%s",
 				path, berrno_bstrerror(&be, errno));
 			return -1;
 		}
+#endif
 	}
 	else
 	{
-		if(chown(path, statp->st_uid, statp->st_gid)<0)
-		{
-			berrno be;
-			berrno_init(&be);
-			logw(asfd, conf, "Unable to set file owner %s: ERR=%s",
-				path, berrno_bstrerror(&be, errno));
-			return -1;
-		}
 		if(chmod(path, statp->st_mode) < 0)
 		{
 			berrno be;

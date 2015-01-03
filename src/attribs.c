@@ -199,6 +199,16 @@ static int set_file_times(const char *path, struct utimbuf *ut, struct cntr *cnt
 	return 0;
 }
 
+static int do_lutimes(const char *path, struct stat *statp, struct cntr *cntr)
+{
+	struct timeval t[2];
+	t[0].tv_sec = statp->st_atime;
+	t[0].tv_usec = 0;
+	t[1].tv_sec = statp->st_mtime;
+	t[1].tv_usec = 0;
+	return lutimes(path, t);
+}
+
 bool set_attributes(const char *path, char cmd, struct stat *statp, int64_t winattr, struct cntr *cntr)
 {
    struct utimbuf ut;
@@ -230,6 +240,14 @@ bool set_attributes(const char *path, char cmd, struct stat *statp, int64_t wina
             path, be.bstrerror());
          ok = false;
       }
+#ifdef HAVE_LUTIMES
+      if (do_lutimes(path, statp, cntr)) {
+         berrno be;
+         logw(cntr, "Unable to set lutimes %s: ERR=%s",
+            path, be.bstrerror());
+         ok = false;
+      }
+#endif
    } else {
       if (chown(path, statp->st_uid, statp->st_gid) < 0) {
          berrno be;

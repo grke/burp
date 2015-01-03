@@ -168,6 +168,9 @@
 /* Define to 1 if you have the 'futimesat' function. */
 #undef HAVE_FUTIMESAT
 
+/* Define to 1 if you have the 'lutimes' function. */
+#undef HAVE_LUTIMES
+
 /* Define if you have GCC */
 #undef HAVE_GCC
 

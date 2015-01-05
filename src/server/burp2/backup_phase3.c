@@ -351,9 +351,9 @@ static int sparse_generation(struct manio *newmanio, uint64_t fcount,
 			if(srca) { free(srca); srca=NULL; }
 			if(srcb) { free(srcb); srcb=NULL; }
 			if(dst) { free(dst); dst=NULL; }
-			snprintf(compa, sizeof(compa), "%08lX", i);
-			snprintf(compb, sizeof(compb), "%08lX", i+1);
-			snprintf(compd, sizeof(compd), "%08lX", i/2);
+			snprintf(compa, sizeof(compa), "%08"PRIX64, i);
+			snprintf(compb, sizeof(compb), "%08"PRIX64, i+1);
+			snprintf(compd, sizeof(compd), "%08"PRIX64, i/2);
 			if(!(srca=prepend_s(srcdir, compa))
 			  || !(dst=prepend_s(dstdir, compd)))
 				goto end;

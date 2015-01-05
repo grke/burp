@@ -96,11 +96,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			}
 			if(!blk)
 			{
-#ifdef HAVE_WIN32
-				logp("Could not find wrap up index: %016I64X\n",
-#else
-				logp("Could not find wrap up index: %016lX\n",
-#endif
+				logp("Could not find wrap up index: %016"PRIX64 "\n",
 					wrap_up);
 //				goto error;
 			}

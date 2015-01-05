@@ -1,6 +1,9 @@
 #ifndef _SRC_INCLUDES_H
 #define _SRC_INCLUDES_H
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 #include "action.h"
 #include "asfd.h"
 #include "async.h"

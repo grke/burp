@@ -54,12 +54,7 @@ static size_t calc_max_str_len(struct cntr *cntr, const char *cname)
 
 	// Second section.
 	snprintf(ullmax, sizeof(ullmax),
-#ifdef HAVE_WIN32
-			" %I64u\n",
-#else
-			" %llu\n",
-#endif
-				ULLONG_MAX);
+		" %"PRIu64 "\n", (uint64_t)ULLONG_MAX);
 	for(e=cntr->list; e; e=e->next)
 	{
 		if(e->flags & CNTR_SINGLE_FIELD)
@@ -263,13 +258,7 @@ static void incr_phase1(struct cntr *cntr, char ch)
 
 static void print_end(unsigned long long val)
 {
-	if(val) logc(
-#ifdef HAVE_WIN32
-			" %I64u\n",
-#else
-			" %llu\n",
-#endif
-			val);
+	if(val) logc(" %"PRIu64 "\n", val);
 }
 
 void cntr_add(struct cntr *c, char ch, int print)

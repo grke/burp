@@ -477,7 +477,7 @@ static int pre_post_override(char **override, char **pre, char **post)
 struct fstype
 {
 	const char *str;
-	long flag;
+	uint64_t flag;
 };
 
 static struct fstype fstypes[]={

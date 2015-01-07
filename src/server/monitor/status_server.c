@@ -123,10 +123,11 @@ static int parse_client_data(struct asfd *srfd,
 		  && strcmp(logfile, "verify_stats"))
 			goto end;
 	}
-
+/*
 	printf("client: %s\n", client?:"");
 	printf("backup: %s\n", backup?:"");
 	printf("logfile: %s\n", logfile?:"");
+*/
 
 	if(cstat)
 	{

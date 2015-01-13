@@ -1,9 +1,9 @@
 WORK IN PROGRESS
-WARNING - THIS WAS WRITTEN BEFORE CHANGING THE MONITOR SO THAT IT WORKS VIA
-THE CLIENT.
 
-NOTE: While the status monitor stuff also exists in burp-1, this documentation
-describes the functionality as it exists in burp-2, unless otherwise stated.
+NOTE: While status monitor functionality also exists in burp-1, this
+documentation describes the functionality as it exists in burp-2, unless
+otherwise stated. The burp-1 feature has significantly less functionality than
+the burp-2.
 
 Status port
 -----------
@@ -12,8 +12,48 @@ On the server side, there is the ability to run a status monitor.
 In the most basic sense, it is a port on which the burp server listens to
 requests, and to which it outputs information.
 
-You may use a status monitor client to connect to it, or query the port
-directly.
+Burp-2:
+            -----------------------------------------------
+            | server (burp -c /etc/burp/burp-server.conf) |
+            -----------------------------------------------
+                                  |
+                          SSL/JSON port 4972
+                                  |
+                        ----------------------
+                        | client (burp -a m) |
+                        ----------------------
+                                  |
+                             stdin/stdout
+                                  |
+                 -------------------------------------
+                 | status monitor client (burp -a s) |
+                 -------------------------------------
+
+Burp-1:
+            -----------------------------------------------
+            | server (burp -c /etc/burp/burp-server.conf) |
+            -----------------------------------------------
+                                  |
+                         Plain text port 4972
+                                  |
+  -------------------------------------------------------------------
+  | status monitor client (burp -c /etc/burp/burp-server.conf -a s) |
+  -------------------------------------------------------------------
+
+
+Security
+--------
+
+CAUTION: The burp-1 status port operates in plain text only and allows you
+to see information on any client. It uses a server configuration file rather
+than a client configuration file, and only allows connections locally on the
+server.
+
+In burp-2, the status port connection is secured via SSL.
+The client that you are connecting from will be able to see its own details,
+and the details of any other client that you are a 'restore_client' of.
+Since it uses a client configuration file, you can run status monitor clients
+remotely.
 
 
 Address and port number
@@ -29,9 +69,7 @@ IPv4, use the --disable-ipv6 configure option).
 
 Burp-2 will listen for local connections by default. You can set the
 'status_address' option in /etc/burp/burp-server.conf to explicitly choose the
-listen address. This also lets you choose IPv4 or IPv6 at run time. Think
-carefully before changing it, as the status port can be used to view the
-contents of all backups.
+listen address. This also lets you choose IPv4 or IPv6 at run time.
 
 Once you start the burp server, you may check the status address and port
 by running a command like this:
@@ -39,22 +77,46 @@ by running a command like this:
 netstat -plant | grep 4972
 
 
+Raw connection
+--------------
+
+You may connect to the status port using a burp client with the syntax
+'burp -a m'.
+This will let you see the raw JSON output, and let you input commands via
+standard input.
+
+If you have not connected from this client before, burp will attempt to set
+up SSL certificates in the usual way first.
+You may need to configure the 'server' and 'status_port' options in your
+client burp.conf before it will connect.
+
+
 Built-in status monitor clients
 -------------------------------
+
+These fork a 'burp -a m' child process and then communicate with it using
+stdin/stdout. If you have connection problems, it can be useful to try running
+'burp -a m' manually.
+
 
 Ncurses:
 
 This requires that burp be compiled with ncurses enabled.
 
-Once the server is running, the ncurses status monitor client on the burp
-server can be run with a command like this:
+Once the burp server is running, the ncurses status monitor client can be run
+with a command like this:
 
-burp -c /etc/burp/burp-server -a s
+burp -a s
 
 You should see a list of clients along with their current status and the time
 of their most recent backup.
-The cursor can be moved with the arrow keys. Hitting enter or the right arrow
-key will give you a list of backups for the selected client.
+If you have any 'running' processes, pressing 't' will toggle between seeing
+the time of the most recent backup and a brief summary of the currently
+running task.
+
+The cursor can be moved with the arrow keys.
+Hitting enter or the right arrow key will give you a list of backups for the
+selected client.
 Choosing a backup will give you the options to browse the backup, or view
 logs.
 Choosing a backup that is currently in progress will also give you the option
@@ -66,12 +128,13 @@ Snapshot:
 Running the following command will print a snapshot of the status monitor
 status screen to stdout:
 
-burp -c /etc/burp/burp-server -a S
+burp -a S
 
 One application is that a script can run this and email an administrator the
 output on a cron job. This doesn't require ncurses support. There are
 additional options that can be given, listed below.
 
+WORK IN PROGRESS - NEED TO UPDATE THIS SECTION FOR BURP-2.
        -C [client]
               Limit the output to a single client.
 
@@ -91,15 +154,11 @@ Other status monitor clients
 An example of another status monitor client is burp-ui, which presents a nice
 web interface.
 
-You may, of course, telnet to the server status port and issue requests
-manually. For example:
-telnet 127.0.0.1 4972
-or
-telnet ::1 4972
-
 
 Request format
 --------------
+
+WORK IN PROGRESS - NEED TO UPDATE THIS SECTION FOR BURP-2.
 
 Empty string
   - Request a summary of all clients.
@@ -117,5 +176,7 @@ c:<client>:b:<backup number>:l:<log type>
 
 Response format
 ---------------
+
+WORK IN PROGRESS - NEED TO COMPLETE THIS SECTION
 
 The response is JSON formatted.

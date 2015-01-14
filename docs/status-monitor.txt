@@ -134,18 +134,18 @@ One application is that a script can run this and email an administrator the
 output on a cron job. This doesn't require ncurses support. There are
 additional options that can be given, listed below.
 
-WORK IN PROGRESS - NEED TO UPDATE THIS SECTION FOR BURP-2.
        -C [client]
               Limit the output to a single client.
 
-       -b [number]
-              Show listable files in a particular backup (requires -C).
-
-       -z [file]
-              Dump a particular log file in a backup (requires -C and -b).
-
-       -d [path]
-              Show a particular path in a backup (requires -C and -b).
+#WORK IN PROGRESS - These options are not yet working in burp-2.
+#       -b [number]
+#              Show listable files in a particular backup (requires -C).
+#
+#       -z [file]
+#              Dump a particular log file in a backup (requires -C and -b).
+#
+#       -d [path]
+#              Show a particular path in a backup (requires -C and -b).
 
 
 Other status monitor clients
@@ -160,7 +160,7 @@ Request format
 
 WORK IN PROGRESS - NEED TO UPDATE THIS SECTION FOR BURP-2.
 
-Empty string
+c:
   - Request a summary of all clients.
 
 c:<client>
@@ -169,9 +169,12 @@ c:<client>
 c:<client>:b:<backup number>
   - Request details of a particular backup.
 
+c:<client>:b:<backup number>:p:<path>
+  - Request the contents of a directory from a backup.
+
 c:<client>:b:<backup number>:l:<log type>
   - Request the contents of a log file from a backup. The available log types
-    for each backup are listed with the backups themselves (above).
+    for each backup are listed with the backups themselves.
 
 
 Response format
@@ -180,3 +183,328 @@ Response format
 WORK IN PROGRESS - NEED TO COMPLETE THIS SECTION
 
 The response is JSON formatted.
+
+Example 1. There are two idle clients. 'testclient' has had three backups and
+'laptop' has had none. The output is indicating the most recent backup of
+each client.
+
+Request: "c:"
+Response:
+{
+    "clients": [
+        {
+            "name": "testclient",
+            "run_status": "idle",
+            "backups": [
+                {
+                    "number": 3,
+                    "timestamp": 1421271819,
+                    "flags": [
+                        "current",
+                        "manifest"
+                    ],
+                    "logs": {
+                        "list": [
+                            "backup",
+                            "backup_stats"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "laptop",
+            "run_status": "idle",
+            "backups": [
+
+            ]
+        }
+    ]
+}
+
+
+Example 2. Requesting the backup list of 'testclient', which is idle.
+The 'flags' section indicates properties of the particular backup that it
+appears in - whether it is deletable, the current backup, and so on.
+The 'logs' section indicates the log files that are able to be returned by
+the status monitor.
+
+Request: "c:testclient"
+Response:
+{
+    "clients": [
+        {
+            "name": "testclient",
+            "run_status": "idle",
+            "backups": [
+                {
+                    "number": 3,
+                    "timestamp": 1421271819,
+                    "flags": [
+                        "current",
+                        "manifest"
+                    ],
+                    "logs": {
+                        "list": [
+                            "backup",
+                            "backup_stats"
+                        ]
+                    }
+                },
+                {
+                    "number": 2,
+                    "timestamp": 1421271581,
+                    "flags": [
+                        "manifest"
+                    ],
+                    "logs": {
+                        "list": [
+                            "backup",
+                            "backup_stats"
+                        ]
+                    }
+                },
+                {
+                    "number": 1,
+                    "timestamp": 1421199720,
+                    "flags": [
+                        "deletable",
+                        "manifest"
+                    ],
+                    "logs": {
+                        "list": [
+                            "backup",
+                            "backup_stats"
+                        ]
+                    }
+                }
+            ]
+        }
+    ]
+}
+
+
+Example 3. Requesting an individual backup.
+
+Request: "c:testclient:b:2"
+Response:
+{
+    "clients": [
+        {
+            "name": "testclient",
+            "run_status": "idle",
+            "backups": [
+                {
+                    "number": 2,
+                    "timestamp": 1421271581,
+                    "flags": [
+                        "manifest"
+                    ],
+                    "logs": {
+                        "list": [
+                            "backup",
+                            "backup_stats"
+                        ]
+                    }
+                }
+            ]
+        }
+    ]
+}
+
+
+Example 4. Requesting the contents of a directory in a backup.
+
+Request: "c:testclient:b:2:p:/usr/lib/xul-ext/webaccounts/content"
+Response:
+{
+    "clients": [
+        {
+            "name": "testclient",
+            "run_status": "idle",
+            "backups": [
+                {
+                    "number": 2,
+                    "timestamp": 1421271581,
+                    "flags": [
+                        "manifest"
+                    ],
+                    "logs": {
+                        "list": [
+                            "backup",
+                            "backup_stats"
+                        ]
+                    },
+                    "browse": {
+                        "directory": "/usr/lib/xul-ext/webaccounts/content",
+                        "entries": [
+                            {
+                                "name": "browser.js",
+                                "dev": 2050,
+                                "ino": 1837644,
+                                "mode": 33188,
+                                "nlink": 1,
+                                "uid": 0,
+                                "gid": 0,
+                                "rdev": 0,
+                                "size": 2166,
+                                "blksize": 4096,
+                                "blocks": 8,
+                                "atime": 1420519821,
+                                "ctime": 1407972494,
+                                "mtime": 1390969550
+                            },
+                            {
+                                "name": "browser.xul",
+                                "dev": 2050,
+                                "ino": 1837645,
+                                "mode": 33188,
+                                "nlink": 1,
+                                "uid": 0,
+                                "gid": 0,
+                                "rdev": 0,
+                                "size": 261,
+                                "blksize": 4096,
+                                "blocks": 8,
+                                "atime": 1420519821,
+                                "ctime": 1407972494,
+                                "mtime": 1373030720
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    ]
+}
+
+Example 5. Requesting the log of a particular backup.
+
+Request: "c:testclient:b:2:l:backup"
+Response:
+{
+    "clients": [
+        {
+            "name": "testclient",
+            "run_status": "idle",
+            "backups": [
+                {
+                    "number": 2,
+                    "timestamp": 1421271581,
+                    "flags": [
+                        "manifest"
+                    ],
+                    "logs": {
+                        "list": [
+                            "backup",
+                            "backup_stats"
+                        ],
+                        "backup": [
+                            "2015-01-15 07:39:41: burp[7398] Client version: 2.0.11",
+                            "2015-01-15 07:39:41: burp[7398] Protocol: 1",
+                            "2015-01-15 07:39:41: burp[7398] Begin phase1 (file system scan)",
+                            "2015-01-15 07:39:42: burp[7398] End phase1 (file system scan)",
+                            "2015-01-15 07:39:42: burp[7398] Begin phase2 (receive file data)",
+                            "2015-01-15 07:39:47: burp[7398] End phase2 (receive file data)",
+                            "2015-01-15 07:39:47: burp[7398] Backup ending - disconnect from client.",
+                            "2015-01-15 07:39:47: burp[7398] Begin phase3 (merge manifests)",
+                            "2015-01-15 07:39:47: burp[7398] End phase3 (merge manifests)",
+                            "2015-01-15 07:39:47: burp[7398] Begin phase4 (shuffle files)",
+                            "2015-01-15 07:39:47: burp[7398] Previous backup is not a hardlinked_archive",
+                            "2015-01-15 07:39:47: burp[7398]  will generate reverse deltas",
+                            "2015-01-15 07:39:47: burp[7398] Duplicating current backup.",
+                            "2015-01-15 07:39:48: burp[7398] New backup is not a hardlinked_archive",
+                            "2015-01-15 07:39:48: burp[7398] Doing the atomic data jiggle...",
+                            "2015-01-15 07:39:59: burp[7398] End phase4 (shuffle files)",
+                            "--------------------------------------------------------------------------------",
+                            "Start time: 2015-01-15 07:39:41",
+                            "  End time: 2015-01-15 07:39:59",
+                            "Time taken: 00:18",
+                            "                         New   Changed Unchanged   Deleted     Total |  Scanned",
+                            "                   ------------------------------------------------------------",
+                            "             Files:     1554         0     19153         0     20707 |    20707",
+                            "         Meta data:        2         0         0         0         2 |        2",
+                            "       Directories:        1         0      1976         0      1977 |     1977",
+                            "        Hard links:        0         0        14         0        14 |       14",
+                            "        Soft links:      380         0      1579         0      1959 |     1959",
+                            "       Grand total:     1937         0     22722         0     24659 |    24659",
+                            "                   ------------------------------------------------------------",
+                            "",
+                            "             Warnings:             0",
+                            "",
+                            "      Bytes estimated:    2385159143 (2.22 GB)",
+                            "      Bytes in backup:    2384195671 (2.22 GB)",
+                            "       Bytes received:     227824877 (217.27 MB)",
+                            "           Bytes sent:             0",
+                            "--------------------------------------------------------------------------------",
+                            "2015-01-15 07:39:59: burp[7398] Backup completed."
+                        ]
+                    }
+                }
+            ]
+        }
+    ]
+}
+
+
+Example 6. Listing all clients whilst one of them is running.
+
+Request: "c:"
+Response:
+{
+    "clients": [
+        {
+            "name": "testclient",
+            "run_status": "running",
+            "phase": "unknown",
+            "backups": [
+                {
+                    "number": 3,
+                    "timestamp": 1421271819,
+                    "flags": [
+                        "current",
+                        "manifest"
+                    ],
+                    "logs": {
+                        "list": [
+                            "backup",
+                            "backup_stats"
+                        ]
+                    }
+                },
+                {
+                    "number": 4,
+                    "timestamp": 1421272639,
+                    "flags": [
+                        "working"
+                    ],
+                    "counters": [
+                        {
+                            "name": "time_start",
+                            "type": "b",
+                            "count": 1421271834
+                        },
+                        {
+                            "name": "time_end",
+                            "type": "E",
+                            "count": 1421272641
+                        }
+                    ],
+                    "logs": {
+                        "list": [
+                            "backup"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "laptop",
+            "run_status": "idle",
+            "backups": [
+
+            ]
+        }
+    ]
+}
+

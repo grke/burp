@@ -314,6 +314,13 @@ Response:
 
 
 Example 4. Requesting the contents of a directory in a backup.
+With large backups, each request might take some time because the manifest
+file needs to parsed on the server. In order to speed this up, there is an
+option called 'monitor_browse_cache' on the server side. Turning it on
+makes the server cache the results of the parsing in memory, thereby allowing
+it to respond faster to subsequent queries about the same backup on the same
+connection. The memory is freed on querying the contents of a different backup
+or closing the connection.
 
 Request: "c:testclient:b:2:p:/usr/lib/xul-ext/webaccounts/content"
 Response:
@@ -456,7 +463,7 @@ Response:
         {
             "name": "testclient",
             "run_status": "running",
-            "phase": "unknown",
+            "phase": "scanning",
             "backups": [
                 {
                     "number": 3,
@@ -479,6 +486,61 @@ Response:
                         "working"
                     ],
                     "counters": [
+                        {
+                            "name": "files",
+                            "type": "f",
+                            "count": 0,
+                            "changed": 0,
+                            "same": 0,
+                            "deleted": 0,
+                            "scanned": 1419
+                        },
+                        {
+                            "name": "directories",
+                            "type": "d",
+                            "count": 0,
+                            "changed": 0,
+                            "same": 0,
+                            "deleted": 0,
+                            "scanned": 318
+                        },
+                        {
+                            "name": "soft_links",
+                            "type": "L",
+                            "count": 0,
+                            "changed": 0,
+                            "same": 0,
+                            "deleted": 0,
+                            "scanned": 6
+                        },
+                        {
+                            "name": "hard_links",
+                            "type": "l",
+                            "count": 0,
+                            "changed": 0,
+                            "same": 0,
+                            "deleted": 0,
+                            "scanned": 1100
+                        },
+                        {
+                            "name": "grand_total",
+                            "type": "Z",
+                            "count": 0,
+                            "changed": 0,
+                            "same": 0,
+                            "deleted": 0,
+                            "scanned": 2843
+                        },
+                        {
+                            "name": "warnings",
+                            "type": "w",
+                            "count": 2
+                        },
+                        {
+                            "name": "bytes_estimated",
+                            "type": "G",
+                            "count": 28264778
+                        },
                         {
                             "name": "time_start",
                             "type": "b",

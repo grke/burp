@@ -158,8 +158,6 @@ web interface.
 Request format
 --------------
 
-WORK IN PROGRESS - NEED TO UPDATE THIS SECTION FOR BURP-2.
-
 c:
   - Request a summary of all clients.
 
@@ -179,8 +177,6 @@ c:<client>:b:<backup number>:l:<log type>
 
 Response format
 ---------------
-
-WORK IN PROGRESS - NEED TO COMPLETE THIS SECTION
 
 The response is JSON formatted.
 

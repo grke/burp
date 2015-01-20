@@ -43,11 +43,14 @@ void logp(const char *fmt, ...)
 	pid=(int)getpid();
 	if(logfp)
 		fprintf(logfp, "%s: %s[%d] %s", gettm(), prog, pid, buf);
-	else if(do_syslog)
-		syslog(LOG_INFO, "%s", buf);
-	else if(do_stdout)
-		fprintf(stdout, "%s: %s[%d] %s",
-			gettm(), prog, pid, buf);
+	else
+	{
+		if(do_syslog)
+			syslog(LOG_INFO, "%s", buf);
+		if(do_stdout)
+			fprintf(stdout, "%s: %s[%d] %s",
+				gettm(), prog, pid, buf);
+	}
 }
 
 // For the counters.

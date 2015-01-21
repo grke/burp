@@ -70,22 +70,25 @@ void logp_ssl_err(const char *fmt, ...)
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
 	logp("%s", buf);
-	if(logfp)
-		ERR_print_errors_fp(logfp);
-	else if(do_syslog)
+	if(logfp) ERR_print_errors_fp(logfp);
+	else
 	{
-		// FIX THIS: How to send to syslog?
-		static BIO *bio_err=NULL;
-		if(!bio_err) bio_err=BIO_new_fp(stderr, BIO_NOCLOSE);
-		ERR_print_errors(bio_err);
-	}
-	else if(do_stdout)
-	{
-		if(!json)
+		if(do_syslog)
 		{
+			// FIX THIS: How to send to syslog?
 			static BIO *bio_err=NULL;
-			if(!bio_err) bio_err=BIO_new_fp(stdout, BIO_NOCLOSE);
+			if(!bio_err) bio_err=BIO_new_fp(stderr, BIO_NOCLOSE);
 			ERR_print_errors(bio_err);
+		}
+		if(do_stdout)
+		{
+			if(!json)
+			{
+				static BIO *bio_err=NULL;
+				if(!bio_err) bio_err=BIO_new_fp(stdout,
+					BIO_NOCLOSE);
+				ERR_print_errors(bio_err);
+			}
 		}
 	}
 }

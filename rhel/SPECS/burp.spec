@@ -1,19 +1,14 @@
-# Author: Bassu <bassu@phi9.com>
-# License: GPL
-# Part of the repo available at mirrors.phi9.com/burp-repo/
-
 Name:		burp
-Version:	1.3.34
-Release:	2%{?dist}
 Summary:	Burp is a network-based simple yet powerful backup and restore program for Unix and Windows.
-Group:		Backup Server
+Version:	1.3.48
+Release:	2%{?dist}
 License:	GPL
 URL:		http://burp.grke.org/
-Source0:	https://github.com/grke/burp/archive/%{name}-master.tar.gz
+Source0:	https://github.com/grke/burp/archive/%{version}.tar.gz
 Source1:	burp.init
+Source2:	burp.service
 BuildRequires:	librsync-devel, zlib-devel, openssl-devel, ncurses-devel, libacl-devel, uthash
 Requires:	openssl-perl
-Provides:	burp, bedup, vss_strip
 
 %description
 Burp is a network backup and restore program, using client and server.
@@ -23,7 +18,7 @@ It also uses VSS (Volume Shadow Copy Service) to make snapshots when
 backing up Windows computers.
 
 %prep
-%setup -q -n %{name}-master
+%setup -q -n %{name}-%{version}
 
 %build
 %configure --sysconfdir=%{_sysconfdir}/%{name}
@@ -32,8 +27,13 @@ make %{?_smp_mflags}
 %install
 rm -rf %{buildroot}
 make install DESTDIR=%{buildroot}
-install -d -m 755 %{buildroot}/etc/rc.d/init.d
-install -c -m 755 %{SOURCE1} %{buildroot}/etc/rc.d/init.d/%{name}
+%if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
+mkdir -p %{buildroot}%{_initrddir}
+install -p -m 0755 %{SOURCE1} %{buildroot}%{_initrddir}/
+%else
+mkdir -p %{buildroot}%{_unitdir}
+install -p -m 0644 %{SOURCE2} %{buildroot}%{_unitdir}/
+%endif
 
 %clean
 rm -rf %{buildroot}
@@ -44,10 +44,12 @@ rm -rf %{buildroot}
 %{_sbindir}/*
 %{_mandir}/*
 %config(noreplace) /etc/burp/*
-%config /etc/rc.d/init.d/%{name}
-#%config(noreplace) /etc/burp/burp.conf
-#%config(noreplace) /etc/burp/burp-server.conf
 %{_sysconfdir}/*
+%if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
+%attr(0755, root, root) %{_initrddir}/burp
+%else
+%{_unitdir}/burp.service
+%endif
 
 %post
 /sbin/chkconfig --add %{name}
@@ -56,20 +58,25 @@ rm -rf %{buildroot}
 /sbin/chkconfig --del %{name} || :
 
 %changelog
+* Tue Nov 25 2014 Andrew Niemantsverdriet <andrewniemants@gmail.com>
+- Fixing spec file issues to clean up rpmlint output
+- Added support for systemd
+
 * Sun Jul 7 2013 Bassu (bassu@phi9.com)
 - Fixed a bug in init file disallowing startup and added missing \
   conf files in sysconfigdir.
+
 * Fri Jul 5 2013 Bassu (bass@phi9.com)
 - First rpm packaged and released for RHEL based distros.
 
 * Sat Jun 29 2013 Graham Keeling: burp-1.3.34 is released.
 - Contributions from Avi Rozen:
-  	- Major autoconf cleanup.
+		- Major autoconf cleanup.
 	- Initial support for cross-building android targets.
 - On the server, indicate where logging is occurring.
 - Fix bedup segfault when using -m with no argument.
 
-* Fri May 5 2013 Graham Keeling: burp-1.3.32 is released.
+* Sun May 5 2013 Graham Keeling: burp-1.3.32 is released.
 - Fix status monitor segfault.
 - Run timed backups with lower thread priority on Windows.
 - Add 'vss_drives' option, which gives the ability to specify which Windows \

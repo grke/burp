@@ -592,7 +592,7 @@ static int do_client(struct config *conf, enum action act, int vss_restore, int 
 
 			// Return non-zero if there were warnings,
 			// so that the test script can easily check.
-			if(p1cntr.warning+cntr.warning)
+			if(!ret && p1cntr.warning+cntr.warning)
 				ret=2;
 
 			break;

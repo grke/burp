@@ -29,6 +29,7 @@
 #include "lock.h"
 #include "log.h"
 #include "msg.h"
+#include "pathcmp.h"
 #include "prepend.h"
 #include "regexp.h"
 #include "run_script.h"

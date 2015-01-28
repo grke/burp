@@ -1,0 +1,2 @@
+Let's start trying to do unit tests.
+gcc  -o x test.c ../src/pathcmp.c -lcheck -lpthread -lm -lrt

@@ -1,3 +1,6 @@
+  * In the client, don't use the return code for restore warnings if an error
+    code is already set. 
+
 2015-01-03 Changes in burp-1.4.30:
   * Better SSL error logging.
   * Replace c_rehash with a line of shell script, from Markus Heberling.

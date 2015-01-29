@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../cmd.h"
 
 // Want to make sure that we are listening for reads too - this will let us
 // exit promptly if the client was killed.

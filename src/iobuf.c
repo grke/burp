@@ -1,4 +1,6 @@
 #include "include.h"
+#include "pathcmp.h"
+#include "cmd.h"
 
 struct iobuf *iobuf_alloc(void)
 {

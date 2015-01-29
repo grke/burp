@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../cmd.h"
 
 static int load_signature(struct asfd *asfd,
 	rs_signature_t **sumset, struct conf *conf)

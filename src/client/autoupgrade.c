@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../cmd.h"
 
 static int receive_file(struct asfd *asfd, const char *autoupgrade_dir,
 	const char *file, struct conf *conf)

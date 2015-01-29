@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../cmd.h"
 
 static int setup_stuff_done=0;
 

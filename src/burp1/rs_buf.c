@@ -34,6 +34,7 @@
  */
 
 #include "include.h"
+#include "../cmd.h"
 
 /* use fseeko instead of fseek for long file support if we have it */
 #ifdef HAVE_FSEEKO

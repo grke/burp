@@ -1,4 +1,5 @@
 #include "include.h"
+#include "cmd.h"
 
 static int do_encryption(struct asfd *asfd, EVP_CIPHER_CTX *ctx,
 	uint8_t *inbuf, int inlen, uint8_t *outbuf, int *outlen,

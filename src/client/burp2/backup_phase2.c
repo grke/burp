@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../cmd.h"
 #include "../../burp2/rabin/include.h"
 
 /* Ignore extrameta for now.

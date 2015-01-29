@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../cmd.h"
 #include "champ_chooser/hash.h"
 #include "../../burp2/slist.h"
 #include "../../server/burp1/restore.h"

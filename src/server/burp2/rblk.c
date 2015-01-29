@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../cmd.h"
 
 // For retrieving stored data.
 struct rblk

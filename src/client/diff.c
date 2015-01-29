@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../cmd.h"
 
 /* Note: The chars in this function are not the same as in the CMD_ set.
    These are for printing to the screen only. */

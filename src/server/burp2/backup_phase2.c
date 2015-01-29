@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../cmd.h"
 #include "champ_chooser/include.h"
 #include "../../server/manio.h"
 #include "../../burp2/blist.h"

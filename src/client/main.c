@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../cmd.h"
 
 #include "monitor/status_client_ncurses.h"
 

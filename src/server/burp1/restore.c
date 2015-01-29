@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../cmd.h"
 #include "../../server/burp2/restore.h"
 
 #include <librsync.h>

@@ -1,4 +1,5 @@
 #include "include.h"
+#include "cmd.h"
 
 #include "../burp1/sbufl.h"
 

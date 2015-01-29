@@ -1,4 +1,5 @@
 #include "include.h"
+#include "cmd.h"
 
 static const char *endreqstrf;
 static const char *endrepstrf;

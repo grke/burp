@@ -1,4 +1,5 @@
 #include "include.h"
+#include "cmd.h"
 #include "client/main.h"
 #include "server/main.h"
 #include "server/burp1/bedup.h"

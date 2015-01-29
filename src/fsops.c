@@ -1,4 +1,5 @@
 #include "include.h"
+#include "pathcmp.h"
 
 #include <dirent.h>
 

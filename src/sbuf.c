@@ -1,4 +1,5 @@
 #include "include.h"
+#include "cmd.h"
 #include "server/burp2/rblk.h"
 
 static int alloc_count=0;

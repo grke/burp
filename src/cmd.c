@@ -1,4 +1,5 @@
-#include "include.h"
+#include <stdio.h>
+#include "cmd.h"
 
 void cmd_to_text(char cmd, char *buf, size_t len)
 {

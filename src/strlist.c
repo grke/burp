@@ -1,4 +1,5 @@
 #include "include.h"
+#include "pathcmp.h"
 
 // Maybe rename this stuff to 'struct pathlist'.
 

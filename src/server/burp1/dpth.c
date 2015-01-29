@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../cmd.h"
 #include "../server/sdirs.h"
 
 #include <dirent.h>

@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../cmd.h"
 
 static size_t treepathlen=0;
 

@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../cmd.h"
 
 #ifdef HAVE_ACL
 #if defined(HAVE_LINUX_OS) || \

@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../cmd.h"
 
 #include "../../server/backup_phase1.h"
 

@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../cmd.h"
 
 #ifndef HAVE_WIN32
 #include <sys/utsname.h>

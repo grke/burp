@@ -1,4 +1,5 @@
 #include "include.h"
+#include "cmd.h"
 
 const char *prog="unknown";
 

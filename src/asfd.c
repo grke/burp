@@ -1,4 +1,5 @@
 #include "include.h"
+#include "cmd.h"
 
 // For IPTOS / IPTOS_THROUGHPUT.
 #ifdef HAVE_WIN32

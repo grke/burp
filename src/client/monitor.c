@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../cmd.h"
 
 static int copy_input_to_output(struct asfd *in, struct asfd *out)
 {

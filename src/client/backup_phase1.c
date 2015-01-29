@@ -33,6 +33,7 @@
  */
 
 #include "include.h"
+#include "../cmd.h"
 
 static char filesymbol=CMD_FILE;
 static char metasymbol=CMD_METADATA;

@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../cmd.h"
 
 static int read_fp_msg(FILE *fp, gzFile zp, char **buf, size_t len)
 {

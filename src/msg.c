@@ -1,4 +1,5 @@
 #include "include.h"
+#include "cmd.h"
 
 int send_msg_fp(FILE *fp, char cmd, const char *buf, size_t s)
 {

@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../cmd.h"
 
 int authorise_client(struct asfd *asfd,
 	struct conf *conf, char **server_version)

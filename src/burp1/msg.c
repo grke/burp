@@ -1,4 +1,5 @@
 #include "include.h"
+#include "cmd.h"
 
 static int do_write(struct asfd *asfd,
 	BFILE *bfd, uint8_t *out, size_t outlen,

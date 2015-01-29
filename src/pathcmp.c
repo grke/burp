@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include "pathcmp.h"
 
-// Return a number indicating the number of directories matched (plus one).
+// Return a number indicating the number of directories matched.
 // 0 if it is not a sub-directory.
 // Two paths the same counts as a subdirectory.
 int is_subdir(const char *dir, const char *sub)
@@ -19,9 +19,9 @@ int is_subdir(const char *dir, const char *sub)
 		dl=d;
 		if(*s=='/') count++;
 	}
-	if(!*d && !*s) return ++count; // Paths were exactly the same.
+	if(!*d && !*s) return count; // Paths were exactly the same.
 	if(!*d && *s=='/')
-		return ++count; // 'dir' ended without a slash, for example:
+		return count; // 'dir' ended without a slash, for example:
 	// dir=/bin sub=/bin/bash
 	if(*dl=='/' && *sl=='/' && *(sl+1) && !*(dl+1)) return count;
 	return 0;

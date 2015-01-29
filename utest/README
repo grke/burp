@@ -1,2 +1,5 @@
 Let's start trying to do unit tests.
-gcc  -o x test.c ../src/pathcmp.c -lcheck -lpthread -lm -lrt
+These use 'check'.
+On Debian:y
+apt-get install check
+make

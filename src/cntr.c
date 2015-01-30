@@ -21,7 +21,7 @@ struct cntr *cntr_alloc(void)
 }
 
 static int add_cntr_ent(struct cntr *cntr, int flags,
-	char cmd, const char *field, const char *label)
+	enum cmd cmd, const char *field, const char *label)
 {
 	struct cntr_ent *cenew=NULL;
 	if(!(cenew=(struct cntr_ent *)
@@ -410,7 +410,7 @@ static void quint_print(struct cntr_ent *ent, enum action act)
 	}
 }
 
-static unsigned long long get_count(struct cntr_ent **ent, char cmd)
+static unsigned long long get_count(struct cntr_ent **ent, enum cmd cmd)
 {
 	if(!ent[(uint8_t)cmd]) return 0;
 	return ent[(uint8_t)cmd]->count;

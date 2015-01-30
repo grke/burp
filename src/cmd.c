@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "cmd.h"
 
-void cmd_to_text(char cmd, char *buf, size_t len)
+void cmd_to_text(enum cmd cmd, char *buf, size_t len)
 {
 	switch(cmd)
 	{
@@ -83,13 +83,13 @@ void cmd_print_all(void)
 	printf("\nIndex of symbols\n\n");
 	for(i=0; cmds[i]; i++)
 	{
-		cmd_to_text(cmds[i], buf, len);
+		cmd_to_text((enum cmd)cmds[i], buf, len);
 		printf("  %c: %s\n", cmds[i], buf);
 	}
 	printf("\n");
 }
 
-int cmd_is_filedata(char cmd)
+int cmd_is_filedata(enum cmd cmd)
 {
 	return     cmd==CMD_FILE
 		|| cmd==CMD_ENC_FILE
@@ -102,12 +102,12 @@ int cmd_is_filedata(char cmd)
 		|| cmd==CMD_EFS_FILE;
 }
 
-int cmd_is_link(char cmd)
+int cmd_is_link(enum cmd cmd)
 {
 	return cmd==CMD_SOFT_LINK || cmd==CMD_HARD_LINK;
 }
 
-int cmd_is_endfile(char cmd)
+int cmd_is_endfile(enum cmd cmd)
 {
 	return cmd==CMD_END_FILE;
 }

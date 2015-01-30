@@ -63,7 +63,7 @@ end:
 }
 
 static int make_link(struct asfd *asfd,
-	const char *fname, const char *lnk, char cmd, struct conf *conf)
+	const char *fname, const char *lnk, enum cmd cmd, struct conf *conf)
 {
 	int ret=-1;
 
@@ -690,6 +690,8 @@ int do_restore_client(struct asfd *asfd,
 				if(restore_special(asfd, sb,
 					fullpath, act, conf)) goto error;
 				continue;
+			default:
+				break;
 		}
 
 		if(conf->protocol==PROTO_BURP2)

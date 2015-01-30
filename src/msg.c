@@ -1,7 +1,7 @@
 #include "include.h"
 #include "cmd.h"
 
-int send_msg_fp(FILE *fp, char cmd, const char *buf, size_t s)
+int send_msg_fp(FILE *fp, enum cmd cmd, const char *buf, size_t s)
 {
 	if(fprintf(fp, "%c%04X", cmd, (unsigned int)s)!=5
 	  || fwrite(buf, 1, s, fp)!=s
@@ -13,7 +13,7 @@ int send_msg_fp(FILE *fp, char cmd, const char *buf, size_t s)
 	return 0;
 }
 
-int send_msg_zp(gzFile zp, char cmd, const char *buf, size_t s)
+int send_msg_zp(gzFile zp, enum cmd cmd, const char *buf, size_t s)
 {
 	if(gzprintf(zp, "%c%04X", cmd, s)!=5
 	  || gzwrite(zp, buf, s)!=(int)s

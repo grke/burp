@@ -101,13 +101,13 @@ struct asfd
 	int (*do_read)(struct asfd *);
 	int (*do_write)(struct asfd *);
 	int (*read)(struct asfd *);
-	int (*read_expect)(struct asfd *, char, const char *);
+	int (*read_expect)(struct asfd *, enum cmd, const char *);
 	int (*simple_loop)(struct asfd *, struct conf *, void *,
 		const char *, enum asl_ret callback(struct asfd *,
 			struct conf *, void *));
 	int (*write)(struct asfd *, struct iobuf *);
-	int (*write_str)(struct asfd *, char, const char *);
-	int (*write_strn)(struct asfd *, char, const char *, size_t);
+	int (*write_str)(struct asfd *, enum cmd, const char *);
+	int (*write_strn)(struct asfd *, enum cmd, const char *, size_t);
 };
 
 extern struct asfd *asfd_alloc(void);

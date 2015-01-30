@@ -4,7 +4,8 @@
 
 /* Ignore extrameta for now.
 #ifndef HAVE_WIN32
-static int maybe_send_extrameta(struct sbuf *sb, char cmd, struct cntr *p1cntr)
+static int maybe_send_extrameta(struct sbuf *sb,
+	enum cmd cmd, struct cntr *p1cntr)
 {
 	if(has_extrameta(sb->path, cmd))
 	{
@@ -123,6 +124,8 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 				*backup_end=1;
 				goto end;
 			}
+			break;
+		default:
 			break;
 	}
 

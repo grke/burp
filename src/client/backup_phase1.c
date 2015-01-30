@@ -35,16 +35,16 @@
 #include "include.h"
 #include "../cmd.h"
 
-static char filesymbol=CMD_FILE;
-static char metasymbol=CMD_METADATA;
-static char dirsymbol=CMD_DIRECTORY;
+static enum cmd filesymbol=CMD_FILE;
+static enum cmd metasymbol=CMD_METADATA;
+static enum cmd dirsymbol=CMD_DIRECTORY;
 #ifdef HAVE_WIN32
-static char vss_trail_symbol=CMD_VSS_T;
+static enum cmd vss_trail_symbol=CMD_VSS_T;
 #endif
 
 static int usual_stuff(struct asfd *asfd,
 	struct conf *conf, const char *path, const char *link,
-	struct sbuf *sb, char cmd)
+	struct sbuf *sb, enum cmd cmd)
 {
 	if(asfd->write_str(asfd, CMD_ATTRIBS, sb->attr.buf)
 	  || asfd->write_str(asfd, cmd, path)
@@ -55,8 +55,9 @@ static int usual_stuff(struct asfd *asfd,
 	return 0;
 }
 
-static int maybe_send_extrameta(struct asfd *asfd, const char *path, char cmd,
-	struct sbuf *sb, struct conf *conf, int symbol)
+static int maybe_send_extrameta(struct asfd *asfd,
+	const char *path, enum cmd cmd,
+	struct sbuf *sb, struct conf *conf, enum cmd symbol)
 {
 	if(!has_extrameta(path, cmd, conf)) return 0;
 	return usual_stuff(asfd, conf, path, NULL, sb, symbol);
@@ -71,7 +72,7 @@ static int ft_err(struct asfd *asfd,
 
 static int do_to_server(struct asfd *asfd,
 	struct conf *conf, FF_PKT *ff, struct sbuf *sb,
-	char cmd, int compression) 
+	enum cmd cmd, int compression) 
 {
 	sb->compression=compression;
 	sb->statp=ff->statp;
@@ -102,7 +103,7 @@ static int do_to_server(struct asfd *asfd,
 }
 
 static int to_server(struct asfd *asfd, struct conf *conf, FF_PKT *ff,
-	struct sbuf *sb, char cmd)
+	struct sbuf *sb, enum cmd cmd)
 {
 	return do_to_server(asfd, conf, ff, sb, cmd, conf->compression);
 }

@@ -14,14 +14,14 @@ struct rblk
 // Return 0 on OK, -1 on error, 1 when there is no more to read.
 static int read_next_data(FILE *fp, struct rblk *rblk, int ind, int r)
 {
-	char cmd='\0';
+	enum cmd cmd=CMD_ERROR;
 	size_t bytes;
 	unsigned int len;
 	char buf[5];
 	// FIX THIS: Check for the appropriate return value that means there
 	// is no more to read.
 	if(fread(buf, 1, 5, fp)!=5) return 1;
-	if((sscanf(buf, "%c%04X", &cmd, &len))!=2)
+	if((sscanf(buf, "%c%04X", (uint8_t *)&cmd, &len))!=2)
 	{
 		logp("sscanf failed in %s: %s\n", __func__, buf);
 		return -1;

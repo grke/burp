@@ -361,7 +361,7 @@ static DWORD WINAPI write_efs(PBYTE pbData,
 #endif
 
 int send_whole_filel(struct asfd *asfd,
-	char cmd, const char *fname, const char *datapth,
+	enum cmd cmd, const char *fname, const char *datapth,
 	int quick_read, unsigned long long *bytes, struct conf *conf,
 	BFILE *bfd, const char *extrameta, size_t elen)
 {

@@ -34,7 +34,7 @@ static int write_wrapper(struct asfd *asfd, struct iobuf *wbuf)
 	return 0;
 }
 
-static int write_wrapper_str(struct asfd *asfd, char wcmd, const char *wsrc)
+static int write_wrapper_str(struct asfd *asfd, enum cmd wcmd, const char *wsrc)
 {
 	static struct iobuf wbuf;
 	wbuf.cmd=wcmd;

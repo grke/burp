@@ -16,7 +16,7 @@ extern int send_whole_file_gzl(struct asfd *asfd,
 	const char *extrameta, size_t elen);
 
 extern int send_whole_filel(struct asfd *asfd,
-	char cmd, const char *fname, const char *datapth,
+	enum cmd cmd, const char *fname, const char *datapth,
 	int quick_read, unsigned long long *bytes, struct conf *conf,
 	BFILE *bfd,
 	const char *extrameta, size_t elen);

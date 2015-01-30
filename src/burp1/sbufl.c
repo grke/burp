@@ -45,7 +45,7 @@ static int read_fp(FILE *fp, gzFile zp, struct iobuf *rbuf)
 		return asr;
 	}
 
-	if((sscanf(tmp, "%c%04X", &rbuf->cmd, &r))!=2)
+	if((sscanf(tmp, "%c%04X", (char *)&rbuf->cmd, &r))!=2)
 	{
 		logp("sscanf of '%s' failed\n", tmp);
 		if(tmp) free(tmp);

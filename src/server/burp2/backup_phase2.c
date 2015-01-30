@@ -269,6 +269,8 @@ static int deal_with_read(struct iobuf *rbuf,
 				goto end;
 			}
 			break;
+		default:
+			break;
 	}
 
 	iobuf_log_unexpected(rbuf, __func__);

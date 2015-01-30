@@ -166,7 +166,7 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 				log_and_send(asfd, "short read in manifest");
 				break;
 			}
-			if((sscanf(lead, "%c%04X", &rbuf->cmd, &s))!=2)
+			if((sscanf(lead, "%c%04X", (char *)&rbuf->cmd, &s))!=2)
 			{
 				log_and_send(asfd,
 					"sscanf failed reading manifest");

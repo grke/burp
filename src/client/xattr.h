@@ -6,7 +6,7 @@
  || defined(HAVE_FREEBSD_OS) \
  || defined(HAVE_OPENBSD_OS) \
  || defined(HAVE_NETBSD_OS)
-extern int has_xattr(const char *path, char cmd);
+extern int has_xattr(const char *path, enum cmd cmd);
 extern int get_xattr(struct asfd *asfd, struct sbuf *sb,
 	char **xattrtext, size_t *xlen, struct conf *conf);
 extern int set_xattr(struct asfd *asfd, const char *path, struct sbuf *sb,

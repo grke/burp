@@ -5,6 +5,7 @@
 #define CNTR_SINGLE_FIELD	0x00000002
 
 #include "burp.h"
+#include "cmd.h"
 
 #define CNTR_ENT_SIZE	256
 
@@ -38,7 +39,7 @@ typedef struct cntr_ent cntr_ent_t;
 
 struct cntr_ent
 {
-	char cmd;
+	enum cmd cmd;
 	char *field;
 	char *label;
 	uint8_t flags;

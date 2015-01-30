@@ -11,7 +11,7 @@ struct iobuf *iobuf_alloc(void)
 	return iobuf;
 }
 
-void iobuf_set(struct iobuf *iobuf, char cmd, char *buf, size_t len)
+void iobuf_set(struct iobuf *iobuf, enum cmd cmd, char *buf, size_t len)
 {
 	iobuf->cmd=cmd;
 	iobuf->buf=buf;
@@ -48,7 +48,7 @@ void iobuf_copy(struct iobuf *dst, struct iobuf *src)
 	iobuf_set(dst, src->cmd, src->buf, src->len);
 }
 
-void iobuf_from_str(struct iobuf *iobuf, char cmd, char *str)
+void iobuf_from_str(struct iobuf *iobuf, enum cmd cmd, char *str)
 {
 	iobuf_set(iobuf, cmd, str, strlen(str));
 }

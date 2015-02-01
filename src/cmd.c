@@ -1,8 +1,11 @@
 #include <stdio.h>
 #include "cmd.h"
 
-void cmd_to_text(enum cmd cmd, char *buf, size_t len)
+static char *cmd_to_text(enum cmd cmd)
 {
+	static char buf[256];
+	size_t len=sizeof(buf);
+	*buf='\0';
 	switch(cmd)
 	{
 		case CMD_ATTRIBS:
@@ -57,6 +60,22 @@ void cmd_to_text(enum cmd cmd, char *buf, size_t len)
 			snprintf(buf, len, "Path to a manifest"); break;
 		case CMD_FINGERPRINT:
 			snprintf(buf, len, "Fingerprint part of a signature"); break;
+
+		// For the status server/client */
+
+		case CMD_TOTAL:
+			snprintf(buf, len, "Total counter"); break;
+		case CMD_GRAND_TOTAL:
+			snprintf(buf, len, "Grand total counter"); break;
+		case CMD_BYTES_ESTIMATED:
+			snprintf(buf, len, "Bytes estimated"); break;
+		case CMD_BYTES:
+			snprintf(buf, len, "Bytes"); break;
+		case CMD_BYTES_RECV:
+			snprintf(buf, len, "Bytes received"); break;
+		case CMD_BYTES_SENT:
+			snprintf(buf, len, "Bytes sent"); break;
+
 		// Legacy.
 		case CMD_DATAPTH:
 			snprintf(buf, len, "Path to data on the server"); break;
@@ -68,24 +87,20 @@ void cmd_to_text(enum cmd cmd, char *buf, size_t len)
 			snprintf(buf, len, "Windows VSS footer"); break;
 		case CMD_ENC_VSS_T:
 			snprintf(buf, len, "Encrypted windows VSS footer"); break;
-
-		default:
-			snprintf(buf, len, "----------------"); break;
+		// No default so that we get compiler warnings when we forget
+		// to add new ones here.
 	}
+	if(!*buf) snprintf(buf, len, "----------------");
+	return buf;
 }
 
 void cmd_print_all(void)
 {
 	int i=0;
-	char buf[256]="";
 	char cmds[256]="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-	size_t len=sizeof(buf);
 	printf("\nIndex of symbols\n\n");
 	for(i=0; cmds[i]; i++)
-	{
-		cmd_to_text((enum cmd)cmds[i], buf, len);
-		printf("  %c: %s\n", cmds[i], buf);
-	}
+		printf("  %c: %s\n", cmds[i], cmd_to_text((enum cmd)cmds[i]));
 	printf("\n");
 }
 

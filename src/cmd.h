@@ -66,10 +66,11 @@ enum cmd
 	CMD_ENC_VSS	='V',	/* Encrypted Windows VSS metadata */
 	CMD_VSS_T	='u',	/* Windows VSS footer */
 	CMD_ENC_VSS_T	='U',	/* Encrypted Windows VSS footer */
+
+	CMD_X = 'M'
 };
 
 
-extern void cmd_to_text(enum cmd cmd, char *buf, size_t len);
 extern void cmd_print_all(void);
 extern int cmd_is_filedata(enum cmd cmd);
 extern int cmd_is_link(enum cmd cmd);

@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../cmd.h"
 
 static int generate_key_and_csr(struct asfd *asfd,
 	struct conf *conf, const char *csr_path)

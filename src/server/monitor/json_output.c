@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../cmd.h"
 
 static int write_all(struct asfd *asfd)
 {

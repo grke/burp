@@ -1,6 +1,6 @@
 #include "include.h"
 
-int has_extrameta(const char *path, char cmd, struct conf *conf)
+int has_extrameta(const char *path, enum cmd cmd, struct conf *conf)
 {
 #if defined(WIN32_VSS)
 	return 1;

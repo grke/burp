@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../cmd.h"
 
 static struct asfd *wasfd=NULL;
 

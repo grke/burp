@@ -1,9 +1,10 @@
 #include "include.h"
+#include "../../cmd.h"
 #include "../server/sdirs.h"
 
 #include <dirent.h>
 
-void mk_dpthl(struct dpthl *dpthl, struct conf *cconf, char cmd)
+void mk_dpthl(struct dpthl *dpthl, struct conf *cconf, enum cmd cmd)
 {
 	// File data.
 	snprintf(dpthl->path, sizeof(dpthl->path), "%04X/%04X/%04X%s",

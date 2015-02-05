@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../cmd.h"
 
 struct burp1 *sbuf_burp1_alloc(void)
 {

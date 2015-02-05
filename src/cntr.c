@@ -1,4 +1,5 @@
 #include "include.h"
+#include "cmd.h"
 
 #include "server/monitor/json_output.h"
 
@@ -20,7 +21,7 @@ struct cntr *cntr_alloc(void)
 }
 
 static int add_cntr_ent(struct cntr *cntr, int flags,
-	char cmd, const char *field, const char *label)
+	enum cmd cmd, const char *field, const char *label)
 {
 	struct cntr_ent *cenew=NULL;
 	if(!(cenew=(struct cntr_ent *)
@@ -54,12 +55,7 @@ static size_t calc_max_str_len(struct cntr *cntr, const char *cname)
 
 	// Second section.
 	snprintf(ullmax, sizeof(ullmax),
-#ifdef HAVE_WIN32
-			" %I64u\n",
-#else
-			" %llu\n",
-#endif
-				ULLONG_MAX);
+		" %"PRIu64 "\n", (uint64_t)ULLONG_MAX);
 	for(e=cntr->list; e; e=e->next)
 	{
 		if(e->flags & CNTR_SINGLE_FIELD)
@@ -263,13 +259,7 @@ static void incr_phase1(struct cntr *cntr, char ch)
 
 static void print_end(unsigned long long val)
 {
-	if(val) logc(
-#ifdef HAVE_WIN32
-			" %I64u\n",
-#else
-			" %llu\n",
-#endif
-			val);
+	if(val) logc(" %"PRIu64 "\n", val);
 }
 
 void cntr_add(struct cntr *c, char ch, int print)
@@ -420,7 +410,7 @@ static void quint_print(struct cntr_ent *ent, enum action act)
 	}
 }
 
-static unsigned long long get_count(struct cntr_ent **ent, char cmd)
+static unsigned long long get_count(struct cntr_ent **ent, enum cmd cmd)
 {
 	if(!ent[(uint8_t)cmd]) return 0;
 	return ent[(uint8_t)cmd]->count;

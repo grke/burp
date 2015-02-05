@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../cmd.h"
 
 static int diff_manifest(struct asfd *asfd,
 	const char *fullpath, struct conf *conf)

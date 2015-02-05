@@ -1,9 +1,11 @@
 #include "include.h"
+#include "../../cmd.h"
 #include "../../burp2/rabin/include.h"
 
 /* Ignore extrameta for now.
 #ifndef HAVE_WIN32
-static int maybe_send_extrameta(struct sbuf *sb, char cmd, struct cntr *p1cntr)
+static int maybe_send_extrameta(struct sbuf *sb,
+	enum cmd cmd, struct cntr *p1cntr)
 {
 	if(has_extrameta(sb->path, cmd))
 	{
@@ -96,11 +98,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			}
 			if(!blk)
 			{
-#ifdef HAVE_WIN32
-				logp("Could not find wrap up index: %016I64X\n",
-#else
-				logp("Could not find wrap up index: %016lX\n",
-#endif
+				logp("Could not find wrap up index: %016"PRIX64 "\n",
 					wrap_up);
 //				goto error;
 			}
@@ -126,6 +124,8 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 				*backup_end=1;
 				goto end;
 			}
+			break;
+		default:
 			break;
 	}
 

@@ -2,6 +2,7 @@
    burp server to get status information. */
 
 #include "include.h"
+#include "../../cmd.h"
 
 #ifdef HAVE_NCURSES_H
 #include "ncurses.h"

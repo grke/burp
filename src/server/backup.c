@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../cmd.h"
 
 #include "burp1/backup_phase2.h"
 #include "burp1/backup_phase3.h"

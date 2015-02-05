@@ -41,6 +41,7 @@ SRCS = \
 		lock.c \
 		log.c \
 		msg.c \
+		pathcmp.c \
 		prepend.c \
 		prog.c \
 		regexp.c \

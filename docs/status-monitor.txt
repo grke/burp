@@ -1,9 +1,9 @@
 WORK IN PROGRESS
-WARNING - THIS WAS WRITTEN BEFORE CHANGING THE MONITOR SO THAT IT WORKS VIA
-THE CLIENT.
 
-NOTE: While the status monitor stuff also exists in burp-1, this documentation
-describes the functionality as it exists in burp-2, unless otherwise stated.
+NOTE: While status monitor functionality also exists in burp-1, this
+documentation describes the functionality as it exists in burp-2, unless
+otherwise stated. The burp-1 feature has significantly less functionality than
+the burp-2.
 
 Status port
 -----------
@@ -12,8 +12,48 @@ On the server side, there is the ability to run a status monitor.
 In the most basic sense, it is a port on which the burp server listens to
 requests, and to which it outputs information.
 
-You may use a status monitor client to connect to it, or query the port
-directly.
+Burp-2:
+            -----------------------------------------------
+            | server (burp -c /etc/burp/burp-server.conf) |
+            -----------------------------------------------
+                                  |
+                          SSL/JSON port 4972
+                                  |
+                        ----------------------
+                        | client (burp -a m) |
+                        ----------------------
+                                  |
+                             stdin/stdout
+                                  |
+                 -------------------------------------
+                 | status monitor client (burp -a s) |
+                 -------------------------------------
+
+Burp-1:
+            -----------------------------------------------
+            | server (burp -c /etc/burp/burp-server.conf) |
+            -----------------------------------------------
+                                  |
+                         Plain text port 4972
+                                  |
+  -------------------------------------------------------------------
+  | status monitor client (burp -c /etc/burp/burp-server.conf -a s) |
+  -------------------------------------------------------------------
+
+
+Security
+--------
+
+CAUTION: The burp-1 status port operates in plain text only and allows you
+to see information on any client. It uses a server configuration file rather
+than a client configuration file, and only allows connections locally on the
+server.
+
+In burp-2, the status port connection is secured via SSL.
+The client that you are connecting from will be able to see its own details,
+and the details of any other client that you are a 'restore_client' of.
+Since it uses a client configuration file, you can run status monitor clients
+remotely.
 
 
 Address and port number
@@ -29,9 +69,7 @@ IPv4, use the --disable-ipv6 configure option).
 
 Burp-2 will listen for local connections by default. You can set the
 'status_address' option in /etc/burp/burp-server.conf to explicitly choose the
-listen address. This also lets you choose IPv4 or IPv6 at run time. Think
-carefully before changing it, as the status port can be used to view the
-contents of all backups.
+listen address. This also lets you choose IPv4 or IPv6 at run time.
 
 Once you start the burp server, you may check the status address and port
 by running a command like this:
@@ -39,22 +77,46 @@ by running a command like this:
 netstat -plant | grep 4972
 
 
+Raw connection
+--------------
+
+You may connect to the status port using a burp client with the syntax
+'burp -a m'.
+This will let you see the raw JSON output, and let you input commands via
+standard input.
+
+If you have not connected from this client before, burp will attempt to set
+up SSL certificates in the usual way first.
+You may need to configure the 'server' and 'status_port' options in your
+client burp.conf before it will connect.
+
+
 Built-in status monitor clients
 -------------------------------
+
+These fork a 'burp -a m' child process and then communicate with it using
+stdin/stdout. If you have connection problems, it can be useful to try running
+'burp -a m' manually.
+
 
 Ncurses:
 
 This requires that burp be compiled with ncurses enabled.
 
-Once the server is running, the ncurses status monitor client on the burp
-server can be run with a command like this:
+Once the burp server is running, the ncurses status monitor client can be run
+with a command like this:
 
-burp -c /etc/burp/burp-server -a s
+burp -a s
 
 You should see a list of clients along with their current status and the time
 of their most recent backup.
-The cursor can be moved with the arrow keys. Hitting enter or the right arrow
-key will give you a list of backups for the selected client.
+If you have any 'running' processes, pressing 't' will toggle between seeing
+the time of the most recent backup and a brief summary of the currently
+running task.
+
+The cursor can be moved with the arrow keys.
+Hitting enter or the right arrow key will give you a list of backups for the
+selected client.
 Choosing a backup will give you the options to browse the backup, or view
 logs.
 Choosing a backup that is currently in progress will also give you the option
@@ -66,7 +128,7 @@ Snapshot:
 Running the following command will print a snapshot of the status monitor
 status screen to stdout:
 
-burp -c /etc/burp/burp-server -a S
+burp -a S
 
 One application is that a script can run this and email an administrator the
 output on a cron job. This doesn't require ncurses support. There are
@@ -75,14 +137,15 @@ additional options that can be given, listed below.
        -C [client]
               Limit the output to a single client.
 
-       -b [number]
-              Show listable files in a particular backup (requires -C).
-
-       -z [file]
-              Dump a particular log file in a backup (requires -C and -b).
-
-       -d [path]
-              Show a particular path in a backup (requires -C and -b).
+#WORK IN PROGRESS - These options are not yet working in burp-2.
+#       -b [number]
+#              Show listable files in a particular backup (requires -C).
+#
+#       -z [file]
+#              Dump a particular log file in a backup (requires -C and -b).
+#
+#       -d [path]
+#              Show a particular path in a backup (requires -C and -b).
 
 
 Other status monitor clients
@@ -91,17 +154,11 @@ Other status monitor clients
 An example of another status monitor client is burp-ui, which presents a nice
 web interface.
 
-You may, of course, telnet to the server status port and issue requests
-manually. For example:
-telnet 127.0.0.1 4972
-or
-telnet ::1 4972
-
 
 Request format
 --------------
 
-Empty string
+c:
   - Request a summary of all clients.
 
 c:<client>
@@ -110,12 +167,402 @@ c:<client>
 c:<client>:b:<backup number>
   - Request details of a particular backup.
 
+c:<client>:b:<backup number>:p:<path>
+  - Request the contents of a directory from a backup.
+
 c:<client>:b:<backup number>:l:<log type>
   - Request the contents of a log file from a backup. The available log types
-    for each backup are listed with the backups themselves (above).
+    for each backup are listed with the backups themselves.
 
 
 Response format
 ---------------
 
 The response is JSON formatted.
+
+Example 1. There are two idle clients. 'testclient' has had three backups and
+'laptop' has had none. The output is indicating the most recent backup of
+each client.
+
+Request: "c:"
+Response:
+{
+    "clients": [
+        {
+            "name": "testclient",
+            "run_status": "idle",
+            "backups": [
+                {
+                    "number": 3,
+                    "timestamp": 1421271819,
+                    "flags": [
+                        "current",
+                        "manifest"
+                    ],
+                    "logs": {
+                        "list": [
+                            "backup",
+                            "backup_stats"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "laptop",
+            "run_status": "idle",
+            "backups": [
+
+            ]
+        }
+    ]
+}
+
+
+Example 2. Requesting the backup list of 'testclient', which is idle.
+The 'flags' section indicates properties of the particular backup that it
+appears in - whether it is deletable, the current backup, and so on.
+The 'logs' section indicates the log files that are able to be returned by
+the status monitor.
+
+Request: "c:testclient"
+Response:
+{
+    "clients": [
+        {
+            "name": "testclient",
+            "run_status": "idle",
+            "backups": [
+                {
+                    "number": 3,
+                    "timestamp": 1421271819,
+                    "flags": [
+                        "current",
+                        "manifest"
+                    ],
+                    "logs": {
+                        "list": [
+                            "backup",
+                            "backup_stats"
+                        ]
+                    }
+                },
+                {
+                    "number": 2,
+                    "timestamp": 1421271581,
+                    "flags": [
+                        "manifest"
+                    ],
+                    "logs": {
+                        "list": [
+                            "backup",
+                            "backup_stats"
+                        ]
+                    }
+                },
+                {
+                    "number": 1,
+                    "timestamp": 1421199720,
+                    "flags": [
+                        "deletable",
+                        "manifest"
+                    ],
+                    "logs": {
+                        "list": [
+                            "backup",
+                            "backup_stats"
+                        ]
+                    }
+                }
+            ]
+        }
+    ]
+}
+
+
+Example 3. Requesting an individual backup.
+
+Request: "c:testclient:b:2"
+Response:
+{
+    "clients": [
+        {
+            "name": "testclient",
+            "run_status": "idle",
+            "backups": [
+                {
+                    "number": 2,
+                    "timestamp": 1421271581,
+                    "flags": [
+                        "manifest"
+                    ],
+                    "logs": {
+                        "list": [
+                            "backup",
+                            "backup_stats"
+                        ]
+                    }
+                }
+            ]
+        }
+    ]
+}
+
+
+Example 4. Requesting the contents of a directory in a backup.
+With large backups, each request might take some time because the manifest
+file needs to parsed on the server. In order to speed this up, there is an
+option called 'monitor_browse_cache' on the server side. Turning it on
+makes the server cache the results of the parsing in memory, thereby allowing
+it to respond faster to subsequent queries about the same backup on the same
+connection. The memory is freed on querying the contents of a different backup
+or closing the connection.
+
+Request: "c:testclient:b:2:p:/usr/lib/xul-ext/webaccounts/content"
+Response:
+{
+    "clients": [
+        {
+            "name": "testclient",
+            "run_status": "idle",
+            "backups": [
+                {
+                    "number": 2,
+                    "timestamp": 1421271581,
+                    "flags": [
+                        "manifest"
+                    ],
+                    "logs": {
+                        "list": [
+                            "backup",
+                            "backup_stats"
+                        ]
+                    },
+                    "browse": {
+                        "directory": "/usr/lib/xul-ext/webaccounts/content",
+                        "entries": [
+                            {
+                                "name": "browser.js",
+                                "dev": 2050,
+                                "ino": 1837644,
+                                "mode": 33188,
+                                "nlink": 1,
+                                "uid": 0,
+                                "gid": 0,
+                                "rdev": 0,
+                                "size": 2166,
+                                "blksize": 4096,
+                                "blocks": 8,
+                                "atime": 1420519821,
+                                "ctime": 1407972494,
+                                "mtime": 1390969550
+                            },
+                            {
+                                "name": "browser.xul",
+                                "dev": 2050,
+                                "ino": 1837645,
+                                "mode": 33188,
+                                "nlink": 1,
+                                "uid": 0,
+                                "gid": 0,
+                                "rdev": 0,
+                                "size": 261,
+                                "blksize": 4096,
+                                "blocks": 8,
+                                "atime": 1420519821,
+                                "ctime": 1407972494,
+                                "mtime": 1373030720
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    ]
+}
+
+Example 5. Requesting the log of a particular backup.
+
+Request: "c:testclient:b:2:l:backup"
+Response:
+{
+    "clients": [
+        {
+            "name": "testclient",
+            "run_status": "idle",
+            "backups": [
+                {
+                    "number": 2,
+                    "timestamp": 1421271581,
+                    "flags": [
+                        "manifest"
+                    ],
+                    "logs": {
+                        "list": [
+                            "backup",
+                            "backup_stats"
+                        ],
+                        "backup": [
+                            "2015-01-15 07:39:41: burp[7398] Client version: 2.0.11",
+                            "2015-01-15 07:39:41: burp[7398] Protocol: 1",
+                            "2015-01-15 07:39:41: burp[7398] Begin phase1 (file system scan)",
+                            "2015-01-15 07:39:42: burp[7398] End phase1 (file system scan)",
+                            "2015-01-15 07:39:42: burp[7398] Begin phase2 (receive file data)",
+                            "2015-01-15 07:39:47: burp[7398] End phase2 (receive file data)",
+                            "2015-01-15 07:39:47: burp[7398] Backup ending - disconnect from client.",
+                            "2015-01-15 07:39:47: burp[7398] Begin phase3 (merge manifests)",
+                            "2015-01-15 07:39:47: burp[7398] End phase3 (merge manifests)",
+                            "2015-01-15 07:39:47: burp[7398] Begin phase4 (shuffle files)",
+                            "2015-01-15 07:39:47: burp[7398] Previous backup is not a hardlinked_archive",
+                            "2015-01-15 07:39:47: burp[7398]  will generate reverse deltas",
+                            "2015-01-15 07:39:47: burp[7398] Duplicating current backup.",
+                            "2015-01-15 07:39:48: burp[7398] New backup is not a hardlinked_archive",
+                            "2015-01-15 07:39:48: burp[7398] Doing the atomic data jiggle...",
+                            "2015-01-15 07:39:59: burp[7398] End phase4 (shuffle files)",
+                            "--------------------------------------------------------------------------------",
+                            "Start time: 2015-01-15 07:39:41",
+                            "  End time: 2015-01-15 07:39:59",
+                            "Time taken: 00:18",
+                            "                         New   Changed Unchanged   Deleted     Total |  Scanned",
+                            "                   ------------------------------------------------------------",
+                            "             Files:     1554         0     19153         0     20707 |    20707",
+                            "         Meta data:        2         0         0         0         2 |        2",
+                            "       Directories:        1         0      1976         0      1977 |     1977",
+                            "        Hard links:        0         0        14         0        14 |       14",
+                            "        Soft links:      380         0      1579         0      1959 |     1959",
+                            "       Grand total:     1937         0     22722         0     24659 |    24659",
+                            "                   ------------------------------------------------------------",
+                            "",
+                            "             Warnings:             0",
+                            "",
+                            "      Bytes estimated:    2385159143 (2.22 GB)",
+                            "      Bytes in backup:    2384195671 (2.22 GB)",
+                            "       Bytes received:     227824877 (217.27 MB)",
+                            "           Bytes sent:             0",
+                            "--------------------------------------------------------------------------------",
+                            "2015-01-15 07:39:59: burp[7398] Backup completed."
+                        ]
+                    }
+                }
+            ]
+        }
+    ]
+}
+
+
+Example 6. Listing all clients whilst one of them is running.
+
+Request: "c:"
+Response:
+{
+    "clients": [
+        {
+            "name": "testclient",
+            "run_status": "running",
+            "phase": "scanning",
+            "backups": [
+                {
+                    "number": 3,
+                    "timestamp": 1421271819,
+                    "flags": [
+                        "current",
+                        "manifest"
+                    ],
+                    "logs": {
+                        "list": [
+                            "backup",
+                            "backup_stats"
+                        ]
+                    }
+                },
+                {
+                    "number": 4,
+                    "timestamp": 1421272639,
+                    "flags": [
+                        "working"
+                    ],
+                    "counters": [
+                        {
+                            "name": "files",
+                            "type": "f",
+                            "count": 0,
+                            "changed": 0,
+                            "same": 0,
+                            "deleted": 0,
+                            "scanned": 1419
+                        },
+                        {
+                            "name": "directories",
+                            "type": "d",
+                            "count": 0,
+                            "changed": 0,
+                            "same": 0,
+                            "deleted": 0,
+                            "scanned": 318
+                        },
+                        {
+                            "name": "soft_links",
+                            "type": "L",
+                            "count": 0,
+                            "changed": 0,
+                            "same": 0,
+                            "deleted": 0,
+                            "scanned": 6
+                        },
+                        {
+                            "name": "hard_links",
+                            "type": "l",
+                            "count": 0,
+                            "changed": 0,
+                            "same": 0,
+                            "deleted": 0,
+                            "scanned": 1100
+                        },
+                        {
+                            "name": "grand_total",
+                            "type": "Z",
+                            "count": 0,
+                            "changed": 0,
+                            "same": 0,
+                            "deleted": 0,
+                            "scanned": 2843
+                        },
+                        {
+                            "name": "warnings",
+                            "type": "w",
+                            "count": 2
+                        },
+                        {
+                            "name": "bytes_estimated",
+                            "type": "G",
+                            "count": 28264778
+                        },
+                        {
+                            "name": "time_start",
+                            "type": "b",
+                            "count": 1421271834
+                        },
+                        {
+                            "name": "time_end",
+                            "type": "E",
+                            "count": 1421272641
+                        }
+                    ],
+                    "logs": {
+                        "list": [
+                            "backup"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "laptop",
+            "run_status": "idle",
+            "backups": [
+
+            ]
+        }
+    ]
+}
+

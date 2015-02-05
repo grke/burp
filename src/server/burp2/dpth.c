@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../cmd.h"
 
 #include <dirent.h>
 
@@ -231,7 +232,7 @@ void dpth_free(struct dpth **dpth)
 	free_v((void **)dpth);
 }
 
-static int fprint_tag(FILE *fp, char cmd, unsigned int s)
+static int fprint_tag(FILE *fp, enum cmd cmd, unsigned int s)
 {
 	if(fprintf(fp, "%c%04X", cmd, s)!=5)
 	{
@@ -241,7 +242,7 @@ static int fprint_tag(FILE *fp, char cmd, unsigned int s)
 	return 0;
 }
 
-static int fwrite_buf(char cmd, const char *buf, unsigned int s, FILE *fp)
+static int fwrite_buf(enum cmd cmd, const char *buf, unsigned int s, FILE *fp)
 {
 	static size_t bytes;
 	if(fprint_tag(fp, cmd, s)) return -1;

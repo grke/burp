@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../cmd.h"
 
 static size_t treepathlen=0;
 
@@ -176,7 +177,7 @@ static int new_non_file(struct sbuf *p1b, FILE *ucfp, struct conf *cconf)
 	return 0;
 }
 
-static int changed_non_file(struct sbuf *p1b, FILE *ucfp, char cmd, struct conf *cconf)
+static int changed_non_file(struct sbuf *p1b, FILE *ucfp, enum cmd cmd, struct conf *cconf)
 {
 	// As new_non_file.
 	if(sbufl_to_manifest(p1b, ucfp, NULL))
@@ -648,6 +649,8 @@ static int do_stuff_to_receive(struct asfd *asfd,
 			  && !strcmp(rbuf->buf, *last_requested))
 				free_w(last_requested);
 			return 0;
+		default:
+			break;
 	}
 	if(cmd_is_filedata(rbuf->cmd))
 	{

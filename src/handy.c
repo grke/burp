@@ -1,4 +1,5 @@
 #include "include.h"
+#include "cmd.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -46,13 +47,7 @@ int do_quick_read(struct asfd *asfd, const char *datapth, struct conf *conf)
 static char *get_endfile_str(unsigned long long bytes)
 {
 	static char endmsg[128]="";
-	snprintf(endmsg, sizeof(endmsg),
-#ifdef HAVE_WIN32
-		"%I64u:",
-#else
-		"%llu:",
-#endif
-		bytes);
+	snprintf(endmsg, sizeof(endmsg), "%"PRIu64 ":", (uint64_t)bytes);
 	return endmsg;
 }
 

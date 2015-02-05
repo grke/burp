@@ -1,3 +1,9 @@
+2015-02-05 Changes in burp-1.4.32:
+  * Allow syslog and stdout logging at the same time (was broken in 1.4.30).
+  * In the client, don't use the return code for restore warnings if an error
+    code is already set.
+  * Upgrade Windows depkgs to openssl-1.0.1l.
+
 2015-01-03 Changes in burp-2.0.10:
   * There are many changes since the last burp-2 release, including:
     - Massive reworking of the status monitor system and ncurses client.

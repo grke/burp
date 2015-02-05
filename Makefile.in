@@ -104,36 +104,20 @@ installdirs:
 	$(MKDIR) $(DESTDIR)$(sysconfdir)/CA-client
 	$(MKDIR) $(DESTDIR)/var/run
 	$(MKDIR) $(DESTDIR)/var/spool/burp
-	@if [ ! -d $(DESTDIR)$(sysconfdir)/clientconfdir ] ; then $(MKDIR) $(DESTDIR)$(sysconfdir)/clientconfdir ; cp configs/server/clientconfdir/testclient $(DESTDIR)$(sysconfdir)/clientconfdir/testclient ; fi
-	@if [ ! -d $(DESTDIR)$(sysconfdir)/clientconfdir/incexc ] ; then $(MKDIR) $(DESTDIR)$(sysconfdir)/clientconfdir/incexc ; cp configs/server/clientconfdir/incexc $(DESTDIR)$(sysconfdir)/clientconfdir/incexc/example ; fi
-	@if [ ! -d $(DESTDIR)$(sysconfdir)/autoupgrade/client ] ; then $(MKDIR) $(DESTDIR)$(sysconfdir)/autoupgrade/client ; fi
-	@if [ ! -d $(DESTDIR)$(sysconfdir)/autoupgrade/server ] ; then $(MKDIR) $(DESTDIR)$(sysconfdir)/autoupgrade/server ; fi
-	@if [ ! -d $(DESTDIR)$(sysconfdir)/autoupgrade/server/win32 ] ; then $(MKDIR) $(DESTDIR)$(sysconfdir)/autoupgrade/server/win32 ; fi
-	@if [ ! -d $(DESTDIR)$(sysconfdir)/autoupgrade/server/win32/$(VERSION) ] ; then $(MKDIR) $(DESTDIR)$(sysconfdir)/autoupgrade/server/win32/$(VERSION) ; fi
-	@if [ ! -d $(DESTDIR)$(sysconfdir)/autoupgrade/server/win64 ] ; then $(MKDIR) $(DESTDIR)$(sysconfdir)/autoupgrade/server/win64 ; fi
-	@if [ ! -d $(DESTDIR)$(sysconfdir)/autoupgrade/server/win64/$(VERSION) ] ; then $(MKDIR) $(DESTDIR)$(sysconfdir)/autoupgrade/server/win64/$(VERSION) ; fi
-
-gnomedirs:
-	$(MKDIR) $(DESTDIR)/usr/share/pixmaps
-	$(MKDIR) $(DESTDIR)/usr/share/gnome/apps/System
-	$(MKDIR) $(DESTDIR)/usr/share/applications
-	$(MKDIR) $(DESTDIR)/etc/security/console.apps
-	$(MKDIR) $(DESTDIR)/etc/pam.d
+	$(MKDIR) $(DESTDIR)$(sysconfdir)/clientconfdir
+	$(MKDIR) $(DESTDIR)$(sysconfdir)/clientconfdir/incexc
+	$(MKDIR) $(DESTDIR)$(sysconfdir)/autoupgrade/client
+	$(MKDIR) $(DESTDIR)$(sysconfdir)/autoupgrade/server
+	$(MKDIR) $(DESTDIR)$(sysconfdir)/autoupgrade/server/win32
+	$(MKDIR) $(DESTDIR)$(sysconfdir)/autoupgrade/server/win64
+	$(MKDIR) $(DESTDIR)$(sysconfdir)/autoupgrade/server/win64/$(VERSION)
+	$(MKDIR) $(DESTDIR)$(scriptdir)
 
 installation: install
 
 install: installdirs
 	@for I in $(all_subdirs); do (cd $$I && $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1); done
-	@if [ ! -f $(DESTDIR)$(sysconfdir)/burp-server.conf ] ; then cp configs/server/burp.conf $(DESTDIR)$(sysconfdir)/burp-server.conf ; fi
-	@if [ ! -f $(DESTDIR)$(sysconfdir)/burp.conf ] ; then cp configs/client/burp.conf $(DESTDIR)$(sysconfdir)/burp.conf ; fi
-	@if [ ! -f $(DESTDIR)$(sysconfdir)/notify_script ] ; then cp configs/server/notify_script $(DESTDIR)$(sysconfdir)/notify_script && chmod 755 $(DESTDIR)$(sysconfdir)/notify_script ; fi
-	@if [ ! -f $(DESTDIR)$(sysconfdir)/ssl_extra_checks_script ] ; then cp configs/server/ssl_extra_checks_script $(DESTDIR)$(sysconfdir)/ssl_extra_checks_script && chmod 755 $(DESTDIR)$(sysconfdir)/ssl_extra_checks_script ; fi
-	@if [ ! -f $(DESTDIR)$(sysconfdir)/summary_script ] ; then cp configs/server/summary_script $(DESTDIR)$(sysconfdir)/summary_script && chmod 755 $(DESTDIR)$(sysconfdir)/summary_script ; fi
-	@if [ ! -f $(DESTDIR)$(sysconfdir)/timer_script ] ; then cp configs/server/timer_script $(DESTDIR)$(sysconfdir)/timer_script && chmod 755 $(DESTDIR)$(sysconfdir)/timer_script ; fi
-	@if [ ! -f $(DESTDIR)$(sysconfdir)/autoupgrade/server/win32/script ] ; then cp configs/server/autoupgrade/windows.script $(DESTDIR)$(sysconfdir)/autoupgrade/server/win32/script ; fi
-	@if [ ! -f $(DESTDIR)$(sysconfdir)/autoupgrade/server/win64/script ] ; then cp configs/server/autoupgrade/windows.script $(DESTDIR)$(sysconfdir)/autoupgrade/server/win64/script ; fi
-	@if [ ! -f $(DESTDIR)$(sysconfdir)/CA.cnf ] ; then cp configs/certs/CA/CA.cnf $(DESTDIR)$(sysconfdir)/CA.cnf ; fi
-	cp configs/certs/CA/burp_ca $(DESTDIR)$(sbindir) && chmod 755 $(DESTDIR)$(sbindir)/burp_ca
+	./configs/install "$(DESTDIR)" "$(sysconfdir)" "$(sbindir)" "$(scriptdir)"
 
 Makefile: Makefile.in
 	cd $(topdir) \

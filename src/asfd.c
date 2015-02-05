@@ -1,4 +1,5 @@
 #include "include.h"
+#include "cmd.h"
 
 // For IPTOS / IPTOS_THROUGHPUT.
 #ifdef HAVE_WIN32
@@ -91,10 +92,10 @@ static int parse_readbuf_line_buf(struct asfd *asfd)
 
 static int parse_readbuf_standard(struct asfd *asfd)
 {
-	char cmdtmp='\0';
+	enum cmd cmdtmp=CMD_ERROR;
 	unsigned int s=0;
 	if(asfd->readbuflen<5) return 0;
-	if((sscanf(asfd->readbuf, "%c%04X", &cmdtmp, &s))!=2)
+	if((sscanf(asfd->readbuf, "%c%04X", (char *)&cmdtmp, &s))!=2)
 	{
 		logp("%s: sscanf of '%s' failed in %s\n",
 			asfd->desc, asfd->readbuf, __func__);
@@ -403,7 +404,7 @@ static int asfd_read(struct asfd *asfd)
 	return 0;
 }
 
-static int asfd_read_expect(struct asfd *asfd, char cmd, const char *expect)
+static int asfd_read_expect(struct asfd *asfd, enum cmd cmd, const char *expect)
 {
 	int ret=0;
 	if(asfd->read(asfd)) return -1;
@@ -431,7 +432,7 @@ static int asfd_write(struct asfd *asfd, struct iobuf *wbuf)
 }
 
 static int asfd_write_strn(struct asfd *asfd,
-	char wcmd, const char *wsrc, size_t len)
+	enum cmd wcmd, const char *wsrc, size_t len)
 {
 	struct iobuf wbuf;
 	wbuf.cmd=wcmd;
@@ -440,7 +441,7 @@ static int asfd_write_strn(struct asfd *asfd,
 	return asfd->write(asfd, &wbuf);
 }
 
-static int asfd_write_str(struct asfd *asfd, char wcmd, const char *wsrc)
+static int asfd_write_str(struct asfd *asfd, enum cmd wcmd, const char *wsrc)
 {
 	return asfd_write_strn(asfd, wcmd, wsrc, strlen(wsrc));
 }

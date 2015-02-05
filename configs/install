@@ -1,9 +1,9 @@
 #!/bin/bash
 
 destdir="$1"
-sysconfdir="$(readlink -f $2)"
-sbindir="$(readlink -f $3)"
-scriptdir="$(readlink -f $4)"
+sysconfdir="$2"
+sbindir="$3"
+scriptdir="$4"
 
 usage()
 {

@@ -1,5 +1,15 @@
 Things to watch out for when upgrading.
 
+2.0.12
+------
+Executable scripts that used to be in /etc/burp are now installed in
+/usr/share/burp/scripts: notify_script, ssl_extra_checks_script,
+summary_script, and timer_script.
+On upgrading, you should probably fix the paths to these scripts in
+/etc/burp/burp-server.conf.
+Package building files have not yet been updated to reflect this change.
+Patches gratefully accepted.
+
 2.0.10
 ------
 The status monitor system and ncurses client are now working to some degree.

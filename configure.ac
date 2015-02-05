@@ -1630,8 +1630,6 @@ fi
 #echo " "
 #${MAKE:-make} clean
 
-scriptdir=$datarootdir/burp
-
 echo "
 Configuration on `date`:
 
@@ -1640,7 +1638,6 @@ Configuration on `date`:
    Source code location:	${srcdir}
    Install binaries:		${sbindir}
    Install config files:	${sysconfdir}
-   Install scripts:		${scriptdir}
    Man directory:		${mandir}
    C Compiler:			${CC}
    C++ Compiler:		${CXX}

@@ -1,17 +1,19 @@
 #!/bin/bash
 
 destdir="$1"
-sysconfdir="$2"
-sbindir="$3"
+sysconfdir="$(readlink -f $2)"
+sbindir="$(readlink -f $3)"
+scriptdir="$(readlink -f $4)"
 
 usage()
 {
-	echo "usage: $0 <destdir> <sysconfdir> <sbindir>" 1>&2
+	echo "usage: $0 <destdir> <sysconfdir> <sbindir> <scriptdir>" 1>&2
 	exit 1
 }
 
 [ -z "$sysconfdir" ] && usage
 [ -z "$sbindir" ] && usage
+[ -z "$scriptdir" ] && usage
 
 safe_cp()
 {
@@ -34,18 +36,36 @@ cp_and_chmod()
 	cp "$1" "$dst" && chmod 755 "$destdir/$2"
 }
 
-safe_cp configs/client/burp.conf		"$sysconfdir"/burp.conf
-safe_cp configs/server/burp.conf		"$sysconfdir"/burp-server.conf
+safe_sed_cp()
+{
+	src="$1"
+	dst="$destdir/$2"
+	[ -f "$dst" ] && return
+	sed	-e "s|@sysconfdir@|$sysconfdir|" \
+		-e "s|@sbindir@|$sbindir|" \
+		-e "s|@scriptdir@|$scriptdir|" \
+			"$src" > "$dst"
+}
+
+# This is just copied direct and made executable.
+cp_and_chmod configs/certs/CA/burp_ca		"$sbindir"/burp_ca
+
+# These have substitutions performed on them (with no overwrite).
+safe_sed_cp configs/client/burp.conf		"$sysconfdir"/burp.conf
+safe_sed_cp configs/server/burp.conf		"$sysconfdir"/burp-server.conf
+safe_sed_cp configs/certs/CA/CA.cnf		"$sysconfdir"/CA.cnf
+
+# These are just copied direct (with no overwrite).
 safe_cp configs/server/clientconfdir/incexc	"$sysconfdir"/clientconfdir/incexc/example 
 safe_cp configs/server/clientconfdir/testclient	"$sysconfdir"/clientconfdir/testclient 
 safe_cp configs/server/clientconfdir/incexc	"$sysconfdir"/clientconfdir/incexc/example
 safe_cp configs/server/autoupgrade/windows.script "$sysconfdir"/autoupgrade/server/win32/script
 safe_cp configs/server/autoupgrade/windows.script "$sysconfdir"/autoupgrade/server/win64/script
 
-safe_cp_and_chmod configs/server/notify_script	"$sysconfdir"/notify_script
-safe_cp_and_chmod configs/server/summary_script	"$sysconfdir"/summary_script
-safe_cp_and_chmod configs/server/timer_script	"$sysconfdir"/timer_script
-safe_cp_and_chmod configs/server/ssl_extra_checks_script "$sysconfdir"/ssl_extra_checks_script
-safe_cp configs/certs/CA/CA.cnf			"$sysconfdir"/CA.cnf
+# These are just copied direct and made executable (with no overwrite).
+safe_cp_and_chmod configs/server/notify_script	"$scriptdir"/notify_script
+safe_cp_and_chmod configs/server/summary_script	"$scriptdir"/summary_script
+safe_cp_and_chmod configs/server/timer_script	"$scriptdir"/timer_script
+safe_cp_and_chmod configs/server/ssl_extra_checks_script "$scriptdir"/ssl_extra_checks_script
 
-cp_and_chmod configs/certs/CA/burp_ca		"$sbindir"/burp_ca
+exit 0

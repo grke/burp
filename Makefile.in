@@ -111,19 +111,13 @@ installdirs:
 	$(MKDIR) $(DESTDIR)$(sysconfdir)/autoupgrade/server/win32
 	$(MKDIR) $(DESTDIR)$(sysconfdir)/autoupgrade/server/win64
 	$(MKDIR) $(DESTDIR)$(sysconfdir)/autoupgrade/server/win64/$(VERSION)
-
-gnomedirs:
-	$(MKDIR) $(DESTDIR)/usr/share/pixmaps
-	$(MKDIR) $(DESTDIR)/usr/share/gnome/apps/System
-	$(MKDIR) $(DESTDIR)/usr/share/applications
-	$(MKDIR) $(DESTDIR)/etc/security/console.apps
-	$(MKDIR) $(DESTDIR)/etc/pam.d
+	$(MKDIR) $(DESTDIR)$(scriptdir)
 
 installation: install
 
 install: installdirs
 	@for I in $(all_subdirs); do (cd $$I && $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1); done
-	./configs/install $(DESTDIR) $(sysconfdir) $(sbindir)
+	./configs/install "$(DESTDIR)" "$(sysconfdir)" "$(sbindir)" "$(scriptdir)"
 
 Makefile: Makefile.in
 	cd $(topdir) \

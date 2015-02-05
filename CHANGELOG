@@ -1,4 +1,6 @@
+2015-02-05 Changes in burp-1.4.32:
   * Allow syslog and stdout logging at the same time (was broken in 1.4.30).
+  * Upgraded Windows depkgs to openssl-1.0.1l.
 
 2015-01-03 Changes in burp-1.4.30:
   * Better SSL error logging.

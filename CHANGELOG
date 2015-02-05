@@ -1,3 +1,17 @@
+2015-02-05 Changes in burp-2.0.12:
+  * Move /etc/burp scripts to /usr/share/burp/scripts.
+  * Do sed replacement when installing config files.
+  * Start to add unit tests with 'check'.
+  * Don't return code for restore warnings if there was an error.
+  * RHEL updates from Andrew Niemantsverdriet: Added support for systemd and
+    cleaned up the spec file according to rpmlint.
+  * Allow syslog and stdout logging at the same time (was broken in 2.0.10).
+  * Fix some file descriptors timing out due to the network timeout code, when
+    they shouldn't be considered for that.
+  * Use __STDC_FORMAT_MACROS to get rid of printf warnings on Debian 7.6 and
+    also use them for Windows printf formatting, to simplify some code.
+  * Upgrade Windows depkgs to openssl-1.0.1l.
+
 2015-02-05 Changes in burp-1.4.32:
   * Allow syslog and stdout logging at the same time (was broken in 1.4.30).
   * In the client, don't use the return code for restore warnings if an error

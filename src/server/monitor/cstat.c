@@ -166,7 +166,7 @@ static int reload_from_client_confs(struct cstat **clist, struct conf *globalc)
 
 			if(set_cstat_from_conf(c, globalc, cconf))
 				goto error;
-printf("%s: %d\n", c->name, c->permitted);
+//printf("%s: %d\n", c->name, c->permitted);
 		}
 		// Only stop if the end of the list was not reached.
 		if(!c) break;
@@ -240,7 +240,6 @@ static int reload_from_clientdir(struct cstat **clist, struct conf *conf)
 		c->lockfile_mtime=ltime;
 		if(cstat_set_run_status(c)) goto error;
 
-printf("reload from clientdir\n");
 		bu_list_free(&c->bu);
 // FIX THIS: should probably not load everything each time.
 //		if(bu_get_current(sdirs, &c->bu))

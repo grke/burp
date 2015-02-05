@@ -1,4 +1,5 @@
 #include "include.h"
+#include "cmd.h"
 
 static int send_incexc_str(struct asfd *asfd, const char *pre, const char *str)
 {

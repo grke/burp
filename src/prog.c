@@ -1,4 +1,5 @@
 #include "include.h"
+#include "cmd.h"
 #include "client/main.h"
 #include "server/main.h"
 #include "server/burp1/bedup.h"
@@ -191,6 +192,7 @@ static int parse_action(enum action *act, const char *optarg)
 	return 0;
 }
 
+#ifndef HAVE_WIN32
 static int run_champ_chooser(struct conf *conf)
 {
 	if(conf->orig_client && *(conf->orig_client))
@@ -200,7 +202,6 @@ static int run_champ_chooser(struct conf *conf)
 	return 1;
 }
 
-#ifndef HAVE_WIN32
 static int server_modes(enum action act,
 	const char *conffile, struct lock *lock, int generate_ca_only,
 	struct conf *conf)

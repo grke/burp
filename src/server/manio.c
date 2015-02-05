@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../cmd.h"
 #include "burp2/champ_chooser/include.h"
 #include "burp2/dpth.h"
 
@@ -66,7 +67,7 @@ static int sort_and_write_hooks(struct manio *manio)
 	char **hook_sort=manio->hook_sort;
 	if(!hook_sort) return 0;
 
-	snprintf(comp, sizeof(comp), "%08lX", manio->fcount-1);
+	snprintf(comp, sizeof(comp), "%08"PRIX64, manio->fcount-1);
 	if(!(path=prepend_s(manio->hook_dir, comp))
 	  || build_path_w(path)
 	  || !(zp=gzopen_file(path, manio->mode)))
@@ -108,7 +109,7 @@ static int sort_and_write_dindex(struct manio *manio)
 	char **dindex_sort=manio->dindex_sort;
 	if(!dindex_sort) return 0;
 
-	snprintf(comp, sizeof(comp), "%08lX", manio->fcount-1);
+	snprintf(comp, sizeof(comp), "%08"PRIX64, manio->fcount-1);
 	if(!(path=prepend_s(manio->dindex_dir, comp))
 	  || build_path_w(path)
 	  || !(zp=gzopen_file(path, manio->mode)))
@@ -213,7 +214,7 @@ static char *get_next_fpath(struct manio *manio)
 {
 	static char tmp[32];
 	if(manio->protocol==PROTO_BURP1) return get_next_fpath_burp1(manio);
-	snprintf(tmp, sizeof(tmp), "%08lX", manio->fcount++);
+	snprintf(tmp, sizeof(tmp), "%08"PRIX64, manio->fcount++);
 	return prepend_s(manio->directory, tmp);
 }
 
@@ -327,11 +328,7 @@ static char *sig_to_msg(struct blk *blk, int save_path)
 {
 	static char msg[128];
 	snprintf(msg, sizeof(msg),
-#ifdef HAVE_WIN32
-		"%016I64X%s%s",
-#else
-		"%016lX%s%s",
-#endif
+		"%016"PRIX64 "%s%s",
 		blk->fingerprint,
 		bytes_to_md5str(blk->md5sum),
 		save_path?bytes_to_savepathstr_with_sig(blk->savepath):"");
@@ -349,11 +346,7 @@ int manio_write_sig_and_path(struct manio *manio, struct blk *blk)
 	{
 		// Add to list of hooks for this manifest chunk.
 		snprintf(manio->hook_sort[manio->hook_count++], WEAK_STR_LEN,
-#ifdef HAVE_WIN32
-			"%016I64X",
-#else
-			"%016lX",
-#endif
+			"%016"PRIX64,
 			blk->fingerprint);
 	}
 	if(manio->dindex_sort)

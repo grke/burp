@@ -45,6 +45,7 @@
 */
 
 #include "include.h"
+#include "pathcmp.h"
 
 #ifdef HAVE_LINUX_OS
 #include <sys/statfs.h>

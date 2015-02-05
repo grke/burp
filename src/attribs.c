@@ -37,6 +37,7 @@
  */
 
 #include "include.h"
+#include "cmd.h"
 
 // Encode a stat structure into a base64 character string.
 int attribs_encode(struct sbuf *sb)

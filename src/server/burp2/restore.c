@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../cmd.h"
 #include "champ_chooser/hash.h"
 #include "../../burp2/slist.h"
 #include "../../server/burp1/restore.h"
@@ -204,9 +205,9 @@ static int maybe_copy_data_files_across(struct asfd *asfd,
 	estimate_blks=blkcount*RABIN_AVG;
 	estimate_one_dat=DATA_FILE_SIG_MAX*RABIN_AVG;
 	estimate_dats=datcount*estimate_one_dat;
-	printf("%lu blocks = %lu bytes in stream approx\n",
+	printf("%"PRIu64 " blocks = %"PRIu64 " bytes in stream approx\n",
 		blkcount, estimate_blks);
-	printf("%lu data files = %lu bytes approx\n",
+	printf("%"PRIu64 " data files = %"PRIu64 " bytes approx\n",
 		datcount, estimate_dats);
 
 	if(estimate_blks < estimate_one_dat)
@@ -239,7 +240,7 @@ static int maybe_copy_data_files_across(struct asfd *asfd,
 		char msg[32];
 		char path[32];
 		char *fdatpath=NULL;
-		snprintf(path, sizeof(path), "%014lX", hash_weak->weak);
+		snprintf(path, sizeof(path), "%014"PRIX64, hash_weak->weak);
 		path[4]='/';
 		path[9]='/';
 		snprintf(msg, sizeof(msg), "dat=%s", path);
@@ -280,11 +281,7 @@ static int maybe_copy_data_files_across(struct asfd *asfd,
 			//	return -1;
 			// FIX THIS: Need to send this stuff unconverted.
 			snprintf(sig, sizeof(sig),
-#ifdef HAVE_WIN32
-				"%016I64X%s%s",
-#else
-				"%016lX%s%s",
-#endif
+				"%016"PRIX64 "%s%s",
 				blk->fingerprint,
 				bytes_to_md5str(blk->md5sum),
 				bytes_to_savepathstr_with_sig(blk->savepath));
@@ -424,11 +421,7 @@ static int restore_stream(struct asfd *asfd,
 				char msg[256]="";
 				snprintf(msg, sizeof(msg),
 				  "Unexpected signature in manifest: "
-#ifdef HAVE_WIN32
-				  "%016I64X%s%s",
-#else
-				  "%016lX%s%s",
-#endif
+				  "%016"PRIX64 "%s%s",
 					blk->fingerprint,
 					bytes_to_md5str(blk->md5sum),
 					bytes_to_savepathstr_with_sig(

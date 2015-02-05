@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../cmd.h"
 
 static void quota_log_bytes(struct async *as,
 	const char *msg, unsigned long long byte, unsigned long quota)

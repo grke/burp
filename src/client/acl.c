@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../cmd.h"
 
 #ifdef HAVE_ACL
 #if defined(HAVE_LINUX_OS) || \
@@ -62,7 +63,7 @@ static acl_t acl_contains_something(const char *path, int acl_type)
 	return NULL;
 }
 
-int has_acl(const char *path, char cmd)
+int has_acl(const char *path, enum cmd cmd)
 {
 	acl_t acl=NULL;
 	if(!(acl=acl_contains_something(path, ACL_TYPE_ACCESS))

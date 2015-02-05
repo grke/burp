@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../cmd.h"
 
 // Return -1 on error or success, 0 to continue normally.
 int autoupgrade_server(struct async *as,

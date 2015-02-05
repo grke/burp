@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../cmd.h"
 
 typedef struct ent ent_t;
 

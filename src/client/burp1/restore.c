@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../cmd.h"
 
 static int restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 	struct sbuf *sb, const char *fname, enum action act,

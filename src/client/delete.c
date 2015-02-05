@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../cmd.h"
 
 int do_delete_client(struct asfd *asfd, struct conf *conf)
 {

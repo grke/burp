@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../cmd.h"
 
 // Want to make sure that we are listening for reads too - this will let us
 // exit promptly if the client was killed.
@@ -33,7 +34,7 @@ static int write_wrapper(struct asfd *asfd, struct iobuf *wbuf)
 	return 0;
 }
 
-static int write_wrapper_str(struct asfd *asfd, char wcmd, const char *wsrc)
+static int write_wrapper_str(struct asfd *asfd, enum cmd wcmd, const char *wsrc)
 {
 	static struct iobuf wbuf;
 	wbuf.cmd=wcmd;

@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../cmd.h"
 
 static int start_restore_file(struct asfd *asfd,
 	BFILE *bfd,

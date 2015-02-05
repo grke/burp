@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../cmd.h"
 
 static int append_to_feat(char **feat, const char *str)
 {

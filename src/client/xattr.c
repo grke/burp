@@ -39,7 +39,7 @@ static char *get_next_str(struct asfd *asfd, char **data, size_t *l,
 static const char *xattr_acl_skiplist[3] = { "system.posix_acl_access", "system.posix_acl_default", NULL };
 //static const char *xattr_skiplist[1] = { NULL };
 
-int has_xattr(const char *path, char cmd)
+int has_xattr(const char *path, enum cmd cmd)
 {
 	if(llistxattr(path, NULL, 0)>0) return 1;
 	return 0;
@@ -267,7 +267,7 @@ static int namespaces[2] = { EXTATTR_NAMESPACE_USER, EXTATTR_NAMESPACE_SYSTEM };
 static const char *acl_skiplist[2] = { "system.posix1e.acl_access", NULL };
 #endif
 
-int has_xattr(const char *path, char cmd)
+int has_xattr(const char *path, enum cmd cmd)
 {
 	int i=0;
 	for(i=0; i<(int)(sizeof(namespaces)/sizeof(int)); i++)

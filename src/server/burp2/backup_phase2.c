@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../cmd.h"
 #include "champ_chooser/include.h"
 #include "../../server/manio.h"
 #include "../../burp2/blist.h"
@@ -267,6 +268,8 @@ static int deal_with_read(struct iobuf *rbuf,
 				*backup_end=1;
 				goto end;
 			}
+			break;
+		default:
 			break;
 	}
 

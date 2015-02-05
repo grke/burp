@@ -1,4 +1,5 @@
 #include "include.h"
+#include "cmd.h"
 
 static int do_encryption(struct asfd *asfd, EVP_CIPHER_CTX *ctx,
 	uint8_t *inbuf, int inlen, uint8_t *outbuf, int *outlen,
@@ -70,12 +71,7 @@ char *get_endfile_str(unsigned long long bytes, uint8_t *checksum)
 {
 	static char endmsg[128]="";
 	snprintf(endmsg, sizeof(endmsg),
-#ifdef HAVE_WIN32
-		"%I64u:%s",
-#else
-		"%llu:%s",
-#endif
-		bytes, bytes_to_md5str(checksum));
+		"%"PRIu64 ":%s", (uint64_t)bytes, bytes_to_md5str(checksum));
 	return endmsg;
 }
 
@@ -365,7 +361,7 @@ static DWORD WINAPI write_efs(PBYTE pbData,
 #endif
 
 int send_whole_filel(struct asfd *asfd,
-	char cmd, const char *fname, const char *datapth,
+	enum cmd cmd, const char *fname, const char *datapth,
 	int quick_read, unsigned long long *bytes, struct conf *conf,
 	BFILE *bfd, const char *extrameta, size_t elen)
 {

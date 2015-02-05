@@ -83,6 +83,7 @@ CLIENT_OBJS = \
 	$(OBJDIR)/log.o \
 	$(OBJDIR)/main.o \
 	$(OBJDIR)/msg.o \
+	$(OBJDIR)/pathcmp.o \
 	$(OBJDIR)/prepend.o \
 	$(OBJDIR)/prog.o \
 	$(OBJDIR)/regexp.o \

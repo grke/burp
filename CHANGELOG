@@ -1,4 +1,4 @@
-2015-02-05 Changes in burp-2.0.12:
+2015-02-06: Changes in burp-2.0.12:
   * Move /etc/burp scripts to /usr/share/burp/scripts.
   * Do some sed replacement when installing config files.
   * Start to add unit tests with 'check'.

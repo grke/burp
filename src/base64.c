@@ -36,7 +36,8 @@
  *    Graham Keeling, 2014.
  */
 
-#include "include.h"
+#include "burp.h"
+#include "base64.h"
 
 static uint8_t const base64_digits[64]=
 {
@@ -59,12 +60,10 @@ void base64_init(void)
 }
 
 /*
- * Convert a value to base64 characters.
- * The result is stored in where, which
- * must be at least 8 characters long.
+ * Convert a value to base64 characters. The result is stored in where, which
+ * must be at least 13 bytes long.
  *
- * Returns the number of characters
- * stored (not including the EOS).
+ * Returns the number of characters stored (not including the EOS).
  */
 int to_base64(int64_t value, char *where)
 {
@@ -100,30 +99,29 @@ int to_base64(int64_t value, char *where)
 }
 
 /*
- * Convert the Base 64 characters in where to
- * a value. No checking is done on the validity
- * of the characters!!
+ * Convert the Base 64 characters in where to a value.
  *
- * Returns the value.
+ * Returns the number of characters converted.
  */
 int from_base64(int64_t *value, const char *where)
 {
 	uint64_t val=0;
-	int i;
-	int neg;
+	int i=0;
+	int neg=0;
 
 	/* Check if it is negative */
-	i=neg=0;
 	if(where[i]=='-')
 	{
 		i++;
 		neg=1;
 	}
 	/* Construct value */
-	while(where[i] != 0 && where[i] != ' ')
+	for(char c=where[i]; c && c!=' '; c=where[++i])
 	{
+		if(!isalnum(c) && c!='+' && c!='/')
+			continue;
 		val<<=6;
-		val+=base64_map[(uint8_t)where[i++]];
+		val+=base64_map[(uint8_t)c];
 	}
 
 	*value=neg?-(int64_t)val:(int64_t)val;

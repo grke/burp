@@ -1,14 +1,23 @@
 LIBS = -lcheck -lpthread -lm -lrt
 
-test: test_cmd test_pathcmp
+SRCS = \
+	test_base64.c \
+	test_cmd.c \
+	test_pathcmp.c
 
-test_cmd:
-	$(CC) -o $@.test test_cmd.c ../src/cmd.c $(LIBS)
-	./$@.test && rm $@.test
+PROGS = clean $(SRCS:.c=.test)
 
-test_pathcmp:
-	$(CC) -o $@.test test_pathcmp.c ../src/pathcmp.c $(LIBS)
-	./$@.test && rm $@.test
+.SUFFIXES:      .c .test
+
+.c.test:
+	@echo "Compiling $<"
+	$(CXX) -Wall -o $@ $< ../src/$(subst test_,,$<) $(LIBS)
+	@echo "Running $<"
+	./$@ || exit 1
+	rm $@
+	@echo OK
+
+test: ${PROGS}
 
 clean:
-	rm *.test
+	rm -vf *.test

@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../base64.h"
 #include "../../cmd.h"
 #include "../../burp2/rabin/include.h"
 

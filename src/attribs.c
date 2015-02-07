@@ -37,6 +37,7 @@
  */
 
 #include "include.h"
+#include "base64.h"
 #include "cmd.h"
 
 // Encode a stat structure into a base64 character string.

@@ -1,3 +1,7 @@
+  * Improve utest/Makefile.
+  * Add unit test for base64.c.
+  * Make from_base64() ignore invalid characters.
+
 2015-02-06: Changes in burp-2.0.12:
   * Move /etc/burp scripts to /usr/share/burp/scripts.
   * Do some sed replacement when installing config files.

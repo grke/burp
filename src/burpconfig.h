@@ -85,7 +85,7 @@ typedef off_t boffset_t;
 	#define O_BINARY 0
 #endif
 
-inline bool IsPathSeparator(int ch)
+inline uint8_t IsPathSeparator(int ch)
 {
 	return
 #ifdef HAVE_WIN32

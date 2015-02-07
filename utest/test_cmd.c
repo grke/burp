@@ -4,12 +4,13 @@
 
 START_TEST(test_cmd)
 {
-	int cmd;
-	for(cmd=0; cmd<256; cmd++)
+	enum cmd cmd;
+	for(int i=0; i<256; i++)
 	{
 		int expected_is_link=0;
 		int expected_is_endfile=0;
 		int expected_is_filedata=0;
+		cmd=(enum cmd)i;
 		if(cmd==CMD_SOFT_LINK
 		  || cmd==CMD_HARD_LINK)
 			expected_is_link=1;

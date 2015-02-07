@@ -8,7 +8,6 @@
 #include "asfd.h"
 #include "async.h"
 #include "attribs.h"
-#include "base64.h"
 #include "berrno.h"
 #include "bfile.h"
 #include "bu.h"

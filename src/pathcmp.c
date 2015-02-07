@@ -1,4 +1,4 @@
-#include <stdlib.h>
+#include "burp.h"
 #include "pathcmp.h"
 
 // Return a number indicating the number of directories matched.

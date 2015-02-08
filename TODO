@@ -1,14 +1,11 @@
 The list of things to do is at:
 https://github.com/grke/burp/issues
 
-However, that is currently relating only to burp1 issues.
+However, that is mostly relating to burp1 issues.
 
 
 So, this is a list of important stuff that needs to be done for burp2,
 roughly in order of most important to least.
-
-* need to make the champion chooser into a separate process (one
-  for each dedup_group) that multiple server children can query.
 
 * Check data file locks don't just make the child exit.
 
@@ -35,8 +32,6 @@ roughly in order of most important to least.
 * Make the status monitor work.
 
 * Make the status monitor use sdirs.
-
-* Make the status monitor use the async/io stuff
 
 * Make the status monitor and counters use JSON.
 

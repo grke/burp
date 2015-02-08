@@ -18883,7 +18883,6 @@ if test x$docdir = x'/usr/share/doc/' ; then
    docdir=`eval echo ${docdir}burp`
 fi
 
-
 support_readline=yes
 support_conio=yes
 support_tls=no
@@ -27220,7 +27219,6 @@ Configuration on `date`:
    Source code location:	${srcdir}
    Install binaries:		${sbindir}
    Install config files:	${sysconfdir}
-   Man directory:		${mandir}
    C Compiler:			${CC}
    C++ Compiler:		${CXX}
    Compiler flags:		${WCFLAGS} ${CFLAGS}

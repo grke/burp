@@ -1,5 +1,5 @@
 # FIX THIS: This file should be a Makefile.in, and LIBS should be generated.
-LIBS = -lcheck -lpthread -lm -lrt -lssl
+LIBS = -lcheck -lpthread -lm -lrt -lssl -lcrypto
 
 SRCS = \
 	test_base64.c \

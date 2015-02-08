@@ -1,5 +1,6 @@
 #include "include.h"
 #include "cmd.h"
+#include "hexmap.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>

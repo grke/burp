@@ -1,5 +1,6 @@
 #include "include.h"
 #include "../../cmd.h"
+#include "../../hexmap.h"
 #include "../../server/burp2/restore.h"
 
 #include <librsync.h>

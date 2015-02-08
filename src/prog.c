@@ -2,6 +2,7 @@
 #include "base64.h"
 #include "cmd.h"
 #include "client/main.h"
+#include "hexmap.h"
 #include "server/main.h"
 #include "server/burp1/bedup.h"
 #include "server/burp2/champ_chooser/champ_server.h"

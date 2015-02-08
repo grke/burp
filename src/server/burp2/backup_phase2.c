@@ -1,6 +1,7 @@
 #include "include.h"
 #include "../../base64.h"
 #include "../../cmd.h"
+#include "../../hexmap.h"
 #include "champ_chooser/include.h"
 #include "../../server/manio.h"
 #include "../../burp2/blist.h"

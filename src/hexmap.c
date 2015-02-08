@@ -1,7 +1,11 @@
-#include "include.h"
+#include "burp.h"
+#include "hexmap.h"
+#include "burp2/blk.h"
+
+// FIX THIS: Should be set in configure somewhere.
+#include <openssl/md5.h>
 
 #define HEXMAP_SIZE	256
-#define SAVE_PATH_LEN	8
 
 static uint8_t hexmap1[HEXMAP_SIZE];
 static uint8_t hexmap2[HEXMAP_SIZE];

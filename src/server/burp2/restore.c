@@ -2,6 +2,7 @@
 #include "../../cmd.h"
 #include "champ_chooser/hash.h"
 #include "../../burp2/slist.h"
+#include "../../hexmap.h"
 #include "../../server/burp1/restore.h"
 #include "../manio.h"
 #include "../sdirs.h"

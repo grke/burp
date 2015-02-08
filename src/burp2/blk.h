@@ -18,7 +18,7 @@
 #define FINGERPRINT_LEN		8
 //#define MD5_DIGEST_LENGTH	16 // This is set in <openssl/md5.h>.
 #define CHECKSUM_LEN		FINGERPRINT_LEN+MD5_DIGEST_LENGTH
-#define SAVE_PATH_LEN		8
+#define SAVE_PATH_LEN		8 // This is set in hexmap.h.
 
 enum blk_got
 {

@@ -1,5 +1,6 @@
 #include "include.h"
 #include "../cmd.h"
+#include "../hexmap.h"
 #include "burp2/champ_chooser/include.h"
 #include "burp2/dpth.h"
 

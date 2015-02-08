@@ -1,5 +1,6 @@
 #include "include.h"
 #include "../../cmd.h"
+#include "../../hexmap.h"
 
 // For retrieving stored data.
 struct rblk

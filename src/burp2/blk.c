@@ -1,6 +1,7 @@
 #include <malloc.h>
 
 #include "include.h"
+#include "../hexmap.h"
 #include "rabin/rconf.h"
 
 static int alloc_count=0;

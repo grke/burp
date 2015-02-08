@@ -117,7 +117,7 @@ installation: install
 
 install: installdirs
 	@for I in $(all_subdirs); do (cd $$I && $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1); done
-	./configs/install "$(DESTDIR)" "$(sysconfdir)" "$(sbindir)" "$(scriptdir)"
+	./configs/install "$(DESTDIR)" "$(sysconfdir)" "$(sbindir)" "$(scriptdir)" "$(runstatedir)"
 
 Makefile: Makefile.in
 	cd $(topdir) \

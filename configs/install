@@ -4,16 +4,18 @@ destdir="$1"
 sysconfdir="$2"
 sbindir="$3"
 scriptdir="$4"
+runstatedir="$5"
 
 usage()
 {
-	echo "usage: $0 <destdir> <sysconfdir> <sbindir> <scriptdir>" 1>&2
+	echo "usage: $0 <destdir> <sysconfdir> <sbindir> <scriptdir> <runstatedir>" 1>&2
 	exit 1
 }
 
 [ -z "$sysconfdir" ] && usage
 [ -z "$sbindir" ] && usage
 [ -z "$scriptdir" ] && usage
+[ -z "$runstatedir" ] && usage
 
 safe_cp()
 {
@@ -44,6 +46,7 @@ safe_sed_cp()
 	sed	-e "s|@sysconfdir@|$sysconfdir|" \
 		-e "s|@sbindir@|$sbindir|" \
 		-e "s|@scriptdir@|$scriptdir|" \
+		-e "s|@runstatedir@|$runstatedir|" \
 			"$src" > "$dst"
 }
 

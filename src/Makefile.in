@@ -38,6 +38,7 @@ SRCS = \
 		incexc_recv.c \
 		incexc_send.c \
 		iobuf.c \
+		linkhash.c \
 		lock.c \
 		log.c \
 		msg.c \

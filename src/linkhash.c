@@ -34,7 +34,6 @@
 
 #include "burp.h"
 #include "handy.h"
-#include "find.h"
 #include "linkhash.h"
 
 // List of all hard linked files found.
@@ -79,10 +78,10 @@ void linkhash_free(void)
 	free_v((void **)&linkhash);
 }
 
-static inline int get_hash(const struct stat &info)
+static inline int get_hash(struct stat *statp)
 {
-	int hash=info.st_dev;
-	unsigned long long i=info.st_ino;
+	int hash=statp->st_dev;
+	unsigned long long i=statp->st_ino;
 	hash ^= i;
 	i >>= 16;
 	hash ^= i;
@@ -93,26 +92,26 @@ static inline int get_hash(const struct stat &info)
 	return hash & LINK_HASHTABLE_MASK;
 }
 
-struct f_link *linkhash_search(FF_PKT *ff_pkt, struct f_link ***bucket)
+struct f_link *linkhash_search(struct stat *statp, struct f_link ***bucket)
 {
 	struct f_link *lp;
-	*bucket=&linkhash[get_hash(ff_pkt->statp)];
+	*bucket=&linkhash[get_hash(statp)];
 	for(lp=**bucket; lp; lp=lp->next)
-		if(lp->ino==(ino_t)ff_pkt->statp.st_ino
-		  && lp->dev==(dev_t)ff_pkt->statp.st_dev)
+		if(lp->ino==(ino_t)statp->st_ino
+		  && lp->dev==(dev_t)statp->st_dev)
 			return lp;
 	return NULL;
 }
 
-int linkhash_add(FF_PKT *ff_pkt, struct f_link **bucket)
+int linkhash_add(char *fname, struct stat *statp, struct f_link **bucket)
 {
 	struct f_link *new_fl;
 	if(!(new_fl=(struct f_link *)
 		malloc_w(sizeof(struct f_link), __func__))
-	  || !(new_fl->name=strdup_w(ff_pkt->fname, __func__)))
+	  || !(new_fl->name=strdup_w(fname, __func__)))
 		return -1;
-	new_fl->ino=ff_pkt->statp.st_ino;
-	new_fl->dev=ff_pkt->statp.st_dev;
+	new_fl->ino=statp->st_ino;
+	new_fl->dev=statp->st_dev;
 	new_fl->next=*bucket;
 	*bucket=new_fl;
 	return 0;

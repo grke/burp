@@ -304,7 +304,7 @@ int send_file_w(struct asfd *asfd, FF_PKT *ff, bool top_level, struct conf *conf
 		struct f_link *lp;
 		struct f_link **bucket=NULL;
 
-		if((lp=linkhash_search(ff, &bucket)))
+		if((lp=linkhash_search(&ff->statp, &bucket)))
 		{
 			if(!strcmp(lp->name, ff->fname)) return 0;
 			ff->link=lp->name;
@@ -313,7 +313,8 @@ int send_file_w(struct asfd *asfd, FF_PKT *ff, bool top_level, struct conf *conf
 		}
 		else
 		{
-			if(linkhash_add(ff, bucket)) return -1;
+			if(linkhash_add(ff->fname,
+				&ff->statp, bucket)) return -1;
 		}
 	}
 

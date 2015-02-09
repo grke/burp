@@ -405,62 +405,6 @@ int restore_sbuf_burp1(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 	return 0;
 }
 
-static int restore_ent(struct asfd *asfd,
-	struct sbuf **sb,
-	struct slist *slist,
-	struct bu *bu,
-	enum action act,
-	struct sdirs *sdirs,
-	enum cntr_status cntr_status,
-	struct conf *cconf)
-{
-	int ret=-1;
-	struct sbuf *xb;
-
-	// Check if we have any directories waiting to be restored.
-	while((xb=slist->head))
-	{
-		if(is_subdir(xb->path.buf, (*sb)->path.buf))
-		{
-			// We are still in a subdir.
-			break;
-		}
-		else
-		{
-			// Can now restore sblist[s] because nothing else is
-			// fiddling in a subdirectory.
-			if(restore_sbuf_burp1(asfd, xb, bu,
-				act, sdirs, cntr_status, cconf))
-					goto end;
-			slist->head=xb->next;
-			sbuf_free(&xb);
-		}
-	}
-
-	/* If it is a directory, need to remember it and restore it later, so
-	   that the permissions come out right. */
-	/* Meta data of directories will also have the stat stuff set to be a
-	   directory, so will also come out at the end. */
-	if(S_ISDIR((*sb)->statp.st_mode))
-	{
-		// Add to the head of the list instead of the tail.
-		(*sb)->next=slist->head;
-		slist->head=*sb;
-
-		// Allocate a new sb.
-		if(!(*sb=sbuf_alloc(cconf))) goto end;
-	}
-	else
-	{
-		if(restore_sbuf_burp1(asfd, *sb,
-			bu, act, sdirs, cntr_status, cconf))
-				goto end;
-	}
-	ret=0;
-end:
-	return ret;
-}
-
 int restore_stream_burp1(struct asfd *asfd, struct sdirs *sdirs,
 	struct slist *slist,
 	struct bu *bu, const char *manifest, regex_t *regex,
@@ -519,11 +463,13 @@ int restore_stream_burp1(struct asfd *asfd, struct sdirs *sdirs,
 		}
 		else
 		{
+			int j1=0;
+			int j2=0;
 			if((!srestore
 			    || check_srestore(cconf, sb->path.buf))
 			  && check_regex(regex, sb->path.buf)
 			  && restore_ent(asfd, &sb, slist,
-				bu, act, sdirs, cntr_status, cconf))
+				bu, act, sdirs, cntr_status, cconf, &j1, &j2))
 					goto end;
 		}
 		sbuf_free_content(sb);

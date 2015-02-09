@@ -34,6 +34,7 @@
 
 #include "include.h"
 #include "../cmd.h"
+#include "linkhash.h"
 
 static enum cmd filesymbol=CMD_FILE;
 static enum cmd metasymbol=CMD_METADATA;
@@ -113,8 +114,6 @@ int send_file(struct asfd *asfd, FF_PKT *ff, bool top_level, struct conf *conf)
 	static struct sbuf *sb=NULL;
 
 	if(!sb && !(sb=sbuf_alloc(conf))) return -1;
-
-	if(!file_is_included(conf, ff->fname, top_level)) return 0;
 
 #ifdef HAVE_WIN32
 	if(ff->winattr & FILE_ATTRIBUTE_ENCRYPTED)

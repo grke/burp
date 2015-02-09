@@ -98,10 +98,6 @@ extern FF_PKT *find_files_init(void);
 extern void find_files_free(FF_PKT *ff);
 extern int find_files_begin(struct asfd *asfd,
 	FF_PKT *ff_pkt, struct conf *conf, char *fname);
-extern int file_is_included(struct conf *conf, const char *fname,
-	bool top_level);
-extern int in_include_regex(struct strlist *incre, const char *fname);
-extern int in_exclude_regex(struct strlist *excre, const char *fname);
 // Returns the level of compression.
 extern int in_exclude_comp(struct strlist *excom, const char *fname,
 	int compression);

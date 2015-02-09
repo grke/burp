@@ -18,6 +18,7 @@ SRCS = \
 	dpth.o \
 	rblk.o \
 	restore.o \
+	restore_spool.o \
 	rubble.o
 
 OBJS = $(SRCS:.c=.o)

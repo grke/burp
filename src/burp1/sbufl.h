@@ -21,8 +21,4 @@ extern int sbufl_fill_phase1(struct sbuf *sb, FILE *fp,
 extern int sbufl_to_manifest(struct sbuf *sb, FILE *mp, gzFile zp);
 extern int sbufl_to_manifest_phase1(struct sbuf *sb, FILE *mp, gzFile zp);
 
-extern int add_to_sbufl_arr(struct sbuf ***sblist, struct sbuf *sb, int *count);
-extern void free_sbufls(struct sbuf **sb, int count);
-extern int del_from_sbufl_arr(struct sbuf ***sblist, int *count);
-
 #endif

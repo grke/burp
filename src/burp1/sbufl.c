@@ -244,38 +244,3 @@ int sbufl_to_manifest_phase1(struct sbuf *sb, FILE *mp, gzFile zp)
 	logp("No valid file pointer given to sbufl_to_manifest_phase1()\n");
 	return -1;
 }
-
-int add_to_sbufl_arr(struct sbuf ***sblist, struct sbuf *sb, int *count)
-{
-        struct sbuf **sbtmp=NULL;
-        if(!(sbtmp=(struct sbuf **)realloc_w(*sblist,
-                ((*count)+1)*sizeof(struct sbuf *), __func__)))
-         	       return -1;
-        *sblist=sbtmp;
-
-        (*sblist)[(*count)++]=sb;
-
-        return 0;
-}
-
-void free_sbufls(struct sbuf **sb, int count)
-{
-	int s=0;
-	if(!sb) return;
-	for(s=0; s<count; s++) sbuf_free(&(sb[s]));
-	free_v((void **)&sb);
-}
-
-int del_from_sbufl_arr(struct sbuf ***sblist, int *count)
-{
-        struct sbuf **sbtmp=NULL;
-
-	(*count)--;
-	if((*sblist)[*count]) sbuf_free(&((*sblist)[*count]));
-        if(*count && !(sbtmp=(struct sbuf **)realloc_w(*sblist,
-                (*count)*sizeof(struct sbuf *), __func__)))
-         	       return -1;
-        *sblist=sbtmp;
-
-	return 0;
-}

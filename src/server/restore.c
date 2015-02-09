@@ -2,6 +2,7 @@
 #include "../cmd.h"
 #include "burp1/restore.h"
 #include "burp2/restore.h"
+#include "burp2/restore_spool.h"
 
 static enum asl_ret restore_end_func(struct asfd *asfd,
 	struct conf *conf, void *param)
@@ -93,6 +94,79 @@ end:
 	return ret;
 }
 
+static int restore_remaining_dirs(struct asfd *asfd, struct bu *bu,
+	struct slist *slist, enum action act, struct sdirs *sdirs,
+	enum cntr_status cntr_status, struct conf *cconf)
+{
+	struct sbuf *sb;
+	// Restore any directories that are left in the list.
+	for(sb=slist->head; sb; sb=sb->next)
+	{
+		if(cconf->protocol==PROTO_BURP1)
+		{
+			if(restore_sbuf_burp1(asfd, sb, bu, act,
+				sdirs, cntr_status, cconf))
+					return -1;
+		}
+		else
+		{
+			int need_data=0; // Unused.
+			if(restore_sbuf_burp2(asfd, sb, act,
+				cntr_status, cconf, &need_data))
+					return -1;
+		}
+	}
+	return 0;
+}
+
+static int actual_restore(struct asfd *asfd, struct bu *bu,
+	const char *manifest, regex_t *regex, int srestore, enum action act,
+	struct sdirs *sdirs, enum cntr_status cntr_status, struct conf *cconf)
+{
+        int ret=-1;
+        // For out-of-sequence directory restoring so that the
+        // timestamps come out right:
+        struct slist *slist=NULL;
+
+        if(!(slist=slist_alloc()))
+                goto end;
+
+	if(cconf->protocol==PROTO_BURP2)
+	{
+        	int ars=0;
+		if(!(ars=maybe_restore_spool(asfd, manifest, sdirs,
+			srestore, regex, cconf, slist, act, cntr_status)))
+		{
+			if(restore_stream_burp2(asfd, sdirs, slist,
+				bu, manifest, regex,
+				srestore, cconf, act, cntr_status))
+					goto end;
+		}
+		else if(ars<0) goto end; // Error.
+	}
+	else
+	{
+		if(restore_stream_burp1(asfd, sdirs, slist,
+			bu, manifest, regex,
+			srestore, cconf, act, cntr_status))
+				goto end;
+	}
+
+	if(restore_remaining_dirs(asfd, bu, slist,
+		act, sdirs, cntr_status, cconf)) goto end;
+
+        // Restore has nearly completed OK.
+
+        ret=restore_end(asfd, cconf);
+
+	cntr_print(cconf->cntr, act);
+	cntr_stats_to_file(cconf->cntr, bu->path, act, cconf);
+end:
+        slist_free(&slist);
+        return ret;
+}
+
+
 static int restore_manifest(struct asfd *asfd, struct bu *bu,
 	regex_t *regex, int srestore, enum action act, struct sdirs *sdirs,
 	char **dir_for_notify, struct conf *cconf)
@@ -145,20 +219,8 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 		goto end;
 
 	// Now, do the actual restore.
-	if(cconf->protocol==PROTO_BURP1)
-	{
-		if(restore_burp1(asfd, bu, manifest,
-		  regex, srestore, act, sdirs, cntr_status, cconf))
-			goto end;
-	}
-	else
-	{
-		if(restore_burp2(asfd, bu, manifest,
-		  regex, srestore, act, sdirs, cntr_status, cconf))
-			goto end;
-	}
-
-	ret=0;
+	ret=actual_restore(asfd, bu, manifest,
+		  regex, srestore, act, sdirs, cntr_status, cconf);
 end:
 	set_logfp(NULL, cconf);
 	compress_file(logpath, logpathz, cconf);

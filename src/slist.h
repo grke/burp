@@ -5,6 +5,7 @@ struct slist
 {
 	struct sbuf *head;
 	struct sbuf *tail;
+	// The following stuff is for burp-2 only.
 	struct sbuf *last_requested; // last file requested
 	struct sbuf *add_sigs_here; // server only
 	struct sbuf *blks_to_request; // server only

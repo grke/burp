@@ -5,7 +5,7 @@
 #include "champ_chooser/include.h"
 #include "../../server/manio.h"
 #include "../../burp2/blist.h"
-#include "../../burp2/slist.h"
+#include "../../slist.h"
 
 static int data_needed(struct sbuf *sb)
 {

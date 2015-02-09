@@ -6,6 +6,5 @@
 #include "blist.h"
 #include "blk.h"
 #include "sbuf_burp2.h"
-#include "slist.h"
 
 #endif

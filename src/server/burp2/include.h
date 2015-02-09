@@ -8,6 +8,7 @@
 #include "dpth.h"
 #include "rblk.h"
 #include "restore.h"
+#include "restore_spool.h"
 #include "rubble.h"
 
 #endif

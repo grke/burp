@@ -2,6 +2,7 @@
 #include "../../cmd.h"
 #include "../../hexmap.h"
 #include "../../server/burp2/restore.h"
+#include "../../slist.h"
 
 #include <librsync.h>
 
@@ -405,32 +406,30 @@ static int restore_sbufl(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 }
 
 static int restore_ent(struct asfd *asfd, struct sbuf **sb,
-	struct sbuf ***sblist, int *scount, struct bu *bu,
+	struct slist *slist, struct bu *bu,
 	enum action act, struct sdirs *sdirs,
 	enum cntr_status cntr_status, struct conf *cconf)
 {
-	int s=0;
 	int ret=-1;
+	struct sbuf *xb;
 
 	// Check if we have any directories waiting to be restored.
-	for(s=(*scount)-1; s>=0; s--)
+	while((xb=slist->head))
 	{
-		if(is_subdir((*sblist)[s]->path.buf, (*sb)->path.buf))
+		if(is_subdir(xb->path.buf, xb->path.buf))
 		{
 			// We are still in a subdir.
-			//printf(" subdir (%s %s)\n",
-			// (*sblist)[s]->path, (*sb)->path);
 			break;
 		}
 		else
 		{
 			// Can now restore sblist[s] because nothing else is
 			// fiddling in a subdirectory.
-			if(restore_sbufl(asfd, (*sblist)[s], bu,
+			if(restore_sbufl(asfd, xb, bu,
 				act, sdirs, cntr_status, cconf))
 					goto end;
-			else if(del_from_sbufl_arr(sblist, scount))
-				goto end;
+			slist->head=xb->next;
+			sbuf_free(&xb);
 		}
 	}
 
@@ -440,33 +439,49 @@ static int restore_ent(struct asfd *asfd, struct sbuf **sb,
 	   directory, so will also come out at the end. */
 	if(S_ISDIR((*sb)->statp.st_mode))
 	{
-		if(add_to_sbufl_arr(sblist, *sb, scount))
-			goto end;
-		// Allocate a new sb to carry on with.
-		if(!(*sb=sbuf_alloc(cconf)))
-			goto end;
+		// Add to the head of the list instead of the tail.
+		(*sb)->next=slist->head;
+		slist->head=*sb;
+
+		// Allocate a new sb.
+		if(!(*sb=sbuf_alloc(cconf))) goto end;
 	}
-	else if(restore_sbufl(asfd, *sb, bu, act, sdirs, cntr_status, cconf))
-		goto end;
+	else
+	{
+		if(restore_sbufl(asfd, *sb,
+			bu, act, sdirs, cntr_status, cconf))
+				goto end;
+	}
 	ret=0;
 end:
 	return ret;
 }
 
-int restore_burp1(struct asfd *asfd, struct bu *bu,
-	const char *manifest, regex_t *regex, int srestore,
-	enum action act, struct sdirs *sdirs, enum cntr_status cntr_status,
-	struct conf *cconf)
+static int restore_remaining_dirs(struct asfd *asfd, struct bu *bu,
+	struct slist *slist, enum action act, struct sdirs *sdirs,
+	enum cntr_status cntr_status, struct conf *conf)
 {
-	int s=0;
+	struct sbuf *sb;
+	// Restore any directories that are left in the list.
+	for(sb=slist->head; sb; sb=sb->next)
+	{
+		if(restore_sbufl(asfd, sb, bu,
+			act, sdirs, cntr_status, conf))
+				return -1;
+	}
+	return 0;
+}
+
+static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
+	struct slist *slist,
+	struct bu *bu, const char *manifest, regex_t *regex,
+	int srestore, struct conf *cconf, enum action act,
+        enum cntr_status cntr_status)
+{
 	int ret=-1;
-	struct sbuf *sb=NULL;
-	// For out-of-sequence directory restoring so that the
-	// timestamps come out right:
-	int scount=0;
-	struct sbuf **sblist=NULL;
-	struct iobuf *rbuf=asfd->rbuf;
 	gzFile zp;
+	struct sbuf *sb;
+	struct iobuf *rbuf=asfd->rbuf;
 
 	if(!(sb=sbuf_alloc(cconf))) goto end;
 	if(!(zp=gzopen_file(manifest, "rb")))
@@ -518,30 +533,49 @@ int restore_burp1(struct asfd *asfd, struct bu *bu,
 			if((!srestore
 			    || check_srestore(cconf, sb->path.buf))
 			  && check_regex(regex, sb->path.buf)
-			  && restore_ent(asfd, &sb, &sblist, &scount,
+			  && restore_ent(asfd, &sb, slist,
 				bu, act, sdirs, cntr_status, cconf))
 					goto end;
 		}
 		sbuf_free_content(sb);
 	}
-	// Restore any directories that are left in the list.
-	for(s=scount-1; s>=0; s--)
-	{
-		if(restore_sbufl(asfd, sblist[s], bu,
-			act, sdirs, cntr_status, cconf))
-				goto end;
-	}
+	ret=0;
+end:
+	gzclose_fp(&zp);
+	sbuf_free(&sb);
+	iobuf_free_content(rbuf);
+	return ret;
+}
+
+int restore_burp1(struct asfd *asfd, struct bu *bu,
+	const char *manifest, regex_t *regex, int srestore,
+	enum action act, struct sdirs *sdirs, enum cntr_status cntr_status,
+	struct conf *cconf)
+{
+	int ret=-1;
+	// For out-of-sequence directory restoring so that the
+	// timestamps come out right:
+	struct slist *slist=NULL;
+
+	if(!(slist=slist_alloc())) goto end;
+
+	if(restore_stream(asfd, sdirs, slist,
+		bu, manifest, regex,
+		srestore, cconf, act, cntr_status))
+			goto end;
+
+	// Restore has nearly completed OK.
+
+	if(restore_remaining_dirs(asfd, bu,
+		slist, act, sdirs, cntr_status, cconf))
+			goto end;
 
 	ret=restore_end(asfd, cconf);
 
 	cntr_print(cconf->cntr, act);
 
 	cntr_stats_to_file(cconf->cntr, bu->path, act, cconf);
-
 end:
-	iobuf_free_content(rbuf);
-	gzclose_fp(&zp);
-	sbuf_free(&sb);
-	free_sbufls(sblist, scount);
+	slist_free(&slist);
 	return ret;
 }

@@ -31,6 +31,7 @@
 #include "run_script.h"
 #include "sbuf.h"
 #include "ssl.h"
+#include "slist.h"
 #include "strlist.h"
 #include "version.h"
 #include "yajl_gen_w.h"

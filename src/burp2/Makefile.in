@@ -16,7 +16,6 @@ SRCS = \
 	blist.c \
 	blk.c \
 	sbuf_burp2.c \
-	slist.c \
 
 OBJS = $(SRCS:.c=.o)
 

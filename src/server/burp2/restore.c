@@ -1,7 +1,7 @@
 #include "include.h"
 #include "../../cmd.h"
 #include "champ_chooser/hash.h"
-#include "../../burp2/slist.h"
+#include "../../slist.h"
 #include "../../hexmap.h"
 #include "../../server/burp1/restore.h"
 #include "../manio.h"
@@ -82,7 +82,6 @@ static int restore_ent(struct asfd *asfd,
 		}
 		else
 		{
-//printf("do dir: %s\n", xb->path.buf);
 			// Can now restore because nothing else is
 			// fiddling in a subdirectory.
 			if(restore_sbuf(asfd, xb, act, cntr_status,
@@ -142,7 +141,7 @@ static int restore_remaining_dirs(struct asfd *asfd,
    Return -1 on error, 1 if it copied the data across, 0 if it did not. */
 static int maybe_copy_data_files_across(struct asfd *asfd,
 	const char *manifest,
-	const char *datadir, int srestore, regex_t *regex, struct conf *conf,
+	struct sdirs *sdirs, int srestore, regex_t *regex, struct conf *conf,
 	struct slist *slist,
 	enum action act, enum cntr_status cntr_status)
 {
@@ -247,7 +246,7 @@ static int maybe_copy_data_files_across(struct asfd *asfd,
 		snprintf(msg, sizeof(msg), "dat=%s", path);
 		printf("got: %s\n", msg);
 		if(asfd->write_str(asfd, CMD_GEN, msg)) goto end;
-		if(!(fdatpath=prepend_s(datadir, path)))
+		if(!(fdatpath=prepend_s(sdirs->data, path)))
 			goto end;
 		if(send_a_file(asfd, fdatpath, conf))
 		{
@@ -316,7 +315,7 @@ end:
 }
 
 static int restore_stream(struct asfd *asfd,
-	const char *datadir, struct slist *slist,
+	struct sdirs *sdirs, struct slist *slist,
 	struct bu *bu, const char *manifest, regex_t *regex,
 	int srestore, struct conf *conf, enum action act,
 	enum cntr_status cntr_status)
@@ -339,7 +338,7 @@ static int restore_stream(struct asfd *asfd,
 	  || manio_init_read(manio, manifest)
 	  || !(sb=sbuf_alloc(conf))
 	  || !(blk=blk_alloc())
-	  || !(dpth=dpth_alloc(datadir)))
+	  || !(dpth=dpth_alloc(sdirs->data)))
 		goto end;
 
 	while(1)
@@ -460,16 +459,12 @@ int restore_burp2(struct asfd *asfd, struct bu *bu, const char *manifest,
 	regex_t *regex, int srestore, enum action act, struct sdirs *sdirs,
 	enum cntr_status cntr_status, struct conf *conf)
 {
-	//int s=0;
-	//size_t len=0;
-	// For out-of-sequence directory restoring so that the
-	// timestamps come out right:
-	// FIX THIS!
-//	int scount=0;
-	struct slist *slist=NULL;
 	int ret=-1;
 	int ars=0;
-	int need_data=0;
+	int need_data=0; // unused
+	// For out-of-sequence directory restoring so that the
+	// timestamps come out right:
+	struct slist *slist=NULL;
 
 	if(!(slist=slist_alloc()))
 		goto end;
@@ -480,7 +475,7 @@ int restore_burp2(struct asfd *asfd, struct bu *bu, const char *manifest,
 	{
 		// Instead of copying all the blocks across, do it as a stream,
 		// in the style of burp-1.x.x.
-		if(restore_stream(asfd, sdirs->data, slist,
+		if(restore_stream(asfd, sdirs, slist,
 			bu, manifest, regex,
 			srestore, conf, act, cntr_status)) 
 				goto end;
@@ -497,8 +492,6 @@ int restore_burp2(struct asfd *asfd, struct bu *bu, const char *manifest,
 
 	cntr_print_end(conf->cntr);
 	cntr_print(conf->cntr, act);
-
-	ret=0;
 end:
 	slist_free(&slist);
 	return ret;

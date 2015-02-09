@@ -466,7 +466,6 @@ int restore_stream_burp1(struct asfd *asfd, struct sdirs *sdirs,
 
 		sbuf_free_content(sb);
 	}
-	ret=0;
 end:
 	gzclose_fp(&zp);
 	sbuf_free(&sb);

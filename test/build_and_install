@@ -1,0 +1,53 @@
+fail()
+{
+	echo
+	echo "Test setup failed: $@"
+	echo
+	exit 1
+}
+
+makedir()
+{
+	rm -rf "$1"
+	mkdir -p "$1" || fail "could not mkdir $1"
+}
+
+cdir()
+{
+	cd "$1" || fail "could not cd to $1"
+}
+
+build_and_install()
+{
+	# Create a build directory, and fill it with the source.
+	makedir "$build"
+	makedir "$build/test"
+
+	ls ../ | while read f ; do
+		[ "$f" = "test" ] && continue
+		[ "$f" = ".git" ] && continue
+		cp -ar ../"$f" "$build" || fail "could not copy ../$f to $build"
+	done || exit 1
+
+	tolink="$build/utest/test_cmd.c"
+	# Add some hard links, to make the test harder.
+	ln "$tolink" "$build/utest/1" || fail
+	ln "$tolink" "$build/utest/2" || fail
+	ln "$tolink" "$build/utest/y" || fail
+	ln "$tolink" "$build/utest/z" || fail
+
+	# Create a target directory, compile burp and install it into the
+	# target.
+	makedir "$target"
+	cdir "$build"
+	make clean
+	./configure || fail "configure failed"
+	make || fail "make failed"
+	# For some reason, make is not returning an error code.
+	# Look for important binaries before carrying on.
+	[ -f src/burp ] || fail "make failed"
+	make install DESTDIR="$target" || fail "make install failed"
+	cdir -
+}
+
+build_and_install

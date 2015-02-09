@@ -21,8 +21,9 @@ extern struct f_link **linkhash;
 
 extern int linkhash_init(void);
 extern void linkhash_free(void);
-extern struct f_link *linkhash_search(FF_PKT *ff_pkt, struct f_link ***bucket);
-extern int linkhash_add(FF_PKT *ff_pkt, struct f_link **bucket);
-
+extern struct f_link *linkhash_search(struct stat *statp,
+	struct f_link ***bucket);
+extern int linkhash_add(char *fname,
+	struct stat *statp, struct f_link **bucket);
 
 #endif

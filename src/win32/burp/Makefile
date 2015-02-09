@@ -79,6 +79,7 @@ CLIENT_OBJS = \
 	$(OBJDIR)/incexc_recv.o \
 	$(OBJDIR)/incexc_send.o \
 	$(OBJDIR)/iobuf.o \
+	$(OBJDIR)/linkhash.o \
 	$(OBJDIR)/lock.o \
 	$(OBJDIR)/log.o \
 	$(OBJDIR)/main.o \

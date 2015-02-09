@@ -11,13 +11,4 @@ extern int restore_sbuf_burp2(struct asfd *asfd, struct sbuf *sb,
 	enum action act, enum cntr_status cntr_status,
 	struct conf *conf, int *need_data);
 
-extern int restore_ent_burp2(struct asfd *asfd,
-	struct sbuf **sb,
-	struct slist *slist,
-	enum action act,
-	enum cntr_status cntr_status,
-	struct conf *conf,
-	int *need_data,
-	int *last_ent_was_dir);
-
 #endif

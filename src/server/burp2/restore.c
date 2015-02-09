@@ -53,73 +53,6 @@ int restore_sbuf_burp2(struct asfd *asfd, struct sbuf *sb, enum action act,
 	}
 }
 
-int restore_ent_burp2(struct asfd *asfd,
-	struct sbuf **sb,
-	struct slist *slist,
-	enum action act,
-	enum cntr_status cntr_status,
-	struct conf *conf,
-	int *need_data,
-	int *last_ent_was_dir)
-{
-	int ret=-1;
-	struct sbuf *xb;
-
-	if(!(*sb)->path.buf)
-	{
-		logp("Got NULL path!\n");
-		return -1;
-	}
-	//printf("want to restore: %s\n", (*sb)->path.buf);
-
-	// Check if we have any directories waiting to be restored.
-	while((xb=slist->head))
-	{
-		if(is_subdir(xb->path.buf, (*sb)->path.buf))
-		{
-			// We are still in a subdir.
-			break;
-		}
-		else
-		{
-			// Can now restore because nothing else is
-			// fiddling in a subdirectory.
-			if(restore_sbuf_burp2(asfd, xb, act, cntr_status,
-				conf, need_data)) goto end;
-			slist->head=xb->next;
-			sbuf_free(&xb);
-		}
-	}
-
-	// If it is a directory, need to remember it and restore it later, so
-	// that the permissions come out right.
-	// Meta data of directories will also have the stat stuff set to be a
-	// directory, so will also come out at the end.
-	// FIX THIS: for Windows, need to read and remember the blocks that
-	// go with the directories. Probably have to do the same for metadata
-	// that goes with directories.
-	if(S_ISDIR((*sb)->statp.st_mode))
-	{
-		// Add to the head of the list instead of the tail.
-		(*sb)->next=slist->head;
-		slist->head=*sb;
-
-		*last_ent_was_dir=1;
-
-		// Allocate a new sb.
-		if(!(*sb=sbuf_alloc(conf))) goto end;
-	}
-	else
-	{
-		*last_ent_was_dir=0;
-		if(restore_sbuf_burp2(asfd, *sb, act,
-			cntr_status, conf, need_data)) goto end;
-	}
-	ret=0;
-end:
-	return ret;
-}
-
 int restore_stream_burp2(struct asfd *asfd,
 	struct sdirs *sdirs, struct slist *slist,
 	struct bu *bu, const char *manifest, regex_t *regex,
@@ -243,8 +176,8 @@ int restore_stream_burp2(struct asfd *asfd,
 		if((!srestore || check_srestore(conf, sb->path.buf))
 		  && check_regex(regex, sb->path.buf))
 		{
-			if(restore_ent_burp2(asfd, &sb, slist, act,
-				cntr_status, conf,
+			if(restore_ent(asfd, &sb, slist, bu, act,
+				sdirs, cntr_status, conf,
 				&need_data, &last_ent_was_dir))
 					goto end;
 		}

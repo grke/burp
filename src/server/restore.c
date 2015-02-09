@@ -13,7 +13,7 @@ static enum asl_ret restore_end_func(struct asfd *asfd,
 	return ASL_END_ERROR;
 }
 
-int restore_end(struct asfd *asfd, struct conf *conf)
+static int restore_end(struct asfd *asfd, struct conf *conf)
 {
 	if(asfd->write_str(asfd, CMD_GEN, "restoreend")) return -1;
 	return asfd->simple_loop(asfd,
@@ -94,6 +94,92 @@ end:
 	return ret;
 }
 
+static int restore_sbuf(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
+	enum action act, struct sdirs *sdirs, enum cntr_status cntr_status,
+	struct conf *cconf, int *need_data)
+{
+	if(cconf->protocol==PROTO_BURP1)
+	{
+		return restore_sbuf_burp1(asfd, sb, bu,
+		  act, sdirs, cntr_status, cconf);
+	}
+	else
+	{
+		return restore_sbuf_burp2(asfd, sb,
+		  act, cntr_status, cconf, need_data);
+	}
+}
+
+int restore_ent(struct asfd *asfd,
+	struct sbuf **sb,
+	struct slist *slist,
+	struct bu *bu,
+	enum action act,
+	struct sdirs *sdirs,
+	enum cntr_status cntr_status,
+	struct conf *cconf,
+	int *need_data,
+	int *last_ent_was_dir)
+{
+	int ret=-1;
+	struct sbuf *xb;
+
+	if(!(*sb)->path.buf)
+	{
+		logp("Got NULL path!\n");
+		return -1;
+	}
+
+	// Check if we have any directories waiting to be restored.
+	while((xb=slist->head))
+	{
+		if(is_subdir(xb->path.buf, (*sb)->path.buf))
+		{
+			// We are still in a subdir.
+			break;
+		}
+		else
+		{
+			// Can now restore sblist[s] because nothing else is
+			// fiddling in a subdirectory.
+			if(restore_sbuf(asfd, xb, bu,
+			  act, sdirs, cntr_status, cconf, need_data))
+				goto end;
+			slist->head=xb->next;
+			sbuf_free(&xb);
+		}
+	}
+
+	/* If it is a directory, need to remember it and restore it later, so
+	   that the permissions come out right. */
+	/* Meta data of directories will also have the stat stuff set to be a
+	   directory, so will also come out at the end. */
+	/* FIX THIS: for Windows, need to read and remember the blocks that
+	   go with the directories. Probably have to do the same for metadata
+	   that goes with directories. */
+	if(S_ISDIR((*sb)->statp.st_mode))
+	{
+		// Add to the head of the list instead of the tail.
+		(*sb)->next=slist->head;
+		slist->head=*sb;
+
+		*last_ent_was_dir=1;
+
+		// Allocate a new sb.
+		if(!(*sb=sbuf_alloc(cconf))) goto end;
+	}
+	else
+	{
+		*last_ent_was_dir=0;
+		if(restore_sbuf(asfd, *sb, bu,
+		  act, sdirs, cntr_status, cconf, need_data))
+			goto end;
+	}
+	ret=0;
+end:
+	return ret;
+}
+
 static int restore_remaining_dirs(struct asfd *asfd, struct bu *bu,
 	struct slist *slist, enum action act, struct sdirs *sdirs,
 	enum cntr_status cntr_status, struct conf *cconf)
@@ -134,7 +220,7 @@ static int actual_restore(struct asfd *asfd, struct bu *bu,
 	if(cconf->protocol==PROTO_BURP2)
 	{
         	int ars=0;
-		if(!(ars=maybe_restore_spool(asfd, manifest, sdirs,
+		if(!(ars=maybe_restore_spool(asfd, manifest, sdirs, bu,
 			srestore, regex, cconf, slist, act, cntr_status)))
 		{
 			if(restore_stream_burp2(asfd, sdirs, slist,

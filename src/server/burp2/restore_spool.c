@@ -12,8 +12,9 @@
    side. If it thinks it is, it will then do it.
    Return -1 on error, 1 if it copied the data across, 0 if it did not. */
 int maybe_restore_spool(struct asfd *asfd, const char *manifest,
-	struct sdirs *sdirs, int srestore, regex_t *regex, struct conf *conf,
-	struct slist *slist, enum action act, enum cntr_status cntr_status)
+	struct sdirs *sdirs, struct bu *bu, int srestore, regex_t *regex,
+	struct conf *conf, struct slist *slist,
+	enum action act, enum cntr_status cntr_status)
 {
 	int ars;
 	int ret=-1;
@@ -166,8 +167,8 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 		if((!srestore || check_srestore(conf, sb->path.buf))
 		  && check_regex(regex, sb->path.buf))
 		{
-			if(restore_ent_burp2(asfd, &sb, slist, act,
-				cntr_status, conf,
+			if(restore_ent(asfd, &sb, slist, bu, act,
+				sdirs, cntr_status, conf,
 				&need_data, &last_ent_was_dir))
 					goto end;
 		}

@@ -411,8 +411,10 @@ int restore_stream_burp1(struct asfd *asfd, struct sdirs *sdirs,
 	int srestore, struct conf *cconf, enum action act,
         enum cntr_status cntr_status)
 {
-	int ret=-1;
 	gzFile zp;
+	int ret=-1;
+	int need_data=0;
+	int last_ent_was_dir=0;
 	struct sbuf *sb;
 	struct iobuf *rbuf=asfd->rbuf;
 
@@ -425,53 +427,43 @@ int restore_stream_burp1(struct asfd *asfd, struct sdirs *sdirs,
 
 	while(1)
 	{
-		int ars=0;
 		iobuf_free_content(rbuf);
 		if(asfd->as->read_quick(asfd->as))
 		{
 			logp("read quick error\n");
 			goto end;
 		}
-		if(rbuf->buf)
+		if(rbuf->buf) switch(rbuf->cmd)
 		{
-			//logp("got read quick\n");
-			if(rbuf->cmd==CMD_WARNING)
-			{
+			case CMD_WARNING:
 				logp("WARNING: %s\n", rbuf->buf);
 				cntr_add(cconf->cntr, rbuf->cmd, 0);
 				continue;
-			}
-			else if(rbuf->cmd==CMD_INTERRUPT)
-			{
+			case CMD_INTERRUPT:
 				// Client wanted to interrupt the
 				// sending of a file. But if we are
 				// here, we have already moved on.
 				// Ignore.
 				continue;
-			}
-			else
-			{
+			default:
 				iobuf_log_unexpected(rbuf, __func__);
 				goto end;
-			}
 		}
 
-		if((ars=sbufl_fill(sb, asfd, NULL, zp, cconf->cntr)))
+		switch(sbufl_fill(sb, asfd, NULL, zp, cconf->cntr))
 		{
-			if(ars<0) goto end;
-			break;
+			case 0: break; // Keep going.
+			case 1: ret=0; goto end; // Finished OK.
+			default: goto end; // Error;
 		}
-		else
-		{
-			int j1=0;
-			int j2=0;
-			if((!srestore
-			    || check_srestore(cconf, sb->path.buf))
-			  && check_regex(regex, sb->path.buf)
-			  && restore_ent(asfd, &sb, slist,
-				bu, act, sdirs, cntr_status, cconf, &j1, &j2))
-					goto end;
-		}
+
+		if((!srestore || check_srestore(cconf, sb->path.buf))
+		  && check_regex(regex, sb->path.buf)
+		  && restore_ent(asfd, &sb, slist,
+			bu, act, sdirs, cntr_status, cconf,
+			&need_data, &last_ent_was_dir))
+				goto end;
+
 		sbuf_free_content(sb);
 	}
 	ret=0;

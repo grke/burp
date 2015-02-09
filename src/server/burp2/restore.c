@@ -175,7 +175,6 @@ int restore_stream_burp2(struct asfd *asfd,
 		sbuf_free_content(sb);
 	}
 
-	ret=0;
 end:
 	blk_free(&blk);
 	sbuf_free(&sb);

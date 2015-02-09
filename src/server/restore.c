@@ -219,16 +219,17 @@ static int actual_restore(struct asfd *asfd, struct bu *bu,
 
 	if(cconf->protocol==PROTO_BURP2)
 	{
-        	int ars=0;
-		if(!(ars=maybe_restore_spool(asfd, manifest, sdirs, bu,
-			srestore, regex, cconf, slist, act, cntr_status)))
+		switch(maybe_restore_spool(asfd, manifest, sdirs, bu,
+			srestore, regex, cconf, slist, act, cntr_status))
 		{
-			if(restore_stream_burp2(asfd, sdirs, slist,
-				bu, manifest, regex,
-				srestore, cconf, act, cntr_status))
-					goto end;
+			case 0: if(restore_stream_burp2(asfd, sdirs, slist,
+					bu, manifest, regex,
+					srestore, cconf, act, cntr_status))
+						goto end;
+				break;
+			case 1: break;
+			default: goto end; // Error;
 		}
-		else if(ars<0) goto end; // Error.
 	}
 	else
 	{

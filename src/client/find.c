@@ -45,33 +45,12 @@
 */
 
 #include "include.h"
+#include "linkhash.h"
 #include "pathcmp.h"
 
 #ifdef HAVE_LINUX_OS
 #include <sys/statfs.h>
 #endif
-
-/*
- * Structure for keeping track of hard linked files, we
- *   keep an entry for each hardlinked file that we save,
- *   which is the first one found. For all the other files that
- *   are linked to this one, we save only the directory
- *   entry so we can link it.
- */
-struct f_link
-{
-	struct f_link *next;
-	dev_t dev;
-	ino_t ino;		// Inode with device is unique.
-	char *name;
-};
-
-// List of all hard linked files found.
-static struct f_link **linkhash=NULL;
-
-#define LINK_HASHTABLE_BITS 16
-#define LINK_HASHTABLE_SIZE (1<<LINK_HASHTABLE_BITS)
-#define LINK_HASHTABLE_MASK (LINK_HASHTABLE_SIZE-1)
 
 // Initialize the find files "global" variables
 FF_PKT *find_files_init(void)
@@ -79,9 +58,8 @@ FF_PKT *find_files_init(void)
 	FF_PKT *ff;
 
 	if(!(ff=(FF_PKT *)calloc_w(1, sizeof(FF_PKT), __func__))
-	  || !(linkhash=(f_link **)
-		calloc_w(1, LINK_HASHTABLE_SIZE*sizeof(f_link *), __func__)))
-			return NULL;
+	  || linkhash_init())
+		return NULL;
 
 	// Get system path and filename maximum lengths.
 	// FIX THIS: maybe this should be done every time a file system is
@@ -91,53 +69,9 @@ FF_PKT *find_files_init(void)
 	return ff;
 }
 
-static inline int LINKHASH(const struct stat &info)
-{
-	int hash=info.st_dev;
-	unsigned long long i=info.st_ino;
-	hash ^= i;
-	i >>= 16;
-	hash ^= i;
-	i >>= 16;
-	hash ^= i;
-	i >>= 16;
-	hash ^= i;
-	return hash & LINK_HASHTABLE_MASK;
-}
-
-static int free_linkhash(void)
-{
-	int i;
-	int count=0;
-	struct f_link *lp;
-	struct f_link *lc;
-
-	if(!linkhash) return 0;
-
-	for(i=0; i<LINK_HASHTABLE_SIZE; i++)
-	{
-		// Free up list of hard linked files.
-		lp=linkhash[i];
-		while(lp)
-		{
-			lc=lp;
-			lp=lp->next;
-			if(lc)
-			{
-				free_w(&lc->name);
-				free_v((void **)&lc);
-				count++;
-			}
-		}
-		linkhash[i]=NULL;
-	}
-	free_v((void **)&linkhash);
-	return count;
-}
-
 void find_files_free(FF_PKT *ff)
 {
-	free_linkhash();
+	linkhash_free();
 	free_v((void **)&ff);
 }
 
@@ -268,7 +202,8 @@ static int file_is_included_no_incext(struct conf *conf, const char *fname)
 	return ret;
 }
 
-int file_is_included(struct conf *conf, const char *fname, bool top_level)
+static int file_is_included(struct conf *conf,
+	const char *fname, bool top_level)
 {
 	// Always save the top level directory.
 	// This will help in the simulation of browsing backups because it
@@ -329,23 +264,68 @@ static int nobackup_directory(struct strlist *nobackup, const char *path)
 	return 0;
 }
 
-static int found_regular_file(struct asfd *asfd,
-	FF_PKT *ff_pkt, struct conf *conf,
-	char *fname, bool top_level)
+static int file_size_match(FF_PKT *ff_pkt, struct conf *conf)
 {
 	boffset_t sizeleft;
-
 	sizeleft=ff_pkt->statp.st_size;
 
-	// If the user specified a minimum or maximum file size, obey it.
 	if(conf->min_file_size && sizeleft<(boffset_t)conf->min_file_size)
 		return 0;
 	if(conf->max_file_size && sizeleft>(boffset_t)conf->max_file_size)
 		return 0;
+	return 1;
+}
 
+// Last checks before actually processing the file system entry.
+int send_file_w(struct asfd *asfd, FF_PKT *ff, bool top_level, struct conf *conf)
+{
+	if(!file_is_included(conf, ff->fname, top_level)) return 0;
+
+	// Doing the file size match here also catches hard links.
+	if(S_ISREG(ff->statp.st_mode))
+	{
+		if(!file_is_included(conf, ff->fname, top_level)) return 0;
+		if(!file_size_match(ff, conf)) return 0;
+	}
+
+	/*
+	 * Handle hard linked files
+	 * Maintain a list of hard linked files already backed up. This
+	 *  allows us to ensure that the data of each file gets backed
+	 *  up only once.
+	 */
+	if(ff->statp.st_nlink > 1
+	  && (S_ISREG(ff->statp.st_mode)
+		|| S_ISCHR(ff->statp.st_mode)
+		|| S_ISBLK(ff->statp.st_mode)
+		|| S_ISFIFO(ff->statp.st_mode)
+		|| S_ISSOCK(ff->statp.st_mode)))
+	{
+		struct f_link *lp;
+		struct f_link **bucket=NULL;
+
+		if((lp=linkhash_search(ff, &bucket)))
+		{
+			if(!strcmp(lp->name, ff->fname)) return 0;
+			ff->link=lp->name;
+			/* Handle link, file already saved */
+			ff->type=FT_LNK_H;
+		}
+		else
+		{
+			if(linkhash_add(ff, bucket)) return -1;
+		}
+	}
+
+	return send_file(asfd, ff, top_level, conf);
+}
+
+static int found_regular_file(struct asfd *asfd,
+	FF_PKT *ff_pkt, struct conf *conf,
+	char *fname, bool top_level)
+{
 	ff_pkt->type=FT_REG;
-
-	return send_file(asfd, ff_pkt, top_level, conf);
+	return send_file_w(asfd, ff_pkt, top_level, conf);
 }
 
 static int found_soft_link(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
@@ -358,12 +338,12 @@ static int found_soft_link(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
 	{
 		/* Could not follow link */
 		ff_pkt->type=FT_NOFOLLOW;
-		return send_file(asfd, ff_pkt, top_level, conf);
+		return send_file_w(asfd, ff_pkt, top_level, conf);
 	}
 	buffer[size]=0;
 	ff_pkt->link=buffer;	/* point to link */
 	ff_pkt->type=FT_LNK_S;	/* got a soft link */
-	return send_file(asfd, ff_pkt, top_level, conf);
+	return send_file_w(asfd, ff_pkt, top_level, conf);
 }
 
 static int fstype_excluded(struct asfd *asfd,
@@ -589,7 +569,7 @@ static int found_directory(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
 	windows_reparse_point_fiddling(ff_pkt);
 #endif
 
-	rtn_stat=send_file(asfd, ff_pkt, top_level, conf);
+	rtn_stat=send_file_w(asfd, ff_pkt, top_level, conf);
 	if(rtn_stat || ff_pkt->type==FT_REPARSE || ff_pkt->type==FT_JUNCTION)
 	{
 		/* ignore or error status */
@@ -615,7 +595,7 @@ static int found_directory(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
 		if(fstype_excluded(asfd, conf, ff_pkt->fname))
 		{
 			free_w(&link);
-			return send_file(asfd, ff_pkt, top_level, conf);
+			return send_file_w(asfd, ff_pkt, top_level, conf);
 		}
 		if(!fs_change_is_allowed(conf, ff_pkt->fname))
 		{
@@ -627,7 +607,7 @@ static int found_directory(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
 	if(!recurse)
 	{
 		free_w(&link);
-		return send_file(asfd, ff_pkt, top_level, conf);
+		return send_file_w(asfd, ff_pkt, top_level, conf);
 	}
 
 	/* reset "link" */
@@ -652,7 +632,7 @@ static int found_directory(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
 		if(dfd>=0) close(dfd);
 #endif
 		ff_pkt->type=FT_NOOPEN;
-		rtn_stat=send_file(asfd, ff_pkt, top_level, conf);
+		rtn_stat=send_file_w(asfd, ff_pkt, top_level, conf);
 		free_w(&link);
 		return rtn_stat;
 	}
@@ -719,7 +699,7 @@ static int found_other(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
 		/* The only remaining are special (character, ...) files */
 		ff_pkt->type=FT_SPEC;
 	}
-	return send_file(asfd, ff_pkt, top_level, conf);
+	return send_file_w(asfd, ff_pkt, top_level, conf);
 }
 
 /*
@@ -742,51 +722,9 @@ static int find_files(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
 #endif
 	{
 		ff_pkt->type=FT_NOSTAT;
-		return send_file(asfd, ff_pkt, top_level, conf);
+		return send_file_w(asfd, ff_pkt, top_level, conf);
 	}
 
-	/*
-	 * Handle hard linked files
-	 * Maintain a list of hard linked files already backed up. This
-	 *  allows us to ensure that the data of each file gets backed
-	 *  up only once.
-	 */
-	if(ff_pkt->statp.st_nlink > 1
-	  && (S_ISREG(ff_pkt->statp.st_mode)
-		|| S_ISCHR(ff_pkt->statp.st_mode)
-		|| S_ISBLK(ff_pkt->statp.st_mode)
-		|| S_ISFIFO(ff_pkt->statp.st_mode)
-		|| S_ISSOCK(ff_pkt->statp.st_mode)))
-	{
-		struct f_link *lp;
-		const int linkhash_ind=LINKHASH(ff_pkt->statp);
-
-		/* Search link list of hard linked files */
-		for(lp=linkhash[linkhash_ind]; lp; lp=lp->next)
-		{
-			if(lp->ino==(ino_t)ff_pkt->statp.st_ino
-			  && lp->dev==(dev_t)ff_pkt->statp.st_dev)
-			{
-				if(!strcmp(lp->name, fname)) return 0;
-				ff_pkt->link=lp->name;
-				/* Handle link, file already saved */
-				ff_pkt->type=FT_LNK_H;
-				return send_file(asfd, ff_pkt, top_level, conf);
-			}
-		}
-
-		// File not previously dumped. Chain it into our list.
-		if(!(lp=(struct f_link *)
-			malloc_w(sizeof(struct f_link), __func__))
-		  || !(lp->name=strdup_w(fname, __func__)))
-			return -1;
-		lp->ino=ff_pkt->statp.st_ino;
-		lp->dev=ff_pkt->statp.st_dev;
-		lp->next=linkhash[linkhash_ind];
-		linkhash[linkhash_ind]=lp;
-	}
-
-	/* This is not a link to a previously dumped file, so dump it.  */
 	if(S_ISREG(ff_pkt->statp.st_mode))
 		return found_regular_file(asfd, ff_pkt, conf, fname, top_level);
 	else if(S_ISLNK(ff_pkt->statp.st_mode))

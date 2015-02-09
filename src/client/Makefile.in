@@ -26,6 +26,7 @@ SRCS = \
 	extrameta.c \
 	find.c \
 	glob_windows.c \
+	linkhash.c \
 	list.c \
 	main.c \
 	monitor.c \

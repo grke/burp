@@ -89,41 +89,33 @@ int restore_stream_burp2(struct asfd *asfd,
 			logp("read quick error\n");
 			goto end;
 		}
-		if(buf)
+		if(buf) switch(cmd)
 		{
-			//logp("got read quick\n");
-			if(cmd==CMD_WARNING)
-			{
+			case CMD_WARNING:
 				logp("WARNING: %s\n", buf);
 				cntr_add(conf->cntr, cmd, 0);
-				free(buf); buf=NULL;
+				free_w(&buf);
 				continue;
-			}
-			else if(cmd==CMD_INTERRUPT)
-			{
+			case CMD_INTERRUPT:
 				// Client wanted to interrupt the
 				// sending of a file. But if we are
 				// here, we have already moved on.
 				// Ignore.
-				free(buf); buf=NULL;
+				free_w(&buf);
 				continue;
-			}
-			else
-			{
+			default:
 				logp("unexpected cmd from client: %c:%s\n", cmd, buf);
-				free(buf); buf=NULL;
+				free_w(&buf);
 				goto end;
-			}
 		}
 */
 
-		if((ars=manio_sbuf_fill(manio, asfd, sb, blk, dpth, conf))<0)
+		switch(manio_sbuf_fill(manio, asfd, sb, blk, dpth, conf))
 		{
-			logp("Error from manio_sbuf_fill() in %s\n", __func__);
-			goto end; // Error;
+			case 0: break; // Keep going.
+			case 1: ret=0; goto end; // Finished OK.
+			default: goto end; // Error;
 		}
-		else if(ars>0)
-			break; // Finished OK.
 
 		if(blk->data)
 		{
@@ -174,13 +166,11 @@ int restore_stream_burp2(struct asfd *asfd,
 		need_data=0;
 
 		if((!srestore || check_srestore(conf, sb->path.buf))
-		  && check_regex(regex, sb->path.buf))
-		{
-			if(restore_ent(asfd, &sb, slist, bu, act,
-				sdirs, cntr_status, conf,
-				&need_data, &last_ent_was_dir))
-					goto end;
-		}
+		  && check_regex(regex, sb->path.buf)
+		  && restore_ent(asfd, &sb, slist,
+			bu, act, sdirs, cntr_status, conf,
+			&need_data, &last_ent_was_dir))
+				goto end;
 
 		sbuf_free_content(sb);
 	}

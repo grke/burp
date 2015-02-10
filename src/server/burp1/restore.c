@@ -411,19 +411,18 @@ int restore_stream_burp1(struct asfd *asfd, struct sdirs *sdirs,
 	int srestore, struct conf *cconf, enum action act,
         enum cntr_status cntr_status)
 {
-	gzFile zp;
 	int ret=-1;
 	int need_data=0;
 	int last_ent_was_dir=0;
 	struct sbuf *sb;
 	struct iobuf *rbuf=asfd->rbuf;
+	struct manio *manio=NULL;
 
-	if(!(sb=sbuf_alloc(cconf))) goto end;
-	if(!(zp=gzopen_file(manifest, "rb")))
-	{
-		log_and_send(asfd, "could not open manifest");
+	if(!(manio=manio_alloc())
+	  || manio_init_read(manio, manifest)
+	  || !(sb=sbuf_alloc(cconf)))
 		goto end;
-	}
+	manio_set_protocol(manio, cconf->protocol);
 
 	while(1)
 	{
@@ -450,7 +449,7 @@ int restore_stream_burp1(struct asfd *asfd, struct sdirs *sdirs,
 				goto end;
 		}
 
-		switch(sbufl_fill(sb, asfd, NULL, zp, cconf->cntr))
+		switch(manio_sbuf_fill(manio, asfd, sb, NULL, NULL, cconf))
 		{
 			case 0: break; // Keep going.
 			case 1: ret=0; goto end; // Finished OK.
@@ -467,8 +466,8 @@ int restore_stream_burp1(struct asfd *asfd, struct sdirs *sdirs,
 		sbuf_free_content(sb);
 	}
 end:
-	gzclose_fp(&zp);
 	sbuf_free(&sb);
 	iobuf_free_content(rbuf);
+	manio_free(&manio);
 	return ret;
 }

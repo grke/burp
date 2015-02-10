@@ -43,6 +43,8 @@ extern void manio_set_protocol(struct manio *manio, enum protocol protocol);
 
 extern int manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
 	struct sbuf *sb, struct blk *blk, struct dpth *dpth, struct conf *conf);
+extern int manio_sbuf_fill_phase1(struct manio *manio, struct asfd *asfd,
+	struct sbuf *sb, struct blk *blk, struct dpth *dpth, struct conf *conf);
 
 extern int manio_write_sig(struct manio *manio, struct blk *blk);
 extern int manio_write_sig_and_path(struct manio *manio, struct blk *blk);

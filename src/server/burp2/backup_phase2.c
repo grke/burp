@@ -538,7 +538,7 @@ static int maybe_add_from_scan(struct asfd *asfd,
 		}
 		if(!(snew=sbuf_alloc(conf))) goto end;
 
-		if((ars=manio_sbuf_fill(p1manio,
+		if((ars=manio_sbuf_fill_phase1(p1manio,
 			asfd, snew, NULL, NULL, conf))<0) goto end;
 		else if(ars>0) return 0; // Finished.
 

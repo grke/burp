@@ -238,9 +238,9 @@ static int open_next_fpath(struct manio *manio)
 }
 
 // Return -1 for error, 0 for stuff read OK, 1 for end of files.
-int manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
+static int do_manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
 	struct sbuf *sb, struct blk *blk,
-	struct dpth *dpth, struct conf *conf)
+	struct dpth *dpth, struct conf *conf, int phase1)
 {
 	int ars;
 
@@ -256,10 +256,22 @@ int manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
 		{
 			manio->first_entry=0;
 		}
-		if((ars=sbuf_fill_from_gzfile(sb, asfd, manio->zp, blk,
-			dpth?dpth->base_path:NULL, conf))<0) goto error;
-		else if(!ars)
-			return 0; // Got something.
+
+		if(manio->protocol==PROTO_BURP2 || phase1)
+		{
+			ars=sbuf_fill_from_gzfile(sb, asfd, manio->zp, blk,
+				dpth?dpth->base_path:NULL, conf);
+		}
+		else
+		{
+			ars=sbufl_fill(sb, asfd, NULL, manio->zp, conf->cntr);
+		}
+		switch(ars)
+		{
+			case 0: return 0; // Got something.
+			case 1: break; // Keep going.
+			default: goto error; // Error.
+		}
 
 		// Reached the end of the current file.
 		// Maybe there is another file to continue with.
@@ -272,6 +284,26 @@ int manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
 error:
 	manio_close(manio);
 	return -1;
+}
+
+int manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
+	struct sbuf *sb, struct blk *blk,
+	struct dpth *dpth, struct conf *conf)
+{
+	return do_manio_sbuf_fill(manio, asfd, sb, blk, dpth, conf, 0);
+}
+
+// FIX THIS:
+// Same as manio_sbuf_fill(), but always does sbuf_fill_from_gzfile().
+// Burp2 is using the burp-1 phase1 format. If it wrote its own format, this
+// separate function should not be necessary.
+// Once there are some tests that excercise the resume functionality, then
+// this can be dealt with more safely.
+int manio_sbuf_fill_phase1(struct manio *manio, struct asfd *asfd,
+	struct sbuf *sb, struct blk *blk,
+	struct dpth *dpth, struct conf *conf)
+{
+	return do_manio_sbuf_fill(manio, asfd, sb, blk, dpth, conf, 1);
 }
 
 static int reset_sig_count_and_close(struct manio *manio)

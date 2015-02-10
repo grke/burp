@@ -59,7 +59,6 @@ int restore_stream_burp2(struct asfd *asfd,
 	int srestore, struct conf *conf, enum action act,
 	enum cntr_status cntr_status)
 {
-	int ars;
 	int ret=-1;
 	int need_data=0;
 	int last_ent_was_dir=0;

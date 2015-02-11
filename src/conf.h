@@ -213,6 +213,9 @@ struct conf
 	char *orig_client;
 
 	struct cntr *cntr;
+
+	// For testing.
+	uint8_t breakpoint;
 };
 
 extern struct conf *conf_alloc(void);

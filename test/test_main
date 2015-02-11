@@ -130,7 +130,9 @@ wait_for_backup_to_finish()
 	# than just sleeping some length of time. 
 	while true ; do
 		sleep $SLEEPTIME
-		[ ! -e "$lockfile" ] && sleep $SLEEPTIME && break
+		[ ! -e "$lockfile" ] && break
+		read pid < "$lockfile"
+		[ -z "$pid" -o ! -d "/proc/$pid" ] && break
 		waited=$((waited+$SLEEPTIME))
 		[ "$waited" -gt 120 ] && \
 		  fail "client backup seemed to be complete after 2 minutes"

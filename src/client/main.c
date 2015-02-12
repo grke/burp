@@ -152,13 +152,13 @@ static enum cliret backup_wrapper(struct asfd *asfd,
 		args[a++]=NULL;
 		if(run_script(asfd,
 			args, conf->b_script_post_arg, conf, 1, 1, 1))
-			ret=CLIENT_ERROR;
+				ret=CLIENT_ERROR;
 	}
 
 	if(ret==CLIENT_OK) logp("backup finished ok\n");
 
 end:
-	return CLIENT_OK;
+	return ret;
 error:
 	logp("error in backup\n");
 	return CLIENT_ERROR;

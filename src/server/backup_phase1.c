@@ -6,7 +6,7 @@
 static int breakpoint(struct conf *conf, const char *func)
 {
 	logp("Breakpoint %d hit in %s\n", conf->breakpoint, func);
-	exit(1);
+	return -1;
 }
 
 int backup_phase1_server_all(struct async *as,
@@ -66,8 +66,8 @@ int backup_phase1_server_all(struct async *as,
 		if(conf->breakpoint==1
 		 && conf->cntr->ent[CMD_FILE]->phase1>20)
 		{
-			gzclose_fp(&p1zp);
 			breakpoint(conf, __func__);
+			goto end;
 		}
 	}
 

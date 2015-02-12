@@ -279,11 +279,12 @@ int has_xattr(const char *path, enum cmd cmd)
 }
 
 #define BSD_BUF_SIZE	1024
-int get_xattr(const char *path, struct sbuf *sb,
+int get_xattr(struct asfd *asfd, struct sbuf *sb,
 	char **xattrtext, size_t *xlen, struct conf *conf)
 {
 	int i=0;
 	size_t maxlen=0xFFFFFFFF/2;
+	const char *path=sb->path.buf;
 
 	for(i=0; i<(int)(sizeof(namespaces)/sizeof(int)); i++)
 	{
@@ -298,7 +299,7 @@ int get_xattr(const char *path, struct sbuf *sb,
 		char cattrname[BSD_BUF_SIZE]="";
 		if((len=extattr_list_link(path, namespaces[i], NULL, 0))<0)
 		{
-			logw(conf, "could not extattr_list_link of '%s': %d\n",
+			logw(asfd, conf, "could not extattr_list_link of '%s': %d\n",
 				path, len);
 			return 0; // carry on
 		}
@@ -313,9 +314,9 @@ int get_xattr(const char *path, struct sbuf *sb,
 			return -1;
 		if((len=extattr_list_link(path, namespaces[i], xattrlist, len))<=0)
 		{
-			logw(conf, "could not extattr_list_link '%s': %d\n",
+			logw(asfd, conf, "could not extattr_list_link '%s': %d\n",
 				path, len);
-			free_w(xattrlist);
+			free_w(&xattrlist);
 			return 0; // carry on
 		}
 		xattrlist[len]='\0';
@@ -326,7 +327,7 @@ int get_xattr(const char *path, struct sbuf *sb,
 		{
 			logp("Failed to convert %d into namespace on '%s'\n",
 				 namespaces[i], path);
-			free_w(xattrlist);
+			free_w(&xattrlist);
 			return 0; // carry on
 		}
 
@@ -369,21 +370,21 @@ int get_xattr(const char *path, struct sbuf *sb,
 			if((vlen=extattr_list_link(path, namespaces[i],
 				xattrlist, len))<0)
 			{
-				logw(conf, "could not extattr_list_link on %s for %s: %d\n", path, namespaces[i], vlen);
+				logw(asfd, conf, "could not extattr_list_link on %s for %s: %d\n", path, namespaces[i], vlen);
 				continue;
 			}
 			if(vlen)
 			{
 				if(!(val=(char *)malloc_w(vlen+1, __func__)))
 				{
-					free_w(xattrlist);
+					free_w(&xattrlist);
 					free_w(&toappend);
 					return -1;
 				}
 				if((vlen=extattr_get_link(path, namespaces[i],
 					cattrname, val, vlen))<0)
 				{
-					logw(conf, "could not extattr_list_link %s for %s: %d\n", path, namespaces[i], vlen);
+					logw(asfd, conf, "could not extattr_list_link %s for %s: %d\n", path, namespaces[i], vlen);
 					free_w(&val);
 					continue;
 				}
@@ -391,7 +392,7 @@ int get_xattr(const char *path, struct sbuf *sb,
 
 				if(vlen>maxlen)
 				{
-					logw(conf, "xattr value of '%s' too long: %d\n",
+					logw(asfd, conf, "xattr value of '%s' too long: %d\n",
 						path, vlen);
 					free_w(&toappend);
 					free_w(&val);
@@ -412,18 +413,18 @@ int get_xattr(const char *path, struct sbuf *sb,
 			{
 				log_out_of_memory(__func__);
 				free_w(&val);
-				free_w(xattrlist);
+				free_w(&xattrlist);
 				return -1;
 			}
 			free_w(&val);
 
 			if(totallen>maxlen)
 			{
-				logw(conf, "xattr length of '%s' grew too long: %d\n",
+				logw(asfd, conf, "xattr length of '%s' grew too long: %d\n",
 					path, totallen);
 				free_w(&val);
 				free_w(&toappend);
-				free_w(xattrlist);
+				free_w(&xattrlist);
 				return 0; // carry on
 			}
 
@@ -444,13 +445,13 @@ int get_xattr(const char *path, struct sbuf *sb,
 			{
 				log_out_of_memory(__func__);
 				free_w(&toappend);
-				free_w(xattrlist);
+				free_w(&xattrlist);
 				return -1;
 			}
 			free_w(&toappend);
 			//printf("and: %s %li\n", *xattrtext, *xlen);
 		}
-		free_w(xattrlist);
+		free_w(&xattrlist);
 	}
 
 	return 0;
@@ -482,7 +483,7 @@ static int do_set_xattr_bsd(struct asfd *asfd,
 		// Need to split the name into two parts.
 		if(!(name=strchr(nspace, '.')))
 		{
-			logw(conf,
+			logw(asfd, conf,
 			  "could not split %s into namespace and name on %s\n",
 				nspace, path);
 			goto end;
@@ -492,7 +493,7 @@ static int do_set_xattr_bsd(struct asfd *asfd,
 
 		if(extattr_string_to_namespace(nspace, &cnspace))
 		{
-			logw(conf,
+			logw(asfd, conf,
 				"could not convert %s into namespace on %s",
 				nspace, path);
 			goto end;
@@ -502,7 +503,7 @@ static int do_set_xattr_bsd(struct asfd *asfd,
 		if((cnt=extattr_set_link(path,
 			cnspace, name, value, vlen))!=vlen)
 		{
-			logw(conf,
+			logw(asfd, conf,
 				"extattr_set_link error on %s %d!=vlen: %s\n",
 				path, strerror(errno));
 			goto end;
@@ -525,11 +526,11 @@ int set_xattr(struct asfd *asfd, const char *path,
 	switch(metacmd)
 	{
 		case META_XATTR_BSD:
-			return do_set_xattr_bsd(path, sb,
+			return do_set_xattr_bsd(asfd, path, sb,
 				xattrtext, xlen, conf);
 		default:
-			logp("unknown xattr type: %c\n", cmd);
-			logw(conf, "unknown xattr type: %c\n", cmd);
+			logp("unknown xattr type: %c\n", metacmd);
+			logw(asfd, conf, "unknown xattr type: %c\n", metacmd);
 			break;
 	}
 	return -1;

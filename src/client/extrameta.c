@@ -132,7 +132,7 @@ int set_extrameta(struct asfd *asfd,
 #ifdef HAVE_XATTR
 			case META_XATTR_BSD:
 				if(set_xattr(asfd,
-					path, statp, m, s, cmdtmp, conf))
+					path, sb, m, s, cmdtmp, conf))
 						errors++;
 				break;
 #endif

@@ -148,6 +148,15 @@ echo "Starting test client backup"
 EOF
 }
 
+add_run_backup_expect_fail()
+{
+cat >> "$clientscript" <<EOF
+echo "Starting test client backup"
+"$burpbin" -c "$clientconfarg" -a b && fail "client backup returned $? (expected 0)"
+
+EOF
+}
+
 add_run_verify()
 {
 	local num="all"
@@ -379,6 +388,17 @@ add_burp1_on()
 		sed_rep_client '$ aprotocol = 1' "$clientconf"
 }
 
+add_breakpoint_off()
+{
+	sed_rep_server 's/^breakpoint = .*//g' "$serverconf"
+}
+
+add_breakpoint_on()
+{
+	add_breakpoint_off
+	sed_rep_server "\$ abreakpoint = $1" "$serverconf"
+}
+
 makedir_server "$logs"
 
 cdir "$target"
@@ -588,8 +608,25 @@ comp_enc_change_test()
 	end_test
 }
 
+check_for_working_dir()
+{
+	[ -h "$workingdir" ] || fail "$working is not a symlink"
+	[ -d "$workingdir/" ] || fail "$working/ is not a directory"
+}
+
 all_tests()
 {
+	start_test "Interrupt phase1"
+	add_breakpoint_on 1
+	add_run_backup_expect_fail
+	run_scripts
+	check_for_working_dir
+	add_breakpoint_off
+	run_script_server
+	end_test
+	num=0
+	pre=0
+
 	comp_enc_change_test on  off off
 	comp_enc_change_test on  off off
 	comp_enc_change_test on  off on
@@ -639,8 +676,10 @@ run_tests()
 }
 
 # Run in burp1 mode.
+workingdir="$target/var/spool/burp/testclient/working"
 run_tests 1
 # Run in burp2 mode.
+workingdir="$target/var/spool/burp/global/clients/testclient/working"
 run_tests 2
 
 echo

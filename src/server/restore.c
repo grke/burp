@@ -1,6 +1,7 @@
 #include "include.h"
 #include "../cmd.h"
 #include "burp1/restore.h"
+#include "burp2/dpth.h"
 #include "burp2/restore.h"
 #include "burp2/restore_spool.h"
 
@@ -98,6 +99,9 @@ static int restore_sbuf(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 	enum action act, struct sdirs *sdirs, enum cntr_status cntr_status,
 	struct conf *cconf, int *need_data)
 {
+	//printf("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path.buf);
+	if(write_status(cntr_status, sb->path.buf, cconf)) return -1;
+
 	if(cconf->protocol==PROTO_BURP1)
 	{
 		return restore_sbuf_burp1(asfd, sb, bu,
@@ -205,11 +209,103 @@ static int restore_remaining_dirs(struct asfd *asfd, struct bu *bu,
 	return 0;
 }
 
+static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
+        struct slist *slist, struct bu *bu, const char *manifest,
+	regex_t *regex, int srestore, struct conf *cconf, enum action act,
+        enum cntr_status cntr_status)
+{
+	int ret=-1;
+	int need_data=0;
+	int last_ent_was_dir=0;
+	struct sbuf *sb=NULL;
+	struct iobuf *rbuf=asfd->rbuf;
+	struct manio *manio=NULL;
+	struct blk *blk=NULL;
+	struct dpth *dpth=NULL;
+
+	if(cconf->protocol==PROTO_BURP2)
+	{
+		if(asfd->write_str(asfd, CMD_GEN, "restore_stream")
+		  || asfd->read_expect(asfd, CMD_GEN, "restore_stream_ok")
+		  || !(blk=blk_alloc())
+		  || !(dpth=dpth_alloc(sdirs->data)))
+                	goto end;
+	}
+
+	if(!(manio=manio_alloc())
+	  || manio_init_read(manio, manifest)
+	  || !(sb=sbuf_alloc(cconf)))
+		goto end;
+	manio_set_protocol(manio, cconf->protocol);
+
+	while(1)
+	{
+		iobuf_free_content(rbuf);
+		if(asfd->as->read_quick(asfd->as))
+		{
+			logp("read quick error\n");
+			goto end;
+		}
+		if(rbuf->buf) switch(rbuf->cmd)
+		{
+			case CMD_WARNING:
+				logp("WARNING: %s\n", rbuf->buf);
+				cntr_add(cconf->cntr, rbuf->cmd, 0);
+				continue;
+			case CMD_INTERRUPT:
+				// Client wanted to interrupt the
+				// sending of a file. But if we are
+				// here, we have already moved on.
+				// Ignore.
+				continue;
+			default:
+				iobuf_log_unexpected(rbuf, __func__);
+				goto end;
+		}
+
+		switch(manio_sbuf_fill(manio, asfd, sb, blk, dpth, cconf))
+		{
+			case 0: break; // Keep going.
+			case 1: ret=0; goto end; // Finished OK.
+			default: goto end; // Error;
+		}
+
+		if(cconf->protocol==PROTO_BURP2)
+		{
+			if(blk->data)
+			{
+				if(burp2_extra_restore_stream_bits(asfd, blk,
+					slist, need_data, last_ent_was_dir,
+					cconf)) goto end;
+				continue;
+			}
+			need_data=0;
+		}
+
+		if((!srestore || check_srestore(cconf, sb->path.buf))
+		  && check_regex(regex, sb->path.buf)
+		  && restore_ent(asfd, &sb, slist,
+			bu, act, sdirs, cntr_status, cconf,
+			&need_data, &last_ent_was_dir))
+				goto end;
+
+		sbuf_free_content(sb);
+	}
+end:
+	blk_free(&blk);
+	sbuf_free(&sb);
+	iobuf_free_content(rbuf);
+	manio_free(&manio);
+	dpth_free(&dpth);
+	return ret;
+}
+
 static int actual_restore(struct asfd *asfd, struct bu *bu,
 	const char *manifest, regex_t *regex, int srestore, enum action act,
 	struct sdirs *sdirs, enum cntr_status cntr_status, struct conf *cconf)
 {
         int ret=-1;
+	int do_restore_stream=1;
         // For out-of-sequence directory restoring so that the
         // timestamps come out right:
         struct slist *slist=NULL;
@@ -222,22 +318,15 @@ static int actual_restore(struct asfd *asfd, struct bu *bu,
 		switch(maybe_restore_spool(asfd, manifest, sdirs, bu,
 			srestore, regex, cconf, slist, act, cntr_status))
 		{
-			case 0: if(restore_stream_burp2(asfd, sdirs, slist,
-					bu, manifest, regex,
-					srestore, cconf, act, cntr_status))
-						goto end;
-				break;
-			case 1: break;
+			case 1: do_restore_stream=0; break;
+			case 0: do_restore_stream=1; break;
 			default: goto end; // Error;
 		}
 	}
-	else
-	{
-		if(restore_stream_burp1(asfd, sdirs, slist,
-			bu, manifest, regex,
-			srestore, cconf, act, cntr_status))
-				goto end;
-	}
+	if(do_restore_stream && restore_stream(asfd, sdirs, slist,
+		bu, manifest, regex,
+		srestore, cconf, act, cntr_status))
+			goto end;
 
 	if(restore_remaining_dirs(asfd, bu, slist,
 		act, sdirs, cntr_status, cconf)) goto end;

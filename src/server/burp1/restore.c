@@ -328,8 +328,7 @@ static int restore_file(struct asfd *asfd, struct bu *bu,
 				}
 				else
 				{
-					cntr_add(cconf->cntr,
-						sb->path.cmd, 0);
+					cntr_add(cconf->cntr, sb->path.cmd, 0);
 					cntr_add_bytes(cconf->cntr,
                  			  strtoull(sb->burp1->endfile.buf,
 						NULL, 10));
@@ -345,8 +344,7 @@ static int restore_file(struct asfd *asfd, struct bu *bu,
 				}
 				else
 				{
-					cntr_add(cconf->cntr,
-						sb->path.cmd, 0);
+					cntr_add(cconf->cntr, sb->path.cmd, 0);
 					cntr_add_bytes(cconf->cntr,
                  			  strtoull(sb->burp1->endfile.buf,
 						NULL, 10));

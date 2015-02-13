@@ -144,8 +144,8 @@ int restore_ent(struct asfd *asfd,
 		}
 		else
 		{
-			// Can now restore sblist[s] because nothing else is
-			// fiddling in a subdirectory.
+			// Can now restore xb because nothing else is fiddling
+			// in a subdirectory.
 			if(restore_sbuf(asfd, xb, bu,
 			  act, sdirs, cntr_status, cconf, need_data))
 				goto end;

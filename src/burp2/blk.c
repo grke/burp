@@ -1,4 +1,4 @@
-#include <malloc.h>
+#include <stdlib.h>
 
 #include "include.h"
 #include "../hexmap.h"

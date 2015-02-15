@@ -58,8 +58,7 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 			continue;
 		}
 
-		if((!srestore || check_srestore(conf, sb->path.buf))
-		  && check_regex(regex, sb->path.buf))
+		if(want_to_restore(srestore, sb, regex, conf))
 		{
 			blkcount++;
 			if(!hash_weak_find((uint64_t)blk->savepath))
@@ -164,12 +163,11 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 
 		need_data=0;
 
-		if((!srestore || check_srestore(conf, sb->path.buf))
-		  && check_regex(regex, sb->path.buf))
+		if(want_to_restore(srestore, sb, regex, conf))
 		{
 			if(restore_ent(asfd, &sb, slist, bu, act,
 				sdirs, cntr_status, conf,
-				&need_data, &last_ent_was_dir))
+				&need_data, &last_ent_was_dir, manifest))
 					goto end;
 		}
 

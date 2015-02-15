@@ -328,8 +328,7 @@ static int restore_file(struct asfd *asfd, struct bu *bu,
 				}
 				else
 				{
-					cntr_add(cconf->cntr,
-						sb->path.cmd, 0);
+					cntr_add(cconf->cntr, sb->path.cmd, 0);
 					cntr_add_bytes(cconf->cntr,
                  			  strtoull(sb->burp1->endfile.buf,
 						NULL, 10));
@@ -345,8 +344,7 @@ static int restore_file(struct asfd *asfd, struct bu *bu,
 				}
 				else
 				{
-					cntr_add(cconf->cntr,
-						sb->path.cmd, 0);
+					cntr_add(cconf->cntr, sb->path.cmd, 0);
 					cntr_add_bytes(cconf->cntr,
                  			  strtoull(sb->burp1->endfile.buf,
 						NULL, 10));
@@ -375,9 +373,6 @@ int restore_sbuf_burp1(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 	enum action act, struct sdirs *sdirs,
 	enum cntr_status cntr_status, struct conf *cconf)
 {
-	//printf("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path.buf);
-	if(write_status(cntr_status, sb->path.buf, cconf)) return -1;
-	
 	if((sb->burp1->datapth.buf && asfd->write(asfd, &(sb->burp1->datapth)))
 	  || asfd->write(asfd, &sb->attr))
 		return -1;
@@ -403,71 +398,4 @@ int restore_sbuf_burp1(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 		cntr_add(cconf->cntr, sb->path.cmd, 0);
 	}
 	return 0;
-}
-
-int restore_stream_burp1(struct asfd *asfd, struct sdirs *sdirs,
-	struct slist *slist,
-	struct bu *bu, const char *manifest, regex_t *regex,
-	int srestore, struct conf *cconf, enum action act,
-        enum cntr_status cntr_status)
-{
-	int ret=-1;
-	int need_data=0;
-	int last_ent_was_dir=0;
-	struct sbuf *sb;
-	struct iobuf *rbuf=asfd->rbuf;
-	struct manio *manio=NULL;
-
-	if(!(manio=manio_alloc())
-	  || manio_init_read(manio, manifest)
-	  || !(sb=sbuf_alloc(cconf)))
-		goto end;
-	manio_set_protocol(manio, cconf->protocol);
-
-	while(1)
-	{
-		iobuf_free_content(rbuf);
-		if(asfd->as->read_quick(asfd->as))
-		{
-			logp("read quick error\n");
-			goto end;
-		}
-		if(rbuf->buf) switch(rbuf->cmd)
-		{
-			case CMD_WARNING:
-				logp("WARNING: %s\n", rbuf->buf);
-				cntr_add(cconf->cntr, rbuf->cmd, 0);
-				continue;
-			case CMD_INTERRUPT:
-				// Client wanted to interrupt the
-				// sending of a file. But if we are
-				// here, we have already moved on.
-				// Ignore.
-				continue;
-			default:
-				iobuf_log_unexpected(rbuf, __func__);
-				goto end;
-		}
-
-		switch(manio_sbuf_fill(manio, asfd, sb, NULL, NULL, cconf))
-		{
-			case 0: break; // Keep going.
-			case 1: ret=0; goto end; // Finished OK.
-			default: goto end; // Error;
-		}
-
-		if((!srestore || check_srestore(cconf, sb->path.buf))
-		  && check_regex(regex, sb->path.buf)
-		  && restore_ent(asfd, &sb, slist,
-			bu, act, sdirs, cntr_status, cconf,
-			&need_data, &last_ent_was_dir))
-				goto end;
-
-		sbuf_free_content(sb);
-	}
-end:
-	sbuf_free(&sb);
-	iobuf_free_content(rbuf);
-	manio_free(&manio);
-	return ret;
 }

@@ -106,8 +106,7 @@ struct f_link *linkhash_search(struct stat *statp, struct f_link ***bucket)
 int linkhash_add(char *fname, struct stat *statp, struct f_link **bucket)
 {
 	struct f_link *new_fl;
-	if(!(new_fl=(struct f_link *)
-		malloc_w(sizeof(struct f_link), __func__))
+	if(!(new_fl=(struct f_link *)malloc_w(sizeof(struct f_link), __func__))
 	  || !(new_fl->name=strdup_w(fname, __func__)))
 		return -1;
 	new_fl->ino=statp->st_ino;

@@ -370,7 +370,7 @@ int attribs_set(struct asfd *asfd, const char *path,
 		{
 			berrno be;
 			berrno_init(&be);
-			logw(conf, "Unable to set file flags %s: ERR=%s",
+			logw(asfd, conf, "Unable to set file flags %s: ERR=%s",
 				path, berrno_bstrerror(&be, errno));
 			return -1;
 		}

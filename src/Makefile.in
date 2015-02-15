@@ -168,12 +168,9 @@ devclean: realclean
 	fi
 
 install: all
-	rm -f $(DESTDIR)/sbin/burp ; \
-	rm -f $(DESTDIR)/usr/sbin/bedup ; \
-	rm -f $(DESTDIR)/usr/sbin/burp ; \
 	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) burp $(DESTDIR)$(sbindir)/burp 
 	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) server/burp1/vss_strip $(DESTDIR)$(sbindir)/vss_strip
-	ln -sfT burp $(DESTDIR)$(sbindir)/bedup
+	ln -sf burp $(DESTDIR)$(sbindir)/bedup
 # Should do a static vss_strip too.
 	@if test -f static-burp; then \
 	   $(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) static-burp $(DESTDIR)$(sbindir)/static-burp; \

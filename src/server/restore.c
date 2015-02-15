@@ -121,9 +121,9 @@ static int hard_link_substitution(struct asfd *asfd,
 	int last_ent_was_dir=0;
 	struct sbuf *hb=NULL;
 	struct manio *manio=NULL;
-	struct iobuf *rbuf=asfd->rbuf;
 	struct blk *blk=NULL;
 	struct dpth *dpth=NULL;
+	int pcmp;
 
 	if(!(manio=manio_alloc())
 	  || manio_init_read(manio, manifest)
@@ -140,8 +140,8 @@ static int hard_link_substitution(struct asfd *asfd,
 
 	while(1)
 	{
-		iobuf_free_content(rbuf);
-		switch(manio_sbuf_fill(manio, asfd, hb, blk, dpth, cconf))
+		switch(manio_sbuf_fill(manio, asfd,
+			hb, need_data?blk:NULL, dpth, cconf))
 		{
 			case 0: break; // Keep going.
 			case 1: ret=0; goto end; // Finished OK.
@@ -160,7 +160,9 @@ static int hard_link_substitution(struct asfd *asfd,
 			need_data=0;
 		}
 
-		if(sbuf_is_filedata(hb) && !strcmp(lp->name, hb->path.buf))
+		pcmp=pathcmp(lp->name, hb->path.buf);
+
+		if(!pcmp && sbuf_is_filedata(hb))
 		{
 			// Copy the path from sb to hb.
 			free_w(&hb->path.buf);
@@ -170,10 +172,15 @@ static int hard_link_substitution(struct asfd *asfd,
 			// to the new location.
 			ret=restore_sbuf(asfd, hb, bu, act, sdirs,
 			  cntr_status, cconf, &need_data, manifest, slist);
+			// May still need to get burp2 data.
+			if(!ret && need_data) continue;
 			break;
 		}
 
 		sbuf_free_content(hb);
+		// Break out once we have gone past the entry that we are
+		// interested in.
+		if(pcmp<0) break;
 	}
 end:
 	blk_free(&blk);

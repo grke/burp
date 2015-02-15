@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 destdir="$1"
 sysconfdir="$2"

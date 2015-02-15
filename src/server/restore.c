@@ -375,7 +375,8 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 				goto end;
 		}
 
-		switch(manio_sbuf_fill(manio, asfd, sb, blk, dpth, cconf))
+		switch(manio_sbuf_fill(manio, asfd,
+			sb, need_data?blk:NULL, dpth, cconf))
 		{
 			case 0: break; // Keep going.
 			case 1: ret=0; goto end; // Finished OK.

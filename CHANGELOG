@@ -4,6 +4,7 @@
   * Make the path to pidfiles in the config files substitutable.
   * Fix some phase1 bugs related to min/max_file_size and hard links.
   * BSD compilation fixes from Stefan Paletta.
+  * Make restoring a hard link without restoring the original file work.
 
 2015-02-06: Changes in burp-2.0.12:
   * Move /etc/burp scripts to /usr/share/burp/scripts.

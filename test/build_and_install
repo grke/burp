@@ -31,10 +31,10 @@ build_and_install()
 
 	tolink="$build/utest/test_cmd.c"
 	# Add some hard links, to make the test harder.
-	ln "$tolink" "$build/utest/1" || fail
-	ln "$tolink" "$build/utest/2" || fail
-	ln "$tolink" "$build/utest/y" || fail
-	ln "$tolink" "$build/utest/z" || fail
+	ln "$tolink" "$build/utest/testhardlink1" || fail
+	ln "$tolink" "$build/utest/testhardlink2" || fail
+	ln "$tolink" "$build/utest/testhardlink3" || fail
+	ln "$tolink" "$build/utest/testhardlink4" || fail
 
 	# Create a target directory, compile burp and install it into the
 	# target.

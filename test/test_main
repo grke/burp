@@ -62,7 +62,11 @@ fsize=1024
 serverscript="$PWD/serverscript"
 clientscript="$PWD/clientscript"
 num=0 # Test number. Incremented for each test.
-pre=0 # Previous test number.
+bno=0 # Backup number. Incremented for each backup.
+pre=0 # Previous backup number.
+res=0 # Restore number. Incremented for each restore.
+test_includes_backup=0
+test_includes_restore=0
 protocol=2 
 
 kill_server()
@@ -78,8 +82,9 @@ trap "kill_server" 0 1 2 3 15
 
 fail()
 {
+	backup_and_restore_nums=$(get_backup_and_restore_nums)
 	echo
-	echo "Test $num failed: $@"
+	echo "Test $num failed: $@ $backup_and_restore_nums"
 	echo
 	kill_server
 	exit 1
@@ -141,6 +146,9 @@ wait_for_backup_to_finish()
 
 add_run_backup()
 {
+pre=$bno
+bno=$((bno+1))
+test_includes_backup=1
 cat >> "$clientscript" <<EOF
 echo "Starting test client backup"
 "$burpbin" -c "$clientconfarg" -a b || fail "client backup returned $?"
@@ -159,27 +167,30 @@ EOF
 
 add_run_verify()
 {
-	local num="all"
+	local bno="all"
 cat >> "$clientscript" <<EOF
-echo "Starting test client verify of backup $num"
-"$burpbin" -c "$clientconfarg" -a v -b "$num" \
+echo "Starting test client verify of backup $bno"
+"$burpbin" -c "$clientconfarg" -a v -b "$bno" \
 		|| fail "client verify returned $?"
 EOF
 }
 
 add_run_restore()
 {
-	local num="$1"
-	local dir="$2"
+	local bno="$1"
+	local dir
+	res=$((res+1))
+	dir="$2$res"
+	test_includes_restore=1
 	makedir_client "$dir"
 # If vss has been stripped, need to add the '-x' option to the restore.
 	nowinapi=
 	[ -n "$STRIP_VSS" ] && nowinapi='-x'
 cat >> "$clientscript" << EOF
-echo "Starting test client restore of backup $num"
+echo "Starting test client restore of backup $bno"
 rm -rf "$dir" || fail
 
-"$burpbin" -c "$clientconfarg" -a r -b "$num" -d "$dir" $nowinapi \
+"$burpbin" -c "$clientconfarg" -a r -b "$bno" -d "$dir" $nowinapi \
 	|| fail "client restore returned $?"
 EOF
 }
@@ -227,8 +238,9 @@ write_message()
 start_test()
 {
 	msg="$1"
-	pre=$num
 	num=$((num+1))
+	test_includes_backup=0
+	test_includes_restore=0
 	write_message "
 Test $num
 $msg"
@@ -486,10 +498,26 @@ run_script_client()
 	rm -f "$clientscript"
 }
 
+get_backup_and_restore_nums()
+{
+	if [ $test_includes_backup != 0 ] ; then
+		if [ $test_includes_restore != 0 ] ; then
+			echo "(backup $bno, restore $res)"
+		else
+			echo "(backup $bno)"
+		fi
+	else
+		if [ $test_includes_restore != 0 ] ; then
+			echo "(restore $res)"
+		fi
+	fi
+}
+
 end_test()
 {
 	run_script_client
-	write_message "Test $num OK"
+	backup_and_restore_nums=$(get_backup_and_restore_nums)
+	write_message "Test $num OK $backup_and_restore_nums"
 }
 
 run_scripts()
@@ -505,7 +533,7 @@ add_backup_run_scripts_setup_verify_restore()
 	wait_for_backup_to_finish
 	start_script_client
 	[ "$protocol" = "burp1" ] && add_run_verify
-	add_run_restore $num "$restoredir"$num
+	add_run_restore $bno "$restoredir"
 }
 
 add_normal_settings()
@@ -539,7 +567,7 @@ add_restore_diff()
 {
 	add_do_diff_client \
 		"$includedir" \
-		"$restoredir"$num/"$includedir" \
+		"$restoredir"$res/"$includedir" \
 		"client restore differed from the original!"
 }
 
@@ -588,7 +616,7 @@ file_size_test()
 		err="less"
 	fi
 	add_run_not_find_client \
-		"\"$restoredir\"$num -size $sign${fsize}c -type f" \
+		"\"$restoredir\"$res -size $sign${fsize}c -type f" \
 		"found file sizes $err than $fsize"
 	end_test
 }
@@ -624,8 +652,6 @@ all_tests()
 	add_breakpoint_off
 	run_script_server
 	end_test
-	num=0
-	pre=0
 
 	comp_enc_change_test on  off off
 	comp_enc_change_test on  off off
@@ -640,8 +666,8 @@ all_tests()
 	add_exclude_on
 	add_backup_run_scripts_setup_verify_restore
 	# On Windows, /C:/ gets converted to /C_/, so tweak the path.
-	exc=$(echo "${restoredir}$num/$excludedir" | sed -e 's/\/C:\//\/C_\//g')
-	inc=$(echo "${restoredir}$num/$includedir" | sed -e 's/\/C:\//\/C_\//g')
+	exc=$(echo "${restoredir}$res/$excludedir" | sed -e 's/\/C:\//\/C_\//g')
+	inc=$(echo "${restoredir}$res/$includedir" | sed -e 's/\/C:\//\/C_\//g')
 	echo "[ -d \"$exc\" ] && fail \"$exc should not have been restored!\"" \
 		>> "$clientscript"
 	echo "[ ! -d \"$inc\" ] && fail \"$inc should have been restored!\"" \
@@ -651,17 +677,17 @@ all_tests()
 	start_test "Exclude extension"
 	add_exclude_ext_on
 	add_backup_run_scripts_setup_verify_restore
-	add_run_not_find_client "\"$restoredir\"$num -type f -name '*.c'" \
-		"$restoredir$num should not contain any '.c' files"
+	add_run_not_find_client "\"$restoredir\"$res -type f -name '*.c'" \
+		"$restoredir$res should not contain any '.c' files"
 	end_test
 
 	start_test "Include extension"
 	add_include_ext_on
 	add_backup_run_scripts_setup_verify_restore
-	add_run_not_find_client "\"$restoredir\"$num -type f -name '*.h'" \
-		"$restoredir$num should not contain any '.h' files"
-	add_run_find_client "\"$restoredir\"$num -type f -name '*.c'" \
-		fail "$restoredir$num should contain '.c' files"
+	add_run_not_find_client "\"$restoredir\"$res -type f -name '*.h'" \
+		"$restoredir$res should not contain any '.h' files"
+	add_run_find_client "\"$restoredir\"$res -type f -name '*.c'" \
+		"$restoredir$res should contain '.c' files"
 	end_test
 }
 
@@ -669,7 +695,9 @@ run_tests()
 {
 	protocol="$1"
 	num=0
+	bno=0
 	pre=0
+	res=0
 	echo
 	echo "Running burp$protocol tests"
 	all_tests

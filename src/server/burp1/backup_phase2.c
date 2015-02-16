@@ -206,17 +206,17 @@ static int process_new(struct sdirs *sdirs, struct conf *cconf,
 	return 0;
 }
 
-static int process_unchanged_file(struct sbuf *cb, FILE *ucfp, struct conf *cconf)
+static int process_unchanged_file(struct sbuf *p1b, struct sbuf *cb,
+	FILE *ucfp, struct conf *cconf)
 {
+	// Want to use the attributes and link settings from p1b, but p1b
+	// does not have all the information that is on cb. Move the attributes
+	// and link settings over.
+	//iobuf_copy(&cb->attr, &p1b->attr); p1b->attr.buf=NULL;
+	iobuf_copy(&cb->link, &p1b->link); p1b->link.buf=NULL;
 	if(sbufl_to_manifest(cb, ucfp, NULL))
-	{
-		sbuf_free_content(cb);
 		return -1;
-	}
-	else
-	{
-		cntr_add_same(cconf->cntr, cb->path.cmd);
-	}
+	cntr_add_same(cconf->cntr, cb->path.cmd);
 	if(cb->burp1->endfile.buf) cntr_add_bytes(cconf->cntr,
 		 strtoull(cb->burp1->endfile.buf, NULL, 10));
 	sbuf_free_content(cb);
@@ -251,8 +251,8 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 	  && cb->statp.st_ctime==p1b->statp.st_ctime)
 	{
 		// got an unchanged file
-		//logp("got unchanged file: %s %c %c\n", cb->path, cb->cmd, p1b->cmd);
-		return process_unchanged_file(cb, ucfp, cconf);
+		//logp("got unchanged file: %s %c %c\n", cb->path.buf, cb->path.cmd, p1b->path.cmd);
+		return process_unchanged_file(p1b, cb, ucfp, cconf);
 	}
 
 	if(cb->statp.st_mtime==p1b->statp.st_mtime
@@ -285,7 +285,7 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 		// below.
 		// Non-Windows clients finish here.
 		else if(!cconf->client_is_windows)
-			return process_unchanged_file(cb, ucfp, cconf);
+			return process_unchanged_file(p1b, cb, ucfp, cconf);
 	}
 
 	// Got a changed file.
@@ -757,6 +757,12 @@ int backup_phase2_server_burp1(struct async *as, struct sdirs *sdirs,
 	struct asfd *asfd=as->asfd;
 
 	logp("Begin phase2 (receive file data)\n");
+
+	if(cconf->breakpoint==2)
+	{
+		breakpoint(cconf, __func__);
+		goto error;
+	}
 
 	if(init_dpthl(&dpthl, sdirs, cconf))
 	{

@@ -595,13 +595,17 @@ if [ -z "$NO_CA_GEN" ] ; then
 	echo
 fi
 
-# Start up the server
-echo "Starting test server"
-./usr/sbin/burp -c "$serverconf" -F >> "$serverlog" 2>&1 &
-serverpid=$!
+restart_server()
+{
+	kill_server
+	# Start up the server
+	echo "Starting test server"
+	./usr/sbin/burp -c "$serverconf" -F >> "$serverlog" 2>&1 &
+	serverpid=$!
 
-# Be kind, and wait a little for it to start.
-sleep 5
+	# Be kind, and wait a little for it to start.
+	sleep 5
+}
 
 file_size_test()
 {
@@ -702,6 +706,8 @@ run_tests()
 	echo "Running burp$protocol tests"
 	all_tests
 }
+
+restart_server
 
 # Run in burp1 mode.
 workingdir="$target/var/spool/burp/testclient/working"

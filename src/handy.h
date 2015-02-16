@@ -64,4 +64,6 @@ extern int astrcat(char **buf, const char *append, const char *func);
 
 extern void strip_trailing_slashes(char **str);
 
+extern int breakpoint(struct conf *conf, const char *func);
+
 #endif

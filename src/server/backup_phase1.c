@@ -3,12 +3,6 @@
 
 #include "../burp1/sbufl.h"
 
-static int breakpoint(struct conf *conf, const char *func)
-{
-	logp("Breakpoint %d hit in %s\n", conf->breakpoint, func);
-	return -1;
-}
-
 int backup_phase1_server_all(struct async *as,
 	struct sdirs *sdirs, struct conf *conf)
 {
@@ -20,6 +14,12 @@ int backup_phase1_server_all(struct async *as,
 	struct asfd *asfd=as->asfd;
 
 	logp("Begin phase1 (file system scan)\n");
+
+	if(conf->breakpoint==1)
+	{
+		breakpoint(conf, __func__);
+		goto end;
+	}
 
 	if(!(phase1tmp=get_tmp_filename(sdirs->phase1data)))
 		goto end;
@@ -61,13 +61,6 @@ int backup_phase1_server_all(struct async *as,
 		{
 			cntr_add_val(conf->cntr, CMD_BYTES_ESTIMATED,
 				(unsigned long long)sb->statp.st_size, 0);
-		}
-
-		if(conf->breakpoint==1
-		 && conf->cntr->ent[CMD_FILE]->phase1>20)
-		{
-			breakpoint(conf, __func__);
-			goto end;
 		}
 	}
 

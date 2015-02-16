@@ -688,3 +688,9 @@ void strip_trailing_slashes(char **str)
 		(*str)[l-1]='\0';
 	}
 }
+
+int breakpoint(struct conf *conf, const char *func)
+{
+	logp("Breakpoint %d hit in %s\n", conf->breakpoint, func);
+	return -1;
+}

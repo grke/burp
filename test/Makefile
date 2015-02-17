@@ -11,5 +11,5 @@ clean:
 	@$(RMF) serverscript
 	@$(RMF) windowsscript
 
-test:
+test: clean
 	./test_self

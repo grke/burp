@@ -15,12 +15,6 @@ int backup_phase1_server_all(struct async *as,
 
 	logp("Begin phase1 (file system scan)\n");
 
-	if(conf->breakpoint==1)
-	{
-		breakpoint(conf, __func__);
-		goto end;
-	}
-
 	if(!(phase1tmp=get_tmp_filename(sdirs->phase1data)))
 		goto end;
 	if(!(p1zp=gzopen_file(phase1tmp, comp_level(conf))))

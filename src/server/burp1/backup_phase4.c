@@ -683,12 +683,6 @@ int backup_phase4_server_burp1(struct sdirs *sdirs, struct conf *cconf)
 
 	logp("Begin phase4 (shuffle files)\n");
 
-	if(cconf->breakpoint==4)
-	{
-		breakpoint(cconf, __func__);
-		goto end;
-	}
-
 	if(write_status(CNTR_STATUS_SHUFFLING, NULL, cconf))
 		goto end;
 

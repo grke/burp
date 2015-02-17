@@ -32,11 +32,11 @@ static void unset_low_priority(void)
 }
 #endif
 
-// Return 0 for OK, -1 for error, 1 for timer conditions not met.
+// Return 0 for OK, -1 for error.
 int do_backup_client(struct asfd *asfd, struct conf *conf, enum action action,
 	int resume)
 {
-	int ret=0;
+	int ret=-1;
 
 	if(action==ACTION_ESTIMATE)
 		logp("do estimate client\n");
@@ -46,7 +46,7 @@ int do_backup_client(struct asfd *asfd, struct conf *conf, enum action action,
 #ifdef HAVE_WIN32
 	win32_enable_backup_privileges();
 #ifdef WIN32_VSS
-	if((ret=win32_start_vss(conf))) return ret;
+	if(win32_start_vss(conf)) return ret;
 #endif
 	if(action==ACTION_BACKUP_TIMED) set_low_priority();
 #endif
@@ -54,35 +54,50 @@ int do_backup_client(struct asfd *asfd, struct conf *conf, enum action action,
 	// Scan the file system and send the results to the server.
 	// Skip phase1 if the server wanted to resume.
 	if(!resume)
-		ret=backup_phase1_client(asfd, conf, action==ACTION_ESTIMATE);
+	{
+		if(conf->breakpoint==1)
+		{
+			breakpoint(conf, __func__);
+			goto end;
+		}
+		if(backup_phase1_client(asfd, conf, action==ACTION_ESTIMATE))
+			goto end;
+	}
 
-	if(!ret) switch(action)
+	switch(action)
 	{
 		case ACTION_DIFF:
 		case ACTION_DIFF_LONG:
 			ret=1;
-			break;
+			goto end;
 		case ACTION_ESTIMATE:
 			cntr_print(conf->cntr, ACTION_ESTIMATE);
 			break;
 		default:
 			// Now, the server will be telling us what data we need
 			// to send.
+			if(conf->breakpoint==2)
+			{
+				breakpoint(conf, __func__);
+				goto end;
+			}
 			if(conf->protocol==PROTO_BURP1)
 				ret=backup_phase2_client_burp1(asfd,
 					conf, resume);
 			else
 				ret=backup_phase2_client_burp2(asfd,
 					conf, resume);
+			if(ret) goto end;
 			break;
 	}
 
+	ret=0;
+end:
 #if defined(HAVE_WIN32)
 	if(action==ACTION_BACKUP_TIMED) unset_low_priority();
 #if defined(WIN32_VSS)
 	win32_stop_vss();
 #endif
 #endif
-
 	return ret;
 }

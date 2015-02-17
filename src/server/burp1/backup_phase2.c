@@ -209,10 +209,8 @@ static int process_new(struct sdirs *sdirs, struct conf *cconf,
 static int process_unchanged_file(struct sbuf *p1b, struct sbuf *cb,
 	FILE *ucfp, struct conf *cconf)
 {
-	// Want to use the attributes and link settings from p1b, but p1b
-	// does not have all the information that is on cb. Move the attributes
-	// and link settings over.
-	//iobuf_copy(&cb->attr, &p1b->attr); p1b->attr.buf=NULL;
+	// Want to use the link settings from p1b, but p1b does not have all
+	// the information that is on cb. Move the link settings over.
 	iobuf_copy(&cb->link, &p1b->link); p1b->link.buf=NULL;
 	if(sbufl_to_manifest(cb, ucfp, NULL))
 		return -1;

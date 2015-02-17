@@ -400,15 +400,26 @@ add_burp1_on()
 		sed_rep_client '$ aprotocol = 1' "$clientconf"
 }
 
-add_breakpoint_off()
+add_server_breakpoint_off()
 {
 	sed_rep_server 's/^breakpoint = .*//g' "$serverconf"
 }
 
-add_breakpoint_on()
+add_server_breakpoint_on()
 {
-	add_breakpoint_off
+	add_server_breakpoint_off
 	sed_rep_server "\$ abreakpoint = $1" "$serverconf"
+}
+
+add_client_breakpoint_off()
+{
+	sed_rep_client 's/^breakpoint = .*//g' "$clientconf"
+}
+
+add_client_breakpoint_on()
+{
+	add_client_breakpoint_off
+	sed_rep_client "\$ abreakpoint = $1" "$clientconf"
 }
 
 makedir_server "$logs"
@@ -518,6 +529,7 @@ end_test()
 	run_script_client
 	backup_and_restore_nums=$(get_backup_and_restore_nums)
 	write_message "Test $num OK $backup_and_restore_nums"
+	sleep 3
 }
 
 run_scripts()
@@ -549,6 +561,8 @@ add_normal_settings()
 	add_include_on
 	add_include_ext_off
 	add_exclude_ext_off
+	add_server_breakpoint_off
+	add_client_breakpoint_off
 
 	# Windows options
 	if [ -n "$SPLIT_VSS" ] ; then
@@ -648,13 +662,18 @@ check_for_working_dir()
 
 all_tests()
 {
-	start_test "Interrupt phase1"
-	add_breakpoint_on 1
+	start_test "Interrupt server phase1"
+	add_server_breakpoint_on 1
 	add_run_backup_expect_fail
 	run_scripts
 	check_for_working_dir
-	add_breakpoint_off
-	run_script_server
+	end_test
+
+	start_test "Interrupt client phase1"
+	add_client_breakpoint_on 1
+	add_run_backup_expect_fail
+	run_scripts
+	check_for_working_dir
 	end_test
 
 	comp_enc_change_test on  off off

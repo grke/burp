@@ -61,26 +61,31 @@ end:
 int backup_phase1_server(struct async *as,
 	struct sdirs *sdirs, struct conf *cconf)
 {
+	if(cconf->breakpoint==1) return breakpoint(cconf, __func__);
 	return backup_phase1_server_all(as, sdirs, cconf);
 }
 
 int backup_phase2_server(struct async *as, struct sdirs *sdirs,
-        const char *incexc, int resume, struct conf *cconf)
+	const char *incexc, int resume, struct conf *cconf)
 {
+	if(cconf->breakpoint==2) return breakpoint(cconf, __func__);
+
 	switch(cconf->protocol)
 	{
 		case PROTO_BURP1:
 			return backup_phase2_server_burp1(as, sdirs,
-        			incexc, resume, cconf);
+				incexc, resume, cconf);
 		default:
 			return backup_phase2_server_burp2(as, sdirs,
-        			resume, cconf);
+				resume, cconf);
 	}
 }
 
 int backup_phase3_server(struct sdirs *sdirs,
 	struct conf *cconf, int recovery, int compress)
 {
+	if(cconf->breakpoint==3) return breakpoint(cconf, __func__);
+
 	switch(cconf->protocol)
 	{
 		case PROTO_BURP1:
@@ -93,6 +98,8 @@ int backup_phase3_server(struct sdirs *sdirs,
 
 int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf)
 {
+	if(cconf->breakpoint==4) return breakpoint(cconf, __func__);
+
 	switch(cconf->protocol)
 	{
 		case PROTO_BURP1:
@@ -181,7 +188,7 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 		}
 	}
 
-        cntr_print(cconf->cntr, ACTION_BACKUP);
+	cntr_print(cconf->cntr, ACTION_BACKUP);
 	cntr_stats_to_file(cconf->cntr, sdirs->rworking, ACTION_BACKUP, cconf);
 
 	if(cconf->protocol==PROTO_BURP1)
@@ -198,17 +205,17 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 		if(do_rename(sdirs->working, sdirs->current)) goto error;
 	}
 
-        logp("Backup completed.\n");
+	logp("Backup completed.\n");
 	set_logfp(NULL, cconf);
-        compress_filename(sdirs->rworking, "log", "log.gz", cconf);
+	compress_filename(sdirs->rworking, "log", "log.gz", cconf);
 
 	goto end;
 error:
 	ret=-1;
 end:
 	set_logfp(NULL, cconf);
-        if(chfd) as->asfd_remove(as, chfd);
-        asfd_free(&chfd);
+	if(chfd) as->asfd_remove(as, chfd);
+	asfd_free(&chfd);
 
 	if(!ret && cconf->keep>0)
 	{

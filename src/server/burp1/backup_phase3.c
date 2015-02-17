@@ -17,12 +17,6 @@ int backup_phase3_server_burp1(struct sdirs *sdirs,
 
 	logp("Begin phase3 (merge manifests)\n");
 
-	if(cconf->breakpoint==3)
-	{
-		breakpoint(cconf, __func__);
-		goto end;
-	}
-
 	if(!(manifesttmp=get_tmp_filename(sdirs->manifest))) goto end;
 
         if(!(ucfp=open_file(sdirs->unchanged, "rb"))

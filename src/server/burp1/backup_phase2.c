@@ -756,12 +756,6 @@ int backup_phase2_server_burp1(struct async *as, struct sdirs *sdirs,
 
 	logp("Begin phase2 (receive file data)\n");
 
-	if(cconf->breakpoint==2)
-	{
-		breakpoint(cconf, __func__);
-		goto error;
-	}
-
 	if(init_dpthl(&dpthl, sdirs, cconf))
 	{
 		logp("could not init_dpthl\n");

@@ -422,6 +422,22 @@ add_client_breakpoint_on()
 	sed_rep_client "\$ abreakpoint = $1" "$clientconf"
 }
 
+add_recovery_method_delete()
+{
+	sed_rep_server 's/^working_dir_recovery_method = .*/working_dir_recovery_method = delete/g'
+}
+
+add_recovery_method_resume()
+{
+	sed_rep_server 's/^working_dir_recovery_method = .*/working_dir_recovery_method = resume/g'
+}
+
+add_max_file_size_on()
+{
+	add_max_file_size_off
+	sed_rep_client '$ amax_file_size = '"$fsize"
+}
+
 makedir_server "$logs"
 
 cdir "$target"
@@ -563,6 +579,7 @@ add_normal_settings()
 	add_exclude_ext_off
 	add_server_breakpoint_off
 	add_client_breakpoint_off
+#	add_recovery_method_resume
 
 	# Windows options
 	if [ -n "$SPLIT_VSS" ] ; then
@@ -656,8 +673,16 @@ comp_enc_change_test()
 
 check_for_working_dir()
 {
-	[ -h "$workingdir" ] || fail "$working is not a symlink"
-	[ -d "$workingdir/" ] || fail "$working/ is not a directory"
+	[ -h "$workingdir" ] || fail "$workingdir is not a symlink"
+	[ -d "$workingdir/" ] || fail "$workingdir/ is not a directory"
+	[ -e "$finishingdir" ] && fail "$finishingdir should not exist"
+}
+
+check_for_finishing_dir()
+{
+	[ -h "$finishingdir" ] || fail "$finishingdir is not a symlink"
+	[ -d "$finishingdir/" ] || fail "$finishingdir/ is not a directory"
+	[ -e "$workingdir" ] && fail "$workingdir should not exist"
 }
 
 all_tests()
@@ -677,6 +702,14 @@ all_tests()
 	end_test
 
 	comp_enc_change_test on  off off
+
+#	start_test "Interrupt server phase4"
+#	add_server_breakpoint_on 4
+#	add_run_backup_expect_fail
+#	run_scripts
+#	check_for_finishing_dir
+#	end_test
+
 	comp_enc_change_test on  off off
 	comp_enc_change_test on  off on
 	comp_enc_change_test off off on
@@ -730,9 +763,11 @@ restart_server
 
 # Run in burp1 mode.
 workingdir="$target/var/spool/burp/testclient/working"
+finishingdir="$target/var/spool/burp/testclient/finishing"
 run_tests 1
 # Run in burp2 mode.
 workingdir="$target/var/spool/burp/global/clients/testclient/working"
+finishingdir="$target/var/spool/burp/global/clients/testclient/finishing"
 run_tests 2
 
 echo

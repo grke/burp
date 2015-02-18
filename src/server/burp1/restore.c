@@ -215,158 +215,138 @@ static int verify_file(struct asfd *asfd, struct sbuf *sb,
 	return 0;
 }
 
-// a = length of struct bu array
-// i = position to restore from
-static int restore_file(struct asfd *asfd, struct bu *bu,
-	struct sbuf *sb, int act, struct sdirs *sdirs, struct conf *cconf)
+static int process_data_dir_file(struct asfd *asfd,
+	struct bu *bu, struct bu *b, const char *path,
+	struct sbuf *sb, enum action act, struct sdirs *sdirs,
+	struct conf *cconf)
 {
-	struct bu *b;
-	struct bu *hlwarn=NULL;
+	int ret=-1;
+	int patches=0;
+	char *dpath=NULL;
+	struct stat dstatp;
+	const char *tmp=NULL;
+	const char *best=NULL;
+	unsigned long long bytes=0;
 	static char *tmppath1=NULL;
 	static char *tmppath2=NULL;
 
 	if((!tmppath1 && !(tmppath1=prepend_s(sdirs->client, "tmp1")))
 	  || (!tmppath2 && !(tmppath2=prepend_s(sdirs->client, "tmp2"))))
-		return -1;
+		goto end;
+
+	best=path;
+	tmp=tmppath1;
+	// Now go down the list, applying any deltas.
+	for(b=b->prev; b && b->next!=bu; b=b->prev)
+	{
+		free_w(&dpath);
+		if(!(dpath=prepend_s(b->delta, sb->burp1->datapth.buf)))
+			goto end;
+
+		if(lstat(dpath, &dstatp) || !S_ISREG(dstatp.st_mode))
+			continue;
+
+		if(!patches)
+		{
+			// Need to gunzip the first one.
+			if(inflate_or_link_oldfile(asfd, best, tmp,
+				cconf, sb->compression))
+			{
+				char msg[256]="";
+				snprintf(msg, sizeof(msg),
+				  "error when inflating %s\n", best);
+				log_and_send(asfd, msg);
+				goto end;
+			}
+			best=tmp;
+			if(tmp==tmppath1) tmp=tmppath2;
+			else tmp=tmppath1;
+		}
+
+		if(do_patch(asfd, best, dpath, tmp,
+			0 /* do not gzip the result */,
+			sb->compression /* from the manifest */, cconf))
+		{
+			char msg[256]="";
+			snprintf(msg, sizeof(msg), "error when patching %s\n",
+				path);
+			log_and_send(asfd, msg);
+			goto end;
+		}
+
+		best=tmp;
+		if(tmp==tmppath1) tmp=tmppath2;
+		else tmp=tmppath1;
+		unlink(tmp);
+		patches++;
+	}
+
+	switch(act)
+	{
+		case ACTION_RESTORE:
+			if(send_file(asfd, sb, patches, best, &bytes, cconf))
+				goto end;
+			break;
+		case ACTION_VERIFY:
+			if(verify_file(asfd, sb, patches, best, &bytes, cconf))
+				goto end;
+			break;
+		default:
+			logp("Unknown action: %d\n", act);
+			goto end;
+	}
+	cntr_add(cconf->cntr, sb->path.cmd, 0);
+	cntr_add_bytes(cconf->cntr,
+		  strtoull(sb->burp1->endfile.buf, NULL, 10));
+	cntr_add_sentbytes(cconf->cntr, bytes);
+
+	ret=0;
+end:
+	free_w(&dpath);
+	return ret;
+}
+
+// a = length of struct bu array
+// i = position to restore from
+static int restore_file(struct asfd *asfd, struct bu *bu,
+	struct sbuf *sb, enum action act,
+	struct sdirs *sdirs, struct conf *cconf)
+{
+	int ret=-1;
+	char *path=NULL;
+	struct bu *b;
+	struct bu *hlwarn=NULL;
+	struct stat statp;
 
 	// Go up the array until we find the file in the data directory.
 	for(b=bu; b; b=b->next)
 	{
-		char *path=NULL;
-		struct stat statp;
+		free_w(&path);
 		if(!(path=prepend_s(b->data, sb->burp1->datapth.buf)))
-		{
-			log_and_send_oom(asfd, __func__);
-			return -1;
-		}
-
-		//printf("server file: %s\n", path);
+			goto end;
 
 		if(lstat(path, &statp) || !S_ISREG(statp.st_mode))
-		{
-			free(path);
 			continue;
-		}
-		else
-		{
-			int patches=0;
-			struct stat dstatp;
-			const char *tmp=NULL;
-			const char *best=NULL;
-			unsigned long long bytes=0;
 
-			if(b!=bu && (bu->flags & BU_HARDLINKED)) hlwarn=b;
+		if(b!=bu && (bu->flags & BU_HARDLINKED)) hlwarn=b;
 
-			best=path;
-			tmp=tmppath1;
-			// Now go down the list, applying any deltas.
-			for(b=b->prev; b && b->next!=bu; b=b->prev)
-			{
-				char *dpath=NULL;
+		if(process_data_dir_file(asfd, bu, b,
+			path, sb, act, sdirs, cconf)) goto end;
 
-				if(!(dpath=prepend_s(b->delta,
-					sb->burp1->datapth.buf)))
-				{
-					log_and_send_oom(asfd, __func__);
-					free(path);
-					return -1;
-				}
-
-				if(lstat(dpath, &dstatp)
-				  || !S_ISREG(dstatp.st_mode))
-				{
-					free(dpath);
-					continue;
-				}
-
-				if(!patches)
-				{
-					// Need to gunzip the first one.
-					if(inflate_or_link_oldfile(asfd,
-						best, tmp,
-						cconf, sb->compression))
-					{
-						logp("error when inflating %s\n", best);
-						free(path);
-						free(dpath);
-						return -1;
-					}
-					best=tmp;
-					if(tmp==tmppath1) tmp=tmppath2;
-					else tmp=tmppath1;
-				}
-
-				if(do_patch(asfd, best, dpath, tmp,
-				  0 /* do not gzip the result */,
-				  sb->compression /* from the manifest */,
-				  cconf))
-				{
-					char msg[256]="";
-					snprintf(msg, sizeof(msg),
-						"error when patching %s\n",
-							path);
-					log_and_send(asfd, msg);
-					free(path);
-					free(dpath);
-					return -1;
-				}
-
-				best=tmp;
-				if(tmp==tmppath1) tmp=tmppath2;
-				else tmp=tmppath1;
-				unlink(tmp);
-				patches++;
-			}
-
-			if(act==ACTION_RESTORE)
-			{
-				if(send_file(asfd, sb,
-					patches, best, &bytes, cconf))
-				{
-					free(path);
-					return -1;
-				}
-				else
-				{
-					cntr_add(cconf->cntr, sb->path.cmd, 0);
-					cntr_add_bytes(cconf->cntr,
-                 			  strtoull(sb->burp1->endfile.buf,
-						NULL, 10));
-				}
-			}
-			else if(act==ACTION_VERIFY)
-			{
-				if(verify_file(asfd, sb, patches,
-					best, &bytes, cconf))
-				{
-					free(path);
-					return -1;
-				}
-				else
-				{
-					cntr_add(cconf->cntr, sb->path.cmd, 0);
-					cntr_add_bytes(cconf->cntr,
-                 			  strtoull(sb->burp1->endfile.buf,
-						NULL, 10));
-				}
-			}
-			cntr_add_sentbytes(cconf->cntr, bytes);
-
-			// This warning must be done after everything else,
-			// Because the client does not expect another cmd after
-			// the warning.
-			if(hlwarn) logw(asfd, cconf,
-				"restore found %s in %s\n",
-					sb->path.buf, hlwarn->basename);
-			free(path);
-			return 0;
-		}
+		// This warning must be done after everything else,
+		// Because the client does not expect another cmd after
+		// the warning.
+		if(hlwarn) logw(asfd, cconf, "restore found %s in %s\n",
+			sb->path.buf, hlwarn->basename);
+		ret=0; // All OK.
+		break;
 	}
 
-	logw(asfd, cconf, "restore could not find %s (%s)\n",
+	if(!b) logw(asfd, cconf, "restore could not find %s (%s)\n",
 		sb->path.buf, sb->burp1->datapth.buf);
-	//return -1;
-	return 0;
+end:
+	free_w(&path);
+	return ret;
 }
 
 int restore_sbuf_burp1(struct asfd *asfd, struct sbuf *sb, struct bu *bu,

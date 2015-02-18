@@ -153,7 +153,8 @@ static int hard_link_substitution(struct asfd *asfd,
 			if(blk->data)
 			{
 				if(burp2_extra_restore_stream_bits(asfd, blk,
-					slist, need_data, last_ent_was_dir,
+					slist, act,
+					need_data, last_ent_was_dir,
 					cconf)) goto end;
 				continue;
 			}
@@ -209,8 +210,8 @@ static int restore_sbuf(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 			// and substitute in the data to restore to this
 			// location.
 			return hard_link_substitution(asfd, sb, lp,
-				bu, act, sdirs, cntr_status, cconf, manifest,
-				slist);
+				bu, act, sdirs,
+				cntr_status, cconf, manifest, slist);
 			// FIX THIS: Would be nice to remember the new link
 			// location so that further hard links would link to
 			// it instead of doing the hard_link_substitution
@@ -395,8 +396,8 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 			if(blk->data)
 			{
 				if(burp2_extra_restore_stream_bits(asfd, blk,
-					slist, need_data, last_ent_was_dir,
-					cconf)) goto end;
+					slist, act, need_data,
+					last_ent_was_dir, cconf)) goto end;
 				continue;
 			}
 			need_data=0;

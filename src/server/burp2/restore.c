@@ -7,7 +7,29 @@
 #include "../manio.h"
 #include "../sdirs.h"
 
-static int restore_start_filedata(struct asfd *asfd, struct sbuf *sb,
+static int send_data(struct asfd *asfd, struct blk *blk,
+	enum action act, struct conf *conf)
+{
+	struct iobuf wbuf;
+	switch(act)
+	{
+		case ACTION_RESTORE:
+			iobuf_set(&wbuf, CMD_DATA, blk->data, blk->length);
+			if(asfd->write(asfd, &wbuf)) return -1;
+			return 0;
+		case ACTION_VERIFY:
+			// FIX THIS.
+			// Need to check that the block has the correct
+			// checksums.
+			logw(asfd, conf, "Verify not yet implemented in protocol 2");
+			return 0;
+		default:
+			logp("unknown action in %s: %d\n", __func__, act);
+			return -1;
+	}
+}
+
+int restore_sbuf_burp2(struct asfd *asfd, struct sbuf *sb, enum action act,
 	enum cntr_status cntr_status, struct conf *conf, int *need_data)
 {
 	if(asfd->write(asfd, &sb->attr)
@@ -25,9 +47,7 @@ static int restore_start_filedata(struct asfd *asfd, struct sbuf *sb,
 		b=sb->burp2->bstart;
 		while(b)
 		{
-			struct iobuf wbuf;
-			iobuf_set(&wbuf, CMD_DATA, b->data, b->length);
-			if(asfd->write(asfd, &wbuf)) return -1;
+			if(send_data(asfd, b, act, conf)) return -1;
 			n=b->next;
 			blk_free(&b);
 			b=n;
@@ -43,37 +63,21 @@ static int restore_start_filedata(struct asfd *asfd, struct sbuf *sb,
 		case CMD_ENC_METADATA:
 		case CMD_EFS_FILE:
 			*need_data=1;
-			return 0;
+			break;
 		default:
 			cntr_add(conf->cntr, sb->path.cmd, 0);
-			return 0;
+			break;
 	}
-}
-
-int restore_sbuf_burp2(struct asfd *asfd, struct sbuf *sb, enum action act,
-	enum cntr_status cntr_status, struct conf *conf, int *need_data)
-{
-	switch(act)
-	{
-		case ACTION_RESTORE:
-			return restore_start_filedata(asfd,
-				sb, cntr_status, conf, need_data);
-		case ACTION_VERIFY:
-		default:
-			logp("Unknown action: %d\n", act);
-			return -1;
-	}
+	return 0;
 }
 
 int burp2_extra_restore_stream_bits(struct asfd *asfd, struct blk *blk,
-	struct slist *slist, int need_data, int last_ent_was_dir,
-	struct conf *cconf)
+	struct slist *slist, enum action act,
+	int need_data, int last_ent_was_dir, struct conf *cconf)
 {
 	if(need_data)
 	{
-		struct iobuf wbuf;
-		iobuf_set(&wbuf, CMD_DATA, blk->data, blk->length);
-		if(asfd->write(asfd, &wbuf)) return -1;
+		if(send_data(asfd, blk, act, cconf)) return -1;
 	}
 	else if(last_ent_was_dir)
 	{

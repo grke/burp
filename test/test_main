@@ -151,7 +151,7 @@ bno=$((bno+1))
 test_includes_backup=1
 cat >> "$clientscript" <<EOF
 echo "Starting test client backup"
-"$burpbin" -c "$clientconfarg" -a b || fail "client backup returned $?"
+"$burpbin" -c "$clientconfarg" -a b || fail "client backup returned \$?"
 
 EOF
 }
@@ -160,7 +160,7 @@ add_run_backup_expect_fail()
 {
 cat >> "$clientscript" <<EOF
 echo "Starting test client backup"
-"$burpbin" -c "$clientconfarg" -a b && fail "client backup returned $? (expected 0)"
+"$burpbin" -c "$clientconfarg" -a b && fail "client backup returned \$? (expected 0)"
 
 EOF
 }
@@ -171,7 +171,7 @@ add_run_verify()
 cat >> "$clientscript" <<EOF
 echo "Starting test client verify of backup $bno"
 "$burpbin" -c "$clientconfarg" -a v -b "$bno" \
-		|| fail "client verify returned $?"
+		|| fail "client verify returned \$?"
 EOF
 }
 
@@ -191,7 +191,7 @@ echo "Starting test client restore of backup $bno"
 rm -rf "$dir" || fail
 
 "$burpbin" -c "$clientconfarg" -a r -b "$bno" -d "$dir" $nowinapi \
-	|| fail "client restore returned $?"
+	|| fail "client restore returned \$?"
 EOF
 }
 

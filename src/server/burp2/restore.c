@@ -7,7 +7,7 @@
 #include "../manio.h"
 #include "../sdirs.h"
 
-int restore_sbuf_burp2(struct asfd *asfd, struct sbuf *sb, enum action act,
+static int restore_start_filedata(struct asfd *asfd, struct sbuf *sb,
 	enum cntr_status cntr_status, struct conf *conf, int *need_data)
 {
 	if(asfd->write(asfd, &sb->attr)
@@ -47,6 +47,21 @@ int restore_sbuf_burp2(struct asfd *asfd, struct sbuf *sb, enum action act,
 		default:
 			cntr_add(conf->cntr, sb->path.cmd, 0);
 			return 0;
+	}
+}
+
+int restore_sbuf_burp2(struct asfd *asfd, struct sbuf *sb, enum action act,
+	enum cntr_status cntr_status, struct conf *conf, int *need_data)
+{
+	switch(act)
+	{
+		case ACTION_RESTORE:
+			return restore_start_filedata(asfd,
+				sb, cntr_status, conf, need_data);
+		case ACTION_VERIFY:
+		default:
+			logp("Unknown action: %d\n", act);
+			return -1;
 	}
 }
 

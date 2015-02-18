@@ -100,3 +100,8 @@ int iobuf_is_link(struct iobuf *iobuf)
 {
 	return cmd_is_link(iobuf->cmd);
 }
+
+int iobuf_is_encrypted(struct iobuf *iobuf)
+{
+	return cmd_is_encrypted(iobuf->cmd);
+}

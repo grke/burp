@@ -73,5 +73,6 @@ extern void cmd_print_all(void);
 extern int cmd_is_filedata(enum cmd cmd);
 extern int cmd_is_link(enum cmd cmd);
 extern int cmd_is_endfile(enum cmd cmd);
+extern int cmd_is_encrypted(enum cmd cmd);
 
 #endif

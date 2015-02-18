@@ -51,6 +51,8 @@ extern ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize);
 
 extern int sbuf_is_filedata(struct sbuf *sb);
 extern int sbuf_is_link(struct sbuf *sb);
+extern int sbuf_is_encrypted(struct sbuf *sb);
+
 extern int sbuf_to_manifest(struct sbuf *sb, gzFile zp);
 
 extern int sbuf_pathcmp(struct sbuf *a, struct sbuf *b);

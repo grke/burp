@@ -126,3 +126,12 @@ int cmd_is_endfile(enum cmd cmd)
 {
 	return cmd==CMD_END_FILE;
 }
+
+int cmd_is_encrypted(enum cmd cmd)
+{
+	return cmd==CMD_ENC_FILE
+	 || cmd==CMD_ENC_METADATA
+	 || cmd==CMD_ENC_VSS
+	 || cmd==CMD_ENC_VSS_T
+	 || cmd==CMD_EFS_FILE;
+}

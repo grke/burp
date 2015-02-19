@@ -1,6 +1,6 @@
 #include "include.h"
-#include "burp1/backup_phase2.h"
-#include "burp2/backup_phase2.h"
+#include "protocol1/backup_phase2.h"
+#include "protocol2/backup_phase2.h"
 
 #ifdef HAVE_WIN32
 static void set_priority(int priority, const char *str)
@@ -81,11 +81,11 @@ int do_backup_client(struct asfd *asfd, struct conf *conf, enum action action,
 				breakpoint(conf, __func__);
 				goto end;
 			}
-			if(conf->protocol==PROTO_BURP1)
-				ret=backup_phase2_client_burp1(asfd,
+			if(conf->protocol==PROTO_1)
+				ret=backup_phase2_client_protocol1(asfd,
 					conf, resume);
 			else
-				ret=backup_phase2_client_burp2(asfd,
+				ret=backup_phase2_client_protocol2(asfd,
 					conf, resume);
 			if(ret) goto end;
 			break;

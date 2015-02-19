@@ -1,0 +1,36 @@
+@MCOMMON@
+
+srcdir =	.
+VPATH = 	.
+.PATH:		.
+
+# one up
+basedir = ..
+# top dir
+topdir = ../../../..
+# this dir relative to top dir
+thisdir = src/server/protocol2/champ_chooser
+
+#
+SRCS = \
+	candidate.o \
+	champ_chooser.o \
+	champ_client.o \
+	champ_server.o \
+	hash.o \
+	incoming.o \
+	scores.o \
+	sparse.o
+
+OBJS = $(SRCS:.c=.o)
+
+all: Makefile champ_chooser.a
+	@echo "==== Make of champ_chooser.a is good ===="
+	@echo " "
+
+champ_chooser.a: $(OBJS)
+	@echo "Making $@ ..."
+	$(AR) rc  $@ $(OBJS)
+	$(RANLIB) $@
+
+@MCOMMON2@

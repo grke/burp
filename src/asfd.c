@@ -12,7 +12,7 @@
 #include "ncurses.h"
 #endif
 
-#include "burp2/blist.h"
+#include "protocol2/blist.h"
 
 static size_t bufmaxsize=(ASYNC_BUF_LEN*2)+32;
 

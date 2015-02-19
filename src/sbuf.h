@@ -5,8 +5,8 @@
 #include <zlib.h>
 
 #include "bfile.h"
-#include "burp1/sbuf_burp1.h"
-#include "burp2/sbuf_burp2.h"
+#include "protocol1/sbuf_protocol1.h"
+#include "protocol2/sbuf_protocol2.h"
 
 // Bits in sbuf flags.
 // Keep track of what has been sent.
@@ -33,8 +33,8 @@ struct sbuf
 	uint8_t flags;
 
 	// These maybe should be a single pointer that is casted.
-	struct burp1 *burp1;
-	struct burp2 *burp2;
+	struct protocol1 *protocol1;
+	struct protocol2 *protocol2;
 
 	struct sbuf *next;
 };

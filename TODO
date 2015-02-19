@@ -1,10 +1,10 @@
 The list of things to do is at:
 https://github.com/grke/burp/issues
 
-However, that is mostly relating to burp1 issues.
+However, that is mostly relating to protocol1 issues.
 
 
-So, this is a list of important stuff that needs to be done for burp2,
+So, this is a list of important stuff that needs to be done for protocol2,
 roughly in order of most important to least.
 
 * Check data file locks don't just make the child exit.
@@ -39,7 +39,7 @@ roughly in order of most important to least.
 
 * Add data encryption.
 
-* Make acl/xattrs work as far as burp1 does.
+* Make acl/xattrs work as far as protocol1 does.
 
 * Make Windows EFS work.
 
@@ -50,4 +50,4 @@ roughly in order of most important to least.
 * Check notifications work (warnings are turned off because of conf/cntr init
   problem.
 
-* Stop bedup from trying to process burp2 directories.
+* Stop bedup from trying to process protocol2 directories.

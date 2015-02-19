@@ -1,8 +1,8 @@
 #include "include.h"
 #include "../cmd.h"
 #include "../hexmap.h"
-#include "burp2/champ_chooser/include.h"
-#include "burp2/dpth.h"
+#include "protocol2/champ_chooser/include.h"
+#include "protocol2/dpth.h"
 
 #define MANIO_MODE_READ		"rb"
 #define MANIO_MODE_WRITE	"wb"
@@ -192,7 +192,7 @@ static int manio_init(struct manio *manio, const char *directory, const char *mo
 	if(!(manio->directory=strdup_w(directory, __func__)))
 		return -1;
 	if(manio_set_mode(manio, mode)) return -1;
-	manio_set_protocol(manio, PROTO_BURP2);
+	manio_set_protocol(manio, PROTO_2);
 	return 0;
 }
 
@@ -206,7 +206,7 @@ int manio_init_write(struct manio *manio, const char *directory)
 	return manio_init(manio, directory, MANIO_MODE_WRITE);
 }
 
-static char *get_next_fpath_burp1(struct manio *manio)
+static char *get_next_fpath_protocol1(struct manio *manio)
 {
 	return strdup_w(manio->directory, __func__);
 }
@@ -214,7 +214,7 @@ static char *get_next_fpath_burp1(struct manio *manio)
 static char *get_next_fpath(struct manio *manio)
 {
 	static char tmp[32];
-	if(manio->protocol==PROTO_BURP1) return get_next_fpath_burp1(manio);
+	if(manio->protocol==PROTO_1) return get_next_fpath_protocol1(manio);
 	snprintf(tmp, sizeof(tmp), "%08"PRIX64, manio->fcount++);
 	return prepend_s(manio->directory, tmp);
 }
@@ -257,7 +257,7 @@ static int do_manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
 			manio->first_entry=0;
 		}
 
-		if(manio->protocol==PROTO_BURP2 || phase1)
+		if(manio->protocol==PROTO_2 || phase1)
 		{
 			ars=sbuf_fill_from_gzfile(sb, asfd, manio->zp, blk,
 				dpth?dpth->base_path:NULL, conf);
@@ -277,8 +277,8 @@ static int do_manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
 		// Maybe there is another file to continue with.
 		if(manio_close(manio)) goto error;
 
-		// If in burp1 mode, there is only one file, so end.
-		if(manio->protocol==PROTO_BURP1) return 1;
+		// If in protocol1 mode, there is only one file, so end.
+		if(manio->protocol==PROTO_1) return 1;
 	}
 
 error:
@@ -295,8 +295,8 @@ int manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
 
 // FIX THIS:
 // Same as manio_sbuf_fill(), but always does sbuf_fill_from_gzfile().
-// Burp2 is using the burp-1 phase1 format. If it wrote its own format, this
-// separate function should not be necessary.
+// Protocol2 is using the burp-1 phase1 format. If it wrote its own format,
+// this separate function should not be necessary.
 // Once there are some tests that excercise the resume functionality, then
 // this can be dealt with more safely.
 int manio_sbuf_fill_phase1(struct manio *manio, struct asfd *asfd,

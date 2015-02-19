@@ -3,7 +3,7 @@
 
 #include "monitor/status_client_ncurses.h"
 
-#include "burp2/restore.h"
+#include "protocol2/restore.h"
 
 #ifndef HAVE_WIN32
 #include <sys/utsname.h>

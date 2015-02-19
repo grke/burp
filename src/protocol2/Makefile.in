@@ -1,0 +1,31 @@
+@MCOMMON@
+
+srcdir =	.
+VPATH = 	.
+.PATH:		.
+
+# one up
+basedir = ..
+# top dir
+topdir = ../..
+# this dir relative to top dir
+thisdir = src/protocol2
+
+#
+SRCS = \
+	blist.c \
+	blk.c \
+	sbuf_protocol2.c \
+
+OBJS = $(SRCS:.c=.o)
+
+all: Makefile protocol2.a
+	@echo "==== Make of protocol2.a is good ===="
+	@echo " "
+
+protocol2.a: $(OBJS)
+	@echo "Making $@ ..."
+	$(AR) rc  $@ $(OBJS)
+	$(RANLIB) $@
+
+@MCOMMON2@

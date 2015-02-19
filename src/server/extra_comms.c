@@ -299,9 +299,9 @@ static int extra_comms_read(struct async *as,
 				goto end;
 			}
 			else if(!strcmp(rbuf->buf+strlen("protocol="), "1"))
-				cconf->protocol=globalc->protocol=PROTO_BURP1;
+				cconf->protocol=globalc->protocol=PROTO_1;
 			else if(!strcmp(rbuf->buf+strlen("protocol="), "2"))
-				cconf->protocol=globalc->protocol=PROTO_BURP2;
+				cconf->protocol=globalc->protocol=PROTO_2;
 			else
 			{
 				snprintf(msg, sizeof(msg), "Client is trying to use %s, which is unknown\n", rbuf->buf);
@@ -380,33 +380,33 @@ int extra_comms(struct async *as,
 		goto error;
 
 	// This needs to come after extra_comms_read, as the client might
-	// have set BURP1 or BURP2.
+	// have set PROTO_1 or PROTO_2.
 	switch(cconf->protocol)
 	{
 		case PROTO_AUTO:
 			// The protocol has not been specified. Make a choice.
 			if(vers.cli<vers.burp2)
 			{
-				// Client is burp-1.x.x, use burp1.
-				cconf->protocol=conf->protocol=PROTO_BURP1;
+				// Client is burp-1.x.x, use protocol1.
+				cconf->protocol=conf->protocol=PROTO_1;
 				logp("Client is burp-%s - using protocol=%d\n",
-					cconf->peer_version, PROTO_BURP1);
+					cconf->peer_version, PROTO_1);
 			}
 			else
 			{
-				// Client is burp-2.x.x, use burp2.
+				// Client is burp-2.x.x, use protocol2.
 				// This will probably never be reached because
 				// the negotiation will take care of it.
-				cconf->protocol=conf->protocol=PROTO_BURP2;
+				cconf->protocol=conf->protocol=PROTO_2;
 				logp("Client is burp-%s - using protocol=%d\n",
-					cconf->peer_version, PROTO_BURP2);
+					cconf->peer_version, PROTO_2);
 			}
 			break;
-		case PROTO_BURP1:
+		case PROTO_1:
 			// It is OK for the client to be burp1 and for the
-			// server to be forced to burp1 protocol.
+			// server to be forced to protocol1.
 			break;
-		case PROTO_BURP2:
+		case PROTO_2:
 			if(vers.cli>=vers.burp2) break;
 			logp("protocol=%d is set server side, "
 			  "but client is burp version %s\n",

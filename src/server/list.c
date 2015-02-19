@@ -196,7 +196,7 @@ int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct conf *conf,
 	struct bu *bu=NULL;
 	struct bu *bu_list=NULL;
 
-	printf("in do_list_server\n");
+	//logp("in do_list_server\n");
 
 	if(compile_regex(&regex, listregex)
 	  || bu_get_list(sdirs, &bu_list)

@@ -159,6 +159,25 @@ enum ofr_e open_for_restore(struct asfd *asfd, BFILE *bfd, const char *path,
 	return OFR_OK;
 }
 
+static char *build_msg(const char *text, const char *param)
+{
+	static char msg[256]="";
+	snprintf(msg, sizeof(msg), text, param);
+	return msg;
+}
+
+static void do_logw(struct asfd *asfd, struct conf *conf,
+	const char *text, const char *param)
+{
+	logw(asfd, conf, "%s", build_msg(text, param));
+}
+
+static int warn_and_interrupt(struct asfd *asfd, struct sbuf *sb,
+	struct conf *conf, const char *text, const char *param)
+{
+	return restore_interrupt(asfd, sb, build_msg(text, param), conf);
+}
+
 static int restore_special(struct asfd *asfd, struct sbuf *sb,
 	const char *fname, enum action act, struct conf *conf)
 {
@@ -178,62 +197,43 @@ static int restore_special(struct asfd *asfd, struct sbuf *sb,
 
 	if(build_path(fname, "", &rpath, NULL))
 	{
-		char msg[256]="";
 		// failed - do a warning
-		snprintf(msg, sizeof(msg), "build path failed: %s", fname);
-		if(restore_interrupt(asfd, sb, msg, conf))
-			ret=-1;
+		if(restore_interrupt(asfd, sb,
+			build_msg("build path failed: %s", fname), conf))
+				ret=-1;
 		goto end;
 	}
 	if(S_ISFIFO(statp.st_mode))
 	{
 		if(mkfifo(rpath, statp.st_mode) && errno!=EEXIST)
-		{
-			char msg[256]="";
-			snprintf(msg, sizeof(msg),
+			do_logw(asfd, conf,
 				"Cannot make fifo: %s\n", strerror(errno));
-			logw(asfd, conf, "%s", msg);
-		}
 		else
 		{
 			attribs_set(asfd, rpath, &statp, sb->winattr, conf);
 			cntr_add(conf->cntr, CMD_SPECIAL, 1);
 		}
-//	}
-//	else if(S_ISSOCK(statp.st_mode)) {
-//		char msg[256]="";
-//		snprintf(msg, sizeof(msg),
-//			"Skipping restore of socket: %s\n", fname);
-//		logw(conf, "%s", msg);
+	}
+//	else if(S_ISSOCK(statp.st_mode))
+//		do_logw(asfd, conf, "Skipping restore of socket: %s\n", fname);
 //
 #ifdef S_IFDOOR     // Solaris high speed RPC mechanism
-	} else if (S_ISDOOR(statp.st_mode)) {
-		char msg[256]="";
-		snprintf(msg, sizeof(msg),
+	else if (S_ISDOOR(statp.st_mode))
+		do_logw(asfd, conf,
 			"Skipping restore of door file: %s\n", fname);
-		logw(conf, "%s", msg);
 #endif
 #ifdef S_IFPORT     // Solaris event port for handling AIO
-	} else if (S_ISPORT(statp.st_mode)) {
-		char msg[256]="";
-		snprintf(msg, sizeof(msg),
+	else if (S_ISPORT(statp.st_mode))
+		do_logw(asfd, conf,
 			"Skipping restore of event port file: %s\n", fname);
-		logw(conf, "%s", msg);
 #endif
-	} else {
-            if(mknod(fname, statp.st_mode, statp.st_rdev) && errno!=EEXIST)
-	    {
-		char msg[256]="";
-		snprintf(msg, sizeof(msg),
-			"Cannot make node: %s\n", strerror(errno));
-		logw(asfd, conf, "%s", msg);
-            }
-	    else
-	    {
+	else if(mknod(fname, statp.st_mode, statp.st_rdev) && errno!=EEXIST)
+		do_logw(asfd, conf, "Cannot make node: %s\n", strerror(errno));
+	else
+	{
 		attribs_set(asfd, rpath, &statp, sb->winattr, conf);
 		cntr_add(conf->cntr, CMD_SPECIAL, 1);
-	    }
-         }
+	}
 #endif
 end:
 	if(rpath) free(rpath);
@@ -249,24 +249,16 @@ int restore_dir(struct asfd *asfd,
 	{
 		if(build_path(dname, "", &rpath, NULL))
 		{
-			char msg[256]="";
-			// failed - do a warning
-			snprintf(msg, sizeof(msg),
+			ret=warn_and_interrupt(asfd, sb, conf,
 				"build path failed: %s", dname);
-			if(restore_interrupt(asfd, sb, msg, conf))
-				ret=-1;
 			goto end;
 		}
 		else if(!is_dir_lstat(rpath))
 		{
 			if(mkdir(rpath, 0777))
 			{
-				char msg[256]="";
-				snprintf(msg, sizeof(msg), "mkdir error: %s",
-					strerror(errno));
-				// failed - do a warning
-				if(restore_interrupt(asfd, sb, msg, conf))
-					ret=-1;
+				ret=warn_and_interrupt(asfd, sb, conf,
+					"mkdir error: %s", strerror(errno));
 				goto end;
 			}
 		}
@@ -289,21 +281,15 @@ static int restore_link(struct asfd *asfd, struct sbuf *sb,
 		char *rpath=NULL;
 		if(build_path(fname, "", &rpath, NULL))
 		{
-			char msg[256]="";
-			// failed - do a warning
-			snprintf(msg, sizeof(msg), "build path failed: %s",
-				fname);
-			if(restore_interrupt(asfd, sb, msg, conf))
-				ret=-1;
+			ret=warn_and_interrupt(asfd, sb, conf,
+				"build path failed: %s", fname);
 			goto end;
 		}
 		else if(make_link(asfd,
 			fname, sb->link.buf, sb->link.cmd, conf))
 		{
-			// failed - do a warning
-			if(restore_interrupt(asfd, sb,
-				"could not create link", conf))
-					ret=-1;
+			ret=warn_and_interrupt(asfd, sb, conf,
+				"could not create link", "");
 			goto end;
 		}
 		else if(!ret)
@@ -422,9 +408,7 @@ static int overwrite_ok(struct sbuf *sb,
 		  && (sb->path.cmd==CMD_FILE || sb->path.cmd==CMD_ENC_FILE
 		      || sb->path.cmd==CMD_VSS_T || sb->path.cmd==CMD_ENC_VSS_T)
 		  && bfd->path && !strcmp(bfd->path, fullpath))
-		{
 			return 1;
-		}
 #endif
 		// If we have file data and the destination is
 		// a fifo, it is OK to write to the fifo.
@@ -446,7 +430,6 @@ static int write_data(struct asfd *asfd, BFILE *bfd, struct blk *blk)
 	else
 	{
 		int w;
-//printf("writing: %d\n", blk->length);
 		if((w=bfd->write(bfd, blk->data, blk->length))<=0)
 		{
 			logp("%s(): error when appending %d: %d\n",
@@ -518,7 +501,6 @@ static enum asl_ret restore_spool_func(struct asfd *asfd,
 
 static int restore_spool(struct asfd *asfd, struct conf *conf, char **datpath)
 {
-printf("in restore_spool\n");
 	logp("Spooling restore to: %s\n", conf->restore_spool);
 
 	if(!(*datpath=prepend_s(conf->restore_spool, "incoming-data")))
@@ -678,13 +660,13 @@ int do_restore_client(struct asfd *asfd,
 		{
 			// These are the same in both burp1 and burp2.
 			case CMD_DIRECTORY:
-				if(restore_dir(asfd, sb,
-					fullpath, act, conf)) goto error;
+				if(restore_dir(asfd, sb, fullpath, act, conf))
+					goto error;
 				continue;
 			case CMD_SOFT_LINK:
 			case CMD_HARD_LINK:
-				if(restore_link(asfd, sb,
-					fullpath, act, conf)) goto error;
+				if(restore_link(asfd, sb, fullpath, act, conf))
+					goto error;
 				continue;
 			case CMD_SPECIAL:
 				if(restore_special(asfd, sb,

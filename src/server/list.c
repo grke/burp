@@ -113,7 +113,7 @@ static int list_manifest(struct asfd *asfd,
 	size_t bdlen=0;
 
 	if(!(manifest_dir=prepend_s(fullpath,
-		conf->protocol==PROTO_BURP1?"manifest.gz":"manifest"))
+		conf->protocol==PROTO_1?"manifest.gz":"manifest"))
 	  || !(manio=manio_alloc())
 	  || manio_init_read(manio, manifest_dir)
 	  || !(sb=sbuf_alloc(conf)))
@@ -180,8 +180,8 @@ static int send_backup_name_to_client(struct asfd *asfd,
 	char msg[64]="";
 	snprintf(msg, sizeof(msg), "%s%s",
 		bu->timestamp,
-		// Burp2 backups are all deletable, so do not mention it.
-		conf->protocol==PROTO_BURP1
+		// Protocol2 backups are all deletable, so do not mention it.
+		conf->protocol==PROTO_1
 		&& (bu->flags & BU_DELETABLE)?" (deletable)":"");
 	return write_wrapper_str(asfd, CMD_TIMESTAMP, msg);
 }

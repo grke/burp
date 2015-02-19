@@ -158,11 +158,11 @@ int extra_comms(struct async *as, struct conf *conf,
 	if(server_supports(feat, ":csetproto:"))
 	{
 		char msg[128]="";
-		// Use burp2 if no choice has been made on client side.
+		// Use protocol2 if no choice has been made on client side.
 		if(conf->protocol==PROTO_AUTO)
 		{
 			logp("Server has protocol=0 (auto)\n");
-			conf->protocol=PROTO_BURP2;
+			conf->protocol=PROTO_2;
 		}
 		// Send choice to server.
 		snprintf(msg, sizeof(msg), "protocol=%d", conf->protocol);
@@ -173,24 +173,24 @@ int extra_comms(struct async *as, struct conf *conf,
 	else if(server_supports(feat, ":forceproto=1:"))
 	{
 		logp("Server is forcing protocol 1\n");
-		if(conf->protocol!=PROTO_AUTO && conf->protocol!=PROTO_BURP1)
+		if(conf->protocol!=PROTO_AUTO && conf->protocol!=PROTO_1)
 		{
 			logp("But client has set protocol=%d!\n",
 				conf->protocol);
 			goto end;
 		}
-		conf->protocol=PROTO_BURP1;
+		conf->protocol=PROTO_1;
 	}
 	else if(server_supports(feat, ":forceproto=2:"))
 	{
 		logp("Server is forcing protocol 2\n");
-		if(conf->protocol!=PROTO_AUTO && conf->protocol!=PROTO_BURP2)
+		if(conf->protocol!=PROTO_AUTO && conf->protocol!=PROTO_2)
 		{
 			logp("But client has set protocol=%d!\n",
 				conf->protocol);
 			goto end;
 		}
-		conf->protocol=PROTO_BURP2;
+		conf->protocol=PROTO_2;
 	}
 
 	if(asfd->write_str(asfd, CMD_GEN, "extra_comms_end")

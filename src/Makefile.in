@@ -56,20 +56,20 @@ SRCS = \
 OBJS = $(SRCS:.c=.o)
 # FIX THIS: Should not need to add extra .o objects here.
 SUBDIROBJS = \
-		burp1/handy.o \
-		burp1/msg.o \
-		server/burp1/restore.o \
+		protocol1/handy.o \
+		protocol1/msg.o \
+		server/protocol1/restore.o \
 		server/backup_phase1.o \
 		server/server.a \
 		client/client.a \
-		client/burp2/client_burp2.a \
-		burp2/rabin/rabin.a \
-		burp1/burp1.a \
-		client/burp1/client_burp1.a \
-		burp2/burp2.a \
-		server/burp1/server_burp1.a \
-		server/burp2/server_burp2.a \
-		server/burp2/champ_chooser/champ_chooser.a \
+		client/protocol2/client_protocol2.a \
+		protocol2/rabin/rabin.a \
+		protocol1/protocol1.a \
+		client/protocol1/client_protocol1.a \
+		protocol2/protocol2.a \
+		server/protocol1/server_protocol1.a \
+		server/protocol2/server_protocol2.a \
+		server/protocol2/champ_chooser/champ_chooser.a \
 		client/monitor/client_monitor.a \
 		server/monitor/server_monitor.a \
 		yajl/yajl.a
@@ -169,7 +169,7 @@ devclean: realclean
 
 install: all
 	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) burp $(DESTDIR)$(sbindir)/burp 
-	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) server/burp1/vss_strip $(DESTDIR)$(sbindir)/vss_strip
+	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) server/protocol1/vss_strip $(DESTDIR)$(sbindir)/vss_strip
 	ln -sf burp $(DESTDIR)$(sbindir)/bedup
 # Should do a static vss_strip too.
 	@if test -f static-burp; then \

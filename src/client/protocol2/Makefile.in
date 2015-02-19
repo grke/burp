@@ -1,0 +1,30 @@
+@MCOMMON@
+
+srcdir =	.
+VPATH = 	.
+.PATH:		.
+
+# one up
+basedir = ..
+# top dir
+topdir = ../../..
+# this dir relative to top dir
+thisdir = src/protocol2/client
+
+#
+SRCS = \
+	backup_phase2.c \
+	restore.c \
+
+OBJS = $(SRCS:.c=.o)
+
+all: Makefile client_protocol2.a
+	@echo "==== Make of client_protocol2.a is good ===="
+	@echo " "
+
+client_protocol2.a: $(OBJS)
+	@echo "Making $@ ..."
+	$(AR) rc  $@ $(OBJS)
+	$(RANLIB) $@
+
+@MCOMMON2@

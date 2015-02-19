@@ -52,7 +52,7 @@ static int browse_manifest_start(struct asfd *srfd, struct cstat *cstat,
 	struct manio *manio=NULL;
 
 	if(!(manifest=prepend_s(bu->path,
-		cstat->protocol==PROTO_BURP1?"manifest.gz":"manifest"))
+		cstat->protocol==PROTO_1?"manifest.gz":"manifest"))
 	  || !(manio=manio_alloc())
 	  || manio_init_read(manio, manifest)
 	  || !(sb=sbuf_alloc_protocol(cstat->protocol)))

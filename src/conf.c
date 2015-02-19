@@ -689,8 +689,8 @@ static int load_conf_field_and_value(struct conf *c,
 	else if(!strcmp(f, "protocol"))
 	{
 		if(!strcmp(v, "0")) c->protocol=PROTO_AUTO;
-		else if(!strcmp(v, "1")) c->protocol=PROTO_BURP1;
-		else if(!strcmp(v, "2")) c->protocol=PROTO_BURP2;
+		else if(!strcmp(v, "1")) c->protocol=PROTO_1;
+		else if(!strcmp(v, "2")) c->protocol=PROTO_2;
 		else return -1;
 	}
 	else if(!strcmp(f, "compression"))

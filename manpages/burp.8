@@ -21,7 +21,7 @@ is /etc/burp/burp.conf.
 .TP
 \fB\-n\fR \fB\fR
 No forking mode. The program will accept a single query, deal with it, and then
-exit. This is useful for debugging. Implies '\-F'. If you intend to debug a burp2 session, you will also want to run a separate champion chooser process ('\-a c' below).
+exit. This is useful for debugging. Implies '\-F'. If you intend to debug a protocol2 session, you will also want to run a separate champion chooser process ('\-a c' below).
 .TP
 \fB\-F\fR \fB\fR
 Foreground mode. The server will fork into the background and run as a daemon if you do not give this option.
@@ -36,7 +36,7 @@ Dry-run mode to test config file syntax.
 Print an index table of symbols that humans may see burp produce, and exit.
 .TP
 \fB\-a c\fR \fB\fR
-Run as a stand-alone champion chooser process (useful for debugging burp2 style backups).
+Run as a stand-alone champion chooser process (useful for debugging protocol2 style backups).
 .TP
 \fB\-a s\fR \fB\fR
 Run this to connect to a running server to get a live monitor of the status of all your backup clients. If your server config file is not in the default location, you will also need to specify the path with the '\-c' option. The live monitor requires ncurses support at compile time.
@@ -228,7 +228,7 @@ Allows you to turn client password checking on or off. The default is on. SSL ce
 Path to the directory that contains client configuration files.
 .TP
 \fBprotocol=[0|1|2]\fR
-Choose which style of backups and restores to use. 0 (the default) automatically decides based on the client version and which protocol is set on the client side. 1 forces burp1 style (file level granularity with a pseudo mirrored storage on the server and optional rsync). 2 forces burp2 style (inline deduplication with variable length blocks). If you choose a forced setting, it will be an error if the client also chooses a forced setting. This option can be overridden by the client configuration files in clientconfdir on the server.
+Choose which style of backups and restores to use. 0 (the default) automatically decides based on the client version and which protocol is set on the client side. 1 forces protocol1 style (file level granularity with a pseudo mirrored storage on the server and optional rsync). 2 forces protocol2 style (inline deduplication with variable length blocks). If you choose a forced setting, it will be an error if the client also chooses a forced setting. This option can be overridden by the client configuration files in clientconfdir on the server.
 .TP
 \fBlockfile=[path]\fR
 Path to the lockfile that ensures that two server processes cannot run
@@ -449,7 +449,7 @@ Defines the TCP port that the server is listening on.
 Defines the client name to identify as to the server.
 .TP
 \fBprotocol=[0|1|2]\fR
-Choose which style of backups and restores to use. 0 (the default) automatically decides based on the server version and which protocol is set on the server side. 1 forces burp1 style (file level granularity with a pseudo mirrored storage on the server and optional rsync). 2 forces burp2 style (inline deduplication with variable length blocks). If you choose a forced setting, it will be an error if the server also chooses a forced setting.
+Choose which style of backups and restores to use. 0 (the default) automatically decides based on the server version and which protocol is set on the server side. 1 forces protocol1 style (file level granularity with a pseudo mirrored storage on the server and optional rsync). 2 forces protocol2 style (inline deduplication with variable length blocks). If you choose a forced setting, it will be an error if the server also chooses a forced setting.
 .TP
 \fBpassword=[password]\fR
 Defines the password to send to the server.

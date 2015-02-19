@@ -1,10 +1,10 @@
 #include "include.h"
 #include "../cmd.h"
 #include "../linkhash.h"
-#include "burp1/restore.h"
-#include "burp2/dpth.h"
-#include "burp2/restore.h"
-#include "burp2/restore_spool.h"
+#include "protocol1/restore.h"
+#include "protocol2/dpth.h"
+#include "protocol2/restore.h"
+#include "protocol2/restore_spool.h"
 
 static enum asl_ret restore_end_func(struct asfd *asfd,
 	struct conf *conf, void *param)
@@ -64,8 +64,8 @@ static int setup_cntr(struct asfd *asfd, const char *manifest,
 	gzFile zp;
 	struct sbuf *sb=NULL;
 
-// FIX THIS: this is only trying to work for burp1.
-	if(cconf->protocol!=PROTO_BURP1) return 0;
+// FIX THIS: this is only trying to work for protocol1.
+	if(cconf->protocol!=PROTO_1) return 0;
 
 	if(!(sb=sbuf_alloc(cconf))) goto end;
 	if(!(zp=gzopen_file(manifest, "rb")))
@@ -86,11 +86,11 @@ static int setup_cntr(struct asfd *asfd, const char *manifest,
 			if(want_to_restore(srestore, sb, regex, cconf))
 			{
 				cntr_add_phase1(cconf->cntr, sb->path.cmd, 0);
-				if(sb->burp1->endfile.buf)
-					cntr_add_val(cconf->cntr,
-						CMD_BYTES_ESTIMATED,
-						strtoull(sb->burp1->endfile.buf,
-							NULL, 10), 0);
+				if(sb->protocol1->endfile.buf)
+				  cntr_add_val(cconf->cntr,
+					CMD_BYTES_ESTIMATED,
+					strtoull(sb->protocol1->endfile.buf,
+						NULL, 10), 0);
 			}
 		}
 		sbuf_free_content(sb);
@@ -131,7 +131,7 @@ static int hard_link_substitution(struct asfd *asfd,
 		goto end;
 	manio_set_protocol(manio, cconf->protocol);
 
-	if(cconf->protocol==PROTO_BURP2)
+	if(cconf->protocol==PROTO_2)
 	{
 		  if(!(blk=blk_alloc())
 		    || !(dpth=dpth_alloc(sdirs->data)))
@@ -148,12 +148,12 @@ static int hard_link_substitution(struct asfd *asfd,
 			default: goto end; // Error;
 		}
 
-		if(cconf->protocol==PROTO_BURP2)
+		if(cconf->protocol==PROTO_2)
 		{
 			if(blk->data)
 			{
-				if(burp2_extra_restore_stream_bits(asfd, blk,
-					slist, act,
+				if(protocol2_extra_restore_stream_bits(asfd,
+					blk, slist, act,
 					need_data, last_ent_was_dir,
 					cconf)) goto end;
 				continue;
@@ -173,7 +173,7 @@ static int hard_link_substitution(struct asfd *asfd,
 			// to the new location.
 			ret=restore_sbuf(asfd, hb, bu, act, sdirs,
 			  cntr_status, cconf, &need_data, manifest, slist);
-			// May still need to get burp2 data.
+			// May still need to get protocol2 data.
 			if(!ret && need_data) continue;
 			break;
 		}
@@ -219,14 +219,14 @@ static int restore_sbuf(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 		}
 	}
 
-	if(cconf->protocol==PROTO_BURP1)
+	if(cconf->protocol==PROTO_1)
 	{
-		return restore_sbuf_burp1(asfd, sb, bu,
+		return restore_sbuf_protocol1(asfd, sb, bu,
 		  act, sdirs, cntr_status, cconf);
 	}
 	else
 	{
-		return restore_sbuf_burp2(asfd, sb,
+		return restore_sbuf_protocol2(asfd, sb,
 		  act, cntr_status, cconf, need_data);
 	}
 }
@@ -312,16 +312,16 @@ static int restore_remaining_dirs(struct asfd *asfd, struct bu *bu,
 	// Restore any directories that are left in the list.
 	for(sb=slist->head; sb; sb=sb->next)
 	{
-		if(cconf->protocol==PROTO_BURP1)
+		if(cconf->protocol==PROTO_1)
 		{
-			if(restore_sbuf_burp1(asfd, sb, bu, act,
+			if(restore_sbuf_protocol1(asfd, sb, bu, act,
 				sdirs, cntr_status, cconf))
 					return -1;
 		}
 		else
 		{
 			int need_data=0; // Unused.
-			if(restore_sbuf_burp2(asfd, sb, act,
+			if(restore_sbuf_protocol2(asfd, sb, act,
 				cntr_status, cconf, &need_data))
 					return -1;
 		}
@@ -343,7 +343,7 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 	struct blk *blk=NULL;
 	struct dpth *dpth=NULL;
 
-	if(cconf->protocol==PROTO_BURP2)
+	if(cconf->protocol==PROTO_2)
 	{
 		if(asfd->write_str(asfd, CMD_GEN, "restore_stream")
 		  || asfd->read_expect(asfd, CMD_GEN, "restore_stream_ok")
@@ -391,12 +391,12 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 			default: goto end; // Error;
 		}
 
-		if(cconf->protocol==PROTO_BURP2)
+		if(cconf->protocol==PROTO_2)
 		{
 			if(blk->data)
 			{
-				if(burp2_extra_restore_stream_bits(asfd, blk,
-					slist, act, need_data,
+				if(protocol2_extra_restore_stream_bits(asfd,
+					blk, slist, act, need_data,
 					last_ent_was_dir, cconf)) goto end;
 				continue;
 			}
@@ -445,7 +445,7 @@ static int actual_restore(struct asfd *asfd, struct bu *bu,
           || !(slist=slist_alloc()))
                 goto end;
 
-	if(cconf->protocol==PROTO_BURP2)
+	if(cconf->protocol==PROTO_2)
 	{
 		switch(maybe_restore_spool(asfd, manifest, sdirs, bu,
 			srestore, regex, cconf, slist, act, cntr_status))
@@ -503,7 +503,7 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 	  || (act==ACTION_VERIFY && get_logpaths(bu, "verifylog",
 		&logpath, &logpathz))
 	  || !(manifest=prepend_s(bu->path,
-		cconf->protocol==PROTO_BURP1?"manifest.gz":"manifest")))
+		cconf->protocol==PROTO_1?"manifest.gz":"manifest")))
 	{
 		log_and_send_oom(asfd, __func__);
 		goto end;

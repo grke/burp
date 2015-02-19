@@ -15,17 +15,17 @@ first_rule: all
 dummy:
 
 bin_subdirs = \
-		src/burp1 \
-		src/burp2 \
-		src/burp2/rabin \
+		src/protocol1 \
+		src/protocol2 \
+		src/protocol2/rabin \
 		src/client \
-		src/client/burp1 \
-		src/client/burp2 \
+		src/client/protocol1 \
+		src/client/protocol2 \
 		src/client/monitor \
 		src/server \
-		src/server/burp1 \
-		src/server/burp2 \
-		src/server/burp2/champ_chooser \
+		src/server/protocol1 \
+		src/server/protocol2 \
+		src/server/protocol2/champ_chooser \
 		src/server/monitor \
 		src/yajl \
 		src

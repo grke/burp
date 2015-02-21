@@ -15,6 +15,13 @@ enum protocol
 	PROTO_2
 };
 
+enum recovery_method
+{
+	RECOVERY_METHOD_DELETE=0,
+	RECOVERY_METHOD_RESUME,
+	RECOVERY_METHOD_USE
+};
+
 enum conf_type
 {
 	CT_STRING=0,
@@ -24,6 +31,7 @@ enum conf_type
 	CT_SSIZE_T,
 	CT_E_BURP_MODE,
 	CT_E_PROTOCOL,
+	CT_E_RECOVERY_METHOD,
 	CT_STRLIST,
 };
 
@@ -36,6 +44,7 @@ struct conf
 		char *s;
 		float f;
 		enum burp_mode burp_mode;
+		enum recovery_method recovery_method;
 		enum protocol protocol;
 		mode_t mode;
 		ssize_t ssizet;
@@ -43,8 +52,7 @@ struct conf
 		struct strlist *sl;
 		struct cntr *cntr;
 	} data;
-	int clientconfdir_override;
-	int overridden;
+	uint8_t flags;
 };
 
 enum conf_opt

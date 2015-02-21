@@ -610,69 +610,6 @@ int strncmp_w(const char *s1, const char *s2)
 	return strncmp(s1, s2, strlen(s2));
 }
 
-static void log_oom_w(const char *func, const char *orig_func)
-{
-	logp("out of memory in %s, called from %s\n", __func__, func);
-}
-
-char *strdup_w(const char *s, const char *func)
-{
-	char *ret;
-	if(!(ret=strdup(s))) log_oom_w(__func__, func);
-	return ret;
-}
-
-void *realloc_w(void *ptr, size_t size, const char *func)
-{
-	void *ret;
-	if(!(ret=realloc(ptr, size))) log_oom_w(__func__, func);
-	return ret;
-}
-
-void *malloc_w(size_t size, const char *func)
-{
-	void *ret;
-	if(!(ret=malloc(size))) log_oom_w(__func__, func);
-	return ret;
-}
-
-void *calloc_w(size_t nmem, size_t size, const char *func)
-{
-	void *ret;
-	if(!(ret=calloc(nmem, size))) log_oom_w(__func__, func);
-	return ret;
-}
-
-void free_v(void **ptr)
-{
-	if(!ptr || !*ptr) return;
-	free(*ptr);
-	*ptr=NULL;
-}
-
-void free_w(char **str)
-{
-	free_v((void **)str);
-}
-
-int astrcat(char **buf, const char *append, const char *func)
-{
-	int l=0;
-	char *copy=NULL;
-	if(append) l+=strlen(append);
-	if(*buf) l+=strlen(*buf);
-	l++;
-	if((*buf && !(copy=strdup_w(*buf, __func__)))
-	  || !(*buf=(char *)realloc_w(*buf, l, __func__)))
-	{
-		log_oom_w(__func__, func);
-		return -1;
-	}
-	snprintf(*buf, l, "%s%s", copy?copy:"", append?append:"");
-	if(copy) free(copy);
-	return 0;
-}
-
 // Strip any trailing slashes (unless it is '/').
 void strip_trailing_slashes(char **str)
 {

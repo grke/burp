@@ -6,6 +6,7 @@
 
 #include "burp.h"
 #include "cmd.h"
+#include "action.h"
 
 #define CNTR_ENT_SIZE	256
 
@@ -81,7 +82,7 @@ extern void cntr_free(struct cntr **cntr);
 extern const char *bytes_to_human(unsigned long long counter);
 extern void cntr_print(struct cntr *cntr, enum action act);
 extern int cntr_stats_to_file(struct cntr *cntr,
-	const char *directory, enum action act, struct conf *conf);
+	const char *directory, enum action act, struct conf **conf);
 extern void cntr_print_end(struct cntr *c);
 extern void cntr_print_end_phase1(struct cntr *c);
 extern void cntr_add(struct cntr *c, char ch, int print);
@@ -107,7 +108,7 @@ extern int cntr_send(struct cntr *cntr);
 #endif
 
 extern int str_to_cntr(const char *str, struct cstat *cstat, char **path);
-extern int cntr_recv(struct asfd *asfd, struct conf *conf);
+extern int cntr_recv(struct asfd *asfd, struct conf **conf);
 
 extern const char *cntr_status_to_str(struct cntr *cntr);
 extern cntr_status cntr_str_to_status(const char *str);

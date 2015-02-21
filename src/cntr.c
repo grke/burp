@@ -507,7 +507,7 @@ void cntr_print(struct cntr *cntr, enum action act)
 #ifndef HAVE_WIN32
 
 int cntr_stats_to_file(struct cntr *cntr,
-	const char *directory, enum action act, struct conf *conf)
+	const char *directory, enum action act, struct conf **confs)
 {
 	int ret=-1;
 	int fd=-1;
@@ -543,7 +543,7 @@ int cntr_stats_to_file(struct cntr *cntr,
 	  || as->init(as, 0)
 	  || !(wfd=asfd_alloc())
 	  || wfd->init(wfd, "stats file",
-		as, fd, NULL, ASFD_STREAM_LINEBUF, conf))
+		as, fd, NULL, ASFD_STREAM_LINEBUF, confs))
 			goto end;
 	as->asfd_add(as, wfd);
 	fd=-1;
@@ -788,7 +788,7 @@ int cntr_send(struct cntr *cntr)
 #endif
 
 static enum asl_ret cntr_recv_func(struct asfd *asfd,
-	struct conf *conf, void *param)
+	struct conf **confs, void *param)
 {
 /*
 	if(str_to_cntr(asfd->rbuf->buf, NULL, NULL, NULL, NULL,
@@ -798,9 +798,9 @@ static enum asl_ret cntr_recv_func(struct asfd *asfd,
 	return ASL_END_OK;
 }
 
-int cntr_recv(struct asfd *asfd, struct conf *conf)
+int cntr_recv(struct asfd *asfd, struct conf **confs)
 {
-	return asfd->simple_loop(asfd, conf, NULL, __func__, cntr_recv_func);
+	return asfd->simple_loop(asfd, confs, NULL, __func__, cntr_recv_func);
 }
 
 const char *cntr_status_to_str(struct cntr *cntr)

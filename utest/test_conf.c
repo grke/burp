@@ -76,7 +76,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_DEDUP_GROUP:
 		case OPT_VSS_DRIVES:
 		case OPT_REGEX:
-			ck_assert_int_eq(get_string(c[o]), 0);
+			ck_assert_int_eq(get_string(c[o]), NULL);
 			break;
 		case OPT_RATELIMIT:
 			ck_assert_int_eq(get_float(c[o]), 0);
@@ -171,7 +171,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_INCGLOB:
         	case OPT_FIFOS:
         	case OPT_BLOCKDEVS:
-			ck_assert_int_eq(get_strlist(c[o]), 0);
+			ck_assert_int_eq(get_strlist(c[o]), NULL);
 			break;
 		case OPT_PROTOCOL:
 			ck_assert_int_eq(get_e_protocol(c[o]), PROTO_AUTO);

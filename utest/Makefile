@@ -4,6 +4,7 @@ LIBS = -lcheck -lpthread -lm -lrt -lssl -lcrypto
 SRCS = \
 	test_base64.c \
 	test_cmd.c \
+	test_conf.c \
 	test_hexmap.c \
 	test_pathcmp.c
 
@@ -13,7 +14,7 @@ PROGS = clean $(SRCS:.c=.test)
 
 .c.test:
 	@echo "Compiling $<"
-	$(CXX) -Wall -o $@ $< ../src/$(subst test_,,$<) $(LIBS)
+	$(CXX) -Wall -g -o $@ $< ../src/$(subst test_,,$<) $(LIBS)
 	@echo "Running $<"
 	./$@ || exit 1
 	rm $@

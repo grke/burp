@@ -1,24 +1,11 @@
-#ifndef _CONF_FILE_H
-#define _CONF_FILE_H
-
-#include "cntr.h"
-#include "strlist.h"
-#include "protocol2/rabin/rconf.h"
-
-#define CLIENT_CAN_DELETE		0x01
-#define CLIENT_CAN_DIFF			0x02
-#define CLIENT_CAN_FORCE_BACKUP		0x04
-#define CLIENT_CAN_LIST			0x08
-#define CLIENT_CAN_RESTORE		0x10
-#define CLIENT_CAN_VERIFY		0x20
-
-#define SERVER_CAN_RESTORE		0x01
+#ifndef _CONF_H
+#define _CONF_H
 
 enum burp_mode
 {
-	MODE_UNSET=0,
-	MODE_SERVER,
-	MODE_CLIENT
+	BURP_MODE_UNSET=0,
+	BURP_MODE_SERVER,
+	BURP_MODE_CLIENT
 };
 
 enum protocol
@@ -28,215 +15,253 @@ enum protocol
 	PROTO_2
 };
 
-struct conf
+enum recovery_method
 {
-	char *conffile;
-	enum burp_mode mode;
-	char *lockfile;
-	uint8_t log_to_syslog;
-	uint8_t log_to_stdout;
-	uint8_t progress_counter;
-	char *ssl_cert_ca;
-	char *ssl_cert;
-	char *ssl_key;
-	char *ssl_key_password;
-	char *ssl_peer_cn;
-	char *ssl_ciphers;
-	int ssl_compression;
-	char *user;
-	char *group;
-	float ratelimit;
-	int network_timeout;
-
-  // If the client tells us it is windows, this is set on the server side.
-	uint8_t client_is_windows;
-
-	char *peer_version;
-
-  // Whether to run in protocol1, or 2 style, or to choose automatically.
-	enum protocol protocol;
-
-// Server options.
-	char *address;
-	char *port;
-	char *status_address;
-	char *status_port;
-	char *directory;
-	char *timestamp_format;
-	char *clientconfdir;
-	char *ssl_dhfile;
-	int max_children;
-	int max_status_children;
-	char *client_lockdir;
-	mode_t umask;
-	int max_hardlinks;
-	int max_storage_subdirs;
-	uint8_t forking;
-	uint8_t daemon;
-	uint8_t directory_tree;
-	char *ca_conf;
-	char *ca_name;
-	char *ca_server_name;
-	char *ca_burp_ca;
-	uint8_t password_check;
-	char *manual_delete;
-	char *monitor_logfile; // An ncurses client option, from command line.
-	uint8_t monitor_browse_cache;
-
-// Client options.
-	char *cname; // set on the server when client connects
-	char *password; // also a clientconfdir option
-	char *passwd; // also a clientconfdir option
-	char *server;
-	char *encryption_password;
-	char *autoupgrade_os;
-	char *autoupgrade_dir; // also a server option
-	char *ca_csr_dir;
-	int randomise;
-
-  // This block of client stuff is all to do with what files to backup.
-	struct strlist *startdir;
-	struct strlist *incexcdir;
-	struct strlist *fschgdir;
-	struct strlist *nobackup;
-	struct strlist *incext; // include extensions
-	struct strlist *excext; // exclude extensions
-	struct strlist *increg; // include (regular expression)
-	struct strlist *excreg; // exclude (regular expression)
-	struct strlist *excfs; // exclude filesystems
-	struct strlist *excom; // exclude from compression
-	struct strlist *incglob; // include (glob expression)
-	uint8_t cross_all_filesystems;
-	uint8_t read_all_fifos;
-	struct strlist *fifos;
-	uint8_t read_all_blockdevs;
-	struct strlist *blockdevs;
-	ssize_t min_file_size;
-	ssize_t max_file_size;
-	uint8_t split_vss;
-	uint8_t strip_vss;
-	char *vss_drives;
-	uint8_t atime;
-  // These are to do with restore.
-	uint8_t overwrite;
-	int strip;
-	char *backup;
-	char *backup2; // For diffs.
-	char *restoreprefix;
-	char *regex;
-	char *restore_spool;
-  // To do with listing.
-	char *browsefile;
-	char *browsedir;
-
-  // Backup scripts.
-	char *b_script_pre;
-	struct strlist *b_script_pre_arg;
-	char *b_script_post;
-	struct strlist *b_script_post_arg;
-	uint8_t b_script_post_run_on_fail;
-	char *r_script_pre;
-	struct strlist *r_script_pre_arg;
-	char *r_script_post;
-	struct strlist *r_script_post_arg;
-	uint8_t r_script_post_run_on_fail;
-
-  // Server scripts.
-	char *s_script_pre;
-	struct strlist *s_script_pre_arg;
-	uint8_t s_script_pre_notify;
-	char *s_script_post;
-	struct strlist *s_script_post_arg;
-	uint8_t s_script_post_run_on_fail;
-	uint8_t s_script_post_notify;
-
-  // Rabin conf
-	struct rconf rconf;
-
-  // Use these when you want to give the same args to both post and pre
-  // scripts.
-	char *b_script;
-	struct strlist *b_script_arg;
-	char *r_script;
-	struct strlist *r_script_arg;
-
-	char *s_script;
-	struct strlist *s_script_arg;
-	uint8_t s_script_notify;
-
-// Client options on the server.
-// They can be set globally in the server config, or for each client.
-	uint8_t hardlinked_archive;
-
-	struct strlist *keep;
-
-	char *recovery_method;
-	uint8_t librsync;
-
-	uint8_t compression;
-	uint8_t version_warn;
-	uint8_t path_length_warn;
-	ssize_t hard_quota;
-	ssize_t soft_quota;
-
-	char *timer_script;
-	struct strlist *timer_arg;
-
-  // Notify scripts
-	char *n_success_script;
-	struct strlist *n_success_arg;
-	uint8_t n_success_warnings_only;
-	uint8_t n_success_changes_only;
-
-	char *n_failure_script;
-	struct strlist *n_failure_arg;
-  // List of clients that are permitted to restore the files from our client.
-	struct strlist *rclients;
-
-	char *dedup_group;
-
-	uint8_t client_can; // Things the client is allowed to do.
-	uint8_t server_can; // Things the server is allowed to do.
-
-// Set to 1 on both client and server when the server is able to send counters
-// on resume/verify/restore.
-	uint8_t send_client_cntr;
-
-// Set on the server to the restore client name (the one that you connected
-// with) when the client has switched to a different set of client backups.
-	char *restore_client;
-// Path to the server initiated restore file.
-	char *restore_path;
-
-// Original client that backed up. Used when doing a server initiated restore
-// to an alternative client;
-	char *orig_client;
-
-	struct cntr *cntr;
-
-	// For testing.
-	uint8_t breakpoint;
+	RECOVERY_METHOD_UNSET=0,
+	RECOVERY_METHOD_DELETE,
+	RECOVERY_METHOD_RESUME,
+	RECOVERY_METHOD_USE
 };
 
-extern struct conf *conf_alloc(void);
-extern void conf_init(struct conf *c);
-extern void conf_free_content(struct conf *c);
-extern void conf_free(struct conf *c);
+enum conf_type
+{
+	CT_STRING=0,
+	CT_UINT,
+	CT_FLOAT,
+	CT_MODE_T,
+	CT_SSIZE_T,
+	CT_E_BURP_MODE,
+	CT_E_PROTOCOL,
+	CT_E_RECOVERY_METHOD,
+	CT_STRLIST,
+};
 
-extern int conf_get_pair(char buf[], char **field, char **value);
-extern int conf_parse_incexcs_buf(struct conf *c, const char *incexc);
-extern int conf_parse_incexcs_path(struct conf *c, const char *path);
-extern int conf_val_reset(const char *src, char **dest);
+struct conf
+{
+        enum conf_type conf_type;
+        const char *field;
+	union
+	{
+		char *s;
+		float f;
+		enum burp_mode burp_mode;
+		enum recovery_method recovery_method;
+		enum protocol protocol;
+		mode_t mode;
+		ssize_t ssizet;
+		unsigned int i;
+		struct strlist *sl;
+		struct cntr *cntr;
+	} data;
+	int flags;
+};
 
-extern int conf_load_clientconfdir(struct conf *globalc, struct conf *cc);
-extern int conf_load_global_only(const char *path, struct conf *globalc);
+enum conf_opt
+{
+	OPT_CONFFILE=0,
+	OPT_BURP_MODE,
+	OPT_LOCKFILE,
+	OPT_SYSLOG,
+	OPT_STDOUT,
+	OPT_PROGRESS_COUNTER,
+	OPT_SSL_CERT_CA,
+	OPT_SSL_CERT,
+	OPT_SSL_KEY,
+	OPT_SSL_KEY_PASSWORD,
+	OPT_SSL_PEER_CN,
+	OPT_SSL_CIPHERS,
+	OPT_SSL_COMPRESSION,
+	OPT_USER,
+	OPT_GROUP,
+	OPT_RATELIMIT,
+	OPT_NETWORK_TIMEOUT,
+	OPT_CLIENT_IS_WINDOWS,
+	OPT_PEER_VERSION,
+	OPT_PROTOCOL,
 
-// Random stuff that does not really belong here.
-#ifdef HAVE_WIN32
-extern void convert_backslashes(char **path);
-#endif
-extern int log_incexcs_buf(const char *incexc);
-extern int is_subdir(const char *dir, const char *sub);
-extern int pathcmp(const char *a, const char *b);
+	// Server options.
+	OPT_ADDRESS,
+	OPT_PORT,
+	OPT_STATUS_ADDRESS,
+	OPT_STATUS_PORT,
+	OPT_DIRECTORY,
+	OPT_TIMESTAMP_FORMAT,
+	OPT_CLIENTCONFDIR,
+	OPT_SSL_DHFILE,
+	OPT_MAX_CHILDREN,
+	OPT_MAX_STATUS_CHILDREN,
+	OPT_CLIENT_LOCKDIR,
+	OPT_UMASK,
+	OPT_MAX_HARDLINKS,
+	OPT_MAX_STORAGE_SUBDIRS,
+	OPT_FORK,
+	OPT_DAEMON,
+	OPT_DIRECTORY_TREE,
+	OPT_CA_CONF,
+	OPT_CA_NAME,
+	OPT_CA_SERVER_NAME,
+	OPT_CA_BURP_CA,
+	OPT_PASSWORD_CHECK,
+	OPT_MANUAL_DELETE,
+	OPT_MONITOR_LOGFILE, // An ncurses client option, from command line.
+	OPT_MONITOR_BROWSE_CACHE,
+
+	// Client options.
+	OPT_CNAME, // set on the server when client connects
+	OPT_PASSWORD, // also a clientconfdir option
+	OPT_PASSWD, // also a clientconfdir option
+	OPT_SERVER,
+	OPT_ENCRYPTION_PASSWORD,
+	OPT_AUTOUPGRADE_OS,
+	OPT_AUTOUPGRADE_DIR, // also a server option
+	OPT_CA_CSR_DIR,
+	OPT_RANDOMISE,
+
+	// This block of client stuff is all to do with what files to backup.
+	OPT_STARTDIR,
+	OPT_INCEXCDIR,
+	OPT_FSCHGDIR,
+	OPT_NOBACKUP,
+	OPT_INCEXT, // include extensions
+	OPT_EXCEXT, // exclude extensions
+	OPT_INCREG, // include (regular expression)
+	OPT_EXCREG, // exclude (regular expression)
+	OPT_EXCFS, // exclude filesystems
+	OPT_EXCOM, // exclude from compression
+	OPT_INCGLOB, // include (glob expression)
+	OPT_CROSS_ALL_FILESYSTEMS,
+	OPT_READ_ALL_FIFOS,
+	OPT_FIFOS,
+	OPT_READ_ALL_BLOCKDEVS,
+	OPT_BLOCKDEVS,
+	OPT_MIN_FILE_SIZE,
+	OPT_MAX_FILE_SIZE,
+	OPT_SPLIT_VSS,
+	OPT_STRIP_VSS,
+	OPT_VSS_DRIVES,
+	OPT_ATIME,
+	// These are to do with restore.
+	OPT_OVERWRITE,
+	OPT_STRIP,
+	OPT_BACKUP,
+	OPT_BACKUP2, // For diffs.
+	OPT_RESTOREPREFIX,
+	OPT_REGEX,
+	OPT_RESTORE_SPOOL,
+	// To do with listing.
+	OPT_BROWSEFILE,
+	OPT_BROWSEDIR,
+
+	// Backup scripts.
+	OPT_B_SCRIPT_PRE,
+	OPT_B_SCRIPT_PRE_ARG,
+	OPT_B_SCRIPT_POST,
+	OPT_B_SCRIPT_POST_ARG,
+	OPT_B_SCRIPT_POST_RUN_ON_FAIL,
+	OPT_R_SCRIPT_PRE,
+	OPT_R_SCRIPT_PRE_ARG,
+	OPT_R_SCRIPT_POST,
+	OPT_R_SCRIPT_POST_ARG,
+	OPT_R_SCRIPT_POST_RUN_ON_FAIL,
+
+	// Server scripts.
+	OPT_S_SCRIPT_PRE,
+	OPT_S_SCRIPT_PRE_ARG,
+	OPT_S_SCRIPT_PRE_NOTIFY,
+	OPT_S_SCRIPT_POST,
+	OPT_S_SCRIPT_POST_ARG,
+	OPT_S_SCRIPT_POST_RUN_ON_FAIL,
+	OPT_S_SCRIPT_POST_NOTIFY,
+
+	// Use these when you want to give the same args to both post and pre
+	// scripts.
+	OPT_B_SCRIPT,
+	OPT_B_SCRIPT_ARG,
+	OPT_R_SCRIPT,
+	OPT_R_SCRIPT_ARG,
+
+	OPT_S_SCRIPT,
+	OPT_S_SCRIPT_ARG,
+	OPT_S_SCRIPT_NOTIFY,
+
+	// Client options on the server.
+	// They can be set globally in the server config, or for each client.
+	OPT_HARDLINKED_ARCHIVE,
+
+	OPT_KEEP,
+
+	OPT_WORKING_DIR_RECOVERY_METHOD,
+	OPT_LIBRSYNC,
+
+	OPT_COMPRESSION,
+	OPT_VERSION_WARN,
+	OPT_PATH_LENGTH_WARN,
+	OPT_HARD_QUOTA,
+	OPT_SOFT_QUOTA,
+
+	OPT_TIMER_SCRIPT,
+	OPT_TIMER_ARG,
+
+	// Notify scripts
+	OPT_N_SUCCESS_SCRIPT,
+	OPT_N_SUCCESS_ARG,
+	OPT_N_SUCCESS_WARNINGS_ONLY,
+	OPT_N_SUCCESS_CHANGES_ONLY,
+
+	OPT_N_FAILURE_SCRIPT,
+	OPT_N_FAILURE_ARG,
+	// List of clients that are permitted to restore the files from our client.
+	OPT_RESTORE_CLIENTS,
+
+	OPT_DEDUP_GROUP,
+
+	OPT_CLIENT_CAN_DELETE,
+	OPT_CLIENT_CAN_DIFF,
+	OPT_CLIENT_CAN_FORCE_BACKUP,
+	OPT_CLIENT_CAN_LIST,
+	OPT_CLIENT_CAN_RESTORE,
+	OPT_CLIENT_CAN_VERIFY,
+	OPT_SERVER_CAN_RESTORE,
+
+	// Set to 1 on both client and server when the server is able to send
+	// counters on resume/verify/restore.
+	OPT_SEND_CLIENT_CNTR,
+
+	// Set on the server to the restore client name (the one that you
+	// connected with) when the client has switched to a different set of
+	// client backups.
+	OPT_RESTORE_CLIENT,
+	// Path to the server initiated restore file.
+	OPT_RESTORE_PATH,
+
+	// Original client that backed up. Used when doing a server initiated
+	// restore to an alternative client,
+	OPT_ORIG_CLIENT,
+
+	OPT_CNTR,
+
+	// For testing.
+	OPT_BREAKPOINT,
+
+	OPT_MAX
+};
+
+extern struct conf **confs_alloc(void);
+extern void confs_free(struct conf ***confs);
+extern int confs_init(struct conf **confs);
+
+extern void free_incexcs(struct conf **confs);
+extern int conf_set(struct conf **confs, const char *field, const char *value);
+extern int confs_dump(struct conf **confs);
+
+extern struct strlist *get_strlist(struct conf *conf);
+extern char *get_string(struct conf *conf);
+extern int get_int(struct conf *conf);
+extern float get_float(struct conf *conf);
+extern ssize_t get_ssize_t(struct conf *conf);
+extern mode_t get_mode_t(struct conf *conf);
+extern enum burp_mode get_e_burp_mode(struct conf *conf);
+extern enum protocol get_e_protocol(struct conf *conf);
+extern enum recovery_method get_e_recovery_method(struct conf *conf);
 
 #endif

@@ -116,7 +116,7 @@ const char *progname(void)
 	return prog;
 }
 
-int set_logfp(const char *path, struct conf *conf)
+int set_logfp(const char *path, struct conf **confs)
 {
 	close_fp(&logfp);
 	if(path)
@@ -127,8 +127,8 @@ int set_logfp(const char *path, struct conf *conf)
 #ifndef HAVE_WIN32
 	if(logfp) setlinebuf(logfp);
 #endif
-	do_syslog=conf->log_to_syslog;
-	do_stdout=conf->log_to_stdout;
+	do_syslog=get_int(confs[OPT_SYSLOG]);
+	do_stdout=get_int(confs[OPT_STDOUT]);
 	do_progress_counter=conf->progress_counter;
 
 	if(syslog_opened)
@@ -161,11 +161,11 @@ void log_out_of_memory(const char *function)
 	else logp("out of memory in unknown function\n");
 }
 
-void log_restore_settings(struct conf *cconf, int srestore)
+void log_restore_settings(struct conf **cconfs, int srestore)
 {
 	struct strlist *l;
 	logp("Restore settings:\n");
-	if(cconf->orig_client)
+	if(get_string(cconfs[OPT_ORIG_CLIENT]))
 		logp("orig_client = %s\n", cconf->orig_client);
 	if(cconf->backup) logp("backup = %s\n", cconf->backup);
 	if(srestore)

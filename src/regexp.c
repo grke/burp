@@ -2,12 +2,6 @@
 
 #include <stdlib.h>
 
-#if defined(HAVE_PCREPOSIX)
-#include <pcreposix.h>
-#else
-#include <regex.h>
-#endif
-
 int compile_regex(regex_t **regex, const char *str)
 {
 	if(str && *str)

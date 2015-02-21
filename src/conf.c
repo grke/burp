@@ -2,7 +2,9 @@
 #include "strlist.h"
 #include "conf.h"
 #include "log.h"
-#include "handy.h"
+#include "alloc.h"
+#include "cntr.h"
+#include "strlist.h"
 
 #include <assert.h>
 
@@ -108,6 +110,12 @@ enum recovery_method get_e_recovery_method(struct conf *conf)
 	return conf->data.recovery_method;
 }
 
+struct cntr *get_cntr(struct conf *conf)
+{
+	assert(conf->conf_type==CT_CNTR);
+	return conf->data.cntr;
+}
+
 static int set_string(struct conf *conf, const char *s)
 {
 	assert(conf->conf_type==CT_STRING);
@@ -127,8 +135,7 @@ static int set_int(struct conf *conf, unsigned int i)
 static int set_strlist(struct conf *conf, struct strlist *s)
 {
 	assert(conf->conf_type==CT_STRLIST);
-	// FIX THIS
-	//if(conf->data.sl) strlists_free(&conf->data.sl);
+	if(conf->data.sl) strlists_free(&conf->data.sl);
 	conf->data.sl=s;
 	return 0;
 }
@@ -175,6 +182,13 @@ static int set_ssize_t(struct conf *conf, ssize_t s)
 	return 0;
 }
 
+int set_cntr(struct conf *conf, struct cntr *cntr)
+{
+	assert(conf->conf_type==CT_CNTR);
+	conf->data.cntr=cntr;
+	return 0;
+}
+
 static void conf_free_content(struct conf *c)
 {
 	if(!c) return;
@@ -188,8 +202,10 @@ static void conf_free_content(struct conf *c)
 			}
 			break;
 		case CT_STRLIST:
-			// FIX THIS.
-			//strlists_free(&c->data.sl);
+			strlists_free(&c->data.sl);
+			break;
+		case CT_CNTR:
+			cntr_free(&c->data.cntr);
 			break;
 		case CT_FLOAT:
 		case CT_E_BURP_MODE:
@@ -431,7 +447,7 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_ORIG_CLIENT:
 	  return sc_str(c[o], 0, 0, "orig_client");
 	case OPT_CNTR:
-	  return sc_str(c[o], 0, 0, "cntr");
+	  return sc_str(c[o], 0, 0, "");
 	case OPT_BREAKPOINT:
 	  return sc_int(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE, "breakpoint");
@@ -678,6 +694,7 @@ static int set_conf(struct conf *c, const char *field, const char *value)
 		case CT_SSIZE_T:
 		case CT_E_PROTOCOL:
 		case CT_STRLIST:
+		case CT_CNTR:
 			break;
 	}
 	return 0;
@@ -728,6 +745,9 @@ static char *conf_data_to_str(struct conf *conf)
 			snprintf(ret, sizeof(ret), "%o", get_mode_t(conf));
 			break;
 		case CT_SSIZE_T:
+			// FIX THIS
+			break;
+		case CT_CNTR:
 			break;
 	}
 	return ret;
@@ -754,8 +774,11 @@ struct conf **confs_alloc(void)
 
 void confs_free(struct conf ***confs)
 {
+	int i=0;
 	if(!confs || !*confs) return;
-	free(*confs);
+	for(i=0; i<OPT_MAX; i++)
+		free_v((void **)&((*confs)[i]));
+	free_v((void **)confs);
 	*confs=NULL;
 }
 

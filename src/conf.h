@@ -34,6 +34,7 @@ enum conf_type
 	CT_E_PROTOCOL,
 	CT_E_RECOVERY_METHOD,
 	CT_STRLIST,
+	CT_CNTR,
 };
 
 struct conf
@@ -263,5 +264,8 @@ extern mode_t get_mode_t(struct conf *conf);
 extern enum burp_mode get_e_burp_mode(struct conf *conf);
 extern enum protocol get_e_protocol(struct conf *conf);
 extern enum recovery_method get_e_recovery_method(struct conf *conf);
+extern struct cntr *get_cntr(struct conf *conf);
+
+extern int set_cntr(struct conf *conf, struct cntr *cntr);
 
 #endif

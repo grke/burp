@@ -1,13 +1,27 @@
 #include <check.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "../src/alloc.h"
 #include "../src/conf.h"
 
 void logp(const char *fmt, ...) { }
-void *calloc_w(size_t nmem, size_t size, const char *func)
-{ return calloc(nmem, size); }
-char *strdup_w(const char *s, const char *func)
-{ return strdup(s); }
+// Stuff pulled in from cntr.c:
+// FIX THIS: Most of it can be deleted if cntr_stats_to_file did not have all
+// the async stuff in it.
+void logc(const char *fmt, ...) { }
+const char *getdatestr(time_t t) { return ""; }
+const char *time_taken(time_t d) { return ""; }
+struct async *async_alloc(void) { struct async *a=NULL; return a; }
+struct asfd *asfd_alloc(void) { struct asfd *v=NULL; return v; }
+char *prepend_s(const char *prep, const char *fname) { return (char *)""; }
+void close_fd(int *fd) { }
+void async_free(struct async **as) { }
+void asfd_free(struct asfd **asfd) { }
+int json_cntr_to_file(struct asfd *asfd, struct cntr *cntr) { return 0; }
+// Stuff pulled in from strlist.c:
+#include "../src/regexp.h"
+int pathcmp(const char *a, const char *b) { return 0; }
+int compile_regex(regex_t **regex, const char *str) { return 0; }
 
 static void check_default(struct conf **c, enum conf_opt o)
 {
@@ -203,6 +217,7 @@ START_TEST(test_conf_defaults)
 		check_default(confs, (enum conf_opt)i);
 	confs_free(&confs);
 	ck_assert_int_eq(confs, 0);
+	ck_assert_int_eq(alloc_count, free_count);
 }
 END_TEST
 

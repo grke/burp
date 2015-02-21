@@ -47,3 +47,21 @@ char *prepend_s(const char *prep, const char *fname)
 {
 	return prepend_slash(prep, fname, strlen(fname));
 }
+
+int astrcat(char **buf, const char *append, const char *func)
+{
+	int l=0;
+	char *copy=NULL;
+	if(append) l+=strlen(append);
+	if(*buf) l+=strlen(*buf);
+	l++;
+	if((*buf && !(copy=strdup_w(*buf, __func__)))
+	  || !(*buf=(char *)realloc_w(*buf, l, __func__)))
+	{
+		log_oom_w(__func__, func);
+		return -1;
+	}
+	snprintf(*buf, l, "%s%s", copy?copy:"", append?append:"");
+	free_w(&copy);
+	return 0;
+}

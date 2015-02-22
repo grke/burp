@@ -22,6 +22,6 @@ struct sel
 	uint8_t gotfirstresponse;
 };
 
-extern int status_client_ncurses(enum action act, struct conf *conf);
+extern int status_client_ncurses(enum action act, struct conf **confs);
 
 #endif

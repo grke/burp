@@ -30,14 +30,14 @@ int backup_phase3_server_protocol1(struct sdirs *sdirs,
 	while(ucfp || chfp)
 	{
 		if(ucfp && !ucb->path.buf
-		  && (ars=sbufl_fill(ucb, NULL, ucfp, NULL, cconf->cntr)))
+		  && (ars=sbufl_fill(ucb, NULL, ucfp, NULL, cget_cntr(confs[OPT_CNTR]))))
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
 			close_fp(&ucfp);
 		}
 		if(chfp && !chb->path.buf
-		  && (ars=sbufl_fill(chb, NULL, chfp, NULL, cconf->cntr)))
+		  && (ars=sbufl_fill(chb, NULL, chfp, NULL, cget_cntr(confs[OPT_CNTR]))))
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.

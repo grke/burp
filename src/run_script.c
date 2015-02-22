@@ -2,7 +2,7 @@
 
 #ifndef HAVE_WIN32
 
-static int log_script_output(struct asfd *asfd, FILE **fp, struct conf *conf,
+static int log_script_output(struct asfd *asfd, FILE **fp, struct conf **confs,
 	int do_logp, int do_logw, char **logbuf)
 {
 	char buf[256]="";
@@ -31,7 +31,7 @@ static void run_script_sigchld_handler(int sig)
 }
 
 static int run_script_select(struct asfd *asfd, FILE **sout, FILE **serr,
-	struct conf *conf, int do_logp, int do_logw, char **logbuf)
+	struct conf **confs, int do_logp, int do_logw, char **logbuf)
 {
 	int mfd=-1;
 	fd_set fsr;
@@ -87,7 +87,7 @@ static int run_script_select(struct asfd *asfd, FILE **sout, FILE **serr,
 #endif
 
 int run_script_to_buf(struct asfd *asfd,
-	const char **args, struct strlist *userargs, struct conf *conf,
+	const char **args, struct strlist *userargs, struct conf **confs,
 	int do_wait, int do_logp, int do_logw, char **logbuf)
 {
 	int a=0;
@@ -161,7 +161,7 @@ int run_script_to_buf(struct asfd *asfd,
 }
 
 int run_script(struct asfd *asfd, const char **args, struct strlist *userargs,
-	struct conf *conf, int do_wait, int do_logp, int do_logw)
+	struct conf **confs, int do_wait, int do_logp, int do_logw)
 {
 	return run_script_to_buf(asfd, args, userargs, conf, do_wait,
 		do_logp, do_logw, NULL /* do not save output to buffer */);

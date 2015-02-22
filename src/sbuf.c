@@ -25,7 +25,7 @@ alloc_count++;
 	return sb;
 }
 
-struct sbuf *sbuf_alloc(struct conf *conf)
+struct sbuf *sbuf_alloc(struct conf **confs)
 {
 	return sbuf_alloc_protocol(conf->protocol);
 }
@@ -101,7 +101,7 @@ int sbuf_pathcmp(struct sbuf *a, struct sbuf *b)
 }
 
 
-int sbuf_open_file(struct sbuf *sb, struct asfd *asfd, struct conf *conf)
+int sbuf_open_file(struct sbuf *sb, struct asfd *asfd, struct conf **confs)
 {
 	BFILE *bfd=&sb->protocol2->bfd;
 #ifdef HAVE_WIN32
@@ -142,7 +142,7 @@ ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize)
 }
 
 int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
-	struct blk *blk, const char *datpath, struct conf *conf)
+	struct blk *blk, const char *datpath, struct conf **confs)
 {
 	static unsigned int s;
 	static char lead[5]="";
@@ -306,7 +306,7 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 				return 0;
 			case CMD_WARNING:
 				logp("WARNING: %s\n", rbuf->buf);
-				if(conf) cntr_add(conf->cntr, CMD_WARNING, 1);
+				if(conf) cntr_add(get_cntr(confs[OPT_CNTR]), CMD_WARNING, 1);
 				break;
 			case CMD_GEN:
 				if(!strcmp(rbuf->buf, "restoreend")
@@ -351,13 +351,13 @@ end:
 }
 
 int sbuf_fill_from_gzfile(struct sbuf *sb, struct asfd *asfd,
-	gzFile zp, struct blk *blk, const char *datpath, struct conf *conf)
+	gzFile zp, struct blk *blk, const char *datpath, struct conf **confs)
 {
 	return sbuf_fill(sb, asfd, zp, blk, datpath, conf);
 }
 
 int sbuf_fill_from_net(struct sbuf *sb, struct asfd *asfd,
-	struct blk *blk, struct conf *conf)
+	struct blk *blk, struct conf **confs)
 {
 	return sbuf_fill(sb, asfd, NULL, blk, NULL, conf);
 }

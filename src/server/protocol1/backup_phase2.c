@@ -141,13 +141,13 @@ static int process_changed_file(struct asfd *asfd,
 	//logp("sig begin: %s\n", p1b->protocol1->datapth.buf);
 	if(!(p1b->protocol1->infb=rs_filebuf_new(asfd, NULL,
 		p1b->protocol1->sigfp, p1b->protocol1->sigzp,
-		-1, blocklen, -1, cconf->cntr)))
+		-1, blocklen, -1, cget_cntr(confs[OPT_CNTR]))))
 	{
 		logp("could not rs_filebuf_new for infb.\n");
 		return -1;
 	}
 	if(!(p1b->protocol1->outfb=rs_filebuf_new(asfd, NULL, NULL, NULL,
-		asfd->fd, ASYNC_BUF_LEN, -1, cconf->cntr)))
+		asfd->fd, ASYNC_BUF_LEN, -1, cget_cntr(confs[OPT_CNTR]))))
 	{
 		logp("could not rs_filebuf_new for in_outfb.\n");
 		return -1;
@@ -174,7 +174,7 @@ static int new_non_file(struct sbuf *p1b, FILE *ucfp, struct conf *cconf)
 	if(sbufl_to_manifest(p1b, ucfp, NULL))
 		return -1;
 	else
-		cntr_add(cconf->cntr, p1b->path.cmd, 0);
+		cntr_add(cget_cntr(confs[OPT_CNTR]), p1b->path.cmd, 0);
 	sbuf_free_content(p1b);
 	return 0;
 }
@@ -186,7 +186,7 @@ static int changed_non_file(struct sbuf *p1b,
 	if(sbufl_to_manifest(p1b, ucfp, NULL))
 		return -1;
 	else
-		cntr_add_changed(cconf->cntr, cmd);
+		cntr_add_changed(cget_cntr(confs[OPT_CNTR]), cmd);
 	sbuf_free_content(p1b);
 	return 0;
 }
@@ -217,8 +217,8 @@ static int process_unchanged_file(struct sbuf *p1b, struct sbuf *cb,
 	iobuf_copy(&cb->link, &p1b->link); p1b->link.buf=NULL;
 	if(sbufl_to_manifest(cb, ucfp, NULL))
 		return -1;
-	cntr_add_same(cconf->cntr, cb->path.cmd);
-	if(cb->protocol1->endfile.buf) cntr_add_bytes(cconf->cntr,
+	cntr_add_same(cget_cntr(confs[OPT_CNTR]), cb->path.cmd);
+	if(cb->protocol1->endfile.buf) cntr_add_bytes(cget_cntr(confs[OPT_CNTR]),
 		 strtoull(cb->protocol1->endfile.buf, NULL, 10));
 	sbuf_free_content(cb);
 	return 1;
@@ -364,7 +364,7 @@ static int maybe_process_file(struct asfd *asfd,
 			// Behind - need to read more from the old manifest.
 			// Count a deleted file - it was in the old manifest
 			// but not the new.
-			cntr_add_deleted(cconf->cntr, cb->path.cmd);
+			cntr_add_deleted(cget_cntr(confs[OPT_CNTR]), cb->path.cmd);
 			return 0;
 	}
 }
@@ -509,9 +509,9 @@ static int deal_with_receive_end_file(struct asfd *asfd, struct sdirs *sdirs,
 		goto error;
 
 	if(rb->flags & SBUFL_RECV_DELTA)
-		cntr_add_changed(cconf->cntr, rb->path.cmd);
+		cntr_add_changed(cget_cntr(confs[OPT_CNTR]), rb->path.cmd);
 	else
-		cntr_add(cconf->cntr, rb->path.cmd, 0);
+		cntr_add(cget_cntr(confs[OPT_CNTR]), rb->path.cmd, 0);
 
 	if(*last_requested && !strcmp(rb->path.buf, *last_requested))
 	{
@@ -521,7 +521,7 @@ static int deal_with_receive_end_file(struct asfd *asfd, struct sdirs *sdirs,
 
 	cp=strchr(rb->protocol1->endfile.buf, ':');
 	if(rb->protocol1->endfile.buf)
-		cntr_add_bytes(cconf->cntr,
+		cntr_add_bytes(cget_cntr(confs[OPT_CNTR]),
 			strtoull(rb->protocol1->endfile.buf, NULL, 10));
 	if(cp)
 	{
@@ -543,7 +543,7 @@ static int deal_with_receive_append(struct asfd *asfd, struct sbuf *rb,
 	rbuf=asfd->rbuf;
 	//logp("rbuf->len: %d\n", rbuf->len);
 
-	cntr_add_recvbytes(cconf->cntr, rbuf->len);
+	cntr_add_recvbytes(cget_cntr(confs[OPT_CNTR]), rbuf->len);
 	if(rb->protocol1->zp)
 		app=gzwrite(rb->protocol1->zp, rbuf->buf, rbuf->len);
 	else if(rb->protocol1->fp)
@@ -603,7 +603,7 @@ static int do_stuff_to_receive(struct asfd *asfd,
 	if(rbuf->cmd==CMD_WARNING)
 	{
 		logp("WARNING: %s\n", rbuf->buf);
-		cntr_add(cconf->cntr, rbuf->cmd, 0);
+		cntr_add(cget_cntr(confs[OPT_CNTR]), rbuf->cmd, 0);
 		return 0;
 	}
 
@@ -827,7 +827,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 
 		sbuf_free_content(p1b);
 
-		switch(sbufl_fill_phase1(p1b, NULL, p1zp, cconf->cntr))
+		switch(sbufl_fill_phase1(p1b, NULL, p1zp, cget_cntr(confs[OPT_CNTR])))
 		{
 			case 0: break;
 			case 1: gzclose_fp(&p1zp);
@@ -860,7 +860,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 		while(cmanfp)
 		{
 			sbuf_free_content(cb);
-			switch(sbufl_fill(cb, asfd, NULL, cmanfp, cconf->cntr))
+			switch(sbufl_fill(cb, asfd, NULL, cmanfp, cget_cntr(confs[OPT_CNTR])))
 			{
 				case 0: break;
 				case 1: gzclose_fp(&cmanfp);

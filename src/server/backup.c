@@ -188,8 +188,8 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 		}
 	}
 
-	cntr_print(cconf->cntr, ACTION_BACKUP);
-	cntr_stats_to_file(cconf->cntr, sdirs->rworking, ACTION_BACKUP, cconf);
+	cntr_print(cget_cntr(confs[OPT_CNTR]), ACTION_BACKUP);
+	cntr_stats_to_file(cget_cntr(confs[OPT_CNTR]), sdirs->rworking, ACTION_BACKUP, cconf);
 
 	if(cconf->protocol==PROTO_1)
 	{

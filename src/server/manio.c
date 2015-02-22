@@ -240,7 +240,7 @@ static int open_next_fpath(struct manio *manio)
 // Return -1 for error, 0 for stuff read OK, 1 for end of files.
 static int do_manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
 	struct sbuf *sb, struct blk *blk,
-	struct dpth *dpth, struct conf *conf, int phase1)
+	struct dpth *dpth, struct conf **confs, int phase1)
 {
 	int ars;
 
@@ -264,7 +264,7 @@ static int do_manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
 		}
 		else
 		{
-			ars=sbufl_fill(sb, asfd, NULL, manio->zp, conf->cntr);
+			ars=sbufl_fill(sb, asfd, NULL, manio->zp, get_cntr(confs[OPT_CNTR]));
 		}
 		switch(ars)
 		{
@@ -288,7 +288,7 @@ error:
 
 int manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
 	struct sbuf *sb, struct blk *blk,
-	struct dpth *dpth, struct conf *conf)
+	struct dpth *dpth, struct conf **confs)
 {
 	return do_manio_sbuf_fill(manio, asfd, sb, blk, dpth, conf, 0);
 }
@@ -301,7 +301,7 @@ int manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
 // this can be dealt with more safely.
 int manio_sbuf_fill_phase1(struct manio *manio, struct asfd *asfd,
 	struct sbuf *sb, struct blk *blk,
-	struct dpth *dpth, struct conf *conf)
+	struct dpth *dpth, struct conf **confs)
 {
 	return do_manio_sbuf_fill(manio, asfd, sb, blk, dpth, conf, 1);
 }
@@ -443,7 +443,7 @@ int manio_init_write_dindex(struct manio *manio, const char *dir)
 // Return -1 on error, 0 on OK, 1 for srcmanio finished.
 int manio_copy_entry(struct asfd *asfd, struct sbuf **csb, struct sbuf *sb,
 	struct blk **blk, struct manio *srcmanio,
-	struct manio *dstmanio, struct conf *conf)
+	struct manio *dstmanio, struct conf **confs)
 {
 	static int ars;
 	static char *copy=NULL;
@@ -487,7 +487,7 @@ error:
 
 int manio_forward_through_sigs(struct asfd *asfd,
 	struct sbuf **csb, struct blk **blk,
-	struct manio *manio, struct conf *conf)
+	struct manio *manio, struct conf **confs)
 {
 	// Call manio_copy_entry with nothing to write to, so
 	// that we forward through the sigs in manio.

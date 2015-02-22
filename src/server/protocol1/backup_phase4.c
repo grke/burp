@@ -37,7 +37,7 @@ int do_patch(struct asfd *asfd, const char *dst, const char *del,
 	if(!updp && !updfp) goto end;
 
 	result=rs_patch_gzfile(asfd,
-		dstp, delfp, delzp, updfp, updp, NULL, cconf->cntr);
+		dstp, delfp, delzp, updfp, updp, NULL, cget_cntr(confs[OPT_CNTR]));
 end:
 	close_fp(&dstp);
 	gzclose_fp(&delzp);
@@ -56,7 +56,7 @@ end:
 }
 
 static int make_rev_sig(const char *dst, const char *sig, const char *endfile,
-	int compression, struct conf *conf)
+	int compression, struct conf **confs)
 {
 	int ret=-1;
 	FILE *dstfp=NULL;
@@ -73,7 +73,7 @@ static int make_rev_sig(const char *dst, const char *sig, const char *endfile,
 	  || !(sigp=open_file(sig, "wb"))
 	  || rs_sig_gzfile(NULL, dstfp, dstzp, sigp,
 		get_librsync_block_len(endfile),
-		RS_DEFAULT_STRONG_LEN, NULL, conf->cntr)!=RS_DONE)
+		RS_DEFAULT_STRONG_LEN, NULL, get_cntr(confs[OPT_CNTR]))!=RS_DONE)
 			goto end;
 	ret=0;
 end:
@@ -122,7 +122,7 @@ static int make_rev_delta(const char *src, const char *sig, const char *del,
 	if(!delzp && !delfp) goto end;
 
 	if(rs_delta_gzfile(NULL, sumset, srcfp, srczp,
-		delfp, delzp, NULL, cconf->cntr)!=RS_DONE)
+		delfp, delzp, NULL, cget_cntr(confs[OPT_CNTR]))!=RS_DONE)
 			goto end;
 	ret=0;
 end:
@@ -187,7 +187,7 @@ end:
 }
 
 static int inflate_oldfile(const char *opath, const char *infpath,
-	struct stat *statp, struct conf *conf)
+	struct stat *statp, struct conf **confs)
 {
 	int ret=0;
 
@@ -313,7 +313,7 @@ static int jiggle(struct sdirs *sdirs, struct fdirs *fdirs, struct sbuf *sb,
 		{
 			logp("WARNING: librsync error when patching %s: %d\n",
 				oldpath, lrs);
-			cntr_add(cconf->cntr, CMD_WARNING, 1);
+			cntr_add(cget_cntr(confs[OPT_CNTR]), CMD_WARNING, 1);
 			// Try to carry on with the rest of the backup
 			// regardless.
 			//ret=-1;
@@ -493,14 +493,14 @@ static int maybe_delete_files_from_manifest(const char *manifesttmp,
 	while(omzp || dfp)
 	{
 		if(dfp && !db->path.buf
-		  && (ars=sbufl_fill(db, NULL, dfp, NULL, cconf->cntr)))
+		  && (ars=sbufl_fill(db, NULL, dfp, NULL, cget_cntr(confs[OPT_CNTR]))))
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
 			close_fp(&dfp);
 		}
 		if(omzp && !mb->path.buf
-		  && (ars=sbufl_fill(mb, NULL, NULL, omzp, cconf->cntr)))
+		  && (ars=sbufl_fill(mb, NULL, NULL, omzp, cget_cntr(confs[OPT_CNTR]))))
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
@@ -611,7 +611,7 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct fdirs *fdirs,
 
 	while(1)
 	{
-		switch(sbufl_fill(sb, NULL, NULL, zp, cconf->cntr))
+		switch(sbufl_fill(sb, NULL, NULL, zp, cget_cntr(confs[OPT_CNTR])))
 		{
 			case 0: break;
 			case 1: goto end;

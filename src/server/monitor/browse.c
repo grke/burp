@@ -44,7 +44,7 @@ end:
 }
 
 static int browse_manifest_start(struct asfd *srfd, struct cstat *cstat,
-	struct bu *bu, const char *browse, struct conf *conf)
+	struct bu *bu, const char *browse, struct conf **confs)
 {
 	int ret=-1;
 	char *manifest=NULL;
@@ -70,7 +70,7 @@ end:
 }
 
 int browse_manifest(struct asfd *srfd, struct cstat *cstat,
-	struct bu *bu, const char *browse, struct conf *conf)
+	struct bu *bu, const char *browse, struct conf **confs)
 {
 	if(conf->monitor_browse_cache)
 	{

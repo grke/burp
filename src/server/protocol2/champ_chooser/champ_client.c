@@ -3,7 +3,7 @@
 
 #include <sys/un.h>
 
-static int champ_chooser_fork(struct sdirs *sdirs, struct conf *conf)
+static int champ_chooser_fork(struct sdirs *sdirs, struct conf **confs)
 {
 	pid_t childpid=-1;
 
@@ -38,7 +38,7 @@ static int champ_chooser_fork(struct sdirs *sdirs, struct conf *conf)
 	return -1; // Not reached.
 }
 
-static int connect_to_champ_chooser(struct sdirs *sdirs, struct conf *conf)
+static int connect_to_champ_chooser(struct sdirs *sdirs, struct conf **confs)
 {
 	int len;
 	int s=-1;
@@ -89,7 +89,7 @@ static int connect_to_champ_chooser(struct sdirs *sdirs, struct conf *conf)
 }
 
 struct asfd *champ_chooser_connect(struct async *as,
-	struct sdirs *sdirs, struct conf *conf)
+	struct sdirs *sdirs, struct conf **confs)
 {
 	int champsock=-1;
 	char *champname=NULL;

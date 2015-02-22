@@ -42,9 +42,9 @@ extern int manio_init_write_dindex(struct manio *manio, const char *dir);
 extern void manio_set_protocol(struct manio *manio, enum protocol protocol);
 
 extern int manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
-	struct sbuf *sb, struct blk *blk, struct dpth *dpth, struct conf *conf);
+	struct sbuf *sb, struct blk *blk, struct dpth *dpth, struct conf **confs);
 extern int manio_sbuf_fill_phase1(struct manio *manio, struct asfd *asfd,
-	struct sbuf *sb, struct blk *blk, struct dpth *dpth, struct conf *conf);
+	struct sbuf *sb, struct blk *blk, struct dpth *dpth, struct conf **confs);
 
 extern int manio_write_sig(struct manio *manio, struct blk *blk);
 extern int manio_write_sig_and_path(struct manio *manio, struct blk *blk);
@@ -55,8 +55,8 @@ extern int manio_closed(struct manio *manio);
 extern int manio_copy_entry(struct asfd *asfd,
 	struct sbuf **csb, struct sbuf *sb,
 	struct blk **blk, struct manio *srcmanio,
-	struct manio *dstmanio, struct conf *conf);
+	struct manio *dstmanio, struct conf **confs);
 extern int manio_forward_through_sigs(struct asfd *asfd, struct sbuf **csb,
-	struct blk **blk, struct manio *manio, struct conf *conf);
+	struct blk **blk, struct manio *manio, struct conf **confs);
 
 #endif

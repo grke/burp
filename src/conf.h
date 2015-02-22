@@ -1,6 +1,14 @@
 #ifndef _CONF_H
 #define _CONF_H
 
+#define CONF_FLAG_CC_OVERRIDE		0x01
+#define CONF_FLAG_OVERRIDDEN		0x02
+#define CONF_FLAG_INCEXC		0x04
+#define CONF_FLAG_STRLIST_SORTED	0x08
+#define CONF_FLAG_STRLIST_REPLACE	0x10
+#define CONF_FLAG_SERVER_SET		0x20
+#define CONF_FLAG_CLIENT_SET		0x40
+
 enum burp_mode
 {
 	BURP_MODE_UNSET=0,
@@ -120,7 +128,8 @@ enum conf_opt
 
 	// This block of client stuff is all to do with what files to backup.
 	OPT_STARTDIR,
-	OPT_INCEXCDIR,
+	OPT_INCLUDE,
+	OPT_EXCLUDE,
 	OPT_FSCHGDIR,
 	OPT_NOBACKUP,
 	OPT_INCEXT, // include extensions
@@ -267,5 +276,18 @@ extern enum recovery_method get_e_recovery_method(struct conf *conf);
 extern struct cntr *get_cntr(struct conf *conf);
 
 extern int set_cntr(struct conf *conf, struct cntr *cntr);
+extern int set_string(struct conf *conf, const char *s);
+extern int set_int(struct conf *conf, unsigned int i);
+extern int set_e_burp_mode(struct conf *conf, enum burp_mode bm);
+extern int set_e_protocol(struct conf *conf, enum protocol p);
+extern int set_mode_t(struct conf *conf, mode_t m);
+extern int set_float(struct conf *conf, float f);
+extern int set_ssize_t(struct conf *conf, ssize_t s);
+extern int add_to_strlist(struct conf *conf, const char *value);
+
+extern enum burp_mode str_to_burp_mode(const char *str);
+extern enum protocol str_to_protocol(const char *str);
+extern enum recovery_method str_to_recovery_method(const char *str);
+extern int set_e_recovery_method(struct conf *conf, enum recovery_method r);
 
 #endif

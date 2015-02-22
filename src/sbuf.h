@@ -39,13 +39,13 @@ struct sbuf
 	struct sbuf *next;
 };
 
-extern struct sbuf *sbuf_alloc(struct conf *conf);
+extern struct sbuf *sbuf_alloc(struct conf **confs);
 extern struct sbuf *sbuf_alloc_protocol(enum protocol protocol);
 extern void sbuf_free_content(struct sbuf *sb);
 extern void sbuf_free(struct sbuf **sb);
 
 extern int sbuf_open_file(struct sbuf *sb,
-	struct asfd *asfd, struct conf *conf);
+	struct asfd *asfd, struct conf **confs);
 extern void sbuf_close_file(struct sbuf *sb, struct asfd *asfd);
 extern ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize);
 
@@ -61,10 +61,10 @@ extern void sbuf_print_alloc_stats(void);
 
 extern int sbuf_fill(struct sbuf *sb, struct asfd *asfd,
 	gzFile zp, struct blk *blk,
-	const char *datpath, struct conf *conf);
+	const char *datpath, struct conf **confs);
 extern int sbuf_fill_from_gzfile(struct sbuf *sb, struct asfd *asfd,
-	gzFile zp, struct blk *blk, const char *datpath, struct conf *conf);
+	gzFile zp, struct blk *blk, const char *datpath, struct conf **confs);
 extern int sbuf_fill_from_net(struct sbuf *sb, struct asfd *asfd,
-	struct blk *blk, struct conf *conf);
+	struct blk *blk, struct conf **confs);
 
 #endif

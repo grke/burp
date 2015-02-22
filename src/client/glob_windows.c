@@ -93,7 +93,7 @@ static char *xstrsub(const char *src, int begin, int len)
 	return ret;
 }
 
-static int process_entry(struct strlist *ig, struct conf *conf)
+static int process_entry(struct strlist *ig, struct conf **confs)
 {
 	int ret=-1;
 	size_t len1=0;
@@ -192,7 +192,7 @@ end:
 	return ret;
 }
 
-int glob_windows(struct conf *conf)
+int glob_windows(struct conf **confs)
 {
 	struct strlist *ig;
 

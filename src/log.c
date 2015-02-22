@@ -129,7 +129,7 @@ int set_logfp(const char *path, struct conf **confs)
 #endif
 	do_syslog=get_int(confs[OPT_SYSLOG]);
 	do_stdout=get_int(confs[OPT_STDOUT]);
-	do_progress_counter=conf->progress_counter;
+	do_progress_counter=get_int(confs[OPT_PROGRESS_COUNTER]);
 
 	if(syslog_opened)
 	{
@@ -166,22 +166,24 @@ void log_restore_settings(struct conf **cconfs, int srestore)
 	struct strlist *l;
 	logp("Restore settings:\n");
 	if(get_string(cconfs[OPT_ORIG_CLIENT]))
-		logp("orig_client = %s\n", cconf->orig_client);
-	if(cconf->backup) logp("backup = %s\n", cconf->backup);
+		logp("orig_client = %s\n", get_string(cconfs[OPT_ORIG_CLIENT]));
+	if(get_string(cconfs[OPT_BACKUP]))
+		logp("backup = %s\n", get_string(cconfs[OPT_BACKUP]));
 	if(srestore)
 	{
 		// This are unknown unless doing a server initiated restore.
-		logp("overwrite = %d\n", cconf->overwrite);
-		logp("strip = %d\n", cconf->strip);
+		logp("overwrite = %d\n", get_int(cconfs[OPT_OVERWRITE]));
+		logp("strip = %d\n", get_int(cconfs[OPT_STRIP]));
 	}
-	if(cconf->restoreprefix)
-		logp("restoreprefix = %s\n", cconf->restoreprefix);
-	if(cconf->regex) logp("regex = %s\n", cconf->regex);
-	for(l=cconf->incexcdir; l; l=l->next)
+	if(get_string(cconfs[OPT_RESTOREPREFIX]))
+	  logp("restoreprefix = %s\n", get_string(cconfs[OPT_RESTOREPREFIX]));
+	if(get_string(cconfs[OPT_REGEX]))
+		logp("regex = %s\n", get_string(cconfs[OPT_REGEX]));
+	for(l=get_strlist(cconfs[OPT_INCEXCDIR]); l; l=l->next)
 		if(l->flag) logp("include = %s\n", l->path);
 }
 
-int logw(struct asfd *asfd, struct conf *conf, const char *fmt, ...)
+int logw(struct asfd *asfd, struct conf **confs, const char *fmt, ...)
 {
 	int r=0;
 	char buf[512]="";
@@ -195,7 +197,7 @@ int logw(struct asfd *asfd, struct conf *conf, const char *fmt, ...)
 		logp("WARNING: %s\n", buf);
 	}
 	va_end(ap);
-	if(conf) cntr_add(conf->cntr, CMD_WARNING, 1);
+	if(confs) cntr_add(get_cntr(confs[OPT_CNTR]), CMD_WARNING, 1);
 	return r;
 }
 
@@ -218,4 +220,30 @@ void log_and_send_oom(struct asfd *asfd, const char *function)
 void log_set_json(int value)
 {
 	json=value;
+}
+
+void log_oom_w(const char *func, const char *orig_func)
+{
+	logp("out of memory in %s, called from %s\n", __func__, func);
+}
+
+int log_incexcs_buf(const char *incexc)
+{
+	char *tok=NULL;
+	char *copy=NULL;
+	if(!incexc || !*incexc) return 0;
+	if(!(copy=strdup_w(incexc, __func__)))
+		return -1;
+	if(!(tok=strtok(copy, "\n")))
+	{
+		logp("unable to parse server incexc\n");
+		free_w(&copy);
+		return -1;
+	}
+	do
+	{
+		logp("%s\n", tok);
+	} while((tok=strtok(NULL, "\n")));
+	free_w(&copy);
+	return 0;
 }

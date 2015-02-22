@@ -4,7 +4,7 @@
 #include "../../server/backup_phase1.h"
 
 // Used on resume, this just reads the phase1 file and sets up cntr.
-static int read_phase1(gzFile zp, struct conf *conf)
+static int read_phase1(gzFile zp, struct conf **confs)
 {
 	int ars=0;
 	struct sbuf *p1b;
@@ -12,7 +12,7 @@ static int read_phase1(gzFile zp, struct conf *conf)
 	while(1)
 	{
 		sbuf_free_content(p1b);
-		if((ars=sbufl_fill_phase1(p1b, NULL, zp, conf->cntr)))
+		if((ars=sbufl_fill_phase1(p1b, NULL, zp, get_cntr(confs[OPT_CNTR]))))
 		{
 			// ars==1 means it ended ok.
 			if(ars<0)
@@ -22,14 +22,14 @@ static int read_phase1(gzFile zp, struct conf *conf)
 			}
 			return 0;
 		}
-		cntr_add_phase1(conf->cntr, p1b->path.cmd, 0);
+		cntr_add_phase1(get_cntr(confs[OPT_CNTR]), p1b->path.cmd, 0);
 
 		if(p1b->path.cmd==CMD_FILE
 		  || p1b->path.cmd==CMD_ENC_FILE
 		  || p1b->path.cmd==CMD_METADATA
 		  || p1b->path.cmd==CMD_ENC_METADATA
 		  || p1b->path.cmd==CMD_EFS_FILE)
-			cntr_add_val(conf->cntr, CMD_BYTES_ESTIMATED,
+			cntr_add_val(get_cntr(confs[OPT_CNTR]), CMD_BYTES_ESTIMATED,
 				(unsigned long long)p1b->statp.st_size, 0);
 	}
 	sbuf_free(&p1b);
@@ -62,9 +62,9 @@ static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
 		sbuf_free_content(sb);
 
 		if(isphase1)
-			ars=sbufl_fill_phase1(sb, fp, zp, cconf->cntr);
+			ars=sbufl_fill_phase1(sb, fp, zp, cget_cntr(confs[OPT_CNTR]));
 		else
-			ars=sbufl_fill(sb, NULL, fp, zp, cconf->cntr);
+			ars=sbufl_fill(sb, NULL, fp, zp, cget_cntr(confs[OPT_CNTR]));
 
 		// Make sure we end up with the highest datapth we can possibly
 		// find - set_dpthl_from_string() will only set it if it is
@@ -109,15 +109,15 @@ static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
 
 		if(do_cntr)
 		{
-			if(same) cntr_add_same(cconf->cntr, sb->path.cmd);
-			else cntr_add_changed(cconf->cntr, sb->path.cmd);
+			if(same) cntr_add_same(cget_cntr(confs[OPT_CNTR]), sb->path.cmd);
+			else cntr_add_changed(cget_cntr(confs[OPT_CNTR]), sb->path.cmd);
 			if(sb->protocol1->endfile.buf)
 			{
 				unsigned long long e=0;
 				e=strtoull(sb->protocol1->endfile.buf,
 					NULL, 10);
-				cntr_add_bytes(cconf->cntr, e);
-				cntr_add_recvbytes(cconf->cntr, e);
+				cntr_add_bytes(cget_cntr(confs[OPT_CNTR]), e);
+				cntr_add_recvbytes(cget_cntr(confs[OPT_CNTR]), e);
 			}
 		}
 
@@ -209,7 +209,7 @@ static int do_resume_work(gzFile p1zp, FILE *p2fp, FILE *ucfp,
 	// Now should have all file pointers in the right places to resume.
 	if(incr_dpthl(dpthl, cconf)) goto error;
 
-	if(cconf->send_client_cntr && cntr_send(cconf->cntr)) goto error;
+	if(cconf->send_client_cntr && cntr_send(cget_cntr(confs[OPT_CNTR]))) goto error;
 
 	goto end;
 error:

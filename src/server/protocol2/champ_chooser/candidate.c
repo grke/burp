@@ -36,7 +36,7 @@ struct candidate *candidates_add_new(void)
 // This deals with reading in the sparse index, as well as actual candidate
 // manifests.
 int candidate_load(struct candidate *candidate,
-	const char *path, struct conf *conf)
+	const char *path, struct conf **confs)
 {
 	int ret=-1;
 	gzFile zp=NULL;
@@ -83,7 +83,7 @@ error:
 }
 
 // When a backup is ongoing, use this to add newly complete candidates.
-int candidate_add_fresh(const char *path, struct conf *conf)
+int candidate_add_fresh(const char *path, struct conf **confs)
 {
 	const char *cp=NULL;
 	struct candidate *candidate=NULL;

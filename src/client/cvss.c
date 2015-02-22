@@ -19,7 +19,7 @@ BOOL CtrlHandler(DWORD fdwCtrlType)
 	} 
 }
 
-int win32_start_vss(struct conf *conf)
+int win32_start_vss(struct conf **confs)
 {
 	int errors=0;
 
@@ -236,7 +236,7 @@ static int ensure_read(BFILE *bfd, char *buf, size_t s, int print_err)
 }
 
 int get_vss(BFILE *bfd, struct sbuf *sb, char **vssdata, size_t *vlen,
-	struct conf *conf)
+	struct conf **confs)
 {
 	bsid sid;
 	char *tmp=NULL;
@@ -298,7 +298,7 @@ static int ensure_write(BFILE *bfd, const char *buf, size_t got)
 	return -1;
 }
 
-int set_vss(BFILE *bfd, const char *vssdata, size_t vlen, struct conf *conf)
+int set_vss(BFILE *bfd, const char *vssdata, size_t vlen, struct conf **confs)
 {
 	// Just need to write the VSS stuff to the file.
 	if(!vlen || !vssdata) return 0;

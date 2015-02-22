@@ -34,7 +34,7 @@ static int hooks_alloc(struct hooks **hnew, char **path, char **fingerprints)
 // Return 0 for OK, -1 for error, 1 for finished reading the file.
 static int get_next_set_of_hooks(struct hooks **hnew, struct sbuf *sb,
 	gzFile spzp, char **path, char **fingerprints,
-	struct conf *conf)
+	struct conf **confs)
 {
 	while(1)
 	{
@@ -158,7 +158,7 @@ static int try_to_get_lock(struct lock *lock)
 
 /* Merge two files of sorted sparse indexes into each other. */
 static int merge_sparse_indexes(const char *srca, const char *srcb,
-	const char *dst, struct conf *conf)
+	const char *dst, struct conf **confs)
 {
 	int fcmp;
 	int ret=-1;
@@ -268,7 +268,7 @@ end:
 }
 
 static int merge_into_global_sparse(const char *sparse, const char *global,
-	struct conf *conf)
+	struct conf **confs)
 {
 	int ret=-1;
 	char *tmpfile=NULL;
@@ -305,7 +305,7 @@ end:
 }
 
 static int sparse_generation(struct manio *newmanio, uint64_t fcount,
-	struct sdirs *sdirs, struct conf *conf)
+	struct sdirs *sdirs, struct conf **confs)
 {
 	int ret=-1;
 	uint64_t i=0;
@@ -392,7 +392,7 @@ end:
 // This is basically backup_phase3_server() from protocol1. It used to merge the
 // unchanged and changed data into a single file. Now it splits the manifests
 // into several files.
-int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf *conf)
+int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 {
 	int ret=1;
 	int pcmp=0;

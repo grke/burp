@@ -113,7 +113,7 @@ static void ls_long_output_json(struct sbuf *sb)
 	yajl_map_close_w();
 }
 
-static void json_backup(char *statbuf, struct conf *conf)
+static void json_backup(char *statbuf, struct conf **confs)
 {
 	char *cp=NULL;
 	if((cp=strstr(statbuf, " (deletable)")))
@@ -176,7 +176,7 @@ static void list_item(int json, enum action act, struct sbuf *sb)
 }
 
 int do_list_client(struct asfd *asfd,
-	enum action act, int json, struct conf *conf)
+	enum action act, int json, struct conf **confs)
 {
 	int ret=-1;
 	char msg[512]="";

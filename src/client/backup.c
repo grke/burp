@@ -33,7 +33,7 @@ static void unset_low_priority(void)
 #endif
 
 // Return 0 for OK, -1 for error.
-int do_backup_client(struct asfd *asfd, struct conf *conf, enum action action,
+int do_backup_client(struct asfd *asfd, struct conf **confs, enum action action,
 	int resume)
 {
 	int ret=-1;
@@ -71,7 +71,7 @@ int do_backup_client(struct asfd *asfd, struct conf *conf, enum action action,
 			ret=1;
 			goto end;
 		case ACTION_ESTIMATE:
-			cntr_print(conf->cntr, ACTION_ESTIMATE);
+			cntr_print(get_cntr(confs[OPT_CNTR]), ACTION_ESTIMATE);
 			break;
 		default:
 			// Now, the server will be telling us what data we need

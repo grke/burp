@@ -87,7 +87,7 @@ static int process_sig(struct blk *blk)
 	return 0;
 }
 
-int hash_load(const char *champ, struct conf *conf)
+int hash_load(const char *champ, struct conf **confs)
 {
 	int ret=-1;
 	gzFile zp=NULL;

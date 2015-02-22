@@ -114,7 +114,7 @@ static int working_resume(struct asfd *asfd, struct sdirs *sdirs,
 }
 
 static int get_fullrealwork(struct asfd *asfd,
-	struct sdirs *sdirs, struct conf *conf)
+	struct sdirs *sdirs, struct conf **confs)
 {
 	struct stat statp;
 

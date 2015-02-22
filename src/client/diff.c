@@ -193,7 +193,7 @@ static void diff_long_output_json(struct sbuf *sb)
 	if(esc_lname) free(esc_lname);
 }
 
-static void json_backup(char *statbuf, struct conf *conf)
+static void json_backup(char *statbuf, struct conf **confs)
 {
 	char *cp=NULL;
 	if((cp=strstr(statbuf, " (deletable)")))
@@ -243,7 +243,7 @@ static void diff_item(int json, enum action act, struct sbuf *sb)
 }
 
 int do_diff_client(struct asfd *asfd,
-	enum action act, int json, struct conf *conf)
+	enum action act, int json, struct conf **confs)
 {
 	int ret=-1;
 	char msg[512]="";

@@ -2,12 +2,12 @@
 #define _CLIENT_VSS_H
 
 #if defined(WIN32_VSS)
-extern int win32_start_vss(struct conf *conf);
+extern int win32_start_vss(struct conf **confs);
 extern int win32_stop_vss(void);
 extern int get_vss(BFILE *bfd, struct sbuf *sb,
-	char **vssdata, size_t *vlen, struct conf *conf);
+	char **vssdata, size_t *vlen, struct conf **confs);
 extern int set_vss(BFILE *bfd,
-	const char *vssdata, size_t vlen, struct conf *config);
+	const char *vssdata, size_t vlen, struct conf **confsig);
 #endif // WIN32_VSS
 
 #if defined(HAVE_WIN32)

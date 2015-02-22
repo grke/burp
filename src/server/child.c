@@ -4,7 +4,7 @@
 static struct asfd *wasfd=NULL;
 
 int write_status(enum cntr_status cntr_status,
-	const char *path, struct conf *conf)
+	const char *path, struct conf **confs)
 {
 	time_t now=0;
 	time_t diff=0;
@@ -30,10 +30,10 @@ int write_status(enum cntr_status cntr_status,
 	// one.
 	if(!l)
 	{
-		conf->cntr->cntr_status=cntr_status;
-		if(!(l=cntr_to_str(conf->cntr, path))) goto error;
+		get_cntr(confs[OPT_CNTR])->cntr_status=cntr_status;
+		if(!(l=cntr_to_str(get_cntr(confs[OPT_CNTR]), path))) goto error;
 		if(!wbuf && !(wbuf=iobuf_alloc())) goto error;
-		iobuf_set(wbuf, CMD_APPEND, conf->cntr->str, l);
+		iobuf_set(wbuf, CMD_APPEND, get_cntr(confs[OPT_CNTR])->str, l);
 	}
 
 	switch(wasfd->append_all_to_write_buffer(wasfd, wbuf))
@@ -102,7 +102,7 @@ end:
 }
 
 int child(struct async *as,
-	int status_wfd, struct conf *conf, struct conf *cconf)
+	int status_wfd, struct conf **confs, struct conf *cconf)
 {
 	int ret=-1;
 	int srestore=0;

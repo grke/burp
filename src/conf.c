@@ -8,11 +8,7 @@
 
 #include <assert.h>
 
-#define CONF_FLAG_CC_OVERRIDE	0x01
-#define CONF_FLAG_OVERRIDDEN	0x02
-#define CONF_FLAG_INCEXC	0x04
-
-static enum burp_mode str_to_burp_mode(const char *str)
+enum burp_mode str_to_burp_mode(const char *str)
 {
 	if(!strcmp(str, "server"))
 		return BURP_MODE_SERVER;
@@ -33,7 +29,7 @@ static const char *burp_mode_to_str(enum burp_mode bm)
 	}
 }
 
-static enum recovery_method str_to_recovery_method(const char *str)
+enum recovery_method str_to_recovery_method(const char *str)
 {
 	if(!strcmp(str, "delete"))
 		return RECOVERY_METHOD_DELETE;
@@ -54,6 +50,18 @@ static const char *recovery_method_to_str(enum recovery_method r)
 		case RECOVERY_METHOD_USE: return "use";
 		default: return "unknown";
 	}
+}
+
+enum protocol str_to_protocol(const char *str)
+{
+	if(!strcmp(str, "0"))
+		return PROTO_AUTO;
+	else if(!strcmp(str, "1"))
+		return PROTO_1;
+	else if(!strcmp(str, "2"))
+		return PROTO_2;
+	logp("Unknown protocol setting: %s\n", str);
+	return PROTO_AUTO;
 }
 
 struct strlist *get_strlist(struct conf *conf)
@@ -116,7 +124,7 @@ struct cntr *get_cntr(struct conf *conf)
 	return conf->data.cntr;
 }
 
-static int set_string(struct conf *conf, const char *s)
+int set_string(struct conf *conf, const char *s)
 {
 	assert(conf->conf_type==CT_STRING);
 	if(conf->data.s) free(conf->data.s);
@@ -125,7 +133,7 @@ static int set_string(struct conf *conf, const char *s)
 	return 0;
 }
 
-static int set_int(struct conf *conf, unsigned int i)
+int set_int(struct conf *conf, unsigned int i)
 {
 	assert(conf->conf_type==CT_UINT);
 	conf->data.i=i;
@@ -140,42 +148,42 @@ static int set_strlist(struct conf *conf, struct strlist *s)
 	return 0;
 }
 
-static int set_float(struct conf *conf, float f)
+int set_float(struct conf *conf, float f)
 {
 	assert(conf->conf_type==CT_FLOAT);
 	conf->data.f=f;
 	return 0;
 }
 
-static int set_e_burp_mode(struct conf *conf, enum burp_mode bm)
+int set_e_burp_mode(struct conf *conf, enum burp_mode bm)
 {
 	assert(conf->conf_type==CT_E_BURP_MODE);
 	conf->data.burp_mode=bm;
 	return 0;
 }
 
-static int set_e_protocol(struct conf *conf, enum protocol p)
+int set_e_protocol(struct conf *conf, enum protocol p)
 {
 	assert(conf->conf_type==CT_E_PROTOCOL);
 	conf->data.protocol=p;
 	return 0;
 }
 
-static int set_e_recovery_method(struct conf *conf, enum recovery_method r)
+int set_e_recovery_method(struct conf *conf, enum recovery_method r)
 {
 	assert(conf->conf_type==CT_E_RECOVERY_METHOD);
 	conf->data.recovery_method=r;
 	return 0;
 }
 
-static int set_mode_t(struct conf *conf, mode_t m)
+int set_mode_t(struct conf *conf, mode_t m)
 {
 	assert(conf->conf_type==CT_MODE_T);
 	conf->data.mode=m;
 	return 0;
 }
 
-static int set_ssize_t(struct conf *conf, ssize_t s)
+int set_ssize_t(struct conf *conf, ssize_t s)
 {
 	assert(conf->conf_type==CT_SSIZE_T);
 	conf->data.ssizet=s;
@@ -187,6 +195,17 @@ int set_cntr(struct conf *conf, struct cntr *cntr)
 	assert(conf->conf_type==CT_CNTR);
 	conf->data.cntr=cntr;
 	return 0;
+}
+
+int add_to_strlist(struct conf *conf, char *value)
+{
+	int include=0;
+	assert(conf->conf_type==CT_STRLIST);
+	if(!strcmp(conf->field, "include")) include=1;
+	if(conf->flags & CONF_FLAG_STRLIST_SORTED)
+		return strlist_add_sorted(&(conf->data.sl), value, include);
+	else
+		return strlist_add(&(conf->data.sl), value, include);
 }
 
 static void conf_free_content(struct conf *c)
@@ -441,7 +460,7 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_SEND_CLIENT_CNTR:
 	  return sc_int(c[o], 0, 0, "send_client_cntr");
 	case OPT_RESTORE_CLIENT:
-	  return sc_str(c[o], 0, 0, "restore_client");
+	  return sc_lst(c[o], 0, CONF_FLAG_STRLIST_SORTED, "restore_client");
 	case OPT_RESTORE_PATH:
 	  return sc_str(c[o], 0, 0, "restore_path");
 	case OPT_ORIG_CLIENT:
@@ -501,7 +520,7 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 		CONF_FLAG_CC_OVERRIDE, "server_script_pre");
 	case OPT_S_SCRIPT_PRE_ARG:
 	  return sc_lst(c[o], 0,
-		CONF_FLAG_CC_OVERRIDE, "server_script_pre_arg");
+		CONF_FLAG_CC_OVERRIDE|CONF_FLAG_STRLIST_REPLACE, "server_script_pre_arg");
 	case OPT_S_SCRIPT_PRE_NOTIFY:
 	  return sc_int(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE, "server_script_pre_notify");
@@ -510,7 +529,7 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 		CONF_FLAG_CC_OVERRIDE, "server_script_post");
 	case OPT_S_SCRIPT_POST_ARG:
 	  return sc_lst(c[o], 0,
-		CONF_FLAG_CC_OVERRIDE, "server_script_post_arg");
+		CONF_FLAG_CC_OVERRIDE|CONF_FLAG_STRLIST_REPLACE, "server_script_post_arg");
 	case OPT_S_SCRIPT_POST_RUN_ON_FAIL:
 	  return sc_int(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE, "server_script_post_run_on_fail");
@@ -522,7 +541,7 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 		CONF_FLAG_CC_OVERRIDE, "server_script");
 	case OPT_S_SCRIPT_ARG:
 	  return sc_lst(c[o], 0,
-		CONF_FLAG_CC_OVERRIDE, "server_script_arg");
+		CONF_FLAG_CC_OVERRIDE|CONF_FLAG_STRLIST_REPLACE, "server_script_arg");
 	case OPT_S_SCRIPT_NOTIFY:
 	  return sc_int(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE, "server_script_notify");
@@ -531,7 +550,7 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 		CONF_FLAG_CC_OVERRIDE, "hardlinked_archive");
 	case OPT_KEEP:
 	  return sc_lst(c[o], 0,
-		CONF_FLAG_CC_OVERRIDE, "keep");
+		CONF_FLAG_CC_OVERRIDE|CONF_FLAG_STRLIST_REPLACE, "keep");
 	case OPT_LIBRSYNC:
 	  return sc_int(c[o], 1,
 		CONF_FLAG_CC_OVERRIDE, "librsync");
@@ -555,13 +574,13 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 		CONF_FLAG_CC_OVERRIDE, "timer_script");
 	case OPT_TIMER_ARG:
 	  return sc_lst(c[o], 0,
-		CONF_FLAG_CC_OVERRIDE, "timer_arg");
+		CONF_FLAG_CC_OVERRIDE|CONF_FLAG_STRLIST_REPLACE, "timer_arg");
 	case OPT_N_SUCCESS_SCRIPT:
 	  return sc_str(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE, "notify_success_script");
 	case OPT_N_SUCCESS_ARG:
 	  return sc_lst(c[o], 0,
-		CONF_FLAG_CC_OVERRIDE, "notify_success_arg");
+		CONF_FLAG_CC_OVERRIDE|CONF_FLAG_STRLIST_REPLACE, "notify_success_arg");
 	case OPT_N_SUCCESS_WARNINGS_ONLY:
 	  return sc_int(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE, "notify_success_warnings_only");
@@ -573,7 +592,7 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 		CONF_FLAG_CC_OVERRIDE, "notify_failure_script");
 	case OPT_N_FAILURE_ARG:
 	  return sc_lst(c[o], 0,
-		CONF_FLAG_CC_OVERRIDE, "notify_failure_arg");
+		CONF_FLAG_CC_OVERRIDE|CONF_FLAG_STRLIST_REPLACE, "notify_failure_arg");
 	case OPT_RESTORE_CLIENTS:
 	  return sc_lst(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE, "restore_clients");
@@ -604,27 +623,41 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_WORKING_DIR_RECOVERY_METHOD:
 	  return sc_rec(c[o], RECOVERY_METHOD_DELETE,
 		CONF_FLAG_CC_OVERRIDE, "working_dir_recovery_method");
-	case OPT_INCEXCDIR:
+	case OPT_INCLUDE:
 	  // FIX THIS: Also need "exclude" in the same option.
-	  return sc_lst(c[o], 0, CONF_FLAG_INCEXC, "include");
+	  return sc_lst(c[o], 0,
+		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "include");
+	case OPT_EXCLUDE:
+	  // FIX THIS: Also need "include" in the same option.
+	  return sc_lst(c[o], 0,
+		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "exclude");
 	case OPT_FSCHGDIR:
-	  return sc_lst(c[o], 0, CONF_FLAG_INCEXC, "cross_filesystem");
+	  return sc_lst(c[o], 0,
+		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "cross_filesystem");
 	case OPT_NOBACKUP:
-	  return sc_lst(c[o], 0, CONF_FLAG_INCEXC, "nobackup");
+	  return sc_lst(c[o], 0,
+		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "no_backup");
 	case OPT_INCEXT:
-	  return sc_lst(c[o], 0, CONF_FLAG_INCEXC, "include_ext");
+	  return sc_lst(c[o], 0,
+		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "include_ext");
 	case OPT_EXCEXT:
-	  return sc_lst(c[o], 0, CONF_FLAG_INCEXC, "exclude_ext");
+	  return sc_lst(c[o], 0,
+		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "exclude_ext");
 	case OPT_INCREG:
-	  return sc_lst(c[o], 0, CONF_FLAG_INCEXC, "include_regex");
+	  return sc_lst(c[o], 0,
+		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "include_regex");
 	case OPT_EXCREG:
-	  return sc_lst(c[o], 0, CONF_FLAG_INCEXC, "exclude_regex");
+	  return sc_lst(c[o], 0,
+		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "exclude_regex");
 	case OPT_EXCFS:
-	  return sc_lst(c[o], 0, CONF_FLAG_INCEXC, "exclude_fs");
+	  return sc_lst(c[o], 0,
+		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "exclude_fs");
 	case OPT_EXCOM:
-	  return sc_lst(c[o], 0, CONF_FLAG_INCEXC, "exclude_comp");
+	  return sc_lst(c[o], 0,
+		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "exclude_comp");
 	case OPT_INCGLOB:
-	  return sc_lst(c[o], 0, CONF_FLAG_INCEXC, "include_glob");
+	  return sc_lst(c[o], 0,
+		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "include_glob");
 	case OPT_CROSS_ALL_FILESYSTEMS:
 	  return sc_int(c[o], 0, CONF_FLAG_INCEXC, "cross_all_filesystems");
 	case OPT_READ_ALL_FIFOS:
@@ -734,7 +767,8 @@ static char *conf_data_to_str(struct conf *conf)
 			break;
 		case CT_E_RECOVERY_METHOD:
 			snprintf(ret, sizeof(ret), "%s",
-				recovery_method_to_str(get_e_recovery_method(conf)));
+				recovery_method_to_str(
+					get_e_recovery_method(conf)));
 			break;
 		case CT_UINT:
 			snprintf(ret, sizeof(ret), "%u", get_int(conf));

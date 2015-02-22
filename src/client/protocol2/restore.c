@@ -10,14 +10,14 @@ static int start_restore_file(struct asfd *asfd,
 	char **metadata,
 	size_t *metalen,
 	int vss_restore,
-	struct conf *conf)
+	struct conf **confs)
 {
 	int ret=-1;
 	char *rpath=NULL;
 
 	if(act==ACTION_VERIFY)
 	{
-		cntr_add(conf->cntr, sb->path.cmd, 1);
+		cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
 		goto end;
 	}
 
@@ -38,7 +38,7 @@ static int start_restore_file(struct asfd *asfd,
 		default: goto error;
 	}
 
-	cntr_add(conf->cntr, sb->path.cmd, 1);
+	cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
 
 end:
 	ret=0;
@@ -57,7 +57,7 @@ static int restore_metadata(
 	enum action act,
 	const char *encpassword,
 	int vss_restore,
-	struct conf *conf)
+	struct conf **confs)
 {
 	// If it is directory metadata, try to make sure the directory
 	// exists. Pass in NULL as the cntr, so no counting is done.
@@ -92,17 +92,17 @@ static int restore_metadata(
 			// the file
 			attribs_set(fname, &(sb->statp), sb->winattr, conf);
 #endif
-			cntr_add(conf->cntr, sb->path.cmd, 1);
+			cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
 		}
 	}
-	else cntr_add(conf->cntr, sb->cmd, 1);
+	else cntr_add(get_cntr(confs[OPT_CNTR]), sb->cmd, 1);
 	return 0;
 }
 */
 
 int restore_switch_protocol2(struct asfd *asfd, struct sbuf *sb,
 	const char *fullpath, enum action act,
-	BFILE *bfd, int vss_restore, struct conf *conf)
+	BFILE *bfd, int vss_restore, struct conf **confs)
 {
 	switch(sb->path.cmd)
 	{

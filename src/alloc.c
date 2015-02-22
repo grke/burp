@@ -7,11 +7,6 @@ uint64_t alloc_count=0;
 uint64_t free_count=0;
 #endif
 
-static void log_oom_w(const char *func, const char *orig_func)
-{
-	logp("out of memory in %s, called from %s\n", __func__, func);
-}
-
 char *strdup_w(const char *s, const char *func)
 {
 	char *ret;

@@ -171,7 +171,7 @@ int in_exclude_regex(struct strlist *excreg, const char *fname)
 }
 
 // When recursing into directories, do not want to check the include_ext list.
-static int file_is_included_no_incext(struct conf *conf, const char *fname)
+static int file_is_included_no_incext(struct conf **confs, const char *fname)
 {
 	int ret=0;
 	int longest=0;
@@ -202,7 +202,7 @@ static int file_is_included_no_incext(struct conf *conf, const char *fname)
 	return ret;
 }
 
-static int file_is_included(struct conf *conf,
+static int file_is_included(struct conf **confs,
 	const char *fname, bool top_level)
 {
 	// Always save the top level directory.
@@ -219,7 +219,7 @@ static int file_is_included(struct conf *conf,
 	return file_is_included_no_incext(conf, fname);
 }
 
-static int fs_change_is_allowed(struct conf *conf, const char *fname)
+static int fs_change_is_allowed(struct conf **confs, const char *fname)
 {
 	struct strlist *l;
 	if(conf->cross_all_filesystems) return 1;
@@ -228,7 +228,7 @@ static int fs_change_is_allowed(struct conf *conf, const char *fname)
 	return 0;
 }
 
-static int need_to_read_fifo(struct conf *conf, const char *fname)
+static int need_to_read_fifo(struct conf **confs, const char *fname)
 {
 	struct strlist *l;
 	if(conf->read_all_fifos) return 1;
@@ -237,7 +237,7 @@ static int need_to_read_fifo(struct conf *conf, const char *fname)
 	return 0;
 }
 
-static int need_to_read_blockdev(struct conf *conf, const char *fname)
+static int need_to_read_blockdev(struct conf **confs, const char *fname)
 {
 	struct strlist *l;
 	if(conf->read_all_blockdevs) return 1;
@@ -264,7 +264,7 @@ static int nobackup_directory(struct strlist *nobackup, const char *path)
 	return 0;
 }
 
-static int file_size_match(FF_PKT *ff_pkt, struct conf *conf)
+static int file_size_match(FF_PKT *ff_pkt, struct conf **confs)
 {
 	boffset_t sizeleft;
 	sizeleft=ff_pkt->statp.st_size;
@@ -277,7 +277,7 @@ static int file_size_match(FF_PKT *ff_pkt, struct conf *conf)
 }
 
 // Last checks before actually processing the file system entry.
-int send_file_w(struct asfd *asfd, FF_PKT *ff, bool top_level, struct conf *conf)
+int send_file_w(struct asfd *asfd, FF_PKT *ff, bool top_level, struct conf **confs)
 {
 	if(!file_is_included(conf, ff->fname, top_level)) return 0;
 
@@ -322,14 +322,14 @@ int send_file_w(struct asfd *asfd, FF_PKT *ff, bool top_level, struct conf *conf
 }
 
 static int found_regular_file(struct asfd *asfd,
-	FF_PKT *ff_pkt, struct conf *conf,
+	FF_PKT *ff_pkt, struct conf **confs,
 	char *fname, bool top_level)
 {
 	ff_pkt->type=FT_REG;
 	return send_file_w(asfd, ff_pkt, top_level, conf);
 }
 
-static int found_soft_link(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
+static int found_soft_link(struct asfd *asfd, FF_PKT *ff_pkt, struct conf **confs,
 	char *fname, bool top_level)
 {
 	ssize_t size;
@@ -348,7 +348,7 @@ static int found_soft_link(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
 }
 
 static int fstype_excluded(struct asfd *asfd,
-	struct conf *conf, const char *fname)
+	struct conf **confs, const char *fname)
 {
 #if defined(HAVE_LINUX_OS)
 	struct statfs buf;
@@ -458,12 +458,12 @@ static int get_files_in_directory(DIR *directory, struct dirent ***nl, int *coun
 }
 
 // Prototype because process_files_in_directory() recurses using find_files().
-static int find_files(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
+static int find_files(struct asfd *asfd, FF_PKT *ff_pkt, struct conf **confs,
 	char *fname, dev_t parent_device, bool top_level);
 
 static int process_files_in_directory(struct asfd *asfd, struct dirent **nl,
 	int count, int *rtn_stat, char **link, size_t len, size_t *link_len,
-	struct conf *conf, FF_PKT *ff_pkt, dev_t our_device)
+	struct conf **confs, FF_PKT *ff_pkt, dev_t our_device)
 {
 	int m=0;
 	for(m=0; m<count; m++)
@@ -523,7 +523,7 @@ static int process_files_in_directory(struct asfd *asfd, struct dirent **nl,
 	return 0;
 }
 
-static int found_directory(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
+static int found_directory(struct asfd *asfd, FF_PKT *ff_pkt, struct conf **confs,
 	char *fname, dev_t parent_device, bool top_level)
 {
 	int rtn_stat;
@@ -669,7 +669,7 @@ static int found_directory(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
 	return rtn_stat;
 }
 
-static int found_other(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
+static int found_other(struct asfd *asfd, FF_PKT *ff_pkt, struct conf **confs,
 	char *fname, bool top_level)
 {
 #ifdef HAVE_FREEBSD_OS
@@ -710,7 +710,7 @@ static int found_other(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
  * top_level is 1 when not recursing or 0 when
  *  descending into a directory.
  */
-static int find_files(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
+static int find_files(struct asfd *asfd, FF_PKT *ff_pkt, struct conf **confs,
 	char *fname, dev_t parent_device, bool top_level)
 {
 	ff_pkt->fname=fname;
@@ -757,7 +757,7 @@ static int find_files(struct asfd *asfd, FF_PKT *ff_pkt, struct conf *conf,
 }
 
 int find_files_begin(struct asfd *asfd,
-	FF_PKT *ff_pkt, struct conf *conf, char *fname)
+	FF_PKT *ff_pkt, struct conf **confs, char *fname)
 {
 	return find_files(asfd, ff_pkt,
 		conf, fname, (dev_t)-1, 1 /* top_level */);

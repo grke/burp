@@ -44,7 +44,7 @@ static enum cmd vss_trail_symbol=CMD_VSS_T;
 #endif
 
 static int usual_stuff(struct asfd *asfd,
-	struct conf *conf, const char *path, const char *link,
+	struct conf **confs, const char *path, const char *link,
 	struct sbuf *sb, enum cmd cmd)
 {
 	if(asfd->write_str(asfd, CMD_ATTRIBS, sb->attr.buf)
@@ -52,27 +52,27 @@ static int usual_stuff(struct asfd *asfd,
 	  || ((cmd==CMD_HARD_LINK || cmd==CMD_SOFT_LINK)
 		&& asfd->write_str(asfd, cmd, link)))
 			return -1;
-	cntr_add_phase1(conf->cntr, cmd, 1);
+	cntr_add_phase1(get_cntr(confs[OPT_CNTR]), cmd, 1);
 	return 0;
 }
 
 static int maybe_send_extrameta(struct asfd *asfd,
 	const char *path, enum cmd cmd,
-	struct sbuf *sb, struct conf *conf, enum cmd symbol)
+	struct sbuf *sb, struct conf **confs, enum cmd symbol)
 {
 	if(!has_extrameta(path, cmd, conf)) return 0;
 	return usual_stuff(asfd, conf, path, NULL, sb, symbol);
 }
 
 static int ft_err(struct asfd *asfd,
-	struct conf *conf, FF_PKT *ff, const char *msg)
+	struct conf **confs, FF_PKT *ff, const char *msg)
 {
 	return logw(asfd, conf, _("Err: %s %s: %s"), msg,
 		ff->fname, strerror(errno));
 }
 
 static int do_to_server(struct asfd *asfd,
-	struct conf *conf, FF_PKT *ff, struct sbuf *sb,
+	struct conf **confs, FF_PKT *ff, struct sbuf *sb,
 	enum cmd cmd, int compression) 
 {
 	sb->compression=compression;
@@ -88,7 +88,7 @@ static int do_to_server(struct asfd *asfd,
 	if(usual_stuff(asfd, conf, ff->fname, ff->link, sb, cmd)) return -1;
 
 	if(ff->type==FT_REG)
-		cntr_add_val(conf->cntr, CMD_BYTES_ESTIMATED,
+		cntr_add_val(get_cntr(confs[OPT_CNTR]), CMD_BYTES_ESTIMATED,
 			(unsigned long long)ff->statp.st_size, 0);
 #ifdef HAVE_WIN32
 	if(conf->split_vss && !conf->strip_vss
@@ -103,13 +103,13 @@ static int do_to_server(struct asfd *asfd,
 #endif
 }
 
-static int to_server(struct asfd *asfd, struct conf *conf, FF_PKT *ff,
+static int to_server(struct asfd *asfd, struct conf **confs, FF_PKT *ff,
 	struct sbuf *sb, enum cmd cmd)
 {
 	return do_to_server(asfd, conf, ff, sb, cmd, conf->compression);
 }
 
-int send_file(struct asfd *asfd, FF_PKT *ff, bool top_level, struct conf *conf)
+int send_file(struct asfd *asfd, FF_PKT *ff, bool top_level, struct conf **confs)
 {
 	static struct sbuf *sb=NULL;
 
@@ -160,7 +160,7 @@ int send_file(struct asfd *asfd, FF_PKT *ff, bool top_level, struct conf *conf)
 	}
 }
 
-int backup_phase1_client(struct asfd *asfd, struct conf *conf, int estimate)
+int backup_phase1_client(struct asfd *asfd, struct conf **confs, int estimate)
 {
 	int ret=-1;
 	FF_PKT *ff=NULL;
@@ -190,7 +190,7 @@ int backup_phase1_client(struct asfd *asfd, struct conf *conf, int estimate)
 		if(find_files_begin(asfd, ff, conf, l->path)) goto end;
 	ret=0;
 end:
-	cntr_print_end_phase1(conf->cntr);
+	cntr_print_end_phase1(get_cntr(confs[OPT_CNTR]));
 	if(ret) logp("Error in phase 1\n");
 	logp("Phase 1 end (file system scan)\n");
 	find_files_free(ff);

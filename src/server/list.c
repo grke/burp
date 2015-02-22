@@ -102,7 +102,7 @@ err:
 
 static int list_manifest(struct asfd *asfd,
 	const char *fullpath, regex_t *regex,
-	const char *browsedir, struct conf *conf)
+	const char *browsedir, struct conf **confs)
 {
 	int ars=0;
 	int ret=0;
@@ -175,7 +175,7 @@ end:
 }
 
 static int send_backup_name_to_client(struct asfd *asfd,
-	struct bu *bu, struct conf *conf)
+	struct bu *bu, struct conf **confs)
 {
 	char msg[64]="";
 	snprintf(msg, sizeof(msg), "%s%s",
@@ -186,7 +186,7 @@ static int send_backup_name_to_client(struct asfd *asfd,
 	return write_wrapper_str(asfd, CMD_TIMESTAMP, msg);
 }
 
-int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct conf *conf,
+int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct conf **confs,
 	const char *backup, const char *listregex, const char *browsedir)
 {
 	int ret=-1;

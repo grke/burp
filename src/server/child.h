@@ -4,9 +4,9 @@
 #include "monitor/cstat.h"
 
 extern int write_status(enum cntr_status cntr_status,
-	const char *path, struct conf *conf);
+	const char *path, struct conf **confs);
 
 extern int child(struct async *as, int status_wfd,
-	struct conf *conf, struct conf *cconf);
+	struct conf **confs, struct conf *cconf);
 
 #endif

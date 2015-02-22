@@ -2,7 +2,7 @@
 
 #include <dirent.h>
 
-int recursive_hardlink(const char *src, const char *dst, struct conf *conf)
+int recursive_hardlink(const char *src, const char *dst, struct conf **confs)
 {
 	int n=-1;
 	int ret=0;
@@ -113,7 +113,7 @@ end:
 	return ret;
 }
 
-int do_link(const char *oldpath, const char *newpath, struct stat *statp, struct conf *conf, uint8_t overwrite)
+int do_link(const char *oldpath, const char *newpath, struct stat *statp, struct conf **confs, uint8_t overwrite)
 {
 	/* Avoid creating too many hardlinks */
 	if(statp->st_nlink >= (unsigned int)conf->max_hardlinks)

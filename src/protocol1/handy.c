@@ -94,7 +94,7 @@ int write_endfile(struct asfd *asfd,
 */
 int send_whole_file_gzl(struct asfd *asfd,
 	const char *fname, const char *datapth, int quick_read,
-	unsigned long long *bytes, const char *encpassword, struct conf *conf,
+	unsigned long long *bytes, const char *encpassword, struct conf **confs,
 	int compression, BFILE *bfd, const char *extrameta,
 	size_t elen)
 {
@@ -328,7 +328,7 @@ struct winbuf
 	MD5_CTX *md5;
 	int quick_read;
 	const char *datapth;
-	struct conf *conf;
+	struct conf **confs;
 	unsigned long long *bytes;
 	struct asfd *asfd;
 };
@@ -363,7 +363,7 @@ static DWORD WINAPI write_efs(PBYTE pbData,
 
 int send_whole_filel(struct asfd *asfd,
 	enum cmd cmd, const char *fname, const char *datapth,
-	int quick_read, unsigned long long *bytes, struct conf *conf,
+	int quick_read, unsigned long long *bytes, struct conf **confs,
 	BFILE *bfd, const char *extrameta, size_t elen)
 {
 	int ret=0;

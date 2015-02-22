@@ -17,7 +17,7 @@ static int data_needed(struct sbuf *sb)
 static int found_in_current_manifest(struct asfd *asfd,
 	struct sbuf *csb, struct sbuf *sb,
 	struct manio *cmanio, struct manio *unmanio,
-	struct blk **blk, struct conf *conf)
+	struct blk **blk, struct conf **confs)
 {
 	// Located the entry in the current manifest.
 	// If the file type changed, I think it is time to back it up again
@@ -60,7 +60,7 @@ static int found_in_current_manifest(struct asfd *asfd,
 
 // Return -1 for error, 0 for entry not changed, 1 for entry changed (or new).
 static int entry_changed(struct asfd *asfd, struct sbuf *sb,
-	struct manio *cmanio, struct manio *unmanio, struct conf *conf)
+	struct manio *cmanio, struct manio *unmanio, struct conf **confs)
 {
 	static int finished=0;
 	static struct sbuf *csb=NULL;
@@ -124,7 +124,7 @@ static int entry_changed(struct asfd *asfd, struct sbuf *sb,
 	return 0;
 }
 
-static int add_data_to_store(struct conf *conf,
+static int add_data_to_store(struct conf **confs,
 	struct blist *blist, struct iobuf *rbuf, struct dpth *dpth)
 {
 	static struct blk *blk=NULL;
@@ -148,8 +148,8 @@ static int add_data_to_store(struct conf *conf,
 	// Add it to the data store straight away.
 	if(dpth_fwrite(dpth, rbuf, blk)) return -1;
 
-	cntr_add(conf->cntr, CMD_DATA, 0);
-	cntr_add_recvbytes(conf->cntr, blk->length);
+	cntr_add(get_cntr(confs[OPT_CNTR]), CMD_DATA, 0);
+	cntr_add_recvbytes(get_cntr(confs[OPT_CNTR]), blk->length);
 
 	blk->got=BLK_GOT;
 	blk=blk->next;
@@ -197,7 +197,7 @@ static void dump_blks(const char *msg, struct blk *b)
 */
 
 static int add_to_sig_list(struct slist *slist, struct blist *blist,
-	struct iobuf *rbuf, struct dpth *dpth, struct conf *conf)
+	struct iobuf *rbuf, struct dpth *dpth, struct conf **confs)
 {
 	// Goes on slist->add_sigs_here
 	struct blk *blk;
@@ -220,7 +220,7 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist,
 }
 
 static int deal_with_read(struct iobuf *rbuf,
-	struct slist *slist, struct blist *blist, struct conf *conf,
+	struct slist *slist, struct blist *blist, struct conf **confs,
 	int *sigs_end, int *backup_end, struct dpth *dpth)
 {
 	int ret=0;
@@ -257,7 +257,7 @@ static int deal_with_read(struct iobuf *rbuf,
 		/* Incoming control/message stuff. */
 		case CMD_WARNING:
 			logp("WARNING: %s\n", rbuf);
-			cntr_add(conf->cntr, rbuf->cmd, 0);
+			cntr_add(get_cntr(confs[OPT_CNTR]), rbuf->cmd, 0);
 			goto end;
 		case CMD_GEN:
 			if(!strcmp(rbuf->buf, "sigs_end"))
@@ -292,7 +292,7 @@ static int encode_req(struct blk *blk, char *req)
 	return 0;
 }
 
-static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, struct blist *blist, int sigs_end, int *blk_requests_end, struct dpth *dpth, struct conf *conf)
+static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, struct blist *blist, int sigs_end, int *blk_requests_end, struct dpth *dpth, struct conf **confs)
 {
 	static char req[32]="";
 	struct sbuf *sb=slist->blks_to_request;
@@ -405,7 +405,7 @@ static void get_wbuf_from_index(struct iobuf *wbuf, uint64_t index)
 static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
         struct asfd *chfd, struct manio *chmanio,
         struct slist *slist, struct blist *blist,
-        struct dpth *dpth, int backup_end, struct conf *conf)
+        struct dpth *dpth, int backup_end, struct conf **confs)
 {
 	struct blk *blk;
 	static struct iobuf *wbuf=NULL;
@@ -474,7 +474,7 @@ error:
 static int write_to_changed_file(struct asfd *asfd,
 	struct asfd *chfd, struct manio *chmanio,
 	struct slist *slist, struct blist *blist,
-	struct dpth *dpth, int backup_end, struct conf *conf)
+	struct dpth *dpth, int backup_end, struct conf **confs)
 {
 	struct sbuf *sb;
 	if(!slist) return 0;
@@ -519,7 +519,7 @@ static void dump_slist(struct slist *slist, const char *msg)
 
 static int maybe_add_from_scan(struct asfd *asfd,
 	struct manio *p1manio, struct manio *cmanio,
-	struct manio *unmanio, struct slist *slist, struct conf *conf)
+	struct manio *unmanio, struct slist *slist, struct conf **confs)
 {
 	int ret=-1;
 	static int ars;
@@ -693,7 +693,7 @@ static int deal_with_wrap_up_from_chfd(struct iobuf *rbuf, struct blist *blist,
 
 static int deal_with_read_from_chfd(struct asfd *asfd, struct asfd *chfd,
 	struct blist *blist, uint64_t *wrap_up, struct dpth *dpth,
-	struct conf *conf)
+	struct conf **confs)
 {
 	int ret=-1;
 
@@ -705,7 +705,7 @@ static int deal_with_read_from_chfd(struct asfd *asfd, struct asfd *chfd,
 			// Get these for blks that the champ chooser has found.
 			if(deal_with_sig_from_chfd(chfd->rbuf, blist, dpth))
 				goto end;
-			cntr_add_same(conf->cntr, CMD_DATA);
+			cntr_add_same(get_cntr(confs[OPT_CNTR]), CMD_DATA);
 			break;
 		case CMD_WRAP_UP:
 			if(deal_with_wrap_up_from_chfd(chfd->rbuf, blist, dpth))
@@ -731,7 +731,7 @@ static struct asfd *get_asfd_from_list_by_fdtype(struct async *as,
 }
 
 int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
-	int resume, struct conf *conf)
+	int resume, struct conf **confs)
 {
 	int ret=-1;
 	int sigs_end=0;

@@ -4,7 +4,7 @@
 #include <sys/un.h>
 
 // FIX THIS: test error conditions.
-static int champ_chooser_new_client(struct async *as, struct conf *conf)
+static int champ_chooser_new_client(struct async *as, struct conf **confs)
 {
 	socklen_t t;
 	int fd=-1;
@@ -100,7 +100,7 @@ static int results_to_fd(struct asfd *asfd)
 }
 
 static int deduplicate_maybe(struct asfd *asfd,
-	struct blk *blk, struct conf *conf)
+	struct blk *blk, struct conf **confs)
 {
 	if(!asfd->in && !(asfd->in=incoming_alloc())) return -1;
 
@@ -118,7 +118,7 @@ static int deduplicate_maybe(struct asfd *asfd,
 	return 0;
 }
 
-static int deal_with_rbuf_sig(struct asfd *asfd, struct conf *conf)
+static int deal_with_rbuf_sig(struct asfd *asfd, struct conf **confs)
 {
 	struct blk *blk;
 	if(!(blk=blk_alloc())) return -1;
@@ -135,7 +135,7 @@ static int deal_with_rbuf_sig(struct asfd *asfd, struct conf *conf)
 	return deduplicate_maybe(asfd, blk, conf);
 }
 
-static int deal_with_client_rbuf(struct asfd *asfd, struct conf *conf)
+static int deal_with_client_rbuf(struct asfd *asfd, struct conf **confs)
 {
 	if(asfd->rbuf->cmd==CMD_GEN)
 	{
@@ -189,7 +189,7 @@ error:
 	return -1;
 }
 
-int champ_chooser_server(struct sdirs *sdirs, struct conf *conf)
+int champ_chooser_server(struct sdirs *sdirs, struct conf **confs)
 {
 	int s;
 	int ret=-1;
@@ -339,7 +339,7 @@ end:
 }
 
 // The return code of this is the return code of the standalone process.
-int champ_chooser_server_standalone(struct conf *globalc)
+int champ_chooser_server_standalone(struct conf **globalcs)
 {
 	int ret=1;
 	struct sdirs *sdirs=NULL;

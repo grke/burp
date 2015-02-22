@@ -2,7 +2,7 @@
 #include "../cmd.h"
 
 static int diff_manifest(struct asfd *asfd,
-	const char *fullpath, struct conf *conf)
+	const char *fullpath, struct conf **confs)
 {
 	int ars=0;
 	int ret=0;
@@ -59,7 +59,7 @@ static int send_backup_name_to_client(struct asfd *asfd, struct bu *bu)
 	return asfd->write_str(asfd, CMD_TIMESTAMP, msg);
 }
 
-int do_diff_server(struct asfd *asfd, struct sdirs *sdirs, struct conf *conf,
+int do_diff_server(struct asfd *asfd, struct sdirs *sdirs, struct conf **confs,
 	const char *backup)
 {
 	int ret=-1;

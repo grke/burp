@@ -7,7 +7,7 @@
 #include "protocol2/restore_spool.h"
 
 static enum asl_ret restore_end_func(struct asfd *asfd,
-	struct conf *conf, void *param)
+	struct conf **confs, void *param)
 {
 	if(!strcmp(asfd->rbuf->buf, "restoreend_ok"))
 		return ASL_END_OK;
@@ -15,7 +15,7 @@ static enum asl_ret restore_end_func(struct asfd *asfd,
 	return ASL_END_ERROR;
 }
 
-static int restore_end(struct asfd *asfd, struct conf *conf)
+static int restore_end(struct asfd *asfd, struct conf **confs)
 {
 	if(asfd->write_str(asfd, CMD_GEN, "restoreend")) return -1;
 	return asfd->simple_loop(asfd,
@@ -35,7 +35,7 @@ static int srestore_matches(struct strlist *s, const char *path)
 }
 
 // Used when restore is initiated from the server.
-static int check_srestore(struct conf *conf, const char *path)
+static int check_srestore(struct conf **confs, const char *path)
 {
 	struct strlist *l;
 
@@ -75,7 +75,7 @@ static int setup_cntr(struct asfd *asfd, const char *manifest,
 	}
 	while(1)
 	{
-		if((ars=sbufl_fill(sb, asfd, NULL, zp, cconf->cntr)))
+		if((ars=sbufl_fill(sb, asfd, NULL, zp, cget_cntr(confs[OPT_CNTR]))))
 		{
 			if(ars<0) goto end;
 			// ars==1 means end ok
@@ -85,9 +85,9 @@ static int setup_cntr(struct asfd *asfd, const char *manifest,
 		{
 			if(want_to_restore(srestore, sb, regex, cconf))
 			{
-				cntr_add_phase1(cconf->cntr, sb->path.cmd, 0);
+				cntr_add_phase1(cget_cntr(confs[OPT_CNTR]), sb->path.cmd, 0);
 				if(sb->protocol1->endfile.buf)
-				  cntr_add_val(cconf->cntr,
+				  cntr_add_val(cget_cntr(confs[OPT_CNTR]),
 					CMD_BYTES_ESTIMATED,
 					strtoull(sb->protocol1->endfile.buf,
 						NULL, 10), 0);
@@ -370,7 +370,7 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 		{
 			case CMD_WARNING:
 				logp("WARNING: %s\n", rbuf->buf);
-				cntr_add(cconf->cntr, rbuf->cmd, 0);
+				cntr_add(cget_cntr(confs[OPT_CNTR]), rbuf->cmd, 0);
 				continue;
 			case CMD_INTERRUPT:
 				// Client wanted to interrupt the
@@ -467,8 +467,8 @@ static int actual_restore(struct asfd *asfd, struct bu *bu,
 
         ret=restore_end(asfd, cconf);
 
-	cntr_print(cconf->cntr, act);
-	cntr_stats_to_file(cconf->cntr, bu->path, act, cconf);
+	cntr_print(cget_cntr(confs[OPT_CNTR]), act);
+	cntr_stats_to_file(cget_cntr(confs[OPT_CNTR]), bu->path, act, cconf);
 end:
         slist_free(&slist);
 	linkhash_free();
@@ -528,7 +528,7 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 	if(setup_cntr(asfd, manifest, regex, srestore, act, cntr_status, cconf))
 		goto end;
 
-	if(cconf->send_client_cntr && cntr_send(cconf->cntr))
+	if(cconf->send_client_cntr && cntr_send(cget_cntr(confs[OPT_CNTR])))
 		goto end;
 
 	// Now, do the actual restore.
@@ -545,7 +545,7 @@ end:
 
 int do_restore_server(struct asfd *asfd, struct sdirs *sdirs,
 	enum action act, int srestore,
-	char **dir_for_notify, struct conf *conf)
+	char **dir_for_notify, struct conf **confs)
 {
 	int ret=0;
 	uint8_t found=0;

@@ -179,7 +179,7 @@ static int run_child(int *cfd, SSL_CTX *ctx,
 	int ca_ret=0;
 	SSL *ssl=NULL;
 	BIO *sbio=NULL;
-	struct conf *conf=NULL;
+	struct conf **confs=NULL;
 	struct conf *cconf=NULL;
 	struct cntr *cntr=NULL;
 	struct async *as=NULL;
@@ -239,8 +239,8 @@ static int run_child(int *cfd, SSL_CTX *ctx,
 	if(!(cntr=cntr_alloc())
 	  || cntr_init(cntr, cconf->cname))
 		goto end;
-	conf->cntr=cntr;
-	cconf->cntr=cntr;
+	get_cntr(confs[OPT_CNTR])=cntr;
+	cget_cntr(confs[OPT_CNTR])=cntr;
 
 	/* At this point, the client might want to get a new certificate
 	   signed. Clients on 1.3.2 or newer can do this. */
@@ -285,7 +285,7 @@ end:
 	return ret;
 }
 
-static int chld_check_counts(struct conf *conf, struct asfd *asfd)
+static int chld_check_counts(struct conf **confs, struct asfd *asfd)
 {
 	int c_count=0;
 	int sc_count=0;
@@ -325,7 +325,7 @@ static int chld_check_counts(struct conf *conf, struct asfd *asfd)
 }
 
 static int process_incoming_client(struct asfd *asfd, SSL_CTX *ctx,
-	const char *conffile, struct conf *conf)
+	const char *conffile, struct conf **confs)
 {
 	int cfd=-1;
 	pid_t childpid;
@@ -535,7 +535,7 @@ struct oldnet
 	char *status_port;
 };
 
-static int oldnet_init(struct oldnet *oldnet, struct conf *conf)
+static int oldnet_init(struct oldnet *oldnet, struct conf **confs)
 {
 	if(!(oldnet->port=strdup_w(conf->port, __func__))) return -1;
 	if(conf->status_port
@@ -566,7 +566,7 @@ static int ports_changed(const char *old, const char *latest)
 	return 0;
 }
 
-static int run_server(struct conf *conf, const char *conffile,
+static int run_server(struct conf **confs, const char *conffile,
 	int *rfds, int *sfds, struct oldnet *oldnet)
 {
 	int i=0;
@@ -726,7 +726,7 @@ end:
 	return ret;
 }
 
-int server(struct conf *conf, const char *conffile,
+int server(struct conf **confs, const char *conffile,
 	struct lock *lock, int generate_ca_only)
 {
 	enum serret ret=SERVER_ERROR;

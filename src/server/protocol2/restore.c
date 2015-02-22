@@ -8,7 +8,7 @@
 #include "../sdirs.h"
 
 static int send_data(struct asfd *asfd, struct blk *blk,
-	enum action act, struct conf *conf)
+	enum action act, struct conf **confs)
 {
 	struct iobuf wbuf;
 	switch(act)
@@ -30,7 +30,7 @@ static int send_data(struct asfd *asfd, struct blk *blk,
 }
 
 int restore_sbuf_protocol2(struct asfd *asfd, struct sbuf *sb, enum action act,
-	enum cntr_status cntr_status, struct conf *conf, int *need_data)
+	enum cntr_status cntr_status, struct conf **confs, int *need_data)
 {
 	if(asfd->write(asfd, &sb->attr)
 	  || asfd->write(asfd, &sb->path))
@@ -65,7 +65,7 @@ int restore_sbuf_protocol2(struct asfd *asfd, struct sbuf *sb, enum action act,
 			*need_data=1;
 			break;
 		default:
-			cntr_add(conf->cntr, sb->path.cmd, 0);
+			cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 0);
 			break;
 	}
 	return 0;

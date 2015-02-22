@@ -34,7 +34,7 @@ static int set_cstat_from_conf(struct cstat *cstat,
 	return 0;
 }
 
-static int get_client_names(struct cstat **clist, struct conf *conf)
+static int get_client_names(struct cstat **clist, struct conf **confs)
 {
 	int m=0;
 	int n=-1;
@@ -204,7 +204,7 @@ int cstat_set_run_status(struct cstat *cstat)
 	return 0;
 }
 
-static int reload_from_clientdir(struct cstat **clist, struct conf *conf)
+static int reload_from_clientdir(struct cstat **clist, struct conf **confs)
 {
 	struct cstat *c;
 	for(c=*clist; c; c=c->next)

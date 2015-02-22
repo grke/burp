@@ -17,5 +17,7 @@ extern int logw(struct asfd *asfd, struct conf **confs, const char *fmt, ...);
 extern void log_and_send(struct asfd *asfd, const char *msg);
 extern void log_and_send_oom(struct asfd *asfd, const char *function);
 extern void log_set_json(int value);
+extern void log_oom_w(const char *func, const char *orig_func);
+extern int log_incexcs_buf(const char *incexc);
 
 #endif

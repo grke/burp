@@ -335,7 +335,7 @@ static int vers_init(struct vers *vers, struct conf *cconf)
 }
 
 int extra_comms(struct async *as,
-	char **incexc, int *srestore, struct conf *conf, struct conf *cconf)
+	char **incexc, int *srestore, struct conf **confs, struct conf *cconf)
 {
 	struct vers vers;
 	struct asfd *asfd;

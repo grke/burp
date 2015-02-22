@@ -75,7 +75,7 @@ int has_acl(const char *path, enum cmd cmd)
 }
 
 static int get_acl_string(struct asfd *asfd, acl_t acl, char **acltext,
-	size_t *alen, const char *path, char type, struct conf *conf)
+	size_t *alen, const char *path, char type, struct conf **confs)
 {
 	int ret=0;
 	char pre[10]="";
@@ -110,7 +110,7 @@ end:
 }
 
 int get_acl(struct asfd *asfd, struct sbuf *sb,
-	char **acltext, size_t *alen, struct conf *conf)
+	char **acltext, size_t *alen, struct conf **confs)
 {
 	acl_t acl=NULL;
 	const char *path=sb->path.buf;
@@ -144,7 +144,7 @@ int get_acl(struct asfd *asfd, struct sbuf *sb,
 
 static int do_set_acl(struct asfd *asfd, const char *path,
 	const char *acltext, size_t alen,
-	int acltype, struct conf *conf)
+	int acltype, struct conf **confs)
 {
 	acl_t acl;
 	int ret=-1;
@@ -180,7 +180,7 @@ end:
 }
 
 int set_acl(struct asfd *asfd, const char *path, struct sbuf *sb,
-	const char *acltext, size_t alen, char metacmd, struct conf *conf)
+	const char *acltext, size_t alen, char metacmd, struct conf **confs)
 {
 	switch(metacmd)
 	{

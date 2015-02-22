@@ -2,14 +2,14 @@
 #include "../../cmd.h"
 
 static int load_signature(struct asfd *asfd,
-	rs_signature_t **sumset, struct conf *conf)
+	rs_signature_t **sumset, struct conf **confs)
 {
 	rs_result r;
 	rs_job_t *job;
 
 	job = rs_loadsig_begin(sumset);
 	if((r=do_rs_run(asfd, job,
-		NULL, NULL, NULL, NULL, NULL, asfd->fd, -1, conf->cntr)))
+		NULL, NULL, NULL, NULL, NULL, asfd->fd, -1, get_cntr(confs[OPT_CNTR]))))
 	{
 		rs_free_sumset(*sumset);
 		return r;
@@ -21,7 +21,7 @@ static int load_signature(struct asfd *asfd,
 
 static int load_signature_and_send_delta(struct asfd *asfd,
 	BFILE *bfd, unsigned long long *bytes, unsigned long long *sentbytes,
-	struct conf *conf)
+	struct conf **confs)
 {
 	rs_job_t *job;
 	rs_result r;
@@ -42,9 +42,9 @@ static int load_signature_and_send_delta(struct asfd *asfd,
 	}
 
 	if(!(infb=rs_filebuf_new(asfd, bfd,
-		NULL, NULL, -1, ASYNC_BUF_LEN, bfd->datalen, conf->cntr))
+		NULL, NULL, -1, ASYNC_BUF_LEN, bfd->datalen, get_cntr(confs[OPT_CNTR])))
 	  || !(outfb=rs_filebuf_new(asfd, NULL, NULL,
-		NULL, asfd->fd, ASYNC_BUF_LEN, -1, conf->cntr)))
+		NULL, asfd->fd, ASYNC_BUF_LEN, -1, get_cntr(confs[OPT_CNTR]))))
 	{
 		logp("could not rs_filebuf_new for delta\n");
 		if(infb) rs_filebuf_free(infb);
@@ -101,7 +101,7 @@ static int load_signature_and_send_delta(struct asfd *asfd,
 static int send_whole_file_w(struct asfd *asfd,
 	struct sbuf *sb, const char *datapth,
 	int quick_read, unsigned long long *bytes, const char *encpassword,
-	struct conf *conf, int compression, BFILE *bfd,
+	struct conf **confs, int compression, BFILE *bfd,
 	const char *extrameta, size_t elen)
 {
 	if((compression || encpassword) && sb->path.cmd!=CMD_EFS_FILE)
@@ -114,7 +114,7 @@ static int send_whole_file_w(struct asfd *asfd,
 		  conf, bfd, extrameta, elen);
 }
 
-static int forget_file(struct asfd *asfd, struct sbuf *sb, struct conf *conf)
+static int forget_file(struct asfd *asfd, struct sbuf *sb, struct conf **confs)
 {
 	// Tell the server to forget about this
 	// file, otherwise it might get stuck
@@ -133,7 +133,7 @@ static int forget_file(struct asfd *asfd, struct sbuf *sb, struct conf *conf)
 	return 0;
 }
 
-static int size_checks(struct asfd *asfd, struct sbuf *sb, struct conf *conf)
+static int size_checks(struct asfd *asfd, struct sbuf *sb, struct conf **confs)
 {
 	if(sb->path.cmd!=CMD_FILE
 	  && sb->path.cmd!=CMD_ENC_FILE
@@ -155,7 +155,7 @@ static int size_checks(struct asfd *asfd, struct sbuf *sb, struct conf *conf)
 }
 
 static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
-	BFILE *bfd, struct conf *conf)
+	BFILE *bfd, struct conf **confs)
 {
 	int ret=-1;
 	int forget=0;
@@ -250,9 +250,9 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 		}
 		else
 		{
-			cntr_add(conf->cntr, CMD_FILE_CHANGED, 1);
-			cntr_add_bytes(conf->cntr, bytes);
-			cntr_add_sentbytes(conf->cntr, sentbytes);
+			cntr_add(get_cntr(confs[OPT_CNTR]), CMD_FILE_CHANGED, 1);
+			cntr_add_bytes(get_cntr(confs[OPT_CNTR]), bytes);
+			cntr_add_sentbytes(get_cntr(confs[OPT_CNTR]), sentbytes);
 		}
 	}
 	else
@@ -268,9 +268,9 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 				goto end;
 		else
 		{
-			cntr_add(conf->cntr, sb->path.cmd, 1);
-			cntr_add_bytes(conf->cntr, bytes);
-			cntr_add_sentbytes(conf->cntr, bytes);
+			cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
+			cntr_add_bytes(get_cntr(confs[OPT_CNTR]), bytes);
+			cntr_add_sentbytes(get_cntr(confs[OPT_CNTR]), bytes);
 		}
 	}
 
@@ -292,7 +292,7 @@ error:
 }
 
 static int parse_rbuf(struct asfd *asfd, struct sbuf *sb,
-	BFILE *bfd, struct conf *conf)
+	BFILE *bfd, struct conf **confs)
 {
 	static struct iobuf *rbuf;
 	rbuf=asfd->rbuf;
@@ -325,7 +325,7 @@ static int parse_rbuf(struct asfd *asfd, struct sbuf *sb,
 	else if(rbuf->cmd==CMD_WARNING)
 	{
 		logp("WARNING: %s\n", rbuf->buf);
-		cntr_add(conf->cntr, rbuf->cmd, 0);
+		cntr_add(get_cntr(confs[OPT_CNTR]), rbuf->cmd, 0);
 	}
 	else
 	{
@@ -336,7 +336,7 @@ static int parse_rbuf(struct asfd *asfd, struct sbuf *sb,
 }
 
 static int do_backup_phase2_client(struct asfd *asfd,
-	struct conf *conf, int resume)
+	struct conf **confs, int resume)
 {
 	int ret=-1;
 	// For efficiency, open Windows files for the VSS data, and do not
@@ -392,7 +392,7 @@ end:
 }
 
 int backup_phase2_client_protocol1(struct asfd *asfd,
-	struct conf *conf, int resume)
+	struct conf **confs, int resume)
 {
 	int ret=0;
 
@@ -400,8 +400,8 @@ int backup_phase2_client_protocol1(struct asfd *asfd,
 
 	ret=do_backup_phase2_client(asfd, conf, resume);
 
-	cntr_print_end(conf->cntr);
-	cntr_print(conf->cntr, ACTION_BACKUP);
+	cntr_print_end(get_cntr(confs[OPT_CNTR]));
+	cntr_print(get_cntr(confs[OPT_CNTR]), ACTION_BACKUP);
 
 	if(ret) logp("Error in phase 2\n");
 	logp("Phase 2 end (send file data)\n");

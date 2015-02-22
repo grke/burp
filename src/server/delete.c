@@ -22,7 +22,7 @@ static int recursive_delete_w(struct sdirs *sdirs, struct bu *bu)
 }
 
 // The failure conditions here are dealt with by the rubble cleaning code.
-int delete_backup(struct sdirs *sdirs, struct conf *conf, struct bu *bu)
+int delete_backup(struct sdirs *sdirs, struct conf **confs, struct bu *bu)
 {
 	logp("deleting %s backup %lu\n", conf->cname, bu->bno);
 
@@ -178,7 +178,7 @@ int delete_backups(struct sdirs *sdirs, struct conf *cconf)
 }
 
 int do_delete_server(struct asfd *asfd,
-	struct sdirs *sdirs, struct conf *conf, const char *backup)
+	struct sdirs *sdirs, struct conf **confs, const char *backup)
 {
 	int ret=-1;
 	int found=0;

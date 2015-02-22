@@ -1,6 +1,6 @@
 #include "include.h"
 
-int champ_chooser_init(const char *datadir, struct conf *conf)
+int champ_chooser_init(const char *datadir, struct conf **confs)
 {
 	int ret=-1;
 	struct stat statp;
@@ -62,7 +62,7 @@ static int already_got_block(struct asfd *asfd, struct blk *blk)
 
 #define CHAMPS_MAX 10
 
-int deduplicate(struct asfd *asfd, struct conf *conf)
+int deduplicate(struct asfd *asfd, struct conf **confs)
 {
 	struct blk *blk;
 	struct incoming *in=asfd->in;
@@ -106,7 +106,7 @@ int deduplicate(struct asfd *asfd, struct conf *conf)
 
 	logp("%s: %04d/%04d - %04d/%04d\n",
 		asfd->desc, count, candidates_len, in->got, blk_count);
-	//cntr_add_same_val(conf->cntr, CMD_DATA, in->got);
+	//cntr_add_same_val(get_cntr(confs[OPT_CNTR]), CMD_DATA, in->got);
 
 	// Start the incoming array again.
 	in->size=0;

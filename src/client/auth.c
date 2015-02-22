@@ -2,7 +2,7 @@
 #include "../cmd.h"
 
 int authorise_client(struct asfd *asfd,
-	struct conf *conf, char **server_version)
+	struct conf **confs, char **server_version)
 {
 	int ret=-1;
 	char hello[256]="";
@@ -47,7 +47,7 @@ int authorise_client(struct asfd *asfd,
 	{
 		//logw(conf->p1cntr, rbuf->buf);
 		logp("WARNING: %s\n", rbuf->buf);
-		cntr_add(conf->cntr, rbuf->cmd, 0);
+		cntr_add(get_cntr(confs[OPT_CNTR]), rbuf->cmd, 0);
 		iobuf_free_content(rbuf);
 		if(asfd->read(asfd))
 		{

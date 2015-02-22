@@ -6,7 +6,7 @@ static int copy_input_to_output(struct asfd *in, struct asfd *out)
 	return out->write_strn(out, CMD_GEN, in->rbuf->buf, in->rbuf->len);
 }
 
-static int main_loop(struct async *as, struct conf *conf)
+static int main_loop(struct async *as, struct conf **confs)
 {
 	struct asfd *asfd;
 	struct asfd *sfd; // Server fd.
@@ -51,7 +51,7 @@ error:
 	return -1;
 }
 
-int do_monitor_client(struct asfd *asfd, struct conf *conf)
+int do_monitor_client(struct asfd *asfd, struct conf **confs)
 {
 	int ret=-1;
 	struct async *as=asfd->as;

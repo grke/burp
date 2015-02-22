@@ -49,7 +49,7 @@ static char *get_bu_str(struct bu *bu)
 }
 
 // Returns 1 if it printed a line, 0 otherwise.
-static int summary(struct cstat *cstat, int row, int col, struct conf *conf)
+static int summary(struct cstat *cstat, int row, int col, struct conf **confs)
 {
 	char msg[1024]="";
 	char fmt[64]="";
@@ -508,7 +508,7 @@ static void print_logs_list(struct sel *sel, int *x, int col)
 }
 
 static void update_screen_clients(struct sel *sel, int *x, int col,
-	int winmin, int winmax, struct conf *conf)
+	int winmin, int winmax, struct conf **confs)
 {
 	int s=0;
 	struct cstat *c;
@@ -674,7 +674,7 @@ static void update_screen_view_log(struct sel *sel, int *x, int col,
 	if(!star_printed) sel->lline=sel->llines;
 }
 
-static int update_screen(struct sel *sel, struct conf *conf)
+static int update_screen(struct sel *sel, struct conf **confs)
 {
 	int x=0;
 	int row=24;
@@ -798,7 +798,7 @@ static int update_screen(struct sel *sel, struct conf *conf)
 }
 
 static int request_status(struct asfd *asfd,
-	const char *client, struct sel *sel, struct conf *conf)
+	const char *client, struct sel *sel, struct conf **confs)
 {
 	char buf[256]="";
 	switch(sel->page)
@@ -1192,7 +1192,7 @@ static int parse_data(struct asfd *asfd, struct sel *sel, int count)
 	return json_input(asfd, sel);
 }
 
-static int main_loop(struct async *as, enum action act, struct conf *conf)
+static int main_loop(struct async *as, enum action act, struct conf **confs)
 {
 	int ret=-1;
 	char *client=NULL;
@@ -1302,7 +1302,7 @@ static void ncurses_init(void)
 }
 #endif
 
-static pid_t fork_monitor(int *csin, int *csout, struct conf *conf)
+static pid_t fork_monitor(int *csin, int *csout, struct conf **confs)
 {
 	int a=0;
 	char *args[12];
@@ -1318,7 +1318,7 @@ static pid_t fork_monitor(int *csin, int *csout, struct conf *conf)
 	return forkchild_fd(csin, csout, NULL, args[0], args);
 }
 
-int status_client_ncurses(enum action act, struct conf *conf)
+int status_client_ncurses(enum action act, struct conf **confs)
 {
 	int csin=-1;
 	int csout=-1;

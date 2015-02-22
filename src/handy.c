@@ -13,7 +13,7 @@
 
 // return -1 for error, 0 for OK, 1 if the client wants to interrupt the
 // transfer.
-int do_quick_read(struct asfd *asfd, const char *datapth, struct conf *conf)
+int do_quick_read(struct asfd *asfd, const char *datapth, struct conf **confs)
 {
 	int r=0;
 	struct iobuf *rbuf;
@@ -25,7 +25,7 @@ int do_quick_read(struct asfd *asfd, const char *datapth, struct conf *conf)
 		if(rbuf->cmd==CMD_WARNING)
 		{
 			logp("WARNING: %s\n", rbuf->buf);
-			cntr_add(conf->cntr, rbuf->cmd, 0);
+			cntr_add(get_cntr(confs[OPT_CNTR]), rbuf->cmd, 0);
 		}
 		else if(rbuf->cmd==CMD_INTERRUPT)
 		{
@@ -59,7 +59,7 @@ static int write_endfile(struct asfd *asfd, unsigned long long bytes)
 
 int send_whole_file_gz(struct asfd *asfd,
 	const char *fname, const char *datapth, int quick_read,
-	unsigned long long *bytes, struct conf *conf,
+	unsigned long long *bytes, struct conf **confs,
 	int compression, FILE *fp)
 {
 	int ret=0;
@@ -129,7 +129,7 @@ int send_whole_file_gz(struct asfd *asfd,
 			if(quick_read && datapth)
 			{
 				int qr;
-				if((qr=do_quick_read(asfd, datapth, conf))<0)
+				if((qr=do_quick_read(asfd, datapth, confs))<0)
 				{
 					ret=-1;
 					break;
@@ -322,19 +322,19 @@ void setup_signal(int sig, void handler(int sig))
 	sigaction(sig, &sa, NULL);
 }
 
-char *comp_level(struct conf *conf)
+char *comp_level(struct conf **confs)
 {
 	static char comp[8]="";
-	snprintf(comp, sizeof(comp), "wb%d", conf->compression);
+	snprintf(comp, sizeof(comp), "wb%d", get_int(confs[OPT_COMPRESSION]));
 	return comp;
 }
 
 /* Function based on src/lib/priv.c from bacula. */
-int chuser_and_or_chgrp(struct conf *conf)
+int chuser_and_or_chgrp(struct conf **confs)
 {
 #if defined(HAVE_PWD_H) && defined(HAVE_GRP_H)
-	char *user=conf->user;
-	char *group=conf->group;
+	char *user=get_string(confs[OPT_USER]);
+	char *group=get_string(confs[OPT_GROUP]);
 	struct passwd *passw = NULL;
 	struct group *grp = NULL;
 	gid_t gid;
@@ -493,7 +493,7 @@ long version_to_long(const char *version)
 
 /* These receive_a_file() and send_file() functions are for use by extra_comms
    and the CA stuff, rather than backups/restores. */
-int receive_a_file(struct asfd *asfd, const char *path, struct conf *conf)
+int receive_a_file(struct asfd *asfd, const char *path, struct conf **confs)
 {
 	int ret=-1;
 	BFILE *bfd=NULL;
@@ -501,7 +501,7 @@ int receive_a_file(struct asfd *asfd, const char *path, struct conf *conf)
 	unsigned long long sentbytes=0;
 
 	if(!(bfd=bfile_alloc())) goto end;
-	bfile_init(bfd, 0, conf);
+	bfile_init(bfd, 0, confs);
 #ifdef HAVE_WIN32
 	bfd->set_win32_api(bfd, 0);
 #endif
@@ -517,7 +517,7 @@ int receive_a_file(struct asfd *asfd, const char *path, struct conf *conf)
 	}
 
 	ret=transfer_gzfile_in(asfd, path, bfd,
-		&rcvdbytes, &sentbytes, conf->cntr);
+		&rcvdbytes, &sentbytes, get_cntr(confs[OPT_CNTR]));
 	if(bfd->close(bfd, asfd))
 	{
 		logp("error closing %s in receive_a_file\n", path);
@@ -534,15 +534,14 @@ end:
 /* Windows will use this function, when sending a certificate signing request.
    It is not using the Windows API stuff because it needs to arrive on the
    server side without any junk in it. */
-int send_a_file(struct asfd *asfd, const char *path, struct conf *conf)
+int send_a_file(struct asfd *asfd, const char *path, struct conf **confs)
 {
 	int ret=0;
 	FILE *fp=NULL;
 	unsigned long long bytes=0;
 	if(!(fp=open_file(path, "rb"))
 	  || send_whole_file_gz(asfd, path, "datapth", 0, &bytes,
-		conf, 9, // compression
-		fp))
+		confs, 9 /*compression*/, fp))
 	{
 		ret=-1;
 		goto end;
@@ -626,8 +625,18 @@ void strip_trailing_slashes(char **str)
 	}
 }
 
-int breakpoint(struct conf *conf, const char *func)
+int breakpoint(struct conf **confs, const char *func)
 {
-	logp("Breakpoint %d hit in %s\n", conf->breakpoint, func);
+	logp("Breakpoint %d hit in %s\n",
+		get_int(confs[OPT_BREAKPOINT]), func);
 	return -1;
 }
+
+/* Windows users have a nasty habit of putting in backslashes. Convert them. */
+#ifdef HAVE_WIN32
+void convert_backslashes(char **path)
+{
+	char *p=NULL;
+	for(p=*path; *p; p++) if(*p=='\\') *p='/';
+}
+#endif

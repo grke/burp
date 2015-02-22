@@ -776,7 +776,7 @@ int cntr_send(struct cntr *cntr)
 /*
 	size_t l;
 	char buf[4096]="";
-	l=cntr_to_str(conf->cntr, STATUS_RUNNING, " ");
+	l=cntr_to_str(get_cntr(confs[OPT_CNTR]), STATUS_RUNNING, " ");
 	if(async_write_strn(CMD_GEN, buf, l))
 	{
 		logp("Error when sending counters to client.\n");
@@ -792,7 +792,7 @@ static enum asl_ret cntr_recv_func(struct asfd *asfd,
 {
 /*
 	if(str_to_cntr(asfd->rbuf->buf, NULL, NULL, NULL, NULL,
-		conf->p1cntr, conf->cntr, NULL))
+		conf->p1cntr, get_cntr(confs[OPT_CNTR]), NULL))
 			return ASL_END_ERROR;
 */
 	return ASL_END_OK;

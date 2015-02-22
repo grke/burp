@@ -14,7 +14,7 @@ static int add_to_incexc(char **incexc, const char *src, size_t len, const char 
 }
 
 static enum asl_ret incexc_recv_func(struct asfd *asfd,
-        struct conf *conf, void *param)
+        struct conf **confs, void *param)
 {
 	char **incexc=(char **)param;
 	if(!strcmp(asfd->rbuf->buf, endreqstrf))
@@ -32,14 +32,14 @@ static enum asl_ret incexc_recv_func(struct asfd *asfd,
 
 static int incexc_recv(struct asfd *asfd, char **incexc,
 	const char *reqstr, const char *repstr,
-	const char *endreqstr, const char *endrepstr, struct conf *conf)
+	const char *endreqstr, const char *endrepstr, struct conf **confs)
 {
 	free_w(incexc);
 	if(asfd->write_str(asfd, CMD_GEN, repstr)) return -1;
 
 	endreqstrf=endreqstr;
 	endrepstrf=endrepstr;
-	if(asfd->simple_loop(asfd, conf, incexc, __func__, incexc_recv_func))
+	if(asfd->simple_loop(asfd, confs, incexc, __func__, incexc_recv_func))
 		return -1;
 
 	// Need to put another new line at the end.
@@ -47,28 +47,28 @@ static int incexc_recv(struct asfd *asfd, char **incexc,
 }
 
 int incexc_recv_client(struct asfd *asfd,
-	char **incexc, struct conf *conf)
+	char **incexc, struct conf **confs)
 {
 	return incexc_recv(asfd, incexc,
 		"sincexc", "sincexc ok",
 		"sincexc end", "sincexc end ok",
-		conf);
+		confs);
 }
 
 int incexc_recv_client_restore(struct asfd *asfd,
-	char **incexc, struct conf *conf)
+	char **incexc, struct conf **confs)
 {
 	return incexc_recv(asfd, incexc,
 		"srestore", "srestore ok",
 		"srestore end", "srestore end ok",
-		conf);
+		confs);
 }
 
 int incexc_recv_server(struct asfd *asfd,
-	char **incexc, struct conf *conf)
+	char **incexc, struct conf **confs)
 {
 	return incexc_recv(asfd, incexc,
 		"incexc", "incexc ok",
 		"incexc end", "incexc end ok",
-		conf);
+		confs);
 }

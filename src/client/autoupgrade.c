@@ -2,7 +2,7 @@
 #include "../cmd.h"
 
 static int receive_file(struct asfd *asfd, const char *autoupgrade_dir,
-	const char *file, struct conf *conf)
+	const char *file, struct conf **confs)
 {
 	int ret=0;
 	char *incoming=NULL;
@@ -13,7 +13,7 @@ static int receive_file(struct asfd *asfd, const char *autoupgrade_dir,
 }
 
 static enum asl_ret autoupgrade_func(struct asfd *asfd,
-	struct conf *conf, void *param)
+	struct conf **confs, void *param)
 {
 	if(!strcmp(asfd->rbuf->buf, "do not autoupgrade"))
 		return ASL_END_OK;
@@ -25,7 +25,7 @@ static enum asl_ret autoupgrade_func(struct asfd *asfd,
 	return ASL_END_OK_RETURN_1;
 }
 
-int autoupgrade_client(struct async *as, struct conf *conf)
+int autoupgrade_client(struct async *as, struct conf **confs)
 {
 	int a=0;
 	int ret=-1;

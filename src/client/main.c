@@ -31,7 +31,7 @@ struct tchk
 };
 
 static enum asl_ret maybe_check_timer_func(struct asfd *asfd,
-        struct conf *conf, void *param)
+        struct conf **confs, void *param)
 {
 	int complen=0;
 	struct tchk *tchk=(struct tchk *)param;
@@ -74,7 +74,7 @@ static enum asl_ret maybe_check_timer_func(struct asfd *asfd,
 
 static enum cliret maybe_check_timer(struct asfd *asfd,
 	enum action action, const char *phase1str,
-	struct conf *conf, int *resume)
+	struct conf **confs, int *resume)
 {
 	struct tchk tchk;
 	memset(&tchk, 0, sizeof(tchk));
@@ -89,7 +89,7 @@ static enum cliret maybe_check_timer(struct asfd *asfd,
 
 static enum cliret backup_wrapper(struct asfd *asfd,
 	enum action action, const char *phase1str,
-	const char *incexc, struct conf *conf)
+	const char *incexc, struct conf **confs)
 {
 	int resume=0;
 	enum cliret ret=CLIENT_OK;
@@ -169,7 +169,7 @@ timer_not_met:
 static int s_server_session_id_context=1;
 
 static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx,
-	enum action action, struct conf *conf)
+	enum action action, struct conf **confs)
 {
 	BIO *sbio=NULL;
 	ssl_load_globals();
@@ -204,7 +204,7 @@ static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx,
 }
 
 static enum cliret initial_comms(struct async *as,
-	enum action *action, char **incexc, struct conf *conf)
+	enum action *action, char **incexc, struct conf **confs)
 {
 	struct asfd *asfd;
 	char *server_version=NULL;
@@ -261,7 +261,7 @@ end:
 }
 
 static enum cliret restore_wrapper(struct asfd *asfd, enum action action,
-	int vss_restore, struct conf *conf)
+	int vss_restore, struct conf **confs)
 {
 	enum cliret ret=CLIENT_OK;
 
@@ -306,13 +306,13 @@ static enum cliret restore_wrapper(struct asfd *asfd, enum action action,
 
 	// Return non-zero if there were warnings,
 	// so that the test script can easily check.
-	if(ret==CLIENT_OK && conf->cntr->ent[CMD_WARNING]->count)
+	if(ret==CLIENT_OK && get_cntr(confs[OPT_CNTR])->ent[CMD_WARNING]->count)
 		ret=CLIENT_RESTORE_WARNINGS;
 
 	return ret;
 }
 
-static enum cliret do_client(struct conf *conf,
+static enum cliret do_client(struct conf **confs,
 	enum action action, int vss_restore, int json)
 {
 	enum cliret ret=CLIENT_OK;
@@ -344,7 +344,7 @@ static enum cliret do_client(struct conf *conf,
 	}
 
 	if(!(cntr=cntr_alloc()) || cntr_init(cntr, conf->cname)) goto error;
-	conf->cntr=cntr;
+	get_cntr(confs[OPT_CNTR])=cntr;
 
 	if(act!=ACTION_ESTIMATE
 	  && ssl_setup(&rfd, &ssl, &ctx, action, conf))
@@ -428,14 +428,14 @@ end:
 	asfd_free(&asfd);
 	if(ctx) ssl_destroy_ctx(ctx);
 	if(incexc) free(incexc);
-	conf->cntr=NULL;
+	get_cntr(confs[OPT_CNTR])=NULL;
 	if(cntr) cntr_free(&cntr);
 
         //logp("end client\n");
 	return ret;
 }
 
-int client(struct conf *conf, enum action action, int vss_restore, int json)
+int client(struct conf **confs, enum action action, int vss_restore, int json)
 {
 	enum cliret ret=CLIENT_OK;
 	

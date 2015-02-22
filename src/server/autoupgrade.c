@@ -3,7 +3,7 @@
 
 // Return -1 on error or success, 0 to continue normally.
 int autoupgrade_server(struct async *as,
-	long ser_ver, long cli_ver, const char *os, struct conf *conf)
+	long ser_ver, long cli_ver, const char *os, struct conf **confs)
 {
 	int ret=-1;
 	char *path=NULL;

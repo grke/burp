@@ -8,9 +8,9 @@
  || defined(HAVE_NETBSD_OS)
 extern int has_xattr(const char *path, enum cmd cmd);
 extern int get_xattr(struct asfd *asfd, struct sbuf *sb,
-	char **xattrtext, size_t *xlen, struct conf *conf);
+	char **xattrtext, size_t *xlen, struct conf **confs);
 extern int set_xattr(struct asfd *asfd, const char *path, struct sbuf *sb,
-	const char *xattrtext, size_t xlen, char metacmd, struct conf *conf);
+	const char *xattrtext, size_t xlen, char metacmd, struct conf **confs);
 #endif
 #endif
 

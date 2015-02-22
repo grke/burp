@@ -69,7 +69,7 @@ static int check_client_and_password(struct conf *globalc,
 	return 0;
 }
 
-void version_warn(struct asfd *asfd, struct conf *conf, struct conf *cconf)
+void version_warn(struct asfd *asfd, struct conf **confs, struct conf *cconf)
 {
 	if(!cconf->peer_version || strcmp(cconf->peer_version, VERSION))
 	{

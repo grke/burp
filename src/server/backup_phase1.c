@@ -4,7 +4,7 @@
 #include "../protocol1/sbufl.h"
 
 int backup_phase1_server_all(struct async *as,
-	struct sdirs *sdirs, struct conf *conf)
+	struct sdirs *sdirs, struct conf **confs)
 {
 	int ars=0;
 	int ret=-1;
@@ -26,7 +26,7 @@ int backup_phase1_server_all(struct async *as,
 	{
 		sbuf_free_content(sb);
 		if(conf->protocol==PROTO_1)
-			ars=sbufl_fill(sb, asfd, NULL, NULL, conf->cntr);
+			ars=sbufl_fill(sb, asfd, NULL, NULL, get_cntr(confs[OPT_CNTR]));
 		else
 			ars=sbuf_fill(sb, asfd, NULL, NULL, NULL, conf);
 
@@ -45,7 +45,7 @@ int backup_phase1_server_all(struct async *as,
 		if(write_status(CNTR_STATUS_SCANNING, sb->path.buf, conf)
 		  || sbufl_to_manifest_phase1(sb, NULL, p1zp))
 			goto end;
-		cntr_add_phase1(conf->cntr, sb->path.cmd, 0);
+		cntr_add_phase1(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 0);
 
 		if(sb->path.cmd==CMD_FILE
 		  || sb->path.cmd==CMD_ENC_FILE
@@ -53,7 +53,7 @@ int backup_phase1_server_all(struct async *as,
 		  || sb->path.cmd==CMD_ENC_METADATA
 		  || sb->path.cmd==CMD_EFS_FILE)
 		{
-			cntr_add_val(conf->cntr, CMD_BYTES_ESTIMATED,
+			cntr_add_val(get_cntr(confs[OPT_CNTR]), CMD_BYTES_ESTIMATED,
 				(unsigned long long)sb->statp.st_size, 0);
 		}
 	}

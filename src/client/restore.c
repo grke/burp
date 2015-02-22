@@ -5,10 +5,10 @@
 
 // FIX THIS: it only works with protocol1.
 int restore_interrupt(struct asfd *asfd,
-	struct sbuf *sb, const char *msg, struct conf *conf)
+	struct sbuf *sb, const char *msg, struct conf **confs)
 {
 	int ret=0;
-	struct cntr *cntr=conf->cntr;
+	struct cntr *cntr=get_cntr(confs[OPT_CNTR]);
 	struct iobuf *rbuf=asfd->rbuf;
 
 	if(conf->protocol!=PROTO_1) return 0;
@@ -63,7 +63,7 @@ end:
 }
 
 static int make_link(struct asfd *asfd,
-	const char *fname, const char *lnk, enum cmd cmd, struct conf *conf)
+	const char *fname, const char *lnk, enum cmd cmd, struct conf **confs)
 {
 	int ret=-1;
 
@@ -104,7 +104,7 @@ static int make_link(struct asfd *asfd,
 
 // FIX THIS: Maybe should be in bfile.c.
 enum ofr_e open_for_restore(struct asfd *asfd, BFILE *bfd, const char *path,
-	struct sbuf *sb, int vss_restore, struct conf *conf)
+	struct sbuf *sb, int vss_restore, struct conf **confs)
 {
 	static int flags;
         if(bfd->mode!=BF_CLOSED)
@@ -166,20 +166,20 @@ static char *build_msg(const char *text, const char *param)
 	return msg;
 }
 
-static void do_logw(struct asfd *asfd, struct conf *conf,
+static void do_logw(struct asfd *asfd, struct conf **confs,
 	const char *text, const char *param)
 {
 	logw(asfd, conf, "%s", build_msg(text, param));
 }
 
 static int warn_and_interrupt(struct asfd *asfd, struct sbuf *sb,
-	struct conf *conf, const char *text, const char *param)
+	struct conf **confs, const char *text, const char *param)
 {
 	return restore_interrupt(asfd, sb, build_msg(text, param), conf);
 }
 
 static int restore_special(struct asfd *asfd, struct sbuf *sb,
-	const char *fname, enum action act, struct conf *conf)
+	const char *fname, enum action act, struct conf **confs)
 {
 	int ret=0;
 	char *rpath=NULL;
@@ -191,7 +191,7 @@ static int restore_special(struct asfd *asfd, struct sbuf *sb,
 
 	if(act==ACTION_VERIFY)
 	{
-		cntr_add(conf->cntr, CMD_SPECIAL, 1);
+		cntr_add(get_cntr(confs[OPT_CNTR]), CMD_SPECIAL, 1);
 		return 0;
 	}
 
@@ -211,7 +211,7 @@ static int restore_special(struct asfd *asfd, struct sbuf *sb,
 		else
 		{
 			attribs_set(asfd, rpath, &statp, sb->winattr, conf);
-			cntr_add(conf->cntr, CMD_SPECIAL, 1);
+			cntr_add(get_cntr(confs[OPT_CNTR]), CMD_SPECIAL, 1);
 		}
 	}
 //	else if(S_ISSOCK(statp.st_mode))
@@ -232,7 +232,7 @@ static int restore_special(struct asfd *asfd, struct sbuf *sb,
 	else
 	{
 		attribs_set(asfd, rpath, &statp, sb->winattr, conf);
-		cntr_add(conf->cntr, CMD_SPECIAL, 1);
+		cntr_add(get_cntr(confs[OPT_CNTR]), CMD_SPECIAL, 1);
 	}
 #endif
 end:
@@ -241,7 +241,7 @@ end:
 }
 
 int restore_dir(struct asfd *asfd,
-	struct sbuf *sb, const char *dname, enum action act, struct conf *conf)
+	struct sbuf *sb, const char *dname, enum action act, struct conf **confs)
 {
 	int ret=0;
 	char *rpath=NULL;
@@ -263,16 +263,16 @@ int restore_dir(struct asfd *asfd,
 			}
 		}
 		attribs_set(asfd, rpath, &(sb->statp), sb->winattr, conf);
-		if(!ret) cntr_add(conf->cntr, sb->path.cmd, 1);
+		if(!ret) cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
 	}
-	else cntr_add(conf->cntr, sb->path.cmd, 1);
+	else cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
 end:
 	if(rpath) free(rpath);
 	return ret;
 }
 
 static int restore_link(struct asfd *asfd, struct sbuf *sb,
-	const char *fname, enum action act, struct conf *conf)
+	const char *fname, enum action act, struct conf **confs)
 {
 	int ret=0;
 
@@ -296,11 +296,11 @@ static int restore_link(struct asfd *asfd, struct sbuf *sb,
 		{
 			attribs_set(asfd, fname,
 				&(sb->statp), sb->winattr, conf);
-			cntr_add(conf->cntr, sb->path.cmd, 1);
+			cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
 		}
 		if(rpath) free(rpath);
 	}
-	else cntr_add(conf->cntr, sb->path.cmd, 1);
+	else cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
 end:
 	return ret;
 }
@@ -338,7 +338,7 @@ static const char *act_str(enum action act)
 
 // Return 1 for ok, -1 for error, 0 for too many components stripped.
 static int strip_path_components(struct asfd *asfd,
-	struct sbuf *sb, struct conf *conf)
+	struct sbuf *sb, struct conf **confs)
 {
 	int s=0;
 	char *tmp=NULL;
@@ -375,7 +375,7 @@ static int strip_path_components(struct asfd *asfd,
 }
 
 static int overwrite_ok(struct sbuf *sb,
-	struct conf *conf,
+	struct conf **confs,
 #ifdef HAVE_WIN32
 	BFILE *bfd,
 #endif
@@ -447,7 +447,7 @@ static int write_data(struct asfd *asfd, BFILE *bfd, struct blk *blk)
 static char *restore_style=NULL;
 
 static enum asl_ret restore_style_func(struct asfd *asfd,
-	struct conf *conf, void *param)
+	struct conf **confs, void *param)
 {
 	char msg[32]="";
 	restore_style=NULL;
@@ -465,7 +465,7 @@ static enum asl_ret restore_style_func(struct asfd *asfd,
 	return ASL_END_OK;
 }
 
-static char *get_restore_style(struct asfd *asfd, struct conf *conf)
+static char *get_restore_style(struct asfd *asfd, struct conf **confs)
 {
 	if(conf->protocol==PROTO_1)
 		return strdup_w(RESTORE_STREAM, __func__);
@@ -475,7 +475,7 @@ static char *get_restore_style(struct asfd *asfd, struct conf *conf)
 }
 
 static enum asl_ret restore_spool_func(struct asfd *asfd,
-	struct conf *conf, void *param)
+	struct conf **confs, void *param)
 {
 	static char **datpath;
 	static struct iobuf *rbuf;
@@ -499,7 +499,7 @@ static enum asl_ret restore_spool_func(struct asfd *asfd,
 	return ASL_CONTINUE;
 }
 
-static int restore_spool(struct asfd *asfd, struct conf *conf, char **datpath)
+static int restore_spool(struct asfd *asfd, struct conf **confs, char **datpath)
 {
 	logp("Spooling restore to: %s\n", conf->restore_spool);
 
@@ -511,16 +511,16 @@ static int restore_spool(struct asfd *asfd, struct conf *conf, char **datpath)
 }
 
 static int sbuf_fill_w(struct sbuf *sb, struct asfd *asfd,
-	struct blk *blk, const char *datpath, struct conf *conf)
+	struct blk *blk, const char *datpath, struct conf **confs)
 {
 	if(conf->protocol==PROTO_2)
 		return sbuf_fill(sb, asfd, NULL, blk, datpath, conf);
 	else
-		return sbufl_fill(sb, asfd, NULL, NULL, conf->cntr);
+		return sbufl_fill(sb, asfd, NULL, NULL, get_cntr(confs[OPT_CNTR]));
 }
 
 int do_restore_client(struct asfd *asfd,
-	struct conf *conf, enum action act, int vss_restore)
+	struct conf **confs, enum action act, int vss_restore)
 {
 	int ret=-1;
 	char msg[512]="";
@@ -648,7 +648,7 @@ int do_restore_client(struct asfd *asfd,
 				}
 				break;
 			case CMD_WARNING:
-				cntr_add(conf->cntr, sb->path.cmd, 1);
+				cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
 				printf("\n");
 				logp("%s", sb->path.buf);
 				continue;
@@ -697,8 +697,8 @@ error:
 	bfd->close(bfd, asfd);
 	bfile_free(&bfd);
 
-	cntr_print_end(conf->cntr);
-	cntr_print(conf->cntr, act);
+	cntr_print_end(get_cntr(confs[OPT_CNTR]));
+	cntr_print(get_cntr(confs[OPT_CNTR]), act);
 
 	if(!ret) logp("%s finished\n", act_str(act));
 	else logp("ret: %d\n", ret);

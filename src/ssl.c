@@ -3,7 +3,7 @@
 
 static const char *pass=NULL;
 
-int ssl_load_dh_params(SSL_CTX *ctx, struct conf *conf)
+int ssl_load_dh_params(SSL_CTX *ctx, struct conf **confs)
 {
 	DH *ret=0;
 	BIO *bio=NULL;
@@ -39,7 +39,7 @@ void ssl_load_globals(void)
 	SSL_load_error_strings();
 }
 
-static int ssl_load_keys_and_certs(SSL_CTX *ctx, struct conf *conf)
+static int ssl_load_keys_and_certs(SSL_CTX *ctx, struct conf **confs)
 {
 	char *ssl_key=NULL;
 	struct stat statp;
@@ -80,7 +80,7 @@ static int ssl_load_keys_and_certs(SSL_CTX *ctx, struct conf *conf)
 	return 0;
 }
 
-SSL_CTX *ssl_initialise_ctx(struct conf *conf)
+SSL_CTX *ssl_initialise_ctx(struct conf **confs)
 {
 	SSL_CTX *ctx=NULL;
 	SSL_METHOD *meth=NULL;
@@ -204,7 +204,7 @@ static int setenv_x509_serialnumber(ASN1_INTEGER *i, const char *env)
 }
 #endif
 
-int ssl_check_cert(SSL *ssl, struct conf *conf)
+int ssl_check_cert(SSL *ssl, struct conf **confs)
 {
 	X509 *peer;
 	char tmpbuf[256]="";

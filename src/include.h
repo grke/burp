@@ -12,6 +12,7 @@
 #include "burpconfig.h"
 #include "cntr.h"
 #include "conf.h"
+#include "conffile.h"
 #include "cstat.h"
 #include "forkchild.h"
 #include "fsops.h"

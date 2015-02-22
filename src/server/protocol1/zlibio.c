@@ -1,7 +1,7 @@
 #include "include.h"
 
 int zlib_inflate(struct asfd *asfd, const char *source,
-	const char *dest, struct conf *conf)
+	const char *dest, struct conf **confs)
 {
 	int ret=-1;
 	size_t b=0;

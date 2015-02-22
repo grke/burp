@@ -5,7 +5,7 @@ struct sdirs *sdirs_alloc(void)
 	return (struct sdirs *)calloc_w(1, sizeof(struct sdirs), __func__);
 }
 
-static int do_lock_dirs(struct sdirs *sdirs, struct conf *conf)
+static int do_lock_dirs(struct sdirs *sdirs, struct conf **confs)
 {
 	int ret=-1;
 	char *lockbase=NULL;
@@ -38,14 +38,14 @@ static int free_prepend_s(char **dst, const char *a, const char *b)
 	return !(*dst=prepend_s(a, b));
 }
 
-int sdirs_get_real_manifest(struct sdirs *sdirs, struct conf *conf)
+int sdirs_get_real_manifest(struct sdirs *sdirs, struct conf **confs)
 {
 	return free_prepend_s(&sdirs->rmanifest,
 		sdirs->rworking,
 		conf->protocol==PROTO_1?"manifest.gz":"manifest");
 }
 
-int sdirs_get_real_working_from_symlink(struct sdirs *sdirs, struct conf *conf)
+int sdirs_get_real_working_from_symlink(struct sdirs *sdirs, struct conf **confs)
 {
 	ssize_t len=0;
 	char real[256]="";
@@ -63,7 +63,7 @@ int sdirs_get_real_working_from_symlink(struct sdirs *sdirs, struct conf *conf)
 	return 0;
 }
 
-int sdirs_create_real_working(struct sdirs *sdirs, struct conf *conf)
+int sdirs_create_real_working(struct sdirs *sdirs, struct conf **confs)
 {
 	char tstmp[64]="";
 	char fname[64]="";
@@ -102,7 +102,7 @@ int sdirs_create_real_working(struct sdirs *sdirs, struct conf *conf)
 	return 0;
 }
 
-static int do_common_dirs(struct sdirs *sdirs, struct conf *conf)
+static int do_common_dirs(struct sdirs *sdirs, struct conf **confs)
 {
 	if(!(sdirs->working=prepend_s(sdirs->client, "working"))
 	  || !(sdirs->finishing=prepend_s(sdirs->client, "finishing"))
@@ -118,7 +118,7 @@ static int do_common_dirs(struct sdirs *sdirs, struct conf *conf)
 }
 
 // Maybe should be in a protocol1 directory.
-static int do_protocol1_dirs(struct sdirs *sdirs, struct conf *conf)
+static int do_protocol1_dirs(struct sdirs *sdirs, struct conf **confs)
 {
 	if(!(sdirs->client=prepend_s(sdirs->base, conf->cname))
 	  || do_common_dirs(sdirs, conf)
@@ -134,7 +134,7 @@ static int do_protocol1_dirs(struct sdirs *sdirs, struct conf *conf)
 	return 0;
 }
 
-static int do_protocol2_dirs(struct sdirs *sdirs, struct conf *conf)
+static int do_protocol2_dirs(struct sdirs *sdirs, struct conf **confs)
 {
 	if(!conf->dedup_group)
 	{
@@ -157,7 +157,7 @@ static int do_protocol2_dirs(struct sdirs *sdirs, struct conf *conf)
 	return 0;
 }
 
-extern int sdirs_init(struct sdirs *sdirs, struct conf *conf)
+extern int sdirs_init(struct sdirs *sdirs, struct conf **confs)
 {
 	if(!conf->directory)
 	{

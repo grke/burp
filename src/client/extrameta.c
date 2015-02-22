@@ -1,6 +1,6 @@
 #include "include.h"
 
-int has_extrameta(const char *path, enum cmd cmd, struct conf *conf)
+int has_extrameta(const char *path, enum cmd cmd, struct conf **confs)
 {
 #if defined(WIN32_VSS)
 	return 1;
@@ -33,7 +33,7 @@ int get_extrameta(struct asfd *asfd,
 	struct sbuf *sb,
 	char **extrameta,
 	size_t *elen,
-	struct conf *conf)
+	struct conf **confs)
 {
 #if defined (WIN32_VSS)
 	if(get_vss(bfd, sb, extrameta, elen, conf)) return -1;
@@ -65,7 +65,7 @@ int set_extrameta(struct asfd *asfd,
 	struct sbuf *sb,
 	const char *extrameta,
 	size_t metalen,
-	struct conf *conf)
+	struct conf **confs)
 {
 	size_t l=0;
 	char cmdtmp='\0';

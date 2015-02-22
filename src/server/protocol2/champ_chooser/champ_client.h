@@ -5,6 +5,6 @@
 #include "../../../server/sdirs.h"
 
 extern struct asfd *champ_chooser_connect(struct async *as,
-        struct sdirs *sdirs, struct conf *conf);
+        struct sdirs *sdirs, struct conf **confs);
 
 #endif

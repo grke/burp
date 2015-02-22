@@ -2,7 +2,7 @@
 #include "../cmd.h"
 
 static int generate_key_and_csr(struct asfd *asfd,
-	struct conf *conf, const char *csr_path)
+	struct conf **confs, const char *csr_path)
 {
 	int a=0;
 	const char *args[12];
@@ -35,7 +35,7 @@ static int generate_key_and_csr(struct asfd *asfd,
 
 /* Rewrite the conf file with the ssl_peer_cn value changed to what the
    server told us it should be. */
-static int rewrite_client_conf(struct conf *conf)
+static int rewrite_client_conf(struct conf **confs)
 {
 	int ret=-1;
 	char p[32]="";
@@ -105,7 +105,7 @@ end:
 }
 
 static enum asl_ret csr_client_func(struct asfd *asfd,
-        struct conf *conf, void *param)
+        struct conf **confs, void *param)
 {
 	if(strncmp_w(asfd->rbuf->buf, "csr ok:"))
 	{
@@ -122,7 +122,7 @@ static enum asl_ret csr_client_func(struct asfd *asfd,
 
 /* Return 1 for everything OK, signed and returned, -1 for error, 0 for
    nothing done. */
-int ca_client_setup(struct asfd *asfd, struct conf *conf)
+int ca_client_setup(struct asfd *asfd, struct conf **confs)
 {
 	int ret=-1;
 	struct stat statp;

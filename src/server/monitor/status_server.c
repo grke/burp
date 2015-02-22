@@ -68,7 +68,7 @@ void dump_cbno(struct cstat *clist, const char *msg)
 */
 
 static int parse_client_data(struct asfd *srfd,
-	struct cstat *clist, struct conf *conf)
+	struct cstat *clist, struct conf **confs)
 {
 	int ret=0;
 	char *client=NULL;
@@ -155,13 +155,13 @@ end:
 }
 
 static int parse_data(struct asfd *asfd, struct cstat *clist,
-	struct asfd *cfd, struct conf *conf)
+	struct asfd *cfd, struct conf **confs)
 {
 	if(asfd==cfd) return parse_client_data(asfd, clist, conf);
 	return parse_parent_data(asfd, clist);
 }
 
-int status_server(struct async *as, struct conf *conf)
+int status_server(struct async *as, struct conf **confs)
 {
 	int gotdata=0;
 	struct asfd *asfd;

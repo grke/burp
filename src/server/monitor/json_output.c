@@ -199,7 +199,7 @@ static int do_counters(struct cntr *cntr)
 static int json_send_backup(struct asfd *asfd, struct cstat *cstat,
 	struct bu *bu, int print_flags,
 	const char *logfile, const char *browse,
-	struct conf *conf)
+	struct conf **confs)
 {
 	long long bno=0;
 	long long timestamp=0;
@@ -307,7 +307,7 @@ static int json_send_client_end(struct asfd *asfd)
 
 static int json_send_client_backup(struct asfd *asfd,
 	struct cstat *cstat, struct bu *bu1, struct bu *bu2,
-	const char *logfile, const char *browse, struct conf *conf)
+	const char *logfile, const char *browse, struct conf **confs)
 {
 	int ret=-1;
 	if(json_send_client_start(asfd, cstat)) return -1;
@@ -340,7 +340,7 @@ end:
 
 int json_send(struct asfd *asfd, struct cstat *clist, struct cstat *cstat,
 	struct bu *bu, const char *logfile, const char *browse,
-	struct conf *conf)
+	struct conf **confs)
 {
 	int ret=-1;
 	struct cstat *c;

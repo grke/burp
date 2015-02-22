@@ -7,7 +7,7 @@
  || defined(HAVE_OPENBSD_OS)
 
 static char *get_next_str(struct asfd *asfd, char **data, size_t *l,
-	struct conf *conf, ssize_t *s, const char *path)
+	struct conf **confs, ssize_t *s, const char *path)
 {
 	char *ret=NULL;
 
@@ -46,7 +46,7 @@ int has_xattr(const char *path, enum cmd cmd)
 }
 
 int get_xattr(struct asfd *asfd, struct sbuf *sb,
-	char **xattrtext, size_t *xlen, struct conf *conf)
+	char **xattrtext, size_t *xlen, struct conf **confs)
 {
 	char *z=NULL;
 	size_t len=0;
@@ -201,7 +201,7 @@ int get_xattr(struct asfd *asfd, struct sbuf *sb,
 
 static int do_set_xattr(struct asfd *asfd,
 	const char *path, struct sbuf *sb,
-	const char *xattrtext, size_t xlen, struct conf *conf)
+	const char *xattrtext, size_t xlen, struct conf **confs)
 {
 	size_t l=0;
 	int ret=-1;
@@ -237,7 +237,7 @@ end:
 }
 
 int set_xattr(struct asfd *asfd, const char *path, struct sbuf *sb,
-	const char *xattrtext, size_t xlen, char metacmd, struct conf *conf)
+	const char *xattrtext, size_t xlen, char metacmd, struct conf **confs)
 {
 	switch(metacmd)
 	{
@@ -280,7 +280,7 @@ int has_xattr(const char *path, enum cmd cmd)
 
 #define BSD_BUF_SIZE	1024
 int get_xattr(struct asfd *asfd, struct sbuf *sb,
-	char **xattrtext, size_t *xlen, struct conf *conf)
+	char **xattrtext, size_t *xlen, struct conf **confs)
 {
 	int i=0;
 	size_t maxlen=0xFFFFFFFF/2;
@@ -459,7 +459,7 @@ int get_xattr(struct asfd *asfd, struct sbuf *sb,
 
 static int do_set_xattr_bsd(struct asfd *asfd,
 	const char *path, struct sbuf *sb,
-	const char *xattrtext, size_t xlen, struct conf *conf)
+	const char *xattrtext, size_t xlen, struct conf **confs)
 {
 	int ret=-1;
 	size_t l=0;
@@ -521,7 +521,7 @@ end:
 
 int set_xattr(struct asfd *asfd, const char *path,
 	struct sbuf *sb, const char *xattrtext,
-	size_t xlen, char metacmd, struct conf *conf)
+	size_t xlen, char metacmd, struct conf **confs)
 {
 	switch(metacmd)
 	{

@@ -7,7 +7,7 @@ static char *gbuf_end=NULL;
 
 static int first=0;
 
-int blks_generate_init(struct conf *conf)
+int blks_generate_init(struct conf **confs)
 {
 	if(!(gbuf=(char *)malloc_w(conf->rconf.blk_max, __func__)))
 		return -1;
@@ -60,7 +60,7 @@ static int blk_read(struct rconf *rconf, struct win *win, struct sbuf *sb, struc
 	return 0;
 }
 
-int blks_generate(struct asfd *asfd, struct conf *conf,
+int blks_generate(struct asfd *asfd, struct conf **confs,
 	struct sbuf *sb, struct blist *blist, struct win *win)
 {
 	static ssize_t bytes;

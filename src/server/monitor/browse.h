@@ -4,6 +4,6 @@
 #include "include.h"
 
 extern int browse_manifest(struct asfd *srfd, struct cstat *cstat,
-	struct bu *bu, const char *browse, struct conf *conf);
+	struct bu *bu, const char *browse, struct conf **confs);
 
 #endif

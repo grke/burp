@@ -87,7 +87,7 @@ static void maybe_do_notification(struct asfd *asfd,
 {
 	int a=0;
 	const char *args[12];
-	struct cntr *cntr=cconf->cntr;
+	struct cntr *cntr=cget_cntr(confs[OPT_CNTR]);
 	args[a++]=NULL; // Fill in the script name later.
 	args[a++]=cconf->cname;
 	args[a++]=clientdir;

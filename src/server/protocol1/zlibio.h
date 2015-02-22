@@ -2,6 +2,6 @@
 #define _ZLIBIO_H
 
 extern int zlib_inflate(struct asfd *asfd, const char *source,
-	const char *dest, struct conf *conf);
+	const char *dest, struct conf **confs);
 
 #endif

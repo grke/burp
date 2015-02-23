@@ -95,7 +95,7 @@ int restore_sbuf_protocol2(struct asfd *asfd, struct sbuf *sb, enum action act,
 }
 
 int protocol2_extra_restore_stream_bits(struct asfd *asfd, struct blk *blk,
-	struct slist *slist, struct sbuf *sb, enum action act,
+	struct slist *slist, enum action act,
 	struct sbuf *need_data, int last_ent_was_dir, struct conf *cconf)
 {
 	if(need_data->path.buf)

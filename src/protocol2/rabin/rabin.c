@@ -56,12 +56,12 @@ static int blk_read_to_list(struct rconf *rconf, struct win *win,
 	// Got something.
 	if(first)
 	{
-		sb->burp2->bstart=blk;
+		sb->protocol2->bstart=blk;
 		first=0;
 	}
-	if(!sb->burp2->bsighead)
+	if(!sb->protocol2->bsighead)
 	{
-		sb->burp2->bsighead=blk;
+		sb->protocol2->bsighead=blk;
 	}
 	blist_add_blk(blist, blk);
 	blk=NULL;

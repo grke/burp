@@ -2,7 +2,7 @@
 
 #include "include.h"
 #include "../hexmap.h"
-#include "../burp2/rabin/rabin.h"
+#include "../protocol2/rabin/rabin.h"
 #include "rabin/rconf.h"
 
 static int alloc_count=0;

@@ -13,7 +13,7 @@ static int log_script_output(struct asfd *asfd, FILE **fp, struct conf **confs,
 		if(do_logp) logp("%s", buf);
 		else logc("%s", buf);
 		if(logbuf && astrcat(logbuf, buf, __func__)) return -1;
-		if(do_logw) logw(asfd, conf, "%s", buf);
+		if(do_logw) logw(asfd, confs, "%s", buf);
 	}
 	if(feof(*fp)) close_fp(fp);
 	return 0;
@@ -62,12 +62,12 @@ static int run_script_select(struct asfd *asfd, FILE **sout, FILE **serr,
 		}
 		if(FD_ISSET(soutfd, &fsr))
 		{
-			if(log_script_output(asfd, sout, conf,
+			if(log_script_output(asfd, sout, confs,
 				do_logp, do_logw, logbuf)) return -1;
 		}
 		if(FD_ISSET(serrfd, &fsr))
 		{
-			if(log_script_output(asfd, serr, conf,
+			if(log_script_output(asfd, serr, confs,
 				do_logp, do_logw, logbuf)) return -1;
 		}
 
@@ -126,7 +126,8 @@ int run_script_to_buf(struct asfd *asfd,
 	// My windows forkchild currently just executes, then returns.
 	return 0;
 #else
-	s=run_script_select(asfd, &sout, &serr, conf, do_logp, do_logw, logbuf);
+	s=run_script_select(asfd, &sout, &serr,
+		confs, do_logp, do_logw, logbuf);
 
 	// Set SIGCHLD back to default.
 	setup_signal(SIGCHLD, SIG_DFL);
@@ -137,22 +138,22 @@ int run_script_to_buf(struct asfd *asfd,
 	{
 		int ret=WEXITSTATUS(run_script_status);
 		logp("%s returned: %d\n", cmd[0], ret);
-		if(do_logw && conf && ret)
-			logw(asfd, conf, "%s returned: %d\n", cmd[0], ret);
+		if(do_logw && confs && ret)
+			logw(asfd, confs, "%s returned: %d\n", cmd[0], ret);
 		return ret;
 	}
 	else if(WIFSIGNALED(run_script_status))
 	{
 		logp("%s terminated on signal %d\n",
 			cmd[0], WTERMSIG(run_script_status));
-		if(do_logw && conf)
-			logw(asfd, conf, "%s terminated on signal %d\n",
+		if(do_logw && confs)
+			logw(asfd, confs, "%s terminated on signal %d\n",
 				cmd[0], WTERMSIG(run_script_status));
 	}
 	else
 	{
 		logp("Strange return when trying to run %s\n", cmd[0]);
-		if(do_logw && conf) logw(asfd, conf,
+		if(do_logw && confs) logw(asfd, confs,
 			"Strange return when trying to run %s\n",
 			cmd[0]);
 	}
@@ -163,6 +164,6 @@ int run_script_to_buf(struct asfd *asfd,
 int run_script(struct asfd *asfd, const char **args, struct strlist *userargs,
 	struct conf **confs, int do_wait, int do_logp, int do_logw)
 {
-	return run_script_to_buf(asfd, args, userargs, conf, do_wait,
+	return run_script_to_buf(asfd, args, userargs, confs, do_wait,
 		do_logp, do_logw, NULL /* do not save output to buffer */);
 }

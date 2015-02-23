@@ -3,6 +3,8 @@
 #include "conf.h"
 #include "lock.h"
 #include "log.h"
+#include "msg.h"
+#include "pathcmp.h"
 #include "prepend.h"
 #include "strlist.h"
 #include "client/glob_windows.h"
@@ -153,21 +155,15 @@ static int get_file_size(const char *v, ssize_t *dest, const char *conf_path, in
 	return 0;
 }
 
-int conf_val_reset(const char *src, char **dest)
+static int pre_post_override(struct conf *c,
+	struct conf *pre, struct conf *post)
 {
-	if(!src) return 0;
-	free_w(dest);
-	if(!(*dest=strdup_w(src, __func__))) return -1;
-	return 0;
-}
-
-static int pre_post_override(char **override, char **pre, char **post)
-{
-	if(!override || !*override) return 0;
-	if(conf_val_reset(*override, pre)
-	  || conf_val_reset(*override, post))
+	const char *override=get_string(c);
+	if(!override) return 0;
+	if(set_string(c, get_string(pre))
+	  || set_string(c, get_string(post))
+	  || set_string(c, NULL))
 		return -1;
-	free_w(override);
 	return 0;
 }
 
@@ -525,24 +521,23 @@ static char *extract_cn(X509_NAME *subj)
 	int index;
 	ASN1_STRING *d;
 	X509_NAME_ENTRY *e;
-	unsigned char *str;
 
 	nid=OBJ_txt2nid("CN");
 	if((index=X509_NAME_get_index_by_NID(subj, nid, -1))<0
 	  || !(e=X509_NAME_get_entry(subj, index))
-	  || !(d=X509_NAME_ENTRY_get_data(e))
-	  || !(str=ASN1_STRING_data(d)))
+	  || !(d=X509_NAME_ENTRY_get_data(e)))
 		return NULL;
-	return strdup_w((char *)str, __func__);
+	return (char *)ASN1_STRING_data(d);
 }
 
-static int get_cname_from_ssl_cert(struct conf *c)
+static int get_cname_from_ssl_cert(struct conf **c)
 {
 	int ret=-1;
 	FILE *fp=NULL;
 	X509 *cert=NULL;
 	X509_NAME *subj=NULL;
-	char *path=c->ssl_cert;
+	char *path=get_string(c[OPT_SSL_CERT]);
+	const char *cn=NULL;
 
 	if(!path || !(fp=open_file(path, "rb"))) return 0;
 
@@ -557,12 +552,14 @@ static int get_cname_from_ssl_cert(struct conf *c)
 		goto end;
 	}
 
-	if(!(c->cname=extract_cn(subj)))
+	if(!(cn=extract_cn(subj)))
 	{
 		logp("could not get CN from %s\n", path);
 		goto end;
 	}
-	logp("cname from cert: %s\n", c->cname);
+	if(set_string(c[OPT_CNAME], cn))
+		goto end;
+	logp("cname from cert: %s\n", cn);
 
 	ret=0;
 end:
@@ -576,7 +573,7 @@ end:
 #include <ws2tcpip.h>
 #endif
 
-static int get_fqdn(struct conf *c)
+static int get_fqdn(struct conf **c)
 {
 	int ret=-1;
 	int gai_result;
@@ -610,9 +607,9 @@ static int get_fqdn(struct conf *c)
 		goto end;
 	}
 
-	if(!(c->cname=strdup_w(info->ai_canonname, __func__)))
+	if(set_string(c[OPT_CNAME], info->ai_canonname))
 		goto end;
-	logp("cname from hostname: %s\n", c->cname);
+	logp("cname from hostname: %s\n", get_string(c[OPT_CNAME]));
 
 	ret=0;
 end:
@@ -622,60 +619,62 @@ end:
 
 static int client_conf_checks(struct conf **c, const char *path, int *r)
 {
-	if(!c->cname)
+	const char *autoupgrade_os=get_string(c[OPT_AUTOUPGRADE_OS]);
+	if(!get_string(c[OPT_CNAME]))
 	{
 		if(get_cname_from_ssl_cert(c)) return -1;
 		// There was no error. This is probably a new install.
 		// Try getting the fqdn and using that.
-		if(!c->cname)
+		if(!get_string(c[OPT_CNAME]))
 		{
 			if(get_fqdn(c)) return -1;
-			if(!c->cname)
+			if(!get_string(c[OPT_CNAME]))
 				conf_problem(path, "client name unset", r);
 		}
 	}
-	if(!c->password)
+	if(!get_string(c[OPT_PASSWORD]))
 	{
 		logp("password not set, falling back to \"password\"\n");
-		if(!(c->password=strdup_w("password", __func__)))
+		if(set_string(c[OPT_PASSWORD], "password"))
 			return -1;
 	}
-	if(!c->server)
+	if(!get_string(c[OPT_SERVER]))
 		conf_problem(path, "server unset", r);
-	if(!c->status_port) // carry on if not set.
+	if(!get_string(c[OPT_STATUS_PORT])) // carry on if not set.
 		logp("%s: status_port unset\n", path);
-	if(!c->ssl_cert)
+	if(!get_string(c[OPT_SSL_CERT]))
 		conf_problem(path, "ssl_cert unset", r);
-	if(!c->ssl_cert_ca)
+	if(!get_string(c[OPT_SSL_CERT_CA]))
 		conf_problem(path, "ssl_cert_ca unset", r);
-	if(!c->ssl_peer_cn)
+	if(!get_string(c[OPT_SSL_PEER_CN]))
 	{
+		const char *server=get_string(c[OPT_SERVER]);
 		logp("ssl_peer_cn unset\n");
-		if(c->server)
+		if(!server)
 		{
-			logp("falling back to '%s'\n", c->server);
-			if(!(c->ssl_peer_cn=strdup_w(c->server, __func__)))
+			logp("falling back to '%s'\n", server);
+			if(set_string(c[OPT_SSL_PEER_CN], server))
 				return -1;
 		}
 	}
-	if(!c->lockfile)
+	if(!get_string(c[OPT_LOCKFILE]))
 		conf_problem(path, "lockfile unset", r);
-	if(c->autoupgrade_os
-	  && strstr(c->autoupgrade_os, ".."))
+	if(autoupgrade_os
+	  && strstr(autoupgrade_os, ".."))
 		conf_problem(path,
 			"autoupgrade_os must not contain a '..' component", r);
-	if(c->ca_burp_ca)
+	if(!get_string(c[OPT_CA_BURP_CA]))
 	{
-		if(!c->ca_csr_dir)
+		if(!get_string(c[OPT_CA_CSR_DIR]))
 			conf_problem(path,
 				"ca_burp_ca set, but ca_csr_dir not set\n", r);
-		if(!c->ssl_cert_ca)
+		if(!get_string(c[OPT_SSL_CERT_CA]))
 			conf_problem(path,
 				"ca_burp_ca set, but ssl_cert_ca not set\n", r);
-		if(!c->ssl_cert)
+		if(!get_string(c[OPT_SSL_CERT]))
 			conf_problem(path,
 				"ca_burp_ca set, but ssl_cert not set\n", r);
-		if(!c->ssl_key)
+		if(!get_string(c[OPT_SSL_KEY]))
 			conf_problem(path,
 				"ca_burp_ca set, but ssl_key not set\n", r);
 	}
@@ -684,21 +683,21 @@ static int client_conf_checks(struct conf **c, const char *path, int *r)
 	{
 		struct strlist *l;
 		logp("Listing configured paths:\n");
-		for(l=c->incexcdir; l; l=l->next)
+		for(l=get_strlist(c[OPT_INCEXCDIR]); l; l=l->next)
 			logp("%s: %s\n", l->flag?"include":"exclude", l->path);
 		logp("Listing starting paths:\n");
-		for(l=c->startdir; l; l=l->next)
+		for(l=get_strlist(c[OPT_STARTDIR]); l; l=l->next)
 			if(l->flag) logp("%s\n", l->path);
 	}
 	return 0;
 }
 
-static int finalise_keep_args(struct conf *c)
+static int finalise_keep_args(struct conf **c)
 {
 	struct strlist *k;
 	struct strlist *last=NULL;
 	unsigned long long mult=1;
-	for(k=c->keep; k; k=k->next)
+	for(k=get_strlist(c[OPT_KEEP]); k; k=k->next)
 	{
 		if(!(k->flag=atoi(k->path)))
 		{
@@ -720,19 +719,20 @@ static int finalise_keep_args(struct conf *c)
 	// This is so that, for example, having set 7, 4, 6, then
 	// a backup of age 7*4*6=168 or more is guaranteed to be kept.
 	// Otherwise, only 7*4*5=140 would be guaranteed to be kept.
-	if(c->keep && c->keep->next) last->flag++;
+	k=get_strlist(c[OPT_KEEP]);
+	if(k && k->next) last->flag++;
 	return 0;
 }
 
 // This decides which directories to start backing up, and which
 // are subdirectories which don't need to be started separately.
-static int finalise_start_dirs(struct conf *c)
+static int finalise_start_dirs(struct conf **c)
 {
 	struct strlist *s=NULL;
 	struct strlist *last_ie=NULL;
 	struct strlist *last_sd=NULL;
 
-	for(s=c->incexcdir; s; s=s->next)
+	for(s=get_strlist(c[OPT_INCEXCDIR]); s; s=s->next)
 	{
 #ifdef HAVE_WIN32
 		convert_backslashes(&s->path);
@@ -752,12 +752,12 @@ static int finalise_start_dirs(struct conf *c)
 		}
 		// If it is not a subdirectory of the most recent start point,
 		// we have found another start point.
-		if(!c->startdir
+		if(!get_strlist(c[OPT_STARTDIR])
 		  || !is_subdir(last_sd->path, s->path))
 		{
 			// Do not use strlist_add_sorted, because last_sd is
 			// relying on incexcdir already being sorted.
-			if(strlist_add(&c->startdir,s->path, s->flag))
+			if(add_to_strlist(c[OPT_STARTDIR], s->path))
 				return -1;
 			last_sd=s;
 		}
@@ -767,28 +767,32 @@ static int finalise_start_dirs(struct conf *c)
 }
 
 // The glob stuff should only run on the client side.
-static int finalise_glob(struct conf *c)
+static int finalise_glob(struct conf **c)
 {
+	int ret=-1;
 #ifdef HAVE_WIN32
-	if(glob_windows(c)) return -1;
+	if(glob_windows(c)) goto end;
 #else
 	int i;
 	glob_t globbuf;
 	struct strlist *l;
 	struct strlist *last=NULL;
 	memset(&globbuf, 0, sizeof(globbuf));
-	for(l=c->incglob; l; l=l->next)
+	for(l=get_strlist(c[OPT_INCGLOB]); l; l=l->next)
 	{
 		glob(l->path, last?GLOB_APPEND:0, NULL, &globbuf);
 		last=l;
 	}
 
 	for(i=0; (unsigned int)i<globbuf.gl_pathc; i++)
-		strlist_add_sorted(&c->incexcdir, globbuf.gl_pathv[i], 1);
+		if(add_to_strlist(c[OPT_INCLUDE], globbuf.gl_pathv[i]))
+			goto end;
 
 	globfree(&globbuf);
 #endif
-	return 0;
+	ret=0;
+end:
+	return ret;
 }
 
 // Set the flag of the first item in a list that looks at extensions to the
@@ -808,11 +812,11 @@ static void set_max_ext(struct strlist *list)
 	if(last) last->flag=max+1;
 }
 
-static int finalise_fstypes(struct conf *c)
+static int finalise_fstypes(struct conf **c)
 {
 	struct strlist *l;
 	// Set the strlist flag for the excluded fstypes
-	for(l=c->excfs; l; l=l->next)
+	for(l=get_strlist(c[OPT_EXCFS]); l; l=l->next)
 	{
 		l->flag=0;
 		if(!strncasecmp(l->path, "0x", 2))
@@ -854,28 +858,34 @@ static int setup_script_arg_override(struct strlist **list, int count, struct st
 
 static int conf_finalise(const char *conf_path, struct conf **c)
 {
+	int s_script_notify=0;
 	if(finalise_fstypes(c)) return -1;
 
-	strlist_compile_regexes(c->increg);
-	strlist_compile_regexes(c->excreg);
+	strlist_compile_regexes(get_strlist(c[OPT_INCREG]));
+	strlist_compile_regexes(get_strlist(c[OPT_EXCREG]));
 
-	set_max_ext(c->incext);
-	set_max_ext(c->excext);
-	set_max_ext(c->excom);
+	set_max_ext(get_strlist(c[OPT_INCEXT]));
+	set_max_ext(get_strlist(c[OPT_EXCEXT]));
+	set_max_ext(get_strlist(c[OPT_EXCOM]));
 
-	if(c->mode==BURP_MODE_CLIENT && finalise_glob(c)) return -1;
+	if(get_e_burp_mode(c[OPT_BURP_MODE])==BURP_MODE_CLIENT
+	  && finalise_glob(c)) return -1;
 
 	if(finalise_start_dirs(c)) return -1;
 
 	if(finalise_keep_args(c)) return -1;
 
-	pre_post_override(&c->b_script, &c->b_script_pre, &c->b_script_post);
-	pre_post_override(&c->r_script, &c->r_script_pre, &c->r_script_post);
-	pre_post_override(&c->s_script, &c->s_script_pre, &c->s_script_post);
-	if(c->s_script_notify)
+	if(pre_post_override(c[OPT_B_SCRIPT],
+		c[OPT_B_SCRIPT_PRE], c[OPT_B_SCRIPT_POST])
+	  || pre_post_override(c[OPT_R_SCRIPT],
+		c[OPT_R_SCRIPT_PRE], c[OPT_R_SCRIPT_POST])
+	  || pre_post_override(c[OPT_S_SCRIPT],
+		c[OPT_S_SCRIPT_PRE], c[OPT_S_SCRIPT_POST]))
+			return -1;
+	if((s_script_notify=get_int(c[OPT_S_SCRIPT_NOTIFY])))
 	{
-		c->s_script_pre_notify=c->s_script_notify;
-		c->s_script_post_notify=c->s_script_notify;
+		set_int(c[OPT_S_SCRIPT_PRE_NOTIFY], s_script_notify);
+		set_int(c[OPT_S_SCRIPT_POST_NOTIFY], s_script_notify);
 	}
 
 /* FIX THIS: Need to figure out what this was supposed to do, and make sure

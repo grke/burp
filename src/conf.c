@@ -127,7 +127,7 @@ struct cntr *get_cntr(struct conf *conf)
 int set_string(struct conf *conf, const char *s)
 {
 	assert(conf->conf_type==CT_STRING);
-	if(conf->data.s) free(conf->data.s);
+	if(conf->data.s) free_w(&(conf->data.s));
 	if(s && !(conf->data.s=strdup_w(s, __func__)))
 		return -1;
 	return 0;
@@ -416,6 +416,8 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_RANDOMISE:
 	  return sc_int(c[o], 0, 0, "randomise");
 	case OPT_STARTDIR:
+	  // Deliberately not using CONF_FLAG_STRLIST_SORTED because of the
+	  // way finalise_start_dirs() works.
 	  return sc_lst(c[o], 0, 0, "startdir");
 	case OPT_BACKUP:
 	  return sc_str(c[o], 0, 0, "backup");
@@ -623,6 +625,11 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_WORKING_DIR_RECOVERY_METHOD:
 	  return sc_rec(c[o], RECOVERY_METHOD_DELETE,
 		CONF_FLAG_CC_OVERRIDE, "working_dir_recovery_method");
+	case OPT_INCEXCDIR:
+	  // This is a combination of OPT_INCLUDE and OPT_EXCLUDE, so
+	  // no field name set for now. Probably needs fixing in some way.
+	  return sc_lst(c[o], 0,
+		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "");
 	case OPT_INCLUDE:
 	  // FIX THIS: Also need "exclude" in the same option.
 	  return sc_lst(c[o], 0,

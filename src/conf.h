@@ -128,6 +128,7 @@ enum conf_opt
 
 	// This block of client stuff is all to do with what files to backup.
 	OPT_STARTDIR,
+	OPT_INCEXCDIR,
 	OPT_INCLUDE,
 	OPT_EXCLUDE,
 	OPT_FSCHGDIR,
@@ -259,6 +260,7 @@ enum conf_opt
 extern struct conf **confs_alloc(void);
 extern void confs_free(struct conf ***confs);
 extern int confs_init(struct conf **confs);
+extern void confs_free_content(struct conf **confs);
 
 extern void free_incexcs(struct conf **confs);
 extern int conf_set(struct conf **confs, const char *field, const char *value);

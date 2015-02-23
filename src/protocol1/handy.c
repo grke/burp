@@ -245,7 +245,7 @@ int send_whole_file_gzl(struct asfd *asfd,
 			if(quick_read && datapth)
 			{
 				int qr;
-				if((qr=do_quick_read(asfd, datapth, conf))<0)
+				if((qr=do_quick_read(asfd, datapth, confs))<0)
 				{
 					ret=-1;
 					break;
@@ -472,7 +472,7 @@ int send_whole_filel(struct asfd *asfd,
 			if(quick_read)
 			{
 				int qr;
-				if((qr=do_quick_read(asfd, datapth, conf))<0)
+				if((qr=do_quick_read(asfd, datapth, confs))<0)
 				{
 					ret=-1;
 					break;

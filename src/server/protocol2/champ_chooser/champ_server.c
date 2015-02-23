@@ -21,7 +21,7 @@ static int champ_chooser_new_client(struct async *as, struct conf **confs)
 
 	if(!(newfd=asfd_alloc())
 	  || newfd->init(newfd, "(unknown)", as, fd, NULL,
-		ASFD_STREAM_STANDARD, conf)
+		ASFD_STREAM_STANDARD, confs)
 	  || !(newfd->blist=blist_alloc()))
 		goto error;
 	as->asfd_add(as, newfd);
@@ -112,7 +112,7 @@ static int deduplicate_maybe(struct asfd *asfd,
 	if(++(asfd->blkcnt)<MANIFEST_SIG_MAX) return 0;
 	asfd->blkcnt=0;
 
-	if(deduplicate(asfd, conf)<0)
+	if(deduplicate(asfd, confs)<0)
 		return -1;
 
 	return 0;
@@ -132,7 +132,7 @@ static int deal_with_rbuf_sig(struct asfd *asfd, struct conf **confs)
 	//printf("Got weak/strong from %d: %lu - %s %s\n",
 	//	asfd->fd, blk->index, blk->weak, blk->strong);
 
-	return deduplicate_maybe(asfd, blk, conf);
+	return deduplicate_maybe(asfd, blk, confs);
 }
 
 static int deal_with_client_rbuf(struct asfd *asfd, struct conf **confs)
@@ -156,7 +156,7 @@ static int deal_with_client_rbuf(struct asfd *asfd, struct conf **confs)
 		else if(!strncmp_w(asfd->rbuf->buf, "sigs_end"))
 		{
 			//printf("Was told no more sigs\n");
-			if(deduplicate(asfd, conf)<0)
+			if(deduplicate(asfd, confs)<0)
 				goto error;
 		}
 		else
@@ -167,14 +167,14 @@ static int deal_with_client_rbuf(struct asfd *asfd, struct conf **confs)
 	}
 	else if(asfd->rbuf->cmd==CMD_SIG)
 	{
-		if(deal_with_rbuf_sig(asfd, conf))
+		if(deal_with_rbuf_sig(asfd, confs))
 			goto error;
 	}
 	else if(asfd->rbuf->cmd==CMD_MANIFEST)
 	{
 		// Client has completed a manifest file. Want to start using
 		// it as a dedup candidate now.
-		if(candidate_add_fresh(asfd->rbuf->buf, conf))
+		if(candidate_add_fresh(asfd->rbuf->buf, confs))
 			goto error;
 	}
 	else
@@ -207,9 +207,9 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf **confs)
 	switch(lock->status)
 	{
 		case GET_LOCK_GOT:
-			set_logfp(sdirs->champlog, conf);
+			set_logfp(sdirs->champlog, confs);
 			logp("Got champ lock for dedup_group: %s\n",
-				conf->dedup_group);
+				get_string(confs[OPT_DEDUP_GROUP]));
 			break;
 		case GET_LOCK_NOT_GOT:
 		case GET_LOCK_ERROR:
@@ -247,13 +247,13 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf **confs)
 	  || !(asfd=asfd_alloc())
 	  || as->init(as, 0)
 	  || asfd->init(asfd, "champ chooser main socket", as, s, NULL,
-		ASFD_STREAM_STANDARD, conf))
+		ASFD_STREAM_STANDARD, confs))
 			goto end;
 	as->asfd_add(as, asfd);
 	asfd->fdtype=ASFD_FD_SERVER_LISTEN_MAIN;
 
 	// Load the sparse indexes for this dedup group.
-	if(champ_chooser_init(sdirs->data, conf))
+	if(champ_chooser_init(sdirs->data, confs))
 		goto end;
 
 	while(1)
@@ -275,7 +275,7 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf **confs)
 					while(asfd->rbuf->buf)
 					{
 						if(deal_with_client_rbuf(asfd,
-							conf)) goto end;
+							confs)) goto end;
 						// Get as much out of the
 						// readbuf as possible.
 						if(asfd->parse_readbuf(asfd))
@@ -286,7 +286,7 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf **confs)
 				{
 					// Incoming client.
 					as->asfd->new_client=0;
-					if(champ_chooser_new_client(as, conf))
+					if(champ_chooser_new_client(as, confs))
 						goto end;
 					started=1;
 				}
@@ -327,7 +327,7 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf **confs)
 
 end:
 	logp("champ chooser exiting: %d\n", ret);
-	set_logfp(NULL, conf);
+	set_logfp(NULL, confs);
 	async_free(&as);
 	asfd_free(&asfd); // This closes s for us.
 	close_fd(&s);
@@ -343,23 +343,24 @@ int champ_chooser_server_standalone(struct conf **globalcs)
 {
 	int ret=1;
 	struct sdirs *sdirs=NULL;
-	struct conf *cconf=NULL;
+	struct conf **cconfs=NULL;
+	const char *orig_client=get_string(globalcs[OPT_ORIG_CLIENT]);
 
-	if(!(cconf=conf_alloc()))
+	if(!(cconfs=confs_alloc()))
 		goto end;
-	conf_init(cconf);
+	confs_init(cconfs);
 	// We need to be given a client name and load the relevant server side
 	// clientconfdir file, because various settings may be overridden
 	// there.
-	if(!(cconf->cname=strdup_w(globalc->orig_client, __func__))
-	  || conf_load_clientconfdir(globalc, cconf)
+	if(set_string(cconfs[OPT_CNAME], orig_client)
+	  || conf_load_clientconfdir(globalcs, cconfs)
 	  || !(sdirs=sdirs_alloc())
-	  || sdirs_init(sdirs, cconf)
-	  || champ_chooser_server(sdirs, cconf))
+	  || sdirs_init(sdirs, cconfs)
+	  || champ_chooser_server(sdirs, cconfs))
 		goto end;
 	ret=0;
 end:
-	conf_free(cconf);
+	confs_free(&cconfs);
 	sdirs_free(&sdirs);
 	return ret;
 }

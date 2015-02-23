@@ -3,6 +3,7 @@
 
 #include <zlib.h>
 #include "bfile.h"
+#include "cmd.h"
 
 extern int send_msg_fp(FILE *fp, enum cmd cmd, const char *buf, size_t s);
 extern int send_msg_zp(gzFile zp, enum cmd cmd, const char *buf, size_t s);

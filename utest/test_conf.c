@@ -5,6 +5,7 @@
 #include "../src/conf.h"
 
 void logp(const char *fmt, ...) { }
+void log_oom_w(const char *func, const char *orig_func) { }
 // Stuff pulled in from cntr.c:
 // FIX THIS: Most of it can be deleted if cntr_stats_to_file did not have all
 // the async stuff in it.
@@ -70,7 +71,6 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_R_SCRIPT_POST:
 		case OPT_B_SCRIPT:
 		case OPT_R_SCRIPT:
-		case OPT_RESTORE_CLIENT:
 		case OPT_RESTORE_PATH:
 		case OPT_ORIG_CLIENT:
 		case OPT_CNTR:
@@ -90,7 +90,8 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_DEDUP_GROUP:
 		case OPT_VSS_DRIVES:
 		case OPT_REGEX:
-			ck_assert_int_eq(get_string(c[o]), NULL);
+		case OPT_RESTORE_CLIENT:
+			ck_assert_int_eq(get_string(c[o])==NULL, 1);
 			break;
 		case OPT_RATELIMIT:
 			ck_assert_int_eq(get_float(c[o]), 0);
@@ -173,7 +174,8 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_N_FAILURE_ARG:
 		case OPT_RESTORE_CLIENTS:
 		case OPT_KEEP:
-		case OPT_INCEXCDIR:
+		case OPT_INCLUDE:
+		case OPT_EXCLUDE:
 		case OPT_FSCHGDIR:
 		case OPT_NOBACKUP:
 		case OPT_INCEXT:
@@ -185,7 +187,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_INCGLOB:
         	case OPT_FIFOS:
         	case OPT_BLOCKDEVS:
-			ck_assert_int_eq(get_strlist(c[o]), NULL);
+			ck_assert_int_eq(get_strlist(c[o])==NULL, 1);
 			break;
 		case OPT_PROTOCOL:
 			ck_assert_int_eq(get_e_protocol(c[o]), PROTO_AUTO);
@@ -216,7 +218,7 @@ START_TEST(test_conf_defaults)
 	for(i=0; i<OPT_MAX; i++)
 		check_default(confs, (enum conf_opt)i);
 	confs_free(&confs);
-	ck_assert_int_eq(confs, 0);
+	ck_assert_int_eq(confs==NULL, 1);
 	ck_assert_int_eq(alloc_count, free_count);
 }
 END_TEST

@@ -3,34 +3,35 @@
 #include <dirent.h>
 
 static int permitted(struct cstat *cstat,
-	struct conf *parentconf, struct conf *cconf)
+	struct conf **parentconfs, struct conf **cconfs)
 {
 	struct strlist *rclient;
 
 	// Allow clients to look at themselves.
-	if(!strcmp(cstat->name, parentconf->cname)) return 1;
+	if(!strcmp(cstat->name, get_string(parentconfs[OPT_CNAME]))) return 1;
 
 	// Do not allow clients using the restore_client option to see more
 	// than the client that it is pretending to be.
-	if(parentconf->restore_client) return 0;
+	if(get_string(parentconfs[OPT_RESTORE_CLIENT])) return 0;
 
 	// If we are listed in this restore_client list.
-	for(rclient=cconf->rclients; rclient; rclient=rclient->next)
-		if(!strcmp(parentconf->cname, rclient->path))
+	for(rclient=get_strlist(cconfs[OPT_RESTORE_CLIENTS]);
+	  rclient; rclient=rclient->next)
+		if(!strcmp(get_string(parentconfs[OPT_CNAME]), rclient->path))
 			return 1;
 	return 0;
 }
 
 static int set_cstat_from_conf(struct cstat *cstat,
-	struct conf *parentconf, struct conf *cconf)
+	struct conf **parentconfs, struct conf **cconfs)
 {
 	// Make sure the permitted flag is set appropriately.
-	cstat->permitted=permitted(cstat, parentconf, cconf);
+	cstat->permitted=permitted(cstat, parentconfs, cconfs);
 
-	cstat->protocol=cconf->protocol;
+	cstat->protocol=get_e_protocol(cconfs[OPT_PROTOCOL]);
 	sdirs_free((struct sdirs **)&cstat->sdirs);
 	if(!(cstat->sdirs=sdirs_alloc())
-	  || sdirs_init((struct sdirs *)cstat->sdirs, cconf)) return -1;
+	  || sdirs_init((struct sdirs *)cstat->sdirs, cconfs)) return -1;
 	return 0;
 }
 
@@ -42,11 +43,12 @@ static int get_client_names(struct cstat **clist, struct conf **confs)
 	struct cstat *c;
 	struct cstat *cnew;
 	struct dirent **dir=NULL;
+	const char *clientconfdir=get_string(confs[OPT_CLIENTCONFDIR]);
 
-	if((n=scandir(conf->clientconfdir, &dir, 0, 0))<0)
+	if((n=scandir(clientconfdir, &dir, 0, 0))<0)
 	{
 		logp("could not scandir clientconfdir: %s\n",
-			conf->clientconfdir, strerror(errno));
+			clientconfdir, strerror(errno));
 		goto end;
 	}
         for(m=0; m<n; m++)
@@ -65,7 +67,7 @@ static int get_client_names(struct cstat **clist, struct conf **confs)
 
 		// We do not have this client yet. Add it.
 		if(!(cnew=cstat_alloc())
-		  || cstat_init(cnew, dir[m]->d_name, conf->clientconfdir)
+		  || cstat_init(cnew, dir[m]->d_name, clientconfdir)
 		  || cstat_add_to_list(clist, cnew))
 			goto end;
 	}
@@ -111,21 +113,23 @@ static void cstat_remove(struct cstat **clist, struct cstat **cstat)
 	}
 }
 
-static int reload_from_client_confs(struct cstat **clist, struct conf *globalc)
+static int reload_from_client_confs(struct cstat **clist,
+	struct conf **globalcs)
 {
 	struct cstat *c;
 	struct stat statp;
-	static struct conf *cconf=NULL;
+	static struct conf **cconfs=NULL;
 	static time_t global_mtime=0;
 	time_t global_mtime_new=0;
+	const char *conffile=get_string(globalcs[OPT_CONFFILE]);
 
-	if(!cconf && !(cconf=conf_alloc())) goto error;
+	if(!cconfs && !(cconfs=confs_alloc())) goto error;
 
-	if(stat(globalc->conffile, &statp)
+	if(stat(conffile, &statp)
 	  || !S_ISREG(statp.st_mode))
 	{
 		logp("Could not stat main conf file %s: %s\n",
-			globalc->conffile, strerror(errno));
+			conffile, strerror(errno));
 		goto error;
 	}
 	global_mtime_new=statp.st_mtime;
@@ -155,16 +159,16 @@ static int reload_from_client_confs(struct cstat **clist, struct conf *globalc)
 			}
 			c->conf_mtime=statp.st_mtime;
 
-			conf_free_content(cconf);
-			if(!(cconf->cname=strdup_w(c->name, __func__)))
+			confs_free_content(cconfs);
+			if(set_string(cconfs[OPT_CNAME], c->name))
 				goto error;
-			if(conf_load_clientconfdir(globalc, cconf))
+			if(conf_load_clientconfdir(globalcs, cconfs))
 			{
 				cstat_remove(clist, &c);
 				break; // Go to the beginning of the list.
 			}
 
-			if(set_cstat_from_conf(c, globalc, cconf))
+			if(set_cstat_from_conf(c, globalcs, cconfs))
 				goto error;
 //printf("%s: %d\n", c->name, c->permitted);
 		}
@@ -175,8 +179,7 @@ static int reload_from_client_confs(struct cstat **clist, struct conf *globalc)
 		global_mtime=global_mtime_new;
 	return 0;
 error:
-	conf_free(cconf);
-	cconf=NULL;
+	confs_free(&cconfs);
 	return -1;
 }
 
@@ -252,11 +255,11 @@ error:
 	return -1;
 }
 
-int cstat_load_data_from_disk(struct cstat **clist, struct conf *globalc)
+int cstat_load_data_from_disk(struct cstat **clist, struct conf **globalcs)
 {
-	return get_client_names(clist, globalc)
-	  || reload_from_client_confs(clist, globalc)
-	  || reload_from_clientdir(clist, globalc);
+	return get_client_names(clist, globalcs)
+	  || reload_from_client_confs(clist, globalcs)
+	  || reload_from_clientdir(clist, globalcs);
 }
 
 int cstat_set_backup_list(struct cstat *cstat)

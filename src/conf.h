@@ -258,6 +258,7 @@ enum conf_opt
 
 extern struct conf **confs_alloc(void);
 extern void confs_free(struct conf ***confs);
+extern void confs_free_content(struct conf **confs);
 extern int confs_init(struct conf **confs);
 
 extern void free_incexcs(struct conf **confs);

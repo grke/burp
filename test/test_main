@@ -560,7 +560,7 @@ add_backup_run_scripts_setup_verify_restore()
 	run_scripts
 	wait_for_backup_to_finish
 	start_script_client
-	[ "$protocol" = "burp1" ] && add_run_verify
+	add_run_verify
 	add_run_restore $bno "$restoredir"
 }
 

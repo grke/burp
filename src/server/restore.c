@@ -104,7 +104,7 @@ end:
 
 static int restore_sbuf(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 	enum action act, struct sdirs *sdirs, enum cntr_status cntr_status,
-	struct conf *cconf, int *need_data, const char *manifest,
+	struct conf *cconf, struct sbuf *need_data, const char *manifest,
 	struct slist *slist);
 
 // Used when restoring a hard link that we have not restored the destination
@@ -117,7 +117,7 @@ static int hard_link_substitution(struct asfd *asfd,
 	const char *manifest, struct slist *slist)
 {
 	int ret=-1;
-	int need_data=0;
+	struct sbuf *need_data=NULL;
 	int last_ent_was_dir=0;
 	struct sbuf *hb=NULL;
 	struct manio *manio=NULL;
@@ -127,7 +127,8 @@ static int hard_link_substitution(struct asfd *asfd,
 
 	if(!(manio=manio_alloc())
 	  || manio_init_read(manio, manifest)
-	  || !(hb=sbuf_alloc(cconf)))
+	  || !(hb=sbuf_alloc(cconf))
+	  || !(need_data=sbuf_alloc(cconf)))
 		goto end;
 	manio_set_protocol(manio, cconf->protocol);
 
@@ -141,7 +142,7 @@ static int hard_link_substitution(struct asfd *asfd,
 	while(1)
 	{
 		switch(manio_sbuf_fill(manio, asfd,
-			hb, need_data?blk:NULL, dpth, cconf))
+			hb, need_data->path.buf?blk:NULL, dpth, cconf))
 		{
 			case 0: break; // Keep going.
 			case 1: ret=0; goto end; // Finished OK.
@@ -153,12 +154,12 @@ static int hard_link_substitution(struct asfd *asfd,
 			if(blk->data)
 			{
 				if(burp2_extra_restore_stream_bits(asfd, blk,
-					slist, act,
+					slist, sb, act,
 					need_data, last_ent_was_dir,
 					cconf)) goto end;
 				continue;
 			}
-			need_data=0;
+			sbuf_free_content(need_data);
 		}
 
 		pcmp=pathcmp(lp->name, hb->path.buf);
@@ -172,9 +173,9 @@ static int hard_link_substitution(struct asfd *asfd,
 			// Should now be able to restore the original data
 			// to the new location.
 			ret=restore_sbuf(asfd, hb, bu, act, sdirs,
-			  cntr_status, cconf, &need_data, manifest, slist);
+			  cntr_status, cconf, need_data, manifest, slist);
 			// May still need to get burp2 data.
-			if(!ret && need_data) continue;
+			if(!ret && need_data->path.buf) continue;
 			break;
 		}
 
@@ -192,7 +193,7 @@ end:
 
 static int restore_sbuf(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 	enum action act, struct sdirs *sdirs, enum cntr_status cntr_status,
-	struct conf *cconf, int *need_data, const char *manifest,
+	struct conf *cconf, struct sbuf *need_data, const char *manifest,
 	struct slist *slist)
 {
 	//printf("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path.buf);
@@ -239,7 +240,7 @@ int restore_ent(struct asfd *asfd,
 	struct sdirs *sdirs,
 	enum cntr_status cntr_status,
 	struct conf *cconf,
-	int *need_data,
+	struct sbuf *need_data,
 	int *last_ent_was_dir,
 	const char *manifest)
 {
@@ -308,7 +309,10 @@ static int restore_remaining_dirs(struct asfd *asfd, struct bu *bu,
 	struct slist *slist, enum action act, struct sdirs *sdirs,
 	enum cntr_status cntr_status, struct conf *cconf)
 {
+	int ret=-1;
 	struct sbuf *sb;
+	struct sbuf *need_data=NULL;
+	if(!(need_data=sbuf_alloc(cconf))) goto end;
 	// Restore any directories that are left in the list.
 	for(sb=slist->head; sb; sb=sb->next)
 	{
@@ -316,17 +320,19 @@ static int restore_remaining_dirs(struct asfd *asfd, struct bu *bu,
 		{
 			if(restore_sbuf_burp1(asfd, sb, bu, act,
 				sdirs, cntr_status, cconf))
-					return -1;
+					goto end;
 		}
 		else
 		{
-			int need_data=0; // Unused.
 			if(restore_sbuf_burp2(asfd, sb, act,
-				cntr_status, cconf, &need_data))
-					return -1;
+				cntr_status, cconf, need_data))
+					goto end;
 		}
 	}
-	return 0;
+	ret=0;
+end:
+	sbuf_free(&need_data);
+	return ret;
 }
 
 static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
@@ -335,13 +341,13 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
         enum cntr_status cntr_status)
 {
 	int ret=-1;
-	int need_data=0;
 	int last_ent_was_dir=0;
 	struct sbuf *sb=NULL;
 	struct iobuf *rbuf=asfd->rbuf;
 	struct manio *manio=NULL;
 	struct blk *blk=NULL;
 	struct dpth *dpth=NULL;
+	struct sbuf *need_data=NULL;
 
 	if(cconf->protocol==PROTO_BURP2)
 	{
@@ -354,7 +360,8 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 
 	if(!(manio=manio_alloc())
 	  || manio_init_read(manio, manifest)
-	  || !(sb=sbuf_alloc(cconf)))
+	  || !(sb=sbuf_alloc(cconf))
+	  || !(need_data=sbuf_alloc(cconf)))
 		goto end;
 	manio_set_protocol(manio, cconf->protocol);
 
@@ -384,7 +391,7 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 		}
 
 		switch(manio_sbuf_fill(manio, asfd,
-			sb, need_data?blk:NULL, dpth, cconf))
+			sb, need_data->path.buf?blk:NULL, dpth, cconf))
 		{
 			case 0: break; // Keep going.
 			case 1: ret=0; goto end; // Finished OK.
@@ -396,18 +403,18 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 			if(blk->data)
 			{
 				if(burp2_extra_restore_stream_bits(asfd, blk,
-					slist, act, need_data,
+					slist, sb, act, need_data,
 					last_ent_was_dir, cconf)) goto end;
 				continue;
 			}
-			need_data=0;
+			sbuf_free_content(need_data);
 		}
 
 		if(want_to_restore(srestore, sb, regex, cconf))
 		{
 			if(restore_ent(asfd, &sb, slist,
 				bu, act, sdirs, cntr_status, cconf,
-				&need_data, &last_ent_was_dir, manifest))
+				need_data, &last_ent_was_dir, manifest))
 					goto end;
 		}
 		else if(sbuf_is_filedata(sb))
@@ -425,6 +432,7 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 end:
 	blk_free(&blk);
 	sbuf_free(&sb);
+	sbuf_free(&need_data);
 	iobuf_free_content(rbuf);
 	manio_free(&manio);
 	dpth_free(&dpth);

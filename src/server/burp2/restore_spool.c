@@ -28,7 +28,7 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 	uint64_t estimate_blks;
 	uint64_t estimate_dats;
 	uint64_t estimate_one_dat;
-	int need_data=0;
+	struct sbuf *need_data=NULL;
 	int last_ent_was_dir=0;
 	char sig[128]="";
 
@@ -39,6 +39,7 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 	if(!(manio=manio_alloc())
 	  || manio_init_read(manio, manifest)
 	  || !(sb=sbuf_alloc(conf))
+	  || !(need_data=sbuf_alloc(conf))
 	  || !(blk=blk_alloc()))
 		goto end;
 
@@ -161,13 +162,13 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 			continue;
 		}
 
-		need_data=0;
+		sbuf_free_content(need_data);
 
 		if(want_to_restore(srestore, sb, regex, conf))
 		{
 			if(restore_ent(asfd, &sb, slist, bu, act,
 				sdirs, cntr_status, conf,
-				&need_data, &last_ent_was_dir, manifest))
+				need_data, &last_ent_was_dir, manifest))
 					goto end;
 		}
 
@@ -178,6 +179,7 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 end:
 	blk_free(&blk);
 	sbuf_free(&sb);
+	sbuf_free(&need_data);
 	manio_free(&manio);
 	hash_delete_all();
 	return ret;

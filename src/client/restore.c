@@ -584,7 +584,10 @@ int do_restore_client(struct asfd *asfd,
 		if(conf->protocol==PROTO_BURP2 && blk->data)
 		{
 			int wret;
-			wret=write_data(asfd, bfd, blk);
+			if(act==ACTION_VERIFY)
+				cntr_add(conf->cntr, CMD_DATA, 1);
+			else
+				wret=write_data(asfd, bfd, blk);
 			if(!datpath) free(blk->data);
 			blk->data=NULL;
 			if(wret) goto error;

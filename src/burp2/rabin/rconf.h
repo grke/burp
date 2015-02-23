@@ -10,7 +10,7 @@ struct rconf
 	uint64_t prime;
 
 	uint32_t win_min;
-	uint32_t win;
+	uint32_t win_size;
 	uint32_t win_max;
 	
 	uint32_t blk_min;

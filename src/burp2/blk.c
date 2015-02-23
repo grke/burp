@@ -2,6 +2,7 @@
 
 #include "include.h"
 #include "../hexmap.h"
+#include "../burp2/rabin/rabin.h"
 #include "rabin/rconf.h"
 
 static int alloc_count=0;
@@ -54,21 +55,43 @@ void blk_print_alloc_stats(void)
 //	printf("data_count: %d, data_free_count: %d\n", data_count, data_free_count);
 }
 
-int blk_md5_update(struct blk *blk)
+static int md5_generation(uint8_t md5sum[], const char *data, uint32_t length)
 {
 	MD5_CTX md5;
 	if(!MD5_Init(&md5)
-	  || !MD5_Update(&md5, blk->data, blk->length)
-	  || !MD5_Final(blk->md5sum, &md5))
+	  || !MD5_Update(&md5, data, length)
+	  || !MD5_Final(md5sum, &md5))
 	{
-		logp("MD5 failed.\n");
+		logp("MD5 generation failed.\n");
 		return -1;
 	}
 	return 0;
+}
+
+int blk_md5_update(struct blk *blk)
+{
+	return md5_generation(blk->md5sum, blk->data, blk->length);
 }
 
 int blk_is_zero_length(struct blk *blk)
 {
 	return !blk->fingerprint // All zeroes.
 	  && !memcmp(blk->md5sum, md5sum_of_empty_string, MD5_DIGEST_LENGTH);
+}
+
+int blk_verify(struct blk *blk, struct conf *conf)
+{
+	uint8_t md5sum[MD5_DIGEST_LENGTH];
+	// Check rabin fingerprint.
+	switch(blk_read_verify(blk, conf))
+	{
+		case 1: break; // Match.
+		case 0: return 0; // Did not match.
+		default: return -1;
+	}
+	// Check md5sum.
+	if(md5_generation(md5sum, blk->data, blk->length))
+		return -1;
+	if(!memcmp(md5sum, blk->md5sum, MD5_DIGEST_LENGTH)) return 1;
+	return 0;
 }

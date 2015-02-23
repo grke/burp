@@ -388,14 +388,14 @@ add_strip_vss_on()
 	sed_rep_client '$ astrip_vss = 1' "$clientconf"
 }
 
-add_burp1_off()
+add_protocol1_off()
 {
 	sed_rep_client 's/^protocol = .*//g' "$clientconf"
 }
 
-add_burp1_on()
+add_protocol1_on()
 {
-	add_burp1_off
+	add_protocol1_off
 	[ "$protocol" = 1 ] && \
 		sed_rep_client '$ aprotocol = 1' "$clientconf"
 }
@@ -568,7 +568,7 @@ add_normal_settings()
 {
 	start_script_server
 	start_script_client
-	add_burp1_on
+	add_protocol1_on
 	add_compression_on
 	add_encryption_off
 	add_max_file_size_off
@@ -761,11 +761,11 @@ run_tests()
 
 restart_server
 
-# Run in burp1 mode.
+# Run in protocol1 mode.
 workingdir="$target/var/spool/burp/testclient/working"
 finishingdir="$target/var/spool/burp/testclient/finishing"
 run_tests 1
-# Run in burp2 mode.
+# Run in protocol2 mode.
 workingdir="$target/var/spool/burp/global/clients/testclient/working"
 finishingdir="$target/var/spool/burp/global/clients/testclient/finishing"
 run_tests 2

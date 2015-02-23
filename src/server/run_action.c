@@ -1,8 +1,8 @@
 #include "include.h"
 #include "../cmd.h"
-#include "burp1/rubble.h"
-#include "burp2/restore.h"
-#include "burp2/rubble.h"
+#include "protocol1/rubble.h"
+#include "protocol2/restore.h"
+#include "protocol2/rubble.h"
 
 // FIX THIS: Somewhat haphazard.
 /* Return 0 for everything OK. -1 for error, or 1 to mean that a backup is
@@ -307,11 +307,11 @@ static const char *buf_to_notify_str(struct iobuf *rbuf)
 static int check_for_rubble(struct asfd *asfd, struct sdirs *sdirs,
 	const char *incexc, int *resume, struct conf *cconf)
 {
-	if(cconf->protocol==PROTO_BURP1)
-		return check_for_rubble_burp1(asfd,
+	if(cconf->protocol==PROTO_1)
+		return check_for_rubble_protocol1(asfd,
 			sdirs, incexc, resume, cconf);
 	else
-		return check_for_rubble_burp2(asfd,
+		return check_for_rubble_protocol2(asfd,
 			sdirs, incexc, resume, cconf);
 }
 

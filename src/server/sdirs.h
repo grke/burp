@@ -34,7 +34,7 @@ struct sdirs
 	char *lockdir;
 	struct lock *lock;
 
-	// Burp1 directories.
+	// Protocol1 directories.
 	char *currentdata;
 	char *datadirtmp;
 	char *cincexc;

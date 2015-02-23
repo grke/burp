@@ -26,7 +26,7 @@ struct manio
 	char *dindex_dir;
 	char **dindex_sort;	// Array for sorting and writing dindex.
 	int dindex_count;
-	enum protocol protocol;	// Whether running in burp1/burp2 mode.
+	enum protocol protocol;	// Whether running in protocol1/2 mode.
 };
 
 extern struct manio *manio_alloc(void);

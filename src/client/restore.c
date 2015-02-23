@@ -1,9 +1,9 @@
 #include "include.h"
 #include "../cmd.h"
-#include "burp1/restore.h"
-#include "burp2/restore.h"
+#include "protocol1/restore.h"
+#include "protocol2/restore.h"
 
-// FIX THIS: it only works with burp1.
+// FIX THIS: it only works with protocol1.
 int restore_interrupt(struct asfd *asfd,
 	struct sbuf *sb, const char *msg, struct conf *conf)
 {
@@ -11,7 +11,7 @@ int restore_interrupt(struct asfd *asfd,
 	struct cntr *cntr=conf->cntr;
 	struct iobuf *rbuf=asfd->rbuf;
 
-	if(conf->protocol!=PROTO_BURP1) return 0;
+	if(conf->protocol!=PROTO_1) return 0;
 	if(!cntr) return 0;
 
 	cntr_add(cntr, CMD_WARNING, 1);
@@ -28,12 +28,12 @@ int restore_interrupt(struct asfd *asfd,
 	  && sb->path.cmd!=CMD_VSS_T
 	  && sb->path.cmd!=CMD_ENC_VSS_T)
 		return 0;
-	if(sb->burp1 && !(sb->burp1->datapth.buf))
+	if(sb->protocol1 && !(sb->protocol1->datapth.buf))
 		return 0;
-	if(sb->burp2 && !(sb->path.buf))
+	if(sb->protocol2 && !(sb->path.buf))
 		return 0;
 
-	if(asfd->write_str(asfd, CMD_INTERRUPT, sb->burp1->datapth.buf))
+	if(asfd->write_str(asfd, CMD_INTERRUPT, sb->protocol1->datapth.buf))
 		goto end;
 
 	// Read to the end file marker.
@@ -467,7 +467,7 @@ static enum asl_ret restore_style_func(struct asfd *asfd,
 
 static char *get_restore_style(struct asfd *asfd, struct conf *conf)
 {
-	if(conf->protocol==PROTO_BURP1)
+	if(conf->protocol==PROTO_1)
 		return strdup_w(RESTORE_STREAM, __func__);
 	if(asfd->simple_loop(asfd, conf, NULL, __func__,
 		restore_style_func)) return NULL;
@@ -513,7 +513,7 @@ static int restore_spool(struct asfd *asfd, struct conf *conf, char **datpath)
 static int sbuf_fill_w(struct sbuf *sb, struct asfd *asfd,
 	struct blk *blk, const char *datpath, struct conf *conf)
 {
-	if(conf->protocol==PROTO_BURP2)
+	if(conf->protocol==PROTO_2)
 		return sbuf_fill(sb, asfd, NULL, blk, datpath, conf);
 	else
 		return sbufl_fill(sb, asfd, NULL, NULL, conf->cntr);
@@ -561,7 +561,7 @@ int do_restore_client(struct asfd *asfd,
 //		goto error;
 
 	if(!(sb=sbuf_alloc(conf))
-	  || (conf->protocol==PROTO_BURP2 && !(blk=blk_alloc())))
+	  || (conf->protocol==PROTO_2 && !(blk=blk_alloc())))
 	{
 		log_and_send_oom(asfd, __func__);
 		goto error;
@@ -581,7 +581,7 @@ int do_restore_client(struct asfd *asfd,
 			case -1: goto error;
 		}
 
-		if(conf->protocol==PROTO_BURP2 && blk->data)
+		if(conf->protocol==PROTO_2 && blk->data)
 		{
 			int wret;
 			if(act==ACTION_VERIFY)
@@ -661,7 +661,7 @@ int do_restore_client(struct asfd *asfd,
 
 		switch(sb->path.cmd)
 		{
-			// These are the same in both burp1 and burp2.
+			// These are the same in both protocol1 and protocol2.
 			case CMD_DIRECTORY:
 				if(restore_dir(asfd, sb, fullpath, act, conf))
 					goto error;
@@ -679,15 +679,15 @@ int do_restore_client(struct asfd *asfd,
 				break;
 		}
 
-		if(conf->protocol==PROTO_BURP2)
+		if(conf->protocol==PROTO_2)
 		{
-			if(restore_switch_burp2(asfd, sb, fullpath, act,
+			if(restore_switch_protocol2(asfd, sb, fullpath, act,
 				bfd, vss_restore, conf))
 					goto error;
 		}
 		else
 		{
-			if(restore_switch_burp1(asfd, sb, fullpath, act,
+			if(restore_switch_protocol1(asfd, sb, fullpath, act,
 				bfd, vss_restore, conf))
 					goto error;
 		}

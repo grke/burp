@@ -1,6 +1,6 @@
 #include "include.h"
 #include "cmd.h"
-#include "server/burp2/rblk.h"
+#include "server/protocol2/rblk.h"
 
 static int alloc_count=0;
 static int free_count=0;
@@ -13,13 +13,13 @@ struct sbuf *sbuf_alloc_protocol(enum protocol protocol)
 	sb->path.cmd=CMD_ERROR;
 	sb->attr.cmd=CMD_ATTRIBS;
 	sb->compression=-1;
-	if(protocol==PROTO_BURP1)
+	if(protocol==PROTO_1)
 	{
-		if(!(sb->burp1=sbuf_burp1_alloc())) return NULL;
+		if(!(sb->protocol1=sbuf_protocol1_alloc())) return NULL;
 	}
 	else
 	{
-		if(!(sb->burp2=sbuf_burp2_alloc())) return NULL;
+		if(!(sb->protocol2=sbuf_protocol2_alloc())) return NULL;
 	}
 alloc_count++;
 	return sb;
@@ -39,16 +39,16 @@ void sbuf_free_content(struct sbuf *sb)
 	sb->compression=-1;
 	sb->winattr=0;
 	sb->flags=0;
-	sbuf_burp1_free_content(sb->burp1);
-	sbuf_burp2_free_content(sb->burp2);
+	sbuf_protocol1_free_content(sb->protocol1);
+	sbuf_protocol2_free_content(sb->protocol2);
 }
 
 void sbuf_free(struct sbuf **sb)
 {
 	if(!sb || !*sb) return;
 	sbuf_free_content(*sb);
-	free_v((void **)&((*sb)->burp1));
-	free_v((void **)&((*sb)->burp2));
+	free_v((void **)&((*sb)->protocol1));
+	free_v((void **)&((*sb)->protocol2));
 	free_v((void **)sb);
 free_count++;
 }
@@ -103,7 +103,7 @@ int sbuf_pathcmp(struct sbuf *a, struct sbuf *b)
 
 int sbuf_open_file(struct sbuf *sb, struct asfd *asfd, struct conf *conf)
 {
-	BFILE *bfd=&sb->burp2->bfd;
+	BFILE *bfd=&sb->protocol2->bfd;
 #ifdef HAVE_WIN32
 	if(win32_lstat(sb->path.buf, &sb->statp, &sb->winattr))
 #else
@@ -115,8 +115,8 @@ int sbuf_open_file(struct sbuf *sb, struct asfd *asfd, struct conf *conf)
 		return -1;
 	}
 	sb->compression=conf->compression;
-	// Encryption not yet implemented in burp2.
-	//sb->burp2->encryption=conf->burp2->encryption_password?1:0;
+	// Encryption not yet implemented in protocol2.
+	//sb->protocol2->encryption=conf->protocol2->encryption_password?1:0;
 	if(attribs_encode(sb)) return -1;
 
 	if(bfd->open_for_send(bfd, asfd,
@@ -130,14 +130,14 @@ int sbuf_open_file(struct sbuf *sb, struct asfd *asfd, struct conf *conf)
 
 void sbuf_close_file(struct sbuf *sb, struct asfd *asfd)
 {
-	BFILE *bfd=&sb->burp2->bfd;
+	BFILE *bfd=&sb->protocol2->bfd;
 	bfd->close(bfd, asfd);
 //printf("closed: %s\n", sb->path);
 }
 
 ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize)
 {
-	BFILE *bfd=&sb->burp2->bfd;
+	BFILE *bfd=&sb->protocol2->bfd;
 	return (ssize_t)bfd->read(bfd, buf, bufsize);
 }
 
@@ -335,11 +335,11 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 			case CMD_ERROR:
 				printf("got error: %s\n", rbuf->buf);
 				goto end;
-			// Stuff that is currently burp1. OK to find these
-			// in burp-1, but not burp-2.
+			// Stuff that is currently protocol1. OK to find these
+			// in protocol-1, but not protocol-2.
 			case CMD_DATAPTH:
 			case CMD_END_FILE:
-				if(sb->burp1) continue;
+				if(sb->protocol1) continue;
 			default:
 				iobuf_log_unexpected(rbuf, __func__);
 				goto end;

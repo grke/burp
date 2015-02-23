@@ -47,7 +47,7 @@ as before.
 
 2.0.6
 -----
-Warning about hardlinked_archive in burp1 style backups:
+Warning about hardlinked_archive in protocol1 style backups:
 In this version, I have changed the way that hardlinked_archive works slightly,
 in order to fix https://github.com/grke/burp/issues/176 - unnecessary
 duplication and deletion.
@@ -57,7 +57,7 @@ made during the next backup.
 Now, the decision is being made for each backup when it is being finalised
 itself (rather than waiting for the next one).
 This means that, when you upgrade, your most recent backup will look like a
-non-hardlinked_archive, and when you make you next burp1 style backup with a
+non-hardlinked_archive, and when you make you next protocol1 style backup with a
 2.0.x server, it will treat the previous backup as a non-hardlinked_archive.
 If you need it to be a hardlinked_archive, make sure that you anticipate this
 before the next backup happens, by creating a file called something like:

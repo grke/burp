@@ -55,16 +55,16 @@ int attribs_encode(struct sbuf *sb)
 	p=sb->attr.buf;
 	statp=&sb->statp;
 
-	if(sb->burp2)
+	if(sb->protocol2)
 	{
-		// Burp1 does not have this field.
-		p += to_base64(sb->burp2->index, p);
+		// Protocol1 does not have this field.
+		p += to_base64(sb->protocol2->index, p);
 		*p++ = ' ';
-		// Burp2 puts compression near the beginning.
+		// Protocol2 puts compression near the beginning.
 		p += to_base64(sb->compression, p);
 		*p++ = ' ';
-		// Burp1 does not have this field.
-		p += to_base64(sb->burp2->encryption, p);
+		// Protocol1 does not have this field.
+		p += to_base64(sb->protocol2->encryption, p);
 		*p++ = ' ';
 	}
 	p += to_base64(statp->st_dev, p);
@@ -114,9 +114,9 @@ int attribs_encode(struct sbuf *sb)
 	p += to_base64(0, p); // place holder
 #endif
 
-	if(sb->burp1)
+	if(sb->protocol1)
 	{
-		// Burp1 puts compression at the end.
+		// Protocol1 puts compression at the end.
 		*p++ = ' ';
 		p += to_base64(sb->compression, p);
 	}
@@ -154,19 +154,19 @@ void attribs_decode(struct sbuf *sb)
 	if(!(p=sb->attr.buf)) return;
 	statp=&sb->statp;
 
-	if(sb->burp2)
+	if(sb->protocol2)
 	{
-		// Burp1 does not have this field.
+		// Protocol1 does not have this field.
 		p += from_base64(&val, p);
-		sb->burp2->index=val;
+		sb->protocol2->index=val;
 		p++;
-		// Compression for burp2.
+		// Compression for protocol2.
 		p += from_base64(&val, p);
 		sb->compression=val;
 		p++;
-		// Burp1 does not have this field.
+		// Protocol1 does not have this field.
 		p += from_base64(&val, p);
-		sb->burp2->encryption=val;
+		sb->protocol2->encryption=val;
 		p++;
 	}
 	p += from_base64(&val, p);
@@ -240,8 +240,8 @@ void attribs_decode(struct sbuf *sb)
 		val = 0;
 	sb->winattr=val;
 
-	// Compression for burp1.
-	if(sb->burp1)
+	// Compression for protocol1.
+	if(sb->protocol1)
 	{
 		if(*p == ' ' || (*p != 0 && *(p+1) == ' '))
 		{

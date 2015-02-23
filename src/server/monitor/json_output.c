@@ -265,7 +265,7 @@ static int json_send_backup(struct asfd *asfd, struct cstat *cstat,
 			if(yajl_gen_str_pair_w("directory", browse)) return -1;
 			if(yajl_gen_str_w("entries")) return -1;
 			if(yajl_array_open_w()) return -1;
-			if(browse_manifest(asfd, cstat, bu, browse, conf))
+			if(browse_manifest(asfd, cstat, bu, browse, confs))
 				return -1;
 			if(yajl_array_close_w()) return -1;
 			if(yajl_map_close_w()) return -1;
@@ -312,10 +312,10 @@ static int json_send_client_backup(struct asfd *asfd,
 	int ret=-1;
 	if(json_send_client_start(asfd, cstat)) return -1;
 	if((ret=json_send_backup(asfd, cstat,
-		bu1, 1 /* print flags */, logfile, browse, conf)))
+		bu1, 1 /* print flags */, logfile, browse, confs)))
 			goto end;
 	if((ret=json_send_backup(asfd, cstat,
-		bu2, 1 /* print flags */, logfile, browse, conf)))
+		bu2, 1 /* print flags */, logfile, browse, confs)))
 			goto end;
 end:
 	if(json_send_client_end(asfd)) ret=-1;
@@ -352,7 +352,7 @@ int json_send(struct asfd *asfd, struct cstat *clist, struct cstat *cstat,
 	if(cstat && bu)
 	{
 		if(json_send_client_backup(asfd, cstat, bu, NULL,
-			logfile, browse, conf)) goto end;
+			logfile, browse, confs)) goto end;
 	}
 	else if(cstat)
 	{

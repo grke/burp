@@ -1,6 +1,7 @@
 #include "include.h"
 #include "base64.h"
 #include "cmd.h"
+#include "conffile.h"
 #include "client/main.h"
 #include "hexmap.h"
 #include "server/main.h"

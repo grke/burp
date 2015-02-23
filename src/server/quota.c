@@ -10,7 +10,7 @@ static void quota_log_bytes(struct async *as,
 }
 
 // Return O for OK, -1 if the estimated size is greater than hard_quota 
-int check_quota(struct async *as, struct conf *cconf)
+int check_quota(struct async *as, struct conf **cconfs)
 {
 	unsigned long long byte;
 

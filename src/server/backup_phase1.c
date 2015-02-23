@@ -17,18 +17,18 @@ int backup_phase1_server_all(struct async *as,
 
 	if(!(phase1tmp=get_tmp_filename(sdirs->phase1data)))
 		goto end;
-	if(!(p1zp=gzopen_file(phase1tmp, comp_level(conf))))
+	if(!(p1zp=gzopen_file(phase1tmp, comp_level(confs))))
 		goto end;
-	if(!(sb=sbuf_alloc(conf)))
+	if(!(sb=sbuf_alloc(confs)))
 		goto end;
 
 	while(1)
 	{
 		sbuf_free_content(sb);
-		if(conf->protocol==PROTO_1)
+		if(get_e_protocol(confs[OPT_PROTOCOL])==PROTO_1)
 			ars=sbufl_fill(sb, asfd, NULL, NULL, get_cntr(confs[OPT_CNTR]));
 		else
-			ars=sbuf_fill(sb, asfd, NULL, NULL, NULL, conf);
+			ars=sbuf_fill(sb, asfd, NULL, NULL, NULL, confs);
 
 		if(ars)
 		{
@@ -42,7 +42,7 @@ int backup_phase1_server_all(struct async *as,
 					goto end;
 			break;
 		}
-		if(write_status(CNTR_STATUS_SCANNING, sb->path.buf, conf)
+		if(write_status(CNTR_STATUS_SCANNING, sb->path.buf, confs)
 		  || sbufl_to_manifest_phase1(sb, NULL, p1zp))
 			goto end;
 		cntr_add_phase1(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 0);
@@ -64,7 +64,7 @@ int backup_phase1_server_all(struct async *as,
 		goto end;
 	}
 
-	if(check_quota(as, conf))
+	if(check_quota(as, confs))
 		goto end;
 
 	// Possible rename race condition is of no consequence here, because

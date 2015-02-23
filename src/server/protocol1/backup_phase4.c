@@ -9,7 +9,7 @@
 // FIX THIS: This stuff is very similar to make_rev_delta, can maybe share
 // some code.
 int do_patch(struct asfd *asfd, const char *dst, const char *del,
-	const char *upd, bool gzupd, int compression, struct conf *cconf)
+	const char *upd, bool gzupd, int compression, struct conf **cconfs)
 {
 	FILE *dstp=NULL;
 	FILE *delfp=NULL;

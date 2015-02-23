@@ -43,7 +43,7 @@ int recursive_hardlink(const char *src, const char *dst, struct conf **confs)
 // Faster evaluation on most systems.
 		if(dir[n]->d_type==DT_DIR)
 		{
-			if(recursive_hardlink(fullpatha, fullpathb, conf))
+			if(recursive_hardlink(fullpatha, fullpathb, confs))
 				break;
 		}
 		else
@@ -56,14 +56,14 @@ int recursive_hardlink(const char *src, const char *dst, struct conf **confs)
 		}
 		else if(S_ISDIR(statp.st_mode))
 		{
-			if(recursive_hardlink(fullpatha, fullpathb, conf))
+			if(recursive_hardlink(fullpatha, fullpathb, confs))
 				break;
 		}
 		else
 		{
 			//logp("hardlinking %s to %s\n", fullpathb, fullpatha);
-			if(write_status(CNTR_STATUS_SHUFFLING, fullpathb, conf)
-			  || do_link(fullpatha, fullpathb, &statp, conf,
+			if(write_status(CNTR_STATUS_SHUFFLING, fullpathb, confs)
+			  || do_link(fullpatha, fullpathb, &statp, confs,
 				0 /* do not overwrite target */))
 				break;
 		}
@@ -116,7 +116,7 @@ end:
 int do_link(const char *oldpath, const char *newpath, struct stat *statp, struct conf **confs, uint8_t overwrite)
 {
 	/* Avoid creating too many hardlinks */
-	if(statp->st_nlink >= (unsigned int)conf->max_hardlinks)
+	if(statp->st_nlink >= (unsigned int)get_int(confs[OPT_MAX_HARDLINKS]))
 	{
 		return duplicate_file(oldpath, newpath);
 	}

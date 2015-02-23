@@ -174,6 +174,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_N_FAILURE_ARG:
 		case OPT_RESTORE_CLIENTS:
 		case OPT_KEEP:
+		case OPT_INCEXCDIR:
 		case OPT_INCLUDE:
 		case OPT_EXCLUDE:
 		case OPT_FSCHGDIR:

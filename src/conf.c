@@ -41,7 +41,7 @@ enum recovery_method str_to_recovery_method(const char *str)
 	return RECOVERY_METHOD_UNSET;
 }
 
-static const char *recovery_method_to_str(enum recovery_method r)
+const char *recovery_method_to_str(enum recovery_method r)
 {
 	switch(r)
 	{

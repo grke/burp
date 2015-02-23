@@ -4,6 +4,7 @@
 #include "../../slist.h"
 #include "../../hexmap.h"
 #include "../../server/protocol1/restore.h"
+#include "../../protocol2/rabin/rconf.h"
 #include "../manio.h"
 #include "../sdirs.h"
 
@@ -31,20 +32,21 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 	int need_data=0;
 	int last_ent_was_dir=0;
 	char sig[128]="";
+	const char *restore_spool=get_string(confs[OPT_RESTORE_SPOOL]);
 
 	// If the client has no restore_spool directory, we have to fall back
 	// to the stream style restore.
-	if(!conf->restore_spool) return 0;
+	if(!restore_spool) return 0;
 	
 	if(!(manio=manio_alloc())
 	  || manio_init_read(manio, manifest)
-	  || !(sb=sbuf_alloc(conf))
+	  || !(sb=sbuf_alloc(confs))
 	  || !(blk=blk_alloc()))
 		goto end;
 
 	while(1)
 	{
-		if((ars=manio_sbuf_fill(manio, asfd, sb, blk, NULL, conf))<0)
+		if((ars=manio_sbuf_fill(manio, asfd, sb, blk, NULL, confs))<0)
 		{
 			logp("Error from manio_sbuf_fill() in %s\n",
 				__func__);
@@ -58,7 +60,7 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 			continue;
 		}
 
-		if(want_to_restore(srestore, sb, regex, conf))
+		if(want_to_restore(srestore, sb, regex, confs))
 		{
 			blkcount++;
 			if(!hash_weak_find((uint64_t)blk->savepath))
@@ -72,6 +74,7 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 		sbuf_free_content(sb);
 	}
 
+	// FIX THIS: should read rabin_avg of a struct rconf.
 	estimate_blks=blkcount*RABIN_AVG;
 	estimate_one_dat=DATA_FILE_SIG_MAX*RABIN_AVG;
 	estimate_dats=datcount*estimate_one_dat;
@@ -98,7 +101,7 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 		printf("Use data files\n");
 	}
 
-	printf("Client is using restore_spool: %s\n", conf->restore_spool);
+	printf("Client is using restore_spool: %s\n", restore_spool);
 
 	if(asfd->write_str(asfd, CMD_GEN, "restore_spool")
 	  || asfd->read_expect(asfd, CMD_GEN, "restore_spool_ok"))
@@ -118,7 +121,7 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 		if(asfd->write_str(asfd, CMD_GEN, msg)) goto end;
 		if(!(fdatpath=prepend_s(sdirs->data, path)))
 			goto end;
-		if(send_a_file(asfd, fdatpath, conf))
+		if(send_a_file(asfd, fdatpath, confs))
 		{
 			free(fdatpath);
 			goto end;
@@ -136,7 +139,7 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 	blk->got_save_path=0;
 	while(1)
 	{
-		if((ars=manio_sbuf_fill(manio, asfd, sb, blk, NULL, conf))<0)
+		if((ars=manio_sbuf_fill(manio, asfd, sb, blk, NULL, confs))<0)
 		{
 			logp("Error from manio_sbuf_fill() in %s\n",
 				__func__);
@@ -163,10 +166,10 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 
 		need_data=0;
 
-		if(want_to_restore(srestore, sb, regex, conf))
+		if(want_to_restore(srestore, sb, regex, confs))
 		{
 			if(restore_ent(asfd, &sb, slist, bu, act,
-				sdirs, cntr_status, conf,
+				sdirs, cntr_status, confs,
 				&need_data, &last_ent_was_dir, manifest))
 					goto end;
 		}

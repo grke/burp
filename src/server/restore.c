@@ -154,7 +154,7 @@ static int hard_link_substitution(struct asfd *asfd,
 			if(blk->data)
 			{
 				if(protocol2_extra_restore_stream_bits(asfd,
-					blk, slist, sb, act,
+					blk, slist, act, need_data,
 					last_ent_was_dir, cconf)) goto end;
 				continue;
 			}
@@ -402,7 +402,7 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 			if(blk->data)
 			{
 				if(protocol2_extra_restore_stream_bits(asfd,
-					blk, slist, sb, act, need_data,
+					blk, slist, act, need_data,
 					last_ent_was_dir, cconf)) goto end;
 				continue;
 			}

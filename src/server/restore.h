@@ -2,7 +2,7 @@
 #define _RESTORE_SERVER_H
 
 extern int want_to_restore(int srestore, struct sbuf *sb,
-	regex_t *regex, struct conf *cconf);
+	regex_t *regex, struct conf **cconfs);
 
 extern int restore_ent(struct asfd *asfd,
         struct sbuf **sb,
@@ -11,7 +11,7 @@ extern int restore_ent(struct asfd *asfd,
         enum action act,
         struct sdirs *sdirs,
         enum cntr_status cntr_status,
-        struct conf *cconf,
+        struct conf **cconfs,
         int *need_data,
         int *last_ent_was_dir,
 	const char *manifest);

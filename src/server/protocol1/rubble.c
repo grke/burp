@@ -33,12 +33,12 @@ end:
 }
 
 static int maybe_rebuild_manifest(struct sdirs *sdirs, int compress,
-	struct conf *cconf)
+	struct conf **cconfs)
 {
 	struct stat statp;
 	if(lstat(sdirs->manifest, &statp))
 		return backup_phase3_server_protocol1(sdirs,
-			1 /* recovery mode */, compress, cconf);
+			1 /* recovery mode */, compress, cconfs);
 
 	unlink(sdirs->changed);
 	unlink(sdirs->unchanged);
@@ -60,7 +60,7 @@ static int working_delete(struct asfd *asfd, struct sdirs *sdirs)
 }
 
 static int working_use(struct asfd *asfd, struct sdirs *sdirs,
-	const char *incexc, int *resume, struct conf *cconf)
+	const char *incexc, int *resume, struct conf **cconfs)
 {
 	// Use it as it is.
 
@@ -71,20 +71,20 @@ static int working_use(struct asfd *asfd, struct sdirs *sdirs,
 	// disk space. Detect this and remove it.
 
 	// Get us a partial manifest from the files lying around.
-	if(maybe_rebuild_manifest(sdirs, 1 /* compress */, cconf)) return -1;
+	if(maybe_rebuild_manifest(sdirs, 1 /* compress */, cconfs)) return -1;
 
 	// Now just rename the working link to be a finishing link,
 	// then run this function again.
 	// The rename() race condition is automatically recoverable here.
 	if(do_rename(sdirs->working, sdirs->finishing)) return -1;
 
-	return check_for_rubble_protocol1(asfd, sdirs, incexc, resume, cconf);
+	return check_for_rubble_protocol1(asfd, sdirs, incexc, resume, cconfs);
 }
 
 static int working_resume(struct asfd *asfd, struct sdirs *sdirs,
-	const char *incexc, int *resume, struct conf *cconf)
+	const char *incexc, int *resume, struct conf **cconfs)
 {
-	if(cconf->restore_client)
+	if(get_string(cconfs[OPT_RESTORE_CLIENT]))
 	{
 		// This client is not the original client, resuming might cause
 		// all sorts of trouble.
@@ -118,7 +118,7 @@ static int get_fullrealwork(struct asfd *asfd,
 {
 	struct stat statp;
 
-	if(sdirs_get_real_working_from_symlink(sdirs, conf))
+	if(sdirs_get_real_working_from_symlink(sdirs, confs))
 		return -1;
 
 	if(lstat(sdirs->rworking, &statp))
@@ -132,10 +132,10 @@ static int get_fullrealwork(struct asfd *asfd,
 }
 
 static int recover_finishing(struct asfd *asfd,
-	struct sdirs *sdirs, struct conf *cconf)
+	struct sdirs *sdirs, struct conf **cconfs)
 {
 	logp("Found finishing symlink - attempting to complete prior backup!\n");
-	if(backup_phase4_server_protocol1(sdirs, cconf))
+	if(backup_phase4_server_protocol1(sdirs, cconfs))
 	{
 		log_and_send(asfd, "Problem with prior backup. Please check the client log on the server.");
 		return -1;
@@ -151,28 +151,30 @@ static int recover_finishing(struct asfd *asfd,
 
 static int recover_working(struct asfd *asfd,
 	struct sdirs *sdirs, const char *incexc,
-	int *resume, struct conf *cconf)
+	int *resume, struct conf **cconfs)
 {
 	int ret=-1;
 	char msg[256]="";
 	char *logpath=NULL;
 	struct stat statp;
 	char *phase1datatmp=NULL;
-	const char *wdrm=cconf->recovery_method;
+	enum recovery_method recovery_method=get_e_recovery_method(
+		cconfs[OPT_WORKING_DIR_RECOVERY_METHOD]);
 
 	// The working directory has not finished being populated.
 	// Check what to do.
-	if(get_fullrealwork(asfd, sdirs, cconf)) goto error;
+	if(get_fullrealwork(asfd, sdirs, cconfs)) goto error;
 	if(!sdirs->rworking) goto end;
 
 	// We have found an old working directory - open the log inside
 	// for appending.
 	if(!(logpath=prepend_s(sdirs->rworking, "log"))
-	  || set_logfp(logpath, cconf))
+	  || set_logfp(logpath, cconfs))
 		goto error;
 
 	logp("found old working directory: %s\n", sdirs->rworking);
-	logp("working_dir_recovery_method: %s\n", wdrm);
+	logp("working_dir_recovery_method: %s\n",
+		recovery_method_to_str(recovery_method));
 
 	if(!(phase1datatmp=get_tmp_filename(sdirs->phase1data)))
 		goto error;
@@ -180,30 +182,27 @@ static int recover_working(struct asfd *asfd,
 	{
 		// Phase 1 did not complete - delete everything.
 		logp("Phase 1 has not completed.\n");
-		wdrm="delete";
+		recovery_method=RECOVERY_METHOD_DELETE;
 	}
 
-	if(!strcmp(wdrm, "delete"))
+	switch(recovery_method)
 	{
-		if(working_delete(asfd, sdirs))
+		case RECOVERY_METHOD_DELETE:
+			if(working_delete(asfd, sdirs))
+				goto error;
+		case RECOVERY_METHOD_USE:
+			if(working_use(asfd, sdirs, incexc, resume, cconfs))
+				goto error;
+		case RECOVERY_METHOD_RESUME:
+			if(working_resume(asfd, sdirs, incexc, resume, cconfs))
+				goto error;
+		case RECOVERY_METHOD_UNSET:
+		default:
+			snprintf(msg, sizeof(msg),
+				"Unknown working_dir_recovery_method: %d\n",
+					(int)recovery_method);
+			log_and_send(asfd, msg);
 			goto error;
-	}
-	else if(!strcmp(wdrm, "use"))
-	{
-		if(working_use(asfd, sdirs, incexc, resume, cconf))
-			goto error;
-	}
-	else if(!strcmp(wdrm, "resume"))
-	{
-		if(working_resume(asfd, sdirs, incexc, resume, cconf))
-			goto error;
-	}
-	else
-	{
-		snprintf(msg, sizeof(msg),
-			"Unknown working_dir_recovery_method: %s\n", wdrm);
-		log_and_send(asfd, msg);
-		goto error;
 	}
 
 end:
@@ -211,7 +210,7 @@ end:
 error:
 	free_w(&logpath);
 	free_w(&phase1datatmp);
-	set_logfp(NULL, cconf); // fclose the logfp
+	set_logfp(NULL, cconfs); // fclose the logfp
 	return ret;
 }
 
@@ -263,14 +262,14 @@ static int recover_currenttmp(struct sdirs *sdirs)
 
 int check_for_rubble_protocol1(struct asfd *asfd,
 	struct sdirs *sdirs, const char *incexc,
-	int *resume, struct conf *cconf)
+	int *resume, struct conf **cconfs)
 {
 	struct stat statp;
 
 	if(!lstat(sdirs->finishing, &statp))
 	{
 		if(S_ISLNK(statp.st_mode))
-			return recover_finishing(asfd, sdirs, cconf);
+			return recover_finishing(asfd, sdirs, cconfs);
 		log_and_send(asfd, "Finishing directory is not a symlink.\n");
 		return -1;
 	}
@@ -279,7 +278,7 @@ int check_for_rubble_protocol1(struct asfd *asfd,
 	{
 		if(S_ISLNK(statp.st_mode))
 			return recover_working(asfd,
-				sdirs, incexc, resume, cconf);
+				sdirs, incexc, resume, cconfs);
 		log_and_send(asfd, "Working directory is not a symlink.\n");
 		return -1;
 	}

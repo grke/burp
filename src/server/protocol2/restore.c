@@ -21,7 +21,8 @@ static int send_data(struct asfd *asfd, struct blk *blk,
 			// FIX THIS.
 			// Need to check that the block has the correct
 			// checksums.
-			logw(asfd, conf, "Verify not yet implemented in protocol 2");
+			logw(asfd, confs,
+				"Verify not yet implemented in protocol 2");
 			return 0;
 		default:
 			logp("unknown action in %s: %d\n", __func__, act);
@@ -47,7 +48,7 @@ int restore_sbuf_protocol2(struct asfd *asfd, struct sbuf *sb, enum action act,
 		b=sb->protocol2->bstart;
 		while(b)
 		{
-			if(send_data(asfd, b, act, conf)) return -1;
+			if(send_data(asfd, b, act, confs)) return -1;
 			n=b->next;
 			blk_free(&b);
 			b=n;
@@ -73,11 +74,11 @@ int restore_sbuf_protocol2(struct asfd *asfd, struct sbuf *sb, enum action act,
 
 int protocol2_extra_restore_stream_bits(struct asfd *asfd, struct blk *blk,
 	struct slist *slist, enum action act,
-	int need_data, int last_ent_was_dir, struct conf *cconf)
+	int need_data, int last_ent_was_dir, struct conf **cconfs)
 {
 	if(need_data)
 	{
-		if(send_data(asfd, blk, act, cconf)) return -1;
+		if(send_data(asfd, blk, act, cconfs)) return -1;
 	}
 	else if(last_ent_was_dir)
 	{
@@ -107,7 +108,7 @@ int protocol2_extra_restore_stream_bits(struct asfd *asfd, struct blk *blk,
 			blk->fingerprint,
 			bytes_to_md5str(blk->md5sum),
 			bytes_to_savepathstr_with_sig(blk->savepath));
-		logw(asfd, cconf, msg);
+		logw(asfd, cconfs, msg);
 	}
 	blk->data=NULL;
 	return 0;

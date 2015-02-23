@@ -10,10 +10,9 @@ struct dpthl
 };
 
 extern int init_dpthl(struct dpthl *dpthl,
-	struct sdirs *sdirs, struct conf *cconf);
-extern int incr_dpthl(struct dpthl *dpthl, struct conf *cconf);
-extern int set_dpthl_from_string(struct dpthl *dpthl,
-	const char *datapath, struct conf **confs);
-extern void mk_dpthl(struct dpthl *dpthl, struct conf *cconf, enum cmd cmd);
+	struct sdirs *sdirs, struct conf **cconfs);
+extern int incr_dpthl(struct dpthl *dpthl, struct conf **cconfs);
+extern int set_dpthl_from_string(struct dpthl *dpthl, const char *datapath);
+extern void mk_dpthl(struct dpthl *dpthl, struct conf **cconfs, enum cmd cmd);
 
 #endif

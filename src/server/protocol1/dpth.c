@@ -4,13 +4,14 @@
 
 #include <dirent.h>
 
-void mk_dpthl(struct dpthl *dpthl, struct conf *cconf, enum cmd cmd)
+void mk_dpthl(struct dpthl *dpthl, struct conf **cconfs, enum cmd cmd)
 {
 	// File data.
 	snprintf(dpthl->path, sizeof(dpthl->path), "%04X/%04X/%04X%s",
 		dpthl->prim, dpthl->seco, dpthl->tert,
 		// Because of the way EFS works, it cannot be compressed.
-		(cconf->compression && cmd!=CMD_EFS_FILE)?".gz":"");
+		(get_int(cconfs[OPT_COMPRESSION])
+			&& cmd!=CMD_EFS_FILE)?".gz":"");
 }
 
 static void mk_dpthl_prim(struct dpthl *dpthl)
@@ -67,7 +68,7 @@ static int get_next_comp(const char *currentdata, const char *path, int *comp)
 	return 0;
 }
 
-int init_dpthl(struct dpthl *dpthl, struct sdirs *sdirs, struct conf *cconf)
+int init_dpthl(struct dpthl *dpthl, struct sdirs *sdirs, struct conf **cconfs)
 {
 	int ret=0;
 	dpthl->prim=0;
@@ -88,7 +89,7 @@ int init_dpthl(struct dpthl *dpthl, struct sdirs *sdirs, struct conf *cconf)
 
 	// At this point, we have the latest data file. Increment to get the
 	// next free one.
-	ret=incr_dpthl(dpthl, cconf);
+	ret=incr_dpthl(dpthl, cconfs);
 
 end:
 	switch(ret)
@@ -102,25 +103,25 @@ end:
 // 65535^3 = 281,462,092,005,375 data entries
 // recommend a filesystem with lots of inodes?
 // Hmm, but ext3 only allows 32000 subdirs, although that many files are OK.
-int incr_dpthl(struct dpthl *dpthl, struct conf *cconf)
+int incr_dpthl(struct dpthl *dpthl, struct conf **cconfs)
 {
+	int max_storage_subdirs=get_int(cconfs[OPT_MAX_STORAGE_SUBDIRS]);
 	if(dpthl->tert++<0xFFFF) return 0;
 	dpthl->tert=0;
 
-	if(dpthl->seco++<cconf->max_storage_subdirs) return 0;
+	if(dpthl->seco++<max_storage_subdirs) return 0;
 	dpthl->seco=0;
 
-	if(dpthl->prim++<cconf->max_storage_subdirs) return 0;
+	if(dpthl->prim++<max_storage_subdirs) return 0;
 	dpthl->prim=0;
 
 	logp("No free data file entries out of the 15000*%d*%d available!\n",
-		cconf->max_storage_subdirs, cconf->max_storage_subdirs);
+		max_storage_subdirs, max_storage_subdirs);
 	logp("Recommend moving the client storage directory aside and starting again.\n");
 	return -1;
 }
 
-int set_dpthl_from_string(struct dpthl *dpthl,
-	const char *datapath, struct conf *cconf)
+int set_dpthl_from_string(struct dpthl *dpthl, const char *datapath)
 {
 	unsigned int a=0;
 	unsigned int b=0;

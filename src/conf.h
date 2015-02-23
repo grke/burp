@@ -290,6 +290,7 @@ extern int add_to_strlist(struct conf *conf, const char *value);
 
 extern enum burp_mode str_to_burp_mode(const char *str);
 extern enum protocol str_to_protocol(const char *str);
+extern const char *recovery_method_to_str(enum recovery_method r);
 extern enum recovery_method str_to_recovery_method(const char *str);
 extern int set_e_recovery_method(struct conf *conf, enum recovery_method r);
 

@@ -35,27 +35,26 @@ CLIENT_OBJS = \
 	$(OBJDIR)/berrno.o \
 	$(OBJDIR)/bfile.o \
 	$(OBJDIR)/bu.o \
-	$(OBJDIR)/burp1/handy.o \
-	$(OBJDIR)/burp1/msg.o \
-	$(OBJDIR)/burp1/rs_buf.o \
-	$(OBJDIR)/burp1/sbuf_burp1.o \
-	$(OBJDIR)/burp1/sbufl.o \
-	$(OBJDIR)/burp2/blist.o \
-	$(OBJDIR)/burp2/blk.o \
-	$(OBJDIR)/burp2/rabin/rabin.o \
-	$(OBJDIR)/burp2/rabin/rconf.o \
-	$(OBJDIR)/burp2/rabin/win.o \
-	$(OBJDIR)/burp2/sbuf_burp2.o \
-	$(OBJDIR)/burp2/slist.o \
+	$(OBJDIR)/protocol1/handy.o \
+	$(OBJDIR)/protocol1/msg.o \
+	$(OBJDIR)/protocol1/rs_buf.o \
+	$(OBJDIR)/protocol1/sbuf_protocol1.o \
+	$(OBJDIR)/protocol1/sbufl.o \
+	$(OBJDIR)/protocol2/blist.o \
+	$(OBJDIR)/protocol2/blk.o \
+	$(OBJDIR)/protocol2/rabin/rabin.o \
+	$(OBJDIR)/protocol2/rabin/rconf.o \
+	$(OBJDIR)/protocol2/rabin/win.o \
+	$(OBJDIR)/protocol2/sbuf_protocol2.o \
 	$(OBJDIR)/client/acl.o \
 	$(OBJDIR)/client/auth.o \
 	$(OBJDIR)/client/autoupgrade.o \
 	$(OBJDIR)/client/backup.o \
 	$(OBJDIR)/client/backup_phase1.o \
-	$(OBJDIR)/client/burp1/backup_phase2.o \
-	$(OBJDIR)/client/burp1/restore.o \
-	$(OBJDIR)/client/burp2/backup_phase2.o \
-	$(OBJDIR)/client/burp2/restore.o \
+	$(OBJDIR)/client/protocol1/backup_phase2.o \
+	$(OBJDIR)/client/protocol1/restore.o \
+	$(OBJDIR)/client/protocol2/backup_phase2.o \
+	$(OBJDIR)/client/protocol2/restore.o \
 	$(OBJDIR)/client/ca.o \
 	$(OBJDIR)/client/cvss.o \
 	$(OBJDIR)/client/delete.o \
@@ -90,6 +89,7 @@ CLIENT_OBJS = \
 	$(OBJDIR)/regexp.o \
 	$(OBJDIR)/run_script.o \
 	$(OBJDIR)/sbuf.o \
+	$(OBJDIR)/slist.o \
 	$(OBJDIR)/ssl.o \
 	$(OBJDIR)/strlist.o \
 	$(OBJDIR)/vss.o \

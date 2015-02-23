@@ -10,8 +10,8 @@ int has_extrameta(const char *path, enum cmd cmd, struct conf *conf)
     defined(HAVE_OPENBSD_OS) || \
     defined(HAVE_NETBSD_OS)
 
-	// FIX THIS: extra meta not supported in burp2.
-	if(conf->protocol==PROTO_BURP2) return 0;
+	// FIX THIS: extra meta not supported in protocol2.
+	if(conf->protocol==PROTO_2) return 0;
 
 #ifdef HAVE_ACL
 	if(has_acl(path, cmd)) return 1;

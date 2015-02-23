@@ -42,7 +42,7 @@ int sdirs_get_real_manifest(struct sdirs *sdirs, struct conf *conf)
 {
 	return free_prepend_s(&sdirs->rmanifest,
 		sdirs->rworking,
-		conf->protocol==PROTO_BURP1?"manifest.gz":"manifest");
+		conf->protocol==PROTO_1?"manifest.gz":"manifest");
 }
 
 int sdirs_get_real_working_from_symlink(struct sdirs *sdirs, struct conf *conf)
@@ -117,8 +117,8 @@ static int do_common_dirs(struct sdirs *sdirs, struct conf *conf)
 	return 0;
 }
 
-// Maybe should be in a burp1 directory.
-static int do_burp1_dirs(struct sdirs *sdirs, struct conf *conf)
+// Maybe should be in a protocol1 directory.
+static int do_protocol1_dirs(struct sdirs *sdirs, struct conf *conf)
 {
 	if(!(sdirs->client=prepend_s(sdirs->base, conf->cname))
 	  || do_common_dirs(sdirs, conf)
@@ -134,7 +134,7 @@ static int do_burp1_dirs(struct sdirs *sdirs, struct conf *conf)
 	return 0;
 }
 
-static int do_burp2_dirs(struct sdirs *sdirs, struct conf *conf)
+static int do_protocol2_dirs(struct sdirs *sdirs, struct conf *conf)
 {
 	if(!conf->dedup_group)
 	{
@@ -168,13 +168,13 @@ extern int sdirs_init(struct sdirs *sdirs, struct conf *conf)
 	if(!(sdirs->base=strdup_w(conf->directory, __func__)))
 		goto error;
 
-	if(conf->protocol==PROTO_BURP1)
+	if(conf->protocol==PROTO_1)
 	{
-		if(do_burp1_dirs(sdirs, conf)) goto error;
+		if(do_protocol1_dirs(sdirs, conf)) goto error;
 	}
 	else
 	{
-		if(do_burp2_dirs(sdirs, conf)) goto error;
+		if(do_protocol2_dirs(sdirs, conf)) goto error;
 	}
 
 	if(do_lock_dirs(sdirs, conf)) goto error;
@@ -213,7 +213,7 @@ void sdirs_free_content(struct sdirs *sdirs)
 	free_w(&sdirs->lockdir);
 	lock_free(&sdirs->lock);
 
-	// Burp1 directories.
+	// Protocol1 directories.
 	free_w(&sdirs->currentdata);
 	free_w(&sdirs->datadirtmp);
 	free_w(&sdirs->cincexc);

@@ -1,0 +1,35 @@
+@MCOMMON@
+
+srcdir =	.
+VPATH = 	.
+.PATH:		.
+
+# one up
+basedir = ..
+# top dir
+topdir = ../../..
+# this dir relative to top dir
+thisdir = src/server/protocol2
+
+#
+SRCS = \
+	backup_phase2.o \
+	backup_phase3.o \
+	dpth.o \
+	rblk.o \
+	restore.o \
+	restore_spool.o \
+	rubble.o
+
+OBJS = $(SRCS:.c=.o)
+
+all: Makefile server_protocol2.a
+	@echo "==== Make of server_protocol2.a is good ===="
+	@echo " "
+
+server_protocol2.a: $(OBJS)
+	@echo "Making $@ ..."
+	$(AR) rc  $@ $(OBJS)
+	$(RANLIB) $@
+
+@MCOMMON2@

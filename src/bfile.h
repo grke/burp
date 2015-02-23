@@ -17,7 +17,7 @@ struct BFILE
 	char *path;
 	struct conf *conf;
 	// Windows VSS headers tell us how much file data to expect.
-	// Burp1 only for now.
+	// Protocol1 only for now.
 	size_t datalen;
 #ifdef HAVE_WIN32
 	uint8_t use_backup_api; /* set if using BackupRead/Write */

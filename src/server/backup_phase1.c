@@ -1,7 +1,7 @@
 #include "include.h"
 #include "cmd.h"
 
-#include "../burp1/sbufl.h"
+#include "../protocol1/sbufl.h"
 
 int backup_phase1_server_all(struct async *as,
 	struct sdirs *sdirs, struct conf *conf)
@@ -25,7 +25,7 @@ int backup_phase1_server_all(struct async *as,
 	while(1)
 	{
 		sbuf_free_content(sb);
-		if(conf->protocol==PROTO_BURP1)
+		if(conf->protocol==PROTO_1)
 			ars=sbufl_fill(sb, asfd, NULL, NULL, conf->cntr);
 		else
 			ars=sbuf_fill(sb, asfd, NULL, NULL, NULL, conf);

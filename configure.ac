@@ -1577,17 +1577,17 @@ AC_OUTPUT([autoconf/Make.common \
 	   Makefile \
 	   manpages/Makefile \
 	   src/Makefile \
-	   src/burp1/Makefile \
-	   src/burp2/rabin/Makefile \
-	   src/burp2/Makefile \
+	   src/protocol1/Makefile \
+	   src/protocol2/rabin/Makefile \
+	   src/protocol2/Makefile \
 	   src/client/Makefile \
-	   src/client/burp1/Makefile \
-	   src/client/burp2/Makefile \
+	   src/client/protocol1/Makefile \
+	   src/client/protocol2/Makefile \
 	   src/client/monitor/Makefile \
 	   src/server/Makefile \
-	   src/server/burp1/Makefile \
-	   src/server/burp2/Makefile \
-	   src/server/burp2/champ_chooser/Makefile \
+	   src/server/protocol1/Makefile \
+	   src/server/protocol2/Makefile \
+	   src/server/protocol2/champ_chooser/Makefile \
 	   src/server/monitor/Makefile \
 	   src/yajl/Makefile \
 	   $PFILES ],  

@@ -1,12 +1,12 @@
 #include "include.h"
 #include "../cmd.h"
 
-#include "burp1/backup_phase2.h"
-#include "burp1/backup_phase3.h"
-#include "burp1/backup_phase4.h"
-#include "burp2/backup_phase2.h"
-#include "burp2/backup_phase3.h"
-#include "burp2/champ_chooser/champ_client.h"
+#include "protocol1/backup_phase2.h"
+#include "protocol1/backup_phase3.h"
+#include "protocol1/backup_phase4.h"
+#include "protocol2/backup_phase2.h"
+#include "protocol2/backup_phase3.h"
+#include "protocol2/champ_chooser/champ_client.h"
 
 static int open_log(struct asfd *asfd, struct sdirs *sdirs, struct conf *cconf)
 {
@@ -72,11 +72,11 @@ int backup_phase2_server(struct async *as, struct sdirs *sdirs,
 
 	switch(cconf->protocol)
 	{
-		case PROTO_BURP1:
-			return backup_phase2_server_burp1(as, sdirs,
+		case PROTO_1:
+			return backup_phase2_server_protocol1(as, sdirs,
 				incexc, resume, cconf);
 		default:
-			return backup_phase2_server_burp2(as, sdirs,
+			return backup_phase2_server_protocol2(as, sdirs,
 				resume, cconf);
 	}
 }
@@ -88,11 +88,11 @@ int backup_phase3_server(struct sdirs *sdirs,
 
 	switch(cconf->protocol)
 	{
-		case PROTO_BURP1:
-			return backup_phase3_server_burp1(sdirs,
+		case PROTO_1:
+			return backup_phase3_server_protocol1(sdirs,
 				recovery, compress, cconf);
 		default:
-			return backup_phase3_server_burp2(sdirs, cconf);
+			return backup_phase3_server_protocol2(sdirs, cconf);
 	}
 }
 
@@ -102,13 +102,13 @@ int backup_phase4_server(struct sdirs *sdirs, struct conf *cconf)
 
 	switch(cconf->protocol)
 	{
-		case PROTO_BURP1:
+		case PROTO_1:
 			set_logfp(NULL, cconf);
 			// Phase4 will open logfp again (in case it is
 			// resuming).
-			return backup_phase4_server_burp1(sdirs, cconf);
+			return backup_phase4_server_protocol1(sdirs, cconf);
 		default:
-			logp("Phase4 is for burp1 only!\n");
+			logp("Phase4 is for protocol1 only!\n");
 			return -1;
 	}
 }
@@ -142,7 +142,7 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 			goto error;
 		}
 
-		if(cconf->protocol==PROTO_BURP2
+		if(cconf->protocol==PROTO_2
 		  && !(chfd=champ_chooser_connect(as, sdirs, cconf)))
 		{
 			logp("problem connecting to champ chooser\n");
@@ -177,7 +177,7 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 		goto error;
 	}
 
-	if(cconf->protocol==PROTO_BURP1)
+	if(cconf->protocol==PROTO_1)
 	{
 		if(do_rename(sdirs->working, sdirs->finishing))
 			goto error;
@@ -191,7 +191,7 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 	cntr_print(cconf->cntr, ACTION_BACKUP);
 	cntr_stats_to_file(cconf->cntr, sdirs->rworking, ACTION_BACKUP, cconf);
 
-	if(cconf->protocol==PROTO_BURP1)
+	if(cconf->protocol==PROTO_1)
 	{
 		// Move the symlink to indicate that we are now in the end
 		// phase. The rename() race condition is automatically
@@ -219,7 +219,7 @@ end:
 
 	if(!ret && cconf->keep>0)
 	{
-		if(cconf->protocol==PROTO_BURP1)
+		if(cconf->protocol==PROTO_1)
 		{
 			delete_backups(sdirs, cconf);
 		}

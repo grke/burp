@@ -11,7 +11,7 @@ static int diff_manifest(struct asfd *asfd,
 	char *manifest_dir=NULL;
 
 	if(!(manifest_dir=prepend_s(fullpath,
-		conf->protocol==PROTO_BURP1?"manifest.gz":"manifest"))
+		conf->protocol==PROTO_1?"manifest.gz":"manifest"))
 	  || !(manio=manio_alloc())
 	  || manio_init_read(manio, manifest_dir)
 	  || !(sb=sbuf_alloc(conf)))

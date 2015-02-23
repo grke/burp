@@ -19516,7 +19516,7 @@ else
     We can't simply define LARGE_OFF_T to be 9223372036854775807,
     since some C++ compilers masquerading as C compilers
     incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
+#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
 		       && LARGE_OFF_T % 2147483647 == 1)
 		      ? 1 : -1];
@@ -19562,7 +19562,7 @@ else
     We can't simply define LARGE_OFF_T to be 9223372036854775807,
     since some C++ compilers masquerading as C compilers
     incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
+#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
 		       && LARGE_OFF_T % 2147483647 == 1)
 		      ? 1 : -1];
@@ -19586,7 +19586,7 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
     We can't simply define LARGE_OFF_T to be 9223372036854775807,
     since some C++ compilers masquerading as C compilers
     incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
+#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
 		       && LARGE_OFF_T % 2147483647 == 1)
 		      ? 1 : -1];
@@ -19631,7 +19631,7 @@ else
     We can't simply define LARGE_OFF_T to be 9223372036854775807,
     since some C++ compilers masquerading as C compilers
     incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
+#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
 		       && LARGE_OFF_T % 2147483647 == 1)
 		      ? 1 : -1];
@@ -19655,7 +19655,7 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
     We can't simply define LARGE_OFF_T to be 9223372036854775807,
     since some C++ compilers masquerading as C compilers
     incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
+#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
 		       && LARGE_OFF_T % 2147483647 == 1)
 		      ? 1 : -1];
@@ -24517,7 +24517,7 @@ if test "x${subsysdir}" = "x${sbindir}" ; then
    exit 1
 fi
 
-ac_config_files="$ac_config_files autoconf/Make.common autoconf/Make.common2 Makefile manpages/Makefile src/Makefile src/burp1/Makefile src/burp2/rabin/Makefile src/burp2/Makefile src/client/Makefile src/client/burp1/Makefile src/client/burp2/Makefile src/client/monitor/Makefile src/server/Makefile src/server/burp1/Makefile src/server/burp2/Makefile src/server/burp2/champ_chooser/Makefile src/server/monitor/Makefile src/yajl/Makefile $PFILES"
+ac_config_files="$ac_config_files autoconf/Make.common autoconf/Make.common2 Makefile manpages/Makefile src/Makefile src/protocol1/Makefile src/protocol2/rabin/Makefile src/protocol2/Makefile src/client/Makefile src/client/protocol1/Makefile src/client/protocol2/Makefile src/client/monitor/Makefile src/server/Makefile src/server/protocol1/Makefile src/server/protocol2/Makefile src/server/protocol2/champ_chooser/Makefile src/server/monitor/Makefile src/yajl/Makefile $PFILES"
 
 ac_config_commands="$ac_config_commands default"
 
@@ -25619,17 +25619,17 @@ do
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "manpages/Makefile") CONFIG_FILES="$CONFIG_FILES manpages/Makefile" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
-    "src/burp1/Makefile") CONFIG_FILES="$CONFIG_FILES src/burp1/Makefile" ;;
-    "src/burp2/rabin/Makefile") CONFIG_FILES="$CONFIG_FILES src/burp2/rabin/Makefile" ;;
-    "src/burp2/Makefile") CONFIG_FILES="$CONFIG_FILES src/burp2/Makefile" ;;
+    "src/protocol1/Makefile") CONFIG_FILES="$CONFIG_FILES src/protocol1/Makefile" ;;
+    "src/protocol2/rabin/Makefile") CONFIG_FILES="$CONFIG_FILES src/protocol2/rabin/Makefile" ;;
+    "src/protocol2/Makefile") CONFIG_FILES="$CONFIG_FILES src/protocol2/Makefile" ;;
     "src/client/Makefile") CONFIG_FILES="$CONFIG_FILES src/client/Makefile" ;;
-    "src/client/burp1/Makefile") CONFIG_FILES="$CONFIG_FILES src/client/burp1/Makefile" ;;
-    "src/client/burp2/Makefile") CONFIG_FILES="$CONFIG_FILES src/client/burp2/Makefile" ;;
+    "src/client/protocol1/Makefile") CONFIG_FILES="$CONFIG_FILES src/client/protocol1/Makefile" ;;
+    "src/client/protocol2/Makefile") CONFIG_FILES="$CONFIG_FILES src/client/protocol2/Makefile" ;;
     "src/client/monitor/Makefile") CONFIG_FILES="$CONFIG_FILES src/client/monitor/Makefile" ;;
     "src/server/Makefile") CONFIG_FILES="$CONFIG_FILES src/server/Makefile" ;;
-    "src/server/burp1/Makefile") CONFIG_FILES="$CONFIG_FILES src/server/burp1/Makefile" ;;
-    "src/server/burp2/Makefile") CONFIG_FILES="$CONFIG_FILES src/server/burp2/Makefile" ;;
-    "src/server/burp2/champ_chooser/Makefile") CONFIG_FILES="$CONFIG_FILES src/server/burp2/champ_chooser/Makefile" ;;
+    "src/server/protocol1/Makefile") CONFIG_FILES="$CONFIG_FILES src/server/protocol1/Makefile" ;;
+    "src/server/protocol2/Makefile") CONFIG_FILES="$CONFIG_FILES src/server/protocol2/Makefile" ;;
+    "src/server/protocol2/champ_chooser/Makefile") CONFIG_FILES="$CONFIG_FILES src/server/protocol2/champ_chooser/Makefile" ;;
     "src/server/monitor/Makefile") CONFIG_FILES="$CONFIG_FILES src/server/monitor/Makefile" ;;
     "src/yajl/Makefile") CONFIG_FILES="$CONFIG_FILES src/yajl/Makefile" ;;
     "$PFILES") CONFIG_FILES="$CONFIG_FILES $PFILES" ;;

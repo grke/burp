@@ -3,7 +3,7 @@
 
 #include "cntr.h"
 #include "strlist.h"
-#include "burp2/rabin/rconf.h"
+#include "protocol2/rabin/rconf.h"
 
 #define CLIENT_CAN_DELETE		0x01
 #define CLIENT_CAN_DIFF			0x02
@@ -24,8 +24,8 @@ enum burp_mode
 enum protocol
 {
 	PROTO_AUTO=0,
-	PROTO_BURP1,
-	PROTO_BURP2
+	PROTO_1,
+	PROTO_2
 };
 
 struct conf
@@ -53,7 +53,7 @@ struct conf
 
 	char *peer_version;
 
-  // Whether to run in burp1, or burp2 style, or to choose automatically.
+  // Whether to run in protocol1, or 2 style, or to choose automatically.
 	enum protocol protocol;
 
 // Server options.

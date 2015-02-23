@@ -4,8 +4,8 @@
 #include "client/main.h"
 #include "hexmap.h"
 #include "server/main.h"
-#include "server/burp1/bedup.h"
-#include "server/burp2/champ_chooser/champ_server.h"
+#include "server/protocol1/bedup.h"
+#include "server/protocol2/champ_chooser/champ_server.h"
 
 static char *get_conf_path(void)
 {

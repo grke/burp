@@ -179,8 +179,8 @@ void log_restore_settings(struct conf **cconfs, int srestore)
 	  logp("restoreprefix = %s\n", get_string(cconfs[OPT_RESTOREPREFIX]));
 	if(get_string(cconfs[OPT_REGEX]))
 		logp("regex = %s\n", get_string(cconfs[OPT_REGEX]));
-	for(l=get_strlist(cconfs[OPT_INCEXCDIR]); l; l=l->next)
-		if(l->flag) logp("include = %s\n", l->path);
+	for(l=get_strlist(cconfs[OPT_INCLUDE]); l; l=l->next)
+		logp("include = %s\n", l->path);
 }
 
 int logw(struct asfd *asfd, struct conf **confs, const char *fmt, ...)

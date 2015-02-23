@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include "../src/alloc.h"
 
-void logp(const char *fmt, ...) { }
+void log_oom_w(const char *func, const char *orig_func) { }
 
 START_TEST(test_alloc)
 {
@@ -16,18 +16,18 @@ START_TEST(test_alloc)
 	mptr=(char *)malloc_w(10, __func__);
 	cptr=(char *)calloc_w(2, 40, __func__);
 	ck_assert_int_eq(alloc_count, 4);
-	ck_assert_int_ne(sptr, NULL);
-	ck_assert_int_ne(rptr, NULL);
-	ck_assert_int_ne(mptr, NULL);
-	ck_assert_int_ne(cptr, NULL);
+	ck_assert_int_eq(sptr==NULL, 0);
+	ck_assert_int_eq(rptr==NULL, 0);
+	ck_assert_int_eq(mptr==NULL, 0);
+	ck_assert_int_eq(cptr==NULL, 0);
 	free_w(&sptr);
 	free_w(&rptr);
 	free_w(&mptr);
 	free_w(&cptr);
-	ck_assert_int_eq(sptr, NULL);
-	ck_assert_int_eq(rptr, NULL);
-	ck_assert_int_eq(mptr, NULL);
-	ck_assert_int_eq(cptr, NULL);
+	ck_assert_int_eq(sptr==NULL, 1);
+	ck_assert_int_eq(rptr==NULL, 1);
+	ck_assert_int_eq(mptr==NULL, 1);
+	ck_assert_int_eq(cptr==NULL, 1);
 	ck_assert_int_eq(free_count, alloc_count);
 }
 END_TEST

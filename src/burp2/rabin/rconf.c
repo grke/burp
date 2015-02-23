@@ -16,19 +16,20 @@ void rconf_init(struct rconf *rconf)
 	rconf->prime=3;		// Not configurable.
 
 	rconf->win_min=17;	// Not configurable.
-	rconf->win=31;		// Sliding window size.
+	rconf->win_size=31;	// Sliding window size.
 	rconf->win_max=63;	// Not configurable.
 
 	rconf->blk_min=RABIN_MIN; // Minimum block size.
 	rconf->blk_avg=RABIN_AVG; // Average block size.
 	rconf->blk_max=RABIN_MAX; // Maximum block size.
 
-	rconf->multiplier=get_multiplier(rconf->win, rconf->prime);
+	rconf->multiplier=get_multiplier(rconf->win_size, rconf->prime);
 }
 
 int rconf_check(struct rconf *rconf)
 {
-	if(rconf->win < rconf->win_min || rconf->win > rconf->win_max)
+	if(rconf->win_size < rconf->win_min
+	  || rconf->win_size > rconf->win_max)
 	{
 		logp("Sliding window size not between %u and %u.\n",
 			rconf->win_min, rconf->win_max);

@@ -7,10 +7,11 @@
 #include "../manio.h"
 #include "../sdirs.h"
 
-static int send_data(struct asfd *asfd, struct blk *blk,
+static int send_data(struct asfd *asfd, struct sbuf *need_data, struct blk *blk,
 	enum action act, struct conf *conf)
 {
 	struct iobuf wbuf;
+
 	switch(act)
 	{
 		case ACTION_RESTORE:
@@ -18,10 +19,30 @@ static int send_data(struct asfd *asfd, struct blk *blk,
 			if(asfd->write(asfd, &wbuf)) return -1;
 			return 0;
 		case ACTION_VERIFY:
-			// FIX THIS.
 			// Need to check that the block has the correct
 			// checksums.
-			logw(asfd, conf, "Verify not yet implemented in protocol 2");
+			switch(blk_verify(blk, conf))
+			{
+				case 1:
+					iobuf_set(&wbuf, CMD_DATA, (char *)"0", 1);
+					if(asfd->write(asfd, &wbuf)) return -1;
+					cntr_add(conf->cntr, CMD_DATA, 0);
+					break; // All OK.
+				case 0:
+				{
+					char msg[256];
+					snprintf(msg, sizeof(msg), "Checksum mismatch in block for %c:%s:%s\n", need_data->path.cmd, need_data->path.buf, bytes_to_savepathstr_with_sig(blk->savepath));
+					logw(asfd, conf, msg);
+					break;
+		
+				}
+				default:
+				{
+					char msg[256];
+					snprintf(msg, sizeof(msg), "Error when attempting  to verify block for %c:%s:%s\n", need_data->path.cmd, need_data->path.buf, bytes_to_savepathstr_with_sig(blk->savepath));
+					return -1;
+				}
+			}
 			return 0;
 		default:
 			logp("unknown action in %s: %d\n", __func__, act);
@@ -30,7 +51,8 @@ static int send_data(struct asfd *asfd, struct blk *blk,
 }
 
 int restore_sbuf_burp2(struct asfd *asfd, struct sbuf *sb, enum action act,
-	enum cntr_status cntr_status, struct conf *conf, int *need_data)
+	enum cntr_status cntr_status, struct conf *conf,
+	struct sbuf *need_data)
 {
 	if(asfd->write(asfd, &sb->attr)
 	  || asfd->write(asfd, &sb->path))
@@ -47,7 +69,7 @@ int restore_sbuf_burp2(struct asfd *asfd, struct sbuf *sb, enum action act,
 		b=sb->burp2->bstart;
 		while(b)
 		{
-			if(send_data(asfd, b, act, conf)) return -1;
+			if(send_data(asfd, sb, b, act, conf)) return -1;
 			n=b->next;
 			blk_free(&b);
 			b=n;
@@ -62,7 +84,8 @@ int restore_sbuf_burp2(struct asfd *asfd, struct sbuf *sb, enum action act,
 		case CMD_METADATA:
 		case CMD_ENC_METADATA:
 		case CMD_EFS_FILE:
-			*need_data=1;
+			iobuf_copy(&need_data->path, &sb->path);
+			sb->path.buf=NULL;
 			break;
 		default:
 			cntr_add(conf->cntr, sb->path.cmd, 0);
@@ -72,12 +95,12 @@ int restore_sbuf_burp2(struct asfd *asfd, struct sbuf *sb, enum action act,
 }
 
 int burp2_extra_restore_stream_bits(struct asfd *asfd, struct blk *blk,
-	struct slist *slist, enum action act,
-	int need_data, int last_ent_was_dir, struct conf *cconf)
+	struct slist *slist, struct sbuf *sb, enum action act,
+	struct sbuf *need_data, int last_ent_was_dir, struct conf *cconf)
 {
-	if(need_data)
+	if(need_data->path.buf)
 	{
-		if(send_data(asfd, blk, act, cconf)) return -1;
+		if(send_data(asfd, need_data, blk, act, cconf)) return -1;
 	}
 	else if(last_ent_was_dir)
 	{

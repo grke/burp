@@ -7,6 +7,7 @@
   * Make restoring a hard link without restoring the original file work.
   * Fix for a protocol 1 bug to do with the first hardlinked entry being
     deleted on the client.
+  * Make verify work for protocol 2.
 
 2015-02-06: Changes in burp-2.0.12:
   * Move /etc/burp scripts to /usr/share/burp/scripts.

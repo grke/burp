@@ -23,8 +23,6 @@ roughly in order of most important to least.
   blocks into memory by looking ahead in the manifests.
   maybe_copy_data_files_across() is probably broken.
 
-* Make verify work.
-
 * Make CMD_INTERRUPT work (on restore, maybe others too).
 
 * Make it possible to delete unused data files.

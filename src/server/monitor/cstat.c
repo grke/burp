@@ -121,15 +121,15 @@ static int reload_from_client_confs(struct cstat **clist,
 	static struct conf **cconfs=NULL;
 	static time_t global_mtime=0;
 	time_t global_mtime_new=0;
-	const char *conffile=get_string(globalcs[OPT_CONFFILE]);
+	const char *globalconffile=get_string(globalcs[OPT_CONFFILE]);
 
 	if(!cconfs && !(cconfs=confs_alloc())) goto error;
 
-	if(stat(conffile, &statp)
+	if(stat(globalconffile, &statp)
 	  || !S_ISREG(statp.st_mode))
 	{
 		logp("Could not stat main conf file %s: %s\n",
-			conffile, strerror(errno));
+			globalconffile, strerror(errno));
 		goto error;
 	}
 	global_mtime_new=statp.st_mtime;
@@ -170,7 +170,6 @@ static int reload_from_client_confs(struct cstat **clist,
 
 			if(set_cstat_from_conf(c, globalcs, cconfs))
 				goto error;
-//printf("%s: %d\n", c->name, c->permitted);
 		}
 		// Only stop if the end of the list was not reached.
 		if(!c) break;

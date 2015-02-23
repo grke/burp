@@ -139,11 +139,11 @@ end:
 }
 
 static int add_to_blks_list(struct asfd *asfd, struct conf **confs,
-	struct slist *slist, struct blist *blist, struct win *win)
+	struct slist *slist, struct blist *blist)
 {
 	struct sbuf *sb=slist->last_requested;
 	if(!sb) return 0;
-	if(blks_generate(asfd, conf, sb, blist, win)) return -1;
+	if(blks_generate(asfd, conf, sb, blist)) return -1;
 
 	// If it closed the file, move to the next one.
 	if(sb->protocol2->bfd.mode==BF_CLOSED) slist->last_requested=sb->next;
@@ -305,7 +305,6 @@ int backup_phase2_client_protocol2(struct asfd *asfd,
 	int backup_end=0;
 	int requests_end=0;
 	int blk_requests_end=0;
-	struct win *win=NULL; // Rabin sliding window.
 	struct slist *slist=NULL;
 	struct blist *blist=NULL;
 	struct iobuf *rbuf=NULL;
@@ -316,8 +315,7 @@ int backup_phase2_client_protocol2(struct asfd *asfd,
 	if(!(slist=slist_alloc())
 	  || !(blist=blist_alloc())
 	  || !(wbuf=iobuf_alloc())
-	  || blks_generate_init(conf)
-	  || !(win=win_alloc(&conf->rconf)))
+	  || blks_generate_init(conf))
 		goto end;
 	rbuf=asfd->rbuf;
 
@@ -371,7 +369,7 @@ int backup_phase2_client_protocol2(struct asfd *asfd,
 		   || blist->tail->index - blist->head->index<BLKS_MAX_IN_MEM)
 		)
 		{
-			if(add_to_blks_list(asfd, conf, slist, blist, win))
+			if(add_to_blks_list(asfd, conf, slist, blist))
 				goto end;
 		}
 
@@ -401,7 +399,6 @@ int backup_phase2_client_protocol2(struct asfd *asfd,
 end:
 blk_print_alloc_stats();
 //sbuf_print_alloc_stats();
-	win_free(win);
 	slist_free(&slist);
 	blist_free(&blist);
 	// Write buffer did not allocate 'buf'.

@@ -15,7 +15,7 @@ int champ_chooser_init(const char *datadir, struct conf **confs)
 		ret=0;
 		goto end;
 	}
-	ret=candidate_load(NULL, sparse_path, conf);
+	ret=candidate_load(NULL, sparse_path, confs);
 end:
 	if(sparse_path) free(sparse_path);
 	return ret;
@@ -78,7 +78,7 @@ int deduplicate(struct asfd *asfd, struct conf **confs)
 	while((champ=candidates_choose_champ(in, champ_last)))
 	{
 //		printf("Got champ: %s %d\n", champ->path, *(champ->score));
-		if(hash_load(champ->path, conf)) return -1;
+		if(hash_load(champ->path, confs)) return -1;
 		if(++count==CHAMPS_MAX) break;
 		champ_last=champ;
 	}

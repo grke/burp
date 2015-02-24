@@ -20,78 +20,87 @@ static int check_passwd(const char *passwd, const char *plain_text)
 	return -1;
 }
 
-static int check_client_and_password(struct conf *globalc,
-	const char *password, struct conf *cconf)
+static int check_client_and_password(struct conf **globalcs,
+	const char *password, struct conf **cconfs)
 {
+	const char *cname=get_string(cconfs[OPT_CNAME]);
+	int password_check=get_int(cconfs[OPT_PASSWORD_CHECK]);
 	// Cannot load it until here, because we need to have the name of the
 	// client.
-	if(conf_load_clientconfdir(globalc, cconf)) return -1;
+	if(conf_load_clientconfdir(globalcs, cconfs)) return -1;
 
-	if(!cconf->ssl_peer_cn)
+	if(!get_string(cconfs[OPT_SSL_PEER_CN]))
 	{
 		logp("ssl_peer_cn unset");
-		if(cconf->cname)
+		if(cname)
 		{
-			logp("Falling back to using '%s'\n", cconf->cname);
-			if(!(cconf->ssl_peer_cn
-				=strdup_w(cconf->cname, __func__)))
-					return -1;
+			logp("Falling back to using '%s'\n", cname);
+			if(set_string(cconfs[OPT_SSL_PEER_CN], cname))
+				return -1;
 		}
 	}
 
-	if(cconf->password_check)
+	cname=get_string(cconfs[OPT_CNAME]);
+
+	if(password_check)
 	{
-		if(!cconf->password && !cconf->passwd)
+		const char *passwd=get_string(cconfs[OPT_PASSWD]);
+		const char *conf_password=get_string(cconfs[OPT_PASSWORD]);
+		if(password && !passwd)
 		{
-			logp("password rejected for client %s\n", cconf->cname);
+			logp("password rejected for client %s\n", cname);
 			return -1;
 		}
 		// check against plain text
-		if(cconf->password && strcmp(cconf->password, password))
+		if(conf_password && strcmp(conf_password, password))
 		{
-			logp("password rejected for client %s\n", cconf->cname);
+			logp("password rejected for client %s\n", cname);
 			return -1;
 		}
 		// check against encypted passwd
-		if(cconf->passwd && !check_passwd(cconf->passwd, password))
+		if(passwd && !check_passwd(passwd, password))
 		{
-			logp("password rejected for client %s\n", cconf->cname);
+			logp("password rejected for client %s\n", cname);
 			return -1;
 		}
 	}
 
-	if(!cconf->keep)
+	if(!get_strlist(cconfs[OPT_KEEP]))
 	{
 		logp("%s: you cannot set the keep value for a client to 0!\n",
-			cconf->cname);
+			cname);
 		return -1;
 	}
 	return 0;
 }
 
-void version_warn(struct asfd *asfd, struct conf **confs, struct conf *cconf)
+void version_warn(struct asfd *asfd, struct conf **confs, struct conf **cconfs)
 {
-	if(!cconf->peer_version || strcmp(cconf->peer_version, VERSION))
+	const char *cname=get_string(cconfs[OPT_CNAME]);
+	const char *peer_version=get_string(cconfs[OPT_PEER_VERSION]);
+	if(!peer_version || strcmp(peer_version, VERSION))
 	{
 		char msg[256]="";
 
-		if(!cconf->peer_version || !*(cconf->peer_version))
-			snprintf(msg, sizeof(msg), "Client '%s' has an unknown version. Please upgrade.", cconf->cname?cconf->cname:"unknown");
+		if(!peer_version || !*peer_version)
+			snprintf(msg, sizeof(msg), "Client '%s' has an unknown version. Please upgrade.", cname?cname:"unknown");
 		else
-			snprintf(msg, sizeof(msg), "Client '%s' version '%s' does not match server version '%s'. An upgrade is recommended.", cconf->cname?cconf->cname:"unknown", cconf->peer_version, VERSION);
-		if(conf) logw(asfd, conf, "%s", msg);
+			snprintf(msg, sizeof(msg), "Client '%s' version '%s' does not match server version '%s'. An upgrade is recommended.", cname?cname:"unknown", peer_version, VERSION);
+		if(confs) logw(asfd, confs, "%s", msg);
 		logp("WARNING: %s\n", msg);
 	}
 }
 
 int authorise_server(struct asfd *asfd,
-	struct conf *globalc, struct conf *cconf)
+	struct conf **globalcs, struct conf **cconfs)
 {
 	int ret=-1;
 	char *cp=NULL;
 	char *password=NULL;
 	char whoareyou[256]="";
 	struct iobuf *rbuf=asfd->rbuf;
+	const char *cname=NULL;
+	const char *peer_version=NULL;
 	if(asfd->read(asfd))
 	{
 		logp("unable to read initial message\n");
@@ -109,18 +118,19 @@ int authorise_server(struct asfd *asfd,
 	if((cp=strchr(rbuf->buf, ':')))
 	{
 		cp++;
-		if(cp && !(cconf->peer_version=strdup_w(cp, __func__)))
+		if(cp && set_string(cconfs[OPT_PEER_VERSION], cp))
 			goto end;
 	}
 	iobuf_free_content(rbuf);
 
 	snprintf(whoareyou, sizeof(whoareyou), "whoareyou");
-	if(cconf->peer_version)
+	peer_version=get_string(cconfs[OPT_PEER_VERSION]);
+	if(peer_version)
 	{
 		long min_ver=0;
 		long cli_ver=0;
 		if((min_ver=version_to_long("1.3.2"))<0
-		  || (cli_ver=version_to_long(cconf->peer_version))<0)
+		  || (cli_ver=version_to_long(peer_version))<0)
 			return -1;
 		// Stick the server version on the end of the whoareyou string.
 		// if the client version is recent enough.
@@ -135,25 +145,29 @@ int authorise_server(struct asfd *asfd,
 		logp("unable to get client name\n");
 		goto end;
 	}
-	cconf->cname=rbuf->buf;
+	if(set_string(cconfs[OPT_CNAME], rbuf->buf))
+		goto end;
 	iobuf_init(rbuf);
+	cname=get_string(cconfs[OPT_CNAME]);
 
 	asfd->write_str(asfd, CMD_GEN, "okpassword");
 	if(asfd->read(asfd))
 	{
-		logp("unable to get password for client %s\n", cconf->cname);
+		logp("unable to get password for client %s\n", cname);
 		goto end;
 	}
 	password=rbuf->buf;
 	iobuf_init(rbuf);
 
-	if(check_client_and_password(globalc, password, cconf))
+	if(check_client_and_password(globalcs, password, cconfs))
 		goto end;
 
-	if(cconf->version_warn) version_warn(asfd, globalc, cconf);
+	if(get_int(cconfs[OPT_VERSION_WARN]))
+		version_warn(asfd, globalcs, cconfs);
 
-	logp("auth ok for: %s%s\n", cconf->cname,
-		cconf->password_check?"":" (no password needed)");
+	logp("auth ok for: %s%s\n", cname,
+		get_int(cconfs[OPT_PASSWORD_CHECK])?
+			"":" (no password needed)");
 
 	asfd->write_str(asfd, CMD_GEN, "ok");
 

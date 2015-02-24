@@ -53,18 +53,19 @@ error:
 static int run_server_script(struct asfd *asfd,
 	const char *pre_or_post,
 	const char *script, struct strlist *script_arg,
-	uint8_t notify, struct conf *cconf, int backup_ret, int timer_ret)
+	uint8_t notify, struct conf **cconfs, int backup_ret, int timer_ret)
 {
 	int a=0;
 	int ret=0;
 	char *logbuf=NULL;
 	const char *args[12];
 	struct iobuf *rbuf=asfd->rbuf;
+	const char *cname=get_string(cconfs[OPT_CNAME]);
 
 	args[a++]=script;
 	args[a++]=pre_or_post;
 	args[a++]=rbuf->buf?rbuf->buf:"", // Action requested by client.
-	args[a++]=cconf->cname;
+	args[a++]=cname;
 	args[a++]=backup_ret?"1":"0", // Indicate success or failure.
 	// Indicate whether the timer script said OK or not.
 	args[a++]=timer_ret?"1":"0",
@@ -72,7 +73,7 @@ static int run_server_script(struct asfd *asfd,
 
 	// Do not have a client storage directory, so capture the
 	// output in a buffer to pass to the notification script.
-	if(run_script_to_buf(asfd, args, script_arg, cconf, 1, 1, 0, &logbuf))
+	if(run_script_to_buf(asfd, args, script_arg, cconfs, 1, 1, 0, &logbuf))
 	{
 		char msg[256];
 		snprintf(msg, sizeof(msg),
@@ -83,8 +84,8 @@ static int run_server_script(struct asfd *asfd,
 		if(!notify) goto end;
 
 		a=0;
-		args[a++]=cconf->n_failure_script;
-		args[a++]=cconf->cname;
+		args[a++]=get_string(cconfs[OPT_N_FAILURE_SCRIPT]);
+		args[a++]=cname;
 		// magic - set basedir blank and the
 		// notify script will know to get the content
 		// from the next argument (usually storagedir)
@@ -94,7 +95,8 @@ static int run_server_script(struct asfd *asfd,
 		args[a++]=""; // usually brv
 		args[a++]=""; // usually warnings
 		args[a++]=NULL;
-		run_script(asfd, args, cconf->n_failure_arg, cconf, 1, 1, 0);
+		run_script(asfd, args, get_strlist(cconfs[OPT_N_FAILURE_ARG]),
+			cconfs, 1, 1, 0);
 	}
 end:
 	if(logbuf) free(logbuf);
@@ -102,25 +104,31 @@ end:
 }
 
 int child(struct async *as,
-	int status_wfd, struct conf **confs, struct conf *cconf)
+	int status_wfd, struct conf **confs, struct conf **cconfs)
 {
 	int ret=-1;
 	int srestore=0;
 	int timer_ret=0;
 	char *incexc=NULL;
 	struct asfd *asfd;
+	const char *confs_user=get_string(confs[OPT_USER]);
+	const char *cconfs_user=get_string(cconfs[OPT_USER]);
+	const char *confs_group=get_string(confs[OPT_GROUP]);
+	const char *cconfs_group=get_string(cconfs[OPT_GROUP]);
+	const char *s_script_pre=get_string(cconfs[OPT_S_SCRIPT_PRE]);
+	const char *s_script_post=get_string(cconfs[OPT_S_SCRIPT_POST]);
 
 	// If we are not a status server, we are a normal child - set up the
 	// parent socket to write status to.
 	if(status_wfd>0
 	  && !(wasfd=setup_asfd(as, "child status pipe", &status_wfd, NULL,
-		ASFD_STREAM_STANDARD, ASFD_FD_CHILD_PIPE_WRITE, -1, cconf)))
+		ASFD_STREAM_STANDARD, ASFD_FD_CHILD_PIPE_WRITE, -1, cconfs)))
 			goto end;
 
 	/* Has to be before the chuser/chgrp stuff to allow clients to switch
 	   to different clients when both clients have different user/group
 	   settings. */
-	if(extra_comms(as, &incexc, &srestore, conf, cconf))
+	if(extra_comms(as, &incexc, &srestore, confs, cconfs))
 	{
 		log_and_send(as->asfd, "running extra comms failed on server");
 		goto end;
@@ -129,12 +137,12 @@ int child(struct async *as,
 	/* Now that the client conf is loaded, we might want to chuser or
 	   chgrp.
 	   The main process could have already done this, so we don't want
-	   to try doing it again if cconf has the same values, because it
+	   to try doing it again if cconfs has the same values, because it
 	   will fail. */
-	if( (!conf->user  || (cconf->user && strcmp(conf->user, cconf->user)))
-	  ||(!conf->group ||(cconf->group && strcmp(conf->group,cconf->group))))
+	if( (!confs_user  || (cconfs_user && strcmp(confs_user, cconfs_user)))
+	  ||(!confs_group ||(cconfs_group && strcmp(confs_group,cconfs_group))))
 	{
-		if(chuser_and_or_chgrp(cconf))
+		if(chuser_and_or_chgrp(cconfs))
 		{
 			log_and_send(as->asfd,
 				"chuser_and_or_chgrp failed on server");
@@ -148,7 +156,7 @@ int child(struct async *as,
 	for(asfd=as->asfd; asfd; asfd=asfd->next)
 	{
 		if(asfd->fdtype!=ASFD_FD_CHILD_PIPE_READ) continue;
-		ret=status_server(as, cconf);
+		ret=status_server(as, cconfs);
 		goto end;
 	}
 
@@ -156,22 +164,23 @@ int child(struct async *as,
 
 	// FIX THIS: Make the script components part of a struct, and just
 	// pass in the correct struct. Same below.
-	if(cconf->s_script_pre)
+	if(s_script_pre)
 		ret=run_server_script(as->asfd, "pre",
-			cconf->s_script_pre,
-			cconf->s_script_pre_arg,
-			cconf->s_script_pre_notify,
-			cconf, ret, timer_ret);
+			s_script_pre,
+			get_strlist(cconfs[OPT_S_SCRIPT_PRE_ARG]),
+			get_int(cconfs[OPT_S_SCRIPT_PRE_NOTIFY]),
+			cconfs, ret, timer_ret);
 
 	if(!ret)
-		ret=run_action_server(as, incexc, srestore, &timer_ret, cconf);
+		ret=run_action_server(as, incexc, srestore, &timer_ret, cconfs);
 
-	if((!ret || cconf->s_script_post_run_on_fail) && cconf->s_script_post)
+	if((!ret || get_int(cconfs[OPT_S_SCRIPT_POST_RUN_ON_FAIL]))
+	  && s_script_post)
 		ret=run_server_script(as->asfd, "post",
-			cconf->s_script_post,
-			cconf->s_script_post_arg,
-			cconf->s_script_post_notify,
-			cconf, ret, timer_ret);
+			s_script_post,
+			get_strlist(cconfs[OPT_S_SCRIPT_POST_ARG]),
+			get_int(cconfs[OPT_S_SCRIPT_POST_NOTIFY]),
+			cconfs, ret, timer_ret);
 
 end:
 	return ret;

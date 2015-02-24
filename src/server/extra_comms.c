@@ -17,25 +17,26 @@ static int append_to_feat(char **feat, const char *str)
 	return 0;
 }
 
-static char *get_restorepath(struct conf *cconf)
+static char *get_restorepath(struct conf **cconfs)
 {
 	char *tmp=NULL;
 	char *restorepath=NULL;
-	if(!(tmp=prepend_s(cconf->directory, cconf->cname))
-	  || !(restorepath=prepend_s(tmp, "restore")))
-	{
-		if(tmp) free(tmp);
-		return NULL;
-	}
-	free(tmp);
+	if((tmp=prepend_s(get_string(cconfs[OPT_DIRECTORY]),
+		get_string(cconfs[OPT_CNAME]))))
+			restorepath=prepend_s(tmp, "restore");
+	free_w(&tmp);
 	return restorepath;
 }
 
-static int send_features(struct asfd *asfd, struct conf *cconf)
+static int send_features(struct asfd *asfd, struct conf **cconfs)
 {
 	int ret=-1;
 	char *feat=NULL;
 	struct stat statp;
+	const char *restorepath=NULL;
+	enum protocol protocol=get_e_protocol(cconfs[OPT_PROTOCOL]);
+	struct strlist *startdir=get_strlist(cconfs[OPT_STARTDIR]);
+	struct strlist *incglob=get_strlist(cconfs[OPT_INCGLOB]);
 	if(append_to_feat(&feat, "extra_comms_begin ok:")
 		/* clients can autoupgrade */
 	  || append_to_feat(&feat, "autoupgrade:")
@@ -50,17 +51,17 @@ static int send_features(struct asfd *asfd, struct conf *cconf)
 		goto end;
 
 	/* Clients can receive restore initiated from the server. */
-	if(cconf->restore_path) free(cconf->restore_path);
-	if(!(cconf->restore_path=get_restorepath(cconf)))
+	if(!(restorepath=get_restorepath(cconfs))
+	  || set_string(cconfs[OPT_RESTORE_PATH], restorepath))
 		goto end;
-	if(!lstat(cconf->restore_path, &statp) && S_ISREG(statp.st_mode)
+	if(!lstat(restorepath, &statp) && S_ISREG(statp.st_mode)
 	  && append_to_feat(&feat, "srestore:"))
 		goto end;
 
 	/* Clients can receive incexc conf from the server.
 	   Only give it as an option if the server has some starting
 	   directory configured in the clientconfdir. */
-	if((cconf->startdir || cconf->incglob)
+	if((startdir || incglob)
 	  && append_to_feat(&feat, "sincexc:"))
 		goto end;
 
@@ -70,7 +71,7 @@ static int send_features(struct asfd *asfd, struct conf *cconf)
 		goto end;
 */
 
-	if(cconf->protocol==PROTO_AUTO)
+	if(protocol==PROTO_AUTO)
 	{
 		/* If the server is configured to use either protocol, let the
 		   client know that it can choose. */
@@ -82,8 +83,8 @@ static int send_features(struct asfd *asfd, struct conf *cconf)
 	{
 		char p[32]="";
 		/* Tell the client what we are going to use. */
-		logp("Server is using protocol=%d\n", cconf->protocol);
-		snprintf(p, sizeof(p), "forceproto=%d:", cconf->protocol);
+		logp("Server is using protocol=%d\n", (int)protocol);
+		snprintf(p, sizeof(p), "forceproto=%d:", (int)protocol);
 		if(append_to_feat(&feat, p))
 			goto end;
 	}
@@ -115,7 +116,7 @@ struct vers
 
 static int extra_comms_read(struct async *as,
 	struct vers *vers, int *srestore,
-	char **incexc, struct conf *globalc, struct conf *cconf)
+	char **incexc, struct conf **globalcs, struct conf **cconfs)
 {
 	int ret=-1;
 	struct asfd *asfd;
@@ -146,7 +147,7 @@ static int extra_comms_read(struct async *as,
 			os=rbuf->buf+strlen("autoupgrade:");
 			iobuf_free_content(rbuf);
 			if(os && *os && autoupgrade_server(as, vers->ser,
-				vers->cli, os, globalc)) goto end;
+				vers->cli, os, globalcs)) goto end;
 		}
 		else if(!strcmp(rbuf->buf, "srestore ok"))
 		{
@@ -154,8 +155,8 @@ static int extra_comms_read(struct async *as,
 			// Client can accept the restore.
 			// Load the restore config, then send it.
 			*srestore=1;
-			if(conf_parse_incexcs_path(cconf, cconf->restore_path)
-			  || incexc_send_server_restore(asfd, cconf))
+			if(conf_parse_incexcs_path(cconfs, cconfs->restore_path)
+			  || incexc_send_server_restore(asfd, cconfs))
 				goto end;
 			// Do not unlink it here - wait until
 			// the client says that it wants to do the
@@ -164,14 +165,14 @@ static int extra_comms_read(struct async *as,
 			// restore is to an alternative client, so
 			// that the code below that reloads the config
 			// can read it again.
-			//unlink(cconf->restore_path);
+			//unlink(cconfs->restore_path);
 		}
 		else if(!strcmp(rbuf->buf, "srestore not ok"))
 		{
 			// Client will not accept the restore.
-			unlink(cconf->restore_path);
-			free(cconf->restore_path);
-			cconf->restore_path=NULL;
+			unlink(cconfs->restore_path);
+			free(cconfs->restore_path);
+			cconfs->restore_path=NULL;
 			logp("Client not accepting server initiated restore.\n");
 		}
 		else if(!strcmp(rbuf->buf, "sincexc ok"))
@@ -179,7 +180,7 @@ static int extra_comms_read(struct async *as,
 			// Client can accept incexc conf from the
 			// server.
 			iobuf_free_content(rbuf);
-			if(incexc_send_server(asfd, cconf)) goto end;
+			if(incexc_send_server(asfd, cconfs)) goto end;
 		}
 		else if(!strcmp(rbuf->buf, "incexc"))
 		{
@@ -187,14 +188,14 @@ static int extra_comms_read(struct async *as,
 			// configuration so that it can better decide
 			// what to do on resume.
 			iobuf_free_content(rbuf);
-			if(incexc_recv_server(asfd, incexc, globalc)) goto end;
+			if(incexc_recv_server(asfd, incexc, globalcs)) goto end;
 			if(*incexc)
 			{
 				char *tmp=NULL;
 				char comp[32]="";
 				snprintf(comp, sizeof(comp),
 					"compression = %d\n",
-					cconf->compression);
+					cconfs->compression);
 				if(!(tmp=prepend(*incexc, comp,
 					strlen(comp), 0))) goto end;
 				free(*incexc);
@@ -206,41 +207,41 @@ static int extra_comms_read(struct async *as,
 			// Client can accept counters on
 			// resume/verify/restore.
 			logp("Client supports being sent counters.\n");
-			cconf->send_client_cntr=1;
+			cconfs->send_client_cntr=1;
 		}
 		else if(!strncmp_w(rbuf->buf, "uname=")
 		  && strlen(rbuf->buf)>strlen("uname="))
 		{
 			char *uname=rbuf->buf+strlen("uname=");
 			if(!strncasecmp("Windows", uname, strlen("Windows")))
-				cconf->client_is_windows=1;
+				cconfs->client_is_windows=1;
 		}
 		else if(!strncmp_w(rbuf->buf, "orig_client=")
 		  && strlen(rbuf->buf)>strlen("orig_client="))
 		{
 			int rcok=0;
 			struct strlist *r;
-			struct conf *sconf=NULL;
+			struct conf **sconfs=NULL;
 
-			if(!(sconf=conf_alloc())) goto end;
-			if(!(sconf->cname=strdup_w(
+			if(!(sconfs=confs_alloc())) goto end;
+			if(!(sconfs->cname=strdup_w(
 				rbuf->buf+strlen("orig_client="), __func__)))
 					goto end;
 			logp("Client wants to switch to client: %s\n",
-				sconf->cname);
-			if(conf_load_clientconfdir(globalc, sconf))
+				sconfs->cname);
+			if(conf_load_clientconfdir(globalcs, sconfs))
 			{
 				char msg[256]="";
 				snprintf(msg, sizeof(msg),
 				  "Could not load alternate config: %s",
-				  sconf->cname);
+				  sconfs->cname);
 				log_and_send(asfd, msg);
 				goto end;
 			}
-			sconf->send_client_cntr=cconf->send_client_cntr;
-			for(r=sconf->rclients; r; r=r->next)
+			sconfs->send_client_cntr=cconfs->send_client_cntr;
+			for(r=sconfs->rclients; r; r=r->next)
 			{
-				if(!strcmp(r->path, cconf->cname))
+				if(!strcmp(r->path, cconfs->cname))
 				{
 					rcok++;
 					break;
@@ -252,20 +253,20 @@ static int extra_comms_read(struct async *as,
 				char msg[256]="";
 				snprintf(msg, sizeof(msg),
 				  "Access to client is not allowed: %s",
-					sconf->cname);
+					sconfs->cname);
 				log_and_send(asfd, msg);
 				goto end;
 			}
-			sconf->restore_path=cconf->restore_path;
-			cconf->restore_path=NULL;
-			conf_free_content(cconf);
-			conf_init(cconf);
+			sconfs->restore_path=cconfs->restore_path;
+			cconfs->restore_path=NULL;
+			confs_free_content(cconfs);
+			confs_init(cconfs);
+			// FIX THIS:
 			memcpy(cconf, sconf, sizeof(struct conf));
-			free(sconf);
-			sconf=NULL;
-			cconf->restore_client=cconf->cname;
-			if(!(cconf->orig_client
-				=strdup_w(cconf->cname, __func__)))
+			free_w(&sconfs);
+			cconfs->restore_client=cconfs->cname;
+			if(!(cconfs->orig_client
+				=strdup_w(cconfs->cname, __func__)))
 					goto end;
 
 			// If this started out as a server-initiated
@@ -273,10 +274,10 @@ static int extra_comms_read(struct async *as,
 			// again.
 			if(*srestore)
 			{
-				if(conf_parse_incexcs_path(cconf,
-					cconf->restore_path)) goto end;
+				if(conf_parse_incexcs_path(cconfs,
+					cconfs->restore_path)) goto end;
 			}
-			logp("Switched to client %s\n", cconf->cname);
+			logp("Switched to client %s\n", cconfs->cname);
 			if(asfd->write_str(asfd, CMD_GEN, "orig_client ok"))
 				goto end;
 		}
@@ -284,7 +285,7 @@ static int extra_comms_read(struct async *as,
 		{
 			// Client supports temporary spool directory
 			// for restores.
-			if(!(cconf->restore_spool=
+			if(!(cconfs->restore_spool=
 			  strdup_w(rbuf->buf+strlen("restore_spool="),
 				__func__))) goto end;
 		}
@@ -292,23 +293,29 @@ static int extra_comms_read(struct async *as,
 		{
 			char msg[128]="";
 			// Client wants to set protocol.
-			if(cconf->protocol!=PROTO_AUTO)
+			if(protocol!=PROTO_AUTO)
 			{
-				snprintf(msg, sizeof(msg), "Client is trying to use %s but server is set to protocol=%d\n", rbuf->buf, cconf->protocol);
+				snprintf(msg, sizeof(msg), "Client is trying to use %s but server is set to protocol=%d\n", rbuf->buf, protocol);
 				log_and_send_oom(asfd, __func__);
 				goto end;
 			}
 			else if(!strcmp(rbuf->buf+strlen("protocol="), "1"))
-				cconf->protocol=globalc->protocol=PROTO_1;
+			{
+				set_e_protocol(cconfs[OPT_PROTOCOL], PROTO_1);
+				set_e_protocol(globalcs[OPT_PROTOCOL], PROTO_1);
+			}
 			else if(!strcmp(rbuf->buf+strlen("protocol="), "2"))
-				cconf->protocol=globalc->protocol=PROTO_2;
+			{
+				set_e_protocol(cconfs[OPT_PROTOCOL], PROTO_2);
+				set_e_protocol(globalcs[OPT_PROTOCOL], PROTO_2);
+			}
 			else
 			{
 				snprintf(msg, sizeof(msg), "Client is trying to use %s, which is unknown\n", rbuf->buf);
 				log_and_send_oom(asfd, __func__);
 				goto end;
 			}
-			logp("Client has set protocol=%d\n", cconf->protocol);
+			logp("Client has set protocol=%d\n", protocol);
 		}
 		else
 		{
@@ -323,11 +330,11 @@ end:
 	return ret;
 }
 
-static int vers_init(struct vers *vers, struct conf *cconf)
+static int vers_init(struct vers *vers, struct conf **cconfs)
 {
 	memset(vers, 0, sizeof(struct vers));
 	return ((vers->min=version_to_long("1.2.7"))<0
-	  || (vers->cli=version_to_long(cconf->peer_version))<0
+	  || (vers->cli=version_to_long(get_string(cconfs[OPT_PEER_VERSION])))<0
 	  || (vers->ser=version_to_long(VERSION))<0
 	  || (vers->feat_list=version_to_long("1.3.0"))<0
 	  || (vers->directory_tree=version_to_long("1.3.6"))<0

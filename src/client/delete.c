@@ -4,7 +4,8 @@
 int do_delete_client(struct asfd *asfd, struct conf **confs)
 {
 	char msg[128]="";
-	snprintf(msg, sizeof(msg), "Delete %s", conf->backup?conf->backup:"");
+	const char *backup=get_string(confs[OPT_BACKUP]);
+	snprintf(msg, sizeof(msg), "Delete %s", backup?backup:"");
 	if(asfd->write_str(asfd, CMD_GEN, msg)
 	  || asfd->read_expect(asfd, CMD_GEN, "ok"))
 		return -1;

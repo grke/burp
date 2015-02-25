@@ -92,37 +92,39 @@ static int do_to_server(struct asfd *asfd,
 		cntr_add_val(get_cntr(confs[OPT_CNTR]), CMD_BYTES_ESTIMATED,
 			(unsigned long long)ff->statp.st_size, 0);
 #ifdef HAVE_WIN32
-	if(conf->split_vss && !conf->strip_vss
+	if(get_int(confs[OPT_SPLIT_VSS])
+	  && !get_int(confs[OPT_STRIP_VSS])
 	// FIX THIS: May have to check that it is not a directory here.
 	  && !S_ISDIR(sb->statp.st_mode) // does this work?
 	  && maybe_send_extrameta(asfd,
-		ff->fname, cmd, sb, conf, vss_trail_symbol))
+		ff->fname, cmd, sb, confs, vss_trail_symbol))
 			return -1;
 	return 0;
 #else
-	return maybe_send_extrameta(asfd, ff->fname, cmd, sb, conf, metasymbol);
+	return maybe_send_extrameta(asfd, ff->fname, cmd, sb, confs, metasymbol);
 #endif
 }
 
 static int to_server(struct asfd *asfd, struct conf **confs, FF_PKT *ff,
 	struct sbuf *sb, enum cmd cmd)
 {
-	return do_to_server(asfd, conf, ff, sb, cmd, conf->compression);
+	return do_to_server(asfd, confs,
+		ff, sb, cmd, get_int(confs[OPT_COMPRESSION]));
 }
 
 int send_file(struct asfd *asfd, FF_PKT *ff, bool top_level, struct conf **confs)
 {
 	static struct sbuf *sb=NULL;
 
-	if(!sb && !(sb=sbuf_alloc(conf))) return -1;
+	if(!sb && !(sb=sbuf_alloc(confs))) return -1;
 
 #ifdef HAVE_WIN32
 	if(ff->winattr & FILE_ATTRIBUTE_ENCRYPTED)
 	{
 		if(ff->type==FT_REG
 		  || ff->type==FT_DIR)
-			return to_server(asfd, conf, ff, sb, CMD_EFS_FILE);
-		return logw(asfd, conf, "EFS type %d not yet supported: %s",
+			return to_server(asfd, confs, ff, sb, CMD_EFS_FILE);
+		return logw(asfd, confs, "EFS type %d not yet supported: %s",
 			ff->type, ff->fname);
 	}
 #endif
@@ -132,30 +134,30 @@ int send_file(struct asfd *asfd, FF_PKT *ff, bool top_level, struct conf **confs
 		case FT_REG:
 		case FT_RAW:
 		case FT_FIFO:
-			return do_to_server(asfd, conf, ff, sb, filesymbol,
-				in_exclude_comp(conf->excom,
-					ff->fname, conf->compression));
+			return do_to_server(asfd, confs, ff, sb, filesymbol,
+				in_exclude_comp(get_strlist(confs[OPT_EXCOM]),
+				  ff->fname, get_int(confs[OPT_COMPRESSION])));
 		case FT_DIR:
 		case FT_REPARSE:
 		case FT_JUNCTION:
-			return to_server(asfd, conf, ff, sb, dirsymbol);
+			return to_server(asfd, confs, ff, sb, dirsymbol);
 		case FT_LNK_S:
-			return to_server(asfd, conf, ff, sb, CMD_SOFT_LINK);
+			return to_server(asfd, confs, ff, sb, CMD_SOFT_LINK);
 		case FT_LNK_H:
-			return to_server(asfd, conf, ff, sb, CMD_HARD_LINK);
+			return to_server(asfd, confs, ff, sb, CMD_HARD_LINK);
 		case FT_SPEC:
-			return to_server(asfd, conf, ff, sb, CMD_SPECIAL);
+			return to_server(asfd, confs, ff, sb, CMD_SPECIAL);
 		case FT_NOFSCHG:
-			return logw(asfd, conf, "Dir: %s [will not descend: "
+			return logw(asfd, confs, "Dir: %s [will not descend: "
 				"file system change not allowed]\n", ff->fname);
 		case FT_NOFOLLOW:
-			return ft_err(asfd, conf, ff, "Could not follow link");
+			return ft_err(asfd, confs, ff, "Could not follow link");
 		case FT_NOSTAT:
-			return ft_err(asfd, conf, ff, "Could not stat");
+			return ft_err(asfd, confs, ff, "Could not stat");
 		case FT_NOOPEN:
-			return ft_err(asfd, conf, ff, "Could not open directory");
+			return ft_err(asfd, confs, ff, "Could not open directory");
 		default:
-			return logw(asfd, conf,
+			return logw(asfd, confs,
 				_("Err: Unknown file type %d: %s"),
 				ff->type, ff->fname);
 	}
@@ -172,8 +174,8 @@ int backup_phase1_client(struct asfd *asfd, struct conf **confs, int estimate)
 	logp("Phase 1 begin (file system scan)\n");
 
 	// Encryption not yet supported in protocol2.
-	if(conf->protocol==PROTO_1
-	  && conf->encryption_password)
+	if(get_e_protocol(confs[OPT_PROTOCOL])==PROTO_1
+	  && get_string(confs[OPT_ENCRYPTION_PASSWORD]))
 	{
 		filesymbol=CMD_ENC_FILE;
 		metasymbol=CMD_ENC_METADATA;
@@ -187,8 +189,8 @@ int backup_phase1_client(struct asfd *asfd, struct conf **confs, int estimate)
 #endif
 
 	if(!(ff=find_files_init())) goto end;
-	for(l=conf->startdir; l; l=l->next) if(l->flag)
-		if(find_files_begin(asfd, ff, conf, l->path)) goto end;
+	for(l=get_strlist(confs[OPT_STARTDIR]); l; l=l->next) if(l->flag)
+		if(find_files_begin(asfd, ff, confs, l->path)) goto end;
 	ret=0;
 end:
 	cntr_print_end_phase1(get_cntr(confs[OPT_CNTR]));

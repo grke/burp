@@ -352,7 +352,7 @@ static DWORD WINAPI write_efs(PBYTE pbData,
 	{
 		int qr;
 		if((qr=do_quick_read(mybuf->asfd,
-				mybuf->datapth, mybuf->conf))<0)
+				mybuf->datapth, mybuf->confs))<0)
 			return ERROR_FUNCTION_FAILED;
 		if(qr) // client wants to interrupt
 			return ERROR_FUNCTION_FAILED;
@@ -416,7 +416,7 @@ int send_whole_filel(struct asfd *asfd,
 			mybuf.md5=&md5;
 			mybuf.quick_read=quick_read;
 			mybuf.datapth=datapth;
-			mybuf.conf=conf;
+			mybuf.confs=confs;
 			mybuf.bytes=bytes;
 			mybuf.asfd=asfd;
 			// The EFS read function, ReadEncryptedFileRaw(),

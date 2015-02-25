@@ -66,8 +66,9 @@ static enum asl_ret maybe_check_timer_func(struct asfd *asfd,
 
 	// The server now tells us the compression level in the OK response.
 	if(strlen(asfd->rbuf->buf)>3)
-		conf->compression=atoi(asfd->rbuf->buf+complen);
-	logp("Compression level: %d\n", conf->compression);
+		set_int(confs[OPT_COMPRESSION], atoi(asfd->rbuf->buf+complen));
+	logp("Compression level: %d\n",
+		get_int(confs[OPT_COMPRESSION]));
 
 	return ASL_END_OK;
 }
@@ -81,7 +82,7 @@ static enum cliret maybe_check_timer(struct asfd *asfd,
         if(asfd->write_str(asfd, CMD_GEN, phase1str))
 		return CLIENT_ERROR;
 
-	if(asfd->simple_loop(asfd, conf, &tchk,
+	if(asfd->simple_loop(asfd, confs, &tchk,
 		__func__, maybe_check_timer_func)) return CLIENT_ERROR;
 	*resume=tchk.resume;
 	return tchk.ret;
@@ -93,6 +94,8 @@ static enum cliret backup_wrapper(struct asfd *asfd,
 {
 	int resume=0;
 	enum cliret ret=CLIENT_OK;
+	const char *b_script_pre=get_string(confs[OPT_B_SCRIPT_PRE]);
+	const char *b_script_post=get_string(confs[OPT_B_SCRIPT_POST]);
 
 	// Set bulk packets quality of service flags on backup.
 	if(incexc)
@@ -101,13 +104,13 @@ static enum cliret backup_wrapper(struct asfd *asfd,
 		logp("with the following settings:\n");
 		if(log_incexcs_buf(incexc)) goto error;
 	}
-	if(!conf->startdir)
+	if(!get_strlist(confs[OPT_STARTDIR]))
 	{
 		logp("Found no include paths!\n");
 		goto error;
 	}
 
-	switch(maybe_check_timer(asfd, action, phase1str, conf, &resume))
+	switch(maybe_check_timer(asfd, action, phase1str, confs, &resume))
 	{
 		case CLIENT_OK:
 			if(action==ACTION_TIMER_CHECK) goto end;
@@ -118,11 +121,11 @@ static enum cliret backup_wrapper(struct asfd *asfd,
 			goto error;
 	}
 		
-	if(conf->b_script_pre)
+	if(b_script_pre)
 	{
 		int a=0;
 		const char *args[12];
-		args[a++]=conf->b_script_pre;
+		args[a++]=b_script_pre;
 		args[a++]="pre";
 		args[a++]="reserved2";
 		args[a++]="reserved3";
@@ -130,19 +133,20 @@ static enum cliret backup_wrapper(struct asfd *asfd,
 		args[a++]="reserved5";
 		args[a++]=NULL;
 		if(run_script(asfd,
-			args, conf->b_script_pre_arg, conf, 1, 1, 1))
+			args, get_strlist(confs[OPT_B_SCRIPT_PRE_ARG]),
+			confs, 1, 1, 1))
 				 ret=CLIENT_ERROR;
 	}
 
 	if(ret==CLIENT_OK && do_backup_client(asfd,
-		conf, action, resume)) ret=CLIENT_ERROR;
+		confs, action, resume)) ret=CLIENT_ERROR;
 
-	if((ret==CLIENT_OK || conf->b_script_post_run_on_fail)
-	  && conf->b_script_post)
+	if((ret==CLIENT_OK || get_int(confs[OPT_B_SCRIPT_POST_RUN_ON_FAIL]))
+	  && b_script_post)
 	{
 		int a=0;
 		const char *args[12];
-		args[a++]=conf->b_script_post;
+		args[a++]=b_script_post;
 		args[a++]="post";
 		// Tell post script whether the restore failed.
 		args[a++]=ret?"1":"0";
@@ -151,7 +155,8 @@ static enum cliret backup_wrapper(struct asfd *asfd,
 		args[a++]="reserved5";
 		args[a++]=NULL;
 		if(run_script(asfd,
-			args, conf->b_script_post_arg, conf, 1, 1, 1))
+			args, get_strlist(confs[OPT_B_SCRIPT_POST_ARG]),
+			confs, 1, 1, 1))
 				ret=CLIENT_ERROR;
 	}
 
@@ -173,7 +178,7 @@ static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx,
 {
 	BIO *sbio=NULL;
 	ssl_load_globals();
-	if(!(*ctx=ssl_initialise_ctx(conf)))
+	if(!(*ctx=ssl_initialise_ctx(confs)))
 	{
 		logp("error initialising ssl ctx\n");
 		return -1;
@@ -183,9 +188,10 @@ static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx,
 		(const uint8_t *)&s_server_session_id_context,
 		sizeof(s_server_session_id_context));
 
-	if((*rfd=init_client_socket(conf->server,
-		action==ACTION_MONITOR?conf->status_port:conf->port))<0)
-			return -1;
+	if((*rfd=init_client_socket(get_string(confs[OPT_SERVER]),
+	  action==ACTION_MONITOR?
+	  get_string(confs[OPT_STATUS_PORT]):get_string(confs[OPT_PORT])))<0)
+		return -1;
 	set_peer_env_vars(*rfd);
 
 	if(!(*ssl=SSL_new(*ctx))
@@ -211,7 +217,7 @@ static enum cliret initial_comms(struct async *as,
 	enum cliret ret=CLIENT_OK;
 	asfd=as->asfd;
 
-	if(authorise_client(asfd, conf, &server_version))
+	if(authorise_client(asfd, confs, &server_version))
 		goto error;
 
 	if(server_version)
@@ -220,7 +226,7 @@ static enum cliret initial_comms(struct async *as,
 		// Servers before 1.3.2 did not tell us their versions.
 		// 1.3.2 and above can do the automatic CA stuff that
 		// follows.
-		switch(ca_client_setup(asfd, conf))
+		switch(ca_client_setup(asfd, confs))
 		{
 			case 0:
 				break; // All OK.
@@ -238,13 +244,13 @@ static enum cliret initial_comms(struct async *as,
 
 	set_non_blocking(asfd->fd);
 
-	if(ssl_check_cert(asfd->ssl, conf))
+	if(ssl_check_cert(asfd->ssl, confs))
 	{
 		logp("check cert failed\n");
 		goto error;
 	}
 
-	if(extra_comms(as, conf, action, incexc))
+	if(extra_comms(as, confs, action, incexc))
 	{
 		logp("extra comms failed\n");
 		goto error;
@@ -264,33 +270,36 @@ static enum cliret restore_wrapper(struct asfd *asfd, enum action action,
 	int vss_restore, struct conf **confs)
 {
 	enum cliret ret=CLIENT_OK;
+	const char *r_script_pre=get_string(confs[OPT_R_SCRIPT_PRE]);
+	const char *r_script_post=get_string(confs[OPT_R_SCRIPT_POST]);
 
-	if(conf->r_script_pre)
+	if(r_script_pre)
 	{
 		int a=0;
 		const char *args[12];
-		args[a++]=conf->r_script_pre;
+		args[a++]=r_script_pre;
 		args[a++]="pre";
 		args[a++]="reserved2";
 		args[a++]="reserved3";
 		args[a++]="reserved4";
 		args[a++]="reserved5";
 		args[a++]=NULL;
-		if(run_script(asfd, args,
-			conf->r_script_pre_arg, conf, 1, 1, 1))
+		if(run_script(asfd,
+			args, get_strlist(confs[OPT_R_SCRIPT_PRE_ARG]),
+			confs, 1, 1, 1))
 				ret=CLIENT_ERROR;
 	}
 	if(ret==CLIENT_OK)
 	{
-		if(do_restore_client(asfd, conf,
+		if(do_restore_client(asfd, confs,
 			action, vss_restore)) ret=CLIENT_ERROR;
 	}
-	if((ret==CLIENT_OK || conf->r_script_post_run_on_fail)
-	  && conf->r_script_post)
+	if((ret==CLIENT_OK || get_int(confs[OPT_R_SCRIPT_POST_RUN_ON_FAIL]))
+	  && r_script_post)
 	{
 		int a=0;
 		const char *args[12];
-		args[a++]=conf->r_script_pre;
+		args[a++]=r_script_pre;
 		args[a++]="post";
 		// Tell post script whether the restore
 		// failed.
@@ -299,8 +308,9 @@ static enum cliret restore_wrapper(struct asfd *asfd, enum action action,
 		args[a++]="reserved4";
 		args[a++]="reserved5";
 		args[a++]=NULL;
-		if(run_script(asfd, args,
-			conf->r_script_post_arg, conf, 1, 1, 1))
+		if(run_script(asfd,
+			args, get_strlist(confs[OPT_R_SCRIPT_POST_ARG]),
+			confs, 1, 1, 1))
 				ret=CLIENT_ERROR;
 	}
 
@@ -339,22 +349,23 @@ static enum cliret do_client(struct conf **confs,
 		logp("Status mode not implemented on Windows.\n");
 		goto error;
 #endif
-		if(status_client_ncurses(act, conf)) ret=CLIENT_ERROR;
+		if(status_client_ncurses(act, confs)) ret=CLIENT_ERROR;
 		goto end;
 	}
 
-	if(!(cntr=cntr_alloc()) || cntr_init(cntr, conf->cname)) goto error;
-	get_cntr(confs[OPT_CNTR])=cntr;
+	if(!(cntr=cntr_alloc())
+	  || cntr_init(cntr, get_string(confs[OPT_CNAME]))) goto error;
+	set_cntr(confs[OPT_CNTR], cntr);
 
 	if(act!=ACTION_ESTIMATE
-	  && ssl_setup(&rfd, &ssl, &ctx, action, conf))
+	  && ssl_setup(&rfd, &ssl, &ctx, action, confs))
 		goto could_not_connect;
 
 	if(!(as=async_alloc())
 	  || !(asfd=asfd_alloc())
 	  || as->init(as, act==ACTION_ESTIMATE)
 	  || asfd->init(asfd, "main socket", as, rfd, ssl,
-		ASFD_STREAM_STANDARD, conf))
+		ASFD_STREAM_STANDARD, confs))
 			goto end;
 	as->asfd_add(as, asfd);
 
@@ -366,7 +377,7 @@ static enum cliret do_client(struct conf **confs,
 
 	if(act!=ACTION_ESTIMATE)
 	{
-		if((ret=initial_comms(as, &act, &incexc, conf)))
+		if((ret=initial_comms(as, &act, &incexc, confs)))
 			goto end;
 	}
 
@@ -375,45 +386,45 @@ static enum cliret do_client(struct conf **confs,
 	{
 		case ACTION_BACKUP:
 			ret=backup_wrapper(asfd, act, "backupphase1",
-			  incexc, conf);
+			  incexc, confs);
 			break;
 		case ACTION_BACKUP_TIMED:
 			ret=backup_wrapper(asfd, act, "backupphase1timed",
-			  incexc, conf);
+			  incexc, confs);
 			break;
 		case ACTION_TIMER_CHECK:
 			ret=backup_wrapper(asfd, act, "backupphase1timedcheck",
-			  incexc, conf);
+			  incexc, confs);
 			break;
 		case ACTION_RESTORE:
 		case ACTION_VERIFY:
-			ret=restore_wrapper(asfd, act, vss_restore, conf);
+			ret=restore_wrapper(asfd, act, vss_restore, confs);
 			break;
 		case ACTION_ESTIMATE:
-			if(do_backup_client(asfd, conf, act, 0))
+			if(do_backup_client(asfd, confs, act, 0))
 				goto error;
 			break;
 		case ACTION_DELETE:
-			if(do_delete_client(asfd, conf)) goto error;
+			if(do_delete_client(asfd, confs)) goto error;
 			break;
 		case ACTION_DIFF:
 		case ACTION_DIFF_LONG:
-			if(!strcmp(conf->backup2, "n"))
+			if(!strcmp(get_string(confs[OPT_BACKUP2]), "n"))
 				// Do a phase1 scan and diff that.
 				ret=backup_wrapper(asfd, act,
-					"backupphase1diff", incexc, conf);
+					"backupphase1diff", incexc, confs);
 			else
 				// Diff two backups that already exist.
-				if(do_diff_client(asfd, act, json, conf))
+				if(do_diff_client(asfd, act, json, confs))
 					goto error;
 			break;
 		case ACTION_MONITOR:
-			if(do_monitor_client(asfd, conf)) goto error;
+			if(do_monitor_client(asfd, confs)) goto error;
 			break;
 		case ACTION_LIST:
 		case ACTION_LIST_LONG:
 		default:
-			if(do_list_client(asfd, act, json, conf)) goto error;
+			if(do_list_client(asfd, act, json, confs)) goto error;
 			break;
 	}
 
@@ -428,7 +439,7 @@ end:
 	asfd_free(&asfd);
 	if(ctx) ssl_destroy_ctx(ctx);
 	if(incexc) free(incexc);
-	get_cntr(confs[OPT_CNTR])=NULL;
+	set_cntr(confs[OPT_CNTR], NULL);
 	if(cntr) cntr_free(&cntr);
 
         //logp("end client\n");
@@ -444,12 +455,12 @@ int client(struct conf **confs, enum action action, int vss_restore, int json)
 	SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED);
 #endif
 	
-	switch((ret=do_client(conf, action, vss_restore, json)))
+	switch((ret=do_client(confs, action, vss_restore, json)))
 	{
 		case CLIENT_RECONNECT:
 			logp("Re-opening connection to server\n");
 			sleep(5);
-			ret=do_client(conf, action, vss_restore, json);
+			ret=do_client(confs, action, vss_restore, json);
 		default:
 			break;
 	}

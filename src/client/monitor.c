@@ -62,11 +62,11 @@ logp("in monitor\n");
 	// so long that I would start to get printf errors.
 	// Using the asfd stuff works well though.
 	if(!setup_asfd(as, "stdin", &stdinfd, NULL, ASFD_STREAM_LINEBUF,
-		ASFD_FD_CLIENT_MONITOR_READ, -1, conf)
+		ASFD_FD_CLIENT_MONITOR_READ, -1, confs)
 	  || !setup_asfd(as, "stdout", &stdoutfd, NULL, ASFD_STREAM_LINEBUF,
-		ASFD_FD_CLIENT_MONITOR_WRITE, -1, conf))
+		ASFD_FD_CLIENT_MONITOR_WRITE, -1, confs))
 		goto end;
-	ret=main_loop(as, conf);
+	ret=main_loop(as, confs);
 end:
 	return ret;
 }

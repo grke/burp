@@ -30,13 +30,14 @@ int win32_start_vss(struct conf **confs)
 
 	if(g_pVSSClient->InitializeForBackup())
 	{
+		const char *vss_drives=get_string(confs[OPT_VSS_DRIVES]);
 		char szWinDriveLetters[27];
 		// Tell vss which drives to snapshot.
-		if(conf->vss_drives)
+		if(vss_drives)
 		{
 			unsigned int i=0;
-			for(i=0; i<strlen(conf->vss_drives) && i<26; i++)
-			  szWinDriveLetters[i]=toupper(conf->vss_drives[i]);
+			for(i=0; i<strlen(vss_drives) && i<26; i++)
+			  szWinDriveLetters[i]=toupper(vss_drives[i]);
 			szWinDriveLetters[i]='\0';
 		}
 		else
@@ -45,7 +46,8 @@ int win32_start_vss(struct conf **confs)
 			// from the given starting directories.
 			int j=0;
 			struct strlist *s;
-			for(s=conf->startdir, j=0; s && j<26; s=s->next)
+			for(s=get_strlist(confs[OPT_STARTDIR]), j=0;
+				s && j<26; s=s->next)
 			{
 				const char *path=NULL;
 				if(!s->flag) continue;

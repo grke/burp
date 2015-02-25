@@ -1,6 +1,7 @@
 #include "burp.h"
 #include "alloc.h"
 #include "conf.h"
+#include "handy.h"
 #include "lock.h"
 #include "log.h"
 #include "msg.h"

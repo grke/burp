@@ -72,6 +72,7 @@ CLIENT_OBJS = \
 	$(OBJDIR)/cmd.o \
 	$(OBJDIR)/cntr.o \
 	$(OBJDIR)/conf.o \
+	$(OBJDIR)/conffile.o \
 	$(OBJDIR)/forkchild.o \
 	$(OBJDIR)/fsops.o \
 	$(OBJDIR)/handy.o \

@@ -206,13 +206,13 @@ static void json_backup(char *statbuf, struct conf **confs)
 	printf("   \"timestamp\": \"%s\",\n", statbuf);
 	printf("   \"deletable\": \"%s\"", cp?"true":"false");
 
-	if(conf->backup)
+	if(get_string(confs[OPT_BACKUP]))
 	{
+		const char *browsedir=get_string(confs[OPT_BROWSEDIR]);
+		const char *regex=get_string(confs[OPT_REGEX]);
 		printf(",\n");
-		printf("   \"directory\": \"%s\",\n",
-			conf->browsedir?conf->browsedir:"");
-		printf("   \"regex\": \"%s\",\n",
-			conf->regex?conf->regex:"");
+		printf("   \"directory\": \"%s\",\n", browsedir?browsedir:"");
+		printf("   \"regex\": \"%s\",\n", regex?regex:"");
 		open_tag(3, "items");
 	}
 }
@@ -251,14 +251,17 @@ int do_diff_client(struct asfd *asfd,
 	struct sbuf *sb=NULL;
 	int json_started=0;
 	struct iobuf *rbuf=asfd->rbuf;
+	const char *backup=get_string(confs[OPT_BACKUP]);
+	const char *browsedir=get_string(confs[OPT_BROWSEDIR]);
+	const char *regex=get_string(confs[OPT_REGEX]);
 //logp("in do_diff\n");
 
-	snprintf(msg, sizeof(msg), "diff %s", conf->backup?conf->backup:"");
+	snprintf(msg, sizeof(msg), "diff %s", backup?backup:"");
 	if(asfd->write_str(asfd, CMD_GEN, msg)
 	  || asfd->read_expect(asfd, CMD_GEN, "ok"))
 		goto end;
 
-	if(!(sb=sbuf_alloc(conf))) goto end;
+	if(!(sb=sbuf_alloc(confs))) goto end;
 	iobuf_init(&sb->path);
 	iobuf_init(&sb->link);
 	iobuf_init(&sb->attr);
@@ -280,16 +283,16 @@ int do_diff_client(struct asfd *asfd,
 		if(rbuf->cmd==CMD_TIMESTAMP)
 		{
 			// A backup timestamp, just print it.
-			if(json) json_backup(rbuf->buf, conf);
+			if(json) json_backup(rbuf->buf, confs);
 			else
 			{
 				printf("Backup: %s\n", rbuf->buf);
-				if(conf->browsedir)
+				if(browsedir)
 					printf("Listing directory: %s\n",
-					       conf->browsedir);
-				if(conf->regex)
+					       browsedir);
+				if(regex)
 					printf("With regex: %s\n",
-					       conf->regex);
+					       regex);
 			}
 			continue;
 		}

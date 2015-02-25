@@ -6,27 +6,31 @@ static int generate_key_and_csr(struct asfd *asfd,
 {
 	int a=0;
 	const char *args[12];
+	const char *ca_burp_ca=get_string(confs[OPT_CA_BURP_CA]);
+	const char *cname=get_string(confs[OPT_CNAME]);
+	const char *ssl_key=get_string(confs[OPT_SSL_KEY]);
+
 	logp("Generating SSL key and certificate signing request\n");
-	logp("Running '%s --key --keypath %s --request --requestpath %s --name %s'\n", conf->ca_burp_ca, conf->ssl_key, csr_path, conf->cname);
+	logp("Running '%s --key --keypath %s --request --requestpath %s --name %s'\n", ca_burp_ca, ssl_key, csr_path, cname);
 #ifdef HAVE_WIN32
 	win32_enable_backup_privileges();
 #endif
-	args[a++]=conf->ca_burp_ca;
+	args[a++]=ca_burp_ca;
 	args[a++]="--key";
 	args[a++]="--keypath";
-	args[a++]=conf->ssl_key;
+	args[a++]=ssl_key;
 	args[a++]="--request";
 	args[a++]="--requestpath";
 	args[a++]=csr_path;
 	args[a++]="--name";
-	args[a++]=conf->cname;
+	args[a++]=cname;
 	args[a++]=NULL;
-	if(run_script(asfd, args, NULL, conf, 1 /* wait */,
+	if(run_script(asfd, args, NULL, confs, 1 /* wait */,
 		0, 0 /* do not use logp - stupid openssl prints lots of dots
 		        one at a time with no way to turn it off */))
 	{
 		logp("error when running '%s --key --keypath %s --request --requestpath %s --name %s'\n",
-		  conf->ca_burp_ca, conf->ssl_key, csr_path, conf->cname);
+			ca_burp_ca, ssl_key, csr_path, cname);
 		return -1;
 	}
 
@@ -43,12 +47,14 @@ static int rewrite_client_conf(struct conf **confs)
 	FILE *sp=NULL;
 	char *tmp=NULL;
 	char buf[4096]="";
+	const char *conffile=get_string(confs[OPT_CONFFILE]);
+	const char *ssl_peer_cn=get_string(confs[OPT_SSL_PEER_CN]);
 
-	logp("Rewriting conf file: %s\n", conf->conffile);
+	logp("Rewriting conf file: %s\n", conffile);
 	snprintf(p, sizeof(p), ".%d", getpid());
-	if(!(tmp=prepend(conf->conffile, p, strlen(p), "")))
+	if(!(tmp=prepend(conffile, p, strlen(p), "")))
 		goto end;
-	if(!(sp=open_file(conf->conffile, "rb"))
+	if(!(sp=open_file(conffile, "rb"))
 	  || !(dp=open_file(tmp, "wb")))
 		goto end;
 
@@ -70,9 +76,9 @@ static int rewrite_client_conf(struct conf **confs)
 		}
 		free_w(&copy);
 #ifdef HAVE_WIN32
-		fprintf(dp, "ssl_peer_cn = %s\r\n", conf->ssl_peer_cn);
+		fprintf(dp, "ssl_peer_cn = %s\r\n", ssl_peer_cn);
 #else
-		fprintf(dp, "ssl_peer_cn = %s\n", conf->ssl_peer_cn);
+		fprintf(dp, "ssl_peer_cn = %s\n", ssl_peer_cn);
 #endif
 	}
 	close_fp(&sp);
@@ -87,9 +93,9 @@ static int rewrite_client_conf(struct conf **confs)
 	// and start again.
 #ifdef HAVE_WIN32
 	// Need to delete the destination, or Windows gets upset.
-	unlink(conf->conffile);
+	unlink(conffile);
 #endif
-	if(do_rename(tmp, conf->conffile)) goto end;
+	if(do_rename(tmp, conffile)) goto end;
 
 	ret=0;
 end:
@@ -113,9 +119,8 @@ static enum asl_ret csr_client_func(struct asfd *asfd,
 		return ASL_END_ERROR;
 	}
 	// The server appends its name after 'csr ok:'
-	free_w(&conf->ssl_peer_cn);
-	if(!(conf->ssl_peer_cn
-		=strdup_w(asfd->rbuf->buf+strlen("csr ok:"), __func__)))
+	if(set_string(confs[OPT_SSL_PEER_CN], 
+		asfd->rbuf->buf+strlen("csr ok:")))
 			return ASL_END_ERROR;
 	return ASL_END_OK;
 }
@@ -129,15 +134,21 @@ int ca_client_setup(struct asfd *asfd, struct conf **confs)
 	char csr_path[256]="";
 	char ssl_cert_tmp[512]="";
 	char ssl_cert_ca_tmp[512]="";
+	const char *ca_burp_ca=get_string(confs[OPT_CA_BURP_CA]);
+	const char *ca_csr_dir=get_string(confs[OPT_CA_CSR_DIR]);
+	const char *cname=get_string(confs[OPT_CNAME]);
+	const char *ssl_key=get_string(confs[OPT_SSL_KEY]);
+	const char *ssl_cert=get_string(confs[OPT_SSL_CERT]);
+	const char *ssl_cert_ca=get_string(confs[OPT_SSL_CERT_CA]);
 
 	// Do not continue if we have one of the following things not set.
-	if(  !conf->ca_burp_ca
-	  || !conf->ca_csr_dir
-	  || !conf->ssl_cert_ca
-	  || !conf->ssl_cert
-	  || !conf->ssl_key
+	if(  !ca_burp_ca
+	  || !ca_csr_dir
+	  || !ssl_cert_ca
+	  || !ssl_cert
+	  || !ssl_key
 	// Do not try to get a new certificate if we already have a key.
-	  || !lstat(conf->ssl_key, &statp))
+	  || !lstat(ssl_key, &statp))
 	{
 		if(asfd->write_str(asfd, CMD_GEN, "nocsr")
 		  || asfd->read_expect(asfd, CMD_GEN, "nocsr ok"))
@@ -152,40 +163,39 @@ int ca_client_setup(struct asfd *asfd, struct conf **confs)
 
 	// Tell the server we want to do a signing request.
 	if(asfd->write_str(asfd, CMD_GEN, "csr")
-	  || asfd->simple_loop(asfd, conf, NULL, __func__, csr_client_func))
+	  || asfd->simple_loop(asfd, confs, NULL, __func__, csr_client_func))
 		goto end;
 
 	logp("Server will sign a certificate request\n");
 
 	// First need to generate a client key and a certificate signing
 	// request.
-	snprintf(csr_path, sizeof(csr_path), "%s/%s.csr",
-		conf->ca_csr_dir, conf->cname);
-	if(generate_key_and_csr(asfd, conf, csr_path)) goto end_cleanup;
+	snprintf(csr_path, sizeof(csr_path), "%s/%s.csr", ca_csr_dir, cname);
+	if(generate_key_and_csr(asfd, confs, csr_path)) goto end_cleanup;
 
 	// Then copy the csr to the server.
-	if(send_a_file(asfd, csr_path, conf)) goto end_cleanup;
+	if(send_a_file(asfd, csr_path, confs)) goto end_cleanup;
 
 	snprintf(ssl_cert_tmp, sizeof(ssl_cert_tmp), "%s.%d",
-		conf->ssl_cert, getpid());
+		ssl_cert, getpid());
 	snprintf(ssl_cert_ca_tmp, sizeof(ssl_cert_ca_tmp), "%s.%d",
-		conf->ssl_cert_ca, getpid());
+		ssl_cert_ca, getpid());
 
 	// The server will then sign it, and give it back.
-	if(receive_a_file(asfd, ssl_cert_tmp, conf)) goto end_cleanup;
+	if(receive_a_file(asfd, ssl_cert_tmp, confs)) goto end_cleanup;
 
 	// The server will also send the CA certificate.
-	if(receive_a_file(asfd, ssl_cert_ca_tmp, conf)) goto end_cleanup;
+	if(receive_a_file(asfd, ssl_cert_ca_tmp, confs)) goto end_cleanup;
 
 	// Possible race condition - the rename can delete the destination
 	// and then fail. Worse case, the user has to rename them by hand.
-	if(do_rename(ssl_cert_tmp, conf->ssl_cert)
-	  || do_rename(ssl_cert_ca_tmp, conf->ssl_cert_ca))
+	if(do_rename(ssl_cert_tmp, ssl_cert)
+	  || do_rename(ssl_cert_ca_tmp, ssl_cert_ca))
 		goto end_cleanup;
 
 	// Need to rewrite our configuration file to contain the server
 	// name (ssl_peer_cn)
-	if(rewrite_client_conf(conf)) goto end_cleanup;
+	if(rewrite_client_conf(confs)) goto end_cleanup;
 
 	// My goodness, everything seems to have gone OK. Stand back!
 	ret=1;
@@ -195,9 +205,9 @@ end_cleanup:
 		// On error, remove any possibly newly created files, so that
 		// this function might run again on another go.
 		unlink(csr_path);
-		unlink(conf->ssl_key);
-		unlink(conf->ssl_cert);
-		unlink(conf->ssl_cert_ca);
+		unlink(ssl_key);
+		unlink(ssl_cert);
+		unlink(ssl_cert_ca);
 		unlink(ssl_cert_tmp);
 		unlink(ssl_cert_ca_tmp);
 	}

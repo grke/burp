@@ -206,7 +206,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 	  || sb->path.cmd==CMD_VSS
 	  || sb->path.cmd==CMD_ENC_VSS
 #ifdef HAVE_WIN32
-	  || confs->strip_vss
+	  || get_int(confs[OPT_STRIP_VSS])
 #endif
 	  )
 	{
@@ -219,7 +219,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 		if(extrameta)
 		{
 #ifdef HAVE_WIN32
-			if(confs->strip_vss)
+	  		if(get_int(confs[OPT_STRIP_VSS]))
 			{
 				free(extrameta);
 				extrameta=NULL;

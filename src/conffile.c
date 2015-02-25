@@ -908,7 +908,8 @@ static int conf_finalise_global_only(const char *conf_path, struct conf **confs)
 {
 	int r=0;
 
-	if(!get_int(confs[OPT_PORT])) conf_problem(conf_path, "port unset", &r);
+	if(!get_string(confs[OPT_PORT]))
+		conf_problem(conf_path, "port unset", &r);
 
 	// Let the caller check the 'keep' value.
 

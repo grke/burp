@@ -24,7 +24,7 @@ void strlists_free(struct strlist **strlist)
 	*strlist=NULL;
 }
 
-static struct strlist *strlist_alloc(char *path, long flag)
+static struct strlist *strlist_alloc(const char *path, long flag)
 {
 	struct strlist *slnew=NULL;
 	if(!path)
@@ -41,7 +41,7 @@ static struct strlist *strlist_alloc(char *path, long flag)
 }
 
 static int do_strlist_add(struct strlist **strlist,
-	char *path, long flag, int sorted)
+	const char *path, long flag, int sorted)
 {
 	struct strlist *s=NULL;
 	struct strlist *slast=NULL;
@@ -72,12 +72,14 @@ static int do_strlist_add(struct strlist **strlist,
 	return 0;
 }
 
-int strlist_add(struct strlist **strlist, char *path, long flag)
+int strlist_add(struct strlist **strlist,
+	const char *path, long flag)
 {
 	return do_strlist_add(strlist, path, flag, 0 /* unsorted */);
 }
 
-int strlist_add_sorted(struct strlist **strlist, char *path, long flag)
+int strlist_add_sorted(struct strlist **strlist,
+	const char *path, long flag)
 {
 	return do_strlist_add(strlist, path, flag, 1 /* sorted */);
 }

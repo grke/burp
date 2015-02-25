@@ -197,7 +197,7 @@ int set_cntr(struct conf *conf, struct cntr *cntr)
 	return 0;
 }
 
-int add_to_strlist(struct conf *conf, char *value)
+int add_to_strlist(struct conf *conf, const char *value)
 {
 	int include=0;
 	assert(conf->conf_type==CT_STRLIST);

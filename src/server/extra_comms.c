@@ -155,7 +155,8 @@ static int extra_comms_read(struct async *as,
 			// Client can accept the restore.
 			// Load the restore config, then send it.
 			*srestore=1;
-			if(conf_parse_incexcs_path(cconfs, cconfs->restore_path)
+			if(conf_parse_incexcs_path(cconfs,
+				get_string(cconfs[OPT_RESTORE_PATH]))
 			  || incexc_send_server_restore(asfd, cconfs))
 				goto end;
 			// Do not unlink it here - wait until
@@ -165,14 +166,16 @@ static int extra_comms_read(struct async *as,
 			// restore is to an alternative client, so
 			// that the code below that reloads the config
 			// can read it again.
-			//unlink(cconfs->restore_path);
+			//unlink(get_string(cconfs[OPT_RESTORE_PATH]));
 		}
 		else if(!strcmp(rbuf->buf, "srestore not ok"))
 		{
+			const char *restore_path=get_string(
+				cconfs[OPT_RESTORE_PATH]);
 			// Client will not accept the restore.
-			unlink(cconfs->restore_path);
-			free(cconfs->restore_path);
-			cconfs->restore_path=NULL;
+			unlink(restore_path);
+			if(set_string(cconfs[OPT_RESTORE_PATH], NULL))
+				goto end;
 			logp("Client not accepting server initiated restore.\n");
 		}
 		else if(!strcmp(rbuf->buf, "sincexc ok"))
@@ -195,10 +198,10 @@ static int extra_comms_read(struct async *as,
 				char comp[32]="";
 				snprintf(comp, sizeof(comp),
 					"compression = %d\n",
-					cconfs->compression);
+					get_int(cconfs[OPT_COMPRESSION]));
 				if(!(tmp=prepend(*incexc, comp,
 					strlen(comp), 0))) goto end;
-				free(*incexc);
+				free_w(incexc);
 				*incexc=tmp;
 			}
 		}
@@ -207,14 +210,14 @@ static int extra_comms_read(struct async *as,
 			// Client can accept counters on
 			// resume/verify/restore.
 			logp("Client supports being sent counters.\n");
-			cconfs->send_client_cntr=1;
+			set_int(cconfs[OPT_SEND_CLIENT_CNTR], 1);
 		}
 		else if(!strncmp_w(rbuf->buf, "uname=")
 		  && strlen(rbuf->buf)>strlen("uname="))
 		{
 			char *uname=rbuf->buf+strlen("uname=");
 			if(!strncasecmp("Windows", uname, strlen("Windows")))
-				cconfs->client_is_windows=1;
+				set_int(cconfs[OPT_CLIENT_IS_WINDOWS], 1);
 		}
 		else if(!strncmp_w(rbuf->buf, "orig_client=")
 		  && strlen(rbuf->buf)>strlen("orig_client="))
@@ -224,24 +227,27 @@ static int extra_comms_read(struct async *as,
 			struct conf **sconfs=NULL;
 
 			if(!(sconfs=confs_alloc())) goto end;
-			if(!(sconfs->cname=strdup_w(
-				rbuf->buf+strlen("orig_client="), __func__)))
+			if(set_string(sconfs[OPT_CNAME],
+				rbuf->buf+strlen("orig_client=")))
 					goto end;
 			logp("Client wants to switch to client: %s\n",
-				sconfs->cname);
+				get_string(sconfs[OPT_CNAME]));
 			if(conf_load_clientconfdir(globalcs, sconfs))
 			{
 				char msg[256]="";
 				snprintf(msg, sizeof(msg),
 				  "Could not load alternate config: %s",
-				  sconfs->cname);
+				  get_string(sconfs[OPT_CNAME]));
 				log_and_send(asfd, msg);
 				goto end;
 			}
-			sconfs->send_client_cntr=cconfs->send_client_cntr;
-			for(r=sconfs->rclients; r; r=r->next)
+			set_int(sconfs[OPT_SEND_CLIENT_CNTR],
+				get_int(cconfs[OPT_SEND_CLIENT_CNTR]));
+			for(r=get_strlist(sconfs[OPT_RESTORE_CLIENTS]);
+				r; r=r->next)
 			{
-				if(!strcmp(r->path, cconfs->cname))
+				if(!strcmp(r->path,
+					get_string(cconfs[OPT_CNAME])))
 				{
 					rcok++;
 					break;
@@ -253,21 +259,24 @@ static int extra_comms_read(struct async *as,
 				char msg[256]="";
 				snprintf(msg, sizeof(msg),
 				  "Access to client is not allowed: %s",
-					sconfs->cname);
+					get_string(sconfs[OPT_CNAME]));
 				log_and_send(asfd, msg);
 				goto end;
 			}
-			sconfs->restore_path=cconfs->restore_path;
-			cconfs->restore_path=NULL;
+			if(set_string(sconfs[OPT_RESTORE_PATH],
+				get_string(cconfs[OPT_RESTORE_PATH])))
+					goto end;
+			if(set_string(cconfs[OPT_RESTORE_PATH], NULL))
+					goto end;
 			confs_free_content(cconfs);
 			confs_init(cconfs);
 			// FIX THIS:
-			memcpy(cconf, sconf, sizeof(struct conf));
-			free_w(&sconfs);
-			cconfs->restore_client=cconfs->cname;
-			if(!(cconfs->orig_client
-				=strdup_w(cconfs->cname, __func__)))
-					goto end;
+			memcpy(cconfs, sconfs, sizeof(struct conf));
+			confs_free(&sconfs);
+			if(set_string(cconfs[OPT_RESTORE_CLIENT],
+				get_string(cconfs[OPT_CNAME]))) goto end;
+			if(set_string(cconfs[OPT_ORIG_CLIENT],
+				get_string(cconfs[OPT_CNAME]))) goto end;
 
 			// If this started out as a server-initiated
 			// restore, need to load the restore file
@@ -275,9 +284,11 @@ static int extra_comms_read(struct async *as,
 			if(*srestore)
 			{
 				if(conf_parse_incexcs_path(cconfs,
-					cconfs->restore_path)) goto end;
+					get_string(cconfs[OPT_RESTORE_PATH])))
+						goto end;
 			}
-			logp("Switched to client %s\n", cconfs->cname);
+			logp("Switched to client %s\n",
+				get_string(cconfs[OPT_CNAME]));
 			if(asfd->write_str(asfd, CMD_GEN, "orig_client ok"))
 				goto end;
 		}
@@ -285,14 +296,16 @@ static int extra_comms_read(struct async *as,
 		{
 			// Client supports temporary spool directory
 			// for restores.
-			if(!(cconfs->restore_spool=
-			  strdup_w(rbuf->buf+strlen("restore_spool="),
-				__func__))) goto end;
+			if(set_string(cconfs[OPT_RESTORE_SPOOL],
+				rbuf->buf+strlen("restore_spool=")))
+					goto end;
 		}
 		else if(!strncmp_w(rbuf->buf, "protocol="))
 		{
 			char msg[128]="";
 			// Client wants to set protocol.
+			enum protocol protocol=get_e_protocol(
+				cconfs[OPT_PROTOCOL]);
 			if(protocol!=PROTO_AUTO)
 			{
 				snprintf(msg, sizeof(msg), "Client is trying to use %s but server is set to protocol=%d\n", rbuf->buf, protocol);
@@ -315,7 +328,8 @@ static int extra_comms_read(struct async *as,
 				log_and_send_oom(asfd, __func__);
 				goto end;
 			}
-			logp("Client has set protocol=%d\n", protocol);
+			logp("Client has set protocol=%d\n",
+				(int)get_e_protocol(cconfs[OPT_PROTOCOL]));
 		}
 		else
 		{
@@ -342,19 +356,20 @@ static int vers_init(struct vers *vers, struct conf **cconfs)
 }
 
 int extra_comms(struct async *as,
-	char **incexc, int *srestore, struct conf **confs, struct conf *cconf)
+	char **incexc, int *srestore, struct conf **confs, struct conf **cconfs)
 {
 	struct vers vers;
 	struct asfd *asfd;
 	asfd=as->asfd;
 	//char *restorepath=NULL;
+	const char *peer_version=get_string(cconfs[OPT_PEER_VERSION]);
 
-	if(vers_init(&vers, cconf)) goto error;
+	if(vers_init(&vers, cconfs)) goto error;
 
 	if(vers.cli<vers.directory_tree)
 	{
-		conf->directory_tree=0;
-		cconf->directory_tree=0;
+		set_int(confs[OPT_DIRECTORY_TREE], 0);
+		set_int(cconfs[OPT_DIRECTORY_TREE], 0);
 	}
 
 	// Clients before 1.2.7 did not know how to do extra comms, so skip
@@ -380,33 +395,35 @@ int extra_comms(struct async *as,
 	}
 	else
 	{
-		if(send_features(asfd, cconf)) goto error;
+		if(send_features(asfd, cconfs)) goto error;
 	}
 
-	if(extra_comms_read(as, &vers, srestore, incexc, conf, cconf))
+	if(extra_comms_read(as, &vers, srestore, incexc, confs, cconfs))
 		goto error;
 
 	// This needs to come after extra_comms_read, as the client might
 	// have set PROTO_1 or PROTO_2.
-	switch(cconf->protocol)
+	switch(get_e_protocol(cconfs[OPT_PROTOCOL]))
 	{
 		case PROTO_AUTO:
 			// The protocol has not been specified. Make a choice.
 			if(vers.cli<vers.burp2)
 			{
 				// Client is burp-1.x.x, use protocol1.
-				cconf->protocol=conf->protocol=PROTO_1;
+				set_e_protocol(confs[OPT_PROTOCOL], PROTO_1);
+				set_e_protocol(cconfs[OPT_PROTOCOL], PROTO_1);
 				logp("Client is burp-%s - using protocol=%d\n",
-					cconf->peer_version, PROTO_1);
+					peer_version, PROTO_1);
 			}
 			else
 			{
 				// Client is burp-2.x.x, use protocol2.
 				// This will probably never be reached because
 				// the negotiation will take care of it.
-				cconf->protocol=conf->protocol=PROTO_2;
+				set_e_protocol(confs[OPT_PROTOCOL], PROTO_2);
+				set_e_protocol(cconfs[OPT_PROTOCOL], PROTO_2);
 				logp("Client is burp-%s - using protocol=%d\n",
-					cconf->peer_version, PROTO_2);
+					peer_version, PROTO_2);
 			}
 			break;
 		case PROTO_1:
@@ -417,7 +434,7 @@ int extra_comms(struct async *as,
 			if(vers.cli>=vers.burp2) break;
 			logp("protocol=%d is set server side, "
 			  "but client is burp version %s\n",
-			  cconf->peer_version);
+			  peer_version);
 			goto error;
 	}
 

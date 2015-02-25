@@ -180,25 +180,26 @@ static int run_child(int *cfd, SSL_CTX *ctx,
 	SSL *ssl=NULL;
 	BIO *sbio=NULL;
 	struct conf **confs=NULL;
-	struct conf *cconf=NULL;
+	struct conf **cconfs=NULL;
 	struct cntr *cntr=NULL;
 	struct async *as=NULL;
+	const char *cname=NULL;
 
-	if(!(conf=conf_alloc())
-	  || !(cconf=conf_alloc()))
+	if(!(confs=confs_alloc())
+	  || !(cconfs=confs_alloc()))
 		goto end;
 
 	set_peer_env_vars(*cfd);
 
 	// Reload global config, in case things have changed. This means that
 	// the server does not need to be restarted for most conf changes.
-	conf_init(conf);
-	conf_init(cconf);
-	if(conf_load_global_only(conffile, conf)) goto end;
+	confs_init(confs);
+	confs_init(cconfs);
+	if(conf_load_global_only(conffile, confs)) goto end;
 
 	// Hack to keep forking turned off if it was specified as off on the
 	// command line.
-	if(!forking) conf->forking=0;
+	if(!forking) set_int(confs[OPT_FORK], 0);
 
 	if(!(sbio=BIO_new_socket(*cfd, BIO_NOCLOSE))
 	  || !(ssl=SSL_new(ctx)))
@@ -222,11 +223,11 @@ static int run_child(int *cfd, SSL_CTX *ctx,
 	if(!(as=async_alloc())
 	  || as->init(as, 0)
 	  || !setup_asfd(as, "main socket",
-		cfd, ssl, ASFD_STREAM_STANDARD, ASFD_FD_CHILD_MAIN, -1, conf))
+		cfd, ssl, ASFD_STREAM_STANDARD, ASFD_FD_CHILD_MAIN, -1, confs))
 			goto end;
 
-	if(authorise_server(as->asfd, conf, cconf)
-	  || !cconf->cname || !*(cconf->cname))
+	if(authorise_server(as->asfd, confs, cconfs)
+	  || !(cname=get_string(cconfs[OPT_CNAME])) || !*cname)
 	{
 		// Add an annoying delay in case they are tempted to
 		// try repeatedly.
@@ -237,17 +238,17 @@ static int run_child(int *cfd, SSL_CTX *ctx,
 
 	// Set up counters. Have to wait until here to get cname.
 	if(!(cntr=cntr_alloc())
-	  || cntr_init(cntr, cconf->cname))
+	  || cntr_init(cntr, cname))
 		goto end;
-	get_cntr(confs[OPT_CNTR])=cntr;
-	cget_cntr(confs[OPT_CNTR])=cntr;
+	set_cntr(confs[OPT_CNTR], cntr);
+	set_cntr(cconfs[OPT_CNTR], cntr);
 
 	/* At this point, the client might want to get a new certificate
 	   signed. Clients on 1.3.2 or newer can do this. */
-	if((ca_ret=ca_server_maybe_sign_client_cert(as->asfd, conf, cconf))<0)
+	if((ca_ret=ca_server_maybe_sign_client_cert(as->asfd, confs, cconfs))<0)
 	{
 		logp("Error signing client certificate request for %s\n",
-			cconf->cname);
+			cname);
 		goto end;
 	}
 	else if(ca_ret>0)
@@ -257,13 +258,13 @@ static int run_child(int *cfd, SSL_CTX *ctx,
 		// so that the client can start again with a new
 		// connection and its new certificates.
 		logp("Signed and returned client certificate request for %s\n",
-			cconf->cname);
+			cname);
 		ret=0;
 		goto end;
 	}
 
 	/* Now it is time to check the certificate. */ 
-	if(ssl_check_cert(ssl, cconf))
+	if(ssl_check_cert(ssl, cconfs))
 	{
 		log_and_send(as->asfd, "check cert failed on server");
 		goto end;
@@ -271,17 +272,17 @@ static int run_child(int *cfd, SSL_CTX *ctx,
 
 	if(status_rfd>=0 && !setup_asfd(as, "status server parent socket",
 		&status_rfd, NULL,
-		ASFD_STREAM_STANDARD, ASFD_FD_CHILD_PIPE_READ, -1, cconf))
+		ASFD_STREAM_STANDARD, ASFD_FD_CHILD_PIPE_READ, -1, cconfs))
 			goto end;
 
-	ret=child(as, status_wfd, conf, cconf);
+	ret=child(as, status_wfd, confs, cconfs);
 end:
 	*cfd=-1;
 	async_asfd_free_all(&as); // This closes cfd for us.
 	logp("exit child\n");
 	if(cntr) cntr_free(&cntr);
-	if(conf) conf_free(conf);
-	if(cconf) conf_free(cconf);
+	if(confs) confs_free(&confs);
+	if(cconfs) confs_free(&cconfs);
 	return ret;
 }
 
@@ -308,11 +309,13 @@ static int chld_check_counts(struct conf **confs, struct asfd *asfd)
 	switch(asfd->fdtype)
 	{
 		case ASFD_FD_SERVER_LISTEN_MAIN:
-			if(c_count<conf->max_children) break;
+			if(c_count<get_int(confs[OPT_MAX_CHILDREN]))
+				break;
 			logp("Too many child processes.\n");
 			return -1;
 		case ASFD_FD_SERVER_LISTEN_STATUS:
-			if(sc_count<conf->max_status_children) break;
+			if(sc_count<get_int(confs[OPT_MAX_STATUS_CHILDREN]))
+				break;
 			logp("Too many status child processes.\n");
 			return -1;
 		default:
@@ -334,6 +337,7 @@ static int process_incoming_client(struct asfd *asfd, SSL_CTX *ctx,
 	socklen_t client_length=0;
 	struct sockaddr_in client_name;
 	enum asfd_fdtype fdtype=asfd->fdtype;
+	int forking=get_int(confs[OPT_FORK]);
 
 	client_length=sizeof(client_name);
 	if((cfd=accept(asfd->fd,
@@ -347,10 +351,10 @@ static int process_incoming_client(struct asfd *asfd, SSL_CTX *ctx,
 	}
 	reuseaddr(cfd);
 
-	if(!conf->forking)
-		return run_child(&cfd, ctx, -1, -1, conffile, conf->forking);
+	if(!forking)
+		return run_child(&cfd, ctx, -1, -1, conffile, forking);
 
-	if(chld_check_counts(conf, asfd))
+	if(chld_check_counts(confs, asfd))
 	{
 		logp("Closing new connection.\n");
 		close_fd(&cfd);
@@ -399,12 +403,12 @@ static int process_incoming_client(struct asfd *asfd, SSL_CTX *ctx,
 			close(pipe_rfd[0]); // close read end
 			close(pipe_wfd[1]); // close write end
 
-			conf_free_content(conf);
-			conf_init(conf);
+			confs_free_content(confs);
+			confs_init(confs);
 
 			ret=run_child(&cfd, ctx, pipe_rfd[1],
 			  fdtype==ASFD_FD_SERVER_LISTEN_STATUS?pipe_wfd[0]:-1,
-			  conffile, conf->forking);
+			  conffile, forking);
 
 			close(pipe_rfd[1]);
 			close(pipe_wfd[0]);
@@ -427,7 +431,7 @@ static int process_incoming_client(struct asfd *asfd, SSL_CTX *ctx,
 						ASFD_STREAM_STANDARD,
 						ASFD_FD_SERVER_PIPE_READ,
 						childpid,
-						conf)) return -1;
+						confs)) return -1;
 					// Do not need to write to normal
 					// children.
 					close(pipe_wfd[1]);
@@ -444,7 +448,7 @@ static int process_incoming_client(struct asfd *asfd, SSL_CTX *ctx,
 						ASFD_STREAM_STANDARD,
 						ASFD_FD_SERVER_PIPE_WRITE,
 						childpid,
-						conf)) return -1;
+						confs)) return -1;
 					break;
 				default:
 					logp("Strange fdtype after fork: %d\n",
@@ -537,15 +541,22 @@ struct oldnet
 
 static int oldnet_init(struct oldnet *oldnet, struct conf **confs)
 {
-	if(!(oldnet->port=strdup_w(conf->port, __func__))) return -1;
-	if(conf->status_port
-	  && !(oldnet->status_port=strdup_w(conf->status_port, __func__)))
+	const char *port=get_string(confs[OPT_PORT]);
+	const char *address=get_string(confs[OPT_ADDRESS]);
+	const char *status_port=get_string(confs[OPT_STATUS_PORT]);
+	const char *status_address=get_string(confs[OPT_STATUS_ADDRESS]);
+
+	if(port
+	  && !(oldnet->port=strdup_w(port, __func__)))
 		return -1;
-	if(conf->address
-	  && !(oldnet->address=strdup_w(conf->address, __func__)))
+	if(status_port
+	  && !(oldnet->status_port=strdup_w(status_port, __func__)))
 		return -1;
-	if(conf->status_address
-	  && !(oldnet->status_address=strdup_w(conf->status_address, __func__)))
+	if(address
+	  && !(oldnet->address=strdup_w(address, __func__)))
+		return -1;
+	if(status_address
+	  && !(oldnet->status_address=strdup_w(status_address, __func__)))
 		return -1;
 	return 0;
 }
@@ -576,29 +587,32 @@ static int run_server(struct conf **confs, const char *conffile,
 	struct asfd *asfd=NULL;
 	struct asfd *scfd=NULL;
 	struct async *mainas=NULL;
+	const char *port=get_string(confs[OPT_PORT]);
+	const char *address=get_string(confs[OPT_ADDRESS]);
+	const char *status_port=get_string(confs[OPT_STATUS_PORT]);
+	const char *status_address=get_string(confs[OPT_STATUS_ADDRESS]);
 
-	if(!(ctx=ssl_initialise_ctx(conf)))
+	if(!(ctx=ssl_initialise_ctx(confs)))
 	{
 		logp("error initialising ssl ctx\n");
 		goto end;
 	}
-	if((ssl_load_dh_params(ctx, conf)))
+	if((ssl_load_dh_params(ctx, confs)))
 	{
 		logp("error loading dh params\n");
 		goto end;
 	}
 
-	if(ports_changed(oldnet->address, conf->address)
-	  || ports_changed(oldnet->port, conf->port))
+	if(ports_changed(oldnet->address, address)
+	  || ports_changed(oldnet->port, port))
 	{
-		if(init_listen_socket(conf->address,
-			conf->port, 1, rfds)) goto end;
+		if(init_listen_socket(address, port, 1, rfds)) goto end;
 	}
-	if(ports_changed(oldnet->status_address, conf->status_address)
-	  || ports_changed(oldnet->status_port, conf->status_port))
+	if(ports_changed(oldnet->status_address, status_address)
+	  || ports_changed(oldnet->status_port, status_port))
 	{
-		if(init_listen_socket(conf->status_address,
-			conf->status_port, 0, sfds)) goto end;
+		if(init_listen_socket(status_address, status_port, 0, sfds))
+			goto end;
 	}
 
 	if(!(mainas=async_alloc())
@@ -608,12 +622,12 @@ static int run_server(struct conf **confs, const char *conffile,
 	for(i=0; i<LISTEN_SOCKETS && rfds[i]!=-1; i++)
 		if(!setup_asfd(mainas,
 		  "main server socket", &rfds[i], NULL,
-		  ASFD_STREAM_STANDARD, ASFD_FD_SERVER_LISTEN_MAIN, -1, conf))
+		  ASFD_STREAM_STANDARD, ASFD_FD_SERVER_LISTEN_MAIN, -1, confs))
 			goto end;
 	for(i=0; i<LISTEN_SOCKETS && sfds[i]!=-1; i++)
 		if(!setup_asfd(mainas,
 		  "main server status socket", &sfds[i], NULL,
-		  ASFD_STREAM_STANDARD, ASFD_FD_SERVER_LISTEN_STATUS, -1, conf))
+		  ASFD_STREAM_STANDARD, ASFD_FD_SERVER_LISTEN_STATUS, -1, confs))
 			goto end;
 
 	while(!hupreload)
@@ -628,9 +642,9 @@ static int run_server(struct conf **confs, const char *conffile,
 						// Incoming client.
 						asfd->new_client=0;
 						if(process_incoming_client(asfd,
-							ctx, conffile, conf))
+							ctx, conffile, confs))
 								goto end;
-						if(!conf->forking)
+						if(!get_int(confs[OPT_FORK]))
 						{
 							gentleshutdown++;
 							ret=1;
@@ -708,7 +722,7 @@ static int run_server(struct conf **confs, const char *conffile,
 				gentleshutdown_logged++;
 			}
 // FIX THIS:
-// found_normal_child=chld_add_fd_to_normal_sets(conf, &fsr, &fse, &mfd);
+// found_normal_child=chld_add_fd_to_normal_sets(confs, &fsr, &fse, &mfd);
 			else if(!found_normal_child)
 			{
 				logp("all children have exited - shutting down\n");
@@ -734,7 +748,7 @@ int server(struct conf **confs, const char *conffile,
 	int sfds[LISTEN_SOCKETS]; // Status server sockets.
 	struct oldnet oldnet;
 
-	//return champ_test(conf);
+	//return champ_test(confs);
 
 	// Only close and reopen listening sockets if the ports changed.
 	// Otherwise you get an "unable to bind listening socket on port X"
@@ -744,14 +758,14 @@ int server(struct conf **confs, const char *conffile,
 	init_fds(rfds);
 	init_fds(sfds);
 
-	if(ca_server_setup(conf)) goto error;
+	if(ca_server_setup(confs)) goto error;
 	if(generate_ca_only)
 	{
 		logp("The '-g' command line option was given. Exiting now.\n");
 		goto end;
 	}
 
-	if(conf->forking && conf->daemon)
+	if(get_int(confs[OPT_FORK]) && get_int(confs[OPT_DAEMON]))
 	{
 		if(daemonise() || relock(lock)) goto error;
 	}
@@ -760,18 +774,18 @@ int server(struct conf **confs, const char *conffile,
 
 	while(!gentleshutdown)
 	{
-		if(run_server(conf, conffile, rfds, sfds, &oldnet))
+		if(run_server(confs, conffile, rfds, sfds, &oldnet))
 			goto error;
 
 		if(hupreload && !gentleshutdown)
 		{
 			oldnet_free_contents(&oldnet);
-			if(oldnet_init(&oldnet, conf))
+			if(oldnet_init(&oldnet, confs))
 				goto error;
-			if(reload(conf, conffile,
+			if(reload(confs, conffile,
 				0, // Not first time.
-				conf->max_children,
-				conf->max_status_children,
+				get_int(confs[OPT_MAX_CHILDREN]),
+				get_int(confs[OPT_MAX_STATUS_CHILDREN]),
 				0)) // Not JSON output.
 					goto error;
 		}

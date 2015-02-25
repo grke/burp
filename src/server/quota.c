@@ -14,7 +14,7 @@ int check_quota(struct async *as, struct conf **cconfs)
 {
 	unsigned long long byte;
 
-	byte=cget_cntr(confs[OPT_CNTR])->ent[(uint8_t)CMD_BYTES_ESTIMATED]->count;
+	byte=cget_cntr(cconfs[OPT_CNTR])->ent[(uint8_t)CMD_BYTES_ESTIMATED]->count;
 
 	if(cconf->hard_quota && byte > (unsigned long long)cconf->hard_quota)
 	{

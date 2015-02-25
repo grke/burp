@@ -111,17 +111,18 @@ static int list_manifest(struct asfd *asfd,
 	char *manifest_dir=NULL;
 	char *last_bd_match=NULL;
 	size_t bdlen=0;
+	enum protocol protocol=get_e_protocol(confs[OPT_PROTOCOL]);
 
 	if(!(manifest_dir=prepend_s(fullpath,
-		conf->protocol==PROTO_1?"manifest.gz":"manifest"))
+		protocol==PROTO_1?"manifest.gz":"manifest"))
 	  || !(manio=manio_alloc())
 	  || manio_init_read(manio, manifest_dir)
-	  || !(sb=sbuf_alloc(conf)))
+	  || !(sb=sbuf_alloc(confs)))
 	{
 		log_and_send_oom(asfd, __func__);
 		goto error;
 	}
-	manio_set_protocol(manio, conf->protocol);
+	manio_set_protocol(manio, protocol);
 
 	if(browsedir) bdlen=strlen(browsedir);
 
@@ -129,12 +130,12 @@ static int list_manifest(struct asfd *asfd,
 	{
 		int show=0;
 
-		if((ars=manio_sbuf_fill(manio, asfd, sb, NULL, NULL, conf))<0)
+		if((ars=manio_sbuf_fill(manio, asfd, sb, NULL, NULL, confs))<0)
 			goto error;
 		else if(ars>0)
 			goto end; // Finished OK.
 
-		if(write_status(CNTR_STATUS_LISTING, sb->path.buf, conf))
+		if(write_status(CNTR_STATUS_LISTING, sb->path.buf, confs))
 			goto error;
 
 		if(browsedir)
@@ -181,7 +182,7 @@ static int send_backup_name_to_client(struct asfd *asfd,
 	snprintf(msg, sizeof(msg), "%s%s",
 		bu->timestamp,
 		// Protocol2 backups are all deletable, so do not mention it.
-		conf->protocol==PROTO_1
+		get_e_protocol(confs[OPT_PROTOCOL])==PROTO_1
 		&& (bu->flags & BU_DELETABLE)?" (deletable)":"");
 	return write_wrapper_str(asfd, CMD_TIMESTAMP, msg);
 }
@@ -200,7 +201,7 @@ int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct conf **confs,
 
 	if(compile_regex(&regex, listregex)
 	  || bu_get_list(sdirs, &bu_list)
-	  || write_status(CNTR_STATUS_LISTING, NULL, conf))
+	  || write_status(CNTR_STATUS_LISTING, NULL, confs))
 		goto end;
 
 	if(backup && *backup) bno=strtoul(backup, NULL, 10);
@@ -214,7 +215,7 @@ int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct conf **confs,
 			if(write_wrapper_str(asfd,
 				CMD_TIMESTAMP, bu->timestamp)
 			  || list_manifest(asfd, bu->path,
-				regex, browsedir, conf)) goto end;
+				regex, browsedir, confs)) goto end;
 		}
 		// Search or list a particular backup.
 		else if(backup && *backup)
@@ -224,16 +225,16 @@ int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct conf **confs,
 				|| bu->bno==bno))
 			{
 				found=1;
-				if(send_backup_name_to_client(asfd, bu, conf)
+				if(send_backup_name_to_client(asfd, bu, confs)
 				  || list_manifest(asfd, bu->path, regex,
-					browsedir, conf)) goto end;
+					browsedir, confs)) goto end;
 			}
 		}
 		// List the backups.
 		else
 		{
 			found=1;
-			if(send_backup_name_to_client(asfd, bu, conf))
+			if(send_backup_name_to_client(asfd, bu, confs))
 				goto end;
 		}
 	}

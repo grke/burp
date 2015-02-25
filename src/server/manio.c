@@ -260,7 +260,7 @@ static int do_manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
 		if(manio->protocol==PROTO_2 || phase1)
 		{
 			ars=sbuf_fill_from_gzfile(sb, asfd, manio->zp, blk,
-				dpth?dpth->base_path:NULL, conf);
+				dpth?dpth->base_path:NULL, confs);
 		}
 		else
 		{
@@ -290,7 +290,7 @@ int manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
 	struct sbuf *sb, struct blk *blk,
 	struct dpth *dpth, struct conf **confs)
 {
-	return do_manio_sbuf_fill(manio, asfd, sb, blk, dpth, conf, 0);
+	return do_manio_sbuf_fill(manio, asfd, sb, blk, dpth, confs, 0);
 }
 
 // FIX THIS:
@@ -303,7 +303,7 @@ int manio_sbuf_fill_phase1(struct manio *manio, struct asfd *asfd,
 	struct sbuf *sb, struct blk *blk,
 	struct dpth *dpth, struct conf **confs)
 {
-	return do_manio_sbuf_fill(manio, asfd, sb, blk, dpth, conf, 1);
+	return do_manio_sbuf_fill(manio, asfd, sb, blk, dpth, confs, 1);
 }
 
 static int reset_sig_count_and_close(struct manio *manio)
@@ -457,7 +457,7 @@ int manio_copy_entry(struct asfd *asfd, struct sbuf **csb, struct sbuf *sb,
 	while(1)
 	{
 		if((ars=manio_sbuf_fill(srcmanio, asfd, *csb,
-			*blk, NULL, conf))<0) goto error;
+			*blk, NULL, confs))<0) goto error;
 		else if(ars>0)
 		{
 			// Finished.
@@ -491,5 +491,5 @@ int manio_forward_through_sigs(struct asfd *asfd,
 {
 	// Call manio_copy_entry with nothing to write to, so
 	// that we forward through the sigs in manio.
-	return manio_copy_entry(asfd, csb, NULL, blk, manio, NULL, conf);
+	return manio_copy_entry(asfd, csb, NULL, blk, manio, NULL, confs);
 }

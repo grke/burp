@@ -46,7 +46,7 @@ int do_backup_client(struct asfd *asfd, struct conf **confs, enum action action,
 #ifdef HAVE_WIN32
 	win32_enable_backup_privileges();
 #ifdef WIN32_VSS
-	if(win32_start_vss(conf)) return ret;
+	if(win32_start_vss(confs)) return ret;
 #endif
 	if(action==ACTION_BACKUP_TIMED) set_low_priority();
 #endif
@@ -55,12 +55,12 @@ int do_backup_client(struct asfd *asfd, struct conf **confs, enum action action,
 	// Skip phase1 if the server wanted to resume.
 	if(!resume)
 	{
-		if(conf->breakpoint==1)
+		if(get_int(confs[OPT_BREAKPOINT])==1)
 		{
-			breakpoint(conf, __func__);
+			breakpoint(confs, __func__);
 			goto end;
 		}
-		if(backup_phase1_client(asfd, conf, action==ACTION_ESTIMATE))
+		if(backup_phase1_client(asfd, confs, action==ACTION_ESTIMATE))
 			goto end;
 	}
 
@@ -76,17 +76,17 @@ int do_backup_client(struct asfd *asfd, struct conf **confs, enum action action,
 		default:
 			// Now, the server will be telling us what data we need
 			// to send.
-			if(conf->breakpoint==2)
+			if(get_int(confs[OPT_BREAKPOINT])==2)
 			{
-				breakpoint(conf, __func__);
+				breakpoint(confs, __func__);
 				goto end;
 			}
-			if(conf->protocol==PROTO_1)
+			if(get_e_protocol(confs[OPT_PROTOCOL])==PROTO_1)
 				ret=backup_phase2_client_protocol1(asfd,
-					conf, resume);
+					confs, resume);
 			else
 				ret=backup_phase2_client_protocol2(asfd,
-					conf, resume);
+					confs, resume);
 			if(ret) goto end;
 			break;
 	}

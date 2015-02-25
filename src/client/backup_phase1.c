@@ -60,14 +60,14 @@ static int maybe_send_extrameta(struct asfd *asfd,
 	const char *path, enum cmd cmd,
 	struct sbuf *sb, struct conf **confs, enum cmd symbol)
 {
-	if(!has_extrameta(path, cmd, conf)) return 0;
-	return usual_stuff(asfd, conf, path, NULL, sb, symbol);
+	if(!has_extrameta(path, cmd, confs)) return 0;
+	return usual_stuff(asfd, confs, path, NULL, sb, symbol);
 }
 
 static int ft_err(struct asfd *asfd,
 	struct conf **confs, FF_PKT *ff, const char *msg)
 {
-	return logw(asfd, conf, _("Err: %s %s: %s"), msg,
+	return logw(asfd, confs, _("Err: %s %s: %s"), msg,
 		ff->fname, strerror(errno));
 }
 
@@ -80,12 +80,13 @@ static int do_to_server(struct asfd *asfd,
 	attribs_encode(sb);
 
 #ifdef HAVE_WIN32
-	if(conf->split_vss && !conf->strip_vss
-	  && maybe_send_extrameta(asfd, ff->fname, cmd, sb, conf, metasymbol))
+	if(get_int(confs[OPT_SPLIT_VSS])
+	  && !get_int(confs[OPT_STRIP_VSS])
+	  && maybe_send_extrameta(asfd, ff->fname, cmd, sb, confs, metasymbol))
 		return -1;
 #endif
 
-	if(usual_stuff(asfd, conf, ff->fname, ff->link, sb, cmd)) return -1;
+	if(usual_stuff(asfd, confs, ff->fname, ff->link, sb, cmd)) return -1;
 
 	if(ff->type==FT_REG)
 		cntr_add_val(get_cntr(confs[OPT_CNTR]), CMD_BYTES_ESTIMATED,

@@ -6,14 +6,12 @@ static char *gbuf=NULL;
 static char *gbuf_end=NULL;
 static struct rconf rconf;
 static struct win *win=NULL; // Rabin sliding window.
-
-
 static int first=0;
 
 int blks_generate_init(void)
 {
 	rconf_init(&rconf);
-	if(!(win=win_alloc(&conf->rconf))
+	if(!(win=win_alloc(&rconf))
 	  || !(gbuf=(char *)malloc_w(rconf.blk_max, __func__)))
 		return -1;
 	gbuf_end=gbuf;

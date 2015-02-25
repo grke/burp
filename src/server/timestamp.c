@@ -42,7 +42,7 @@ static void write_to_buf(char *buf, size_t s,
 }
 
 int timestamp_get_new(struct sdirs *sdirs,
-	char *buf, size_t s, char *bufforfile, size_t bs, struct conf *cconf)
+	char *buf, size_t s, char *bufforfile, size_t bs, struct conf **cconfs)
 {
 	time_t t=0;
 	unsigned long index=0;
@@ -68,7 +68,8 @@ int timestamp_get_new(struct sdirs *sdirs,
 	index++;
 
 	write_to_buf(buf, s, index, NULL, ctm);
-	write_to_buf(bufforfile, bs, index, cconf->timestamp_format, ctm);
+	write_to_buf(bufforfile, bs, index,
+		get_string(cconfs[OPT_TIMESTAMP_FORMAT]), ctm);
 
 	return 0;
 }

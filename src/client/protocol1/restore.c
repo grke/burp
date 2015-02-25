@@ -13,7 +13,7 @@ static int do_restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 	const char *encpassword=NULL;
 
 	if(sbuf_is_encrypted(sb))
-		encpassword=conf->encryption_password;
+		encpassword=get_string(confs[OPT_ENCRYPTION_PASSWORD]);
 	enccompressed=dpthl_is_compressed(sb->compression,
 		sb->protocol1->datapth.buf);
 /*
@@ -53,7 +53,7 @@ static int do_restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 		}
 #endif
 		if(!ret) attribs_set(asfd, rpath,
-			&(sb->statp), sb->winattr, conf);
+			&(sb->statp), sb->winattr, confs);
 	}
 
 	ret=0;
@@ -63,7 +63,7 @@ end:
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
 			"Could not transfer file in: %s", rpath);
-		if(restore_interrupt(asfd, sb, msg, conf))
+		if(restore_interrupt(asfd, sb, msg, confs))
 			ret=-1;
 		goto end;
 	}
@@ -88,7 +88,7 @@ static int restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 		char msg[256]="";
 		// failed - do a warning
 		snprintf(msg, sizeof(msg), "build path failed: %s", fname);
-		if(restore_interrupt(asfd, sb, msg, conf))
+		if(restore_interrupt(asfd, sb, msg, confs))
 			ret=-1;
 		goto end;
 	}
@@ -100,7 +100,7 @@ static int restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 	{
 #endif
 		switch(open_for_restore(asfd,
-			bfd, rpath, sb, vss_restore, conf))
+			bfd, rpath, sb, vss_restore, confs))
 		{
 			case OFR_OK: break;
 			case OFR_CONTINUE: goto end;
@@ -111,7 +111,7 @@ static int restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 #endif
 
 	if(!(ret=do_restore_file_or_get_meta(asfd, bfd, sb, fname,
-		metadata, metalen, conf, rpath)))
+		metadata, metalen, confs, rpath)))
 			cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
 end:
 	free_w(&rpath);
@@ -144,19 +144,19 @@ static int restore_metadata(struct asfd *asfd, BFILE *bfd, struct sbuf *sb,
 
 	// Read in the metadata...
 	if(restore_file_or_get_meta(asfd, bfd, sb, fname, act,
-		&metadata, &metalen, vss_restore, conf))
+		&metadata, &metalen, vss_restore, confs))
 			goto end;
 	if(metadata)
 	{
 		
 		if(!set_extrameta(asfd, bfd, fname,
-			sb, metadata, metalen, conf))
+			sb, metadata, metalen, confs))
 		{
 #ifndef HAVE_WIN32
 			// Set attributes again, since we just diddled with the
 			// file.
 			attribs_set(asfd, fname,
-				&(sb->statp), sb->winattr, conf);
+				&(sb->statp), sb->winattr, confs);
 			cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
 #endif
 		}
@@ -181,14 +181,14 @@ int restore_switch_protocol1(struct asfd *asfd, struct sbuf *sb,
 		case CMD_EFS_FILE:
 			return restore_file_or_get_meta(asfd, bfd, sb,
 				fullpath, act,
-				NULL, NULL, vss_restore, conf);
+				NULL, NULL, vss_restore, confs);
 		case CMD_METADATA:
 		case CMD_VSS:
 		case CMD_ENC_METADATA:
 		case CMD_ENC_VSS:
 			return restore_metadata(asfd, bfd, sb,
 				fullpath, act,
-				vss_restore, conf);
+				vss_restore, confs);
 		default:
 			// Other cases (dir/links/etc) are handled in the
 			// calling function.

@@ -519,7 +519,7 @@ static void update_screen_clients(struct sel *sel, int *x, int col,
 		if(s<winmin) continue;
 		if(s>winmax) break;
 
-		summary(c, (*x)++, col, conf);
+		summary(c, (*x)++, col, confs);
 
 #ifdef HAVE_NCURSES_H
 		if(actg==ACTION_STATUS && sel->client==c)
@@ -769,7 +769,7 @@ static int update_screen(struct sel *sel, struct conf **confs)
 	{
 		case PAGE_CLIENT_LIST:
 			update_screen_clients(sel, &x, col,
-				winmin, winmax, conf);
+				winmin, winmax, confs);
 			break;
 		case PAGE_BACKUP_LIST:
 			update_screen_backups(sel, &x, col,
@@ -859,12 +859,12 @@ static int request_status(struct asfd *asfd,
 		}
 	}
 /*
-	if(conf->browsedir)
+	if(confs->browsedir)
 		snprintf(buf, sizeof(buf), "c:%s:b:%s:p:%s\n",
-			client, conf->backup, conf->browsedir);
-	else if(conf->browsefile)
+			client, confs->backup, confs->browsedir);
+	else if(confs->browsefile)
 		snprintf(buf, sizeof(buf), "c:%s:b:%s:f:%s\n",
-			client, conf->backup, conf->browsefile);
+			client, confs->backup, confs->browsefile);
 */
 	if(*buf)
 	{
@@ -1201,14 +1201,15 @@ static int main_loop(struct async *as, enum action act, struct conf **confs)
 	struct asfd *sfd=as->asfd; // Server asfd.
 	int reqdone=0;
 	struct sel *sel=NULL;
+	const char *orig_client=get_string(confs[OPT_ORIG_CLIENT]);
 
 	if(!(sel=(struct sel *)calloc_w(1, sizeof(struct sel), __func__)))
 		goto error;
 	sel->page=PAGE_CLIENT_LIST;
 
-	if(conf->orig_client && !client)
+	if(orig_client && !client)
 	{
-		client=strdup_w(conf->orig_client, __func__);
+		client=strdup_w(orig_client, __func__);
 		sel->page=PAGE_BACKUP_LIST;
 	}
 
@@ -1223,7 +1224,7 @@ static int main_loop(struct async *as, enum action act, struct conf **confs)
 				else if(sel->client) req=sel->client->name;
 			}
 			if(request_status(sfd,
-				req, sel, conf)) goto error;
+				req, sel, confs)) goto error;
 			if(act==ACTION_STATUS_SNAPSHOT)
 				reqdone=1;
 		}
@@ -1262,7 +1263,7 @@ static int main_loop(struct async *as, enum action act, struct conf **confs)
 
 #ifdef HAVE_NCURSES_H
 		if(act==ACTION_STATUS
-		  && update_screen(sel, conf))
+		  && update_screen(sel, confs))
 			goto error;
 		refresh();
 #endif
@@ -1270,7 +1271,7 @@ static int main_loop(struct async *as, enum action act, struct conf **confs)
 		if(act==ACTION_STATUS_SNAPSHOT
 		  && sel->gotfirstresponse)
 		{
-			if(update_screen(sel, conf))
+			if(update_screen(sel, confs))
 				goto error;
 			// FIX THIS - should probably set up stdout with an
 			// asfd.
@@ -1310,7 +1311,7 @@ static pid_t fork_monitor(int *csin, int *csout, struct conf **confs)
 	// FIX THIS: get all args from configuration.
 	args[a++]=(char *)"/usr/sbin/burp";
 	args[a++]=(char *)"-c";
-	args[a++]=conf->conffile;
+	args[a++]=get_string(confs[OPT_CONFFILE]);
 	args[a++]=(char *)"-a";
 	args[a++]=(char *)"m";
 	args[a++]=NULL;
@@ -1325,6 +1326,7 @@ int status_client_ncurses(enum action act, struct conf **confs)
         int ret=-1;
 	pid_t childpid=-1;
 	struct async *as=NULL;
+	const char *monitor_logfile=get_string(confs[OPT_MONITOR_LOGFILE]);
 
 #ifdef HAVE_NCURSES_H
 	actg=act; // So that the sighandler can call endwin().
@@ -1340,7 +1342,7 @@ int status_client_ncurses(enum action act, struct conf **confs)
 
 	// Fork a burp child process that will contact the server over SSL.
 	// We will read and write from and to its stdout and stdin.
-	if((childpid=fork_monitor(&csin, &csout, conf))<0)
+	if((childpid=fork_monitor(&csin, &csout, confs))<0)
 		goto end;
 //printf("childpid: %d\n", childpid);
 	set_non_blocking(csin);
@@ -1349,28 +1351,28 @@ int status_client_ncurses(enum action act, struct conf **confs)
 	if(!(as=async_alloc())
 	  || as->init(as, 0)
 	  || !setup_asfd(as, "monitor stdin", &csin, NULL,
-		ASFD_STREAM_LINEBUF, ASFD_FD_CLIENT_MONITOR_WRITE, -1, conf)
+		ASFD_STREAM_LINEBUF, ASFD_FD_CLIENT_MONITOR_WRITE, -1, confs)
 	  || !setup_asfd(as, "monitor stdout", &csout, NULL,
-		ASFD_STREAM_LINEBUF, ASFD_FD_CLIENT_MONITOR_READ, -1, conf))
+		ASFD_STREAM_LINEBUF, ASFD_FD_CLIENT_MONITOR_READ, -1, confs))
 			goto end;
-//printf("ml: %s\n", conf->monitor_logfile);
+//printf("ml: %s\n", monitor_logfile);
 #ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS)
 	{
 		int stdinfd=fileno(stdin);
 		if(!setup_asfd(as, "stdin", &stdinfd, NULL,
 			ASFD_STREAM_NCURSES_STDIN, ASFD_FD_CLIENT_NCURSES_READ,
-			-1, conf))
+			-1, confs))
 				goto end;
 		ncurses_init();
 	}
 #endif
-	if(conf->monitor_logfile
-	  && !(lfp=open_file(conf->monitor_logfile, "wb")))
+	if(monitor_logfile
+	  && !(lfp=open_file(monitor_logfile, "wb")))
 		goto end;
 	set_logfp_direct(lfp);
 
-	ret=main_loop(as, act, conf);
+	ret=main_loop(as, act, confs);
 end:
 #ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS) endwin();

@@ -26,12 +26,12 @@ static int start_restore_file(struct asfd *asfd,
 		char msg[256]="";
 		// Failed - do a warning.
 		snprintf(msg, sizeof(msg), "build path failed: %s", fname);
-		if(restore_interrupt(asfd, sb, msg, conf))
+		if(restore_interrupt(asfd, sb, msg, confs))
 			goto error;
 		goto end; // Try to carry on with other files.
 	}
 
-	switch(open_for_restore(asfd, bfd, rpath, sb, vss_restore, conf))
+	switch(open_for_restore(asfd, bfd, rpath, sb, vss_restore, confs))
 	{
 		case OFR_OK: break;
 		case OFR_CONTINUE: goto end;
@@ -75,12 +75,12 @@ static int restore_metadata(
 
 		// Read in the metadata...
 		if(restore_file_or_get_meta(bfd, sb, fname, act, encpassword,
-			&metadata, &metalen, vss_restore, conf))
+			&metadata, &metalen, vss_restore, confs))
 				return -1;
 		if(metadata)
 		{
 			if(set_extrameta(bfd, fname, sb->path.cmd,
-				&(sb->statp), metadata, metalen, conf))
+				&(sb->statp), metadata, metalen, confs))
 			{
 				free(metadata);
 				// carry on if we could not do it
@@ -90,7 +90,7 @@ static int restore_metadata(
 #ifndef HAVE_WIN32
 			// set attributes again, since we just diddled with
 			// the file
-			attribs_set(fname, &(sb->statp), sb->winattr, conf);
+			attribs_set(fname, &(sb->statp), sb->winattr, confs);
 #endif
 			cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
 		}
@@ -114,7 +114,7 @@ int restore_switch_protocol2(struct asfd *asfd, struct sbuf *sb,
 			if(start_restore_file(asfd,
 				bfd, sb, fullpath, act,
 				NULL, NULL, NULL,
-				vss_restore, conf))
+				vss_restore, confs))
 			{
 				logp("restore_file error\n");
 				goto error;
@@ -124,8 +124,8 @@ int restore_switch_protocol2(struct asfd *asfd, struct sbuf *sb,
 		case CMD_ENC_FILE:
 			if(start_restore_file(asfd,
 				bfd, sb, fullpath, act,
-				conf->encryption_password,
-				NULL, NULL, vss_restore, conf))
+				get_string(confs[OPT_ENCRYPTION_PASSWORD]),
+				NULL, NULL, vss_restore, confs))
 			{
 				logp("restore_file error\n");
 				goto error;
@@ -136,14 +136,14 @@ int restore_switch_protocol2(struct asfd *asfd, struct sbuf *sb,
 		case CMD_METADATA:
 			if(restore_metadata(
 				bfd, sb, fullpath, act,
-				NULL, vss_restore, conf))
+				NULL, vss_restore, confs))
 					goto error;
 			break;
 		case CMD_ENC_METADATA:
 			if(restore_metadata(
 				bfd, sb, fullpath, act,
-				conf->encryption_password,
-				vss_restore, conf))
+				get_string(confs[OPT_ENCRYPTION_PASSWORD]),
+				vss_restore, confs))
 					goto error;
 			break;
 		case CMD_EFS_FILE:
@@ -151,7 +151,7 @@ int restore_switch_protocol2(struct asfd *asfd, struct sbuf *sb,
 				bfd, sb,
 				fullpath, act,
 				NULL,
-				NULL, NULL, vss_restore, conf))
+				NULL, NULL, vss_restore, confs))
 			{
 				logp("restore_file error\n");
 				goto error;

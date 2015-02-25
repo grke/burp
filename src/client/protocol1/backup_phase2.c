@@ -32,7 +32,7 @@ static int load_signature_and_send_delta(struct asfd *asfd,
 	rs_buffers_t rsbuf;
 	memset(&rsbuf, 0, sizeof(rsbuf));
 
-	if(load_signature(asfd, &sumset, conf)) return -1;
+	if(load_signature(asfd, &sumset, confs)) return -1;
 
 	if(!(job=rs_delta_begin(sumset)))
 	{
@@ -107,11 +107,11 @@ static int send_whole_file_w(struct asfd *asfd,
 	if((compression || encpassword) && sb->path.cmd!=CMD_EFS_FILE)
 		return send_whole_file_gzl(asfd,
 		  sb->path.buf, datapth, quick_read, bytes, 
-		  encpassword, conf, compression, bfd, extrameta, elen);
+		  encpassword, confs, compression, bfd, extrameta, elen);
 	else
 		return send_whole_filel(asfd,
 		  sb->path.cmd, sb->path.buf, datapth, quick_read, bytes, 
-		  conf, bfd, extrameta, elen);
+		  confs, bfd, extrameta, elen);
 }
 
 static int forget_file(struct asfd *asfd, struct sbuf *sb, struct conf **confs)
@@ -127,7 +127,7 @@ static int forget_file(struct asfd *asfd, struct sbuf *sb, struct conf **confs)
 		rs_signature_t *sumset=NULL;
 		// The server will be sending us a signature.
 		// Munch it up then carry on.
-		if(load_signature(asfd, &sumset, conf)) return -1;
+		if(load_signature(asfd, &sumset, confs)) return -1;
 		else rs_free_sumset(sumset);
 	}
 	return 0;
@@ -139,16 +139,16 @@ static int size_checks(struct asfd *asfd, struct sbuf *sb, struct conf **confs)
 	  && sb->path.cmd!=CMD_ENC_FILE
 	  && sb->path.cmd!=CMD_EFS_FILE)
 		return 0;
-	if(conf->min_file_size
-	  && sb->statp.st_size<(boffset_t)conf->min_file_size)
+	if(get_ssize_t(confs[OPT_MIN_FILE_SIZE])
+	  && sb->statp.st_size<(boffset_t)get_ssize_t(confs[OPT_MIN_FILE_SIZE]))
 	{
-		logw(asfd, conf, "File size decreased below min_file_size after initial scan: %c:%s", sb->path.cmd, sb->path.buf);
+		logw(asfd, confs, "File size decreased below min_file_size after initial scan: %c:%s", sb->path.cmd, sb->path.buf);
 		return -1;
 	}
-	if(conf->max_file_size
-	  && sb->statp.st_size>(boffset_t)conf->max_file_size)
+	if(get_ssize_t(confs[OPT_MAX_FILE_SIZE])
+	  && sb->statp.st_size>(boffset_t)get_ssize_t(confs[OPT_MAX_FILE_SIZE]))
 	{
-		logw(asfd, conf, "File size increased above max_file_size after initial scan: %c:%s", sb->path.cmd, sb->path.buf);
+		logw(asfd, confs, "File size increased above max_file_size after initial scan: %c:%s", sb->path.cmd, sb->path.buf);
 		return -1;
 	}
 	return 0;
@@ -162,8 +162,9 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 	size_t elen=0;
 	char *extrameta=NULL;
 	unsigned long long bytes=0;
+	int conf_compression=get_int(confs[OPT_COMPRESSION]);
 
-	sb->compression=conf->compression;
+	sb->compression=conf_compression;
 
 	iobuf_copy(&sb->path, asfd->rbuf);
 	iobuf_init(asfd->rbuf);
@@ -174,28 +175,29 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 	if(lstat(sb->path.buf, &sb->statp))
 #endif
 	{
-		logw(asfd, conf, "Path has vanished: %s", sb->path.buf);
-		if(forget_file(asfd, sb, conf)) goto error;
+		logw(asfd, confs, "Path has vanished: %s", sb->path.buf);
+		if(forget_file(asfd, sb, confs)) goto error;
 		goto end;
 	}
 
-	if(size_checks(asfd, sb, conf)) forget++;
+	if(size_checks(asfd, sb, confs)) forget++;
 
-	sb->compression=in_exclude_comp(conf->excom,
-		sb->path.buf, conf->compression);
+	sb->compression=in_exclude_comp(get_strlist(confs[OPT_EXCOM]),
+		sb->path.buf, conf_compression);
 	if(attribs_encode(sb)) goto error;
 
 	if(sb->path.cmd!=CMD_METADATA
 	  && sb->path.cmd!=CMD_ENC_METADATA)
 	{
 		if(bfd->open_for_send(bfd, asfd,
-			sb->path.buf, sb->winattr, conf->atime, conf))
+			sb->path.buf, sb->winattr,
+			get_int(confs[OPT_ATIME]), confs))
 				forget++;
 	}
 
 	if(forget)
 	{
-		if(forget_file(asfd, sb, conf)) goto error;
+		if(forget_file(asfd, sb, confs)) goto error;
 		goto end;
 	}
 
@@ -204,20 +206,20 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 	  || sb->path.cmd==CMD_VSS
 	  || sb->path.cmd==CMD_ENC_VSS
 #ifdef HAVE_WIN32
-	  || conf->strip_vss
+	  || confs->strip_vss
 #endif
 	  )
 	{
 		if(get_extrameta(asfd, bfd,
-			sb, &extrameta, &elen, conf))
+			sb, &extrameta, &elen, confs))
 		{
-			logw(asfd, conf, "Meta data error for %s", sb->path.buf);
+			logw(asfd, confs, "Meta data error for %s", sb->path.buf);
 			goto end;
 		}
 		if(extrameta)
 		{
 #ifdef HAVE_WIN32
-			if(conf->strip_vss)
+			if(confs->strip_vss)
 			{
 				free(extrameta);
 				extrameta=NULL;
@@ -227,7 +229,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 		}
 		else
 		{
-			logw(asfd, conf,
+			logw(asfd, confs,
 				"No meta data after all: %s", sb->path.buf);
 			goto end;
 		}
@@ -242,7 +244,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 		  || asfd->write(asfd, &sb->attr)
 		  || asfd->write(asfd, &sb->path)
 		  || load_signature_and_send_delta(asfd, bfd,
-			&bytes, &sentbytes, conf))
+			&bytes, &sentbytes, confs))
 		{
 			logp("error in sig/delta for %s (%s)\n",
 				sb->path.buf, sb->protocol1->datapth.buf);
@@ -263,7 +265,8 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 		if((asfd->write(asfd, &sb->attr)
 		  || asfd->write(asfd, &sb->path))
 		  || send_whole_file_w(asfd, sb, NULL, 0, &bytes,
-			conf->encryption_password, conf, sb->compression,
+			get_string(confs[OPT_ENCRYPTION_PASSWORD]),
+			confs, sb->compression,
 			bfd, extrameta, elen))
 				goto end;
 		else
@@ -319,7 +322,7 @@ static int parse_rbuf(struct asfd *asfd, struct sbuf *sb,
 	  || rbuf->cmd==CMD_ENC_VSS_T
 	  || rbuf->cmd==CMD_EFS_FILE)
 	{
-		if(deal_with_data(asfd, sb, bfd, conf))
+		if(deal_with_data(asfd, sb, bfd, confs))
 			return -1;
 	}
 	else if(rbuf->cmd==CMD_WARNING)
@@ -347,9 +350,9 @@ static int do_backup_phase2_client(struct asfd *asfd,
 	struct iobuf *rbuf=asfd->rbuf;
 
 	if(!(bfd=bfile_alloc())
-	  || !(sb=sbuf_alloc(conf)))
+	  || !(sb=sbuf_alloc(confs)))
 		goto end;
-	bfile_init(bfd, 0, conf);
+	bfile_init(bfd, 0, confs);
 
 	if(!resume)
 	{
@@ -358,10 +361,10 @@ static int do_backup_phase2_client(struct asfd *asfd,
 		  || asfd->read_expect(asfd, CMD_GEN, "ok"))
 			goto end;
 	}
-	else if(conf->send_client_cntr)
+	else if(get_int(confs[OPT_SEND_CLIENT_CNTR]))
 	{
 		// On resume, the server might update the client with cntr.
-		if(cntr_recv(asfd, conf)) goto end;
+		if(cntr_recv(asfd, confs)) goto end;
 	}
 
 	while(1)
@@ -378,7 +381,7 @@ static int do_backup_phase2_client(struct asfd *asfd,
 			break;
 		}
 
-		if(parse_rbuf(asfd, sb, bfd, conf))
+		if(parse_rbuf(asfd, sb, bfd, confs))
 			goto end;
 	}
 
@@ -398,7 +401,7 @@ int backup_phase2_client_protocol1(struct asfd *asfd,
 
 	logp("Phase 2 begin (send backup data)\n");
 
-	ret=do_backup_phase2_client(asfd, conf, resume);
+	ret=do_backup_phase2_client(asfd, confs, resume);
 
 	cntr_print_end(get_cntr(confs[OPT_CNTR]));
 	cntr_print(get_cntr(confs[OPT_CNTR]), ACTION_BACKUP);

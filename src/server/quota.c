@@ -13,19 +13,20 @@ static void quota_log_bytes(struct async *as,
 int check_quota(struct async *as, struct conf **cconfs)
 {
 	unsigned long long byte;
+	struct cntr *cntr=get_cntr(cconfs[OPT_CNTR]);
+	ssize_t hard_quota=get_ssize_t(cconfs[OPT_HARD_QUOTA]);
+	ssize_t soft_quota=get_ssize_t(cconfs[OPT_SOFT_QUOTA]);
 
-	byte=cget_cntr(cconfs[OPT_CNTR])->ent[(uint8_t)CMD_BYTES_ESTIMATED]->count;
+	byte=cntr->ent[(uint8_t)CMD_BYTES_ESTIMATED]->count;
 
-	if(cconf->hard_quota && byte > (unsigned long long)cconf->hard_quota)
+	if(hard_quota && byte > (unsigned long long)hard_quota)
 	{
-		quota_log_bytes(as,
-			"Hard quota exceeded", byte, cconf->soft_quota);
+		quota_log_bytes(as, "Hard quota exceeded", byte, soft_quota);
 		return -1;
 	}
 
-	if(cconf->soft_quota && byte > (unsigned long long)cconf->soft_quota)
-		quota_log_bytes(as,
-			"Soft quota exceeded", byte, cconf->soft_quota);
+	if(soft_quota && byte > (unsigned long long)soft_quota)
+		quota_log_bytes(as, "Soft quota exceeded", byte, soft_quota);
 	
 	return 0;
 }

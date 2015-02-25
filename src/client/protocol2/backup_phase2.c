@@ -34,7 +34,7 @@ static int add_to_file_requests(struct slist *slist, struct iobuf *rbuf,
 	static uint64_t file_no=1;
 	struct sbuf *sb;
 
-	if(!(sb=sbuf_alloc(conf))) return -1;
+	if(!(sb=sbuf_alloc(confs))) return -1;
 
 	iobuf_copy(&sb->path, rbuf);
 	rbuf->buf=NULL;
@@ -74,7 +74,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 	{
 		/* Incoming file request. */
 		case CMD_FILE:
-			if(add_to_file_requests(slist, rbuf, conf)) goto error;
+			if(add_to_file_requests(slist, rbuf, confs)) goto error;
 			return 0;
 
 		/* Incoming data block request. */
@@ -143,7 +143,7 @@ static int add_to_blks_list(struct asfd *asfd, struct conf **confs,
 {
 	struct sbuf *sb=slist->last_requested;
 	if(!sb) return 0;
-	if(blks_generate(asfd, conf, sb, blist)) return -1;
+	if(blks_generate(asfd, confs, sb, blist)) return -1;
 
 	// If it closed the file, move to the next one.
 	if(sb->protocol2->bfd.mode==BF_CLOSED) slist->last_requested=sb->next;
@@ -315,7 +315,7 @@ int backup_phase2_client_protocol2(struct asfd *asfd,
 	if(!(slist=slist_alloc())
 	  || !(blist=blist_alloc())
 	  || !(wbuf=iobuf_alloc())
-	  || blks_generate_init(conf))
+	  || blks_generate_init())
 		goto end;
 	rbuf=asfd->rbuf;
 
@@ -326,11 +326,11 @@ int backup_phase2_client_protocol2(struct asfd *asfd,
 		  || asfd->read_expect(asfd, CMD_GEN, "ok"))
 			goto end;
 	}
-	else if(conf->send_client_cntr)
+	else if(get_int(confs[OPT_SEND_CLIENT_CNTR]))
 	{
 		// On resume, the server might update the client with the
 		// counters.
-		if(cntr_recv(asfd, conf))
+		if(cntr_recv(asfd, confs))
 			goto end;
         }
 
@@ -338,7 +338,7 @@ int backup_phase2_client_protocol2(struct asfd *asfd,
 	{
 		if(!wbuf->len)
 		{
-			get_wbuf_from_data(conf, wbuf, slist, blist,
+			get_wbuf_from_data(confs, wbuf, slist, blist,
 				blk_requests_end);
 			if(!wbuf->len)
 			{
@@ -360,7 +360,7 @@ int backup_phase2_client_protocol2(struct asfd *asfd,
 		}
 
 		if(rbuf->buf && deal_with_read(rbuf, slist, blist,
-			conf, &backup_end, &requests_end, &blk_requests_end))
+			confs, &backup_end, &requests_end, &blk_requests_end))
 				goto end;
 
 		if(slist->head
@@ -369,7 +369,7 @@ int backup_phase2_client_protocol2(struct asfd *asfd,
 		   || blist->tail->index - blist->head->index<BLKS_MAX_IN_MEM)
 		)
 		{
-			if(add_to_blks_list(asfd, conf, slist, blist))
+			if(add_to_blks_list(asfd, confs, slist, blist))
 				goto end;
 		}
 

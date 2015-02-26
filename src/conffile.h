@@ -12,4 +12,6 @@ extern int conf_load_clientconfdir(struct conf **globalcs,
 	struct conf **ccconfs);
 extern int conf_load_global_only(const char *path, struct conf **globalcs);
 
+extern const char *confs_get_lockfile(struct conf **confs);
+
 #endif

@@ -328,6 +328,13 @@ static int sc_szt(struct conf *conf, ssize_t def,
 	return set_ssize_t(conf, def);
 }
 
+static int sc_cntr(struct conf *conf, struct cntr *def,
+	uint8_t flags, const char *field)
+{
+	sc(conf, flags, CT_CNTR, field);
+	return set_cntr(conf, def);
+}
+
 static int reset_conf(struct conf **c, enum conf_opt o)
 {
 	// Do this with a switch statement, so that we get compiler warnings
@@ -337,8 +344,9 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_BURP_MODE:
 	  return sc_ebm(c[o], BURP_MODE_UNSET, 0, "mode");
 	case OPT_LOCKFILE:
-	  // FIX THIS: synonym: pidfile
 	  return sc_str(c[o], 0, 0, "lockfile");
+	case OPT_PIDFILE:
+	  return sc_str(c[o], 0, 0, "pidfile");
 	case OPT_SSL_CERT_CA:
 	  return sc_str(c[o], 0, 0, "ssl_cert_ca");
 	case OPT_SSL_CERT:
@@ -468,7 +476,7 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_ORIG_CLIENT:
 	  return sc_str(c[o], 0, 0, "orig_client");
 	case OPT_CNTR:
-	  return sc_str(c[o], 0, 0, "");
+	  return sc_cntr(c[o], 0, 0, "");
 	case OPT_BREAKPOINT:
 	  return sc_int(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE, "breakpoint");

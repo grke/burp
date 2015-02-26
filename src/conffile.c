@@ -433,10 +433,6 @@ static int server_conf_checks(struct conf **c, const char *path, int *r)
 		conf_problem(path, "clientconfdir unset", r);
 	if(get_e_recovery_method(c[OPT_WORKING_DIR_RECOVERY_METHOD])==RECOVERY_METHOD_UNSET)
 		conf_problem(path, "working_dir_recovery_method unset", r);
-	if(!get_string(c[OPT_SSL_CERT]))
-		conf_problem(path, "ssl_cert unset", r);
-	if(!get_string(c[OPT_SSL_CERT_CA]))
-		conf_problem(path, "ssl_cert_ca unset", r);
 	if(!get_string(c[OPT_SSL_DHFILE]))
 		conf_problem(path, "ssl_dhfile unset", r);
 	if(get_string(c[OPT_ENCRYPTION_PASSWORD]))
@@ -453,13 +449,13 @@ static int server_conf_checks(struct conf **c, const char *path, int *r)
 		conf_problem(path, "max_status_children unset", r);
 	if(!get_strlist(c[OPT_KEEP]))
 		conf_problem(path, "keep unset", r);
-	if(!get_int(c[OPT_MAX_HARDLINKS])<2)
+	if(get_int(c[OPT_MAX_HARDLINKS])<2)
 		conf_problem(path, "max_hardlinks too low", r);
-	if(!get_int(c[OPT_MAX_CHILDREN])<=0)
+	if(get_int(c[OPT_MAX_CHILDREN])<=0)
 		conf_problem(path, "max_children too low", r);
-	if(!get_int(c[OPT_MAX_STATUS_CHILDREN])<=0)
+	if(get_int(c[OPT_MAX_STATUS_CHILDREN])<=0)
 		conf_problem(path, "max_status_children too low", r);
-	if(!get_int(c[OPT_MAX_STORAGE_SUBDIRS])<=1000)
+	if(get_int(c[OPT_MAX_STORAGE_SUBDIRS])<=1000)
 		conf_problem(path, "max_storage_subdirs too low", r);
 	if(get_string(c[OPT_CA_CONF]))
 	{
@@ -618,6 +614,24 @@ end:
 	return ret;
 }
 
+const char *confs_get_lockfile(struct conf **confs)
+{
+	const char *lockfile=get_string(confs[OPT_LOCKFILE]);
+	if(!lockfile) lockfile=get_string(confs[OPT_PIDFILE]);
+	return lockfile;
+}
+
+static int general_conf_checks(struct conf **c, const char *path, int *r)
+{
+	if(!confs_get_lockfile(c))
+		conf_problem(path, "lockfile unset", r);
+	if(!get_string(c[OPT_SSL_CERT]))
+		conf_problem(path, "ssl_cert unset", r);
+	if(!get_string(c[OPT_SSL_CERT_CA]))
+		conf_problem(path, "ssl_cert_ca unset", r);
+	return 0;
+}
+
 static int client_conf_checks(struct conf **c, const char *path, int *r)
 {
 	const char *autoupgrade_os=get_string(c[OPT_AUTOUPGRADE_OS]);
@@ -643,10 +657,6 @@ static int client_conf_checks(struct conf **c, const char *path, int *r)
 		conf_problem(path, "server unset", r);
 	if(!get_string(c[OPT_STATUS_PORT])) // carry on if not set.
 		logp("%s: status_port unset\n", path);
-	if(!get_string(c[OPT_SSL_CERT]))
-		conf_problem(path, "ssl_cert unset", r);
-	if(!get_string(c[OPT_SSL_CERT_CA]))
-		conf_problem(path, "ssl_cert_ca unset", r);
 	if(!get_string(c[OPT_SSL_PEER_CN]))
 	{
 		const char *server=get_string(c[OPT_SERVER]);
@@ -658,8 +668,6 @@ static int client_conf_checks(struct conf **c, const char *path, int *r)
 				return -1;
 		}
 	}
-	if(!get_string(c[OPT_LOCKFILE]))
-		conf_problem(path, "lockfile unset", r);
 	if(autoupgrade_os
 	  && strstr(autoupgrade_os, ".."))
 		conf_problem(path,
@@ -916,6 +924,8 @@ static int conf_finalise_global_only(const char *conf_path, struct conf **confs)
 	if(!get_string(confs[OPT_SSL_KEY_PASSWORD])
 	  && set_string(confs[OPT_SSL_KEY_PASSWORD], ""))
 		r--;
+
+	if(general_conf_checks(confs, conf_path, &r)) r--;
 
 	switch(get_e_burp_mode(confs[OPT_BURP_MODE]))
 	{

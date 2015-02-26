@@ -401,7 +401,7 @@ int ca_server_maybe_sign_client_cert(struct asfd *asfd,
 	const char *cname=get_string(cconfs[OPT_CNAME]);
 
 	if((min_ver=version_to_long("1.3.2"))<0
-	 || (cli_ver=version_to_long(get_string(cconfs[OPT_PEER_VERSION]))<0))
+	 || (cli_ver=version_to_long(get_string(cconfs[OPT_PEER_VERSION])))<0)
 		return -1;
 	// Clients before 1.3.2 did not know how to send cert signing requests.
 	if(cli_ver<min_ver) return 0;

@@ -378,7 +378,11 @@ int main (int argc, char *argv[])
 	  json)) goto end;
 
 	// Dry run to test config file syntax.
-	if(test_confs) return 0;
+	if(test_confs)
+	{
+		confs_dump(confs);
+		return 0;
+	}
 
 	if(!backup) switch(act)
 	{

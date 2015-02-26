@@ -845,6 +845,7 @@ int confs_dump(struct conf **confs)
 	int i=0;
 	for(i=0; i<OPT_MAX; i++)
 	{
+		if(!*(confs[i]->field)) continue;
 		printf("%32s: %s\n", confs[i]->field,
 			conf_data_to_str(confs[i]));
 	}

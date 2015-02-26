@@ -442,7 +442,7 @@ int main (int argc, char *argv[])
 	}
 	else
 	{
-		const char *lockfile=get_string(confs[OPT_LOCKFILE]);
+		const char *lockfile=confs_get_lockfile(confs);
 		if(!(lock=lock_alloc_and_init(lockfile)))
 			goto end;
 		lock_get(lock);

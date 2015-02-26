@@ -733,6 +733,32 @@ static int finalise_keep_args(struct conf **c)
 	return 0;
 }
 
+static int incexc_munge(struct conf **c, struct strlist *s)
+{
+#ifdef HAVE_WIN32
+	convert_backslashes(&s->path);
+#endif
+	if(path_checks(s->path,
+		"ERROR: Please use absolute include/exclude paths.\n"))
+			return -1;
+	if(add_to_strlist(c[OPT_INCEXCDIR], s->path))
+		return -1;
+	return 0;
+}
+
+static int finalise_incexc_dirs(struct conf **c)
+{
+	struct strlist *s=NULL;
+	struct strlist *last_ie=NULL;
+	struct strlist *last_sd=NULL;
+
+	for(s=get_strlist(c[OPT_INCLUDE]); s; s=s->next)
+		if(incexc_munge(c, s)) return -1;
+	for(s=get_strlist(c[OPT_EXCLUDE]); s; s=s->next)
+		if(incexc_munge(c, s)) return -1;
+	return 0;
+}
+
 // This decides which directories to start backing up, and which
 // are subdirectories which don't need to be started separately.
 static int finalise_start_dirs(struct conf **c)
@@ -741,7 +767,7 @@ static int finalise_start_dirs(struct conf **c)
 	struct strlist *last_ie=NULL;
 	struct strlist *last_sd=NULL;
 
-	for(s=get_strlist(c[OPT_INCEXCDIR]); s; s=s->next)
+	for(s=get_strlist(c[OPT_INCLUDE]); s; s=s->next)
 	{
 #ifdef HAVE_WIN32
 		convert_backslashes(&s->path);
@@ -749,12 +775,11 @@ static int finalise_start_dirs(struct conf **c)
 		if(path_checks(s->path,
 			"ERROR: Please use absolute include/exclude paths.\n"))
 				return -1;
-		
-		if(!s->flag) continue; // an exclude
 
 		// Ensure that we do not backup the same directory twice.
 		if(last_ie && !strcmp(s->path, last_ie->path))
 		{
+confs_dump(c, 0);
 			logp("Directory appears twice in conf: %s\n",
 				s->path);
 			return -1;
@@ -762,7 +787,7 @@ static int finalise_start_dirs(struct conf **c)
 		// If it is not a subdirectory of the most recent start point,
 		// we have found another start point.
 		if(!get_strlist(c[OPT_STARTDIR])
-		  || !is_subdir(last_sd->path, s->path))
+		  || !last_sd || !is_subdir(last_sd->path, s->path))
 		{
 			// Do not use strlist_add_sorted, because last_sd is
 			// relying on incexcdir already being sorted.
@@ -880,7 +905,9 @@ static int conf_finalise(const char *conf_path, struct conf **c)
 	if(get_e_burp_mode(c[OPT_BURP_MODE])==BURP_MODE_CLIENT
 	  && finalise_glob(c)) return -1;
 
-	if(finalise_start_dirs(c)) return -1;
+	if(finalise_incexc_dirs(c)
+	  || finalise_start_dirs(c))
+		return -1;
 
 	if(finalise_keep_args(c)) return -1;
 

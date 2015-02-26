@@ -5,6 +5,7 @@
 #include "alloc.h"
 #include "cntr.h"
 #include "strlist.h"
+#include "prepend.h"
 
 #include <assert.h>
 
@@ -423,10 +424,6 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_str(c[o], 0, 0, "ca_csr_dir");
 	case OPT_RANDOMISE:
 	  return sc_int(c[o], 0, 0, "randomise");
-	case OPT_STARTDIR:
-	  // Deliberately not using CONF_FLAG_STRLIST_SORTED because of the
-	  // way finalise_start_dirs() works.
-	  return sc_lst(c[o], 0, 0, "startdir");
 	case OPT_BACKUP:
 	  return sc_str(c[o], 0, 0, "backup");
 	case OPT_BACKUP2:
@@ -511,8 +508,7 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_str(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE, "clientconfdir");
 	case OPT_FORK:
-	  return sc_int(c[o], 1,
-		CONF_FLAG_CC_OVERRIDE, "fork");
+	  return sc_int(c[o], 1, 0, "fork");
 	case OPT_DIRECTORY_TREE:
 	  return sc_int(c[o], 1,
 		CONF_FLAG_CC_OVERRIDE, "directory_tree");
@@ -635,15 +631,21 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 		CONF_FLAG_CC_OVERRIDE, "working_dir_recovery_method");
 	case OPT_INCEXCDIR:
 	  // This is a combination of OPT_INCLUDE and OPT_EXCLUDE, so
-	  // no field name set for now. Probably needs fixing in some way.
+	  // no field name set for now.
 	  return sc_lst(c[o], 0,
 		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "");
+	case OPT_STARTDIR:
+	  // This is a combination of OPT_INCLUDE and OPT_EXCLUDE, so
+	  // no field name set for now.
+	  // Deliberately not using CONF_FLAG_STRLIST_SORTED because of the
+	  // way finalise_start_dirs() works.
+	  return sc_lst(c[o], 0, 0, "");
 	case OPT_INCLUDE:
-	  // FIX THIS: Also need "exclude" in the same option.
+	  // Combines with OPT_EXCLUDE to make OPT_INCEXCDIR and OPT_STARTDIR.
 	  return sc_lst(c[o], 0,
 		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "include");
 	case OPT_EXCLUDE:
-	  // FIX THIS: Also need "include" in the same option.
+	  // Combines with OPT_INCLUDE to make OPT_INCEXCDIR and OPT_STARTDIR.
 	  return sc_lst(c[o], 0,
 		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "exclude");
 	case OPT_FSCHGDIR:
@@ -762,36 +764,53 @@ int conf_set(struct conf **confs, const char *field, const char *value)
 
 static char *conf_data_to_str(struct conf *conf)
 {
-	static char ret[256]="";
+	size_t l=256;
+	char *ret=NULL;
+	if(!(ret=(char *)calloc(1, l))) return ret;
 	*ret='\0';
 	switch(conf->conf_type)
 	{
 		case CT_STRING:
-			snprintf(ret, sizeof(ret), "%s",
+			snprintf(ret, l, "%32s: %s\n", conf->field,
 				get_string(conf)?get_string(conf):"");
 			break;
 		case CT_FLOAT:
-			snprintf(ret, sizeof(ret), "%g", get_float(conf));
+			snprintf(ret, l, "%32s: %g\n", conf->field,
+				get_float(conf));
 			break;
 		case CT_E_BURP_MODE:
-			snprintf(ret, sizeof(ret), "%s",
+			snprintf(ret, l, "%32s: %s\n", conf->field,
 				burp_mode_to_str(get_e_burp_mode(conf)));
 			break;
 		case CT_E_PROTOCOL:
-			snprintf(ret, sizeof(ret), "%d", get_e_protocol(conf));
+			snprintf(ret, l, "%32s: %d\n", conf->field,
+				get_e_protocol(conf));
 			break;
 		case CT_E_RECOVERY_METHOD:
-			snprintf(ret, sizeof(ret), "%s",
+			snprintf(ret, l, "%32s: %s\n", conf->field,
 				recovery_method_to_str(
 					get_e_recovery_method(conf)));
 			break;
 		case CT_UINT:
-			snprintf(ret, sizeof(ret), "%u", get_int(conf));
+			snprintf(ret, l, "%32s: %u\n", conf->field,
+				get_int(conf));
 			break;
 		case CT_STRLIST:
+		{
+			char piece[256]="";
+			struct strlist *s;
+			for(s=get_strlist(conf); s; s=s->next)
+			{
+				snprintf(piece, sizeof(piece),
+					"%32s: %s\n", conf->field, s->path);
+				if(astrcat(&ret, piece, __func__))
+					return ret;
+			}
 			break;
+		}
 		case CT_MODE_T:
-			snprintf(ret, sizeof(ret), "%o", get_mode_t(conf));
+			snprintf(ret, l, "%32s: %o\n", conf->field,
+				get_mode_t(conf));
 			break;
 		case CT_SSIZE_T:
 			// FIX THIS
@@ -840,14 +859,17 @@ int confs_init(struct conf **confs)
 	return 0;
 }
 
-int confs_dump(struct conf **confs)
+int confs_dump(struct conf **confs, int flags)
 {
 	int i=0;
+	char *str=NULL;
 	for(i=0; i<OPT_MAX; i++)
 	{
+		if(flags && !(flags & confs[i]->flags)) continue;
 		if(!*(confs[i]->field)) continue;
-		printf("%32s: %s\n", confs[i]->field,
-			conf_data_to_str(confs[i]));
+		str=conf_data_to_str(confs[i]);
+		if(str && *str) printf("%s", str);
+		free_w(&str);
 	}
 	return 0;
 }

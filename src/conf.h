@@ -266,7 +266,7 @@ extern void confs_free_content(struct conf **confs);
 
 extern void free_incexcs(struct conf **confs);
 extern int conf_set(struct conf **confs, const char *field, const char *value);
-extern int confs_dump(struct conf **confs);
+extern int confs_dump(struct conf **confs, int flags);
 
 extern struct strlist *get_strlist(struct conf *conf);
 extern char *get_string(struct conf *conf);

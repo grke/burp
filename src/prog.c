@@ -237,6 +237,29 @@ static void random_delay(struct conf **confs)
 	sleep(delay);
 }
 
+static int run_test_confs(struct conf **confs,
+	const char *client, const char *conffile)
+{
+	int ret=-1;
+	struct conf **cconfs=NULL;
+	if(!client)
+	{
+		confs_dump(confs, 0);
+		ret=0;
+		goto end;
+	}
+	if(!(cconfs=confs_alloc())
+          || conf_load_global_only(conffile, confs)
+	  || set_string(cconfs[OPT_CNAME], client)
+	  || set_string(cconfs[OPT_PEER_VERSION], VERSION)
+	  || conf_load_clientconfdir(confs, cconfs))
+		goto end;
+	confs_dump(cconfs, CONF_FLAG_CC_OVERRIDE|CONF_FLAG_INCEXC);
+
+end:
+	confs_free(&cconfs);
+	return ret;
+}
 
 #if defined(HAVE_WIN32)
 #define main BurpMain
@@ -380,8 +403,8 @@ int main (int argc, char *argv[])
 	// Dry run to test config file syntax.
 	if(test_confs)
 	{
-		confs_dump(confs);
-		return 0;
+		ret=run_test_confs(confs, orig_client, conffile);
+		goto end;
 	}
 
 	if(!backup) switch(act)

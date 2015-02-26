@@ -367,6 +367,7 @@ static enum asl_ret csr_server_func(struct asfd *asfd,
 		{
 			logp("But server is not configured to sign client certificate requests.\n");
 			logp("See option 'ca_conf'.\n");
+logp("'%s' '%s'\n", ca_conf, gca_dir);
 			asfd->write_str(asfd, CMD_ERROR,
 			  "server not configured to sign client certificates");
 			return ASL_END_ERROR;

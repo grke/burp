@@ -23,11 +23,14 @@ static int check_passwd(const char *passwd, const char *plain_text)
 static int check_client_and_password(struct conf **globalcs,
 	const char *password, struct conf **cconfs)
 {
-	const char *cname=get_string(cconfs[OPT_CNAME]);
-	int password_check=get_int(cconfs[OPT_PASSWORD_CHECK]);
+	const char *cname;
+	int password_check;
 	// Cannot load it until here, because we need to have the name of the
 	// client.
 	if(conf_load_clientconfdir(globalcs, cconfs)) return -1;
+
+	cname=get_string(cconfs[OPT_CNAME]);
+	password_check=get_int(cconfs[OPT_PASSWORD_CHECK]);
 
 	if(!get_string(cconfs[OPT_SSL_PEER_CN]))
 	{
@@ -44,9 +47,9 @@ static int check_client_and_password(struct conf **globalcs,
 
 	if(password_check)
 	{
-		const char *passwd=get_string(cconfs[OPT_PASSWD]);
+		const char *conf_passwd=get_string(cconfs[OPT_PASSWD]);
 		const char *conf_password=get_string(cconfs[OPT_PASSWORD]);
-		if(password && !passwd)
+		if(!conf_password && !conf_passwd)
 		{
 			logp("password rejected for client %s\n", cname);
 			return -1;
@@ -58,7 +61,7 @@ static int check_client_and_password(struct conf **globalcs,
 			return -1;
 		}
 		// check against encypted passwd
-		if(passwd && !check_passwd(passwd, password))
+		if(conf_passwd && !check_passwd(conf_passwd, password))
 		{
 			logp("password rejected for client %s\n", cname);
 			return -1;

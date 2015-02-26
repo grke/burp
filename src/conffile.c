@@ -1094,19 +1094,25 @@ static int conf_set_from_global_arg_list_overrides(struct conf **globalc,
 
 static int conf_init_save_cname_and_version(struct conf **cconfs)
 {
-	char *cname=get_string(cconfs[OPT_CNAME]);
-	char *cversion=get_string(cconfs[OPT_PEER_VERSION]);
+	int ret=-1;
+	char *cname=NULL;
+	char *cversion=NULL;
+
+	if(!(cname=strdup_w(get_string(cconfs[OPT_CNAME]), __func__))
+	  || !(cversion=
+	  strdup_w(get_string(cconfs[OPT_PEER_VERSION]), __func__)))
+		goto end;
 
 	set_string(cconfs[OPT_CNAME], NULL);
 	set_string(cconfs[OPT_PEER_VERSION], NULL);
-	if(confs_init(cconfs))
-	{
-		free_w(&cname);
-		free_w(&cversion);
-	}
+	if(confs_init(cconfs)) goto end;
 	set_string(cconfs[OPT_CNAME], cname);
 	set_string(cconfs[OPT_PEER_VERSION], cversion);
-	return 0;
+	ret=0;
+end:
+	free_w(&cname);
+	free_w(&cversion);
+	return ret;
 }
 
 int conf_load_clientconfdir(struct conf **globalcs, struct conf **cconfs)

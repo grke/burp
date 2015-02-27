@@ -51,7 +51,7 @@ static char *set_new_datapth(struct asfd *asfd,
 {
 	char *tmp=NULL;
 	char *rpath=NULL;
-	if(get_string(cconfs[OPT_DIRECTORY_TREE]))
+	if(get_int(cconfs[OPT_DIRECTORY_TREE]))
 		*istreedata=treedata(sb, cconfs);
 
 	if(*istreedata)

@@ -248,9 +248,10 @@ static int run_test_confs(struct conf **confs,
 		ret=0;
 		goto end;
 	}
-	if(!(cconfs=confs_alloc())
-          || conf_load_global_only(conffile, confs)
-	  || set_string(cconfs[OPT_CNAME], client)
+	if(!(cconfs=confs_alloc()))
+		goto end;
+	confs_init(cconfs);
+	if(set_string(cconfs[OPT_CNAME], client)
 	  || set_string(cconfs[OPT_PEER_VERSION], VERSION)
 	  || conf_load_clientconfdir(confs, cconfs))
 		goto end;

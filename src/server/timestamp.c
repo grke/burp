@@ -1,7 +1,5 @@
 #include "include.h"
 
-#define DEFAULT_TIMESTAMP_FORMAT	"%Y-%m-%d %H:%M:%S"
-
 int timestamp_read(const char *path, char buf[], size_t len)
 {
 	FILE *fp=NULL;

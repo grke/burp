@@ -198,15 +198,23 @@ int set_cntr(struct conf *conf, struct cntr *cntr)
 	return 0;
 }
 
-int add_to_strlist(struct conf *conf, const char *value)
+int add_to_strlist(struct conf *conf, const char *value, int include)
 {
-	int include=0;
 	assert(conf->conf_type==CT_STRLIST);
-	if(!strcmp(conf->field, "include")) include=1;
 	if(conf->flags & CONF_FLAG_STRLIST_SORTED)
 		return strlist_add_sorted(&(conf->data.sl), value, include);
 	else
 		return strlist_add(&(conf->data.sl), value, include);
+}
+
+int add_to_strlist_include(struct conf *conf, const char *value)
+{
+	return add_to_strlist(conf, value, 1);
+}
+
+int add_to_strlist_exclude(struct conf *conf, const char *value)
+{
+	return add_to_strlist(conf, value, 0);
 }
 
 static void conf_free_content(struct conf *c)
@@ -633,13 +641,13 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  // This is a combination of OPT_INCLUDE and OPT_EXCLUDE, so
 	  // no field name set for now.
 	  return sc_lst(c[o], 0,
-		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "");
+		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "incexcdir");
 	case OPT_STARTDIR:
 	  // This is a combination of OPT_INCLUDE and OPT_EXCLUDE, so
 	  // no field name set for now.
 	  // Deliberately not using CONF_FLAG_STRLIST_SORTED because of the
 	  // way finalise_start_dirs() works.
-	  return sc_lst(c[o], 0, 0, "");
+	  return sc_lst(c[o], 0, 0, "startdir");
 	case OPT_INCLUDE:
 	  // Combines with OPT_EXCLUDE to make OPT_INCEXCDIR and OPT_STARTDIR.
 	  return sc_lst(c[o], 0,
@@ -797,6 +805,7 @@ static char *conf_data_to_str(struct conf *conf)
 			break;
 		case CT_STRLIST:
 		{
+			int count=0;
 			char piece[256]="";
 			struct strlist *s;
 			for(s=get_strlist(conf); s; s=s->next)
@@ -805,7 +814,10 @@ static char *conf_data_to_str(struct conf *conf)
 					"%32s: %s\n", conf->field, s->path);
 				if(astrcat(&ret, piece, __func__))
 					return ret;
+				count++;
 			}
+			if(!count)
+			snprintf(ret, l, "%32s:\n", conf->field);
 			break;
 		}
 		case CT_MODE_T:
@@ -866,7 +878,7 @@ int confs_dump(struct conf **confs, int flags)
 	for(i=0; i<OPT_MAX; i++)
 	{
 		if(flags && !(flags & confs[i]->flags)) continue;
-		if(!*(confs[i]->field)) continue;
+	//	if(!*(confs[i]->field)) continue;
 		str=conf_data_to_str(confs[i]);
 		if(str && *str) printf("%s", str);
 		free_w(&str);

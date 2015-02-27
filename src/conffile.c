@@ -8,6 +8,7 @@
 #include "pathcmp.h"
 #include "prepend.h"
 #include "strlist.h"
+#include "src/server/timestamp.h"
 #include "client/glob_windows.h"
 
 // This will strip off everything after the last quote. So, configs like this
@@ -294,45 +295,34 @@ static int load_conf_field_and_value(struct conf **c,
 			switch(c[i]->conf_type)
 			{
 				case CT_STRING:
-					if(set_string(c[i], v)) return -1;
-					break;
+					return set_string(c[i], v);
 				case CT_UINT:
-					if(set_int(c[i], atoi(v))) return -1;
-					break;
+					return set_int(c[i], atoi(v));
 				case CT_FLOAT:
-					if(set_float(c[i], atof(v))) return -1;
+					return set_float(c[i], atof(v));
 					break;
 				case CT_MODE_T:
-					if(set_mode_t(c[i],
-						strtol(v, NULL, 8))) return -1;
-					break;
+					return set_mode_t(c[i],
+						strtol(v, NULL, 8));
 				case CT_SSIZE_T:
 				{
 					ssize_t s=0;
-					if(get_file_size(v, &s, conf_path, line)
-					  || set_ssize_t(c[i], s))
-						return -1;
-					break;
+					return
+					 get_file_size(v, &s, conf_path, line)
+					  || set_ssize_t(c[i], s);
 				}
 				case CT_E_BURP_MODE:
-					if(set_e_burp_mode(c[i],
-						str_to_burp_mode(v)))
-							return -1;
-					break;
+					return set_e_burp_mode(c[i],
+						str_to_burp_mode(v));
 				case CT_E_PROTOCOL:
-					if(set_e_protocol(c[i],
-						str_to_protocol(v)))
-							return -1;
-					break;
+					return set_e_protocol(c[i],
+						str_to_protocol(v));
 				case CT_E_RECOVERY_METHOD:
-					if(set_e_recovery_method(c[i],
-						str_to_recovery_method(v)))
-							return -1;
-					break;
+					return set_e_recovery_method(c[i],
+						str_to_recovery_method(v));
 				case CT_STRLIST:
-					if(add_to_strlist(c[i], v))
-						return -1;
-					break;
+					return add_to_strlist(c[i], v,
+					  !strcmp(c[i]->field, "include"));
 				case CT_CNTR:
 					break;
 				// No default so we get a warning if something
@@ -457,6 +447,9 @@ static int server_conf_checks(struct conf **c, const char *path, int *r)
 		conf_problem(path, "max_status_children too low", r);
 	if(get_int(c[OPT_MAX_STORAGE_SUBDIRS])<=1000)
 		conf_problem(path, "max_storage_subdirs too low", r);
+	if(!get_string(c[OPT_TIMESTAMP_FORMAT])
+	  && set_string(c[OPT_TIMESTAMP_FORMAT], DEFAULT_TIMESTAMP_FORMAT))
+			return -1;
 	if(get_string(c[OPT_CA_CONF]))
 	{
 		int ca_err=0;
@@ -741,7 +734,7 @@ static int incexc_munge(struct conf **c, struct strlist *s)
 	if(path_checks(s->path,
 		"ERROR: Please use absolute include/exclude paths.\n"))
 			return -1;
-	if(add_to_strlist(c[OPT_INCEXCDIR], s->path))
+	if(add_to_strlist(c[OPT_INCEXCDIR], s->path, s->flag))
 		return -1;
 	return 0;
 }
@@ -749,8 +742,6 @@ static int incexc_munge(struct conf **c, struct strlist *s)
 static int finalise_incexc_dirs(struct conf **c)
 {
 	struct strlist *s=NULL;
-	struct strlist *last_ie=NULL;
-	struct strlist *last_sd=NULL;
 
 	for(s=get_strlist(c[OPT_INCLUDE]); s; s=s->next)
 		if(incexc_munge(c, s)) return -1;
@@ -779,7 +770,6 @@ static int finalise_start_dirs(struct conf **c)
 		// Ensure that we do not backup the same directory twice.
 		if(last_ie && !strcmp(s->path, last_ie->path))
 		{
-confs_dump(c, 0);
 			logp("Directory appears twice in conf: %s\n",
 				s->path);
 			return -1;
@@ -791,7 +781,7 @@ confs_dump(c, 0);
 		{
 			// Do not use strlist_add_sorted, because last_sd is
 			// relying on incexcdir already being sorted.
-			if(add_to_strlist(c[OPT_STARTDIR], s->path))
+			if(add_to_strlist(c[OPT_STARTDIR], s->path, s->flag))
 				return -1;
 			last_sd=s;
 		}
@@ -819,7 +809,7 @@ static int finalise_glob(struct conf **c)
 	}
 
 	for(i=0; (unsigned int)i<globbuf.gl_pathc; i++)
-		if(add_to_strlist(c[OPT_INCLUDE], globbuf.gl_pathv[i]))
+		if(add_to_strlist_include(c[OPT_INCLUDE], globbuf.gl_pathv[i]))
 			goto end;
 
 	globfree(&globbuf);
@@ -1045,7 +1035,7 @@ static int set_global_arglist(struct conf *dst, struct conf *src)
 {
 	struct strlist *s;
 	for(s=get_strlist(src); s; s=s->next)
-		if(add_to_strlist(dst, s->path))
+		if(add_to_strlist(dst, s->path, s->flag))
 			return -1;
 	return 0;
 }
@@ -1161,9 +1151,11 @@ int conf_load_clientconfdir(struct conf **globalcs, struct conf **cconfs)
 
 	// Some client settings can be globally set in the server conf and
 	// overridden in the client specific conf.
-	if(conf_set_from_global(globalcs, cconfs)
-	  || load_conf_lines(path, cconfs)
-	  || conf_set_from_global_arg_list_overrides(globalcs, cconfs)
+	if(conf_set_from_global(globalcs, cconfs))
+		goto end;
+	if(load_conf_lines(path, cconfs))
+		goto end;
+	if(conf_set_from_global_arg_list_overrides(globalcs, cconfs)
 	  || conf_finalise(path, cconfs))
 		goto end;
 

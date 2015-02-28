@@ -26,7 +26,7 @@ PROGS2 = clean $(SRCS2:.c=.test2)
 
 .c.test2:
 	@echo "Compiling $<"
-	$(CXX) -DUTEST -Wall -g -o $@ $< ../src/$(subst test_,,$<) ../src/alloc.c ../src/cntr.c ../src/strlist.c $(LIBS)
+	$(CXX) -DUTEST -Wall -g -o $@ $< ../src/$(subst test_,,$<) ../src/alloc.c ../src/cntr.c ../src/prepend.c ../src/strlist.c $(LIBS)
 	@echo "Running $<"
 	./$@ || exit 1
 	rm $@

@@ -14,7 +14,6 @@ const char *getdatestr(time_t t) { return ""; }
 const char *time_taken(time_t d) { return ""; }
 struct async *async_alloc(void) { struct async *a=NULL; return a; }
 struct asfd *asfd_alloc(void) { struct asfd *v=NULL; return v; }
-char *prepend_s(const char *prep, const char *fname) { return (char *)""; }
 void close_fd(int *fd) { }
 void async_free(struct async **as) { }
 void asfd_free(struct asfd **asfd) { }
@@ -33,6 +32,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 				BURP_MODE_UNSET);
 			break;
 		case OPT_LOCKFILE:
+		case OPT_PIDFILE:
 		case OPT_ADDRESS:
 		case OPT_PORT:
 		case OPT_STATUS_ADDRESS:
@@ -73,7 +73,6 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_R_SCRIPT:
 		case OPT_RESTORE_PATH:
 		case OPT_ORIG_CLIENT:
-		case OPT_CNTR:
 		case OPT_CONFFILE:
 		case OPT_USER:
 		case OPT_GROUP:
@@ -202,6 +201,9 @@ static void check_default(struct conf **c, enum conf_opt o)
         	case OPT_WORKING_DIR_RECOVERY_METHOD:
 			ck_assert_int_eq(get_e_recovery_method(c[o]),
 				RECOVERY_METHOD_DELETE);
+			break;
+		case OPT_CNTR:
+			ck_assert_int_eq(get_cntr(c[o])==NULL, 1);
 			break;
         	case OPT_MAX:
 			break;

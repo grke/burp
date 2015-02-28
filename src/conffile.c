@@ -333,10 +333,11 @@ static int load_conf_field_and_value(struct conf **c,
 	return 0;
 }
 
-// Recursing, so need to define load_conf_lines ahead of parse_conf_line.
-static int load_conf_lines(const char *conf_path, struct conf **confs);
+// Recursing, so need to define this ahead of conf_parse_line.
+static int load_conf_lines_from_file(const char *conf_path,
+	struct conf **confs);
 
-static int parse_conf_line(struct conf **confs, const char *conf_path,
+static int conf_parse_line(struct conf **confs, const char *conf_path,
 	char buf[], int line)
 {
 	int ret=-1;
@@ -963,7 +964,7 @@ static int conf_finalise_global_only(const char *conf_path, struct conf **confs)
 	return r;
 }
 
-static int load_conf_lines(const char *conf_path, struct conf **confs)
+static int load_conf_lines_from_file(const char *conf_path, struct conf **confs)
 {
 	int ret=0;
 	int line=0;
@@ -978,7 +979,7 @@ static int load_conf_lines(const char *conf_path, struct conf **confs)
 	while(fgets(buf, sizeof(buf), fp))
 	{
 		line++;
-		if(parse_conf_line(confs, conf_path, buf, line))
+		if(conf_parse_line(confs, conf_path, buf, line))
 		{
 			conf_error(conf_path, line);
 			ret=-1;
@@ -1009,7 +1010,7 @@ int conf_parse_incexcs_buf(struct conf **c, const char *incexc)
 	do
 	{
 		line++;
-		if(parse_conf_line(c, "", tok, line))
+		if(conf_parse_line(c, "", tok, line))
 		{
 			ret=-1;
 			break;
@@ -1025,7 +1026,7 @@ int conf_parse_incexcs_buf(struct conf **c, const char *incexc)
 int conf_parse_incexcs_path(struct conf **c, const char *path)
 {
 	free_incexcs(c);
-	if(load_conf_lines(path, c)
+	if(load_conf_lines_from_file(path, c)
 	  || conf_finalise(path, c))
 		return -1;
 	return 0;
@@ -1132,6 +1133,19 @@ end:
 	return ret;
 }
 
+static int conf_load_overrides(struct conf **globalcs, struct conf **cconfs,
+	const char *path)
+{
+	// Some client settings can be globally set in the server conf and
+	// overridden in the client specific conf.
+	if(conf_set_from_global(globalcs, cconfs)
+	  || load_conf_lines_from_file(path, cconfs)
+	  || conf_set_from_global_arg_list_overrides(globalcs, cconfs)
+	  || conf_finalise(path, cconfs))
+		return -1;
+	return 0;
+}
+
 int conf_load_clientconfdir(struct conf **globalcs, struct conf **cconfs)
 {
 	int ret=-1;
@@ -1148,18 +1162,7 @@ int conf_load_clientconfdir(struct conf **globalcs, struct conf **cconfs)
 
 	if(!(path=prepend_s(get_string(globalcs[OPT_CLIENTCONFDIR]), cname)))
 		goto end;
-
-	// Some client settings can be globally set in the server conf and
-	// overridden in the client specific conf.
-	if(conf_set_from_global(globalcs, cconfs))
-		goto end;
-	if(load_conf_lines(path, cconfs))
-		goto end;
-	if(conf_set_from_global_arg_list_overrides(globalcs, cconfs)
-	  || conf_finalise(path, cconfs))
-		goto end;
-
-	ret=0;
+	ret=conf_load_overrides(globalcs, cconfs, path);
 end:
 	free_w(&path);
 	return ret;
@@ -1168,7 +1171,7 @@ end:
 int conf_load_global_only(const char *path, struct conf **globalcs)
 {
 	if(set_string(globalcs[OPT_CONFFILE], path)
-	  || load_conf_lines(path, globalcs)
+	  || load_conf_lines_from_file(path, globalcs)
 	  || conf_finalise(path, globalcs)
 	  || conf_finalise_global_only(path, globalcs))
 		return -1;

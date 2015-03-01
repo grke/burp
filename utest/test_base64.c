@@ -76,7 +76,7 @@ START_TEST(test_from_base64)
 }
 END_TEST
 
-Suite *base64_suite(void)
+Suite *suite_base64(void)
 {
 	Suite *s;
 	TCase *tc_core;
@@ -90,19 +90,4 @@ Suite *base64_suite(void)
 	suite_add_tcase(s, tc_core);
 
 	return s;
-}
-
-int main(void)
-{
-	int number_failed;
-	Suite *s;
-	SRunner *sr;
-
-	s=base64_suite();
-	sr=srunner_create(s);
-
-	srunner_run_all(sr, CK_NORMAL);
-	number_failed = srunner_ntests_failed(sr);
-	srunner_free(sr);
-	return number_failed == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }

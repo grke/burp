@@ -2,8 +2,6 @@
 #include <stdlib.h>
 #include "../src/alloc.h"
 
-void log_oom_w(const char *func, const char *orig_func) { }
-
 START_TEST(test_alloc)
 {
 	char *rptr=NULL;
@@ -32,7 +30,7 @@ START_TEST(test_alloc)
 }
 END_TEST
 
-Suite *alloc_suite(void)
+Suite *suite_alloc(void)
 {
 	Suite *s;
 	TCase *tc_core;
@@ -47,17 +45,3 @@ Suite *alloc_suite(void)
 	return s;
 }
 
-int main(void)
-{
-	int number_failed;
-	Suite *s;
-	SRunner *sr;
-
-	s=alloc_suite();
-	sr=srunner_create(s);
-
-	srunner_run_all(sr, CK_NORMAL);
-	number_failed = srunner_ntests_failed(sr);
-	srunner_free(sr);
-	return number_failed == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
-}

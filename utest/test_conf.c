@@ -4,23 +4,16 @@
 #include "../src/alloc.h"
 #include "../src/conf.h"
 
-void logp(const char *fmt, ...) { }
-void log_oom_w(const char *func, const char *orig_func) { }
 // Stuff pulled in from cntr.c:
 // FIX THIS: Most of it can be deleted if cntr_stats_to_file did not have all
 // the async stuff in it.
-void logc(const char *fmt, ...) { }
-const char *getdatestr(time_t t) { return ""; }
-const char *time_taken(time_t d) { return ""; }
 struct async *async_alloc(void) { struct async *a=NULL; return a; }
 struct asfd *asfd_alloc(void) { struct asfd *v=NULL; return v; }
-void close_fd(int *fd) { }
 void async_free(struct async **as) { }
 void asfd_free(struct asfd **asfd) { }
 int json_cntr_to_file(struct asfd *asfd, struct cntr *cntr) { return 0; }
 // Stuff pulled in from strlist.c:
 #include "../src/regexp.h"
-int pathcmp(const char *a, const char *b) { return 0; }
 int compile_regex(regex_t **regex, const char *str) { return 0; }
 
 static void check_default(struct conf **c, enum conf_opt o)
@@ -226,7 +219,7 @@ START_TEST(test_conf_defaults)
 }
 END_TEST
 
-Suite *conf_suite(void)
+Suite *suite_conf(void)
 {
 	Suite *s;
 	TCase *tc_core;
@@ -239,19 +232,4 @@ Suite *conf_suite(void)
 	suite_add_tcase(s, tc_core);
 
 	return s;
-}
-
-int main(void)
-{
-	int number_failed;
-	Suite *s;
-	SRunner *sr;
-
-	s=conf_suite();
-	sr=srunner_create(s);
-
-	srunner_run_all(sr, CK_NORMAL);
-	number_failed = srunner_ntests_failed(sr);
-	srunner_free(sr);
-	return number_failed == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }

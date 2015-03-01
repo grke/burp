@@ -8,7 +8,7 @@
 #include "pathcmp.h"
 #include "prepend.h"
 #include "strlist.h"
-#include "src/server/timestamp.h"
+#include "server/timestamp.h"
 #include "client/glob_windows.h"
 
 // This will strip off everything after the last quote. So, configs like this
@@ -379,7 +379,7 @@ static int conf_parse_line(struct conf **confs, const char *conf_path,
 			extrafile=tmp;
 		}
 
-		ret=load_conf_lines(extrafile, confs);
+		ret=load_conf_lines_from_file(extrafile, confs);
 		goto end;
 	}
 

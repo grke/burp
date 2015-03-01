@@ -1,38 +1,55 @@
 # FIX THIS: This file should be a Makefile.in, and LIBS should be generated.
 LIBS = -lcheck -lpthread -lm -lrt -lssl -lcrypto
 
-SRCS1 = \
+SRCS = \
+	main.c \
 	test_alloc.c \
 	test_base64.c \
 	test_cmd.c \
+	test_conf.c \
+	test_conffile.c \
 	test_hexmap.c \
 	test_pathcmp.c
 
-SRCS2 = \
-	test_conf.c \
+BURP_SRCS = \
+	../src/alloc.c \
+	../src/attribs.c \
+	../src/base64.c \
+	../src/berrno.c \
+	../src/bfile.c \
+	../src/cmd.c \
+	../src/cntr.c \
+	../src/conf.c \
+	../src/conffile.c \
+	../src/fsops.c \
+	../src/handy.c \
+	../src/hexmap.c \
+	../src/iobuf.c \
+	../src/lock.c \
+	../src/log.c \
+	../src/msg.c \
+	../src/pathcmp.c \
+	../src/prepend.c \
+	../src/strlist.c \
 
-PROGS1 = clean $(SRCS1:.c=.test)
-PROGS2 = clean $(SRCS2:.c=.test2)
+OBJS = $(SRCS:.c=.o)
+BURP_OBJS = $(BURP_SRCS:.c=.o)
+BURP_STRIP = $(subst ../src/,,${BURP_OBJS})
 
-.SUFFIXES:      .c .test .test2
+.SUFFIXES:      .c .o
 
-.c.test:
-	@echo "Compiling $<"
-	$(CXX) -DUTEST -Wall -g -o $@ $< ../src/$(subst test_,,$<) $(LIBS)
+.c.o:
+	$(ECHO_CMD)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) -DUTEST $<
+
+test: Makefile $(OBJS) $(BURP_OBJS)
+	@echo "Linking $@ ..."
+	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -o $@ \
+	  $(OBJS) $(BURP_STRIP) $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
+	  $(DLIB) -lz
 	@echo "Running $<"
 	./$@ || exit 1
-	rm $@
+	make clean
 	@echo OK
-
-.c.test2:
-	@echo "Compiling $<"
-	$(CXX) -DUTEST -Wall -g -o $@ $< ../src/$(subst test_,,$<) ../src/alloc.c ../src/cntr.c ../src/prepend.c ../src/strlist.c $(LIBS)
-	@echo "Running $<"
-	./$@ || exit 1
-	rm $@
-	@echo OK
-
-test: ${PROGS1} ${PROGS2}
 
 clean:
-	rm -vf *.test *.test2
+	rm -f test *.o

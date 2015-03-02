@@ -1,3 +1,4 @@
+2015-03-02: Changes in burp-2.0.14:
   * Improve utest/Makefile.
   * Add unit test for base64.c.
   * Make from_base64() ignore invalid characters.

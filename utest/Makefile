@@ -3,6 +3,7 @@ LIBS = -lcheck -lpthread -lm -lrt -lssl -lcrypto
 
 SRCS = \
 	main.c \
+	mock.c \
 	test_alloc.c \
 	test_base64.c \
 	test_cmd.c \
@@ -13,21 +14,12 @@ SRCS = \
 
 BURP_SRCS = \
 	../src/alloc.c \
-	../src/attribs.c \
 	../src/base64.c \
-	../src/berrno.c \
-	../src/bfile.c \
 	../src/cmd.c \
 	../src/cntr.c \
 	../src/conf.c \
 	../src/conffile.c \
-	../src/fsops.c \
-	../src/handy.c \
 	../src/hexmap.c \
-	../src/iobuf.c \
-	../src/lock.c \
-	../src/log.c \
-	../src/msg.c \
 	../src/pathcmp.c \
 	../src/prepend.c \
 	../src/strlist.c \

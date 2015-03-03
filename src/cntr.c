@@ -505,6 +505,7 @@ void cntr_print(struct cntr *cntr, enum action act)
 }
 
 #ifndef HAVE_WIN32
+#ifndef UTEST
 
 int cntr_stats_to_file(struct cntr *cntr,
 	const char *directory, enum action act, struct conf **confs)
@@ -570,6 +571,7 @@ end:
 	return ret;
 }
 
+#endif
 #endif
 
 void cntr_print_end(struct cntr *cntr)

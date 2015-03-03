@@ -4,14 +4,6 @@
 #include "../src/alloc.h"
 #include "../src/conf.h"
 
-// Stuff pulled in from cntr.c:
-// FIX THIS: Most of it can be deleted if cntr_stats_to_file did not have all
-// the async stuff in it.
-struct async *async_alloc(void) { struct async *a=NULL; return a; }
-struct asfd *asfd_alloc(void) { struct asfd *v=NULL; return v; }
-void async_free(struct async **as) { }
-void asfd_free(struct asfd **asfd) { }
-int json_cntr_to_file(struct asfd *asfd, struct cntr *cntr) { return 0; }
 // Stuff pulled in from strlist.c:
 #include "../src/regexp.h"
 int compile_regex(regex_t **regex, const char *str) { return 0; }

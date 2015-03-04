@@ -36,8 +36,7 @@ static int add_to_file_requests(struct slist *slist, struct iobuf *rbuf,
 
 	if(!(sb=sbuf_alloc(confs))) return -1;
 
-	iobuf_copy(&sb->path, rbuf);
-	rbuf->buf=NULL;
+	iobuf_move(&sb->path, rbuf);
 	// Give it a number to simplify tracking.
 	sb->protocol2->index=file_no++;
 	slist_add_sbuf(slist, sb);

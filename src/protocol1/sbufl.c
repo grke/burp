@@ -100,13 +100,11 @@ static int read_stat(struct asfd *asfd, struct iobuf *rbuf, FILE *fp,
 		}
 		if(rbuf->cmd==CMD_DATAPTH)
 		{
-			iobuf_copy(&(sb->protocol1->datapth), rbuf);
-			rbuf->buf=NULL;
+			iobuf_move(&(sb->protocol1->datapth), rbuf);
 		}
 		else if(rbuf->cmd==CMD_ATTRIBS)
 		{
-			iobuf_copy(&sb->attr, rbuf);
-			rbuf->buf=NULL;
+			iobuf_move(&sb->attr, rbuf);
 			attribs_decode(sb);
 
 			return 0;
@@ -136,13 +134,11 @@ static int do_sbufl_fill_from_net(struct sbuf *sb, struct asfd *asfd,
 	iobuf_free_content(rbuf);
 	if((ars=read_stat(asfd, rbuf, NULL, NULL, sb, cntr))
 	  || (ars=asfd->read(asfd))) return ars;
-	iobuf_copy(&sb->path, rbuf);
-	rbuf->buf=NULL;
+	iobuf_move(&sb->path, rbuf);
 	if(sbuf_is_link(sb))
 	{
 		if((ars=asfd->read(asfd))) return ars;
-		iobuf_copy(&sb->link, rbuf);
-		rbuf->buf=NULL;
+		iobuf_move(&sb->link, rbuf);
 		if(!cmd_is_link(rbuf->cmd))
 			return unexpected(rbuf, __func__);
 	}
@@ -159,18 +155,18 @@ static int do_sbufl_fill_from_file(struct sbuf *sb, FILE *fp, gzFile zp,
 	if((ars=read_stat(NULL /* no async */,
 		&rbuf, fp, zp, sb, cntr))) return ars;
 	if((ars=read_fp(fp, zp, &rbuf))) return ars;
-	iobuf_copy(&sb->path, &rbuf);
+	iobuf_move(&sb->path, &rbuf);
 	if(sbuf_is_link(sb))
 	{
 		if((ars=read_fp(fp, zp, &rbuf))) return ars;
-		iobuf_copy(&sb->link, &rbuf);
+		iobuf_move(&sb->link, &rbuf);
 		if(!cmd_is_link(rbuf.cmd))
 			return unexpected(&rbuf, __func__);
 	}
 	else if(!phase1 && sbuf_is_filedata(sb))
 	{
 		if((ars=read_fp(fp, zp, &rbuf))) return ars;
-		iobuf_copy(&(sb->protocol1->endfile), &rbuf);
+		iobuf_move(&(sb->protocol1->endfile), &rbuf);
 		if(!cmd_is_endfile(rbuf.cmd))
 			return unexpected(&rbuf, __func__);
 	}

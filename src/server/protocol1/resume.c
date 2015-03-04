@@ -123,8 +123,7 @@ static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
 		}
 
 		iobuf_free_content(result);
-		iobuf_copy(result, &sb->path);
-		sb->path.buf=NULL;
+		iobuf_move(result, &sb->path);
 	}
 
 error:

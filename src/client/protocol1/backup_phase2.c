@@ -302,8 +302,7 @@ static int parse_rbuf(struct asfd *asfd, struct sbuf *sb,
 	//printf("now %d: %c:%s\n", rbuf->len, rbuf->cmd, rbuf->buf);
 	if(rbuf->cmd==CMD_DATAPTH)
 	{
-		iobuf_copy(&(sb->protocol1->datapth), rbuf);
-		rbuf->buf=NULL;
+		iobuf_move(&(sb->protocol1->datapth), rbuf);
 	}
 	else if(rbuf->cmd==CMD_ATTRIBS)
 	{

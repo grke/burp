@@ -115,8 +115,7 @@ static int process_changed_file(struct asfd *asfd,
 	//	cb->path, cb->datapth);
 
 	// Move datapth onto p1b.
-	iobuf_copy(&p1b->protocol1->datapth, &cb->protocol1->datapth);
-	cb->protocol1->datapth.buf=NULL;
+	iobuf_move(&p1b->protocol1->datapth, &cb->protocol1->datapth);
 
 	if(!(curpath=prepend_s(adir, p1b->protocol1->datapth.buf)))
 	{
@@ -218,7 +217,7 @@ static int process_unchanged_file(struct sbuf *p1b, struct sbuf *cb,
 {
 	// Want to use the link settings from p1b, but p1b does not have all
 	// the information that is on cb. Move the link settings over.
-	iobuf_copy(&cb->link, &p1b->link); p1b->link.buf=NULL;
+	iobuf_move(&cb->link, &p1b->link);
 	if(sbufl_to_manifest(cb, ucfp, NULL))
 		return -1;
 	cntr_add_same(get_cntr(cconfs[OPT_CNTR]), cb->path.cmd);
@@ -507,8 +506,7 @@ static int deal_with_receive_end_file(struct asfd *asfd, struct sdirs *sdirs,
 		logp("error gzclosing delta for %s in receive\n", rb->path);
 		goto error;
 	}
-	iobuf_copy(&rb->protocol1->endfile, rbuf);
-	rbuf->buf=NULL;
+	iobuf_move(&rb->protocol1->endfile, rbuf);
 	if(rb->flags & SBUFL_RECV_DELTA && finish_delta(sdirs, rb))
 		goto error;
 
@@ -566,8 +564,7 @@ static int deal_with_filedata(struct asfd *asfd,
 	struct sdirs *sdirs, struct sbuf *rb,
 	struct iobuf *rbuf, struct dpthl *dpthl, struct conf **cconfs)
 {
-	iobuf_copy(&rb->path, rbuf);
-	rbuf->buf=NULL;
+	iobuf_move(&rb->path, rbuf);
 
 	if(rb->protocol1->datapth.buf)
 	{
@@ -638,12 +635,10 @@ static int do_stuff_to_receive(struct asfd *asfd,
 	switch(rbuf->cmd)
 	{
 		case CMD_DATAPTH:
-			iobuf_copy(&rb->protocol1->datapth, rbuf);
-			rbuf->buf=NULL;
+			iobuf_move(&rb->protocol1->datapth, rbuf);
 			return 0;
 		case CMD_ATTRIBS:
-			iobuf_copy(&rb->attr, rbuf);
-			rbuf->buf=NULL;
+			iobuf_move(&rb->attr, rbuf);
 			return 0;
 		case CMD_GEN:
 			if(!strcmp(rbuf->buf, "okbackupphase2end"))

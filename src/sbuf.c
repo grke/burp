@@ -221,8 +221,7 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 					free(sb->link.buf);
 					sb->link.buf=NULL;
 				}
-				iobuf_copy(&sb->attr, rbuf);
-				rbuf->buf=NULL;
+				iobuf_move(&sb->attr, rbuf);
 				attribs_decode(sb);
 				break;
 
@@ -251,8 +250,7 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 				{
 					if(cmd_is_link(rbuf->cmd))
 					{
-						iobuf_copy(&sb->link, rbuf);
-						rbuf->buf=NULL;
+						iobuf_move(&sb->link, rbuf);
 						sb->flags &= ~SBUF_NEED_LINK;
 						return 0;
 					}
@@ -264,8 +262,7 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 				}
 				else
 				{
-					iobuf_copy(&sb->path, rbuf);
-					rbuf->buf=NULL;
+					iobuf_move(&sb->path, rbuf);
 					if(cmd_is_link(rbuf->cmd))
 						sb->flags |= SBUF_NEED_LINK;
 					else
@@ -327,8 +324,7 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 					goto end;
 				// Fall through.
 			case CMD_MANIFEST:
-				iobuf_copy(&sb->path, rbuf);
-				rbuf->buf=NULL;
+				iobuf_move(&sb->path, rbuf);
 				return 0;
 			case CMD_ERROR:
 				printf("got error: %s\n", rbuf->buf);

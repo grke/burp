@@ -240,9 +240,8 @@ static int deal_with_read(struct iobuf *rbuf,
 		case CMD_ATTRIBS_SIGS:
 			// New set of stuff incoming. Clean up.
 			if(inew->attr.buf) free(inew->attr.buf);
-			iobuf_copy(&inew->attr, rbuf);
+			iobuf_move(&inew->attr, rbuf);
 			inew->protocol2->index=decode_file_no(&inew->attr);
-			rbuf->buf=NULL;
 
 			// Need to go through slist to find the matching
 			// entry.

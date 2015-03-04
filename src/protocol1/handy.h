@@ -12,12 +12,12 @@
 extern int send_whole_file_gzl(struct asfd *asfd,
 	const char *fname, const char *datapth,
 	int quick_read, unsigned long long *bytes, const char *encpassword,
-	struct conf *conf, int compression, BFILE *bfd,
+	struct conf **confs, int compression, BFILE *bfd,
 	const char *extrameta, size_t elen);
 
 extern int send_whole_filel(struct asfd *asfd,
 	enum cmd cmd, const char *fname, const char *datapth,
-	int quick_read, unsigned long long *bytes, struct conf *conf,
+	int quick_read, unsigned long long *bytes, struct conf **confs,
 	BFILE *bfd,
 	const char *extrameta, size_t elen);
 

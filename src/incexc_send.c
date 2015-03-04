@@ -42,8 +42,9 @@ static int send_incexc_from_strlist(struct asfd *asfd,
 	return 0;
 }
 
-static int do_sends(struct asfd *asfd, struct conf *conf)
+static int do_sends(struct asfd *asfd, struct conf **confs)
 {
+/*
 	if(  send_incexc_from_strlist(asfd, "include", "exclude",
 		conf->incexcdir)
 	  || send_incexc_from_strlist(asfd, "include_glob", "include_glob",
@@ -75,11 +76,13 @@ static int do_sends(struct asfd *asfd, struct conf *conf)
 	  || send_incexc_long(asfd, "max_file_size", conf->max_file_size)
 	  || send_incexc_str(asfd, "vss_drives", conf->vss_drives))
 		return -1;
+*/
 	return 0;
 }
 
-static int do_sends_restore(struct asfd *asfd, struct conf *conf)
+static int do_sends_restore(struct asfd *asfd, struct conf **confs)
 {
+/*
 	if(  send_incexc_from_strlist(asfd, "include", "exclude", conf->incexcdir)
 	  || send_incexc_str(asfd, "orig_client", conf->orig_client)
 	  || send_incexc_str(asfd, "backup", conf->backup)
@@ -88,6 +91,7 @@ static int do_sends_restore(struct asfd *asfd, struct conf *conf)
 	  || send_incexc_int(asfd, "overwrite", conf->overwrite)
 	  || send_incexc_long(asfd, "strip", conf->strip))
 		return -1;
+*/
 	return 0;
 }
 
@@ -98,30 +102,30 @@ static int do_request_response(struct asfd *asfd,
 	  || asfd->read_expect(asfd, CMD_GEN, repstr));
 }
 
-int incexc_send_client(struct asfd *asfd, struct conf *conf)
+int incexc_send_client(struct asfd *asfd, struct conf **confs)
 {
 	if(do_request_response(asfd, "incexc", "incexc ok")
-	  || do_sends(asfd, conf)
+	  || do_sends(asfd, confs)
 	  || do_request_response(asfd, "incexc end", "incexc end ok"))
 		return -1;
 	return 0;
 }
 
-int incexc_send_server(struct asfd *asfd, struct conf *conf)
+int incexc_send_server(struct asfd *asfd, struct conf **confs)
 {
 	/* 'sincexc' and 'sincexc ok' have already been exchanged,
 	   so go straight into doing the sends. */
-	if(do_sends(asfd, conf)
+	if(do_sends(asfd, confs)
 	  || do_request_response(asfd, "sincexc end", "sincexc end ok"))
 		return -1;
 	return 0;
 }
 
-int incexc_send_server_restore(struct asfd *asfd, struct conf *conf)
+int incexc_send_server_restore(struct asfd *asfd, struct conf **confs)
 {
 	/* 'srestore' and 'srestore ok' have already been exchanged,
 	   so go straight into doing the sends. */
-	if(do_sends_restore(asfd, conf)
+	if(do_sends_restore(asfd, confs)
 	  || do_request_response(asfd, "srestore end", "srestore end ok"))
 		return -1;
 	return 0;

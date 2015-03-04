@@ -687,19 +687,19 @@ check_for_finishing_dir()
 
 all_tests()
 {
-	start_test "Interrupt server phase1"
-	add_server_breakpoint_on 1
-	add_run_backup_expect_fail
-	run_scripts
-	check_for_working_dir
-	end_test
+#	start_test "Interrupt server phase1"
+#	add_server_breakpoint_on 1
+#	add_run_backup_expect_fail
+#	run_scripts
+#	check_for_working_dir
+#	end_test
 
-	start_test "Interrupt client phase1"
-	add_client_breakpoint_on 1
-	add_run_backup_expect_fail
-	run_scripts
-	check_for_working_dir
-	end_test
+#	start_test "Interrupt client phase1"
+#	add_client_breakpoint_on 1
+#	add_run_backup_expect_fail
+#	run_scripts
+#	check_for_working_dir
+#	end_test
 
 	comp_enc_change_test on  off off
 

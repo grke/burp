@@ -7,8 +7,8 @@
 #include "../manio.h"
 #include "../sdirs.h"
 
-static int send_data(struct asfd *asfd, struct sbuf *need_data, struct blk *blk,
-	enum action act, struct conf *conf)
+static int send_data(struct asfd *asfd, struct blk *blk,
+	enum action act, struct conf **confs)
 {
 	struct iobuf wbuf;
 
@@ -51,8 +51,7 @@ static int send_data(struct asfd *asfd, struct sbuf *need_data, struct blk *blk,
 }
 
 int restore_sbuf_protocol2(struct asfd *asfd, struct sbuf *sb, enum action act,
-	enum cntr_status cntr_status, struct conf *conf,
-	struct sbuf *need_data)
+	enum cntr_status cntr_status, struct conf **confs, int *need_data)
 {
 	if(asfd->write(asfd, &sb->attr)
 	  || asfd->write(asfd, &sb->path))
@@ -69,7 +68,7 @@ int restore_sbuf_protocol2(struct asfd *asfd, struct sbuf *sb, enum action act,
 		b=sb->protocol2->bstart;
 		while(b)
 		{
-			if(send_data(asfd, sb, b, act, conf)) return -1;
+			if(send_data(asfd, b, act, confs)) return -1;
 			n=b->next;
 			blk_free(&b);
 			b=n;
@@ -88,7 +87,7 @@ int restore_sbuf_protocol2(struct asfd *asfd, struct sbuf *sb, enum action act,
 			sb->path.buf=NULL;
 			break;
 		default:
-			cntr_add(conf->cntr, sb->path.cmd, 0);
+			cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 0);
 			break;
 	}
 	return 0;
@@ -96,11 +95,11 @@ int restore_sbuf_protocol2(struct asfd *asfd, struct sbuf *sb, enum action act,
 
 int protocol2_extra_restore_stream_bits(struct asfd *asfd, struct blk *blk,
 	struct slist *slist, enum action act,
-	struct sbuf *need_data, int last_ent_was_dir, struct conf *cconf)
+	int need_data, int last_ent_was_dir, struct conf **cconfs)
 {
 	if(need_data->path.buf)
 	{
-		if(send_data(asfd, need_data, blk, act, cconf)) return -1;
+		if(send_data(asfd, blk, act, cconfs)) return -1;
 	}
 	else if(last_ent_was_dir)
 	{
@@ -130,7 +129,7 @@ int protocol2_extra_restore_stream_bits(struct asfd *asfd, struct blk *blk,
 			blk->fingerprint,
 			bytes_to_md5str(blk->md5sum),
 			bytes_to_savepathstr_with_sig(blk->savepath));
-		logw(asfd, cconf, msg);
+		logw(asfd, cconfs, msg);
 	}
 	blk->data=NULL;
 	return 0;

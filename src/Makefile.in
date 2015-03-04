@@ -20,6 +20,7 @@ dummy:
 
 #
 SRCS = \
+		alloc.c \
 		asfd.c \
 		async.c \
 		attribs.c \
@@ -30,6 +31,7 @@ SRCS = \
 		cmd.c \
 		cntr.c \
 		conf.c \
+		conffile.c \
 		cstat.c \
 		forkchild.c \
 		fsops.c \

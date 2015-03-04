@@ -2,6 +2,6 @@
 #define _AUTH_CLIENT_H
 
 extern int authorise_client(struct asfd *asfd,
-	struct conf *conf, char **server_version);
+	struct conf **confs, char **server_version);
 
 #endif

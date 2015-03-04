@@ -447,8 +447,8 @@ static int asfd_write_str(struct asfd *asfd, enum cmd wcmd, const char *wsrc)
 }
 
 static int asfd_simple_loop(struct asfd *asfd,
-	struct conf *conf, void *param, const char *caller,
-  enum asl_ret callback(struct asfd *asfd, struct conf *conf, void *param))
+	struct conf **confs, void *param, const char *caller,
+  enum asl_ret callback(struct asfd *asfd, struct conf **confs, void *param))
 {
 	struct iobuf *rbuf=asfd->rbuf;
 	while(1)
@@ -460,7 +460,7 @@ static int asfd_simple_loop(struct asfd *asfd,
 			if(rbuf->cmd==CMD_WARNING)
 			{
 				logp("WARNING: %s\n", rbuf->buf);
-				cntr_add(conf->cntr, rbuf->cmd, 0);
+				cntr_add(get_cntr(confs[OPT_CNTR]), rbuf->cmd, 0);
 			}
 			else if(rbuf->cmd==CMD_INTERRUPT)
 			{
@@ -473,7 +473,7 @@ static int asfd_simple_loop(struct asfd *asfd,
 			}
 			continue;
 		}
-		switch(callback(asfd, conf, param))
+		switch(callback(asfd, confs, param))
 		{
 			case ASL_CONTINUE: break;
 			case ASL_END_OK:
@@ -495,15 +495,15 @@ error:
 
 static int asfd_init(struct asfd *asfd, const char *desc,
 	struct async *as, int afd, SSL *assl,
-	enum asfd_streamtype streamtype, struct conf *conf)
+	enum asfd_streamtype streamtype, struct conf **confs)
 {
 	asfd->as=as;
 	asfd->fd=afd;
 	asfd->ssl=assl;
 	asfd->streamtype=streamtype;
-	asfd->max_network_timeout=conf->network_timeout;
+	asfd->max_network_timeout=get_int(confs[OPT_NETWORK_TIMEOUT]);
 	asfd->network_timeout=asfd->max_network_timeout;
-	asfd->ratelimit=conf->ratelimit;
+	asfd->ratelimit=get_float(confs[OPT_RATELIMIT]);
 	asfd->rlsleeptime=10000;
 	asfd->pid=-1;
 
@@ -611,7 +611,7 @@ void asfd_free(struct asfd **asfd)
 
 struct asfd *setup_asfd(struct async *as, const char *desc, int *fd, SSL *ssl,
 	enum asfd_streamtype asfd_streamtype, enum asfd_fdtype fdtype,
-	pid_t pid, struct conf *conf)
+	pid_t pid, struct conf **conf)
 {
 	struct asfd *asfd=NULL;
 	if(!fd || *fd<0)

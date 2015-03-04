@@ -1,6 +1,8 @@
 #ifndef _ASFD_H
 #define _ASFD_H
 
+#include "burp.h"
+#include "cmd.h"
 #include "ssl.h"
 
 // Return values for simple_loop().
@@ -92,7 +94,7 @@ struct asfd
 	// Function pointers.
 	int (*init)(struct asfd *, const char *,
 		struct async *, int, SSL *,
-		enum asfd_streamtype, struct conf *);
+		enum asfd_streamtype, struct conf **);
 	int (*parse_readbuf)(struct asfd *);
 	int (*parse_readbuf_specific)(struct asfd *);
 	enum append_ret
@@ -102,9 +104,9 @@ struct asfd
 	int (*do_write)(struct asfd *);
 	int (*read)(struct asfd *);
 	int (*read_expect)(struct asfd *, enum cmd, const char *);
-	int (*simple_loop)(struct asfd *, struct conf *, void *,
+	int (*simple_loop)(struct asfd *, struct conf **, void *,
 		const char *, enum asl_ret callback(struct asfd *,
-			struct conf *, void *));
+			struct conf **, void *));
 	int (*write)(struct asfd *, struct iobuf *);
 	int (*write_str)(struct asfd *, enum cmd, const char *);
 	int (*write_strn)(struct asfd *, enum cmd, const char *, size_t);
@@ -117,6 +119,6 @@ extern void asfd_free(struct asfd **asfd);
 extern struct asfd *setup_asfd(struct async *as,
 	const char *desc, int *fd, SSL *ssl,
 	enum asfd_streamtype asfd_streamtype, enum asfd_fdtype fdtype,
-	pid_t pid, struct conf *conf);
+	pid_t pid, struct conf **conf);
 
 #endif

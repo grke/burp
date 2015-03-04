@@ -1,6 +1,7 @@
 #include "include.h"
 #include "base64.h"
 #include "cmd.h"
+#include "conffile.h"
 #include "client/main.h"
 #include "hexmap.h"
 #include "server/main.h"
@@ -106,44 +107,42 @@ static void usage_client(void)
 #endif
 }
 
-int reload(struct conf *conf, const char *conffile, bool firsttime,
+int reload(struct conf **confs, const char *conffile, bool firsttime,
 	int oldmax_children, int oldmax_status_children, int json)
 {
 	if(!firsttime) logp("Reloading config\n");
 
-	conf_init(conf);
+	if(confs_init(confs)) return -1;
 
-	if(conf_load_global_only(conffile, conf)) return 1;
+	if(conf_load_global_only(conffile, confs)) return -1;
 
-	umask(conf->umask);
+	umask(get_mode_t(confs[OPT_UMASK]));
 
         // Try to make JSON output clean.
-        if(json) conf->log_to_stdout=0;
+        if(json) set_int(confs[OPT_STDOUT], 0);
 
 	// This will turn on syslogging which could not be turned on before
 	// conf_load.
-	set_logfp(NULL, conf);
+	set_logfp(NULL, confs);
 
 #ifndef HAVE_WIN32
-	if(conf->mode==MODE_SERVER)
-		setup_signals(oldmax_children, conf->max_children,
-			oldmax_status_children, conf->max_status_children);
+	if(get_e_burp_mode(confs[OPT_BURP_MODE])==BURP_MODE_SERVER)
+		setup_signals(oldmax_children, get_int(confs[OPT_MAX_CHILDREN]),
+			oldmax_status_children,
+			get_int(confs[OPT_MAX_STATUS_CHILDREN]));
 #endif
 
 	// Do not try to change user or group after the first time.
-	if(firsttime && chuser_and_or_chgrp(conf))
-		return 1;
+	if(firsttime && chuser_and_or_chgrp(confs))
+		return -1;
 
 	return 0;
 }
 
-static int replace_conf_str(const char *newval, char **dest)
+static int replace_conf_str(struct conf *conf, const char *newval)
 {
 	if(!newval) return 0;
-	free_w(dest);
-	if(!(*dest=strdup_w(newval, __func__)))
-		return -1;
-	return 0;
+	return set_string(conf, newval);
 }
 
 static void usage(void)
@@ -195,10 +194,11 @@ static int parse_action(enum action *act, const char *optarg)
 }
 
 #ifndef HAVE_WIN32
-static int run_champ_chooser(struct conf *conf)
+static int run_champ_chooser(struct conf **confs)
 {
-	if(conf->orig_client && *(conf->orig_client))
-		return champ_chooser_server_standalone(conf);
+	const char *orig_client=get_string(confs[OPT_ORIG_CLIENT]);
+	if(orig_client && *orig_client)
+		return champ_chooser_server_standalone(confs);
 	logp("No client name given for standalone champion chooser process.\n");
 	logp("Try using the '-C' option.\n");
 	return 1;
@@ -206,23 +206,25 @@ static int run_champ_chooser(struct conf *conf)
 
 static int server_modes(enum action act,
 	const char *conffile, struct lock *lock, int generate_ca_only,
-	struct conf *conf)
+	struct conf **confs)
 {
 	switch(act)
 	{
 		case ACTION_CHAMP_CHOOSER:
 			// We are running on the server machine, wanting to
 			// be a standalone champion chooser process.
-			return run_champ_chooser(conf);
+			return run_champ_chooser(confs);
 		default:
-			return server(conf, conffile, lock, generate_ca_only);
+			return server(confs, conffile, lock, generate_ca_only);
 	}
 }
 #endif
 
-static void random_delay(int randomise)
+static void random_delay(struct conf **confs)
 {
 	int delay;
+	int randomise=get_int(confs[OPT_RANDOMISE]);
+	if(!randomise) return;
 #ifdef HAVE_WIN32
 	srand(GetTickCount());
 #else
@@ -235,6 +237,30 @@ static void random_delay(int randomise)
 	sleep(delay);
 }
 
+static int run_test_confs(struct conf **confs,
+	const char *client, const char *conffile)
+{
+	int ret=-1;
+	struct conf **cconfs=NULL;
+	if(!client)
+	{
+		confs_dump(confs, 0);
+		ret=0;
+		goto end;
+	}
+	if(!(cconfs=confs_alloc()))
+		goto end;
+	confs_init(cconfs);
+	if(set_string(cconfs[OPT_CNAME], client)
+	  || set_string(cconfs[OPT_PEER_VERSION], VERSION)
+	  || conf_load_clientconfdir(confs, cconfs))
+		goto end;
+	confs_dump(cconfs, CONF_FLAG_CC_OVERRIDE|CONF_FLAG_INCEXC);
+
+end:
+	confs_free(&cconfs);
+	return ret;
+}
 
 #if defined(HAVE_WIN32)
 #define main BurpMain
@@ -248,15 +274,15 @@ int main (int argc, char *argv[])
 	int strip=0;
 	int randomise=0;
 	struct lock *lock=NULL;
-	struct conf *conf=NULL;
+	struct conf **confs=NULL;
 	int forceoverwrite=0;
 	enum action act=ACTION_LIST;
 	const char *backup=NULL;
 	const char *backup2=NULL;
-	const char *restoreprefix=NULL;
+	char *restoreprefix=NULL;
 	const char *regex=NULL;
 	const char *browsefile=NULL;
-	const char *browsedir=NULL;
+	char *browsedir=NULL;
 	const char *conffile=get_conf_path();
 	const char *orig_client=NULL;
 	const char *logfile=NULL;
@@ -269,7 +295,8 @@ int main (int argc, char *argv[])
 	// FIX THIS: Since the client can now connect to the status port,
 	// this json option is no longer needed.
 	int json=0;
-	int test_conf=0;
+	int test_confs=0;
+	enum burp_mode mode;
 
 	init_log(argv[0]);
 #ifndef HAVE_WIN32
@@ -341,7 +368,7 @@ int main (int argc, char *argv[])
 				json=1;
 				break;
 			case 't':
-				test_conf=1;
+				test_confs=1;
 				break;
 			case 'z':
 				browsefile=optarg;
@@ -365,17 +392,21 @@ int main (int argc, char *argv[])
 		log_set_json(1);
 	}
 
-	if(!(conf=conf_alloc()))
+	if(!(confs=confs_alloc()))
 		goto end;
 
-	if(reload(conf, conffile,
+	if(reload(confs, conffile,
 	  1 /* first time */,
 	  0 /* no oldmax_children setting */,
 	  0 /* no oldmax_status_children setting */,
 	  json)) goto end;
 
 	// Dry run to test config file syntax.
-	if(test_conf) return 0;
+	if(test_confs)
+	{
+		ret=run_test_confs(confs, orig_client, conffile);
+		goto end;
+	}
 
 	if(!backup) switch(act)
 	{
@@ -407,26 +438,26 @@ int main (int argc, char *argv[])
 		&& act!=ACTION_STATUS_SNAPSHOT))
 			logp("-l <logfile> option obsoleted\n");
 
-	if(conf->mode==MODE_CLIENT
+	mode=get_e_burp_mode(confs[OPT_BURP_MODE]);
+	if(mode==BURP_MODE_CLIENT
 	  && orig_client
 	  && *orig_client
-	  && !(conf->orig_client=strdup_w(orig_client, __func__)))
+	  && set_string(confs[OPT_ORIG_CLIENT], orig_client))
 		goto end;
 
 	// The random delay needs to happen before the lock is got, otherwise
 	// you would never be able to use burp by hand.
-	if(randomise) conf->randomise=randomise;
-	if(conf->mode==MODE_CLIENT
-	  && (act==ACTION_BACKUP_TIMED || act==ACTION_TIMER_CHECK)
-	  && conf->randomise)
-		random_delay(conf->randomise);
+	if(randomise) set_int(confs[OPT_RANDOMISE], randomise);
+	if(mode==BURP_MODE_CLIENT
+	  && (act==ACTION_BACKUP_TIMED || act==ACTION_TIMER_CHECK))
+		random_delay(confs);
 
-	if(conf->mode==MODE_SERVER
+	if(mode==BURP_MODE_SERVER
 	  && act==ACTION_CHAMP_CHOOSER)
 	{
 		// These server modes need to run without getting the lock.
 	}
-	else if(conf->mode==MODE_CLIENT
+	else if(mode==BURP_MODE_CLIENT
 	  && (act==ACTION_LIST
 		|| act==ACTION_LIST_LONG
 		|| act==ACTION_DIFF
@@ -439,7 +470,8 @@ int main (int argc, char *argv[])
 	}
 	else
 	{
-		if(!(lock=lock_alloc_and_init(conf->lockfile)))
+		const char *lockfile=confs_get_lockfile(confs);
+		if(!(lock=lock_alloc_and_init(lockfile)))
 			goto end;
 		lock_get(lock);
 		switch(lock->status)
@@ -452,47 +484,47 @@ int main (int argc, char *argv[])
 			case GET_LOCK_ERROR:
 			default:
 				logp("Could not get lockfile.\n");
-				logp("Maybe you do not have permissions to write to %s.\n", conf->lockfile);
+				logp("Maybe you do not have permissions to write to %s.\n", lockfile);
 				goto end;
 		}
 	}
 
-	conf->overwrite=forceoverwrite;
-	conf->strip=strip;
-	conf->forking=forking;
-	conf->daemon=daemon;
-	if(replace_conf_str(backup, &conf->backup)
-	  || replace_conf_str(backup2, &conf->backup2)
-	  || replace_conf_str(restoreprefix, &conf->restoreprefix)
-	  || replace_conf_str(regex, &conf->regex)
-	  || replace_conf_str(browsefile, &conf->browsefile)
-	  || replace_conf_str(browsedir, &conf->browsedir)
-	  || replace_conf_str(logfile, &conf->monitor_logfile))
-		goto end;
+	set_int(confs[OPT_OVERWRITE], forceoverwrite);
+	set_int(confs[OPT_STRIP], strip);
+	set_int(confs[OPT_FORK], forking);
+	set_int(confs[OPT_DAEMON], daemon);
 
-	strip_trailing_slashes(&conf->restoreprefix);
-	strip_trailing_slashes(&conf->browsedir);
+	strip_trailing_slashes(&restoreprefix);
+	strip_trailing_slashes(&browsedir);
+	if(replace_conf_str(confs[OPT_BACKUP], backup)
+	  || replace_conf_str(confs[OPT_BACKUP2], backup2)
+	  || replace_conf_str(confs[OPT_RESTOREPREFIX], restoreprefix)
+	  || replace_conf_str(confs[OPT_REGEX], regex)
+	  || replace_conf_str(confs[OPT_BROWSEFILE], browsefile)
+	  || replace_conf_str(confs[OPT_BROWSEDIR], browsedir)
+	  || replace_conf_str(confs[OPT_MONITOR_LOGFILE], logfile))
+		goto end;
 
 	base64_init();
 	hexmap_init();
 
-	if(conf->mode==MODE_SERVER)
+	if(mode==BURP_MODE_SERVER)
 	{
 #ifdef HAVE_WIN32
 		logp("Sorry, server mode is not implemented for Windows.\n");
 #else
 		ret=server_modes(act,
-			conffile, lock, generate_ca_only, conf);
+			conffile, lock, generate_ca_only, confs);
 #endif
 	}
 	else
 	{
-		ret=client(conf, act, vss_restore, json);
+		ret=client(confs, act, vss_restore, json);
 	}
 
 end:
 	lock_release(lock);
 	lock_free(&lock);
-	conf_free(conf);
+	confs_free(&confs);
 	return ret;
 }

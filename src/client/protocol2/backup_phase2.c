@@ -29,15 +29,14 @@ static uint64_t decode_req(const char *buf)
 }
 
 static int add_to_file_requests(struct slist *slist, struct iobuf *rbuf,
-	struct conf *conf)
+	struct conf **confs)
 {
 	static uint64_t file_no=1;
 	struct sbuf *sb;
 
-	if(!(sb=sbuf_alloc(conf))) return -1;
+	if(!(sb=sbuf_alloc(confs))) return -1;
 
-	iobuf_copy(&sb->path, rbuf);
-	rbuf->buf=NULL;
+	iobuf_move(&sb->path, rbuf);
 	// Give it a number to simplify tracking.
 	sb->protocol2->index=file_no++;
 	slist_add_sbuf(slist, sb);
@@ -67,14 +66,14 @@ static int add_to_data_requests(struct blist *blist, struct iobuf *rbuf)
 	return 0;
 }
 
-static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist  *blist, struct conf *conf, int *backup_end, int *requests_end, int *blk_requests_end)
+static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist  *blist, struct conf **confs, int *backup_end, int *requests_end, int *blk_requests_end)
 {
 	int ret=0;
 	switch(rbuf->cmd)
 	{
 		/* Incoming file request. */
 		case CMD_FILE:
-			if(add_to_file_requests(slist, rbuf, conf)) goto error;
+			if(add_to_file_requests(slist, rbuf, confs)) goto error;
 			return 0;
 
 		/* Incoming data block request. */
@@ -107,7 +106,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 		}
 		case CMD_WARNING:
 			logp("WARNING: %s\n", rbuf->buf);
-			cntr_add(conf->cntr, rbuf->cmd, 0);
+			cntr_add(get_cntr(confs[OPT_CNTR]), rbuf->cmd, 0);
 			goto end;
 		case CMD_GEN:
 			if(!strcmp(rbuf->buf, "requests_end"))
@@ -138,12 +137,12 @@ end:
 	return ret;
 }
 
-static int add_to_blks_list(struct asfd *asfd, struct conf *conf,
-	struct slist *slist, struct blist *blist, struct win *win)
+static int add_to_blks_list(struct asfd *asfd, struct conf **confs,
+	struct slist *slist, struct blist *blist)
 {
 	struct sbuf *sb=slist->last_requested;
 	if(!sb) return 0;
-	if(blks_generate(asfd, conf, sb, blist, win)) return -1;
+	if(blks_generate(asfd, confs, sb, blist)) return -1;
 
 	// If it closed the file, move to the next one.
 	if(sb->protocol2->bfd.mode==BF_CLOSED) slist->last_requested=sb->next;
@@ -174,7 +173,7 @@ static void free_stuff(struct slist *slist, struct blist *blist)
 	}
 }
 
-static void get_wbuf_from_data(struct conf *conf,
+static void get_wbuf_from_data(struct conf **confs,
 	struct iobuf *wbuf, struct slist *slist,
 	struct blist *blist, int blk_requests_end)
 {
@@ -189,13 +188,13 @@ static void get_wbuf_from_data(struct conf *conf,
 			wbuf->len=blk->length;
 			blk->requested=0;
 			blist->last_sent=blk;
-			cntr_add(conf->cntr, CMD_DATA, 1);
-			cntr_add_sentbytes(conf->cntr, blk->length);
+			cntr_add(get_cntr(confs[OPT_CNTR]), CMD_DATA, 1);
+			cntr_add_sentbytes(get_cntr(confs[OPT_CNTR]), blk->length);
 			break;
 		}
 		else
 		{
-			cntr_add_same(conf->cntr, CMD_DATA);
+			cntr_add_same(get_cntr(confs[OPT_CNTR]), CMD_DATA);
 			if(blk_requests_end)
 			{
 				// Force onwards when the server has said that
@@ -298,14 +297,13 @@ static void get_wbuf_from_scan(struct iobuf *wbuf, struct slist *flist)
 }
 
 int backup_phase2_client_protocol2(struct asfd *asfd,
-	struct conf *conf, int resume)
+	struct conf **confs, int resume)
 {
 	int ret=-1;
 	int sigs_end=0;
 	int backup_end=0;
 	int requests_end=0;
 	int blk_requests_end=0;
-	struct win *win=NULL; // Rabin sliding window.
 	struct slist *slist=NULL;
 	struct blist *blist=NULL;
 	struct iobuf *rbuf=NULL;
@@ -316,8 +314,7 @@ int backup_phase2_client_protocol2(struct asfd *asfd,
 	if(!(slist=slist_alloc())
 	  || !(blist=blist_alloc())
 	  || !(wbuf=iobuf_alloc())
-	  || blks_generate_init(conf)
-	  || !(win=win_alloc(&conf->rconf)))
+	  || blks_generate_init())
 		goto end;
 	rbuf=asfd->rbuf;
 
@@ -328,11 +325,11 @@ int backup_phase2_client_protocol2(struct asfd *asfd,
 		  || asfd->read_expect(asfd, CMD_GEN, "ok"))
 			goto end;
 	}
-	else if(conf->send_client_cntr)
+	else if(get_int(confs[OPT_SEND_CLIENT_CNTR]))
 	{
 		// On resume, the server might update the client with the
 		// counters.
-		if(cntr_recv(asfd, conf))
+		if(cntr_recv(asfd, confs))
 			goto end;
         }
 
@@ -340,7 +337,7 @@ int backup_phase2_client_protocol2(struct asfd *asfd,
 	{
 		if(!wbuf->len)
 		{
-			get_wbuf_from_data(conf, wbuf, slist, blist,
+			get_wbuf_from_data(confs, wbuf, slist, blist,
 				blk_requests_end);
 			if(!wbuf->len)
 			{
@@ -362,7 +359,7 @@ int backup_phase2_client_protocol2(struct asfd *asfd,
 		}
 
 		if(rbuf->buf && deal_with_read(rbuf, slist, blist,
-			conf, &backup_end, &requests_end, &blk_requests_end))
+			confs, &backup_end, &requests_end, &blk_requests_end))
 				goto end;
 
 		if(slist->head
@@ -371,7 +368,7 @@ int backup_phase2_client_protocol2(struct asfd *asfd,
 		   || blist->tail->index - blist->head->index<BLKS_MAX_IN_MEM)
 		)
 		{
-			if(add_to_blks_list(asfd, conf, slist, blist, win))
+			if(add_to_blks_list(asfd, confs, slist, blist))
 				goto end;
 		}
 
@@ -401,15 +398,14 @@ int backup_phase2_client_protocol2(struct asfd *asfd,
 end:
 blk_print_alloc_stats();
 //sbuf_print_alloc_stats();
-	win_free(win);
 	slist_free(&slist);
 	blist_free(&blist);
 	// Write buffer did not allocate 'buf'.
 	wbuf->buf=NULL;
 	iobuf_free(&wbuf);
 
-	cntr_print_end(conf->cntr);
-	cntr_print(conf->cntr, ACTION_BACKUP);
+	cntr_print_end(get_cntr(confs[OPT_CNTR]));
+	cntr_print(get_cntr(confs[OPT_CNTR]), ACTION_BACKUP);
 	if(ret) logp("Error in backup\n");
 	logp("End backup\n");
 

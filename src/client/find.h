@@ -97,7 +97,7 @@ struct FF_PKT
 extern FF_PKT *find_files_init(void);
 extern void find_files_free(FF_PKT *ff);
 extern int find_files_begin(struct asfd *asfd,
-	FF_PKT *ff_pkt, struct conf *conf, char *fname);
+	FF_PKT *ff_pkt, struct conf **confs, char *fname);
 // Returns the level of compression.
 extern int in_exclude_comp(struct strlist *excom, const char *fname,
 	int compression);

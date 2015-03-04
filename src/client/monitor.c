@@ -6,7 +6,7 @@ static int copy_input_to_output(struct asfd *in, struct asfd *out)
 	return out->write_strn(out, CMD_GEN, in->rbuf->buf, in->rbuf->len);
 }
 
-static int main_loop(struct async *as, struct conf *conf)
+static int main_loop(struct async *as, struct conf **confs)
 {
 	struct asfd *asfd;
 	struct asfd *sfd; // Server fd.
@@ -51,7 +51,7 @@ error:
 	return -1;
 }
 
-int do_monitor_client(struct asfd *asfd, struct conf *conf)
+int do_monitor_client(struct asfd *asfd, struct conf **confs)
 {
 	int ret=-1;
 	struct async *as=asfd->as;
@@ -62,11 +62,11 @@ logp("in monitor\n");
 	// so long that I would start to get printf errors.
 	// Using the asfd stuff works well though.
 	if(!setup_asfd(as, "stdin", &stdinfd, NULL, ASFD_STREAM_LINEBUF,
-		ASFD_FD_CLIENT_MONITOR_READ, -1, conf)
+		ASFD_FD_CLIENT_MONITOR_READ, -1, confs)
 	  || !setup_asfd(as, "stdout", &stdoutfd, NULL, ASFD_STREAM_LINEBUF,
-		ASFD_FD_CLIENT_MONITOR_WRITE, -1, conf))
+		ASFD_FD_CLIENT_MONITOR_WRITE, -1, confs))
 		goto end;
-	ret=main_loop(as, conf);
+	ret=main_loop(as, confs);
 end:
 	return ret;
 }

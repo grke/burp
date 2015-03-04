@@ -36,20 +36,20 @@ struct candidate *candidates_add_new(void)
 // This deals with reading in the sparse index, as well as actual candidate
 // manifests.
 int candidate_load(struct candidate *candidate,
-	const char *path, struct conf *conf)
+	const char *path, struct conf **confs)
 {
 	int ret=-1;
 	gzFile zp=NULL;
 	struct sbuf *sb=NULL;
 	struct blk *blk=NULL;
 
-	if(!(sb=sbuf_alloc(conf))
+	if(!(sb=sbuf_alloc(confs))
 	  || !(blk=blk_alloc())
 	  || !(zp=gzopen_file(path, "rb")))
 		goto error;
 	while(zp)
 	{
-		switch(sbuf_fill_from_gzfile(sb, NULL, zp, blk, NULL, conf))
+		switch(sbuf_fill_from_gzfile(sb, NULL, zp, blk, NULL, confs))
 		{
 			case 1: goto end;
 			case -1: goto error;
@@ -83,17 +83,17 @@ error:
 }
 
 // When a backup is ongoing, use this to add newly complete candidates.
-int candidate_add_fresh(const char *path, struct conf *conf)
+int candidate_add_fresh(const char *path, struct conf **confs)
 {
 	const char *cp=NULL;
 	struct candidate *candidate=NULL;
 
 	if(!(candidate=candidates_add_new())) return -1;
-	cp=path+strlen(conf->directory);
+	cp=path+strlen(get_string(confs[OPT_DIRECTORY]));
 	while(cp && *cp=='/') cp++;
 	if(!(candidate->path=strdup_w(cp, __func__))) return -1;
 
-	return candidate_load(candidate, path, conf);
+	return candidate_load(candidate, path, confs);
 }
 
 struct candidate *candidates_choose_champ(struct incoming *in,

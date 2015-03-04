@@ -93,7 +93,7 @@ static char *xstrsub(const char *src, int begin, int len)
 	return ret;
 }
 
-static int process_entry(struct strlist *ig, struct conf *conf)
+static int process_entry(struct strlist *ig, struct conf **confs)
 {
 	int ret=-1;
 	size_t len1=0;
@@ -174,8 +174,8 @@ static int process_entry(struct strlist *ig, struct conf *conf)
 				  || astrcat(&tmppath, splitstr1[1], __func__))
 					goto end;
 			}
-			strlist_add_sorted(&conf->incexcdir,
-				tmppath, 1);
+			if(add_to_strlist(confs[OPT_INCLUDE], tmppath))
+				goto end;
 			free_w(&tmppath);
 		}
 	}
@@ -192,12 +192,12 @@ end:
 	return ret;
 }
 
-int glob_windows(struct conf *conf)
+int glob_windows(struct conf **confs)
 {
 	struct strlist *ig;
 
-	for(ig=conf->incglob; ig; ig=ig->next)
-		if(process_entry(ig, conf)) return -1;
+	for(ig=get_strlist(confs[OPT_INCGLOB]); ig; ig=ig->next)
+		if(process_entry(ig, confs)) return -1;
 	return 0;
 }
 

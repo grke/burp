@@ -1,6 +1,6 @@
 #include "include.h"
 
-static int compress(const char *src, const char *dst, struct conf *cconf)
+static int compress(const char *src, const char *dst, struct conf **cconfs)
 {
 	int res;
 	int got;
@@ -9,7 +9,7 @@ static int compress(const char *src, const char *dst, struct conf *cconf)
 	char buf[ZCHUNK];
 
 	if(!(mp=open_file(src, "rb"))
-	  || !(zp=gzopen_file(dst, comp_level(cconf))))
+	  || !(zp=gzopen_file(dst, comp_level(cconfs))))
 	{
 		close_fp(&mp);
 		gzclose_fp(&zp);
@@ -31,7 +31,7 @@ static int compress(const char *src, const char *dst, struct conf *cconf)
 	return gzclose_fp(&zp); // this can give an error when out of space
 }
 
-int compress_file(const char *src, const char *dst, struct conf *cconf)
+int compress_file(const char *src, const char *dst, struct conf **cconfs)
 {
 	char *dsttmp=NULL;
 	pid_t pid=getpid();
@@ -43,7 +43,7 @@ int compress_file(const char *src, const char *dst, struct conf *cconf)
 	
 	// Need to compress the log.
 	logp("Compressing %s to %s...\n", src, dst);
-	if(compress(src, dsttmp, cconf)
+	if(compress(src, dsttmp, cconfs)
 	// Possible rename race condition is of little consequence here.
 	// You will still have the uncompressed log file.
 	  || do_rename(dsttmp, dst))
@@ -59,13 +59,13 @@ int compress_file(const char *src, const char *dst, struct conf *cconf)
 }
 
 int compress_filename(const char *d,
-	const char *file, const char *zfile, struct conf *cconf)
+	const char *file, const char *zfile, struct conf **cconfs)
 {
 	char *fullfile=NULL;
 	char *fullzfile=NULL;
 	if(!(fullfile=prepend_s(d, file))
 	  || !(fullzfile=prepend_s(d, zfile))
-	  || compress_file(fullfile, fullzfile, cconf))
+	  || compress_file(fullfile, fullzfile, cconfs))
 	{
 		if(fullfile) free(fullfile);
 		if(fullzfile) free(fullzfile);

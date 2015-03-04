@@ -3,7 +3,7 @@
 
 extern int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 	struct sdirs *sdirs, struct bu *bu, int srestore, regex_t *regex,
-	struct conf *conf, struct slist *slist,
+	struct conf **confs, struct slist *slist,
 	enum action act, enum cntr_status cntr_status);
 
 #endif

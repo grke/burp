@@ -48,6 +48,12 @@ void iobuf_copy(struct iobuf *dst, struct iobuf *src)
 	iobuf_set(dst, src->cmd, src->buf, src->len);
 }
 
+void iobuf_move(struct iobuf *dst, struct iobuf *src)
+{
+	iobuf_copy(dst, src);
+	src->buf=NULL;
+}
+
 void iobuf_from_str(struct iobuf *iobuf, enum cmd cmd, char *str)
 {
 	iobuf_set(iobuf, cmd, str, strlen(str));

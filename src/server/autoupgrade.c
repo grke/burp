@@ -3,7 +3,7 @@
 
 // Return -1 on error or success, 0 to continue normally.
 int autoupgrade_server(struct async *as,
-	long ser_ver, long cli_ver, const char *os, struct conf *conf)
+	long ser_ver, long cli_ver, const char *os, struct conf **confs)
 {
 	int ret=-1;
 	char *path=NULL;
@@ -15,9 +15,10 @@ int autoupgrade_server(struct async *as,
 	struct stat stats;
 	struct stat statp;
 	struct asfd *asfd;
+	const char *autoupgrade_dir=get_string(confs[OPT_AUTOUPGRADE_DIR]);
 	asfd=as->asfd;
 
-	if(!conf->autoupgrade_dir)
+	if(!autoupgrade_dir)
 	{
 		// Autoupgrades not turned on on the server.
 		ret=0;
@@ -34,7 +35,7 @@ int autoupgrade_server(struct async *as,
 		goto end;
 	}
 
-	if(!(base_path=prepend_s(conf->autoupgrade_dir, os))
+	if(!(base_path=prepend_s(autoupgrade_dir, os))
 	  || !(path=prepend_s(base_path, VERSION))
 	  || !(script_path_top=prepend_s(base_path, "script"))
 	  || !(script_path_specific=prepend_s(path, "script"))
@@ -83,12 +84,12 @@ int autoupgrade_server(struct async *as,
 	if(asfd->write_str(asfd, CMD_GEN, "autoupgrade ok"))
 		goto end;
 
-	if(send_a_file(asfd, script_path, conf))
+	if(send_a_file(asfd, script_path, confs))
 	{
 		logp("Problem sending %s\n", script_path);
 		goto end;
 	}
-	if(send_a_file(asfd, package_path, conf))
+	if(send_a_file(asfd, package_path, confs))
 	{
 		logp("Problem sending %s\n", package_path);
 		goto end;

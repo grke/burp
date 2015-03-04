@@ -9,7 +9,7 @@
 // FIX THIS: This stuff is very similar to make_rev_delta, can maybe share
 // some code.
 int do_patch(struct asfd *asfd, const char *dst, const char *del,
-	const char *upd, bool gzupd, int compression, struct conf *cconf)
+	const char *upd, bool gzupd, int compression, struct conf **cconfs)
 {
 	FILE *dstp=NULL;
 	FILE *delfp=NULL;
@@ -30,14 +30,14 @@ int do_patch(struct asfd *asfd, const char *dst, const char *del,
 	if(!delzp && !delfp) goto end;
 
 	if(gzupd)
-		updp=gzopen(upd, comp_level(cconf));
+		updp=gzopen(upd, comp_level(cconfs));
 	else
 		updfp=fopen(upd, "wb");
 
 	if(!updp && !updfp) goto end;
 
 	result=rs_patch_gzfile(asfd,
-		dstp, delfp, delzp, updfp, updp, NULL, cconf->cntr);
+		dstp, delfp, delzp, updfp, updp, NULL, get_cntr(cconfs[OPT_CNTR]));
 end:
 	close_fp(&dstp);
 	gzclose_fp(&delzp);
@@ -56,7 +56,7 @@ end:
 }
 
 static int make_rev_sig(const char *dst, const char *sig, const char *endfile,
-	int compression, struct conf *conf)
+	int compression, struct conf **confs)
 {
 	int ret=-1;
 	FILE *dstfp=NULL;
@@ -73,7 +73,7 @@ static int make_rev_sig(const char *dst, const char *sig, const char *endfile,
 	  || !(sigp=open_file(sig, "wb"))
 	  || rs_sig_gzfile(NULL, dstfp, dstzp, sigp,
 		get_librsync_block_len(endfile),
-		RS_DEFAULT_STRONG_LEN, NULL, conf->cntr)!=RS_DONE)
+		RS_DEFAULT_STRONG_LEN, NULL, get_cntr(confs[OPT_CNTR]))!=RS_DONE)
 			goto end;
 	ret=0;
 end:
@@ -89,7 +89,7 @@ end:
 }
 
 static int make_rev_delta(const char *src, const char *sig, const char *del,
-	int compression, struct conf *cconf)
+	int compression, struct conf **cconfs)
 {
 	int ret=-1;
 	FILE *srcfp=NULL;
@@ -115,14 +115,14 @@ static int make_rev_delta(const char *src, const char *sig, const char *del,
 
 	if(!srczp && !srcfp) goto end;
 
-	if(cconf->compression)
-		delzp=gzopen_file(del, comp_level(cconf));
+	if(get_int(cconfs[OPT_COMPRESSION]))
+		delzp=gzopen_file(del, comp_level(cconfs));
 	else
 		delfp=open_file(del, "wb");
 	if(!delzp && !delfp) goto end;
 
 	if(rs_delta_gzfile(NULL, sumset, srcfp, srczp,
-		delfp, delzp, NULL, cconf->cntr)!=RS_DONE)
+		delfp, delzp, NULL, get_cntr(cconfs[OPT_CNTR]))!=RS_DONE)
 			goto end;
 	ret=0;
 end:
@@ -145,7 +145,7 @@ end:
 
 static int gen_rev_delta(const char *sigpath, const char *deltadir,
 	const char *oldpath, const char *finpath, const char *path,
-	struct sbuf *sb, struct conf *cconf)
+	struct sbuf *sb, struct conf **cconfs)
 {
 	int ret=-1;
 	char *delpath=NULL;
@@ -167,13 +167,13 @@ static int gen_rev_delta(const char *sigpath, const char *deltadir,
 		goto end;
 	}
 	else if(make_rev_sig(finpath, sigpath,
-		sb->protocol1->endfile.buf, sb->compression, cconf))
+		sb->protocol1->endfile.buf, sb->compression, cconfs))
 	{
 		logp("could not make signature from: %s\n", finpath);
 		goto end;
 	}
 	else if(make_rev_delta(oldpath, sigpath,
-		delpath, sb->compression, cconf))
+		delpath, sb->compression, cconfs))
 	{
 		logp("could not make delta from: %s\n", oldpath);
 		goto end;
@@ -187,7 +187,7 @@ end:
 }
 
 static int inflate_oldfile(const char *opath, const char *infpath,
-	struct stat *statp, struct conf *conf)
+	struct stat *statp, struct conf **confs)
 {
 	int ret=0;
 
@@ -202,7 +202,7 @@ static int inflate_oldfile(const char *opath, const char *infpath,
 		if(close_fp(&dest))
 			logp("error closing %s in %s\n", infpath, __func__);
 	}
-	else if(zlib_inflate(NULL, opath, infpath, conf))
+	else if(zlib_inflate(NULL, opath, infpath, confs))
 	{
 		logp("zlib_inflate returned error\n");
 		ret=-1;
@@ -212,7 +212,7 @@ end:
 }
 
 static int inflate_or_link_oldfile(const char *oldpath, const char *infpath,
-	int compression, struct conf *cconf)
+	int compression, struct conf **cconfs)
 {
 	struct stat statp;
 
@@ -223,18 +223,18 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath,
 	}
 
 	if(dpthl_is_compressed(compression, oldpath))
-		return inflate_oldfile(oldpath, infpath, &statp, cconf);
+		return inflate_oldfile(oldpath, infpath, &statp, cconfs);
 
 	// If it was not a compressed file, just hard link it.
 	// It is possible that infpath already exists, if the server
 	// was interrupted on a previous run just after this point.
-	return do_link(oldpath, infpath, &statp, cconf,
+	return do_link(oldpath, infpath, &statp, cconfs,
 		1 /* allow overwrite of infpath */);
 }
 
 static int jiggle(struct sdirs *sdirs, struct fdirs *fdirs, struct sbuf *sb,
 	int hardlinked_current, const char *deltabdir, const char *deltafdir,
-	const char *sigpath, FILE **delfp, struct conf *cconf)
+	const char *sigpath, FILE **delfp, struct conf **cconfs)
 {
 	int ret=-1;
 	struct stat statp;
@@ -300,7 +300,7 @@ static int jiggle(struct sdirs *sdirs, struct fdirs *fdirs, struct sbuf *sb,
 
 		//logp("Fixing up: %s\n", datapth);
 		if(inflate_or_link_oldfile(oldpath, infpath,
-			sb->compression, cconf))
+			sb->compression, cconfs))
 		{
 			logp("error when inflating old file: %s\n", oldpath);
 			free(infpath);
@@ -308,12 +308,12 @@ static int jiggle(struct sdirs *sdirs, struct fdirs *fdirs, struct sbuf *sb,
 		}
 
 		if((lrs=do_patch(NULL, infpath, deltafpath, newpath,
-			cconf->compression,
-			sb->compression /* from the manifest */, cconf)))
+			get_int(cconfs[OPT_COMPRESSION]),
+			sb->compression /* from the manifest */, cconfs)))
 		{
 			logp("WARNING: librsync error when patching %s: %d\n",
 				oldpath, lrs);
-			cntr_add(cconf->cntr, CMD_WARNING, 1);
+			cntr_add(get_cntr(cconfs[OPT_CNTR]), CMD_WARNING, 1);
 			// Try to carry on with the rest of the backup
 			// regardless.
 			//ret=-1;
@@ -351,7 +351,7 @@ static int jiggle(struct sdirs *sdirs, struct fdirs *fdirs, struct sbuf *sb,
 		if(!hardlinked_current)
 		{
 			if(gen_rev_delta(sigpath, deltabdir,
-				oldpath, newpath, datapth, sb, cconf))
+				oldpath, newpath, datapth, sb, cconfs))
 					goto end;
 		}
 
@@ -400,7 +400,7 @@ static int jiggle(struct sdirs *sdirs, struct fdirs *fdirs, struct sbuf *sb,
 		// Use the old unchanged file.
 		// Hard link it first.
 		//logp("Hard linking to old file: %s\n", datapth);
-		if(do_link(oldpath, finpath, &statp, cconf,
+		if(do_link(oldpath, finpath, &statp, cconfs,
 		  0 /* do not overwrite finpath (should never need to) */))
 			goto end;
 		else
@@ -429,21 +429,22 @@ end:
 	return ret;
 }
 
-/* If cconf->hardlinked_archive set, hardlink everything.
+/* If OPT_HARDLINKED_ARCHIVE set, hardlink everything.
    If unset and there is more than one 'keep' value, periodically hardlink,
    based on the first 'keep' value. This is so that we have more choice
    of backups to delete than just the oldest.
 */
-static int need_hardlinked_archive(struct conf *cconf, unsigned long bno)
+static int need_hardlinked_archive(struct conf **cconfs, unsigned long bno)
 {
 	int kp=0;
 	int ret=0;
-	if(cconf->hardlinked_archive)
+	struct strlist *keep=get_strlist(cconfs[OPT_KEEP]);
+	if(get_int(cconfs[OPT_HARDLINKED_ARCHIVE]))
 	{
 		logp("New backup is a hardlinked_archive\n");
 		return 1;
 	}
-	if(!cconf->keep || !cconf->keep->next)
+	if(!keep || !keep->next)
 	{
 		logp("New backup is not a hardlinked_archive\n");
 		return 0;
@@ -451,7 +452,7 @@ static int need_hardlinked_archive(struct conf *cconf, unsigned long bno)
 
 	// If they have specified more than one 'keep' value, need to
 	// periodically hardlink, based on the first 'keep' value.
-	kp=cconf->keep->flag;
+	kp=keep->flag;
 
 	logp("First keep value: %d, backup: %lu (%lu-1=%lu)\n",
 			kp, bno, bno, bno-1);
@@ -464,7 +465,7 @@ static int need_hardlinked_archive(struct conf *cconf, unsigned long bno)
 }
 
 static int maybe_delete_files_from_manifest(const char *manifesttmp,
-	struct fdirs *fdirs, struct conf *cconf)
+	struct fdirs *fdirs, struct conf **cconfs)
 {
 	int ars=0;
 	int ret=-1;
@@ -485,22 +486,22 @@ static int maybe_delete_files_from_manifest(const char *manifesttmp,
 
         if(!(dfp=open_file(fdirs->deletionsfile, "rb"))
 	  || !(omzp=gzopen_file(fdirs->manifest, "rb"))
-	  || !(nmzp=gzopen_file(manifesttmp, comp_level(cconf)))
-	  || !(db=sbuf_alloc(cconf))
-	  || !(mb=sbuf_alloc(cconf)))
+	  || !(nmzp=gzopen_file(manifesttmp, comp_level(cconfs)))
+	  || !(db=sbuf_alloc(cconfs))
+	  || !(mb=sbuf_alloc(cconfs)))
 		goto end;
 
 	while(omzp || dfp)
 	{
 		if(dfp && !db->path.buf
-		  && (ars=sbufl_fill(db, NULL, dfp, NULL, cconf->cntr)))
+		  && (ars=sbufl_fill(db, NULL, dfp, NULL, get_cntr(cconfs[OPT_CNTR]))))
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
 			close_fp(&dfp);
 		}
 		if(omzp && !mb->path.buf
-		  && (ars=sbufl_fill(mb, NULL, NULL, omzp, cconf->cntr)))
+		  && (ars=sbufl_fill(mb, NULL, NULL, omzp, get_cntr(cconfs[OPT_CNTR]))))
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
@@ -567,7 +568,7 @@ end:
 /* Need to make all the stuff that this does atomic so that existing backups
    never get broken, even if somebody turns the power off on the server. */ 
 static int atomic_data_jiggle(struct sdirs *sdirs, struct fdirs *fdirs,
-	int hardlinked_current, struct conf *cconf, unsigned long bno)
+	int hardlinked_current, struct conf **cconfs, unsigned long bno)
 {
 	int ret=-1;
 	char *datapth=NULL;
@@ -601,7 +602,7 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct fdirs *fdirs,
 	if(!(deltabdir=prepend_s(fdirs->currentdup, "deltas.reverse"))
 	  || !(deltafdir=prepend_s(sdirs->finishing, "deltas.forward"))
 	  || !(sigpath=prepend_s(fdirs->currentdup, "sig.tmp"))
-	  || !(sb=sbuf_alloc(cconf)))
+	  || !(sb=sbuf_alloc(cconfs)))
 	{
 		log_out_of_memory(__func__);
 		goto error;
@@ -611,7 +612,8 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct fdirs *fdirs,
 
 	while(1)
 	{
-		switch(sbufl_fill(sb, NULL, NULL, zp, cconf->cntr))
+		switch(sbufl_fill(sb,
+			NULL, NULL, zp, get_cntr(cconfs[OPT_CNTR])))
 		{
 			case 0: break;
 			case 1: goto end;
@@ -620,10 +622,10 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct fdirs *fdirs,
 		if(sb->protocol1->datapth.buf)
 		{
 			if(write_status(CNTR_STATUS_SHUFFLING,
-				sb->protocol1->datapth.buf, cconf)
+				sb->protocol1->datapth.buf, cconfs)
 			  || jiggle(sdirs, fdirs, sb, hardlinked_current,
 				deltabdir, deltafdir,
-				sigpath, &delfp, cconf))
+				sigpath, &delfp, cconfs))
 					goto error;
 		}
 		sbuf_free_content(sb);
@@ -637,7 +639,7 @@ end:
 		goto error;
 	}
 
-	if(maybe_delete_files_from_manifest(tmpman, fdirs, cconf))
+	if(maybe_delete_files_from_manifest(tmpman, fdirs, cconfs))
 		goto error;
 
 	// Remove the temporary data directory, we have probably removed
@@ -658,7 +660,7 @@ error:
 	return ret;
 }
 
-int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf *cconf)
+int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf **cconfs)
 {
 	int ret=-1;
 	struct stat statp;
@@ -678,12 +680,12 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf *cconf)
 	  || fdirs_init(fdirs, sdirs, realcurrent))
 		goto end;
 
-	if(set_logfp(fdirs->logpath, cconf))
+	if(set_logfp(fdirs->logpath, cconfs))
 		goto end;
 
 	logp("Begin phase4 (shuffle files)\n");
 
-	if(write_status(CNTR_STATUS_SHUFFLING, NULL, cconf))
+	if(write_status(CNTR_STATUS_SHUFFLING, NULL, cconfs))
 		goto end;
 
 	if(!lstat(sdirs->current, &statp)) // Had a previous backup.
@@ -722,7 +724,7 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf *cconf)
 			}
 			logp("Duplicating current backup.\n");
 			if(recursive_hardlink(sdirs->current,
-				fdirs->currentduptmp, cconf)
+				fdirs->currentduptmp, cconfs)
 			// The rename race condition is of no consequence here
 			// because currentdup does not exist.
 			  || do_rename(fdirs->currentduptmp, fdirs->currentdup))
@@ -740,8 +742,8 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf *cconf)
 	bno=strtoul(tstmp, NULL, 10);
 
 	// Determine whether the new backup should be a hardlinked
-	// archive or not, from the conf and the backup number...
-	if(need_hardlinked_archive(cconf, bno))
+	// archive or not, from the confs and the backup number...
+	if(need_hardlinked_archive(cconfs, bno))
 	{
 		// Create a file to indicate that the previous backup
 		// does not have others depending on it.
@@ -761,14 +763,14 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf *cconf)
 	else
 		unlink(fdirs->hlinked);
 
-	if(atomic_data_jiggle(sdirs, fdirs, hardlinked_current, cconf, bno))
+	if(atomic_data_jiggle(sdirs, fdirs, hardlinked_current, cconfs, bno))
 	{
 		logp("could not finish up backup.\n");
 		goto end;
 	}
 
 	if(write_status(CNTR_STATUS_SHUFFLING,
-		"deleting temporary files", cconf))
+		"deleting temporary files", cconfs))
 			goto end;
 
 	// Remove the temporary data directory, we have now removed
@@ -788,14 +790,14 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf *cconf)
 	if(previous_backup && !hardlinked_current)
 	{
 		if(deleteme_move(sdirs->client,
-			fdirs->fullrealcurrent, realcurrent, cconf)
+			fdirs->fullrealcurrent, realcurrent, cconfs)
 		// I have tested that potential race conditions on the
 		// rename() are automatically recoverable here.
 		  || do_rename(fdirs->currentdup, fdirs->fullrealcurrent))
 			goto end;
 	}
 
-	if(deleteme_maybe_delete(cconf, sdirs->client))
+	if(deleteme_maybe_delete(cconfs, sdirs->client))
 		goto end;
 
 	logp("End phase4 (shuffle files)\n");

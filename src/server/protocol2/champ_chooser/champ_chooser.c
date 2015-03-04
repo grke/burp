@@ -1,6 +1,6 @@
 #include "include.h"
 
-int champ_chooser_init(const char *datadir, struct conf *conf)
+int champ_chooser_init(const char *datadir, struct conf **confs)
 {
 	int ret=-1;
 	struct stat statp;
@@ -15,7 +15,7 @@ int champ_chooser_init(const char *datadir, struct conf *conf)
 		ret=0;
 		goto end;
 	}
-	ret=candidate_load(NULL, sparse_path, conf);
+	ret=candidate_load(NULL, sparse_path, confs);
 end:
 	if(sparse_path) free(sparse_path);
 	return ret;
@@ -62,7 +62,7 @@ static int already_got_block(struct asfd *asfd, struct blk *blk)
 
 #define CHAMPS_MAX 10
 
-int deduplicate(struct asfd *asfd, struct conf *conf)
+int deduplicate(struct asfd *asfd, struct conf **confs)
 {
 	struct blk *blk;
 	struct incoming *in=asfd->in;
@@ -78,7 +78,7 @@ int deduplicate(struct asfd *asfd, struct conf *conf)
 	while((champ=candidates_choose_champ(in, champ_last)))
 	{
 //		printf("Got champ: %s %d\n", champ->path, *(champ->score));
-		if(hash_load(champ->path, conf)) return -1;
+		if(hash_load(champ->path, confs)) return -1;
 		if(++count==CHAMPS_MAX) break;
 		champ_last=champ;
 	}
@@ -106,7 +106,7 @@ int deduplicate(struct asfd *asfd, struct conf *conf)
 
 	logp("%s: %04d/%04d - %04d/%04d\n",
 		asfd->desc, count, candidates_len, in->got, blk_count);
-	//cntr_add_same_val(conf->cntr, CMD_DATA, in->got);
+	//cntr_add_same_val(get_cntr(confs[OPT_CNTR]), CMD_DATA, in->got);
 
 	// Start the incoming array again.
 	in->size=0;

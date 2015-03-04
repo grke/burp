@@ -25,9 +25,9 @@ alloc_count++;
 	return sb;
 }
 
-struct sbuf *sbuf_alloc(struct conf *conf)
+struct sbuf *sbuf_alloc(struct conf **confs)
 {
-	return sbuf_alloc_protocol(conf->protocol);
+	return sbuf_alloc_protocol(get_e_protocol(confs[OPT_PROTOCOL]));
 }
 
 void sbuf_free_content(struct sbuf *sb)
@@ -101,7 +101,7 @@ int sbuf_pathcmp(struct sbuf *a, struct sbuf *b)
 }
 
 
-int sbuf_open_file(struct sbuf *sb, struct asfd *asfd, struct conf *conf)
+int sbuf_open_file(struct sbuf *sb, struct asfd *asfd, struct conf **confs)
 {
 	BFILE *bfd=&sb->protocol2->bfd;
 #ifdef HAVE_WIN32
@@ -111,18 +111,18 @@ int sbuf_open_file(struct sbuf *sb, struct asfd *asfd, struct conf *conf)
 #endif
 	{
 		// This file is no longer available.
-		logw(asfd, conf, "%s has vanished\n", sb->path.buf);
+		logw(asfd, confs, "%s has vanished\n", sb->path.buf);
 		return -1;
 	}
-	sb->compression=conf->compression;
+	sb->compression=get_int(confs[OPT_COMPRESSION]);
 	// Encryption not yet implemented in protocol2.
 	//sb->protocol2->encryption=conf->protocol2->encryption_password?1:0;
 	if(attribs_encode(sb)) return -1;
 
 	if(bfd->open_for_send(bfd, asfd,
-		sb->path.buf, sb->winattr, conf->atime, conf))
+		sb->path.buf, sb->winattr, get_int(confs[OPT_ATIME]), confs))
 	{
-		logw(asfd, conf, "Could not open %s\n", sb->path.buf);
+		logw(asfd, confs, "Could not open %s\n", sb->path.buf);
 		return -1;
 	}
 	return 0;
@@ -142,7 +142,7 @@ ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize)
 }
 
 int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
-	struct blk *blk, const char *datpath, struct conf *conf)
+	struct blk *blk, const char *datpath, struct conf **confs)
 {
 	static unsigned int s;
 	static char lead[5]="";
@@ -221,8 +221,7 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 					free(sb->link.buf);
 					sb->link.buf=NULL;
 				}
-				iobuf_copy(&sb->attr, rbuf);
-				rbuf->buf=NULL;
+				iobuf_move(&sb->attr, rbuf);
 				attribs_decode(sb);
 				break;
 
@@ -251,8 +250,7 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 				{
 					if(cmd_is_link(rbuf->cmd))
 					{
-						iobuf_copy(&sb->link, rbuf);
-						rbuf->buf=NULL;
+						iobuf_move(&sb->link, rbuf);
 						sb->flags &= ~SBUF_NEED_LINK;
 						return 0;
 					}
@@ -264,8 +262,7 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 				}
 				else
 				{
-					iobuf_copy(&sb->path, rbuf);
-					rbuf->buf=NULL;
+					iobuf_move(&sb->path, rbuf);
 					if(cmd_is_link(rbuf->cmd))
 						sb->flags |= SBUF_NEED_LINK;
 					else
@@ -299,21 +296,19 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 				// Need to write the block to disk.
 				// Client only.
 				if(!blk) break;
-//				printf("got data: %d\n", rbuf->len);
 				blk->data=rbuf->buf;
 				blk->length=rbuf->len;
 				rbuf->buf=NULL;
 				return 0;
 			case CMD_WARNING:
 				logp("WARNING: %s\n", rbuf->buf);
-				if(conf) cntr_add(conf->cntr, CMD_WARNING, 1);
+				if(confs) cntr_add(get_cntr(confs[OPT_CNTR]), CMD_WARNING, 1);
 				break;
 			case CMD_GEN:
 				if(!strcmp(rbuf->buf, "restoreend")
 				  || !strcmp(rbuf->buf, "phase1end")
 				  || !strcmp(rbuf->buf, "backupphase2"))
 				{
-//					printf("HERE: %s\n", rbuf->buf);
 					ret=1;
 					goto end;
 				}
@@ -329,8 +324,7 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 					goto end;
 				// Fall through.
 			case CMD_MANIFEST:
-				iobuf_copy(&sb->path, rbuf);
-				rbuf->buf=NULL;
+				iobuf_move(&sb->path, rbuf);
 				return 0;
 			case CMD_ERROR:
 				printf("got error: %s\n", rbuf->buf);
@@ -351,13 +345,13 @@ end:
 }
 
 int sbuf_fill_from_gzfile(struct sbuf *sb, struct asfd *asfd,
-	gzFile zp, struct blk *blk, const char *datpath, struct conf *conf)
+	gzFile zp, struct blk *blk, const char *datpath, struct conf **confs)
 {
-	return sbuf_fill(sb, asfd, zp, blk, datpath, conf);
+	return sbuf_fill(sb, asfd, zp, blk, datpath, confs);
 }
 
 int sbuf_fill_from_net(struct sbuf *sb, struct asfd *asfd,
-	struct blk *blk, struct conf *conf)
+	struct blk *blk, struct conf **confs)
 {
-	return sbuf_fill(sb, asfd, NULL, blk, NULL, conf);
+	return sbuf_fill(sb, asfd, NULL, blk, NULL, confs);
 }

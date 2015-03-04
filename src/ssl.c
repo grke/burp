@@ -3,15 +3,15 @@
 
 static const char *pass=NULL;
 
-int ssl_load_dh_params(SSL_CTX *ctx, struct conf *conf)
+int ssl_load_dh_params(SSL_CTX *ctx, struct conf **confs)
 {
 	DH *ret=0;
 	BIO *bio=NULL;
+	const char *ssl_dhfile=get_string(confs[OPT_SSL_DHFILE]);
 
-	if(!(bio=BIO_new_file(conf->ssl_dhfile, "r")))
+	if(!(bio=BIO_new_file(ssl_dhfile, "r")))
 	{
-		logp_ssl_err("Couldn't open ssl_dhfile: %s\n",
-			conf->ssl_dhfile);
+		logp_ssl_err("Couldn't open ssl_dhfile: %s\n", ssl_dhfile);
 		return -1;
 	}
 
@@ -39,26 +39,26 @@ void ssl_load_globals(void)
 	SSL_load_error_strings();
 }
 
-static int ssl_load_keys_and_certs(SSL_CTX *ctx, struct conf *conf)
+static int ssl_load_keys_and_certs(SSL_CTX *ctx, struct conf **confs)
 {
 	char *ssl_key=NULL;
 	struct stat statp;
+	const char *ssl_cert=get_string(confs[OPT_SSL_CERT]);
+	const char *ssl_cert_ca=get_string(confs[OPT_SSL_CERT_CA]);
 
 	// Load our keys and certificates if the path exists.
-	if(conf->ssl_cert && !lstat(conf->ssl_cert, &statp)
-	  && !SSL_CTX_use_certificate_chain_file(ctx, conf->ssl_cert))
+	if(ssl_cert && !lstat(ssl_cert, &statp)
+	  && !SSL_CTX_use_certificate_chain_file(ctx, ssl_cert))
 	{
-		logp_ssl_err("Can't read ssl_cert: %s\n", conf->ssl_cert);
+		logp_ssl_err("Can't read ssl_cert: %s\n", ssl_cert);
 		return -1;
 	}
 
-	pass=conf->ssl_key_password;
+	pass=get_string(confs[OPT_SSL_KEY_PASSWORD]);
 	SSL_CTX_set_default_passwd_cb(ctx, password_cb);
 
-	if(conf->ssl_key)
-		ssl_key=conf->ssl_key;
-	else
-		ssl_key=conf->ssl_cert;
+	ssl_key=get_string(confs[OPT_SSL_KEY]);
+	if(!ssl_key) ssl_key=get_string(confs[OPT_SSL_CERT]);
 
 	// Load the key file, if the path exists.
 	if(ssl_key && !lstat(ssl_key, &statp)
@@ -69,34 +69,33 @@ static int ssl_load_keys_and_certs(SSL_CTX *ctx, struct conf *conf)
 	}
 
 	// Load the CAs we trust, if the path exists.
-	if(conf->ssl_cert_ca && !lstat(conf->ssl_cert_ca, &statp)
-	  && !SSL_CTX_load_verify_locations(ctx, conf->ssl_cert_ca, 0))
+	if(ssl_cert_ca && !lstat(ssl_cert_ca, &statp)
+	  && !SSL_CTX_load_verify_locations(ctx, ssl_cert_ca, 0))
 	{
-		logp_ssl_err("Can't read ssl_cert_ca file: %s\n",
-			conf->ssl_cert_ca);
+		logp_ssl_err("Can't read ssl_cert_ca file: %s\n", ssl_cert_ca);
 		return -1;
 	}
 
 	return 0;
 }
 
-SSL_CTX *ssl_initialise_ctx(struct conf *conf)
+SSL_CTX *ssl_initialise_ctx(struct conf **confs)
 {
 	SSL_CTX *ctx=NULL;
 	SSL_METHOD *meth=NULL;
+	const char *ssl_ciphers=get_string(confs[OPT_SSL_CIPHERS]);
 
 	// Create our context.
 	meth=(SSL_METHOD *)SSLv23_method();
 	ctx=(SSL_CTX *)SSL_CTX_new(meth);
 
-	if(ssl_load_keys_and_certs(ctx, conf)) return NULL;
+	if(ssl_load_keys_and_certs(ctx, confs)) return NULL;
 
-	if(conf->ssl_ciphers)
-		SSL_CTX_set_cipher_list(ctx, conf->ssl_ciphers);
+	if(ssl_ciphers)
+		SSL_CTX_set_cipher_list(ctx, ssl_ciphers);
 
 	// Unclear what is negotiated, so keep quiet until I figure that out.
-	//logp("SSL zlib compression: %d\n", conf->ssl_compression);
-	if(!conf->ssl_compression)
+	if(!get_int(confs[OPT_SSL_COMPRESSION]))
 		SSL_CTX_set_options(ctx, SSL_OP_NO_COMPRESSION);
 	// Default is zlib5, which needs no option set.
 
@@ -204,12 +203,13 @@ static int setenv_x509_serialnumber(ASN1_INTEGER *i, const char *env)
 }
 #endif
 
-int ssl_check_cert(SSL *ssl, struct conf *conf)
+int ssl_check_cert(SSL *ssl, struct conf **confs)
 {
 	X509 *peer;
 	char tmpbuf[256]="";
+	const char *ssl_peer_cn=get_string(confs[OPT_SSL_PEER_CN]);
 
-	if(!conf->ssl_peer_cn)
+	if(!ssl_peer_cn)
 	{
 		logp("ssl_peer_cn not set.\n");
 		return -1;
@@ -231,10 +231,10 @@ int ssl_check_cert(SSL *ssl, struct conf *conf)
 
 	X509_NAME_get_text_by_NID(X509_get_subject_name(peer),
 		NID_commonName, tmpbuf, sizeof(tmpbuf));
-	if(strcasecmp(tmpbuf, conf->ssl_peer_cn))
+	if(strcasecmp(tmpbuf, ssl_peer_cn))
 	{
 		logp("cert common name doesn't match configured ssl_peer_cn\n");
-		logp("'%s'!='%s'\n", tmpbuf, conf->ssl_peer_cn);
+		logp("'%s'!='%s'\n", tmpbuf, ssl_peer_cn);
 		return -1;
 	}
 #ifndef HAVE_WIN32

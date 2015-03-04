@@ -1,15 +1,16 @@
 #include "include.h"
 
-static char *deleteme_get_path(const char *basedir, struct conf *cconf)
+static char *deleteme_get_path(const char *basedir, struct conf **cconfs)
 {
 	static char *deleteme=NULL;
-	if(deleteme) { free(deleteme); deleteme=NULL; }
-	if(cconf->manual_delete) return cconf->manual_delete;
+	char *manual_delete=get_string(cconfs[OPT_MANUAL_DELETE]);
+	free_w(&deleteme);
+	if(manual_delete) return manual_delete;
 	return prepend_s(basedir, "deleteme");
 }
 
 int deleteme_move(const char *basedir, const char *fullpath, const char *path,
-	struct conf *cconf)
+	struct conf **cconfs)
 {
 	int ret=-1;
 	char *tmp=NULL;
@@ -27,7 +28,7 @@ int deleteme_move(const char *basedir, const char *fullpath, const char *path,
 		goto end;
 	}
 
-	if(!(deleteme=deleteme_get_path(basedir, cconf))
+	if(!(deleteme=deleteme_get_path(basedir, cconfs))
 	  || !(tmp=prepend_s(deleteme, path))
 	  || mkpath(&tmp, deleteme)
 	  || !(dest=prepend("", tmp, strlen(tmp), "")))
@@ -55,12 +56,12 @@ end:
 	return ret;
 }
 
-int deleteme_maybe_delete(struct conf *cconf, const char *basedir)
+int deleteme_maybe_delete(struct conf **cconfs, const char *basedir)
 {
 	char *deleteme;
 	// If manual_delete is on, they will have to delete the files
 	// manually, via a cron job or something.
-	if(cconf->manual_delete) return 0;
-	if(!(deleteme=deleteme_get_path(basedir, cconf))) return -1;
+	if(get_string(cconfs[OPT_MANUAL_DELETE])) return 0;
+	if(!(deleteme=deleteme_get_path(basedir, cconfs))) return -1;
 	return recursive_delete(deleteme, NULL, 1 /* delete all */);
 }

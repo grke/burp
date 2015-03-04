@@ -8,9 +8,9 @@
     defined(HAVE_NETBSD_OS)
 extern int has_acl(const char *path, enum cmd cmd);
 extern int get_acl(struct asfd *asfd, struct sbuf *sb,
-	char **acltext, size_t *alen, struct conf *conf);
+	char **acltext, size_t *alen, struct conf **confs);
 extern int set_acl(struct asfd *asfd, const char *path, struct sbuf *sb,
-	const char *acltext, size_t alen, char metacmd, struct conf *conf);
+	const char *acltext, size_t alen, char metacmd, struct conf **confs);
 #endif
 #endif
 

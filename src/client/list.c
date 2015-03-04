@@ -113,7 +113,7 @@ static void ls_long_output_json(struct sbuf *sb)
 	yajl_map_close_w();
 }
 
-static void json_backup(char *statbuf, struct conf *conf)
+static void json_backup(char *statbuf, struct conf **confs)
 {
 	char *cp=NULL;
 	if((cp=strstr(statbuf, " (deletable)")))
@@ -133,12 +133,14 @@ static void json_backup(char *statbuf, struct conf *conf)
 	yajl_gen_str_pair_w("timestamp", statbuf);
 	yajl_gen_int_pair_w("deletable", cp?(long long)1:(long long)0);
 
-	if(conf->backup)
+	if(get_string(confs[OPT_BACKUP]))
 	{
+		const char *browsedir=get_string(confs[OPT_BROWSEDIR]);
+		const char *regex=get_string(confs[OPT_REGEX]);
 		yajl_gen_str_pair_w("directory", 
-			conf->browsedir?conf->browsedir:"");
+			browsedir?browsedir:"");
 		yajl_gen_str_pair_w("regex", 
-			conf->regex?conf->regex:"");
+			regex?regex:"");
 		yajl_gen_str_w("items");
 		yajl_array_open_w();
 		items_open=1;
@@ -176,26 +178,29 @@ static void list_item(int json, enum action act, struct sbuf *sb)
 }
 
 int do_list_client(struct asfd *asfd,
-	enum action act, int json, struct conf *conf)
+	enum action act, int json, struct conf **confs)
 {
 	int ret=-1;
 	char msg[512]="";
 	char *dpth=NULL;
 	struct sbuf *sb=NULL;
 	struct iobuf *rbuf=asfd->rbuf;
+	const char *backup=get_string(confs[OPT_BACKUP]);
+	const char *browsedir=get_string(confs[OPT_BROWSEDIR]);
+	const char *regex=get_string(confs[OPT_REGEX]);
 //logp("in do_list\n");
 
-	if(conf->browsedir)
+	if(browsedir)
 	  snprintf(msg, sizeof(msg), "listb %s:%s",
-		conf->backup?conf->backup:"", conf->browsedir);
+		backup?backup:"", browsedir);
 	else
 	  snprintf(msg, sizeof(msg), "list %s:%s",
-		conf->backup?conf->backup:"", conf->regex?conf->regex:"");
+		backup?backup:"", regex?regex:"");
 	if(asfd->write_str(asfd, CMD_GEN, msg)
 	  || asfd->read_expect(asfd, CMD_GEN, "ok"))
 		goto end;
 
-	if(!(sb=sbuf_alloc(conf))) goto end;
+	if(!(sb=sbuf_alloc(confs))) goto end;
 	iobuf_init(&sb->path);
 	iobuf_init(&sb->link);
 	iobuf_init(&sb->attr);
@@ -221,16 +226,16 @@ int do_list_client(struct asfd *asfd,
 		if(rbuf->cmd==CMD_TIMESTAMP)
 		{
 			// A backup timestamp, just print it.
-			if(json) json_backup(rbuf->buf, conf);
+			if(json) json_backup(rbuf->buf, confs);
 			else
 			{
 				printf("Backup: %s\n", rbuf->buf);
-				if(conf->browsedir)
+				if(browsedir)
 					printf("Listing directory: %s\n",
-					       conf->browsedir);
-				if(conf->regex)
+					       browsedir);
+				if(regex)
 					printf("With regex: %s\n",
-					       conf->regex);
+					       regex);
 			}
 			continue;
 		}

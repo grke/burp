@@ -2,33 +2,34 @@
 #include "../cmd.h"
 
 static int diff_manifest(struct asfd *asfd,
-	const char *fullpath, struct conf *conf)
+	const char *fullpath, struct conf **confs)
 {
 	int ars=0;
 	int ret=0;
 	struct sbuf *sb=NULL;
 	struct manio *manio=NULL;
 	char *manifest_dir=NULL;
+	enum protocol protocol=get_e_protocol(confs[OPT_PROTOCOL]);
 
 	if(!(manifest_dir=prepend_s(fullpath,
-		conf->protocol==PROTO_1?"manifest.gz":"manifest"))
+		protocol==PROTO_1?"manifest.gz":"manifest"))
 	  || !(manio=manio_alloc())
 	  || manio_init_read(manio, manifest_dir)
-	  || !(sb=sbuf_alloc(conf)))
+	  || !(sb=sbuf_alloc(confs)))
 	{
 		log_and_send_oom(asfd, __func__);
 		goto error;
 	}
-	manio_set_protocol(manio, conf->protocol);
+	manio_set_protocol(manio, protocol);
 
 	while(1)
 	{
-		if((ars=manio_sbuf_fill(manio, asfd, sb, NULL, NULL, conf))<0)
+		if((ars=manio_sbuf_fill(manio, asfd, sb, NULL, NULL, confs))<0)
 			goto error;
 		else if(ars>0)
 			goto end; // Finished OK.
 
-		if(write_status(CNTR_STATUS_DIFFING, sb->path.buf, conf))
+		if(write_status(CNTR_STATUS_DIFFING, sb->path.buf, confs))
 			goto error;
 
 		if(asfd->write(asfd, &sb->attr)
@@ -59,7 +60,7 @@ static int send_backup_name_to_client(struct asfd *asfd, struct bu *bu)
 	return asfd->write_str(asfd, CMD_TIMESTAMP, msg);
 }
 
-int do_diff_server(struct asfd *asfd, struct sdirs *sdirs, struct conf *conf,
+int do_diff_server(struct asfd *asfd, struct sdirs *sdirs, struct conf **confs,
 	const char *backup)
 {
 	int ret=-1;
@@ -71,7 +72,7 @@ int do_diff_server(struct asfd *asfd, struct sdirs *sdirs, struct conf *conf,
 	printf("in do_diff_server\n");
 
 	if(bu_get_list(sdirs, &bu_list)
-	  || write_status(CNTR_STATUS_DIFFING, NULL, conf))
+	  || write_status(CNTR_STATUS_DIFFING, NULL, confs))
 		goto end;
 
 	if(backup && *backup) bno=strtoul(backup, NULL, 10);
@@ -87,7 +88,7 @@ int do_diff_server(struct asfd *asfd, struct sdirs *sdirs, struct conf *conf,
 			{
 				found=1;
 				if(send_backup_name_to_client(asfd, bu)
-				  || diff_manifest(asfd, bu->path, conf))
+				  || diff_manifest(asfd, bu->path, confs))
 					goto end;
 			}
 		}

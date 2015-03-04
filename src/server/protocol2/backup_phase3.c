@@ -34,13 +34,13 @@ static int hooks_alloc(struct hooks **hnew, char **path, char **fingerprints)
 // Return 0 for OK, -1 for error, 1 for finished reading the file.
 static int get_next_set_of_hooks(struct hooks **hnew, struct sbuf *sb,
 	gzFile spzp, char **path, char **fingerprints,
-	struct conf *conf)
+	struct conf **confs)
 {
 	while(1)
 	{
 		switch(sbuf_fill_from_gzfile(sb,
 			NULL /* struct async */,
-			spzp, NULL, NULL, conf))
+			spzp, NULL, NULL, confs))
 		{
 			case -1: goto error;
 			case 1:
@@ -158,7 +158,7 @@ static int try_to_get_lock(struct lock *lock)
 
 /* Merge two files of sorted sparse indexes into each other. */
 static int merge_sparse_indexes(const char *srca, const char *srcb,
-	const char *dst, struct conf *conf)
+	const char *dst, struct conf **confs)
 {
 	int fcmp;
 	int ret=-1;
@@ -174,8 +174,8 @@ static int merge_sparse_indexes(const char *srca, const char *srcb,
 	char *apath=NULL;
 	char *bpath=NULL;
 
-	if(!(asb=sbuf_alloc(conf))
-	  || (srcb && !(bsb=sbuf_alloc(conf))))
+	if(!(asb=sbuf_alloc(confs))
+	  || (srcb && !(bsb=sbuf_alloc(confs))))
 		goto end;
 	if(build_path_w(dst))
 		goto end;
@@ -191,7 +191,7 @@ static int merge_sparse_indexes(const char *srca, const char *srcb,
 		  && !anew)
 		{
 			switch(get_next_set_of_hooks(&anew, asb, azp,
-				&apath, &afingerprints, conf))
+				&apath, &afingerprints, confs))
 			{
 				case -1: goto end;
 				case 1: gzclose_fp(&azp); // Finished OK.
@@ -203,7 +203,7 @@ static int merge_sparse_indexes(const char *srca, const char *srcb,
 		  && !bnew)
 		{
 			switch(get_next_set_of_hooks(&bnew, bsb, bzp,
-				&bpath, &bfingerprints, conf))
+				&bpath, &bfingerprints, confs))
 			{
 				case -1: goto end;
 				case 1: gzclose_fp(&bzp); // Finished OK.
@@ -268,7 +268,7 @@ end:
 }
 
 static int merge_into_global_sparse(const char *sparse, const char *global,
-	struct conf *conf)
+	struct conf **confs)
 {
 	int ret=-1;
 	char *tmpfile=NULL;
@@ -289,7 +289,7 @@ static int merge_into_global_sparse(const char *sparse, const char *global,
 
 	if(!lstat(global, &statp)) globalsrc=global;
 
-	if(merge_sparse_indexes(sparse, globalsrc, tmpfile, conf))
+	if(merge_sparse_indexes(sparse, globalsrc, tmpfile, confs))
 		goto end;
 
 	// FIX THIS: nasty race condition needs to be recoverable.
@@ -305,7 +305,7 @@ end:
 }
 
 static int sparse_generation(struct manio *newmanio, uint64_t fcount,
-	struct sdirs *sdirs, struct conf *conf)
+	struct sdirs *sdirs, struct conf **confs)
 {
 	int ret=-1;
 	uint64_t i=0;
@@ -360,7 +360,7 @@ static int sparse_generation(struct manio *newmanio, uint64_t fcount,
 				goto end;
 			if(i+1<fcount && !(srcb=prepend_s(srcdir, compb)))
 				goto end;
-			if(merge_sparse_indexes(srca, srcb, dst, conf))
+			if(merge_sparse_indexes(srca, srcb, dst, confs))
 				goto end;
 		}
 		if((fcount=i/2)<2) break;
@@ -374,7 +374,7 @@ static int sparse_generation(struct manio *newmanio, uint64_t fcount,
 	// recoverable.
 	if(do_rename(dst, sparse)) goto end;
 
-	if(merge_into_global_sparse(sparse, global_sparse, conf)) goto end;
+	if(merge_into_global_sparse(sparse, global_sparse, confs)) goto end;
 
 	ret=0;
 end:
@@ -392,7 +392,7 @@ end:
 // This is basically backup_phase3_server() from protocol1. It used to merge the
 // unchanged and changed data into a single file. Now it splits the manifests
 // into several files.
-int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf *conf)
+int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 {
 	int ret=1;
 	int pcmp=0;
@@ -416,12 +416,13 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf *conf)
 	  || !(hooksdir=prepend_s(sdirs->rmanifest, "hooks"))
 	  || !(dindexdir=prepend_s(sdirs->rmanifest, "dindex"))
 	  || manio_init_write(newmanio, sdirs->rmanifest)
-	  || manio_init_write_hooks(newmanio, conf->directory, hooksdir)
+	  || manio_init_write_hooks(newmanio,
+		get_string(confs[OPT_DIRECTORY]), hooksdir)
 	  || manio_init_write_dindex(newmanio, dindexdir)
 	  || manio_init_read(chmanio, sdirs->changed)
 	  || manio_init_read(unmanio, sdirs->unchanged)
-	  || !(usb=sbuf_alloc(conf))
-	  || !(csb=sbuf_alloc(conf)))
+	  || !(usb=sbuf_alloc(confs))
+	  || !(csb=sbuf_alloc(confs)))
 		goto end;
 
 	while(!finished_ch || !finished_un)
@@ -433,7 +434,7 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf *conf)
 		  && !usb->path.buf)
 		{
 			switch(manio_sbuf_fill(unmanio, NULL /* no async */,
-				usb, NULL, NULL, conf))
+				usb, NULL, NULL, confs))
 			{
 				case -1: goto end;
 				case 1: finished_un++;
@@ -445,7 +446,7 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf *conf)
 		  && !csb->path.buf)
 		{
 			switch(manio_sbuf_fill(chmanio, NULL /* no async */,
-				csb, NULL, NULL, conf))
+				csb, NULL, NULL, confs))
 			{
 				case -1: goto end;
 				case 1: finished_ch++;
@@ -456,7 +457,7 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf *conf)
 		{
 			switch(manio_copy_entry(NULL /* no async */,
 				&usb, usb,
-				&blk, unmanio, newmanio, conf))
+				&blk, unmanio, newmanio, confs))
 			{
 				case -1: goto end;
 				case 1: finished_un++;
@@ -465,7 +466,7 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf *conf)
 		else if((!usb || !usb->path.buf) && (csb && csb->path.buf))
 		{
 			switch(manio_copy_entry(NULL /* no async */,
-				&csb, csb, &blk, chmanio, newmanio, conf))
+				&csb, csb, &blk, chmanio, newmanio, confs))
 			{
 				case -1: goto end;
 				case 1: finished_ch++;
@@ -479,7 +480,7 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf *conf)
 		{
 			// They were the same - write one.
 			switch(manio_copy_entry(NULL /* no async */,
-				&csb, csb, &blk, chmanio, newmanio, conf))
+				&csb, csb, &blk, chmanio, newmanio, confs))
 			{
 				case -1: goto end;
 				case 1: finished_ch++;
@@ -488,7 +489,7 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf *conf)
 		else if(pcmp<0)
 		{
 			switch(manio_copy_entry(NULL /* no async */,
-				&usb, usb, &blk, unmanio, newmanio, conf))
+				&usb, usb, &blk, unmanio, newmanio, confs))
 			{
 				case -1: goto end;
 				case 1: finished_un++;
@@ -497,7 +498,7 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf *conf)
 		else
 		{
 			switch(manio_copy_entry(NULL /* no async */,
-				&csb, csb, &blk, chmanio, newmanio, conf))
+				&csb, csb, &blk, chmanio, newmanio, confs))
 			{
 				case -1: goto end;
 				case 1: finished_ch++;
@@ -513,7 +514,7 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf *conf)
 	  || manio_init_read(newmanio, sdirs->rmanifest))
 		goto end;
 
-	if(sparse_generation(newmanio, fcount, sdirs, conf))
+	if(sparse_generation(newmanio, fcount, sdirs, confs))
 		goto end;
 
 	recursive_delete(chmanio->directory, NULL, 1);

@@ -44,7 +44,7 @@ end:
 }
 
 static int browse_manifest_start(struct asfd *srfd, struct cstat *cstat,
-	struct bu *bu, const char *browse, struct conf *conf)
+	struct bu *bu, const char *browse, struct conf **confs)
 {
 	int ret=-1;
 	char *manifest=NULL;
@@ -58,7 +58,7 @@ static int browse_manifest_start(struct asfd *srfd, struct cstat *cstat,
 	  || !(sb=sbuf_alloc_protocol(cstat->protocol)))
 		goto end;
 	manio_set_protocol(manio, cstat->protocol);
-	if(conf->monitor_browse_cache)
+	if(get_int(confs[OPT_MONITOR_BROWSE_CACHE]))
 		ret=cache_load(srfd, manio, sb, cstat, bu);
 	else
 		ret=do_browse_manifest(srfd, manio, sb, browse);
@@ -70,14 +70,14 @@ end:
 }
 
 int browse_manifest(struct asfd *srfd, struct cstat *cstat,
-	struct bu *bu, const char *browse, struct conf *conf)
+	struct bu *bu, const char *browse, struct conf **confs)
 {
-	if(conf->monitor_browse_cache)
+	if(get_int(confs[OPT_MONITOR_BROWSE_CACHE]))
 	{
 		if(!cache_loaded(cstat, bu)
-		  && browse_manifest_start(srfd, cstat, bu, browse, conf))
+		  && browse_manifest_start(srfd, cstat, bu, browse, confs))
 			return -1;
 		return cache_lookup(browse);
 	}
-	return browse_manifest_start(srfd, cstat, bu, browse, conf);
+	return browse_manifest_start(srfd, cstat, bu, browse, confs);
 }

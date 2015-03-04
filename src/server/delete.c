@@ -22,9 +22,9 @@ static int recursive_delete_w(struct sdirs *sdirs, struct bu *bu)
 }
 
 // The failure conditions here are dealt with by the rubble cleaning code.
-int delete_backup(struct sdirs *sdirs, struct conf *conf, struct bu *bu)
+int delete_backup(struct sdirs *sdirs, struct conf **confs, struct bu *bu)
 {
-	logp("deleting %s backup %lu\n", conf->cname, bu->bno);
+	logp("deleting %s backup %lu\n", get_string(confs[OPT_CNAME]), bu->bno);
 
 	if(!bu->next && !bu->prev)
 	{
@@ -76,7 +76,7 @@ int delete_backup(struct sdirs *sdirs, struct conf *conf, struct bu *bu)
 	return 0;
 }
 
-static int range_loop(struct sdirs *sdirs, struct conf *cconf,
+static int range_loop(struct sdirs *sdirs, struct conf **cconfs,
 	struct strlist *keep, unsigned long rmin, struct bu *bu_list,
 	struct bu *last, int *deleted)
 {
@@ -110,7 +110,7 @@ static int range_loop(struct sdirs *sdirs, struct conf *cconf,
 			  && bu->trbno<=r
 			  && (bu->flags & BU_DELETABLE))
 			{
-				if(delete_backup(sdirs, cconf, bu)) return -1;
+				if(delete_backup(sdirs, cconfs, bu)) return -1;
 				(*deleted)++;
 				if(--count<=1) break;
 			}
@@ -120,7 +120,7 @@ static int range_loop(struct sdirs *sdirs, struct conf *cconf,
 	return 0;
 }
 
-static int do_delete_backups(struct sdirs *sdirs, struct conf *cconf)
+static int do_delete_backups(struct sdirs *sdirs, struct conf **cconfs)
 {
 	int ret=-1;
 	int deleted=0;
@@ -137,12 +137,12 @@ static int do_delete_backups(struct sdirs *sdirs, struct conf *cconf)
 
 	// For each of the 'keep' values, generate ranges in which to keep
 	// one backup.
-	for(keep=cconf->keep; keep; keep=keep->next)
+	for(keep=get_strlist(cconfs[OPT_KEEP]); keep; keep=keep->next)
         {
 		unsigned long rmin=0;
 		rmin=m * keep->flag;
 
-		if(keep->next && range_loop(sdirs, cconf,
+		if(keep->next && range_loop(sdirs, cconfs,
 			keep, rmin, bu_list, last, &deleted))
 				goto end;
 		m=rmin;
@@ -153,7 +153,7 @@ static int do_delete_backups(struct sdirs *sdirs, struct conf *cconf)
 
 	for(; bu; bu=bu->prev)
 	{
-		if(delete_backup(sdirs, cconf, bu))
+		if(delete_backup(sdirs, cconfs, bu))
 			goto end;
 		deleted++;
 	}
@@ -164,11 +164,11 @@ end:
 	return ret;
 }
 
-int delete_backups(struct sdirs *sdirs, struct conf *cconf)
+int delete_backups(struct sdirs *sdirs, struct conf **cconfs)
 {
 	// Deleting a backup might mean that more become available to delete.
 	// Keep trying to delete until we cannot delete any more.
-	while(1) switch(do_delete_backups(sdirs, cconf))
+	while(1) switch(do_delete_backups(sdirs, cconfs))
 	{
 		case 0: return 0;
 		case -1: return -1;
@@ -178,7 +178,7 @@ int delete_backups(struct sdirs *sdirs, struct conf *cconf)
 }
 
 int do_delete_server(struct asfd *asfd,
-	struct sdirs *sdirs, struct conf *conf, const char *backup)
+	struct sdirs *sdirs, struct conf **cconfs, const char *backup)
 {
 	int ret=-1;
 	int found=0;
@@ -189,7 +189,7 @@ int do_delete_server(struct asfd *asfd,
 	logp("in do_delete\n");
 
 	if(bu_get_list(sdirs, &bu_list)
-	  || write_status(CNTR_STATUS_DELETING, NULL, conf))
+	  || write_status(CNTR_STATUS_DELETING, NULL, cconfs))
 		goto end;
 
 	if(backup && *backup) bno=strtoul(backup, NULL, 10);
@@ -205,7 +205,7 @@ int do_delete_server(struct asfd *asfd,
 			{
 				found=1;
 				if(asfd->write_str(asfd, CMD_GEN, "ok")
-				  || delete_backup(sdirs, conf, bu))
+				  || delete_backup(sdirs, cconfs, bu))
 					goto end;
 			}
 			else

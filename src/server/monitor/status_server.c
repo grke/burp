@@ -68,7 +68,7 @@ void dump_cbno(struct cstat *clist, const char *msg)
 */
 
 static int parse_client_data(struct asfd *srfd,
-	struct cstat *clist, struct conf *conf)
+	struct cstat *clist, struct conf **confs)
 {
 	int ret=0;
 	char *client=NULL;
@@ -140,7 +140,7 @@ static int parse_client_data(struct asfd *srfd,
 			goto error;
 	}
 
-	if(json_send(srfd, clist, cstat, bu, logfile, browse, conf))
+	if(json_send(srfd, clist, cstat, bu, logfile, browse, confs))
 		goto error;
 
 	goto end;
@@ -155,13 +155,13 @@ end:
 }
 
 static int parse_data(struct asfd *asfd, struct cstat *clist,
-	struct asfd *cfd, struct conf *conf)
+	struct asfd *cfd, struct conf **confs)
 {
-	if(asfd==cfd) return parse_client_data(asfd, clist, conf);
+	if(asfd==cfd) return parse_client_data(asfd, clist, confs);
 	return parse_parent_data(asfd, clist);
 }
 
-int status_server(struct async *as, struct conf *conf)
+int status_server(struct async *as, struct conf **confs)
 {
 	int gotdata=0;
 	struct asfd *asfd;
@@ -173,7 +173,7 @@ int status_server(struct async *as, struct conf *conf)
 		// was read from the fds.
 //dump_cbno(clist, "a");
 		if(gotdata) gotdata=0;
-		else if(cstat_load_data_from_disk(&clist, conf))
+		else if(cstat_load_data_from_disk(&clist, confs))
 			goto error;
 //dump_cbno(clist, "b");
 		if(as->read_write(as))
@@ -185,7 +185,7 @@ int status_server(struct async *as, struct conf *conf)
 			while(asfd->rbuf->buf)
 		{
 			gotdata=1;
-			if(parse_data(asfd, clist, cfd, conf)
+			if(parse_data(asfd, clist, cfd, confs)
 			  || asfd->parse_readbuf(asfd))
 				goto error;
 			iobuf_free_content(asfd->rbuf);

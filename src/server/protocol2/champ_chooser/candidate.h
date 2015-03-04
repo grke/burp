@@ -16,7 +16,7 @@ extern void candidates_set_score_pointers(struct candidate **candidates,
 	size_t clen, struct scores *scores);
 extern struct candidate *candidates_add_new(void);
 extern int candidate_load(struct candidate *candidate,
-        const char *path, struct conf *conf);
-extern int candidate_add_fresh(const char *path, struct conf *conf);
+        const char *path, struct conf **confs);
+extern int candidate_add_fresh(const char *path, struct conf **confs);
 extern struct candidate *candidates_choose_champ(struct incoming *in,
 	struct candidate *champ_last);

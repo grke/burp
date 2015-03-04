@@ -1,9 +1,6 @@
 #ifndef _SRC_INCLUDES_H
 #define _SRC_INCLUDES_H
 
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
-
 #include "action.h"
 #include "asfd.h"
 #include "async.h"
@@ -15,6 +12,7 @@
 #include "burpconfig.h"
 #include "cntr.h"
 #include "conf.h"
+#include "conffile.h"
 #include "cstat.h"
 #include "forkchild.h"
 #include "fsops.h"

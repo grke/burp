@@ -4,15 +4,15 @@
 #include "../../server/backup_phase1.h"
 
 // Used on resume, this just reads the phase1 file and sets up cntr.
-static int read_phase1(gzFile zp, struct conf *conf)
+static int read_phase1(gzFile zp, struct conf **confs)
 {
 	int ars=0;
 	struct sbuf *p1b;
-	if(!(p1b=sbuf_alloc(conf))) return -1;
+	if(!(p1b=sbuf_alloc(confs))) return -1;
 	while(1)
 	{
 		sbuf_free_content(p1b);
-		if((ars=sbufl_fill_phase1(p1b, NULL, zp, conf->cntr)))
+		if((ars=sbufl_fill_phase1(p1b, NULL, zp, get_cntr(confs[OPT_CNTR]))))
 		{
 			// ars==1 means it ended ok.
 			if(ars<0)
@@ -22,14 +22,14 @@ static int read_phase1(gzFile zp, struct conf *conf)
 			}
 			return 0;
 		}
-		cntr_add_phase1(conf->cntr, p1b->path.cmd, 0);
+		cntr_add_phase1(get_cntr(confs[OPT_CNTR]), p1b->path.cmd, 0);
 
 		if(p1b->path.cmd==CMD_FILE
 		  || p1b->path.cmd==CMD_ENC_FILE
 		  || p1b->path.cmd==CMD_METADATA
 		  || p1b->path.cmd==CMD_ENC_METADATA
 		  || p1b->path.cmd==CMD_EFS_FILE)
-			cntr_add_val(conf->cntr, CMD_BYTES_ESTIMATED,
+			cntr_add_val(get_cntr(confs[OPT_CNTR]), CMD_BYTES_ESTIMATED,
 				(unsigned long long)p1b->statp.st_size, 0);
 	}
 	sbuf_free(&p1b);
@@ -39,13 +39,13 @@ static int read_phase1(gzFile zp, struct conf *conf)
 
 static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
 	struct iobuf *target, int isphase1, int seekback, int do_cntr,
-	int same, struct dpthl *dpthl, struct conf *cconf)
+	int same, struct dpthl *dpthl, struct conf **cconfs)
 {
 	int ars=0;
 	off_t pos=0;
 	static struct sbuf *sb=NULL;
 
-	if(!sb && !(sb=sbuf_alloc(cconf)))
+	if(!sb && !(sb=sbuf_alloc(cconfs)))
 		goto error;
 
 	while(1)
@@ -62,16 +62,17 @@ static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
 		sbuf_free_content(sb);
 
 		if(isphase1)
-			ars=sbufl_fill_phase1(sb, fp, zp, cconf->cntr);
+			ars=sbufl_fill_phase1(sb, fp, zp,
+				get_cntr(cconfs[OPT_CNTR]));
 		else
-			ars=sbufl_fill(sb, NULL, fp, zp, cconf->cntr);
+			ars=sbufl_fill(sb, NULL, fp, zp,
+				get_cntr(cconfs[OPT_CNTR]));
 
 		// Make sure we end up with the highest datapth we can possibly
 		// find - set_dpthl_from_string() will only set it if it is
 		// higher.
 		if(sb->protocol1->datapth.buf
-		  && set_dpthl_from_string(dpthl,
-			sb->protocol1->datapth.buf, cconf))
+		  && set_dpthl_from_string(dpthl, sb->protocol1->datapth.buf))
 		{
 			logp("unable to set datapath: %s\n",
 				sb->protocol1->datapth.buf);
@@ -109,21 +110,20 @@ static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
 
 		if(do_cntr)
 		{
-			if(same) cntr_add_same(cconf->cntr, sb->path.cmd);
-			else cntr_add_changed(cconf->cntr, sb->path.cmd);
+			if(same) cntr_add_same(get_cntr(cconfs[OPT_CNTR]), sb->path.cmd);
+			else cntr_add_changed(get_cntr(cconfs[OPT_CNTR]), sb->path.cmd);
 			if(sb->protocol1->endfile.buf)
 			{
 				unsigned long long e=0;
 				e=strtoull(sb->protocol1->endfile.buf,
 					NULL, 10);
-				cntr_add_bytes(cconf->cntr, e);
-				cntr_add_recvbytes(cconf->cntr, e);
+				cntr_add_bytes(get_cntr(cconfs[OPT_CNTR]), e);
+				cntr_add_recvbytes(get_cntr(cconfs[OPT_CNTR]), e);
 			}
 		}
 
 		iobuf_free_content(result);
-		iobuf_copy(result, &sb->path);
-		sb->path.buf=NULL;
+		iobuf_move(result, &sb->path);
 	}
 
 error:
@@ -133,22 +133,22 @@ error:
 
 static int forward_fp(FILE *fp, struct iobuf *result, struct iobuf *target,
 	int isphase1, int seekback, int do_cntr, int same,
-	struct dpthl *dpthl, struct conf *cconf)
+	struct dpthl *dpthl, struct conf **cconfs)
 {
 	return do_forward(fp, NULL, result, target, isphase1, seekback,
-		do_cntr, same, dpthl, cconf);
+		do_cntr, same, dpthl, cconfs);
 }
 
 static int forward_zp(gzFile zp, struct iobuf *result, struct iobuf *target,
 	int isphase1, int seekback, int do_cntr, int same,
-	struct dpthl *dpthl, struct conf *cconf)
+	struct dpthl *dpthl, struct conf **cconfs)
 {
 	return do_forward(NULL, zp, result, target, isphase1, seekback,
-		do_cntr, same, dpthl, cconf);
+		do_cntr, same, dpthl, cconfs);
 }
 
 static int do_resume_work(gzFile p1zp, FILE *p2fp, FILE *ucfp,
-	struct dpthl *dpthl, struct conf *cconf)
+	struct dpthl *dpthl, struct conf **cconfs)
 {
 	int ret=0;
 	struct iobuf *p1b=NULL;
@@ -163,7 +163,7 @@ static int do_resume_work(gzFile p1zp, FILE *p2fp, FILE *ucfp,
 		return -1;
 
 	logp("Begin phase1 (read previous file system scan)\n");
-	if(read_phase1(p1zp, cconf)) goto error;
+	if(read_phase1(p1zp, cconfs)) goto error;
 
 	gzrewind(p1zp);
 
@@ -174,7 +174,7 @@ static int do_resume_work(gzFile p1zp, FILE *p2fp, FILE *ucfp,
 		0, /* no seekback */
 		0, /* no cntr */
 		0, /* changed */
-		dpthl, cconf)) goto error;
+		dpthl, cconfs)) goto error;
 	rewind(p2fp);
 	// Go to the beginning of p2fp and seek forward to the p2btmp entry.
 	// This is to guard against a partially written entry at the end of
@@ -184,7 +184,7 @@ static int do_resume_work(gzFile p1zp, FILE *p2fp, FILE *ucfp,
 		0, /* no seekback */
 		1, /* do_cntr */
 		0, /* changed */
-		dpthl, cconf)) goto error;
+		dpthl, cconfs)) goto error;
 	logp("  phase2:    %s\n", p2b->buf);
 
 	// Now need to go to the appropriate places in p1zp and unchanged.
@@ -195,7 +195,7 @@ static int do_resume_work(gzFile p1zp, FILE *p2fp, FILE *ucfp,
 		0, /* no seekback */
 		0, /* no cntr */
 		0, /* ignored */
-		dpthl, cconf)) goto error;
+		dpthl, cconfs)) goto error;
 	logp("  phase1:    %s\n", p1b->buf);
 
 	if(forward_fp(ucfp, ucb, p2b,
@@ -203,13 +203,14 @@ static int do_resume_work(gzFile p1zp, FILE *p2fp, FILE *ucfp,
 		1, /* seekback */
 		1, /* do_cntr */
 		1, /* same */
-		dpthl, cconf)) goto error;
+		dpthl, cconfs)) goto error;
 	logp("  unchanged: %s\n", ucb->buf);
 
 	// Now should have all file pointers in the right places to resume.
-	if(incr_dpthl(dpthl, cconf)) goto error;
+	if(incr_dpthl(dpthl, cconfs)) goto error;
 
-	if(cconf->send_client_cntr && cntr_send(cconf->cntr)) goto error;
+	if(get_int(cconfs[OPT_SEND_CLIENT_CNTR])
+	  && cntr_send(get_cntr(cconfs[OPT_CNTR]))) goto error;
 
 	goto end;
 error:
@@ -241,7 +242,7 @@ static int do_truncate(const char *path, FILE **fp)
 }
 
 int do_resume(gzFile p1zp, struct sdirs *sdirs,
-	struct dpthl *dpthl, struct conf *cconf)
+	struct dpthl *dpthl, struct conf **cconfs)
 {
 	int ret=-1;
 	FILE *cfp=NULL;
@@ -260,7 +261,7 @@ int do_resume(gzFile p1zp, struct sdirs *sdirs,
 	  || !(ucfp=open_file(sdirs->unchanged, "rb")))
 		goto end;
 
-	if(do_resume_work(p1zp, cfp, ucfp, dpthl, cconf)) goto end;
+	if(do_resume_work(p1zp, cfp, ucfp, dpthl, cconfs)) goto end;
 
 	// Truncate to the appropriate places.
 	if(do_truncate(sdirs->changed, &cfp)

@@ -2,18 +2,18 @@
 #include "../cmd.h"
 
 static int receive_file(struct asfd *asfd, const char *autoupgrade_dir,
-	const char *file, struct conf *conf)
+	const char *file, struct conf **confs)
 {
 	int ret=0;
 	char *incoming=NULL;
 	if(!(incoming=prepend_s(autoupgrade_dir, file))) return -1;
-	ret=receive_a_file(asfd, incoming, conf);
+	ret=receive_a_file(asfd, incoming, confs);
 	if(incoming) free(incoming);
 	return ret;
 }
 
 static enum asl_ret autoupgrade_func(struct asfd *asfd,
-	struct conf *conf, void *param)
+	struct conf **confs, void *param)
 {
 	if(!strcmp(asfd->rbuf->buf, "do not autoupgrade"))
 		return ASL_END_OK;
@@ -25,7 +25,7 @@ static enum asl_ret autoupgrade_func(struct asfd *asfd,
 	return ASL_END_OK_RETURN_1;
 }
 
-int autoupgrade_client(struct async *as, struct conf *conf)
+int autoupgrade_client(struct async *as, struct conf **confs)
 {
 	int a=0;
 	int ret=-1;
@@ -38,34 +38,36 @@ int autoupgrade_client(struct async *as, struct conf *conf)
 	const char *args[2];
 	struct iobuf *rbuf=NULL;
 	struct asfd *asfd;
+	char *autoupgrade_dir=get_string(confs[OPT_AUTOUPGRADE_DIR]);
+	const char *autoupgrade_os=get_string(confs[OPT_AUTOUPGRADE_OS]);
 	asfd=as->asfd;
 
-	if(!conf->autoupgrade_dir)
+	if(!autoupgrade_dir)
 	{
 		logp("autoupgrade_dir not set!\n");
 		goto end;
 	}
-	if(!conf->autoupgrade_os)
+	if(!autoupgrade_os)
 	{
 		logp("autoupgrade_os not set!\n");
 		goto end;
 	}
-	if(!(copy=strdup_w(conf->autoupgrade_dir, __func__)))
+	if(!(copy=strdup_w(autoupgrade_dir, __func__)))
 		goto end;
 
 	strip_trailing_slashes(&copy);
 	if((cp=strchr(copy, '/'))) *cp='\0';
-	if(mkpath(&(conf->autoupgrade_dir), copy))
+	if(mkpath(&autoupgrade_dir, copy))
 		goto end;
 
 	// Let the server know we are ready.
 	snprintf(write_str, sizeof(write_str),
-		"autoupgrade:%s", conf->autoupgrade_os);
+		"autoupgrade:%s", autoupgrade_os);
 	if(asfd->write_str(asfd, CMD_GEN, write_str))
 		goto end;
 
 	if(!(a=asfd->simple_loop(asfd,
-		conf, NULL, __func__, autoupgrade_func)))
+		confs, NULL, __func__, autoupgrade_func)))
 	{
 		ret=0; // No autoupgrade.
 		goto end;
@@ -81,20 +83,20 @@ int autoupgrade_client(struct async *as, struct conf *conf)
 	snprintf(package_name, sizeof(package_name), "package");
 #endif
 
-	if(receive_file(asfd, conf->autoupgrade_dir, script_name, conf))
+	if(receive_file(asfd, autoupgrade_dir, script_name, confs))
 	{
 		logp("Problem receiving %s/%s\n",
-			conf->autoupgrade_dir, script_name);
+			autoupgrade_dir, script_name);
 		goto end;
 	}
-	if(receive_file(asfd, conf->autoupgrade_dir, package_name, conf))
+	if(receive_file(asfd, autoupgrade_dir, package_name, confs))
 	{
 		logp("Problem receiving %s/%s\n",
-			conf->autoupgrade_dir, package_name);
+			autoupgrade_dir, package_name);
 		goto end;
 	}
 
-	if(!(script_path=prepend_s(conf->autoupgrade_dir, script_name)))
+	if(!(script_path=prepend_s(autoupgrade_dir, script_name)))
 		goto end;
 
 	chmod(script_path, 0755);
@@ -103,7 +105,7 @@ int autoupgrade_client(struct async *as, struct conf *conf)
 	a=0;
 	args[a++]=script_path;
 	args[a++]=NULL;
-	ret=run_script(asfd, args, NULL, conf,
+	ret=run_script(asfd, args, NULL, confs,
 		0 /* do not wait */, 1 /* use logp */, 1 /* use logw */);
 	/* To get round Windows problems to do with installing over files
 	   that the current process is running from, I am forking the child,

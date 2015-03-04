@@ -26,6 +26,8 @@ void rconf_init(struct rconf *rconf)
 	rconf->multiplier=get_multiplier(rconf->win_size, rconf->prime);
 }
 
+/* This should probably be a unit test, since users should not be messing
+   with the settings. */
 int rconf_check(struct rconf *rconf)
 {
 	if(rconf->win_size < rconf->win_min

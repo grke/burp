@@ -17,7 +17,7 @@
 extern int send_whole_file_gz(struct asfd *asfd,
 	const char *fname, const char *datapth,
 	int quick_read, unsigned long long *bytes, const char *encpassword,
-	struct conf *conf, int compression, BFILE *bfd, FILE *fp,
+	struct conf **confs, int compression, BFILE *bfd, FILE *fp,
 	const char *extrameta, size_t elen, size_t datalen);
 extern int set_non_blocking(int fd);
 extern int set_blocking(int fd);
@@ -27,8 +27,8 @@ extern void add_fd_to_sets(int fd,
 extern int set_peer_env_vars(int cfd);
 extern int init_client_socket(const char *host, const char *port);
 extern void reuseaddr(int fd);
-extern char *comp_level(struct conf *conf);
-extern int chuser_and_or_chgrp(struct conf *conf);
+extern char *comp_level(struct conf **confs);
+extern int chuser_and_or_chgrp(struct conf **confs);
 extern const char *getdatestr(time_t t);
 extern const char *time_taken(time_t d);
 extern int dpthl_is_compressed(int compressed, const char *datapath);
@@ -41,16 +41,16 @@ extern long version_to_long(const char *version);
 /* These receive_a_file() and send_file() functions are for use by extra_comms
    and the CA stuff, rather than backups/restores. */
 extern int receive_a_file(struct asfd *asfd,
-	const char *path, struct conf *conf);
+	const char *path, struct conf **confs);
 extern int send_a_file(struct asfd *asfd,
-	const char *path, struct conf *conf);
+	const char *path, struct conf **confs);
 
 extern int split_sig(struct iobuf *iobuf, struct blk *blk);
 extern int split_sig_from_manifest(struct iobuf *iobuf, struct blk *blk);
 extern int get_fingerprint(struct iobuf *iobuf, struct blk *blk);
 
 extern int do_quick_read(struct asfd *asfd,
-	const char *datapth, struct conf *conf);
+	const char *datapth, struct conf **confs);
 
 extern int strncmp_w(const char *s1, const char *s2);
 extern char *strdup_w(const char *s, const char *func);
@@ -64,6 +64,10 @@ extern int astrcat(char **buf, const char *append, const char *func);
 
 extern void strip_trailing_slashes(char **str);
 
-extern int breakpoint(struct conf *conf, const char *func);
+extern int breakpoint(struct conf **confs, const char *func);
+
+#ifdef HAVE_WIN32
+extern void convert_backslashes(char **path);
+#endif
 
 #endif

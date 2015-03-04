@@ -28,6 +28,7 @@ vpath %.cpp $(MAINDIR)/src $(BUILDDIR)/libwin32
 
 CLIENT_OBJS = \
 	$(OBJDIR)/alist.o \
+	$(OBJDIR)/alloc.o \
 	$(OBJDIR)/asfd.o \
 	$(OBJDIR)/async.o \
 	$(OBJDIR)/attribs.o \
@@ -71,6 +72,7 @@ CLIENT_OBJS = \
 	$(OBJDIR)/cmd.o \
 	$(OBJDIR)/cntr.o \
 	$(OBJDIR)/conf.o \
+	$(OBJDIR)/conffile.o \
 	$(OBJDIR)/forkchild.o \
 	$(OBJDIR)/fsops.o \
 	$(OBJDIR)/handy.o \

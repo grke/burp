@@ -18,13 +18,14 @@ static const char *server_supports_autoupgrade(const char *feat)
 	return server_supports(feat, ":autoupgrade:");
 }
 
-int extra_comms(struct async *as, struct conf *conf,
+int extra_comms(struct async *as, struct conf **confs,
 	enum action *action, char **incexc)
 {
 	int ret=-1;
 	char *feat=NULL;
 	struct asfd *asfd;
 	struct iobuf *rbuf;
+	const char *orig_client=get_string(confs[OPT_ORIG_CLIENT]);
 	asfd=as->asfd;
 	rbuf=asfd->rbuf;
 
@@ -53,25 +54,25 @@ int extra_comms(struct async *as, struct conf *conf,
 	// Can add extra bits here. The first extra bit is the
 	// autoupgrade stuff.
 	if(server_supports_autoupgrade(feat)
-	  && conf->autoupgrade_dir
-	  && conf->autoupgrade_os
-	  && autoupgrade_client(as, conf))
+	  && get_string(confs[OPT_AUTOUPGRADE_DIR])
+	  && get_string(confs[OPT_AUTOUPGRADE_OS])
+	  && autoupgrade_client(as, confs))
 		goto end;
 
 	// :srestore: means that the server wants to do a restore.
 	if(server_supports(feat, ":srestore:"))
 	{
-		if(conf->server_can & SERVER_CAN_RESTORE)
+		if(get_int(confs[OPT_SERVER_CAN_RESTORE]))
 		{
 			logp("Server is initiating a restore\n");
-			if(incexc_recv_client_restore(asfd, incexc, conf))
+			if(incexc_recv_client_restore(asfd, incexc, confs))
 				goto end;
 			if(*incexc)
 			{
-				if(conf_parse_incexcs_buf(conf, *incexc))
+				if(conf_parse_incexcs_buf(confs, *incexc))
 					goto end;
 				*action=ACTION_RESTORE;
-				log_restore_settings(conf, 1);
+				log_restore_settings(confs, 1);
 			}
 		}
 		else
@@ -83,10 +84,10 @@ int extra_comms(struct async *as, struct conf *conf,
 		}
 	}
 
-	if(conf->orig_client)
+	if(orig_client)
 	{
 		char str[512]="";
-		snprintf(str, sizeof(str), "orig_client=%s", conf->orig_client);
+		snprintf(str, sizeof(str), "orig_client=%s", orig_client);
 		if(!server_supports(feat, ":orig_client:"))
 		{
 			logp("Server does not support switching client.\n");
@@ -98,7 +99,7 @@ int extra_comms(struct async *as, struct conf *conf,
 			logp("Problem requesting %s\n", str);
 			goto end;
 		}
-		logp("Switched to client %s\n", conf->orig_client);
+		logp("Switched to client %s\n", orig_client);
 	}
 
 	// :sincexc: is for the server giving the client the
@@ -110,9 +111,9 @@ int extra_comms(struct async *as, struct conf *conf,
 		if(!*incexc && server_supports(feat, ":sincexc:"))
 		{
 			logp("Server is setting includes/excludes.\n");
-			if(incexc_recv_client(asfd, incexc, conf))
+			if(incexc_recv_client(asfd, incexc, confs))
 				goto end;
-			if(*incexc && conf_parse_incexcs_buf(conf,
+			if(*incexc && conf_parse_incexcs_buf(confs,
 				*incexc)) goto end;
 		}
 	}
@@ -121,14 +122,14 @@ int extra_comms(struct async *as, struct conf *conf,
 	{
 		if(asfd->write_str(asfd, CMD_GEN, "countersok"))
 			goto end;
-		conf->send_client_cntr=1;
+		set_int(confs[OPT_SEND_CLIENT_CNTR], 1);
 	}
 
 	// :incexc: is for the client sending the server the
 	// incexc conf so that it better knows what to do on
 	// resume.
 	if(server_supports(feat, ":incexc:")
-	  && incexc_send_client(asfd, conf))
+	  && incexc_send_client(asfd, confs))
 		goto end;
 
 	if(server_supports(feat, ":uname:"))
@@ -159,38 +160,42 @@ int extra_comms(struct async *as, struct conf *conf,
 	{
 		char msg[128]="";
 		// Use protocol2 if no choice has been made on client side.
-		if(conf->protocol==PROTO_AUTO)
+		if(get_e_protocol(confs[OPT_PROTOCOL])==PROTO_AUTO)
 		{
 			logp("Server has protocol=0 (auto)\n");
-			conf->protocol=PROTO_2;
+			set_e_protocol(confs[OPT_PROTOCOL], PROTO_2);
 		}
 		// Send choice to server.
-		snprintf(msg, sizeof(msg), "protocol=%d", conf->protocol);
+		snprintf(msg, sizeof(msg), "protocol=%d",
+			get_e_protocol(confs[OPT_PROTOCOL]));
 		if(asfd->write_str(asfd, CMD_GEN, msg))
 			goto end;
-		logp("Using protocol=%d\n", conf->protocol);
+		logp("Using protocol=%d\n",
+			get_e_protocol(confs[OPT_PROTOCOL]));
 	}
 	else if(server_supports(feat, ":forceproto=1:"))
 	{
 		logp("Server is forcing protocol 1\n");
-		if(conf->protocol!=PROTO_AUTO && conf->protocol!=PROTO_1)
+		if(get_e_protocol(confs[OPT_PROTOCOL])!=PROTO_AUTO
+		  && get_e_protocol(confs[OPT_PROTOCOL])!=PROTO_1)
 		{
 			logp("But client has set protocol=%d!\n",
-				conf->protocol);
+				get_e_protocol(confs[OPT_PROTOCOL]));
 			goto end;
 		}
-		conf->protocol=PROTO_1;
+		set_e_protocol(confs[OPT_PROTOCOL], PROTO_1);
 	}
 	else if(server_supports(feat, ":forceproto=2:"))
 	{
 		logp("Server is forcing protocol 2\n");
-		if(conf->protocol!=PROTO_AUTO && conf->protocol!=PROTO_2)
+		if(get_e_protocol(confs[OPT_PROTOCOL])!=PROTO_AUTO
+		  && get_e_protocol(confs[OPT_PROTOCOL])!=PROTO_2)
 		{
 			logp("But client has set protocol=%d!\n",
-				conf->protocol);
+				get_e_protocol(confs[OPT_PROTOCOL]));
 			goto end;
 		}
-		conf->protocol=PROTO_2;
+		set_e_protocol(confs[OPT_PROTOCOL], PROTO_2);
 	}
 
 	if(asfd->write_str(asfd, CMD_GEN, "extra_comms_end")

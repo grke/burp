@@ -5,16 +5,18 @@ struct sdirs *sdirs_alloc(void)
 	return (struct sdirs *)calloc_w(1, sizeof(struct sdirs), __func__);
 }
 
-static int do_lock_dirs(struct sdirs *sdirs, struct conf *conf)
+static int do_lock_dirs(struct sdirs *sdirs, struct conf **confs)
 {
 	int ret=-1;
 	char *lockbase=NULL;
 	char *lockfile=NULL;
-	if(conf->client_lockdir)
+	const char *conf_lockdir=get_string(confs[OPT_CLIENT_LOCKDIR]);
+	if(conf_lockdir)
 	{
-		if(!(sdirs->lockdir=strdup_w(conf->client_lockdir, __func__))
-		  || !(lockbase=prepend_s(sdirs->lockdir, conf->cname)))
-			goto end;
+		if(!(sdirs->lockdir=strdup_w(conf_lockdir, __func__))
+		  || !(lockbase=prepend_s(sdirs->lockdir,
+			get_string(confs[OPT_CNAME]))))
+				goto end;
 	}
 	else
 	{
@@ -38,14 +40,15 @@ static int free_prepend_s(char **dst, const char *a, const char *b)
 	return !(*dst=prepend_s(a, b));
 }
 
-int sdirs_get_real_manifest(struct sdirs *sdirs, struct conf *conf)
+int sdirs_get_real_manifest(struct sdirs *sdirs, struct conf **confs)
 {
 	return free_prepend_s(&sdirs->rmanifest,
 		sdirs->rworking,
-		conf->protocol==PROTO_1?"manifest.gz":"manifest");
+		get_e_protocol(confs[OPT_PROTOCOL])==PROTO_1?
+			"manifest.gz":"manifest");
 }
 
-int sdirs_get_real_working_from_symlink(struct sdirs *sdirs, struct conf *conf)
+int sdirs_get_real_working_from_symlink(struct sdirs *sdirs, struct conf **confs)
 {
 	ssize_t len=0;
 	char real[256]="";
@@ -63,13 +66,13 @@ int sdirs_get_real_working_from_symlink(struct sdirs *sdirs, struct conf *conf)
 	return 0;
 }
 
-int sdirs_create_real_working(struct sdirs *sdirs, struct conf *conf)
+int sdirs_create_real_working(struct sdirs *sdirs, struct conf **confs)
 {
 	char tstmp[64]="";
 	char fname[64]="";
 
 	if(timestamp_get_new(sdirs,
-		tstmp, sizeof(tstmp), fname, sizeof(fname), conf)
+		tstmp, sizeof(tstmp), fname, sizeof(fname), confs)
 	  || free_prepend_s(&sdirs->rworking, sdirs->client, fname)
 	  || free_prepend_s(&sdirs->treepath,
 		sdirs->rworking, DATA_DIR "/" TREE_DIR))
@@ -102,7 +105,7 @@ int sdirs_create_real_working(struct sdirs *sdirs, struct conf *conf)
 	return 0;
 }
 
-static int do_common_dirs(struct sdirs *sdirs, struct conf *conf)
+static int do_common_dirs(struct sdirs *sdirs, struct conf **confs)
 {
 	if(!(sdirs->working=prepend_s(sdirs->client, "working"))
 	  || !(sdirs->finishing=prepend_s(sdirs->client, "finishing"))
@@ -118,10 +121,10 @@ static int do_common_dirs(struct sdirs *sdirs, struct conf *conf)
 }
 
 // Maybe should be in a protocol1 directory.
-static int do_protocol1_dirs(struct sdirs *sdirs, struct conf *conf)
+static int do_protocol1_dirs(struct sdirs *sdirs, struct conf **confs)
 {
-	if(!(sdirs->client=prepend_s(sdirs->base, conf->cname))
-	  || do_common_dirs(sdirs, conf)
+	if(!(sdirs->client=prepend_s(sdirs->base, get_string(confs[OPT_CNAME])))
+	  || do_common_dirs(sdirs, confs)
 	  || !(sdirs->currentdata=prepend_s(sdirs->current, DATA_DIR))
 	  || !(sdirs->manifest=prepend_s(sdirs->working, "manifest.gz"))
 	  || !(sdirs->datadirtmp=prepend_s(sdirs->working, "data.tmp"))
@@ -134,17 +137,19 @@ static int do_protocol1_dirs(struct sdirs *sdirs, struct conf *conf)
 	return 0;
 }
 
-static int do_protocol2_dirs(struct sdirs *sdirs, struct conf *conf)
+static int do_protocol2_dirs(struct sdirs *sdirs, struct conf **confs)
 {
-	if(!conf->dedup_group)
+	const char *dedup_group=get_string(confs[OPT_DEDUP_GROUP]);
+	if(!dedup_group)
 	{
-		logp("conf->dedup_group unset in %s\n", __func__);
+		logp("dedup_group unset in %s\n", __func__);
 		return -1;
 	}
-	if(!(sdirs->dedup=prepend_s(sdirs->base, conf->dedup_group))
+	if(!(sdirs->dedup=prepend_s(sdirs->base, dedup_group))
 	  || !(sdirs->clients=prepend_s(sdirs->dedup, "clients"))
-	  || !(sdirs->client=prepend_s(sdirs->clients, conf->cname))
-	  || do_common_dirs(sdirs, conf)
+	  || !(sdirs->client=prepend_s(sdirs->clients,
+			get_string(confs[OPT_CNAME])))
+	  || do_common_dirs(sdirs, confs)
 	  || !(sdirs->data=prepend_s(sdirs->dedup, DATA_DIR))
 	  || !(sdirs->champlock=prepend_s(sdirs->data, "cc.lock"))
 	  || !(sdirs->champsock=prepend_s(sdirs->data, "cc.sock"))
@@ -157,27 +162,28 @@ static int do_protocol2_dirs(struct sdirs *sdirs, struct conf *conf)
 	return 0;
 }
 
-extern int sdirs_init(struct sdirs *sdirs, struct conf *conf)
+extern int sdirs_init(struct sdirs *sdirs, struct conf **confs)
 {
-	if(!conf->directory)
+	const char *directory=get_string(confs[OPT_DIRECTORY]);
+	if(!directory)
 	{
-		logp("conf->directory unset in %s\n", __func__);
+		logp("directory unset in %s\n", __func__);
 		goto error;
 	}
 
-	if(!(sdirs->base=strdup_w(conf->directory, __func__)))
+	if(!(sdirs->base=strdup_w(directory, __func__)))
 		goto error;
 
-	if(conf->protocol==PROTO_1)
+	if(get_e_protocol(confs[OPT_PROTOCOL])==PROTO_1)
 	{
-		if(do_protocol1_dirs(sdirs, conf)) goto error;
+		if(do_protocol1_dirs(sdirs, confs)) goto error;
 	}
 	else
 	{
-		if(do_protocol2_dirs(sdirs, conf)) goto error;
+		if(do_protocol2_dirs(sdirs, confs)) goto error;
 	}
 
-	if(do_lock_dirs(sdirs, conf)) goto error;
+	if(do_lock_dirs(sdirs, confs)) goto error;
 
 	return 0;
 error:

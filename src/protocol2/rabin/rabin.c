@@ -143,7 +143,6 @@ int blks_generate(struct asfd *asfd, struct conf **confs,
 // The server uses this for verification.
 int blk_read_verify(struct blk *blk_to_verify, struct conf **confs)
 {
-	static struct win *win=NULL; // Rabin sliding window.
 	if(!win && !(win=win_alloc(&rconf)))
 		return -1;
 

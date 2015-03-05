@@ -8,7 +8,7 @@
 #include "../sdirs.h"
 
 static int send_data(struct asfd *asfd, struct blk *blk,
-	enum action act, struct conf **confs)
+	enum action act, struct sbuf *need_data, struct conf **confs)
 {
 	struct iobuf wbuf;
 
@@ -21,18 +21,18 @@ static int send_data(struct asfd *asfd, struct blk *blk,
 		case ACTION_VERIFY:
 			// Need to check that the block has the correct
 			// checksums.
-			switch(blk_verify(blk, conf))
+			switch(blk_verify(blk, confs))
 			{
 				case 1:
 					iobuf_set(&wbuf, CMD_DATA, (char *)"0", 1);
 					if(asfd->write(asfd, &wbuf)) return -1;
-					cntr_add(conf->cntr, CMD_DATA, 0);
+					cntr_add(get_cntr(confs[OPT_CNTR]), CMD_DATA, 0);
 					break; // All OK.
 				case 0:
 				{
 					char msg[256];
 					snprintf(msg, sizeof(msg), "Checksum mismatch in block for %c:%s:%s\n", need_data->path.cmd, need_data->path.buf, bytes_to_savepathstr_with_sig(blk->savepath));
-					logw(asfd, conf, msg);
+					logw(asfd, confs, msg);
 					break;
 		
 				}
@@ -51,7 +51,8 @@ static int send_data(struct asfd *asfd, struct blk *blk,
 }
 
 int restore_sbuf_protocol2(struct asfd *asfd, struct sbuf *sb, enum action act,
-	enum cntr_status cntr_status, struct conf **confs, int *need_data)
+	enum cntr_status cntr_status,
+	struct conf **confs, struct sbuf *need_data)
 {
 	if(asfd->write(asfd, &sb->attr)
 	  || asfd->write(asfd, &sb->path))
@@ -68,7 +69,8 @@ int restore_sbuf_protocol2(struct asfd *asfd, struct sbuf *sb, enum action act,
 		b=sb->protocol2->bstart;
 		while(b)
 		{
-			if(send_data(asfd, b, act, confs)) return -1;
+			if(send_data(asfd, b, act, need_data, confs))
+				return -1;
 			n=b->next;
 			blk_free(&b);
 			b=n;
@@ -95,11 +97,11 @@ int restore_sbuf_protocol2(struct asfd *asfd, struct sbuf *sb, enum action act,
 
 int protocol2_extra_restore_stream_bits(struct asfd *asfd, struct blk *blk,
 	struct slist *slist, enum action act,
-	int need_data, int last_ent_was_dir, struct conf **cconfs)
+	struct sbuf *need_data, int last_ent_was_dir, struct conf **cconfs)
 {
 	if(need_data->path.buf)
 	{
-		if(send_data(asfd, blk, act, cconfs)) return -1;
+		if(send_data(asfd, blk, act, need_data, cconfs)) return -1;
 	}
 	else if(last_ent_was_dir)
 	{

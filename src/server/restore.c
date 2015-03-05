@@ -129,7 +129,7 @@ static int hard_link_substitution(struct asfd *asfd,
 
 	if(!(manio=manio_alloc())
 	  || manio_init_read(manio, manifest)
-	  || !(need_data=sbuf_alloc(cconf))
+	  || !(need_data=sbuf_alloc(cconfs))
 	  || !(hb=sbuf_alloc(cconfs)))
 		goto end;
 	manio_set_protocol(manio, protocol);
@@ -240,8 +240,8 @@ int restore_ent(struct asfd *asfd,
 	enum action act,
 	struct sdirs *sdirs,
 	enum cntr_status cntr_status,
-	struct sbuf *need_data,
 	struct conf **cconfs,
+	struct sbuf *need_data,
 	int *last_ent_was_dir,
 	const char *manifest)
 {
@@ -313,7 +313,7 @@ static int restore_remaining_dirs(struct asfd *asfd, struct bu *bu,
 	int ret=-1;
 	struct sbuf *sb;
 	struct sbuf *need_data=NULL;
-	if(!(need_data=sbuf_alloc(cconf))) goto end;
+	if(!(need_data=sbuf_alloc(cconfs))) goto end;
 	// Restore any directories that are left in the list.
 	for(sb=slist->head; sb; sb=sb->next)
 	{
@@ -362,8 +362,8 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 
 	if(!(manio=manio_alloc())
 	  || manio_init_read(manio, manifest)
-	  || !(need_data=sbuf_alloc(cconf))
-	  || !(sb=sbuf_alloc(cconfs))
+	  || !(need_data=sbuf_alloc(cconfs))
+	  || !(sb=sbuf_alloc(cconfs)))
 		goto end;
 	manio_set_protocol(manio, protocol);
 

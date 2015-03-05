@@ -51,6 +51,6 @@ extern void blk_free(struct blk **blk);
 extern int blk_md5_update(struct blk *blk);
 extern void blk_print_alloc_stats(void);
 extern int blk_is_zero_length(struct blk *blk);
-extern int blk_verify(struct blk *blk, struct conf *conf);
+extern int blk_verify(struct blk *blk, struct conf **confs);
 
 #endif

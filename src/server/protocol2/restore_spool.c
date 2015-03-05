@@ -40,7 +40,7 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 	
 	if(!(manio=manio_alloc())
 	  || manio_init_read(manio, manifest)
-	  || !(need_data=sbuf_alloc(conf))
+	  || !(need_data=sbuf_alloc(confs))
 	  || !(sb=sbuf_alloc(confs))
 	  || !(blk=blk_alloc()))
 		goto end;
@@ -170,7 +170,7 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 		if(want_to_restore(srestore, sb, regex, confs))
 		{
 			if(restore_ent(asfd, &sb, slist, bu, act,
-				sdirs, cntr_status, conf,
+				sdirs, cntr_status, confs,
 				need_data, &last_ent_was_dir, manifest))
 					goto end;
 		}

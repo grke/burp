@@ -21,7 +21,7 @@ int blks_generate_init(void)
 
 // This is where the magic happens.
 // Return 1 for got a block, 0 for no block got.
-static int blk_read(struct sbuf *sb, struct blist *blist)
+static int blk_read(void)
 {
 	char c;
 
@@ -38,7 +38,7 @@ static int blk_read(struct sbuf *sb, struct blist *blist)
 		if(blk->data) blk->data[blk->length] = c;
 		blk->length++;
 
-		if(win->pos == rconf.win) win->pos=0;
+		if(win->pos == rconf.win_size) win->pos=0;
 
 		if( blk->length >= rconf.blk_min
 		 && (blk->length == rconf.blk_max
@@ -51,10 +51,9 @@ static int blk_read(struct sbuf *sb, struct blist *blist)
 	return 0;
 }
 
-static int blk_read_to_list(struct rconf *rconf, struct win *win,
-	struct sbuf *sb, struct blist *blist)
+static int blk_read_to_list(struct sbuf *sb, struct blist *blist)
 {
-	if(!blk_read(rconf, win)) return 0;
+	if(!blk_read()) return 0;
 
 	// Got something.
 	if(first)
@@ -90,7 +89,7 @@ int blks_generate(struct asfd *asfd, struct conf **confs,
 	{
 		// Could have got a fill before buf ran out -
 		// need to resume from the same place in that case.
-		if(blk_read_to_list(&conf->rconf, win, sb, blist))
+		if(blk_read_to_list(sb, blist))
 			return 0; // Got a block.
 		// Did not get a block. Carry on and read more.
 	}
@@ -99,7 +98,7 @@ int blks_generate(struct asfd *asfd, struct conf **confs,
 		gcp=gbuf;
 		gbuf_end=gbuf+bytes;
 		sb->protocol2->bytes_read+=bytes;
-		if(blk_read_to_list(win, sb, blist))
+		if(blk_read_to_list(sb, blist))
 			return 0; // Got a block
 		// Did not get a block. Maybe should try again?
 		// If there are async timeouts, look at this!
@@ -142,10 +141,10 @@ int blks_generate(struct asfd *asfd, struct conf **confs,
 }
 
 // The server uses this for verification.
-int blk_read_verify(struct blk *blk_to_verify, struct conf *conf)
+int blk_read_verify(struct blk *blk_to_verify, struct conf **confs)
 {
 	static struct win *win=NULL; // Rabin sliding window.
-	if(!win && !(win=win_alloc(&conf->rconf)))
+	if(!win && !(win=win_alloc(&rconf)))
 		return -1;
 
 	gbuf=blk_to_verify->data;
@@ -161,7 +160,7 @@ int blk_read_verify(struct blk *blk_to_verify, struct conf *conf)
 	// a final block.
 	// So, here the return of blk_read is ignored and we look at the
 	// position of gcp instead.
-	blk_read(&conf->rconf, win);
+	blk_read();
 	if(gcp==gbuf_end
 	  && blk->fingerprint==blk_to_verify->fingerprint)
 		return 1;

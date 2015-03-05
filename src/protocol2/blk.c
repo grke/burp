@@ -79,11 +79,11 @@ int blk_is_zero_length(struct blk *blk)
 	  && !memcmp(blk->md5sum, md5sum_of_empty_string, MD5_DIGEST_LENGTH);
 }
 
-int blk_verify(struct blk *blk, struct conf *conf)
+int blk_verify(struct blk *blk, struct conf **confs)
 {
 	uint8_t md5sum[MD5_DIGEST_LENGTH];
 	// Check rabin fingerprint.
-	switch(blk_read_verify(blk, conf))
+	switch(blk_read_verify(blk, confs))
 	{
 		case 1: break; // Match.
 		case 0: return 0; // Did not match.

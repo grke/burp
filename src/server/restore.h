@@ -11,7 +11,7 @@ extern int restore_ent(struct asfd *asfd,
 	enum action act,
 	struct sdirs *sdirs,
 	enum cntr_status cntr_status,
-	struct conf *cconf,
+	struct conf **cconfs,
 	struct sbuf *need_data,
 	int *last_ent_was_dir,
 	const char *manifest);

@@ -215,15 +215,19 @@ static int process_new(struct sdirs *sdirs, struct conf **cconfs,
 static int process_unchanged_file(struct sbuf *p1b, struct sbuf *cb,
 	FILE *ucfp, struct conf **cconfs)
 {
-	// Want to use the link settings from p1b, but p1b does not have all
-	// the information that is on cb. Move the link settings over.
-	iobuf_move(&cb->link, &p1b->link);
-	if(sbufl_to_manifest(cb, ucfp, NULL))
+	// Need to re-encode the p1b attribs to include compression and
+	// other bits and pieces that are recorded on cb.
+	iobuf_move(&p1b->protocol1->datapth, &cb->protocol1->datapth);
+	iobuf_move(&p1b->protocol1->endfile, &cb->protocol1->endfile);
+	p1b->compression=cb->compression;
+	if(attribs_encode(p1b))
 		return -1;
-	cntr_add_same(get_cntr(cconfs[OPT_CNTR]), cb->path.cmd);
-	if(cb->protocol1->endfile.buf) cntr_add_bytes(
+	if(sbufl_to_manifest(p1b, ucfp, NULL))
+		return -1;
+	cntr_add_same(get_cntr(cconfs[OPT_CNTR]), p1b->path.cmd);
+	if(p1b->protocol1->endfile.buf) cntr_add_bytes(
 		get_cntr(cconfs[OPT_CNTR]),
-		 strtoull(cb->protocol1->endfile.buf, NULL, 10));
+		 strtoull(p1b->protocol1->endfile.buf, NULL, 10));
 	sbuf_free_content(cb);
 	return 1;
 }

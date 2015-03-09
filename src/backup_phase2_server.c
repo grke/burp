@@ -757,19 +757,26 @@ static int process_new(struct sbuf *p1b, FILE *ucfp, const char *currentdata, co
 	return 0;
 }
 
-static int process_unchanged_file(struct sbuf *cb, FILE *ucfp, struct cntr *cntr)
+static int process_unchanged_file(struct sbuf *p1b, struct sbuf *cb,
+	FILE *ucfp, struct cntr *cntr)
 {
-	if(sbuf_to_manifest(cb, ucfp, NULL))
+	// Re-encode stat for p1b, to include compression and other things.
+	p1b->datapth=cb->datapth; cb->datapth=NULL;
+	p1b->endfile=cb->endfile; cb->endfile=NULL;
+	p1b->elen=cb->elen;
+	encode_stat(p1b->statbuf, &p1b->statp, p1b->winattr, cb->compression);
+	p1b->slen=strlen(p1b->statbuf);
+	if(sbuf_to_manifest(p1b, ucfp, NULL))
 	{
 		free_sbuf(cb);
 		return -1;
 	}
 	else
 	{
-		do_filecounter_same(cntr, cb->cmd);
+		do_filecounter_same(cntr, p1b->cmd);
 	}
-	if(cb->endfile) do_filecounter_bytes(cntr,
-		 strtoull(cb->endfile, NULL, 10));
+	if(p1b->endfile) do_filecounter_bytes(cntr,
+		 strtoull(p1b->endfile, NULL, 10));
 	free_sbuf(cb);
 	return 1;
 }
@@ -807,7 +814,7 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *ucfp, con
 		{
 			// got an unchanged file
 			//logp("got unchanged file: %s %c %c\n", cb->path, cb->cmd, p1b->cmd);
-			return process_unchanged_file(cb, ucfp, cntr);
+			return process_unchanged_file(p1b, cb, ucfp, cntr);
 		}
 
 		if(cb->statp.st_mtime==p1b->statp.st_mtime
@@ -842,7 +849,8 @@ static int maybe_process_file(struct sbuf *cb, struct sbuf *p1b, FILE *ucfp, con
 			// through to the changed stuff below.
 			// Non-Windows clients finish here.
 			else if(!cconf->client_is_windows)
-				return process_unchanged_file(cb, ucfp, cntr);
+				return process_unchanged_file(p1b,
+					cb, ucfp, cntr);
 		}
 
 		// Got a changed file.

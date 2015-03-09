@@ -556,8 +556,6 @@ all_tests()
 	backuppath2=$(echo "$target"/var/spool/burp/testclient/0000002*)
 	[ -d "$backuppath1"/data ] \
 		&& fail "something changed between backup 1 and backup 2!"
-	do_diff_server "$backuppath1"/manifest.gz "$backuppath2/manifest.gz" \
-			"manifests changed between backup 1 and backup 2!"
 	# Make sure that restoring from either backup gives the same result.
 	add_run_restore 1 "$restoredir"1
 	add_run_restore 2 "$restoredir"2

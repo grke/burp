@@ -207,6 +207,17 @@ add_do_diff_client()
 	rpath2=$(echo "$2" | sed -e 's/\/C:\//\/C_\//g')
 cat >> "$clientscript" << EOF
 diff -ur "$rpath1" "$rpath2" || fail "$3"
+diff -u \
+  <( cd "$rpath1" ; find . -printf "chown %U:%G %p; chmod %m %p \n" | sort ) \
+  <( cd "$rpath2" ; find . -printf "chown %U:%G %p; chmod %m %p \n" | sort ) \
+	|| fail "$3 (permissions)"
+EOF
+}
+
+add_chown()
+{
+	cat >> "$clientscript" << EOF
+chmod "$1" "$2" || fail "chown $1 $2 failed"
 EOF
 }
 
@@ -666,6 +677,7 @@ comp_enc_change_test()
 	add_compression_$comp
 	add_encryption_$encr
 	[ "$change" = "on" ] && add_change_source_files
+	add_chown 644 "$includedir/utest/test_cmd.c"
 	add_backup_run_scripts_setup_verify_restore
 	add_restore_diff
 	end_test
@@ -717,6 +729,11 @@ all_tests()
 	comp_enc_change_test on  on  on
 	file_size_test min
 	file_size_test max
+
+	start_test "Permissions"
+	add_chown 755 "$includedir/utest/test_cmd.c"
+	add_backup_run_scripts_setup_verify_restore
+	end_test
 
 	start_test "Exclude directory"
 	add_exclude_on

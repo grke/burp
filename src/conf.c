@@ -433,11 +433,11 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_RANDOMISE:
 	  return sc_int(c[o], 0, 0, "randomise");
 	case OPT_BACKUP:
-	  return sc_str(c[o], 0, 0, "backup");
+	  return sc_str(c[o], 0, CONF_FLAG_INCEXC_RESTORE, "backup");
 	case OPT_BACKUP2:
 	  return sc_str(c[o], 0, 0, "backup2");
 	case OPT_RESTOREPREFIX:
-	  return sc_str(c[o], 0, 0, "restoreprefix");
+	  return sc_str(c[o], 0, CONF_FLAG_INCEXC_RESTORE, "restoreprefix");
 	case OPT_RESTORE_SPOOL:
 	  return sc_str(c[o], 0, 0, "restore_spool");
 	case OPT_BROWSEFILE:
@@ -479,7 +479,7 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_RESTORE_PATH:
 	  return sc_str(c[o], 0, 0, "restore_path");
 	case OPT_ORIG_CLIENT:
-	  return sc_str(c[o], 0, 0, "orig_client");
+	  return sc_str(c[o], 0, CONF_FLAG_INCEXC_RESTORE, "orig_client");
 	case OPT_CNTR:
 	  return sc_cntr(c[o], 0, 0, "");
 	case OPT_BREAKPOINT:
@@ -640,8 +640,7 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_INCEXCDIR:
 	  // This is a combination of OPT_INCLUDE and OPT_EXCLUDE, so
 	  // no field name set for now.
-	  return sc_lst(c[o], 0,
-		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "incexcdir");
+	  return sc_lst(c[o], 0, CONF_FLAG_STRLIST_SORTED, "incexcdir");
 	case OPT_STARTDIR:
 	  // This is a combination of OPT_INCLUDE and OPT_EXCLUDE, so
 	  // no field name set for now.
@@ -651,11 +650,11 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_INCLUDE:
 	  // Combines with OPT_EXCLUDE to make OPT_INCEXCDIR and OPT_STARTDIR.
 	  return sc_lst(c[o], 0,
-		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "include");
+		CONF_FLAG_INCEXC|CONF_FLAG_INCEXC_RESTORE|CONF_FLAG_STRLIST_SORTED, "include");
 	case OPT_EXCLUDE:
 	  // Combines with OPT_INCLUDE to make OPT_INCEXCDIR and OPT_STARTDIR.
 	  return sc_lst(c[o], 0,
-		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "exclude");
+		CONF_FLAG_INCEXC|CONF_FLAG_INCEXC_RESTORE|CONF_FLAG_STRLIST_SORTED, "exclude");
 	case OPT_FSCHGDIR:
 	  return sc_lst(c[o], 0,
 		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "cross_filesystem");
@@ -706,11 +705,14 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_ATIME:
 	  return sc_int(c[o], 0, CONF_FLAG_INCEXC, "atime");
 	case OPT_OVERWRITE:
-	  return sc_int(c[o], 0, CONF_FLAG_INCEXC, "overwrite");
+	  return sc_int(c[o], 0,
+		CONF_FLAG_INCEXC|CONF_FLAG_INCEXC_RESTORE, "overwrite");
 	case OPT_STRIP:
-	  return sc_int(c[o], 0, CONF_FLAG_INCEXC, "strip");
+	  return sc_int(c[o], 0,
+		CONF_FLAG_INCEXC|CONF_FLAG_INCEXC_RESTORE, "strip");
 	case OPT_REGEX:
-	  return sc_str(c[o], 0, CONF_FLAG_INCEXC, "regex");
+	  return sc_str(c[o], 0,
+		CONF_FLAG_INCEXC|CONF_FLAG_INCEXC_RESTORE, "regex");
 	case OPT_MAX:
 	  return 0;
 	// No default, so we get compiler warnings if something was missed.

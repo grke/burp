@@ -514,7 +514,8 @@ static int process_files_in_directory(struct asfd *asfd, struct dirent **nl,
 					// find_one_file(), or we might get
 					// some things backed up twice.
 					for(y=x->next; y; y=y->next)
-						if(is_subdir(x->path, y->path))
+						if(y->next
+						 && is_subdir(x->path, y->path))
 							y=y->next;
 				}
 			}

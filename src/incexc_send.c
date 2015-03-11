@@ -1,98 +1,89 @@
 #include "include.h"
 #include "cmd.h"
 
-static int send_incexc_str(struct asfd *asfd, const char *pre, const char *str)
+static int send_incexc_string(struct asfd *asfd,
+	const char *field, const char *str)
 {
 	char *tosend=NULL;
-	int rc=0;
+	int ret=-1;
 	if(!str) return 0;
-	if(!(tosend=prepend(pre, str, strlen(str), " = ")))
-		rc=-1;
-	if(!rc && asfd->write_str(asfd, CMD_GEN, tosend))
+	if(!(tosend=prepend(field, str, strlen(str), " = ")))
+		goto end;
+	if(asfd->write_str(asfd, CMD_GEN, tosend))
 	{
 		logp("Error in async_write_str when sending incexc\n");
-		rc=-1;
+		goto end;
 	}
-	if(tosend)
-		free(tosend);
-	return rc;
+	ret=0;
+end:
+	free_w(&tosend);
+	return ret;
 }
 
-static int send_incexc_int(struct asfd *asfd, const char *pre, int myint)
+static int send_incexc_str(struct asfd *asfd, struct conf *conf)
+{
+	return send_incexc_string(asfd, conf->field, get_string(conf));
+}
+
+static int send_incexc_uint(struct asfd *asfd, struct conf *conf)
 {
 	char tmp[64]="";
-	snprintf(tmp, sizeof(tmp), "%d", myint);
-	return send_incexc_str(asfd, pre, tmp);
+	snprintf(tmp, sizeof(tmp), "%d", get_int(conf));
+	return send_incexc_string(asfd, conf->field, tmp);
 }
 
-static int send_incexc_long(struct asfd *asfd, const char *pre, long mylong)
+static int send_incexc_ssize_t(struct asfd *asfd, struct conf *conf)
 {
 	char tmp[32]="";
-	snprintf(tmp, sizeof(tmp), "%lu", mylong);
-	return send_incexc_str(asfd, pre, tmp);
+	snprintf(tmp, sizeof(tmp), "%lu", (long)get_ssize_t(conf));
+	return send_incexc_string(asfd, conf->field, tmp);
 }
 
-static int send_incexc_from_strlist(struct asfd *asfd,
-	const char *prepend_on, const char *prepend_off, struct strlist *list)
+static int send_incexc_strlist(struct asfd *asfd, struct conf *conf)
 {
 	struct strlist *l;
-	for(l=list; l; l=l->next)
-		if(send_incexc_str(asfd,
-			l->flag?prepend_on:prepend_off, l->path)) return -1;
+	for(l=get_strlist(conf); l; l=l->next)
+		if(send_incexc_string(asfd, conf->field, l->path)) return -1;
 	return 0;
 }
 
-static int do_sends(struct asfd *asfd, struct conf **confs)
+static int do_sends(struct asfd *asfd, struct conf **confs, int flag)
 {
-/*
-	if(  send_incexc_from_strlist(asfd, "include", "exclude",
-		conf->incexcdir)
-	  || send_incexc_from_strlist(asfd, "include_glob", "include_glob",
-		conf->incglob)
-	  || send_incexc_from_strlist(asfd, "cross_filesystem", "cross_filesystem",
-		conf->fschgdir)
-	  || send_incexc_from_strlist(asfd, "nobackup", "nobackup",
-		conf->nobackup)
-	  || send_incexc_from_strlist(asfd, "include_ext", "include_ext",
-		conf->incext)
-	  || send_incexc_from_strlist(asfd, "exclude_ext", "exclude_ext",
-		conf->excext)
-	  || send_incexc_from_strlist(asfd, "include_regex", "include_regex",
-		conf->increg)
-	  || send_incexc_from_strlist(asfd, "exclude_regex", "exclude_regex",
-		conf->excreg)
-	  || send_incexc_from_strlist(asfd, "exclude_fs", "exclude_fs",
-		conf->excfs)
-	  || send_incexc_from_strlist(asfd, "exclude_comp", "exclude_comp",
-		conf->excom)
-	  || send_incexc_from_strlist(asfd, "read_fifo", "read_fifo",
-		conf->fifos)
-	  || send_incexc_from_strlist(asfd, "read_blockdev", "read_blockdev",
-		conf->blockdevs)
-	  || send_incexc_int(asfd, "cross_all_filesystems",
-		conf->cross_all_filesystems)
-	  || send_incexc_int(asfd, "read_all_fifos", conf->read_all_fifos)
-	  || send_incexc_long(asfd, "min_file_size", conf->min_file_size)
-	  || send_incexc_long(asfd, "max_file_size", conf->max_file_size)
-	  || send_incexc_str(asfd, "vss_drives", conf->vss_drives))
-		return -1;
-*/
-	return 0;
-}
-
-static int do_sends_restore(struct asfd *asfd, struct conf **confs)
-{
-/*
-	if(  send_incexc_from_strlist(asfd, "include", "exclude", conf->incexcdir)
-	  || send_incexc_str(asfd, "orig_client", conf->orig_client)
-	  || send_incexc_str(asfd, "backup", conf->backup)
-	  || send_incexc_str(asfd, "restoreprefix", conf->restoreprefix)
-	  || send_incexc_str(asfd, "regex", conf->regex)
-	  || send_incexc_int(asfd, "overwrite", conf->overwrite)
-	  || send_incexc_long(asfd, "strip", conf->strip))
-		return -1;
-*/
-	return 0;
+	int i=0;
+	int r=-1;
+	for(i=0; i<OPT_MAX; i++)
+	{
+		if(!(confs[i]->flags & flag)) continue;
+		switch(confs[i]->conf_type)
+		{
+			case CT_STRING:
+				if(send_incexc_str(asfd, confs[i]))
+					goto end;
+				break;
+			case CT_STRLIST:
+				if(send_incexc_strlist(asfd, confs[i]))
+					goto end;
+				break;
+			case CT_UINT:
+				if(send_incexc_uint(asfd, confs[i]))
+					goto end;
+				break;
+			case CT_SSIZE_T:
+				if(send_incexc_ssize_t(asfd, confs[i]))
+					goto end;
+				break;
+			case CT_FLOAT:
+			case CT_MODE_T:
+			case CT_E_BURP_MODE:
+			case CT_E_PROTOCOL:
+			case CT_E_RECOVERY_METHOD:
+			case CT_CNTR:
+				break;
+		}
+	}
+	r=0;
+end:
+	return r;
 }
 
 static int do_request_response(struct asfd *asfd,
@@ -105,7 +96,7 @@ static int do_request_response(struct asfd *asfd,
 int incexc_send_client(struct asfd *asfd, struct conf **confs)
 {
 	if(do_request_response(asfd, "incexc", "incexc ok")
-	  || do_sends(asfd, confs)
+	  || do_sends(asfd, confs, CONF_FLAG_INCEXC)
 	  || do_request_response(asfd, "incexc end", "incexc end ok"))
 		return -1;
 	return 0;
@@ -115,7 +106,7 @@ int incexc_send_server(struct asfd *asfd, struct conf **confs)
 {
 	/* 'sincexc' and 'sincexc ok' have already been exchanged,
 	   so go straight into doing the sends. */
-	if(do_sends(asfd, confs)
+	if(do_sends(asfd, confs, CONF_FLAG_INCEXC)
 	  || do_request_response(asfd, "sincexc end", "sincexc end ok"))
 		return -1;
 	return 0;
@@ -125,7 +116,7 @@ int incexc_send_server_restore(struct asfd *asfd, struct conf **confs)
 {
 	/* 'srestore' and 'srestore ok' have already been exchanged,
 	   so go straight into doing the sends. */
-	if(do_sends_restore(asfd, confs)
+	if(do_sends(asfd, confs, CONF_FLAG_INCEXC_RESTORE)
 	  || do_request_response(asfd, "srestore end", "srestore end ok"))
 		return -1;
 	return 0;

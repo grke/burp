@@ -14,4 +14,10 @@ extern int conf_load_global_only(const char *path, struct conf **globalcs);
 
 extern const char *confs_get_lockfile(struct conf **confs);
 
+#ifdef UTEST
+extern int conf_load_lines_from_buf(const char *buf, struct conf **c);
+extern int conf_finalise(struct conf **c);
+extern int conf_load_global_only_buf(const char *path, struct conf **globalcs);
+#endif
+
 #endif

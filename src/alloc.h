@@ -6,6 +6,7 @@
 #ifdef UTEST
 extern uint64_t alloc_count;
 extern uint64_t free_count;
+extern void alloc_counters_reset(void);
 #endif
 
 extern char *strdup_w(const char *s, const char *func);

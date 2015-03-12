@@ -223,11 +223,7 @@ static void conf_free_content(struct conf *c)
 	switch(c->conf_type)
 	{
 		case CT_STRING:
-			if(c->data.s)
-			{
-				free(c->data.s);
-				c->data.s=NULL;
-			}
+			free_w(&c->data.s);
 			break;
 		case CT_STRLIST:
 			strlists_free(&c->data.sl);
@@ -858,6 +854,7 @@ void confs_free(struct conf ***confs)
 {
 	int i=0;
 	if(!confs || !*confs) return;
+	confs_free_content(*confs);
 	for(i=0; i<OPT_MAX; i++)
 		free_v((void **)&((*confs)[i]));
 	free_v((void **)confs);

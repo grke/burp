@@ -6,9 +6,9 @@
 static void strlist_free(struct strlist *strlist)
 {
 	if(!strlist) return;
-	if(strlist->path) free(strlist->path);
+	if(strlist->path) free_w(&strlist->path);
 	if(strlist->re) regfree(strlist->re);
-	free(strlist);
+	free_v((void **)&strlist);
 }
 
 void strlists_free(struct strlist **strlist)

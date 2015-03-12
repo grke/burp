@@ -8,6 +8,7 @@ START_TEST(test_alloc)
 	char *sptr=NULL;
 	char *mptr=NULL;
 	char *cptr=NULL;
+	alloc_counters_reset();
 	sptr=(char *)strdup_w("asdfa", __func__);
 	rptr=(char *)realloc_w(rptr, 20, __func__);
 	rptr=(char *)realloc_w(rptr, 50, __func__);

@@ -334,7 +334,7 @@ static int load_conf_field_and_value(struct conf **c,
 }
 
 // Recursing, so need to define this ahead of conf_parse_line.
-static int load_conf_lines_from_file(const char *conf_path,
+static int conf_load_lines_from_file(const char *conf_path,
 	struct conf **confs);
 
 static int conf_parse_line(struct conf **confs, const char *conf_path,
@@ -379,7 +379,7 @@ static int conf_parse_line(struct conf **confs, const char *conf_path,
 			extrafile=tmp;
 		}
 
-		ret=load_conf_lines_from_file(extrafile, confs);
+		ret=conf_load_lines_from_file(extrafile, confs);
 		goto end;
 	}
 
@@ -881,7 +881,7 @@ static int setup_script_arg_override(struct strlist **list, int count, struct st
 }
 */
 
-static int conf_finalise(const char *conf_path, struct conf **c)
+int conf_finalise(struct conf **c)
 {
 	int s_script_notify=0;
 	if(finalise_fstypes(c)) return -1;
@@ -964,7 +964,7 @@ static int conf_finalise_global_only(const char *conf_path, struct conf **confs)
 	return r;
 }
 
-static int load_conf_lines_from_file(const char *conf_path, struct conf **confs)
+static int conf_load_lines_from_file(const char *conf_path, struct conf **confs)
 {
 	int ret=0;
 	int line=0;
@@ -989,21 +989,19 @@ static int load_conf_lines_from_file(const char *conf_path, struct conf **confs)
 	return ret;
 }
 
-/* The client runs this when the server overrides the incexcs. */
-int conf_parse_incexcs_buf(struct conf **c, const char *incexc)
+int conf_load_lines_from_buf(const char *buf, struct conf **c)
 {
 	int ret=0;
 	int line=0;
 	char *tok=NULL;
 	char *copy=NULL;
 
-	if(!incexc) return 0;
+	if(!buf) return 0;
 	
-	if(!(copy=strdup_w(incexc, __func__))) return -1;
-	free_incexcs(c);
+	if(!(copy=strdup_w(buf, __func__))) return -1;
 	if(!(tok=strtok(copy, "\n")))
 	{
-		logp("unable to parse server incexc\n");
+		logp("unable to parse conf buffer\n");
 		free_w(&copy);
 		return -1;
 	}
@@ -1018,16 +1016,25 @@ int conf_parse_incexcs_buf(struct conf **c, const char *incexc)
 	} while((tok=strtok(NULL, "\n")));
 	free_w(&copy);
 
-	if(ret) return ret;
-	return conf_finalise("server override", c);
+	return ret;
 }
 
 /* The server runs this when parsing a restore file on the server. */
 int conf_parse_incexcs_path(struct conf **c, const char *path)
 {
 	free_incexcs(c);
-	if(load_conf_lines_from_file(path, c)
-	  || conf_finalise(path, c))
+	if(conf_load_lines_from_file(path, c)
+	  || conf_finalise(c))
+		return -1;
+	return 0;
+}
+
+/* The client runs this when the server overrides the incexcs. */
+int conf_parse_incexcs_buf(struct conf **c, const char *incexc)
+{
+	free_incexcs(c);
+	if(conf_load_lines_from_buf(incexc, c)
+	  || conf_finalise(c))
 		return -1;
 	return 0;
 }
@@ -1139,9 +1146,9 @@ static int conf_load_overrides(struct conf **globalcs, struct conf **cconfs,
 	// Some client settings can be globally set in the server conf and
 	// overridden in the client specific conf.
 	if(conf_set_from_global(globalcs, cconfs)
-	  || load_conf_lines_from_file(path, cconfs)
+	  || conf_load_lines_from_file(path, cconfs)
 	  || conf_set_from_global_arg_list_overrides(globalcs, cconfs)
-	  || conf_finalise(path, cconfs))
+	  || conf_finalise(cconfs))
 		return -1;
 	return 0;
 }
@@ -1168,12 +1175,27 @@ end:
 	return ret;
 }
 
-int conf_load_global_only(const char *path, struct conf **globalcs)
+static int do_load_global_only(struct conf **globalcs,
+	const char *path, const char *buf)
 {
-	if(set_string(globalcs[OPT_CONFFILE], path)
-	  || load_conf_lines_from_file(path, globalcs)
-	  || conf_finalise(path, globalcs)
+	if(set_string(globalcs[OPT_CONFFILE], path)) return -1;
+	if(buf) { if(conf_load_lines_from_buf(buf, globalcs)) return -1; }
+	else { if(conf_load_lines_from_file(path, globalcs)) return -1; }
+	if(conf_finalise(globalcs)
 	  || conf_finalise_global_only(path, globalcs))
 		return -1;
 	return 0;
+
 }
+
+int conf_load_global_only(const char *path, struct conf **globalcs)
+{
+	return do_load_global_only(globalcs, path, NULL);
+}
+
+#ifdef UTEST
+int conf_load_global_only_buf(const char *buf, struct conf **globalcs)
+{
+	return do_load_global_only(globalcs, "test buf", buf);
+}
+#endif

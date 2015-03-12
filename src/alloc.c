@@ -5,6 +5,11 @@
 #ifdef UTEST
 uint64_t alloc_count=0;
 uint64_t free_count=0;
+void alloc_counters_reset(void)
+{
+	alloc_count=0;
+	free_count=0;
+}
 #endif
 
 char *strdup_w(const char *s, const char *func)

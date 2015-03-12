@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "test.h"
 #include "../src/base64.h"
 
 struct data
@@ -37,9 +38,8 @@ static struct data p[] = {
 
 START_TEST(test_to_base64)
 {
-	unsigned int i;
 	base64_init();
-	for(i=0; i<sizeof(p)/sizeof(*p); i++)
+	FOREACH(p)
 	{
 		char where[32];
 		ck_assert_int_eq(to_base64(p[i].value, where), p[i].len);
@@ -71,8 +71,8 @@ static void do_from_base64(struct data *d, size_t s)
 
 START_TEST(test_from_base64)
 {
-	do_from_base64(p, sizeof(p)/sizeof(*p));
-	do_from_base64(extra_from, sizeof(extra_from)/sizeof(*extra_from));
+	do_from_base64(p, ARR_LEN(p));
+	do_from_base64(extra_from, ARR_LEN(extra_from));
 }
 END_TEST
 

@@ -1,5 +1,6 @@
 #include <check.h>
 #include <stdlib.h>
+#include "test.h"
 #include "../src/pathcmp.h"
 
 #define SAME	0
@@ -34,8 +35,7 @@ static struct data p[] = {
 
 START_TEST(test_pathcmp)
 {
-	unsigned int i;
-	for(i=0; i<sizeof(p)/sizeof(*p); i++)
+	FOREACH(p)
 		ck_assert_int_eq(pathcmp(p[i].a, p[i].b), p[i].expected);
 }
 END_TEST
@@ -63,8 +63,7 @@ static struct data s[] = {
 
 START_TEST(test_is_subdir)
 {
-	unsigned int i;
-	for(i=0; i<sizeof(s)/sizeof(*s); i++)
+	FOREACH(s)
 		ck_assert_int_eq(is_subdir(s[i].a, s[i].b), s[i].expected);
 }
 END_TEST

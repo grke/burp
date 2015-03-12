@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <openssl/md5.h>
+#include "test.h"
 #include "../src/hexmap.h"
 #include "../src/protocol2/blk.h"
 
@@ -42,9 +43,8 @@ static struct md5data m[] = {
 
 START_TEST(test_md5str_to_bytes)
 {
-	unsigned int i;
 	hexmap_init();
-	for(i=0; i<sizeof(m)/sizeof(*m); i++)
+	FOREACH(m)
 	{
 		uint8_t bytes[MD5_DIGEST_LENGTH];
 		md5str_to_bytes(m[i].str, bytes);
@@ -56,9 +56,8 @@ END_TEST
 
 START_TEST(test_bytes_to_md5str)
 {
-	unsigned int i;
 	hexmap_init();
-	for(i=0; i<sizeof(m)/sizeof(*m); i++)
+	FOREACH(m)
 	{
 		const char *str;
 		str=bytes_to_md5str(m[i].bytes);
@@ -91,8 +90,7 @@ static struct savepathdata ssavepathsig[] = {
 
 static void do_savepath_str_to_bytes(struct savepathdata *d, size_t s)
 {
-	unsigned int i;
-	for(i=0; i<sizeof(d)/sizeof(*d); i++)
+	FOREACH(d)
 	{
 		uint8_t bytes[SAVE_PATH_LEN];
 		savepathstr_to_bytes(d[i].str, bytes);
@@ -113,9 +111,8 @@ END_TEST
 
 START_TEST(test_bytes_to_savepathstr)
 {
-	unsigned int i;
 	hexmap_init();
-	for(i=0; i<sizeof(ssavepath)/sizeof(*ssavepath); i++)
+	FOREACH(ssavepath)
 	{
 		const char *str;
 		str=bytes_to_savepathstr(ssavepath[i].bytes);
@@ -126,9 +123,8 @@ END_TEST
 
 START_TEST(test_bytes_to_savepathstr_with_sig)
 {
-	unsigned int i;
 	hexmap_init();
-	for(i=0; i<sizeof(ssavepathsig)/sizeof(*ssavepathsig); i++)
+	FOREACH(ssavepathsig)
 	{
 		const char *str;
 		str=bytes_to_savepathstr_with_sig(ssavepathsig[i].bytes);

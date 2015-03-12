@@ -1,6 +1,9 @@
 #ifndef __UTEST_H
 #define __UTEST_H
 
+#define ARR_LEN(array) (sizeof((array))/sizeof((array)[0]))
+#define FOREACH(array) for(unsigned int i=0; i<ARR_LEN(array); i++)
+
 extern int sub_ntests;
 
 Suite *suite_alloc(void);

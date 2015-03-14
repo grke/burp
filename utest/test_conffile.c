@@ -30,6 +30,7 @@ struct data
 
 static struct data d[] = {
 	{ "a=b", "a", "b" },
+	{ "a=b\n", "a", "b" },
 	{ "a = b", "a", "b" },
 	{ "   a  =    b ", "a", "b" },
 	{ "   a  =    b \n", "a", "b" },
@@ -82,6 +83,7 @@ START_TEST(test_client_conf)
 {
 	struct conf **confs=setup();
 	fail_unless(!conf_load_global_only_buf(MIN_CLIENT_CONF, confs));
+	fail_unless(get_e_burp_mode(confs[OPT_BURP_MODE])==BURP_MODE_CLIENT);
 	ck_assert_str_eq(get_string(confs[OPT_SERVER]), "4.5.6.7");
 	ck_assert_str_eq(get_string(confs[OPT_PORT]), "1234");
 	ck_assert_str_eq(get_string(confs[OPT_STATUS_PORT]), "12345");
@@ -95,7 +97,7 @@ START_TEST(test_client_conf)
 }
 END_TEST
 
-static void assert_incexc(struct strlist **s, const char *path, int flag)
+static void assert_strlist(struct strlist **s, const char *path, int flag)
 {
 	if(!path)
 	{
@@ -109,12 +111,12 @@ static void assert_incexc(struct strlist **s, const char *path, int flag)
 
 static void assert_include(struct strlist **s, const char *path)
 {
-	assert_incexc(s, path, 1);
+	assert_strlist(s, path, 1);
 }
 
 static void assert_exclude(struct strlist **s, const char *path)
 {
-	assert_incexc(s, path, 0);
+	assert_strlist(s, path, 0);
 }
 
 START_TEST(test_client_includes_excludes)
@@ -176,6 +178,41 @@ START_TEST(test_client_include_failures)
 }
 END_TEST
 
+#define MIN_SERVER_CONF				\
+	"mode=server\n"				\
+	"port=1234\n"				\
+	"status_port=12345\n"			\
+	"lockfile=/lockfile/path\n"		\
+	"ssl_cert=/ssl/cert/path\n"		\
+	"ssl_cert_ca=/cert_ca/path\n"		\
+	"directory=/a/directory\n"		\
+	"dedup_group=a_group\n" 		\
+	"clientconfdir=/a/ccdir\n"		\
+	"ssl_dhfile=/a/dhfile\n"		\
+	"keep=10\n"				\
+
+START_TEST(test_server_conf)
+{
+	struct strlist *s;
+	struct conf **confs=setup();
+	fail_unless(!conf_load_global_only_buf(MIN_SERVER_CONF, confs));
+	fail_unless(get_e_burp_mode(confs[OPT_BURP_MODE])==BURP_MODE_SERVER);
+	ck_assert_str_eq(get_string(confs[OPT_PORT]), "1234");
+	ck_assert_str_eq(get_string(confs[OPT_STATUS_PORT]), "12345");
+	ck_assert_str_eq(get_string(confs[OPT_LOCKFILE]), "/lockfile/path");
+	ck_assert_str_eq(get_string(confs[OPT_SSL_CERT]), "/ssl/cert/path");
+	ck_assert_str_eq(get_string(confs[OPT_SSL_CERT_CA]), "/cert_ca/path");
+	ck_assert_str_eq(get_string(confs[OPT_DIRECTORY]), "/a/directory");
+	ck_assert_str_eq(get_string(confs[OPT_DEDUP_GROUP]), "a_group");
+	ck_assert_str_eq(get_string(confs[OPT_CLIENTCONFDIR]), "/a/ccdir");
+	ck_assert_str_eq(get_string(confs[OPT_SSL_DHFILE]), "/a/dhfile");
+	s=get_strlist(confs[OPT_KEEP]);
+	assert_strlist(&s, "10", 10);
+	assert_include(&s, NULL);
+	tear_down(&confs);
+}
+END_TEST
+
 Suite *suite_conffile(void)
 {
 	Suite *s;
@@ -189,6 +226,7 @@ Suite *suite_conffile(void)
 	tcase_add_test(tc_core, test_client_conf);
 	tcase_add_test(tc_core, test_client_includes_excludes);
 	tcase_add_test(tc_core, test_client_include_failures);
+	tcase_add_test(tc_core, test_server_conf);
 	suite_add_tcase(s, tc_core);
 
 	return s;

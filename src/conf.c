@@ -700,6 +700,8 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_str(c[o], 0, CONF_FLAG_INCEXC, "vss_drives");
 	case OPT_ATIME:
 	  return sc_int(c[o], 0, CONF_FLAG_INCEXC, "atime");
+	case OPT_SCAN_PROBLEM_RAISES_ERROR:
+	  return sc_int(c[o], 0, CONF_FLAG_INCEXC, "scan_problem_raises_error");
 	case OPT_OVERWRITE:
 	  return sc_int(c[o], 0,
 		CONF_FLAG_INCEXC|CONF_FLAG_INCEXC_RESTORE, "overwrite");

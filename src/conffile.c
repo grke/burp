@@ -1122,10 +1122,12 @@ static int conf_init_save_cname_and_version(struct conf **cconfs)
 	int ret=-1;
 	char *cname=NULL;
 	char *cversion=NULL;
+	char *orig_cname=get_string(cconfs[OPT_CNAME]);
+	char *orig_cversion=get_string(cconfs[OPT_PEER_VERSION]);
 
-	if(!(cname=strdup_w(get_string(cconfs[OPT_CNAME]), __func__))
-	  || !(cversion=
-	  strdup_w(get_string(cconfs[OPT_PEER_VERSION]), __func__)))
+	if((orig_cname && !(cname=strdup_w(orig_cname, __func__)))
+	  || (orig_cversion
+	    && !(cversion=strdup_w(orig_cversion, __func__))))
 		goto end;
 
 	set_string(cconfs[OPT_CNAME], NULL);

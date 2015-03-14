@@ -438,9 +438,7 @@ int main (int argc, char *argv[])
 		&& act!=ACTION_STATUS_SNAPSHOT))
 			logp("-l <logfile> option obsoleted\n");
 
-	mode=get_e_burp_mode(confs[OPT_BURP_MODE]);
-	if(mode==BURP_MODE_CLIENT
-	  && orig_client
+	if(orig_client
 	  && *orig_client
 	  && set_string(confs[OPT_ORIG_CLIENT], orig_client))
 		goto end;
@@ -448,6 +446,7 @@ int main (int argc, char *argv[])
 	// The random delay needs to happen before the lock is got, otherwise
 	// you would never be able to use burp by hand.
 	if(randomise) set_int(confs[OPT_RANDOMISE], randomise);
+	mode=get_e_burp_mode(confs[OPT_BURP_MODE]);
 	if(mode==BURP_MODE_CLIENT
 	  && (act==ACTION_BACKUP_TIMED || act==ACTION_TIMER_CHECK))
 		random_delay(confs);

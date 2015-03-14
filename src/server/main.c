@@ -281,8 +281,16 @@ end:
 	async_asfd_free_all(&as); // This closes cfd for us.
 	logp("exit child\n");
 	if(cntr) cntr_free(&cntr);
-	if(confs) confs_free(&confs);
-	if(cconfs) confs_free(&cconfs);
+	if(confs)
+	{
+		set_cntr(confs[OPT_CNTR], NULL);
+		confs_free(&confs);
+	}
+	if(cconfs)
+	{
+		set_cntr(cconfs[OPT_CNTR], NULL);
+		confs_free(&cconfs);
+	}
 	return ret;
 }
 

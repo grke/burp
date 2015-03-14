@@ -13,8 +13,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 	switch(o)
 	{
 		case OPT_BURP_MODE:
-			ck_assert_int_eq(get_e_burp_mode(c[o]),
-				BURP_MODE_UNSET);
+			fail_unless(get_e_burp_mode(c[o])==BURP_MODE_UNSET);
 			break;
 		case OPT_LOCKFILE:
 		case OPT_PIDFILE:
@@ -75,10 +74,10 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_VSS_DRIVES:
 		case OPT_REGEX:
 		case OPT_RESTORE_CLIENT:
-			ck_assert_int_eq(get_string(c[o])==NULL, 1);
+			fail_unless(get_string(c[o])==NULL);
 			break;
 		case OPT_RATELIMIT:
-			ck_assert_int_eq(get_float(c[o]), 0);
+			fail_unless(get_float(c[o])==0);
 			break;
 		case OPT_CLIENT_IS_WINDOWS:
 		case OPT_RANDOMISE:
@@ -104,7 +103,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_ATIME:
 		case OPT_OVERWRITE:
 		case OPT_STRIP:
-			ck_assert_int_eq(get_int(c[o]), 0);
+			fail_unless(get_int(c[o])==0);
 			break;
 		case OPT_DAEMON:
 		case OPT_STDOUT:
@@ -121,27 +120,27 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_CLIENT_CAN_RESTORE:
 		case OPT_CLIENT_CAN_VERIFY:
 		case OPT_SERVER_CAN_RESTORE:
-			ck_assert_int_eq(get_int(c[o]), 1);
+			fail_unless(get_int(c[o])==1);
 			break;
 		case OPT_NETWORK_TIMEOUT:
-			ck_assert_int_eq(get_int(c[o]), 60*60*2);
+			fail_unless(get_int(c[o])==60*60*2);
 			break;
 		case OPT_SSL_COMPRESSION:
 		case OPT_MAX_CHILDREN:
 		case OPT_MAX_STATUS_CHILDREN:
-			ck_assert_int_eq(get_int(c[o]), 5);
+			fail_unless(get_int(c[o])==5);
 			break;
         	case OPT_COMPRESSION:
-			ck_assert_int_eq(get_int(c[o]), 9);
+			fail_unless(get_int(c[o])==9);
 			break;
 		case OPT_MAX_STORAGE_SUBDIRS:
-			ck_assert_int_eq(get_int(c[o]), 30000);
+			fail_unless(get_int(c[o])==30000);
 			break;
 		case OPT_MAX_HARDLINKS:
-			ck_assert_int_eq(get_int(c[o]), 10000);
+			fail_unless(get_int(c[o])==10000);
 			break;
 		case OPT_UMASK:
-			ck_assert_int_eq(get_mode_t(c[o]), 0022);
+			fail_unless(get_mode_t(c[o])==0022);
 			break;
 		case OPT_STARTDIR:
 		case OPT_B_SCRIPT_PRE_ARG:
@@ -172,23 +171,23 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_INCGLOB:
         	case OPT_FIFOS:
         	case OPT_BLOCKDEVS:
-			ck_assert_int_eq(get_strlist(c[o])==NULL, 1);
+			fail_unless(get_strlist(c[o])==NULL);
 			break;
 		case OPT_PROTOCOL:
-			ck_assert_int_eq(get_e_protocol(c[o]), PROTO_AUTO);
+			fail_unless(get_e_protocol(c[o])==PROTO_AUTO);
 			break;
 		case OPT_HARD_QUOTA:
 		case OPT_SOFT_QUOTA:
 		case OPT_MIN_FILE_SIZE:
 		case OPT_MAX_FILE_SIZE:
-			ck_assert_int_eq(get_ssize_t(c[o]), 0);
+			fail_unless(get_ssize_t(c[o])==0);
 			break;
         	case OPT_WORKING_DIR_RECOVERY_METHOD:
-			ck_assert_int_eq(get_e_recovery_method(c[o]),
+			fail_unless(get_e_recovery_method(c[o])==
 				RECOVERY_METHOD_DELETE);
 			break;
 		case OPT_CNTR:
-			ck_assert_int_eq(get_cntr(c[o])==NULL, 1);
+			fail_unless(get_cntr(c[o])==NULL);
 			break;
         	case OPT_MAX:
 			break;
@@ -206,8 +205,8 @@ START_TEST(test_conf_defaults)
 	for(i=0; i<OPT_MAX; i++)
 		check_default(confs, (enum conf_opt)i);
 	confs_free(&confs);
-	ck_assert_int_eq(confs==NULL, 1);
-	ck_assert_int_eq(alloc_count, free_count);
+	fail_unless(confs==NULL);
+	fail_unless(alloc_count==free_count);
 }
 END_TEST
 

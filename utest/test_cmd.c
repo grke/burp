@@ -34,10 +34,10 @@ START_TEST(test_cmd)
 		  || cmd==CMD_EFS_FILE)
 			expected_is_encrypted=1;
 
-		ck_assert_int_eq(cmd_is_link(cmd), expected_is_link);
-		ck_assert_int_eq(cmd_is_endfile(cmd), expected_is_endfile);
-		ck_assert_int_eq(cmd_is_filedata(cmd), expected_is_filedata);
-		ck_assert_int_eq(cmd_is_encrypted(cmd), expected_is_encrypted);
+		fail_unless(cmd_is_link(cmd)==expected_is_link);
+		fail_unless(cmd_is_endfile(cmd)==expected_is_endfile);
+		fail_unless(cmd_is_filedata(cmd)==expected_is_filedata);
+		fail_unless(cmd_is_encrypted(cmd)==expected_is_encrypted);
 	}
 }
 END_TEST

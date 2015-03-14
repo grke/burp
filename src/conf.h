@@ -153,6 +153,7 @@ enum conf_opt
 	OPT_STRIP_VSS,
 	OPT_VSS_DRIVES,
 	OPT_ATIME,
+	OPT_SCAN_PROBLEM_RAISES_ERROR,
 	// These are to do with restore.
 	OPT_OVERWRITE,
 	OPT_STRIP,

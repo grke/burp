@@ -21,3 +21,5 @@
 # read_all_fifos=0
 # split_vss=1
 # strip_vss=0
+# atime=0
+# scan_problem_raises_error=0

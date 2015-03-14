@@ -101,6 +101,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_SPLIT_VSS:
 		case OPT_STRIP_VSS:
 		case OPT_ATIME:
+		case OPT_SCAN_PROBLEM_RAISES_ERROR:
 		case OPT_OVERWRITE:
 		case OPT_STRIP:
 			fail_unless(get_int(c[o])==0);

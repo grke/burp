@@ -67,8 +67,14 @@ static int maybe_send_extrameta(struct asfd *asfd,
 static int ft_err(struct asfd *asfd,
 	struct conf **confs, FF_PKT *ff, const char *msg)
 {
-	return logw(asfd, confs, _("Err: %s %s: %s"), msg,
-		ff->fname, strerror(errno));
+	int raise_error;
+	const char *prefix="";
+	raise_error=get_int(confs[OPT_SCAN_PROBLEM_RAISES_ERROR]);
+	if(raise_error) prefix="Err: ";
+	if(logw(asfd, confs, _("%s%s %s: %s"), prefix, msg,
+		ff->fname, strerror(errno))) return -1;
+	if(raise_error) return -1;
+	return 0;
 }
 
 static int do_to_server(struct asfd *asfd,
@@ -148,8 +154,8 @@ int send_file(struct asfd *asfd, FF_PKT *ff, bool top_level, struct conf **confs
 		case FT_SPEC:
 			return to_server(asfd, confs, ff, sb, CMD_SPECIAL);
 		case FT_NOFSCHG:
-			return logw(asfd, confs, "Dir: %s [will not descend: "
-				"file system change not allowed]\n", ff->fname);
+			return ft_err(asfd, confs, ff, "Will not descend: "
+				"file system change not allowed");
 		case FT_NOFOLLOW:
 			return ft_err(asfd, confs, ff, "Could not follow link");
 		case FT_NOSTAT:

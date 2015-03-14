@@ -636,6 +636,9 @@ When backing up Windows computers, this option allows you to specify which drive
 .TP
 \fBatime=[0|1]\fR
 This allows you to control whether the client uses O_NOATIME when opening files and directories. The default is 0, which enables O_NOATIME. This means that the client can read files and directories without updating the access times. However, this is only possible if you are running as root, or are the owner of the file or directory. If this is not the case (perhaps you only have group or world access to the files), you will get errors until you set atime=1. With atime=1, the access times will be updated on the files and directories that get backed up.
+.TP
+\fBscan_problem_raises_error=[0|1]\fR
+When enabled, this causes problems in the phase1 scan (such as an 'include' being missing) to be treated as fatal errors. The default is off.
 
 .SH SERVER CLIENTCONFDIR FILE
 .TP

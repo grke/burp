@@ -1,3 +1,10 @@
+  * Add ability to do 'burp -a l -b c' and list the files in the current
+    backup.
+  * Rewrite the conf system. Gives the ability to use 'burp -t' to show the
+    current conf settings. Add '-c <conf file>' and '-C <client>' to get
+    client/server conf settings, and clientconfdir settings.
+  * More unit tests.
+
 2015-03-02: Changes in burp-2.0.14:
   * Improve utest/Makefile.
   * Add unit test for base64.c.

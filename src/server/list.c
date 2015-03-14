@@ -222,7 +222,8 @@ int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct conf **confs,
 		{
 			if(!found
 			  && (!strcmp(bu->timestamp, backup)
-				|| bu->bno==bno))
+				|| bu->bno==bno
+				|| (*backup=='c' && (bu->flags & BU_CURRENT))))
 			{
 				found=1;
 				if(send_backup_name_to_client(asfd, bu, confs)

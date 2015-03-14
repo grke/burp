@@ -42,8 +42,8 @@ START_TEST(test_to_base64)
 	FOREACH(p)
 	{
 		char where[32];
-		ck_assert_int_eq(to_base64(p[i].value, where), p[i].len);
-		ck_assert_int_eq(strcmp(p[i].where, where), 0);
+		fail_unless(to_base64(p[i].value, where)==p[i].len);
+		fail_unless(!strcmp(p[i].where, where));
 	}
 }
 END_TEST
@@ -64,8 +64,8 @@ static void do_from_base64(struct data *d, size_t s)
 	for(i=0; i<s; i++)
 	{
 		int64_t value=0;
-		ck_assert_int_eq(from_base64(&value, d[i].where), d[i].len);
-		ck_assert_int_eq(value, d[i].value);
+		fail_unless(from_base64(&value, d[i].where)==d[i].len);
+		fail_unless(value==d[i].value);
 	}
 }
 

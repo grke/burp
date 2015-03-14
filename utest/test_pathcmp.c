@@ -35,8 +35,7 @@ static struct data p[] = {
 
 START_TEST(test_pathcmp)
 {
-	FOREACH(p)
-		ck_assert_int_eq(pathcmp(p[i].a, p[i].b), p[i].expected);
+	FOREACH(p) fail_unless(pathcmp(p[i].a, p[i].b)==p[i].expected);
 }
 END_TEST
 
@@ -63,8 +62,7 @@ static struct data s[] = {
 
 START_TEST(test_is_subdir)
 {
-	FOREACH(s)
-		ck_assert_int_eq(is_subdir(s[i].a, s[i].b), s[i].expected);
+	FOREACH(s) fail_unless(is_subdir(s[i].a, s[i].b)==s[i].expected);
 }
 END_TEST
 

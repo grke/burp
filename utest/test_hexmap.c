@@ -15,8 +15,7 @@ START_TEST(test_md5sum_of_empty_string)
 	MD5_Init(&md5);
 	MD5_Final(checksum, &md5);
 	hexmap_init();
-	ck_assert_int_eq(memcmp(md5sum_of_empty_string,
-		&md5, MD5_DIGEST_LENGTH), 0);
+	fail_unless(!memcmp(md5sum_of_empty_string, &md5, MD5_DIGEST_LENGTH));
 }
 END_TEST
 
@@ -48,8 +47,7 @@ START_TEST(test_md5str_to_bytes)
 	{
 		uint8_t bytes[MD5_DIGEST_LENGTH];
 		md5str_to_bytes(m[i].str, bytes);
-		ck_assert_int_eq(memcmp(bytes,
-			m[i].bytes, MD5_DIGEST_LENGTH), 0);
+		fail_unless(!memcmp(bytes, m[i].bytes, MD5_DIGEST_LENGTH));
 	}
 }
 END_TEST
@@ -61,7 +59,7 @@ START_TEST(test_bytes_to_md5str)
 	{
 		const char *str;
 		str=bytes_to_md5str(m[i].bytes);
-		ck_assert_int_eq(strcmp(m[i].str, str), 0);
+		fail_unless(!strcmp(m[i].str, str));
 	}
 }
 END_TEST
@@ -94,8 +92,7 @@ static void do_savepath_str_to_bytes(struct savepathdata *d, size_t s)
 	{
 		uint8_t bytes[SAVE_PATH_LEN];
 		savepathstr_to_bytes(d[i].str, bytes);
-		ck_assert_int_eq(memcmp(bytes,
-			d[i].bytes, SAVE_PATH_LEN), 0);
+		fail_unless(memcmp(bytes, d[i].bytes, SAVE_PATH_LEN));
 	}
 }
 
@@ -116,7 +113,7 @@ START_TEST(test_bytes_to_savepathstr)
 	{
 		const char *str;
 		str=bytes_to_savepathstr(ssavepath[i].bytes);
-		ck_assert_int_eq(strcmp(ssavepath[i].str, str), 0);
+		fail_unless(!strcmp(ssavepath[i].str, str));
 	}
 }
 END_TEST
@@ -128,7 +125,7 @@ START_TEST(test_bytes_to_savepathstr_with_sig)
 	{
 		const char *str;
 		str=bytes_to_savepathstr_with_sig(ssavepathsig[i].bytes);
-		ck_assert_int_eq(strcmp(ssavepathsig[i].str, str), 0);
+		fail_unless(!strcmp(ssavepathsig[i].str, str));
 	}
 }
 END_TEST

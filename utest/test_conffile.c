@@ -18,7 +18,7 @@ static struct conf **setup(void)
 static void tear_down(struct conf ***confs)
 {
 	confs_free(confs);
-	ck_assert_int_eq(free_count, alloc_count);
+	fail_unless(free_count, alloc_count);
 }
 
 struct data
@@ -54,13 +54,13 @@ START_TEST(test_conf_get_pair)
 		char *str=strdup(d[i].str);
 		conf_get_pair(str, &field, &value);
 		if(!field || !d[i].field)
-			ck_assert_int_eq(field==d[i].field, 1);
+			fail_unless(field==d[i].field);
 		else
-			ck_assert_int_eq(!strcmp(field, d[i].field), 1);
+			fail_unless(!strcmp(field, d[i].field));
 		if(!value || !d[i].value)
-			ck_assert_int_eq(value==d[i].value, 1);
+			fail_unless(value==d[i].value);
 		else
-			ck_assert_int_eq(!strcmp(value, d[i].value), 1);
+			fail_unless(!strcmp(value, d[i].value));
 		free(str);
 	}
 }
@@ -81,7 +81,7 @@ END_TEST
 START_TEST(test_client_conf)
 {
 	struct conf **confs=setup();
-	ck_assert_int_eq(conf_load_global_only_buf(MIN_CLIENT_CONF, confs), 0);
+	fail_unless(!conf_load_global_only_buf(MIN_CLIENT_CONF, confs));
 	ck_assert_str_eq(get_string(confs[OPT_SERVER]), "4.5.6.7");
 	ck_assert_str_eq(get_string(confs[OPT_PORT]), "1234");
 	ck_assert_str_eq(get_string(confs[OPT_STATUS_PORT]), "12345");
@@ -99,11 +99,11 @@ static void assert_incexc(struct strlist **s, const char *path, int flag)
 {
 	if(!path)
 	{
-		ck_assert_int_eq(*s==NULL, 1);
+		fail_unless(*s==NULL);
 		return;
 	}
 	ck_assert_str_eq((*s)->path, path);
-	ck_assert_int_eq((*s)->flag, flag);
+	fail_unless((*s)->flag==flag);
 	*s=(*s)->next;
 }
 
@@ -130,9 +130,7 @@ START_TEST(test_client_includes_excludes)
 	struct strlist *s;
 	struct conf **confs;
 	confs=setup();
-printf("A\n");
-	ck_assert_int_eq(conf_load_global_only_buf(buf, confs), 0);
-printf("B\n");
+	fail_unless(!conf_load_global_only_buf(buf, confs));
 	s=get_strlist(confs[OPT_INCLUDE]);
 	assert_include(&s, "/a");
 	assert_include(&s, "/a/b/c");
@@ -171,8 +169,8 @@ START_TEST(test_client_include_failures)
 	FOREACH(include_failures)
 	{
 		confs=setup();
-		ck_assert_int_eq(conf_load_global_only_buf(include_failures[i],
-			confs), -1);
+		fail_unless(conf_load_global_only_buf(include_failures[i],
+			confs)==-1);
 		tear_down(&confs);
 	}
 }
@@ -190,7 +188,7 @@ Suite *suite_conffile(void)
 	tcase_add_test(tc_core, test_conf_get_pair);
 	tcase_add_test(tc_core, test_client_conf);
 	tcase_add_test(tc_core, test_client_includes_excludes);
-//	tcase_add_test(tc_core, test_client_include_failures);
+	tcase_add_test(tc_core, test_client_include_failures);
 	suite_add_tcase(s, tc_core);
 
 	return s;

@@ -130,7 +130,9 @@ START_TEST(test_client_includes_excludes)
 	struct strlist *s;
 	struct conf **confs;
 	confs=setup();
+printf("A\n");
 	ck_assert_int_eq(conf_load_global_only_buf(buf, confs), 0);
+printf("B\n");
 	s=get_strlist(confs[OPT_INCLUDE]);
 	assert_include(&s, "/a");
 	assert_include(&s, "/a/b/c");
@@ -188,7 +190,7 @@ Suite *suite_conffile(void)
 	tcase_add_test(tc_core, test_conf_get_pair);
 	tcase_add_test(tc_core, test_client_conf);
 	tcase_add_test(tc_core, test_client_includes_excludes);
-	tcase_add_test(tc_core, test_client_include_failures);
+//	tcase_add_test(tc_core, test_client_include_failures);
 	suite_add_tcase(s, tc_core);
 
 	return s;

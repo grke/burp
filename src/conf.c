@@ -141,7 +141,7 @@ int set_int(struct conf *conf, unsigned int i)
 	return 0;
 }
 
-static int set_strlist(struct conf *conf, struct strlist *s)
+int set_strlist(struct conf *conf, struct strlist *s)
 {
 	assert(conf->conf_type==CT_STRLIST);
 	if(conf->data.sl) strlists_free(&conf->data.sl);

@@ -221,16 +221,16 @@ static void server_pre_post_checks(const char *buf, const char *pre_path,
 	struct conf **confs;
 	confs=setup();
 	fail_unless(!conf_load_global_only_buf(buf, confs));
-	ck_assert_str_eq(get_string(confs[OPT_S_SCRIPT_PRE]), "pre_path");
-	ck_assert_str_eq(get_string(confs[OPT_S_SCRIPT_POST]), "post_path");
+	ck_assert_str_eq(get_string(confs[OPT_S_SCRIPT_PRE]), pre_path);
+	ck_assert_str_eq(get_string(confs[OPT_S_SCRIPT_POST]), post_path);
 	s=get_strlist(confs[OPT_S_SCRIPT_PRE_ARG]);
-	assert_strlist(&s, "pre_arg1", 0);
-	assert_strlist(&s, "pre_arg2", 0);
+	assert_strlist(&s, pre_arg1, 0);
+	assert_strlist(&s, pre_arg2, 0);
 	assert_strlist(&s, NULL, 0);
 	fail_unless(get_int(confs[OPT_S_SCRIPT_PRE_NOTIFY])==1);
 	s=get_strlist(confs[OPT_S_SCRIPT_POST_ARG]);
-	assert_strlist(&s, "post_arg1", 0);
-	assert_strlist(&s, "post_arg2", 0);
+	assert_strlist(&s, post_arg1, 0);
+	assert_strlist(&s, post_arg2, 0);
 	assert_strlist(&s, NULL, 0);
 	fail_unless(get_int(confs[OPT_S_SCRIPT_POST_NOTIFY])==1);
 	fail_unless(get_int(confs[OPT_S_SCRIPT_POST_RUN_ON_FAIL])==1);
@@ -266,6 +266,7 @@ START_TEST(test_server_script)
 		"server_script_notify=1\n"
 		"server_script_notify=1\n"
 		"server_script_run_on_fail=1\n"
+		"server_script_post_run_on_fail=1\n"
 	;
 	server_pre_post_checks(buf, "path", "path", "arg1",
 		"arg2", "arg1", "arg2");

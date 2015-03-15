@@ -162,9 +162,8 @@ static int pre_post_override(struct conf *c,
 {
 	const char *override=get_string(c);
 	if(!override) return 0;
-	if(set_string(c, get_string(pre))
-	  || set_string(c, get_string(post))
-	  || set_string(c, NULL))
+	if(set_string(pre, override)
+	  || set_string(post, override))
 		return -1;
 	return 0;
 }
@@ -861,25 +860,24 @@ static int finalise_fstypes(struct conf **c)
 	return 0;
 }
 
-/*
-static int setup_script_arg_override(struct strlist **list, int count, struct strlist ***prelist, struct strlist ***postlist, int *precount, int *postcount)
+static int setup_script_arg_override(struct conf *c, struct conf *args)
 {
 	int i=0;
-	if(!list) return 0;
-	strlists_free(*prelist, *precount);
-	strlists_free(*postlist, *postcount);
-	*precount=0;
-	*postcount=0;
-	for(i=0; i<count; i++)
-	{
-		if(strlist_add(prelist, precount,
-			list[i]->path, 0)) return -1;
-		if(strlist_add(postlist, postcount,
-			list[i]->path, 0)) return -1;
-	}
+	struct strlist *s;
+	set_strlist(args, NULL);
+	for(s=get_strlist(c); s; s=s->next)
+		if(add_to_strlist(args, s->path, s->flag))
+			return -1;
 	return 0;
 }
-*/
+
+static int setup_script_arg_overrides(struct conf *c,
+	struct conf *pre_args, struct conf *post_args)
+{
+	if(!get_strlist(c)) return 0;
+	return setup_script_arg_override(c, pre_args)
+	  || setup_script_arg_override(c, post_args);
+}
 
 int conf_finalise(struct conf **c)
 {
@@ -902,31 +900,29 @@ int conf_finalise(struct conf **c)
 
 	if(finalise_keep_args(c)) return -1;
 
-	if(pre_post_override(c[OPT_B_SCRIPT],
-		c[OPT_B_SCRIPT_PRE], c[OPT_B_SCRIPT_POST])
-	  || pre_post_override(c[OPT_R_SCRIPT],
-		c[OPT_R_SCRIPT_PRE], c[OPT_R_SCRIPT_POST])
-	  || pre_post_override(c[OPT_S_SCRIPT],
-		c[OPT_S_SCRIPT_PRE], c[OPT_S_SCRIPT_POST]))
-			return -1;
 	if((s_script_notify=get_int(c[OPT_S_SCRIPT_NOTIFY])))
 	{
 		set_int(c[OPT_S_SCRIPT_PRE_NOTIFY], s_script_notify);
 		set_int(c[OPT_S_SCRIPT_POST_NOTIFY], s_script_notify);
 	}
 
-/* FIX THIS: Need to figure out what this was supposed to do, and make sure
-   burp-2 does it too.
-	setup_script_arg_override(l->bslist, conf->bscount,
-		&(l->bprelist), &(l->bpostlist),
-		&(conf->bprecount), &(conf->bpostcount));
-	setup_script_arg_override(l->rslist, conf->rscount,
-		&(l->rprelist), &(l->rpostlist),
-		&(conf->rprecount), &(conf->rpostcount));
-	setup_script_arg_override(conf->server_script_arg, conf->sscount,
-		&(l->sprelist), &(l->spostlist),
-		&(conf->sprecount), &(conf->spostcount));
-*/
+	// These override the specific pre/post script paths with the general
+	// one. For example, if 'server_script' is set, its value is used for
+	// 'server_script_pre' and 'server_script_post'.
+	if(pre_post_override(c[OPT_B_SCRIPT],
+		c[OPT_B_SCRIPT_PRE], c[OPT_B_SCRIPT_POST])
+	  || pre_post_override(c[OPT_R_SCRIPT],
+		c[OPT_R_SCRIPT_PRE], c[OPT_R_SCRIPT_POST])
+	  || pre_post_override(c[OPT_S_SCRIPT],
+		c[OPT_S_SCRIPT_PRE], c[OPT_S_SCRIPT_POST])
+	// And these do the same for the script arguments.
+	  || setup_script_arg_overrides(c[OPT_B_SCRIPT_ARG],
+		c[OPT_B_SCRIPT_PRE_ARG], c[OPT_B_SCRIPT_POST_ARG])
+	  || setup_script_arg_overrides(c[OPT_R_SCRIPT_ARG],
+		c[OPT_R_SCRIPT_PRE_ARG], c[OPT_R_SCRIPT_POST_ARG])
+	  || setup_script_arg_overrides(c[OPT_S_SCRIPT_ARG],
+		c[OPT_S_SCRIPT_PRE_ARG], c[OPT_S_SCRIPT_POST_ARG]))
+			return -1;
 	return 0;
 }
 

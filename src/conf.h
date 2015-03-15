@@ -283,6 +283,7 @@ extern struct cntr *get_cntr(struct conf *conf);
 
 extern int set_cntr(struct conf *conf, struct cntr *cntr);
 extern int set_string(struct conf *conf, const char *s);
+extern int set_strlist(struct conf *conf, struct strlist *s);
 extern int set_int(struct conf *conf, unsigned int i);
 extern int set_e_burp_mode(struct conf *conf, enum burp_mode bm);
 extern int set_e_protocol(struct conf *conf, enum protocol p);

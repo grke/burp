@@ -459,7 +459,7 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_R_SCRIPT_POST_ARG:
 	  return sc_lst(c[o], 0, 0, "restore_script_post_arg");
 	case OPT_R_SCRIPT_POST_RUN_ON_FAIL:
-	  return sc_int(c[o], 0, 0, "restore_script_run_on_fail");
+	  return sc_int(c[o], 0, 0, "restore_script_post_run_on_fail");
 	case OPT_B_SCRIPT:
 	  return sc_str(c[o], 0, 0, "backup_script");
 	case OPT_B_SCRIPT_ARG:

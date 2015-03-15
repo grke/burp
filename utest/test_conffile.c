@@ -213,28 +213,46 @@ START_TEST(test_server_conf)
 }
 END_TEST
 
-static void server_pre_post_checks(const char *buf, const char *pre_path,
+static void pre_post_checks(const char *buf, const char *pre_path,
 	const char *post_path, const char *pre_arg1, const char *pre_arg2,
-	const char *post_arg1, const char *post_arg2)
+	const char *post_arg1, const char *post_arg2,
+	enum conf_opt o_script_pre, enum conf_opt o_script_post,
+	enum conf_opt o_script_pre_arg, enum conf_opt o_script_post_arg,
+	enum conf_opt o_script_pre_notify, enum conf_opt o_script_post_notify,
+	enum conf_opt o_script_post_run_on_fail)
 {
 	struct strlist *s;
 	struct conf **confs;
 	confs=setup();
 	fail_unless(!conf_load_global_only_buf(buf, confs));
-	ck_assert_str_eq(get_string(confs[OPT_S_SCRIPT_PRE]), pre_path);
-	ck_assert_str_eq(get_string(confs[OPT_S_SCRIPT_POST]), post_path);
-	s=get_strlist(confs[OPT_S_SCRIPT_PRE_ARG]);
+	ck_assert_str_eq(get_string(confs[o_script_pre]), pre_path);
+	ck_assert_str_eq(get_string(confs[o_script_post]), post_path);
+	s=get_strlist(confs[o_script_pre_arg]);
 	assert_strlist(&s, pre_arg1, 0);
 	assert_strlist(&s, pre_arg2, 0);
 	assert_strlist(&s, NULL, 0);
-	fail_unless(get_int(confs[OPT_S_SCRIPT_PRE_NOTIFY])==1);
-	s=get_strlist(confs[OPT_S_SCRIPT_POST_ARG]);
+	if(o_script_pre_notify!=OPT_MAX)
+		fail_unless(get_int(confs[o_script_pre_notify])==1);
+	s=get_strlist(confs[o_script_post_arg]);
 	assert_strlist(&s, post_arg1, 0);
 	assert_strlist(&s, post_arg2, 0);
 	assert_strlist(&s, NULL, 0);
-	fail_unless(get_int(confs[OPT_S_SCRIPT_POST_NOTIFY])==1);
-	fail_unless(get_int(confs[OPT_S_SCRIPT_POST_RUN_ON_FAIL])==1);
+	if(o_script_post_notify!=OPT_MAX)
+		fail_unless(get_int(confs[o_script_post_notify])==1);
+	fail_unless(get_int(confs[o_script_post_run_on_fail])==1);
 	tear_down(&confs);
+}
+
+static void server_pre_post_checks(const char *buf, const char *pre_path,
+	const char *post_path, const char *pre_arg1, const char *pre_arg2,
+	const char *post_arg1, const char *post_arg2)
+{
+	pre_post_checks(buf, pre_path, post_path, pre_arg1, pre_arg2,
+		post_arg1, post_arg2,
+		OPT_S_SCRIPT_PRE, OPT_S_SCRIPT_POST,
+		OPT_S_SCRIPT_PRE_ARG, OPT_S_SCRIPT_POST_ARG,
+		OPT_S_SCRIPT_PRE_NOTIFY, OPT_S_SCRIPT_POST_NOTIFY,
+		OPT_S_SCRIPT_POST_RUN_ON_FAIL);
 }
 
 START_TEST(test_server_script_pre_post)
@@ -273,6 +291,93 @@ START_TEST(test_server_script)
 }
 END_TEST
 
+static void backup_script_pre_post_checks(const char *buf, const char *pre_path,
+	const char *post_path, const char *pre_arg1, const char *pre_arg2,
+	const char *post_arg1, const char *post_arg2)
+{
+	pre_post_checks(buf, pre_path, post_path, pre_arg1, pre_arg2,
+		post_arg1, post_arg2,
+		OPT_B_SCRIPT_PRE, OPT_B_SCRIPT_POST,
+		OPT_B_SCRIPT_PRE_ARG, OPT_B_SCRIPT_POST_ARG,
+		OPT_MAX, OPT_MAX, OPT_B_SCRIPT_POST_RUN_ON_FAIL);
+}
+
+START_TEST(test_backup_script_pre_post)
+{
+	const char *buf=MIN_CLIENT_CONF
+		"backup_script_pre=pre_path\n"
+		"backup_script_pre_arg=pre_arg1\n"
+		"backup_script_pre_arg=pre_arg2\n"
+		"backup_script_post=post_path\n"
+		"backup_script_post_arg=post_arg1\n"
+		"backup_script_post_arg=post_arg2\n"
+		"backup_script_post_run_on_fail=1\n"
+	;
+	backup_script_pre_post_checks(buf, "pre_path", "post_path", "pre_arg1",
+		"pre_arg2", "post_arg1", "post_arg2");
+}
+END_TEST
+
+// Same as test_backup_script_pre_post, but use backup_script to set both pre
+// and post at the same time.
+START_TEST(test_backup_script)
+{
+	const char *buf=MIN_CLIENT_CONF
+		"backup_script=path\n"
+		"backup_script_arg=arg1\n"
+		"backup_script_arg=arg2\n"
+		"backup_script_run_on_fail=1\n"
+		"backup_script_post_run_on_fail=1\n"
+	;
+	backup_script_pre_post_checks(buf, "path", "path", "arg1",
+		"arg2", "arg1", "arg2");
+}
+END_TEST
+
+static void restore_script_pre_post_checks(const char *buf,
+	const char *pre_path, const char *post_path,
+	const char *pre_arg1, const char *pre_arg2,
+	const char *post_arg1, const char *post_arg2)
+{
+	pre_post_checks(buf, pre_path, post_path, pre_arg1, pre_arg2,
+		post_arg1, post_arg2,
+		OPT_R_SCRIPT_PRE, OPT_R_SCRIPT_POST,
+		OPT_R_SCRIPT_PRE_ARG, OPT_R_SCRIPT_POST_ARG,
+		OPT_MAX, OPT_MAX, OPT_R_SCRIPT_POST_RUN_ON_FAIL);
+}
+
+START_TEST(test_restore_script_pre_post)
+{
+	const char *buf=MIN_CLIENT_CONF
+		"restore_script_pre=pre_path\n"
+		"restore_script_pre_arg=pre_arg1\n"
+		"restore_script_pre_arg=pre_arg2\n"
+		"restore_script_post=post_path\n"
+		"restore_script_post_arg=post_arg1\n"
+		"restore_script_post_arg=post_arg2\n"
+		"restore_script_post_run_on_fail=1\n"
+	;
+	restore_script_pre_post_checks(buf, "pre_path", "post_path", "pre_arg1",
+		"pre_arg2", "post_arg1", "post_arg2");
+}
+END_TEST
+
+// Same as test_restore_script_pre_post, but use restore_script to set both pre
+// and post at the same time.
+START_TEST(test_restore_script)
+{
+	const char *buf=MIN_CLIENT_CONF
+		"restore_script=path\n"
+		"restore_script_arg=arg1\n"
+		"restore_script_arg=arg2\n"
+		"restore_script_run_on_fail=1\n"
+		"restore_script_post_run_on_fail=1\n"
+	;
+	restore_script_pre_post_checks(buf, "path", "path", "arg1",
+		"arg2", "arg1", "arg2");
+}
+END_TEST
+
 Suite *suite_conffile(void)
 {
 	Suite *s;
@@ -289,6 +394,10 @@ Suite *suite_conffile(void)
 	tcase_add_test(tc_core, test_server_conf);
 	tcase_add_test(tc_core, test_server_script_pre_post);
 	tcase_add_test(tc_core, test_server_script);
+	tcase_add_test(tc_core, test_backup_script_pre_post);
+	tcase_add_test(tc_core, test_backup_script);
+	tcase_add_test(tc_core, test_restore_script_pre_post);
+	tcase_add_test(tc_core, test_restore_script);
 	suite_add_tcase(s, tc_core);
 
 	return s;

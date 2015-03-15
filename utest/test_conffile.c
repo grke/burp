@@ -213,6 +213,65 @@ START_TEST(test_server_conf)
 }
 END_TEST
 
+static void server_pre_post_checks(const char *buf, const char *pre_path,
+	const char *post_path, const char *pre_arg1, const char *pre_arg2,
+	const char *post_arg1, const char *post_arg2)
+{
+	struct strlist *s;
+	struct conf **confs;
+	confs=setup();
+	fail_unless(!conf_load_global_only_buf(buf, confs));
+	ck_assert_str_eq(get_string(confs[OPT_S_SCRIPT_PRE]), "pre_path");
+	ck_assert_str_eq(get_string(confs[OPT_S_SCRIPT_POST]), "post_path");
+	s=get_strlist(confs[OPT_S_SCRIPT_PRE_ARG]);
+	assert_strlist(&s, "pre_arg1", 0);
+	assert_strlist(&s, "pre_arg2", 0);
+	assert_strlist(&s, NULL, 0);
+	fail_unless(get_int(confs[OPT_S_SCRIPT_PRE_NOTIFY])==1);
+	s=get_strlist(confs[OPT_S_SCRIPT_POST_ARG]);
+	assert_strlist(&s, "post_arg1", 0);
+	assert_strlist(&s, "post_arg2", 0);
+	assert_strlist(&s, NULL, 0);
+	fail_unless(get_int(confs[OPT_S_SCRIPT_POST_NOTIFY])==1);
+	fail_unless(get_int(confs[OPT_S_SCRIPT_POST_RUN_ON_FAIL])==1);
+	tear_down(&confs);
+}
+
+START_TEST(test_server_script_pre_post)
+{
+	const char *buf=MIN_SERVER_CONF
+		"server_script_pre=pre_path\n"
+		"server_script_pre_arg=pre_arg1\n"
+		"server_script_pre_arg=pre_arg2\n"
+		"server_script_pre_notify=1\n"
+		"server_script_post=post_path\n"
+		"server_script_post_arg=post_arg1\n"
+		"server_script_post_arg=post_arg2\n"
+		"server_script_post_notify=1\n"
+		"server_script_post_run_on_fail=1\n"
+	;
+	server_pre_post_checks(buf, "pre_path", "post_path", "pre_arg1",
+		"pre_arg2", "post_arg1", "post_arg2");
+}
+END_TEST
+
+// Same as test_server_script_pre_post, but use server_script to set both pre
+// and post at the same time.
+START_TEST(test_server_script)
+{
+	const char *buf=MIN_SERVER_CONF
+		"server_script=path\n"
+		"server_script_arg=arg1\n"
+		"server_script_arg=arg2\n"
+		"server_script_notify=1\n"
+		"server_script_notify=1\n"
+		"server_script_run_on_fail=1\n"
+	;
+	server_pre_post_checks(buf, "path", "path", "arg1",
+		"arg2", "arg1", "arg2");
+}
+END_TEST
+
 Suite *suite_conffile(void)
 {
 	Suite *s;
@@ -227,6 +286,8 @@ Suite *suite_conffile(void)
 	tcase_add_test(tc_core, test_client_includes_excludes);
 	tcase_add_test(tc_core, test_client_include_failures);
 	tcase_add_test(tc_core, test_server_conf);
+	tcase_add_test(tc_core, test_server_script_pre_post);
+	tcase_add_test(tc_core, test_server_script);
 	suite_add_tcase(s, tc_core);
 
 	return s;

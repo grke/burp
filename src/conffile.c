@@ -1077,8 +1077,8 @@ static int conf_set_from_global(struct conf **globalc, struct conf **cc)
 				set_e_recovery_method(cc[i], get_e_recovery_method(globalc[i]));
 				break;
 			case CT_STRLIST:
-				if(set_global_arglist(cc[i], globalc[i]))
-					return -1;
+				//if(set_global_arglist(cc[i], globalc[i]))
+				//	return -1;
 				break;
 			case CT_CNTR:
 				break;
@@ -1135,18 +1135,33 @@ end:
 	return ret;
 }
 
-static int conf_load_overrides(struct conf **globalcs, struct conf **cconfs,
-	const char *path)
+static int do_conf_load_overrides(struct conf **globalcs, struct conf **cconfs,
+	const char *path, const char *buf)
 {
 	// Some client settings can be globally set in the server conf and
 	// overridden in the client specific conf.
-	if(conf_set_from_global(globalcs, cconfs)
-	  || conf_load_lines_from_file(path, cconfs)
-	  || conf_set_from_global_arg_list_overrides(globalcs, cconfs)
+	if(conf_set_from_global(globalcs, cconfs)) return -1;
+	if(buf) { if(conf_load_lines_from_buf(buf, cconfs)) return -1; }
+	else { if(conf_load_lines_from_file(path, cconfs)) return -1; }
+	if(conf_set_from_global_arg_list_overrides(globalcs, cconfs)
 	  || conf_finalise(cconfs))
 		return -1;
 	return 0;
 }
+
+static int conf_load_overrides(struct conf **globalcs, struct conf **cconfs,
+	const char *path)
+{
+	return do_conf_load_overrides(globalcs, cconfs, path, NULL);
+}
+
+#ifdef UTEST
+int conf_load_overrides_buf(struct conf **globalcs, struct conf **cconfs,
+	const char *buf)
+{
+	return do_conf_load_overrides(globalcs, cconfs, "test buf", buf);
+}
+#endif
 
 int conf_load_clientconfdir(struct conf **globalcs, struct conf **cconfs)
 {

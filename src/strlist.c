@@ -1,5 +1,9 @@
-#include "include.h"
+#include "burp.h"
+#include "alloc.h"
+#include "log.h"
 #include "pathcmp.h"
+#include "regexp.h"
+#include "strlist.h"
 
 // Maybe rename this stuff to 'struct pathlist'.
 

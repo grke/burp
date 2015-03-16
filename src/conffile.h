@@ -18,6 +18,8 @@ extern const char *confs_get_lockfile(struct conf **confs);
 extern int conf_load_lines_from_buf(const char *buf, struct conf **c);
 extern int conf_finalise(struct conf **c);
 extern int conf_load_global_only_buf(const char *path, struct conf **globalcs);
+extern int conf_load_overrides_buf(struct conf **globalcs,
+	struct conf **cconfs, const char *buf);
 #endif
 
 #endif

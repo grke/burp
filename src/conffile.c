@@ -862,7 +862,6 @@ static int finalise_fstypes(struct conf **c)
 
 static int setup_script_arg_override(struct conf *c, struct conf *args)
 {
-	int i=0;
 	struct strlist *s;
 	set_strlist(args, NULL);
 	for(s=get_strlist(c); s; s=s->next)
@@ -1044,7 +1043,6 @@ static int set_global_arglist(struct conf *dst, struct conf *src)
 	return 0;
 }
 
-// Remember to update the list in the man page when you change these.
 static int conf_set_from_global(struct conf **globalc, struct conf **cc)
 {
 	int i=0;
@@ -1097,8 +1095,7 @@ static int conf_set_from_global(struct conf **globalc, struct conf **cc)
 	return 0;
 }
 
-// Remember to update the list in the man page when you change these.
-// Instead of adding onto the end of the list, these replace the list.
+// Instead of adding onto the end of the list, this replaces the list.
 static int conf_set_from_global_arg_list_overrides(struct conf **globalc,
 	struct conf **cc)
 {

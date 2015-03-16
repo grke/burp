@@ -6,13 +6,19 @@
 #include "../src/conf.h"
 #include "../src/conffile.h"
 
-static struct conf **setup(void)
+static struct conf **setup_conf(void)
 {
-	struct conf **confs;
-	alloc_counters_reset();
-	confs=confs_alloc();
-	confs_init(confs);
+	struct conf **confs=NULL;
+	fail_unless((confs=confs_alloc())!=NULL);
+	fail_unless(!confs_init(confs));
 	return confs;
+}
+
+static void setup(struct conf ***globalcs, struct conf ***cconfs)
+{
+	alloc_counters_reset();
+	if(globalcs) *globalcs=setup_conf();
+	if(cconfs) *cconfs=setup_conf();
 }
 
 static void tear_down(struct conf ***confs)
@@ -81,7 +87,8 @@ END_TEST
 
 START_TEST(test_client_conf)
 {
-	struct conf **confs=setup();
+	struct conf **confs=NULL;
+	setup(&confs, NULL);
 	fail_unless(!conf_load_global_only_buf(MIN_CLIENT_CONF, confs));
 	fail_unless(get_e_burp_mode(confs[OPT_BURP_MODE])==BURP_MODE_CLIENT);
 	ck_assert_str_eq(get_string(confs[OPT_SERVER]), "4.5.6.7");
@@ -130,8 +137,8 @@ START_TEST(test_client_includes_excludes)
 		"include=/a\n"
 	;
 	struct strlist *s;
-	struct conf **confs;
-	confs=setup();
+	struct conf **confs=NULL;
+	setup(&confs, NULL);
 	fail_unless(!conf_load_global_only_buf(buf, confs));
 	s=get_strlist(confs[OPT_INCLUDE]);
 	assert_include(&s, "/a");
@@ -167,10 +174,10 @@ static const char *include_failures[] = {
 
 START_TEST(test_client_include_failures)
 {
-	struct conf **confs;
+	struct conf **confs=NULL;
 	FOREACH(include_failures)
 	{
-		confs=setup();
+		setup(&confs, NULL);
 		fail_unless(conf_load_global_only_buf(include_failures[i],
 			confs)==-1);
 		tear_down(&confs);
@@ -194,7 +201,8 @@ END_TEST
 START_TEST(test_server_conf)
 {
 	struct strlist *s;
-	struct conf **confs=setup();
+	struct conf **confs=NULL;
+	setup(&confs, NULL);
 	fail_unless(!conf_load_global_only_buf(MIN_SERVER_CONF, confs));
 	fail_unless(get_e_burp_mode(confs[OPT_BURP_MODE])==BURP_MODE_SERVER);
 	ck_assert_str_eq(get_string(confs[OPT_PORT]), "1234");
@@ -222,8 +230,8 @@ static void pre_post_checks(const char *buf, const char *pre_path,
 	enum conf_opt o_script_post_run_on_fail)
 {
 	struct strlist *s;
-	struct conf **confs;
-	confs=setup();
+	struct conf **confs=NULL;
+	setup(&confs, NULL);
 	fail_unless(!conf_load_global_only_buf(buf, confs));
 	ck_assert_str_eq(get_string(confs[o_script_pre]), pre_path);
 	ck_assert_str_eq(get_string(confs[o_script_post]), post_path);
@@ -378,6 +386,33 @@ START_TEST(test_restore_script)
 }
 END_TEST
 
+#define MIN_CLIENTCONFDIR_BUF "# comment\n"
+
+START_TEST(test_clientconfdir_conf)
+{
+	struct strlist *s;
+	struct conf **globalcs=NULL;
+	struct conf **cconfs=NULL;
+	const char *buf=MIN_CLIENTCONFDIR_BUF
+		"protocol=1\n"
+		"directory=/another/dir\n"
+		"keep=4\n"
+		"keep=7\n"
+	;
+	setup(&globalcs, &cconfs);
+	fail_unless(!conf_load_global_only_buf(MIN_SERVER_CONF, globalcs));
+	set_string(cconfs[OPT_CNAME], "utestclient");
+        fail_unless(!conf_load_overrides_buf(globalcs, cconfs, buf));
+	ck_assert_str_eq(get_string(cconfs[OPT_CNAME]), "utestclient");
+	fail_unless(get_e_protocol(cconfs[OPT_PROTOCOL])==PROTO_1);
+	ck_assert_str_eq(get_string(cconfs[OPT_DIRECTORY]), "/another/dir");
+	s=get_strlist(cconfs[OPT_KEEP]);
+	assert_strlist(&s, "4", 4);
+	assert_strlist(&s, "7", 8); // The last one gets 1 added to it.
+	assert_include(&s, NULL);
+}
+END_TEST
+
 Suite *suite_conffile(void)
 {
 	Suite *s;
@@ -398,6 +433,7 @@ Suite *suite_conffile(void)
 	tcase_add_test(tc_core, test_backup_script);
 	tcase_add_test(tc_core, test_restore_script_pre_post);
 	tcase_add_test(tc_core, test_restore_script);
+	tcase_add_test(tc_core, test_clientconfdir_conf);
 	suite_add_tcase(s, tc_core);
 
 	return s;

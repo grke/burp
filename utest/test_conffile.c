@@ -396,8 +396,21 @@ START_TEST(test_clientconfdir_conf)
 	const char *buf=MIN_CLIENTCONFDIR_BUF
 		"protocol=1\n"
 		"directory=/another/dir\n"
+		"directory_tree=0\n"
+		"timestamp_format=%H %M %S\n"
+		"password_check=0\n"
 		"keep=4\n"
 		"keep=7\n"
+		"working_dir_recovery_method=resume\n"
+		"librsync=0\n"
+		"version_warn=0\n"
+		"path_length_warn=0\n"
+		"syslog=1\n"
+		"client_can_delete=0\n"
+		"client_can_force_backup=0\n"
+		"client_can_list=0\n"
+		"client_can_restore=0\n"
+		"client_can_verify=0\n"
 	;
 	setup(&globalcs, &cconfs);
 	fail_unless(!conf_load_global_only_buf(MIN_SERVER_CONF, globalcs));
@@ -406,10 +419,25 @@ START_TEST(test_clientconfdir_conf)
 	ck_assert_str_eq(get_string(cconfs[OPT_CNAME]), "utestclient");
 	fail_unless(get_e_protocol(cconfs[OPT_PROTOCOL])==PROTO_1);
 	ck_assert_str_eq(get_string(cconfs[OPT_DIRECTORY]), "/another/dir");
+	fail_unless(get_int(cconfs[OPT_DIRECTORY_TREE])==0);
+	ck_assert_str_eq(get_string(cconfs[OPT_TIMESTAMP_FORMAT]),
+		"%H %M %S");
+	fail_unless(get_int(cconfs[OPT_PASSWORD_CHECK])==0);
 	s=get_strlist(cconfs[OPT_KEEP]);
 	assert_strlist(&s, "4", 4);
 	assert_strlist(&s, "7", 8); // The last one gets 1 added to it.
 	assert_include(&s, NULL);
+	fail_unless(get_e_recovery_method(
+	  cconfs[OPT_WORKING_DIR_RECOVERY_METHOD])==RECOVERY_METHOD_RESUME);
+	fail_unless(get_int(cconfs[OPT_LIBRSYNC])==0);
+	fail_unless(get_int(cconfs[OPT_VERSION_WARN])==0);
+	fail_unless(get_int(cconfs[OPT_PATH_LENGTH_WARN])==0);
+	fail_unless(get_int(cconfs[OPT_SYSLOG])==1);
+	fail_unless(get_int(cconfs[OPT_CLIENT_CAN_DELETE])==0);
+	fail_unless(get_int(cconfs[OPT_CLIENT_CAN_FORCE_BACKUP])==0);
+	fail_unless(get_int(cconfs[OPT_CLIENT_CAN_LIST])==0);
+	fail_unless(get_int(cconfs[OPT_CLIENT_CAN_RESTORE])==0);
+	fail_unless(get_int(cconfs[OPT_CLIENT_CAN_VERIFY])==0);
 }
 END_TEST
 

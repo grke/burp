@@ -33,8 +33,6 @@ roughly in order of most important to least.
 
 * Make the status monitor and counters use JSON.
 
-* 'burp -a S' limited to 24 lines?
-
 * Add data compression.
 
 * Add data encryption.

@@ -410,7 +410,7 @@ You can use this to save space in your config file when you want to run the same
 Goes with server_script and overrides server_script_pre_arg and server_script_post_arg.
 .TP
 \fBserver_script_notify=[0|1]\fR
-Turn on to send a notification emails when the server pre and post scripts return non-zero. The output of the script will be included it the email. The default is off. Requires the notify_failure options to be set.
+Turn on to send notifications email when the server pre and post scripts return non-zero. The output of the script will be included in the email. The default is off. Requires the notify_failure options to be set.
 .TP
 \fBserver_script_post_run_on_fail=[0|1]\fR
 If this is set to 1, server_script_post will always be run. The default is 0, which means that if the task asked for by the client fails, server_script_post will not be run.

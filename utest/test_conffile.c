@@ -387,6 +387,16 @@ START_TEST(test_restore_script)
 }
 END_TEST
 
+static void clientconfdir_setup(struct conf ***globalcs, struct conf ***cconfs,
+	const char *gbuf, const char *buf)
+{
+	setup(globalcs, cconfs);
+	fail_unless(!conf_load_global_only_buf(gbuf, *globalcs));
+	set_string((*cconfs)[OPT_CNAME], "utestclient");
+        fail_unless(!conf_load_overrides_buf(*globalcs, *cconfs, buf));
+	ck_assert_str_eq(get_string((*cconfs)[OPT_CNAME]), "utestclient");
+}
+
 #define MIN_CLIENTCONFDIR_BUF "# comment\n"
 
 START_TEST(test_clientconfdir_conf)
@@ -419,11 +429,9 @@ START_TEST(test_clientconfdir_conf)
 		"restore_client=123\n"
 		"restore_client=456\n"
 	;
-	setup(&globalcs, &cconfs);
-	fail_unless(!conf_load_global_only_buf(gbuf, globalcs));
-	set_string(cconfs[OPT_CNAME], "utestclient");
-        fail_unless(!conf_load_overrides_buf(globalcs, cconfs, buf));
-	ck_assert_str_eq(get_string(cconfs[OPT_CNAME]), "utestclient");
+
+	clientconfdir_setup(&globalcs, &cconfs, gbuf, buf);
+
 	fail_unless(get_e_protocol(cconfs[OPT_PROTOCOL])==PROTO_1);
 	ck_assert_str_eq(get_string(cconfs[OPT_DIRECTORY]), "/another/dir");
 	fail_unless(get_int(cconfs[OPT_DIRECTORY_TREE])==0);
@@ -467,10 +475,7 @@ START_TEST(test_clientconfdir_extra)
 	const char *buf=MIN_CLIENTCONFDIR_BUF
 		"include = /testdir" // should not be ignored
 	;
-	setup(&globalcs, &cconfs);
-	fail_unless(!conf_load_global_only_buf(gbuf, globalcs));
-	set_string(cconfs[OPT_CNAME], "utestclient");
-        fail_unless(!conf_load_overrides_buf(globalcs, cconfs, buf));
+	clientconfdir_setup(&globalcs, &cconfs, gbuf, buf);
 	s=get_strlist(cconfs[OPT_RESTORE_CLIENTS]);
 	assert_strlist(&s, "abc", 0);
 	assert_include(&s, NULL);

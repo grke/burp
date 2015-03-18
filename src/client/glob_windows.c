@@ -174,7 +174,7 @@ static int process_entry(struct strlist *ig, struct conf **confs)
 				  || astrcat(&tmppath, splitstr1[1], __func__))
 					goto end;
 			}
-			if(add_to_strlist(confs[OPT_INCLUDE], tmppath))
+			if(add_to_strlist(confs[OPT_INCLUDE], tmppath, 1))
 				goto end;
 			free_w(&tmppath);
 		}

@@ -894,8 +894,7 @@ int conf_finalise(struct conf **c)
 	  && finalise_glob(c)) return -1;
 
 	if(finalise_incexc_dirs(c)
-	  || finalise_start_dirs(c))
-		return -1;
+	  || finalise_start_dirs(c)) return -1;
 
 	if(finalise_keep_args(c)) return -1;
 
@@ -1034,15 +1033,6 @@ int conf_parse_incexcs_buf(struct conf **c, const char *incexc)
 	return 0;
 }
 
-static int set_global_arglist(struct conf *dst, struct conf *src)
-{
-	struct strlist *s;
-	for(s=get_strlist(src); s; s=s->next)
-		if(add_to_strlist(dst, s->path, s->flag))
-			return -1;
-	return 0;
-}
-
 static int conf_set_from_global(struct conf **globalc, struct conf **cc)
 {
 	int i=0;
@@ -1077,8 +1067,7 @@ static int conf_set_from_global(struct conf **globalc, struct conf **cc)
 				set_e_recovery_method(cc[i], get_e_recovery_method(globalc[i]));
 				break;
 			case CT_STRLIST:
-				//if(set_global_arglist(cc[i], globalc[i]))
-				//	return -1;
+				// Done later.
 				break;
 			case CT_CNTR:
 				break;
@@ -1095,6 +1084,15 @@ static int conf_set_from_global(struct conf **globalc, struct conf **cc)
 	return 0;
 }
 
+static int append_strlist(struct conf *dst, struct conf *src)
+{
+	struct strlist *s;
+	for(s=get_strlist(src); s; s=s->next)
+		if(add_to_strlist(dst, s->path, s->flag))
+			return -1;
+	return 0;
+}
+
 // Instead of adding onto the end of the list, this replaces the list.
 static int conf_set_from_global_arg_list_overrides(struct conf **globalc,
 	struct conf **cc)
@@ -1103,9 +1101,26 @@ static int conf_set_from_global_arg_list_overrides(struct conf **globalc,
 	for(i=0; i<OPT_MAX; i++)
 	{
 		if(cc[i]->conf_type!=CT_STRLIST) continue;
-		if(!(cc[i]->flags & CONF_FLAG_STRLIST_REPLACE)) continue;
-		if(get_strlist(cc[i])) continue; // Was overriden by the client.
-		if(set_global_arglist(cc[i], globalc[i])) return -1;
+		if(!(cc[i]->flags & CONF_FLAG_CC_OVERRIDE)) continue;
+		if(cc[i]->flags & CONF_FLAG_STRLIST_REPLACE)
+		{
+			// If there was no cc[i] strlist set, use the global.
+			if(!get_strlist(cc[i])
+			  && append_strlist(cc[i], globalc[i]))
+				return -1;
+		}
+		else
+		{
+			struct conf tmpconf;
+			// A bit painful.
+			tmpconf.conf_type=cc[i]->conf_type;
+			tmpconf.flags=cc[i]->flags;
+			memset(&tmpconf.data, 0, sizeof(tmpconf.data));
+			if(append_strlist(&tmpconf, globalc[i])
+			  || append_strlist(&tmpconf, cc[i]))
+				return -1;
+			set_strlist(cc[i], get_strlist(&tmpconf));
+		}
 	}
 	return 0;
 }

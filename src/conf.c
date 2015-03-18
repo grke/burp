@@ -471,7 +471,7 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_SEND_CLIENT_CNTR:
 	  return sc_int(c[o], 0, 0, "send_client_cntr");
 	case OPT_RESTORE_CLIENT:
-	  return sc_str(c[o], 0, 0, "restore_client");
+	  return sc_str(c[o], 0, 0, "");
 	case OPT_RESTORE_PATH:
 	  return sc_str(c[o], 0, 0, "restore_path");
 	case OPT_ORIG_CLIENT:
@@ -605,7 +605,7 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 		CONF_FLAG_CC_OVERRIDE|CONF_FLAG_STRLIST_REPLACE, "notify_failure_arg");
 	case OPT_RESTORE_CLIENTS:
 	  return sc_lst(c[o], 0,
-		CONF_FLAG_CC_OVERRIDE|CONF_FLAG_STRLIST_SORTED, "restore_clients");
+		CONF_FLAG_CC_OVERRIDE|CONF_FLAG_STRLIST_SORTED, "restore_client");
 	case OPT_DEDUP_GROUP:
 	  return sc_str(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE, "dedup_group");

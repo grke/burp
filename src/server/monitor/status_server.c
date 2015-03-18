@@ -171,11 +171,9 @@ int status_server(struct async *as, struct conf **confs)
 	{
 		// Take the opportunity to get data from the disk if nothing
 		// was read from the fds.
-//dump_cbno(clist, "a");
 		if(gotdata) gotdata=0;
 		else if(cstat_load_data_from_disk(&clist, confs))
 			goto error;
-//dump_cbno(clist, "b");
 		if(as->read_write(as))
 		{
 			logp("Exiting main status server loop\n");

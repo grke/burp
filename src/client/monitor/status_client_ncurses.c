@@ -34,8 +34,12 @@ static void print_line(const char *string, int row, int col)
 	}
 #endif
 	while(k<LEFT_SPACE) { printf(" "); k++; }
-	for(cp=string; (*cp && k<col); cp++)
-		{ printf("%c", *cp); k++; }
+	for(cp=string; *cp; cp++)
+	{
+		printf("%c", *cp);
+		k++;
+		if(actg==ACTION_STATUS && k<col) break;
+	}
 	printf("\n");
 }
 
@@ -48,15 +52,14 @@ static char *get_bu_str(struct bu *bu)
 	return ret;
 }
 
-// Returns 1 if it printed a line, 0 otherwise.
-static int summary(struct cstat *cstat, int row, int col, struct conf **confs)
+static void client_summary(struct cstat *cstat,
+	int row, int col, int clientwidth, struct conf **confs)
 {
 	char msg[1024]="";
 	char fmt[64]="";
-	int colwidth=28*((float)col/100);
 	struct bu *cbu=NULL;
 	snprintf(fmt, sizeof(fmt), "%%-%d.%ds %%9s %%s%%s",
-		colwidth, colwidth);
+		clientwidth, clientwidth);
 
 	// Find the current backup.
 	cbu=bu_find_current(cstat->bu);
@@ -103,12 +106,7 @@ static int summary(struct cstat *cstat, int row, int col, struct conf **confs)
 			break;
 	}
 
-	if(*msg)
-	{
-		print_line(msg, row, col);
-		return 1;
-	}
-	return 0;
+	if(*msg) print_line(msg, row, col);
 }
 
 /* for the counters */
@@ -513,6 +511,14 @@ static void update_screen_clients(struct sel *sel, int *x, int col,
 	int s=0;
 	struct cstat *c;
 	int star_printed=0;
+	int max_cname=28*((float)col/100);
+	if(actg==ACTION_STATUS_SNAPSHOT)
+	{
+		size_t l;
+		for(c=sel->clist; c; c=c->next)
+			if((l=strlen(c->name))>(unsigned int)max_cname)
+				max_cname=l;
+	}
 	for(c=sel->clist; c; c=c->next)
 	{
 		if(actg==ACTION_STATUS)
@@ -522,7 +528,7 @@ static void update_screen_clients(struct sel *sel, int *x, int col,
 			if(s>winmax) break;
 		}
 
-		summary(c, (*x)++, col, confs);
+		client_summary(c, (*x)++, col, max_cname, confs);
 
 #ifdef HAVE_NCURSES_H
 		if(actg==ACTION_STATUS && sel->client==c)

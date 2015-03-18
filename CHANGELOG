@@ -8,6 +8,7 @@
     warnings as hard errors.
   * Fix bug where 'burp -a S' was limited to 24 lines.
   * Make 'burp -a S' not truncate client names.
+  * Implement glob '. /some/dir/*' conf syntax on non-Windows machines.
 
 2015-03-02: Changes in burp-2.0.14:
   * Improve utest/Makefile.

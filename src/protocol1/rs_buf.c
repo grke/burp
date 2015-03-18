@@ -500,8 +500,15 @@ rs_result rs_sig_gzfile(struct asfd *asfd,
 {
 	rs_job_t *job;
 	rs_result r;
-
-	job=rs_sig_begin(new_block_len, strong_len);
+	job=
+		rs_sig_begin(new_block_len, strong_len
+#ifndef RS_DEFAULT_STRONG_LEN
+			// Help librsync-1.0.0.
+			// FIX THIS:
+			// See comment in src/server/protocol1/backup_phase2.c
+			, RS_MD4_SIG_MAGIC
+#endif
+		);
 	r=rs_whole_gzrun(asfd, job, old_file, old_zfile, sig_file, NULL, cntr);
 	rs_job_free(job);
 

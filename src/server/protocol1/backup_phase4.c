@@ -55,6 +55,11 @@ end:
 	return result;
 }
 
+// Help librsync-1.0.0
+#ifndef RS_DEFAULT_STRONG_LEN
+#define RS_DEFAULT_STRONG_LEN	8
+#endif
+
 static int make_rev_sig(const char *dst, const char *sig, const char *endfile,
 	int compression, struct conf **confs)
 {
@@ -73,7 +78,8 @@ static int make_rev_sig(const char *dst, const char *sig, const char *endfile,
 	  || !(sigp=open_file(sig, "wb"))
 	  || rs_sig_gzfile(NULL, dstfp, dstzp, sigp,
 		get_librsync_block_len(endfile),
-		RS_DEFAULT_STRONG_LEN, NULL, get_cntr(confs[OPT_CNTR]))!=RS_DONE)
+		RS_DEFAULT_STRONG_LEN,
+		NULL, get_cntr(confs[OPT_CNTR]))!=RS_DONE)
 			goto end;
 	ret=0;
 end:

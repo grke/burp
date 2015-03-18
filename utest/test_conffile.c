@@ -21,9 +21,10 @@ static void setup(struct conf ***globalcs, struct conf ***cconfs)
 	if(cconfs) *cconfs=setup_conf();
 }
 
-static void tear_down(struct conf ***confs)
+static void tear_down(struct conf ***globalcs, struct conf ***confs)
 {
 	confs_free(confs);
+	confs_free(globalcs);
 	fail_unless(free_count, alloc_count);
 }
 
@@ -100,7 +101,7 @@ START_TEST(test_client_conf)
 	ck_assert_str_eq(get_string(confs[OPT_SSL_PEER_CN]), "my_cn");
 	ck_assert_str_eq(get_string(confs[OPT_SSL_KEY]), "/ssl/key/path");
 	ck_assert_str_eq(get_string(confs[OPT_CA_CSR_DIR]), "/csr/dir");
-	tear_down(&confs);
+	tear_down(NULL, &confs);
 }
 END_TEST
 
@@ -163,7 +164,7 @@ START_TEST(test_client_includes_excludes)
 	assert_include(&s, "/x/y/z");
 	assert_exclude(&s, "/z");
 	assert_include(&s, NULL);
-	tear_down(&confs);
+	tear_down(NULL, &confs);
 }
 END_TEST
 
@@ -180,7 +181,7 @@ START_TEST(test_client_include_failures)
 		setup(&confs, NULL);
 		fail_unless(conf_load_global_only_buf(include_failures[i],
 			confs)==-1);
-		tear_down(&confs);
+		tear_down(NULL, &confs);
 	}
 }
 END_TEST
@@ -217,7 +218,7 @@ START_TEST(test_server_conf)
 	s=get_strlist(confs[OPT_KEEP]);
 	assert_strlist(&s, "10", 10);
 	assert_include(&s, NULL);
-	tear_down(&confs);
+	tear_down(NULL, &confs);
 }
 END_TEST
 
@@ -248,7 +249,7 @@ static void pre_post_checks(const char *buf, const char *pre_path,
 	if(o_script_post_notify!=OPT_MAX)
 		fail_unless(get_int(confs[o_script_post_notify])==1);
 	fail_unless(get_int(confs[o_script_post_run_on_fail])==1);
-	tear_down(&confs);
+	tear_down(NULL, &confs);
 }
 
 static void server_pre_post_checks(const char *buf, const char *pre_path,
@@ -393,6 +394,10 @@ START_TEST(test_clientconfdir_conf)
 	struct strlist *s;
 	struct conf **globalcs=NULL;
 	struct conf **cconfs=NULL;
+	const char *gbuf=MIN_SERVER_CONF
+		"restore_client=abc\n"
+		"restore_client=xyz\n"
+	;
 	const char *buf=MIN_CLIENTCONFDIR_BUF
 		"protocol=1\n"
 		"directory=/another/dir\n"
@@ -411,9 +416,11 @@ START_TEST(test_clientconfdir_conf)
 		"client_can_list=0\n"
 		"client_can_restore=0\n"
 		"client_can_verify=0\n"
+		"restore_client=123\n"
+		"restore_client=456\n"
 	;
 	setup(&globalcs, &cconfs);
-	fail_unless(!conf_load_global_only_buf(MIN_SERVER_CONF, globalcs));
+	fail_unless(!conf_load_global_only_buf(gbuf, globalcs));
 	set_string(cconfs[OPT_CNAME], "utestclient");
         fail_unless(!conf_load_overrides_buf(globalcs, cconfs, buf));
 	ck_assert_str_eq(get_string(cconfs[OPT_CNAME]), "utestclient");
@@ -427,6 +434,12 @@ START_TEST(test_clientconfdir_conf)
 	assert_strlist(&s, "4", 4);
 	assert_strlist(&s, "7", 8); // The last one gets 1 added to it.
 	assert_include(&s, NULL);
+	s=get_strlist(cconfs[OPT_RESTORE_CLIENTS]);
+	assert_strlist(&s, "123", 0);
+	assert_strlist(&s, "456", 0);
+	assert_strlist(&s, "abc", 0);
+	assert_strlist(&s, "xyz", 0);
+	assert_include(&s, NULL);
 	fail_unless(get_e_recovery_method(
 	  cconfs[OPT_WORKING_DIR_RECOVERY_METHOD])==RECOVERY_METHOD_RESUME);
 	fail_unless(get_int(cconfs[OPT_LIBRSYNC])==0);
@@ -438,6 +451,33 @@ START_TEST(test_clientconfdir_conf)
 	fail_unless(get_int(cconfs[OPT_CLIENT_CAN_LIST])==0);
 	fail_unless(get_int(cconfs[OPT_CLIENT_CAN_RESTORE])==0);
 	fail_unless(get_int(cconfs[OPT_CLIENT_CAN_VERIFY])==0);
+	tear_down(&globalcs, &cconfs);
+}
+END_TEST
+
+START_TEST(test_clientconfdir_extra)
+{
+	struct strlist *s;
+	struct conf **globalcs=NULL;
+	struct conf **cconfs=NULL;
+	const char *gbuf=MIN_SERVER_CONF
+		"restore_client=abc\n"
+		"include = /testdir" // should be ignored
+	;
+	const char *buf=MIN_CLIENTCONFDIR_BUF
+		"include = /testdir" // should not be ignored
+	;
+	setup(&globalcs, &cconfs);
+	fail_unless(!conf_load_global_only_buf(gbuf, globalcs));
+	set_string(cconfs[OPT_CNAME], "utestclient");
+        fail_unless(!conf_load_overrides_buf(globalcs, cconfs, buf));
+	s=get_strlist(cconfs[OPT_RESTORE_CLIENTS]);
+	assert_strlist(&s, "abc", 0);
+	assert_include(&s, NULL);
+	s=get_strlist(cconfs[OPT_INCLUDE]);
+	assert_strlist(&s, "/testdir", 1);
+	assert_include(&s, NULL);
+	tear_down(&globalcs, &cconfs);
 }
 END_TEST
 
@@ -462,6 +502,7 @@ Suite *suite_conffile(void)
 	tcase_add_test(tc_core, test_restore_script_pre_post);
 	tcase_add_test(tc_core, test_restore_script);
 	tcase_add_test(tc_core, test_clientconfdir_conf);
+	tcase_add_test(tc_core, test_clientconfdir_extra);
 	suite_add_tcase(s, tc_core);
 
 	return s;

@@ -497,7 +497,12 @@ rs_result rs_sig_gzfile(FILE *old_file, gzFile old_zfile, FILE *sig_file, size_t
     rs_job_t        *job;
     rs_result       r;
 
-    job = rs_sig_begin(new_block_len, strong_len);
+    job = rs_sig_begin(new_block_len, strong_len
+#ifndef RS_DEFAULT_STRONG_LEN
+		// Support librsync-1.0.0.
+		, RS_MD4_SIG_MAGIC
+#endif
+	);
     r = rs_whole_gzrun(job, old_file, old_zfile, sig_file, NULL, cntr);
 /*
     if (stats)

@@ -483,7 +483,15 @@ static int process_changed_file(struct sbuf *cb, struct sbuf *p1b, const char *c
 	free(curpath);
 
 	blocklen=get_librsync_block_len(cb->endfile);
-	if(!(p1b->sigjob=rs_sig_begin(blocklen, RS_DEFAULT_STRONG_LEN)))
+	if(!(p1b->sigjob=
+#ifdef RS_DEFAULT_STRONG_LEN
+		rs_sig_begin(blocklen, RS_DEFAULT_STRONG_LEN)
+#else
+		// Support for librsync-1.0.0. RS_DEFAULT_STRONG_LEN was 8 in
+		// librsync-0.9.7.
+		rs_sig_begin(blocklen, 8, RS_MD4_SIG_MAGIC)
+#endif
+	))
 	{
 		logp("could not start signature job.\n");
 		return -1;

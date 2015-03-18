@@ -16,6 +16,11 @@
 #include <netdb.h>
 #include <librsync.h>
 
+#ifndef RS_DEFAULT_STRONG_LEN
+// Support librsync-1.0.0.
+#define RS_DEFAULT_STRONG_LEN	8
+#endif
+
 static int make_rev_sig(const char *dst, const char *sig, const char *endfile, int compression, struct cntr *cntr)
 {
 	FILE *dstfp=NULL;

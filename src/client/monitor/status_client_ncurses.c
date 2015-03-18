@@ -515,9 +515,12 @@ static void update_screen_clients(struct sel *sel, int *x, int col,
 	int star_printed=0;
 	for(c=sel->clist; c; c=c->next)
 	{
-		s++;
-		if(s<winmin) continue;
-		if(s>winmax) break;
+		if(actg==ACTION_STATUS)
+		{
+			s++;
+			if(s<winmin) continue;
+			if(s>winmax) break;
+		}
 
 		summary(c, (*x)++, col, confs);
 
@@ -542,9 +545,12 @@ static void update_screen_backups(struct sel *sel, int *x, int col,
 	const char *extradesc=NULL;
 	for(b=sel->client->bu; b; b=b->next)
 	{
-		s++;
-		if(s<winmin) continue;
-		if(s>winmax) break;
+		if(actg==ACTION_STATUS)
+		{
+			s++;
+			if(s<winmin) continue;
+			if(s>winmax) break;
+		}
 
 		if(b->flags & BU_CURRENT)
 			extradesc=" (current)";
@@ -655,9 +661,12 @@ static void update_screen_view_log(struct sel *sel, int *x, int col,
 
 	for(l=sel->llines; l; l=l->next)
 	{
-		s++;
-		if(s<winmin) continue;
-		if(s>winmax) break;
+		if(actg==ACTION_STATUS)
+		{
+			s++;
+			if(s<winmin) continue;
+			if(s>winmax) break;
+		}
 
 		// Allow them to scroll log lines left and right.
 		for(cp=l->line, o=0; *cp && o<sel->offset; cp++, o++) { }
@@ -709,7 +718,6 @@ static int update_screen(struct sel *sel, struct conf **confs)
 		}
 	}
 #endif
-
 	switch(sel->page)
 	{
 		case PAGE_CLIENT_LIST:
@@ -725,45 +733,49 @@ static int update_screen(struct sel *sel, struct conf **confs)
 			break;
 	}
 
+	if(actg==ACTION_STATUS)
+	{
 #ifdef HAVE_NCURSES_H
-	// Adjust sliding window appropriately.
-	if(selindex>selindex_last)
-	{
-		if(selindex>winmax-TOP_SPACE-1-x)
+		// Adjust sliding window appropriately.
+		if(selindex>selindex_last)
 		{
-			winmin+=selindex-selindex_last;
-			winmax+=selindex-selindex_last;
+			if(selindex>winmax-TOP_SPACE-1-x)
+			{
+				winmin+=selindex-selindex_last;
+				winmax+=selindex-selindex_last;
+			}
 		}
-	}
-	else if(selindex<selindex_last)
-	{
-		if(selindex<winmin)
+		else if(selindex<selindex_last)
 		{
-			winmin+=selindex-selindex_last;
-			winmax+=selindex-selindex_last;
+			if(selindex<winmin)
+			{
+				winmin+=selindex-selindex_last;
+				winmax+=selindex-selindex_last;
+			}
 		}
-	}
 #endif
-	if(winmin==winmax)
-	{
-		winmin=0;
-		winmax=row;
-	}
-	else if(winmin<0)
-	{
-		winmin=0;
-		winmax=row;
-	}
+		if(winmin==winmax)
+		{
+			winmin=0;
+			winmax=row;
+		}
+		else if(winmin<0)
+		{
+			winmin=0;
+			winmax=row;
+		}
 /*
-	{
-		char msg[64];
-		snprintf(msg, sizeof(msg), "sel:%d si:%d min:%d max:%d %s\n",
-			selindex, selindex_last, winmin, winmax,
-			(selbu && *selbu && (*selbu)->prev)?
-				(*selbu)->prev->timestamp:"");
-		print_line(msg, -1, col);
-	}
+		{
+			char msg[64];
+			snprintf(msg, sizeof(msg),
+				"sel:%d si:%d min:%d max:%d %s\n",
+				selindex, selindex_last, winmin, winmax,
+				(selbu && *selbu && (*selbu)->prev)?
+					(*selbu)->prev->timestamp:"");
+			print_line(msg, -1, col);
+		}
 */
+	}
 
 	switch(sel->page)
 	{
@@ -790,9 +802,8 @@ static int update_screen(struct sel *sel, struct conf **confs)
 		// Blank any remainder of the screen.
 		for(; x<row; x++)
 			print_line("", x, col);
+		selindex_last=selindex;
 	}
-
-	selindex_last=selindex;
 #endif
 	return 0;
 }

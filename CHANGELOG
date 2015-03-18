@@ -6,6 +6,7 @@
   * More unit tests.
   * Add 'scan_problem_raises_error' option, which lets you treat phase1 scan
     warnings as hard errors.
+  * Fix bug where 'burp -a S' was limited to 24 lines.
 
 2015-03-02: Changes in burp-2.0.14:
   * Improve utest/Makefile.

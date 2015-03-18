@@ -407,6 +407,9 @@ START_TEST(test_clientconfdir_conf)
 	const char *gbuf=MIN_SERVER_CONF
 		"restore_client=abc\n"
 		"restore_client=xyz\n"
+		"timer_script=/timer/script\n"
+		"timer_arg=/timer/arg1\n"
+		"timer_arg=/timer/arg2\n"
 	;
 	const char *buf=MIN_CLIENTCONFDIR_BUF
 		"protocol=1\n"
@@ -428,6 +431,7 @@ START_TEST(test_clientconfdir_conf)
 		"client_can_verify=0\n"
 		"restore_client=123\n"
 		"restore_client=456\n"
+		"dedup_group=dd_group\n"
 	;
 
 	clientconfdir_setup(&globalcs, &cconfs, gbuf, buf);
@@ -459,6 +463,11 @@ START_TEST(test_clientconfdir_conf)
 	fail_unless(get_int(cconfs[OPT_CLIENT_CAN_LIST])==0);
 	fail_unless(get_int(cconfs[OPT_CLIENT_CAN_RESTORE])==0);
 	fail_unless(get_int(cconfs[OPT_CLIENT_CAN_VERIFY])==0);
+	s=get_strlist(cconfs[OPT_TIMER_ARG]);
+	assert_strlist(&s, "/timer/arg1", 0);
+	assert_strlist(&s, "/timer/arg2", 0);
+	assert_include(&s, NULL);
+	ck_assert_str_eq(get_string(cconfs[OPT_DEDUP_GROUP]), "dd_group");
 	tear_down(&globalcs, &cconfs);
 }
 END_TEST
@@ -470,10 +479,16 @@ START_TEST(test_clientconfdir_extra)
 	struct conf **cconfs=NULL;
 	const char *gbuf=MIN_SERVER_CONF
 		"restore_client=abc\n"
-		"include = /testdir" // should be ignored
+		"include = /ignored/include"
+		"timer_script = /ignored/timer"
+		"timer_arg = /ignored/timer/arg1"
+		"timer_arg = /ignored/timer/arg2"
 	;
 	const char *buf=MIN_CLIENTCONFDIR_BUF
-		"include = /testdir" // should not be ignored
+		"include = /testdir\n"
+		"timer_script = /timer/script\n"
+		"timer_arg = /timer/arg1\n"
+		"timer_arg = /timer/arg2\n"
 	;
 	clientconfdir_setup(&globalcs, &cconfs, gbuf, buf);
 	s=get_strlist(cconfs[OPT_RESTORE_CLIENTS]);
@@ -481,6 +496,11 @@ START_TEST(test_clientconfdir_extra)
 	assert_include(&s, NULL);
 	s=get_strlist(cconfs[OPT_INCLUDE]);
 	assert_strlist(&s, "/testdir", 1);
+	assert_include(&s, NULL);
+	ck_assert_str_eq(get_string(cconfs[OPT_TIMER_SCRIPT]), "/timer/script");
+	s=get_strlist(cconfs[OPT_TIMER_ARG]);
+	assert_strlist(&s, "/timer/arg1", 0);
+	assert_strlist(&s, "/timer/arg2", 0);
 	assert_include(&s, NULL);
 	tear_down(&globalcs, &cconfs);
 }

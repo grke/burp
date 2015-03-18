@@ -163,21 +163,21 @@ static int recover_working(struct asfd *asfd,
 
 	// The working directory has not finished being populated.
 	// Check what to do.
-	if(get_fullrealwork(asfd, sdirs, cconfs)) goto error;
+	if(get_fullrealwork(asfd, sdirs, cconfs)) goto end;
 	if(!sdirs->rworking) goto end;
 
 	// We have found an old working directory - open the log inside
 	// for appending.
 	if(!(logpath=prepend_s(sdirs->rworking, "log"))
 	  || set_logfp(logpath, cconfs))
-		goto error;
+		goto end;
 
 	logp("found old working directory: %s\n", sdirs->rworking);
 	logp("working_dir_recovery_method: %s\n",
 		recovery_method_to_str(recovery_method));
 
 	if(!(phase1datatmp=get_tmp_filename(sdirs->phase1data)))
-		goto error;
+		goto end;
 	if(!lstat(phase1datatmp, &statp))
 	{
 		// Phase 1 did not complete - delete everything.
@@ -189,26 +189,24 @@ static int recover_working(struct asfd *asfd,
 	switch(recovery_method)
 	{
 		case RECOVERY_METHOD_DELETE:
-			if(working_delete(asfd, sdirs))
-				goto error;
+			ret=working_delete(asfd, sdirs);
+			break;
 		case RECOVERY_METHOD_USE:
-			if(working_use(asfd, sdirs, incexc, resume, cconfs))
-				goto error;
+			ret=working_use(asfd, sdirs, incexc, resume, cconfs);
+			break;
 		case RECOVERY_METHOD_RESUME:
-			if(working_resume(asfd, sdirs, incexc, resume, cconfs))
-				goto error;
+			ret=working_resume(asfd, sdirs, incexc, resume, cconfs);
+			break;
 		case RECOVERY_METHOD_UNSET:
 		default:
 			snprintf(msg, sizeof(msg),
 				"Unknown working_dir_recovery_method: %d\n",
 					(int)recovery_method);
 			log_and_send(asfd, msg);
-			goto error;
+			break;
 	}
 
 end:
-	ret=0;
-error:
 	free_w(&logpath);
 	free_w(&phase1datatmp);
 	set_logfp(NULL, cconfs); // fclose the logfp

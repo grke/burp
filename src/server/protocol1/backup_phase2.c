@@ -136,7 +136,16 @@ static int process_changed_file(struct asfd *asfd,
 
 	blocklen=get_librsync_block_len(cb->protocol1->endfile.buf);
 	if(!(p1b->protocol1->sigjob=
-		rs_sig_begin(blocklen, RS_DEFAULT_STRONG_LEN)))
+#ifdef RS_DEFAULT_STRONG_LEN
+		rs_sig_begin(blocklen, RS_DEFAULT_STRONG_LEN)
+#else
+		// This is for librsync-1.0.0. RS_DEFAULT_STRONG_LEN was 8 in
+		// librsync-0.9.7. RS_MD4_SIG_MAGIC is also what 0.9.7 uses,
+		// so mixing 0.9.7 and 1.0.0 should be OK.
+		// FIX THIS: Allow the third option to be configurable.
+		rs_sig_begin(blocklen, 8, RS_MD4_SIG_MAGIC)
+#endif
+	))
 	{
 		logp("could not start signature job.\n");
 		return -1;

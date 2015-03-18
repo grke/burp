@@ -191,8 +191,8 @@ Restores all the files in backup number 1 from client 'altclient' that match the
 .SH SERVER CONFIGURATION FILE OPTIONS
 
 .TP
-\fB. [path]\fR
-Read an additional configuration file.
+\fB. [glob]\fR
+Read additional configuration files.
 .TP
 \fBmode=server\fR
 Required to run in server mode.
@@ -436,8 +436,8 @@ Whether or not the server should cache the directory tree when a monitor client 
 .SH CLIENT CONFIGURATION FILE OPTIONS
 
 .TP
-\fB. [path]\fR
-Read an additional configuration file.
+\fB. [glob]\fR
+Read additional configuration files. On Windows, the glob is unimplemented - you will need to specify an actual file.
 .TP
 \fBmode=client\fR
 Required to run in client mode.

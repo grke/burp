@@ -336,13 +336,57 @@ static int load_conf_field_and_value(struct conf **c,
 static int conf_load_lines_from_file(const char *conf_path,
 	struct conf **confs);
 
+static int deal_with_dot_inclusion(const char *conf_path,
+	char **extrafile, struct conf **confs)
+{
+	int ret=-1;
+	char *copy=NULL;
+#ifndef HAVE_WIN32
+	int i=0;
+	glob_t globbuf;
+	if(**extrafile!='/')
+#else
+	if(strlen(*extrafile)>2
+	  && (*extrafile)[1]!=':')
+#endif
+	{
+		// It is relative to the directory that the
+		// current conf file is in.
+		char *cp=NULL;
+		char *tmp=NULL;
+		if(!(copy=strdup_w(conf_path, __func__)))
+			goto end;
+		if((cp=strrchr(copy, '/'))) *cp='\0';
+		if(!(tmp=prepend_s(copy, *extrafile)))
+		{
+			log_out_of_memory(__func__);
+			goto end;
+		}
+		free_w(extrafile);
+		*extrafile=tmp;
+	}
+#ifndef HAVE_WIN32
+	// Treat it is a glob expression.
+	memset(&globbuf, 0, sizeof(globbuf));
+	glob(*extrafile, 0, NULL, &globbuf);
+	for(i=0; (unsigned int)i<globbuf.gl_pathc; i++)
+		if((ret=conf_load_lines_from_file(globbuf.gl_pathv[i], confs)))
+			goto end;
+#else
+	ret=conf_load_lines_from_file(*extrafile, confs);
+#endif
+
+end:
+	free_w(&copy);
+	return ret;
+}
+
 static int conf_parse_line(struct conf **confs, const char *conf_path,
 	char buf[], int line)
 {
 	int ret=-1;
 	char *f=NULL; // field
 	char *v=NULL; // value
-	char *copy=NULL;
 	char *extrafile=NULL;
 
 	if(!strncmp(buf, ". ", 2))
@@ -355,30 +399,7 @@ static int conf_parse_line(struct conf **confs, const char *conf_path,
 		if((np=strrchr(extrafile, '\n'))) *np='\0';
 		if(!*extrafile) goto end;
 
-#ifdef HAVE_WIN32
-		if(strlen(extrafile)>2
-		  && extrafile[1]!=':')
-#else
-		if(*extrafile!='/')
-#endif
-		{
-			// It is relative to the directory that the
-			// current conf file is in.
-			char *cp=NULL;
-			char *tmp=NULL;
-			if(!(copy=strdup_w(conf_path, __func__)))
-				goto end;
-			if((cp=strrchr(copy, '/'))) *cp='\0';
-			if(!(tmp=prepend_s(copy, extrafile)))
-			{
-				log_out_of_memory(__func__);
-				goto end;
-			}
-			free_w(&extrafile);
-			extrafile=tmp;
-		}
-
-		ret=conf_load_lines_from_file(extrafile, confs);
+		ret=deal_with_dot_inclusion(conf_path, &extrafile, confs);
 		goto end;
 	}
 
@@ -389,7 +410,6 @@ static int conf_parse_line(struct conf **confs, const char *conf_path,
 	ret=0;
 end:
 	free_w(&extrafile);
-	free_w(&copy);
 	return ret;
 }
 

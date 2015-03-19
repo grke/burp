@@ -136,7 +136,12 @@ static int list_manifest(struct asfd *asfd,
 		if((ars=manio_sbuf_fill(manio, asfd, sb, NULL, NULL, confs))<0)
 			goto error;
 		else if(ars>0)
+		{
+			if(browsedir && *browsedir && !last_bd_match)
+				write_wrapper_str(asfd, CMD_ERROR,
+					"directory not found");
 			goto end; // Finished OK.
+		}
 
 		if(write_status(CNTR_STATUS_LISTING, sb->path.buf, confs))
 			goto error;

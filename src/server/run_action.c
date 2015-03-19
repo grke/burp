@@ -117,7 +117,7 @@ static void maybe_do_notification(struct asfd *asfd,
 		args[0]=get_string(cconfs[OPT_N_SUCCESS_SCRIPT]);
 		args[a++]=warnings;
 		args[a++]=NULL;
-		run_script(asfd, args, get_strlist(cconfs[OPT_N_FAILURE_ARG]),
+		run_script(asfd, args, get_strlist(cconfs[OPT_N_SUCCESS_ARG]),
 			cconfs, 1, 1, 1);
 	}
 }

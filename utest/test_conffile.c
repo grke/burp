@@ -222,7 +222,7 @@ START_TEST(test_server_conf)
 }
 END_TEST
 
-static void pre_post_checks(const char *buf, const char *pre_path,
+static void pre_post_assertions(struct conf **confs, const char *pre_path,
 	const char *post_path, const char *pre_arg1, const char *pre_arg2,
 	const char *post_arg1, const char *post_arg2,
 	enum conf_opt o_script_pre, enum conf_opt o_script_post,
@@ -231,9 +231,6 @@ static void pre_post_checks(const char *buf, const char *pre_path,
 	enum conf_opt o_script_post_run_on_fail)
 {
 	struct strlist *s;
-	struct conf **confs=NULL;
-	setup(&confs, NULL);
-	fail_unless(!conf_load_global_only_buf(buf, confs));
 	ck_assert_str_eq(get_string(confs[o_script_pre]), pre_path);
 	ck_assert_str_eq(get_string(confs[o_script_post]), post_path);
 	s=get_strlist(confs[o_script_pre_arg]);
@@ -249,6 +246,25 @@ static void pre_post_checks(const char *buf, const char *pre_path,
 	if(o_script_post_notify!=OPT_MAX)
 		fail_unless(get_int(confs[o_script_post_notify])==1);
 	fail_unless(get_int(confs[o_script_post_run_on_fail])==1);
+}
+
+static void pre_post_checks(const char *buf, const char *pre_path,
+	const char *post_path, const char *pre_arg1, const char *pre_arg2,
+	const char *post_arg1, const char *post_arg2,
+	enum conf_opt o_script_pre, enum conf_opt o_script_post,
+	enum conf_opt o_script_pre_arg, enum conf_opt o_script_post_arg,
+	enum conf_opt o_script_pre_notify, enum conf_opt o_script_post_notify,
+	enum conf_opt o_script_post_run_on_fail)
+{
+	struct conf **confs=NULL;
+	setup(&confs, NULL);
+	fail_unless(!conf_load_global_only_buf(buf, confs));
+	pre_post_assertions(confs, pre_path, post_path, pre_arg1, pre_arg2,
+		post_arg1, post_arg2,
+		o_script_pre, o_script_post,
+		o_script_pre_arg, o_script_post_arg,
+		o_script_pre_notify, o_script_post_notify,
+		o_script_post_run_on_fail);
 	tear_down(NULL, &confs);
 }
 
@@ -264,37 +280,39 @@ static void server_pre_post_checks(const char *buf, const char *pre_path,
 		OPT_S_SCRIPT_POST_RUN_ON_FAIL);
 }
 
+#define SERVER_SCRIPT_PRE_POST 			\
+	"server_script_pre=pre_path\n"		\
+	"server_script_pre_arg=pre_arg1\n"	\
+	"server_script_pre_arg=pre_arg2\n"	\
+	"server_script_pre_notify=1\n"		\
+	"server_script_post=post_path\n"	\
+	"server_script_post_arg=post_arg1\n"	\
+	"server_script_post_arg=post_arg2\n"	\
+	"server_script_post_notify=1\n"		\
+	"server_script_post_run_on_fail=1\n"	\
+
 START_TEST(test_server_script_pre_post)
 {
-	const char *buf=MIN_SERVER_CONF
-		"server_script_pre=pre_path\n"
-		"server_script_pre_arg=pre_arg1\n"
-		"server_script_pre_arg=pre_arg2\n"
-		"server_script_pre_notify=1\n"
-		"server_script_post=post_path\n"
-		"server_script_post_arg=post_arg1\n"
-		"server_script_post_arg=post_arg2\n"
-		"server_script_post_notify=1\n"
-		"server_script_post_run_on_fail=1\n"
-	;
+	const char *buf=MIN_SERVER_CONF SERVER_SCRIPT_PRE_POST;
 	server_pre_post_checks(buf, "pre_path", "post_path", "pre_arg1",
 		"pre_arg2", "post_arg1", "post_arg2");
 }
 END_TEST
 
+#define SERVER_SCRIPT_CONF			\
+	"server_script=path\n"			\
+	"server_script_arg=arg1\n"		\
+	"server_script_arg=arg2\n"		\
+	"server_script_notify=1\n"		\
+	"server_script_notify=1\n"		\
+	"server_script_run_on_fail=1\n"		\
+	"server_script_post_run_on_fail=1\n"	\
+
 // Same as test_server_script_pre_post, but use server_script to set both pre
 // and post at the same time.
 START_TEST(test_server_script)
 {
-	const char *buf=MIN_SERVER_CONF
-		"server_script=path\n"
-		"server_script_arg=arg1\n"
-		"server_script_arg=arg2\n"
-		"server_script_notify=1\n"
-		"server_script_notify=1\n"
-		"server_script_run_on_fail=1\n"
-		"server_script_post_run_on_fail=1\n"
-	;
+	const char *buf=MIN_SERVER_CONF SERVER_SCRIPT_CONF;
 	server_pre_post_checks(buf, "path", "path", "arg1",
 		"arg2", "arg1", "arg2");
 }
@@ -397,6 +415,35 @@ static void clientconfdir_setup(struct conf ***globalcs, struct conf ***cconfs,
 	ck_assert_str_eq(get_string((*cconfs)[OPT_CNAME]), "utestclient");
 }
 
+#define NOTIFY_CONF				\
+	"notify_success_script=/success_path\n"	\
+	"notify_success_arg=/success/arg1\n"	\
+	"notify_success_arg=/success/arg2\n"	\
+	"notify_success_warnings_only=1\n"	\
+	"notify_success_changes_only=1\n"	\
+	"notify_failure_script=/failure_path\n"	\
+	"notify_failure_arg=/failure/arg1\n"	\
+	"notify_failure_arg=/failure/arg2\n"	\
+
+static int notify_assertions(struct conf **cconfs)
+{
+	struct strlist *s;
+	ck_assert_str_eq(get_string(cconfs[OPT_N_SUCCESS_SCRIPT]),
+		"/success_path");
+	s=get_strlist(cconfs[OPT_N_SUCCESS_ARG]);
+	assert_strlist(&s, "/success/arg1", 0);
+	assert_strlist(&s, "/success/arg2", 0);
+	assert_include(&s, NULL);
+	ck_assert_str_eq(get_string(cconfs[OPT_N_FAILURE_SCRIPT]),
+		"/failure_path");
+	fail_unless(get_int(cconfs[OPT_N_SUCCESS_WARNINGS_ONLY])==1);
+	fail_unless(get_int(cconfs[OPT_N_SUCCESS_CHANGES_ONLY])==1);
+	s=get_strlist(cconfs[OPT_N_FAILURE_ARG]);
+	assert_strlist(&s, "/failure/arg1", 0);
+	assert_strlist(&s, "/failure/arg2", 0);
+	assert_include(&s, NULL);
+}
+
 #define MIN_CLIENTCONFDIR_BUF "# comment\n"
 
 START_TEST(test_clientconfdir_conf)
@@ -410,6 +457,7 @@ START_TEST(test_clientconfdir_conf)
 		"timer_script=/timer/script\n"
 		"timer_arg=/timer/arg1\n"
 		"timer_arg=/timer/arg2\n"
+		NOTIFY_CONF
 	;
 	const char *buf=MIN_CLIENTCONFDIR_BUF
 		"protocol=1\n"
@@ -468,6 +516,7 @@ START_TEST(test_clientconfdir_conf)
 	assert_strlist(&s, "/timer/arg2", 0);
 	assert_include(&s, NULL);
 	ck_assert_str_eq(get_string(cconfs[OPT_DEDUP_GROUP]), "dd_group");
+	notify_assertions(cconfs);
 	tear_down(&globalcs, &cconfs);
 }
 END_TEST
@@ -479,16 +528,23 @@ START_TEST(test_clientconfdir_extra)
 	struct conf **cconfs=NULL;
 	const char *gbuf=MIN_SERVER_CONF
 		"restore_client=abc\n"
-		"include = /ignored/include"
-		"timer_script = /ignored/timer"
-		"timer_arg = /ignored/timer/arg1"
-		"timer_arg = /ignored/timer/arg2"
+		"include = /ignored/include\n"
+		"timer_script = /ignored/timer\n"
+		"timer_arg = /ignored/timer/arg1\n"
+		"timer_arg = /ignored/timer/arg2\n"
+		"notify_success_script = /ignored/success\n"
+		"notify_success_arg = /ignored/success/arg\n"
+		"notify_failure_script = /ignored/failure\n"
+		"notify_failure_arg = /ignored/failure/arg\n"
+		SERVER_SCRIPT_CONF
 	;
 	const char *buf=MIN_CLIENTCONFDIR_BUF
 		"include = /testdir\n"
 		"timer_script = /timer/script\n"
 		"timer_arg = /timer/arg1\n"
 		"timer_arg = /timer/arg2\n"
+		SERVER_SCRIPT_PRE_POST
+		NOTIFY_CONF
 	;
 	clientconfdir_setup(&globalcs, &cconfs, gbuf, buf);
 	s=get_strlist(cconfs[OPT_RESTORE_CLIENTS]);
@@ -502,6 +558,34 @@ START_TEST(test_clientconfdir_extra)
 	assert_strlist(&s, "/timer/arg1", 0);
 	assert_strlist(&s, "/timer/arg2", 0);
 	assert_include(&s, NULL);
+	pre_post_assertions(cconfs, "pre_path", "post_path",
+		"pre_arg1", "pre_arg2",
+		"post_arg1", "post_arg2",
+		OPT_S_SCRIPT_PRE, OPT_S_SCRIPT_POST,
+		OPT_S_SCRIPT_PRE_ARG, OPT_S_SCRIPT_POST_ARG,
+		OPT_S_SCRIPT_PRE_NOTIFY, OPT_S_SCRIPT_POST_NOTIFY,
+		OPT_S_SCRIPT_POST_RUN_ON_FAIL);
+	notify_assertions(cconfs);
+	tear_down(&globalcs, &cconfs);
+}
+END_TEST
+
+START_TEST(test_clientconfdir_server_script)
+{
+	struct strlist *s;
+	struct conf **globalcs=NULL;
+	struct conf **cconfs=NULL;
+	const char *gbuf=MIN_SERVER_CONF SERVER_SCRIPT_PRE_POST;
+	const char *buf=MIN_CLIENTCONFDIR_BUF SERVER_SCRIPT_CONF;
+
+	clientconfdir_setup(&globalcs, &cconfs, gbuf, buf);
+	pre_post_assertions(cconfs, "path", "path",
+		"arg1", "arg2",
+		"arg1", "arg2",
+		OPT_S_SCRIPT_PRE, OPT_S_SCRIPT_POST,
+		OPT_S_SCRIPT_PRE_ARG, OPT_S_SCRIPT_POST_ARG,
+		OPT_S_SCRIPT_PRE_NOTIFY, OPT_S_SCRIPT_POST_NOTIFY,
+		OPT_S_SCRIPT_POST_RUN_ON_FAIL);
 	tear_down(&globalcs, &cconfs);
 }
 END_TEST
@@ -528,6 +612,7 @@ Suite *suite_conffile(void)
 	tcase_add_test(tc_core, test_restore_script);
 	tcase_add_test(tc_core, test_clientconfdir_conf);
 	tcase_add_test(tc_core, test_clientconfdir_extra);
+	tcase_add_test(tc_core, test_clientconfdir_server_script);
 	suite_add_tcase(s, tc_core);
 
 	return s;

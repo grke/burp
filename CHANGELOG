@@ -11,8 +11,8 @@
   * Implement glob '. /some/dir/*' conf syntax on non-Windows machines.
   * Changes to support librsync-1.0.0.  
   * When listing a directory, include a '.' entry to indicate the directory
-    itself. Enables the user to distinguish between a directory that is empty
-    and one that doesn't exist.
+    itself.
+  * When listing a directory, send an error if the directory was not found.
 
 2015-03-02: Changes in burp-2.0.14:
   * Improve utest/Makefile.

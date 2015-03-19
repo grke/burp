@@ -43,7 +43,4 @@ roughly in order of most important to least.
 
 * champ_chooser: figure out a way of giving preference to newer candidates.
 
-* Check notifications work (warnings are turned off because of conf/cntr init
-  problem.
-
 * Stop bedup from trying to process protocol2 directories.

@@ -29,8 +29,6 @@ roughly in order of most important to least.
 
 * Make the status monitor work.
 
-* Make the status monitor use sdirs.
-
 * Make the status monitor and counters use JSON.
 
 * Add data compression.

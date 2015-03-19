@@ -11,8 +11,6 @@ roughly in order of most important to least.
 
 * Fix counters
 
-* Verify / make the server_script_arg override stuff work in src/conf.c.
-
 * Make recovery from partially complete backups work. Hooks
   need to be generated from already transferred manifests. Need to forward
   through already written 'changed/unchanged' manifest.

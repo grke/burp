@@ -55,11 +55,14 @@ int check_browsedir(const char *browsedir,
 		cp+=bdlen;
 		if(browsedir[bdlen-1]!='/')
 		{
-			if(*cp!='/') return 0;
-			cp++;
+			if(*cp!='\0')
+			{
+				if(*cp!='/') return 0;
+				cp++;
+			}
 		}
 	}
-	if(*cp=='\0') return 0;
+	if(*cp=='\0') cp=(char *)".";
 	if(!(copy=strdup_w(cp, __func__))) goto err;
 	if((cp=strchr(copy, '/')))
 	{

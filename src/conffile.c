@@ -941,6 +941,10 @@ int conf_finalise(struct conf **c)
 	  || setup_script_arg_overrides(c[OPT_S_SCRIPT_ARG],
 		c[OPT_S_SCRIPT_PRE_ARG], c[OPT_S_SCRIPT_POST_ARG]))
 			return -1;
+
+	// We are now done with these. Clear them, otherwise they interfere.
+	set_string(c[OPT_S_SCRIPT], NULL);
+	set_strlist(c[OPT_S_SCRIPT_ARG], NULL);
 	return 0;
 }
 

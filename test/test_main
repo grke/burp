@@ -144,11 +144,8 @@ wait_for_backup_to_finish()
 	done
 }
 
-add_run_backup()
+add_run_backup_no_increment()
 {
-pre=$bno
-bno=$((bno+1))
-test_includes_backup=1
 cat >> "$clientscript" <<EOF
 echo "Starting test client backup"
 "$burpbin" -c "$clientconfarg" -a b || fail "client backup returned \$?"
@@ -156,13 +153,32 @@ echo "Starting test client backup"
 EOF
 }
 
-add_run_backup_expect_fail()
+increment()
+{
+	pre=$bno
+	bno=$((bno+1))
+}
+
+add_run_backup()
+{
+	increment
+	test_includes_backup=1
+	add_run_backup_no_increment
+}
+
+add_run_backup_expect_fail_no_increment()
 {
 cat >> "$clientscript" <<EOF
 echo "Starting test client backup"
 "$burpbin" -c "$clientconfarg" -a b && fail "client backup returned \$? (expected 0)"
 
 EOF
+}
+
+add_run_backup_expect_fail()
+{
+	increment
+	add_run_backup_expect_fail_no_increment
 }
 
 add_run_verify()
@@ -699,28 +715,41 @@ check_for_finishing_dir()
 
 all_tests()
 {
-#	start_test "Interrupt server phase1"
-#	add_server_breakpoint_on 1
-#	add_run_backup_expect_fail
-#	run_scripts
-#	check_for_working_dir
-#	end_test
+	start_test "Interrupt server phase1"
+	add_server_breakpoint_on 1
+	add_run_backup_expect_fail_no_increment
+	run_scripts
+	check_for_working_dir
+	end_test
 
-#	start_test "Interrupt client phase1"
-#	add_client_breakpoint_on 1
-#	add_run_backup_expect_fail
-#	run_scripts
-#	check_for_working_dir
-#	end_test
+	start_test "Interrupt client phase1"
+	add_client_breakpoint_on 1
+	add_run_backup_expect_fail_no_increment
+	run_scripts
+	check_for_working_dir
+	end_test
 
 	comp_enc_change_test on  off off
 
-#	start_test "Interrupt server phase4"
-#	add_server_breakpoint_on 4
-#	add_run_backup_expect_fail
-#	run_scripts
-#	check_for_finishing_dir
-#	end_test
+if [ "$protocol" -eq "1" ] ; then
+	start_test "Interrupt server phase4"
+	add_server_breakpoint_on 4
+	add_run_backup_no_increment
+	run_scripts
+	wait_for_backup_to_finish
+	check_for_finishing_dir
+	end_test
+
+	start_test "Complete phase4"
+	add_server_breakpoint_off
+	add_run_backup_expect_fail
+	run_scripts
+	wait_for_backup_to_finish
+	start_script_client
+	add_run_verify
+	add_run_restore $bno "$restoredir"
+	end_test
+fi
 
 	comp_enc_change_test on  off off
 	comp_enc_change_test on  off on
@@ -773,7 +802,7 @@ run_tests()
 	res=0
 	echo
 	echo "Running burp$protocol tests"
-	all_tests
+	all_tests "$protocol"
 }
 
 restart_server

@@ -272,7 +272,7 @@ int init_client_socket(const char *host, const char *port)
 
 	if((gai_ret=getaddrinfo(host, port, &hints, &result)))
 	{
-		logp("getaddrinfo: %s\n", gai_strerror(rfd));
+		logp("getaddrinfo: %s\n", gai_strerror(gai_ret));
 		return -1;
 	}
 

@@ -13,6 +13,7 @@
   * When listing a directory, include a '.' entry to indicate the directory
     itself.
   * When listing a directory, send an error if the directory was not found.
+  * Fix for client getaddrinfo error message.
 
 2015-03-02: Changes in burp-2.0.14:
   * Improve utest/Makefile.

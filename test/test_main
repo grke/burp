@@ -731,25 +731,34 @@ all_tests()
 
 	comp_enc_change_test on  off off
 
-if [ "$protocol" -eq "1" ] ; then
-	start_test "Interrupt server phase4"
-	add_server_breakpoint_on 4
+	start_test "Interrupt server phase3"
+	add_server_breakpoint_on 3
 	add_run_backup_no_increment
 	run_scripts
 	wait_for_backup_to_finish
-	check_for_finishing_dir
+	check_for_working_dir
 	end_test
 
-	start_test "Complete phase4"
-	add_server_breakpoint_off
-	add_run_backup_expect_fail
-	run_scripts
-	wait_for_backup_to_finish
-	start_script_client
-	add_run_verify
-	add_run_restore $bno "$restoredir"
-	end_test
-fi
+	if [ "$protocol" -eq "1" ] ; then
+		# Protocol2 has no phase4.
+		start_test "Interrupt server phase4"
+		add_server_breakpoint_on 4
+		add_run_backup_no_increment
+		run_scripts
+		wait_for_backup_to_finish
+		check_for_finishing_dir
+		end_test
+
+		start_test "Complete phase4"
+		add_server_breakpoint_off
+		add_run_backup_expect_fail
+		run_scripts
+		wait_for_backup_to_finish
+		start_script_client
+		add_run_verify
+		add_run_restore $bno "$restoredir"
+		end_test
+	fi
 
 	comp_enc_change_test on  off off
 	comp_enc_change_test on  off on

@@ -178,9 +178,16 @@ static int recover_working(struct asfd *asfd,
 
 	if(!(phase1datatmp=get_tmp_filename(sdirs->phase1data)))
 		goto end;
-	if(!lstat(phase1datatmp, &statp))
+	// If there is still a phase1 tmp file...
+	if(!lstat(phase1datatmp, &statp)
+	  ||
+		// ...or phase1 has not even got underway yet...
+		(lstat(phase1datatmp, &statp)
+		  && lstat(sdirs->phase1data, &statp)
+		  && lstat(sdirs->changed, &statp)
+		  && lstat(sdirs->unchanged, &statp)))
 	{
-		// Phase 1 did not complete - delete everything.
+		// ...phase 1 did not complete - delete everything.
 		logp("Phase 1 has not completed.\n");
 		printf("Phase 1 has not completed.\n");
 		recovery_method=RECOVERY_METHOD_DELETE;

@@ -14,6 +14,8 @@
     itself.
   * When listing a directory, send an error if the directory was not found.
   * Fix for client getaddrinfo error message.
+  * Fix resume bug when a backup is interrupted before phase1 has got under
+    way.
 
 2015-03-02: Changes in burp-2.0.14:
   * Improve utest/Makefile.

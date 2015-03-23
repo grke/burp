@@ -606,7 +606,7 @@ add_normal_settings()
 	add_exclude_ext_off
 	add_server_breakpoint_off
 	add_client_breakpoint_off
-#	add_recovery_method_resume
+	#add_recovery_method_resume
 
 	# Windows options
 	if [ -n "$SPLIT_VSS" ] ; then
@@ -730,6 +730,14 @@ all_tests()
 	end_test
 
 	comp_enc_change_test on  off off
+
+	start_test "Interrupt server phase2"
+	add_server_breakpoint_on 2
+	add_run_backup_expect_fail_no_increment
+	run_scripts
+	wait_for_backup_to_finish
+	check_for_working_dir
+	end_test
 
 	start_test "Interrupt server phase3"
 	add_server_breakpoint_on 3

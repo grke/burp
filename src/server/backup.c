@@ -123,6 +123,7 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 	struct conf **cconfs, const char *incexc, int resume)
 {
 	int ret=0;
+	int do_phase2=1;
 	struct asfd *chfd=NULL;
 	struct asfd *asfd=as->asfd;
 	enum protocol protocol=get_e_protocol(cconfs[OPT_PROTOCOL]);
@@ -163,13 +164,29 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 		}
 	}
 
-	if(backup_phase2_server(as, sdirs, incexc, resume, cconfs))
+	if(resume)
 	{
-		logp("error in backup phase 2\n");
-		goto error;
+		struct stat statp;
+		if(lstat(sdirs->phase1data, &statp)
+		  && !lstat(sdirs->changed, &statp)
+		  && !lstat(sdirs->unchanged, &statp))
+		{
+			// In this condition, it looks like there was an
+			// interruption during phase3. Skip phase2.
+			do_phase2=0;
+		}
 	}
 
-	asfd->write_str(asfd, CMD_GEN, "okbackupend");
+	if(do_phase2)
+	{
+		if(backup_phase2_server(as, sdirs, incexc, resume, cconfs))
+		{
+			logp("error in backup phase 2\n");
+			goto error;
+		}
+
+		asfd->write_str(asfd, CMD_GEN, "okbackupend");
+	}
 
 	// Close the connection with the client, the rest of the job we can do
 	// by ourselves.

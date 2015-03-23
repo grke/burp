@@ -919,7 +919,7 @@ end:
 		logp("error closing %s in %s\n", sdirs->unchanged, __func__);
 		ret=-1;
 	}
-	free(deltmppath);
+	free_w(&deltmppath);
 	sbuf_free(&cb);
 	sbuf_free(&p1b);
 	sbuf_free(&rb);

@@ -10,6 +10,7 @@ SRCS = \
 	test_conf.c \
 	test_conffile.c \
 	test_hexmap.c \
+	test_lock.c \
 	test_pathcmp.c
 
 BURP_SRCS = \
@@ -19,7 +20,9 @@ BURP_SRCS = \
 	../src/cntr.c \
 	../src/conf.c \
 	../src/conffile.c \
+	../src/fsops.c \
 	../src/hexmap.c \
+	../src/lock.c \
 	../src/pathcmp.c \
 	../src/prepend.c \
 	../src/strlist.c \

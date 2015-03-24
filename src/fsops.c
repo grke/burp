@@ -330,3 +330,13 @@ void init_fs_max(const char *path)
 	init_max(path, &fs_name_max, _PC_NAME_MAX, 255);
 	fs_full_path_max=fs_path_max+fs_name_max;
 }
+
+int looks_like_tmp_or_hidden_file(const char *filename)
+{
+	if(!filename) return 0;
+	if(filename[0]=='.' // Also avoids '.' and '..'.
+	  // I am told that emacs tmp files end with '~'.
+	  || filename[strlen(filename)-1]=='~')
+		return 1;
+	return 0;
+}

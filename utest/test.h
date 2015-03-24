@@ -12,6 +12,7 @@ Suite *suite_cmd(void);
 Suite *suite_conf(void);
 Suite *suite_conffile(void);
 Suite *suite_hexmap(void);
+Suite *suite_lock(void);
 Suite *suite_pathcmp(void);
 
 #endif

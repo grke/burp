@@ -21,7 +21,6 @@
 #include "incexc_send.h"
 #include "include.h"
 #include "iobuf.h"
-#include "lock.h"
 #include "log.h"
 #include "msg.h"
 #include "prepend.h"

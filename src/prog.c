@@ -4,6 +4,7 @@
 #include "conffile.h"
 #include "client/main.h"
 #include "hexmap.h"
+#include "lock.h"
 #include "server/main.h"
 #include "server/protocol1/bedup.h"
 #include "server/protocol2/champ_chooser/champ_server.h"

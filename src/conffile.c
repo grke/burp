@@ -1,6 +1,7 @@
 #include "burp.h"
 #include "alloc.h"
 #include "conf.h"
+#include "fsops.h"
 #include "handy.h"
 #include "lock.h"
 #include "log.h"

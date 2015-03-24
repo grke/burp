@@ -685,7 +685,7 @@ static int deal_with_wrap_up_from_chfd(struct iobuf *rbuf, struct blist *blist,
 	}
 	memcpy(&fileno, rbuf->buf, FILENO_LEN);
 	if(mark_up_to_index(blist, fileno, dpth)) return -1;
-	mark_not_got(blist->blk_from_champ_chooser, dpth);
+	if(mark_not_got(blist->blk_from_champ_chooser, dpth)) return -1;
 
 	return 0;
 }

@@ -1,5 +1,6 @@
 #include "include.h"
 #include "../../cmd.h"
+#include "../../lock.h"
 
 #include <sys/un.h>
 

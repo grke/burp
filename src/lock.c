@@ -1,4 +1,7 @@
-#include "include.h"
+#include "alloc.h"
+#include "burp.h"
+#include "lock.h"
+#include "log.h"
 
 struct lock *lock_alloc(void)
 {
@@ -7,7 +10,7 @@ struct lock *lock_alloc(void)
 
 int lock_init(struct lock *lock, const char *path)
 {
-	if(lock->path) free(lock->path);
+	free_w(&lock->path);
 	if(!(lock->path=strdup_w(path, __func__)))
 		return -1;
 	return 0;
@@ -21,12 +24,16 @@ struct lock *lock_alloc_and_init(const char *path)
 	return lock;
 }
 
+static void lock_free_content(struct lock *lock)
+{
+	free_w(&lock->path);
+}
+
 void lock_free(struct lock **lock)
 {
 	if(!lock || !*lock) return;
-	if((*lock)->path) free((*lock)->path);
-	free(*lock);
-	*lock=NULL;
+	lock_free_content(*lock);
+	free_v((void **)lock);
 }
 
 void lock_get_quick(struct lock *lock)
@@ -159,16 +166,4 @@ void locks_release_and_free(struct lock **locklist)
 		lock_free(&l);
 	}
 	*locklist=NULL;
-}
-
-// FIX THIS:
-// In this source file so that both bedup and status_server can see it.
-int looks_like_tmp_or_hidden_file(const char *filename)
-{
-	if(!filename) return 0;
-	if(filename[0]=='.' // Also avoids '.' and '..'.
-	// I am told that emacs tmp files end with '~'.
-	  || filename[strlen(filename)-1]=='~')
-		return 1;
-	return 0;
 }

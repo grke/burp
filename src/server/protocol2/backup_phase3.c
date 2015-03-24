@@ -1,5 +1,6 @@
 #include "include.h"
 #include "../../cmd.h"
+#include "../../lock.h"
 #include "../../server/manio.h"
 #include "../../server/sdirs.h"
 

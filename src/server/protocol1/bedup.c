@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../lock.h"
 
 #include <uthash.h>
 #include <dirent.h>

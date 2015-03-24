@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../lock.h"
 #include "monitor/status_server.h"
 
 #include <netdb.h>

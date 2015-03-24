@@ -1,5 +1,6 @@
 #include "include.h"
 #include "../cmd.h"
+#include "../lock.h"
 #include "protocol1/rubble.h"
 #include "protocol2/restore.h"
 #include "protocol2/rubble.h"

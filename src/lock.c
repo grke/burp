@@ -98,7 +98,7 @@ void lock_get(struct lock *lock)
 		*cp='\0';
 		if(*copy) mkdir(copy, 0777);
 	}
-	free(copy);
+	free_w(&copy);
 
 	lock_get_quick(lock);
 

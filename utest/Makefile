@@ -47,4 +47,4 @@ test: Makefile $(OBJS) $(BURP_OBJS)
 	@echo OK
 
 clean:
-	rm -f test *.o
+	rm -f test *.o utest_lockfile

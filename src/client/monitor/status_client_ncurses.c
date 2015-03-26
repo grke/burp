@@ -38,7 +38,9 @@ static void print_line(const char *string, int row, int col)
 	{
 		printf("%c", *cp);
 		k++;
+#ifdef HAVE_NCURSES_H
 		if(actg==ACTION_STATUS && k<col) break;
+#endif
 	}
 	printf("\n");
 }
@@ -508,11 +510,15 @@ static void print_logs_list(struct sel *sel, int *x, int col)
 static void update_screen_clients(struct sel *sel, int *x, int col,
 	int winmin, int winmax, struct conf **confs)
 {
+#ifdef HAVE_NCURSES_H
 	int s=0;
+#endif
 	struct cstat *c;
 	int star_printed=0;
 	int max_cname=28*((float)col/100);
+#ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS_SNAPSHOT)
+#endif
 	{
 		size_t l;
 		for(c=sel->clist; c; c=c->next)
@@ -521,12 +527,14 @@ static void update_screen_clients(struct sel *sel, int *x, int col,
 	}
 	for(c=sel->clist; c; c=c->next)
 	{
+#ifdef HAVE_NCURSES_H
 		if(actg==ACTION_STATUS)
 		{
 			s++;
 			if(s<winmin) continue;
 			if(s>winmax) break;
 		}
+#endif
 
 		client_summary(c, (*x)++, col, max_cname, confs);
 
@@ -544,19 +552,23 @@ static void update_screen_clients(struct sel *sel, int *x, int col,
 static void update_screen_backups(struct sel *sel, int *x, int col,
 	int winmin, int winmax)
 {
+#ifdef HAVE_NCURSES_H
 	int s=0;
+#endif
 	struct bu *b;
 	char msg[1024]="";
 	int star_printed=0;
 	const char *extradesc=NULL;
 	for(b=sel->client->bu; b; b=b->next)
 	{
+#ifdef HAVE_NCURSES_H
 		if(actg==ACTION_STATUS)
 		{
 			s++;
 			if(s<winmin) continue;
 			if(s>winmax) break;
 		}
+#endif
 
 		if(b->flags & BU_CURRENT)
 			extradesc=" (current)";
@@ -653,7 +665,9 @@ static void update_screen_live_counters(struct cstat *client, int *x, int col)
 static void update_screen_view_log(struct sel *sel, int *x, int col,
 	int winmin, int winmax)
 {
+#ifdef HAVE_NCURSES_H
 	int s=0;
+#endif
 	int o=0;
 	struct lline *l;
 	const char *cp=NULL;
@@ -667,12 +681,14 @@ static void update_screen_view_log(struct sel *sel, int *x, int col,
 
 	for(l=sel->llines; l; l=l->next)
 	{
+#ifdef HAVE_NCURSES_H
 		if(actg==ACTION_STATUS)
 		{
 			s++;
 			if(s<winmin) continue;
 			if(s>winmax) break;
 		}
+#endif
 
 		// Allow them to scroll log lines left and right.
 		for(cp=l->line, o=0; *cp && o<sel->offset; cp++, o++) { }
@@ -739,9 +755,9 @@ static int update_screen(struct sel *sel, struct conf **confs)
 			break;
 	}
 
+#ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS)
 	{
-#ifdef HAVE_NCURSES_H
 		// Adjust sliding window appropriately.
 		if(selindex>selindex_last)
 		{
@@ -759,7 +775,7 @@ static int update_screen(struct sel *sel, struct conf **confs)
 				winmax+=selindex-selindex_last;
 			}
 		}
-#endif
+
 		if(winmin==winmax)
 		{
 			winmin=0;
@@ -782,6 +798,7 @@ static int update_screen(struct sel *sel, struct conf **confs)
 		}
 */
 	}
+#endif
 
 	switch(sel->page)
 	{

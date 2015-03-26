@@ -17,6 +17,7 @@
   * Fix resume bug when a backup is interrupted before phase1 has got under
     way.
   * Fix resume bug where an interruption in phase3 causes problems.
+  * Fix compile when there is no ncurses.
 
 2015-03-02: Changes in burp-2.0.14:
   * Improve utest/Makefile.

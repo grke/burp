@@ -3,6 +3,7 @@
     permissions have changed.
   * Support librsync-1.0.0.
   * Bug fix for client getaddrinfo error message.
+  * Upgrade Windows depkgs to openssl-1.0.1m.
 
 2015-02-05 Changes in burp-1.4.32:
   * Allow syslog and stdout logging at the same time (was broken in 1.4.30).

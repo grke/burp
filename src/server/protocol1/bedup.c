@@ -112,8 +112,7 @@ static int full_match(struct file *o, struct file *n, FILE **ofp, FILE **nfp)
 		{
 			// Blank this entry so that it can be ignored from
 			// now on.
-			free(o->path);
-			o->path=NULL;
+			free_w(&o->path);
 		}
 		return 0;
 	}
@@ -240,7 +239,7 @@ static int do_hardlink(struct file *o, struct file *n, const char *ext)
 		goto end;
 	ret=0;
 end:
-	if(tmppath) free(tmppath);
+	free_w(&tmppath);
 	return ret;
 }
 
@@ -249,7 +248,7 @@ static void reset_old_file(struct file *oldfile, struct file *newfile, struct st
 	//printf("reset %s with %s %d\n", oldfile->path, newfile->path,
 	//	info->st_nlink);
 	oldfile->nlink=info->st_nlink;
-	if(oldfile->path) free(oldfile->path);
+	free_w(&oldfile->path);
 	oldfile->path=newfile->path;
 	newfile->path=NULL;
 }
@@ -293,7 +292,7 @@ static int check_files(struct mystruct *find, struct file *newfile, struct stat 
 		}
 		if(newfile->part_cksum!=f->part_cksum)
 		{
-			if(ofp) { fclose(ofp); ofp=NULL; }
+			close_fp(&ofp);
 			continue;
 		}
 		//printf("  %s, %s\n", find->files->path, newfile->path);
@@ -307,14 +306,14 @@ static int check_files(struct mystruct *find, struct file *newfile, struct stat 
 		}
 		if(newfile->full_cksum!=f->full_cksum)
 		{
-			if(ofp) { fclose(ofp); ofp=NULL; }
+			close_fp(&ofp);
 			continue;
 		}
 
 		//printf("  full cksum matched\n");
 		if(!full_match(newfile, f, &nfp, &ofp))
 		{
-			if(ofp) { fclose(ofp); ofp=NULL; }
+			close_fp(&ofp);
 			continue;
 		}
 		//printf("  full match\n");
@@ -393,12 +392,12 @@ static int check_files(struct mystruct *find, struct file *newfile, struct stat 
 
 		break;
 	}
-	if(nfp) { fclose(nfp); nfp=NULL; }
-	if(ofp) { fclose(ofp); ofp=NULL; }
+	close_fp(&nfp);
+	close_fp(&ofp);
 
 	if(found)
 	{
-		if(newfile->path) free(newfile->path);
+		free_w(&newfile->path);
 		return 0;
 	}
 
@@ -418,7 +417,7 @@ static int get_link(const char *basedir, const char *lnk, char real[], size_t r)
 	}
 	if((len=readlink(tmp, real, r-1))<0) len=0;
 	real[len]='\0';
-	free(tmp);
+	free_w(&tmp);
 	// Strip any trailing slash.
 	if(real[strlen(real)-1]=='/') real[strlen(real)-1]='\0';
 	return 0;
@@ -428,6 +427,7 @@ static int get_link(const char *basedir, const char *lnk, char real[], size_t r)
 static int process_dir(const char *oldpath, const char *newpath,
 	const char *ext, unsigned int maxlinks, int burp_mode, int level)
 {
+	int ret=-1;
 	DIR *dirp=NULL;
 	char *path=NULL;
 	struct stat info;
@@ -437,22 +437,22 @@ static int process_dir(const char *oldpath, const char *newpath,
 	static char working[256]="";
 	static char finishing[256]="";
 
-	if(!(path=prepend(oldpath, newpath, "/"))) return -1;
+	newfile.path=NULL;
+
+	if(!(path=prepend(oldpath, newpath, "/"))) goto end;
 
 	if(burp_mode && level==0)
 	{
 		if(get_link(path, "working", working, sizeof(working))
 		  || get_link(path, "finishing", finishing, sizeof(finishing)))
-		{
-			free(path);
-			return -1;
-		}
+			goto end;
 	}
 
 	if(!(dirp=opendir(path)))
 	{
 		logp("Could not opendir '%s': %s\n", path, strerror(errno));
-		return 0;
+		ret=0;
+		goto end;
 	}
 	while((dirinfo=readdir(dirp)))
 	{
@@ -485,8 +485,7 @@ static int process_dir(const char *oldpath, const char *newpath,
 		  }
 		  else if(level==1)
 		  {
-			/* Do not dedup stuff that might be appended to later.
-			*/
+			// Do not dedup stuff that might be appended to later.
 			if(!strncmp(dirinfo->d_name, "log",
 				strlen("log"))
 			  || !strncmp(dirinfo->d_name, "verifylog",
@@ -497,37 +496,22 @@ static int process_dir(const char *oldpath, const char *newpath,
 		  }
 		}
 
+		free_w(&newfile.path);
 		if(!(newfile.path=prepend(path, dirinfo->d_name, "/")))
-		{
-			closedir(dirp);
-			free(path);
-			return -1;
-		}
+			goto end;
 
 		if(lstat(newfile.path, &info))
-		{
-			free(newfile.path);
 			continue;
-		}
 
 		if(S_ISDIR(info.st_mode))
 		{
 			if(process_dir(path, dirinfo->d_name, ext, maxlinks,					burp_mode, level+1))
-			{
-				closedir(dirp);
-				free(path);
-				free(newfile.path);
-				return -1;
-			}
-			free(newfile.path);
+					goto end;
 			continue;
 		}
 		else if(!S_ISREG(info.st_mode)
 		  || !info.st_size) // ignore zero-length files
-		{
-			free(newfile.path);
 			continue;
-		}
 
 		newfile.dev=info.st_dev;
 		newfile.ino=info.st_ino;
@@ -541,27 +525,21 @@ static int process_dir(const char *oldpath, const char *newpath,
 		if((find=find_key(info.st_size)))
 		{
 			if(check_files(find, &newfile, &info, ext, maxlinks))
-			{
-				closedir(dirp);
-				free(path);
-				return -1;
-			}
+				goto end;
 		}
 		else
 		{
 			//printf("add: %s\n", newfile.path);
 			if(add_key(info.st_size, &newfile))
-			{
-				closedir(dirp);
-				free(path);
-				return -1;
-			}
-			continue;
+				goto end;
 		}
 	}
+	ret=0;
+end:
 	closedir(dirp);
-	free(path);
-	return 0;
+	free_w(&newfile.path);
+	free_w(&path);
+	return ret;
 }
 
 static void sighandler(int signum)
@@ -578,10 +556,10 @@ static int is_regular_file(const char *clientconfdir, const char *file)
 		return 0;
 	if(lstat(fullpath, &statp))
 	{
-		free(fullpath);
+		free_w(&fullpath);
 		return 0;
 	}
-	free(fullpath);
+	free_w(&fullpath);
 	return S_ISREG(statp.st_mode);
 }
 
@@ -660,12 +638,12 @@ static int iterate_over_clients(struct conf **globalcs,
 		 || !(lockfile=prepend(lockfilebase,
 			BEDUP_LOCKFILE_NAME, "/")))
 		{
-			if(lockfilebase) free(lockfilebase);
-			if(lockfile) free(lockfile);
+			free_w(&lockfilebase);
+			free_w(&lockfile);
 			ret=-1;
 			break;
 		}
-		free(lockfilebase);
+		free_w(&lockfilebase);
 
 		if(!(lock=lock_alloc_and_init(lockfile)))
 		{
@@ -673,14 +651,14 @@ static int iterate_over_clients(struct conf **globalcs,
 			break;
 		}
 		lock_get(lock);
+		free_w(&lockfile);
 
 		if(lock->status!=GET_LOCK_GOT)
 		{
-			logp("Could not get %s\n", lockfile);
-			free(lockfile);
+			logp("Could not get %s\n", lock->path);
 			continue;
 		}
-		logp("Got %s\n", lockfile);
+		logp("Got %s\n", lock->path);
 
 		// Remember that we got that lock.
 		lock_add_to_list(&locklist, lock);
@@ -924,7 +902,7 @@ int run_bedup(int argc, char *argv[])
 			{
 				logp("Could not get lock %s (%d)\n", lockpath,
 					globallock->status);
-				free(lockpath);
+				free_w(&lockpath);
 				return 1;
 			}
 			logp("Got %s\n", lockpath);

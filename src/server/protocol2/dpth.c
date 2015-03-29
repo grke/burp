@@ -46,8 +46,8 @@ static int get_data_lock(struct lock *lock, struct dpth *dpth, const char *path)
 	lock_get_quick(lock);
 	ret=0;
 end:
-	if(p) free(p);
-	if(lockfile) free(lockfile);
+	free_w(&p);
+	free_w(&lockfile);
 	return ret;
 }
 
@@ -74,12 +74,6 @@ static struct dpth_lock *dpth_lock_alloc(const char *save_path)
 	snprintf(dpth_lock->save_path, sizeof(dpth_lock->save_path),
 		"%s", save_path);
         return dpth_lock;
-}
-
-static void dpth_lock_free(struct dpth_lock *dpth_lock)
-{
-	if(!dpth_lock) return;
-	free(dpth_lock);
 }
 
 static int add_lock_to_list(struct dpth *dpth,
@@ -158,8 +152,8 @@ static int get_highest_entry(const char *path, int *max, struct dpth *dpth)
 
 end:
 	if(d) closedir(d);
-	if(ifp) fclose(ifp);
-	if(tmp) free(tmp);
+	close_fp(&ifp);
+	free_w(&tmp);
 	return ret;
 }
 
@@ -206,7 +200,7 @@ int dpth_init(struct dpth *dpth)
 		goto error;
 	if(max<0) max=0;
 	dpth->seco=max;
-	free(tmp);
+	free_w(&tmp);
 	tmp=dpth_mk_seco(dpth);
 	if(!(tmp=prepend_s(dpth->base_path, tmp)))
 		goto error;
@@ -223,7 +217,7 @@ int dpth_init(struct dpth *dpth)
 error:
 	ret=-1;
 end:
-	if(tmp) free(tmp);
+	free_w(&tmp);
 	return ret;
 }
 
@@ -277,7 +271,7 @@ static int release_and_move_to_next_in_list(struct dpth *dpth)
 
 	next=dpth->head->next;
 	if(dpth->head==dpth->tail) dpth->tail=next;
-	dpth_lock_free(dpth->head);
+	free_v((void **)&dpth->head);
 	dpth->head=next;
 	return ret;
 }
@@ -310,7 +304,7 @@ static FILE *open_data_file_for_write(struct dpth *dpth, struct blk *blk)
 		goto end;
 	fp=file_open_w(path, "wb");
 end:
-	if(path) free(path);
+	free_w(&path);
 	return fp;
 }
 

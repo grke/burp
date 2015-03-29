@@ -113,7 +113,8 @@ end:
 	return ret;
 }
 
-int do_link(const char *oldpath, const char *newpath, struct stat *statp, struct conf **confs, uint8_t overwrite)
+int do_link(const char *oldpath, const char *newpath, struct stat *statp,
+	struct conf **confs, uint8_t overwrite)
 {
 	/* Avoid creating too many hardlinks */
 	if(statp->st_nlink >= (unsigned int)get_int(confs[OPT_MAX_HARDLINKS]))
@@ -125,18 +126,14 @@ int do_link(const char *oldpath, const char *newpath, struct stat *statp, struct
 		if(overwrite && errno==EEXIST)
 		{
 			unlink(newpath);
-			if(link(oldpath, newpath))
+			if(!link(oldpath, newpath))
 			{
-				logp("could not hard link '%s' to '%s': %s\n",
-					newpath, oldpath, strerror(errno));
-				return -1;
-			}
-			else
-			{
-				logp("Successful hard link of '%s' to '%s' after unlinking the former\n", newpath, oldpath);
+				//logp("Successful hard link of '%s' to '%s' after unlinking the former\n", newpath, oldpath);
 				return 0;
 			}
 		}
+		logp("could not hard link '%s' to '%s': %s\n",
+			newpath, oldpath, strerror(errno));
 		return -1;
 	}
 	return 0;

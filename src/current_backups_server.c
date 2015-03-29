@@ -756,18 +756,14 @@ int do_link(const char *oldpath, const char *newpath, struct stat *statp, struct
 		if(overwrite && errno==EEXIST)
 		{
 			unlink(newpath);
-			if(link(oldpath, newpath))
-			{
-				logp("could not hard link '%s' to '%s': %s\n",
-					newpath, oldpath, strerror(errno));
-				return -1;
-			}
-			else
+			if(!link(oldpath, newpath))
 			{
 				//logp("Successful hard link of '%s' to '%s' after unlinking the former\n", newpath, oldpath);
 				return 0;
 			}
 		}
+		logp("could not hard link '%s' to '%s': %s\n",
+			newpath, oldpath, strerror(errno));
 		return -1;
 	}
 	return 0;

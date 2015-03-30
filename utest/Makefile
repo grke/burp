@@ -11,7 +11,8 @@ SRCS = \
 	test_conffile.c \
 	test_hexmap.c \
 	test_lock.c \
-	test_pathcmp.c
+	test_pathcmp.c \
+	server/protocol2/test_dpth.c
 
 BURP_SRCS = \
 	../src/alloc.c \
@@ -26,20 +27,21 @@ BURP_SRCS = \
 	../src/pathcmp.c \
 	../src/prepend.c \
 	../src/strlist.c \
+	../src/server/protocol2/dpth.c \
 
 OBJS = $(SRCS:.c=.o)
 BURP_OBJS = $(BURP_SRCS:.c=.o)
-BURP_STRIP = $(subst ../src/,,${BURP_OBJS})
+#BURP_STRIP = $(subst ../src/,,${BURP_OBJS})
 
 .SUFFIXES:      .c .o
 
 .c.o:
-	$(ECHO_CMD)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) -DUTEST $<
+	$(ECHO_CMD)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) -DUTEST $< -o $@
 
 test: Makefile $(OBJS) $(BURP_OBJS)
 	@echo "Linking $@ ..."
 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -o $@ \
-	  $(OBJS) $(BURP_STRIP) $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
+	  $(OBJS) $(BURP_OBJS) $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
 	  $(DLIB) -lz
 	@echo "Running $<"
 	./$@ || exit 1
@@ -47,4 +49,4 @@ test: Makefile $(OBJS) $(BURP_OBJS)
 	@echo OK
 
 clean:
-	rm -f test *.o utest_lockfile
+	rm -f test *.o utest_lockfile server/protocol2/*.o

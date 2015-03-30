@@ -14,5 +14,6 @@ Suite *suite_conffile(void);
 Suite *suite_hexmap(void);
 Suite *suite_lock(void);
 Suite *suite_pathcmp(void);
+Suite *suite_server_protocol2_dpth(void);
 
 #endif

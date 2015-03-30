@@ -135,15 +135,14 @@ static int get_highest_entry(const char *path, int *max, struct dpth *dpth)
 	int ent=0;
 	int ret=0;
 	DIR *d=NULL;
-	char *tmp=NULL;
-	struct dirent *dp=NULL;
 	FILE *ifp=NULL;
+	struct dirent *dp=NULL;
 
 	*max=-1;
 	if(!(d=opendir(path))) goto end;
 	while((dp=readdir(d)))
 	{
-		if(dp->d_ino==0
+		if(!dp->d_ino
 		  || strlen(dp->d_name)!=4)
 			continue;
 		ent=strtol(dp->d_name, NULL, 16);
@@ -153,7 +152,6 @@ static int get_highest_entry(const char *path, int *max, struct dpth *dpth)
 end:
 	if(d) closedir(d);
 	close_fp(&ifp);
-	free_w(&tmp);
 	return ret;
 }
 

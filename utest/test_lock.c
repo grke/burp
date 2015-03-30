@@ -12,17 +12,18 @@ static struct lock *setup(void)
 {
 	static int x=0;
 	struct lock *lock;
-	// Test both ways of alloc and init.
-	if(!(x++ % 2))
-		fail_unless((lock=lock_alloc_and_init(lockfile))!=NULL);
-	else
-	{
-		fail_unless((lock=lock_alloc())!=NULL);
-		fail_unless(!lock_init(lock, lockfile));
-	}
+	fail_unless((lock=lock_alloc())!=NULL);
+	fail_unless(!lock_init(lock, lockfile));
 	ck_assert_str_eq(lock->path, lockfile);
 	fail_unless(lock->status==GET_LOCK_NOT_GOT);
 	return lock;
+}
+
+static void tear_down(struct lock **lock, struct lock **locklist)
+{
+	lock_free(lock);
+	locks_release_and_free(locklist);
+	fail_unless(free_count==alloc_count);
 }
 
 static void assert_can_get_lock(struct lock *lock)
@@ -76,7 +77,7 @@ static void run_with_fork(int child_exit_early)
 
 	// The child has exited, should now be able to get it.
 	assert_can_get_lock(lock);
-	lock_free(&lock);
+	tear_down(&lock, NULL);
 }
 
 START_TEST(test_lock_simple_success)
@@ -84,7 +85,7 @@ START_TEST(test_lock_simple_success)
 	struct lock *lock;
 	lock=setup();
 	assert_can_get_lock(lock);
-	lock_free(&lock);
+	tear_down(&lock, NULL);
 }
 END_TEST
 
@@ -107,6 +108,28 @@ START_TEST(test_lock_left_behind)
 }
 END_TEST
 
+static void init_and_add_to_list(struct lock **locklist, const char *path)
+{
+	struct lock *lock;
+	fail_unless((lock=lock_alloc_and_init(path))!=NULL);
+	lock_add_to_list(locklist, lock);
+}
+
+START_TEST(test_lock_list)
+{
+	struct lock *lock=NULL;
+	struct lock *locklist=NULL;
+	init_and_add_to_list(&locklist, "path1");
+	init_and_add_to_list(&locklist, "path2");
+	init_and_add_to_list(&locklist, "path3");
+	lock=locklist;
+	ck_assert_str_eq(lock->path, "path3"); lock=lock->next;
+	ck_assert_str_eq(lock->path, "path2"); lock=lock->next;
+	ck_assert_str_eq(lock->path, "path1"); fail_unless(lock->next==NULL);
+	tear_down(NULL, &locklist);
+}
+END_TEST
+
 Suite *suite_lock(void)
 {
 	Suite *s;
@@ -119,6 +142,7 @@ Suite *suite_lock(void)
 	tcase_add_test(tc_core, test_lock_simple_success);
 	tcase_add_test(tc_core, test_lock_simple_failure);
 	tcase_add_test(tc_core, test_lock_left_behind);
+	tcase_add_test(tc_core, test_lock_list);
 	suite_add_tcase(s, tc_core);
 
 	return s;

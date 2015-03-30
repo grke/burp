@@ -157,7 +157,9 @@ void lock_add_to_list(struct lock **locklist, struct lock *lock)
 void locks_release_and_free(struct lock **locklist)
 {
 	struct lock *l;
-	struct lock *head=*locklist;
+	struct lock *head;
+	if(!locklist) return;
+	head=*locklist;
 	while(head)
 	{
 		l=head;

@@ -3,10 +3,17 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "../../test.h"
+#include "../../../src/alloc.h"
 #include "../../../src/server/protocol2/dpth.h"
+
+static const char *lockpath="utest_dpth";
 
 START_TEST(test_server_protocol2_dpth)
 {
+	struct dpth *dpth;
+	fail_unless((dpth=dpth_alloc(lockpath))!=NULL);
+	dpth_free(&dpth);
+	fail_unless(free_count==alloc_count);
 }
 END_TEST
 

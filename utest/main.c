@@ -14,9 +14,10 @@ int main(void)
 	srunner_add_suite(sr, suite_conf());
 	srunner_add_suite(sr, suite_conffile());
 	srunner_add_suite(sr, suite_hexmap());
-	srunner_add_suite(sr, suite_lock());
 	srunner_add_suite(sr, suite_pathcmp());
 	srunner_add_suite(sr, suite_server_protocol2_dpth());
+	// Do this last, as it has a slight delay.
+	srunner_add_suite(sr, suite_lock());
 
 	srunner_run_all(sr, CK_NORMAL);
 	number_failed = srunner_ntests_failed(sr);

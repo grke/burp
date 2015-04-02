@@ -1,4 +1,4 @@
-# FIX THIS: This file should be a Makefile.in, and LIBS should be generated.
+
 LIBS = -lcheck -lpthread -lm -lrt -lssl -lcrypto
 
 SRCS = \
@@ -50,3 +50,4 @@ test: Makefile $(OBJS) $(BURP_OBJS)
 
 clean:
 	rm -f test *.o utest_lockfile server/protocol2/*.o
+	rm -rf utest_dpth

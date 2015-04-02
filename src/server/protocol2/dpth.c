@@ -222,6 +222,7 @@ end:
 void dpth_free(struct dpth **dpth)
 {
 	if(!dpth || !*dpth) return;
+	dpth_release_all(*dpth);
 	free_w(&((*dpth)->base_path));
 	free_v((void **)dpth);
 }

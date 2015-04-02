@@ -157,7 +157,7 @@ int build_path(const char *datadir, const char *fname, char **rpath, const char 
 	if(!(*rpath=prepend_s(datadir, fname))) return -1;
 	if(mkpath(rpath, limit))
 	{
-		if(*rpath) { free(*rpath); *rpath=NULL; }
+		free_w(rpath);
 		return -1;
 	}
 	return 0;
@@ -181,7 +181,7 @@ int build_path_w(const char *path)
 	char *rpath=NULL;
 	if(build_path(path, "", &rpath, NULL))
 		return -1;
-	free(rpath);
+	free_w(&rpath);
 	return 0;
 }
 
@@ -199,52 +199,47 @@ static void get_max(int32_t *max, int32_t default_max)
 
 static int do_recursive_delete(const char *d, const char *file, uint8_t delfiles, int32_t name_max)
 {
-	int ret=RECDEL_OK;
-	DIR *dirp;
-	struct dirent *entry;
+	int ret=RECDEL_ERROR;
+	DIR *dirp=NULL;
+	struct dirent *entry=NULL;
 	struct dirent *result;
 	struct stat statp;
 	char *directory=NULL;
+	char *fullpath=NULL;
 
 	if(!file)
 	{
-		if(!(directory=prepend_s(d, ""))) return RECDEL_ERROR;
+		if(!(directory=prepend_s(d, ""))) goto end;
 	}
 	else if(!(directory=prepend_s(d, file)))
 	{
 		log_out_of_memory(__func__);
-		return RECDEL_ERROR;
+		goto end;
 	}
 
 	if(lstat(directory, &statp))
 	{
 		// path does not exist.
-		free(directory);
-		return RECDEL_OK;
+		ret=RECDEL_OK;
+		goto end;
 	}
 
 	if(!(dirp=opendir(directory)))
 	{
 		logp("opendir %s: %s\n", directory, strerror(errno));
-		free(directory);
-		return RECDEL_ERROR;
+		goto end;
 	}
 
 	if(!(entry=(struct dirent *)
 		malloc_w(sizeof(struct dirent)+name_max+100, __func__)))
-	{
-		free(directory);
-		return RECDEL_ERROR;
-	}
-
+			goto end;
 
 	while(1)
 	{
-		char *fullpath=NULL;
-
 		if(readdir_r(dirp, entry, &result) || !result)
 		{
 			// Got to the end of the directory.
+			ret=RECDEL_OK;
 			break;
 		}
 
@@ -252,21 +247,16 @@ static int do_recursive_delete(const char *d, const char *file, uint8_t delfiles
 		  || !strcmp(entry->d_name, ".")
 		  || !strcmp(entry->d_name, ".."))
 			continue;
+		free_w(&fullpath);
 		if(!(fullpath=prepend_s(directory, entry->d_name)))
-		{
-			ret=RECDEL_ERROR;
-			break;
-		}
+			goto end;
 
 		if(is_dir(fullpath, entry))
 		{
 			int r;
 			if((r=do_recursive_delete(directory, entry->d_name,
 				delfiles, name_max))==RECDEL_ERROR)
-			{
-				free(fullpath);
-				break;
-			}
+					goto end;
 			// do not overwrite ret with OK if it previously
 			// had ENTRIES_REMAINING
 			if(r==RECDEL_ENTRIES_REMAINING) ret=r;
@@ -284,7 +274,6 @@ static int do_recursive_delete(const char *d, const char *file, uint8_t delfiles
 		{
 			ret=RECDEL_ENTRIES_REMAINING;
 		}
-		free(fullpath);
 	}
 
 	if(ret==RECDEL_OK && rmdir(directory))
@@ -292,9 +281,11 @@ static int do_recursive_delete(const char *d, const char *file, uint8_t delfiles
 		logp("rmdir %s: %s\n", directory, strerror(errno));
 		ret=RECDEL_ERROR;
 	}
-	closedir(dirp);
-	free(directory);
-	free(entry);
+end:
+	if(dirp) closedir(dirp);
+	free_w(&fullpath);
+	free_w(&directory);
+	free_v((void **)&entry);
 	return ret;
 }
 

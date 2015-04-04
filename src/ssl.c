@@ -96,7 +96,13 @@ SSL_CTX *ssl_initialise_ctx(struct conf **confs)
 
 	// Unclear what is negotiated, so keep quiet until I figure that out.
 	if(!get_int(confs[OPT_SSL_COMPRESSION]))
-		SSL_CTX_set_options(ctx, SSL_OP_NO_COMPRESSION);
+	{
+//#ifdef SSL_OP_NO_COMPRESSION
+//		SSL_CTX_set_options(ctx, SSL_OP_NO_COMPRESSION);
+//#else
+		logp("This version of openssl has no SSL_OP_NO_COMPRESSION option, so turning off config option '%s' will not work. You should probably upgrade openssl.\n", confs[OPT_SSL_COMPRESSION]->field);
+//#endif
+	}
 	// Default is zlib5, which needs no option set.
 
 	SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2|SSL_OP_NO_SSLv3);

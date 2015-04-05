@@ -24,6 +24,16 @@ static int get_lock_sdirs(struct asfd *asfd, struct sdirs *sdirs)
 	{
 		case GET_LOCK_GOT: break;
 		case GET_LOCK_NOT_GOT:
+			if(!lstat(sdirs->finishing, &statp))
+			{
+				char msg[256]="";
+				logp("finalising previous backup\n");
+				snprintf(msg, sizeof(msg),
+					"Finalising previous backup of client. "
+					"Please try again later.");
+				asfd->write_str(asfd, CMD_ERROR, msg);
+				goto finalising;
+			}
 			logp("Another instance of client is already running.\n");
 			asfd->write_str(asfd, CMD_ERROR,
 				"another instance is already running");
@@ -35,17 +45,6 @@ static int get_lock_sdirs(struct asfd *asfd, struct sdirs *sdirs)
 			asfd->write_str(asfd, CMD_ERROR,
 				"problem with lock file on server");
 			goto error;
-	}
-
-	if(!lstat(sdirs->finishing, &statp))
-	{
-		char msg[256]="";
-		logp("finalising previous backup\n");
-		snprintf(msg, sizeof(msg),
-			"Finalising previous backup of client. "
-			"Please try again later.");
-		asfd->write_str(asfd, CMD_ERROR, msg);
-		goto finalising;
 	}
 
 	return 0;
@@ -316,18 +315,18 @@ static const char *buf_to_notify_str(struct iobuf *rbuf)
 	else return "unknown";
 }
 
-static int check_for_rubble(struct asfd *asfd, struct sdirs *sdirs,
+static int check_for_rubble(struct async *as, struct sdirs *sdirs,
 	const char *incexc, int *resume, struct conf **cconfs)
 {
 	if(get_e_protocol(cconfs[OPT_PROTOCOL])==PROTO_1)
-		return check_for_rubble_protocol1(asfd,
+		return check_for_rubble_protocol1(as,
 			sdirs, incexc, resume, cconfs);
 	else
-		return check_for_rubble_protocol2(asfd,
+		return check_for_rubble_protocol2(as,
 			sdirs, incexc, resume, cconfs);
 }
 
-int run_action_server_do(struct async *as, struct sdirs *sdirs,
+static int run_action_server_do(struct async *as, struct sdirs *sdirs,
 	const char *incexc, int srestore, int *timer_ret, struct conf **cconfs)
 {
 	int ret;
@@ -354,24 +353,27 @@ int run_action_server_do(struct async *as, struct sdirs *sdirs,
 	if(!strncmp_w(rbuf->buf, "diff "))
 		return run_diff(as->asfd, sdirs, cconfs);
 
-	// -1 on error or 1 if the backup is still finalising.
-	if((ret=get_lock_sdirs(as->asfd, sdirs))<0)
+	switch((ret=get_lock_sdirs(as->asfd, sdirs)))
 	{
-		maybe_do_notification(as->asfd, ret,
-			"", "error in get_lock_sdirs()",
-			"", buf_to_notify_str(rbuf), cconfs);
-		return ret;
+		case 0: break; // OK.
+		case 1: return 1; // Still finalising.
+		default: // Error.
+			maybe_do_notification(as->asfd, ret,
+				"", "error in get_lock_sdirs()",
+				"", buf_to_notify_str(rbuf), cconfs);
+			return -1;
 	}
 
-	if(check_for_rubble(as->asfd, sdirs, incexc, &resume, cconfs))
+	switch((ret=check_for_rubble(as, sdirs, incexc, &resume, cconfs)))
 	{
-		maybe_do_notification(as->asfd, ret,
-			"", "error in check_for_rubble()",
-			"", buf_to_notify_str(rbuf), cconfs);
-		return -1;
+		case 0: break; // OK.
+		case 1: return 1; // Now finalising.
+		default: // Error.
+			maybe_do_notification(as->asfd, ret,
+				"", "error in check_for_rubble()",
+				"", buf_to_notify_str(rbuf), cconfs);
+			return -1;
 	}
-	// Exit if we finalised the backup.
-	if(ret) return ret;
 
 	if(!strncmp_w(rbuf->buf, "backup"))
 	{

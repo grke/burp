@@ -1,6 +1,6 @@
 #include "include.h"
 
-int check_for_rubble_protocol2(struct asfd *asfd, struct sdirs *sdirs,
+int check_for_rubble_protocol2(struct async *as, struct sdirs *sdirs,
 	const char *incexc, int *resume, struct conf **cconfs)
 {
 	// FIX THIS - currently just deletes the interrupted backup.
@@ -17,7 +17,7 @@ int check_for_rubble_protocol2(struct asfd *asfd, struct sdirs *sdirs,
 	lnk[len]='\0';
 	if(!(real=prepend_s(sdirs->client, lnk)))
 	{
-		log_and_send_oom(asfd, __func__);
+		log_and_send_oom(as->asfd, __func__);
 		return -1;
 	}
 	if(recursive_delete(real, "", 1))
@@ -25,7 +25,7 @@ int check_for_rubble_protocol2(struct asfd *asfd, struct sdirs *sdirs,
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
 			"Could not remove interrupted directory: %s", real);
-		log_and_send(asfd, msg);
+		log_and_send(as->asfd, msg);
 		return -1;
 	}
 	unlink(sdirs->working);

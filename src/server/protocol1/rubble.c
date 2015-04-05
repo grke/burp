@@ -138,7 +138,8 @@ static int recover_finishing(struct async *as,
 	char msg[128]="";
 	struct asfd *asfd=as->asfd;
 	logp("Found finishing symlink - attempting to complete prior backup!\n");
-/* This seemed to cause one of the protocol2 tests (Permissions) to fail,
+/* FIX THIS:
+   This seemed to cause one of the protocol2 tests (Permissions) to fail,
    somehow. Leave it out for now.
 
 	snprintf(msg, sizeof(msg),

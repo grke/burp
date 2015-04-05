@@ -45,13 +45,14 @@ static int maybe_rebuild_manifest(struct sdirs *sdirs, int compress,
 	return 0;
 }
 
-static int working_delete(struct asfd *asfd, struct sdirs *sdirs)
+static int working_delete(struct async *as, struct sdirs *sdirs)
 {
 	// Try to remove it and start again.
 	logp("deleting old working directory\n");
 	if(recursive_delete(sdirs->rworking, NULL, 1 /* delete files */))
 	{
-		log_and_send(asfd, "Old working directory is in the way.\n");
+		log_and_send(as->asfd,
+			"Old working directory is in the way.\n");
 		return -1;
 	}
 	// Get rid of the symlink.
@@ -59,7 +60,7 @@ static int working_delete(struct asfd *asfd, struct sdirs *sdirs)
 	return 0;
 }
 
-static int working_use(struct asfd *asfd, struct sdirs *sdirs,
+static int working_use(struct async *as, struct sdirs *sdirs,
 	const char *incexc, int *resume, struct conf **cconfs)
 {
 	// Use it as it is.
@@ -78,17 +79,17 @@ static int working_use(struct asfd *asfd, struct sdirs *sdirs,
 	// The rename() race condition is automatically recoverable here.
 	if(do_rename(sdirs->working, sdirs->finishing)) return -1;
 
-	return check_for_rubble_protocol1(asfd, sdirs, incexc, resume, cconfs);
+	return check_for_rubble_protocol1(as, sdirs, incexc, resume, cconfs);
 }
 
-static int working_resume(struct asfd *asfd, struct sdirs *sdirs,
+static int working_resume(struct async *as, struct sdirs *sdirs,
 	const char *incexc, int *resume, struct conf **cconfs)
 {
 	if(get_string(cconfs[OPT_RESTORE_CLIENT]))
 	{
 		// This client is not the original client, resuming might cause
 		// all sorts of trouble.
-		log_and_send(asfd, "Found interrupted backup - not resuming because the connected client is not the original");
+		log_and_send(as->asfd, "Found interrupted backup - not resuming because the connected client is not the original");
 		return -1;
 	}
 
@@ -106,7 +107,7 @@ static int working_resume(struct asfd *asfd, struct sdirs *sdirs,
 		case 0:
 			logp("Includes/excludes changed since last backup.\n");
 			logp("Will delete instead of resuming.\n");
-			return working_delete(asfd, sdirs);
+			return working_delete(as, sdirs);
 		case -1:
 		default:
 			return -1;
@@ -131,13 +132,30 @@ static int get_fullrealwork(struct asfd *asfd,
 	return 0;
 }
 
-static int recover_finishing(struct asfd *asfd,
+static int recover_finishing(struct async *as,
 	struct sdirs *sdirs, struct conf **cconfs)
 {
+	char msg[128]="";
+	struct asfd *asfd=as->asfd;
 	logp("Found finishing symlink - attempting to complete prior backup!\n");
+/* This seemed to cause one of the protocol2 tests (Permissions) to fail,
+   somehow. Leave it out for now.
+
+	snprintf(msg, sizeof(msg),
+		"Now finalising previous backup of client. "
+		"Please try again later.");
+	asfd->write_str(asfd, CMD_ERROR, msg);
+
+	// Do not need the client connected any more.
+	// Disconnect.
+	logp("Disconnect from client.\n");
+	as->asfd_remove(as, asfd);
+	asfd_close(asfd);
+*/
+
 	if(backup_phase4_server_protocol1(sdirs, cconfs))
 	{
-		log_and_send(asfd, "Problem with prior backup. Please check the client log on the server.");
+		logp("Problem with prior backup. Please check the client log on the server.");
 		return -1;
 	}
 	logp("Prior backup completed OK.\n");
@@ -146,10 +164,11 @@ static int recover_finishing(struct asfd *asfd,
 	// phase.
 	// FIX THIS: Check whether the rename race condition is recoverable
 	// here.
-	return do_rename(sdirs->finishing, sdirs->current);
+	if(do_rename(sdirs->finishing, sdirs->current)) return -1;
+	return 0;
 }
 
-static int recover_working(struct asfd *asfd,
+static int recover_working(struct async *as,
 	struct sdirs *sdirs, const char *incexc,
 	int *resume, struct conf **cconfs)
 {
@@ -163,7 +182,7 @@ static int recover_working(struct asfd *asfd,
 
 	// The working directory has not finished being populated.
 	// Check what to do.
-	if(get_fullrealwork(asfd, sdirs, cconfs)) goto end;
+	if(get_fullrealwork(as->asfd, sdirs, cconfs)) goto end;
 	if(!sdirs->rworking) goto end;
 
 	// We have found an old working directory - open the log inside
@@ -196,20 +215,20 @@ static int recover_working(struct asfd *asfd,
 	switch(recovery_method)
 	{
 		case RECOVERY_METHOD_DELETE:
-			ret=working_delete(asfd, sdirs);
+			ret=working_delete(as, sdirs);
 			break;
 		case RECOVERY_METHOD_USE:
-			ret=working_use(asfd, sdirs, incexc, resume, cconfs);
+			ret=working_use(as, sdirs, incexc, resume, cconfs);
 			break;
 		case RECOVERY_METHOD_RESUME:
-			ret=working_resume(asfd, sdirs, incexc, resume, cconfs);
+			ret=working_resume(as, sdirs, incexc, resume, cconfs);
 			break;
 		case RECOVERY_METHOD_UNSET:
 		default:
 			snprintf(msg, sizeof(msg),
 				"Unknown working_dir_recovery_method: %d\n",
 					(int)recovery_method);
-			log_and_send(asfd, msg);
+			log_and_send(as->asfd, msg);
 			break;
 	}
 
@@ -266,16 +285,22 @@ static int recover_currenttmp(struct sdirs *sdirs)
 	return 0;
 }
 
-int check_for_rubble_protocol1(struct asfd *asfd,
+// Return 1 if the backup is now finalising.
+int check_for_rubble_protocol1(struct async *as,
 	struct sdirs *sdirs, const char *incexc,
 	int *resume, struct conf **cconfs)
 {
 	struct stat statp;
+	struct asfd *asfd=as->asfd;
 
 	if(!lstat(sdirs->finishing, &statp))
 	{
 		if(S_ISLNK(statp.st_mode))
-			return recover_finishing(asfd, sdirs, cconfs);
+		{
+			if(recover_finishing(as, sdirs, cconfs))
+				return -1;
+			return 1;
+		}
 		log_and_send(asfd, "Finishing directory is not a symlink.\n");
 		return -1;
 	}
@@ -283,7 +308,7 @@ int check_for_rubble_protocol1(struct asfd *asfd,
 	if(!lstat(sdirs->working, &statp))
 	{
 		if(S_ISLNK(statp.st_mode))
-			return recover_working(asfd,
+			return recover_working(as,
 				sdirs, incexc, resume, cconfs);
 		log_and_send(asfd, "Working directory is not a symlink.\n");
 		return -1;

@@ -3,6 +3,7 @@
     Log a message if an attempt to use the feature was made.
   * Fix problem where a client connecting while a backup was finalising
     would cause 'backup failed' emails to be sent.
+  * Fix two possible server segfaults discovered with efence.
 
 2015-02-28 Changes in burp-2.0.16:
   * Add ability to do 'burp -a l -b c' and list the files in the current

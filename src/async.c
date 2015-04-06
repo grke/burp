@@ -2,7 +2,7 @@
 
 void async_free(struct async **as)
 {
-	if(!*as) return;
+	if(!as || !*as) return;
 	free_v((void **)as);
 }
 

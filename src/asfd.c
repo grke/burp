@@ -160,7 +160,6 @@ static int asfd_do_read(struct asfd *asfd)
 		goto error;
 	}
 	asfd->readbuflen+=r;
-	asfd->readbuf[asfd->readbuflen]='\0';
 	return 0;
 error:
 	truncate_readbuf(asfd);

@@ -384,12 +384,12 @@ static int process_incoming_client(struct asfd *asfd, SSL_CTX *ctx,
 			return -1;
 		case 0:
 		{
+			// Child.
 			int p;
 			int ret;
-			// Child.
 			struct sigaction sa;
-
-			async_asfd_free_all(&asfd->as);
+			struct async *as=asfd->as;
+			async_asfd_free_all(&as);
 
 			// Close unnecessary file descriptors.
 			// Go up to FD_SETSIZE and hope for the best.

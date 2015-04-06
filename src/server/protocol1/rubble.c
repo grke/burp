@@ -138,9 +138,6 @@ static int recover_finishing(struct async *as,
 	char msg[128]="";
 	struct asfd *asfd=as->asfd;
 	logp("Found finishing symlink - attempting to complete prior backup!\n");
-/* FIX THIS:
-   This seemed to cause one of the protocol2 tests (Permissions) to fail,
-   somehow. Leave it out for now.
 
 	snprintf(msg, sizeof(msg),
 		"Now finalising previous backup of client. "
@@ -152,7 +149,6 @@ static int recover_finishing(struct async *as,
 	logp("Disconnect from client.\n");
 	as->asfd_remove(as, asfd);
 	asfd_close(asfd);
-*/
 
 	if(backup_phase4_server_protocol1(sdirs, cconfs))
 	{

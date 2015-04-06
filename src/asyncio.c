@@ -109,7 +109,6 @@ static int do_read(int *read_blocked_on_write)
 	  case SSL_ERROR_NONE:
 		//logp("read: %d\n", r);
 		readbuflen+=r;
-		readbuf[readbuflen]='\0';
 		break;
 	  case SSL_ERROR_ZERO_RETURN:
 		/* end of data */
@@ -215,7 +214,6 @@ static int append_to_write_buffer(const char *buf, size_t len)
 {
 	memcpy(writebuf+writebuflen, buf, len);
 	writebuflen+=len;
-	writebuf[writebuflen]='\0';
 	return 0;
 }
 

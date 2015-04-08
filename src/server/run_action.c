@@ -6,8 +6,8 @@
 #include "protocol2/rubble.h"
 
 // FIX THIS: Somewhat haphazard.
-/* Return 0 for everything OK. -1 for error, or 1 to mean that a backup is
-   currently finalising. */
+/* Return 0 for everything OK. -1 for error, or 1 to mean that there was
+   another process that has the lock. */
 static int get_lock_sdirs(struct asfd *asfd, struct sdirs *sdirs)
 {
 	struct stat statp;
@@ -32,12 +32,14 @@ static int get_lock_sdirs(struct asfd *asfd, struct sdirs *sdirs)
 					"Finalising previous backup of client. "
 					"Please try again later.");
 				asfd->write_str(asfd, CMD_ERROR, msg);
-				goto finalising;
 			}
-			logp("Another instance of client is already running.\n");
-			asfd->write_str(asfd, CMD_ERROR,
-				"another instance is already running");
-			goto error;
+			else
+			{
+				logp("Another instance of client is already running.\n");
+				asfd->write_str(asfd, CMD_ERROR,
+					"another instance is already running");
+			}
+			goto lockedout;
 		case GET_LOCK_ERROR:
 		default:
 			logp("Problem with lock file on server: %s\n",
@@ -48,7 +50,7 @@ static int get_lock_sdirs(struct asfd *asfd, struct sdirs *sdirs)
 	}
 
 	return 0;
-finalising:
+lockedout:
 	return 1;
 error:
 	return -1;
@@ -356,7 +358,7 @@ static int run_action_server_do(struct async *as, struct sdirs *sdirs,
 	switch((ret=get_lock_sdirs(as->asfd, sdirs)))
 	{
 		case 0: break; // OK.
-		case 1: return 1; // Still finalising.
+		case 1: return 1; // Locked out.
 		default: // Error.
 			maybe_do_notification(as->asfd, ret,
 				"", "error in get_lock_sdirs()",

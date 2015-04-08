@@ -1,6 +1,8 @@
 #ifndef _FDIRS_H
 #define _FDIRS_H
 
+#include "../sdirs.h"
+
 struct fdirs // Finishing directories.
 {
 	char *manifest;
@@ -17,7 +19,7 @@ struct fdirs // Finishing directories.
 	char *hlinkedcurrent;
 };
 
-extern void fdirs_free(struct fdirs *fdirs);
+extern void fdirs_free(struct fdirs **fdirs);
 extern struct fdirs *fdirs_alloc(void);
 extern int fdirs_init(struct fdirs *fdirs,
 	struct sdirs *sdirs, const char *realcurrent);

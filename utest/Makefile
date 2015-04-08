@@ -12,6 +12,7 @@ SRCS = \
 	test_hexmap.c \
 	test_lock.c \
 	test_pathcmp.c \
+	server/protocol1/test_fdirs.c \
 	server/protocol2/test_dpth.c
 
 BURP_SRCS = \
@@ -27,6 +28,8 @@ BURP_SRCS = \
 	../src/pathcmp.c \
 	../src/prepend.c \
 	../src/strlist.c \
+	../src/server/sdirs.c \
+	../src/server/protocol1/fdirs.c \
 	../src/server/protocol2/dpth.c \
 
 OBJS = $(SRCS:.c=.o)

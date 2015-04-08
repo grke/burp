@@ -2,6 +2,7 @@
 #include "../cmd.h"
 #include "../linkhash.h"
 #include "../pathcmp.h"
+#include "sdirs.h"
 #include "protocol1/restore.h"
 #include "protocol2/dpth.h"
 #include "protocol2/restore.h"

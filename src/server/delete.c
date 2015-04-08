@@ -1,4 +1,5 @@
 #include "include.h"
+#include "sdirs.h"
 #include "../cmd.h"
 
 static int do_rename_w(const char *a, const char *b)
@@ -166,6 +167,7 @@ end:
 
 int delete_backups(struct sdirs *sdirs, struct conf **cconfs)
 {
+sleep(20);
 	// Deleting a backup might mean that more become available to delete.
 	// Keep trying to delete until we cannot delete any more.
 	while(1) switch(do_delete_backups(sdirs, cconfs))

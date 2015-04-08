@@ -20,7 +20,6 @@
 #include "quota.h"
 #include "restore.h"
 #include "run_action.h"
-#include "sdirs.h"
 #include "timestamp.h"
 
 #endif

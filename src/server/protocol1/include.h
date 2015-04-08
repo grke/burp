@@ -14,7 +14,6 @@
 #include "blocklen.h"
 #include "deleteme.h"
 #include "dpth.h"
-#include "fdirs.h"
 #include "link.h"
 #include "restore.h"
 #include "resume.h"

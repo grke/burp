@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../sdirs.h"
 #include "../../lock.h"
 
 #include <dirent.h>

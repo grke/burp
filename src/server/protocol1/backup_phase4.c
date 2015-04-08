@@ -1,5 +1,6 @@
 #include "include.h"
 #include "../../cmd.h"
+#include "fdirs.h"
 
 #include <netdb.h>
 #include <librsync.h>
@@ -810,6 +811,6 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf **cconfs)
 
 	ret=0;
 end:
-	fdirs_free(fdirs);
+	fdirs_free(&fdirs);
 	return ret;
 }

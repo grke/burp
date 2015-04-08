@@ -1,5 +1,10 @@
-#include "include.h"
+#include "sdirs.h"
+#include "../alloc.h"
+#include "../conf.h"
 #include "../lock.h"
+#include "../log.h"
+#include "../prepend.h"
+#include "timestamp.h"
 
 struct sdirs *sdirs_alloc(void)
 {

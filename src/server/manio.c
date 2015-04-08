@@ -264,7 +264,8 @@ static int do_manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
 		}
 		else
 		{
-			ars=sbufl_fill(sb, asfd, NULL, manio->zp, get_cntr(confs[OPT_CNTR]));
+			ars=sbufl_fill(sb, asfd, NULL, manio->zp,
+				confs?get_cntr(confs[OPT_CNTR]):NULL);
 		}
 		switch(ars)
 		{

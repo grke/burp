@@ -15,6 +15,7 @@ int main(void)
 	srunner_add_suite(sr, suite_conffile());
 	srunner_add_suite(sr, suite_hexmap());
 	srunner_add_suite(sr, suite_pathcmp());
+	srunner_add_suite(sr, suite_server_protocol1_fdirs());
 	srunner_add_suite(sr, suite_server_protocol2_dpth());
 	// Do this last, as it has a slight delay.
 	srunner_add_suite(sr, suite_lock());

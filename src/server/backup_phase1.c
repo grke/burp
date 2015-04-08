@@ -1,5 +1,6 @@
 #include "include.h"
 #include "cmd.h"
+#include "sdirs.h"
 
 #include "../protocol1/sbufl.h"
 

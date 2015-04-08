@@ -1,4 +1,6 @@
-#include "include.h"
+#include "fdirs.h"
+#include "../../alloc.h"
+#include "../../prepend.h"
 
 struct fdirs *fdirs_alloc(void)
 {
@@ -26,7 +28,7 @@ int fdirs_init(struct fdirs *fdirs,
 	return -1;
 }
 
-void fdirs_free(struct fdirs *fdirs)
+static void fdirs_free_content(struct fdirs *fdirs)
 {
 	if(!fdirs) return;
 	free_w(&fdirs->datadir);
@@ -41,4 +43,11 @@ void fdirs_free(struct fdirs *fdirs)
 	free_w(&fdirs->logpath);
 	free_w(&fdirs->hlinked);
 	free_w(&fdirs->hlinkedcurrent);
+}
+
+void fdirs_free(struct fdirs **fdirs)
+{
+	if(!fdirs || !*fdirs) return;
+	fdirs_free_content(*fdirs);
+	free_v((void **)fdirs);
 }

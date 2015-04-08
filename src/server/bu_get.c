@@ -1,5 +1,7 @@
 #include "include.h"
 
+#include "sdirs.h"
+
 #include <netdb.h>
 #include <dirent.h>
 

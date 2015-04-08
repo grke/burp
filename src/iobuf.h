@@ -1,6 +1,8 @@
 #ifndef _IOBUF_H
 #define _IOBUF_H
 
+#include "cmd.h"
+
 struct iobuf
 {
 	enum cmd cmd;

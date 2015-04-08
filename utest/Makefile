@@ -24,10 +24,13 @@ BURP_SRCS = \
 	../src/conffile.c \
 	../src/fsops.c \
 	../src/hexmap.c \
+	../src/iobuf.c \
 	../src/lock.c \
+	../src/msg.c \
 	../src/pathcmp.c \
 	../src/prepend.c \
 	../src/strlist.c \
+	../src/protocol2/blk.c \
 	../src/server/sdirs.c \
 	../src/server/protocol1/fdirs.c \
 	../src/server/protocol2/dpth.c \

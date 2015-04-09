@@ -13,7 +13,8 @@ SRCS = \
 	test_lock.c \
 	test_pathcmp.c \
 	server/protocol1/test_fdirs.c \
-	server/protocol2/test_dpth.c
+	server/protocol2/test_dpth.c \
+	server/test_sdirs.c \
 
 BURP_SRCS = \
 	../src/alloc.c \

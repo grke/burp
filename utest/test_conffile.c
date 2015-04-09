@@ -186,19 +186,6 @@ START_TEST(test_client_include_failures)
 }
 END_TEST
 
-#define MIN_SERVER_CONF				\
-	"mode=server\n"				\
-	"port=1234\n"				\
-	"status_port=12345\n"			\
-	"lockfile=/lockfile/path\n"		\
-	"ssl_cert=/ssl/cert/path\n"		\
-	"ssl_cert_ca=/cert_ca/path\n"		\
-	"directory=/a/directory\n"		\
-	"dedup_group=a_group\n" 		\
-	"clientconfdir=/a/ccdir\n"		\
-	"ssl_dhfile=/a/dhfile\n"		\
-	"keep=10\n"				\
-
 START_TEST(test_server_conf)
 {
 	struct strlist *s;

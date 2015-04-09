@@ -7,8 +7,6 @@ However, that is mostly relating to protocol1 issues.
 So, this is a list of important stuff that needs to be done for protocol2,
 roughly in order of most important to least.
 
-* Check data file locks don't just make the child exit.
-
 * Fix counters
 
 * Make recovery from partially complete backups work. Hooks

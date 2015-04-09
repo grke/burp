@@ -4,6 +4,19 @@
 #define ARR_LEN(array) (sizeof((array))/sizeof((array)[0]))
 #define FOREACH(array) for(unsigned int i=0; i<ARR_LEN(array); i++)
 
+#define MIN_SERVER_CONF				\
+	"mode=server\n"				\
+	"port=1234\n"				\
+	"status_port=12345\n"			\
+	"lockfile=/lockfile/path\n"		\
+	"ssl_cert=/ssl/cert/path\n"		\
+	"ssl_cert_ca=/cert_ca/path\n"		\
+	"directory=/a/directory\n"		\
+	"dedup_group=a_group\n"			\
+	"clientconfdir=/a/ccdir\n"		\
+	"ssl_dhfile=/a/dhfile\n"		\
+	"keep=10\n"				\
+
 extern int sub_ntests;
 
 Suite *suite_alloc(void);

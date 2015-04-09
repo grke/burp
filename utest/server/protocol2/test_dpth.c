@@ -61,14 +61,12 @@ static void do_fork(void)
 			 break;
 		case 0: // Child.
 		{
-			int x;
 			struct dpth *dpth;
+			const char *savepath;
 			dpth=dpth_alloc(lockpath);
-			dpth->need_data_lock=1;
 			dpth_init(dpth);
-			dpth_mk(dpth);
-			x=write_to_dpth(dpth, "0000/0000/0001");
-printf("CHILD %d %d\n", x, dpth->tert);
+			savepath=dpth_mk(dpth);
+			write_to_dpth(dpth, savepath);
 			sleep(2);
 			dpth_free(&dpth);
 			exit(0);
@@ -80,36 +78,36 @@ printf("CHILD %d %d\n", x, dpth->tert);
 
 START_TEST(test_simple)
 {
+	int stat;
 	struct dpth *dpth;
+	const char *savepath;
 	dpth=setup();
-	dpth->need_data_lock=1;
 	fail_unless(dpth_init(dpth)==0);
-	fail_unless(dpth_mk(dpth)!=NULL);
-	fail_unless(dpth->head!=NULL);
-	fail_unless(dpth->head->lock!=NULL);
+	savepath=dpth_mk(dpth);
+	ck_assert_str_eq(savepath, "0000/0000/0000/0000");
 	fail_unless(dpth->head->lock->status==GET_LOCK_GOT);
-	fail_unless(write_to_dpth(dpth, "0000/0000/0000")==0);
+	// Fill up the data file, so that the next call to dpth_incr_sig will
+	// need to open a new one.
+	while(dpth->sig<DATA_FILE_SIG_MAX-1)
+	{
+		fail_unless(write_to_dpth(dpth, savepath)==0);
+		fail_unless(dpth_incr_sig(dpth)==0);
+	}
 
+	// Child will lock the next data file. So, the next call to dpth_mk
+	// will get the next one after that.
 	do_fork();
 	sleep(1);
-/*
-	dpth_init(dpth);
-	dpth_mk(dpth);
+
+	fail_unless(dpth_incr_sig(dpth)==0);
+	savepath=dpth_mk(dpth);
+	ck_assert_str_eq(savepath, "0000/0000/0002/0000");
+	assert_components(dpth, 0, 0, 2, 0);
+	fail_unless(dpth->head!=dpth->tail);
 	fail_unless(dpth->head->lock->status==GET_LOCK_GOT);
-printf("p: %p\n", dpth->head);
-printf("p: %p\n", dpth->tail);
-	assert_components(dpth, 0, 0, 2, 0);
-	dpth_free(&dpth);
-*/
-fail_unless(1==0);
-/*
-	dpth->need_data_lock=1;
-	dpth->tert++;
-	fail_unless(dpth_mk(dpth)!=NULL);
 	fail_unless(dpth->tail->lock->status==GET_LOCK_GOT);
-	assert_components(dpth, 0, 0, 2, 0);
-*/
 	tear_down(&dpth);
+	wait(&stat);
 }
 END_TEST
 

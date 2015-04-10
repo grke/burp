@@ -7,7 +7,6 @@
 #include "autoupgrade.h"
 #include "backup.h"
 #include "backup_phase1.h"
-#include "bu_get.h"
 #include "ca.h"
 #include "child.h"
 #include "compress.h"
@@ -20,6 +19,5 @@
 #include "quota.h"
 #include "restore.h"
 #include "run_action.h"
-#include "timestamp.h"
 
 #endif

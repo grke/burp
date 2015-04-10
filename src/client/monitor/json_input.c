@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../bu.h"
 #ifdef HAVE_WIN32
 #include <yajl/yajl_parse.h>
 #else

@@ -1,4 +1,10 @@
-#include "include.h"
+#include "../burp.h"
+#include "../bu.h"
+#include "../conf.h"
+#include "../msg.h"
+#include "bu_get.h"
+
+#include "timestamp.h"
 
 int timestamp_read(const char *path, char buf[], size_t len)
 {

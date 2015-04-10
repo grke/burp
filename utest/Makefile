@@ -19,6 +19,7 @@ SRCS = \
 BURP_SRCS = \
 	../src/alloc.c \
 	../src/base64.c \
+	../src/bu.c \
 	../src/cmd.c \
 	../src/cntr.c \
 	../src/conf.c \
@@ -32,9 +33,11 @@ BURP_SRCS = \
 	../src/prepend.c \
 	../src/strlist.c \
 	../src/protocol2/blk.c \
+	../src/server/bu_get.c \
 	../src/server/sdirs.c \
 	../src/server/protocol1/fdirs.c \
 	../src/server/protocol2/dpth.c \
+	../src/server/timestamp.c \
 
 OBJS = $(SRCS:.c=.o)
 BURP_OBJS = $(BURP_SRCS:.c=.o)

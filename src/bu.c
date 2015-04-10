@@ -1,4 +1,7 @@
-#include "include.h"
+#include "burp.h"
+#include "alloc.h"
+#include "bu.h"
+#include "prepend.h"
 
 struct bu *bu_alloc(void)
 {
@@ -23,15 +26,21 @@ error:
 	return -1;
 }
 
+static void bu_free_content(struct bu *bu)
+{
+	if(!bu) return;
+	free_w(&bu->path);
+	free_w(&bu->basename);
+	free_w(&bu->data);
+	free_w(&bu->delta);
+	free_w(&bu->timestamp);
+}
+
 void bu_free(struct bu **bu)
 {
 	if(!bu || !*bu) return;
-	free_w(&((*bu)->path));
-	free_w(&((*bu)->basename));
-	free_w(&((*bu)->data));
-	free_w(&((*bu)->delta));
-	free_w(&((*bu)->timestamp));
-	*bu=NULL;
+	bu_free_content(*bu);
+	free_v((void **)bu);
 }
 
 void bu_list_free(struct bu **bu_list)

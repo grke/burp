@@ -1,6 +1,8 @@
 #include "include.h"
-#include "../sdirs.h"
+#include "../../bu.h"
 #include "../../lock.h"
+#include "../bu_get.h"
+#include "../sdirs.h"
 
 #include <dirent.h>
 

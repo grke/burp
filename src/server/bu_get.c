@@ -1,6 +1,12 @@
-#include "include.h"
+#include "../burp.h"
 
+#include "../alloc.h"
+#include "../bu.h"
+#include "../cstat.h"
+#include "../log.h"
+#include "../prepend.h"
 #include "sdirs.h"
+#include "timestamp.h"
 
 #include <netdb.h>
 #include <dirent.h>
@@ -13,7 +19,7 @@ static int get_link(const char *dir, const char *lnk, char real[], size_t r)
 		return -1;
 	if((len=readlink(tmp, real, r-1))<0) len=0;
 	real[len]='\0';
-	free(tmp);
+	free_w(&tmp);
 	return 0;
 }
 

@@ -1,6 +1,8 @@
 #include "include.h"
-#include "sdirs.h"
+#include "../bu.h"
 #include "../cmd.h"
+#include "bu_get.h"
+#include "sdirs.h"
 
 static int do_rename_w(const char *a, const char *b)
 {

@@ -5,6 +5,8 @@
     would cause 'backup failed' emails to be sent.
   * Fix two possible segfaults discovered with efence.
   * Fix status monitor segfault due to recent conf system changes.
+  * Use setlinebuf(stdout) with '-a m' so that reading processes get the
+    output of the logp printfs straight away.
 
 2015-02-28 Changes in burp-2.0.16:
   * Add ability to do 'burp -a l -b c' and list the files in the current

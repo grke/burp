@@ -8,12 +8,12 @@
 #include "../../src/server/protocol1/fdirs.h"
 #include "../../src/server/sdirs.h"
 
-static struct conf **setup_confs(void)
+static struct conf **setup_confs(const char *conf_str)
 {
 	struct conf **confs;
 	confs=confs_alloc();
 	confs_init(confs);
-	fail_unless(!conf_load_global_only_buf(MIN_SERVER_CONF, confs));
+	fail_unless(!conf_load_global_only_buf(conf_str, confs));
 	set_string(confs[OPT_CNAME], "utestclient");
 	return confs;
 }
@@ -29,7 +29,6 @@ static void tear_down(struct sdirs **sdirs, struct conf ***confs)
 {
 	sdirs_free(sdirs);
 	confs_free(confs);
-printf("%d %d\n", free_count, alloc_count);
 	fail_unless(free_count==alloc_count);
 }
 
@@ -117,12 +116,29 @@ START_TEST(test_sdirs)
 {
 	struct sdirs *sdirs;
 	struct conf **confs;
-	confs=setup_confs();
+	confs=setup_confs(MIN_SERVER_CONF);
 	sdirs=setup(confs);
 
 	protocol1_tests(sdirs, confs);
 	sdirs_free_content(sdirs);
 	protocol2_tests(sdirs, confs);
+
+	tear_down(&sdirs, &confs);
+}
+END_TEST
+
+START_TEST(test_lockdirs)
+{
+	struct sdirs *sdirs;
+	struct conf **confs;
+	confs=setup_confs(MIN_SERVER_CONF "client_lockdir=/some/other/dir\n");
+	sdirs=setup(confs);
+	set_e_protocol(confs[OPT_PROTOCOL], PROTO_2);
+	fail_unless(sdirs_init(sdirs, confs)==0);
+
+	ck_assert_str_eq(sdirs->lockdir, "/some/other/dir");
+	ck_assert_str_eq(sdirs->lock->path,
+		"/some/other/dir/utestclient/lockfile");
 
 	tear_down(&sdirs, &confs);
 }
@@ -138,6 +154,7 @@ Suite *suite_server_sdirs(void)
 	tc_core=tcase_create("Core");
 
 	tcase_add_test(tc_core, test_sdirs);
+	tcase_add_test(tc_core, test_lockdirs);
 	suite_add_tcase(s, tc_core);
 
 	return s;

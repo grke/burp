@@ -1,5 +1,7 @@
 #include "include.h"
 
+#include "bu.h"
+
 struct cstat *cstat_alloc(void)
 {
 	return (struct cstat *)calloc_w(1, sizeof(struct cstat), __func__);

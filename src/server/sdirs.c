@@ -1,6 +1,7 @@
 #include "sdirs.h"
 #include "../alloc.h"
 #include "../conf.h"
+#include "../fsops.h"
 #include "../lock.h"
 #include "../log.h"
 #include "../prepend.h"
@@ -77,7 +78,8 @@ int sdirs_create_real_working(struct sdirs *sdirs, struct conf **confs)
 	char tstmp[64]="";
 	char fname[64]="";
 
-	if(timestamp_get_new(sdirs,
+	if(build_path_w(sdirs->working)
+	  || timestamp_get_new(sdirs,
 		tstmp, sizeof(tstmp), fname, sizeof(fname), confs)
 	  || free_prepend_s(&sdirs->rworking, sdirs->client, fname)
 	  || free_prepend_s(&sdirs->treepath,

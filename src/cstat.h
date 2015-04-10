@@ -1,7 +1,8 @@
 #ifndef _CSTAT_H
 #define _CSTAT_H
 
-#include "include.h"
+#include "conf.h"
+#include "cntr.h"
 
 #define RUN_STATUS_STR_IDLE		"idle"
 #define RUN_STATUS_STR_CLIENT_CRASHED	"c crashed"

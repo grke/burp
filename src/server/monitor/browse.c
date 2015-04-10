@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../bu.h"
 #include "../../cmd.h"
 
 static int do_browse_manifest(struct asfd *srfd,

@@ -1,5 +1,7 @@
 #include "include.h"
+#include "../bu.h"
 #include "../cmd.h"
+#include "bu_get.h"
 
 static int diff_manifest(struct asfd *asfd,
 	const char *fullpath, struct conf **confs)

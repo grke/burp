@@ -391,6 +391,9 @@ int main (int argc, char *argv[])
 	{
 		// Try to output everything in JSON.
 		log_set_json(1);
+		// Need to do this so that processes reading stdout get the
+		// result of the printfs of logp straight away.
+		setlinebuf(stdout);
 	}
 
 	if(!(confs=confs_alloc()))

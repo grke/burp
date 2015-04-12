@@ -126,11 +126,14 @@ static enum cliret backup_wrapper(struct asfd *asfd,
 		int a=0;
 		const char *args[12];
 		args[a++]=b_script_pre;
-		args[a++]="pre";
-		args[a++]="reserved2";
-		args[a++]="reserved3";
-		args[a++]="reserved4";
-		args[a++]="reserved5";
+		if(get_int(confs[OPT_B_SCRIPT_RESERVED_ARGS]))
+		{
+			args[a++]="pre";
+			args[a++]="reserved2";
+			args[a++]="reserved3";
+			args[a++]="reserved4";
+			args[a++]="reserved5";
+		}
 		args[a++]=NULL;
 		if(run_script(asfd,
 			args, get_strlist(confs[OPT_B_SCRIPT_PRE_ARG]),
@@ -146,13 +149,16 @@ static enum cliret backup_wrapper(struct asfd *asfd,
 	{
 		int a=0;
 		const char *args[12];
-		args[a++]=b_script_post;
-		args[a++]="post";
-		// Tell post script whether the restore failed.
-		args[a++]=ret?"1":"0";
-		args[a++]="reserved3";
-		args[a++]="reserved4";
-		args[a++]="reserved5";
+		if(get_int(confs[OPT_B_SCRIPT_RESERVED_ARGS]))
+		{
+			args[a++]=b_script_post;
+			args[a++]="post";
+			// Tell post script whether the restore failed.
+			args[a++]=ret?"1":"0";
+			args[a++]="reserved3";
+			args[a++]="reserved4";
+			args[a++]="reserved5";
+		}
 		args[a++]=NULL;
 		if(run_script(asfd,
 			args, get_strlist(confs[OPT_B_SCRIPT_POST_ARG]),
@@ -278,11 +284,14 @@ static enum cliret restore_wrapper(struct asfd *asfd, enum action action,
 		int a=0;
 		const char *args[12];
 		args[a++]=r_script_pre;
-		args[a++]="pre";
-		args[a++]="reserved2";
-		args[a++]="reserved3";
-		args[a++]="reserved4";
-		args[a++]="reserved5";
+		if(get_int(confs[OPT_R_SCRIPT_RESERVED_ARGS]))
+		{
+			args[a++]="pre";
+			args[a++]="reserved2";
+			args[a++]="reserved3";
+			args[a++]="reserved4";
+			args[a++]="reserved5";
+		}
 		args[a++]=NULL;
 		if(run_script(asfd,
 			args, get_strlist(confs[OPT_R_SCRIPT_PRE_ARG]),
@@ -300,13 +309,15 @@ static enum cliret restore_wrapper(struct asfd *asfd, enum action action,
 		int a=0;
 		const char *args[12];
 		args[a++]=r_script_pre;
-		args[a++]="post";
-		// Tell post script whether the restore
-		// failed.
-		args[a++]=ret?"1":"0";
-		args[a++]="reserved3";
-		args[a++]="reserved4";
-		args[a++]="reserved5";
+		if(get_int(confs[OPT_R_SCRIPT_RESERVED_ARGS]))
+		{
+			args[a++]="post";
+			// Tell post script whether the restore failed.
+			args[a++]=ret?"1":"0";
+			args[a++]="reserved3";
+			args[a++]="reserved4";
+			args[a++]="reserved5";
+		}
 		args[a++]=NULL;
 		if(run_script(asfd,
 			args, get_strlist(confs[OPT_R_SCRIPT_POST_ARG]),

@@ -412,7 +412,7 @@ static void clientconfdir_setup(struct conf ***globalcs, struct conf ***cconfs,
 	"notify_failure_arg=/failure/arg1\n"	\
 	"notify_failure_arg=/failure/arg2\n"	\
 
-static int notify_assertions(struct conf **cconfs)
+static void notify_assertions(struct conf **cconfs)
 {
 	struct strlist *s;
 	ck_assert_str_eq(get_string(cconfs[OPT_N_SUCCESS_SCRIPT]),
@@ -559,7 +559,6 @@ END_TEST
 
 START_TEST(test_clientconfdir_server_script)
 {
-	struct strlist *s;
 	struct conf **globalcs=NULL;
 	struct conf **cconfs=NULL;
 	const char *gbuf=MIN_SERVER_CONF SERVER_SCRIPT_PRE_POST;

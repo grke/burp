@@ -8,6 +8,8 @@
   * Use setlinebuf(stdout) with '-a m' so that reading processes get the
     output of the logp printfs straight away.
   * Add out-of-date report script from Pablo Daniel Estigarribia Davyt.
+  * 'backup_script_reserved_args=0|1' and 'restore_script_reserved_args='0|1'
+    client side options.
 
 2015-02-28 Changes in burp-2.0.16:
   * Add ability to do 'burp -a l -b c' and list the files in the current

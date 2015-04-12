@@ -1,5 +1,6 @@
 
 LIBS = -lcheck -lpthread -lm -lrt -lssl -lcrypto
+CFLAGS+=-Wall
 
 SRCS = \
 	main.c \

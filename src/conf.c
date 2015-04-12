@@ -450,6 +450,8 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_lst(c[o], 0, 0, "backup_script_post_arg");
 	case OPT_B_SCRIPT_POST_RUN_ON_FAIL:
 	  return sc_int(c[o], 0, 0, "backup_script_post_run_on_fail");
+	case OPT_B_SCRIPT_RESERVED_ARGS:
+	  return sc_int(c[o], 1, 0, "backup_script_reserved_args");
 	case OPT_R_SCRIPT_PRE:
 	  return sc_str(c[o], 0, 0, "restore_script_pre");
 	case OPT_R_SCRIPT_PRE_ARG:
@@ -468,6 +470,8 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_str(c[o], 0, 0, "restore_script");
 	case OPT_R_SCRIPT_ARG:
 	  return sc_lst(c[o], 0, 0, "restore_script_arg");
+	case OPT_R_SCRIPT_RESERVED_ARGS:
+	  return sc_int(c[o], 1, 0, "restore_script_reserved_args");
 	case OPT_SEND_CLIENT_CNTR:
 	  return sc_int(c[o], 0, 0, "send_client_cntr");
 	case OPT_RESTORE_CLIENT:

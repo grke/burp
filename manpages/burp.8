@@ -522,13 +522,13 @@ To prevent the server from initiating restores, set this to 0. The default is 1.
 Set this to enable client side file Blowfish encryption. If you do not want encryption, leave this field out of your config file. \fBIMPORTANT:\fR Configuring this renders delta differencing pointless, since the smallest real change to a file will make the whole file look different. Therefore, activating this option turns off delta differencing so that whenever a client file changes, the whole new file will be uploaded on the next backup. \fBALSO IMPORTANT:\fR If you manage to lose your encryption password, you will not be able to unencrypt your files. You should therefore think about having a copy of the encryption password somewhere off-box, in case of your client hard disk failing. \fBFINALLY:\fR If you change your encryption password, you will end up with a mixture of files on the server with different encryption and it may become tricky to restore more than one file at a time. For this reason, if you change your encryption password, you may want to start a fresh chain of backups (by moving the original set aside, for example). Burp will cope fine with turning the same encryption password on and off between backups, and will restore a backup of mixed encrypted and unencrypted files without a problem.
 .TP
 \fBbackup_script_pre=[path]\fR
-Path to a script to run before a backup. The arguments to it are 'pre', 'reserved2' to 'reserved5', and then arguments defined by backup_script_pre_arg.
+Path to a script to run before a backup. The arguments to it are 'pre', 'reserved2' to 'reserved5', and then arguments defined by backup_script_pre_arg - unless the option 'backup_script_reserved_args' is off, then only arguments defined by backup_script_pre_arg are passed to it.
 .TP
 \fBbackup_script_pre_arg=[string]\fR
 A user-definable argument to the backup pre script. You can have many of these.
 .TP
 \fBbackup_script_post=[path]\fR
-Path to a script to run after a backup. The arguments to it are 'post', [0|1] if the backup failed or succeeded, 'reserved3' to 'reserved5', and then arguments defined by backup_script_post_arg.
+Path to a script to run after a backup. The arguments to it are 'post', [0|1] if the backup failed or succeeded, 'reserved3' to 'reserved5', and then arguments defined by backup_script_post_arg - unless the option 'backup_script_reserved_args' is off, then only arguments defined by backup_script_post_arg are passed to it.
 .TP
 \fBbackup_script_post_arg=[string]\fR
 A user-definable argument to the backup post script. You can have many of these.
@@ -537,13 +537,13 @@ A user-definable argument to the backup post script. You can have many of these.
 If this is set to 1, backup_script_post will be run whether the backup succeeds or not. The default is 0, which means that backup_script_post will only be run if the backup succeeds.
 .TP
 \fBrestore_script_pre=[path]\fR
-Path to a script to run before a restore. The arguments to it are 'pre', 'reserved2' to 'reserved5', and then arguments defined by restore_script_pre_arg.
+Path to a script to run before a restore. The arguments to it are 'pre', 'reserved2' to 'reserved5', and then arguments defined by restore_script_pre_arg - unless the option 'restore_script_reserved_args' is off, then only arguments defined by restore_script_pre_arg are passed to it.
 .TP
 \fBrestore_script_pre_arg=[string]\fR
 A user-definable argument to the restore pre script. You can have many of these.
 .TP
 \fBrestore_script_post=[path]\fR
-Path to a script to run after a restore. The arguments to it are 'post', [0|1] if the restore failed or succeeded, 'reserved3' to 'reserved5', and then arguments defined by restore_script_post_arg.
+Path to a script to run after a restore. The arguments to it are 'post', [0|1] if the restore failed or succeeded, 'reserved3' to 'reserved5', and then arguments defined by restore_script_post_arg - unless the option 'restore_script_reserved_args' is off, then only arguments defined by restore_script_post_arg are passed to it.
 .TP
 \fBrestore_script_post_arg=[string]\fR
 A user-definable argument to the restore post script. You can have many of these.
@@ -557,11 +557,17 @@ You can use this to save space in your config file when you want to run the same
 \fBbackup_script_arg=[path]\fR
 Goes with backup_script and overrides backup_script_pre_arg and backup_script_post_arg.
 .TP
+\fBbackup_script_reserved_args=[0|1]\fR
+Whether to pass reserved arguments to backup scripts. The default is on.
+.TP
 \fBrestore_script=[path]\fR
 You can use this to save space in your config file when you want to run the same script before and after a restore. It overrides restore_script_pre and restore_script_post.
 .TP
 \fBrestore_script_arg=[path]\fR
 Goes with restore_script and overrides restore_script_pre_arg and restore_script_post_arg.
+.TP
+\fBrestore_script_reserved_args=[0|1]\fR
+Whether to pass reserved arguments to restore scripts. The default is on.
 .TP
 \fBautoupgrade_dir=[path]\fR
 Path to autoupgrade directory into which upgrades are downloaded. Please see docs/autoupgrade.txt in the source package for more help with this option. If you do not want your client to autoupgrade, do not set this option.

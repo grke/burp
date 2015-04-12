@@ -165,17 +165,19 @@ enum conf_opt
 	OPT_BROWSEFILE,
 	OPT_BROWSEDIR,
 
-	// Backup scripts.
+	// Backup/restore client scripts.
 	OPT_B_SCRIPT_PRE,
 	OPT_B_SCRIPT_PRE_ARG,
 	OPT_B_SCRIPT_POST,
 	OPT_B_SCRIPT_POST_ARG,
 	OPT_B_SCRIPT_POST_RUN_ON_FAIL,
+	OPT_B_SCRIPT_RESERVED_ARGS,
 	OPT_R_SCRIPT_PRE,
 	OPT_R_SCRIPT_PRE_ARG,
 	OPT_R_SCRIPT_POST,
 	OPT_R_SCRIPT_POST_ARG,
 	OPT_R_SCRIPT_POST_RUN_ON_FAIL,
+	OPT_R_SCRIPT_RESERVED_ARGS,
 
 	// Server scripts.
 	OPT_S_SCRIPT_PRE,
@@ -188,11 +190,12 @@ enum conf_opt
 
 	// Use these when you want to give the same args to both post and pre
 	// scripts.
+	// Backup/restore client scripts.
 	OPT_B_SCRIPT,
 	OPT_B_SCRIPT_ARG,
 	OPT_R_SCRIPT,
 	OPT_R_SCRIPT_ARG,
-
+	// Server scripts.
 	OPT_S_SCRIPT,
 	OPT_S_SCRIPT_ARG,
 	OPT_S_SCRIPT_NOTIFY,

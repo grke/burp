@@ -121,6 +121,8 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_CLIENT_CAN_RESTORE:
 		case OPT_CLIENT_CAN_VERIFY:
 		case OPT_SERVER_CAN_RESTORE:
+		case OPT_B_SCRIPT_RESERVED_ARGS:
+		case OPT_R_SCRIPT_RESERVED_ARGS:
 			fail_unless(get_int(c[o])==1);
 			break;
 		case OPT_NETWORK_TIMEOUT:

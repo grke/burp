@@ -10,7 +10,6 @@ static const char *lockfile="utest_lockfile";
 
 static struct lock *setup(void)
 {
-	static int x=0;
 	struct lock *lock;
 	fail_unless((lock=lock_alloc())!=NULL);
 	fail_unless(!lock_init(lock, lockfile));

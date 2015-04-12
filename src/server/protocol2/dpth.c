@@ -10,7 +10,7 @@
 
 static int incr(uint16_t *component, uint16_t max)
 {
-	if((*component)++<MAX_FILES_PER_DIR) return 1;
+	if((*component)++<max) return 1;
 	*component=0;
 	return 0;
 }

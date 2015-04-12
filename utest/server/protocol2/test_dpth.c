@@ -76,7 +76,7 @@ static void do_fork(void)
 	// Parent.
 }
 
-START_TEST(test_simple)
+START_TEST(test_simple_lock)
 {
 	int stat;
 	struct dpth *dpth;
@@ -111,6 +111,67 @@ START_TEST(test_simple)
 }
 END_TEST
 
+struct incr_data
+{
+        uint16_t prim;
+        uint16_t seco;
+        uint16_t tert;
+        uint16_t sig;
+        uint16_t prim_expected;
+        uint16_t seco_expected;
+        uint16_t tert_expected;
+        uint16_t sig_expected;
+	int ret_expected;
+};
+
+static struct incr_data d[] = {
+	{ 0x0000, 0x0000, 0x0000, 0x0000,
+	  0x0000, 0x0000, 0x0000, 0x0001, 0 },
+	{ 0x0000, 0x0000, 0x0000, 0x0001,
+	  0x0000, 0x0000, 0x0000, 0x0002, 0 },
+	{ 0x0000, 0x0000, 0x0000, 0x1000,
+	  0x0000, 0x0000, 0x0001, 0x0000, 0 },
+	{ 0x0000, 0x0000, 0x0AAA, 0x0000,
+	  0x0000, 0x0000, 0x0AAA, 0x0001, 0 },
+	{ 0x0000, 0x0000, 0x0AAA, 0x0AAA,
+	  0x0000, 0x0000, 0x0AAA, 0x0AAB, 0 },
+	{ 0x0000, 0x0000, 0xFFFF, 0x1000,
+	  0x0000, 0x0001, 0x0000, 0x0000, 0 },
+	{ 0x0000, 0x3333, 0xFFFF, 0x1000,
+	  0x0000, 0x3334, 0x0000, 0x0000, 0 },
+	{ 0x0000, 0x7530, 0xFFFF, 0x1000,
+	  0x0001, 0x0000, 0x0000, 0x0000, 0 },
+	{ 0x3333, 0x3333, 0x3333, 0x0050,
+	  0x3333, 0x3333, 0x3333, 0x0051, 0 },
+	{ 0x3333, 0xFFFF, 0xFFFF, 0x1000,
+	  0x3334, 0x0000, 0x0000, 0x0000, 0 },
+	{ 0x7530, 0x7530, 0xFFFF, 0x1000,
+	  0x0000, 0x0000, 0x0000, 0x0000, -1 }
+};
+
+START_TEST(test_incr_sig)
+{
+        FOREACH(d)
+        {
+		struct dpth *dpth;
+		dpth=setup();
+		dpth->prim=d[i].prim;
+		dpth->seco=d[i].seco;
+		dpth->tert=d[i].tert;
+		dpth->sig=d[i].sig;
+		fail_unless(dpth_incr_sig(dpth)==d[i].ret_expected);
+		if(!d[i].ret_expected)
+		{
+			fail_unless(dpth->prim==d[i].prim_expected);
+			fail_unless(dpth->seco==d[i].seco_expected);
+			fail_unless(dpth->tert==d[i].tert_expected);
+			fail_unless(dpth->sig==d[i].sig_expected);
+		}
+		tear_down(&dpth);
+        }
+}
+END_TEST
+
 Suite *suite_server_protocol2_dpth(void)
 {
 	Suite *s;
@@ -120,7 +181,8 @@ Suite *suite_server_protocol2_dpth(void)
 
 	tc_core=tcase_create("Core");
 
-	tcase_add_test(tc_core, test_simple);
+	tcase_add_test(tc_core, test_simple_lock);
+	tcase_add_test(tc_core, test_incr_sig);
 	suite_add_tcase(s, tc_core);
 
 	return s;

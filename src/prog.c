@@ -391,9 +391,11 @@ int main (int argc, char *argv[])
 	{
 		// Try to output everything in JSON.
 		log_set_json(1);
+#ifndef HAVE_WIN32
 		// Need to do this so that processes reading stdout get the
 		// result of the printfs of logp straight away.
 		setlinebuf(stdout);
+#endif
 	}
 
 	if(!(confs=confs_alloc()))

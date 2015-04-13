@@ -11,6 +11,8 @@
   * 'backup_script_reserved_args=0|1' and 'restore_script_reserved_args='0|1'
     client side options.
   * Fix protocol2 dpth incrementing bugs.
+  * Fix Windows VSS output so that it prints the writer names at the start of
+    backups.
 
 2015-02-28 Changes in burp-2.0.16:
   * Add ability to do 'burp -a l -b c' and list the files in the current

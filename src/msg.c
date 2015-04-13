@@ -139,27 +139,3 @@ end:
 	iobuf_free_content(rbuf);
 	return ret;
 }
-
-FILE *open_file(const char *fname, const char *mode)
-{
-	FILE *fp=NULL;
-
-	if(!(fp=fopen(fname, mode)))
-	{
-		logp("could not open %s: %s\n", fname, strerror(errno));
-		return NULL; 
-	}
-	return fp;
-}
-
-gzFile gzopen_file(const char *fname, const char *mode)
-{
-	gzFile fp=NULL;
-
-	if(!(fp=gzopen(fname, mode)))
-	{
-		logp("could not open %s: %s\n", fname, strerror(errno));
-		return NULL; 
-	}
-	return fp;
-}

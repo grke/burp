@@ -331,3 +331,27 @@ int looks_like_tmp_or_hidden_file(const char *filename)
 		return 1;
 	return 0;
 }
+
+FILE *open_file(const char *fname, const char *mode)
+{
+	FILE *fp=NULL;
+
+	if(!(fp=fopen(fname, mode)))
+	{
+		logp("could not open %s: %s\n", fname, strerror(errno));
+		return NULL;
+	}
+	return fp;
+}
+
+gzFile gzopen_file(const char *fname, const char *mode)
+{
+	gzFile fp=NULL;
+
+	if(!(fp=gzopen(fname, mode)))
+	{
+		logp("could not open %s: %s\n", fname, strerror(errno));
+		return NULL;
+	}
+	return fp;
+}

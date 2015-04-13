@@ -36,6 +36,7 @@ extern void dpth_free(struct dpth **dpth);
 
 extern int dpth_incr_sig(struct dpth *dpth);
 extern char *dpth_mk(struct dpth *dpth);
+extern char *dpth_get_save_path(struct dpth *dpth);
 
 extern int dpth_fwrite(struct dpth *dpth,
 	struct iobuf *iobuf, struct blk *blk);

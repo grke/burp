@@ -1,7 +1,7 @@
 #include "../burp.h"
 #include "../bu.h"
 #include "../conf.h"
-#include "../msg.h"
+#include "../fsops.h"
 #include "bu_get.h"
 
 #include "timestamp.h"

@@ -8,17 +8,24 @@
 #include "../../../src/hexmap.h"
 #include "../../../src/iobuf.h"
 #include "../../../src/lock.h"
+#include "../../../src/prepend.h"
 #include "../../../src/server/protocol2/dpth.h"
 #include "../../../src/protocol2/blk.h"
 
 static const char *lockpath="utest_dpth";
 
-static void assert_components(struct dpth *dpth,
-	int prim, int seco, int tert, int sig)
+static void assert_path_components(struct dpth *dpth,
+	int prim, int seco, int tert)
 {
 	fail_unless(dpth->prim==prim);
 	fail_unless(dpth->seco==seco);
 	fail_unless(dpth->tert==tert);
+}
+
+static void assert_components(struct dpth *dpth,
+	int prim, int seco, int tert, int sig)
+{
+	assert_path_components(dpth, prim, seco, tert);
 	fail_unless(dpth->sig==sig);
 }
 
@@ -161,14 +168,79 @@ START_TEST(test_incr_sig)
 		dpth->sig=d[i].sig;
 		fail_unless(dpth_incr_sig(dpth)==d[i].ret_expected);
 		if(!d[i].ret_expected)
-		{
-			fail_unless(dpth->prim==d[i].prim_expected);
-			fail_unless(dpth->seco==d[i].seco_expected);
-			fail_unless(dpth->tert==d[i].tert_expected);
-			fail_unless(dpth->sig==d[i].sig_expected);
-		}
+			assert_components(dpth,
+				d[i].prim_expected,
+				d[i].seco_expected,
+				d[i].tert_expected,
+				d[i].sig_expected);
 		tear_down(&dpth);
         }
+}
+END_TEST
+
+struct init_data
+{
+        uint16_t prim;
+        uint16_t seco;
+        uint16_t tert;
+        uint16_t prim_expected;
+        uint16_t seco_expected;
+        uint16_t tert_expected;
+	int ret_expected;
+};
+
+static struct init_data in[] = {
+	{ 0x0000, 0x0000, 0x0000,
+	  0x0000, 0x0000, 0x0001, 0 },
+	{ 0x0000, 0x0000, 0xAAAA,
+	  0x0000, 0x0000, 0xAAAB, 0 },
+	{ 0x0000, 0x0000, 0xFFFF,
+	  0x0000, 0x0001, 0x0000, 0 },
+	{ 0x0000, 0x3333, 0xFFFF,
+	  0x0000, 0x3334, 0x0000, 0 },
+	{ 0x0000, 0x7530, 0xFFFF,
+	  0x0001, 0x0000, 0x0000, 0 },
+	{ 0x3333, 0xFFFF, 0xFFFF,
+	  0x3334, 0x0000, 0x0000, 0 },
+	{ 0x7530, 0x7530, 0xFFFF,
+	  0x0000, 0x0000, 0x0000, -1 }
+};
+
+START_TEST(test_init)
+{
+        FOREACH(in)
+	{
+		FILE *fp=NULL;
+		char *path=NULL;
+		struct dpth *dpth;
+		char *savepath;
+		dpth=setup();
+		dpth->prim=in[i].prim;
+		dpth->seco=in[i].seco;
+		dpth->tert=in[i].tert;
+		dpth->sig=0;
+		savepath=dpth_get_save_path(dpth);
+		// Truncate it to remove the sig part.
+		savepath[14]='\0';
+		path=prepend_s(lockpath, savepath);
+		fail_unless(build_path_w(path)==0);
+		// Create a file.
+		fail_unless((fp=open_file(path, "wb"))!=NULL);
+		close_fp(&fp);
+
+		// Now when calling dpth_init(), the components should be
+		// incremented appropriately.
+		dpth_free(&dpth);
+		fail_unless((dpth=dpth_alloc(lockpath))!=NULL);
+		fail_unless(dpth_init(dpth)==in[i].ret_expected);
+		assert_path_components(dpth,
+			in[i].prim_expected,
+			in[i].seco_expected,
+			in[i].tert_expected);
+		
+		free_w(&path);
+		tear_down(&dpth);
+	}
 }
 END_TEST
 
@@ -183,6 +255,7 @@ Suite *suite_server_protocol2_dpth(void)
 
 	tcase_add_test(tc_core, test_simple_lock);
 	tcase_add_test(tc_core, test_incr_sig);
+	tcase_add_test(tc_core, test_init);
 	suite_add_tcase(s, tc_core);
 
 	return s;

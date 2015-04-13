@@ -95,14 +95,21 @@ printf("tail: %s\n", dpth->tail->save_path);
 	return 0;
 }
 
-char *dpth_mk(struct dpth *dpth)
+char *dpth_get_save_path(struct dpth *dpth)
 {
 	static char save_path[32];
+	snprintf(save_path, sizeof(save_path), "%04X/%04X/%04X/%04X",
+		dpth->prim, dpth->seco, dpth->tert, dpth->sig);
+	return save_path;
+}
+
+char *dpth_mk(struct dpth *dpth)
+{
+	static char *save_path=NULL;
 	static struct lock *lock=NULL;
 	while(1)
 	{
-		snprintf(save_path, sizeof(save_path), "%04X/%04X/%04X/%04X",
-			dpth->prim, dpth->seco, dpth->tert, dpth->sig);
+		save_path=dpth_get_save_path(dpth);
 		if(!dpth->need_data_lock) return save_path;
 
 		if(!lock && !(lock=lock_alloc())) goto error;
@@ -130,7 +137,7 @@ error:
 }
 
 // Returns 0 on OK, -1 on error. *max gets set to the next entry.
-static int get_highest_entry(const char *path, int *max, struct dpth *dpth)
+static int get_highest_entry(const char *path, int *max)
 {
 	int ent=0;
 	int ret=0;
@@ -153,13 +160,6 @@ end:
 	if(d) closedir(d);
 	close_fp(&ifp);
 	return ret;
-}
-
-static int get_next_entry(const char *path, int *max, struct dpth *dpth)
-{
-	if(get_highest_entry(path, max, dpth)) return -1;
-	(*max)++;
-	return 0;
 }
 
 struct dpth *dpth_alloc(const char *base_path)
@@ -186,7 +186,10 @@ int dpth_init(struct dpth *dpth)
 	int ret=0;
 	char *tmp=NULL;
 
-	if(get_highest_entry(dpth->base_path, &max, NULL))
+	dpth->sig=0;
+	dpth->need_data_lock=1;
+
+	if(get_highest_entry(dpth->base_path, &max))
 		goto error;
 	if(max<0) max=0;
 	dpth->prim=max;
@@ -194,7 +197,7 @@ int dpth_init(struct dpth *dpth)
 	if(!(tmp=prepend_s(dpth->base_path, tmp)))
 		goto error;
 
-	if(get_highest_entry(tmp, &max, NULL))
+	if(get_highest_entry(tmp, &max))
 		goto error;
 	if(max<0) max=0;
 	dpth->seco=max;
@@ -203,13 +206,17 @@ int dpth_init(struct dpth *dpth)
 	if(!(tmp=prepend_s(dpth->base_path, tmp)))
 		goto error;
 
-	if(get_next_entry(tmp, &max, dpth))
+	if(get_highest_entry(tmp, &max))
 		goto error;
-	if(max<0) max=0;
-	dpth->tert=max;
-
-	dpth->sig=0;
-	dpth->need_data_lock=1;
+	if(max<0)
+	{
+		dpth->tert=0;
+	}
+	else
+	{
+		dpth->tert=max;
+		if(dpth_incr(dpth)) goto error;
+	}
 
 	goto end;
 error:

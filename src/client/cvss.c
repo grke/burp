@@ -92,8 +92,8 @@ int win32_start_vss(struct conf **confs)
 			{
 				if(g_pVSSClient->GetWriterState(i)<1)
 					errors++;
-				logp("VSS Writer %d (PrepareForBackup): %s\n",
-					i, g_pVSSClient->GetWriterInfo(i));
+				logp("VSS Writer (PrepareForBackup): %s\n",
+					g_pVSSClient->GetWriterInfo(i));
 			}
 		}
 	}

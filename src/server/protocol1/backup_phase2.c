@@ -66,7 +66,7 @@ static char *set_new_datapth(struct asfd *asfd,
 	}
 	else
 	{
-		mk_dpthl(dpthl, cconfs, sb->path.cmd);
+		dpthl_mk(dpthl, cconfs, sb->path.cmd);
 		if(!(tmp=strdup_w(dpthl->path, __func__))) // File data path.
 			return NULL;
 	}
@@ -99,7 +99,7 @@ static int start_to_receive_new_file(struct asfd *asfd,
 		if(rpath) free(rpath);
 		return -1;
 	}
-	if(!istreedata) incr_dpthl(dpthl, cconfs);
+	if(!istreedata) dpthl_incr(dpthl, cconfs);
 	if(rpath) free(rpath);
 	return 0; 
 }
@@ -785,7 +785,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 
 	logp("Begin phase2 (receive file data)\n");
 
-	if(init_dpthl(&dpthl, sdirs, cconfs))
+	if(dpthl_init(&dpthl, sdirs, cconfs))
 	{
 		logp("could not init_dpthl\n");
 		goto error;

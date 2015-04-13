@@ -9,10 +9,10 @@ struct dpthl
 	char path[32];
 };
 
-extern int init_dpthl(struct dpthl *dpthl,
+extern int dpthl_init(struct dpthl *dpthl,
 	struct sdirs *sdirs, struct conf **cconfs);
-extern int incr_dpthl(struct dpthl *dpthl, struct conf **cconfs);
-extern int set_dpthl_from_string(struct dpthl *dpthl, const char *datapath);
-extern void mk_dpthl(struct dpthl *dpthl, struct conf **cconfs, enum cmd cmd);
+extern int dpthl_incr(struct dpthl *dpthl, struct conf **cconfs);
+extern int dpthl_set_from_string(struct dpthl *dpthl, const char *datapath);
+extern void dpthl_mk(struct dpthl *dpthl, struct conf **cconfs, enum cmd cmd);
 
 #endif

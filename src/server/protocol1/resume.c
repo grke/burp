@@ -72,7 +72,7 @@ static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
 		// find - set_dpthl_from_string() will only set it if it is
 		// higher.
 		if(sb->protocol1->datapth.buf
-		  && set_dpthl_from_string(dpthl, sb->protocol1->datapth.buf))
+		  && dpthl_set_from_string(dpthl, sb->protocol1->datapth.buf))
 		{
 			logp("unable to set datapath: %s\n",
 				sb->protocol1->datapth.buf);
@@ -207,7 +207,7 @@ static int do_resume_work(gzFile p1zp, FILE *p2fp, FILE *ucfp,
 	logp("  unchanged: %s\n", ucb->buf);
 
 	// Now should have all file pointers in the right places to resume.
-	if(incr_dpthl(dpthl, cconfs)) goto error;
+	if(dpthl_incr(dpthl, cconfs)) goto error;
 
 	if(get_int(cconfs[OPT_SEND_CLIENT_CNTR])
 	  && cntr_send(get_cntr(cconfs[OPT_CNTR]))) goto error;

@@ -4,7 +4,7 @@
 
 #include <dirent.h>
 
-void mk_dpthl(struct dpthl *dpthl, struct conf **cconfs, enum cmd cmd)
+void dpthl_mk(struct dpthl *dpthl, struct conf **cconfs, enum cmd cmd)
 {
 	// File data.
 	snprintf(dpthl->path, sizeof(dpthl->path), "%04X/%04X/%04X%s",
@@ -14,12 +14,12 @@ void mk_dpthl(struct dpthl *dpthl, struct conf **cconfs, enum cmd cmd)
 			&& cmd!=CMD_EFS_FILE)?".gz":"");
 }
 
-static void mk_dpthl_prim(struct dpthl *dpthl)
+static void dpthl_mk_prim(struct dpthl *dpthl)
 {
 	snprintf(dpthl->path, sizeof(dpthl->path), "%04X", dpthl->prim);
 }
 
-static void mk_dpthl_seco(struct dpthl *dpthl)
+static void dpthl_mk_seco(struct dpthl *dpthl)
 {
 	snprintf(dpthl->path, sizeof(dpthl->path), "%04X/%04X",
 		dpthl->prim, dpthl->seco);
@@ -68,7 +68,7 @@ static int get_next_comp(const char *currentdata, const char *path, int *comp)
 	return 0;
 }
 
-int init_dpthl(struct dpthl *dpthl, struct sdirs *sdirs, struct conf **cconfs)
+int dpthl_init(struct dpthl *dpthl, struct sdirs *sdirs, struct conf **cconfs)
 {
 	int ret=0;
 	dpthl->prim=0;
@@ -79,17 +79,17 @@ int init_dpthl(struct dpthl *dpthl, struct sdirs *sdirs, struct conf **cconfs)
 	if((ret=get_next_comp(sdirs->currentdata, dpthl->path, &dpthl->prim)))
 		goto end;
 
-	mk_dpthl_prim(dpthl);
+	dpthl_mk_prim(dpthl);
 	if((ret=get_next_comp(sdirs->currentdata, dpthl->path, &dpthl->seco)))
 		goto end;
 
-	mk_dpthl_seco(dpthl);
+	dpthl_mk_seco(dpthl);
 	if((ret=get_next_comp(sdirs->currentdata, dpthl->path, &dpthl->tert)))
 		goto end;
 
 	// At this point, we have the latest data file. Increment to get the
 	// next free one.
-	ret=incr_dpthl(dpthl, cconfs);
+	ret=dpthl_incr(dpthl, cconfs);
 
 end:
 	switch(ret)
@@ -103,7 +103,7 @@ end:
 // 65535^3 = 281,462,092,005,375 data entries
 // recommend a filesystem with lots of inodes?
 // Hmm, but ext3 only allows 32000 subdirs, although that many files are OK.
-int incr_dpthl(struct dpthl *dpthl, struct conf **cconfs)
+int dpthl_incr(struct dpthl *dpthl, struct conf **cconfs)
 {
 	int max_storage_subdirs=get_int(cconfs[OPT_MAX_STORAGE_SUBDIRS]);
 	if(dpthl->tert++<0xFFFF) return 0;
@@ -121,7 +121,7 @@ int incr_dpthl(struct dpthl *dpthl, struct conf **cconfs)
 	return -1;
 }
 
-int set_dpthl_from_string(struct dpthl *dpthl, const char *datapath)
+int dpthl_set_from_string(struct dpthl *dpthl, const char *datapath)
 {
 	unsigned int a=0;
 	unsigned int b=0;

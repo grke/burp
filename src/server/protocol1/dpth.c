@@ -4,25 +4,30 @@
 
 #include <dirent.h>
 
-void dpthl_mk(struct dpthl *dpthl, struct conf **cconfs, enum cmd cmd)
+char *dpthl_mk(struct dpthl *dpthl, struct conf **cconfs, enum cmd cmd)
 {
+	static char path[32];
 	// File data.
-	snprintf(dpthl->path, sizeof(dpthl->path), "%04X/%04X/%04X%s",
+	snprintf(path, sizeof(path), "%04X/%04X/%04X%s",
 		dpthl->prim, dpthl->seco, dpthl->tert,
 		// Because of the way EFS works, it cannot be compressed.
 		(get_int(cconfs[OPT_COMPRESSION])
 			&& cmd!=CMD_EFS_FILE)?".gz":"");
+	return path;
 }
 
-static void dpthl_mk_prim(struct dpthl *dpthl)
+static char *dpthl_mk_prim(struct dpthl *dpthl)
 {
-	snprintf(dpthl->path, sizeof(dpthl->path), "%04X", dpthl->prim);
+	static char path[5];
+	snprintf(path, sizeof(path), "%04X", dpthl->prim);
+	return path;
 }
 
-static void dpthl_mk_seco(struct dpthl *dpthl)
+static char *dpthl_mk_seco(struct dpthl *dpthl)
 {
-	snprintf(dpthl->path, sizeof(dpthl->path), "%04X/%04X",
-		dpthl->prim, dpthl->seco);
+	static char path[10];
+	snprintf(path, sizeof(path), "%04X/%04X", dpthl->prim, dpthl->seco);
+	return path;
 }
 
 static int get_highest_entry(const char *path)
@@ -74,18 +79,15 @@ int dpthl_init(struct dpthl *dpthl, struct sdirs *sdirs, struct conf **cconfs)
 	dpthl->prim=0;
 	dpthl->seco=0;
 	dpthl->tert=0;
-	*(dpthl->path)='\0';
 
-	if((ret=get_next_comp(sdirs->currentdata, dpthl->path, &dpthl->prim)))
-		goto end;
+	if((ret=get_next_comp(sdirs->currentdata,
+		NULL, &dpthl->prim))) goto end;
 
-	dpthl_mk_prim(dpthl);
-	if((ret=get_next_comp(sdirs->currentdata, dpthl->path, &dpthl->seco)))
-		goto end;
+	if((ret=get_next_comp(sdirs->currentdata,
+		dpthl_mk_prim(dpthl), &dpthl->seco))) goto end;
 
-	dpthl_mk_seco(dpthl);
-	if((ret=get_next_comp(sdirs->currentdata, dpthl->path, &dpthl->tert)))
-		goto end;
+	if((ret=get_next_comp(sdirs->currentdata,
+		dpthl_mk_seco(dpthl), &dpthl->tert))) goto end;
 
 	// At this point, we have the latest data file. Increment to get the
 	// next free one.

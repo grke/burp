@@ -66,9 +66,8 @@ static char *set_new_datapth(struct asfd *asfd,
 	}
 	else
 	{
-		dpthl_mk(dpthl, cconfs, sb->path.cmd);
-		if(!(tmp=strdup_w(dpthl->path, __func__))) // File data path.
-			return NULL;
+		if(!(tmp=strdup_w(dpthl_mk(dpthl, cconfs, sb->path.cmd),
+			__func__))) return NULL;
 	}
 	iobuf_from_str(&sb->protocol1->datapth, CMD_DATAPTH, tmp);
 	if(build_path(sdirs->datadirtmp,

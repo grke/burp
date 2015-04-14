@@ -4,6 +4,17 @@
 
 #include <dirent.h>
 
+struct dpthl *dpthl_alloc(void)
+{
+	return (struct dpthl *)calloc_w(1, sizeof(struct dpthl), __func__);
+}
+
+void dpthl_free(struct dpthl **dpthl)
+{
+	if(!dpthl || !*dpthl) return;
+	free_v((void **)dpthl);
+}
+
 char *dpthl_mk(struct dpthl *dpthl, struct conf **cconfs, enum cmd cmd)
 {
 	static char path[32];

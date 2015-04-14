@@ -768,7 +768,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 {
 	int ret=0;
 	gzFile p1zp=NULL;
-	struct dpthl dpthl;
+	struct dpthl *dpthl=NULL;
 	char *deltmppath=NULL;
 	char *last_requested=NULL;
 	// Where to write changed data.
@@ -784,11 +784,9 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 
 	logp("Begin phase2 (receive file data)\n");
 
-	if(dpthl_init(&dpthl, sdirs, cconfs))
-	{
-		logp("could not init_dpthl\n");
+	if(!(dpthl=dpthl_alloc())
+	  || dpthl_init(dpthl, sdirs, cconfs))
 		goto error;
-	}
 
 	if(open_previous_manifest(&cmanfp, sdirs, incexc, cconfs))
 		goto error;
@@ -810,7 +808,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 	if(!(p1zp=gzopen_file(sdirs->phase1data, "rb")))
 		goto error;
 
-	if(resume && do_resume(p1zp, sdirs, &dpthl, cconfs))
+	if(resume && do_resume(p1zp, sdirs, dpthl, cconfs))
 		goto error;
 
 	// Unchanged and changed should now be truncated correctly, we just
@@ -831,7 +829,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 		if(last_requested || !p1zp || asfd->writebuflen)
 		{
 			switch(do_stuff_to_receive(asfd, sdirs,
-				cconfs, rb, chfp, &dpthl, &last_requested))
+				cconfs, rb, chfp, dpthl, &last_requested))
 			{
 				case 0: break;
 				case 1: goto end; // Finished ok.
@@ -864,7 +862,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 		if(!cmanfp)
 		{
 			// No old manifest, need to ask for a new file.
-			if(process_new(sdirs, cconfs, p1b, ucfp, &dpthl))
+			if(process_new(sdirs, cconfs, p1b, ucfp, dpthl))
 				goto error;
 			continue;
 		}
@@ -874,7 +872,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 		// Might already have it, or be ahead in the old
 		// manifest.
 		if(cb->path.buf) switch(maybe_process_file(asfd,
-			sdirs, cb, p1b, ucfp, &dpthl, cconfs))
+			sdirs, cb, p1b, ucfp, dpthl, cconfs))
 		{
 			case 0: break;
 			case 1: continue;
@@ -890,12 +888,12 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 				case 0: break;
 				case 1: gzclose_fp(&cmanfp);
 					if(process_new(sdirs, cconfs, p1b,
-						ucfp, &dpthl)) goto error;
+						ucfp, dpthl)) goto error;
 					continue;
 				case -1: goto error;
 			}
 			switch(maybe_process_file(asfd, sdirs,
-				cb, p1b, ucfp, &dpthl, cconfs))
+				cb, p1b, ucfp, dpthl, cconfs))
 			{
 				case 0: continue;
 				case 1: break;
@@ -924,6 +922,7 @@ end:
 	sbuf_free(&rb);
 	gzclose_fp(&p1zp);
 	gzclose_fp(&cmanfp);
+	dpthl_free(&dpthl);
 	if(!ret) unlink(sdirs->phase1data);
 
 	logp("End phase2 (receive file data)\n");

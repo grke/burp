@@ -13,6 +13,7 @@ SRCS = \
 	test_hexmap.c \
 	test_lock.c \
 	test_pathcmp.c \
+	server/protocol1/test_dpth.c \
 	server/protocol1/test_fdirs.c \
 	server/protocol2/test_dpth.c \
 	server/test_sdirs.c \
@@ -35,7 +36,9 @@ BURP_SRCS = \
 	../src/strlist.c \
 	../src/protocol2/blk.c \
 	../src/server/bu_get.c \
+	../src/server/dpth.c \
 	../src/server/sdirs.c \
+	../src/server/protocol1/dpth.c \
 	../src/server/protocol1/fdirs.c \
 	../src/server/protocol2/dpth.c \
 	../src/server/timestamp.c \

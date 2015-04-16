@@ -6,6 +6,7 @@
 #include "../../server/manio.h"
 #include "../../protocol2/blist.h"
 #include "../../slist.h"
+#include "dpth.h"
 
 static int data_needed(struct sbuf *sb)
 {
@@ -766,8 +767,8 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 	  || !(slist=slist_alloc())
 	  || !(blist=blist_alloc())
 	  || !(wbuf=iobuf_alloc())
-	  || !(dpth=dpth_alloc(sdirs->data))
-	  || dpth_init(dpth))
+	  || !(dpth=dpth_alloc())
+	  || dpth_init(dpth, sdirs->data))
 		goto end;
 
 	// The phase1 manifest looks the same as a protocol1 one.

@@ -2,7 +2,6 @@
 #include "../cmd.h"
 #include "../hexmap.h"
 #include "protocol2/champ_chooser/include.h"
-#include "protocol2/dpth.h"
 
 #define MANIO_MODE_READ		"rb"
 #define MANIO_MODE_WRITE	"wb"
@@ -240,7 +239,7 @@ static int open_next_fpath(struct manio *manio)
 // Return -1 for error, 0 for stuff read OK, 1 for end of files.
 static int do_manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
 	struct sbuf *sb, struct blk *blk,
-	struct dpth *dpth, struct conf **confs, int phase1)
+	struct sdirs *sdirs, struct conf **confs, int phase1)
 {
 	int ars;
 
@@ -260,7 +259,7 @@ static int do_manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
 		if(manio->protocol==PROTO_2 || phase1)
 		{
 			ars=sbuf_fill_from_gzfile(sb, asfd, manio->zp, blk,
-				dpth?dpth->base_path:NULL, confs);
+				sdirs?sdirs->data:NULL, confs);
 		}
 		else
 		{
@@ -289,9 +288,9 @@ error:
 
 int manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
 	struct sbuf *sb, struct blk *blk,
-	struct dpth *dpth, struct conf **confs)
+	struct sdirs *sdirs, struct conf **confs)
 {
-	return do_manio_sbuf_fill(manio, asfd, sb, blk, dpth, confs, 0);
+	return do_manio_sbuf_fill(manio, asfd, sb, blk, sdirs, confs, 0);
 }
 
 // FIX THIS:
@@ -302,9 +301,9 @@ int manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
 // this can be dealt with more safely.
 int manio_sbuf_fill_phase1(struct manio *manio, struct asfd *asfd,
 	struct sbuf *sb, struct blk *blk,
-	struct dpth *dpth, struct conf **confs)
+	struct sdirs *sdirs, struct conf **confs)
 {
-	return do_manio_sbuf_fill(manio, asfd, sb, blk, dpth, confs, 1);
+	return do_manio_sbuf_fill(manio, asfd, sb, blk, sdirs, confs, 1);
 }
 
 static int reset_sig_count_and_close(struct manio *manio)

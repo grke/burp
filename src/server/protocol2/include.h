@@ -5,7 +5,6 @@
 
 #include "backup_phase2.h"
 #include "backup_phase3.h"
-#include "dpth.h"
 #include "rblk.h"
 #include "restore.h"
 #include "restore_spool.h"

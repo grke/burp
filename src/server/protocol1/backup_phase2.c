@@ -1,5 +1,6 @@
 #include "include.h"
 #include "../../cmd.h"
+#include "dpth.h"
 
 static size_t treepathlen=0;
 
@@ -47,7 +48,7 @@ static int treedata(struct sbuf *sb, struct conf **cconfs)
 
 static char *set_new_datapth(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf **cconfs,
-	struct sbuf *sb, struct dpthl *dpthl, int *istreedata)
+	struct sbuf *sb, struct dpth *dpthl, int *istreedata)
 {
 	char *tmp=NULL;
 	char *rpath=NULL;
@@ -81,7 +82,7 @@ static char *set_new_datapth(struct asfd *asfd,
 
 static int start_to_receive_new_file(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf **cconfs,
-	struct sbuf *sb, struct dpthl *dpthl)
+	struct sbuf *sb, struct dpth *dpthl)
 {
 	char *rpath=NULL;
 	int istreedata=0;
@@ -203,7 +204,7 @@ static int changed_non_file(struct sbuf *p1b,
 }
 
 static int process_new(struct sdirs *sdirs, struct conf **cconfs,
-	struct sbuf *p1b, FILE *ucfp, struct dpthl *dpthl)
+	struct sbuf *p1b, FILE *ucfp, struct dpth *dpthl)
 {
 	if(!p1b->path.buf) return 0;
 	if(cmd_is_filedata(p1b->path.cmd))
@@ -242,7 +243,7 @@ static int process_unchanged_file(struct sbuf *p1b, struct sbuf *cb,
 
 static int process_new_file(struct sdirs *sdirs, struct conf **cconfs,
 	struct sbuf *cb, struct sbuf *p1b, FILE *ucfp,
-	struct dpthl *dpthl)
+	struct dpth *dpthl)
 {
 	if(process_new(sdirs, cconfs, p1b, ucfp, dpthl))
 		return -1;
@@ -252,7 +253,7 @@ static int process_new_file(struct sdirs *sdirs, struct conf **cconfs,
 
 static int maybe_do_delta_stuff(struct asfd *asfd,
 	struct sdirs *sdirs, struct sbuf *cb, struct sbuf *p1b, FILE *ucfp,
-	struct dpthl *dpthl, struct conf **cconfs)
+	struct dpth *dpthl, struct conf **cconfs)
 {
 	int oldcompressed=0;
 	int compression=get_int(cconfs[OPT_COMPRESSION]);
@@ -361,7 +362,7 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 // return 1 to say that a file was processed
 static int maybe_process_file(struct asfd *asfd,
 	struct sdirs *sdirs, struct sbuf *cb, struct sbuf *p1b, FILE *ucfp,
-	struct dpthl *dpthl, struct conf **cconfs)
+	struct dpth *dpthl, struct conf **cconfs)
 {
 	switch(sbuf_pathcmp(cb, p1b))
 	{
@@ -574,7 +575,7 @@ static int deal_with_receive_append(struct asfd *asfd, struct sbuf *rb,
 
 static int deal_with_filedata(struct asfd *asfd,
 	struct sdirs *sdirs, struct sbuf *rb,
-	struct iobuf *rbuf, struct dpthl *dpthl, struct conf **cconfs)
+	struct iobuf *rbuf, struct dpth *dpthl, struct conf **cconfs)
 {
 	iobuf_move(&rb->path, rbuf);
 
@@ -602,7 +603,7 @@ static int deal_with_filedata(struct asfd *asfd,
 static int do_stuff_to_receive(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf **cconfs,
 	struct sbuf *rb, FILE *chfp,
-	struct dpthl *dpthl, char **last_requested)
+	struct dpth *dpthl, char **last_requested)
 {
 	struct iobuf *rbuf=asfd->rbuf;
 
@@ -768,7 +769,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 {
 	int ret=0;
 	gzFile p1zp=NULL;
-	struct dpthl *dpthl=NULL;
+	struct dpth *dpthl=NULL;
 	char *deltmppath=NULL;
 	char *last_requested=NULL;
 	// Where to write changed data.
@@ -784,8 +785,8 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 
 	logp("Begin phase2 (receive file data)\n");
 
-	if(!(dpthl=dpthl_alloc())
-	  || dpthl_init(dpthl, sdirs, cconfs))
+	if(!(dpthl=dpth_alloc())
+	  || dpthl_init(dpthl, sdirs->currentdata, cconfs))
 		goto error;
 
 	if(open_previous_manifest(&cmanfp, sdirs, incexc, cconfs))
@@ -922,7 +923,7 @@ end:
 	sbuf_free(&rb);
 	gzclose_fp(&p1zp);
 	gzclose_fp(&cmanfp);
-	dpthl_free(&dpthl);
+	dpth_free(&dpthl);
 	if(!ret) unlink(sdirs->phase1data);
 
 	logp("End phase2 (receive file data)\n");

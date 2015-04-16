@@ -1,7 +1,14 @@
-#include "include.h"
+#include "../../burp.h"
+#include "../../alloc.h"
 #include "../../cmd.h"
-#include "../../lock.h"
+#include "../../fsops.h"
 #include "../../hexmap.h"
+#include "../../iobuf.h"
+#include "../../lock.h"
+#include "../../log.h"
+#include "../../prepend.h"
+#include "../../protocol2/blk.h"
+#include "dpth.h"
 
 #include <dirent.h>
 
@@ -162,16 +169,6 @@ end:
 	return ret;
 }
 
-struct dpth *dpth_alloc(const char *base_path)
-{
-        struct dpth *dpth=NULL;
-        if((dpth=(struct dpth *)calloc_w(1, sizeof(struct dpth), __func__))
-	  && (dpth->base_path=strdup_w(base_path, __func__)))
-		return dpth;
-	dpth_free(&dpth);
-	return NULL;
-}
-
 int dpth_incr_sig(struct dpth *dpth)
 {
 	if(++dpth->sig<DATA_FILE_SIG_MAX) return 0;
@@ -180,11 +177,15 @@ int dpth_incr_sig(struct dpth *dpth)
 	return dpth_incr(dpth);
 }
 
-int dpth_init(struct dpth *dpth)
+int dpth_init(struct dpth *dpth, const char *base_path)
 {
 	int max;
 	int ret=0;
 	char *tmp=NULL;
+
+	free_w(&dpth->base_path);
+	if(!(dpth->base_path=strdup_w(base_path, __func__)))
+		goto error;
 
 	dpth->sig=0;
 	dpth->need_data_lock=1;
@@ -226,14 +227,6 @@ end:
 	return ret;
 }
 
-void dpth_free(struct dpth **dpth)
-{
-	if(!dpth || !*dpth) return;
-	dpth_release_all(*dpth);
-	free_w(&((*dpth)->base_path));
-	free_v((void **)dpth);
-}
-
 static int fprint_tag(FILE *fp, enum cmd cmd, unsigned int s)
 {
 	if(fprintf(fp, "%c%04X", cmd, s)!=5)
@@ -262,24 +255,6 @@ static FILE *file_open_w(const char *path, const char *mode)
 	if(build_path_w(path)) return NULL;
 	fp=open_file(path, "wb");
 	return fp;
-}
-
-static int release_and_move_to_next_in_list(struct dpth *dpth)
-{
-	int ret=0;
-	struct dpth_lock *next=NULL;
-
-	// Try to release (and unlink) the lock even if close_fp failed, just
-	// to be tidy.
-	if(close_fp(&dpth->fp)) ret=-1;
-	if(lock_release(dpth->head->lock)) ret=-1;
-	lock_free(&dpth->head->lock);
-
-	next=dpth->head->next;
-	if(dpth->head==dpth->tail) dpth->tail=next;
-	free_v((void **)&dpth->head);
-	dpth->head=next;
-	return ret;
 }
 
 static FILE *open_data_file_for_write(struct dpth *dpth, struct blk *blk)
@@ -324,7 +299,7 @@ int dpth_fwrite(struct dpth *dpth, struct iobuf *iobuf, struct blk *blk)
 	  && strncmp(dpth->head->save_path,
 		bytes_to_savepathstr(blk->savepath),
 		sizeof(dpth->head->save_path)-1)
-	  && release_and_move_to_next_in_list(dpth))
+	  && dpth_release_and_move_to_next_in_list(dpth))
 		return -1;
 
 	// Open the current list head if we have no fp.
@@ -332,13 +307,4 @@ int dpth_fwrite(struct dpth *dpth, struct iobuf *iobuf, struct blk *blk)
 	  && !(dpth->fp=open_data_file_for_write(dpth, blk))) return -1;
 
 	return fwrite_buf(CMD_DATA, iobuf->buf, iobuf->len, dpth->fp);
-}
-
-int dpth_release_all(struct dpth *dpth)
-{
-	int ret=0;
-	if(!dpth) return 0;
-	if(dpth->fp && close_fp(&dpth->fp)) ret=-1;
-	while(dpth->head) if(release_and_move_to_next_in_list(dpth)) ret=-1;
-	return ret;
 }

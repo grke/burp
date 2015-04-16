@@ -18,10 +18,11 @@ struct dpth
 	uint16_t tert;
 
 	// Protocol 2 also uses these.
-	char *base_path;
 	uint16_t sig;
+	char *base_path;
 	// Whether we need to lock another data file.
 	uint8_t need_data_lock;
+	int max_storage_subdirs;
 	// Currently open data file. Only one is open at a time, while many
 	// may be locked.
 	FILE *fp;
@@ -33,6 +34,7 @@ struct dpth
 extern struct dpth *dpth_alloc(void);
 extern void dpth_free(struct dpth **dpth);
 
+extern int dpth_incr(struct dpth *dpth);
 extern int dpth_release_and_move_to_next_in_list(struct dpth *dpth);
 extern int dpth_release_all(struct dpth *dpth);
 

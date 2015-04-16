@@ -12,32 +12,6 @@
 
 #include <dirent.h>
 
-#define MAX_STORAGE_SUBDIRS	30000
-#define MAX_FILES_PER_DIR	0xFFFF
-
-static int incr(uint16_t *component, uint16_t max)
-{
-	if((*component)++<max) return 1;
-	*component=0;
-	return 0;
-}
-
-// Three levels with 65535 entries each gives
-// 65535^3 = 281,462,092,005,375 data entries
-// recommend a filesystem with lots of inodes?
-// Hmm, but ext3 only allows 32000 subdirs, although that many files are OK.
-static int dpth_incr(struct dpth *dpth)
-{
-	if(incr(&dpth->tert, MAX_FILES_PER_DIR)
-	  || incr(&dpth->seco, MAX_STORAGE_SUBDIRS)
-	  || incr(&dpth->prim, MAX_STORAGE_SUBDIRS))
-		return 0;
-	logp("No free data file entries out of the %d*%d*%d available!\n",
-		MAX_FILES_PER_DIR, MAX_STORAGE_SUBDIRS, MAX_STORAGE_SUBDIRS);
-	logp("Maybe move the storage directory aside and start again.\n");
-	return -1;
-}
-
 static int get_data_lock(struct lock *lock, struct dpth *dpth, const char *path)
 {
 	int ret=-1;
@@ -177,11 +151,14 @@ int dpth_incr_sig(struct dpth *dpth)
 	return dpth_incr(dpth);
 }
 
-int dpth_init(struct dpth *dpth, const char *base_path)
+int dpth_init(struct dpth *dpth, const char *base_path,
+	int max_storage_subdirs)
 {
 	int max;
 	int ret=0;
 	char *tmp=NULL;
+
+	dpth->max_storage_subdirs=max_storage_subdirs;
 
 	free_w(&dpth->base_path);
 	if(!(dpth->base_path=strdup_w(base_path, __func__)))

@@ -8,15 +8,14 @@
 
 #include <dirent.h>
 
-char *dpthl_mk(struct dpth *dpthl, struct conf **cconfs, enum cmd cmd)
+char *dpthl_mk(struct dpth *dpthl, int compression, enum cmd cmd)
 {
 	static char path[32];
 	// File data.
 	snprintf(path, sizeof(path), "%04X/%04X/%04X%s",
 		dpthl->prim, dpthl->seco, dpthl->tert,
 		// Because of the way EFS works, it cannot be compressed.
-		(get_int(cconfs[OPT_COMPRESSION])
-			&& cmd!=CMD_EFS_FILE)?".gz":"");
+		(compression && cmd!=CMD_EFS_FILE)?".gz":"");
 	return path;
 }
 
@@ -72,12 +71,14 @@ end:
 	return ret;
 }
 
-int dpthl_init(struct dpth *dpthl, const char *basepath, struct conf **cconfs)
+int dpthl_init(struct dpth *dpthl, const char *basepath,
+	int max_storage_subdirs)
 {
 	int ret=0;
 	dpthl->prim=0;
 	dpthl->seco=0;
 	dpthl->tert=0;
+	dpthl->max_storage_subdirs=max_storage_subdirs;
 
 	if((ret=get_next_comp(basepath,
 		NULL, &dpthl->prim))) goto end;
@@ -90,7 +91,7 @@ int dpthl_init(struct dpth *dpthl, const char *basepath, struct conf **cconfs)
 
 	// At this point, we have the latest data file. Increment to get the
 	// next free one.
-	ret=dpthl_incr(dpthl, cconfs);
+	ret=dpth_incr(dpthl);
 
 end:
 	switch(ret)
@@ -98,28 +99,6 @@ end:
 		case -1: return -1;
 		default: return 0;
 	}
-}
-
-// Three levels with 65535 entries each gives
-// 65535^3 = 281,462,092,005,375 data entries
-// recommend a filesystem with lots of inodes?
-// Hmm, but ext3 only allows 32000 subdirs, although that many files are OK.
-int dpthl_incr(struct dpth *dpthl, struct conf **cconfs)
-{
-	int max_storage_subdirs=get_int(cconfs[OPT_MAX_STORAGE_SUBDIRS]);
-	if(dpthl->tert++<0xFFFF) return 0;
-	dpthl->tert=0;
-
-	if(dpthl->seco++<max_storage_subdirs) return 0;
-	dpthl->seco=0;
-
-	if(dpthl->prim++<max_storage_subdirs) return 0;
-	dpthl->prim=0;
-
-	logp("No free data file entries out of the %d*%d*%d available!\n",
-		0xFFFF, max_storage_subdirs, max_storage_subdirs);
-	logp("Recommend moving the client storage directory aside and starting again.\n");
-	return -1;
 }
 
 int dpthl_set_from_string(struct dpth *dpthl, const char *datapath)

@@ -12,6 +12,8 @@
 #include "../../../src/server/protocol2/dpth.h"
 #include "../../../src/protocol2/blk.h"
 
+#define MAX_STORAGE_SUBDIRS	30000
+
 static const char *lockpath="utest_dpth";
 
 static void assert_path_components(struct dpth *dpth,
@@ -71,7 +73,7 @@ static void do_fork(void)
 			struct dpth *dpth;
 			const char *savepath;
 			dpth=dpth_alloc();
-			dpth_init(dpth, lockpath);
+			dpth_init(dpth, lockpath, MAX_STORAGE_SUBDIRS);
 			savepath=dpth_mk(dpth);
 			write_to_dpth(dpth, savepath);
 			sleep(2);
@@ -89,7 +91,7 @@ START_TEST(test_simple_lock)
 	struct dpth *dpth;
 	const char *savepath;
 	dpth=setup();
-	fail_unless(dpth_init(dpth, lockpath)==0);
+	fail_unless(dpth_init(dpth, lockpath, MAX_STORAGE_SUBDIRS)==0);
 	savepath=dpth_mk(dpth);
 	ck_assert_str_eq(savepath, "0000/0000/0000/0000");
 	fail_unless(dpth->head->lock->status==GET_LOCK_GOT);
@@ -162,6 +164,7 @@ START_TEST(test_incr_sig)
         {
 		struct dpth *dpth;
 		dpth=setup();
+		fail_unless(dpth_init(dpth, lockpath, MAX_STORAGE_SUBDIRS)==0);
 		dpth->prim=d[i].prim;
 		dpth->seco=d[i].seco;
 		dpth->tert=d[i].tert;
@@ -232,7 +235,8 @@ START_TEST(test_init)
 		// incremented appropriately.
 		dpth_free(&dpth);
 		fail_unless((dpth=dpth_alloc())!=NULL);
-		fail_unless(dpth_init(dpth, lockpath)==in[i].ret_expected);
+		fail_unless(dpth_init(dpth, lockpath, MAX_STORAGE_SUBDIRS)
+			==in[i].ret_expected);
 		assert_path_components(dpth,
 			in[i].prim_expected,
 			in[i].seco_expected,

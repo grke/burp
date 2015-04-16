@@ -1,5 +1,6 @@
 #include "include.h"
 #include "../../cmd.h"
+#include "../../conf.h"
 #include "dpth.h"
 
 static size_t treepathlen=0;
@@ -67,8 +68,9 @@ static char *set_new_datapth(struct asfd *asfd,
 	}
 	else
 	{
-		if(!(tmp=strdup_w(dpthl_mk(dpthl, cconfs, sb->path.cmd),
-			__func__))) return NULL;
+		if(!(tmp=strdup_w(dpthl_mk(dpthl,
+			get_int(cconfs[OPT_COMPRESSION]),
+			sb->path.cmd), __func__))) return NULL;
 	}
 	iobuf_from_str(&sb->protocol1->datapth, CMD_DATAPTH, tmp);
 	if(build_path(sdirs->datadirtmp,
@@ -99,7 +101,7 @@ static int start_to_receive_new_file(struct asfd *asfd,
 		if(rpath) free(rpath);
 		return -1;
 	}
-	if(!istreedata) dpthl_incr(dpthl, cconfs);
+	if(!istreedata) dpth_incr(dpthl);
 	if(rpath) free(rpath);
 	return 0; 
 }
@@ -786,8 +788,9 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 	logp("Begin phase2 (receive file data)\n");
 
 	if(!(dpthl=dpth_alloc())
-	  || dpthl_init(dpthl, sdirs->currentdata, cconfs))
-		goto error;
+	  || dpthl_init(dpthl, sdirs->currentdata,
+		get_int(cconfs[OPT_MAX_STORAGE_SUBDIRS])))
+			goto error;
 
 	if(open_previous_manifest(&cmanfp, sdirs, incexc, cconfs))
 		goto error;

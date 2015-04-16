@@ -126,7 +126,6 @@ static int hard_link_substitution(struct asfd *asfd,
 	struct sbuf *hb=NULL;
 	struct manio *manio=NULL;
 	struct blk *blk=NULL;
-	struct dpth *dpth=NULL;
 	int pcmp;
 	enum protocol protocol=get_e_protocol(cconfs[OPT_PROTOCOL]);
 
@@ -139,15 +138,14 @@ static int hard_link_substitution(struct asfd *asfd,
 
 	if(protocol==PROTO_2)
 	{
-		  if(!(blk=blk_alloc())
-		    || !(dpth=dpth_alloc(sdirs->data)))
+		  if(!(blk=blk_alloc()))
                 	goto end;
 	}
 
 	while(1)
 	{
 		switch(manio_sbuf_fill(manio, asfd,
-			hb, need_data->path.buf?blk:NULL, dpth, cconfs))
+			hb, need_data->path.buf?blk:NULL, sdirs, cconfs))
 		{
 			case 0: break; // Keep going.
 			case 1: ret=0; goto end; // Finished OK.
@@ -350,7 +348,6 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 	struct iobuf *rbuf=asfd->rbuf;
 	struct manio *manio=NULL;
 	struct blk *blk=NULL;
-	struct dpth *dpth=NULL;
 	struct sbuf *need_data=NULL;
 	enum protocol protocol=get_e_protocol(cconfs[OPT_PROTOCOL]);
 
@@ -358,8 +355,7 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 	{
 		if(asfd->write_str(asfd, CMD_GEN, "restore_stream")
 		  || asfd->read_expect(asfd, CMD_GEN, "restore_stream_ok")
-		  || !(blk=blk_alloc())
-		  || !(dpth=dpth_alloc(sdirs->data)))
+		  || !(blk=blk_alloc()))
                 	goto end;
 	}
 
@@ -397,7 +393,7 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 		}
 
 		switch(manio_sbuf_fill(manio, asfd,
-			sb, need_data->path.buf?blk:NULL, dpth, cconfs))
+			sb, need_data->path.buf?blk:NULL, sdirs, cconfs))
 		{
 			case 0: break; // Keep going.
 			case 1: ret=0; goto end; // Finished OK.
@@ -441,7 +437,6 @@ end:
 	sbuf_free(&need_data);
 	iobuf_free_content(rbuf);
 	manio_free(&manio);
-	dpth_free(&dpth);
 	return ret;
 }
 

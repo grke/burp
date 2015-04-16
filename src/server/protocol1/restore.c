@@ -1,6 +1,7 @@
 #include "include.h"
 #include "../../cmd.h"
 #include "../../hexmap.h"
+#include "dpth.h"
 #include "../../server/protocol2/restore.h"
 #include "../../slist.h"
 

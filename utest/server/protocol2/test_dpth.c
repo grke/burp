@@ -34,7 +34,7 @@ static struct dpth *setup(void)
 	struct dpth *dpth;
 	hexmap_init();
 	fail_unless(recursive_delete(lockpath, "", 1)==0);
-	fail_unless((dpth=dpth_alloc(lockpath))!=NULL);
+	fail_unless((dpth=dpth_alloc())!=NULL);
 	assert_components(dpth, 0, 0, 0, 0);
 	return dpth;
 }
@@ -70,8 +70,8 @@ static void do_fork(void)
 		{
 			struct dpth *dpth;
 			const char *savepath;
-			dpth=dpth_alloc(lockpath);
-			dpth_init(dpth);
+			dpth=dpth_alloc();
+			dpth_init(dpth, lockpath);
 			savepath=dpth_mk(dpth);
 			write_to_dpth(dpth, savepath);
 			sleep(2);
@@ -89,7 +89,7 @@ START_TEST(test_simple_lock)
 	struct dpth *dpth;
 	const char *savepath;
 	dpth=setup();
-	fail_unless(dpth_init(dpth)==0);
+	fail_unless(dpth_init(dpth, lockpath)==0);
 	savepath=dpth_mk(dpth);
 	ck_assert_str_eq(savepath, "0000/0000/0000/0000");
 	fail_unless(dpth->head->lock->status==GET_LOCK_GOT);
@@ -231,8 +231,8 @@ START_TEST(test_init)
 		// Now when calling dpth_init(), the components should be
 		// incremented appropriately.
 		dpth_free(&dpth);
-		fail_unless((dpth=dpth_alloc(lockpath))!=NULL);
-		fail_unless(dpth_init(dpth)==in[i].ret_expected);
+		fail_unless((dpth=dpth_alloc())!=NULL);
+		fail_unless(dpth_init(dpth, lockpath)==in[i].ret_expected);
 		assert_path_components(dpth,
 			in[i].prim_expected,
 			in[i].seco_expected,

@@ -13,7 +13,6 @@
 #include "bedup.h"
 #include "blocklen.h"
 #include "deleteme.h"
-#include "dpth.h"
 #include "link.h"
 #include "restore.h"
 #include "resume.h"

@@ -23,6 +23,7 @@ SRCS = \
 	child.c \
 	delete.c \
 	diff.c \
+	dpth.c \
 	extra_comms.c \
 	list.c \
 	main.c \

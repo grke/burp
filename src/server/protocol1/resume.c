@@ -1,5 +1,6 @@
 #include "include.h"
 #include "../../cmd.h"
+#include "dpth.h"
 
 #include "../../server/backup_phase1.h"
 
@@ -39,7 +40,7 @@ static int read_phase1(gzFile zp, struct conf **confs)
 
 static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
 	struct iobuf *target, int isphase1, int seekback, int do_cntr,
-	int same, struct dpthl *dpthl, struct conf **cconfs)
+	int same, struct dpth *dpthl, struct conf **cconfs)
 {
 	int ars=0;
 	off_t pos=0;
@@ -133,7 +134,7 @@ error:
 
 static int forward_fp(FILE *fp, struct iobuf *result, struct iobuf *target,
 	int isphase1, int seekback, int do_cntr, int same,
-	struct dpthl *dpthl, struct conf **cconfs)
+	struct dpth *dpthl, struct conf **cconfs)
 {
 	return do_forward(fp, NULL, result, target, isphase1, seekback,
 		do_cntr, same, dpthl, cconfs);
@@ -141,14 +142,14 @@ static int forward_fp(FILE *fp, struct iobuf *result, struct iobuf *target,
 
 static int forward_zp(gzFile zp, struct iobuf *result, struct iobuf *target,
 	int isphase1, int seekback, int do_cntr, int same,
-	struct dpthl *dpthl, struct conf **cconfs)
+	struct dpth *dpthl, struct conf **cconfs)
 {
 	return do_forward(NULL, zp, result, target, isphase1, seekback,
 		do_cntr, same, dpthl, cconfs);
 }
 
 static int do_resume_work(gzFile p1zp, FILE *p2fp, FILE *ucfp,
-	struct dpthl *dpthl, struct conf **cconfs)
+	struct dpth *dpthl, struct conf **cconfs)
 {
 	int ret=0;
 	struct iobuf *p1b=NULL;
@@ -242,7 +243,7 @@ static int do_truncate(const char *path, FILE **fp)
 }
 
 int do_resume(gzFile p1zp, struct sdirs *sdirs,
-	struct dpthl *dpthl, struct conf **cconfs)
+	struct dpth *dpthl, struct conf **cconfs)
 {
 	int ret=-1;
 	FILE *cfp=NULL;

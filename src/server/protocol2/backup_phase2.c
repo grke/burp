@@ -147,7 +147,7 @@ static int add_data_to_store(struct conf **confs,
 	}
 
 	// Add it to the data store straight away.
-	if(dpth_fwrite(dpth, rbuf, blk)) return -1;
+	if(dpth_protocol2_fwrite(dpth, rbuf, blk)) return -1;
 
 	cntr_add(get_cntr(confs[OPT_CNTR]), CMD_DATA, 0);
 	cntr_add_recvbytes(get_cntr(confs[OPT_CNTR]), blk->length);
@@ -625,12 +625,12 @@ static int mark_not_got(struct blk *blk, struct dpth *dpth)
 
 	// Need to get the data for this blk from the client.
 	// Set up the details of where it will be saved.
-	if(!(path=dpth_mk(dpth))) return -1;
+	if(!(path=dpth_protocol2_mk(dpth))) return -1;
 
 	// FIX THIS: make dpth give us the path in a uint8 array.
 	savepathstr_to_bytes(path, blk->savepath);
 	blk->got_save_path=1;
-	if(dpth_incr_sig(dpth)) return -1;
+	if(dpth_protocol2_incr_sig(dpth)) return -1;
 	return 0;
 }
 
@@ -768,7 +768,7 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 	  || !(blist=blist_alloc())
 	  || !(wbuf=iobuf_alloc())
 	  || !(dpth=dpth_alloc())
-	  || dpth_init(dpth,
+	  || dpth_protocol2_init(dpth,
 		sdirs->data, get_int(confs[OPT_MAX_STORAGE_SUBDIRS])))
 			goto end;
 

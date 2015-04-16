@@ -13,8 +13,6 @@
 #include "../../../src/prepend.h"
 #include "../../../src/server/protocol1/dpth.h"
 
-#define MAX_STORAGE_SUBDIRS	30000
-
 static const char *basepath="utest_dpth";
 
 static void assert_components(struct dpth *dpth,
@@ -77,7 +75,8 @@ START_TEST(test_incr)
 	{
 		struct dpth *dpth;
 		dpth=setup();
-		fail_unless(dpthl_init(dpth, basepath, MAX_STORAGE_SUBDIRS)==0);
+		fail_unless(dpth_protocol1_init(dpth,
+			basepath, MAX_STORAGE_SUBDIRS)==0);
 		dpth->prim=in[i].prim;
 		dpth->seco=in[i].seco;
 		dpth->tert=in[i].tert;
@@ -104,7 +103,7 @@ START_TEST(test_init)
 		dpth->prim=in[i].prim;
 		dpth->seco=in[i].seco;
 		dpth->tert=in[i].tert;
-		savepath=dpthl_mk(dpth, 0, CMD_ERROR);
+		savepath=dpth_protocol1_mk(dpth, 0, CMD_ERROR);
 		path=prepend_s(basepath, savepath);
 		fail_unless(build_path_w(path)==0);
 		// Create a file.
@@ -115,7 +114,8 @@ START_TEST(test_init)
 		// incremented appropriately.
 		dpth_free(&dpth);
 		fail_unless((dpth=dpth_alloc())!=NULL);
-		fail_unless(dpthl_init(dpth, basepath, MAX_STORAGE_SUBDIRS)
+		fail_unless(dpth_protocol1_init(dpth,
+			basepath, MAX_STORAGE_SUBDIRS)
 			==in[i].ret_expected);
 		assert_components(dpth,
 				in[i].prim_expected,

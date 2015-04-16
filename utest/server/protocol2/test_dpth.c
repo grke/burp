@@ -12,8 +12,6 @@
 #include "../../../src/server/protocol2/dpth.h"
 #include "../../../src/protocol2/blk.h"
 
-#define MAX_STORAGE_SUBDIRS	30000
-
 static const char *lockpath="utest_dpth";
 
 static void assert_path_components(struct dpth *dpth,
@@ -56,7 +54,7 @@ static int write_to_dpth(struct dpth *dpth, const char *savepathstr)
 	savepathstr_to_bytes(savepathstr, blk->savepath);
 	wbuf.buf=strdup_w("abc", __FUNCTION__);
 	wbuf.len=3;
-	ret=dpth_fwrite(dpth, &wbuf, blk);
+	ret=dpth_protocol2_fwrite(dpth, &wbuf, blk);
 	free_w(&wbuf.buf);
 	blk_free(&blk);
 	return ret;
@@ -73,8 +71,9 @@ static void do_fork(void)
 			struct dpth *dpth;
 			const char *savepath;
 			dpth=dpth_alloc();
-			dpth_init(dpth, lockpath, MAX_STORAGE_SUBDIRS);
-			savepath=dpth_mk(dpth);
+			dpth_protocol2_init(dpth,
+				lockpath, MAX_STORAGE_SUBDIRS);
+			savepath=dpth_protocol2_mk(dpth);
 			write_to_dpth(dpth, savepath);
 			sleep(2);
 			dpth_free(&dpth);
@@ -91,8 +90,9 @@ START_TEST(test_simple_lock)
 	struct dpth *dpth;
 	const char *savepath;
 	dpth=setup();
-	fail_unless(dpth_init(dpth, lockpath, MAX_STORAGE_SUBDIRS)==0);
-	savepath=dpth_mk(dpth);
+	fail_unless(dpth_protocol2_init(dpth,
+		lockpath, MAX_STORAGE_SUBDIRS)==0);
+	savepath=dpth_protocol2_mk(dpth);
 	ck_assert_str_eq(savepath, "0000/0000/0000/0000");
 	fail_unless(dpth->head->lock->status==GET_LOCK_GOT);
 	// Fill up the data file, so that the next call to dpth_incr_sig will
@@ -100,7 +100,7 @@ START_TEST(test_simple_lock)
 	while(dpth->sig<DATA_FILE_SIG_MAX-1)
 	{
 		fail_unless(write_to_dpth(dpth, savepath)==0);
-		fail_unless(dpth_incr_sig(dpth)==0);
+		fail_unless(dpth_protocol2_incr_sig(dpth)==0);
 	}
 
 	// Child will lock the next data file. So, the next call to dpth_mk
@@ -108,8 +108,8 @@ START_TEST(test_simple_lock)
 	do_fork();
 	sleep(1);
 
-	fail_unless(dpth_incr_sig(dpth)==0);
-	savepath=dpth_mk(dpth);
+	fail_unless(dpth_protocol2_incr_sig(dpth)==0);
+	savepath=dpth_protocol2_mk(dpth);
 	ck_assert_str_eq(savepath, "0000/0000/0002/0000");
 	assert_components(dpth, 0, 0, 2, 0);
 	fail_unless(dpth->head!=dpth->tail);
@@ -164,12 +164,13 @@ START_TEST(test_incr_sig)
         {
 		struct dpth *dpth;
 		dpth=setup();
-		fail_unless(dpth_init(dpth, lockpath, MAX_STORAGE_SUBDIRS)==0);
+		fail_unless(dpth_protocol2_init(dpth,
+			lockpath, MAX_STORAGE_SUBDIRS)==0);
 		dpth->prim=d[i].prim;
 		dpth->seco=d[i].seco;
 		dpth->tert=d[i].tert;
 		dpth->sig=d[i].sig;
-		fail_unless(dpth_incr_sig(dpth)==d[i].ret_expected);
+		fail_unless(dpth_protocol2_incr_sig(dpth)==d[i].ret_expected);
 		if(!d[i].ret_expected)
 			assert_components(dpth,
 				d[i].prim_expected,
@@ -222,7 +223,7 @@ START_TEST(test_init)
 		dpth->seco=in[i].seco;
 		dpth->tert=in[i].tert;
 		dpth->sig=0;
-		savepath=dpth_get_save_path(dpth);
+		savepath=dpth_protocol2_get_save_path(dpth);
 		// Truncate it to remove the sig part.
 		savepath[14]='\0';
 		path=prepend_s(lockpath, savepath);
@@ -235,8 +236,8 @@ START_TEST(test_init)
 		// incremented appropriately.
 		dpth_free(&dpth);
 		fail_unless((dpth=dpth_alloc())!=NULL);
-		fail_unless(dpth_init(dpth, lockpath, MAX_STORAGE_SUBDIRS)
-			==in[i].ret_expected);
+		fail_unless(dpth_protocol2_init(dpth,
+			lockpath, MAX_STORAGE_SUBDIRS)==in[i].ret_expected);
 		assert_path_components(dpth,
 			in[i].prim_expected,
 			in[i].seco_expected,

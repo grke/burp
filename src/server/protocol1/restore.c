@@ -19,7 +19,7 @@ static int inflate_or_link_oldfile(struct asfd *asfd, const char *oldpath,
 		return -1;
 	}
 
-	if(dpthl_is_compressed(compression, oldpath))
+	if(dpth_protocol1_is_compressed(compression, oldpath))
 	{
 		//logp("inflating...\n");
 
@@ -93,7 +93,7 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 		// It might have been stored uncompressed. Gzip it during
 		// the send. If the client knew what kind of file it would be
 		// receiving, this step could disappear.
-		else if(!dpthl_is_compressed(sb->compression,
+		else if(!dpth_protocol1_is_compressed(sb->compression,
 			sb->protocol1->datapth.buf))
 		{
 			ret=send_whole_file_gzl(asfd,
@@ -141,7 +141,7 @@ static int verify_file(struct asfd *asfd, struct sbuf *sb,
 	  || sb->path.cmd==CMD_ENC_METADATA
 	  || sb->path.cmd==CMD_EFS_FILE
 	  || sb->path.cmd==CMD_ENC_VSS
-	  || (!patches && !dpthl_is_compressed(sb->compression, best)))
+	  || (!patches && !dpth_protocol1_is_compressed(sb->compression, best)))
 	{
 		// If we did some patches or encryption, or the compression
 		// was turned off, the resulting file is not gzipped.

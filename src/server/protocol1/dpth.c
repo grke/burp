@@ -8,28 +8,28 @@
 
 #include <dirent.h>
 
-char *dpthl_mk(struct dpth *dpthl, int compression, enum cmd cmd)
+char *dpth_protocol1_mk(struct dpth *dpth, int compression, enum cmd cmd)
 {
 	static char path[32];
 	// File data.
 	snprintf(path, sizeof(path), "%04X/%04X/%04X%s",
-		dpthl->prim, dpthl->seco, dpthl->tert,
+		dpth->prim, dpth->seco, dpth->tert,
 		// Because of the way EFS works, it cannot be compressed.
 		(compression && cmd!=CMD_EFS_FILE)?".gz":"");
 	return path;
 }
 
-static char *dpthl_mk_prim(struct dpth *dpthl)
+static char *dpth_mk_prim(struct dpth *dpth)
 {
 	static char path[5];
-	snprintf(path, sizeof(path), "%04X", dpthl->prim);
+	snprintf(path, sizeof(path), "%04X", dpth->prim);
 	return path;
 }
 
-static char *dpthl_mk_seco(struct dpth *dpthl)
+static char *dpth_mk_seco(struct dpth *dpth)
 {
 	static char path[10];
-	snprintf(path, sizeof(path), "%04X/%04X", dpthl->prim, dpthl->seco);
+	snprintf(path, sizeof(path), "%04X/%04X", dpth->prim, dpth->seco);
 	return path;
 }
 
@@ -71,27 +71,27 @@ end:
 	return ret;
 }
 
-int dpthl_init(struct dpth *dpthl, const char *basepath,
+int dpth_protocol1_init(struct dpth *dpth, const char *basepath,
 	int max_storage_subdirs)
 {
 	int ret=0;
-	dpthl->prim=0;
-	dpthl->seco=0;
-	dpthl->tert=0;
-	dpthl->max_storage_subdirs=max_storage_subdirs;
+	dpth->prim=0;
+	dpth->seco=0;
+	dpth->tert=0;
+	dpth->max_storage_subdirs=max_storage_subdirs;
 
 	if((ret=get_next_comp(basepath,
-		NULL, &dpthl->prim))) goto end;
+		NULL, &dpth->prim))) goto end;
 
 	if((ret=get_next_comp(basepath,
-		dpthl_mk_prim(dpthl), &dpthl->seco))) goto end;
+		dpth_mk_prim(dpth), &dpth->seco))) goto end;
 
 	if((ret=get_next_comp(basepath,
-		dpthl_mk_seco(dpthl), &dpthl->tert))) goto end;
+		dpth_mk_seco(dpth), &dpth->tert))) goto end;
 
 	// At this point, we have the latest data file. Increment to get the
 	// next free one.
-	ret=dpth_incr(dpthl);
+	ret=dpth_incr(dpth);
 
 end:
 	switch(ret)
@@ -101,7 +101,7 @@ end:
 	}
 }
 
-int dpthl_set_from_string(struct dpth *dpthl, const char *datapath)
+int dpth_protocol1_set_from_string(struct dpth *dpth, const char *datapath)
 {
 	unsigned int a=0;
 	unsigned int b=0;
@@ -115,12 +115,12 @@ int dpthl_set_from_string(struct dpth *dpthl, const char *datapath)
 		return -1;
 
 	// Only set it if it is a higher one.
-	if(dpthl->prim > (int)a
-	  || dpthl->seco > (int)b
-	  || dpthl->tert > (int)c) return 0;
+	if(dpth->prim > (int)a
+	  || dpth->seco > (int)b
+	  || dpth->tert > (int)c) return 0;
 
-	dpthl->prim=a;
-	dpthl->seco=b;
-	dpthl->tert=c;
+	dpth->prim=a;
+	dpth->seco=b;
+	dpth->tert=c;
 	return 0;
 }

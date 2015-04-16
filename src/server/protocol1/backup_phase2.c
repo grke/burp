@@ -49,7 +49,7 @@ static int treedata(struct sbuf *sb, struct conf **cconfs)
 
 static char *set_new_datapth(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf **cconfs,
-	struct sbuf *sb, struct dpth *dpthl, int *istreedata)
+	struct sbuf *sb, struct dpth *dpth, int *istreedata)
 {
 	char *tmp=NULL;
 	char *rpath=NULL;
@@ -68,7 +68,7 @@ static char *set_new_datapth(struct asfd *asfd,
 	}
 	else
 	{
-		if(!(tmp=strdup_w(dpthl_mk(dpthl,
+		if(!(tmp=strdup_w(dpth_protocol1_mk(dpth,
 			get_int(cconfs[OPT_COMPRESSION]),
 			sb->path.cmd), __func__))) return NULL;
 	}
@@ -84,7 +84,7 @@ static char *set_new_datapth(struct asfd *asfd,
 
 static int start_to_receive_new_file(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf **cconfs,
-	struct sbuf *sb, struct dpth *dpthl)
+	struct sbuf *sb, struct dpth *dpth)
 {
 	char *rpath=NULL;
 	int istreedata=0;
@@ -92,7 +92,7 @@ static int start_to_receive_new_file(struct asfd *asfd,
 //logp("start to receive: %s\n", sb->path.buf);
 
 	if(!(rpath=set_new_datapth(asfd,
-		sdirs, cconfs, sb, dpthl, &istreedata)))
+		sdirs, cconfs, sb, dpth, &istreedata)))
 			return -1;
 	
 	if(!(sb->protocol1->fp=open_file(rpath, "wb")))
@@ -101,7 +101,7 @@ static int start_to_receive_new_file(struct asfd *asfd,
 		if(rpath) free(rpath);
 		return -1;
 	}
-	if(!istreedata) dpth_incr(dpthl);
+	if(!istreedata) dpth_incr(dpth);
 	if(rpath) free(rpath);
 	return 0; 
 }
@@ -124,7 +124,7 @@ static int process_changed_file(struct asfd *asfd,
 		log_out_of_memory(__func__);
 		return -1;
 	}
-	if(dpthl_is_compressed(cb->compression, curpath))
+	if(dpth_protocol1_is_compressed(cb->compression, curpath))
 		p1b->protocol1->sigzp=gzopen_file(curpath, "rb");
 	else
 		p1b->protocol1->sigfp=open_file(curpath, "rb");
@@ -206,7 +206,7 @@ static int changed_non_file(struct sbuf *p1b,
 }
 
 static int process_new(struct sdirs *sdirs, struct conf **cconfs,
-	struct sbuf *p1b, FILE *ucfp, struct dpth *dpthl)
+	struct sbuf *p1b, FILE *ucfp)
 {
 	if(!p1b->path.buf) return 0;
 	if(cmd_is_filedata(p1b->path.cmd))
@@ -244,10 +244,9 @@ static int process_unchanged_file(struct sbuf *p1b, struct sbuf *cb,
 }
 
 static int process_new_file(struct sdirs *sdirs, struct conf **cconfs,
-	struct sbuf *cb, struct sbuf *p1b, FILE *ucfp,
-	struct dpth *dpthl)
+	struct sbuf *cb, struct sbuf *p1b, FILE *ucfp)
 {
-	if(process_new(sdirs, cconfs, p1b, ucfp, dpthl))
+	if(process_new(sdirs, cconfs, p1b, ucfp))
 		return -1;
 	sbuf_free_content(cb);
 	return 1;
@@ -255,7 +254,7 @@ static int process_new_file(struct sdirs *sdirs, struct conf **cconfs,
 
 static int maybe_do_delta_stuff(struct asfd *asfd,
 	struct sdirs *sdirs, struct sbuf *cb, struct sbuf *p1b, FILE *ucfp,
-	struct dpth *dpthl, struct conf **cconfs)
+	struct conf **cconfs)
 {
 	int oldcompressed=0;
 	int compression=get_int(cconfs[OPT_COMPRESSION]);
@@ -263,8 +262,7 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 	// If the file type changed, I think it is time to back it up again
 	// (for example, EFS changing to normal file, or back again).
 	if(cb->path.cmd!=p1b->path.cmd)
-		return process_new_file(sdirs, cconfs, cb, p1b, ucfp,
-			dpthl);
+		return process_new_file(sdirs, cconfs, cb, p1b, ucfp);
 
 	// mtime is the actual file data.
 	// ctime is the attributes or meta data.
@@ -299,8 +297,7 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 		  || p1b->path.cmd==CMD_ENC_VSS_T
 		  || cb->path.cmd==CMD_EFS_FILE
 		  || p1b->path.cmd==CMD_EFS_FILE)
-			return process_new_file(sdirs, cconfs, cb,
-				p1b, ucfp, dpthl);
+			return process_new_file(sdirs, cconfs, cb, p1b, ucfp);
 		// On Windows, we have to back up the whole file if ctime
 		// changed, otherwise things like permission changes do not get
 		// noticed. So, in that case, fall through to the changed stuff
@@ -334,17 +331,16 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 	  || p1b->path.cmd==CMD_VSS_T
 	  || cb->path.cmd==CMD_ENC_VSS_T
 	  || p1b->path.cmd==CMD_ENC_VSS_T)
-		return process_new_file(sdirs, cconfs, cb, p1b, ucfp,
-			dpthl);
+		return process_new_file(sdirs, cconfs, cb, p1b, ucfp);
 
 	// Get new files if they have switched between compression on or off.
 	if(cb->protocol1->datapth.buf
-	  && dpthl_is_compressed(cb->compression, cb->protocol1->datapth.buf))
+	  && dpth_protocol1_is_compressed(cb->compression,
+	    cb->protocol1->datapth.buf))
 		oldcompressed=1;
 	if( ( oldcompressed && !compression)
 	 || (!oldcompressed &&  compression))
-		return process_new_file(sdirs, cconfs, cb, p1b, ucfp,
-			dpthl);
+		return process_new_file(sdirs, cconfs, cb, p1b, ucfp);
 
 	// Otherwise, do the delta stuff (if possible).
 	if(cmd_is_filedata(p1b->path.cmd))
@@ -364,17 +360,17 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 // return 1 to say that a file was processed
 static int maybe_process_file(struct asfd *asfd,
 	struct sdirs *sdirs, struct sbuf *cb, struct sbuf *p1b, FILE *ucfp,
-	struct dpth *dpthl, struct conf **cconfs)
+	struct conf **cconfs)
 {
 	switch(sbuf_pathcmp(cb, p1b))
 	{
 		case 0:
 			return maybe_do_delta_stuff(asfd, sdirs, cb, p1b,
-				ucfp, dpthl, cconfs);
+				ucfp, cconfs);
 		case 1:
 			//logp("ahead: %s\n", p1b->path);
 			// ahead - need to get the whole file
-			if(process_new(sdirs, cconfs, p1b, ucfp, dpthl))
+			if(process_new(sdirs, cconfs, p1b, ucfp))
 				return -1;
 			// Do not free.
 			return 1;
@@ -577,7 +573,7 @@ static int deal_with_receive_append(struct asfd *asfd, struct sbuf *rb,
 
 static int deal_with_filedata(struct asfd *asfd,
 	struct sdirs *sdirs, struct sbuf *rb,
-	struct iobuf *rbuf, struct dpth *dpthl, struct conf **cconfs)
+	struct iobuf *rbuf, struct dpth *dpth, struct conf **cconfs)
 {
 	iobuf_move(&rb->path, rbuf);
 
@@ -593,7 +589,7 @@ static int deal_with_filedata(struct asfd *asfd,
 	}
 
 	// Receiving a whole new file.
-	if(start_to_receive_new_file(asfd, sdirs, cconfs, rb, dpthl))
+	if(start_to_receive_new_file(asfd, sdirs, cconfs, rb, dpth))
 	{
 		logp("error in start_to_receive_new_file\n");
 		return -1;
@@ -605,7 +601,7 @@ static int deal_with_filedata(struct asfd *asfd,
 static int do_stuff_to_receive(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf **cconfs,
 	struct sbuf *rb, FILE *chfp,
-	struct dpth *dpthl, char **last_requested)
+	struct dpth *dpth, char **last_requested)
 {
 	struct iobuf *rbuf=asfd->rbuf;
 
@@ -674,7 +670,7 @@ static int do_stuff_to_receive(struct asfd *asfd,
 	}
 	if(cmd_is_filedata(rbuf->cmd))
 	{
-		if(deal_with_filedata(asfd, sdirs, rb, rbuf, dpthl, cconfs))
+		if(deal_with_filedata(asfd, sdirs, rb, rbuf, dpth, cconfs))
 			goto error;
 		return 0;
 	}
@@ -771,7 +767,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 {
 	int ret=0;
 	gzFile p1zp=NULL;
-	struct dpth *dpthl=NULL;
+	struct dpth *dpth=NULL;
 	char *deltmppath=NULL;
 	char *last_requested=NULL;
 	// Where to write changed data.
@@ -787,8 +783,8 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 
 	logp("Begin phase2 (receive file data)\n");
 
-	if(!(dpthl=dpth_alloc())
-	  || dpthl_init(dpthl, sdirs->currentdata,
+	if(!(dpth=dpth_alloc())
+	  || dpth_protocol1_init(dpth, sdirs->currentdata,
 		get_int(cconfs[OPT_MAX_STORAGE_SUBDIRS])))
 			goto error;
 
@@ -812,7 +808,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 	if(!(p1zp=gzopen_file(sdirs->phase1data, "rb")))
 		goto error;
 
-	if(resume && do_resume(p1zp, sdirs, dpthl, cconfs))
+	if(resume && do_resume(p1zp, sdirs, dpth, cconfs))
 		goto error;
 
 	// Unchanged and changed should now be truncated correctly, we just
@@ -833,7 +829,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 		if(last_requested || !p1zp || asfd->writebuflen)
 		{
 			switch(do_stuff_to_receive(asfd, sdirs,
-				cconfs, rb, chfp, dpthl, &last_requested))
+				cconfs, rb, chfp, dpth, &last_requested))
 			{
 				case 0: break;
 				case 1: goto end; // Finished ok.
@@ -866,7 +862,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 		if(!cmanfp)
 		{
 			// No old manifest, need to ask for a new file.
-			if(process_new(sdirs, cconfs, p1b, ucfp, dpthl))
+			if(process_new(sdirs, cconfs, p1b, ucfp))
 				goto error;
 			continue;
 		}
@@ -876,7 +872,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 		// Might already have it, or be ahead in the old
 		// manifest.
 		if(cb->path.buf) switch(maybe_process_file(asfd,
-			sdirs, cb, p1b, ucfp, dpthl, cconfs))
+			sdirs, cb, p1b, ucfp, cconfs))
 		{
 			case 0: break;
 			case 1: continue;
@@ -892,12 +888,12 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 				case 0: break;
 				case 1: gzclose_fp(&cmanfp);
 					if(process_new(sdirs, cconfs, p1b,
-						ucfp, dpthl)) goto error;
+						ucfp)) goto error;
 					continue;
 				case -1: goto error;
 			}
 			switch(maybe_process_file(asfd, sdirs,
-				cb, p1b, ucfp, dpthl, cconfs))
+				cb, p1b, ucfp, cconfs))
 			{
 				case 0: continue;
 				case 1: break;
@@ -926,7 +922,7 @@ end:
 	sbuf_free(&rb);
 	gzclose_fp(&p1zp);
 	gzclose_fp(&cmanfp);
-	dpth_free(&dpthl);
+	dpth_free(&dpth);
 	if(!ret) unlink(sdirs->phase1data);
 
 	logp("End phase2 (receive file data)\n");

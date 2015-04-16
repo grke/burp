@@ -1,6 +1,9 @@
 #ifndef __DPTH_H
 #define __DPTH_H
 
+// ext3 maximum number of subdirs is 32000, so leave a little room.
+#define MAX_STORAGE_SUBDIRS	30000
+
 // Wrapper around the lock stuff, so that we can have a list of them and
 // also keep the save_path without the leading directories.
 struct dpth_lock

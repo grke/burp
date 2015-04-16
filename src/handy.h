@@ -31,7 +31,7 @@ extern char *comp_level(struct conf **confs);
 extern int chuser_and_or_chgrp(struct conf **confs);
 extern const char *getdatestr(time_t t);
 extern const char *time_taken(time_t d);
-extern int dpthl_is_compressed(int compressed, const char *datapath);
+extern int dpth_protocol1_is_compressed(int compressed, const char *datapath);
 #ifndef HAVE_WIN32
 extern void setup_signal(int sig, void handler(int sig));
 #endif

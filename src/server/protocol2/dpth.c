@@ -76,7 +76,7 @@ printf("tail: %s\n", dpth->tail->save_path);
 	return 0;
 }
 
-char *dpth_get_save_path(struct dpth *dpth)
+char *dpth_protocol2_get_save_path(struct dpth *dpth)
 {
 	static char save_path[32];
 	snprintf(save_path, sizeof(save_path), "%04X/%04X/%04X/%04X",
@@ -84,13 +84,13 @@ char *dpth_get_save_path(struct dpth *dpth)
 	return save_path;
 }
 
-char *dpth_mk(struct dpth *dpth)
+char *dpth_protocol2_mk(struct dpth *dpth)
 {
 	static char *save_path=NULL;
 	static struct lock *lock=NULL;
 	while(1)
 	{
-		save_path=dpth_get_save_path(dpth);
+		save_path=dpth_protocol2_get_save_path(dpth);
 		if(!dpth->need_data_lock) return save_path;
 
 		if(!lock && !(lock=lock_alloc())) goto error;
@@ -143,7 +143,7 @@ end:
 	return ret;
 }
 
-int dpth_incr_sig(struct dpth *dpth)
+int dpth_protocol2_incr_sig(struct dpth *dpth)
 {
 	if(++dpth->sig<DATA_FILE_SIG_MAX) return 0;
 	dpth->sig=0;
@@ -151,7 +151,7 @@ int dpth_incr_sig(struct dpth *dpth)
 	return dpth_incr(dpth);
 }
 
-int dpth_init(struct dpth *dpth, const char *base_path,
+int dpth_protocol2_init(struct dpth *dpth, const char *base_path,
 	int max_storage_subdirs)
 {
 	int max;
@@ -266,7 +266,8 @@ end:
 	return fp;
 }
 
-int dpth_fwrite(struct dpth *dpth, struct iobuf *iobuf, struct blk *blk)
+int dpth_protocol2_fwrite(struct dpth *dpth,
+	struct iobuf *iobuf, struct blk *blk)
 {
 	//printf("want to write: %s\n", blk->save_path);
 

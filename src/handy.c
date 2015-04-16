@@ -454,7 +454,7 @@ const char *time_taken(time_t d)
 }
 
 // Not in dpth.c so that Windows client can see it.
-int dpthl_is_compressed(int compressed, const char *datapath)
+int dpth_protocol1_is_compressed(int compressed, const char *datapath)
 {
 	const char *dp=NULL;
 

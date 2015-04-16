@@ -6,6 +6,7 @@
 #include "cntr.h"
 #include "strlist.h"
 #include "prepend.h"
+#include "server/dpth.h"
 
 #include <assert.h>
 
@@ -396,8 +397,7 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_MAX_HARDLINKS:
 	  return sc_int(c[o], 10000, 0, "max_hardlinks");
 	case OPT_MAX_STORAGE_SUBDIRS:
-	  // ext3 maximum number of subdirs is 32000, so leave a little room.
-	  return sc_int(c[o], 30000, 0, "max_storage_subdirs");
+	  return sc_int(c[o], MAX_STORAGE_SUBDIRS, 0, "max_storage_subdirs");
 	case OPT_DAEMON:
 	  return sc_int(c[o], 1, 0, "daemon");
 	case OPT_CA_CONF:

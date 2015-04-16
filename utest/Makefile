@@ -63,5 +63,5 @@ test: Makefile $(OBJS) $(BURP_OBJS)
 	@echo OK
 
 clean:
-	rm -f test *.o utest_lockfile server/protocol2/*.o
+	rm -f test *.o utest_lockfile server/protocol1/*.o server/protocol2/*.o
 	rm -rf utest_dpth

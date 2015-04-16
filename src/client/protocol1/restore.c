@@ -14,7 +14,7 @@ static int do_restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 
 	if(sbuf_is_encrypted(sb))
 		encpassword=get_string(confs[OPT_ENCRYPTION_PASSWORD]);
-	enccompressed=dpthl_is_compressed(sb->compression,
+	enccompressed=dpth_protocol1_is_compressed(sb->compression,
 		sb->protocol1->datapth.buf);
 /*
 	printf("%s \n", fname);

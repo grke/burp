@@ -24,7 +24,7 @@ int do_patch(struct asfd *asfd, const char *dst, const char *del,
 
 	if(!(dstp=open_file(dst, "rb"))) goto end;
 
-	if(dpthl_is_compressed(compression, del))
+	if(dpth_protocol1_is_compressed(compression, del))
 		delzp=gzopen_file(del, "rb");
 	else
 		delfp=open_file(del, "rb");
@@ -71,7 +71,7 @@ static int make_rev_sig(const char *dst, const char *sig, const char *endfile,
 	FILE *sigp=NULL;
 //logp("make rev sig: %s %s\n", dst, sig);
 
-	if(dpthl_is_compressed(compression, dst))
+	if(dpth_protocol1_is_compressed(compression, dst))
 		dstzp=gzopen_file(dst, "rb");
 	else
 		dstfp=open_file(dst, "rb");
@@ -116,7 +116,7 @@ static int make_rev_delta(const char *src, const char *sig, const char *del,
 
 //logp("make rev deltb: %s %s %s\n", src, sig, del);
 
-	if(dpthl_is_compressed(compression, src))
+	if(dpth_protocol1_is_compressed(compression, src))
 		srczp=gzopen_file(src, "rb");
 	else
 		srcfp=open_file(src, "rb");
@@ -230,7 +230,7 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath,
 		return -1;
 	}
 
-	if(dpthl_is_compressed(compression, oldpath))
+	if(dpth_protocol1_is_compressed(compression, oldpath))
 		return inflate_oldfile(oldpath, infpath, &statp, cconfs);
 
 	// If it was not a compressed file, just hard link it.

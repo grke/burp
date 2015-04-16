@@ -3,11 +3,10 @@
 
 #include "../dpth.h"
 
-extern int dpthl_init(struct dpth *dpthl,
-	const char *basepath, struct conf **cconfs);
+extern int dpthl_init(struct dpth *dpthl, const char *basepath,
+	int max_storage_subdirs);
 
-extern int dpthl_incr(struct dpth *dpthl, struct conf **cconfs);
 extern int dpthl_set_from_string(struct dpth *dpthl, const char *datapath);
-extern char *dpthl_mk(struct dpth *dpthl, struct conf **cconfs, enum cmd cmd);
+extern char *dpthl_mk(struct dpth *dpthl, int compression, enum cmd cmd);
 
 #endif

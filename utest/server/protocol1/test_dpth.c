@@ -13,18 +13,9 @@
 #include "../../../src/prepend.h"
 #include "../../../src/server/protocol1/dpth.h"
 
-static const char *basepath="utest_dpth";
+#define MAX_STORAGE_SUBDIRS	30000
 
-static struct conf **setup_confs(void)
-{
-	struct conf **confs;
-	confs=confs_alloc();
-	confs_init(confs);
-	fail_unless(!conf_load_global_only_buf(MIN_SERVER_CONF, confs));
-	set_string(confs[OPT_CNAME], "utestclient");
-	set_e_protocol(confs[OPT_PROTOCOL], PROTO_1);
-	return confs;
-}
+static const char *basepath="utest_dpth";
 
 static void assert_components(struct dpth *dpth,
 	int prim, int seco, int tert)
@@ -85,19 +76,17 @@ START_TEST(test_incr)
 	FOREACH(in)
 	{
 		struct dpth *dpth;
-		struct conf **confs;
-		confs=setup_confs();
 		dpth=setup();
+		fail_unless(dpthl_init(dpth, basepath, MAX_STORAGE_SUBDIRS)==0);
 		dpth->prim=in[i].prim;
 		dpth->seco=in[i].seco;
 		dpth->tert=in[i].tert;
-		fail_unless(dpthl_incr(dpth, confs)==in[i].ret_expected);
+		fail_unless(dpth_incr(dpth)==in[i].ret_expected);
 		if(!in[i].ret_expected)
 			assert_components(dpth,
 				in[i].prim_expected,
 				in[i].seco_expected,
 				in[i].tert_expected);
-		confs_free(&confs);
 		tear_down(&dpth);
 	}
 }
@@ -111,13 +100,11 @@ START_TEST(test_init)
 		char *path=NULL;
 		struct dpth *dpth;
 		char *savepath;
-		struct conf **confs;
-		confs=setup_confs();
 		dpth=setup();
 		dpth->prim=in[i].prim;
 		dpth->seco=in[i].seco;
 		dpth->tert=in[i].tert;
-		savepath=dpthl_mk(dpth, confs, CMD_ERROR);
+		savepath=dpthl_mk(dpth, 0, CMD_ERROR);
 		path=prepend_s(basepath, savepath);
 		fail_unless(build_path_w(path)==0);
 		// Create a file.
@@ -128,7 +115,7 @@ START_TEST(test_init)
 		// incremented appropriately.
 		dpth_free(&dpth);
 		fail_unless((dpth=dpth_alloc())!=NULL);
-		fail_unless(dpthl_init(dpth, basepath, confs)
+		fail_unless(dpthl_init(dpth, basepath, MAX_STORAGE_SUBDIRS)
 			==in[i].ret_expected);
 		assert_components(dpth,
 				in[i].prim_expected,
@@ -136,7 +123,6 @@ START_TEST(test_init)
 				in[i].tert_expected);
 
 		free_w(&path);
-		confs_free(&confs);
 		tear_down(&dpth);
 	}
 }

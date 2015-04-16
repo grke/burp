@@ -768,8 +768,9 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 	  || !(blist=blist_alloc())
 	  || !(wbuf=iobuf_alloc())
 	  || !(dpth=dpth_alloc())
-	  || dpth_init(dpth, sdirs->data))
-		goto end;
+	  || dpth_init(dpth,
+		sdirs->data, get_int(confs[OPT_MAX_STORAGE_SUBDIRS])))
+			goto end;
 
 	// The phase1 manifest looks the same as a protocol1 one.
 	manio_set_protocol(p1manio, PROTO_1);

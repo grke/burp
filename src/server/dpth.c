@@ -2,6 +2,7 @@
 #include "../alloc.h"
 #include "../fsops.h"
 #include "../lock.h"
+#include "../log.h"
 #include "dpth.h"
 
 struct dpth *dpth_alloc(void)
@@ -43,4 +44,30 @@ int dpth_release_all(struct dpth *dpth)
 	while(dpth->head)
 		if(dpth_release_and_move_to_next_in_list(dpth)) ret=-1;
 	return ret;
+}
+
+#define MAX_FILES_PER_DIR       0xFFFF
+
+static int incr(uint16_t *component, uint16_t max)
+{
+	if((*component)++<max) return 1;
+	*component=0;
+	return 0;
+}
+
+// Three levels with 65535 entries each gives
+// 65535^3 = 281,462,092,005,375 data entries
+// recommend a filesystem with lots of inodes?
+// Hmm, but ext3 only allows 32000 subdirs, although that many files are OK.
+int dpth_incr(struct dpth *dpth)
+{
+	if(incr(&dpth->tert, MAX_FILES_PER_DIR)
+	  || incr(&dpth->seco, dpth->max_storage_subdirs)
+	  || incr(&dpth->prim, dpth->max_storage_subdirs))
+		return 0;
+	logp("No free data file entries out of the %d*%d*%d available!\n",
+		MAX_FILES_PER_DIR,
+		dpth->max_storage_subdirs, dpth->max_storage_subdirs);
+	logp("Maybe move the storage directory aside and start again.\n");
+	return -1;
 }

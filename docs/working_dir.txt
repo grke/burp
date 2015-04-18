@@ -50,9 +50,11 @@ Note also that if the backup was interrupted in phase 1 (file system scan), the
 recovery method will automatically switch to 'delete'. 
 
 
-The safest working_dir_recovery_method to choose is 'delete', which is also the
-default. To understand why, consider what burp must do when you choose the
-other options.
+Setting 'delete' is the safest option (and also the default), because it means
+that an entire backup run has to finish uninterrupted for a backup to be
+considered complete. If you want to do Windows bare metal restores, you should
+choose this option so that you don't end up with a mixture of files from
+different VSS snapshots.
 
 For 'use', burp will just treat the files that it has managed to back up as
 a complete backup, and truncate the manifest to the last complete file that it
@@ -71,16 +73,9 @@ If you are using Windows (or some other OS that similarly generates browsable
 file system snapshots for backing up), it will mean that files have been copied
 from more than one snapshot, so the restore will be inconsistent if you are
 considering a bare metal restore.
-Additionally, there are occasional bugs reported in the resume code, which can
-be avoided if you use 'delete'.
-Personally, I (Graham Keeling) use 'resume' for my backups and have had no
-problems.
-
-
-Setting 'delete' is the safest option, because it means that an entire backup
-run has to finish uninterrupted for a backup to be considered complete. If  
-you want to do Windows bare metal restores, you should choose this option so
-that you don't end up with a mixture of files from different VSS snapshots.
+Additionally, there are occasionally bugs reported in the resume code, whic 
+can be avoided if you use 'delete'.
+Personally, I use 'resume' for my backups and have had no problems.
 
 
 Some people have a lot of data, and need to give an initial backup extra help

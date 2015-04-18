@@ -14,6 +14,7 @@
   * Fix Windows VSS output so that it prints the writer names at the start of
     backups.
   * More unit tests.
+  * Add some documentation about working_dir_recovery_method.
 
 2015-02-28 Changes in burp-2.0.16:
   * Add ability to do 'burp -a l -b c' and list the files in the current

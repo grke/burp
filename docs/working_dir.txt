@@ -1,0 +1,88 @@
+Working directory and recovery methods
+--------------------------------------
+
+Whilst a backup is taking place, the server will create a directory in the
+storage area for the client with a number and a timestamp. For example:
+
+/var/spool/burp/<client>/0000027 2015-04-12 01:24:29
+
+During backup phases 1 (file system scan) and 2 (send actual data), there will
+be a symlink pointing to the directory called 'working':
+
+/var/spool/burp/<client>/working -> 0000027 2015-04-12 01:24:29
+
+During backup phases 3 (manifest generation) and 4 (shuffling), the symlink
+will be renamed to 'finishing':
+
+/var/spool/burp/<client>/finishing -> 0000027 2015-04-12 01:24:29
+
+When the backup is complete, the symlink will be renamed to 'current':
+
+/var/spool/burp/<client>/current -> 0000027 2015-04-12 01:24:29
+
+
+If there is some error that happens during the backup and the backup is
+interrupted, the burp server needs to decide what happens next. The behaviour
+of what happens next is triggered the next time that the client contacts the
+server.
+
+If the interruption left a 'finishing' symlink behind, the server will attempt
+to carry on and complete the backup. Part of phase 4 may involve operations
+that alter the immediately previous backup (it may need to convert its files
+into reverse deltas), so once it is 'finishing', burp can only try to move
+forwards. Note that when the backup is 'finishing', no more data is required
+from the client.
+
+If the interruption left a 'working' symlink behind, the server will check the
+'working_dir_recovery_method' server-side option to decide what to do next.
+There are three choices:
+
+ delete: Just delete the old working directory.
+
+ use: Convert the working directory into a complete backup.
+
+ resume: Simply continue the previous backup from the point at which it
+         left off. NOTE: If the client has changed its include/exclude
+         configuration since the backup was interrupted, the recovery method
+         will automatically switch to 'delete'.
+
+Note also that if the backup was interrupted in phase 1 (file system scan), the
+recovery method will automatically switch to 'delete'. 
+
+
+The safest working_dir_recovery_method to choose is 'delete', which is also the
+default. To understand why, consider what burp must do when you choose the
+other options.
+
+For 'use', burp will just treat the files that it has managed to back up as
+a complete backup, and truncate the manifest to the last complete file that it
+got. It will then not differentiate between this and fully complete (non-
+recovered) backups in the future - you may set 'keep' values that will result
+in a recovered backup eventually being kept over a fully complete backup. Also,
+since the most recent backup has files missing that may have been present in
+the immediately previous backup, the very next backup will decide that it needs
+to back them up again. For these reasons, I believe that 'use' is not a
+practical choice and may be removed in some future version.
+
+For 'resume', burp will use the working directory's original client file
+system scan in order to request the remaining files that it needs to finish
+the backup.
+If you are using Windows (or some other OS that similarly generates browsable
+file system snapshots for backing up), it will mean that files have been copied
+from more than one snapshot, so the restore will be inconsistent if you are
+considering a bare metal restore.
+Additionally, there are occasional bugs reported in the resume code, which can
+be avoided if you use 'delete'.
+Personally, I (Graham Keeling) use 'resume' for my backups and have had no
+problems.
+
+
+Setting 'delete' is the safest option, because it means that an entire backup
+run has to finish uninterrupted for a backup to be considered complete. If  
+you want to do Windows bare metal restores, you should choose this option so
+that you don't end up with a mixture of files from different VSS snapshots.
+
+
+Some people have a lot of data, and need to give an initial backup extra help
+to complete. They might set 'resume' until they have that initial backup, and
+switch to 'delete' after that.

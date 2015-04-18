@@ -16,6 +16,8 @@
 <li><A HREF="docs/shuffling.html">Shuffling, hardlinked_archive, librsync</A> -
 	An explanation about what happens on the server when the client has
 	disconnected after a backup.
+<li><A HREF="docs/working_dir.html">Working directory and recovery methods</A> -
+	An explanation of the working_dir_recovery_method configuration option.
 <li><A HREF="docs/manpage.html">Man page</A> -
 	The man page describes all of the available options and more. This is
 	where you can find the most detailed information about burp.

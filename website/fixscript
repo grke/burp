@@ -52,6 +52,7 @@ debugging=content/docs/debugging.content
 securitymodels=content/docs/security-models.content
 autoupgrade=content/docs/autoupgrade.content
 timerscript=content/docs/timer_script.content
+workingdir=content/docs/working_dir.content
 burp_ca=content/docs/burp_ca.content
 serverbasics=content/docs/server-basics.content
 baremetal=content/docs/baremetal-windows.content
@@ -68,6 +69,7 @@ generic_page "$debugging" "../docs/debug.txt"
 generic_page "$securitymodels" "../docs/security-models.txt"
 generic_page "$autoupgrade" "../docs/autoupgrade.txt"
 generic_page "$timerscript" "../docs/timer_script.txt"
+generic_page "$workingdir" "../docs/working_dir.txt"
 generic_page "$burp_ca" "../docs/burp_ca.txt"
 generic_page "$serverbasics" "../docs/server-basics.txt"
 generic_page "$baremetal" "../docs/baremetal-windows7and8.txt"

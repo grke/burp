@@ -200,38 +200,10 @@ Q. Can you use librsync to do rsync feature X?
 </FONT>
 </P>
 
-<HR>
-
 <P>
 <FONT COLOR="#000000">
 A. No, rsync has nothing to do with librsync other than them both using the
 same algorithm. Put another way, rsync does not use librsync. 
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#000000">
-Q. Do I really need to set a different password for each client in each
-clientconfdir file?
-</FONT>
-</P>
-
-<P>
-<FONT COLOR="#000000">
-A. The password in the clientconfdir file is really to ensure that the first
-contact when you add a new client is from the client that you expect (because
-you need to set a matching password in the client burp.conf). After
-the first contact, the server and client will exchange SSL certificates, and
-from that point, the SSL certificates will prove that the peers are still who
-they claim to be. Although, the clientconfdir password will still need to
-match or the server will reject the client anyway. Just think of the passwords
-as 'first contact' passwords.
-<br>
-There is also the option of setting 'password_check = 0' on the server, which
-will disable the checking of passwords completely.
-<br>
-You should take into account the environment that your server is running in,
-and then make your choice appropriately.
 </FONT>
 </P>
 

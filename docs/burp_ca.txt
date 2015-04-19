@@ -11,6 +11,18 @@ and given back. If a different, second client, happens to connect with the
 same client name and password, it will be rejected because it doesn't have
 a matching certificate.
 
+The clientconfdir passwords can now be thought of as being 'first contact'
+passwords, as after that, SSL will provide assurance that the peers are who
+they claim to be (although the server will still check the passwords too).
+
+There is the option of setting 'password_check = 0' on the server, which
+will disable the checking of passwords completely (but won't disable the
+checking of SSL certificates).
+
+Of course, you should take into account the environment that your server and
+clients are running in before making the choice to either disable the
+passwords, leave them all the same, or make them all different.
+
 
 Server
 ------

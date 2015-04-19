@@ -684,11 +684,6 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 		ret=-1;
 		goto end;
 	}
-	if(set_logfp(logpath, cconf))
-	{
-		ret=-1;
-		goto end;
-	}
 
 	logp("found old working directory: %s\n", fullrealwork);
 	logp("working_dir_recovery_method: %s\n", wdrm);
@@ -714,6 +709,14 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 		unlink(working); // get rid of the symlink.
 		goto end;
 	}
+
+	// Since we are not deleting the directory, we can log to it.
+	if(set_logfp(logpath, cconf))
+	{
+		ret=-1;
+		goto end;
+	}
+
 	if(!strcmp(wdrm, "resume"))
 	{
 		if(cconf->restore_client)

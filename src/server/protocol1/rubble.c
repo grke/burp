@@ -165,6 +165,14 @@ static int recover_finishing(struct async *as,
 	return 0;
 }
 
+static void log_recovery_method(struct sdirs *sdirs,
+	enum recovery_method recovery_method)
+{
+	logp("found old working directory: %s\n", sdirs->rworking);
+	logp("working_dir_recovery_method: %s\n",
+		recovery_method_to_str(recovery_method));
+}
+
 static int recover_working(struct async *as,
 	struct sdirs *sdirs, const char *incexc,
 	int *resume, struct conf **cconfs)
@@ -182,15 +190,7 @@ static int recover_working(struct async *as,
 	if(get_fullrealwork(as->asfd, sdirs, cconfs)) goto end;
 	if(!sdirs->rworking) goto end;
 
-	// We have found an old working directory - open the log inside
-	// for appending.
-	if(!(logpath=prepend_s(sdirs->rworking, "log"))
-	  || set_logfp(logpath, cconfs))
-		goto end;
-
-	logp("found old working directory: %s\n", sdirs->rworking);
-	logp("working_dir_recovery_method: %s\n",
-		recovery_method_to_str(recovery_method));
+	log_recovery_method(sdirs, recovery_method);
 
 	if(!(phase1datatmp=get_tmp_filename(sdirs->phase1data)))
 		goto end;
@@ -209,10 +209,22 @@ static int recover_working(struct async *as,
 		recovery_method=RECOVERY_METHOD_DELETE;
 	}
 
+	if(recovery_method==RECOVERY_METHOD_DELETE)
+	{
+		ret=working_delete(as, sdirs);
+		goto end;
+	}
+
+	// We are not deleting the old working directory - open the log inside
+	// for appending.
+	if(!(logpath=prepend_s(sdirs->rworking, "log"))
+	  || set_logfp(logpath, cconfs))
+		goto end;
+
 	switch(recovery_method)
 	{
 		case RECOVERY_METHOD_DELETE:
-			ret=working_delete(as, sdirs);
+			// Dealt with above.
 			break;
 		case RECOVERY_METHOD_USE:
 			ret=working_use(as, sdirs, incexc, resume, cconfs);

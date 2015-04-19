@@ -227,8 +227,11 @@ they claim to be. Although, the clientconfdir password will still need to
 match or the server will reject the client anyway. Just think of the passwords
 as 'first contact' passwords.
 <br>
+There is also the option of setting 'password_check = 0' on the server, which
+will disable the checking of passwords completely.
+<br>
 You should take into account the environment that your server is running in,
-and then make your choice of passwords appropriately.
+and then make your choice appropriately.
 </FONT>
 </P>
 

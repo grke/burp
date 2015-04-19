@@ -608,6 +608,12 @@ end:
 	return ret;
 }
 
+static void log_recovery_method(const char *fullrealwork, const char *wdrm)
+{
+	logp("found old working directory: %s\n", fullrealwork);
+	logp("working_dir_recovery_method: %s\n", wdrm);
+}
+
 static int check_for_rubble(const char *basedir, const char *current, const char *working, const char *currentdata, const char *finishing, struct config *cconf, const char *phase1data, const char *phase2data, const char *unchangeddata, const char *manifest, const char *client, struct cntr *p1cntr, struct cntr *cntr, int *resume, const char *incexc)
 {
 	int ret=0;
@@ -677,16 +683,7 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 	if(!(phase1datatmp=get_tmp_filename(phase1data)))
 		goto end;
 
-	// We have found an old working directory - open the log inside
-	// for appending.
-	if(!(logpath=prepend_s(fullrealwork, "log", strlen("log"))))
-	{
-		ret=-1;
-		goto end;
-	}
-
-	logp("found old working directory: %s\n", fullrealwork);
-	logp("working_dir_recovery_method: %s\n", wdrm);
+	log_recovery_method(fullrealwork, wdrm);
 
 	if(!lstat(phase1datatmp, &statp))
 	{
@@ -711,11 +708,15 @@ static int check_for_rubble(const char *basedir, const char *current, const char
 	}
 
 	// Since we are not deleting the directory, we can log to it.
-	if(set_logfp(logpath, cconf))
+	if(!(logpath=prepend_s(fullrealwork, "log", strlen("log")))
+	  || set_logfp(logpath, cconf))
 	{
 		ret=-1;
 		goto end;
 	}
+
+	// Log again for the sake of the log inside the working directory.
+	log_recovery_method(fullrealwork, wdrm);
 
 	if(!strcmp(wdrm, "resume"))
 	{

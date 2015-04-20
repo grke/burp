@@ -38,7 +38,7 @@ ssl_dhfile = /etc/burp/dhfile.pem
 ssl_cert_ca = /etc/burp/ssl_cert_ca.pem
 ssl_cert = /etc/burp/ssl_cert-server.pem
 ssl_key = /etc/burp/ssl_cert-server.key
-ssl_key_password = password
+ssl_key_password = password (only needed if you have an encrypted certificate)
 
 If you do not want the server to automate the CA stuff, do not set ca_conf.
 
@@ -73,7 +73,7 @@ Client SSL options:
 ssl_cert_ca = /etc/burp/ssl_cert_ca.pem
 ssl_cert = /etc/burp/ssl_cert-client.pem
 ssl_key = /etc/burp/ssl_cert-client.key
-ssl_key_password = password
+ssl_key_password = password (only needed if you have an encrypted certificate)
 ssl_peer_cn = burpserver
 
 If you do not want the client to automate the CA stuff, do not set ca_burp_ca.

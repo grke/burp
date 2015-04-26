@@ -128,6 +128,26 @@ START_TEST(test_init)
 }
 END_TEST
 
+static void assert_mk(struct dpth *dpth, int compression, enum cmd cmd,
+	const char *expected)
+{
+	ck_assert_str_eq(dpth_protocol1_mk(dpth, compression, cmd), expected);
+}
+
+START_TEST(test_mk)
+{
+	struct dpth *dpth=setup();
+	dpth->prim=9;
+	dpth->seco=9;
+	dpth->tert=9;
+	assert_mk(dpth, 0, CMD_FILE, "0009/0009/0009");
+	assert_mk(dpth, 5, CMD_FILE, "0009/0009/0009.gz");
+	assert_mk(dpth, 0, CMD_EFS_FILE, "0009/0009/0009");
+	assert_mk(dpth, 5, CMD_EFS_FILE, "0009/0009/0009");
+	tear_down(&dpth);
+}
+END_TEST
+
 Suite *suite_server_protocol1_dpth(void)
 {
 	Suite *s;
@@ -139,6 +159,7 @@ Suite *suite_server_protocol1_dpth(void)
 
 	tcase_add_test(tc_core, test_incr);
 	tcase_add_test(tc_core, test_init);
+	tcase_add_test(tc_core, test_mk);
 	suite_add_tcase(s, tc_core);
 
 	return s;

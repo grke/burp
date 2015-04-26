@@ -102,7 +102,6 @@ int authorise_server(struct asfd *asfd,
 	char *password=NULL;
 	char whoareyou[256]="";
 	struct iobuf *rbuf=asfd->rbuf;
-	const char *cname=NULL;
 	const char *peer_version=NULL;
 	if(asfd->read(asfd))
 	{
@@ -151,12 +150,12 @@ int authorise_server(struct asfd *asfd,
 	if(set_string(cconfs[OPT_CNAME], rbuf->buf))
 		goto end;
 	iobuf_init(rbuf);
-	cname=get_string(cconfs[OPT_CNAME]);
 
 	asfd->write_str(asfd, CMD_GEN, "okpassword");
 	if(asfd->read(asfd))
 	{
-		logp("unable to get password for client %s\n", cname);
+		logp("unable to get password for client %s\n",
+			get_string(cconfs[OPT_CNAME]));
 		goto end;
 	}
 	password=rbuf->buf;
@@ -168,7 +167,7 @@ int authorise_server(struct asfd *asfd,
 	if(get_int(cconfs[OPT_VERSION_WARN]))
 		version_warn(asfd, globalcs, cconfs);
 
-	logp("auth ok for: %s%s\n", cname,
+	logp("auth ok for: %s%s\n", get_string(cconfs[OPT_CNAME]),
 		get_int(cconfs[OPT_PASSWORD_CHECK])?
 			"":" (no password needed)");
 

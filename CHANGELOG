@@ -16,6 +16,7 @@
   * More unit tests.
   * Add some documentation about working_dir_recovery_method.
   * Don't open the log when about to delete the working directory.
+  * Stop server side 'auth ok' message logging a freed string.
 
 2015-02-28 Changes in burp-2.0.16:
   * Add ability to do 'burp -a l -b c' and list the files in the current

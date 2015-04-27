@@ -19,7 +19,8 @@ SRCS = \
 	rblk.o \
 	restore.o \
 	restore_spool.o \
-	rubble.o
+	rubble.o \
+	sparse_gen.o
 
 OBJS = $(SRCS:.c=.o)
 

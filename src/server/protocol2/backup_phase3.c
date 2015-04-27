@@ -350,9 +350,9 @@ static int sparse_generation(struct manio *newmanio, uint64_t fcount,
 		pass++;
 		for(i=0; i<fcount; i+=2)
 		{
-			if(srca) { free(srca); srca=NULL; }
-			if(srcb) { free(srcb); srcb=NULL; }
-			if(dst) { free(dst); dst=NULL; }
+			free_w(&srca);
+			free_w(&srcb);
+			free_w(&dst);
 			snprintf(compa, sizeof(compa), "%08"PRIX64, i);
 			snprintf(compb, sizeof(compb), "%08"PRIX64, i+1);
 			snprintf(compd, sizeof(compd), "%08"PRIX64, i/2);
@@ -379,14 +379,14 @@ static int sparse_generation(struct manio *newmanio, uint64_t fcount,
 
 	ret=0;
 end:
-	if(sparse) free(sparse);
-	if(global_sparse) free(global_sparse);
-	if(srca) free(srca);
-	if(srcb) free(srcb);
+	free_w(&sparse);
+	free_w(&global_sparse);
+	free_w(&srca);
+	free_w(&srcb);
 	recursive_delete(h1dir, NULL, 1);
 	recursive_delete(h2dir, NULL, 1);
-	if(h1dir) free(h1dir);
-	if(h2dir) free(h2dir);
+	free_w(&h1dir);
+	free_w(&h2dir);
 	return ret;
 }
 

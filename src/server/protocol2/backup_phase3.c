@@ -12,6 +12,7 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 	int pcmp=0;
 	char *hooksdir=NULL;
 	char *dindexdir=NULL;
+	char *manifesttmp=NULL;
 	struct sbuf *usb=NULL;
 	struct sbuf *csb=NULL;
 	struct blk *blk=NULL;
@@ -24,14 +25,15 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 
 	logp("Start phase3\n");
 
-	if(!(newmanio=manio_alloc())
+	if(!(manifesttmp=get_tmp_filename(sdirs->rmanifest))
+	  || !(newmanio=manio_alloc())
 	  || !(chmanio=manio_alloc())
 	  || !(unmanio=manio_alloc())
-	  || !(hooksdir=prepend_s(sdirs->rmanifest, "hooks"))
-	  || !(dindexdir=prepend_s(sdirs->rmanifest, "dindex"))
-	  || manio_init_write(newmanio, sdirs->rmanifest)
+	  || !(hooksdir=prepend_s(manifesttmp, "hooks"))
+	  || !(dindexdir=prepend_s(manifesttmp, "dindex"))
+	  || manio_init_write(newmanio, manifesttmp)
 	  || manio_init_write_hooks(newmanio,
-		get_string(confs[OPT_DIRECTORY]), hooksdir)
+		get_string(confs[OPT_DIRECTORY]), hooksdir, sdirs->rmanifest)
 	  || manio_init_write_dindex(newmanio, dindexdir)
 	  || manio_init_read(chmanio, sdirs->changed)
 	  || manio_init_read(unmanio, sdirs->unchanged)
@@ -128,11 +130,18 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 	  || manio_init_read(newmanio, sdirs->rmanifest))
 		goto end;
 
+	// Rename race condition should be of no consequence here, as the
+	// manifest should just get recreated automatically.
+	if(do_rename(manifesttmp, sdirs->rmanifest))
+		goto end;
+	else
+	{
+		recursive_delete(sdirs->changed, NULL, 1);
+		recursive_delete(sdirs->unchanged, NULL, 1);
+	}
+
 	if(sparse_generation(newmanio, fcount, sdirs, confs))
 		goto end;
-
-	recursive_delete(chmanio->directory, NULL, 1);
-	recursive_delete(unmanio->directory, NULL, 1);
 
 	ret=0;
 
@@ -146,5 +155,6 @@ end:
 	blk_free(&blk);
 	free_w(&hooksdir);
 	free_w(&dindexdir);
+	free_w(&manifesttmp);
 	return ret;
 }

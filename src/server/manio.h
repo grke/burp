@@ -23,6 +23,10 @@ struct manio
 	char *hook_dir;
 	char **hook_sort;	// Array for sorting and writing hooks.
 	int hook_count;
+	char *rdirectory;	// When renaming the manifest directory to its
+				// final location, hooks need to be written
+				// using the final destination. This is for
+				// that circumstance.
 	char *dindex_dir;
 	char **dindex_sort;	// Array for sorting and writing dindex.
 	int dindex_count;
@@ -37,7 +41,7 @@ extern int manio_init_write(struct manio *manio, const char *directory);
 extern int manio_set_mode_read(struct manio *manio);
 extern int manio_set_mode_write(struct manio *manio);
 extern int manio_init_write_hooks(struct manio *manio,
-	const char *base_dir, const char *dir);
+	const char *base_dir, const char *hook_dir, const char *rdirectory);
 extern int manio_init_write_dindex(struct manio *manio, const char *dir);
 extern void manio_set_protocol(struct manio *manio, enum protocol protocol);
 

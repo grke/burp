@@ -26,6 +26,7 @@ static int manio_free_content(struct manio *manio)
 	free_w(&manio->lpath);
 	free_w(&manio->mode);
 	free_w(&manio->hook_dir);
+	free_w(&manio->rdirectory);
 	if(manio->hook_sort)
 	{
 		int i;
@@ -41,7 +42,7 @@ static int write_hook_header(struct manio *manio, gzFile zp, const char *comp)
 {
 	const char *cp;
 	char *tmp=NULL;
-	cp=manio->directory+strlen(manio->base_dir);
+	cp=manio->rdirectory+strlen(manio->base_dir);
 	while(cp && *cp=='/') cp++;
 	if(!(tmp=prepend_s(cp, comp))) return -1;
 	gzprintf(zp, "%c%04X%s\n", CMD_MANIFEST, strlen(tmp), tmp);
@@ -411,11 +412,12 @@ int manio_closed(struct manio *manio)
 }
 
 int manio_init_write_hooks(struct manio *manio,
-	const char *base_dir, const char *dir)
+	const char *base_dir, const char *hook_dir, const char *rdirectory)
 {
 	int i=0;
 	if(!(manio->base_dir=strdup_w(base_dir, __func__))
-	  || !(manio->hook_dir=strdup_w(dir, __func__))
+	  || !(manio->hook_dir=strdup_w(hook_dir, __func__))
+	  || !(manio->rdirectory=strdup_w(rdirectory, __func__))
 	  || !(manio->hook_sort=
 		(char **)calloc_w(MANIFEST_SIG_MAX, sizeof(char*), __func__)))
 			return -1;

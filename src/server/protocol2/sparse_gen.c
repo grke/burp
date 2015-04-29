@@ -318,6 +318,8 @@ int sparse_generation(struct manio *newmanio, uint64_t fcount,
 	char compb[32]="";
 	char compd[32]="";
 
+	logp("Start sparse generation\n");
+
 	if(!(hooksdir=prepend_s(sdirs->rmanifest, "hooks"))
 	  || !(h1dir=prepend_s(sdirs->rmanifest, "h1"))
 	  || !(h2dir=prepend_s(sdirs->rmanifest, "h2")))

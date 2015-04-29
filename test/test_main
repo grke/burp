@@ -740,7 +740,7 @@ all_tests()
 	end_test
 
 	if [ "$protocol" -eq "1" ] ; then
-		# Protocol2 phase3 restore currently broken.
+		# Protocol2 phase3 resume currently broken.
 		start_test "Interrupt server phase3"
 		add_server_breakpoint_on 3
 		add_run_backup_no_increment

@@ -9,26 +9,36 @@
 outdated=`date -d "1 days ago" +%F`
 sendto=emailto@server.com
 sendfrom=emailsender@from.com
-timestamp=`date +%F`
+timestamp=`date +%F-%H-%M`
 logfolder=/var/log/burp-custom/
 
-#Variable to uso on outdated hosts functions
-repoutdfile=burp-outdated.$outdated.$timestamp.log
 
-#logrotate(){
-#
-#}
+#Variable to use on outdated hosts function
+repoutdfile=$logfolder/burp-outdated.$outdated.$timestamp.log
+#Variable to use for not outdated hosts function
+repokfile=$logfolder/burp-ok.$outdated.$timestamp.log
 
+logsclean(){
+    find $logfolder -name "*.log" -type f -mtime +30 -delete
+}
+
+make_dirs() {
+    if [[ ! -d $1 ]] ; then  mkdir -p $1 ; fi
+}
+
+make_dirs "$logfolder"
 
 report_outdated(){
     date_backup=`echo $1 | sed -e 's/\s\+/ /g' | cut -d' ' -f6`
     echo "line is $1"
     echo "date_backup is $date_backup"
     if [[ "$date_backup" < "$outdated" ]] ; then
-        echo "outdated burp users on $HOSTNAME" > $repoutdfile
-        echo "$1" > $repoutdfile
+        echo "$1" >> $repoutdfile
+	else 
+	    echo "$1" >> $repokfile
     fi
 }
+
 
 reports(){
     report_outdated "$1"
@@ -46,4 +56,8 @@ burp -a S -c /etc/burp/burp-server.conf | grep -i "last backup" | while read -r 
 
 echo "finishing and sending email"
 #Send email using function, parse file and then subject inside "subject line"
-send_email_report $repoutdfile "Outdated hosts older than $outdated"
+send_email_report $repoutdfile "Outdated hosts older than $outdated on $HOSTNAME"
+send_email_report $repokfile "Burp Hosts ok newer than $outdated on $HOSTNAME"
+
+#Clean old logs
+logsclean

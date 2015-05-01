@@ -6,6 +6,7 @@
 #include "protocol1/backup_phase4.h"
 #include "protocol2/backup_phase2.h"
 #include "protocol2/backup_phase3.h"
+#include "protocol2/backup_phase4.h"
 #include "protocol2/champ_chooser/champ_client.h"
 
 static int open_log(struct asfd *asfd,
@@ -106,16 +107,14 @@ int backup_phase4_server(struct sdirs *sdirs, struct conf **cconfs)
 	if(get_int(cconfs[OPT_BREAKPOINT])==4)
 		return breakpoint(cconfs, __func__);
 
+	set_logfp(NULL, cconfs);
+	// Phase4 will open logfp again (in case it is resuming).
 	switch(get_e_protocol(cconfs[OPT_PROTOCOL]))
 	{
 		case PROTO_1:
-			set_logfp(NULL, cconfs);
-			// Phase4 will open logfp again (in case it is
-			// resuming).
 			return backup_phase4_server_protocol1(sdirs, cconfs);
 		default:
-			logp("Phase4 is for protocol1 only!\n");
-			return -1;
+			return backup_phase4_server_protocol2(sdirs, 0, cconfs);
 	}
 }
 
@@ -201,15 +200,10 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 		goto error;
 	}
 
-	if(protocol==PROTO_1)
+	if(backup_phase4_server(sdirs, cconfs))
 	{
-		if(do_rename(sdirs->working, sdirs->finishing))
-			goto error;
-		if(backup_phase4_server(sdirs, cconfs))
-		{
-			logp("error in backup phase 4\n");
-			goto error;
-		}
+		logp("error in backup phase 4\n");
+		goto error;
 	}
 
 	cntr_print(get_cntr(cconfs[OPT_CNTR]), ACTION_BACKUP);

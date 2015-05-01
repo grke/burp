@@ -44,6 +44,7 @@ extern int manio_init_write_hooks(struct manio *manio,
 	const char *base_dir, const char *hook_dir, const char *rdirectory);
 extern int manio_init_write_dindex(struct manio *manio, const char *dir);
 extern void manio_set_protocol(struct manio *manio, enum protocol protocol);
+extern int manio_read_fcount(struct manio *manio);
 
 extern int manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
 	struct sbuf *sb, struct blk *blk, struct sdirs *sdirs, struct conf **confs);

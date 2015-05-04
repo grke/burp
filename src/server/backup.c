@@ -114,7 +114,7 @@ int backup_phase4_server(struct sdirs *sdirs, struct conf **cconfs)
 		case PROTO_1:
 			return backup_phase4_server_protocol1(sdirs, cconfs);
 		default:
-			return backup_phase4_server_protocol2(sdirs, 0, cconfs);
+			return backup_phase4_server_protocol2(sdirs, cconfs);
 	}
 }
 
@@ -198,6 +198,12 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 	{
 		logp("error in backup phase 3\n");
 		goto error;
+	}
+
+	if(protocol==PROTO_1)
+	{
+		if(do_rename(sdirs->working, sdirs->finishing))
+			goto error;
 	}
 
 	if(backup_phase4_server(sdirs, cconfs))

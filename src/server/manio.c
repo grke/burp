@@ -112,7 +112,6 @@ int manio_read_fcount(struct manio *manio)
 		goto end;
 	}
 	manio->fcount=strtoul(buf, NULL, 16);
-logp("fcount: %08X\n", manio->fcount);
 	ret=0;
 end:
 	close_fp(&fp);

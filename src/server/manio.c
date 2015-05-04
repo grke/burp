@@ -57,6 +57,68 @@ static int strsort(const void *a, const void *b)
 	return strcmp(x, y);
 }
 
+static char *get_fcount_path(struct manio *manio)
+{
+	return prepend_s(manio->directory, "fcount");
+}
+
+// Backup phase4 needs to know the fcount, so leave a file behind that
+// contains it (otherwise phase4 will have to read and sort the directory
+// contents).
+static int manio_write_fcount(struct manio *manio)
+{
+	int ret=-1;
+	FILE *fp=NULL;
+	char *path=NULL;
+
+	if(!(path=get_fcount_path(manio))
+	  || !(fp=open_file(path, "wb")))
+		goto end;
+	if(fprintf(fp, "%08"PRIX64"\n", manio->fcount)!=9)
+	{
+		logp("Short write when writing to %s\n", path);
+		goto end;
+	}
+	ret=0;
+end:
+	if(close_fp(&fp))
+	{
+		logp("Could not close file pointer to %s\n", path);
+		ret=-1;
+	}
+	free_w(&path);
+	return ret;
+}
+
+int manio_read_fcount(struct manio *manio)
+{
+	int ret=-1;
+	size_t s;
+	FILE *fp=NULL;
+	char *path=NULL;
+	char buf[16]="";
+	if(!(path=get_fcount_path(manio))
+	  || !(fp=open_file(path, "rb")))
+		goto end;
+	if(!fgets(buf, sizeof(buf), fp))
+	{
+		logp("fgets on %s failed\n", path);
+		goto end;
+	}
+	s=strlen(buf);
+	if(s!=9)
+	{
+		logp("data in %s is not the right length (%s!=9)\n", s);
+		goto end;
+	}
+	manio->fcount=strtoul(buf, NULL, 16);
+	ret=0;
+end:
+	close_fp(&fp);
+	free_w(&path);
+	return ret;
+}
+
 static int sort_and_write_hooks(struct manio *manio)
 {
 	int i;
@@ -91,6 +153,7 @@ static int sort_and_write_hooks(struct manio *manio)
 			path, __func__, strerror(errno));
 		goto end;
 	}
+	if(manio_write_fcount(manio)) goto end;
 	manio->hook_count=0;
 	ret=0;
 end:

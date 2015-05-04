@@ -300,8 +300,7 @@ end:
 	return ret;
 }
 
-int sparse_generation(struct manio *newmanio, uint64_t fcount,
-	struct sdirs *sdirs, struct conf **confs)
+int backup_phase4_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 {
 	int ret=-1;
 	uint64_t i=0;
@@ -317,10 +316,14 @@ int sparse_generation(struct manio *newmanio, uint64_t fcount,
 	char compa[32]="";
 	char compb[32]="";
 	char compd[32]="";
+	struct manio *newmanio=NULL;
 
 	logp("Start sparse generation\n");
 
-	if(!(hooksdir=prepend_s(sdirs->rmanifest, "hooks"))
+	if(!(newmanio=manio_alloc())
+	  || manio_init_read(newmanio, sdirs->rmanifest)
+	  || manio_read_fcount(newmanio)
+	  || !(hooksdir=prepend_s(sdirs->rmanifest, "hooks"))
 	  || !(h1dir=prepend_s(sdirs->rmanifest, "h1"))
 	  || !(h2dir=prepend_s(sdirs->rmanifest, "h2")))
 		goto end;
@@ -345,7 +348,7 @@ int sparse_generation(struct manio *newmanio, uint64_t fcount,
 			dstdir=h1dir;
 		}
 		pass++;
-		for(i=0; i<fcount; i+=2)
+		for(i=0; i<newmanio->fcount; i+=2)
 		{
 			free_w(&srca);
 			free_w(&srcb);
@@ -356,12 +359,13 @@ int sparse_generation(struct manio *newmanio, uint64_t fcount,
 			if(!(srca=prepend_s(srcdir, compa))
 			  || !(dst=prepend_s(dstdir, compd)))
 				goto end;
-			if(i+1<fcount && !(srcb=prepend_s(srcdir, compb)))
+			if(i+1<newmanio->fcount
+			  && !(srcb=prepend_s(srcdir, compb)))
 				goto end;
 			if(merge_sparse_indexes(srca, srcb, dst, confs))
 				goto end;
 		}
-		if((fcount=i/2)<2) break;
+		if((newmanio->fcount=i/2)<2) break;
 	}
 
 	if(!(sparse=prepend_s(sdirs->rmanifest, "sparse"))
@@ -376,6 +380,7 @@ int sparse_generation(struct manio *newmanio, uint64_t fcount,
 
 	ret=0;
 end:
+	manio_free(&newmanio);
 	free_w(&sparse);
 	free_w(&global_sparse);
 	free_w(&srca);

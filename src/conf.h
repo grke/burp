@@ -267,6 +267,8 @@ extern void confs_free(struct conf ***confs);
 extern void confs_free_content(struct conf **confs);
 extern int confs_init(struct conf **confs);
 extern void confs_free_content(struct conf **confs);
+extern void confs_null(struct conf **confs);
+extern void confs_memcpy(struct conf **dst, struct conf **src);
 
 extern void free_incexcs(struct conf **confs);
 extern int conf_set(struct conf **confs, const char *field, const char *value);

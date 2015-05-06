@@ -12,7 +12,7 @@ static int append_to_feat(char **feat, const char *str)
 	}
 	if(!(tmp=prepend(*feat, str, strlen(str), "")))
 		return -1;
-	free(*feat);
+	free_w(feat);
 	*feat=tmp;
 	return 0;
 }
@@ -268,11 +268,12 @@ static int extra_comms_read(struct async *as,
 					goto end;
 			if(set_string(cconfs[OPT_RESTORE_PATH], NULL))
 					goto end;
+			set_cntr(sconfs[OPT_CNTR], get_cntr(cconfs[OPT_CNTR]));
+			set_cntr(cconfs[OPT_CNTR], NULL);
 			confs_free_content(cconfs);
 			confs_init(cconfs);
-			// FIX THIS:
-			memcpy(cconfs, sconfs, sizeof(struct conf));
-			confs_free(&sconfs);
+			confs_memcpy(cconfs, sconfs);
+			confs_null(sconfs);
 			if(set_string(cconfs[OPT_RESTORE_CLIENT],
 				get_string(cconfs[OPT_CNAME]))) goto end;
 			if(set_string(cconfs[OPT_ORIG_CLIENT],
@@ -362,7 +363,7 @@ int extra_comms(struct async *as,
 	struct asfd *asfd;
 	asfd=as->asfd;
 	//char *restorepath=NULL;
-	const char *peer_version=get_string(cconfs[OPT_PEER_VERSION]);
+	const char *peer_version=NULL;
 
 	if(vers_init(&vers, cconfs)) goto error;
 
@@ -400,6 +401,8 @@ int extra_comms(struct async *as,
 
 	if(extra_comms_read(as, &vers, srestore, incexc, confs, cconfs))
 		goto error;
+
+	peer_version=get_string(cconfs[OPT_PEER_VERSION]);
 
 	// This needs to come after extra_comms_read, as the client might
 	// have set PROTO_1 or PROTO_2.

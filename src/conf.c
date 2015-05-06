@@ -244,6 +244,23 @@ static void conf_free_content(struct conf *c)
 	}
 }
 
+void confs_memcpy(struct conf **dst, struct conf **src)
+{
+	int i=0;
+	for(i=0; i<OPT_MAX; i++)
+	{
+		free_v((void **)&(dst[i]));
+		dst[i]=src[i];
+	}
+}
+
+void confs_null(struct conf **confs)
+{
+	int i=0;
+	if(!confs) return;
+	for(i=0; i<OPT_MAX; i++) confs[i]=NULL;
+}
+
 void confs_free_content(struct conf **confs)
 {
 	int i=0;

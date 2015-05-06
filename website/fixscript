@@ -63,6 +63,7 @@ shuffling=content/docs/shuffling.content
 monitor=content/docs/monitor.content
 changelog=content/html/changelog.content
 contributors=content/html/contributors.content
+retention=content/docs/retention.content
 
 generic_page "$quickstart" "../README"
 generic_page "$debugging" "../docs/debug.txt"
@@ -80,6 +81,7 @@ generic_page "$shuffling" "../docs/shuffling.txt"
 generic_page "$monitor" "../docs/status-monitor.txt"
 generic_page "$changelog" "../CHANGELOG"
 generic_page "$contributors" "../CONTRIBUTORS"
+generic_page "$retention" "../docs/retention.txt"
 
 mkdir -p html/txt
 cp -v ../docs/*.txt html/txt

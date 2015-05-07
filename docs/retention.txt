@@ -8,11 +8,11 @@ start with the number 1. It will also be given a timestamp.
 So, after five days, your backups of a client in /var/spool/burp/testclient/
 might look like this:
 
-0000001 2014-05-01 19:00:04
-0000002 2014-05-02 19:00:02
-0000003 2014-05-03 19:00:05
-0000004 2014-05-04 19:00:05
-0000005 2014-05-05 19:00:03
+0000001 2014-05-19 19:00:04
+0000002 2014-05-20 19:00:02
+0000003 2014-05-21 19:00:05
+0000004 2014-05-22 19:00:05
+0000005 2014-05-23 19:00:03
 
 It is important to note that burp's retention works on the backup numbers, not
 the timestamp.
@@ -35,13 +35,13 @@ a 'hardlinked' backup. This is explained further in the section about multiple
 For example, the burp default is 'keep = 7'. Intuitively, this means 'keep
 seven backups'. After nine backups, your backup list will look like this:
 
-0000003 2014-05-02 19:00:04
-0000004 2014-05-03 19:00:02
-0000005 2014-05-04 19:00:05
-0000006 2014-05-05 19:00:05
-0000007 2014-05-06 19:00:03
-0000008 2014-05-07 19:00:01
-0000009 2014-05-08 19:00:04
+0000003 2014-05-21 19:00:04
+0000004 2014-05-22 19:00:02
+0000005 2014-05-23 19:00:05
+0000006 2014-05-24 19:00:05
+0000007 2014-05-25 19:00:03
+0000008 2014-05-26 19:00:01
+0000009 2014-05-27 19:00:04
 
 At the end of backup 8, backup 1 was deleted.
 At the end of backup 9, backup 2 was deleted.

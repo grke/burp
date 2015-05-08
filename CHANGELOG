@@ -1,5 +1,5 @@
   * Fix conf bug that was causing the server to segfault when the client
-    used the -C option.
+    used the -C option. Also add unit test for it.
   * Add documentation about retention and keep values.
 
 2015-05-03 Changes in burp-2.0.18

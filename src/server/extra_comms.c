@@ -222,63 +222,9 @@ static int extra_comms_read(struct async *as,
 		else if(!strncmp_w(rbuf->buf, "orig_client=")
 		  && strlen(rbuf->buf)>strlen("orig_client="))
 		{
-			int rcok=0;
-			struct strlist *r;
-			struct conf **sconfs=NULL;
-
-			if(!(sconfs=confs_alloc())) goto end;
-			if(set_string(sconfs[OPT_CNAME],
+			if(conf_switch_to_orig_client(globalcs, cconfs,
 				rbuf->buf+strlen("orig_client=")))
 					goto end;
-			logp("Client wants to switch to client: %s\n",
-				get_string(sconfs[OPT_CNAME]));
-			if(conf_load_clientconfdir(globalcs, sconfs))
-			{
-				char msg[256]="";
-				snprintf(msg, sizeof(msg),
-				  "Could not load alternate config: %s",
-				  get_string(sconfs[OPT_CNAME]));
-				log_and_send(asfd, msg);
-				goto end;
-			}
-			set_int(sconfs[OPT_SEND_CLIENT_CNTR],
-				get_int(cconfs[OPT_SEND_CLIENT_CNTR]));
-			for(r=get_strlist(sconfs[OPT_RESTORE_CLIENTS]);
-				r; r=r->next)
-			{
-				if(!strcmp(r->path,
-					get_string(cconfs[OPT_CNAME])))
-				{
-					rcok++;
-					break;
-				}
-			}
-
-			if(!rcok)
-			{
-				char msg[256]="";
-				snprintf(msg, sizeof(msg),
-				  "Access to client is not allowed: %s",
-					get_string(sconfs[OPT_CNAME]));
-				log_and_send(asfd, msg);
-				goto end;
-			}
-			if(set_string(sconfs[OPT_RESTORE_PATH],
-				get_string(cconfs[OPT_RESTORE_PATH])))
-					goto end;
-			if(set_string(cconfs[OPT_RESTORE_PATH], NULL))
-					goto end;
-			set_cntr(sconfs[OPT_CNTR], get_cntr(cconfs[OPT_CNTR]));
-			set_cntr(cconfs[OPT_CNTR], NULL);
-			confs_free_content(cconfs);
-			confs_init(cconfs);
-			confs_memcpy(cconfs, sconfs);
-			confs_null(sconfs);
-			if(set_string(cconfs[OPT_RESTORE_CLIENT],
-				get_string(cconfs[OPT_CNAME]))) goto end;
-			if(set_string(cconfs[OPT_ORIG_CLIENT],
-				get_string(cconfs[OPT_CNAME]))) goto end;
-
 			// If this started out as a server-initiated
 			// restore, need to load the restore file
 			// again.
@@ -288,8 +234,6 @@ static int extra_comms_read(struct async *as,
 					get_string(cconfs[OPT_RESTORE_PATH])))
 						goto end;
 			}
-			logp("Switched to client %s\n",
-				get_string(cconfs[OPT_CNAME]));
 			if(asfd->write_str(asfd, CMD_GEN, "orig_client ok"))
 				goto end;
 		}

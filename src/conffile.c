@@ -1249,3 +1249,85 @@ int conf_load_global_only_buf(const char *buf, struct conf **globalcs)
 	return do_load_global_only(globalcs, "test buf", buf);
 }
 #endif
+
+static int restore_client_allowed(struct conf **cconfs, struct conf **sconfs)
+{
+	struct strlist *r;
+	for(r=get_strlist(sconfs[OPT_RESTORE_CLIENTS]); r; r=r->next)
+		if(!strcmp(r->path, get_string(cconfs[OPT_CNAME])))
+			return 1;
+	logp("Access to client is not allowed: %s",
+		get_string(sconfs[OPT_CNAME]));
+	return 0;
+}
+
+// FIX THIS: need to unit test this.
+static int do_conf_switch_to_orig_client(struct conf **globalcs,
+	struct conf **cconfs, const char *orig_client, const char *buf)
+{
+	int ret=-1;
+	int loadrc;
+	struct conf **sconfs=NULL;
+	if(!(sconfs=confs_alloc())
+	  || confs_init(sconfs)) goto end;
+	if(set_string(sconfs[OPT_CNAME], orig_client))
+		goto end;
+	logp("Client wants to switch to client: %s\n",
+		get_string(sconfs[OPT_CNAME]));
+
+	// Allow unit testing using a buffer.
+#ifdef UTEST
+	if(buf) loadrc=conf_load_overrides_buf(globalcs, sconfs, buf);
+	else
+#endif
+		loadrc=conf_load_clientconfdir(globalcs, sconfs);
+	if(loadrc)
+	{
+		logp("Could not load alternate config: %s",
+			get_string(sconfs[OPT_CNAME]));
+		goto end;
+	}
+	set_int(sconfs[OPT_SEND_CLIENT_CNTR],
+		get_int(cconfs[OPT_SEND_CLIENT_CNTR]));
+
+	if(!restore_client_allowed(cconfs, sconfs))
+		goto end;
+
+	if(set_string(sconfs[OPT_RESTORE_PATH],
+		get_string(cconfs[OPT_RESTORE_PATH])))
+			goto end;
+	if(set_string(cconfs[OPT_RESTORE_PATH], NULL))
+		goto end;
+	set_cntr(sconfs[OPT_CNTR], get_cntr(cconfs[OPT_CNTR]));
+	set_cntr(cconfs[OPT_CNTR], NULL);
+	confs_free_content(cconfs);
+	confs_init(cconfs);
+	confs_memcpy(cconfs, sconfs);
+	confs_null(sconfs);
+	if(set_string(cconfs[OPT_RESTORE_CLIENT],
+		get_string(cconfs[OPT_CNAME]))) goto end;
+	if(set_string(cconfs[OPT_ORIG_CLIENT],
+		get_string(cconfs[OPT_CNAME]))) goto end;
+
+	logp("Switched to client %s\n", get_string(cconfs[OPT_CNAME]));
+	ret=0;
+end:
+	confs_free(&sconfs);
+	return ret;
+}
+
+int conf_switch_to_orig_client(struct conf **globalcs, struct conf **cconfs,
+	const char *orig_client)
+{
+	return do_conf_switch_to_orig_client(globalcs,
+		cconfs, orig_client, NULL);
+}
+
+#ifdef UTEST
+int conf_switch_to_orig_client_buf(struct conf **globalcs,
+	struct conf **cconfs, const char *orig_client, const char *buf)
+{
+	return do_conf_switch_to_orig_client(globalcs,
+		cconfs, orig_client, buf);
+}
+#endif

@@ -99,19 +99,38 @@ static int parse_client_data(struct asfd *srfd,
 	if(client && *client)
 	{
 		if(!(cstat=cstat_get_by_name(clist, client)))
+		{
+			if(json_send_parse_error(srfd,
+				"Could not find client")) goto error;
 			goto end;
+		}
 
-		if(cstat_set_backup_list(cstat)) goto end;
+		if(cstat_set_backup_list(cstat))
+		{
+			if(json_send_parse_error(srfd,
+				"Could not get backup list")) goto error;
+			goto end;
+			
+		}
 	}
 	if(cstat && backup)
 	{
 		unsigned long bno=0;
 		if(!(bno=strtoul(backup, NULL, 10)))
+		{
+			if(json_send_parse_error(srfd,
+				"Could not get backup number")) goto error;
 			goto end;
+		}
 		for(bu=cstat->bu; bu; bu=bu->prev)
 			if(bu->bno==bno) break;
 
-		if(!bu) goto end;
+		if(!bu)
+		{
+			if(json_send_parse_error(srfd,
+				"Backup not found")) goto error;
+			goto end;
+		}
 	}
 	if(logfile)
 	{
@@ -122,7 +141,11 @@ static int parse_client_data(struct asfd *srfd,
 		  && strcmp(logfile, "backup_stats")
 		  && strcmp(logfile, "restore_stats")
 		  && strcmp(logfile, "verify_stats"))
+		{
+			if(json_send_parse_error(srfd,
+				"File not supported")) goto error;
 			goto end;
+		}
 	}
 /*
 	printf("client: %s\n", client?:"");

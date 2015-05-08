@@ -407,3 +407,11 @@ int json_from_statp(const char *path, struct stat *statp)
 	  || yajl_gen_int_pair_w("mtime", statp->st_mtime)
 	  || yajl_map_close_w();
 }
+
+int json_send_parse_error(struct asfd *asfd, const char *msg)
+{
+	if(json_start(asfd)
+	  || yajl_gen_str_pair_w("warning", msg)
+	  || json_end(asfd)) return -1;
+	return 0;
+}

@@ -566,3 +566,11 @@ Response:
     ]
 }
 
+
+Example 7. Problem with request.
+
+Request: "c:blah"
+Response:
+{
+    "warning": "Could not find client"
+}

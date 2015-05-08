@@ -2,6 +2,13 @@
 #include "../../bu.h"
 #include "../../cmd.h"
 
+static int pretty_print=1;
+
+void json_set_pretty_print(int value)
+{
+	pretty_print=value;
+}
+
 static int write_all(struct asfd *asfd)
 {
 	int ret=-1;
@@ -20,6 +27,9 @@ static int write_all(struct asfd *asfd)
 		buf+=w;
 		len-=w;
 	}
+	if(!ret && !pretty_print)
+		ret=asfd->write_strn(asfd, CMD_GEN /* not used */, "\n", 1);
+
 	yajl_gen_clear(yajl);
 	return ret;
 }
@@ -30,7 +40,7 @@ static int json_start(struct asfd *asfd)
 	{
 		if(!(yajl=yajl_gen_alloc(NULL)))
 			return -1;
-		yajl_gen_config(yajl, yajl_gen_beautify, 1);
+		yajl_gen_config(yajl, yajl_gen_beautify, pretty_print);
 	}
 	if(yajl_map_open_w()) return -1;
 	return 0;
@@ -408,7 +418,7 @@ int json_from_statp(const char *path, struct stat *statp)
 	  || yajl_map_close_w();
 }
 
-int json_send_parse_error(struct asfd *asfd, const char *msg)
+int json_send_warn(struct asfd *asfd, const char *msg)
 {
 	if(json_start(asfd)
 	  || yajl_gen_str_pair_w("warning", msg)

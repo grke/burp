@@ -8,6 +8,7 @@ extern int json_send(struct asfd *asfd,
 extern int json_from_statp(const char *path, struct stat *statp);
 extern int json_cntr_to_file(struct asfd *asfd, struct cntr *cntr);
 
-extern int json_send_parse_error(struct asfd *asfd, const char *msg);
+extern int json_send_warn(struct asfd *asfd, const char *msg);
+extern void json_set_pretty_print(int value);
 
 #endif

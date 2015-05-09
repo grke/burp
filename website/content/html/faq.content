@@ -55,6 +55,9 @@ Q. How do I build a static Linux binary?
 <P>
 <FONT COLOR="#000000">
 A. Use the --enable-static and --disable-libtool configure script options.
+Depending on your OS, you may need to add extra linker options to the
+'static-burp' section in src/Makefile. For example, while using Debian Wheezy,
+I had to add: -ltinfo -ldl -lgpm
 </FONT>
 </P>
 

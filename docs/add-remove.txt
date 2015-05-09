@@ -13,8 +13,8 @@ the 'password_check = 0' option):
 password = abcedfgh
 
 Now, you can install the burp client.
-If you are using Windows, the <a href="docs/windows-installer.html">installer</a>
-will walk you through the steps.
+If you are using Windows, the installer will walk you through the steps (see
+the separate documentation on this).
 
 On other operating systems, you will need to edit the client burp.conf so that
 the 'cname' line matches the clientconfdir file name on the server, the
@@ -31,7 +31,8 @@ This is done automatically on Windows. On other operating systems, you will
 need to add a cron job.
 
 The first time that the new client connects to the server, it will perform the
-<a href="docs/burp_ca.html">certificate exchange</a>.
+SSL certificate exchange (see the separate documentation on this).
+
 I find it useful to run 'burp -a l' by hand initially, to see the exchange
 happen and be sure that the connection is working. 'burp -a l' is a request
 for a list of backups. With your new client, there will of course be no

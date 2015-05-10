@@ -72,10 +72,14 @@ rs_result rs_patch_gzfile(struct asfd *asfd,
 rs_result rs_sig_gzfile(struct asfd *asfd,
 	FILE *old_file, gzFile old_zfile, FILE *sig_file,
 	size_t new_block_len, size_t strong_len, rs_stats_t *stats,
-	struct cntr *cntr);
+	struct conf **confs);
 rs_result rs_delta_gzfile(struct asfd *asfd,
 	rs_signature_t *sig, FILE *new_file,
 	gzFile new_zfile, FILE *delta_file, gzFile delta_zfile,
 	rs_stats_t *stats, struct cntr *cntr);
+
+#ifndef RS_DEFAULT_STRONG_LEN
+extern rs_magic_number rshash_to_magic_number(enum rshash r);
+#endif
 
 #endif

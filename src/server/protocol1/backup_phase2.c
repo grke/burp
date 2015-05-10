@@ -142,10 +142,9 @@ static int process_changed_file(struct asfd *asfd,
 		rs_sig_begin(blocklen, RS_DEFAULT_STRONG_LEN)
 #else
 		// This is for librsync-1.0.0. RS_DEFAULT_STRONG_LEN was 8 in
-		// librsync-0.9.7. RS_MD4_SIG_MAGIC is also what 0.9.7 uses,
-		// so mixing 0.9.7 and 1.0.0 should be OK.
-		// FIX THIS: Allow the third option to be configurable.
-		rs_sig_begin(blocklen, 8, RS_MD4_SIG_MAGIC)
+		// librsync-0.9.7.
+		rs_sig_begin(blocklen, 8,
+		  rshash_to_magic_number(get_e_rshash(cconfs[OPT_RSHASH])))
 #endif
 	))
 	{

@@ -496,20 +496,19 @@ rs_result rs_patch_gzfile(struct asfd *asfd, FILE *basis_file, FILE *delta_file,
 rs_result rs_sig_gzfile(struct asfd *asfd,
 	FILE *old_file, gzFile old_zfile, FILE *sig_file,
 	size_t new_block_len, size_t strong_len,
-	rs_stats_t *stats, struct cntr *cntr)
+	rs_stats_t *stats, struct conf **confs)
 {
 	rs_job_t *job;
 	rs_result r;
 	job=
 		rs_sig_begin(new_block_len, strong_len
 #ifndef RS_DEFAULT_STRONG_LEN
-			// Help librsync-1.0.0.
-			// FIX THIS:
-			// See comment in src/server/protocol1/backup_phase2.c
-			, RS_MD4_SIG_MAGIC
+                  	, rshash_to_magic_number(
+				get_e_rshash(confs[OPT_RSHASH]))
 #endif
 		);
-	r=rs_whole_gzrun(asfd, job, old_file, old_zfile, sig_file, NULL, cntr);
+	r=rs_whole_gzrun(asfd, job, old_file, old_zfile, sig_file, NULL,
+		get_cntr(confs[OPT_CNTR]));
 	rs_job_free(job);
 
 	return r;
@@ -530,3 +529,14 @@ rs_result rs_delta_gzfile(struct asfd *asfd,
 
 	return r;
 }
+
+#ifndef RS_DEFAULT_STRONG_LEN
+rs_magic_number rshash_to_magic_number(enum rshash r)
+{
+	switch(r)
+	{
+		case RSHASH_BLAKE2: return RS_BLAKE2_SIG_MAGIC;
+		default: return RS_MD4_SIG_MAGIC;
+	}
+}
+#endif

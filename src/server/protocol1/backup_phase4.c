@@ -81,7 +81,7 @@ static int make_rev_sig(const char *dst, const char *sig, const char *endfile,
 	  || rs_sig_gzfile(NULL, dstfp, dstzp, sigp,
 		get_librsync_block_len(endfile),
 		RS_DEFAULT_STRONG_LEN,
-		NULL, get_cntr(confs[OPT_CNTR]))!=RS_DONE)
+		NULL, confs)!=RS_DONE)
 			goto end;
 	ret=0;
 end:

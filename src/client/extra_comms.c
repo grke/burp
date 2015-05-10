@@ -198,6 +198,18 @@ int extra_comms(struct async *as, struct conf **confs,
 		set_e_protocol(confs[OPT_PROTOCOL], PROTO_2);
 	}
 
+#ifndef RS_DEFAULT_STRONG_LEN
+	if(server_supports(feat, ":rshash=blake2:"))
+	{
+		set_e_rshash(confs[OPT_RSHASH], RSHASH_BLAKE2);
+		// Send choice to server.
+		if(asfd->write_str(asfd, CMD_GEN, "rshash=blake2"))
+			goto end;
+	}
+	else
+#endif
+		set_e_rshash(confs[OPT_RSHASH], RSHASH_MD4);
+
 	if(asfd->write_str(asfd, CMD_GEN, "extra_comms_end")
 	  || asfd->read_expect(asfd, CMD_GEN, "extra_comms_end ok"))
 	{

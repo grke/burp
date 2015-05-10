@@ -118,6 +118,13 @@ int backup_phase4_server(struct sdirs *sdirs, struct conf **cconfs)
 	}
 }
 
+static void log_rshash(struct conf **confs)
+{
+	if(get_e_protocol(confs[OPT_PROTOCOL])!=PROTO_1) return;
+	logp("Using librsync hash %s\n",
+		rshash_to_str(get_e_rshash(confs[OPT_RSHASH])));
+}
+
 static int do_backup_server(struct async *as, struct sdirs *sdirs,
 	struct conf **cconfs, const char *incexc, int resume)
 {
@@ -134,6 +141,7 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 		if(sdirs_get_real_working_from_symlink(sdirs, cconfs)
 		  || open_log(asfd, sdirs, cconfs))
 			goto error;
+		log_rshash(cconfs);
 	}
 	else
 	{
@@ -142,6 +150,7 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 		  || sdirs_get_real_manifest(sdirs, cconfs)
 		  || open_log(asfd, sdirs, cconfs))
 			goto error;
+		log_rshash(cconfs);
 
 		if(write_incexc(sdirs->rworking, incexc))
 		{

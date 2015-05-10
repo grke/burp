@@ -41,7 +41,12 @@ int do_backup_client(struct asfd *asfd, struct conf **confs, enum action action,
 	if(action==ACTION_ESTIMATE)
 		logp("do estimate client\n");
 	else
+	{
 		logp("do backup client\n");
+		if(get_e_protocol(confs[OPT_PROTOCOL])==PROTO_1)
+			logp("Using librsync hash %s\n",
+			  rshash_to_str(get_e_rshash(confs[OPT_RSHASH])));
+	}
 
 #ifdef HAVE_WIN32
 	win32_enable_backup_privileges();

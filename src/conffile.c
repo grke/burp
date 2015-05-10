@@ -323,6 +323,8 @@ static int load_conf_field_and_value(struct conf **c,
 				case CT_STRLIST:
 					return add_to_strlist(c[i], v,
 					  !strcmp(c[i]->field, "include"));
+				case CT_E_RSHASH:
+					break;
 				case CT_CNTR:
 					break;
 				// No default so we get a warning if something
@@ -1090,6 +1092,9 @@ static int conf_set_from_global(struct conf **globalc, struct conf **cc)
 				break;
 			case CT_E_RECOVERY_METHOD:
 				set_e_recovery_method(cc[i], get_e_recovery_method(globalc[i]));
+				break;
+			case CT_E_RSHASH:
+				set_e_rshash(cc[i], get_e_rshash(globalc[i]));
 				break;
 			case CT_STRLIST:
 				// Done later.

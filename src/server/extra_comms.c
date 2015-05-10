@@ -37,6 +37,7 @@ static int send_features(struct asfd *asfd, struct conf **cconfs)
 	enum protocol protocol=get_e_protocol(cconfs[OPT_PROTOCOL]);
 	struct strlist *startdir=get_strlist(cconfs[OPT_STARTDIR]);
 	struct strlist *incglob=get_strlist(cconfs[OPT_INCGLOB]);
+
 	if(append_to_feat(&feat, "extra_comms_begin ok:")
 		/* clients can autoupgrade */
 	  || append_to_feat(&feat, "autoupgrade:")
@@ -88,7 +89,11 @@ static int send_features(struct asfd *asfd, struct conf **cconfs)
 		if(append_to_feat(&feat, p))
 			goto end;
 	}
-	
+
+#ifndef RS_DEFAULT_STRONG_LEN
+	if(append_to_feat(&feat, "rshash=blake2:"))
+		goto end;
+#endif
 
 	//printf("feat: %s\n", feat);
 
@@ -253,7 +258,7 @@ static int extra_comms_read(struct async *as,
 				cconfs[OPT_PROTOCOL]);
 			if(protocol!=PROTO_AUTO)
 			{
-				snprintf(msg, sizeof(msg), "Client is trying to use %s but server is set to protocol=%d\n", rbuf->buf, protocol);
+				snprintf(msg, sizeof(msg), "Client is trying to use protocol=%s but server is set to protocol=%d\n", rbuf->buf, protocol);
 				log_and_send_oom(asfd, __func__);
 				goto end;
 			}
@@ -269,12 +274,22 @@ static int extra_comms_read(struct async *as,
 			}
 			else
 			{
-				snprintf(msg, sizeof(msg), "Client is trying to use %s, which is unknown\n", rbuf->buf);
+				snprintf(msg, sizeof(msg), "Client is trying to use protocol=%s, which is unknown\n", rbuf->buf);
 				log_and_send_oom(asfd, __func__);
 				goto end;
 			}
 			logp("Client has set protocol=%d\n",
 				(int)get_e_protocol(cconfs[OPT_PROTOCOL]));
+		}
+		else if(!strncmp_w(rbuf->buf, "rshash=blake2"))
+		{
+#ifdef RS_DEFAULT_STRONG_LEN
+			logp("Client is trying to use librsync hash blake2, but server does not support it.\n");
+			goto end;
+#else
+			set_e_rshash(cconfs[OPT_RSHASH], RSHASH_BLAKE2);
+			set_e_rshash(globalcs[OPT_RSHASH], RSHASH_BLAKE2);
+#endif
 		}
 		else
 		{
@@ -383,6 +398,15 @@ int extra_comms(struct async *as,
 			  "but client is burp version %s\n",
 			  peer_version);
 			goto error;
+	}
+
+	if(get_e_protocol(cconfs[OPT_PROTOCOL])==PROTO_1)
+	{
+		if(get_e_rshash(cconfs[OPT_RSHASH])==RSHASH_UNSET)
+		{
+			set_e_rshash(confs[OPT_RSHASH], RSHASH_MD4);
+			set_e_rshash(cconfs[OPT_RSHASH], RSHASH_MD4);
+		}
 	}
 
 	return 0;

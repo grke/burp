@@ -689,6 +689,9 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_RSHASH:
 	  return sc_rsh(c[o], RSHASH_UNSET,
 		CONF_FLAG_CC_OVERRIDE, "");
+	case OPT_MESSAGE:
+	  return sc_int(c[o], 0,
+		CONF_FLAG_CC_OVERRIDE, "");
 	case OPT_INCEXCDIR:
 	  // This is a combination of OPT_INCLUDE and OPT_EXCLUDE, so
 	  // no field name set for now.

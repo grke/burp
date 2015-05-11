@@ -327,8 +327,7 @@ static int do_manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
 		}
 		else
 		{
-			ars=sbufl_fill(sb, asfd, NULL, manio->zp,
-				confs?get_cntr(confs[OPT_CNTR]):NULL);
+			ars=sbufl_fill(sb, asfd, NULL, manio->zp, confs);
 		}
 		switch(ars)
 		{

@@ -22,10 +22,10 @@ int do_quick_read(struct asfd *asfd, const char *datapth, struct conf **confs)
 
 	if(rbuf->buf)
 	{
-		if(rbuf->cmd==CMD_WARNING)
+		if(rbuf->cmd==CMD_MESSAGE
+		  || rbuf->cmd==CMD_WARNING)
 		{
-			logp("WARNING: %s\n", rbuf->buf);
-			cntr_add(get_cntr(confs[OPT_CNTR]), rbuf->cmd, 0);
+			log_recvd(rbuf, confs, 0);
 		}
 		else if(rbuf->cmd==CMD_INTERRUPT)
 		{
@@ -516,8 +516,7 @@ int receive_a_file(struct asfd *asfd, const char *path, struct conf **confs)
 		goto end;
 	}
 
-	ret=transfer_gzfile_in(asfd, path, bfd,
-		&rcvdbytes, &sentbytes, get_cntr(confs[OPT_CNTR]));
+	ret=transfer_gzfile_in(asfd, path, bfd, &rcvdbytes, &sentbytes, confs);
 	if(bfd->close(bfd, asfd))
 	{
 		logp("error closing %s in receive_a_file\n", path);

@@ -34,6 +34,7 @@ enum cmd
 	CMD_ERROR	='e',	/* Error message */
 	CMD_APPEND	='a',	/* Append to a file */
 	CMD_INTERRUPT	='i',	/* Please interrupt the current data flow */
+	CMD_MESSAGE	='p',	/* A message */
 	CMD_WARNING	='w',	/* A warning */
 	CMD_END_FILE	='x',	/* End of file transmission - also appears at
 				   the end of the manifest and contains

@@ -86,6 +86,7 @@ int do_backup_client(struct asfd *asfd, struct conf **confs, enum action action,
 				breakpoint(confs, __func__);
 				goto end;
 			}
+
 			if(get_e_protocol(confs[OPT_PROTOCOL])==PROTO_1)
 				ret=backup_phase2_client_protocol1(asfd,
 					confs, resume);

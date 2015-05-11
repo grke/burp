@@ -15,9 +15,9 @@
 #define SBUFL_UNUSED_C		0x80
 
 extern int sbufl_fill(struct sbuf *sb, struct asfd *asfd, FILE *fp,
-	gzFile zp, struct cntr *cntr);
+	gzFile zp, struct conf **confs);
 extern int sbufl_fill_phase1(struct sbuf *sb, FILE *fp,
-	gzFile zp, struct cntr *cntr);
+	gzFile zp, struct conf **confs);
 extern int sbufl_to_manifest(struct sbuf *sb, FILE *mp, gzFile zp);
 extern int sbufl_to_manifest_phase1(struct sbuf *sb, FILE *mp, gzFile zp);
 

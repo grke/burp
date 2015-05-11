@@ -32,7 +32,7 @@ static int do_restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 	{
 		ret=transfer_gzfile_inl(asfd, sb, fname, NULL,
 			&rcvdbytes, &sentbytes, encpassword, enccompressed,
-			get_cntr(confs[OPT_CNTR]), metadata);
+			confs, metadata);
 		*metalen=sentbytes;
 		// skip setting cntr, as we do not actually
 		// restore until a bit later
@@ -42,7 +42,7 @@ static int do_restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 	{
 		ret=transfer_gzfile_inl(asfd, sb, fname, bfd,
 			&rcvdbytes, &sentbytes,
-			encpassword, enccompressed, get_cntr(confs[OPT_CNTR]), NULL);
+			encpassword, enccompressed, confs, NULL);
 #ifndef HAVE_WIN32
 		if(bfd->close(bfd, asfd))
 		{

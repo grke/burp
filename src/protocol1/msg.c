@@ -119,6 +119,11 @@ static DWORD WINAPI read_efs(PBYTE pbData, PVOID pvCallbackContext, PULONG ulLen
 				*ulLength=0;
 				iobuf_free_content(rbuf);
 				return ERROR_SUCCESS;
+			case CMD_MESSAGE:
+				logp("MESSAGE: %s\n", rbuf->buf);
+				cntr_add(mybuf->cntr, rbuf->cmd, 0);
+				iobuf_free_content(rbuf);
+				continue;
 			case CMD_WARNING:
 				logp("WARNING: %s\n", rbuf->buf);
 				cntr_add(mybuf->cntr, rbuf->cmd, 0);
@@ -155,7 +160,7 @@ int transfer_gzfile_inl(struct asfd *asfd,
 	struct sbuf *sb, const char *path, BFILE *bfd,
 	unsigned long long *rcvd, unsigned long long *sent,
 	const char *encpassword, int enccompressed,
-	struct cntr *cntr, char **metadata)
+	struct conf **confs, char **metadata)
 {
 	int quit=0;
 	int ret=-1;
@@ -175,7 +180,8 @@ int transfer_gzfile_inl(struct asfd *asfd,
 
 #ifdef HAVE_WIN32
 	if(sb && sb->path.cmd==CMD_EFS_FILE)
-		return transfer_efs_in(asfd, bfd, rcvd, sent, cntr);
+		return transfer_efs_in(asfd, bfd, rcvd, sent,
+			get_cntr(confs[OPT_CNTR]);
 #endif
 
 	//if(!MD5_Init(&md5))
@@ -329,9 +335,9 @@ int transfer_gzfile_inl(struct asfd *asfd,
 				quit++;
 				ret=0;
 				break;
+			case CMD_MESSAGE:
 			case CMD_WARNING:
-				logp("WARNING: %s\n", rbuf->buf);
-				cntr_add(cntr, rbuf->cmd, 0);
+				log_recvd(rbuf, confs, 0);
 				break;
 			default:
 				iobuf_log_unexpected(rbuf, __func__);

@@ -74,7 +74,7 @@ static int do_inflate(struct asfd *asfd, z_stream *zstrm, BFILE *bfd,
 }
 
 int transfer_gzfile_in(struct asfd *asfd, const char *path, BFILE *bfd,
-	unsigned long long *rcvd, unsigned long long *sent, struct cntr *cntr)
+	unsigned long long *rcvd, unsigned long long *sent, struct conf **confs)
 {
 	int quit=0;
 	int ret=-1;
@@ -120,9 +120,9 @@ int transfer_gzfile_in(struct asfd *asfd, const char *path, BFILE *bfd,
 				break;
 			case CMD_END_FILE: // finish up
 				goto end_ok;
+			case CMD_MESSAGE:
 			case CMD_WARNING:
-				logp("WARNING: %s\n", rbuf->buf);
-				cntr_add(cntr, rbuf->cmd, 0);
+				log_recvd(rbuf, confs, 0);
 				break;
 			default:
 				iobuf_log_unexpected(rbuf, __func__);

@@ -614,10 +614,10 @@ static int do_stuff_to_receive(struct asfd *asfd,
 
 	if(!rbuf->buf) return 0;
 
-	if(rbuf->cmd==CMD_WARNING)
+	if(rbuf->cmd==CMD_MESSAGE
+	  || rbuf->cmd==CMD_WARNING)
 	{
-		logp("WARNING: %s\n", rbuf->buf);
-		cntr_add(get_cntr(cconfs[OPT_CNTR]), rbuf->cmd, 0);
+		log_recvd(rbuf, cconfs, 0);
 		return 0;
 	}
 
@@ -847,8 +847,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 
 		sbuf_free_content(p1b);
 
-		switch(sbufl_fill_phase1(p1b,
-			NULL, p1zp, get_cntr(cconfs[OPT_CNTR])))
+		switch(sbufl_fill_phase1(p1b, NULL, p1zp, cconfs))
 		{
 			case 0: break;
 			case 1: gzclose_fp(&p1zp);
@@ -881,8 +880,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 		while(cmanfp)
 		{
 			sbuf_free_content(cb);
-			switch(sbufl_fill(cb, asfd,
-				NULL, cmanfp, get_cntr(cconfs[OPT_CNTR])))
+			switch(sbufl_fill(cb, asfd, NULL, cmanfp, cconfs))
 			{
 				case 0: break;
 				case 1: gzclose_fp(&cmanfp);

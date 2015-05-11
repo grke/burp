@@ -98,6 +98,7 @@ enum conf_opt
 	OPT_PEER_VERSION,
 	OPT_PROTOCOL,
 	OPT_RSHASH,
+	OPT_MESSAGE,
 
 	// Server options.
 	OPT_ADDRESS,

@@ -71,6 +71,9 @@ static int send_features(struct asfd *asfd, struct conf **cconfs)
 	if(append_to_feat(&feat, "counters:"))
 		goto end;
 */
+	// We support CMD_MESSAGE.
+	if(append_to_feat(&feat, "msg:"))
+		goto end;
 
 	if(protocol==PROTO_AUTO)
 	{
@@ -290,6 +293,11 @@ static int extra_comms_read(struct async *as,
 			set_e_rshash(cconfs[OPT_RSHASH], RSHASH_BLAKE2);
 			set_e_rshash(globalcs[OPT_RSHASH], RSHASH_BLAKE2);
 #endif
+		}
+		else if(!strncmp_w(rbuf->buf, "msg"))
+		{
+			set_int(cconfs[OPT_MESSAGE], 1);
+			set_int(globalcs[OPT_MESSAGE], 1);
 		}
 		else
 		{

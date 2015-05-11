@@ -324,10 +324,10 @@ static int parse_rbuf(struct asfd *asfd, struct sbuf *sb,
 		if(deal_with_data(asfd, sb, bfd, confs))
 			return -1;
 	}
-	else if(rbuf->cmd==CMD_WARNING)
+	else if(rbuf->cmd==CMD_MESSAGE
+	  || rbuf->cmd==CMD_WARNING)
 	{
-		logp("WARNING: %s\n", rbuf->buf);
-		cntr_add(get_cntr(confs[OPT_CNTR]), rbuf->cmd, 0);
+		log_recvd(rbuf, confs, 0);
 	}
 	else
 	{
@@ -399,6 +399,7 @@ int backup_phase2_client_protocol1(struct asfd *asfd,
 	int ret=0;
 
 	logp("Phase 2 begin (send backup data)\n");
+	printf("\n");
 
 	ret=do_backup_phase2_client(asfd, confs, resume);
 

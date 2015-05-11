@@ -104,9 +104,9 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist, struct blist 
 			}
 			goto end;
 		}
+		case CMD_MESSAGE:
 		case CMD_WARNING:
-			logp("WARNING: %s\n", rbuf->buf);
-			cntr_add(get_cntr(confs[OPT_CNTR]), rbuf->cmd, 0);
+			log_recvd(rbuf, confs, 0);
 			goto end;
 		case CMD_GEN:
 			if(!strcmp(rbuf->buf, "requests_end"))
@@ -310,6 +310,7 @@ int backup_phase2_client_protocol2(struct asfd *asfd,
 	struct iobuf *wbuf=NULL;
 
 	logp("Phase 2 begin (send backup data)\n");
+	printf("\n");
 
 	if(!(slist=slist_alloc())
 	  || !(blist=blist_alloc())

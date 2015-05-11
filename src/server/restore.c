@@ -78,8 +78,7 @@ static int setup_cntr(struct asfd *asfd, const char *manifest,
 	}
 	while(1)
 	{
-		if((ars=sbufl_fill(sb,
-			asfd, NULL, zp, get_cntr(cconfs[OPT_CNTR]))))
+		if((ars=sbufl_fill(sb, asfd, NULL, zp, cconfs)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means end ok
@@ -376,10 +375,9 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 		}
 		if(rbuf->buf) switch(rbuf->cmd)
 		{
+			case CMD_MESSAGE:
 			case CMD_WARNING:
-				logp("WARNING: %s\n", rbuf->buf);
-				cntr_add(get_cntr(cconfs[OPT_CNTR]),
-					rbuf->cmd, 0);
+				log_recvd(rbuf, cconfs, 0);
 				continue;
 			case CMD_INTERRUPT:
 				// Client wanted to interrupt the

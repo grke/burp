@@ -197,6 +197,12 @@ int extra_comms(struct async *as, struct conf **confs,
 		}
 		set_e_protocol(confs[OPT_PROTOCOL], PROTO_2);
 	}
+	else if(server_supports(feat, ":msg:"))
+	{
+		set_int(confs[OPT_MESSAGE], 1);
+		if(asfd->write_str(asfd, CMD_GEN, "msg"))
+			goto end;
+	}
 
 #ifndef RS_DEFAULT_STRONG_LEN
 	if(server_supports(feat, ":rshash=blake2:"))

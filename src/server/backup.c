@@ -304,7 +304,7 @@ int run_backup(struct async *as, struct sdirs *sdirs, struct conf **cconfs,
 		  cconfs,
 		  1 /* wait */,
 		  1 /* use logp */,
-		  0 /* no logw */
+		  0 /* no log_remote */
 		))<0)
 		{
 			logp("Error running timer script for %s\n",

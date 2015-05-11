@@ -42,6 +42,8 @@ static char *cmd_to_text(enum cmd cmd)
 			snprintf(buf, len, "Append to a file"); break;
 		case CMD_INTERRUPT:
 			snprintf(buf, len, "Interrupt"); break;
+		case CMD_MESSAGE:
+			snprintf(buf, len, "Message"); break;
 		case CMD_WARNING:
 			snprintf(buf, len, "Warning"); break;
 		case CMD_END_FILE:

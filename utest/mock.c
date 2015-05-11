@@ -14,6 +14,7 @@ void logp(const char *fmt, ...)
 void logc(const char *fmt, ...) { }
 void log_oom_w(const char *func, const char *orig_func) { }
 void log_out_of_memory(const char *function) { }
+void log_recvd(struct iobuf *, struct conf **, int) { }
 const char *getdatestr(time_t t) { return ""; }
 const char *time_taken(time_t d) { return ""; }
 const char *progname(void) { return "utest"; }

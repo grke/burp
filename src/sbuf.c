@@ -300,9 +300,9 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 				blk->length=rbuf->len;
 				rbuf->buf=NULL;
 				return 0;
+			case CMD_MESSAGE:
 			case CMD_WARNING:
-				logp("WARNING: %s\n", rbuf->buf);
-				if(confs) cntr_add(get_cntr(confs[OPT_CNTR]), CMD_WARNING, 1);
+				log_recvd(rbuf, confs, 1);
 				break;
 			case CMD_GEN:
 				if(!strcmp(rbuf->buf, "restoreend")

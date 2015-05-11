@@ -255,9 +255,9 @@ static int deal_with_read(struct iobuf *rbuf,
 			goto end;
 
 		/* Incoming control/message stuff. */
+		case CMD_MESSAGE:
 		case CMD_WARNING:
-			logp("WARNING: %s\n", rbuf);
-			cntr_add(get_cntr(confs[OPT_CNTR]), rbuf->cmd, 0);
+			log_recvd(rbuf, confs, 0);
 			goto end;
 		case CMD_GEN:
 			if(!strcmp(rbuf->buf, "sigs_end"))

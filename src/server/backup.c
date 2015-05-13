@@ -61,7 +61,7 @@ end:
 	return ret;
 }
 
-int backup_phase1_server(struct async *as,
+static int backup_phase1_server(struct async *as,
 	struct sdirs *sdirs, struct conf **cconfs)
 {
 	if(get_int(cconfs[OPT_BREAKPOINT])==1)
@@ -69,7 +69,7 @@ int backup_phase1_server(struct async *as,
 	return backup_phase1_server_all(as, sdirs, cconfs);
 }
 
-int backup_phase2_server(struct async *as, struct sdirs *sdirs,
+static int backup_phase2_server(struct async *as, struct sdirs *sdirs,
 	const char *incexc, int resume, struct conf **cconfs)
 {
 	if(get_int(cconfs[OPT_BREAKPOINT])==2)
@@ -86,8 +86,8 @@ int backup_phase2_server(struct async *as, struct sdirs *sdirs,
 	}
 }
 
-int backup_phase3_server(struct sdirs *sdirs,
-	struct conf **cconfs, int recovery, int compress)
+static int backup_phase3_server(struct sdirs *sdirs, struct conf **cconfs,
+	int compress)
 {
 	if(get_int(cconfs[OPT_BREAKPOINT])==3)
 		return breakpoint(cconfs, __func__);
@@ -96,13 +96,13 @@ int backup_phase3_server(struct sdirs *sdirs,
 	{
 		case PROTO_1:
 			return backup_phase3_server_protocol1(sdirs,
-				recovery, compress, cconfs);
+				compress, cconfs);
 		default:
 			return backup_phase3_server_protocol2(sdirs, cconfs);
 	}
 }
 
-int backup_phase4_server(struct sdirs *sdirs, struct conf **cconfs)
+static int backup_phase4_server(struct sdirs *sdirs, struct conf **cconfs)
 {
 	if(get_int(cconfs[OPT_BREAKPOINT])==4)
 		return breakpoint(cconfs, __func__);
@@ -202,8 +202,7 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 	as->asfd_remove(as, asfd);
 	asfd_close(asfd);
 
-	if(backup_phase3_server(sdirs, cconfs,
-		0 /* not recovery mode */, 1 /* compress */))
+	if(backup_phase3_server(sdirs, cconfs, 1 /* compress */))
 	{
 		logp("error in backup phase 3\n");
 		goto error;

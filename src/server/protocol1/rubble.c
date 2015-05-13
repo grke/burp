@@ -32,19 +32,6 @@ end:
 	return ret;
 }
 
-static int maybe_rebuild_manifest(struct sdirs *sdirs, int compress,
-	struct conf **cconfs)
-{
-	struct stat statp;
-	if(lstat(sdirs->manifest, &statp))
-		return backup_phase3_server_protocol1(sdirs,
-			1 /* recovery mode */, compress, cconfs);
-
-	unlink(sdirs->changed);
-	unlink(sdirs->unchanged);
-	return 0;
-}
-
 static int working_delete(struct async *as, struct sdirs *sdirs)
 {
 	// Try to remove it and start again.
@@ -58,28 +45,6 @@ static int working_delete(struct async *as, struct sdirs *sdirs)
 	// Get rid of the symlink.
 	unlink(sdirs->working);
 	return 0;
-}
-
-static int working_use(struct async *as, struct sdirs *sdirs,
-	const char *incexc, int *resume, struct conf **cconfs)
-{
-	// Use it as it is.
-
-	logp("converting old working directory into the latest backup\n");
-
-	// FIX THIS: There might be a partial file written that is not yet
-	// logged to the manifest. It does no harm other than taking up some
-	// disk space. Detect this and remove it.
-
-	// Get us a partial manifest from the files lying around.
-	if(maybe_rebuild_manifest(sdirs, 1 /* compress */, cconfs)) return -1;
-
-	// Now just rename the working link to be a finishing link,
-	// then run this function again.
-	// The rename() race condition is automatically recoverable here.
-	if(do_rename(sdirs->working, sdirs->finishing)) return -1;
-
-	return check_for_rubble_protocol1(as, sdirs, incexc, resume, cconfs);
 }
 
 static int working_resume(struct async *as, struct sdirs *sdirs,
@@ -225,9 +190,6 @@ static int recover_working(struct async *as,
 	{
 		case RECOVERY_METHOD_DELETE:
 			// Dealt with above.
-			break;
-		case RECOVERY_METHOD_USE:
-			ret=working_use(as, sdirs, incexc, resume, cconfs);
 			break;
 		case RECOVERY_METHOD_RESUME:
 			ret=working_resume(as, sdirs, incexc, resume, cconfs);

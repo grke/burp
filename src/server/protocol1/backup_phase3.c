@@ -2,7 +2,7 @@
 
 // Combine the phase1 and phase2 files into a new manifest.
 int backup_phase3_server_protocol1(struct sdirs *sdirs,
-	int recovery, int compress, struct conf **cconfs)
+	int compress, struct conf **cconfs)
 {
 	int ars=0;
 	int ret=-1;
@@ -42,10 +42,6 @@ int backup_phase3_server_protocol1(struct sdirs *sdirs,
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
 			close_fp(&chfp);
-
-			// In recovery mode, only want to read to the last
-			// entry in the phase 2 file.
-			if(recovery) break;
 		}
 
 		if(ucb->path.buf && !chb->path.buf)

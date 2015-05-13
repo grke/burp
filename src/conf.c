@@ -37,8 +37,6 @@ enum recovery_method str_to_recovery_method(const char *str)
 		return RECOVERY_METHOD_DELETE;
 	else if(!strcmp(str, "resume"))
 		return RECOVERY_METHOD_RESUME;
-	else if(!strcmp(str, "use"))
-		return RECOVERY_METHOD_USE;
 	logp("Unknown working_dir_recovery_method setting: %s\n", str);
 	return RECOVERY_METHOD_UNSET;
 }
@@ -49,7 +47,6 @@ const char *recovery_method_to_str(enum recovery_method r)
 	{
 		case RECOVERY_METHOD_DELETE: return "delete";
 		case RECOVERY_METHOD_RESUME: return "resume";
-		case RECOVERY_METHOD_USE: return "use";
 		default: return "unknown";
 	}
 }

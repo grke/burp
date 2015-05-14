@@ -16,7 +16,6 @@
 #include "link.h"
 #include "restore.h"
 #include "resume.h"
-#include "rubble.h"
 #include "zlibio.h"
 
 #endif

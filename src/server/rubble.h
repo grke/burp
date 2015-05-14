@@ -1,8 +1,8 @@
-#ifndef _RUBBLE_PROTOCOL1_H
-#define _RUBBLE_PROTOCOL1_H
+#ifndef _RUBBLE_H
+#define _RUBBLE_H
 
 // Return 1 if the backup is now finalising.
-extern int check_for_rubble_protocol1(struct async *as,
+extern int check_for_rubble(struct async *as,
 	struct sdirs *sdirs, const char *incexc,
 	int *resume, struct conf **cconfs);
 

@@ -24,7 +24,6 @@ SRCS = \
 	link.c \
 	restore.c \
 	resume.c \
-	rubble.c \
 	zlibio.c \
 
 OBJS = $(SRCS:.c=.o)

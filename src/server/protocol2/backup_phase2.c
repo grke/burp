@@ -755,6 +755,13 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 
 	logp("Phase 2 begin (recv backup data)\n");
 
+	if(resume)
+	{
+		// FIX THIS.
+		logp("Error: resume currently unimplemented for protocol 2\n");
+		goto end;
+	}
+
 	//if(champ_chooser_init(sdirs->data, confs)
 	if(!(cmanio=manio_alloc())
 	  || !(p1manio=manio_alloc())

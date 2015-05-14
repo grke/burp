@@ -52,7 +52,7 @@ static int rewrite_client_conf(struct conf **confs)
 
 	logp("Rewriting conf file: %s\n", conffile);
 	snprintf(p, sizeof(p), ".%d", getpid());
-	if(!(tmp=prepend(conffile, p, strlen(p), "")))
+	if(!(tmp=prepend(conffile, p)))
 		goto end;
 	if(!(sp=open_file(conffile, "rb"))
 	  || !(dp=open_file(tmp, "wb")))

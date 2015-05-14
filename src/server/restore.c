@@ -486,7 +486,7 @@ static int get_logpaths(struct bu *bu, const char *file,
 	char **logpath, char **logpathz)
 {
 	if(!(*logpath=prepend_s(bu->path, file))
-	  || !(*logpathz=prepend(*logpath, ".gz", strlen(".gz"), "")))
+	  || !(*logpathz=prepend(*logpath, ".gz")))
 		return -1;
 	return 0;
 }

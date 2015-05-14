@@ -190,7 +190,7 @@ int set_blocking(int fd)
 
 char *get_tmp_filename(const char *basis)
 {
-	return prepend(basis, ".tmp", strlen(".tmp"), 0 /* no slash */);
+	return prepend(basis, ".tmp");
 }
 
 void add_fd_to_sets(int fd, fd_set *read_set, fd_set *write_set, fd_set *err_set, int *max_fd)

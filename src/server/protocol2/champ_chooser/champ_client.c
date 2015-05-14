@@ -112,7 +112,7 @@ struct asfd *champ_chooser_connect(struct async *as,
 			confs))) goto error;
 
 	cname=get_string(confs[OPT_CNAME]);
-	if(!(champname=prepend("cname", cname, strlen(cname), ":")))
+	if(!(champname=prepend_n("cname", cname, strlen(cname), ":")))
 			goto error;
 
 	if(chfd->write_str(chfd, CMD_GEN, champname)

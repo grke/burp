@@ -273,11 +273,11 @@ static int merge_into_global_sparse(const char *sparse, const char *global,
 	struct lock *lock=NULL;
 	const char *globalsrc=NULL;
 	
-	if(!(tmpfile=prepend(global, "tmp", strlen("tmp"), ".")))
+	if(!(tmpfile=prepend_n(global, "tmp", strlen("tmp"), ".")))
 		goto end;
 
 	// Get a lock before messing with the global sparse index.
-	if(!(lockfile=prepend(global, "lock", strlen("lock"), "."))
+	if(!(lockfile=prepend_n(global, "lock", strlen("lock"), "."))
 	  || !(lock=lock_alloc_and_init(lockfile)))
 		goto end;
 

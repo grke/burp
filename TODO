@@ -38,5 +38,3 @@ roughly in order of most important to least.
 * Make Windows 'image' backups work.
 
 * champ_chooser: figure out a way of giving preference to newer candidates.
-
-* Stop bedup from trying to process protocol2 directories.

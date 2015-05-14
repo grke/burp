@@ -10,7 +10,7 @@ static int append_to_feat(char **feat, const char *str)
 			return -1;
 		return 0;
 	}
-	if(!(tmp=prepend(*feat, str, strlen(str), "")))
+	if(!(tmp=prepend(*feat, str)))
 		return -1;
 	free_w(feat);
 	*feat=tmp;
@@ -207,8 +207,8 @@ static int extra_comms_read(struct async *as,
 				snprintf(comp, sizeof(comp),
 					"compression = %d\n",
 					get_int(cconfs[OPT_COMPRESSION]));
-				if(!(tmp=prepend(*incexc, comp,
-					strlen(comp), 0))) goto end;
+				if(!(tmp=prepend(*incexc, comp)))
+					goto end;
 				free_w(incexc);
 				*incexc=tmp;
 			}

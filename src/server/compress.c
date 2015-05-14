@@ -38,7 +38,7 @@ int compress_file(const char *src, const char *dst, struct conf **cconfs)
 	char p[12]="";
 	snprintf(p, sizeof(p), "%d", (int)pid);
 
-	if(!(dsttmp=prepend(dst, p, strlen(p), 0 /* no slash */)))
+	if(!(dsttmp=prepend(dst, p)))
 		return -1;
 	
 	// Need to compress the log.

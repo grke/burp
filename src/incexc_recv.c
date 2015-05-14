@@ -7,7 +7,7 @@ static const char *endrepstrf;
 static int add_to_incexc(char **incexc, const char *src, size_t len, const char *sep)
 {
 	char *tmp;
-	if(!(tmp=prepend(*incexc?:"", src, len, *incexc?"\n":""))) return -1;
+	if(!(tmp=prepend_n(*incexc?:"", src, len, *incexc?"\n":""))) return -1;
 	if(*incexc) free(*incexc);
 	*incexc=tmp;
 	return 0;

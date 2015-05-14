@@ -318,7 +318,7 @@ int backup_phase4_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 	char compd[32]="";
 	struct manio *newmanio=NULL;
 
-	logp("Start sparse generation\n");
+	logp("Begin phase4 (sparse generation)\n");
 
 	if(!(newmanio=manio_alloc())
 	  || manio_init_read(newmanio, sdirs->rmanifest)
@@ -377,6 +377,8 @@ int backup_phase4_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 	if(do_rename(dst, sparse)) goto end;
 
 	if(merge_into_global_sparse(sparse, global_sparse, confs)) goto end;
+
+	logp("End phase4 (sparse generation)\n");
 
 	ret=0;
 end:

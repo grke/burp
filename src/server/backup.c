@@ -208,11 +208,8 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 		goto error;
 	}
 
-	if(protocol==PROTO_1)
-	{
-		if(do_rename(sdirs->working, sdirs->finishing))
-			goto error;
-	}
+	if(do_rename(sdirs->working, sdirs->finishing))
+		goto error;
 
 	if(backup_phase4_server(sdirs, cconfs))
 	{
@@ -224,19 +221,9 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 	cntr_stats_to_file(get_cntr(cconfs[OPT_CNTR]),
 		sdirs->rworking, ACTION_BACKUP, cconfs);
 
-	if(protocol==PROTO_1)
-	{
-		// Move the symlink to indicate that we are now in the end
-		// phase. The rename() race condition is automatically
-		// recoverable here.
-		if(do_rename(sdirs->finishing, sdirs->current)) goto error;
-	}
-	else
-	{
-		// FIX THIS: check whether the race condition here means that
-		// the backup is not automatically recoverable.
-		if(do_rename(sdirs->working, sdirs->current)) goto error;
-	}
+	// Move the symlink to indicate that we are now in the end phase. The
+	// rename() race condition is automatically recoverable here.
+	if(do_rename(sdirs->finishing, sdirs->current)) goto error;
 
 	logp("Backup completed.\n");
 	set_logfp(NULL, cconfs);

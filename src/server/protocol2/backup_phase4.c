@@ -317,6 +317,12 @@ int backup_phase4_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 	char compb[32]="";
 	char compd[32]="";
 	struct manio *newmanio=NULL;
+	char *logpath=NULL;
+
+	if(!(logpath=prepend_s(sdirs->finishing, "log")))
+		goto end;
+	if(set_logfp(logpath, confs))
+		goto end;
 
 	logp("Begin phase4 (sparse generation)\n");
 
@@ -391,5 +397,6 @@ end:
 	recursive_delete(h2dir, NULL, 1);
 	free_w(&h1dir);
 	free_w(&h2dir);
+	free_w(&logpath);
 	return ret;
 }

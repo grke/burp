@@ -276,6 +276,7 @@ extern struct conf **confs_alloc(void);
 extern void confs_free(struct conf ***confs);
 extern void confs_free_content(struct conf **confs);
 extern int confs_init(struct conf **confs);
+extern void conf_free_content(struct conf *c);
 extern void confs_free_content(struct conf **confs);
 extern void confs_null(struct conf **confs);
 extern void confs_memcpy(struct conf **dst, struct conf **src);

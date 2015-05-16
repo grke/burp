@@ -239,7 +239,7 @@ int add_to_strlist_exclude(struct conf *conf, const char *value)
 	return add_to_strlist(conf, value, 0);
 }
 
-static void conf_free_content(struct conf *c)
+void conf_free_content(struct conf *c)
 {
 	if(!c) return;
 	switch(c->conf_type)

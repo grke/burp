@@ -781,6 +781,9 @@ static int finalise_start_dirs(struct conf **c)
 	struct strlist *last_ie=NULL;
 	struct strlist *last_sd=NULL;
 
+	// Make sure that the startdir list starts empty, or chaos will ensue.
+	conf_free_content(c[OPT_STARTDIR]);
+
 	for(s=get_strlist(c[OPT_INCLUDE]); s; s=s->next)
 	{
 #ifdef HAVE_WIN32

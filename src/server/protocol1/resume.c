@@ -53,11 +53,14 @@ static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
 	{
 		// If told to 'seekback' to the immediately previous
 		// entry, we need to remember the position of it.
-		if(target && fp && seekback && (pos=ftello(fp))<0)
+		if(target && seekback)
 		{
-			logp("Could not ftello in %s(): %s\n", __func__,
-				strerror(errno));
-			goto error;
+			if(fp && (pos=ftello(fp))<0)
+			{
+				logp("Could not ftello in %s(): %s\n", __func__,
+					strerror(errno));
+				goto error;
+			}
 		}
 
 		sbuf_free_content(sb);
@@ -99,11 +102,19 @@ static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
 		{
 			// If told to 'seekback' to the immediately previous
 			// entry, do it here.
-			if(fp && seekback && fseeko(fp, pos, SEEK_SET))
+			if(seekback)
 			{
-				logp("Could not fseeko in %s(): %s\n",
-					__func__, strerror(errno));
-				goto error;
+				if(fp && fseeko(fp, pos, SEEK_SET))
+				{
+					logp("Could not fseeko in %s(): %s\n",
+						__func__, strerror(errno));
+					goto error;
+				}
+			}
+			else
+			{
+				iobuf_free_content(result);
+				iobuf_move(result, &sb->path);
 			}
 			return 0;
 		}
@@ -147,18 +158,16 @@ static int forward_zp(gzFile zp, struct iobuf *result, struct iobuf *target,
 		do_cntr, same, dpth, cconfs);
 }
 
-static int do_resume_work(gzFile p1zp, FILE *p2fp, FILE *ucfp,
+static int do_resume_work(gzFile p1zp, FILE *cfp, FILE *ucfp,
 	struct dpth *dpth, struct conf **cconfs)
 {
 	int ret=0;
 	struct iobuf *p1b=NULL;
-	struct iobuf *p2b=NULL;
-	struct iobuf *p2btmp=NULL;
+	struct iobuf *chb=NULL;
 	struct iobuf *ucb=NULL;
 
 	if(!(p1b=iobuf_alloc())
-	  || !(p2b=iobuf_alloc())
-	  || !(p2btmp=iobuf_alloc())
+	  || !(chb=iobuf_alloc())
 	  || !(ucb=iobuf_alloc()))
 		return -1;
 
@@ -168,43 +177,43 @@ static int do_resume_work(gzFile p1zp, FILE *p2fp, FILE *ucfp,
 	gzrewind(p1zp);
 
 	logp("Setting up resume positions...\n");
-	// Go to the end of p2fp.
-	if(forward_fp(p2fp, p2btmp, NULL,
+	// Go to the end of cfp.
+	if(forward_fp(cfp, chb, NULL,
 		0, /* not phase1 */
 		0, /* no seekback */
-		0, /* no cntr */
+		1, /* do cntr */
 		0, /* changed */
 		dpth, cconfs)) goto error;
-	rewind(p2fp);
-	// Go to the beginning of p2fp and seek forward to the p2btmp entry.
-	// This is to guard against a partially written entry at the end of
-	// p2fp, which will get overwritten.
-	if(forward_fp(p2fp, p2b, p2btmp,
-		0, /* not phase1 */
-		0, /* no seekback */
-		1, /* do_cntr */
-		0, /* changed */
-		dpth, cconfs)) goto error;
-	logp("  phase2:    %s\n", p2b->buf);
+	if(chb->buf)
+	{
+		logp("  changed:    %s\n", chb->buf);
+		// Now need to go to the appropriate places in p1zp and
+		// unchanged.
+		if(forward_zp(p1zp, p1b, chb,
+			1, /* phase1 */
+			0, /* seekback */
+			0, /* no cntr */
+			0, /* ignored */
+			dpth, cconfs)) goto error;
+		logp("  phase1:    %s\n", p1b->buf);
+		if(strcmp(p1b->buf, chb->buf))
+		{
+			logp("phase1 and changed positions should match!\n");
+			goto error;
+		}
 
-	// Now need to go to the appropriate places in p1zp and unchanged.
-	// The unchanged file needs to be positioned just before the found
-	// entry, otherwise it ends up having a duplicated entry.
-	if(forward_zp(p1zp, p1b, p2b,
-		1, /* phase1 */
-		0, /* no seekback */
-		0, /* no cntr */
-		0, /* ignored */
-		dpth, cconfs)) goto error;
-	logp("  phase1:    %s\n", p1b->buf);
-
-	if(forward_fp(ucfp, ucb, p2b,
-		0, /* not phase1 */
-		1, /* seekback */
-		1, /* do_cntr */
-		1, /* same */
-		dpth, cconfs)) goto error;
-	logp("  unchanged: %s\n", ucb->buf);
+		// The unchanged file needs to be positioned just before the
+		// found entry, otherwise it ends up having a duplicated entry.
+		if(forward_fp(ucfp, ucb, chb,
+			0, /* not phase1 */
+			1, /* seekback */
+			1, /* do_cntr */
+			1, /* same */
+			dpth, cconfs)) goto error;
+		logp("  unchanged: %s\n", ucb->buf);
+	}
+	else
+		logp("  nothing previously transferred\n");
 
 	// Now should have all file pointers in the right places to resume.
 	if(dpth_incr(dpth)) goto error;
@@ -217,8 +226,7 @@ error:
 	ret=-1;
 end:
 	iobuf_free(&p1b);
-	iobuf_free(&p2b);
-	iobuf_free(&p2btmp);
+	iobuf_free(&chb);
 	iobuf_free(&ucb);
 	logp("End phase1 (read previous file system scan)\n");
 	return ret;

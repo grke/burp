@@ -779,6 +779,14 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 	struct sbuf *p1b=NULL; // file list from client
 	struct sbuf *rb=NULL; // receiving file from client
 	struct asfd *asfd=as->asfd;
+	int breaking=0;
+	int breakcount=0;
+	if(get_int(cconfs[OPT_BREAKPOINT])>=2000
+	  && get_int(cconfs[OPT_BREAKPOINT])<3000)
+	{
+		breaking=get_int(cconfs[OPT_BREAKPOINT]);
+		breakcount=breaking-2000;
+	}
 
 	logp("Begin phase2 (receive file data)\n");
 
@@ -818,6 +826,11 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 
 	while(1)
 	{
+		if(breaking)
+		{
+			if(breakcount--==0) return breakpoint(cconfs, __func__);
+		}
+
 		//printf("in loop, %s %s %c\n",
 		//	*cmanfp?"got cmanfp":"no cmanfp",
 		//	rb->path.buf?:"no rb->path",

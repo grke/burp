@@ -783,6 +783,38 @@ all_tests()
 		end_test
 	fi
 
+	if [ "$protocol" -eq "1" ] ; then
+		start_test "Interrupt server middle of phase2"
+		add_server_breakpoint_on 2010
+		add_change_source_files
+		add_run_backup_expect_fail_no_increment
+		run_scripts
+		wait_for_backup_to_finish
+		check_for_working_dir
+		end_test
+
+		start_test "Interrupt server middle of phase2"
+		add_server_breakpoint_on 2100
+		add_run_backup_expect_fail_no_increment
+		run_scripts
+		wait_for_backup_to_finish
+		check_for_working_dir
+		end_test
+
+		start_test "Interrupt server middle of phase2"
+		add_server_breakpoint_on 2200
+		add_run_backup_expect_fail_no_increment
+		run_scripts
+		wait_for_backup_to_finish
+		check_for_working_dir
+		end_test
+
+		start_test "Complete phase2"
+		add_server_breakpoint_off
+		add_backup_run_scripts_setup_verify_restore
+		end_test
+	fi
+
 	comp_enc_change_test on  off off
 	comp_enc_change_test on  off on
 	comp_enc_change_test off off on

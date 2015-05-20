@@ -10,15 +10,13 @@ int zlib_inflate(struct asfd *asfd, const char *source_path,
 	struct fzp *src=NULL;
 	struct fzp *dst=NULL;
 
-	if(!(src=fzp_alloc())
-	  || fzp_gzopen(src, source_path, "rb"))
+	if(!(src=fzp_gzopen(source_path, "rb")))
 	{
 		logw(asfd, confs, "could not gzopen %s in %s: %s\n",
 			source_path, __func__, strerror(errno));
 		goto end;
 	}
-	if(!(dst=fzp_alloc())
-	  || fzp_open(dst, dest_path, "wb"))
+	if(!(dst=fzp_open(dest_path, "wb")))
 	{
 		logw(asfd, confs, "could not open %s in %s: %s\n",
 			dest_path, __func__, strerror(errno));
@@ -41,7 +39,7 @@ int zlib_inflate(struct asfd *asfd, const char *source_path,
 				source_path, __func__);
 		goto end;
 	}
-	if(fzp_close(dst))
+	if(fzp_close(&dst))
 	{
 		logw(asfd, confs,
 			"error when closing %s in %s: %s\n",
@@ -50,7 +48,7 @@ int zlib_inflate(struct asfd *asfd, const char *source_path,
 	}
 	ret=0;
 end:
-	fzp_free(&src);
-	fzp_free(&dst);
+	fzp_close(&src);
+	fzp_close(&dst);
 	return ret;
 }

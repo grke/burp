@@ -4,71 +4,76 @@
 #include "fzp.h"
 #include "log.h"
 
-struct fzp *fzp_alloc(void)
+static struct fzp *fzp_alloc(void)
 {
 	return (struct fzp *)calloc_w(1, sizeof(struct fzp), __func__);
 }
 
-int fzp_free(struct fzp **fzp)
+static void fzp_free(struct fzp **fzp)
 {
-	int ret=0;
-	if(!fzp || !*fzp) return 0;
-	if(fzp_close(*fzp)) ret=-1;
+	if(!fzp || !*fzp) return;
 	free_v((void **)fzp);
-	return ret;
 }
 
-static int unknown_type(struct fzp *fzp, const char *func)
+static void unknown_type(struct fzp *fzp, const char *func)
 {
 	logp("unknown type in %s: %d\n", func, fzp->type);
-	return -1;
 }
 
-static int fzp_do_open(struct fzp *fzp, enum fzp_type type,
-	const char *path, const char *mode)
+static struct fzp *fzp_do_open(const char *path, const char *mode,
+	enum fzp_type type)
 {
-	if(fzp->zp || fzp->fp)
-	{
-		logp("Pointer already open in %s\n", __func__);
-		return -1;
-	}
+	struct fzp *fzp=NULL;
+
+	if(!(fzp=fzp_alloc())) goto error;
 	fzp->type=type;
 	switch(type)
 	{
 		case FZP_FILE:
 			if(!(fzp->fp=open_file(path, mode)))
-				return -1;
-			return 0;
+				goto error;
+			return fzp;
 		case FZP_COMPRESSED:
 			if(!(fzp->zp=gzopen_file(path, mode)))
-				return -1;
-			return 0;
+				goto error;
+			return fzp;
 		default:
-			return unknown_type(fzp, __func__);
+			unknown_type(fzp, __func__);
+			goto error;
 	}
+error:
+	fzp_close(&fzp);
+	return NULL;
 }
 
-int fzp_open(struct fzp *fzp, const char *path, const char *mode)
+struct fzp *fzp_open(const char *path, const char *mode)
 {
-	return fzp_do_open(fzp, FZP_FILE, path, mode);
+	return fzp_do_open(path, mode, FZP_FILE);
 }
 
-int fzp_gzopen(struct fzp *fzp, const char *path, const char *mode)
+struct fzp *fzp_gzopen(const char *path, const char *mode)
 {
-	return fzp_do_open(fzp, FZP_COMPRESSED, path, mode);
+	return fzp_do_open(path, mode, FZP_COMPRESSED);
 }
 
-int fzp_close(struct fzp *fzp)
+int fzp_close(struct fzp **fzp)
 {
-	switch(fzp->type)
+	int ret=-1;
+	if(!fzp || !*fzp) return 0;
+	switch((*fzp)->type)
 	{
 		case FZP_FILE:
-			return close_fp(&fzp->fp);
+			ret=close_fp(&((*fzp)->fp));
+			break;
 		case FZP_COMPRESSED:
-			return gzclose_fp(&fzp->zp);
+			ret=gzclose_fp(&((*fzp)->zp));
+			break;
 		default:
-			return unknown_type(fzp, __func__);
+			unknown_type(*fzp, __func__);
+			break;
 	}
+	fzp_free(fzp);
+	return ret;
 }
 
 size_t fzp_read(struct fzp *fzp, void *ptr, size_t nmemb)
@@ -80,7 +85,8 @@ size_t fzp_read(struct fzp *fzp, void *ptr, size_t nmemb)
 		case FZP_COMPRESSED:
 			return gzread(fzp->zp, ptr, (unsigned)nmemb);
 		default:
-			return unknown_type(fzp, __func__);
+			unknown_type(fzp, __func__);
+			return 0;
 	}
 }
 
@@ -93,7 +99,8 @@ size_t fzp_write(struct fzp *fzp, void *ptr, size_t nmemb)
 		case FZP_COMPRESSED:
 			return gzwrite(fzp->zp, ptr, (unsigned)nmemb);
 		default:
-			return unknown_type(fzp, __func__);
+			unknown_type(fzp, __func__);
+			return 0;
 	}
 }
 
@@ -106,6 +113,7 @@ int fzp_eof(struct fzp *fzp)
 		case FZP_COMPRESSED:
 			return gzeof(fzp->zp);
 		default:
-			return unknown_type(fzp, __func__);
+			unknown_type(fzp, __func__);
+			return -1;
 	}
 }

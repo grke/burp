@@ -90,13 +90,13 @@ static int process_sig(struct blk *blk)
 int hash_load(const char *champ, struct conf **confs)
 {
 	int ret=-1;
-	gzFile zp=NULL;
 	char *path=NULL;
+	struct fzp *fzp=NULL;
 	struct sbuf *sb=NULL;
 	static struct blk *blk=NULL;
 
 	if(!(path=prepend_s(get_string(confs[OPT_DIRECTORY]), champ))
-	  || !(zp=gzopen_file(path, "rb")))
+	  || !(fzp=fzp_gzopen(path, "rb")))
 		goto end;
 
 	if(!sb && !(sb=sbuf_alloc(confs))) goto end;
@@ -105,7 +105,7 @@ int hash_load(const char *champ, struct conf **confs)
 	while(1)
 	{
 		sbuf_free_content(sb);
-		switch(sbuf_fill(sb, NULL, zp, blk, NULL, confs))
+		switch(sbuf_fill(sb, NULL, fzp, blk, NULL, confs))
 		{
 			case 1: ret=0;
 				goto end;
@@ -118,6 +118,6 @@ int hash_load(const char *champ, struct conf **confs)
 	}
 end:
 	if(path) free(path);
-	gzclose_fp(&zp);
+	fzp_close(&fzp);
 	return ret;
 }

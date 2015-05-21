@@ -13,45 +13,37 @@
 int do_patch(struct asfd *asfd, const char *dst, const char *del,
 	const char *upd, bool gzupd, int compression, struct conf **cconfs)
 {
-	FILE *dstp=NULL;
-	FILE *delfp=NULL;
-	gzFile delzp=NULL;
-	gzFile updp=NULL;
-	FILE *updfp=NULL;
+	struct fzp *dstp=NULL;
+	struct fzp *delfzp=NULL;
+	struct fzp *upfzp=NULL;
 	rs_result result=RS_IO_ERROR;
 
 	//logp("patching...\n");
 
-	if(!(dstp=open_file(dst, "rb"))) goto end;
+	if(!(dstp=fzp_open(dst, "rb"))) goto end;
 
 	if(dpth_protocol1_is_compressed(compression, del))
-		delzp=gzopen_file(del, "rb");
+		delfzp=fzp_gzopen(del, "rb");
 	else
-		delfp=open_file(del, "rb");
+		delfzp=fzp_open(del, "rb");
 
-	if(!delzp && !delfp) goto end;
+	if(!delfzp) goto end;
 
 	if(gzupd)
-		updp=gzopen(upd, comp_level(cconfs));
+		upfzp=fzp_gzopen(upd, comp_level(cconfs));
 	else
-		updfp=fopen(upd, "wb");
+		upfzp=fzp_open(upd, "wb");
 
-	if(!updp && !updfp) goto end;
+	if(!upfzp) goto end;
 
 	result=rs_patch_gzfile(asfd,
-		dstp, delfp, delzp, updfp, updp, NULL, get_cntr(cconfs[OPT_CNTR]));
+		dstp, delfzp, upfzp, NULL, get_cntr(cconfs[OPT_CNTR]));
 end:
-	close_fp(&dstp);
-	gzclose_fp(&delzp);
-	close_fp(&delfp);
-	if(close_fp(&updfp))
+	fzp_close(&dstp);
+	fzp_close(&delfzp);
+	if(fzp_close(&upfzp))
 	{
 		logp("error closing %s in %s\n", upd, __func__);
-		result=RS_IO_ERROR;
-	}
-	if(gzclose_fp(&updp))
-	{
-		logp("error gzclosing %s in %s\n", upd, __func__);
 		result=RS_IO_ERROR;
 	}
 	return result;
@@ -66,19 +58,18 @@ static int make_rev_sig(const char *dst, const char *sig, const char *endfile,
 	int compression, struct conf **confs)
 {
 	int ret=-1;
-	FILE *dstfp=NULL;
-	gzFile dstzp=NULL;
-	FILE *sigp=NULL;
+	struct fzp *dstfzp=NULL;
+	struct fzp *sigp=NULL;
 //logp("make rev sig: %s %s\n", dst, sig);
 
 	if(dpth_protocol1_is_compressed(compression, dst))
-		dstzp=gzopen_file(dst, "rb");
+		dstfzp=fzp_gzopen(dst, "rb");
 	else
-		dstfp=open_file(dst, "rb");
+		dstfzp=fzp_open(dst, "rb");
 
-	if((!dstzp && !dstfp)
-	  || !(sigp=open_file(sig, "wb"))
-	  || rs_sig_gzfile(NULL, dstfp, dstzp, sigp,
+	if(!dstfzp
+	  || !(sigp=fzp_open(sig, "wb"))
+	  || rs_sig_gzfile(NULL, dstfzp, sigp,
 		get_librsync_block_len(endfile),
 		RS_DEFAULT_STRONG_LEN,
 		NULL, confs)!=RS_DONE)
@@ -86,9 +77,8 @@ static int make_rev_sig(const char *dst, const char *sig, const char *endfile,
 	ret=0;
 end:
 //logp("end of make rev sig\n");
-	gzclose_fp(&dstzp);
-	close_fp(&dstfp);
-	if(close_fp(&sigp))
+	fzp_close(&dstfzp);
+	if(fzp_close(&sigp))
 	{
 		logp("error closing %s in %s\n", sig, __func__);
 		return -1;
@@ -100,52 +90,44 @@ static int make_rev_delta(const char *src, const char *sig, const char *del,
 	int compression, struct conf **cconfs)
 {
 	int ret=-1;
-	FILE *srcfp=NULL;
-	FILE *delfp=NULL;
-	FILE *sigp=NULL;
-	gzFile srczp=NULL;
-	gzFile delzp=NULL;
+	struct fzp *srcfzp=NULL;
+	struct fzp *delfzp=NULL;
+	struct fzp *sigp=NULL;
 	rs_signature_t *sumset=NULL;
 
 //logp("make rev delta: %s %s %s\n", src, sig, del);
-	if(!(sigp=open_file(sig, "rb"))) goto end;
+	if(!(sigp=fzp_open(sig, "rb"))) goto end;
 
-	if(rs_loadsig_file(sigp, &sumset, NULL)!=RS_DONE
+	if(rs_loadsig_fzp(sigp, &sumset, NULL)!=RS_DONE
 	  || rs_build_hash_table(sumset)!=RS_DONE)
 		goto end;
 
 //logp("make rev deltb: %s %s %s\n", src, sig, del);
 
 	if(dpth_protocol1_is_compressed(compression, src))
-		srczp=gzopen_file(src, "rb");
+		srcfzp=fzp_gzopen(src, "rb");
 	else
-		srcfp=open_file(src, "rb");
+		srcfzp=fzp_open(src, "rb");
 
-	if(!srczp && !srcfp) goto end;
+	if(!srcfzp) goto end;
 
 	if(get_int(cconfs[OPT_COMPRESSION]))
-		delzp=gzopen_file(del, comp_level(cconfs));
+		delfzp=fzp_gzopen(del, comp_level(cconfs));
 	else
-		delfp=open_file(del, "wb");
-	if(!delzp && !delfp) goto end;
+		delfzp=fzp_open(del, "wb");
+	if(!delfzp) goto end;
 
-	if(rs_delta_gzfile(NULL, sumset, srcfp, srczp,
-		delfp, delzp, NULL, get_cntr(cconfs[OPT_CNTR]))!=RS_DONE)
+	if(rs_delta_gzfile(NULL, sumset, srcfzp,
+		delfzp, NULL, get_cntr(cconfs[OPT_CNTR]))!=RS_DONE)
 			goto end;
 	ret=0;
 end:
 	if(sumset) rs_free_sumset(sumset);
-	gzclose_fp(&srczp);
-	close_fp(&srcfp);
-	close_fp(&sigp);
-	if(gzclose_fp(&delzp))
+	fzp_close(&srcfzp);
+	fzp_close(&sigp);
+	if(fzp_close(&delfzp))
 	{
-		logp("error closing zp %s in %s\n", del, __func__);
-		ret=-1;
-	}
-	if(close_fp(&delfp))
-	{
-		logp("error closing fp %s in %s\n", del, __func__);
+		logp("error closing delfzp %s in %s\n", del, __func__);
 		ret=-1;
 	}
 	return ret;
@@ -201,13 +183,13 @@ static int inflate_oldfile(const char *opath, const char *infpath,
 
 	if(!statp->st_size)
 	{
-		FILE *dest;
+		struct fzp *dest=NULL;
 		// Empty file - cannot inflate.
 		// just close the destination and we have duplicated a
 		// zero length file.
-		if(!(dest=open_file(infpath, "wb"))) goto end;
+		if(!(dest=fzp_open(infpath, "wb"))) goto end;
 		logp("asked to inflate zero length file: %s\n", opath);
-		if(close_fp(&dest))
+		if(fzp_close(&dest))
 			logp("error closing %s in %s\n", infpath, __func__);
 	}
 	else if(zlib_inflate(NULL, opath, infpath, confs))
@@ -242,7 +224,7 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath,
 
 static int jiggle(struct sdirs *sdirs, struct fdirs *fdirs, struct sbuf *sb,
 	int hardlinked_current, const char *deltabdir, const char *deltafdir,
-	const char *sigpath, FILE **delfp, struct conf **cconfs)
+	const char *sigpath, struct fzp **delfp, struct conf **cconfs)
 {
 	int ret=-1;
 	struct stat statp;
@@ -333,14 +315,14 @@ static int jiggle(struct sdirs *sdirs, struct fdirs *fdirs, struct sbuf *sb,
 			// First, note that we want to remove this entry from
 			// the manifest.
 			if(!*delfp
-			  && !(*delfp=open_file(fdirs->deletionsfile, "ab")))
+			  && !(*delfp=fzp_open(fdirs->deletionsfile, "ab")))
 			{
 				// Could not mark this file as deleted. Fatal.
 				goto end;
 			}
-			if(sbufl_to_manifest(sb, *delfp, NULL))
+			if(sbufl_to_manifest(sb, *delfp))
 				goto end;
-			if(fflush(*delfp))
+			if(fzp_flush(*delfp))
 			{
 				logp("error fflushing deletions file in %s: %s\n", __func__, strerror(errno));
 				goto end;
@@ -478,9 +460,9 @@ static int maybe_delete_files_from_manifest(const char *manifesttmp,
 	int ars=0;
 	int ret=-1;
 	int pcmp=0;
-	FILE *dfp=NULL;
-	gzFile nmzp=NULL;
-	gzFile omzp=NULL;
+	struct fzp *dfp=NULL;
+	struct fzp *nmzp=NULL;
+	struct fzp *omzp=NULL;
 	struct sbuf *db=NULL;
 	struct sbuf *mb=NULL;
 	struct stat statp;
@@ -492,9 +474,9 @@ static int maybe_delete_files_from_manifest(const char *manifesttmp,
 	if(!(manifesttmp=get_tmp_filename(fdirs->manifest)))
 		goto end;
 
-        if(!(dfp=open_file(fdirs->deletionsfile, "rb"))
-	  || !(omzp=gzopen_file(fdirs->manifest, "rb"))
-	  || !(nmzp=gzopen_file(manifesttmp, comp_level(cconfs)))
+        if(!(dfp=fzp_open(fdirs->deletionsfile, "rb"))
+	  || !(omzp=fzp_gzopen(fdirs->manifest, "rb"))
+	  || !(nmzp=fzp_gzopen(manifesttmp, comp_level(cconfs)))
 	  || !(db=sbuf_alloc(cconfs))
 	  || !(mb=sbuf_alloc(cconfs)))
 		goto end;
@@ -502,23 +484,23 @@ static int maybe_delete_files_from_manifest(const char *manifesttmp,
 	while(omzp || dfp)
 	{
 		if(dfp && !db->path.buf
-		  && (ars=sbufl_fill(db, NULL, dfp, NULL, cconfs)))
+		  && (ars=sbufl_fill(db, NULL, dfp, cconfs)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
-			close_fp(&dfp);
+			fzp_close(&dfp);
 		}
 		if(omzp && !mb->path.buf
-		  && (ars=sbufl_fill(mb, NULL, NULL, omzp, cconfs)))
+		  && (ars=sbufl_fill(mb, NULL, omzp, cconfs)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
-			gzclose_fp(&omzp);
+			fzp_close(&omzp);
 		}
 
 		if(mb->path.buf && !db->path.buf)
 		{
-			if(sbufl_to_manifest(mb, NULL, nmzp)) goto end;
+			if(sbufl_to_manifest(mb, nmzp)) goto end;
 			sbuf_free_content(mb);
 		}
 		else if(!mb->path.buf && db->path.buf)
@@ -538,7 +520,7 @@ static int maybe_delete_files_from_manifest(const char *manifesttmp,
 		else if(pcmp<0)
 		{
 			// Behind in manifest. Write.
-			if(sbufl_to_manifest(mb, NULL, nmzp)) goto end;
+			if(sbufl_to_manifest(mb, nmzp)) goto end;
 			sbuf_free_content(mb);
 		}
 		else
@@ -550,14 +532,14 @@ static int maybe_delete_files_from_manifest(const char *manifesttmp,
 
 	ret=0;
 end:
-	if(gzclose_fp(&nmzp))
+	if(fzp_close(&nmzp))
 	{
 		logp("error closing %s in %s\n", manifesttmp, __func__);
 		ret=-1;
 	}
 	
-	close_fp(&dfp);
-	gzclose_fp(&omzp);
+	fzp_close(&dfp);
+	fzp_close(&omzp);
 	sbuf_free(&db);
 	sbuf_free(&mb);
 	if(!ret)
@@ -586,10 +568,10 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct fdirs *fdirs,
 	char *deltabdir=NULL;
 	char *deltafdir=NULL;
 	char *sigpath=NULL;
-	gzFile zp=NULL;
+	struct fzp *zp=NULL;
 	struct sbuf *sb=NULL;
 
-	FILE *delfp=NULL;
+	struct fzp *delfp=NULL;
 
 	logp("Doing the atomic data jiggle...\n");
 
@@ -604,7 +586,7 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct fdirs *fdirs,
 		// already does not exist.
 		do_rename(tmpman, fdirs->manifest);
 	}
-	if(!(zp=gzopen_file(fdirs->manifest, "rb")))
+	if(!(zp=fzp_gzopen(fdirs->manifest, "rb")))
 		goto error;
 
 	if(!(deltabdir=prepend_s(fdirs->currentdup, "deltas.reverse"))
@@ -620,7 +602,7 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct fdirs *fdirs,
 
 	while(1)
 	{
-		switch(sbufl_fill(sb, NULL, NULL, zp, cconfs))
+		switch(sbufl_fill(sb, NULL, zp, cconfs))
 		{
 			case 0: break;
 			case 1: goto end;
@@ -639,7 +621,7 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct fdirs *fdirs,
 	}
 
 end:
-	if(close_fp(&delfp))
+	if(fzp_close(&delfp))
 	{
 		logp("error closing %s in atomic_data_jiggle\n",
 			fdirs->deletionsfile);
@@ -656,8 +638,8 @@ end:
 
 	ret=0;
 error:
-	gzclose_fp(&zp);
-	close_fp(&delfp);
+	fzp_close(&zp);
+	fzp_close(&delfp);
 	sbuf_free(&sb);
 	free_w(&deltabdir);
 	free_w(&deltafdir);
@@ -754,14 +736,14 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf **cconfs)
 	{
 		// Create a file to indicate that the previous backup
 		// does not have others depending on it.
-		FILE *hfp=NULL;
-		if(!(hfp=open_file(fdirs->hlinked, "wb"))) goto end;
+		struct fzp *hfp=NULL;
+		if(!(hfp=fzp_open(fdirs->hlinked, "wb"))) goto end;
 
 		// Stick the next backup timestamp in it. It might
 		// be useful one day when wondering when the next
 		// backup, now deleted, was made.
-		fprintf(hfp, "%s\n", tstmp);
-		if(close_fp(&hfp))
+		fzp_printf(hfp, "%s\n", tstmp);
+		if(fzp_close(&hfp))
 		{
 			logp("error closing hardlinked indication\n");
 			goto end;

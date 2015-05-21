@@ -302,14 +302,14 @@ int init_client_socket(const char *host, const char *port)
 
 void reuseaddr(int fd)
 {
-	int tmpfd=0;
+	int optval=1;
 #ifdef HAVE_OLD_SOCKOPT
 #define sockopt_val_t char *
 #else
 #define sockopt_val_t void *
 #endif
 	if(setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
-		(sockopt_val_t)&tmpfd, sizeof(tmpfd))<0)
+		(sockopt_val_t)&optval, sizeof(optval))<0)
 			logp("Error: setsockopt SO_REUSEADDR: %s",
 				strerror(errno));
 }

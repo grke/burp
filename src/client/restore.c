@@ -518,7 +518,7 @@ static int sbuf_fill_w(struct sbuf *sb, struct asfd *asfd,
 	if(get_e_protocol(confs[OPT_PROTOCOL])==PROTO_2)
 		return sbuf_fill(sb, asfd, NULL, blk, datpath, confs);
 	else
-		return sbufl_fill(sb, asfd, NULL, NULL, confs);
+		return sbufl_fill(sb, asfd, NULL, confs);
 }
 
 int do_restore_client(struct asfd *asfd,

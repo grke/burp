@@ -7,10 +7,9 @@ int backup_phase3_server_protocol1(struct sdirs *sdirs,
 	int ars=0;
 	int ret=-1;
 	int pcmp=0;
-	FILE *ucfp=NULL;
-	FILE *chfp=NULL;
-	FILE *mp=NULL;
-	gzFile mzp=NULL;
+	struct fzp *ucfp=NULL;
+	struct fzp *chfp=NULL;
+	struct fzp *mzp=NULL;
 	struct sbuf *ucb=NULL;
 	struct sbuf *chb=NULL;
 	char *manifesttmp=NULL;
@@ -19,10 +18,10 @@ int backup_phase3_server_protocol1(struct sdirs *sdirs,
 
 	if(!(manifesttmp=get_tmp_filename(sdirs->manifest))) goto end;
 
-        if(!(ucfp=open_file(sdirs->unchanged, "rb"))
-	  || !(chfp=open_file(sdirs->changed, "rb"))
-	  || (compress && !(mzp=gzopen_file(manifesttmp, comp_level(cconfs))))
-          || (!compress && !(mp=open_file(manifesttmp, "wb")))
+        if(!(ucfp=fzp_open(sdirs->unchanged, "rb"))
+	  || !(chfp=fzp_open(sdirs->changed, "rb"))
+	  || (compress && !(mzp=fzp_gzopen(manifesttmp, comp_level(cconfs))))
+          || (!compress && !(mzp=fzp_open(manifesttmp, "wb")))
 	  || !(ucb=sbuf_alloc(cconfs))
 	  || !(chb=sbuf_alloc(cconfs)))
 		goto end;
@@ -30,32 +29,32 @@ int backup_phase3_server_protocol1(struct sdirs *sdirs,
 	while(ucfp || chfp)
 	{
 		if(ucfp && !ucb->path.buf
-		  && (ars=sbufl_fill(ucb, NULL, ucfp, NULL, cconfs)))
+		  && (ars=sbufl_fill(ucb, NULL, ucfp, cconfs)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
-			close_fp(&ucfp);
+			fzp_close(&ucfp);
 		}
 		if(chfp && !chb->path.buf
-		  && (ars=sbufl_fill(chb, NULL, chfp, NULL, cconfs)))
+		  && (ars=sbufl_fill(chb, NULL, chfp, cconfs)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
-			close_fp(&chfp);
+			fzp_close(&chfp);
 		}
 
 		if(ucb->path.buf && !chb->path.buf)
 		{
 			if(write_status(CNTR_STATUS_MERGING,
 				ucb->path.buf, cconfs)
-			  || sbufl_to_manifest(ucb, mp, mzp)) goto end;
+			  || sbufl_to_manifest(ucb, mzp)) goto end;
 			sbuf_free_content(ucb);
 		}
 		else if(!ucb->path.buf && chb->path.buf)
 		{
 			if(write_status(CNTR_STATUS_MERGING,
 				chb->path.buf, cconfs)
-			  || sbufl_to_manifest(chb, mp, mzp)) goto end;
+			  || sbufl_to_manifest(chb, mzp)) goto end;
 			sbuf_free_content(chb);
 		}
 		else if(!ucb->path.buf && !chb->path.buf) 
@@ -67,7 +66,7 @@ int backup_phase3_server_protocol1(struct sdirs *sdirs,
 			// They were the same - write one and free both.
 			if(write_status(CNTR_STATUS_MERGING,
 				chb->path.buf, cconfs)
-			  || sbufl_to_manifest(chb, mp, mzp)) goto end;
+			  || sbufl_to_manifest(chb, mzp)) goto end;
 			sbuf_free_content(ucb);
 			sbuf_free_content(chb);
 		}
@@ -75,25 +74,19 @@ int backup_phase3_server_protocol1(struct sdirs *sdirs,
 		{
 			if(write_status(CNTR_STATUS_MERGING,
 				ucb->path.buf, cconfs)
-			  || sbufl_to_manifest(ucb, mp, mzp)) goto end;
+			  || sbufl_to_manifest(ucb, mzp)) goto end;
 			sbuf_free_content(ucb);
 		}
 		else
 		{
 			if(write_status(CNTR_STATUS_MERGING,
 				chb->path.buf, cconfs)
-			  || sbufl_to_manifest(chb, mp, mzp)) goto end;
+			  || sbufl_to_manifest(chb, mzp)) goto end;
 			sbuf_free_content(chb);
 		}
 	}
 
-	if(close_fp(&mp))
-	{
-		logp("error closing %s in backup_phase3_server\n",
-			manifesttmp);
-		goto end;
-	}
-	if(gzclose_fp(&mzp))
+	if(fzp_close(&mzp))
 	{
 		logp("error gzclosing %s in backup_phase3_server\n",
 			manifesttmp);
@@ -113,10 +106,9 @@ int backup_phase3_server_protocol1(struct sdirs *sdirs,
 	logp("End phase3 (merge manifests)\n");
 	ret=0;
 end:
-	close_fp(&ucfp);
-	gzclose_fp(&mzp);
-	close_fp(&chfp);
-	close_fp(&mp);
+	fzp_close(&ucfp);
+	fzp_close(&mzp);
+	fzp_close(&chfp);
 	sbuf_free(&ucb);
 	sbuf_free(&chb);
 	free_w(&manifesttmp);

@@ -90,7 +90,7 @@ size_t fzp_read(struct fzp *fzp, void *ptr, size_t nmemb)
 	}
 }
 
-size_t fzp_write(struct fzp *fzp, void *ptr, size_t nmemb)
+size_t fzp_write(struct fzp *fzp, const void *ptr, size_t nmemb)
 {
 	switch(fzp->type)
 	{
@@ -116,4 +116,70 @@ int fzp_eof(struct fzp *fzp)
 			unknown_type(fzp, __func__);
 			return -1;
 	}
+}
+
+int fzp_flush(struct fzp *fzp)
+{
+	switch(fzp->type)
+	{
+		case FZP_FILE:
+			return fflush(fzp->fp);
+		case FZP_COMPRESSED:
+			return gzflush(fzp->zp, Z_FINISH);
+		default:
+			unknown_type(fzp, __func__);
+			return EOF;
+	}
+}
+
+int fzp_seek(struct fzp *fzp, off_t offset, int whence)
+{
+	switch(fzp->type)
+	{
+		case FZP_FILE:
+			return fseeko(fzp->fp, offset, whence);
+		case FZP_COMPRESSED:
+			return gzseek(fzp->zp, offset, whence);
+		default:
+			unknown_type(fzp, __func__);
+			return -1;
+	}
+}
+
+off_t fzp_tell(struct fzp *fzp)
+{
+	switch(fzp->type)
+	{
+		case FZP_FILE:
+			return ftello(fzp->fp);
+		case FZP_COMPRESSED:
+			return gztell(fzp->zp);
+		default:
+			unknown_type(fzp, __func__);
+			return -1;
+	}
+}
+
+int fzp_printf(struct fzp *fzp, const char *format, ...)
+{
+	static char buf[512];
+	int ret=-1;
+	va_list ap;
+	va_start(ap, format);
+	vsnprintf(buf, sizeof(buf), format, ap);
+
+	switch(fzp->type)
+	{
+		case FZP_FILE:
+			ret=fprintf(fzp->fp, "%s", buf);
+			break;
+		case FZP_COMPRESSED:
+			ret=gzprintf(fzp->zp, "%s", buf);
+			break;
+		default:
+			unknown_type(fzp, __func__);
+			break;
+	}
+	va_end(ap);
+	return ret;
 }

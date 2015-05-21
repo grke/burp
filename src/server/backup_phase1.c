@@ -2,6 +2,7 @@
 #include "cmd.h"
 #include "sdirs.h"
 
+#include "../fzp.h"
 #include "../protocol1/sbufl.h"
 
 int backup_phase1_server_all(struct async *as,
@@ -10,7 +11,7 @@ int backup_phase1_server_all(struct async *as,
 	int ars=0;
 	int ret=-1;
 	struct sbuf *sb=NULL;
-	gzFile p1zp=NULL;
+	struct fzp *p1zp=NULL;
 	char *phase1tmp=NULL;
 	struct asfd *asfd=as->asfd;
 
@@ -18,7 +19,7 @@ int backup_phase1_server_all(struct async *as,
 
 	if(!(phase1tmp=get_tmp_filename(sdirs->phase1data)))
 		goto end;
-	if(!(p1zp=gzopen_file(phase1tmp, comp_level(confs))))
+	if(!(p1zp=fzp_gzopen(phase1tmp, comp_level(confs))))
 		goto end;
 	if(!(sb=sbuf_alloc(confs)))
 		goto end;
@@ -27,7 +28,7 @@ int backup_phase1_server_all(struct async *as,
 	{
 		sbuf_free_content(sb);
 		if(get_e_protocol(confs[OPT_PROTOCOL])==PROTO_1)
-			ars=sbufl_fill(sb, asfd, NULL, NULL, confs);
+			ars=sbufl_fill(sb, asfd, NULL, confs);
 		else
 			ars=sbuf_fill(sb, asfd, NULL, NULL, NULL, confs);
 
@@ -38,13 +39,13 @@ int backup_phase1_server_all(struct async *as,
 			// Last thing the client sends is 'backupphase2', and
 			// it wants an 'ok' reply.
 			if(asfd->write_str(asfd, CMD_GEN, "ok")
-			  || send_msg_zp(p1zp, CMD_GEN,
+			  || send_msg_fzp(p1zp, CMD_GEN,
 				"phase1end", strlen("phase1end")))
 					goto end;
 			break;
 		}
 		if(write_status(CNTR_STATUS_SCANNING, sb->path.buf, confs)
-		  || sbufl_to_manifest_phase1(sb, NULL, p1zp))
+		  || sbufl_to_manifest_phase1(sb, p1zp))
 			goto end;
 		cntr_add_phase1(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 0);
 
@@ -59,7 +60,7 @@ int backup_phase1_server_all(struct async *as,
 		}
 	}
 
-	if(gzclose_fp(&p1zp))
+	if(fzp_close(&p1zp))
 	{
 		logp("error closing %s in backup_phase1_server\n", phase1tmp);
 		goto end;
@@ -80,7 +81,7 @@ int backup_phase1_server_all(struct async *as,
 	ret=0;
 end:
 	free(phase1tmp);
-	gzclose_fp(&p1zp);
+	fzp_close(&p1zp);
 	sbuf_free(&sb);
 	return ret;
 }

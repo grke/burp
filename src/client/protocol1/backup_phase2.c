@@ -9,7 +9,7 @@ static int load_signature(struct asfd *asfd,
 
 	job = rs_loadsig_begin(sumset);
 	if((r=do_rs_run(asfd, job,
-		NULL, NULL, NULL, NULL, NULL, asfd->fd, -1, get_cntr(confs[OPT_CNTR]))))
+		NULL, NULL, NULL, asfd->fd, -1, get_cntr(confs[OPT_CNTR]))))
 	{
 		rs_free_sumset(*sumset);
 		return r;
@@ -42,9 +42,11 @@ static int load_signature_and_send_delta(struct asfd *asfd,
 	}
 
 	if(!(infb=rs_filebuf_new(asfd, bfd,
-		NULL, NULL, -1, ASYNC_BUF_LEN, bfd->datalen, get_cntr(confs[OPT_CNTR])))
-	  || !(outfb=rs_filebuf_new(asfd, NULL, NULL,
-		NULL, asfd->fd, ASYNC_BUF_LEN, -1, get_cntr(confs[OPT_CNTR]))))
+		NULL, -1, ASYNC_BUF_LEN, bfd->datalen,
+		get_cntr(confs[OPT_CNTR])))
+	  || !(outfb=rs_filebuf_new(asfd, NULL,
+		NULL, asfd->fd, ASYNC_BUF_LEN, -1,
+		get_cntr(confs[OPT_CNTR]))))
 	{
 		logp("could not rs_filebuf_new for delta\n");
 		if(infb) rs_filebuf_free(infb);

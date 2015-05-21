@@ -9,7 +9,7 @@
 
 struct manio
 {
-	gzFile zp;		// File pointer.
+	struct fzp *fzp;	// File pointer.
 	char *base_dir;		// The base directory. 
 	char *directory;	// Directory containing the files.
 	uint64_t fcount;	// File name incrementer.

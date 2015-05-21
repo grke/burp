@@ -5,7 +5,7 @@
 #include "../../server/backup_phase1.h"
 
 // Used on resume, this just reads the phase1 file and sets up cntr.
-static int read_phase1(gzFile zp, struct conf **confs)
+static int read_phase1(struct fzp *fzp, struct conf **confs)
 {
 	int ars=0;
 	struct sbuf *p1b;
@@ -13,7 +13,7 @@ static int read_phase1(gzFile zp, struct conf **confs)
 	while(1)
 	{
 		sbuf_free_content(p1b);
-		if((ars=sbufl_fill_phase1(p1b, NULL, zp, confs)))
+		if((ars=sbufl_fill_phase1(p1b, fzp, confs)))
 		{
 			// ars==1 means it ended ok.
 			if(ars<0)
@@ -38,7 +38,7 @@ static int read_phase1(gzFile zp, struct conf **confs)
 	return 0;
 }
 
-static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
+static int do_forward(struct fzp *fzp, struct iobuf *result,
 	struct iobuf *target, int isphase1, int seekback, int do_cntr,
 	int same, struct dpth *dpth, struct conf **cconfs)
 {
@@ -55,7 +55,7 @@ static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
 		// entry, we need to remember the position of it.
 		if(target && seekback)
 		{
-			if(fp && (pos=ftello(fp))<0)
+			if(fzp && (pos=fzp_tell(fzp))<0)
 			{
 				logp("Could not ftello in %s(): %s\n", __func__,
 					strerror(errno));
@@ -66,9 +66,9 @@ static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
 		sbuf_free_content(sb);
 
 		if(isphase1)
-			ars=sbufl_fill_phase1(sb, fp, zp, cconfs);
+			ars=sbufl_fill_phase1(sb, fzp, cconfs);
 		else
-			ars=sbufl_fill(sb, NULL, fp, zp, cconfs);
+			ars=sbufl_fill(sb, NULL, fzp, cconfs);
 
 		// Make sure we end up with the highest datapth we can possibly
 		// find - dpth_protocol1_set_from_string() will only set it if
@@ -104,7 +104,7 @@ static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
 			// entry, do it here.
 			if(seekback)
 			{
-				if(fp && fseeko(fp, pos, SEEK_SET))
+				if(fzp && fzp_seek(fzp, pos, SEEK_SET))
 				{
 					logp("Could not fseeko in %s(): %s\n",
 						__func__, strerror(errno));
@@ -142,23 +142,7 @@ error:
 	return -1;
 }
 
-static int forward_fp(FILE *fp, struct iobuf *result, struct iobuf *target,
-	int isphase1, int seekback, int do_cntr, int same,
-	struct dpth *dpth, struct conf **cconfs)
-{
-	return do_forward(fp, NULL, result, target, isphase1, seekback,
-		do_cntr, same, dpth, cconfs);
-}
-
-static int forward_zp(gzFile zp, struct iobuf *result, struct iobuf *target,
-	int isphase1, int seekback, int do_cntr, int same,
-	struct dpth *dpth, struct conf **cconfs)
-{
-	return do_forward(NULL, zp, result, target, isphase1, seekback,
-		do_cntr, same, dpth, cconfs);
-}
-
-static int do_resume_work(gzFile p1zp, FILE *cfp, FILE *ucfp,
+static int do_resume_work(struct fzp *p1zp, struct fzp *cfp, struct fzp *ucfp,
 	struct dpth *dpth, struct conf **cconfs)
 {
 	int ret=0;
@@ -174,11 +158,11 @@ static int do_resume_work(gzFile p1zp, FILE *cfp, FILE *ucfp,
 	logp("Begin phase1 (read previous file system scan)\n");
 	if(read_phase1(p1zp, cconfs)) goto error;
 
-	gzrewind(p1zp);
+	fzp_seek(p1zp, 0L, SEEK_SET);
 
 	logp("Setting up resume positions...\n");
 	// Go to the end of cfp.
-	if(forward_fp(cfp, chb, NULL,
+	if(do_forward(cfp, chb, NULL,
 		0, /* not phase1 */
 		0, /* no seekback */
 		1, /* do cntr */
@@ -189,7 +173,7 @@ static int do_resume_work(gzFile p1zp, FILE *cfp, FILE *ucfp,
 		logp("  changed:    %s\n", chb->buf);
 		// Now need to go to the appropriate places in p1zp and
 		// unchanged.
-		if(forward_zp(p1zp, p1b, chb,
+		if(do_forward(p1zp, p1b, chb,
 			1, /* phase1 */
 			0, /* seekback */
 			0, /* no cntr */
@@ -204,7 +188,7 @@ static int do_resume_work(gzFile p1zp, FILE *cfp, FILE *ucfp,
 
 		// The unchanged file needs to be positioned just before the
 		// found entry, otherwise it ends up having a duplicated entry.
-		if(forward_fp(ucfp, ucb, chb,
+		if(do_forward(ucfp, ucb, chb,
 			0, /* not phase1 */
 			1, /* seekback */
 			1, /* do_cntr */
@@ -232,10 +216,10 @@ end:
 	return ret;
 }
 
-static int do_truncate(const char *path, FILE **fp)
+static int do_truncate(const char *path, struct fzp **fzp)
 {
 	off_t pos;
-	if((pos=ftello(*fp))<0)
+	if((pos=fzp_tell(*fzp))<0)
 	{
 		logp("Could not ftello on %s: %s\n", path, strerror(errno));
 		return -1;
@@ -245,28 +229,27 @@ static int do_truncate(const char *path, FILE **fp)
 		logp("Could not truncate %s: %s\n", path, strerror(errno));
 		return -1;
 	}
-	close_fp(fp);
-	return 0;
+	return fzp_close(fzp);
 }
 
-int do_resume(gzFile p1zp, struct sdirs *sdirs,
+int do_resume(struct fzp *p1zp, struct sdirs *sdirs,
 	struct dpth *dpth, struct conf **cconfs)
 {
 	int ret=-1;
-	FILE *cfp=NULL;
-	FILE *ucfp=NULL;
+	struct fzp *cfp=NULL;
+	struct fzp *ucfp=NULL;
 
 	// First, open them in a+ mode, so that they will be created if they
 	// do not exist.
-	if(!(cfp=open_file(sdirs->changed, "a+b"))
-	  || !(ucfp=open_file(sdirs->unchanged, "a+b")))
+	if(!(cfp=fzp_open(sdirs->changed, "a+b"))
+	  || !(ucfp=fzp_open(sdirs->unchanged, "a+b")))
 		goto end;
-	close_fp(&cfp);
-	close_fp(&ucfp);
+	fzp_close(&cfp);
+	fzp_close(&ucfp);
 
 	// Open for reading.
-	if(!(cfp=open_file(sdirs->changed, "rb"))
-	  || !(ucfp=open_file(sdirs->unchanged, "rb")))
+	if(!(cfp=fzp_open(sdirs->changed, "rb"))
+	  || !(ucfp=fzp_open(sdirs->unchanged, "rb")))
 		goto end;
 
 	if(do_resume_work(p1zp, cfp, ucfp, dpth, cconfs)) goto end;
@@ -277,8 +260,7 @@ int do_resume(gzFile p1zp, struct sdirs *sdirs,
 		goto end;
 	ret=0;
 end:
-	close_fp(&cfp);
-	close_fp(&ucfp);
+	fzp_close(&cfp);
+	fzp_close(&ucfp);
 	return ret;
 }
-

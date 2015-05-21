@@ -36,8 +36,7 @@ typedef struct rs_filebuf rs_filebuf_t;
 struct rs_filebuf
 {
         BFILE *bfd;
-	FILE *fp;
-        gzFile zp;
+        struct fzp *fzp;
 	int fd;
 	char *buf;
         size_t buf_len;
@@ -52,31 +51,31 @@ struct rs_filebuf
 // FIX THIS: Now that struct asfd is getting passed, probably do not need
 // fd as well,
 rs_filebuf_t *rs_filebuf_new(struct asfd *asfd,
-	BFILE *bfd, FILE *fp, gzFile zp,
+	BFILE *bfd, struct fzp *fzp,
 	int fd, size_t buf_len, size_t data_len, struct cntr *cntr);
 void rs_filebuf_free(rs_filebuf_t *fb);
 rs_result rs_infilebuf_fill(rs_job_t *, rs_buffers_t *buf, void *fb);
 rs_result rs_outfilebuf_drain(rs_job_t *, rs_buffers_t *, void *fb);
 rs_result do_rs_run(struct asfd *asfd,
-	rs_job_t *job, BFILE *bfd, FILE *in_file, FILE *out_file,
-	gzFile in_zfile, gzFile out_zfile, int infd, int outfd,
-	struct cntr *cntr);
+	rs_job_t *job, BFILE *bfd, struct fzp *in_file, struct fzp *out_file,
+	int infd, int outfd, struct cntr *cntr);
 
 rs_result rs_async(rs_job_t *job,
 	rs_buffers_t *rsbuf, rs_filebuf_t *infb, rs_filebuf_t *outfb);
 
 rs_result rs_patch_gzfile(struct asfd *asfd,
-	FILE *basis_file, FILE *delta_file,
-	gzFile delta_zfile, FILE *new_file, gzFile new_zfile,
+	struct fzp *basis_file, struct fzp *delta_file, struct fzp *new_file,
 	rs_stats_t *stats, struct cntr *cntr);
 rs_result rs_sig_gzfile(struct asfd *asfd,
-	FILE *old_file, gzFile old_zfile, FILE *sig_file,
+	struct fzp *old_file, struct fzp *sig_file,
 	size_t new_block_len, size_t strong_len, rs_stats_t *stats,
 	struct conf **confs);
-rs_result rs_delta_gzfile(struct asfd *asfd,
-	rs_signature_t *sig, FILE *new_file,
-	gzFile new_zfile, FILE *delta_file, gzFile delta_zfile,
+rs_result rs_delta_gzfile(struct asfd *asfd, rs_signature_t *sig,
+	struct fzp *new_file, struct fzp *delta_file,
 	rs_stats_t *stats, struct cntr *cntr);
+
+rs_result rs_loadsig_fzp(struct fzp *fzp,
+	rs_signature_t **sig, rs_stats_t *stats);
 
 #ifndef RS_DEFAULT_STRONG_LEN
 extern rs_magic_number rshash_to_magic_number(enum rshash r);

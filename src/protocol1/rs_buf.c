@@ -47,7 +47,7 @@ void *rs_alloc(size_t size)
 }
 
 rs_filebuf_t *rs_filebuf_new(struct asfd *asfd,
-	BFILE *bfd, FILE *fp, gzFile zp, int fd,
+	BFILE *bfd, struct fzp *fzp, int fd,
 	size_t buf_len, size_t data_len, struct cntr *cntr)
 {
 	rs_filebuf_t *pf=NULL;
@@ -60,8 +60,7 @@ rs_filebuf_t *rs_filebuf_new(struct asfd *asfd,
 		return NULL;
 	}
 	pf->buf_len=buf_len;
-	pf->fp=fp;
-	pf->zp=zp;
+	pf->fzp=fzp;
 	pf->fd=fd;
 	pf->bfd=bfd;
 	pf->bytes=0;
@@ -97,10 +96,8 @@ void rs_filebuf_free(rs_filebuf_t *fb)
  */
 rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 {
-	int                     len=0;
-	rs_filebuf_t            *fb = (rs_filebuf_t *) opaque;
-	gzFile                  zp = fb->zp;
-	FILE                    *fp = fb->fp;
+	int len=0;
+	rs_filebuf_t *fb=(rs_filebuf_t *) opaque;
 	struct cntr *cntr;
 	int fd=fb->fd;
 	cntr=fb->cntr;
@@ -222,42 +219,13 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 			return RS_IO_ERROR;
 		}
 	}
-	else if(fp)
+	else if(fb->fzp)
 	{
-		len = fread(fb->buf, 1, fb->buf_len, fp);
-		//logp("fread: %d\n", len);
-		if(len <= 0)
+		if((len=fzp_read(fb->fzp, fb->buf, fb->buf_len))<=0)
 		{
-			/* This will happen if file size is a multiple of
-			   input block len
-			 */
-			if(feof(fp))
-			{
-				buf->eof_in=1;
-				return RS_DONE;
-			}
-			else
-			{
-				logp("rs_infilebuf_fill: got return %d when trying to read\n", len);
-				return RS_IO_ERROR;
-			}
-		}
-		fb->bytes+=len;
-		if(!MD5_Update(&(fb->md5), fb->buf, len))
-		{
-			logp("rs_infilebuf_fill: MD5_Update() failed\n");
-			return RS_IO_ERROR;
-		}
-	}
-	else if(zp)
-	{
-		len=gzread(zp, fb->buf, fb->buf_len);
-		//logp("gzread: %d\n", len);
-		if(len <= 0)
-		{
-			/* This will happen if file size is a multiple of input block len
-			 */
-			if(gzeof(zp))
+			// This will happen if file size is a multiple of
+			// input block len.
+			if(fzp_eof(fb->fzp))
 			{
 				buf->eof_in=1;
 				return RS_DONE;
@@ -289,10 +257,8 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
  */
 rs_result rs_outfilebuf_drain(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 {
-	rs_filebuf_t *fb = (rs_filebuf_t *) opaque;
-	FILE *fp = fb->fp;
-	gzFile zp = fb->zp;
-	int fd = fb->fd;
+	rs_filebuf_t *fb=(rs_filebuf_t *)opaque;
+	int fd=fb->fd;
 	size_t wlen;
 
 	//logp("in rs_outfilebuf_drain\n");
@@ -355,8 +321,7 @@ rs_result rs_outfilebuf_drain(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 		else
 		{
 			size_t result=0;
-			if(fp) result=fwrite(fb->buf, 1, wlen, fp);
-			else if(zp) result=gzwrite(zp, fb->buf, wlen);
+			result=fzp_write(fb->fzp, fb->buf, wlen);
 			if(wlen!=result)
 			{
 				logp("error draining buf to file: %s",
@@ -374,8 +339,8 @@ rs_result rs_outfilebuf_drain(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 
 rs_result do_rs_run(struct asfd *asfd,
 	rs_job_t *job, BFILE *bfd,
-	FILE *in_file, FILE *out_file,
-	gzFile in_zfile, gzFile out_zfile, int infd, int outfd, struct cntr *cntr)
+	struct fzp *in_file, struct fzp *out_file,
+	int infd, int outfd, struct cntr *cntr)
 {
 	rs_buffers_t buf;
 	rs_result result;
@@ -393,13 +358,13 @@ rs_result do_rs_run(struct asfd *asfd,
 		return RS_IO_ERROR;
 	}
 
-	if((bfd || in_file || in_zfile || infd>=0)
+	if((bfd || in_file || infd>=0)
 	 && !(in_fb=rs_filebuf_new(asfd, bfd,
-		in_file, in_zfile, infd, ASYNC_BUF_LEN, -1, cntr)))
+		in_file, infd, ASYNC_BUF_LEN, -1, cntr)))
 			return RS_MEM_ERROR;
-	if((out_file || out_zfile || outfd>=0)
+	if((out_file || outfd>=0)
 	 && !(out_fb=rs_filebuf_new(asfd, NULL,
-		out_file, out_zfile, outfd, ASYNC_BUF_LEN, -1, cntr)))
+		out_file, outfd, ASYNC_BUF_LEN, -1, cntr)))
 	{
 		if(in_fb) rs_filebuf_free(in_fb);
 		return RS_MEM_ERROR;
@@ -453,21 +418,21 @@ rs_result rs_async(rs_job_t *job, rs_buffers_t *rsbuf,
 }
 
 static rs_result rs_whole_gzrun(struct asfd *asfd,
-	rs_job_t *job, FILE *in_file, gzFile in_zfile,
-	FILE *out_file, gzFile out_zfile, struct cntr *cntr)
+	rs_job_t *job, struct fzp *in_file, struct fzp *out_file,
+	struct cntr *cntr)
 {
 	rs_buffers_t buf;
 	rs_result result;
 	rs_filebuf_t *in_fb=NULL;
 	rs_filebuf_t *out_fb=NULL;
 
-	if(in_file || in_zfile)
+	if(in_file)
 		in_fb=rs_filebuf_new(asfd, NULL,
-			in_file, in_zfile, -1, ASYNC_BUF_LEN, -1, cntr);
+			in_file, -1, ASYNC_BUF_LEN, -1, cntr);
 
-	if(out_file || out_zfile)
+	if(out_file)
 	out_fb=rs_filebuf_new(asfd, NULL,
-		out_file, out_zfile, -1, ASYNC_BUF_LEN, -1, cntr);
+		out_file, -1, ASYNC_BUF_LEN, -1, cntr);
 	result=rs_job_drive(job, &buf,
 		in_fb ? rs_infilebuf_fill : NULL, in_fb,
 		out_fb ? rs_outfilebuf_drain : NULL, out_fb);
@@ -478,23 +443,22 @@ static rs_result rs_whole_gzrun(struct asfd *asfd,
 	return result;
 }
 
-rs_result rs_patch_gzfile(struct asfd *asfd, FILE *basis_file, FILE *delta_file,
-	gzFile delta_zfile, FILE *new_file, gzFile new_zfile,
+rs_result rs_patch_gzfile(struct asfd *asfd, struct fzp *basis_file,
+	struct fzp *delta_file, struct fzp *new_file,
 	rs_stats_t *stats, struct cntr *cntr)
 {
 	rs_job_t *job;
 	rs_result r;
 
 	job=rs_patch_begin(rs_file_copy_cb, basis_file);
-	r=rs_whole_gzrun(asfd, job,
-		delta_file, delta_zfile, new_file, new_zfile, cntr);
+	r=rs_whole_gzrun(asfd, job, delta_file, new_file, cntr);
 	rs_job_free(job);
 
 	return r;
 }
 
 rs_result rs_sig_gzfile(struct asfd *asfd,
-	FILE *old_file, gzFile old_zfile, FILE *sig_file,
+	struct fzp *old_file, struct fzp *sig_file,
 	size_t new_block_len, size_t strong_len,
 	rs_stats_t *stats, struct conf **confs)
 {
@@ -507,7 +471,8 @@ rs_result rs_sig_gzfile(struct asfd *asfd,
 				get_e_rshash(confs[OPT_RSHASH]))
 #endif
 		);
-	r=rs_whole_gzrun(asfd, job, old_file, old_zfile, sig_file, NULL,
+
+	r=rs_whole_gzrun(asfd, job, old_file, sig_file,
 		get_cntr(confs[OPT_CNTR]));
 	rs_job_free(job);
 
@@ -515,16 +480,15 @@ rs_result rs_sig_gzfile(struct asfd *asfd,
 }
 
 rs_result rs_delta_gzfile(struct asfd *asfd,
-	rs_signature_t *sig, FILE *new_file,
-	gzFile new_zfile, FILE *delta_file, gzFile delta_zfile,
+	rs_signature_t *sig, struct fzp *new_file,
+	struct fzp *delta_file,
 	rs_stats_t *stats, struct cntr *cntr)
 {
 	rs_job_t *job;
 	rs_result r;
 
 	job=rs_delta_begin(sig);
-	r=rs_whole_gzrun(asfd, job,
-		new_file, new_zfile, delta_file, delta_zfile, cntr);
+	r=rs_whole_gzrun(asfd, job, new_file, delta_file, cntr);
 	rs_job_free(job);
 
 	return r;
@@ -540,3 +504,9 @@ rs_magic_number rshash_to_magic_number(enum rshash r)
 	}
 }
 #endif
+
+rs_result rs_loadsig_fzp(struct fzp *fzp,
+	rs_signature_t **sig, rs_stats_t *stats)
+{
+	return rs_loadsig_file(fzp->fp, sig, stats);
+}

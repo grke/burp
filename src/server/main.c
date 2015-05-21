@@ -102,6 +102,7 @@ static int init_listen_socket(const char *address, const char *port,
 				port, strerror(errno));
 			continue;
 		}
+		reuseaddr(fds[i]);
 		if(bind(fds[i], rp->ai_addr, rp->ai_addrlen))
 		{
 			logp("unable to bind socket on port %s: %s\n",
@@ -136,7 +137,6 @@ static int init_listen_socket(const char *address, const char *port,
 			ioctlsocket(fds[i], FIONBIO, &ioctlArg);
 		}
 #endif
-		reuseaddr(fds[i]);
 		i++;
 	}
 

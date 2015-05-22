@@ -72,7 +72,7 @@ static int read_stat(struct asfd *asfd, struct iobuf *rbuf,
 			int asr;
 			if((asr=read_fp(fzp, rbuf)))
 			{
-				logp("read_fp returned: %d\n", asr);
+				//logp("read_fp returned: %d\n", asr);
 				return asr;
 			}
 			if(rbuf->buf[rbuf->len]=='\n')

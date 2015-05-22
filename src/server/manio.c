@@ -47,7 +47,7 @@ static int write_hook_header(struct manio *manio,
 	while(cp && *cp=='/') cp++;
 	if(!(tmp=prepend_s(cp, comp))) return -1;
 	// FIX THIS: fzp_printf will truncate at 512 characters.
-	fzp_printf(manio->fzp, "%c%04X%s\n", CMD_MANIFEST, strlen(tmp), tmp);
+	fzp_printf(fzp, "%c%04X%s\n", CMD_MANIFEST, strlen(tmp), tmp);
 	free_w(&tmp);
 	return 0;
 }

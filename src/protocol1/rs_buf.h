@@ -35,11 +35,11 @@ extern size_t strong_len;
 typedef struct rs_filebuf rs_filebuf_t;
 struct rs_filebuf
 {
-        BFILE *bfd;
-        struct fzp *fzp;
+	BFILE *bfd;
+	struct fzp *fzp;
 	int fd;
 	char *buf;
-        size_t buf_len;
+	size_t buf_len;
 	unsigned long long bytes;
 	size_t data_len;
 	int do_known_byte_count;

@@ -181,7 +181,7 @@ int transfer_gzfile_inl(struct asfd *asfd,
 #ifdef HAVE_WIN32
 	if(sb && sb->path.cmd==CMD_EFS_FILE)
 		return transfer_efs_in(asfd, bfd, rcvd, sent,
-			get_cntr(confs[OPT_CNTR]);
+			get_cntr(confs[OPT_CNTR]));
 #endif
 
 	//if(!MD5_Init(&md5))

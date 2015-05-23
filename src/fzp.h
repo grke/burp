@@ -11,9 +11,12 @@ enum fzp_type
 
 struct fzp
 {
-	FILE *fp;
-	gzFile zp;
 	enum fzp_type type;
+	union
+	{
+		FILE *fp;
+		gzFile zp;
+	};
 };
 
 extern struct fzp *fzp_open(const char *path, const char *mode);

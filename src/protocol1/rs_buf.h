@@ -53,12 +53,9 @@ struct rs_filebuf
 rs_filebuf_t *rs_filebuf_new(struct asfd *asfd,
 	BFILE *bfd, struct fzp *fzp,
 	int fd, size_t buf_len, size_t data_len, struct cntr *cntr);
-void rs_filebuf_free(rs_filebuf_t *fb);
+void rs_filebuf_free(rs_filebuf_t **fb);
 rs_result rs_infilebuf_fill(rs_job_t *, rs_buffers_t *buf, void *fb);
 rs_result rs_outfilebuf_drain(rs_job_t *, rs_buffers_t *, void *fb);
-rs_result do_rs_run(struct asfd *asfd,
-	rs_job_t *job, BFILE *bfd, struct fzp *in_file, struct fzp *out_file,
-	int infd, int outfd, struct cntr *cntr);
 
 rs_result rs_async(rs_job_t *job,
 	rs_buffers_t *rsbuf, rs_filebuf_t *infb, rs_filebuf_t *outfb);
@@ -76,6 +73,8 @@ rs_result rs_delta_gzfile(struct asfd *asfd, rs_signature_t *sig,
 
 rs_result rs_loadsig_fzp(struct fzp *fzp,
 	rs_signature_t **sig, rs_stats_t *stats);
+rs_result rs_loadsig_network_run(struct asfd *asfd,
+	rs_job_t *job, struct cntr *cntr);
 
 #ifndef RS_DEFAULT_STRONG_LEN
 extern rs_magic_number rshash_to_magic_number(enum rshash r);

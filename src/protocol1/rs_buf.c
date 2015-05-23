@@ -55,10 +55,7 @@ rs_filebuf_t *rs_filebuf_new(struct asfd *asfd,
 		sizeof(struct rs_filebuf), __func__))) return NULL;
 
 	if(!(pf->buf=(char *)calloc_w(1, buf_len, __func__)))
-	{
-		free(pf);
-		return NULL;
-	}
+		goto error;
 	pf->buf_len=buf_len;
 	pf->fzp=fzp;
 	pf->fd=fd;
@@ -73,20 +70,20 @@ rs_filebuf_t *rs_filebuf_new(struct asfd *asfd,
 	if(!MD5_Init(&(pf->md5)))
 	{
 		logp("MD5_Init() failed\n");
-		rs_filebuf_free(pf);
-		return NULL;
+		goto error;
 	}
 	pf->asfd=asfd;
-
 	return pf;
+error:
+	rs_filebuf_free(&pf);
+	return NULL;
 }
 
-void rs_filebuf_free(rs_filebuf_t *fb) 
+void rs_filebuf_free(rs_filebuf_t **fb) 
 {
-	if(fb->buf) free(fb->buf);
-	memset(fb, 0, sizeof(*fb));
-        free(fb);
-	fb=NULL;
+	if(!fb || !*fb) return;
+	free_w(&((*fb)->buf));
+        free_v((void **)fb);
 }
 
 /*
@@ -337,51 +334,6 @@ rs_result rs_outfilebuf_drain(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 	return RS_DONE;
 }
 
-rs_result do_rs_run(struct asfd *asfd,
-	rs_job_t *job, BFILE *bfd,
-	struct fzp *in_file, struct fzp *out_file,
-	int infd, int outfd, struct cntr *cntr)
-{
-	rs_buffers_t buf;
-	rs_result result;
-	rs_filebuf_t *in_fb=NULL;
-	rs_filebuf_t *out_fb=NULL;
-
-	if(in_file && infd>=0)
-	{
-		logp("do not specify both input file and input fd in do_rs_run()\n");
-		return RS_IO_ERROR;
-	}
-	if(out_file && outfd>=0)
-	{
-		logp("do not specify both output file and output fd in do_rs_run()\n");
-		return RS_IO_ERROR;
-	}
-
-	if((bfd || in_file || infd>=0)
-	 && !(in_fb=rs_filebuf_new(asfd, bfd,
-		in_file, infd, ASYNC_BUF_LEN, -1, cntr)))
-			return RS_MEM_ERROR;
-	if((out_file || outfd>=0)
-	 && !(out_fb=rs_filebuf_new(asfd, NULL,
-		out_file, outfd, ASYNC_BUF_LEN, -1, cntr)))
-	{
-		if(in_fb) rs_filebuf_free(in_fb);
-		return RS_MEM_ERROR;
-	}
-
-//logp("before rs_job_drive\n");
-	result = rs_job_drive(job, &buf,
-		in_fb ? rs_infilebuf_fill : NULL, in_fb,
-		out_fb ? rs_outfilebuf_drain : NULL, out_fb);
-//logp("after rs_job_drive\n");
-
-	if(in_fb) rs_filebuf_free(in_fb);
-	if(out_fb) rs_filebuf_free(out_fb);
-
-	return result;
-}
-
 static rs_result rs_async_drive(rs_job_t *job, rs_buffers_t *rsbuf,
              rs_driven_cb in_cb, void *in_opaque,
              rs_driven_cb out_cb, void *out_opaque)
@@ -389,21 +341,20 @@ static rs_result rs_async_drive(rs_job_t *job, rs_buffers_t *rsbuf,
 	rs_result result;
 	rs_result iores;
 
-	if (!rsbuf->eof_in && in_cb)
+	if(!rsbuf->eof_in && in_cb)
 	{
-		iores = in_cb(job, rsbuf, in_opaque);
-		if (iores != RS_DONE) return iores;
+		iores=in_cb(job, rsbuf, in_opaque);
+		if(iores!=RS_DONE) return iores;
 	}
 
-	result = rs_job_iter(job, rsbuf);
-	if (result != RS_DONE && result != RS_BLOCKED)
+	result=rs_job_iter(job, rsbuf);
+	if(result!=RS_DONE && result!=RS_BLOCKED)
 		return result;
-	//printf("job iter got: %d\n", result);
 
-	if (out_cb)
+	if(out_cb)
 	{
-		iores = (out_cb)(job, rsbuf, out_opaque);
-		if (iores != RS_DONE) return iores;
+		iores=(out_cb)(job, rsbuf, out_opaque);
+		if(iores!=RS_DONE) return iores;
 	}
 
 	return result;
@@ -429,17 +380,16 @@ static rs_result rs_whole_gzrun(struct asfd *asfd,
 	if(in_file)
 		in_fb=rs_filebuf_new(asfd, NULL,
 			in_file, -1, ASYNC_BUF_LEN, -1, cntr);
-
 	if(out_file)
-	out_fb=rs_filebuf_new(asfd, NULL,
-		out_file, -1, ASYNC_BUF_LEN, -1, cntr);
+		out_fb=rs_filebuf_new(asfd, NULL,
+			out_file, -1, ASYNC_BUF_LEN, -1, cntr);
+
 	result=rs_job_drive(job, &buf,
 		in_fb ? rs_infilebuf_fill : NULL, in_fb,
 		out_fb ? rs_outfilebuf_drain : NULL, out_fb);
 
-	if(in_fb) rs_filebuf_free(in_fb);
-	if(out_fb) rs_filebuf_free(out_fb);
-
+	rs_filebuf_free(&in_fb);
+	rs_filebuf_free(&out_fb);
 	return result;
 }
 
@@ -509,4 +459,25 @@ rs_result rs_loadsig_fzp(struct fzp *fzp,
 	rs_signature_t **sig, rs_stats_t *stats)
 {
 	return rs_loadsig_file(fzp->fp, sig, stats);
+}
+
+rs_result rs_loadsig_network_run(struct asfd *asfd,
+	rs_job_t *job, struct cntr *cntr)
+{
+	rs_buffers_t buf;
+	rs_result result;
+	rs_filebuf_t *in_fb=NULL;
+
+	if(!(in_fb=rs_filebuf_new(asfd, NULL,
+		NULL, asfd->fd, ASYNC_BUF_LEN, -1, cntr)))
+	{
+		result=RS_MEM_ERROR;
+		goto end;
+	}
+
+	result=rs_job_drive(job, &buf, rs_infilebuf_fill, in_fb, NULL, NULL);
+
+end:
+	rs_filebuf_free(&in_fb);
+	return result;
 }

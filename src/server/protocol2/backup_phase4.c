@@ -319,6 +319,7 @@ int backup_phase4_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 	char compd[32]="";
 	struct manio *newmanio=NULL;
 	char *logpath=NULL;
+	char *fmanifest=NULL; // FIX THIS: should be part of sdirs.
 
 	if(!(logpath=prepend_s(sdirs->finishing, "log")))
 		goto end;
@@ -328,11 +329,12 @@ int backup_phase4_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 	logp("Begin phase4 (sparse generation)\n");
 
 	if(!(newmanio=manio_alloc())
-	  || manio_init_read(newmanio, sdirs->rmanifest)
+	  || !(fmanifest=prepend_s(sdirs->finishing, "manifest"))
+	  || manio_init_read(newmanio, fmanifest)
 	  || manio_read_fcount(newmanio)
-	  || !(hooksdir=prepend_s(sdirs->rmanifest, "hooks"))
-	  || !(h1dir=prepend_s(sdirs->rmanifest, "h1"))
-	  || !(h2dir=prepend_s(sdirs->rmanifest, "h2")))
+	  || !(hooksdir=prepend_s(fmanifest, "hooks"))
+	  || !(h1dir=prepend_s(fmanifest, "h1"))
+	  || !(h2dir=prepend_s(fmanifest, "h2")))
 		goto end;
 
 	while(1)
@@ -375,7 +377,7 @@ int backup_phase4_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 		if((newmanio->fcount=i/2)<2) break;
 	}
 
-	if(!(sparse=prepend_s(sdirs->rmanifest, "sparse"))
+	if(!(sparse=prepend_s(fmanifest, "sparse"))
 	  || !(global_sparse=prepend_s(sdirs->data, "sparse")))
 		goto end;
 
@@ -399,5 +401,6 @@ end:
 	free_w(&h1dir);
 	free_w(&h2dir);
 	free_w(&logpath);
+	free_w(&fmanifest);
 	return ret;
 }

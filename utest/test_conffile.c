@@ -136,6 +136,8 @@ START_TEST(test_client_includes_excludes)
 		"include=/x/y/z\n"
 		"include=/r/s/t\n"
 		"include=/a\n"
+		"include=/a/b/c/d\n"
+		"cross_filesystem=/mnt/x\n"
 	;
 	struct strlist *s;
 	struct conf **confs=NULL;
@@ -144,6 +146,7 @@ START_TEST(test_client_includes_excludes)
 	s=get_strlist(confs[OPT_INCLUDE]);
 	assert_include(&s, "/a");
 	assert_include(&s, "/a/b/c");
+	assert_include(&s, "/a/b/c/d");
 	assert_include(&s, "/r/s/t");
 	assert_include(&s, "/x/y/z");
 	assert_include(&s, NULL);
@@ -160,10 +163,16 @@ START_TEST(test_client_includes_excludes)
 	assert_include(&s, "/a");
 	assert_exclude(&s, "/a/b");
 	assert_include(&s, "/a/b/c");
+	assert_include(&s, "/a/b/c/d");
 	assert_include(&s, "/r/s/t");
 	assert_include(&s, "/x/y/z");
 	assert_exclude(&s, "/z");
 	assert_include(&s, NULL);
+	s=get_strlist(confs[OPT_FSCHGDIR]);
+	assert_strlist(&s, "/a/b/c", 0);
+	assert_strlist(&s, "/a/b/c/d", 0);
+	assert_strlist(&s, "/mnt/x", 0);
+	assert_strlist(&s, NULL, 0);
 	tear_down(NULL, &confs);
 }
 END_TEST

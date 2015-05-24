@@ -3,7 +3,7 @@
 
 #include "../../fzp.h"
 
-extern int do_resume(struct fzp *p1zp, struct sdirs *sdirs,
+extern int do_resume(struct manio *p1manio, struct sdirs *sdirs,
 	struct dpth *dpth, struct conf **cconfs);
 
 #endif

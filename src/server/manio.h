@@ -18,8 +18,6 @@ struct manio
 	char *mode;		// Mode with which to open the files.
 	int sig_count;		// When writing, need to split the files
 				// after every X signatures written.
-	uint8_t first_entry;	// Set to 1 when starting a new manifest
-				// component file.
 	char *hook_dir;
 	char **hook_sort;	// Array for sorting and writing hooks.
 	int hook_count;
@@ -63,5 +61,10 @@ extern int manio_copy_entry(struct asfd *asfd,
 	struct manio *dstmanio, struct conf **confs);
 extern int manio_forward_through_sigs(struct asfd *asfd, struct sbuf **csb,
 	struct blk **blk, struct manio *manio, struct conf **confs);
+
+extern off_t manio_tell(struct manio *manio);
+extern int manio_seek(struct manio *manio, off_t offset, int whence);
+extern int manio_truncate(struct manio *manio);
+extern int manio_open_next_fpath(struct manio *manio);
 
 #endif

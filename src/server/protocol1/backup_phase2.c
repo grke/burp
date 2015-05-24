@@ -761,7 +761,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 	const char *incexc, int resume, struct conf **cconfs)
 {
 	int ret=0;
-	struct fzp *p1zp=NULL;
+	struct manio *p1manio=NULL;
 	struct dpth *dpth=NULL;
 	char *deltmppath=NULL;
 	char *last_requested=NULL;
@@ -803,16 +803,20 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 		init_fs_max(sdirs->treepath);
 	}
 
-	if(!(cb=sbuf_alloc(cconfs))
+	if(!(p1manio=manio_alloc())
+	  || manio_init_read(p1manio, sdirs->phase1data)
+	  || !(cb=sbuf_alloc(cconfs))
 	  || !(p1b=sbuf_alloc(cconfs))
 	  || !(rb=sbuf_alloc(cconfs)))
 		goto error;
 
-	if(!(p1zp=fzp_gzopen(sdirs->phase1data, "rb")))
+	manio_set_protocol(p1manio, PROTO_1);
+
+	if(resume && do_resume(p1manio, sdirs, dpth, cconfs))
 		goto error;
 
-	if(resume && do_resume(p1zp, sdirs, dpth, cconfs))
-		goto error;
+logp("HERE: %s\n", p1manio?"yes":"no");
+if(p1manio) logp("HERE2: %s\n", p1manio->fzp?"yes":"no");
 
 	// Unchanged and changed should now be truncated correctly, we just
 	// have to open them for appending.
@@ -820,6 +824,9 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 	  || !(chfp=fzp_open(sdirs->changed, "a+b")))
 		goto error;
 
+	if(manio_closed(p1manio)
+	  && manio_open_next_fpath(p1manio))
+		goto error;
 
 	while(1)
 	{
@@ -835,7 +842,9 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 		if(write_status(CNTR_STATUS_BACKUP,
 			rb->path.buf?rb->path.buf:p1b->path.buf, cconfs))
 				goto error;
-		if(last_requested || !p1zp || asfd->writebuflen)
+		if(last_requested
+		  || manio_closed(p1manio)
+		  || asfd->writebuflen)
 		{
 			switch(do_stuff_to_receive(asfd, sdirs,
 				cconfs, rb, chfp, dpth, &last_requested))
@@ -853,14 +862,15 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 			case -1: goto error;
 		}
 
-		if(!p1zp) continue;
+		if(manio_closed(p1manio)) continue;
 
 		sbuf_free_content(p1b);
 
-		switch(sbufl_fill_phase1(p1b, p1zp, cconfs))
+		switch(manio_sbuf_fill_phase1(p1manio, asfd,
+			p1b, NULL, sdirs, cconfs))
 		{
 			case 0: break;
-			case 1: fzp_close(&p1zp);
+			case 1: manio_close(p1manio);
 				if(asfd->write_str(asfd,
 				  CMD_GEN, "backupphase2end")) goto error;
 				break;
@@ -927,7 +937,7 @@ end:
 	sbuf_free(&cb);
 	sbuf_free(&p1b);
 	sbuf_free(&rb);
-	fzp_close(&p1zp);
+	manio_free(&p1manio);
 	fzp_close(&cmanfp);
 	dpth_free(&dpth);
 	if(!ret) unlink(sdirs->phase1data);

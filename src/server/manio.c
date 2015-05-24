@@ -284,7 +284,7 @@ static char *get_next_fpath(struct manio *manio)
 	return prepend_s(manio->directory, tmp);
 }
 
-static int open_next_fpath(struct manio *manio)
+int manio_open_next_fpath(struct manio *manio)
 {
 	static struct stat statp;
 
@@ -313,13 +313,8 @@ static int do_manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
 	{
 		if(!manio->fzp)
 		{
-			if(open_next_fpath(manio)) goto error;
+			if(manio_open_next_fpath(manio)) goto error;
 			if(!manio->fzp) return 1; // No more files to read.
-			manio->first_entry=1;
-		}
-		else
-		{
-			manio->first_entry=0;
 		}
 
 		if(manio->protocol==PROTO_2 || phase1)
@@ -417,7 +412,7 @@ static int check_sig_count(struct manio *manio, const char *msg)
 
 static int write_sig_msg(struct manio *manio, const char *msg)
 {
-	if(!manio->fzp && open_next_fpath(manio)) return -1;
+	if(!manio->fzp && manio_open_next_fpath(manio)) return -1;
 	if(send_msg_fzp(manio->fzp, CMD_SIG, msg, strlen(msg))) return -1;
 	return check_sig_count(manio, msg);
 }
@@ -465,7 +460,7 @@ int manio_write_sig_and_path(struct manio *manio, struct blk *blk)
 
 int manio_write_sbuf(struct manio *manio, struct sbuf *sb)
 {
-	if(!manio->fzp && open_next_fpath(manio)) return -1;
+	if(!manio->fzp && manio_open_next_fpath(manio)) return -1;
 	return sbuf_to_manifest(sb, manio->fzp);
 }
 
@@ -558,4 +553,34 @@ int manio_forward_through_sigs(struct asfd *asfd,
 	// Call manio_copy_entry with nothing to write to, so
 	// that we forward through the sigs in manio.
 	return manio_copy_entry(asfd, csb, NULL, blk, manio, NULL, confs);
+}
+
+off_t manio_tell(struct manio *manio)
+{
+	if(!manio->fzp) return 0;
+	return fzp_tell(manio->fzp);
+}
+
+int manio_seek(struct manio *manio, off_t offset, int whence)
+{
+	if(!manio->fzp) return 0;
+	return fzp_seek(manio->fzp, offset, whence);
+}
+
+int manio_truncate(struct manio *manio)
+{
+	off_t pos=0;
+	if(manio->fzp && (pos=fzp_tell(manio->fzp))<0)
+	{
+		logp("Could not fzp_tell %s in %s(): %s\n",
+			manio->directory, __func__, strerror(errno));
+		return -1;
+	}
+	if(truncate(manio->directory, pos))
+	{
+		logp("Could not truncate %s in %s(): %s\n",
+			manio->directory, __func__, strerror(errno));
+		return -1;
+	}
+	return 0;
 }

@@ -94,3 +94,12 @@ int strlist_compile_regexes(struct strlist *strlist)
         for(l=strlist; l; l=l->next) compile_regex(&l->re, l->path);
 	return 0;
 }
+
+int strlist_find(struct strlist *strlist, const char *path, long flag)
+{
+	struct strlist *s;
+	for(s=strlist; s; s=s->next)
+		if(!strcmp(path, s->path) && flag==s->flag)
+			return 1;
+	return 0;
+}

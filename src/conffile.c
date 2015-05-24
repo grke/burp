@@ -773,6 +773,13 @@ static int finalise_incexc_dirs(struct conf **c)
 	return 0;
 }
 
+static int add_to_cross_filesystem(struct conf **c, const char *path)
+{
+	if(strlist_find(get_strlist(c[OPT_FSCHGDIR]), path, 0))
+		return 0;
+	return add_to_strlist(c[OPT_FSCHGDIR], path, 0);
+}
+
 // This decides which directories to start backing up, and which
 // are subdirectories which don't need to be started separately.
 static int finalise_start_dirs(struct conf **c)
@@ -810,6 +817,13 @@ static int finalise_start_dirs(struct conf **c)
 			if(add_to_strlist(c[OPT_STARTDIR], s->path, s->flag))
 				return -1;
 			last_sd=s;
+		}
+		else
+		{
+			// If it is not a starting directory, it should at
+			// least be included as a cross_filesystem entry.
+			if(add_to_cross_filesystem(c, s->path))
+				return -1;
 		}
 		last_ie=s;
 	}

@@ -452,7 +452,7 @@ int manio_write_sig_and_path(struct manio *manio, struct blk *blk)
 		{
 			// Add to list of dindexes for this manifest chunk.
 			snprintf(manio->dindex_sort[manio->dindex_count++],
-				MSAVE_PATH_LEN, "%s", savepathstr);
+				MSAVE_PATH_LEN+1, "%s", savepathstr);
 		}
 	}
 	return write_sig_msg(manio, sig_to_msg(blk, 1 /* save_path */));
@@ -561,10 +561,10 @@ off_t manio_tell(struct manio *manio)
 	return fzp_tell(manio->fzp);
 }
 
-int manio_seek(struct manio *manio, off_t offset, int whence)
+int manio_seek(struct manio *manio, off_t offset)
 {
 	if(!manio->fzp) return 0;
-	return fzp_seek(manio->fzp, offset, whence);
+	return fzp_seek(manio->fzp, offset, SEEK_SET);
 }
 
 int manio_truncate(struct manio *manio)

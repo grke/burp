@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../protocol1/resume.h"
 #include "../../base64.h"
 #include "../../cmd.h"
 #include "../../hexmap.h"
@@ -755,13 +756,6 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 
 	logp("Phase 2 begin (recv backup data)\n");
 
-	if(resume)
-	{
-		// FIX THIS.
-		logp("Error: resume currently unimplemented for protocol 2\n");
-		goto end;
-	}
-
 	//if(champ_chooser_init(sdirs->data, confs)
 	if(!(cmanio=manio_alloc())
 	  || !(p1manio=manio_alloc())
@@ -781,6 +775,13 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 
 	// The phase1 manifest looks the same as a protocol1 one.
 	manio_set_protocol(p1manio, PROTO_1);
+
+	if(resume && do_resume(p1manio, sdirs, dpth, confs))
+                goto end;
+
+	if(manio_closed(p1manio)
+	  && manio_open_next_fpath(p1manio))
+		goto end;
 
 	while(!backup_end)
 	{

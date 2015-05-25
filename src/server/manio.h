@@ -63,7 +63,7 @@ extern int manio_forward_through_sigs(struct asfd *asfd, struct sbuf **csb,
 	struct blk **blk, struct manio *manio, struct conf **confs);
 
 extern off_t manio_tell(struct manio *manio);
-extern int manio_seek(struct manio *manio, off_t offset, int whence);
+extern int manio_seek(struct manio *manio, off_t offset);
 extern int manio_truncate(struct manio *manio);
 extern int manio_open_next_fpath(struct manio *manio);
 

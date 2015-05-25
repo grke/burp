@@ -77,7 +77,7 @@ static int do_forward(struct manio *manio, struct iobuf *result,
 		// Make sure we end up with the highest datapth we can possibly
 		// find - dpth_protocol1_set_from_string() will only set it if
 		// it is higher.
-		if(sb->protocol1->datapth.buf
+		if(sb->protocol1 && sb->protocol1->datapth.buf
 		  && dpth_protocol1_set_from_string(dpth,
 			sb->protocol1->datapth.buf))
 		{
@@ -110,7 +110,7 @@ static int do_forward(struct manio *manio, struct iobuf *result,
 			{
 				errno=0;
 				if(!manio_closed(manio)
-				  && manio_seek(manio, pos, SEEK_SET))
+				  && manio_seek(manio, pos))
 				{
 					logp("Could not seek to %d in %s(): %s\n", pos,
 						__func__, strerror(errno));
@@ -129,7 +129,7 @@ static int do_forward(struct manio *manio, struct iobuf *result,
 		{
 			if(same) cntr_add_same(get_cntr(cconfs[OPT_CNTR]), sb->path.cmd);
 			else cntr_add_changed(get_cntr(cconfs[OPT_CNTR]), sb->path.cmd);
-			if(sb->protocol1->endfile.buf)
+			if(sb->protocol1 && sb->protocol1->endfile.buf)
 			{
 				unsigned long long e=0;
 				e=strtoull(sb->protocol1->endfile.buf,
@@ -166,7 +166,7 @@ static int do_resume_work(struct manio *p1manio,
 	if(read_phase1(p1manio, cconfs)) goto error;
 
 	if(!manio_closed(p1manio))
-		manio_seek(p1manio, 0L, SEEK_SET);
+		manio_seek(p1manio, 0L);
 
 	logp("Setting up resume positions...\n");
 	// Go to the end of cmanio.
@@ -233,14 +233,17 @@ int do_resume(struct manio *p1manio, struct sdirs *sdirs,
 	struct manio *cmanio=NULL;
 	struct manio *umanio=NULL;
 
-	// First, open them in a+ mode, so that they will be created if they
-	// do not exist.
-	// FIX THIS: Do it via manio.
-	if(!(cfzp=fzp_open(sdirs->changed, "a+b"))
-	  || !(ufzp=fzp_open(sdirs->unchanged, "a+b")))
-		goto end;
-	fzp_close(&cfzp);
-	fzp_close(&ufzp);
+	if(get_e_protocol(cconfs[OPT_PROTOCOL])==PROTO_1)
+	{
+		// First, open them in a+ mode, so that they will be created if
+		// they do not exist.
+		// FIX THIS: Do it via manio.
+		if(!(cfzp=fzp_open(sdirs->changed, "a+b"))
+		  || !(ufzp=fzp_open(sdirs->unchanged, "a+b")))
+			goto end;
+		fzp_close(&cfzp);
+		fzp_close(&ufzp);
+	}
 
 	if(!(cmanio=manio_alloc())
 	  || !(umanio=manio_alloc())

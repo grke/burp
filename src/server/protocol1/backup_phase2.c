@@ -815,9 +815,6 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 	if(resume && do_resume(p1manio, sdirs, dpth, cconfs))
 		goto error;
 
-logp("HERE: %s\n", p1manio?"yes":"no");
-if(p1manio) logp("HERE2: %s\n", p1manio->fzp?"yes":"no");
-
 	// Unchanged and changed should now be truncated correctly, we just
 	// have to open them for appending.
 	if(!(ucfp=fzp_open(sdirs->unchanged, "a+b"))

@@ -572,16 +572,29 @@ int manio_forward_through_sigs(struct asfd *asfd,
 	return manio_copy_entry(asfd, csb, NULL, blk, manio, NULL, confs);
 }
 
-off_t manio_tell(struct manio *manio)
+static void man_off_t_memcpy(man_off_t *dst, man_off_t *src)
 {
-	if(!manio->fzp) return 0;
-	return fzp_tell(manio->fzp);
+	memcpy(dst, src, sizeof(man_off_t));
 }
 
-int manio_seek(struct manio *manio, off_t offset)
+man_off_t *manio_tell(struct manio *manio)
 {
+	static man_off_t offset;
+	memset(&offset, 0, sizeof(man_off_t));
 	if(!manio->fzp) return 0;
-	return fzp_seek(manio->fzp, offset, SEEK_SET);
+	if((manio->offset.offset=fzp_tell(manio->fzp))<0)
+		return NULL;
+	man_off_t_memcpy(&offset, &manio->offset);
+	return &offset;
+}
+
+int manio_seek(struct manio *manio, man_off_t *offset)
+{
+	fzp_close(&manio->fzp);
+	man_off_t_memcpy(&manio->offset, offset);
+	if(!(manio->fzp=fzp_gzopen(manio->offset.fpath, manio->mode)))
+		return -1;
+	return fzp_seek(manio->fzp, manio->offset.offset, SEEK_SET);
 }
 
 int manio_truncate(struct manio *manio)

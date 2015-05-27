@@ -44,7 +44,7 @@ static int do_forward(struct manio *manio, struct iobuf *result,
 	int same, struct dpth *dpth, struct conf **cconfs)
 {
 	int ars=0;
-	off_t pos=0;
+	man_off_t *pos=NULL;
 	static struct sbuf *sb=NULL;
 
 	if(!sb && !(sb=sbuf_alloc(cconfs)))
@@ -57,7 +57,7 @@ static int do_forward(struct manio *manio, struct iobuf *result,
 		if(target && seekback)
 		{
 			if(!manio_closed(manio)
-			  && (pos=manio_tell(manio))<0)
+			  && !(pos=manio_tell(manio)))
 			{
 				logp("Could not manio_tell in %s(): %s\n",
 					__func__, strerror(errno));
@@ -112,8 +112,10 @@ static int do_forward(struct manio *manio, struct iobuf *result,
 				if(!manio_closed(manio)
 				  && manio_seek(manio, pos))
 				{
-					logp("Could not seek to %d in %s(): %s\n", pos,
-						__func__, strerror(errno));
+					logp("Could not seek to %s:%d in %s():"
+						" %s\n", pos->fpath,
+						pos->offset, __func__,
+						strerror(errno));
 					goto error;
 				}
 			}

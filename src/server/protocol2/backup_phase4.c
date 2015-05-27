@@ -357,7 +357,7 @@ int backup_phase4_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 			dstdir=h1dir;
 		}
 		pass++;
-		for(i=0; i<newmanio->fcount; i+=2)
+		for(i=0; i<newmanio->offset.fcount; i+=2)
 		{
 			free_w(&srca);
 			free_w(&srcb);
@@ -368,13 +368,13 @@ int backup_phase4_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 			if(!(srca=prepend_s(srcdir, compa))
 			  || !(dst=prepend_s(dstdir, compd)))
 				goto end;
-			if(i+1<newmanio->fcount
+			if(i+1<newmanio->offset.fcount
 			  && !(srcb=prepend_s(srcdir, compb)))
 				goto end;
 			if(merge_sparse_indexes(srca, srcb, dst, confs))
 				goto end;
 		}
-		if((newmanio->fcount=i/2)<2) break;
+		if((newmanio->offset.fcount=i/2)<2) break;
 	}
 
 	if(!(sparse=prepend_s(fmanifest, "sparse"))

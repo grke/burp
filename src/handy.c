@@ -893,9 +893,9 @@ int init_client_socket(const char *host, const char *port)
 
 void reuseaddr(int fd)
 {
-	int tmpfd=0;
+	int option=1;
 	if(setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
-		(sockopt_val_t)&tmpfd, sizeof(tmpfd))<0)
+		(sockopt_val_t)&option, sizeof(option))<0)
 			logp("Error: setsockopt SO_REUSEADDR: %s",
 				strerror(errno));
 }

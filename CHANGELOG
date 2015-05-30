@@ -1,3 +1,4 @@
+2015-05-30 Changes in burp-1.4.38:
   * Turn SO_REUSEADDR on instead of turning it off.
 
 2015-05-03 Changes in burp-1.4.36:

@@ -1,2 +1,2 @@
 #undef  VERSION
-#define VERSION "2.0.19"
+#define VERSION "2.0.20"

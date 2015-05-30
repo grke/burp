@@ -75,6 +75,7 @@ CLIENT_OBJS = \
 	$(OBJDIR)/conffile.o \
 	$(OBJDIR)/forkchild.o \
 	$(OBJDIR)/fsops.o \
+	$(OBJDIR)/fzp.o \
 	$(OBJDIR)/handy.o \
 	$(OBJDIR)/hexmap.o \
 	$(OBJDIR)/incexc_recv.o \

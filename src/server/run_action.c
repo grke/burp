@@ -1,9 +1,8 @@
 #include "include.h"
 #include "../cmd.h"
 #include "../lock.h"
-#include "protocol1/rubble.h"
+#include "rubble.h"
 #include "protocol2/restore.h"
-#include "protocol2/rubble.h"
 
 // FIX THIS: Somewhat haphazard.
 /* Return 0 for everything OK. -1 for error, or 1 to mean that there was
@@ -315,17 +314,6 @@ static const char *buf_to_notify_str(struct iobuf *rbuf)
 	else if(!strncmp_w(buf, "delete")) return "delete";
 	else if(!strncmp_w(buf, "list")) return "list";
 	else return "unknown";
-}
-
-static int check_for_rubble(struct async *as, struct sdirs *sdirs,
-	const char *incexc, int *resume, struct conf **cconfs)
-{
-	if(get_e_protocol(cconfs[OPT_PROTOCOL])==PROTO_1)
-		return check_for_rubble_protocol1(as,
-			sdirs, incexc, resume, cconfs);
-	else
-		return check_for_rubble_protocol2(as,
-			sdirs, incexc, resume, cconfs);
 }
 
 static int run_action_server_do(struct async *as, struct sdirs *sdirs,

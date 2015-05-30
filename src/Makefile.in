@@ -35,6 +35,7 @@ SRCS = \
 		cstat.c \
 		forkchild.c \
 		fsops.c \
+		fzp.c \
 		handy.c \
 		hexmap.c \
 		incexc_recv.c \

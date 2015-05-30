@@ -64,21 +64,21 @@ static int setup_cntr(struct asfd *asfd, const char *manifest,
 {
 	int ars=0;
 	int ret=-1;
-	gzFile zp;
+	struct fzp *fzp=NULL;
 	struct sbuf *sb=NULL;
 
 // FIX THIS: this is only trying to work for protocol1.
 	if(get_e_protocol(cconfs[OPT_PROTOCOL])!=PROTO_1) return 0;
 
 	if(!(sb=sbuf_alloc(cconfs))) goto end;
-	if(!(zp=gzopen_file(manifest, "rb")))
+	if(!(fzp=fzp_gzopen(manifest, "rb")))
 	{
 		log_and_send(asfd, "could not open manifest");
 		goto end;
 	}
 	while(1)
 	{
-		if((ars=sbufl_fill(sb, asfd, NULL, zp, cconfs)))
+		if((ars=sbufl_fill(sb, asfd, fzp, cconfs)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means end ok
@@ -101,7 +101,7 @@ static int setup_cntr(struct asfd *asfd, const char *manifest,
 	ret=0;
 end:
 	sbuf_free(&sb);
-	gzclose_fp(&zp);
+	fzp_close(&fzp);
 	return ret;
 }
 

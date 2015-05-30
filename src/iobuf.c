@@ -59,14 +59,9 @@ void iobuf_from_str(struct iobuf *iobuf, enum cmd cmd, char *str)
 	iobuf_set(iobuf, cmd, str, strlen(str));
 }
 
-int iobuf_send_msg_fp(struct iobuf *iobuf, FILE *fp)
+int iobuf_send_msg_fzp(struct iobuf *iobuf, struct fzp *fzp)
 {
-	return send_msg_fp(fp, iobuf->cmd, iobuf->buf, iobuf->len);
-}
-
-int iobuf_send_msg_zp(struct iobuf *iobuf, gzFile zp)
-{
-	return send_msg_zp(zp, iobuf->cmd, iobuf->buf, iobuf->len);
+	return send_msg_fzp(fzp, iobuf->cmd, iobuf->buf, iobuf->len);
 }
 
 int iobuf_pathcmp(struct iobuf *a, struct iobuf *b)

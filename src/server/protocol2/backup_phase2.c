@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../protocol1/resume.h"
 #include "../../base64.h"
 #include "../../cmd.h"
 #include "../../hexmap.h"
@@ -431,7 +432,7 @@ static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
 				// Have finished a manifest file. Want to start
 				// using it as a dedup candidate now.
 				iobuf_from_str(wbuf, CMD_MANIFEST,
-					chmanio->fpath);
+					chmanio->offset.fpath);
 				if(chfd->write(chfd, wbuf)) goto error;
 
 				if(!blk->requested)
@@ -774,6 +775,13 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 
 	// The phase1 manifest looks the same as a protocol1 one.
 	manio_set_protocol(p1manio, PROTO_1);
+
+	if(resume && do_resume(p1manio, sdirs, dpth, confs))
+                goto end;
+
+	if(manio_closed(p1manio)
+	  && manio_open_next_fpath(p1manio))
+		goto end;
 
 	while(!backup_end)
 	{

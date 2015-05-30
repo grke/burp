@@ -1,50 +1,54 @@
 #include "include.h"
+#include "../../fzp.h"
 
-int zlib_inflate(struct asfd *asfd, const char *source,
-	const char *dest, struct conf **confs)
+int zlib_inflate(struct asfd *asfd, const char *source_path,
+	const char *dest_path, struct conf **confs)
 {
 	int ret=-1;
 	size_t b=0;
-	FILE *fp=NULL;
-	gzFile zp=NULL;
 	uint8_t in[ZCHUNK];
+	struct fzp *src=NULL;
+	struct fzp *dst=NULL;
 
-	if(!(zp=gzopen_file(source, "rb")))
+	if(!(src=fzp_gzopen(source_path, "rb")))
 	{
-		logw(asfd, confs,
-			"could not open %s in %s\n", source, __func__);
+		logw(asfd, confs, "could not gzopen %s in %s: %s\n",
+			source_path, __func__, strerror(errno));
 		goto end;
 	}
-	if(!(fp=open_file(dest, "wb")))
+	if(!(dst=fzp_open(dest_path, "wb")))
 	{
 		logw(asfd, confs, "could not open %s in %s: %s\n",
-			dest, __func__, strerror(errno));
+			dest_path, __func__, strerror(errno));
 		goto end;
 	}
-	while((b=gzread(zp, in, ZCHUNK))>0)
+
+	while((b=fzp_read(src, in, ZCHUNK))>0)
 	{
-		if(fwrite(in, 1, b, fp)!=b)
+		if(fzp_write(dst, in, b)!=b)
 		{
-			logw(asfd, confs, "error when writing to %s\n", dest);
+			logw(asfd, confs,
+				"error when writing to %s\n", dest_path);
 			goto end;
 		}
 	}
-	if(!gzeof(zp))
+	if(!fzp_eof(src))
 	{
 		logw(asfd, confs,
-			"error while gzreading %s in %s\n", source, __func__);
+			"error while reading %s in %s\n",
+				source_path, __func__);
 		goto end;
 	}
-	if(close_fp(&fp))
+	if(fzp_close(&dst))
 	{
 		logw(asfd, confs,
 			"error when closing %s in %s: %s\n",
-				dest, __func__, strerror(errno));
+				dest_path, __func__, strerror(errno));
 		goto end;
 	}
 	ret=0;
 end:
-	gzclose_fp(&zp);
-	close_fp(&fp);
+	fzp_close(&src);
+	fzp_close(&dst);
 	return ret;
 }

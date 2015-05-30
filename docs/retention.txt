@@ -1,0 +1,160 @@
+Retention
+---------
+
+Each time burp creates a backup, it will be given a number that is one greater
+than the previous successful backup. If there is no previous backup, it will
+start with the number 1. It will also be given a timestamp.
+
+So, after five days, your backups of a client in /var/spool/burp/testclient/
+might look like this:
+
+0000001 2014-05-19 19:00:04
+0000002 2014-05-20 19:00:02
+0000003 2014-05-21 19:00:05
+0000004 2014-05-22 19:00:05
+0000005 2014-05-23 19:00:03
+
+It is important to note that burp's retention works on the backup numbers, not
+the timestamp.
+
+
+Single 'keep' setting
+---------------------
+
+The retention is configured via the 'keep' server side configuration option,
+which can be overridden per-client in the clientconfdir files.
+
+At the end of each successful backup, the server will run its retention code
+and delete old backups. It will delete any backup that the 'keep' settings and
+the 'deletable' criteria allow it to.
+A backup is 'deletable' if it is the oldest backup, or comes immediately after
+a 'hardlinked' backup. This is explained further in the section about multiple
+'keep' values, below.
+
+
+For example, the burp default is 'keep = 7'. Intuitively, this means 'keep
+seven backups'. After nine backups, your backup list will look like this:
+
+0000003 2014-05-21 19:00:04
+0000004 2014-05-22 19:00:02
+0000005 2014-05-23 19:00:05
+0000006 2014-05-24 19:00:05
+0000007 2014-05-25 19:00:03
+0000008 2014-05-26 19:00:01
+0000009 2014-05-27 19:00:04
+
+At the end of backup 8, backup 1 was deleted.
+At the end of backup 9, backup 2 was deleted.
+
+A single 'keep' setting is just a special case of the algorithm that burp uses
+when you have multiple 'keep' settings.
+
+
+Multiple 'keep' settings
+------------------------
+
+You may want configure multiple 'keep' values. This will make burp prune the
+the backups so that as you go further back in time, there are fewer of them.
+In effect, an exponential decay.
+
+For example, you may set:
+
+keep = 7
+keep = 4
+keep = 12
+
+This guarantees to keep 7 backups in a row, plus 4 on multiples of 7, plus
+12 on multiples of 4*12.
+
+
+At the end of a successful backup, burp takes the 'keep' settings and the list
+of numbered backups.
+It re-indexes the list so that the most recent backup is at postition 1.
+It splits the re-indexed list into regions based on the 'keep' settings (eg,
+boundaries at 1..7, 7*1, 7*2, 7*3, 7*4, 7*4*1, 7*4*2, ..., 7*4*12.
+
+It then attempts to reduce the number of backups in each region to 1 (or 0 if
+the region is beyond the end of the 'keep' settings).
+It can only delete backups that are 'deletable'.
+The very oldest backup is deletable.
+A backup that comes immediately after a 'hardlinked' backup is deletable.
+Burp makes all backups 'hardlinked' if they are made while
+'hardlinked_archive=1' is set.
+Otherwise, backups that are created on the boundaries defined by the first
+'keep' setting are made 'hardlinked' (ie, 1, 7, 14, etc).
+
+This is an example set of backups on a server on which I set 'keep' values of
+7 and 4:
+
+0000260 2012-04-03 20:07:02
+0000267 2012-04-22 09:14:44
+0000274 2012-05-06 19:06:43
+0000281 2012-05-13 19:27:03
+0000283 2012-05-15 19:47:03
+0000284 2012-05-16 19:27:03
+0000285 2012-05-17 19:27:03
+0000286 2012-05-18 19:47:04
+0000287 2012-05-19 19:27:04
+0000288 2012-05-20 19:27:03
+0000289 2012-05-21 19:27:03
+
+You can see the gaps of 7 between backups 260,267, 274 and 281.
+Backups 283 to 289 are in the range of 1 to 7.
+
+
+Changing 'keep' settings
+------------------------
+
+A question that sometimes comes up is:
+What happens if I change my 'keep' settings?
+
+
+On the next backup of a client, burp will do it's reduction algorithm based on
+the new settings for that client.
+If it has more than 1 backup in its new regions, it will try to reduce them
+to 1 if it is able to.
+
+
+In the following examples, somebody initially set...
+keep = 14
+keep = 4
+keep = 2
+...and they then change them to:
+keep = 14
+keep = 7
+
+
+Example A:
+In this case, the 'range' of backups has been reduced.
+14*4*2 = 112
+ 7*4*2 = 56
+
+Therefore, if there were 72 backups, the new settings will result in any
+left in the range 57-112 (the oldest ones) being deleted.
+Since the regions are now smaller, some of the regions will now have 0
+backups. Obviously nothing will happen to those regions. Other regions will
+still have 1. Nothing will happen to those. If a multiple that expanded the
+regions were chosen, there may be a region with more than 1 backup, which then
+might be reduced to 1 (depending on 'deletable' criteria).
+
+
+Example B:
+If there were backups 10 9 8 7 6 5 4 3 2 1, and hardlinked_archive=1 were set
+the whole time, after next backup, there would be:
+11 10 9 8 7 6 5 1
+
+If hardlinked_archive=0 were set the whole time with 14*4*2, the result would
+be the same:
+11 10 9 8 7 6 5 1
+
+But when carrying on, there will be a small difference.
+The hardlinked_archive=1 example would become:
+21 20 19 18 17 16 15 14 7 1
+
+The other would become:
+21 20 19 18 17 16 15 14 13 12 11 10 9 8 7 1
+Burp would like to delete 8 to 13 based on the current 'keep' settings, but it
+can't because 7 to 13 were not hardlinked.
+However, you can still delete 7, then 8, 9, 10, 11, 12, 13 in that order by
+hand if you like (with the client 'delete' option), because each one
+successively does not have any backups that depend upon it.

@@ -323,6 +323,8 @@ static int load_conf_field_and_value(struct conf **c,
 				case CT_STRLIST:
 					return add_to_strlist(c[i], v,
 					  !strcmp(c[i]->field, "include"));
+				case CT_E_RSHASH:
+					break;
 				case CT_CNTR:
 					break;
 				// No default so we get a warning if something
@@ -771,6 +773,13 @@ static int finalise_incexc_dirs(struct conf **c)
 	return 0;
 }
 
+static int add_to_cross_filesystem(struct conf **c, const char *path)
+{
+	if(strlist_find(get_strlist(c[OPT_FSCHGDIR]), path, 0))
+		return 0;
+	return add_to_strlist(c[OPT_FSCHGDIR], path, 0);
+}
+
 // This decides which directories to start backing up, and which
 // are subdirectories which don't need to be started separately.
 static int finalise_start_dirs(struct conf **c)
@@ -778,6 +787,9 @@ static int finalise_start_dirs(struct conf **c)
 	struct strlist *s=NULL;
 	struct strlist *last_ie=NULL;
 	struct strlist *last_sd=NULL;
+
+	// Make sure that the startdir list starts empty, or chaos will ensue.
+	conf_free_content(c[OPT_STARTDIR]);
 
 	for(s=get_strlist(c[OPT_INCLUDE]); s; s=s->next)
 	{
@@ -805,6 +817,13 @@ static int finalise_start_dirs(struct conf **c)
 			if(add_to_strlist(c[OPT_STARTDIR], s->path, s->flag))
 				return -1;
 			last_sd=s;
+		}
+		else
+		{
+			// If it is not a starting directory, it should at
+			// least be included as a cross_filesystem entry.
+			if(add_to_cross_filesystem(c, s->path))
+				return -1;
 		}
 		last_ie=s;
 	}
@@ -1091,6 +1110,9 @@ static int conf_set_from_global(struct conf **globalc, struct conf **cc)
 			case CT_E_RECOVERY_METHOD:
 				set_e_recovery_method(cc[i], get_e_recovery_method(globalc[i]));
 				break;
+			case CT_E_RSHASH:
+				set_e_rshash(cc[i], get_e_rshash(globalc[i]));
+				break;
 			case CT_STRLIST:
 				// Done later.
 				break;
@@ -1247,5 +1269,87 @@ int conf_load_global_only(const char *path, struct conf **globalcs)
 int conf_load_global_only_buf(const char *buf, struct conf **globalcs)
 {
 	return do_load_global_only(globalcs, "test buf", buf);
+}
+#endif
+
+static int restore_client_allowed(struct conf **cconfs, struct conf **sconfs)
+{
+	struct strlist *r;
+	for(r=get_strlist(sconfs[OPT_RESTORE_CLIENTS]); r; r=r->next)
+		if(!strcmp(r->path, get_string(cconfs[OPT_CNAME])))
+			return 1;
+	logp("Access to client is not allowed: %s",
+		get_string(sconfs[OPT_CNAME]));
+	return 0;
+}
+
+// FIX THIS: need to unit test this.
+static int do_conf_switch_to_orig_client(struct conf **globalcs,
+	struct conf **cconfs, const char *orig_client, const char *buf)
+{
+	int ret=-1;
+	int loadrc;
+	struct conf **sconfs=NULL;
+	if(!(sconfs=confs_alloc())
+	  || confs_init(sconfs)) goto end;
+	if(set_string(sconfs[OPT_CNAME], orig_client))
+		goto end;
+	logp("Client wants to switch to client: %s\n",
+		get_string(sconfs[OPT_CNAME]));
+
+	// Allow unit testing using a buffer.
+#ifdef UTEST
+	if(buf) loadrc=conf_load_overrides_buf(globalcs, sconfs, buf);
+	else
+#endif
+		loadrc=conf_load_clientconfdir(globalcs, sconfs);
+	if(loadrc)
+	{
+		logp("Could not load alternate config: %s",
+			get_string(sconfs[OPT_CNAME]));
+		goto end;
+	}
+	set_int(sconfs[OPT_SEND_CLIENT_CNTR],
+		get_int(cconfs[OPT_SEND_CLIENT_CNTR]));
+
+	if(!restore_client_allowed(cconfs, sconfs))
+		goto end;
+
+	if(set_string(sconfs[OPT_RESTORE_PATH],
+		get_string(cconfs[OPT_RESTORE_PATH])))
+			goto end;
+	if(set_string(cconfs[OPT_RESTORE_PATH], NULL))
+		goto end;
+	set_cntr(sconfs[OPT_CNTR], get_cntr(cconfs[OPT_CNTR]));
+	set_cntr(cconfs[OPT_CNTR], NULL);
+	confs_free_content(cconfs);
+	confs_init(cconfs);
+	confs_memcpy(cconfs, sconfs);
+	confs_null(sconfs);
+	if(set_string(cconfs[OPT_RESTORE_CLIENT],
+		get_string(cconfs[OPT_CNAME]))) goto end;
+	if(set_string(cconfs[OPT_ORIG_CLIENT],
+		get_string(cconfs[OPT_CNAME]))) goto end;
+
+	logp("Switched to client %s\n", get_string(cconfs[OPT_CNAME]));
+	ret=0;
+end:
+	confs_free(&sconfs);
+	return ret;
+}
+
+int conf_switch_to_orig_client(struct conf **globalcs, struct conf **cconfs,
+	const char *orig_client)
+{
+	return do_conf_switch_to_orig_client(globalcs,
+		cconfs, orig_client, NULL);
+}
+
+#ifdef UTEST
+int conf_switch_to_orig_client_buf(struct conf **globalcs,
+	struct conf **cconfs, const char *orig_client, const char *buf)
+{
+	return do_conf_switch_to_orig_client(globalcs,
+		cconfs, orig_client, buf);
 }
 #endif

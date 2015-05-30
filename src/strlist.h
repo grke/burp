@@ -23,5 +23,6 @@ extern int strlist_add(struct strlist **strlist,
 extern int strlist_add_sorted(struct strlist **strlist,
 	const char *path, long flag);
 extern int strlist_compile_regexes(struct strlist *strlist);
+extern int strlist_find(struct strlist *strlist, const char *path, long flag);
 
 #endif

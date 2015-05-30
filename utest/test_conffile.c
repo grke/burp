@@ -136,6 +136,8 @@ START_TEST(test_client_includes_excludes)
 		"include=/x/y/z\n"
 		"include=/r/s/t\n"
 		"include=/a\n"
+		"include=/a/b/c/d\n"
+		"cross_filesystem=/mnt/x\n"
 	;
 	struct strlist *s;
 	struct conf **confs=NULL;
@@ -144,6 +146,7 @@ START_TEST(test_client_includes_excludes)
 	s=get_strlist(confs[OPT_INCLUDE]);
 	assert_include(&s, "/a");
 	assert_include(&s, "/a/b/c");
+	assert_include(&s, "/a/b/c/d");
 	assert_include(&s, "/r/s/t");
 	assert_include(&s, "/x/y/z");
 	assert_include(&s, NULL);
@@ -160,10 +163,16 @@ START_TEST(test_client_includes_excludes)
 	assert_include(&s, "/a");
 	assert_exclude(&s, "/a/b");
 	assert_include(&s, "/a/b/c");
+	assert_include(&s, "/a/b/c/d");
 	assert_include(&s, "/r/s/t");
 	assert_include(&s, "/x/y/z");
 	assert_exclude(&s, "/z");
 	assert_include(&s, NULL);
+	s=get_strlist(confs[OPT_FSCHGDIR]);
+	assert_strlist(&s, "/a/b/c", 0);
+	assert_strlist(&s, "/a/b/c/d", 0);
+	assert_strlist(&s, "/mnt/x", 0);
+	assert_strlist(&s, NULL, 0);
 	tear_down(NULL, &confs);
 }
 END_TEST
@@ -576,6 +585,44 @@ START_TEST(test_clientconfdir_server_script)
 }
 END_TEST
 
+START_TEST(test_conf_switch_to_orig_client_fail)
+{
+	struct conf **globalcs=NULL;
+	struct conf **cconfs=NULL;
+	const char *gbuf=MIN_SERVER_CONF
+		"restore_client=non-matching1"
+		"restore_client=non-matching2";
+	const char *buf=MIN_CLIENTCONFDIR_BUF;
+	const char *orig_client_buf=MIN_CLIENTCONFDIR_BUF;
+
+	clientconfdir_setup(&globalcs, &cconfs, gbuf, buf);
+	fail_unless(conf_switch_to_orig_client_buf(globalcs, cconfs,
+		"orig_client", orig_client_buf)==-1);
+	tear_down(&globalcs, &cconfs);
+}
+END_TEST
+
+START_TEST(test_conf_switch_to_orig_client_ok)
+{
+	struct conf **globalcs=NULL;
+	struct conf **cconfs=NULL;
+	const char *gbuf=MIN_SERVER_CONF
+		"restore_client=non-matching1\n"
+		"restore_client=utestclient\n";
+	const char *buf=MIN_CLIENTCONFDIR_BUF;
+	const char *orig_client_buf=MIN_CLIENTCONFDIR_BUF;
+
+	clientconfdir_setup(&globalcs, &cconfs, gbuf, buf);
+	fail_unless(conf_switch_to_orig_client_buf(globalcs, cconfs,
+		"orig_client", orig_client_buf)==0);
+	ck_assert_str_eq(get_string(cconfs[OPT_CNAME]), "orig_client");
+	ck_assert_str_eq(get_string(cconfs[OPT_RESTORE_CLIENT]), "orig_client");
+	ck_assert_str_eq(get_string(cconfs[OPT_ORIG_CLIENT]), "orig_client");
+	tear_down(&globalcs, &cconfs);
+}
+END_TEST
+
+
 Suite *suite_conffile(void)
 {
 	Suite *s;
@@ -599,6 +646,8 @@ Suite *suite_conffile(void)
 	tcase_add_test(tc_core, test_clientconfdir_conf);
 	tcase_add_test(tc_core, test_clientconfdir_extra);
 	tcase_add_test(tc_core, test_clientconfdir_server_script);
+	tcase_add_test(tc_core, test_conf_switch_to_orig_client_fail);
+	tcase_add_test(tc_core, test_conf_switch_to_orig_client_ok);
 	suite_add_tcase(s, tc_core);
 
 	return s;

@@ -7,9 +7,8 @@ static int load_signature(struct asfd *asfd,
 	rs_result r;
 	rs_job_t *job;
 
-	job = rs_loadsig_begin(sumset);
-	if((r=do_rs_run(asfd, job,
-		NULL, NULL, NULL, NULL, NULL, asfd->fd, -1, get_cntr(confs[OPT_CNTR]))))
+	job=rs_loadsig_begin(sumset);
+	if((r=rs_loadsig_network_run(asfd, job, get_cntr(confs[OPT_CNTR]))))
 	{
 		rs_free_sumset(*sumset);
 		return r;
@@ -42,12 +41,14 @@ static int load_signature_and_send_delta(struct asfd *asfd,
 	}
 
 	if(!(infb=rs_filebuf_new(asfd, bfd,
-		NULL, NULL, -1, ASYNC_BUF_LEN, bfd->datalen, get_cntr(confs[OPT_CNTR])))
-	  || !(outfb=rs_filebuf_new(asfd, NULL, NULL,
-		NULL, asfd->fd, ASYNC_BUF_LEN, -1, get_cntr(confs[OPT_CNTR]))))
+		NULL, -1, ASYNC_BUF_LEN, bfd->datalen,
+		get_cntr(confs[OPT_CNTR])))
+	  || !(outfb=rs_filebuf_new(asfd, NULL,
+		NULL, asfd->fd, ASYNC_BUF_LEN, -1,
+		get_cntr(confs[OPT_CNTR]))))
 	{
 		logp("could not rs_filebuf_new for delta\n");
-		if(infb) rs_filebuf_free(infb);
+		rs_filebuf_free(&infb);
 		return -1;
 	}
 
@@ -87,8 +88,8 @@ static int load_signature_and_send_delta(struct asfd *asfd,
 			r=RS_IO_ERROR;
 		}
 	}
-	rs_filebuf_free(infb);
-	rs_filebuf_free(outfb);
+	rs_filebuf_free(&infb);
+	rs_filebuf_free(&outfb);
 	rs_job_free(job);
 	rs_free_sumset(sumset);
 
@@ -324,10 +325,10 @@ static int parse_rbuf(struct asfd *asfd, struct sbuf *sb,
 		if(deal_with_data(asfd, sb, bfd, confs))
 			return -1;
 	}
-	else if(rbuf->cmd==CMD_WARNING)
+	else if(rbuf->cmd==CMD_MESSAGE
+	  || rbuf->cmd==CMD_WARNING)
 	{
-		logp("WARNING: %s\n", rbuf->buf);
-		cntr_add(get_cntr(confs[OPT_CNTR]), rbuf->cmd, 0);
+		log_recvd(rbuf, confs, 0);
 	}
 	else
 	{
@@ -399,6 +400,7 @@ int backup_phase2_client_protocol1(struct asfd *asfd,
 	int ret=0;
 
 	logp("Phase 2 begin (send backup data)\n");
+	printf("\n");
 
 	ret=do_backup_phase2_client(asfd, confs, resume);
 

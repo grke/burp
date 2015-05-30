@@ -99,7 +99,7 @@ static int get_acl_string(struct asfd *asfd, acl_t acl, char **acltext,
 	}
 
 	snprintf(pre, sizeof(pre), "%c%08X", type, (unsigned int)tlen);
-	if(!(ourtext=prepend(pre, tmp, tlen, ""))
+	if(!(ourtext=prepend(pre, tmp))
 	  || !(*acltext=prepend_len(*acltext,
 		*alen, ourtext, tlen+9, "", 0, alen)))
 			ret=-1;

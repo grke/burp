@@ -1,25 +1,13 @@
 #include "include.h"
 #include "cmd.h"
 
-int send_msg_fp(FILE *fp, enum cmd cmd, const char *buf, size_t s)
+int send_msg_fzp(struct fzp *fzp, enum cmd cmd, const char *buf, size_t s)
 {
-	if(fprintf(fp, "%c%04X", cmd, (unsigned int)s)!=5
-	  || fwrite(buf, 1, s, fp)!=s
-	  || fprintf(fp, "\n")!=1)
+	if(fzp_printf(fzp, "%c%04X", cmd, (unsigned int)s)!=5
+	  || fzp_write(fzp, buf, s)!=s
+	  || fzp_printf(fzp, "\n")!=1)
 	{
 		logp("Unable to write message to file: %s\n", strerror(errno));
-		return -1;
-	}
-	return 0;
-}
-
-int send_msg_zp(gzFile zp, enum cmd cmd, const char *buf, size_t s)
-{
-	if(gzprintf(zp, "%c%04X", cmd, s)!=5
-	  || gzwrite(zp, buf, s)!=(int)s
-	  || gzprintf(zp, "\n")!=1)
-	{
-		logp("Unable to write message to compressed file\n");
 		return -1;
 	}
 	return 0;
@@ -74,7 +62,7 @@ static int do_inflate(struct asfd *asfd, z_stream *zstrm, BFILE *bfd,
 }
 
 int transfer_gzfile_in(struct asfd *asfd, const char *path, BFILE *bfd,
-	unsigned long long *rcvd, unsigned long long *sent, struct cntr *cntr)
+	unsigned long long *rcvd, unsigned long long *sent, struct conf **confs)
 {
 	int quit=0;
 	int ret=-1;
@@ -120,9 +108,9 @@ int transfer_gzfile_in(struct asfd *asfd, const char *path, BFILE *bfd,
 				break;
 			case CMD_END_FILE: // finish up
 				goto end_ok;
+			case CMD_MESSAGE:
 			case CMD_WARNING:
-				logp("WARNING: %s\n", rbuf->buf);
-				cntr_add(cntr, rbuf->cmd, 0);
+				log_recvd(rbuf, confs, 0);
 				break;
 			default:
 				iobuf_log_unexpected(rbuf, __func__);

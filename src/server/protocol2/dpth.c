@@ -19,7 +19,7 @@ static int get_data_lock(struct lock *lock, struct dpth *dpth, const char *path)
 	char *lockfile=NULL;
 	// Use just the first three components, excluding sig number.
 	if(!(p=prepend_slash(dpth->base_path, path, 14))
-	  || !(lockfile=prepend(p, ".lock", strlen(".lock"), "")))
+	  || !(lockfile=prepend(p, ".lock")))
 		goto end;
 	if(lock_init(lock, lockfile)
 	  || build_path_w(lock->path))

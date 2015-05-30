@@ -39,17 +39,17 @@ int candidate_load(struct candidate *candidate,
 	const char *path, struct conf **confs)
 {
 	int ret=-1;
-	gzFile zp=NULL;
+	struct fzp *fzp=NULL;
 	struct sbuf *sb=NULL;
 	struct blk *blk=NULL;
 
 	if(!(sb=sbuf_alloc(confs))
 	  || !(blk=blk_alloc())
-	  || !(zp=gzopen_file(path, "rb")))
+	  || !(fzp=fzp_gzopen(path, "rb")))
 		goto error;
-	while(zp)
+	while(fzp)
 	{
-		switch(sbuf_fill_from_gzfile(sb, NULL, zp, blk, NULL, confs))
+		switch(sbuf_fill(sb, NULL, fzp, blk, NULL, confs))
 		{
 			case 1: goto end;
 			case -1: goto error;
@@ -76,7 +76,7 @@ end:
 	//logp("Now have %d candidates\n", (int)candidates_len);
 	ret=0;
 error:
-	gzclose_fp(&zp);
+	fzp_close(&fzp);
 	sbuf_free(&sb);
 	blk_free(&blk);
 	return ret;

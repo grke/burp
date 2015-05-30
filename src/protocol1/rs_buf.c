@@ -47,7 +47,7 @@ void *rs_alloc(size_t size)
 }
 
 rs_filebuf_t *rs_filebuf_new(struct asfd *asfd,
-	BFILE *bfd, FILE *fp, gzFile zp, int fd,
+	BFILE *bfd, struct fzp *fzp, int fd,
 	size_t buf_len, size_t data_len, struct cntr *cntr)
 {
 	rs_filebuf_t *pf=NULL;
@@ -55,13 +55,9 @@ rs_filebuf_t *rs_filebuf_new(struct asfd *asfd,
 		sizeof(struct rs_filebuf), __func__))) return NULL;
 
 	if(!(pf->buf=(char *)calloc_w(1, buf_len, __func__)))
-	{
-		free(pf);
-		return NULL;
-	}
+		goto error;
 	pf->buf_len=buf_len;
-	pf->fp=fp;
-	pf->zp=zp;
+	pf->fzp=fzp;
 	pf->fd=fd;
 	pf->bfd=bfd;
 	pf->bytes=0;
@@ -74,20 +70,20 @@ rs_filebuf_t *rs_filebuf_new(struct asfd *asfd,
 	if(!MD5_Init(&(pf->md5)))
 	{
 		logp("MD5_Init() failed\n");
-		rs_filebuf_free(pf);
-		return NULL;
+		goto error;
 	}
 	pf->asfd=asfd;
-
 	return pf;
+error:
+	rs_filebuf_free(&pf);
+	return NULL;
 }
 
-void rs_filebuf_free(rs_filebuf_t *fb) 
+void rs_filebuf_free(rs_filebuf_t **fb) 
 {
-	if(fb->buf) free(fb->buf);
-	memset(fb, 0, sizeof(*fb));
-        free(fb);
-	fb=NULL;
+	if(!fb || !*fb) return;
+	free_w(&((*fb)->buf));
+        free_v((void **)fb);
 }
 
 /*
@@ -97,10 +93,8 @@ void rs_filebuf_free(rs_filebuf_t *fb)
  */
 rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 {
-	int                     len=0;
-	rs_filebuf_t            *fb = (rs_filebuf_t *) opaque;
-	gzFile                  zp = fb->zp;
-	FILE                    *fp = fb->fp;
+	int len=0;
+	rs_filebuf_t *fb=(rs_filebuf_t *) opaque;
 	struct cntr *cntr;
 	int fd=fb->fd;
 	cntr=fb->cntr;
@@ -222,42 +216,13 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 			return RS_IO_ERROR;
 		}
 	}
-	else if(fp)
+	else if(fb->fzp)
 	{
-		len = fread(fb->buf, 1, fb->buf_len, fp);
-		//logp("fread: %d\n", len);
-		if(len <= 0)
+		if((len=fzp_read(fb->fzp, fb->buf, fb->buf_len))<=0)
 		{
-			/* This will happen if file size is a multiple of
-			   input block len
-			 */
-			if(feof(fp))
-			{
-				buf->eof_in=1;
-				return RS_DONE;
-			}
-			else
-			{
-				logp("rs_infilebuf_fill: got return %d when trying to read\n", len);
-				return RS_IO_ERROR;
-			}
-		}
-		fb->bytes+=len;
-		if(!MD5_Update(&(fb->md5), fb->buf, len))
-		{
-			logp("rs_infilebuf_fill: MD5_Update() failed\n");
-			return RS_IO_ERROR;
-		}
-	}
-	else if(zp)
-	{
-		len=gzread(zp, fb->buf, fb->buf_len);
-		//logp("gzread: %d\n", len);
-		if(len <= 0)
-		{
-			/* This will happen if file size is a multiple of input block len
-			 */
-			if(gzeof(zp))
+			// This will happen if file size is a multiple of
+			// input block len.
+			if(fzp_eof(fb->fzp))
 			{
 				buf->eof_in=1;
 				return RS_DONE;
@@ -289,10 +254,8 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
  */
 rs_result rs_outfilebuf_drain(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 {
-	rs_filebuf_t *fb = (rs_filebuf_t *) opaque;
-	FILE *fp = fb->fp;
-	gzFile zp = fb->zp;
-	int fd = fb->fd;
+	rs_filebuf_t *fb=(rs_filebuf_t *)opaque;
+	int fd=fb->fd;
 	size_t wlen;
 
 	//logp("in rs_outfilebuf_drain\n");
@@ -355,8 +318,7 @@ rs_result rs_outfilebuf_drain(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 		else
 		{
 			size_t result=0;
-			if(fp) result=fwrite(fb->buf, 1, wlen, fp);
-			else if(zp) result=gzwrite(zp, fb->buf, wlen);
+			result=fzp_write(fb->fzp, fb->buf, wlen);
 			if(wlen!=result)
 			{
 				logp("error draining buf to file: %s",
@@ -372,51 +334,6 @@ rs_result rs_outfilebuf_drain(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 	return RS_DONE;
 }
 
-rs_result do_rs_run(struct asfd *asfd,
-	rs_job_t *job, BFILE *bfd,
-	FILE *in_file, FILE *out_file,
-	gzFile in_zfile, gzFile out_zfile, int infd, int outfd, struct cntr *cntr)
-{
-	rs_buffers_t buf;
-	rs_result result;
-	rs_filebuf_t *in_fb=NULL;
-	rs_filebuf_t *out_fb=NULL;
-
-	if(in_file && infd>=0)
-	{
-		logp("do not specify both input file and input fd in do_rs_run()\n");
-		return RS_IO_ERROR;
-	}
-	if(out_file && outfd>=0)
-	{
-		logp("do not specify both output file and output fd in do_rs_run()\n");
-		return RS_IO_ERROR;
-	}
-
-	if((bfd || in_file || in_zfile || infd>=0)
-	 && !(in_fb=rs_filebuf_new(asfd, bfd,
-		in_file, in_zfile, infd, ASYNC_BUF_LEN, -1, cntr)))
-			return RS_MEM_ERROR;
-	if((out_file || out_zfile || outfd>=0)
-	 && !(out_fb=rs_filebuf_new(asfd, NULL,
-		out_file, out_zfile, outfd, ASYNC_BUF_LEN, -1, cntr)))
-	{
-		if(in_fb) rs_filebuf_free(in_fb);
-		return RS_MEM_ERROR;
-	}
-
-//logp("before rs_job_drive\n");
-	result = rs_job_drive(job, &buf,
-		in_fb ? rs_infilebuf_fill : NULL, in_fb,
-		out_fb ? rs_outfilebuf_drain : NULL, out_fb);
-//logp("after rs_job_drive\n");
-
-	if(in_fb) rs_filebuf_free(in_fb);
-	if(out_fb) rs_filebuf_free(out_fb);
-
-	return result;
-}
-
 static rs_result rs_async_drive(rs_job_t *job, rs_buffers_t *rsbuf,
              rs_driven_cb in_cb, void *in_opaque,
              rs_driven_cb out_cb, void *out_opaque)
@@ -424,21 +341,20 @@ static rs_result rs_async_drive(rs_job_t *job, rs_buffers_t *rsbuf,
 	rs_result result;
 	rs_result iores;
 
-	if (!rsbuf->eof_in && in_cb)
+	if(!rsbuf->eof_in && in_cb)
 	{
-		iores = in_cb(job, rsbuf, in_opaque);
-		if (iores != RS_DONE) return iores;
+		iores=in_cb(job, rsbuf, in_opaque);
+		if(iores!=RS_DONE) return iores;
 	}
 
-	result = rs_job_iter(job, rsbuf);
-	if (result != RS_DONE && result != RS_BLOCKED)
+	result=rs_job_iter(job, rsbuf);
+	if(result!=RS_DONE && result!=RS_BLOCKED)
 		return result;
-	//printf("job iter got: %d\n", result);
 
-	if (out_cb)
+	if(out_cb)
 	{
-		iores = (out_cb)(job, rsbuf, out_opaque);
-		if (iores != RS_DONE) return iores;
+		iores=(out_cb)(job, rsbuf, out_opaque);
+		if(iores!=RS_DONE) return iores;
 	}
 
 	return result;
@@ -453,80 +369,115 @@ rs_result rs_async(rs_job_t *job, rs_buffers_t *rsbuf,
 }
 
 static rs_result rs_whole_gzrun(struct asfd *asfd,
-	rs_job_t *job, FILE *in_file, gzFile in_zfile,
-	FILE *out_file, gzFile out_zfile, struct cntr *cntr)
+	rs_job_t *job, struct fzp *in_file, struct fzp *out_file,
+	struct cntr *cntr)
 {
 	rs_buffers_t buf;
 	rs_result result;
 	rs_filebuf_t *in_fb=NULL;
 	rs_filebuf_t *out_fb=NULL;
 
-	if(in_file || in_zfile)
+	if(in_file)
 		in_fb=rs_filebuf_new(asfd, NULL,
-			in_file, in_zfile, -1, ASYNC_BUF_LEN, -1, cntr);
+			in_file, -1, ASYNC_BUF_LEN, -1, cntr);
+	if(out_file)
+		out_fb=rs_filebuf_new(asfd, NULL,
+			out_file, -1, ASYNC_BUF_LEN, -1, cntr);
 
-	if(out_file || out_zfile)
-	out_fb=rs_filebuf_new(asfd, NULL,
-		out_file, out_zfile, -1, ASYNC_BUF_LEN, -1, cntr);
 	result=rs_job_drive(job, &buf,
 		in_fb ? rs_infilebuf_fill : NULL, in_fb,
 		out_fb ? rs_outfilebuf_drain : NULL, out_fb);
 
-	if(in_fb) rs_filebuf_free(in_fb);
-	if(out_fb) rs_filebuf_free(out_fb);
-
+	rs_filebuf_free(&in_fb);
+	rs_filebuf_free(&out_fb);
 	return result;
 }
 
-rs_result rs_patch_gzfile(struct asfd *asfd, FILE *basis_file, FILE *delta_file,
-	gzFile delta_zfile, FILE *new_file, gzFile new_zfile,
+rs_result rs_patch_gzfile(struct asfd *asfd, struct fzp *basis_file,
+	struct fzp *delta_file, struct fzp *new_file,
 	rs_stats_t *stats, struct cntr *cntr)
 {
 	rs_job_t *job;
 	rs_result r;
 
 	job=rs_patch_begin(rs_file_copy_cb, basis_file);
-	r=rs_whole_gzrun(asfd, job,
-		delta_file, delta_zfile, new_file, new_zfile, cntr);
+	r=rs_whole_gzrun(asfd, job, delta_file, new_file, cntr);
 	rs_job_free(job);
 
 	return r;
 }
 
 rs_result rs_sig_gzfile(struct asfd *asfd,
-	FILE *old_file, gzFile old_zfile, FILE *sig_file,
+	struct fzp *old_file, struct fzp *sig_file,
 	size_t new_block_len, size_t strong_len,
-	rs_stats_t *stats, struct cntr *cntr)
+	rs_stats_t *stats, struct conf **confs)
 {
 	rs_job_t *job;
 	rs_result r;
 	job=
 		rs_sig_begin(new_block_len, strong_len
 #ifndef RS_DEFAULT_STRONG_LEN
-			// Help librsync-1.0.0.
-			// FIX THIS:
-			// See comment in src/server/protocol1/backup_phase2.c
-			, RS_MD4_SIG_MAGIC
+                  	, rshash_to_magic_number(
+				get_e_rshash(confs[OPT_RSHASH]))
 #endif
 		);
-	r=rs_whole_gzrun(asfd, job, old_file, old_zfile, sig_file, NULL, cntr);
+
+	r=rs_whole_gzrun(asfd, job, old_file, sig_file,
+		get_cntr(confs[OPT_CNTR]));
 	rs_job_free(job);
 
 	return r;
 }
 
 rs_result rs_delta_gzfile(struct asfd *asfd,
-	rs_signature_t *sig, FILE *new_file,
-	gzFile new_zfile, FILE *delta_file, gzFile delta_zfile,
+	rs_signature_t *sig, struct fzp *new_file,
+	struct fzp *delta_file,
 	rs_stats_t *stats, struct cntr *cntr)
 {
 	rs_job_t *job;
 	rs_result r;
 
 	job=rs_delta_begin(sig);
-	r=rs_whole_gzrun(asfd, job,
-		new_file, new_zfile, delta_file, delta_zfile, cntr);
+	r=rs_whole_gzrun(asfd, job, new_file, delta_file, cntr);
 	rs_job_free(job);
 
 	return r;
+}
+
+#ifndef RS_DEFAULT_STRONG_LEN
+rs_magic_number rshash_to_magic_number(enum rshash r)
+{
+	switch(r)
+	{
+		case RSHASH_BLAKE2: return RS_BLAKE2_SIG_MAGIC;
+		default: return RS_MD4_SIG_MAGIC;
+	}
+}
+#endif
+
+rs_result rs_loadsig_fzp(struct fzp *fzp,
+	rs_signature_t **sig, rs_stats_t *stats)
+{
+	return rs_loadsig_file(fzp->fp, sig, stats);
+}
+
+rs_result rs_loadsig_network_run(struct asfd *asfd,
+	rs_job_t *job, struct cntr *cntr)
+{
+	rs_buffers_t buf;
+	rs_result result;
+	rs_filebuf_t *in_fb=NULL;
+
+	if(!(in_fb=rs_filebuf_new(asfd, NULL,
+		NULL, asfd->fd, ASYNC_BUF_LEN, -1, cntr)))
+	{
+		result=RS_MEM_ERROR;
+		goto end;
+	}
+
+	result=rs_job_drive(job, &buf, rs_infilebuf_fill, in_fb, NULL, NULL);
+
+end:
+	rs_filebuf_free(&in_fb);
+	return result;
 }

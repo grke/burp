@@ -518,7 +518,7 @@ static int sbuf_fill_w(struct sbuf *sb, struct asfd *asfd,
 	if(get_e_protocol(confs[OPT_PROTOCOL])==PROTO_2)
 		return sbuf_fill(sb, asfd, NULL, blk, datpath, confs);
 	else
-		return sbufl_fill(sb, asfd, NULL, NULL, get_cntr(confs[OPT_CNTR]));
+		return sbufl_fill(sb, asfd, NULL, confs);
 }
 
 int do_restore_client(struct asfd *asfd,
@@ -561,6 +561,8 @@ int do_restore_client(struct asfd *asfd,
 	}
 	else
 		logp("Streaming restore direct\n");
+
+	printf("\n");
 
 //	if(get_int(confs[OPT_SEND_CLIENT_CNTR]) && cntr_recv(confs))
 //		goto error;
@@ -656,10 +658,10 @@ int do_restore_client(struct asfd *asfd,
 				  }
 				}
 				break;
+			case CMD_MESSAGE:
 			case CMD_WARNING:
-				cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
+				log_recvd(&sb->path, confs, 1);
 				printf("\n");
-				logp("%s", sb->path.buf);
 				continue;
 			default:
 				break;

@@ -56,6 +56,7 @@ static int add_file(struct mystruct *s, struct file *f)
 	if(!(newfile=(struct file *)malloc_w(sizeof(struct file), __func__)))
 		return -1;
 	memcpy(newfile, f, sizeof(struct file));
+	f->path=NULL;
 	newfile->next=s->files;
 	s->files=newfile;
 	return 0;
@@ -67,24 +68,12 @@ static int add_key(off_t st_size, struct file *f)
 
 	if(!(s=(struct mystruct *)malloc_w(sizeof(struct mystruct), __func__)))
 		return -1;
-	s->st_size = st_size;
+	s->st_size=st_size;
 	s->files=NULL;
 	if(add_file(s, f)) return -1;
+//printf("HASH ADD %d\n", st_size);
 	HASH_ADD_INT(myfiles, st_size, s);
 	return 0;
-}
-
-static char *prepend(const char *oldpath, const char *newpath, const char *sep)
-{
-	int len=0;
-	char *path=NULL;
-	len+=strlen(oldpath);
-	len+=strlen(newpath);
-	len+=2;
-	if(!(path=(char *)malloc_w(len, __func__)))
-		return NULL;
-	snprintf(path, len, "%s%s%s", oldpath, *oldpath?sep:"", newpath);
-	return path;
 }
 
 static FILE *open_file(struct file *f)
@@ -108,12 +97,9 @@ static int full_match(struct file *o, struct file *n, FILE **ofp, FILE **nfp)
 	if(*ofp) fseek(*ofp, 0, SEEK_SET);
 	else if(!(*ofp=open_file(o)))
 	{
-		if(o->path)
-		{
-			// Blank this entry so that it can be ignored from
-			// now on.
-			free_w(&o->path);
-		}
+		// Blank this entry so that it can be ignored from
+		// now on.
+		free_w(&o->path);
 		return 0;
 	}
 
@@ -224,7 +210,7 @@ static int do_hardlink(struct file *o, struct file *n, const char *ext)
 {
 	int ret=-1;
 	char *tmppath=NULL;
-	if(!(tmppath=prepend(o->path, ext, "")))
+	if(!(tmppath=prepend(o->path, ext)))
 	{
 		log_out_of_memory(__func__);
 		goto end;
@@ -243,7 +229,8 @@ end:
 	return ret;
 }
 
-static void reset_old_file(struct file *oldfile, struct file *newfile, struct stat *info)
+static void reset_old_file(struct file *oldfile, struct file *newfile,
+	struct stat *info)
 {
 	//printf("reset %s with %s %d\n", oldfile->path, newfile->path,
 	//	info->st_nlink);
@@ -253,17 +240,17 @@ static void reset_old_file(struct file *oldfile, struct file *newfile, struct st
 	newfile->path=NULL;
 }
 
-static int check_files(struct mystruct *find, struct file *newfile, struct stat *info, const char *ext, unsigned int maxlinks)
+static int check_files(struct mystruct *find, struct file *newfile,
+	struct stat *info, const char *ext, unsigned int maxlinks)
 {
 	int found=0;
 	FILE *nfp=NULL;
 	FILE *ofp=NULL;
 	struct file *f=NULL;
 
-	//printf("  same size: %s, %s\n", find->files->path, newfile->path);
-
 	for(f=find->files; f; f=f->next)
 	{
+//printf("  against: '%s'\n", f->path);
 		if(!f->path)
 		{
 			// If the full_match() function fails to open oldfile
@@ -406,11 +393,34 @@ static int check_files(struct mystruct *find, struct file *newfile, struct stat 
 	return 0;
 }
 
+static int looks_like_protocol1(const char *basedir)
+{
+	int ret=-1;
+	char *tmp=NULL;
+	struct stat statp;
+	if(!(tmp=prepend_s(basedir, "current")))
+	{
+		log_out_of_memory(__func__);
+		goto end;
+	}
+	// If there is a 'current' symlink here, we think it looks like a
+	// protocol 1 backup.
+	if(!lstat(tmp, &statp) && S_ISLNK(statp.st_mode))
+	{
+		ret=1;
+		goto end;
+	}
+	ret=0;
+end:
+	free_w(&tmp);
+	return ret;
+}
+
 static int get_link(const char *basedir, const char *lnk, char real[], size_t r)
 {
 	int len=0;
 	char *tmp=NULL;
-	if(!(tmp=prepend(basedir, lnk, "/")))
+	if(!(tmp=prepend_s(basedir, lnk)))
 	{
 		log_out_of_memory(__func__);
 		return -1;
@@ -423,7 +433,40 @@ static int get_link(const char *basedir, const char *lnk, char real[], size_t r)
 	return 0;
 }
 
+static int level_exclusion(int level, const char *fname,
+	const char *working, const char *finishing)
+{
+	if(level==0)
+	{
+		/* Be careful not to try to dedup the lockfiles.
+		   The lock actually gets lost if you open one to do a
+		   checksum
+		   and then close it. This caused me major headaches to
+		   figure out. */
+		if(!strcmp(fname, LOCKFILE_NAME)
+		  || !strcmp(fname, BEDUP_LOCKFILE_NAME))
+			return 1;
 
+		/* Skip places where backups are going on. */
+		if(!strcmp(fname, working)
+		  || !strcmp(fname, finishing))
+			return 1;
+
+		if(!strcmp(fname, "deleteme"))
+			return 1;
+	}
+	else if(level==1)
+	{
+		// Do not dedup stuff that might be appended to later.
+		if(!strncmp(fname, "log", strlen("log"))
+		  || !strncmp(fname, "verifylog", strlen("verifylog"))
+		  || !strncmp(fname, "restorelog", strlen("restorelog")))
+			return 1;
+	}
+	return 0;
+}
+
+// Return 0 for directory processed, -1 for error, 1 for not processed.
 static int process_dir(const char *oldpath, const char *newpath,
 	const char *ext, unsigned int maxlinks, int burp_mode, int level)
 {
@@ -439,19 +482,25 @@ static int process_dir(const char *oldpath, const char *newpath,
 
 	newfile.path=NULL;
 
-	if(!(path=prepend(oldpath, newpath, "/"))) goto end;
+	if(!(path=prepend_s(oldpath, newpath))) goto end;
 
 	if(burp_mode && level==0)
 	{
 		if(get_link(path, "working", working, sizeof(working))
 		  || get_link(path, "finishing", finishing, sizeof(finishing)))
 			goto end;
+		if(!looks_like_protocol1(path))
+		{
+			logp("%s does not look like a protocol 1 storage directory - skipping\n", path);
+			ret=1;
+			goto end;
+		}
 	}
 
 	if(!(dirp=opendir(path)))
 	{
 		logp("Could not opendir '%s': %s\n", path, strerror(errno));
-		ret=0;
+		ret=1;
 		goto end;
 	}
 	while((dirinfo=readdir(dirp)))
@@ -462,42 +511,13 @@ static int process_dir(const char *oldpath, const char *newpath,
 
 		//printf("try %s\n", dirinfo->d_name);
 
-		if(burp_mode)
-		{
-		  if(level==0)
-		  {
-			/* Be careful not to try to dedup the lockfiles.
-			   The lock actually gets lost if you open one to do a
-			   checksum
-			   and then close it. This caused me major headaches to
-			   figure out. */
-			if(!strcmp(dirinfo->d_name, LOCKFILE_NAME)
-			  || !strcmp(dirinfo->d_name, BEDUP_LOCKFILE_NAME))
+		if(burp_mode
+		  && level_exclusion(level, dirinfo->d_name,
+			working, finishing))
 				continue;
-
-			/* Skip places where backups are going on. */
-			if(!strcmp(dirinfo->d_name, working)
-			  || !strcmp(dirinfo->d_name, finishing))
-				continue;
-
-			if(!strcmp(dirinfo->d_name, "deleteme"))
-				continue;
-		  }
-		  else if(level==1)
-		  {
-			// Do not dedup stuff that might be appended to later.
-			if(!strncmp(dirinfo->d_name, "log",
-				strlen("log"))
-			  || !strncmp(dirinfo->d_name, "verifylog",
-				strlen("verifylog"))
-			  || !strncmp(dirinfo->d_name, "restorelog",
-				strlen("restorelog")))
-					continue;
-		  }
-		}
 
 		free_w(&newfile.path);
-		if(!(newfile.path=prepend(path, dirinfo->d_name, "/")))
+		if(!(newfile.path=prepend_s(path, dirinfo->d_name)))
 			goto end;
 
 		if(lstat(newfile.path, &info))
@@ -520,10 +540,9 @@ static int process_dir(const char *oldpath, const char *newpath,
 		newfile.part_cksum=0;
 		newfile.next=NULL;
 
-		//printf("%s\n", newfile.path);
-
 		if((find=find_key(info.st_size)))
 		{
+			//printf("check %d: %s\n", info.st_size, newfile.path);
 			if(check_files(find, &newfile, &info, ext, maxlinks))
 				goto end;
 		}
@@ -633,10 +652,8 @@ static int iterate_over_clients(struct conf **globalcs,
 		if(!(client_lockdir=get_string(cconfs[OPT_CLIENT_LOCKDIR])))
 			client_lockdir=get_string(cconfs[OPT_DIRECTORY]);
 
-		if(!(lockfilebase=prepend(client_lockdir,
-			dirinfo->d_name, "/"))
-		 || !(lockfile=prepend(lockfilebase,
-			BEDUP_LOCKFILE_NAME, "/")))
+		if(!(lockfilebase=prepend_s(client_lockdir, dirinfo->d_name))
+		 || !(lockfile=prepend_s(lockfilebase, BEDUP_LOCKFILE_NAME)))
 		{
 			free_w(&lockfilebase);
 			free_w(&lockfile);
@@ -663,15 +680,15 @@ static int iterate_over_clients(struct conf **globalcs,
 		// Remember that we got that lock.
 		lock_add_to_list(&locklist, lock);
 
-		if(process_dir(get_string(cconfs[OPT_DIRECTORY]),
+		switch(process_dir(get_string(cconfs[OPT_DIRECTORY]),
 			dirinfo->d_name,
 			ext, maxlinks, 1 /* burp mode */, 0 /* level */))
 		{
-			ret=-1;
-			break;
+			case 0: ccount++;
+			case 1: continue;
+			default: ret=-1; break;
 		}
-
-		ccount++;
+		break;
 	}
 	closedir(dirp);
 
@@ -888,13 +905,12 @@ int run_bedup(int argc, char *argv[])
 		else
 		{
 			char *lockpath=NULL;
+			const char *opt_lockfile=confs_get_lockfile(globalcs);
 			// Only get the global lock when doing a global run.
 			// If you are doing individual groups, you are likely
 			// to want to do many different dedup jobs and a
 			// global lock would get in the way.
-			if(!(lockpath=prepend(
-				get_string(globalcs[OPT_LOCKFILE]),
-				".bedup", ""))
+			if(!(lockpath=prepend(opt_lockfile, ".bedup"))
 			  || !(globallock=lock_alloc_and_init(lockpath)))
 				return 1;
 			lock_get(globallock);

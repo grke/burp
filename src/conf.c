@@ -37,8 +37,6 @@ enum recovery_method str_to_recovery_method(const char *str)
 		return RECOVERY_METHOD_DELETE;
 	else if(!strcmp(str, "resume"))
 		return RECOVERY_METHOD_RESUME;
-	else if(!strcmp(str, "use"))
-		return RECOVERY_METHOD_USE;
 	logp("Unknown working_dir_recovery_method setting: %s\n", str);
 	return RECOVERY_METHOD_UNSET;
 }
@@ -49,7 +47,17 @@ const char *recovery_method_to_str(enum recovery_method r)
 	{
 		case RECOVERY_METHOD_DELETE: return "delete";
 		case RECOVERY_METHOD_RESUME: return "resume";
-		case RECOVERY_METHOD_USE: return "use";
+		default: return "unknown";
+	}
+}
+
+const char *rshash_to_str(enum rshash r)
+{
+	switch(r)
+	{
+		case RSHASH_UNSET: return "unset";
+		case RSHASH_MD4: return "md4";
+		case RSHASH_BLAKE2: return "blake2";
 		default: return "unknown";
 	}
 }
@@ -120,6 +128,12 @@ enum recovery_method get_e_recovery_method(struct conf *conf)
 	return conf->data.recovery_method;
 }
 
+enum rshash get_e_rshash(struct conf *conf)
+{
+	assert(conf->conf_type==CT_E_RSHASH);
+	return conf->data.rshash;
+}
+
 struct cntr *get_cntr(struct conf *conf)
 {
 	assert(conf->conf_type==CT_CNTR);
@@ -178,6 +192,13 @@ int set_e_recovery_method(struct conf *conf, enum recovery_method r)
 	return 0;
 }
 
+int set_e_rshash(struct conf *conf, enum rshash r)
+{
+	assert(conf->conf_type==CT_E_RSHASH);
+	conf->data.rshash=r;
+	return 0;
+}
+
 int set_mode_t(struct conf *conf, mode_t m)
 {
 	assert(conf->conf_type==CT_MODE_T);
@@ -218,7 +239,7 @@ int add_to_strlist_exclude(struct conf *conf, const char *value)
 	return add_to_strlist(conf, value, 0);
 }
 
-static void conf_free_content(struct conf *c)
+void conf_free_content(struct conf *c)
 {
 	if(!c) return;
 	switch(c->conf_type)
@@ -236,12 +257,30 @@ static void conf_free_content(struct conf *c)
 		case CT_E_BURP_MODE:
 		case CT_E_PROTOCOL:
 		case CT_E_RECOVERY_METHOD:
+		case CT_E_RSHASH:
 		case CT_UINT:
 		case CT_MODE_T:
 		case CT_SSIZE_T:
 			memset(&c->data, 0, sizeof(c->data));
 			break;
 	}
+}
+
+void confs_memcpy(struct conf **dst, struct conf **src)
+{
+	int i=0;
+	for(i=0; i<OPT_MAX; i++)
+	{
+		free_v((void **)&(dst[i]));
+		dst[i]=src[i];
+	}
+}
+
+void confs_null(struct conf **confs)
+{
+	int i=0;
+	if(!confs) return;
+	for(i=0; i<OPT_MAX; i++) confs[i]=NULL;
 }
 
 void confs_free_content(struct conf **confs)
@@ -318,6 +357,13 @@ static int sc_rec(struct conf *conf, enum recovery_method def,
 {
 	sc(conf, flags, CT_E_RECOVERY_METHOD, field);
 	return set_e_recovery_method(conf, def);
+}
+
+static int sc_rsh(struct conf *conf, enum rshash def,
+	uint8_t flags, const char *field)
+{
+	sc(conf, flags, CT_E_RSHASH, field);
+	return set_e_rshash(conf, def);
 }
 
 static int sc_mod(struct conf *conf, mode_t def,
@@ -637,6 +683,12 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_WORKING_DIR_RECOVERY_METHOD:
 	  return sc_rec(c[o], RECOVERY_METHOD_DELETE,
 		CONF_FLAG_CC_OVERRIDE, "working_dir_recovery_method");
+	case OPT_RSHASH:
+	  return sc_rsh(c[o], RSHASH_UNSET,
+		CONF_FLAG_CC_OVERRIDE, "");
+	case OPT_MESSAGE:
+	  return sc_int(c[o], 0,
+		CONF_FLAG_CC_OVERRIDE, "");
 	case OPT_INCEXCDIR:
 	  // This is a combination of OPT_INCLUDE and OPT_EXCLUDE, so
 	  // no field name set for now.
@@ -751,6 +803,7 @@ static int set_conf(struct conf *c, const char *field, const char *value)
 			break;
 		}
 	// FIX THIS
+		case CT_E_RSHASH:
 		case CT_UINT:
 		case CT_MODE_T:
 		case CT_SSIZE_T:
@@ -802,6 +855,10 @@ static char *conf_data_to_str(struct conf *conf)
 			snprintf(ret, l, "%32s: %s\n", conf->field,
 				recovery_method_to_str(
 					get_e_recovery_method(conf)));
+			break;
+		case CT_E_RSHASH:
+			snprintf(ret, l, "%32s: %s\n", conf->field,
+				rshash_to_str(get_e_rshash(conf)));
 			break;
 		case CT_UINT:
 			snprintf(ret, l, "%32s: %u\n", conf->field,

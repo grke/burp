@@ -31,7 +31,7 @@ int deleteme_move(const char *basedir, const char *fullpath, const char *path,
 	if(!(deleteme=deleteme_get_path(basedir, cconfs))
 	  || !(tmp=prepend_s(deleteme, path))
 	  || mkpath(&tmp, deleteme)
-	  || !(dest=prepend("", tmp, strlen(tmp), "")))
+	  || !(dest=prepend("", tmp)))
 		goto end;
 
 	// Try to generate destination paths if the desired one is already
@@ -41,7 +41,7 @@ int deleteme_move(const char *basedir, const char *fullpath, const char *path,
 		if(lstat(dest, &statp)) break;
 		snprintf(suffix, sizeof(suffix), ".%d", ++attempts);
 		free_w(&dest);
-		if(!(dest=prepend(tmp, suffix, strlen(suffix), "")))
+		if(!(dest=prepend(tmp, suffix)))
 			goto end;
 		if(attempts>=10) break; // Give up.
 	}

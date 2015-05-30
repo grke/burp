@@ -183,6 +183,26 @@ void log_restore_settings(struct conf **cconfs, int srestore)
 		logp("include = %s\n", l->path);
 }
 
+int logm(struct asfd *asfd, struct conf **confs, const char *fmt, ...)
+{
+	int r=0;
+	char buf[512]="";
+	va_list ap;
+	va_start(ap, fmt);
+	vsnprintf(buf, sizeof(buf), fmt, ap);
+	if(asfd && asfd->as->doing_estimate) printf("\nMESSAGE: %s", buf);
+	else
+	{
+		if(asfd
+		  && get_int(confs[OPT_MESSAGE])) // Backwards compatibility
+			r=asfd->write_str(asfd, CMD_MESSAGE, buf);
+		logp("MESSAGE: %s", buf);
+	}
+	va_end(ap);
+	if(confs) cntr_add(get_cntr(confs[OPT_CNTR]), CMD_MESSAGE, 1);
+	return r;
+}
+
 int logw(struct asfd *asfd, struct conf **confs, const char *fmt, ...)
 {
 	int r=0;
@@ -190,11 +210,11 @@ int logw(struct asfd *asfd, struct conf **confs, const char *fmt, ...)
 	va_list ap;
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
-	if(asfd && asfd->as->doing_estimate) printf("\nWARNING: %s\n", buf);
+	if(asfd && asfd->as->doing_estimate) printf("\nWARNING: %s", buf);
 	else
 	{
 		if(asfd) r=asfd->write_str(asfd, CMD_WARNING, buf);
-		logp("WARNING: %s\n", buf);
+		logp("WARNING: %s", buf);
 	}
 	va_end(ap);
 	if(confs) cntr_add(get_cntr(confs[OPT_CNTR]), CMD_WARNING, 1);
@@ -246,4 +266,17 @@ int log_incexcs_buf(const char *incexc)
 	} while((tok=strtok(NULL, "\n")));
 	free_w(&copy);
 	return 0;
+}
+
+void log_recvd(struct iobuf *iobuf, struct conf **confs, int print)
+{
+	const char *prefix="unset";
+	switch(iobuf->cmd)
+	{
+		case CMD_MESSAGE: prefix="MESSAGE"; break;
+		case CMD_WARNING: prefix="WARNING"; break;
+		default: break;
+	}
+	logp("%s: %s", prefix, iobuf->buf);
+	if(confs) cntr_add(get_cntr(confs[OPT_CNTR]), iobuf->cmd, print);
 }

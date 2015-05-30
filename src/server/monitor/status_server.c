@@ -72,6 +72,7 @@ static int parse_client_data(struct asfd *srfd,
 	struct cstat *clist, struct conf **confs)
 {
 	int ret=0;
+	char *command=NULL;
 	char *client=NULL;
 	char *backup=NULL;
 	char *logfile=NULL;
@@ -82,10 +83,34 @@ static int parse_client_data(struct asfd *srfd,
 //printf("got client data: '%s'\n", srfd->rbuf->buf);
 
 	cp=srfd->rbuf->buf;
+	command=get_str(&cp, "j:", 0);
 	client=get_str(&cp, "c:", 0);
 	backup=get_str(&cp, "b:", 0);
 	logfile=get_str(&cp, "l:", 0);
 	browse=get_str(&cp, "p:", 1);
+
+	if(command)
+	{
+		if(!strcmp(command, "pretty-print-on"))
+		{
+			json_set_pretty_print(1);
+			if(json_send_warn(srfd, "Pretty print on"))
+				goto error;
+		}
+		else if(!strcmp(command, "pretty-print-off"))
+		{
+			json_set_pretty_print(0);
+			if(json_send_warn(srfd, "Pretty print off"))
+				goto error;
+		}
+		else
+		{
+			if(json_send_warn(srfd, "Unknown command"))
+				goto error;
+		}
+		goto end;
+	}
+
 	if(browse)
 	{
 		free_w(&logfile);
@@ -99,19 +124,38 @@ static int parse_client_data(struct asfd *srfd,
 	if(client && *client)
 	{
 		if(!(cstat=cstat_get_by_name(clist, client)))
+		{
+			if(json_send_warn(srfd, "Could not find client"))
+				goto error;
 			goto end;
+		}
 
-		if(cstat_set_backup_list(cstat)) goto end;
+		if(cstat_set_backup_list(cstat))
+		{
+			if(json_send_warn(srfd, "Could not get backup list"))
+				goto error;
+			goto end;
+			
+		}
 	}
 	if(cstat && backup)
 	{
 		unsigned long bno=0;
 		if(!(bno=strtoul(backup, NULL, 10)))
+		{
+			if(json_send_warn(srfd, "Could not get backup number"))
+				goto error;
 			goto end;
+		}
 		for(bu=cstat->bu; bu; bu=bu->prev)
 			if(bu->bno==bno) break;
 
-		if(!bu) goto end;
+		if(!bu)
+		{
+			if(json_send_warn(srfd, "Backup not found"))
+				goto error;
+			goto end;
+		}
 	}
 	if(logfile)
 	{
@@ -122,7 +166,11 @@ static int parse_client_data(struct asfd *srfd,
 		  && strcmp(logfile, "backup_stats")
 		  && strcmp(logfile, "restore_stats")
 		  && strcmp(logfile, "verify_stats"))
+		{
+			if(json_send_warn(srfd, "File not supported"))
+				goto error;
 			goto end;
+		}
 	}
 /*
 	printf("client: %s\n", client?:"");

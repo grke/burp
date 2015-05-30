@@ -39,8 +39,6 @@ There are three choices:
 
  delete: Just delete the old working directory.
 
- use: Convert the working directory into a complete backup.
-
  resume: Simply continue the previous backup from the point at which it
          left off. NOTE: If the client has changed its include/exclude
          configuration since the backup was interrupted, the recovery method
@@ -56,16 +54,6 @@ considered complete. If you want to do Windows bare metal restores, you should
 choose this option so that you don't end up with a mixture of files from
 different VSS snapshots.
 
-For 'use', burp will just treat the files that it has managed to back up as
-a complete backup, and truncate the manifest to the last complete file that it
-got. It will then not differentiate between this and fully complete (non-
-recovered) backups in the future - you may set 'keep' values that will result
-in a recovered backup eventually being kept over a fully complete backup. Also,
-since the most recent backup has files missing that may have been present in
-the immediately previous backup, the very next backup will decide that it needs
-to back them up again. For these reasons, I believe that 'use' is not a
-practical choice and may be removed in some future version.
-
 For 'resume', burp will use the working directory's original client file
 system scan in order to request the remaining files that it needs to finish
 the backup.
@@ -73,7 +61,7 @@ If you are using Windows (or some other OS that similarly generates browsable
 file system snapshots for backing up), it will mean that files have been copied
 from more than one snapshot, so the restore will be inconsistent if you are
 considering a bare metal restore.
-Additionally, there are occasionally bugs reported in the resume code, whic 
+Additionally, there are occasionally bugs reported in the resume code, which
 can be avoided if you use 'delete'.
 Personally, I use 'resume' for my backups and have had no problems.
 

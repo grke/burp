@@ -27,8 +27,14 @@ enum recovery_method
 {
 	RECOVERY_METHOD_UNSET=0,
 	RECOVERY_METHOD_DELETE,
-	RECOVERY_METHOD_RESUME,
-	RECOVERY_METHOD_USE
+	RECOVERY_METHOD_RESUME
+};
+
+enum rshash
+{
+	RSHASH_UNSET=0,
+	RSHASH_MD4,
+	RSHASH_BLAKE2
 };
 
 enum conf_type
@@ -41,6 +47,7 @@ enum conf_type
 	CT_E_BURP_MODE,
 	CT_E_PROTOCOL,
 	CT_E_RECOVERY_METHOD,
+	CT_E_RSHASH,
 	CT_STRLIST,
 	CT_CNTR,
 };
@@ -56,6 +63,7 @@ struct conf
 		enum burp_mode burp_mode;
 		enum recovery_method recovery_method;
 		enum protocol protocol;
+		enum rshash rshash;
 		mode_t mode;
 		ssize_t ssizet;
 		unsigned int i;
@@ -88,6 +96,8 @@ enum conf_opt
 	OPT_CLIENT_IS_WINDOWS,
 	OPT_PEER_VERSION,
 	OPT_PROTOCOL,
+	OPT_RSHASH,
+	OPT_MESSAGE,
 
 	// Server options.
 	OPT_ADDRESS,
@@ -266,7 +276,10 @@ extern struct conf **confs_alloc(void);
 extern void confs_free(struct conf ***confs);
 extern void confs_free_content(struct conf **confs);
 extern int confs_init(struct conf **confs);
+extern void conf_free_content(struct conf *c);
 extern void confs_free_content(struct conf **confs);
+extern void confs_null(struct conf **confs);
+extern void confs_memcpy(struct conf **dst, struct conf **src);
 
 extern void free_incexcs(struct conf **confs);
 extern int conf_set(struct conf **confs, const char *field, const char *value);
@@ -281,6 +294,7 @@ extern mode_t get_mode_t(struct conf *conf);
 extern enum burp_mode get_e_burp_mode(struct conf *conf);
 extern enum protocol get_e_protocol(struct conf *conf);
 extern enum recovery_method get_e_recovery_method(struct conf *conf);
+extern enum rshash get_e_rshash(struct conf *conf);
 extern struct cntr *get_cntr(struct conf *conf);
 
 extern int set_cntr(struct conf *conf, struct cntr *cntr);
@@ -289,6 +303,7 @@ extern int set_strlist(struct conf *conf, struct strlist *s);
 extern int set_int(struct conf *conf, unsigned int i);
 extern int set_e_burp_mode(struct conf *conf, enum burp_mode bm);
 extern int set_e_protocol(struct conf *conf, enum protocol p);
+extern int set_e_rshash(struct conf *conf, enum rshash r);
 extern int set_mode_t(struct conf *conf, mode_t m);
 extern int set_float(struct conf *conf, float f);
 extern int set_ssize_t(struct conf *conf, ssize_t s);
@@ -301,5 +316,6 @@ extern enum protocol str_to_protocol(const char *str);
 extern const char *recovery_method_to_str(enum recovery_method r);
 extern enum recovery_method str_to_recovery_method(const char *str);
 extern int set_e_recovery_method(struct conf *conf, enum recovery_method r);
+extern const char *rshash_to_str(enum rshash r);
 
 #endif

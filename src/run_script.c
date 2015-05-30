@@ -3,17 +3,25 @@
 #ifndef HAVE_WIN32
 
 static int log_script_output(struct asfd *asfd, FILE **fp, struct conf **confs,
-	int do_logp, int do_logw, char **logbuf)
+	int do_logp, int log_remote, int is_stderr, char **logbuf)
 {
 	char buf[256]="";
 	if(!fp || !*fp) return 0;
 	if(fgets(buf, sizeof(buf), *fp))
 	{
-		// logc does not print a prefix
-		if(do_logp) logp("%s", buf);
-		else logc("%s", buf);
 		if(logbuf && astrcat(logbuf, buf, __func__)) return -1;
-		if(do_logw) logw(asfd, confs, "%s", buf);
+		if(log_remote)
+		{
+			// logm and low will also log to stdout.
+			if(is_stderr) logw(asfd, confs, "%s", buf);
+			else logm(asfd, confs, "%s", buf);
+		}
+		else
+		{
+			// logc does not print a prefix
+			if(do_logp) logp("%s", buf);
+			else logc("%s", buf);
+		}
 	}
 	if(feof(*fp)) close_fp(fp);
 	return 0;
@@ -31,7 +39,7 @@ static void run_script_sigchld_handler(int sig)
 }
 
 static int run_script_select(struct asfd *asfd, FILE **sout, FILE **serr,
-	struct conf **confs, int do_logp, int do_logw, char **logbuf)
+	struct conf **confs, int do_logp, int log_remote, char **logbuf)
 {
 	int mfd=-1;
 	fd_set fsr;
@@ -63,12 +71,12 @@ static int run_script_select(struct asfd *asfd, FILE **sout, FILE **serr,
 		if(FD_ISSET(soutfd, &fsr))
 		{
 			if(log_script_output(asfd, sout, confs,
-				do_logp, do_logw, logbuf)) return -1;
+				do_logp, log_remote, 0, logbuf)) return -1;
 		}
 		if(FD_ISSET(serrfd, &fsr))
 		{
 			if(log_script_output(asfd, serr, confs,
-				do_logp, do_logw, logbuf)) return -1;
+				do_logp, log_remote, 1, logbuf)) return -1;
 		}
 
 		if(!*sout && !*serr && got_sigchld)
@@ -88,7 +96,7 @@ static int run_script_select(struct asfd *asfd, FILE **sout, FILE **serr,
 
 int run_script_to_buf(struct asfd *asfd,
 	const char **args, struct strlist *userargs, struct conf **confs,
-	int do_wait, int do_logp, int do_logw, char **logbuf)
+	int do_wait, int do_logp, int log_remote, char **logbuf)
 {
 	int a=0;
 	int l=0;
@@ -127,7 +135,7 @@ int run_script_to_buf(struct asfd *asfd,
 	return 0;
 #else
 	s=run_script_select(asfd, &sout, &serr,
-		confs, do_logp, do_logw, logbuf);
+		confs, do_logp, log_remote, logbuf);
 
 	// Set SIGCHLD back to default.
 	setup_signal(SIGCHLD, SIG_DFL);
@@ -138,7 +146,7 @@ int run_script_to_buf(struct asfd *asfd,
 	{
 		int ret=WEXITSTATUS(run_script_status);
 		logp("%s returned: %d\n", cmd[0], ret);
-		if(do_logw && confs && ret)
+		if(log_remote && confs && ret)
 			logw(asfd, confs, "%s returned: %d\n", cmd[0], ret);
 		return ret;
 	}
@@ -146,24 +154,23 @@ int run_script_to_buf(struct asfd *asfd,
 	{
 		logp("%s terminated on signal %d\n",
 			cmd[0], WTERMSIG(run_script_status));
-		if(do_logw && confs)
+		if(log_remote && confs)
 			logw(asfd, confs, "%s terminated on signal %d\n",
 				cmd[0], WTERMSIG(run_script_status));
 	}
 	else
 	{
 		logp("Strange return when trying to run %s\n", cmd[0]);
-		if(do_logw && confs) logw(asfd, confs,
-			"Strange return when trying to run %s\n",
-			cmd[0]);
+		if(log_remote && confs) logw(asfd, confs,
+			"Strange return when trying to run %s\n", cmd[0]);
 	}
 	return -1;
 #endif
 }
 
 int run_script(struct asfd *asfd, const char **args, struct strlist *userargs,
-	struct conf **confs, int do_wait, int do_logp, int do_logw)
+	struct conf **confs, int do_wait, int do_logp, int log_remote)
 {
 	return run_script_to_buf(asfd, args, userargs, confs, do_wait,
-		do_logp, do_logw, NULL /* do not save output to buffer */);
+		do_logp, log_remote, NULL /* do not save output to buffer */);
 }

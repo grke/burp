@@ -7,7 +7,7 @@ static int send_incexc_string(struct asfd *asfd,
 	char *tosend=NULL;
 	int ret=-1;
 	if(!str) return 0;
-	if(!(tosend=prepend(field, str, strlen(str), " = ")))
+	if(!(tosend=prepend_n(field, str, strlen(str), " = ")))
 		goto end;
 	if(asfd->write_str(asfd, CMD_GEN, tosend))
 	{
@@ -77,6 +77,7 @@ static int do_sends(struct asfd *asfd, struct conf **confs, int flag)
 			case CT_E_BURP_MODE:
 			case CT_E_PROTOCOL:
 			case CT_E_RECOVERY_METHOD:
+			case CT_E_RSHASH:
 			case CT_CNTR:
 				break;
 		}

@@ -15,12 +15,11 @@ thisdir = src/server/protocol2
 SRCS = \
 	backup_phase2.o \
 	backup_phase3.o \
+	backup_phase4.o \
 	dpth.o \
 	rblk.o \
 	restore.o \
-	restore_spool.o \
-	rubble.o \
-	sparse_gen.o
+	restore_spool.o
 
 OBJS = $(SRCS:.c=.o)
 

@@ -23,11 +23,17 @@ char *prepend_len(const char *prep, size_t plen, const char *fname,
 	return rpath;
 }
 
-char *prepend(const char *prep, const char *fname, size_t len, const char *sep)
+char *prepend_n(const char *prep, const char *fname,
+	size_t len, const char *sep)
 {
 	return prepend_len(prep, prep?strlen(prep):0,
 		fname, len,
 		sep, (sep && *fname)?strlen(sep):0, NULL);
+}
+
+char *prepend(const char *prep, const char *fname)
+{
+	return prepend_n(prep, fname, strlen(fname), "");
 }
 
 char *prepend_slash(const char *prep, const char *fname, size_t len)
@@ -40,7 +46,7 @@ char *prepend_slash(const char *prep, const char *fname, size_t len)
 		fname++;
 		len--;
 	}
-	return prepend(prep, fname, len, "/");
+	return prepend_n(prep, fname, len, "/");
 }
 
 char *prepend_s(const char *prep, const char *fname)

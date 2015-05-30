@@ -456,10 +456,10 @@ static int asfd_simple_loop(struct asfd *asfd,
 		if(asfd->read(asfd)) goto error;
 		if(rbuf->cmd!=CMD_GEN)
 		{
-			if(rbuf->cmd==CMD_WARNING)
+			if(rbuf->cmd==CMD_WARNING
+			  || rbuf->cmd==CMD_MESSAGE)
 			{
-				logp("WARNING: %s\n", rbuf->buf);
-				cntr_add(get_cntr(confs[OPT_CNTR]), rbuf->cmd, 0);
+				log_recvd(rbuf, confs, 0);
 			}
 			else if(rbuf->cmd==CMD_INTERRUPT)
 			{

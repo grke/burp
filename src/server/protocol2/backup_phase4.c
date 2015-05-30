@@ -34,13 +34,12 @@ static int hooks_alloc(struct hooks **hnew, char **path, char **fingerprints)
 
 // Return 0 for OK, -1 for error, 1 for finished reading the file.
 static int get_next_set_of_hooks(struct hooks **hnew, struct sbuf *sb,
-	gzFile spzp, char **path, char **fingerprints,
+	struct fzp *spzp, char **path, char **fingerprints,
 	struct conf **confs)
 {
 	while(1)
 	{
-		switch(sbuf_fill_from_gzfile(sb,
-			NULL /* struct async */,
+		switch(sbuf_fill(sb, NULL /* struct async */,
 			spzp, NULL, NULL, confs))
 		{
 			case -1: goto error;
@@ -78,7 +77,7 @@ error:
 	return -1;
 }
 
-static int gzprintf_hooks(gzFile tzp, struct hooks *hooks)
+static int gzprintf_hooks(struct fzp *fzp, struct hooks *hooks)
 {
 	static char *f;
 	static char ftmp[WEAK_STR_LEN];
@@ -86,12 +85,14 @@ static int gzprintf_hooks(gzFile tzp, struct hooks *hooks)
 
 //	printf("NW: %c%04lX%s\n", CMD_MANIFEST,
 //		strlen(hooks->path), hooks->path);
-	gzprintf(tzp, "%c%04lX%s\n", CMD_MANIFEST,
+	// FIX THIS: The path could be long, and fzp_printf will truncate at
+	// 512 characters.
+	fzp_printf(fzp, "%c%04lX%s\n", CMD_MANIFEST,
 		strlen(hooks->path), hooks->path);
 	for(f=hooks->fingerprints; f<hooks->fingerprints+len; f+=WEAK_LEN)
 	{
 		snprintf(ftmp, sizeof(ftmp), "%s", f);
-		gzprintf(tzp, "%c%04lX%s\n", CMD_FINGERPRINT,
+		fzp_printf(fzp, "%c%04lX%s\n", CMD_FINGERPRINT,
 			strlen(ftmp), ftmp);
 	}
 	return 0;
@@ -162,9 +163,9 @@ static int merge_sparse_indexes(const char *srca, const char *srcb,
 	struct sbuf *bsb=NULL;
 	char *afingerprints=NULL;
 	char *bfingerprints=NULL;
-	gzFile azp=NULL;
-	gzFile bzp=NULL;
-	gzFile dzp=NULL;
+	struct fzp *azp=NULL;
+	struct fzp *bzp=NULL;
+	struct fzp *dzp=NULL;
 	struct hooks *anew=NULL;
 	struct hooks *bnew=NULL;
 	char *apath=NULL;
@@ -175,9 +176,9 @@ static int merge_sparse_indexes(const char *srca, const char *srcb,
 		goto end;
 	if(build_path_w(dst))
 		goto end;
-	if(!(azp=gzopen_file(srca, "rb"))
-	  || (srcb && !(bzp=gzopen_file(srcb, "rb")))
-	  || !(dzp=gzopen_file(dst, "wb")))
+	if(!(azp=fzp_gzopen(srca, "rb"))
+	  || (srcb && !(bzp=fzp_gzopen(srcb, "rb")))
+	  || !(dzp=fzp_gzopen(dst, "wb")))
 		goto end;
 
 	while(azp || bzp || anew || bnew)
@@ -190,7 +191,7 @@ static int merge_sparse_indexes(const char *srca, const char *srcb,
 				&apath, &afingerprints, confs))
 			{
 				case -1: goto end;
-				case 1: gzclose_fp(&azp); // Finished OK.
+				case 1: fzp_close(&azp); // Finished OK.
 			}
 		}
 
@@ -202,7 +203,7 @@ static int merge_sparse_indexes(const char *srca, const char *srcb,
 				&bpath, &bfingerprints, confs))
 			{
 				case -1: goto end;
-				case 1: gzclose_fp(&bzp); // Finished OK.
+				case 1: fzp_close(&bzp); // Finished OK.
 			}
 		}
 
@@ -241,7 +242,7 @@ static int merge_sparse_indexes(const char *srca, const char *srcb,
 		}
 	}
 
-	if(gzclose_fp(&dzp))
+	if(fzp_close(&dzp))
 	{
 		logp("Error closing %s in %s\n", tmpfile, __func__);
 		goto end;
@@ -249,9 +250,9 @@ static int merge_sparse_indexes(const char *srca, const char *srcb,
 
 	ret=0;
 end:
-	gzclose_fp(&azp);
-	gzclose_fp(&bzp);
-	gzclose_fp(&dzp);
+	fzp_close(&azp);
+	fzp_close(&bzp);
+	fzp_close(&dzp);
 	sbuf_free(&asb);
 	sbuf_free(&bsb);
 	hooks_free(&anew);
@@ -273,11 +274,11 @@ static int merge_into_global_sparse(const char *sparse, const char *global,
 	struct lock *lock=NULL;
 	const char *globalsrc=NULL;
 	
-	if(!(tmpfile=prepend(global, "tmp", strlen("tmp"), ".")))
+	if(!(tmpfile=prepend_n(global, "tmp", strlen("tmp"), ".")))
 		goto end;
 
 	// Get a lock before messing with the global sparse index.
-	if(!(lockfile=prepend(global, "lock", strlen("lock"), "."))
+	if(!(lockfile=prepend_n(global, "lock", strlen("lock"), "."))
 	  || !(lock=lock_alloc_and_init(lockfile)))
 		goto end;
 
@@ -300,8 +301,7 @@ end:
 	return ret;
 }
 
-int sparse_generation(struct manio *newmanio, uint64_t fcount,
-	struct sdirs *sdirs, struct conf **confs)
+int backup_phase4_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 {
 	int ret=-1;
 	uint64_t i=0;
@@ -317,12 +317,24 @@ int sparse_generation(struct manio *newmanio, uint64_t fcount,
 	char compa[32]="";
 	char compb[32]="";
 	char compd[32]="";
+	struct manio *newmanio=NULL;
+	char *logpath=NULL;
+	char *fmanifest=NULL; // FIX THIS: should be part of sdirs.
 
-	logp("Start sparse generation\n");
+	if(!(logpath=prepend_s(sdirs->finishing, "log")))
+		goto end;
+	if(set_logfp(logpath, confs))
+		goto end;
 
-	if(!(hooksdir=prepend_s(sdirs->rmanifest, "hooks"))
-	  || !(h1dir=prepend_s(sdirs->rmanifest, "h1"))
-	  || !(h2dir=prepend_s(sdirs->rmanifest, "h2")))
+	logp("Begin phase4 (sparse generation)\n");
+
+	if(!(newmanio=manio_alloc())
+	  || !(fmanifest=prepend_s(sdirs->finishing, "manifest"))
+	  || manio_init_read(newmanio, fmanifest)
+	  || manio_read_fcount(newmanio)
+	  || !(hooksdir=prepend_s(fmanifest, "hooks"))
+	  || !(h1dir=prepend_s(fmanifest, "h1"))
+	  || !(h2dir=prepend_s(fmanifest, "h2")))
 		goto end;
 
 	while(1)
@@ -345,7 +357,7 @@ int sparse_generation(struct manio *newmanio, uint64_t fcount,
 			dstdir=h1dir;
 		}
 		pass++;
-		for(i=0; i<fcount; i+=2)
+		for(i=0; i<newmanio->offset.fcount; i+=2)
 		{
 			free_w(&srca);
 			free_w(&srcb);
@@ -356,15 +368,16 @@ int sparse_generation(struct manio *newmanio, uint64_t fcount,
 			if(!(srca=prepend_s(srcdir, compa))
 			  || !(dst=prepend_s(dstdir, compd)))
 				goto end;
-			if(i+1<fcount && !(srcb=prepend_s(srcdir, compb)))
+			if(i+1<newmanio->offset.fcount
+			  && !(srcb=prepend_s(srcdir, compb)))
 				goto end;
 			if(merge_sparse_indexes(srca, srcb, dst, confs))
 				goto end;
 		}
-		if((fcount=i/2)<2) break;
+		if((newmanio->offset.fcount=i/2)<2) break;
 	}
 
-	if(!(sparse=prepend_s(sdirs->rmanifest, "sparse"))
+	if(!(sparse=prepend_s(fmanifest, "sparse"))
 	  || !(global_sparse=prepend_s(sdirs->data, "sparse")))
 		goto end;
 
@@ -374,8 +387,11 @@ int sparse_generation(struct manio *newmanio, uint64_t fcount,
 
 	if(merge_into_global_sparse(sparse, global_sparse, confs)) goto end;
 
+	logp("End phase4 (sparse generation)\n");
+
 	ret=0;
 end:
+	manio_free(&newmanio);
 	free_w(&sparse);
 	free_w(&global_sparse);
 	free_w(&srca);
@@ -384,5 +400,7 @@ end:
 	recursive_delete(h2dir, NULL, 1);
 	free_w(&h1dir);
 	free_w(&h2dir);
+	free_w(&logpath);
+	free_w(&fmanifest);
 	return ret;
 }

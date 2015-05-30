@@ -1,0 +1,77 @@
+Adding a new client
+-------------------
+
+First, you will need to tell the server about the new client.
+Each client is represented by a file in the /etc/burp/clientconfdir directory
+on the server.
+
+So, to add a client called 'data_store', you would create a file on the server
+called /etc/burp/clientconfdir/data_store.
+As a minimum, the file needs to contain a line like this (unless you are using
+the 'password_check = 0' option):
+
+password = abcedfgh
+
+Now, you can install the burp client.
+If you are using Windows, the installer will walk you through the steps (see
+the separate documentation on this).
+
+On other operating systems, you will need to edit the client burp.conf so that
+the 'cname' line matches the clientconfdir file name on the server, the
+'password' line matches the its the clientconfdir file's contents, and the
+'server' line contains the address of the server. In our example's case, those
+three lines will look like this:
+
+cname = data_store
+password = abcdefgh
+server= 1.2.3.4
+
+You will also need to set up a timed job on the client, to run 'burp -a t'.
+This is done automatically on Windows. On other operating systems, you will
+need to add a cron job.
+
+The first time that the new client connects to the server, it will perform the
+SSL certificate exchange (see the separate documentation on this).
+
+I find it useful to run 'burp -a l' by hand initially, to see the exchange
+happen and be sure that the connection is working. 'burp -a l' is a request
+for a list of backups. With your new client, there will of course be no
+backups, but you will see successful communication between client and server.
+The Windows equivalent of this command is:
+C:\Program Files\Burp\bin\burp.exe -a l
+
+
+
+Removing a client
+-----------------
+
+To stop a client from successfully interacting with the server, you should
+move the /etc/burp/clientconfdir/<client> file aside. The client, if it still
+exists, will keep trying to connect.
+
+If you can still access the client, I would recommend at least turning off its
+timed 'burp -a t' job.
+
+
+You may have noticed the /etc/burp/CA/<client>* files on their server.
+
+Deleting these will do nothing to deactivate a client.
+Their presence stops the server doing another certificate signing process for
+that client, so deleting them could actually be a security problem if the
+clientconfdir file still exists (a different client could pretend to be the
+real client and successfully do the exchange - if they knew the client name
+and password).
+
+<client>.csr is the client's initial signing request and <client>.crt is the
+signed certificate that the server gave back to the client.
+
+The fact that the client uses a certificate, with the correct CN, signed by
+the server is what allows it to complete the SSL part of the connection.
+To make a particular certificate stop working, you need to revoke it.
+There is currently no automatic mechanism in burp that will let you do this.
+(See: https://github.com/grke/burp/issues/89)
+For now it is easiest to move the clientconfdir file aside.
+
+
+To get rid of the data that a client has backed up, you would need to delete
+all of /var/spool/burp/<client> on the server.

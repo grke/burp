@@ -6,6 +6,7 @@
 #include "protocol1/backup_phase4.h"
 #include "protocol2/backup_phase2.h"
 #include "protocol2/backup_phase3.h"
+#include "protocol2/backup_phase4.h"
 #include "protocol2/champ_chooser/champ_client.h"
 
 static int open_log(struct asfd *asfd,
@@ -60,7 +61,7 @@ end:
 	return ret;
 }
 
-int backup_phase1_server(struct async *as,
+static int backup_phase1_server(struct async *as,
 	struct sdirs *sdirs, struct conf **cconfs)
 {
 	if(get_int(cconfs[OPT_BREAKPOINT])==1)
@@ -68,7 +69,7 @@ int backup_phase1_server(struct async *as,
 	return backup_phase1_server_all(as, sdirs, cconfs);
 }
 
-int backup_phase2_server(struct async *as, struct sdirs *sdirs,
+static int backup_phase2_server(struct async *as, struct sdirs *sdirs,
 	const char *incexc, int resume, struct conf **cconfs)
 {
 	if(get_int(cconfs[OPT_BREAKPOINT])==2)
@@ -85,8 +86,8 @@ int backup_phase2_server(struct async *as, struct sdirs *sdirs,
 	}
 }
 
-int backup_phase3_server(struct sdirs *sdirs,
-	struct conf **cconfs, int recovery, int compress)
+static int backup_phase3_server(struct sdirs *sdirs, struct conf **cconfs,
+	int compress)
 {
 	if(get_int(cconfs[OPT_BREAKPOINT])==3)
 		return breakpoint(cconfs, __func__);
@@ -95,28 +96,33 @@ int backup_phase3_server(struct sdirs *sdirs,
 	{
 		case PROTO_1:
 			return backup_phase3_server_protocol1(sdirs,
-				recovery, compress, cconfs);
+				compress, cconfs);
 		default:
 			return backup_phase3_server_protocol2(sdirs, cconfs);
 	}
 }
 
-int backup_phase4_server(struct sdirs *sdirs, struct conf **cconfs)
+static int backup_phase4_server(struct sdirs *sdirs, struct conf **cconfs)
 {
 	if(get_int(cconfs[OPT_BREAKPOINT])==4)
 		return breakpoint(cconfs, __func__);
 
+	set_logfp(NULL, cconfs);
+	// Phase4 will open logfp again (in case it is resuming).
 	switch(get_e_protocol(cconfs[OPT_PROTOCOL]))
 	{
 		case PROTO_1:
-			set_logfp(NULL, cconfs);
-			// Phase4 will open logfp again (in case it is
-			// resuming).
 			return backup_phase4_server_protocol1(sdirs, cconfs);
 		default:
-			logp("Phase4 is for protocol1 only!\n");
-			return -1;
+			return backup_phase4_server_protocol2(sdirs, cconfs);
 	}
+}
+
+static void log_rshash(struct conf **confs)
+{
+	if(get_e_protocol(confs[OPT_PROTOCOL])!=PROTO_1) return;
+	logp("Using librsync hash %s\n",
+		rshash_to_str(get_e_rshash(confs[OPT_RSHASH])));
 }
 
 static int do_backup_server(struct async *as, struct sdirs *sdirs,
@@ -135,6 +141,7 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 		if(sdirs_get_real_working_from_symlink(sdirs, cconfs)
 		  || open_log(asfd, sdirs, cconfs))
 			goto error;
+		log_rshash(cconfs);
 	}
 	else
 	{
@@ -143,6 +150,7 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 		  || sdirs_get_real_manifest(sdirs, cconfs)
 		  || open_log(asfd, sdirs, cconfs))
 			goto error;
+		log_rshash(cconfs);
 
 		if(write_incexc(sdirs->rworking, incexc))
 		{
@@ -194,41 +202,28 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 	as->asfd_remove(as, asfd);
 	asfd_close(asfd);
 
-	if(backup_phase3_server(sdirs, cconfs,
-		0 /* not recovery mode */, 1 /* compress */))
+	if(backup_phase3_server(sdirs, cconfs, 1 /* compress */))
 	{
 		logp("error in backup phase 3\n");
 		goto error;
 	}
 
-	if(protocol==PROTO_1)
+	if(do_rename(sdirs->working, sdirs->finishing))
+		goto error;
+
+	if(backup_phase4_server(sdirs, cconfs))
 	{
-		if(do_rename(sdirs->working, sdirs->finishing))
-			goto error;
-		if(backup_phase4_server(sdirs, cconfs))
-		{
-			logp("error in backup phase 4\n");
-			goto error;
-		}
+		logp("error in backup phase 4\n");
+		goto error;
 	}
 
 	cntr_print(get_cntr(cconfs[OPT_CNTR]), ACTION_BACKUP);
 	cntr_stats_to_file(get_cntr(cconfs[OPT_CNTR]),
 		sdirs->rworking, ACTION_BACKUP, cconfs);
 
-	if(protocol==PROTO_1)
-	{
-		// Move the symlink to indicate that we are now in the end
-		// phase. The rename() race condition is automatically
-		// recoverable here.
-		if(do_rename(sdirs->finishing, sdirs->current)) goto error;
-	}
-	else
-	{
-		// FIX THIS: check whether the race condition here means that
-		// the backup is not automatically recoverable.
-		if(do_rename(sdirs->working, sdirs->current)) goto error;
-	}
+	// Move the symlink to indicate that we are now in the end phase. The
+	// rename() race condition is automatically recoverable here.
+	if(do_rename(sdirs->finishing, sdirs->current)) goto error;
 
 	logp("Backup completed.\n");
 	set_logfp(NULL, cconfs);
@@ -295,7 +290,7 @@ int run_backup(struct async *as, struct sdirs *sdirs, struct conf **cconfs,
 		  cconfs,
 		  1 /* wait */,
 		  1 /* use logp */,
-		  0 /* no logw */
+		  0 /* no log_remote */
 		))<0)
 		{
 			logp("Error running timer script for %s\n",

@@ -3,6 +3,7 @@
 
 #include "include.h"
 #include "rs_buf.h"
+#include "../fzp.h"
 
 // Structure used only by protocol1 style functionality.
 struct protocol1
@@ -11,12 +12,10 @@ struct protocol1
         rs_job_t *sigjob;
         rs_filebuf_t *infb;
         rs_filebuf_t *outfb;
-        FILE *sigfp;
-        gzFile sigzp;
+        struct fzp *sigfzp;
 
         // Used when saving stuff on the server.
-        FILE *fp;
-        gzFile zp;
+        struct fzp *fzp;
 
         struct iobuf datapth;
         struct iobuf endfile;

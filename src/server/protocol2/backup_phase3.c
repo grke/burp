@@ -1,7 +1,6 @@
 #include "include.h"
 #include "../../server/manio.h"
 #include "../../server/sdirs.h"
-#include "sparse_gen.h"
 
 // This is basically backup_phase3_server() from protocol1. It used to merge the
 // unchanged and changed data into a single file. Now it splits the manifests
@@ -21,14 +20,13 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 	struct manio *newmanio=NULL;
 	struct manio *chmanio=NULL;
 	struct manio *unmanio=NULL;
-	uint64_t fcount=0;
 
 	logp("Start phase3\n");
 
-	if(!(manifesttmp=get_tmp_filename(sdirs->rmanifest))
-	  || !(newmanio=manio_alloc())
+	if(!(newmanio=manio_alloc())
 	  || !(chmanio=manio_alloc())
 	  || !(unmanio=manio_alloc())
+	  || !(manifesttmp=get_tmp_filename(sdirs->rmanifest))
 	  || !(hooksdir=prepend_s(manifesttmp, "hooks"))
 	  || !(dindexdir=prepend_s(manifesttmp, "dindex"))
 	  || manio_init_write(newmanio, manifesttmp)
@@ -122,13 +120,8 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 		}
 	}
 
-	fcount=newmanio->fcount;
-
-	// Flush to disk and set up for reading.
-	if(manio_free(&newmanio)
-	  || !(newmanio=manio_alloc())
-	  || manio_init_read(newmanio, sdirs->rmanifest))
-		goto end;
+	// Flush to disk.
+	if(manio_free(&newmanio)) goto end;
 
 	// Rename race condition should be of no consequence here, as the
 	// manifest should just get recreated automatically.
@@ -139,9 +132,6 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 		recursive_delete(sdirs->changed, NULL, 1);
 		recursive_delete(sdirs->unchanged, NULL, 1);
 	}
-
-	if(sparse_generation(newmanio, fcount, sdirs, confs))
-		goto end;
 
 	ret=0;
 

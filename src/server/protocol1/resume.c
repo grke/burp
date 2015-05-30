@@ -5,7 +5,7 @@
 #include "../../server/backup_phase1.h"
 
 // Used on resume, this just reads the phase1 file and sets up cntr.
-static int read_phase1(gzFile zp, struct conf **confs)
+static int read_phase1(struct manio *p1manio, struct conf **confs)
 {
 	int ars=0;
 	struct sbuf *p1b;
@@ -13,7 +13,8 @@ static int read_phase1(gzFile zp, struct conf **confs)
 	while(1)
 	{
 		sbuf_free_content(p1b);
-		if((ars=sbufl_fill_phase1(p1b, NULL, zp, get_cntr(confs[OPT_CNTR]))))
+		if((ars=manio_sbuf_fill_phase1(p1manio, NULL,
+			p1b, NULL, NULL, confs)))
 		{
 			// ars==1 means it ended ok.
 			if(ars<0)
@@ -38,12 +39,12 @@ static int read_phase1(gzFile zp, struct conf **confs)
 	return 0;
 }
 
-static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
+static int do_forward(struct manio *manio, struct iobuf *result,
 	struct iobuf *target, int isphase1, int seekback, int do_cntr,
 	int same, struct dpth *dpth, struct conf **cconfs)
 {
 	int ars=0;
-	off_t pos=0;
+	man_off_t *pos=NULL;
 	static struct sbuf *sb=NULL;
 
 	if(!sb && !(sb=sbuf_alloc(cconfs)))
@@ -53,26 +54,30 @@ static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
 	{
 		// If told to 'seekback' to the immediately previous
 		// entry, we need to remember the position of it.
-		if(target && fp && seekback && (pos=ftello(fp))<0)
+		if(target && seekback)
 		{
-			logp("Could not ftello in %s(): %s\n", __func__,
-				strerror(errno));
-			goto error;
+			if(!manio_closed(manio)
+			  && !(pos=manio_tell(manio)))
+			{
+				logp("Could not manio_tell in %s(): %s\n",
+					__func__, strerror(errno));
+				goto error;
+			}
 		}
 
 		sbuf_free_content(sb);
 
 		if(isphase1)
-			ars=sbufl_fill_phase1(sb, fp, zp,
-				get_cntr(cconfs[OPT_CNTR]));
+			ars=manio_sbuf_fill_phase1(manio, NULL,
+				sb, NULL, NULL, cconfs);
 		else
-			ars=sbufl_fill(sb, NULL, fp, zp,
-				get_cntr(cconfs[OPT_CNTR]));
+			ars=manio_sbuf_fill(manio, NULL,
+				sb, NULL, NULL, cconfs);
 
 		// Make sure we end up with the highest datapth we can possibly
 		// find - dpth_protocol1_set_from_string() will only set it if
 		// it is higher.
-		if(sb->protocol1->datapth.buf
+		if(sb->protocol1 && sb->protocol1->datapth.buf
 		  && dpth_protocol1_set_from_string(dpth,
 			sb->protocol1->datapth.buf))
 		{
@@ -101,11 +106,23 @@ static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
 		{
 			// If told to 'seekback' to the immediately previous
 			// entry, do it here.
-			if(fp && seekback && fseeko(fp, pos, SEEK_SET))
+			if(seekback)
 			{
-				logp("Could not fseeko in %s(): %s\n",
-					__func__, strerror(errno));
-				goto error;
+				errno=0;
+				if(!manio_closed(manio)
+				  && manio_seek(manio, pos))
+				{
+					logp("Could not seek to %s:%d in %s():"
+						" %s\n", pos->fpath,
+						pos->offset, __func__,
+						strerror(errno));
+					goto error;
+				}
+			}
+			else
+			{
+				iobuf_free_content(result);
+				iobuf_move(result, &sb->path);
 			}
 			return 0;
 		}
@@ -114,7 +131,7 @@ static int do_forward(FILE *fp, gzFile zp, struct iobuf *result,
 		{
 			if(same) cntr_add_same(get_cntr(cconfs[OPT_CNTR]), sb->path.cmd);
 			else cntr_add_changed(get_cntr(cconfs[OPT_CNTR]), sb->path.cmd);
-			if(sb->protocol1->endfile.buf)
+			if(sb->protocol1 && sb->protocol1->endfile.buf)
 			{
 				unsigned long long e=0;
 				e=strtoull(sb->protocol1->endfile.buf,
@@ -133,80 +150,64 @@ error:
 	return -1;
 }
 
-static int forward_fp(FILE *fp, struct iobuf *result, struct iobuf *target,
-	int isphase1, int seekback, int do_cntr, int same,
-	struct dpth *dpth, struct conf **cconfs)
-{
-	return do_forward(fp, NULL, result, target, isphase1, seekback,
-		do_cntr, same, dpth, cconfs);
-}
-
-static int forward_zp(gzFile zp, struct iobuf *result, struct iobuf *target,
-	int isphase1, int seekback, int do_cntr, int same,
-	struct dpth *dpth, struct conf **cconfs)
-{
-	return do_forward(NULL, zp, result, target, isphase1, seekback,
-		do_cntr, same, dpth, cconfs);
-}
-
-static int do_resume_work(gzFile p1zp, FILE *p2fp, FILE *ucfp,
+static int do_resume_work(struct manio *p1manio,
+	struct manio *cmanio, struct manio *umanio,
 	struct dpth *dpth, struct conf **cconfs)
 {
 	int ret=0;
 	struct iobuf *p1b=NULL;
-	struct iobuf *p2b=NULL;
-	struct iobuf *p2btmp=NULL;
+	struct iobuf *chb=NULL;
 	struct iobuf *ucb=NULL;
 
 	if(!(p1b=iobuf_alloc())
-	  || !(p2b=iobuf_alloc())
-	  || !(p2btmp=iobuf_alloc())
+	  || !(chb=iobuf_alloc())
 	  || !(ucb=iobuf_alloc()))
 		return -1;
 
 	logp("Begin phase1 (read previous file system scan)\n");
-	if(read_phase1(p1zp, cconfs)) goto error;
+	if(read_phase1(p1manio, cconfs)) goto error;
 
-	gzrewind(p1zp);
+	if(!manio_closed(p1manio))
+		manio_seek(p1manio, 0L);
 
 	logp("Setting up resume positions...\n");
-	// Go to the end of p2fp.
-	if(forward_fp(p2fp, p2btmp, NULL,
+	// Go to the end of cmanio.
+	if(do_forward(cmanio, chb, NULL,
 		0, /* not phase1 */
 		0, /* no seekback */
-		0, /* no cntr */
+		1, /* do cntr */
 		0, /* changed */
 		dpth, cconfs)) goto error;
-	rewind(p2fp);
-	// Go to the beginning of p2fp and seek forward to the p2btmp entry.
-	// This is to guard against a partially written entry at the end of
-	// p2fp, which will get overwritten.
-	if(forward_fp(p2fp, p2b, p2btmp,
-		0, /* not phase1 */
-		0, /* no seekback */
-		1, /* do_cntr */
-		0, /* changed */
-		dpth, cconfs)) goto error;
-	logp("  phase2:    %s\n", p2b->buf);
+	if(chb->buf)
+	{
+		logp("  changed:    %s\n", chb->buf);
+		// Now need to go to the appropriate places in p1manio and
+		// unchanged.
+		if(do_forward(p1manio, p1b, chb,
+			1, /* phase1 */
+			0, /* seekback */
+			0, /* no cntr */
+			0, /* ignored */
+			dpth, cconfs)) goto error;
+		logp("  phase1:    %s\n", p1b->buf);
+		if(strcmp(p1b->buf, chb->buf))
+		{
+			logp("phase1 and changed positions should match!\n");
+			goto error;
+		}
 
-	// Now need to go to the appropriate places in p1zp and unchanged.
-	// The unchanged file needs to be positioned just before the found
-	// entry, otherwise it ends up having a duplicated entry.
-	if(forward_zp(p1zp, p1b, p2b,
-		1, /* phase1 */
-		0, /* no seekback */
-		0, /* no cntr */
-		0, /* ignored */
-		dpth, cconfs)) goto error;
-	logp("  phase1:    %s\n", p1b->buf);
-
-	if(forward_fp(ucfp, ucb, p2b,
-		0, /* not phase1 */
-		1, /* seekback */
-		1, /* do_cntr */
-		1, /* same */
-		dpth, cconfs)) goto error;
-	logp("  unchanged: %s\n", ucb->buf);
+		// The unchanged file needs to be positioned just before the
+		// found entry, otherwise it ends up having a duplicated entry.
+		if(do_forward(umanio, ucb, chb,
+			0, /* not phase1 */
+			1, /* seekback */
+			1, /* do_cntr */
+			1, /* same */
+			dpth, cconfs)) goto error;
+		logp("  unchanged: %s\n", ucb->buf);
+	}
+	else
+		logp("  nothing previously transferred\n");
 
 	// Now should have all file pointers in the right places to resume.
 	if(dpth_incr(dpth)) goto error;
@@ -219,60 +220,52 @@ error:
 	ret=-1;
 end:
 	iobuf_free(&p1b);
-	iobuf_free(&p2b);
-	iobuf_free(&p2btmp);
+	iobuf_free(&chb);
 	iobuf_free(&ucb);
 	logp("End phase1 (read previous file system scan)\n");
 	return ret;
 }
 
-static int do_truncate(const char *path, FILE **fp)
-{
-	off_t pos;
-	if((pos=ftello(*fp))<0)
-	{
-		logp("Could not ftello on %s: %s\n", path, strerror(errno));
-		return -1;
-	}
-	if(truncate(path, pos))
-	{
-		logp("Could not truncate %s: %s\n", path, strerror(errno));
-		return -1;
-	}
-	close_fp(fp);
-	return 0;
-}
-
-int do_resume(gzFile p1zp, struct sdirs *sdirs,
+int do_resume(struct manio *p1manio, struct sdirs *sdirs,
 	struct dpth *dpth, struct conf **cconfs)
 {
 	int ret=-1;
-	FILE *cfp=NULL;
-	FILE *ucfp=NULL;
+	struct fzp *cfzp=NULL;
+	struct fzp *ufzp=NULL;
+	struct manio *cmanio=NULL;
+	struct manio *umanio=NULL;
 
-	// First, open them in a+ mode, so that they will be created if they
-	// do not exist.
-	if(!(cfp=open_file(sdirs->changed, "a+b"))
-	  || !(ucfp=open_file(sdirs->unchanged, "a+b")))
+	if(get_e_protocol(cconfs[OPT_PROTOCOL])==PROTO_1)
+	{
+		// First, open them in a+ mode, so that they will be created if
+		// they do not exist.
+		// FIX THIS: Do it via manio.
+		if(!(cfzp=fzp_open(sdirs->changed, "a+b"))
+		  || !(ufzp=fzp_open(sdirs->unchanged, "a+b")))
+			goto end;
+		fzp_close(&cfzp);
+		fzp_close(&ufzp);
+	}
+
+	if(!(cmanio=manio_alloc())
+	  || !(umanio=manio_alloc())
+	  || manio_init_read(cmanio, sdirs->changed)
+	  || manio_init_read(umanio, sdirs->unchanged))
 		goto end;
-	close_fp(&cfp);
-	close_fp(&ucfp);
+//	manio_set_protocol(cmanio, PROTO_1);
+//	manio_set_protocol(umanio, PROTO_1);
 
-	// Open for reading.
-	if(!(cfp=open_file(sdirs->changed, "rb"))
-	  || !(ucfp=open_file(sdirs->unchanged, "rb")))
-		goto end;
-
-	if(do_resume_work(p1zp, cfp, ucfp, dpth, cconfs)) goto end;
+	if(do_resume_work(p1manio, cmanio, umanio, dpth, cconfs)) goto end;
 
 	// Truncate to the appropriate places.
-	if(do_truncate(sdirs->changed, &cfp)
-	  || do_truncate(sdirs->unchanged, &ucfp))
+	if(manio_truncate(cmanio)
+	  || manio_truncate(umanio))
 		goto end;
 	ret=0;
 end:
-	close_fp(&cfp);
-	close_fp(&ucfp);
+	fzp_close(&cfzp);
+	fzp_close(&ufzp);
+	manio_free(&cmanio);
+	manio_free(&umanio);
 	return ret;
 }
-

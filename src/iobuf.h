@@ -2,6 +2,7 @@
 #define _IOBUF_H
 
 #include "cmd.h"
+#include "fzp.h"
 
 struct iobuf
 {
@@ -22,8 +23,7 @@ extern void iobuf_copy(struct iobuf *dst, struct iobuf *src);
 extern void iobuf_move(struct iobuf *dst, struct iobuf *src);
 extern void iobuf_from_str(struct iobuf *iobuf, enum cmd cmd, char *str);
 
-extern int iobuf_send_msg_fp(struct iobuf *iobuf, FILE *fp);
-extern int iobuf_send_msg_zp(struct iobuf *iobuf, gzFile zp);
+extern int iobuf_send_msg_fzp(struct iobuf *iobuf, struct fzp *fzp);
 
 extern int iobuf_pathcmp(struct iobuf *a, struct iobuf *b);
 

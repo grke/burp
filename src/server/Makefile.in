@@ -30,6 +30,7 @@ SRCS = \
 	manio.c \
 	quota.c \
 	restore.c \
+	rubble.c \
 	run_action.c \
 	sdirs.c \
 	timestamp.c \

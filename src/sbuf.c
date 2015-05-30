@@ -68,7 +68,7 @@ int sbuf_is_encrypted(struct sbuf *sb)
 	return iobuf_is_encrypted(&sb->path);
 }
 
-int sbuf_to_manifest(struct sbuf *sb, gzFile zp)
+int sbuf_to_manifest(struct sbuf *sb, struct fzp *fzp)
 {
 	if(!sb->path.buf) return 0;
 
@@ -82,12 +82,12 @@ int sbuf_to_manifest(struct sbuf *sb, gzFile zp)
 		logp("Strange attributes: %s\n", sb->attr.buf);
 		return -1;
 	}
-	if(send_msg_zp(zp, CMD_ATTRIBS,
+	if(send_msg_fzp(fzp, CMD_ATTRIBS,
 		cp, sb->attr.len-(cp-sb->attr.buf))
-	  || send_msg_zp(zp, sb->path.cmd, sb->path.buf, sb->path.len))
+	  || send_msg_fzp(fzp, sb->path.cmd, sb->path.buf, sb->path.len))
 		return -1;
 	if(sb->link.buf
-	  && send_msg_zp(zp, sb->link.cmd, sb->link.buf, sb->link.len))
+	  && send_msg_fzp(fzp, sb->link.cmd, sb->link.buf, sb->link.len))
 		return -1;
 
 	return 0;
@@ -141,7 +141,7 @@ ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize)
 	return (ssize_t)bfd->read(bfd, buf, bufsize);
 }
 
-int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
+int sbuf_fill(struct sbuf *sb, struct asfd *asfd, struct fzp *fzp,
 	struct blk *blk, const char *datpath, struct conf **confs)
 {
 	static unsigned int s;
@@ -161,11 +161,11 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 	while(1)
 	{
 		iobuf_free_content(rbuf);
-		if(zp)
+		if(fzp)
 		{
 			size_t got;
 
-			if((got=gzread(zp, lead, sizeof(lead)))!=5)
+			if((got=fzp_read(fzp, lead, sizeof(lead)))!=5)
 			{
 				if(!got) return 1; // Finished OK.
 				log_and_send(asfd, "short read in manifest");
@@ -184,7 +184,7 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 				log_and_send_oom(asfd, __func__);
 				break;
 			}
-			if(gzread(zp, rbuf->buf, rbuf->len+1)!=(int)rbuf->len+1)
+			if(fzp_read(fzp, rbuf->buf, rbuf->len+1)!=rbuf->len+1)
 			{
 				log_and_send(asfd, "short read in manifest");
 				break;
@@ -300,9 +300,9 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 				blk->length=rbuf->len;
 				rbuf->buf=NULL;
 				return 0;
+			case CMD_MESSAGE:
 			case CMD_WARNING:
-				logp("WARNING: %s\n", rbuf->buf);
-				if(confs) cntr_add(get_cntr(confs[OPT_CNTR]), CMD_WARNING, 1);
+				log_recvd(rbuf, confs, 1);
 				break;
 			case CMD_GEN:
 				if(!strcmp(rbuf->buf, "restoreend")
@@ -342,12 +342,6 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, gzFile zp,
 end:
 	iobuf_free_content(rbuf);
 	return ret;
-}
-
-int sbuf_fill_from_gzfile(struct sbuf *sb, struct asfd *asfd,
-	gzFile zp, struct blk *blk, const char *datpath, struct conf **confs)
-{
-	return sbuf_fill(sb, asfd, zp, blk, datpath, confs);
 }
 
 int sbuf_fill_from_net(struct sbuf *sb, struct asfd *asfd,

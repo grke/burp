@@ -10,9 +10,9 @@ static int append_to_feat(char **feat, const char *str)
 			return -1;
 		return 0;
 	}
-	if(!(tmp=prepend(*feat, str, strlen(str), "")))
+	if(!(tmp=prepend(*feat, str)))
 		return -1;
-	free(*feat);
+	free_w(feat);
 	*feat=tmp;
 	return 0;
 }
@@ -37,6 +37,7 @@ static int send_features(struct asfd *asfd, struct conf **cconfs)
 	enum protocol protocol=get_e_protocol(cconfs[OPT_PROTOCOL]);
 	struct strlist *startdir=get_strlist(cconfs[OPT_STARTDIR]);
 	struct strlist *incglob=get_strlist(cconfs[OPT_INCGLOB]);
+
 	if(append_to_feat(&feat, "extra_comms_begin ok:")
 		/* clients can autoupgrade */
 	  || append_to_feat(&feat, "autoupgrade:")
@@ -70,6 +71,9 @@ static int send_features(struct asfd *asfd, struct conf **cconfs)
 	if(append_to_feat(&feat, "counters:"))
 		goto end;
 */
+	// We support CMD_MESSAGE.
+	if(append_to_feat(&feat, "msg:"))
+		goto end;
 
 	if(protocol==PROTO_AUTO)
 	{
@@ -88,7 +92,11 @@ static int send_features(struct asfd *asfd, struct conf **cconfs)
 		if(append_to_feat(&feat, p))
 			goto end;
 	}
-	
+
+#ifndef RS_DEFAULT_STRONG_LEN
+	if(append_to_feat(&feat, "rshash=blake2:"))
+		goto end;
+#endif
 
 	//printf("feat: %s\n", feat);
 
@@ -199,8 +207,8 @@ static int extra_comms_read(struct async *as,
 				snprintf(comp, sizeof(comp),
 					"compression = %d\n",
 					get_int(cconfs[OPT_COMPRESSION]));
-				if(!(tmp=prepend(*incexc, comp,
-					strlen(comp), 0))) goto end;
+				if(!(tmp=prepend(*incexc, comp)))
+					goto end;
 				free_w(incexc);
 				*incexc=tmp;
 			}
@@ -222,62 +230,9 @@ static int extra_comms_read(struct async *as,
 		else if(!strncmp_w(rbuf->buf, "orig_client=")
 		  && strlen(rbuf->buf)>strlen("orig_client="))
 		{
-			int rcok=0;
-			struct strlist *r;
-			struct conf **sconfs=NULL;
-
-			if(!(sconfs=confs_alloc())) goto end;
-			if(set_string(sconfs[OPT_CNAME],
+			if(conf_switch_to_orig_client(globalcs, cconfs,
 				rbuf->buf+strlen("orig_client=")))
 					goto end;
-			logp("Client wants to switch to client: %s\n",
-				get_string(sconfs[OPT_CNAME]));
-			if(conf_load_clientconfdir(globalcs, sconfs))
-			{
-				char msg[256]="";
-				snprintf(msg, sizeof(msg),
-				  "Could not load alternate config: %s",
-				  get_string(sconfs[OPT_CNAME]));
-				log_and_send(asfd, msg);
-				goto end;
-			}
-			set_int(sconfs[OPT_SEND_CLIENT_CNTR],
-				get_int(cconfs[OPT_SEND_CLIENT_CNTR]));
-			for(r=get_strlist(sconfs[OPT_RESTORE_CLIENTS]);
-				r; r=r->next)
-			{
-				if(!strcmp(r->path,
-					get_string(cconfs[OPT_CNAME])))
-				{
-					rcok++;
-					break;
-				}
-			}
-
-			if(!rcok)
-			{
-				char msg[256]="";
-				snprintf(msg, sizeof(msg),
-				  "Access to client is not allowed: %s",
-					get_string(sconfs[OPT_CNAME]));
-				log_and_send(asfd, msg);
-				goto end;
-			}
-			if(set_string(sconfs[OPT_RESTORE_PATH],
-				get_string(cconfs[OPT_RESTORE_PATH])))
-					goto end;
-			if(set_string(cconfs[OPT_RESTORE_PATH], NULL))
-					goto end;
-			confs_free_content(cconfs);
-			confs_init(cconfs);
-			// FIX THIS:
-			memcpy(cconfs, sconfs, sizeof(struct conf));
-			confs_free(&sconfs);
-			if(set_string(cconfs[OPT_RESTORE_CLIENT],
-				get_string(cconfs[OPT_CNAME]))) goto end;
-			if(set_string(cconfs[OPT_ORIG_CLIENT],
-				get_string(cconfs[OPT_CNAME]))) goto end;
-
 			// If this started out as a server-initiated
 			// restore, need to load the restore file
 			// again.
@@ -287,8 +242,6 @@ static int extra_comms_read(struct async *as,
 					get_string(cconfs[OPT_RESTORE_PATH])))
 						goto end;
 			}
-			logp("Switched to client %s\n",
-				get_string(cconfs[OPT_CNAME]));
 			if(asfd->write_str(asfd, CMD_GEN, "orig_client ok"))
 				goto end;
 		}
@@ -308,7 +261,7 @@ static int extra_comms_read(struct async *as,
 				cconfs[OPT_PROTOCOL]);
 			if(protocol!=PROTO_AUTO)
 			{
-				snprintf(msg, sizeof(msg), "Client is trying to use %s but server is set to protocol=%d\n", rbuf->buf, protocol);
+				snprintf(msg, sizeof(msg), "Client is trying to use protocol=%s but server is set to protocol=%d\n", rbuf->buf, protocol);
 				log_and_send_oom(asfd, __func__);
 				goto end;
 			}
@@ -324,12 +277,27 @@ static int extra_comms_read(struct async *as,
 			}
 			else
 			{
-				snprintf(msg, sizeof(msg), "Client is trying to use %s, which is unknown\n", rbuf->buf);
+				snprintf(msg, sizeof(msg), "Client is trying to use protocol=%s, which is unknown\n", rbuf->buf);
 				log_and_send_oom(asfd, __func__);
 				goto end;
 			}
 			logp("Client has set protocol=%d\n",
 				(int)get_e_protocol(cconfs[OPT_PROTOCOL]));
+		}
+		else if(!strncmp_w(rbuf->buf, "rshash=blake2"))
+		{
+#ifdef RS_DEFAULT_STRONG_LEN
+			logp("Client is trying to use librsync hash blake2, but server does not support it.\n");
+			goto end;
+#else
+			set_e_rshash(cconfs[OPT_RSHASH], RSHASH_BLAKE2);
+			set_e_rshash(globalcs[OPT_RSHASH], RSHASH_BLAKE2);
+#endif
+		}
+		else if(!strncmp_w(rbuf->buf, "msg"))
+		{
+			set_int(cconfs[OPT_MESSAGE], 1);
+			set_int(globalcs[OPT_MESSAGE], 1);
 		}
 		else
 		{
@@ -362,7 +330,7 @@ int extra_comms(struct async *as,
 	struct asfd *asfd;
 	asfd=as->asfd;
 	//char *restorepath=NULL;
-	const char *peer_version=get_string(cconfs[OPT_PEER_VERSION]);
+	const char *peer_version=NULL;
 
 	if(vers_init(&vers, cconfs)) goto error;
 
@@ -401,6 +369,8 @@ int extra_comms(struct async *as,
 	if(extra_comms_read(as, &vers, srestore, incexc, confs, cconfs))
 		goto error;
 
+	peer_version=get_string(cconfs[OPT_PEER_VERSION]);
+
 	// This needs to come after extra_comms_read, as the client might
 	// have set PROTO_1 or PROTO_2.
 	switch(get_e_protocol(cconfs[OPT_PROTOCOL]))
@@ -436,6 +406,15 @@ int extra_comms(struct async *as,
 			  "but client is burp version %s\n",
 			  peer_version);
 			goto error;
+	}
+
+	if(get_e_protocol(cconfs[OPT_PROTOCOL])==PROTO_1)
+	{
+		if(get_e_rshash(cconfs[OPT_RSHASH])==RSHASH_UNSET)
+		{
+			set_e_rshash(confs[OPT_RSHASH], RSHASH_MD4);
+			set_e_rshash(cconfs[OPT_RSHASH], RSHASH_MD4);
+		}
 	}
 
 	return 0;

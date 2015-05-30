@@ -1,9 +1,7 @@
-.\"Created with GNOME Manpages Editor Wizard
-.\"http://sourceforge.net/projects/gmanedit2
 .TH bedup 8 "February 10, 2012" "" "bedup"
 
 .SH NAME
-bedup \- program for deduplication program with additional knowledge of burp
+bedup \- deduplication program with additional knowledge of burp
 
 .SH SYNOPSIS
 .B bedup
@@ -11,7 +9,7 @@ bedup \- program for deduplication program with additional knowledge of burp
 .br
 
 .LP
-A file deduplication program with additional knowledge of burp storage directories. This program comes with the burp backup and restore package.
+A file deduplication program with additional knowledge of burp protocol 1 storage directories. This program comes with the burp backup and restore package.
 
 .SH OPTIONS
 .TP
@@ -42,7 +40,7 @@ Print duplicate paths. Useful if you want to double check the files that would b
 \fB\-V\fR \fB\fR
 Print version and exit.\fR
 .TP
-By default, bedup will read /etc/burp/burp.conf and deduplicate client storage directories using special knowledge of the structure.\fR
+By default, bedup will read /etc/burp/burp.conf and deduplicate protocol 1 client storage directories using special knowledge of the structure.\fR
 .TP
 With '\-n', this knowledge is turned off and you have to specify the directories to deduplicate on the command line. Running with '\-n' is therefore dangerous if you are deduplicating burp storage directories.
 

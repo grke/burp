@@ -55,7 +55,7 @@ static int maybe_add_ent(const char *dir, const char *d_name,
 	char *basename=NULL;
 	struct bu *bu=NULL;
 
-	if(!(basename=prepend("", d_name, strlen(d_name), ""))
+	if(!(basename=prepend("", d_name))
 	 || !(fullpath=prepend_s(dir, basename))
 	 || !(timestamp=prepend_s(fullpath, "timestamp"))
 	 || !(hlinkedpath=prepend_s(fullpath, "hardlinked")))

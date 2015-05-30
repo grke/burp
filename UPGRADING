@@ -1,5 +1,9 @@
 Things to watch out for when upgrading.
 
+2.0.20
+------
+The option 'working_dir_recovery_method = use' has been removed.
+
 2.0.12
 ------
 Executable scripts that used to be in /etc/burp are now installed in

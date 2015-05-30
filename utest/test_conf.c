@@ -104,6 +104,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_SCAN_PROBLEM_RAISES_ERROR:
 		case OPT_OVERWRITE:
 		case OPT_STRIP:
+		case OPT_MESSAGE:
 			fail_unless(get_int(c[o])==0);
 			break;
 		case OPT_DAEMON:
@@ -188,6 +189,9 @@ static void check_default(struct conf **c, enum conf_opt o)
         	case OPT_WORKING_DIR_RECOVERY_METHOD:
 			fail_unless(get_e_recovery_method(c[o])==
 				RECOVERY_METHOD_DELETE);
+			break;
+        	case OPT_RSHASH:
+			fail_unless(get_e_rshash(c[o])==RSHASH_UNSET);
 			break;
 		case OPT_CNTR:
 			fail_unless(get_cntr(c[o])==NULL);

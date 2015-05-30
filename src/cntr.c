@@ -98,6 +98,8 @@ int cntr_init(struct cntr *cntr, const char *cname)
 	  || add_cntr_ent(cntr, CNTR_SINGLE_FIELD,
 		CMD_BYTES_ESTIMATED, "bytes_estimated", "Bytes estimated")
 	  || add_cntr_ent(cntr, CNTR_SINGLE_FIELD,
+		CMD_MESSAGE, "messages", "Messages")
+	  || add_cntr_ent(cntr, CNTR_SINGLE_FIELD,
 		CMD_WARNING, "warnings", "Warnings")
 	  || add_cntr_ent(cntr, CNTR_TABULATE,
 		CMD_GRAND_TOTAL, "grand_total", "Grand total")
@@ -269,11 +271,8 @@ void cntr_add(struct cntr *c, char ch, int print)
 	if(!(grand_total_ent=c->ent[CMD_GRAND_TOTAL])) return;
 	if(print)
 	{
-		struct cntr_ent *warning;
-		if(!(warning=c->ent[CMD_WARNING])) return;
-		if(!grand_total_ent->count
-		  && !warning->count) logc("\n");
-		logc("%c", ch);
+		if(ch!=CMD_MESSAGE && ch!=CMD_WARNING)
+			logc("%c", ch);
 	}
 	if(ch==CMD_FILE_CHANGED)
 	{
@@ -284,7 +283,7 @@ void cntr_add(struct cntr *c, char ch, int print)
 	else
 	{
 		incr_count(c, ch);
-		if(ch==CMD_WARNING) return;
+		if(ch==CMD_WARNING || ch==CMD_MESSAGE) return;
 		incr_count(c, CMD_TOTAL);
 	}
 
@@ -421,6 +420,7 @@ static void bottom_part(struct cntr *c, enum action act)
 	unsigned long long l;
 	struct cntr_ent **e=c->ent;
 	logc("\n");
+	logc("             Messages:   % 11llu\n", get_count(e, CMD_MESSAGE));
 	logc("             Warnings:   % 11llu\n", get_count(e, CMD_WARNING));
 	logc("\n");
 	logc("      Bytes estimated:   % 11llu", get_count(e, CMD_BYTES_ESTIMATED));

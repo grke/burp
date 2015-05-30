@@ -22,10 +22,10 @@ int do_quick_read(struct asfd *asfd, const char *datapth, struct conf **confs)
 
 	if(rbuf->buf)
 	{
-		if(rbuf->cmd==CMD_WARNING)
+		if(rbuf->cmd==CMD_MESSAGE
+		  || rbuf->cmd==CMD_WARNING)
 		{
-			logp("WARNING: %s\n", rbuf->buf);
-			cntr_add(get_cntr(confs[OPT_CNTR]), rbuf->cmd, 0);
+			log_recvd(rbuf, confs, 0);
 		}
 		else if(rbuf->cmd==CMD_INTERRUPT)
 		{
@@ -190,7 +190,7 @@ int set_blocking(int fd)
 
 char *get_tmp_filename(const char *basis)
 {
-	return prepend(basis, ".tmp", strlen(".tmp"), 0 /* no slash */);
+	return prepend(basis, ".tmp");
 }
 
 void add_fd_to_sets(int fd, fd_set *read_set, fd_set *write_set, fd_set *err_set, int *max_fd)
@@ -302,14 +302,14 @@ int init_client_socket(const char *host, const char *port)
 
 void reuseaddr(int fd)
 {
-	int tmpfd=0;
+	int optval=1;
 #ifdef HAVE_OLD_SOCKOPT
 #define sockopt_val_t char *
 #else
 #define sockopt_val_t void *
 #endif
 	if(setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
-		(sockopt_val_t)&tmpfd, sizeof(tmpfd))<0)
+		(sockopt_val_t)&optval, sizeof(optval))<0)
 			logp("Error: setsockopt SO_REUSEADDR: %s",
 				strerror(errno));
 }
@@ -516,8 +516,7 @@ int receive_a_file(struct asfd *asfd, const char *path, struct conf **confs)
 		goto end;
 	}
 
-	ret=transfer_gzfile_in(asfd, path, bfd,
-		&rcvdbytes, &sentbytes, get_cntr(confs[OPT_CNTR]));
+	ret=transfer_gzfile_in(asfd, path, bfd, &rcvdbytes, &sentbytes, confs);
 	if(bfd->close(bfd, asfd))
 	{
 		logp("error closing %s in receive_a_file\n", path);

@@ -13,11 +13,13 @@ extern void set_logfp_direct(FILE *fp);
 extern FILE *get_logfp(void);
 extern void log_out_of_memory(const char *function);
 extern void log_restore_settings(struct conf **cconfs, int srestore);
+extern int logm(struct asfd *asfd, struct conf **confs, const char *fmt, ...);
 extern int logw(struct asfd *asfd, struct conf **confs, const char *fmt, ...);
 extern void log_and_send(struct asfd *asfd, const char *msg);
 extern void log_and_send_oom(struct asfd *asfd, const char *function);
 extern void log_set_json(int value);
 extern void log_oom_w(const char *func, const char *orig_func);
 extern int log_incexcs_buf(const char *incexc);
+extern void log_recvd(struct iobuf *iobuf, struct conf **confs, int print);
 
 #endif

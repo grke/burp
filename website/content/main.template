@@ -15,7 +15,7 @@ P { text-align:justify;}
 BURP - BackUp and Restore Program
 </TITLE>
 </HEAD>
-<BODY BACKGROUND="/images/background.jpg" BGCOLOR="white">
+<BODY BGCOLOR="LightGrey">
 
 <TABLE WIDTH="100%" BORDER=0>
  <TR>
@@ -108,7 +108,7 @@ donation.
    </td>
    <td align="right">
     <font color="#000000">
-     Last updated: May 2015
+     Last updated: June 2015
      <BR>
      By Graham Keeling
      <BR>

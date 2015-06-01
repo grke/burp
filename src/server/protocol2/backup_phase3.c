@@ -23,18 +23,15 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 
 	logp("Start phase3\n");
 
-	if(!(newmanio=manio_alloc())
-	  || !(chmanio=manio_alloc())
-	  || !(unmanio=manio_alloc())
-	  || !(manifesttmp=get_tmp_filename(sdirs->rmanifest))
+	if(!(manifesttmp=get_tmp_filename(sdirs->rmanifest))
+	  || !(newmanio=manio_open(manifesttmp, "wb", PROTO_2))
+	  || !(chmanio=manio_open(sdirs->changed, "rb", PROTO_2))
+	  || !(unmanio=manio_open(sdirs->unchanged, "rb", PROTO_2))
 	  || !(hooksdir=prepend_s(manifesttmp, "hooks"))
 	  || !(dindexdir=prepend_s(manifesttmp, "dindex"))
-	  || manio_init_write(newmanio, manifesttmp)
 	  || manio_init_write_hooks(newmanio,
 		get_string(confs[OPT_DIRECTORY]), hooksdir, sdirs->rmanifest)
 	  || manio_init_write_dindex(newmanio, dindexdir)
-	  || manio_init_read(chmanio, sdirs->changed)
-	  || manio_init_read(unmanio, sdirs->unchanged)
 	  || !(usb=sbuf_alloc(confs))
 	  || !(csb=sbuf_alloc(confs)))
 		goto end;
@@ -121,7 +118,7 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 	}
 
 	// Flush to disk.
-	if(manio_free(&newmanio)) goto end;
+	if(manio_close(&newmanio)) goto end;
 
 	// Rename race condition should be of no consequence here, as the
 	// manifest should just get recreated automatically.
@@ -137,9 +134,9 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 
 	logp("End phase3\n");
 end:
-	manio_free(&newmanio);
-	manio_free(&chmanio);
-	manio_free(&unmanio);
+	manio_close(&newmanio);
+	manio_close(&chmanio);
+	manio_close(&unmanio);
 	sbuf_free(&csb);
 	sbuf_free(&usb);
 	blk_free(&blk);

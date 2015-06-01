@@ -120,14 +120,12 @@ static int list_manifest(struct asfd *asfd,
 
 	if(!(manifest_dir=prepend_s(fullpath,
 		protocol==PROTO_1?"manifest.gz":"manifest"))
-	  || !(manio=manio_alloc())
-	  || manio_init_read(manio, manifest_dir)
+	  || !(manio=manio_open(manifest_dir, "rb", protocol))
 	  || !(sb=sbuf_alloc(confs)))
 	{
 		log_and_send_oom(asfd, __func__);
 		goto error;
 	}
-	manio_set_protocol(manio, protocol);
 
 	if(browsedir) bdlen=strlen(browsedir);
 
@@ -180,7 +178,7 @@ error:
 end:
 	sbuf_free(&sb);
 	free_w(&manifest_dir);
-	manio_free(&manio);
+	manio_close(&manio);
 	free_w(&last_bd_match);
 	return ret;
 }

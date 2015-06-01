@@ -363,7 +363,7 @@ static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist, struct 
 	struct sbuf *sb=slist->last_requested;
 	if(!sb)
 	{
-		if(manio_closed(p1manio) && !*requests_end)
+		if(!p1manio && !*requests_end)
 		{
 			iobuf_from_str(wbuf, CMD_GEN, (char *)"requests_end");
 			*requests_end=1;
@@ -519,7 +519,7 @@ static void dump_slist(struct slist *slist, const char *msg)
 */
 
 static int maybe_add_from_scan(struct asfd *asfd,
-	struct manio *p1manio, struct manio *cmanio,
+	struct manio **p1manio, struct manio *cmanio,
 	struct manio *unmanio, struct slist *slist, struct conf **confs)
 {
 	int ret=-1;
@@ -529,7 +529,7 @@ static int maybe_add_from_scan(struct asfd *asfd,
 
 	while(1)
 	{
-		if(manio_closed(p1manio)) return 0;
+		if(!p1manio || !*p1manio) return 0;
 		// Limit the amount loaded into memory at any one time.
 		if(slist && slist->head)
 		{
@@ -539,9 +539,13 @@ static int maybe_add_from_scan(struct asfd *asfd,
 		}
 		if(!(snew=sbuf_alloc(confs))) goto end;
 
-		if((ars=manio_sbuf_fill_phase1(p1manio,
+		if((ars=manio_sbuf_fill_phase1(*p1manio,
 			asfd, snew, NULL, NULL, confs))<0) goto end;
-		else if(ars>0) return 0; // Finished.
+		else if(ars>0)
+		{
+			manio_close(p1manio);
+			return 0; // Finished.
+		}
 
 		if(!(ec=entry_changed(asfd, snew, cmanio, unmanio, confs)))
 		{
@@ -757,14 +761,10 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 	logp("Phase 2 begin (recv backup data)\n");
 
 	//if(champ_chooser_init(sdirs->data, confs)
-	if(!(cmanio=manio_alloc())
-	  || !(p1manio=manio_alloc())
-	  || !(chmanio=manio_alloc())
-	  || !(unmanio=manio_alloc())
-	  || manio_init_read(cmanio, sdirs->cmanifest)
-	  || manio_init_read(p1manio, sdirs->phase1data)
-	  || manio_init_write(chmanio, sdirs->changed)
-	  || manio_init_write(unmanio, sdirs->unchanged)
+	if(!(cmanio=manio_open(sdirs->cmanifest, "rb", PROTO_2))
+	  || !(p1manio=manio_open(sdirs->phase1data, "rb", PROTO_1))
+	  || !(chmanio=manio_open(sdirs->changed, "wb", PROTO_2))
+	  || !(unmanio=manio_open(sdirs->unchanged, "wb", PROTO_2))
 	  || !(slist=slist_alloc())
 	  || !(blist=blist_alloc())
 	  || !(wbuf=iobuf_alloc())
@@ -773,20 +773,17 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 		sdirs->data, get_int(confs[OPT_MAX_STORAGE_SUBDIRS])))
 			goto end;
 
-	// The phase1 manifest looks the same as a protocol1 one.
-	manio_set_protocol(p1manio, PROTO_1);
-
 	if(resume && do_resume(p1manio, sdirs, dpth, confs))
                 goto end;
 
-	if(manio_closed(p1manio)
-	  && manio_open_next_fpath(p1manio))
+	if(!p1manio
+	  && !(p1manio=manio_open(sdirs->phase1data, "rb", PROTO_1)))
 		goto end;
 
 	while(!backup_end)
 	{
 		if(maybe_add_from_scan(asfd,
-			p1manio, cmanio, unmanio, slist, confs))
+			&p1manio, cmanio, unmanio, slist, confs))
 				goto end;
 
 		if(!wbuf->len)
@@ -848,8 +845,8 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 				goto end;
 	}
 
-	if(manio_close(unmanio)
-	  || manio_close(chmanio))
+	if(manio_close(&unmanio)
+	  || manio_close(&chmanio))
 		goto end;
 
 	if(blist->head)
@@ -880,9 +877,9 @@ end:
 	iobuf_free(&wbuf);
 	dpth_release_all(dpth);
 	dpth_free(&dpth);
-	manio_free(&cmanio);
-	manio_free(&p1manio);
-	manio_free(&chmanio);
-	manio_free(&unmanio);
+	manio_close(&cmanio);
+	manio_close(&p1manio);
+	manio_close(&chmanio);
+	manio_close(&unmanio);
 	return ret;
 }

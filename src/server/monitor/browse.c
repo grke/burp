@@ -54,18 +54,16 @@ static int browse_manifest_start(struct asfd *srfd, struct cstat *cstat,
 
 	if(!(manifest=prepend_s(bu->path,
 		cstat->protocol==PROTO_1?"manifest.gz":"manifest"))
-	  || !(manio=manio_alloc())
-	  || manio_init_read(manio, manifest)
+	  || !(manio=manio_open(manifest, "rb", cstat->protocol))
 	  || !(sb=sbuf_alloc_protocol(cstat->protocol)))
 		goto end;
-	manio_set_protocol(manio, cstat->protocol);
 	if(get_int(confs[OPT_MONITOR_BROWSE_CACHE]))
 		ret=cache_load(srfd, manio, sb, cstat, bu);
 	else
 		ret=do_browse_manifest(srfd, manio, sb, browse);
 end:
 	free_w(&manifest);
-	manio_free(&manio);
+	manio_close(&manio);
 	sbuf_free(&sb);
 	return ret;
 }

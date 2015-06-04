@@ -38,7 +38,6 @@ static int manio_open_next_fpath(struct manio *manio)
 	if(!strcmp(manio->mode, MANIO_MODE_READ)
 	  && lstat(manio->offset.fpath, &statp))
 		return 0;
-logp("try open %s\n", manio->offset.fpath);
 
 	if(build_path_w(manio->offset.fpath)
 	  || !(manio->fzp=fzp_gzopen(manio->offset.fpath, manio->mode)))
@@ -254,14 +253,18 @@ end:
 	return ret;
 }
 
+static int sort_and_write_hooks_and_dindex(struct manio *manio)
+{
+	return sort_and_write_hooks(manio)
+	  || sort_and_write_dindex(manio);
+}
+
 int manio_close(struct manio **manio)
 {
 	int ret=0;
 	if(!manio || !*manio) return ret;
-	if(sort_and_write_hooks(*manio)
-	  || sort_and_write_dindex(*manio))
-		ret=-1;
-	if(fzp_close(&((*manio)->fzp)))
+	if(sort_and_write_hooks_and_dindex(*manio)
+	  || fzp_close(&((*manio)->fzp)))
 		ret=-1;
 	manio_free_content(*manio);
 	free_v((void **)manio);
@@ -301,7 +304,8 @@ static int do_manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
 
 		// Reached the end of the current file.
 		// Maybe there is another file to continue with.
-		if(fzp_close(&manio->fzp)) goto error;
+		if(sort_and_write_hooks_and_dindex(manio)
+		  || fzp_close(&manio->fzp)) goto error;
 
 		// If in protocol1 mode, there is only one file, so end.
 		if(manio->protocol==PROTO_1) return 1;
@@ -333,6 +337,7 @@ int manio_sbuf_fill_phase1(struct manio *manio, struct asfd *asfd,
 
 static int reset_sig_count_and_close(struct manio *manio)
 {
+	if(sort_and_write_hooks_and_dindex(manio)) return -1;
 	if(fzp_close(&manio->fzp)) return -1;
 	manio->sig_count=0;
 	return 0;

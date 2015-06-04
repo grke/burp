@@ -1,6 +1,7 @@
+  * Refactor src/server/manio.c to work towards protocol2 resume
+    functionality.
   * Fix '-a l' regex so that it isn't split in two at the right-most
     colon.
-
 
 2015-05-30 Changes in burp-2.0.20:
   * Fix conf bug that was causing the server to segfault when the client

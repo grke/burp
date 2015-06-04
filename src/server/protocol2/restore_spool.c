@@ -38,8 +38,7 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 	// to the stream style restore.
 	if(!restore_spool) return 0;
 	
-	if(!(manio=manio_alloc())
-	  || manio_init_read(manio, manifest)
+	if(!(manio=manio_open(manifest, "rb", PROTO_2))
 	  || !(need_data=sbuf_alloc(confs))
 	  || !(sb=sbuf_alloc(confs))
 	  || !(blk=blk_alloc()))
@@ -134,8 +133,9 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 	  || asfd->read_expect(asfd, CMD_GEN, "datfilesend_ok"))
 		goto end;
 
+	manio_close(&manio);
 	// Send the manifest to the client.
-	if(manio_init_read(manio, manifest))
+	if(manio_open(manifest, "rb", PROTO_2))
 		goto end;
 	blk->got_save_path=0;
 	while(1)
@@ -183,7 +183,7 @@ end:
 	blk_free(&blk);
 	sbuf_free(&sb);
 	sbuf_free(&need_data);
-	manio_free(&manio);
+	manio_close(&manio);
 	hash_delete_all();
 	return ret;
 }

@@ -328,9 +328,8 @@ int backup_phase4_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 
 	logp("Begin phase4 (sparse generation)\n");
 
-	if(!(newmanio=manio_alloc())
-	  || !(fmanifest=prepend_s(sdirs->finishing, "manifest"))
-	  || manio_init_read(newmanio, fmanifest)
+	if(!(fmanifest=prepend_s(sdirs->finishing, "manifest"))
+	  || !(newmanio=manio_open(fmanifest, "rb", PROTO_2))
 	  || manio_read_fcount(newmanio)
 	  || !(hooksdir=prepend_s(fmanifest, "hooks"))
 	  || !(h1dir=prepend_s(fmanifest, "h1"))
@@ -391,7 +390,7 @@ int backup_phase4_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 
 	ret=0;
 end:
-	manio_free(&newmanio);
+	manio_close(&newmanio);
 	free_w(&sparse);
 	free_w(&global_sparse);
 	free_w(&srca);

@@ -128,12 +128,10 @@ static int hard_link_substitution(struct asfd *asfd,
 	int pcmp;
 	enum protocol protocol=get_e_protocol(cconfs[OPT_PROTOCOL]);
 
-	if(!(manio=manio_alloc())
-	  || manio_init_read(manio, manifest)
+	if(!(manio=manio_open(manifest, "rb", protocol))
 	  || !(need_data=sbuf_alloc(cconfs))
 	  || !(hb=sbuf_alloc(cconfs)))
 		goto end;
-	manio_set_protocol(manio, protocol);
 
 	if(protocol==PROTO_2)
 	{
@@ -188,7 +186,7 @@ static int hard_link_substitution(struct asfd *asfd,
 end:
 	blk_free(&blk);
 	sbuf_free(&hb);
-	manio_free(&manio);
+	manio_close(&manio);
 	return ret;
 }
 
@@ -358,12 +356,10 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
                 	goto end;
 	}
 
-	if(!(manio=manio_alloc())
-	  || manio_init_read(manio, manifest)
+	if(!(manio=manio_open(manifest, "rb", protocol))
 	  || !(need_data=sbuf_alloc(cconfs))
 	  || !(sb=sbuf_alloc(cconfs)))
 		goto end;
-	manio_set_protocol(manio, protocol);
 
 	while(1)
 	{
@@ -434,7 +430,7 @@ end:
 	sbuf_free(&sb);
 	sbuf_free(&need_data);
 	iobuf_free_content(rbuf);
-	manio_free(&manio);
+	manio_close(&manio);
 	return ret;
 }
 

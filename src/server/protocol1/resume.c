@@ -56,7 +56,7 @@ static int do_forward(struct manio *manio, struct iobuf *result,
 		// entry, we need to remember the position of it.
 		if(target && seekback)
 		{
-			if(!manio_closed(manio)
+			if(manio
 			  && !(pos=manio_tell(manio)))
 			{
 				logp("Could not manio_tell in %s(): %s\n",
@@ -109,7 +109,7 @@ static int do_forward(struct manio *manio, struct iobuf *result,
 			if(seekback)
 			{
 				errno=0;
-				if(!manio_closed(manio)
+				if(manio
 				  && manio_seek(manio, pos))
 				{
 					logp("Could not seek to %s:%d in %s():"
@@ -167,7 +167,7 @@ static int do_resume_work(struct manio *p1manio,
 	logp("Begin phase1 (read previous file system scan)\n");
 	if(read_phase1(p1manio, cconfs)) goto error;
 
-	if(!manio_closed(p1manio))
+	if(!p1manio)
 		manio_seek(p1manio, 0L);
 
 	logp("Setting up resume positions...\n");
@@ -247,13 +247,9 @@ int do_resume(struct manio *p1manio, struct sdirs *sdirs,
 		fzp_close(&ufzp);
 	}
 
-	if(!(cmanio=manio_alloc())
-	  || !(umanio=manio_alloc())
-	  || manio_init_read(cmanio, sdirs->changed)
-	  || manio_init_read(umanio, sdirs->unchanged))
+	if(!(cmanio=manio_open(sdirs->changed, "rb", PROTO_2))
+	  || !(umanio=manio_open(sdirs->unchanged, "rb", PROTO_2)))
 		goto end;
-//	manio_set_protocol(cmanio, PROTO_1);
-//	manio_set_protocol(umanio, PROTO_1);
 
 	if(do_resume_work(p1manio, cmanio, umanio, dpth, cconfs)) goto end;
 
@@ -265,7 +261,7 @@ int do_resume(struct manio *p1manio, struct sdirs *sdirs,
 end:
 	fzp_close(&cfzp);
 	fzp_close(&ufzp);
-	manio_free(&cmanio);
-	manio_free(&umanio);
+	manio_close(&cmanio);
+	manio_close(&umanio);
 	return ret;
 }

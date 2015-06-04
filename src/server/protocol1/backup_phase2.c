@@ -803,14 +803,11 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 		init_fs_max(sdirs->treepath);
 	}
 
-	if(!(p1manio=manio_alloc())
-	  || manio_init_read(p1manio, sdirs->phase1data)
+	if(!(p1manio=manio_open(sdirs->phase1data, "rb", PROTO_1))
 	  || !(cb=sbuf_alloc(cconfs))
 	  || !(p1b=sbuf_alloc(cconfs))
 	  || !(rb=sbuf_alloc(cconfs)))
 		goto error;
-
-	manio_set_protocol(p1manio, PROTO_1);
 
 	if(resume && do_resume(p1manio, sdirs, dpth, cconfs))
 		goto error;
@@ -821,8 +818,8 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 	  || !(chfp=fzp_open(sdirs->changed, "a+b")))
 		goto error;
 
-	if(manio_closed(p1manio)
-	  && manio_open_next_fpath(p1manio))
+	if(!p1manio
+	  && !(p1manio=manio_open(sdirs->phase1data, "rb", PROTO_1)))
 		goto error;
 
 	while(1)
@@ -840,7 +837,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 			rb->path.buf?rb->path.buf:p1b->path.buf, cconfs))
 				goto error;
 		if(last_requested
-		  || manio_closed(p1manio)
+		  || !p1manio
 		  || asfd->writebuflen)
 		{
 			switch(do_stuff_to_receive(asfd, sdirs,
@@ -859,7 +856,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 			case -1: goto error;
 		}
 
-		if(manio_closed(p1manio)) continue;
+		if(!p1manio) continue;
 
 		sbuf_free_content(p1b);
 
@@ -867,7 +864,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 			p1b, NULL, sdirs, cconfs))
 		{
 			case 0: break;
-			case 1: manio_close(p1manio);
+			case 1: manio_close(&p1manio);
 				if(asfd->write_str(asfd,
 				  CMD_GEN, "backupphase2end")) goto error;
 				break;
@@ -934,7 +931,7 @@ end:
 	sbuf_free(&cb);
 	sbuf_free(&p1b);
 	sbuf_free(&rb);
-	manio_free(&p1manio);
+	manio_close(&p1manio);
 	fzp_close(&cmanfp);
 	dpth_free(&dpth);
 	if(!ret) unlink(sdirs->phase1data);

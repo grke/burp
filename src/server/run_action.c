@@ -234,7 +234,7 @@ static int run_list(struct asfd *asfd,
 
 	if(!strncmp_w(rbuf->buf, "list "))
 	{
-		if((cp=strrchr(rbuf->buf, ':')))
+		if((cp=strchr(rbuf->buf, ':')))
 		{
 			*cp='\0';
 			if(!(listregex=strdup_w(cp+1, __func__)))

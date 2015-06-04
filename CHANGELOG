@@ -1,3 +1,6 @@
+  * Fix '-a l' regex so that it isn't split in two at the right-most
+    colon.
+
 2015-05-30 Changes in burp-1.4.38:
   * Turn SO_REUSEADDR on instead of turning it off.
 

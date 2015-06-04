@@ -1287,7 +1287,7 @@ static int child(struct config *conf, struct config *cconf, const char *client, 
 
 			if(!strncmp(buf, "list ", strlen("list ")))
 			{
-				if((listregex=strrchr(buf, ':')))
+				if((listregex=strchr(buf, ':')))
 				{
 					*listregex='\0';
 					listregex++;

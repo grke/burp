@@ -10,6 +10,7 @@ SRCS = \
 	test_cmd.c \
 	test_conf.c \
 	test_conffile.c \
+	test_fzp.c \
 	test_hexmap.c \
 	test_lock.c \
 	test_pathcmp.c \
@@ -27,6 +28,7 @@ BURP_SRCS = \
 	../src/conf.c \
 	../src/conffile.c \
 	../src/fsops.c \
+	../src/fzp.c \
 	../src/hexmap.c \
 	../src/iobuf.c \
 	../src/lock.c \
@@ -63,5 +65,6 @@ test: Makefile $(OBJS) $(BURP_OBJS)
 	@echo OK
 
 clean:
-	rm -f test *.o utest_lockfile server/protocol1/*.o server/protocol2/*.o
+	rm -f test *.o utest_lockfile utest_fzp
+	rm -f server/protocol1/*.o server/protocol2/*.o
 	rm -rf utest_dpth

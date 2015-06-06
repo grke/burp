@@ -235,7 +235,7 @@ int do_resume(struct manio *p1manio, struct sdirs *sdirs,
 	struct manio *cmanio=NULL;
 	struct manio *umanio=NULL;
 
-	if(get_e_protocol(cconfs[OPT_PROTOCOL])==PROTO_1)
+	if(get_protocol(cconfs)==PROTO_1)
 	{
 		// First, open them in a+ mode, so that they will be created if
 		// they do not exist.

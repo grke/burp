@@ -32,5 +32,6 @@ Suite *suite_server_sdirs(void);
 Suite *suite_server_protocol1_dpth(void);
 Suite *suite_server_protocol1_fdirs(void);
 Suite *suite_server_protocol2_dpth(void);
+Suite *suite_sbuf(void);
 
 #endif

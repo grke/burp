@@ -39,7 +39,7 @@ static int working_delete(struct async *as, struct sdirs *sdirs,
 {
 	// Try to remove it and start again.
 	logp("deleting old working directory\n");
-	if(get_e_protocol(cconfs[OPT_PROTOCOL])==PROTO_2)
+	if(get_protocol(cconfs)==PROTO_2)
 	{
 		logp("protocol 2 - unimplemented - need cleanup of data directory\n");
 	}
@@ -123,7 +123,7 @@ static int recover_finishing(struct async *as,
 	as->asfd_remove(as, asfd);
 	asfd_close(asfd);
 
-	switch(get_e_protocol(cconfs[OPT_PROTOCOL]))
+	switch(get_protocol(cconfs))
 	{
 		case PROTO_1:
 			r=backup_phase4_server_protocol1(sdirs, cconfs);
@@ -194,7 +194,7 @@ static int recover_working(struct async *as,
 
 	// FIX THIS: Currently forcing protocol2 to delete so that the tests
 	// do not fail.
-	if(get_e_protocol(cconfs[OPT_PROTOCOL])==PROTO_2)
+	if(get_protocol(cconfs)==PROTO_2)
 		recovery_method=RECOVERY_METHOD_DELETE;
 
 	if(recovery_method==RECOVERY_METHOD_DELETE)

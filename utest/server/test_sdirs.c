@@ -79,7 +79,7 @@ static void check_dynamic_paths(struct sdirs *sdirs, struct conf **confs,
 
 static void protocol1_tests(struct sdirs *sdirs, struct conf **confs)
 {
-	set_e_protocol(confs[OPT_PROTOCOL], PROTO_1);
+	set_protocol(confs, PROTO_1);
 	fail_unless(sdirs_init(sdirs, confs)==0);
 	ck_assert_str_eq(sdirs->base, BASE);
 	fail_unless(sdirs->dedup==NULL);
@@ -119,7 +119,7 @@ static void protocol1_tests(struct sdirs *sdirs, struct conf **confs)
 
 static void protocol2_tests(struct sdirs *sdirs, struct conf **confs)
 {
-	set_e_protocol(confs[OPT_PROTOCOL], PROTO_2);
+	set_protocol(confs, PROTO_2);
 	fail_unless(sdirs_init(sdirs, confs)==0);
 	ck_assert_str_eq(sdirs->base, BASE);
 	ck_assert_str_eq(sdirs->dedup, DEDUP);
@@ -174,7 +174,7 @@ START_TEST(test_lockdirs)
 	struct conf **confs;
 	confs=setup_confs(MIN_SERVER_CONF "client_lockdir=/some/other/dir\n");
 	sdirs=setup(confs);
-	set_e_protocol(confs[OPT_PROTOCOL], PROTO_2);
+	set_protocol(confs, PROTO_2);
 	fail_unless(sdirs_init(sdirs, confs)==0);
 
 	ck_assert_str_eq(sdirs->lockdir, "/some/other/dir");

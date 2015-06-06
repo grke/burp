@@ -24,7 +24,7 @@ static int open_log(struct asfd *asfd,
 	}
 
 	logp("Client version: %s\n", peer_version?:"");
-	logp("Protocol: %d\n", (int)get_e_protocol(cconfs[OPT_PROTOCOL]));
+	logp("Protocol: %d\n", (int)get_protocol(cconfs));
 	if(get_int(cconfs[OPT_CLIENT_IS_WINDOWS]))
 		logp("Client is Windows\n");
 
@@ -75,7 +75,7 @@ static int backup_phase2_server(struct async *as, struct sdirs *sdirs,
 	if(get_int(cconfs[OPT_BREAKPOINT])==2)
 		return breakpoint(cconfs, __func__);
 
-	switch(get_e_protocol(cconfs[OPT_PROTOCOL]))
+	switch(get_protocol(cconfs))
 	{
 		case PROTO_1:
 			return backup_phase2_server_protocol1(as, sdirs,
@@ -92,7 +92,7 @@ static int backup_phase3_server(struct sdirs *sdirs, struct conf **cconfs,
 	if(get_int(cconfs[OPT_BREAKPOINT])==3)
 		return breakpoint(cconfs, __func__);
 
-	switch(get_e_protocol(cconfs[OPT_PROTOCOL]))
+	switch(get_protocol(cconfs))
 	{
 		case PROTO_1:
 			return backup_phase3_server_protocol1(sdirs,
@@ -109,7 +109,7 @@ static int backup_phase4_server(struct sdirs *sdirs, struct conf **cconfs)
 
 	set_logfzp(NULL, cconfs);
 	// Phase4 will open logfp again (in case it is resuming).
-	switch(get_e_protocol(cconfs[OPT_PROTOCOL]))
+	switch(get_protocol(cconfs))
 	{
 		case PROTO_1:
 			return backup_phase4_server_protocol1(sdirs, cconfs);
@@ -120,7 +120,7 @@ static int backup_phase4_server(struct sdirs *sdirs, struct conf **cconfs)
 
 static void log_rshash(struct conf **confs)
 {
-	if(get_e_protocol(confs[OPT_PROTOCOL])!=PROTO_1) return;
+	if(get_protocol(confs)!=PROTO_1) return;
 	logp("Using librsync hash %s\n",
 		rshash_to_str(get_e_rshash(confs[OPT_RSHASH])));
 }
@@ -132,7 +132,7 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 	int do_phase2=1;
 	struct asfd *chfd=NULL;
 	struct asfd *asfd=as->asfd;
-	enum protocol protocol=get_e_protocol(cconfs[OPT_PROTOCOL]);
+	enum protocol protocol=get_protocol(cconfs);
 
 	logp("in do_backup_server\n");
 

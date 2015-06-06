@@ -43,7 +43,7 @@ int do_backup_client(struct asfd *asfd, struct conf **confs, enum action action,
 	else
 	{
 		logp("do backup client\n");
-		if(get_e_protocol(confs[OPT_PROTOCOL])==PROTO_1)
+		if(get_protocol(confs)==PROTO_1)
 			logp("Using librsync hash %s\n",
 			  rshash_to_str(get_e_rshash(confs[OPT_RSHASH])));
 	}
@@ -87,7 +87,7 @@ int do_backup_client(struct asfd *asfd, struct conf **confs, enum action action,
 				goto end;
 			}
 
-			if(get_e_protocol(confs[OPT_PROTOCOL])==PROTO_1)
+			if(get_protocol(confs)==PROTO_1)
 				ret=backup_phase2_client_protocol1(asfd,
 					confs, resume);
 			else

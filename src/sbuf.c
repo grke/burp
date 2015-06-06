@@ -2,9 +2,6 @@
 #include "cmd.h"
 #include "server/protocol2/rblk.h"
 
-static int alloc_count=0;
-static int free_count=0;
-
 struct sbuf *sbuf_alloc_protocol(enum protocol protocol)
 {
 	struct sbuf *sb;
@@ -21,13 +18,12 @@ struct sbuf *sbuf_alloc_protocol(enum protocol protocol)
 	{
 		if(!(sb->protocol2=sbuf_protocol2_alloc())) return NULL;
 	}
-alloc_count++;
 	return sb;
 }
 
 struct sbuf *sbuf_alloc(struct conf **confs)
 {
-	return sbuf_alloc_protocol(get_e_protocol(confs[OPT_PROTOCOL]));
+	return sbuf_alloc_protocol(get_protocol(confs));
 }
 
 void sbuf_free_content(struct sbuf *sb)
@@ -50,7 +46,6 @@ void sbuf_free(struct sbuf **sb)
 	free_v((void **)&((*sb)->protocol1));
 	free_v((void **)&((*sb)->protocol2));
 	free_v((void **)sb);
-free_count++;
 }
 
 int sbuf_is_link(struct sbuf *sb)

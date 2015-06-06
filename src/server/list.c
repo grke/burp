@@ -116,7 +116,7 @@ static int list_manifest(struct asfd *asfd,
 	char *manifest_dir=NULL;
 	char *last_bd_match=NULL;
 	size_t bdlen=0;
-	enum protocol protocol=get_e_protocol(confs[OPT_PROTOCOL]);
+	enum protocol protocol=get_protocol(confs);
 
 	if(!(manifest_dir=prepend_s(fullpath,
 		protocol==PROTO_1?"manifest.gz":"manifest"))
@@ -190,7 +190,7 @@ static int send_backup_name_to_client(struct asfd *asfd,
 	snprintf(msg, sizeof(msg), "%s%s",
 		bu->timestamp,
 		// Protocol2 backups are all deletable, so do not mention it.
-		get_e_protocol(confs[OPT_PROTOCOL])==PROTO_1
+		get_protocol(confs)==PROTO_1
 		&& (bu->flags & BU_DELETABLE)?" (deletable)":"");
 	return write_wrapper_str(asfd, CMD_TIMESTAMP, msg);
 }

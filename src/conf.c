@@ -122,6 +122,11 @@ enum protocol get_e_protocol(struct conf *conf)
 	return conf->data.protocol;
 }
 
+enum protocol get_protocol(struct conf **confs)
+{
+	return get_e_protocol(confs[OPT_PROTOCOL]);
+}
+
 enum recovery_method get_e_recovery_method(struct conf *conf)
 {
 	assert(conf->conf_type==CT_E_RECOVERY_METHOD);
@@ -183,6 +188,11 @@ int set_e_protocol(struct conf *conf, enum protocol p)
 	assert(conf->conf_type==CT_E_PROTOCOL);
 	conf->data.protocol=p;
 	return 0;
+}
+
+int set_protocol(struct conf **confs, enum protocol p)
+{
+	return set_e_protocol(confs[OPT_PROTOCOL], p);
 }
 
 int set_e_recovery_method(struct conf *conf, enum recovery_method r)

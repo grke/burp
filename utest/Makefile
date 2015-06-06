@@ -14,6 +14,7 @@ SRCS = \
 	test_hexmap.c \
 	test_lock.c \
 	test_pathcmp.c \
+	test_sbuf.c \
 	server/protocol1/test_dpth.c \
 	server/protocol1/test_fdirs.c \
 	server/protocol2/test_dpth.c \
@@ -21,7 +22,9 @@ SRCS = \
 
 BURP_SRCS = \
 	../src/alloc.c \
+	../src/attribs.c \
 	../src/base64.c \
+	../src/bfile.c \
 	../src/bu.c \
 	../src/cmd.c \
 	../src/cntr.c \
@@ -29,14 +32,19 @@ BURP_SRCS = \
 	../src/conffile.c \
 	../src/fsops.c \
 	../src/fzp.c \
+	../src/handy.c \
 	../src/hexmap.c \
 	../src/iobuf.c \
 	../src/lock.c \
 	../src/msg.c \
 	../src/pathcmp.c \
 	../src/prepend.c \
+	../src/sbuf.c \
 	../src/strlist.c \
+	../src/protocol1/rs_buf.c \
+	../src/protocol1/sbuf_protocol1.c \
 	../src/protocol2/blk.c \
+	../src/protocol2/sbuf_protocol2.c \
 	../src/server/bu_get.c \
 	../src/server/compress.c \
 	../src/server/dpth.c \
@@ -60,7 +68,7 @@ test: Makefile $(OBJS) $(BURP_OBJS)
 	@echo "Linking $@ ..."
 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -o $@ \
 	  $(OBJS) $(BURP_OBJS) $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
-	  $(DLIB) -lz
+	  $(DLIB) -lz -lrsync
 	@echo "Running $<"
 	./$@ || exit 1
 	make clean

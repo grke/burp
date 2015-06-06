@@ -32,7 +32,6 @@ struct sbuf
 
 	uint8_t flags;
 
-	// These maybe should be a single pointer that is casted.
 	struct protocol1 *protocol1;
 	struct protocol2 *protocol2;
 

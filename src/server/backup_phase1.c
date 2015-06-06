@@ -27,7 +27,7 @@ int backup_phase1_server_all(struct async *as,
 	while(1)
 	{
 		sbuf_free_content(sb);
-		if(get_e_protocol(confs[OPT_PROTOCOL])==PROTO_1)
+		if(get_protocol(confs)==PROTO_1)
 			ars=sbufl_fill(sb, asfd, NULL, confs);
 		else
 			ars=sbuf_fill(sb, asfd, NULL, NULL, NULL, confs);

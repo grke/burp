@@ -34,7 +34,7 @@ static int send_features(struct asfd *asfd, struct conf **cconfs)
 	char *feat=NULL;
 	struct stat statp;
 	const char *restorepath=NULL;
-	enum protocol protocol=get_e_protocol(cconfs[OPT_PROTOCOL]);
+	enum protocol protocol=get_protocol(cconfs);
 	struct strlist *startdir=get_strlist(cconfs[OPT_STARTDIR]);
 	struct strlist *incglob=get_strlist(cconfs[OPT_INCGLOB]);
 
@@ -257,8 +257,7 @@ static int extra_comms_read(struct async *as,
 		{
 			char msg[128]="";
 			// Client wants to set protocol.
-			enum protocol protocol=get_e_protocol(
-				cconfs[OPT_PROTOCOL]);
+			enum protocol protocol=get_protocol(cconfs);
 			if(protocol!=PROTO_AUTO)
 			{
 				snprintf(msg, sizeof(msg), "Client is trying to use protocol=%s but server is set to protocol=%d\n", rbuf->buf, protocol);
@@ -267,13 +266,13 @@ static int extra_comms_read(struct async *as,
 			}
 			else if(!strcmp(rbuf->buf+strlen("protocol="), "1"))
 			{
-				set_e_protocol(cconfs[OPT_PROTOCOL], PROTO_1);
-				set_e_protocol(globalcs[OPT_PROTOCOL], PROTO_1);
+				set_protocol(cconfs, PROTO_1);
+				set_protocol(globalcs, PROTO_1);
 			}
 			else if(!strcmp(rbuf->buf+strlen("protocol="), "2"))
 			{
-				set_e_protocol(cconfs[OPT_PROTOCOL], PROTO_2);
-				set_e_protocol(globalcs[OPT_PROTOCOL], PROTO_2);
+				set_protocol(cconfs, PROTO_2);
+				set_protocol(globalcs, PROTO_2);
 			}
 			else
 			{
@@ -282,7 +281,7 @@ static int extra_comms_read(struct async *as,
 				goto end;
 			}
 			logp("Client has set protocol=%d\n",
-				(int)get_e_protocol(cconfs[OPT_PROTOCOL]));
+				(int)get_protocol(cconfs));
 		}
 		else if(!strncmp_w(rbuf->buf, "rshash=blake2"))
 		{
@@ -373,15 +372,15 @@ int extra_comms(struct async *as,
 
 	// This needs to come after extra_comms_read, as the client might
 	// have set PROTO_1 or PROTO_2.
-	switch(get_e_protocol(cconfs[OPT_PROTOCOL]))
+	switch(get_protocol(cconfs))
 	{
 		case PROTO_AUTO:
 			// The protocol has not been specified. Make a choice.
 			if(vers.cli<vers.burp2)
 			{
 				// Client is burp-1.x.x, use protocol1.
-				set_e_protocol(confs[OPT_PROTOCOL], PROTO_1);
-				set_e_protocol(cconfs[OPT_PROTOCOL], PROTO_1);
+				set_protocol(confs, PROTO_1);
+				set_protocol(cconfs, PROTO_1);
 				logp("Client is burp-%s - using protocol=%d\n",
 					peer_version, PROTO_1);
 			}
@@ -390,8 +389,8 @@ int extra_comms(struct async *as,
 				// Client is burp-2.x.x, use protocol2.
 				// This will probably never be reached because
 				// the negotiation will take care of it.
-				set_e_protocol(confs[OPT_PROTOCOL], PROTO_2);
-				set_e_protocol(cconfs[OPT_PROTOCOL], PROTO_2);
+				set_protocol(confs, PROTO_2);
+				set_protocol(cconfs, PROTO_2);
 				logp("Client is burp-%s - using protocol=%d\n",
 					peer_version, PROTO_2);
 			}
@@ -408,7 +407,7 @@ int extra_comms(struct async *as,
 			goto error;
 	}
 
-	if(get_e_protocol(cconfs[OPT_PROTOCOL])==PROTO_1)
+	if(get_protocol(cconfs)==PROTO_1)
 	{
 		if(get_e_rshash(cconfs[OPT_RSHASH])==RSHASH_UNSET)
 		{

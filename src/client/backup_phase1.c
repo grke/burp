@@ -180,7 +180,7 @@ int backup_phase1_client(struct asfd *asfd, struct conf **confs, int estimate)
 	logp("Phase 1 begin (file system scan)\n");
 
 	// Encryption not yet supported in protocol2.
-	if(get_e_protocol(confs[OPT_PROTOCOL])==PROTO_1
+	if(get_protocol(confs)==PROTO_1
 	  && get_string(confs[OPT_ENCRYPTION_PASSWORD]))
 	{
 		filesymbol=CMD_ENC_FILE;

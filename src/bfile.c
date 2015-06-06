@@ -468,7 +468,7 @@ static ssize_t bfile_write(BFILE *bfd, void *buf, size_t count)
 static int bfile_open_for_send(BFILE *bfd, struct asfd *asfd,
 	const char *fname, int64_t winattr, int atime, struct conf **confs)
 {
-	if(get_e_protocol(confs[OPT_PROTOCOL])==PROTO_1
+	if(get_protocol(confs)==PROTO_1
 	  && bfd->mode!=BF_CLOSED)
 	{
 #ifdef HAVE_WIN32

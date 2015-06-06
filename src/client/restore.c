@@ -11,7 +11,7 @@ int restore_interrupt(struct asfd *asfd,
 	struct cntr *cntr=get_cntr(confs[OPT_CNTR]);
 	struct iobuf *rbuf=asfd->rbuf;
 
-	if(get_e_protocol(confs[OPT_PROTOCOL])!=PROTO_1) return 0;
+	if(get_protocol(confs)!=PROTO_1) return 0;
 	if(!cntr) return 0;
 
 	cntr_add(cntr, CMD_WARNING, 1);
@@ -468,7 +468,7 @@ static enum asl_ret restore_style_func(struct asfd *asfd,
 
 static char *get_restore_style(struct asfd *asfd, struct conf **confs)
 {
-	if(get_e_protocol(confs[OPT_PROTOCOL])==PROTO_1)
+	if(get_protocol(confs)==PROTO_1)
 		return strdup_w(RESTORE_STREAM, __func__);
 	if(asfd->simple_loop(asfd, confs, NULL, __func__,
 		restore_style_func)) return NULL;
@@ -515,7 +515,7 @@ static int restore_spool(struct asfd *asfd, struct conf **confs, char **datpath)
 static int sbuf_fill_w(struct sbuf *sb, struct asfd *asfd,
 	struct blk *blk, const char *datpath, struct conf **confs)
 {
-	if(get_e_protocol(confs[OPT_PROTOCOL])==PROTO_2)
+	if(get_protocol(confs)==PROTO_2)
 		return sbuf_fill(sb, asfd, NULL, blk, datpath, confs);
 	else
 		return sbufl_fill(sb, asfd, NULL, confs);
@@ -532,7 +532,7 @@ int do_restore_client(struct asfd *asfd,
 	char *fullpath=NULL;
 	char *style=NULL;
 	char *datpath=NULL;
-	enum protocol protocol=get_e_protocol(confs[OPT_PROTOCOL]);
+	enum protocol protocol=get_protocol(confs);
 	const char *backup=get_string(confs[OPT_BACKUP]);
 	const char *regex=get_string(confs[OPT_REGEX]);
 

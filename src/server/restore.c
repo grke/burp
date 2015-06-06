@@ -68,7 +68,7 @@ static int setup_cntr(struct asfd *asfd, const char *manifest,
 	struct sbuf *sb=NULL;
 
 // FIX THIS: this is only trying to work for protocol1.
-	if(get_e_protocol(cconfs[OPT_PROTOCOL])!=PROTO_1) return 0;
+	if(get_protocol(cconfs)!=PROTO_1) return 0;
 
 	if(!(sb=sbuf_alloc(cconfs))) goto end;
 	if(!(fzp=fzp_gzopen(manifest, "rb")))
@@ -126,7 +126,7 @@ static int hard_link_substitution(struct asfd *asfd,
 	struct manio *manio=NULL;
 	struct blk *blk=NULL;
 	int pcmp;
-	enum protocol protocol=get_e_protocol(cconfs[OPT_PROTOCOL]);
+	enum protocol protocol=get_protocol(cconfs);
 
 	if(!(manio=manio_open(manifest, "rb", protocol))
 	  || !(need_data=sbuf_alloc(cconfs))
@@ -219,7 +219,7 @@ static int restore_sbuf(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 		}
 	}
 
-	if(get_e_protocol(cconfs[OPT_PROTOCOL])==PROTO_1)
+	if(get_protocol(cconfs)==PROTO_1)
 	{
 		return restore_sbuf_protocol1(asfd, sb, bu,
 		  act, sdirs, cntr_status, cconfs);
@@ -315,7 +315,7 @@ static int restore_remaining_dirs(struct asfd *asfd, struct bu *bu,
 	// Restore any directories that are left in the list.
 	for(sb=slist->head; sb; sb=sb->next)
 	{
-		if(get_e_protocol(cconfs[OPT_PROTOCOL])==PROTO_1)
+		if(get_protocol(cconfs)==PROTO_1)
 		{
 			if(restore_sbuf_protocol1(asfd, sb, bu, act,
 				sdirs, cntr_status, cconfs))
@@ -346,7 +346,7 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 	struct manio *manio=NULL;
 	struct blk *blk=NULL;
 	struct sbuf *need_data=NULL;
-	enum protocol protocol=get_e_protocol(cconfs[OPT_PROTOCOL]);
+	enum protocol protocol=get_protocol(cconfs);
 
 	if(protocol==PROTO_2)
 	{
@@ -448,7 +448,7 @@ static int actual_restore(struct asfd *asfd, struct bu *bu,
           || !(slist=slist_alloc()))
                 goto end;
 
-	if(get_e_protocol(cconfs[OPT_PROTOCOL])==PROTO_2)
+	if(get_protocol(cconfs)==PROTO_2)
 	{
 		switch(maybe_restore_spool(asfd, manifest, sdirs, bu,
 			srestore, regex, cconfs, slist, act, cntr_status))
@@ -506,7 +506,7 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 	  || (act==ACTION_VERIFY && get_logpaths(bu, "verifylog",
 		&logpath, &logpathz))
 	  || !(manifest=prepend_s(bu->path,
-		get_e_protocol(cconfs[OPT_PROTOCOL])==PROTO_1?
+		get_protocol(cconfs)==PROTO_1?
 			"manifest.gz":"manifest")))
 	{
 		log_and_send_oom(asfd, __func__);

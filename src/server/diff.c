@@ -11,7 +11,7 @@ static int diff_manifest(struct asfd *asfd,
 	struct sbuf *sb=NULL;
 	struct manio *manio=NULL;
 	char *manifest_dir=NULL;
-	enum protocol protocol=get_e_protocol(confs[OPT_PROTOCOL]);
+	enum protocol protocol=get_protocol(confs);
 
 	if(!(manifest_dir=prepend_s(fullpath,
 		protocol==PROTO_1?"manifest.gz":"manifest"))

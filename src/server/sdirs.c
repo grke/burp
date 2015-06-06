@@ -51,7 +51,7 @@ int sdirs_get_real_manifest(struct sdirs *sdirs, struct conf **confs)
 {
 	return free_prepend_s(&sdirs->rmanifest,
 		sdirs->rworking,
-		get_e_protocol(confs[OPT_PROTOCOL])==PROTO_1?
+		get_protocol(confs)==PROTO_1?
 			"manifest.gz":"manifest");
 }
 
@@ -182,7 +182,7 @@ extern int sdirs_init(struct sdirs *sdirs, struct conf **confs)
 	if(!(sdirs->base=strdup_w(directory, __func__)))
 		goto error;
 
-	if(get_e_protocol(confs[OPT_PROTOCOL])==PROTO_1)
+	if(get_protocol(confs)==PROTO_1)
 	{
 		if(do_protocol1_dirs(sdirs, confs)) goto error;
 	}

@@ -27,7 +27,6 @@ extern void add_fd_to_sets(int fd,
 extern int set_peer_env_vars(int cfd);
 extern int init_client_socket(const char *host, const char *port);
 extern void reuseaddr(int fd);
-extern char *comp_level(struct conf **confs);
 extern int chuser_and_or_chgrp(struct conf **confs);
 extern const char *getdatestr(time_t t);
 extern const char *time_taken(time_t d);

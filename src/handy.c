@@ -322,13 +322,6 @@ void setup_signal(int sig, void handler(int sig))
 	sigaction(sig, &sa, NULL);
 }
 
-char *comp_level(struct conf **confs)
-{
-	static char comp[8]="";
-	snprintf(comp, sizeof(comp), "wb%d", get_int(confs[OPT_COMPRESSION]));
-	return comp;
-}
-
 /* Function based on src/lib/priv.c from bacula. */
 int chuser_and_or_chgrp(struct conf **confs)
 {

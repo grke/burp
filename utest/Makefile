@@ -38,10 +38,12 @@ BURP_SRCS = \
 	../src/strlist.c \
 	../src/protocol2/blk.c \
 	../src/server/bu_get.c \
+	../src/server/compress.c \
 	../src/server/dpth.c \
 	../src/server/sdirs.c \
 	../src/server/protocol1/dpth.c \
 	../src/server/protocol1/fdirs.c \
+	../src/server/protocol1/zlibio.c \
 	../src/server/protocol2/dpth.c \
 	../src/server/timestamp.c \
 

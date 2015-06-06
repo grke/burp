@@ -64,6 +64,14 @@ static void read_checks(
 	ck_assert_str_eq(d->expected_str, buf);
 }
 
+static void do_read_tests(
+	struct fzp *(*open_func)(const char *, const char *))
+{
+	setup_for_read(open_func, content);
+	FOREACH(rd) read_checks(open_func, &rd[i]);
+	tear_down();
+};
+
 struct sdata
 {
 	off_t pos;
@@ -91,24 +99,55 @@ static void seek_checks(
 	fail_unless(fzp==NULL);
 }
 
-static void do_read_tests(
-	struct fzp *(*open_func)(const char *, const char *))
-{
-	setup_for_read(open_func, content);
-
-	FOREACH(rd) read_checks(open_func, &rd[i]);
-
-	tear_down();
-}
-
 static void do_seek_tests(
 	struct fzp *(*open_func)(const char *, const char *))
 {
 	setup_for_read(open_func, content);
-
 	FOREACH(sd) seek_checks(open_func, &sd[i]);
-
 	tear_down();
+};
+
+struct tdata
+{
+	off_t pos;
+	const char *expected_str;
+};
+
+static struct tdata td[] = {
+	{  0, "" },
+	{  5, "01234" },
+	{ 17, "0123456789abcdefg" },
+	{ 20, "0123456789abcdefg" }
+};
+
+static void truncate_checks(
+	struct fzp *(*open_func)(const char *, const char *),
+	enum fzp_type type,
+	struct tdata *d)
+{
+	char buf[32]="";
+	struct fzp *fzp;
+
+	fail_unless(!fzp_truncate(file, type, d->pos, NULL));
+	fail_unless((fzp=open_func(file, "rb"))!=NULL);
+	fzp_read(fzp, buf, sizeof(buf));
+	fail_unless(fzp_eof(fzp));
+	fail_unless(!fzp_close(&fzp));
+	fail_unless(fzp==NULL);
+
+	ck_assert_str_eq(d->expected_str, buf);
+}
+
+static void do_truncate_tests(
+	struct fzp *(*open_func)(const char *, const char *),
+	enum fzp_type type)
+{
+	FOREACH(td)
+	{
+		setup_for_read(open_func, content);
+		truncate_checks(open_func, type, &td[i]);
+		tear_down();
+	}
 }
 
 START_TEST(test_fzp_read)
@@ -135,6 +174,18 @@ START_TEST(test_fzp_gzseek)
 }
 END_TEST
 
+START_TEST(test_fzp_truncate)
+{
+	do_truncate_tests(fzp_open, FZP_FILE);
+}
+END_TEST
+
+START_TEST(test_fzp_gztruncate)
+{
+	do_truncate_tests(fzp_gzopen, FZP_COMPRESSED);
+}
+END_TEST
+
 START_TEST(test_fzp_null_pointer)
 {
 	struct fzp *fzp=NULL;
@@ -147,7 +198,8 @@ START_TEST(test_fzp_null_pointer)
 	fail_unless(fzp_seek(NULL, 1, SEEK_SET)==-1);
 	fail_unless(fzp_tell(NULL)==-1);
 	fail_unless(fzp_printf(NULL, "%s", "blah")==-1);
-	alloc_check();
+	fail_unless(fzp_truncate(NULL, FZP_FILE, 1, NULL)==-1);
+	tear_down();
 }
 END_TEST
 
@@ -164,6 +216,8 @@ Suite *suite_fzp(void)
 	tcase_add_test(tc_core, test_fzp_gzread);
 	tcase_add_test(tc_core, test_fzp_seek);
 	tcase_add_test(tc_core, test_fzp_gzseek);
+	tcase_add_test(tc_core, test_fzp_truncate);
+	tcase_add_test(tc_core, test_fzp_gztruncate);
 	tcase_add_test(tc_core, test_fzp_null_pointer);
 	suite_add_tcase(s, tc_core);
 

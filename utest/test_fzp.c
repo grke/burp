@@ -74,7 +74,7 @@ static struct sdata sd[] = {
 	{ 5 },
 	{ 10 },
 	{ 16 },
-	{ 20 }
+	{ 20 } // It is OK to seek beyond the end of a file.
 };
 
 static void seek_checks(
@@ -86,6 +86,7 @@ static void seek_checks(
 	fail_unless((fzp=open_func(file, "rb"))!=NULL);
 	fail_unless(!fzp_seek(fzp, d->pos, SEEK_SET));
 	fail_unless(fzp_tell(fzp)==d->pos);
+	fail_unless(!fzp_eof(fzp));
 	fail_unless(!fzp_close(&fzp));
 	fail_unless(fzp==NULL);
 }

@@ -6,13 +6,13 @@ static int incexc_matches(const char *fullrealwork, const char *incexc)
 {
 	int ret=0;
 	int got=0;
-	FILE *fp=NULL;
+	struct fzp *fzp=NULL;
 	char buf[4096]="";
 	const char *inc=NULL;
 	char *old_incexc_path=NULL;
 	if(!(old_incexc_path=prepend_s(fullrealwork, "incexc")))
 		return -1;
-	if(!(fp=open_file(old_incexc_path, "rb")))
+	if(!(fzp=fzp_open(old_incexc_path, "rb")))
 	{
 		// Assume that no incexc file could be found because the client
 		// was on an old version. Assume resume is OK and return 1.
@@ -20,7 +20,7 @@ static int incexc_matches(const char *fullrealwork, const char *incexc)
 		goto end;
 	}
 	inc=incexc;
-	while((got=fread(buf, 1, sizeof(buf), fp))>0)
+	while((got=fzp_read(fzp, buf, sizeof(buf)))>0)
 	{
 		if(strlen(inc)<(size_t)got) break;
 		if(strncmp(buf, inc, got)) break;
@@ -29,7 +29,7 @@ static int incexc_matches(const char *fullrealwork, const char *incexc)
 	if(inc && strlen(inc)) ret=0;
 	else ret=1;
 end:
-	close_fp(&fp);
+	fzp_close(&fzp);
 	free_w(&old_incexc_path);
 	return ret;
 }
@@ -206,7 +206,7 @@ static int recover_working(struct async *as,
 	// We are not deleting the old working directory - open the log inside
 	// for appending.
 	if(!(logpath=prepend_s(sdirs->rworking, "log"))
-	  || set_logfp(logpath, cconfs))
+	  || set_logfzp(logpath, cconfs))
 		goto end;
 
 	switch(recovery_method)
@@ -229,7 +229,7 @@ static int recover_working(struct async *as,
 end:
 	free_w(&logpath);
 	free_w(&phase1datatmp);
-	set_logfp(NULL, cconfs); // fclose the logfp
+	set_logfzp(NULL, cconfs); // fclose the logfzp
 	return ret;
 }
 

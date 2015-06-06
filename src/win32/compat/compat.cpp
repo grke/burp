@@ -1999,7 +1999,8 @@ void openlog(const char *ident, int option, int facility)
 {
 }
 
-static pid_t do_forkchild(FILE **sin, FILE **sout, FILE **serr,
+static pid_t do_forkchild(struct fzp **sin,
+	struct fzp **sout, struct fzp **serr,
 	const char *path, char * const argv[], int do_wait)
 {
 	int a=0;
@@ -2030,13 +2031,13 @@ static pid_t do_forkchild(FILE **sin, FILE **sout, FILE **serr,
 	return 0;
 }
 
-pid_t forkchild(FILE **sin, FILE **sout, FILE **serr,
+pid_t forkchild(struct fzp **sin, struct fzp **sout, struct fzp **serr,
 	const char *path, char * const argv[])
 {
 	return do_forkchild(sin, sout, serr, path, argv, 1 /* wait */);
 }
 
-pid_t forkchild_no_wait(FILE **sin, FILE **sout, FILE **serr,
+pid_t forkchild_no_wait(struct fzp **sin, struct fzp **sout, struct fzp **serr,
 	const char *path, char * const argv[])
 {
 	return do_forkchild(sin, sout, serr, path, argv, 0 /* do not wait */);

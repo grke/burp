@@ -124,7 +124,7 @@ int reload(struct conf **confs, const char *conffile, bool firsttime,
 
 	// This will turn on syslogging which could not be turned on before
 	// conf_load.
-	set_logfp(NULL, confs);
+	set_logfzp(NULL, confs);
 
 #ifndef HAVE_WIN32
 	if(get_e_burp_mode(confs[OPT_BURP_MODE])==BURP_MODE_SERVER)

@@ -4,8 +4,10 @@
 #include "fzp.h"
 #include "log.h"
 #include "prepend.h"
+#ifndef HAVE_WIN32
 #include "server/compress.h"
 #include "server/protocol1/zlibio.h"
+#endif
 
 static struct fzp *fzp_alloc(void)
 {
@@ -16,6 +18,52 @@ static void fzp_free(struct fzp **fzp)
 {
 	if(!fzp || !*fzp) return;
 	free_v((void **)fzp);
+}
+
+FILE *open_fp(const char *fname, const char *mode)
+{
+	FILE *fp=NULL;
+	if(!(fp=fopen(fname, mode)))
+		logp("could not open %s: %s\n", fname, strerror(errno));
+	return fp;
+}
+
+gzFile open_zp(const char *fname, const char *mode)
+{
+	gzFile zp=NULL;
+
+	if(!(zp=gzopen(fname, mode)))
+		logp("could not open %s: %s\n", fname, strerror(errno));
+	return zp;
+}
+
+static int close_fp(FILE **fp)
+{
+	int ret=0;
+	if(!*fp) return ret;
+	if(fclose(*fp))
+	{
+		logp("fclose failed: %s\n", strerror(errno));
+		ret=-1;
+	}
+	*fp=NULL;
+	return ret;
+}
+
+static int close_zp(gzFile *zp)
+{
+	int e;
+	int ret=0;
+	if(!*zp) return ret;
+	if((e=gzclose(*zp)))
+	{
+		const char *str=NULL;
+		if(e==Z_ERRNO) str=strerror(errno);
+		else str=gzerror(*zp, &e);
+		logp("gzclose failed: %d (%s)\n", e, str?:"");
+		ret=-1;
+	}
+	return ret;
 }
 
 static void unknown_type(enum fzp_type type, const char *func)
@@ -38,11 +86,11 @@ static struct fzp *fzp_do_open(const char *path, const char *mode,
 	switch(type)
 	{
 		case FZP_FILE:
-			if(!(fzp->fp=open_file(path, mode)))
+			if(!(fzp->fp=open_fp(path, mode)))
 				goto error;
 			return fzp;
 		case FZP_COMPRESSED:
-			if(!(fzp->zp=gzopen_file(path, mode)))
+			if(!(fzp->zp=open_zp(path, mode)))
 				goto error;
 			return fzp;
 		default:
@@ -74,7 +122,7 @@ int fzp_close(struct fzp **fzp)
 			ret=close_fp(&((*fzp)->fp));
 			break;
 		case FZP_COMPRESSED:
-			ret=gzclose_fp(&((*fzp)->zp));
+			ret=close_zp(&((*fzp)->zp));
 			break;
 		default:
 			unknown_type((*fzp)->type, __func__);
@@ -190,32 +238,7 @@ error:
 	return -1;
 }
 
-int fzp_printf(struct fzp *fzp, const char *format, ...)
-{
-	static char buf[512];
-	int ret=-1;
-	va_list ap;
-	va_start(ap, format);
-	vsnprintf(buf, sizeof(buf), format, ap);
-
-	if(fzp) switch(fzp->type)
-	{
-		case FZP_FILE:
-			ret=fprintf(fzp->fp, "%s", buf);
-			break;
-		case FZP_COMPRESSED:
-			ret=gzprintf(fzp->zp, "%s", buf);
-			break;
-		default:
-			unknown_type(fzp->type, __func__);
-			break;
-	}
-	else
-		not_open(__func__);
-	va_end(ap);
-	return ret;
-}
-
+#ifndef HAVE_WIN32
 // There is no zlib gztruncate. Inflate it, truncate it, recompress it.
 static int gztruncate(const char *path, off_t length, struct conf **confs)
 {
@@ -260,4 +283,157 @@ int fzp_truncate(const char *path, enum fzp_type type, off_t length,
 	}
 error:
 	return -1;
+}
+#endif
+
+int fzp_printf(struct fzp *fzp, const char *format, ...)
+{
+	static char buf[4096];
+	int ret=-1;
+	va_list ap;
+	va_start(ap, format);
+	vsnprintf(buf, sizeof(buf), format, ap);
+
+	if(fzp) switch(fzp->type)
+	{
+		case FZP_FILE:
+			ret=fprintf(fzp->fp, "%s", buf);
+			break;
+		case FZP_COMPRESSED:
+			ret=gzprintf(fzp->zp, "%s", buf);
+			break;
+		default:
+			unknown_type(fzp->type, __func__);
+			break;
+	}
+	else
+		not_open(__func__);
+	va_end(ap);
+	return ret;
+}
+
+void fzp_setlinebuf(struct fzp *fzp)
+{
+#ifndef HAVE_WIN32
+	if(fzp) switch(fzp->type)
+	{
+		case FZP_FILE:
+			setlinebuf(fzp->fp);
+			return;
+		case FZP_COMPRESSED:
+			logp("gzsetlinebuf() does not exist in %s\n", __func__);
+			return;
+		default:
+			unknown_type(fzp->type, __func__);
+			return;
+	}
+	not_open(__func__);
+#endif
+}
+
+char *fzp_gets(struct fzp *fzp, char *s, int size)
+{
+	if(fzp) switch(fzp->type)
+	{
+		case FZP_FILE:
+			return fgets(s, size, fzp->fp);
+		case FZP_COMPRESSED:
+			return gzgets(fzp->zp, s, size);
+		default:
+			unknown_type(fzp->type, __func__);
+			goto error;
+	}
+	not_open(__func__);
+error:
+	return NULL;
+}
+
+extern int fzp_fileno(struct fzp *fzp)
+{
+	if(fzp) switch(fzp->type)
+	{
+		case FZP_FILE:
+			return fileno(fzp->fp);
+		case FZP_COMPRESSED:
+			logp("gzfileno() does not exist in %s\n", __func__);
+			goto error;
+		default:
+			unknown_type(fzp->type, __func__);
+			goto error;
+	}
+	not_open(__func__);
+error:
+	return -1;
+}
+
+static struct fzp *fzp_do_dopen(int fd, const char *mode,
+	enum fzp_type type)
+{
+	struct fzp *fzp=NULL;
+
+	if(!(fzp=fzp_alloc())) goto error;
+	fzp->type=type;
+	switch(type)
+	{
+		case FZP_FILE:
+			if(!(fzp->fp=fdopen(fd, mode)))
+				goto error;
+			return fzp;
+		case FZP_COMPRESSED:
+			if(!(fzp->zp=gzdopen(fd, mode)))
+				goto error;
+			return fzp;
+		default:
+			unknown_type(fzp->type, __func__);
+			goto error;
+	}
+error:
+	fzp_close(&fzp);
+	return NULL;
+}
+
+struct fzp *fzp_dopen(int fd, const char *mode)
+{
+	return fzp_do_dopen(fd, mode, FZP_FILE);
+}
+
+struct fzp *fzp_gzdopen(int fd, const char *mode)
+{
+	return fzp_do_dopen(fd, mode, FZP_COMPRESSED);
+}
+
+void fzp_ERR_print_errors_fp(struct fzp *fzp)
+{
+	if(fzp) switch(fzp->type)
+	{
+		case FZP_FILE:
+			ERR_print_errors_fp(fzp->fp);
+			break;
+		case FZP_COMPRESSED:
+			logp("ERR_print_errors_zp() does not exist in %s\n",
+				__func__);
+			break;
+		default:
+			unknown_type(fzp->type, __func__);
+			break;
+	}
+}
+
+X509 *fzp_PEM_read_X509(struct fzp *fzp)
+{
+	if(fzp) switch(fzp->type)
+	{
+		case FZP_FILE:
+			return PEM_read_X509(fzp->fp, NULL, NULL, NULL);
+		case FZP_COMPRESSED:
+			logp("PEM_read_X509() does not exist in %s\n",
+				__func__);
+			goto error;
+		default:
+			unknown_type(fzp->type, __func__);
+			goto error;
+	}
+	not_open(__func__);
+error:
+	return NULL;
 }

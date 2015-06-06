@@ -96,10 +96,10 @@ static int flag_wrap_str(struct bu *bu, uint16_t flag, const char *field)
 	return yajl_gen_str_w(field);
 }
 
-static gzFile open_backup_log(struct bu *bu, const char *logfile)
+static struct fzp *open_backup_log(struct bu *bu, const char *logfile)
 {
-	gzFile zp=NULL;
 	char *path=NULL;
+	struct fzp *fzp=NULL;
 
 	char logfilereal[32]="";
 	if(!strcmp(logfile, "backup"))
@@ -117,15 +117,15 @@ static gzFile open_backup_log(struct bu *bu, const char *logfile)
 
 	if(!(path=prepend_s(bu->path, logfilereal)))
 		goto end;
-	if(!(zp=gzopen_file(path, "rb")))
+	if(!(fzp=fzp_gzopen(path, "rb")))
 	{
 		if(astrcat(&path, ".gz", __func__)
-		  || !(zp=gzopen_file(path, "rb")))
+		  || !(fzp=fzp_gzopen(path, "rb")))
 			goto end;
 	}
 end:
 	free_w(&path);
-	return zp;
+	return fzp;
 
 }
 
@@ -133,18 +133,18 @@ static int flag_wrap_str_zp(struct bu *bu, uint16_t flag, const char *field,
 	const char *logfile)
 {
 	int ret=-1;
-	gzFile zp=NULL;
+	struct fzp *fzp=NULL;
 	if(!flag_matches(bu, flag)
 	  || !logfile || strcmp(logfile, field))
 		return 0;
-	if(!(zp=open_backup_log(bu, logfile))) goto end;
+	if(!(fzp=open_backup_log(bu, logfile))) goto end;
 	if(yajl_gen_str_w(field)) goto end;
 	if(yajl_array_open_w()) goto end;
-	if(zp)
+	if(fzp)
 	{
 		char *cp=NULL;
 		char buf[1024]="";
-		while(gzgets(zp, buf, sizeof(buf)))
+		while(fzp_gets(fzp, buf, sizeof(buf)))
 		{
 			if((cp=strrchr(buf, '\n'))) *cp='\0';
 			if(yajl_gen_str_w(buf))
@@ -154,7 +154,7 @@ static int flag_wrap_str_zp(struct bu *bu, uint16_t flag, const char *field,
 	if(yajl_array_close_w()) goto end;
 	ret=0;
 end:
-	gzclose_fp(&zp);
+	fzp_close(&fzp);
 	return ret;
 }
 

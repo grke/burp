@@ -208,7 +208,7 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf **confs)
 	switch(lock->status)
 	{
 		case GET_LOCK_GOT:
-			set_logfp(sdirs->champlog, confs);
+			set_logfzp(sdirs->champlog, confs);
 			logp("Got champ lock for dedup_group: %s\n",
 				get_string(confs[OPT_DEDUP_GROUP]));
 			break;
@@ -328,7 +328,7 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf **confs)
 
 end:
 	logp("champ chooser exiting: %d\n", ret);
-	set_logfp(NULL, confs);
+	set_logfzp(NULL, confs);
 	async_free(&as);
 	asfd_free(&asfd); // This closes s for us.
 	close_fd(&s);

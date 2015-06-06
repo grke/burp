@@ -197,8 +197,14 @@ START_TEST(test_fzp_null_pointer)
 	fail_unless(fzp_flush(NULL)==EOF);
 	fail_unless(fzp_seek(NULL, 1, SEEK_SET)==-1);
 	fail_unless(fzp_tell(NULL)==-1);
-	fail_unless(fzp_printf(NULL, "%s", "blah")==-1);
 	fail_unless(fzp_truncate(NULL, FZP_FILE, 1, NULL)==-1);
+	fail_unless(fzp_printf(NULL, "%s", "blah")==-1);
+	fzp_setlinebuf(NULL);
+	fail_unless(fzp_gets(NULL, NULL, 0)==NULL);
+	fail_unless(fzp_fileno(NULL)==-1);
+
+	fzp_ERR_print_errors_fp(NULL);
+	fail_unless(!fzp_PEM_read_X509(NULL));
 	tear_down();
 }
 END_TEST

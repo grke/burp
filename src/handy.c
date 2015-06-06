@@ -60,7 +60,7 @@ static int write_endfile(struct asfd *asfd, unsigned long long bytes)
 int send_whole_file_gz(struct asfd *asfd,
 	const char *fname, const char *datapth, int quick_read,
 	unsigned long long *bytes, struct conf **confs,
-	int compression, FILE *fp)
+	int compression, struct fzp *fzp)
 {
 	int ret=0;
 	int zret=0;
@@ -85,7 +85,7 @@ int send_whole_file_gz(struct asfd *asfd,
 
 	do
 	{
-		strm.avail_in=fread(in, 1, ZCHUNK, fp);
+		strm.avail_in=fzp_read(fzp, in, ZCHUNK);
 		if(!compression && !strm.avail_in) break;
 
 		*bytes+=strm.avail_in;
@@ -529,18 +529,18 @@ end:
 int send_a_file(struct asfd *asfd, const char *path, struct conf **confs)
 {
 	int ret=0;
-	FILE *fp=NULL;
+	struct fzp *fzp=NULL;
 	unsigned long long bytes=0;
-	if(!(fp=open_file(path, "rb"))
+	if(!(fzp=fzp_open(path, "rb"))
 	  || send_whole_file_gz(asfd, path, "datapth", 0, &bytes,
-		confs, 9 /*compression*/, fp))
+		confs, 9 /*compression*/, fzp))
 	{
 		ret=-1;
 		goto end;
 	}
 	logp("Sent %s\n", path);
 end:
-	close_fp(&fp);
+	fzp_close(&fzp);
 	return ret;
 }
 

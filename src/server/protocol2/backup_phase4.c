@@ -85,8 +85,6 @@ static int gzprintf_hooks(struct fzp *fzp, struct hooks *hooks)
 
 //	printf("NW: %c%04lX%s\n", CMD_MANIFEST,
 //		strlen(hooks->path), hooks->path);
-	// FIX THIS: The path could be long, and fzp_printf will truncate at
-	// 512 characters.
 	fzp_printf(fzp, "%c%04lX%s\n", CMD_MANIFEST,
 		strlen(hooks->path), hooks->path);
 	for(f=hooks->fingerprints; f<hooks->fingerprints+len; f+=WEAK_LEN)
@@ -323,7 +321,7 @@ int backup_phase4_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 
 	if(!(logpath=prepend_s(sdirs->finishing, "log")))
 		goto end;
-	if(set_logfp(logpath, confs))
+	if(set_logfzp(logpath, confs))
 		goto end;
 
 	logp("Begin phase4 (sparse generation)\n");

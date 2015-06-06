@@ -60,8 +60,8 @@ _ZN6winverC2Ev
 syslog
 umask
 utime
-_Z9forkchildPP6_iobufS1_S1_PKcPKPc
-_Z17forkchild_no_waitPP6_iobufS1_S1_PKcPKPc
+_Z9forkchildPP3fzpS1_S1_PKcPKPc
+_Z17forkchild_no_waitPP3fzpS1_S1_PKcPKPc
  
 ; print.o
 _Z10__vsprintfPcPKcS_

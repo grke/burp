@@ -513,7 +513,7 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 		goto end;
 	}
 
-	if(set_logfp(logpath, cconfs))
+	if(set_logfzp(logpath, cconfs))
 	{
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
@@ -541,7 +541,7 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 	ret=actual_restore(asfd, bu, manifest,
 		  regex, srestore, act, sdirs, cntr_status, cconfs);
 end:
-	set_logfp(NULL, cconfs);
+	set_logfzp(NULL, cconfs);
 	compress_file(logpath, logpathz, cconfs);
 	if(manifest) free(manifest);
 	if(logpath) free(logpath);

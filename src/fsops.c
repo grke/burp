@@ -15,36 +15,6 @@ void close_fd(int *fd)
 	*fd=-1;
 }
 
-int close_fp(FILE **fp)
-{
-	if(!*fp) return 0;
-	if(fclose(*fp))
-	{
-		logp("fclose failed: %s\n", strerror(errno));
-		*fp=NULL;
-		return -1;
-	}
-	*fp=NULL;
-	return 0;
-}
-
-int gzclose_fp(gzFile *fp)
-{
-	int e;
-	if(!*fp) return 0;
-	if((e=gzclose(*fp)))
-	{
-		const char *str=NULL;
-		if(e==Z_ERRNO) str=strerror(errno);
-		else str=gzerror(*fp, &e);
-		logp("gzclose failed: %d (%s)\n", e, str?:"");
-		*fp=NULL;
-		return -1;
-	}
-	*fp=NULL;
-	return 0;
-}
-
 int is_dir_lstat(const char *path)
 {
         struct stat buf;
@@ -330,28 +300,4 @@ int looks_like_tmp_or_hidden_file(const char *filename)
 	  || filename[strlen(filename)-1]=='~')
 		return 1;
 	return 0;
-}
-
-FILE *open_file(const char *fname, const char *mode)
-{
-	FILE *fp=NULL;
-
-	if(!(fp=fopen(fname, mode)))
-	{
-		logp("could not open %s: %s\n", fname, strerror(errno));
-		return NULL;
-	}
-	return fp;
-}
-
-gzFile gzopen_file(const char *fname, const char *mode)
-{
-	gzFile fp=NULL;
-
-	if(!(fp=gzopen(fname, mode)))
-	{
-		logp("could not open %s: %s\n", fname, strerror(errno));
-		return NULL;
-	}
-	return fp;
 }

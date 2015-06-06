@@ -17,7 +17,7 @@ static int open_log(struct asfd *asfd,
 	const char *peer_version=get_string(cconfs[OPT_PEER_VERSION]);
 
 	if(!(logpath=prepend_s(sdirs->rworking, "log"))) goto end;
-	if(set_logfp(logpath, cconfs))
+	if(set_logfzp(logpath, cconfs))
 	{
 		logp("could not open log file: %s\n", logpath);
 		goto end;
@@ -43,16 +43,16 @@ end:
 static int write_incexc(const char *realworking, const char *incexc)
 {
 	int ret=-1;
-	FILE *fp=NULL;
+	struct fzp *fzp=NULL;
 	char *path=NULL;
 	if(!incexc || !*incexc) return 0;
 	if(!(path=prepend_s(realworking, "incexc"))
-	  || !(fp=open_file(path, "wb")))
+	  || !(fzp=fzp_open(path, "wb")))
 		goto end;
-	fprintf(fp, "%s", incexc);
+	fzp_printf(fzp, "%s", incexc);
 	ret=0;
 end:
-	if(close_fp(&fp))
+	if(fzp_close(&fzp))
 	{
 		logp("error writing to %s in write_incexc\n", path);
 		ret=-1;
@@ -107,7 +107,7 @@ static int backup_phase4_server(struct sdirs *sdirs, struct conf **cconfs)
 	if(get_int(cconfs[OPT_BREAKPOINT])==4)
 		return breakpoint(cconfs, __func__);
 
-	set_logfp(NULL, cconfs);
+	set_logfzp(NULL, cconfs);
 	// Phase4 will open logfp again (in case it is resuming).
 	switch(get_e_protocol(cconfs[OPT_PROTOCOL]))
 	{
@@ -226,14 +226,14 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 	if(do_rename(sdirs->finishing, sdirs->current)) goto error;
 
 	logp("Backup completed.\n");
-	set_logfp(NULL, cconfs);
+	set_logfzp(NULL, cconfs);
 	compress_filename(sdirs->rworking, "log", "log.gz", cconfs);
 
 	goto end;
 error:
 	ret=-1;
 end:
-	set_logfp(NULL, cconfs);
+	set_logfzp(NULL, cconfs);
 	if(chfd) as->asfd_remove(as, chfd);
 	asfd_free(&chfd);
 

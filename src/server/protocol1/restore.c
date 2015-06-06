@@ -7,6 +7,16 @@
 
 #include <librsync.h>
 
+static int create_zero_length_file(const char *path)
+{
+	int ret=0;
+	struct fzp *dest;
+	if(!(dest=fzp_open(path, "wb")))
+		ret=-1;
+	ret|=fzp_close(&dest);
+	return ret;
+}
+
 static int inflate_or_link_oldfile(struct asfd *asfd, const char *oldpath,
 	const char *infpath, struct conf **cconfs, int compression)
 {
@@ -25,19 +35,10 @@ static int inflate_or_link_oldfile(struct asfd *asfd, const char *oldpath,
 
 		if(!statp.st_size)
 		{
-			FILE *dest;
 			// Empty file - cannot inflate.
-			// Just open and close the destination and we have
-			// duplicated a zero length file.
 			logp("asked to inflate zero length file: %s\n",
 				oldpath);
-			if(!(dest=open_file(infpath, "wb")))
-			{
-				close_fp(&dest);
-				return -1;
-			}
-			close_fp(&dest);
-			return 0;
+			return create_zero_length_file(infpath);
 		}
 
 		if((ret=zlib_inflate(asfd, oldpath, infpath, cconfs)))
@@ -124,6 +125,8 @@ static int verify_file(struct asfd *asfd, struct sbuf *sb,
 	uint8_t in[ZCHUNK];
 	uint8_t checksum[MD5_DIGEST_LENGTH];
 	unsigned long long cbytes=0;
+	struct fzp *fzp=NULL;
+
 	if(!(cp=strrchr(sb->protocol1->endfile.buf, ':')))
 	{
 		logw(asfd, cconfs,
@@ -142,59 +145,32 @@ static int verify_file(struct asfd *asfd, struct sbuf *sb,
 	  || sb->path.cmd==CMD_EFS_FILE
 	  || sb->path.cmd==CMD_ENC_VSS
 	  || (!patches && !dpth_protocol1_is_compressed(sb->compression, best)))
-	{
-		// If we did some patches or encryption, or the compression
-		// was turned off, the resulting file is not gzipped.
-		FILE *fp=NULL;
-		if(!(fp=open_file(best, "rb")))
-		{
-			logw(asfd, cconfs, "could not open %s\n", best);
-			return 0;
-		}
-		while((b=fread(in, 1, ZCHUNK, fp))>0)
-		{
-			cbytes+=b;
-			if(!MD5_Update(&md5, in, b))
-			{
-				logp("MD5_Update() failed\n");
-				close_fp(&fp);
-				return -1;
-			}
-		}
-		if(!feof(fp))
-		{
-			logw(asfd, cconfs, "error while reading %s\n", best);
-			close_fp(&fp);
-			return 0;
-		}
-		close_fp(&fp);
-	}
+		fzp=fzp_open(best, "rb");
 	else
+		fzp=fzp_gzopen(best, "rb");
+
+	if(!fzp)
 	{
-		gzFile zp=NULL;
-		if(!(zp=gzopen_file(best, "rb")))
-		{
-			logw(asfd, cconfs, "could not gzopen %s\n", best);
-			return 0;
-		}
-		while((b=gzread(zp, in, ZCHUNK))>0)
-		{
-			cbytes+=b;
-			if(!MD5_Update(&md5, in, b))
-			{
-				logp("MD5_Update() failed\n");
-				gzclose_fp(&zp);
-				return -1;
-			}
-		}
-		if(!gzeof(zp))
-		{
-			logw(asfd, cconfs, "error while gzreading %s\n", best);
-			gzclose_fp(&zp);
-			return 0;
-		}
-		gzclose_fp(&zp);
+		logw(asfd, cconfs, "could not open %s\n", best);
+		return 0;
 	}
+	while((b=fzp_read(fzp, in, ZCHUNK))>0)
+	{
+		cbytes+=b;
+		if(!MD5_Update(&md5, in, b))
+		{
+			logp("MD5_Update() failed\n");
+			fzp_close(&fzp);
+			return -1;
+		}
+	}
+	if(!fzp_eof(fzp))
+	{
+		logw(asfd, cconfs, "error while reading %s\n", best);
+		fzp_close(&fzp);
+		return 0;
+	}
+	fzp_close(&fzp);
 	if(!MD5_Final(checksum, &md5))
 	{
 		logp("MD5_Final() failed\n");

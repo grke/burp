@@ -28,7 +28,7 @@ struct dpth
 	int max_storage_subdirs;
 	// Currently open data file. Only one is open at a time, while many
 	// may be locked.
-	FILE *fp;
+	struct fzp *fzp;
 	// List of locked data files. 
 	struct dpth_lock *head;
 	struct dpth_lock *tail;

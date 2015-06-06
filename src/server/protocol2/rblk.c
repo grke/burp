@@ -13,7 +13,7 @@ struct rblk
 #define RBLK_MAX	10
 
 // Return 0 on OK, -1 on error, 1 when there is no more to read.
-static int read_next_data(FILE *fp, struct rblk *rblk, int ind, int r)
+static int read_next_data(struct fzp *fzp, struct rblk *rblk, int ind, int r)
 {
 	enum cmd cmd=CMD_ERROR;
 	size_t bytes;
@@ -21,7 +21,7 @@ static int read_next_data(FILE *fp, struct rblk *rblk, int ind, int r)
 	char buf[5];
 	// FIX THIS: Check for the appropriate return value that means there
 	// is no more to read.
-	if(fread(buf, 1, 5, fp)!=5) return 1;
+	if(fzp_read(fzp, buf, 5)!=5) return 1;
 	if((sscanf(buf, "%c%04X", (uint8_t *)&cmd, &len))!=2)
 	{
 		logp("sscanf failed in %s: %s\n", __func__, buf);
@@ -35,7 +35,7 @@ static int read_next_data(FILE *fp, struct rblk *rblk, int ind, int r)
 	if(!(rblk[ind].readbuf[r].buf=
 		(char *)realloc_w(rblk[ind].readbuf[r].buf, len, __func__)))
 		return -1;
-	if((bytes=fread(rblk[ind].readbuf[r].buf, 1, len, fp))!=len)
+	if((bytes=fzp_read(fzp, rblk[ind].readbuf[r].buf, len))!=len)
 	{
 		logp("Short read: %d wanted: %d\n", (int)bytes, (int)len);
 		return -1;
@@ -49,13 +49,13 @@ static int read_next_data(FILE *fp, struct rblk *rblk, int ind, int r)
 static int load_rblk(struct rblk *rblks, int ind, const char *datpath)
 {
 	int r;
-	FILE *dfp;
+	struct fzp *dfp;
 	free_w(&rblks[ind].datpath);
 	if(!(rblks[ind].datpath=strdup_w(datpath, __func__)))
 		return -1;
 	printf("swap %d to: %s\n", ind, datpath);
 
-	if(!(dfp=open_file(datpath, "rb"))) return -1;
+	if(!(dfp=fzp_open(datpath, "rb"))) return -1;
 	for(r=0; r<DATA_FILE_SIG_MAX; r++)
 	{
 		switch(read_next_data(dfp, rblks, ind, r))
@@ -68,7 +68,7 @@ static int load_rblk(struct rblk *rblks, int ind, const char *datpath)
 		}
 	}
 	rblks[ind].readbuflen=r;
-	fclose(dfp);
+	fzp_close(&dfp);
 	return 0;
 }
 

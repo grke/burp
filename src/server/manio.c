@@ -118,20 +118,20 @@ static char *get_fcount_path(struct manio *manio)
 static int manio_write_fcount(struct manio *manio)
 {
 	int ret=-1;
-	FILE *fp=NULL;
+	struct fzp *fzp=NULL;
 	char *path=NULL;
 
 	if(!(path=get_fcount_path(manio))
-	  || !(fp=open_file(path, "wb")))
+	  || !(fzp=fzp_open(path, "wb")))
 		goto end;
-	if(fprintf(fp, "%08"PRIX64"\n", manio->offset.fcount)!=9)
+	if(fzp_printf(fzp, "%08"PRIX64"\n", manio->offset.fcount)!=9)
 	{
 		logp("Short write when writing to %s\n", path);
 		goto end;
 	}
 	ret=0;
 end:
-	if(close_fp(&fp))
+	if(fzp_close(&fzp))
 	{
 		logp("Could not close file pointer to %s\n", path);
 		ret=-1;
@@ -144,15 +144,15 @@ int manio_read_fcount(struct manio *manio)
 {
 	int ret=-1;
 	size_t s;
-	FILE *fp=NULL;
+	struct fzp *fzp=NULL;
 	char *path=NULL;
 	char buf[16]="";
 	if(!(path=get_fcount_path(manio))
-	  || !(fp=open_file(path, "rb")))
+	  || !(fzp=fzp_open(path, "rb")))
 		goto end;
-	if(!fgets(buf, sizeof(buf), fp))
+	if(!fzp_gets(fzp, buf, sizeof(buf)))
 	{
-		logp("fgets on %s failed\n", path);
+		logp("fzp_gets on %s failed\n", path);
 		goto end;
 	}
 	s=strlen(buf);
@@ -164,7 +164,7 @@ int manio_read_fcount(struct manio *manio)
 	manio->offset.fcount=strtoul(buf, NULL, 16);
 	ret=0;
 end:
-	close_fp(&fp);
+	fzp_close(&fzp);
 	free_w(&path);
 	return ret;
 }

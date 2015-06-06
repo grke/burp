@@ -14,7 +14,7 @@ static enum action actg=ACTION_STATUS;
 #define LEFT_SPACE	3
 #define TOP_SPACE	2
 
-static FILE *lfp=NULL;
+static struct fzp *lfzp=NULL;
 
 // For switching between seeing 'last backup' and counter summary on the front
 // screen.
@@ -903,7 +903,7 @@ static int request_status(struct asfd *asfd,
 */
 	if(*buf)
 	{
-		if(lfp) logp("request: %s\n", buf);
+		if(lfzp) logp("request: %s\n", buf);
 		if(asfd->write_str(asfd, CMD_GEN /* ignored */, buf)) return -1;
 	}
 	return 0;
@@ -966,7 +966,7 @@ static void right(struct sel *sel)
 			sel->page=PAGE_BACKUP_LOGS;
 			break;
 		case PAGE_BACKUP_LOGS:
-			if(lfp) logp("Option selected: 0x%04X\n", sel->logop);
+			if(lfzp) logp("Option selected: 0x%04X\n", sel->logop);
 			sel->page=PAGE_VIEW_LOG;
 			break;
 		case PAGE_VIEW_LOG:
@@ -1403,9 +1403,9 @@ int status_client_ncurses(enum action act, struct conf **confs)
 	}
 #endif
 	if(monitor_logfile
-	  && !(lfp=open_file(monitor_logfile, "wb")))
+	  && !(lfzp=fzp_open(monitor_logfile, "wb")))
 		goto end;
-	set_logfp_direct(lfp);
+	set_logfzp_direct(lfzp);
 
 	ret=main_loop(as, act, confs);
 end:
@@ -1413,7 +1413,7 @@ end:
 	if(actg==ACTION_STATUS) endwin();
 #endif
 	if(ret) logp("%s exiting with error: %d\n", __func__, ret);
-	close_fp(&lfp);
+	fzp_close(&lfzp);
 	async_asfd_free_all(&as);
 	close_fd(&csin);
 	close_fd(&csout);

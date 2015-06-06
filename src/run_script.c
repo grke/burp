@@ -2,12 +2,13 @@
 
 #ifndef HAVE_WIN32
 
-static int log_script_output(struct asfd *asfd, FILE **fp, struct conf **confs,
+static int log_script_output(struct asfd *asfd, struct fzp **fzp,
+	struct conf **confs,
 	int do_logp, int log_remote, int is_stderr, char **logbuf)
 {
 	char buf[256]="";
-	if(!fp || !*fp) return 0;
-	if(fgets(buf, sizeof(buf), *fp))
+	if(!fzp || !*fzp) return 0;
+	if(fzp_gets(*fzp, buf, sizeof(buf)))
 	{
 		if(logbuf && astrcat(logbuf, buf, __func__)) return -1;
 		if(log_remote)
@@ -23,7 +24,7 @@ static int log_script_output(struct asfd *asfd, FILE **fp, struct conf **confs,
 			else logc("%s", buf);
 		}
 	}
-	if(feof(*fp)) close_fp(fp);
+	if(fzp_eof(*fzp)) fzp_close(fzp);
 	return 0;
 }
 
@@ -38,16 +39,17 @@ static void run_script_sigchld_handler(int sig)
 	waitpid(-1, &run_script_status, 0);
 }
 
-static int run_script_select(struct asfd *asfd, FILE **sout, FILE **serr,
+static int run_script_select(struct asfd *asfd,
+	struct fzp **sout, struct fzp **serr,
 	struct conf **confs, int do_logp, int log_remote, char **logbuf)
 {
 	int mfd=-1;
 	fd_set fsr;
 	struct timeval tval;
-	int soutfd=fileno(*sout);
-	int serrfd=fileno(*serr);
-	setlinebuf(*sout);
-	setlinebuf(*serr);
+	int soutfd=fzp_fileno(*sout);
+	int serrfd=fzp_fileno(*serr);
+	fzp_setlinebuf(*sout);
+	fzp_setlinebuf(*serr);
 	set_non_blocking(soutfd);
 	set_non_blocking(serrfd);
 
@@ -101,8 +103,8 @@ int run_script_to_buf(struct asfd *asfd,
 	int a=0;
 	int l=0;
 	pid_t p;
-	FILE *serr=NULL;
-	FILE *sout=NULL;
+	struct fzp *serr=NULL;
+	struct fzp *sout=NULL;
 	char *cmd[64]={ NULL };
 	struct strlist *sl;
 #ifndef HAVE_WIN32

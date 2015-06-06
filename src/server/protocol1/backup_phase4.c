@@ -669,7 +669,7 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf **cconfs)
 	  || fdirs_init(fdirs, sdirs, realcurrent))
 		goto end;
 
-	if(set_logfp(fdirs->logpath, cconfs))
+	if(set_logfzp(fdirs->logpath, cconfs))
 		goto end;
 
 	logp("Begin phase4 (shuffle files)\n");

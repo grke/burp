@@ -123,7 +123,6 @@ static int get_highest_entry(const char *path, int *max)
 	int ent=0;
 	int ret=0;
 	DIR *d=NULL;
-	FILE *ifp=NULL;
 	struct dirent *dp=NULL;
 
 	*max=-1;
@@ -139,7 +138,6 @@ static int get_highest_entry(const char *path, int *max)
 
 end:
 	if(d) closedir(d);
-	close_fp(&ifp);
 	return ret;
 }
 
@@ -204,9 +202,9 @@ end:
 	return ret;
 }
 
-static int fprint_tag(FILE *fp, enum cmd cmd, unsigned int s)
+static int fprint_tag(struct fzp *fzp, enum cmd cmd, unsigned int s)
 {
-	if(fprintf(fp, "%c%04X", cmd, s)!=5)
+	if(fzp_printf(fzp, "%c%04X", cmd, s)!=5)
 	{
 		logp("Short fprintf\n");
 		return -1;
@@ -214,11 +212,12 @@ static int fprint_tag(FILE *fp, enum cmd cmd, unsigned int s)
 	return 0;
 }
 
-static int fwrite_buf(enum cmd cmd, const char *buf, unsigned int s, FILE *fp)
+static int fwrite_buf(enum cmd cmd,
+	const char *buf, unsigned int s, struct fzp *fzp)
 {
 	static size_t bytes;
-	if(fprint_tag(fp, cmd, s)) return -1;
-	if((bytes=fwrite(buf, 1, s, fp))!=s)
+	if(fprint_tag(fzp, cmd, s)) return -1;
+	if((bytes=fzp_write(fzp, buf, s))!=s)
 	{
 		logp("Short write: %d\n", (int)bytes);
 		return -1;
@@ -226,18 +225,16 @@ static int fwrite_buf(enum cmd cmd, const char *buf, unsigned int s, FILE *fp)
 	return 0;
 }
 
-static FILE *file_open_w(const char *path, const char *mode)
+static struct fzp *file_open_w(const char *path, const char *mode)
 {
-	FILE *fp;
 	if(build_path_w(path)) return NULL;
-	fp=open_file(path, "wb");
-	return fp;
+	return fzp_open(path, "wb");
 }
 
-static FILE *open_data_file_for_write(struct dpth *dpth, struct blk *blk)
+static struct fzp *open_data_file_for_write(struct dpth *dpth, struct blk *blk)
 {
-	FILE *fp=NULL;
 	char *path=NULL;
+	struct fzp *fzp=NULL;
 	char *savepathstr=NULL;
 	struct dpth_lock *head=dpth->head;
 //printf("moving for: %s\n", blk->save_path);
@@ -260,10 +257,10 @@ static FILE *open_data_file_for_write(struct dpth *dpth, struct blk *blk)
 
 	if(!(path=prepend_slash(dpth->base_path, savepathstr, 14)))
 		goto end;
-	fp=file_open_w(path, "wb");
+	fzp=file_open_w(path, "wb");
 end:
 	free_w(&path);
-	return fp;
+	return fzp;
 }
 
 int dpth_protocol2_fwrite(struct dpth *dpth,
@@ -273,16 +270,16 @@ int dpth_protocol2_fwrite(struct dpth *dpth,
 
 	// Remember that the save_path on the lock list is shorter than the
 	// full save_path on the blk.
-	if(dpth->fp
+	if(dpth->fzp
 	  && strncmp(dpth->head->save_path,
 		bytes_to_savepathstr(blk->savepath),
 		sizeof(dpth->head->save_path)-1)
 	  && dpth_release_and_move_to_next_in_list(dpth))
 		return -1;
 
-	// Open the current list head if we have no fp.
-	if(!dpth->fp
-	  && !(dpth->fp=open_data_file_for_write(dpth, blk))) return -1;
+	// Open the current list head if we have no fzp.
+	if(!dpth->fzp
+	  && !(dpth->fzp=open_data_file_for_write(dpth, blk))) return -1;
 
-	return fwrite_buf(CMD_DATA, iobuf->buf, iobuf->len, dpth->fp);
+	return fwrite_buf(CMD_DATA, iobuf->buf, iobuf->len, dpth->fzp);
 }

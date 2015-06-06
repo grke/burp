@@ -20,6 +20,11 @@ static void unknown_type(struct fzp *fzp, const char *func)
 	logp("unknown type in %s: %d\n", func, fzp->type);
 }
 
+static void not_open(const char *func)
+{
+	logp("File pointer not open in %s\n", func);
+}
+
 static struct fzp *fzp_do_open(const char *path, const char *mode,
 	enum fzp_type type)
 {
@@ -78,7 +83,7 @@ int fzp_close(struct fzp **fzp)
 
 size_t fzp_read(struct fzp *fzp, void *ptr, size_t nmemb)
 {
-	switch(fzp->type)
+	if(fzp) switch(fzp->type)
 	{
 		case FZP_FILE:
 			return fread(ptr, 1, nmemb, fzp->fp);
@@ -86,13 +91,16 @@ size_t fzp_read(struct fzp *fzp, void *ptr, size_t nmemb)
 			return gzread(fzp->zp, ptr, (unsigned)nmemb);
 		default:
 			unknown_type(fzp, __func__);
-			return 0;
+			goto error;
 	}
+	not_open(__func__);
+error:
+	return 0;
 }
 
 size_t fzp_write(struct fzp *fzp, const void *ptr, size_t nmemb)
 {
-	switch(fzp->type)
+	if(fzp) switch(fzp->type)
 	{
 		case FZP_FILE:
 			return fwrite(ptr, 1, nmemb, fzp->fp);
@@ -100,13 +108,16 @@ size_t fzp_write(struct fzp *fzp, const void *ptr, size_t nmemb)
 			return gzwrite(fzp->zp, ptr, (unsigned)nmemb);
 		default:
 			unknown_type(fzp, __func__);
-			return 0;
+			goto error;
 	}
+	not_open(__func__);
+error:
+	return 0;
 }
 
 int fzp_eof(struct fzp *fzp)
 {
-	switch(fzp->type)
+	if(fzp) switch(fzp->type)
 	{
 		case FZP_FILE:
 			return feof(fzp->fp);
@@ -114,13 +125,17 @@ int fzp_eof(struct fzp *fzp)
 			return gzeof(fzp->zp);
 		default:
 			unknown_type(fzp, __func__);
-			return -1;
+			goto error;
 	}
+	not_open(__func__);
+error:
+	// Non-zero means end of file. Should be OK to use -1 here.
+	return -1;
 }
 
 int fzp_flush(struct fzp *fzp)
 {
-	switch(fzp->type)
+	if(fzp) switch(fzp->type)
 	{
 		case FZP_FILE:
 			return fflush(fzp->fp);
@@ -128,27 +143,36 @@ int fzp_flush(struct fzp *fzp)
 			return gzflush(fzp->zp, Z_FINISH);
 		default:
 			unknown_type(fzp, __func__);
-			return EOF;
+			goto error;
 	}
+	not_open(__func__);
+error:
+	return EOF;
 }
 
 int fzp_seek(struct fzp *fzp, off_t offset, int whence)
 {
-	switch(fzp->type)
+	if(fzp) switch(fzp->type)
 	{
 		case FZP_FILE:
 			return fseeko(fzp->fp, offset, whence);
 		case FZP_COMPRESSED:
-			return gzseek(fzp->zp, offset, whence);
+			// Notice that gzseek returns the new offset.
+			if(gzseek(fzp->zp, offset, whence)==offset)
+				return 0;
+			goto error;
 		default:
 			unknown_type(fzp, __func__);
-			return -1;
+			goto error;
 	}
+	not_open(__func__);
+error:
+	return -1;
 }
 
 off_t fzp_tell(struct fzp *fzp)
 {
-	switch(fzp->type)
+	if(fzp) switch(fzp->type)
 	{
 		case FZP_FILE:
 			return ftello(fzp->fp);
@@ -156,8 +180,11 @@ off_t fzp_tell(struct fzp *fzp)
 			return gztell(fzp->zp);
 		default:
 			unknown_type(fzp, __func__);
-			return -1;
+			goto error;
 	}
+	not_open(__func__);
+error:
+	return -1;
 }
 
 int fzp_printf(struct fzp *fzp, const char *format, ...)
@@ -168,7 +195,7 @@ int fzp_printf(struct fzp *fzp, const char *format, ...)
 	va_start(ap, format);
 	vsnprintf(buf, sizeof(buf), format, ap);
 
-	switch(fzp->type)
+	if(fzp) switch(fzp->type)
 	{
 		case FZP_FILE:
 			ret=fprintf(fzp->fp, "%s", buf);
@@ -180,6 +207,8 @@ int fzp_printf(struct fzp *fzp, const char *format, ...)
 			unknown_type(fzp, __func__);
 			break;
 	}
+	else
+		not_open(__func__);
 	va_end(ap);
 	return ret;
 }

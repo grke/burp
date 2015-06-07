@@ -1,6 +1,8 @@
 #ifndef __UTEST_H
 #define __UTEST_H
 
+#include "../src/conf.h"
+
 #define ARR_LEN(array) (sizeof((array))/sizeof((array)[0]))
 #define FOREACH(array) for(unsigned int i=0; i<ARR_LEN(array); i++)
 
@@ -20,6 +22,9 @@
 extern int sub_ntests;
 
 extern void alloc_check(void);
+extern char **build_paths(int wanted);
+extern struct sbuf *build_attribs(enum protocol protocol);
+extern struct sbuf *build_attribs_reduce(enum protocol protocol);
 
 Suite *suite_alloc(void);
 Suite *suite_attribs(void);

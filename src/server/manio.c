@@ -103,8 +103,8 @@ static int write_hook_header(struct manio *manio,
 
 static int strsort(const void *a, const void *b)
 {
-	const char *x=*(const char**)a;
-	const char *y=*(const char**)b;
+	const char *x=*(const char **)a;
+	const char *y=*(const char **)b;
 	return strcmp(x, y);
 }
 

@@ -3,6 +3,8 @@ LIBS = -lcheck -lpthread -lm -lrt -lssl -lcrypto
 CFLAGS+=-Wall
 
 SRCS = \
+	build_attribs.c \
+	build_paths.c \
 	main.c \
 	mock.c \
 	prng.c \
@@ -45,6 +47,7 @@ BURP_SRCS = \
 	../src/strlist.c \
 	../src/protocol1/rs_buf.c \
 	../src/protocol1/sbuf_protocol1.c \
+	../src/protocol1/sbufl.c \
 	../src/protocol2/blk.c \
 	../src/protocol2/sbuf_protocol2.c \
 	../src/server/bu_get.c \

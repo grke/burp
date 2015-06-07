@@ -12,47 +12,6 @@ static void tear_down(void)
 	alloc_check();
 }
 
-static void memcpy_a(void *dest, size_t s)
-{
-	static uint64_t u;
-	u=prng_next64();
-	memcpy(dest, &u, s);
-}
-
-static struct sbuf *sbuf_builder(enum protocol protocol)
-{
-	struct sbuf *sbuf;
-	struct stat *statp;
-	fail_unless((sbuf=sbuf_alloc_protocol(protocol))!=NULL);
-	statp=&sbuf->statp;
-	memcpy_a(&statp->st_dev, sizeof(statp->st_dev));
-	memcpy_a(&statp->st_ino, sizeof(statp->st_ino));
-	memcpy_a(&statp->st_mode, sizeof(statp->st_mode));
-	memcpy_a(&statp->st_nlink, sizeof(statp->st_nlink));
-	memcpy_a(&statp->st_uid, sizeof(statp->st_uid));
-	memcpy_a(&statp->st_gid, sizeof(statp->st_gid));
-	memcpy_a(&statp->st_rdev, sizeof(statp->st_rdev));
-	memcpy_a(&statp->st_size, sizeof(statp->st_size));
-	memcpy_a(&statp->st_blksize, sizeof(statp->st_blksize));
-	memcpy_a(&statp->st_blocks, sizeof(statp->st_blocks));
-	memcpy_a(&statp->st_atime, sizeof(statp->st_atime));
-	memcpy_a(&statp->st_mtime, sizeof(statp->st_mtime));
-	memcpy_a(&statp->st_ctime, sizeof(statp->st_ctime));
-#ifdef HAVE_CHFLAGS
-	memcpy_a(&statp->st_flags, sizeof(statp->st_flags));
-#endif
-	memcpy_a(&sbuf->winattr, sizeof(sbuf->winattr));
-	memcpy_a(&sbuf->compression, sizeof(sbuf->compression));
-	if(protocol==PROTO_2)
-	{
-		memcpy_a(&sbuf->protocol2->index,
-			sizeof(sbuf->protocol2->index));
-		memcpy_a(&sbuf->protocol2->encryption,
-			sizeof(sbuf->protocol2->encryption));
-	}
-	return sbuf;
-}
-
 static void assert_attribs(struct sbuf *a, struct sbuf *b,
 	enum protocol protocol)
 {
@@ -78,7 +37,7 @@ static void test_attribs(enum protocol protocol)
 	{
 		struct sbuf *encode;
 		struct sbuf *decode;
-		encode=sbuf_builder(protocol);
+		encode=build_attribs(protocol);
 		decode=sbuf_alloc_protocol(protocol);
 
 		fail_unless(!attribs_encode(encode));

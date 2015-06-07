@@ -2,6 +2,7 @@
 
 #include "include.h"
 #include "../../cmd.h"
+#include "../../sbuf.h"
 
 struct candidate **candidates=NULL;
 size_t candidates_len=0;

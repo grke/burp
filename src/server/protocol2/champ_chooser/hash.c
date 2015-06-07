@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../sbuf.h"
 
 struct hash_weak *hash_table=NULL;
 

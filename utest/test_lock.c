@@ -22,7 +22,7 @@ static void tear_down(struct lock **lock, struct lock **locklist)
 {
 	lock_free(lock);
 	locks_release_and_free(locklist);
-	fail_unless(free_count==alloc_count);
+	alloc_check();
 }
 
 static void assert_can_get_lock(struct lock *lock)

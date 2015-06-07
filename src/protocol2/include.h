@@ -5,6 +5,5 @@
 
 #include "blist.h"
 #include "blk.h"
-#include "sbuf_protocol2.h"
 
 #endif

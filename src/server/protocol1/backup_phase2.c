@@ -1,6 +1,8 @@
 #include "include.h"
+#include "../../attribs.h"
 #include "../../cmd.h"
 #include "../../conf.h"
+#include "../../protocol1/sbufl.h"
 #include "dpth.h"
 
 static size_t treepathlen=0;

@@ -1,7 +1,7 @@
 #ifndef PROTOCOL1_SBUF_H
 #define PROTOCOL1_SBUF_H
 
-#include "include.h"
+#include "../sbuf.h"
 
 // Keep track of what needs to be sent.
 #define SBUFL_SEND_STAT		0x01

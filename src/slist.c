@@ -1,4 +1,5 @@
 #include "include.h"
+#include "sbuf.h"
 
 struct slist *slist_alloc(void)
 {

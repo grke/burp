@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../protocol1/sbufl.h"
 
 // Combine the phase1 and phase2 files into a new manifest.
 int backup_phase3_server_protocol1(struct sdirs *sdirs,

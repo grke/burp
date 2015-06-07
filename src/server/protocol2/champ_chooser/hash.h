@@ -3,6 +3,8 @@
 
 #include <uthash.h>
 
+#include "../../../protocol2/blk.h"
+
 typedef struct hash_strong hash_strong_t;
 
 struct hash_strong

@@ -1,5 +1,8 @@
-#include "include.h"
+#include "../burp.h"
+#include "../attribs.h"
 #include "../cmd.h"
+#include "../log.h"
+#include "../sbuf.h"
 
 static int read_fp_msg(struct fzp *fzp, char **buf, size_t len)
 {

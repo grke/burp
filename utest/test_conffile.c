@@ -25,7 +25,7 @@ static void tear_down(struct conf ***globalcs, struct conf ***confs)
 {
 	confs_free(confs);
 	confs_free(globalcs);
-	fail_unless(free_count==alloc_count);
+	alloc_check();
 }
 
 struct data

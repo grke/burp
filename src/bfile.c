@@ -1,4 +1,5 @@
 #include "include.h"
+#include "attribs.h"
 
 #ifdef HAVE_DARWIN_OS
 #include <sys/paths.h>

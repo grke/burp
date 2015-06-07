@@ -5,7 +5,9 @@ CFLAGS+=-Wall
 SRCS = \
 	main.c \
 	mock.c \
+	prng.c \
 	test_alloc.c \
+	test_attribs.c \
 	test_base64.c \
 	test_cmd.c \
 	test_conf.c \

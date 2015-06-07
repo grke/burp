@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../attribs.h"
 #include "../bu.h"
 #include "../cmd.h"
 #include "bu_get.h"

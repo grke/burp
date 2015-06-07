@@ -1,9 +1,10 @@
 #include "include.h"
 #include "../../cmd.h"
 #include "../../hexmap.h"
-#include "dpth.h"
 #include "../../server/protocol2/restore.h"
+#include "../../sbuf.h"
 #include "../../slist.h"
+#include "dpth.h"
 
 #include <librsync.h>
 

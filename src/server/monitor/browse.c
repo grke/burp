@@ -1,6 +1,7 @@
 #include "include.h"
 #include "../../bu.h"
 #include "../../cmd.h"
+#include "../../sbuf.h"
 
 static int do_browse_manifest(struct asfd *srfd,
 	struct manio *manio, struct sbuf *sb, const char *browse)

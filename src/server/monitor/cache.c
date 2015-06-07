@@ -1,6 +1,7 @@
 #include "include.h"
 #include "../../bu.h"
 #include "../../cmd.h"
+#include "../../sbuf.h"
 
 typedef struct ent ent_t;
 

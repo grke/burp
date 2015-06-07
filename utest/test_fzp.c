@@ -9,11 +9,6 @@
 static const char *file="utest_fzp";
 static const char *content="0123456789abcdefg";
 
-static void alloc_check(void)
-{
-	fail_unless(free_count==alloc_count);
-}
-
 static void tear_down(void)
 {
 	alloc_check();

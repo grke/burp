@@ -1,5 +1,8 @@
-#include "include.h"
+#include "burp.h"
+#include "attribs.h"
 #include "cmd.h"
+#include "conf.h"
+#include "sbuf.h"
 #include "server/protocol2/rblk.h"
 
 struct sbuf *sbuf_alloc_protocol(enum protocol protocol)

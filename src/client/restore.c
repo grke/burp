@@ -1,7 +1,9 @@
 #include "include.h"
+#include "../attribs.h"
 #include "../cmd.h"
 #include "protocol1/restore.h"
 #include "protocol2/restore.h"
+#include "../protocol1/sbufl.h"
 
 // FIX THIS: it only works with protocol1.
 int restore_interrupt(struct asfd *asfd,

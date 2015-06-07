@@ -19,7 +19,10 @@
 
 extern int sub_ntests;
 
+extern void alloc_check(void);
+
 Suite *suite_alloc(void);
+Suite *suite_attribs(void);
 Suite *suite_base64(void);
 Suite *suite_cmd(void);
 Suite *suite_conf(void);

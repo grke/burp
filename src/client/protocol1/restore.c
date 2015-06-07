@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../attribs.h"
 #include "../../cmd.h"
 
 static int do_restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,

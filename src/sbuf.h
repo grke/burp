@@ -1,10 +1,9 @@
 #ifndef _SBUF_H
 #define _SBUF_H
 
-#include <sys/stat.h>
-#include <zlib.h>
-
+#include "burp.h"
 #include "bfile.h"
+#include "iobuf.h"
 #include "protocol1/sbuf_protocol1.h"
 #include "protocol2/sbuf_protocol2.h"
 

@@ -25,8 +25,8 @@ void iobuf_init(struct iobuf *iobuf)
 
 void iobuf_free_content(struct iobuf *iobuf)
 {
-	if(!iobuf || !iobuf->buf) return;
-	free(iobuf->buf);
+	if(!iobuf) return;
+	free_w(&iobuf->buf);
 	iobuf_init(iobuf);
 }
 

@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../attribs.h"
 #include "../../cmd.h"
 
 static int load_signature(struct asfd *asfd,

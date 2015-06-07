@@ -33,6 +33,7 @@
  */
 
 #include "include.h"
+#include "../attribs.h"
 #include "../cmd.h"
 #include "linkhash.h"
 

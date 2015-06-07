@@ -1,5 +1,6 @@
 #include "include.h"
 #include "../protocol1/resume.h"
+#include "../../attribs.h"
 #include "../../base64.h"
 #include "../../cmd.h"
 #include "../../hexmap.h"

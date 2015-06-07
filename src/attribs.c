@@ -36,9 +36,10 @@
  *   Graham Keeling, 2014
  */
 
-#include "include.h"
 #include "base64.h"
 #include "cmd.h"
+#include "log.h"
+#include "sbuf.h"
 
 // Encode a stat structure into a base64 character string.
 int attribs_encode(struct sbuf *sb)

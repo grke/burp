@@ -9,6 +9,7 @@ int main(void)
 
 	sr=srunner_create(NULL);
 	srunner_add_suite(sr, suite_alloc());
+	srunner_add_suite(sr, suite_attribs());
 	srunner_add_suite(sr, suite_base64());
 	srunner_add_suite(sr, suite_cmd());
 	srunner_add_suite(sr, suite_conf());

@@ -1,6 +1,7 @@
 #include <check.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "test.h"
 #include "../src/alloc.h"
 #include "../src/conf.h"
 
@@ -213,7 +214,7 @@ START_TEST(test_conf_defaults)
 		check_default(confs, (enum conf_opt)i);
 	confs_free(&confs);
 	fail_unless(confs==NULL);
-	fail_unless(alloc_count==free_count);
+	alloc_check();
 }
 END_TEST
 

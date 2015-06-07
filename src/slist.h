@@ -1,6 +1,8 @@
 #ifndef _SLIST_H
 #define _SLIST_H
 
+#include "sbuf.h"
+
 struct slist
 {
 	struct sbuf *head;

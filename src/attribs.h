@@ -1,6 +1,8 @@
 #ifndef __ATTRIBS_H
 #define __ATTRIBS_H
 
+#include "sbuf.h"
+
 extern int attribs_encode(struct sbuf *sb);
 
 extern void attribs_decode(struct sbuf *sb);

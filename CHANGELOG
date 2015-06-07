@@ -2,6 +2,7 @@
     functionality.
   * Fix '-a l' regex so that it isn't split in two at the right-most
     colon.
+  * Fix possible buffer overrun when encoding attribs.
 
 2015-05-30 Changes in burp-2.0.20:
   * Fix conf bug that was causing the server to segfault when the client

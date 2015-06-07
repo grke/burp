@@ -44,6 +44,7 @@ BURP_SRCS = \
 	../src/pathcmp.c \
 	../src/prepend.c \
 	../src/sbuf.c \
+	../src/slist.c \
 	../src/strlist.c \
 	../src/protocol1/rs_buf.c \
 	../src/protocol1/sbuf_protocol1.c \
@@ -53,6 +54,7 @@ BURP_SRCS = \
 	../src/server/bu_get.c \
 	../src/server/compress.c \
 	../src/server/dpth.c \
+	../src/server/manio.c \
 	../src/server/sdirs.c \
 	../src/server/protocol1/dpth.c \
 	../src/server/protocol1/fdirs.c \
@@ -82,4 +84,4 @@ test: Makefile $(OBJS) $(BURP_OBJS)
 clean:
 	rm -f test *.o utest_lockfile utest_fzp
 	rm -f server/protocol1/*.o server/protocol2/*.o
-	rm -rf utest_dpth
+	rm -rf utest_dpth utest_sbuf

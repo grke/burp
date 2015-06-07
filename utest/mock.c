@@ -1,6 +1,4 @@
-#include <stdio.h>
-#include <stdarg.h>
-#include <time.h>
+#include "../src/burp.h"
 void logp(const char *fmt, ...)
 {
 /*
@@ -30,3 +28,5 @@ int blk_read_verify(struct blk *blk_to_verify, struct conf **confs)
 
 
 int rblk_retrieve_data(const char *datpath, struct blk *blk) { return 0; }
+
+int is_hook(uint64_t fingerprint) { return 0; }

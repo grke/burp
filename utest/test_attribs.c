@@ -12,14 +12,26 @@ static void tear_down(void)
 	alloc_check();
 }
 
-static void assert_attribs(struct sbuf *a, struct sbuf *b,
-	enum protocol protocol)
+static void assert_iobuf(struct iobuf *a, struct iobuf *b)
 {
+	fail_unless(!iobuf_pathcmp(a, b));
+	fail_unless(a->len==b->len);
+}
+
+void assert_sbuf(struct sbuf *a, struct sbuf *b, enum protocol protocol)
+{
+	assert_iobuf(&a->path, &b->path);
+	assert_iobuf(&a->attr, &b->attr);
+	assert_iobuf(&a->link, &b->link);
 	fail_unless(!memcmp(&a->statp, &b->statp, sizeof(struct stat)));
 	fail_unless(a->winattr==b->winattr);
 	fail_unless(a->compression==b->compression);
 	if(protocol==PROTO_1)
+	{
 		fail_unless(a->protocol1 && b->protocol1);
+		assert_iobuf(&a->protocol1->datapth, &b->protocol1->datapth);
+		assert_iobuf(&a->protocol1->endfile, &b->protocol1->endfile);
+	}
 	else if(protocol==PROTO_2)
 	{
 		fail_unless(a->protocol2 && b->protocol2);
@@ -44,8 +56,9 @@ static void test_attribs(enum protocol protocol)
 		free_w(&decode->attr.buf);
 		fail_unless((decode->attr.buf
 			=strdup_w(encode->attr.buf, __func__))!=NULL);
+		decode->attr.len=encode->attr.len;
 		attribs_decode(decode);
-		assert_attribs(encode, decode, protocol);
+		assert_sbuf(encode, decode, protocol);
 		sbuf_free(&encode);
 		sbuf_free(&decode);
 	}

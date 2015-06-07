@@ -25,6 +25,7 @@ extern void alloc_check(void);
 extern char **build_paths(int wanted);
 extern struct sbuf *build_attribs(enum protocol protocol);
 extern struct sbuf *build_attribs_reduce(enum protocol protocol);
+extern void assert_sbuf(struct sbuf *a, struct sbuf *b, enum protocol protocol);
 
 Suite *suite_alloc(void);
 Suite *suite_attribs(void);

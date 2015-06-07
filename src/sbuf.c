@@ -145,16 +145,15 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, struct fzp *fzp,
 	static unsigned int s;
 	static char lead[5]="";
 	static struct iobuf *rbuf;
-	static struct iobuf *localrbuf=NULL;
+	static struct iobuf localrbuf;
 	int ret=-1;
 
 	if(asfd) rbuf=asfd->rbuf;
 	else
 	{
 		// If not given asfd, use our own iobuf.
-		if(!localrbuf && !(localrbuf=iobuf_alloc()))
-			goto end;
-		rbuf=localrbuf;
+		memset(&localrbuf, 0, sizeof(struct iobuf));
+		rbuf=&localrbuf;
 	}
 	while(1)
 	{

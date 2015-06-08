@@ -234,8 +234,9 @@ int do_resume(struct manio *p1manio, struct sdirs *sdirs,
 	struct fzp *ufzp=NULL;
 	struct manio *cmanio=NULL;
 	struct manio *umanio=NULL;
+	enum protocol protocol=get_protocol(cconfs);
 
-	if(get_protocol(cconfs)==PROTO_1)
+	if(protocol==PROTO_1)
 	{
 		// First, open them in a+ mode, so that they will be created if
 		// they do not exist.
@@ -247,8 +248,8 @@ int do_resume(struct manio *p1manio, struct sdirs *sdirs,
 		fzp_close(&ufzp);
 	}
 
-	if(!(cmanio=manio_open(sdirs->changed, "rb", PROTO_2))
-	  || !(umanio=manio_open(sdirs->unchanged, "rb", PROTO_2)))
+	if(!(cmanio=manio_open(sdirs->changed, "rb", protocol))
+	  || !(umanio=manio_open(sdirs->unchanged, "rb", protocol)))
 		goto end;
 
 	if(do_resume_work(p1manio, cmanio, umanio, dpth, cconfs)) goto end;

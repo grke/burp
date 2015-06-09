@@ -805,7 +805,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 		init_fs_max(sdirs->treepath);
 	}
 
-	if(!(p1manio=manio_open(sdirs->phase1data, "rb", PROTO_1))
+	if(!(p1manio=manio_open_phase1(sdirs->phase1data, "rb", PROTO_1))
 	  || !(cb=sbuf_alloc(cconfs))
 	  || !(p1b=sbuf_alloc(cconfs))
 	  || !(rb=sbuf_alloc(cconfs)))
@@ -821,7 +821,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 		goto error;
 
 	if(!p1manio
-	  && !(p1manio=manio_open(sdirs->phase1data, "rb", PROTO_1)))
+	  && !(p1manio=manio_open_phase1(sdirs->phase1data, "rb", PROTO_1)))
 		goto error;
 
 	while(1)
@@ -862,7 +862,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 
 		sbuf_free_content(p1b);
 
-		switch(manio_sbuf_fill_phase1(p1manio, asfd,
+		switch(manio_sbuf_fill(p1manio, asfd,
 			p1b, NULL, sdirs, cconfs))
 		{
 			case 0: break;

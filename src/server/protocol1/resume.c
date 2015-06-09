@@ -13,7 +13,7 @@ static int read_phase1(struct manio *p1manio, struct conf **confs)
 	while(1)
 	{
 		sbuf_free_content(p1b);
-		if((ars=manio_sbuf_fill_phase1(p1manio, NULL,
+		if((ars=manio_sbuf_fill(p1manio, NULL,
 			p1b, NULL, NULL, confs)))
 		{
 			// ars==1 means it ended ok.
@@ -67,12 +67,7 @@ static int do_forward(struct manio *manio, struct iobuf *result,
 
 		sbuf_free_content(sb);
 
-		if(isphase1)
-			ars=manio_sbuf_fill_phase1(manio, NULL,
-				sb, NULL, NULL, cconfs);
-		else
-			ars=manio_sbuf_fill(manio, NULL,
-				sb, NULL, NULL, cconfs);
+		ars=manio_sbuf_fill(manio, NULL, sb, NULL, NULL, cconfs);
 
 		// Make sure we end up with the highest datapth we can possibly
 		// find - dpth_protocol1_set_from_string() will only set it if

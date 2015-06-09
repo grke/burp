@@ -540,7 +540,7 @@ static int maybe_add_from_scan(struct asfd *asfd,
 		}
 		if(!(snew=sbuf_alloc(confs))) goto end;
 
-		if((ars=manio_sbuf_fill_phase1(*p1manio,
+		if((ars=manio_sbuf_fill(*p1manio,
 			asfd, snew, NULL, NULL, confs))<0) goto end;
 		else if(ars>0)
 		{
@@ -763,7 +763,7 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 
 	//if(champ_chooser_init(sdirs->data, confs)
 	if(!(cmanio=manio_open(sdirs->cmanifest, "rb", PROTO_2))
-	  || !(p1manio=manio_open(sdirs->phase1data, "rb", PROTO_1))
+	  || !(p1manio=manio_open_phase1(sdirs->phase1data, "rb", PROTO_2))
 	  || !(chmanio=manio_open(sdirs->changed, "wb", PROTO_2))
 	  || !(unmanio=manio_open(sdirs->unchanged, "wb", PROTO_2))
 	  || !(slist=slist_alloc())
@@ -778,7 +778,7 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
                 goto end;
 
 	if(!p1manio
-	  && !(p1manio=manio_open(sdirs->phase1data, "rb", PROTO_1)))
+	  && !(p1manio=manio_open_phase1(sdirs->phase1data, "rb", PROTO_2)))
 		goto end;
 
 	while(!backup_end)

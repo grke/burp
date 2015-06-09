@@ -72,14 +72,13 @@ static void test_manifest_phase1(enum protocol protocol)
 	slist=gen_manifest_phase1(protocol, 1000);
 
 	fail_unless((rb=sbuf_alloc_protocol(protocol))!=NULL);
-	fail_unless((manio=manio_open(file, "rb", PROTO_1))!=NULL);
+	fail_unless((manio=manio_open_phase1(file, "rb", PROTO_1))!=NULL);
 
 	sb=slist->head;
 	while(1)
 	{
 		sbuf_free_content(rb);
-		switch(manio_sbuf_fill_phase1(manio, NULL,
-			rb, NULL, NULL, NULL))
+		switch(manio_sbuf_fill(manio, NULL, rb, NULL, NULL, NULL))
 		{
 			case 0: break;
 			case 1: goto end;

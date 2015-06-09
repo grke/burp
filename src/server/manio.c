@@ -25,7 +25,8 @@ static char *get_next_fpath_protocol1(struct manio *manio)
 static char *get_next_fpath(struct manio *manio)
 {
 	static char tmp[32];
-	if(manio->protocol==PROTO_1) return get_next_fpath_protocol1(manio);
+	if(manio->protocol==PROTO_1 || manio->phase==1)
+		return get_next_fpath_protocol1(manio);
 	snprintf(tmp, sizeof(tmp), "%08"PRIX64, manio->offset.fcount++);
 	return prepend_s(manio->manifest, tmp);
 }
@@ -66,6 +67,14 @@ struct manio *manio_open(const char *manifest, const char *mode,
 error:
 	manio_close(&manio);
 	return NULL;
+}
+
+struct manio *manio_open_phase1(const char *manifest, const char *mode,
+	enum protocol protocol)
+{
+	struct manio *manio=manio_open(manifest, mode, protocol);
+	manio->phase=1;
+	return manio;
 }
 
 static void manio_free_content(struct manio *manio)
@@ -273,9 +282,9 @@ int manio_close(struct manio **manio)
 }
 
 // Return -1 for error, 0 for stuff read OK, 1 for end of files.
-static int do_manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
+int manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
 	struct sbuf *sb, struct blk *blk,
-	struct sdirs *sdirs, struct conf **confs, int phase1)
+	struct sdirs *sdirs, struct conf **confs)
 {
 	int ars;
 
@@ -287,7 +296,7 @@ static int do_manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
 			if(!manio->fzp) return 1; // No more files to read.
 		}
 
-		if(manio->protocol==PROTO_2 || phase1)
+		if(manio->protocol==PROTO_2 || manio->phase==1)
 		{
 			ars=sbuf_fill(sb, asfd, manio->fzp, blk,
 				sdirs?sdirs->data:NULL, confs);
@@ -309,31 +318,11 @@ static int do_manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
 		  || fzp_close(&manio->fzp)) goto error;
 
 		// If in protocol1 mode, there is only one file, so end.
-		if(manio->protocol==PROTO_1) return 1;
+		if(manio->protocol==PROTO_1 || manio->phase==1) return 1;
 	}
 
 error:
 	return -1;
-}
-
-int manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
-	struct sbuf *sb, struct blk *blk,
-	struct sdirs *sdirs, struct conf **confs)
-{
-	return do_manio_sbuf_fill(manio, asfd, sb, blk, sdirs, confs, 0);
-}
-
-// FIX THIS:
-// Same as manio_sbuf_fill(), but always does sbuf_fill_from_gzfile().
-// Protocol2 is using the burp-1 phase1 format. If it wrote its own format,
-// this separate function should not be necessary.
-// Once there are some tests that excercise the resume functionality, then
-// this can be dealt with more safely.
-int manio_sbuf_fill_phase1(struct manio *manio, struct asfd *asfd,
-	struct sbuf *sb, struct blk *blk,
-	struct sdirs *sdirs, struct conf **confs)
-{
-	return do_manio_sbuf_fill(manio, asfd, sb, blk, sdirs, confs, 1);
 }
 
 static int reset_sig_count_and_close(struct manio *manio)

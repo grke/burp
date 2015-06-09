@@ -35,11 +35,14 @@ struct manio
 	char **dindex_sort;	// Array for sorting and writing dindex.
 	int dindex_count;
 	enum protocol protocol;	// Whether running in protocol1/2 mode.
+	int phase;
 
 	man_off_t offset;
 };
 
 extern struct manio *manio_open(const char *manifest, const char *mode,
+	enum protocol protocol);
+extern struct manio *manio_open_phase1(const char *manifest, const char *mode,
 	enum protocol protocol);
 extern int manio_close(struct manio **manio);
 
@@ -49,9 +52,6 @@ extern int manio_init_write_dindex(struct manio *manio, const char *dir);
 extern int manio_read_fcount(struct manio *manio);
 
 extern int manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
-	struct sbuf *sb, struct blk *blk, struct sdirs *sdirs,
-	struct conf **confs);
-extern int manio_sbuf_fill_phase1(struct manio *manio, struct asfd *asfd,
 	struct sbuf *sb, struct blk *blk, struct sdirs *sdirs,
 	struct conf **confs);
 

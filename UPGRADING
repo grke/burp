@@ -1,5 +1,10 @@
 Things to watch out for when upgrading.
 
+2.0.22
+------
+The protocol2 phase1 manifest format has changed slightly. You should therefore
+not mix earlier 2.0.x servers and clients with this version.
+
 2.0.20
 ------
 The option 'working_dir_recovery_method = use' has been removed.

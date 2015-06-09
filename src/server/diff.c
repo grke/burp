@@ -24,7 +24,7 @@ static int diff_manifest(struct asfd *asfd,
 
 	while(1)
 	{
-		if((ars=manio_sbuf_fill(manio, asfd, sb, NULL, NULL, confs))<0)
+		if((ars=manio_read_async(manio, asfd, sb, NULL, NULL, confs))<0)
 			goto error;
 		else if(ars>0)
 			goto end; // Finished OK.

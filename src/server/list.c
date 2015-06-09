@@ -134,7 +134,7 @@ static int list_manifest(struct asfd *asfd,
 	{
 		int show=0;
 
-		if((ars=manio_sbuf_fill(manio, asfd, sb, NULL, NULL, confs))<0)
+		if((ars=manio_read_async(manio, asfd, sb, NULL, NULL, confs))<0)
 			goto error;
 		else if(ars>0)
 		{

@@ -22,10 +22,15 @@ static char *get_next_fpath_protocol1(struct manio *manio)
 	return strdup_w(manio->manifest, __func__);
 }
 
+static int is_single_file(struct manio *manio)
+{
+	return manio->protocol==PROTO_1 || manio->phase==1;
+}
+
 static char *get_next_fpath(struct manio *manio)
 {
 	static char tmp[32];
-	if(manio->protocol==PROTO_1 || manio->phase==1)
+	if(is_single_file(manio))
 		return get_next_fpath_protocol1(manio);
 	snprintf(tmp, sizeof(tmp), "%08"PRIX64, manio->offset.fcount++);
 	return prepend_s(manio->manifest, tmp);
@@ -282,7 +287,7 @@ int manio_close(struct manio **manio)
 }
 
 // Return -1 for error, 0 for stuff read OK, 1 for end of files.
-int manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
+int manio_read_async(struct manio *manio, struct asfd *asfd,
 	struct sbuf *sb, struct blk *blk,
 	struct sdirs *sdirs, struct conf **confs)
 {
@@ -317,12 +322,17 @@ int manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
 		if(sort_and_write_hooks_and_dindex(manio)
 		  || fzp_close(&manio->fzp)) goto error;
 
-		// If in protocol1 mode, there is only one file, so end.
-		if(manio->protocol==PROTO_1 || manio->phase==1) return 1;
+		if(is_single_file(manio)) return 1;
 	}
 
 error:
 	return -1;
+}
+
+int manio_read(struct manio *manio, struct sbuf *sb,
+	struct conf **confs)
+{
+	return manio_read_async(manio, NULL, sb, NULL, NULL, confs);
 }
 
 static int reset_sig_count_and_close(struct manio *manio)
@@ -471,7 +481,7 @@ int manio_copy_entry(struct asfd *asfd, struct sbuf **csb, struct sbuf *sb,
 
 	while(1)
 	{
-		if((ars=manio_sbuf_fill(srcmanio, asfd, *csb,
+		if((ars=manio_read_async(srcmanio, asfd, *csb,
 			*blk, NULL, confs))<0) goto error;
 		else if(ars>0)
 		{

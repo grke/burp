@@ -78,7 +78,7 @@ static void test_manifest_phase1(enum protocol protocol)
 	while(1)
 	{
 		sbuf_free_content(rb);
-		switch(manio_sbuf_fill(manio, NULL, rb, NULL, NULL, NULL))
+		switch(manio_read(manio, rb, NULL))
 		{
 			case 0: break;
 			case 1: goto end;

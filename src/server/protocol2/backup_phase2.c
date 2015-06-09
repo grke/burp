@@ -81,7 +81,7 @@ static int entry_changed(struct asfd *asfd, struct sbuf *sb,
 	{
 		// Need to read another.
 		if(!blk && !(blk=blk_alloc())) return -1;
-		switch(manio_sbuf_fill(cmanio, asfd, csb, blk, NULL, confs))
+		switch(manio_read_async(cmanio, asfd, csb, blk, NULL, confs))
 		{
 			case 1: // Reached the end.
 				sbuf_free(&csb);
@@ -108,7 +108,7 @@ static int entry_changed(struct asfd *asfd, struct sbuf *sb,
 			case -1:
 				// Behind - need to read more data from the old
 				// manifest.
-				switch(manio_sbuf_fill(cmanio, asfd,
+				switch(manio_read_async(cmanio, asfd,
 					csb, blk, NULL, confs))
 				{
 					case -1: return -1;
@@ -540,7 +540,7 @@ static int maybe_add_from_scan(struct asfd *asfd,
 		}
 		if(!(snew=sbuf_alloc(confs))) goto end;
 
-		if((ars=manio_sbuf_fill(*p1manio,
+		if((ars=manio_read_async(*p1manio,
 			asfd, snew, NULL, NULL, confs))<0) goto end;
 		else if(ars>0)
 		{

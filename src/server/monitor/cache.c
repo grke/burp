@@ -106,7 +106,7 @@ int cache_load(struct asfd *srfd, struct manio *manio, struct sbuf *sb,
 	while(1)
 	{
 		sbuf_free_content(sb);
-		if((ars=manio_sbuf_fill(manio, NULL, sb, NULL, NULL, NULL)))
+		if((ars=manio_read(manio, sb, NULL)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.

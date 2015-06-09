@@ -44,8 +44,7 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 		  && usb
 		  && !usb->path.buf)
 		{
-			switch(manio_sbuf_fill(unmanio, NULL /* no async */,
-				usb, NULL, NULL, confs))
+			switch(manio_read(unmanio, usb, confs))
 			{
 				case -1: goto end;
 				case 1: finished_un++;
@@ -56,8 +55,7 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 		  && csb
 		  && !csb->path.buf)
 		{
-			switch(manio_sbuf_fill(chmanio, NULL /* no async */,
-				csb, NULL, NULL, confs))
+			switch(manio_read(chmanio, csb, confs))
 			{
 				case -1: goto end;
 				case 1: finished_ch++;

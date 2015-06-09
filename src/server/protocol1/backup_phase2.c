@@ -862,8 +862,8 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 
 		sbuf_free_content(p1b);
 
-		switch(manio_sbuf_fill(p1manio, asfd,
-			p1b, NULL, sdirs, cconfs))
+		switch(manio_read_async(p1manio,
+			asfd, p1b, NULL, sdirs, cconfs))
 		{
 			case 0: break;
 			case 1: manio_close(&p1manio);

@@ -142,7 +142,7 @@ static int hard_link_substitution(struct asfd *asfd,
 
 	while(1)
 	{
-		switch(manio_sbuf_fill(manio, asfd,
+		switch(manio_read_async(manio, asfd,
 			hb, need_data->path.buf?blk:NULL, sdirs, cconfs))
 		{
 			case 0: break; // Keep going.
@@ -387,7 +387,7 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 				goto end;
 		}
 
-		switch(manio_sbuf_fill(manio, asfd,
+		switch(manio_read_async(manio, asfd,
 			sb, need_data->path.buf?blk:NULL, sdirs, cconfs))
 		{
 			case 0: break; // Keep going.

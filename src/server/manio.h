@@ -51,8 +51,10 @@ extern int manio_init_write_hooks(struct manio *manio,
 extern int manio_init_write_dindex(struct manio *manio, const char *dir);
 extern int manio_read_fcount(struct manio *manio);
 
-extern int manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
+extern int manio_read_async(struct manio *manio, struct asfd *asfd,
 	struct sbuf *sb, struct blk *blk, struct sdirs *sdirs,
+	struct conf **confs);
+extern int manio_read(struct manio *manio, struct sbuf *sb,
 	struct conf **confs);
 
 extern int manio_write_sig(struct manio *manio, struct blk *blk);

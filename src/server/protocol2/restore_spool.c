@@ -46,9 +46,9 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 
 	while(1)
 	{
-		if((ars=manio_sbuf_fill(manio, asfd, sb, blk, NULL, confs))<0)
+		if((ars=manio_read_async(manio, asfd, sb, blk, NULL, confs))<0)
 		{
-			logp("Error from manio_sbuf_fill() in %s\n",
+			logp("Error from manio_read_async() in %s\n",
 				__func__);
 			goto end; // Error;
 		}
@@ -140,9 +140,9 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 	blk->got_save_path=0;
 	while(1)
 	{
-		if((ars=manio_sbuf_fill(manio, asfd, sb, blk, NULL, confs))<0)
+		if((ars=manio_read_async(manio, asfd, sb, blk, NULL, confs))<0)
 		{
-			logp("Error from manio_sbuf_fill() in %s\n",
+			logp("Error from manio_read_async() in %s\n",
 				__func__);
 			goto end; // Error;
 		}

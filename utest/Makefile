@@ -84,5 +84,5 @@ test: Makefile $(OBJS) $(BURP_OBJS)
 
 clean:
 	rm -f test *.o utest_lockfile utest_fzp
-	rm -f server/protocol1/*.o server/protocol2/*.o
+	rm -f server/*.o server/protocol1/*.o server/protocol2/*.o
 	rm -rf utest_dpth utest_sbuf

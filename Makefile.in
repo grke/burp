@@ -127,7 +127,7 @@ Makefiles:
 	$(SHELL) config.status
 
 clean:
-	@for I in ${all_subdirs} test ; \
+	@for I in ${all_subdirs} test utest ; \
 	  do (cd $$I; echo "==>Entering directory `pwd`"; ${MAKE} $@ || exit 1); done
 	@cd src/win32 && ${MAKE} $@
 	@$(RMF) *~ 1 2 3 core core.* config.guess console.log console.sum
@@ -149,7 +149,8 @@ distrib: configure autoconf/config.h.in
 
 .PHONY: test
 test:
-	cd test && ${MAKE} $@
+	cd utest && ${MAKE} && cd -
+	${MAKE} clean && cd test && ${MAKE} $@
 
 tar.gz:  ../$(VERNAME).tar.gz
 ../$(VERNAME).tar.gz:

@@ -10,6 +10,14 @@
 #include "../src/protocol1/sbufl.h"
 #include "../src/sbuf.h"
 
+static void link_data(struct sbuf *sb, enum cmd cmd)
+{
+	sb->path.cmd=cmd;
+	sb->link.cmd=cmd;
+	fail_unless((sb->link.buf=strdup_w("some link", __func__))!=NULL);
+	sb->link.len=strlen(sb->link.buf);
+}
+
 static struct slist *build_slist(enum protocol protocol, int entries)
 {
 	int i=0;
@@ -26,6 +34,27 @@ static struct slist *build_slist(enum protocol protocol, int entries)
 		attribs_encode(sb);
 		iobuf_from_str(&sb->path, CMD_FILE, paths[i]);
 		slist_add_sbuf(slist, sb);
+		switch(prng_next()%10)
+		{
+			case 0:
+				link_data(sb, CMD_SOFT_LINK);
+				break;
+			case 1:
+				link_data(sb, CMD_HARD_LINK);
+				break;
+			case 2:
+			case 3:
+				sb->path.cmd=CMD_DIRECTORY;
+				break;
+			case 4:
+				sb->path.cmd=CMD_ENC_FILE;
+				break;
+			case 5:
+				sb->path.cmd=CMD_SPECIAL;
+				break;
+			default:
+				break;
+		}
 	}
 	free_v((void **)&paths);
 	return slist;
@@ -51,4 +80,3 @@ struct slist *build_manifest_phase1(const char *path,
 	fail_unless(!fzp_close(&fzp));
 	return slist;
 }
-

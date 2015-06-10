@@ -49,6 +49,7 @@ static char *gen_fullpath(char **comps)
 		fail_unless(!astrcat(&path, "/", __func__));
 		fail_unless(!astrcat(&path, comps[choice], __func__));
 	}
+
 	fail_unless((file=comp_gen())!=NULL);
 	fail_unless(!astrcat(&path, "/", __func__));
 	fail_unless(!astrcat(&path, file, __func__));

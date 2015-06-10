@@ -25,6 +25,9 @@ extern void alloc_check(void);
 extern char **build_paths(int wanted);
 extern struct sbuf *build_attribs(enum protocol protocol);
 extern struct sbuf *build_attribs_reduce(enum protocol protocol);
+extern struct slist *build_manifest_phase1(const char *path,
+	enum protocol protocol, int entries);
+
 extern void assert_sbuf(struct sbuf *a, struct sbuf *b, enum protocol protocol);
 
 Suite *suite_alloc(void);
@@ -36,11 +39,11 @@ Suite *suite_conffile(void);
 Suite *suite_fzp(void);
 Suite *suite_hexmap(void);
 Suite *suite_lock(void);
+Suite *suite_manio(void);
 Suite *suite_pathcmp(void);
 Suite *suite_server_sdirs(void);
 Suite *suite_server_protocol1_dpth(void);
 Suite *suite_server_protocol1_fdirs(void);
 Suite *suite_server_protocol2_dpth(void);
-Suite *suite_sbuf(void);
 
 #endif

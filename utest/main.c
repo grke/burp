@@ -16,8 +16,8 @@ int main(void)
 	srunner_add_suite(sr, suite_conffile());
 	srunner_add_suite(sr, suite_fzp());
 	srunner_add_suite(sr, suite_hexmap());
+	srunner_add_suite(sr, suite_manio());
 	srunner_add_suite(sr, suite_pathcmp());
-	srunner_add_suite(sr, suite_sbuf());
 	srunner_add_suite(sr, suite_server_sdirs());
 	srunner_add_suite(sr, suite_server_protocol1_dpth());
 	srunner_add_suite(sr, suite_server_protocol1_fdirs());

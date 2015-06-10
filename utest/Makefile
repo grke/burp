@@ -4,6 +4,7 @@ CFLAGS+=-Wall
 
 SRCS = \
 	build_attribs.c \
+	build_manifest.c \
 	build_paths.c \
 	main.c \
 	mock.c \
@@ -17,8 +18,8 @@ SRCS = \
 	test_fzp.c \
 	test_hexmap.c \
 	test_lock.c \
+	test_manio.c \
 	test_pathcmp.c \
-	test_sbuf.c \
 	server/protocol1/test_dpth.c \
 	server/protocol1/test_fdirs.c \
 	server/protocol2/test_dpth.c \

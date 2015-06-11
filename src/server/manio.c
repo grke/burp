@@ -480,7 +480,7 @@ int manio_init_write_dindex(struct manio *manio, const char *dir)
 }
 
 // Return -1 on error, 0 on OK, 1 for srcmanio finished.
-int manio_copy_entry(struct asfd *asfd, struct sbuf **csb, struct sbuf *sb,
+int manio_copy_entry(struct asfd *asfd, struct sbuf *csb, struct sbuf *sb,
 	struct blk **blk, struct manio *srcmanio,
 	struct manio *dstmanio, struct conf **confs)
 {
@@ -490,24 +490,24 @@ int manio_copy_entry(struct asfd *asfd, struct sbuf **csb, struct sbuf *sb,
 	// Use the most recent stat for the new manifest.
 	if(dstmanio && manio_write_sbuf(dstmanio, sb)) goto error;
 
-	if(!(copy=strdup_w((*csb)->path.buf, __func__)))
+	if(!(copy=strdup_w(csb->path.buf, __func__)))
 		goto error;
 
 	while(1)
 	{
-		if((ars=manio_read_async(srcmanio, asfd, *csb,
+		if((ars=manio_read_async(srcmanio, asfd, csb,
 			*blk, NULL, confs))<0) goto error;
 		else if(ars>0)
 		{
 			// Finished.
-			sbuf_free(csb);
+			sbuf_free_content(csb);
 			blk_free(blk);
 			free_w(&copy);
 			return 1;
 		}
 
 		// Got something.
-		if(strcmp((*csb)->path.buf, copy))
+		if(strcmp(csb->path.buf, copy))
 		{
 			// Found the next entry.
 			free_w(&copy);
@@ -525,7 +525,7 @@ error:
 }
 
 int manio_forward_through_sigs(struct asfd *asfd,
-	struct sbuf **csb, struct blk **blk,
+	struct sbuf *csb, struct blk **blk,
 	struct manio *manio, struct conf **confs)
 {
 	// Call manio_copy_entry with nothing to write to, so

@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Uncomment to get core dumps if segfaults are happening.
+ulimit -c unlimited
+
 myscript=$(basename $0)
 if [ ! -f "$myscript" ] ; then
 	echo "Please run $myscript whilst standing in the same directory" 1>&2
@@ -129,6 +132,8 @@ wait_for_backup_to_finish()
 {
 	local waited=0
 	local lockfile="$target/var/spool/burp/testclient/lockfile"
+	[ "$protocol" = "2" ] && \
+	  lockfile="$target/var/spool/burp/global/clients/testclient/lockfile"
 
 	SLEEPTIME=2
 	# Repeatedly check to see whether the server has finished, rather
@@ -864,7 +869,7 @@ run_tests()
 	res=0
 	echo
 	echo "Running burp$protocol tests"
-	all_tests "$protocol"
+	all_tests
 }
 
 restart_server

@@ -27,7 +27,7 @@ static int found_in_current_manifest(struct asfd *asfd,
 	// (for example, EFS changing to normal file, or back again).
 	if(csb->path.cmd!=sb->path.cmd)
 	{
-		if(manio_forward_through_sigs(asfd, &csb, blk, cmanio, confs)<0)
+		if(manio_forward_through_sigs(asfd, csb, blk, cmanio, confs)<0)
 			return -1;
 		return 1;
 	}
@@ -38,7 +38,7 @@ static int found_in_current_manifest(struct asfd *asfd,
 	  && csb->statp.st_ctime==sb->statp.st_ctime)
 	{
 		// Got an unchanged file.
-		if(manio_copy_entry(asfd, &csb, sb,
+		if(manio_copy_entry(asfd, csb, sb,
 			blk, cmanio, unmanio, confs)<0) return -1;
 		return 0;
 	}
@@ -50,13 +50,13 @@ static int found_in_current_manifest(struct asfd *asfd,
 		// changed. We already have the attributes, but may need to
 		// get extra meta data.
 		// FIX THIS
-		if(manio_copy_entry(asfd, &csb, sb,
+		if(manio_copy_entry(asfd, csb, sb,
 			blk, cmanio, unmanio, confs)<0) return -1;
 		return 0;
 	}
 
 	// File data changed.
-	if(manio_forward_through_sigs(asfd, &csb, blk, cmanio, confs)<0)
+	if(manio_forward_through_sigs(asfd, csb, blk, cmanio, confs)<0)
 		return -1;
 	return 1;
 }

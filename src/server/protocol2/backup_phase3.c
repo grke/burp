@@ -65,7 +65,7 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 		if((usb && usb->path.buf) && (!csb || !csb->path.buf))
 		{
 			switch(manio_copy_entry(NULL /* no async */,
-				&usb, usb,
+				usb, usb,
 				&blk, unmanio, newmanio, confs))
 			{
 				case -1: goto end;
@@ -75,7 +75,7 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 		else if((!usb || !usb->path.buf) && (csb && csb->path.buf))
 		{
 			switch(manio_copy_entry(NULL /* no async */,
-				&csb, csb, &blk, chmanio, newmanio, confs))
+				csb, csb, &blk, chmanio, newmanio, confs))
 			{
 				case -1: goto end;
 				case 1: finished_ch++;
@@ -89,7 +89,7 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 		{
 			// They were the same - write one.
 			switch(manio_copy_entry(NULL /* no async */,
-				&csb, csb, &blk, chmanio, newmanio, confs))
+				csb, csb, &blk, chmanio, newmanio, confs))
 			{
 				case -1: goto end;
 				case 1: finished_ch++;
@@ -98,7 +98,7 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 		else if(pcmp<0)
 		{
 			switch(manio_copy_entry(NULL /* no async */,
-				&usb, usb, &blk, unmanio, newmanio, confs))
+				usb, usb, &blk, unmanio, newmanio, confs))
 			{
 				case -1: goto end;
 				case 1: finished_un++;
@@ -107,7 +107,7 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 		else
 		{
 			switch(manio_copy_entry(NULL /* no async */,
-				&csb, csb, &blk, chmanio, newmanio, confs))
+				csb, csb, &blk, chmanio, newmanio, confs))
 			{
 				case -1: goto end;
 				case 1: finished_ch++;

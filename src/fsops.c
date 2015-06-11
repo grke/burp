@@ -148,11 +148,11 @@ int do_rename(const char *oldpath, const char *newpath)
 
 int build_path_w(const char *path)
 {
+	int ret;
 	char *rpath=NULL;
-	if(build_path(path, "", &rpath, NULL))
-		return -1;
+	ret=build_path(path, "", &rpath, NULL);
 	free_w(&rpath);
-	return 0;
+	return ret;
 }
 
 #define RECDEL_ERROR			-1

@@ -55,7 +55,6 @@ static void test_manifest_phase1(enum protocol protocol)
 	fail_unless(slist!=NULL);
 
 	sb=slist->head;
-printf("TRY %s\n", file);
 	fail_unless((manio=manio_open_phase1(file, "rb", protocol))!=NULL);
 	read_manifest(&sb, manio, 0, entries, protocol);
 	fail_unless(sb==NULL);
@@ -95,6 +94,7 @@ static void test_manifest_phase1_tell_seek(enum protocol protocol)
 	fail_unless((manio=manio_open_phase1(file, "rb", protocol))!=NULL);
 	read_manifest(&sb, manio, 0, entries/2, protocol);
 	fail_unless((offset=manio_tell(manio))!=NULL);
+	fail_unless(sb!=NULL);
 	fail_unless(!manio_close(&manio));
 
 	fail_unless((manio=manio_open_phase1(file, "rb", protocol))!=NULL);
@@ -105,6 +105,7 @@ static void test_manifest_phase1_tell_seek(enum protocol protocol)
 	fail_unless(!manio);
 
 	slist_free(&slist);
+	man_off_t_free(&offset);
 	tear_down();
 }
 

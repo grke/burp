@@ -92,6 +92,7 @@ static int do_forward(struct manio *manio, struct iobuf *result,
 				}
 				goto error;
 			}
+			man_off_t_free(&pos);
 			return 0;
 		}
 
@@ -118,6 +119,7 @@ static int do_forward(struct manio *manio, struct iobuf *result,
 				iobuf_free_content(result);
 				iobuf_move(result, &sb->path);
 			}
+			man_off_t_free(&pos);
 			return 0;
 		}
 
@@ -141,6 +143,7 @@ static int do_forward(struct manio *manio, struct iobuf *result,
 
 error:
 	sbuf_free_content(sb);
+	man_off_t_free(&pos);
 	return -1;
 }
 

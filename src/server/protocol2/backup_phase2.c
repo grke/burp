@@ -433,7 +433,7 @@ static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
 				// Have finished a manifest file. Want to start
 				// using it as a dedup candidate now.
 				iobuf_from_str(wbuf, CMD_MANIFEST,
-					chmanio->offset.fpath);
+					chmanio->offset->fpath);
 				if(chfd->write(chfd, wbuf)) goto error;
 
 				if(!blk->requested)

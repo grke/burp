@@ -37,7 +37,7 @@ struct manio
 	enum protocol protocol;	// Whether running in protocol1/2 mode.
 	int phase;
 
-	man_off_t offset;
+	man_off_t *offset;
 };
 
 extern struct manio *manio_open(const char *manifest, const char *mode,
@@ -68,6 +68,7 @@ extern int manio_copy_entry(struct asfd *asfd,
 extern int manio_forward_through_sigs(struct asfd *asfd, struct sbuf **csb,
 	struct blk **blk, struct manio *manio, struct conf **confs);
 
+extern void man_off_t_free(man_off_t **offset);
 extern man_off_t *manio_tell(struct manio *manio);
 extern int manio_seek(struct manio *manio, man_off_t *offset);
 extern int manio_truncate(struct manio *manio);

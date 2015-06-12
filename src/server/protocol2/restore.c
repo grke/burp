@@ -78,20 +78,13 @@ int restore_sbuf_protocol2(struct asfd *asfd, struct sbuf *sb, enum action act,
 		sb->protocol2->bstart=sb->protocol2->bend=NULL;
 	}
 
-	switch(sb->path.cmd)
+	if(sbuf_is_filedata(sb))
 	{
-		case CMD_FILE:
-		case CMD_ENC_FILE:
-		case CMD_METADATA:
-		case CMD_ENC_METADATA:
-		case CMD_EFS_FILE:
-			iobuf_copy(&need_data->path, &sb->path);
-			sb->path.buf=NULL;
-			break;
-		default:
-			cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 0);
-			break;
+		iobuf_copy(&need_data->path, &sb->path);
+		sb->path.buf=NULL;
 	}
+	else
+		cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 0);
 	return 0;
 }
 

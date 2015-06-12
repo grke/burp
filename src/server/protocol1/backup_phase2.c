@@ -211,7 +211,8 @@ static int process_new(struct sdirs *sdirs, struct conf **cconfs,
 	struct sbuf *p1b, struct fzp *ucfp)
 {
 	if(!p1b->path.buf) return 0;
-	if(cmd_is_filedata(p1b->path.cmd))
+	if(sbuf_is_filedata(p1b)
+	  || sbuf_is_vssdata(p1b))
 	{
 		//logp("need to process new file: %s\n", p1b->path);
 		// Flag the things that need to be sent (to the client)
@@ -286,19 +287,13 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 		// FIX THIS horrible mess.
 		if(cb->path.cmd==CMD_ENC_METADATA
 		  || p1b->path.cmd==CMD_ENC_METADATA
+		  || cb->path.cmd==CMD_EFS_FILE
+		  || p1b->path.cmd==CMD_EFS_FILE
 		// FIX THIS: make unencrypted metadata use the librsync
 		  || cb->path.cmd==CMD_METADATA
 		  || p1b->path.cmd==CMD_METADATA
-		  || cb->path.cmd==CMD_VSS
-		  || p1b->path.cmd==CMD_VSS
-		  || cb->path.cmd==CMD_ENC_VSS
-		  || p1b->path.cmd==CMD_ENC_VSS
-		  || cb->path.cmd==CMD_VSS_T
-		  || p1b->path.cmd==CMD_VSS_T
-		  || cb->path.cmd==CMD_ENC_VSS_T
-		  || p1b->path.cmd==CMD_ENC_VSS_T
-		  || cb->path.cmd==CMD_EFS_FILE
-		  || p1b->path.cmd==CMD_EFS_FILE)
+		  || sbuf_is_vssdata(cb)
+		  || sbuf_is_vssdata(p1b))
 			return process_new_file(sdirs, cconfs, cb, p1b, ucfp);
 		// On Windows, we have to back up the whole file if ctime
 		// changed, otherwise things like permission changes do not get
@@ -316,23 +311,13 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 	// get a new file.
 	// FIX THIS horrible mess.
 	if(get_int(cconfs[OPT_LIBRSYNC])
-	  || cb->path.cmd==CMD_ENC_FILE
-	  || p1b->path.cmd==CMD_ENC_FILE
-	  || cb->path.cmd==CMD_ENC_METADATA
-	  || p1b->path.cmd==CMD_ENC_METADATA
-	  || cb->path.cmd==CMD_EFS_FILE
-	  || p1b->path.cmd==CMD_EFS_FILE
 	// FIX THIS: make unencrypted metadata use the librsync
 	  || cb->path.cmd==CMD_METADATA
 	  || p1b->path.cmd==CMD_METADATA
-	  || cb->path.cmd==CMD_VSS
-	  || p1b->path.cmd==CMD_VSS
-	  || cb->path.cmd==CMD_ENC_VSS
-	  || p1b->path.cmd==CMD_ENC_VSS
-	  || cb->path.cmd==CMD_VSS_T
-	  || p1b->path.cmd==CMD_VSS_T
-	  || cb->path.cmd==CMD_ENC_VSS_T
-	  || p1b->path.cmd==CMD_ENC_VSS_T)
+	  || sbuf_is_encrypted(cb)
+	  || sbuf_is_encrypted(p1b)
+	  || sbuf_is_vssdata(cb)
+	  || sbuf_is_vssdata(p1b))
 		return process_new_file(sdirs, cconfs, cb, p1b, ucfp);
 
 	// Get new files if they have switched between compression on or off.
@@ -345,7 +330,8 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 		return process_new_file(sdirs, cconfs, cb, p1b, ucfp);
 
 	// Otherwise, do the delta stuff (if possible).
-	if(cmd_is_filedata(p1b->path.cmd))
+	if(sbuf_is_filedata(p1b)
+	  || sbuf_is_vssdata(p1b))
 	{
 		if(process_changed_file(asfd, sdirs, cconfs, cb, p1b,
 			sdirs->currentdata)) return -1;
@@ -664,7 +650,8 @@ static int do_stuff_to_receive(struct asfd *asfd,
 		default:
 			break;
 	}
-	if(cmd_is_filedata(rbuf->cmd))
+	if(iobuf_is_filedata(rbuf)
+	  || iobuf_is_vssdata(rbuf))
 	{
 		if(deal_with_filedata(asfd, sdirs, rb, rbuf, dpth, cconfs))
 			goto error;

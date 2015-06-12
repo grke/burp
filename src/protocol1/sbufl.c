@@ -155,7 +155,7 @@ static int do_sbufl_fill_from_file(struct sbuf *sb, struct fzp *fzp,
 		if(!cmd_is_link(rbuf.cmd))
 			return unexpected(&rbuf, __func__);
 	}
-	else if(!phase1 && sbuf_is_filedata(sb))
+	else if(!phase1 && (sbuf_is_filedata(sb) || sbuf_is_vssdata(sb)))
 	{
 		if((ars=read_fp(fzp, &rbuf))) return ars;
 		iobuf_move(&(sb->protocol1->endfile), &rbuf);
@@ -185,7 +185,7 @@ static int sbufl_to_fzp(struct sbuf *sb, struct fzp *fzp)
 		return -1;
 	if(sbuf_to_manifest_phase1(sb, fzp))
 		return -1;
-	if(sbuf_is_filedata(sb)
+	if((sbuf_is_filedata(sb) || sbuf_is_vssdata(sb))
 	  && sb->protocol1
 	  && iobuf_send_msg_fzp(&sb->protocol1->endfile, fzp))
 		return -1;

@@ -164,7 +164,7 @@ static int hard_link_substitution(struct asfd *asfd,
 
 		pcmp=pathcmp(lp->name, hb->path.buf);
 
-		if(!pcmp && sbuf_is_filedata(hb))
+		if(!pcmp && (sbuf_is_filedata(hb) || sbuf_is_vssdata(hb)))
 		{
 			// Copy the path from sb to hb.
 			free_w(&hb->path.buf);
@@ -414,7 +414,7 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 				need_data, &last_ent_was_dir, manifest))
 					goto end;
 		}
-		else if(sbuf_is_filedata(sb))
+		else if(sbuf_is_filedata(sb) || sbuf_is_vssdata(sb))
 		{
 			// Add it to the list of filedata that was not
 			// restored.

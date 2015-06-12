@@ -82,11 +82,7 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 		// If it was encrypted, it may or may not have been compressed
 		// before encryption. Send it as it as, and let the client
 		// sort it out.
-		if(sb->path.cmd==CMD_ENC_FILE
-		  || sb->path.cmd==CMD_ENC_METADATA
-		  || sb->path.cmd==CMD_ENC_VSS
-		  || sb->path.cmd==CMD_ENC_VSS_T
-		  || sb->path.cmd==CMD_EFS_FILE)
+		if(sbuf_is_encrypted(sb))
 		{
 			ret=send_whole_filel(asfd, sb->path.cmd, best,
 				sb->protocol1->datapth.buf, 1, bytes,
@@ -337,7 +333,8 @@ int restore_sbuf_protocol1(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 		&& asfd->write(asfd, &(sb->protocol1->datapth)))
 	  || asfd->write(asfd, &sb->attr))
 		return -1;
-	else if(sbuf_is_filedata(sb))
+	else if(sbuf_is_filedata(sb)
+	  || sbuf_is_vssdata(sb))
 	{
 		if(!sb->protocol1->datapth.buf)
 		{

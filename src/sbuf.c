@@ -62,6 +62,11 @@ int sbuf_is_filedata(struct sbuf *sb)
 	return iobuf_is_filedata(&sb->path);
 }
 
+int sbuf_is_vssdata(struct sbuf *sb)
+{
+	return iobuf_is_vssdata(&sb->path);
+}
+
 int sbuf_is_encrypted(struct sbuf *sb)
 {
 	return iobuf_is_encrypted(&sb->path);

@@ -313,15 +313,8 @@ static int parse_rbuf(struct asfd *asfd, struct sbuf *sb,
 		// and it is best to make it as fresh as
 		// possible.
 	}
-	else if(rbuf->cmd==CMD_FILE
-	  || rbuf->cmd==CMD_ENC_FILE
-	  || rbuf->cmd==CMD_METADATA
-	  || rbuf->cmd==CMD_ENC_METADATA
-	  || rbuf->cmd==CMD_VSS
-	  || rbuf->cmd==CMD_ENC_VSS
-	  || rbuf->cmd==CMD_VSS_T
-	  || rbuf->cmd==CMD_ENC_VSS_T
-	  || rbuf->cmd==CMD_EFS_FILE)
+	else if(iobuf_is_filedata(rbuf)
+	  || iobuf_is_vssdata(rbuf))
 	{
 		if(deal_with_data(asfd, sb, bfd, confs))
 			return -1;

@@ -78,7 +78,7 @@ static char *cmd_to_text(enum cmd cmd)
 		case CMD_BYTES_SENT:
 			snprintf(buf, len, "Bytes sent"); break;
 
-		// Legacy.
+		// Protocol1 only.
 		case CMD_DATAPTH:
 			snprintf(buf, len, "Path to data on the server"); break;
 		case CMD_VSS:
@@ -112,11 +112,15 @@ int cmd_is_filedata(enum cmd cmd)
 		|| cmd==CMD_ENC_FILE
 		|| cmd==CMD_METADATA
 		|| cmd==CMD_ENC_METADATA
-		|| cmd==CMD_VSS
+		|| cmd==CMD_EFS_FILE;
+}
+
+int cmd_is_vssdata(enum cmd cmd)
+{
+	return     cmd==CMD_VSS
 		|| cmd==CMD_ENC_VSS
 		|| cmd==CMD_VSS_T
-		|| cmd==CMD_ENC_VSS_T
-		|| cmd==CMD_EFS_FILE;
+		|| cmd==CMD_ENC_VSS_T;
 }
 
 int cmd_is_link(enum cmd cmd)

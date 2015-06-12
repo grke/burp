@@ -1,8 +1,8 @@
 #include "include.h"
 #include "cmd.h"
+#include "manio.h"
 #include "sdirs.h"
 
-#include "../fzp.h"
 #include "../protocol1/sbufl.h"
 
 int backup_phase1_server_all(struct async *as,
@@ -11,19 +11,18 @@ int backup_phase1_server_all(struct async *as,
 	int ars=0;
 	int ret=-1;
 	struct sbuf *sb=NULL;
-	struct fzp *p1zp=NULL;
 	char *phase1tmp=NULL;
 	struct asfd *asfd=as->asfd;
+	struct manio *manio=NULL;
 	enum protocol protocol=get_protocol(confs);
 	struct cntr *cntr=get_cntr(confs[OPT_CNTR]);
 
 	logp("Begin phase1 (file system scan)\n");
 
-	if(!(phase1tmp=get_tmp_filename(sdirs->phase1data)))
-		goto end;
-	if(!(p1zp=fzp_gzopen(phase1tmp, comp_level(confs))))
-		goto end;
-	if(!(sb=sbuf_alloc(confs)))
+	if(!(phase1tmp=get_tmp_filename(sdirs->phase1data))
+	  || !(manio=manio_open_phase1(phase1tmp,
+		comp_level(confs), protocol))
+	  || !(sb=sbuf_alloc(confs)))
 		goto end;
 
 	while(1)
@@ -41,28 +40,24 @@ int backup_phase1_server_all(struct async *as,
 			// Last thing the client sends is 'backupphase2', and
 			// it wants an 'ok' reply.
 			if(asfd->write_str(asfd, CMD_GEN, "ok")
-			  || send_msg_fzp(p1zp, CMD_GEN,
+			  || send_msg_fzp(manio->fzp, CMD_GEN,
 				"phase1end", strlen("phase1end")))
 					goto end;
 			break;
 		}
 		if(write_status(CNTR_STATUS_SCANNING, sb->path.buf, confs)
-		  || sbuf_to_manifest_phase1(sb, p1zp))
+		  || manio_write_sbuf(manio, sb))
 			goto end;
 		cntr_add_phase1(cntr, sb->path.cmd, 0);
 
-		if(sb->path.cmd==CMD_FILE
-		  || sb->path.cmd==CMD_ENC_FILE
-		  || sb->path.cmd==CMD_METADATA
-		  || sb->path.cmd==CMD_ENC_METADATA
-		  || sb->path.cmd==CMD_EFS_FILE)
+		if(sbuf_is_filedata(sb))
 		{
 			cntr_add_val(cntr, CMD_BYTES_ESTIMATED,
 				(unsigned long long)sb->statp.st_size, 0);
 		}
 	}
 
-	if(fzp_close(&p1zp))
+	if(manio_close(&manio))
 	{
 		logp("error closing %s in backup_phase1_server\n", phase1tmp);
 		goto end;
@@ -82,8 +77,8 @@ int backup_phase1_server_all(struct async *as,
 	logp("End phase1 (file system scan)\n");
 	ret=0;
 end:
-	free(phase1tmp);
-	fzp_close(&p1zp);
+	free_w(&phase1tmp);
+	manio_close(&manio);
 	sbuf_free(&sb);
 	return ret;
 }

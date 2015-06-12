@@ -25,11 +25,7 @@ static int read_phase1(struct manio *p1manio, struct conf **confs)
 		}
 		cntr_add_phase1(get_cntr(confs[OPT_CNTR]), p1b->path.cmd, 0);
 
-		if(p1b->path.cmd==CMD_FILE
-		  || p1b->path.cmd==CMD_ENC_FILE
-		  || p1b->path.cmd==CMD_METADATA
-		  || p1b->path.cmd==CMD_ENC_METADATA
-		  || p1b->path.cmd==CMD_EFS_FILE)
+		if(sbuf_is_filedata(p1b))
 			cntr_add_val(get_cntr(confs[OPT_CNTR]), CMD_BYTES_ESTIMATED,
 				(unsigned long long)p1b->statp.st_size, 0);
 	}

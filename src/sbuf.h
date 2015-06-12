@@ -48,6 +48,7 @@ extern void sbuf_close_file(struct sbuf *sb, struct asfd *asfd);
 extern ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize);
 
 extern int sbuf_is_filedata(struct sbuf *sb);
+extern int sbuf_is_vssdata(struct sbuf *sb);
 extern int sbuf_is_link(struct sbuf *sb);
 extern int sbuf_is_encrypted(struct sbuf *sb);
 

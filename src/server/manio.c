@@ -54,9 +54,18 @@ static int manio_open_next_fpath(struct manio *manio)
 	  && lstat(manio->offset->fpath, &statp))
 		return 0;
 
-	if(build_path_w(manio->offset->fpath)
-	  || !(manio->fzp=fzp_gzopen(manio->offset->fpath, manio->mode)))
+	if(build_path_w(manio->offset->fpath))
 		return -1;
+//	if(manio->phase==1)
+//	{
+		if(!(manio->fzp=fzp_gzopen(manio->offset->fpath, manio->mode)))
+			return -1;
+//	}
+//	else
+//	{
+//		if(!(manio->fzp=fzp_open(manio->offset->fpath, manio->mode)))
+//			return -1;
+//	}
 	return 0;
 }
 

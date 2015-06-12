@@ -47,6 +47,7 @@ BURP_SRCS = \
 	../src/sbuf.c \
 	../src/slist.c \
 	../src/strlist.c \
+	../src/protocol1/handy.c \
 	../src/protocol1/rs_buf.c \
 	../src/protocol1/sbuf_protocol1.c \
 	../src/protocol1/sbufl.c \

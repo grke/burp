@@ -46,18 +46,6 @@ int do_quick_read(struct asfd *asfd, const char *datapth, struct conf **confs)
 	return r;
 }
 
-static char *get_endfile_str(unsigned long long bytes)
-{
-	static char endmsg[128]="";
-	snprintf(endmsg, sizeof(endmsg), "%"PRIu64 ":", (uint64_t)bytes);
-	return endmsg;
-}
-
-static int write_endfile(struct asfd *asfd, unsigned long long bytes)
-{
-	return asfd->write_str(asfd, CMD_END_FILE, get_endfile_str(bytes));
-}
-
 int send_whole_file_gz(struct asfd *asfd,
 	const char *fname, const char *datapth, int quick_read,
 	unsigned long long *bytes, struct conf **confs,
@@ -169,7 +157,7 @@ cleanup:
 
 	if(!ret)
 	{
-		return write_endfile(asfd, *bytes);
+		return write_endfile(asfd, *bytes, NULL);
 	}
 //logp("end of send\n");
 	return ret;

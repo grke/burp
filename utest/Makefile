@@ -18,11 +18,11 @@ SRCS = \
 	test_fzp.c \
 	test_hexmap.c \
 	test_lock.c \
-	test_manio.c \
 	test_pathcmp.c \
 	server/protocol1/test_dpth.c \
 	server/protocol1/test_fdirs.c \
 	server/protocol2/test_dpth.c \
+	server/test_manio.c \
 	server/test_sdirs.c \
 
 BURP_SRCS = \

@@ -2,15 +2,15 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "test.h"
-#include "prng.h"
-#include "../src/alloc.h"
-#include "../src/attribs.h"
-#include "../src/base64.h"
-#include "../src/pathcmp.h"
-#include "../src/protocol1/sbufl.h"
-#include "../src/sbuf.h"
-#include "../src/server/manio.h"
+#include "../test.h"
+#include "../prng.h"
+#include "../../src/alloc.h"
+#include "../../src/attribs.h"
+#include "../../src/base64.h"
+#include "../../src/pathcmp.h"
+#include "../../src/protocol1/sbufl.h"
+#include "../../src/sbuf.h"
+#include "../../src/server/manio.h"
 
 static const char *file="utest_manio";
 

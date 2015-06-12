@@ -9,6 +9,7 @@
 #include "../src/pathcmp.h"
 #include "../src/protocol1/sbufl.h"
 #include "../src/sbuf.h"
+#include "../src/server/manio.h"
 
 static void link_data(struct sbuf *sb, enum cmd cmd)
 {
@@ -63,20 +64,22 @@ static struct slist *build_slist(enum protocol protocol, int entries)
 struct slist *build_manifest_phase1(const char *path,
 	enum protocol protocol, int entries)
 {
-	struct fzp *fzp=NULL;
 	struct iobuf wbuf;
 	struct sbuf *sb;
 	struct slist *slist=NULL;
+	struct manio *manio=NULL;
 
 	slist=build_slist(protocol, entries);
 
-	fail_unless((fzp=fzp_gzopen(path, "wb"))!=NULL);
+	fail_unless((manio=manio_open_phase1(path, "wb", protocol))!=NULL);
 
+	// FIX THIS: should call a function called manio_write().
 	for(sb=slist->head; sb; sb=sb->next)
-		fail_unless(!sbufl_to_manifest_phase1(sb, fzp));
-	iobuf_from_str(&wbuf, CMD_GEN, (char *)"phase1end");
-	fail_unless(!iobuf_send_msg_fzp(&wbuf, fzp));
+		fail_unless(!sbufl_to_manifest_phase1(sb, manio->fzp));
 
-	fail_unless(!fzp_close(&fzp));
+	iobuf_from_str(&wbuf, CMD_GEN, (char *)"phase1end");
+	fail_unless(!iobuf_send_msg_fzp(&wbuf, manio->fzp));
+
+	fail_unless(!manio_close(&manio));
 	return slist;
 }

@@ -64,7 +64,6 @@ static struct slist *build_slist(enum protocol protocol, int entries)
 struct slist *build_manifest_phase1(const char *path,
 	enum protocol protocol, int entries)
 {
-	struct iobuf wbuf;
 	struct sbuf *sb;
 	struct slist *slist=NULL;
 	struct manio *manio=NULL;
@@ -73,12 +72,11 @@ struct slist *build_manifest_phase1(const char *path,
 
 	fail_unless((manio=manio_open_phase1(path, "wb", protocol))!=NULL);
 
-	// FIX THIS: should call a function called manio_write().
 	for(sb=slist->head; sb; sb=sb->next)
-		fail_unless(!sbufl_to_manifest_phase1(sb, manio->fzp));
+		fail_unless(!manio_write_sbuf(manio, sb));
 
-	iobuf_from_str(&wbuf, CMD_GEN, (char *)"phase1end");
-	fail_unless(!iobuf_send_msg_fzp(&wbuf, manio->fzp));
+	fail_unless(!send_msg_fzp(manio->fzp,
+		CMD_GEN, "phase1end", strlen("phase1end")));
 
 	fail_unless(!manio_close(&manio));
 	return slist;

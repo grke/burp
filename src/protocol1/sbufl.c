@@ -177,20 +177,15 @@ int sbufl_fill_phase1(struct sbuf *sb, struct fzp *fzp, struct conf **confs)
 	return do_sbufl_fill_from_file(sb, fzp, 1, confs);
 }
 
-static int sbufl_to_fzp(struct sbuf *sb, struct fzp *fzp, int write_endfile)
+static int sbufl_to_fzp(struct sbuf *sb, struct fzp *fzp)
 {
 	if(!sb->path.buf) return 0;
 	if(sb->protocol1 && sb->protocol1->datapth.buf
 	  && iobuf_send_msg_fzp(&(sb->protocol1->datapth), fzp))
 		return -1;
-	if(iobuf_send_msg_fzp(&sb->attr, fzp)
-	  || iobuf_send_msg_fzp(&sb->path, fzp))
+	if(sbuf_to_manifest_phase1(sb, fzp))
 		return -1;
-	if(sb->link.buf
-	  && iobuf_send_msg_fzp(&sb->link, fzp))
-		return -1;
-	if(write_endfile
-	  && sbuf_is_filedata(sb)
+	if(sbuf_is_filedata(sb)
 	  && sb->protocol1
 	  && iobuf_send_msg_fzp(&sb->protocol1->endfile, fzp))
 		return -1;
@@ -199,14 +194,7 @@ static int sbufl_to_fzp(struct sbuf *sb, struct fzp *fzp, int write_endfile)
 
 int sbufl_to_manifest(struct sbuf *sb, struct fzp *fzp)
 {
-	if(fzp) return sbufl_to_fzp(sb, fzp, 1);
+	if(fzp) return sbufl_to_fzp(sb, fzp);
 	logp("No valid file pointer given to sbufl_to_manifest()\n");
-	return -1;
-}
-
-int sbufl_to_manifest_phase1(struct sbuf *sb, struct fzp *fzp)
-{
-	if(fzp) return sbufl_to_fzp(sb, fzp, 0);
-	logp("No valid file pointer given to sbufl_to_manifest_phase1()\n");
 	return -1;
 }

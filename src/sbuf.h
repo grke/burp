@@ -51,6 +51,7 @@ extern int sbuf_is_filedata(struct sbuf *sb);
 extern int sbuf_is_link(struct sbuf *sb);
 extern int sbuf_is_encrypted(struct sbuf *sb);
 
+extern int sbuf_to_manifest_phase1(struct sbuf *sb, struct fzp *fzp);
 extern int sbuf_to_manifest(struct sbuf *sb, struct fzp *fzp);
 
 extern int sbuf_pathcmp(struct sbuf *a, struct sbuf *b);

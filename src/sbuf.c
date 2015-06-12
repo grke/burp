@@ -4,6 +4,7 @@
 #include "conf.h"
 #include "sbuf.h"
 #include "server/protocol2/rblk.h"
+#include "protocol1/sbufl.h"
 
 struct sbuf *sbuf_alloc_protocol(enum protocol protocol)
 {
@@ -64,6 +65,18 @@ int sbuf_is_filedata(struct sbuf *sb)
 int sbuf_is_encrypted(struct sbuf *sb)
 {
 	return iobuf_is_encrypted(&sb->path);
+}
+
+int sbuf_to_manifest_phase1(struct sbuf *sb, struct fzp *fzp)
+{
+	if(!sb->path.buf) return 0;
+	if(iobuf_send_msg_fzp(&sb->attr, fzp)
+	  || iobuf_send_msg_fzp(&sb->path, fzp))
+		return -1;
+	if(sb->link.buf
+	  && iobuf_send_msg_fzp(&sb->link, fzp))
+		return -1;
+	return 0;
 }
 
 int sbuf_to_manifest(struct sbuf *sb, struct fzp *fzp)

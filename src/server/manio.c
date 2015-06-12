@@ -445,7 +445,12 @@ int manio_write_sig_and_path(struct manio *manio, struct blk *blk)
 int manio_write_sbuf(struct manio *manio, struct sbuf *sb)
 {
 	if(!manio->fzp && manio_open_next_fpath(manio)) return -1;
-	return sbuf_to_manifest(sb, manio->fzp);
+	if(manio->phase==1)
+		return sbuf_to_manifest_phase1(sb, manio->fzp);
+	if(manio->protocol==PROTO_2)
+		return sbuf_to_manifest(sb, manio->fzp);
+	else
+		return sbufl_to_manifest(sb, manio->fzp);
 }
 
 int manio_init_write_hooks(struct manio *manio,

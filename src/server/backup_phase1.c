@@ -14,6 +14,8 @@ int backup_phase1_server_all(struct async *as,
 	struct fzp *p1zp=NULL;
 	char *phase1tmp=NULL;
 	struct asfd *asfd=as->asfd;
+	enum protocol protocol=get_protocol(confs);
+	struct cntr *cntr=get_cntr(confs[OPT_CNTR]);
 
 	logp("Begin phase1 (file system scan)\n");
 
@@ -27,7 +29,7 @@ int backup_phase1_server_all(struct async *as,
 	while(1)
 	{
 		sbuf_free_content(sb);
-		if(get_protocol(confs)==PROTO_1)
+		if(protocol==PROTO_1)
 			ars=sbufl_fill(sb, asfd, NULL, confs);
 		else
 			ars=sbuf_fill(sb, asfd, NULL, NULL, NULL, confs);
@@ -45,9 +47,9 @@ int backup_phase1_server_all(struct async *as,
 			break;
 		}
 		if(write_status(CNTR_STATUS_SCANNING, sb->path.buf, confs)
-		  || sbufl_to_manifest_phase1(sb, p1zp))
+		  || sbuf_to_manifest_phase1(sb, p1zp))
 			goto end;
-		cntr_add_phase1(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 0);
+		cntr_add_phase1(cntr, sb->path.cmd, 0);
 
 		if(sb->path.cmd==CMD_FILE
 		  || sb->path.cmd==CMD_ENC_FILE
@@ -55,7 +57,7 @@ int backup_phase1_server_all(struct async *as,
 		  || sb->path.cmd==CMD_ENC_METADATA
 		  || sb->path.cmd==CMD_EFS_FILE)
 		{
-			cntr_add_val(get_cntr(confs[OPT_CNTR]), CMD_BYTES_ESTIMATED,
+			cntr_add_val(cntr, CMD_BYTES_ESTIMATED,
 				(unsigned long long)sb->statp.st_size, 0);
 		}
 	}

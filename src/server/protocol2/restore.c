@@ -26,7 +26,7 @@ static int send_data(struct asfd *asfd, struct blk *blk,
 				case 1:
 					iobuf_set(&wbuf, CMD_DATA, (char *)"0", 1);
 					if(asfd->write(asfd, &wbuf)) return -1;
-					cntr_add(get_cntr(confs[OPT_CNTR]), CMD_DATA, 0);
+					cntr_add(get_cntr(confs), CMD_DATA, 0);
 					break; // All OK.
 				case 0:
 				{
@@ -84,7 +84,7 @@ int restore_sbuf_protocol2(struct asfd *asfd, struct sbuf *sb, enum action act,
 		sb->path.buf=NULL;
 	}
 	else
-		cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 0);
+		cntr_add(get_cntr(confs), sb->path.cmd, 0);
 	return 0;
 }
 

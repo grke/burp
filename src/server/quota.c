@@ -13,7 +13,7 @@ static void quota_log_bytes(struct async *as,
 int check_quota(struct async *as, struct conf **cconfs)
 {
 	unsigned long long byte;
-	struct cntr *cntr=get_cntr(cconfs[OPT_CNTR]);
+	struct cntr *cntr=get_cntr(cconfs);
 	ssize_t hard_quota=get_ssize_t(cconfs[OPT_HARD_QUOTA]);
 	ssize_t soft_quota=get_ssize_t(cconfs[OPT_SOFT_QUOTA]);
 

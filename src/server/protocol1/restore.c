@@ -271,10 +271,10 @@ static int process_data_dir_file(struct asfd *asfd,
 			logp("Unknown action: %d\n", act);
 			goto end;
 	}
-	cntr_add(get_cntr(cconfs[OPT_CNTR]), sb->path.cmd, 0);
-	cntr_add_bytes(get_cntr(cconfs[OPT_CNTR]),
+	cntr_add(get_cntr(cconfs), sb->path.cmd, 0);
+	cntr_add_bytes(get_cntr(cconfs),
 		  strtoull(sb->protocol1->endfile.buf, NULL, 10));
-	cntr_add_sentbytes(get_cntr(cconfs[OPT_CNTR]), bytes);
+	cntr_add_sentbytes(get_cntr(cconfs), bytes);
 
 	ret=0;
 end:
@@ -353,7 +353,7 @@ int restore_sbuf_protocol1(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 		// it points to.
 		else if(sbuf_is_link(sb)
 		  && asfd->write(asfd, &sb->link)) return -1;
-		cntr_add(get_cntr(cconfs[OPT_CNTR]), sb->path.cmd, 0);
+		cntr_add(get_cntr(cconfs), sb->path.cmd, 0);
 	}
 	return 0;
 }

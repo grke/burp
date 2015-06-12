@@ -188,13 +188,13 @@ static void get_wbuf_from_data(struct conf **confs,
 			wbuf->len=blk->length;
 			blk->requested=0;
 			blist->last_sent=blk;
-			cntr_add(get_cntr(confs[OPT_CNTR]), CMD_DATA, 1);
-			cntr_add_sentbytes(get_cntr(confs[OPT_CNTR]), blk->length);
+			cntr_add(get_cntr(confs), CMD_DATA, 1);
+			cntr_add_sentbytes(get_cntr(confs), blk->length);
 			break;
 		}
 		else
 		{
-			cntr_add_same(get_cntr(confs[OPT_CNTR]), CMD_DATA);
+			cntr_add_same(get_cntr(confs), CMD_DATA);
 			if(blk_requests_end)
 			{
 				// Force onwards when the server has said that
@@ -405,8 +405,8 @@ blk_print_alloc_stats();
 	wbuf->buf=NULL;
 	iobuf_free(&wbuf);
 
-	cntr_print_end(get_cntr(confs[OPT_CNTR]));
-	cntr_print(get_cntr(confs[OPT_CNTR]), ACTION_BACKUP);
+	cntr_print_end(get_cntr(confs));
+	cntr_print(get_cntr(confs), ACTION_BACKUP);
 	if(ret) logp("Error in backup\n");
 	logp("End backup\n");
 

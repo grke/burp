@@ -156,13 +156,13 @@ static int process_changed_file(struct asfd *asfd,
 	//logp("sig begin: %s\n", p1b->protocol1->datapth.buf);
 	if(!(p1b->protocol1->infb=rs_filebuf_new(asfd, NULL,
 		p1b->protocol1->sigfzp,
-		-1, blocklen, -1, get_cntr(cconfs[OPT_CNTR]))))
+		-1, blocklen, -1, get_cntr(cconfs))))
 	{
 		logp("could not rs_filebuf_new for infb.\n");
 		return -1;
 	}
 	if(!(p1b->protocol1->outfb=rs_filebuf_new(asfd, NULL, NULL,
-		asfd->fd, ASYNC_BUF_LEN, -1, get_cntr(cconfs[OPT_CNTR]))))
+		asfd->fd, ASYNC_BUF_LEN, -1, get_cntr(cconfs))))
 	{
 		logp("could not rs_filebuf_new for in_outfb.\n");
 		return -1;
@@ -190,7 +190,7 @@ static int new_non_file(struct sbuf *p1b,
 	if(sbufl_to_manifest(p1b, ucfp))
 		return -1;
 	else
-		cntr_add(get_cntr(cconfs[OPT_CNTR]), p1b->path.cmd, 0);
+		cntr_add(get_cntr(cconfs), p1b->path.cmd, 0);
 	sbuf_free_content(p1b);
 	return 0;
 }
@@ -202,7 +202,7 @@ static int changed_non_file(struct sbuf *p1b,
 	if(sbufl_to_manifest(p1b, ucfp))
 		return -1;
 	else
-		cntr_add_changed(get_cntr(cconfs[OPT_CNTR]), cmd);
+		cntr_add_changed(get_cntr(cconfs), cmd);
 	sbuf_free_content(p1b);
 	return 0;
 }
@@ -238,9 +238,9 @@ static int process_unchanged_file(struct sbuf *p1b, struct sbuf *cb,
 		return -1;
 	if(sbufl_to_manifest(p1b, ucfp))
 		return -1;
-	cntr_add_same(get_cntr(cconfs[OPT_CNTR]), p1b->path.cmd);
+	cntr_add_same(get_cntr(cconfs), p1b->path.cmd);
 	if(p1b->protocol1->endfile.buf) cntr_add_bytes(
-		get_cntr(cconfs[OPT_CNTR]),
+		get_cntr(cconfs),
 		 strtoull(p1b->protocol1->endfile.buf, NULL, 10));
 	sbuf_free_content(cb);
 	return 1;
@@ -368,7 +368,7 @@ static int maybe_process_file(struct asfd *asfd,
 			// Behind - need to read more from the old manifest.
 			// Count a deleted file - it was in the old manifest
 			// but not the new.
-			cntr_add_deleted(get_cntr(cconfs[OPT_CNTR]),
+			cntr_add_deleted(get_cntr(cconfs),
 				cb->path.cmd);
 			return 0;
 	}
@@ -509,9 +509,9 @@ static int deal_with_receive_end_file(struct asfd *asfd, struct sdirs *sdirs,
 		goto error;
 
 	if(rb->flags & SBUFL_RECV_DELTA)
-		cntr_add_changed(get_cntr(cconfs[OPT_CNTR]), rb->path.cmd);
+		cntr_add_changed(get_cntr(cconfs), rb->path.cmd);
 	else
-		cntr_add(get_cntr(cconfs[OPT_CNTR]), rb->path.cmd, 0);
+		cntr_add(get_cntr(cconfs), rb->path.cmd, 0);
 
 	if(*last_requested && !strcmp(rb->path.buf, *last_requested))
 	{
@@ -521,7 +521,7 @@ static int deal_with_receive_end_file(struct asfd *asfd, struct sdirs *sdirs,
 
 	cp=strchr(rb->protocol1->endfile.buf, ':');
 	if(rb->protocol1->endfile.buf)
-		cntr_add_bytes(get_cntr(cconfs[OPT_CNTR]),
+		cntr_add_bytes(get_cntr(cconfs),
 			strtoull(rb->protocol1->endfile.buf, NULL, 10));
 	if(cp)
 	{
@@ -543,7 +543,7 @@ static int deal_with_receive_append(struct asfd *asfd, struct sbuf *rb,
 	rbuf=asfd->rbuf;
 	//logp("rbuf->len: %d\n", rbuf->len);
 
-	cntr_add_recvbytes(get_cntr(cconfs[OPT_CNTR]), rbuf->len);
+	cntr_add_recvbytes(get_cntr(cconfs), rbuf->len);
 	if(rb->protocol1->fzp)
 		app=fzp_write(rb->protocol1->fzp, rbuf->buf, rbuf->len);
 

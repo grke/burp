@@ -422,8 +422,7 @@ rs_result rs_sig_gzfile(struct asfd *asfd,
 #endif
 		);
 
-	r=rs_whole_gzrun(asfd, job, old_file, sig_file,
-		get_cntr(confs[OPT_CNTR]));
+	r=rs_whole_gzrun(asfd, job, old_file, sig_file, get_cntr(confs));
 	rs_job_free(job);
 
 	return r;

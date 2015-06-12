@@ -195,7 +195,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 			fail_unless(get_e_rshash(c[o])==RSHASH_UNSET);
 			break;
 		case OPT_CNTR:
-			fail_unless(get_cntr(c[o])==NULL);
+			fail_unless(get_cntr(c)==NULL);
 			break;
         	case OPT_MAX:
 			break;

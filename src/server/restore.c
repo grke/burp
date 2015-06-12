@@ -89,9 +89,10 @@ static int setup_cntr(struct asfd *asfd, const char *manifest,
 		{
 			if(want_to_restore(srestore, sb, regex, cconfs))
 			{
-				cntr_add_phase1(get_cntr(cconfs[OPT_CNTR]), sb->path.cmd, 0);
+				cntr_add_phase1(get_cntr(cconfs),
+					sb->path.cmd, 0);
 				if(sb->protocol1->endfile.buf)
-				  cntr_add_val(get_cntr(cconfs[OPT_CNTR]),
+				  cntr_add_val(get_cntr(cconfs),
 					CMD_BYTES_ESTIMATED,
 					strtoull(sb->protocol1->endfile.buf,
 						NULL, 10), 0);
@@ -471,8 +472,8 @@ static int actual_restore(struct asfd *asfd, struct bu *bu,
 
         ret=restore_end(asfd, cconfs);
 
-	cntr_print(get_cntr(cconfs[OPT_CNTR]), act);
-	cntr_stats_to_file(get_cntr(cconfs[OPT_CNTR]), bu->path, act, cconfs);
+	cntr_print(get_cntr(cconfs), act);
+	cntr_stats_to_file(get_cntr(cconfs), bu->path, act, cconfs);
 end:
         slist_free(&slist);
 	linkhash_free();
@@ -535,7 +536,7 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 			goto end;
 
 	if(get_int(cconfs[OPT_SEND_CLIENT_CNTR])
-	  && cntr_send(get_cntr(cconfs[OPT_CNTR])))
+	  && cntr_send(get_cntr(cconfs)))
 		goto end;
 
 	// Now, do the actual restore.

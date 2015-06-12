@@ -151,8 +151,8 @@ static int add_data_to_store(struct conf **confs,
 	// Add it to the data store straight away.
 	if(dpth_protocol2_fwrite(dpth, rbuf, blk)) return -1;
 
-	cntr_add(get_cntr(confs[OPT_CNTR]), CMD_DATA, 0);
-	cntr_add_recvbytes(get_cntr(confs[OPT_CNTR]), blk->length);
+	cntr_add(get_cntr(confs), CMD_DATA, 0);
+	cntr_add_recvbytes(get_cntr(confs), blk->length);
 
 	blk->got=BLK_GOT;
 	blk=blk->next;
@@ -711,7 +711,7 @@ static int deal_with_read_from_chfd(struct asfd *asfd, struct asfd *chfd,
 			// Get these for blks that the champ chooser has found.
 			if(deal_with_sig_from_chfd(chfd->rbuf, blist, dpth))
 				goto end;
-			cntr_add_same(get_cntr(confs[OPT_CNTR]), CMD_DATA);
+			cntr_add_same(get_cntr(confs), CMD_DATA);
 			break;
 		case CMD_WRAP_UP:
 			if(deal_with_wrap_up_from_chfd(chfd->rbuf, blist, dpth))

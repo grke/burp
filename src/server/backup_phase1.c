@@ -15,7 +15,7 @@ int backup_phase1_server_all(struct async *as,
 	struct asfd *asfd=as->asfd;
 	struct manio *manio=NULL;
 	enum protocol protocol=get_protocol(confs);
-	struct cntr *cntr=get_cntr(confs[OPT_CNTR]);
+	struct cntr *cntr=get_cntr(confs);
 
 	logp("Begin phase1 (file system scan)\n");
 

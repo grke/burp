@@ -217,8 +217,8 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 		goto error;
 	}
 
-	cntr_print(get_cntr(cconfs[OPT_CNTR]), ACTION_BACKUP);
-	cntr_stats_to_file(get_cntr(cconfs[OPT_CNTR]),
+	cntr_print(get_cntr(cconfs), ACTION_BACKUP);
+	cntr_stats_to_file(get_cntr(cconfs),
 		sdirs->rworking, ACTION_BACKUP, cconfs);
 
 	// Move the symlink to indicate that we are now in the end phase. The

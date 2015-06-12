@@ -1320,7 +1320,7 @@ static int do_conf_switch_to_orig_client(struct conf **globalcs,
 			goto end;
 	if(set_string(cconfs[OPT_RESTORE_PATH], NULL))
 		goto end;
-	set_cntr(sconfs[OPT_CNTR], get_cntr(cconfs[OPT_CNTR]));
+	set_cntr(sconfs[OPT_CNTR], get_cntr(cconfs));
 	set_cntr(cconfs[OPT_CNTR], NULL);
 	confs_free_content(cconfs);
 	confs_init(cconfs);

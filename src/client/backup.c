@@ -76,7 +76,7 @@ int do_backup_client(struct asfd *asfd, struct conf **confs, enum action action,
 			ret=1;
 			goto end;
 		case ACTION_ESTIMATE:
-			cntr_print(get_cntr(confs[OPT_CNTR]), ACTION_ESTIMATE);
+			cntr_print(get_cntr(confs), ACTION_ESTIMATE);
 			break;
 		default:
 			// Now, the server will be telling us what data we need

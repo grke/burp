@@ -296,7 +296,7 @@ extern enum protocol get_e_protocol(struct conf *conf);
 extern enum protocol get_protocol(struct conf **confs);
 extern enum recovery_method get_e_recovery_method(struct conf *conf);
 extern enum rshash get_e_rshash(struct conf *conf);
-extern struct cntr *get_cntr(struct conf *conf);
+extern struct cntr *get_cntr(struct conf **confs);
 
 extern int set_cntr(struct conf *conf, struct cntr *cntr);
 extern int set_string(struct conf *conf, const char *s);

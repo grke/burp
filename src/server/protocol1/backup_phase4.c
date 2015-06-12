@@ -38,7 +38,7 @@ int do_patch(struct asfd *asfd, const char *dst, const char *del,
 	if(!upfzp) goto end;
 
 	result=rs_patch_gzfile(asfd,
-		dstp, delfzp, upfzp, NULL, get_cntr(cconfs[OPT_CNTR]));
+		dstp, delfzp, upfzp, NULL, get_cntr(cconfs));
 end:
 	fzp_close(&dstp);
 	fzp_close(&delfzp);
@@ -119,7 +119,7 @@ static int make_rev_delta(const char *src, const char *sig, const char *del,
 	if(!delfzp) goto end;
 
 	if(rs_delta_gzfile(NULL, sumset, srcfzp,
-		delfzp, NULL, get_cntr(cconfs[OPT_CNTR]))!=RS_DONE)
+		delfzp, NULL, get_cntr(cconfs))!=RS_DONE)
 			goto end;
 	ret=0;
 end:
@@ -304,7 +304,7 @@ static int jiggle(struct sdirs *sdirs, struct fdirs *fdirs, struct sbuf *sb,
 		{
 			logp("WARNING: librsync error when patching %s: %d\n",
 				oldpath, lrs);
-			cntr_add(get_cntr(cconfs[OPT_CNTR]), CMD_WARNING, 1);
+			cntr_add(get_cntr(cconfs), CMD_WARNING, 1);
 			// Try to carry on with the rest of the backup
 			// regardless.
 			//ret=-1;

@@ -199,7 +199,7 @@ int logm(struct asfd *asfd, struct conf **confs, const char *fmt, ...)
 		logp("MESSAGE: %s", buf);
 	}
 	va_end(ap);
-	if(confs) cntr_add(get_cntr(confs[OPT_CNTR]), CMD_MESSAGE, 1);
+	if(confs) cntr_add(get_cntr(confs), CMD_MESSAGE, 1);
 	return r;
 }
 
@@ -217,7 +217,7 @@ int logw(struct asfd *asfd, struct conf **confs, const char *fmt, ...)
 		logp("WARNING: %s", buf);
 	}
 	va_end(ap);
-	if(confs) cntr_add(get_cntr(confs[OPT_CNTR]), CMD_WARNING, 1);
+	if(confs) cntr_add(get_cntr(confs), CMD_WARNING, 1);
 	return r;
 }
 
@@ -278,5 +278,5 @@ void log_recvd(struct iobuf *iobuf, struct conf **confs, int print)
 		default: break;
 	}
 	logp("%s: %s", prefix, iobuf->buf);
-	if(confs) cntr_add(get_cntr(confs[OPT_CNTR]), iobuf->cmd, print);
+	if(confs) cntr_add(get_cntr(confs), iobuf->cmd, print);
 }

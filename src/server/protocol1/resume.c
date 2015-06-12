@@ -23,10 +23,10 @@ static int read_phase1(struct manio *p1manio, struct conf **confs)
 			}
 			return 0;
 		}
-		cntr_add_phase1(get_cntr(confs[OPT_CNTR]), p1b->path.cmd, 0);
+		cntr_add_phase1(get_cntr(confs), p1b->path.cmd, 0);
 
 		if(sbuf_is_filedata(p1b))
-			cntr_add_val(get_cntr(confs[OPT_CNTR]), CMD_BYTES_ESTIMATED,
+			cntr_add_val(get_cntr(confs), CMD_BYTES_ESTIMATED,
 				(unsigned long long)p1b->statp.st_size, 0);
 	}
 	sbuf_free(&p1b);
@@ -121,15 +121,15 @@ static int do_forward(struct manio *manio, struct iobuf *result,
 
 		if(do_cntr)
 		{
-			if(same) cntr_add_same(get_cntr(cconfs[OPT_CNTR]), sb->path.cmd);
-			else cntr_add_changed(get_cntr(cconfs[OPT_CNTR]), sb->path.cmd);
+			if(same) cntr_add_same(get_cntr(cconfs), sb->path.cmd);
+			else cntr_add_changed(get_cntr(cconfs), sb->path.cmd);
 			if(sb->protocol1 && sb->protocol1->endfile.buf)
 			{
 				unsigned long long e=0;
 				e=strtoull(sb->protocol1->endfile.buf,
 					NULL, 10);
-				cntr_add_bytes(get_cntr(cconfs[OPT_CNTR]), e);
-				cntr_add_recvbytes(get_cntr(cconfs[OPT_CNTR]), e);
+				cntr_add_bytes(get_cntr(cconfs), e);
+				cntr_add_recvbytes(get_cntr(cconfs), e);
 			}
 		}
 
@@ -206,7 +206,7 @@ static int do_resume_work(struct manio *p1manio,
 	if(dpth_incr(dpth)) goto error;
 
 	if(get_int(cconfs[OPT_SEND_CLIENT_CNTR])
-	  && cntr_send(get_cntr(cconfs[OPT_CNTR]))) goto error;
+	  && cntr_send(get_cntr(cconfs))) goto error;
 
 	goto end;
 error:

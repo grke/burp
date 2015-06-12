@@ -53,7 +53,7 @@ static int usual_stuff(struct asfd *asfd,
 	  || ((cmd==CMD_HARD_LINK || cmd==CMD_SOFT_LINK)
 		&& asfd->write_str(asfd, cmd, link)))
 			return -1;
-	cntr_add_phase1(get_cntr(confs[OPT_CNTR]), cmd, 1);
+	cntr_add_phase1(get_cntr(confs), cmd, 1);
 	return 0;
 }
 
@@ -96,7 +96,7 @@ static int do_to_server(struct asfd *asfd,
 	if(usual_stuff(asfd, confs, ff->fname, ff->link, sb, cmd)) return -1;
 
 	if(ff->type==FT_REG)
-		cntr_add_val(get_cntr(confs[OPT_CNTR]), CMD_BYTES_ESTIMATED,
+		cntr_add_val(get_cntr(confs), CMD_BYTES_ESTIMATED,
 			(unsigned long long)ff->statp.st_size, 0);
 #ifdef HAVE_WIN32
 	if(get_int(confs[OPT_SPLIT_VSS])
@@ -200,7 +200,7 @@ int backup_phase1_client(struct asfd *asfd, struct conf **confs, int estimate)
 		if(find_files_begin(asfd, ff, confs, l->path)) goto end;
 	ret=0;
 end:
-	cntr_print_end_phase1(get_cntr(confs[OPT_CNTR]));
+	cntr_print_end_phase1(get_cntr(confs));
 	if(ret) logp("Error in phase 1\n");
 	logp("Phase 1 end (file system scan)\n");
 	find_files_free(ff);

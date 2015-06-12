@@ -80,7 +80,7 @@ static int restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 
 	if(act==ACTION_VERIFY)
 	{
-		cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
+		cntr_add(get_cntr(confs), sb->path.cmd, 1);
 		goto end;
 	}
 
@@ -113,7 +113,7 @@ static int restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 
 	if(!(ret=do_restore_file_or_get_meta(asfd, bfd, sb, fname,
 		metadata, metalen, confs, rpath)))
-			cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
+			cntr_add(get_cntr(confs), sb->path.cmd, 1);
 end:
 	free_w(&rpath);
 	if(ret) logp("restore_file error\n");
@@ -134,7 +134,7 @@ static int restore_metadata(struct asfd *asfd, BFILE *bfd, struct sbuf *sb,
 	// them gets set correctly.
 	if(act==ACTION_VERIFY)
 	{
-		cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
+		cntr_add(get_cntr(confs), sb->path.cmd, 1);
 		ret=0;
 		goto end;
 	}
@@ -158,7 +158,7 @@ static int restore_metadata(struct asfd *asfd, BFILE *bfd, struct sbuf *sb,
 			// file.
 			attribs_set(asfd, fname,
 				&(sb->statp), sb->winattr, confs);
-			cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
+			cntr_add(get_cntr(confs), sb->path.cmd, 1);
 #endif
 		}
 		// Carry on if we could not set_extrameta.

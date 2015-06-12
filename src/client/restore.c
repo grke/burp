@@ -10,7 +10,7 @@ int restore_interrupt(struct asfd *asfd,
 	struct sbuf *sb, const char *msg, struct conf **confs)
 {
 	int ret=0;
-	struct cntr *cntr=get_cntr(confs[OPT_CNTR]);
+	struct cntr *cntr=get_cntr(confs);
 	struct iobuf *rbuf=asfd->rbuf;
 
 	if(get_protocol(confs)!=PROTO_1) return 0;
@@ -193,7 +193,7 @@ static int restore_special(struct asfd *asfd, struct sbuf *sb,
 
 	if(act==ACTION_VERIFY)
 	{
-		cntr_add(get_cntr(confs[OPT_CNTR]), CMD_SPECIAL, 1);
+		cntr_add(get_cntr(confs), CMD_SPECIAL, 1);
 		return 0;
 	}
 
@@ -213,7 +213,7 @@ static int restore_special(struct asfd *asfd, struct sbuf *sb,
 		else
 		{
 			attribs_set(asfd, rpath, &statp, sb->winattr, confs);
-			cntr_add(get_cntr(confs[OPT_CNTR]), CMD_SPECIAL, 1);
+			cntr_add(get_cntr(confs), CMD_SPECIAL, 1);
 		}
 	}
 //	else if(S_ISSOCK(statp.st_mode))
@@ -234,7 +234,7 @@ static int restore_special(struct asfd *asfd, struct sbuf *sb,
 	else
 	{
 		attribs_set(asfd, rpath, &statp, sb->winattr, confs);
-		cntr_add(get_cntr(confs[OPT_CNTR]), CMD_SPECIAL, 1);
+		cntr_add(get_cntr(confs), CMD_SPECIAL, 1);
 	}
 #endif
 end:
@@ -265,9 +265,9 @@ int restore_dir(struct asfd *asfd,
 			}
 		}
 		attribs_set(asfd, rpath, &(sb->statp), sb->winattr, confs);
-		if(!ret) cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
+		if(!ret) cntr_add(get_cntr(confs), sb->path.cmd, 1);
 	}
-	else cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
+	else cntr_add(get_cntr(confs), sb->path.cmd, 1);
 end:
 	if(rpath) free(rpath);
 	return ret;
@@ -298,11 +298,11 @@ static int restore_link(struct asfd *asfd, struct sbuf *sb,
 		{
 			attribs_set(asfd, fname,
 				&(sb->statp), sb->winattr, confs);
-			cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
+			cntr_add(get_cntr(confs), sb->path.cmd, 1);
 		}
 		if(rpath) free(rpath);
 	}
-	else cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
+	else cntr_add(get_cntr(confs), sb->path.cmd, 1);
 end:
 	return ret;
 }
@@ -594,7 +594,7 @@ int do_restore_client(struct asfd *asfd,
 		{
 			int wret;
 			if(act==ACTION_VERIFY)
-				cntr_add(get_cntr(confs[OPT_CNTR]), CMD_DATA, 1);
+				cntr_add(get_cntr(confs), CMD_DATA, 1);
 			else
 				wret=write_data(asfd, bfd, blk);
 			if(!datpath) free(blk->data);
@@ -710,8 +710,8 @@ error:
 	bfd->close(bfd, asfd);
 	bfile_free(&bfd);
 
-	cntr_print_end(get_cntr(confs[OPT_CNTR]));
-	cntr_print(get_cntr(confs[OPT_CNTR]), act);
+	cntr_print_end(get_cntr(confs));
+	cntr_print(get_cntr(confs), act);
 
 	if(!ret) logp("%s finished\n", act_str(act));
 	else logp("ret: %d\n", ret);

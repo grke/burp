@@ -139,10 +139,9 @@ enum rshash get_e_rshash(struct conf *conf)
 	return conf->data.rshash;
 }
 
-struct cntr *get_cntr(struct conf *conf)
+struct cntr *get_cntr(struct conf **confs)
 {
-	assert(conf->conf_type==CT_CNTR);
-	return conf->data.cntr;
+	return confs[OPT_CNTR]->data.cntr;
 }
 
 int set_string(struct conf *conf, const char *s)

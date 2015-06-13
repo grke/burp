@@ -29,6 +29,36 @@ static man_off_t *man_off_t_alloc(void)
 	return (man_off_t *)calloc_w(1, sizeof(man_off_t), __func__);
 }
 
+static int init_write_hooks(struct manio *manio,
+	const char *hook_dir, const char *rmanifest)
+{
+	int i=0;
+	if(!(manio->hook_dir=strdup_w(hook_dir, __func__))
+	  || !(manio->rmanifest=strdup_w(rmanifest, __func__))
+	  || !(manio->hook_sort=
+		(char **)calloc_w(MANIFEST_SIG_MAX, sizeof(char*), __func__)))
+			return -1;
+	for(i=0; i<MANIFEST_SIG_MAX; i++)
+		if(!(manio->hook_sort[i]=
+			(char *)calloc_w(1, WEAK_STR_LEN, __func__)))
+				return -1;
+	return 0;
+}
+
+static int init_write_dindex(struct manio *manio, const char *dir)
+{
+	int i=0;
+	if(!(manio->dindex_dir=strdup_w(dir, __func__))
+	  || !(manio->dindex_sort=
+		(char **)calloc_w(MANIFEST_SIG_MAX, sizeof(char*), __func__)))
+			return -1;
+	for(i=0; i<MANIFEST_SIG_MAX; i++)
+		if(!(manio->dindex_sort[i]=
+			(char *)calloc_w(1, MSAVE_PATH_LEN+1, __func__)))
+				return -1;
+	return 0;
+}
+
 static int is_single_file(struct manio *manio)
 {
 	return manio->protocol==PROTO_1 || manio->phase==1;
@@ -56,22 +86,19 @@ static int manio_open_next_fpath(struct manio *manio)
 
 	if(build_path_w(manio->offset->fpath))
 		return -1;
-	if(manio->phase==1)
+	switch(manio->phase)
 	{
-		if(!(manio->fzp=fzp_gzopen(manio->offset->fpath, manio->mode)))
-			return -1;
+		case 2:
+			if(!(manio->fzp=fzp_open(manio->offset->fpath,
+				manio->mode))) return -1;
+			return 0;
+		case 1:
+		case 3:
+		default:
+			if(!(manio->fzp=fzp_gzopen(manio->offset->fpath,
+				manio->mode))) return -1;
+			return 0;
 	}
-	else if(manio->phase==2)
-	{
-		if(!(manio->fzp=fzp_open(manio->offset->fpath, manio->mode)))
-			return -1;
-	}
-	else
-	{
-		if(!(manio->fzp=fzp_gzopen(manio->offset->fpath, manio->mode)))
-			return -1;
-	}
-	return 0;
 }
 
 static struct manio *manio_alloc(void)
@@ -116,11 +143,35 @@ struct manio *manio_open_phase2(const char *manifest, const char *mode,
 	return do_manio_open(manifest, mode, protocol, 2);
 }
 
+struct manio *manio_open_phase3(const char *manifest, const char *mode,
+	enum protocol protocol, const char *rmanifest)
+{
+	struct manio *manio=NULL;
+
+	if(!(manio=do_manio_open(manifest, mode, protocol, 3)))
+		goto end;
+
+	if(protocol==PROTO_2 && rmanifest)
+	{
+		char *hooksdir=NULL;
+		char *dindexdir=NULL;
+		if(!(hooksdir=prepend_s(manifest, "hooks"))
+		  || !(dindexdir=prepend_s(manifest, "dindex"))
+		  || init_write_hooks(manio, hooksdir, rmanifest)
+		  || init_write_dindex(manio, dindexdir))
+			manio_close(&manio);
+		free_w(&hooksdir);
+		free_w(&dindexdir);
+	}
+
+end:
+	return manio;
+}
+
 static void manio_free_content(struct manio *manio)
 {
 	if(!manio) return;
 	man_off_t_free(&manio->offset);
-	free_w(&manio->base_dir);
 	free_w(&manio->manifest);
 	free_w(&manio->mode);
 	free_w(&manio->hook_dir);
@@ -138,11 +189,8 @@ static void manio_free_content(struct manio *manio)
 static int write_hook_header(struct manio *manio,
 	struct fzp *fzp, const char *comp)
 {
-	const char *cp;
 	char *tmp=NULL;
-	cp=manio->rmanifest+strlen(manio->base_dir);
-	while(cp && *cp=='/') cp++;
-	if(!(tmp=prepend_s(cp, comp))) return -1;
+	if(!(tmp=prepend_s(manio->rmanifest, comp))) return -1;
 	// FIX THIS: fzp_printf will truncate at 512 characters.
 	fzp_printf(fzp, "%c%04X%s\n", CMD_MANIFEST, strlen(tmp), tmp);
 	free_w(&tmp);
@@ -473,37 +521,6 @@ int manio_write_sbuf(struct manio *manio, struct sbuf *sb)
 		return sbufl_to_manifest(sb, manio->fzp);
 }
 
-int manio_init_write_hooks(struct manio *manio,
-	const char *base_dir, const char *hook_dir, const char *rmanifest)
-{
-	int i=0;
-	if(!(manio->base_dir=strdup_w(base_dir, __func__))
-	  || !(manio->hook_dir=strdup_w(hook_dir, __func__))
-	  || !(manio->rmanifest=strdup_w(rmanifest, __func__))
-	  || !(manio->hook_sort=
-		(char **)calloc_w(MANIFEST_SIG_MAX, sizeof(char*), __func__)))
-			return -1;
-	for(i=0; i<MANIFEST_SIG_MAX; i++)
-		if(!(manio->hook_sort[i]=
-			(char *)calloc_w(1, WEAK_STR_LEN, __func__)))
-				return -1;
-	return 0;
-}
-
-int manio_init_write_dindex(struct manio *manio, const char *dir)
-{
-	int i=0;
-	if(!(manio->dindex_dir=strdup_w(dir, __func__))
-	  || !(manio->dindex_sort=
-		(char **)calloc_w(MANIFEST_SIG_MAX, sizeof(char*), __func__)))
-			return -1;
-	for(i=0; i<MANIFEST_SIG_MAX; i++)
-		if(!(manio->dindex_sort[i]=
-			(char *)calloc_w(1, MSAVE_PATH_LEN+1, __func__)))
-				return -1;
-	return 0;
-}
-
 // Return -1 on error, 0 on OK, 1 for srcmanio finished.
 int manio_copy_entry(struct asfd *asfd, struct sbuf *csb, struct sbuf *sb,
 	struct blk **blk, struct manio *srcmanio,
@@ -513,7 +530,15 @@ int manio_copy_entry(struct asfd *asfd, struct sbuf *csb, struct sbuf *sb,
 	static char *copy=NULL;
 
 	// Use the most recent stat for the new manifest.
-	if(dstmanio && manio_write_sbuf(dstmanio, sb)) goto error;
+	if(dstmanio)
+	{
+		if(manio_write_sbuf(dstmanio, sb)) goto error;
+		if(dstmanio->protocol==PROTO_1)
+		{
+			sbuf_free_content(csb);
+			return 0;
+		}
+	}
 
 	if(!(copy=strdup_w(csb->path.buf, __func__)))
 		goto error;

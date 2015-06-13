@@ -19,7 +19,6 @@ typedef struct man_off man_off_t;
 struct manio
 {
 	struct fzp *fzp;	// File pointer.
-	char *base_dir;		// The base directory. 
 	char *manifest;
 	char *mode;		// Mode with which to open the files.
 	int sig_count;		// When writing, need to split the files
@@ -46,11 +45,10 @@ extern struct manio *manio_open_phase1(const char *manifest, const char *mode,
 	enum protocol protocol);
 extern struct manio *manio_open_phase2(const char *manifest, const char *mode,
 	enum protocol protocol);
+extern struct manio *manio_open_phase3(const char *manifest, const char *mode,
+	enum protocol protocol, const char *rmanifest);
 extern int manio_close(struct manio **manio);
 
-extern int manio_init_write_hooks(struct manio *manio,
-	const char *base_dir, const char *hook_dir, const char *rmanifest);
-extern int manio_init_write_dindex(struct manio *manio, const char *dir);
 extern int manio_read_fcount(struct manio *manio);
 
 extern int manio_read_async(struct manio *manio, struct asfd *asfd,

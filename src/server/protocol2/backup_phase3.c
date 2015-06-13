@@ -2,6 +2,15 @@
 #include "../../server/manio.h"
 #include "../../server/sdirs.h"
 
+static const char *get_rmanifest_relative(struct sdirs *sdirs,
+	struct conf **confs)
+{
+	const char *cp;
+	cp=sdirs->rmanifest+strlen(get_string(confs[OPT_DIRECTORY]));
+	while(cp && *cp=='/') cp++;
+	return cp;
+}
+
 // This is basically backup_phase3_server() from protocol1. It used to merge the
 // unchanged and changed data into a single file. Now it splits the manifests
 // into several files.
@@ -9,32 +18,25 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 {
 	int ret=1;
 	int pcmp=0;
-	char *hooksdir=NULL;
-	char *dindexdir=NULL;
-	char *manifesttmp=NULL;
+	struct blk *blk=NULL;
 	struct sbuf *usb=NULL;
 	struct sbuf *csb=NULL;
-	struct blk *blk=NULL;
+	char *manifesttmp=NULL;
 	struct manio *newmanio=NULL;
 	struct manio *chmanio=NULL;
 	struct manio *unmanio=NULL;
 	enum protocol protocol=get_protocol(confs);
+	const char *rmanifest_relative=get_rmanifest_relative(sdirs, confs);
 
 	logp("Begin phase3 (merge manifests)\n");
 
 	if(!(manifesttmp=get_tmp_filename(sdirs->rmanifest))
-	  || !(newmanio=manio_open(manifesttmp, "wb", protocol))
+	  || !(newmanio=manio_open_phase3(manifesttmp, comp_level(confs),
+		protocol, rmanifest_relative))
 	  || !(chmanio=manio_open_phase2(sdirs->changed, "rb", protocol))
 	  || !(unmanio=manio_open_phase2(sdirs->unchanged, "rb", protocol))
 	  || !(usb=sbuf_alloc(confs))
 	  || !(csb=sbuf_alloc(confs)))
-		goto end;
-
-	if(!(hooksdir=prepend_s(manifesttmp, "hooks"))
-	  || !(dindexdir=prepend_s(manifesttmp, "dindex"))
-	  || manio_init_write_hooks(newmanio,
-		get_string(confs[OPT_DIRECTORY]), hooksdir, sdirs->rmanifest)
-	  || manio_init_write_dindex(newmanio, dindexdir))
 		goto end;
 
 	while(chmanio || unmanio)
@@ -135,8 +137,6 @@ end:
 	sbuf_free(&csb);
 	sbuf_free(&usb);
 	blk_free(&blk);
-	free_w(&hooksdir);
-	free_w(&dindexdir);
 	free_w(&manifesttmp);
 	return ret;
 }

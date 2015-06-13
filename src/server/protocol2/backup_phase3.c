@@ -11,9 +11,7 @@ static const char *get_rmanifest_relative(struct sdirs *sdirs,
 	return cp;
 }
 
-// This is basically backup_phase3_server() from protocol1. It used to merge the
-// unchanged and changed data into a single file. Now it splits the manifests
-// into several files.
+// Combine the phase1 and phase2 files into a new manifest.
 int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 {
 	int ret=1;
@@ -26,9 +24,12 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 	struct manio *chmanio=NULL;
 	struct manio *unmanio=NULL;
 	enum protocol protocol=get_protocol(confs);
-	const char *rmanifest_relative=get_rmanifest_relative(sdirs, confs);
+	const char *rmanifest_relative=NULL;
 
 	logp("Begin phase3 (merge manifests)\n");
+
+	if(protocol==PROTO_2)
+		rmanifest_relative=get_rmanifest_relative(sdirs, confs);
 
 	if(!(manifesttmp=get_tmp_filename(sdirs->rmanifest))
 	  || !(newmanio=manio_open_phase3(manifesttmp, comp_level(confs),
@@ -65,6 +66,8 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 
 		if(usb->path.buf && !csb->path.buf)
 		{
+			if(write_status(CNTR_STATUS_MERGING,
+				usb->path.buf, confs)) goto end;
 			switch(manio_copy_entry(NULL /* no async */,
 				usb, usb, &blk, unmanio, newmanio, confs))
 			{
@@ -74,6 +77,8 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 		}
 		else if(!usb->path.buf && csb->path.buf)
 		{
+			if(write_status(CNTR_STATUS_MERGING,
+				csb->path.buf, confs)) goto end;
 			switch(manio_copy_entry(NULL /* no async */,
 				csb, csb, &blk, chmanio, newmanio, confs))
 			{
@@ -88,6 +93,8 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 		else if(!(pcmp=sbuf_pathcmp(usb, csb)))
 		{
 			// They were the same - write one.
+			if(write_status(CNTR_STATUS_MERGING,
+				csb->path.buf, confs)) goto end;
 			switch(manio_copy_entry(NULL /* no async */,
 				csb, csb, &blk, chmanio, newmanio, confs))
 			{
@@ -97,6 +104,8 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 		}
 		else if(pcmp<0)
 		{
+			if(write_status(CNTR_STATUS_MERGING,
+				usb->path.buf, confs)) goto end;
 			switch(manio_copy_entry(NULL /* no async */,
 				usb, usb, &blk, unmanio, newmanio, confs))
 			{
@@ -106,6 +115,8 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 		}
 		else
 		{
+			if(write_status(CNTR_STATUS_MERGING,
+				csb->path.buf, confs)) goto end;
 			switch(manio_copy_entry(NULL /* no async */,
 				csb, csb, &blk, chmanio, newmanio, confs))
 			{
@@ -116,7 +127,12 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 	}
 
 	// Flush to disk.
-	if(manio_close(&newmanio)) goto end;
+	if(manio_close(&newmanio))
+	{
+		logp("error gzclosing %s in backup_phase3_server\n",
+			manifesttmp);
+		goto end;
+	}
 
 	// Rename race condition should be of no consequence here, as the
 	// manifest should just get recreated automatically.

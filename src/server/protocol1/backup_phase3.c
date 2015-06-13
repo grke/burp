@@ -1,5 +1,15 @@
 #include "include.h"
-#include "../../protocol1/sbufl.h"
+#include "../../server/manio.h"
+#include "../../server/sdirs.h"
+
+static const char *get_rmanifest_relative(struct sdirs *sdirs,
+	struct conf **confs)
+{
+	const char *cp;
+	cp=sdirs->rmanifest+strlen(get_string(confs[OPT_DIRECTORY]));
+	while(cp && *cp=='/') cp++;
+	return cp;
+}
 
 // Combine the phase1 and phase2 files into a new manifest.
 int backup_phase3_server_protocol1(struct sdirs *sdirs, struct conf **confs)
@@ -13,12 +23,16 @@ int backup_phase3_server_protocol1(struct sdirs *sdirs, struct conf **confs)
 	struct manio *chmanio=NULL;
 	struct manio *unmanio=NULL;
 	enum protocol protocol=get_protocol(confs);
+	const char *rmanifest_relative=NULL;
 
 	logp("Begin phase3 (merge manifests)\n");
 
+	if(protocol==PROTO_2)
+		rmanifest_relative=get_rmanifest_relative(sdirs, confs);
+
 	if(!(manifesttmp=get_tmp_filename(sdirs->manifest))
-	  || !(newmanio=manio_open_phase3(manifesttmp,
-		comp_level(confs), protocol, NULL))
+	  || !(newmanio=manio_open_phase3(manifesttmp, comp_level(confs),
+		protocol, rmanifest_relative))
 	  || !(chmanio=manio_open_phase2(sdirs->changed, "rb", protocol))
           || !(unmanio=manio_open_phase2(sdirs->unchanged, "rb", protocol))
 	  || !(usb=sbuf_alloc(confs))

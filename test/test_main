@@ -877,7 +877,7 @@ restart_server
 # Run in protocol1 mode.
 workingdir="$target/var/spool/burp/testclient/working"
 finishingdir="$target/var/spool/burp/testclient/finishing"
-run_tests 1
+#run_tests 1
 # Run in protocol2 mode.
 workingdir="$target/var/spool/burp/global/clients/testclient/working"
 finishingdir="$target/var/spool/burp/global/clients/testclient/finishing"

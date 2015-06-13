@@ -731,13 +731,14 @@ end:
 // backup, do not open the previous manifest. This will have the effect of
 // making the client back up everything fresh. Need to do this, otherwise
 // toggling split_vss on and off will result in backups that do not work.
-static int open_previous_manifest(struct fzp **cmanfp,
+static int open_previous_manifest(struct manio **cmanio,
 	struct sdirs *sdirs, const char *incexc, struct conf **cconfs)
 {
 	struct stat statp;
 	if(!lstat(sdirs->cmanifest, &statp)
 	  && !vss_opts_changed(sdirs, cconfs, incexc)
-	  && !(*cmanfp=fzp_gzopen(sdirs->cmanifest, "rb")))
+	  && !(*cmanio=manio_open(sdirs->cmanifest,
+		"rb", get_protocol(cconfs))))
 	{
 		logp("could not open old manifest %s\n", sdirs->cmanifest);
 		return -1;
@@ -759,7 +760,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 	// This is important for recovery if the power goes.
 	struct fzp *chfp=NULL;
 	struct fzp *ucfp=NULL; // unchanged data
-	struct fzp *cmanfp=NULL; // previous (current) manifest.
+	struct manio *cmanio=NULL; // previous (current) manifest.
 	struct sbuf *cb=NULL; // file list in current manifest
 	struct sbuf *p1b=NULL; // file list from client
 	struct sbuf *rb=NULL; // receiving file from client
@@ -780,7 +781,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 		get_int(cconfs[OPT_MAX_STORAGE_SUBDIRS])))
 			goto error;
 
-	if(open_previous_manifest(&cmanfp, sdirs, incexc, cconfs))
+	if(open_previous_manifest(&cmanio, sdirs, incexc, cconfs))
 		goto error;
 
 	if(get_int(cconfs[OPT_DIRECTORY_TREE]))
@@ -818,10 +819,6 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 			if(breakcount--==0) return breakpoint(cconfs, __func__);
 		}
 
-		//printf("in loop, %s %s %c\n",
-		//	cmanfp?"got cmanfp":"no cmanfp",
-		//	rb->path.buf?:"no rb->path",
-	 	//	rb->path.buf?'X':rb->path.cmd);
 		if(write_status(CNTR_STATUS_BACKUP,
 			rb->path.buf?rb->path.buf:p1b->path.buf, cconfs))
 				goto error;
@@ -860,7 +857,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 			case -1: goto error;
 		}
 
-		if(!cmanfp)
+		if(!cmanio)
 		{
 			// No old manifest, need to ask for a new file.
 			if(process_new(sdirs, cconfs, p1b, ucfp))
@@ -880,13 +877,14 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 			case -1: goto error;
 		}
 
-		while(cmanfp)
+		while(cmanio)
 		{
 			sbuf_free_content(cb);
-			switch(sbufl_fill(cb, asfd, cmanfp, cconfs))
+			switch(manio_read_async(cmanio, asfd,
+				cb, NULL, NULL, cconfs))
 			{
 				case 0: break;
-				case 1: fzp_close(&cmanfp);
+				case 1: manio_close(&cmanio);
 					if(process_new(sdirs, cconfs, p1b,
 						ucfp)) goto error;
 					continue;
@@ -921,7 +919,7 @@ end:
 	sbuf_free(&p1b);
 	sbuf_free(&rb);
 	manio_close(&p1manio);
-	fzp_close(&cmanfp);
+	manio_close(&cmanio);
 	dpth_free(&dpth);
 	if(!ret) unlink(sdirs->phase1data);
 

@@ -2,8 +2,7 @@
 #include "../../protocol1/sbufl.h"
 
 // Combine the phase1 and phase2 files into a new manifest.
-int backup_phase3_server_protocol1(struct sdirs *sdirs,
-	int compress, struct conf **cconfs)
+int backup_phase3_server_protocol1(struct sdirs *sdirs, struct conf **cconfs)
 {
 	int ars=0;
 	int ret=-1;
@@ -17,12 +16,10 @@ int backup_phase3_server_protocol1(struct sdirs *sdirs,
 
 	logp("Begin phase3 (merge manifests)\n");
 
-	if(!(manifesttmp=get_tmp_filename(sdirs->manifest))) goto end;
-
-        if(!(ucfp=fzp_open(sdirs->unchanged, "rb"))
+	if(!(manifesttmp=get_tmp_filename(sdirs->manifest))
+          || !(ucfp=fzp_open(sdirs->unchanged, "rb"))
 	  || !(chfp=fzp_open(sdirs->changed, "rb"))
-	  || (compress && !(mzp=fzp_gzopen(manifesttmp, comp_level(cconfs))))
-          || (!compress && !(mzp=fzp_open(manifesttmp, "wb")))
+	  || !(mzp=fzp_gzopen(manifesttmp, comp_level(cconfs)))
 	  || !(ucb=sbuf_alloc(cconfs))
 	  || !(chb=sbuf_alloc(cconfs)))
 		goto end;

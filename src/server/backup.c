@@ -86,8 +86,7 @@ static int backup_phase2_server(struct async *as, struct sdirs *sdirs,
 	}
 }
 
-static int backup_phase3_server(struct sdirs *sdirs, struct conf **cconfs,
-	int compress)
+static int backup_phase3_server(struct sdirs *sdirs, struct conf **cconfs)
 {
 	if(get_int(cconfs[OPT_BREAKPOINT])==3)
 		return breakpoint(cconfs, __func__);
@@ -95,8 +94,7 @@ static int backup_phase3_server(struct sdirs *sdirs, struct conf **cconfs,
 	switch(get_protocol(cconfs))
 	{
 		case PROTO_1:
-			return backup_phase3_server_protocol1(sdirs,
-				compress, cconfs);
+			return backup_phase3_server_protocol1(sdirs, cconfs);
 		default:
 			return backup_phase3_server_protocol2(sdirs, cconfs);
 	}
@@ -202,7 +200,7 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 	as->asfd_remove(as, asfd);
 	asfd_close(asfd);
 
-	if(backup_phase3_server(sdirs, cconfs, 1 /* compress */))
+	if(backup_phase3_server(sdirs, cconfs))
 	{
 		logp("error in backup phase 3\n");
 		goto error;

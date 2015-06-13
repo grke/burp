@@ -757,15 +757,15 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 	uint64_t wrap_up=0;
 	struct asfd *asfd=as->asfd;
 	struct asfd *chfd;
+	enum protocol protocol=get_protocol(confs);
 	chfd=get_asfd_from_list_by_fdtype(as, ASFD_FD_SERVER_TO_CHAMP_CHOOSER);
 
 	logp("Phase 2 begin (recv backup data)\n");
 
-	//if(champ_chooser_init(sdirs->data, confs)
-	if(!(cmanio=manio_open(sdirs->cmanifest, "rb", PROTO_2))
-	  || !(p1manio=manio_open_phase1(sdirs->phase1data, "rb", PROTO_2))
-	  || !(chmanio=manio_open(sdirs->changed, "wb", PROTO_2))
-	  || !(unmanio=manio_open(sdirs->unchanged, "wb", PROTO_2))
+	if(!(cmanio=manio_open(sdirs->cmanifest, "rb", protocol))
+	  || !(p1manio=manio_open_phase1(sdirs->phase1data, "rb", protocol))
+	  || !(chmanio=manio_open_phase2(sdirs->changed, "wb", protocol))
+	  || !(unmanio=manio_open_phase2(sdirs->unchanged, "wb", protocol))
 	  || !(slist=slist_alloc())
 	  || !(blist=blist_alloc())
 	  || !(wbuf=iobuf_alloc())
@@ -778,7 +778,7 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
                 goto end;
 
 	if(!p1manio
-	  && !(p1manio=manio_open_phase1(sdirs->phase1data, "rb", PROTO_2)))
+	  && !(p1manio=manio_open_phase1(sdirs->phase1data, "rb", protocol)))
 		goto end;
 
 	while(!backup_end)

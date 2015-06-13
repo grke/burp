@@ -15,73 +15,71 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 	struct sbuf *usb=NULL;
 	struct sbuf *csb=NULL;
 	struct blk *blk=NULL;
-	int finished_ch=0;
-	int finished_un=0;
 	struct manio *newmanio=NULL;
 	struct manio *chmanio=NULL;
 	struct manio *unmanio=NULL;
+	enum protocol protocol=get_protocol(confs);
 
-	logp("Start phase3\n");
+	logp("Begin phase3 (merge manifests)\n");
 
 	if(!(manifesttmp=get_tmp_filename(sdirs->rmanifest))
-	  || !(newmanio=manio_open(manifesttmp, "wb", PROTO_2))
-	  || !(chmanio=manio_open(sdirs->changed, "rb", PROTO_2))
-	  || !(unmanio=manio_open(sdirs->unchanged, "rb", PROTO_2))
-	  || !(hooksdir=prepend_s(manifesttmp, "hooks"))
-	  || !(dindexdir=prepend_s(manifesttmp, "dindex"))
-	  || manio_init_write_hooks(newmanio,
-		get_string(confs[OPT_DIRECTORY]), hooksdir, sdirs->rmanifest)
-	  || manio_init_write_dindex(newmanio, dindexdir)
+	  || !(newmanio=manio_open(manifesttmp, "wb", protocol))
+	  || !(chmanio=manio_open_phase2(sdirs->changed, "rb", protocol))
+	  || !(unmanio=manio_open_phase2(sdirs->unchanged, "rb", protocol))
 	  || !(usb=sbuf_alloc(confs))
 	  || !(csb=sbuf_alloc(confs)))
 		goto end;
 
-	while(!finished_ch || !finished_un)
+	if(!(hooksdir=prepend_s(manifesttmp, "hooks"))
+	  || !(dindexdir=prepend_s(manifesttmp, "dindex"))
+	  || manio_init_write_hooks(newmanio,
+		get_string(confs[OPT_DIRECTORY]), hooksdir, sdirs->rmanifest)
+	  || manio_init_write_dindex(newmanio, dindexdir))
+		goto end;
+
+	while(chmanio || unmanio)
 	{
 		if(!blk && !(blk=blk_alloc())) goto end;
 
-		if(!finished_un
-		  && usb
+		if(unmanio
 		  && !usb->path.buf)
 		{
 			switch(manio_read(unmanio, usb, confs))
 			{
 				case -1: goto end;
-				case 1: finished_un++;
+				case 1: manio_close(&unmanio);
 			}
 		}
 
-		if(!finished_ch
-		  && csb
+		if(chmanio
 		  && !csb->path.buf)
 		{
 			switch(manio_read(chmanio, csb, confs))
 			{
 				case -1: goto end;
-				case 1: finished_ch++;
+				case 1: manio_close(&chmanio);
 			}
 		}
 
-		if((usb && usb->path.buf) && (!csb || !csb->path.buf))
+		if(usb->path.buf && !csb->path.buf)
 		{
 			switch(manio_copy_entry(NULL /* no async */,
-				usb, usb,
-				&blk, unmanio, newmanio, confs))
+				usb, usb, &blk, unmanio, newmanio, confs))
 			{
 				case -1: goto end;
-				case 1: finished_un++;
+				case 1: manio_close(&unmanio);
 			}
 		}
-		else if((!usb || !usb->path.buf) && (csb && csb->path.buf))
+		else if(!usb->path.buf && csb->path.buf)
 		{
 			switch(manio_copy_entry(NULL /* no async */,
 				csb, csb, &blk, chmanio, newmanio, confs))
 			{
 				case -1: goto end;
-				case 1: finished_ch++;
+				case 1: manio_close(&chmanio);
 			}
 		}
-		else if((!usb || !usb->path.buf) && (!csb || !(csb->path.buf)))
+		else if(!usb->path.buf && !csb->path.buf)
 		{
 			continue;
 		}
@@ -92,7 +90,7 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 				csb, csb, &blk, chmanio, newmanio, confs))
 			{
 				case -1: goto end;
-				case 1: finished_ch++;
+				case 1: manio_close(&chmanio);
 			}
 		}
 		else if(pcmp<0)
@@ -101,7 +99,7 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 				usb, usb, &blk, unmanio, newmanio, confs))
 			{
 				case -1: goto end;
-				case 1: finished_un++;
+				case 1: manio_close(&unmanio);
 			}
 		}
 		else
@@ -110,7 +108,7 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 				csb, csb, &blk, chmanio, newmanio, confs))
 			{
 				case -1: goto end;
-				case 1: finished_ch++;
+				case 1: manio_close(&chmanio);
 			}
 		}
 	}
@@ -128,9 +126,8 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 		recursive_delete(sdirs->unchanged, NULL, 1);
 	}
 
+	logp("End phase3 (merge manifests)\n");
 	ret=0;
-
-	logp("End phase3\n");
 end:
 	manio_close(&newmanio);
 	manio_close(&chmanio);

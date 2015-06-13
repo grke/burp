@@ -180,14 +180,14 @@ static int process_changed_file(struct asfd *asfd,
 }
 
 static int new_non_file(struct sbuf *p1b,
-	struct fzp *ucfp, struct conf **cconfs)
+	struct manio *ucmanio, struct conf **cconfs)
 {
 	// Is something that does not need more data backed up.
 	// Like a directory or a link or something like that.
 	// Goes into the unchanged file, so that it does not end up out of
 	// order with normal files, which has to wait around for their data
 	// to turn up.
-	if(sbufl_to_manifest(p1b, ucfp))
+	if(manio_write_sbuf(ucmanio, p1b))
 		return -1;
 	else
 		cntr_add(get_cntr(cconfs), p1b->path.cmd, 0);
@@ -196,10 +196,10 @@ static int new_non_file(struct sbuf *p1b,
 }
 
 static int changed_non_file(struct sbuf *p1b,
-	struct fzp *ucfp, enum cmd cmd, struct conf **cconfs)
+	struct manio *ucmanio, enum cmd cmd, struct conf **cconfs)
 {
 	// As new_non_file.
-	if(sbufl_to_manifest(p1b, ucfp))
+	if(manio_write_sbuf(ucmanio, p1b))
 		return -1;
 	else
 		cntr_add_changed(get_cntr(cconfs), cmd);
@@ -208,7 +208,7 @@ static int changed_non_file(struct sbuf *p1b,
 }
 
 static int process_new(struct sdirs *sdirs, struct conf **cconfs,
-	struct sbuf *p1b, struct fzp *ucfp)
+	struct sbuf *p1b, struct manio *ucmanio)
 {
 	if(!p1b->path.buf) return 0;
 	if(sbuf_is_filedata(p1b)
@@ -221,13 +221,13 @@ static int process_new(struct sdirs *sdirs, struct conf **cconfs,
 	}
 	else
 	{
-		new_non_file(p1b, ucfp, cconfs);
+		new_non_file(p1b, ucmanio, cconfs);
 	}
 	return 0;
 }
 
 static int process_unchanged_file(struct sbuf *p1b, struct sbuf *cb,
-	struct fzp *ucfp, struct conf **cconfs)
+	struct manio *ucmanio, struct conf **cconfs)
 {
 	// Need to re-encode the p1b attribs to include compression and
 	// other bits and pieces that are recorded on cb.
@@ -236,7 +236,7 @@ static int process_unchanged_file(struct sbuf *p1b, struct sbuf *cb,
 	p1b->compression=cb->compression;
 	if(attribs_encode(p1b))
 		return -1;
-	if(sbufl_to_manifest(p1b, ucfp))
+	if(manio_write_sbuf(ucmanio, p1b))
 		return -1;
 	cntr_add_same(get_cntr(cconfs), p1b->path.cmd);
 	if(p1b->protocol1->endfile.buf) cntr_add_bytes(
@@ -247,9 +247,9 @@ static int process_unchanged_file(struct sbuf *p1b, struct sbuf *cb,
 }
 
 static int process_new_file(struct sdirs *sdirs, struct conf **cconfs,
-	struct sbuf *cb, struct sbuf *p1b, struct fzp *ucfp)
+	struct sbuf *cb, struct sbuf *p1b, struct manio *ucmanio)
 {
-	if(process_new(sdirs, cconfs, p1b, ucfp))
+	if(process_new(sdirs, cconfs, p1b, ucmanio))
 		return -1;
 	sbuf_free_content(cb);
 	return 1;
@@ -257,7 +257,7 @@ static int process_new_file(struct sdirs *sdirs, struct conf **cconfs,
 
 static int maybe_do_delta_stuff(struct asfd *asfd,
 	struct sdirs *sdirs, struct sbuf *cb, struct sbuf *p1b,
-	struct fzp *ucfp, struct conf **cconfs)
+	struct manio *ucmanio, struct conf **cconfs)
 {
 	int oldcompressed=0;
 	int compression=get_int(cconfs[OPT_COMPRESSION]);
@@ -265,7 +265,7 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 	// If the file type changed, I think it is time to back it up again
 	// (for example, EFS changing to normal file, or back again).
 	if(cb->path.cmd!=p1b->path.cmd)
-		return process_new_file(sdirs, cconfs, cb, p1b, ucfp);
+		return process_new_file(sdirs, cconfs, cb, p1b, ucmanio);
 
 	// mtime is the actual file data.
 	// ctime is the attributes or meta data.
@@ -275,7 +275,7 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 		// got an unchanged file
 		//logp("got unchanged file: %s %c %c\n",
 		//	cb->path.buf, cb->path.cmd, p1b->path.cmd);
-		return process_unchanged_file(p1b, cb, ucfp, cconfs);
+		return process_unchanged_file(p1b, cb, ucmanio, cconfs);
 	}
 
 	if(cb->statp.st_mtime==p1b->statp.st_mtime
@@ -294,14 +294,16 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 		  || p1b->path.cmd==CMD_METADATA
 		  || sbuf_is_vssdata(cb)
 		  || sbuf_is_vssdata(p1b))
-			return process_new_file(sdirs, cconfs, cb, p1b, ucfp);
+			return process_new_file(sdirs,
+				cconfs, cb, p1b, ucmanio);
 		// On Windows, we have to back up the whole file if ctime
 		// changed, otherwise things like permission changes do not get
 		// noticed. So, in that case, fall through to the changed stuff
 		// below.
 		// Non-Windows clients finish here.
 		else if(!get_int(cconfs[OPT_CLIENT_IS_WINDOWS]))
-			return process_unchanged_file(p1b, cb, ucfp, cconfs);
+			return process_unchanged_file(p1b,
+				cb, ucmanio, cconfs);
 	}
 
 	// Got a changed file.
@@ -318,7 +320,7 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 	  || sbuf_is_encrypted(p1b)
 	  || sbuf_is_vssdata(cb)
 	  || sbuf_is_vssdata(p1b))
-		return process_new_file(sdirs, cconfs, cb, p1b, ucfp);
+		return process_new_file(sdirs, cconfs, cb, p1b, ucmanio);
 
 	// Get new files if they have switched between compression on or off.
 	if(cb->protocol1->datapth.buf
@@ -327,7 +329,7 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 		oldcompressed=1;
 	if( ( oldcompressed && !compression)
 	 || (!oldcompressed &&  compression))
-		return process_new_file(sdirs, cconfs, cb, p1b, ucfp);
+		return process_new_file(sdirs, cconfs, cb, p1b, ucmanio);
 
 	// Otherwise, do the delta stuff (if possible).
 	if(sbuf_is_filedata(p1b)
@@ -338,7 +340,7 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 	}
 	else
 	{
-		if(changed_non_file(p1b, ucfp, p1b->path.cmd, cconfs))
+		if(changed_non_file(p1b, ucmanio, p1b->path.cmd, cconfs))
 			return -1;
 	}
 	sbuf_free_content(cb);
@@ -348,17 +350,17 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 // return 1 to say that a file was processed
 static int maybe_process_file(struct asfd *asfd,
 	struct sdirs *sdirs, struct sbuf *cb, struct sbuf *p1b,
-	struct fzp *ucfp, struct conf **cconfs)
+	struct manio *ucmanio, struct conf **cconfs)
 {
 	switch(sbuf_pathcmp(cb, p1b))
 	{
 		case 0:
 			return maybe_do_delta_stuff(asfd, sdirs, cb, p1b,
-				ucfp, cconfs);
+				ucmanio, cconfs);
 		case 1:
 			//logp("ahead: %s\n", p1b->path);
 			// ahead - need to get the whole file
-			if(process_new(sdirs, cconfs, p1b, ucfp))
+			if(process_new(sdirs, cconfs, p1b, ucmanio))
 				return -1;
 			// Do not free.
 			return 1;
@@ -487,7 +489,7 @@ static int finish_delta(struct sdirs *sdirs, struct sbuf *rb)
 }
 
 static int deal_with_receive_end_file(struct asfd *asfd, struct sdirs *sdirs,
-	struct sbuf *rb, struct fzp *chfp, struct conf **cconfs,
+	struct sbuf *rb, struct manio *chmanio, struct conf **cconfs,
 	char **last_requested)
 {
 	static char *cp=NULL;
@@ -505,7 +507,7 @@ static int deal_with_receive_end_file(struct asfd *asfd, struct sdirs *sdirs,
 	if(rb->flags & SBUFL_RECV_DELTA && finish_delta(sdirs, rb))
 		goto error;
 
-	if(sbufl_to_manifest(rb, chfp))
+	if(manio_write_sbuf(chmanio, rb))
 		goto error;
 
 	if(rb->flags & SBUFL_RECV_DELTA)
@@ -582,7 +584,7 @@ static int deal_with_filedata(struct asfd *asfd,
 // returns 1 for finished ok.
 static int do_stuff_to_receive(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf **cconfs,
-	struct sbuf *rb, struct fzp *chfp,
+	struct sbuf *rb, struct manio *chmanio,
 	struct dpth *dpth, char **last_requested)
 {
 	struct iobuf *rbuf=asfd->rbuf;
@@ -615,7 +617,7 @@ static int do_stuff_to_receive(struct asfd *asfd,
 				return 0;
 			case CMD_END_FILE:
 				if(deal_with_receive_end_file(asfd, sdirs, rb,
-					chfp, cconfs, last_requested))
+					chmanio, cconfs, last_requested))
 						goto error;
 				return 0;
 			default:
@@ -755,16 +757,14 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 	struct dpth *dpth=NULL;
 	char *deltmppath=NULL;
 	char *last_requested=NULL;
-	// Where to write changed data.
-	// Data is not getting written to a compressed file.
-	// This is important for recovery if the power goes.
-	struct fzp *chfp=NULL;
-	struct fzp *ucfp=NULL; // unchanged data
+	struct manio *chmanio=NULL; // changed data
+	struct manio *ucmanio=NULL; // unchanged data
 	struct manio *cmanio=NULL; // previous (current) manifest.
 	struct sbuf *cb=NULL; // file list in current manifest
 	struct sbuf *p1b=NULL; // file list from client
 	struct sbuf *rb=NULL; // receiving file from client
 	struct asfd *asfd=as->asfd;
+	enum protocol protocol=get_protocol(cconfs);
 	int breaking=0;
 	int breakcount=0;
 	if(get_int(cconfs[OPT_BREAKPOINT])>=2000
@@ -793,7 +793,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 		init_fs_max(sdirs->treepath);
 	}
 
-	if(!(p1manio=manio_open_phase1(sdirs->phase1data, "rb", PROTO_1))
+	if(!(p1manio=manio_open_phase1(sdirs->phase1data, "rb", protocol))
 	  || !(cb=sbuf_alloc(cconfs))
 	  || !(p1b=sbuf_alloc(cconfs))
 	  || !(rb=sbuf_alloc(cconfs)))
@@ -804,12 +804,14 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 
 	// Unchanged and changed should now be truncated correctly, we just
 	// have to open them for appending.
-	if(!(ucfp=fzp_open(sdirs->unchanged, "a+b"))
-	  || !(chfp=fzp_open(sdirs->changed, "a+b")))
+	// Data is not getting written to a compressed file.
+	// This is important for recovery if the power goes.
+	if(!(ucmanio=manio_open_phase2(sdirs->unchanged, "a+b", protocol))
+	  || !(chmanio=manio_open_phase2(sdirs->changed, "a+b", protocol)))
 		goto error;
 
 	if(!p1manio
-	  && !(p1manio=manio_open_phase1(sdirs->phase1data, "rb", PROTO_1)))
+	  && !(p1manio=manio_open_phase1(sdirs->phase1data, "rb", protocol)))
 		goto error;
 
 	while(1)
@@ -827,7 +829,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 		  || asfd->writebuflen)
 		{
 			switch(do_stuff_to_receive(asfd, sdirs,
-				cconfs, rb, chfp, dpth, &last_requested))
+				cconfs, rb, chmanio, dpth, &last_requested))
 			{
 				case 0: break;
 				case 1: goto end; // Finished ok.
@@ -860,7 +862,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 		if(!cmanio)
 		{
 			// No old manifest, need to ask for a new file.
-			if(process_new(sdirs, cconfs, p1b, ucfp))
+			if(process_new(sdirs, cconfs, p1b, ucmanio))
 				goto error;
 			continue;
 		}
@@ -870,7 +872,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 		// Might already have it, or be ahead in the old
 		// manifest.
 		if(cb->path.buf) switch(maybe_process_file(asfd,
-			sdirs, cb, p1b, ucfp, cconfs))
+			sdirs, cb, p1b, ucmanio, cconfs))
 		{
 			case 0: break;
 			case 1: continue;
@@ -886,12 +888,12 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 				case 0: break;
 				case 1: manio_close(&cmanio);
 					if(process_new(sdirs, cconfs, p1b,
-						ucfp)) goto error;
+						ucmanio)) goto error;
 					continue;
 				case -1: goto error;
 			}
 			switch(maybe_process_file(asfd, sdirs,
-				cb, p1b, ucfp, cconfs))
+				cb, p1b, ucmanio, cconfs))
 			{
 				case 0: continue;
 				case 1: break;
@@ -904,12 +906,12 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 error:
 	ret=-1;
 end:
-	if(fzp_close(&chfp))
+	if(manio_close(&chmanio))
 	{
 		logp("error closing %s in %s\n", sdirs->changed, __func__);
 		ret=-1;
 	}
-	if(fzp_close(&ucfp))
+	if(manio_close(&ucmanio))
 	{
 		logp("error closing %s in %s\n", sdirs->unchanged, __func__);
 		ret=-1;

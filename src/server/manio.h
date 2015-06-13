@@ -44,6 +44,8 @@ extern struct manio *manio_open(const char *manifest, const char *mode,
 	enum protocol protocol);
 extern struct manio *manio_open_phase1(const char *manifest, const char *mode,
 	enum protocol protocol);
+extern struct manio *manio_open_phase2(const char *manifest, const char *mode,
+	enum protocol protocol);
 extern int manio_close(struct manio **manio);
 
 extern int manio_init_write_hooks(struct manio *manio,

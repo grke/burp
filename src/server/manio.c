@@ -56,16 +56,21 @@ static int manio_open_next_fpath(struct manio *manio)
 
 	if(build_path_w(manio->offset->fpath))
 		return -1;
-//	if(manio->phase==1)
-//	{
+	if(manio->phase==1)
+	{
 		if(!(manio->fzp=fzp_gzopen(manio->offset->fpath, manio->mode)))
 			return -1;
-//	}
-//	else
-//	{
-//		if(!(manio->fzp=fzp_open(manio->offset->fpath, manio->mode)))
-//			return -1;
-//	}
+	}
+	else if(manio->phase==2)
+	{
+		if(!(manio->fzp=fzp_open(manio->offset->fpath, manio->mode)))
+			return -1;
+	}
+	else
+	{
+		if(!(manio->fzp=fzp_gzopen(manio->offset->fpath, manio->mode)))
+			return -1;
+	}
 	return 0;
 }
 
@@ -103,6 +108,12 @@ struct manio *manio_open_phase1(const char *manifest, const char *mode,
 	enum protocol protocol)
 {
 	return do_manio_open(manifest, mode, protocol, 1);
+}
+
+struct manio *manio_open_phase2(const char *manifest, const char *mode,
+	enum protocol protocol)
+{
+	return do_manio_open(manifest, mode, protocol, 2);
 }
 
 static void manio_free_content(struct manio *manio)

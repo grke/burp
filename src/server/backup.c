@@ -1,11 +1,10 @@
 #include "include.h"
 #include "../cmd.h"
 
+#include "backup_phase3.h"
 #include "protocol1/backup_phase2.h"
-#include "protocol1/backup_phase3.h"
 #include "protocol1/backup_phase4.h"
 #include "protocol2/backup_phase2.h"
-#include "protocol2/backup_phase3.h"
 #include "protocol2/backup_phase4.h"
 #include "protocol2/champ_chooser/champ_client.h"
 
@@ -91,13 +90,7 @@ static int backup_phase3_server(struct sdirs *sdirs, struct conf **cconfs)
 	if(get_int(cconfs[OPT_BREAKPOINT])==3)
 		return breakpoint(cconfs, __func__);
 
-	switch(get_protocol(cconfs))
-	{
-		case PROTO_1:
-			return backup_phase3_server_protocol1(sdirs, cconfs);
-		default:
-			return backup_phase3_server_protocol2(sdirs, cconfs);
-	}
+	return backup_phase3_server_all(sdirs, cconfs);
 }
 
 static int backup_phase4_server(struct sdirs *sdirs, struct conf **cconfs)

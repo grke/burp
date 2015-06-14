@@ -1,6 +1,6 @@
 #include "include.h"
-#include "../../server/manio.h"
-#include "../../server/sdirs.h"
+#include "manio.h"
+#include "sdirs.h"
 
 static const char *get_rmanifest_relative(struct sdirs *sdirs,
 	struct conf **confs)
@@ -12,9 +12,9 @@ static const char *get_rmanifest_relative(struct sdirs *sdirs,
 }
 
 // Combine the phase1 and phase2 files into a new manifest.
-int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
+int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 {
-	int ret=1;
+	int ret=-1;
 	int pcmp=0;
 	struct blk *blk=NULL;
 	struct sbuf *usb=NULL;
@@ -31,7 +31,7 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 	if(protocol==PROTO_2)
 		rmanifest_relative=get_rmanifest_relative(sdirs, confs);
 
-	if(!(manifesttmp=get_tmp_filename(sdirs->rmanifest))
+	if(!(manifesttmp=get_tmp_filename(sdirs->manifest))
 	  || !(newmanio=manio_open_phase3(manifesttmp, comp_level(confs),
 		protocol, rmanifest_relative))
 	  || !(chmanio=manio_open_phase2(sdirs->changed, "rb", protocol))
@@ -136,7 +136,7 @@ int backup_phase3_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 
 	// Rename race condition should be of no consequence here, as the
 	// manifest should just get recreated automatically.
-	if(do_rename(manifesttmp, sdirs->rmanifest))
+	if(do_rename(manifesttmp, sdirs->manifest))
 		goto end;
 	else
 	{

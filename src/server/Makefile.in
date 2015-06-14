@@ -18,6 +18,7 @@ SRCS = \
 	bu_get.c \
 	backup.c \
 	backup_phase1.c \
+	backup_phase3.c \
 	compress.c \
 	ca.c \
 	child.c \

@@ -482,11 +482,13 @@ static char *sig_to_msg(struct blk *blk, int save_path)
 
 int manio_write_sig(struct manio *manio, struct blk *blk)
 {
+	if(manio->protocol==PROTO_1) return 0;
 	return write_sig_msg(manio, sig_to_msg(blk, 0 /* no save_path */));
 }
 
 int manio_write_sig_and_path(struct manio *manio, struct blk *blk)
 {
+	if(manio->protocol==PROTO_1) return 0;
 	if(manio->hook_sort && is_hook(blk->fingerprint))
 	{
 		// Add to list of hooks for this manifest chunk.

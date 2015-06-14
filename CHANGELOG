@@ -5,6 +5,7 @@
   * Fix possible buffer overrun when encoding attribs.
   * Fix protocol 1 phase 2 resume bug introduced in 2.0.20.
   * Fix possible protocol 2 phase 2 segfaults.
+  * Make protocol 1 and 2 share the same code for phase 3.
 
 2015-05-30 Changes in burp-2.0.20:
   * Fix conf bug that was causing the server to segfault when the client

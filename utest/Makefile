@@ -1,6 +1,6 @@
 
 LIBS = -lcheck -lpthread -lm -lrt -lssl -lcrypto
-CFLAGS+=-Wall
+CFLAGS+=-Wall -g
 
 SRCS = \
 	build_attribs.c \
@@ -86,4 +86,4 @@ test: Makefile $(OBJS) $(BURP_OBJS)
 clean:
 	rm -f test *.o utest_lockfile utest_fzp
 	rm -f server/*.o server/protocol1/*.o server/protocol2/*.o
-	rm -rf utest_dpth utest_sbuf
+	rm -rf utest_dpth utest_sbuf utest_manio

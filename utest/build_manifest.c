@@ -104,11 +104,16 @@ static char *gen_endfile_str(void)
 static void set_sbuf_protocol1(struct sbuf *sb)
 {
 	char *datapth;
-	char *endfile=gen_endfile_str();
-	sb->protocol1->endfile.cmd=CMD_END_FILE;
-	sb->protocol1->endfile.len=strlen(endfile);
-	fail_unless((sb->protocol1->endfile.buf
-		=strdup_w(endfile, __func__))!=NULL);
+	char *endfile;
+
+	if(sbuf_is_filedata(sb))
+	{
+		endfile=gen_endfile_str();
+		sb->protocol1->endfile.cmd=CMD_END_FILE;
+		sb->protocol1->endfile.len=strlen(endfile);
+		fail_unless((sb->protocol1->endfile.buf
+			=strdup_w(endfile, __func__))!=NULL);
+	}
 
 	fail_unless((datapth=prepend_s(TREE_DIR, sb->path.buf))!=NULL);
 	iobuf_from_str(&sb->protocol1->datapth, CMD_DATAPTH, datapth);
@@ -135,7 +140,7 @@ static struct slist *build_slist(enum protocol protocol, int entries)
 	return slist;
 }
 
-struct slist *build_manifest(const char *path,
+struct slist *build_manifest_phase2(const char *path,
 	enum protocol protocol, int entries)
 {
 	struct sbuf *sb;
@@ -144,7 +149,7 @@ struct slist *build_manifest(const char *path,
 
 	slist=build_slist(protocol, entries);
 
-	fail_unless((manio=manio_open(path, "wb", protocol))!=NULL);
+	fail_unless((manio=manio_open_phase2(path, "wb", protocol))!=NULL);
 
 	for(sb=slist->head; sb; sb=sb->next)
 		fail_unless(!manio_write_sbuf(manio, sb));

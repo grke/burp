@@ -121,39 +121,38 @@ START_TEST(test_man_protocol2_phase1_tell_seek)
 }
 END_TEST
 
-static void test_manifest(enum protocol protocol)
+static void test_manifest_phase2(enum protocol protocol)
 {
 	struct slist *slist;
-//	struct manio *manio;
-//	struct sbuf *sb=NULL;
+	struct manio *manio;
+	struct sbuf *sb=NULL;
 	int entries=1000;
 	base64_init();
 	unlink(file);
 
-	slist=build_manifest(file, protocol, entries);
+	slist=build_manifest_phase2(file, protocol, entries);
 	fail_unless(slist!=NULL);
-/*
+
 	sb=slist->head;
-	fail_unless((manio=manio_open_phase1(file, "rb", protocol))!=NULL);
+	fail_unless((manio=manio_open_phase2(file, "rb", protocol))!=NULL);
 	read_manifest(&sb, manio, 0, entries, protocol);
 	fail_unless(sb==NULL);
 	fail_unless(!manio_close(&manio));
 	fail_unless(!manio);
-*/
 
 	slist_free(&slist);
 	tear_down();
 }
 
-START_TEST(test_man_protocol1)
+START_TEST(test_man_protocol1_phase2)
 {
-	test_manifest(PROTO_1);
+	test_manifest_phase2(PROTO_1);
 }
 END_TEST
 
-START_TEST(test_man_protocol2)
+START_TEST(test_man_protocol2_phase2)
 {
-	test_manifest(PROTO_2);
+	test_manifest_phase2(PROTO_2);
 }
 END_TEST
 
@@ -171,8 +170,8 @@ Suite *suite_manio(void)
 	tcase_add_test(tc_core, test_man_protocol1_phase1_tell_seek);
 	tcase_add_test(tc_core, test_man_protocol2_phase1_tell_seek);
 
-	tcase_add_test(tc_core, test_man_protocol1);
-//	tcase_add_test(tc_core, test_man_protocol2);
+	tcase_add_test(tc_core, test_man_protocol1_phase2);
+//	tcase_add_test(tc_core, test_man_protocol2_phase2);
 
 	suite_add_tcase(s, tc_core);
 

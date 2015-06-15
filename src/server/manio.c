@@ -509,11 +509,7 @@ int manio_write_sig_and_path(struct manio *manio, struct blk *blk)
 int manio_write_sbuf(struct manio *manio, struct sbuf *sb)
 {
 	if(!manio->fzp && manio_open_next_fpath(manio)) return -1;
-	if(manio->protocol==PROTO_2)
-		return sbuf_to_manifest(sb, manio->fzp);
-	if(manio->phase==1)
-		return sbuf_to_manifest_phase1(sb, manio->fzp);
-	return sbufl_to_manifest(sb, manio->fzp);
+	return sbuf_to_manifest(sb, manio->fzp);
 }
 
 // Return -1 on error, 0 on OK, 1 for srcmanio finished.

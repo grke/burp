@@ -72,39 +72,46 @@ int sbuf_is_encrypted(struct sbuf *sb)
 	return iobuf_is_encrypted(&sb->path);
 }
 
-int sbuf_to_manifest_phase1(struct sbuf *sb, struct fzp *fzp)
-{
-	if(!sb->path.buf) return 0;
-	if(iobuf_send_msg_fzp(&sb->attr, fzp)
-	  || iobuf_send_msg_fzp(&sb->path, fzp))
-		return -1;
-	if(sb->link.buf
-	  && iobuf_send_msg_fzp(&sb->link, fzp))
-		return -1;
-	return 0;
-}
-
 int sbuf_to_manifest(struct sbuf *sb, struct fzp *fzp)
 {
 	if(!sb->path.buf) return 0;
 
-	// Hackity hack: Strip the file index from the beginning of
-	// the attribs so that manifests where nothing changed are
-	// identical to each other. Better would be to preserve the
-	// index.
-	char *cp;
-	if(!(cp=strchr(sb->attr.buf, ' ')))
+	if(sb->protocol1)
 	{
-		logp("Strange attributes: %s\n", sb->attr.buf);
-		return -1;
+		if(sb->protocol1->datapth.buf
+        	  && iobuf_send_msg_fzp(&(sb->protocol1->datapth), fzp))
+			return -1;
+
+		if(iobuf_send_msg_fzp(&sb->attr, fzp))
+			return -1;
 	}
-	if(send_msg_fzp(fzp, CMD_ATTRIBS,
-		cp, sb->attr.len-(cp-sb->attr.buf))
-	  || send_msg_fzp(fzp, sb->path.cmd, sb->path.buf, sb->path.len))
+	else
+	{
+		// Hackity hack: Strip the file index from the beginning of
+		// the attribs so that manifests where nothing changed are
+		// identical to each other. Better would be to preserve the
+		// index.
+		char *cp;
+		if(!(cp=strchr(sb->attr.buf, ' ')))
+		{
+			logp("Strange attributes: %s\n", sb->attr.buf);
+			return -1;
+		}
+		if(send_msg_fzp(fzp, CMD_ATTRIBS,
+			cp, sb->attr.len-(cp-sb->attr.buf)))
+				return -1;
+	}
+	if(iobuf_send_msg_fzp(&sb->path, fzp))
 		return -1;
 	if(sb->link.buf
-	  && send_msg_fzp(fzp, sb->link.cmd, sb->link.buf, sb->link.len))
+	  && iobuf_send_msg_fzp(&sb->link, fzp))
 		return -1;
+	if(sb->protocol1 && sb->protocol1->endfile.buf)
+	{
+		if((sbuf_is_filedata(sb) || sbuf_is_vssdata(sb))
+		  && iobuf_send_msg_fzp(&sb->protocol1->endfile, fzp))
+				return -1;
+	}
 
 	return 0;
 }
@@ -115,7 +122,6 @@ int sbuf_pathcmp(struct sbuf *a, struct sbuf *b)
 {
 	return iobuf_pathcmp(&a->path, &b->path);
 }
-
 
 int sbuf_open_file(struct sbuf *sb, struct asfd *asfd, struct conf **confs)
 {

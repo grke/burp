@@ -18,6 +18,5 @@ extern int sbufl_fill(struct sbuf *sb, struct asfd *asfd, struct fzp *fzp,
 	struct conf **confs);
 extern int sbufl_fill_phase1(struct sbuf *sb, struct fzp *fzp,
 	struct conf **confs);
-extern int sbufl_to_manifest(struct sbuf *sb, struct fzp *fzp);
 
 #endif

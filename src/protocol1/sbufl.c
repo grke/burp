@@ -176,25 +176,3 @@ int sbufl_fill_phase1(struct sbuf *sb, struct fzp *fzp, struct conf **confs)
 {
 	return do_sbufl_fill_from_file(sb, fzp, 1, confs);
 }
-
-static int sbufl_to_fzp(struct sbuf *sb, struct fzp *fzp)
-{
-	if(!sb->path.buf) return 0;
-	if(sb->protocol1 && sb->protocol1->datapth.buf
-	  && iobuf_send_msg_fzp(&(sb->protocol1->datapth), fzp))
-		return -1;
-	if(sbuf_to_manifest_phase1(sb, fzp))
-		return -1;
-	if((sbuf_is_filedata(sb) || sbuf_is_vssdata(sb))
-	  && sb->protocol1
-	  && iobuf_send_msg_fzp(&sb->protocol1->endfile, fzp))
-		return -1;
-	return 0;
-}
-
-int sbufl_to_manifest(struct sbuf *sb, struct fzp *fzp)
-{
-	if(fzp) return sbufl_to_fzp(sb, fzp);
-	logp("No valid file pointer given to sbufl_to_manifest()\n");
-	return -1;
-}

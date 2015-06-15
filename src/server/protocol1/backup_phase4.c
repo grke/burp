@@ -321,7 +321,7 @@ static int jiggle(struct sdirs *sdirs, struct fdirs *fdirs, struct sbuf *sb,
 				// Could not mark this file as deleted. Fatal.
 				goto end;
 			}
-			if(sbufl_to_manifest(sb, *delfp))
+			if(sbuf_to_manifest(sb, *delfp))
 				goto end;
 			if(fzp_flush(*delfp))
 			{
@@ -501,7 +501,7 @@ static int maybe_delete_files_from_manifest(const char *manifesttmp,
 
 		if(mb->path.buf && !db->path.buf)
 		{
-			if(sbufl_to_manifest(mb, nmzp)) goto end;
+			if(sbuf_to_manifest(mb, nmzp)) goto end;
 			sbuf_free_content(mb);
 		}
 		else if(!mb->path.buf && db->path.buf)
@@ -521,7 +521,7 @@ static int maybe_delete_files_from_manifest(const char *manifesttmp,
 		else if(pcmp<0)
 		{
 			// Behind in manifest. Write.
-			if(sbufl_to_manifest(mb, nmzp)) goto end;
+			if(sbuf_to_manifest(mb, nmzp)) goto end;
 			sbuf_free_content(mb);
 		}
 		else

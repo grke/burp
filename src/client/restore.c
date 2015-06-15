@@ -720,7 +720,7 @@ error:
 	free_w(&style);
 	if(datpath)
 	{
-		recursive_delete(datpath, NULL, 1);
+		recursive_delete(datpath);
 		free(datpath);
 	}
 	free_w(&fullpath);

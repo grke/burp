@@ -393,8 +393,8 @@ end:
 	free_w(&global_sparse);
 	free_w(&srca);
 	free_w(&srcb);
-	recursive_delete(h1dir, NULL, 1);
-	recursive_delete(h2dir, NULL, 1);
+	recursive_delete(h1dir);
+	recursive_delete(h2dir);
 	free_w(&h1dir);
 	free_w(&h2dir);
 	free_w(&logpath);

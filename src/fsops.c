@@ -167,7 +167,8 @@ static void get_max(int32_t *max, int32_t default_max)
 	(*max)++;
 }
 
-static int do_recursive_delete(const char *d, const char *file, uint8_t delfiles, int32_t name_max)
+static int do_recursive_delete(const char *d, const char *file,
+	uint8_t delfiles, int32_t name_max)
 {
 	int ret=RECDEL_ERROR;
 	DIR *dirp=NULL;
@@ -259,11 +260,21 @@ end:
 	return ret;
 }
 
-int recursive_delete(const char *d, const char *file, uint8_t delfiles)
+static int do_recursive_delete_w(const char *path, uint8_t delfiles)
 {
 	int32_t name_max;
 	get_max(&name_max, _PC_NAME_MAX);
-	return do_recursive_delete(d, file, delfiles, name_max);
+	return do_recursive_delete(path, NULL, delfiles, name_max);
+}
+
+int recursive_delete(const char *path)
+{
+	return do_recursive_delete_w(path, 1);
+}
+
+int recursive_delete_dirs_only(const char *path)
+{
+	return do_recursive_delete_w(path, 0);
 }
 
 int unlink_w(const char *path, const char *func)

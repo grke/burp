@@ -63,5 +63,5 @@ int deleteme_maybe_delete(struct conf **cconfs, const char *basedir)
 	// manually, via a cron job or something.
 	if(get_string(cconfs[OPT_MANUAL_DELETE])) return 0;
 	if(!(deleteme=deleteme_get_path(basedir, cconfs))) return -1;
-	return recursive_delete(deleteme, NULL, 1 /* delete all */);
+	return recursive_delete(deleteme);
 }

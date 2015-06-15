@@ -17,7 +17,7 @@ static const char *path="utest_manio";
 static void tear_down(void)
 {
 	alloc_check();
-//	recursive_delete(path, NULL, 1);
+	recursive_delete(path);
 }
 
 static void read_manifest(struct sbuf **sb, struct manio *manio,
@@ -66,7 +66,7 @@ static void test_manifest(enum protocol protocol, int phase)
 	struct sbuf *sb=NULL;
 	int entries=1000;
 	base64_init();
-	recursive_delete(path, NULL, 1);
+	recursive_delete(path);
 
 	slist=build_manifest(path, protocol, entries, phase);
 	fail_unless(slist!=NULL);
@@ -126,7 +126,7 @@ static void test_manifest_tell_seek(enum protocol protocol, int phase)
 	man_off_t *offset=NULL;
 	int entries=1000;
 	base64_init();
-	recursive_delete(path, NULL, 1);
+	recursive_delete(path);
 
 	slist=build_manifest(path, protocol, entries, phase);
 	fail_unless(slist!=NULL);

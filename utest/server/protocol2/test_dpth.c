@@ -33,7 +33,7 @@ static struct dpth *setup(void)
 {
 	struct dpth *dpth;
 	hexmap_init();
-	fail_unless(recursive_delete(lockpath, "", 1)==0);
+	fail_unless(recursive_delete(lockpath)==0);
 	fail_unless((dpth=dpth_alloc())!=NULL);
 	assert_components(dpth, 0, 0, 0, 0);
 	return dpth;
@@ -42,7 +42,7 @@ static struct dpth *setup(void)
 static void tear_down(struct dpth **dpth)
 {
 	dpth_free(dpth);
-	fail_unless(recursive_delete(lockpath, "", 1)==0);
+	fail_unless(recursive_delete(lockpath)==0);
 	fail_unless(free_count==alloc_count);
 }
 

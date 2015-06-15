@@ -26,7 +26,7 @@ static struct conf **setup_confs(const char *conf_str)
 static struct sdirs *setup(struct conf **confs)
 {
 	struct sdirs *sdirs;
-	fail_unless(recursive_delete(BASE, "", 1)==0);
+	fail_unless(recursive_delete(BASE)==0);
 	fail_unless((sdirs=sdirs_alloc())!=NULL);
 	return sdirs;
 }
@@ -35,7 +35,7 @@ static void tear_down(struct sdirs **sdirs, struct conf ***confs)
 {
 	sdirs_free(sdirs);
 	confs_free(confs);
-	fail_unless(recursive_delete(BASE, "", 1)==0);
+	fail_unless(recursive_delete(BASE)==0);
 	fail_unless(free_count==alloc_count);
 }
 

@@ -43,7 +43,7 @@ static int working_delete(struct async *as, struct sdirs *sdirs,
 	{
 		logp("protocol 2 - unimplemented - need cleanup of data directory\n");
 	}
-	if(recursive_delete(sdirs->rworking, NULL, 1 /* delete files */))
+	if(recursive_delete(sdirs->rworking))
 	{
 		log_and_send(as->asfd,
 			"Old working directory is in the way.\n");

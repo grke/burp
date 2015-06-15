@@ -635,7 +635,7 @@ end:
 	// Remove the temporary data directory, we have probably removed
 	// useful files from it.
 	sync(); // try to help CIFS
-	recursive_delete(deltafdir, NULL, 0 /* do not del files */);
+	recursive_delete_dirs_only(deltafdir);
 
 	ret=0;
 error:
@@ -704,8 +704,7 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf **cconfs)
 			{
 				logp("Removing previous directory: %s\n",
 					fdirs->currentduptmp);
-				if(recursive_delete(fdirs->currentduptmp,
-					NULL, 1 /* del files */))
+				if(recursive_delete(fdirs->currentduptmp))
 				{
 					logp("Could not delete %s\n",
 						fdirs->currentduptmp);
@@ -765,7 +764,7 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf **cconfs)
 
 	// Remove the temporary data directory, we have now removed
 	// everything useful from it.
-	recursive_delete(fdirs->datadirtmp, NULL, 1 /* del files */);
+	recursive_delete(fdirs->datadirtmp);
 
 	// Clean up the currentdata directory - this is now the 'old'
 	// currentdata directory. Any files that were deleted from
@@ -774,7 +773,7 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf **cconfs)
 	// This will have the effect of getting rid of unnecessary
 	// directories.
 	sync(); // try to help CIFS
-	recursive_delete(fdirs->currentdupdata, NULL, 0 /* do not del files */);
+	recursive_delete_dirs_only(fdirs->currentdupdata);
 
 	// Rename the old current to something that we know to delete.
 	if(previous_backup && !hardlinked_current)

@@ -140,8 +140,8 @@ int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 		goto end;
 	else
 	{
-		recursive_delete(sdirs->changed, NULL, 1);
-		recursive_delete(sdirs->unchanged, NULL, 1);
+		recursive_delete(sdirs->changed);
+		recursive_delete(sdirs->unchanged);
 	}
 
 	logp("End phase3 (merge manifests)\n");

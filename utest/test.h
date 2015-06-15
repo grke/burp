@@ -25,11 +25,8 @@ extern void alloc_check(void);
 extern char **build_paths(int wanted);
 extern struct sbuf *build_attribs(enum protocol protocol);
 extern struct sbuf *build_attribs_reduce(enum protocol protocol);
-extern struct slist *build_manifest_phase1(const char *path,
-	enum protocol protocol, int entries);
-extern struct slist *build_manifest_phase2(const char *path,
-	enum protocol protocol, int entries);
-
+extern struct slist *build_manifest(const char *path,
+	enum protocol protocol, int entries, int phase);
 
 extern void assert_sbuf(struct sbuf *a, struct sbuf *b, enum protocol protocol);
 

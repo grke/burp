@@ -63,7 +63,7 @@ static struct slist *build_slist_phase1(enum protocol protocol, int entries)
 	return slist;
 }
 
-struct slist *build_manifest_phase1(const char *path,
+static struct slist *build_manifest_phase1(const char *path,
 	enum protocol protocol, int entries)
 {
 	struct sbuf *sb;
@@ -140,7 +140,7 @@ static struct slist *build_slist(enum protocol protocol, int entries)
 	return slist;
 }
 
-struct slist *build_manifest_phase2(const char *path,
+static struct slist *build_manifest_phase2(const char *path,
 	enum protocol protocol, int entries)
 {
 	struct sbuf *sb;
@@ -157,4 +157,20 @@ struct slist *build_manifest_phase2(const char *path,
 	fail_unless(!manio_close(&manio));
 
 	return slist;
+}
+
+struct slist *build_manifest(const char *path,
+	enum protocol protocol, int entries, int phase)
+{
+	switch(phase)
+	{
+		// FIX THIS
+		case 0: return build_manifest_phase2(path, protocol, entries);
+		case 1: return build_manifest_phase1(path, protocol, entries);
+		case 2: return build_manifest_phase2(path, protocol, entries);
+		default:
+			fprintf(stderr, "Do not know how to build_manifest phase %d\n", phase);
+			fail_unless(0);
+			return NULL;
+	}
 }

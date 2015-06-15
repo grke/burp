@@ -20,6 +20,20 @@ static void tear_down(void)
 	recursive_delete(path);
 }
 
+// Deal with a hack where the index is stripped off the beginning of the
+// attributes when protocol2 saves to the manifest.
+static void hack_protocol2_attr(struct iobuf *attr)
+{
+	char *cp=NULL;
+	char *copy=NULL;
+	size_t newlen;
+	fail_unless((cp=strchr(attr->buf, ' '))!=NULL);
+	fail_unless((copy=strdup_w(cp, __func__))!=NULL);
+	newlen=attr->buf-cp+attr->len;
+	iobuf_free_content(attr);
+	iobuf_set(attr, CMD_ATTRIBS, copy, newlen);
+}
+
 static void read_manifest(struct sbuf **sb, struct manio *manio,
 	int start, int end, enum protocol protocol)
 {
@@ -35,6 +49,8 @@ static void read_manifest(struct sbuf **sb, struct manio *manio,
 			case 1: goto end;
 			case -1: fail_unless(0);
 		}
+		if(protocol==PROTO_2)
+			hack_protocol2_attr(&(*sb)->attr);
 		assert_sbuf(*sb, rb, protocol);
 		*sb=(*sb)->next;
 	}
@@ -196,7 +212,7 @@ Suite *suite_manio(void)
 	tc_core=tcase_create("Core");
 
 	tcase_add_test(tc_core, test_man_protocol1);
-//	tcase_add_test(tc_core, test_man_protocol2);
+	tcase_add_test(tc_core, test_man_protocol2);
 
 	tcase_add_test(tc_core, test_man_protocol1_phase1);
 	tcase_add_test(tc_core, test_man_protocol2_phase1);

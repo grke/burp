@@ -122,6 +122,16 @@ static void set_sbuf_protocol1(struct sbuf *sb)
 static void set_sbuf_protocol2(struct sbuf *sb)
 {
 	// FIX THIS - need to create signatures and things.
+/*
+	if(sbuf_is_filedata(sb))
+	{
+		int i=0;
+		int x=prng_next()%50;
+		for(i=0; i<x; i++)
+		{
+		}
+	}
+*/
 }
 
 static void set_sbuf(struct sbuf *sb)

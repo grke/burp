@@ -480,12 +480,6 @@ static char *sig_to_msg(struct blk *blk, int save_path)
 	return msg;
 }
 
-int manio_write_sig(struct manio *manio, struct blk *blk)
-{
-	if(manio->protocol==PROTO_1) return 0;
-	return write_sig_msg(manio, sig_to_msg(blk, 0 /* no save_path */));
-}
-
 int manio_write_sig_and_path(struct manio *manio, struct blk *blk)
 {
 	if(manio->protocol==PROTO_1) return 0;
@@ -515,12 +509,11 @@ int manio_write_sig_and_path(struct manio *manio, struct blk *blk)
 int manio_write_sbuf(struct manio *manio, struct sbuf *sb)
 {
 	if(!manio->fzp && manio_open_next_fpath(manio)) return -1;
-	if(manio->phase==1)
-		return sbuf_to_manifest_phase1(sb, manio->fzp);
 	if(manio->protocol==PROTO_2)
 		return sbuf_to_manifest(sb, manio->fzp);
-	else
-		return sbufl_to_manifest(sb, manio->fzp);
+	if(manio->phase==1)
+		return sbuf_to_manifest_phase1(sb, manio->fzp);
+	return sbufl_to_manifest(sb, manio->fzp);
 }
 
 // Return -1 on error, 0 on OK, 1 for srcmanio finished.

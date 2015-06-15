@@ -269,6 +269,16 @@ static int do_recursive_delete_w(const char *path, uint8_t delfiles)
 
 int recursive_delete(const char *path)
 {
+	struct stat statp;
+	// We might have been given a file entry, instead of a directory.
+	if(!lstat(path, &statp) && !S_ISDIR(statp.st_mode))
+	{
+		if(unlink(path))
+		{
+			logp("unlink %s: %s\n", path, strerror(errno));
+			return RECDEL_ENTRIES_REMAINING;
+		}
+	}
 	return do_recursive_delete_w(path, 1);
 }
 

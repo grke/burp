@@ -57,7 +57,6 @@ extern int manio_read_async(struct manio *manio, struct asfd *asfd,
 extern int manio_read(struct manio *manio, struct sbuf *sb,
 	struct conf **confs);
 
-extern int manio_write_sig(struct manio *manio, struct blk *blk);
 extern int manio_write_sig_and_path(struct manio *manio, struct blk *blk);
 extern int manio_write_sbuf(struct manio *manio, struct sbuf *sb);
 

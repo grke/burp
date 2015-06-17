@@ -154,7 +154,6 @@ void sbuf_close_file(struct sbuf *sb, struct asfd *asfd)
 {
 	BFILE *bfd=&sb->protocol2->bfd;
 	bfd->close(bfd, asfd);
-//printf("closed: %s\n", sb->path);
 }
 
 ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize)
@@ -163,11 +162,167 @@ ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize)
 	return (ssize_t)bfd->read(bfd, buf, bufsize);
 }
 
+enum parse_ret
+{
+	PARSE_RET_ERROR=-1,
+	PARSE_RET_NEED_MORE=0,
+	PARSE_RET_COMPLETE=1,
+	PARSE_RET_FINISHED=2,
+};
+
+static parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
+	struct iobuf *rbuf, struct blk *blk,
+	const char *datpath, struct conf **confs)
+{
+	switch(rbuf->cmd)
+	{
+		case CMD_ATTRIBS:
+			// I think these frees are hacks. Probably,
+			// the calling function should deal with this.
+			// FIX THIS.
+			free_w(&sb->attr.buf);
+			free_w(&sb->path.buf);
+			free_w(&sb->link.buf);
+			iobuf_move(&sb->attr, rbuf);
+			attribs_decode(sb);
+			return PARSE_RET_NEED_MORE;
+
+		case CMD_FILE:
+		case CMD_DIRECTORY:
+		case CMD_SOFT_LINK:
+		case CMD_HARD_LINK:
+		case CMD_SPECIAL:
+		// Stuff not currently supported in burp-2, but OK
+		// to find in burp-1.
+		case CMD_ENC_FILE:
+		case CMD_METADATA:
+		case CMD_ENC_METADATA:
+		case CMD_EFS_FILE:
+		case CMD_VSS:
+		case CMD_ENC_VSS:
+		case CMD_VSS_T:
+		case CMD_ENC_VSS_T:
+			if(!sb->attr.buf)
+			{
+				log_and_send(asfd, "read cmd with no attribs");
+				return PARSE_RET_NEED_MORE;
+			}
+			if(sb->flags & SBUF_NEED_LINK)
+			{
+				if(cmd_is_link(rbuf->cmd))
+				{
+					iobuf_move(&sb->link, rbuf);
+					sb->flags &= ~SBUF_NEED_LINK;
+					return PARSE_RET_COMPLETE;
+				}
+				else
+				{
+					log_and_send(asfd, "got non-link after link in manifest");
+					return PARSE_RET_NEED_MORE;
+				}
+			}
+			else
+			{
+				iobuf_move(&sb->path, rbuf);
+				if(cmd_is_link(rbuf->cmd))
+					sb->flags |= SBUF_NEED_LINK;
+				else
+					return PARSE_RET_COMPLETE;
+			}
+			rbuf->buf=NULL;
+			return PARSE_RET_NEED_MORE;
+#ifndef HAVE_WIN32
+		case CMD_SIG:
+			// Fill in the sig/block, if the caller provided
+			// a pointer for one. Server only.
+			if(!blk) return PARSE_RET_NEED_MORE;
+
+			// Just fill in the sig details.
+			if(split_sig_from_manifest(rbuf, blk))
+				return PARSE_RET_ERROR;
+			blk->got_save_path=1;
+			iobuf_free_content(rbuf);
+			if(datpath && rblk_retrieve_data(datpath, blk))
+			{
+				logp("Could not retrieve blk data.\n");
+				return PARSE_RET_ERROR;
+			}
+			return PARSE_RET_COMPLETE;
+#endif
+		case CMD_DATA:
+			// Need to write the block to disk.
+			// Client only.
+			if(!blk) return PARSE_RET_NEED_MORE;
+			blk->data=rbuf->buf;
+			blk->length=rbuf->len;
+			rbuf->buf=NULL;
+			return PARSE_RET_COMPLETE;
+		case CMD_MESSAGE:
+		case CMD_WARNING:
+			log_recvd(rbuf, confs, 1);
+			return PARSE_RET_NEED_MORE;
+		case CMD_GEN:
+			if(!strcmp(rbuf->buf, "restoreend")
+			  || !strcmp(rbuf->buf, "phase1end")
+			  || !strcmp(rbuf->buf, "backupphase2"))
+				return PARSE_RET_FINISHED;
+			iobuf_log_unexpected(rbuf, __func__);
+			return PARSE_RET_ERROR;
+		case CMD_FINGERPRINT:
+			if(blk && get_fingerprint(rbuf, blk))
+				return PARSE_RET_ERROR;
+			// Fall through.
+		case CMD_MANIFEST:
+			iobuf_move(&sb->path, rbuf);
+			return PARSE_RET_COMPLETE;
+		case CMD_ERROR:
+			logp("got error: %s\n", rbuf->buf);
+			return PARSE_RET_ERROR;
+		// Stuff that is currently protocol1. OK to find these
+		// in protocol1, but not protocol2.
+		case CMD_DATAPTH:
+		case CMD_END_FILE:
+			if(sb->protocol1) return PARSE_RET_NEED_MORE;
+		default:
+			iobuf_log_unexpected(rbuf, __func__);
+			return PARSE_RET_ERROR;
+	}
+	logp("Fell out of switch unexpectedly in %s()\n", __func__);
+	return PARSE_RET_ERROR;
+}
+
+static int fill_from_fzp(struct fzp *fzp, struct iobuf *rbuf)
+{
+	static size_t got;
+	static unsigned int s;
+	static char lead[5]="";
+
+	if((got=fzp_read(fzp, lead, sizeof(lead)))!=5)
+	{
+		if(!got) return 1; // Finished OK.
+		logp("short read in manifest\n");
+		return -1;
+	}
+	if((sscanf(lead, "%c%04X", (char *)&rbuf->cmd, &s))!=2)
+	{
+		logp("sscanf failed reading manifest: %s\n", lead);
+		return -1;
+	}
+	rbuf->len=(size_t)s;
+	if(!(rbuf->buf=(char *)malloc_w(rbuf->len+2, __func__)))
+		return -1;
+	if(fzp_read(fzp, rbuf->buf, rbuf->len+1)!=rbuf->len+1)
+	{
+		logp("short read in manifest\n");
+		return -1;
+	}
+	rbuf->buf[rbuf->len]='\0';
+	return 0;
+}
+
 static int sbuf_fill(struct sbuf *sb, struct asfd *asfd, struct fzp *fzp,
 	struct blk *blk, const char *datpath, struct conf **confs)
 {
-	static unsigned int s;
-	static char lead[5]="";
 	static struct iobuf *rbuf;
 	static struct iobuf localrbuf;
 	int ret=-1;
@@ -184,33 +339,8 @@ static int sbuf_fill(struct sbuf *sb, struct asfd *asfd, struct fzp *fzp,
 		iobuf_free_content(rbuf);
 		if(fzp)
 		{
-			size_t got;
-
-			if((got=fzp_read(fzp, lead, sizeof(lead)))!=5)
-			{
-				if(!got) return 1; // Finished OK.
-				log_and_send(asfd, "short read in manifest");
-				break;
-			}
-			if((sscanf(lead, "%c%04X", (char *)&rbuf->cmd, &s))!=2)
-			{
-				log_and_send(asfd,
-					"sscanf failed reading manifest");
-				logp("%s\n", lead);
-				break;
-			}
-			rbuf->len=(size_t)s;
-			if(!(rbuf->buf=(char *)malloc_w(rbuf->len+2, __func__)))
-			{
-				log_and_send_oom(asfd, __func__);
-				break;
-			}
-			if(fzp_read(fzp, rbuf->buf, rbuf->len+1)!=rbuf->len+1)
-			{
-				log_and_send(asfd, "short read in manifest");
-				break;
-			}
-			rbuf->buf[rbuf->len]='\0';
+			if((ret=fill_from_fzp(fzp, rbuf)))
+				goto end;
 		}
 		else
 		{
@@ -220,131 +350,17 @@ static int sbuf_fill(struct sbuf *sb, struct asfd *asfd, struct fzp *fzp,
 				break;
 			}
 		}
-
-		switch(rbuf->cmd)
+		switch(parse_cmd(sb, asfd, rbuf, blk, datpath, confs))
 		{
-			case CMD_ATTRIBS:
-				// I think these frees are hacks. Probably,
-				// the calling function should deal with this.
-				// FIX THIS.
-				free_w(&sb->attr.buf);
-				free_w(&sb->path.buf);
-				free_w(&sb->link.buf);
-				iobuf_move(&sb->attr, rbuf);
-				attribs_decode(sb);
-				break;
-
-			case CMD_FILE:
-			case CMD_DIRECTORY:
-			case CMD_SOFT_LINK:
-			case CMD_HARD_LINK:
-			case CMD_SPECIAL:
-			// Stuff not currently supported in burp-2, but OK
-			// to find in burp-1.
-			case CMD_ENC_FILE:
-			case CMD_METADATA:
-			case CMD_ENC_METADATA:
-			case CMD_EFS_FILE:
-			case CMD_VSS:
-			case CMD_ENC_VSS:
-			case CMD_VSS_T:
-			case CMD_ENC_VSS_T:
-				if(!sb->attr.buf)
-				{
-					log_and_send(asfd,
-						"read cmd with no attribs");
-					break;
-				}
-				if(sb->flags & SBUF_NEED_LINK)
-				{
-					if(cmd_is_link(rbuf->cmd))
-					{
-						iobuf_move(&sb->link, rbuf);
-						sb->flags &= ~SBUF_NEED_LINK;
-						return 0;
-					}
-					else
-					{
-						log_and_send(asfd, "got non-link after link in manifest");
-						break;
-					}
-				}
-				else
-				{
-					iobuf_move(&sb->path, rbuf);
-					if(cmd_is_link(rbuf->cmd))
-						sb->flags |= SBUF_NEED_LINK;
-					else
-						return 0;
-				}
-				rbuf->buf=NULL;
-				break;
-#ifndef HAVE_WIN32
-			case CMD_SIG:
-				// Fill in the sig/block, if the caller provided
-				// a pointer for one. Server only.
-				if(!blk) break;
-				//printf("got sig: %s\n", rbuf->buf);
-
-				// Just fill in the sig details.
-				if(split_sig_from_manifest(rbuf, blk))
-					goto end;
-				blk->got_save_path=1;
-				iobuf_free_content(rbuf);
-				if(datpath)
-				{
-					if(rblk_retrieve_data(datpath, blk))
-					{
-						logp("Could not retrieve blk data.\n");
-						goto end;
-					}
-				}
+			case PARSE_RET_NEED_MORE:
+				continue;
+			case PARSE_RET_COMPLETE:
 				return 0;
-#endif
-			case CMD_DATA:
-				// Need to write the block to disk.
-				// Client only.
-				if(!blk) break;
-				blk->data=rbuf->buf;
-				blk->length=rbuf->len;
-				rbuf->buf=NULL;
-				return 0;
-			case CMD_MESSAGE:
-			case CMD_WARNING:
-				log_recvd(rbuf, confs, 1);
-				break;
-			case CMD_GEN:
-				if(!strcmp(rbuf->buf, "restoreend")
-				  || !strcmp(rbuf->buf, "phase1end")
-				  || !strcmp(rbuf->buf, "backupphase2"))
-				{
-					ret=1;
-					goto end;
-				}
-				else
-				{
-					iobuf_log_unexpected(rbuf,
-						__func__);
-					goto end;
-				}
-				break;
-			case CMD_FINGERPRINT:
-				if(blk && get_fingerprint(rbuf, blk))
-					goto end;
-				// Fall through.
-			case CMD_MANIFEST:
-				iobuf_move(&sb->path, rbuf);
-				return 0;
-			case CMD_ERROR:
-				printf("got error: %s\n", rbuf->buf);
+			case PARSE_RET_FINISHED:
+				ret=1;
 				goto end;
-			// Stuff that is currently protocol1. OK to find these
-			// in protocol-1, but not protocol-2.
-			case CMD_DATAPTH:
-			case CMD_END_FILE:
-				if(sb->protocol1) continue;
+			case PARSE_RET_ERROR:
 			default:
-				iobuf_log_unexpected(rbuf, __func__);
 				goto end;
 		}
 	}

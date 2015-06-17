@@ -39,15 +39,27 @@ void ssl_load_globals(void)
 	SSL_load_error_strings();
 }
 
+static int check_path(const char *path, const char *what)
+{
+	struct stat statp;
+	if(!path) return -1;
+	if(stat(path, &statp))
+	{
+		logp("Could not find %s %s: %s\n",
+			what, path, strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
 static int ssl_load_keys_and_certs(SSL_CTX *ctx, struct conf **confs)
 {
 	char *ssl_key=NULL;
-	struct stat statp;
 	const char *ssl_cert=get_string(confs[OPT_SSL_CERT]);
 	const char *ssl_cert_ca=get_string(confs[OPT_SSL_CERT_CA]);
 
 	// Load our keys and certificates if the path exists.
-	if(ssl_cert && !lstat(ssl_cert, &statp)
+	if(!check_path(ssl_cert, "ssl_cert")
 	  && !SSL_CTX_use_certificate_chain_file(ctx, ssl_cert))
 	{
 		logp_ssl_err("Can't read ssl_cert: %s\n", ssl_cert);
@@ -61,15 +73,15 @@ static int ssl_load_keys_and_certs(SSL_CTX *ctx, struct conf **confs)
 	if(!ssl_key) ssl_key=get_string(confs[OPT_SSL_CERT]);
 
 	// Load the key file, if the path exists.
-	if(ssl_key && !lstat(ssl_key, &statp)
-	  && !SSL_CTX_use_PrivateKey_file(ctx,ssl_key,SSL_FILETYPE_PEM))
+	if(!check_path(ssl_key, "ssl_key")
+	  && !SSL_CTX_use_PrivateKey_file(ctx, ssl_key, SSL_FILETYPE_PEM))
 	{
 		logp_ssl_err("Can't read ssl_key file: %s\n", ssl_key);
 		return -1;
 	}
 
 	// Load the CAs we trust, if the path exists.
-	if(ssl_cert_ca && !lstat(ssl_cert_ca, &statp)
+	if(!check_path(ssl_cert_ca, "ssl_cert_ca")
 	  && !SSL_CTX_load_verify_locations(ctx, ssl_cert_ca, 0))
 	{
 		logp_ssl_err("Can't read ssl_cert_ca file: %s\n", ssl_cert_ca);

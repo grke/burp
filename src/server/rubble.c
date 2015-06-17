@@ -188,7 +188,6 @@ static int recover_working(struct async *as,
 	{
 		// ...phase 1 did not complete - delete everything.
 		logp("Phase 1 has not completed.\n");
-		printf("Phase 1 has not completed.\n");
 		recovery_method=RECOVERY_METHOD_DELETE;
 	}
 

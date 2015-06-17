@@ -163,7 +163,7 @@ ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize)
 	return (ssize_t)bfd->read(bfd, buf, bufsize);
 }
 
-int sbuf_fill(struct sbuf *sb, struct asfd *asfd, struct fzp *fzp,
+static int sbuf_fill(struct sbuf *sb, struct asfd *asfd, struct fzp *fzp,
 	struct blk *blk, const char *datpath, struct conf **confs)
 {
 	static unsigned int s;
@@ -227,21 +227,9 @@ int sbuf_fill(struct sbuf *sb, struct asfd *asfd, struct fzp *fzp,
 				// I think these frees are hacks. Probably,
 				// the calling function should deal with this.
 				// FIX THIS.
-				if(sb->attr.buf)
-				{
-					free(sb->attr.buf);
-					sb->attr.buf=NULL;
-				}
-				if(sb->path.buf)
-				{
-					free(sb->path.buf);
-					sb->path.buf=NULL;
-				}
-				if(sb->link.buf)
-				{
-					free(sb->link.buf);
-					sb->link.buf=NULL;
-				}
+				free_w(&sb->attr.buf);
+				free_w(&sb->path.buf);
+				free_w(&sb->link.buf);
 				iobuf_move(&sb->attr, rbuf);
 				attribs_decode(sb);
 				break;
@@ -366,7 +354,13 @@ end:
 }
 
 int sbuf_fill_from_net(struct sbuf *sb, struct asfd *asfd,
-	struct blk *blk, struct conf **confs)
+	struct blk *blk, const char *datpath, struct conf **confs)
 {
-	return sbuf_fill(sb, asfd, NULL, blk, NULL, confs);
+	return sbuf_fill(sb, asfd, NULL, blk, datpath, confs);
+}
+
+int sbuf_fill_from_file(struct sbuf *sb, struct fzp *fzp,
+	struct blk *blk, const char *datpath, struct conf **confs)
+{
+	return sbuf_fill(sb, NULL, fzp, blk, datpath, confs);
 }

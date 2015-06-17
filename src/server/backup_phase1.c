@@ -29,9 +29,9 @@ int backup_phase1_server_all(struct async *as,
 	{
 		sbuf_free_content(sb);
 		if(protocol==PROTO_1)
-			ars=sbufl_fill(sb, asfd, NULL, confs);
+			ars=sbufl_fill_from_net(sb, asfd, confs);
 		else
-			ars=sbuf_fill(sb, asfd, NULL, NULL, NULL, confs);
+			ars=sbuf_fill_from_net(sb, asfd, NULL, NULL, confs);
 
 		if(ars)
 		{

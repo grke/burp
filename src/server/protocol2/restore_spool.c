@@ -46,7 +46,7 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 
 	while(1)
 	{
-		if((ars=manio_read_async(manio, asfd, sb, blk, NULL, confs))<0)
+		if((ars=manio_read_async(manio, NULL, sb, blk, NULL, confs))<0)
 		{
 			logp("Error from manio_read_async() in %s\n",
 				__func__);

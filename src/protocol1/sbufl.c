@@ -118,7 +118,7 @@ static int read_stat(struct asfd *asfd, struct iobuf *rbuf,
 	return -1;
 }
 
-static int do_sbufl_fill_from_net(struct sbuf *sb, struct asfd *asfd,
+int sbufl_fill_from_net(struct sbuf *sb, struct asfd *asfd,
 	struct conf **confs)
 {
 	int ars;
@@ -165,11 +165,9 @@ static int do_sbufl_fill_from_file(struct sbuf *sb, struct fzp *fzp,
 	return 0;
 }
 
-int sbufl_fill(struct sbuf *sb, struct asfd *asfd, struct fzp *fzp,
-	struct conf **confs)
+int sbufl_fill_from_file(struct sbuf *sb, struct fzp *fzp, struct conf **confs)
 {
-	if(fzp) return do_sbufl_fill_from_file(sb, fzp, 0, confs);
-	return do_sbufl_fill_from_net(sb, asfd, confs);
+	return do_sbufl_fill_from_file(sb, fzp, 0, confs);
 }
 
 int sbufl_fill_phase1(struct sbuf *sb, struct fzp *fzp, struct conf **confs)

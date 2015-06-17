@@ -385,12 +385,12 @@ int manio_read_async(struct manio *manio, struct asfd *asfd,
 
 		if(manio->protocol==PROTO_2 || manio->phase==1)
 		{
-			ars=sbuf_fill(sb, asfd, manio->fzp, blk,
+			ars=sbuf_fill_from_file(sb, manio->fzp, blk,
 				sdirs?sdirs->data:NULL, confs);
 		}
 		else
 		{
-			ars=sbufl_fill(sb, asfd, manio->fzp, confs);
+			ars=sbufl_fill_from_file(sb, manio->fzp, confs);
 		}
 		switch(ars)
 		{

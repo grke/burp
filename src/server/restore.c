@@ -79,7 +79,7 @@ static int setup_cntr(struct asfd *asfd, const char *manifest,
 	}
 	while(1)
 	{
-		if((ars=sbufl_fill(sb, asfd, fzp, cconfs)))
+		if((ars=sbufl_fill_from_file(sb, fzp, cconfs)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means end ok
@@ -143,7 +143,7 @@ static int hard_link_substitution(struct asfd *asfd,
 
 	while(1)
 	{
-		switch(manio_read_async(manio, asfd,
+		switch(manio_read_async(manio, NULL,
 			hb, need_data->path.buf?blk:NULL, sdirs, cconfs))
 		{
 			case 0: break; // Keep going.
@@ -388,7 +388,7 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 				goto end;
 		}
 
-		switch(manio_read_async(manio, asfd,
+		switch(manio_read_async(manio, NULL,
 			sb, need_data->path.buf?blk:NULL, sdirs, cconfs))
 		{
 			case 0: break; // Keep going.

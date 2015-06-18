@@ -16,9 +16,5 @@
 
 extern int sbufl_fill_from_net(struct sbuf *sb, struct asfd *asfd,
 	struct conf **confs);
-extern int sbufl_fill_from_file(struct sbuf *sb, struct fzp *fzp,
-	struct conf **confs);
-extern int sbufl_fill_phase1(struct sbuf *sb, struct fzp *fzp,
-	struct conf **confs);
 
 #endif

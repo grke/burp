@@ -485,14 +485,14 @@ static int maybe_delete_files_from_manifest(const char *manifesttmp,
 	while(omzp || dfp)
 	{
 		if(dfp && !db->path.buf
-		  && (ars=sbufl_fill_from_file(db, dfp, cconfs)))
+		  && (ars=sbuf_fill_from_file(db, dfp, NULL, NULL, cconfs)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
 			fzp_close(&dfp);
 		}
 		if(omzp && !mb->path.buf
-		  && (ars=sbufl_fill_from_file(mb, omzp, cconfs)))
+		  && (ars=sbuf_fill_from_file(mb, omzp, NULL, NULL, cconfs)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
@@ -603,7 +603,7 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct fdirs *fdirs,
 
 	while(1)
 	{
-		switch(sbufl_fill_from_file(sb, zp, cconfs))
+		switch(sbuf_fill_from_file(sb, zp, NULL, NULL, cconfs))
 		{
 			case 0: break;
 			case 1: goto end;

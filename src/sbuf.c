@@ -177,12 +177,19 @@ static parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 	switch(rbuf->cmd)
 	{
 		case CMD_ATTRIBS:
-			// I think these frees are hacks. Probably,
-			// the calling function should deal with this.
-			// FIX THIS.
-			free_w(&sb->attr.buf);
-			free_w(&sb->path.buf);
-			free_w(&sb->link.buf);
+			if(sb->protocol2)
+				sbuf_free_content(sb);
+			else
+			{
+				if(sb->protocol1->datapth.buf)
+					// protocol 1 phase 2+ file data
+					// starts with datapth.
+					iobuf_free_content(&sb->attr);
+				else
+					// protocol 1 phase 1 or non file data
+					// starts with attribs
+					sbuf_free_content(sb);
+			}
 			iobuf_move(&sb->attr, rbuf);
 			attribs_decode(sb);
 			return PARSE_RET_NEED_MORE;
@@ -211,6 +218,7 @@ static parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 			{
 				if(cmd_is_link(rbuf->cmd))
 				{
+					iobuf_free_content(&sb->link);
 					iobuf_move(&sb->link, rbuf);
 					sb->flags &= ~SBUF_NEED_LINK;
 					return PARSE_RET_COMPLETE;
@@ -223,13 +231,18 @@ static parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 			}
 			else
 			{
+				iobuf_free_content(&sb->path);
 				iobuf_move(&sb->path, rbuf);
 				if(cmd_is_link(rbuf->cmd))
 					sb->flags |= SBUF_NEED_LINK;
 				else
+				{
+					if(sb->protocol1
+					  && sb->protocol1->datapth.buf)
+						return PARSE_RET_NEED_MORE;
 					return PARSE_RET_COMPLETE;
+				}
 			}
-			rbuf->buf=NULL;
 			return PARSE_RET_NEED_MORE;
 #ifndef HAVE_WIN32
 		case CMD_SIG:
@@ -273,16 +286,37 @@ static parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 				return PARSE_RET_ERROR;
 			// Fall through.
 		case CMD_MANIFEST:
+			iobuf_free_content(&sb->path);
 			iobuf_move(&sb->path, rbuf);
 			return PARSE_RET_COMPLETE;
 		case CMD_ERROR:
 			logp("got error: %s\n", rbuf->buf);
 			return PARSE_RET_ERROR;
-		// Stuff that is currently protocol1. OK to find these
-		// in protocol1, but not protocol2.
 		case CMD_DATAPTH:
+			if(!sb->protocol1)
+			{
+				iobuf_log_unexpected(rbuf, __func__);
+				return PARSE_RET_ERROR;
+			}
+			sbuf_free_content(sb);
+			iobuf_move(&sb->protocol1->datapth, rbuf);
+			return PARSE_RET_NEED_MORE;
 		case CMD_END_FILE:
-			if(sb->protocol1) return PARSE_RET_NEED_MORE;
+			if(!sb->protocol1)
+			{
+				iobuf_log_unexpected(rbuf, __func__);
+				return PARSE_RET_ERROR;
+			}
+			iobuf_free_content(&sb->protocol1->endfile);
+			iobuf_move(&sb->protocol1->endfile, rbuf);
+			if(!sb->attr.buf
+			  || !sb->protocol1->datapth.buf
+			  || (!sbuf_is_filedata(sb) && !sbuf_is_vssdata(sb)))
+			{
+				logp("got unexpected cmd_endfile");
+				return PARSE_RET_ERROR;
+			}
+			return PARSE_RET_COMPLETE;
 		default:
 			iobuf_log_unexpected(rbuf, __func__);
 			return PARSE_RET_ERROR;

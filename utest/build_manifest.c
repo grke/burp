@@ -103,20 +103,21 @@ static char *gen_endfile_str(void)
 
 static void set_sbuf_protocol1(struct sbuf *sb)
 {
-	char *datapth;
-	char *endfile;
-
 	if(sbuf_is_filedata(sb))
 	{
-		endfile=gen_endfile_str();
+		char *endfile=gen_endfile_str();
 		sb->protocol1->endfile.cmd=CMD_END_FILE;
 		sb->protocol1->endfile.len=strlen(endfile);
 		fail_unless((sb->protocol1->endfile.buf
 			=strdup_w(endfile, __func__))!=NULL);
 	}
 
-	fail_unless((datapth=prepend_s(TREE_DIR, sb->path.buf))!=NULL);
-	iobuf_from_str(&sb->protocol1->datapth, CMD_DATAPTH, datapth);
+	if(sbuf_is_filedata(sb) || sbuf_is_vssdata(sb))
+	{
+		char *datapth;
+		fail_unless((datapth=prepend_s(TREE_DIR, sb->path.buf))!=NULL);
+		iobuf_from_str(&sb->protocol1->datapth, CMD_DATAPTH, datapth);
+	}
 }
 
 static void set_sbuf_protocol2(struct sbuf *sb)

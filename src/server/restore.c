@@ -79,7 +79,7 @@ static int setup_cntr(struct asfd *asfd, const char *manifest,
 	}
 	while(1)
 	{
-		if((ars=sbufl_fill_from_file(sb, fzp, cconfs)))
+		if((ars=sbuf_fill_from_file(sb, fzp, NULL, NULL, cconfs)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means end ok

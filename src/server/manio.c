@@ -373,8 +373,6 @@ int manio_read_async(struct manio *manio, struct asfd *asfd,
 	struct sbuf *sb, struct blk *blk,
 	struct sdirs *sdirs, struct conf **confs)
 {
-	int ars;
-
 	while(1)
 	{
 		if(!manio->fzp)
@@ -383,16 +381,8 @@ int manio_read_async(struct manio *manio, struct asfd *asfd,
 			if(!manio->fzp) return 1; // No more files to read.
 		}
 
-		if(manio->protocol==PROTO_2 || manio->phase==1)
-		{
-			ars=sbuf_fill_from_file(sb, manio->fzp, blk,
-				sdirs?sdirs->data:NULL, confs);
-		}
-		else
-		{
-			ars=sbufl_fill_from_file(sb, manio->fzp, confs);
-		}
-		switch(ars)
+		switch(sbuf_fill_from_file(sb, manio->fzp, blk,
+			sdirs?sdirs->data:NULL, confs))
 		{
 			case 0: return 0; // Got something.
 			case 1: break; // Keep going.

@@ -514,15 +514,6 @@ static int restore_spool(struct asfd *asfd, struct conf **confs, char **datpath)
 		__func__, restore_spool_func);
 }
 
-static int sbuf_fill_w(struct sbuf *sb, struct asfd *asfd,
-	struct blk *blk, const char *datpath, struct conf **confs)
-{
-	if(get_protocol(confs)==PROTO_2)
-		return sbuf_fill_from_net(sb, asfd, blk, datpath, confs);
-	else
-		return sbufl_fill_from_net(sb, asfd, confs);
-}
-
 int do_restore_client(struct asfd *asfd,
 	struct conf **confs, enum action act, int vss_restore)
 {
@@ -580,7 +571,7 @@ int do_restore_client(struct asfd *asfd,
 	{
 		sbuf_free_content(sb);
 
-		switch(sbuf_fill_w(sb, asfd, blk, datpath, confs))
+		switch(sbuf_fill_from_net(sb, asfd, blk, datpath, confs))
 		{
 			case 0: break;
 			case 1: if(asfd->write_str(asfd, CMD_GEN,

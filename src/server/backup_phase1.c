@@ -28,12 +28,7 @@ int backup_phase1_server_all(struct async *as,
 	while(1)
 	{
 		sbuf_free_content(sb);
-		if(protocol==PROTO_1)
-			ars=sbufl_fill_from_net(sb, asfd, confs);
-		else
-			ars=sbuf_fill_from_net(sb, asfd, NULL, NULL, confs);
-
-		if(ars)
+		if((ars=sbuf_fill_from_net(sb, asfd, NULL, NULL, confs)))
 		{
 			if(ars<0) goto end;
 			//ars==1 means it ended ok.

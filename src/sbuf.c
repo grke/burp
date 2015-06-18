@@ -277,7 +277,10 @@ static parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 		case CMD_GEN:
 			if(!strcmp(rbuf->buf, "restoreend")
 			  || !strcmp(rbuf->buf, "phase1end")
-			  || !strcmp(rbuf->buf, "backupphase2"))
+			  || !strcmp(rbuf->buf, "backupphase2")
+			// Think these are protocol1 things.
+                	  || !strcmp(rbuf->buf, "backupend")
+			  || !strcmp(rbuf->buf, "estimateend"))
 				return PARSE_RET_FINISHED;
 			iobuf_log_unexpected(rbuf, __func__);
 			return PARSE_RET_ERROR;

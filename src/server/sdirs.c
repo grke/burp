@@ -131,7 +131,9 @@ static int do_common_dirs(struct sdirs *sdirs, struct conf **confs)
 // Maybe should be in a protocol1 directory.
 static int do_protocol1_dirs(struct sdirs *sdirs, struct conf **confs)
 {
-	if(!(sdirs->client=prepend_s(sdirs->base, get_string(confs[OPT_CNAME])))
+	if(!(sdirs->clients=strdup_w(sdirs->base, __func__))
+	  || !(sdirs->client=prepend_s(sdirs->clients,
+		get_string(confs[OPT_CNAME])))
 	  || do_common_dirs(sdirs, confs)
 	  || !(sdirs->currentdata=prepend_s(sdirs->current, DATA_DIR))
 	  || !(sdirs->manifest=prepend_s(sdirs->working, "manifest.gz"))

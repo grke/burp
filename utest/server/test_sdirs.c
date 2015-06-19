@@ -87,7 +87,7 @@ static void protocol1_tests(struct sdirs *sdirs, struct conf **confs)
 	fail_unless(sdirs->champsock==NULL);
 	fail_unless(sdirs->champlog==NULL);
 	fail_unless(sdirs->data==NULL);
-	fail_unless(sdirs->clients==NULL);
+	ck_assert_str_eq(sdirs->clients, BASE);
 	ck_assert_str_eq(sdirs->client, CLIENT);
 	ck_assert_str_eq(sdirs->working, WORKING);
 	ck_assert_str_eq(sdirs->finishing, CLIENT "/finishing");

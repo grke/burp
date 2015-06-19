@@ -1,6 +1,5 @@
 #include "include.h"
 #include "../../cmd.h"
-#include "../../protocol1/sbufl.h"
 #include "../timestamp.h"
 #include "fdirs.h"
 

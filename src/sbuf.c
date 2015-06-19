@@ -4,7 +4,6 @@
 #include "conf.h"
 #include "sbuf.h"
 #include "server/protocol2/rblk.h"
-#include "protocol1/sbufl.h"
 
 struct sbuf *sbuf_alloc_protocol(enum protocol protocol)
 {
@@ -234,16 +233,23 @@ static parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 				iobuf_free_content(&sb->path);
 				iobuf_move(&sb->path, rbuf);
 				if(cmd_is_link(rbuf->cmd))
-					sb->flags |= SBUF_NEED_LINK;
-				else
 				{
-					if(sb->protocol1
-					  && sb->protocol1->datapth.buf)
-						return PARSE_RET_NEED_MORE;
-					return PARSE_RET_COMPLETE;
+					sb->flags |= SBUF_NEED_LINK;
+					return PARSE_RET_NEED_MORE;
 				}
+				else if(sb->protocol1
+				  && sb->protocol1->datapth.buf)
+				{
+					// Protocol1 client restore reads
+					// CMD_APPEND and CMD_END_FILE in the
+					// calling function, so pretend it is
+					// complete if we have the hack flag.
+					if(sb->flags & SBUF_CLIENT_RESTORE_HACK)
+						return PARSE_RET_COMPLETE;
+					return PARSE_RET_NEED_MORE;
+				}
+				return PARSE_RET_COMPLETE;
 			}
-			return PARSE_RET_NEED_MORE;
 #ifndef HAVE_WIN32
 		case CMD_SIG:
 			// Fill in the sig/block, if the caller provided
@@ -301,7 +307,14 @@ static parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 				iobuf_log_unexpected(rbuf, __func__);
 				return PARSE_RET_ERROR;
 			}
-			sbuf_free_content(sb);
+			if(sb->flags & SBUF_CLIENT_RESTORE_HACK)
+			{
+				sbuf_free_content(sb);
+				sb->flags |= SBUF_CLIENT_RESTORE_HACK;
+			}
+			else
+				sbuf_free_content(sb);
+			
 			iobuf_move(&sb->protocol1->datapth, rbuf);
 			return PARSE_RET_NEED_MORE;
 		case CMD_END_FILE:

@@ -8,7 +8,6 @@
 #include "../src/attribs.h"
 #include "../src/handy.h"
 #include "../src/pathcmp.h"
-#include "../src/protocol1/sbufl.h"
 #include "../src/sbuf.h"
 #include "../src/server/manio.h"
 #include "../src/server/sdirs.h"

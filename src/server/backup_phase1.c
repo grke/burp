@@ -3,8 +3,6 @@
 #include "manio.h"
 #include "sdirs.h"
 
-#include "../protocol1/sbufl.h"
-
 int backup_phase1_server_all(struct async *as,
 	struct sdirs *sdirs, struct conf **confs)
 {

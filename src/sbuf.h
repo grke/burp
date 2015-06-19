@@ -27,6 +27,7 @@
 #define SBUF_SEND_ENDOFSIG		0x0800
 // Keep track of what is being received.
 #define SBUF_RECV_DELTA			0x1000
+#define SBUF_CLIENT_RESTORE_HACK	0x2000
 
 
 typedef struct sbuf sbuf_t;

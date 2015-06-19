@@ -40,7 +40,6 @@ CLIENT_OBJS = \
 	$(OBJDIR)/protocol1/msg.o \
 	$(OBJDIR)/protocol1/rs_buf.o \
 	$(OBJDIR)/protocol1/sbuf_protocol1.o \
-	$(OBJDIR)/protocol1/sbufl.o \
 	$(OBJDIR)/protocol2/blist.o \
 	$(OBJDIR)/protocol2/blk.o \
 	$(OBJDIR)/protocol2/rabin/rabin.o \

@@ -50,7 +50,6 @@ BURP_SRCS = \
 	../src/protocol1/handy.c \
 	../src/protocol1/rs_buf.c \
 	../src/protocol1/sbuf_protocol1.c \
-	../src/protocol1/sbufl.c \
 	../src/protocol2/blk.c \
 	../src/protocol2/sbuf_protocol2.c \
 	../src/server/bu_get.c \

@@ -3,7 +3,6 @@
 #include "../cmd.h"
 #include "../linkhash.h"
 #include "../pathcmp.h"
-#include "../protocol1/sbufl.h"
 #include "bu_get.h"
 #include "sdirs.h"
 #include "protocol1/restore.h"

@@ -3,7 +3,6 @@
 #include "../cmd.h"
 #include "protocol1/restore.h"
 #include "protocol2/restore.h"
-#include "../protocol1/sbufl.h"
 
 // FIX THIS: it only works with protocol1.
 int restore_interrupt(struct asfd *asfd,
@@ -569,14 +568,11 @@ int do_restore_client(struct asfd *asfd,
 
 	while(1)
 	{
-		int ars;
 		sbuf_free_content(sb);
-
 		if(protocol==PROTO_1)
-			ars=sbufl_fill_from_net(sb, asfd, confs);
-		else
-			ars=sbuf_fill_from_net(sb, asfd, blk, datpath, confs);
-		switch(ars)
+			sb->flags |= SBUF_CLIENT_RESTORE_HACK;
+
+		switch(sbuf_fill_from_net(sb, asfd, blk, datpath, confs))
 		{
 			case 0: break;
 			case 1: if(asfd->write_str(asfd, CMD_GEN,

@@ -1,7 +1,6 @@
 #include "include.h"
 #include "../cmd.h"
 #include "../hexmap.h"
-#include "../protocol1/sbufl.h"
 #include "protocol2/champ_chooser/include.h"
 
 #define MANIO_MODE_READ		"rb"

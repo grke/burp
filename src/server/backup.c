@@ -272,7 +272,7 @@ int run_backup(struct async *as, struct sdirs *sdirs, struct conf **cconfs,
 		args[a++]=get_string(cconfs[OPT_TIMER_SCRIPT]);
 		args[a++]=cname;
 		args[a++]=sdirs->current;
-		args[a++]=sdirs->client;
+		args[a++]=sdirs->base;
 		args[a++]="reserved1";
 		args[a++]="reserved2";
 		args[a++]=NULL;

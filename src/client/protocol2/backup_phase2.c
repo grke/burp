@@ -397,8 +397,6 @@ int backup_phase2_client_protocol2(struct asfd *asfd,
 
 	ret=0;
 end:
-blk_print_alloc_stats();
-//sbuf_print_alloc_stats();
 	slist_free(&slist);
 	blist_free(&blist);
 	// Write buffer did not allocate 'buf'.

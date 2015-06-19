@@ -169,13 +169,19 @@ static struct slist *build_manifest_phase2(const char *path,
 	return slist;
 }
 
+static struct slist *build_manifest_final(const char *path,
+	enum protocol protocol, int entries)
+{
+	// Same as phase2.
+	return build_manifest_phase2(path, protocol, entries);
+}
+
 struct slist *build_manifest(const char *path,
 	enum protocol protocol, int entries, int phase)
 {
 	switch(phase)
 	{
-		// FIX THIS
-		case 0: return build_manifest_phase2(path, protocol, entries);
+		case 0: return build_manifest_final(path, protocol, entries);
 		case 1: return build_manifest_phase1(path, protocol, entries);
 		case 2: return build_manifest_phase2(path, protocol, entries);
 		default:

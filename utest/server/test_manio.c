@@ -99,13 +99,13 @@ static void test_manifest(enum protocol protocol, int phase)
 
 START_TEST(test_man_protocol1)
 {
-	test_manifest(PROTO_1, 0 /* phase */);
+	test_manifest(PROTO_1, 0 /* phase - final manifest */);
 }
 END_TEST
 
 START_TEST(test_man_protocol2)
 {
-	test_manifest(PROTO_2, 0 /* phase */);
+	test_manifest(PROTO_2, 0 /* phase - final manifest */);
 }
 END_TEST
 

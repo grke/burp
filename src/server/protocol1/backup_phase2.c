@@ -169,9 +169,9 @@ static int process_changed_file(struct asfd *asfd,
 	}
 
 	// Flag the things that need to be sent (to the client)
-	p1b->flags |= SBUFL_SEND_DATAPTH;
-	p1b->flags |= SBUFL_SEND_STAT;
-	p1b->flags |= SBUFL_SEND_PATH;
+	p1b->flags |= SBUF_SEND_DATAPTH;
+	p1b->flags |= SBUF_SEND_STAT;
+	p1b->flags |= SBUF_SEND_PATH;
 
 	//logp("sending sig for %s\n", p1b->path);
 	//logp("(%s)\n", p1b->datapth);
@@ -216,8 +216,8 @@ static int process_new(struct sdirs *sdirs, struct conf **cconfs,
 	{
 		//logp("need to process new file: %s\n", p1b->path);
 		// Flag the things that need to be sent (to the client)
-		p1b->flags |= SBUFL_SEND_STAT;
-		p1b->flags |= SBUFL_SEND_PATH;
+		p1b->flags |= SBUF_SEND_STAT;
+		p1b->flags |= SBUF_SEND_PATH;
 	}
 	else
 	{
@@ -382,7 +382,7 @@ static int do_stuff_to_send(struct asfd *asfd,
 	struct sbuf *p1b, char **last_requested)
 {
 	static struct iobuf wbuf;
-	if(p1b->flags & SBUFL_SEND_DATAPTH)
+	if(p1b->flags & SBUF_SEND_DATAPTH)
 	{
 		iobuf_copy(&wbuf, &p1b->protocol1->datapth);
 		switch(asfd->append_all_to_write_buffer(asfd, &wbuf))
@@ -391,9 +391,9 @@ static int do_stuff_to_send(struct asfd *asfd,
 			case APPEND_BLOCKED: return 1;
 			default: return -1;
 		}
-		p1b->flags &= ~SBUFL_SEND_DATAPTH;
+		p1b->flags &= ~SBUF_SEND_DATAPTH;
 	}
-	if(p1b->flags & SBUFL_SEND_STAT)
+	if(p1b->flags & SBUF_SEND_STAT)
 	{
 		iobuf_copy(&wbuf, &p1b->attr);
 		switch(asfd->append_all_to_write_buffer(asfd, &wbuf))
@@ -402,9 +402,9 @@ static int do_stuff_to_send(struct asfd *asfd,
 			case APPEND_BLOCKED: return 1;
 			default: return -1;
 		}
-		p1b->flags &= ~SBUFL_SEND_STAT;
+		p1b->flags &= ~SBUF_SEND_STAT;
 	}
-	if(p1b->flags & SBUFL_SEND_PATH)
+	if(p1b->flags & SBUF_SEND_PATH)
 	{
 		iobuf_copy(&wbuf, &p1b->path);
 		switch(asfd->append_all_to_write_buffer(asfd, &wbuf))
@@ -413,12 +413,12 @@ static int do_stuff_to_send(struct asfd *asfd,
 			case APPEND_BLOCKED: return 1;
 			default: return -1;
 		}
-		p1b->flags &= ~SBUFL_SEND_PATH;
+		p1b->flags &= ~SBUF_SEND_PATH;
 		if(*last_requested) free(*last_requested);
 		if(!(*last_requested=strdup_w(p1b->path.buf, __func__)))
 			return -1;
 	}
-	if(p1b->protocol1->sigjob && !(p1b->flags & SBUFL_SEND_ENDOFSIG))
+	if(p1b->protocol1->sigjob && !(p1b->flags & SBUF_SEND_ENDOFSIG))
 	{
 		rs_result sigresult;
 
@@ -427,7 +427,7 @@ static int do_stuff_to_send(struct asfd *asfd,
 			p1b->protocol1->infb, p1b->protocol1->outfb)))
 		{
 			case RS_DONE:
-				p1b->flags |= SBUFL_SEND_ENDOFSIG;
+				p1b->flags |= SBUF_SEND_ENDOFSIG;
 				break;
 			case RS_BLOCKED:
 			case RS_RUNNING:
@@ -438,7 +438,7 @@ static int do_stuff_to_send(struct asfd *asfd,
 				return -1;
 		}
 	}
-	if(p1b->flags & SBUFL_SEND_ENDOFSIG)
+	if(p1b->flags & SBUF_SEND_ENDOFSIG)
 	{
 		iobuf_from_str(&wbuf, CMD_END_FILE, (char *)"endfile");
 		switch(asfd->append_all_to_write_buffer(asfd, &wbuf))
@@ -447,7 +447,7 @@ static int do_stuff_to_send(struct asfd *asfd,
 			case APPEND_BLOCKED: return 1;
 			default: return -1;
 		}
-		p1b->flags &= ~SBUFL_SEND_ENDOFSIG;
+		p1b->flags &= ~SBUF_SEND_ENDOFSIG;
 	}
 	return 0;
 }
@@ -466,7 +466,7 @@ static int start_to_receive_delta(struct sdirs *sdirs, struct conf **cconfs,
 		if(!(rb->protocol1->fzp=fzp_open(sdirs->deltmppath, "wb")))
 			return -1;
 	}
-	rb->flags |= SBUFL_RECV_DELTA;
+	rb->flags |= SBUF_RECV_DELTA;
 
 	return 0;
 }
@@ -504,13 +504,13 @@ static int deal_with_receive_end_file(struct asfd *asfd, struct sdirs *sdirs,
 		goto error;
 	}
 	iobuf_move(&rb->protocol1->endfile, rbuf);
-	if(rb->flags & SBUFL_RECV_DELTA && finish_delta(sdirs, rb))
+	if(rb->flags & SBUF_RECV_DELTA && finish_delta(sdirs, rb))
 		goto error;
 
 	if(manio_write_sbuf(chmanio, rb))
 		goto error;
 
-	if(rb->flags & SBUFL_RECV_DELTA)
+	if(rb->flags & SBUF_RECV_DELTA)
 		cntr_add_changed(get_cntr(cconfs), rb->path.cmd);
 	else
 		cntr_add(get_cntr(cconfs), rb->path.cmd, 0);

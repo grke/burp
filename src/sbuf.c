@@ -409,7 +409,6 @@ end:
 int sbuf_fill_from_net(struct sbuf *sb, struct asfd *asfd,
 	struct blk *blk, const char *datpath, struct conf **confs)
 {
-	if(sb->protocol1) return sbufl_fill_from_net(sb, asfd, confs);
 	return sbuf_fill(sb, asfd, NULL, blk, datpath, confs);
 }
 

@@ -569,9 +569,14 @@ int do_restore_client(struct asfd *asfd,
 
 	while(1)
 	{
+		int ars;
 		sbuf_free_content(sb);
 
-		switch(sbuf_fill_from_net(sb, asfd, blk, datpath, confs))
+		if(protocol==PROTO_1)
+			ars=sbufl_fill_from_net(sb, asfd, confs);
+		else
+			ars=sbuf_fill_from_net(sb, asfd, blk, datpath, confs);
+		switch(ars)
 		{
 			case 0: break;
 			case 1: if(asfd->write_str(asfd, CMD_GEN,

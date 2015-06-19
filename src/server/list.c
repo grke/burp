@@ -110,7 +110,6 @@ static int list_manifest(struct asfd *asfd,
 	const char *fullpath, regex_t *regex,
 	const char *browsedir, struct conf **confs)
 {
-	int ars=0;
 	int ret=0;
 	struct sbuf *sb=NULL;
 	struct manio *manio=NULL;
@@ -134,14 +133,14 @@ static int list_manifest(struct asfd *asfd,
 	{
 		int show=0;
 
-		if((ars=manio_read_async(manio, asfd, sb, NULL, NULL, confs))<0)
-			goto error;
-		else if(ars>0)
+		switch(manio_read(manio, sb, confs))
 		{
-			if(browsedir && *browsedir && !last_bd_match)
-				write_wrapper_str(asfd, CMD_ERROR,
-					"directory not found");
-			goto end; // Finished OK.
+			case 0: break;
+			case 1: if(browsedir && *browsedir && !last_bd_match)
+					write_wrapper_str(asfd, CMD_ERROR,
+						"directory not found");
+				goto end; // Finished OK.
+			default: goto error;
 		}
 
 		if(write_status(CNTR_STATUS_LISTING, sb->path.buf, confs))

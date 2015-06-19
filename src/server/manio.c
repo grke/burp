@@ -368,7 +368,7 @@ int manio_close(struct manio **manio)
 }
 
 // Return -1 for error, 0 for stuff read OK, 1 for end of files.
-int manio_read_async(struct manio *manio, struct asfd *asfd,
+int manio_read_with_blk(struct manio *manio,
 	struct sbuf *sb, struct blk *blk,
 	struct sdirs *sdirs, struct conf **confs)
 {
@@ -400,10 +400,9 @@ error:
 	return -1;
 }
 
-int manio_read(struct manio *manio, struct sbuf *sb,
-	struct conf **confs)
+int manio_read(struct manio *manio, struct sbuf *sb, struct conf **confs)
 {
-	return manio_read_async(manio, NULL, sb, NULL, NULL, confs);
+	return manio_read_with_blk(manio, sb, NULL, NULL, confs);
 }
 
 static int reset_sig_count_and_close(struct manio *manio)
@@ -502,7 +501,7 @@ int manio_write_sbuf(struct manio *manio, struct sbuf *sb)
 }
 
 // Return -1 on error, 0 on OK, 1 for srcmanio finished.
-int manio_copy_entry(struct asfd *asfd, struct sbuf *csb, struct sbuf *sb,
+int manio_copy_entry(struct sbuf *csb, struct sbuf *sb,
 	struct blk **blk, struct manio *srcmanio,
 	struct manio *dstmanio, struct conf **confs)
 {
@@ -525,7 +524,7 @@ int manio_copy_entry(struct asfd *asfd, struct sbuf *csb, struct sbuf *sb,
 
 	while(1)
 	{
-		if((ars=manio_read_async(srcmanio, asfd, csb,
+		if((ars=manio_read_with_blk(srcmanio, csb,
 			*blk, NULL, confs))<0) goto error;
 		else if(ars>0)
 		{
@@ -554,13 +553,12 @@ error:
 	return -1;
 }
 
-int manio_forward_through_sigs(struct asfd *asfd,
-	struct sbuf *csb, struct blk **blk,
+int manio_forward_through_sigs(struct sbuf *csb, struct blk **blk,
 	struct manio *manio, struct conf **confs)
 {
 	// Call manio_copy_entry with nothing to write to, so
 	// that we forward through the sigs in manio.
-	return manio_copy_entry(asfd, csb, NULL, blk, manio, NULL, confs);
+	return manio_copy_entry(csb, NULL, blk, manio, NULL, confs);
 }
 
 man_off_t *manio_tell(struct manio *manio)

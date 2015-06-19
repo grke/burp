@@ -7,21 +7,17 @@
 // Used on resume, this just reads the phase1 file and sets up cntr.
 static int read_phase1(struct manio *p1manio, struct conf **confs)
 {
-	int ars=0;
+	int ret=-1;
 	struct sbuf *p1b;
 	if(!(p1b=sbuf_alloc(confs))) return -1;
 	while(1)
 	{
 		sbuf_free_content(p1b);
-		if((ars=manio_read(p1manio, p1b, confs)))
+		switch(manio_read(p1manio, p1b, confs))
 		{
-			// ars==1 means it ended ok.
-			if(ars<0)
-			{
-				sbuf_free(&p1b);
-				return -1;
-			}
-			return 0;
+			case 0: break;
+			case 1: ret=0;
+			default: goto end;
 		}
 		cntr_add_phase1(get_cntr(confs), p1b->path.cmd, 0);
 
@@ -29,9 +25,9 @@ static int read_phase1(struct manio *p1manio, struct conf **confs)
 			cntr_add_val(get_cntr(confs), CMD_BYTES_ESTIMATED,
 				(unsigned long long)p1b->statp.st_size, 0);
 	}
+end:
 	sbuf_free(&p1b);
-	// not reached
-	return 0;
+	return ret;
 }
 
 static int do_forward(struct manio *manio, struct iobuf *result,

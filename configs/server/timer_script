@@ -6,7 +6,7 @@ echo "Running timer script: $@"
 
 client="$1" ; shift
 current="$1" ; shift
-storage_dir="$1" ; shift
+client_dir="$1" ; shift
 reserved1="$1" ; shift
 reserved2="$1" ; shift
 interval="$1" ; shift
@@ -16,7 +16,7 @@ timestamp="$current/timestamp"
 # a backup needs to be done right now.
 # This gives the 'server initiates a manual backup' feature.
 
-manual_file="$storage_dir/$client/backup"
+manual_file="$client_dir/backup"
 if [ -f "$manual_file" ] ; then
 	echo "Found $manual_file"
 	echo "Do a backup of $client now"

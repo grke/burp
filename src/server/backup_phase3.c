@@ -68,7 +68,7 @@ int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 		{
 			if(write_status(CNTR_STATUS_MERGING,
 				usb->path.buf, confs)) goto end;
-			switch(manio_copy_entry(NULL /* no async */,
+			switch(manio_copy_entry(
 				usb, usb, &blk, unmanio, newmanio, confs))
 			{
 				case -1: goto end;
@@ -79,7 +79,7 @@ int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 		{
 			if(write_status(CNTR_STATUS_MERGING,
 				csb->path.buf, confs)) goto end;
-			switch(manio_copy_entry(NULL /* no async */,
+			switch(manio_copy_entry(
 				csb, csb, &blk, chmanio, newmanio, confs))
 			{
 				case -1: goto end;
@@ -95,7 +95,7 @@ int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 			// They were the same - write one.
 			if(write_status(CNTR_STATUS_MERGING,
 				csb->path.buf, confs)) goto end;
-			switch(manio_copy_entry(NULL /* no async */,
+			switch(manio_copy_entry(
 				csb, csb, &blk, chmanio, newmanio, confs))
 			{
 				case -1: goto end;
@@ -106,7 +106,7 @@ int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 		{
 			if(write_status(CNTR_STATUS_MERGING,
 				usb->path.buf, confs)) goto end;
-			switch(manio_copy_entry(NULL /* no async */,
+			switch(manio_copy_entry(
 				usb, usb, &blk, unmanio, newmanio, confs))
 			{
 				case -1: goto end;
@@ -117,7 +117,7 @@ int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 		{
 			if(write_status(CNTR_STATUS_MERGING,
 				csb->path.buf, confs)) goto end;
-			switch(manio_copy_entry(NULL /* no async */,
+			switch(manio_copy_entry(
 				csb, csb, &blk, chmanio, newmanio, confs))
 			{
 				case -1: goto end;

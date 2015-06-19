@@ -6,7 +6,6 @@
 static int diff_manifest(struct asfd *asfd,
 	const char *fullpath, struct conf **confs)
 {
-	int ars=0;
 	int ret=0;
 	struct sbuf *sb=NULL;
 	struct manio *manio=NULL;
@@ -24,10 +23,12 @@ static int diff_manifest(struct asfd *asfd,
 
 	while(1)
 	{
-		if((ars=manio_read_async(manio, asfd, sb, NULL, NULL, confs))<0)
-			goto error;
-		else if(ars>0)
-			goto end; // Finished OK.
+                switch(manio_read(manio, sb, confs))
+                {
+                        case 0: break;
+                        case 1: goto end; // Finished OK.
+                        default: goto error;
+                }
 
 		if(write_status(CNTR_STATUS_DIFFING, sb->path.buf, confs))
 			goto error;

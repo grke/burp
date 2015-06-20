@@ -29,6 +29,7 @@ SRCS = \
 	list.c \
 	main.c \
 	manio.c \
+	manios.c \
 	quota.c \
 	restore.c \
 	rubble.c \

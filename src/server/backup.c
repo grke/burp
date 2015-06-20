@@ -224,6 +224,7 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 error:
 	ret=-1;
 end:
+
 	set_logfzp(NULL, cconfs);
 	if(chfd) as->asfd_remove(as, chfd);
 	asfd_free(&chfd);

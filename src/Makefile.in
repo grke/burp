@@ -63,6 +63,7 @@ SUBDIROBJS = \
 		protocol1/msg.o \
 		server/protocol1/restore.o \
 		server/backup_phase1.o \
+		server/manios.o \
 		server/server.a \
 		client/client.a \
 		client/protocol2/client_protocol2.a \

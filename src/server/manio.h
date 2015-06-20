@@ -1,7 +1,9 @@
 #ifndef _MANIO_H
 #define _MANIO_H
 
-#include <zlib.h>
+#include "../burp.h"
+#include "../conf.h"
+#include "sdirs.h"
 
 struct man_off
 {

@@ -175,10 +175,8 @@ static int set_up_for_sig_info(struct slist *slist, struct blist *blist, struct 
 		return -1;
 	}
 	// Replace the attribs with the more recent values.
-	if(sb->attr.buf) free(sb->attr.buf);
-	sb->attr.buf=inew->attr.buf;
-	sb->attr.len=inew->attr.len;
-	inew->attr.buf=NULL;
+	iobuf_free_content(&sb->attr);
+	iobuf_move(&sb->attr, &inew->attr);
 
 	// Mark the end of the previous file.
 	slist->add_sigs_here->protocol2->bend=blist->tail;
@@ -330,12 +328,7 @@ static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist, struct bl
 	}
 
 	if(sb->protocol2->bsighead->got==BLK_INCOMING)
-	{
-//		if(sigs_end
-//		  && deduplicate(sb->protocol2->bsighead, dpth, confs, wrap_up))
-//			return -1;
 		return 0;
-	}
 
 	if(sb->protocol2->bsighead->got==BLK_NOT_GOT)
 	{

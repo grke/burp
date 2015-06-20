@@ -262,42 +262,6 @@ static int get_wbuf_from_blks(struct iobuf *wbuf,
 	return 0;
 }
 
-static void get_wbuf_from_scan(struct iobuf *wbuf, struct slist *flist)
-{
-	struct sbuf *sb=flist->head;
-	if(!sb) return;
-	if(!(sb->flags & SBUF_SENT_STAT))
-	{
-		iobuf_copy(wbuf, &sb->attr);
-		sb->flags |= SBUF_SENT_STAT;
-	}
-	else if(!(sb->flags & SBUF_SENT_PATH))
-	{
-		iobuf_copy(wbuf, &sb->path);
-		sb->flags |= SBUF_SENT_PATH;
-	}
-	else if(sb->link.buf && !(sb->flags & SBUF_SENT_LINK))
-	{
-		iobuf_copy(wbuf, &sb->link);
-		sb->flags |= SBUF_SENT_LINK;
-	}
-	else
-	{
-		flist->head=flist->head->next;
-		sbuf_free(&sb);
-		if(flist->head)
-		{
-			// Go ahead and get the next one from the list.
-			get_wbuf_from_scan(wbuf, flist);
-		}
-		else
-		{
-			flist->tail=NULL;
-			iobuf_from_str(wbuf, CMD_GEN, (char *)"scan_end");
-		}
-	}
-}
-
 int backup_phase2_client_protocol2(struct asfd *asfd,
 	struct conf **confs, int resume)
 {

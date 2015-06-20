@@ -4,18 +4,28 @@
 #include "../../prng.h"
 #include "../../../src/protocol2/blist.h"
 
-struct blist *build_blist(int wanted)
+static void add_blk(struct blist *blist)
 {
-	int i=0;
-	struct blist *blist;
-	fail_unless((blist=blist_alloc())!=NULL);
+	struct blk *blk;
+	fail_unless((blk=blk_alloc())!=NULL);
+	blk->fingerprint=prng_next64();
+	prng_md5sum(blk->md5sum);
+	blist_add_blk(blist, blk);
+}
+
+void build_blks(struct blist *blist, int wanted)
+{
+	int i;
 	for(i=0; i<wanted; i++)
 	{
-		struct blk *blk;
-		fail_unless((blk=blk_alloc())!=NULL);
-		blk->fingerprint=prng_next64();
-		prng_md5sum(blk->md5sum);
-		blist_add_blk(blist, blk);
+		add_blk(blist);
 	}
+}
+
+struct blist *build_blist(int wanted)
+{
+	struct blist *blist;
+	fail_unless((blist=blist_alloc())!=NULL);
+	build_blks(blist, wanted);
 	return blist;
 }

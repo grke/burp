@@ -20,11 +20,13 @@ START_TEST(test_protocol2_blist)
 	base64_init();
 	hexmap_init();
 	blist=build_blist(1000);
+/*
 	for(blk=blist->head; blk; blk=blk->next)
 	{
 		printf("f: %016"PRIX64" %s\n",
 			blk->fingerprint, bytes_to_md5str(blk->md5sum));
 	}
+*/
 	blist_free(&blist);
 	tear_down();
 }

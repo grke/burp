@@ -1,11 +1,11 @@
 #include <check.h>
-#include "../src/config.h"
-#include "test.h"
-#include "prng.h"
-#include "../src/alloc.h"
-#include "../src/attribs.h"
-#include "../src/base64.h"
-#include "../src/sbuf.h"
+#include "../../src/config.h"
+#include "../test.h"
+#include "../prng.h"
+#include "../../src/alloc.h"
+#include "../../src/attribs.h"
+#include "../../src/base64.h"
+#include "../../src/sbuf.h"
 
 static int reduce=1;
 

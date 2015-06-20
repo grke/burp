@@ -6,6 +6,7 @@
 #include "../src/attribs.h"
 #include "../src/base64.h"
 #include "../src/sbuf.h"
+#include "builders/build.h"
 
 static void tear_down(void)
 {

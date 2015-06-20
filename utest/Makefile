@@ -3,9 +3,9 @@ LIBS = -lcheck -lpthread -lm -lrt -lssl -lcrypto
 CFLAGS+=-Wall -g
 
 SRCS = \
-	build_attribs.c \
-	build_manifest.c \
-	build_paths.c \
+	builders/build_attribs.c \
+	builders/server/build_manifest.c \
+	builders/build_paths.c \
 	main.c \
 	mock.c \
 	prng.c \

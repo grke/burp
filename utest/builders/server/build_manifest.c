@@ -2,15 +2,16 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "test.h"
-#include "prng.h"
-#include "../src/alloc.h"
-#include "../src/attribs.h"
-#include "../src/handy.h"
-#include "../src/pathcmp.h"
-#include "../src/sbuf.h"
-#include "../src/server/manio.h"
-#include "../src/server/sdirs.h"
+#include "../build.h"
+#include "../../test.h"
+#include "../../prng.h"
+#include "../../../src/alloc.h"
+#include "../../../src/attribs.h"
+#include "../../../src/handy.h"
+#include "../../../src/pathcmp.h"
+#include "../../../src/sbuf.h"
+#include "../../../src/server/manio.h"
+#include "../../../src/server/sdirs.h"
 
 static void link_data(struct sbuf *sb, enum cmd cmd)
 {

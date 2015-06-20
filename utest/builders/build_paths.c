@@ -2,12 +2,12 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "test.h"
-#include "prng.h"
-#include "../src/alloc.h"
-#include "../src/attribs.h"
-#include "../src/pathcmp.h"
-#include "../src/sbuf.h"
+#include "../test.h"
+#include "../prng.h"
+#include "../../src/alloc.h"
+#include "../../src/attribs.h"
+#include "../../src/pathcmp.h"
+#include "../../src/sbuf.h"
 
 static char char_gen(void)
 {

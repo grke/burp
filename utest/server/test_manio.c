@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "../builders/build.h"
 #include "../test.h"
 #include "../prng.h"
 #include "../../src/alloc.h"

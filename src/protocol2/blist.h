@@ -2,6 +2,7 @@
 #define __RABIN_BLK_LIST_H
 
 #include "../burp.h"
+#include "blk.h"
 
 struct blist
 {

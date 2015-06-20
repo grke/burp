@@ -8,8 +8,11 @@
 #include "../../../src/alloc.h"
 #include "../../../src/attribs.h"
 #include "../../../src/handy.h"
+#include "../../../src/msg.h"
 #include "../../../src/pathcmp.h"
+#include "../../../src/protocol1/handy.h"
 #include "../../../src/sbuf.h"
+#include "../../../src/slist.h"
 #include "../../../src/server/manio.h"
 #include "../../../src/server/sdirs.h"
 
@@ -27,7 +30,6 @@ static struct slist *build_slist_phase1(enum protocol protocol, int entries)
 	char **paths;
 	struct sbuf *sb;
 	struct slist *slist;
-	prng_init(0);
 
 	fail_unless((slist=slist_alloc())!=NULL);
 	paths=build_paths(entries);
@@ -86,18 +88,10 @@ static struct slist *build_manifest_phase1(const char *path,
 
 static char *gen_endfile_str(void)
 {
-	uint8_t i=0;
-	uint8_t j=0;
-	uint32_t r;
 	uint64_t bytes;
 	uint8_t checksum[MD5_DIGEST_LENGTH];
 	bytes=prng_next64();
-	while(i<MD5_DIGEST_LENGTH)
-	{
-		r=prng_next();
-		for(j=0; j<sizeof(r)*4; j+=8)
-			checksum[i++]=(uint8_t)(r>>j);
-	}
+	prng_md5sum(checksum);
 	return get_endfile_str(bytes, checksum);
 }
 

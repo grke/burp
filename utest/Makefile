@@ -4,6 +4,7 @@ CFLAGS+=-Wall -g
 
 SRCS = \
 	builders/build_attribs.c \
+	builders/protocol2/build_blist.c \
 	builders/server/build_manifest.c \
 	builders/build_paths.c \
 	main.c \
@@ -19,6 +20,7 @@ SRCS = \
 	test_hexmap.c \
 	test_lock.c \
 	test_pathcmp.c \
+	protocol2/test_blist.c \
 	server/protocol1/test_dpth.c \
 	server/protocol1/test_fdirs.c \
 	server/protocol2/test_dpth.c \
@@ -51,6 +53,7 @@ BURP_SRCS = \
 	../src/protocol1/rs_buf.c \
 	../src/protocol1/sbuf_protocol1.c \
 	../src/protocol2/blk.c \
+	../src/protocol2/blist.c \
 	../src/protocol2/sbuf_protocol2.c \
 	../src/server/bu_get.c \
 	../src/server/compress.c \
@@ -83,6 +86,8 @@ test: Makefile $(OBJS) $(BURP_OBJS)
 	@echo OK
 
 clean:
-	rm -f test *.o utest_lockfile utest_fzp
+	rm -f test *.o
+	rm -rf utest_*
+	rm -f builders/*.o builders/protocol2/*.o builders/server/*.o
 	rm -f server/*.o server/protocol1/*.o server/protocol2/*.o
-	rm -rf utest_dpth utest_sbuf utest_manio
+	rm -f protocol2/*.o

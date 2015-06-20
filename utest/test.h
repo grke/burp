@@ -36,6 +36,7 @@ Suite *suite_hexmap(void);
 Suite *suite_lock(void);
 Suite *suite_manio(void);
 Suite *suite_pathcmp(void);
+Suite *suite_protocol2_blist(void);
 Suite *suite_server_sdirs(void);
 Suite *suite_server_protocol1_dpth(void);
 Suite *suite_server_protocol1_fdirs(void);

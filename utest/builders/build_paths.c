@@ -6,6 +6,7 @@
 #include "../prng.h"
 #include "../../src/alloc.h"
 #include "../../src/attribs.h"
+#include "../../src/handy.h"
 #include "../../src/pathcmp.h"
 #include "../../src/sbuf.h"
 

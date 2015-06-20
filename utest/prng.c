@@ -30,3 +30,17 @@ uint64_t prng_next64(void)
 {
 	return (uint64_t)(prng_next())<<32|prng_next();
 }
+
+uint8_t *prng_md5sum(uint8_t checksum[])
+{
+	uint8_t i=0;
+	uint8_t j=0;
+	uint32_t r;
+	while(i<MD5_DIGEST_LENGTH)
+	{
+		r=prng_next();
+		for(j=0; j<sizeof(r)*4; j+=8)
+			checksum[i++]=(uint8_t)(r>>j);
+	}
+	return checksum;
+}

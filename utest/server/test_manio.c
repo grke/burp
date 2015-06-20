@@ -83,6 +83,7 @@ static void test_manifest(enum protocol protocol, int phase)
 	struct manio *manio;
 	struct sbuf *sb=NULL;
 	int entries=1000;
+	prng_init(0);
 	base64_init();
 	recursive_delete(path);
 
@@ -143,6 +144,7 @@ static void test_manifest_tell_seek(enum protocol protocol, int phase)
 	struct sbuf *sb=NULL;
 	man_off_t *offset=NULL;
 	int entries=1000;
+	prng_init(0);
 	base64_init();
 	recursive_delete(path);
 

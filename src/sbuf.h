@@ -3,6 +3,7 @@
 
 #include "burp.h"
 #include "bfile.h"
+#include "conf.h"
 #include "iobuf.h"
 #include "protocol1/sbuf_protocol1.h"
 #include "protocol2/sbuf_protocol2.h"

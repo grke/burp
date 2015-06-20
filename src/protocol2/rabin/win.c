@@ -1,4 +1,6 @@
-#include "include.h"
+#include "win.h"
+#include "rconf.h"
+#include "../../alloc.h"
 
 struct win *win_alloc(struct rconf *rconf)
 {

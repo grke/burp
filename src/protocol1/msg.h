@@ -2,7 +2,7 @@
 #define _MSG_PROTOCOL1_H
 
 #include <zlib.h>
-#include "include.h"
+#include "../bfile.h"
 
 extern int transfer_gzfile_inl(struct asfd *asfd,
 	struct sbuf *sb, const char *path, BFILE *bfd,

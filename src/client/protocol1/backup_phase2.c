@@ -1,6 +1,8 @@
 #include "include.h"
 #include "../../attribs.h"
 #include "../../cmd.h"
+#include "../../protocol1/handy.h"
+#include "../../protocol1/msg.h"
 
 static int load_signature(struct asfd *asfd,
 	rs_signature_t **sumset, struct conf **confs)

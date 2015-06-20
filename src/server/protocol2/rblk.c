@@ -1,6 +1,7 @@
 #include "include.h"
 #include "../../cmd.h"
 #include "../../hexmap.h"
+#include "../../protocol2/blk.h"
 
 // For retrieving stored data.
 struct rblk

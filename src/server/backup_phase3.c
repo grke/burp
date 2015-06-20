@@ -1,6 +1,7 @@
 #include "include.h"
 #include "manio.h"
 #include "sdirs.h"
+#include "../protocol2/blk.h"
 
 static const char *get_rmanifest_relative(struct sdirs *sdirs,
 	struct conf **confs)

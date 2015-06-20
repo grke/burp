@@ -1027,6 +1027,12 @@ int fcntl(int fd, int cmd, long arg)
 	return rval;
 }
 
+int stat(const char *file, struct stat *sb)
+{
+	uint64_t winattr=0;
+	return do_stat(file, sb, &winattr);
+}
+
 int lstat(const char *file, struct stat *sb)
 {
 	uint64_t winattr=0;

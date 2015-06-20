@@ -36,8 +36,12 @@
  *   Graham Keeling, 2014
  */
 
+#include "attribs.h"
+#include "alloc.h"
 #include "base64.h"
+#include "berrno.h"
 #include "cmd.h"
+#include "conf.h"
 #include "log.h"
 #include "sbuf.h"
 

@@ -1,6 +1,8 @@
 #ifndef __RABIN_WIN_H
 #define __RABIN_WIN_H
 
+#include "../../burp.h"
+
 // The sliding window.
 struct win
 {

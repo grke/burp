@@ -1,6 +1,12 @@
-#include "include.h"
+#include "handy.h"
+#include "../alloc.h"
+#include "../asfd.h"
+#include "../async.h"
+#include "../bfile.h"
 #include "../cmd.h"
+#include "../handy.h"
 #include "../hexmap.h"
+#include "../log.h"
 
 static int do_encryption(struct asfd *asfd, EVP_CIPHER_CTX *ctx,
 	uint8_t *inbuf, int inlen, uint8_t *outbuf, int *outlen,

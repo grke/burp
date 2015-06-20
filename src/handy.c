@@ -1,6 +1,7 @@
 #include "include.h"
 #include "cmd.h"
 #include "hexmap.h"
+#include "protocol1/handy.h"
 #include "protocol2/blk.h"
 
 #include <sys/types.h>

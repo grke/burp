@@ -1,6 +1,8 @@
 #ifndef __RABIN_BLK_H
 #define __RABIN_BLK_H
 
+#include "../burp.h"
+
 #include <openssl/md5.h>
 
 // The highest number of blocks that the client will hold in memory.

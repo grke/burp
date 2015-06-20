@@ -1,4 +1,10 @@
-#include "include.h"
+#include "rabin.h"
+#include "rconf.h"
+#include "win.h"
+#include "../../alloc.h"
+#include "../blk.h"
+#include "../blist.h"
+#include "../../sbuf.h"
 
 static struct blk *blk=NULL;
 static char *gcp=NULL;

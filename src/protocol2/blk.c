@@ -1,7 +1,9 @@
 #include <stdlib.h>
 
-#include "include.h"
+#include "blk.h"
+#include "../alloc.h"
 #include "../hexmap.h"
+#include "../log.h"
 #include "../protocol2/rabin/rabin.h"
 #include "rabin/rconf.h"
 

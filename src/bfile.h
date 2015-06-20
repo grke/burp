@@ -1,6 +1,8 @@
 #ifndef __BFILE_H
 #define __BFILE_H
 
+#include "burp.h"
+
 enum bf_mode
 {
 	BF_CLOSED=0,

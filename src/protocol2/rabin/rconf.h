@@ -5,6 +5,8 @@
 #define RABIN_AVG	5000
 #define RABIN_MAX	8192
 
+#include "../../burp.h"
+
 struct rconf
 {
 	uint64_t prime;

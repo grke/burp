@@ -1,5 +1,4 @@
 #include "include.h"
-#include "openssl/ssl.h"
 
 static const char *pass=NULL;
 

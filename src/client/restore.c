@@ -1,6 +1,7 @@
 #include "include.h"
 #include "../attribs.h"
 #include "../cmd.h"
+#include "../protocol2/blk.h"
 #include "protocol1/restore.h"
 #include "protocol2/restore.h"
 
@@ -167,11 +168,13 @@ static char *build_msg(const char *text, const char *param)
 	return msg;
 }
 
+#ifndef HAVE_WIN32
 static void do_logw(struct asfd *asfd, struct conf **confs,
 	const char *text, const char *param)
 {
 	logw(asfd, confs, "%s", build_msg(text, param));
 }
+#endif
 
 static int warn_and_interrupt(struct asfd *asfd, struct sbuf *sb,
 	struct conf **confs, const char *text, const char *param)

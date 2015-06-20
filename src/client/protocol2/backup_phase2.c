@@ -1,7 +1,9 @@
 #include "include.h"
 #include "../../base64.h"
 #include "../../cmd.h"
-#include "../../protocol2/rabin/include.h"
+#include "../../protocol2/blk.h"
+#include "../../protocol2/blist.h"
+#include "../../protocol2/rabin/rabin.h"
 
 /* Ignore extrameta for now.
 #ifndef HAVE_WIN32

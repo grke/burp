@@ -3,6 +3,8 @@
 
 #include <openssl/md5.h>
 #include <zlib.h>
+#include "../bfile.h"
+#include "../cmd.h"
 
 #define min(a,b) \
    ({ __typeof__ (a) _a = (a); \

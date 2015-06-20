@@ -1,6 +1,8 @@
 #ifndef _HEXMAP_H
 #define _HEXMAP_H
 
+#include "burp.h"
+
 extern uint8_t md5sum_of_empty_string[];
 
 extern void hexmap_init(void);

@@ -8,8 +8,10 @@
 #include "../../src/alloc.h"
 #include "../../src/attribs.h"
 #include "../../src/base64.h"
+#include "../../src/fsops.h"
 #include "../../src/pathcmp.h"
 #include "../../src/sbuf.h"
+#include "../../src/slist.h"
 #include "../../src/server/manio.h"
 
 static const char *path="utest_manio";

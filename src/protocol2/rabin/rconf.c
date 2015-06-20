@@ -1,4 +1,5 @@
-#include "include.h"
+#include "rconf.h"
+#include "../../log.h"
 
 static uint64_t get_multiplier(uint32_t win, uint64_t prime)
 {

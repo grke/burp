@@ -1,5 +1,6 @@
-#include "../cmd.h"
 #include "sbuf_protocol1.h"
+#include "../alloc.h"
+#include "../cmd.h"
 
 struct protocol1 *sbuf_protocol1_alloc(void)
 {

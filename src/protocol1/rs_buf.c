@@ -33,8 +33,15 @@
  * allocated buffer of configurable size is used as an intermediary.
  */
 
-#include "include.h"
+#include "rs_buf.h"
 #include "../cmd.h"
+#include "../alloc.h"
+#include "../asfd.h"
+#include "../async.h"
+#include "../cntr.h"
+#include "../handy.h"
+#include "../iobuf.h"
+#include "../log.h"
 
 /* use fseeko instead of fseek for long file support if we have it */
 #ifdef HAVE_FSEEKO

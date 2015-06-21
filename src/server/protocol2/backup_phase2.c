@@ -11,6 +11,11 @@
 #include "../../protocol2/blist.h"
 #include "../../slist.h"
 
+#define END_SIGS		0x01
+#define END_BACKUP		0x02
+#define END_REQUESTS		0x04
+#define END_BLK_REQUESTS	0x08
+
 static int data_needed(struct sbuf *sb)
 {
 	if(sb->path.cmd==CMD_FILE) return 1;
@@ -128,14 +133,15 @@ static int entry_changed(struct sbuf *sb,
 }
 
 static int add_data_to_store(struct conf **confs,
-	struct blist *blist, struct iobuf *rbuf, struct dpth *dpth)
+	struct slist *slist, struct iobuf *rbuf, struct dpth *dpth)
 {
 	static struct blk *blk=NULL;
+	struct cntr *cntr=get_cntr(confs);
 
 	// Find the first one in the list that was requested.
 	// FIX THIS: Going up the list here, and then later
 	// when writing to the manifest is not efficient.
-	for(blk=blist->head;
+	for(blk=slist->blist->head;
 		blk && (!blk->requested || blk->got==BLK_GOT); blk=blk->next)
 	{
 	//	logp("try: %d %d\n", blk->index, blk->got);
@@ -143,16 +149,18 @@ static int add_data_to_store(struct conf **confs,
 	if(!blk)
 	{
 		logp("Received data but could not find next requested block.\n");
-		if(!blist->head) logp("and blist->head is null\n");
-		else logp("head index: %d\n", blist->head->index);
+		if(!slist->blist->head)
+			logp("and slist->blist->head is null\n");
+		else
+			logp("head index: %d\n", slist->blist->head->index);
 		return -1;
 	}
 
 	// Add it to the data store straight away.
 	if(dpth_protocol2_fwrite(dpth, rbuf, blk)) return -1;
 
-	cntr_add(get_cntr(confs), CMD_DATA, 0);
-	cntr_add_recvbytes(get_cntr(confs), blk->length);
+	cntr_add(cntr, CMD_DATA, 0);
+	cntr_add_recvbytes(cntr, blk->length);
 
 	blk->got=BLK_GOT;
 	blk=blk->next;
@@ -160,7 +168,7 @@ static int add_data_to_store(struct conf **confs,
 	return 0;
 }
 
-static int set_up_for_sig_info(struct slist *slist, struct blist *blist, struct sbuf *inew)
+static int set_up_for_sig_info(struct slist *slist, struct sbuf *inew)
 {
 	struct sbuf *sb;
 
@@ -180,7 +188,7 @@ static int set_up_for_sig_info(struct slist *slist, struct blist *blist, struct 
 	iobuf_move(&sb->attr, &inew->attr);
 
 	// Mark the end of the previous file.
-	slist->add_sigs_here->protocol2->bend=blist->tail;
+	slist->add_sigs_here->protocol2->bend=slist->blist->tail;
 
 	slist->add_sigs_here=sb;
 
@@ -197,7 +205,7 @@ static void dump_blks(const char *msg, struct blk *b)
 }
 */
 
-static int add_to_sig_list(struct slist *slist, struct blist *blist,
+static int add_to_sig_list(struct slist *slist,
 	struct iobuf *rbuf, struct conf **confs)
 {
 	// Goes on slist->add_sigs_here
@@ -205,7 +213,7 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist,
 	struct protocol2 *protocol2;
 
 	if(!(blk=blk_alloc())) return -1;
-	blist_add_blk(blist, blk);
+	blist_add_blk(slist->blist, blk);
 
 	protocol2=slist->add_sigs_here->protocol2;
         if(!protocol2->bstart) protocol2->bstart=blk;
@@ -215,14 +223,14 @@ static int add_to_sig_list(struct slist *slist, struct blist *blist,
 
 	// Need to send sigs to champ chooser, therefore need to point
 	// to the oldest unsent one if nothing is pointed to yet.
-	if(!blist->blk_for_champ_chooser) blist->blk_for_champ_chooser=blk;
+	if(!slist->blist->blk_for_champ_chooser)
+		slist->blist->blk_for_champ_chooser=blk;
 
 	return 0;
 }
 
-static int deal_with_read(struct iobuf *rbuf,
-	struct slist *slist, struct blist *blist, struct conf **confs,
-	int *sigs_end, int *backup_end, struct dpth *dpth)
+static int deal_with_read(struct iobuf *rbuf, struct slist *slist,
+	struct conf **confs, uint8_t *end_flags, struct dpth *dpth)
 {
 	int ret=0;
 	static struct sbuf *inew=NULL;
@@ -233,7 +241,7 @@ static int deal_with_read(struct iobuf *rbuf,
 	{
 		/* Incoming block data. */
 		case CMD_DATA:
-			if(add_data_to_store(confs, blist, rbuf, dpth))
+			if(add_data_to_store(confs, slist, rbuf, dpth))
 				goto error;
 			goto end;
 
@@ -246,11 +254,11 @@ static int deal_with_read(struct iobuf *rbuf,
 
 			// Need to go through slist to find the matching
 			// entry.
-			if(set_up_for_sig_info(slist, blist, inew))
+			if(set_up_for_sig_info(slist, inew))
 				goto error;
 			return 0;
 		case CMD_SIG:
-			if(add_to_sig_list(slist, blist, rbuf, confs))
+			if(add_to_sig_list(slist, rbuf, confs))
 				goto error;
 			goto end;
 
@@ -262,12 +270,12 @@ static int deal_with_read(struct iobuf *rbuf,
 		case CMD_GEN:
 			if(!strcmp(rbuf->buf, "sigs_end"))
 			{
-				*sigs_end=1;
+				(*end_flags)|=END_SIGS;
 				goto end;
 			}
 			else if(!strcmp(rbuf->buf, "backup_end"))
 			{
-				*backup_end=1;
+				(*end_flags)|=END_BACKUP;
 				goto end;
 			}
 			break;
@@ -293,8 +301,7 @@ static int encode_req(struct blk *blk, char *req)
 }
 
 static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist,
-	struct blist *blist, int sigs_end,
-	int *blk_requests_end, struct conf **confs)
+	uint8_t *end_flags, struct conf **confs)
 {
 	static char req[32]="";
 	struct sbuf *sb=slist->blks_to_request;
@@ -304,11 +311,11 @@ static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist,
 	if(!sb)
 	{
 		slist->blks_to_request=NULL;
-		if(sigs_end && !*blk_requests_end)
+		if((*end_flags)&END_SIGS && !((*end_flags)&END_BLK_REQUESTS))
 		{
 			iobuf_from_str(wbuf,
 				CMD_GEN, (char *)"blk_requests_end");
-			*blk_requests_end=1;
+			(*end_flags)|=END_BLK_REQUESTS;
 		}
 		return 0;
 	}
@@ -321,11 +328,11 @@ static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist,
 			slist->blks_to_request=sb->next;
 			printf("move to next\n");
 		}
-		if(sigs_end && !*blk_requests_end)
+		if((*end_flags)&END_SIGS && !((*end_flags)&END_BLK_REQUESTS))
 		{
 			iobuf_from_str(wbuf,
 				CMD_GEN, (char *)"blk_requests_end");
-			*blk_requests_end=1;
+			(*end_flags)|=END_BLK_REQUESTS;
 		}
 		return 0;
 	}
@@ -354,16 +361,16 @@ static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist,
 }
 
 static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist,
-	struct manios *manios, int *requests_end)
+	struct manios *manios, uint8_t *end_flags)
 {
 	static uint64_t file_no=1;
 	struct sbuf *sb=slist->last_requested;
 	if(!sb)
 	{
-		if(!manios->phase1 && !*requests_end)
+		if(!manios->phase1 && !((*end_flags)&END_REQUESTS))
 		{
 			iobuf_from_str(wbuf, CMD_GEN, (char *)"requests_end");
-			*requests_end=1;
+			(*end_flags)|=END_REQUESTS;
 		}
 		return;
 	}
@@ -402,11 +409,11 @@ static void get_wbuf_from_index(struct iobuf *wbuf, uint64_t index)
 
 static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
         struct asfd *chfd, struct manios *manios,
-        struct slist *slist, struct blist *blist,
-        int backup_end, struct conf **confs)
+        struct slist *slist, int end_flags, struct conf **confs)
 {
 	struct blk *blk;
 	static struct iobuf *wbuf=NULL;
+	struct blist *blist=slist->blist;
 
 	if(!(sb->flags & SBUF_HEADER_WRITTEN_TO_MANIFEST))
 	{
@@ -418,7 +425,7 @@ static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
 
 	while((blk=sb->protocol2->bstart)
 		&& blk->got==BLK_GOT
-		&& (blk->next || backup_end))
+		&& (blk->next || end_flags&END_BACKUP))
 	{
 		if(blk->got_save_path
 		  && !blk_is_zero_length(blk))
@@ -448,7 +455,8 @@ static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
 		if(blk==sb->protocol2->bend)
 		{
 			slist->head=sb->next;
-			if(!(blist->head=sb->protocol2->bstart)) blist->tail=NULL;
+			if(!(blist->head=sb->protocol2->bstart))
+				blist->tail=NULL;
 			sanity_before_sbuf_free(slist, sb);
 			sbuf_free(&sb);
 			return 1;
@@ -472,8 +480,7 @@ error:
 
 static int write_to_changed_file(struct asfd *asfd,
 	struct asfd *chfd, struct manios *manios,
-	struct slist *slist, struct blist *blist,
-	int backup_end, struct conf **confs)
+	struct slist *slist, int end_flags, struct conf **confs)
 {
 	struct sbuf *sb;
 	if(!slist) return 0;
@@ -483,7 +490,7 @@ static int write_to_changed_file(struct asfd *asfd,
 		if(sb->flags & SBUF_NEED_DATA)
 		{
 			switch(sbuf_needs_data(sb, asfd, chfd, manios, slist,
-				blist, backup_end, confs))
+				end_flags, confs))
 			{
 				case 0: return 0;
 				case 1: continue;
@@ -551,7 +558,7 @@ end:
 }
 
 static int append_for_champ_chooser(struct asfd *chfd,
-	struct blist *blist, int sigs_end)
+	struct blist *blist, int end_flags)
 {
 	static int finished_sending=0;
 	static struct iobuf *wbuf=NULL;
@@ -591,7 +598,8 @@ static int append_for_champ_chooser(struct asfd *chfd,
 		}
 		blist->blk_for_champ_chooser=blist->blk_for_champ_chooser->next;
 	}
-	if(sigs_end && !finished_sending && !blist->blk_for_champ_chooser)
+	if(end_flags&END_SIGS
+	  && !finished_sending && !blist->blk_for_champ_chooser)
 	{
 		wbuf->cmd=CMD_GEN;
 		wbuf->len=snprintf(wbuf->buf, CHECKSUM_LEN, "%s", "sigs_end");
@@ -682,7 +690,7 @@ static int deal_with_wrap_up_from_chfd(struct iobuf *rbuf, struct blist *blist,
 	return 0;
 }
 
-static int deal_with_read_from_chfd(struct asfd *asfd, struct asfd *chfd,
+static int deal_with_read_from_chfd(struct asfd *chfd,
 	struct blist *blist, uint64_t *wrap_up, struct dpth *dpth,
 	struct conf **confs)
 {
@@ -725,12 +733,8 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 	int resume, struct conf **confs)
 {
 	int ret=-1;
-	int sigs_end=0;
-	int backup_end=0;
-	int requests_end=0;
-	int blk_requests_end=0;
+	uint8_t end_flags=0;
 	struct slist *slist=NULL;
-	struct blist *blist=NULL;
 	struct iobuf *wbuf=NULL;
 	struct dpth *dpth=NULL;
 	struct manios *manios=NULL;
@@ -746,7 +750,6 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 
 	if(!(manios=manios_open_phase2(sdirs, protocol))
 	  || !(slist=slist_alloc())
-	  || !(blist=blist_alloc())
 	  || !(wbuf=iobuf_alloc())
 	  || !(dpth=dpth_alloc())
 	  || dpth_protocol2_init(dpth,
@@ -761,20 +764,19 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 		"rb", protocol)))
 			goto end;
 
-	while(!backup_end)
+	while(!(end_flags&END_BACKUP))
 	{
 		if(maybe_add_from_scan(manios, slist, confs))
 				goto end;
 
 		if(!wbuf->len)
 		{
-			if(get_wbuf_from_sigs(wbuf, slist, blist,
-				sigs_end, &blk_requests_end, confs))
-					goto end;
+			if(get_wbuf_from_sigs(wbuf, slist, &end_flags, confs))
+				goto end;
 			if(!wbuf->len)
 			{
 				get_wbuf_from_files(wbuf, slist,
-					manios, &requests_end);
+					manios, &end_flags);
 			}
 		}
 
@@ -782,7 +784,7 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 		  && asfd->append_all_to_write_buffer(asfd, wbuf)==APPEND_ERROR)
 			goto end;
 
-		if(append_for_champ_chooser(chfd, blist, sigs_end))
+		if(append_for_champ_chooser(chfd, slist->blist, end_flags))
 			goto end;
 
 		if(as->read_write(as))
@@ -793,24 +795,23 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 
 		while(asfd->rbuf->buf)
 		{
-			if(deal_with_read(asfd->rbuf, slist, blist,
-				confs, &sigs_end, &backup_end, dpth))
-					goto end;
+			if(deal_with_read(asfd->rbuf, slist, confs,
+				&end_flags, dpth)) goto end;
 			// Get as much out of the
 			// readbuf as possible.
 			if(asfd->parse_readbuf(asfd)) goto end;
 		}
 		while(chfd->rbuf->buf)
 		{
-			if(deal_with_read_from_chfd(asfd, chfd,
-				blist, &wrap_up, dpth, confs)) goto end;
+			if(deal_with_read_from_chfd(chfd,
+				slist->blist, &wrap_up, dpth, confs)) goto end;
 			// Get as much out of the
 			// readbuf as possible.
 			if(chfd->parse_readbuf(chfd)) goto end;
 		}
 
 		if(write_to_changed_file(asfd, chfd, manios,
-			slist, blist, backup_end, confs))
+			slist, end_flags, confs))
 				goto end;
 	}
 
@@ -822,17 +823,17 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 	{
 		slist->head=slist->head->next;
 		if(write_to_changed_file(asfd, chfd, manios,
-			slist, blist, backup_end, confs))
+			slist, end_flags, confs))
 				goto end;
 	}
 
 	if(manios_close(&manios))
 		goto end;
 
-	if(blist->head)
+	if(slist->blist->head)
 	{
 		logp("ERROR: finishing but still want block: %lu\n",
-			blist->head->index);
+			slist->blist->head->index);
 		goto end;
 	}
 
@@ -849,7 +850,6 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 end:
 	logp("End backup\n");
 	slist_free(&slist);
-	blist_free(&blist);
 	iobuf_free_content(asfd->rbuf);
 	iobuf_free_content(chfd->rbuf);
 	// Write buffer did not allocate 'buf'. 

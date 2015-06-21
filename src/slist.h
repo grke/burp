@@ -12,6 +12,8 @@ struct slist
 	struct sbuf *add_sigs_here; // server only
 	struct sbuf *blks_to_request; // server only
 	struct sbuf *blks_to_send; // client only
+
+	struct blist *blist;
 };
 
 extern struct slist *slist_alloc(void);

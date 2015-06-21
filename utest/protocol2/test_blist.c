@@ -15,7 +15,7 @@ static void tear_down(void)
 
 START_TEST(test_protocol2_blist)
 {
-	struct blk *blk;
+//	struct blk *blk;
 	struct blist *blist;
 	base64_init();
 	hexmap_init();

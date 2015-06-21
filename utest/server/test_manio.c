@@ -9,9 +9,11 @@
 #include "../../src/attribs.h"
 #include "../../src/base64.h"
 #include "../../src/fsops.h"
+#include "../../src/hexmap.h"
 #include "../../src/pathcmp.h"
 #include "../../src/sbuf.h"
 #include "../../src/slist.h"
+#include "../../src/protocol2/blk.h"
 #include "../../src/server/manio.h"
 
 static const char *path="utest_manio";
@@ -22,42 +24,64 @@ static void tear_down(void)
 	recursive_delete(path);
 }
 
-// Deal with a hack where the index is stripped off the beginning of the
-// attributes when protocol2 saves to the manifest.
-static void hack_protocol2_attr(struct iobuf *attr)
+static void assert_blk(struct blk *blk_expected, struct blk *blk)
 {
-	char *cp=NULL;
-	char *copy=NULL;
-	size_t newlen;
-	fail_unless((cp=strchr(attr->buf, ' '))!=NULL);
-	fail_unless((copy=strdup_w(cp, __func__))!=NULL);
-	newlen=attr->buf-cp+attr->len;
-	iobuf_free_content(attr);
-	iobuf_set(attr, CMD_ATTRIBS, copy, newlen);
+	if(!blk_expected)
+	{
+		fail_unless(blk==NULL);
+		return;
+	}
+	fail_unless(blk_expected->fingerprint==blk->fingerprint);
+	fail_unless(!memcmp(blk_expected->md5sum,
+		blk->md5sum, MD5_DIGEST_LENGTH));
+	fail_unless(!memcmp(blk_expected->savepath,
+		blk->savepath, SAVE_PATH_LEN));
 }
 
-static void read_manifest(struct sbuf **sb, struct manio *manio,
+static void read_manifest(struct sbuf **sb_expected, struct manio *manio,
 	int start, int end, enum protocol protocol)
 {
-	int i;
+	int i=start;
 	struct sbuf *rb=NULL;
+	struct blk *blk=NULL;
+	struct blk *blk_expected=NULL;
 	fail_unless((rb=sbuf_alloc_protocol(protocol))!=NULL);
-	for(i=start; i<end; i++)
+	fail_unless((blk=blk_alloc())!=NULL);
+	if(protocol==PROTO_2)
 	{
-		sbuf_free_content(rb);
-		switch(manio_read(manio, rb, NULL))
+		blk_expected=(*sb_expected)->protocol2->bstart;
+	}
+	while(i<end)
+	{
+		switch(manio_read_with_blk(manio, rb, blk, NULL, NULL))
 		{
 			case 0: break;
 			case 1: goto end;
-			case -1: fail_unless(0);
+			default: fail_unless(0);
 		}
 		if(protocol==PROTO_2)
-			hack_protocol2_attr(&(*sb)->attr);
-		assert_sbuf(*sb, rb, protocol);
-		*sb=(*sb)->next;
+		{
+			if(blk->got_save_path)
+			{
+				assert_blk(blk_expected, blk);
+				blk_expected=blk_expected->next;
+				blk->got_save_path=0;
+				continue;
+			}
+		}
+
+		assert_sbuf(*sb_expected, rb, protocol);
+		sbuf_free_content(rb);
+		if(protocol==PROTO_2)
+		{
+			blk_expected=(*sb_expected)->protocol2->bstart;
+		}
+		*sb_expected=(*sb_expected)->next;
+		i++;
 	}
 end:
 	sbuf_free(&rb);
+	blk_free(&blk);
 }
 
 static struct manio *do_manio_open(const char *path, const char *mode,
@@ -85,6 +109,7 @@ static void test_manifest(enum protocol protocol, int phase)
 	int entries=1000;
 	prng_init(0);
 	base64_init();
+	hexmap_init();
 	recursive_delete(path);
 
 	slist=build_manifest(path, protocol, entries, phase);
@@ -146,6 +171,7 @@ static void test_manifest_tell_seek(enum protocol protocol, int phase)
 	int entries=1000;
 	prng_init(0);
 	base64_init();
+	hexmap_init();
 	recursive_delete(path);
 
 	slist=build_manifest(path, protocol, entries, phase);
@@ -214,6 +240,7 @@ Suite *suite_manio(void)
 	s=suite_create("manio");
 
 	tc_core=tcase_create("Core");
+	tcase_add_test(tc_core, test_man_protocol1_tell_seek);
 
 	tcase_add_test(tc_core, test_man_protocol1);
 	tcase_add_test(tc_core, test_man_protocol2);
@@ -221,7 +248,7 @@ Suite *suite_manio(void)
 	tcase_add_test(tc_core, test_man_protocol1_phase1);
 	tcase_add_test(tc_core, test_man_protocol2_phase1);
 	tcase_add_test(tc_core, test_man_protocol1_phase2);
-//	tcase_add_test(tc_core, test_man_protocol2_phase2);
+	tcase_add_test(tc_core, test_man_protocol2_phase2);
 
 	tcase_add_test(tc_core, test_man_protocol1_tell_seek);
 //	tcase_add_test(tc_core, test_man_protocol2_tell_seek);

@@ -87,7 +87,7 @@ test: Makefile $(OBJS) $(BURP_OBJS)
 
 clean:
 	rm -f test *.o
-	rm -rf utest_*
+#	rm -rf utest_*
 	rm -f builders/*.o builders/protocol2/*.o builders/server/*.o
 	rm -f server/*.o server/protocol1/*.o server/protocol2/*.o
 	rm -f protocol2/*.o

@@ -11,6 +11,7 @@
 #include "../../../src/msg.h"
 #include "../../../src/pathcmp.h"
 #include "../../../src/protocol1/handy.h"
+#include "../../../src/protocol2/blist.h"
 #include "../../../src/sbuf.h"
 #include "../../../src/slist.h"
 #include "../../../src/server/manio.h"
@@ -65,6 +66,20 @@ static struct slist *build_slist_phase1(enum protocol protocol, int entries)
 	return slist;
 }
 
+// Deal with a hack where the index is stripped off the beginning of the
+// attributes when protocol2 saves to the manifest.
+static void hack_protocol2_attr(struct iobuf *attr)
+{
+	char *cp=NULL;
+	char *copy=NULL;
+	size_t newlen;
+	fail_unless((cp=strchr(attr->buf, ' '))!=NULL);
+	fail_unless((copy=strdup_w(cp, __func__))!=NULL);
+	newlen=attr->buf-cp+attr->len;
+	iobuf_free_content(attr);
+	iobuf_set(attr, CMD_ATTRIBS, copy, newlen);
+}
+
 static struct slist *build_manifest_phase1(const char *path,
 	enum protocol protocol, int entries)
 {
@@ -77,7 +92,10 @@ static struct slist *build_manifest_phase1(const char *path,
 	fail_unless((manio=manio_open_phase1(path, "wb", protocol))!=NULL);
 
 	for(sb=slist->head; sb; sb=sb->next)
+	{
 		fail_unless(!manio_write_sbuf(manio, sb));
+		if(protocol==PROTO_2) hack_protocol2_attr(&sb->attr);
+	}
 
 	fail_unless(!send_msg_fzp(manio->fzp,
 		CMD_GEN, "phase1end", strlen("phase1end")));
@@ -114,25 +132,28 @@ static void set_sbuf_protocol1(struct sbuf *sb)
 	}
 }
 
-static void set_sbuf_protocol2(struct sbuf *sb)
+static void set_sbuf_protocol2(struct slist *slist, struct sbuf *sb)
 {
-	// FIX THIS - need to create signatures and things.
-/*
+	struct blk *tail=NULL;
+	struct blist *blist=slist->blist;
 	if(sbuf_is_filedata(sb))
 	{
-		int i=0;
-		int x=prng_next()%50;
-		for(i=0; i<x; i++)
-		{
-		}
+		if(blist->tail) tail=blist->tail;
+		build_blks(blist, prng_next()%50);
+		if(tail)
+			sb->protocol2->bstart=tail->next;
+		else
+			sb->protocol2->bstart=blist->head; // first one
+
+		if(sb->protocol2->bstart)
+			sb->protocol2->bend=slist->blist->tail;
 	}
-*/
 }
 
-static void set_sbuf(struct sbuf *sb)
+static void set_sbuf(struct slist *slist, struct sbuf *sb)
 {
 	if(sb->protocol1) set_sbuf_protocol1(sb);
-	else set_sbuf_protocol2(sb);
+	else set_sbuf_protocol2(slist, sb);
 }
 
 static struct slist *build_slist(enum protocol protocol, int entries)
@@ -141,7 +162,7 @@ static struct slist *build_slist(enum protocol protocol, int entries)
 	struct slist *slist;
 	slist=build_slist_phase1(protocol, entries);
 	for(sb=slist->head; sb; sb=sb->next)
-		set_sbuf(sb);
+		set_sbuf(slist, sb);
 	return slist;
 }
 
@@ -157,7 +178,20 @@ static struct slist *build_manifest_phase2(const char *path,
 	fail_unless((manio=manio_open_phase2(path, "wb", protocol))!=NULL);
 
 	for(sb=slist->head; sb; sb=sb->next)
+	{
 		fail_unless(!manio_write_sbuf(manio, sb));
+		if(protocol==PROTO_2)
+		{
+			struct blk *blk=NULL;
+			for(blk=sb->protocol2->bstart;
+				blk && blk!=sb->protocol2->bend; blk=blk->next)
+			{
+				fail_unless(!manio_write_sig_and_path(manio,
+					blk));
+			}
+			hack_protocol2_attr(&sb->attr);
+		}
+	}
 
 	fail_unless(!manio_close(&manio));
 

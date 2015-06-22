@@ -582,9 +582,14 @@ error:
 int manio_seek(struct manio *manio, man_off_t *offset)
 {
 	fzp_close(&manio->fzp);
-	if(!(manio->fzp=fzp_gzopen(manio->offset->fpath, manio->mode)))
+	if(!(manio->fzp=fzp_gzopen(offset->fpath, manio->mode))
+	  || fzp_seek(manio->fzp, offset->offset, SEEK_SET))
 		return -1;
-	return fzp_seek(manio->fzp, offset->offset, SEEK_SET);
+	man_off_t_free_content(manio->offset);
+	if(!(manio->offset->fpath=strdup_w(offset->fpath, __func__)))
+		return -1;
+	manio->offset->offset=offset->offset;
+	return 0;
 }
 
 int manio_truncate(struct manio *manio)

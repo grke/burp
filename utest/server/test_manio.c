@@ -39,19 +39,21 @@ static void assert_blk(struct blk *blk_expected, struct blk *blk)
 }
 
 static void read_manifest(struct sbuf **sb_expected, struct manio *manio,
-	int start, int end, enum protocol protocol)
+	int start, int finish, enum protocol protocol, int phase)
 {
 	int i=start;
 	struct sbuf *rb=NULL;
 	struct blk *blk=NULL;
 	struct blk *blk_expected=NULL;
+	struct blk *blk_expected_end=NULL;
 	fail_unless((rb=sbuf_alloc_protocol(protocol))!=NULL);
 	fail_unless((blk=blk_alloc())!=NULL);
 	if(protocol==PROTO_2)
 	{
 		blk_expected=(*sb_expected)->protocol2->bstart;
+		blk_expected_end=(*sb_expected)->protocol2->bend;
 	}
-	while(i<end)
+	while(1)
 	{
 		switch(manio_read_with_blk(manio, rb, blk, NULL, NULL))
 		{
@@ -64,8 +66,12 @@ static void read_manifest(struct sbuf **sb_expected, struct manio *manio,
 			if(blk->got_save_path)
 			{
 				assert_blk(blk_expected, blk);
-				blk_expected=blk_expected->next;
 				blk->got_save_path=0;
+				// Need to suck up all the sigs before exiting.
+				if(i==finish
+				  && blk_expected->next==blk_expected_end)
+					break;
+				blk_expected=blk_expected->next;
 				continue;
 			}
 		}
@@ -75,9 +81,14 @@ static void read_manifest(struct sbuf **sb_expected, struct manio *manio,
 		if(protocol==PROTO_2)
 		{
 			blk_expected=(*sb_expected)->protocol2->bstart;
+			blk_expected_end=(*sb_expected)->protocol2->bend;
 		}
 		*sb_expected=(*sb_expected)->next;
 		i++;
+		if(i==finish)
+		{
+			if(protocol==PROTO_1 || phase==1) break;
+		}
 	}
 end:
 	sbuf_free(&rb);
@@ -117,7 +128,7 @@ static void test_manifest(enum protocol protocol, int phase)
 
 	sb=slist->head;
 	fail_unless((manio=do_manio_open(path, "rb", protocol, phase))!=NULL);
-	read_manifest(&sb, manio, 0, entries, protocol);
+	read_manifest(&sb, manio, 0, entries, protocol, phase);
 	fail_unless(sb==NULL);
 	fail_unless(!manio_close(&manio));
 	fail_unless(!manio);
@@ -179,14 +190,14 @@ static void test_manifest_tell_seek(enum protocol protocol, int phase)
 
 	sb=slist->head;
 	fail_unless((manio=do_manio_open(path, "rb", protocol, phase))!=NULL);
-	read_manifest(&sb, manio, 0, entries/2, protocol);
+	read_manifest(&sb, manio, 0, entries/2, protocol, phase);
 	fail_unless((offset=manio_tell(manio))!=NULL);
 	fail_unless(sb!=NULL);
 	fail_unless(!manio_close(&manio));
 
 	fail_unless((manio=do_manio_open(path, "rb", protocol, phase))!=NULL);
 	fail_unless(!manio_seek(manio, offset));
-	read_manifest(&sb, manio, entries/2, entries, protocol);
+	read_manifest(&sb, manio, entries/2, entries, protocol, phase);
 	fail_unless(sb==NULL);
 	fail_unless(!manio_close(&manio));
 	fail_unless(!manio);
@@ -240,7 +251,6 @@ Suite *suite_manio(void)
 	s=suite_create("manio");
 
 	tc_core=tcase_create("Core");
-	tcase_add_test(tc_core, test_man_protocol1_tell_seek);
 
 	tcase_add_test(tc_core, test_man_protocol1);
 	tcase_add_test(tc_core, test_man_protocol2);
@@ -251,11 +261,11 @@ Suite *suite_manio(void)
 	tcase_add_test(tc_core, test_man_protocol2_phase2);
 
 	tcase_add_test(tc_core, test_man_protocol1_tell_seek);
-//	tcase_add_test(tc_core, test_man_protocol2_tell_seek);
+	tcase_add_test(tc_core, test_man_protocol2_tell_seek);
 	tcase_add_test(tc_core, test_man_protocol1_phase1_tell_seek);
 	tcase_add_test(tc_core, test_man_protocol2_phase1_tell_seek);
 	tcase_add_test(tc_core, test_man_protocol1_phase2_tell_seek);
-//	tcase_add_test(tc_core, test_man_protocol2_phase2_tell_seek);
+	tcase_add_test(tc_core, test_man_protocol2_phase2_tell_seek);
 
 	suite_add_tcase(s, tc_core);
 

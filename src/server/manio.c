@@ -573,6 +573,7 @@ man_off_t *manio_tell(struct manio *manio)
 	  || !(offset->fpath=strdup_w(manio->offset->fpath, __func__))
 	  || (offset->offset=fzp_tell(manio->fzp))<0)
 		goto error;
+	offset->fcount=manio->offset->fcount;
 	return offset;
 error:
 	man_off_t_free(&offset);
@@ -589,6 +590,7 @@ int manio_seek(struct manio *manio, man_off_t *offset)
 	if(!(manio->offset->fpath=strdup_w(offset->fpath, __func__)))
 		return -1;
 	manio->offset->offset=offset->offset;
+	manio->offset->fcount=offset->fcount;
 	return 0;
 }
 

@@ -22,7 +22,6 @@ SRCS = \
 	fdirs.c \
 	link.c \
 	restore.c \
-	resume.c \
 	zlibio.c \
 
 OBJS = $(SRCS:.c=.o)

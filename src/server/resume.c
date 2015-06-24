@@ -1,28 +1,29 @@
-#include "include.h"
-#include "../../cmd.h"
+#include "../cmd.h"
 #include "dpth.h"
-
-#include "../../server/backup_phase1.h"
+#include "resume.h"
+#include "backup_phase1.h"
+#include "protocol1/dpth.h"
 
 // Used on resume, this just reads the phase1 file and sets up cntr.
-static int read_phase1(struct manio *p1manio, struct conf **confs)
+static int read_phase1(struct manio *p1manio, struct conf **cconfs)
 {
 	int ret=-1;
 	struct sbuf *p1b;
-	if(!(p1b=sbuf_alloc(confs))) return -1;
+	struct cntr *cntr=get_cntr(cconfs);
+	if(!(p1b=sbuf_alloc(cconfs))) return -1;
 	while(1)
 	{
 		sbuf_free_content(p1b);
-		switch(manio_read(p1manio, p1b, confs))
+		switch(manio_read(p1manio, p1b, cconfs))
 		{
 			case 0: break;
 			case 1: ret=0;
 			default: goto end;
 		}
-		cntr_add_phase1(get_cntr(confs), p1b->path.cmd, 0);
+		cntr_add_phase1(cntr, p1b->path.cmd, 0);
 
 		if(sbuf_is_filedata(p1b))
-			cntr_add_val(get_cntr(confs), CMD_BYTES_ESTIMATED,
+			cntr_add_val(cntr, CMD_BYTES_ESTIMATED,
 				(unsigned long long)p1b->statp.st_size, 0);
 	}
 end:
@@ -37,6 +38,7 @@ static int do_forward(struct manio *manio, struct iobuf *result,
 	int ars=0;
 	man_off_t *pos=NULL;
 	static struct sbuf *sb=NULL;
+	struct cntr *cntr=get_cntr(cconfs);
 
 	if(!sb && !(sb=sbuf_alloc(cconfs)))
 		goto error;
@@ -117,15 +119,15 @@ static int do_forward(struct manio *manio, struct iobuf *result,
 
 		if(do_cntr)
 		{
-			if(same) cntr_add_same(get_cntr(cconfs), sb->path.cmd);
-			else cntr_add_changed(get_cntr(cconfs), sb->path.cmd);
+			if(same) cntr_add_same(cntr, sb->path.cmd);
+			else cntr_add_changed(cntr, sb->path.cmd);
 			if(sb->protocol1 && sb->protocol1->endfile.buf)
 			{
 				unsigned long long e=0;
 				e=strtoull(sb->protocol1->endfile.buf,
 					NULL, 10);
-				cntr_add_bytes(get_cntr(cconfs), e);
-				cntr_add_recvbytes(get_cntr(cconfs), e);
+				cntr_add_bytes(cntr, e);
+				cntr_add_recvbytes(cntr, e);
 			}
 		}
 
@@ -219,38 +221,30 @@ int do_resume(struct manio *p1manio, struct sdirs *sdirs,
 	struct dpth *dpth, struct conf **cconfs)
 {
 	int ret=-1;
-	struct fzp *cfzp=NULL;
-	struct fzp *ufzp=NULL;
 	struct manio *cmanio=NULL;
 	struct manio *umanio=NULL;
 	enum protocol protocol=get_protocol(cconfs);
 
-	if(protocol==PROTO_1)
-	{
-		// First, open them in a+ mode, so that they will be created if
-		// they do not exist.
-		// FIX THIS: Do it via manio.
-		if(!(cfzp=fzp_open(sdirs->changed, "a+b"))
-		  || !(ufzp=fzp_open(sdirs->unchanged, "a+b")))
-			goto end;
-		fzp_close(&cfzp);
-		fzp_close(&ufzp);
-	}
+	// First, open them in a+ mode, so that they will be created if
+	// they do not exist.
+	if(!(cmanio=manio_open_phase2(sdirs->changed, "a+b", protocol))
+	  || !(umanio=manio_open_phase2(sdirs->unchanged, "a+b", protocol)))
+		goto end;
+	manio_close(&cmanio);
+	manio_close(&umanio);
 
-	if(!(cmanio=manio_open(sdirs->changed, "rb", protocol))
-	  || !(umanio=manio_open(sdirs->unchanged, "rb", protocol)))
+	if(!(cmanio=manio_open_phase2(sdirs->changed, "rb", protocol))
+	  || !(umanio=manio_open_phase2(sdirs->unchanged, "rb", protocol)))
 		goto end;
 
 	if(do_resume_work(p1manio, cmanio, umanio, dpth, cconfs)) goto end;
 
 	// Truncate to the appropriate places.
-	if(manio_truncate(cmanio)
-	  || manio_truncate(umanio))
+	if(manio_truncate(cmanio, cconfs)
+	  || manio_truncate(umanio, cconfs))
 		goto end;
 	ret=0;
 end:
-	fzp_close(&cfzp);
-	fzp_close(&ufzp);
 	manio_close(&cmanio);
 	manio_close(&umanio);
 	return ret;

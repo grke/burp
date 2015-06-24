@@ -1,6 +1,8 @@
 #ifndef __DPTH_H
 #define __DPTH_H
 
+#include "../burp.h"
+
 // ext3 maximum number of subdirs is 32000, so leave a little room.
 #define MAX_STORAGE_SUBDIRS	30000
 

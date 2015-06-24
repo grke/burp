@@ -2,7 +2,7 @@
 #include "champ_chooser/include.h"
 #include "dpth.h"
 #include "../manios.h"
-#include "../protocol1/resume.h"
+#include "../resume.h"
 #include "../../attribs.h"
 #include "../../base64.h"
 #include "../../cmd.h"

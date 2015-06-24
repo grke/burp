@@ -61,6 +61,7 @@ OBJS = $(SRCS:.c=.o)
 SUBDIROBJS = \
 		protocol1/handy.o \
 		protocol1/msg.o \
+		server/resume.o \
 		server/protocol1/restore.o \
 		server/backup_phase1.o \
 		server/manios.o \

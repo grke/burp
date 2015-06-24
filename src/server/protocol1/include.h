@@ -14,7 +14,6 @@
 #include "deleteme.h"
 #include "link.h"
 #include "restore.h"
-#include "resume.h"
 #include "zlibio.h"
 
 #endif

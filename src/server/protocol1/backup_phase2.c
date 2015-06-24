@@ -3,6 +3,7 @@
 #include "../../cmd.h"
 #include "../../conf.h"
 #include "dpth.h"
+#include "../resume.h"
 
 static size_t treepathlen=0;
 

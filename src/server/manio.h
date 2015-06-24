@@ -71,6 +71,6 @@ extern int manio_forward_through_sigs(struct sbuf *csb,
 extern void man_off_t_free(man_off_t **offset);
 extern man_off_t *manio_tell(struct manio *manio);
 extern int manio_seek(struct manio *manio, man_off_t *offset);
-extern int manio_truncate(struct manio *manio);
+extern int manio_truncate(struct manio *manio, struct conf **confs);
 
 #endif

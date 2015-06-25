@@ -5,6 +5,7 @@
 
 #define MANIO_MODE_READ		"rb"
 #define MANIO_MODE_WRITE	"wb"
+#define MANIO_MODE_APPEND	"ab"
 
 #define WEAK_LEN		16
 #define WEAK_STR_LEN		WEAK_LEN+1
@@ -72,33 +73,38 @@ static char *get_next_fpath(struct manio *manio, man_off_t *offset)
 	return prepend_s(manio->manifest, tmp);
 }
 
-static int manio_open_next_fpath(struct manio *manio)
+static int manio_open_fpath(struct manio *manio, man_off_t *offset)
 {
-	static struct stat statp;
-
-	free_w(&manio->offset->fpath);
-	if(!(manio->offset->fpath=get_next_fpath(manio, manio->offset)))
-		return -1;
+	struct stat statp;
 
 	if(!strcmp(manio->mode, MANIO_MODE_READ)
-	  && lstat(manio->offset->fpath, &statp))
+	  && lstat(offset->fpath, &statp))
 		return 0;
 
-	if(build_path_w(manio->offset->fpath))
+	if(build_path_w(offset->fpath))
 		return -1;
+logp("phase: %d\n");
 	switch(manio->phase)
 	{
 		case 2:
-			if(!(manio->fzp=fzp_open(manio->offset->fpath,
-				manio->mode))) return -1;
+			if(!(manio->fzp=fzp_open(offset->fpath, manio->mode)))
+				return -1;
 			return 0;
 		case 1:
 		case 3:
 		default:
-			if(!(manio->fzp=fzp_gzopen(manio->offset->fpath,
+			if(!(manio->fzp=fzp_gzopen(offset->fpath,
 				manio->mode))) return -1;
 			return 0;
 	}
+}
+
+static int manio_open_next_fpath(struct manio *manio)
+{
+	free_w(&manio->offset->fpath);
+	if(!(manio->offset->fpath=get_next_fpath(manio, manio->offset)))
+		return -1;
+	return manio_open_fpath(manio, manio->offset);
 }
 
 static struct manio *manio_alloc(void)
@@ -595,28 +601,40 @@ int manio_seek(struct manio *manio, man_off_t *offset)
 	return 0;
 }
 
-int manio_truncate(struct manio *manio, struct conf **confs)
+static int clean_up_manio_files(struct manio *manio, man_off_t *offset)
 {
-	off_t pos=0;
-	if(manio->fzp && (pos=fzp_tell(manio->fzp))<0)
-	{
-		logp("Could not fzp_tell %s in %s(): %s\n",
-			manio->manifest, __func__, strerror(errno));
-		return -1;
-	}
-	if(truncate(manio->manifest, pos))
-	{
-		logp("Could not truncate %s in %s(): %s\n",
-			manio->manifest, __func__, strerror(errno));
-		return -1;
-	}
-	return 0;
-/*
 	int ret=-1;
 	char *fpath=NULL;
-	man_off_t *offset=NULL;
 	struct stat statp;
-	if(manio->fzp && !(offset=manio_tell(manio)))
+	while(1)
+	{
+		if(!(fpath=get_next_fpath(manio, offset)))
+			goto end;
+		if(lstat(fpath, &statp)) break;
+		if(!S_ISREG(statp.st_mode))
+			goto end;
+		if(recursive_delete(fpath))
+			goto end;
+		free_w(&fpath);
+	}
+	ret=0;
+end:
+	free_w(&fpath);
+	return ret;
+}
+
+int manio_truncate(struct manio *manio, struct conf **confs)
+{
+	int ret=-1;
+	man_off_t *offset=NULL;
+	if(!manio->fzp)
+	{
+		free_w(&manio->mode);
+	  	if(!(manio->mode=strdup_w(MANIO_MODE_APPEND, __func__))
+		  || manio_open_fpath(manio, manio->offset))
+			goto end;
+	}
+	if(!(offset=manio_tell(manio)))
 	{
 		logp("Could not manio_tell %s in %s(): %s\n",
 			manio->manifest, __func__, strerror(errno));
@@ -629,24 +647,11 @@ int manio_truncate(struct manio *manio, struct conf **confs)
 			manio->manifest, __func__, strerror(errno));
 		goto end;
 	}
-	if(!is_single_file(manio))
-	{
-		while(1)
-		{
-			free_w(&fpath);
-			if(!(fpath=get_next_fpath(manio, offset)))
-				goto end;
-			if(lstat(fpath, &statp)) break;
-			if(!S_ISREG(statp.st_mode))
-				goto end;
-			if(recursive_delete(fpath))
-				goto end;
-		}
-	}
+	if(!is_single_file(manio)
+	  && clean_up_manio_files(manio, offset))
+		goto end;
 	ret=0;
 end:
 	man_off_t_free(&offset);
-	free_w(&fpath);
 	return ret;
-*/
 }

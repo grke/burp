@@ -60,7 +60,9 @@ static int do_forward(struct manio *manio, struct iobuf *result,
 
 		sbuf_free_content(sb);
 
+logp("before read open: %s\n", manio->fzp?"yes":"no");
 		ars=manio_read(manio, sb, cconfs);
+logp("after read open: %s\n", manio->fzp?"yes":"no");
 
 		// Make sure we end up with the highest datapth we can possibly
 		// find - dpth_protocol1_set_from_string() will only set it if
@@ -163,12 +165,14 @@ static int do_resume_work(struct manio *p1manio,
 
 	logp("Setting up resume positions...\n");
 	// Go to the end of cmanio.
+logp("x cmanio open: %s\n", cmanio->fzp?"yes":"no");
 	if(do_forward(cmanio, chb, NULL,
 		0, /* not phase1 */
 		0, /* no seekback */
 		1, /* do cntr */
 		0, /* changed */
 		dpth, cconfs)) goto error;
+logp("y cmanio open: %s\n", cmanio->fzp?"yes":"no");
 	if(chb->buf)
 	{
 		logp("  changed:    %s\n", chb->buf);
@@ -236,8 +240,12 @@ int do_resume(struct manio *p1manio, struct sdirs *sdirs,
 	if(!(cmanio=manio_open_phase2(sdirs->changed, "rb", protocol))
 	  || !(umanio=manio_open_phase2(sdirs->unchanged, "rb", protocol)))
 		goto end;
+logp("cmanio open: %s\n", cmanio->fzp?"yes":"no");
+logp("umanio open: %s\n", umanio->fzp?"yes":"no");
 
 	if(do_resume_work(p1manio, cmanio, umanio, dpth, cconfs)) goto end;
+logp("after cmanio open: %s\n", cmanio->fzp?"yes":"no");
+logp("after umanio open: %s\n", umanio->fzp?"yes":"no");
 
 	// Truncate to the appropriate places.
 	if(manio_truncate(cmanio, cconfs)

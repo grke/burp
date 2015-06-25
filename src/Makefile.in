@@ -152,6 +152,7 @@ clean:	libtool-clean
 	@$(RMF) static-burp config.h
 	@$(RMF) Makefile
 	@$(RMF) uthash.h
+	@$(RMF) *.gcda *.gcno
 #	@if test -f win32/Makefile -a "${GMAKE}" != "none"; then \
 #	   (cd win32; $(GMAKE) clean); \
 #	fi

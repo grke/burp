@@ -1,6 +1,6 @@
 
 LIBS = -lcheck -lpthread -lm -lrt -lssl -lcrypto
-CFLAGS+=-Wall -g
+CFLAGS+=-Wall -g -fprofile-arcs -ftest-coverage
 
 SRCS = \
 	builders/build_attribs.c \
@@ -79,15 +79,28 @@ test: Makefile $(OBJS) $(BURP_OBJS)
 	@echo "Linking $@ ..."
 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -o $@ \
 	  $(OBJS) $(BURP_OBJS) $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
-	  $(DLIB) -lz -lrsync
+	  $(DLIB) -lz -lrsync -lgcov
 	@echo "Running $<"
 	./$@ || exit 1
+	rm -rf /tmp/burp-coverage /tmp/burp-coverage.info || exit 1
+	lcov --capture -d /home/graham/burp -b . --output-file /tmp/burp-coverage.info || exit 1
+	genhtml /tmp/burp-coverage.info --output-directory /tmp/burp-coverage || exit 1
 	make clean
 	@echo OK
 
 clean:
 	rm -f test *.o
-#	rm -rf utest_*
+	rm -rf utest_*
 	rm -f builders/*.o builders/protocol2/*.o builders/server/*.o
 	rm -f server/*.o server/protocol1/*.o server/protocol2/*.o
 	rm -f protocol2/*.o
+	rm -f *.gcda *.gcno
+	rm -f builders/*.gcda builders/*.gcno
+	rm -f builders/protocol2/*.gcda builders/protocol2/*.gcno
+	rm -f builders/server/*.gcda builders/protocol2/*.gcno
+	rm -f builders/server/*.gcda builders/server/*.gcno
+	rm -f protocol2/*.gcda protocol2/*.gcno
+	rm -f server/*.gcda server/*.gcno
+	rm -f server/protocol1/*.gcda server/protocol1/*.gcno
+	rm -f server/protocol2/*.gcda server/protocol2/*.gcno
+	rm -f /tmp/burp-coverage.info

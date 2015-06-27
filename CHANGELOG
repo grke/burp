@@ -1,6 +1,7 @@
   * Fix '-a l' regex so that it isn't split in two at the right-most
     colon.
   * Set default_md=sha256 in CA.cnf.
+  * Correct logp format strings in quota.c.
 
 2015-05-30 Changes in burp-1.4.38:
   * Turn SO_REUSEADDR on instead of turning it off.

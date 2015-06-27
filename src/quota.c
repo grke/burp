@@ -9,9 +9,9 @@ static void quota_log_bytes(const char *msg,
 	struct cntr *p1cntr, unsigned long quota)
 {
 	async_write_str(CMD_WARNING, msg);
-	logp("bytes estimated: %Lu%s\n",
+	logp("bytes estimated: %llu%s\n",
 		p1cntr->byte, bytes_to_human(p1cntr->byte));
-	logp("%s: %Lu%s\n", msg, quota, bytes_to_human(quota));
+	logp("%s: %lu%s\n", msg, quota, bytes_to_human(quota));
 }
 
 // Return O for OK, -1 if the estimated size is greater than hard_quota.

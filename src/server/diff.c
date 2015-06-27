@@ -23,12 +23,17 @@ static int diff_manifest(struct asfd *asfd,
 
 	while(1)
 	{
+		sbuf_free_content(sb);
+
                 switch(manio_read(manio, sb, confs))
                 {
                         case 0: break;
                         case 1: goto end; // Finished OK.
                         default: goto error;
                 }
+
+		if(protocol==PROTO_2 && sb->endfile.buf)
+			continue;
 
 		if(write_status(CNTR_STATUS_DIFFING, sb->path.buf, confs))
 			goto error;
@@ -39,8 +44,6 @@ static int diff_manifest(struct asfd *asfd,
 		if(sbuf_is_link(sb)
 		  && asfd->write(asfd, &sb->link))
 			goto error;
-
-		sbuf_free_content(sb);
 	}
 
 error:

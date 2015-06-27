@@ -132,6 +132,7 @@ static int list_manifest(struct asfd *asfd,
 	while(1)
 	{
 		int show=0;
+		sbuf_free_content(sb);
 
 		switch(manio_read(manio, sb, confs))
 		{
@@ -142,6 +143,9 @@ static int list_manifest(struct asfd *asfd,
 				goto end; // Finished OK.
 			default: goto error;
 		}
+
+		if(protocol==PROTO_2 && sb->endfile.buf)
+			continue;
 
 		if(write_status(CNTR_STATUS_LISTING, sb->path.buf, confs))
 			goto error;
@@ -169,8 +173,6 @@ static int list_manifest(struct asfd *asfd,
 			  && write_wrapper(asfd, &sb->link))
 				goto error;
 		}
-
-		sbuf_free_content(sb);
 	}
 
 error:

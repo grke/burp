@@ -522,7 +522,6 @@ int manio_copy_entry(struct sbuf *csb, struct sbuf *sb,
 
 	if(!(copy=strdup_w(csb->path.buf, __func__)))
 		goto error;
-
 	while(1)
 	{
 		if((ars=manio_read_with_blk(srcmanio, csb,
@@ -543,10 +542,23 @@ int manio_copy_entry(struct sbuf *csb, struct sbuf *sb,
 			free_w(&copy);
 			return 0;
 		}
-		// Should have the next signature.
-		// Write it to the destination manifest.
-		if(dstmanio && manio_write_sig_and_path(dstmanio, *blk))
-			goto error;
+		if(dstmanio)
+		{
+			if(!dstmanio->fzp
+			  && manio_open_next_fpath(dstmanio)) return -1;
+			if(csb->endfile.buf)
+			{
+				if(iobuf_send_msg_fzp(&csb->endfile,
+					dstmanio->fzp)) goto error;
+			}
+			else
+			{
+				// Should have the next signature.
+				// Write it to the destination manifest.
+				if(manio_write_sig_and_path(dstmanio, *blk))
+					goto error;
+			}
+		}
 	}
 
 error:

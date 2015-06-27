@@ -189,6 +189,14 @@ static struct slist *build_manifest_phase2(const char *path,
 				fail_unless(!manio_write_sig_and_path(manio,
 					blk));
 			}
+			if(sbuf_is_filedata(sb) || sbuf_is_vssdata(sb))
+			{
+				struct iobuf endfile;
+				iobuf_from_str(&endfile,
+					CMD_END_FILE, (char *)"0:0");
+				fail_unless(!iobuf_send_msg_fzp(&endfile,
+					manio->fzp));
+			}
 			hack_protocol2_attr(&sb->attr);
 		}
 	}

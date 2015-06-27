@@ -38,6 +38,7 @@ static void assert_blk(struct blk *blk_expected, struct blk *blk)
 		blk->savepath, SAVE_PATH_LEN));
 }
 
+// FIX THIS: Far too complicated.
 static void read_manifest(struct sbuf **sb_expected, struct manio *manio,
 	int start, int finish, enum protocol protocol, int phase)
 {
@@ -63,6 +64,16 @@ static void read_manifest(struct sbuf **sb_expected, struct manio *manio,
 		}
 		if(protocol==PROTO_2)
 		{
+			if(rb->endfile.buf)
+			{
+				sbuf_free_content(rb);
+				if(i==finish)
+				{
+					fail_unless(!blk_expected);
+					break;
+				}
+				continue;
+			}
 			if(blk->got_save_path)
 			{
 				assert_blk(blk_expected, blk);

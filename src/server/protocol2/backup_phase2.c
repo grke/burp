@@ -279,8 +279,6 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist,
 				goto end;
 			}
 			break;
-		//case CMD_END_FILE:
-		//	goto end;
 		default:
 			break;
 	}
@@ -456,21 +454,16 @@ static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
 
 		if(blk==sb->protocol2->bend)
 		{
+			struct iobuf endfile;
 			slist->head=sb->next;
 			if(!(blist->head=sb->protocol2->bstart))
 				blist->tail=NULL;
 			sanity_before_sbuf_free(slist, sb);
-/*
-			{
-				struct iobuf endfile;
-				endfile.cmd=CMD_END_FILE;
-				endfile.buf=(char *)"0:0";
-				endfile.len=strlen(endfile.buf);
-				iobuf_send_msg_fzp(&endfile,
-					manios->changed->fzp);
-			}
-*/
 			sbuf_free(&sb);
+			// FIX THIS: Should give a proper length and md5sum.
+			// Should probably be part of sb above.
+			iobuf_from_str(&endfile, CMD_END_FILE, (char *)"0:0");
+			iobuf_send_msg_fzp(&endfile, manios->changed->fzp);
 			return 1;
 		}
 

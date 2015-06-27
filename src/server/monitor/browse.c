@@ -24,6 +24,9 @@ static int do_browse_manifest(struct asfd *srfd,
 			break;
 		}
 
+		if(manio->protocol==PROTO_2 && sb->endfile.buf)
+			continue;
+
 		if(sb->path.cmd!=CMD_DIRECTORY
 		  && sb->path.cmd!=CMD_FILE
 		  && sb->path.cmd!=CMD_ENC_FILE

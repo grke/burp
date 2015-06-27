@@ -153,6 +153,11 @@ static int hard_link_substitution(struct asfd *asfd,
 
 		if(protocol==PROTO_2)
 		{
+			if(hb->endfile.buf)
+			{
+				sbuf_free_content(hb);
+				continue;
+			}
 			if(blk->data)
 			{
 				if(protocol2_extra_restore_stream_bits(asfd,
@@ -398,6 +403,11 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 
 		if(protocol==PROTO_2)
 		{
+			if(sb->endfile.buf)
+			{
+				sbuf_free_content(sb);
+				continue;
+			}
 			if(blk->data)
 			{
 				if(protocol2_extra_restore_stream_bits(asfd,

@@ -2,8 +2,9 @@ Things to watch out for when upgrading.
 
 2.0.22
 ------
-The protocol2 phase1 manifest format has changed slightly. You should therefore
-not mix earlier 2.0.x servers and clients with this version.
+The protocol2 manifest formats have changed. You should therefore not mix
+earlier 2.0.x servers and clients with this version, and protocol2 backups from
+earlier versions will probably no longer work.
 
 2.0.20
 ------

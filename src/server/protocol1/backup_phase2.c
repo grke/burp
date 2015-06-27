@@ -138,7 +138,7 @@ static int process_changed_file(struct asfd *asfd,
 	}
 	free(curpath);
 
-	blocklen=get_librsync_block_len(cb->protocol1->endfile.buf);
+	blocklen=get_librsync_block_len(cb->endfile.buf);
 	if(!(p1b->protocol1->sigjob=
 #ifdef RS_DEFAULT_STRONG_LEN
 		rs_sig_begin(blocklen, RS_DEFAULT_STRONG_LEN)
@@ -232,16 +232,15 @@ static int process_unchanged_file(struct sbuf *p1b, struct sbuf *cb,
 	// Need to re-encode the p1b attribs to include compression and
 	// other bits and pieces that are recorded on cb.
 	iobuf_move(&p1b->protocol1->datapth, &cb->protocol1->datapth);
-	iobuf_move(&p1b->protocol1->endfile, &cb->protocol1->endfile);
+	iobuf_move(&p1b->endfile, &cb->endfile);
 	p1b->compression=cb->compression;
 	if(attribs_encode(p1b))
 		return -1;
 	if(manio_write_sbuf(ucmanio, p1b))
 		return -1;
 	cntr_add_same(get_cntr(cconfs), p1b->path.cmd);
-	if(p1b->protocol1->endfile.buf) cntr_add_bytes(
-		get_cntr(cconfs),
-		 strtoull(p1b->protocol1->endfile.buf, NULL, 10));
+	if(p1b->endfile.buf) cntr_add_bytes(get_cntr(cconfs),
+		 strtoull(p1b->endfile.buf, NULL, 10));
 	sbuf_free_content(cb);
 	return 1;
 }
@@ -492,8 +491,10 @@ static int deal_with_receive_end_file(struct asfd *asfd, struct sdirs *sdirs,
 	struct sbuf *rb, struct manio *chmanio, struct conf **cconfs,
 	char **last_requested)
 {
+	int ret=-1;
 	static char *cp=NULL;
 	static struct iobuf *rbuf;
+	struct cntr *cntr=get_cntr(cconfs);
 	rbuf=asfd->rbuf;
 	// Finished the file.
 	// Write it to the phase2 file, and free the buffers.
@@ -501,19 +502,19 @@ static int deal_with_receive_end_file(struct asfd *asfd, struct sdirs *sdirs,
 	if(fzp_close(&(rb->protocol1->fzp)))
 	{
 		logp("error closing delta for %s in receive\n", rb->path);
-		goto error;
+		goto end;
 	}
-	iobuf_move(&rb->protocol1->endfile, rbuf);
+	iobuf_move(&rb->endfile, rbuf);
 	if(rb->flags & SBUF_RECV_DELTA && finish_delta(sdirs, rb))
-		goto error;
+		goto end;
 
 	if(manio_write_sbuf(chmanio, rb))
-		goto error;
+		goto end;
 
 	if(rb->flags & SBUF_RECV_DELTA)
-		cntr_add_changed(get_cntr(cconfs), rb->path.cmd);
+		cntr_add_changed(cntr, rb->path.cmd);
 	else
-		cntr_add(get_cntr(cconfs), rb->path.cmd, 0);
+		cntr_add(cntr, rb->path.cmd, 0);
 
 	if(*last_requested && !strcmp(rb->path.buf, *last_requested))
 	{
@@ -521,20 +522,18 @@ static int deal_with_receive_end_file(struct asfd *asfd, struct sdirs *sdirs,
 		*last_requested=NULL;
 	}
 
-	cp=strchr(rb->protocol1->endfile.buf, ':');
-	if(rb->protocol1->endfile.buf)
-		cntr_add_bytes(get_cntr(cconfs),
-			strtoull(rb->protocol1->endfile.buf, NULL, 10));
+	cp=strchr(rb->endfile.buf, ':');
+	if(rb->endfile.buf)
+		cntr_add_bytes(cntr, strtoull(rb->endfile.buf, NULL, 10));
 	if(cp)
 	{
 		// checksum stuff goes here
 	}
 
+	ret=0;
+end:
 	sbuf_free_content(rb);
-	return 0;
-error:
-	sbuf_free_content(rb);
-	return -1;
+	return ret;
 }
 
 static int deal_with_receive_append(struct asfd *asfd, struct sbuf *rb,

@@ -157,7 +157,7 @@ static int gen_rev_delta(const char *sigpath, const char *deltadir,
 		goto end;
 	}
 	else if(make_rev_sig(finpath, sigpath,
-		sb->protocol1->endfile.buf, sb->compression, cconfs))
+		sb->endfile.buf, sb->compression, cconfs))
 	{
 		logp("could not make signature from: %s\n", finpath);
 		goto end;

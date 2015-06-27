@@ -118,9 +118,9 @@ static void set_sbuf_protocol1(struct sbuf *sb)
 	if(sbuf_is_filedata(sb))
 	{
 		char *endfile=gen_endfile_str();
-		sb->protocol1->endfile.cmd=CMD_END_FILE;
-		sb->protocol1->endfile.len=strlen(endfile);
-		fail_unless((sb->protocol1->endfile.buf
+		sb->endfile.cmd=CMD_END_FILE;
+		sb->endfile.len=strlen(endfile);
+		fail_unless((sb->endfile.buf
 			=strdup_w(endfile, __func__))!=NULL);
 	}
 

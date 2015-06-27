@@ -243,6 +243,11 @@ static int get_wbuf_from_blks(struct iobuf *wbuf,
 	// Move on.
 	if(sb->protocol2->bsighead==sb->protocol2->bend)
 	{
+/*
+		wbuf->cmd=CMD_END_FILE;
+		wbuf->buf=(char *)"0:0";
+		wbuf->len=strlen(wbuf->buf);
+*/
 		slist->blks_to_send=sb->next;
 		sb->protocol2->bsighead=sb->protocol2->bstart;
 	}

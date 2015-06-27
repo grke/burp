@@ -18,7 +18,6 @@ struct protocol1
         struct fzp *fzp;
 
         struct iobuf datapth;
-        struct iobuf endfile;
 };
 
 extern struct protocol1 *sbuf_protocol1_alloc(void);

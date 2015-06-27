@@ -31,7 +31,7 @@ void assert_sbuf(struct sbuf *a, struct sbuf *b, enum protocol protocol)
 	{
 		fail_unless(a->protocol1 && b->protocol1);
 		assert_iobuf(&a->protocol1->datapth, &b->protocol1->datapth);
-		assert_iobuf(&a->protocol1->endfile, &b->protocol1->endfile);
+		assert_iobuf(&a->endfile, &b->endfile);
 		assert_iobuf(&a->attr, &b->attr);
 	}
 	else if(protocol==PROTO_2)

@@ -125,7 +125,7 @@ static int verify_file(struct asfd *asfd, struct sbuf *sb,
 	unsigned long long cbytes=0;
 	struct fzp *fzp=NULL;
 
-	if(!(cp=strrchr(sb->protocol1->endfile.buf, ':')))
+	if(!(cp=strrchr(sb->endfile.buf, ':')))
 	{
 		logw(asfd, cconfs,
 			"%s has no md5sum!\n", sb->protocol1->datapth.buf);
@@ -273,8 +273,7 @@ static int process_data_dir_file(struct asfd *asfd,
 			goto end;
 	}
 	cntr_add(get_cntr(cconfs), sb->path.cmd, 0);
-	cntr_add_bytes(get_cntr(cconfs),
-		  strtoull(sb->protocol1->endfile.buf, NULL, 10));
+	cntr_add_bytes(get_cntr(cconfs), strtoull(sb->endfile.buf, NULL, 10));
 	cntr_add_sentbytes(get_cntr(cconfs), bytes);
 
 	ret=0;

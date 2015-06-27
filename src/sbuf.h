@@ -38,6 +38,7 @@ struct sbuf
 	struct iobuf path; // File data.
 	struct iobuf link; // Link data.
 	struct iobuf attr; // Attribute data.
+        struct iobuf endfile; // End file marker.
 
 	struct stat statp;
 	uint64_t winattr;

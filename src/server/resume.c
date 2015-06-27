@@ -121,11 +121,10 @@ static int do_forward(struct manio *manio, struct iobuf *result,
 		{
 			if(same) cntr_add_same(cntr, sb->path.cmd);
 			else cntr_add_changed(cntr, sb->path.cmd);
-			if(sb->protocol1 && sb->protocol1->endfile.buf)
+			if(sb->endfile.buf)
 			{
 				unsigned long long e=0;
-				e=strtoull(sb->protocol1->endfile.buf,
-					NULL, 10);
+				e=strtoull(sb->endfile.buf, NULL, 10);
 				cntr_add_bytes(cntr, e);
 				cntr_add_recvbytes(cntr, e);
 			}

@@ -40,6 +40,7 @@ void sbuf_free_content(struct sbuf *sb)
 	iobuf_free_content(&sb->path);
 	iobuf_free_content(&sb->attr);
 	iobuf_free_content(&sb->link);
+	iobuf_free_content(&sb->endfile);
 	memset(&(sb->statp), 0, sizeof(sb->statp));
 	sb->compression=-1;
 	sb->winattr=0;
@@ -111,12 +112,9 @@ int sbuf_to_manifest(struct sbuf *sb, struct fzp *fzp)
 	if(sb->link.buf
 	  && iobuf_send_msg_fzp(&sb->link, fzp))
 		return -1;
-	if(sb->protocol1 && sb->protocol1->endfile.buf)
-	{
-		if((sbuf_is_filedata(sb) || sbuf_is_vssdata(sb))
-		  && iobuf_send_msg_fzp(&sb->protocol1->endfile, fzp))
-				return -1;
-	}
+	if(sb->endfile.buf
+	  && iobuf_send_msg_fzp(&sb->endfile, fzp))
+		return -1;
 
 	return 0;
 }
@@ -324,19 +322,18 @@ static parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 			iobuf_move(&sb->protocol1->datapth, rbuf);
 			return PARSE_RET_NEED_MORE;
 		case CMD_END_FILE:
-			if(!sb->protocol1)
+			iobuf_free_content(&sb->endfile);
+			iobuf_move(&sb->endfile, rbuf);
+			if(sb->protocol1)
 			{
-				iobuf_log_unexpected(rbuf, __func__);
-				return PARSE_RET_ERROR;
-			}
-			iobuf_free_content(&sb->protocol1->endfile);
-			iobuf_move(&sb->protocol1->endfile, rbuf);
-			if(!sb->attr.buf
-			  || !sb->protocol1->datapth.buf
-			  || (!sbuf_is_filedata(sb) && !sbuf_is_vssdata(sb)))
-			{
-				logp("got unexpected cmd_endfile");
-				return PARSE_RET_ERROR;
+				if(!sb->attr.buf
+				  || !sb->protocol1->datapth.buf
+				  || (!sbuf_is_filedata(sb)
+					&& !sbuf_is_vssdata(sb)))
+				{
+					logp("got unexpected cmd_endfile");
+					return PARSE_RET_ERROR;
+				}
 			}
 			return PARSE_RET_COMPLETE;
 		default:

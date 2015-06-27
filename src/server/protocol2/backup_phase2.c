@@ -279,6 +279,8 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist,
 				goto end;
 			}
 			break;
+		//case CMD_END_FILE:
+		//	goto end;
 		default:
 			break;
 	}
@@ -288,7 +290,7 @@ error:
 	ret=-1;
 	sbuf_free(&inew);
 end:
-	if(rbuf->buf) { free(rbuf->buf); rbuf->buf=NULL; }
+	iobuf_free_content(rbuf);
 	return ret;
 }
 
@@ -458,6 +460,16 @@ static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
 			if(!(blist->head=sb->protocol2->bstart))
 				blist->tail=NULL;
 			sanity_before_sbuf_free(slist, sb);
+/*
+			{
+				struct iobuf endfile;
+				endfile.cmd=CMD_END_FILE;
+				endfile.buf=(char *)"0:0";
+				endfile.len=strlen(endfile.buf);
+				iobuf_send_msg_fzp(&endfile,
+					manios->changed->fzp);
+			}
+*/
 			sbuf_free(&sb);
 			return 1;
 		}
@@ -797,16 +809,14 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 		{
 			if(deal_with_read(asfd->rbuf, slist, confs,
 				&end_flags, dpth)) goto end;
-			// Get as much out of the
-			// readbuf as possible.
+			// Get as much out of the readbuf as possible.
 			if(asfd->parse_readbuf(asfd)) goto end;
 		}
 		while(chfd->rbuf->buf)
 		{
 			if(deal_with_read_from_chfd(chfd,
 				slist->blist, &wrap_up, dpth, confs)) goto end;
-			// Get as much out of the
-			// readbuf as possible.
+			// Get as much out of the readbuf as possible.
 			if(chfd->parse_readbuf(chfd)) goto end;
 		}
 

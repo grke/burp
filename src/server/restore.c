@@ -67,6 +67,7 @@ static int setup_cntr(struct asfd *asfd, const char *manifest,
 	int ret=-1;
 	struct fzp *fzp=NULL;
 	struct sbuf *sb=NULL;
+	struct cntr *cntr=get_cntr(cconfs);
 
 // FIX THIS: this is only trying to work for protocol1.
 	if(get_protocol(cconfs)!=PROTO_1) return 0;
@@ -89,12 +90,11 @@ static int setup_cntr(struct asfd *asfd, const char *manifest,
 		{
 			if(want_to_restore(srestore, sb, regex, cconfs))
 			{
-				cntr_add_phase1(get_cntr(cconfs),
-					sb->path.cmd, 0);
-				if(sb->protocol1->endfile.buf)
-				  cntr_add_val(get_cntr(cconfs),
+				cntr_add_phase1(cntr, sb->path.cmd, 0);
+				if(sb->endfile.buf)
+				  cntr_add_val(cntr,
 					CMD_BYTES_ESTIMATED,
-					strtoull(sb->protocol1->endfile.buf,
+					strtoull(sb->endfile.buf,
 						NULL, 10), 0);
 			}
 		}

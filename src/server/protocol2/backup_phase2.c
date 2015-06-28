@@ -750,6 +750,15 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 	struct asfd *asfd=as->asfd;
 	struct asfd *chfd;
 	enum protocol protocol=get_protocol(confs);
+	int breaking=0;
+	int breakcount=0;
+	if(get_int(confs[OPT_BREAKPOINT])>=2000
+	  && get_int(confs[OPT_BREAKPOINT])<3000)
+	{
+		breaking=get_int(confs[OPT_BREAKPOINT]);
+		breakcount=breaking-2000;
+	}
+
 	chfd=get_asfd_from_list_by_fdtype(as, ASFD_FD_SERVER_TO_CHAMP_CHOOSER);
 
 	logp("Phase 2 begin (recv backup data)\n");
@@ -766,8 +775,15 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 	  || !(wbuf=iobuf_alloc()))
 		goto end;
 
+	iobuf_free_content(asfd->rbuf);
+
 	while(!(end_flags&END_BACKUP))
 	{
+		if(breaking)
+		{
+			if(breakcount--==0) return breakpoint(confs, __func__);
+		}
+
 		if(maybe_add_from_scan(manios, slist, confs))
 				goto end;
 

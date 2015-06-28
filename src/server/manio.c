@@ -2,9 +2,11 @@
 #include "../cmd.h"
 #include "../hexmap.h"
 #include "protocol2/champ_chooser/include.h"
+#include "protocol2/dpth.h"
 
 #define MANIO_MODE_READ		"rb"
 #define MANIO_MODE_WRITE	"wb"
+#define MANIO_MODE_APPEND	"ab"
 
 #define WEAK_LEN		16
 #define WEAK_STR_LEN		WEAK_LEN+1
@@ -101,6 +103,18 @@ static int manio_open_next_fpath(struct manio *manio)
 	}
 }
 
+static int manio_open_last_fpath(struct manio *manio)
+{
+	int max=-1;
+	if(is_single_file(manio))
+		return manio_open_next_fpath(manio);
+	if(get_highest_entry(manio->manifest, &max))
+		return -1;
+	if(max<0) max=0;
+	manio->offset->fcount=(uint64_t)max;
+	return manio_open_next_fpath(manio);
+}
+
 static struct manio *manio_alloc(void)
 {
 	return (struct manio *)calloc_w(1, sizeof(struct manio), __func__);
@@ -117,8 +131,23 @@ static struct manio *do_manio_open(const char *manifest, const char *mode,
 		goto error;
 	manio->protocol=protocol;
 	manio->phase=phase;
-	if(manio_open_next_fpath(manio))
-		goto error;
+	if(!strcmp(manio->mode, MANIO_MODE_APPEND))
+	{
+		if(manio->phase!=2)
+		{
+			logp("manio append mode only works for phase 2.\n");
+			logp("%s has phase: %s\n",
+				manio->manifest, manio->phase);
+			goto error;
+		}
+		if(manio_open_last_fpath(manio))
+			goto error;
+	}
+	else
+	{
+		if(manio_open_next_fpath(manio))
+			goto error;
+	}
 	return manio;
 error:
 	manio_close(&manio);
@@ -280,7 +309,7 @@ static int sort_and_write_hooks(struct manio *manio)
 	snprintf(comp, sizeof(comp), "%08"PRIX64, manio->offset->fcount-1);
 	if(!(path=prepend_s(manio->hook_dir, comp))
 	  || build_path_w(path)
-	  || !(fzp=fzp_gzopen(path, manio->mode)))
+	  || !(fzp=fzp_gzopen(path, MANIO_MODE_WRITE)))
 		goto end;
 
 	qsort(hook_sort, hook_count, sizeof(char *), strsort);
@@ -323,7 +352,7 @@ static int sort_and_write_dindex(struct manio *manio)
 	snprintf(comp, sizeof(comp), "%08"PRIX64, manio->offset->fcount-1);
 	if(!(path=prepend_s(manio->dindex_dir, comp))
 	  || build_path_w(path)
-	  || !(fzp=fzp_gzopen(path, manio->mode)))
+	  || !(fzp=fzp_gzopen(path, MANIO_MODE_WRITE)))
 		goto end;
 
 	qsort(dindex_sort, dindex_count, sizeof(char *), strsort);
@@ -633,19 +662,12 @@ int manio_truncate(struct manio *manio, man_off_t *offset, struct conf **confs)
 {
 	int ret=-1;
 	errno=0;
-//logp("truncate %s to %d\n", offset->fpath, offset->offset);
-//	if(!manio->fzp
-//	  && !(manio->fzp=fzp_open(offset->fpath, manio->mode)))
-//		goto end;
-//	if(fzp_truncate(offset->fpath,
-//		manio->fzp->type, offset->offset, confs))
 	if(fzp_truncate(offset->fpath, FZP_FILE, offset->offset, confs))
 	{
 		logp("Could not fzp_truncate %s in %s(): %s\n",
 			manio->manifest, __func__, strerror(errno));
 		goto end;
 	}
-//logp("done\n");
 	if(!is_single_file(manio)
 	  && remove_trailing_files(manio, offset))
 		goto end;

@@ -808,8 +808,8 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 	// have to open them for appending.
 	// Data is not getting written to a compressed file.
 	// This is important for recovery if the power goes.
-	if(!(ucmanio=manio_open_phase2(sdirs->unchanged, "a+b", protocol))
-	  || !(chmanio=manio_open_phase2(sdirs->changed, "a+b", protocol)))
+	if(!(ucmanio=manio_open_phase2(sdirs->unchanged, "ab", protocol))
+	  || !(chmanio=manio_open_phase2(sdirs->changed, "ab", protocol)))
 		goto error;
 
 	while(1)

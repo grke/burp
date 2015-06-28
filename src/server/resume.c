@@ -194,8 +194,6 @@ static man_off_t *do_resume_work(struct sdirs *sdirs,
 			1, /* same */
 			dpth, cconfs, &pos, &lastpos)) goto error;
 		logp("  unchanged: %s\n", ucb->buf);
-		logp("      pos: %s %d\n", pos->fpath, pos->offset);
-		logp("  lastpos: %s %d\n", lastpos->fpath, lastpos->offset);
 		if(manio_truncate(umanio, lastpos, cconfs)) goto error;
 		manio_close(&umanio);
 		man_off_t_free(&pos);
@@ -247,10 +245,10 @@ man_off_t *do_resume(struct sdirs *sdirs,
 		goto end;
 	manio_close(&p1manio);
 
-	// First, open them in a+ mode, so that they will be created if
+	// First, open them in append mode, so that they will be created if
 	// they do not exist.
-	if(!(cmanio=manio_open_phase2(sdirs->changed, "a+b", protocol))
-	  || !(umanio=manio_open_phase2(sdirs->unchanged, "a+b", protocol)))
+	if(!(cmanio=manio_open_phase2(sdirs->changed, "ab", protocol))
+	  || !(umanio=manio_open_phase2(sdirs->unchanged, "ab", protocol)))
 		goto end;
 	manio_close(&cmanio);
 	manio_close(&umanio);

@@ -2,8 +2,9 @@
 #define _BACKUP_RESUME_H
 
 #include "../fzp.h"
+#include "manio.h"
 
-extern int do_resume(struct manio *p1manio, struct sdirs *sdirs,
+extern man_off_t *do_resume(struct sdirs *sdirs,
 	struct dpth *dpth, struct conf **cconfs);
 
 #endif

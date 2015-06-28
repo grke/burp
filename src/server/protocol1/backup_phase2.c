@@ -752,6 +752,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 	const char *incexc, int resume, struct conf **cconfs)
 {
 	int ret=0;
+	man_off_t *p1pos=NULL;
 	struct manio *p1manio=NULL;
 	struct dpth *dpth=NULL;
 	char *deltmppath=NULL;
@@ -792,13 +793,15 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 		init_fs_max(sdirs->treepath);
 	}
 
-	if(!(p1manio=manio_open_phase1(sdirs->phase1data, "rb", protocol))
-	  || !(cb=sbuf_alloc(cconfs))
-	  || !(p1b=sbuf_alloc(cconfs))
-	  || !(rb=sbuf_alloc(cconfs)))
+	if(resume && !(p1pos=do_resume(sdirs, dpth, cconfs)))
 		goto error;
 
-	if(resume && do_resume(p1manio, sdirs, dpth, cconfs))
+	if(!(p1manio=manio_open_phase1(sdirs->phase1data, "rb", protocol))
+	  || (resume && manio_seek(p1manio, p1pos)))
+		goto error;
+	if(!(cb=sbuf_alloc(cconfs))
+	  || !(p1b=sbuf_alloc(cconfs))
+	  || !(rb=sbuf_alloc(cconfs)))
 		goto error;
 
 	// Unchanged and changed should now be truncated correctly, we just
@@ -807,10 +810,6 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 	// This is important for recovery if the power goes.
 	if(!(ucmanio=manio_open_phase2(sdirs->unchanged, "a+b", protocol))
 	  || !(chmanio=manio_open_phase2(sdirs->changed, "a+b", protocol)))
-		goto error;
-
-	if(!p1manio
-	  && !(p1manio=manio_open_phase1(sdirs->phase1data, "rb", protocol)))
 		goto error;
 
 	while(1)
@@ -920,6 +919,7 @@ end:
 	manio_close(&p1manio);
 	manio_close(&cmanio);
 	dpth_free(&dpth);
+	man_off_t_free(&p1pos);
 	if(!ret) unlink(sdirs->phase1data);
 
 	logp("End phase2 (receive file data)\n");

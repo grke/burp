@@ -742,6 +742,7 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 	struct slist *slist=NULL;
 	struct iobuf *wbuf=NULL;
 	struct dpth *dpth=NULL;
+	man_off_t *p1pos=NULL;
 	struct manios *manios=NULL;
 	// This is used to tell the client that a number of consecutive blocks
 	// have been found and can be freed.
@@ -753,21 +754,17 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 
 	logp("Phase 2 begin (recv backup data)\n");
 
-	if(!(manios=manios_open_phase2(sdirs, protocol))
-	  || !(slist=slist_alloc())
-	  || !(wbuf=iobuf_alloc())
-	  || !(dpth=dpth_alloc())
+	if(!(dpth=dpth_alloc())
 	  || dpth_protocol2_init(dpth,
 		sdirs->data, get_int(confs[OPT_MAX_STORAGE_SUBDIRS])))
 			goto end;
-
-	if(resume && do_resume(manios->phase1, sdirs, dpth, confs))
+	if(resume && !(p1pos=do_resume(sdirs, dpth, confs)))
                 goto end;
 
-	if(!manios->phase1
-	  && !(manios->phase1=manio_open_phase1(sdirs->phase1data,
-		"rb", protocol)))
-			goto end;
+	if(!(manios=manios_open_phase2(sdirs, p1pos, protocol))
+	  || !(slist=slist_alloc())
+	  || !(wbuf=iobuf_alloc()))
+		goto end;
 
 	while(!(end_flags&END_BACKUP))
 	{
@@ -860,5 +857,6 @@ end:
 	iobuf_free(&wbuf);
 	dpth_free(&dpth);
 	manios_close(&manios);
+	man_off_t_free(&p1pos);
 	return ret;
 }

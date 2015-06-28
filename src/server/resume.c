@@ -31,93 +31,85 @@ end:
 	return ret;
 }
 
+static int set_higher_datapth(struct sbuf *sb, struct dpth *dpth)
+{
+	// Make sure we end up with the highest datapth we can possibly
+	// find - dpth_protocol1_set_from_string() will only set it if
+	// it is higher.
+	if(sb->protocol1 && sb->protocol1->datapth.buf
+	  && dpth_protocol1_set_from_string(dpth,
+		sb->protocol1->datapth.buf))
+	{
+		logp("unable to set datapath: %s\n",
+			sb->protocol1->datapth.buf);
+		return -1;
+	}
+	return 0;
+}
+
 static int do_forward(struct manio *manio, struct iobuf *result,
-	struct iobuf *target, int isphase1, int seekback, int do_cntr,
-	int same, struct dpth *dpth, struct conf **cconfs)
+	struct iobuf *target, struct cntr *cntr,
+	int same, struct dpth *dpth, struct conf **cconfs,
+	man_off_t **pos, man_off_t **lastpos)
 {
 	int ars=0;
-	man_off_t *pos=NULL;
 	static struct sbuf *sb=NULL;
-	struct cntr *cntr=get_cntr(cconfs);
 
 	if(!sb && !(sb=sbuf_alloc(cconfs)))
 		goto error;
+	man_off_t_free(pos);
+
+	if(!(*pos=manio_tell(manio)))
+	{
+		logp("Could not manio_tell first pos in %s(): %s\n",
+			__func__, strerror(errno));
+		goto error;
+	}
 
 	while(1)
 	{
-		// If told to 'seekback' to the immediately previous
-		// entry, we need to remember the position of it.
-		if(target && seekback)
+		man_off_t_free(lastpos);
+		if(!(*lastpos=manio_tell(manio)))
 		{
-			if(manio
-			  && !(pos=manio_tell(manio)))
-			{
-				logp("Could not manio_tell in %s(): %s\n",
-					__func__, strerror(errno));
-				goto error;
-			}
-		}
-
-		sbuf_free_content(sb);
-
-		ars=manio_read(manio, sb, cconfs);
-
-		// Make sure we end up with the highest datapth we can possibly
-		// find - dpth_protocol1_set_from_string() will only set it if
-		// it is higher.
-		if(sb->protocol1 && sb->protocol1->datapth.buf
-		  && dpth_protocol1_set_from_string(dpth,
-			sb->protocol1->datapth.buf))
-		{
-			logp("unable to set datapath: %s\n",
-				sb->protocol1->datapth.buf);
+			logp("Could not manio_tell lastpos in %s(): %s\n",
+				__func__, strerror(errno));
 			goto error;
 		}
 
-		if(ars)
+		sbuf_free_content(sb);
+		ars=manio_read(manio, sb, cconfs);
+		if(set_higher_datapth(sb, dpth)) goto error;
+
+		switch(ars)
 		{
-			// ars==1 means it ended ok.
-			if(ars<0)
-			{
+			case 0: break;
+			case 1: return 0;
+			default:
 				if(result->buf)
-				{
 					logp("Error after %s in %s()\n",
 						result->buf, __func__);
-				}
 				goto error;
-			}
-			man_off_t_free(&pos);
-			return 0;
+		}
+
+		man_off_t_free(pos);
+		if(!(*pos=manio_tell(manio)))
+		{
+			logp("Could not manio_tell pos in %s(): %s\n",
+				__func__, strerror(errno));
+			goto error;
 		}
 
 		// If seeking to a particular point...
-		if(target && target->buf && iobuf_pathcmp(target, &sb->path)<=0)
+		if(target
+		  && target->buf
+		  && iobuf_pathcmp(target, &sb->path)<=0)
 		{
-			// If told to 'seekback' to the immediately previous
-			// entry, do it here.
-			if(seekback)
-			{
-				errno=0;
-				if(manio
-				  && manio_seek(manio, pos))
-				{
-					logp("Could not seek to %s:%d in %s():"
-						" %s\n", pos->fpath,
-						pos->offset, __func__,
-						strerror(errno));
-					goto error;
-				}
-			}
-			else
-			{
-				iobuf_free_content(result);
-				iobuf_move(result, &sb->path);
-			}
-			man_off_t_free(&pos);
+			iobuf_free_content(result);
+			iobuf_move(result, &sb->path);
 			return 0;
 		}
 
-		if(do_cntr)
+		if(cntr)
 		{
 			if(same) cntr_add_same(cntr, sb->path.cmd);
 			else cntr_add_changed(cntr, sb->path.cmd);
@@ -136,50 +128,59 @@ static int do_forward(struct manio *manio, struct iobuf *result,
 
 error:
 	sbuf_free_content(sb);
-	man_off_t_free(&pos);
+	man_off_t_free(pos);
+	man_off_t_free(lastpos);
 	return -1;
 }
 
-static int do_resume_work(struct manio *p1manio,
-	struct manio *cmanio, struct manio *umanio,
+// Return p1manio position.
+static man_off_t *do_resume_work(struct sdirs *sdirs,
 	struct dpth *dpth, struct conf **cconfs)
 {
-	int ret=0;
+	man_off_t *pos=NULL;
+	man_off_t *lastpos=NULL;
+	man_off_t *p1pos=NULL;
 	struct iobuf *p1b=NULL;
 	struct iobuf *chb=NULL;
 	struct iobuf *ucb=NULL;
+	struct manio *cmanio=NULL;
+	struct manio *umanio=NULL;
+	struct manio *p1manio=NULL;
+	enum protocol protocol=get_protocol(cconfs);
+	struct cntr *cntr=get_cntr(cconfs);
+
+	if(!(p1manio=manio_open_phase1(sdirs->phase1data, "rb", protocol))
+	  || !(cmanio=manio_open_phase2(sdirs->changed, "rb", protocol))
+	  || !(umanio=manio_open_phase2(sdirs->unchanged, "rb", protocol)))
+		goto end;
 
 	if(!(p1b=iobuf_alloc())
 	  || !(chb=iobuf_alloc())
 	  || !(ucb=iobuf_alloc()))
-		return -1;
-
-	logp("Begin phase1 (read previous file system scan)\n");
-	if(read_phase1(p1manio, cconfs)) goto error;
-
-	if(!p1manio)
-		manio_seek(p1manio, 0L);
+		return NULL;
 
 	logp("Setting up resume positions...\n");
 	// Go to the end of cmanio.
 	if(do_forward(cmanio, chb, NULL,
-		0, /* not phase1 */
-		0, /* no seekback */
-		1, /* do cntr */
+		cntr,
 		0, /* changed */
-		dpth, cconfs)) goto error;
+		dpth, cconfs, &pos, &lastpos)) goto error;
+	if(manio_truncate(cmanio, pos, cconfs)) goto error;
+	manio_close(&cmanio);
+	man_off_t_free(&pos);
+	man_off_t_free(&lastpos);
 	if(chb->buf)
 	{
 		logp("  changed:    %s\n", chb->buf);
 		// Now need to go to the appropriate places in p1manio and
 		// unchanged.
 		if(do_forward(p1manio, p1b, chb,
-			1, /* phase1 */
-			0, /* seekback */
-			0, /* no cntr */
+			NULL, /* no cntr */
 			0, /* ignored */
-			dpth, cconfs)) goto error;
+			dpth, cconfs, &p1pos, &lastpos)) goto error;
 		logp("  phase1:    %s\n", p1b->buf);
+		man_off_t_free(&lastpos);
+
 		if(strcmp(p1b->buf, chb->buf))
 		{
 			logp("phase1 and changed positions should match!\n");
@@ -189,15 +190,27 @@ static int do_resume_work(struct manio *p1manio,
 		// The unchanged file needs to be positioned just before the
 		// found entry, otherwise it ends up having a duplicated entry.
 		if(do_forward(umanio, ucb, chb,
-			0, /* not phase1 */
-			1, /* seekback */
-			1, /* do_cntr */
+			cntr,
 			1, /* same */
-			dpth, cconfs)) goto error;
+			dpth, cconfs, &pos, &lastpos)) goto error;
 		logp("  unchanged: %s\n", ucb->buf);
+		logp("      pos: %s %d\n", pos->fpath, pos->offset);
+		logp("  lastpos: %s %d\n", lastpos->fpath, lastpos->offset);
+		if(manio_truncate(umanio, lastpos, cconfs)) goto error;
+		manio_close(&umanio);
+		man_off_t_free(&pos);
+		man_off_t_free(&lastpos);
 	}
 	else
+	{
 		logp("  nothing previously transferred\n");
+		if(!(p1pos=manio_tell(p1manio)))
+			goto error;
+		if(!(pos=manio_tell(umanio)))
+			goto error;
+		if(manio_truncate(umanio, pos, cconfs))
+			goto error;
+	}
 
 	// Now should have all file pointers in the right places to resume.
 	if(dpth_incr(dpth)) goto error;
@@ -207,22 +220,32 @@ static int do_resume_work(struct manio *p1manio,
 
 	goto end;
 error:
-	ret=-1;
+	man_off_t_free(&p1pos);
 end:
 	iobuf_free(&p1b);
 	iobuf_free(&chb);
 	iobuf_free(&ucb);
-	logp("End phase1 (read previous file system scan)\n");
-	return ret;
+	man_off_t_free(&pos);
+	manio_close(&p1manio);
+	manio_close(&cmanio);
+	manio_close(&umanio);
+	return p1pos;
 }
 
-int do_resume(struct manio *p1manio, struct sdirs *sdirs,
+man_off_t *do_resume(struct sdirs *sdirs,
 	struct dpth *dpth, struct conf **cconfs)
 {
-	int ret=-1;
+	man_off_t *p1pos=NULL;
 	struct manio *cmanio=NULL;
 	struct manio *umanio=NULL;
+	struct manio *p1manio=NULL;
 	enum protocol protocol=get_protocol(cconfs);
+
+	logp("Begin phase1 (read previous file system scan)\n");
+        if(!(p1manio=manio_open_phase1(sdirs->phase1data, "rb", protocol))
+	  || read_phase1(p1manio, cconfs))
+		goto end;
+	manio_close(&p1manio);
 
 	// First, open them in a+ mode, so that they will be created if
 	// they do not exist.
@@ -232,19 +255,12 @@ int do_resume(struct manio *p1manio, struct sdirs *sdirs,
 	manio_close(&cmanio);
 	manio_close(&umanio);
 
-	if(!(cmanio=manio_open_phase2(sdirs->changed, "rb", protocol))
-	  || !(umanio=manio_open_phase2(sdirs->unchanged, "rb", protocol)))
-		goto end;
+	if(!(p1pos=do_resume_work(sdirs, dpth, cconfs))) goto end;
 
-	if(do_resume_work(p1manio, cmanio, umanio, dpth, cconfs)) goto end;
-
-	// Truncate to the appropriate places.
-	if(manio_truncate(cmanio, cconfs)
-	  || manio_truncate(umanio, cconfs))
-		goto end;
-	ret=0;
+	logp("End phase1 (read previous file system scan)\n");
 end:
+	manio_close(&p1manio);
 	manio_close(&cmanio);
 	manio_close(&umanio);
-	return ret;
+	return p1pos;
 }

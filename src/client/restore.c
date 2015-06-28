@@ -646,7 +646,7 @@ int do_restore_client(struct asfd *asfd,
 					char msg[512]="";
 					// Something exists at that path.
 					snprintf(msg, sizeof(msg),
-						"Path exists: %s", fullpath);
+						"Path exists: %s\n", fullpath);
 					if(restore_interrupt(asfd,
 						sb, msg, confs))
 							goto error;

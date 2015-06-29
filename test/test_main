@@ -175,7 +175,7 @@ add_run_backup_expect_fail_no_increment()
 {
 cat >> "$clientscript" <<EOF
 echo "Starting test client backup"
-"$burpbin" -c "$clientconfarg" -a b && fail "client backup returned \$? (expected 0)"
+"$burpbin" -c "$clientconfarg" -a b && fail "client backup returned \$? (expected non-zero)"
 
 EOF
 }
@@ -744,27 +744,31 @@ all_tests()
 	check_for_working_dir
 	end_test
 
-	# Protocol2 is currently broken here.
-	if [ "$protocol" -eq "1" ] ; then
-		start_test "Interrupt server phase3"
-		add_server_breakpoint_on 3
-		add_run_backup_no_increment
-		run_scripts
-		wait_for_backup_to_finish
-		check_for_working_dir
-		end_test
+	start_test "Interrupt server phase3"
+	add_server_breakpoint_on 3
+	add_run_backup_no_increment
+	run_scripts
+	wait_for_backup_to_finish
+	check_for_working_dir
+	end_test
 	
-		start_test "Complete phase3"
-		add_server_breakpoint_off
+	start_test "Complete phase3"
+	add_server_breakpoint_off
+	if [ "$protocol" -eq "1" ] ; then
+		# Client gives an error on protocol1, while the server does
+		# the resume.
 		add_run_backup_expect_fail
-		test_includes_backup=1
-		run_scripts
-		wait_for_backup_to_finish
-		start_script_client
-		add_run_verify
-		add_run_restore $bno "$restoredir"
-		end_test
+	else
+		add_run_backup
 	fi
+	test_includes_backup=1
+	run_scripts
+	wait_for_backup_to_finish
+	start_script_client
+	add_run_verify
+	add_run_restore $bno "$restoredir"
+	add_restore_diff
+	end_test
 
 	start_test "Interrupt server phase4"
 	add_server_breakpoint_on 4
@@ -783,40 +787,42 @@ all_tests()
 	start_script_client
 	add_run_verify
 	add_run_restore $bno "$restoredir"
+	add_restore_diff
 	end_test
 
-	# Protocol2 is currently broken here.
-	if [ "$protocol" -eq "1" ] ; then
-		start_test "Interrupt server middle of phase2"
-		add_server_breakpoint_on 2010
-		add_change_source_files
-		add_run_backup_expect_fail_no_increment
-		run_scripts
-		wait_for_backup_to_finish
-		check_for_working_dir
-		end_test
+	start_test "Interrupt server middle of phase2"
+	add_server_breakpoint_on 2010
+	add_change_source_files
+	add_run_backup_expect_fail_no_increment
+	run_scripts
+	wait_for_backup_to_finish
+	check_for_working_dir
+	end_test
 
-		start_test "Interrupt server middle of phase2"
-		add_server_breakpoint_on 2100
-		add_run_backup_expect_fail_no_increment
-		run_scripts
-		wait_for_backup_to_finish
-		check_for_working_dir
-		end_test
+# Currently broken in protocol2
+	start_test "Interrupt server middle of phase2"
+	add_server_breakpoint_on 2100
+	add_run_backup_expect_fail_no_increment
+	run_scripts
+	wait_for_backup_to_finish
+	check_for_working_dir
+	end_test
 
-		start_test "Interrupt server middle of phase2"
-		add_server_breakpoint_on 2200
-		add_run_backup_expect_fail_no_increment
-		run_scripts
-		wait_for_backup_to_finish
-		check_for_working_dir
-		end_test
+# Currently broken in protocol2
+	start_test "Interrupt server middle of phase2"
+	add_server_breakpoint_on 2200
+	add_run_backup_expect_fail_no_increment
+	run_scripts
+	wait_for_backup_to_finish
+	check_for_working_dir
+	end_test
 
-		start_test "Complete phase2"
-		add_server_breakpoint_off
-		add_backup_run_scripts_setup_verify_restore
-		end_test
-	fi
+# Currently broken in protocol2
+	start_test "Complete phase2"
+	add_server_breakpoint_off
+	add_backup_run_scripts_setup_verify_restore
+	add_restore_diff
+	end_test
 
 	comp_enc_change_test on  off off
 	comp_enc_change_test on  off on
@@ -829,6 +835,7 @@ all_tests()
 	start_test "Permissions"
 	add_chown 755 "$includedir/utest/test_cmd.c"
 	add_backup_run_scripts_setup_verify_restore
+	add_restore_diff
 	end_test
 
 	start_test "Exclude directory"

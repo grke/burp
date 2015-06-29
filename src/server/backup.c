@@ -127,12 +127,14 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 
 	logp("in do_backup_server\n");
 
+	log_rshash(cconfs);
+
 	if(resume)
 	{
 		if(sdirs_get_real_working_from_symlink(sdirs, cconfs)
+		  || sdirs_get_real_manifest(sdirs, cconfs)
 		  || open_log(asfd, sdirs, cconfs))
 			goto error;
-		log_rshash(cconfs);
 	}
 	else
 	{
@@ -141,18 +143,10 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 		  || sdirs_get_real_manifest(sdirs, cconfs)
 		  || open_log(asfd, sdirs, cconfs))
 			goto error;
-		log_rshash(cconfs);
 
 		if(write_incexc(sdirs->rworking, incexc))
 		{
 			logp("unable to write incexc\n");
-			goto error;
-		}
-
-		if(protocol==PROTO_2
-		  && !(chfd=champ_chooser_connect(as, sdirs, cconfs)))
-		{
-			logp("problem connecting to champ chooser\n");
 			goto error;
 		}
 
@@ -161,6 +155,13 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 			logp("error in phase 1\n");
 			goto error;
 		}
+	}
+
+	if(protocol==PROTO_2
+	  && !(chfd=champ_chooser_connect(as, sdirs, cconfs)))
+	{
+		logp("problem connecting to champ chooser\n");
+		goto error;
 	}
 
 	if(resume)

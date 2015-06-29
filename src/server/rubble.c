@@ -193,8 +193,8 @@ static int recover_working(struct async *as,
 
 	// FIX THIS: Currently forcing protocol2 to delete so that the tests
 	// do not fail.
-	if(get_protocol(cconfs)==PROTO_2)
-		recovery_method=RECOVERY_METHOD_DELETE;
+	//if(get_protocol(cconfs)==PROTO_2)
+	//	recovery_method=RECOVERY_METHOD_DELETE;
 
 	if(recovery_method==RECOVERY_METHOD_DELETE)
 	{

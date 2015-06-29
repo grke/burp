@@ -10,6 +10,7 @@
   * Use 'stat' for checking ssl files instead of 'lstat', and log if
     the ssl file was not found.
   * Fix path for server initiated backup via timer_script.
+  * Use mach.h headers and functions instead of clock_gettime() on Mac.
 
 2015-05-30 Changes in burp-2.0.20:
   * Fix conf bug that was causing the server to segfault when the client

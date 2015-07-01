@@ -3,6 +3,7 @@
     colon.
   * Set default_md=sha256 in CA.cnf.
   * Correct logp format strings in quota.c.
+  * Upgrade Windows depkgs to openssl-1.0.1o.
 
 2015-05-30 Changes in burp-1.4.38:
   * Turn SO_REUSEADDR on instead of turning it off.

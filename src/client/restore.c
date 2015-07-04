@@ -587,7 +587,7 @@ int do_restore_client(struct asfd *asfd,
 
 		if(protocol==PROTO_2 && blk->data)
 		{
-			int wret;
+			int wret=0;
 			if(act==ACTION_VERIFY)
 				cntr_add(get_cntr(confs), CMD_DATA, 1);
 			else

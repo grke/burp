@@ -221,33 +221,12 @@ static int server_modes(enum action act,
 }
 #endif
 
-#ifdef __MACH__
-#include <mach/clock.h>
-#include <mach/mach.h>
-#endif
-
 static void random_delay(struct conf **confs)
 {
 	int delay;
 	int randomise=get_int(confs[OPT_RANDOMISE]);
 	if(!randomise) return;
-#ifdef HAVE_WIN32
-	srand(GetTickCount());
-#else
-#ifdef __MACH__ // OS X
-	clock_serv_t cclock;
-	mach_timespec_t mts;
-	host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
-	clock_get_time(cclock, &mts);
-	mach_port_deallocate(mach_task_self(), cclock);
-	ts.tv_sec = mts.tv_sec;
-	ts.tv_nsec = mts.tv_nsec;
-#else
-	struct timespec ts;
-	clock_gettime(CLOCK_REALTIME, &ts);
-	srand(ts.tv_nsec);
-#endif
-#endif
+	srand(getpid());
 	delay=rand()%randomise;
 	logp("Sleeping %d seconds\n", delay);
 	sleep(delay);

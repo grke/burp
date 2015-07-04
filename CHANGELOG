@@ -10,7 +10,8 @@
   * Use 'stat' for checking ssl files instead of 'lstat', and log if
     the ssl file was not found.
   * Fix path for server initiated backup via timer_script.
-  * Use mach.h headers and functions instead of clock_gettime() on Mac.
+  * Use getpid() for random delay seed so that I can get rid of OS specific
+    clock code and '-lrt' link flag.
 
 2015-07-01 Changes in burp-1.4.40:
   * Fix '-a l' regex so that it isn't split in two at the right-most

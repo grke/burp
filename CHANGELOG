@@ -12,6 +12,8 @@
   * Fix path for server initiated backup via timer_script.
   * Use getpid() for random delay seed so that I can get rid of OS specific
     clock code and '-lrt' link flag.
+  * Get xattr working on Mac OSX. This should mean that resource forks and
+    finder info backup/restore is working.
 
 2015-07-01 Changes in burp-1.4.40:
   * Fix '-a l' regex so that it isn't split in two at the right-most

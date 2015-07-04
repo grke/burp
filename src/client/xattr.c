@@ -4,7 +4,8 @@
 #if defined(HAVE_LINUX_OS) \
  || defined(HAVE_FREEBSD_OS) \
  || defined(HAVE_NETBSD_OS) \
- || defined(HAVE_OPENBSD_OS)
+ || defined(HAVE_OPENBSD_OS) \
+ || defined(HAVE_DARWIN_OS)
 
 static char *get_next_str(struct asfd *asfd, char **data, size_t *l,
 	struct conf **confs, ssize_t *s, const char *path)
@@ -33,11 +34,41 @@ static char *get_next_str(struct asfd *asfd, char **data, size_t *l,
 #endif
 
 #ifdef HAVE_XATTR
-#if defined(HAVE_LINUX_OS)
+#if defined(HAVE_LINUX_OS) \
+ || defined(HAVE_DARWIN_OS)
 #include <sys/xattr.h>
+
+
+#if defined(HAVE_DARWIN_OS)
+
+static const char *xattr_acl_skiplist[2] = {
+    "com.apple.system.Security",
+    NULL
+};
+
+#else
 
 static const char *xattr_acl_skiplist[3] = { "system.posix_acl_access", "system.posix_acl_default", NULL };
 //static const char *xattr_skiplist[1] = { NULL };
+#endif
+
+
+/*
+ * OSX doesn't have llistxattr, lgetxattr and lsetxattr but has
+ * listxattr, getxattr and setxattr with an extra options argument
+ * which mimics the l variants of the functions when we specify
+ * XATTR_NOFOLLOW as the options value.
+ */
+#if defined(HAVE_DARWIN_OS)
+#define llistxattr(path, list, size) \
+listxattr((path), (list), (size), XATTR_NOFOLLOW)
+#define lgetxattr(path, name, value, size) \
+getxattr((path), (name), (value), (size), 0, XATTR_NOFOLLOW)
+#define lsetxattr(path, name, value, size, flags) \
+setxattr((path), (name), (value), (size), (flags), XATTR_NOFOLLOW)
+
+#endif
+
 
 int has_xattr(const char *path, enum cmd cmd)
 {
@@ -220,8 +251,7 @@ static int do_set_xattr(struct asfd *asfd,
 		if(!(name=get_next_str(asfd, &data, &l, confs, &s, path))
 		  || !(value=get_next_str(asfd, &data, &l, confs, &s, path)))
 			goto end;
-
-		if(lsetxattr(path, name, value, strlen(value), 0))
+		if(lsetxattr(path, name, value, s, 0))
 		{
 			logw(asfd, confs, "lsetxattr error on %s: %s\n",
 				path, strerror(errno));
@@ -257,6 +287,7 @@ int set_xattr(struct asfd *asfd, const char *path, struct sbuf *sb,
 #if defined(HAVE_FREEBSD_OS) \
  || defined(HAVE_NETBSD_OS) \
  || defined(HAVE_OPENBSD_OS)
+
 
 #include <sys/extattr.h>
 #include <libutil.h>

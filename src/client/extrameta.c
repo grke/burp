@@ -5,13 +5,12 @@ int has_extrameta(const char *path, enum cmd cmd, struct conf **confs)
 #if defined(WIN32_VSS)
 	return 1;
 #endif
+	// FIX THIS: extra meta not supported in protocol2.
+	if(get_protocol(confs)==PROTO_2) return 0;
 #if defined(HAVE_LINUX_OS) || \
     defined(HAVE_FREEBSD_OS) || \
     defined(HAVE_OPENBSD_OS) || \
     defined(HAVE_NETBSD_OS)
-
-	// FIX THIS: extra meta not supported in protocol2.
-	if(get_protocol(confs)==PROTO_2) return 0;
 
 #ifdef HAVE_ACL
 	if(has_acl(path, cmd)) return 1;
@@ -20,7 +19,8 @@ int has_extrameta(const char *path, enum cmd cmd, struct conf **confs)
 #if defined(HAVE_LINUX_OS) || \
     defined(HAVE_FREEBSD_OS) || \
     defined(HAVE_OPENBSD_OS) || \
-    defined(HAVE_NETBSD_OS)
+    defined(HAVE_NETBSD_OS) || \
+    defined(HAVE_DARWIN_OS)
 #ifdef HAVE_XATTR
 	if(has_xattr(path, cmd)) return 1;
 #endif
@@ -51,7 +51,8 @@ int get_extrameta(struct asfd *asfd,
 #if defined(HAVE_LINUX_OS) || \
     defined(HAVE_FREEBSD_OS) || \
     defined(HAVE_OPENBSD_OS) || \
-    defined(HAVE_NETBSD_OS)
+    defined(HAVE_NETBSD_OS) || \
+    defined(HAVE_DARWIN_OS)
 #ifdef HAVE_XATTR
 	if(get_xattr(asfd, sb, extrameta, elen, confs)) return -1;
 #endif
@@ -117,7 +118,8 @@ int set_extrameta(struct asfd *asfd,
 				break;
 #endif
 #endif
-#if defined(HAVE_LINUX_OS)
+#if defined(HAVE_LINUX_OS) || \
+    defined(HAVE_DARWIN_OS)
 #ifdef HAVE_XATTR
 			case META_XATTR:
 				if(set_xattr(asfd,

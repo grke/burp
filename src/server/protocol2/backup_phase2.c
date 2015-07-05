@@ -2,7 +2,7 @@
 #include "champ_chooser/include.h"
 #include "dpth.h"
 #include "../manios.h"
-#include "../resume.h"
+#include "../resume2.h"
 #include "../../attribs.h"
 #include "../../base64.h"
 #include "../../cmd.h"
@@ -15,6 +15,9 @@
 #define END_BACKUP		0x02
 #define END_REQUESTS		0x04
 #define END_BLK_REQUESTS	0x08
+
+static int breaking=0;
+static int breakcount=0;
 
 static int data_needed(struct sbuf *sb)
 {
@@ -430,6 +433,12 @@ static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
 		if(blk->got_save_path
 		  && !blk_is_zero_length(blk))
 		{
+			if(breaking)
+			{
+				if(breakcount--==0)
+					return breakpoint(confs, __func__);
+			}
+
 			if(manio_write_sig_and_path(manios->changed, blk))
 				goto error;
 			if(manios->changed->sig_count==0)
@@ -750,8 +759,6 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 	struct asfd *asfd=as->asfd;
 	struct asfd *chfd;
 	enum protocol protocol=get_protocol(confs);
-	int breaking=0;
-	int breakcount=0;
 	if(get_int(confs[OPT_BREAKPOINT])>=2000
 	  && get_int(confs[OPT_BREAKPOINT])<3000)
 	{
@@ -767,7 +774,7 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 	  || dpth_protocol2_init(dpth,
 		sdirs->data, get_int(confs[OPT_MAX_STORAGE_SUBDIRS])))
 			goto end;
-	if(resume && !(p1pos=do_resume(sdirs, dpth, confs)))
+	if(resume && !(p1pos=do_resume2(sdirs, dpth, confs)))
                 goto end;
 
 	if(!(manios=manios_open_phase2(sdirs, p1pos, protocol))
@@ -779,11 +786,6 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 
 	while(!(end_flags&END_BACKUP))
 	{
-		if(breaking)
-		{
-			if(breakcount--==0) return breakpoint(confs, __func__);
-		}
-
 		if(maybe_add_from_scan(manios, slist, confs))
 				goto end;
 

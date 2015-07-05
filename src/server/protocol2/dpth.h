@@ -13,6 +13,6 @@ extern char *dpth_protocol2_get_save_path(struct dpth *dpth);
 extern int dpth_protocol2_fwrite(struct dpth *dpth,
 	struct iobuf *iobuf, struct blk *blk);
 
-extern int get_highest_entry(const char *path, int *max);
+extern int get_highest_entry(const char *path, int *max, int len);
 
 #endif

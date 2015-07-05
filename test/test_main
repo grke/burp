@@ -799,7 +799,6 @@ all_tests()
 	check_for_working_dir
 	end_test
 
-# Currently broken in protocol2
 	start_test "Interrupt server middle of phase2"
 	add_server_breakpoint_on 2100
 	add_run_backup_expect_fail_no_increment
@@ -808,7 +807,6 @@ all_tests()
 	check_for_working_dir
 	end_test
 
-# Currently broken in protocol2
 	start_test "Interrupt server middle of phase2"
 	add_server_breakpoint_on 2200
 	add_run_backup_expect_fail_no_increment
@@ -817,7 +815,6 @@ all_tests()
 	check_for_working_dir
 	end_test
 
-# Currently broken in protocol2
 	start_test "Complete phase2"
 	add_server_breakpoint_off
 	add_backup_run_scripts_setup_verify_restore

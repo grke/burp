@@ -62,6 +62,7 @@ SUBDIROBJS = \
 		protocol1/handy.o \
 		protocol1/msg.o \
 		server/resume.o \
+		server/resume2.o \
 		server/protocol1/restore.o \
 		server/backup_phase1.o \
 		server/manios.o \

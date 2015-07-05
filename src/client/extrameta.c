@@ -140,7 +140,7 @@ int set_extrameta(struct asfd *asfd,
 #endif
 #if defined(HAVE_DARWIN_OS)
 #ifdef HAVE_XATTR
-			case META_XATTR_MAC:
+			case META_XATTR_OSX:
 				if(set_xattr(asfd,
 					path, sb, m, s, cmdtmp, confs))
 						errors++;

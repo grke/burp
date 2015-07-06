@@ -23,10 +23,16 @@ struct blk *blk_alloc_with_data(uint32_t max_data_length)
 	return NULL;
 }
 
+static void blk_free_content(struct blk *blk)
+{
+	if(!blk) return;
+	free_w(&blk->data);
+}
+
 void blk_free(struct blk **blk)
 {
 	if(!blk || !*blk) return;
-	if((*blk)->data) free((*blk)->data);
+	blk_free_content(*blk);
 	free_v((void **)blk);
 }
 

@@ -8,6 +8,8 @@
 #include "../../src/alloc.h"
 #include "../../src/attribs.h"
 #include "../../src/base64.h"
+#include "../../src/cmd.h"
+#include "../../src/conffile.h"
 #include "../../src/fsops.h"
 #include "../../src/hexmap.h"
 #include "../../src/pathcmp.h"
@@ -15,6 +17,7 @@
 #include "../../src/slist.h"
 #include "../../src/protocol2/blk.h"
 #include "../../src/server/manio.h"
+#include "../../src/server/resume2.h"
 
 static const char *path="utest_manio";
 
@@ -254,6 +257,85 @@ START_TEST(test_man_protocol2_phase2_tell_seek)
 }
 END_TEST
 
+static void add_slist_path(struct slist *slist, int *entries,
+	enum protocol protocol, enum cmd cmd, const char *path)
+{
+	char *copy=NULL;
+	struct sbuf *sb;
+	sb=build_attribs_reduce(protocol);
+	attribs_encode(sb);
+	fail_unless((copy=strdup_w(path, __func__))!=NULL);
+	iobuf_from_str(&sb->path, cmd, copy);
+	slist_add_sbuf(slist, sb);
+	(*entries)++;
+}
+
+struct slist *build_slist_specific_paths(enum protocol protocol, int *entries)
+{
+	struct slist *s=NULL;
+	fail_unless((s=slist_alloc())!=NULL);
+	add_slist_path(s, entries, protocol, CMD_DIRECTORY, "/a");
+	add_slist_path(s, entries, protocol, CMD_DIRECTORY, "/a/dir");
+	add_slist_path(s, entries, protocol, CMD_FILE,      "/a/dir/path");
+	add_slist_path(s, entries, protocol, CMD_DIRECTORY, "/a/folder1");
+	add_slist_path(s, entries, protocol, CMD_DIRECTORY, "/a/folder2");
+	add_slist_path(s, entries, protocol, CMD_DIRECTORY, "/a/folder3");
+	add_slist_path(s, entries, protocol, CMD_FILE,      "/a/folder3/path");
+	add_slist_path(s, entries, protocol, CMD_FILE,      "/a/folder3/path2");
+	add_slist_path(s, entries, protocol, CMD_FILE,      "/a/folder3/path3");
+	return s;
+}
+
+START_TEST(test_man_protocol2_phase2_truncate)
+{
+	int phase=2;
+	int entries=0;
+	struct slist *slist;
+	struct manio *manio;
+	enum protocol protocol=PROTO_2;
+	struct iobuf result;
+	struct iobuf target;
+	man_off_t *pos=NULL;
+	man_off_t *lastpos=NULL;
+	struct conf **confs;
+	confs=confs_alloc();
+	confs_init(confs);
+	fail_unless(!conf_load_global_only_buf(MIN_SERVER_CONF, confs));
+	set_e_protocol(confs[OPT_PROTOCOL], protocol);
+
+	prng_init(0);
+	base64_init();
+	hexmap_init();
+	recursive_delete(path);
+
+	slist=build_slist_specific_paths(protocol, &entries);
+	build_manifest_phase2_from_slist(path, slist, protocol);
+	fail_unless(slist!=NULL);
+
+	iobuf_init(&result);
+	iobuf_init(&target);
+
+	fail_unless((manio=do_manio_open(path, "rb", protocol, phase))!=NULL);
+	iobuf_from_str(&target, CMD_FILE, (char *)"/a/folder3/path");
+	do_forward(manio, &result, &target, NULL,
+		0, NULL, confs, &pos, &lastpos);
+	printf("result: %c:%s\n", result.cmd, result.buf);
+
+//	read_manifest(&sb, manio, entries, entries, protocol, phase);
+//	fail_unless(sb==NULL);
+	fail_unless(!manio_close(&manio));
+	fail_unless(!manio);
+	printf("%s\n", path);
+
+	slist_free(&slist);
+
+	man_off_t_free(&pos);
+	man_off_t_free(&lastpos);
+	confs_free(&confs);
+	tear_down();
+}
+END_TEST
+
 Suite *suite_manio(void)
 {
 	Suite *s;
@@ -277,6 +359,8 @@ Suite *suite_manio(void)
 	tcase_add_test(tc_core, test_man_protocol2_phase1_tell_seek);
 	tcase_add_test(tc_core, test_man_protocol1_phase2_tell_seek);
 	tcase_add_test(tc_core, test_man_protocol2_phase2_tell_seek);
+
+	tcase_add_test(tc_core, test_man_protocol2_phase2_truncate);
 
 	suite_add_tcase(s, tc_core);
 

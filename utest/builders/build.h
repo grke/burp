@@ -12,4 +12,8 @@ extern struct slist *build_manifest(const char *path,
 extern struct blist *build_blist(int wanted);
 extern void build_blks(struct blist *blist, int wanted);
 
+
+extern void build_manifest_phase2_from_slist(const char *path,
+	struct slist *slist, enum protocol protocol);
+
 #endif

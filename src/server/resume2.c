@@ -47,7 +47,7 @@ static int set_higher_datapth(struct sbuf *sb, struct dpth *dpth)
 	return 0;
 }
 
-static int do_forward(struct manio *manio, struct iobuf *result,
+int do_forward(struct manio *manio, struct iobuf *result,
 	struct iobuf *target, struct cntr *cntr,
 	int same, struct dpth *dpth, struct conf **cconfs,
 	man_off_t **pos, man_off_t **lastpos)
@@ -98,7 +98,7 @@ static int do_forward(struct manio *manio, struct iobuf *result,
 
 		sbuf_free_content(sb);
 		ars=manio_read(manio, sb, cconfs);
-		if(set_higher_datapth(sb, dpth)) goto error;
+		if(dpth && set_higher_datapth(sb, dpth)) goto error;
 
 		switch(ars)
 		{

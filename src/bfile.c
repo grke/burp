@@ -443,7 +443,7 @@ static int bfile_open(BFILE *bfd,
 	if(!bfd) return 0;
 	if(bfd->mode!=BF_CLOSED && bfd->close(bfd, asfd))
 		return -1;
-	if(!(bfd->fd=open(fname, flags, mode))<0)
+	if((bfd->fd=open(fname, flags, mode))<0)
 		return -1;
 	if(flags & O_CREAT || flags & O_WRONLY)
 		bfd->mode=BF_WRITE;

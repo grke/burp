@@ -108,7 +108,7 @@ static int do_forward(struct manio *manio, struct iobuf *result,
 				if(result->buf)
 					logp("Error after %s in %s()\n",
 						result->buf, __func__);
-				if(!manio->phase==1 || same)
+				if(manio->phase!=1 || same)
 				{
 					// Treat error in changed manio as
 					// OK - could have been a short write.

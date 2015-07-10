@@ -118,7 +118,7 @@ error:
 }
 
 // Returns 0 on OK, -1 on error. *max gets set to the next entry.
-int get_highest_entry(const char *path, int *max, int len)
+int get_highest_entry(const char *path, int *max, size_t len)
 {
 	int ent=0;
 	int ret=0;

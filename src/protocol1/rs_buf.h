@@ -25,6 +25,7 @@
 #define RS_BUF_H
 
 #include "../burp.h"
+#include "../conf.h"
 #include "../bfile.h"
 
 #include <librsync.h>

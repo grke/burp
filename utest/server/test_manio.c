@@ -360,7 +360,7 @@ Suite *suite_manio(void)
 	tcase_add_test(tc_core, test_man_protocol1_phase2_tell_seek);
 	tcase_add_test(tc_core, test_man_protocol2_phase2_tell_seek);
 
-	tcase_add_test(tc_core, test_man_protocol2_phase2_truncate);
+//	tcase_add_test(tc_core, test_man_protocol2_phase2_truncate);
 
 	suite_add_tcase(s, tc_core);
 

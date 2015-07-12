@@ -65,7 +65,7 @@ get_intervals()
 	  [0-9]*h) i=${interval%h*} ; intervalsecs=$((i*60*60)) ;;
 	  [0-9]*d) i=${interval%d*} ; intervalsecs=$((i*60*60*24)) ;;
 	  [0-9]*w) i=${interval%w*} ; intervalsecs=$((i*60*60*24*7)) ;;
-	  [0-9]*n) i=${interval%n*} ; intervalsecs=$((i*60*60*24*7*30)) ;;
+	  [0-9]*n) i=${interval%n*} ; intervalsecs=$((i*60*60*24*30)) ;;
 	  *) echo "$0: interval $interval not understood for $client."
 		return 0 ;;
 	esac

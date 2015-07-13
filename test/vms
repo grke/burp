@@ -7,7 +7,7 @@ stopping=0
 fail()
 {
 	echo "$prog failed: $*" 1>&2
-#	[ "$stopping" = 0 ] && stop_all
+	[ "$stopping" = 0 ] && stop_all
 	exit 1
 }
 
@@ -125,8 +125,8 @@ instanceids=$(aws ec2 describe-instances | grep -i InstanceId \
 	echo "${x%\"*}"
 done)
 
-#stop_all
-#start_all
+stop_all
+start_all
 
 details=$(echo "$instanceids" | while read i ; do
 	ip_address=$(get_address $i)
@@ -155,5 +155,8 @@ ssh -i "$identity" $ssh_opts "$host" \
 	"cd $directory && ./configure && make test" \
 		|| fail "running make test"
 
-#stop_all
+stop_all
+
+echo "Everything succeeded."
+
 exit 0

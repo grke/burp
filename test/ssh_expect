@@ -4,7 +4,7 @@
 
 set timeout -1
 
-spawn ssh [lindex $argv 1] [lrange $argv 2 10]
+spawn ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null [lindex $argv 1] [lrange $argv 2 10]
 
 match_max 100000
 

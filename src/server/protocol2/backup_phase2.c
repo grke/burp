@@ -2,7 +2,7 @@
 #include "champ_chooser/include.h"
 #include "dpth.h"
 #include "../manios.h"
-#include "../resume.h"
+#include "../resume2.h"
 #include "../../attribs.h"
 #include "../../base64.h"
 #include "../../cmd.h"
@@ -15,6 +15,9 @@
 #define END_BACKUP		0x02
 #define END_REQUESTS		0x04
 #define END_BLK_REQUESTS	0x08
+
+static int breaking=0;
+static int breakcount=0;
 
 static int data_needed(struct sbuf *sb)
 {
@@ -248,7 +251,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist,
 		/* Incoming block signatures. */
 		case CMD_ATTRIBS_SIGS:
 			// New set of stuff incoming. Clean up.
-			if(inew->attr.buf) free(inew->attr.buf);
+			iobuf_free_content(&inew->attr);
 			iobuf_move(&inew->attr, rbuf);
 			inew->protocol2->index=decode_file_no(&inew->attr);
 
@@ -411,17 +414,18 @@ static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
         struct asfd *chfd, struct manios *manios,
         struct slist *slist, int end_flags, struct conf **confs)
 {
+	int ret=-1;
 	struct blk *blk;
 	static struct iobuf *wbuf=NULL;
 	struct blist *blist=slist->blist;
 
 	if(!(sb->flags & SBUF_HEADER_WRITTEN_TO_MANIFEST))
 	{
-		if(manio_write_sbuf(manios->changed, sb)) goto error;
+		if(manio_write_sbuf(manios->changed, sb)) goto end;
 		sb->flags |= SBUF_HEADER_WRITTEN_TO_MANIFEST;
 	}
 
-        if(!wbuf && !(wbuf=iobuf_alloc())) return -1;
+        if(!wbuf && !(wbuf=iobuf_alloc())) goto end;
 
 	while((blk=sb->protocol2->bstart)
 		&& blk->got==BLK_GOT
@@ -430,15 +434,23 @@ static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
 		if(blk->got_save_path
 		  && !blk_is_zero_length(blk))
 		{
+			if(breaking)
+			{
+				if(breakcount--==0)
+				{
+					breakpoint(confs, __func__);
+					goto end;
+				}
+			}
 			if(manio_write_sig_and_path(manios->changed, blk))
-				goto error;
+				goto end;
 			if(manios->changed->sig_count==0)
 			{
 				// Have finished a manifest file. Want to start
 				// using it as a dedup candidate now.
 				iobuf_from_str(wbuf, CMD_MANIFEST,
 					manios->changed->offset->fpath);
-				if(chfd->write(chfd, wbuf)) goto error;
+				if(chfd->write(chfd, wbuf)) goto end;
 
 				if(!blk->requested)
 				{
@@ -447,7 +459,7 @@ static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
 					// consecutive number of unrequested
 					// blocks.
 					get_wbuf_from_index(wbuf, blk->index);
-					if(asfd->write(asfd, wbuf)) goto error;
+					if(asfd->write(asfd, wbuf)) goto end;
 				}
 			}
 		}
@@ -477,10 +489,10 @@ static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
 		blk_free(&blk);
 	}
 
+	ret=0;
+end:
 	if(!(blist->head=sb->protocol2->bstart)) blist->tail=NULL;
-	return 0;
-error:
-	return -1;
+	return ret;
 }
 
 static int write_to_changed_file(struct asfd *asfd,
@@ -750,8 +762,6 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 	struct asfd *asfd=as->asfd;
 	struct asfd *chfd;
 	enum protocol protocol=get_protocol(confs);
-	int breaking=0;
-	int breakcount=0;
 	if(get_int(confs[OPT_BREAKPOINT])>=2000
 	  && get_int(confs[OPT_BREAKPOINT])<3000)
 	{
@@ -767,7 +777,7 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 	  || dpth_protocol2_init(dpth,
 		sdirs->data, get_int(confs[OPT_MAX_STORAGE_SUBDIRS])))
 			goto end;
-	if(resume && !(p1pos=do_resume(sdirs, dpth, confs)))
+	if(resume && !(p1pos=do_resume2(sdirs, dpth, confs)))
                 goto end;
 
 	if(!(manios=manios_open_phase2(sdirs, p1pos, protocol))
@@ -779,11 +789,6 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 
 	while(!(end_flags&END_BACKUP))
 	{
-		if(breaking)
-		{
-			if(breakcount--==0) return breakpoint(confs, __func__);
-		}
-
 		if(maybe_add_from_scan(manios, slist, confs))
 				goto end;
 

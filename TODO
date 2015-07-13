@@ -37,4 +37,9 @@ roughly in order of most important to least.
 
 * Make Windows 'image' backups work.
 
+* Windows directories are restoring with the wrong permissions
+  - need to fix and remove 'type -f' from find command in test/test_main.
+
+* Windows split_vss/strip_vss options cause breakage.
+
 * champ_chooser: figure out a way of giving preference to newer candidates.

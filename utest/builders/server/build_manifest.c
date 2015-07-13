@@ -227,3 +227,41 @@ struct slist *build_manifest(const char *path,
 			return NULL;
 	}
 }
+
+void build_manifest_phase2_from_slist(const char *path,
+	struct slist *slist, enum protocol protocol)
+{
+	struct sbuf *sb;
+	struct manio *manio=NULL;
+
+	for(sb=slist->head; sb; sb=sb->next)
+		set_sbuf(slist, sb);
+
+	fail_unless((manio=manio_open_phase2(path, "wb", protocol))!=NULL);
+
+	for(sb=slist->head; sb; sb=sb->next)
+	{
+		fail_unless(!manio_write_sbuf(manio, sb));
+		if(protocol==PROTO_2)
+		{
+			struct blk *blk=NULL;
+			for(blk=sb->protocol2->bstart;
+				blk && blk!=sb->protocol2->bend; blk=blk->next)
+			{
+				fail_unless(!manio_write_sig_and_path(manio,
+					blk));
+			}
+			if(sbuf_is_filedata(sb) || sbuf_is_vssdata(sb))
+			{
+				struct iobuf endfile;
+				iobuf_from_str(&endfile,
+					CMD_END_FILE, (char *)"0:0");
+				fail_unless(!iobuf_send_msg_fzp(&endfile,
+					manio->fzp));
+			}
+			hack_protocol2_attr(&sb->attr);
+		}
+	}
+
+	fail_unless(!manio_close(&manio));
+}

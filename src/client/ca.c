@@ -14,6 +14,9 @@ static int generate_key_and_csr(struct asfd *asfd,
 	logp("Running '%s --key --keypath %s --request --requestpath %s --name %s'\n", ca_burp_ca, ssl_key, csr_path, cname);
 #ifdef HAVE_WIN32
 	win32_enable_backup_privileges();
+#else
+	// FIX THIS
+	signal(SIGPIPE, SIG_IGN);
 #endif
 	args[a++]=ca_burp_ca;
 	args[a++]="--key";

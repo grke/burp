@@ -108,7 +108,7 @@ static int manio_open_last_fpath(struct manio *manio)
 	int max=-1;
 	if(is_single_file(manio))
 		return manio_open_next_fpath(manio);
-	if(get_highest_entry(manio->manifest, &max))
+	if(get_highest_entry(manio->manifest, &max, 8))
 		return -1;
 	if(max<0) max=0;
 	manio->offset->fcount=(uint64_t)max;

@@ -64,6 +64,7 @@ BURP_SRCS = \
 	../src/server/protocol1/fdirs.c \
 	../src/server/protocol1/zlibio.c \
 	../src/server/protocol2/dpth.c \
+	../src/server/resume2.c \
 	../src/server/timestamp.c \
 
 OBJS = $(SRCS:.c=.o)
@@ -85,7 +86,7 @@ test: Makefile $(OBJS) $(BURP_OBJS)
 	rm -rf /tmp/burp-coverage /tmp/burp-coverage.info || exit 1
 	lcov --capture -d ~/burp -b . --output-file /tmp/burp-coverage.info || exit 1
 	genhtml /tmp/burp-coverage.info --output-directory /tmp/burp-coverage || exit 1
-	make clean
+#	make clean
 	@echo OK
 
 clean:

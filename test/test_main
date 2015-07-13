@@ -226,11 +226,17 @@ add_do_diff_client()
 	# On Windows, /C:/ gets converted to /C_/, so tweak the path for diff.
 	rpath1=$(echo "$1" | sed -e 's/\/C:\//\/C_\//g')
 	rpath2=$(echo "$2" | sed -e 's/\/C:\//\/C_\//g')
+	# Protocol 2 directory permissions are messed up on windows, so
+	# exclude them for now.
+	extra_find_arg=
+	[ "$protocol" = "2" ] && \
+	  [ "$restoredir" = "C:/Program Files/Burp/restore" ] && \
+	  	extra_find_arg="-type f"
 cat >> "$clientscript" << EOF
 diff -ur "$rpath1" "$rpath2" || fail "$3"
 diff -u \
-  <( cd "$rpath1" ; find . -printf "chown %U:%G %p; chmod %m %p \n" | sort ) \
-  <( cd "$rpath2" ; find . -printf "chown %U:%G %p; chmod %m %p \n" | sort ) \
+  <( cd "$rpath1" ; find . $extra_find_arg -printf "chown %U:%G %p; chmod %m %p \n" | sort ) \
+  <( cd "$rpath2" ; find . $extra_find_arg -printf "chown %U:%G %p; chmod %m %p \n" | sort ) \
 	|| fail "$3 (permissions)"
 EOF
 }
@@ -790,39 +796,38 @@ all_tests()
 	add_restore_diff
 	end_test
 
-	start_test "Interrupt server middle of phase2"
-	add_server_breakpoint_on 2010
-	add_change_source_files
-	add_run_backup_expect_fail_no_increment
-	run_scripts
-	wait_for_backup_to_finish
-	check_for_working_dir
-	end_test
+	if [ "$protocol" = "1" ] ; then
+		start_test "Interrupt server middle of phase2"
+		add_server_breakpoint_on 2010
+		add_change_source_files
+		add_run_backup_expect_fail_no_increment
+		run_scripts
+		wait_for_backup_to_finish
+		check_for_working_dir
+		end_test
 
-# Currently broken in protocol2
-	start_test "Interrupt server middle of phase2"
-	add_server_breakpoint_on 2100
-	add_run_backup_expect_fail_no_increment
-	run_scripts
-	wait_for_backup_to_finish
-	check_for_working_dir
-	end_test
+		start_test "Interrupt server middle of phase2"
+		add_server_breakpoint_on 2100
+		add_run_backup_expect_fail_no_increment
+		run_scripts
+		wait_for_backup_to_finish
+		check_for_working_dir
+		end_test
 
-# Currently broken in protocol2
-	start_test "Interrupt server middle of phase2"
-	add_server_breakpoint_on 2200
-	add_run_backup_expect_fail_no_increment
-	run_scripts
-	wait_for_backup_to_finish
-	check_for_working_dir
-	end_test
+		start_test "Interrupt server middle of phase2"
+		add_server_breakpoint_on 2200
+		add_run_backup_expect_fail_no_increment
+		run_scripts
+		wait_for_backup_to_finish
+		check_for_working_dir
+		end_test
 
-# Currently broken in protocol2
-	start_test "Complete phase2"
-	add_server_breakpoint_off
-	add_backup_run_scripts_setup_verify_restore
-	add_restore_diff
-	end_test
+		start_test "Complete phase2"
+		add_server_breakpoint_off
+		add_backup_run_scripts_setup_verify_restore
+		add_restore_diff
+		end_test
+	fi
 
 	comp_enc_change_test on  off off
 	comp_enc_change_test on  off on
@@ -885,10 +890,17 @@ restart_server
 workingdir="$target/var/spool/burp/testclient/working"
 finishingdir="$target/var/spool/burp/testclient/finishing"
 run_tests 1
+
 # Run in protocol2 mode.
 workingdir="$target/var/spool/burp/global/clients/testclient/working"
 finishingdir="$target/var/spool/burp/global/clients/testclient/finishing"
-run_tests 2
+if [ -n "$SPLIT_VSS" ] ; then
+	echo "Skip protocol 2 tests for split_vss"
+elif [ -n "$STRIP_VSS" ] ; then
+	echo "Skip protocol 2 tests for strip_vss"
+else
+	run_tests 2
+fi
 
 echo
 echo "All tests succeeded"

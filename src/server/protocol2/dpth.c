@@ -118,7 +118,7 @@ error:
 }
 
 // Returns 0 on OK, -1 on error. *max gets set to the next entry.
-int get_highest_entry(const char *path, int *max)
+int get_highest_entry(const char *path, int *max, size_t len)
 {
 	int ent=0;
 	int ret=0;
@@ -130,7 +130,7 @@ int get_highest_entry(const char *path, int *max)
 	while((dp=readdir(d)))
 	{
 		if(!dp->d_ino
-		  || strlen(dp->d_name)!=4)
+		  || strlen(dp->d_name)!=len)
 			continue;
 		ent=strtol(dp->d_name, NULL, 16);
 		if(ent>*max) *max=ent;
@@ -165,7 +165,7 @@ int dpth_protocol2_init(struct dpth *dpth, const char *base_path,
 	dpth->sig=0;
 	dpth->need_data_lock=1;
 
-	if(get_highest_entry(dpth->base_path, &max))
+	if(get_highest_entry(dpth->base_path, &max, 4))
 		goto error;
 	if(max<0) max=0;
 	dpth->prim=max;
@@ -173,7 +173,7 @@ int dpth_protocol2_init(struct dpth *dpth, const char *base_path,
 	if(!(tmp=prepend_s(dpth->base_path, tmp)))
 		goto error;
 
-	if(get_highest_entry(tmp, &max))
+	if(get_highest_entry(tmp, &max, 4))
 		goto error;
 	if(max<0) max=0;
 	dpth->seco=max;
@@ -182,7 +182,7 @@ int dpth_protocol2_init(struct dpth *dpth, const char *base_path,
 	if(!(tmp=prepend_s(dpth->base_path, tmp)))
 		goto error;
 
-	if(get_highest_entry(tmp, &max))
+	if(get_highest_entry(tmp, &max, 4))
 		goto error;
 	if(max<0)
 	{

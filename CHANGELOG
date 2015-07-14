@@ -15,6 +15,7 @@
   * Get xattr working on Mac OSX. This should mean that resource forks and
     finder info backup/restore is working.
   * Fix Windows protocol1 restore segfault when using split_vss.
+  * Fix directories in Windows protocol1 strip_vss mode.
 
 2015-07-01 Changes in burp-1.4.40:
   * Fix '-a l' regex so that it isn't split in two at the right-most

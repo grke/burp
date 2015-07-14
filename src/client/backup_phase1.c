@@ -82,13 +82,17 @@ static int do_to_server(struct asfd *asfd,
 	struct conf **confs, FF_PKT *ff, struct sbuf *sb,
 	enum cmd cmd, int compression) 
 {
+#ifdef HAVE_WIN32
+	int split_vss=get_int(confs[OPT_SPLIT_VSS]);
+	int strip_vss=get_int(confs[OPT_STRIP_VSS]);
+#endif
 	sb->compression=compression;
 	sb->statp=ff->statp;
 	attribs_encode(sb);
 
 #ifdef HAVE_WIN32
-	if(get_int(confs[OPT_SPLIT_VSS])
-	  && !get_int(confs[OPT_STRIP_VSS])
+	if(split_vss
+	  && !strip_vss
 	  && maybe_send_extrameta(asfd, ff->fname, cmd, sb, confs, metasymbol))
 		return -1;
 #endif
@@ -99,8 +103,8 @@ static int do_to_server(struct asfd *asfd,
 		cntr_add_val(get_cntr(confs), CMD_BYTES_ESTIMATED,
 			(unsigned long long)ff->statp.st_size, 0);
 #ifdef HAVE_WIN32
-	if(get_int(confs[OPT_SPLIT_VSS])
-	  && !get_int(confs[OPT_STRIP_VSS])
+	if(split_vss
+	  && !strip_vss
 	// FIX THIS: May have to check that it is not a directory here.
 	  && !S_ISDIR(sb->statp.st_mode) // does this work?
 	  && maybe_send_extrameta(asfd,
@@ -193,6 +197,8 @@ int backup_phase1_client(struct asfd *asfd, struct conf **confs, int estimate)
 	}
 #ifdef HAVE_WIN32
 	dirsymbol=filesymbol;
+	if(get_int(confs[OPT_STRIP_VSS]))
+		dirsymbol=CMD_DIRECTORY;
 #endif
 
 	if(!(ff=find_files_init())) goto end;

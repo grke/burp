@@ -70,7 +70,7 @@ static int restore_metadata(
 		size_t metalen=0;
 		char *metadata=NULL;
 		if(S_ISDIR(sb->statp.st_mode)
-		  && restore_dir(asfd, sb, fname, act, NULL))
+		  && restore_dir(asfd, sb, fname, act, confs))
 			return -1;
 
 		// Read in the metadata...

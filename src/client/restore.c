@@ -244,8 +244,8 @@ end:
 	return ret;
 }
 
-int restore_dir(struct asfd *asfd,
-	struct sbuf *sb, const char *dname, enum action act, struct conf **confs)
+int restore_dir(struct asfd *asfd, struct sbuf *sb,
+	const char *dname, enum action act, struct conf **confs)
 {
 	int ret=0;
 	char *rpath=NULL;

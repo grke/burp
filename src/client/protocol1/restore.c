@@ -141,7 +141,7 @@ static int restore_metadata(struct asfd *asfd, BFILE *bfd, struct sbuf *sb,
 	}
 
 	if(S_ISDIR(sb->statp.st_mode)
-	  && restore_dir(asfd, sb, fname, act, NULL))
+	  && restore_dir(asfd, sb, fname, act, confs))
 		goto end;
 
 	// Read in the metadata...

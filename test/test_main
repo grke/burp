@@ -234,6 +234,11 @@ add_do_diff_client()
 	  	extra_find_arg="-type f"
 cat >> "$clientscript" << EOF
 diff -ur "$rpath1" "$rpath2" || fail "$3"
+EOF
+
+	# Stripping vss will of course cause permissions to be wrong on
+	# restore on Windows, so do not do this check in that case.
+[ -z "$STRIP_VSS" ] && cat >> "$clientscript" << EOF
 diff -u \
   <( cd "$rpath1" ; find . $extra_find_arg -printf "chown %U:%G %p; chmod %m %p \n" | sort ) \
   <( cd "$rpath2" ; find . $extra_find_arg -printf "chown %U:%G %p; chmod %m %p \n" | sort ) \

@@ -13,16 +13,14 @@ fail()
 
 usage()
 {
-	echo "usage: $prog tarfile directory winpass" 1>&2
+	echo "usage: $prog tarfile directory" 1>&2
 	exit 1
 }
 
 tarfile="$1"
 directory="$2"
-winpass="$3"
 [ -n "$tarfile" ] || usage
 [ -n "$directory" ] || usage
-[ -n "$winpass" ] || usage
 [ -f "$tarfile" ] || fail "tarfile $tarfile does not exist"
 
 describe()
@@ -139,19 +137,30 @@ linux=$(echo "$details" | grep -v windows | cut -f 2 -d " ")
 echo "  linux: $linux"
 echo "windows: $windows"
 
-identity=/home/graham/aws/ubfree.pem
 host="ubuntu@$linux"
-ssh_opts="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
-ssh -i "$identity" $ssh_opts "$host" "rm -rfv $tarfile $directory" \
+ssh_opts="-i /home/graham/aws/ubfree.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+
+# It is possible for the machine to be up, but for sshd to not yet be running.
+# Try multiple times for the initial connect.
+attempts=0
+attempts_max=20
+while true ; do
+	ssh $ssh_opts "$host" true && break
+	attempts=$((attempts+1))
+	[ "$attempts" = "$max_attempts" ] && \
+		fail "Could not make initial ssh connection after $attempts"
+done
+
+ssh $ssh_opts "$host" "rm -rfv $tarfile $directory" \
 	|| fail "cleaning linux machine"
-scp -i "$identity" $ssh_opts "$tarfile" "$host:" \
+scp $ssh_opts "$tarfile" "$host:" \
 	|| fail "scp $tarfile to ubuntu"
-ssh -i "$identity" $ssh_opts "$host" "tar -xvf $tarfile" \
+ssh $ssh_opts "$host" "tar -xvf $tarfile" \
 	|| fail "unpacking $tarfile"
-ssh -i "$identity" $ssh_opts "$host" \
-	"cd $directory && cd test && ./test_windows64 $linux $windows Administrator $winpass" \
+ssh $ssh_opts "$host" \
+	"cd $directory && cd test && ./test_windows64 $linux $windows Administrator" \
 		|| fail "running windows tests"
-ssh -i "$identity" $ssh_opts "$host" \
+ssh $ssh_opts "$host" \
 	"cd $directory && ./configure && make test" \
 		|| fail "running make test"
 

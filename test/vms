@@ -138,7 +138,7 @@ echo "  linux: $linux"
 echo "windows: $windows"
 
 host="ubuntu@$linux"
-ssh_opts="-i /home/graham/aws/ubfree.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+ssh_opts="-i /var/lib/jenkins/aws/ubfree.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
 
 # It is possible for the machine to be up, but for sshd to not yet be running.
 # Try multiple times for the initial connect.
@@ -158,11 +158,16 @@ scp $ssh_opts "$tarfile" "$host:" \
 ssh $ssh_opts "$host" "tar -xvf $tarfile" \
 	|| fail "unpacking $tarfile"
 ssh $ssh_opts "$host" \
-	"cd $directory && cd test && ./test_windows64 $linux $windows Administrator" \
-		|| fail "running windows tests"
-ssh $ssh_opts "$host" \
 	"cd $directory && ./configure && make test" \
 		|| fail "running make test"
+ssh $ssh_opts "$host" \
+	"cd $directory/test && ./test_windows64 $linux $windows Administrator" \
+		|| fail "running windows tests"
+ssh $ssh_opts "$host" \
+	"cd $directory/src/win32 && make" \
+		|| fail "running make win32"
+scp -r $ssh_opts "$host:$directory/src/win*/release*/burp-win*installer*.exe" . || fail "copying windows installers"
+scp -r $ssh_opts "$host:/tmp/burp-coverage" . || fail "copying code coverage"
 
 stop_all
 

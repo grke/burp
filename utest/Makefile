@@ -84,7 +84,7 @@ test: Makefile $(OBJS) $(BURP_OBJS)
 	@echo "Running $<"
 	./$@ || exit 1
 	rm -rf /tmp/burp-coverage /tmp/burp-coverage.info || exit 1
-	lcov --capture -d /var/lib/jenkins/burp -b . --output-file /tmp/burp-coverage.info || exit 1
+	lcov --capture -d .. -b . --output-file /tmp/burp-coverage.info || exit 1
 	genhtml /tmp/burp-coverage.info --output-directory /tmp/burp-coverage || exit 1
 #	make clean
 	@echo OK

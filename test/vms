@@ -1,4 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
+#
+# Run builds and tests on Amazon virtual machines.
 
 prog=$(basename $0)
 
@@ -159,15 +161,17 @@ ssh $ssh_opts "$host" "tar -xvf $tarfile" \
 	|| fail "unpacking $tarfile"
 ssh $ssh_opts "$host" \
 	"cd $directory && ./configure && make test" \
-		|| fail "running make test"
+		|| fail "make test"
+ssh $ssh_opts "$host" \
+	"cd $directory/src/win32 && make && make WIN64=yes" \
+		|| fail "building windows installers"
 ssh $ssh_opts "$host" \
 	"cd $directory/test && ./test_windows64 $linux $windows Administrator" \
 		|| fail "running windows tests"
-ssh $ssh_opts "$host" \
-	"cd $directory/src/win32 && make" \
-		|| fail "running make win32"
 scp -r $ssh_opts "$host:$directory/src/win*/release*/burp-win*installer*.exe" . || fail "copying windows installers"
 scp -r $ssh_opts "$host:/tmp/burp-coverage" . || fail "copying code coverage"
+ssh $ssh_opts "$host" "rm -rfv $tarfile $directory" \
+	|| fail "cleaning linux machine"
 
 stop_all
 

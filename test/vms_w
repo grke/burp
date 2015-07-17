@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+#
+# Some useful wrapping to help the vms test script with automatic builds and
+# testing.
+
+v=$(grep define src/version.h | cut -f 2 -d "\"")
+[ -n $v ] || exit 1
+dir=burp-$v
+ext=tar.bz2
+tarfile=$dir.$ext
+
+files=$(ls)
+mkdir $dir || exit 1
+mv $files $dir || exit 1
+tar -cjvf $tarfile $dir || exit 1
+
+$dir/test/vms $tarfile $dir

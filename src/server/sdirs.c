@@ -51,7 +51,7 @@ int sdirs_get_real_manifest(struct sdirs *sdirs, struct conf **confs)
 {
 	return free_prepend_s(&sdirs->rmanifest,
 		sdirs->rworking,
-		get_e_protocol(confs[OPT_PROTOCOL])==PROTO_1?
+		get_protocol(confs)==PROTO_1?
 			"manifest.gz":"manifest");
 }
 
@@ -131,7 +131,9 @@ static int do_common_dirs(struct sdirs *sdirs, struct conf **confs)
 // Maybe should be in a protocol1 directory.
 static int do_protocol1_dirs(struct sdirs *sdirs, struct conf **confs)
 {
-	if(!(sdirs->client=prepend_s(sdirs->base, get_string(confs[OPT_CNAME])))
+	if(!(sdirs->clients=strdup_w(sdirs->base, __func__))
+	  || !(sdirs->client=prepend_s(sdirs->clients,
+		get_string(confs[OPT_CNAME])))
 	  || do_common_dirs(sdirs, confs)
 	  || !(sdirs->currentdata=prepend_s(sdirs->current, DATA_DIR))
 	  || !(sdirs->manifest=prepend_s(sdirs->working, "manifest.gz"))
@@ -182,7 +184,7 @@ extern int sdirs_init(struct sdirs *sdirs, struct conf **confs)
 	if(!(sdirs->base=strdup_w(directory, __func__)))
 		goto error;
 
-	if(get_e_protocol(confs[OPT_PROTOCOL])==PROTO_1)
+	if(get_protocol(confs)==PROTO_1)
 	{
 		if(do_protocol1_dirs(sdirs, confs)) goto error;
 	}

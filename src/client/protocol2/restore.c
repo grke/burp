@@ -17,7 +17,7 @@ static int start_restore_file(struct asfd *asfd,
 
 	if(act==ACTION_VERIFY)
 	{
-		cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
+		cntr_add(get_cntr(confs), sb->path.cmd, 1);
 		goto end;
 	}
 
@@ -38,7 +38,7 @@ static int start_restore_file(struct asfd *asfd,
 		default: goto error;
 	}
 
-	cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
+	cntr_add(get_cntr(confs), sb->path.cmd, 1);
 
 end:
 	ret=0;
@@ -70,7 +70,7 @@ static int restore_metadata(
 		size_t metalen=0;
 		char *metadata=NULL;
 		if(S_ISDIR(sb->statp.st_mode)
-		  && restore_dir(asfd, sb, fname, act, NULL))
+		  && restore_dir(asfd, sb, fname, act, confs))
 			return -1;
 
 		// Read in the metadata...
@@ -92,10 +92,10 @@ static int restore_metadata(
 			// the file
 			attribs_set(fname, &(sb->statp), sb->winattr, confs);
 #endif
-			cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
+			cntr_add(get_cntr(confs), sb->path.cmd, 1);
 		}
 	}
-	else cntr_add(get_cntr(confs[OPT_CNTR]), sb->cmd, 1);
+	else cntr_add(get_cntr(confs), sb->cmd, 1);
 	return 0;
 }
 */

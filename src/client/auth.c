@@ -47,7 +47,7 @@ int authorise_client(struct asfd *asfd,
 	{
 		//logw(conf->p1cntr, rbuf->buf);
 		logp("WARNING: %s\n", rbuf->buf);
-		cntr_add(get_cntr(confs[OPT_CNTR]), rbuf->cmd, 0);
+		cntr_add(get_cntr(confs), rbuf->cmd, 0);
 		iobuf_free_content(rbuf);
 		if(asfd->read(asfd))
 		{

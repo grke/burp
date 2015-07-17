@@ -14,7 +14,7 @@ crlnumber               = $dir/crlnumber.txt
 
 unique_subject          = no
 
-default_md              = sha1
+default_md              = sha256
 default_days            = 7300
 default_crl_days        = 7300
 

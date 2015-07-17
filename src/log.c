@@ -3,7 +3,7 @@
 
 const char *prog="unknown";
 
-static FILE *logfp=NULL;
+static struct fzp *logfzp=NULL;
 // Start with all logging on, so that something is said when initial startup
 // goes wrong - for example, reading the conf file.
 static int do_syslog=1;
@@ -40,7 +40,8 @@ void logp(const char *fmt, ...)
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	pid=(int)getpid();
-	if(logfp) fprintf(logfp, "%s: %s[%d] %s", gettm(), prog, pid, buf);
+	if(logfzp)
+		fzp_printf(logfzp, "%s: %s[%d] %s", gettm(), prog, pid, buf);
 	else
 	{
 		if(do_syslog)
@@ -71,7 +72,7 @@ void logp_ssl_err(const char *fmt, ...)
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
 	logp("%s", buf);
-	if(logfp) ERR_print_errors_fp(logfp);
+	if(logfzp) fzp_ERR_print_errors_fp(logfzp);
 	else
 	{
 		if(do_syslog)
@@ -101,7 +102,8 @@ void logc(const char *fmt, ...)
 	va_list ap;
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
-	if(logfp) fprintf(logfp, "%s", buf); // for the server side
+	if(logfzp)
+		fzp_printf(logfzp, "%s", buf); // for the server side
 	else
 	{
 		if(do_progress_counter
@@ -116,17 +118,15 @@ const char *progname(void)
 	return prog;
 }
 
-int set_logfp(const char *path, struct conf **confs)
+int set_logfzp(const char *path, struct conf **confs)
 {
-	close_fp(&logfp);
+	fzp_close(&logfzp);
 	if(path)
 	{
 		logp("Logging to %s\n", path);
-		if(!(logfp=open_file(path, "ab"))) return -1;
+		if(!(logfzp=fzp_open(path, "ab"))) return -1;
 	}
-#ifndef HAVE_WIN32
-	if(logfp) setlinebuf(logfp);
-#endif
+	if(logfzp) fzp_setlinebuf(logfzp);
 	do_syslog=get_int(confs[OPT_SYSLOG]);
 	do_stdout=get_int(confs[OPT_STDOUT]);
 	do_progress_counter=get_int(confs[OPT_PROGRESS_COUNTER]);
@@ -144,15 +144,15 @@ int set_logfp(const char *path, struct conf **confs)
 	return 0;
 }
 
-void set_logfp_direct(FILE *fp)
+void set_logfzp_direct(struct fzp *fzp)
 {
-	close_fp(&logfp);
-	logfp=fp;
+	fzp_close(&logfzp);
+	logfzp=fzp;
 }
 
-FILE *get_logfp(void)
+struct fzp *get_logfzp(void)
 {
-	return logfp;
+	return logfzp;
 }
 
 void log_out_of_memory(const char *function)
@@ -199,7 +199,7 @@ int logm(struct asfd *asfd, struct conf **confs, const char *fmt, ...)
 		logp("MESSAGE: %s", buf);
 	}
 	va_end(ap);
-	if(confs) cntr_add(get_cntr(confs[OPT_CNTR]), CMD_MESSAGE, 1);
+	if(confs) cntr_add(get_cntr(confs), CMD_MESSAGE, 1);
 	return r;
 }
 
@@ -217,7 +217,7 @@ int logw(struct asfd *asfd, struct conf **confs, const char *fmt, ...)
 		logp("WARNING: %s", buf);
 	}
 	va_end(ap);
-	if(confs) cntr_add(get_cntr(confs[OPT_CNTR]), CMD_WARNING, 1);
+	if(confs) cntr_add(get_cntr(confs), CMD_WARNING, 1);
 	return r;
 }
 
@@ -278,5 +278,5 @@ void log_recvd(struct iobuf *iobuf, struct conf **confs, int print)
 		default: break;
 	}
 	logp("%s: %s", prefix, iobuf->buf);
-	if(confs) cntr_add(get_cntr(confs[OPT_CNTR]), iobuf->cmd, print);
+	if(confs) cntr_add(get_cntr(confs), iobuf->cmd, print);
 }

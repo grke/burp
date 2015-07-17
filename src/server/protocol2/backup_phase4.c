@@ -39,8 +39,7 @@ static int get_next_set_of_hooks(struct hooks **hnew, struct sbuf *sb,
 {
 	while(1)
 	{
-		switch(sbuf_fill(sb, NULL /* struct async */,
-			spzp, NULL, NULL, confs))
+		switch(sbuf_fill_from_file(sb, spzp, NULL, NULL, confs))
 		{
 			case -1: goto error;
 			case 1:
@@ -85,8 +84,6 @@ static int gzprintf_hooks(struct fzp *fzp, struct hooks *hooks)
 
 //	printf("NW: %c%04lX%s\n", CMD_MANIFEST,
 //		strlen(hooks->path), hooks->path);
-	// FIX THIS: The path could be long, and fzp_printf will truncate at
-	// 512 characters.
 	fzp_printf(fzp, "%c%04lX%s\n", CMD_MANIFEST,
 		strlen(hooks->path), hooks->path);
 	for(f=hooks->fingerprints; f<hooks->fingerprints+len; f+=WEAK_LEN)
@@ -323,14 +320,13 @@ int backup_phase4_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 
 	if(!(logpath=prepend_s(sdirs->finishing, "log")))
 		goto end;
-	if(set_logfp(logpath, confs))
+	if(set_logfzp(logpath, confs))
 		goto end;
 
 	logp("Begin phase4 (sparse generation)\n");
 
-	if(!(newmanio=manio_alloc())
-	  || !(fmanifest=prepend_s(sdirs->finishing, "manifest"))
-	  || manio_init_read(newmanio, fmanifest)
+	if(!(fmanifest=prepend_s(sdirs->finishing, "manifest"))
+	  || !(newmanio=manio_open(fmanifest, "rb", PROTO_2))
 	  || manio_read_fcount(newmanio)
 	  || !(hooksdir=prepend_s(fmanifest, "hooks"))
 	  || !(h1dir=prepend_s(fmanifest, "h1"))
@@ -357,7 +353,7 @@ int backup_phase4_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 			dstdir=h1dir;
 		}
 		pass++;
-		for(i=0; i<newmanio->offset.fcount; i+=2)
+		for(i=0; i<newmanio->offset->fcount; i+=2)
 		{
 			free_w(&srca);
 			free_w(&srcb);
@@ -368,13 +364,13 @@ int backup_phase4_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 			if(!(srca=prepend_s(srcdir, compa))
 			  || !(dst=prepend_s(dstdir, compd)))
 				goto end;
-			if(i+1<newmanio->offset.fcount
+			if(i+1<newmanio->offset->fcount
 			  && !(srcb=prepend_s(srcdir, compb)))
 				goto end;
 			if(merge_sparse_indexes(srca, srcb, dst, confs))
 				goto end;
 		}
-		if((newmanio->offset.fcount=i/2)<2) break;
+		if((newmanio->offset->fcount=i/2)<2) break;
 	}
 
 	if(!(sparse=prepend_s(fmanifest, "sparse"))
@@ -391,13 +387,13 @@ int backup_phase4_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 
 	ret=0;
 end:
-	manio_free(&newmanio);
+	manio_close(&newmanio);
 	free_w(&sparse);
 	free_w(&global_sparse);
 	free_w(&srca);
 	free_w(&srcb);
-	recursive_delete(h1dir, NULL, 1);
-	recursive_delete(h2dir, NULL, 1);
+	recursive_delete(h1dir);
+	recursive_delete(h2dir);
 	free_w(&h1dir);
 	free_w(&h2dir);
 	free_w(&logpath);

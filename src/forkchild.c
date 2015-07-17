@@ -36,7 +36,7 @@ static pid_t do_forkchild(int sin, int sout, int serr,
 	return pid;
 }
 
-pid_t forkchild(FILE **sin, FILE **sout, FILE **serr,
+pid_t forkchild(struct fzp **sin, struct fzp **sout, struct fzp **serr,
 	const char *path, char * const argv[])
 {
 	pid_t pid;
@@ -48,9 +48,9 @@ pid_t forkchild(FILE **sin, FILE **sout, FILE **serr,
 	  || (sout && pipe(soutfds))
 	  || (serr && pipe(serrfds)))
 		return -1;
-	if((sin && !(*sin=fdopen(sinfds[1], "w")))
-	  || (sout && !(*sout=fdopen(soutfds[0], "r")))
-	  || (serr && !(*serr=fdopen(serrfds[0], "r"))))
+	if((sin && !(*sin=fzp_dopen(sinfds[1], "w")))
+	  || (sout && !(*sout=fzp_dopen(soutfds[0], "r")))
+	  || (serr && !(*serr=fzp_dopen(serrfds[0], "r"))))
 		return -1;
 	pid=do_forkchild(sin?sinfds[0]:-1, sout?soutfds[1]:-1,
 		serr?serrfds[1]:-1, path, argv);
@@ -83,7 +83,7 @@ pid_t forkchild_fd(int *sin, int *sout, int *serr,
 	return pid;
 }
 
-pid_t forkchild_no_wait(FILE **sin, FILE **sout, FILE **serr,
+pid_t forkchild_no_wait(struct fzp **sin, struct fzp **sout, struct fzp **serr,
 	const char *path, char * const argv[])
 {
 	return forkchild(sin, sout, serr, path, argv);

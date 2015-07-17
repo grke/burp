@@ -8,14 +8,12 @@
 #include "../sdirs.h"
 
 #include "backup_phase2.h"
-#include "backup_phase3.h"
 #include "backup_phase4.h"
 #include "bedup.h"
 #include "blocklen.h"
 #include "deleteme.h"
 #include "link.h"
 #include "restore.h"
-#include "resume.h"
 #include "zlibio.h"
 
 #endif

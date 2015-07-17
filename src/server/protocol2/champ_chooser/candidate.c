@@ -2,6 +2,7 @@
 
 #include "include.h"
 #include "../../cmd.h"
+#include "../../sbuf.h"
 
 struct candidate **candidates=NULL;
 size_t candidates_len=0;
@@ -49,7 +50,7 @@ int candidate_load(struct candidate *candidate,
 		goto error;
 	while(fzp)
 	{
-		switch(sbuf_fill(sb, NULL, fzp, blk, NULL, confs))
+		switch(sbuf_fill_from_file(sb, fzp, blk, NULL, confs))
 		{
 			case 1: goto end;
 			case -1: goto error;

@@ -27,7 +27,7 @@ static struct dpth *setup(void)
 {
 	struct dpth *dpth;
 	hexmap_init();
-	fail_unless(recursive_delete(basepath, "", 1)==0);
+	fail_unless(recursive_delete(basepath)==0);
 	fail_unless((dpth=dpth_alloc())!=NULL);
 	assert_components(dpth, 0, 0, 0);
 
@@ -37,7 +37,7 @@ static struct dpth *setup(void)
 static void tear_down(struct dpth **dpth)
 {
 	dpth_free(dpth);
-	fail_unless(recursive_delete(basepath, "", 1)==0);
+	fail_unless(recursive_delete(basepath)==0);
 	fail_unless(free_count==alloc_count);
 }
 
@@ -95,7 +95,7 @@ START_TEST(test_init)
 {
 	FOREACH(in)
 	{
-		FILE *fp=NULL;
+		struct fzp *fp=NULL;
 		char *path=NULL;
 		struct dpth *dpth;
 		char *savepath;
@@ -107,8 +107,8 @@ START_TEST(test_init)
 		path=prepend_s(basepath, savepath);
 		fail_unless(build_path_w(path)==0);
 		// Create a file.
-		fail_unless((fp=open_file(path, "wb"))!=NULL);
-		close_fp(&fp);
+		fail_unless((fp=fzp_open(path, "wb"))!=NULL);
+		fzp_close(&fp);
 
 		// Now when calling dpth_init(), the components should be
 		// incremented appropriately.

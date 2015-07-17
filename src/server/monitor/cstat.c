@@ -32,7 +32,7 @@ static int set_cstat_from_conf(struct cstat *cstat,
 	// Make sure the permitted flag is set appropriately.
 	cstat->permitted=permitted(cstat, parentconfs, cconfs);
 
-	cstat->protocol=get_e_protocol(cconfs[OPT_PROTOCOL]);
+	cstat->protocol=get_protocol(cconfs);
 	sdirs_free((struct sdirs **)&cstat->sdirs);
 	if(!(cstat->sdirs=sdirs_alloc())
 	  || sdirs_init((struct sdirs *)cstat->sdirs, cconfs)) return -1;

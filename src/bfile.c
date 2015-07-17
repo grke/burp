@@ -1,4 +1,5 @@
 #include "include.h"
+#include "attribs.h"
 
 #ifdef HAVE_DARWIN_OS
 #include <sys/paths.h>
@@ -442,7 +443,7 @@ static int bfile_open(BFILE *bfd,
 	if(!bfd) return 0;
 	if(bfd->mode!=BF_CLOSED && bfd->close(bfd, asfd))
 		return -1;
-	if(!(bfd->fd=open(fname, flags, mode))<0)
+	if((bfd->fd=open(fname, flags, mode))<0)
 		return -1;
 	if(flags & O_CREAT || flags & O_WRONLY)
 		bfd->mode=BF_WRITE;
@@ -468,7 +469,7 @@ static ssize_t bfile_write(BFILE *bfd, void *buf, size_t count)
 static int bfile_open_for_send(BFILE *bfd, struct asfd *asfd,
 	const char *fname, int64_t winattr, int atime, struct conf **confs)
 {
-	if(get_e_protocol(confs[OPT_PROTOCOL])==PROTO_1
+	if(get_protocol(confs)==PROTO_1
 	  && bfd->mode!=BF_CLOSED)
 	{
 #ifdef HAVE_WIN32

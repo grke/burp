@@ -18,6 +18,7 @@ SRCS = \
 	bu_get.c \
 	backup.c \
 	backup_phase1.c \
+	backup_phase3.c \
 	compress.c \
 	ca.c \
 	child.c \
@@ -28,8 +29,11 @@ SRCS = \
 	list.c \
 	main.c \
 	manio.c \
+	manios.c \
 	quota.c \
 	restore.c \
+	resume.c \
+	resume2.c \
 	rubble.c \
 	run_action.c \
 	sdirs.c \

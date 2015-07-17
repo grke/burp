@@ -163,8 +163,16 @@ static void setup_indices(struct bu *bu_list)
 	}
 }
 
+// FIX THIS: Use the scandir/qsort from src/client/find.c.
+#ifdef HAVE_DARWIN_OS
+static int rev_alphasort(const void *x, const void *y)
+{
+	struct dirent **a=(struct dirent **)x;
+	struct dirent **b=(struct dirent **)y;
+#else
 static int rev_alphasort(const struct dirent **a, const struct dirent **b)
 {
+#endif
 	static int s;
 	if((s=strcmp((*a)->d_name, (*b)->d_name))>0)
 		return -1;

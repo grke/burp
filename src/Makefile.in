@@ -61,8 +61,11 @@ OBJS = $(SRCS:.c=.o)
 SUBDIROBJS = \
 		protocol1/handy.o \
 		protocol1/msg.o \
+		server/resume.o \
+		server/resume2.o \
 		server/protocol1/restore.o \
 		server/backup_phase1.o \
+		server/manios.o \
 		server/server.a \
 		client/client.a \
 		client/protocol2/client_protocol2.a \
@@ -131,7 +134,7 @@ burp:  Makefile $(OBJS) $(SUBDIROBJS) @WIN32@
 	@echo "Linking $@ ..."
 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -o $@ \
 	$(SUBDIROBJS) $(OBJS) $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
-	  $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS) $(RSYNC_LIBS) -lrt
+	  $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(ZLIBS) $(NCURSES_LIBS) $(CRYPT_LIBS) $(RSYNC_LIBS)
 
 static-burp: Makefile $(OBJS) $(SUBDIROBJS) @WIN32@
 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -o $@ \
@@ -150,6 +153,7 @@ clean:	libtool-clean
 	@$(RMF) static-burp config.h
 	@$(RMF) Makefile
 	@$(RMF) uthash.h
+	@$(RMF) *.gcda *.gcno
 #	@if test -f win32/Makefile -a "${GMAKE}" != "none"; then \
 #	   (cd win32; $(GMAKE) clean); \
 #	fi

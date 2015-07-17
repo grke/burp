@@ -1,6 +1,4 @@
-#include <stdio.h>
-#include <stdarg.h>
-#include <time.h>
+#include "../src/burp.h"
 void logp(const char *fmt, ...)
 {
 /*
@@ -15,11 +13,20 @@ void logc(const char *fmt, ...) { }
 void log_oom_w(const char *func, const char *orig_func) { }
 void log_out_of_memory(const char *function) { }
 void log_recvd(struct iobuf *, struct conf **, int) { }
-const char *getdatestr(time_t t) { return ""; }
-const char *time_taken(time_t d) { return ""; }
+void log_and_send(struct asfd *asfd, const char *msg) { }
+void log_and_send_oom(struct asfd *asfd, const char *function) { }
+int logw(struct asfd *asfd, struct conf **confs, const char *fmt, ...)
+	{ return 0; }
+
 const char *progname(void) { return "utest"; }
-size_t fzp_write(struct fzp *fzp, const void *ptr, size_t nmemb) { return 0; }
-int fzp_printf(struct fzp *fzp, const char *format, ...) { return 0; }
+
+void berrno_init(struct berrno *b) { }
+const char *berrno_bstrerror(struct berrno *b, int errnum) { return ""; }
 
 int blk_read_verify(struct blk *blk_to_verify, struct conf **confs)
 	{ return 0; }
+
+
+int rblk_retrieve_data(const char *datpath, struct blk *blk) { return 0; }
+
+int is_hook(uint64_t fingerprint) { return 0; }

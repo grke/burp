@@ -1,6 +1,7 @@
 #include "include.h"
 #include "../../bu.h"
 #include "../../cmd.h"
+#include "../../sbuf.h"
 
 static int do_browse_manifest(struct asfd *srfd,
 	struct manio *manio, struct sbuf *sb, const char *browse)
@@ -16,12 +17,15 @@ static int do_browse_manifest(struct asfd *srfd,
 	{
 		int r;
 		sbuf_free_content(sb);
-		if((ars=manio_sbuf_fill(manio, NULL, sb, NULL, NULL, NULL)))
+		if((ars=manio_read(manio, sb, NULL)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
 			break;
 		}
+
+		if(manio->protocol==PROTO_2 && sb->endfile.buf)
+			continue;
 
 		if(sb->path.cmd!=CMD_DIRECTORY
 		  && sb->path.cmd!=CMD_FILE
@@ -54,18 +58,16 @@ static int browse_manifest_start(struct asfd *srfd, struct cstat *cstat,
 
 	if(!(manifest=prepend_s(bu->path,
 		cstat->protocol==PROTO_1?"manifest.gz":"manifest"))
-	  || !(manio=manio_alloc())
-	  || manio_init_read(manio, manifest)
+	  || !(manio=manio_open(manifest, "rb", cstat->protocol))
 	  || !(sb=sbuf_alloc_protocol(cstat->protocol)))
 		goto end;
-	manio_set_protocol(manio, cstat->protocol);
 	if(get_int(confs[OPT_MONITOR_BROWSE_CACHE]))
 		ret=cache_load(srfd, manio, sb, cstat, bu);
 	else
 		ret=do_browse_manifest(srfd, manio, sb, browse);
 end:
 	free_w(&manifest);
-	manio_free(&manio);
+	manio_close(&manio);
 	sbuf_free(&sb);
 	return ret;
 }

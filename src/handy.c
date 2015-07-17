@@ -1,6 +1,8 @@
 #include "include.h"
 #include "cmd.h"
 #include "hexmap.h"
+#include "protocol1/handy.h"
+#include "protocol2/blk.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -45,22 +47,10 @@ int do_quick_read(struct asfd *asfd, const char *datapth, struct conf **confs)
 	return r;
 }
 
-static char *get_endfile_str(unsigned long long bytes)
-{
-	static char endmsg[128]="";
-	snprintf(endmsg, sizeof(endmsg), "%"PRIu64 ":", (uint64_t)bytes);
-	return endmsg;
-}
-
-static int write_endfile(struct asfd *asfd, unsigned long long bytes)
-{
-	return asfd->write_str(asfd, CMD_END_FILE, get_endfile_str(bytes));
-}
-
 int send_whole_file_gz(struct asfd *asfd,
 	const char *fname, const char *datapth, int quick_read,
 	unsigned long long *bytes, struct conf **confs,
-	int compression, FILE *fp)
+	int compression, struct fzp *fzp)
 {
 	int ret=0;
 	int zret=0;
@@ -85,7 +75,7 @@ int send_whole_file_gz(struct asfd *asfd,
 
 	do
 	{
-		strm.avail_in=fread(in, 1, ZCHUNK, fp);
+		strm.avail_in=fzp_read(fzp, in, ZCHUNK);
 		if(!compression && !strm.avail_in) break;
 
 		*bytes+=strm.avail_in;
@@ -168,7 +158,7 @@ cleanup:
 
 	if(!ret)
 	{
-		return write_endfile(asfd, *bytes);
+		return write_endfile(asfd, *bytes, NULL);
 	}
 //logp("end of send\n");
 	return ret;
@@ -320,13 +310,6 @@ void setup_signal(int sig, void handler(int sig))
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler=handler;
 	sigaction(sig, &sa, NULL);
-}
-
-char *comp_level(struct conf **confs)
-{
-	static char comp[8]="";
-	snprintf(comp, sizeof(comp), "wb%d", get_int(confs[OPT_COMPRESSION]));
-	return comp;
 }
 
 /* Function based on src/lib/priv.c from bacula. */
@@ -536,18 +519,18 @@ end:
 int send_a_file(struct asfd *asfd, const char *path, struct conf **confs)
 {
 	int ret=0;
-	FILE *fp=NULL;
+	struct fzp *fzp=NULL;
 	unsigned long long bytes=0;
-	if(!(fp=open_file(path, "rb"))
+	if(!(fzp=fzp_open(path, "rb"))
 	  || send_whole_file_gz(asfd, path, "datapth", 0, &bytes,
-		confs, 9 /*compression*/, fp))
+		confs, 9 /*compression*/, fzp))
 	{
 		ret=-1;
 		goto end;
 	}
 	logp("Sent %s\n", path);
 end:
-	close_fp(&fp);
+	fzp_close(&fzp);
 	return ret;
 }
 

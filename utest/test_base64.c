@@ -55,6 +55,7 @@ static struct data extra_from[] = {
 	{ 10000,	"C$cQ", 4 },
 	{ 10000,	"C$cQ 82394", 4 },
 	{ 10000,	"Cc€Q 82394", 6 },
+	{ 9184233123957407608,	"812908312903012923901239081232394", 33 }
 };
 
 static void do_from_base64(struct data *d, size_t s)

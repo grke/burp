@@ -1,11 +1,23 @@
 #include "include.h"
+#include "dpth.h"
 #include "../../cmd.h"
 #include "../../hexmap.h"
-#include "dpth.h"
+#include "../../protocol1/handy.h"
 #include "../../server/protocol2/restore.h"
+#include "../../sbuf.h"
 #include "../../slist.h"
 
 #include <librsync.h>
+
+static int create_zero_length_file(const char *path)
+{
+	int ret=0;
+	struct fzp *dest;
+	if(!(dest=fzp_open(path, "wb")))
+		ret=-1;
+	ret|=fzp_close(&dest);
+	return ret;
+}
 
 static int inflate_or_link_oldfile(struct asfd *asfd, const char *oldpath,
 	const char *infpath, struct conf **cconfs, int compression)
@@ -25,19 +37,10 @@ static int inflate_or_link_oldfile(struct asfd *asfd, const char *oldpath,
 
 		if(!statp.st_size)
 		{
-			FILE *dest;
 			// Empty file - cannot inflate.
-			// Just open and close the destination and we have
-			// duplicated a zero length file.
 			logp("asked to inflate zero length file: %s\n",
 				oldpath);
-			if(!(dest=open_file(infpath, "wb")))
-			{
-				close_fp(&dest);
-				return -1;
-			}
-			close_fp(&dest);
-			return 0;
+			return create_zero_length_file(infpath);
 		}
 
 		if((ret=zlib_inflate(asfd, oldpath, infpath, cconfs)))
@@ -80,11 +83,7 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 		// If it was encrypted, it may or may not have been compressed
 		// before encryption. Send it as it as, and let the client
 		// sort it out.
-		if(sb->path.cmd==CMD_ENC_FILE
-		  || sb->path.cmd==CMD_ENC_METADATA
-		  || sb->path.cmd==CMD_ENC_VSS
-		  || sb->path.cmd==CMD_ENC_VSS_T
-		  || sb->path.cmd==CMD_EFS_FILE)
+		if(sbuf_is_encrypted(sb))
 		{
 			ret=send_whole_filel(asfd, sb->path.cmd, best,
 				sb->protocol1->datapth.buf, 1, bytes,
@@ -124,7 +123,9 @@ static int verify_file(struct asfd *asfd, struct sbuf *sb,
 	uint8_t in[ZCHUNK];
 	uint8_t checksum[MD5_DIGEST_LENGTH];
 	unsigned long long cbytes=0;
-	if(!(cp=strrchr(sb->protocol1->endfile.buf, ':')))
+	struct fzp *fzp=NULL;
+
+	if(!(cp=strrchr(sb->endfile.buf, ':')))
 	{
 		logw(asfd, cconfs,
 			"%s has no md5sum!\n", sb->protocol1->datapth.buf);
@@ -142,59 +143,32 @@ static int verify_file(struct asfd *asfd, struct sbuf *sb,
 	  || sb->path.cmd==CMD_EFS_FILE
 	  || sb->path.cmd==CMD_ENC_VSS
 	  || (!patches && !dpth_protocol1_is_compressed(sb->compression, best)))
-	{
-		// If we did some patches or encryption, or the compression
-		// was turned off, the resulting file is not gzipped.
-		FILE *fp=NULL;
-		if(!(fp=open_file(best, "rb")))
-		{
-			logw(asfd, cconfs, "could not open %s\n", best);
-			return 0;
-		}
-		while((b=fread(in, 1, ZCHUNK, fp))>0)
-		{
-			cbytes+=b;
-			if(!MD5_Update(&md5, in, b))
-			{
-				logp("MD5_Update() failed\n");
-				close_fp(&fp);
-				return -1;
-			}
-		}
-		if(!feof(fp))
-		{
-			logw(asfd, cconfs, "error while reading %s\n", best);
-			close_fp(&fp);
-			return 0;
-		}
-		close_fp(&fp);
-	}
+		fzp=fzp_open(best, "rb");
 	else
+		fzp=fzp_gzopen(best, "rb");
+
+	if(!fzp)
 	{
-		gzFile zp=NULL;
-		if(!(zp=gzopen_file(best, "rb")))
-		{
-			logw(asfd, cconfs, "could not gzopen %s\n", best);
-			return 0;
-		}
-		while((b=gzread(zp, in, ZCHUNK))>0)
-		{
-			cbytes+=b;
-			if(!MD5_Update(&md5, in, b))
-			{
-				logp("MD5_Update() failed\n");
-				gzclose_fp(&zp);
-				return -1;
-			}
-		}
-		if(!gzeof(zp))
-		{
-			logw(asfd, cconfs, "error while gzreading %s\n", best);
-			gzclose_fp(&zp);
-			return 0;
-		}
-		gzclose_fp(&zp);
+		logw(asfd, cconfs, "could not open %s\n", best);
+		return 0;
 	}
+	while((b=fzp_read(fzp, in, ZCHUNK))>0)
+	{
+		cbytes+=b;
+		if(!MD5_Update(&md5, in, b))
+		{
+			logp("MD5_Update() failed\n");
+			fzp_close(&fzp);
+			return -1;
+		}
+	}
+	if(!fzp_eof(fzp))
+	{
+		logw(asfd, cconfs, "error while reading %s\n", best);
+		fzp_close(&fzp);
+		return 0;
+	}
+	fzp_close(&fzp);
 	if(!MD5_Final(checksum, &md5))
 	{
 		logp("MD5_Final() failed\n");
@@ -298,10 +272,9 @@ static int process_data_dir_file(struct asfd *asfd,
 			logp("Unknown action: %d\n", act);
 			goto end;
 	}
-	cntr_add(get_cntr(cconfs[OPT_CNTR]), sb->path.cmd, 0);
-	cntr_add_bytes(get_cntr(cconfs[OPT_CNTR]),
-		  strtoull(sb->protocol1->endfile.buf, NULL, 10));
-	cntr_add_sentbytes(get_cntr(cconfs[OPT_CNTR]), bytes);
+	cntr_add(get_cntr(cconfs), sb->path.cmd, 0);
+	cntr_add_bytes(get_cntr(cconfs), strtoull(sb->endfile.buf, NULL, 10));
+	cntr_add_sentbytes(get_cntr(cconfs), bytes);
 
 	ret=0;
 end:
@@ -360,7 +333,8 @@ int restore_sbuf_protocol1(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 		&& asfd->write(asfd, &(sb->protocol1->datapth)))
 	  || asfd->write(asfd, &sb->attr))
 		return -1;
-	else if(sbuf_is_filedata(sb))
+	else if(sbuf_is_filedata(sb)
+	  || sbuf_is_vssdata(sb))
 	{
 		if(!sb->protocol1->datapth.buf)
 		{
@@ -379,7 +353,7 @@ int restore_sbuf_protocol1(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 		// it points to.
 		else if(sbuf_is_link(sb)
 		  && asfd->write(asfd, &sb->link)) return -1;
-		cntr_add(get_cntr(cconfs[OPT_CNTR]), sb->path.cmd, 0);
+		cntr_add(get_cntr(cconfs), sb->path.cmd, 0);
 	}
 	return 0;
 }

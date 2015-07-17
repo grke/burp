@@ -1,6 +1,8 @@
 #ifndef __DPTH_H
 #define __DPTH_H
 
+#include "../burp.h"
+
 // ext3 maximum number of subdirs is 32000, so leave a little room.
 #define MAX_STORAGE_SUBDIRS	30000
 
@@ -28,7 +30,7 @@ struct dpth
 	int max_storage_subdirs;
 	// Currently open data file. Only one is open at a time, while many
 	// may be locked.
-	FILE *fp;
+	struct fzp *fzp;
 	// List of locked data files. 
 	struct dpth_lock *head;
 	struct dpth_lock *tail;

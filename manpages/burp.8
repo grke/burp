@@ -357,7 +357,7 @@ Defines the number of status child processes to fork (the number of status clien
 Defines the number of subdirectories in the data storage areas. The maximum number of subdirectories that ext3 allows is 32000. If you do not set this option, it defaults to 30000.
 .TP
 \fBtimer_script=[path]\fR
-Path to the script to run when a client connects with the timed backup option. If the script exits with code 0, a backup will run. The first two arguments are the client name and the path to the 'current' storage directory. The next three arguments are reserved, and user arguments are appended after that. An example timer script is provided. The timer_script option can be overridden by the client configuration files in clientconfdir on the server.
+Path to the script to run when a client connects with the timed backup option. If the script exits with code 0, a backup will run. The first three arguments are the client name, the path to the 'current' storage directory, and the path to the top level storage directories. The next two arguments are reserved, and user arguments are appended after that. An example timer script is provided. The timer_script option can be overridden by the client configuration files in clientconfdir on the server.
 .TP
 \fBtimer_arg=[string]\fR
 A user-definable argument to the timer script. You can have many of these. The timer_arg options can be overridden by the client configuration files in clientconfdir on the server.

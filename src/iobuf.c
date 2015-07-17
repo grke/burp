@@ -25,8 +25,8 @@ void iobuf_init(struct iobuf *iobuf)
 
 void iobuf_free_content(struct iobuf *iobuf)
 {
-	if(!iobuf || !iobuf->buf) return;
-	free(iobuf->buf);
+	if(!iobuf) return;
+	free_w(&iobuf->buf);
 	iobuf_init(iobuf);
 }
 
@@ -95,6 +95,11 @@ int iobuf_pathcmp(struct iobuf *a, struct iobuf *b)
 int iobuf_is_filedata(struct iobuf *iobuf)
 {
 	return cmd_is_filedata(iobuf->cmd);
+}
+
+int iobuf_is_vssdata(struct iobuf *iobuf)
+{
+	return cmd_is_vssdata(iobuf->cmd);
 }
 
 int iobuf_is_link(struct iobuf *iobuf)

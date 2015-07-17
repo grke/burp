@@ -76,17 +76,10 @@ static int add_key(off_t st_size, struct file *f)
 	return 0;
 }
 
-static FILE *open_file(struct file *f)
-{
-	FILE *fp=NULL;
-	if(!(fp=fopen(f->path, "rb")))
-		logp("Could not open %s\n", f->path);
-	return fp;
-}
-
 #define FULL_CHUNK	4096
 
-static int full_match(struct file *o, struct file *n, FILE **ofp, FILE **nfp)
+static int full_match(struct file *o, struct file *n,
+	struct fzp **ofp, struct fzp **nfp)
 {
 	size_t ogot;
 	size_t ngot;
@@ -94,8 +87,8 @@ static int full_match(struct file *o, struct file *n, FILE **ofp, FILE **nfp)
 	static char obuf[FULL_CHUNK];
 	static char nbuf[FULL_CHUNK];
 
-	if(*ofp) fseek(*ofp, 0, SEEK_SET);
-	else if(!(*ofp=open_file(o)))
+	if(*ofp) fzp_seek(*ofp, 0, SEEK_SET);
+	else if(!(*ofp=fzp_open(o->path, "rb")))
 	{
 		// Blank this entry so that it can be ignored from
 		// now on.
@@ -103,13 +96,13 @@ static int full_match(struct file *o, struct file *n, FILE **ofp, FILE **nfp)
 		return 0;
 	}
 
-	if(*nfp) fseek(*nfp, 0, SEEK_SET);
-	else if(!(*nfp=open_file(n))) return 0;
+	if(*nfp) fzp_seek(*nfp, 0, SEEK_SET);
+	else if(!(*nfp=fzp_open(n->path, "rb"))) return 0;
 
 	while(1)
 	{
-		ogot=fread(obuf, 1, FULL_CHUNK, *ofp);
-		ngot=fread(nbuf, 1, FULL_CHUNK, *nfp);
+		ogot=fzp_read(*ofp, obuf, FULL_CHUNK);
+		ngot=fzp_read(*nfp, nbuf, FULL_CHUNK);
 		if(ogot!=ngot) return 0;
 		for(i=0; i<ogot; i++)
 			if(obuf[i]!=nbuf[i]) return 0;
@@ -121,15 +114,15 @@ static int full_match(struct file *o, struct file *n, FILE **ofp, FILE **nfp)
 
 #define PART_CHUNK	1024
 
-static int get_part_cksum(struct file *f, FILE **fp)
+static int get_part_cksum(struct file *f, struct fzp **fzp)
 {
 	MD5_CTX md5;
 	int got=0;
 	static char buf[PART_CHUNK];
 	unsigned char checksum[MD5_DIGEST_LENGTH+1];
 
-	if(*fp) fseek(*fp, 0, SEEK_SET);
-	else if(!(*fp=open_file(f)))
+	if(*fzp) fzp_seek(*fzp, 0, SEEK_SET);
+	else if(!(*fzp=fzp_open(f->path, "rb")))
 	{
 		f->part_cksum=0;
 		return 0;
@@ -141,7 +134,7 @@ static int get_part_cksum(struct file *f, FILE **fp)
 		return -1;
 	}
 
-	got=fread(buf, 1, PART_CHUNK, *fp);
+	got=fzp_read(*fzp, buf, PART_CHUNK);
 
 	if(!MD5_Update(&md5, buf, got))
 	{
@@ -164,15 +157,15 @@ static int get_part_cksum(struct file *f, FILE **fp)
 	return 0;
 }
 
-static int get_full_cksum(struct file *f, FILE **fp)
+static int get_full_cksum(struct file *f, struct fzp **fzp)
 {
 	size_t s=0;
 	MD5_CTX md5;
 	static char buf[FULL_CHUNK];
 	unsigned char checksum[MD5_DIGEST_LENGTH+1];
 
-	if(*fp) fseek(*fp, 0, SEEK_SET);
-	else if(!(*fp=open_file(f)))
+	if(*fzp) fzp_seek(*fzp, 0, SEEK_SET);
+	else if(!(*fzp=fzp_open(f->path, "rb")))
 	{
 		f->full_cksum=0;
 		return 0;
@@ -184,7 +177,7 @@ static int get_full_cksum(struct file *f, FILE **fp)
 		return -1;
 	}
 
-	while((s=fread(buf, 1, FULL_CHUNK, *fp))>0)
+	while((s=fzp_read(*fzp, buf, FULL_CHUNK))>0)
 	{
 		if(!MD5_Update(&md5, buf, s))
 		{
@@ -244,8 +237,8 @@ static int check_files(struct mystruct *find, struct file *newfile,
 	struct stat *info, const char *ext, unsigned int maxlinks)
 {
 	int found=0;
-	FILE *nfp=NULL;
-	FILE *ofp=NULL;
+	struct fzp *nfp=NULL;
+	struct fzp *ofp=NULL;
 	struct file *f=NULL;
 
 	for(f=find->files; f; f=f->next)
@@ -279,7 +272,7 @@ static int check_files(struct mystruct *find, struct file *newfile,
 		}
 		if(newfile->part_cksum!=f->part_cksum)
 		{
-			close_fp(&ofp);
+			fzp_close(&ofp);
 			continue;
 		}
 		//printf("  %s, %s\n", find->files->path, newfile->path);
@@ -293,14 +286,14 @@ static int check_files(struct mystruct *find, struct file *newfile,
 		}
 		if(newfile->full_cksum!=f->full_cksum)
 		{
-			close_fp(&ofp);
+			fzp_close(&ofp);
 			continue;
 		}
 
 		//printf("  full cksum matched\n");
 		if(!full_match(newfile, f, &nfp, &ofp))
 		{
-			close_fp(&ofp);
+			fzp_close(&ofp);
 			continue;
 		}
 		//printf("  full match\n");
@@ -379,8 +372,8 @@ static int check_files(struct mystruct *find, struct file *newfile,
 
 		break;
 	}
-	close_fp(&nfp);
-	close_fp(&ofp);
+	fzp_close(&nfp);
+	fzp_close(&ofp);
 
 	if(found)
 	{

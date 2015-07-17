@@ -30,10 +30,11 @@ int write_status(enum cntr_status cntr_status,
 	// one.
 	if(!l)
 	{
-		get_cntr(confs[OPT_CNTR])->cntr_status=cntr_status;
-		if(!(l=cntr_to_str(get_cntr(confs[OPT_CNTR]), path))) goto error;
+		struct cntr *cntr=get_cntr(confs);
+		cntr->cntr_status=cntr_status;
+		if(!(l=cntr_to_str(cntr, path))) goto error;
 		if(!wbuf && !(wbuf=iobuf_alloc())) goto error;
-		iobuf_set(wbuf, CMD_APPEND, get_cntr(confs[OPT_CNTR])->str, l);
+		iobuf_set(wbuf, CMD_APPEND, cntr->str, l);
 	}
 
 	switch(wasfd->append_all_to_write_buffer(wasfd, wbuf))

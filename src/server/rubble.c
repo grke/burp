@@ -6,13 +6,13 @@ static int incexc_matches(const char *fullrealwork, const char *incexc)
 {
 	int ret=0;
 	int got=0;
-	FILE *fp=NULL;
+	struct fzp *fzp=NULL;
 	char buf[4096]="";
 	const char *inc=NULL;
 	char *old_incexc_path=NULL;
 	if(!(old_incexc_path=prepend_s(fullrealwork, "incexc")))
 		return -1;
-	if(!(fp=open_file(old_incexc_path, "rb")))
+	if(!(fzp=fzp_open(old_incexc_path, "rb")))
 	{
 		// Assume that no incexc file could be found because the client
 		// was on an old version. Assume resume is OK and return 1.
@@ -20,7 +20,7 @@ static int incexc_matches(const char *fullrealwork, const char *incexc)
 		goto end;
 	}
 	inc=incexc;
-	while((got=fread(buf, 1, sizeof(buf), fp))>0)
+	while((got=fzp_read(fzp, buf, sizeof(buf)))>0)
 	{
 		if(strlen(inc)<(size_t)got) break;
 		if(strncmp(buf, inc, got)) break;
@@ -29,7 +29,7 @@ static int incexc_matches(const char *fullrealwork, const char *incexc)
 	if(inc && strlen(inc)) ret=0;
 	else ret=1;
 end:
-	close_fp(&fp);
+	fzp_close(&fzp);
 	free_w(&old_incexc_path);
 	return ret;
 }
@@ -39,11 +39,11 @@ static int working_delete(struct async *as, struct sdirs *sdirs,
 {
 	// Try to remove it and start again.
 	logp("deleting old working directory\n");
-	if(get_e_protocol(cconfs[OPT_PROTOCOL])==PROTO_2)
+	if(get_protocol(cconfs)==PROTO_2)
 	{
 		logp("protocol 2 - unimplemented - need cleanup of data directory\n");
 	}
-	if(recursive_delete(sdirs->rworking, NULL, 1 /* delete files */))
+	if(recursive_delete(sdirs->rworking))
 	{
 		log_and_send(as->asfd,
 			"Old working directory is in the way.\n");
@@ -123,7 +123,7 @@ static int recover_finishing(struct async *as,
 	as->asfd_remove(as, asfd);
 	asfd_close(asfd);
 
-	switch(get_e_protocol(cconfs[OPT_PROTOCOL]))
+	switch(get_protocol(cconfs))
 	{
 		case PROTO_1:
 			r=backup_phase4_server_protocol1(sdirs, cconfs);
@@ -188,14 +188,13 @@ static int recover_working(struct async *as,
 	{
 		// ...phase 1 did not complete - delete everything.
 		logp("Phase 1 has not completed.\n");
-		printf("Phase 1 has not completed.\n");
 		recovery_method=RECOVERY_METHOD_DELETE;
 	}
 
 	// FIX THIS: Currently forcing protocol2 to delete so that the tests
 	// do not fail.
-	if(get_e_protocol(cconfs[OPT_PROTOCOL])==PROTO_2)
-		recovery_method=RECOVERY_METHOD_DELETE;
+	//if(get_protocol(cconfs)==PROTO_2)
+	//	recovery_method=RECOVERY_METHOD_DELETE;
 
 	if(recovery_method==RECOVERY_METHOD_DELETE)
 	{
@@ -206,7 +205,7 @@ static int recover_working(struct async *as,
 	// We are not deleting the old working directory - open the log inside
 	// for appending.
 	if(!(logpath=prepend_s(sdirs->rworking, "log"))
-	  || set_logfp(logpath, cconfs))
+	  || set_logfzp(logpath, cconfs))
 		goto end;
 
 	switch(recovery_method)
@@ -229,7 +228,7 @@ static int recover_working(struct async *as,
 end:
 	free_w(&logpath);
 	free_w(&phase1datatmp);
-	set_logfp(NULL, cconfs); // fclose the logfp
+	set_logfzp(NULL, cconfs); // fclose the logfzp
 	return ret;
 }
 

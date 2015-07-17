@@ -327,7 +327,7 @@ static enum cliret restore_wrapper(struct asfd *asfd, enum action action,
 
 	// Return non-zero if there were warnings,
 	// so that the test script can easily check.
-	if(ret==CLIENT_OK && get_cntr(confs[OPT_CNTR])->ent[CMD_WARNING]->count)
+	if(ret==CLIENT_OK && get_cntr(confs)->ent[CMD_WARNING]->count)
 		ret=CLIENT_RESTORE_WARNINGS;
 
 	return ret;

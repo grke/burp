@@ -88,16 +88,16 @@ static int duplicate_file(const char *oldpath, const char *newpath)
 	int ret=-1;
 	size_t s=0;
 	size_t t=0;
-	FILE *op=NULL;
-	FILE *np=NULL;
+	struct fzp *op=NULL;
+	struct fzp *np=NULL;
 	char buf[DUP_CHUNK]="";
-	if(!(op=open_file(oldpath, "rb"))
-	  || !(np=open_file(newpath, "wb")))
+	if(!(op=fzp_open(oldpath, "rb"))
+	  || !(np=fzp_open(newpath, "wb")))
 		goto end;
 
-	while((s=fread(buf, 1, DUP_CHUNK, op))>0)
+	while((s=fzp_read(op, buf, DUP_CHUNK))>0)
 	{
-		t=fwrite(buf, 1, s, np);
+		t=fzp_write(np, buf, s);
 		if(t!=s)
 		{
 			logp("could not write all bytes: %d!=%d\n", s, t);
@@ -107,8 +107,8 @@ static int duplicate_file(const char *oldpath, const char *newpath)
 
 	ret=0;
 end:
-	close_fp(&np);
-	close_fp(&op);
+	fzp_close(&np);
+	fzp_close(&op);
 	if(ret) logp("could not duplicate %s to %s\n", oldpath, newpath);
 	return ret;
 }

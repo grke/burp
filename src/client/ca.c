@@ -14,6 +14,9 @@ static int generate_key_and_csr(struct asfd *asfd,
 	logp("Running '%s --key --keypath %s --request --requestpath %s --name %s'\n", ca_burp_ca, ssl_key, csr_path, cname);
 #ifdef HAVE_WIN32
 	win32_enable_backup_privileges();
+#else
+	// FIX THIS
+	signal(SIGPIPE, SIG_IGN);
 #endif
 	args[a++]=ca_burp_ca;
 	args[a++]="--key";
@@ -43,8 +46,8 @@ static int rewrite_client_conf(struct conf **confs)
 {
 	int ret=-1;
 	char p[32]="";
-	FILE *dp=NULL;
-	FILE *sp=NULL;
+	struct fzp *dp=NULL;
+	struct fzp *sp=NULL;
 	char *tmp=NULL;
 	char buf[4096]="";
 	const char *conffile=get_string(confs[OPT_CONFFILE]);
@@ -54,11 +57,11 @@ static int rewrite_client_conf(struct conf **confs)
 	snprintf(p, sizeof(p), ".%d", getpid());
 	if(!(tmp=prepend(conffile, p)))
 		goto end;
-	if(!(sp=open_file(conffile, "rb"))
-	  || !(dp=open_file(tmp, "wb")))
+	if(!(sp=fzp_open(conffile, "rb"))
+	  || !(dp=fzp_open(tmp, "wb")))
 		goto end;
 
-	while(fgets(buf, sizeof(buf), sp))
+	while(fzp_gets(sp, buf, sizeof(buf)))
 	{
 		char *copy=NULL;
 		char *field=NULL;
@@ -70,19 +73,19 @@ static int rewrite_client_conf(struct conf **confs)
 		  || !field || !value
 		  || strcmp(field, "ssl_peer_cn"))
 		{
-			fprintf(dp, "%s", copy);
+			fzp_printf(dp, "%s", copy);
 			free_w(&copy);
 			continue;
 		}
 		free_w(&copy);
 #ifdef HAVE_WIN32
-		fprintf(dp, "ssl_peer_cn = %s\r\n", ssl_peer_cn);
+		fzp_printf(dp, "ssl_peer_cn = %s\r\n", ssl_peer_cn);
 #else
-		fprintf(dp, "ssl_peer_cn = %s\n", ssl_peer_cn);
+		fzp_printf(dp, "ssl_peer_cn = %s\n", ssl_peer_cn);
 #endif
 	}
-	close_fp(&sp);
-	if(close_fp(&dp))
+	fzp_close(&sp);
+	if(fzp_close(&dp))
 	{
 		logp("error closing %s in %s\n", tmp, __func__);
 		goto end;
@@ -99,8 +102,8 @@ static int rewrite_client_conf(struct conf **confs)
 
 	ret=0;
 end:
-	close_fp(&sp);
-	close_fp(&dp);
+	fzp_close(&sp);
+	fzp_close(&dp);
 	if(ret)
 	{
 		logp("Rewrite failed\n");

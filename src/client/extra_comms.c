@@ -160,42 +160,42 @@ int extra_comms(struct async *as, struct conf **confs,
 	{
 		char msg[128]="";
 		// Use protocol2 if no choice has been made on client side.
-		if(get_e_protocol(confs[OPT_PROTOCOL])==PROTO_AUTO)
+		if(get_protocol(confs)==PROTO_AUTO)
 		{
 			logp("Server has protocol=0 (auto)\n");
-			set_e_protocol(confs[OPT_PROTOCOL], PROTO_2);
+			set_protocol(confs, PROTO_2);
 		}
 		// Send choice to server.
 		snprintf(msg, sizeof(msg), "protocol=%d",
-			get_e_protocol(confs[OPT_PROTOCOL]));
+			get_protocol(confs));
 		if(asfd->write_str(asfd, CMD_GEN, msg))
 			goto end;
 		logp("Using protocol=%d\n",
-			get_e_protocol(confs[OPT_PROTOCOL]));
+			get_protocol(confs));
 	}
 	else if(server_supports(feat, ":forceproto=1:"))
 	{
 		logp("Server is forcing protocol 1\n");
-		if(get_e_protocol(confs[OPT_PROTOCOL])!=PROTO_AUTO
-		  && get_e_protocol(confs[OPT_PROTOCOL])!=PROTO_1)
+		if(get_protocol(confs)!=PROTO_AUTO
+		  && get_protocol(confs)!=PROTO_1)
 		{
 			logp("But client has set protocol=%d!\n",
-				get_e_protocol(confs[OPT_PROTOCOL]));
+				get_protocol(confs));
 			goto end;
 		}
-		set_e_protocol(confs[OPT_PROTOCOL], PROTO_1);
+		set_protocol(confs, PROTO_1);
 	}
 	else if(server_supports(feat, ":forceproto=2:"))
 	{
 		logp("Server is forcing protocol 2\n");
-		if(get_e_protocol(confs[OPT_PROTOCOL])!=PROTO_AUTO
-		  && get_e_protocol(confs[OPT_PROTOCOL])!=PROTO_2)
+		if(get_protocol(confs)!=PROTO_AUTO
+		  && get_protocol(confs)!=PROTO_2)
 		{
 			logp("But client has set protocol=%d!\n",
-				get_e_protocol(confs[OPT_PROTOCOL]));
+				get_protocol(confs));
 			goto end;
 		}
-		set_e_protocol(confs[OPT_PROTOCOL], PROTO_2);
+		set_protocol(confs, PROTO_2);
 	}
 
 	if(server_supports(feat, ":msg:"))

@@ -1,5 +1,7 @@
 #include "include.h"
+#include "../attribs.h"
 #include "../cmd.h"
+#include "../protocol2/blk.h"
 #include "protocol1/restore.h"
 #include "protocol2/restore.h"
 
@@ -8,10 +10,10 @@ int restore_interrupt(struct asfd *asfd,
 	struct sbuf *sb, const char *msg, struct conf **confs)
 {
 	int ret=0;
-	struct cntr *cntr=get_cntr(confs[OPT_CNTR]);
+	struct cntr *cntr=get_cntr(confs);
 	struct iobuf *rbuf=asfd->rbuf;
 
-	if(get_e_protocol(confs[OPT_PROTOCOL])!=PROTO_1) return 0;
+	if(get_protocol(confs)!=PROTO_1) return 0;
 	if(!cntr) return 0;
 
 	cntr_add(cntr, CMD_WARNING, 1);
@@ -166,11 +168,13 @@ static char *build_msg(const char *text, const char *param)
 	return msg;
 }
 
+#ifndef HAVE_WIN32
 static void do_logw(struct asfd *asfd, struct conf **confs,
 	const char *text, const char *param)
 {
 	logw(asfd, confs, "%s", build_msg(text, param));
 }
+#endif
 
 static int warn_and_interrupt(struct asfd *asfd, struct sbuf *sb,
 	struct conf **confs, const char *text, const char *param)
@@ -191,7 +195,7 @@ static int restore_special(struct asfd *asfd, struct sbuf *sb,
 
 	if(act==ACTION_VERIFY)
 	{
-		cntr_add(get_cntr(confs[OPT_CNTR]), CMD_SPECIAL, 1);
+		cntr_add(get_cntr(confs), CMD_SPECIAL, 1);
 		return 0;
 	}
 
@@ -211,7 +215,7 @@ static int restore_special(struct asfd *asfd, struct sbuf *sb,
 		else
 		{
 			attribs_set(asfd, rpath, &statp, sb->winattr, confs);
-			cntr_add(get_cntr(confs[OPT_CNTR]), CMD_SPECIAL, 1);
+			cntr_add(get_cntr(confs), CMD_SPECIAL, 1);
 		}
 	}
 //	else if(S_ISSOCK(statp.st_mode))
@@ -232,7 +236,7 @@ static int restore_special(struct asfd *asfd, struct sbuf *sb,
 	else
 	{
 		attribs_set(asfd, rpath, &statp, sb->winattr, confs);
-		cntr_add(get_cntr(confs[OPT_CNTR]), CMD_SPECIAL, 1);
+		cntr_add(get_cntr(confs), CMD_SPECIAL, 1);
 	}
 #endif
 end:
@@ -240,8 +244,8 @@ end:
 	return ret;
 }
 
-int restore_dir(struct asfd *asfd,
-	struct sbuf *sb, const char *dname, enum action act, struct conf **confs)
+int restore_dir(struct asfd *asfd, struct sbuf *sb,
+	const char *dname, enum action act, struct conf **confs)
 {
 	int ret=0;
 	char *rpath=NULL;
@@ -263,9 +267,9 @@ int restore_dir(struct asfd *asfd,
 			}
 		}
 		attribs_set(asfd, rpath, &(sb->statp), sb->winattr, confs);
-		if(!ret) cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
+		if(!ret) cntr_add(get_cntr(confs), sb->path.cmd, 1);
 	}
-	else cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
+	else cntr_add(get_cntr(confs), sb->path.cmd, 1);
 end:
 	if(rpath) free(rpath);
 	return ret;
@@ -296,11 +300,11 @@ static int restore_link(struct asfd *asfd, struct sbuf *sb,
 		{
 			attribs_set(asfd, fname,
 				&(sb->statp), sb->winattr, confs);
-			cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
+			cntr_add(get_cntr(confs), sb->path.cmd, 1);
 		}
 		if(rpath) free(rpath);
 	}
-	else cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
+	else cntr_add(get_cntr(confs), sb->path.cmd, 1);
 end:
 	return ret;
 }
@@ -468,7 +472,7 @@ static enum asl_ret restore_style_func(struct asfd *asfd,
 
 static char *get_restore_style(struct asfd *asfd, struct conf **confs)
 {
-	if(get_e_protocol(confs[OPT_PROTOCOL])==PROTO_1)
+	if(get_protocol(confs)==PROTO_1)
 		return strdup_w(RESTORE_STREAM, __func__);
 	if(asfd->simple_loop(asfd, confs, NULL, __func__,
 		restore_style_func)) return NULL;
@@ -512,15 +516,6 @@ static int restore_spool(struct asfd *asfd, struct conf **confs, char **datpath)
 		__func__, restore_spool_func);
 }
 
-static int sbuf_fill_w(struct sbuf *sb, struct asfd *asfd,
-	struct blk *blk, const char *datpath, struct conf **confs)
-{
-	if(get_e_protocol(confs[OPT_PROTOCOL])==PROTO_2)
-		return sbuf_fill(sb, asfd, NULL, blk, datpath, confs);
-	else
-		return sbufl_fill(sb, asfd, NULL, confs);
-}
-
 int do_restore_client(struct asfd *asfd,
 	struct conf **confs, enum action act, int vss_restore)
 {
@@ -532,7 +527,7 @@ int do_restore_client(struct asfd *asfd,
 	char *fullpath=NULL;
 	char *style=NULL;
 	char *datpath=NULL;
-	enum protocol protocol=get_e_protocol(confs[OPT_PROTOCOL]);
+	enum protocol protocol=get_protocol(confs);
 	const char *backup=get_string(confs[OPT_BACKUP]);
 	const char *regex=get_string(confs[OPT_REGEX]);
 
@@ -577,8 +572,10 @@ int do_restore_client(struct asfd *asfd,
 	while(1)
 	{
 		sbuf_free_content(sb);
+		if(protocol==PROTO_1)
+			sb->flags |= SBUF_CLIENT_RESTORE_HACK;
 
-		switch(sbuf_fill_w(sb, asfd, blk, datpath, confs))
+		switch(sbuf_fill_from_net(sb, asfd, blk, datpath, confs))
 		{
 			case 0: break;
 			case 1: if(asfd->write_str(asfd, CMD_GEN,
@@ -590,9 +587,9 @@ int do_restore_client(struct asfd *asfd,
 
 		if(protocol==PROTO_2 && blk->data)
 		{
-			int wret;
+			int wret=0;
 			if(act==ACTION_VERIFY)
-				cntr_add(get_cntr(confs[OPT_CNTR]), CMD_DATA, 1);
+				cntr_add(get_cntr(confs), CMD_DATA, 1);
 			else
 				wret=write_data(asfd, bfd, blk);
 			if(!datpath) free(blk->data);
@@ -649,7 +646,7 @@ int do_restore_client(struct asfd *asfd,
 					char msg[512]="";
 					// Something exists at that path.
 					snprintf(msg, sizeof(msg),
-						"Path exists: %s", fullpath);
+						"Path exists: %s\n", fullpath);
 					if(restore_interrupt(asfd,
 						sb, msg, confs))
 							goto error;
@@ -708,8 +705,8 @@ error:
 	bfd->close(bfd, asfd);
 	bfile_free(&bfd);
 
-	cntr_print_end(get_cntr(confs[OPT_CNTR]));
-	cntr_print(get_cntr(confs[OPT_CNTR]), act);
+	cntr_print_end(get_cntr(confs));
+	cntr_print(get_cntr(confs), act);
 
 	if(!ret) logp("%s finished\n", act_str(act));
 	else logp("ret: %d\n", ret);
@@ -718,7 +715,7 @@ error:
 	free_w(&style);
 	if(datpath)
 	{
-		recursive_delete(datpath, NULL, 1);
+		recursive_delete(datpath);
 		free(datpath);
 	}
 	free_w(&fullpath);

@@ -1,6 +1,8 @@
 #ifndef __RABIN_BLK_H
 #define __RABIN_BLK_H
 
+#include "../burp.h"
+
 #include <openssl/md5.h>
 
 // The highest number of blocks that the client will hold in memory.
@@ -49,7 +51,6 @@ extern struct blk *blk_alloc(void);
 extern struct blk *blk_alloc_with_data(uint32_t max_data_length);
 extern void blk_free(struct blk **blk);
 extern int blk_md5_update(struct blk *blk);
-extern void blk_print_alloc_stats(void);
 extern int blk_is_zero_length(struct blk *blk);
 extern int blk_verify(struct blk *blk, struct conf **confs);
 

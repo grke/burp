@@ -31,6 +31,22 @@ extern int fzp_flush(struct fzp *fzp);
 extern int fzp_seek(struct fzp *fzp, off_t offset, int whence);
 extern off_t fzp_tell(struct fzp *fzp);
 
+#ifndef HAVE_WIN32
+extern int fzp_truncate(const char *path, enum fzp_type type, off_t length,
+	struct conf **confs);
+#endif
+
 extern int fzp_printf(struct fzp *fzp, const char *format, ...);
+
+extern void fzp_setlinebuf(struct fzp *fzp);
+
+extern char *fzp_gets(struct fzp *fzp, char *s, int size);
+extern int fzp_fileno(struct fzp *fzp);
+
+extern struct fzp *fzp_dopen(int fd, const char *mode);
+extern struct fzp *fzp_gzdopen(int fd, const char *mode);
+
+extern void fzp_ERR_print_errors_fp(struct fzp *fzp);
+extern X509 *fzp_PEM_read_X509(struct fzp *fzp);
 
 #endif

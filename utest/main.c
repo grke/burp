@@ -9,12 +9,16 @@ int main(void)
 
 	sr=srunner_create(NULL);
 	srunner_add_suite(sr, suite_alloc());
+	srunner_add_suite(sr, suite_attribs());
 	srunner_add_suite(sr, suite_base64());
 	srunner_add_suite(sr, suite_cmd());
 	srunner_add_suite(sr, suite_conf());
 	srunner_add_suite(sr, suite_conffile());
+	srunner_add_suite(sr, suite_fzp());
 	srunner_add_suite(sr, suite_hexmap());
+	srunner_add_suite(sr, suite_manio());
 	srunner_add_suite(sr, suite_pathcmp());
+	srunner_add_suite(sr, suite_protocol2_blist());
 	srunner_add_suite(sr, suite_server_sdirs());
 	srunner_add_suite(sr, suite_server_protocol1_dpth());
 	srunner_add_suite(sr, suite_server_protocol1_fdirs());

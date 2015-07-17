@@ -1,6 +1,7 @@
 #include <check.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "test.h"
 #include "../src/alloc.h"
 #include "../src/conf.h"
 
@@ -194,7 +195,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 			fail_unless(get_e_rshash(c[o])==RSHASH_UNSET);
 			break;
 		case OPT_CNTR:
-			fail_unless(get_cntr(c[o])==NULL);
+			fail_unless(get_cntr(c)==NULL);
 			break;
         	case OPT_MAX:
 			break;
@@ -213,7 +214,7 @@ START_TEST(test_conf_defaults)
 		check_default(confs, (enum conf_opt)i);
 	confs_free(&confs);
 	fail_unless(confs==NULL);
-	fail_unless(alloc_count==free_count);
+	alloc_check();
 }
 END_TEST
 

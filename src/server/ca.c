@@ -9,11 +9,11 @@ static char *gca_dir=NULL;
 
 static char *get_ca_dir(struct conf **confs)
 {
-	FILE *fp=NULL;
+	struct fzp *fzp=NULL;
 	char buf[4096]="";
 	const char *ca_conf=get_string(confs[OPT_CA_CONF]);
-	if(!(fp=open_file(ca_conf, "r"))) goto end;
-	while(fgets(buf, sizeof(buf), fp))
+	if(!(fzp=fzp_open(ca_conf, "r"))) goto end;
+	while(fzp_gets(fzp, buf, sizeof(buf)))
 	{
 		char *field=NULL;
 		char *value=NULL;
@@ -28,7 +28,7 @@ static char *get_ca_dir(struct conf **confs)
 		}
 	}
 end:
-	close_fp(&fp);
+	fzp_close(&fzp);
 	return gca_dir;
 }
 
@@ -227,7 +227,7 @@ int ca_server_setup(struct conf **confs)
 
 	if(burp_ca_init(confs, ca_dir))
 	{
-		recursive_delete(ca_dir, "", 1);
+		recursive_delete(ca_dir);
 		ret=-1;
 		goto end;
 	}

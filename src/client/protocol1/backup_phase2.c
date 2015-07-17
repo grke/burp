@@ -1,5 +1,8 @@
 #include "include.h"
+#include "../../attribs.h"
 #include "../../cmd.h"
+#include "../../protocol1/handy.h"
+#include "../../protocol1/msg.h"
 
 static int load_signature(struct asfd *asfd,
 	rs_signature_t **sumset, struct conf **confs)
@@ -8,7 +11,7 @@ static int load_signature(struct asfd *asfd,
 	rs_job_t *job;
 
 	job=rs_loadsig_begin(sumset);
-	if((r=rs_loadsig_network_run(asfd, job, get_cntr(confs[OPT_CNTR]))))
+	if((r=rs_loadsig_network_run(asfd, job, get_cntr(confs))))
 	{
 		rs_free_sumset(*sumset);
 		return r;
@@ -42,10 +45,10 @@ static int load_signature_and_send_delta(struct asfd *asfd,
 
 	if(!(infb=rs_filebuf_new(asfd, bfd,
 		NULL, -1, ASYNC_BUF_LEN, bfd->datalen,
-		get_cntr(confs[OPT_CNTR])))
+		get_cntr(confs)))
 	  || !(outfb=rs_filebuf_new(asfd, NULL,
 		NULL, asfd->fd, ASYNC_BUF_LEN, -1,
-		get_cntr(confs[OPT_CNTR]))))
+		get_cntr(confs))))
 	{
 		logp("could not rs_filebuf_new for delta\n");
 		rs_filebuf_free(&infb);
@@ -253,9 +256,9 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 		}
 		else
 		{
-			cntr_add(get_cntr(confs[OPT_CNTR]), CMD_FILE_CHANGED, 1);
-			cntr_add_bytes(get_cntr(confs[OPT_CNTR]), bytes);
-			cntr_add_sentbytes(get_cntr(confs[OPT_CNTR]), sentbytes);
+			cntr_add(get_cntr(confs), CMD_FILE_CHANGED, 1);
+			cntr_add_bytes(get_cntr(confs), bytes);
+			cntr_add_sentbytes(get_cntr(confs), sentbytes);
 		}
 	}
 	else
@@ -272,9 +275,9 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 				goto end;
 		else
 		{
-			cntr_add(get_cntr(confs[OPT_CNTR]), sb->path.cmd, 1);
-			cntr_add_bytes(get_cntr(confs[OPT_CNTR]), bytes);
-			cntr_add_sentbytes(get_cntr(confs[OPT_CNTR]), bytes);
+			cntr_add(get_cntr(confs), sb->path.cmd, 1);
+			cntr_add_bytes(get_cntr(confs), bytes);
+			cntr_add_sentbytes(get_cntr(confs), bytes);
 		}
 	}
 
@@ -312,15 +315,8 @@ static int parse_rbuf(struct asfd *asfd, struct sbuf *sb,
 		// and it is best to make it as fresh as
 		// possible.
 	}
-	else if(rbuf->cmd==CMD_FILE
-	  || rbuf->cmd==CMD_ENC_FILE
-	  || rbuf->cmd==CMD_METADATA
-	  || rbuf->cmd==CMD_ENC_METADATA
-	  || rbuf->cmd==CMD_VSS
-	  || rbuf->cmd==CMD_ENC_VSS
-	  || rbuf->cmd==CMD_VSS_T
-	  || rbuf->cmd==CMD_ENC_VSS_T
-	  || rbuf->cmd==CMD_EFS_FILE)
+	else if(iobuf_is_filedata(rbuf)
+	  || iobuf_is_vssdata(rbuf))
 	{
 		if(deal_with_data(asfd, sb, bfd, confs))
 			return -1;
@@ -404,8 +400,8 @@ int backup_phase2_client_protocol1(struct asfd *asfd,
 
 	ret=do_backup_phase2_client(asfd, confs, resume);
 
-	cntr_print_end(get_cntr(confs[OPT_CNTR]));
-	cntr_print(get_cntr(confs[OPT_CNTR]), ACTION_BACKUP);
+	cntr_print_end(get_cntr(confs));
+	cntr_print(get_cntr(confs), ACTION_BACKUP);
 
 	if(ret) logp("Error in phase 2\n");
 	logp("Phase 2 end (send file data)\n");

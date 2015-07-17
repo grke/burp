@@ -17,7 +17,6 @@ SRCS = \
 	msg.c \
 	rs_buf.c \
 	sbuf_protocol1.c \
-	sbufl.c \
 
 OBJS = $(SRCS:.c=.o)
 

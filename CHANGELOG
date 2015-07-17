@@ -1,5 +1,31 @@
+  * Refactor src/server/manio.c to work towards protocol2 resume
+    functionality.
+  * Fix '-a l' regex so that it isn't split in two at the right-most
+    colon.
+  * Fix possible buffer overrun when encoding attribs.
+  * Fix protocol 1 phase 2 resume bug introduced in 2.0.20.
+  * Fix possible protocol 2 phase 2 segfaults.
+  * Make protocol 1 and 2 share the same code for phase 3.
+  * Set default_md=sha256 in CA.cnf.
+  * Use 'stat' for checking ssl files instead of 'lstat', and log if
+    the ssl file was not found.
+  * Fix path for server initiated backup via timer_script.
+  * Use getpid() for random delay seed so that I can get rid of OS specific
+    clock code and '-lrt' link flag.
+  * Get xattr working on Mac OSX. This should mean that resource forks and
+    finder info backup/restore is working.
+  * Fix Windows protocol1 restore segfault when using split_vss.
+  * Fix directories in Windows protocol1 strip_vss mode.
   * Fix from Patrick Van der Veken to correct typo in timer_script that
     meant month settings were broken.
+
+2015-07-01 Changes in burp-1.4.40:
+  * Fix '-a l' regex so that it isn't split in two at the right-most
+    colon.
+  * Set default_md=sha256 in CA.cnf.
+  * Correct logp format strings in quota.c.
+  * Upgrade Windows depkgs to openssl-1.0.1o.
+>>>>>>> 2.0.21
 
 2015-05-30 Changes in burp-2.0.20:
   * Fix conf bug that was causing the server to segfault when the client

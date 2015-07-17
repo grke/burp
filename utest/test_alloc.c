@@ -2,6 +2,11 @@
 #include <stdlib.h>
 #include "../src/alloc.h"
 
+void alloc_check(void)
+{
+	fail_unless(free_count==alloc_count);
+}
+
 START_TEST(test_alloc)
 {
 	char *rptr=NULL;
@@ -27,7 +32,6 @@ START_TEST(test_alloc)
 	fail_unless(rptr==NULL);
 	fail_unless(mptr==NULL);
 	fail_unless(cptr==NULL);
-	fail_unless(free_count==alloc_count);
 }
 END_TEST
 

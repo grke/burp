@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Uncomment to get core dumps if segfaults are happening.
+ulimit -c unlimited
+
 myscript=$(basename $0)
 if [ ! -f "$myscript" ] ; then
 	echo "Please run $myscript whilst standing in the same directory" 1>&2
@@ -129,6 +132,8 @@ wait_for_backup_to_finish()
 {
 	local waited=0
 	local lockfile="$target/var/spool/burp/testclient/lockfile"
+	[ "$protocol" = "2" ] && \
+	  lockfile="$target/var/spool/burp/global/clients/testclient/lockfile"
 
 	SLEEPTIME=2
 	# Repeatedly check to see whether the server has finished, rather
@@ -170,7 +175,7 @@ add_run_backup_expect_fail_no_increment()
 {
 cat >> "$clientscript" <<EOF
 echo "Starting test client backup"
-"$burpbin" -c "$clientconfarg" -a b && fail "client backup returned \$? (expected 0)"
+"$burpbin" -c "$clientconfarg" -a b && fail "client backup returned \$? (expected non-zero)"
 
 EOF
 }
@@ -221,11 +226,22 @@ add_do_diff_client()
 	# On Windows, /C:/ gets converted to /C_/, so tweak the path for diff.
 	rpath1=$(echo "$1" | sed -e 's/\/C:\//\/C_\//g')
 	rpath2=$(echo "$2" | sed -e 's/\/C:\//\/C_\//g')
+	# Protocol 2 directory permissions are messed up on windows, so
+	# exclude them for now.
+	extra_find_arg=
+	[ "$protocol" = "2" ] && \
+	  [ "$restoredir" = "C:/Program Files/Burp/restore" ] && \
+	  	extra_find_arg="-type f"
 cat >> "$clientscript" << EOF
 diff -ur "$rpath1" "$rpath2" || fail "$3"
+EOF
+
+	# Stripping vss will of course cause permissions to be wrong on
+	# restore on Windows, so do not do this check in that case.
+[ -z "$STRIP_VSS" ] && cat >> "$clientscript" << EOF
 diff -u \
-  <( cd "$rpath1" ; find . -printf "chown %U:%G %p; chmod %m %p \n" | sort ) \
-  <( cd "$rpath2" ; find . -printf "chown %U:%G %p; chmod %m %p \n" | sort ) \
+  <( cd "$rpath1" ; find . $extra_find_arg -printf "chown %U:%G %p; chmod %m %p \n" | sort ) \
+  <( cd "$rpath2" ; find . $extra_find_arg -printf "chown %U:%G %p; chmod %m %p \n" | sort ) \
 	|| fail "$3 (permissions)"
 EOF
 }
@@ -739,27 +755,31 @@ all_tests()
 	check_for_working_dir
 	end_test
 
-	# Protocol2 is currently broken here.
-	if [ "$protocol" -eq "1" ] ; then
-		start_test "Interrupt server phase3"
-		add_server_breakpoint_on 3
-		add_run_backup_no_increment
-		run_scripts
-		wait_for_backup_to_finish
-		check_for_working_dir
-		end_test
+	start_test "Interrupt server phase3"
+	add_server_breakpoint_on 3
+	add_run_backup_no_increment
+	run_scripts
+	wait_for_backup_to_finish
+	check_for_working_dir
+	end_test
 	
-		start_test "Complete phase3"
-		add_server_breakpoint_off
+	start_test "Complete phase3"
+	add_server_breakpoint_off
+	if [ "$protocol" -eq "1" ] ; then
+		# Client gives an error on protocol1, while the server does
+		# the resume.
 		add_run_backup_expect_fail
-		test_includes_backup=1
-		run_scripts
-		wait_for_backup_to_finish
-		start_script_client
-		add_run_verify
-		add_run_restore $bno "$restoredir"
-		end_test
+	else
+		add_run_backup
 	fi
+	test_includes_backup=1
+	run_scripts
+	wait_for_backup_to_finish
+	start_script_client
+	add_run_verify
+	add_run_restore $bno "$restoredir"
+	add_restore_diff
+	end_test
 
 	start_test "Interrupt server phase4"
 	add_server_breakpoint_on 4
@@ -778,10 +798,10 @@ all_tests()
 	start_script_client
 	add_run_verify
 	add_run_restore $bno "$restoredir"
+	add_restore_diff
 	end_test
 
-	# Protocol2 is currently broken here.
-	if [ "$protocol" -eq "1" ] ; then
+	if [ "$protocol" = "1" ] ; then
 		start_test "Interrupt server middle of phase2"
 		add_server_breakpoint_on 2010
 		add_change_source_files
@@ -810,6 +830,7 @@ all_tests()
 		start_test "Complete phase2"
 		add_server_breakpoint_off
 		add_backup_run_scripts_setup_verify_restore
+		add_restore_diff
 		end_test
 	fi
 
@@ -824,6 +845,7 @@ all_tests()
 	start_test "Permissions"
 	add_chown 755 "$includedir/utest/test_cmd.c"
 	add_backup_run_scripts_setup_verify_restore
+	add_restore_diff
 	end_test
 
 	start_test "Exclude directory"
@@ -864,7 +886,7 @@ run_tests()
 	res=0
 	echo
 	echo "Running burp$protocol tests"
-	all_tests "$protocol"
+	all_tests
 }
 
 restart_server
@@ -873,10 +895,17 @@ restart_server
 workingdir="$target/var/spool/burp/testclient/working"
 finishingdir="$target/var/spool/burp/testclient/finishing"
 run_tests 1
+
 # Run in protocol2 mode.
 workingdir="$target/var/spool/burp/global/clients/testclient/working"
 finishingdir="$target/var/spool/burp/global/clients/testclient/finishing"
-run_tests 2
+if [ -n "$SPLIT_VSS" ] ; then
+	echo "Skip protocol 2 tests for split_vss"
+elif [ -n "$STRIP_VSS" ] ; then
+	echo "Skip protocol 2 tests for strip_vss"
+else
+	run_tests 2
+fi
 
 echo
 echo "All tests succeeded"

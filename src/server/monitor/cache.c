@@ -1,6 +1,7 @@
 #include "include.h"
 #include "../../bu.h"
 #include "../../cmd.h"
+#include "../../sbuf.h"
 
 typedef struct ent ent_t;
 
@@ -105,12 +106,15 @@ int cache_load(struct asfd *srfd, struct manio *manio, struct sbuf *sb,
 	while(1)
 	{
 		sbuf_free_content(sb);
-		if((ars=manio_sbuf_fill(manio, NULL, sb, NULL, NULL, NULL)))
+		if((ars=manio_read(manio, sb, NULL)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
 			break;
 		}
+
+		if(manio->protocol==PROTO_2 && sb->endfile.buf)
+			continue;
 
 		if(sb->path.cmd!=CMD_DIRECTORY
 		  && sb->path.cmd!=CMD_FILE

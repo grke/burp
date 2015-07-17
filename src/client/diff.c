@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../attribs.h"
 #include "../cmd.h"
 
 /* Note: The chars in this function are not the same as in the CMD_ set.

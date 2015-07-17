@@ -33,6 +33,7 @@
  */
 
 #include "include.h"
+#include "../attribs.h"
 #include "../cmd.h"
 #include "linkhash.h"
 
@@ -52,7 +53,7 @@ static int usual_stuff(struct asfd *asfd,
 	  || ((cmd==CMD_HARD_LINK || cmd==CMD_SOFT_LINK)
 		&& asfd->write_str(asfd, cmd, link)))
 			return -1;
-	cntr_add_phase1(get_cntr(confs[OPT_CNTR]), cmd, 1);
+	cntr_add_phase1(get_cntr(confs), cmd, 1);
 	return 0;
 }
 
@@ -81,13 +82,17 @@ static int do_to_server(struct asfd *asfd,
 	struct conf **confs, FF_PKT *ff, struct sbuf *sb,
 	enum cmd cmd, int compression) 
 {
+#ifdef HAVE_WIN32
+	int split_vss=get_int(confs[OPT_SPLIT_VSS]);
+	int strip_vss=get_int(confs[OPT_STRIP_VSS]);
+#endif
 	sb->compression=compression;
 	sb->statp=ff->statp;
 	attribs_encode(sb);
 
 #ifdef HAVE_WIN32
-	if(get_int(confs[OPT_SPLIT_VSS])
-	  && !get_int(confs[OPT_STRIP_VSS])
+	if(split_vss
+	  && !strip_vss
 	  && maybe_send_extrameta(asfd, ff->fname, cmd, sb, confs, metasymbol))
 		return -1;
 #endif
@@ -95,11 +100,11 @@ static int do_to_server(struct asfd *asfd,
 	if(usual_stuff(asfd, confs, ff->fname, ff->link, sb, cmd)) return -1;
 
 	if(ff->type==FT_REG)
-		cntr_add_val(get_cntr(confs[OPT_CNTR]), CMD_BYTES_ESTIMATED,
+		cntr_add_val(get_cntr(confs), CMD_BYTES_ESTIMATED,
 			(unsigned long long)ff->statp.st_size, 0);
 #ifdef HAVE_WIN32
-	if(get_int(confs[OPT_SPLIT_VSS])
-	  && !get_int(confs[OPT_STRIP_VSS])
+	if(split_vss
+	  && !strip_vss
 	// FIX THIS: May have to check that it is not a directory here.
 	  && !S_ISDIR(sb->statp.st_mode) // does this work?
 	  && maybe_send_extrameta(asfd,
@@ -180,7 +185,7 @@ int backup_phase1_client(struct asfd *asfd, struct conf **confs, int estimate)
 	logp("Phase 1 begin (file system scan)\n");
 
 	// Encryption not yet supported in protocol2.
-	if(get_e_protocol(confs[OPT_PROTOCOL])==PROTO_1
+	if(get_protocol(confs)==PROTO_1
 	  && get_string(confs[OPT_ENCRYPTION_PASSWORD]))
 	{
 		filesymbol=CMD_ENC_FILE;
@@ -192,6 +197,8 @@ int backup_phase1_client(struct asfd *asfd, struct conf **confs, int estimate)
 	}
 #ifdef HAVE_WIN32
 	dirsymbol=filesymbol;
+	if(get_int(confs[OPT_STRIP_VSS]))
+		dirsymbol=CMD_DIRECTORY;
 #endif
 
 	if(!(ff=find_files_init())) goto end;
@@ -199,7 +206,7 @@ int backup_phase1_client(struct asfd *asfd, struct conf **confs, int estimate)
 		if(find_files_begin(asfd, ff, confs, l->path)) goto end;
 	ret=0;
 end:
-	cntr_print_end_phase1(get_cntr(confs[OPT_CNTR]));
+	cntr_print_end_phase1(get_cntr(confs));
 	if(ret) logp("Error in phase 1\n");
 	logp("Phase 1 end (file system scan)\n");
 	find_files_free(ff);

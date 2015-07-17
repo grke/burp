@@ -1,8 +1,14 @@
 #include "include.h"
+#include "sbuf.h"
+#include "protocol2/blist.h"
 
 struct slist *slist_alloc(void)
 {
-	return (struct slist *)calloc_w(1, sizeof(struct slist), __func__);
+	struct slist *slist=NULL;
+	if(!(slist=(struct slist *)calloc_w(1, sizeof(struct slist), __func__))
+	  || !(slist->blist=blist_alloc()))
+		slist_free(&slist);
+	return slist;
 }
 
 void slist_free(struct slist **slist)
@@ -10,6 +16,7 @@ void slist_free(struct slist **slist)
 	struct sbuf *sb;
 	struct sbuf *shead;
 	if(!slist || !*slist) return;
+	blist_free(&(*slist)->blist);
 	shead=(*slist)->head;
 	while(shead)
 	{

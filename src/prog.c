@@ -124,7 +124,7 @@ int reload(struct conf **confs, const char *conffile, bool firsttime,
 
 	// This will turn on syslogging which could not be turned on before
 	// conf_load.
-	set_logfp(NULL, confs);
+	set_logfzp(NULL, confs);
 
 #ifndef HAVE_WIN32
 	if(get_e_burp_mode(confs[OPT_BURP_MODE])==BURP_MODE_SERVER)
@@ -226,13 +226,7 @@ static void random_delay(struct conf **confs)
 	int delay;
 	int randomise=get_int(confs[OPT_RANDOMISE]);
 	if(!randomise) return;
-#ifdef HAVE_WIN32
-	srand(GetTickCount());
-#else
-	struct timespec ts;
-	clock_gettime(CLOCK_REALTIME, &ts);
-	srand(ts.tv_nsec);
-#endif
+	srand(getpid());
 	delay=rand()%randomise;
 	logp("Sleeping %d seconds\n", delay);
 	sleep(delay);

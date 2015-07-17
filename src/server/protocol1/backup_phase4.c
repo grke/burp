@@ -37,7 +37,7 @@ int do_patch(struct asfd *asfd, const char *dst, const char *del,
 	if(!upfzp) goto end;
 
 	result=rs_patch_gzfile(asfd,
-		dstp, delfzp, upfzp, NULL, get_cntr(cconfs[OPT_CNTR]));
+		dstp, delfzp, upfzp, NULL, get_cntr(cconfs));
 end:
 	fzp_close(&dstp);
 	fzp_close(&delfzp);
@@ -118,7 +118,7 @@ static int make_rev_delta(const char *src, const char *sig, const char *del,
 	if(!delfzp) goto end;
 
 	if(rs_delta_gzfile(NULL, sumset, srcfzp,
-		delfzp, NULL, get_cntr(cconfs[OPT_CNTR]))!=RS_DONE)
+		delfzp, NULL, get_cntr(cconfs))!=RS_DONE)
 			goto end;
 	ret=0;
 end:
@@ -157,7 +157,7 @@ static int gen_rev_delta(const char *sigpath, const char *deltadir,
 		goto end;
 	}
 	else if(make_rev_sig(finpath, sigpath,
-		sb->protocol1->endfile.buf, sb->compression, cconfs))
+		sb->endfile.buf, sb->compression, cconfs))
 	{
 		logp("could not make signature from: %s\n", finpath);
 		goto end;
@@ -303,7 +303,7 @@ static int jiggle(struct sdirs *sdirs, struct fdirs *fdirs, struct sbuf *sb,
 		{
 			logp("WARNING: librsync error when patching %s: %d\n",
 				oldpath, lrs);
-			cntr_add(get_cntr(cconfs[OPT_CNTR]), CMD_WARNING, 1);
+			cntr_add(get_cntr(cconfs), CMD_WARNING, 1);
 			// Try to carry on with the rest of the backup
 			// regardless.
 			//ret=-1;
@@ -320,7 +320,7 @@ static int jiggle(struct sdirs *sdirs, struct fdirs *fdirs, struct sbuf *sb,
 				// Could not mark this file as deleted. Fatal.
 				goto end;
 			}
-			if(sbufl_to_manifest(sb, *delfp))
+			if(sbuf_to_manifest(sb, *delfp))
 				goto end;
 			if(fzp_flush(*delfp))
 			{
@@ -484,14 +484,14 @@ static int maybe_delete_files_from_manifest(const char *manifesttmp,
 	while(omzp || dfp)
 	{
 		if(dfp && !db->path.buf
-		  && (ars=sbufl_fill(db, NULL, dfp, cconfs)))
+		  && (ars=sbuf_fill_from_file(db, dfp, NULL, NULL, cconfs)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
 			fzp_close(&dfp);
 		}
 		if(omzp && !mb->path.buf
-		  && (ars=sbufl_fill(mb, NULL, omzp, cconfs)))
+		  && (ars=sbuf_fill_from_file(mb, omzp, NULL, NULL, cconfs)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
@@ -500,7 +500,7 @@ static int maybe_delete_files_from_manifest(const char *manifesttmp,
 
 		if(mb->path.buf && !db->path.buf)
 		{
-			if(sbufl_to_manifest(mb, nmzp)) goto end;
+			if(sbuf_to_manifest(mb, nmzp)) goto end;
 			sbuf_free_content(mb);
 		}
 		else if(!mb->path.buf && db->path.buf)
@@ -520,7 +520,7 @@ static int maybe_delete_files_from_manifest(const char *manifesttmp,
 		else if(pcmp<0)
 		{
 			// Behind in manifest. Write.
-			if(sbufl_to_manifest(mb, nmzp)) goto end;
+			if(sbuf_to_manifest(mb, nmzp)) goto end;
 			sbuf_free_content(mb);
 		}
 		else
@@ -602,7 +602,7 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct fdirs *fdirs,
 
 	while(1)
 	{
-		switch(sbufl_fill(sb, NULL, zp, cconfs))
+		switch(sbuf_fill_from_file(sb, zp, NULL, NULL, cconfs))
 		{
 			case 0: break;
 			case 1: goto end;
@@ -634,7 +634,7 @@ end:
 	// Remove the temporary data directory, we have probably removed
 	// useful files from it.
 	sync(); // try to help CIFS
-	recursive_delete(deltafdir, NULL, 0 /* do not del files */);
+	recursive_delete_dirs_only(deltafdir);
 
 	ret=0;
 error:
@@ -669,7 +669,7 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf **cconfs)
 	  || fdirs_init(fdirs, sdirs, realcurrent))
 		goto end;
 
-	if(set_logfp(fdirs->logpath, cconfs))
+	if(set_logfzp(fdirs->logpath, cconfs))
 		goto end;
 
 	logp("Begin phase4 (shuffle files)\n");
@@ -703,8 +703,7 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf **cconfs)
 			{
 				logp("Removing previous directory: %s\n",
 					fdirs->currentduptmp);
-				if(recursive_delete(fdirs->currentduptmp,
-					NULL, 1 /* del files */))
+				if(recursive_delete(fdirs->currentduptmp))
 				{
 					logp("Could not delete %s\n",
 						fdirs->currentduptmp);
@@ -764,7 +763,7 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf **cconfs)
 
 	// Remove the temporary data directory, we have now removed
 	// everything useful from it.
-	recursive_delete(fdirs->datadirtmp, NULL, 1 /* del files */);
+	recursive_delete(fdirs->datadirtmp);
 
 	// Clean up the currentdata directory - this is now the 'old'
 	// currentdata directory. Any files that were deleted from
@@ -773,7 +772,7 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf **cconfs)
 	// This will have the effect of getting rid of unnecessary
 	// directories.
 	sync(); // try to help CIFS
-	recursive_delete(fdirs->currentdupdata, NULL, 0 /* do not del files */);
+	recursive_delete_dirs_only(fdirs->currentdupdata);
 
 	// Rename the old current to something that we know to delete.
 	if(previous_backup && !hardlinked_current)

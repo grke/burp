@@ -1,11 +1,10 @@
 #include "include.h"
 #include "../cmd.h"
 
+#include "backup_phase3.h"
 #include "protocol1/backup_phase2.h"
-#include "protocol1/backup_phase3.h"
 #include "protocol1/backup_phase4.h"
 #include "protocol2/backup_phase2.h"
-#include "protocol2/backup_phase3.h"
 #include "protocol2/backup_phase4.h"
 #include "protocol2/champ_chooser/champ_client.h"
 
@@ -17,14 +16,14 @@ static int open_log(struct asfd *asfd,
 	const char *peer_version=get_string(cconfs[OPT_PEER_VERSION]);
 
 	if(!(logpath=prepend_s(sdirs->rworking, "log"))) goto end;
-	if(set_logfp(logpath, cconfs))
+	if(set_logfzp(logpath, cconfs))
 	{
 		logp("could not open log file: %s\n", logpath);
 		goto end;
 	}
 
 	logp("Client version: %s\n", peer_version?:"");
-	logp("Protocol: %d\n", (int)get_e_protocol(cconfs[OPT_PROTOCOL]));
+	logp("Protocol: %d\n", (int)get_protocol(cconfs));
 	if(get_int(cconfs[OPT_CLIENT_IS_WINDOWS]))
 		logp("Client is Windows\n");
 
@@ -43,16 +42,16 @@ end:
 static int write_incexc(const char *realworking, const char *incexc)
 {
 	int ret=-1;
-	FILE *fp=NULL;
+	struct fzp *fzp=NULL;
 	char *path=NULL;
 	if(!incexc || !*incexc) return 0;
 	if(!(path=prepend_s(realworking, "incexc"))
-	  || !(fp=open_file(path, "wb")))
+	  || !(fzp=fzp_open(path, "wb")))
 		goto end;
-	fprintf(fp, "%s", incexc);
+	fzp_printf(fzp, "%s", incexc);
 	ret=0;
 end:
-	if(close_fp(&fp))
+	if(fzp_close(&fzp))
 	{
 		logp("error writing to %s in write_incexc\n", path);
 		ret=-1;
@@ -75,7 +74,7 @@ static int backup_phase2_server(struct async *as, struct sdirs *sdirs,
 	if(get_int(cconfs[OPT_BREAKPOINT])==2)
 		return breakpoint(cconfs, __func__);
 
-	switch(get_e_protocol(cconfs[OPT_PROTOCOL]))
+	switch(get_protocol(cconfs))
 	{
 		case PROTO_1:
 			return backup_phase2_server_protocol1(as, sdirs,
@@ -86,20 +85,12 @@ static int backup_phase2_server(struct async *as, struct sdirs *sdirs,
 	}
 }
 
-static int backup_phase3_server(struct sdirs *sdirs, struct conf **cconfs,
-	int compress)
+static int backup_phase3_server(struct sdirs *sdirs, struct conf **cconfs)
 {
 	if(get_int(cconfs[OPT_BREAKPOINT])==3)
 		return breakpoint(cconfs, __func__);
 
-	switch(get_e_protocol(cconfs[OPT_PROTOCOL]))
-	{
-		case PROTO_1:
-			return backup_phase3_server_protocol1(sdirs,
-				compress, cconfs);
-		default:
-			return backup_phase3_server_protocol2(sdirs, cconfs);
-	}
+	return backup_phase3_server_all(sdirs, cconfs);
 }
 
 static int backup_phase4_server(struct sdirs *sdirs, struct conf **cconfs)
@@ -107,9 +98,9 @@ static int backup_phase4_server(struct sdirs *sdirs, struct conf **cconfs)
 	if(get_int(cconfs[OPT_BREAKPOINT])==4)
 		return breakpoint(cconfs, __func__);
 
-	set_logfp(NULL, cconfs);
+	set_logfzp(NULL, cconfs);
 	// Phase4 will open logfp again (in case it is resuming).
-	switch(get_e_protocol(cconfs[OPT_PROTOCOL]))
+	switch(get_protocol(cconfs))
 	{
 		case PROTO_1:
 			return backup_phase4_server_protocol1(sdirs, cconfs);
@@ -120,7 +111,7 @@ static int backup_phase4_server(struct sdirs *sdirs, struct conf **cconfs)
 
 static void log_rshash(struct conf **confs)
 {
-	if(get_e_protocol(confs[OPT_PROTOCOL])!=PROTO_1) return;
+	if(get_protocol(confs)!=PROTO_1) return;
 	logp("Using librsync hash %s\n",
 		rshash_to_str(get_e_rshash(confs[OPT_RSHASH])));
 }
@@ -132,16 +123,18 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 	int do_phase2=1;
 	struct asfd *chfd=NULL;
 	struct asfd *asfd=as->asfd;
-	enum protocol protocol=get_e_protocol(cconfs[OPT_PROTOCOL]);
+	enum protocol protocol=get_protocol(cconfs);
 
 	logp("in do_backup_server\n");
+
+	log_rshash(cconfs);
 
 	if(resume)
 	{
 		if(sdirs_get_real_working_from_symlink(sdirs, cconfs)
+		  || sdirs_get_real_manifest(sdirs, cconfs)
 		  || open_log(asfd, sdirs, cconfs))
 			goto error;
-		log_rshash(cconfs);
 	}
 	else
 	{
@@ -150,18 +143,10 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 		  || sdirs_get_real_manifest(sdirs, cconfs)
 		  || open_log(asfd, sdirs, cconfs))
 			goto error;
-		log_rshash(cconfs);
 
 		if(write_incexc(sdirs->rworking, incexc))
 		{
 			logp("unable to write incexc\n");
-			goto error;
-		}
-
-		if(protocol==PROTO_2
-		  && !(chfd=champ_chooser_connect(as, sdirs, cconfs)))
-		{
-			logp("problem connecting to champ chooser\n");
 			goto error;
 		}
 
@@ -170,6 +155,13 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 			logp("error in phase 1\n");
 			goto error;
 		}
+	}
+
+	if(protocol==PROTO_2
+	  && !(chfd=champ_chooser_connect(as, sdirs, cconfs)))
+	{
+		logp("problem connecting to champ chooser\n");
+		goto error;
 	}
 
 	if(resume)
@@ -202,7 +194,7 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 	as->asfd_remove(as, asfd);
 	asfd_close(asfd);
 
-	if(backup_phase3_server(sdirs, cconfs, 1 /* compress */))
+	if(backup_phase3_server(sdirs, cconfs))
 	{
 		logp("error in backup phase 3\n");
 		goto error;
@@ -217,8 +209,8 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 		goto error;
 	}
 
-	cntr_print(get_cntr(cconfs[OPT_CNTR]), ACTION_BACKUP);
-	cntr_stats_to_file(get_cntr(cconfs[OPT_CNTR]),
+	cntr_print(get_cntr(cconfs), ACTION_BACKUP);
+	cntr_stats_to_file(get_cntr(cconfs),
 		sdirs->rworking, ACTION_BACKUP, cconfs);
 
 	// Move the symlink to indicate that we are now in the end phase. The
@@ -226,14 +218,15 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 	if(do_rename(sdirs->finishing, sdirs->current)) goto error;
 
 	logp("Backup completed.\n");
-	set_logfp(NULL, cconfs);
+	set_logfzp(NULL, cconfs);
 	compress_filename(sdirs->rworking, "log", "log.gz", cconfs);
 
 	goto end;
 error:
 	ret=-1;
 end:
-	set_logfp(NULL, cconfs);
+
+	set_logfzp(NULL, cconfs);
 	if(chfd) as->asfd_remove(as, chfd);
 	asfd_free(&chfd);
 
@@ -281,7 +274,7 @@ int run_backup(struct async *as, struct sdirs *sdirs, struct conf **cconfs,
 		args[a++]=get_string(cconfs[OPT_TIMER_SCRIPT]);
 		args[a++]=cname;
 		args[a++]=sdirs->current;
-		args[a++]=sdirs->client;
+		args[a++]=sdirs->clients;
 		args[a++]="reserved1";
 		args[a++]="reserved2";
 		args[a++]=NULL;

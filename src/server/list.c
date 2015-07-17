@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../attribs.h"
 #include "../bu.h"
 #include "../cmd.h"
 #include "bu_get.h"
@@ -109,41 +110,42 @@ static int list_manifest(struct asfd *asfd,
 	const char *fullpath, regex_t *regex,
 	const char *browsedir, struct conf **confs)
 {
-	int ars=0;
 	int ret=0;
 	struct sbuf *sb=NULL;
 	struct manio *manio=NULL;
 	char *manifest_dir=NULL;
 	char *last_bd_match=NULL;
 	size_t bdlen=0;
-	enum protocol protocol=get_e_protocol(confs[OPT_PROTOCOL]);
+	enum protocol protocol=get_protocol(confs);
 
 	if(!(manifest_dir=prepend_s(fullpath,
 		protocol==PROTO_1?"manifest.gz":"manifest"))
-	  || !(manio=manio_alloc())
-	  || manio_init_read(manio, manifest_dir)
+	  || !(manio=manio_open(manifest_dir, "rb", protocol))
 	  || !(sb=sbuf_alloc(confs)))
 	{
 		log_and_send_oom(asfd, __func__);
 		goto error;
 	}
-	manio_set_protocol(manio, protocol);
 
 	if(browsedir) bdlen=strlen(browsedir);
 
 	while(1)
 	{
 		int show=0;
+		sbuf_free_content(sb);
 
-		if((ars=manio_sbuf_fill(manio, asfd, sb, NULL, NULL, confs))<0)
-			goto error;
-		else if(ars>0)
+		switch(manio_read(manio, sb, confs))
 		{
-			if(browsedir && *browsedir && !last_bd_match)
-				write_wrapper_str(asfd, CMD_ERROR,
-					"directory not found");
-			goto end; // Finished OK.
+			case 0: break;
+			case 1: if(browsedir && *browsedir && !last_bd_match)
+					write_wrapper_str(asfd, CMD_ERROR,
+						"directory not found");
+				goto end; // Finished OK.
+			default: goto error;
 		}
+
+		if(protocol==PROTO_2 && sb->endfile.buf)
+			continue;
 
 		if(write_status(CNTR_STATUS_LISTING, sb->path.buf, confs))
 			goto error;
@@ -171,8 +173,6 @@ static int list_manifest(struct asfd *asfd,
 			  && write_wrapper(asfd, &sb->link))
 				goto error;
 		}
-
-		sbuf_free_content(sb);
 	}
 
 error:
@@ -180,7 +180,7 @@ error:
 end:
 	sbuf_free(&sb);
 	free_w(&manifest_dir);
-	manio_free(&manio);
+	manio_close(&manio);
 	free_w(&last_bd_match);
 	return ret;
 }
@@ -192,7 +192,7 @@ static int send_backup_name_to_client(struct asfd *asfd,
 	snprintf(msg, sizeof(msg), "%s%s",
 		bu->timestamp,
 		// Protocol2 backups are all deletable, so do not mention it.
-		get_e_protocol(confs[OPT_PROTOCOL])==PROTO_1
+		get_protocol(confs)==PROTO_1
 		&& (bu->flags & BU_DELETABLE)?" (deletable)":"");
 	return write_wrapper_str(asfd, CMD_TIMESTAMP, msg);
 }

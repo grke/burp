@@ -24,7 +24,7 @@ static int champ_chooser_fork(struct sdirs *sdirs, struct conf **confs)
 		case 0:
 			// Child.
 			int cret;
-			set_logfp(NULL, confs);
+			set_logfzp(NULL, confs);
 			switch(champ_chooser_server(sdirs, confs))
 			{
 				case 0: cret=0;

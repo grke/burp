@@ -546,15 +546,15 @@ static char *extract_cn(X509_NAME *subj)
 static int get_cname_from_ssl_cert(struct conf **c)
 {
 	int ret=-1;
-	FILE *fp=NULL;
+	struct fzp *fzp=NULL;
 	X509 *cert=NULL;
 	X509_NAME *subj=NULL;
 	char *path=get_string(c[OPT_SSL_CERT]);
 	const char *cn=NULL;
 
-	if(!path || !(fp=open_file(path, "rb"))) return 0;
+	if(!path || !(fzp=fzp_open(path, "rb"))) return 0;
 
-	if(!(cert=PEM_read_X509(fp, NULL, NULL, NULL)))
+	if(!(cert=fzp_PEM_read_X509(fzp)))
 	{
 		logp("unable to parse %s in: %s\n", path, __func__);
 		goto end;
@@ -577,7 +577,7 @@ static int get_cname_from_ssl_cert(struct conf **c)
 	ret=0;
 end:
 	if(cert) X509_free(cert);
-	if(fp) fclose(fp);
+	fzp_close(&fzp);
 	return ret;
 }
 
@@ -1320,7 +1320,7 @@ static int do_conf_switch_to_orig_client(struct conf **globalcs,
 			goto end;
 	if(set_string(cconfs[OPT_RESTORE_PATH], NULL))
 		goto end;
-	set_cntr(sconfs[OPT_CNTR], get_cntr(cconfs[OPT_CNTR]));
+	set_cntr(sconfs[OPT_CNTR], get_cntr(cconfs));
 	set_cntr(cconfs[OPT_CNTR], NULL);
 	confs_free_content(cconfs);
 	confs_init(cconfs);

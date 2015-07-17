@@ -24,7 +24,9 @@
 #ifndef RS_BUF_H
 #define RS_BUF_H
 
-#include "include.h"
+#include "../burp.h"
+#include "../conf.h"
+#include "../bfile.h"
 
 #include <librsync.h>
 #include <openssl/md5.h>

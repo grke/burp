@@ -1,4 +1,5 @@
 #include "include.h"
+#include "../../sbuf.h"
 
 struct hash_weak *hash_table=NULL;
 
@@ -105,7 +106,7 @@ int hash_load(const char *champ, struct conf **confs)
 	while(1)
 	{
 		sbuf_free_content(sb);
-		switch(sbuf_fill(sb, NULL, fzp, blk, NULL, confs))
+		switch(sbuf_fill_from_file(sb, fzp, blk, NULL, confs))
 		{
 			case 1: ret=0;
 				goto end;

@@ -36,9 +36,14 @@
  *   Graham Keeling, 2014
  */
 
-#include "include.h"
+#include "attribs.h"
+#include "alloc.h"
 #include "base64.h"
+#include "berrno.h"
 #include "cmd.h"
+#include "conf.h"
+#include "log.h"
+#include "sbuf.h"
 
 // Encode a stat structure into a base64 character string.
 int attribs_encode(struct sbuf *sb)
@@ -49,7 +54,7 @@ int attribs_encode(struct sbuf *sb)
 	if(!sb->attr.buf)
 	{
 		sb->attr.cmd=CMD_ATTRIBS; // should not be needed
-		if(!(sb->attr.buf=(char *)malloc_w(128, __func__)))
+		if(!(sb->attr.buf=(char *)malloc_w(256, __func__)))
 			return -1;
 	}
 	p=sb->attr.buf;
@@ -108,11 +113,7 @@ int attribs_encode(struct sbuf *sb)
 #endif
 	*p++ = ' ';
 
-#ifdef HAVE_WIN32
 	p += to_base64(sb->winattr, p);
-#else
-	p += to_base64(0, p); // place holder
-#endif
 
 	if(sb->protocol1)
 	{

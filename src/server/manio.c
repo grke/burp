@@ -2,50 +2,209 @@
 #include "../cmd.h"
 #include "../hexmap.h"
 #include "protocol2/champ_chooser/include.h"
+#include "protocol2/dpth.h"
 
 #define MANIO_MODE_READ		"rb"
 #define MANIO_MODE_WRITE	"wb"
+#define MANIO_MODE_APPEND	"ab"
 
 #define WEAK_LEN		16
 #define WEAK_STR_LEN		WEAK_LEN+1
 #define MSAVE_PATH_LEN		14
 
-/*
-static man_off_t *man_off_alloc(void)
-{
-	return (man_off_t *)calloc_w(1, sizeof(man_off_t), __func__);
-}
-
-static void man_off_free(man_off_t **offset)
-{
-	if(!offset || !*offset) return;
-	man_off_free_content(*offset);
-	free_v((void **)offset);
-}
-*/
-
-static void man_off_free_content(man_off_t *offset)
+static void man_off_t_free_content(man_off_t *offset)
 {
 	if(!offset) return;
 	free_w(&offset->fpath);
 }
 
-struct manio *manio_alloc(void)
+void man_off_t_free(man_off_t **offset)
+{
+	if(!offset || !*offset) return;
+	man_off_t_free_content(*offset);
+	free_v((void **)offset);
+}
+
+static man_off_t *man_off_t_alloc(void)
+{
+	return (man_off_t *)calloc_w(1, sizeof(man_off_t), __func__);
+}
+
+static int init_write_hooks(struct manio *manio,
+	const char *hook_dir, const char *rmanifest)
+{
+	int i=0;
+	if(!(manio->hook_dir=strdup_w(hook_dir, __func__))
+	  || !(manio->rmanifest=strdup_w(rmanifest, __func__))
+	  || !(manio->hook_sort=
+		(char **)calloc_w(MANIFEST_SIG_MAX, sizeof(char*), __func__)))
+			return -1;
+	for(i=0; i<MANIFEST_SIG_MAX; i++)
+		if(!(manio->hook_sort[i]=
+			(char *)calloc_w(1, WEAK_STR_LEN, __func__)))
+				return -1;
+	return 0;
+}
+
+static int init_write_dindex(struct manio *manio, const char *dir)
+{
+	int i=0;
+	if(!(manio->dindex_dir=strdup_w(dir, __func__))
+	  || !(manio->dindex_sort=
+		(char **)calloc_w(MANIFEST_SIG_MAX, sizeof(char*), __func__)))
+			return -1;
+	for(i=0; i<MANIFEST_SIG_MAX; i++)
+		if(!(manio->dindex_sort[i]=
+			(char *)calloc_w(1, MSAVE_PATH_LEN+1, __func__)))
+				return -1;
+	return 0;
+}
+
+static int is_single_file(struct manio *manio)
+{
+	return manio->protocol==PROTO_1 || manio->phase==1;
+}
+
+static char *get_next_fpath(struct manio *manio, man_off_t *offset)
+{
+	static char tmp[32];
+	if(is_single_file(manio))
+		return strdup_w(manio->manifest, __func__);
+	snprintf(tmp, sizeof(tmp), "%08"PRIX64, offset->fcount++);
+	return prepend_s(manio->manifest, tmp);
+}
+
+static int manio_open_next_fpath(struct manio *manio)
+{
+	static struct stat statp;
+
+	free_w(&manio->offset->fpath);
+	if(!(manio->offset->fpath=get_next_fpath(manio, manio->offset)))
+		return -1;
+
+	if(!strcmp(manio->mode, MANIO_MODE_READ)
+	  && lstat(manio->offset->fpath, &statp))
+		return 0;
+
+	if(build_path_w(manio->offset->fpath))
+		return -1;
+	switch(manio->phase)
+	{
+		case 2:
+			if(!(manio->fzp=fzp_open(manio->offset->fpath,
+				manio->mode))) return -1;
+			return 0;
+		case 1:
+		case 3:
+		default:
+			if(!(manio->fzp=fzp_gzopen(manio->offset->fpath,
+				manio->mode))) return -1;
+			return 0;
+	}
+}
+
+static int manio_open_last_fpath(struct manio *manio)
+{
+	int max=-1;
+	if(is_single_file(manio))
+		return manio_open_next_fpath(manio);
+	if(get_highest_entry(manio->manifest, &max, 8))
+		return -1;
+	if(max<0) max=0;
+	manio->offset->fcount=(uint64_t)max;
+	return manio_open_next_fpath(manio);
+}
+
+static struct manio *manio_alloc(void)
 {
 	return (struct manio *)calloc_w(1, sizeof(struct manio), __func__);
 }
 
-static int manio_free_content(struct manio *manio)
+static struct manio *do_manio_open(const char *manifest, const char *mode,
+	enum protocol protocol, int phase)
 {
-	int ret=0;
-	if(!manio) return ret;
-	if(manio_close(manio)) ret=-1;
-	man_off_free_content(&manio->offset);
-	free_w(&manio->base_dir);
-	free_w(&manio->directory);
+	struct manio *manio=NULL;
+	if(!(manio=manio_alloc())
+	  || !(manio->manifest=strdup_w(manifest, __func__))
+	  || !(manio->mode=strdup_w(mode, __func__))
+	  || !(manio->offset=man_off_t_alloc()))
+		goto error;
+	manio->protocol=protocol;
+	manio->phase=phase;
+	if(!strcmp(manio->mode, MANIO_MODE_APPEND))
+	{
+		if(manio->phase!=2)
+		{
+			logp("manio append mode only works for phase 2.\n");
+			logp("%s has phase: %s\n",
+				manio->manifest, manio->phase);
+			goto error;
+		}
+		if(manio_open_last_fpath(manio))
+			goto error;
+	}
+	else
+	{
+		if(manio_open_next_fpath(manio))
+			goto error;
+	}
+	return manio;
+error:
+	manio_close(&manio);
+	return NULL;
+}
+
+struct manio *manio_open(const char *manifest, const char *mode,
+	enum protocol protocol)
+{
+	return do_manio_open(manifest, mode, protocol, 0);
+}
+
+struct manio *manio_open_phase1(const char *manifest, const char *mode,
+	enum protocol protocol)
+{
+	return do_manio_open(manifest, mode, protocol, 1);
+}
+
+struct manio *manio_open_phase2(const char *manifest, const char *mode,
+	enum protocol protocol)
+{
+	return do_manio_open(manifest, mode, protocol, 2);
+}
+
+struct manio *manio_open_phase3(const char *manifest, const char *mode,
+	enum protocol protocol, const char *rmanifest)
+{
+	struct manio *manio=NULL;
+
+	if(!(manio=do_manio_open(manifest, mode, protocol, 3)))
+		goto end;
+
+	if(protocol==PROTO_2 && rmanifest)
+	{
+		char *hooksdir=NULL;
+		char *dindexdir=NULL;
+		if(!(hooksdir=prepend_s(manifest, "hooks"))
+		  || !(dindexdir=prepend_s(manifest, "dindex"))
+		  || init_write_hooks(manio, hooksdir, rmanifest)
+		  || init_write_dindex(manio, dindexdir))
+			manio_close(&manio);
+		free_w(&hooksdir);
+		free_w(&dindexdir);
+	}
+
+end:
+	return manio;
+}
+
+static void manio_free_content(struct manio *manio)
+{
+	if(!manio) return;
+	man_off_t_free(&manio->offset);
+	free_w(&manio->manifest);
 	free_w(&manio->mode);
 	free_w(&manio->hook_dir);
-	free_w(&manio->rdirectory);
+	free_w(&manio->rmanifest);
 	if(manio->hook_sort)
 	{
 		int i;
@@ -54,17 +213,13 @@ static int manio_free_content(struct manio *manio)
 		free_v((void **)&manio->hook_sort);
 	}
 	memset(manio, 0, sizeof(struct manio));
-	return ret;
 }
 
 static int write_hook_header(struct manio *manio,
 	struct fzp *fzp, const char *comp)
 {
-	const char *cp;
 	char *tmp=NULL;
-	cp=manio->rdirectory+strlen(manio->base_dir);
-	while(cp && *cp=='/') cp++;
-	if(!(tmp=prepend_s(cp, comp))) return -1;
+	if(!(tmp=prepend_s(manio->rmanifest, comp))) return -1;
 	// FIX THIS: fzp_printf will truncate at 512 characters.
 	fzp_printf(fzp, "%c%04X%s\n", CMD_MANIFEST, strlen(tmp), tmp);
 	free_w(&tmp);
@@ -73,14 +228,14 @@ static int write_hook_header(struct manio *manio,
 
 static int strsort(const void *a, const void *b)
 {
-	const char *x=*(const char**)a;
-	const char *y=*(const char**)b;
+	const char *x=*(const char **)a;
+	const char *y=*(const char **)b;
 	return strcmp(x, y);
 }
 
 static char *get_fcount_path(struct manio *manio)
 {
-	return prepend_s(manio->directory, "fcount");
+	return prepend_s(manio->manifest, "fcount");
 }
 
 // Backup phase4 needs to know the fcount, so leave a file behind that
@@ -89,20 +244,20 @@ static char *get_fcount_path(struct manio *manio)
 static int manio_write_fcount(struct manio *manio)
 {
 	int ret=-1;
-	FILE *fp=NULL;
+	struct fzp *fzp=NULL;
 	char *path=NULL;
 
 	if(!(path=get_fcount_path(manio))
-	  || !(fp=open_file(path, "wb")))
+	  || !(fzp=fzp_open(path, "wb")))
 		goto end;
-	if(fprintf(fp, "%08"PRIX64"\n", manio->offset.fcount)!=9)
+	if(fzp_printf(fzp, "%08"PRIX64"\n", manio->offset->fcount)!=9)
 	{
 		logp("Short write when writing to %s\n", path);
 		goto end;
 	}
 	ret=0;
 end:
-	if(close_fp(&fp))
+	if(fzp_close(&fzp))
 	{
 		logp("Could not close file pointer to %s\n", path);
 		ret=-1;
@@ -115,15 +270,15 @@ int manio_read_fcount(struct manio *manio)
 {
 	int ret=-1;
 	size_t s;
-	FILE *fp=NULL;
+	struct fzp *fzp=NULL;
 	char *path=NULL;
 	char buf[16]="";
 	if(!(path=get_fcount_path(manio))
-	  || !(fp=open_file(path, "rb")))
+	  || !(fzp=fzp_open(path, "rb")))
 		goto end;
-	if(!fgets(buf, sizeof(buf), fp))
+	if(!fzp_gets(fzp, buf, sizeof(buf)))
 	{
-		logp("fgets on %s failed\n", path);
+		logp("fzp_gets on %s failed\n", path);
 		goto end;
 	}
 	s=strlen(buf);
@@ -132,10 +287,10 @@ int manio_read_fcount(struct manio *manio)
 		logp("data in %s is not the right length (%s!=9)\n", s);
 		goto end;
 	}
-	manio->offset.fcount=strtoul(buf, NULL, 16);
+	manio->offset->fcount=strtoul(buf, NULL, 16);
 	ret=0;
 end:
-	close_fp(&fp);
+	fzp_close(&fzp);
 	free_w(&path);
 	return ret;
 }
@@ -151,10 +306,10 @@ static int sort_and_write_hooks(struct manio *manio)
 	char **hook_sort=manio->hook_sort;
 	if(!hook_sort) return 0;
 
-	snprintf(comp, sizeof(comp), "%08"PRIX64, manio->offset.fcount-1);
+	snprintf(comp, sizeof(comp), "%08"PRIX64, manio->offset->fcount-1);
 	if(!(path=prepend_s(manio->hook_dir, comp))
 	  || build_path_w(path)
-	  || !(fzp=fzp_gzopen(path, manio->mode)))
+	  || !(fzp=fzp_gzopen(path, MANIO_MODE_WRITE)))
 		goto end;
 
 	qsort(hook_sort, hook_count, sizeof(char *), strsort);
@@ -194,10 +349,10 @@ static int sort_and_write_dindex(struct manio *manio)
 	char **dindex_sort=manio->dindex_sort;
 	if(!dindex_sort) return 0;
 
-	snprintf(comp, sizeof(comp), "%08"PRIX64, manio->offset.fcount-1);
+	snprintf(comp, sizeof(comp), "%08"PRIX64, manio->offset->fcount-1);
 	if(!(path=prepend_s(manio->dindex_dir, comp))
 	  || build_path_w(path)
-	  || !(fzp=fzp_gzopen(path, manio->mode)))
+	  || !(fzp=fzp_gzopen(path, MANIO_MODE_WRITE)))
 		goto end;
 
 	qsort(dindex_sort, dindex_count, sizeof(char *), strsort);
@@ -224,108 +379,29 @@ end:
 	return ret;
 }
 
-int manio_close(struct manio *manio)
+static int sort_and_write_hooks_and_dindex(struct manio *manio)
 {
-	if(manio_closed(manio)) return 0;
-	if(sort_and_write_hooks(manio)
-	  || sort_and_write_dindex(manio))
-	{
-		fzp_close(&(manio->fzp));
-		return -1;
-	}
-	return fzp_close(&(manio->fzp));
+	return sort_and_write_hooks(manio)
+	  || sort_and_write_dindex(manio);
 }
 
-int manio_free(struct manio **manio)
+int manio_close(struct manio **manio)
 {
 	int ret=0;
 	if(!manio || !*manio) return ret;
-	if(manio_free_content(*manio)) ret=-1;
+	if(sort_and_write_hooks_and_dindex(*manio)
+	  || fzp_close(&((*manio)->fzp)))
+		ret=-1;
+	manio_free_content(*manio);
 	free_v((void **)manio);
 	return ret;
 }
 
-static int manio_set_mode(struct manio *manio, const char *mode)
-{
-	if(manio_close(manio)) return -1;
-	free_w(&manio->mode);
-	if(!(manio->mode=strdup_w(mode, __func__)))
-		return -1;
-	manio->offset.fcount=0;
-	return 0;
-}
-
-int manio_set_mode_read(struct manio *manio)
-{
-	return manio_set_mode(manio, MANIO_MODE_READ);
-}
-
-int manio_set_mode_write(struct manio *manio)
-{
-	return manio_set_mode(manio, MANIO_MODE_WRITE);
-}
-
-void manio_set_protocol(struct manio *manio, enum protocol protocol)
-{
-	manio->protocol=protocol;
-}
-
-static int manio_init(struct manio *manio, const char *directory, const char *mode)
-{
-	if(manio_free_content(manio)) return -1;
-	if(!(manio->directory=strdup_w(directory, __func__)))
-		return -1;
-	if(manio_set_mode(manio, mode)) return -1;
-	manio_set_protocol(manio, PROTO_2);
-	return 0;
-}
-
-int manio_init_read(struct manio *manio, const char *directory)
-{
-	return manio_init(manio, directory, MANIO_MODE_READ);
-}
-
-int manio_init_write(struct manio *manio, const char *directory)
-{
-	return manio_init(manio, directory, MANIO_MODE_WRITE);
-}
-
-static char *get_next_fpath_protocol1(struct manio *manio)
-{
-	return strdup_w(manio->directory, __func__);
-}
-
-static char *get_next_fpath(struct manio *manio)
-{
-	static char tmp[32];
-	if(manio->protocol==PROTO_1) return get_next_fpath_protocol1(manio);
-	snprintf(tmp, sizeof(tmp), "%08"PRIX64, manio->offset.fcount++);
-	return prepend_s(manio->directory, tmp);
-}
-
-int manio_open_next_fpath(struct manio *manio)
-{
-	static struct stat statp;
-
-	if(!(manio->offset.fpath=get_next_fpath(manio))) return -1;
-
-	if(!strcmp(manio->mode, MANIO_MODE_READ)
-	  && lstat(manio->offset.fpath, &statp))
-		return 0;
-
-	if(build_path_w(manio->offset.fpath)
-	  || !(manio->fzp=fzp_gzopen(manio->offset.fpath, manio->mode)))
-		return -1;
-	return 0;
-}
-
 // Return -1 for error, 0 for stuff read OK, 1 for end of files.
-static int do_manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
+int manio_read_with_blk(struct manio *manio,
 	struct sbuf *sb, struct blk *blk,
-	struct sdirs *sdirs, struct conf **confs, int phase1)
+	struct sdirs *sdirs, struct conf **confs)
 {
-	int ars;
-
 	while(1)
 	{
 		if(!manio->fzp)
@@ -334,16 +410,8 @@ static int do_manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
 			if(!manio->fzp) return 1; // No more files to read.
 		}
 
-		if(manio->protocol==PROTO_2 || phase1)
-		{
-			ars=sbuf_fill(sb, asfd, manio->fzp, blk,
-				sdirs?sdirs->data:NULL, confs);
-		}
-		else
-		{
-			ars=sbufl_fill(sb, asfd, manio->fzp, confs);
-		}
-		switch(ars)
+		switch(sbuf_fill_from_file(sb, manio->fzp, blk,
+			sdirs?sdirs->data:NULL, confs))
 		{
 			case 0: return 0; // Got something.
 			case 1: break; // Keep going.
@@ -352,40 +420,25 @@ static int do_manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
 
 		// Reached the end of the current file.
 		// Maybe there is another file to continue with.
-		if(manio_close(manio)) goto error;
+		if(sort_and_write_hooks_and_dindex(manio)
+		  || fzp_close(&manio->fzp)) goto error;
 
-		// If in protocol1 mode, there is only one file, so end.
-		if(manio->protocol==PROTO_1) return 1;
+		if(is_single_file(manio)) return 1;
 	}
 
 error:
-	manio_close(manio);
 	return -1;
 }
 
-int manio_sbuf_fill(struct manio *manio, struct asfd *asfd,
-	struct sbuf *sb, struct blk *blk,
-	struct sdirs *sdirs, struct conf **confs)
+int manio_read(struct manio *manio, struct sbuf *sb, struct conf **confs)
 {
-	return do_manio_sbuf_fill(manio, asfd, sb, blk, sdirs, confs, 0);
-}
-
-// FIX THIS:
-// Same as manio_sbuf_fill(), but always does sbuf_fill_from_gzfile().
-// Protocol2 is using the burp-1 phase1 format. If it wrote its own format,
-// this separate function should not be necessary.
-// Once there are some tests that excercise the resume functionality, then
-// this can be dealt with more safely.
-int manio_sbuf_fill_phase1(struct manio *manio, struct asfd *asfd,
-	struct sbuf *sb, struct blk *blk,
-	struct sdirs *sdirs, struct conf **confs)
-{
-	return do_manio_sbuf_fill(manio, asfd, sb, blk, sdirs, confs, 1);
+	return manio_read_with_blk(manio, sb, NULL, NULL, confs);
 }
 
 static int reset_sig_count_and_close(struct manio *manio)
 {
-	if(manio_close(manio)) return -1;
+	if(sort_and_write_hooks_and_dindex(manio)) return -1;
+	if(fzp_close(&manio->fzp)) return -1;
 	manio->sig_count=0;
 	return 0;
 }
@@ -445,13 +498,9 @@ static char *sig_to_msg(struct blk *blk, int save_path)
 	return msg;
 }
 
-int manio_write_sig(struct manio *manio, struct blk *blk)
-{
-	return write_sig_msg(manio, sig_to_msg(blk, 0 /* no save_path */));
-}
-
 int manio_write_sig_and_path(struct manio *manio, struct blk *blk)
 {
+	if(manio->protocol==PROTO_1) return 0;
 	if(manio->hook_sort && is_hook(blk->fingerprint))
 	{
 		// Add to list of hooks for this manifest chunk.
@@ -481,45 +530,8 @@ int manio_write_sbuf(struct manio *manio, struct sbuf *sb)
 	return sbuf_to_manifest(sb, manio->fzp);
 }
 
-int manio_closed(struct manio *manio)
-{
-	if(manio->fzp || !manio->offset.fpath) return 0;
-	return 1;
-}
-
-int manio_init_write_hooks(struct manio *manio,
-	const char *base_dir, const char *hook_dir, const char *rdirectory)
-{
-	int i=0;
-	if(!(manio->base_dir=strdup_w(base_dir, __func__))
-	  || !(manio->hook_dir=strdup_w(hook_dir, __func__))
-	  || !(manio->rdirectory=strdup_w(rdirectory, __func__))
-	  || !(manio->hook_sort=
-		(char **)calloc_w(MANIFEST_SIG_MAX, sizeof(char*), __func__)))
-			return -1;
-	for(i=0; i<MANIFEST_SIG_MAX; i++)
-		if(!(manio->hook_sort[i]=
-			(char *)calloc_w(1, WEAK_STR_LEN, __func__)))
-				return -1;
-	return 0;
-}
-
-int manio_init_write_dindex(struct manio *manio, const char *dir)
-{
-	int i=0;
-	if(!(manio->dindex_dir=strdup_w(dir, __func__))
-	  || !(manio->dindex_sort=
-		(char **)calloc_w(MANIFEST_SIG_MAX, sizeof(char*), __func__)))
-			return -1;
-	for(i=0; i<MANIFEST_SIG_MAX; i++)
-		if(!(manio->dindex_sort[i]=
-			(char *)calloc_w(1, MSAVE_PATH_LEN+1, __func__)))
-				return -1;
-	return 0;
-}
-
 // Return -1 on error, 0 on OK, 1 for srcmanio finished.
-int manio_copy_entry(struct asfd *asfd, struct sbuf **csb, struct sbuf *sb,
+int manio_copy_entry(struct sbuf *csb, struct sbuf *sb,
 	struct blk **blk, struct manio *srcmanio,
 	struct manio *dstmanio, struct conf **confs)
 {
@@ -527,35 +539,55 @@ int manio_copy_entry(struct asfd *asfd, struct sbuf **csb, struct sbuf *sb,
 	static char *copy=NULL;
 
 	// Use the most recent stat for the new manifest.
-	if(dstmanio && manio_write_sbuf(dstmanio, sb)) goto error;
+	if(dstmanio)
+	{
+		if(manio_write_sbuf(dstmanio, sb)) goto error;
+		if(dstmanio->protocol==PROTO_1)
+		{
+			sbuf_free_content(csb);
+			return 0;
+		}
+	}
 
-	if(!(copy=strdup_w((*csb)->path.buf, __func__)))
+	if(!(copy=strdup_w(csb->path.buf, __func__)))
 		goto error;
-
 	while(1)
 	{
-		if((ars=manio_sbuf_fill(srcmanio, asfd, *csb,
+		if((ars=manio_read_with_blk(srcmanio, csb,
 			*blk, NULL, confs))<0) goto error;
 		else if(ars>0)
 		{
 			// Finished.
-			sbuf_free(csb);
+			sbuf_free_content(csb);
 			blk_free(blk);
 			free_w(&copy);
 			return 1;
 		}
 
 		// Got something.
-		if(strcmp((*csb)->path.buf, copy))
+		if(strcmp(csb->path.buf, copy))
 		{
 			// Found the next entry.
 			free_w(&copy);
 			return 0;
 		}
-		// Should have the next signature.
-		// Write it to the destination manifest.
-		if(dstmanio && manio_write_sig_and_path(dstmanio, *blk))
-			goto error;
+		if(dstmanio)
+		{
+			if(!dstmanio->fzp
+			  && manio_open_next_fpath(dstmanio)) return -1;
+			if(csb->endfile.buf)
+			{
+				if(iobuf_send_msg_fzp(&csb->endfile,
+					dstmanio->fzp)) goto error;
+			}
+			else
+			{
+				// Should have the next signature.
+				// Write it to the destination manifest.
+				if(manio_write_sig_and_path(dstmanio, *blk))
+					goto error;
+			}
+		}
 	}
 
 error:
@@ -563,54 +595,83 @@ error:
 	return -1;
 }
 
-int manio_forward_through_sigs(struct asfd *asfd,
-	struct sbuf **csb, struct blk **blk,
+int manio_forward_through_sigs(struct sbuf *csb, struct blk **blk,
 	struct manio *manio, struct conf **confs)
 {
 	// Call manio_copy_entry with nothing to write to, so
 	// that we forward through the sigs in manio.
-	return manio_copy_entry(asfd, csb, NULL, blk, manio, NULL, confs);
-}
-
-static void man_off_t_memcpy(man_off_t *dst, man_off_t *src)
-{
-	memcpy(dst, src, sizeof(man_off_t));
+	return manio_copy_entry(csb, NULL, blk, manio, NULL, confs);
 }
 
 man_off_t *manio_tell(struct manio *manio)
 {
-	static man_off_t offset;
-	memset(&offset, 0, sizeof(man_off_t));
-	if(!manio->fzp) return 0;
-	if((manio->offset.offset=fzp_tell(manio->fzp))<0)
-		return NULL;
-	man_off_t_memcpy(&offset, &manio->offset);
-	return &offset;
+	man_off_t *offset=NULL;
+	if(!manio->fzp)
+	{
+		logp("manio_tell called on null fzp\n");
+		goto error;
+	}
+	if(!(offset=man_off_t_alloc())
+	  || !(offset->fpath=strdup_w(manio->offset->fpath, __func__))
+	  || (offset->offset=fzp_tell(manio->fzp))<0)
+		goto error;
+	offset->fcount=manio->offset->fcount;
+	return offset;
+error:
+	man_off_t_free(&offset);
+	return NULL;
 }
 
 int manio_seek(struct manio *manio, man_off_t *offset)
 {
 	fzp_close(&manio->fzp);
-	man_off_t_memcpy(&manio->offset, offset);
-	if(!(manio->fzp=fzp_gzopen(manio->offset.fpath, manio->mode)))
+	if(!(manio->fzp=fzp_gzopen(offset->fpath, manio->mode))
+	  || fzp_seek(manio->fzp, offset->offset, SEEK_SET))
 		return -1;
-	return fzp_seek(manio->fzp, manio->offset.offset, SEEK_SET);
+	man_off_t_free_content(manio->offset);
+	if(!(manio->offset->fpath=strdup_w(offset->fpath, __func__)))
+		return -1;
+	manio->offset->offset=offset->offset;
+	manio->offset->fcount=offset->fcount;
+	return 0;
 }
 
-int manio_truncate(struct manio *manio)
+static int remove_trailing_files(struct manio *manio, man_off_t *offset)
 {
-	off_t pos=0;
-	if(manio->fzp && (pos=fzp_tell(manio->fzp))<0)
+	int ret=-1;
+	char *fpath=NULL;
+	struct stat statp;
+	while(1)
 	{
-		logp("Could not fzp_tell %s in %s(): %s\n",
-			manio->directory, __func__, strerror(errno));
-		return -1;
+		free_w(&fpath);
+		if(!(fpath=get_next_fpath(manio, offset)))
+			goto end;
+		if(lstat(fpath, &statp)) break;
+		if(!S_ISREG(statp.st_mode))
+			goto end;
+		if(recursive_delete(fpath))
+			goto end;
 	}
-	if(truncate(manio->directory, pos))
+	ret=0;
+end:
+	free_w(&fpath);
+	return ret;
+}
+
+int manio_truncate(struct manio *manio, man_off_t *offset, struct conf **confs)
+{
+	int ret=-1;
+	errno=0;
+	if(fzp_truncate(offset->fpath, FZP_FILE, offset->offset, confs))
 	{
-		logp("Could not truncate %s in %s(): %s\n",
-			manio->directory, __func__, strerror(errno));
-		return -1;
+		logp("Could not fzp_truncate %s in %s(): %s\n",
+			manio->manifest, __func__, strerror(errno));
+		goto end;
 	}
-	return 0;
+	if(!is_single_file(manio)
+	  && remove_trailing_files(manio, offset))
+		goto end;
+	ret=0;
+end:
+	return ret;
 }

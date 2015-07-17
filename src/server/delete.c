@@ -16,7 +16,7 @@ static int do_rename_w(const char *a, const char *b)
 
 static int recursive_delete_w(struct sdirs *sdirs, struct bu *bu)
 {
-	if(recursive_delete(sdirs->deleteme, NULL, 1))
+	if(recursive_delete(sdirs->deleteme))
 	{
 		logp("Error when trying to delete %s\n", bu->path);
 		return -1;

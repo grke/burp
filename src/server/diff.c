@@ -6,30 +6,34 @@
 static int diff_manifest(struct asfd *asfd,
 	const char *fullpath, struct conf **confs)
 {
-	int ars=0;
 	int ret=0;
 	struct sbuf *sb=NULL;
 	struct manio *manio=NULL;
 	char *manifest_dir=NULL;
-	enum protocol protocol=get_e_protocol(confs[OPT_PROTOCOL]);
+	enum protocol protocol=get_protocol(confs);
 
 	if(!(manifest_dir=prepend_s(fullpath,
 		protocol==PROTO_1?"manifest.gz":"manifest"))
-	  || !(manio=manio_alloc())
-	  || manio_init_read(manio, manifest_dir)
+	  || !(manio=manio_open(manifest_dir, "rb", protocol))
 	  || !(sb=sbuf_alloc(confs)))
 	{
 		log_and_send_oom(asfd, __func__);
 		goto error;
 	}
-	manio_set_protocol(manio, protocol);
 
 	while(1)
 	{
-		if((ars=manio_sbuf_fill(manio, asfd, sb, NULL, NULL, confs))<0)
-			goto error;
-		else if(ars>0)
-			goto end; // Finished OK.
+		sbuf_free_content(sb);
+
+                switch(manio_read(manio, sb, confs))
+                {
+                        case 0: break;
+                        case 1: goto end; // Finished OK.
+                        default: goto error;
+                }
+
+		if(protocol==PROTO_2 && sb->endfile.buf)
+			continue;
 
 		if(write_status(CNTR_STATUS_DIFFING, sb->path.buf, confs))
 			goto error;
@@ -40,8 +44,6 @@ static int diff_manifest(struct asfd *asfd,
 		if(sbuf_is_link(sb)
 		  && asfd->write(asfd, &sb->link))
 			goto error;
-
-		sbuf_free_content(sb);
 	}
 
 error:
@@ -49,7 +51,7 @@ error:
 end:
 	sbuf_free(&sb);
 	free_w(&manifest_dir);
-	manio_free(&manio);
+	manio_close(&manio);
 	return ret;
 }
 

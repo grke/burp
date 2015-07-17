@@ -38,8 +38,7 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 	// to the stream style restore.
 	if(!restore_spool) return 0;
 	
-	if(!(manio=manio_alloc())
-	  || manio_init_read(manio, manifest)
+	if(!(manio=manio_open(manifest, "rb", PROTO_2))
 	  || !(need_data=sbuf_alloc(confs))
 	  || !(sb=sbuf_alloc(confs))
 	  || !(blk=blk_alloc()))
@@ -47,14 +46,15 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 
 	while(1)
 	{
-		if((ars=manio_sbuf_fill(manio, asfd, sb, blk, NULL, confs))<0)
+		if((ars=manio_read_with_blk(manio, sb, blk, NULL, confs))<0)
 		{
-			logp("Error from manio_sbuf_fill() in %s\n",
+			logp("Error from manio_read_async() in %s\n",
 				__func__);
 			goto end; // Error;
 		}
 		else if(ars>0)
 			break; // Finished OK.
+
 		if(!blk->got_save_path)
 		{
 			sbuf_free_content(sb);
@@ -134,15 +134,16 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 	  || asfd->read_expect(asfd, CMD_GEN, "datfilesend_ok"))
 		goto end;
 
+	manio_close(&manio);
 	// Send the manifest to the client.
-	if(manio_init_read(manio, manifest))
+	if(manio_open(manifest, "rb", PROTO_2))
 		goto end;
 	blk->got_save_path=0;
 	while(1)
 	{
-		if((ars=manio_sbuf_fill(manio, asfd, sb, blk, NULL, confs))<0)
+		if((ars=manio_read_with_blk(manio, sb, blk, NULL, confs))<0)
 		{
-			logp("Error from manio_sbuf_fill() in %s\n",
+			logp("Error from manio_read_async() in %s\n",
 				__func__);
 			goto end; // Error;
 		}
@@ -183,7 +184,7 @@ end:
 	blk_free(&blk);
 	sbuf_free(&sb);
 	sbuf_free(&need_data);
-	manio_free(&manio);
+	manio_close(&manio);
 	hash_delete_all();
 	return ret;
 }

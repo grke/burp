@@ -30,7 +30,7 @@ _Z4forkv
 _Z4killii
 _Z4pipePi
 _Z11win32_lstatPKcP4statPy
-; _Z4statPKcP4stat
+_Z4statPKcP4stat
 _Z5chownPKcjj
 _Z5fcntlii
 _Z5fcntliil
@@ -61,8 +61,8 @@ _ZN6winverC2Ev
 syslog
 umask
 utime
-_Z9forkchildPP6_iobufS1_S1_PKcPKPc
-_Z17forkchild_no_waitPP6_iobufS1_S1_PKcPKPc
+_Z9forkchildPP3fzpS1_S1_PKcPKPc
+_Z17forkchild_no_waitPP3fzpS1_S1_PKcPKPc
  
 ; print.o
 _Z10__snprintfPcjPKcz

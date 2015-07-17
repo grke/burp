@@ -1,6 +1,7 @@
 #include "../burp.h"
 #include "../alloc.h"
 #include "../fsops.h"
+#include "../fzp.h"
 #include "../lock.h"
 #include "../log.h"
 #include "dpth.h"
@@ -23,9 +24,9 @@ int dpth_release_and_move_to_next_in_list(struct dpth *dpth)
 	int ret=0;
 	struct dpth_lock *next=NULL;
 
-	// Try to release (and unlink) the lock even if close_fp failed, just
+	// Try to release (and unlink) the lock even if fzp_close failed, just
 	// to be tidy.
-	if(close_fp(&dpth->fp)) ret=-1;
+	if(fzp_close(&dpth->fzp)) ret=-1;
 	if(lock_release(dpth->head->lock)) ret=-1;
 	lock_free(&dpth->head->lock);
 
@@ -40,7 +41,7 @@ int dpth_release_all(struct dpth *dpth)
 {
 	int ret=0;
 	if(!dpth) return 0;
-	if(dpth->fp && close_fp(&dpth->fp)) ret=-1;
+	if(dpth->fzp && fzp_close(&dpth->fzp)) ret=-1;
 	while(dpth->head)
 		if(dpth_release_and_move_to_next_in_list(dpth)) ret=-1;
 	return ret;

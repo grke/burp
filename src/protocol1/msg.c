@@ -1,5 +1,13 @@
-#include "include.h"
+#include "msg.h"
 #include "cmd.h"
+#include "handy.h"
+#include "../asfd.h"
+#include "../async.h"
+#include "../cntr.h"
+#include "../iobuf.h"
+#include "../log.h"
+#include "../prepend.h"
+#include "../sbuf.h"
 
 static int do_write(struct asfd *asfd,
 	BFILE *bfd, uint8_t *out, size_t outlen,
@@ -180,8 +188,7 @@ int transfer_gzfile_inl(struct asfd *asfd,
 
 #ifdef HAVE_WIN32
 	if(sb && sb->path.cmd==CMD_EFS_FILE)
-		return transfer_efs_in(asfd, bfd, rcvd, sent,
-			get_cntr(confs[OPT_CNTR]));
+		return transfer_efs_in(asfd, bfd, rcvd, sent, get_cntr(confs));
 #endif
 
 	//if(!MD5_Init(&md5))

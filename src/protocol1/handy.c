@@ -1,6 +1,12 @@
-#include "include.h"
-#include "cmd.h"
-#include "hexmap.h"
+#include "handy.h"
+#include "../alloc.h"
+#include "../asfd.h"
+#include "../async.h"
+#include "../bfile.h"
+#include "../cmd.h"
+#include "../handy.h"
+#include "../hexmap.h"
+#include "../log.h"
 
 static int do_encryption(struct asfd *asfd, EVP_CIPHER_CTX *ctx,
 	uint8_t *inbuf, int inlen, uint8_t *outbuf, int *outlen,
@@ -71,8 +77,9 @@ struct bsid {
 char *get_endfile_str(unsigned long long bytes, uint8_t *checksum)
 {
 	static char endmsg[128]="";
-	snprintf(endmsg, sizeof(endmsg),
-		"%"PRIu64 ":%s", (uint64_t)bytes, bytes_to_md5str(checksum));
+	snprintf(endmsg, sizeof(endmsg), "%"PRIu64 ":%s",
+			(uint64_t)bytes,
+			checksum?bytes_to_md5str(checksum):"");
 	return endmsg;
 }
 

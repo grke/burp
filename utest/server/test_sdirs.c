@@ -26,7 +26,7 @@ static struct conf **setup_confs(const char *conf_str)
 static struct sdirs *setup(struct conf **confs)
 {
 	struct sdirs *sdirs;
-	fail_unless(recursive_delete(BASE, "", 1)==0);
+	fail_unless(recursive_delete(BASE)==0);
 	fail_unless((sdirs=sdirs_alloc())!=NULL);
 	return sdirs;
 }
@@ -35,7 +35,7 @@ static void tear_down(struct sdirs **sdirs, struct conf ***confs)
 {
 	sdirs_free(sdirs);
 	confs_free(confs);
-	fail_unless(recursive_delete(BASE, "", 1)==0);
+	fail_unless(recursive_delete(BASE)==0);
 	fail_unless(free_count==alloc_count);
 }
 
@@ -79,7 +79,7 @@ static void check_dynamic_paths(struct sdirs *sdirs, struct conf **confs,
 
 static void protocol1_tests(struct sdirs *sdirs, struct conf **confs)
 {
-	set_e_protocol(confs[OPT_PROTOCOL], PROTO_1);
+	set_protocol(confs, PROTO_1);
 	fail_unless(sdirs_init(sdirs, confs)==0);
 	ck_assert_str_eq(sdirs->base, BASE);
 	fail_unless(sdirs->dedup==NULL);
@@ -87,7 +87,7 @@ static void protocol1_tests(struct sdirs *sdirs, struct conf **confs)
 	fail_unless(sdirs->champsock==NULL);
 	fail_unless(sdirs->champlog==NULL);
 	fail_unless(sdirs->data==NULL);
-	fail_unless(sdirs->clients==NULL);
+	ck_assert_str_eq(sdirs->clients, BASE);
 	ck_assert_str_eq(sdirs->client, CLIENT);
 	ck_assert_str_eq(sdirs->working, WORKING);
 	ck_assert_str_eq(sdirs->finishing, CLIENT "/finishing");
@@ -119,7 +119,7 @@ static void protocol1_tests(struct sdirs *sdirs, struct conf **confs)
 
 static void protocol2_tests(struct sdirs *sdirs, struct conf **confs)
 {
-	set_e_protocol(confs[OPT_PROTOCOL], PROTO_2);
+	set_protocol(confs, PROTO_2);
 	fail_unless(sdirs_init(sdirs, confs)==0);
 	ck_assert_str_eq(sdirs->base, BASE);
 	ck_assert_str_eq(sdirs->dedup, DEDUP);
@@ -174,7 +174,7 @@ START_TEST(test_lockdirs)
 	struct conf **confs;
 	confs=setup_confs(MIN_SERVER_CONF "client_lockdir=/some/other/dir\n");
 	sdirs=setup(confs);
-	set_e_protocol(confs[OPT_PROTOCOL], PROTO_2);
+	set_protocol(confs, PROTO_2);
 	fail_unless(sdirs_init(sdirs, confs)==0);
 
 	ck_assert_str_eq(sdirs->lockdir, "/some/other/dir");

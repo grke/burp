@@ -9,19 +9,18 @@ fi
 server="$1"
 client="$2"
 user="$3"
-pass="$4"
 
 if [ -z "$server" ] \
   || [ -z "$client" ] \
-  || [ -z "$user" ] \
-  || [ -z "$pass" ] ; then
-	echo "Usage: $myscript [server address] [client address] [client user] [client pass]"
+  || [ -z "$user" ] ; then
+	echo "Usage: $myscript [server address] [client address] [client user]"
 	exit 1
 fi
 
 path="$PWD"
 build="$path/build"
 target="$path/target"
+ssh_opts="-o StrictHostKeyChecking=no"
 
 fail()
 {
@@ -73,7 +72,7 @@ build_and_install()
 	# Now copy the Windows installer to the client
 	installer=$(find -name burp-win64-installer*.exe)
 	[ -z "$client" ] && fail
-	"$path/scp_expect" "$pass" "$installer" "$user@$client:" || fail
+	scp $ssh_opts "$installer" "$user@$client:" || fail
 
 	cdir -
 }
@@ -87,7 +86,7 @@ cdir "$path" || fail
 rm -f build/burp-depkgs
 rm -f build/burp-cross-tools
 tar -cjf build.tar.bz2 build || fail
-"$path/scp_expect" "$pass" build.tar.bz2 "$user@$client:" || fail
+scp $ssh_opts build.tar.bz2 "$user@$client:" || fail
 
 
 installer=$(basename $installer)
@@ -101,10 +100,10 @@ rm -rf "/cygdrive/c/Program Files/Burp" || exit 1
 tar -xjf build.tar.bz2 -C "$clientburpdir" || exit 1
 EOF
 
-"$path/scp_expect" "$pass" windowsscript "$user@$client:" || fail
-"$path/ssh_expect" "$pass" "$user@$client" chmod 755 windowsscript || fail
-"$path/ssh_expect" "$pass" "$user@$client" chmod 755 "$installer" || fail
-"$path/ssh_expect" "$pass" "$user@$client" ./windowsscript || fail
+scp $ssh_opts windowsscript "$user@$client:" || fail
+ssh $ssh_opts "$user@$client" chmod 755 windowsscript || fail
+ssh $ssh_opts "$user@$client" chmod 755 "$installer" || fail
+ssh $ssh_opts "$user@$client" ./windowsscript || fail
 
 # args:
 # 1 - directory where build was installed
@@ -117,47 +116,30 @@ EOF
 # 8 - ssh command (leave unset for self test)
 # 9 - scp command (leave unset for self test)
 # 10 - address of the client (leave unset for self test)
+
+do_run()
+{
+	rm -rf "$target/var/spool/burp/testclient"
+	./test_main \
+		"$target" \
+		"$clientburpdir/bin/burp.exe" \
+		"$clientburpdir/burp.conf" \
+		"C:\Program Files\Burp\burp.conf" \
+		"C:/Program Files/Burp/build" \
+		"C:/Program Files/Burp/restore" \
+		"$server" \
+		"ssh $ssh_opts" \
+		"scp $ssh_opts" \
+		"$user@$client" || exit 1
+}
+
 echo "Running with split_vss=0 and strip_vss=0"
-./test_main \
-	"$target" \
-	"$clientburpdir/bin/burp.exe" \
-	"$clientburpdir/burp.conf" \
-	"C:\Program Files\Burp\burp.conf" \
-	"C:/Program Files/Burp/build" \
-	"C:/Program Files/Burp/restore" \
-	"$server" \
-	"$path/ssh_expect $pass" \
-	"$path/scp_expect $pass" \
-	"$user@$client" || exit 1
+do_run
 
-# Go again with SPLIT_VSS=1
 echo "Running with split_vss=1 and strip_vss=0"
-rm -rf "$target/var/spool/burp/testclient"
-NO_CA_GEN=1 SPLIT_VSS=1 ./test_main \
-	"$target" \
-	"$clientburpdir/bin/burp.exe" \
-	"$clientburpdir/burp.conf" \
-	"C:\Program Files\Burp\burp.conf" \
-	"C:/Program Files/Burp/build" \
-	"C:/Program Files/Burp/restore" \
-	"$server" \
-	"$path/ssh_expect $pass" \
-	"$path/scp_expect $pass" \
-	"$user@$client" || exit 1
+NO_CA_GEN=1 SPLIT_VSS=1 do_run
 
-# Go again with STRIP_VSS=1
 echo "Running with split_vss=0 and strip_vss=1"
-rm -rf "$target/var/spool/burp/testclient"
-NO_CA_GEN=1 STRIP_VSS=1 ./test_main \
-	"$target" \
-	"$clientburpdir/bin/burp.exe" \
-	"$clientburpdir/burp.conf" \
-	"C:\Program Files\Burp\burp.conf" \
-	"C:/Program Files/Burp/build" \
-	"C:/Program Files/Burp/restore" \
-	"$server" \
-	"$path/ssh_expect $pass" \
-	"$path/scp_expect $pass" \
-	"$user@$client" || exit 1
+NO_CA_GEN=1 STRIP_VSS=1 do_run
 
 exit 0

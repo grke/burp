@@ -1,7 +1,8 @@
 #ifndef _SBUF_PROTOCOL2_H
 #define _SBUF_PROTOCOL2_H
 
-#include "include.h"
+#include "../burp.h"
+#include "../bfile.h"
 
 // Structure used only by protocol2 style functionality.
 struct protocol2

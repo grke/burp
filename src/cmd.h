@@ -40,7 +40,7 @@ enum cmd
 				   the end of the manifest and contains
 				   size/checksum info. */
 
-/* CMD_FILE_UNCHANGED only used in counting stats on the client, for humans */
+// CMD_FILE_UNCHANGED only used in counting stats on the client, for humans
 	CMD_FILE_CHANGED='z',
 
 	CMD_TIMESTAMP	='b',	/* Backup timestamp (in response to list) */
@@ -50,7 +50,7 @@ enum cmd
 	CMD_FINGERPRINT	='F',	/* Fingerprint part of a signature */
 
 
-/* These things are for the status server/client */
+// These things are for the status server/client
 
 	CMD_TOTAL	='Y',
 	CMD_GRAND_TOTAL	='Z',
@@ -61,7 +61,7 @@ enum cmd
 	CMD_BYTES_SENT	='Q',
 	CMD_TIMESTAMP_END='E',
 
-// Legacy stuff
+// Protocol1 only.
 	CMD_DATAPTH	='t',	/* Path to data on the server */
 	CMD_VSS		='v',	/* Windows VSS metadata */
 	CMD_ENC_VSS	='V',	/* Encrypted Windows VSS metadata */
@@ -72,6 +72,7 @@ enum cmd
 
 extern void cmd_print_all(void);
 extern int cmd_is_filedata(enum cmd cmd);
+extern int cmd_is_vssdata(enum cmd cmd);
 extern int cmd_is_link(enum cmd cmd);
 extern int cmd_is_endfile(enum cmd cmd);
 extern int cmd_is_encrypted(enum cmd cmd);

@@ -1,4 +1,5 @@
-#include "include.h"
+#include "sbuf_protocol1.h"
+#include "../alloc.h"
 #include "../cmd.h"
 
 struct protocol1 *sbuf_protocol1_alloc(void)
@@ -18,7 +19,5 @@ void sbuf_protocol1_free_content(struct protocol1 *protocol1)
 	fzp_close(&protocol1->sigfzp);
 	fzp_close(&protocol1->fzp);
 	iobuf_free_content(&protocol1->datapth);
-	iobuf_free_content(&protocol1->endfile);
 	protocol1->datapth.cmd=CMD_DATAPTH;
-	protocol1->endfile.cmd=CMD_END_FILE;
 }

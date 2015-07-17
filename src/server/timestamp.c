@@ -2,25 +2,24 @@
 #include "../bu.h"
 #include "../conf.h"
 #include "../fsops.h"
+#include "../fzp.h"
 #include "bu_get.h"
 
 #include "timestamp.h"
 
 int timestamp_read(const char *path, char buf[], size_t len)
 {
-	FILE *fp=NULL;
 	char *cp=NULL;
 	char *fgetret=NULL;
+	struct fzp *fzp=NULL;
 
-	//if(!(fp=open_file(path, "rb")))
-	// avoid alarming message
-	if(!(fp=fopen(path, "rb")))
+	if(!(fzp=fzp_open(path, "rb")))
 	{
 		*buf=0;
 		return -1;
 	}
-	fgetret=fgets(buf, len, fp);
-	fclose(fp);
+	fgetret=fzp_gets(fzp, buf, len);
+	fzp_close(&fzp);
 	if(!fgetret) return -1;
 	if((cp=strrchr(buf, '\n'))) *cp='\0';
 	return 0;
@@ -28,10 +27,10 @@ int timestamp_read(const char *path, char buf[], size_t len)
 
 int timestamp_write(const char *path, const char *tstmp)
 {
-	FILE *fp=NULL;
-	if(!(fp=open_file(path, "wb"))) return -1;
-	fprintf(fp, "%s\n", tstmp);
-	fclose(fp);
+	struct fzp *fzp=NULL;
+	if(!(fzp=fzp_open(path, "wb"))) return -1;
+	fzp_printf(fzp, "%s\n", tstmp);
+	fzp_close(&fzp);
 	return 0;
 }
 

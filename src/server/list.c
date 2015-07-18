@@ -253,6 +253,7 @@ int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct conf **confs,
 	if(backup && *backup && !found)
 	{
 		write_wrapper_str(asfd, CMD_ERROR, "backup not found");
+		flush_asio(asfd);
 		goto end;
 	}
 

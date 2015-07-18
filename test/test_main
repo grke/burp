@@ -149,6 +149,24 @@ wait_for_backup_to_finish()
 	done
 }
 
+add_run_list()
+{
+cat >> "$clientscript" <<EOF
+echo "Starting test client list"
+"$burpbin" -c "$clientconfarg" -a l -b "$1" || fail "client list returned \$?"
+
+EOF
+}
+
+add_run_list_expect_fail()
+{
+cat >> "$clientscript" <<EOF
+echo "Starting test client list"
+"$burpbin" -c "$clientconfarg" -a l -b "$1" && fail "client list returned \$?"
+
+EOF
+}
+
 add_run_backup_no_increment()
 {
 cat >> "$clientscript" <<EOF
@@ -779,6 +797,12 @@ all_tests()
 	add_run_verify
 	add_run_restore $bno "$restoredir"
 	add_restore_diff
+	end_test
+
+	start_test "List"
+	add_run_list $bno
+	add_run_list_expect_fail 99999
+	run_scripts
 	end_test
 
 	start_test "Interrupt server phase4"

@@ -18,6 +18,9 @@
   * Fix directories in Windows protocol1 strip_vss mode.
   * Fix from Patrick Van der Veken to correct typo in timer_script that
     meant month settings were broken.
+  * Make listing a non-existent backup give an error.
+  * Stop using scandir with a comparison function, in order to avoid
+    problems with compilation on Macs.
 
 2015-07-01 Changes in burp-1.4.40:
   * Fix '-a l' regex so that it isn't split in two at the right-most
@@ -25,7 +28,6 @@
   * Set default_md=sha256 in CA.cnf.
   * Correct logp format strings in quota.c.
   * Upgrade Windows depkgs to openssl-1.0.1o.
->>>>>>> 2.0.21
 
 2015-05-30 Changes in burp-2.0.20:
   * Fix conf bug that was causing the server to segfault when the client

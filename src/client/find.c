@@ -40,7 +40,7 @@
    src/findlib/find.c
    src/findlib/find_one.c.
    The comment by Kern above, about TAR, was from find_one.c.
-   
+
       Graham Keeling, 2014.
 */
 
@@ -61,11 +61,6 @@ FF_PKT *find_files_init(void)
 	  || linkhash_init())
 		return NULL;
 
-	// Get system path and filename maximum lengths.
-	// FIX THIS: maybe this should be done every time a file system is
-	// crossed?
-	init_fs_max(NULL);
-
 	return ff;
 }
 
@@ -75,18 +70,13 @@ void find_files_free(FF_PKT *ff)
 	free_v((void **)&ff);
 }
 
-static int myalphasort(const struct dirent **a, const struct dirent **b)
-{
-	return pathcmp((*a)->d_name, (*b)->d_name);
-}
-
 // Return 1 to include the file, 0 to exclude it.
 static int in_include_ext(struct strlist *incext, const char *fname)
 {
 	int i=0;
 	struct strlist *l;
 	const char *cp=NULL;
-	// If not doing include_ext, let the file get backed up. 
+	// If not doing include_ext, let the file get backed up.
 	if(!incext) return 1;
 
 	// The flag of the first item contains the maximum number of characters
@@ -341,11 +331,13 @@ static int found_soft_link(struct asfd *asfd, FF_PKT *ff_pkt, struct conf **conf
 	{
 		/* Could not follow link */
 		ff_pkt->type=FT_NOFOLLOW;
-		return send_file_w(asfd, ff_pkt, top_level, confs);
 	}
-	buffer[size]=0;
-	ff_pkt->link=buffer;	/* point to link */
-	ff_pkt->type=FT_LNK_S;	/* got a soft link */
+	else
+	{
+		buffer[size]=0;
+		ff_pkt->link=buffer;	/* point to link */
+		ff_pkt->type=FT_LNK_S;	/* got a soft link */
+	}
 	return send_file_w(asfd, ff_pkt, top_level, confs);
 }
 
@@ -378,7 +370,7 @@ static void windows_reparse_point_fiddling(FF_PKT *ff_pkt)
 {
 	/*
 	* We have set st_rdev to 1 if it is a reparse point, otherwise 0,
-	*  if st_rdev is 2, it is a mount point 
+	*  if st_rdev is 2, it is a mount point.
 	*/
 	/*
 	 * A reparse point (WIN32_REPARSE_POINT)
@@ -405,65 +397,11 @@ static void windows_reparse_point_fiddling(FF_PKT *ff_pkt)
 }
 #endif
 
-static int get_files_in_directory(DIR *directory, struct dirent ***nl, int *count)
-{
-	int status;
-	int allocated=0;
-	struct dirent **ntmp=NULL;
-	struct dirent *entry=NULL;
-	struct dirent *result=NULL;
-
-	/* Graham says: this here is doing a funky kind of scandir/alphasort
-	   that can also run on Windows.
-	*/
-	while(1)
-	{
-		char *p;
-		if(!(entry=(struct dirent *)malloc_w(
-			sizeof(struct dirent)+fs_name_max+100, __func__)))
-				return -1;
-		status=readdir_r(directory, entry, &result);
-		if(status || !result)
-		{
-			free_v((void **)&entry);
-			break;
-		}
-
-		p=entry->d_name;
-		ASSERT(fs_name_max+1 > (int)sizeof(struct dirent)+strlen(p));
-
-		/* Skip `.', `..', and excluded file names.  */
-		if(!p || !strcmp(p, ".") || !strcmp(p, ".."))
-		{
-			free_v((void **)&entry);
-			continue;
-		}
-
-		if(*count==allocated)
-		{
-			if(!allocated) allocated=10;
-			else allocated*=2;
-
-			if(!(ntmp=(struct dirent **)
-			  realloc_w(*nl, allocated*sizeof(**nl), __func__)))
-			{
-				free_v((void **)&entry);
-				return -1;
-			}
-			*nl=ntmp;
-		}
-		(*nl)[(*count)++]=entry;
-	}
-	if(*nl) qsort(*nl, *count, sizeof(**nl),
-		(int (*)(const void *, const void *))myalphasort);
-	return 0;
-}
-
-// Prototype because process_files_in_directory() recurses using find_files().
+// Prototype because process_entries_in_directory() recurses using find_files().
 static int find_files(struct asfd *asfd, FF_PKT *ff_pkt, struct conf **confs,
 	char *fname, dev_t parent_device, bool top_level);
 
-static int process_files_in_directory(struct asfd *asfd, struct dirent **nl,
+static int process_entries_in_directory(struct asfd *asfd, struct dirent **nl,
 	int count, int *rtn_stat, char **link, size_t len, size_t *link_len,
 	struct conf **confs, FF_PKT *ff_pkt, dev_t our_device)
 {
@@ -526,11 +464,11 @@ static int process_files_in_directory(struct asfd *asfd, struct dirent **nl,
 	return 0;
 }
 
-static int found_directory(struct asfd *asfd, FF_PKT *ff_pkt, struct conf **confs,
+static int found_directory(struct asfd *asfd,
+	FF_PKT *ff_pkt, struct conf **confs,
 	char *fname, dev_t parent_device, bool top_level)
 {
 	int rtn_stat;
-	DIR *directory;
 	char *link=NULL;
 	size_t link_len;
 	size_t len;
@@ -618,48 +556,25 @@ static int found_directory(struct asfd *asfd, FF_PKT *ff_pkt, struct conf **conf
 	/* reset "link" */
 	ff_pkt->link=ff_pkt->fname;
 
-	/*
-	* Descend into or "recurse" into the directory to read
-	*   all the files in it.
-	*/
 	errno = 0;
-#if defined(O_DIRECTORY) && defined(O_NOATIME)
-	int dfd=-1;
-	if((dfd=open(fname,
-		O_RDONLY|O_DIRECTORY|get_int(confs[OPT_ATIME])?0:O_NOATIME))<0
-	  || !(directory=fdopendir(dfd)))
-#else
-// Mac OS X appears to have no O_NOATIME and no fdopendir(), so it should
-// end up using opendir() here.
-	if(!(directory=opendir(fname)))
-#endif
+	switch(entries_in_directory_alphasort(fname,
+		&nl, &count, get_int(confs[OPT_ATIME])))
 	{
-#if defined(O_DIRECTORY) && defined(O_NOATIME)
-		if(dfd>=0) close(dfd);
-#endif
-		ff_pkt->type=FT_NOOPEN;
-		rtn_stat=send_file_w(asfd, ff_pkt, top_level, confs);
-		free_w(&link);
-		return rtn_stat;
+		case 0: break;
+		case 1:
+			ff_pkt->type=FT_NOOPEN;
+			rtn_stat=send_file_w(asfd, ff_pkt, top_level, confs);
+			free_w(&link);
+			return rtn_stat;
+		default:
+			free_w(&link);
+			return -1;
 	}
-
-	/*
-	* Process all files in this directory entry (recursing).
-	*    This would possibly run faster if we chdir to the directory
-	*    before traversing it.
-	*/
-	if(get_files_in_directory(directory, &nl, &count))
-	{
-		closedir(directory);
-		free_w(&link);
-		return -1;
-	}
-	closedir(directory);
 
 	rtn_stat=0;
 	if(nl)
 	{
-		if(process_files_in_directory(asfd, nl, count,
+		if(process_entries_in_directory(asfd, nl, count,
 			&rtn_stat, &link, len, &link_len, confs,
 			ff_pkt, our_device))
 		{
@@ -693,7 +608,8 @@ static int found_other(struct asfd *asfd, FF_PKT *ff_pkt, struct conf **confs,
 		&& need_to_read_blockdev(confs, ff_pkt->fname))
 	{
 #endif
-		ff_pkt->type = FT_RAW;          /* raw partition */
+		/* raw partition */
+		ff_pkt->type=FT_RAW;
 	}
 	else if(S_ISFIFO(ff_pkt->statp.st_mode)
 		&& need_to_read_fifo(confs, ff_pkt->fname))
@@ -708,13 +624,6 @@ static int found_other(struct asfd *asfd, FF_PKT *ff_pkt, struct conf **confs,
 	return send_file_w(asfd, ff_pkt, top_level, confs);
 }
 
-/*
- * Find a single file.
- * p is the filename
- * parent_device is the device we are currently on
- * top_level is 1 when not recursing or 0 when
- *  descending into a directory.
- */
 static int find_files(struct asfd *asfd, FF_PKT *ff_pkt, struct conf **confs,
 	char *fname, dev_t parent_device, bool top_level)
 {

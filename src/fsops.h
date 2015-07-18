@@ -4,7 +4,6 @@
 #include <zlib.h>
 
 extern uint32_t fs_name_max;
-extern uint32_t fs_path_max;
 extern uint32_t fs_full_path_max;
 
 extern void close_fd(int *fd);
@@ -24,5 +23,12 @@ extern int unlink_w(const char *path, const char *func);
 extern void init_fs_max(const char *path);
 
 extern int looks_like_tmp_or_hidden_file(const char *filename);
+
+extern int entries_in_directory_alphasort(const char *path,
+	struct dirent ***nl, int *count, int atime);
+extern int entries_in_directory_alphasort_rev(const char *path,
+	struct dirent ***nl, int *count, int atime);
+extern int entries_in_directory_no_sort(const char *path,
+	struct dirent ***nl, int *count, int atime);
 
 #endif

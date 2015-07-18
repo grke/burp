@@ -4,8 +4,8 @@
 #include <dirent.h>
 
 uint32_t fs_name_max=0;
-uint32_t fs_path_max=0;
 uint32_t fs_full_path_max=0;
+static uint32_t fs_path_max=0;
 
 void close_fd(int *fd)
 {
@@ -214,7 +214,7 @@ static int do_recursive_delete(const char *d, const char *file,
 			break;
 		}
 
-		if(entry->d_ino==0
+		if(!entry->d_ino
 		  || !strcmp(entry->d_name, ".")
 		  || !strcmp(entry->d_name, ".."))
 			continue;
@@ -321,4 +321,132 @@ int looks_like_tmp_or_hidden_file(const char *filename)
 	  || filename[strlen(filename)-1]=='~')
 		return 1;
 	return 0;
+}
+
+int do_get_entries_in_directory(DIR *directory, struct dirent ***nl,
+	int *count, int (*compar)(const void *, const void *))
+{
+	int status;
+	int allocated=0;
+	struct dirent **ntmp=NULL;
+	struct dirent *entry=NULL;
+	struct dirent *result=NULL;
+
+	// This here is doing a funky kind of scandir/alphasort
+	// that can also run on Windows.
+	while(1)
+	{
+		char *p;
+		if(!(entry=(struct dirent *)malloc_w(
+		  sizeof(struct dirent)+fs_name_max+100, __func__)))
+			goto error;
+		status=readdir_r(directory, entry, &result);
+		if(status || !result)
+		{
+			free_v((void **)&entry);
+			break;
+		}
+
+		p=entry->d_name;
+		ASSERT(fs_name_max+1 > (int)sizeof(struct dirent)+strlen(p));
+
+		if(!p
+		  || !strcmp(p, ".")
+		  || !strcmp(p, ".."))
+		{
+			free_v((void **)&entry);
+			continue;
+		}
+
+		if(*count==allocated)
+		{
+			if(!allocated) allocated=10;
+			else allocated*=2;
+
+			if(!(ntmp=(struct dirent **)
+			  realloc_w(*nl, allocated*sizeof(**nl), __func__)))
+				goto error;
+			*nl=ntmp;
+		}
+		(*nl)[(*count)++]=entry;
+	}
+	if(*nl && compar) qsort(*nl, *count, sizeof(**nl), compar);
+	return 0;
+error:
+	free_v((void **)&entry);
+	if(*nl)
+	{
+		int i;
+		for(i=0; i<*count; i++)
+			free_v((void **)&((*nl)[i]));
+		free_v((void **)nl);
+	}
+	return -1;
+}
+
+static int entries_in_directory(const char *path, struct dirent ***nl,
+	int *count, int atime,
+	int (*compar)(const struct dirent **, const struct dirent **))
+{
+	int ret=0;
+	DIR *directory=NULL;
+
+	if(!fs_name_max)
+	{
+        	// Get system path and filename maximum lengths.
+        	// FIX THIS: maybe this should be done every time a file system
+        	// is crossed?
+		init_fs_max(path);
+	}
+#if defined(O_DIRECTORY) && defined(O_NOATIME)
+	int dfd=-1;
+	if((dfd=open(path, O_RDONLY|O_DIRECTORY|atime?0:O_NOATIME))<0
+	  || !(directory=fdopendir(dfd)))
+#else
+// Mac OS X appears to have no O_NOATIME and no fdopendir(), so it should
+// end up using opendir() here.
+	if(!(directory=opendir(path)))
+#endif
+	{
+#if defined(O_DIRECTORY) && defined(O_NOATIME)
+		close_fd(&dfd);
+#endif
+		ret=1;
+        }
+	else
+	{
+		if(do_get_entries_in_directory(directory, nl, count,
+			(int (*)(const void *, const void *))compar))
+				ret=-1;
+	}
+	if(directory) closedir(directory);
+	return ret;
+}
+
+static int my_alphasort(const struct dirent **a, const struct dirent **b)
+{
+	return strcmp((*a)->d_name, (*b)->d_name);
+}
+
+static int rev_alphasort(const struct dirent **a, const struct dirent **b)
+{
+	return strcmp((*a)->d_name, (*b)->d_name)*-1;
+}
+
+int entries_in_directory_alphasort(const char *path, struct dirent ***nl,
+	int *count, int atime)
+{
+	return entries_in_directory(path, nl, count, atime, my_alphasort);
+}
+
+int entries_in_directory_alphasort_rev(const char *path, struct dirent ***nl,
+	int *count, int atime)
+{
+	return entries_in_directory(path, nl, count, atime, rev_alphasort);
+}
+
+int entries_in_directory_no_sort(const char *path, struct dirent ***nl,
+	int *count, int atime)
+{
+	return entries_in_directory(path, nl, count, atime, NULL);
 }

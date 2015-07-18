@@ -3,6 +3,7 @@
 #include "../alloc.h"
 #include "../bu.h"
 #include "../cstat.h"
+#include "../fsops.h"
 #include "../log.h"
 #include "../prepend.h"
 #include "sdirs.h"
@@ -163,24 +164,6 @@ static void setup_indices(struct bu *bu_list)
 	}
 }
 
-// FIX THIS: Use the scandir/qsort from src/client/find.c.
-#ifdef HAVE_DARWIN_OS
-static int rev_alphasort(const void *x, const void *y)
-{
-	struct dirent **a=(struct dirent **)x;
-	struct dirent **b=(struct dirent **)y;
-#else
-static int rev_alphasort(const struct dirent **a, const struct dirent **b)
-{
-#endif
-	static int s;
-	if((s=strcmp((*a)->d_name, (*b)->d_name))>0)
-		return -1;
-	if(s<0)
-		return 1;
-	return 0;
-}
-
 static int do_bu_get_list(struct sdirs *sdirs,
 	struct bu **bu_list, struct cstat *include_working)
 {
@@ -199,7 +182,7 @@ static int do_bu_get_list(struct sdirs *sdirs,
 	  || get_link(dir, "current", realcurrent, sizeof(realcurrent)))
 		goto end;
 
-	if((n=scandir(dir, &dp, NULL, rev_alphasort))<0)
+	if(entries_in_directory_alphasort_rev(dir, &dp, &n, 1 /* atime */))
 	{
 		logp("scandir failed in %s: %s\n", __func__, strerror(errno));
 		goto end;

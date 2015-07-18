@@ -43,7 +43,7 @@ static void get_highest_entry(const char *path, uint16_t *max)
 	if(!(d=opendir(path))) return;
 	while((dp=readdir(d)))
 	{
-		if(dp->d_ino==0
+		if(!dp->d_ino
 		  || !strcmp(dp->d_name, ".")
 		  || !strcmp(dp->d_name, ".."))
 			continue;

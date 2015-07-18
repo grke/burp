@@ -23,6 +23,7 @@ extern int sub_ntests;
 
 extern void alloc_check(void);
 
+extern void assert_iobuf(struct iobuf *a, struct iobuf *b);
 extern void assert_sbuf(struct sbuf *a, struct sbuf *b, enum protocol protocol);
 
 Suite *suite_alloc(void);

@@ -13,7 +13,7 @@ static void tear_down(void)
 	alloc_check();
 }
 
-static void assert_iobuf(struct iobuf *a, struct iobuf *b)
+void assert_iobuf(struct iobuf *a, struct iobuf *b)
 {
 	fail_unless(!iobuf_pathcmp(a, b));
 	fail_unless(a->len==b->len);

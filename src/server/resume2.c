@@ -50,16 +50,12 @@ static int set_higher_datapth(struct sbuf *sb, struct dpth *dpth)
 int do_forward(struct manio *manio, struct iobuf *result,
 	struct iobuf *target, struct cntr *cntr,
 	int same, struct dpth *dpth, struct conf **cconfs,
-	man_off_t **pos, man_off_t **lastpos)
+	man_off_t **pos, man_off_t **lastpos, struct sbuf *sb)
 {
 	int ars=0;
-	static struct sbuf *sb=NULL;
-	struct iobuf *lastpath=NULL;
+	struct iobuf lastpath;
 
-	if(!sb && !(sb=sbuf_alloc(cconfs)))
-		goto error;
-	if(!lastpath && !(lastpath=iobuf_alloc()))
-		goto error;
+	iobuf_init(&lastpath);
 
 	man_off_t_free(pos);
 	if(!(*pos=manio_tell(manio)))
@@ -88,12 +84,12 @@ int do_forward(struct manio *manio, struct iobuf *result,
 				goto error;
 			}
 			iobuf_free_content(result);
-			iobuf_move(result, lastpath);
+			iobuf_move(result, &lastpath);
 		}
 		if(sb->path.buf)
 		{
-			iobuf_free_content(lastpath);
-			iobuf_move(lastpath, &sb->path);
+			iobuf_free_content(&lastpath);
+			iobuf_move(&lastpath, &sb->path);
 		}
 
 		sbuf_free_content(sb);
@@ -112,6 +108,7 @@ int do_forward(struct manio *manio, struct iobuf *result,
 				{
 					// Treat error in changed manio as
 					// OK - could have been a short write.
+					iobuf_free_content(&lastpath);
 					return 0;
 				}
 				goto error;
@@ -132,6 +129,7 @@ int do_forward(struct manio *manio, struct iobuf *result,
 		{
 			iobuf_free_content(result);
 			iobuf_move(result, &sb->path);
+			iobuf_free_content(&lastpath);
 			return 0;
 		}
 
@@ -150,6 +148,7 @@ int do_forward(struct manio *manio, struct iobuf *result,
 	}
 
 error:
+	iobuf_free_content(&lastpath);
 	sbuf_free_content(sb);
 	man_off_t_free(pos);
 	man_off_t_free(lastpos);
@@ -163,6 +162,7 @@ static man_off_t *do_resume_work(struct sdirs *sdirs,
 	man_off_t *pos=NULL;
 	man_off_t *lastpos=NULL;
 	man_off_t *p1pos=NULL;
+	struct sbuf *sb=NULL;
 	struct iobuf *p1b=NULL;
 	struct iobuf *chb=NULL;
 	struct iobuf *ucb=NULL;
@@ -171,6 +171,9 @@ static man_off_t *do_resume_work(struct sdirs *sdirs,
 	struct manio *p1manio=NULL;
 	enum protocol protocol=get_protocol(cconfs);
 	struct cntr *cntr=get_cntr(cconfs);
+
+	if(!(sb=sbuf_alloc(cconfs)))
+		goto error;
 
 	if(!(p1manio=manio_open_phase1(sdirs->phase1data, "rb", protocol))
 	  || !(cmanio=manio_open_phase2(sdirs->changed, "rb", protocol))
@@ -188,7 +191,7 @@ static man_off_t *do_resume_work(struct sdirs *sdirs,
 	if(do_forward(cmanio, chb, NULL,
 		cntr,
 		0, /* changed */
-		dpth, cconfs, &pos, &lastpos)) goto error;
+		dpth, cconfs, &pos, &lastpos, sb)) goto error;
 	//if(manio_truncate(cmanio, pos, cconfs)) goto error;
 	if(manio_truncate(cmanio, lastpos, cconfs)) goto error;
 	manio_close(&cmanio);
@@ -202,7 +205,7 @@ static man_off_t *do_resume_work(struct sdirs *sdirs,
 		if(do_forward(p1manio, p1b, chb,
 			NULL, /* no cntr */
 			0, /* ignored */
-			dpth, cconfs, &p1pos, &lastpos)) goto error;
+			dpth, cconfs, &p1pos, &lastpos, sb)) goto error;
 		logp("  phase1:    %s\n", p1b->buf);
 		man_off_t_free(&lastpos);
 
@@ -217,7 +220,7 @@ static man_off_t *do_resume_work(struct sdirs *sdirs,
 		if(do_forward(umanio, ucb, chb,
 			cntr,
 			1, /* same */
-			dpth, cconfs, &pos, &lastpos)) goto error;
+			dpth, cconfs, &pos, &lastpos, sb)) goto error;
 		logp("  unchanged: %s\n", ucb->buf);
 		if(manio_truncate(umanio, lastpos, cconfs)) goto error;
 		manio_close(&umanio);
@@ -252,6 +255,7 @@ end:
 	manio_close(&p1manio);
 	manio_close(&cmanio);
 	manio_close(&umanio);
+	sbuf_free(&sb);
 	return p1pos;
 }
 

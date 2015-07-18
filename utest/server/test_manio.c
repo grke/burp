@@ -12,6 +12,7 @@
 #include "../../src/conffile.h"
 #include "../../src/fsops.h"
 #include "../../src/hexmap.h"
+#include "../../src/log.h"
 #include "../../src/pathcmp.h"
 #include "../../src/sbuf.h"
 #include "../../src/slist.h"
@@ -286,13 +287,13 @@ struct slist *build_slist_specific_paths(enum protocol protocol, int *entries)
 	return s;
 }
 
-START_TEST(test_man_protocol2_phase2_truncate)
+static void test_man_phase2_forward(enum protocol protocol)
 {
 	int phase=2;
 	int entries=0;
 	struct slist *slist;
+	struct sbuf *sb=NULL;
 	struct manio *manio;
-	enum protocol protocol=PROTO_2;
 	struct iobuf result;
 	struct iobuf target;
 	man_off_t *pos=NULL;
@@ -316,23 +317,43 @@ START_TEST(test_man_protocol2_phase2_truncate)
 	iobuf_init(&target);
 
 	fail_unless((manio=do_manio_open(path, "rb", protocol, phase))!=NULL);
-	iobuf_from_str(&target, CMD_FILE, (char *)"/a/folder3/path");
-	do_forward(manio, &result, &target, NULL,
-		0, NULL, confs, &pos, &lastpos);
-	printf("result: %c:%s\n", result.cmd, result.buf);
 
-//	read_manifest(&sb, manio, entries, entries, protocol, phase);
-//	fail_unless(sb==NULL);
+	fail_unless((sb=sbuf_alloc_protocol(protocol))!=NULL);
+	iobuf_from_str(&target, CMD_FILE, (char *)"/a/folder3/path");
+	fail_unless(!do_forward(manio, &result, &target, NULL,
+		0, NULL, confs, &pos, &lastpos, sb));
+	sbuf_free_content(sb);
+
+	assert_iobuf(&target, &result);
+	fail_unless(!manio_seek(manio, lastpos));
+
+	fail_unless(!manio_read_with_blk(manio, sb, NULL, NULL, NULL));
+	fail_unless(sb->path.cmd==CMD_DIRECTORY);
+	ck_assert_str_eq("/a/folder1", sb->path.buf);
+	sbuf_free_content(sb);
+
 	fail_unless(!manio_close(&manio));
 	fail_unless(!manio);
-	printf("%s\n", path);
 
 	slist_free(&slist);
 
+	iobuf_free_content(&result);
 	man_off_t_free(&pos);
 	man_off_t_free(&lastpos);
 	confs_free(&confs);
+	sbuf_free(&sb);
 	tear_down();
+}
+
+START_TEST(test_man_protocol1_phase2_forward)
+{
+	return test_man_phase2_forward(PROTO_1);
+}
+END_TEST
+
+START_TEST(test_man_protocol2_phase2_forward)
+{
+	return test_man_phase2_forward(PROTO_2);
 }
 END_TEST
 
@@ -360,7 +381,8 @@ Suite *suite_manio(void)
 	tcase_add_test(tc_core, test_man_protocol1_phase2_tell_seek);
 	tcase_add_test(tc_core, test_man_protocol2_phase2_tell_seek);
 
-//	tcase_add_test(tc_core, test_man_protocol2_phase2_truncate);
+	tcase_add_test(tc_core, test_man_protocol1_phase2_forward);
+	tcase_add_test(tc_core, test_man_protocol2_phase2_forward);
 
 	suite_add_tcase(s, tc_core);
 

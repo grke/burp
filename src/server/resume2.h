@@ -10,6 +10,6 @@ extern man_off_t *do_resume2(struct sdirs *sdirs,
 extern int do_forward(struct manio *manio, struct iobuf *result,
 	struct iobuf *target, struct cntr *cntr,
 	int same, struct dpth *dpth, struct conf **cconfs,
-	man_off_t **pos, man_off_t **lastpos);
+	man_off_t **pos, man_off_t **lastpos, struct sbuf *sb);
 
 #endif

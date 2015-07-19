@@ -111,3 +111,8 @@ int iobuf_is_encrypted(struct iobuf *iobuf)
 {
 	return cmd_is_encrypted(iobuf->cmd);
 }
+
+int iobuf_is_metadata(struct iobuf *iobuf)
+{
+	return cmd_is_metadata(iobuf->cmd);
+}

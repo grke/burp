@@ -146,6 +146,8 @@ static int list_manifest(struct asfd *asfd,
 
 		if(protocol==PROTO_2 && sb->endfile.buf)
 			continue;
+		if(sbuf_is_metadata(sb))
+			continue;
 
 		if(write_status(CNTR_STATUS_LISTING, sb->path.buf, confs))
 			goto error;

@@ -135,9 +135,16 @@ int cmd_is_endfile(enum cmd cmd)
 
 int cmd_is_encrypted(enum cmd cmd)
 {
-	return cmd==CMD_ENC_FILE
-	 || cmd==CMD_ENC_METADATA
-	 || cmd==CMD_ENC_VSS
-	 || cmd==CMD_ENC_VSS_T
-	 || cmd==CMD_EFS_FILE;
+	return     cmd==CMD_ENC_FILE
+		|| cmd==CMD_ENC_METADATA
+		|| cmd==CMD_ENC_VSS
+		|| cmd==CMD_ENC_VSS_T
+		|| cmd==CMD_EFS_FILE;
+}
+
+int cmd_is_metadata(enum cmd cmd)
+{
+	return cmd_is_vssdata(cmd)
+		|| cmd==CMD_METADATA
+		|| cmd==CMD_ENC_METADATA;
 }

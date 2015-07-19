@@ -23,6 +23,7 @@
     problems with compilation on Macs.
   * Fix bug where Windows backups with split_vss was saving CMD_METADATA
     instead of CMD_VSS.
+  * Prevent warnings when listing backups that contain metadata.
 
 2015-07-01 Changes in burp-1.4.40:
   * Fix '-a l' regex so that it isn't split in two at the right-most

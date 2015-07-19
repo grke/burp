@@ -31,5 +31,6 @@ extern int iobuf_is_filedata(struct iobuf *iobuf);
 extern int iobuf_is_vssdata(struct iobuf *iobuf);
 extern int iobuf_is_link(struct iobuf *iobuf);
 extern int iobuf_is_encrypted(struct iobuf *iobuf);
+extern int iobuf_is_metadata(struct iobuf *iobuf);
 
 #endif

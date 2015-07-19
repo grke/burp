@@ -38,10 +38,12 @@
 #include "linkhash.h"
 
 static enum cmd filesymbol=CMD_FILE;
-static enum cmd metasymbol=CMD_METADATA;
 static enum cmd dirsymbol=CMD_DIRECTORY;
 #ifdef HAVE_WIN32
+static enum cmd metasymbol=CMD_VSS;
 static enum cmd vss_trail_symbol=CMD_VSS_T;
+#else
+static enum cmd metasymbol=CMD_METADATA;
 #endif
 
 static int usual_stuff(struct asfd *asfd,

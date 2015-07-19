@@ -21,6 +21,8 @@
   * Make listing a non-existent backup give an error.
   * Stop using scandir with a comparison function, in order to avoid
     problems with compilation on Macs.
+  * Fix bug where Windows backups with split_vss was saving CMD_METADATA
+    instead of CMD_VSS.
 
 2015-07-01 Changes in burp-1.4.40:
   * Fix '-a l' regex so that it isn't split in two at the right-most

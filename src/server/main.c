@@ -538,56 +538,8 @@ static int relock(struct lock *lock)
 	return -1;
 }
 
-// FIX THIS: should probably put this stuff in a separate file and get the
-// conf stuff to use it too.
-struct oldnet
-{
-	char *address;
-	char *status_address;
-	char *port;
-	char *status_port;
-};
-
-static int oldnet_init(struct oldnet *oldnet, struct conf **confs)
-{
-	const char *port=get_string(confs[OPT_PORT]);
-	const char *address=get_string(confs[OPT_ADDRESS]);
-	const char *status_port=get_string(confs[OPT_STATUS_PORT]);
-	const char *status_address=get_string(confs[OPT_STATUS_ADDRESS]);
-
-	if(port
-	  && !(oldnet->port=strdup_w(port, __func__)))
-		return -1;
-	if(status_port
-	  && !(oldnet->status_port=strdup_w(status_port, __func__)))
-		return -1;
-	if(address
-	  && !(oldnet->address=strdup_w(address, __func__)))
-		return -1;
-	if(status_address
-	  && !(oldnet->status_address=strdup_w(status_address, __func__)))
-		return -1;
-	return 0;
-}
-
-static void oldnet_free_contents(struct oldnet *oldnet)
-{
-	free_w(&oldnet->address);
-	free_w(&oldnet->status_address);
-	free_w(&oldnet->port);
-	free_w(&oldnet->status_port);
-}
-
-static int ports_changed(const char *old, const char *latest)
-{
-	if((!old && latest)
-	  || (old && latest && strcmp(old, latest)))
-		return 1;
-	return 0;
-}
-
 static int run_server(struct conf **confs, const char *conffile,
-	int *rfds, int *sfds, struct oldnet *oldnet)
+	int *rfds, int *sfds)
 {
 	int i=0;
 	int ret=-1;
@@ -612,17 +564,9 @@ static int run_server(struct conf **confs, const char *conffile,
 		goto end;
 	}
 
-	if(ports_changed(oldnet->address, address)
-	  || ports_changed(oldnet->port, port))
-	{
-		if(init_listen_socket(address, port, 1, rfds)) goto end;
-	}
-	if(ports_changed(oldnet->status_address, status_address)
-	  || ports_changed(oldnet->status_port, status_port))
-	{
-		if(init_listen_socket(status_address, status_port, 0, sfds))
-			goto end;
-	}
+	if(init_listen_socket(address, port, 1, rfds)
+	  || init_listen_socket(status_address, status_port, 0, sfds))
+		goto end;
 
 	if(!(mainas=async_alloc())
 	  || mainas->init(mainas, 0))
@@ -755,14 +699,8 @@ int server(struct conf **confs, const char *conffile,
 	enum serret ret=SERVER_ERROR;
 	int rfds[LISTEN_SOCKETS]; // Sockets for clients to connect to.
 	int sfds[LISTEN_SOCKETS]; // Status server sockets.
-	struct oldnet oldnet;
 
 	//return champ_test(confs);
-
-	// Only close and reopen listening sockets if the ports changed.
-	// Otherwise you get an "unable to bind listening socket on port X"
-	// error, and the server stops.
-	memset(&oldnet, 0, sizeof(oldnet));
 
 	init_fds(rfds);
 	init_fds(sfds);
@@ -783,14 +721,11 @@ int server(struct conf **confs, const char *conffile,
 
 	while(!gentleshutdown)
 	{
-		if(run_server(confs, conffile, rfds, sfds, &oldnet))
+		if(run_server(confs, conffile, rfds, sfds))
 			goto error;
 
 		if(hupreload && !gentleshutdown)
 		{
-			oldnet_free_contents(&oldnet);
-			if(oldnet_init(&oldnet, confs))
-				goto error;
 			if(reload(confs, conffile,
 				0, // Not first time.
 				get_int(confs[OPT_MAX_CHILDREN]),
@@ -806,7 +741,6 @@ end:
 error:
 	close_fds(rfds);
 	close_fds(sfds);
-	oldnet_free_contents(&oldnet);
 
 // FIX THIS: Have an enum for a return value, so that it is more obvious what
 // is happening, like client.c does.

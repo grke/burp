@@ -699,6 +699,11 @@ restart_server()
 	sleep 5
 }
 
+sighup_server()
+{
+	kill -1 $serverpid
+}
+
 file_size_test()
 {
 	start_test "File size $1"
@@ -764,6 +769,9 @@ all_tests()
 	end_test
 
 	comp_enc_change_test on  off off
+
+	# Server should come back after a sighup reload.
+	sighup_server
 
 	start_test "Interrupt server phase2"
 	add_server_breakpoint_on 2

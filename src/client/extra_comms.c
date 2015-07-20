@@ -62,9 +62,14 @@ int extra_comms(struct async *as, struct conf **confs,
 	// :srestore: means that the server wants to do a restore.
 	if(server_supports(feat, ":srestore:"))
 	{
-		if(get_int(confs[OPT_SERVER_CAN_RESTORE]))
+		logp("Server wants to initiate a restore\n");
+		if(*action==ACTION_MONITOR)
 		{
-			logp("Server is initiating a restore\n");
+			logp("Client is in monitor mode, so ignoring\n");
+		}
+		else if(get_int(confs[OPT_SERVER_CAN_RESTORE]))
+		{
+			logp("Client accepts.\n");
 			if(incexc_recv_client_restore(asfd, incexc, confs))
 				goto end;
 			if(*incexc)
@@ -77,7 +82,6 @@ int extra_comms(struct async *as, struct conf **confs,
 		}
 		else
 		{
-			logp("Server wants to initiate a restore\n");
 			logp("Client configuration says no\n");
 			if(asfd->write_str(asfd, CMD_GEN, "srestore not ok"))
 				goto end;

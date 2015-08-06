@@ -1,6 +1,6 @@
-#include <assert.h>
-
-#include "include.h"
+#include "../../../burp.h"
+#include "../../../alloc.h"
+#include "incoming.h"
 
 struct incoming *incoming_alloc(void)
 {

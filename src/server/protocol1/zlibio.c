@@ -2,7 +2,7 @@
 #include "../../fzp.h"
 
 int zlib_inflate(struct asfd *asfd, const char *source_path,
-	const char *dest_path, struct conf **confs)
+	const char *dest_path, struct cntr *cntr)
 {
 	int ret=-1;
 	size_t b=0;
@@ -12,13 +12,13 @@ int zlib_inflate(struct asfd *asfd, const char *source_path,
 
 	if(!(src=fzp_gzopen(source_path, "rb")))
 	{
-		logw(asfd, confs, "could not gzopen %s in %s: %s\n",
+		logw(asfd, cntr, "could not gzopen %s in %s: %s\n",
 			source_path, __func__, strerror(errno));
 		goto end;
 	}
 	if(!(dst=fzp_open(dest_path, "wb")))
 	{
-		logw(asfd, confs, "could not open %s in %s: %s\n",
+		logw(asfd, cntr, "could not open %s in %s: %s\n",
 			dest_path, __func__, strerror(errno));
 		goto end;
 	}
@@ -27,21 +27,21 @@ int zlib_inflate(struct asfd *asfd, const char *source_path,
 	{
 		if(fzp_write(dst, in, b)!=b)
 		{
-			logw(asfd, confs,
+			logw(asfd, cntr,
 				"error when writing to %s\n", dest_path);
 			goto end;
 		}
 	}
 	if(!fzp_eof(src))
 	{
-		logw(asfd, confs,
+		logw(asfd, cntr,
 			"error while reading %s in %s\n",
 				source_path, __func__);
 		goto end;
 	}
 	if(fzp_close(&dst))
 	{
-		logw(asfd, confs,
+		logw(asfd, cntr,
 			"error when closing %s in %s: %s\n",
 				dest_path, __func__, strerror(errno));
 		goto end;

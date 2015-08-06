@@ -18,13 +18,12 @@ static uint64_t decode_req(const char *buf)
 	return (uint64_t)val;
 }
 
-static int add_to_file_requests(struct slist *slist, struct iobuf *rbuf,
-	struct conf **confs)
+static int add_to_file_requests(struct slist *slist, struct iobuf *rbuf)
 {
 	static uint64_t file_no=1;
 	struct sbuf *sb;
 
-	if(!(sb=sbuf_alloc(confs))) return -1;
+	if(!(sb=sbuf_alloc(PROTO_2))) return -1;
 
 	iobuf_move(&sb->path, rbuf);
 	// Give it a number to simplify tracking.
@@ -57,14 +56,14 @@ static int add_to_data_requests(struct blist *blist, struct iobuf *rbuf)
 }
 
 static int deal_with_read(struct iobuf *rbuf, struct slist *slist,
-	struct conf **confs, uint8_t *end_flags)
+	struct cntr *cntr, uint8_t *end_flags)
 {
 	int ret=0;
 	switch(rbuf->cmd)
 	{
 		/* Incoming file request. */
 		case CMD_FILE:
-			if(add_to_file_requests(slist, rbuf, confs)) goto error;
+			if(add_to_file_requests(slist, rbuf)) goto error;
 			return 0;
 
 		/* Incoming data block request. */
@@ -98,8 +97,10 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist,
 		}
 		case CMD_MESSAGE:
 		case CMD_WARNING:
-			log_recvd(rbuf, confs, 0);
+		{
+			log_recvd(rbuf, cntr, 0);
 			goto end;
+		}
 		case CMD_GEN:
 			if(!strcmp(rbuf->buf, "requests_end"))
 			{
@@ -204,13 +205,8 @@ static void get_wbuf_from_data(struct conf **confs,
 
 static int iobuf_from_blk_data(struct iobuf *wbuf, struct blk *blk)
 {
-	static char buf[CHECKSUM_LEN];
 	if(blk_md5_update(blk)) return -1;
-
-	// FIX THIS: consider endian-ness.
-	memcpy(buf, &blk->fingerprint, FINGERPRINT_LEN);
-	memcpy(buf+FINGERPRINT_LEN, blk->md5sum, MD5_DIGEST_LENGTH);
-	iobuf_set(wbuf, CMD_SIG, buf, CHECKSUM_LEN);
+	blk_to_iobuf_sig(blk, wbuf);
 	return 0;
 }
 
@@ -312,7 +308,7 @@ int backup_phase2_client_protocol2(struct asfd *asfd,
 			goto end;
 		}
 
-		if(rbuf->buf && deal_with_read(rbuf, slist, confs, &end_flags))
+		if(rbuf->buf && deal_with_read(rbuf, slist, cntr, &end_flags))
 			goto end;
 
 		if(slist->head

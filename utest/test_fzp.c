@@ -123,7 +123,7 @@ static void truncate_checks(
 	char buf[32]="";
 	struct fzp *fzp;
 
-	fail_unless(!fzp_truncate(file, type, d->pos, NULL));
+	fail_unless(!fzp_truncate(file, type, d->pos, 9 /* compression */));
 	fail_unless((fzp=open_func(file, "rb"))!=NULL);
 	fzp_read(fzp, buf, sizeof(buf));
 	fail_unless(fzp_eof(fzp));
@@ -192,7 +192,7 @@ START_TEST(test_fzp_null_pointer)
 	fail_unless(fzp_flush(NULL)==EOF);
 	fail_unless(fzp_seek(NULL, 1, SEEK_SET)==-1);
 	fail_unless(fzp_tell(NULL)==-1);
-	fail_unless(fzp_truncate(NULL, FZP_FILE, 1, NULL)==-1);
+	fail_unless(fzp_truncate(NULL, FZP_FILE, 1, 9 /* compression */)==-1);
 	fail_unless(fzp_printf(NULL, "%s", "blah")==-1);
 	fzp_setlinebuf(NULL);
 	fail_unless(fzp_gets(NULL, NULL, 0)==NULL);

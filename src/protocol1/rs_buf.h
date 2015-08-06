@@ -42,7 +42,7 @@ struct rs_filebuf
 	int fd;
 	char *buf;
 	size_t buf_len;
-	unsigned long long bytes;
+	uint64_t bytes;
 	size_t data_len;
 	int do_known_byte_count;
 	struct cntr *cntr;
@@ -64,14 +64,14 @@ rs_result rs_async(rs_job_t *job,
 
 rs_result rs_patch_gzfile(struct asfd *asfd,
 	struct fzp *basis_file, struct fzp *delta_file, struct fzp *new_file,
-	rs_stats_t *stats, struct cntr *cntr);
+	struct cntr *cntr);
 rs_result rs_sig_gzfile(struct asfd *asfd,
 	struct fzp *old_file, struct fzp *sig_file,
-	size_t new_block_len, size_t strong_len, rs_stats_t *stats,
+	size_t new_block_len, size_t strong_len,
 	struct conf **confs);
 rs_result rs_delta_gzfile(struct asfd *asfd, rs_signature_t *sig,
 	struct fzp *new_file, struct fzp *delta_file,
-	rs_stats_t *stats, struct cntr *cntr);
+	struct cntr *cntr);
 
 rs_result rs_loadsig_fzp(struct fzp *fzp,
 	rs_signature_t **sig, rs_stats_t *stats);

@@ -74,8 +74,8 @@ static void client_summary(struct cstat *cstat,
 			{
 				char f[64]="";
 				char b[64]="";
-				unsigned long long p=0;
-				unsigned long long t=0;
+				uint64_t p=0;
+				uint64_t t=0;
 				struct cntr *cntr=cstat->cntr;
 				struct cntr_ent *ent_gtotal=
 					cntr->ent[(uint8_t)CMD_GRAND_TOTAL];
@@ -85,7 +85,8 @@ static void client_summary(struct cstat *cstat,
 					+ent_gtotal->changed;
 				if(ent_gtotal->phase1)
 					p=(t*100)/ent_gtotal->phase1;
-				snprintf(f, sizeof(f), " %llu/%llu %llu%%",
+				snprintf(f, sizeof(f),
+					" %"PRIu64"/%"PRIu64" %"PRIu64"%%",
 					t, ent_gtotal->phase1, p);
 				if(cntr->byte)
 					snprintf(b, sizeof(b), "%s",
@@ -122,15 +123,15 @@ static void to_msg(char msg[], size_t s, const char *fmt, ...)
 }
 
 static void print_cntr_ent(const char *field,
-	unsigned long long a,
-	unsigned long long b,
-	unsigned long long c,
-	unsigned long long d,
-	unsigned long long e,
+	uint64_t a,
+	uint64_t b,
+	uint64_t c,
+	uint64_t d,
+	uint64_t e,
 	int *x, int col)
 {
 	char msg[256]="";
-	unsigned long long t=a+b+c;
+	uint64_t t=a+b+c;
 	if(!field || (!t && !d && !e)) return;
 
 /* FIX THIS.
@@ -152,7 +153,7 @@ static void print_cntr_ent(const char *field,
 /* FIX THIS
 	if(percent && e)
 	{
-	  unsigned long long p;
+	  uint64_t p;
 	  p=(t*100)/e;
 	  if(phase==STATUS_RESTORING
 	    || phase==STATUS_VERIFYING)
@@ -189,7 +190,7 @@ static void table_header(int *x, int col)
 }
 
 /*
-static void print_detail2(const char *field, unsigned long long value1, const char *value2, int *x, int col)
+static void print_detail2(const char *field, uint64_t value1, const char *value2, int *x, int col)
 {
 	char msg[256]="";
 	if(!field || !value1 || !value2 || !*value2) return;
@@ -322,9 +323,9 @@ static void detail(const char *cntrclient, char status, char phase, const char *
 
 		if(diff>0)
 		{
-			unsigned long long bytesleft=0;
-			unsigned long long byteswant=0;
-			unsigned long long bytesgot=0;
+			uint64_t bytesleft=0;
+			uint64_t byteswant=0;
+			uint64_t bytesgot=0;
 			float bytespersec=0;
 			byteswant=p1cntr->byte;
 			bytesgot=cntr->byte;
@@ -630,7 +631,7 @@ static void update_screen_live_counter_single(struct cntr_ent *e,
 		default:
 			break;
 	}
-	snprintf(msg, sizeof(msg), "%19s: %12llu %s",
+	snprintf(msg, sizeof(msg), "%19s: %12"PRIu64" %s",
 		e->label, e->count, bytes_human);
 	print_line(msg, (*x)++, col);
 }
@@ -655,7 +656,7 @@ static void update_screen_live_counters(struct cstat *client, int *x, int col)
 	for(e=client->cntr->list; e; e=e->next)
 		update_screen_live_counter_table(e, x, col);
 	print_line("", (*x)++, col);
-	snprintf(msg, sizeof(msg), "%19s: %llu%%", "Percentage complete",
+	snprintf(msg, sizeof(msg), "%19s: %"PRIu64"%%", "Percentage complete",
 	  ((gtotal->count+gtotal->same+gtotal->changed)*100)/gtotal->phase1);
 	print_line(msg, (*x)++, col);
 	print_line("", (*x)++, col);
@@ -1405,7 +1406,7 @@ int status_client_ncurses(enum action act, struct conf **confs)
 	if(monitor_logfile
 	  && !(lfzp=fzp_open(monitor_logfile, "wb")))
 		goto end;
-	set_logfzp_direct(lfzp);
+	log_fzp_set_direct(lfzp);
 
 	ret=main_loop(as, act, confs);
 end:

@@ -57,14 +57,8 @@
 	#endif
 #endif
 
-#if defined(HAVE_WIN32)
-typedef uint64_t boffset_t;
-#else
-typedef off_t boffset_t;
-#endif
-
 // Use the following for strings not to be translated.
-#define NT_(s) (s)   
+#define NT_(s) (s)
 
 #ifndef S_ISLNK
 #define S_ISLNK(m) (((m) & S_IFM) == S_IFLNK)

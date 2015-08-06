@@ -33,7 +33,6 @@ SRCS = \
 	quota.c \
 	restore.c \
 	resume.c \
-	resume2.c \
 	rubble.c \
 	run_action.c \
 	sdirs.c \

@@ -1,14 +1,15 @@
 #include "include.h"
 #include "../../cmd.h"
-#include "champ_chooser/hash.h"
-#include "../../slist.h"
 #include "../../hexmap.h"
+#include "../../slist.h"
+#include "../../protocol2/blk.h"
 #include "../../server/protocol1/restore.h"
 #include "../manio.h"
 #include "../sdirs.h"
+#include "champ_chooser/hash.h"
 
 static int send_data(struct asfd *asfd, struct blk *blk,
-	enum action act, struct sbuf *need_data, struct conf **confs)
+	enum action act, struct sbuf *need_data, struct cntr *cntr)
 {
 	struct iobuf wbuf;
 
@@ -21,25 +22,25 @@ static int send_data(struct asfd *asfd, struct blk *blk,
 		case ACTION_VERIFY:
 			// Need to check that the block has the correct
 			// checksums.
-			switch(blk_verify(blk, confs))
+			switch(blk_verify(blk))
 			{
 				case 1:
 					iobuf_set(&wbuf, CMD_DATA, (char *)"0", 1);
 					if(asfd->write(asfd, &wbuf)) return -1;
-					cntr_add(get_cntr(confs), CMD_DATA, 0);
+					cntr_add(cntr, CMD_DATA, 0);
 					break; // All OK.
 				case 0:
 				{
 					char msg[256];
-					snprintf(msg, sizeof(msg), "Checksum mismatch in block for %c:%s:%s\n", need_data->path.cmd, need_data->path.buf, bytes_to_savepathstr_with_sig(blk->savepath));
-					logw(asfd, confs, msg);
+					snprintf(msg, sizeof(msg), "Checksum mismatch in block for %c:%s:%s\n", need_data->path.cmd, need_data->path.buf, uint64_to_savepathstr_with_sig(blk->savepath));
+					logw(asfd, cntr, msg);
 					break;
 		
 				}
 				default:
 				{
 					char msg[256];
-					snprintf(msg, sizeof(msg), "Error when attempting  to verify block for %c:%s:%s\n", need_data->path.cmd, need_data->path.buf, bytes_to_savepathstr_with_sig(blk->savepath));
+					snprintf(msg, sizeof(msg), "Error when attempting  to verify block for %c:%s:%s\n", need_data->path.cmd, need_data->path.buf, uint64_to_savepathstr_with_sig(blk->savepath));
 					return -1;
 				}
 			}
@@ -52,7 +53,7 @@ static int send_data(struct asfd *asfd, struct blk *blk,
 
 int restore_sbuf_protocol2(struct asfd *asfd, struct sbuf *sb, enum action act,
 	enum cntr_status cntr_status,
-	struct conf **confs, struct sbuf *need_data)
+	struct cntr *cntr, struct sbuf *need_data)
 {
 	if(asfd->write(asfd, &sb->attr)
 	  || asfd->write(asfd, &sb->path))
@@ -69,7 +70,7 @@ int restore_sbuf_protocol2(struct asfd *asfd, struct sbuf *sb, enum action act,
 		b=sb->protocol2->bstart;
 		while(b)
 		{
-			if(send_data(asfd, b, act, need_data, confs))
+			if(send_data(asfd, b, act, need_data, cntr))
 				return -1;
 			n=b->next;
 			blk_free(&b);
@@ -84,17 +85,17 @@ int restore_sbuf_protocol2(struct asfd *asfd, struct sbuf *sb, enum action act,
 		sb->path.buf=NULL;
 	}
 	else
-		cntr_add(get_cntr(confs), sb->path.cmd, 0);
+		cntr_add(cntr, sb->path.cmd, 0);
 	return 0;
 }
 
 int protocol2_extra_restore_stream_bits(struct asfd *asfd, struct blk *blk,
 	struct slist *slist, enum action act,
-	struct sbuf *need_data, int last_ent_was_dir, struct conf **cconfs)
+	struct sbuf *need_data, int last_ent_was_dir, struct cntr *cntr)
 {
 	if(need_data->path.buf)
 	{
-		if(send_data(asfd, blk, act, need_data, cconfs)) return -1;
+		if(send_data(asfd, blk, act, need_data, cntr)) return -1;
 	}
 	else if(last_ent_was_dir)
 	{
@@ -123,8 +124,8 @@ int protocol2_extra_restore_stream_bits(struct asfd *asfd, struct blk *blk,
 			"Unexpected signature in manifest: %016"PRIX64 "%s%s",
 			blk->fingerprint,
 			bytes_to_md5str(blk->md5sum),
-			bytes_to_savepathstr_with_sig(blk->savepath));
-		logw(asfd, cconfs, msg);
+			uint64_to_savepathstr_with_sig(blk->savepath));
+		logw(asfd, cntr, msg);
 	}
 	blk->data=NULL;
 	return 0;

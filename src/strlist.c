@@ -12,6 +12,7 @@ static void strlist_free(struct strlist *strlist)
 	if(!strlist) return;
 	if(strlist->path) free_w(&strlist->path);
 	if(strlist->re) regfree(strlist->re);
+	free_v((void **)&strlist->re);
 	free_v((void **)&strlist);
 }
 

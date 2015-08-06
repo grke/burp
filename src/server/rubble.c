@@ -205,7 +205,7 @@ static int recover_working(struct async *as,
 	// We are not deleting the old working directory - open the log inside
 	// for appending.
 	if(!(logpath=prepend_s(sdirs->rworking, "log"))
-	  || set_logfzp(logpath, cconfs))
+	  || log_fzp_set(logpath, cconfs))
 		goto end;
 
 	switch(recovery_method)
@@ -228,7 +228,7 @@ static int recover_working(struct async *as,
 end:
 	free_w(&logpath);
 	free_w(&phase1datatmp);
-	set_logfzp(NULL, cconfs); // fclose the logfzp
+	log_fzp_set(NULL, cconfs); // fclose the logfzp
 	return ret;
 }
 

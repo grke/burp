@@ -10,6 +10,7 @@ static void add_blk(struct blist *blist)
 	fail_unless((blk=blk_alloc())!=NULL);
 	blk->fingerprint=prng_next64();
 	prng_md5sum(blk->md5sum);
+	blk->savepath=prng_next64();
 	blist_add_blk(blist, blk);
 }
 

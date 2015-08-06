@@ -13,64 +13,45 @@ struct rblk
 
 #define RBLK_MAX	10
 
-// Return 0 on OK, -1 on error, 1 when there is no more to read.
-static int read_next_data(struct fzp *fzp, struct rblk *rblk, int ind, int r)
-{
-	enum cmd cmd=CMD_ERROR;
-	size_t bytes;
-	unsigned int len;
-	char buf[5];
-	// FIX THIS: Check for the appropriate return value that means there
-	// is no more to read.
-	if(fzp_read(fzp, buf, 5)!=5) return 1;
-	if((sscanf(buf, "%c%04X", (uint8_t *)&cmd, &len))!=2)
-	{
-		logp("sscanf failed in %s: %s\n", __func__, buf);
-		return -1;
-	}
-	if(cmd!=CMD_DATA)
-	{
-		logp("unknown cmd in %s: %c\n", __func__, cmd);
-		return -1;
-	}
-	if(!(rblk[ind].readbuf[r].buf=
-		(char *)realloc_w(rblk[ind].readbuf[r].buf, len, __func__)))
-		return -1;
-	if((bytes=fzp_read(fzp, rblk[ind].readbuf[r].buf, len))!=len)
-	{
-		logp("Short read: %d wanted: %d\n", (int)bytes, (int)len);
-		return -1;
-	}
-	rblk[ind].readbuf[r].len=len;
-	//printf("read: %d:%d %04X\n", r, len, r);
-
-	return 0;
-}
-
 static int load_rblk(struct rblk *rblks, int ind, const char *datpath)
 {
 	int r;
-	struct fzp *dfp;
+	int ret=-1;
+	int done=0;
+	struct fzp *fzp;
+	struct iobuf rbuf;
+
 	free_w(&rblks[ind].datpath);
 	if(!(rblks[ind].datpath=strdup_w(datpath, __func__)))
-		return -1;
-	printf("swap %d to: %s\n", ind, datpath);
+		goto end;
 
-	if(!(dfp=fzp_open(datpath, "rb"))) return -1;
+	logp("swap %d to: %s\n", ind, datpath);
+
+	if(!(fzp=fzp_open(datpath, "rb")))
+		goto end;
 	for(r=0; r<DATA_FILE_SIG_MAX; r++)
 	{
-		switch(read_next_data(dfp, rblks, ind, r))
+		switch(iobuf_fill_from_fzp_data(&rbuf, fzp))
 		{
-			case 0: continue;
-			case 1: break;
-			case -1:
-			default:
-				return -1;
+			case 0: if(rbuf.cmd!=CMD_DATA)
+				{
+					logp("unknown cmd in %s: %c\n",
+						__func__, rbuf.cmd);
+					goto end;
+				}
+				iobuf_move(&rblks[ind].readbuf[r], &rbuf);
+				continue;
+			case 1: done++;
+				break;
+			default: goto end;
 		}
+		if(done) break;
 	}
 	rblks[ind].readbuflen=r;
-	fzp_close(&dfp);
-	return 0;
+	ret=0;
+end:
+	fzp_close(&fzp);
+	return ret;
 }
 
 static struct rblk *get_rblk(struct rblk *rblks, const char *datpath)
@@ -117,8 +98,8 @@ int rblk_retrieve_data(const char *datpath, struct blk *blk)
 	unsigned int datno;
 	struct rblk *rblk;
 
-	snprintf(fulldatpath, sizeof(fulldatpath),
-		"%s/%s", datpath, bytes_to_savepathstr_with_sig(blk->savepath));
+	snprintf(fulldatpath, sizeof(fulldatpath), "%s/%s",
+		datpath, uint64_to_savepathstr_with_sig(blk->savepath));
 
 //printf("x: %s\n", fulldatpath);
 	if(!(cp=strrchr(fulldatpath, '/')))

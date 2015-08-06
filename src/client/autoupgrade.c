@@ -2,12 +2,12 @@
 #include "../cmd.h"
 
 static int receive_file(struct asfd *asfd, const char *autoupgrade_dir,
-	const char *file, struct conf **confs)
+	const char *file, struct cntr *cntr)
 {
 	int ret=0;
 	char *incoming=NULL;
 	if(!(incoming=prepend_s(autoupgrade_dir, file))) return -1;
-	ret=receive_a_file(asfd, incoming, confs);
+	ret=receive_a_file(asfd, incoming, cntr);
 	if(incoming) free(incoming);
 	return ret;
 }
@@ -40,6 +40,7 @@ int autoupgrade_client(struct async *as, struct conf **confs)
 	struct asfd *asfd;
 	char *autoupgrade_dir=get_string(confs[OPT_AUTOUPGRADE_DIR]);
 	const char *autoupgrade_os=get_string(confs[OPT_AUTOUPGRADE_OS]);
+	struct cntr *cntr=get_cntr(confs);
 	asfd=as->asfd;
 
 	if(!autoupgrade_dir)
@@ -83,13 +84,13 @@ int autoupgrade_client(struct async *as, struct conf **confs)
 	snprintf(package_name, sizeof(package_name), "package");
 #endif
 
-	if(receive_file(asfd, autoupgrade_dir, script_name, confs))
+	if(receive_file(asfd, autoupgrade_dir, script_name, cntr))
 	{
 		logp("Problem receiving %s/%s\n",
 			autoupgrade_dir, script_name);
 		goto end;
 	}
-	if(receive_file(asfd, autoupgrade_dir, package_name, confs))
+	if(receive_file(asfd, autoupgrade_dir, package_name, cntr))
 	{
 		logp("Problem receiving %s/%s\n",
 			autoupgrade_dir, package_name);

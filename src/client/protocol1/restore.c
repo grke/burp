@@ -6,16 +6,17 @@
 static int do_restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 	struct sbuf *sb, const char *fname,
 	char **metadata, size_t *metalen,
-	struct conf **confs, const char *rpath)
+	struct cntr *cntr, const char *rpath,
+	const char *encryption_password)
 {
 	int ret=-1;
 	int enccompressed=0;
-	unsigned long long rcvdbytes=0;
-	unsigned long long sentbytes=0;
+	uint64_t rcvdbytes=0;
+	uint64_t sentbytes=0;
 	const char *encpassword=NULL;
 
 	if(sbuf_is_encrypted(sb))
-		encpassword=get_string(confs[OPT_ENCRYPTION_PASSWORD]);
+		encpassword=encryption_password;
 	enccompressed=dpth_protocol1_is_compressed(sb->compression,
 		sb->protocol1->datapth.buf);
 /*
@@ -34,7 +35,7 @@ static int do_restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 	{
 		ret=transfer_gzfile_inl(asfd, sb, fname, NULL,
 			&rcvdbytes, &sentbytes, encpassword, enccompressed,
-			confs, metadata);
+			cntr, metadata);
 		*metalen=sentbytes;
 		// skip setting cntr, as we do not actually
 		// restore until a bit later
@@ -44,7 +45,7 @@ static int do_restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 	{
 		ret=transfer_gzfile_inl(asfd, sb, fname, bfd,
 			&rcvdbytes, &sentbytes,
-			encpassword, enccompressed, confs, NULL);
+			encpassword, enccompressed, cntr, NULL);
 #ifndef HAVE_WIN32
 		if(bfd->close(bfd, asfd))
 		{
@@ -55,7 +56,7 @@ static int do_restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 		}
 #endif
 		if(!ret) attribs_set(asfd, rpath,
-			&(sb->statp), sb->winattr, confs);
+			&(sb->statp), sb->winattr, cntr);
 	}
 
 	ret=0;
@@ -65,7 +66,7 @@ end:
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
 			"Could not transfer file in: %s", rpath);
-		if(restore_interrupt(asfd, sb, msg, confs))
+		if(restore_interrupt(asfd, sb, msg, cntr, PROTO_1))
 			ret=-1;
 		goto end;
 	}
@@ -74,14 +75,15 @@ end:
 
 static int restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 	struct sbuf *sb, const char *fname, enum action act,
-	char **metadata, size_t *metalen, int vss_restore, struct conf **confs)
+	char **metadata, size_t *metalen, int vss_restore,
+	struct cntr *cntr, const char *encyption_password)
 {
 	int ret=0;
 	char *rpath=NULL;
 
 	if(act==ACTION_VERIFY)
 	{
-		cntr_add(get_cntr(confs), sb->path.cmd, 1);
+		cntr_add(cntr, sb->path.cmd, 1);
 		goto end;
 	}
 
@@ -90,7 +92,7 @@ static int restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 		char msg[256]="";
 		// failed - do a warning
 		snprintf(msg, sizeof(msg), "build path failed: %s", fname);
-		if(restore_interrupt(asfd, sb, msg, confs))
+		if(restore_interrupt(asfd, sb, msg, cntr, PROTO_1))
 			ret=-1;
 		goto end;
 	}
@@ -102,7 +104,7 @@ static int restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 	{
 #endif
 		switch(open_for_restore(asfd,
-			bfd, rpath, sb, vss_restore, confs))
+			bfd, rpath, sb, vss_restore, cntr, PROTO_1))
 		{
 			case OFR_OK: break;
 			case OFR_CONTINUE: goto end;
@@ -113,8 +115,8 @@ static int restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 #endif
 
 	if(!(ret=do_restore_file_or_get_meta(asfd, bfd, sb, fname,
-		metadata, metalen, confs, rpath)))
-			cntr_add(get_cntr(confs), sb->path.cmd, 1);
+		metadata, metalen, cntr, rpath, encyption_password)))
+			cntr_add(cntr, sb->path.cmd, 1);
 end:
 	free_w(&rpath);
 	if(ret) logp("restore_file error\n");
@@ -122,11 +124,13 @@ end:
 }
 
 static int restore_metadata(struct asfd *asfd, BFILE *bfd, struct sbuf *sb,
-	const char *fname, enum action act, int vss_restore, struct conf **confs)
+	const char *fname, enum action act,
+	int vss_restore, struct cntr *cntr, const char *encryption_password)
 {
 	int ret=-1;
 	size_t metalen=0;
 	char *metadata=NULL;
+	
 	// If it is directory metadata, try to make sure the directory
 	// exists. Pass in NULL as the cntr, so no counting is done.
 	// The actual directory entry will be coming after the metadata,
@@ -135,31 +139,31 @@ static int restore_metadata(struct asfd *asfd, BFILE *bfd, struct sbuf *sb,
 	// them gets set correctly.
 	if(act==ACTION_VERIFY)
 	{
-		cntr_add(get_cntr(confs), sb->path.cmd, 1);
+		cntr_add(cntr, sb->path.cmd, 1);
 		ret=0;
 		goto end;
 	}
 
 	if(S_ISDIR(sb->statp.st_mode)
-	  && restore_dir(asfd, sb, fname, act, confs))
+	  && restore_dir(asfd, sb, fname, act, cntr, PROTO_1))
 		goto end;
 
 	// Read in the metadata...
 	if(restore_file_or_get_meta(asfd, bfd, sb, fname, act,
-		&metadata, &metalen, vss_restore, confs))
+		&metadata, &metalen, vss_restore, cntr, encryption_password))
 			goto end;
 	if(metadata)
 	{
 		
 		if(!set_extrameta(asfd, bfd, fname,
-			sb, metadata, metalen, confs))
+			sb, metadata, metalen, cntr))
 		{
 #ifndef HAVE_WIN32
 			// Set attributes again, since we just diddled with the
 			// file.
 			attribs_set(asfd, fname,
-				&(sb->statp), sb->winattr, confs);
-			cntr_add(get_cntr(confs), sb->path.cmd, 1);
+				&(sb->statp), sb->winattr, cntr);
+			cntr_add(cntr, sb->path.cmd, 1);
 #endif
 		}
 		// Carry on if we could not set_extrameta.
@@ -172,7 +176,8 @@ end:
 
 int restore_switch_protocol1(struct asfd *asfd, struct sbuf *sb,
 	const char *fullpath, enum action act,
-	BFILE *bfd, int vss_restore, struct conf **confs)
+	BFILE *bfd, int vss_restore, struct cntr *cntr,
+	const char *encryption_password)
 {
 	switch(sb->path.cmd)
 	{
@@ -183,14 +188,15 @@ int restore_switch_protocol1(struct asfd *asfd, struct sbuf *sb,
 		case CMD_EFS_FILE:
 			return restore_file_or_get_meta(asfd, bfd, sb,
 				fullpath, act,
-				NULL, NULL, vss_restore, confs);
+				NULL, NULL, vss_restore, cntr,
+				encryption_password);
 		case CMD_METADATA:
 		case CMD_VSS:
 		case CMD_ENC_METADATA:
 		case CMD_ENC_VSS:
 			return restore_metadata(asfd, bfd, sb,
 				fullpath, act,
-				vss_restore, confs);
+				vss_restore, cntr, encryption_password);
 		default:
 			// Other cases (dir/links/etc) are handled in the
 			// calling function.

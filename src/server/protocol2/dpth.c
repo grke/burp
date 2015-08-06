@@ -68,11 +68,6 @@ static int add_lock_to_list(struct dpth *dpth,
 	if(dpth->tail) dpth->tail->next=dlnew;
 	else if(!dpth->head) dpth->head=dlnew;
 	dpth->tail=dlnew;
-/*
-printf("added: %s\n", dlnew->save_path);
-printf("head: %s\n", dpth->head->save_path);
-printf("tail: %s\n", dpth->tail->save_path);
-*/
 	return 0;
 }
 
@@ -237,9 +232,8 @@ static struct fzp *open_data_file_for_write(struct dpth *dpth, struct blk *blk)
 	struct fzp *fzp=NULL;
 	char *savepathstr=NULL;
 	struct dpth_lock *head=dpth->head;
-//printf("moving for: %s\n", blk->save_path);
 
-	savepathstr=bytes_to_savepathstr(blk->savepath);
+	savepathstr=uint64_to_savepathstr(blk->savepath);
 
 	// Sanity check. They should be coming through from the client
 	// in the same order in which we locked them.
@@ -266,13 +260,11 @@ end:
 int dpth_protocol2_fwrite(struct dpth *dpth,
 	struct iobuf *iobuf, struct blk *blk)
 {
-	//printf("want to write: %s\n", blk->save_path);
-
 	// Remember that the save_path on the lock list is shorter than the
 	// full save_path on the blk.
 	if(dpth->fzp
 	  && strncmp(dpth->head->save_path,
-		bytes_to_savepathstr(blk->savepath),
+		uint64_to_savepathstr(blk->savepath),
 		sizeof(dpth->head->save_path)-1)
 	  && dpth_release_and_move_to_next_in_list(dpth))
 		return -1;

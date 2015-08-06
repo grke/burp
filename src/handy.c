@@ -15,7 +15,7 @@
 
 // return -1 for error, 0 for OK, 1 if the client wants to interrupt the
 // transfer.
-int do_quick_read(struct asfd *asfd, const char *datapth, struct conf **confs)
+int do_quick_read(struct asfd *asfd, const char *datapth, struct cntr *cntr)
 {
 	int r=0;
 	struct iobuf *rbuf;
@@ -27,7 +27,7 @@ int do_quick_read(struct asfd *asfd, const char *datapth, struct conf **confs)
 		if(rbuf->cmd==CMD_MESSAGE
 		  || rbuf->cmd==CMD_WARNING)
 		{
-			log_recvd(rbuf, confs, 0);
+			log_recvd(rbuf, cntr, 0);
 		}
 		else if(rbuf->cmd==CMD_INTERRUPT)
 		{
@@ -49,7 +49,7 @@ int do_quick_read(struct asfd *asfd, const char *datapth, struct conf **confs)
 
 int send_whole_file_gz(struct asfd *asfd,
 	const char *fname, const char *datapth, int quick_read,
-	unsigned long long *bytes, struct conf **confs,
+	uint64_t *bytes, struct cntr *cntr,
 	int compression, struct fzp *fzp)
 {
 	int ret=0;
@@ -119,7 +119,7 @@ int send_whole_file_gz(struct asfd *asfd,
 			if(quick_read && datapth)
 			{
 				int qr;
-				if((qr=do_quick_read(asfd, datapth, confs))<0)
+				if((qr=do_quick_read(asfd, datapth, cntr))<0)
 				{
 					ret=-1;
 					break;
@@ -313,11 +313,9 @@ void setup_signal(int sig, void handler(int sig))
 }
 
 /* Function based on src/lib/priv.c from bacula. */
-int chuser_and_or_chgrp(struct conf **confs)
+int chuser_and_or_chgrp(const char *user, const char *group)
 {
 #if defined(HAVE_PWD_H) && defined(HAVE_GRP_H)
-	char *user=get_string(confs[OPT_USER]);
-	char *group=get_string(confs[OPT_GROUP]);
 	struct passwd *passw = NULL;
 	struct group *grp = NULL;
 	gid_t gid;
@@ -476,15 +474,15 @@ long version_to_long(const char *version)
 
 /* These receive_a_file() and send_file() functions are for use by extra_comms
    and the CA stuff, rather than backups/restores. */
-int receive_a_file(struct asfd *asfd, const char *path, struct conf **confs)
+int receive_a_file(struct asfd *asfd, const char *path, struct cntr *cntr)
 {
 	int ret=-1;
 	BFILE *bfd=NULL;
-	unsigned long long rcvdbytes=0;
-	unsigned long long sentbytes=0;
+	uint64_t rcvdbytes=0;
+	uint64_t sentbytes=0;
 
 	if(!(bfd=bfile_alloc())) goto end;
-	bfile_init(bfd, 0, confs);
+	bfile_init(bfd, 0, cntr);
 #ifdef HAVE_WIN32
 	bfd->set_win32_api(bfd, 0);
 #endif
@@ -499,10 +497,10 @@ int receive_a_file(struct asfd *asfd, const char *path, struct conf **confs)
 		goto end;
 	}
 
-	ret=transfer_gzfile_in(asfd, path, bfd, &rcvdbytes, &sentbytes, confs);
+	ret=transfer_gzfile_in(asfd, path, bfd, &rcvdbytes, &sentbytes, cntr);
 	if(bfd->close(bfd, asfd))
 	{
-		logp("error closing %s in receive_a_file\n", path);
+		logp("error closing %s in %s\n", path, __func__);
 		goto end;
 	}
 	logp("Received: %s\n", path);
@@ -516,14 +514,14 @@ end:
 /* Windows will use this function, when sending a certificate signing request.
    It is not using the Windows API stuff because it needs to arrive on the
    server side without any junk in it. */
-int send_a_file(struct asfd *asfd, const char *path, struct conf **confs)
+int send_a_file(struct asfd *asfd, const char *path, struct cntr *cntr)
 {
 	int ret=0;
 	struct fzp *fzp=NULL;
-	unsigned long long bytes=0;
+	uint64_t bytes=0;
 	if(!(fzp=fzp_open(path, "rb"))
 	  || send_whole_file_gz(asfd, path, "datapth", 0, &bytes,
-		confs, 9 /*compression*/, fzp))
+		cntr, 9 /*compression*/, fzp))
 	{
 		ret=-1;
 		goto end;
@@ -532,58 +530,6 @@ int send_a_file(struct asfd *asfd, const char *path, struct conf **confs)
 end:
 	fzp_close(&fzp);
 	return ret;
-}
-
-static void get_fingerprint_from_str(const char *str, struct blk *blk)
-{
-	// FIX THIS.
-	char tmp[17]="";
-	snprintf(tmp, sizeof(tmp), "%s", str);
-	blk->fingerprint=strtoull(tmp, 0, 16);
-}
-
-static void get_fingerprint_and_md5sum(struct iobuf *iobuf, struct blk *blk)
-{
-	get_fingerprint_from_str(iobuf->buf, blk);
-	md5str_to_bytes(iobuf->buf+16, blk->md5sum);
-}
-
-int split_sig(struct iobuf *iobuf, struct blk *blk)
-{
-	if(iobuf->len!=CHECKSUM_LEN)
-	{
-		logp("Signature wrong length: %u!=%u\n",
-			iobuf->len, CHECKSUM_LEN);
-		return -1;
-	}
-	memcpy(&blk->fingerprint, iobuf->buf, FINGERPRINT_LEN);
-	memcpy(blk->md5sum, iobuf->buf+FINGERPRINT_LEN, MD5_DIGEST_LENGTH);
-	return 0;
-}
-	
-int split_sig_from_manifest(struct iobuf *iobuf, struct blk *blk)
-{
-	if(iobuf->len!=67)
-	{
-		logp("Signature with save_path wrong length: %u\n", iobuf->len);
-		logp("%s\n", iobuf->buf);
-		return -1;
-	}
-	get_fingerprint_and_md5sum(iobuf, blk);
-	savepathstr_to_bytes(iobuf->buf+48, blk->savepath);
-	return 0;
-}
-
-int get_fingerprint(struct iobuf *iobuf, struct blk *blk)
-{
-	if(iobuf->len!=16)
-	{
-		logp("Fingerprint wrong length: %u!=%u\n",
-			iobuf->len, FINGERPRINT_LEN);
-		return -1;
-	}
-	get_fingerprint_from_str(iobuf->buf, blk);
-	return 0;
 }
 
 int strncmp_w(const char *s1, const char *s2)
@@ -607,10 +553,9 @@ void strip_trailing_slashes(char **str)
 	}
 }
 
-int breakpoint(struct conf **confs, const char *func)
+int breakpoint(int breakpoint, const char *func)
 {
-	logp("Breakpoint %d hit in %s\n",
-		get_int(confs[OPT_BREAKPOINT]), func);
+	logp("Breakpoint %d hit in %s\n", breakpoint, func);
 	return -1;
 }
 

@@ -7,21 +7,13 @@ However, that is mostly relating to protocol1 issues.
 So, this is a list of important stuff that needs to be done for protocol2,
 roughly in order of most important to least.
 
-* Fix counters
-
-* Make recovery from partially complete backups work. Hooks
-  need to be generated from already transferred manifests. Need to forward
-  through already written 'changed/unchanged' manifest.
-
-* Don't store fingerprints and md5sums as strings.
+* Make it possible to delete unused data files.
 
 * Need to improve restore speed - come up with a way to efficiently read the
   blocks into memory by looking ahead in the manifests.
   maybe_copy_data_files_across() is probably broken.
 
 * Make CMD_INTERRUPT work (on restore, maybe others too).
-
-* Make it possible to delete unused data files.
 
 * Make the status monitor work.
 
@@ -37,9 +29,4 @@ roughly in order of most important to least.
 
 * Make Windows 'image' backups work.
 
-* Windows directories are restoring with the wrong permissions
-  - need to fix and remove 'type -f' from find command in test/test_main.
-
 * Windows split_vss/strip_vss options cause breakage.
-
-* champ_chooser: figure out a way of giving preference to newer candidates.

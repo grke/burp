@@ -1,9 +1,9 @@
-#ifndef __CHAMP_CHOOSER_H
-#define __CHAMP_CHOOSER_H
+#ifndef _CHAMP_CHOOSER_H
+#define _CHAMP_CHOOSER_H
 
-extern int champ_chooser_init(const char *sparse, struct conf **confs);
+extern struct scores *champ_chooser_init(const char *datadir);
 
-extern int deduplicate(struct asfd *asfd, struct conf **confs);
-extern int is_hook(uint64_t fingerprint);
+extern int deduplicate(struct asfd *asfd, const char *directory,
+	struct scores *scores);
 
 #endif

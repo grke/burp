@@ -176,13 +176,15 @@ static int do_bu_get_list(struct sdirs *sdirs,
 	struct dirent **dp=NULL;
 	const char *dir=sdirs->client;
 	uint16_t flags=0;
+	struct stat statp;
 
 	if(get_link(dir, "working", realwork, sizeof(realwork))
 	  || get_link(dir, "finishing", realfinishing, sizeof(realfinishing))
 	  || get_link(dir, "current", realcurrent, sizeof(realcurrent)))
 		goto end;
 
-	if(entries_in_directory_alphasort_rev(dir, &dp, &n, 1 /* atime */))
+	if(!stat(dir, &statp)
+	  && entries_in_directory_alphasort_rev(dir, &dp, &n, 1 /* atime */))
 	{
 		logp("scandir failed in %s: %s\n", __func__, strerror(errno));
 		goto end;

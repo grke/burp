@@ -17,11 +17,6 @@
 #define MANIFEST_SIG_MIN	0x0e0c
 #define MANIFEST_SIG_MAX	0x1000
 
-#define FINGERPRINT_LEN		8
-//#define MD5_DIGEST_LENGTH	16 // This is set in <openssl/md5.h>.
-#define CHECKSUM_LEN		FINGERPRINT_LEN+MD5_DIGEST_LENGTH
-#define SAVE_PATH_LEN		8 // This is set in hexmap.h.
-
 enum blk_got
 {
 	BLK_INCOMING=0,
@@ -42,16 +37,37 @@ struct blk
 	uint32_t length;			// 4
 	uint64_t fingerprint;			// 8
 	uint8_t md5sum[MD5_DIGEST_LENGTH];	// 16
-	uint8_t savepath[SAVE_PATH_LEN];	// 8
+	uint64_t savepath;			// 8
 	uint64_t index;				// 8
 	struct blk *next;			// 8
 };
 
 extern struct blk *blk_alloc(void);
 extern struct blk *blk_alloc_with_data(uint32_t max_data_length);
+extern void blk_free_content(struct blk *blk);
 extern void blk_free(struct blk **blk);
 extern int blk_md5_update(struct blk *blk);
 extern int blk_is_zero_length(struct blk *blk);
-extern int blk_verify(struct blk *blk, struct conf **confs);
+extern int blk_verify(struct blk *blk);
+extern int blk_fingerprint_is_hook(struct blk *blk);
+
+extern int blk_set_from_iobuf_sig(struct blk *blk, struct iobuf *iobuf);
+extern int blk_set_from_iobuf_sig_and_savepath(struct blk *blk,
+	struct iobuf *iobuf);
+extern int blk_set_from_iobuf_fingerprint(struct blk *blk, struct iobuf *iobuf);
+extern int blk_set_from_iobuf_savepath(struct blk *blk, struct iobuf *iobuf);
+extern int blk_set_from_iobuf_index_and_savepath(struct blk *blk,
+	struct iobuf *iobuf);
+extern int blk_set_from_iobuf_wrap_up(struct blk *blk, struct iobuf *iobuf);
+
+extern void blk_to_iobuf_sig(struct blk *blk, struct iobuf *iobuf);
+extern void blk_to_iobuf_sig_and_savepath(struct blk *blk, struct iobuf *iobuf);
+extern void blk_to_iobuf_fingerprint(struct blk *blk, struct iobuf *iobuf);
+extern void blk_to_iobuf_savepath(struct blk *blk, struct iobuf *iobuf);
+extern void blk_to_iobuf_index_and_savepath(struct blk *blk,
+	struct iobuf *iobuf);
+extern void blk_to_iobuf_wrap_up(struct blk *blk, struct iobuf *iobuf);
+
+extern int to_fzp_fingerprint(struct fzp *fzp, uint64_t fingerprint);
 
 #endif

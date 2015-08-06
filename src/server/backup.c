@@ -16,7 +16,7 @@ static int open_log(struct asfd *asfd,
 	const char *peer_version=get_string(cconfs[OPT_PEER_VERSION]);
 
 	if(!(logpath=prepend_s(sdirs->rworking, "log"))) goto end;
-	if(set_logfzp(logpath, cconfs))
+	if(log_fzp_set(logpath, cconfs))
 	{
 		logp("could not open log file: %s\n", logpath);
 		goto end;
@@ -63,16 +63,18 @@ end:
 static int backup_phase1_server(struct async *as,
 	struct sdirs *sdirs, struct conf **cconfs)
 {
-	if(get_int(cconfs[OPT_BREAKPOINT])==1)
-		return breakpoint(cconfs, __func__);
+	int breaking=get_int(cconfs[OPT_BREAKPOINT]);
+	if(breaking==1)
+		return breakpoint(breaking, __func__);
 	return backup_phase1_server_all(as, sdirs, cconfs);
 }
 
 static int backup_phase2_server(struct async *as, struct sdirs *sdirs,
 	const char *incexc, int resume, struct conf **cconfs)
 {
-	if(get_int(cconfs[OPT_BREAKPOINT])==2)
-		return breakpoint(cconfs, __func__);
+	int breaking=get_int(cconfs[OPT_BREAKPOINT]);
+	if(breaking==2)
+		return breakpoint(breaking, __func__);
 
 	switch(get_protocol(cconfs))
 	{
@@ -87,18 +89,20 @@ static int backup_phase2_server(struct async *as, struct sdirs *sdirs,
 
 static int backup_phase3_server(struct sdirs *sdirs, struct conf **cconfs)
 {
-	if(get_int(cconfs[OPT_BREAKPOINT])==3)
-		return breakpoint(cconfs, __func__);
+	int breaking=get_int(cconfs[OPT_BREAKPOINT]);
+	if(breaking==3)
+		return breakpoint(breaking, __func__);
 
 	return backup_phase3_server_all(sdirs, cconfs);
 }
 
 static int backup_phase4_server(struct sdirs *sdirs, struct conf **cconfs)
 {
-	if(get_int(cconfs[OPT_BREAKPOINT])==4)
-		return breakpoint(cconfs, __func__);
+	int breaking=get_int(cconfs[OPT_BREAKPOINT]);
+	if(breaking==4)
+		return breakpoint(breaking, __func__);
 
-	set_logfzp(NULL, cconfs);
+	log_fzp_set(NULL, cconfs);
 	// Phase4 will open logfp again (in case it is resuming).
 	switch(get_protocol(cconfs))
 	{
@@ -218,15 +222,16 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 	if(do_rename(sdirs->finishing, sdirs->current)) goto error;
 
 	logp("Backup completed.\n");
-	set_logfzp(NULL, cconfs);
-	compress_filename(sdirs->rworking, "log", "log.gz", cconfs);
+	log_fzp_set(NULL, cconfs);
+	compress_filename(sdirs->rworking,
+		"log", "log.gz", get_int(cconfs[OPT_COMPRESSION]));
 
 	goto end;
 error:
 	ret=-1;
 end:
 
-	set_logfzp(NULL, cconfs);
+	log_fzp_set(NULL, cconfs);
 	if(chfd) as->asfd_remove(as, chfd);
 	asfd_free(&chfd);
 
@@ -234,7 +239,9 @@ end:
 	{
 		if(protocol==PROTO_1)
 		{
-			delete_backups(sdirs, cconfs);
+			delete_backups(sdirs,
+				get_string(cconfs[OPT_CNAME]),
+				get_strlist(cconfs[OPT_KEEP]));
 		}
 		else
 		{

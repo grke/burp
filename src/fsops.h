@@ -20,7 +20,7 @@ extern int recursive_delete_dirs_only(const char *path);
 
 extern int unlink_w(const char *path, const char *func);
 
-extern void init_fs_max(const char *path);
+extern int init_fs_max(const char *path);
 
 extern int looks_like_tmp_or_hidden_file(const char *filename);
 

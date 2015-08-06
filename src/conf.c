@@ -92,10 +92,10 @@ int get_int(struct conf *conf)
 	return conf->data.i;
 }
 
-ssize_t get_ssize_t(struct conf *conf)
+uint64_t get_uint64_t(struct conf *conf)
 {
 	assert(conf->conf_type==CT_SSIZE_T);
-	return conf->data.ssizet;
+	return conf->data.uint64;
 }
 
 float get_float(struct conf *conf)
@@ -215,10 +215,10 @@ int set_mode_t(struct conf *conf, mode_t m)
 	return 0;
 }
 
-int set_ssize_t(struct conf *conf, ssize_t s)
+int set_uint64_t(struct conf *conf, uint64_t s)
 {
 	assert(conf->conf_type==CT_SSIZE_T);
-	conf->data.ssizet=s;
+	conf->data.uint64=s;
 	return 0;
 }
 
@@ -382,11 +382,11 @@ static int sc_mod(struct conf *conf, mode_t def,
 	return set_mode_t(conf, def);
 }
 
-static int sc_szt(struct conf *conf, ssize_t def,
+static int sc_u64(struct conf *conf, uint64_t def,
 	uint8_t flags, const char *field)
 {
 	sc(conf, flags, CT_SSIZE_T, field);
-	return set_ssize_t(conf, def);
+	return set_uint64_t(conf, def);
 }
 
 static int sc_cntr(struct conf *conf, struct cntr *def,
@@ -633,10 +633,10 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_int(c[o], 1,
 		CONF_FLAG_CC_OVERRIDE, "path_length_warn");
 	case OPT_HARD_QUOTA:
-	  return sc_szt(c[o], 0,
+	  return sc_u64(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE, "hard_quota");
 	case OPT_SOFT_QUOTA:
-	  return sc_szt(c[o], 0,
+	  return sc_u64(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE, "soft_quota");
 	case OPT_TIMER_SCRIPT:
 	  return sc_str(c[o], 0,
@@ -721,7 +721,7 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "cross_filesystem");
 	case OPT_NOBACKUP:
 	  return sc_lst(c[o], 0,
-		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "no_backup");
+		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "nobackup");
 	case OPT_INCEXT:
 	  return sc_lst(c[o], 0,
 		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "include_ext");
@@ -754,9 +754,9 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_BLOCKDEVS:
 	  return sc_lst(c[o], 0, CONF_FLAG_INCEXC, "read_blockdev");
 	case OPT_MIN_FILE_SIZE:
-	  return sc_szt(c[o], 0, CONF_FLAG_INCEXC, "min_file_size");
+	  return sc_u64(c[o], 0, CONF_FLAG_INCEXC, "min_file_size");
 	case OPT_MAX_FILE_SIZE:
-	  return sc_szt(c[o], 0, CONF_FLAG_INCEXC, "max_file_size");
+	  return sc_u64(c[o], 0, CONF_FLAG_INCEXC, "max_file_size");
 	case OPT_SPLIT_VSS:
 	  return sc_int(c[o], 0, CONF_FLAG_INCEXC, "split_vss");
 	case OPT_STRIP_VSS:
@@ -840,7 +840,7 @@ static char *conf_data_to_str(struct conf *conf)
 {
 	size_t l=256;
 	char *ret=NULL;
-	if(!(ret=(char *)calloc(1, l))) return ret;
+	if(!(ret=(char *)calloc_w(1, l, __func__))) return ret;
 	*ret='\0';
 	switch(conf->conf_type)
 	{

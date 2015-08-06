@@ -1,6 +1,23 @@
-#include "include.h"
-#include "../../cmd.h"
-#include "../../lock.h"
+#include "../../../burp.h"
+#include "../../../alloc.h"
+#include "../../../asfd.h"
+#include "../../../async.h"
+#include "../../../cmd.h"
+#include "../../../conf.h"
+#include "../../../conffile.h"
+#include "../../../fsops.h"
+#include "../../../handy.h"
+#include "../../../iobuf.h"
+#include "../../../lock.h"
+#include "../../../log.h"
+#include "../../protocol2/blist.h"
+#include "../../protocol2/blk.h"
+#include "../../sdirs.h"
+#include "candidate.h"
+#include "champ_chooser.h"
+#include "champ_server.h"
+#include "incoming.h"
+#include "scores.h"
 
 #include <sys/un.h>
 
@@ -37,19 +54,11 @@ error:
 
 static int results_to_fd(struct asfd *asfd)
 {
+	static struct iobuf wbuf;
 	struct blk *b;
 	struct blk *l;
-	static struct iobuf *wbuf=NULL;
 
 	if(!asfd->blist->last_index) return 0;
-
-	if(!wbuf)
-	{
-		if(!(wbuf=iobuf_alloc())
-		  || !(wbuf->buf=(char *)
-			malloc_w(FILENO_LEN+SAVE_PATH_LEN, __func__)))
-				return -1;
-	}
 
 	// Need to start writing the results down the fd.
 	for(b=asfd->blist->head; b && b!=asfd->blist->blk_to_dedup; b=l)
@@ -57,12 +66,9 @@ static int results_to_fd(struct asfd *asfd)
 		if(b->got==BLK_GOT)
 		{
 			// Need to write to fd.
-			memcpy(wbuf->buf, &b->index, FILENO_LEN);
-			memcpy(wbuf->buf+FILENO_LEN, b->savepath, SAVE_PATH_LEN);
-			wbuf->len=FILENO_LEN+SAVE_PATH_LEN;
-			wbuf->cmd=CMD_SIG;
+			blk_to_iobuf_index_and_savepath(b, &wbuf);
 
-			switch(asfd->append_all_to_write_buffer(asfd, wbuf))
+			switch(asfd->append_all_to_write_buffer(asfd, &wbuf))
 			{
 				case APPEND_OK: break;
 				case APPEND_BLOCKED:
@@ -77,11 +83,9 @@ static int results_to_fd(struct asfd *asfd)
 			// Send a 'wrap_up' message.
 			if(!b->next || b->next==asfd->blist->blk_to_dedup)
 			{
-				memcpy(wbuf->buf, &b->index, FILENO_LEN);
-				wbuf->len=FILENO_LEN;
-				wbuf->cmd=CMD_WRAP_UP;
+				blk_to_iobuf_wrap_up(b, &wbuf);
 				switch(asfd->append_all_to_write_buffer(asfd,
-					wbuf))
+					&wbuf))
 				{
 					case APPEND_OK: break;
 					case APPEND_BLOCKED:
@@ -101,11 +105,11 @@ static int results_to_fd(struct asfd *asfd)
 }
 
 static int deduplicate_maybe(struct asfd *asfd,
-	struct blk *blk, struct conf **confs)
+	struct blk *blk, const char *directory, struct scores *scores)
 {
 	if(!asfd->in && !(asfd->in=incoming_alloc())) return -1;
 
-	if(is_hook(blk->fingerprint))
+	if(blk_fingerprint_is_hook(blk))
 	{
 		if(incoming_grow_maybe(asfd->in)) return -1;
 		asfd->in->fingerprints[asfd->in->size-1]=blk->fingerprint;
@@ -113,30 +117,32 @@ static int deduplicate_maybe(struct asfd *asfd,
 	if(++(asfd->blkcnt)<MANIFEST_SIG_MAX) return 0;
 	asfd->blkcnt=0;
 
-	if(deduplicate(asfd, confs)<0)
+	if(deduplicate(asfd, directory, scores)<0)
 		return -1;
 
 	return 0;
 }
 
-static int deal_with_rbuf_sig(struct asfd *asfd, struct conf **confs)
+static int deal_with_rbuf_sig(struct asfd *asfd, const char *directory,
+	struct scores *scores)
 {
 	struct blk *blk;
 	if(!(blk=blk_alloc())) return -1;
 
 	blist_add_blk(asfd->blist, blk);
+
 	if(!asfd->blist->blk_to_dedup) asfd->blist->blk_to_dedup=blk;
 
-	// FIX THIS: Consider endian-ness.
-	if(split_sig(asfd->rbuf, blk)) return -1;
+	if(blk_set_from_iobuf_sig(blk, asfd->rbuf)) return -1;
 
 	//printf("Got weak/strong from %d: %lu - %s %s\n",
 	//	asfd->fd, blk->index, blk->weak, blk->strong);
 
-	return deduplicate_maybe(asfd, blk, confs);
+	return deduplicate_maybe(asfd, blk, directory, scores);
 }
 
-static int deal_with_client_rbuf(struct asfd *asfd, struct conf **confs)
+static int deal_with_client_rbuf(struct asfd *asfd, const char *directory,
+	struct scores *scores)
 {
 	if(asfd->rbuf->cmd==CMD_GEN)
 	{
@@ -157,7 +163,7 @@ static int deal_with_client_rbuf(struct asfd *asfd, struct conf **confs)
 		else if(!strncmp_w(asfd->rbuf->buf, "sigs_end"))
 		{
 			//printf("Was told no more sigs\n");
-			if(deduplicate(asfd, confs)<0)
+			if(deduplicate(asfd, directory, scores)<0)
 				goto error;
 		}
 		else
@@ -168,14 +174,14 @@ static int deal_with_client_rbuf(struct asfd *asfd, struct conf **confs)
 	}
 	else if(asfd->rbuf->cmd==CMD_SIG)
 	{
-		if(deal_with_rbuf_sig(asfd, confs))
+		if(deal_with_rbuf_sig(asfd, directory, scores))
 			goto error;
 	}
 	else if(asfd->rbuf->cmd==CMD_MANIFEST)
 	{
 		// Client has completed a manifest file. Want to start using
 		// it as a dedup candidate now.
-		if(candidate_add_fresh(asfd->rbuf->buf, confs))
+		if(candidate_add_fresh(asfd->rbuf->buf, directory, scores))
 			goto error;
 	}
 	else
@@ -200,6 +206,8 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf **confs)
 	struct lock *lock=NULL;
 	struct async *as=NULL;
 	int started=0;
+	struct scores *scores=NULL;
+	const char *directory=get_string(confs[OPT_DIRECTORY]);
 
 	if(!(lock=lock_alloc_and_init(sdirs->champlock))
 	  || build_path_w(sdirs->champlock))
@@ -208,7 +216,7 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf **confs)
 	switch(lock->status)
 	{
 		case GET_LOCK_GOT:
-			set_logfzp(sdirs->champlog, confs);
+			log_fzp_set(sdirs->champlog, confs);
 			logp("Got champ lock for dedup_group: %s\n",
 				get_string(confs[OPT_DEDUP_GROUP]));
 			break;
@@ -254,7 +262,7 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf **confs)
 	asfd->fdtype=ASFD_FD_SERVER_LISTEN_MAIN;
 
 	// Load the sparse indexes for this dedup group.
-	if(champ_chooser_init(sdirs->data, confs))
+	if(!(scores=champ_chooser_init(sdirs->data)))
 		goto end;
 
 	while(1)
@@ -276,7 +284,8 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf **confs)
 					while(asfd->rbuf->buf)
 					{
 						if(deal_with_client_rbuf(asfd,
-							confs)) goto end;
+							directory, scores))
+								goto end;
 						// Get as much out of the
 						// readbuf as possible.
 						if(asfd->parse_readbuf(asfd))
@@ -328,7 +337,7 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf **confs)
 
 end:
 	logp("champ chooser exiting: %d\n", ret);
-	set_logfzp(NULL, confs);
+	log_fzp_set(NULL, confs);
 	async_free(&as);
 	asfd_free(&asfd); // This closes s for us.
 	close_fd(&s);
@@ -336,6 +345,7 @@ end:
 // FIX THIS: free asfds.
 	lock_release(lock);
 	lock_free(&lock);
+	scores_free(&scores);
 	return ret;
 }
 

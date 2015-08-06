@@ -74,18 +74,6 @@ START_TEST(test_conf_get_pair)
 }
 END_TEST
 
-#define MIN_CLIENT_CONF				\
-	"mode=client\n"				\
-	"server=4.5.6.7\n"			\
-	"port=1234\n"				\
-	"status_port=12345\n"			\
-	"lockfile=/lockfile/path\n"		\
-	"ssl_cert=/ssl/cert/path\n"		\
-	"ssl_cert_ca=/cert_ca/path\n"		\
-	"ssl_peer_cn=my_cn\n"			\
-	"ca_csr_dir=/csr/dir\n"			\
-	"ssl_key=/ssl/key/path\n"		\
-
 START_TEST(test_client_conf)
 {
 	struct conf **confs=NULL;

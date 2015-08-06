@@ -5,10 +5,6 @@
 #include "../src/alloc.h"
 #include "../src/conf.h"
 
-// Stuff pulled in from strlist.c:
-#include "../src/regexp.h"
-int compile_regex(regex_t **regex, const char *str) { return 0; }
-
 static void check_default(struct conf **c, enum conf_opt o)
 {
 	switch(o)
@@ -185,7 +181,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_SOFT_QUOTA:
 		case OPT_MIN_FILE_SIZE:
 		case OPT_MAX_FILE_SIZE:
-			fail_unless(get_ssize_t(c[o])==0);
+			fail_unless(get_uint64_t(c[o])==0);
 			break;
         	case OPT_WORKING_DIR_RECOVERY_METHOD:
 			fail_unless(get_e_recovery_method(c[o])==

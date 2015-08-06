@@ -136,4 +136,53 @@
 	};
 #endif
 
+#ifdef HAVE_LINUX_OS
+	#include <endian.h>
+#endif
+#ifdef HAVE_WIN32
+	#include <winsock2.h>
+	#include <sys/param.h>
+	#if BYTE_ORDER == LITTLE_ENDIAN
+		#define htobe64(x) __builtin_bswap64(x)
+		#define htole64(x) (x)
+		#define be64toh(x) __builtin_bswap64(x)
+		#define le64toh(x) (x)
+	#elif BYTE_ORDER == BIG_ENDIAN
+		#define htobe64(x) (x)
+		#define htole64(x) __builtin_bswap64(x)
+		#define be64toh(x) (x)
+		#define le64toh(x) __builtin_bswap64(x)
+	#else
+		#error byte order not supported
+	#endif
+	#define __BYTE_ORDER	BYTE_ORDER
+	#define __BIG_ENDIAN    BIG_ENDIAN
+	#define __LITTLE_ENDIAN	LITTLE_ENDIAN
+	#define __PDP_ENDIAN	PDP_ENDIAN
+#endif
+#ifdef HAVE_DARWIN_OS
+	#include <libkern/OSByteOrder.h>
+	#define htobe64(x) OSSwapHostToBigInt64(x)
+	#define htole64(x) OSSwapHostToLittleInt64(x)
+	#define be64toh(x) OSSwapBigToHostInt64(x)
+	#define le64toh(x) OSSwapLittleToHostInt64(x)
+	#define __BYTE_ORDER    BYTE_ORDER
+	#define __BIG_ENDIAN    BIG_ENDIAN
+	#define __LITTLE_ENDIAN LITTLE_ENDIAN
+	#define __PDP_ENDIAN    PDP_ENDIAN
+#endif
+#ifdef HAVE_OPENBSD_OS
+	#include <sys/endian.h>
+#endif
+#ifdef HAVE_FREEBSD_OS
+	#include <sys/endian.h>
+	#define be64toh(x) betoh64(x)
+	#define le64toh(x) letoh64(x)
+#endif
+#ifdef HAVE_NETBSD_OS
+	#include <sys/endian.h>
+	#define be64toh(x) betoh64(x)
+	#define le64toh(x) letoh64(x)
+#endif
+
 #endif

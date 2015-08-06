@@ -12,8 +12,8 @@
 static int makelinks=0;
 static int deletedups=0;
 
-static unsigned long long savedbytes=0;
-static unsigned long long count=0;
+static uint64_t savedbytes=0;
+static uint64_t count=0;
 static int ccount=0;
 
 static struct lock *locklist=NULL;
@@ -28,8 +28,8 @@ struct file
 	dev_t dev;
 	ino_t ino;
 	nlink_t nlink;
-	unsigned long full_cksum;
-	unsigned long part_cksum;
+	uint64_t full_cksum;
+	uint64_t part_cksum;
 	file_t *next;
 };
 
@@ -701,7 +701,7 @@ static char *get_config_path(void)
 
 static int usage(void)
 {
-	printf("\n%s: [options]\n", prog);
+	printf("\nUsage: %s [options]\n", prog);
 	printf("\n");
 	printf(" Options:\n");
 	printf("  -c <path>                Path to config file (default: %s).\n", get_config_path());

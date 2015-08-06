@@ -3,6 +3,8 @@
 
 #include "../../src/conf.h"
 
+#define RMANIFEST_RELATIVE	"rmanifest_relative"
+
 extern char **build_paths(int wanted);
 extern struct sbuf *build_attribs(enum protocol protocol);
 extern struct sbuf *build_attribs_reduce(enum protocol protocol);
@@ -14,6 +16,8 @@ extern void build_blks(struct blist *blist, int wanted);
 
 
 extern void build_manifest_phase2_from_slist(const char *path,
+	struct slist *slist, enum protocol protocol, int short_write);
+extern void build_manifest_phase1_from_slist(const char *path,
 	struct slist *slist, enum protocol protocol);
 
 #endif

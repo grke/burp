@@ -4,7 +4,7 @@ Things to watch out for when upgrading.
 ------
 The protocol2 manifest formats have changed. You should therefore not mix
 earlier 2.0.x servers and clients with this version, and protocol2 backups from
-earlier versions will probably no longer work.
+earlier versions will no longer work.
 
 2.0.20
 ------

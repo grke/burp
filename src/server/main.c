@@ -47,28 +47,30 @@ static void close_fds(int *fds)
 }
 
 // Remove any exiting child pids from our list.
-// FIX THIS.
 static void chld_check_for_exiting(struct async *mainas)
 {
 	pid_t p;
 	int status;
 	struct asfd *asfd;
-	if((p=waitpid(-1, &status, WNOHANG))<=0) return;
 
-	// Logging a message here appeared to occasionally lock burp up on a
-	// Ubuntu server that I used to use.
-	//logp("child pid %d exited\n", p);
-	for(asfd=mainas->asfd; asfd; asfd=asfd->next)
+	while(sigchld && (p=waitpid(-1, &status, WNOHANG))>0)
 	{
-		if(p!=asfd->pid) continue;
-		mainas->asfd_remove(mainas, asfd);
-		asfd_free(&asfd);
-		break;
+		sigchld--;
+		// Logging a message here appeared to occasionally lock burp up
+		// on a Ubuntu server that I used to use.
+		//logp("child pid %d exited\n", p);
+		for(asfd=mainas->asfd; asfd; asfd=asfd->next)
+		{
+			if(p!=asfd->pid) continue;
+			mainas->asfd_remove(mainas, asfd);
+			asfd_free(&asfd);
+			break;
+		}
 	}
+
 }
 
-static int init_listen_socket(const char *address, const char *port,
-	int alladdr, int *fds)
+static int init_listen_socket(const char *address, const char *port, int *fds)
 {
 	int i;
 	int gai_ret;
@@ -83,7 +85,7 @@ static int init_listen_socket(const char *address, const char *port,
 	hints.ai_socktype=SOCK_STREAM;
 	hints.ai_protocol=IPPROTO_TCP;
 	hints.ai_flags=AI_NUMERICHOST;
-	//if(alladdr) hints.ai_flags|=AI_PASSIVE;
+	hints.ai_flags|=AI_PASSIVE;
 
 	if((gai_ret=getaddrinfo(address, port, &hints, &info)))
 	{
@@ -102,16 +104,6 @@ static int init_listen_socket(const char *address, const char *port,
 				port, strerror(errno));
 			continue;
 		}
-		reuseaddr(fds[i]);
-		if(bind(fds[i], rp->ai_addr, rp->ai_addrlen))
-		{
-			logp("unable to bind socket on port %s: %s\n",
-				port, strerror(errno));
-			close(fds[i]);
-			fds[i]=-1;
-			continue;
-		}
-
 #ifdef HAVE_IPV6
 		if(rp->ai_family==AF_INET6)
 		{
@@ -122,6 +114,15 @@ static int init_listen_socket(const char *address, const char *port,
 				&optval, sizeof(optval));
 		}
 #endif
+		reuseaddr(fds[i]);
+		if(bind(fds[i], rp->ai_addr, rp->ai_addrlen))
+		{
+			logp("unable to bind socket on port %s: %s\n",
+				port, strerror(errno));
+			close(fds[i]);
+			fds[i]=-1;
+			continue;
+		}
 
 		// Say that we are happy to accept connections.
 		if(listen(fds[i], 5)<0)
@@ -157,7 +158,7 @@ static int init_listen_socket(const char *address, const char *port,
 
 static void sigchld_handler(int sig)
 {
-	sigchld=1;
+	sigchld++;
 }
 
 int setup_signals(int oldmax_children, int max_children,
@@ -564,8 +565,8 @@ static int run_server(struct conf **confs, const char *conffile,
 		goto end;
 	}
 
-	if(init_listen_socket(address, port, 1, rfds)
-	  || init_listen_socket(status_address, status_port, 0, sfds))
+	if(init_listen_socket(address, port, rfds)
+	  || init_listen_socket(status_address, status_port, sfds))
 		goto end;
 
 	if(!(mainas=async_alloc())
@@ -662,7 +663,6 @@ static int run_server(struct conf **confs, const char *conffile,
 		if(sigchld)
 		{
 			chld_check_for_exiting(mainas);
-			sigchld=0;
 		}
 
 		// Leave if we had a SIGUSR1 and there are no children running.

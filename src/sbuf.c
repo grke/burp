@@ -11,13 +11,16 @@
 #include "protocol2/blk.h"
 #include "server/protocol2/rblk.h"
 
-struct sbuf *sbuf_alloc_protocol(enum protocol protocol)
+struct sbuf *sbuf_alloc(enum protocol protocol)
 {
 	struct sbuf *sb;
 	if(!(sb=(struct sbuf *)calloc_w(1, sizeof(struct sbuf), __func__)))
 		return NULL;
-	sb->path.cmd=CMD_ERROR;
+	iobuf_init(&sb->path);
+	iobuf_init(&sb->attr);
 	sb->attr.cmd=CMD_ATTRIBS;
+	iobuf_init(&sb->link);
+	iobuf_init(&sb->endfile);
 	sb->compression=-1;
 	if(protocol==PROTO_1)
 	{
@@ -28,11 +31,6 @@ struct sbuf *sbuf_alloc_protocol(enum protocol protocol)
 		if(!(sb->protocol2=sbuf_protocol2_alloc())) return NULL;
 	}
 	return sb;
-}
-
-struct sbuf *sbuf_alloc(struct conf **confs)
-{
-	return sbuf_alloc_protocol(get_protocol(confs));
 }
 
 void sbuf_free_content(struct sbuf *sb)
@@ -141,7 +139,7 @@ int sbuf_open_file(struct sbuf *sb, struct asfd *asfd, struct conf **confs)
 #endif
 	{
 		// This file is no longer available.
-		logw(asfd, confs, "%s has vanished\n", sb->path.buf);
+		logw(asfd, get_cntr(confs), "%s has vanished\n", sb->path.buf);
 		return -1;
 	}
 	sb->compression=get_int(confs[OPT_COMPRESSION]);
@@ -150,9 +148,11 @@ int sbuf_open_file(struct sbuf *sb, struct asfd *asfd, struct conf **confs)
 	if(attribs_encode(sb)) return -1;
 
 	if(bfd->open_for_send(bfd, asfd,
-		sb->path.buf, sb->winattr, get_int(confs[OPT_ATIME]), confs))
+		sb->path.buf, sb->winattr,
+		get_int(confs[OPT_ATIME]), get_cntr(confs), PROTO_2))
 	{
-		logw(asfd, confs, "Could not open %s\n", sb->path.buf);
+		logw(asfd, get_cntr(confs),
+			"Could not open %s\n", sb->path.buf);
 		return -1;
 	}
 	return 0;
@@ -180,7 +180,7 @@ enum parse_ret
 
 static parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 	struct iobuf *rbuf, struct blk *blk,
-	const char *datpath, struct conf **confs)
+	const char *datpath, struct cntr *cntr)
 {
 	switch(rbuf->cmd)
 	{
@@ -266,7 +266,7 @@ static parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 			if(!blk) return PARSE_RET_NEED_MORE;
 
 			// Just fill in the sig details.
-			if(split_sig_from_manifest(rbuf, blk))
+			if(blk_set_from_iobuf_sig_and_savepath(blk, rbuf))
 				return PARSE_RET_ERROR;
 			blk->got_save_path=1;
 			iobuf_free_content(rbuf);
@@ -287,7 +287,7 @@ static parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 			return PARSE_RET_COMPLETE;
 		case CMD_MESSAGE:
 		case CMD_WARNING:
-			log_recvd(rbuf, confs, 1);
+			log_recvd(rbuf, cntr, 1);
 			return PARSE_RET_NEED_MORE;
 		case CMD_GEN:
 			if(!strcmp(rbuf->buf, "restoreend")
@@ -300,7 +300,7 @@ static parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 			iobuf_log_unexpected(rbuf, __func__);
 			return PARSE_RET_ERROR;
 		case CMD_FINGERPRINT:
-			if(blk && get_fingerprint(rbuf, blk))
+			if(blk && blk_set_from_iobuf_fingerprint(blk, rbuf))
 				return PARSE_RET_ERROR;
 			// Fall through.
 		case CMD_MANIFEST:
@@ -349,37 +349,8 @@ static parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 	return PARSE_RET_ERROR;
 }
 
-static int fill_from_fzp(struct fzp *fzp, struct iobuf *rbuf)
-{
-	static size_t got;
-	static unsigned int s;
-	static char lead[5]="";
-
-	if((got=fzp_read(fzp, lead, sizeof(lead)))!=5)
-	{
-		if(!got) return 1; // Finished OK.
-		logp("short read in manifest\n");
-		return -1;
-	}
-	if((sscanf(lead, "%c%04X", (char *)&rbuf->cmd, &s))!=2)
-	{
-		logp("sscanf failed reading manifest: %s\n", lead);
-		return -1;
-	}
-	rbuf->len=(size_t)s;
-	if(!(rbuf->buf=(char *)malloc_w(rbuf->len+2, __func__)))
-		return -1;
-	if(fzp_read(fzp, rbuf->buf, rbuf->len+1)!=rbuf->len+1)
-	{
-		logp("short read in manifest\n");
-		return -1;
-	}
-	rbuf->buf[rbuf->len]='\0';
-	return 0;
-}
-
 static int sbuf_fill(struct sbuf *sb, struct asfd *asfd, struct fzp *fzp,
-	struct blk *blk, const char *datpath, struct conf **confs)
+	struct blk *blk, const char *datpath, struct cntr *cntr)
 {
 	static struct iobuf *rbuf;
 	static struct iobuf localrbuf;
@@ -397,7 +368,7 @@ static int sbuf_fill(struct sbuf *sb, struct asfd *asfd, struct fzp *fzp,
 		iobuf_free_content(rbuf);
 		if(fzp)
 		{
-			if((ret=fill_from_fzp(fzp, rbuf)))
+			if((ret=iobuf_fill_from_fzp(rbuf, fzp)))
 				goto end;
 		}
 		else
@@ -408,7 +379,7 @@ static int sbuf_fill(struct sbuf *sb, struct asfd *asfd, struct fzp *fzp,
 				break;
 			}
 		}
-		switch(parse_cmd(sb, asfd, rbuf, blk, datpath, confs))
+		switch(parse_cmd(sb, asfd, rbuf, blk, datpath, cntr))
 		{
 			case PARSE_RET_NEED_MORE:
 				continue;
@@ -419,6 +390,7 @@ static int sbuf_fill(struct sbuf *sb, struct asfd *asfd, struct fzp *fzp,
 				goto end;
 			case PARSE_RET_ERROR:
 			default:
+				ret=-1;
 				goto end;
 		}
 	}
@@ -428,13 +400,13 @@ end:
 }
 
 int sbuf_fill_from_net(struct sbuf *sb, struct asfd *asfd,
-	struct blk *blk, const char *datpath, struct conf **confs)
+	struct blk *blk, const char *datpath, struct cntr *cntr)
 {
-	return sbuf_fill(sb, asfd, NULL, blk, datpath, confs);
+	return sbuf_fill(sb, asfd, NULL, blk, datpath, cntr);
 }
 
 int sbuf_fill_from_file(struct sbuf *sb, struct fzp *fzp,
-	struct blk *blk, const char *datpath, struct conf **confs)
+	struct blk *blk, const char *datpath)
 {
-	return sbuf_fill(sb, NULL, fzp, blk, datpath, confs);
+	return sbuf_fill(sb, NULL, fzp, blk, datpath, NULL);
 }

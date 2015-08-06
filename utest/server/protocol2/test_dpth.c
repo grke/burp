@@ -43,7 +43,7 @@ static void tear_down(struct dpth **dpth)
 {
 	dpth_free(dpth);
 	fail_unless(recursive_delete(lockpath)==0);
-	fail_unless(free_count==alloc_count);
+	alloc_check();
 }
 
 static int write_to_dpth(struct dpth *dpth, const char *savepathstr)
@@ -51,7 +51,7 @@ static int write_to_dpth(struct dpth *dpth, const char *savepathstr)
 	int ret;
 	struct iobuf wbuf;
 	struct blk *blk=blk_alloc();
-	savepathstr_to_bytes(savepathstr, blk->savepath);
+	blk->savepath=savepathstr_to_uint64(savepathstr);
 	wbuf.buf=strdup_w("abc", __FUNCTION__);
 	wbuf.len=3;
 	ret=dpth_protocol2_fwrite(dpth, &wbuf, blk);

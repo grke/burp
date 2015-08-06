@@ -3,7 +3,8 @@
 
 // Return -1 on error or success, 0 to continue normally.
 int autoupgrade_server(struct async *as,
-	long ser_ver, long cli_ver, const char *os, struct conf **confs)
+	long ser_ver, long cli_ver, const char *os, struct cntr *cntr,
+	const char *autoupgrade_dir)
 {
 	int ret=-1;
 	char *path=NULL;
@@ -15,7 +16,6 @@ int autoupgrade_server(struct async *as,
 	struct stat stats;
 	struct stat statp;
 	struct asfd *asfd;
-	const char *autoupgrade_dir=get_string(confs[OPT_AUTOUPGRADE_DIR]);
 	asfd=as->asfd;
 
 	if(!autoupgrade_dir)
@@ -84,12 +84,12 @@ int autoupgrade_server(struct async *as,
 	if(asfd->write_str(asfd, CMD_GEN, "autoupgrade ok"))
 		goto end;
 
-	if(send_a_file(asfd, script_path, confs))
+	if(send_a_file(asfd, script_path, cntr))
 	{
 		logp("Problem sending %s\n", script_path);
 		goto end;
 	}
-	if(send_a_file(asfd, package_path, confs))
+	if(send_a_file(asfd, package_path, cntr))
 	{
 		logp("Problem sending %s\n", package_path);
 		goto end;

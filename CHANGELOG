@@ -1,9 +1,11 @@
-  * Refactor src/server/manio.c to work towards protocol2 resume
-    functionality.
+  * Make protocol2 resume work. Add unit tests for resume components.
+  * Store manifest fingerprints and md5sums in binary instead of strings,
+    plus related endian fixes.
   * Fix '-a l' regex so that it isn't split in two at the right-most
     colon.
   * Fix possible buffer overrun when encoding attribs.
   * Fix protocol 1 phase 2 resume bug introduced in 2.0.20.
+  * Fix protocol 1 phase 2 bug where librsync was never used.
   * Fix possible protocol 2 phase 2 segfaults.
   * Make protocol 1 and 2 share the same code for phase 3.
   * Set default_md=sha256 in CA.cnf.
@@ -25,6 +27,21 @@
     instead of CMD_VSS.
   * Prevent warnings when listing backups that contain metadata.
   * Fix for SIGHUP causing server to stop listening.
+  * Use flock to stop simultaneous runs of burp_ca, hopefully preventing CA
+    corruption.
+  * Unit tests for src/client/find.c, enabling the removal of some of the
+    time consuming end-to-end tests.
+  * Fix 'nobackup' conf item.
+  * Don't use absolute path to 'sort' in 'make test'.
+  * Fix bug where fs_name_max could get set to an incorrect value on the
+    server side, causing scandir to fail at the end of a backup.
+  * Fix for a growing list of defunct child processes on busy servers, where
+    overlapping sigchlds would get conflated into one, and waitpid would only
+    get run once.
+  * Set the server address in linux client burp.conf to "::1" if IPv6 is
+    supported, and "127.0.0.1" otherwise.
+  * Substitute 127.0.0.1 for the default burp.conf server address if the OS
+    doesn't have IPv6.
 
 2015-07-01 Changes in burp-1.4.40:
   * Fix '-a l' regex so that it isn't split in two at the right-most

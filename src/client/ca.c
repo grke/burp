@@ -143,6 +143,7 @@ int ca_client_setup(struct asfd *asfd, struct conf **confs)
 	const char *ssl_key=get_string(confs[OPT_SSL_KEY]);
 	const char *ssl_cert=get_string(confs[OPT_SSL_CERT]);
 	const char *ssl_cert_ca=get_string(confs[OPT_SSL_CERT_CA]);
+	struct cntr *cntr=get_cntr(confs);
 
 	// Do not continue if we have one of the following things not set.
 	if(  !ca_burp_ca
@@ -177,7 +178,7 @@ int ca_client_setup(struct asfd *asfd, struct conf **confs)
 	if(generate_key_and_csr(asfd, confs, csr_path)) goto end_cleanup;
 
 	// Then copy the csr to the server.
-	if(send_a_file(asfd, csr_path, confs)) goto end_cleanup;
+	if(send_a_file(asfd, csr_path, cntr)) goto end_cleanup;
 
 	snprintf(ssl_cert_tmp, sizeof(ssl_cert_tmp), "%s.%d",
 		ssl_cert, getpid());
@@ -185,10 +186,10 @@ int ca_client_setup(struct asfd *asfd, struct conf **confs)
 		ssl_cert_ca, getpid());
 
 	// The server will then sign it, and give it back.
-	if(receive_a_file(asfd, ssl_cert_tmp, confs)) goto end_cleanup;
+	if(receive_a_file(asfd, ssl_cert_tmp, cntr)) goto end_cleanup;
 
 	// The server will also send the CA certificate.
-	if(receive_a_file(asfd, ssl_cert_ca_tmp, confs)) goto end_cleanup;
+	if(receive_a_file(asfd, ssl_cert_ca_tmp, cntr)) goto end_cleanup;
 
 	// Possible race condition - the rename can delete the destination
 	// and then fail. Worse case, the user has to rename them by hand.

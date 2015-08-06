@@ -23,7 +23,7 @@ static struct sbuf *do_build_attribs(enum protocol protocol)
 {
 	struct sbuf *sbuf;
 	struct stat *statp;
-	fail_unless((sbuf=sbuf_alloc_protocol(protocol))!=NULL);
+	fail_unless((sbuf=sbuf_alloc(protocol))!=NULL);
 	statp=&sbuf->statp;
 	memcpy_a(&statp->st_dev, sizeof(statp->st_dev));
 	memcpy_a(&statp->st_ino, sizeof(statp->st_ino));

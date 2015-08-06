@@ -18,8 +18,6 @@ int do_patch(struct asfd *asfd, const char *dst, const char *del,
 	struct fzp *upfzp=NULL;
 	rs_result result=RS_IO_ERROR;
 
-	//logp("patching...\n");
-
 	if(!(dstp=fzp_open(dst, "rb"))) goto end;
 
 	if(dpth_protocol1_is_compressed(compression, del))
@@ -30,14 +28,15 @@ int do_patch(struct asfd *asfd, const char *dst, const char *del,
 	if(!delfzp) goto end;
 
 	if(gzupd)
-		upfzp=fzp_gzopen(upd, comp_level(cconfs));
+		upfzp=fzp_gzopen(upd,
+			comp_level(get_int(cconfs[OPT_COMPRESSION])));
 	else
 		upfzp=fzp_open(upd, "wb");
 
 	if(!upfzp) goto end;
 
 	result=rs_patch_gzfile(asfd,
-		dstp, delfzp, upfzp, NULL, get_cntr(cconfs));
+		dstp, delfzp, upfzp, get_cntr(cconfs));
 end:
 	fzp_close(&dstp);
 	fzp_close(&delfzp);
@@ -71,8 +70,7 @@ static int make_rev_sig(const char *dst, const char *sig, const char *endfile,
 	  || !(sigp=fzp_open(sig, "wb"))
 	  || rs_sig_gzfile(NULL, dstfzp, sigp,
 		get_librsync_block_len(endfile),
-		RS_DEFAULT_STRONG_LEN,
-		NULL, confs)!=RS_DONE)
+		RS_DEFAULT_STRONG_LEN, confs)!=RS_DONE)
 			goto end;
 	ret=0;
 end:
@@ -112,13 +110,14 @@ static int make_rev_delta(const char *src, const char *sig, const char *del,
 	if(!srcfzp) goto end;
 
 	if(get_int(cconfs[OPT_COMPRESSION]))
-		delfzp=fzp_gzopen(del, comp_level(cconfs));
+		delfzp=fzp_gzopen(del,
+			comp_level(get_int(cconfs[OPT_COMPRESSION])));
 	else
 		delfzp=fzp_open(del, "wb");
 	if(!delfzp) goto end;
 
 	if(rs_delta_gzfile(NULL, sumset, srcfzp,
-		delfzp, NULL, get_cntr(cconfs))!=RS_DONE)
+		delfzp, get_cntr(cconfs))!=RS_DONE)
 			goto end;
 	ret=0;
 end:
@@ -177,7 +176,7 @@ end:
 }
 
 static int inflate_oldfile(const char *opath, const char *infpath,
-	struct stat *statp, struct conf **confs)
+	struct stat *statp, struct cntr *cntr)
 {
 	int ret=0;
 
@@ -192,7 +191,7 @@ static int inflate_oldfile(const char *opath, const char *infpath,
 		if(fzp_close(&dest))
 			logp("error closing %s in %s\n", infpath, __func__);
 	}
-	else if(zlib_inflate(NULL, opath, infpath, confs))
+	else if(zlib_inflate(NULL, opath, infpath, cntr))
 	{
 		logp("zlib_inflate returned error\n");
 		ret=-1;
@@ -213,7 +212,8 @@ static int inflate_or_link_oldfile(const char *oldpath, const char *infpath,
 	}
 
 	if(dpth_protocol1_is_compressed(compression, oldpath))
-		return inflate_oldfile(oldpath, infpath, &statp, cconfs);
+		return inflate_oldfile(oldpath, infpath, &statp,
+			get_cntr(cconfs));
 
 	// If it was not a compressed file, just hard link it.
 	// It is possible that infpath already exists, if the server
@@ -476,22 +476,23 @@ static int maybe_delete_files_from_manifest(const char *manifesttmp,
 
         if(!(dfp=fzp_open(fdirs->deletionsfile, "rb"))
 	  || !(omzp=fzp_gzopen(fdirs->manifest, "rb"))
-	  || !(nmzp=fzp_gzopen(manifesttmp, comp_level(cconfs)))
-	  || !(db=sbuf_alloc(cconfs))
-	  || !(mb=sbuf_alloc(cconfs)))
+	  || !(nmzp=fzp_gzopen(manifesttmp,
+		comp_level(get_int(cconfs[OPT_COMPRESSION]))))
+	  || !(db=sbuf_alloc(PROTO_1))
+	  || !(mb=sbuf_alloc(PROTO_1)))
 		goto end;
 
 	while(omzp || dfp)
 	{
 		if(dfp && !db->path.buf
-		  && (ars=sbuf_fill_from_file(db, dfp, NULL, NULL, cconfs)))
+		  && (ars=sbuf_fill_from_file(db, dfp, NULL, NULL)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
 			fzp_close(&dfp);
 		}
 		if(omzp && !mb->path.buf
-		  && (ars=sbuf_fill_from_file(mb, omzp, NULL, NULL, cconfs)))
+		  && (ars=sbuf_fill_from_file(mb, omzp, NULL, NULL)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
@@ -592,7 +593,7 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct fdirs *fdirs,
 	if(!(deltabdir=prepend_s(fdirs->currentdup, "deltas.reverse"))
 	  || !(deltafdir=prepend_s(sdirs->finishing, "deltas.forward"))
 	  || !(sigpath=prepend_s(fdirs->currentdup, "sig.tmp"))
-	  || !(sb=sbuf_alloc(cconfs)))
+	  || !(sb=sbuf_alloc(PROTO_1)))
 	{
 		log_out_of_memory(__func__);
 		goto error;
@@ -602,7 +603,7 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct fdirs *fdirs,
 
 	while(1)
 	{
-		switch(sbuf_fill_from_file(sb, zp, NULL, NULL, cconfs))
+		switch(sbuf_fill_from_file(sb, zp, NULL, NULL))
 		{
 			case 0: break;
 			case 1: goto end;
@@ -611,7 +612,7 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct fdirs *fdirs,
 		if(sb->protocol1->datapth.buf)
 		{
 			if(write_status(CNTR_STATUS_SHUFFLING,
-				sb->protocol1->datapth.buf, cconfs)
+				sb->protocol1->datapth.buf, get_cntr(cconfs))
 			  || jiggle(sdirs, fdirs, sb, hardlinked_current,
 				deltabdir, deltafdir,
 				sigpath, &delfp, cconfs))
@@ -669,12 +670,12 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf **cconfs)
 	  || fdirs_init(fdirs, sdirs, realcurrent))
 		goto end;
 
-	if(set_logfzp(fdirs->logpath, cconfs))
+	if(log_fzp_set(fdirs->logpath, cconfs))
 		goto end;
 
 	logp("Begin phase4 (shuffle files)\n");
 
-	if(write_status(CNTR_STATUS_SHUFFLING, NULL, cconfs))
+	if(write_status(CNTR_STATUS_SHUFFLING, NULL, get_cntr(cconfs)))
 		goto end;
 
 	if(!lstat(sdirs->current, &statp)) // Had a previous backup.
@@ -758,7 +759,7 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf **cconfs)
 	}
 
 	if(write_status(CNTR_STATUS_SHUFFLING,
-		"deleting temporary files", cconfs))
+		"deleting temporary files", get_cntr(cconfs)))
 			goto end;
 
 	// Remove the temporary data directory, we have now removed

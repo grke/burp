@@ -1,4 +1,7 @@
-#include "include.h"
+#include "../../../burp.h"
+#include "../../../alloc.h"
+#include "candidate.h"
+#include "sparse.h"
 
 static struct sparse *sparse_table=NULL;
 
@@ -20,6 +23,21 @@ struct sparse *sparse_find(uint64_t *fingerprint)
 	return sparse;
 }
 
+void sparse_delete_all(void)
+{
+	struct sparse *tmp;
+	struct sparse *sparse;
+
+	HASH_ITER(hh, sparse_table, sparse, tmp)
+	{
+		HASH_DEL(sparse_table, sparse);
+		free_v((void **)&sparse->candidates);
+		free_v((void **)&sparse);
+	}
+	sparse_table=NULL;
+}
+
+
 int sparse_add_candidate(uint64_t *fingerprint, struct candidate *candidate)
 {
 	static size_t s;
@@ -30,10 +48,7 @@ int sparse_add_candidate(uint64_t *fingerprint, struct candidate *candidate)
 		// Do not add it to the list if it has already been added.
 		for(s=0; s<sparse->size; s++)
 			if((sparse->candidates[s]==candidate))
-			{
-//				printf("not adding %s\n", candidate->path);
 				return 0;
-			}
 	}
 
 	if(!sparse && !(sparse=sparse_add(*fingerprint)))

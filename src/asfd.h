@@ -60,7 +60,7 @@ struct asfd
 	float ratelimit;
 	time_t rlstart;
 	int rlsleeptime;
-	unsigned long long rlbytes;
+	uint64_t rlbytes;
 
 	struct iobuf *rbuf;
 

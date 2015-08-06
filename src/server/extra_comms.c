@@ -152,10 +152,14 @@ static int extra_comms_read(struct async *as,
 		else if(!strncmp_w(rbuf->buf, "autoupgrade:"))
 		{
 			char *os=NULL;
+			const char *autoupgrade_dir=
+				get_string(globalcs[OPT_AUTOUPGRADE_DIR]);
 			os=rbuf->buf+strlen("autoupgrade:");
 			iobuf_free_content(rbuf);
 			if(os && *os && autoupgrade_server(as, vers->ser,
-				vers->cli, os, globalcs)) goto end;
+				vers->cli, os, get_cntr(globalcs),
+				autoupgrade_dir))
+					goto end;
 		}
 		else if(!strcmp(rbuf->buf, "srestore ok"))
 		{

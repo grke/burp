@@ -33,7 +33,7 @@ extern off_t fzp_tell(struct fzp *fzp);
 
 #ifndef HAVE_WIN32
 extern int fzp_truncate(const char *path, enum fzp_type type, off_t length,
-	struct conf **confs);
+	int compression);
 #endif
 
 extern int fzp_printf(struct fzp *fzp, const char *format, ...);
@@ -48,5 +48,8 @@ extern struct fzp *fzp_gzdopen(int fd, const char *mode);
 
 extern void fzp_ERR_print_errors_fp(struct fzp *fzp);
 extern X509 *fzp_PEM_read_X509(struct fzp *fzp);
+
+extern int fzp_read_ensure(struct fzp *fzp, void *ptr, size_t nmemb,
+	const char *func);
 
 #endif

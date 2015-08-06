@@ -75,7 +75,7 @@ int has_acl(const char *path, enum cmd cmd)
 }
 
 static int get_acl_string(struct asfd *asfd, acl_t acl, char **acltext,
-	size_t *alen, const char *path, char type, struct conf **confs)
+	size_t *alen, const char *path, char type, struct cntr *cntr)
 {
 	int ret=0;
 	char pre[10]="";
@@ -86,7 +86,7 @@ static int get_acl_string(struct asfd *asfd, acl_t acl, char **acltext,
 
 	if(!(tmp=acl_to_text(acl, NULL)))
 	{
-		logw(asfd, confs, "could not get ACL text of '%s'\n", path);
+		logw(asfd, cntr, "could not get ACL text of '%s'\n", path);
 		goto end; // carry on
 	}
 
@@ -94,7 +94,7 @@ static int get_acl_string(struct asfd *asfd, acl_t acl, char **acltext,
 
 	if(tlen>maxlen)
 	{
-		logw(asfd, confs, "ACL of '%s' too long: %d\n", path, tlen);
+		logw(asfd, cntr, "ACL of '%s' too long: %d\n", path, tlen);
 		goto end; // carry on
 	}
 
@@ -110,7 +110,7 @@ end:
 }
 
 int get_acl(struct asfd *asfd, struct sbuf *sb,
-	char **acltext, size_t *alen, struct conf **confs)
+	char **acltext, size_t *alen, struct cntr *cntr)
 {
 	acl_t acl=NULL;
 	const char *path=sb->path.buf;
@@ -118,7 +118,7 @@ int get_acl(struct asfd *asfd, struct sbuf *sb,
 	if((acl=acl_contains_something(path, ACL_TYPE_ACCESS)))
 	{
 		if(get_acl_string(asfd, acl,
-			acltext, alen, path, META_ACCESS_ACL, confs))
+			acltext, alen, path, META_ACCESS_ACL, cntr))
 		{
 			acl_free(acl);
 			return -1;
@@ -131,7 +131,7 @@ int get_acl(struct asfd *asfd, struct sbuf *sb,
 		if((acl=acl_contains_something(path, ACL_TYPE_DEFAULT)))
 		{
 			if(get_acl_string(asfd, acl,
-				acltext, alen, path, META_DEFAULT_ACL, confs))
+				acltext, alen, path, META_DEFAULT_ACL, cntr))
 			{
 				acl_free(acl);
 				return -1;
@@ -144,7 +144,7 @@ int get_acl(struct asfd *asfd, struct sbuf *sb,
 
 static int do_set_acl(struct asfd *asfd, const char *path,
 	const char *acltext, size_t alen,
-	int acltype, struct conf **confs)
+	int acltype, struct cntr *cntr)
 {
 	acl_t acl;
 	int ret=-1;
@@ -152,7 +152,7 @@ static int do_set_acl(struct asfd *asfd, const char *path,
 	{
 		logp("acl_from_text error on %s (%s): %s\n",
 			path, acltext, strerror(errno));
-		logw(asfd, confs, "acl_from_text error on %s (%s): %s\n",
+		logw(asfd, cntr, "acl_from_text error on %s (%s): %s\n",
 			path, acltext, strerror(errno));
 		goto end;
 	}
@@ -161,7 +161,7 @@ static int do_set_acl(struct asfd *asfd, const char *path,
 	if(acl_valid(acl))
 	{
 		logp("acl_valid error on %s: %s", path, strerror(errno));
-		logw(asfd, confs,
+		logw(asfd, cntr,
 			"acl_valid error on %s: %s", path, strerror(errno));
 		goto end;
 	}
@@ -170,7 +170,7 @@ static int do_set_acl(struct asfd *asfd, const char *path,
 	{
 		logp("acl set error on %s: %s", path, strerror(errno));
 		logw(asfd,
-			confs, "acl set error on %s: %s", path, strerror(errno));
+			cntr, "acl set error on %s: %s", path, strerror(errno));
 		goto end;
 	}
 	ret=0;
@@ -180,20 +180,19 @@ end:
 }
 
 int set_acl(struct asfd *asfd, const char *path, struct sbuf *sb,
-	const char *acltext, size_t alen, char metacmd, struct conf **confs)
+	const char *acltext, size_t alen, char metacmd, struct cntr *cntr)
 {
 	switch(metacmd)
 	{
 		case META_ACCESS_ACL:
 			return do_set_acl(asfd, path,
-				acltext, alen, ACL_TYPE_ACCESS, confs);
+				acltext, alen, ACL_TYPE_ACCESS, cntr);
 		case META_DEFAULT_ACL:
 			return do_set_acl(asfd, path,
-				acltext, alen, ACL_TYPE_DEFAULT, confs);
+				acltext, alen, ACL_TYPE_DEFAULT, cntr);
 		default:
 			logp("unknown acl type: %c\n", metacmd);
-			logw(asfd, confs,
-				"unknown acl type: %c\n", metacmd);
+			logw(asfd, cntr, "unknown acl type: %c\n", metacmd);
 			break;
 	}
 	return -1;

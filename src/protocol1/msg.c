@@ -11,7 +11,7 @@
 
 static int do_write(struct asfd *asfd,
 	BFILE *bfd, uint8_t *out, size_t outlen,
-	char **metadata, unsigned long long *sent)
+	char **metadata, uint64_t *sent)
 {
 	int ret=0;
 	if(metadata)
@@ -46,7 +46,7 @@ static int do_inflate(struct asfd *asfd,
 	z_stream *zstrm, BFILE *bfd,
 	uint8_t *out, uint8_t *buftouse, size_t lentouse,
 	char **metadata, const char *encpassword, int enccompressed,
-	unsigned long long *sent)
+	uint64_t *sent)
 {
 	int zret=Z_OK;
 	unsigned have=0;
@@ -97,8 +97,8 @@ static int do_inflate(struct asfd *asfd,
 
 struct winbuf
 {
-	unsigned long long *rcvd;
-	unsigned long long *sent;
+	uint64_t *rcvd;
+	uint64_t *sent;
 	struct cntr *cntr;
 	struct asfd *asfd;
 };
@@ -147,8 +147,8 @@ static DWORD WINAPI read_efs(PBYTE pbData, PVOID pvCallbackContext, PULONG ulLen
 }
 
 static int transfer_efs_in(struct asfd *asfd,
-	BFILE *bfd, unsigned long long *rcvd,
-	unsigned long long *sent, struct cntr *cntr)
+	BFILE *bfd, uint64_t *rcvd,
+	uint64_t *sent, struct cntr *cntr)
 {
 	int ret=0;
 	struct winbuf mybuf;
@@ -166,9 +166,9 @@ static int transfer_efs_in(struct asfd *asfd,
 
 int transfer_gzfile_inl(struct asfd *asfd,
 	struct sbuf *sb, const char *path, BFILE *bfd,
-	unsigned long long *rcvd, unsigned long long *sent,
+	uint64_t *rcvd, uint64_t *sent,
 	const char *encpassword, int enccompressed,
-	struct conf **confs, char **metadata)
+	struct cntr *cntr, char **metadata)
 {
 	int quit=0;
 	int ret=-1;
@@ -188,7 +188,7 @@ int transfer_gzfile_inl(struct asfd *asfd,
 
 #ifdef HAVE_WIN32
 	if(sb && sb->path.cmd==CMD_EFS_FILE)
-		return transfer_efs_in(asfd, bfd, rcvd, sent, get_cntr(confs));
+		return transfer_efs_in(asfd, bfd, rcvd, sent, cntr);
 #endif
 
 	//if(!MD5_Init(&md5))
@@ -344,7 +344,7 @@ int transfer_gzfile_inl(struct asfd *asfd,
 				break;
 			case CMD_MESSAGE:
 			case CMD_WARNING:
-				log_recvd(rbuf, confs, 0);
+				log_recvd(rbuf, cntr, 0);
 				break;
 			default:
 				iobuf_log_unexpected(rbuf, __func__);

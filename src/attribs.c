@@ -41,7 +41,7 @@
 #include "base64.h"
 #include "berrno.h"
 #include "cmd.h"
-#include "conf.h"
+#include "cntr.h"
 #include "log.h"
 #include "sbuf.h"
 
@@ -258,7 +258,7 @@ void attribs_decode(struct sbuf *sb)
 
 static int set_file_times(struct asfd *asfd,
 	const char *path, struct utimbuf *ut,
-	struct stat *statp, struct conf **confs)
+	struct stat *statp, struct cntr *cntr)
 {
 	int e;
 // The mingw64 utime() appears not to work on read-only files.
@@ -273,7 +273,7 @@ static int set_file_times(struct asfd *asfd,
 	{
 		berrno be;
 		berrno_init(&be);
-		logw(asfd, confs, "Unable to set file times %s: ERR=%s",
+		logw(asfd, cntr, "Unable to set file times %s: ERR=%s",
 			path, berrno_bstrerror(&be, errno));
 		return -1;
 	}
@@ -309,7 +309,7 @@ static int do_lutimes(const char *path, struct stat *statp)
 #endif
 
 int attribs_set(struct asfd *asfd, const char *path,
-	struct stat *statp, uint64_t winattr, struct conf **confs)
+	struct stat *statp, uint64_t winattr, struct cntr *cntr)
 {
 	struct utimbuf ut;
 
@@ -318,7 +318,7 @@ int attribs_set(struct asfd *asfd, const char *path,
 
 #ifdef HAVE_WIN32
 	win32_chmod(path, statp->st_mode, winattr);
-	set_file_times(asfd, path, &ut, statp, confs);
+	set_file_times(asfd, path, &ut, statp, cntr);
 	return 0;
 #endif
 
@@ -326,7 +326,7 @@ int attribs_set(struct asfd *asfd, const char *path,
 	{
 		berrno be;
 		berrno_init(&be);
-		logw(asfd, confs, "Unable to set file owner %s: ERR=%s",
+		logw(asfd, cntr, "Unable to set file owner %s: ERR=%s",
 			path, berrno_bstrerror(&be, errno));
 		return -1;
 	}
@@ -340,7 +340,7 @@ int attribs_set(struct asfd *asfd, const char *path,
 		if(do_lutimes(path, statp)) {
 			berrno be;
 			berrno_init(&be);
-			logw(asfd, confs, "Unable to set lutimes %s: ERR=%s",
+			logw(asfd, cntr, "Unable to set lutimes %s: ERR=%s",
 				path, berrno_bstrerror(&be, errno));
 			return -1;
 		}
@@ -352,12 +352,12 @@ int attribs_set(struct asfd *asfd, const char *path,
 		{
 			berrno be;
 			berrno_init(&be);
-			logw(asfd, confs, "Unable to set file modes %s: ERR=%s",
+			logw(asfd, cntr, "Unable to set file modes %s: ERR=%s",
 				path, berrno_bstrerror(&be, errno));
 			return -1;
 		}
 
-		if(set_file_times(asfd, path, &ut, statp, confs))
+		if(set_file_times(asfd, path, &ut, statp, cntr))
 			return -1;
 #ifdef HAVE_CHFLAGS
 		/*
@@ -371,7 +371,7 @@ int attribs_set(struct asfd *asfd, const char *path,
 		{
 			berrno be;
 			berrno_init(&be);
-			logw(asfd, confs, "Unable to set file flags %s: ERR=%s",
+			logw(asfd, cntr, "Unable to set file flags %s: ERR=%s",
 				path, berrno_bstrerror(&be, errno));
 			return -1;
 		}

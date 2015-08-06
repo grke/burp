@@ -43,7 +43,7 @@ static int inflate_or_link_oldfile(struct asfd *asfd, const char *oldpath,
 			return create_zero_length_file(infpath);
 		}
 
-		if((ret=zlib_inflate(asfd, oldpath, infpath, cconfs)))
+		if((ret=zlib_inflate(asfd, oldpath, infpath, get_cntr(cconfs))))
 			logp("zlib_inflate returned: %d\n", ret);
 	}
 	else
@@ -58,16 +58,16 @@ static int inflate_or_link_oldfile(struct asfd *asfd, const char *oldpath,
 
 static int send_file(struct asfd *asfd, struct sbuf *sb,
 	int patches, const char *best,
-	unsigned long long *bytes, struct conf **cconfs)
+	uint64_t *bytes, struct cntr *cntr)
 {
 	int ret=0;
 	static BFILE *bfd=NULL;
 
 	if(!bfd && !(bfd=bfile_alloc())) return -1;
 
-	bfile_init(bfd, 0, cconfs);
+	bfile_init(bfd, 0, cntr);
 	if(bfd->open_for_send(bfd, asfd, best, sb->winattr,
-		1 /* no O_NOATIME */, cconfs)) return -1;
+		1 /* no O_NOATIME */, cntr, PROTO_1)) return -1;
 	//logp("sending: %s\n", best);
 	if(asfd->write(asfd, &sb->path))
 		ret=-1;
@@ -76,7 +76,7 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 		// If we did some patches, the resulting file
 		// is not gzipped. Gzip it during the send. 
 		ret=send_whole_file_gzl(asfd, best, sb->protocol1->datapth.buf,
-			1, bytes, NULL, cconfs, 9, bfd, NULL, 0);
+			1, bytes, NULL, cntr, 9, bfd, NULL, 0);
 	}
 	else
 	{
@@ -87,7 +87,7 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 		{
 			ret=send_whole_filel(asfd, sb->path.cmd, best,
 				sb->protocol1->datapth.buf, 1, bytes,
-				cconfs, bfd, NULL, 0);
+				cntr, bfd, NULL, 0);
 		}
 		// It might have been stored uncompressed. Gzip it during
 		// the send. If the client knew what kind of file it would be
@@ -97,7 +97,7 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 		{
 			ret=send_whole_file_gzl(asfd,
 				best, sb->protocol1->datapth.buf, 1, bytes,
-				NULL, cconfs, 9, bfd, NULL, 0);
+				NULL, cntr, 9, bfd, NULL, 0);
 		}
 		else
 		{
@@ -105,7 +105,7 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 			// file might already be gzipped. Send it as it is.
 			ret=send_whole_filel(asfd, sb->path.cmd, best,
 				sb->protocol1->datapth.buf, 1, bytes,
-				cconfs, bfd, NULL, 0);
+				cntr, bfd, NULL, 0);
 		}
 	}
 	bfd->close(bfd, asfd);
@@ -114,7 +114,7 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 
 static int verify_file(struct asfd *asfd, struct sbuf *sb,
 	int patches, const char *best,
-	unsigned long long *bytes, struct conf **cconfs)
+	uint64_t *bytes, struct cntr *cntr)
 {
 	MD5_CTX md5;
 	size_t b=0;
@@ -122,12 +122,12 @@ static int verify_file(struct asfd *asfd, struct sbuf *sb,
 	const char *newsum=NULL;
 	uint8_t in[ZCHUNK];
 	uint8_t checksum[MD5_DIGEST_LENGTH];
-	unsigned long long cbytes=0;
+	uint64_t cbytes=0;
 	struct fzp *fzp=NULL;
 
 	if(!(cp=strrchr(sb->endfile.buf, ':')))
 	{
-		logw(asfd, cconfs,
+		logw(asfd, cntr,
 			"%s has no md5sum!\n", sb->protocol1->datapth.buf);
 		return 0;
 	}
@@ -149,7 +149,7 @@ static int verify_file(struct asfd *asfd, struct sbuf *sb,
 
 	if(!fzp)
 	{
-		logw(asfd, cconfs, "could not open %s\n", best);
+		logw(asfd, cntr, "could not open %s\n", best);
 		return 0;
 	}
 	while((b=fzp_read(fzp, in, ZCHUNK))>0)
@@ -164,7 +164,7 @@ static int verify_file(struct asfd *asfd, struct sbuf *sb,
 	}
 	if(!fzp_eof(fzp))
 	{
-		logw(asfd, cconfs, "error while reading %s\n", best);
+		logw(asfd, cntr, "error while reading %s\n", best);
 		fzp_close(&fzp);
 		return 0;
 	}
@@ -179,7 +179,7 @@ static int verify_file(struct asfd *asfd, struct sbuf *sb,
 	if(strcmp(newsum, cp))
 	{
 		logp("%s %s\n", newsum, cp);
-		logw(asfd, cconfs, "md5sum for '%s (%s)' did not match!\n",
+		logw(asfd, cntr, "md5sum for '%s (%s)' did not match!\n",
 			sb->path.buf, sb->protocol1->datapth.buf);
 		logp("md5sum for '%s (%s)' did not match!\n",
 			sb->path.buf, sb->protocol1->datapth.buf);
@@ -203,9 +203,11 @@ static int process_data_dir_file(struct asfd *asfd,
 	struct stat dstatp;
 	const char *tmp=NULL;
 	const char *best=NULL;
-	unsigned long long bytes=0;
+	uint64_t bytes=0;
 	static char *tmppath1=NULL;
 	static char *tmppath2=NULL;
+	struct cntr *cntr=NULL;
+	if(cconfs) cntr=get_cntr(cconfs);
 
 	if((!tmppath1 && !(tmppath1=prepend_s(sdirs->client, "tmp1")))
 	  || (!tmppath2 && !(tmppath2=prepend_s(sdirs->client, "tmp2"))))
@@ -261,20 +263,20 @@ static int process_data_dir_file(struct asfd *asfd,
 	switch(act)
 	{
 		case ACTION_RESTORE:
-			if(send_file(asfd, sb, patches, best, &bytes, cconfs))
+			if(send_file(asfd, sb, patches, best, &bytes, cntr))
 				goto end;
 			break;
 		case ACTION_VERIFY:
-			if(verify_file(asfd, sb, patches, best, &bytes, cconfs))
+			if(verify_file(asfd, sb, patches, best, &bytes, cntr))
 				goto end;
 			break;
 		default:
 			logp("Unknown action: %d\n", act);
 			goto end;
 	}
-	cntr_add(get_cntr(cconfs), sb->path.cmd, 0);
-	cntr_add_bytes(get_cntr(cconfs), strtoull(sb->endfile.buf, NULL, 10));
-	cntr_add_sentbytes(get_cntr(cconfs), bytes);
+	cntr_add(cntr, sb->path.cmd, 0);
+	cntr_add_bytes(cntr, strtoull(sb->endfile.buf, NULL, 10));
+	cntr_add_sentbytes(cntr, bytes);
 
 	ret=0;
 end:
@@ -293,6 +295,8 @@ static int restore_file(struct asfd *asfd, struct bu *bu,
 	struct bu *b;
 	struct bu *hlwarn=NULL;
 	struct stat statp;
+	struct cntr *cntr=NULL;
+	if(cconfs) cntr=get_cntr(cconfs);
 
 	// Go up the array until we find the file in the data directory.
 	for(b=bu; b; b=b->next)
@@ -312,13 +316,13 @@ static int restore_file(struct asfd *asfd, struct bu *bu,
 		// This warning must be done after everything else,
 		// Because the client does not expect another cmd after
 		// the warning.
-		if(hlwarn) logw(asfd, cconfs, "restore found %s in %s\n",
+		if(hlwarn) logw(asfd, cntr, "restore found %s in %s\n",
 			sb->path.buf, hlwarn->basename);
 		ret=0; // All OK.
 		break;
 	}
 
-	if(!b) logw(asfd, cconfs, "restore could not find %s (%s)\n",
+	if(!b) logw(asfd, cntr, "restore could not find %s (%s)\n",
 		sb->path.buf, sb->protocol1->datapth.buf);
 end:
 	free_w(&path);
@@ -338,7 +342,7 @@ int restore_sbuf_protocol1(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 	{
 		if(!sb->protocol1->datapth.buf)
 		{
-			logw(asfd, cconfs,
+			logw(asfd, get_cntr(cconfs),
 				"Got filedata entry with no datapth: %c:%s\n",
 					sb->path.cmd, sb->path.buf);
 			return 0;

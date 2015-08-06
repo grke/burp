@@ -48,6 +48,7 @@ enum cmd
 
 	CMD_MANIFEST	='M',	/* Path to a manifest */
 	CMD_FINGERPRINT	='F',	/* Fingerprint part of a signature */
+	CMD_SAVE_PATH   ='q',   /* Save path part of a signature */
 
 
 // These things are for the status server/client

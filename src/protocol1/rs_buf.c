@@ -402,12 +402,19 @@ static rs_result rs_whole_gzrun(struct asfd *asfd,
 
 rs_result rs_patch_gzfile(struct asfd *asfd, struct fzp *basis_file,
 	struct fzp *delta_file, struct fzp *new_file,
-	rs_stats_t *stats, struct cntr *cntr)
+	struct cntr *cntr)
 {
 	rs_job_t *job;
 	rs_result r;
 
-	job=rs_patch_begin(rs_file_copy_cb, basis_file);
+	// FIX THIS: Seems wrong to just pick out basis_file->fp.
+	// Should probably pass a fp into rs_patch_gzfile.
+	// Or, much better would be to investigate whether basis_file always
+	// needs to be a FILE *. If I copy rs_file_copy_cb from librsync, and
+	// rewrite it to use a struct fzp, maybe the callers to rs_patch_gzfile
+	// do not need to mess around inflating files when they do not have
+	// to.
+	job=rs_patch_begin(rs_file_copy_cb, basis_file->fp);
 	r=rs_whole_gzrun(asfd, job, delta_file, new_file, cntr);
 	rs_job_free(job);
 
@@ -417,7 +424,7 @@ rs_result rs_patch_gzfile(struct asfd *asfd, struct fzp *basis_file,
 rs_result rs_sig_gzfile(struct asfd *asfd,
 	struct fzp *old_file, struct fzp *sig_file,
 	size_t new_block_len, size_t strong_len,
-	rs_stats_t *stats, struct conf **confs)
+	struct conf **confs)
 {
 	rs_job_t *job;
 	rs_result r;
@@ -438,7 +445,7 @@ rs_result rs_sig_gzfile(struct asfd *asfd,
 rs_result rs_delta_gzfile(struct asfd *asfd,
 	rs_signature_t *sig, struct fzp *new_file,
 	struct fzp *delta_file,
-	rs_stats_t *stats, struct cntr *cntr)
+	struct cntr *cntr)
 {
 	rs_job_t *job;
 	rs_result r;

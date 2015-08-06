@@ -32,10 +32,10 @@ static int send_incexc_uint(struct asfd *asfd, struct conf *conf)
 	return send_incexc_string(asfd, conf->field, tmp);
 }
 
-static int send_incexc_ssize_t(struct asfd *asfd, struct conf *conf)
+static int send_incexc_uint64(struct asfd *asfd, struct conf *conf)
 {
 	char tmp[32]="";
-	snprintf(tmp, sizeof(tmp), "%lu", (long)get_ssize_t(conf));
+	snprintf(tmp, sizeof(tmp), "%"PRIu64, get_uint64_t(conf));
 	return send_incexc_string(asfd, conf->field, tmp);
 }
 
@@ -69,7 +69,7 @@ static int do_sends(struct asfd *asfd, struct conf **confs, int flag)
 					goto end;
 				break;
 			case CT_SSIZE_T:
-				if(send_incexc_ssize_t(asfd, confs[i]))
+				if(send_incexc_uint64(asfd, confs[i]))
 					goto end;
 				break;
 			case CT_FLOAT:

@@ -37,6 +37,7 @@ int do_backup_client(struct asfd *asfd, struct conf **confs, enum action action,
 	int resume)
 {
 	int ret=-1;
+	int breaking=get_int(confs[OPT_BREAKPOINT]);
 
 	if(action==ACTION_ESTIMATE)
 		logp("do estimate client\n");
@@ -60,9 +61,9 @@ int do_backup_client(struct asfd *asfd, struct conf **confs, enum action action,
 	// Skip phase1 if the server wanted to resume.
 	if(!resume)
 	{
-		if(get_int(confs[OPT_BREAKPOINT])==1)
+		if(breaking==1)
 		{
-			breakpoint(confs, __func__);
+			breakpoint(breaking, __func__);
 			goto end;
 		}
 		if(backup_phase1_client(asfd, confs, action==ACTION_ESTIMATE))
@@ -81,9 +82,9 @@ int do_backup_client(struct asfd *asfd, struct conf **confs, enum action action,
 		default:
 			// Now, the server will be telling us what data we need
 			// to send.
-			if(get_int(confs[OPT_BREAKPOINT])==2)
+			if(breaking==2)
 			{
-				breakpoint(confs, __func__);
+				breakpoint(breaking, __func__);
 				goto end;
 			}
 

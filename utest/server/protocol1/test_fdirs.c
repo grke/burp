@@ -39,7 +39,7 @@ static void tear_down(struct fdirs **fdirs,
 	fdirs_free(fdirs);
 	sdirs_free(sdirs);
 	confs_free(confs);
-	fail_unless(free_count==alloc_count);
+	alloc_check();
 }
 
 #define CLIENTDIR	"/a/directory/utestclient"

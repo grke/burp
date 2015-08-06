@@ -62,7 +62,6 @@ SUBDIROBJS = \
 		protocol1/handy.o \
 		protocol1/msg.o \
 		server/resume.o \
-		server/resume2.o \
 		server/protocol1/restore.o \
 		server/backup_phase1.o \
 		server/manios.o \
@@ -176,9 +175,10 @@ devclean: realclean
 	fi
 
 install: all
-	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) burp $(DESTDIR)$(sbindir)/burp 
+	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) burp $(DESTDIR)$(sbindir)/burp
 	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) server/protocol1/vss_strip $(DESTDIR)$(sbindir)/vss_strip
 	ln -sf burp $(DESTDIR)$(sbindir)/bedup
+	ln -sf burp $(DESTDIR)$(sbindir)/bsigs
 # Should do a static vss_strip too.
 	@if test -f static-burp; then \
 	   $(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) static-burp $(DESTDIR)$(sbindir)/static-burp; \

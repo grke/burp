@@ -74,7 +74,7 @@ struct bsid {
 };
 #endif
 
-char *get_endfile_str(unsigned long long bytes, uint8_t *checksum)
+char *get_endfile_str(uint64_t bytes, uint8_t *checksum)
 {
 	static char endmsg[128]="";
 	snprintf(endmsg, sizeof(endmsg), "%"PRIu64 ":%s",
@@ -83,8 +83,7 @@ char *get_endfile_str(unsigned long long bytes, uint8_t *checksum)
 	return endmsg;
 }
 
-int write_endfile(struct asfd *asfd,
-	unsigned long long bytes, uint8_t *checksum)
+int write_endfile(struct asfd *asfd, uint64_t bytes, uint8_t *checksum)
 {
 	return asfd->write_str(asfd,
 		CMD_END_FILE, get_endfile_str(bytes, checksum));
@@ -101,7 +100,7 @@ int write_endfile(struct asfd *asfd,
 */
 int send_whole_file_gzl(struct asfd *asfd,
 	const char *fname, const char *datapth, int quick_read,
-	unsigned long long *bytes, const char *encpassword, struct conf **confs,
+	uint64_t *bytes, const char *encpassword, struct cntr *cntr,
 	int compression, BFILE *bfd, const char *extrameta,
 	size_t elen)
 {
@@ -252,7 +251,7 @@ int send_whole_file_gzl(struct asfd *asfd,
 			if(quick_read && datapth)
 			{
 				int qr;
-				if((qr=do_quick_read(asfd, datapth, confs))<0)
+				if((qr=do_quick_read(asfd, datapth, cntr))<0)
 				{
 					ret=-1;
 					break;
@@ -335,8 +334,8 @@ struct winbuf
 	MD5_CTX *md5;
 	int quick_read;
 	const char *datapth;
-	struct conf **confs;
-	unsigned long long *bytes;
+	struct cntr *cntr;
+	uint64_t *bytes;
 	struct asfd *asfd;
 };
 
@@ -359,7 +358,7 @@ static DWORD WINAPI write_efs(PBYTE pbData,
 	{
 		int qr;
 		if((qr=do_quick_read(mybuf->asfd,
-				mybuf->datapth, mybuf->confs))<0)
+				mybuf->datapth, mybuf->cntr))<0)
 			return ERROR_FUNCTION_FAILED;
 		if(qr) // client wants to interrupt
 			return ERROR_FUNCTION_FAILED;
@@ -370,7 +369,7 @@ static DWORD WINAPI write_efs(PBYTE pbData,
 
 int send_whole_filel(struct asfd *asfd,
 	enum cmd cmd, const char *fname, const char *datapth,
-	int quick_read, unsigned long long *bytes, struct conf **confs,
+	int quick_read, uint64_t *bytes, struct cntr *cntr,
 	BFILE *bfd, const char *extrameta, size_t elen)
 {
 	int ret=0;
@@ -423,7 +422,7 @@ int send_whole_filel(struct asfd *asfd,
 			mybuf.md5=&md5;
 			mybuf.quick_read=quick_read;
 			mybuf.datapth=datapth;
-			mybuf.confs=confs;
+			mybuf.cntr=cntr;
 			mybuf.bytes=bytes;
 			mybuf.asfd=asfd;
 			// The EFS read function, ReadEncryptedFileRaw(),
@@ -479,7 +478,7 @@ int send_whole_filel(struct asfd *asfd,
 			if(quick_read)
 			{
 				int qr;
-				if((qr=do_quick_read(asfd, datapth, confs))<0)
+				if((qr=do_quick_read(asfd, datapth, cntr))<0)
 				{
 					ret=-1;
 					break;

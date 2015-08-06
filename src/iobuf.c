@@ -116,3 +116,45 @@ int iobuf_is_metadata(struct iobuf *iobuf)
 {
 	return cmd_is_metadata(iobuf->cmd);
 }
+
+static int do_iobuf_fill_from_fzp(struct iobuf *iobuf, struct fzp *fzp,
+	int extra_bytes)
+{
+	static unsigned int s;
+	static char lead[5]="";
+
+	switch(fzp_read_ensure(fzp, lead, sizeof(lead), __func__))
+	{
+		case 0: break; // OK.
+		case 1: return 1; // Finished OK.
+		default: return -1; // Error.
+	}
+	if((sscanf(lead, "%c%04X", (char *)&iobuf->cmd, &s))!=2)
+	{
+		logp("sscanf failed reading manifest: %s\n", lead);
+		return -1;
+	}
+	iobuf->len=(size_t)s;
+	if(!(iobuf->buf=(char *)malloc_w(
+		iobuf->len+extra_bytes+1, __func__)))
+			return -1;
+	switch(fzp_read_ensure(fzp,
+		iobuf->buf, iobuf->len+extra_bytes, __func__))
+	{
+		case 0: break; // OK.
+		case 1: return 1; // Finished OK.
+		default: return -1; // Error.
+	}
+	iobuf->buf[iobuf->len]='\0';
+	return 0;
+}
+
+int iobuf_fill_from_fzp(struct iobuf *iobuf, struct fzp *fzp)
+{
+	return do_iobuf_fill_from_fzp(iobuf, fzp, 1 /*newline*/);
+}
+
+int iobuf_fill_from_fzp_data(struct iobuf *iobuf, struct fzp *fzp)
+{
+	return do_iobuf_fill_from_fzp(iobuf, fzp, 0 /*no newline*/);
+}

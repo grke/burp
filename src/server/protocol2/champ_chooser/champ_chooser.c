@@ -1,36 +1,49 @@
-#include "include.h"
+#include "../../../burp.h"
+#include "../../../alloc.h"
+#include "../../../asfd.h"
+#include "../../../log.h"
+#include "../../../prepend.h"
+#include "../../../protocol2/blist.h"
+#include "../../../protocol2/blk.h"
+#include "candidate.h"
+#include "champ_chooser.h"
+#include "hash.h"
+#include "incoming.h"
+#include "scores.h"
 
-int champ_chooser_init(const char *datadir, struct conf **confs)
+static int load_existing_sparse(const char *datadir, struct scores *scores)
 {
 	int ret=-1;
 	struct stat statp;
 	char *sparse_path=NULL;
-
-	// FIX THIS: scores is a global variable.
-	if(!scores && !(scores=scores_alloc())) goto end;
-
 	if(!(sparse_path=prepend_s(datadir, "sparse"))) goto end;
 	if(lstat(sparse_path, &statp))
 	{
 		ret=0;
 		goto end;
 	}
-	ret=candidate_load(NULL, sparse_path, confs);
+	if(candidate_load(NULL, sparse_path, scores))
+		goto end;
+	ret=0;
 end:
-	if(sparse_path) free(sparse_path);
+	free_w(&sparse_path);
 	return ret;
 }
 
-#define HOOK_MASK	0xF000000000000000
-
-int is_hook(uint64_t fingerprint)
+struct scores *champ_chooser_init(const char *datadir)
 {
-	return (fingerprint&HOOK_MASK)==HOOK_MASK;
+	struct scores *scores=NULL;
+	if(!(scores=scores_alloc())
+	  || load_existing_sparse(datadir, scores))
+		goto error;
+	return scores;
+error:
+	scores_free(&scores);
+	return NULL;
 }
 
 static int already_got_block(struct asfd *asfd, struct blk *blk)
 {
-	//static char *path;
 	static struct hash_weak *hash_weak;
 
 	// If already got, need to overwrite the references.
@@ -40,8 +53,7 @@ static int already_got_block(struct asfd *asfd, struct blk *blk)
 		if((hash_strong=hash_strong_find(
 			hash_weak, blk->md5sum)))
 		{
-			memcpy(blk->savepath,
-				hash_strong->savepath, SAVE_PATH_LEN);
+			blk->savepath=hash_strong->savepath;
 //printf("FOUND: %s %s\n", blk->weak, blk->strong);
 //printf("F");
 			blk->got=BLK_GOT;
@@ -62,7 +74,7 @@ static int already_got_block(struct asfd *asfd, struct blk *blk)
 
 #define CHAMPS_MAX 10
 
-int deduplicate(struct asfd *asfd, struct conf **confs)
+int deduplicate(struct asfd *asfd, const char *directory, struct scores *scores)
 {
 	struct blk *blk;
 	struct incoming *in=asfd->in;
@@ -75,10 +87,10 @@ int deduplicate(struct asfd *asfd, struct conf **confs)
 
 	incoming_found_reset(in);
 	count=0;
-	while((champ=candidates_choose_champ(in, champ_last)))
+	while((champ=candidates_choose_champ(in, champ_last, scores)))
 	{
 //		printf("Got champ: %s %d\n", champ->path, *(champ->score));
-		if(hash_load(champ->path, confs)) return -1;
+		if(hash_load(champ->path, directory)) return -1;
 		if(++count==CHAMPS_MAX) break;
 		champ_last=champ;
 	}
@@ -106,7 +118,6 @@ int deduplicate(struct asfd *asfd, struct conf **confs)
 
 	logp("%s: %04d/%04d - %04d/%04d\n",
 		asfd->desc, count, candidates_len, in->got, blk_count);
-	//cntr_add_same_val(get_cntr(confs[OPT_CNTR]), CMD_DATA, in->got);
 
 	// Start the incoming array again.
 	in->size=0;

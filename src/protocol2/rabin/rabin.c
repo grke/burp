@@ -147,7 +147,7 @@ int blks_generate(struct asfd *asfd, struct conf **confs,
 }
 
 // The server uses this for verification.
-int blk_read_verify(struct blk *blk_to_verify, struct conf **confs)
+int blk_read_verify(struct blk *blk_to_verify)
 {
 	if(!win)
 	{

@@ -4,7 +4,7 @@
 static struct asfd *wasfd=NULL;
 
 int write_status(enum cntr_status cntr_status,
-	const char *path, struct conf **confs)
+	const char *path, struct cntr *cntr)
 {
 	time_t now=0;
 	time_t diff=0;
@@ -30,7 +30,6 @@ int write_status(enum cntr_status cntr_status,
 	// one.
 	if(!l)
 	{
-		struct cntr *cntr=get_cntr(confs);
 		cntr->cntr_status=cntr_status;
 		if(!(l=cntr_to_str(cntr, path))) goto error;
 		if(!wbuf && !(wbuf=iobuf_alloc())) goto error;
@@ -143,7 +142,7 @@ int child(struct async *as,
 	if( (!confs_user  || (cconfs_user && strcmp(confs_user, cconfs_user)))
 	  ||(!confs_group ||(cconfs_group && strcmp(confs_group,cconfs_group))))
 	{
-		if(chuser_and_or_chgrp(cconfs))
+		if(chuser_and_or_chgrp(cconfs_user, cconfs_group))
 		{
 			log_and_send(as->asfd,
 				"chuser_and_or_chgrp failed on server");

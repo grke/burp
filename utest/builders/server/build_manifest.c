@@ -115,7 +115,7 @@ static char *gen_endfile_str(void)
 
 static void set_sbuf_protocol1(struct sbuf *sb)
 {
-	if(sbuf_is_filedata(sb))
+	if(sbuf_is_filedata(sb) || sbuf_is_vssdata(sb))
 	{
 		char *endfile=gen_endfile_str();
 		sb->endfile.cmd=CMD_END_FILE;
@@ -136,7 +136,7 @@ static void set_sbuf_protocol2(struct slist *slist, struct sbuf *sb)
 {
 	struct blk *tail=NULL;
 	struct blist *blist=slist->blist;
-	if(sbuf_is_filedata(sb))
+	if(sbuf_is_filedata(sb) || sbuf_is_vssdata(sb))
 	{
 		if(blist->tail) tail=blist->tail;
 		build_blks(blist, prng_next()%50);
@@ -166,16 +166,13 @@ static struct slist *build_slist(enum protocol protocol, int entries)
 	return slist;
 }
 
-static struct slist *build_manifest_phase2(const char *path,
+static struct slist *do_build_manifest(struct manio *manio,
 	enum protocol protocol, int entries)
 {
 	struct sbuf *sb;
 	struct slist *slist=NULL;
-	struct manio *manio=NULL;
 
 	slist=build_slist(protocol, entries);
-
-	fail_unless((manio=manio_open_phase2(path, "wb", protocol))!=NULL);
 
 	for(sb=slist->head; sb; sb=sb->next)
 	{
@@ -201,6 +198,31 @@ static struct slist *build_manifest_phase2(const char *path,
 		}
 	}
 
+	return slist;
+}
+
+static struct slist *build_manifest_phase2(const char *path,
+	enum protocol protocol, int entries)
+{
+	struct slist *slist=NULL;
+	struct manio *manio=NULL;
+
+	fail_unless((manio=manio_open_phase2(path, "wb", protocol))!=NULL);
+	slist=do_build_manifest(manio, protocol, entries);
+	fail_unless(!manio_close(&manio));
+
+	return slist;
+}
+
+static struct slist *build_manifest_phase3(const char *path,
+	enum protocol protocol, int entries)
+{
+	struct slist *slist=NULL;
+	struct manio *manio=NULL;
+
+	fail_unless((manio=manio_open_phase3(path, "wb", protocol,
+		RMANIFEST_RELATIVE))!=NULL);
+	slist=do_build_manifest(manio, protocol, entries);
 	fail_unless(!manio_close(&manio));
 
 	return slist;
@@ -209,8 +231,8 @@ static struct slist *build_manifest_phase2(const char *path,
 static struct slist *build_manifest_final(const char *path,
 	enum protocol protocol, int entries)
 {
-	// Same as phase2.
-	return build_manifest_phase2(path, protocol, entries);
+	// Same as phase3.
+	return build_manifest_phase3(path, protocol, entries);
 }
 
 struct slist *build_manifest(const char *path,
@@ -221,6 +243,7 @@ struct slist *build_manifest(const char *path,
 		case 0: return build_manifest_final(path, protocol, entries);
 		case 1: return build_manifest_phase1(path, protocol, entries);
 		case 2: return build_manifest_phase2(path, protocol, entries);
+		case 3: return build_manifest_phase3(path, protocol, entries);
 		default:
 			fprintf(stderr, "Do not know how to build_manifest phase %d\n", phase);
 			fail_unless(0);
@@ -229,7 +252,7 @@ struct slist *build_manifest(const char *path,
 }
 
 void build_manifest_phase2_from_slist(const char *path,
-	struct slist *slist, enum protocol protocol)
+	struct slist *slist, enum protocol protocol, int short_write)
 {
 	struct sbuf *sb;
 	struct manio *manio=NULL;
@@ -262,6 +285,35 @@ void build_manifest_phase2_from_slist(const char *path,
 			hack_protocol2_attr(&sb->attr);
 		}
 	}
+
+	if(short_write)
+	{
+		man_off_t *pos;
+		fail_unless((pos=manio_tell(manio))!=NULL);
+		if(pos->offset>=short_write) pos->offset-=short_write;
+		fail_unless(!manio_close_and_truncate(&manio,
+			pos, 0 /* compression */));
+		man_off_t_free(&pos);
+	}
+	fail_unless(!manio_close(&manio));
+}
+
+void build_manifest_phase1_from_slist(const char *path,
+	struct slist *slist, enum protocol protocol)
+{
+	struct sbuf *sb;
+	struct manio *manio=NULL;
+
+	for(sb=slist->head; sb; sb=sb->next)
+		set_sbuf(slist, sb);
+
+	fail_unless((manio=manio_open_phase1(path, "wb", protocol))!=NULL);
+
+	for(sb=slist->head; sb; sb=sb->next)
+		fail_unless(!manio_write_sbuf(manio, sb));
+
+	fail_unless(!send_msg_fzp(manio->fzp,
+		CMD_GEN, "phase1end", strlen("phase1end")));
 
 	fail_unless(!manio_close(&manio));
 }

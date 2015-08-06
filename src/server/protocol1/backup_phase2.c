@@ -10,7 +10,7 @@ static size_t treepathlen=0;
 static int path_length_warn(struct iobuf *path, struct conf **cconfs)
 {
 	if(get_int(cconfs[OPT_PATH_LENGTH_WARN]))
-		logw(NULL, cconfs, "Path too long for tree - will save in data structure instead: %s\n", path->buf);
+		logw(NULL, get_cntr(cconfs), "Path too long for tree - will save in data structure instead: %s\n", path->buf);
 	return 1;
 }
 
@@ -88,6 +88,7 @@ static int start_to_receive_new_file(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf **cconfs,
 	struct sbuf *sb, struct dpth *dpth)
 {
+	int ret=-1;
 	char *rpath=NULL;
 	int istreedata=0;
 
@@ -95,17 +96,18 @@ static int start_to_receive_new_file(struct asfd *asfd,
 
 	if(!(rpath=set_new_datapth(asfd,
 		sdirs, cconfs, sb, dpth, &istreedata)))
-			return -1;
+			goto end;
 	
 	if(!(sb->protocol1->fzp=fzp_open(rpath, "wb")))
 	{
 		log_and_send(asfd, "make file failed");
-		if(rpath) free(rpath);
-		return -1;
+		goto end;
 	}
 	if(!istreedata) dpth_incr(dpth);
-	if(rpath) free(rpath);
-	return 0; 
+	ret=0;
+end:
+	free_w(&rpath);
+	return ret;
 }
 
 static int process_changed_file(struct asfd *asfd,
@@ -113,6 +115,7 @@ static int process_changed_file(struct asfd *asfd,
 	struct sbuf *cb, struct sbuf *p1b,
 	const char *adir)
 {
+	int ret=-1;
 	size_t blocklen=0;
 	char *curpath=NULL;
 	//logp("need to process changed file: %s (%s)\n",
@@ -124,7 +127,7 @@ static int process_changed_file(struct asfd *asfd,
 	if(!(curpath=prepend_s(adir, p1b->protocol1->datapth.buf)))
 	{
 		log_out_of_memory(__func__);
-		return -1;
+		goto end;
 	}
 	if(dpth_protocol1_is_compressed(cb->compression, curpath))
 		p1b->protocol1->sigfzp=fzp_gzopen(curpath, "rb");
@@ -133,10 +136,8 @@ static int process_changed_file(struct asfd *asfd,
 	if(!p1b->protocol1->sigfzp)
 	{
 		logp("could not open %s: %s\n", curpath, strerror(errno));
-		free(curpath);
-		return -1;
+		goto end;
 	}
-	free(curpath);
 
 	blocklen=get_librsync_block_len(cb->endfile.buf);
 	if(!(p1b->protocol1->sigjob=
@@ -151,7 +152,7 @@ static int process_changed_file(struct asfd *asfd,
 	))
 	{
 		logp("could not start signature job.\n");
-		return -1;
+		goto end;
 	}
 	//logp("sig begin: %s\n", p1b->protocol1->datapth.buf);
 	if(!(p1b->protocol1->infb=rs_filebuf_new(asfd, NULL,
@@ -159,13 +160,13 @@ static int process_changed_file(struct asfd *asfd,
 		-1, blocklen, -1, get_cntr(cconfs))))
 	{
 		logp("could not rs_filebuf_new for infb.\n");
-		return -1;
+		goto end;
 	}
 	if(!(p1b->protocol1->outfb=rs_filebuf_new(asfd, NULL, NULL,
 		asfd->fd, ASYNC_BUF_LEN, -1, get_cntr(cconfs))))
 	{
 		logp("could not rs_filebuf_new for in_outfb.\n");
-		return -1;
+		goto end;
 	}
 
 	// Flag the things that need to be sent (to the client)
@@ -176,7 +177,10 @@ static int process_changed_file(struct asfd *asfd,
 	//logp("sending sig for %s\n", p1b->path);
 	//logp("(%s)\n", p1b->datapth);
 
-	return 0;
+	ret=0;
+end:
+	free_w(&curpath);
+	return ret;
 }
 
 static int new_non_file(struct sbuf *p1b,
@@ -189,8 +193,7 @@ static int new_non_file(struct sbuf *p1b,
 	// to turn up.
 	if(manio_write_sbuf(ucmanio, p1b))
 		return -1;
-	else
-		cntr_add(get_cntr(cconfs), p1b->path.cmd, 0);
+	cntr_add(get_cntr(cconfs), p1b->path.cmd, 0);
 	sbuf_free_content(p1b);
 	return 0;
 }
@@ -201,8 +204,7 @@ static int changed_non_file(struct sbuf *p1b,
 	// As new_non_file.
 	if(manio_write_sbuf(ucmanio, p1b))
 		return -1;
-	else
-		cntr_add_changed(get_cntr(cconfs), cmd);
+	cntr_add_changed(get_cntr(cconfs), cmd);
 	sbuf_free_content(p1b);
 	return 0;
 }
@@ -218,12 +220,9 @@ static int process_new(struct sdirs *sdirs, struct conf **cconfs,
 		// Flag the things that need to be sent (to the client)
 		p1b->flags |= SBUF_SEND_STAT;
 		p1b->flags |= SBUF_SEND_PATH;
+		return 0;
 	}
-	else
-	{
-		new_non_file(p1b, ucmanio, cconfs);
-	}
-	return 0;
+	return new_non_file(p1b, ucmanio, cconfs);
 }
 
 static int process_unchanged_file(struct sbuf *p1b, struct sbuf *cb,
@@ -311,7 +310,7 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 	// If either old or new is encrypted, or librsync is off, we need to
 	// get a new file.
 	// FIX THIS horrible mess.
-	if(get_int(cconfs[OPT_LIBRSYNC])
+	if(!get_int(cconfs[OPT_LIBRSYNC])
 	// FIX THIS: make unencrypted metadata use the librsync
 	  || cb->path.cmd==CMD_METADATA
 	  || p1b->path.cmd==CMD_METADATA
@@ -454,10 +453,11 @@ static int do_stuff_to_send(struct asfd *asfd,
 static int start_to_receive_delta(struct sdirs *sdirs, struct conf **cconfs,
 	struct sbuf *rb)
 {
-	if(get_int(cconfs[OPT_COMPRESSION]))
+	int compression=get_int(cconfs[OPT_COMPRESSION]);
+	if(compression)
 	{
 		if(!(rb->protocol1->fzp=fzp_gzopen(sdirs->deltmppath,
-			comp_level(cconfs))))
+			comp_level(compression))))
 				return -1;
 	}
 	else
@@ -601,7 +601,9 @@ static int do_stuff_to_receive(struct asfd *asfd,
 	if(rbuf->cmd==CMD_MESSAGE
 	  || rbuf->cmd==CMD_WARNING)
 	{
-		log_recvd(rbuf, cconfs, 0);
+		struct cntr *cntr=NULL;
+		if(cconfs) cntr=get_cntr(cconfs);
+		log_recvd(rbuf, cntr, 0);
 		return 0;
 	}
 
@@ -764,9 +766,9 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 	struct sbuf *p1b=NULL; // file list from client
 	struct sbuf *rb=NULL; // receiving file from client
 	struct asfd *asfd=as->asfd;
-	enum protocol protocol=get_protocol(cconfs);
 	int breaking=0;
 	int breakcount=0;
+	struct cntr *cntr=get_cntr(cconfs);
 	if(get_int(cconfs[OPT_BREAKPOINT])>=2000
 	  && get_int(cconfs[OPT_BREAKPOINT])<3000)
 	{
@@ -789,38 +791,38 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 		// Need to make sure we do not try to create a path that is
 		// too long.
 		if(build_path_w(sdirs->treepath)) goto error;
+		mkdir(sdirs->treepath, 0777);
 		treepathlen=strlen(sdirs->treepath);
-		init_fs_max(sdirs->treepath);
+		if(init_fs_max(sdirs->treepath))
+			goto error;
 	}
 
 	if(resume && !(p1pos=do_resume(sdirs, dpth, cconfs)))
 		goto error;
 
-	if(!(p1manio=manio_open_phase1(sdirs->phase1data, "rb", protocol))
+	if(!(p1manio=manio_open_phase1(sdirs->phase1data, "rb", PROTO_1))
 	  || (resume && manio_seek(p1manio, p1pos)))
 		goto error;
-	if(!(cb=sbuf_alloc(cconfs))
-	  || !(p1b=sbuf_alloc(cconfs))
-	  || !(rb=sbuf_alloc(cconfs)))
+	if(!(cb=sbuf_alloc(PROTO_1))
+	  || !(p1b=sbuf_alloc(PROTO_1))
+	  || !(rb=sbuf_alloc(PROTO_1)))
 		goto error;
 
 	// Unchanged and changed should now be truncated correctly, we just
 	// have to open them for appending.
 	// Data is not getting written to a compressed file.
 	// This is important for recovery if the power goes.
-	if(!(ucmanio=manio_open_phase2(sdirs->unchanged, "ab", protocol))
-	  || !(chmanio=manio_open_phase2(sdirs->changed, "ab", protocol)))
+	if(!(ucmanio=manio_open_phase2(sdirs->unchanged, "ab", PROTO_1))
+	  || !(chmanio=manio_open_phase2(sdirs->changed, "ab", PROTO_1)))
 		goto error;
 
 	while(1)
 	{
-		if(breaking)
-		{
-			if(breakcount--==0) return breakpoint(cconfs, __func__);
-		}
+		if(breaking && breakcount--==0)
+			return breakpoint(breaking, __func__);
 
 		if(write_status(CNTR_STATUS_BACKUP,
-			rb->path.buf?rb->path.buf:p1b->path.buf, cconfs))
+			rb->path.buf?rb->path.buf:p1b->path.buf, cntr))
 				goto error;
 		if(last_requested
 		  || !p1manio
@@ -846,7 +848,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 
 		sbuf_free_content(p1b);
 
-		switch(manio_read(p1manio, p1b, cconfs))
+		switch(manio_read(p1manio, p1b))
 		{
 			case 0: break;
 			case 1: manio_close(&p1manio);
@@ -879,7 +881,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 		while(cmanio)
 		{
 			sbuf_free_content(cb);
-			switch(manio_read(cmanio, cb, cconfs))
+			switch(manio_read(cmanio, cb))
 			{
 				case 0: break;
 				case 1: manio_close(&cmanio);

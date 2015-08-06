@@ -4,20 +4,18 @@
 
 int compile_regex(regex_t **regex, const char *str)
 {
-	if(str && *str)
-	{
-		if(!(*regex=(regex_t *)malloc_w(sizeof(regex_t), __func__))
-		  || regcomp(*regex, str, REG_EXTENDED
+	if(!str || !*str) return 0;
+	if(!(*regex=(regex_t *)malloc_w(sizeof(regex_t), __func__))
+	  || regcomp(*regex, str, REG_EXTENDED
 #ifdef HAVE_WIN32
 // Give Windows another helping hand and make the regular expressions
 // case insensitive.
-			| REG_ICASE
+		| REG_ICASE
 #endif
-		))
-		{
-			logp("unable to compile regex\n");
-			return -1;
-		}
+	))
+	{
+		logp("unable to compile regex\n");
+		return -1;
 	}
 	return 0;
 }

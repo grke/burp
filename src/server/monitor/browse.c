@@ -17,7 +17,7 @@ static int do_browse_manifest(struct asfd *srfd,
 	{
 		int r;
 		sbuf_free_content(sb);
-		if((ars=manio_read(manio, sb, NULL)))
+		if((ars=manio_read(manio, sb)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
@@ -59,7 +59,7 @@ static int browse_manifest_start(struct asfd *srfd, struct cstat *cstat,
 	if(!(manifest=prepend_s(bu->path,
 		cstat->protocol==PROTO_1?"manifest.gz":"manifest"))
 	  || !(manio=manio_open(manifest, "rb", cstat->protocol))
-	  || !(sb=sbuf_alloc_protocol(cstat->protocol)))
+	  || !(sb=sbuf_alloc(cstat->protocol)))
 		goto end;
 	if(get_int(confs[OPT_MONITOR_BROWSE_CACHE]))
 		ret=cache_load(srfd, manio, sb, cstat, bu);

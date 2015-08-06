@@ -1,24 +1,34 @@
 #include "include.h"
 #include "../../cmd.h"
 #include "../../lock.h"
+#include "../../protocol2/blk.h"
 #include "../../server/manio.h"
 #include "../../server/sdirs.h"
-
-#define WEAK_LEN	16
-#define WEAK_STR_LEN	WEAK_LEN+1
 
 struct hooks
 {
 	char *path;
-	char *fingerprints;
+	uint64_t *fingerprints;
+	size_t len;
 };
 
-static int hookscmp(const struct hooks **a, const struct hooks **b)
+static int hookscmp(struct hooks *a, struct hooks *b)
 {
-	return strcmp((*a)->fingerprints, (*b)->fingerprints);
+	size_t i;
+	uint64_t *af=a->fingerprints;
+	uint64_t *bf=b->fingerprints;
+	for(i=0; i<a->len && i<b->len; i++)
+	{
+		if(af[i]>bf[i]) return 1;
+		if(af[i]<bf[i]) return -1;
+	}
+	if(a->len>b->len) return 1;
+	if(a->len<b->len) return -1;
+	return 0;
 }
 
-static int hooks_alloc(struct hooks **hnew, char **path, char **fingerprints)
+static int hooks_alloc(struct hooks **hnew,
+	char **path, uint64_t **fingerprints, size_t *len)
 {
 	if(!*path || !*fingerprints) return 0;
 
@@ -27,33 +37,33 @@ static int hooks_alloc(struct hooks **hnew, char **path, char **fingerprints)
 	
 	(*hnew)->path=*path;
 	(*hnew)->fingerprints=*fingerprints;
-	*fingerprints=NULL;
+	(*hnew)->len=*len;
 	*path=NULL;
+	*fingerprints=NULL;
+	*len=0;
 	return 0;
 }
 
 // Return 0 for OK, -1 for error, 1 for finished reading the file.
 static int get_next_set_of_hooks(struct hooks **hnew, struct sbuf *sb,
-	struct fzp *spzp, char **path, char **fingerprints,
-	struct conf **confs)
+	struct fzp *spzp, char **path, uint64_t **fingerprints, size_t *len)
 {
+	struct blk blk;
 	while(1)
 	{
-		switch(sbuf_fill_from_file(sb, spzp, NULL, NULL, confs))
+		switch(sbuf_fill_from_file(sb, spzp, NULL, NULL))
 		{
 			case -1: goto error;
 			case 1:
 				// Reached the end.
-				if(hooks_alloc(hnew, path, fingerprints))
+				if(hooks_alloc(hnew, path, fingerprints, len))
 					goto error;
 				return 1;
 		}
 		if(sb->path.cmd==CMD_MANIFEST)
 		{
-			if(hooks_alloc(hnew, path, fingerprints))
+			if(hooks_alloc(hnew, path, fingerprints, len))
 				break;
-			free_w(fingerprints);
-			free_w(path);
 			*path=sb->path.buf;
 			sb->path.buf=NULL;
 			sbuf_free_content(sb);
@@ -61,8 +71,12 @@ static int get_next_set_of_hooks(struct hooks **hnew, struct sbuf *sb,
 		}
 		else if(sb->path.cmd==CMD_FINGERPRINT)
 		{
-			if(astrcat(fingerprints, sb->path.buf, __func__))
-				break;
+			if(!(*fingerprints=(uint64_t *)realloc_w(*fingerprints,
+				((*len)+1)*sizeof(uint64_t), __func__)))
+					goto error;
+			if(blk_set_from_iobuf_fingerprint(&blk, &sb->path))
+				goto error;
+			(*fingerprints)[(*len)++]=blk.fingerprint;
 			sbuf_free_content(sb);
 		}
 		else
@@ -73,25 +87,18 @@ static int get_next_set_of_hooks(struct hooks **hnew, struct sbuf *sb,
 	}
 
 error:
+	sbuf_free_content(sb);
 	return -1;
 }
 
 static int gzprintf_hooks(struct fzp *fzp, struct hooks *hooks)
 {
-	static char *f;
-	static char ftmp[WEAK_STR_LEN];
-	size_t len=strlen(hooks->fingerprints);
-
-//	printf("NW: %c%04lX%s\n", CMD_MANIFEST,
-//		strlen(hooks->path), hooks->path);
+	size_t i;
 	fzp_printf(fzp, "%c%04lX%s\n", CMD_MANIFEST,
 		strlen(hooks->path), hooks->path);
-	for(f=hooks->fingerprints; f<hooks->fingerprints+len; f+=WEAK_LEN)
-	{
-		snprintf(ftmp, sizeof(ftmp), "%s", f);
-		fzp_printf(fzp, "%c%04lX%s\n", CMD_FINGERPRINT,
-			strlen(ftmp), ftmp);
-	}
+	for(i=0; i<hooks->len; i++)
+		if(to_fzp_fingerprint(fzp, hooks->fingerprints[i]))
+			return -1;
 	return 0;
 }
 
@@ -99,8 +106,260 @@ static void hooks_free(struct hooks **hooks)
 {
 	if(!*hooks) return;
 	free_w(&(*hooks)->path);
-	free_w(&(*hooks)->fingerprints);
+	free_v((void **)&(*hooks)->fingerprints);
 	free_v((void **)hooks);
+}
+
+/* Merge two files of sorted sparse indexes into each other. */
+#ifndef UTEST
+static
+#endif
+int merge_sparse_indexes(const char *dst, const char *srca, const char *srcb)
+{
+	int fcmp;
+	int ret=-1;
+	struct sbuf *asb=NULL;
+	struct sbuf *bsb=NULL;
+	uint64_t *afingerprints=NULL;
+	uint64_t *bfingerprints=NULL;
+	size_t aflen=0;
+	size_t bflen=0;
+	struct fzp *azp=NULL;
+	struct fzp *bzp=NULL;
+	struct fzp *dzp=NULL;
+	struct hooks *anew=NULL;
+	struct hooks *bnew=NULL;
+	char *apath=NULL;
+	char *bpath=NULL;
+
+	if(!(asb=sbuf_alloc(PROTO_2))
+	  || (srcb && !(bsb=sbuf_alloc(PROTO_2))))
+		goto end;
+	if(build_path_w(dst))
+		goto end;
+	if(!(azp=fzp_gzopen(srca, "rb"))
+	  || (srcb && !(bzp=fzp_gzopen(srcb, "rb")))
+	  || !(dzp=fzp_gzopen(dst, "wb")))
+		goto end;
+
+	while(azp || bzp || anew || bnew)
+	{
+		if(azp
+		  && asb
+		  && !anew)
+		{
+			switch(get_next_set_of_hooks(&anew, asb, azp,
+				&apath, &afingerprints, &aflen))
+			{
+				case -1: goto end;
+				case 1: fzp_close(&azp); // Finished OK.
+			}
+		}
+
+		if(bzp
+		  && bsb
+		  && !bnew)
+		{
+			switch(get_next_set_of_hooks(&bnew, bsb, bzp,
+				&bpath, &bfingerprints, &bflen))
+			{
+				case -1: goto end;
+				case 1: fzp_close(&bzp); // Finished OK.
+			}
+		}
+
+		if(anew && !bnew)
+		{
+			if(gzprintf_hooks(dzp, anew)) goto end;
+			hooks_free(&anew);
+		}
+		else if(!anew && bnew)
+		{
+			if(gzprintf_hooks(dzp, bnew)) goto end;
+			hooks_free(&bnew);
+		}
+		else if(!anew && !bnew)
+		{
+			continue;
+		}
+		else if(!(fcmp=hookscmp(anew, bnew)))
+		{
+			// They were the same - write the new one.
+			if(gzprintf_hooks(dzp, bnew)) goto end;
+			hooks_free(&anew);
+			hooks_free(&bnew);
+		}
+		else if(fcmp<0)
+		{
+			if(gzprintf_hooks(dzp, anew)) goto end;
+			hooks_free(&anew);
+		}
+		else
+		{
+			if(gzprintf_hooks(dzp, bnew)) goto end;
+			hooks_free(&bnew);
+		}
+	}
+
+	if(fzp_close(&dzp))
+	{
+		logp("Error closing %s in %s\n", tmpfile, __func__);
+		goto end;
+	}
+
+	ret=0;
+end:
+	fzp_close(&azp);
+	fzp_close(&bzp);
+	fzp_close(&dzp);
+	sbuf_free(&asb);
+	sbuf_free(&bsb);
+	hooks_free(&anew);
+	hooks_free(&bnew);
+	free_v((void **)&afingerprints);
+	free_v((void **)&bfingerprints);
+	free_w(&apath);
+	free_w(&bpath);
+	return ret;
+}
+
+static int gzprintf_dindex(struct fzp *fzp, uint64_t *dindex)
+{
+	struct blk blk;
+	struct iobuf wbuf;
+	blk.savepath=*dindex;
+	blk_to_iobuf_savepath(&blk, &wbuf);
+	return iobuf_send_msg_fzp(&wbuf, fzp);
+}
+
+// Return 0 for OK, -1 for error, 1 for finished reading the file.
+static int get_next_dindex(uint64_t **dnew, struct sbuf *sb, struct fzp *fzp)
+{
+	static struct blk blk;
+	static struct iobuf *rbuf=NULL;
+
+	if(!rbuf && !(rbuf=iobuf_alloc()))
+		return -1;
+	switch(iobuf_fill_from_fzp(rbuf, fzp))
+	{
+		case -1: goto error;
+		case 1: return 1; // Reached the end.
+	}
+	if(rbuf->cmd==CMD_SAVE_PATH)
+	{
+		if(blk_set_from_iobuf_savepath(&blk, rbuf))
+			goto error;
+		*dnew=(uint64_t *)malloc_w(sizeof(uint64_t), __func__);
+		**dnew=blk.savepath;
+		iobuf_free_content(rbuf);
+		return 0;
+	}
+	else
+		iobuf_log_unexpected(&sb->path, __func__);
+
+error:
+	iobuf_free_content(rbuf);
+	return -1;
+}
+
+/* Merge two files of sorted dindexes into each other. */
+#ifndef UTEST
+static
+#endif
+int merge_dindexes(const char *dst, const char *srca, const char *srcb)
+{
+	int ret=-1;
+	struct sbuf *asb=NULL;
+	struct sbuf *bsb=NULL;
+	struct fzp *azp=NULL;
+	struct fzp *bzp=NULL;
+	struct fzp *dzp=NULL;
+	uint64_t *anew=NULL;
+	uint64_t *bnew=NULL;
+
+	if(!(asb=sbuf_alloc(PROTO_2))
+	  || (srcb && !(bsb=sbuf_alloc(PROTO_2))))
+		goto end;
+	if(build_path_w(dst))
+		goto end;
+	if(!(azp=fzp_gzopen(srca, "rb"))
+	  || (srcb && !(bzp=fzp_gzopen(srcb, "rb")))
+	  || !(dzp=fzp_gzopen(dst, "wb")))
+		goto end;
+
+	while(azp || bzp || anew || bnew)
+	{
+		if(azp
+		  && asb
+		  && !anew)
+		{
+			switch(get_next_dindex(&anew, asb, azp))
+			{
+				case -1: goto end;
+				case 1: fzp_close(&azp); // Finished OK.
+			}
+		}
+
+		if(bzp
+		  && bsb
+		  && !bnew)
+		{
+			switch(get_next_dindex(&bnew, bsb, bzp))
+			{
+				case -1: goto end;
+				case 1: fzp_close(&bzp); // Finished OK.
+			}
+		}
+
+		if(anew && !bnew)
+		{
+			if(gzprintf_dindex(dzp, anew)) goto end;
+			free_v((void **)&anew);
+		}
+		else if(!anew && bnew)
+		{
+			if(gzprintf_dindex(dzp, bnew)) goto end;
+			free_v((void **)&bnew);
+		}
+		else if(!anew && !bnew)
+		{
+			continue;
+		}
+		else if(*anew==*bnew)
+		{
+			// They were the same - write the new one.
+			if(gzprintf_dindex(dzp, bnew)) goto end;
+			free_v((void **)&anew);
+			free_v((void **)&bnew);
+		}
+		else if(*anew<*bnew)
+		{
+			if(gzprintf_dindex(dzp, anew)) goto end;
+			free_v((void **)&anew);
+		}
+		else
+		{
+			if(gzprintf_dindex(dzp, bnew)) goto end;
+			free_v((void **)&bnew);
+		}
+	}
+
+	if(fzp_close(&dzp))
+	{
+		logp("Error closing %s in %s\n", tmpfile, __func__);
+		goto end;
+	}
+
+	ret=0;
+end:
+	fzp_close(&azp);
+	fzp_close(&bzp);
+	fzp_close(&dzp);
+	sbuf_free(&asb);
+	sbuf_free(&bsb);
+	free_v((void **)&anew);
+	free_v((void **)&bnew);
+	return ret;
 }
 
 static void try_lock_msg(int seconds)
@@ -150,119 +409,7 @@ static int try_to_get_lock(struct lock *lock)
 	return -1;
 }
 
-/* Merge two files of sorted sparse indexes into each other. */
-static int merge_sparse_indexes(const char *srca, const char *srcb,
-	const char *dst, struct conf **confs)
-{
-	int fcmp;
-	int ret=-1;
-	struct sbuf *asb=NULL;
-	struct sbuf *bsb=NULL;
-	char *afingerprints=NULL;
-	char *bfingerprints=NULL;
-	struct fzp *azp=NULL;
-	struct fzp *bzp=NULL;
-	struct fzp *dzp=NULL;
-	struct hooks *anew=NULL;
-	struct hooks *bnew=NULL;
-	char *apath=NULL;
-	char *bpath=NULL;
-
-	if(!(asb=sbuf_alloc(confs))
-	  || (srcb && !(bsb=sbuf_alloc(confs))))
-		goto end;
-	if(build_path_w(dst))
-		goto end;
-	if(!(azp=fzp_gzopen(srca, "rb"))
-	  || (srcb && !(bzp=fzp_gzopen(srcb, "rb")))
-	  || !(dzp=fzp_gzopen(dst, "wb")))
-		goto end;
-
-	while(azp || bzp || anew || bnew)
-	{
-		if(azp
-		  && asb
-		  && !anew)
-		{
-			switch(get_next_set_of_hooks(&anew, asb, azp,
-				&apath, &afingerprints, confs))
-			{
-				case -1: goto end;
-				case 1: fzp_close(&azp); // Finished OK.
-			}
-		}
-
-		if(bzp
-		  && bsb
-		  && !bnew)
-		{
-			switch(get_next_set_of_hooks(&bnew, bsb, bzp,
-				&bpath, &bfingerprints, confs))
-			{
-				case -1: goto end;
-				case 1: fzp_close(&bzp); // Finished OK.
-			}
-		}
-
-		if(anew && !bnew)
-		{
-			if(gzprintf_hooks(dzp, anew)) goto end;
-			hooks_free(&anew);
-		}
-		else if(!anew && bnew)
-		{
-			if(gzprintf_hooks(dzp, bnew)) goto end;
-			hooks_free(&bnew);
-		}
-		else if(!anew && !bnew)
-		{
-			continue;
-		}
-		else if(!(fcmp=hookscmp(
-		  (const struct hooks **)&anew,
-		  (const struct hooks **)&bnew)))
-		{
-			// They were the same - write the new one.
-			if(gzprintf_hooks(dzp, bnew)) goto end;
-			hooks_free(&anew);
-			hooks_free(&bnew);
-		}
-		else if(fcmp<0)
-		{
-			if(gzprintf_hooks(dzp, anew)) goto end;
-			hooks_free(&anew);
-		}
-		else
-		{
-			if(gzprintf_hooks(dzp, bnew)) goto end;
-			hooks_free(&bnew);
-		}
-	}
-
-	if(fzp_close(&dzp))
-	{
-		logp("Error closing %s in %s\n", tmpfile, __func__);
-		goto end;
-	}
-
-	ret=0;
-end:
-	fzp_close(&azp);
-	fzp_close(&bzp);
-	fzp_close(&dzp);
-	sbuf_free(&asb);
-	sbuf_free(&bsb);
-	hooks_free(&anew);
-	hooks_free(&bnew);
-	if(afingerprints) free(afingerprints);
-	if(bfingerprints) free(bfingerprints);
-	if(apath) free(apath);
-	if(bpath) free(bpath);
-	return ret;
-}
-
-static int merge_into_global_sparse(const char *sparse, const char *global,
-	struct conf **confs)
+static int merge_into_global_sparse(const char *sparse, const char *global)
 {
 	int ret=-1;
 	char *tmpfile=NULL;
@@ -283,7 +430,7 @@ static int merge_into_global_sparse(const char *sparse, const char *global,
 
 	if(!lstat(global, &statp)) globalsrc=global;
 
-	if(merge_sparse_indexes(sparse, globalsrc, tmpfile, confs))
+	if(merge_sparse_indexes(tmpfile, sparse, globalsrc))
 		goto end;
 
 	// FIX THIS: nasty race condition needs to be recoverable.
@@ -298,62 +445,51 @@ end:
 	return ret;
 }
 
-int backup_phase4_server_protocol2(struct sdirs *sdirs, struct conf **confs)
+#ifndef UTEST
+static
+#endif
+int merge_files_in_dir(const char *final, const char *fmanifest,
+	const char *srcdir, uint64_t fcount,
+	int merge(const char *dst, const char *srca, const char *srcb))
 {
 	int ret=-1;
 	uint64_t i=0;
 	uint64_t pass=0;
-	char *sparse=NULL;
-	char *global_sparse=NULL;
-	char *h1dir=NULL;
-	char *h2dir=NULL;
-	char *hooksdir=NULL;
+	char *m1dir=NULL;
+	char *m2dir=NULL;
 	char *srca=NULL;
 	char *srcb=NULL;
 	char *dst=NULL;
 	char compa[32]="";
 	char compb[32]="";
 	char compd[32]="";
-	struct manio *newmanio=NULL;
-	char *logpath=NULL;
-	char *fmanifest=NULL; // FIX THIS: should be part of sdirs.
+	char *fullsrcdir=NULL;
 
-	if(!(logpath=prepend_s(sdirs->finishing, "log")))
+	if(!(m1dir=prepend_s(fmanifest, "m1"))
+	  || !(m2dir=prepend_s(fmanifest, "m2"))
+	  || !(fullsrcdir=prepend_s(fmanifest, srcdir)))
 		goto end;
-	if(set_logfzp(logpath, confs))
-		goto end;
-
-	logp("Begin phase4 (sparse generation)\n");
-
-	if(!(fmanifest=prepend_s(sdirs->finishing, "manifest"))
-	  || !(newmanio=manio_open(fmanifest, "rb", PROTO_2))
-	  || manio_read_fcount(newmanio)
-	  || !(hooksdir=prepend_s(fmanifest, "hooks"))
-	  || !(h1dir=prepend_s(fmanifest, "h1"))
-	  || !(h2dir=prepend_s(fmanifest, "h2")))
-		goto end;
-
 	while(1)
 	{
-		char *srcdir=NULL;
-		char *dstdir=NULL;
+		const char *srcdir=NULL;
+		const char *dstdir=NULL;
 		if(!pass)
 		{
-			srcdir=hooksdir;
-			dstdir=h1dir;
+			srcdir=fullsrcdir;
+			dstdir=m1dir;
 		}
 		else if(pass%2)
 		{
-			srcdir=h1dir;
-			dstdir=h2dir;
+			srcdir=m1dir;
+			dstdir=m2dir;
 		}
 		else
 		{
-			srcdir=h2dir;
-			dstdir=h1dir;
+			srcdir=m2dir;
+			dstdir=m1dir;
 		}
 		pass++;
-		for(i=0; i<newmanio->offset->fcount; i+=2)
+		for(i=0; i<fcount; i+=2)
 		{
 			free_w(&srca);
 			free_w(&srcb);
@@ -364,24 +500,71 @@ int backup_phase4_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 			if(!(srca=prepend_s(srcdir, compa))
 			  || !(dst=prepend_s(dstdir, compd)))
 				goto end;
-			if(i+1<newmanio->offset->fcount
+			if(i+1<fcount
 			  && !(srcb=prepend_s(srcdir, compb)))
 				goto end;
-			if(merge_sparse_indexes(srca, srcb, dst, confs))
+			if(merge(dst, srca, srcb))
 				goto end;
 		}
-		if((newmanio->offset->fcount=i/2)<2) break;
+		fcount=i/2;
+		if(fcount<2) break;
 	}
-
-	if(!(sparse=prepend_s(fmanifest, "sparse"))
-	  || !(global_sparse=prepend_s(sdirs->data, "sparse")))
-		goto end;
 
 	// FIX THIS: nasty race condition here needs to be automatically
 	// recoverable.
-	if(do_rename(dst, sparse)) goto end;
+	// The rename will give an error on fcount==0, which is OK because
+	// fcount will always be at least 1.
+	if(do_rename(dst, final)
+	  || recursive_delete(m1dir)
+	  || recursive_delete(m2dir))
+		goto end;
 
-	if(merge_into_global_sparse(sparse, global_sparse, confs)) goto end;
+	ret=0;
+end:
+	free_w(&m1dir);
+	free_w(&m2dir);
+	free_w(&srca);
+	free_w(&srcb);
+	free_w(&dst);
+	free_w(&fullsrcdir);
+	return ret;
+}
+
+int backup_phase4_server_protocol2(struct sdirs *sdirs, struct conf **confs)
+{
+	int ret=-1;
+	char *dfiles=NULL;
+	char *sparse=NULL;
+	char *global_sparse=NULL;
+	struct manio *newmanio=NULL;
+	char *logpath=NULL;
+	char *fmanifest=NULL; // FIX THIS: should be part of sdirs.
+
+	if(!(logpath=prepend_s(sdirs->finishing, "log")))
+		goto end;
+	if(log_fzp_set(logpath, confs))
+		goto end;
+
+	logp("Begin phase4 (sparse generation)\n");
+
+	if(!(fmanifest=prepend_s(sdirs->finishing, "manifest"))
+	  || !(newmanio=manio_open(fmanifest, "rb", PROTO_2))
+	  || manio_read_fcount(newmanio)
+	  || !(dfiles=prepend_s(fmanifest, "dfiles"))
+	  || !(sparse=prepend_s(fmanifest, "sparse")))
+		goto end;
+
+	if(merge_files_in_dir(dfiles, fmanifest, "dindex",
+		newmanio->offset->fcount,
+		merge_dindexes))
+			goto end;
+	if(merge_files_in_dir(sparse, fmanifest, "hooks",
+		newmanio->offset->fcount,
+		merge_sparse_indexes))
+			goto end;
+
+	if(!(global_sparse=prepend_s(sdirs->data, "sparse"))
+	  || merge_into_global_sparse(sparse, global_sparse)) goto end;
 
 	logp("End phase4 (sparse generation)\n");
 
@@ -390,12 +573,6 @@ end:
 	manio_close(&newmanio);
 	free_w(&sparse);
 	free_w(&global_sparse);
-	free_w(&srca);
-	free_w(&srcb);
-	recursive_delete(h1dir);
-	recursive_delete(h2dir);
-	free_w(&h1dir);
-	free_w(&h2dir);
 	free_w(&logpath);
 	free_w(&fmanifest);
 	return ret;

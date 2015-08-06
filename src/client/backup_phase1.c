@@ -47,7 +47,7 @@ static enum cmd metasymbol=CMD_METADATA;
 #endif
 
 static int usual_stuff(struct asfd *asfd,
-	struct conf **confs, const char *path, const char *link,
+	struct cntr *cntr, const char *path, const char *link,
 	struct sbuf *sb, enum cmd cmd)
 {
 	if(asfd->write_str(asfd, CMD_ATTRIBS, sb->attr.buf)
@@ -55,16 +55,17 @@ static int usual_stuff(struct asfd *asfd,
 	  || ((cmd==CMD_HARD_LINK || cmd==CMD_SOFT_LINK)
 		&& asfd->write_str(asfd, cmd, link)))
 			return -1;
-	cntr_add_phase1(get_cntr(confs), cmd, 1);
+	cntr_add_phase1(cntr, cmd, 1);
 	return 0;
 }
 
 static int maybe_send_extrameta(struct asfd *asfd,
 	const char *path, enum cmd cmd,
-	struct sbuf *sb, struct conf **confs, enum cmd symbol)
+	struct sbuf *sb, enum protocol protocol,
+	struct cntr *cntr, enum cmd symbol)
 {
-	if(!has_extrameta(path, cmd, confs)) return 0;
-	return usual_stuff(asfd, confs, path, NULL, sb, symbol);
+	if(!has_extrameta(path, cmd, protocol)) return 0;
+	return usual_stuff(asfd, cntr, path, NULL, sb, symbol);
 }
 
 static int ft_err(struct asfd *asfd,
@@ -74,7 +75,7 @@ static int ft_err(struct asfd *asfd,
 	const char *prefix="";
 	raise_error=get_int(confs[OPT_SCAN_PROBLEM_RAISES_ERROR]);
 	if(raise_error) prefix="Err: ";
-	if(logw(asfd, confs, _("%s%s %s: %s"), prefix, msg,
+	if(logw(asfd, get_cntr(confs), _("%s%s %s: %s"), prefix, msg,
 		ff->fname, strerror(errno))) return -1;
 	if(raise_error) return -1;
 	return 0;
@@ -82,12 +83,14 @@ static int ft_err(struct asfd *asfd,
 
 static int do_to_server(struct asfd *asfd,
 	struct conf **confs, FF_PKT *ff, struct sbuf *sb,
-	enum cmd cmd, int compression) 
+	enum cmd cmd, int compression)
 {
 #ifdef HAVE_WIN32
 	int split_vss=get_int(confs[OPT_SPLIT_VSS]);
 	int strip_vss=get_int(confs[OPT_STRIP_VSS]);
 #endif
+	struct cntr *cntr=get_cntr(confs);
+	enum protocol protocol=get_protocol(confs);
 	sb->compression=compression;
 	sb->statp=ff->statp;
 	attribs_encode(sb);
@@ -95,26 +98,28 @@ static int do_to_server(struct asfd *asfd,
 #ifdef HAVE_WIN32
 	if(split_vss
 	  && !strip_vss
-	  && maybe_send_extrameta(asfd, ff->fname, cmd, sb, confs, metasymbol))
-		return -1;
+	  && maybe_send_extrameta(asfd, ff->fname,
+		cmd, sb, protocol, cntr, metasymbol))
+			return -1;
 #endif
 
-	if(usual_stuff(asfd, confs, ff->fname, ff->link, sb, cmd)) return -1;
+	if(usual_stuff(asfd, cntr, ff->fname, ff->link, sb, cmd)) return -1;
 
 	if(ff->type==FT_REG)
-		cntr_add_val(get_cntr(confs), CMD_BYTES_ESTIMATED,
-			(unsigned long long)ff->statp.st_size, 0);
+		cntr_add_val(cntr, CMD_BYTES_ESTIMATED,
+			(uint64_t)ff->statp.st_size, 0);
 #ifdef HAVE_WIN32
 	if(split_vss
 	  && !strip_vss
 	// FIX THIS: May have to check that it is not a directory here.
 	  && !S_ISDIR(sb->statp.st_mode) // does this work?
 	  && maybe_send_extrameta(asfd,
-		ff->fname, cmd, sb, confs, vss_trail_symbol))
+		ff->fname, cmd, sb, protocol, cntr, vss_trail_symbol))
 			return -1;
 	return 0;
 #else
-	return maybe_send_extrameta(asfd, ff->fname, cmd, sb, confs, metasymbol);
+	return maybe_send_extrameta(asfd, ff->fname, cmd, sb,
+		protocol, cntr, metasymbol);
 #endif
 }
 
@@ -125,11 +130,12 @@ static int to_server(struct asfd *asfd, struct conf **confs, FF_PKT *ff,
 		ff, sb, cmd, get_int(confs[OPT_COMPRESSION]));
 }
 
-int send_file(struct asfd *asfd, FF_PKT *ff, bool top_level, struct conf **confs)
+static int send_file(struct asfd *asfd, FF_PKT *ff, struct conf **confs)
 {
 	static struct sbuf *sb=NULL;
+	struct cntr *cntr=get_cntr(confs);
 
-	if(!sb && !(sb=sbuf_alloc(confs))) return -1;
+	if(!sb && !(sb=sbuf_alloc(get_protocol(confs)))) return -1;
 
 #ifdef HAVE_WIN32
 	if(ff->winattr & FILE_ATTRIBUTE_ENCRYPTED)
@@ -137,7 +143,8 @@ int send_file(struct asfd *asfd, FF_PKT *ff, bool top_level, struct conf **confs
 		if(ff->type==FT_REG
 		  || ff->type==FT_DIR)
 			return to_server(asfd, confs, ff, sb, CMD_EFS_FILE);
-		return logw(asfd, confs, "EFS type %d not yet supported: %s",
+		return logw(asfd, cntr,
+			"EFS type %d not yet supported: %s",
 			ff->type, ff->fname);
 	}
 #endif
@@ -170,7 +177,7 @@ int send_file(struct asfd *asfd, FF_PKT *ff, bool top_level, struct conf **confs
 		case FT_NOOPEN:
 			return ft_err(asfd, confs, ff, "Could not open directory");
 		default:
-			return logw(asfd, confs,
+			return logw(asfd, cntr,
 				_("Err: Unknown file type %d: %s"),
 				ff->type, ff->fname);
 	}
@@ -203,7 +210,7 @@ int backup_phase1_client(struct asfd *asfd, struct conf **confs, int estimate)
 		dirsymbol=CMD_DIRECTORY;
 #endif
 
-	if(!(ff=find_files_init())) goto end;
+	if(!(ff=find_files_init(send_file))) goto end;
 	for(l=get_strlist(confs[OPT_STARTDIR]); l; l=l->next) if(l->flag)
 		if(find_files_begin(asfd, ff, confs, l->path)) goto end;
 	ret=0;
@@ -211,7 +218,7 @@ end:
 	cntr_print_end_phase1(get_cntr(confs));
 	if(ret) logp("Error in phase 1\n");
 	logp("Phase 1 end (file system scan)\n");
-	find_files_free(ff);
+	find_files_free(&ff);
 
 	return ret;
 }

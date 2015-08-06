@@ -38,7 +38,7 @@ static void tear_down(struct dpth **dpth)
 {
 	dpth_free(dpth);
 	fail_unless(recursive_delete(basepath)==0);
-	fail_unless(free_count==alloc_count);
+	alloc_check();
 }
 
 struct init_data
@@ -148,6 +148,54 @@ START_TEST(test_mk)
 }
 END_TEST
 
+struct str_data
+{
+        uint16_t prim;
+        uint16_t seco;
+        uint16_t tert;
+	char str[15];
+        uint16_t prim_expected;
+        uint16_t seco_expected;
+        uint16_t tert_expected;
+	int ret_expected;
+};
+
+static struct str_data str[] = {
+	{ 0x0000,0x0000,0x0000, "t/some/path",    0x0000,0x0000,0x0000,  0 },
+	{ 0x0000,0x0000,0x0000, "invalid",        0x0000,0x0000,0x0000, -1 },
+	{ 0x0000,0x0000,0x0000, "0000/0G00/0000", 0x0000,0x0000,0x0000, -1 },
+	{ 0x0000,0x0000,0x0000, "0000/0000/0010", 0x0000,0x0000,0x0010,  0 },
+	{ 0x0000,0x0000,0x0000, "0000/0011/0010", 0x0000,0x0011,0x0010,  0 },
+	{ 0x0000,0x0000,0x0000, "0012/0011/0010", 0x0012,0x0011,0x0010,  0 },
+	{ 0x0000,0x0000,0xAAAA, "0000/0000/0010", 0x0000,0x0000,0xAAAA,  0 },
+	{ 0x0000,0xAAAA,0x0000, "0000/0010/0000", 0x0000,0xAAAA,0x0000,  0 },
+	{ 0x1111,0x0000,0x0000, "1110/1111/1111", 0x1111,0x0000,0x0000,  0 },
+	{ 0x1111,0x2222,0x0000, "1110/3333/4444", 0x1111,0x2222,0x0000,  0 },
+	{ 0x1111,0x2222,0x3333, "1110/3333/4444", 0x1111,0x2222,0x3333,  0 },
+	{ 0x1111,0x2222,0x3333, "1112/1111/1111", 0x1112,0x1111,0x1111,  0 }
+};
+
+START_TEST(test_set_from_string)
+{
+	FOREACH(str)
+	{
+		int ret;
+		struct dpth *dpth;
+		dpth=setup();
+		dpth->prim=str[i].prim;
+		dpth->seco=str[i].seco;
+		dpth->tert=str[i].tert;
+		ret=dpth_protocol1_set_from_string(dpth, str[i].str);
+		fail_unless(ret==str[i].ret_expected);
+		assert_components(dpth,
+				str[i].prim_expected,
+				str[i].seco_expected,
+				str[i].tert_expected);
+		tear_down(&dpth);
+	}
+}
+END_TEST
+
 Suite *suite_server_protocol1_dpth(void)
 {
 	Suite *s;
@@ -160,6 +208,7 @@ Suite *suite_server_protocol1_dpth(void)
 	tcase_add_test(tc_core, test_incr);
 	tcase_add_test(tc_core, test_init);
 	tcase_add_test(tc_core, test_mk);
+	tcase_add_test(tc_core, test_set_from_string);
 	suite_add_tcase(s, tc_core);
 
 	return s;

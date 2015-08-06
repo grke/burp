@@ -67,64 +67,63 @@ END_TEST
 struct savepathdata
 {
         const char *str;
-	uint8_t bytes[SAVE_PATH_LEN];
+	uint64_t bytes;
 };
 
 static struct savepathdata ssavepath[] = {
-	{ "0011/2233/4455", { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55 } },
-	{ "0000/0000/0000", { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } },
-	{ "FFFF/FFFF/FFFF", { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF } },
+	{ "0011/2233/4455", 0x0011223344550000 },
+	{ "0000/0000/0000", 0x0000000000000000 },
+	{ "0000/0000/0001", 0x0000000000010000 },
+	{ "FFFF/FFFF/FFFF", 0xFFFFFFFFFFFF0000 }
 };
 static struct savepathdata ssavepathsig[] = {
-	{ "0000/0000/0000/0000",
-			{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } },
-	{ "0011/2233/4455/6677",
-			{ 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77 } },
-	{ "AA00/BB11/CC22/DD33",
-			{ 0xAA, 0x00, 0xBB, 0x11, 0xCC, 0x22, 0xDD, 0x33 } },
-	{ "FFFF/FFFF/FFFF/FFFF",
-			{ 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF } },
+	{ "0000/0000/0000/0000", 0x0000000000000000 },
+	{ "0000/0000/0000/0001", 0x0000000000000001 },
+	{ "0011/2233/4455/6677", 0x0011223344556677 },
+	{ "AA00/BB11/CC22/DD33", 0xAA00BB11CC22DD33 },
+	{ "FFFF/FFFF/FFFF/FFFF", 0xFFFFFFFFFFFFFFFF }
 };
 
-static void do_savepath_str_to_bytes(struct savepathdata *d, size_t s)
+static void do_savepath_str_to_uint64(struct savepathdata *d, size_t s)
 {
-	FOREACH(d)
+	size_t i;
+	uint64_t bytes;
+	for(i=0; i<s; i++)
 	{
-		uint8_t bytes[SAVE_PATH_LEN];
-		savepathstr_to_bytes(d[i].str, bytes);
-		fail_unless(memcmp(bytes, d[i].bytes, SAVE_PATH_LEN));
+		bytes=savepathstr_to_uint64(d[i].str);
+		fail_unless(bytes==d[i].bytes);
 	}
 }
 
-START_TEST(test_savepathstr_to_bytes)
+START_TEST(test_savepathstr_to_uint64)
 {
 	hexmap_init();
-	do_savepath_str_to_bytes(ssavepath,
+	do_savepath_str_to_uint64(ssavepath,
 		sizeof(ssavepath)/sizeof(*ssavepath));
-	do_savepath_str_to_bytes(ssavepathsig,
+	do_savepath_str_to_uint64(ssavepathsig,
 		sizeof(ssavepathsig)/sizeof(*ssavepathsig));
 }
 END_TEST
 
-START_TEST(test_bytes_to_savepathstr)
+START_TEST(test_uint64_to_savepathstr)
 {
 	hexmap_init();
 	FOREACH(ssavepath)
 	{
 		const char *str;
-		str=bytes_to_savepathstr(ssavepath[i].bytes);
+		str=uint64_to_savepathstr(ssavepath[i].bytes);
 		fail_unless(!strcmp(ssavepath[i].str, str));
 	}
 }
 END_TEST
 
-START_TEST(test_bytes_to_savepathstr_with_sig)
+START_TEST(test_uint64_to_savepathstr_with_sig)
 {
 	hexmap_init();
 	FOREACH(ssavepathsig)
 	{
 		const char *str;
-		str=bytes_to_savepathstr_with_sig(ssavepathsig[i].bytes);
+		str=uint64_to_savepathstr_with_sig(ssavepathsig[i].bytes);
 		fail_unless(!strcmp(ssavepathsig[i].str, str));
 	}
 }
@@ -142,9 +141,9 @@ Suite *suite_hexmap(void)
 	tcase_add_test(tc_core, test_md5sum_of_empty_string);
 	tcase_add_test(tc_core, test_md5str_to_bytes);
 	tcase_add_test(tc_core, test_bytes_to_md5str);
-	tcase_add_test(tc_core, test_savepathstr_to_bytes);
-	tcase_add_test(tc_core, test_bytes_to_savepathstr);
-	tcase_add_test(tc_core, test_bytes_to_savepathstr_with_sig);
+	tcase_add_test(tc_core, test_savepathstr_to_uint64);
+	tcase_add_test(tc_core, test_uint64_to_savepathstr);
+	tcase_add_test(tc_core, test_uint64_to_savepathstr_with_sig);
 	suite_add_tcase(s, tc_core);
 
 	return s;

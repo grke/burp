@@ -1,12 +1,12 @@
 #include "include.h"
 
-int has_extrameta(const char *path, enum cmd cmd, struct conf **confs)
+int has_extrameta(const char *path, enum cmd cmd, enum protocol protocol)
 {
 #if defined(WIN32_VSS)
 	return 1;
 #endif
 	// FIX THIS: extra meta not supported in protocol2.
-	if(get_protocol(confs)==PROTO_2) return 0;
+	if(protocol==PROTO_2) return 0;
 #if defined(HAVE_LINUX_OS) || \
     defined(HAVE_FREEBSD_OS) || \
     defined(HAVE_OPENBSD_OS) || \
@@ -33,10 +33,10 @@ int get_extrameta(struct asfd *asfd,
 	struct sbuf *sb,
 	char **extrameta,
 	size_t *elen,
-	struct conf **confs)
+	struct cntr *cntr)
 {
 #if defined (WIN32_VSS)
-	if(get_vss(bfd, sb, extrameta, elen, confs)) return -1;
+	if(get_vss(bfd, sb, extrameta, elen)) return -1;
 #endif
 	// Important to do xattr directly after acl, because xattr is excluding
 	// some entries if acls were set.
@@ -45,7 +45,7 @@ int get_extrameta(struct asfd *asfd,
     defined(HAVE_OPENBSD_OS) || \
     defined(HAVE_NETBSD_OS)
 #ifdef HAVE_ACL
-	if(get_acl(asfd, sb, extrameta, elen, confs)) return -1;
+	if(get_acl(asfd, sb, extrameta, elen, cntr)) return -1;
 #endif
 #endif
 #if defined(HAVE_LINUX_OS) || \
@@ -54,7 +54,7 @@ int get_extrameta(struct asfd *asfd,
     defined(HAVE_NETBSD_OS) || \
     defined(HAVE_DARWIN_OS)
 #ifdef HAVE_XATTR
-	if(get_xattr(asfd, sb, extrameta, elen, confs)) return -1;
+	if(get_xattr(asfd, sb, extrameta, elen, cntr)) return -1;
 #endif
 #endif
         return 0;
@@ -66,7 +66,7 @@ int set_extrameta(struct asfd *asfd,
 	struct sbuf *sb,
 	const char *extrameta,
 	size_t metalen,
-	struct conf **confs)
+	struct cntr *cntr)
 {
 	size_t l=0;
 	char cmdtmp='\0';
@@ -81,7 +81,7 @@ int set_extrameta(struct asfd *asfd,
 		char *m=NULL;
 		if((sscanf(metadata, "%c%08X", &cmdtmp, &s))!=2)
 		{
-			logw(asfd, confs,
+			logw(asfd, cntr,
 				"sscanf of metadata failed for %s: %s\n",
 				path, metadata);
 			return -1;
@@ -100,7 +100,7 @@ int set_extrameta(struct asfd *asfd,
 		{
 #if defined(HAVE_WIN32)
 			case META_VSS:
-				if(set_vss(bfd, m, s, confs)) errors++;
+				if(set_vss(bfd, m, s)) errors++;
 				break;
 #endif
 #if defined(HAVE_LINUX_OS) || \
@@ -109,11 +109,11 @@ int set_extrameta(struct asfd *asfd,
     defined(HAVE_NETBSD_OS)
 #ifdef HAVE_ACL
 			case META_ACCESS_ACL:
-				if(set_acl(asfd, path, sb, m, s, cmdtmp, confs))
+				if(set_acl(asfd, path, sb, m, s, cmdtmp, cntr))
 					errors++;
 				break;
 			case META_DEFAULT_ACL:
-				if(set_acl(asfd, path, sb, m, s, cmdtmp, confs))
+				if(set_acl(asfd, path, sb, m, s, cmdtmp, cntr))
 					errors++;
 				break;
 #endif
@@ -122,7 +122,7 @@ int set_extrameta(struct asfd *asfd,
 #ifdef HAVE_XATTR
 			case META_XATTR:
 				if(set_xattr(asfd,
-					path, sb, m, s, cmdtmp, confs))
+					path, sb, m, s, cmdtmp, cntr))
 						errors++;
 				break;
 #endif
@@ -133,7 +133,7 @@ int set_extrameta(struct asfd *asfd,
 #ifdef HAVE_XATTR
 			case META_XATTR_BSD:
 				if(set_xattr(asfd,
-					path, sb, m, s, cmdtmp, confs))
+					path, sb, m, s, cmdtmp, cntr))
 						errors++;
 				break;
 #endif
@@ -142,14 +142,14 @@ int set_extrameta(struct asfd *asfd,
 #ifdef HAVE_XATTR
 			case META_XATTR_OSX:
 				if(set_xattr(asfd,
-					path, sb, m, s, cmdtmp, confs))
+					path, sb, m, s, cmdtmp, cntr))
 						errors++;
 				break;
 #endif
 #endif
 			default:
 				logp("unknown metadata: %c\n", cmdtmp);
-				logw(asfd, confs,
+				logw(asfd, cntr,
 					"unknown metadata: %c\n", cmdtmp);
 				errors++;
 				break;

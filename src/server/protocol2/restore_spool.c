@@ -1,12 +1,13 @@
 #include "include.h"
 #include "../../cmd.h"
-#include "champ_chooser/hash.h"
 #include "../../slist.h"
 #include "../../hexmap.h"
-#include "../../server/protocol1/restore.h"
+#include "../../protocol2/blk.h"
 #include "../../protocol2/rabin/rconf.h"
+#include "../../server/protocol1/restore.h"
 #include "../manio.h"
 #include "../sdirs.h"
+#include "champ_chooser/hash.h"
 
 /* This function reads the manifest to determine whether it may be more
    efficient to just copy the data files across and unpack them on the other
@@ -39,14 +40,14 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 	if(!restore_spool) return 0;
 	
 	if(!(manio=manio_open(manifest, "rb", PROTO_2))
-	  || !(need_data=sbuf_alloc(confs))
-	  || !(sb=sbuf_alloc(confs))
+	  || !(need_data=sbuf_alloc(PROTO_2))
+	  || !(sb=sbuf_alloc(PROTO_2))
 	  || !(blk=blk_alloc()))
 		goto end;
 
 	while(1)
 	{
-		if((ars=manio_read_with_blk(manio, sb, blk, NULL, confs))<0)
+		if((ars=manio_read_with_blk(manio, sb, blk, NULL))<0)
 		{
 			logp("Error from manio_read_async() in %s\n",
 				__func__);
@@ -122,7 +123,7 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 		if(asfd->write_str(asfd, CMD_GEN, msg)) goto end;
 		if(!(fdatpath=prepend_s(sdirs->data, path)))
 			goto end;
-		if(send_a_file(asfd, fdatpath, confs))
+		if(send_a_file(asfd, fdatpath, get_cntr(confs)))
 		{
 			free(fdatpath);
 			goto end;
@@ -141,7 +142,7 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 	blk->got_save_path=0;
 	while(1)
 	{
-		if((ars=manio_read_with_blk(manio, sb, blk, NULL, confs))<0)
+		if((ars=manio_read_with_blk(manio, sb, blk, NULL))<0)
 		{
 			logp("Error from manio_read_async() in %s\n",
 				__func__);
@@ -159,7 +160,7 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 				"%016"PRIX64 "%s%s",
 				blk->fingerprint,
 				bytes_to_md5str(blk->md5sum),
-				bytes_to_savepathstr_with_sig(blk->savepath));
+				uint64_to_savepathstr_with_sig(blk->savepath));
 			if(asfd->write_str(asfd, CMD_SIG, sig))
 				goto end;
 			blk->got_save_path=0;

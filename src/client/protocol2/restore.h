@@ -3,6 +3,6 @@
 
 int restore_switch_protocol2(struct asfd *asfd, struct sbuf *sb,
 	const char *fullpath, enum action act,
-	BFILE *bfd, int vss_restore, struct conf **confs);
+	BFILE *bfd, int vss_restore, struct cntr *cntr);
 
 #endif

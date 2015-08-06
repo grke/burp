@@ -201,7 +201,7 @@ int do_list_client(struct asfd *asfd,
 	  || asfd->read_expect(asfd, CMD_GEN, "ok"))
 		goto end;
 
-	if(!(sb=sbuf_alloc(confs))) goto end;
+	if(!(sb=sbuf_alloc(get_protocol(confs)))) goto end;
 	iobuf_init(&sb->path);
 	iobuf_init(&sb->link);
 	iobuf_init(&sb->attr);

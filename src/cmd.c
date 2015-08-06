@@ -62,6 +62,8 @@ static char *cmd_to_text(enum cmd cmd)
 			snprintf(buf, len, "Path to a manifest"); break;
 		case CMD_FINGERPRINT:
 			snprintf(buf, len, "Fingerprint part of a signature"); break;
+		case CMD_SAVE_PATH:
+			snprintf(buf, len, "Save path part of a signature"); break;
 
 		// For the status server/client */
 

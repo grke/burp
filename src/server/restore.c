@@ -72,7 +72,7 @@ static int setup_cntr(struct asfd *asfd, const char *manifest,
 // FIX THIS: this is only trying to work for protocol1.
 	if(get_protocol(cconfs)!=PROTO_1) return 0;
 
-	if(!(sb=sbuf_alloc(cconfs))) goto end;
+	if(!(sb=sbuf_alloc(PROTO_1))) goto end;
 	if(!(fzp=fzp_gzopen(manifest, "rb")))
 	{
 		log_and_send(asfd, "could not open manifest");
@@ -80,7 +80,7 @@ static int setup_cntr(struct asfd *asfd, const char *manifest,
 	}
 	while(1)
 	{
-		if((ars=sbuf_fill_from_file(sb, fzp, NULL, NULL, cconfs)))
+		if((ars=sbuf_fill_from_file(sb, fzp, NULL, NULL)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means end ok
@@ -129,10 +129,11 @@ static int hard_link_substitution(struct asfd *asfd,
 	struct blk *blk=NULL;
 	int pcmp;
 	enum protocol protocol=get_protocol(cconfs);
+	struct cntr *cntr=get_cntr(cconfs);
 
 	if(!(manio=manio_open(manifest, "rb", protocol))
-	  || !(need_data=sbuf_alloc(cconfs))
-	  || !(hb=sbuf_alloc(cconfs)))
+	  || !(need_data=sbuf_alloc(protocol))
+	  || !(hb=sbuf_alloc(protocol)))
 		goto end;
 
 	if(protocol==PROTO_2)
@@ -144,7 +145,7 @@ static int hard_link_substitution(struct asfd *asfd,
 	while(1)
 	{
 		switch(manio_read_with_blk(manio,
-			hb, need_data->path.buf?blk:NULL, sdirs, cconfs))
+			hb, need_data->path.buf?blk:NULL, sdirs))
 		{
 			case 0: break; // Keep going.
 			case 1: ret=0; goto end; // Finished OK.
@@ -162,7 +163,7 @@ static int hard_link_substitution(struct asfd *asfd,
 			{
 				if(protocol2_extra_restore_stream_bits(asfd,
 					blk, slist, act, need_data,
-					last_ent_was_dir, cconfs)) goto end;
+					last_ent_was_dir, cntr)) goto end;
 				continue;
 			}
 			sbuf_free_content(need_data);
@@ -203,7 +204,8 @@ static int restore_sbuf(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 	struct slist *slist)
 {
 	//printf("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path.buf);
-	if(write_status(cntr_status, sb->path.buf, cconfs)) return -1;
+	if(write_status(cntr_status, sb->path.buf, get_cntr(cconfs)))
+		return -1;
 
 	if(sb->path.cmd==CMD_HARD_LINK)
 	{
@@ -234,7 +236,7 @@ static int restore_sbuf(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 	else
 	{
 		return restore_sbuf_protocol2(asfd, sb,
-		  act, cntr_status, cconfs, need_data);
+		  act, cntr_status, get_cntr(cconfs), need_data);
 	}
 }
 
@@ -296,7 +298,7 @@ int restore_ent(struct asfd *asfd,
 		*last_ent_was_dir=1;
 
 		// Allocate a new sb.
-		if(!(*sb=sbuf_alloc(cconfs))) goto end;
+		if(!(*sb=sbuf_alloc(get_protocol(cconfs)))) goto end;
 	}
 	else
 	{
@@ -318,7 +320,7 @@ static int restore_remaining_dirs(struct asfd *asfd, struct bu *bu,
 	int ret=-1;
 	struct sbuf *sb;
 	struct sbuf *need_data=NULL;
-	if(!(need_data=sbuf_alloc(cconfs))) goto end;
+	if(!(need_data=sbuf_alloc(get_protocol(cconfs)))) goto end;
 	// Restore any directories that are left in the list.
 	for(sb=slist->head; sb; sb=sb->next)
 	{
@@ -331,7 +333,7 @@ static int restore_remaining_dirs(struct asfd *asfd, struct bu *bu,
 		else
 		{
 			if(restore_sbuf_protocol2(asfd, sb, act,
-				cntr_status, cconfs, need_data))
+				cntr_status, get_cntr(cconfs), need_data))
 					goto end;
 		}
 	}
@@ -354,6 +356,7 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 	struct blk *blk=NULL;
 	struct sbuf *need_data=NULL;
 	enum protocol protocol=get_protocol(cconfs);
+	struct cntr *cntr=get_cntr(cconfs);
 
 	if(protocol==PROTO_2)
 	{
@@ -364,8 +367,8 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 	}
 
 	if(!(manio=manio_open(manifest, "rb", protocol))
-	  || !(need_data=sbuf_alloc(cconfs))
-	  || !(sb=sbuf_alloc(cconfs)))
+	  || !(need_data=sbuf_alloc(protocol))
+	  || !(sb=sbuf_alloc(protocol)))
 		goto end;
 
 	while(1)
@@ -380,8 +383,10 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 		{
 			case CMD_MESSAGE:
 			case CMD_WARNING:
-				log_recvd(rbuf, cconfs, 0);
+			{
+				log_recvd(rbuf, cntr, 0);
 				continue;
+			}
 			case CMD_INTERRUPT:
 				// Client wanted to interrupt the
 				// sending of a file. But if we are
@@ -394,7 +399,7 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 		}
 
 		switch(manio_read_with_blk(manio,
-			sb, need_data->path.buf?blk:NULL, sdirs, cconfs))
+			sb, need_data->path.buf?blk:NULL, sdirs))
 		{
 			case 0: break; // Keep going.
 			case 1: ret=0; goto end; // Finished OK.
@@ -412,7 +417,7 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 			{
 				if(protocol2_extra_restore_stream_bits(asfd,
 					blk, slist, act, need_data,
-					last_ent_was_dir, cconfs)) goto end;
+					last_ent_was_dir, cntr)) goto end;
 				continue;
 			}
 			sbuf_free_content(need_data);
@@ -525,7 +530,7 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 		goto end;
 	}
 
-	if(set_logfzp(logpath, cconfs))
+	if(log_fzp_set(logpath, cconfs))
 	{
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
@@ -553,8 +558,8 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 	ret=actual_restore(asfd, bu, manifest,
 		  regex, srestore, act, sdirs, cntr_status, cconfs);
 end:
-	set_logfzp(NULL, cconfs);
-	compress_file(logpath, logpathz, cconfs);
+	log_fzp_set(NULL, cconfs);
+	compress_file(logpath, logpathz, get_int(cconfs[OPT_COMPRESSION]));
 	if(manifest) free(manifest);
 	if(logpath) free(logpath);
 	if(logpathz) free(logpathz);

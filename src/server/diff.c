@@ -4,18 +4,17 @@
 #include "bu_get.h"
 
 static int diff_manifest(struct asfd *asfd,
-	const char *fullpath, struct conf **confs)
+	const char *fullpath, struct cntr *cntr, enum protocol protocol)
 {
 	int ret=0;
 	struct sbuf *sb=NULL;
 	struct manio *manio=NULL;
 	char *manifest_dir=NULL;
-	enum protocol protocol=get_protocol(confs);
 
 	if(!(manifest_dir=prepend_s(fullpath,
 		protocol==PROTO_1?"manifest.gz":"manifest"))
 	  || !(manio=manio_open(manifest_dir, "rb", protocol))
-	  || !(sb=sbuf_alloc(confs)))
+	  || !(sb=sbuf_alloc(protocol)))
 	{
 		log_and_send_oom(asfd, __func__);
 		goto error;
@@ -25,7 +24,7 @@ static int diff_manifest(struct asfd *asfd,
 	{
 		sbuf_free_content(sb);
 
-                switch(manio_read(manio, sb, confs))
+                switch(manio_read(manio, sb))
                 {
                         case 0: break;
                         case 1: goto end; // Finished OK.
@@ -35,7 +34,7 @@ static int diff_manifest(struct asfd *asfd,
 		if(protocol==PROTO_2 && sb->endfile.buf)
 			continue;
 
-		if(write_status(CNTR_STATUS_DIFFING, sb->path.buf, confs))
+		if(write_status(CNTR_STATUS_DIFFING, sb->path.buf, cntr))
 			goto error;
 
 		if(asfd->write(asfd, &sb->attr)
@@ -64,8 +63,8 @@ static int send_backup_name_to_client(struct asfd *asfd, struct bu *bu)
 	return asfd->write_str(asfd, CMD_TIMESTAMP, msg);
 }
 
-int do_diff_server(struct asfd *asfd, struct sdirs *sdirs, struct conf **confs,
-	const char *backup)
+int do_diff_server(struct asfd *asfd, struct sdirs *sdirs, struct cntr *cntr,
+	enum protocol protocol, const char *backup)
 {
 	int ret=-1;
 	uint8_t found=0;
@@ -76,7 +75,7 @@ int do_diff_server(struct asfd *asfd, struct sdirs *sdirs, struct conf **confs,
 	printf("in do_diff_server\n");
 
 	if(bu_get_list(sdirs, &bu_list)
-	  || write_status(CNTR_STATUS_DIFFING, NULL, confs))
+	  || write_status(CNTR_STATUS_DIFFING, NULL, cntr))
 		goto end;
 
 	if(backup && *backup) bno=strtoul(backup, NULL, 10);
@@ -92,8 +91,9 @@ int do_diff_server(struct asfd *asfd, struct sdirs *sdirs, struct conf **confs,
 			{
 				found=1;
 				if(send_backup_name_to_client(asfd, bu)
-				  || diff_manifest(asfd, bu->path, confs))
-					goto end;
+				  || diff_manifest(asfd, bu->path,
+					cntr, protocol))
+						goto end;
 			}
 		}
 		// List the backups.

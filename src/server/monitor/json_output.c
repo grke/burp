@@ -163,8 +163,7 @@ static int do_counters(struct cntr *cntr)
 	static char type[2];
 	struct cntr_ent *e;
 
-	cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count
-		=(unsigned long long)time(NULL);
+	cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count=(uint64_t)time(NULL);
 	if(yajl_gen_str_w("counters")
 	  || yajl_array_open_w()) return -1;
 	for(e=cntr->list; e; e=e->next)

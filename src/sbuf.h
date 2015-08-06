@@ -19,6 +19,7 @@
 #define SBUF_NEED_LINK			0x0010
 #define SBUF_NEED_DATA			0x0020
 #define SBUF_HEADER_WRITTEN_TO_MANIFEST	0x0040
+#define SBUF_END_WRITTEN_TO_MANIFEST	0x0080
 
 // Protocol1 stuff.
 // Keep track of what needs to be sent.
@@ -52,8 +53,7 @@ struct sbuf
 	struct sbuf *next;
 };
 
-extern struct sbuf *sbuf_alloc(struct conf **confs);
-extern struct sbuf *sbuf_alloc_protocol(enum protocol protocol);
+extern struct sbuf *sbuf_alloc(enum protocol protocol);
 extern void sbuf_free_content(struct sbuf *sb);
 extern void sbuf_free(struct sbuf **sb);
 
@@ -75,8 +75,8 @@ extern int sbuf_pathcmp(struct sbuf *a, struct sbuf *b);
 extern void sbuf_print_alloc_stats(void);
 
 extern int sbuf_fill_from_file(struct sbuf *sb, struct fzp *fzp,
-	struct blk *blk, const char *datpath, struct conf **confs);
+	struct blk *blk, const char *datpath);
 extern int sbuf_fill_from_net(struct sbuf *sb, struct asfd *asfd,
-	struct blk *blk, const char *datpath, struct conf **confs);
+	struct blk *blk, const char *datpath, struct cntr *cntr);
 
 #endif

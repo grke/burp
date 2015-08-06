@@ -81,7 +81,7 @@ void linkhash_free(void)
 static inline int get_hash(struct stat *statp)
 {
 	int hash=statp->st_dev;
-	unsigned long long i=statp->st_ino;
+	uint64_t i=statp->st_ino;
 	hash ^= i;
 	i >>= 16;
 	hash ^= i;

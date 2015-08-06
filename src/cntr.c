@@ -138,7 +138,7 @@ int cntr_init(struct cntr *cntr, const char *cname)
 	)
 		return -1;
 
-	cntr->ent[(uint8_t)CMD_TIMESTAMP]->count=(unsigned long long)time(NULL);
+	cntr->ent[(uint8_t)CMD_TIMESTAMP]->count=(uint64_t)time(NULL);
 
 	cntr->str_max_len=calc_max_str_len(cntr, cname);
 	if(!(cntr->str=(char *)calloc_w(1, cntr->str_max_len, __func__))
@@ -163,7 +163,7 @@ void cntr_free(struct cntr **cntr)
 	free_v((void **)cntr);
 }
 
-const char *bytes_to_human(unsigned long long counter)
+const char *bytes_to_human(uint64_t counter)
 {
 	static char ret[32]="";
 	float div=(float)counter;
@@ -209,27 +209,27 @@ static void table_border(enum action act)
 	}
 }
 
-static void incr_count_val(struct cntr *cntr, char ch, unsigned long long val)
+static void incr_count_val(struct cntr *cntr, char ch, uint64_t val)
 {
 	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->count+=val;
 }
 
-static void incr_same_val(struct cntr *cntr, char ch, unsigned long long val)
+static void incr_same_val(struct cntr *cntr, char ch, uint64_t val)
 {
 	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->same+=val;
 }
 
-static void incr_changed_val(struct cntr *cntr, char ch, unsigned long long val)
+static void incr_changed_val(struct cntr *cntr, char ch, uint64_t val)
 {
 	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->changed+=val;
 }
 
-static void incr_deleted_val(struct cntr *cntr, char ch, unsigned long long val)
+static void incr_deleted_val(struct cntr *cntr, char ch, uint64_t val)
 {
 	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->deleted+=val;
 }
 
-static void incr_phase1_val(struct cntr *cntr, char ch, unsigned long long val)
+static void incr_phase1_val(struct cntr *cntr, char ch, uint64_t val)
 {
 	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->phase1+=val;
 }
@@ -259,7 +259,7 @@ static void incr_phase1(struct cntr *cntr, char ch)
 	return incr_phase1_val(cntr, ch, 1);
 }
 
-static void print_end(unsigned long long val)
+static void print_end(uint64_t val)
 {
 	if(val) logc(" %"PRIu64 "\n", val);
 }
@@ -307,7 +307,7 @@ void cntr_add_phase1(struct cntr *c, char ch, int print)
 	fflush(stdout);
 }
 
-void cntr_add_val(struct cntr *c, char ch, unsigned long long val, int print)
+void cntr_add_val(struct cntr *c, char ch, uint64_t val, int print)
 {
 	incr_count_val(c, ch, val);
 }
@@ -319,7 +319,7 @@ void cntr_add_same(struct cntr *c, char ch)
 	incr_same(c, CMD_GRAND_TOTAL);
 }
 
-void cntr_add_same_val(struct cntr *c, char ch, unsigned long long val)
+void cntr_add_same_val(struct cntr *c, char ch, uint64_t val)
 {
 	incr_same_val(c, ch, val);
 	incr_same_val(c, CMD_TOTAL, val);
@@ -333,7 +333,7 @@ void cntr_add_changed(struct cntr *c, char ch)
 	incr_changed(c, CMD_GRAND_TOTAL);
 }
 
-void cntr_add_changed_val(struct cntr *c, char ch, unsigned long long val)
+void cntr_add_changed_val(struct cntr *c, char ch, uint64_t val)
 {
 	incr_changed_val(c, ch, val);
 	incr_changed_val(c, CMD_TOTAL, val);
@@ -347,28 +347,28 @@ void cntr_add_deleted(struct cntr *c, char ch)
 	incr_deleted(c, CMD_GRAND_TOTAL);
 }
 
-void cntr_add_bytes(struct cntr *c, unsigned long long bytes)
+void cntr_add_bytes(struct cntr *c, uint64_t bytes)
 {
 	incr_count_val(c, CMD_BYTES, bytes);
 }
 
-void cntr_add_sentbytes(struct cntr *c, unsigned long long bytes)
+void cntr_add_sentbytes(struct cntr *c, uint64_t bytes)
 {
 	incr_count_val(c, CMD_BYTES_SENT, bytes);
 }
 
-void cntr_add_recvbytes(struct cntr *c, unsigned long long bytes)
+void cntr_add_recvbytes(struct cntr *c, uint64_t bytes)
 {
 	incr_count_val(c, CMD_BYTES_RECV, bytes);
 }
 
 static void quint_print(struct cntr_ent *ent, enum action act)
 {
-	unsigned long long a;
-	unsigned long long b;
-	unsigned long long c;
-	unsigned long long d;
-	unsigned long long e;
+	uint64_t a;
+	uint64_t b;
+	uint64_t c;
+	uint64_t d;
+	uint64_t e;
 	if(!ent) return;
 	a=ent->count;
 	b=ent->changed;
@@ -409,7 +409,7 @@ static void quint_print(struct cntr_ent *ent, enum action act)
 	}
 }
 
-static unsigned long long get_count(struct cntr_ent **ent, enum cmd cmd)
+static uint64_t get_count(struct cntr_ent **ent, enum cmd cmd)
 {
 	if(!ent[(uint8_t)cmd]) return 0;
 	return ent[(uint8_t)cmd]->count;
@@ -417,7 +417,7 @@ static unsigned long long get_count(struct cntr_ent **ent, enum cmd cmd)
 
 static void bottom_part(struct cntr *c, enum action act)
 {
-	unsigned long long l;
+	uint64_t l;
 	struct cntr_ent **e=c->ent;
 	logc("\n");
 	logc("             Messages:   % 11llu\n", get_count(e, CMD_MESSAGE));
@@ -470,7 +470,7 @@ void cntr_print(struct cntr *cntr, enum action act)
 	struct cntr_ent *e;
 	time_t now=time(NULL);
 	time_t start=(time_t)cntr->ent[(uint8_t)CMD_TIMESTAMP]->count;
-	cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count=(unsigned long long)now;
+	cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count=(uint64_t)now;
 
 	border();
 	logc("Start time: %s\n", getdatestr(start));
@@ -517,7 +517,7 @@ int cntr_stats_to_file(struct cntr *cntr,
 	struct async *as=NULL;
 	struct asfd *wfd=NULL;
 	cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count
-		=(unsigned long long)time(NULL);
+		=(uint64_t)time(NULL);
 
 	if(act==ACTION_BACKUP
 	  ||  act==ACTION_BACKUP_TIMED)
@@ -610,11 +610,11 @@ size_t cntr_to_str(struct cntr *cntr, const char *path)
 	for(e=cntr->list; e; e=e->next)
 	{
 		if(e->flags & CNTR_SINGLE_FIELD)
-			snprintf(tmp,
-				sizeof(tmp), "%c%llu\t", e->cmd, e->count);
+			snprintf(tmp, sizeof(tmp),
+				"%c%"PRIu64"\t", e->cmd, e->count);
 		else
-			snprintf(tmp,
-				sizeof(tmp), "%c%llu/%llu/%llu/%llu/%llu\t",
+			snprintf(tmp, sizeof(tmp),
+			"%c%"PRIu64"/%"PRIu64"/%"PRIu64"/%"PRIu64"/%"PRIu64"\t",
 				e->cmd, e->count, e->same,
 				e->changed, e->deleted, e->phase1);
 		strcat(str, tmp);
@@ -684,7 +684,7 @@ static char *get_backup_str(const char *s, int *deletable)
 		snprintf(str, sizeof(str), "never");
 	else
 	{
-		unsigned long backupnum=0;
+		uint64_t backupnum=0;
 		backupnum=strtoul(s, NULL, 10);
 		snprintf(str, sizeof(str),
 			"%07lu %s", backupnum, getdatestr(atol(dp+1)));

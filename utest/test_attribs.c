@@ -16,6 +16,7 @@ static void tear_down(void)
 void assert_iobuf(struct iobuf *a, struct iobuf *b)
 {
 	fail_unless(!iobuf_pathcmp(a, b));
+	fail_unless(a->cmd==b->cmd);
 	fail_unless(a->len==b->len);
 }
 
@@ -54,7 +55,7 @@ static void test_attribs(enum protocol protocol)
 		struct sbuf *encode;
 		struct sbuf *decode;
 		encode=build_attribs(protocol);
-		decode=sbuf_alloc_protocol(protocol);
+		decode=sbuf_alloc(protocol);
 
 		fail_unless(!attribs_encode(encode));
 		free_w(&decode->attr.buf);

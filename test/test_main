@@ -61,7 +61,6 @@ clientlog="$logs/client.log"
 difflog="$logs/diff.log"
 serverpid=
 serverconf=etc/burp/burp-server.conf
-fsize=1024
 serverscript="$PWD/serverscript"
 clientscript="$PWD/clientscript"
 num=0 # Test number. Incremented for each test.
@@ -271,22 +270,6 @@ chmod "$1" "$2" || fail "chown $1 $2 failed"
 EOF
 }
 
-add_run_not_find_client()
-{
-	cat >> "$clientscript" << EOF
-f=\$(/usr/bin/find $1) || fail "find failed"
-[ -n "\$f" ] && fail "$2"
-EOF
-}
-
-add_run_find_client()
-{
-	cat >> "$clientscript" << EOF
-f=\$(/usr/bin/find $1) || fail "find failed"
-[ -z "\$f" ] && fail "$2"
-EOF
-}
-
 write_message()
 {
 	message="$1"
@@ -331,7 +314,7 @@ fi
 # On Windows, need to specify the whole path to find and sort, or the Windows
 # versions are picked up instead.
 /usr/bin/find "$includedir/autoconf" -type f | while read f ; do
-	LC_ALL='C' /usr/bin/sort --random-sort "\$f" > tmpfile
+	LC_ALL='C' sort --random-sort "\$f" > tmpfile
 	[ "$?" != "0" ] && exit 1
 	mv tmpfile "\$f" || exit 1
 done || fail "randomise files failed"
@@ -361,39 +344,6 @@ add_encryption_on()
 	sed_rep_client '$ aencryption_password = 7djh34nmmsd'
 }
 
-add_min_file_size_off()
-{
-	sed_rep_client 's/^min_file_size = .*//g'
-}
-
-add_min_file_size_on()
-{
-	add_min_file_size_off
-	sed_rep_client '$ amin_file_size = '"$fsize"
-}
-
-add_max_file_size_off()
-{
-	sed_rep_client 's/^max_file_size = .*//g'
-}
-
-add_max_file_size_on()
-{
-	add_max_file_size_off
-	sed_rep_client '$ amax_file_size = '"$fsize"
-}
-
-add_exclude_off()
-{
-	sed_rep_client 's/^exclude = .*//g'
-}
-
-add_exclude_on()
-{
-	add_exclude_off
-	sed_rep_client '$ aexclude = '"$excludedir"
-}
-
 add_include_off()
 {
 	sed_rep_client 's/^include = .*//g'
@@ -403,28 +353,6 @@ add_include_on()
 {
 	add_include_off
 	sed_rep_client '$ ainclude = '"$includedir"
-}
-
-add_include_ext_off()
-{
-	sed_rep_client 's/^include_ext = c//g' "$clientconf"
-}
-
-add_include_ext_on()
-{
-	add_include_ext_off
-	sed_rep_client '$ ainclude_ext = c' "$clientconf"
-}
-
-add_exclude_ext_off()
-{
-	sed_rep_client 's/^exclude_ext = c//g' "$clientconf"
-}
-
-add_exclude_ext_on()
-{
-	add_exclude_ext_off
-	sed_rep_client '$ aexclude_ext = c' "$clientconf"
 }
 
 add_split_vss_off()
@@ -491,12 +419,6 @@ add_recovery_method_delete()
 add_recovery_method_resume()
 {
 	sed_rep_server 's/^working_dir_recovery_method = .*/working_dir_recovery_method = resume/g'
-}
-
-add_max_file_size_on()
-{
-	add_max_file_size_off
-	sed_rep_client '$ amax_file_size = '"$fsize"
 }
 
 makedir_server "$logs"
@@ -632,12 +554,7 @@ add_normal_settings()
 	add_protocol1_on
 	add_compression_on
 	add_encryption_off
-	add_max_file_size_off
-	add_min_file_size_off
-	add_exclude_off
 	add_include_on
-	add_include_ext_off
-	add_exclude_ext_off
 	add_server_breakpoint_off
 	add_client_breakpoint_off
 	add_recovery_method_resume
@@ -702,24 +619,6 @@ restart_server()
 sighup_server()
 {
 	kill -1 $serverpid
-}
-
-file_size_test()
-{
-	start_test "File size $1"
-	add_$1_file_size_on
-	add_change_source_files
-	add_backup_run_scripts_setup_verify_restore
-	sign="+"
-	err="greater"
-	if [ "$1" = "min" ] ; then
-		sign="-"
-		err="less"
-	fi
-	add_run_not_find_client \
-		"\"$restoredir\"$res -size $sign${fsize}c -type f" \
-		"found file sizes $err than $fsize"
-	end_test
 }
 
 comp_enc_change_test()
@@ -833,79 +732,47 @@ all_tests()
 	add_restore_diff
 	end_test
 
-	if [ "$protocol" = "1" ] ; then
-		start_test "Interrupt server middle of phase2"
-		add_server_breakpoint_on 2010
-		add_change_source_files
-		add_run_backup_expect_fail_no_increment
-		run_scripts
-		wait_for_backup_to_finish
-		check_for_working_dir
-		end_test
+	start_test "Interrupt server middle of phase2"
+	add_server_breakpoint_on 2010
+	add_change_source_files
+	add_run_backup_expect_fail_no_increment
+	run_scripts
+	wait_for_backup_to_finish
+	check_for_working_dir
+	end_test
 
-		start_test "Interrupt server middle of phase2"
-		add_server_breakpoint_on 2100
-		add_run_backup_expect_fail_no_increment
-		run_scripts
-		wait_for_backup_to_finish
-		check_for_working_dir
-		end_test
+	start_test "Interrupt server middle of phase2"
+	add_server_breakpoint_on 2100
+	add_run_backup_expect_fail_no_increment
+	run_scripts
+	wait_for_backup_to_finish
+	check_for_working_dir
+	end_test
 
-		start_test "Interrupt server middle of phase2"
-		add_server_breakpoint_on 2200
-		add_run_backup_expect_fail_no_increment
-		run_scripts
-		wait_for_backup_to_finish
-		check_for_working_dir
-		end_test
+	start_test "Interrupt server middle of phase2"
+	add_server_breakpoint_on 2200
+	add_run_backup_expect_fail_no_increment
+	run_scripts
+	wait_for_backup_to_finish
+	check_for_working_dir
+	end_test
 
-		start_test "Complete phase2"
-		add_server_breakpoint_off
-		add_backup_run_scripts_setup_verify_restore
-		add_restore_diff
-		end_test
-	fi
+	start_test "Complete phase2"
+	add_server_breakpoint_off
+	add_backup_run_scripts_setup_verify_restore
+	add_restore_diff
+	end_test
 
 	comp_enc_change_test on  off off
 	comp_enc_change_test on  off on
 	comp_enc_change_test off off on
 	comp_enc_change_test off on  on
 	comp_enc_change_test on  on  on
-	file_size_test min
-	file_size_test max
 
 	start_test "Permissions"
 	add_chown 755 "$includedir/utest/test_cmd.c"
 	add_backup_run_scripts_setup_verify_restore
 	add_restore_diff
-	end_test
-
-	start_test "Exclude directory"
-	add_exclude_on
-	add_backup_run_scripts_setup_verify_restore
-	# On Windows, /C:/ gets converted to /C_/, so tweak the path.
-	exc=$(echo "${restoredir}$res/$excludedir" | sed -e 's/\/C:\//\/C_\//g')
-	inc=$(echo "${restoredir}$res/$includedir" | sed -e 's/\/C:\//\/C_\//g')
-	echo "[ -d \"$exc\" ] && fail \"$exc should not have been restored!\"" \
-		>> "$clientscript"
-	echo "[ ! -d \"$inc\" ] && fail \"$inc should have been restored!\"" \
-		>> "$clientscript"
-	end_test
-
-	start_test "Exclude extension"
-	add_exclude_ext_on
-	add_backup_run_scripts_setup_verify_restore
-	add_run_not_find_client "\"$restoredir\"$res -type f -name '*.c'" \
-		"$restoredir$res should not contain any '.c' files"
-	end_test
-
-	start_test "Include extension"
-	add_include_ext_on
-	add_backup_run_scripts_setup_verify_restore
-	add_run_not_find_client "\"$restoredir\"$res -type f -name '*.h'" \
-		"$restoredir$res should not contain any '.h' files"
-	add_run_find_client "\"$restoredir\"$res -type f -name '*.c'" \
-		"$restoredir$res should contain '.c' files"
 	end_test
 }
 

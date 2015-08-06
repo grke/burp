@@ -305,12 +305,19 @@ static void init_max(const char *path,
 	if(*max<default_max) *max=default_max;
 }
 
-void init_fs_max(const char *path)
+int init_fs_max(const char *path)
 {
+	struct stat statp;
+	if(stat(path, &statp))
+	{
+		logp("Path %s does not exist in %s\n", path, __func__);
+		return -1;
+	}
 	// Get system path and filename maximum lengths.
 	init_max(path, &fs_path_max, _PC_PATH_MAX, 1024);
 	init_max(path, &fs_name_max, _PC_NAME_MAX, 255);
 	fs_full_path_max=fs_path_max+fs_name_max;
+	return 0;
 }
 
 int looks_like_tmp_or_hidden_file(const char *filename)
@@ -396,7 +403,7 @@ static int entries_in_directory(const char *path, struct dirent ***nl,
         	// Get system path and filename maximum lengths.
         	// FIX THIS: maybe this should be done every time a file system
         	// is crossed?
-		init_fs_max(path);
+		if(init_fs_max(path)) return -1;
 	}
 #if defined(O_DIRECTORY) && defined(O_NOATIME)
 	int dfd=-1;

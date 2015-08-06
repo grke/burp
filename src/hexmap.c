@@ -56,34 +56,34 @@ void md5str_to_bytes(const char *md5str, uint8_t *bytes)
 char *bytes_to_md5str(uint8_t *bytes)
 {
         static char str[64]="";
-        snprintf(str, sizeof(str),
-          "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
-                bytes[0], bytes[1], bytes[2], bytes[3],
-                bytes[4], bytes[5], bytes[6], bytes[7],
-                bytes[8], bytes[9], bytes[10], bytes[11],
-                bytes[12], bytes[13], bytes[14], bytes[15]);
+        snprintf(str, sizeof(str), "%016"PRIx64"%016"PRIx64,
+		htobe64(*(uint64_t *)bytes), htobe64(*(uint64_t *)(bytes+8)));
         return str;
 }
 
-void savepathstr_to_bytes(const char *savepathstr, uint8_t *bytes)
+uint64_t savepathstr_to_uint64(const char *savepathstr)
 {
-	str_to_bytes(savepathstr, bytes, SAVE_PATH_LEN);
+	uint8_t b[sizeof(uint64_t)];
+	str_to_bytes(savepathstr, b, sizeof(b));
+	return htobe64(*(uint64_t *)&b);
 }
 
-char *bytes_to_savepathstr(uint8_t *bytes)
+char *uint64_to_savepathstr(uint64_t bytes)
 {
-        static char str[20]="";
+        static char str[15]="";
+	uint64_t tmp=htobe64(bytes);
+	uint8_t *b=(uint8_t *)&tmp;
         snprintf(str, sizeof(str), "%02X%02X/%02X%02X/%02X%02X",
-                bytes[0], bytes[1], bytes[2], bytes[3],
-                bytes[4], bytes[5]);
+                b[0], b[1], b[2], b[3], b[4], b[5]);
         return str;
 }
 
-char *bytes_to_savepathstr_with_sig(uint8_t *bytes)
+char *uint64_to_savepathstr_with_sig(uint64_t bytes)
 {
         static char str[20]="";
+	uint64_t tmp=htobe64(bytes);
+	uint8_t *b=(uint8_t *)&tmp;
         snprintf(str, sizeof(str), "%02X%02X/%02X%02X/%02X%02X/%02X%02X",
-                bytes[0], bytes[1], bytes[2], bytes[3],
-                bytes[4], bytes[5], bytes[6], bytes[7]);
+                b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]);
         return str;
 }

@@ -1,5 +1,6 @@
 #include "burp.h"
 #include "alloc.h"
+#include "cmd.h"
 #include "fsops.h"
 #include "fzp.h"
 #include "log.h"
@@ -240,7 +241,7 @@ error:
 
 #ifndef HAVE_WIN32
 // There is no zlib gztruncate. Inflate it, truncate it, recompress it.
-static int gztruncate(const char *path, off_t length, struct conf **confs)
+static int gztruncate(const char *path, off_t length, int compression)
 {
 	int ret=1;
 	char tmp[16];
@@ -256,7 +257,7 @@ static int gztruncate(const char *path, off_t length, struct conf **confs)
 		logp("truncate of %s failed in %s\n", dest, __func__);
 		goto end;
 	}
-	if(compress_file(dest, dest2, confs))
+	if(compress_file(dest, dest2, compression))
 		goto end;
 	unlink(dest);
 	ret=do_rename(dest2, path);
@@ -269,14 +270,14 @@ end:
 }
 
 int fzp_truncate(const char *path, enum fzp_type type, off_t length,
-	struct conf **confs)
+	int compression)
 {
 	switch(type)
 	{
 		case FZP_FILE:
 			return truncate(path, length);
 		case FZP_COMPRESSED:
-			return gztruncate(path, length, confs);
+			return gztruncate(path, length, compression);
 		default:
 			unknown_type(type, __func__);
 			goto error;
@@ -436,4 +437,53 @@ X509 *fzp_PEM_read_X509(struct fzp *fzp)
 	not_open(__func__);
 error:
 	return NULL;
+}
+
+static void pass_msg(size_t nmemb, size_t got, int pass)
+{
+	logp("Tried to read %u bytes, got %u by pass %d\n",
+		nmemb, got, pass);
+}
+
+int fzp_read_ensure(struct fzp *fzp, void *ptr, size_t nmemb, const char *func)
+{
+	static int f;
+	static size_t r;
+	static size_t got;
+	static int pass;
+	for(r=0, got=0, pass=0; got!=nmemb; pass++)
+	{
+		r=fzp_read(fzp, ((char *)ptr)+got, nmemb-got);
+		if(r>0)
+		{
+			got+=r;
+			continue;
+		}
+		if(r<0)
+		{
+			pass_msg(nmemb, got, pass);
+			logp("Error in %s, called from %s: %s\n",
+				__func__, func, strerror(errno));
+			return -1;
+		}
+		f=fzp_eof(fzp);
+		if(!f) continue; // Not yet end of file, keep trying.
+		if(f>0)
+		{
+			// End of file.
+			if(!got) return 1;
+			pass_msg(nmemb, got, pass);
+			logp("Error in %s, called from %s: %u bytes, eof\n",
+				__func__, func, got);
+			return -1;
+		}
+		else
+		{
+			pass_msg(nmemb, got, pass);
+			logp("Error in %s by fzp_feof, called from %s: %s\n",
+				__func__, func, strerror(errno));
+			return -1;
+		}
+	}
+	return 0;
 }

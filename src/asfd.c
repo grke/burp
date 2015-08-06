@@ -459,7 +459,9 @@ static int asfd_simple_loop(struct asfd *asfd,
 			if(rbuf->cmd==CMD_WARNING
 			  || rbuf->cmd==CMD_MESSAGE)
 			{
-				log_recvd(rbuf, confs, 0);
+				struct cntr *cntr=NULL;
+				if(confs) cntr=get_cntr(confs);
+				log_recvd(rbuf, cntr, 0);
 			}
 			else if(rbuf->cmd==CMD_INTERRUPT)
 			{

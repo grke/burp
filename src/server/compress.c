@@ -1,15 +1,13 @@
 #include "include.h"
 
-char *comp_level(struct conf **confs)
+char *comp_level(int compression)
 {
 	static char comp[8]="";
-	snprintf(comp, sizeof(comp), "wb%d",
-		// Unit test might run compress with no confs - set to 9.
-		confs?get_int(confs[OPT_COMPRESSION]):9);
+	snprintf(comp, sizeof(comp), "wb%d", compression);
 	return comp;
 }
 
-static int compress(const char *src, const char *dst, struct conf **cconfs)
+static int compress(const char *src, const char *dst, int compression)
 {
 	int res;
 	int got;
@@ -18,7 +16,7 @@ static int compress(const char *src, const char *dst, struct conf **cconfs)
 	char buf[ZCHUNK];
 
 	if(!(sfzp=fzp_open(src, "rb"))
-	  || !(dfzp=fzp_gzopen(dst, comp_level(cconfs))))
+	  || !(dfzp=fzp_gzopen(dst, comp_level(compression))))
 		goto error;
 	while((got=fzp_read(sfzp, buf, sizeof(buf)))>0)
 	{
@@ -38,7 +36,7 @@ error:
 	return -1;
 }
 
-int compress_file(const char *src, const char *dst, struct conf **cconfs)
+int compress_file(const char *src, const char *dst, int compression)
 {
 	int ret=-1;
 	char *dsttmp=NULL;
@@ -48,10 +46,10 @@ int compress_file(const char *src, const char *dst, struct conf **cconfs)
 
 	if(!(dsttmp=prepend(dst, p)))
 		return -1;
-	
+
 	// Need to compress the log.
 	logp("Compressing %s to %s...\n", src, dst);
-	if(compress(src, dsttmp, cconfs)
+	if(compress(src, dsttmp, compression)
 	// Possible rename race condition is of little consequence here.
 	// You will still have the uncompressed log file.
 	  || do_rename(dsttmp, dst))
@@ -68,13 +66,13 @@ end:
 }
 
 int compress_filename(const char *d,
-	const char *file, const char *zfile, struct conf **cconfs)
+	const char *file, const char *zfile, int compression)
 {
 	char *fullfile=NULL;
 	char *fullzfile=NULL;
 	if(!(fullfile=prepend_s(d, file))
 	  || !(fullzfile=prepend_s(d, zfile))
-	  || compress_file(fullfile, fullzfile, cconfs))
+	  || compress_file(fullfile, fullzfile, compression))
 	{
 		free_w(&fullfile);
 		free_w(&fullzfile);

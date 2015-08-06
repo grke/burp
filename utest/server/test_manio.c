@@ -18,7 +18,6 @@
 #include "../../src/slist.h"
 #include "../../src/protocol2/blk.h"
 #include "../../src/server/manio.h"
-#include "../../src/server/resume2.h"
 
 static const char *path="utest_manio";
 
@@ -26,6 +25,23 @@ static void tear_down(void)
 {
 	alloc_check();
 	recursive_delete(path);
+}
+
+struct manio *do_manio_open(const char *path, const char *mode,
+	enum protocol protocol, int phase)
+{
+	switch(phase)
+	{
+		case 0: return manio_open(path, mode, protocol);
+		case 1: return manio_open_phase1(path, mode, protocol);
+		case 2: return manio_open_phase2(path, mode, protocol);
+		default:
+			fprintf(stderr,
+				"Do not know how to manio_open phase %d\n",
+				phase);
+			fail_unless(0);
+			return NULL;
+	}
 }
 
 static void assert_blk(struct blk *blk_expected, struct blk *blk)
@@ -38,8 +54,7 @@ static void assert_blk(struct blk *blk_expected, struct blk *blk)
 	fail_unless(blk_expected->fingerprint==blk->fingerprint);
 	fail_unless(!memcmp(blk_expected->md5sum,
 		blk->md5sum, MD5_DIGEST_LENGTH));
-	fail_unless(!memcmp(blk_expected->savepath,
-		blk->savepath, SAVE_PATH_LEN));
+	fail_unless(blk_expected->savepath==blk->savepath);
 }
 
 // FIX THIS: Far too complicated.
@@ -51,7 +66,7 @@ static void read_manifest(struct sbuf **sb_expected, struct manio *manio,
 	struct blk *blk=NULL;
 	struct blk *blk_expected=NULL;
 	struct blk *blk_expected_end=NULL;
-	fail_unless((rb=sbuf_alloc_protocol(protocol))!=NULL);
+	fail_unless((rb=sbuf_alloc(protocol))!=NULL);
 	fail_unless((blk=blk_alloc())!=NULL);
 	if(protocol==PROTO_2)
 	{
@@ -60,7 +75,7 @@ static void read_manifest(struct sbuf **sb_expected, struct manio *manio,
 	}
 	while(1)
 	{
-		switch(manio_read_with_blk(manio, rb, blk, NULL, NULL))
+		switch(manio_read_with_blk(manio, rb, blk, NULL))
 		{
 			case 0: break;
 			case 1: goto end;
@@ -108,23 +123,6 @@ static void read_manifest(struct sbuf **sb_expected, struct manio *manio,
 end:
 	sbuf_free(&rb);
 	blk_free(&blk);
-}
-
-static struct manio *do_manio_open(const char *path, const char *mode,
-        enum protocol protocol, int phase)
-{
-        switch(phase)
-        {
-                case 0: return manio_open(path, mode, protocol);
-                case 1: return manio_open_phase1(path, mode, protocol);
-                case 2: return manio_open_phase2(path, mode, protocol);
-                default:
-                        fprintf(stderr,
-				"Do not know how to manio_open phase %d\n",
-				phase);
-                        fail_unless(0);
-			return NULL;
-        }
 }
 
 static void test_manifest(enum protocol protocol, int phase)
@@ -258,111 +256,189 @@ START_TEST(test_man_protocol2_phase2_tell_seek)
 }
 END_TEST
 
-static void add_slist_path(struct slist *slist, int *entries,
-	enum protocol protocol, enum cmd cmd, const char *path)
+static const char *get_extra_path(int i, const char *dir)
 {
-	char *copy=NULL;
-	struct sbuf *sb;
-	sb=build_attribs_reduce(protocol);
-	attribs_encode(sb);
-	fail_unless((copy=strdup_w(path, __func__))!=NULL);
-	iobuf_from_str(&sb->path, cmd, copy);
-	slist_add_sbuf(slist, sb);
-	(*entries)++;
+	static char p[64]="";
+	snprintf(p, sizeof(p), "%s/%s%s%08X", path, dir?dir:"", dir?"/":"", i);
+	return p;
 }
 
-struct slist *build_slist_specific_paths(enum protocol protocol, int *entries)
+static void check_path(int i, int exists, const char *dir)
 {
-	struct slist *s=NULL;
-	fail_unless((s=slist_alloc())!=NULL);
-	add_slist_path(s, entries, protocol, CMD_DIRECTORY, "/a");
-	add_slist_path(s, entries, protocol, CMD_DIRECTORY, "/a/dir");
-	add_slist_path(s, entries, protocol, CMD_FILE,      "/a/dir/path");
-	add_slist_path(s, entries, protocol, CMD_DIRECTORY, "/a/folder1");
-	add_slist_path(s, entries, protocol, CMD_DIRECTORY, "/a/folder2");
-	add_slist_path(s, entries, protocol, CMD_DIRECTORY, "/a/folder3");
-	add_slist_path(s, entries, protocol, CMD_FILE,      "/a/folder3/path");
-	add_slist_path(s, entries, protocol, CMD_FILE,      "/a/folder3/path2");
-	add_slist_path(s, entries, protocol, CMD_FILE,      "/a/folder3/path3");
-	return s;
+	struct stat statp;
+	const char *p=get_extra_path(i, dir);
+	fail_unless(exists==!lstat(p, &statp));
 }
 
-static void test_man_phase2_forward(enum protocol protocol)
+static void check_paths(int i, int exists)
 {
-	int phase=2;
-	int entries=0;
-	struct slist *slist;
-	struct sbuf *sb=NULL;
+	check_path(i, exists, NULL);
+	check_path(i, exists, "dindex");
+	check_path(i, exists, "hooks");
+}
+
+static void check_hooks(int i, int fcount)
+{
+	int ret;
+	fzp *fzp;
+	const char *p;
+	struct iobuf rbuf;
+	struct blk blk;
+	int lines=0;
+	uint64_t last_fingerprint=0;
+	char manifest_line[64]="";
+
+	p=get_extra_path(i, "hooks");
+	memset(&rbuf, 0, sizeof(rbuf));
+	snprintf(manifest_line, sizeof(manifest_line),
+		"%s/%08X", RMANIFEST_RELATIVE, i);
+
+	fail_unless((fzp=fzp_gzopen(p, "rb"))!=NULL);
+	while(!(ret=iobuf_fill_from_fzp(&rbuf, fzp)))
+	{
+		lines++;
+		switch(rbuf.cmd)
+		{
+			case CMD_MANIFEST:
+				fail_unless(lines==1);
+				ck_assert_str_eq(manifest_line, rbuf.buf);
+				break;
+			case CMD_FINGERPRINT:
+				blk_set_from_iobuf_fingerprint(&blk, &rbuf);
+				fail_unless(blk.fingerprint>last_fingerprint);
+				last_fingerprint=blk.fingerprint;
+				break;
+			default:
+				fail_unless(0==1);
+				break;
+		}
+		iobuf_free_content(&rbuf);
+	}
+	fail_unless(ret==1);
+	if(i<fcount-1)
+		fail_unless(lines>200);
+	else
+		fail_unless(lines>10); // Last file will have fewer entries.
+	fail_unless(!fzp_close(&fzp));
+}
+
+static void check_dindex(int i)
+{
+	int ret;
+	fzp *fzp;
+	const char *p;
+	struct iobuf rbuf;
+	int lines=0;
+	struct blk blk;
+	uint64_t last_savepath=0;
+
+	p=get_extra_path(i, "dindex");
+	memset(&rbuf, 0, sizeof(rbuf));
+
+	fail_unless((fzp=fzp_gzopen(p, "rb"))!=NULL);
+	while(!(ret=iobuf_fill_from_fzp(&rbuf, fzp)))
+	{
+		lines++;
+		switch(rbuf.cmd)
+		{
+			case CMD_SAVE_PATH:
+				blk_set_from_iobuf_savepath(&blk, &rbuf);
+				fail_unless(blk.savepath>last_savepath);
+				last_savepath=blk.savepath;
+				break;
+			default:
+				fail_unless(0==1);
+				break;
+		}
+		iobuf_free_content(&rbuf);
+	}
+	fail_unless(ret==1);
+	fail_unless(lines>500);
+	fail_unless(!fzp_close(&fzp));
+}
+
+START_TEST(test_man_protocol2_hooks)
+{
+	int i=0;
+	int phase=0;
+	int entries=1000;
 	struct manio *manio;
-	struct iobuf result;
-	struct iobuf target;
-	man_off_t *pos=NULL;
-	man_off_t *lastpos=NULL;
-	struct conf **confs;
-	confs=confs_alloc();
-	confs_init(confs);
-	fail_unless(!conf_load_global_only_buf(MIN_SERVER_CONF, confs));
-	set_e_protocol(confs[OPT_PROTOCOL], protocol);
+	struct slist *slist;
+	uint64_t fcount;
+	enum protocol protocol=PROTO_2;
 
 	prng_init(0);
 	base64_init();
 	hexmap_init();
 	recursive_delete(path);
 
-	slist=build_slist_specific_paths(protocol, &entries);
-	build_manifest_phase2_from_slist(path, slist, protocol);
+	slist=build_manifest(path, protocol, entries, phase);
 	fail_unless(slist!=NULL);
-
-	iobuf_init(&result);
-	iobuf_init(&target);
-
-	fail_unless((manio=do_manio_open(path, "rb", protocol, phase))!=NULL);
-
-	fail_unless((sb=sbuf_alloc_protocol(protocol))!=NULL);
-	iobuf_from_str(&target, CMD_FILE, (char *)"/a/folder3/path");
-	fail_unless(!do_forward(manio, &result, &target, NULL,
-		0, NULL, confs, &pos, &lastpos, sb));
-	sbuf_free_content(sb);
-
-	assert_iobuf(&target, &result);
-	fail_unless(!manio_seek(manio, lastpos));
-
-	fail_unless(!manio_read_with_blk(manio, sb, NULL, NULL, NULL));
-	fail_unless(sb->path.cmd==CMD_DIRECTORY);
-	ck_assert_str_eq("/a/folder1", sb->path.buf);
-	sbuf_free_content(sb);
-
+	fail_unless((manio=manio_open(path, "rb", protocol))!=NULL);
+	fail_unless(!manio_read_fcount(manio));
+	fcount=manio->offset->fcount;
 	fail_unless(!manio_close(&manio));
-	fail_unless(!manio);
+
+	// fcount will probably be 4, but give some wiggle room.
+	fail_unless(fcount>=3 && fcount<=5);
+	for(i=0; i<(int)fcount; i++)
+	{
+		check_paths(i, 1 /* exist */);
+		check_hooks(i, (int)fcount);
+		check_dindex(i);
+	}
+	check_paths(i, 0 /* do not exist */);
 
 	slist_free(&slist);
-
-	iobuf_free_content(&result);
-	man_off_t_free(&pos);
-	man_off_t_free(&lastpos);
-	confs_free(&confs);
-	sbuf_free(&sb);
 	tear_down();
 }
+END_TEST
 
-START_TEST(test_man_protocol1_phase2_forward)
+struct boundary_data
 {
-	return test_man_phase2_forward(PROTO_1);
+	char mdstr[33];
+	int expected;
+};
+
+static struct boundary_data bdata[] = {
+	{ "00000000000000000000000000000000", 1 },
+	{ "D41D8CD98F00B204E9800998ECF8427E", 0 },
+	{ "01010101010101010101010101010101", 0 },
+	{ "01010101010101010101010101010000", 1 },
+	{ "10101010101010101010101010101111", 1 },
+	{ "00001010101010101010101010101001", 1 },
+	{ "0123456789ABCDEF0123456789ABCDEF", 0 },
+	{ "10101010101010FF0010101010101001", 0 },
+	{ "10101010101010FFFF10101010101001", 1 },
+	{ "101010101010100EEEE1001010101001", 1 },
+	{ "1010101010100EEEE100101110101001", 1 },
+	{ "0CCCC010101010101010101010101001", 1 },
+	{ "0CCC0010101010101010101010101001", 0 },
+	{ "00CCCC01010101010101010101010101", 1 },
+	{ "000CCCC0101010101010101010101101", 1 },
+	{ "CCC0CCC1101010101010101010101101", 0 }
+};
+
+START_TEST(test_man_find_boundary)
+{
+	uint8_t bytes[MD5_DIGEST_LENGTH];
+        hexmap_init();
+	FOREACH(bdata)
+	{
+		int result;
+		md5str_to_bytes(bdata[i].mdstr, bytes);
+		result=manio_find_boundary(bytes);
+		fail_unless(bdata[i].expected==result);
+	}
 }
 END_TEST
 
-START_TEST(test_man_protocol2_phase2_forward)
-{
-	return test_man_phase2_forward(PROTO_2);
-}
-END_TEST
-
-Suite *suite_manio(void)
+Suite *suite_server_manio(void)
 {
 	Suite *s;
 	TCase *tc_core;
 
-	s=suite_create("manio");
+	s=suite_create("server_manio");
 
 	tc_core=tcase_create("Core");
 
@@ -381,8 +457,9 @@ Suite *suite_manio(void)
 	tcase_add_test(tc_core, test_man_protocol1_phase2_tell_seek);
 	tcase_add_test(tc_core, test_man_protocol2_phase2_tell_seek);
 
-	tcase_add_test(tc_core, test_man_protocol1_phase2_forward);
-	tcase_add_test(tc_core, test_man_protocol2_phase2_forward);
+	tcase_add_test(tc_core, test_man_protocol2_hooks);
+
+	tcase_add_test(tc_core, test_man_find_boundary);
 
 	suite_add_tcase(s, tc_core);
 

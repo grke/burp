@@ -4,6 +4,7 @@
 
 void alloc_check(void)
 {
+//printf("%d %d\n", free_count, alloc_count);
 	fail_unless(free_count==alloc_count);
 }
 

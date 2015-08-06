@@ -26,14 +26,14 @@ struct manio
 	int sig_count;		// When writing, need to split the files
 				// after every X signatures written.
 	char *hook_dir;
-	char **hook_sort;	// Array for sorting and writing hooks.
+	uint64_t *hook_sort;	// Array for sorting and writing hooks.
 	int hook_count;
 	char *rmanifest;	// When renaming the manifest to its final
 				// location, hooks need to be written using the
 				// final destination. This is for that
 				// circumstance.
 	char *dindex_dir;
-	char **dindex_sort;	// Array for sorting and writing dindex.
+	uint64_t *dindex_sort;	// Array for sorting and writing dindex.
 	int dindex_count;
 	enum protocol protocol;	// Whether running in protocol1/2 mode.
 	int phase;
@@ -54,24 +54,28 @@ extern int manio_close(struct manio **manio);
 extern int manio_read_fcount(struct manio *manio);
 
 extern int manio_read_with_blk(struct manio *manio,
-	struct sbuf *sb, struct blk *blk, struct sdirs *sdirs,
-	struct conf **confs);
-extern int manio_read(struct manio *manio, struct sbuf *sb,
-	struct conf **confs);
+	struct sbuf *sb, struct blk *blk, struct sdirs *sdirs);
+extern int manio_read(struct manio *manio, struct sbuf *sb);
 
 extern int manio_write_sig_and_path(struct manio *manio, struct blk *blk);
 extern int manio_write_sbuf(struct manio *manio, struct sbuf *sb);
 
 extern int manio_copy_entry(struct sbuf *csb, struct sbuf *sb,
 	struct blk **blk, struct manio *srcmanio,
-	struct manio *dstmanio, struct conf **confs);
+	struct manio *dstmanio);
 extern int manio_forward_through_sigs(struct sbuf *csb,
-	struct blk **blk, struct manio *manio, struct conf **confs);
+	struct blk **blk, struct manio *manio);
 
 extern void man_off_t_free(man_off_t **offset);
 extern man_off_t *manio_tell(struct manio *manio);
 extern int manio_seek(struct manio *manio, man_off_t *offset);
-extern int manio_truncate(struct manio *manio,
-	man_off_t *offset, struct conf **confs);
+extern int manio_close_and_truncate(struct manio **manio,
+	man_off_t *offset, int compression);
+
+#ifdef UTEST
+extern int write_hook_header(struct fzp *fzp, const char *rmanifest,
+        const char *msg);
+extern int manio_find_boundary(uint8_t *md5sum);
+#endif
 
 #endif

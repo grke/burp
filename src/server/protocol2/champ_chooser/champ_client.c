@@ -1,6 +1,15 @@
-#include "include.h"
+#include "../../../burp.h"
+#include "../../asfd.h"
+#include "../../async.h"
 #include "../../cmd.h"
+#include "../../conf.h"
+#include "../../fsops.h"
 #include "../../lock.h"
+#include "../../log.h"
+#include "../../prepend.h"
+#include "champ_client.h"
+#include "champ_chooser.h"
+#include "champ_server.h"
 
 #include <sys/un.h>
 
@@ -24,7 +33,7 @@ static int champ_chooser_fork(struct sdirs *sdirs, struct conf **confs)
 		case 0:
 			// Child.
 			int cret;
-			set_logfzp(NULL, confs);
+			log_fzp_set(NULL, confs);
 			switch(champ_chooser_server(sdirs, confs))
 			{
 				case 0: cret=0;

@@ -15,18 +15,17 @@ static void tear_down(void)
 
 START_TEST(test_protocol2_blist)
 {
-//	struct blk *blk;
+	struct blk *blk;
 	struct blist *blist;
 	base64_init();
 	hexmap_init();
 	blist=build_blist(1000);
-/*
 	for(blk=blist->head; blk; blk=blk->next)
 	{
-		printf("f: %016"PRIX64" %s\n",
-			blk->fingerprint, bytes_to_md5str(blk->md5sum));
+		// Builder is currently only generating md5sums without
+		// matching data, so it will not verify for now.
+		// fail_unless(blk_verify(blk)==1);
 	}
-*/
 	blist_free(&blist);
 	tear_down();
 }

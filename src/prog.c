@@ -7,6 +7,7 @@
 #include "lock.h"
 #include "server/main.h"
 #include "server/protocol1/bedup.h"
+#include "server/protocol2/bsigs.h"
 #include "server/protocol2/champ_chooser/champ_server.h"
 
 static char *get_conf_path(void)
@@ -124,7 +125,7 @@ int reload(struct conf **confs, const char *conffile, bool firsttime,
 
 	// This will turn on syslogging which could not be turned on before
 	// conf_load.
-	set_logfzp(NULL, confs);
+	log_fzp_set(NULL, confs);
 
 #ifndef HAVE_WIN32
 	if(get_e_burp_mode(confs[OPT_BURP_MODE])==BURP_MODE_SERVER)
@@ -134,8 +135,9 @@ int reload(struct conf **confs, const char *conffile, bool firsttime,
 #endif
 
 	// Do not try to change user or group after the first time.
-	if(firsttime && chuser_and_or_chgrp(confs))
-		return -1;
+	if(firsttime && chuser_and_or_chgrp(
+		get_string(confs[OPT_USER]), get_string(confs[OPT_GROUP])))
+			return -1;
 
 	return 0;
 }
@@ -293,10 +295,12 @@ int main (int argc, char *argv[])
 	int test_confs=0;
 	enum burp_mode mode;
 
-	init_log(argv[0]);
+	log_init(argv[0]);
 #ifndef HAVE_WIN32
 	if(!strcmp(prog, "bedup"))
 		return run_bedup(argc, argv);
+	if(!strcmp(prog, "bsigs"))
+		return run_bsigs(argc, argv);
 #endif
 
 	while((option=getopt(argc, argv, "a:b:c:C:d:fFghil:nq:r:s:tvxjz:?"))!=-1)

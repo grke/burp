@@ -18,14 +18,14 @@ int backup_phase1_server_all(struct async *as,
 
 	if(!(phase1tmp=get_tmp_filename(sdirs->phase1data))
 	  || !(manio=manio_open_phase1(phase1tmp,
-		comp_level(confs), protocol))
-	  || !(sb=sbuf_alloc(confs)))
+		comp_level(get_int(confs[OPT_COMPRESSION])), protocol))
+	  || !(sb=sbuf_alloc(protocol)))
 		goto error;
 
 	while(1)
 	{
 		sbuf_free_content(sb);
-		switch(sbuf_fill_from_net(sb, asfd, NULL, NULL, confs))
+		switch(sbuf_fill_from_net(sb, asfd, NULL, NULL, cntr))
 		{
 			case 0: break;
 			case 1: // Last thing the client sends is
@@ -38,7 +38,7 @@ int backup_phase1_server_all(struct async *as,
 			case -1:
 			default: goto error;
 		}
-		if(write_status(CNTR_STATUS_SCANNING, sb->path.buf, confs)
+		if(write_status(CNTR_STATUS_SCANNING, sb->path.buf, cntr)
 		  || manio_write_sbuf(manio, sb))
 			goto error;
 		cntr_add_phase1(cntr, sb->path.cmd, 0);
@@ -46,7 +46,7 @@ int backup_phase1_server_all(struct async *as,
 		if(sbuf_is_filedata(sb))
 		{
 			cntr_add_val(cntr, CMD_BYTES_ESTIMATED,
-				(unsigned long long)sb->statp.st_size, 0);
+				(uint64_t)sb->statp.st_size, 0);
 		}
 	}
 
@@ -57,8 +57,10 @@ end:
 		goto error;
 	}
 
-	if(check_quota(as, confs))
-		goto error;
+	if(check_quota(as, cntr,
+		get_uint64_t(confs[OPT_HARD_QUOTA]),
+		get_uint64_t(confs[OPT_SOFT_QUOTA])))
+			goto error;
 
 	// Possible rename race condition is of no consequence here, because
 	// the working directory will always get deleted if phase1 is not

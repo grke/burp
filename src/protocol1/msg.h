@@ -6,8 +6,8 @@
 
 extern int transfer_gzfile_inl(struct asfd *asfd,
 	struct sbuf *sb, const char *path, BFILE *bfd,
-	unsigned long long *rcvd, unsigned long long *sent,
+	uint64_t *rcvd, uint64_t *sent,
 	const char *encpassword, int enccompressed,
-	struct conf **conf, char **metadata);
+	struct cntr *cntr, char **metadata);
 
 #endif

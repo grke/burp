@@ -108,7 +108,7 @@ err:
 
 static int list_manifest(struct asfd *asfd,
 	const char *fullpath, regex_t *regex,
-	const char *browsedir, struct conf **confs)
+	const char *browsedir, struct cntr *cntr, enum protocol protocol)
 {
 	int ret=0;
 	struct sbuf *sb=NULL;
@@ -116,12 +116,11 @@ static int list_manifest(struct asfd *asfd,
 	char *manifest_dir=NULL;
 	char *last_bd_match=NULL;
 	size_t bdlen=0;
-	enum protocol protocol=get_protocol(confs);
 
 	if(!(manifest_dir=prepend_s(fullpath,
 		protocol==PROTO_1?"manifest.gz":"manifest"))
 	  || !(manio=manio_open(manifest_dir, "rb", protocol))
-	  || !(sb=sbuf_alloc(confs)))
+	  || !(sb=sbuf_alloc(protocol)))
 	{
 		log_and_send_oom(asfd, __func__);
 		goto error;
@@ -134,7 +133,7 @@ static int list_manifest(struct asfd *asfd,
 		int show=0;
 		sbuf_free_content(sb);
 
-		switch(manio_read(manio, sb, confs))
+		switch(manio_read(manio, sb))
 		{
 			case 0: break;
 			case 1: if(browsedir && *browsedir && !last_bd_match)
@@ -149,7 +148,7 @@ static int list_manifest(struct asfd *asfd,
 		if(sbuf_is_metadata(sb))
 			continue;
 
-		if(write_status(CNTR_STATUS_LISTING, sb->path.buf, confs))
+		if(write_status(CNTR_STATUS_LISTING, sb->path.buf, cntr))
 			goto error;
 
 		if(browsedir)
@@ -188,18 +187,19 @@ end:
 }
 
 static int send_backup_name_to_client(struct asfd *asfd,
-	struct bu *bu, struct conf **confs)
+	struct bu *bu, enum protocol protocol)
 {
 	char msg[64]="";
 	snprintf(msg, sizeof(msg), "%s%s",
 		bu->timestamp,
 		// Protocol2 backups are all deletable, so do not mention it.
-		get_protocol(confs)==PROTO_1
+		protocol==PROTO_1
 		&& (bu->flags & BU_DELETABLE)?" (deletable)":"");
 	return write_wrapper_str(asfd, CMD_TIMESTAMP, msg);
 }
 
-int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct conf **confs,
+int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct cntr *cntr,
+	enum protocol protocol,
 	const char *backup, const char *listregex, const char *browsedir)
 {
 	int ret=-1;
@@ -213,7 +213,7 @@ int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct conf **confs,
 
 	if(compile_regex(&regex, listregex)
 	  || bu_get_list(sdirs, &bu_list)
-	  || write_status(CNTR_STATUS_LISTING, NULL, confs))
+	  || write_status(CNTR_STATUS_LISTING, NULL, cntr))
 		goto end;
 
 	if(backup && *backup) bno=strtoul(backup, NULL, 10);
@@ -227,7 +227,7 @@ int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct conf **confs,
 			if(write_wrapper_str(asfd,
 				CMD_TIMESTAMP, bu->timestamp)
 			  || list_manifest(asfd, bu->path,
-				regex, browsedir, confs)) goto end;
+				regex, browsedir, cntr, protocol)) goto end;
 		}
 		// Search or list a particular backup.
 		else if(backup && *backup)
@@ -238,16 +238,17 @@ int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct conf **confs,
 				|| (*backup=='c' && (bu->flags & BU_CURRENT))))
 			{
 				found=1;
-				if(send_backup_name_to_client(asfd, bu, confs)
+				if(send_backup_name_to_client(asfd,
+					bu, protocol)
 				  || list_manifest(asfd, bu->path, regex,
-					browsedir, confs)) goto end;
+					browsedir, cntr, protocol)) goto end;
 			}
 		}
 		// List the backups.
 		else
 		{
 			found=1;
-			if(send_backup_name_to_client(asfd, bu, confs))
+			if(send_backup_name_to_client(asfd, bu, protocol))
 				goto end;
 		}
 	}

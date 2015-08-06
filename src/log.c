@@ -12,7 +12,7 @@ static int do_progress_counter=1;
 static int syslog_opened=0;
 static int json=0;
 
-void init_log(char *progname)
+void log_init(char *progname)
 {
 	if((prog=strrchr(progname, '/'))) prog++;
 	else prog=progname;
@@ -118,7 +118,7 @@ const char *progname(void)
 	return prog;
 }
 
-int set_logfzp(const char *path, struct conf **confs)
+int log_fzp_set(const char *path, struct conf **confs)
 {
 	fzp_close(&logfzp);
 	if(path)
@@ -144,15 +144,10 @@ int set_logfzp(const char *path, struct conf **confs)
 	return 0;
 }
 
-void set_logfzp_direct(struct fzp *fzp)
+void log_fzp_set_direct(struct fzp *fzp)
 {
 	fzp_close(&logfzp);
 	logfzp=fzp;
-}
-
-struct fzp *get_logfzp(void)
-{
-	return logfzp;
 }
 
 void log_out_of_memory(const char *function)
@@ -203,7 +198,7 @@ int logm(struct asfd *asfd, struct conf **confs, const char *fmt, ...)
 	return r;
 }
 
-int logw(struct asfd *asfd, struct conf **confs, const char *fmt, ...)
+int logw(struct asfd *asfd, struct cntr *cntr, const char *fmt, ...)
 {
 	int r=0;
 	char buf[512]="";
@@ -217,7 +212,7 @@ int logw(struct asfd *asfd, struct conf **confs, const char *fmt, ...)
 		logp("WARNING: %s", buf);
 	}
 	va_end(ap);
-	if(confs) cntr_add(get_cntr(confs), CMD_WARNING, 1);
+	cntr_add(cntr, CMD_WARNING, 1);
 	return r;
 }
 
@@ -268,7 +263,7 @@ int log_incexcs_buf(const char *incexc)
 	return 0;
 }
 
-void log_recvd(struct iobuf *iobuf, struct conf **confs, int print)
+void log_recvd(struct iobuf *iobuf, struct cntr *cntr, int print)
 {
 	const char *prefix="unset";
 	switch(iobuf->cmd)
@@ -278,5 +273,5 @@ void log_recvd(struct iobuf *iobuf, struct conf **confs, int print)
 		default: break;
 	}
 	logp("%s: %s", prefix, iobuf->buf);
-	if(confs) cntr_add(get_cntr(confs), iobuf->cmd, print);
+	cntr_add(cntr, iobuf->cmd, print);
 }

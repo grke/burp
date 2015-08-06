@@ -4,7 +4,7 @@
 extern int check_browsedir(const char *browsedir,
 	struct sbuf *mb, size_t bdlen, char **last_bd_match);
 extern int do_list_server(struct asfd *asfd,
-	struct sdirs *sdirs, struct conf **confs,
+	struct sdirs *sdirs, struct cntr *cntr, enum protocol protocol,
 	const char *backup, const char *listregex, const char *browsedir);
 
 #endif

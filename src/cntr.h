@@ -44,11 +44,11 @@ struct cntr_ent
 	char *field;
 	char *label;
 	uint8_t flags;
-	unsigned long long count;
-	unsigned long long changed;
-	unsigned long long same;
-	unsigned long long deleted;
-	unsigned long long phase1;
+	uint64_t count;
+	uint64_t changed;
+	uint64_t same;
+	uint64_t deleted;
+	uint64_t phase1;
 	cntr_ent_t *next;
 };
 
@@ -61,10 +61,10 @@ struct cntr
 	struct cntr_ent *ent[CNTR_ENT_SIZE];
 
 	// These should have their own individual cmd entries.
-	unsigned long long warning;
-	unsigned long long byte;
-	unsigned long long recvbyte;
-	unsigned long long sentbyte;
+	uint64_t warning;
+	uint64_t byte;
+	uint64_t recvbyte;
+	uint64_t sentbyte;
 
 	// Buffer to use for the forked child to write statuses to the parent.
 	size_t str_max_len;
@@ -79,7 +79,7 @@ extern struct cntr *cntr_alloc(void);
 extern int cntr_init(struct cntr *cntr, const char *cname);
 extern void cntr_free(struct cntr **cntr);
 
-extern const char *bytes_to_human(unsigned long long counter);
+extern const char *bytes_to_human(uint64_t counter);
 extern void cntr_print(struct cntr *cntr, enum action act);
 extern int cntr_stats_to_file(struct cntr *cntr,
 	const char *directory, enum action act, struct conf **conf);
@@ -89,18 +89,18 @@ extern void cntr_add(struct cntr *c, char ch, int print);
 extern void cntr_add_same(struct cntr *c, char ch);
 extern void cntr_add_changed(struct cntr *c, char ch);
 extern void cntr_add_deleted(struct cntr *c, char ch);
-extern void cntr_add_bytes(struct cntr *c, unsigned long long bytes);
-extern void cntr_add_sentbytes(struct cntr *c, unsigned long long bytes);
-extern void cntr_add_recvbytes(struct cntr *c, unsigned long long bytes);
+extern void cntr_add_bytes(struct cntr *c, uint64_t bytes);
+extern void cntr_add_sentbytes(struct cntr *c, uint64_t bytes);
+extern void cntr_add_recvbytes(struct cntr *c, uint64_t bytes);
 
 extern void cntr_add_phase1(struct cntr *c,
 	char ch, int print);
 extern void cntr_add_val(struct cntr *c,
-	char ch, unsigned long long val, int print);
+	char ch, uint64_t val, int print);
 extern void cntr_add_same_val(struct cntr *c,
-	char ch, unsigned long long val);
+	char ch, uint64_t val);
 extern void cntr_add_changed_val(struct cntr *c,
-	char ch, unsigned long long val);
+	char ch, uint64_t val);
 
 #ifndef HAVE_WIN32
 extern size_t cntr_to_str(struct cntr *cntr, const char *path);

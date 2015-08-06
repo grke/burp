@@ -62,7 +62,8 @@ int recursive_hardlink(const char *src, const char *dst, struct conf **confs)
 		else
 		{
 			//logp("hardlinking %s to %s\n", fullpathb, fullpatha);
-			if(write_status(CNTR_STATUS_SHUFFLING, fullpathb, confs)
+			if(write_status(CNTR_STATUS_SHUFFLING, fullpathb,
+				get_cntr(confs))
 			  || do_link(fullpatha, fullpathb, &statp, confs,
 				0 /* do not overwrite target */))
 				break;
@@ -117,7 +118,8 @@ int do_link(const char *oldpath, const char *newpath, struct stat *statp,
 	struct conf **confs, uint8_t overwrite)
 {
 	/* Avoid creating too many hardlinks */
-	if(statp->st_nlink >= (unsigned int)get_int(confs[OPT_MAX_HARDLINKS]))
+	if(confs
+	  && statp->st_nlink >= (unsigned int)get_int(confs[OPT_MAX_HARDLINKS]))
 	{
 		return duplicate_file(oldpath, newpath);
 	}

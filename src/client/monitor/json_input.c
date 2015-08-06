@@ -42,27 +42,27 @@ static int input_integer(void *ctx, long long val)
 		if(!strcmp(lastkey, "count"))
 		{
 			if(!cntr_ent) goto error;
-			cntr_ent->count=(unsigned long long)val;
+			cntr_ent->count=(uint64_t)val;
 		}
 		else if(!strcmp(lastkey, "changed"))
 		{
 			if(!cntr_ent) goto error;
-			cntr_ent->changed=(unsigned long long)val;
+			cntr_ent->changed=(uint64_t)val;
 		}
 		else if(!strcmp(lastkey, "same"))
 		{
 			if(!cntr_ent) goto error;
-			cntr_ent->same=(unsigned long long)val;
+			cntr_ent->same=(uint64_t)val;
 		}
 		else if(!strcmp(lastkey, "deleted"))
 		{
 			if(!cntr_ent) goto error;
-			cntr_ent->deleted=(unsigned long long)val;
+			cntr_ent->deleted=(uint64_t)val;
 		}
 		else if(!strcmp(lastkey, "scanned"))
 		{
 			if(!cntr_ent) goto error;
-			cntr_ent->phase1=(unsigned long long)val;
+			cntr_ent->phase1=(uint64_t)val;
 		}
 		else
 		{

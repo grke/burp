@@ -113,7 +113,7 @@ static void maybe_do_notification(struct asfd *asfd,
 	        && !get_int(cconfs[OPT_N_SUCCESS_CHANGES_ONLY])))
 	{
 		char warnings[32]="";
-		snprintf(warnings, sizeof(warnings), "%llu",
+		snprintf(warnings, sizeof(warnings), "%"PRIu64,
 			cntr->ent[CMD_WARNING]->count);
 		args[0]=get_string(cconfs[OPT_N_SUCCESS_SCRIPT]);
 		args[a++]=warnings;
@@ -203,15 +203,16 @@ static int run_delete(struct asfd *asfd,
 {
 	char *backupno=NULL;
 	struct iobuf *rbuf=asfd->rbuf;
+	const char *cname=get_string(cconfs[OPT_CNAME]);
 	if(!client_can_generic(cconfs, OPT_CLIENT_CAN_DELETE))
 	{
-		logp("Not allowing delete of %s\n",
-			get_string(cconfs[OPT_CNAME]));
+		logp("Not allowing delete of %s\n", cname);
 		asfd->write_str(asfd, CMD_GEN, "Client delete is not allowed");
 		return -1;
 	}
 	backupno=rbuf->buf+strlen("delete ");
-	return do_delete_server(asfd, sdirs, cconfs, backupno);
+	return do_delete_server(asfd, sdirs,
+		get_cntr(cconfs), cname, backupno);
 }
 
 static int run_list(struct asfd *asfd,
@@ -260,8 +261,8 @@ static int run_list(struct asfd *asfd,
 
 	iobuf_free_content(asfd->rbuf);
 
-	ret=do_list_server(asfd,
-		sdirs, cconfs, backupno, listregex, browsedir);
+	ret=do_list_server(asfd, sdirs, get_cntr(cconfs),
+		get_protocol(cconfs), backupno, listregex, browsedir);
 end:
 	free_w(&backupno);
 	free_w(&browsedir);
@@ -293,7 +294,8 @@ static int run_diff(struct asfd *asfd,
 
 	iobuf_free_content(asfd->rbuf);
 
-	ret=do_diff_server(asfd, sdirs, cconfs, backupno);
+	ret=do_diff_server(asfd, sdirs,
+		get_cntr(cconfs), get_protocol(cconfs), backupno);
 end:
 	return ret;
 }

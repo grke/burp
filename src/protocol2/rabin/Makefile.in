@@ -68,6 +68,7 @@ libtool-clean:
 
 clean:	libtool-clean
 	@$(RMF) a.out *.o *.bak *~ *.intpro *.extpro *.a Makefile
+	@$(RMF) *.gcda *.gcno
 
 realclean: clean
 	@$(RMF) x

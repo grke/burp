@@ -6,6 +6,9 @@ sbindir="$3"
 scriptdir="$4"
 runstatedir="$5"
 
+server_address=127.0.0.1
+[ -f /proc/net/if_inet6 ] && server_address="::1"
+
 usage()
 {
 	echo "usage: $0 <destdir> <sysconfdir> <sbindir> <scriptdir> <runstatedir>" 1>&2
@@ -47,6 +50,7 @@ safe_sed_cp()
 		-e "s|@sbindir@|$sbindir|" \
 		-e "s|@scriptdir@|$scriptdir|" \
 		-e "s|@runstatedir@|$runstatedir|" \
+		-e "s|@server_address@|$server_address|" \
 			"$src" > "$dst"
 }
 

@@ -279,7 +279,7 @@ static int bfile_close_encrypted(BFILE *bfd, struct asfd *asfd)
 	CloseEncryptedFileRaw(bfd->pvContext);
 	if(bfd->mode==BF_WRITE)
 		attribs_set(asfd,
-			bfd->path, &bfd->statp, bfd->winattr, bfd->confs);
+			bfd->path, &bfd->statp, bfd->winattr, bfd->cntr);
 	bfd->pvContext=NULL;
 	bfd->mode=BF_CLOSED;
 	if(bfd->path)
@@ -347,7 +347,7 @@ static int bfile_close(BFILE *bfd, struct asfd *asfd)
 
 	if(bfd->mode==BF_WRITE)
 		attribs_set(asfd,
-			bfd->path, &bfd->statp, bfd->winattr, bfd->confs);
+			bfd->path, &bfd->statp, bfd->winattr, bfd->cntr);
 	bfd->lpContext=NULL;
 	bfd->mode=BF_CLOSED;
 
@@ -427,7 +427,7 @@ static int bfile_close(BFILE *bfd, struct asfd *asfd)
 	{
 		if(bfd->mode==BF_WRITE)
 			attribs_set(asfd, bfd->path,
-				&bfd->statp, bfd->winattr, bfd->confs);
+				&bfd->statp, bfd->winattr, bfd->cntr);
 		bfd->mode=BF_CLOSED;
 		bfd->fd=-1;
 		free_w(&bfd->path);
@@ -467,9 +467,10 @@ static ssize_t bfile_write(BFILE *bfd, void *buf, size_t count)
 #endif
 
 static int bfile_open_for_send(BFILE *bfd, struct asfd *asfd,
-	const char *fname, int64_t winattr, int atime, struct conf **confs)
+	const char *fname, int64_t winattr, int atime,
+	struct cntr *cntr, enum protocol protocol)
 {
-	if(get_protocol(confs)==PROTO_1
+	if(protocol==PROTO_1
 	  && bfd->mode!=BF_CLOSED)
 	{
 #ifdef HAVE_WIN32
@@ -490,7 +491,7 @@ static int bfile_open_for_send(BFILE *bfd, struct asfd *asfd,
 #endif
 	}
 
-	bfile_init(bfd, winattr, confs);
+	bfile_init(bfd, winattr, cntr);
 	if(bfile_open(bfd, asfd, fname, O_RDONLY|O_BINARY
 #ifdef O_NOATIME
 		|atime?0:O_NOATIME
@@ -499,7 +500,8 @@ static int bfile_open_for_send(BFILE *bfd, struct asfd *asfd,
 	{
 		berrno be;
 		berrno_init(&be);
-		logw(asfd, confs, "Could not open %s: %s\n",
+		logw(asfd, cntr,
+			"Could not open %s: %s\n",
 			fname, berrno_bstrerror(&be, errno));
 		return -1;
 	}
@@ -518,12 +520,12 @@ void bfile_setup_funcs(BFILE *bfd)
 #endif
 }
 
-void bfile_init(BFILE *bfd, int64_t winattr, struct conf **confs)
+void bfile_init(BFILE *bfd, int64_t winattr, struct cntr *cntr)
 {
 	memset(bfd, 0, sizeof(BFILE));
 	bfd->mode=BF_CLOSED;
 	bfd->winattr=winattr;
-	bfd->confs=confs;
+	bfd->cntr=cntr;
 	if(!bfd->open) bfile_setup_funcs(bfd);
 #ifdef HAVE_WIN32
 	bfile_set_win32_api(bfd, 1);

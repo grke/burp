@@ -1,5 +1,10 @@
-#include "include.h"
-#include "../../sbuf.h"
+#include "../../../burp.h"
+#include "../../../alloc.h"
+#include "../../../log.h"
+#include "../../../prepend.h"
+#include "../../../protocol2/blk.h"
+#include "../../../sbuf.h"
+#include "hash.h"
 
 struct hash_weak *hash_table=NULL;
 
@@ -39,7 +44,7 @@ static struct hash_strong *hash_strong_add(struct hash_weak *hash_weak,
 	if(!(newstrong=(struct hash_strong *)
 		malloc_w(sizeof(struct hash_strong), __func__)))
 			return NULL;
-	memcpy(newstrong->savepath, blk->savepath, SAVE_PATH_LEN);
+	newstrong->savepath=blk->savepath;
 	memcpy(newstrong->md5sum, blk->md5sum, MD5_DIGEST_LENGTH);
 	newstrong->next=hash_weak->strong;
 	return newstrong;
@@ -53,7 +58,7 @@ static void hash_strongs_free(struct hash_strong *shead)
 	{
 		s=shead;
 		shead=shead->next;
-		free(s);
+		free_v((void **)&s);
 	}
 }
 
@@ -66,7 +71,7 @@ void hash_delete_all(void)
 	{
 		HASH_DEL(hash_table, hash_weak);
 		hash_strongs_free(hash_weak->strong);
-		free(hash_weak);
+		free_v((void **)&hash_weak);
 	}
 }
 
@@ -88,7 +93,7 @@ static int process_sig(struct blk *blk)
 	return 0;
 }
 
-int hash_load(const char *champ, struct conf **confs)
+int hash_load(const char *champ, const char *directory)
 {
 	int ret=-1;
 	char *path=NULL;
@@ -96,21 +101,23 @@ int hash_load(const char *champ, struct conf **confs)
 	struct sbuf *sb=NULL;
 	static struct blk *blk=NULL;
 
-	if(!(path=prepend_s(get_string(confs[OPT_DIRECTORY]), champ))
+	if(!(path=prepend_s(directory, champ))
 	  || !(fzp=fzp_gzopen(path, "rb")))
 		goto end;
 
-	if(!sb && !(sb=sbuf_alloc(confs))) goto end;
+	if(!sb && !(sb=sbuf_alloc(PROTO_2))) goto end;
 	if(!blk && !(blk=blk_alloc())) goto end;
 
 	while(1)
 	{
 		sbuf_free_content(sb);
-		switch(sbuf_fill_from_file(sb, fzp, blk, NULL, confs))
+		switch(sbuf_fill_from_file(sb, fzp, blk, NULL))
 		{
 			case 1: ret=0;
 				goto end;
 			case -1:
+				logp("Error reading %s in %s\n", path,
+					__func__);
 				goto end;
 		}
 		if(!blk->got_save_path) continue;
@@ -118,7 +125,7 @@ int hash_load(const char *champ, struct conf **confs)
 		blk->got_save_path=0;
 	}
 end:
-	if(path) free(path);
+	free_w(&path);
 	fzp_close(&fzp);
 	return ret;
 }

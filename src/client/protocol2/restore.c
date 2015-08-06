@@ -10,14 +10,14 @@ static int start_restore_file(struct asfd *asfd,
 	char **metadata,
 	size_t *metalen,
 	int vss_restore,
-	struct conf **confs)
+	struct cntr *cntr)
 {
 	int ret=-1;
 	char *rpath=NULL;
 
 	if(act==ACTION_VERIFY)
 	{
-		cntr_add(get_cntr(confs), sb->path.cmd, 1);
+		cntr_add(cntr, sb->path.cmd, 1);
 		goto end;
 	}
 
@@ -26,24 +26,25 @@ static int start_restore_file(struct asfd *asfd,
 		char msg[256]="";
 		// Failed - do a warning.
 		snprintf(msg, sizeof(msg), "build path failed: %s", fname);
-		if(restore_interrupt(asfd, sb, msg, confs))
+		if(restore_interrupt(asfd, sb, msg, cntr, PROTO_2))
 			goto error;
 		goto end; // Try to carry on with other files.
 	}
 
-	switch(open_for_restore(asfd, bfd, rpath, sb, vss_restore, confs))
+	switch(open_for_restore(asfd, bfd, rpath, sb, vss_restore, cntr,
+		PROTO_2))
 	{
 		case OFR_OK: break;
 		case OFR_CONTINUE: goto end;
 		default: goto error;
 	}
 
-	cntr_add(get_cntr(confs), sb->path.cmd, 1);
+	cntr_add(cntr, sb->path.cmd, 1);
 
 end:
 	ret=0;
 error:
-	if(rpath) free(rpath);
+	free_w(&rpath);
 	return ret;
 }
 
@@ -102,7 +103,7 @@ static int restore_metadata(
 
 int restore_switch_protocol2(struct asfd *asfd, struct sbuf *sb,
 	const char *fullpath, enum action act,
-	BFILE *bfd, int vss_restore, struct conf **confs)
+	BFILE *bfd, int vss_restore, struct cntr *cntr)
 {
 	switch(sb->path.cmd)
 	{
@@ -114,7 +115,7 @@ int restore_switch_protocol2(struct asfd *asfd, struct sbuf *sb,
 			if(start_restore_file(asfd,
 				bfd, sb, fullpath, act,
 				NULL, NULL, NULL,
-				vss_restore, confs))
+				vss_restore, cntr))
 			{
 				logp("restore_file error\n");
 				goto error;

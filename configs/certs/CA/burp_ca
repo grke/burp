@@ -5,6 +5,11 @@
 # Version:   1.2
 # Date:      29.12.2012
 
+# Locking code to try to make sure that two instances do not run together and
+# corrupt the ca files.
+[ "${FLOCKER}" != "$0" ] \
+  && exec env FLOCKER="$0" flock -e -w 60 /tmp/burp_ca.lock "$0" "$@" || :
+
 set -e
 
 etc=/etc/burp

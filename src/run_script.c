@@ -14,7 +14,8 @@ static int log_script_output(struct asfd *asfd, struct fzp **fzp,
 		if(log_remote)
 		{
 			// logm and low will also log to stdout.
-			if(is_stderr) logw(asfd, confs, "%s", buf);
+			if(is_stderr) logw(asfd, confs?get_cntr(confs):NULL,
+				"%s", buf);
 			else logm(asfd, confs, "%s", buf);
 		}
 		else
@@ -107,10 +108,12 @@ int run_script_to_buf(struct asfd *asfd,
 	struct fzp *sout=NULL;
 	char *cmd[64]={ NULL };
 	struct strlist *sl;
+	struct cntr *cntr=NULL;
 #ifndef HAVE_WIN32
 	int s=0;
 #endif
 	if(!args || !args[0]) return 0;
+	if(confs) cntr=get_cntr(confs);
 
 	for(a=0; args[a]; a++) cmd[l++]=(char *)args[a];
 	for(sl=userargs; sl; sl=sl->next) cmd[l++]=sl->path;
@@ -149,7 +152,7 @@ int run_script_to_buf(struct asfd *asfd,
 		int ret=WEXITSTATUS(run_script_status);
 		logp("%s returned: %d\n", cmd[0], ret);
 		if(log_remote && confs && ret)
-			logw(asfd, confs, "%s returned: %d\n", cmd[0], ret);
+			logw(asfd, cntr, "%s returned: %d\n", cmd[0], ret);
 		return ret;
 	}
 	else if(WIFSIGNALED(run_script_status))
@@ -157,13 +160,13 @@ int run_script_to_buf(struct asfd *asfd,
 		logp("%s terminated on signal %d\n",
 			cmd[0], WTERMSIG(run_script_status));
 		if(log_remote && confs)
-			logw(asfd, confs, "%s terminated on signal %d\n",
+			logw(asfd, cntr, "%s terminated on signal %d\n",
 				cmd[0], WTERMSIG(run_script_status));
 	}
 	else
 	{
 		logp("Strange return when trying to run %s\n", cmd[0]);
-		if(log_remote && confs) logw(asfd, confs,
+		if(log_remote && confs) logw(asfd, cntr,
 			"Strange return when trying to run %s\n", cmd[0]);
 	}
 	return -1;

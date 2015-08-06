@@ -22,7 +22,7 @@ static int load_signature(struct asfd *asfd,
 }
 
 static int load_signature_and_send_delta(struct asfd *asfd,
-	BFILE *bfd, unsigned long long *bytes, unsigned long long *sentbytes,
+	BFILE *bfd, uint64_t *bytes, uint64_t *sentbytes,
 	struct conf **confs)
 {
 	rs_job_t *job;
@@ -104,18 +104,18 @@ static int load_signature_and_send_delta(struct asfd *asfd,
 
 static int send_whole_file_w(struct asfd *asfd,
 	struct sbuf *sb, const char *datapth,
-	int quick_read, unsigned long long *bytes, const char *encpassword,
-	struct conf **confs, int compression, BFILE *bfd,
+	int quick_read, uint64_t *bytes, const char *encpassword,
+	struct cntr *cntr, int compression, BFILE *bfd,
 	const char *extrameta, size_t elen)
 {
 	if((compression || encpassword) && sb->path.cmd!=CMD_EFS_FILE)
 		return send_whole_file_gzl(asfd,
 		  sb->path.buf, datapth, quick_read, bytes, 
-		  encpassword, confs, compression, bfd, extrameta, elen);
+		  encpassword, cntr, compression, bfd, extrameta, elen);
 	else
 		return send_whole_filel(asfd,
 		  sb->path.cmd, sb->path.buf, datapth, quick_read, bytes, 
-		  confs, bfd, extrameta, elen);
+		  cntr, bfd, extrameta, elen);
 }
 
 static int forget_file(struct asfd *asfd, struct sbuf *sb, struct conf **confs)
@@ -143,16 +143,16 @@ static int size_checks(struct asfd *asfd, struct sbuf *sb, struct conf **confs)
 	  && sb->path.cmd!=CMD_ENC_FILE
 	  && sb->path.cmd!=CMD_EFS_FILE)
 		return 0;
-	if(get_ssize_t(confs[OPT_MIN_FILE_SIZE])
-	  && sb->statp.st_size<(boffset_t)get_ssize_t(confs[OPT_MIN_FILE_SIZE]))
+	if(get_uint64_t(confs[OPT_MIN_FILE_SIZE])
+	  && (uint64_t)sb->statp.st_size<get_uint64_t(confs[OPT_MIN_FILE_SIZE]))
 	{
-		logw(asfd, confs, "File size decreased below min_file_size after initial scan: %c:%s", sb->path.cmd, sb->path.buf);
+		logw(asfd, get_cntr(confs), "File size decreased below min_file_size after initial scan: %c:%s", sb->path.cmd, sb->path.buf);
 		return -1;
 	}
-	if(get_ssize_t(confs[OPT_MAX_FILE_SIZE])
-	  && sb->statp.st_size>(boffset_t)get_ssize_t(confs[OPT_MAX_FILE_SIZE]))
+	if(get_uint64_t(confs[OPT_MAX_FILE_SIZE])
+	  && (uint64_t)sb->statp.st_size>get_uint64_t(confs[OPT_MAX_FILE_SIZE]))
 	{
-		logw(asfd, confs, "File size increased above max_file_size after initial scan: %c:%s", sb->path.cmd, sb->path.buf);
+		logw(asfd, get_cntr(confs), "File size increased above max_file_size after initial scan: %c:%s", sb->path.cmd, sb->path.buf);
 		return -1;
 	}
 	return 0;
@@ -165,8 +165,9 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 	int forget=0;
 	size_t elen=0;
 	char *extrameta=NULL;
-	unsigned long long bytes=0;
+	uint64_t bytes=0;
 	int conf_compression=get_int(confs[OPT_COMPRESSION]);
+	struct cntr *cntr=get_cntr(confs);
 
 	sb->compression=conf_compression;
 
@@ -179,7 +180,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 	if(lstat(sb->path.buf, &sb->statp))
 #endif
 	{
-		logw(asfd, confs, "Path has vanished: %s", sb->path.buf);
+		logw(asfd, cntr, "Path has vanished: %s", sb->path.buf);
 		if(forget_file(asfd, sb, confs)) goto error;
 		goto end;
 	}
@@ -195,7 +196,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 	{
 		if(bfd->open_for_send(bfd, asfd,
 			sb->path.buf, sb->winattr,
-			get_int(confs[OPT_ATIME]), confs))
+			get_int(confs[OPT_ATIME]), cntr, PROTO_1))
 				forget++;
 	}
 
@@ -215,9 +216,9 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 	  )
 	{
 		if(get_extrameta(asfd, bfd,
-			sb, &extrameta, &elen, confs))
+			sb, &extrameta, &elen, cntr))
 		{
-			logw(asfd, confs, "Meta data error for %s", sb->path.buf);
+			logw(asfd, cntr, "Meta data error for %s", sb->path.buf);
 			goto end;
 		}
 		if(extrameta)
@@ -233,7 +234,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 		}
 		else
 		{
-			logw(asfd, confs,
+			logw(asfd, cntr,
 				"No meta data after all: %s", sb->path.buf);
 			goto end;
 		}
@@ -242,7 +243,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 	if(sb->path.cmd==CMD_FILE
 	  && sb->protocol1->datapth.buf)
 	{
-		unsigned long long sentbytes=0;
+		uint64_t sentbytes=0;
 		// Need to do sig/delta stuff.
 		if(asfd->write(asfd, &(sb->protocol1->datapth))
 		  || asfd->write(asfd, &sb->attr)
@@ -270,7 +271,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 		  || asfd->write(asfd, &sb->path))
 		  || send_whole_file_w(asfd, sb, NULL, 0, &bytes,
 			get_string(confs[OPT_ENCRYPTION_PASSWORD]),
-			confs, sb->compression,
+			cntr, sb->compression,
 			bfd, extrameta, elen))
 				goto end;
 		else
@@ -324,7 +325,9 @@ static int parse_rbuf(struct asfd *asfd, struct sbuf *sb,
 	else if(rbuf->cmd==CMD_MESSAGE
 	  || rbuf->cmd==CMD_WARNING)
 	{
-		log_recvd(rbuf, confs, 0);
+		struct cntr *cntr=NULL;
+		if(confs) cntr=get_cntr(confs);
+		log_recvd(rbuf, cntr, 0);
 	}
 	else
 	{
@@ -346,9 +349,9 @@ static int do_backup_phase2_client(struct asfd *asfd,
 	struct iobuf *rbuf=asfd->rbuf;
 
 	if(!(bfd=bfile_alloc())
-	  || !(sb=sbuf_alloc(confs)))
+	  || !(sb=sbuf_alloc(PROTO_1)))
 		goto end;
-	bfile_init(bfd, 0, confs);
+	bfile_init(bfd, 0, get_cntr(confs));
 
 	if(!resume)
 	{

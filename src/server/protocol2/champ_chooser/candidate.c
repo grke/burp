@@ -1,8 +1,14 @@
 #include <assert.h>
 
-#include "include.h"
-#include "../../cmd.h"
-#include "../../sbuf.h"
+#include "../../../burp.h"
+#include "../../../alloc.h"
+#include "../../../log.h"
+#include "../../../sbuf.h"
+#include "../../../protocol2/blk.h"
+#include "candidate.h"
+#include "incoming.h"
+#include "scores.h"
+#include "sparse.h"
 
 struct candidate **candidates=NULL;
 size_t candidates_len=0;
@@ -13,11 +19,24 @@ struct candidate *candidate_alloc(void)
 		calloc_w(1, sizeof(struct candidate), __func__);
 }
 
-void candidates_set_score_pointers(struct candidate **candidates,
-	size_t clen, struct scores *scores)
+void candidate_free_content(struct candidate *c)
+{
+	if(!c) return;
+	free_w(&c->path);
+}
+
+void candidate_free(struct candidate **c)
+{
+	if(!c) return;
+	candidate_free_content(*c);
+	free_v((void **)c);
+}
+
+void candidates_set_score_pointers(struct candidate **candidates, size_t clen,
+	struct scores *scores)
 {
 	size_t a;
-	for(a=0; a<candidates_len; a++)
+	for(a=0; candidates && a<candidates_len; a++)
 		candidates[a]->score=&(scores->scores[a]);
 }
 
@@ -29,33 +48,37 @@ struct candidate *candidates_add_new(void)
 
 	if(!(candidates=(struct candidate **)realloc_w(candidates,
 		(candidates_len+1)*sizeof(struct candidate *), __func__)))
-		return NULL;
+			return NULL;
 	candidates[candidates_len++]=candidate;
 	return candidate;
 }
 
 // This deals with reading in the sparse index, as well as actual candidate
 // manifests.
-int candidate_load(struct candidate *candidate,
-	const char *path, struct conf **confs)
+int candidate_load(struct candidate *candidate, const char *path,
+	struct scores *scores)
 {
 	int ret=-1;
 	struct fzp *fzp=NULL;
 	struct sbuf *sb=NULL;
 	struct blk *blk=NULL;
 
-	if(!(sb=sbuf_alloc(confs))
+	if(!(sb=sbuf_alloc(PROTO_2))
 	  || !(blk=blk_alloc())
 	  || !(fzp=fzp_gzopen(path, "rb")))
 		goto error;
 	while(fzp)
 	{
-		switch(sbuf_fill_from_file(sb, fzp, blk, NULL, confs))
+		sbuf_free_content(sb);
+		switch(sbuf_fill_from_file(sb, fzp, blk, NULL))
 		{
 			case 1: goto end;
-			case -1: goto error;
+			case -1:
+				logp("Error reading %s in %s, pos %d\n",
+					path, __func__, fzp_tell(fzp));
+				goto error;
 		}
-		if(is_hook(blk->fingerprint))
+		if(blk_fingerprint_is_hook(blk))
 		{
 			if(sparse_add_candidate(&blk->fingerprint, candidate))
 				goto error;
@@ -66,7 +89,6 @@ int candidate_load(struct candidate *candidate,
 			candidate->path=sb->path.buf;
 			sb->path.buf=NULL;
 		}
-		sbuf_free_content(sb);
 		blk->fingerprint=0;
 	}
 
@@ -84,21 +106,22 @@ error:
 }
 
 // When a backup is ongoing, use this to add newly complete candidates.
-int candidate_add_fresh(const char *path, struct conf **confs)
+int candidate_add_fresh(const char *path, const char *directory,
+	struct scores *scores)
 {
 	const char *cp=NULL;
 	struct candidate *candidate=NULL;
 
 	if(!(candidate=candidates_add_new())) return -1;
-	cp=path+strlen(get_string(confs[OPT_DIRECTORY]));
+	cp=path+strlen(directory);
 	while(cp && *cp=='/') cp++;
 	if(!(candidate->path=strdup_w(cp, __func__))) return -1;
 
-	return candidate_load(candidate, path, confs);
+	return candidate_load(candidate, path, scores);
 }
 
 struct candidate *candidates_choose_champ(struct incoming *in,
-	struct candidate *champ_last)
+	struct candidate *champ_last, struct scores *scores)
 {
 	static uint16_t i;
 	static uint16_t s;

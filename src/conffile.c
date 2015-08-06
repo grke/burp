@@ -138,7 +138,7 @@ static int conf_error(const char *conf_path, int line)
 	return -1;
 }
 
-static int get_file_size(const char *v, ssize_t *dest, const char *conf_path, int line)
+static int get_file_size(const char *v, uint64_t *dest, const char *conf_path, int line)
 {
 	// Store in bytes, allow k/m/g.
 	const char *cp=NULL;
@@ -306,10 +306,10 @@ static int load_conf_field_and_value(struct conf **c,
 						strtol(v, NULL, 8));
 				case CT_SSIZE_T:
 				{
-					ssize_t s=0;
+					uint64_t s=0;
 					return
 					 get_file_size(v, &s, conf_path, line)
-					  || set_ssize_t(c[i], s);
+					  || set_uint64_t(c[i], s);
 				}
 				case CT_E_BURP_MODE:
 					return set_e_burp_mode(c[i],
@@ -721,7 +721,7 @@ static int finalise_keep_args(struct conf **c)
 {
 	struct strlist *k;
 	struct strlist *last=NULL;
-	unsigned long long mult=1;
+	uint64_t mult=1;
 	for(k=get_strlist(c[OPT_KEEP]); k; k=k->next)
 	{
 		if(!(k->flag=atoi(k->path)))
@@ -866,14 +866,12 @@ static void set_max_ext(struct strlist *list)
 {
 	int max=0;
 	struct strlist *l=NULL;
-	struct strlist *last=NULL;
 	for(l=list; l; l=l->next)
 	{
 		int s=strlen(l->path);
 		if(s>max) max=s;
-		last=l;
 	}
-	if(last) last->flag=max+1;
+	if(list) list->flag=max+1;
 }
 
 static int finalise_fstypes(struct conf **c)
@@ -1099,7 +1097,7 @@ static int conf_set_from_global(struct conf **globalc, struct conf **cc)
 				set_mode_t(cc[i], get_mode_t(globalc[i]));
 				break;
 			case CT_SSIZE_T:
-				set_ssize_t(cc[i], get_ssize_t(globalc[i]));
+				set_uint64_t(cc[i], get_uint64_t(globalc[i]));
 				break;
 			case CT_E_BURP_MODE:
 				set_e_burp_mode(cc[i], get_e_burp_mode(globalc[i]));

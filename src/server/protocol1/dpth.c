@@ -113,11 +113,12 @@ int dpth_protocol1_set_from_string(struct dpth *dpth, const char *datapath)
 
 	if((sscanf(datapath, "%04X/%04X/%04X", &a, &b, &c))!=3)
 		return -1;
-
-	// Only set it if it is a higher one.
-	if(dpth->prim > (int)a
-	  || dpth->seco > (int)b
-	  || dpth->tert > (int)c) return 0;
+	if(dpth->prim==(int)a && dpth->seco==(int)b && dpth->tert > (int)c)
+		return 0;
+	if(dpth->prim==(int)a && dpth->seco > (int)b)
+		return 0;
+	if(dpth->prim > (int)a)
+		return 0;
 
 	dpth->prim=a;
 	dpth->seco=b;

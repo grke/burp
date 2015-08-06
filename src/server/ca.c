@@ -262,6 +262,7 @@ static int sign_client_cert(struct asfd *asfd,
 	const char *ca_burp_ca=get_string(confs[OPT_CA_BURP_CA]);
 	const char *ca_server_name=get_string(confs[OPT_CA_SERVER_NAME]);
 	const char *ssl_cert_ca=get_string(confs[OPT_SSL_CERT_CA]);
+	struct cntr *cntr=get_cntr(confs);
 	snprintf(csrpath, sizeof(csrpath), "%s/%s.csr", gca_dir, client);
 	snprintf(crtpath, sizeof(crtpath), "%s/%s.crt", gca_dir, client);
 
@@ -305,7 +306,7 @@ static int sign_client_cert(struct asfd *asfd,
 	   to end and delete any new files. */
 
 	// Get the CSR from the client.
-	if(receive_a_file(asfd, csrpath, confs)) goto end;
+	if(receive_a_file(asfd, csrpath, cntr)) goto end;
 
 	// Now, sign it.
 	logp("Signing certificate signing request from %s\n", client);
@@ -333,11 +334,11 @@ static int sign_client_cert(struct asfd *asfd,
 
 	// Now, we should have a signed certificate.
 	// Need to send it back to the client.
-	if(send_a_file(asfd, crtpath, confs))
+	if(send_a_file(asfd, crtpath, cntr))
 		goto end;
 
 	// Also need to send the CA public certificate back to the client.
-	if(send_a_file(asfd, ssl_cert_ca, confs))
+	if(send_a_file(asfd, ssl_cert_ca, cntr))
 		goto end;
 
 	ret=0;

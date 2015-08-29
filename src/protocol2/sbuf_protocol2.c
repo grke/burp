@@ -1,3 +1,4 @@
+#include "../burp.h"
 #include "sbuf_protocol2.h"
 #include "../alloc.h"
 

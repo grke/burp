@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "../burp.h"
 #include "api/yajl_parse.h"
 #include "yajl_lex.h"
 #include "yajl_parser.h"

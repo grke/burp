@@ -1,9 +1,5 @@
-#include <check.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include "../builders/build.h"
 #include "../test.h"
+#include "../builders/build.h"
 #include "../prng.h"
 #include "../../src/alloc.h"
 #include "../../src/attribs.h"

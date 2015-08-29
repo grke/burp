@@ -1,0 +1,155 @@
+get_all_instanceids()
+{
+	aws ec2 describe-instances | grep -i InstanceId \
+	  | while read a b ; do
+		x=${b#*\"}
+		echo "${x%\"*}"
+	done
+}
+
+do_stop_on_fail=0
+
+fail()
+{
+	echo "$prog failed: $*" 1>&2
+	[ "$do_stop_on_fail" = 1 ] && stop_instanceids "$(get_all_instanceids)"
+	exit 1
+}
+
+describe()
+{
+	local instanceid="$1"
+	local what="$2"
+	aws ec2 describe-instances --instance-ids "$instanceid" --output text \
+		--query "Reservations[*].Instances[*].$what" \
+			|| fail "getting $what"
+}
+
+get_address()
+{
+	local instanceid="$1"
+	describe "$instanceid" PublicIpAddress \
+		|| fail "getting address for $instanceid"
+}
+
+get_state()
+{
+	local instanceid="$1"
+	describe "$instanceid" State.Name \
+		|| fail "getting state for $instanceid"
+}
+
+get_platform()
+{
+	local instanceid="$1"
+	describe "$instanceid" Platform \
+		|| fail "getting platform for $instanceid"
+}
+
+wait_for_state()
+{
+	local instanceid="$1"
+	local wanted_state="$2"
+	i=100
+	while [ $i -gt 0 ] ; do
+		state=$(get_state "$instanceid")
+		echo "$instanceid is $state"
+		if [ "$state" = "$wanted_state" ] ; then
+			return 0
+		fi
+		sleep 10
+		i=$((i-10))
+		echo $i
+	done
+	return 1
+}
+
+signal_to_stop()
+{
+	local instanceid="$1"
+	state=$(get_state $instanceid)
+	[ "$state" = "stopped" ] && return
+	[ "$state" = "terminated" ] && return
+	[ "$state" = "running" ] \
+		|| fail "unknown state for $instanceid: $state"
+	echo "$instanceid is running, telling it to stop"
+	aws ec2 stop-instances --instance-ids "$instanceid" \
+		|| fail "stop instance $instanceid"
+}
+
+signal_to_start()
+{
+	local instanceid="$1"
+	state=$(get_state $instanceid)
+	if [ "$state" = "running" ] ; then
+		true
+	elif [ "$state" = "pending" ] ; then
+		echo "$instanceid is already $state"
+	elif [ "$state" = "stopped" ] ; then
+		echo "$instanceid is stopped, telling it to start"
+		aws ec2 start-instances --instance-ids "$instanceid" \
+			|| fail "start instance $instanceid"
+	else
+		fail "$instanceid is not stopped: $state"
+	fi
+}
+
+stop_instanceids()
+{
+	local instanceids="$1"
+	do_stop_on_fail=0
+	echo "$instanceids" | while read i ; do
+		signal_to_stop "$i"
+	done
+	echo "$instanceids" | while read i ; do
+		wait_for_state "$i" stopped
+	done
+	stopping=0
+}
+
+start_instanceids()
+{
+	local instanceids="$1"
+	do_stop_on_fail=1
+	echo "$instanceids" | while read i ; do
+		signal_to_start "$i"
+	done
+	echo "$instanceids" | while read i ; do
+		wait_for_state "$i" running
+	done
+}
+
+restart_instanceids()
+{
+	local instanceids="$1"
+	stop_instanceids "$instanceids"
+	start_instanceids "$instanceids"
+}
+
+get_details()
+{
+	local instanceids="$1"
+	details=$(echo "$instanceids" | while read i ; do
+		ip_address=$(get_address $i)
+		platform=$(get_platform $i)
+		echo $i $ip_address $platform
+	done)
+	echo "$details"
+}
+
+get_summary()
+{
+	local instanceids="$1"
+	details=$(get_details "$instanceids")
+        windows=$(echo "$details" | grep windows | cut -f 2 -d " ")
+        linux=$(echo "$details" | grep -v windows | cut -f 2 -d " ")
+        echo "  linux: $linux"
+        echo "windows: $windows"
+}
+
+get_states()
+{
+	echo "$instanceids" | while read i ; do
+		get_state "$i"
+	done
+}

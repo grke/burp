@@ -33,6 +33,7 @@
  * allocated buffer of configurable size is used as an intermediary.
  */
 
+#include "../burp.h"
 #include "rs_buf.h"
 #include "../cmd.h"
 #include "../alloc.h"

@@ -1,3 +1,4 @@
+#include "burp.h"
 #include "manios.h"
 #include "manio.h"
 #include "../alloc.h"

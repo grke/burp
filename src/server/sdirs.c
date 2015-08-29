@@ -1,3 +1,4 @@
+#include "../burp.h"
 #include "sdirs.h"
 #include "../alloc.h"
 #include "../conf.h"

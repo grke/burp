@@ -1,5 +1,4 @@
 #include "../burp.h"
-
 #include "../alloc.h"
 #include "../bu.h"
 #include "../cstat.h"

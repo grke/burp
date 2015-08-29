@@ -90,7 +90,7 @@ static void do_savepath_str_to_uint64(struct savepathdata *d, size_t s)
 	uint64_t bytes;
 	for(i=0; i<s; i++)
 	{
-		bytes=savepathstr_to_uint64(d[i].str);
+		bytes=savepathstr_with_sig_to_uint64(d[i].str);
 		fail_unless(bytes==d[i].bytes);
 	}
 }
@@ -98,8 +98,6 @@ static void do_savepath_str_to_uint64(struct savepathdata *d, size_t s)
 START_TEST(test_savepathstr_to_uint64)
 {
 	hexmap_init();
-	do_savepath_str_to_uint64(ssavepath,
-		sizeof(ssavepath)/sizeof(*ssavepath));
 	do_savepath_str_to_uint64(ssavepathsig,
 		sizeof(ssavepathsig)/sizeof(*ssavepathsig));
 }

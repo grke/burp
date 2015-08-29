@@ -1,3 +1,4 @@
+#include "../../burp.h"
 #include "include.h"
 #include "dpth.h"
 #include "../../cmd.h"

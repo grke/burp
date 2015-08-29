@@ -61,3 +61,17 @@ int sparse_add_candidate(uint64_t *fingerprint, struct candidate *candidate)
 	
 	return 0;
 }
+
+void sparse_delete_candidate(struct candidate *candidate)
+{
+	struct sparse *tmp;
+	struct sparse *sparse;
+
+	HASH_ITER(hh, sparse_table, sparse, tmp)
+	{
+		// Only works if the candidate being deleted is the most recent
+		// one added. Which is fine for candidate_add_fresh().
+		if(sparse->candidates[sparse->size-1]==candidate)
+			sparse->size--;
+	}
+}

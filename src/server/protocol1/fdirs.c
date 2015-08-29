@@ -1,3 +1,4 @@
+#include "../../burp.h"
 #include "fdirs.h"
 #include "../../alloc.h"
 #include "../../prepend.h"

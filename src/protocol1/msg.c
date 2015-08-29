@@ -1,3 +1,4 @@
+#include "../burp.h"
 #include "msg.h"
 #include "cmd.h"
 #include "handy.h"

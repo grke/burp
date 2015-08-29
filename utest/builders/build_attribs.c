@@ -1,5 +1,3 @@
-#include <check.h>
-#include "../../src/config.h"
 #include "../test.h"
 #include "../prng.h"
 #include "../../src/alloc.h"

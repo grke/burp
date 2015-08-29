@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "../burp.h"
 #include "api/yajl_gen.h"
 #include "yajl_buf.h"
 #include "yajl_encode.h"

@@ -1,3 +1,4 @@
+#include "../../burp.h"
 #include "win.h"
 #include "rconf.h"
 #include "../../alloc.h"

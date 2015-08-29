@@ -1,7 +1,7 @@
+#include "burp.h"
 #include "sbuf.h"
 #include "alloc.h"
 #include "asfd.h"
-#include "burp.h"
 #include "attribs.h"
 #include "cmd.h"
 #include "conf.h"

@@ -1,5 +1,5 @@
-#include "alloc.h"
 #include "burp.h"
+#include "alloc.h"
 #include "lock.h"
 #include "log.h"
 

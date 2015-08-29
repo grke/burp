@@ -1,3 +1,4 @@
+#include "../../burp.h"
 #include "rconf.h"
 #include "../../log.h"
 

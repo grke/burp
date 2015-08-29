@@ -43,6 +43,9 @@
   * Substitute 127.0.0.1 for the default burp.conf server address if the OS
     doesn't have IPv6.
   * Fix for server side restore file causing '-a m' to exit.
+  * Fix large file support for 32 bit machines.
+  * Let the champ chooser continue if candidate_add_fresh could not read a
+    new candidate file.
 
 2015-07-01 Changes in burp-1.4.40:
   * Fix '-a l' regex so that it isn't split in two at the right-most

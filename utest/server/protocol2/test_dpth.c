@@ -51,7 +51,7 @@ static int write_to_dpth(struct dpth *dpth, const char *savepathstr)
 	int ret;
 	struct iobuf wbuf;
 	struct blk *blk=blk_alloc();
-	blk->savepath=savepathstr_to_uint64(savepathstr);
+	blk->savepath=savepathstr_with_sig_to_uint64(savepathstr);
 	wbuf.buf=strdup_w("abc", __FUNCTION__);
 	wbuf.len=3;
 	ret=dpth_protocol2_fwrite(dpth, &wbuf, blk);

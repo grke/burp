@@ -639,7 +639,7 @@ static int mark_not_got(struct blk *blk, struct dpth *dpth)
 	if(!(path=dpth_protocol2_mk(dpth))) return -1;
 
 	// FIX THIS: make dpth give us the path in a uint8 array.
-	blk->savepath=savepathstr_to_uint64(path);
+	blk->savepath=savepathstr_with_sig_to_uint64(path);
 	blk->got_save_path=1;
 	if(dpth_protocol2_incr_sig(dpth)) return -1;
 	return 0;

@@ -1,7 +1,3 @@
-#include <check.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include "test.h"
 #include "../src/alloc.h"
 #include "../src/fzp.h"

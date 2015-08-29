@@ -1,4 +1,3 @@
-#include <check.h>
 #include "../test.h"
 #include "../../src/alloc.h"
 #include "../../src/config.h"
@@ -419,6 +418,14 @@ START_TEST(test_find)
 }
 END_TEST
 
+START_TEST(test_large_file_support)
+{
+	// 32 bit machines need the correct build parameters to support
+	// large files. Try to detect problems here.
+	fail_unless(sizeof(off_t)>=8);
+}
+END_TEST
+
 Suite *suite_client_find(void)
 {
 	Suite *s;
@@ -429,6 +436,7 @@ Suite *suite_client_find(void)
 	tc_core=tcase_create("Core");
 
 	tcase_add_test(tc_core, test_find);
+	tcase_add_test(tc_core, test_large_file_support);
 	suite_add_tcase(s, tc_core);
 
 	return s;

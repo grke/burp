@@ -1,3 +1,4 @@
+#include "../burp.h"
 #include "../cmd.h"
 #include "../pathcmp.h"
 #include "dpth.h"

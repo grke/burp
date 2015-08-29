@@ -1,3 +1,4 @@
+#include "../burp.h"
 #include "blist.h"
 #include "blk.h"
 #include "../alloc.h"

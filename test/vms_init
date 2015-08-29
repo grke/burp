@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+#
+# Restarts Amazon virtual machines.
+
+prog=$(basename $0)
+
+linuxid=i-be250362
+windowsid=i-c021071c
+
+usage()
+{
+	echo "usage: $prog [stop|start|restart|status] [instanceid ...]" 1>&2
+	echo "No instanceids restarts all AWS machines" 1>&2
+	echo "'linux' maps to instanceid $linux" 1>&2
+	echo "'windows' maps to instanceid $windowsid" 1>&2
+	exit 1
+}
+
+[ -z "$1" ] && usage
+
+. ./vms_shared
+
+instanceids="$2"
+if [ -n "$instanceids" ] ; then
+	[ "$instanceids" = "linux" ] && instanceids=$linuxid
+	[ "$instanceids" = "windows" ] && instanceids=$windowsid
+else
+	instanceids=$(get_all_instanceids)
+fi
+
+if [ "$1" = "stop" ] ; then
+	stop_instanceids "$instanceids" || fail
+elif [ "$1" = "start" ] ; then
+	start_instanceids "$instanceids" || fail
+elif [ "$1" = "restart" ] ; then
+	stop_instanceids "$instanceids" || fail
+	start_instanceids "$instanceids" || fail
+elif [ "$1" = "status" ] ; then
+	get_states "$instanceids" || fail
+else
+	usage
+fi
+
+get_details "$instanceids"
+
+exit 0

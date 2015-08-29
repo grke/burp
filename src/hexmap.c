@@ -61,7 +61,7 @@ char *bytes_to_md5str(uint8_t *bytes)
         return str;
 }
 
-uint64_t savepathstr_to_uint64(const char *savepathstr)
+uint64_t savepathstr_with_sig_to_uint64(const char *savepathstr)
 {
 	uint8_t b[sizeof(uint64_t)];
 	str_to_bytes(savepathstr, b, sizeof(b));

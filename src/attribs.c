@@ -36,6 +36,7 @@
  *   Graham Keeling, 2014
  */
 
+#include "burp.h"
 #include "attribs.h"
 #include "alloc.h"
 #include "base64.h"

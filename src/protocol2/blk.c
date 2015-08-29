@@ -1,5 +1,4 @@
-#include <stdlib.h>
-
+#include "../burp.h"
 #include "blk.h"
 #include "../alloc.h"
 #include "../hexmap.h"

@@ -127,7 +127,11 @@ static int do_iobuf_fill_from_fzp(struct iobuf *iobuf, struct fzp *fzp,
 	{
 		case 0: break; // OK.
 		case 1: return 1; // Finished OK.
-		default: return -1; // Error.
+		default:
+		{
+			logp("Error reading lead in %s\n", __func__);
+			return -1; // Error.
+		}
 	}
 	if((sscanf(lead, "%c%04X", (char *)&iobuf->cmd, &s))!=2)
 	{
@@ -143,7 +147,9 @@ static int do_iobuf_fill_from_fzp(struct iobuf *iobuf, struct fzp *fzp,
 	{
 		case 0: break; // OK.
 		case 1: return 1; // Finished OK.
-		default: return -1; // Error.
+		default:
+			logp("Error attempting to read after %s in %s (%c:%u)\n", lead, __func__, iobuf->cmd, s);
+			return -1;
 	}
 	iobuf->buf[iobuf->len]='\0';
 	return 0;

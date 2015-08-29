@@ -1,9 +1,6 @@
 #ifndef _BURP_H
 #define _BURP_H
 
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
-
 #ifdef __cplusplus
 	/* Workaround for SGI IRIX 6.5 */
 	#define _LANGUAGE_C_PLUS_PLUS 1
@@ -36,6 +33,8 @@
 #include <arpa/inet.h>
 #include <sys/ioctl.h>
 #include <sys/time.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 
 #if HAVE_STDINT_H
 	#ifndef __sgi

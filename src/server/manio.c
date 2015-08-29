@@ -385,7 +385,6 @@ int manio_close(struct manio **manio)
 	if(!manio || !*manio) return ret;
 	if(sort_and_write_hooks_and_dindex(*manio))
 		ret=-1;
-	sync();
 /*
 	There is no gzfileno()
 	if((fd=fzp_fileno((*manio)->fzp))<0)
@@ -403,6 +402,7 @@ int manio_close(struct manio **manio)
 */
 	if(fzp_close(&((*manio)->fzp)))
 		ret=-1;
+	sync();
 	manio_free_content(*manio);
 	free_v((void **)manio);
 	return ret;

@@ -17,16 +17,16 @@ static const char *lockpath="utest_dpth";
 static void assert_path_components(struct dpth *dpth,
 	int prim, int seco, int tert)
 {
-	fail_unless(dpth->prim==prim);
-	fail_unless(dpth->seco==seco);
-	fail_unless(dpth->tert==tert);
+	fail_unless(dpth->comp[0]==prim);
+	fail_unless(dpth->comp[1]==seco);
+	fail_unless(dpth->comp[2]==tert);
 }
 
 static void assert_components(struct dpth *dpth,
 	int prim, int seco, int tert, int sig)
 {
 	assert_path_components(dpth, prim, seco, tert);
-	fail_unless(dpth->sig==sig);
+	fail_unless(dpth->comp[3]==sig);
 }
 
 static struct dpth *setup(void)
@@ -97,7 +97,7 @@ START_TEST(test_simple_lock)
 	fail_unless(dpth->head->lock->status==GET_LOCK_GOT);
 	// Fill up the data file, so that the next call to dpth_incr_sig will
 	// need to open a new one.
-	while(dpth->sig<DATA_FILE_SIG_MAX-1)
+	while(dpth->comp[3]<DATA_FILE_SIG_MAX-1)
 	{
 		fail_unless(write_to_dpth(dpth, savepath)==0);
 		fail_unless(dpth_protocol2_incr_sig(dpth)==0);
@@ -166,10 +166,10 @@ START_TEST(test_incr_sig)
 		dpth=setup();
 		fail_unless(dpth_protocol2_init(dpth,
 			lockpath, MAX_STORAGE_SUBDIRS)==0);
-		dpth->prim=d[i].prim;
-		dpth->seco=d[i].seco;
-		dpth->tert=d[i].tert;
-		dpth->sig=d[i].sig;
+		dpth->comp[0]=d[i].prim;
+		dpth->comp[1]=d[i].seco;
+		dpth->comp[2]=d[i].tert;
+		dpth->comp[3]=d[i].sig;
 		fail_unless(dpth_protocol2_incr_sig(dpth)==d[i].ret_expected);
 		if(!d[i].ret_expected)
 			assert_components(dpth,
@@ -219,10 +219,10 @@ START_TEST(test_init)
 		struct dpth *dpth;
 		char *savepath;
 		dpth=setup();
-		dpth->prim=in[i].prim;
-		dpth->seco=in[i].seco;
-		dpth->tert=in[i].tert;
-		dpth->sig=0;
+		dpth->comp[0]=in[i].prim;
+		dpth->comp[1]=in[i].seco;
+		dpth->comp[2]=in[i].tert;
+		dpth->comp[3]=0;
 		savepath=dpth_protocol2_get_save_path(dpth);
 		// Truncate it to remove the sig part.
 		savepath[14]='\0';

@@ -8,9 +8,6 @@
 #include "sdirs.h"
 #include "timestamp.h"
 
-#include <netdb.h>
-#include <dirent.h>
-
 static int get_link(const char *dir, const char *lnk, char real[], size_t r)
 {
 	ssize_t len=0;

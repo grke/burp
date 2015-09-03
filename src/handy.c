@@ -6,7 +6,6 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <netdb.h>
 
 #ifdef HAVE_WIN32
 #include <winsock2.h>

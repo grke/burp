@@ -40,10 +40,6 @@
 #ifndef _FIND_H
 #define _FIND_H
 
-#ifdef HAVE_DIRENT_H
-#include <dirent.h>
-#endif
-
 #include <sys/file.h>
 #include <sys/param.h>
 #if HAVE_UTIME_H

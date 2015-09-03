@@ -1,8 +1,6 @@
 #include "include.h"
 #include "../cmd.h"
 
-#include <netdb.h>
-
 static int check_passwd(const char *passwd, const char *plain_text)
 {
 #ifdef HAVE_CRYPT

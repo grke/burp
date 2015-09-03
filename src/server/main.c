@@ -2,8 +2,6 @@
 #include "../lock.h"
 #include "monitor/status_server.h"
 
-#include <netdb.h>
-
 // FIX THIS: Should be able to configure multiple addresses and ports.
 #define LISTEN_SOCKETS	32
 

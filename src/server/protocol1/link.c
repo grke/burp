@@ -1,7 +1,5 @@
 #include "include.h"
 
-#include <dirent.h>
-
 int recursive_hardlink(const char *src, const char *dst, struct conf **confs)
 {
 	int n=-1;

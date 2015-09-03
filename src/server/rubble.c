@@ -91,7 +91,7 @@ static int get_fullrealwork(struct asfd *asfd,
 {
 	struct stat statp;
 
-	if(sdirs_get_real_working_from_symlink(sdirs, confs))
+	if(sdirs_get_real_working_from_symlink(sdirs))
 		return -1;
 
 	if(lstat(sdirs->rworking, &statp))

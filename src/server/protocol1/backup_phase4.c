@@ -3,9 +3,7 @@
 #include "../timestamp.h"
 #include "fdirs.h"
 
-#include <netdb.h>
 #include <librsync.h>
-#include <dirent.h>
 
 // Also used by restore.c.
 // FIX THIS: This stuff is very similar to make_rev_delta, can maybe share

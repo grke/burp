@@ -10,8 +10,6 @@
 #include "../../protocol2/blk.h"
 #include "dpth.h"
 
-#include <dirent.h>
-
 static int get_data_lock(struct lock *lock, struct dpth *dpth, const char *path)
 {
 	int ret=-1;
@@ -35,14 +33,14 @@ end:
 static char *dpth_mk_prim(struct dpth *dpth)
 {
 	static char path[8];
-	snprintf(path, sizeof(path), "%04X", dpth->prim);
+	snprintf(path, sizeof(path), "%04X", dpth->comp[0]);
 	return path;
 }
 
 static char *dpth_mk_seco(struct dpth *dpth)
 {
 	static char path[16];
-	snprintf(path, sizeof(path), "%04X/%04X", dpth->prim, dpth->seco);
+	snprintf(path, sizeof(path), "%04X/%04X", dpth->comp[0], dpth->comp[1]);
 	return path;
 }
 
@@ -75,7 +73,7 @@ char *dpth_protocol2_get_save_path(struct dpth *dpth)
 {
 	static char save_path[32];
 	snprintf(save_path, sizeof(save_path), "%04X/%04X/%04X/%04X",
-		dpth->prim, dpth->seco, dpth->tert, dpth->sig);
+		dpth->comp[0], dpth->comp[1], dpth->comp[2], dpth->comp[3]);
 	return save_path;
 }
 
@@ -138,8 +136,8 @@ end:
 
 int dpth_protocol2_incr_sig(struct dpth *dpth)
 {
-	if(++dpth->sig<DATA_FILE_SIG_MAX) return 0;
-	dpth->sig=0;
+	if(++dpth->comp[3]<DATA_FILE_SIG_MAX) return 0;
+	dpth->comp[3]=0;
 	dpth->need_data_lock=1;
 	return dpth_incr(dpth);
 }
@@ -157,13 +155,13 @@ int dpth_protocol2_init(struct dpth *dpth, const char *base_path,
 	if(!(dpth->base_path=strdup_w(base_path, __func__)))
 		goto error;
 
-	dpth->sig=0;
+	dpth->savepath=0;
 	dpth->need_data_lock=1;
 
 	if(get_highest_entry(dpth->base_path, &max, 4))
 		goto error;
 	if(max<0) max=0;
-	dpth->prim=max;
+	dpth->comp[0]=max;
 	tmp=dpth_mk_prim(dpth);
 	if(!(tmp=prepend_s(dpth->base_path, tmp)))
 		goto error;
@@ -171,7 +169,7 @@ int dpth_protocol2_init(struct dpth *dpth, const char *base_path,
 	if(get_highest_entry(tmp, &max, 4))
 		goto error;
 	if(max<0) max=0;
-	dpth->seco=max;
+	dpth->comp[1]=max;
 	free_w(&tmp);
 	tmp=dpth_mk_seco(dpth);
 	if(!(tmp=prepend_s(dpth->base_path, tmp)))
@@ -181,11 +179,11 @@ int dpth_protocol2_init(struct dpth *dpth, const char *base_path,
 		goto error;
 	if(max<0)
 	{
-		dpth->tert=0;
+		dpth->comp[2]=0;
 	}
 	else
 	{
-		dpth->tert=max;
+		dpth->comp[2]=max;
 		if(dpth_incr(dpth)) goto error;
 	}
 

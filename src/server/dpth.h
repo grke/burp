@@ -17,13 +17,12 @@ struct dpth_lock
 
 struct dpth
 {
-	// Protocol 1 only uses these.
-	uint16_t prim;
-	uint16_t seco;
-	uint16_t tert;
+	union
+	{
+		uint16_t comp[4];
+		uint64_t savepath;
+	};
 
-	// Protocol 2 also uses these.
-	uint16_t sig;
 	char *base_path;
 	// Whether we need to lock another data file.
 	uint8_t need_data_lock;

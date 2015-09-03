@@ -18,9 +18,9 @@ static const char *basepath="utest_dpth";
 static void assert_components(struct dpth *dpth,
 	int prim, int seco, int tert)
 {
-	fail_unless(dpth->prim==prim);
-	fail_unless(dpth->seco==seco);
-	fail_unless(dpth->tert==tert);
+	fail_unless(dpth->comp[0]==prim);
+	fail_unless(dpth->comp[1]==seco);
+	fail_unless(dpth->comp[2]==tert);
 }
 
 static struct dpth *setup(void)
@@ -77,9 +77,9 @@ START_TEST(test_incr)
 		dpth=setup();
 		fail_unless(dpth_protocol1_init(dpth,
 			basepath, MAX_STORAGE_SUBDIRS)==0);
-		dpth->prim=in[i].prim;
-		dpth->seco=in[i].seco;
-		dpth->tert=in[i].tert;
+		dpth->comp[0]=in[i].prim;
+		dpth->comp[1]=in[i].seco;
+		dpth->comp[2]=in[i].tert;
 		fail_unless(dpth_incr(dpth)==in[i].ret_expected);
 		if(!in[i].ret_expected)
 			assert_components(dpth,
@@ -100,9 +100,9 @@ START_TEST(test_init)
 		struct dpth *dpth;
 		char *savepath;
 		dpth=setup();
-		dpth->prim=in[i].prim;
-		dpth->seco=in[i].seco;
-		dpth->tert=in[i].tert;
+		dpth->comp[0]=in[i].prim;
+		dpth->comp[1]=in[i].seco;
+		dpth->comp[2]=in[i].tert;
 		savepath=dpth_protocol1_mk(dpth, 0, CMD_ERROR);
 		path=prepend_s(basepath, savepath);
 		fail_unless(build_path_w(path)==0);
@@ -137,9 +137,9 @@ static void assert_mk(struct dpth *dpth, int compression, enum cmd cmd,
 START_TEST(test_mk)
 {
 	struct dpth *dpth=setup();
-	dpth->prim=9;
-	dpth->seco=9;
-	dpth->tert=9;
+	dpth->comp[0]=9;
+	dpth->comp[1]=9;
+	dpth->comp[2]=9;
 	assert_mk(dpth, 0, CMD_FILE, "0009/0009/0009");
 	assert_mk(dpth, 5, CMD_FILE, "0009/0009/0009.gz");
 	assert_mk(dpth, 0, CMD_EFS_FILE, "0009/0009/0009");
@@ -182,9 +182,9 @@ START_TEST(test_set_from_string)
 		int ret;
 		struct dpth *dpth;
 		dpth=setup();
-		dpth->prim=str[i].prim;
-		dpth->seco=str[i].seco;
-		dpth->tert=str[i].tert;
+		dpth->comp[0]=str[i].prim;
+		dpth->comp[1]=str[i].seco;
+		dpth->comp[2]=str[i].tert;
 		ret=dpth_protocol1_set_from_string(dpth, str[i].str);
 		fail_unless(ret==str[i].ret_expected);
 		assert_components(dpth,

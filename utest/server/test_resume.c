@@ -726,6 +726,8 @@ Suite *suite_server_resume(void)
 
 	tc_core=tcase_create("Core");
 
+	tcase_set_timeout(tc_core, 60);
+
 	tcase_add_test(tc_core, test_man_protocol1_phase2_get_last_good_entry);
 	tcase_add_test(tc_core, test_man_protocol2_phase2_get_last_good_entry);
 

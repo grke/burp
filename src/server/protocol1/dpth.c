@@ -6,14 +6,12 @@
 #include "../../prepend.h"
 #include "dpth.h"
 
-#include <dirent.h>
-
 char *dpth_protocol1_mk(struct dpth *dpth, int compression, enum cmd cmd)
 {
 	static char path[32];
 	// File data.
 	snprintf(path, sizeof(path), "%04X/%04X/%04X%s",
-		dpth->prim, dpth->seco, dpth->tert,
+		dpth->comp[0], dpth->comp[1], dpth->comp[2],
 		// Because of the way EFS works, it cannot be compressed.
 		(compression && cmd!=CMD_EFS_FILE)?".gz":"");
 	return path;
@@ -22,14 +20,14 @@ char *dpth_protocol1_mk(struct dpth *dpth, int compression, enum cmd cmd)
 static char *dpth_mk_prim(struct dpth *dpth)
 {
 	static char path[5];
-	snprintf(path, sizeof(path), "%04X", dpth->prim);
+	snprintf(path, sizeof(path), "%04X", dpth->comp[0]);
 	return path;
 }
 
 static char *dpth_mk_seco(struct dpth *dpth)
 {
 	static char path[10];
-	snprintf(path, sizeof(path), "%04X/%04X", dpth->prim, dpth->seco);
+	snprintf(path, sizeof(path), "%04X/%04X", dpth->comp[0], dpth->comp[1]);
 	return path;
 }
 
@@ -75,19 +73,17 @@ int dpth_protocol1_init(struct dpth *dpth, const char *basepath,
 	int max_storage_subdirs)
 {
 	int ret=0;
-	dpth->prim=0;
-	dpth->seco=0;
-	dpth->tert=0;
+	dpth->savepath=0;
 	dpth->max_storage_subdirs=max_storage_subdirs;
 
 	if((ret=get_next_comp(basepath,
-		NULL, &dpth->prim))) goto end;
+		NULL, &dpth->comp[0]))) goto end;
 
 	if((ret=get_next_comp(basepath,
-		dpth_mk_prim(dpth), &dpth->seco))) goto end;
+		dpth_mk_prim(dpth), &dpth->comp[1]))) goto end;
 
 	if((ret=get_next_comp(basepath,
-		dpth_mk_seco(dpth), &dpth->tert))) goto end;
+		dpth_mk_seco(dpth), &dpth->comp[2]))) goto end;
 
 	// At this point, we have the latest data file. Increment to get the
 	// next free one.
@@ -113,15 +109,18 @@ int dpth_protocol1_set_from_string(struct dpth *dpth, const char *datapath)
 
 	if((sscanf(datapath, "%04X/%04X/%04X", &a, &b, &c))!=3)
 		return -1;
-	if(dpth->prim==(int)a && dpth->seco==(int)b && dpth->tert > (int)c)
+	if(dpth->comp[0]==(int)a
+	  && dpth->comp[1]==(int)b
+	  && dpth->comp[2] > (int)c)
 		return 0;
-	if(dpth->prim==(int)a && dpth->seco > (int)b)
+	if(dpth->comp[0]==(int)a
+	  && dpth->comp[1] > (int)b)
 		return 0;
-	if(dpth->prim > (int)a)
+	if(dpth->comp[0] > (int)a)
 		return 0;
 
-	dpth->prim=a;
-	dpth->seco=b;
-	dpth->tert=c;
+	dpth->comp[0]=a;
+	dpth->comp[1]=b;
+	dpth->comp[2]=c;
 	return 0;
 }

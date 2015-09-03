@@ -22,7 +22,7 @@ static struct sdirs *setup_sdirs(struct conf **confs)
 {
 	struct sdirs *sdirs;
 	fail_unless((sdirs=sdirs_alloc())!=NULL);
-	fail_unless(sdirs_init(sdirs, confs)==0);
+	fail_unless(sdirs_init_from_confs(sdirs, confs)==0);
 	return sdirs;
 }
 

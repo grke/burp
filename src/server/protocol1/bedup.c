@@ -2,7 +2,6 @@
 #include "../../lock.h"
 
 #include <uthash.h>
-#include <dirent.h>
 
 #define LOCKFILE_NAME		"lockfile"
 #define BEDUP_LOCKFILE_NAME	"lockfile.bedup"

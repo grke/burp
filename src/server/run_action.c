@@ -408,7 +408,7 @@ int run_action_server(struct async *as,
 	int ret=-1;
         struct sdirs *sdirs=NULL;
         if((sdirs=sdirs_alloc())
-          && !sdirs_init(sdirs, cconfs))
+          && !sdirs_init_from_confs(sdirs, cconfs))
 		ret=run_action_server_do(as,
 			sdirs, incexc, srestore, timer_ret, cconfs);
         if(sdirs) lock_release(sdirs->lock);

@@ -135,6 +135,10 @@
 	};
 #endif
 
+#ifdef HAVE_DIRENT_H
+#include <dirent.h>
+#endif
+
 #ifdef HAVE_LINUX_OS
 	#include <endian.h>
 #endif

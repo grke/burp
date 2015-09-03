@@ -366,7 +366,7 @@ int champ_chooser_server_standalone(struct conf **globalcs)
 	if(set_string(cconfs[OPT_CNAME], orig_client)
 	  || conf_load_clientconfdir(globalcs, cconfs)
 	  || !(sdirs=sdirs_alloc())
-	  || sdirs_init(sdirs, cconfs)
+	  || sdirs_init_from_confs(sdirs, cconfs)
 	  || champ_chooser_server(sdirs, cconfs))
 		goto end;
 	ret=0;

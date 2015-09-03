@@ -4,6 +4,8 @@
 #define TREE_DIR	"t"
 #define DATA_DIR	"data"
 
+#include "../conf.h"
+
 // Server directories.
 struct sdirs
 {
@@ -43,13 +45,16 @@ struct sdirs
 };
 
 extern struct sdirs *sdirs_alloc(void);
-extern int sdirs_init(struct sdirs *sdirs, struct conf **confs);
+extern int sdirs_init_from_confs(struct sdirs *sdirs, struct conf **confs);
+extern int sdirs_init(struct sdirs *sdirs, enum protocol protocol,
+	const char *directory, const char *cname, const char *conf_lockdir,
+	const char *dedup_group);
 extern void sdirs_free_content(struct sdirs *sdirs);
 extern void sdirs_free(struct sdirs **sdirs);
 
-extern int sdirs_get_real_manifest(struct sdirs *sdirs, struct conf **confs);
-extern int sdirs_create_real_working(struct sdirs *sdirs, struct conf **confs);
-extern int sdirs_get_real_working_from_symlink(struct sdirs *sdirs,
-	struct conf **confs);
+extern int sdirs_get_real_manifest(struct sdirs *sdirs, enum protocol protocol);
+extern int sdirs_create_real_working(struct sdirs *sdirs,
+	const char *timestamp_format);
+extern int sdirs_get_real_working_from_symlink(struct sdirs *sdirs);
 
 #endif

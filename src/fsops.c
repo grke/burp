@@ -1,8 +1,6 @@
 #include "include.h"
 #include "pathcmp.h"
 
-#include <dirent.h>
-
 uint32_t fs_name_max=0;
 uint32_t fs_full_path_max=0;
 static uint32_t fs_path_max=0;

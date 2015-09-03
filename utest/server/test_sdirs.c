@@ -1,5 +1,3 @@
-#include <check.h>
-#include <stdio.h>
 #include "../test.h"
 #include "../../src/alloc.h"
 #include "../../src/conf.h"
@@ -23,7 +21,7 @@ static struct conf **setup_confs(const char *conf_str)
 
 #define BASE		"utest_directory"
 
-static struct sdirs *setup(struct conf **confs)
+static struct sdirs *setup()
 {
 	struct sdirs *sdirs;
 	fail_unless(recursive_delete(BASE)==0);
@@ -51,8 +49,9 @@ static void check_dynamic_paths(struct sdirs *sdirs, struct conf **confs,
 	fail_unless(sdirs->rmanifest==NULL);
 	fail_unless(sdirs->treepath==NULL);
 
-	fail_unless(sdirs_create_real_working(sdirs, confs)==0);
-	fail_unless(sdirs_get_real_manifest(sdirs, confs)==0);
+	fail_unless(sdirs_create_real_working(sdirs,
+		get_string(confs[OPT_TIMESTAMP_FORMAT]))==0);
+	fail_unless(sdirs_get_real_manifest(sdirs, get_protocol(confs))==0);
 	fail_unless(timestamp_read(sdirs->timestamp, tstmp, sizeof(tstmp))==0);
 	rworking=prepend_s(sdirs->client, tstmp);
 	ck_assert_str_eq(sdirs->rworking, rworking);
@@ -64,7 +63,7 @@ static void check_dynamic_paths(struct sdirs *sdirs, struct conf **confs,
 	free_w(&sdirs->rworking);
 	free_w(&sdirs->treepath);
 
-	fail_unless(sdirs_get_real_working_from_symlink(sdirs, confs)==0);
+	fail_unless(sdirs_get_real_working_from_symlink(sdirs)==0);
 	ck_assert_str_eq(sdirs->rworking, rworking);
 	ck_assert_str_eq(sdirs->treepath, treepath);
 	
@@ -80,7 +79,7 @@ static void check_dynamic_paths(struct sdirs *sdirs, struct conf **confs,
 static void protocol1_tests(struct sdirs *sdirs, struct conf **confs)
 {
 	set_protocol(confs, PROTO_1);
-	fail_unless(sdirs_init(sdirs, confs)==0);
+	fail_unless(sdirs_init_from_confs(sdirs, confs)==0);
 	ck_assert_str_eq(sdirs->base, BASE);
 	fail_unless(sdirs->dedup==NULL);
 	fail_unless(sdirs->champlock==NULL);
@@ -120,7 +119,7 @@ static void protocol1_tests(struct sdirs *sdirs, struct conf **confs)
 static void protocol2_tests(struct sdirs *sdirs, struct conf **confs)
 {
 	set_protocol(confs, PROTO_2);
-	fail_unless(sdirs_init(sdirs, confs)==0);
+	fail_unless(sdirs_init_from_confs(sdirs, confs)==0);
 	ck_assert_str_eq(sdirs->base, BASE);
 	ck_assert_str_eq(sdirs->dedup, DEDUP);
 	ck_assert_str_eq(sdirs->champlock, DATA "/cc.lock");
@@ -158,7 +157,7 @@ START_TEST(test_sdirs)
 		// Override the directory so that we can do things in the
 		// current directory in the filesystem.
 		"directory=" BASE "\n");
-	sdirs=setup(confs);
+	sdirs=setup();
 
 	protocol1_tests(sdirs, confs);
 	sdirs_free_content(sdirs);
@@ -173,9 +172,9 @@ START_TEST(test_lockdirs)
 	struct sdirs *sdirs;
 	struct conf **confs;
 	confs=setup_confs(MIN_SERVER_CONF "client_lockdir=/some/other/dir\n");
-	sdirs=setup(confs);
+	sdirs=setup();
 	set_protocol(confs, PROTO_2);
-	fail_unless(sdirs_init(sdirs, confs)==0);
+	fail_unless(sdirs_init_from_confs(sdirs, confs)==0);
 
 	ck_assert_str_eq(sdirs->lockdir, "/some/other/dir");
 	ck_assert_str_eq(sdirs->lock->path,

@@ -135,16 +135,17 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 
 	if(resume)
 	{
-		if(sdirs_get_real_working_from_symlink(sdirs, cconfs)
-		  || sdirs_get_real_manifest(sdirs, cconfs)
+		if(sdirs_get_real_working_from_symlink(sdirs)
+		  || sdirs_get_real_manifest(sdirs, protocol)
 		  || open_log(asfd, sdirs, cconfs))
 			goto error;
 	}
 	else
 	{
 		// Not resuming - need to set everything up fresh.
-		if(sdirs_create_real_working(sdirs, cconfs)
-		  || sdirs_get_real_manifest(sdirs, cconfs)
+		if(sdirs_create_real_working(sdirs,
+			get_string(cconfs[OPT_TIMESTAMP_FORMAT]))
+		  || sdirs_get_real_manifest(sdirs, protocol)
 		  || open_log(asfd, sdirs, cconfs))
 			goto error;
 

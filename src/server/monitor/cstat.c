@@ -4,8 +4,6 @@
 #include "../bu_get.h"
 #include "../sdirs.h"
 
-#include <dirent.h>
-
 static int permitted(struct cstat *cstat,
 	struct conf **parentconfs, struct conf **cconfs)
 {
@@ -35,7 +33,8 @@ static int set_cstat_from_conf(struct cstat *cstat,
 	cstat->protocol=get_protocol(cconfs);
 	sdirs_free((struct sdirs **)&cstat->sdirs);
 	if(!(cstat->sdirs=sdirs_alloc())
-	  || sdirs_init((struct sdirs *)cstat->sdirs, cconfs)) return -1;
+	  || sdirs_init_from_confs((struct sdirs *)cstat->sdirs, cconfs))
+		return -1;
 	return 0;
 }
 

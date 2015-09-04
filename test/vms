@@ -56,7 +56,7 @@ scp -r $ssh_opts "$host:/tmp/burp-coverage" . || fail "copying code coverage"
 ssh $ssh_opts "$host" "rm -rf $tarfile $directory" \
 	|| fail "cleaning linux machine"
 
-stop_instances "$instanceids"
+stop_instanceids "$instanceids"
 
 echo "Everything succeeded."
 

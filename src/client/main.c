@@ -198,7 +198,6 @@ static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx,
 	  action==ACTION_MONITOR?
 	  get_string(confs[OPT_STATUS_PORT]):get_string(confs[OPT_PORT])))<0)
 		return -1;
-	set_peer_env_vars(*rfd);
 
 	if(!(*ssl=SSL_new(*ctx))
 	  || !(sbio=BIO_new_socket(*rfd, BIO_NOCLOSE)))

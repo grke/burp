@@ -24,7 +24,8 @@ extern int set_blocking(int fd);
 extern char *get_tmp_filename(const char *basis);
 extern void add_fd_to_sets(int fd,
 	fd_set *read_set, fd_set *write_set, fd_set *err_set, int *max_fd);
-extern int set_peer_env_vars(int cfd);
+extern int log_peer_address(struct sockaddr_storage *addr);
+extern int set_peer_env_vars(struct sockaddr_storage *addr);
 extern int init_client_socket(const char *host, const char *port);
 extern void reuseaddr(int fd);
 extern int chuser_and_or_chgrp(const char *user, const char *group);

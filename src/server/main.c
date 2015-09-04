@@ -172,7 +172,7 @@ int setup_signals(int oldmax_children, int max_children,
 	return 0;
 }
 
-static int run_child(int *cfd, SSL_CTX *ctx,
+static int run_child(int *cfd, SSL_CTX *ctx, struct sockaddr_storage *addr,
 	int status_wfd, int status_rfd, const char *conffile, int forking)
 {
 	int ret=-1;
@@ -189,7 +189,7 @@ static int run_child(int *cfd, SSL_CTX *ctx,
 	  || !(cconfs=confs_alloc()))
 		goto end;
 
-	set_peer_env_vars(*cfd);
+	set_peer_env_vars(addr);
 
 	// Reload global config, in case things have changed. This means that
 	// the server does not need to be restarted for most conf changes.
@@ -343,7 +343,7 @@ static int process_incoming_client(struct asfd *asfd, SSL_CTX *ctx,
 	int pipe_rfd[2];
 	int pipe_wfd[2];
 	socklen_t client_length=0;
-	struct sockaddr_in client_name;
+	struct sockaddr_storage client_name;
 	enum asfd_fdtype fdtype=asfd->fdtype;
 	int forking=get_int(confs[OPT_FORK]);
 
@@ -358,9 +358,12 @@ static int process_incoming_client(struct asfd *asfd, SSL_CTX *ctx,
 		return -1;
 	}
 	reuseaddr(cfd);
+	if(log_peer_address(&client_name))
+		return -1;
 
 	if(!forking)
-		return run_child(&cfd, ctx, -1, -1, conffile, forking);
+		return run_child(&cfd, ctx,
+			&client_name, -1, -1, conffile, forking);
 
 	if(chld_check_counts(confs, asfd))
 	{
@@ -414,7 +417,7 @@ static int process_incoming_client(struct asfd *asfd, SSL_CTX *ctx,
 			confs_free_content(confs);
 			confs_init(confs);
 
-			ret=run_child(&cfd, ctx, pipe_rfd[1],
+			ret=run_child(&cfd, ctx, &client_name, pipe_rfd[1],
 			  fdtype==ASFD_FD_SERVER_LISTEN_STATUS?pipe_wfd[0]:-1,
 			  conffile, forking);
 

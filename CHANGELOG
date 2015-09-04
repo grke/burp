@@ -46,6 +46,7 @@
   * Fix large file support for 32 bit machines.
   * Let the champ chooser continue if candidate_add_fresh could not read a
     new candidate file.
+  * On the server, log the client address and port for every connection.
 
 2015-07-01 Changes in burp-1.4.40:
   * Fix '-a l' regex so that it isn't split in two at the right-most

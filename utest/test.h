@@ -56,6 +56,7 @@ Suite *suite_protocol2_blist(void);
 Suite *suite_protocol2_rabin_rconf(void);
 Suite *suite_protocol2_rabin_win(void);
 Suite *suite_client_find(void);
+Suite *suite_server_bu_get(void);
 Suite *suite_server_manio(void);
 Suite *suite_server_resume(void);
 Suite *suite_server_sdirs(void);

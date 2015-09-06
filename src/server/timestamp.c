@@ -34,24 +34,23 @@ int timestamp_write(const char *path, const char *tstmp)
 	return 0;
 }
 
-static void write_to_buf(char *buf, size_t s,
-	unsigned long index, const char *format, const struct tm *ctm)
+static void timestamp_write_to_buf(char *buf, size_t s,
+	uint64_t index, const char *format, time_t *t)
 {
 	char tmpbuf[32]="";
 	const char *fmt=DEFAULT_TIMESTAMP_FORMAT;
 	if(format) fmt=format;
-	strftime(tmpbuf, sizeof(tmpbuf), fmt, ctm);
-	snprintf(buf, s, "%07lu %s", index, tmpbuf);
+	strftime(tmpbuf, sizeof(tmpbuf), fmt, localtime(t));
+	snprintf(buf, s, "%07"PRIu64" %s", index, tmpbuf);
 }
 
 int timestamp_get_new(struct sdirs *sdirs,
 	char *buf, size_t s, char *bufforfile, size_t bs, const char *format)
 {
 	time_t t=0;
-	unsigned long index=0;
+	uint64_t index=0;
 	struct bu *bu=NULL;
 	struct bu *bu_list=NULL;
-	const struct tm *ctm=NULL;
 
 	// Want to prefix the timestamp with an index that increases by
 	// one each time. This makes it far more obvious which backup depends
@@ -65,13 +64,12 @@ int timestamp_get_new(struct sdirs *sdirs,
 	bu_list_free(&bu_list);
 
 	time(&t);
-	ctm=localtime(&t);
         // Windows does not like the %T strftime format option - you get
         // complaints under gdb.
 	index++;
 
-	write_to_buf(buf, s, index, NULL, ctm);
-	write_to_buf(bufforfile, bs, index, format, ctm);
+	timestamp_write_to_buf(buf, s, index, NULL, &t);
+	timestamp_write_to_buf(bufforfile, bs, index, format, &t);
 
 	return 0;
 }

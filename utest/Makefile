@@ -31,6 +31,7 @@ SRCS = \
 	server/protocol2/champ_chooser/test_sparse.c \
 	server/protocol2/test_backup_phase4.c \
 	server/protocol2/test_dpth.c \
+	server/test_bu_get.c \
 	server/test_manio.c \
 	server/test_resume.c \
 	server/test_sdirs.c \

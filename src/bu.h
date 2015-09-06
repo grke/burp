@@ -26,7 +26,6 @@ struct bu
 	char *data;
 	char *delta;
 	char *timestamp;
-	char *forward_timestamp;
 	uint16_t flags;
 
 	// The number of the backup.

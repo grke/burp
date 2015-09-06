@@ -65,6 +65,7 @@ static int maybe_add_ent(const char *dir, const char *d_name,
 		ret=0; // For resilience.
 		goto error;
 	}
+
 	free_w(&timestamp);
 
 	if(!(timestampstr=strdup_w(buf, __func__)))
@@ -113,6 +114,7 @@ static int maybe_add_ent(const char *dir, const char *d_name,
 		  have_backup_file_name(bu, "verify_stats", BU_STATS_VERIFY);
 	}
 
+	free_w(&hlinkedpath);
 	return 0;
 error:
 	free_w(&basename);
@@ -216,8 +218,8 @@ static int do_bu_get_list(struct sdirs *sdirs,
 end:
 	if(dp)
 	{
-		for(i=0; i<n; i++) free(dp[i]);
-		free(dp);
+		for(i=0; i<n; i++) free_v((void **)&dp[i]);
+		free_v((void **)&dp);
 	}
 	return ret;
 }

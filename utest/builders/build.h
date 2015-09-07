@@ -2,6 +2,7 @@
 #define _BUILDERS_H
 
 #include "../../src/conf.h"
+#include "server/build_storage_dirs.h"
 
 #define RMANIFEST_RELATIVE	"rmanifest_relative"
 

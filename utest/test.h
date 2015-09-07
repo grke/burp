@@ -41,6 +41,7 @@ extern void assert_iobuf(struct iobuf *a, struct iobuf *b);
 extern void assert_sbuf(struct sbuf *a, struct sbuf *b, enum protocol protocol);
 extern struct manio *do_manio_open(const char *path, const char *mode,
 	enum protocol protocol, int phase);
+extern void assert_bu_list(struct sdirs *sdirs, struct sd *s, unsigned int len);
 
 Suite *suite_alloc(void);
 Suite *suite_attribs(void);
@@ -57,6 +58,7 @@ Suite *suite_protocol2_rabin_rconf(void);
 Suite *suite_protocol2_rabin_win(void);
 Suite *suite_client_find(void);
 Suite *suite_server_bu_get(void);
+Suite *suite_server_delete(void);
 Suite *suite_server_manio(void);
 Suite *suite_server_resume(void);
 Suite *suite_server_sdirs(void);

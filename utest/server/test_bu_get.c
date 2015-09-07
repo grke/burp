@@ -1,4 +1,5 @@
 #include "../test.h"
+#include "../builders/build.h"
 #include "../../src/alloc.h"
 #include "../../src/bu.h"
 #include "../../src/conf.h"
@@ -13,7 +14,7 @@
 
 #define BASE		"utest_bu_get"
 
-static struct sdirs *setup()
+static struct sdirs *setup(void)
 {
 	struct sdirs *sdirs;
 	fail_unless(recursive_delete(BASE)==0);
@@ -37,50 +38,7 @@ static void do_sdirs_init(struct sdirs *sdirs, enum protocol protocol)
 		"a_group")); // dedup_group
 }
 
-static void create_file(const char *path)
-{
-	FILE *fp;
-	fail_unless((fp=fopen(path, "wb"))!=NULL);
-	fail_unless(!fclose(fp));
-}
-
-struct sd
-{
-	const char *timestamp;
-	unsigned long bno;
-	unsigned long index;
-	uint16_t flags;
-};
-
-static void build_storage_dirs(struct sdirs *sdirs, struct sd *s, int len)
-{
-	int i=0;
-	time_t t=0;
-	char backup[128]="";
-	char hardlinked[128]="";
-	char timestamp_path[128]="";
-	for(i=0; i<len; i++)
-	{
-		snprintf(backup, sizeof(backup),
-			"%s/%s", sdirs->client, s[i].timestamp);
-		snprintf(timestamp_path, sizeof(timestamp_path),
-			"%s/timestamp", backup);
-                fail_unless(!build_path_w(backup));
-                fail_unless(!mkdir(backup, 0777));
-		fail_unless(!timestamp_write(timestamp_path, s[i].timestamp));
-		if(s[i].flags & BU_CURRENT)
-			fail_unless(!symlink(s[i].timestamp, sdirs->current));
-		if(s[i].flags & BU_HARDLINKED)
-		{
-			snprintf(hardlinked, sizeof(hardlinked),
-				"%s/hardlinked", backup);
-			create_file(hardlinked);
-		}
-		t+=60*60*24; // Add one day.
-	}
-}
-
-static void check_bu_list(struct sdirs *sdirs, struct sd *s, unsigned int len)
+void assert_bu_list(struct sdirs *sdirs, struct sd *s, unsigned int len)
 {
 	unsigned int count=0;
 	struct bu *bu;
@@ -93,7 +51,6 @@ static void check_bu_list(struct sdirs *sdirs, struct sd *s, unsigned int len)
 	for(count=0; count<len; count++)
 	{
 		fail_unless(bu!=NULL);
-//printf("bu: %lu %s %lu %08X\n", bu->bno, bu->path, bu->index, bu->flags);
 
 		fail_unless(s[count].bno==bu->bno);
 		fail_unless(s[count].index==bu->index);
@@ -117,7 +74,7 @@ static void build_and_check(struct sd *s, int len, enum protocol protocol)
 	struct sdirs *sdirs=setup();
 	do_sdirs_init(sdirs, protocol);
 	build_storage_dirs(sdirs, s, len);
-	check_bu_list(sdirs, s, len);
+	assert_bu_list(sdirs, s, len);
 	tear_down(&sdirs);
 }
 
@@ -152,6 +109,32 @@ static struct sd sd5[] = {
 	{ "0000005 1970-01-05 00:00:00", 5, 5, BU_CURRENT }
 };
 
+static struct sd sd6[] = {
+	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_HARDLINKED|BU_DELETABLE },
+	{ "0000002 1970-01-02 00:00:00", 2, 2, BU_HARDLINKED|BU_DELETABLE },
+	{ "0000005 1970-01-05 00:00:00", 5, 3, BU_HARDLINKED|BU_CURRENT }
+};
+
+static struct sd sd7[] = {
+	{ "0000001 1970-01-01 00:00:00", 1,  1, BU_HARDLINKED|BU_DELETABLE },
+	{ "0000005 1970-01-05 00:00:00", 5,  2, BU_HARDLINKED|BU_DELETABLE },
+	{ "0000010 1970-01-10 00:00:00", 10, 3, BU_HARDLINKED|BU_DELETABLE },
+	{ "0000020 1970-01-20 00:00:00", 20, 4, BU_DELETABLE },
+	{ "0000021 1970-01-21 00:00:00", 21, 5, 0 },
+	{ "0000022 1970-01-22 00:00:00", 22, 6, 0 },
+	{ "0000023 1970-01-23 00:00:00", 23, 7, BU_CURRENT }
+};
+
+static struct sd sd8[] = {
+	{ "0000010 1970-01-01 00:00:00", 10, 1, BU_HARDLINKED|BU_DELETABLE },
+	{ "0000015 1970-01-05 00:00:00", 15, 2, BU_HARDLINKED|BU_DELETABLE },
+	{ "0000020 1970-01-10 00:00:00", 20, 3, BU_HARDLINKED|BU_DELETABLE },
+	{ "0000030 1970-01-20 00:00:00", 30, 4, BU_DELETABLE },
+	{ "0000031 1970-01-21 00:00:00", 31, 5, 0 },
+	{ "0000032 1970-01-22 00:00:00", 32, 6, 0 },
+	{ "0000033 1970-01-23 00:00:00", 33, 7, BU_CURRENT }
+};
+
 static void do_tests(enum protocol protocol)
 {
 	build_and_check(sd1, ARR_LEN(sd1), protocol);
@@ -159,6 +142,9 @@ static void do_tests(enum protocol protocol)
 	build_and_check(sd3, ARR_LEN(sd3), protocol);
 	build_and_check(sd4, ARR_LEN(sd4), protocol);
 	build_and_check(sd5, ARR_LEN(sd5), protocol);
+	build_and_check(sd5, ARR_LEN(sd6), protocol);
+	build_and_check(sd7, ARR_LEN(sd7), protocol);
+	build_and_check(sd8, ARR_LEN(sd8), protocol);
 }
 
 START_TEST(test_bu_get_proto_1)

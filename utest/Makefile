@@ -6,6 +6,7 @@ SRCS = \
 	builders/build_attribs.c \
 	builders/protocol2/build_blist.c \
 	builders/server/build_manifest.c \
+	builders/server/build_storage_dirs.c \
 	builders/build_paths.c \
 	main.c \
 	mock.c \
@@ -32,6 +33,7 @@ SRCS = \
 	server/protocol2/test_backup_phase4.c \
 	server/protocol2/test_dpth.c \
 	server/test_bu_get.c \
+	server/test_delete.c \
 	server/test_manio.c \
 	server/test_resume.c \
 	server/test_sdirs.c \
@@ -73,6 +75,7 @@ BURP_SRCS = \
 	../src/server/bu_get.c \
 	../src/server/compress.c \
 	../src/server/dpth.c \
+	../src/server/delete.c \
 	../src/server/manio.c \
 	../src/server/sdirs.c \
 	../src/server/protocol1/dpth.c \

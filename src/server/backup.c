@@ -2,6 +2,7 @@
 #include "../cmd.h"
 
 #include "backup_phase3.h"
+#include "delete.h"
 #include "protocol1/backup_phase2.h"
 #include "protocol1/backup_phase4.h"
 #include "protocol2/backup_phase2.h"

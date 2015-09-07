@@ -1,7 +1,13 @@
-#include "include.h"
+#include "../burp.h"
+#include "../asfd.h"
 #include "../bu.h"
 #include "../cmd.h"
+#include "../cntr.h"
+#include "../fsops.h"
+#include "../log.h"
+#include "../strlist.h"
 #include "bu_get.h"
+#include "child.h"
 #include "sdirs.h"
 
 static int do_rename_w(const char *a, const char *b)

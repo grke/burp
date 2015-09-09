@@ -116,7 +116,7 @@ static int range_loop(struct sdirs *sdirs, const char *cname,
 		for(bu=last; bu; bu=bu->prev)
 		{
 			if(s<bu->trbno
-			  && bu->trbno<=r
+			  && bu->trbno<r
 			  && (bu->flags & BU_DELETABLE))
 			{
 				if(delete_backup(sdirs, cname, bu)) return -1;

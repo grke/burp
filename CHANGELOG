@@ -1,4 +1,8 @@
   * Another fix for sigchld handling.
+  * Tests for delete algorithm.
+  * Fix a bug where deleting with multiple keep settings and no hardlinked
+    archives would result in too many backups getting removed in the oldest
+    keep range.
 
 2015-09-04 Changes in burp-2.0.22:
   * Make protocol2 resume work. Add unit tests for resume components.

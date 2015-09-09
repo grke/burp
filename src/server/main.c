@@ -9,7 +9,6 @@ static int hupreload=0;
 static int hupreload_logged=0;
 static int gentleshutdown=0;
 static int gentleshutdown_logged=0;
-static int sigchld=0;
 
 // These will also be used as the exit codes of the program and are therefore
 // unsigned integers.
@@ -51,12 +50,10 @@ static void chld_check_for_exiting(struct async *mainas)
 	int status;
 	struct asfd *asfd;
 
-	while(sigchld && (p=waitpid(-1, &status, WNOHANG))>0)
+	while((p=waitpid(-1, &status, WNOHANG))>0)
 	{
-		sigchld--;
 		// Logging a message here appeared to occasionally lock burp up
 		// on a Ubuntu server that I used to use.
-		//logp("child pid %d exited\n", p);
 		for(asfd=mainas->asfd; asfd; asfd=asfd->next)
 		{
 			if(p!=asfd->pid) continue;
@@ -65,7 +62,6 @@ static void chld_check_for_exiting(struct async *mainas)
 			break;
 		}
 	}
-
 }
 
 static int init_listen_socket(const char *address, const char *port, int *fds)
@@ -154,18 +150,12 @@ static int init_listen_socket(const char *address, const char *port, int *fds)
 	return 0;
 }
 
-static void sigchld_handler(int sig)
-{
-	sigchld++;
-}
-
 int setup_signals(int oldmax_children, int max_children,
 	int oldmax_status_children, int max_status_children)
 {
 	// Ignore SIGPIPE - we are careful with read and write return values.
 	signal(SIGPIPE, SIG_IGN);
 
-	setup_signal(SIGCHLD, sigchld_handler);
 	setup_signal(SIGHUP, huphandler);
 	setup_signal(SIGUSR2, usr2handler);
 
@@ -661,10 +651,7 @@ static int run_server(struct conf **confs, const char *conffile,
 			iobuf_free_content(asfd->rbuf);
 		}
 
-		if(sigchld)
-		{
-			chld_check_for_exiting(mainas);
-		}
+		chld_check_for_exiting(mainas);
 
 		// Leave if we had a SIGUSR1 and there are no children running.
 		if(gentleshutdown)

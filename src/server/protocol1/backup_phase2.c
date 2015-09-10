@@ -38,8 +38,6 @@ static int treedata(struct sbuf *sb, struct conf **cconfs)
 {
 	// Windows is sending directory data as if it is file data - this
 	// cannot be saved in a tree structure.
-	// So, need to decode the stat to test for whether it is a directory.
-	attribs_decode(sb);
 	if(S_ISDIR(sb->statp.st_mode)) return 0;
 
 	if(sb->path.cmd!=CMD_FILE
@@ -71,8 +69,7 @@ static char *set_new_datapth(struct asfd *asfd,
 	}
 	else
 	{
-		if(!(tmp=strdup_w(dpth_protocol1_mk(dpth,
-			get_int(cconfs[OPT_COMPRESSION]),
+		if(!(tmp=strdup_w(dpth_protocol1_mk(dpth, sb->compression,
 			sb->path.cmd), __func__))) return NULL;
 	}
 	iobuf_from_str(&sb->protocol1->datapth, CMD_DATAPTH, tmp);
@@ -259,7 +256,7 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 	struct manio *ucmanio, struct conf **cconfs)
 {
 	int oldcompressed=0;
-	int compression=get_int(cconfs[OPT_COMPRESSION]);
+	int compression=p1b->compression;
 
 	// If the file type changed, I think it is time to back it up again
 	// (for example, EFS changing to normal file, or back again).
@@ -306,7 +303,7 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 	}
 
 	// Got a changed file.
-	//logp("got changed file: %s\n", p1b->path);
+	//logp("got changed file: %s\n", p1b->path.buf);
 
 	// If either old or new is encrypted, or librsync is off, we need to
 	// get a new file.
@@ -454,11 +451,10 @@ static int do_stuff_to_send(struct asfd *asfd,
 static int start_to_receive_delta(struct sdirs *sdirs, struct conf **cconfs,
 	struct sbuf *rb)
 {
-	int compression=get_int(cconfs[OPT_COMPRESSION]);
-	if(compression)
+	if(rb->compression)
 	{
 		if(!(rb->protocol1->fzp=fzp_gzopen(sdirs->deltmppath,
-			comp_level(compression))))
+			comp_level(rb->compression))))
 				return -1;
 	}
 	else
@@ -636,6 +632,7 @@ static int do_stuff_to_receive(struct asfd *asfd,
 			return 0;
 		case CMD_ATTRIBS:
 			iobuf_move(&rb->attr, rbuf);
+			attribs_decode(rb);
 			return 0;
 		case CMD_GEN:
 			if(!strcmp(rbuf->buf, "okbackupphase2end"))

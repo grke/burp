@@ -26,8 +26,7 @@ int do_patch(struct asfd *asfd, const char *dst, const char *del,
 	if(!delfzp) goto end;
 
 	if(gzupd)
-		upfzp=fzp_gzopen(upd,
-			comp_level(get_int(cconfs[OPT_COMPRESSION])));
+		upfzp=fzp_gzopen(upd, comp_level(compression));
 	else
 		upfzp=fzp_open(upd, "wb");
 
@@ -296,8 +295,8 @@ static int jiggle(struct sdirs *sdirs, struct fdirs *fdirs, struct sbuf *sb,
 		}
 
 		if((lrs=do_patch(NULL, infpath, deltafpath, newpath,
-			get_int(cconfs[OPT_COMPRESSION]),
-			sb->compression /* from the manifest */, cconfs)))
+			sb->compression, sb->compression /* from manifest */,
+			cconfs)))
 		{
 			logp("WARNING: librsync error when patching %s: %d\n",
 				oldpath, lrs);

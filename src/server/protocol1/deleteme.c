@@ -19,6 +19,7 @@ int deleteme_move(const char *basedir, const char *fullpath, const char *path,
 	int attempts=0;
 	struct stat statp;
 	char suffix[16]="";
+	char *timestamp=NULL;
 
 	if(lstat(fullpath, &statp) && errno==ENOENT)
 	{
@@ -43,8 +44,14 @@ int deleteme_move(const char *basedir, const char *fullpath, const char *path,
 		free_w(&dest);
 		if(!(dest=prepend(tmp, suffix)))
 			goto end;
-		if(attempts>=10) break; // Give up.
+		if(attempts>=100) break; // Give up.
 	}
+
+	// Paranoia - really do not want the deleteme directory to be loaded
+	// as if it were a normal storage directory, so remove the timestamp.
+	if(!(timestamp=prepend_s(fullpath, "timestamp")))
+		goto end;
+	unlink(timestamp);
 
 	// Possible race condition is of no consequence, as the destination
 	// will need to be deleted at some point anyway.
@@ -53,6 +60,7 @@ int deleteme_move(const char *basedir, const char *fullpath, const char *path,
 end:
 	free_w(&dest);
 	free_w(&tmp);
+	free_w(&timestamp);
 	return ret;
 }
 

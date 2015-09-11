@@ -5,6 +5,9 @@
     keep range.
   * During backup, read compression settings from the attribs buffer sent from
     the client rather than relying on the server config being correct.
+  * Fix a bug where interrupting a the server whilst it was deleting old
+    backups would result in the next backup erroneously being given a backup
+    number incremented from the timestamp in the 'deleteme' directory.
 
 2015-09-04 Changes in burp-2.0.22:
   * Make protocol2 resume work. Add unit tests for resume components.

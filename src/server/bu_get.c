@@ -60,7 +60,10 @@ static int maybe_add_ent(const char *dir, const char *d_name,
 
 	if((!lstat(fullpath, &statp) && !S_ISDIR(statp.st_mode))
 	  || lstat(timestamp, &statp) || !S_ISREG(statp.st_mode)
-	  || timestamp_read(timestamp, buf, sizeof(buf)))
+	  || timestamp_read(timestamp, buf, sizeof(buf))
+	// A bit of paranoia to protect against loading directories moved
+	// aside as if they were real storage directories.
+	  || strncmp(buf, d_name, 8))
 	{
 		ret=0; // For resilience.
 		goto error;
@@ -191,7 +194,11 @@ static int do_bu_get_list(struct sdirs *sdirs,
 	{
 		if(!dp[i]->d_ino
 		  || !strcmp(dp[i]->d_name, ".")
-		  || !strcmp(dp[i]->d_name, ".."))
+		  || !strcmp(dp[i]->d_name, "..")
+		// Each storage directory starts with a digit. The 'deleteme'
+		// directory does not. This check avoids loading 'deleteme'
+		// as a storage directory.
+		  || !isdigit(dp[i]->d_name[0]))
 			continue;
 		flags=0;
 		if(!strcmp(dp[i]->d_name, realcurrent))

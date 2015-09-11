@@ -22,12 +22,23 @@ static int do_rename_w(const char *a, const char *b)
 
 static int recursive_delete_w(struct sdirs *sdirs, struct bu *bu)
 {
+	int ret=-1;
+	char *timestamp=NULL;
+	if(!(timestamp=prepend_s(sdirs->deleteme, "timestamp")))
+		goto end;
+	// Paranoia - really do not want the deleteme directory to be loaded
+	// as if it were a normal storage directory, so delete the timestamp.
+	unlink(timestamp);
+sleep(100);
 	if(recursive_delete(sdirs->deleteme))
 	{
 		logp("Error when trying to delete %s\n", bu->path);
-		return -1;
+		goto end;
 	}
-	return 0;
+	ret=0;
+end:
+	free_w(&timestamp);
+	return ret;
 }
 
 // The failure conditions here are dealt with by the rubble cleaning code.

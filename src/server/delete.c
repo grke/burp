@@ -29,7 +29,6 @@ static int recursive_delete_w(struct sdirs *sdirs, struct bu *bu)
 	// Paranoia - really do not want the deleteme directory to be loaded
 	// as if it were a normal storage directory, so delete the timestamp.
 	unlink(timestamp);
-sleep(100);
 	if(recursive_delete(sdirs->deleteme))
 	{
 		logp("Error when trying to delete %s\n", bu->path);

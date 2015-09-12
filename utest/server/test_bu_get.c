@@ -4,6 +4,7 @@
 #include "../../src/bu.h"
 #include "../../src/conf.h"
 #include "../../src/conffile.h"
+#include "../../src/cstat.h"
 #include "../../src/fsops.h"
 #include "../../src/lock.h"
 #include "../../src/prepend.h"
@@ -38,13 +39,12 @@ static void do_sdirs_init(struct sdirs *sdirs, enum protocol protocol)
 		"a_group")); // dedup_group
 }
 
-void assert_bu_list(struct sdirs *sdirs, struct sd *s, unsigned int len)
+static void do_assert_bu_list(struct bu *bu_list,
+	struct sd *s, unsigned int len)
 {
 	unsigned int count=0;
 	struct bu *bu;
 	struct bu *last;
-	struct bu *bu_list=NULL;
-	fail_unless(!bu_get_list(sdirs, &bu_list));
 
 	bu=bu_list;
 	last=NULL;
@@ -65,16 +65,24 @@ void assert_bu_list(struct sdirs *sdirs, struct sd *s, unsigned int len)
 	}
 	fail_unless(len==count);
 	fail_unless(bu==NULL);
+}
 
+void assert_bu_list(struct sdirs *sdirs, struct sd *s, unsigned int len)
+{
+	struct bu *bu_list=NULL;
+	fail_unless(!bu_get_list(sdirs, &bu_list));
+	do_assert_bu_list(bu_list, s, len);
 	bu_list_free(&bu_list);
 }
 
-static void build_and_check(struct sd *s, int len, enum protocol protocol)
+static void build_and_check(struct sd *s, int slen,
+	struct sd *e, int elen,
+	enum protocol protocol)
 {
 	struct sdirs *sdirs=setup();
 	do_sdirs_init(sdirs, protocol);
-	build_storage_dirs(sdirs, s, len);
-	assert_bu_list(sdirs, s, len);
+	build_storage_dirs(sdirs, s, slen);
+	assert_bu_list(sdirs, e, elen);
 	tear_down(&sdirs);
 }
 
@@ -112,7 +120,7 @@ static struct sd sd5[] = {
 static struct sd sd6[] = {
 	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_HARDLINKED|BU_DELETABLE },
 	{ "0000002 1970-01-02 00:00:00", 2, 2, BU_HARDLINKED|BU_DELETABLE },
-	{ "0000005 1970-01-05 00:00:00", 5, 3, BU_HARDLINKED|BU_CURRENT }
+	{ "0000005 1970-01-05 00:00:00", 5, 3, BU_HARDLINKED|BU_DELETABLE|BU_CURRENT }
 };
 
 static struct sd sd7[] = {
@@ -135,16 +143,66 @@ static struct sd sd8[] = {
 	{ "0000033 1970-01-23 00:00:00", 33, 7, BU_CURRENT }
 };
 
-static void do_tests(enum protocol protocol)
+static struct sd sd9[] = {
+	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_DELETABLE },
+	{ "0000002 1970-01-02 00:00:00", 2, 2, 0 },
+	{ "0000003 1970-01-03 00:00:00", 3, 3, 0 },
+	{ "0000004 1970-01-04 00:00:00", 4, 4, 0 },
+	{ "0000005 1970-01-05 00:00:00", 5, 5, BU_CURRENT },
+	{ "0000006 1970-01-06 00:00:00", 6, 6, BU_WORKING }
+};
+
+static struct sd sd10[] = {
+	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_DELETABLE },
+	{ "0000002 1970-01-02 00:00:00", 2, 2, 0 },
+	{ "0000003 1970-01-03 00:00:00", 3, 3, 0 },
+	{ "0000004 1970-01-04 00:00:00", 4, 4, 0 },
+	{ "0000005 1970-01-05 00:00:00", 5, 5, BU_CURRENT },
+	{ "0000006 1970-01-06 00:00:00", 6, 6, BU_FINISHING }
+};
+
+static struct sd sd11[] = {
+	{ "0000005 1970-01-01 00:00:00", 5, 1, BU_DELETABLE|BU_MANIFEST },
+	{ "0000006 1970-01-02 00:00:00", 6, 2, BU_MANIFEST },
+	{ "0000007 1970-01-03 00:00:00", 7, 3, BU_MANIFEST },
+	{ "0000008 1970-01-04 00:00:00", 8, 4, BU_MANIFEST },
+	{ "0000009 1970-01-05 00:00:00", 9, 5, BU_MANIFEST|BU_CURRENT },
+};
+
+static struct sd sd12[] = {
+	{ "0000005 1970-01-01 00:00:00", 5, 1,
+		BU_MANIFEST|BU_LOG_BACKUP|BU_DELETABLE },
+	{ "0000006 1970-01-02 00:00:00", 6, 2,
+		BU_MANIFEST|BU_LOG_BACKUP|BU_LOG_RESTORE },
+	{ "0000007 1970-01-03 00:00:00", 7, 3,
+		BU_MANIFEST|BU_LOG_BACKUP|BU_LOG_VERIFY|BU_LOG_RESTORE },
+	{ "0000008 1970-01-04 00:00:00", 8, 4,
+		BU_MANIFEST|BU_LOG_BACKUP },
+	{ "0000009 1970-01-05 00:00:00", 9, 5,
+		BU_MANIFEST|BU_LOG_BACKUP|BU_LOG_VERIFY|BU_CURRENT },
+};
+
+static void build_and_check_same(struct sd *s, int len, enum protocol p)
 {
-	build_and_check(sd1, ARR_LEN(sd1), protocol);
-	build_and_check(sd2, ARR_LEN(sd2), protocol);
-	build_and_check(sd3, ARR_LEN(sd3), protocol);
-	build_and_check(sd4, ARR_LEN(sd4), protocol);
-	build_and_check(sd5, ARR_LEN(sd5), protocol);
-	build_and_check(sd5, ARR_LEN(sd6), protocol);
-	build_and_check(sd7, ARR_LEN(sd7), protocol);
-	build_and_check(sd8, ARR_LEN(sd8), protocol);
+	build_and_check(s, len, s, len, p);
+}
+
+static void do_tests(enum protocol p)
+{
+	build_and_check_same(sd1, ARR_LEN(sd1), p);
+	build_and_check_same(sd2, ARR_LEN(sd2), p);
+	build_and_check_same(sd3, ARR_LEN(sd3), p);
+	build_and_check_same(sd4, ARR_LEN(sd4), p);
+	build_and_check_same(sd5, ARR_LEN(sd5), p);
+	build_and_check_same(sd6, ARR_LEN(sd6), p);
+	build_and_check_same(sd7, ARR_LEN(sd7), p);
+	build_and_check_same(sd8, ARR_LEN(sd8), p);
+	// These two should not have working/finishing loaded.
+	build_and_check(sd9, ARR_LEN(sd9), sd4, ARR_LEN(sd4), p);
+	build_and_check(sd10, ARR_LEN(sd10), sd4, ARR_LEN(sd4), p);
+	build_and_check_same(sd11, ARR_LEN(sd11), p);
+	// This should not have the log stuff loaded.
+	build_and_check(sd12, ARR_LEN(sd12), sd11, ARR_LEN(sd11), p);
 }
 
 START_TEST(test_bu_get_proto_1)
@@ -159,6 +217,216 @@ START_TEST(test_bu_get_proto_2)
 }
 END_TEST
 
+static enum run_status run_status=RUN_STATUS_IDLE;
+static enum cntr_status cntr_status=CNTR_STATUS_UNSET;
+
+static void assert_bu_list_with_working(struct sdirs *sdirs,
+	struct sd *s, unsigned int len)
+{
+	struct bu *bu_list=NULL;
+	struct cstat cstat;
+	struct cntr cntr;
+	memset(&cstat, 0, sizeof(cstat));
+	memset(&cntr, 0, sizeof(cntr));
+	cstat.run_status=run_status;
+	cstat.cntr=&cntr;
+	cntr.cntr_status=cntr_status;
+	fail_unless(!bu_get_list_with_working(sdirs, &bu_list, &cstat));
+	do_assert_bu_list(bu_list, s, len);
+	bu_list_free(&bu_list);
+}
+
+static int compressed_logs=0;
+
+static void build_and_check_working(struct sd *s, int slen,
+	struct sd *e, int elen,
+	enum protocol protocol)
+{
+	struct sdirs *sdirs=setup();
+	do_sdirs_init(sdirs, protocol);
+	if(compressed_logs)
+		build_storage_dirs_compressed_logs(sdirs, s, slen);
+	else
+		build_storage_dirs(sdirs, s, slen);
+	assert_bu_list_with_working(sdirs, e, elen);
+	tear_down(&sdirs);
+}
+
+static void build_and_check_working_same(struct sd *s, int len, enum protocol p)
+{
+	build_and_check_working(s, len, s, len, p);
+}
+
+static void do_tests_with_working(enum protocol p)
+{
+	build_and_check_working_same(sd1, ARR_LEN(sd1), p);
+	build_and_check_working_same(sd2, ARR_LEN(sd2), p);
+	build_and_check_working_same(sd3, ARR_LEN(sd3), p);
+	build_and_check_working_same(sd4, ARR_LEN(sd4), p);
+	build_and_check_working_same(sd5, ARR_LEN(sd5), p);
+	build_and_check_working_same(sd6, ARR_LEN(sd6), p);
+	build_and_check_working_same(sd7, ARR_LEN(sd7), p);
+	build_and_check_working_same(sd8, ARR_LEN(sd8), p);
+	build_and_check_working_same(sd9, ARR_LEN(sd9), p);
+	build_and_check_working_same(sd10, ARR_LEN(sd10), p);
+	build_and_check_working_same(sd11, ARR_LEN(sd11), p);
+	build_and_check_working_same(sd12, ARR_LEN(sd12), p);
+}
+
+START_TEST(test_bu_get_with_working_proto_1)
+{
+	run_status=RUN_STATUS_IDLE;
+	cntr_status=CNTR_STATUS_UNSET;
+	compressed_logs=0;
+	do_tests_with_working(PROTO_1);
+	compressed_logs=1;
+	do_tests_with_working(PROTO_1);
+}
+END_TEST
+
+START_TEST(test_bu_get_with_working_proto_2)
+{
+	run_status=RUN_STATUS_IDLE;
+	cntr_status=CNTR_STATUS_UNSET;
+	compressed_logs=0;
+	do_tests_with_working(PROTO_2);
+	compressed_logs=1;
+	do_tests_with_working(PROTO_2);
+}
+END_TEST
+
+static struct sd rn1[] = {
+	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_STATS_BACKUP|BU_DELETABLE },
+	{ "0000003 1970-01-03 00:00:00", 3, 2, BU_STATS_BACKUP },
+	{ "0000005 1970-01-05 00:00:00", 5, 3, BU_STATS_BACKUP|BU_CURRENT }
+};
+static struct sd rn2[] = {
+	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_STATS_RESTORE|BU_DELETABLE },
+	{ "0000003 1970-01-03 00:00:00", 3, 2, BU_STATS_RESTORE },
+	{ "0000005 1970-01-05 00:00:00", 5, 3, BU_STATS_RESTORE|BU_CURRENT }
+};
+static struct sd rn3[] = {
+	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_STATS_VERIFY|BU_DELETABLE },
+	{ "0000003 1970-01-03 00:00:00", 3, 2, BU_STATS_VERIFY },
+	{ "0000005 1970-01-05 00:00:00", 5, 3, BU_STATS_VERIFY|BU_CURRENT }
+};
+
+static void do_tests_with_running(enum protocol p)
+{
+	run_status=RUN_STATUS_RUNNING;
+	cntr_status=CNTR_STATUS_UNSET;
+	build_and_check_working_same(sd3, ARR_LEN(sd3), p);
+	cntr_status=CNTR_STATUS_SCANNING;
+	build_and_check_working_same(rn1, ARR_LEN(rn1), p);
+	cntr_status=CNTR_STATUS_RESTORING;
+	build_and_check_working_same(rn2, ARR_LEN(rn2), p);
+	cntr_status=CNTR_STATUS_VERIFYING;
+	build_and_check_working_same(rn3, ARR_LEN(rn3), p);
+}
+
+START_TEST(test_bu_get_with_running_proto_1)
+{
+	do_tests_with_running(PROTO_1);
+}
+END_TEST
+
+START_TEST(test_bu_get_with_running_proto_2)
+{
+	do_tests_with_running(PROTO_2);
+}
+END_TEST
+
+static void assert_bu_list_current(struct sdirs *sdirs,
+	struct sd *s, unsigned int len)
+{
+	struct bu *bu_list=NULL;
+	fail_unless(!bu_get_current(sdirs, &bu_list));
+	do_assert_bu_list(bu_list, s, len);
+	bu_list_free(&bu_list);
+}
+
+static void build_and_check_current(struct sd *s, int slen,
+	struct sd *e, int elen,
+	enum protocol protocol)
+{
+	struct sdirs *sdirs=setup();
+	do_sdirs_init(sdirs, protocol);
+	build_storage_dirs(sdirs, s, slen);
+	assert_bu_list_current(sdirs, e, elen);
+	tear_down(&sdirs);
+}
+
+static struct sd c1[] = {
+	{ "0000005 1970-01-05 00:00:00", 5, 0, BU_CURRENT }
+};
+
+static void do_tests_current(enum protocol p)
+{
+	build_and_check_current(sd1, ARR_LEN(sd1), c1, ARR_LEN(c1), p);
+	build_and_check_current(sd2, ARR_LEN(sd2), c1, ARR_LEN(c1), p);
+	build_and_check_current(sd3, ARR_LEN(sd3), c1, ARR_LEN(c1), p);
+	build_and_check_current(sd4, ARR_LEN(sd4), c1, ARR_LEN(c1), p);
+}
+
+START_TEST(test_bu_get_current_proto_1)
+{
+	do_tests_current(PROTO_1);
+}
+END_TEST
+
+START_TEST(test_bu_get_current_proto_2)
+{
+	do_tests_current(PROTO_2);
+}
+END_TEST
+
+static void build_and_check_deleteme(struct sd *s, int slen,
+	struct sd *e, int elen,
+	enum protocol protocol)
+{
+	char backup[128]="";
+	char renamed[128]="";
+	struct sdirs *sdirs=setup();
+	do_sdirs_init(sdirs, protocol);
+	build_storage_dirs(sdirs, s, slen);
+
+	// Rename the first one.
+	snprintf(backup, sizeof(backup),
+		"%s/%s", sdirs->client, s[0].timestamp);
+	fail_unless(!rename(backup, sdirs->deleteme));
+	assert_bu_list(sdirs, e, elen);
+
+	// Do it again, renamed to something that looks like a timestamp.
+	snprintf(renamed, sizeof(renamed), "%s/1010101 1970-01-05 00:00:00",
+		sdirs->client);
+	fail_unless(!rename(sdirs->deleteme, renamed));
+	assert_bu_list(sdirs, e, elen);
+
+	tear_down(&sdirs);
+}
+
+static struct sd dm1[] = {
+	{ "0000003 1970-01-03 00:00:00", 3, 1, BU_DELETABLE },
+	{ "0000005 1970-01-05 00:00:00", 5, 2, BU_CURRENT }
+};
+
+static void do_tests_deleteme(enum protocol p)
+{
+	build_and_check_deleteme(sd3, ARR_LEN(sd3), dm1, ARR_LEN(dm1), p);
+}
+
+START_TEST(test_bu_get_deleteme_proto_1)
+{
+	do_tests_deleteme(PROTO_1);
+}
+END_TEST
+
+START_TEST(test_bu_get_deleteme_proto_2)
+{
+	do_tests_deleteme(PROTO_2);
+}
+END_TEST
+
 Suite *suite_server_bu_get(void)
 {
 	Suite *s;
@@ -170,6 +438,14 @@ Suite *suite_server_bu_get(void)
 
 	tcase_add_test(tc_core, test_bu_get_proto_1);
 	tcase_add_test(tc_core, test_bu_get_proto_2);
+	tcase_add_test(tc_core, test_bu_get_with_working_proto_1);
+	tcase_add_test(tc_core, test_bu_get_with_working_proto_2);
+	tcase_add_test(tc_core, test_bu_get_with_running_proto_1);
+	tcase_add_test(tc_core, test_bu_get_with_running_proto_2);
+	tcase_add_test(tc_core, test_bu_get_current_proto_1);
+	tcase_add_test(tc_core, test_bu_get_current_proto_2);
+	tcase_add_test(tc_core, test_bu_get_deleteme_proto_1);
+	tcase_add_test(tc_core, test_bu_get_deleteme_proto_2);
 	suite_add_tcase(s, tc_core);
 
 	return s;

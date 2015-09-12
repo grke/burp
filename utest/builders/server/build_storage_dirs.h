@@ -10,5 +10,7 @@ struct sd
 };
 
 extern void build_storage_dirs(struct sdirs *sdirs, struct sd *s, int len);
+extern void build_storage_dirs_compressed_logs(struct sdirs *sdirs,
+	struct sd *s, int len);
 
 #endif

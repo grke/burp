@@ -1,6 +1,9 @@
-#include "include.h"
-
+#include "burp.h"
+#include "alloc.h"
 #include "bu.h"
+#include "cstat.h"
+#include "log.h"
+#include "prepend.h"
 
 struct cstat *cstat_alloc(void)
 {

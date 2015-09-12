@@ -103,7 +103,7 @@ static int maybe_add_ent(const char *dir, const char *d_name,
 					bu->flags|=BU_STATS_VERIFY;
 					break;
 				case CNTR_STATUS_RESTORING:
-					bu->flags|=BU_STATS_VERIFY;
+					bu->flags|=BU_STATS_RESTORE;
 					break;
 				default:
 					break;
@@ -192,13 +192,10 @@ static int do_bu_get_list(struct sdirs *sdirs,
 	}
 	for(i=0; i<n; i++)
 	{
-		if(!dp[i]->d_ino
-		  || !strcmp(dp[i]->d_name, ".")
-		  || !strcmp(dp[i]->d_name, "..")
 		// Each storage directory starts with a digit. The 'deleteme'
 		// directory does not. This check avoids loading 'deleteme'
 		// as a storage directory.
-		  || !isdigit(dp[i]->d_name[0]))
+		if(!isdigit(dp[i]->d_name[0]))
 			continue;
 		flags=0;
 		if(!strcmp(dp[i]->d_name, realcurrent))

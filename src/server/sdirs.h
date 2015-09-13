@@ -24,6 +24,7 @@ struct sdirs
 	char *current; // Symlink
 	char *currenttmp; // Temporary symlink
 	char *deleteme;
+	char *dfiles;
 
 	char *timestamp;
 	char *changed;

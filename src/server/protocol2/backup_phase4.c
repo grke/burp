@@ -443,8 +443,36 @@ static int merge_into_global_sparse(const char *sparse, const char *global)
 end:
 	lock_release(lock);
 	lock_free(&lock);
-	if(lockfile) free(lockfile);
-	if(tmpfile) free(tmpfile);
+	free_w(&lockfile);
+	free_w(&tmpfile);
+	return ret;
+}
+
+static int merge_into_client_dindex(const char *dfiles,
+	const char *client_dfiles)
+{
+	int ret=-1;
+	char *tmpfile=NULL;
+	struct stat statp;
+	const char *client_src=NULL;
+
+	// Rely on the current process having already got a lock for this
+	// client, so do not do any locking for now.
+	
+	if(!(tmpfile=prepend_n(client_dfiles, "tmp", strlen("tmp"), ".")))
+		goto end;
+
+	if(!lstat(client_dfiles, &statp)) client_src=client_dfiles;
+
+	if(merge_dindexes(tmpfile, dfiles, client_src))
+		goto end;
+
+	// FIX THIS: nasty race condition needs to be recoverable.
+	if(do_rename(tmpfile, client_dfiles)) goto end;
+
+	ret=0;
+end:
+	free_w(&tmpfile);
 	return ret;
 }
 
@@ -567,7 +595,8 @@ int backup_phase4_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 			goto end;
 
 	if(!(global_sparse=prepend_s(sdirs->data, "sparse"))
-	  || merge_into_global_sparse(sparse, global_sparse)) goto end;
+	  || merge_into_global_sparse(sparse, global_sparse)
+	  || merge_into_client_dindex(dfiles, sdirs->dfiles)) goto end;
 
 	logp("End phase4 (sparse generation)\n");
 

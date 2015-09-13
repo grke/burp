@@ -10,6 +10,8 @@ extern int merge_sparse_indexes(const char *dst,
 extern int merge_files_in_dir(const char *final, const char *fmanifest,
 	const char *srcdir, uint64_t fcount,
 	int merge(const char *dst, const char *src, const char *srcb));
+extern int merge_dindexes(const char *dst, const char *srca, const char *srcb);
+extern int gzprintf_dindex(struct fzp *fzp, uint64_t *dindex);
 #endif
 
 #endif

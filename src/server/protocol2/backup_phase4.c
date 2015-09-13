@@ -223,7 +223,10 @@ end:
 	return ret;
 }
 
-static int gzprintf_dindex(struct fzp *fzp, uint64_t *dindex)
+#ifndef UTEST
+static 
+#endif
+int gzprintf_dindex(struct fzp *fzp, uint64_t *dindex)
 {
 	struct blk blk;
 	struct iobuf wbuf;
@@ -236,29 +239,29 @@ static int gzprintf_dindex(struct fzp *fzp, uint64_t *dindex)
 static int get_next_dindex(uint64_t **dnew, struct sbuf *sb, struct fzp *fzp)
 {
 	static struct blk blk;
-	static struct iobuf *rbuf=NULL;
+	static struct iobuf rbuf;
 
-	if(!rbuf && !(rbuf=iobuf_alloc()))
-		return -1;
-	switch(iobuf_fill_from_fzp(rbuf, fzp))
+	memset(&rbuf, 0, sizeof(rbuf));
+
+	switch(iobuf_fill_from_fzp(&rbuf, fzp))
 	{
 		case -1: goto error;
 		case 1: return 1; // Reached the end.
 	}
-	if(rbuf->cmd==CMD_SAVE_PATH)
+	if(rbuf.cmd==CMD_SAVE_PATH)
 	{
-		if(blk_set_from_iobuf_savepath(&blk, rbuf))
+		if(blk_set_from_iobuf_savepath(&blk, &rbuf))
 			goto error;
 		*dnew=(uint64_t *)malloc_w(sizeof(uint64_t), __func__);
 		**dnew=blk.savepath;
-		iobuf_free_content(rbuf);
+		iobuf_free_content(&rbuf);
 		return 0;
 	}
 	else
 		iobuf_log_unexpected(&sb->path, __func__);
 
 error:
-	iobuf_free_content(rbuf);
+	iobuf_free_content(&rbuf);
 	return -1;
 }
 

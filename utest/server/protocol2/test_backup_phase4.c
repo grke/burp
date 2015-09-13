@@ -114,6 +114,7 @@ static void check_result(struct sp *sp, size_t splen)
 static void common(struct sp *dst, size_t dlen,
 	struct sp *srca, size_t alen, struct sp *srcb, size_t blen)
 {
+	setup();
 	build_sparse_index(srca, alen, srca_path);
 	build_sparse_index(srcb, blen, srcb_path);
 	fail_unless(!merge_sparse_indexes(dst_path, srca_path, srcb_path));
@@ -152,7 +153,6 @@ START_TEST(test_merge_sparse_indexes_simple1)
 	struct sp srca[1];
 	struct sp srcb[1];
 	struct sp dst[2];
-	setup();
 	init_sp(&srca[0], "bbbb", fingb, ARR_LEN(fingb));
 	init_sp(&srcb[0], "ffff", fingf, ARR_LEN(fingf));
 	init_sp(&dst[0],  "bbbb", fingb, ARR_LEN(fingb));
@@ -166,7 +166,6 @@ START_TEST(test_merge_sparse_indexes_simple2)
 	struct sp srca[1];
 	struct sp srcb[1];
 	struct sp dst[2];
-	setup();
 	init_sp(&srca[0], "ffff", fingf, ARR_LEN(fingf));
 	init_sp(&srcb[0], "bbbb", fingb, ARR_LEN(fingb));
 	init_sp(&dst[0],  "bbbb", fingb, ARR_LEN(fingb));
@@ -180,7 +179,6 @@ START_TEST(test_merge_sparse_indexes_same)
 	struct sp srca[1];
 	struct sp srcb[1];
 	struct sp dst[1];
-	setup();
 	init_sp(&srca[0], "bbb1", fingb, ARR_LEN(fingb));
 	init_sp(&srcb[0], "bbb2", fingb, ARR_LEN(fingb));
 	init_sp(&dst[0],  "bbb2", fingb, ARR_LEN(fingb));
@@ -193,7 +191,6 @@ START_TEST(test_merge_sparse_indexes_many)
 	struct sp srca[3];
 	struct sp srcb[3];
 	struct sp dst[6];
-	setup();
 	init_sp(&srca[0], "aaaa", finga, ARR_LEN(finga));
 	init_sp(&srca[1], "cccc", fingc, ARR_LEN(fingc));
 	init_sp(&srca[2], "eeee", finge, ARR_LEN(finge));
@@ -215,7 +212,6 @@ START_TEST(test_merge_sparse_indexes_different_lengths1)
 	struct sp srca[1];
 	struct sp srcb[1];
 	struct sp dst[2];
-	setup();
 	init_sp(&srca[0], "ffff", fingf, ARR_LEN(fingf));
 	init_sp(&srcb[0], "gggg", fingg, ARR_LEN(fingg));
 	init_sp(&dst[0],  "gggg", fingg, ARR_LEN(fingg));
@@ -229,12 +225,121 @@ START_TEST(test_merge_sparse_indexes_different_lengths2)
 	struct sp srca[1];
 	struct sp srcb[1];
 	struct sp dst[2];
-	setup();
 	init_sp(&srca[0], "gggg", fingg, ARR_LEN(fingg));
 	init_sp(&srcb[0], "ffff", fingf, ARR_LEN(fingf));
 	init_sp(&dst[0],  "gggg", fingg, ARR_LEN(fingg));
 	init_sp(&dst[1],  "ffff", fingf, ARR_LEN(fingf));
 	common(dst, ARR_LEN(dst), srca, ARR_LEN(srca), srcb, ARR_LEN(srcb));
+}
+END_TEST
+
+static void di_to_fzp(struct fzp *fzp, uint64_t *di, size_t len)
+{
+	size_t i;
+	for(i=0; i<len; i++)
+		fail_unless(!gzprintf_dindex(fzp, &di[i]));
+}
+
+static void build_dindex(uint64_t *di, size_t s, const char *fname)
+{
+	struct fzp *fzp=NULL;
+
+	fail_unless((fzp=fzp_gzopen(fname, "ab"))!=NULL);
+	di_to_fzp(fzp, di, s);
+	fzp_close(&fzp);
+}
+
+static void check_result_di(uint64_t *di, size_t dlen)
+{
+	int ret;
+	size_t i=0;
+	struct fzp *fzp;
+	struct blk blk;
+	struct iobuf rbuf;
+	memset(&rbuf, 0, sizeof(struct iobuf));
+	fail_unless(dlen>0);
+	fail_unless((fzp=fzp_gzopen(dst_path, "rb"))!=NULL);
+
+	while(!(ret=iobuf_fill_from_fzp(&rbuf, fzp)))
+	{
+		switch(rbuf.cmd)
+		{
+			case CMD_SAVE_PATH:
+				blk_set_from_iobuf_savepath(&blk, &rbuf);
+				fail_unless(blk.savepath==di[i++]);
+				break;
+			default:
+				fail_unless(0==1);
+		}
+		iobuf_free_content(&rbuf);
+	}
+	fail_unless(!fzp_close(&fzp));
+	fail_unless(ret==1);
+	fail_unless(i==dlen);
+	iobuf_free_content(&rbuf);
+}
+
+static void common_di(uint64_t *dst, size_t dlen,
+	uint64_t *srca, size_t alen, uint64_t *srcb, size_t blen)
+{
+	setup();
+	build_dindex(srca, alen, srca_path);
+	build_dindex(srcb, blen, srcb_path);
+	fail_unless(!merge_dindexes(dst_path, srca_path, srcb_path));
+	check_result_di(dst, dlen);
+	tear_down();
+}
+
+static uint64_t din1[2]={
+	0x1111222233330000,
+	0x1111222244440000
+};
+static uint64_t din2[2]={
+	0x1111222233350000,
+	0x1111222233390000
+};
+static uint64_t ex1[4]={
+	0x1111222233330000,
+	0x1111222233350000,
+	0x1111222233390000,
+	0x1111222244440000
+};
+static uint64_t din3[5]={
+	0x0000000011110000,
+	0x1111222233330000,
+	0x1111222244440000,
+	0x123456789ABC0000,
+	0xFFFFFFFFFFFF0000
+};
+static uint64_t din4[5]={
+	0x0000000011100000,
+	0x1111222223330000,
+	0x1111222244540000,
+	0x123456889ABC0000,
+	0xFFFFFFFFFFFE0000
+};
+static uint64_t ex2[10]={
+	0x0000000011100000,
+	0x0000000011110000,
+	0x1111222223330000,
+	0x1111222233330000,
+	0x1111222244440000,
+	0x1111222244540000,
+	0x123456789ABC0000,
+	0x123456889ABC0000,
+	0xFFFFFFFFFFFE0000,
+	0xFFFFFFFFFFFF0000
+};
+
+START_TEST(test_merge_dindexes_simple1)
+{
+	common_di(ex1, ARR_LEN(ex1), din1, ARR_LEN(din1), din2, ARR_LEN(din2));
+	common_di(ex1, ARR_LEN(ex1), din2, ARR_LEN(din2), din1, ARR_LEN(din1));
+	common_di(din1, ARR_LEN(din1),
+		din1, ARR_LEN(din1), din1, ARR_LEN(din1));
+	common_di(din1, ARR_LEN(din1), din1, ARR_LEN(din1), NULL, 0);
+	common_di(din1, ARR_LEN(din1), NULL, 0, din1, ARR_LEN(din1));
+	common_di(ex2, ARR_LEN(ex2), din3, ARR_LEN(din3), din4, ARR_LEN(din4));
 }
 END_TEST
 
@@ -453,6 +558,8 @@ Suite *suite_server_protocol2_backup_phase4(void)
 	tcase_add_test(tc_core, test_merge_sparse_indexes_many);
 	tcase_add_test(tc_core, test_merge_sparse_indexes_different_lengths1);
 	tcase_add_test(tc_core, test_merge_sparse_indexes_different_lengths2);
+
+	tcase_add_test(tc_core, test_merge_dindexes_simple1);
 
 	tcase_add_test(tc_core, test_merge_files_in_dir);
 	suite_add_tcase(s, tc_core);

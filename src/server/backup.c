@@ -236,27 +236,13 @@ end:
 	log_fzp_set(NULL, cconfs);
 	if(chfd) as->asfd_remove(as, chfd);
 	asfd_free(&chfd);
-
-	if(!ret)
-	{
-		if(protocol==PROTO_1)
-		{
-			delete_backups(sdirs,
-				get_string(cconfs[OPT_CNAME]),
-				get_strlist(cconfs[OPT_KEEP]));
-		}
-		else
-		{
-			// FIX THIS: Need to figure out which data files can be
-			// deleted.
-		}
-	}
 	return ret;
 }
 
 int run_backup(struct async *as, struct sdirs *sdirs, struct conf **cconfs,
 	const char *incexc, int *timer_ret, int resume)
 {
+	int ret;
 	char okstr[32]="";
 	struct asfd *asfd=as->asfd;
 	struct iobuf *rbuf=asfd->rbuf;
@@ -327,5 +313,12 @@ int run_backup(struct async *as, struct sdirs *sdirs, struct conf **cconfs,
 		resume?"resume":"ok", get_int(cconfs[OPT_COMPRESSION]));
 	if(asfd->write_str(asfd, CMD_GEN, okstr)) return -1;
 
-	return do_backup_server(as, sdirs, cconfs, incexc, resume);
+	if(!(ret=do_backup_server(as, sdirs, cconfs, incexc, resume)))
+	{
+		if(!delete_backups(sdirs, cname,
+			get_strlist(cconfs[OPT_KEEP])))
+				regenerate_client_dindex(sdirs);
+	}
+
+	return ret;
 }

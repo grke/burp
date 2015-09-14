@@ -85,6 +85,9 @@ BURP_SRCS = \
 	../src/server/protocol2/dpth.c \
 	../src/server/protocol2/backup_phase4.c \
 	../src/server/protocol2/champ_chooser/candidate.c \
+	../src/server/protocol2/champ_chooser/champ_chooser.c \
+	../src/server/protocol2/champ_chooser/hash.c \
+	../src/server/protocol2/champ_chooser/incoming.c \
 	../src/server/protocol2/champ_chooser/scores.c \
 	../src/server/protocol2/champ_chooser/sparse.c \
 	../src/server/resume.c \

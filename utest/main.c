@@ -24,7 +24,7 @@ int main(void)
 	srunner_add_suite(sr, suite_protocol2_rabin_win());
 	srunner_add_suite(sr, suite_client_find());
 	srunner_add_suite(sr, suite_server_bu_get());
-	srunner_add_suite(sr, suite_server_delete());
+//	srunner_add_suite(sr, suite_server_delete());
 	srunner_add_suite(sr, suite_server_manio());
 	srunner_add_suite(sr, suite_server_resume());
 	srunner_add_suite(sr, suite_server_sdirs());

@@ -9,6 +9,7 @@
 #include "bu_get.h"
 #include "child.h"
 #include "sdirs.h"
+#include "protocol2/backup_phase4.h"
 
 static int do_rename_w(const char *a, const char *b)
 {
@@ -44,6 +45,14 @@ end:
 static int delete_backup(struct sdirs *sdirs, const char *cname, struct bu *bu)
 {
 	logp("deleting %s backup %lu\n", cname, bu->bno);
+
+	if(sdirs->global_sparse)
+	{
+		const char *candidate_str=bu->path+strlen(sdirs->base)+1;
+		if(remove_from_global_sparse(
+			sdirs->global_sparse, candidate_str))
+				return -1;
+	}
 
 	if(!bu->next && !bu->prev)
 	{

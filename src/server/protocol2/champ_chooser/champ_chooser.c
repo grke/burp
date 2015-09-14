@@ -1,6 +1,7 @@
 #include "../../../burp.h"
 #include "../../../alloc.h"
 #include "../../../asfd.h"
+#include "../../../lock.h"
 #include "../../../log.h"
 #include "../../../prepend.h"
 #include "../../../protocol2/blist.h"
@@ -11,12 +12,77 @@
 #include "incoming.h"
 #include "scores.h"
 
+static void try_lock_msg(int seconds)
+{
+	logp("Unable to get sparse lock for %d seconds.\n", seconds);
+}
+
+static int try_to_get_lock(struct lock *lock)
+{
+	// Sleeping for 1800*2 seconds makes 1 hour.
+	// This should be super generous.
+	int lock_tries=0;
+	int lock_tries_max=1800;
+	int sleeptime=2;
+
+	while(1)
+	{
+		lock_get(lock);
+		switch(lock->status)
+		{
+			case GET_LOCK_GOT:
+				logp("Got sparse lock\n");
+				return 0;
+			case GET_LOCK_NOT_GOT:
+				lock_tries++;
+				if(lock_tries>lock_tries_max)
+				{
+					try_lock_msg(lock_tries_max*sleeptime);
+					return -1;
+				}
+				// Log every 10 seconds.
+				if(lock_tries%(10/sleeptime))
+				{
+					try_lock_msg(lock_tries_max*sleeptime);
+					logp("Giving up.\n");
+					return -1;
+				}
+				sleep(sleeptime);
+				continue;
+			case GET_LOCK_ERROR:
+			default:
+				logp("Unable to get global sparse lock.\n");
+				return -1;
+		}
+	}
+	// Never reached.
+	return -1;
+}
+
+struct lock *try_to_get_sparse_lock(const char *sparse_path)
+{
+	char *lockfile=NULL;
+	struct lock *lock=NULL;
+	if(!(lockfile=prepend_n(sparse_path, "lock", strlen("lock"), "."))
+	  || !(lock=lock_alloc_and_init(lockfile))
+	  || try_to_get_lock(lock))
+		lock_free(&lock);
+end:
+	free_w(&lockfile);
+	return lock;
+}
+
 static int load_existing_sparse(const char *datadir, struct scores *scores)
 {
 	int ret=-1;
 	struct stat statp;
+	struct lock *lock=NULL;
 	char *sparse_path=NULL;
 	if(!(sparse_path=prepend_s(datadir, "sparse"))) goto end;
+	// Best not let other things mess with the sparse lock while we are
+	// trying to read it.
+	if(!(lock=try_to_get_sparse_lock(sparse_path)))
+		goto end;
 	if(lstat(sparse_path, &statp))
 	{
 		ret=0;
@@ -27,6 +93,8 @@ static int load_existing_sparse(const char *datadir, struct scores *scores)
 	ret=0;
 end:
 	free_w(&sparse_path);
+	lock_release(lock);
+	lock_free(&lock);
 	return ret;
 }
 

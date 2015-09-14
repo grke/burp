@@ -21,10 +21,12 @@ struct sdirs
 	char *working; // Symlink.
 	char *rworking; // Real.
 	char *finishing; // Symlink.
-	char *current; // Symlink
-	char *currenttmp; // Temporary symlink
+	char *current; // Symlink.
+	char *currenttmp; // Temporary symlink.
 	char *deleteme;
+	char *dindex;
 	char *dfiles;
+	char *global_sparse;
 
 	char *timestamp;
 	char *changed;

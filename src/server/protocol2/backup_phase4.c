@@ -1,7 +1,9 @@
 #include "include.h"
+#include "../../bu.h"
 #include "../../cmd.h"
 #include "../../lock.h"
 #include "../../protocol2/blk.h"
+#include "../../server/bu_get.h"
 #include "../../server/manio.h"
 #include "../../server/sdirs.h"
 
@@ -448,34 +450,6 @@ end:
 	return ret;
 }
 
-static int merge_into_client_dindex(const char *dfiles,
-	const char *client_dfiles)
-{
-	int ret=-1;
-	char *tmpfile=NULL;
-	struct stat statp;
-	const char *client_src=NULL;
-
-	// Rely on the current process having already got a lock for this
-	// client, so do not do any locking for now.
-	
-	if(!(tmpfile=prepend_n(client_dfiles, "tmp", strlen("tmp"), ".")))
-		goto end;
-
-	if(!lstat(client_dfiles, &statp)) client_src=client_dfiles;
-
-	if(merge_dindexes(tmpfile, dfiles, client_src))
-		goto end;
-
-	// FIX THIS: nasty race condition needs to be recoverable.
-	if(do_rename(tmpfile, client_dfiles)) goto end;
-
-	ret=0;
-end:
-	free_w(&tmpfile);
-	return ret;
-}
-
 #ifndef UTEST
 static
 #endif
@@ -499,6 +473,9 @@ int merge_files_in_dir(const char *final, const char *fmanifest,
 	if(!(m1dir=prepend_s(fmanifest, "m1"))
 	  || !(m2dir=prepend_s(fmanifest, "m2"))
 	  || !(fullsrcdir=prepend_s(fmanifest, srcdir)))
+		goto end;
+	if(recursive_delete(m1dir)
+	  || recursive_delete(m2dir))
 		goto end;
 	while(1)
 	{
@@ -595,8 +572,8 @@ int backup_phase4_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 			goto end;
 
 	if(!(global_sparse=prepend_s(sdirs->data, "sparse"))
-	  || merge_into_global_sparse(sparse, global_sparse)
-	  || merge_into_client_dindex(dfiles, sdirs->dfiles)) goto end;
+	  || merge_into_global_sparse(sparse, global_sparse))
+		goto end;
 
 	logp("End phase4 (sparse generation)\n");
 
@@ -607,5 +584,68 @@ end:
 	free_w(&global_sparse);
 	free_w(&logpath);
 	free_w(&fmanifest);
+	return ret;
+}
+
+int regenerate_client_dindex(struct sdirs *sdirs)
+{
+	int ret=-1;
+	struct bu *bu;
+	struct bu *bu_list=NULL;
+	char *newpath=NULL;
+	char *oldpath=NULL;
+	char tmp[16]="";
+	int path_built=0;
+	uint64_t last_index=0;
+	char *dfiles_new=NULL;
+
+	if(recursive_delete(sdirs->dindex)) goto end;
+
+	if(bu_get_list(sdirs, &bu_list)) goto end;
+
+	for(bu=bu_list; bu; bu=bu->next)
+	{
+		snprintf(tmp, sizeof(tmp), "%08lu", bu->index-1);
+		if(!(newpath=prepend_s(sdirs->dindex, tmp))
+		  || !(oldpath=prepend_s(bu->path, "manifest/dfiles")))
+			goto end;
+		if(!path_built)
+		{
+			if(build_path_w(newpath))
+				goto end;
+			path_built++;
+		}
+		if(link(oldpath, newpath))
+		{
+			logp("%s could not hard link '%s' to '%s': %s\n",
+				__func__, oldpath, newpath, strerror(errno));
+			goto end;
+		}
+		free_w(&newpath);
+		free_w(&oldpath);
+		last_index=(uint64_t)bu->index;
+	}
+
+	if(!(dfiles_new=prepend(sdirs->dfiles, ".new")))
+		goto end;
+	if(merge_files_in_dir(dfiles_new, sdirs->client,
+		"dindex", last_index, merge_dindexes))
+			goto end;
+
+	// FIX THIS: At this point, should generate the differences between
+	// the old and new files.
+	// If anything was deleted, need to pass it on to the next process
+	// to check if it was deleted completely from this dedup_group.
+
+	if(do_rename(dfiles_new, sdirs->dfiles))
+		goto end;
+
+	if(recursive_delete(sdirs->dindex)) goto end;
+
+	ret=0;
+end:
+	bu_list_free(&bu_list);
+	free_w(&newpath);
+	free_w(&oldpath);
 	return ret;
 }

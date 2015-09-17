@@ -775,7 +775,7 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf **cconfs)
 	// Rename the old current to something that we know to delete.
 	if(previous_backup && !hardlinked_current)
 	{
-		if(deleteme_move(sdirs->client,
+		if(deleteme_move(sdirs,
 			fdirs->fullrealcurrent, realcurrent, cconfs)
 		// I have tested that potential race conditions on the
 		// rename() are automatically recoverable here.
@@ -783,7 +783,7 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf **cconfs)
 			goto end;
 	}
 
-	if(deleteme_maybe_delete(cconfs, sdirs->client))
+	if(deleteme_maybe_delete(cconfs, sdirs))
 		goto end;
 
 	logp("End phase4 (shuffle files)\n");

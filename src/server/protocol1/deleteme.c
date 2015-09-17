@@ -1,21 +1,11 @@
 #include "include.h"
 
-static char *deleteme_get_path(const char *basedir, struct conf **cconfs)
-{
-	static char *deleteme=NULL;
-	char *manual_delete=get_string(cconfs[OPT_MANUAL_DELETE]);
-	free_w(&deleteme);
-	if(manual_delete) return manual_delete;
-	return prepend_s(basedir, "deleteme");
-}
-
-int deleteme_move(const char *basedir, const char *fullpath, const char *path,
+int deleteme_move(struct sdirs *sdirs, const char *fullpath, const char *path,
 	struct conf **cconfs)
 {
 	int ret=-1;
 	char *tmp=NULL;
 	char *dest=NULL;
-	char *deleteme=NULL;
 	int attempts=0;
 	struct stat statp;
 	char suffix[16]="";
@@ -29,9 +19,8 @@ int deleteme_move(const char *basedir, const char *fullpath, const char *path,
 		goto end;
 	}
 
-	if(!(deleteme=deleteme_get_path(basedir, cconfs))
-	  || !(tmp=prepend_s(deleteme, path))
-	  || mkpath(&tmp, deleteme)
+	if(!(tmp=prepend_s(sdirs->deleteme, path))
+	  || mkpath(&tmp, sdirs->deleteme)
 	  || !(dest=prepend("", tmp)))
 		goto end;
 
@@ -64,12 +53,10 @@ end:
 	return ret;
 }
 
-int deleteme_maybe_delete(struct conf **cconfs, const char *basedir)
+int deleteme_maybe_delete(struct conf **cconfs, struct sdirs *sdirs)
 {
-	char *deleteme;
 	// If manual_delete is on, they will have to delete the files
 	// manually, via a cron job or something.
 	if(get_string(cconfs[OPT_MANUAL_DELETE])) return 0;
-	if(!(deleteme=deleteme_get_path(basedir, cconfs))) return -1;
-	return recursive_delete(deleteme);
+	return recursive_delete(sdirs->deleteme);
 }

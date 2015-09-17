@@ -49,7 +49,7 @@ extern struct sdirs *sdirs_alloc(void);
 extern int sdirs_init_from_confs(struct sdirs *sdirs, struct conf **confs);
 extern int sdirs_init(struct sdirs *sdirs, enum protocol protocol,
 	const char *directory, const char *cname, const char *conf_lockdir,
-	const char *dedup_group);
+	const char *dedup_group, const char *manual_delete);
 extern void sdirs_free_content(struct sdirs *sdirs);
 extern void sdirs_free(struct sdirs **sdirs);
 

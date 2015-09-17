@@ -111,11 +111,10 @@ int sdirs_create_real_working(struct sdirs *sdirs, const char *timestamp_format)
 	return 0;
 }
 
-static int do_common_dirs(struct sdirs *sdirs)
+static int do_common_dirs(struct sdirs *sdirs, const char *manual_delete)
 {
 	if(!(sdirs->working=prepend_s(sdirs->client, "working"))
 	  || !(sdirs->finishing=prepend_s(sdirs->client, "finishing"))
-	  || !(sdirs->deleteme=prepend_s(sdirs->client, "deleteme"))
 	  || !(sdirs->current=prepend_s(sdirs->client, "current"))
 	  || !(sdirs->currenttmp=prepend_s(sdirs->client, "current.tmp"))
 	  || !(sdirs->timestamp=prepend_s(sdirs->working, "timestamp"))
@@ -123,15 +122,26 @@ static int do_common_dirs(struct sdirs *sdirs)
 	  || !(sdirs->changed=prepend_s(sdirs->working, "changed"))
 	  || !(sdirs->unchanged=prepend_s(sdirs->working, "unchanged")))
 		return -1;
+	if(manual_delete)
+	{
+		if(!(sdirs->deleteme=strdup_w(manual_delete, __func__)))
+			return -1;
+	}
+	else
+	{
+		if(!(sdirs->deleteme=prepend_s(sdirs->client, "deleteme")))
+			return -1;
+	}
 	return 0;
 }
 
 // Maybe should be in a protocol1 directory.
-static int do_protocol1_dirs(struct sdirs *sdirs, const char *cname)
+static int do_protocol1_dirs(struct sdirs *sdirs, const char *cname,
+	const char *manual_delete)
 {
 	if(!(sdirs->clients=strdup_w(sdirs->base, __func__))
 	  || !(sdirs->client=prepend_s(sdirs->clients, cname))
-	  || do_common_dirs(sdirs)
+	  || do_common_dirs(sdirs, manual_delete)
 	  || !(sdirs->currentdata=prepend_s(sdirs->current, DATA_DIR))
 	  || !(sdirs->manifest=prepend_s(sdirs->working, "manifest.gz"))
 	  || !(sdirs->datadirtmp=prepend_s(sdirs->working, "data.tmp"))
@@ -145,7 +155,7 @@ static int do_protocol1_dirs(struct sdirs *sdirs, const char *cname)
 }
 
 static int do_protocol2_dirs(struct sdirs *sdirs,
-	const char *cname, const char *dedup_group)
+	const char *cname, const char *dedup_group, const char *manual_delete)
 {
 	if(!dedup_group)
 	{
@@ -156,7 +166,7 @@ static int do_protocol2_dirs(struct sdirs *sdirs,
 	  || !(sdirs->clients=prepend_s(sdirs->dedup, "clients"))
 	  || !(sdirs->client=prepend_s(sdirs->clients, cname))
 	  || !(sdirs->dfiles=prepend_s(sdirs->client, "dfiles"))
-	  || do_common_dirs(sdirs)
+	  || do_common_dirs(sdirs, manual_delete)
 	  || !(sdirs->data=prepend_s(sdirs->dedup, DATA_DIR))
 	  || !(sdirs->champlock=prepend_s(sdirs->data, "cc.lock"))
 	  || !(sdirs->champsock=prepend_s(sdirs->data, "cc.sock"))
@@ -177,13 +187,14 @@ int sdirs_init_from_confs(struct sdirs *sdirs, struct conf **confs)
 		get_string(confs[OPT_DIRECTORY]),
 		get_string(confs[OPT_CNAME]),
 		get_string(confs[OPT_CLIENT_LOCKDIR]),
-		get_string(confs[OPT_DEDUP_GROUP])
+		get_string(confs[OPT_DEDUP_GROUP]),
+		get_string(confs[OPT_MANUAL_DELETE])
 	);
 }
 
 int sdirs_init(struct sdirs *sdirs, enum protocol protocol,
 	const char *directory, const char *cname, const char *conf_lockdir,
-	const char *dedup_group)
+	const char *dedup_group, const char *manual_delete)
 {
 	if(!directory)
 	{
@@ -196,11 +207,13 @@ int sdirs_init(struct sdirs *sdirs, enum protocol protocol,
 
 	if(protocol==PROTO_1)
 	{
-		if(do_protocol1_dirs(sdirs, cname)) goto error;
+		if(do_protocol1_dirs(sdirs, cname, manual_delete))
+			goto error;
 	}
 	else
 	{
-		if(do_protocol2_dirs(sdirs, cname, dedup_group)) goto error;
+		if(do_protocol2_dirs(sdirs, cname, dedup_group, manual_delete))
+			goto error;
 	}
 
 	if(do_lock_dirs(sdirs, cname, conf_lockdir)) goto error;

@@ -38,7 +38,9 @@ static void do_sdirs_init(struct sdirs *sdirs, enum protocol protocol)
 		BASE, // directory
 		CNAME,
 		NULL, // client_lockdir
-		"a_group")); // dedup_group
+		"a_group", // dedup_group
+		NULL // manual_delete
+		));
 }
 
 static struct strlist *build_keep_strlist(long keep[], size_t len)

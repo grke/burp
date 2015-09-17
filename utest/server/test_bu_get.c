@@ -36,7 +36,9 @@ static void do_sdirs_init(struct sdirs *sdirs, enum protocol protocol)
 		BASE, // directory
 		"utestclient", // cname
 		NULL, // client_lockdir
-		"a_group")); // dedup_group
+		"a_group", // dedup_group
+		NULL // manual_delete
+		));
 }
 
 static void do_assert_bu_list(struct bu *bu_list,

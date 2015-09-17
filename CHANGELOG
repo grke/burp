@@ -9,6 +9,8 @@
   * Fix a bug where interrupting the server whilst it was deleting old
     backups would result in the next backup erroneously being given a backup
     number incremented from the timestamp in the 'deleteme' directory.
+  * Fix the 'manual_delete' option so that it works on backups instead of
+    just the rubble left behind by a librsync=1 backup.
 
 2015-09-04 Changes in burp-2.0.22:
   * Make protocol2 resume work. Add unit tests for resume components.

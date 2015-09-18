@@ -1,6 +1,7 @@
 #include "include.h"
 
-int has_extrameta(const char *path, enum cmd cmd, enum protocol protocol)
+int has_extrameta(const char *path, enum cmd cmd, enum protocol protocol,
+	int enable_acl, int enable_xattr)
 {
 #if defined(WIN32_VSS)
 	return 1;
@@ -13,7 +14,7 @@ int has_extrameta(const char *path, enum cmd cmd, enum protocol protocol)
     defined(HAVE_NETBSD_OS)
 
 #ifdef HAVE_ACL
-	if(has_acl(path, cmd)) return 1;
+	if(enable_acl && has_acl(path, cmd)) return 1;
 #endif
 #endif
 #if defined(HAVE_LINUX_OS) || \
@@ -22,7 +23,7 @@ int has_extrameta(const char *path, enum cmd cmd, enum protocol protocol)
     defined(HAVE_NETBSD_OS) || \
     defined(HAVE_DARWIN_OS)
 #ifdef HAVE_XATTR
-	if(has_xattr(path, cmd)) return 1;
+	if(enable_xattr && has_xattr(path, cmd)) return 1;
 #endif
 #endif
         return 0;

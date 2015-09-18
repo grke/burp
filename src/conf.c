@@ -763,6 +763,10 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_int(c[o], 0, CONF_FLAG_INCEXC, "strip_vss");
 	case OPT_VSS_DRIVES:
 	  return sc_str(c[o], 0, CONF_FLAG_INCEXC, "vss_drives");
+	case OPT_ACL:
+	  return sc_int(c[o], 1, CONF_FLAG_INCEXC, "acl");
+	case OPT_XATTR:
+	  return sc_int(c[o], 1, CONF_FLAG_INCEXC, "xattr");
 	case OPT_ATIME:
 	  return sc_int(c[o], 0, CONF_FLAG_INCEXC, "atime");
 	case OPT_SCAN_PROBLEM_RAISES_ERROR:

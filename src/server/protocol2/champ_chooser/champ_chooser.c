@@ -67,7 +67,6 @@ struct lock *try_to_get_sparse_lock(const char *sparse_path)
 	  || !(lock=lock_alloc_and_init(lockfile))
 	  || try_to_get_lock(lock))
 		lock_free(&lock);
-end:
 	free_w(&lockfile);
 	return lock;
 }

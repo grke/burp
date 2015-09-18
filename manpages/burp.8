@@ -247,8 +247,10 @@ Log to syslog. Defaults to off.
 Log to stdout. Defaults to on.
 .TP
 \fBkeep=[number]\fR
-Number of backups to keep. This can be overridden by the client configuration
-files in clientconfdir on the server. Specify multiple 'keep' entries on separate lines in order to keep multiple periods of backups. For example, assuming that you are doing a backup a day, keep=7 keep=4 keep=6 (on separate lines) will keep 7 daily backups, 4 weekly backups (7x4=28), and 6 multiples of 4 weeks (7x4x6=168) \- roughly 6 monthly backups. Effectively, you will be guaranteed to be able to restore up to 168 days ago, with the number of available backups exponentially decreasing as you go back in time to that point. In this example, every 7th backup will be hardlinked to allow burp to safely delete intermediate backups when necessary. You can have as many 'keep' lines as you like, as long as they don't exceed 52560000 when multiplied together. That is, a backup every minute for 100 years.
+Number of backups to keep. This can be overridden by the clientconfdir configuration files in clientconfdir on the server. Specify multiple 'keep' entries on separate lines in order to keep multiple periods of backups. For example, assuming that you are doing a backup a day, keep=7 keep=4 keep=6 (on separate lines) will keep 7 daily backups, 4 weekly backups (7x4=28), and 6 multiples of 4 weeks (7x4x6=168) \- roughly 6 monthly backups. Effectively, you will be guaranteed to be able to restore up to 168 days ago, with the number of available backups exponentially decreasing as you go back in time to that point. In this example, every 7th backup will be hardlinked to allow burp to safely delete intermediate backups when necessary. You can have as many 'keep' lines as you like, as long as they don't exceed 52560000 when multiplied together. That is, a backup every minute for 100 years.
+.TP
+\fBmanual_delete=[path]\fR
+This can be overridden by the clientconfdir configuration files in clientconfdir on the server. When the server needs to delete old backups, or rubble left over from generating reverse patches with librsync=1, it will normally delete them in place. If you use the 'manual_delete' option, the files will be moved to the path specified for deletion at a later point. You will then need to configure a cron job, or similar, to delete the files yourself. Do not specify a path that is not on the same filesystem as the client storage directory.
 .TP
 \fBhardlinked_archive=[0|1]\fR
 On the server, defines whether to keep hardlinked files in the backups, or whether to generate reverse deltas and delete the original files. Can be set to either 0 (off) or 1 (on). Disadvantage: More disk space will be used Advantage: Restores will be faster, and since no reverse deltas need to be generated, the time and effort the server needs at the end of a backup is reduced.
@@ -638,6 +640,12 @@ When backing up Windows computers with burp protocol 1, this option allows you t
 \fBvss_drives=[list of drive letters]\fR
 When backing up Windows computers, this option allows you to specify which drives have VSS snapshots taken of them. If you omit this option, burp will automatically decide based on the 'include' options. If you want no drives to have snapshots taken of them, you can specify '0'.
 .TP
+\fBacl=[0|1]\fR
+If acl support is compiled into burp, this allows you to decide whether or not to backup acls at runtime. The default is '1'.
+.TP
+\fBxattr=[0|1]\fR
+If xattr support is compiled into burp, this allows you to decide whether or not to backup xattrs at runtime. The default is '1'.
+.TP
 \fBatime=[0|1]\fR
 This allows you to control whether the client uses O_NOATIME when opening files and directories. The default is 0, which enables O_NOATIME. This means that the client can read files and directories without updating the access times. However, this is only possible if you are running as root, or are the owner of the file or directory. If this is not the case (perhaps you only have group or world access to the files), you will get errors until you set atime=1. With atime=1, the access times will be updated on the files and directories that get backed up.
 .TP
@@ -661,6 +669,7 @@ Additionally, the following options can be overridden here for each client:
 \fBtimestamp_format\fR
 \fBpassword_check\fR
 \fBkeep\fR
+\fBmanual_delete\fR
 \fBworking_dir_recovery_method\fR
 \fBlibrsync\fR
 \fBversion_warn\fR

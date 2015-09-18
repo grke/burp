@@ -161,6 +161,8 @@ enum conf_opt
 	OPT_SPLIT_VSS,
 	OPT_STRIP_VSS,
 	OPT_VSS_DRIVES,
+	OPT_ACL,
+	OPT_XATTR,
 	OPT_ATIME,
 	OPT_SCAN_PROBLEM_RAISES_ERROR,
 	// These are to do with restore.

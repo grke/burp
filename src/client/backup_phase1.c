@@ -46,6 +46,9 @@ static enum cmd vss_trail_symbol=CMD_VSS_T;
 static enum cmd metasymbol=CMD_METADATA;
 #endif
 
+static int enable_acl=0;
+static int enable_xattr=0;
+
 static int usual_stuff(struct asfd *asfd,
 	struct cntr *cntr, const char *path, const char *link,
 	struct sbuf *sb, enum cmd cmd)
@@ -64,7 +67,11 @@ static int maybe_send_extrameta(struct asfd *asfd,
 	struct sbuf *sb, enum protocol protocol,
 	struct cntr *cntr, enum cmd symbol)
 {
-	if(!has_extrameta(path, cmd, protocol)) return 0;
+	// FIX THIS: should probably initialise extrameta with the desired
+	// conf parameters so that they do not need to be passed in all the
+	// time.
+	if(!has_extrameta(path, cmd, protocol, enable_acl, enable_xattr))
+		return 0;
 	return usual_stuff(asfd, cntr, path, NULL, sb, symbol);
 }
 
@@ -188,6 +195,8 @@ int backup_phase1_client(struct asfd *asfd, struct conf **confs, int estimate)
 	int ret=-1;
 	FF_PKT *ff=NULL;
 	struct strlist *l=NULL;
+	enable_acl=get_int(confs[OPT_ACL]);
+	enable_xattr=get_int(confs[OPT_XATTR]);
 
 	// First, tell the server about everything that needs to be backed up.
 

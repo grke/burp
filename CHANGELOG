@@ -10,7 +10,10 @@
     backups would result in the next backup erroneously being given a backup
     number incremented from the timestamp in the 'deleteme' directory.
   * Fix the 'manual_delete' option so that it works on backups instead of
-    just the rubble left behind by a librsync=1 backup.
+    just the rubble left behind by a librsync=1 backup. Add the option to the
+    man page as it is missing.
+  * Add acl=[0|1] and xattr=[0|1] options so that acls and xattrs can be
+    turned on and off at runtime.
 
 2015-09-04 Changes in burp-2.0.22:
   * Make protocol2 resume work. Add unit tests for resume components.

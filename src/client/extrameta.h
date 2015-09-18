@@ -11,7 +11,8 @@
 #define META_VSS		'V'
 
 extern int has_extrameta(const char *path,
-	enum cmd cmd, enum protocol protocol);
+	enum cmd cmd, enum protocol protocol,
+	int enable_acl, int enable_xattr);
 
 extern int get_extrameta(struct asfd *asfd,
 	BFILE *bfd,

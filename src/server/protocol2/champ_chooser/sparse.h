@@ -15,6 +15,6 @@ extern struct sparse *sparse_find(uint64_t *fingerprint);
 extern void sparse_delete_all(void);
 extern int sparse_add_candidate(uint64_t *fingerprint,
 	struct candidate *candidate);
-extern void sparse_delete_candidate(struct candidate *candidate);
+extern void sparse_delete_fresh_candidate(struct candidate *candidate);
 
 #endif

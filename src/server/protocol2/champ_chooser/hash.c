@@ -93,27 +93,32 @@ static int process_sig(struct blk *blk)
 	return 0;
 }
 
-int hash_load(const char *champ, const char *directory)
+enum hash_ret hash_load(const char *champ, const char *directory)
 {
-	int ret=-1;
+	enum hash_ret ret=HASH_RET_PERM;
 	char *path=NULL;
 	struct fzp *fzp=NULL;
 	struct sbuf *sb=NULL;
 	static struct blk *blk=NULL;
 
-	if(!(path=prepend_s(directory, champ))
-	  || !(fzp=fzp_gzopen(path, "rb")))
+	if(!(path=prepend_s(directory, champ)))
 		goto end;
+	if(!(fzp=fzp_gzopen(path, "rb")))
+	{
+		ret=HASH_RET_TEMP;
+		goto end;
+	}
 
-	if(!sb && !(sb=sbuf_alloc(PROTO_2))) goto end;
-	if(!blk && !(blk=blk_alloc())) goto end;
+	if((!sb && !(sb=sbuf_alloc(PROTO_2)))
+	  || (!blk && !(blk=blk_alloc())))
+		goto end;
 
 	while(1)
 	{
 		sbuf_free_content(sb);
 		switch(sbuf_fill_from_file(sb, fzp, blk, NULL))
 		{
-			case 1: ret=0;
+			case 1: ret=HASH_RET_OK;
 				goto end;
 			case -1:
 				logp("Error reading %s in %s\n", path,

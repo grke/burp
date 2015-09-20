@@ -53,15 +53,12 @@ struct candidate *candidates_add_new(void)
 	return candidate;
 }
 
-#define PERM_ERROR	-2
-#define TEMP_ERROR	-1
-
 // This deals with reading in the sparse index, as well as actual candidate
 // manifests.
-int candidate_load(struct candidate *candidate, const char *path,
+enum cand_ret candidate_load(struct candidate *candidate, const char *path,
 	struct scores *scores)
 {
-	int ret=PERM_ERROR;
+	enum cand_ret ret=CAND_RET_PERM;
 	struct fzp *fzp=NULL;
 	struct sbuf *sb=NULL;
 	struct blk *blk=NULL;
@@ -69,13 +66,13 @@ int candidate_load(struct candidate *candidate, const char *path,
 	if(!(sb=sbuf_alloc(PROTO_2))
 	  || !(blk=blk_alloc()))
 	{
-		ret=PERM_ERROR;
+		ret=CAND_RET_PERM;
 		goto error;
 	}
 	
 	if(!(fzp=fzp_gzopen(path, "rb")))
 	{
-		ret=TEMP_ERROR;
+		ret=CAND_RET_TEMP;
 		goto error;
 	}
 	while(fzp)
@@ -87,14 +84,14 @@ int candidate_load(struct candidate *candidate, const char *path,
 			case -1:
 				logp("Error reading %s in %s, pos %d\n",
 					path, __func__, fzp_tell(fzp));
-				ret=TEMP_ERROR;
+				ret=CAND_RET_TEMP;
 				goto error;
 		}
 		if(blk_fingerprint_is_hook(blk))
 		{
 			if(sparse_add_candidate(&blk->fingerprint, candidate))
 			{
-				ret=PERM_ERROR;
+				ret=CAND_RET_PERM;
 				goto error;
 			}
 		}
@@ -102,7 +99,7 @@ int candidate_load(struct candidate *candidate, const char *path,
 		{
 			if(!(candidate=candidates_add_new()))
 			{
-				ret=PERM_ERROR;
+				ret=CAND_RET_PERM;
 				goto error;
 			}
 			candidate->path=sb->path.buf;
@@ -114,13 +111,13 @@ int candidate_load(struct candidate *candidate, const char *path,
 end:
 	if(scores_grow(scores, candidates_len))
 	{
-		ret=PERM_ERROR;
+		ret=CAND_RET_PERM;
 		goto error;
 	}
 	candidates_set_score_pointers(candidates, candidates_len, scores);
 	scores_reset(scores);
 	//logp("Now have %d candidates\n", (int)candidates_len);
-	ret=0;
+	ret=CAND_RET_OK;
 error:
 	fzp_close(&fzp);
 	sbuf_free(&sb);
@@ -132,8 +129,6 @@ error:
 int candidate_add_fresh(const char *path, const char *directory,
 	struct scores *scores)
 {
-	int r;
-	int ret=-1;
 	const char *cp=NULL;
 	struct candidate *candidate=NULL;
 
@@ -144,24 +139,26 @@ int candidate_add_fresh(const char *path, const char *directory,
 	if(!(candidate->path=strdup_w(cp, __func__)))
 		goto error;
 
-	r=candidate_load(candidate, path, scores);
-	if(r==PERM_ERROR)
-		goto error;
-	if(r==TEMP_ERROR)
+	switch(candidate_load(candidate, path, scores))
 	{
-		// Had an error - try to carry on. Errors can happen when
-		// loading a fresh candidate because the backup process can
-		// move to the next phase and rename the candidates.
-		logp("Removing candidate.\n");
-		candidates_len--;
-		sparse_delete_candidate(candidate);
-		candidate_free(&candidate);
-		return 0;
+		case CAND_RET_PERM:
+			goto error;
+		case CAND_RET_TEMP:
+			// Had an error - try to carry on. Errors can happen
+			// when loading a fresh candidate because the backup
+			// process can move to the next phase and rename the
+			// candidates.
+			logp("Removing candidate.\n");
+			candidates_len--;
+			sparse_delete_fresh_candidate(candidate);
+			candidate_free(&candidate);
+			// Fall through.
+		case CAND_RET_OK:
+			return 0;
 	}
-	return r;
 error:
 	candidate_free(&candidate);
-	return ret;
+	return -1;
 }
 
 struct candidate *candidates_choose_champ(struct incoming *in,
@@ -190,6 +187,7 @@ struct candidate *candidates_choose_champ(struct incoming *in,
 		for(s=0; s<sparse->size; s++)
 		{
 			candidate=sparse->candidates[s];
+			if(candidate->deleted) continue;
 			if(candidate==champ_last)
 			{
 				int t;

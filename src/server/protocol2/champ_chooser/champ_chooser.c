@@ -154,12 +154,22 @@ int deduplicate(struct asfd *asfd, const char *directory, struct scores *scores)
 
 	incoming_found_reset(in);
 	count=0;
-	while((champ=candidates_choose_champ(in, champ_last, scores)))
+	while(count!=CHAMPS_MAX
+	  && (champ=candidates_choose_champ(in, champ_last, scores)))
 	{
 //		printf("Got champ: %s %d\n", champ->path, *(champ->score));
-		if(hash_load(champ->path, directory)) return -1;
-		if(++count==CHAMPS_MAX) break;
-		champ_last=champ;
+		switch(hash_load(champ->path, directory))
+		{
+			case HASH_RET_OK:
+				count++;
+				champ_last=champ;
+				break;
+			case HASH_RET_PERM:
+				return -1;
+			case HASH_RET_TEMP:
+				champ->deleted=1;
+				break;
+		}
 	}
 
 	blk_count=0;

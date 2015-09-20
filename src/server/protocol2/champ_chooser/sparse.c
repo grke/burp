@@ -62,7 +62,7 @@ int sparse_add_candidate(uint64_t *fingerprint, struct candidate *candidate)
 	return 0;
 }
 
-void sparse_delete_candidate(struct candidate *candidate)
+void sparse_delete_fresh_candidate(struct candidate *candidate)
 {
 	struct sparse *tmp;
 	struct sparse *sparse;

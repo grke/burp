@@ -5,6 +5,13 @@
 
 typedef struct hash_strong hash_strong_t;
 
+enum hash_ret
+{
+	HASH_RET_PERM=-2,
+	HASH_RET_TEMP=-1,
+	HASH_RET_OK=0
+};
+
 struct hash_strong
 {
 	uint8_t md5sum[MD5_DIGEST_LENGTH];
@@ -27,6 +34,6 @@ extern struct hash_strong *hash_strong_find(struct hash_weak *hash_weak,
 extern struct hash_weak *hash_weak_add(uint64_t weakint);
 
 extern void hash_delete_all(void);
-extern int hash_load(const char *champ, const char *directory);
+extern enum hash_ret hash_load(const char *champ, const char *directory);
 
 #endif

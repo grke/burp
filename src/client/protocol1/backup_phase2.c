@@ -147,13 +147,13 @@ static int size_checks(struct asfd *asfd, struct sbuf *sb, struct conf **confs)
 	if(get_uint64_t(confs[OPT_MIN_FILE_SIZE])
 	  && (uint64_t)sb->statp.st_size<get_uint64_t(confs[OPT_MIN_FILE_SIZE]))
 	{
-		logw(asfd, get_cntr(confs), "File size decreased below min_file_size after initial scan: %c:%s", sb->path.cmd, sb->path.buf);
+		logw(asfd, get_cntr(confs), "File size decreased below min_file_size after initial scan: %c:%s\n", sb->path.cmd, sb->path.buf);
 		return -1;
 	}
 	if(get_uint64_t(confs[OPT_MAX_FILE_SIZE])
 	  && (uint64_t)sb->statp.st_size>get_uint64_t(confs[OPT_MAX_FILE_SIZE]))
 	{
-		logw(asfd, get_cntr(confs), "File size increased above max_file_size after initial scan: %c:%s", sb->path.cmd, sb->path.buf);
+		logw(asfd, get_cntr(confs), "File size increased above max_file_size after initial scan: %c:%s\n", sb->path.cmd, sb->path.buf);
 		return -1;
 	}
 	return 0;
@@ -181,7 +181,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 	if(lstat(sb->path.buf, &sb->statp))
 #endif
 	{
-		logw(asfd, cntr, "Path has vanished: %s", sb->path.buf);
+		logw(asfd, cntr, "Path has vanished: %s\n", sb->path.buf);
 		if(forget_file(asfd, sb, confs)) goto error;
 		goto end;
 	}
@@ -219,7 +219,8 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 		if(get_extrameta(asfd, bfd,
 			sb, &extrameta, &elen, cntr))
 		{
-			logw(asfd, cntr, "Meta data error for %s", sb->path.buf);
+			logw(asfd, cntr,
+				"Meta data error for %s\n", sb->path.buf);
 			goto end;
 		}
 		if(extrameta)
@@ -236,7 +237,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 		else
 		{
 			logw(asfd, cntr,
-				"No meta data after all: %s", sb->path.buf);
+				"No meta data after all: %s\n", sb->path.buf);
 			goto end;
 		}
 	}

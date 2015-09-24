@@ -82,7 +82,7 @@ static int ft_err(struct asfd *asfd,
 	const char *prefix="";
 	raise_error=get_int(confs[OPT_SCAN_PROBLEM_RAISES_ERROR]);
 	if(raise_error) prefix="Err: ";
-	if(logw(asfd, get_cntr(confs), _("%s%s %s: %s"), prefix, msg,
+	if(logw(asfd, get_cntr(confs), "%s%s %s: %s\n", prefix, msg,
 		ff->fname, strerror(errno))) return -1;
 	if(raise_error) return -1;
 	return 0;
@@ -151,7 +151,7 @@ static int send_file(struct asfd *asfd, FF_PKT *ff, struct conf **confs)
 		  || ff->type==FT_DIR)
 			return to_server(asfd, confs, ff, sb, CMD_EFS_FILE);
 		return logw(asfd, cntr,
-			"EFS type %d not yet supported: %s",
+			"EFS type %d not yet supported: %s\n",
 			ff->type, ff->fname);
 	}
 #endif
@@ -185,7 +185,7 @@ static int send_file(struct asfd *asfd, FF_PKT *ff, struct conf **confs)
 			return ft_err(asfd, confs, ff, "Could not open directory");
 		default:
 			return logw(asfd, cntr,
-				_("Err: Unknown file type %d: %s"),
+				"Err: Unknown file type %d: %s\n",
 				ff->type, ff->fname);
 	}
 }

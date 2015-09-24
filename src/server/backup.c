@@ -316,8 +316,12 @@ int run_backup(struct async *as, struct sdirs *sdirs, struct conf **cconfs,
 	if(!(ret=do_backup_server(as, sdirs, cconfs, incexc, resume)))
 	{
 		if(!delete_backups(sdirs, cname,
-			get_strlist(cconfs[OPT_KEEP])))
+			get_strlist(cconfs[OPT_KEEP]),
+			get_string(cconfs[OPT_MANUAL_DELETE])))
+		{
+			if(get_protocol(cconfs)==PROTO_2)
 				regenerate_client_dindex(sdirs);
+		}
 	}
 
 	return ret;

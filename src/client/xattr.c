@@ -525,7 +525,7 @@ static int do_set_xattr_bsd(struct asfd *asfd,
 		if(extattr_string_to_namespace(nspace, &cnspace))
 		{
 			logw(asfd, cntr,
-				"could not convert %s into namespace on %s",
+				"could not convert %s into namespace on %s\n",
 				nspace, path);
 			goto end;
 		}

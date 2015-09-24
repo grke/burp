@@ -11,38 +11,42 @@
 #include "sdirs.h"
 #include "protocol2/backup_phase4.h"
 
-static int do_rename_w(const char *a, const char *b)
+static int do_rename_w(const char *a, const char *b,
+	const char *cname, struct bu *bu)
 {
-	if(do_rename(a, b))
+	int ret=-1;
+	char *target=NULL;
+	char new_name[256]="";
+	snprintf(new_name, sizeof(new_name), "%s-%s", cname, bu->basename);
+	if(!(target=prepend_s(b, new_name))
+	  || build_path_w(target))
+		goto end;
+	if(do_rename(a, target))
 	{
 		logp("Error when trying to rename for delete %s\n", a);
+		goto end;
+	}
+	ret=0;
+end:
+	free_w(&target);
+	return ret;
+}
+
+static int recursive_delete_w(struct sdirs *sdirs, struct bu *bu,
+	const char *manual_delete)
+{
+	if(manual_delete) return 0;
+	if(recursive_delete(sdirs->deleteme))
+	{
+		logp("Error when trying to delete %s\n", bu->path);
 		return -1;
 	}
 	return 0;
 }
 
-static int recursive_delete_w(struct sdirs *sdirs, struct bu *bu)
-{
-	int ret=-1;
-	char *timestamp=NULL;
-	if(!(timestamp=prepend_s(sdirs->deleteme, "timestamp")))
-		goto end;
-	// Paranoia - really do not want the deleteme directory to be loaded
-	// as if it were a normal storage directory, so delete the timestamp.
-	unlink(timestamp);
-	if(recursive_delete(sdirs->deleteme))
-	{
-		logp("Error when trying to delete %s\n", bu->path);
-		goto end;
-	}
-	ret=0;
-end:
-	free_w(&timestamp);
-	return ret;
-}
-
 // The failure conditions here are dealt with by the rubble cleaning code.
-static int delete_backup(struct sdirs *sdirs, const char *cname, struct bu *bu)
+static int delete_backup(struct sdirs *sdirs, const char *cname, struct bu *bu,
+	const char *manual_delete)
 {
 	logp("deleting %s backup %lu\n", cname, bu->bno);
 
@@ -57,7 +61,8 @@ static int delete_backup(struct sdirs *sdirs, const char *cname, struct bu *bu)
 	if(!bu->next && !bu->prev)
 	{
 		// The current, and only, backup.
-		if(do_rename_w(bu->path, sdirs->deleteme)) return -1;
+		if(do_rename_w(bu->path, sdirs->deleteme, cname, bu))
+			return -1;
 		// If interrupted here, there will be a dangling 'current'
 		// symlink.
 		if(unlink(sdirs->current))
@@ -66,7 +71,7 @@ static int delete_backup(struct sdirs *sdirs, const char *cname, struct bu *bu)
 				sdirs->current, strerror(errno));
 			return -1;
 		}
-		return recursive_delete_w(sdirs, bu);
+		return recursive_delete_w(sdirs, bu, manual_delete);
 	}
 	if(!bu->next && bu->prev)
 	{
@@ -84,29 +89,29 @@ static int delete_backup(struct sdirs *sdirs, const char *cname, struct bu *bu)
 		}
 		// If interrupted here, there is a currenttmp and a current
 		// symlink, and they both point to valid directories.
-		if(do_rename_w(bu->path, sdirs->deleteme))
+		if(do_rename_w(bu->path, sdirs->deleteme, cname, bu))
 			return -1;
 		// If interrupted here, there is a currenttmp and a current
 		// symlink, and the current link is dangling.
-		if(do_rename_w(sdirs->currenttmp, sdirs->current))
+		if(do_rename_w(sdirs->currenttmp, sdirs->current, cname, bu))
 			return -1;
 		// If interrupted here, moving the symlink could have failed
 		// after current was deleted but before currenttmp was renamed.
-		if(recursive_delete_w(sdirs, bu))
+		if(recursive_delete_w(sdirs, bu, manual_delete))
 			return -1;
 		return 0;
 	}
 
 	// It is not the current backup.
-	if(do_rename_w(bu->path, sdirs->deleteme)
-	  || recursive_delete_w(sdirs, bu))
+	if(do_rename_w(bu->path, sdirs->deleteme, cname, bu)
+	  || recursive_delete_w(sdirs, bu, manual_delete))
 		return -1;
 	return 0;
 }
 
 static int range_loop(struct sdirs *sdirs, const char *cname,
 	struct strlist *keep, unsigned long rmin, struct bu *bu_list,
-	struct bu *last, int *deleted)
+	struct bu *last, const char *manual_delete, int *deleted)
 {
 	struct bu *bu=NULL;
 	unsigned long r=0;
@@ -138,7 +143,8 @@ static int range_loop(struct sdirs *sdirs, const char *cname,
 			  && bu->trbno<r
 			  && (bu->flags & BU_DELETABLE))
 			{
-				if(delete_backup(sdirs, cname, bu)) return -1;
+				if(delete_backup(sdirs, cname, bu,
+					manual_delete)) return -1;
 				(*deleted)++;
 				if(--count<=1) break;
 			}
@@ -149,7 +155,7 @@ static int range_loop(struct sdirs *sdirs, const char *cname,
 }
 
 static int do_delete_backups(struct sdirs *sdirs, const char *cname,
-	struct strlist *keep, struct bu *bu_list)
+	struct strlist *keep, struct bu *bu_list, const char *manual_delete)
 {
 	int ret=-1;
 	int deleted=0;
@@ -169,7 +175,7 @@ static int do_delete_backups(struct sdirs *sdirs, const char *cname,
 		rmin=m * k->flag;
 
 		if(k->next && range_loop(sdirs, cname,
-			k, rmin, bu_list, last, &deleted))
+			k, rmin, bu_list, last, manual_delete, &deleted))
 				goto end;
 		m=rmin;
         }
@@ -179,7 +185,7 @@ static int do_delete_backups(struct sdirs *sdirs, const char *cname,
 
 	for(; bu; bu=bu->prev)
 	{
-		if(delete_backup(sdirs, cname, bu))
+		if(delete_backup(sdirs, cname, bu, manual_delete))
 			goto end;
 		deleted++;
 	}
@@ -190,7 +196,7 @@ end:
 }
 
 int delete_backups(struct sdirs *sdirs,
-	const char *cname, struct strlist *keep)
+	const char *cname, struct strlist *keep, const char *manual_delete)
 {
 	int ret=-1;
 	struct bu *bu_list=NULL;
@@ -199,7 +205,8 @@ int delete_backups(struct sdirs *sdirs,
 	while(1)
 	{
 		if(bu_get_list(sdirs, &bu_list)) goto end;
-		switch(do_delete_backups(sdirs, cname, keep, bu_list))
+		switch(do_delete_backups(sdirs, cname, keep, bu_list,
+			manual_delete))
 		{
 			case 0: ret=0; goto end;
 			case -1: ret=-1; goto end;
@@ -214,7 +221,7 @@ end:
 
 int do_delete_server(struct asfd *asfd,
 	struct sdirs *sdirs, struct cntr *cntr,
-	const char *cname, const char *backup)
+	const char *cname, const char *backup, const char *manual_delete)
 {
 	int ret=-1;
 	int found=0;
@@ -241,8 +248,9 @@ int do_delete_server(struct asfd *asfd,
 			{
 				found=1;
 				if(asfd->write_str(asfd, CMD_GEN, "ok")
-				  || delete_backup(sdirs, cname, bu))
-					goto end;
+				  || delete_backup(sdirs, cname, bu,
+					manual_delete))
+						goto end;
 			}
 			else
 			{

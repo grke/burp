@@ -636,6 +636,8 @@ int remove_from_global_sparse(const char *global_sparse,
 			case 1: fzp_close(&azp); // Finished OK.
 		}
 
+		if(!anew) continue;
+
 		if(!strncmp(anew->path, candidate_str, clen)
 		  && *(anew->path+clen)=='/')
 			continue;

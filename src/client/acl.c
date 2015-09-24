@@ -161,16 +161,16 @@ static int do_set_acl(struct asfd *asfd, const char *path,
 	if(acl_valid(acl))
 	{
 		logp("acl_valid error on %s: %s", path, strerror(errno));
-		logw(asfd, cntr,
-			"acl_valid error on %s: %s", path, strerror(errno));
+		logw(asfd, cntr, "acl_valid error on %s: %s\n",
+			path, strerror(errno));
 		goto end;
 	}
 //#endif
 	if(acl_set_file(path, acltype, acl))
 	{
 		logp("acl set error on %s: %s", path, strerror(errno));
-		logw(asfd,
-			cntr, "acl set error on %s: %s", path, strerror(errno));
+		logw(asfd, cntr, "acl set error on %s: %s\n",
+			path, strerror(errno));
 		goto end;
 	}
 	ret=0;

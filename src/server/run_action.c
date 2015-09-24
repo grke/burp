@@ -213,7 +213,8 @@ static int run_delete(struct asfd *asfd,
 	}
 	backupno=rbuf->buf+strlen("delete ");
 	return do_delete_server(asfd, sdirs,
-		get_cntr(cconfs), cname, backupno);
+		get_cntr(cconfs), cname, backupno,
+		get_string(cconfs[OPT_MANUAL_DELETE]));
 }
 
 static int run_list(struct asfd *asfd,

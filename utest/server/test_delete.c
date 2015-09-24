@@ -66,7 +66,8 @@ static void build_and_delete(enum protocol protocol,
 	do_sdirs_init(sdirs, protocol);
 	klist=build_keep_strlist(keep, klen);
 	build_storage_dirs(sdirs, s, slen);
-	fail_unless(!delete_backups(sdirs, CNAME, klist));
+	fail_unless(!delete_backups(sdirs, CNAME, klist,
+		NULL /* manual_delete */));
 	assert_bu_list(sdirs, e, elen);
 	tear_down(&klist, &sdirs);
 }

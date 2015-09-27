@@ -668,3 +668,14 @@ end:
 	free_w(&tmpfile);
 	return ret;
 }
+
+/* The intention of this function is that a child process at the end of a
+   backup will attempt to remove data storage files that are no longer
+   referenced by any client in the dedup_group.
+   This means that this child will have to get a lock on every client in the
+   group first. */
+int cleanup_dedup_group(struct sdirs *sdirs, const char *dedup_group)
+{
+	logp("Attempting cleanup of dedup_group: %s\n", dedup_group);
+	return 0;
+}

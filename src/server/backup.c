@@ -313,16 +313,19 @@ int run_backup(struct async *as, struct sdirs *sdirs, struct conf **cconfs,
 		resume?"resume":"ok", get_int(cconfs[OPT_COMPRESSION]));
 	if(asfd->write_str(asfd, CMD_GEN, okstr)) return -1;
 
-	if(!(ret=do_backup_server(as, sdirs, cconfs, incexc, resume)))
+	if((ret=do_backup_server(as, sdirs, cconfs, incexc, resume)))
+		goto end;
+	if((ret=delete_backups(sdirs, cname,
+		get_strlist(cconfs[OPT_KEEP]),
+		get_string(cconfs[OPT_MANUAL_DELETE]))))
+			goto end;
+	if(get_protocol(cconfs)==PROTO_2)
 	{
-		if(!delete_backups(sdirs, cname,
-			get_strlist(cconfs[OPT_KEEP]),
-			get_string(cconfs[OPT_MANUAL_DELETE])))
-		{
-			if(get_protocol(cconfs)==PROTO_2)
-				regenerate_client_dindex(sdirs);
-		}
+		if((ret=regenerate_client_dindex(sdirs)))
+			goto end;
+		ret=cleanup_dedup_group(sdirs,
+			get_string(cconfs[OPT_DEDUP_GROUP]));
 	}
-
+end:
 	return ret;
 }

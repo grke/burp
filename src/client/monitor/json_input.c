@@ -124,7 +124,7 @@ static int input_string(void *ctx, const unsigned char *val, size_t len)
 		if(!(current=cstat_get_by_name(*cslist, str)))
 		{
 			if(!(cnew=cstat_alloc())
-			  || cstat_init(cnew, str, NULL))
+			  || cstat_init_with_cntr(cnew, str, NULL))
 				goto error;
 			current=cnew;
 		}

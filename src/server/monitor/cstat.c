@@ -40,7 +40,7 @@ static int set_cstat_from_conf(struct cstat *cstat,
 
 static int get_client_names(struct cstat **clist, struct conf **confs)
 {
-	int m=0;
+	int i=0;
 	int n=-1;
 	int ret=-1;
 	struct cstat *c;
@@ -48,37 +48,39 @@ static int get_client_names(struct cstat **clist, struct conf **confs)
 	struct dirent **dir=NULL;
 	const char *clientconfdir=get_string(confs[OPT_CLIENTCONFDIR]);
 
-	if((n=scandir(clientconfdir, &dir, 0, 0))<0)
+	if(entries_in_directory_no_sort(clientconfdir, &dir, &n, 1 /*atime*/))
 	{
-		logp("could not scandir clientconfdir: %s\n",
-			clientconfdir, strerror(errno));
+		logp("scandir failed for %s in %s: %s\n",
+			clientconfdir, __func__, strerror(errno));
 		goto end;
 	}
-        for(m=0; m<n; m++)
+	for(i=0; i<n; i++)
 	{
-		if(dir[m]->d_ino==0
 		// looks_like...() also avoids '.' and '..'.
-		  || looks_like_tmp_or_hidden_file(dir[m]->d_name))
+		if(looks_like_tmp_or_hidden_file(dir[i]->d_name))
 			continue;
 		for(c=*clist; c; c=c->next)
 		{
 			if(!c->name) continue;
-			if(!strcmp(dir[m]->d_name, c->name))
+			if(!strcmp(dir[i]->d_name, c->name))
 				break;
 		}
 		if(c) continue;
 
 		// We do not have this client yet. Add it.
 		if(!(cnew=cstat_alloc())
-		  || cstat_init(cnew, dir[m]->d_name, clientconfdir)
+		  || cstat_init_with_cntr(cnew, dir[i]->d_name, clientconfdir)
 		  || cstat_add_to_list(clist, cnew))
 			goto end;
 	}
 
 	ret=0;
 end:
-	for(m=0; m<n; m++) free_v((void **)&dir[m]);
-	free_v((void **)&dir);
+	if(dir)
+	{
+		for(i=0; i<n; i++) free_v((void **)&dir[i]);
+		free_v((void **)&dir);
+	}
 	return ret;
 }
 

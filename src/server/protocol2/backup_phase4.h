@@ -17,6 +17,5 @@ extern int gzprintf_dindex(struct fzp *fzp, uint64_t *dindex);
 
 extern int remove_from_global_sparse(const char *global_sparse,
 	const char *candidate_str);
-extern int cleanup_dedup_group(struct sdirs *sdirs, const char *dedup_group);
 
 #endif

@@ -320,12 +320,7 @@ int run_backup(struct async *as, struct sdirs *sdirs, struct conf **cconfs,
 		get_string(cconfs[OPT_MANUAL_DELETE]))))
 			goto end;
 	if(get_protocol(cconfs)==PROTO_2)
-	{
-		if((ret=regenerate_client_dindex(sdirs)))
-			goto end;
-		ret=cleanup_dedup_group(sdirs,
-			get_string(cconfs[OPT_DEDUP_GROUP]));
-	}
+		ret=regenerate_client_dindex(sdirs);
 end:
 	return ret;
 }

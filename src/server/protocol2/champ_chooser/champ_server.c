@@ -261,6 +261,11 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf **confs)
 	as->asfd_add(as, asfd);
 	asfd->fdtype=ASFD_FD_SERVER_LISTEN_MAIN;
 
+	// FIX THIS:
+	// I think that this is probably the best point at which to run a
+	// cleanup job to delete unused data files, because no other process
+	// can fiddle with the dedup_group at this point.
+
 	// Load the sparse indexes for this dedup group.
 	if(!(scores=champ_chooser_init(sdirs->data)))
 		goto end;

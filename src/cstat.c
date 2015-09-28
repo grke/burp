@@ -14,7 +14,15 @@ int cstat_init(struct cstat *cstat,
 	const char *name, const char *clientconfdir)
 {
 	if((clientconfdir && !(cstat->conffile=prepend_s(clientconfdir, name)))
-	  || !(cstat->name=strdup_w(name, __func__))
+	  || !(cstat->name=strdup_w(name, __func__)))
+		return -1;
+	return 0;
+}
+
+int cstat_init_with_cntr(struct cstat *cstat,
+	const char *name, const char *clientconfdir)
+{
+	if(cstat_init(cstat, name, clientconfdir)
 	  || !(cstat->cntr=cntr_alloc())
 	  || cntr_init(cstat->cntr, name))
 		return -1;

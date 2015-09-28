@@ -47,6 +47,8 @@ struct cstat
 extern struct cstat *cstat_alloc(void);
 extern int cstat_init(struct cstat *cstat,
         const char *name, const char *clientconfdir);
+extern int cstat_init_with_cntr(struct cstat *cstat,
+        const char *name, const char *clientconfdir);
 extern void cstat_free(struct cstat **cstat);
 extern int cstat_add_to_list(struct cstat **clist, struct cstat *cnew);
 

@@ -1,3 +1,4 @@
+2015-09-30 Changes in burp-2.0.24:
   * Another fix for sigchld handling.
   * Tests for delete algorithm.
   * Tests for bu_get.
@@ -11,7 +12,7 @@
     number incremented from the timestamp in the 'deleteme' directory.
   * Fix the 'manual_delete' option so that it works on backups instead of
     just the rubble left behind by a librsync=1 backup. Add the option to the
-    man page as it is missing.
+    man page as it was missing.
   * Add acl=[0|1] and xattr=[0|1] options so that acls and xattrs can be
     turned on and off at runtime.
   * Ensure all logw() messages end with a newline.

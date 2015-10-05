@@ -68,7 +68,7 @@ static int burp_ca_init(struct conf **confs, const char *ca_dir)
 	const char *ssl_cert_ca=get_string(confs[OPT_SSL_CERT_CA]);
 	const char *ssl_key=get_string(confs[OPT_SSL_KEY]);
 
-	if(is_dir_lstat(ca_dir)) return 0;
+	if(is_dir_lstat(ca_dir)>0) return 0;
 
 	setup_stuff_done++;
 

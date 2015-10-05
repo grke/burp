@@ -264,7 +264,7 @@ int restore_dir(struct asfd *asfd, struct sbuf *sb,
 				"build path failed: %s", dname);
 			goto end;
 		}
-		else if(!is_dir_lstat(rpath))
+		else if(is_dir_lstat(rpath)<=0)
 		{
 			if(mkdir(rpath, 0777))
 			{

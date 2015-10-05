@@ -17,7 +17,7 @@ int is_dir_lstat(const char *path)
 {
         struct stat buf;
 
-        if(lstat(path, &buf)) return 0;
+        if(lstat(path, &buf)) return -1;
 
         return S_ISDIR(buf.st_mode);
 }
@@ -220,7 +220,7 @@ static int do_recursive_delete(const char *d, const char *file,
 		if(!(fullpath=prepend_s(directory, entry->d_name)))
 			goto end;
 
-		if(is_dir(fullpath, entry))
+		if(is_dir(fullpath, entry)>0)
 		{
 			int r;
 			if((r=do_recursive_delete(directory, entry->d_name,

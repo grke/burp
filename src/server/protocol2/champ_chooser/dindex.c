@@ -5,6 +5,7 @@
 #include "../../../prepend.h"
 #include "../../../strlist.h"
 #include "../../sdirs.h"
+#include "../backup_phase4.h"
 
 static int backup_in_progress(const char *fullpath)
 {
@@ -97,19 +98,72 @@ end:
 	return ret;
 }
 
+static int do_removal(const char *dindex_new, const char *dindex_old)
+{
+	// IMPLEMENT THIS
+	return 0;
+}
+
 int delete_unused_data_files(struct sdirs *sdirs)
 {
 	int ret=-1;
+	uint64_t fcount=0;
+	char hfile[32];
+	char *tmpdir=NULL;
+	char *hlinks=NULL;
+	char *fullpath=NULL;
+	char *dindex_new=NULL;
+	char *dindex_old=NULL;
 	struct strlist *s=NULL;
 	struct strlist *slist=NULL;
-	if(get_dfiles_to_merge(sdirs, &slist))
+
+	if(get_dfiles_to_merge(sdirs, &slist)
+	  || !(dindex_old=prepend_s(sdirs->data, "dindex"))
+	  || !(tmpdir=prepend_s(sdirs->data, "dindex.new"))
+	  || !(hlinks=prepend_s(tmpdir, "hlinks"))
+	  || recursive_delete(tmpdir)
+	  || mkdir(tmpdir, 0777)
+	  || mkdir(hlinks, 0777))
 		goto end;
+
 	for(s=slist; s; s=s->next)
 	{
-		logp("dfile: %s\n", s->path);
+		snprintf(hfile, sizeof(hfile), "%08"PRIX64, fcount++);
+		free_w(&fullpath);
+		if(!(fullpath=prepend_s(hlinks, hfile)))
+			goto end;
+		if(link(s->path, fullpath))
+		{
+			logp("Could not hardlink %s to %s: %s\n",
+				fullpath, s->path, strerror(errno));
+			goto end;
+		}
 	}
+
+	if(!(dindex_new=prepend_s(tmpdir, "dindex")))
+		goto end;
+
+	if(merge_files_in_dir(dindex_new,
+		tmpdir, "hlinks", fcount, merge_dindexes))
+			goto end;
+
+	// FIX THIS:
+	// Now need to compare the previous global dindex with the newly
+	// merged one. If an item appears in the previous one that is not in
+	// the new one, we can delete that item!
+
+	printf("%s %s\n", dindex_old, dindex_new);
+	if(do_removal(dindex_old, dindex_new))
+		goto end;
+
 	ret=0;
 end:
-	if(ret) strlists_free(&slist);
+	strlists_free(&slist);
+	if(tmpdir) recursive_delete(tmpdir);
+	free_w(&fullpath);
+	free_w(&hlinks);
+	free_w(&tmpdir);
+	free_w(&dindex_new);
+	free_w(&dindex_old);
 	return ret;
 }

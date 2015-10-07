@@ -269,9 +269,6 @@ error:
 }
 
 /* Merge two files of sorted dindexes into each other. */
-#ifndef UTEST
-static
-#endif
 int merge_dindexes(const char *dst, const char *srca, const char *srcb)
 {
 	int ret=-1;
@@ -403,9 +400,6 @@ end:
 	return ret;
 }
 
-#ifndef UTEST
-static
-#endif
 int merge_files_in_dir(const char *final, const char *fmanifest,
 	const char *srcdir, uint64_t fcount,
 	int merge(const char *dst, const char *srca, const char *srcb))
@@ -473,10 +467,9 @@ int merge_files_in_dir(const char *final, const char *fmanifest,
 
 	// FIX THIS: nasty race condition here needs to be automatically
 	// recoverable.
-	// The rename will give an error on fcount==0, which is OK because
-	// fcount will always be at least 1.
-	if(do_rename(dst, final)
-	  || recursive_delete(m1dir)
+	if(dst && do_rename(dst, final))
+		goto end;
+	if(recursive_delete(m1dir)
 	  || recursive_delete(m2dir))
 		goto end;
 
@@ -581,11 +574,6 @@ int regenerate_client_dindex(struct sdirs *sdirs)
 	if(merge_files_in_dir(dfiles_new, sdirs->client,
 		"dindex", last_index, merge_dindexes))
 			goto end;
-
-	// FIX THIS: At this point, should generate the differences between
-	// the old and new files.
-	// If anything was deleted, need to pass it on to the next process
-	// to check if it was deleted completely from this dedup_group.
 
 	if(do_rename(dfiles_new, sdirs->dfiles))
 		goto end;

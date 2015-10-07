@@ -524,8 +524,7 @@ static void merge_common(uint64_t fcount, int set_max_calls,
 	calls=0;
 	max_calls=set_max_calls;
 	r=merge_files_in_dir(final, fmanifest, srcdir, fcount, merge_callback);
-	if(fcount==0) fail_unless(r==-1);
-	else fail_unless(r==0);
+	fail_unless(r==0);
 	fail_unless(calls==max_calls);
 	tear_down();
 }

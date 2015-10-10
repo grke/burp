@@ -19,6 +19,7 @@ directory="$2"
 
 . "$DIR"/vms_shared || fail
 instanceids=$(get_all_instanceids)
+[ -n "$instanceids" ] || fail
 restart_instanceids "$instanceids"
 get_summary "$instanceids"
 

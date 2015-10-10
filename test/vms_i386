@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+#
+# Run builds and tests on linux-i386 machine provided by ziirish.
+
+prog=$(basename $0)
+DIR=$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)
+
+usage()
+{
+	echo "usage: $prog tarfile directory" 1>&2
+	exit 1
+}
+
+fail()
+{
+	echo "$prog failed: $*" 1>&2
+	exit 1
+}
+
+tarfile="$1"
+directory="$2"
+[ -n "$tarfile" ] || usage
+[ -n "$directory" ] || usage
+[ -f "$tarfile" ] || fail "tarfile $tarfile does not exist"
+
+host="linux_i386" # An alias for the actual address.
+ssh_opts=
+
+ssh $ssh_opts "$host" "rm -rf $tarfile $directory" \
+	|| fail "cleaning linux-i386 machine"
+scp $ssh_opts "$tarfile" "$host:" \
+	|| fail "scp $tarfile to linux-386 machine"
+ssh $ssh_opts "$host" "tar -xvf $tarfile" \
+	|| fail "unpacking $tarfile"
+ssh $ssh_opts "$host" \
+	"cd $directory && ./configure && make test" \
+		|| fail "make test"
+
+echo "Everything succeeded."
+
+exit 0

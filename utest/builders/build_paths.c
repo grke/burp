@@ -25,7 +25,7 @@ static char char_gen(void)
 static char *comp_gen(void)
 {
 	char *c;
-	uint32_t r;
+	int32_t r;
 	char comp[16]="";
 	r=5+(prng_next()%10);
 	for(c=comp; c-comp<r; c++)

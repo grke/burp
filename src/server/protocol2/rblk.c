@@ -21,6 +21,8 @@ static int load_rblk(struct rblk *rblks, int ind, const char *datpath)
 	struct fzp *fzp;
 	struct iobuf rbuf;
 
+	iobuf_init(&rbuf);
+
 	free_w(&rblks[ind].datpath);
 	if(!(rblks[ind].datpath=strdup_w(datpath, __func__)))
 		goto end;

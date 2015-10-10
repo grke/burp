@@ -7,7 +7,7 @@ static uint32_t seed=0;
 
 static uint32_t permute(uint32_t x)
 {
-	static uint32_t prime = 4294967291;
+	static uint32_t prime = 4294967291U;
 	if(x>=prime) return x;
 	uint32_t residue = ((uint64_t)x*x)%prime;
 	if(x<=prime/2) return residue;

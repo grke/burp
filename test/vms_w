@@ -14,4 +14,8 @@ mkdir $dir || exit 1
 mv $files $dir || exit 1
 tar -cjvf $tarfile $dir || exit 1
 
-$dir/test/vms $tarfile $dir
+$dir/test/vms_i386 $tarfile $dir || exit 1
+
+$dir/test/vms $tarfile $dir || exit 1
+
+exit 0

@@ -39,7 +39,7 @@ done
 ssh $ssh_opts "$host" "rm -rf $tarfile $directory" \
 	|| fail "cleaning linux machine"
 scp $ssh_opts "$tarfile" "$host:" \
-	|| fail "scp $tarfile to ubuntu"
+	|| fail "scp $tarfile to linux machine"
 ssh $ssh_opts "$host" "tar -xvf $tarfile" \
 	|| fail "unpacking $tarfile"
 ssh $ssh_opts "$host" \

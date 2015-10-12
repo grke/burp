@@ -1,8 +1,11 @@
 #include "../../../burp.h"
 #include "../../../alloc.h"
 #include "../../../fsops.h"
+#include "../../../hexmap.h"
 #include "../../../log.h"
 #include "../../../prepend.h"
+#include "../../../protocol2/blk.h"
+#include "../../../sbuf.h"
 #include "../../../strlist.h"
 #include "../../sdirs.h"
 #include "../backup_phase4.h"
@@ -98,10 +101,130 @@ end:
 	return ret;
 }
 
-static int do_removal(const char *dindex_new, const char *dindex_old)
+static int do_unlink(struct iobuf *obuf, struct sdirs *sdirs)
 {
-	// IMPLEMENT THIS
-	return 0;
+	int ret=-1;
+	char *fullpath=NULL;
+	if(!(fullpath=prepend_s(sdirs->data, obuf->buf)))
+		goto end;
+	errno=0;
+	if(unlink(fullpath) && errno!=ENOENT)
+	{
+		logp("Could not unlink %s: %s\n", fullpath, strerror(errno));
+		goto end;
+	}
+	logp("Deleted %s\n", obuf->buf);
+	ret=0;
+end:
+	return ret;
+}
+
+static int do_removal(const char *dindex_old, const char *dindex_new,
+	struct sdirs *sdirs)
+{
+	int ret=-1;
+	struct fzp *nzp=NULL;
+	struct fzp *ozp=NULL;
+	struct iobuf nbuf;
+	struct iobuf obuf;
+	struct blk nblk;
+	struct blk oblk;
+
+	iobuf_init(&nbuf);
+	iobuf_init(&obuf);
+	memset(&nblk, 0, sizeof(struct blk));
+	memset(&oblk, 0, sizeof(struct blk));
+	
+	if(!(nzp=fzp_gzopen(dindex_new, "rb"))
+	  || !(ozp=fzp_gzopen(dindex_old, "rb")))
+		goto end;
+
+	while(nzp || ozp)
+	{
+		if(nzp
+		  && !nbuf.buf)
+		{
+			switch(iobuf_fill_from_fzp(&nbuf, nzp))
+			{
+				case -1: goto end; // Error.
+				case 1: fzp_close(&nzp);
+					break;
+				case 0: if(nbuf.cmd!=CMD_SAVE_PATH)
+					{
+						logp("unknown cmd in %s: %c\n",
+							__func__, nbuf.cmd);
+						goto end;
+					}
+					if(blk_set_from_iobuf_savepath(&nblk,
+						&nbuf)) goto end;
+					break;
+			}
+		}
+
+		if(ozp
+		  && !obuf.buf)
+		{
+			switch(iobuf_fill_from_fzp(&obuf, ozp))
+			{
+				case -1: goto end; // Error.
+				case 1: fzp_close(&ozp);
+					break;
+				case 0: if(obuf.cmd!=CMD_SAVE_PATH)
+					{
+						logp("unknown cmd in %s: %c\n",
+							__func__, obuf.cmd);
+						goto end;
+					}
+					if(blk_set_from_iobuf_savepath(&oblk,
+						&obuf)) goto end;
+					break;
+			}
+		}
+
+		if(nbuf.buf && !obuf.buf)
+		{
+			// No more from the old file. Time to stop.
+			break;
+		}
+		else if(!nbuf.buf && obuf.buf)
+		{
+			// No more in the new file. Delete old entry.
+			if(do_unlink(&obuf, sdirs))
+				goto end;
+			iobuf_free_content(&obuf);
+		}
+		else if(!nbuf.buf && !obuf.buf)
+		{
+			continue;
+		}
+		else if(nblk.savepath==oblk.savepath)
+		{
+			// Same, free both and continue;
+			iobuf_free_content(&nbuf);
+			iobuf_free_content(&obuf);
+		}
+		else if(nblk.savepath>oblk.savepath)
+		{
+			// Only in the new file.
+			iobuf_free_content(&nbuf);
+		}
+		else
+		{
+			// Only in the old file.
+			if(do_unlink(&obuf, sdirs))
+				goto end;
+			iobuf_free_content(&obuf);
+		}
+	}
+
+
+	ret=0;
+end:
+	iobuf_free_content(&nbuf);
+	iobuf_free_content(&obuf);
+	fzp_close(&nzp);
+	fzp_close(&ozp);
+	return ret;
 }
 
 int delete_unused_data_files(struct sdirs *sdirs)
@@ -116,6 +239,7 @@ int delete_unused_data_files(struct sdirs *sdirs)
 	char *dindex_old=NULL;
 	struct strlist *s=NULL;
 	struct strlist *slist=NULL;
+	struct stat statp;
 
 	if(get_dfiles_to_merge(sdirs, &slist)
 	  || !(dindex_old=prepend_s(sdirs->data, "dindex"))
@@ -147,14 +271,14 @@ int delete_unused_data_files(struct sdirs *sdirs)
 		tmpdir, "hlinks", fcount, merge_dindexes))
 			goto end;
 
-	// FIX THIS:
-	// Now need to compare the previous global dindex with the newly
-	// merged one. If an item appears in the previous one that is not in
-	// the new one, we can delete that item!
-
-	printf("%s %s\n", dindex_old, dindex_new);
-	if(do_removal(dindex_old, dindex_new))
-		goto end;
+	if(!lstat(dindex_new, &statp))
+	{
+		if(!lstat(dindex_old, &statp)
+		  && do_removal(dindex_old, dindex_new, sdirs))
+			goto end;
+		if(do_rename(dindex_new, dindex_old))
+			goto end;
+	}
 
 	ret=0;
 end:

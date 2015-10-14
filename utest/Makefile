@@ -7,6 +7,7 @@ SRCS = \
 	builders/protocol2/build_blist.c \
 	builders/server/build_manifest.c \
 	builders/server/build_storage_dirs.c \
+	builders/server/protocol2/champ_chooser/build_dindex.c \
 	builders/build_paths.c \
 	main.c \
 	mock.c \
@@ -28,6 +29,7 @@ SRCS = \
 	server/protocol1/test_dpth.c \
 	server/protocol1/test_fdirs.c \
 	server/protocol2/champ_chooser/test_candidate.c \
+	server/protocol2/champ_chooser/test_dindex.c \
 	server/protocol2/champ_chooser/test_scores.c \
 	server/protocol2/champ_chooser/test_sparse.c \
 	server/protocol2/test_backup_phase4.c \
@@ -86,6 +88,7 @@ BURP_SRCS = \
 	../src/server/protocol2/backup_phase4.c \
 	../src/server/protocol2/champ_chooser/candidate.c \
 	../src/server/protocol2/champ_chooser/champ_chooser.c \
+	../src/server/protocol2/champ_chooser/dindex.c \
 	../src/server/protocol2/champ_chooser/hash.c \
 	../src/server/protocol2/champ_chooser/incoming.c \
 	../src/server/protocol2/champ_chooser/scores.c \
@@ -119,6 +122,7 @@ clean:
 	rm -f test *.o
 	rm -rf utest_*
 	rm -f builders/*.o builders/protocol2/*.o builders/server/*.o
+	rm -f builders/server/protocol2/champ_chooser/*.o
 	rm -f client/*.o server/*.o server/protocol1/*.o server/protocol2/*.o
 	rm -f server/protocol2/champ_chooser/*.o
 	rm -f protocol2/*.o
@@ -128,6 +132,8 @@ clean:
 	rm -f builders/protocol2/*.gcda builders/protocol2/*.gcno
 	rm -f builders/server/*.gcda builders/protocol2/*.gcno
 	rm -f builders/server/*.gcda builders/server/*.gcno
+	rm -f builders/server/protocol2/champ_chooser/*.gcda
+	rm -f builders/server/protocol2/champ_chooser/*.gcno
 	rm -f protocol2/*.gcda protocol2/*.gcno
 	rm -f protocol2/rabin/*.gcda protocol2/rabin/*.gcno
 	rm -f client/*.gcda client/*.gcno

@@ -101,11 +101,12 @@ end:
 	return ret;
 }
 
-static int do_unlink(struct iobuf *obuf, struct sdirs *sdirs)
+static int do_unlink(struct blk *oblk, const char *datadir)
 {
 	int ret=-1;
 	char *fullpath=NULL;
-	if(!(fullpath=prepend_s(sdirs->data, obuf->buf)))
+	char *savepath=uint64_to_savepathstr(oblk->savepath);
+	if(!(fullpath=prepend_s(datadir, savepath)))
 		goto end;
 	errno=0;
 	if(unlink(fullpath) && errno!=ENOENT)
@@ -113,14 +114,18 @@ static int do_unlink(struct iobuf *obuf, struct sdirs *sdirs)
 		logp("Could not unlink %s: %s\n", fullpath, strerror(errno));
 		goto end;
 	}
-	logp("Deleted %s\n", obuf->buf);
+	logp("Deleted %s\n", savepath);
 	ret=0;
 end:
+	free_w(&fullpath);
 	return ret;
 }
 
-static int do_removal(const char *dindex_old, const char *dindex_new,
-	struct sdirs *sdirs)
+#ifndef UTEST
+static
+#endif
+int compare_dindexes_and_unlink_datafiles(const char *dindex_old,
+	const char *dindex_new, const char *datadir)
 {
 	int ret=-1;
 	struct fzp *nzp=NULL;
@@ -146,7 +151,6 @@ static int do_removal(const char *dindex_old, const char *dindex_new,
 		{
 			switch(iobuf_fill_from_fzp(&nbuf, nzp))
 			{
-				case -1: goto end; // Error.
 				case 1: fzp_close(&nzp);
 					break;
 				case 0: if(nbuf.cmd!=CMD_SAVE_PATH)
@@ -158,6 +162,7 @@ static int do_removal(const char *dindex_old, const char *dindex_new,
 					if(blk_set_from_iobuf_savepath(&nblk,
 						&nbuf)) goto end;
 					break;
+				default: goto end; // Error;
 			}
 		}
 
@@ -166,7 +171,6 @@ static int do_removal(const char *dindex_old, const char *dindex_new,
 		{
 			switch(iobuf_fill_from_fzp(&obuf, ozp))
 			{
-				case -1: goto end; // Error.
 				case 1: fzp_close(&ozp);
 					break;
 				case 0: if(obuf.cmd!=CMD_SAVE_PATH)
@@ -178,6 +182,7 @@ static int do_removal(const char *dindex_old, const char *dindex_new,
 					if(blk_set_from_iobuf_savepath(&oblk,
 						&obuf)) goto end;
 					break;
+				default: goto end; // Error;
 			}
 		}
 
@@ -189,7 +194,7 @@ static int do_removal(const char *dindex_old, const char *dindex_new,
 		else if(!nbuf.buf && obuf.buf)
 		{
 			// No more in the new file. Delete old entry.
-			if(do_unlink(&obuf, sdirs))
+			if(do_unlink(&oblk, datadir))
 				goto end;
 			iobuf_free_content(&obuf);
 		}
@@ -203,7 +208,7 @@ static int do_removal(const char *dindex_old, const char *dindex_new,
 			iobuf_free_content(&nbuf);
 			iobuf_free_content(&obuf);
 		}
-		else if(nblk.savepath>oblk.savepath)
+		else if(nblk.savepath<oblk.savepath)
 		{
 			// Only in the new file.
 			iobuf_free_content(&nbuf);
@@ -211,7 +216,7 @@ static int do_removal(const char *dindex_old, const char *dindex_new,
 		else
 		{
 			// Only in the old file.
-			if(do_unlink(&obuf, sdirs))
+			if(do_unlink(&oblk, datadir))
 				goto end;
 			iobuf_free_content(&obuf);
 		}
@@ -274,8 +279,9 @@ int delete_unused_data_files(struct sdirs *sdirs)
 	if(!lstat(dindex_new, &statp))
 	{
 		if(!lstat(dindex_old, &statp)
-		  && do_removal(dindex_old, dindex_new, sdirs))
-			goto end;
+		  && compare_dindexes_and_unlink_datafiles(dindex_old,
+			dindex_new, sdirs->data))
+				goto end;
 		if(do_rename(dindex_new, dindex_old))
 			goto end;
 	}

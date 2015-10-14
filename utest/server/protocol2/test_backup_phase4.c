@@ -1,5 +1,6 @@
 #include <check.h>
 #include "../../test.h"
+#include "../../builders/build.h"
 #include "../../../src/alloc.h"
 #include "../../../src/fsops.h"
 #include "../../../src/fzp.h"
@@ -232,22 +233,6 @@ START_TEST(test_merge_sparse_indexes_different_lengths2)
 	common(dst, ARR_LEN(dst), srca, ARR_LEN(srca), srcb, ARR_LEN(srcb));
 }
 END_TEST
-
-static void di_to_fzp(struct fzp *fzp, uint64_t *di, size_t len)
-{
-	size_t i;
-	for(i=0; i<len; i++)
-		fail_unless(!gzprintf_dindex(fzp, &di[i]));
-}
-
-static void build_dindex(uint64_t *di, size_t s, const char *fname)
-{
-	struct fzp *fzp=NULL;
-
-	fail_unless((fzp=fzp_gzopen(fname, "ab"))!=NULL);
-	di_to_fzp(fzp, di, s);
-	fzp_close(&fzp);
-}
 
 static void check_result_di(uint64_t *di, size_t dlen)
 {

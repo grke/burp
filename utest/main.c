@@ -32,6 +32,7 @@ int main(void)
 	srunner_add_suite(sr, suite_server_protocol1_fdirs());
 	srunner_add_suite(sr, suite_server_protocol2_backup_phase4());
 	srunner_add_suite(sr, suite_server_protocol2_champ_chooser_candidate());
+	srunner_add_suite(sr, suite_server_protocol2_champ_chooser_dindex());
 	srunner_add_suite(sr, suite_server_protocol2_champ_chooser_scores());
 	srunner_add_suite(sr, suite_server_protocol2_champ_chooser_sparse());
 	srunner_add_suite(sr, suite_server_protocol2_dpth());

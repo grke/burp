@@ -3,6 +3,7 @@
 
 #include "../../src/conf.h"
 #include "server/build_storage_dirs.h"
+#include "server/protocol2/champ_chooser/build_dindex.h"
 
 #define RMANIFEST_RELATIVE	"rmanifest_relative"
 

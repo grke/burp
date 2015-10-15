@@ -1988,18 +1988,6 @@ void ErrorExit(LPCSTR lpszMessage)
 {
 }
 
-int kill(int pid, int signal)
-{
-	int rval=0;
-	if(!TerminateProcess((HANDLE)pid, (UINT)signal))
-	{
-		rval=-1;
-		errno=b_errno_win32;
-	}
-	CloseHandle((HANDLE)pid);
-	return rval;
-}
-
 // syslog function, added by Nicolas Boichat.
 void openlog(const char *ident, int option, int facility)
 {

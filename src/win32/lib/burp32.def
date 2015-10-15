@@ -27,7 +27,6 @@ _Z21make_wchar_win32_pathPcPi
 _Z23conv_unix_to_win32_pathPKcPcm
 _Z30make_win32_path_UTF8_2_wchar_wPKc
 _Z4forkv
-_Z4killii
 _Z4pipePi
 _Z11win32_lstatPKcP4statPy
 _Z4statPKcP4stat

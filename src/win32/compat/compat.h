@@ -271,7 +271,6 @@ int fstat(intptr_t fd, struct stat *sb);
 int stat(intptr_t fd, struct stat *sb);
 
 int inet_aton(const char *cp, struct in_addr *inp);
-int kill(int pid, int signo);
 int pipe(int []);
 int fork();
 int waitpid(int, int *, int);

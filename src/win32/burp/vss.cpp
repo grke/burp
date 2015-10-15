@@ -242,7 +242,7 @@ void VSSClient::AppendWriterInfo(int nState, const char *pszInfo)
 	alist *pS=(alist *)m_pAlistWriterState;
 
 	pT->push(strdup(pszInfo));
-	pS->push((void*)nState);   
+	pS->push((void*)(intptr_t)nState);   
 }
 
 void VSSClient::DestroyWriterInfo(void)

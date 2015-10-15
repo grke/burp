@@ -108,12 +108,11 @@ int run_script_to_buf(struct asfd *asfd,
 	struct fzp *sout=NULL;
 	char *cmd[64]={ NULL };
 	struct strlist *sl;
-	struct cntr *cntr=NULL;
 #ifndef HAVE_WIN32
+	struct cntr *cntr=NULL;
 	int s=0;
 #endif
 	if(!args || !args[0]) return 0;
-	if(confs) cntr=get_cntr(confs);
 
 	for(a=0; args[a]; a++) cmd[l++]=(char *)args[a];
 	for(sl=userargs; sl; sl=sl->next) cmd[l++]=sl->path;
@@ -146,6 +145,8 @@ int run_script_to_buf(struct asfd *asfd,
 	setup_signal(SIGCHLD, SIG_DFL);
 
 	if(s) return -1;
+
+	if(confs) cntr=get_cntr(confs);
 
 	if(WIFEXITED(run_script_status))
 	{

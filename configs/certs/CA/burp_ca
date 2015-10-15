@@ -86,7 +86,7 @@ do
 done
 
 if [ -n "$dhfile" ] ; then
-	openssl dhparam -out "$dhfile" 1024
+	openssl dhparam -dsaparam -out "$dhfile" 2048
 	r=$?
 	chmod 600 "$dhfile"
 	exit $r

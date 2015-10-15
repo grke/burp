@@ -1,5 +1,14 @@
 Things to watch out for when upgrading.
 
+2.0.24
+------
+The dhfile generation command in burp_ca has changed from 'openssl dhparam -out
+"$dhfile" 1024' to 'openssl dhparam -dsaparam -out "$dhfile" 2048' in order
+to make ssl key exchange more secure.
+Your existing /etc/burp/dhfile.pem on your burp server will not be regenerated
+unless you delete /etc/burp/dhfile.pem by hand (rm -f /etc/burp/dhfile.pem)
+and restart the burp server.
+
 2.0.22
 ------
 The protocol2 manifest formats have changed. You should therefore not mix

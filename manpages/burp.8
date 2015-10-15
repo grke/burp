@@ -347,7 +347,7 @@ Choose the level of zlib compression over SSL. Setting 0 or zlib0 turns SSL comp
 .TP
 .TP
 \fBssl_dhfile=[path]\fR
-Path to Diffie-Hellman parameter file. To generate one with openssl, use a command like this: openssl dhparam \-out dhfile.pem \-5 1024
+Path to Diffie-Hellman parameter file. To generate one with openssl, use a command like this: openssl dhparam \-dsaparam \-out dhfile.pem 2048
 .TP
 \fBmax_children=[number]\fR
 Defines the number of child processes to fork (the number of clients that can simultaneously connect. The default is 5.

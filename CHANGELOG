@@ -1,3 +1,5 @@
+  * Upgrade Windows depkgs to openssl-1.0.2d.
+
 2015-09-30 Changes in burp-2.0.24:
   * Another fix for sigchld handling.
   * Tests for delete algorithm.
@@ -67,6 +69,7 @@
   * Let the champ chooser continue if candidate_add_fresh could not read a
     new candidate file.
   * On the server, log the client address and port for every connection.
+  * Upgrade Windows depkgs to openssl-1.0.1p.
 
 2015-07-01 Changes in burp-1.4.40:
   * Fix '-a l' regex so that it isn't split in two at the right-most

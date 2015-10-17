@@ -1,4 +1,5 @@
   * Upgrade Windows depkgs to openssl-1.0.2d.
+  * Upgrade Windows depkgs to librsync-1.0.0.
 
 2015-09-30 Changes in burp-2.0.24:
   * Another fix for sigchld handling.

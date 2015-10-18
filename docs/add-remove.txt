@@ -41,37 +41,82 @@ The Windows equivalent of this command is:
 C:\Program Files\Burp\bin\burp.exe -a l
 
 
-
-Removing a client
------------------
+Disabling a client
+------------------
 
 To stop a client from successfully interacting with the server, you should
 move the /etc/burp/clientconfdir/<client> file aside. The client, if it still
 exists, will keep trying to connect.
 
-If you can still access the client, I would recommend at least turning off its
-timed 'burp -a t' job.
+For example:
+
+mv /etc/burp/clientconfdir/<client> /etc/burp/clientconfdir/<client>.disable
+
+However, this will not stop the client trying to connect to the server based on
+its timed job. If you can still access the client, I would recommend turning
+off the timed job.
 
 
-You may have noticed the /etc/burp/CA/<client>* files on their server.
-
-Deleting these will do nothing to deactivate a client.
-Their presence stops the server doing another certificate signing process for
-that client, so deleting them could actually be a security problem if the
-clientconfdir file still exists (a different client could pretend to be the
-real client and successfully do the exchange - if they knew the client name
-and password).
-
-<client>.csr is the client's initial signing request and <client>.crt is the
-signed certificate that the server gave back to the client.
+Revoking a client
+-----------------
 
 The fact that the client uses a certificate, with the correct CN, signed by
 the server is what allows it to complete the SSL part of the connection.
 To make a particular certificate stop working, you need to revoke it.
-There is currently no automatic mechanism in burp that will let you do this.
-(See: https://github.com/grke/burp/issues/89)
-For now it is easiest to move the clientconfdir file aside.
 
+There is currently no automatic mechanism in burp that will let you do
+this (see https://github.com/grke/burp/issues/89).
 
-To get rid of the data that a client has backed up, you would need to delete
-all of /var/spool/burp/<client> on the server.
+Revoking a client certificate will cause the server to reject a client
+connection, from the moment the 'ca_crl' option has been correctly configured
+in the burp-server.conf configuration file.
+
+Before you can revoke certificates with the following method, you to enable the
+Certificate Revocation List (CRL). See the documentation page on 'certificate
+authority and certificates' for details on this.
+
+The procedure below will revoke a client certificate which has been signed by
+the server certificate authority. These commands are run on the server.
+
+   1. Get the certificate serial of the client:
+      openssl x509 -serial -noout -in /etc/burp/CA/<client name>.crt
+
+   2. Revoke the certificate ('01' is the serial number output in step 2):
+      burp_ca --name burpCA --revoke 01
+
+   3. Regenerate the crl:
+      burp_ca --name burpCA --crl
+
+   4. Check the certificate has been revoked:
+      openssl crl -in /etc/burp/CA/CA_burpCA.crl -text
+
+   The client will not be able to connect any more.
+
+   5. Left over files for the client can now be deleted on the server:
+      rm /etc/burp/CA/<client>.*
+      rm /etc/burp/clientconfdir/<client>
+
+   6. You may, or may not, also want to delete any backups left on the server:
+      rm -r /var/spool/burp/<client>
+
+   7. To see a list of revoked certificates:
+      openssl crl -in /etc/burp/CA/CA_burpCA.crl -text -noout
+
+Notes:
+
+ 1. The presence of the '/etc/burp/CA/<client>.*' files will prevent a
+    client with the same CN doing a certificate signing process.
+
+ 2. If not deleted, the presence of '/etc/burp/clientconfdir/<client>'
+    could present a security risk as somebody knowing the client name and
+    password could start a certificate signing process and then access any
+    remaining backup files.
+
+ 3. The procedure above checks the certificate against the burp_ca CRL. If
+    the certificate authority is different, it is recommended to use
+    the provided 'ssl_extra_checks_script' which will download the
+    certificate authority CRL for validation before allowing the
+    client to proceed further with the backup/list/restore operations.
+
+ 4. <client>.csr is the client's initial signing request and <client>.crt is
+    the signed certificate that the server gave back to the client.

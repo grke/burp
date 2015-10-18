@@ -32,6 +32,23 @@ end:
 	return gca_dir;
 }
 
+static char *get_crl_path(const char *ca_name)
+{
+	int flen=0;
+	char *fname=NULL;
+	char *crl_path=NULL;
+	flen+=strlen(ca_name);
+	flen+=strlen("CA_");
+	flen+=strlen(".crl")+1;
+	if(!(fname=(char *)malloc_w(flen, __func__)))
+		goto end;
+	snprintf(fname, flen, "CA_%s.crl", ca_name);
+	crl_path=prepend_s(gca_dir, fname);
+end:
+	free_w(&fname);
+	return crl_path;
+}
+
 static void remove_file(const char *path)
 {
 	logp("Removing %s\n", path);
@@ -169,15 +186,11 @@ static int maybe_make_dhfile(struct conf **confs, const char *ca_dir)
 {
 	int a=0;
 	const char *args[12];
-	char *path=NULL;
 	struct stat statp;
 	const char *ca_burp_ca=get_string(confs[OPT_CA_BURP_CA]);
 	const char *ssl_dhfile=get_string(confs[OPT_SSL_DHFILE]);
 	if(!lstat(ssl_dhfile, &statp))
-	{
-		free(path);
 		return 0;
-	}
 
 	setup_stuff_done++;
 
@@ -196,42 +209,93 @@ static int maybe_make_dhfile(struct conf **confs, const char *ca_dir)
 		        one at a time with no way to turn it off */))
 	{
 		logp("Error running %s\n", ca_burp_ca);
-		free(path);
 		return -1;
 	}
 
-	free(path);
 	return 0;
+}
+
+static int maybe_make_crl(struct conf **confs, const char *ca_dir,
+	const char *ca_conf)
+{
+	int a=0;
+	int ret=-1;
+	const char *args[12];
+	struct stat statp;
+	char *crl_path=NULL;
+	const char *ca_name=get_string(confs[OPT_CA_NAME]);
+	const char *ca_burp_ca=get_string(confs[OPT_CA_BURP_CA]);
+	if(!ca_conf || !*ca_conf
+	  || !ca_burp_ca || !*ca_burp_ca
+	  || !ca_name || !*ca_name)
+		return 0;
+	if(!(crl_path=get_crl_path(ca_name)))
+		goto end;
+	if(!lstat(crl_path, &statp))
+	{
+		ret=0;
+		goto end;
+	}
+	// Create it even if we are not going to use it because of
+	// OPT_CA_CRL_CHECK = 0.
+
+	setup_stuff_done++;
+
+	logp("Creating %s\n", crl_path);
+	logp("Running '%s --name %s --config %s --dir %s --crl'\n",
+		ca_burp_ca, ca_name, ca_conf, ca_dir);
+	a=0;
+	args[a++]=ca_burp_ca;
+	args[a++]="--name";
+	args[a++]=ca_name;
+	args[a++]="--config";
+	args[a++]=ca_conf;
+	args[a++]="--dir";
+	args[a++]=ca_dir;
+	args[a++]="--crl";
+	args[a++]=NULL;
+	if(run_script(NULL /* no async yet */, args, NULL, confs, 1 /* wait */,
+		0, 0 /* do not use logp - stupid openssl prints lots of dots
+		        one at a time with no way to turn it off */))
+	{
+		logp("Error running %s\n", ca_burp_ca);
+		return -1;
+	}
+	ret=0;
+end:
+	free_w(&crl_path);
+	return ret;
 }
 
 int ca_server_setup(struct conf **confs)
 {
-	int ret=0;
+	int ret=-1;
 	char *ca_dir=NULL;
 	const char *ca_conf=get_string(confs[OPT_CA_CONF]);
 
-	if(!ca_conf) return 0;
+	if(!ca_conf)
+	{
+		ret=0;
+		goto end;
+	}
 
 	/* Need to read CA_DIR from ca_conf. */
 	if(!(ca_dir=get_ca_dir(confs)))
-	{
-		ret=-1;
 		goto end;
-	}
 
 	if(maybe_make_dhfile(confs, ca_dir))
-	{
-		ret=-1;
 		goto end;
-	}
 
 	if(burp_ca_init(confs, ca_dir))
 	{
 		recursive_delete(ca_dir);
-		ret=-1;
 		goto end;
 	}
 
+	if(maybe_make_crl(confs, ca_dir, ca_conf))
+		goto end;
+
+	ret=0;
 end:
 	// Keeping it in gca_dir for later.
 	//if(ca_dir) free(ca_dir);
@@ -368,7 +432,6 @@ static enum asl_ret csr_server_func(struct asfd *asfd,
 		{
 			logp("But server is not configured to sign client certificate requests.\n");
 			logp("See option 'ca_conf'.\n");
-logp("'%s' '%s'\n", ca_conf, gca_dir);
 			asfd->write_str(asfd, CMD_ERROR,
 			  "server not configured to sign client certificates");
 			return ASL_END_ERROR;
@@ -411,4 +474,73 @@ int ca_server_maybe_sign_client_cert(struct asfd *asfd,
 	if(asfd->simple_loop(asfd, confs, &cname, __func__,
 		csr_server_func)) return -1;
 	return csr_done;
+}
+
+int ca_x509_verify_crl(struct conf **confs,
+	X509 *peer_cert, const char *ssl_peer_cn)
+{
+	int n;
+	int i;
+	int ret=-1;
+	BIO *in=NULL;
+	BIGNUM *bnser=NULL;
+	X509_CRL *crl=NULL;
+	X509_REVOKED *revoked;
+	ASN1_INTEGER *serial=NULL;
+	char *crl_path=NULL;
+	const char *ca_name=get_string(confs[OPT_CA_NAME]);
+	int crl_check=get_int(confs[OPT_CA_CRL_CHECK]);
+
+	if(!crl_check
+	  || !ca_name || !*ca_name
+	  || !gca_dir)
+	{
+		ret=0;
+		goto end;
+	}
+
+	if(!(crl_path=get_crl_path(ca_name)))
+		goto end;
+
+	if(!(in=BIO_new_file(crl_path, "r")))
+	{
+		logp("CRL: cannot read: %s\n", crl_path);
+		goto end;
+	}
+
+	if(!(crl=PEM_read_bio_X509_CRL(in, NULL, NULL, NULL)))
+	{
+		logp_ssl_err("CRL: cannot read CRL from file %s\n", crl_path);
+		goto end;
+	}
+
+	if(X509_NAME_cmp(X509_CRL_get_issuer(crl),
+		X509_get_issuer_name(peer_cert)))
+	{
+		logp_ssl_err("CRL: CRL %s is from a different issuer than the issuer of certificate %\ns", crl_path, ssl_peer_cn);
+		goto end;
+	}
+
+	n=sk_X509_REVOKED_num(X509_CRL_get_REVOKED(crl));
+	for(i=0; i<n; i++)
+	{
+		revoked=(X509_REVOKED *)
+			sk_X509_REVOKED_value(X509_CRL_get_REVOKED(crl), i);
+		if(!ASN1_INTEGER_cmp(revoked->serialNumber, X509_get_serialNumber(peer_cert)))
+		{
+			serial=X509_get_serialNumber(peer_cert);
+			bnser=ASN1_INTEGER_to_BN(serial, NULL);
+			logp_ssl_err("CRL check failed: %s (%s) is revoked\n",
+				ssl_peer_cn,
+				serial ? BN_bn2hex(bnser):"not available");
+			goto end;
+		}
+	}
+
+	ret=0;
+end:
+	if(in) BIO_free(in);
+	if(crl) X509_CRL_free(crl);
+	free_w(&crl_path);
+	return ret;
 }

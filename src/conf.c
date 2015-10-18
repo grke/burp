@@ -463,6 +463,8 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_str(c[o], 0, 0, "ca_server_name");
 	case OPT_CA_BURP_CA:
 	  return sc_str(c[o], 0, 0, "ca_burp_ca");
+        case OPT_CA_CRL_CHECK:
+          return sc_int(c[o], 0, 0, "ca_crl_check");
 	case OPT_MONITOR_LOGFILE:
 	  return sc_str(c[o], 0, 0, "monitor_logfile");
 	case OPT_CNAME:

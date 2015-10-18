@@ -1,5 +1,9 @@
   * Upgrade Windows depkgs to openssl-1.0.2d.
   * Upgrade Windows depkgs to librsync-1.0.0.
+  * Add internal CRL revocation feature based on a patch from Sebastien
+    Couppey (as opposed to using the old ssl_extra_checks_script server pre
+    script).
+
 
 2015-09-30 Changes in burp-2.0.24:
   * Another fix for sigchld handling.
@@ -73,8 +77,7 @@
   * Upgrade Windows depkgs to openssl-1.0.1p.
 
 2015-07-01 Changes in burp-1.4.40:
-  * Fix '-a l' regex so that it isn't split in two at the right-most
-    colon.
+  * Fix '-a l' regex so that it isn't split in two at the right-most colon.
   * Set default_md=sha256 in CA.cnf.
   * Correct logp format strings in quota.c.
   * Upgrade Windows depkgs to openssl-1.0.1o.

@@ -243,13 +243,12 @@ static enum cliret initial_comms(struct async *as,
 			default:
 				logp("Error with cert signing request\n");
 				goto error;
-				
 		}
 	}
 
 	set_non_blocking(asfd->fd);
 
-	if(ssl_check_cert(asfd->ssl, confs))
+	if(ssl_check_cert(asfd->ssl, NULL, confs))
 	{
 		logp("check cert failed\n");
 		goto error;

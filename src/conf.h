@@ -54,8 +54,8 @@ enum conf_type
 
 struct conf
 {
-        enum conf_type conf_type;
-        const char *field;
+	enum conf_type conf_type;
+	const char *field;
 	union
 	{
 		char *s;
@@ -121,6 +121,7 @@ enum conf_opt
 	OPT_CA_NAME,
 	OPT_CA_SERVER_NAME,
 	OPT_CA_BURP_CA,
+	OPT_CA_CRL_CHECK,
 	OPT_PASSWORD_CHECK,
 	OPT_MANUAL_DELETE,
 	OPT_MONITOR_LOGFILE, // An ncurses client option, from command line.

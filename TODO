@@ -9,7 +9,8 @@ roughly in order of most important to least.
 
 * Need to improve restore speed - come up with a way to efficiently read the
   blocks into memory by looking ahead in the manifests.
-  maybe_copy_data_files_across() is probably broken.
+
+* maybe_copy_data_files_across() is probably broken.
 
 * Make CMD_INTERRUPT work (on restore, maybe others too).
 

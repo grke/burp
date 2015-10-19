@@ -8,7 +8,7 @@ struct rblk
 {
 	char *datpath;
 	struct iobuf readbuf[DATA_FILE_SIG_MAX];
-	unsigned int readbuflen;
+	uint16_t readbuflen;
 };
 
 #define RBLK_MAX	10
@@ -96,23 +96,11 @@ int rblk_retrieve_data(const char *datpath, struct blk *blk)
 {
 	static char fulldatpath[256]="";
 	static struct rblk *rblks=NULL;
-	char *cp;
-	unsigned int datno;
+	uint16_t datno;
 	struct rblk *rblk;
 
-	snprintf(fulldatpath, sizeof(fulldatpath), "%s/%s",
-		datpath, uint64_to_savepathstr_with_sig(blk->savepath));
-
-//printf("x: %s\n", fulldatpath);
-	if(!(cp=strrchr(fulldatpath, '/')))
-	{
-		logp("Could not parse data path: %s\n", fulldatpath);
-		return -1;
-	}
-	*cp=0;
-	cp++;
-	datno=strtoul(cp, NULL, 16);
-//printf("y: %s\n", fulldatpath);
+	snprintf(fulldatpath, sizeof(fulldatpath), "%s/%s", datpath,
+		uint64_to_savepathstr_with_sig_uint(blk->savepath, &datno));
 
 	if(!rblks
 	  && !(rblks=(struct rblk *)

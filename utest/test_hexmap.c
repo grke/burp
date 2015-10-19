@@ -79,7 +79,7 @@ static struct savepathdata ssavepath[] = {
 static struct savepathdata ssavepathsig[] = {
 	{ "0000/0000/0000/0000", 0x0000000000000000 },
 	{ "0000/0000/0000/0001", 0x0000000000000001 },
-	{ "0011/2233/4455/6677", 0x0011223344556677 },
+	{ "0011/2233/4455/6789", 0x0011223344556789 },
 	{ "AA00/BB11/CC22/DD33", 0xAA00BB11CC22DD33 },
 	{ "FFFF/FFFF/FFFF/FFFF", 0xFFFFFFFFFFFFFFFF }
 };
@@ -127,6 +127,36 @@ START_TEST(test_uint64_to_savepathstr_with_sig)
 }
 END_TEST
 
+struct savepathdatauint
+{
+        const char *str;
+	uint64_t bytes;
+	uint16_t datno;
+};
+
+static struct savepathdatauint ssavepathsiguint[] = {
+	{ "0000/0000/0000", 0x0000000000000000, 0x0000 },
+	{ "0000/0000/0000", 0x0000000000000001, 0x0001 },
+	{ "0011/2233/4455", 0x0011223344556789, 0x6789 },
+	{ "AA00/BB11/CC22", 0xAA00BB11CC22DD33, 0xDD33 },
+	{ "FFFF/FFFF/FFFF", 0xFFFFFFFFFFFFFFFF, 0xFFFF }
+};
+
+START_TEST(test_uint64_to_savepathstr_with_sig_uint)
+{
+	hexmap_init();
+	FOREACH(ssavepathsiguint)
+	{
+		const char *str;
+		uint16_t datno;
+		str=uint64_to_savepathstr_with_sig_uint(
+			ssavepathsiguint[i].bytes, &datno);
+		fail_unless(!strcmp(ssavepathsiguint[i].str, str));
+		fail_unless(ssavepathsiguint[i].datno==datno);
+	}
+}
+END_TEST
+
 Suite *suite_hexmap(void)
 {
 	Suite *s;
@@ -142,6 +172,7 @@ Suite *suite_hexmap(void)
 	tcase_add_test(tc_core, test_savepathstr_to_uint64);
 	tcase_add_test(tc_core, test_uint64_to_savepathstr);
 	tcase_add_test(tc_core, test_uint64_to_savepathstr_with_sig);
+	tcase_add_test(tc_core, test_uint64_to_savepathstr_with_sig_uint);
 	suite_add_tcase(s, tc_core);
 
 	return s;

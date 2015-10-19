@@ -253,8 +253,8 @@ static int run_child(int *cfd, SSL_CTX *ctx, struct sockaddr_storage *addr,
 		goto end;
 	}
 
-	/* Now it is time to check the certificate. */ 
-	if(ssl_check_cert(ssl, cconfs))
+	/* Now it is time to check the certificate. */
+	if(ssl_check_cert(ssl, confs, cconfs))
 	{
 		log_and_send(as->asfd, "check cert failed on server");
 		goto end;

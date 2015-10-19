@@ -1,4 +1,5 @@
 #include "include.h"
+#include "server/ca.h"
 
 static const char *pass=NULL;
 
@@ -220,11 +221,11 @@ static int setenv_x509_serialnumber(ASN1_INTEGER *i, const char *env)
 }
 #endif
 
-int ssl_check_cert(SSL *ssl, struct conf **confs)
+int ssl_check_cert(SSL *ssl, struct conf **confs, struct conf **cconfs)
 {
 	X509 *peer;
 	char tmpbuf[256]="";
-	const char *ssl_peer_cn=get_string(confs[OPT_SSL_PEER_CN]);
+	const char *ssl_peer_cn=get_string(cconfs[OPT_SSL_PEER_CN]);
 
 	if(!ssl_peer_cn)
 	{
@@ -254,7 +255,14 @@ int ssl_check_cert(SSL *ssl, struct conf **confs)
 		logp("'%s'!='%s'\n", tmpbuf, ssl_peer_cn);
 		return -1;
 	}
+
 #ifndef HAVE_WIN32
+	// Check the peer certificate against the CRL list only if set
+        // in the configuration file. Thus if not set it is not
+        // breaking the 'ssl_extra_checks_script' configuration.
+	if(confs && ca_x509_verify_crl(confs, peer, ssl_peer_cn))
+		return -1;
+
 	if(setenv_x509(X509_get_subject_name(peer), "PEER")
 	  || setenv_x509(X509_get_issuer_name(peer), "ISSUER"))
 		return -1;

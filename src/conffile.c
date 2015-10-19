@@ -1033,7 +1033,7 @@ int conf_load_lines_from_buf(const char *buf, struct conf **c)
 	char *copy=NULL;
 
 	if(!buf) return 0;
-	
+
 	if(!(copy=strdup_w(buf, __func__))) return -1;
 	if(!(tok=strtok(copy, "\n")))
 	{

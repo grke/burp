@@ -102,6 +102,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_OVERWRITE:
 		case OPT_STRIP:
 		case OPT_MESSAGE:
+		case OPT_CA_CRL_CHECK:
 			fail_unless(get_int(c[o])==0);
 			break;
 		case OPT_DAEMON:

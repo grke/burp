@@ -41,6 +41,7 @@ static int load_rblk(struct rblk *rblks, int ind, const char *datpath)
 						__func__, rbuf.cmd);
 					goto end;
 				}
+				iobuf_free_content(&rblks[ind].readbuf[r]);
 				iobuf_move(&rblks[ind].readbuf[r], &rbuf);
 				continue;
 			case 1: done++;

@@ -9,6 +9,7 @@ struct man_off
 {
 	uint64_t fcount;	// File name incrementer.
 	char *fpath;		// Current file path.
+	char *ppath;		// Previous file path.
 	off_t offset;		// Offset into the file.
 };
 

@@ -223,7 +223,7 @@ add_run_restore()
 	makedir_client "$dir"
 # If vss has been stripped, need to add the '-x' option to the restore.
 	nowinapi=
-	[ -n "$STRIP_VSS" ] && nowinapi='-x'
+	[ -n "$STRIP_VSS" -a "$protocol" = 1 ] && nowinapi='-x'
 cat >> "$clientscript" << EOF
 echo "Starting test client restore of backup $bno"
 rm -rf "$dir" || fail
@@ -253,9 +253,9 @@ cat >> "$clientscript" << EOF
 diff -ur "$rpath1" "$rpath2" || fail "$3"
 EOF
 
-	# Stripping vss will of course cause permissions to be wrong on
-	# restore on Windows, so do not do this check in that case.
-[ -z "$STRIP_VSS" ] && cat >> "$clientscript" << EOF
+	# Stripping vss in protocol 1 will of course cause permissions to be
+	# wrong on restore on Windows, so do not do this check in that case.
+[ -z "$STRIP_VSS" -o "$protocol" = 2 ] && cat >> "$clientscript" << EOF
 diff -u \
   <( cd "$rpath1" ; find . $extra_find_arg -printf "chown %U:%G %p; chmod %m %p \n" | sort ) \
   <( cd "$rpath2" ; find . $extra_find_arg -printf "chown %U:%G %p; chmod %m %p \n" | sort ) \
@@ -793,7 +793,7 @@ restart_server
 # Run in protocol1 mode.
 workingdir="$target/var/spool/burp/testclient/working"
 finishingdir="$target/var/spool/burp/testclient/finishing"
-run_tests 1
+#run_tests 1
 
 # Run in protocol2 mode.
 workingdir="$target/var/spool/burp/global/clients/testclient/working"

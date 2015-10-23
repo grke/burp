@@ -119,6 +119,7 @@ ssh $ssh_opts "$user@$client" ./windowsscript || fail
 
 do_run()
 {
+	rm -rf "$target/var/spool/burp/global"
 	rm -rf "$target/var/spool/burp/testclient"
 	./test_main \
 		"$target" \

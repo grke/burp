@@ -93,8 +93,13 @@ static int do_to_server(struct asfd *asfd,
 	enum cmd cmd, int compression)
 {
 #ifdef HAVE_WIN32
-	int split_vss=get_int(confs[OPT_SPLIT_VSS]);
-	int strip_vss=get_int(confs[OPT_STRIP_VSS]);
+	int split_vss=0;
+	int strip_vss=0;
+	if(get_protocol(confs)==PROTO_1)
+	{
+		split_vss=get_int(confs[OPT_SPLIT_VSS]);
+		strip_vss=get_int(confs[OPT_STRIP_VSS]);
+	}
 #endif
 	struct cntr *cntr=get_cntr(confs);
 	enum protocol protocol=get_protocol(confs);
@@ -215,7 +220,8 @@ int backup_phase1_client(struct asfd *asfd, struct conf **confs, int estimate)
 	}
 #ifdef HAVE_WIN32
 	dirsymbol=filesymbol;
-	if(get_int(confs[OPT_STRIP_VSS]))
+	if(get_protocol(confs)==PROTO_1
+	  && get_int(confs[OPT_STRIP_VSS]))
 		dirsymbol=CMD_DIRECTORY;
 #endif
 

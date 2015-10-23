@@ -13,6 +13,7 @@ static void man_off_t_free_content(man_off_t *offset)
 {
 	if(!offset) return;
 	free_w(&offset->fpath);
+	free_w(&offset->ppath);
 }
 
 void man_off_t_free(man_off_t **offset)
@@ -64,27 +65,29 @@ static char *get_next_fpath(struct manio *manio, man_off_t *offset)
 static int manio_open_next_fpath(struct manio *manio)
 {
 	static struct stat statp;
+	man_off_t *offset=manio->offset;
 
-	free_w(&manio->offset->fpath);
-	if(!(manio->offset->fpath=get_next_fpath(manio, manio->offset)))
+	free_w(&offset->ppath);
+	offset->ppath=offset->fpath;
+	if(!(offset->fpath=get_next_fpath(manio, offset)))
 		return -1;
 
 	if(!strcmp(manio->mode, MANIO_MODE_READ)
-	  && lstat(manio->offset->fpath, &statp))
+	  && lstat(offset->fpath, &statp))
 		return 0;
 
-	if(build_path_w(manio->offset->fpath))
+	if(build_path_w(offset->fpath))
 		return -1;
 	switch(manio->phase)
 	{
 		case 2:
-			if(!(manio->fzp=fzp_open(manio->offset->fpath,
+			if(!(manio->fzp=fzp_open(offset->fpath,
 				manio->mode))) return -1;
 			return 0;
 		case 1:
 		case 3:
 		default:
-			if(!(manio->fzp=fzp_gzopen(manio->offset->fpath,
+			if(!(manio->fzp=fzp_gzopen(offset->fpath,
 				manio->mode))) return -1;
 			return 0;
 	}

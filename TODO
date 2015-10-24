@@ -27,5 +27,3 @@ roughly in order of most important to least.
 * Make Windows EFS work.
 
 * Make Windows 'image' backups work.
-
-* Windows split_vss/strip_vss options cause breakage.

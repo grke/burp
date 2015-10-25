@@ -392,6 +392,12 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 				// sending of a file. But if we are
 				// here, we have already moved on.
 				// Ignore.
+				if(protocol==PROTO_2)
+				{
+					// FIX THIS:
+					// Suspect the case is different for
+					// PROTO_2.
+				}
 				continue;
 			default:
 				iobuf_log_unexpected(rbuf, __func__);

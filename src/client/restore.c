@@ -5,37 +5,35 @@
 #include "protocol1/restore.h"
 #include "protocol2/restore.h"
 
-// FIX THIS: it only works with protocol1.
 int restore_interrupt(struct asfd *asfd,
 	struct sbuf *sb, const char *msg, struct cntr *cntr,
 	enum protocol protocol)
 {
 	int ret=0;
+	char *path=NULL;
 	struct iobuf *rbuf=asfd->rbuf;
 
-	if(protocol!=PROTO_1) return 0;
-	if(!cntr) return 0;
-
-	cntr_add(cntr, CMD_WARNING, 1);
-	logp("WARNING: %s\n", msg);
-	if(asfd->write_str(asfd, CMD_WARNING, msg)) goto end;
+	if(cntr)
+	{
+		cntr_add(cntr, CMD_WARNING, 1);
+		logp("WARNING: %s\n", msg);
+		if(asfd->write_str(asfd, CMD_WARNING, msg)) goto end;
+	}
 
 	// If it is file data, get the server
 	// to interrupt the flow and move on.
-	if(sb->path.cmd!=CMD_FILE
-	  && sb->path.cmd!=CMD_ENC_FILE
-	  && sb->path.cmd!=CMD_EFS_FILE
-	  && sb->path.cmd!=CMD_VSS
-	  && sb->path.cmd!=CMD_ENC_VSS
-	  && sb->path.cmd!=CMD_VSS_T
-	  && sb->path.cmd!=CMD_ENC_VSS_T)
-		return 0;
-	if(sb->protocol1 && !(sb->protocol1->datapth.buf))
-		return 0;
-	if(sb->protocol2 && !(sb->path.buf))
+	if(!iobuf_is_filedata(&sb->path)
+	  && !iobuf_is_vssdata(&sb->path))
 		return 0;
 
-	if(asfd->write_str(asfd, CMD_INTERRUPT, sb->protocol1->datapth.buf))
+	if(protocol==PROTO_1)
+		path=sb->protocol1->datapth.buf;
+	else if(protocol==PROTO_2)
+		path=sb->path.buf;
+
+	if(!path) return 0;
+
+	if(asfd->write_str(asfd, CMD_INTERRUPT, path))
 		goto end;
 
 	// Read to the end file marker.
@@ -44,21 +42,20 @@ int restore_interrupt(struct asfd *asfd,
 		iobuf_free_content(rbuf);
 		if(asfd->read(asfd))
 			goto end;
-		if(!ret && rbuf->len)
+		if(!rbuf->len) continue;
+
+		switch(rbuf->cmd)
 		{
-			if(rbuf->cmd==CMD_APPEND)
+			case CMD_APPEND:
 				continue;
-			else if(rbuf->cmd==CMD_END_FILE)
-				break;
-			else
-			{
+			case CMD_END_FILE:
+				ret=0;
+				goto end;
+			default:
 				iobuf_log_unexpected(rbuf, __func__);
 				goto end;
-			}
 		}
 	}
-
-	ret=0;
 end:
 	iobuf_free_content(rbuf);
 	return ret;

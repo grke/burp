@@ -9,6 +9,8 @@ int main(void)
 
 	sr=srunner_create(NULL);
 
+	srunner_add_suite(sr, suite_client_auth());
+/*
 	srunner_add_suite(sr, suite_alloc());
 	srunner_add_suite(sr, suite_attribs());
 	srunner_add_suite(sr, suite_base64());
@@ -36,6 +38,7 @@ int main(void)
 	srunner_add_suite(sr, suite_server_protocol2_champ_chooser_scores());
 	srunner_add_suite(sr, suite_server_protocol2_champ_chooser_sparse());
 	srunner_add_suite(sr, suite_server_protocol2_dpth());
+*/
 
 	srunner_run_all(sr, CK_NORMAL);
 	number_failed = srunner_ntests_failed(sr);

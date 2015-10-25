@@ -222,7 +222,10 @@ static enum cliret initial_comms(struct async *as,
 	enum cliret ret=CLIENT_OK;
 	asfd=as->asfd;
 
-	if(authorise_client(asfd, confs, &server_version))
+	if(authorise_client(asfd, &server_version,
+	  get_string(confs[OPT_CNAME]),
+	  get_string(confs[OPT_PASSWORD]),
+	  cntr))
 		goto error;
 
 	if(server_version)

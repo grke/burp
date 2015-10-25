@@ -19,6 +19,7 @@ void log_and_send_oom(struct asfd *asfd, const char *function) { }
 int logw(struct asfd *asfd, struct cntr *cntr, const char *fmt, ...)
 	{ return 0; }
 int log_fzp_set(const char *path, struct conf **confs) { return 0; }
+void logp_ssl_err(const char *fmt, ...) { };
 
 const char *progname(void) { return "utest"; }
 

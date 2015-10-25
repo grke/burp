@@ -25,6 +25,7 @@ SRCS = \
 	protocol2/test_blist.c \
 	protocol2/rabin/test_rconf.c \
 	protocol2/rabin/test_win.c \
+	client/test_auth.c \
 	client/test_find.c \
 	server/protocol1/test_dpth.c \
 	server/protocol1/test_fdirs.c \
@@ -42,6 +43,7 @@ SRCS = \
 
 BURP_SRCS = \
 	../src/alloc.c \
+	../src/asfd.c \
 	../src/attribs.c \
 	../src/base64.c \
 	../src/bfile.c \
@@ -73,6 +75,7 @@ BURP_SRCS = \
 	../src/protocol2/rabin/rconf.c \
 	../src/protocol2/rabin/win.c \
 	../src/protocol2/sbuf_protocol2.c \
+	../src/client/auth.c \
 	../src/client/find.c \
 	../src/server/bu_get.c \
 	../src/server/compress.c \
@@ -109,7 +112,7 @@ test: Makefile $(OBJS) $(BURP_OBJS)
 	@echo "Linking $@ ..."
 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -o $@ \
 	  $(OBJS) $(BURP_OBJS) $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
-	  $(DLIB) -lz -lrsync -lgcov
+	  $(DLIB) -lz -lrsync -lgcov -lncurses
 	@echo "Running $<"
 	./$@ || exit 1
 	rm -rf /tmp/burp-coverage /tmp/burp-coverage.info || exit 1

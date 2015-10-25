@@ -191,11 +191,6 @@ static int recover_working(struct async *as,
 		recovery_method=RECOVERY_METHOD_DELETE;
 	}
 
-	// FIX THIS: Currently forcing protocol2 to delete so that the tests
-	// do not fail.
-	//if(get_protocol(cconfs)==PROTO_2)
-	//	recovery_method=RECOVERY_METHOD_DELETE;
-
 	if(recovery_method==RECOVERY_METHOD_DELETE)
 	{
 		ret=working_delete(as, sdirs, cconfs);

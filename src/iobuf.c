@@ -32,7 +32,7 @@ void iobuf_free_content(struct iobuf *iobuf)
 
 void iobuf_free(struct iobuf **iobuf)
 {
-	if(!iobuf || *iobuf) return;
+	if(!iobuf || !*iobuf) return;
 	iobuf_free_content(*iobuf);
 	free_v((void **)iobuf);
 }

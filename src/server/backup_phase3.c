@@ -1,7 +1,16 @@
-#include "include.h"
+#include "../burp.h"
+#include "../alloc.h"
+#include "../cntr.h"
+#include "../conf.h"
+#include "../fsops.h"
+#include "../handy.h"
+#include "../log.h"
+#include "../protocol2/blk.h"
+#include "../sbuf.h"
+#include "compress.h"
 #include "manio.h"
 #include "sdirs.h"
-#include "../protocol2/blk.h"
+#include "child.h"
 
 static const char *get_rmanifest_relative(struct sdirs *sdirs,
 	struct conf **confs)

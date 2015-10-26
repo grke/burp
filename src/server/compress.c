@@ -1,4 +1,11 @@
-#include "include.h"
+#include "../burp.h"
+#include "../alloc.h"
+#include "../asfd.h"
+#include "../async.h"
+#include "../fsops.h"
+#include "../fzp.h"
+#include "../log.h"
+#include "../prepend.h"
 
 char *comp_level(int compression)
 {

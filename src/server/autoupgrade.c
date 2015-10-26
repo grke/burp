@@ -1,5 +1,10 @@
-#include "include.h"
+#include "../burp.h"
+#include "../asfd.h"
+#include "../async.h"
 #include "../cmd.h"
+#include "../handy.h"
+#include "../log.h"
+#include "../prepend.h"
 
 // Return -1 on error or success, 0 to continue normally.
 int autoupgrade_server(struct async *as,

@@ -1,6 +1,15 @@
-#include "include.h"
+#include "../../burp.h"
+#include "../../alloc.h"
+#include "../../asfd.h"
+#include "../../async.h"
 #include "../../bu.h"
 #include "../../cmd.h"
+#include "../../cstat.h"
+#include "../../fzp.h"
+#include "../../prepend.h"
+#include "../../yajl_gen_w.h"
+#include "browse.h"
+#include "json_output.h"
 
 static int pretty_print=1;
 

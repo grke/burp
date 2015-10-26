@@ -1,4 +1,7 @@
-#include "include.h"
+#include "burp.h"
+#include "alloc.h"
+#include "conf.h"
+#include "log.h"
 #include "server/ca.h"
 
 static const char *pass=NULL;

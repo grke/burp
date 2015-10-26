@@ -1,9 +1,23 @@
 /* Client of the server status. Runs on the server machine and connects to the
    burp server to get status information. */
 
-#include "include.h"
+#include "../../burp.h"
+#include "../../action.h"
+#include "../../alloc.h"
+#include "../../asfd.h"
+#include "../../async.h"
 #include "../../bu.h"
 #include "../../cmd.h"
+#include "../../cstat.h"
+#include "../../forkchild.h"
+#include "../../fsops.h"
+#include "../../fzp.h"
+#include "../../handy.h"
+#include "../../iobuf.h"
+#include "../../log.h"
+#include "json_input.h"
+#include "lline.h"
+#include "status_client_ncurses.h"
 
 #ifdef HAVE_NCURSES_H
 #include "ncurses.h"

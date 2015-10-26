@@ -1,5 +1,12 @@
-#include "include.h"
+#include "burp.h"
+#include "alloc.h"
+#include "asfd.h"
+#include "async.h"
 #include "cmd.h"
+#include "cntr.h"
+#include "iobuf.h"
+#include "log.h"
+#include "strlist.h"
 
 const char *prog="unknown";
 

@@ -1,5 +1,7 @@
-#include "include.h"
+#include "../burp.h"
+#include "../asfd.h"
 #include "../cmd.h"
+#include "../log.h"
 
 int do_delete_client(struct asfd *asfd, struct conf **confs)
 {

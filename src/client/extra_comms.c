@@ -1,5 +1,15 @@
-#include "include.h"
+#include "../burp.h"
+#include "../asfd.h"
+#include "../async.h"
 #include "../cmd.h"
+#include "../conf.h"
+#include "../conffile.h"
+#include "../handy.h"
+#include "../iobuf.h"
+#include "../log.h"
+#include "autoupgrade.h"
+#include "incexc_recv.h"
+#include "incexc_send.h"
 
 #ifndef HAVE_WIN32
 #include <sys/utsname.h>

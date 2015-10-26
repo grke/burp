@@ -1,5 +1,7 @@
-#include "include.h"
+#include "burp.h"
+#include "alloc.h"
 #include "sbuf.h"
+#include "slist.h"
 #include "protocol2/blist.h"
 
 struct slist *slist_alloc(void)

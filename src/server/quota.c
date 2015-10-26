@@ -1,5 +1,9 @@
-#include "include.h"
+#include "../burp.h"
+#include "../asfd.h"
+#include "../async.h"
 #include "../cmd.h"
+#include "../cntr.h"
+#include "../log.h"
 
 static void quota_log_bytes(struct async *as,
 	const char *msg, uint64_t byte, uint64_t quota)

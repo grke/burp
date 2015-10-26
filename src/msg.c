@@ -1,5 +1,11 @@
-#include "include.h"
+#include "burp.h"
+#include "asfd.h"
+#include "async.h"
+#include "bfile.h"
 #include "cmd.h"
+#include "fzp.h"
+#include "iobuf.h"
+#include "log.h"
 
 int send_msg_fzp(struct fzp *fzp, enum cmd cmd, const char *buf, size_t s)
 {

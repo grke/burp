@@ -1,6 +1,10 @@
-#include "include.h"
+#include "../../burp.h"
+#include "../../alloc.h"
 #include "../../cmd.h"
+#include "../../fzp.h"
 #include "../../hexmap.h"
+#include "../../iobuf.h"
+#include "../../log.h"
 #include "../../protocol2/blk.h"
 
 // For retrieving stored data.

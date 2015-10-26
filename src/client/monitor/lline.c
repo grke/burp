@@ -1,4 +1,7 @@
-#include "include.h"
+#include "../../burp.h"
+#include "../../alloc.h"
+#include "../../log.h"
+#include "lline.h"
 
 static void lline_free(struct lline *lline)
 {

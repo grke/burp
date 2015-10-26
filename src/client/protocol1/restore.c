@@ -1,7 +1,18 @@
-#include "include.h"
+#include "../../burp.h"
+#include "../../action.h"
+#include "../../alloc.h"
+#include "../../asfd.h"
+#include "../../async.h"
 #include "../../attribs.h"
+#include "../../bfile.h"
 #include "../../cmd.h"
+#include "../../cntr.h"
+#include "../../fsops.h"
+#include "../../handy.h"
+#include "../../log.h"
 #include "../../protocol1/msg.h"
+#include "../extrameta.h"
+#include "../restore.h"
 
 static int do_restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 	struct sbuf *sb, const char *fname,

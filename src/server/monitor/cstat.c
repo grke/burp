@@ -1,8 +1,15 @@
-#include "include.h"
+#include "../../burp.h"
+#include "../../alloc.h"
 #include "../../bu.h"
+#include "../../cstat.h"
+#include "../../conffile.h"
+#include "../../fsops.h"
 #include "../../lock.h"
+#include "../../log.h"
+#include "../../strlist.h"
 #include "../bu_get.h"
 #include "../sdirs.h"
+#include "cstat.h"
 
 static int permitted(struct cstat *cstat,
 	struct conf **parentconfs, struct conf **cconfs)

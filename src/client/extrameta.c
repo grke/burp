@@ -1,4 +1,13 @@
-#include "include.h"
+#include "../burp.h"
+#include "../alloc.h"
+#include "../bfile.h"
+#include "../cmd.h"
+#include "../conf.h"
+#include "../log.h"
+#include "acl.h"
+#include "cvss.h"
+#include "extrameta.h"
+#include "xattr.h"
 
 int has_extrameta(const char *path, enum cmd cmd, enum protocol protocol,
 	int enable_acl, int enable_xattr)

@@ -1,5 +1,14 @@
-#include "include.h"
+#include "../../burp.h"
+#include "../../alloc.h"
+#include "../../asfd.h"
+#include "../../async.h"
+#include "../../bfile.h"
 #include "../../cmd.h"
+#include "../../cntr.h"
+#include "../../fsops.h"
+#include "../../log.h"
+#include "../../sbuf.h"
+#include "../restore.h"
 
 static int start_restore_file(struct asfd *asfd,
 	BFILE *bfd,

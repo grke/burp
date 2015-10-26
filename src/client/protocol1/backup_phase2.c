@@ -1,9 +1,16 @@
 #include "../../burp.h"
-#include "include.h"
+#include "../../action.h"
+#include "../../asfd.h"
+#include "../../async.h"
 #include "../../attribs.h"
 #include "../../cmd.h"
+#include "../../cntr.h"
+#include "../../conf.h"
+#include "../../log.h"
 #include "../../protocol1/handy.h"
 #include "../../protocol1/msg.h"
+#include "../extrameta.h"
+#include "../find.h"
 
 static int load_signature(struct asfd *asfd,
 	rs_signature_t **sumset, struct conf **confs)

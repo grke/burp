@@ -1,4 +1,12 @@
-#include "include.h"
+#include "burp.h"
+#include "alloc.h"
+#include "asfd.h"
+#include "conf.h"
+#include "fzp.h"
+#include "forkchild.h"
+#include "handy.h"
+#include "log.h"
+#include "strlist.h"
 
 #ifndef HAVE_WIN32
 

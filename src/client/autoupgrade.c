@@ -1,5 +1,14 @@
-#include "include.h"
+#include "../burp.h"
+#include "../asfd.h"
+#include "../async.h"
 #include "../cmd.h"
+#include "../fsops.h"
+#include "../iobuf.h"
+#include "../handy.h"
+#include "../log.h"
+#include "../prepend.h"
+#include "../run_script.h"
+#include "cvss.h"
 
 static int receive_file(struct asfd *asfd, const char *autoupgrade_dir,
 	const char *file, struct cntr *cntr)

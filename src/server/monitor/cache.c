@@ -1,7 +1,12 @@
-#include "include.h"
+#include "../../burp.h"
+#include "../../alloc.h"
 #include "../../bu.h"
 #include "../../cmd.h"
+#include "../../cstat.h"
+#include "../../log.h"
 #include "../../sbuf.h"
+#include "../manio.h"
+#include "json_output.h"
 
 typedef struct ent ent_t;
 

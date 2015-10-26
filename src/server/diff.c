@@ -1,7 +1,17 @@
-#include "include.h"
+#include "../burp.h"
+#include "../alloc.h"
+#include "../asfd.h"
+#include "../async.h"
 #include "../bu.h"
+#include "../conf.h"
 #include "../cmd.h"
+#include "../cntr.h"
+#include "../log.h"
+#include "../prepend.h"
+#include "../sbuf.h"
 #include "bu_get.h"
+#include "child.h"
+#include "manio.h"
 
 static int diff_manifest(struct asfd *asfd,
 	const char *fullpath, struct cntr *cntr, enum protocol protocol)

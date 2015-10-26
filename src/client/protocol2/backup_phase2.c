@@ -1,9 +1,16 @@
-#include "include.h"
+#include "../../burp.h"
+#include "../../action.h"
+#include "../../asfd.h"
+#include "../../async.h"
 #include "../../base64.h"
 #include "../../cmd.h"
+#include "../../cntr.h"
+#include "../../iobuf.h"
+#include "../../log.h"
 #include "../../protocol2/blk.h"
 #include "../../protocol2/blist.h"
 #include "../../protocol2/rabin/rabin.h"
+#include "../../slist.h"
 
 #define END_SIGS                0x01
 #define END_BACKUP              0x02

@@ -1,4 +1,5 @@
-#include "include.h"
+#include "burp.h"
+#include "yajl_gen_w.h"
 
 yajl_gen yajl=NULL;
 

@@ -1,5 +1,10 @@
-#include "include.h"
+#include "burp.h"
+#include "alloc.h"
+#include "asfd.h"
+#include "async.h"
 #include "cmd.h"
+#include "iobuf.h"
+#include "prepend.h"
 
 static const char *endreqstrf;
 static const char *endrepstrf;

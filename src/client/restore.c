@@ -1,9 +1,20 @@
-#include "include.h"
+#include "../burp.h"
+#include "../alloc.h"
+#include "../asfd.h"
+#include "../async.h"
 #include "../attribs.h"
+#include "../berrno.h"
 #include "../cmd.h"
+#include "../cntr.h"
+#include "../fsops.h"
+#include "../handy.h"
+#include "../log.h"
+#include "../prepend.h"
 #include "../protocol2/blk.h"
+#include "cvss.h"
 #include "protocol1/restore.h"
 #include "protocol2/restore.h"
+#include "restore.h"
 
 int restore_interrupt(struct asfd *asfd,
 	struct sbuf *sb, const char *msg, struct cntr *cntr,

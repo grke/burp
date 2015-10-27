@@ -1,9 +1,25 @@
-#include "include.h"
+#include "../burp.h"
+#include "../action.h"
+#include "../asfd.h"
+#include "../async.h"
 #include "../cmd.h"
-
+#include "../cntr.h"
+#include "../fsops.h"
+#include "../handy.h"
+#include "../iobuf.h"
+#include "../log.h"
+#include "../run_script.h"
+#include "auth.h"
+#include "backup.h"
+#include "ca.h"
+#include "delete.h"
+#include "diff.h"
+#include "extra_comms.h"
+#include "list.h"
+#include "monitor.h"
 #include "monitor/status_client_ncurses.h"
-
 #include "protocol2/restore.h"
+#include "restore.h"
 
 #ifndef HAVE_WIN32
 #include <sys/utsname.h>

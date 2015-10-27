@@ -1,5 +1,18 @@
-#include "include.h"
+#include "../burp.h"
+#include "../alloc.h"
+#include "../asfd.h"
+#include "../async.h"
 #include "../cmd.h"
+#include "../cntr.h"
+#include "../conf.h"
+#include "../handy.h"
+#include "../iobuf.h"
+#include "../log.h"
+#include "../prepend.h"
+#include "../run_script.h"
+#include "extra_comms.h"
+#include "monitor/status_server.h"
+#include "run_action.h"
 
 static struct asfd *wasfd=NULL;
 

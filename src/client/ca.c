@@ -1,5 +1,15 @@
-#include "include.h"
+#include "../burp.h"
+#include "../asfd.h"
+#include "../async.h"
 #include "../cmd.h"
+#include "../conf.h"
+#include "../conffile.h"
+#include "../fsops.h"
+#include "../handy.h"
+#include "../iobuf.h"
+#include "../log.h"
+#include "../run_script.h"
+#include "cvss.h"
 
 static int generate_key_and_csr(struct asfd *asfd,
 	struct conf **confs, const char *csr_path)

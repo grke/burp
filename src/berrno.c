@@ -34,7 +34,8 @@
  *    Graham Keeling, 2014.
  */
 
-#include "include.h"
+#include "burp.h"
+#include "berrno.h"
 
 void berrno_init(struct berrno *b)
 {

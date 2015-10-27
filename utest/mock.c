@@ -1,4 +1,5 @@
 #include "../src/burp.h"
+#include "../src/cntr.h"
 #include "../src/server/monitor/cstat.h"
 void logp(const char *fmt, ...)
 {

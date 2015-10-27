@@ -1,5 +1,8 @@
-#include "include.h"
+#include "../../burp.h"
+#include "../../asfd.h"
+#include "../../async.h"
 #include "../../fzp.h"
+#include "../../log.h"
 
 int zlib_inflate(struct asfd *asfd, const char *source_path,
 	const char *dest_path, struct cntr *cntr)

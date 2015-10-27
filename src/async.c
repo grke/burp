@@ -1,4 +1,10 @@
-#include "include.h"
+#include "burp.h"
+#include "alloc.h"
+#include "asfd.h"
+#include "async.h"
+#include "handy.h"
+#include "iobuf.h"
+#include "log.h"
 
 void async_free(struct async **as)
 {

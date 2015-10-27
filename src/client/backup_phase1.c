@@ -32,9 +32,17 @@
  *     Graham Keeling, 2014.
  */
 
-#include "include.h"
+#include "../burp.h"
+#include "../alloc.h"
+#include "../asfd.h"
+#include "../async.h"
 #include "../attribs.h"
 #include "../cmd.h"
+#include "../cntr.h"
+#include "../log.h"
+#include "../strlist.h"
+#include "extrameta.h"
+#include "find.h"
 #include "linkhash.h"
 
 static enum cmd filesymbol=CMD_FILE;

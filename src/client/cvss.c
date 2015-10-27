@@ -1,4 +1,12 @@
-#include "include.h"
+#include "../burp.h"
+#include "../alloc.h"
+#include "../berrno.h"
+#include "../bfile.h"
+#include "../cmd.h"
+#include "../log.h"
+#include "../strlist.h"
+#include "cvss.h"
+#include "extrameta.h"
 
 #if defined(WIN32_VSS)
 #include "vss.h"

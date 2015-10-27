@@ -1,4 +1,13 @@
-#include "include.h"
+#include "../burp.h"
+#include "../alloc.h"
+#include "../asfd.h"
+#include "../async.h"
+#include "../cntr.h"
+#include "../log.h"
+#include "../prepend.h"
+#include "../sbuf.h"
+#include "extrameta.h"
+#include "xattr.h"
 
 #ifdef HAVE_XATTR
 #if defined(HAVE_LINUX_OS) \

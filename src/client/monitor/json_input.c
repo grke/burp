@@ -1,5 +1,15 @@
-#include "include.h"
+#include "../../burp.h"
+#include "../../alloc.h"
+#include "../../asfd.h"
+#include "../../async.h"
 #include "../../bu.h"
+#include "../../cstat.h"
+#include "../../handy.h"
+#include "../../iobuf.h"
+#include "../../log.h"
+#include "json_input.h"
+#include "lline.h"
+#include "status_client_ncurses.h"
 #ifdef HAVE_WIN32
 #include <yajl/yajl_parse.h>
 #else

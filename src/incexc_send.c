@@ -1,5 +1,10 @@
-#include "include.h"
+#include "burp.h"
+#include "alloc.h"
+#include "asfd.h"
 #include "cmd.h"
+#include "log.h"
+#include "prepend.h"
+#include "strlist.h"
 
 static int send_incexc_string(struct asfd *asfd,
 	const char *field, const char *str)

@@ -1,6 +1,10 @@
-#include "include.h"
-#include "pathcmp.h"
+#include "burp.h"
+#include "alloc.h"
 #include "cmd.h"
+#include "iobuf.h"
+#include "log.h"
+#include "msg.h"
+#include "pathcmp.h"
 
 struct iobuf *iobuf_alloc(void)
 {

@@ -1,5 +1,9 @@
-#include "include.h"
+#include "burp.h"
+#include "alloc.h"
+#include "fsops.h"
+#include "log.h"
 #include "pathcmp.h"
+#include "prepend.h"
 
 uint32_t fs_name_max=0;
 uint32_t fs_full_path_max=0;

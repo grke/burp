@@ -1,5 +1,13 @@
-#include "include.h"
+#include "../burp.h"
+#include "../alloc.h"
+#include "../asfd.h"
+#include "../async.h"
 #include "../cmd.h"
+#include "../conf.h"
+#include "../conffile.h"
+#include "../handy.h"
+#include "../iobuf.h"
+#include "../log.h"
 
 static int check_passwd(const char *passwd, const char *plain_text)
 {

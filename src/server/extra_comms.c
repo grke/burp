@@ -1,5 +1,17 @@
-#include "include.h"
+#include "../burp.h"
+#include "../alloc.h"
+#include "../asfd.h"
+#include "../async.h"
 #include "../cmd.h"
+#include "../conf.h"
+#include "../conffile.h"
+#include "../handy.h"
+#include "../iobuf.h"
+#include "../log.h"
+#include "../prepend.h"
+#include "autoupgrade.h"
+#include "incexc_recv.h"
+#include "incexc_send.h"
 
 static int append_to_feat(char **feat, const char *str)
 {

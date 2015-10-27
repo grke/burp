@@ -1,6 +1,11 @@
-#include "include.h"
+#include "../burp.h"
+#include "../action.h"
+#include "../asfd.h"
+#include "../async.h"
 #include "../attribs.h"
 #include "../cmd.h"
+#include "../log.h"
+#include "../yajl_gen_w.h"
 
 static int items_open=0;
 

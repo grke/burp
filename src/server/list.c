@@ -1,8 +1,17 @@
-#include "include.h"
+#include "../burp.h"
+#include "../alloc.h"
+#include "../asfd.h"
+#include "../async.h"
 #include "../attribs.h"
 #include "../bu.h"
 #include "../cmd.h"
+#include "../cntr.h"
+#include "../log.h"
+#include "../prepend.h"
+#include "../regexp.h"
 #include "bu_get.h"
+#include "child.h"
+#include "manio.h"
 
 // Want to make sure that we are listening for reads too - this will let us
 // exit promptly if the client was killed.

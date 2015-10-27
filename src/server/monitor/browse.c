@@ -1,7 +1,14 @@
-#include "include.h"
+#include "../../burp.h"
+#include "../../alloc.h"
 #include "../../bu.h"
 #include "../../cmd.h"
+#include "../../cstat.h"
+#include "../../prepend.h"
 #include "../../sbuf.h"
+#include "../list.h"
+#include "../manio.h"
+#include "cache.h"
+#include "json_output.h"
 
 static int do_browse_manifest(struct asfd *srfd,
 	struct manio *manio, struct sbuf *sb, const char *browse)

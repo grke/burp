@@ -1,5 +1,8 @@
-#include "include.h"
+#include "burp.h"
+#include "alloc.h"
 #include "attribs.h"
+#include "berrno.h"
+#include "log.h"
 
 #ifdef HAVE_DARWIN_OS
 #include <sys/paths.h>

@@ -1,5 +1,5 @@
 
-LIBS = -lcheck -lpthread -lm -lssl -lcrypto -lrt
+LIBS = -lcheck -lpthread -lm -lssl -lcrypto -lrt -lacl -lcrypt
 CFLAGS+=-Wall -Werror -g -fprofile-arcs -ftest-coverage
 
 SRCS = \
@@ -10,7 +10,6 @@ SRCS = \
 	builders/server/protocol2/champ_chooser/build_dindex.c \
 	builders/build_paths.c \
 	main.c \
-	mock.c \
 	prng.c \
 	test_alloc.c \
 	test_attribs.c \
@@ -44,29 +43,65 @@ SRCS = \
 BURP_SRCS = \
 	../src/alloc.c \
 	../src/asfd.c \
+	../src/async.c \
 	../src/attribs.c \
 	../src/base64.c \
+	../src/berrno.c \
 	../src/bfile.c \
 	../src/bu.c \
 	../src/cmd.c \
 	../src/cntr.c \
 	../src/conf.c \
 	../src/conffile.c \
+	../src/cstat.c \
+	../src/forkchild.c \
 	../src/fsops.c \
 	../src/fzp.c \
 	../src/handy.c \
 	../src/hexmap.c \
+	../src/incexc_recv.c \
+	../src/incexc_send.c \
 	../src/iobuf.c \
 	../src/linkhash.c \
 	../src/lock.c \
+	../src/log.c \
 	../src/msg.c \
 	../src/pathcmp.c \
 	../src/prepend.c \
+	../src/prog.c \
 	../src/regexp.c \
+	../src/run_script.c \
 	../src/sbuf.c \
 	../src/slist.c \
+	../src/ssl.c \
 	../src/strlist.c \
+	../src/client/acl.c \
+	../src/client/auth.c \
+	../src/client/autoupgrade.c \
+	../src/client/ca.c \
+	../src/client/cvss.c \
+	../src/client/backup.c \
+	../src/client/backup_phase1.c \
+	../src/client/delete.c \
+	../src/client/diff.c \
+	../src/client/extra_comms.c \
+	../src/client/extrameta.c \
+	../src/client/find.c \
+	../src/client/glob_windows.c \
+	../src/client/list.c \
+	../src/client/main.c \
+	../src/client/monitor/json_input.c \
+	../src/client/monitor/lline.c \
+	../src/client/monitor/status_client_ncurses.c \
+	../src/client/monitor.c \
+	../src/client/protocol1/backup_phase2.c \
+	../src/client/protocol1/restore.c \
+	../src/client/protocol2/backup_phase2.c \
+	../src/client/protocol2/restore.c \
+	../src/client/restore.c \
+	../src/client/xattr.c \
 	../src/protocol1/handy.c \
+	../src/protocol1/msg.c \
 	../src/protocol1/rs_buf.c \
 	../src/protocol1/sbuf_protocol1.c \
 	../src/protocol2/blk.c \
@@ -75,31 +110,74 @@ BURP_SRCS = \
 	../src/protocol2/rabin/rconf.c \
 	../src/protocol2/rabin/win.c \
 	../src/protocol2/sbuf_protocol2.c \
-	../src/client/auth.c \
-	../src/client/find.c \
+	../src/server/auth.c \
+	../src/server/autoupgrade.c \
+	../src/server/backup.c \
+	../src/server/backup_phase1.c \
+	../src/server/backup_phase3.c \
 	../src/server/bu_get.c \
+	../src/server/ca.c \
+	../src/server/child.c \
 	../src/server/compress.c \
-	../src/server/dpth.c \
 	../src/server/delete.c \
+	../src/server/diff.c \
+	../src/server/dpth.c \
+	../src/server/extra_comms.c \
+	../src/server/list.c \
+	../src/server/main.c \
 	../src/server/manio.c \
-	../src/server/sdirs.c \
+	../src/server/manios.c \
+	../src/server/monitor/browse.c \
+	../src/server/monitor/cache.c \
+	../src/server/monitor/cstat.c \
+	../src/server/monitor/json_output.c \
+	../src/server/monitor/status_server.c \
+	../src/server/protocol1/backup_phase2.c \
+	../src/server/protocol1/backup_phase4.c \
+	../src/server/protocol1/bedup.c \
+	../src/server/protocol1/blocklen.c \
+	../src/server/protocol1/deleteme.c \
 	../src/server/protocol1/dpth.c \
 	../src/server/protocol1/fdirs.c \
 	../src/server/protocol1/link.c \
+	../src/server/protocol1/restore.c \
 	../src/server/protocol1/zlibio.c \
-	../src/server/protocol2/dpth.c \
+	../src/server/protocol2/backup_phase2.c \
 	../src/server/protocol2/backup_phase4.c \
+	../src/server/protocol2/bsigs.c \
 	../src/server/protocol2/champ_chooser/candidate.c \
 	../src/server/protocol2/champ_chooser/champ_chooser.c \
+	../src/server/protocol2/champ_chooser/champ_client.c \
+	../src/server/protocol2/champ_chooser/champ_server.c \
 	../src/server/protocol2/champ_chooser/dindex.c \
 	../src/server/protocol2/champ_chooser/hash.c \
 	../src/server/protocol2/champ_chooser/incoming.c \
 	../src/server/protocol2/champ_chooser/scores.c \
 	../src/server/protocol2/champ_chooser/sparse.c \
+	../src/server/protocol2/dpth.c \
+	../src/server/protocol2/rblk.c \
+	../src/server/protocol2/restore.c \
+	../src/server/protocol2/restore_spool.c \
+	../src/server/quota.c \
+	../src/server/restore.c \
 	../src/server/resume.c \
+	../src/server/rubble.c \
+	../src/server/run_action.c \
+	../src/server/sdirs.c \
 	../src/server/timestamp.c \
+	../src/yajl/yajl.c \
+	../src/yajl/yajl_alloc.c \
+	../src/yajl/yajl_buf.c \
+	../src/yajl/yajl_encode.c \
+	../src/yajl/yajl_gen.c \
+	../src/yajl/yajl_lex.c \
+	../src/yajl/yajl_parser.c \
+	../src/yajl/yajl_tree.c \
+	../src/yajl/yajl_version.c \
+	../src/yajl_gen_w.c
 
-OBJS = $(SRCS:.c=.o)
+
+	OBJS = $(SRCS:.c=.o)
 BURP_OBJS = $(BURP_SRCS:.c=.o)
 #BURP_STRIP = $(subst ../src/,,${BURP_OBJS})
 
@@ -117,7 +195,12 @@ test: Makefile $(OBJS) $(BURP_OBJS)
 	./$@ || exit 1
 	rm -rf /tmp/burp-coverage /tmp/burp-coverage.info || exit 1
 	lcov --capture -d .. -b . --output-file /tmp/burp-coverage.info || exit 1
-	genhtml /tmp/burp-coverage.info --output-directory /tmp/burp-coverage || exit 1
+	lcov -r /tmp/burp-coverage.info \
+		/usr/include/bits/* \
+		src/yajl/* \
+		utest/* \
+		-o /tmp/burp-coverage-clean.info
+	genhtml /tmp/burp-coverage-clean.info --output-directory /tmp/burp-coverage || exit 1
 #	make clean
 	@echo OK
 
@@ -146,3 +229,4 @@ clean:
 	rm -f server/protocol2/champ_chooser/*.gcda
 	rm -f server/protocol2/champ_chooser/*.gcno
 	rm -f /tmp/burp-coverage.info
+	rm -f /tmp/burp-coverage-clean.info

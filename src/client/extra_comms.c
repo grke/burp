@@ -5,11 +5,11 @@
 #include "../conf.h"
 #include "../conffile.h"
 #include "../handy.h"
+#include "../incexc_recv.h"
+#include "../incexc_send.h"
 #include "../iobuf.h"
 #include "../log.h"
 #include "autoupgrade.h"
-#include "incexc_recv.h"
-#include "incexc_send.h"
 
 #ifndef HAVE_WIN32
 #include <sys/utsname.h>

@@ -18,7 +18,7 @@ static int parse_cmd(struct iobuf *rbuf, struct blk *blk)
 {
 	int ret=-1;
 
-	printf("%c%04lX", rbuf->cmd, rbuf->len);
+	printf("%c%04X", rbuf->cmd, (unsigned int)rbuf->len);
 	switch(rbuf->cmd)
 	{
 		case CMD_SIG:

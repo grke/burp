@@ -10,6 +10,7 @@
 #include "../lock.h"
 #include "../log.h"
 #include "../regexp.h"
+#include "../run_script.h"
 #include "backup.h"
 #include "delete.h"
 #include "diff.h"
@@ -17,7 +18,6 @@
 #include "protocol2/restore.h"
 #include "restore.h"
 #include "rubble.h"
-#include "run_script.h"
 #include "sdirs.h"
 
 // FIX THIS: Somewhat haphazard.

@@ -39,11 +39,11 @@
 #include "../attribs.h"
 #include "../cmd.h"
 #include "../cntr.h"
+#include "../linkhash.h"
 #include "../log.h"
 #include "../strlist.h"
 #include "extrameta.h"
 #include "find.h"
-#include "linkhash.h"
 
 static enum cmd filesymbol=CMD_FILE;
 static enum cmd dirsymbol=CMD_DIRECTORY;

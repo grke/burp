@@ -1,7 +1,7 @@
-#include "burp.h"
+#include "../burp.h"
+#include "../alloc.h"
 #include "manios.h"
 #include "manio.h"
-#include "../alloc.h"
 
 static manios *manios_alloc(void)
 {

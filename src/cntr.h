@@ -82,7 +82,7 @@ extern void cntr_free(struct cntr **cntr);
 extern const char *bytes_to_human(uint64_t counter);
 extern void cntr_print(struct cntr *cntr, enum action act);
 extern int cntr_stats_to_file(struct cntr *cntr,
-	const char *directory, enum action act, struct conf **conf);
+	const char *directory, enum action act, struct conf **confs);
 extern void cntr_print_end(struct cntr *c);
 extern void cntr_print_end_phase1(struct cntr *c);
 extern void cntr_add(struct cntr *c, char ch, int print);

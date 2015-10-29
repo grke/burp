@@ -476,8 +476,11 @@ static void bottom_part(struct cntr *c, enum action act)
 void cntr_print(struct cntr *cntr, enum action act)
 {
 	struct cntr_ent *e;
-	time_t now=time(NULL);
-	time_t start=(time_t)cntr->ent[(uint8_t)CMD_TIMESTAMP]->count;
+	time_t now;
+	time_t start;
+	if(!cntr) return;
+	now=time(NULL);
+	start=(time_t)cntr->ent[(uint8_t)CMD_TIMESTAMP]->count;
 	cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count=(uint64_t)now;
 
 	border();
@@ -582,7 +585,9 @@ end:
 
 void cntr_print_end(struct cntr *cntr)
 {
-	struct cntr_ent *grand_total_ent=cntr->ent[CMD_GRAND_TOTAL];
+	struct cntr_ent *grand_total_ent;
+	if(!cntr) return;
+	grand_total_ent=cntr->ent[CMD_GRAND_TOTAL];
 	if(grand_total_ent)
 	{
 		print_end(grand_total_ent->count);
@@ -592,7 +597,9 @@ void cntr_print_end(struct cntr *cntr)
 
 void cntr_print_end_phase1(struct cntr *cntr)
 {
-	struct cntr_ent *grand_total_ent=cntr->ent[CMD_GRAND_TOTAL];
+	struct cntr_ent *grand_total_ent;
+	if(!cntr) return;
+	grand_total_ent=cntr->ent[CMD_GRAND_TOTAL];
 	if(grand_total_ent)
 	{
 		print_end(grand_total_ent->phase1);

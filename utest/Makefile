@@ -4,6 +4,7 @@ CFLAGS+=-Wall -Werror -g -fprofile-arcs -ftest-coverage
 
 SRCS = \
 	builders/build_attribs.c \
+	builders/build_asfd_mock.c \
 	builders/protocol2/build_blist.c \
 	builders/server/build_manifest.c \
 	builders/server/build_storage_dirs.c \
@@ -26,6 +27,7 @@ SRCS = \
 	protocol2/rabin/test_win.c \
 	client/test_auth.c \
 	client/test_find.c \
+	client/test_restore.c \
 	server/protocol1/test_dpth.c \
 	server/protocol1/test_fdirs.c \
 	server/protocol2/champ_chooser/test_candidate.c \

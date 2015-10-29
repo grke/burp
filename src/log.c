@@ -216,7 +216,9 @@ int logw(struct asfd *asfd, struct cntr *cntr, const char *fmt, ...)
 	va_list ap;
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
-	if(asfd && asfd->as->doing_estimate) printf("\nWARNING: %s", buf);
+	if(asfd
+	  && asfd->as
+	  && asfd->as->doing_estimate) printf("\nWARNING: %s", buf);
 	else
 	{
 		if(asfd) r=asfd->write_str(asfd, CMD_WARNING, buf);

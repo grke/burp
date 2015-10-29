@@ -58,7 +58,7 @@ static int do_restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 			&rcvdbytes, &sentbytes,
 			encpassword, enccompressed, cntr, NULL);
 #ifndef HAVE_WIN32
-		if(bfd->close(bfd, asfd))
+		if(bfd && bfd->close(bfd, asfd))
 		{
 			logp("error closing %s in %s\n",
 				fname, __func__);
@@ -79,7 +79,6 @@ end:
 			"Could not transfer file in: %s", rpath);
 		if(restore_interrupt(asfd, sb, msg, cntr, PROTO_1))
 			ret=-1;
-		goto end;
 	}
 	return ret;
 }

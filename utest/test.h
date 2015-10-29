@@ -58,6 +58,7 @@ Suite *suite_protocol2_rabin_rconf(void);
 Suite *suite_protocol2_rabin_win(void);
 Suite *suite_client_auth(void);
 Suite *suite_client_find(void);
+Suite *suite_client_restore(void);
 Suite *suite_server_bu_get(void);
 Suite *suite_server_delete(void);
 Suite *suite_server_manio(void);

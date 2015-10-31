@@ -1,0 +1,34 @@
+This section will provide code coverage reports from the burp unit tests,
+starting from version 2.0.26.
+
+There are two sets of tests in burp now:
+
+1) An 'end-to-end' system that basically runs a server, and does
+backups/verifies/restores, and changes config settings between each one. These
+are time consuming tests, and they are run from scripts in the 'test' directory
+of the burp source.
+These tests do not show up in the code coverage report.
+
+2) Unit tests that exercise small parts of the code hard.
+If you wish to run them yourself, change to the top level of the burp source
+directory and do this:
+make clean
+./configure
+cd utest
+make
+If the tests pass, and you have lcov installed, a code coverage report will
+be generated in /tmp/burp-coverage.
+If you want to build burp proper after running the unit tests, you will first
+need to run 'make clean' in the top level of the source code.
+
+At first glance, the code coverage report will look like not much is getting
+tested, but that is not true, because you will not see (1) showing up in it.
+The intention is that more unit tests will be added as time goes on, so the
+coverage should climb.
+
+The code coverage reports can be found <a href="/coverage">here</a>.
+
+Although both sets of tests are run automatically when I commit code to burp,
+they absolutely do not cover all conditions and all environments.
+Please remember that burp comes with absolutely no warranty.
+You are responsible for testing it and ensuring that it works for you. 
